@@ -1,0 +1,10 @@
+// 나중에 Perplexity API 키 발급받으면 활성화
+// .disabled 확장자 제거하고 사용
+
+export async function generateNaverKeywords(
+  productName: string,
+  category?: string
+): Promise<string[]> {
+  // TODO: Perplexity API 구현
+  throw new Error('Perplexity API 키가 필요합니다.');
+}

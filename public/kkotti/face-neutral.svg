@@ -1,0 +1,10 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 왼쪽 눈 -->
+  <circle cx="90" cy="70" r="4" fill="#212121"/>
+  
+  <!-- 오른쪽 눈 -->
+  <circle cx="110" cy="70" r="4" fill="#212121"/>
+  
+  <!-- 입 -->
+  <line x1="95" y1="85" x2="105" y2="85" stroke="#212121" stroke-width="2" stroke-linecap="round"/>
+</svg>

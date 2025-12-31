@@ -1,23 +1,27 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextResponse } from 'next/server';
 
 export async function GET() {
-  try {
-    const products = await prisma.product.findMany({
-      orderBy: { createdAt: 'desc' }
-    })
-    return NextResponse.json(products)
-  } catch (error) {
-    return NextResponse.json({ error: '상품 조회 실패' }, { status: 500 })
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    const data = await request.json()
-    const product = await prisma.product.create({ data })
-    return NextResponse.json(product)
-  } catch (error) {
-    return NextResponse.json({ error: '상품 등록 실패' }, { status: 500 })
-  }
+  const mockProducts = [
+    {
+      id: 1,
+      name: '테스트 상품 1',
+      price: 15000,
+      stock: 10,
+      status: '판매중',
+      registeredAt: '2026-01-01'
+    },
+    {
+      id: 2,
+      name: '테스트 상품 2',
+      price: 25000,
+      stock: 5,
+      status: '판매중',
+      registeredAt: '2026-01-01'
+    }
+  ];
+  
+  return NextResponse.json({
+    success: true,
+     mockProducts
+  });
 }

@@ -1,0 +1,13 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 왼쪽 눈 (위 보기) -->
+  <circle cx="90" cy="68" r="4" fill="#212121"/>
+  
+  <!-- 오른쪽 눈 (위 보기) -->
+  <circle cx="110" cy="68" r="4" fill="#212121"/>
+  
+  <!-- 물결 입 -->
+  <path d="M 92 85 Q 96 87 100 85 Q 104 83 108 85" stroke="#212121" stroke-width="2" stroke-linecap="round" fill="none"/>
+  
+  <!-- 물음표 -->
+  <text x="120" y="58" font-size="18" fill="#7CB342" font-weight="bold">?</text>
+</svg>

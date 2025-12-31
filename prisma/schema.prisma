@@ -3,36 +3,60 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Supplier {
+  id                 String    @id @default(cuid())
+  platform           String
+  vendorName         String
+  vendorCode         String    @unique
+  contactPhone       String?
+  contactEmail       String?
+  shippingCost       Int       @default(0)
+  returnShippingCost Int       @default(0)
+  freeShippingMin    Int?
+  bundleShipping     Boolean   @default(true)
+  shippingGroupCode  String?
+  memo               String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  products           Product[]
+
+  @@map("suppliers")
 }
 
 model Product {
-  id            String   @id @default(cuid())
-  
-  // 기본 정보
-  productName   String
-  productCode   String   @unique
-  category      String
-  brand         String?
-  
-  // 가격 정보
-  salePrice     Int
-  supplyPrice   Int
-  marginRate    Float
-  
-  // 재고
-  stockQty      Int      @default(0)
-  status        String   @default("SALE")
-  
-  // 이미지
-  mainImage     String?
-  detailImages  String?
-  
-  // 설명
-  description   String?
-  
-  // 메타
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                  String    @id @default(cuid())
+  productCode         String    @unique
+  productName         String
+  brand               String
+  category            String
+  supplierId          String?
+  supplierProductCode String?
+  stockQuantity       Int       @default(0)
+  wholesalePrice      Int
+  sellingPrice        Int
+  margin              Int
+  marginRate          Float
+  discountRate        Int?
+  finalPrice          Int?
+  shippingCost        Int?
+  hasOptions          Boolean   @default(false)
+  options             Json?
+  thumbnailUrl        String?
+  imageUrls           String[]
+  keywords            String?
+  productDescription  String?
+  seoScore            Int?
+  status              String    @default("SALE")
+  naverProductId      String?
+  uploadedToNaver     Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  supplier            Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@map("products")
 }

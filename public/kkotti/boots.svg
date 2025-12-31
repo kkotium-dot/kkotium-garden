@@ -1,0 +1,13 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 왼쪽 부츠 -->
+  <path d="M 70 160 L 70 180 L 85 185 L 85 165 Z" fill="#FFB6C7" stroke="#212121" stroke-width="2"/>
+  <ellipse cx="77.5" cy="180" rx="12" ry="6" fill="#FFB6C7" stroke="#212121" stroke-width="2"/>
+  
+  <!-- 오른쪽 부츠 -->
+  <path d="M 115 160 L 115 180 L 130 185 L 130 165 Z" fill="#FFB6C7" stroke="#212121" stroke-width="2"/>
+  <ellipse cx="122.5" cy="180" rx="12" ry="6" fill="#FFB6C7" stroke="#212121" stroke-width="2"/>
+  
+  <!-- 부츠 디테일 (스티치) -->
+  <line x1="72" y1="165" x2="72" y2="178" stroke="#FF9BB0" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="117" y1="165" x2="117" y2="178" stroke="#FF9BB0" stroke-width="1" stroke-dasharray="2,2"/>
+</svg>

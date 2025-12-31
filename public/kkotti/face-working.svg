@@ -1,0 +1,15 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 왼쪽 눈 (집중) -->
+  <path d="M 85 70 L 95 70" stroke="#212121" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 85 67 L 95 67" stroke="#212121" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <!-- 오른쪽 눈 (집중) -->
+  <path d="M 105 70 L 115 70" stroke="#212121" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 105 67 L 115 67" stroke="#212121" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <!-- 각진 입 (결연함) -->
+  <path d="M 92 85 L 100 83 L 108 85" stroke="#212121" stroke-width="2" stroke-linecap="round" fill="none"/>
+  
+  <!-- 땀방울 -->
+  <ellipse cx="118" cy="65" rx="2" ry="3" fill="#4FC3F7" opacity="0.7"/>
+</svg>
