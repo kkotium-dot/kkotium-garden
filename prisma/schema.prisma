@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  
+  // 기본 정보
+  productName   String
+  productCode   String   @unique
+  category      String
+  brand         String?
+  
+  // 가격 정보
+  salePrice     Int
+  supplyPrice   Int
+  marginRate    Float
+  
+  // 재고
+  stockQty      Int      @default(0)
+  status        String   @default("SALE")
+  
+  // 이미지
+  mainImage     String?
+  detailImages  String?
+  
+  // 설명
+  description   String?
+  
+  // 메타
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
