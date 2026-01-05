@@ -3,60 +3,68 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model Supplier {
-  id                 String    @id @default(cuid())
-  platform           String
-  vendorName         String
-  vendorCode         String    @unique
-  contactPhone       String?
-  contactEmail       String?
-  shippingCost       Int       @default(0)
-  returnShippingCost Int       @default(0)
-  freeShippingMin    Int?
-  bundleShipping     Boolean   @default(true)
-  shippingGroupCode  String?
-  memo               String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  products           Product[]
-
-  @@map("suppliers")
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  level     Int      @default(1) // 1-25 레벨
+  exp       Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Product {
-  id                  String    @id @default(cuid())
-  productCode         String    @unique
-  productName         String
-  brand               String
-  category            String
-  supplierId          String?
-  supplierProductCode String?
-  stockQuantity       Int       @default(0)
-  wholesalePrice      Int
-  sellingPrice        Int
-  margin              Int
-  marginRate          Float
-  discountRate        Int?
-  finalPrice          Int?
-  shippingCost        Int?
-  hasOptions          Boolean   @default(false)
-  options             Json?
-  thumbnailUrl        String?
-  imageUrls           String[]
-  keywords            String?
-  productDescription  String?
-  seoScore            Int?
-  status              String    @default("SALE")
-  naverProductId      String?
-  uploadedToNaver     Boolean   @default(false)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  supplier            Supplier? @relation(fields: [supplierId], references: [id])
+  id              String   @id @default(cuid())
+  name            String
+  sku             String   @unique // 🆕 자체 관리 코드
+  vendorCode      String?  // 🆕 공급사 상품번호
+  supplierId      String   // 공급사 FK
+  supplierPrice   Int
+  salePrice       Int
+  margin          Float
+  status          String   @default("todo") // todo/active/issue/sold
+  aiScore         Int?     // Perplexity 점수
+  crawledData     Json?    // 크롤링 데이터
+  substituteUrl   String?  // 🆕 대체상품 URL
+  substituteMemo  String?  // 🆕 대체상품 메모
+  supplier        Supplier @relation(fields: [supplierId], references: [id])
+  salesRecords    SalesRecord[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
 
-  @@map("products")
+model Supplier {
+  id                  String    @id @default(cuid())
+  name                String
+  platform            String    // 도매꾹/해피바스 등 🆕
+  shippingFee         Int
+  bundleShippingCode  String?   // 🆕 묶음배송 코드
+  products            Product[]
+}
+
+model SalesRecord {
+  id          String  @id @default(cuid())
+  productId   String
+  soldQuantity Int
+  profit      Int     // 🆕 순이익
+  date        DateTime @default(now())
+  product     Product @relation(fields: [productId], references: [id])
+}
+
+model PriceMonitor {
+  id             String @id @default(cuid())
+  productId      String
+  competitorUrl  String
+  lastPrice      Int
+  product        Product @relation(fields: [productId], references: [id])
+}
+
+model Notification {
+  id        String  @id @default(cuid())
+  type      String  // 재고/가격/판매
+  message   String
+  read      Boolean @default(false)
 }
