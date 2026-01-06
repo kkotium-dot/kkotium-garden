@@ -9,21 +9,23 @@ datasource db {
 }
 
 model Product {
-  id              Int       @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   name            String
   price           Int
-  originalPrice   Int?
+  originalPrice   Int
   imageUrl        String?
   productUrl      String?
   category        String?
   vendorName      String?
-  sku             String?   @unique
+  sku             String?
   vendorCode      String?
-  status          String    @default("todo")
+  status          String   @default("todo")
   aiScore         Int?
   crawledData     Json?
   substituteUrl   String?
   substituteMemo  String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("products")
 }
