@@ -1,67 +1,117 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
+// 개별 상품 조회
 export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const params = await context.params
-    const id = params.id
+    const productId = parseInt(params.id);
     
-    const product = await prisma.product.findUnique({
-      where: { id }
-    })
-
-    if (!product) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (isNaN(productId)) {
+      return NextResponse.json(
+        { success: false, error: '유효하지 않은 상품 ID입니다' },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json(product)
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      return NextResponse.json(
+        { success: false, error: '상품을 찾을 수 없습니다' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      product,
+    });
   } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    console.error('GET Error:', error);
+    return NextResponse.json(
+      { success: false, error: '상품 조회 실패', details: String(error) },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+// 상품 수정
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const params = await context.params
-    const id = params.id
-    const data = await request.json()
+    const productId = parseInt(params.id);
     
-    const product = await prisma.product.update({
-      where: { id },
-      data
-    })
+    if (isNaN(productId)) {
+      return NextResponse.json(
+        { success: false, error: '유효하지 않은 상품 ID입니다' },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json(product)
+    const body = await request.json();
+
+    const updatedProduct = await prisma.product.update({
+      where: { id: productId },
+        data:{
+        name: body.name,
+        price: parseFloat(body.price),
+        originalPrice: parseFloat(body.originalPrice),
+        category: body.category,
+        supplier: body.supplier,
+        stockStatus: body.stockStatus,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      product: updatedProduct,
+    });
   } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    console.error('PATCH Error:', error);
+    return NextResponse.json(
+      { success: false, error: '상품 수정 실패', details: String(error) },
+      { status: 500 }
+    );
   }
 }
 
+// 상품 삭제
 export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const params = await context.params
-    const id = params.id
+    const productId = parseInt(params.id);
     
-    await prisma.product.delete({
-      where: { id }
-    })
+    if (isNaN(productId)) {
+      return NextResponse.json(
+        { success: false, error: '유효하지 않은 상품 ID입니다' },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json({ success: true })
+    await prisma.product.delete({
+      where: { id: productId },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: '상품이 삭제되었습니다',
+    });
   } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    console.error('DELETE Error:', error);
+    return NextResponse.json(
+      { success: false, error: '상품 삭제 실패', details: String(error) },
+      { status: 500 }
+    );
   }
 }

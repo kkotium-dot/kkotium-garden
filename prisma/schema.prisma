@@ -3,68 +3,27 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  level     Int      @default(1) // 1-25 레벨
-  exp       Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Product {
-  id              String   @id @default(cuid())
+  id              Int       @id @default(autoincrement())
   name            String
-  sku             String   @unique // 🆕 자체 관리 코드
-  vendorCode      String?  // 🆕 공급사 상품번호
-  supplierId      String   // 공급사 FK
-  supplierPrice   Int
-  salePrice       Int
-  margin          Float
-  status          String   @default("todo") // todo/active/issue/sold
-  aiScore         Int?     // Perplexity 점수
-  crawledData     Json?    // 크롤링 데이터
-  substituteUrl   String?  // 🆕 대체상품 URL
-  substituteMemo  String?  // 🆕 대체상품 메모
-  supplier        Supplier @relation(fields: [supplierId], references: [id])
-  salesRecords    SalesRecord[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
-model Supplier {
-  id                  String    @id @default(cuid())
-  name                String
-  platform            String    // 도매꾹/해피바스 등 🆕
-  shippingFee         Int
-  bundleShippingCode  String?   // 🆕 묶음배송 코드
-  products            Product[]
-}
-
-model SalesRecord {
-  id          String  @id @default(cuid())
-  productId   String
-  soldQuantity Int
-  profit      Int     // 🆕 순이익
-  date        DateTime @default(now())
-  product     Product @relation(fields: [productId], references: [id])
-}
-
-model PriceMonitor {
-  id             String @id @default(cuid())
-  productId      String
-  competitorUrl  String
-  lastPrice      Int
-  product        Product @relation(fields: [productId], references: [id])
-}
-
-model Notification {
-  id        String  @id @default(cuid())
-  type      String  // 재고/가격/판매
-  message   String
-  read      Boolean @default(false)
+  price           Int
+  originalPrice   Int?
+  imageUrl        String?
+  productUrl      String?
+  category        String?
+  vendorName      String?
+  sku             String?   @unique
+  vendorCode      String?
+  status          String    @default("todo")
+  aiScore         Int?
+  crawledData     Json?
+  substituteUrl   String?
+  substituteMemo  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
