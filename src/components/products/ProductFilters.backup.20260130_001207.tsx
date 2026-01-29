@@ -11,14 +11,9 @@ interface FilterState {
   seoScore: string;
 }
 
-interface CategoryOption {
-  value: string;
-  label: string;
-}
-
 interface ProductFiltersProps {
   onFilterChange: (filters: FilterState) => void;
-  categories: CategoryOption[];
+  categories: string[];
 }
 
 export default function ProductFilters({ onFilterChange, categories }: ProductFiltersProps) {
@@ -97,9 +92,7 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
             >
               <option value="">전체</option>
               {categories.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
-                </option>
+                <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
@@ -155,7 +148,7 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
             />
           </div>
 
-          {/* SEO 점수 필터 (정확한 범위) */}
+          {/* SEO 점수 필터 */}
           <div>
             <label className="block text-sm font-medium mb-1 text-gray-700">SEO 점수</label>
             <select
@@ -164,10 +157,10 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 bg-gradient-to-r from-purple-50 to-pink-50"
             >
               <option value="">전체</option>
-              <option value="100">100점 (S급)</option>
-              <option value="80-99">80-99점 (A급)</option>
-              <option value="70-79">70-79점 (B급)</option>
-              <option value="0-69">0-69점 (C급)</option>
+              <option value="100">100점만</option>
+              <option value="80-99">80-99점</option>
+              <option value="70-79">70-79점</option>
+              <option value="below70">70점 미만</option>
             </select>
           </div>
         </div>
@@ -194,9 +187,7 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
           >
             <option value="">전체 카테고리</option>
             {categories.map((cat) => (
-              <option key={cat.value} value={cat.value}>
-                {cat.label}
-              </option>
+              <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
 
@@ -206,10 +197,9 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
             className="px-3 py-2 border rounded-lg text-sm bg-gradient-to-r from-purple-50 to-pink-50"
           >
             <option value="">전체 SEO</option>
-            <option value="100">100점 S급</option>
-            <option value="80-99">80-99점 A급</option>
-            <option value="70-79">70-79점 B급</option>
-            <option value="0-69">0-69점 C급</option>
+            <option value="100">100점만</option>
+            <option value="80-99">80-99점</option>
+            <option value="below70">70점 미만</option>
           </select>
         </div>
       )}

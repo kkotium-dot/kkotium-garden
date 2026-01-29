@@ -16,14 +16,6 @@ interface FilterState {
   seoScore: string;
 }
 
-// 🎯 카테고리 매핑 (영문 → 한글)
-const CATEGORY_MAP: Record<string, string> = {
-  'flower': '꽃',
-  'plant': '식물',
-  'gift': '선물세트',
-  'supplies': '원예용품',
-};
-
 export default function ProductsPage() {
   const [rawProducts, setRawProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +29,7 @@ export default function ProductsPage() {
   });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // 🎯 동적 카테고리 추출 (한글 표시명 포함)
+  // 🎯 동적 카테고리 추출
   const categories = useMemo(() => {
     const uniqueCategories = new Set<string>();
     rawProducts.forEach((p: any) => {
@@ -45,13 +37,10 @@ export default function ProductsPage() {
         uniqueCategories.add(p.category);
       }
     });
-
-    return Array.from(uniqueCategories).map(cat => ({
-      value: cat,
-      label: CATEGORY_MAP[cat] || cat,
-    })).sort((a, b) => a.label.localeCompare(b.label));
+    return Array.from(uniqueCategories).sort();
   }, [rawProducts]);
 
+  // 초기 데이터 로드
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -59,18 +48,7 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      // 🎯 옵션 1: 전체 데이터 로드 후 클라이언트 필터링 (현재 방식)
       const res = await fetch('/api/products');
-
-      // 🎯 옵션 2: API 쿼리 파라미터 활용 (성능 최적화)
-      // const params = new URLSearchParams();
-      // if (filters.category) params.append('category', filters.category);
-      // if (filters.status) params.append('status', filters.status);
-      // if (filters.priceMin) params.append('minPrice', filters.priceMin);
-      // if (filters.priceMax) params.append('maxPrice', filters.priceMax);
-      // if (filters.seoScore) params.append('seoScore', filters.seoScore);
-      // const res = await fetch(`/api/products?${params.toString()}`);
-
       const data = await res.json();
 
       if (data.success) {
@@ -84,12 +62,12 @@ export default function ProductsPage() {
     }
   };
 
-  // 필터링 로직
+  // useMemo로 필터링 (성능 최적화 + 명확한 로직)
   const filteredProducts = useMemo(() => {
     console.log('🔍 필터 적용:', filters);
     let result = [...rawProducts];
 
-    // 1. 카테고리 필터
+    // 1. 카테고리 필터 (✅ 빈 문자열 체크 추가)
     if (filters.category && filters.category.trim() !== '') {
       result = result.filter((p: any) => {
         const productCategory = p.category || '';
@@ -98,7 +76,7 @@ export default function ProductsPage() {
       });
     }
 
-    // 2. 상태 필터
+    // 2. 상태 필터 (✅ 빈 문자열 체크 추가)
     if (filters.status && filters.status.trim() !== '') {
       result = result.filter((p: any) => p.status === filters.status);
     }
@@ -135,7 +113,7 @@ export default function ProductsPage() {
       });
     }
 
-    // 5. SEO 점수 필터 (정확한 범위 매칭)
+    // 5. SEO 점수 필터 (✅ 빈 문자열 체크 + 정확한 매칭)
     if (filters.seoScore && filters.seoScore.trim() !== '') {
       console.log('🎯 SEO 필터 적용:', filters.seoScore);
       result = result.filter((p: any) => {
@@ -148,8 +126,8 @@ export default function ProductsPage() {
           return score >= 80 && score < 100;
         } else if (filters.seoScore === '70-79') {
           return score >= 70 && score < 80;
-        } else if (filters.seoScore === '0-69') {
-          return score >= 0 && score < 70;
+        } else if (filters.seoScore === 'below70') {
+          return score < 70;
         }
         return true;
       });
