@@ -1,63 +1,51 @@
 'use client';
 
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 
 interface SalesChartProps {
-   number[];
+  data: number[];      // ✅ 필드명 추가
   labels: string[];
 }
 
 export default function SalesChart({ data, labels }: SalesChartProps) {
+  // 데이터 변환: recharts 형식
   const chartData = labels.map((label, index) => ({
     name: label,
-    sales: data[index] || 0,
+    매출액: data[index] || 0,
   }));
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">매출 추이 (최근 7일)</h3>
+      <h3 className="text-lg font-bold mb-4">📈 매출 추이</h3>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis
-            dataKey="name"
-            tick={{ fill: '#6b7280', fontSize: 12 }}
-            axisLine={{ stroke: '#e5e7eb' }}
+        <LineChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip 
+            formatter={(value: number) => 
+              new Intl.NumberFormat('ko-KR', {
+                style: 'currency',
+                currency: 'KRW'
+              }).format(value)
+            }
           />
-          <YAxis
-            tick={{ fill: '#6b7280', fontSize: 12 }}
-            axisLine={{ stroke: '#e5e7eb' }}
-            tickFormatter={(value: number) => {
-              if (value >= 1000000) return \`\${(value / 1000000).toFixed(1)}M\`;
-              if (value >= 1000) return \`\${(value / 1000).toFixed(0)}K\`;
-              return value.toString();
-            }}
+          <Line 
+            type="monotone" 
+            dataKey="매출액" 
+            stroke="#ec4899" 
+            strokeWidth={2}
+            dot={{ fill: '#ec4899', r: 4 }}
           />
-          <Tooltip
-            formatter={(value: number) => [\`\${value.toLocaleString()}원\`, '매출']}
-            contentStyle={{
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              border: '1px solid #e5e7eb',
-              borderRadius: '0.5rem',
-            }}
-          />
-          <Legend />
-          <Bar
-            dataKey="sales"
-            fill="#8b5cf6"
-            radius={[8, 8, 0, 0]}
-            maxBarSize={60}
-          />
-        </BarChart>
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );
