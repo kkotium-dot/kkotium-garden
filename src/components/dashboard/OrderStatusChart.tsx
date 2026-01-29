@@ -1,0 +1,96 @@
+'use client';
+
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+
+interface OrderStatusChartProps {
+  data: Record<string, number>;
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: '결제대기',
+  paid: '결제완료',
+  preparing: '배송준비',
+  shipping: '배송중',
+  delivered: '배송완료',
+  cancelled: '취소',
+  refunded: '환불',
+};
+
+const COLORS: Record<string, string> = {
+  pending: '#f59e0b',
+  paid: '#3b82f6',
+  preparing: '#8b5cf6',
+  shipping: '#06b6d4',
+  delivered: '#10b981',
+  cancelled: '#ef4444',
+  refunded: '#6b7280',
+};
+
+interface ChartDataItem {
+  name: string;
+  value: number;
+  color: string;
+}
+
+export default function OrderStatusChart({ data }: OrderStatusChartProps) {
+  const chartData: ChartDataItem[] = Object.entries(data)
+    .filter(([, value]) => value > 0)
+    .map(([key, value]) => ({
+      name: STATUS_LABELS[key] || key,
+      value,
+      color: COLORS[key] || '#6b7280',
+    }));
+
+  if (chartData.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">주문 현황</h3>
+        <div className="flex items-center justify-center h-64 text-gray-500">
+          주문 데이터가 없습니다
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">주문 현황</h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+          <Pie
+            data={chartData}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            label={({ name, percent }: { name: string; percent: number }) =>
+              `${name} ${(percent * 100).toFixed(0)}%`
+            }
+            outerRadius={80}
+            fill="#8884d8"
+            dataKey="value"
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {chartData.map((item) => (
+          <div key={item.name} className="flex items-center justify-between text-sm">
+            <div className="flex items-center">
+              <div
+                className="w-3 h-3 rounded-full mr-2"
+                style={{ backgroundColor: item.color }}
+              />
+              <span className="text-gray-600">{item.name}</span>
+            </div>
+            <span className="font-semibold text-gray-900">{item.value}건</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -1,69 +1,58 @@
-import { NextResponse } from 'next/server';
+// src/app/api/products/[id]/keywords/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function GET(
-  request: Request,
+export async function POST(
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const product = await prisma.product.findUnique({
-      where: { id: parseInt(params.id) },
+      where: { id: params.id },
     });
 
     if (!product) {
       return NextResponse.json(
-        { success: false, error: '상품을 찾을 수 없습니다' },
+        { success: false, error: 'Product not found' },
         { status: 404 }
       );
     }
 
-    // ✅ Prisma 모델 필드명 그대로 사용
-    const prompt = `다음 상품의 네이버 스마트스토어 키워드를 10개 추천해주세요:
+    const prompt = `
+다음 상품의 네이버 스마트스토어 키워드를 추출해주세요:
 상품명: ${product.name}
-가격: ${product.price}원
-카테고리: ${product.category}
-공급사: ${product.supplier}
+카테고리: ${product.category || '미분류'}
+가격: ${product.salePrice}원
+설명: ${product.description || ''}
 
-키워드는 쉼표로 구분하여 JSON 배열로 반환해주세요.`;
+20개의 연관 키워드를 추출해주세요.
+`;
 
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
-        messages: [
-          {
-            role: 'system',
-            content: '당신은 네이버 스마트스토어 SEO 전문가입니다.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      }),
+    // AI API 호출 (추후 구현)
+    const keywords = [
+      product.name,
+      product.category || '꽃',
+      '선물',
+      '화환',
+      '꽃다발'
+    ];
+
+    const updatedProduct = await prisma.product.update({
+      where: { id: params.id },
+      data: { keywords },
     });
-
-    if (!response.ok) {
-      throw new Error('Perplexity API 호출 실패');
-    }
-
-    const data = await response.json();
-    const keywords = JSON.parse(data.choices[0].message.content);
 
     return NextResponse.json({
       success: true,
       keywords,
+      product: updatedProduct,
     });
   } catch (error) {
-    console.error('Keyword Generation Error:', error);
+    console.error('Keyword extraction error:', error);
     return NextResponse.json(
-      { success: false, error: 'AI 키워드 생성 실패', details: String(error) },
+      { success: false, error: 'Failed to extract keywords' },
       { status: 500 }
     );
   }

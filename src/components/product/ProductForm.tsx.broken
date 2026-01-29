@@ -1,0 +1,133 @@
+'use client';
+
+import { useState } from 'react';
+import ProductSeoForm from './seo/ProductSeoForm';
+
+interface ProductFormProps {
+  initialData?: any;
+  onSubmit: (data: any) => void;
+}
+
+export default function ProductForm({ initialData, onSubmit }: ProductFormProps) {
+  const [formData, setFormData] = useState({
+    name: initialData?.name || '',
+    price: initialData?.price || 0,
+    stock: initialData?.stock || 0,
+    description: initialData?.description || '',
+    category: initialData?.category || '',
+    seo: {
+      naver_title: initialData?.naver_title || '',
+      naver_keywords: initialData?.naver_keywords || '',
+      naver_description: initialData?.naver_description || '',
+      naver_category: initialData?.naver_category || '',
+      naver_shipping_fee: initialData?.naver_shipping_fee || '',
+      naver_seller_id: initialData?.naver_seller_id || '',
+      naver_brand: initialData?.naver_brand || '꽃틔움 가든'
+    }
+  });
+
+  const handleBasicChange = (field: string, value: any) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const handleSeoChange = (seoData: any) => {
+    setFormData({ ...formData, seo: seoData });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const submitData = {
+      ...formData,
+      ...formData.seo
+    };
+    onSubmit(submitData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8 max-w-4xl mx-auto p-6">
+      {/* 기본 정보 */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-xl font-bold mb-6">상품 기본 정보</h3>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">상품명</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => handleBasicChange('name', e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">가격 (원)</label>
+              <input
+                type="number"
+                value={formData.price}
+                onChange={(e) => handleBasicChange('price', Number(e.target.value))}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">재고</label>
+              <input
+                type="number"
+                value={formData.stock}
+                onChange={(e) => handleBasicChange('stock', Number(e.target.value))}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">카테고리</label>
+            <select
+              value={formData.category}
+              onChange={(e) => handleBasicChange('category', e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              <option value="">선택하세요</option>
+              <option value="꽃다발">꽃다발</option>
+              <option value="화분">화분</option>
+              <option value="꽃바구니">꽃바구니</option>
+              <option value="관엽식물">관엽식물</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">상품 설명</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => handleBasicChange('description', e.target.value)}
+              rows={5}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Naver SEO */}
+      <div>
+        <h3 className="text-xl font-bold mb-4">네이버 쇼핑 SEO 설정</h3>
+        <ProductSeoForm 
+          seoData={formData.seo}
+          onSeoChange={handleSeoChange}
+        />
+      </div>
+
+      <button
+        type="submit"
+        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium text-lg"
+      >
+        상품 {initialData ? '수정' : '등록'}하기
+      </button>
+    </form>
+  );
+}

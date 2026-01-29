@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import Sidebar from "@/components/layout/Sidebar";
 
 export const metadata: Metadata = {
   title: "꽃티움가든 - 상품 관리 시스템",
@@ -25,15 +25,18 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="font-pretendard bg-cream">
-        <div className="flex">
+      <body className="font-pretendard bg-cream antialiased">
+        <div className="flex min-h-screen">
           {/* Sidebar */}
           <Sidebar />
 
           {/* Main Content */}
-          <div className="flex-1">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Header */}
             <Header />
-            <main className="p-6">
+
+            {/* Main */}
+            <main className="flex-1 overflow-y-auto p-6 lg:p-8">
               {children}
             </main>
           </div>
