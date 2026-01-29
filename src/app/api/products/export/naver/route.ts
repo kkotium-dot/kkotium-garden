@@ -1,71 +1,58 @@
-import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+// src/app/api/products/export/naver/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const products = await prisma.product.findMany({
+      where: { status: 'active' },
       orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        productCode: true,
-        productName: true,
-        brand: true,
-        category: true,
-        supplierId: true,
-        supplierProductCode: true,
-        stockQuantity: true,
-        wholesalePrice: true,
-        sellingPrice: true,
-        marginRate: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    })
+    });
 
+    // CSV 헤더
     const headers = [
       '상품명',
       '판매가',
-      '상품코드',
-      '재고수량',
+      'SKU',
+      '재고',
       '카테고리',
       '브랜드',
-      '상품상태',
-      '원가',
+      '도매가',
       '마진율',
-      '상품설명'
-    ].join(',')
+      '키워드',
+    ];
 
-    const rows = products.map(p => {
-      return [
-        `"${p.productName}"`,
-        p.sellingPrice,
-        p.productCode,
-        p.stockQuantity,
-        `"${p.category}"`,
-        `"${p.brand}"`,
-        p.status === 'SALE' ? '판매중' : p.status === 'SOLD_OUT' ? '품절' : '판매중지',
-        p.wholesalePrice,
-        `${p.marginRate.toFixed(2)}%`,
-        `"${''}"` 
-      ].join(',')
-    })
+    // CSV 데이터 생성
+    const rows = products.map(p => [
+      `"${p.name}"`,
+      p.salePrice,
+      p.sku,
+      100, // 기본 재고
+      `"${p.category || '꽃'}"`,
+      '"꽃티움"',
+      p.supplierPrice,
+      `${p.margin.toFixed(2)}%`,
+      `"${Array.isArray(p.keywords) ? (p.keywords as string[]).join(',') : ''}"`,
+    ]);
 
-    const csv = [headers, ...rows].join('\n')
-    const bom = '\uFEFF'
-    const csvWithBom = bom + csv
+    const csv = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
 
-    return new NextResponse(csvWithBom, {
-      status: 200,
+    return new NextResponse(csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="naver_products_${new Date().toISOString().split('T')[0]}.csv"`
-      }
-    })
+        'Content-Disposition': `attachment; filename="naver_products_${new Date().toISOString().split('T')[0]}.csv"`,
+      },
+    });
   } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: 'Export failed' }, { status: 500 })
+    console.error('Export error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to export products' },
+      { status: 500 }
+    );
   }
 }

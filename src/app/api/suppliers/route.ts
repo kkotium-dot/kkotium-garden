@@ -1,16 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export async function GET() {
-  const suppliers = [
-    '도매꾹',
-    '오늘의도매',
-    '삼익상사',
-    '직접구매',
-    '기타',
-  ];
+  try {
+    const suppliers = await prisma.supplier.findMany({
+      orderBy: { name: 'asc' },
+    });
 
-  return NextResponse.json({
-    success: true,
-    suppliers,
-  });
+    return NextResponse.json({
+      success: true,
+      suppliers,
+    });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: 'Fetch failed' }, { status: 500 });
+  }
 }

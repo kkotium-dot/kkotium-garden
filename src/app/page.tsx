@@ -1,256 +1,173 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import ProductCard from '@/components/products/ProductCard';
-import Card from '@/components/common/Card';
-import Button from '@/components/common/Button';
+import StatCard from '@/components/dashboard/StatCard';
+import SalesChart from '@/components/dashboard/SalesChart';
+import OrderStatusChart from '@/components/dashboard/OrderStatusChart';
+import PopularProducts from '@/components/dashboard/PopularProducts';
+import RecentOrders from '@/components/dashboard/RecentOrders';
 
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  originalPrice: number;
-  imageUrl?: string | null;
-  category?: string | null;
-  vendorName?: string | null;
-  status: string;
-  aiScore?: number | null;
+interface DashboardStats {
+  todaySales: number;
+  todaySalesChange: number;
+  todayOrders: number;
+  todayOrdersChange: number;
+  monthSales: number;
+  monthOrders: number;
+  weekSales: number[];
+  weekLabels: string[];
+  totalProducts: number;
+  activeProducts: number;
+  outOfStockProducts: number;
+  ordersByStatus: Record<string, number>;
+  topProducts: Array<{
+    id: string;
+    name: string;
+    salesCount: number;
+    revenue: number;
+    mainImage?: string | null;
+  }>;
+  recentOrders: Array<{
+    id: string;
+    orderNumber: string;
+    customerName: string;
+    totalPrice: number;
+    status: string;
+    orderDate: Date;
+  }>;
 }
 
-export default function Home() {
-  const [products, setProducts] = useState<Product[]>([]);
+export default function DashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
-    name: '',
-    price: '',
-    originalPrice: '',
-    category: '',
-    vendorName: '',
-  });
+  const [error, setError] = useState<string | null>(null);
 
-  // 상품 목록 불러오기
-  const fetchProducts = async () => {
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
     try {
-      const res = await fetch('/api/products');
-      const data = await res.json();
+      setLoading(true);
+      const response = await fetch('/api/dashboard');
+      const data = await response.json();
+
       if (data.success) {
-        setProducts(data.products);
+        setStats(data.stats);
+        setError(null);
+      } else {
+        setError(data.error || '통계 조회 실패');
       }
-    } catch (error) {
-      console.error('상품 조회 실패:', error);
+    } catch (err) {
+      setError('서버 연결 실패');
+      console.error('Dashboard fetch error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">대시보드 로딩중...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // 상품 등록
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  if (error || !stats) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">❌ {error || '데이터를 불러올 수 없습니다'}</p>
+          <button
+            onClick={fetchDashboardStats}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          >
+            다시 시도
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-    try {
-      const res = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        alert('상품이 등록되었습니다!');
-        setFormData({
-          name: '',
-          price: '',
-          originalPrice: '',
-          category: '',
-          vendorName: '',
-        });
-        fetchProducts();
-      } else {
-        alert(data.error || '등록 실패');
-      }
-    } catch (error) {
-      console.error('등록 실패:', error);
-      alert('등록 중 오류가 발생했습니다');
-    }
-  };
-
-  // 상품 삭제
-  const handleDelete = async (id: number) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return;
-
-    try {
-      const res = await fetch(`/api/products?id=${id}`, {
-        method: 'DELETE',
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        alert('삭제되었습니다');
-        fetchProducts();
-      } else {
-        alert(data.error || '삭제 실패');
-      }
-    } catch (error) {
-      console.error('삭제 실패:', error);
-      alert('삭제 중 오류가 발생했습니다');
-    }
-  };
+  const totalActiveOrders = Object.entries(stats.ordersByStatus)
+    .filter(([key]) => !['cancelled', 'refunded', 'delivered'].includes(key))
+    .reduce((sum, [_, count]) => sum + count, 0);
 
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* 헤더 */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-text-dark mb-2 font-poppins">
-          상품 관리
-        </h1>
-        <p className="text-gray-500 font-pretendard">
-          네이버 스마트스토어 상품을 관리하고 최적화하세요
-        </p>
-      </div>
-
-      {/* 상품 등록 폼 */}
-      <Card className="mb-8">
-        <h2 className="text-xl font-semibold mb-4 text-text-dark font-pretendard">
-          ➕ 새 상품 등록
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-dark mb-1 font-pretendard">
-                상품명 <span className="text-red">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="상품명을 입력하세요"
-                className="w-full px-4 py-2 border border-beige rounded-lg focus:outline-none focus:border-pink-main font-pretendard"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-dark mb-1 font-pretendard">
-                카테고리
-              </label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-4 py-2 border border-beige rounded-lg focus:outline-none focus:border-pink-main font-pretendard"
-              >
-                <option value="">카테고리 선택</option>
-                <option value="홈데코">홈데코</option>
-                <option value="주방용품">주방용품</option>
-                <option value="생활용품">생활용품</option>
-                <option value="패브릭">패브릭</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-dark mb-1 font-pretendard">
-                판매가 (원) <span className="text-red">*</span>
-              </label>
-              <input
-                type="number"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                placeholder="0"
-                className="w-full px-4 py-2 border border-beige rounded-lg focus:outline-none focus:border-pink-main font-pretendard"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-dark mb-1 font-pretendard">
-                원가 (원) <span className="text-red">*</span>
-              </label>
-              <input
-                type="number"
-                value={formData.originalPrice}
-                onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value })}
-                placeholder="0"
-                className="w-full px-4 py-2 border border-beige rounded-lg focus:outline-none focus:border-pink-main font-pretendard"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-dark mb-1 font-pretendard">
-                공급업체
-              </label>
-              <select
-                value={formData.vendorName}
-                onChange={(e) => setFormData({ ...formData, vendorName: e.target.value })}
-                className="w-full px-4 py-2 border border-beige rounded-lg focus:outline-none focus:border-pink-main font-pretendard"
-              >
-                <option value="">공급업체 선택</option>
-                <option value="도매꾹">도매꾹</option>
-                <option value="도매매">도매매</option>
-                <option value="직접입력">직접입력</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex gap-2 justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() =>
-                setFormData({
-                  name: '',
-                  price: '',
-                  originalPrice: '',
-                  category: '',
-                  vendorName: '',
-                })
-              }
-            >
-              취소
-            </Button>
-            <Button type="submit" variant="primary">
-              상품 등록
-            </Button>
-          </div>
-        </form>
-      </Card>
-
-      {/* 상품 목록 */}
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold text-text-dark font-pretendard">
-          📦 등록된 상품 목록 ({products.length}개)
-        </h2>
-      </div>
-
-      {loading ? (
-        <Card>
-          <div className="text-center py-8 text-gray-500">
-            로딩 중...
-          </div>
-        </Card>
-      ) : products.length === 0 ? (
-        <Card>
-          <div className="text-center py-8 text-gray-500">
-            등록된 상품이 없습니다
-          </div>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {products.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onEdit={() => alert('수정 기능은 곧 추가됩니다')}
-              onDelete={() => handleDelete(product.id)}
-            />
-          ))}
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">🌸 대시보드</h1>
+          <p className="text-gray-600">꽃티움 가든 관리 시스템</p>
         </div>
-      )}
+
+        {/* 핵심 지표 카드 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title="오늘 매출"
+            value={`${stats.todaySales.toLocaleString()}원`}
+            change={stats.todaySalesChange}
+            icon="💰"
+            color="purple"
+          />
+          <StatCard
+            title="오늘 주문"
+            value={`${stats.todayOrders}건`}
+            change={stats.todayOrdersChange}
+            icon="📦"
+            color="blue"
+          />
+          <StatCard
+            title="총 상품"
+            value={`${stats.totalProducts}개`}
+            icon="🌸"
+            color="green"
+          />
+          <StatCard
+            title="미처리 주문"
+            value={`${totalActiveOrders}건`}
+            icon="⏳"
+            color="orange"
+          />
+        </div>
+
+        {/* 월 통계 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-md p-6 text-white">
+            <p className="text-purple-100 text-sm mb-1">이번 달 매출</p>
+            <h3 className="text-3xl font-bold">{stats.monthSales.toLocaleString()}원</h3>
+          </div>
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md p-6 text-white">
+            <p className="text-blue-100 text-sm mb-1">이번 달 주문</p>
+            <h3 className="text-3xl font-bold">{stats.monthOrders}건</h3>
+          </div>
+          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-md p-6 text-white">
+            <p className="text-green-100 text-sm mb-1">활성 상품</p>
+            <h3 className="text-3xl font-bold">{stats.activeProducts}개</h3>
+          </div>
+        </div>
+
+        {/* 차트 영역 */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <SalesChart data={stats.weekSales} labels={stats.weekLabels} />
+          </div>
+          <div>
+            <OrderStatusChart data={stats.ordersByStatus} />
+          </div>
+        </div>
+
+        {/* 인기 상품 & 최근 주문 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <PopularProducts products={stats.topProducts} />
+          <RecentOrders orders={stats.recentOrders} />
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,0 +1,69 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { writeFile, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
+import path from 'path';
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return NextResponse.json(
+        { success: false, error: '파일이 없습니다.' },
+        { status: 400 }
+      );
+    }
+
+    // 파일 유효성 검사
+    if (!file.type.startsWith('image/')) {
+      return NextResponse.json(
+        { success: false, error: '이미지 파일만 업로드 가능합니다.' },
+        { status: 400 }
+      );
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json(
+        { success: false, error: '파일 크기는 5MB 이하여야 합니다.' },
+        { status: 400 }
+      );
+    }
+
+    // 파일 저장 경로 설정
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+
+    // uploads 폴더가 없으면 생성
+    if (!existsSync(uploadsDir)) {
+      await mkdir(uploadsDir, { recursive: true });
+    }
+
+    // 파일명 생성 (타임스탬프 + 랜덤 문자열)
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 15);
+    const ext = file.name.split('.').pop();
+    const filename = `${timestamp}-${randomStr}.${ext}`;
+    const filepath = path.join(uploadsDir, filename);
+
+    // 파일 저장
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    await writeFile(filepath, buffer);
+
+    // URL 생성
+    const url = `/uploads/${filename}`;
+
+    return NextResponse.json({
+      success: true,
+      url: url,
+      filename: filename,
+    });
+
+  } catch (error: any) {
+    console.error('이미지 업로드 에러:', error);
+    return NextResponse.json(
+      { success: false, error: '이미지 업로드 중 오류가 발생했습니다.' },
+      { status: 500 }
+    );
+  }
+}

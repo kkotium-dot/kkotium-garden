@@ -1,0 +1,139 @@
+'use client';
+
+import { formatKRW, formatPercent, calculateMargin } from '@/lib/utils/format';
+import Link from 'next/link';
+
+interface Product {
+  id: string;
+  name: string;
+  supplierPrice: number;
+  salePrice: number;
+  shippingCost: number;
+  category?: string;
+  status: string;
+  stock: number;
+  images?: string[];
+}
+
+interface ProductCardProps {
+  product: Product;
+  onDelete?: (id: string) => void;
+}
+
+export default function ProductCard({ product, onDelete }: ProductCardProps) {
+  const { profit, margin } = calculateMargin(
+    product.supplierPrice,
+    product.salePrice,
+    product.shippingCost
+  );
+
+  const getStatusBadge = (status: string) => {
+    const badges: Record<string, { text: string; className: string }> = {
+      active: { text: '판매중', className: 'bg-green-100 text-green-700' },
+      inactive: { text: '판매중지', className: 'bg-gray-100 text-gray-700' },
+      soldout: { text: '품절', className: 'bg-red-100 text-red-700' },
+    };
+    return badges[status] || badges.active;
+  };
+
+  const getMarginColor = (margin: number) => {
+    if (margin >= 30) return 'text-green-600';
+    if (margin >= 20) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const badge = getStatusBadge(product.status);
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+      {/* 상품 이미지 */}
+      <div className="aspect-square bg-gray-100 relative">
+        {product.images && product.images.length > 0 ? (
+          <img
+            src={product.images[0]}
+            alt={product.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-400">
+            <span className="text-6xl">📦</span>
+          </div>
+        )}
+        <div className="absolute top-2 right-2">
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${badge.className}`}>
+            {badge.text}
+          </span>
+        </div>
+      </div>
+
+      {/* 상품 정보 */}
+      <div className="p-4">
+        {/* 카테고리 */}
+        {product.category && (
+          <p className="text-xs text-gray-500 mb-1">{product.category}</p>
+        )}
+
+        {/* 상품명 */}
+        <h3 className="font-semibold text-gray-900 mb-3 line-clamp-2 min-h-[3rem]">
+          {product.name}
+        </h3>
+
+        {/* 가격 정보 */}
+        <div className="space-y-2 mb-4">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">도매가</span>
+            <span className="font-medium">{formatKRW(product.supplierPrice)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">판매가</span>
+            <span className="font-bold text-pink-600">{formatKRW(product.salePrice)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">순이익</span>
+            <span className="font-medium text-blue-600">{formatKRW(profit)}</span>
+          </div>
+          <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+            <span className="text-sm font-medium text-gray-700">마진율</span>
+            <span className={`text-lg font-bold ${getMarginColor(margin)}`}>
+              {formatPercent(margin)}
+            </span>
+          </div>
+        </div>
+
+        {/* 재고 */}
+        <div className="mb-4">
+          <div className="flex justify-between text-xs text-gray-500 mb-1">
+            <span>재고</span>
+            <span>{product.stock}개</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className={`h-2 rounded-full ${
+                product.stock > 50 ? 'bg-green-500' : product.stock > 20 ? 'bg-yellow-500' : 'bg-red-500'
+              }`}
+              style={{ width: `${Math.min(product.stock, 100)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* 액션 버튼 */}
+        <div className="flex gap-2">
+          <Link
+            href={`/products/${product.id}/edit`}
+            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+          >
+            수정
+          </Link>
+          {onDelete && (
+            <button
+              onClick={() => onDelete(product.id)}
+              className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
+            >
+              삭제
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

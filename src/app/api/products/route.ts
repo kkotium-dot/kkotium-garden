@@ -1,13 +1,57 @@
-import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-const prisma = new PrismaClient();
-
-// 상품 목록 조회 (GET)
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+
+    // 검색 및 필터 파라미터
+    const search = searchParams.get('search') || '';
+    const category = searchParams.get('category') || '';
+    const status = searchParams.get('status') || '';
+    const minPrice = searchParams.get('minPrice') || '';
+    const maxPrice = searchParams.get('maxPrice') || '';
+
+    // 필터 조건 구성
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { sku: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (category) {
+      where.category = category;
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (minPrice) {
+      where.salePrice = { ...where.salePrice, gte: parseInt(minPrice) };
+    }
+
+    if (maxPrice) {
+      where.salePrice = { ...where.salePrice, lte: parseInt(maxPrice) };
+    }
+
+    // 상품 조회
     const products = await prisma.product.findMany({
-      orderBy: { createdAt: 'desc' },
+      where,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        supplier: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json({
@@ -16,131 +60,9 @@ export async function GET() {
       count: products.length,
     });
   } catch (error: any) {
-    console.error('❌ GET Error:', error);
+    console.error('Products GET error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: '상품 조회 실패',
-        details: error.message 
-      },
-      { status: 500 }
-    );
-  }
-}
-
-// 상품 등록 (POST)
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-
-    const { name, price, originalPrice, category, vendorName } = body;
-
-    // 유효성 검사
-    if (!name || !price || !originalPrice) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: '필수 항목을 입력해주세요' 
-        },
-        { status: 400 }
-      );
-    }
-
-    // 상품 생성
-    const product = await prisma.product.create({
-      data: {
-        name,
-        price: parseInt(price),
-        originalPrice: parseInt(originalPrice),
-        category: category || null,
-        vendorName: vendorName || null,
-        status: 'todo',
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      product,
-      message: '상품이 등록되었습니다',
-    });
-  } catch (error: any) {
-    console.error('❌ POST Error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: '상품 등록 실패',
-        details: error.message 
-      },
-      { status: 500 }
-    );
-  }
-}
-
-// 상품 수정 (PUT)
-export async function PUT(request: Request) {
-  try {
-    const body = await request.json();
-    const { id, ...data } = body;
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: '상품 ID가 필요합니다' },
-        { status: 400 }
-      );
-    }
-
-    const product = await prisma.product.update({
-      where: { id: parseInt(id) },
-      data,
-    });
-
-    return NextResponse.json({
-      success: true,
-      product,
-      message: '상품이 수정되었습니다',
-    });
-  } catch (error: any) {
-    console.error('❌ PUT Error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: '상품 수정 실패',
-        details: error.message 
-      },
-      { status: 500 }
-    );
-  }
-}
-
-// 상품 삭제 (DELETE)
-export async function DELETE(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: '상품 ID가 필요합니다' },
-        { status: 400 }
-      );
-    }
-
-    await prisma.product.delete({
-      where: { id: parseInt(id) },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: '상품이 삭제되었습니다',
-    });
-  } catch (error: any) {
-    console.error('❌ DELETE Error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: '상품 삭제 실패',
-        details: error.message 
-      },
+      { success: false, error: '상품 목록 조회 실패: ' + error.message },
       { status: 500 }
     );
   }

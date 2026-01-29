@@ -1,0 +1,137 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+// Supabase 클라이언트 초기화 (Service Role Key 사용!)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Supabase 환경 변수가 설정되지 않았습니다!');
+  console.error('   NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅' : '❌');
+  console.error('   SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? '✅' : '❌');
+}
+
+// Service Role Key로 Supabase 클라이언트 생성 (모든 권한!)
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+console.log('✅ Supabase 클라이언트 초기화 완료 (Dashboard Stats API)');
+
+// GET: 대시보드 통계
+export async function GET(request: NextRequest) {
+  try {
+    console.log('\n' + '='.repeat(80));
+    console.log('📊 대시보드 통계 API 호출됨 (Service Role Key 사용)');
+    console.log('='.repeat(80));
+
+    // 환경 변수 체크
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Supabase 환경 변수가 없습니다!');
+      return NextResponse.json({
+        totalProducts: 0,
+        totalRevenue: 0,
+        totalProfit: 0,
+        averageMargin: 0,
+        error: 'Supabase 환경 변수가 설정되지 않았습니다.'
+      });
+    }
+
+    // 전체 상품 조회 (Product 테이블 - 대문자 P!)
+    console.log('💾 Product 테이블 조회 시작...');
+    const { data: products, error, count } = await supabase
+      .from('Product')  // ✅ 대문자 P!
+      .select('*', { count: 'exact' });
+
+    if (error) {
+      console.error('\n❌ Supabase 조회 에러:');
+      console.error('에러 코드:', error.code);
+      console.error('에러 메시지:', error.message);
+      console.error('에러 상세:', error.details);
+
+      return NextResponse.json({
+        totalProducts: 0,
+        totalRevenue: 0,
+        totalProfit: 0,
+        averageMargin: 0,
+        error: error.message
+      });
+    }
+
+    console.log('\n✅ 조회 성공!');
+    console.log('총 상품 수:', products?.length || 0);
+    console.log('Count:', count);
+
+    // 상품이 없으면 0 반환
+    if (!products || products.length === 0) {
+      console.log('⚠️  상품이 없습니다');
+      console.log('='.repeat(80) + '\n');
+
+      return NextResponse.json({
+        totalProducts: 0,
+        totalRevenue: 0,
+        totalProfit: 0,
+        averageMargin: 0,
+      });
+    }
+
+    // 통계 계산
+    console.log('\n📈 통계 계산 시작...');
+    let totalRevenue = 0;
+    let totalProfit = 0;
+    let totalMargin = 0;
+
+    products.forEach(product => {
+      // camelCase 필드명 사용 (Product 테이블)
+      const supplierPrice = product.supplierPrice || 0;
+      const salePrice = product.salePrice || 0;
+      const shippingCost = product.shippingFee || 0;
+
+      const cost = supplierPrice + shippingCost;
+      const fee = salePrice * 0.058; // 네이버 수수료 5.8%
+      const profit = salePrice - cost - fee;
+      const margin = salePrice > 0 ? (profit / salePrice) * 100 : 0;
+
+      totalRevenue += salePrice;
+      totalProfit += profit;
+      totalMargin += margin;
+
+      console.log(`  📦 ${product.name || product.sku}`);
+      console.log(`     판매가: ${salePrice.toLocaleString()}원, 마진: ${margin.toFixed(1)}%`);
+    });
+
+    // 평균 마진율
+    const averageMargin = products.length > 0 ? totalMargin / products.length : 0;
+
+    const result = {
+      totalProducts: products.length,
+      totalRevenue: Math.round(totalRevenue),
+      totalProfit: Math.round(totalProfit),
+      averageMargin: parseFloat(averageMargin.toFixed(2)),
+    };
+
+    console.log('\n📊 최종 통계:');
+    console.log('  - 전체 상품:', result.totalProducts, '개');
+    console.log('  - 총 매출:', result.totalRevenue.toLocaleString(), '원');
+    console.log('  - 순이익:', result.totalProfit.toLocaleString(), '원');
+    console.log('  - 평균 마진율:', result.averageMargin, '%');
+    console.log('='.repeat(80) + '\n');
+
+    return NextResponse.json(result);
+
+  } catch (error: any) {
+    console.error('\n' + '='.repeat(80));
+    console.error('❌ 대시보드 통계 조회 중 예외 발생');
+    console.error('='.repeat(80));
+    console.error('에러 이름:', error.name);
+    console.error('에러 메시지:', error.message);
+    console.error('스택:', error.stack);
+    console.error('='.repeat(80) + '\n');
+
+    return NextResponse.json({
+      totalProducts: 0,
+      totalRevenue: 0,
+      totalProfit: 0,
+      averageMargin: 0,
+      error: error.message || '통계 조회 중 오류가 발생했습니다.'
+    });
+  }
+}

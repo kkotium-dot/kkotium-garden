@@ -1,0 +1,133 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    const {
+      // 기존 필드 (10개) - 완전 보존
+      name,
+      category,
+      supplierId,
+      supplierPrice,
+      salePrice,
+      shippingCost,
+      keywords,
+      description,
+      images,
+      options,
+
+      // 네이버 SEO 필드 (27개) - 신규 추가
+      naver_title,
+      naver_keywords,
+      naver_description,
+      naver_brand,
+      naver_manufacturer,
+      naver_origin,
+      naver_material,
+      naver_color,
+      naver_size,
+      naver_weight,
+      naver_care_instructions,
+      naver_warranty,
+      naver_certification,
+      naver_tax_type,
+      naver_gift_wrapping,
+      naver_as_info,
+      naver_delivery_info,
+      naver_exchange_info,
+      naver_refund_info,
+      naver_min_order,
+      naver_max_order,
+      naver_adult_only,
+      naver_parallel_import,
+      naver_custom_option_1,
+      naver_custom_option_2,
+      naver_custom_option_3,
+      naver_meta_tags,
+    } = body;
+
+    // 필수 항목 검증 (기존 유지)
+    if (!name || !supplierId || !supplierPrice || !salePrice) {
+      return NextResponse.json(
+        { success: false, error: '필수 항목을 입력해주세요' },
+        { status: 400 }
+      );
+    }
+
+    // SKU 자동 생성 (기존 유지)
+    const timestamp = Date.now().toString().slice(-8);
+    const sku = `KG-${timestamp}`;
+
+    // 마진 계산 (기존 유지)
+    const platformFee = Math.round(salePrice * 0.058);
+    const totalCost = supplierPrice + (shippingCost || 3000);
+    const profit = salePrice - totalCost - platformFee;
+    const margin = Math.round((profit / salePrice) * 100);
+
+    // 상품 등록 (기존 필드 + SEO 필드)
+    const product = await prisma.product.create({
+      data: {
+        // 기존 필드 (완전 보존)
+        name,
+        sku,
+        category: category || '',
+        supplierId,
+        supplierPrice: parseInt(supplierPrice),
+        salePrice: parseInt(salePrice),
+        shippingCost: parseInt(shippingCost || 3000),
+        margin,
+        keywords: keywords || [],
+        description: description || '',
+        images: images || [],
+        options: options || [],
+        status: 'DRAFT',
+
+        // 네이버 SEO 필드 (신규 추가 - 선택적)
+        naver_title: naver_title || name, // 기본값: 상품명
+        naver_keywords: naver_keywords || '',
+        naver_description: naver_description || description || '',
+        naver_brand: naver_brand || '',
+        naver_manufacturer: naver_manufacturer || '',
+        naver_origin: naver_origin || '국내',
+        naver_material: naver_material || '',
+        naver_color: naver_color || '',
+        naver_size: naver_size || '',
+        naver_weight: naver_weight || '',
+        naver_care_instructions: naver_care_instructions || '',
+        naver_warranty: naver_warranty || '',
+        naver_certification: naver_certification || '',
+        naver_tax_type: naver_tax_type || '과세',
+        naver_gift_wrapping: naver_gift_wrapping || false,
+        naver_as_info: naver_as_info || '',
+        naver_delivery_info: naver_delivery_info || '',
+        naver_exchange_info: naver_exchange_info || '',
+        naver_refund_info: naver_refund_info || '',
+        naver_min_order: naver_min_order || '1',
+        naver_max_order: naver_max_order || '999',
+        naver_adult_only: naver_adult_only || false,
+        naver_parallel_import: naver_parallel_import || false,
+        naver_custom_option_1: naver_custom_option_1 || '',
+        naver_custom_option_2: naver_custom_option_2 || '',
+        naver_custom_option_3: naver_custom_option_3 || '',
+        naver_meta_tags: naver_meta_tags || '',
+      },
+      include: {
+        supplier: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      product,
+      message: '상품이 등록되었습니다',
+    });
+  } catch (error: any) {
+    console.error('Product creation error:', error);
+    return NextResponse.json(
+      { success: false, error: '상품 등록 실패: ' + error.message },
+      { status: 500 }
+    );
+  }
+}

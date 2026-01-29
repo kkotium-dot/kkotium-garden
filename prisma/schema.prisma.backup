@@ -1,0 +1,193 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String
+  level     Int       @default(1)
+  exp       Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+  orders    Order[]
+}
+
+model Product {
+  id                      String    @id @default(cuid())
+  naver_title             String?
+  naver_keywords          String?
+  naver_description       String?
+  seo_title               String?
+  seo_keywords            String?
+  seo_description         String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  additionalImages        Json?
+  aiGeneratedDesc         String?
+  aiGeneratedTags         Json?
+  aiGeneratedTitle        String?
+  aiScore                 Int?
+  asInfo                  String    @default("평일 10:00~18:00")
+  asPhone                 String    @default("고객센터 문의")
+  barcode                 String?
+  brand                   String    @default("꽃틔움")
+  category                String?
+  courierCode             String    @default("CJGLS")
+  description             String?
+  exchangeShippingFee     Int       @default(6000)
+  freeShippingMinPrice    Int       @default(30000)
+  freeShippingThreshold   Int?
+  hasOptions              Boolean   @default(false)
+  hookPhrase              String?
+  internalNote            String?
+  internalTags            Json?
+  keywords                Json?
+  lastSaleDate            DateTime?
+  mainImage               String?
+  images                  String[]  @default([])
+  manufacturer            String    @default("도매매 공급사")
+  margin                  Float
+  minorPurchase           String    @default("Y")
+  name                    String
+  naverCategoryCode       String    @default("50003307")
+  naverProductId          String?
+  optionName              String?
+  optionType              String?
+  optionValues            Json?
+  options                 Json?
+  originCode              String    @default("0001")
+  productInfoManufacturer String?
+  productInfoModel        String?
+  productInfoName         String?
+  productStatus           String    @default("신상품")
+  returnShippingFee       Int       @default(3000)
+  salePrice               Int
+  salesCount              Int       @default(0)
+  sellerCode              String?
+  seoTitle                String?
+  shippingFee             Int       @default(0)
+  shippingMethod          String    @default("택배, 소포, 등기")
+  shippingPayType         String    @default("선결제")
+  shippingStrategy        String    @default("free")
+  shippingType            String    @default("조건부 무료")
+  sku                     String    @unique
+  status                  String    @default("todo")
+  supplierId              String?
+  supplierPrice           Int
+  supplierReturnFee       Int       @default(0)
+  supplierShippingFee     Int       @default(0)
+  tags                    Json?
+  targetKeywords          Json?
+  taxType                 String    @default("과세상품")
+  userId                  String
+  vendorCode              String?
+  supplier                Supplier? @relation(fields: [supplierId], references: [id])
+  user                    User      @relation(fields: [userId], references: [id])
+  orderItems              OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([supplierId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model Supplier {
+  id        String    @id @default(cuid())
+  name      String
+  platform  String
+  createdAt DateTime  @default(now())
+  products  Product[]
+
+  @@index([platform])
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  orderNumber       String      @unique
+
+  // 고객 정보
+  customerName      String
+  customerPhone     String
+  customerEmail     String
+
+  // 배송 정보
+  shippingAddress   String
+  shippingZipcode   String?
+  shippingRequest   String?
+
+  // 상태
+  status            String      @default("pending")
+  // pending: 결제대기
+  // paid: 결제완료
+  // preparing: 배송준비
+  // shipping: 배송중
+  // delivered: 배송완료
+  // cancelled: 취소
+  // refunded: 환불
+  // returning: 반품중
+  // returned: 반품완료
+
+  // 결제 정보
+  paymentMethod     String
+  totalPrice        Int
+  shippingFee       Int         @default(0)
+  discount          Int         @default(0)
+
+  // 배송 정보
+  trackingNumber    String?
+  courierCompany    String?
+
+  // 날짜
+  orderDate         DateTime    @default(now())
+  paidAt            DateTime?
+  shippedAt         DateTime?
+  deliveredAt       DateTime?
+  cancelledAt       DateTime?
+
+  // 메모
+  adminMemo         String?
+
+  // 관계
+  userId            String?
+  user              User?       @relation(fields: [userId], references: [id])
+
+  items             OrderItem[]
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([orderNumber])
+  @@index([status])
+  @@index([customerPhone])
+  @@index([orderDate])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+
+  productName String
+  productSku  String?
+  quantity    Int
+  price       Int
+  options     String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}

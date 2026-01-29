@@ -1,0 +1,292 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { createId } from '@paralleldrive/cuid2';
+
+// Supabase 클라이언트 초기화 (Service Role Key 사용!)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Supabase 환경 변수가 설정되지 않았습니다!');
+  console.error('   NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅' : '❌');
+  console.error('   SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? '✅' : '❌');
+}
+
+// Service Role Key로 Supabase 클라이언트 생성 (모든 권한!)
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+console.log('✅ Supabase 클라이언트 초기화 완료 (Service Role Key 사용)');
+
+// SKU 생성 함수
+function generateSKU(): string {
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `SKU${year}${month}${day}${random}`;
+}
+
+// POST: 상품 저장
+export async function POST(request: NextRequest) {
+  try {
+    console.log('\n' + '='.repeat(80));
+    console.log('💾 상품 저장 API 호출됨 (Service Role Key 사용)');
+    console.log('='.repeat(80));
+
+    // 환경 변수 체크
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Supabase 환경 변수가 없습니다!');
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Supabase 환경 변수가 설정되지 않았습니다. .env.local 파일을 확인하세요.',
+        },
+        { status: 500 }
+      );
+    }
+
+    const body = await request.json();
+    console.log('📦 요청 데이터:', {
+      name: body.name,
+      supplierPrice: body.supplierPrice,
+      salePrice: body.salePrice,
+    });
+
+    // ID와 SKU 자동 생성
+    const id = createId(); // cuid2 생성
+    const sku = generateSKU();
+    console.log('🆔 생성된 ID:', id);
+    console.log('🏷️  생성된 SKU:', sku);
+
+    // 기본 userId (인증 구현 전까지 임시)
+    const userId = 'temp-user-id';
+
+    // 상품 데이터 준비
+    const productData = {
+      id: id, // ✅ id를 명시적으로 전달!
+      userId: userId,
+      name: body.name || '상품명 없음',
+      sku: sku,
+      vendorCode: body.vendorCode || null,
+      category: body.category || '미분류',
+      supplierId: body.supplierId || null,
+      supplierPrice: parseInt(body.supplierPrice) || 0,
+      salePrice: parseInt(body.salePrice) || 0,
+      margin: parseFloat(body.margin) || 0,
+      shippingStrategy: body.shippingStrategy || 'free',
+      freeShippingThreshold: body.freeShippingThreshold || null,
+      shippingFee: parseInt(body.shippingFee) || 0,
+      supplierShippingFee: parseInt(body.supplierShippingFee) || 0,
+      supplierReturnFee: parseInt(body.supplierReturnFee) || 0,
+      hasOptions: Boolean(body.hasOptions),
+      optionName: body.optionName || null,
+      optionValues: body.optionValues || null,
+      mainImage: body.mainImage || null,
+      additionalImages: body.additionalImages || null,
+      description: body.description || null,
+      keywords: body.keywords || null,
+      status: body.status || 'DRAFT',
+    };
+
+    console.log('✅ 상품 데이터 준비 완료');
+
+    // Supabase에 저장 (Service Role Key로 모든 권한 보유!)
+    console.log('💾 Supabase 저장 시도... (Service Role Key - 모든 권한 보유)');
+    const { data, error } = await supabase
+      .from('Product')
+      .insert([productData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('\n❌ Supabase 저장 에러:');
+      console.error('에러 코드:', error.code);
+      console.error('에러 메시지:', error.message);
+      console.error('에러 상세:', error.details);
+      console.error('에러 힌트:', error.hint);
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: `데이터베이스 저장 실패: ${error.message}`,
+          details: error.details,
+          hint: error.hint,
+        },
+        { status: 500 }
+      );
+    }
+
+    console.log('\n✅ 상품 저장 성공!');
+    console.log('상품 ID:', data.id);
+    console.log('SKU:', data.sku);
+    console.log('='.repeat(80) + '\n');
+
+    return NextResponse.json({
+      success: true,
+      message: '상품이 성공적으로 저장되었습니다.',
+      product: data,
+    });
+
+  } catch (error: any) {
+    console.error('\n' + '='.repeat(80));
+    console.error('❌ 상품 저장 중 예외 발생');
+    console.error('='.repeat(80));
+    console.error('에러 이름:', error.name);
+    console.error('에러 메시지:', error.message);
+    console.error('스택:', error.stack);
+    console.error('='.repeat(80) + '\n');
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || '상품 저장 중 오류가 발생했습니다.',
+        details: error.toString(),
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// GET: 상품 목록 조회
+export async function GET(request: NextRequest) {
+  try {
+    console.log('\n' + '='.repeat(80));
+    console.log('📋 상품 목록 조회 API 호출됨');
+    console.log('='.repeat(80));
+
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const search = searchParams.get('search') || '';
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
+
+    console.log('📊 조회 조건:');
+    console.log('  - 페이지:', page);
+    console.log('  - 개수:', limit);
+    console.log('  - 검색어:', search || '없음');
+    console.log('  - 정렬:', sortBy, sortOrder);
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from('Product')
+      .select('*', { count: 'exact' })
+      .order(sortBy, { ascending: sortOrder === 'asc' })
+      .range(from, to);
+
+    if (search) {
+      query = query.ilike('name', `%${search}%`);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('\n❌ 조회 에러:');
+      console.error('에러 메시지:', error.message);
+      console.error('에러 상세:', error.details);
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: `상품 조회 실패: ${error.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    console.log('\n✅ 조회 성공!');
+    console.log('총 개수:', count);
+    console.log('현재 페이지 상품 수:', data?.length || 0);
+    console.log('='.repeat(80) + '\n');
+
+    return NextResponse.json({
+      success: true,
+      products: data || [],
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+      },
+    });
+
+  } catch (error: any) {
+    console.error('\n' + '='.repeat(80));
+    console.error('❌ 상품 조회 중 예외 발생');
+    console.error('='.repeat(80));
+    console.error('에러:', error);
+    console.error('='.repeat(80) + '\n');
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || '상품 조회 중 오류가 발생했습니다.',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE: 상품 삭제
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: '상품 ID가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    console.log('\n' + '='.repeat(80));
+    console.log('🗑️  상품 삭제 요청');
+    console.log('='.repeat(80));
+    console.log('상품 ID:', id);
+
+    const { error } = await supabase
+      .from('Product')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('\n❌ 삭제 에러:');
+      console.error(error);
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: `상품 삭제 실패: ${error.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    console.log('\n✅ 삭제 성공!');
+    console.log('='.repeat(80) + '\n');
+
+    return NextResponse.json({
+      success: true,
+      message: '상품이 삭제되었습니다.',
+    });
+
+  } catch (error: any) {
+    console.error('\n' + '='.repeat(80));
+    console.error('❌ 상품 삭제 중 예외 발생');
+    console.error('='.repeat(80));
+    console.error(error);
+    console.error('='.repeat(80) + '\n');
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || '상품 삭제 중 오류가 발생했습니다.',
+      },
+      { status: 500 }
+    );
+  }
+}
