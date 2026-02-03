@@ -14,8 +14,6 @@ export async function GET(request: NextRequest) {
     const maxPrice = searchParams.get('maxPrice');
     const seoScore = searchParams.get('seoScore');
 
-    console.log('🔍 API 필터:', { category, status, minPrice, maxPrice, seoScore });
-
     // Prisma where 조건
     const where: any = {};
 
@@ -37,7 +35,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 🔥 수정: imageCount 필드 추가 + 이미지 관련 필드들
+    // DB 쿼리
     const products = await prisma.product.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -45,9 +43,6 @@ export async function GET(request: NextRequest) {
         id: true,
         name: true,
         mainImage: true,
-        images: true,
-        imageCount: true,        // ✅ 추가!
-        imageAltTexts: true,     // ✅ 추가!
         salePrice: true,
         supplierPrice: true,
         shippingFee: true,
@@ -56,12 +51,6 @@ export async function GET(request: NextRequest) {
         sku: true,
         createdAt: true,
         updatedAt: true,
-        margin: true,
-        supplier: {
-          select: {
-            name: true
-          }
-        },
         // 네이버 SEO 필드
         naver_title: true,
         naver_keywords: true,
@@ -72,34 +61,20 @@ export async function GET(request: NextRequest) {
         naver_material: true,
         naver_color: true,
         naver_size: true,
-        naver_weight: true,
         naver_care_instructions: true,
         naver_as_info: true,
         naver_warranty: true,
-        naver_certification: true,
-        naver_tax_type: true,
-        naver_gift_wrapping: true,
-        naver_delivery_info: true,
-        naver_exchange_info: true,
-        naver_refund_info: true,
-        naver_min_order: true,
-        naver_max_order: true,
-        naver_adult_only: true,
-        naver_parallel_import: true,
-        naver_custom_option_1: true,
-        naver_custom_option_2: true,
-        naver_custom_option_3: true,
+        // ❌ naver_tags 제거 (Schema에 없음)
+        // ✅ 대신 naver_meta_tags 사용 (Schema에 있음)
         naver_meta_tags: true,
       },
     });
-
-    console.log('✅ 상품 조회 성공:', products.length, '개');
 
     // SEO 점수 필터 (클라이언트 측)
     let filteredProducts = products;
 
     if (seoScore) {
-      filteredProducts = products.filter((p: any) => {
+      filteredProducts = products.filter((p) => {
         const score = calculateNaverSeoScore(p);
 
         if (seoScore === '100') {

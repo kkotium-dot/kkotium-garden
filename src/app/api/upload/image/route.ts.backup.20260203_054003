@@ -1,18 +1,9 @@
-// src/app/api/upload/image/route.ts
-// 네이버 스마트스토어 2026 이미지 업로드 API (Sharp 통합)
-
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import sharp from 'sharp';
-
-// 환경 변수 체크
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('⚠️ Supabase 환경 변수가 설정되지 않았습니다.');
-}
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 // 네이버 스마트스토어 2026 이미지 규격
@@ -24,39 +15,7 @@ const NAVER_IMAGE_CONFIG = {
   maxSizeMB: 10,
   maxImages: 10,
   validTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
-  validMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
 };
-
-/**
- * 이미지 메타데이터 추출 (Sharp)
- */
-async function getImageMetadata(buffer: Buffer) {
-  try {
-    const metadata = await sharp(buffer).metadata();
-    return {
-      width: metadata.width || 0,
-      height: metadata.height || 0,
-      format: metadata.format || 'unknown',
-      size: metadata.size || 0,
-    };
-  } catch (error) {
-    console.error('❌ 메타데이터 추출 실패:', error);
-    return null;
-  }
-}
-
-/**
- * 네이버 규격 검증
- */
-function validateNaverSpec(width: number, height: number) {
-  if (width < NAVER_IMAGE_CONFIG.minWidth || height < NAVER_IMAGE_CONFIG.minHeight) {
-    return {
-      valid: false,
-      error: `이미지 크기는 최소 ${NAVER_IMAGE_CONFIG.minWidth}x${NAVER_IMAGE_CONFIG.minHeight}px 이상이어야 합니다. (현재: ${width}x${height}px)`,
-    };
-  }
-  return { valid: true };
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📤 네이버 이미지 업로드 시작 (2026 규격 + Sharp)');
+    console.log('📤 네이버 이미지 업로드 시작 (2026 규격)');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('파일명:', file.name);
     console.log('크기:', (file.size / 1024).toFixed(2), 'KB');
@@ -90,45 +49,24 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. 파일 형식 검증
-    if (!NAVER_IMAGE_CONFIG.validMimeTypes.includes(file.type)) {
+    if (!NAVER_IMAGE_CONFIG.validTypes.includes(file.type)) {
       return NextResponse.json(
         { success: false, error: 'JPG, PNG, GIF, WebP 형식만 지원됩니다.' },
         { status: 400 }
       );
     }
 
-    // 3. Buffer 변환
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // ⭐ 4. Sharp로 이미지 메타데이터 추출
-    const metadata = await getImageMetadata(buffer);
-    if (!metadata) {
-      return NextResponse.json(
-        { success: false, error: '이미지 파일이 손상되었거나 올바르지 않습니다.' },
-        { status: 400 }
-      );
-    }
-
-    console.log('📏 이미지 정보:', `${metadata.width}x${metadata.height}px`, metadata.format);
-
-    // ⭐ 5. 네이버 규격 검증 (최소 크기)
-    const validation = validateNaverSpec(metadata.width, metadata.height);
-    if (!validation.valid) {
-      return NextResponse.json(
-        { success: false, error: validation.error },
-        { status: 400 }
-      );
-    }
-
-    // 6. 파일명 생성 (타임스탬프 + 랜덤)
+    // 3. 파일명 생성 (타임스탬프 + 랜덤)
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(7);
     const ext = file.name.split('.').pop();
     const fileName = `${timestamp}-${random}.${ext}`;
     const filePath = productId ? `products/${productId}/${fileName}` : `temp/${fileName}`;
 
-    // 7. Supabase Storage 업로드
+    // 4. Supabase Storage 업로드
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
     const { data, error } = await supabase.storage
       .from('product-images')
       .upload(filePath, buffer, {
@@ -145,14 +83,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8. Public URL 생성
+    // 5. Public URL 생성
     const { data: urlData } = supabase.storage
       .from('product-images')
       .getPublicUrl(filePath);
 
     console.log('✅ 업로드 완료!');
     console.log('   URL:', urlData.publicUrl);
-    console.log('   크기:', `${metadata.width}x${metadata.height}px`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     return NextResponse.json({
@@ -165,9 +102,6 @@ export async function POST(request: NextRequest) {
         size: file.size,
         type: file.type,
         name: file.name,
-        width: metadata.width,
-        height: metadata.height,
-        format: metadata.format,
       },
     });
   } catch (error) {

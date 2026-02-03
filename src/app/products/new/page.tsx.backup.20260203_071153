@@ -113,7 +113,7 @@ export default function ProductNewPage() {
     });
   };
 
-  // ⭐ 실시간 SEO 점수 계산 - 수정됨!
+  // 실시간 SEO 점수 계산
   useEffect(() => {
     const score = calculateNaverSeoScore(formData);
     const prevScore = seoScore;
@@ -125,27 +125,14 @@ export default function ProductNewPage() {
       setTimeout(() => setShowSuccess(false), 3000);
     }
 
-    // ⭐ 디버그 로그 강화
-    console.log('📊 네이버 SEO 점수 재계산:', {
+    console.log('📊 네이버 SEO 점수:', {
       title: formData.naver_title?.length || 0,
       keywords: formData.naver_keywords?.split(',').filter(k => k.trim()).length || 0,
       description: formData.naver_description?.length || 0,
       imageCount: formData.imageCount,
-      mainImage: formData.mainImage ? '있음' : '없음',
-      totalScore: score,
-      변경됨: '이미지 개수 또는 필드 변경'
+      score: score
     });
-  }, [
-    formData.naver_title,
-    formData.naver_keywords,
-    formData.naver_description,
-    formData.naver_brand,
-    formData.naver_origin,
-    formData.naver_material,
-    formData.naver_care_instructions,
-    formData.imageCount, // ⭐ 이미지 개수 변경 감지
-    formData.mainImage,  // ⭐ 메인 이미지 변경 감지
-  ]);
+  }, [formData]);
 
   const handleChange = (e: any) => {
     const { name, value, type, checked } = e.target;
@@ -574,7 +561,7 @@ export default function ProductNewPage() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className={`text-4xl font-bold ${
+                  <span className={`text-4xl font-bold $${
                     seoScore >= 100 ? 'text-purple-600' :
                     seoScore >= 90 ? 'text-green-600' :
                     seoScore >= 80 ? 'text-blue-600' :
@@ -629,7 +616,7 @@ export default function ProductNewPage() {
                 </span>
               </div>
 
-              {/* ⭐ 이미지 점수 추가 - 수정됨! */}
+              {/* ⭐ 이미지 점수 추가 */}
               <div className="pt-3 border-t border-pink-200">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-700">이미지 ({formData.imageCount}개)</span>
@@ -638,22 +625,11 @@ export default function ProductNewPage() {
                     formData.mainImage ? 'text-blue-600' :
                     'text-gray-400'
                   }`}>
-                    {formData.mainImage && formData.imageCount >= 4 ? '✅ 10점' :
-                     formData.mainImage ? `🔵 ${5 + Math.min(formData.imageCount - 1, 3)}점` :
-                     '⭕ 10점'}
+                    {formData.mainImage && formData.imageCount >= 4 ? '✓ 10점' :
+                     formData.mainImage ? `✓ ${5 + Math.min(formData.imageCount - 1, 3)}점` :
+                     '○ 10점'}
                   </span>
                 </div>
-                {/* ⭐ 실시간 피드백 추가 */}
-                {formData.mainImage && formData.imageCount < 4 && (
-                  <p className="text-xs text-orange-600 mt-1">
-                    {4 - formData.imageCount}장 더 추가하면 +{Math.min(5 - (formData.imageCount - 1), 5)}점!
-                  </p>
-                )}
-                {!formData.mainImage && (
-                  <p className="text-xs text-red-600 mt-1">
-                    메인 이미지를 먼저 업로드하세요 (+5점)
-                  </p>
-                )}
               </div>
             </div>
 
@@ -666,9 +642,7 @@ export default function ProductNewPage() {
                 <li>• 설명은 50자 이상 작성하세요 ⭐</li>
                 <li>• 브랜드/원산지 정보를 입력하세요</li>
                 <li>• 상세 정보를 충실히 작성하세요</li>
-                <li className={formData.imageCount >= 4 ? 'text-green-600 font-bold' : 'text-pink-600 font-bold'}>
-                  • {formData.imageCount >= 4 ? '✅ 이미지 4개 이상 달성!' : '이미지 4개 이상 업로드 시 +10점!'}
-                </li>
+                <li className="text-pink-600 font-bold">• 이미지 4개 이상 업로드 시 +10점!</li>
               </ul>
             </div>
           </div>

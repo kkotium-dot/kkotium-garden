@@ -1,22 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';  // ✅ named import로 수정
 import { calculateNaverSeoScore } from '@/lib/seo';
 
-// GET /api/products - 상품 목록 조회
+// GET /api/products - 상품 목록 조회 (쿼리 파라미터 지원)
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
 
-    // 쿼리 파라미터
+    // 🎯 쿼리 파라미터 추출
     const category = searchParams.get('category');
     const status = searchParams.get('status');
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
     const seoScore = searchParams.get('seoScore');
 
-    console.log('🔍 API 필터:', { category, status, minPrice, maxPrice, seoScore });
-
-    // Prisma where 조건
+    // Prisma where 조건 동적 생성
     const where: any = {};
 
     if (category) {
@@ -28,40 +26,31 @@ export async function GET(request: NextRequest) {
     }
 
     if (minPrice || maxPrice) {
-      where.salePrice = {};
+      where.selling_price = {};
       if (minPrice) {
-        where.salePrice.gte = parseFloat(minPrice);
+        where.selling_price.gte = parseFloat(minPrice);
       }
       if (maxPrice) {
-        where.salePrice.lte = parseFloat(maxPrice);
+        where.selling_price.lte = parseFloat(maxPrice);
       }
     }
 
-    // 🔥 수정: imageCount 필드 추가 + 이미지 관련 필드들
+    // DB 쿼리 실행
     const products = await prisma.product.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
       select: {
         id: true,
         name: true,
         mainImage: true,
-        images: true,
-        imageCount: true,        // ✅ 추가!
-        imageAltTexts: true,     // ✅ 추가!
-        salePrice: true,
-        supplierPrice: true,
-        shippingFee: true,
+        selling_price: true,
+        supply_price: true,
+        shipping_cost: true,
         category: true,
         status: true,
         sku: true,
-        createdAt: true,
-        updatedAt: true,
-        margin: true,
-        supplier: {
-          select: {
-            name: true
-          }
-        },
+        created_at: true,
+        updated_at: true,
         // 네이버 SEO 필드
         naver_title: true,
         naver_keywords: true,
@@ -72,34 +61,19 @@ export async function GET(request: NextRequest) {
         naver_material: true,
         naver_color: true,
         naver_size: true,
-        naver_weight: true,
         naver_care_instructions: true,
         naver_as_info: true,
         naver_warranty: true,
-        naver_certification: true,
-        naver_tax_type: true,
-        naver_gift_wrapping: true,
-        naver_delivery_info: true,
-        naver_exchange_info: true,
-        naver_refund_info: true,
-        naver_min_order: true,
-        naver_max_order: true,
-        naver_adult_only: true,
-        naver_parallel_import: true,
-        naver_custom_option_1: true,
-        naver_custom_option_2: true,
-        naver_custom_option_3: true,
-        naver_meta_tags: true,
+        naver_features: true,
+        naver_tags: true,
       },
     });
 
-    console.log('✅ 상품 조회 성공:', products.length, '개');
-
-    // SEO 점수 필터 (클라이언트 측)
+    // 🎯 SEO 점수 필터 (클라이언트 측 - DB 계산 불가)
     let filteredProducts = products;
 
     if (seoScore) {
-      filteredProducts = products.filter((p: any) => {
+      filteredProducts = products.filter((p) => {
         const score = calculateNaverSeoScore(p);
 
         if (seoScore === '100') {

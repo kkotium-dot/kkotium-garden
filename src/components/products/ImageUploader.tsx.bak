@@ -1,0 +1,362 @@
+'use client';
+
+import { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Upload, X, Image as ImageIcon, AlertCircle, CheckCircle } from 'lucide-react';
+import { validateNaverImage, generateAltText, NAVER_IMAGE_SPECS } from '@/lib/supabase-storage';
+
+interface ImageFile {
+  id: string;
+  file: File;
+  preview: string;
+  altText: string;
+  isMain: boolean;
+  uploadedUrl?: string;
+}
+
+interface ImageUploaderProps {
+  productId?: string;
+  productName?: string;
+  keywords?: string[];
+  images: string[];
+  onChange: (images: string[], altTexts: string[]) => void;
+  maxImages?: number;
+}
+
+export default function ImageUploader({
+  productId,
+  productName = '상품',
+  keywords = [],
+  images: existingImages,
+  onChange,
+  maxImages = NAVER_IMAGE_SPECS.maxImages,
+}: ImageUploaderProps) {
+  const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState('');
+  const [uploadedCount, setUploadedCount] = useState(0);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    setError('');
+
+    // 최대 이미지 수 체크
+    const totalImages = existingImages.length + imageFiles.length + acceptedFiles.length;
+    if (totalImages > maxImages) {
+      setError(`최대 ${maxImages}개까지 업로드 가능합니다. (현재: ${existingImages.length + imageFiles.length}개)`);
+      return;
+    }
+
+    // 파일 검증 및 추가
+    const newImageFiles: ImageFile[] = [];
+    const warnings: string[] = [];
+
+    acceptedFiles.forEach((file, index) => {
+      const validation = validateNaverImage(file);
+
+      if (!validation.isValid) {
+        setError(validation.error || '파일 검증 실패');
+        return;
+      }
+
+      if (validation.warnings) {
+        warnings.push(...validation.warnings);
+      }
+
+      const id = Math.random().toString(36).substr(2, 9);
+      const preview = URL.createObjectURL(file);
+      const currentIndex = existingImages.length + imageFiles.length + index;
+      const altText = generateAltText(productName, keywords, currentIndex);
+
+      newImageFiles.push({
+        id,
+        file,
+        preview,
+        altText,
+        isMain: existingImages.length === 0 && imageFiles.length === 0 && index === 0,
+      });
+    });
+
+    if (warnings.length > 0) {
+      console.log('⚠️ 권장사항:', warnings);
+    }
+
+    setImageFiles([...imageFiles, ...newImageFiles]);
+  }, [existingImages, imageFiles, maxImages, productName, keywords]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/gif': ['.gif'],
+      'image/webp': ['.webp'],
+    },
+    maxSize: NAVER_IMAGE_SPECS.maxSizeMB * 1024 * 1024,
+    multiple: true,
+  });
+
+  // 메인 이미지 설정
+  const setMainImage = (id: string) => {
+    setImageFiles(imageFiles.map(img => ({
+      ...img,
+      isMain: img.id === id
+    })));
+  };
+
+  // 이미지 삭제
+  const removeImage = (id: string) => {
+    const removedImage = imageFiles.find(img => img.id === id);
+    if (removedImage) {
+      URL.revokeObjectURL(removedImage.preview);
+    }
+
+    const newImages = imageFiles.filter(img => img.id !== id);
+
+    // 메인 이미지가 삭제되면 첫 번째 이미지를 메인으로
+    if (removedImage?.isMain && newImages.length > 0) {
+      newImages[0].isMain = true;
+    }
+
+    setImageFiles(newImages);
+  };
+
+  // alt 텍스트 수정
+  const updateAltText = (id: string, altText: string) => {
+    setImageFiles(imageFiles.map(img => 
+      img.id === id ? { ...img, altText } : img
+    ));
+  };
+
+  // 업로드 실행
+  const handleUpload = async () => {
+    if (imageFiles.length === 0) {
+      setError('업로드할 이미지를 선택해주세요.');
+      return;
+    }
+
+    setUploading(true);
+    setProgress(0);
+    setUploadedCount(0);
+
+    try {
+      const uploadedUrls: string[] = [];
+      const altTexts: string[] = [];
+
+      for (let i = 0; i < imageFiles.length; i++) {
+        const imageFile = imageFiles[i];
+
+        const formData = new FormData();
+        formData.append('file', imageFile.file);
+        formData.append('isMain', imageFile.isMain.toString());
+        formData.append('altText', imageFile.altText);
+        if (productId) formData.append('productId', productId);
+
+        const response = await fetch('/api/upload/image', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          uploadedUrls.push(result.url);
+          altTexts.push(result.altText);
+
+          // 진행률 업데이트
+          setUploadedCount(i + 1);
+          setProgress(Math.round(((i + 1) / imageFiles.length) * 100));
+        } else {
+          throw new Error(result.error || '업로드 실패');
+        }
+      }
+
+      // 기존 이미지 + 새 이미지
+      const allImages = [...existingImages, ...uploadedUrls];
+      const allAltTexts = [...altTexts];
+
+      onChange(allImages, allAltTexts);
+
+      // 초기화
+      imageFiles.forEach(img => URL.revokeObjectURL(img.preview));
+      setImageFiles([]);
+      setProgress(0);
+      setUploadedCount(0);
+
+      console.log('✅ 업로드 완료:', uploadedUrls.length, '개');
+    } catch (error) {
+      console.error('업로드 에러:', error);
+      setError(error instanceof Error ? error.message : '업로드 실패');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const totalImages = existingImages.length + imageFiles.length;
+  const canUpload = imageFiles.length > 0 && !uploading;
+
+  return (
+    <div className="space-y-4">
+      {/* 네이버 규격 안내 */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-blue-900 mb-1">네이버 스마트스토어 이미지 규격 (2026)</p>
+            <ul className="text-blue-700 space-y-1">
+              <li>• 최소: {NAVER_IMAGE_SPECS.minSize.width}x{NAVER_IMAGE_SPECS.minSize.height}px</li>
+              <li>• 권장: {NAVER_IMAGE_SPECS.recommended.width}x{NAVER_IMAGE_SPECS.recommended.height}px (정사각형)</li>
+              <li>• 형식: JPG, PNG, GIF, WebP</li>
+              <li>• 최대 크기: {NAVER_IMAGE_SPECS.maxSizeMB}MB</li>
+              <li>• 최대 개수: {NAVER_IMAGE_SPECS.maxImages}개 (메인 포함)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* 업로드 영역 */}
+      <div
+        {...getRootProps()}
+        className={`relative border-2 border-dashed rounded-lg p-8 text-center transition cursor-pointer ${
+          isDragActive ? 'border-purple-500 bg-purple-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+        } ${totalImages >= maxImages ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        <input {...getInputProps()} disabled={totalImages >= maxImages} />
+
+        <div className="space-y-3">
+          <Upload className="w-12 h-12 mx-auto text-gray-400" />
+          <div>
+            <p className="text-lg font-medium text-gray-700">
+              {isDragActive ? '여기에 놓으세요!' : '이미지를 드래그하거나 클릭하세요'}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              {totalImages}/{maxImages}개 ({imageFiles.length}개 대기 중)
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-red-600" />
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      {/* 업로드 대기 이미지 */}
+      {imageFiles.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-medium text-gray-900">
+              업로드 대기 중 ({imageFiles.length}개)
+            </h3>
+            <button
+              onClick={handleUpload}
+              disabled={!canUpload}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {uploading ? (
+                <>
+                  <span>업로드 중... ({uploadedCount}/{imageFiles.length})</span>
+                  <span className="text-sm">({progress}%)</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  <span>업로드</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* 진행률 바 */}
+          {uploading && (
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+              <div
+                className="bg-purple-600 h-2 rounded-full transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {imageFiles.map((imageFile) => (
+              <div key={imageFile.id} className="relative group">
+                <div className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
+                  <img
+                    src={imageFile.preview}
+                    alt={imageFile.altText}
+                    className="w-full h-full object-cover"
+                  />
+
+                  {/* 메인 배지 */}
+                  {imageFile.isMain && (
+                    <div className="absolute top-2 left-2 px-2 py-1 bg-purple-600 text-white text-xs rounded font-medium">
+                      메인
+                    </div>
+                  )}
+
+                  {/* 호버 액션 */}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                    {!imageFile.isMain && (
+                      <button
+                        onClick={() => setMainImage(imageFile.id)}
+                        className="px-3 py-1.5 bg-white text-gray-700 text-sm rounded hover:bg-gray-100 transition"
+                      >
+                        메인으로
+                      </button>
+                    )}
+                    <button
+                      onClick={() => removeImage(imageFile.id)}
+                      className="px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+
+                {/* alt 텍스트 입력 */}
+                <input
+                  type="text"
+                  value={imageFile.altText}
+                  onChange={(e) => updateAltText(imageFile.id, e.target.value)}
+                  placeholder="alt 텍스트 (SEO)"
+                  className="mt-2 w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 업로드된 이미지 */}
+      {existingImages.length > 0 && (
+        <div>
+          <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            업로드 완료 ({existingImages.length}개)
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {existingImages.map((url, index) => (
+              <div key={url} className="relative group">
+                <div className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden border-2 border-green-200">
+                  <img
+                    src={url}
+                    alt={`상품 이미지 ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  {index === 0 && (
+                    <div className="absolute top-2 left-2 px-2 py-1 bg-green-600 text-white text-xs rounded font-medium">
+                      메인
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

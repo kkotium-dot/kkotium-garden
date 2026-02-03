@@ -11,9 +11,14 @@ interface FilterState {
   seoScore: string;
 }
 
+interface CategoryOption {
+  value: string;
+  label: string;
+}
+
 interface ProductFiltersProps {
   onFilterChange: (filters: FilterState) => void;
-  categories: { value: string; label: string }[];
+  categories: CategoryOption[];
 }
 
 export default function ProductFilters({ onFilterChange, categories }: ProductFiltersProps) {
@@ -32,7 +37,6 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
     const newFilters = { ...filters, [field]: value };
     setFilters(newFilters);
     onFilterChange(newFilters);
-    console.log('🔧 필터 변경:', field, '=', value);
   };
 
   const handleReset = () => {
@@ -54,10 +58,10 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
     <div className="bg-white rounded-lg shadow-md p-4 mb-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-gray-900">🔍 필터</h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-bold">🔍 필터</h3>
           {activeFilterCount > 0 && (
-            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+            <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-sm font-medium">
               {activeFilterCount}개 적용 중
             </span>
           )}
@@ -66,7 +70,7 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
           {activeFilterCount > 0 && (
             <button
               onClick={handleReset}
-              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+              className="text-sm text-gray-600 hover:text-gray-800 underline"
             >
               초기화
             </button>
@@ -100,7 +104,7 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
             </select>
           </div>
 
-          {/* 상태 (✅ 실제 DB 값과 일치) */}
+          {/* 상태 */}
           <div>
             <label className="block text-sm font-medium mb-1 text-gray-700">상태</label>
             <select
@@ -109,9 +113,9 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
             >
               <option value="">전체</option>
-              <option value="DRAFT">초안</option>
-              <option value="ACTIVE">활성</option>
-              <option value="INACTIVE">비활성</option>
+              <option value="todo">준비중</option>
+              <option value="draft">초안</option>
+              <option value="published">판매중</option>
             </select>
           </div>
 
@@ -151,7 +155,7 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
             />
           </div>
 
-          {/* SEO 점수 필터 (✅ page.tsx와 일치) */}
+          {/* SEO 점수 필터 (정확한 범위) */}
           <div>
             <label className="block text-sm font-medium mb-1 text-gray-700">SEO 점수</label>
             <select
@@ -160,10 +164,10 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 bg-gradient-to-r from-purple-50 to-pink-50"
             >
               <option value="">전체</option>
-              <option value="100">💎 100점 (S급)</option>
-              <option value="80-99">⭐ 80-99점 (A급)</option>
-              <option value="70-79">🌟 70-79점 (B급)</option>
-              <option value="0-69">⚠️ 0-69점 (개선필요)</option>
+              <option value="100">100점 (S급)</option>
+              <option value="80-99">80-99점 (A급)</option>
+              <option value="70-79">70-79점 (B급)</option>
+              <option value="0-69">0-69점 (C급)</option>
             </select>
           </div>
         </div>
@@ -178,9 +182,9 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
             className="px-3 py-2 border rounded-lg text-sm"
           >
             <option value="">전체 상태</option>
-            <option value="DRAFT">초안</option>
-            <option value="ACTIVE">활성</option>
-            <option value="INACTIVE">비활성</option>
+            <option value="todo">준비중</option>
+            <option value="draft">초안</option>
+            <option value="published">판매중</option>
           </select>
 
           <select
@@ -202,9 +206,10 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
             className="px-3 py-2 border rounded-lg text-sm bg-gradient-to-r from-purple-50 to-pink-50"
           >
             <option value="">전체 SEO</option>
-            <option value="100">💎 100점</option>
-            <option value="80-99">⭐ 80-99점</option>
-            <option value="0-69">⚠️ 0-69점 이하</option>
+            <option value="100">100점 S급</option>
+            <option value="80-99">80-99점 A급</option>
+            <option value="70-79">70-79점 B급</option>
+            <option value="0-69">0-69점 C급</option>
           </select>
         </div>
       )}
