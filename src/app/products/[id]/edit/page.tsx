@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Eye, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Loader2, CheckCircle, AlertCircle, Upload, X } from 'lucide-react';
 import { calculateNaverSeoScore } from '@/lib/seo';
 
 export default function ProductEditPage() {
   const router = useRouter();
   const params = useParams();
   const productId = params.id as string;
+  const prevScoreRef = useRef(0); // 🔥 100점 감지 수정
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -20,9 +21,13 @@ export default function ProductEditPage() {
     supplierId: '',
     supplierPrice: '',
     salePrice: '',
-    shippingCost: '3000',
+    shippingFee: '3000',
     description: '',
     keywords: [] as string[],
+
+    // 이미지 필드
+    mainImage: '',
+    images: [] as string[],
 
     // 네이버 SEO 필드 (27개)
     naver_title: '',
@@ -70,12 +75,15 @@ export default function ProductEditPage() {
           setFormData({
             name: product.name || '',
             category: product.category || '',
-            supplierId: product.supplier?.code || '',
+            supplierId: product.supplier?.code || product.supplier?.id || '',
             supplierPrice: product.supplierPrice?.toString() || '',
             salePrice: product.salePrice?.toString() || '',
-            shippingCost: product.shippingFee?.toString() || '3000',
+            shippingFee: product.shippingFee?.toString() || '3000',
             description: product.description || '',
             keywords: product.keywords || [],
+
+            mainImage: product.mainImage || '',
+            images: product.images || [],
 
             // 네이버 SEO 필드
             naver_title: product.naver_title || '',
@@ -110,12 +118,12 @@ export default function ProductEditPage() {
           console.log('✅ 상품 조회 성공:', product.name);
         } else {
           alert('상품을 찾을 수 없습니다');
-          router.push('/products');
+          router.push('/products/sourced');
         }
       } catch (error) {
         console.error('상품 조회 실패:', error);
         alert('상품 정보를 불러올 수 없습니다');
-        router.push('/products');
+        router.push('/products/sourced');
       } finally {
         setFetching(false);
       }
@@ -129,7 +137,7 @@ export default function ProductEditPage() {
   // SEO 점수 계산 및 100점 달성 감지
   useEffect(() => {
     const score = calculateNaverSeoScore(formData);
-    const prevScore = seoScore;
+    const prevScore = prevScoreRef.current;
     setSeoScore(score);
 
     // 100점 달성 시 축하 메시지
@@ -137,6 +145,8 @@ export default function ProductEditPage() {
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     }
+
+    prevScoreRef.current = score;
 
     console.log('📊 네이버 SEO 점수:', {
       title: formData.naver_title?.length || 0,
@@ -154,7 +164,47 @@ export default function ProductEditPage() {
     }));
   };
 
-  const handleSubmit = async (e: any) => {
+  // 이미지 업로드 핸들러
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const uploadData = new FormData();
+    Array.from(files).forEach(file => {
+      uploadData.append('images', file);
+    });
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadData,
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, ...data.urls],
+          mainImage: prev.mainImage || data.urls[0],
+        }));
+        console.log('✅ 이미지 업로드 성공:', data.urls);
+      }
+    } catch (error) {
+      console.error('이미지 업로드 실패:', error);
+      alert('이미지 업로드에 실패했습니다');
+    }
+  };
+
+  // 이미지 삭제
+  const handleRemoveImage = (url: string) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter(img => img !== url),
+      mainImage: prev.mainImage === url ? (prev.images[0] || '') : prev.mainImage,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -164,7 +214,9 @@ export default function ProductEditPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          shippingFee: formData.shippingCost,
+          keywords: Array.isArray(formData.keywords) 
+            ? formData.keywords 
+            : formData.keywords.split(',').map(k => k.trim()).filter(Boolean),
         }),
       });
 
@@ -173,7 +225,10 @@ export default function ProductEditPage() {
       if (data.success) {
         console.log('✅ 상품 수정 완료:', data.product.name);
         alert('✅ 상품이 수정되었습니다!');
-        router.push('/products');
+
+        // 🔥 수정: 소싱 목록으로 리다이렉트
+        router.push('/products/sourced');
+        router.refresh();
       } else {
         alert(data.error || '상품 수정 실패');
       }
@@ -210,7 +265,7 @@ export default function ProductEditPage() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/products" className="p-2 hover:bg-gray-100 rounded-lg">
+          <Link href="/products/sourced" className="p-2 hover:bg-gray-100 rounded-lg">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
@@ -219,13 +274,16 @@ export default function ProductEditPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
+          {/* 🔥 수정: Link 컴포넌트 사용 */}
+          <Link 
+            href={`/products/${productId}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
           >
             <Eye className="w-4 h-4" />
             미리보기
-          </button>
+          </Link>
           <button
             onClick={handleSubmit}
             disabled={loading}
@@ -240,6 +298,63 @@ export default function ProductEditPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 메인 폼 (2/3) */}
         <div className="lg:col-span-2 space-y-6">
+          {/* 이미지 업로드 섹션 */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">📷 상품 이미지</h2>
+
+            {/* 메인 이미지 */}
+            {formData.mainImage && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">메인 이미지</p>
+                <div className="relative w-full h-64 bg-gray-100 rounded-lg overflow-hidden">
+                  <img 
+                    src={formData.mainImage} 
+                    alt="메인 이미지" 
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* 이미지 갤러리 */}
+            {formData.images.length > 0 && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">추가 이미지 ({formData.images.length})</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {formData.images.map((img, idx) => (
+                    <div key={idx} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden group">
+                      <img src={img} alt={`이미지 ${idx + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => handleRemoveImage(img)}
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      {img === formData.mainImage && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-pink-500 text-white text-xs py-1 text-center">
+                          메인
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 이미지 업로드 버튼 */}
+            <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-pink-500 cursor-pointer transition">
+              <Upload className="w-5 h-5 text-gray-400 mr-2" />
+              <span className="text-sm text-gray-600">이미지 추가</span>
+              <input 
+                type="file" 
+                multiple 
+                accept="image/*" 
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </label>
+          </div>
+
           {/* 기본 정보 */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">📦 기본 정보</h2>
@@ -331,8 +446,8 @@ export default function ProductEditPage() {
                   </label>
                   <input
                     type="number"
-                    name="shippingCost"
-                    value={formData.shippingCost}
+                    name="shippingFee"
+                    value={formData.shippingFee}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
                     placeholder="3000"
@@ -430,7 +545,7 @@ export default function ProductEditPage() {
                 </div>
               </div>
 
-              {/* 🔥 네이버 설명 (강조!) */}
+              {/* 네이버 설명 */}
               <div className={`border-2 rounded-lg p-4 ${
                 formData.naver_description.length >= 50 
                   ? 'border-green-200 bg-green-50' 

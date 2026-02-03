@@ -117,13 +117,8 @@ model Product {
   internalTags            Json?
   keywords                Json?
   lastSaleDate            DateTime?
-
-  // ⭐ 이미지 필드 (네이버 스마트스토어 2026 기준 - 개선됨)
   mainImage               String?
   images                  String[]  @default([])
-  imageAltTexts           String[]  @default([])      // 🆕 SEO용 alt 텍스트 배열
-  imageCount              Int       @default(0)        // 🆕 총 이미지 개수 (캐시)
-
   manufacturer            String    @default("도매매 공급사")
   margin                  Float
   minorPurchase           String    @default("Y")
@@ -158,7 +153,6 @@ model Product {
   @@index([userId])
   @@index([status])
   @@index([category])
-  @@index([imageCount])
 }
 
 model Order {

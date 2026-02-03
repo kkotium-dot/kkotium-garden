@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import SeoWidget from '@/components/SeoWidget';
+
 import Link from 'next/link';
 import { formatKRW, formatPercent, formatNumber } from '@/lib/utils/format';
 
@@ -166,6 +168,10 @@ export default function DashboardPage() {
       </div>
 
       {/* 2열 레이아웃 */}
+
+      {/* 네이버 SEO 위젯 */}
+      <SeoWidget />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 최근 활동 */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

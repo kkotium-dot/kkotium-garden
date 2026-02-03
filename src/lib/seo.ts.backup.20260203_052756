@@ -67,9 +67,6 @@ export function calculateSeoScore(product: Product): number {
   return score;
 }
 
-// ⭐ 별칭(Alias) 추가 - 하위 호환성
-export const calculateNaverSeoScore = calculateSeoScore;
-
 /**
  * 이미지 점수 계산 (최대 10점)
  * 네이버 스마트스토어 2026 기준

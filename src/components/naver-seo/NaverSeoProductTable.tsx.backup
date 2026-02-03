@@ -1,3 +1,4 @@
+// ~/Downloads/NaverSeoProductTable_final.tsx
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +8,7 @@ interface Product {
   id: string;
   name: string;
   mainImage: string | null;
-  salePrice: number;
+  salePrice: number;                    // ✅ price → salePrice
   naver_title: string | null;
   naver_keywords: string | null;
   naver_description: string | null;
@@ -18,72 +19,33 @@ interface Product {
   seoScore: number;
   suggestions: string[];
   needsImprovement: boolean;
-  keywordCount: number;
-  imageCount: number;
+  keywordCount: number;                 // ✅ 추가
+  imageCount: number;                   // ✅ 추가
 }
 
 interface Props {
   products: Product[];
   onProductClick?: (productId: string) => void;
-  selectedIds: string[];
-  onSelectChange: (ids: string[]) => void;
-  onAiGenerate?: (productId: string) => Promise<void>;
-  onRefresh?: () => void;
 }
 
-export default function NaverSeoProductTable({ 
-  products, 
-  onProductClick,
-  selectedIds,
-  onSelectChange,
-  onAiGenerate,
-  onRefresh,
-}: Props) {
+export default function NaverSeoProductTable({ products, onProductClick }: Props) {
   const [sortBy, setSortBy] = useState<'score' | 'name' | 'date'>('score');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [aiLoading, setAiLoading] = useState<{ [key: string]: boolean }>({});
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');  // ✅ 기본 내림차순
 
+  // 정렬
   const sortedProducts = [...products].sort((a, b) => {
     let comparison = 0;
+
     if (sortBy === 'score') {
       comparison = a.seoScore - b.seoScore;
     } else if (sortBy === 'name') {
       comparison = a.name.localeCompare(b.name);
     }
+
     return sortOrder === 'asc' ? comparison : -comparison;
   });
 
-  const handleSelectAll = () => {
-    if (selectedIds.length === products.length) {
-      onSelectChange([]);
-    } else {
-      onSelectChange(products.map(p => p.id));
-    }
-  };
-
-  const handleSelectOne = (id: string) => {
-    if (selectedIds.includes(id)) {
-      onSelectChange(selectedIds.filter(selectedId => selectedId !== id));
-    } else {
-      onSelectChange([...selectedIds, id]);
-    }
-  };
-
-  const handleAiGenerate = async (productId: string, productName: string) => {
-    if (!onAiGenerate) return;
-
-    setAiLoading({ ...aiLoading, [productId]: true });
-    try {
-      await onAiGenerate(productId);
-      alert(`✅ "$${productName}" AI 생성 완료!`);
-      onRefresh?.();
-    } catch (error) {
-      alert('❌ AI 생성 실패');
-    } finally {
-      setAiLoading({ ...aiLoading, [productId]: false });
-    }
-  };
-
+  // 점수에 따른 색상
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-purple-600 bg-purple-50';
     if (score >= 80) return 'text-green-600 bg-green-50';
@@ -92,6 +54,7 @@ export default function NaverSeoProductTable({
     return 'text-orange-600 bg-orange-50';
   };
 
+  // 점수에 따른 뱃지
   const getScoreBadge = (score: number) => {
     if (score >= 90) return { text: 'S급', color: 'bg-purple-600' };
     if (score >= 80) return { text: 'A급', color: 'bg-green-600' };
@@ -105,7 +68,7 @@ export default function NaverSeoProductTable({
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
       setSortBy(column);
-      setSortOrder('desc');
+      setSortOrder('desc');  // ✅ 새 컬럼 선택 시 내림차순
     }
   };
 
@@ -121,26 +84,13 @@ export default function NaverSeoProductTable({
     );
   }
 
-  const isAllSelected = selectedIds.length === products.length && products.length > 0;
-  const isSomeSelected = selectedIds.length > 0 && selectedIds.length < products.length;
-
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {/* 테이블 헤더 */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-4 text-left">
-                <input
-                  type="checkbox"
-                  checked={isAllSelected}
-                  ref={input => {
-                    if (input) input.indeterminate = isSomeSelected;
-                  }}
-                  onChange={handleSelectAll}
-                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 cursor-pointer"
-                />
-              </th>
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 상품 정보
               </th>
@@ -171,25 +121,10 @@ export default function NaverSeoProductTable({
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedProducts.map((product) => {
               const badge = getScoreBadge(product.seoScore);
-              const isSelected = selectedIds.includes(product.id);
-              const isAiLoading = aiLoading[product.id];
 
               return (
-                <tr 
-                  key={product.id} 
-                  className={`transition $${
-                    isSelected ? 'bg-purple-50' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => handleSelectOne(product.id)}
-                      className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 cursor-pointer"
-                    />
-                  </td>
-
+                <tr key={product.id} className="hover:bg-gray-50 transition">
+                  {/* 상품 정보 */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <div className="relative w-16 h-16 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
@@ -216,23 +151,25 @@ export default function NaverSeoProductTable({
                           </p>
                         )}
                         <p className="text-xs text-gray-400 mt-1">
-                      {product.salePrice.toLocaleString()}원
+                          {product.salePrice.toLocaleString()}원
                         </p>
                       </div>
                     </div>
                   </td>
 
+                  {/* SEO 점수 */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className={`text-2xl font-bold $${getScoreColor(product.seoScore)} px-4 py-2 rounded-lg`}>
+                      <div className={`text-2xl font-bold ${getScoreColor(product.seoScore)} px-4 py-2 rounded-lg`}>
                         {product.seoScore}점
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium text-white $${badge.color}`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium text-white ${badge.color}`}>
                         {badge.text}
                       </span>
                     </div>
                   </td>
 
+                  {/* 최적화 현황 */}
                   <td className="px-6 py-4">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-xs">
@@ -258,6 +195,7 @@ export default function NaverSeoProductTable({
                     </div>
                   </td>
 
+                  {/* 개선 필요 항목 */}
                   <td className="px-6 py-4">
                     {product.suggestions.length > 0 ? (
                       <ul className="space-y-1">
@@ -281,34 +219,14 @@ export default function NaverSeoProductTable({
                     )}
                   </td>
 
+                  {/* 작업 */}
                   <td className="px-6 py-4">
-                    <div className="flex gap-2">
-                      {onAiGenerate && (
-                        <button
-                          onClick={() => handleAiGenerate(product.id, product.name)}
-                          disabled={isAiLoading}
-                          className="px-3 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                        >
-                          {isAiLoading ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              <span>생성중...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>🤖</span>
-                              <span>AI</span>
-                            </>
-                          )}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => onProductClick?.(product.id)}
-                        className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition"
-                      >
-                        최적화
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => onProductClick?.(product.id)}
+                      className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition"
+                    >
+                      최적화
+                    </button>
                   </td>
                 </tr>
               );
@@ -317,15 +235,11 @@ export default function NaverSeoProductTable({
         </table>
       </div>
 
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+      {/* 푸터 */}
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
         <p className="text-sm text-gray-600">
           총 <span className="font-medium text-gray-900">{products.length}</span>개 상품
         </p>
-        {selectedIds.length > 0 && (
-          <p className="text-sm font-medium text-purple-600">
-            {selectedIds.length}개 선택됨
-          </p>
-        )}
       </div>
     </div>
   );

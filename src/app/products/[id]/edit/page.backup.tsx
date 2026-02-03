@@ -1,26 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Eye, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { calculateNaverSeoScore } from '@/lib/seo';
-import ImageUploader from '@/components/products/ImageUploader';
 
-export default function ProductNewPage() {
+export default function ProductEditPage() {
   const router = useRouter();
+  const params = useParams();
+  const productId = params.id as string;
+
   const [loading, setLoading] = useState(false);
-
-  // ⭐ 이미지 상태 추가
-  const [uploadedImages, setUploadedImages] = useState<Array<{
-    url: string;
-    isMain: boolean;
-    altText: string;
-  }>>([]);
-
+  const [fetching, setFetching] = useState(true);
   const [formData, setFormData] = useState({
     // 기본 정보
-    id: '', // 새 상품은 임시 ID
     name: '',
     category: '',
     supplierId: '',
@@ -29,12 +23,6 @@ export default function ProductNewPage() {
     shippingCost: '3000',
     description: '',
     keywords: [] as string[],
-
-    // ⭐ 이미지 필드 추가
-    mainImage: '',
-    images: [] as string[],
-    imageAltTexts: [] as string[],
-    imageCount: 0,
 
     // 네이버 SEO 필드 (27개)
     naver_title: '',
@@ -69,83 +57,94 @@ export default function ProductNewPage() {
   const [seoScore, setSeoScore] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // ⭐ 이미지 업로드 성공 핸들러
-  const handleImageUpload = (imageData: { url: string; isMain: boolean; altText: string }) => {
-    setUploadedImages(prev => {
-      const newImages = [...prev, imageData];
+  // 기존 상품 데이터 불러오기
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const res = await fetch(`/api/products/${productId}`);
+        const data = await res.json();
 
-      // formData 업데이트
-      const mainImage = newImages.find(img => img.isMain)?.url || '';
-      const images = newImages.filter(img => !img.isMain).map(img => img.url);
-      const imageAltTexts = newImages.map(img => img.altText);
+        if (data.success && data.product) {
+          const product = data.product;
 
-      setFormData(prev => ({
-        ...prev,
-        mainImage,
-        images,
-        imageAltTexts,
-        imageCount: newImages.length,
-      }));
+          setFormData({
+            name: product.name || '',
+            category: product.category || '',
+            supplierId: product.supplier?.code || '',
+            supplierPrice: product.supplierPrice?.toString() || '',
+            salePrice: product.salePrice?.toString() || '',
+            shippingCost: product.shippingFee?.toString() || '3000',
+            description: product.description || '',
+            keywords: product.keywords || [],
 
-      return newImages;
-    });
-  };
+            // 네이버 SEO 필드
+            naver_title: product.naver_title || '',
+            naver_keywords: product.naver_keywords || '',
+            naver_description: product.naver_description || '',
+            naver_brand: product.naver_brand || '',
+            naver_manufacturer: product.naver_manufacturer || '',
+            naver_origin: product.naver_origin || '국내',
+            naver_material: product.naver_material || '',
+            naver_color: product.naver_color || '',
+            naver_size: product.naver_size || '',
+            naver_weight: product.naver_weight || '',
+            naver_care_instructions: product.naver_care_instructions || '',
+            naver_warranty: product.naver_warranty || '',
+            naver_certification: product.naver_certification || '',
+            naver_tax_type: product.naver_tax_type || '과세',
+            naver_gift_wrapping: product.naver_gift_wrapping || false,
+            naver_as_info: product.naver_as_info || '',
+            naver_delivery_info: product.naver_delivery_info || '',
+            naver_exchange_info: product.naver_exchange_info || '',
+            naver_refund_info: product.naver_refund_info || '',
+            naver_min_order: product.naver_min_order || '1',
+            naver_max_order: product.naver_max_order || '999',
+            naver_adult_only: product.naver_adult_only || false,
+            naver_parallel_import: product.naver_parallel_import || false,
+            naver_custom_option_1: product.naver_custom_option_1 || '',
+            naver_custom_option_2: product.naver_custom_option_2 || '',
+            naver_custom_option_3: product.naver_custom_option_3 || '',
+            naver_meta_tags: product.naver_meta_tags || '',
+          });
 
-  // ⭐ 이미지 삭제 핸들러
-  const handleImageDelete = (url: string) => {
-    setUploadedImages(prev => {
-      const newImages = prev.filter(img => img.url !== url);
+          console.log('✅ 상품 조회 성공:', product.name);
+        } else {
+          alert('상품을 찾을 수 없습니다');
+          router.push('/products');
+        }
+      } catch (error) {
+        console.error('상품 조회 실패:', error);
+        alert('상품 정보를 불러올 수 없습니다');
+        router.push('/products');
+      } finally {
+        setFetching(false);
+      }
+    };
 
-      // formData 업데이트
-      const mainImage = newImages.find(img => img.isMain)?.url || '';
-      const images = newImages.filter(img => !img.isMain).map(img => img.url);
-      const imageAltTexts = newImages.map(img => img.altText);
+    if (productId) {
+      fetchProduct();
+    }
+  }, [productId, router]);
 
-      setFormData(prev => ({
-        ...prev,
-        mainImage,
-        images,
-        imageAltTexts,
-        imageCount: newImages.length,
-      }));
-
-      return newImages;
-    });
-  };
-
-  // ⭐ 실시간 SEO 점수 계산 - 수정됨!
+  // SEO 점수 계산 및 100점 달성 감지
   useEffect(() => {
     const score = calculateNaverSeoScore(formData);
     const prevScore = seoScore;
     setSeoScore(score);
 
     // 100점 달성 시 축하 메시지
-    if (score === 110 && prevScore < 110) {
+    if (score === 100 && prevScore < 100) {
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     }
 
-    // ⭐ 디버그 로그 강화
-    console.log('📊 네이버 SEO 점수 재계산:', {
+    console.log('📊 네이버 SEO 점수:', {
       title: formData.naver_title?.length || 0,
       keywords: formData.naver_keywords?.split(',').filter(k => k.trim()).length || 0,
       description: formData.naver_description?.length || 0,
-      imageCount: formData.imageCount,
-      mainImage: formData.mainImage ? '있음' : '없음',
-      totalScore: score,
-      변경됨: '이미지 개수 또는 필드 변경'
+      score: score
     });
-  }, [
-    formData.naver_title,
-    formData.naver_keywords,
-    formData.naver_description,
-    formData.naver_brand,
-    formData.naver_origin,
-    formData.naver_material,
-    formData.naver_care_instructions,
-    formData.imageCount, // ⭐ 이미지 개수 변경 감지
-    formData.mainImage,  // ⭐ 메인 이미지 변경 감지
-  ]);
+  }, [formData]);
 
   const handleChange = (e: any) => {
     const { name, value, type, checked } = e.target;
@@ -160,35 +159,51 @@ export default function ProductNewPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/products/new', {
-        method: 'POST',
+      const res = await fetch(`/api/products/${productId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          shippingFee: formData.shippingCost,
+        }),
       });
 
       const data = await res.json();
 
       if (data.success) {
-        alert('✅ 상품이 등록되었습니다!');
+        console.log('✅ 상품 수정 완료:', data.product.name);
+        alert('✅ 상품이 수정되었습니다!');
         router.push('/products');
       } else {
-        alert(data.error || '상품 등록 실패');
+        alert(data.error || '상품 수정 실패');
       }
     } catch (error) {
-      console.error('등록 실패:', error);
+      console.error('수정 실패:', error);
       alert('서버 오류가 발생했습니다');
     } finally {
       setLoading(false);
     }
   };
 
+  // 로딩 중
+  if (fetching) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-pink-500 mx-auto mb-4" />
+          <p className="text-gray-600">상품 정보를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* 110점 달성 축하 메시지 */}
+      {/* 100점 달성 축하 메시지 */}
       {showSuccess && (
         <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-bounce z-50">
           <CheckCircle className="w-6 h-6" />
-          <span className="font-bold">🎉 SEO 110점 만점 달성! 완벽합니다!</span>
+          <span className="font-bold">🎉 SEO 100점 달성! 완벽합니다!</span>
         </div>
       )}
 
@@ -199,8 +214,8 @@ export default function ProductNewPage() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">상품 등록</h1>
-            <p className="text-sm text-gray-500 mt-1">새 상품을 등록하고 네이버 SEO를 최적화하세요</p>
+            <h1 className="text-2xl font-bold text-gray-900">상품 수정</h1>
+            <p className="text-sm text-gray-500 mt-1">상품 정보를 수정하고 네이버 SEO를 최적화하세요</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -216,17 +231,8 @@ export default function ProductNewPage() {
             disabled={loading}
             className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50"
           >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                등록 중...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                상품 등록
-              </>
-            )}
+            <Save className="w-4 h-4" />
+            {loading ? '수정 중...' : '수정 저장'}
           </button>
         </div>
       </div>
@@ -234,23 +240,6 @@ export default function ProductNewPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 메인 폼 (2/3) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* ⭐ 이미지 업로드 섹션 - 최상단 */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">📸 상품 이미지</h2>
-            <ImageUploader
-              existingImages={uploadedImages}
-              onUploadSuccess={handleImageUpload}
-              onDeleteSuccess={handleImageDelete}
-              maxImages={10}
-            />
-            <p className="text-xs text-gray-500 mt-3">
-              ⭐ 네이버 규격: 최소 500x500px, 권장 1000x1000px, 최대 10MB
-            </p>
-            <p className="text-xs text-gray-500">
-              🎯 SEO 팁: 메인 이미지 1개(+5점) + 추가 이미지 3개 이상(+5점) = 총 10점
-            </p>
-          </div>
-
           {/* 기본 정보 */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">📦 기본 정보</h2>
@@ -291,7 +280,7 @@ export default function ProductNewPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    공급사 ID
+                    공급처 ID <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -300,6 +289,7 @@ export default function ProductNewPage() {
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
                     placeholder="SUP001"
+                    required
                   />
                 </div>
               </div>
@@ -307,7 +297,7 @@ export default function ProductNewPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    도매가
+                    도매가 <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -316,6 +306,7 @@ export default function ProductNewPage() {
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
                     placeholder="30000"
+                    required
                   />
                 </div>
 
@@ -344,6 +335,7 @@ export default function ProductNewPage() {
                     value={formData.shippingCost}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                    placeholder="3000"
                   />
                 </div>
               </div>
@@ -366,36 +358,53 @@ export default function ProductNewPage() {
 
           {/* 네이버 쇼핑 SEO */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              🔍 네이버 쇼핑 SEO
-              <span className="text-xs font-normal text-gray-500">(최대 100점)</span>
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">🔍 네이버 쇼핑 SEO</h2>
+              <span className={`text-xs px-3 py-1 rounded-full font-bold ${
+                seoScore >= 90 ? 'bg-purple-100 text-purple-700' :
+                seoScore >= 80 ? 'bg-green-100 text-green-700' :
+                seoScore >= 70 ? 'bg-blue-100 text-blue-700' :
+                'bg-yellow-100 text-yellow-700'
+              }`}>
+                현재 {seoScore}점
+              </span>
+            </div>
 
             <div className="space-y-4">
+              {/* 네이버 제목 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   네이버 제목 (10-50자 권장) <span className="text-red-500">*</span>
-                  <span className="ml-2 text-xs text-gray-500">
-                    {formData.naver_title.length >= 10 ? '✓ 50자 이상 입력 시 +20점' : `${formData.naver_title.length}/10`}
-                  </span>
                 </label>
                 <input
                   type="text"
                   name="naver_title"
                   value={formData.naver_title}
                   onChange={handleChange}
-                  maxLength={200}
+                  maxLength={50}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
                   placeholder="꽃틔움 프리미엄 장미 꽃다발 - 생일선물 기념일선물"
                 />
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-gray-500">
+                    {formData.naver_title.length}/50자
+                  </p>
+                  {formData.naver_title.length >= 10 ? (
+                    <span className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> +20점
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400">
+                      10자 이상 입력 시 +20점
+                    </span>
+                  )}
+                </div>
               </div>
 
+              {/* 네이버 키워드 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  네이버 키워드 (쉼표로 구분, 3-10개 권장)
-                  <span className="ml-2 text-xs text-gray-500">
-                    {formData.naver_keywords.split(',').filter(k => k.trim()).length >= 3 ? '✓ 3개 이상 입력 시 +20점' : `0개 키워드`}
-                  </span>
+                  네이버 키워드 (쉼표로 구분, 3-10개 권장) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -403,32 +412,85 @@ export default function ProductNewPage() {
                   value={formData.naver_keywords}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
-                  placeholder="장미꽃다발, 생일선물, 프리미엄, 그랑, 특별한날"
+                  placeholder="장미꽃다발, 생일선물, 프리미엄꽃, 고급, 특별한날, 기념일선물"
                 />
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-gray-500">
+                    {formData.naver_keywords.split(',').filter(k => k.trim()).length}개 키워드
+                  </p>
+                  {formData.naver_keywords.split(',').filter(k => k.trim()).length >= 3 ? (
+                    <span className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> +20점
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400">
+                      3개 이상 입력 시 +20점
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  네이버 설명 (50-200자 권장)
-                  <span className="ml-2 text-xs text-gray-500">
-                    {formData.naver_description.length >= 50 ? '✓ 50자 이상 입력 시 +20점' : `${formData.naver_description.length}/50`}
-                  </span>
+              {/* 🔥 네이버 설명 (강조!) */}
+              <div className={`border-2 rounded-lg p-4 ${
+                formData.naver_description.length >= 50 
+                  ? 'border-green-200 bg-green-50' 
+                  : 'border-yellow-300 bg-yellow-50'
+              }`}>
+                <label className="block text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  {formData.naver_description.length >= 50 ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-yellow-600" />
+                  )}
+                  네이버 설명 (50-200자 권장) 
+                  <span className="text-red-500">*</span>
+                  {formData.naver_description.length < 50 && (
+                    <span className="text-xs font-normal text-yellow-700 ml-2">
+                      ⚠️ 50자 이상 입력하면 +20점!
+                    </span>
+                  )}
                 </label>
                 <textarea
                   name="naver_description"
                   value={formData.naver_description}
                   onChange={handleChange}
-                  rows={3}
-                  maxLength={1000}
+                  rows={4}
+                  maxLength={200}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
-                  placeholder="신선한 장미로 제작한 프리미엄 꽃다발입니다. 생일, 기념일, 감사 선물로 완벽합니다. 당일 배송 가능하며, 고급 포장재로 제공됩니다."
+                  placeholder="신선한 장미로 제작된 프리미엄 꽃다발입니다. 생일, 기념일, 감사 선물로 완벽합니다. 당일 배송 가능하며, 고급 포장으로 제공됩니다."
                 />
+                <div className="flex items-center justify-between mt-2">
+                  <p className={`text-sm font-medium ${
+                    formData.naver_description.length >= 50 
+                      ? 'text-green-600' 
+                      : formData.naver_description.length >= 30
+                      ? 'text-yellow-600'
+                      : 'text-red-600'
+                  }`}>
+                    {formData.naver_description.length}/200자
+                    {formData.naver_description.length < 50 && (
+                      <span className="ml-2 text-xs">
+                        (앞으로 {50 - formData.naver_description.length}자 더 입력)
+                      </span>
+                    )}
+                  </p>
+                  {formData.naver_description.length >= 50 ? (
+                    <span className="text-sm text-green-600 flex items-center gap-1 font-bold">
+                      <CheckCircle className="w-4 h-4" /> +20점 획득!
+                    </span>
+                  ) : (
+                    <span className="text-sm text-yellow-600 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" /> 50자 이상 필요
+                    </span>
+                  )}
+                </div>
               </div>
 
+              {/* 나머지 필드들 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    브랜드 <span className="ml-1 text-xs text-gray-500">(+10점)</span>
+                    브랜드
                   </label>
                   <input
                     type="text"
@@ -442,25 +504,23 @@ export default function ProductNewPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    원산지 <span className="ml-1 text-xs text-gray-500">(+10점)</span>
+                    원산지
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="naver_origin"
                     value={formData.naver_origin}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
-                  >
-                    <option value="국내">국내</option>
-                    <option value="해외">해외</option>
-                    <option value="혼합">혼합</option>
-                  </select>
+                    placeholder="국내"
+                  />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    재질/소재 <span className="ml-1 text-xs text-gray-500">(+10점)</span>
+                    재질/소재
                   </label>
                   <input
                     type="text"
@@ -468,75 +528,23 @@ export default function ProductNewPage() {
                     value={formData.naver_material}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
-                    placeholder="생화"
+                    placeholder="프리미엄 생화"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    색상
+                    관리 방법
                   </label>
                   <input
                     type="text"
-                    name="naver_color"
-                    value={formData.naver_color}
+                    name="naver_care_instructions"
+                    value={formData.naver_care_instructions}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
-                    placeholder="레드, 핑크"
+                    placeholder="물을 매일 갈아주세요"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    크기
-                  </label>
-                  <input
-                    type="text"
-                    name="naver_size"
-                    value={formData.naver_size}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
-                    placeholder="중형(50cm)"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  관리 방법 <span className="ml-1 text-xs text-gray-500">(+10점)</span>
-                </label>
-                <textarea
-                  name="naver_care_instructions"
-                  value={formData.naver_care_instructions}
-                  onChange={handleChange}
-                  rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
-                  placeholder="물 갈이 주기, 보관 방법 등"
-                />
-              </div>
-
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="naver_gift_wrapping"
-                    checked={formData.naver_gift_wrapping}
-                    onChange={handleChange}
-                    className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500"
-                  />
-                  <span className="text-sm text-gray-700">선물 포장 가능</span>
-                </label>
-
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="naver_adult_only"
-                    checked={formData.naver_adult_only}
-                    onChange={handleChange}
-                    className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500"
-                  />
-                  <span className="text-sm text-gray-700">성인 전용</span>
-                </label>
               </div>
             </div>
           </div>
@@ -565,19 +573,19 @@ export default function ProductNewPage() {
                     cx="80"
                     cy="80"
                     r="70"
-                    stroke={seoScore >= 100 ? '#9333ea' : seoScore >= 90 ? '#22c55e' : seoScore >= 80 ? '#3b82f6' : '#eab308'}
+                    stroke={seoScore >= 90 ? '#9333ea' : seoScore >= 80 ? '#22c55e' : seoScore >= 70 ? '#3b82f6' : '#eab308'}
                     strokeWidth="12"
                     fill="none"
-                    strokeDasharray={`${(seoScore / 110) * 439.6} 439.6`}
+                    strokeDasharray={`${(seoScore / 100) * 439.6} 439.6`}
                     strokeLinecap="round"
                     className="transition-all duration-500"
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className={`text-4xl font-bold ${
-                    seoScore >= 100 ? 'text-purple-600' :
-                    seoScore >= 90 ? 'text-green-600' :
-                    seoScore >= 80 ? 'text-blue-600' :
+                    seoScore >= 90 ? 'text-purple-600' :
+                    seoScore >= 80 ? 'text-green-600' :
+                    seoScore >= 70 ? 'text-blue-600' :
                     'text-yellow-600'
                   }`}>
                     {seoScore}
@@ -628,33 +636,6 @@ export default function ProductNewPage() {
                   ✓ {(formData.naver_origin ? 10 : 0) + (formData.naver_material ? 10 : 0) + (formData.naver_care_instructions ? 10 : 0)}점
                 </span>
               </div>
-
-              {/* ⭐ 이미지 점수 추가 - 수정됨! */}
-              <div className="pt-3 border-t border-pink-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">이미지 ({formData.imageCount}개)</span>
-                  <span className={`text-sm font-bold ${
-                    formData.mainImage && formData.imageCount >= 4 ? 'text-green-600' :
-                    formData.mainImage ? 'text-blue-600' :
-                    'text-gray-400'
-                  }`}>
-                    {formData.mainImage && formData.imageCount >= 4 ? '✅ 10점' :
-                     formData.mainImage ? `🔵 ${5 + Math.min(formData.imageCount - 1, 3)}점` :
-                     '⭕ 10점'}
-                  </span>
-                </div>
-                {/* ⭐ 실시간 피드백 추가 */}
-                {formData.mainImage && formData.imageCount < 4 && (
-                  <p className="text-xs text-orange-600 mt-1">
-                    {4 - formData.imageCount}장 더 추가하면 +{Math.min(5 - (formData.imageCount - 1), 5)}점!
-                  </p>
-                )}
-                {!formData.mainImage && (
-                  <p className="text-xs text-red-600 mt-1">
-                    메인 이미지를 먼저 업로드하세요 (+5점)
-                  </p>
-                )}
-              </div>
             </div>
 
             {/* SEO 가이드 */}
@@ -666,9 +647,6 @@ export default function ProductNewPage() {
                 <li>• 설명은 50자 이상 작성하세요 ⭐</li>
                 <li>• 브랜드/원산지 정보를 입력하세요</li>
                 <li>• 상세 정보를 충실히 작성하세요</li>
-                <li className={formData.imageCount >= 4 ? 'text-green-600 font-bold' : 'text-pink-600 font-bold'}>
-                  • {formData.imageCount >= 4 ? '✅ 이미지 4개 이상 달성!' : '이미지 4개 이상 업로드 시 +10점!'}
-                </li>
               </ul>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';  // ✅ 글로벌 싱글톤 사용
 
 interface DashboardStats {
   todaySales: number;
@@ -25,9 +25,9 @@ interface DashboardStats {
     id: string;
     orderNumber: string;
     customerName: string;
-    totalAmount: number;
+    totalPrice: number;
     status: string;
-    createdAt: Date;
+    orderDate: Date;
   }>;
 }
 
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // 어제
+    // 어제 (비교용)
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayTomorrow = new Date(yesterday);
@@ -51,38 +51,39 @@ export async function GET(request: NextRequest) {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    // 1. 오늘/어제 주문
+    // 1. 오늘 매출/주문
     const [todayOrders, yesterdayOrders] = await Promise.all([
       prisma.order.findMany({
         where: {
-          createdAt: { gte: today, lt: tomorrow },  // ✅ createdAt로 수정
+          orderDate: { gte: today, lt: tomorrow },
           status: { notIn: ['cancelled', 'refunded'] },
         },
       }),
       prisma.order.findMany({
         where: {
-          createdAt: { gte: yesterday, lt: yesterdayTomorrow },  // ✅ createdAt로 수정
+          orderDate: { gte: yesterday, lt: yesterdayTomorrow },
           status: { notIn: ['cancelled', 'refunded'] },
         },
       }),
     ]);
 
-    const todaySales = todayOrders.reduce((sum, order) => sum + order.totalAmount, 0);  // ✅ totalAmount로 수정
+    const todaySales = todayOrders.reduce((sum, order) => sum + order.totalPrice, 0);
     const todayOrdersCount = todayOrders.length;
-    const yesterdaySales = yesterdayOrders.reduce((sum, order) => sum + order.totalAmount, 0);  // ✅ totalAmount로 수정
+    const yesterdaySales = yesterdayOrders.reduce((sum, order) => sum + order.totalPrice, 0);
     const yesterdayOrdersCount = yesterdayOrders.length;
 
+    // 증감률 계산
     const todaySalesChange = yesterdaySales === 0 ? 0 : ((todaySales - yesterdaySales) / yesterdaySales * 100);
     const todayOrdersChange = yesterdayOrdersCount === 0 ? 0 : ((todayOrdersCount - yesterdayOrdersCount) / yesterdayOrdersCount * 100);
 
     // 2. 월 매출/주문
     const monthOrders = await prisma.order.findMany({
       where: {
-        createdAt: { gte: monthStart, lte: monthEnd },  // ✅ createdAt로 수정
+        orderDate: { gte: monthStart, lte: monthEnd },
         status: { notIn: ['cancelled', 'refunded'] },
       },
     });
-    const monthSales = monthOrders.reduce((sum, order) => sum + order.totalAmount, 0);  // ✅ totalAmount로 수정
+    const monthSales = monthOrders.reduce((sum, order) => sum + order.totalPrice, 0);
     const monthOrdersCount = monthOrders.length;
 
     // 3. 주간 추이 (최근 7일)
@@ -100,11 +101,11 @@ export async function GET(request: NextRequest) {
       weekPromises.push(
         prisma.order.findMany({
           where: {
-            createdAt: { gte: date, lt: nextDate },  // ✅ createdAt로 수정
+            orderDate: { gte: date, lt: nextDate },
             status: { notIn: ['cancelled', 'refunded'] },
           },
         }).then(dayOrders => {
-          const daySales = dayOrders.reduce((sum, order) => sum + order.totalAmount, 0);  // ✅ totalAmount로 수정
+          const daySales = dayOrders.reduce((sum, order) => sum + order.totalPrice, 0);
           weekSales.push(daySales);
           weekLabels.push(date.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }));
         })
@@ -124,7 +125,7 @@ export async function GET(request: NextRequest) {
     const ordersByStatus = await prisma.order.groupBy({
       by: ['status'],
       _count: { id: true },
-      where: { createdAt: { gte: monthStart, lte: monthEnd } },  // ✅ createdAt로 수정
+      where: { orderDate: { gte: monthStart, lte: monthEnd } },
     });
 
     const statusCount: Record<string, number> = {};
@@ -132,19 +133,24 @@ export async function GET(request: NextRequest) {
       statusCount[item.status] = item._count.id;
     });
 
-    const ordersByStatusFormatted: Record<string, number> = {
-      'pending': statusCount['PENDING'] || 0,
-      'paid': statusCount['PAID'] || 0,
-      'preparing': statusCount['PREPARING'] || 0,
-      'shipping': statusCount['SHIPPING'] || 0,
-      'delivered': statusCount['DELIVERED'] || 0,
-      'cancelled': statusCount['CANCELLED'] || 0,
-      'refunded': statusCount['REFUNDED'] || 0,
+    // 기본 상태들 초기화
+    const statusMap: Record<string, string> = {
+      'pending': '결제대기',
+      'paid': '결제완료',
+      'preparing': '배송준비',
+      'shipping': '배송중',
+      'delivered': '배송완료',
+      'cancelled': '취소',
+      'refunded': '환불'
     };
+    const ordersByStatusFormatted: Record<string, number> = {};
+    Object.keys(statusMap).forEach(status => {
+      ordersByStatusFormatted[status] = statusCount[status] || 0;
+    });
 
-    // 6. 인기 상품 Top 5
+    // 6. 인기 상품 Top 5 (판매량 기준)
     const topProductsRaw = await prisma.orderItem.groupBy({
-      by: ['productId'],
+      by: ['productId', 'productName'],
       _sum: { quantity: true, price: true },
       _count: { productId: true },
       orderBy: { _sum: { quantity: 'desc' } },
@@ -162,30 +168,30 @@ export async function GET(request: NextRequest) {
     for (const item of topProductsRaw) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
-        select: { name: true, mainImage: true },
+        select: { mainImage: true },
       });
 
       topProducts.push({
         id: item.productId,
-        name: product?.name || '알 수 없는 상품',
+        name: item.productName || '알 수 없는 상품',
         salesCount: (item._sum?.quantity || 0) as number,
         revenue: ((item._sum?.quantity || 0) * (item._sum?.price || 0)) as number,
         mainImage: product?.mainImage || null,
       });
     }
 
-    // 7. 최근 주문
+    // 7. 최근 주문 (상태, 고객명 포함)
     const recentOrders = await prisma.order.findMany({
-      where: { status: { notIn: ['CANCELLED', 'REFUNDED'] } },
-      orderBy: { createdAt: 'desc' },  // ✅ createdAt로 수정
+      where: { status: { notIn: ['cancelled', 'refunded'] } },
+      orderBy: { orderDate: 'desc' },
       take: 10,
       select: {
         id: true,
         orderNumber: true,
         customerName: true,
-        totalAmount: true,  // ✅ totalAmount로 수정
+        totalPrice: true,
         status: true,
-        createdAt: true,  // ✅ createdAt로 수정
+        orderDate: true,
       },
     });
 
@@ -223,4 +229,5 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+  // ✅ finally 블록 제거 - 글로벌 싱글톤이므로 연결 종료 불필요
 }

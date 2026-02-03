@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, RefreshCw } from 'lucide-react';
-import ProductTable from '@/components/products/ProductTable';
+import { Plus, RefreshCw, Filter, Search } from 'lucide-react';
+import ProductTable from '@/components/ProductTable';
 import ProductFilters from '@/components/products/ProductFilters';
-import { calculateNaverSeoScore } from '@/lib/seo';
+import { calculateNaverSeoScore, getSeoGrade } from '@/lib/seo';
 
 interface FilterState {
   category: string;
@@ -14,6 +14,7 @@ interface FilterState {
   priceMax: string;
   marginMin: string;
   seoScore: string;
+  search: string;
 }
 
 // 🎯 카테고리 매핑 (영문 → 한글)
@@ -34,6 +35,7 @@ export default function ProductsPage() {
     priceMax: '',
     marginMin: '',
     seoScore: '',
+    search: '',
   });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -48,10 +50,56 @@ export default function ProductsPage() {
 
     return Array.from(uniqueCategories).map(cat => ({
       value: cat,
-      label: CATEGORY_MAP[cat] || cat,
-    })).sort((a, b) => a.label.localeCompare(b.label));
+      label: CATEGORY_MAP[cat as keyof typeof CATEGORY_MAP] || cat,
+    }));
   }, [rawProducts]);
 
+  // 🎯 필터링된 상품
+  const filteredProducts = useMemo(() => {
+    return rawProducts.filter((product: any) => {
+      const seoScore = calculateNaverSeoScore(product);
+
+      // 검색
+      if (filters.search && !product.name.toLowerCase().includes(filters.search.toLowerCase())) {
+        return false;
+      }
+
+      // 카테고리
+      if (filters.category && product.category !== filters.category) {
+        return false;
+      }
+
+      // 상태
+      if (filters.status && product.status !== filters.status) {
+        return false;
+      }
+
+      // 가격 범위
+      const salePrice = product.salePrice || 0;
+      if (filters.priceMin && salePrice < parseInt(filters.priceMin)) return false;
+      if (filters.priceMax && salePrice > parseInt(filters.priceMax)) return false;
+
+      // 마진 범위
+      if (filters.marginMin && product.margin < parseFloat(filters.marginMin)) {
+        return false;
+      }
+
+      // SEO 점수 필터
+      if (filters.seoScore) {
+        if (filters.seoScore === '100+' && seoScore < 100) return false;
+        if (filters.seoScore === '80-99' && (seoScore < 80 || seoScore >= 100)) return false;
+        if (filters.seoScore === '70-79' && (seoScore < 70 || seoScore >= 80)) return false;
+      }
+
+      return true;
+    }).sort((a: any, b: any) => {
+      const scoreA = calculateNaverSeoScore(a);
+      const scoreB = calculateNaverSeoScore(b);
+      return scoreB - scoreA; // SEO 점수 내림차순
+    });
+  }, [rawProducts, filters]);
+
+  // 상품 목록 로드
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -59,229 +107,120 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      // 🎯 옵션 1: 전체 데이터 로드 후 클라이언트 필터링 (현재 방식)
-      const res = await fetch('/api/products');
+      const params = new URLSearchParams({
+        category: filters.category,
+        status: filters.status,
+        ...(filters.priceMin && { minPrice: filters.priceMin }),
+        ...(filters.priceMax && { maxPrice: filters.priceMax }),
+        ...(filters.seoScore && { seoScore: filters.seoScore }),
+      });
 
-      // 🎯 옵션 2: API 쿼리 파라미터 활용 (성능 최적화)
-      // const params = new URLSearchParams();
-      // if (filters.category) params.append('category', filters.category);
-      // if (filters.status) params.append('status', filters.status);
-      // if (filters.priceMin) params.append('minPrice', filters.priceMin);
-      // if (filters.priceMax) params.append('maxPrice', filters.priceMax);
-      // if (filters.seoScore) params.append('seoScore', filters.seoScore);
-      // const res = await fetch(`/api/products?${params.toString()}`);
-
-      const data = await res.json();
+      const response = await fetch(`/api/products?${params}`);
+      const data = await response.json();
 
       if (data.success) {
-        console.log('✅ API 상품 데이터:', data.products);
-        setRawProducts(data.products || []);
+        setRawProducts(data.products);
       }
     } catch (error) {
-      console.error('❌ 상품 목록 조회 실패:', error);
+      console.error('상품 로드 실패:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // 필터링 로직
-  const filteredProducts = useMemo(() => {
-    console.log('🔍 필터 적용:', filters);
-    let result = [...rawProducts];
+  const handleFilterChange = useCallback((newFilters: Partial<FilterState>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  }, []);
 
-    // 1. 카테고리 필터
-    if (filters.category && filters.category.trim() !== '') {
-      result = result.filter((p: any) => {
-        const productCategory = p.category || '';
-        console.log('카테고리 비교:', productCategory, '===', filters.category);
-        return productCategory === filters.category;
-      });
-    }
-
-    // 2. 상태 필터
-    if (filters.status && filters.status.trim() !== '') {
-      result = result.filter((p: any) => p.status === filters.status);
-    }
-
-    // 3. 가격 필터
-    if (filters.priceMin) {
-      const minPrice = parseFloat(filters.priceMin);
-      result = result.filter((p: any) => {
-        const price = p.selling_price || p.salePrice || 0;
-        return price >= minPrice;
-      });
-    }
-
-    if (filters.priceMax) {
-      const maxPrice = parseFloat(filters.priceMax);
-      result = result.filter((p: any) => {
-        const price = p.selling_price || p.salePrice || 0;
-        return price <= maxPrice;
-      });
-    }
-
-    // 4. 마진 필터
-    if (filters.marginMin) {
-      const minMargin = parseFloat(filters.marginMin);
-      result = result.filter((p: any) => {
-        const supplyPrice = p.supply_price || p.supplierPrice || 0;
-        const sellingPrice = p.selling_price || p.salePrice || 0;
-        const shippingCost = p.shipping_cost || p.shippingCost || 0;
-        const cost = supplyPrice + shippingCost;
-        const fee = sellingPrice * 0.058;
-        const profit = sellingPrice - cost - fee;
-        const margin = sellingPrice > 0 ? (profit / sellingPrice) * 100 : 0;
-        return margin >= minMargin;
-      });
-    }
-
-    // 5. SEO 점수 필터 (정확한 범위 매칭)
-    if (filters.seoScore && filters.seoScore.trim() !== '') {
-      console.log('🎯 SEO 필터 적용:', filters.seoScore);
-      result = result.filter((p: any) => {
-        const score = calculateNaverSeoScore(p);
-        console.log('상품:', p.name, '/ SEO 점수:', score);
-
-        if (filters.seoScore === '100') {
-          return score === 100;
-        } else if (filters.seoScore === '80-99') {
-          return score >= 80 && score < 100;
-        } else if (filters.seoScore === '70-79') {
-          return score >= 70 && score < 80;
-        } else if (filters.seoScore === '0-69') {
-          return score >= 0 && score < 70;
-        }
-        return true;
-      });
-    }
-
-    console.log('✅ 필터링 결과:', result.length, '개');
-    return result;
-  }, [rawProducts, filters]);
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return;
-
-    try {
-      const res = await fetch('/api/products/' + id, {
-        method: 'DELETE',
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        alert('상품이 삭제되었습니다');
-        fetchProducts();
-      } else {
-        alert(data.error || '삭제 실패');
-      }
-    } catch (error) {
-      alert('서버 오류가 발생했습니다');
-    }
+  const handleBulkAction = (action: 'delete' | 'publish') => {
+    console.log('벌크 액션:', action, selectedIds);
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedIds.length === 0) {
-      alert('삭제할 상품을 선택해주세요');
-      return;
-    }
-
-    if (!confirm(selectedIds.length + '개 상품을 삭제하시겠습니까?')) return;
-
-    try {
-      const res = await fetch('/api/products/bulk-delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        alert('상품이 삭제되었습니다');
-        setSelectedIds([]);
-        fetchProducts();
-      } else {
-        alert(data.error || '삭제 실패');
-      }
-    } catch (error) {
-      alert('서버 오류가 발생했습니다');
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-lg text-gray-500">로딩 중...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">상품 관리</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            총 {filteredProducts.length}개 상품
-          </p>
+      {/* 헤더 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center space-x-4">
+          <h1 className="text-3xl font-bold text-gray-900">
+            상품 목록 ({filteredProducts.length}/{rawProducts.length})
+          </h1>
+          <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <span>S등급: {filteredProducts.filter((p: any) => calculateNaverSeoScore(p) >= 100).length}</span>
+            <span>A등급: {filteredProducts.filter((p: any) => calculateNaverSeoScore(p) >= 90).length}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center space-x-3">
           <button
             onClick={fetchProducts}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
-            title="새로고침"
+            className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            disabled={loading}
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4 mr-2" />
             새로고침
           </button>
           <Link
             href="/products/new"
-            className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center gap-2"
+            className="flex items-center px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
           >
-            <Plus className="w-4 h-4" />
-            상품 등록
+            <Plus className="w-4 h-4 mr-2" />
+            새 상품 등록
           </Link>
         </div>
       </div>
 
-      <ProductFilters 
-        onFilterChange={setFilters}
-        categories={categories}
-      />
-
-      {selectedIds.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
-          <span className="text-sm text-blue-900 font-medium">
-            {selectedIds.length}개 상품 선택됨
-          </span>
-          <button
-            onClick={handleBulkDelete}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm"
-          >
-            선택 삭제
-          </button>
-        </div>
-      )}
-
-      <div className="bg-white rounded-lg shadow-md">
-        {loading ? (
-          <div className="p-12 text-center">
-            <div className="animate-spin w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-500">로딩 중...</p>
+      {/* 필터 & 검색 */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+          <div className="flex-1 min-w-0">
+            <ProductFilters
+              filters={filters}
+              categories={categories}
+              onFilterChange={handleFilterChange}
+            />
           </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-gray-500 mb-4">등록된 상품이 없습니다</p>
-            <Link
-              href="/products/new"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition"
+
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium text-gray-700">
+              선택 {selectedIds.length}개
+            </span>
+            <button
+              onClick={() => handleBulkAction('delete')}
+              className="px-3 py-1 text-sm bg-red-100 text-red-800 rounded-md hover:bg-red-200"
+              disabled={selectedIds.length === 0}
             >
-              <Plus className="w-4 h-4" />
-              첫 상품 등록하기
-            </Link>
+              삭제
+            </button>
+            <button
+              onClick={() => handleBulkAction('publish')}
+              className="px-3 py-1 text-sm bg-green-100 text-green-800 rounded-md hover:bg-green-200"
+              disabled={selectedIds.length === 0}
+            >
+              출시
+            </button>
           </div>
-        ) : (
-          <ProductTable
-            products={filteredProducts}
-            selectedIds={selectedIds}
-            setSelectedIds={setSelectedIds}
-            onDelete={handleDelete}
-          />
-        )}
+        </div>
       </div>
+
+      {/* 상품 테이블 */}
+      <ProductTable
+        products={filteredProducts}
+        onEdit={(product: any) => {
+          console.log('편집:', product);
+          // /products/[id]/edit 로 이동
+        }}
+        onDelete={(id: string) => {
+          console.log('삭제:', id);
+        }}
+      />
     </div>
   );
 }

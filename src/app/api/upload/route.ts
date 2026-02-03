@@ -1,11 +1,11 @@
 // app/api/upload/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadMultipleImages } from '@/lib/cloudinary';
+import { uploadMultipleImages } from '@/lib/supabase-storage';
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const files = formData.getAll('files') as File[];
+    const files = formData.getAll('images') as File[]; // 🔥 'files' → 'images'
 
     if (!files || files.length === 0) {
       return NextResponse.json(
@@ -35,12 +35,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`📤 ${files.length}개 이미지 업로드 시작...`);
+    console.log(`📤 ${files.length}개 이미지 Supabase 업로드 시작...`);
 
-    // Cloudinary 업로드
+    // 🔥 Supabase Storage 업로드
     const urls = await uploadMultipleImages(files);
 
-    console.log('✅ 이미지 업로드 완료:', urls);
+    console.log('✅ Supabase 업로드 완료:', urls);
 
     return NextResponse.json({
       success: true,
