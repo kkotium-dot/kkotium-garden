@@ -147,6 +147,10 @@ model Product {
   taxType                 String    @default("과세")
   vendorCode              String?
 
+  // ⭐⭐⭐ 네이버 통합 설계 신규 필드 (2개 추가) ⭐⭐⭐
+  naverExcelData          Json?     // 네이버 엑셀 88개 필드 저장
+  kkottiNaverScore        Json?     // 꼬띠 AI + 네이버 통합 평가
+
   // 관계
   supplierId              String
   supplier                Supplier  @relation(fields: [supplierId], references: [id])
@@ -188,4 +192,53 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ⭐⭐⭐ 네이버 마스터 데이터 테이블 3개 (신규) ⭐⭐⭐
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 1. 택배사 마스터 (212개)
+model DeliveryCompany {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@index([active])
+}
+
+// 2. 네이버 카테고리 마스터 (4,993개)
+model NaverCategory {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  level1    String?
+  level2    String?
+  level3    String?
+  level4    String?
+  fullPath  String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@index([level1])
+  @@index([fullPath])
+  @@index([active])
+}
+
+// 3. 원산지 마스터 (518개)
+model OriginCode {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  region    String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@index([active])
 }

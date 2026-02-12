@@ -1,329 +1,195 @@
+// src/app/dashboard/page.tsx
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 통합 관리 대시보드 메인 페이지
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 'use client';
 
-import { useState, useEffect } from 'react';
-import SeoWidget from '@/components/SeoWidget';
-
-import Link from 'next/link';
-import { formatKRW, formatPercent, formatNumber } from '@/lib/utils/format';
-
-interface Stats {
-  totalProducts: number;
-  totalRevenue: number;
-  totalProfit: number;
-  averageMargin: number;
-  sourcedProducts: {
-    total: number;
-    pending: number;
-    approved: number;
-    listed: number;
-  };
-  recentActivity: Array<{
-    id: number;
-    name: string;
-    status: string;
-    created_at: string;
-  }>;
-  topMarginProducts: Array<{
-    id: number;
-    name: string;
-    wholesale_price: number;
-    retail_price: number;
-    margin: number;
-  }>;
-}
+import { useEffect, useState } from 'react';
+import { KpiCards } from '@/components/dashboard/KpiCards';
+import { ProductsTable } from '@/components/dashboard/ProductsTable';
+import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
+import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<Stats>({
-    totalProducts: 0,
-    totalRevenue: 0,
-    totalProfit: 0,
-    averageMargin: 0,
-    sourcedProducts: { total: 0, pending: 0, approved: 0, listed: 0 },
-    recentActivity: [],
-    topMarginProducts: []
-  });
+  const [stats, setStats] = useState<any>(null);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<any>({});
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [period, setPeriod] = useState('7d');
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    loadData();
+  }, [filters, period]);
 
-  const fetchStats = async () => {
+  const loadData = async () => {
+    setLoading(true);
     try {
-      const response = await fetch('/api/dashboard/stats');
-      if (!response.ok) throw new Error('통계를 불러올 수 없습니다');
-      const data = await response.json();
-      setStats({
-        totalProducts: data.totalProducts || 0,
-        totalRevenue: data.totalRevenue || 0,
-        totalProfit: data.totalProfit || 0,
-        averageMargin: data.averageMargin || 0,
-        sourcedProducts: data.sourcedProducts || { total: 0, pending: 0, approved: 0, listed: 0 },
-        recentActivity: data.recentActivity || [],
-        topMarginProducts: data.topMarginProducts || []
-      });
-    } catch (err) {
-      console.error('Failed to fetch stats:', err);
+      // 통계 로드
+      const statsRes = await fetch(`/api/dashboard/stats?period=${period}`);
+      const statsData = await statsRes.json();
+      if (statsData.success) {
+        setStats(statsData.data.summary);
+      }
+
+      // 상품 목록 로드
+      const query = new URLSearchParams(filters).toString();
+      const productsRes = await fetch(`/api/dashboard/products?${query}`);
+      const productsData = await productsRes.json();
+      if (productsData.success) {
+        setProducts(productsData.data.products);
+      }
+    } catch (error) {
+      console.error('❌ 데이터 로드 오류:', error);
+      alert('데이터를 불러오는 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-gray-600">로딩 중...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {/* 주요 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">📦</span>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* 헤더 */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
+              🌸 통합 관리 대시보드
+            </h1>
+            <p className="text-gray-600 mt-2 text-lg">
+              네이버 스마트스토어 상품 관리 센터
+            </p>
           </div>
-          <p className="text-sm text-gray-600 mb-1">전체 상품</p>
-          <p className="text-3xl font-bold text-gray-900">
-            {formatNumber(stats.totalProducts)}
-            <span className="text-lg font-normal text-gray-500 ml-1">개</span>
-          </p>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">💰</span>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 mb-1">총 매출</p>
-          <p className="text-3xl font-bold text-green-600">
-            {formatKRW(stats.totalRevenue)}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">💎</span>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 mb-1">순이익</p>
-          <p className="text-3xl font-bold text-pink-600">
-            {formatKRW(stats.totalProfit)}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">📈</span>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 mb-1">평균 마진율</p>
-          <p className="text-3xl font-bold text-purple-600">
-            {formatPercent(stats.averageMargin)}
-          </p>
-        </div>
-      </div>
-
-      {/* 수집 상품 현황 */}
-      <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900">
-            🌸 수집 상품 현황
-          </h3>
-          <Link 
-            href="/sourced" 
-            className="text-sm text-pink-600 hover:underline font-semibold"
-          >
-            전체 보기 →
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg p-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">{stats.sourcedProducts.total}</p>
-            <p className="text-sm text-gray-600">전체</p>
-          </div>
-          <div className="bg-white rounded-lg p-4 text-center">
-            <p className="text-2xl font-bold text-yellow-600">{stats.sourcedProducts.pending}</p>
-            <p className="text-sm text-gray-600">⏳ 대기중</p>
-          </div>
-          <div className="bg-white rounded-lg p-4 text-center">
-            <p className="text-2xl font-bold text-blue-600">{stats.sourcedProducts.approved}</p>
-            <p className="text-sm text-gray-600">✅ 승인됨</p>
-          </div>
-          <div className="bg-white rounded-lg p-4 text-center">
-            <p className="text-2xl font-bold text-green-600">{stats.sourcedProducts.listed}</p>
-            <p className="text-sm text-gray-600">🎉 등록완료</p>
-          </div>
-        </div>
-      </div>
-
-      {/* 2열 레이아웃 */}
-
-      {/* 네이버 SEO 위젯 */}
-      <SeoWidget />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 최근 활동 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">📌 최근 활동</h3>
-            <Link href="/sourced" className="text-sm text-pink-600 hover:underline font-semibold">
-              전체 보기 →
-            </Link>
-          </div>
-          {stats.recentActivity.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-3">최근 활동이 없습니다</p>
-              <Link
-                href="/crawl"
-                className="inline-block px-4 py-2 bg-pink-500 text-white text-sm rounded-lg hover:bg-pink-600"
+          {/* 기간 선택 */}
+          <div className="flex gap-2">
+            {['7d', '30d', '90d', 'all'].map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  period === p
+                    ? 'bg-pink-500 text-white shadow-lg'
+                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`}
               >
-                상품 수집 시작하기
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {stats.recentActivity.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-800 truncate">
-                      {activity.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(activity.created_at).toLocaleDateString('ko-KR', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
-                  <span className={`ml-3 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                    activity.status === 'listed' 
-                      ? 'bg-green-100 text-green-800'
-                      : activity.status === 'approved'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {activity.status === 'listed' ? '등록완료' :
-                     activity.status === 'approved' ? '승인됨' :
-                     '대기중'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+                {p === '7d' && '최근 7일'}
+                {p === '30d' && '최근 30일'}
+                {p === '90d' && '최근 90일'}
+                {p === 'all' && '전체'}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* 마진율 Top 5 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">🏆 마진율 Top 5</h3>
-            <Link href="/sourced" className="text-sm text-pink-600 hover:underline font-semibold">
-              전체 보기 →
-            </Link>
-          </div>
-          {stats.topMarginProducts.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-3">수집된 상품이 없습니다</p>
-              <Link
-                href="/crawl"
-                className="inline-block px-4 py-2 bg-pink-500 text-white text-sm rounded-lg hover:bg-pink-600"
+        {/* KPI 카드 */}
+        <KpiCards stats={stats} loading={!stats} />
+
+        {/* 빠른 액션 */}
+        <div className="bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg shadow-lg p-6 mb-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">⚡ 빠른 작업</h2>
+              <p className="text-pink-100">
+                등록 대기 상품 {stats?.readyProducts || 0}개를 네이버에 한 번에 등록하세요!
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <ExcelExportButton
+                mode="filter"
+                filters={{ status: 'READY', minScore: 60 }}
+                buttonText="📥 등록 대기 상품 전체 다운로드"
+                buttonClassName="px-6 py-3 bg-white text-pink-600 rounded-lg hover:bg-gray-100 font-bold shadow-lg"
+              />
+              <button
+                onClick={() => window.location.href = '/products/new'}
+                className="px-6 py-3 bg-white text-purple-600 rounded-lg hover:bg-gray-100 font-bold shadow-lg"
               >
-                상품 수집하기
-              </Link>
+                ➕ 새 상품 등록
+              </button>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {stats.topMarginProducts.map((product, index) => (
-                <div
-                  key={product.id}
-                  className="flex items-center gap-3 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg hover:from-pink-100 hover:to-purple-100 transition"
-                >
-                  <div className="flex-shrink-0 w-7 h-7 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-800 truncate text-sm">
-                      {product.name}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      도매가: {formatKRW(product.wholesale_price)} → 판매가: {formatKRW(product.retail_price)}
-                    </p>
-                  </div>
-                  <span className={`flex-shrink-0 px-3 py-1 rounded-full text-sm font-bold ${
-                    product.margin >= 100 ? 'bg-green-100 text-green-800' :
-                    product.margin >= 60 ? 'bg-blue-100 text-blue-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {product.margin}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          </div>
         </div>
-      </div>
 
-      {/* 빠른 액션 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Link
-          href="/products/new"
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-pink-500 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">➕</span>
+        {/* 필터 */}
+        <DashboardFilters onFilterChange={(f) => setFilters({ ...filters, ...f })} />
+
+        {/* 선택된 상품 정보 */}
+        {selectedIds.length > 0 && (
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-blue-800 font-bold text-lg">
+                ✓ {selectedIds.length}개 상품 선택됨
+              </span>
+              <span className="text-blue-600 text-sm">
+                일괄 작업을 수행할 수 있습니다
+              </span>
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-1">상품 등록</h3>
-              <p className="text-sm text-gray-600">새 상품 추가하기</p>
+            <div className="flex gap-2">
+              <ExcelExportButton
+                mode="batch"
+                productIds={selectedIds}
+                buttonText={`📥 ${selectedIds.length}개 엑셀 다운로드`}
+                buttonClassName="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold"
+              />
+              <button
+                onClick={() => {
+                  if (confirm(`선택된 ${selectedIds.length}개 상품을 삭제하시겠습니까?`)) {
+                    alert('일괄 삭제 기능은 추후 구현 예정입니다.');
+                  }
+                }}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-semibold"
+              >
+                🗑️ 일괄 삭제
+              </button>
             </div>
           </div>
-        </Link>
+        )}
 
-        <Link
-          href="/products"
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">📋</span>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-1">상품 관리</h3>
-              <p className="text-sm text-gray-600">상품 목록 보기</p>
+        {/* 상품 테이블 */}
+        <ProductsTable
+          products={products}
+          loading={loading}
+          onSelectionChange={setSelectedIds}
+        />
+
+        {/* 푸터 통계 */}
+        {!loading && products.length > 0 && (
+          <div className="mt-6 bg-white rounded-lg shadow p-4">
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <span>총 {products.length}개 상품 표시 중</span>
+              <span>
+                평균 AI 점수:{' '}
+                <span className="font-bold text-pink-600">
+                  {Math.round(
+                    products.reduce((sum, p) => sum + p.aiScore, 0) / products.length
+                  )}
+                  점
+                </span>
+              </span>
+              <span>
+                총 예상 마진:{' '}
+                <span className="font-bold text-green-600">
+                  {Math.round(
+                    products.reduce((sum, p) => sum + (p.salePrice - p.supplierPrice), 0) / 10000
+                  )}
+                  만원
+                </span>
+              </span>
             </div>
           </div>
-        </Link>
+        )}
 
-        <Link
-          href="/crawl"
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">🔗</span>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-1">도매매 크롤러</h3>
-              <p className="text-sm text-gray-600">상품 불러오기</p>
+        {/* 로딩 오버레이 */}
+        {loading && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-8 shadow-2xl">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-pink-600 mx-auto mb-4"></div>
+              <p className="text-gray-700 text-lg font-semibold">데이터 로딩 중...</p>
             </div>
           </div>
-        </Link>
+        )}
       </div>
     </div>
   );

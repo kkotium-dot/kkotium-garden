@@ -1,0 +1,558 @@
+'use client';
+
+import { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import ImageUploader from '@/components/products/ImageUploader';
+import ProductSeoForm from './seo/ProductSeoForm';
+import { Save, Loader2, ArrowLeft, Package, Image as ImageIcon, FileText, TrendingUp, Truck } from 'lucide-react';
+import Link from 'next/link';
+
+interface ProductFormProps {
+  initialData?: any;
+  onSave?: (data: any) => Promise<void>;
+  loading?: boolean;
+  mode?: string;
+}
+
+// ✅ SKU 영문 생성 (한글 → 영문 약자)
+function generateEnglishSKU(name: string): string {
+  const koreanToEnglish: Record<string, string> = {
+    '프리미엄': 'PREM',
+    '장미': 'ROSE',
+    '꽃다발': 'BQT',
+    '튤립': 'TULP',
+    '해바라기': 'SUNF',
+    '백합': 'LILY',
+    '카네이션': 'CARN',
+    '국화': 'CHRY',
+    '난초': 'ORCH',
+    '부케': 'BOUQ',
+    '화환': 'WREA',
+    '바구니': 'BASK',
+    '포트': 'POT',
+    '세트': 'SET',
+    '선물': 'GIFT',
+    '생일': 'BDAY',
+    '결혼': 'WED',
+    '기념일': 'ANNI',
+  };
+
+  let prefix = '';
+  for (const [kor, eng] of Object.entries(koreanToEnglish)) {
+    if (name.includes(kor)) {
+      prefix = eng;
+      break;
+    }
+  }
+
+  if (!prefix) {
+    const words = name.match(/[a-zA-Z]+/g);
+    if (words && words.length > 0) {
+      prefix = words[0].substring(0, 4).toUpperCase();
+    }
+  }
+
+  const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `PROD-${prefix || randomStr.substring(0, 4)}${randomStr.substring(0, 2)}`;
+}
+
+export default function ProductForm({ initialData, onSave, loading: externalLoading, mode = 'create' }: ProductFormProps) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'basic' | 'images' | 'detail' | 'seo'>('basic');
+
+  const [supplier, setSupplier] = useState<{
+    id: string;
+    name: string;
+    code: string;
+  }>(initialData?.supplier || {
+    id: initialData?.supplierId || 'kkotium-default',
+    name: initialData?.supplierName || '꽃틔움(협력사)',
+    code: initialData?.supplierCode || 'KKOTIUM'
+  });
+
+  const [formData, setFormData] = useState({
+    name: initialData?.name || '',
+    sku: initialData?.sku || '',
+    category: initialData?.category || '',
+    salePrice: initialData?.salePrice?.toString() || '',
+    supplierPrice: initialData?.supplierPrice?.toString() || '',
+    stock: initialData?.stock?.toString() || '',
+    brand: initialData?.brand || '',
+    manufacturer: initialData?.manufacturer || '',
+    origin: initialData?.origin || '',
+    shippingFee: initialData?.shippingFee?.toString() || '',
+    status: initialData?.status || 'draft',
+  });
+
+  const [detailDescription, setDetailDescription] = useState(initialData?.detailDescription || '');
+
+  const [images, setImages] = useState<Array<{ url: string; isMain: boolean; altText: string }>>(
+    Array.isArray(initialData?.images) 
+      ? initialData.images.map((url: string, i: number) => ({ url, isMain: i === 0, altText: '' }))
+      : []
+  );
+
+  const [seoData, setSeoData] = useState({
+    title: initialData?.title || '',
+    description: initialData?.description || '',
+    keywords: initialData?.keywords || '',
+    naver_title: initialData?.naver_title || '',
+    naver_description: initialData?.naver_description || '',
+    naver_keywords: initialData?.naver_keywords || '',
+    og_image: initialData?.og_image || '',
+    seo_score: initialData?.seo_score || 0,
+    seo_valid: initialData?.seo_valid || false,
+  });
+
+  // ✅ 이미지 업로드 핸들러 (ImageUploader 콜백용)
+  const handleImageUpload = useCallback((imageData: { url: string; isMain: boolean; altText: string }) => {
+    setImages(prev => {
+      // 새 이미지가 메인이면 기존 메인 해제
+      if (imageData.isMain) {
+        return [...prev.map(img => ({ ...img, isMain: false })), imageData];
+      }
+      return [...prev, imageData];
+    });
+  }, []);
+
+  // ✅ 이미지 삭제 핸들러
+  const handleImageDelete = useCallback((url: string) => {
+    setImages(prev => {
+      const filtered = prev.filter(img => img.url !== url);
+      // 메인 이미지가 삭제되면 첫 번째를 메인으로
+      if (filtered.length > 0 && !filtered.some(img => img.isMain)) {
+        filtered[0].isMain = true;
+      }
+      return filtered;
+    });
+  }, []);
+
+  const calculateMargin = useCallback(() => {
+    const salePrice = parseFloat(formData.salePrice) || 0;
+    const supplierPrice = parseFloat(formData.supplierPrice) || 0;
+    if (salePrice === 0) return '0';
+    const margin = ((salePrice - supplierPrice) / salePrice) * 100;
+    return margin.toFixed(1);
+  }, [formData.salePrice, formData.supplierPrice]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name.trim()) {
+      alert('❌ 상품명을 입력해주세요');
+      setActiveTab('basic');
+      return;
+    }
+
+    const finalSku = formData.sku || generateEnglishSKU(formData.name);
+
+    if (!formData.category.trim()) {
+      alert('❌ 카테고리를 선택해주세요');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (!formData.salePrice || parseFloat(formData.salePrice) < 10) {
+      alert('❌ 판매가는 최소 10원 이상이어야 합니다');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (!formData.stock || parseInt(formData.stock) < 1) {
+      alert('❌ 재고수량을 입력해주세요');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (images.length === 0) {
+      const confirmImage = window.confirm(
+        '⚠️ 이미지가 없습니다.\n\n' +
+        '이미지 없이 등록하시겠습니까?\n' +
+        '(나중에 수정 가능합니다)'
+      );
+      if (!confirmImage) {
+        setActiveTab('images');
+        return;
+      }
+    }
+
+    const seoScore = seoData.seo_score;
+    let seoWarning = '';
+
+    if (seoScore < 50) {
+      seoWarning = 
+        `⚠️ SEO 점수: ${seoScore}점 (낮음)\n\n` +
+        `• 0-49점: 검색 노출 매우 낮음\n` +
+        `• 50-79점: 일반 노출\n` +
+        `• 80-100점: 우선 노출 (권장)\n\n` +
+        `지금 등록하고 나중에 SEO를 개선하시겠습니까?`;
+    } else if (seoScore < 80) {
+      seoWarning = 
+        `ℹ️ SEO 점수: ${seoScore}점 (보통)\n\n` +
+        `80점 이상 권장 (우선 노출)\n\n` +
+        `지금 등록하시겠습니까?`;
+    }
+
+    if (seoWarning) {
+      const confirmSEO = window.confirm(seoWarning);
+      if (!confirmSEO) {
+        setActiveTab('seo');
+        return;
+      }
+    }
+
+    const margin = parseFloat(calculateMargin());
+    const submitData = {
+      name: formData.name.trim(),
+      sku: finalSku,
+      category: formData.category.trim(),
+      salePrice: parseFloat(formData.salePrice),
+      supplierPrice: parseFloat(formData.supplierPrice) || 0,
+      stock: parseInt(formData.stock),
+      brand: formData.brand.trim() || '꽃틔움',
+      manufacturer: formData.manufacturer.trim() || '꽃틔움(협력사)',
+      origin: formData.origin,
+      shippingFee: parseFloat(formData.shippingFee) || 0,
+      status: formData.status,
+      supplierId: supplier.id,
+      supplierCode: supplier.code,
+      supplierName: supplier.name,
+      images: images.map(img => img.url),
+      imageAltTexts: images.map(img => img.altText),
+      mainImage: images.find(img => img.isMain)?.url || images[0]?.url || null,
+      detailDescription: detailDescription.trim(),
+      title: seoData.title?.trim() || '',
+      description: seoData.description?.trim() || '',
+      keywords: seoData.keywords?.trim() || '',
+      naver_title: seoData.naver_title?.trim() || formData.name,
+      naver_description: seoData.naver_description?.trim() || '',
+      naver_brand: formData.brand?.trim() || '꽃틔움',
+      naver_manufacturer: formData.manufacturer?.trim() || '꽃틔움(협력사)',
+      naver_origin: formData.origin,
+      naver_keywords: seoData.keywords?.trim() || '',
+      og_image: seoData.og_image?.trim() || images[0]?.url || '',
+      seo_score: seoData.seo_score,
+      seo_valid: seoData.seo_score >= 50,
+      margin,
+    };
+
+    try {
+      if (onSave) {
+        await onSave(submitData);
+      } else {
+        setLoading(true);
+        const response = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(submitData),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || result.details || '상품 등록 실패');
+        }
+
+        alert('✅ 상품이 등록되었습니다');
+        router.push('/products');
+      }
+    } catch (error: any) {
+      console.error('❌ 제출 실패:', error);
+      alert(`❌ 상품 등록 실패: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isFormValid = 
+    formData.name.trim().length > 0 &&
+    formData.category.trim().length > 0 && 
+    parseFloat(formData.salePrice) >= 10 &&
+    parseInt(formData.stock) >= 1;
+
+  const getSeoGrade = (score: number) => {
+    if (score >= 80) return { grade: 'A', color: 'from-green-400 to-emerald-500', text: '우수' };
+    if (score >= 50) return { grade: 'B', color: 'from-yellow-400 to-orange-400', text: '보통' };
+    return { grade: 'C', color: 'from-red-400 to-pink-500', text: '낮음' };
+  };
+
+  const seoGrade = getSeoGrade(seoData.seo_score);
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-5xl mx-auto space-y-6 pb-20">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between bg-white p-6 rounded-2xl shadow-lg border-2 border-pink-100">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900">
+            {mode === 'create' ? '📦 상품 등록' : '✏️ 상품 수정'}
+          </h1>
+          <p className="text-lg text-gray-600 mt-1">
+            공급사: <span className="font-bold text-pink-600">{supplier.name}</span>
+          </p>
+        </div>
+        <div className="text-right">
+          <div className={`px-6 py-3 rounded-full text-base font-bold shadow-md bg-gradient-to-r ${seoGrade.color} text-white`}>
+            SEO {seoData.seo_score}/100 ({seoGrade.grade}등급)
+          </div>
+          <p className="text-sm text-gray-500 mt-1">{seoGrade.text}</p>
+        </div>
+      </div>
+
+      {/* 탭 네비게이션 */}
+      <div className="bg-white rounded-2xl shadow-lg p-2 border-2 border-pink-100">
+        <div className="flex gap-2">
+          {[
+            { id: 'basic' as const, icon: Package, label: '기본정보' },
+            { id: 'images' as const, icon: ImageIcon, label: `이미지 (${images.length})` },
+            { id: 'detail' as const, icon: FileText, label: '상세설명' },
+            { id: 'seo' as const, icon: TrendingUp, label: 'SEO' },
+          ].map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setActiveTab(id)}
+              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
+                activeTab === id
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 탭 컨텐츠 */}
+      <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-pink-100">
+        {activeTab === 'basic' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+              <Package className="w-7 h-7 text-pink-600" />
+              기본 정보
+            </h2>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                상품명 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-pink-500 focus:ring-2 focus:ring-pink-200"
+                placeholder="프리미엄 장미 꽃다발 (빨강)"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                SKU <span className="text-green-600 text-xs">✓ 자동생성</span>
+              </label>
+              <input
+                type="text"
+                value={formData.sku}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-green-50"
+                placeholder="자동 생성됨"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  카테고리 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-pink-500"
+                  placeholder="주방/생활"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  판매가 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={formData.salePrice}
+                  onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-pink-500"
+                  placeholder="35000"
+                  required
+                  min="10"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">공급가</label>
+                <input
+                  type="number"
+                  value={formData.supplierPrice}
+                  onChange={(e) => setFormData({ ...formData, supplierPrice: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl"
+                  placeholder="21000"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  💰 마진율: {calculateMargin()}%
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  재고수량 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={formData.stock}
+                  onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-pink-500"
+                  placeholder="100"
+                  required
+                  min="1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">배송비</label>
+              <input
+                type="number"
+                value={formData.shippingFee}
+                onChange={(e) => setFormData({ ...formData, shippingFee: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl"
+                placeholder="3500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  브랜드 <span className="text-yellow-600 text-xs">⭐ 검색 노출 필수</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.brand}
+                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl"
+                  placeholder="라이프스타일"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  제조사 <span className="text-yellow-600 text-xs">⭐ 신뢰도</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.manufacturer}
+                  onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl"
+                  placeholder="꽃틔움(협력사)"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                원산지 <span className="text-yellow-600 text-xs">⭐ 필수</span>
+              </label>
+              <select
+                value={formData.origin}
+                onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl"
+              >
+                <option value="">선택</option>
+                <option value="0200037">한국산</option>
+                <option value="0200038">중국산</option>
+                <option value="0200039">일본산</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'images' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+                <ImageIcon className="w-7 h-7 text-pink-600" />
+                이미지 ({images.length}개)
+              </h2>
+              <p className="text-sm text-gray-500">
+                {images.length === 0 && '⚠️ 권장: 3개 이상'}
+                {images.length >= 3 && '✅ 최적화됨'}
+              </p>
+            </div>
+            <ImageUploader
+              existingImages={images}
+              onUploadSuccess={handleImageUpload}
+              onDeleteSuccess={handleImageDelete}
+              maxImages={10}
+            />
+          </div>
+        )}
+
+        {activeTab === 'detail' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+              <FileText className="w-7 h-7 text-pink-600" />
+              상세설명
+            </h2>
+            <textarea
+              value={detailDescription}
+              onChange={(e) => setDetailDescription(e.target.value)}
+              className="w-full h-64 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-pink-500 focus:ring-2 focus:ring-pink-200"
+              placeholder="제품 수령 후 7일 이내 교환/환불 가능..."
+            />
+          </div>
+        )}
+
+        {activeTab === 'seo' && (
+          <ProductSeoForm
+            seoData={seoData}
+            onSeoChange={setSeoData}
+          />
+        )}
+      </div>
+
+      {/* 제출 버튼 */}
+      <div className="flex items-center justify-between bg-white p-6 rounded-2xl shadow-lg border-2 border-pink-100">
+        <Link
+          href="/products"
+          className="px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 text-gray-600 hover:bg-gray-100 transition-all"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          목록으로
+        </Link>
+
+        <button
+          type="submit"
+          disabled={loading || !isFormValid}
+          className={`px-12 py-4 rounded-xl font-black text-lg flex items-center gap-3 transition-all shadow-xl ${
+            isFormValid && !loading
+              ? 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white hover:shadow-2xl hover:-translate-y-1'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          {loading || externalLoading ? (
+            <>
+              <Loader2 className="w-6 h-6 animate-spin" />
+              등록중...
+            </>
+          ) : (
+            <>
+              <Save className="w-6 h-6" />
+              {mode === 'create' ? '상품 등록하기' : '수정 완료'}
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+}

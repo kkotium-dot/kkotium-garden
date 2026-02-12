@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
+import ToastProvider from "@/components/providers/ToastProvider";
 
 export const metadata: Metadata = {
   title: "꽃티움가든 - 상품 관리 시스템",
@@ -26,6 +27,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-pretendard bg-cream antialiased">
+        {/* Toast 알림 시스템 */}
+        <ToastProvider />
+
         <div className="flex min-h-screen">
           {/* Sidebar */}
           <Sidebar />

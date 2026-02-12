@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import NaverSeoProductTable from '@/components/naver-seo/NaverSeoProductTable';
 import BulkEditModal, { BulkEditData } from '@/components/naver-seo/BulkEditModal';
 import AiBulkGenerateModal from '@/components/naver-seo/AiBulkGenerateModal';
+import AiProgressModal from '@/components/naver-seo/AiProgressModal';
 
 interface Product {
   id: string;
@@ -34,6 +36,8 @@ export default function NaverSeoPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [showAiBulkModal, setShowAiBulkModal] = useState(false);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0, currentProduct: '' });
 
   useEffect(() => {
     fetchProducts();
@@ -46,7 +50,7 @@ export default function NaverSeoPage() {
       if (filter !== 'all') params.append('filter', filter);
       if (searchQuery) params.append('search', searchQuery);
 
-      const response = await fetch(`/api/naver-seo/products?$${params.toString()}`);
+      const response = await fetch('/api/naver-seo/products?' + params.toString());
       const data = await response.json();
 
       if (data.success) {
@@ -54,13 +58,14 @@ export default function NaverSeoPage() {
       }
     } catch (error) {
       console.error('Failed to fetch products:', error);
+      toast.error('상품 목록을 불러오는데 실패했습니다');
     } finally {
       setLoading(false);
     }
   };
 
   const handleProductClick = (productId: string) => {
-    router.push(`/products/$${productId}/edit`);
+    router.push('/products/' + productId + '/edit');
   };
 
   const handleBulkEdit = async (data: BulkEditData) => {
@@ -77,7 +82,7 @@ export default function NaverSeoPage() {
       const result = await response.json();
 
       if (result.success) {
-        alert(`✅ $${result.updatedCount}개 상품이 수정되었습니다!`);
+        toast.success('🎉 ' + result.updatedCount + '개 상품이 수정되었습니다!');
         setSelectedIds([]);
         fetchProducts();
       } else {
@@ -85,6 +90,7 @@ export default function NaverSeoPage() {
       }
     } catch (error) {
       console.error('일괄 수정 실패:', error);
+      toast.error('일괄 수정에 실패했습니다');
       throw error;
     }
   };
@@ -93,6 +99,8 @@ export default function NaverSeoPage() {
     try {
       const product = products.find(p => p.id === productId);
       if (!product) throw new Error('상품을 찾을 수 없습니다');
+
+      const loadingToast = toast.loading('🤖 AI가 최적화 중입니다...');
 
       const response = await fetch('/api/naver-seo/ai-generate', {
         method: 'POST',
@@ -105,17 +113,26 @@ export default function NaverSeoPage() {
 
       const result = await response.json();
 
-      if (!result.success) {
+      toast.dismiss(loadingToast);
+
+      if (result.success) {
+        toast.success('✨ AI 최적화가 완료되었습니다!');
+        fetchProducts();
+      } else {
         throw new Error(result.error);
       }
     } catch (error) {
       console.error('AI 생성 실패:', error);
+      toast.error('AI 생성에 실패했습니다');
       throw error;
     }
   };
 
   const handleAiBulkGenerate = async () => {
     try {
+      setShowProgressModal(true);
+      setProgress({ current: 0, total: selectedIds.length, currentProduct: '' });
+
       const response = await fetch('/api/naver-seo/ai-generate', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -126,8 +143,12 @@ export default function NaverSeoPage() {
 
       const result = await response.json();
 
+      setShowProgressModal(false);
+
       if (result.success) {
-        alert(`✅ $${result.successCount}개 상품 AI 생성 완료!\n$${result.failCount > 0 ? `❌ $${result.failCount}개 실패` : ''}`);
+        const successMsg = '🎉 ' + result.successCount + '개 상품 AI 최적화 완료!';
+        const failMsg = result.failCount > 0 ? '\n⚠️ ' + result.failCount + '개 실패' : '';
+        toast.success(successMsg + failMsg, { duration: 5000 });
         setSelectedIds([]);
         fetchProducts();
       } else {
@@ -135,6 +156,8 @@ export default function NaverSeoPage() {
       }
     } catch (error) {
       console.error('AI 일괄 생성 실패:', error);
+      setShowProgressModal(false);
+      toast.error('AI 일괄 생성에 실패했습니다');
       throw error;
     }
   };
@@ -155,18 +178,17 @@ export default function NaverSeoPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">네이버 SEO 데이터 로딩중...</p>
+          <p className="text-gray-600">상품 목록을 불러오는 중...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-4xl">🔍</span>
+          <div className="flex justify-between items-start mb-4">
             <h1 className="text-3xl font-bold text-gray-900">네이버 SEO 최적화</h1>
           </div>
           <p className="text-gray-600">상품별 SEO 점수를 확인하고 최적화하세요</p>
@@ -177,50 +199,48 @@ export default function NaverSeoPage() {
             <p className="text-sm text-gray-600 mb-1">평균 SEO 점수</p>
             <h3 className="text-3xl font-bold text-purple-600">{stats.avgScore}점</h3>
           </div>
-          <div className={`bg-white rounded-lg shadow-sm border-2 p-6 cursor-pointer transition $${filter === 'perfect' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'}`} onClick={() => setFilter(filter === 'perfect' ? 'all' : 'perfect')}>
+          <div className={'bg-white rounded-lg shadow-sm border-2 p-6 cursor-pointer transition ' + (filter === 'perfect' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300')} onClick={() => setFilter(filter === 'perfect' ? 'all' : 'perfect')}>
             <p className="text-xs text-gray-600 mb-1">100점</p>
             <h3 className="text-2xl font-bold text-purple-600">{stats.perfect}</h3>
             <p className="text-xs text-gray-500 mt-1">완벽</p>
           </div>
-          <div className={`bg-white rounded-lg shadow-sm border-2 p-6 cursor-pointer transition $${filter === 'good' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300'}`} onClick={() => setFilter(filter === 'good' ? 'all' : 'good')}>
+          <div className={'bg-white rounded-lg shadow-sm border-2 p-6 cursor-pointer transition ' + (filter === 'good' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300')} onClick={() => setFilter(filter === 'good' ? 'all' : 'good')}>
             <p className="text-xs text-gray-600 mb-1">80-99점</p>
             <h3 className="text-2xl font-bold text-green-600">{stats.good}</h3>
             <p className="text-xs text-gray-500 mt-1">양호</p>
           </div>
-          <div className={`bg-white rounded-lg shadow-sm border-2 p-6 cursor-pointer transition $${filter === 'fair' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`} onClick={() => setFilter(filter === 'fair' ? 'all' : 'fair')}>
+          <div className={'bg-white rounded-lg shadow-sm border-2 p-6 cursor-pointer transition ' + (filter === 'fair' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300')} onClick={() => setFilter(filter === 'fair' ? 'all' : 'fair')}>
             <p className="text-xs text-gray-600 mb-1">70-79점</p>
             <h3 className="text-2xl font-bold text-blue-600">{stats.fair}</h3>
             <p className="text-xs text-gray-500 mt-1">보통</p>
           </div>
-          <div className={`bg-white rounded-lg shadow-sm border-2 p-6 cursor-pointer transition $${filter === 'poor' ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200 hover:border-yellow-300'}`} onClick={() => setFilter(filter === 'poor' ? 'all' : 'poor')}>
-            <p className="text-xs text-gray-600 mb-1">70점 미만</p>
-            <h3 className="text-2xl font-bold text-yellow-600">{stats.poor}</h3>
+          <div className={'bg-white rounded-lg shadow-sm border-2 p-6 cursor-pointer transition ' + (filter === 'poor' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300')} onClick={() => setFilter(filter === 'poor' ? 'all' : 'poor')}>
+            <p className="text-xs text-gray-600 mb-1">0-69점</p>
+            <h3 className="text-2xl font-bold text-orange-600">{stats.poor}</h3>
             <p className="text-xs text-gray-500 mt-1">개선필요</p>
           </div>
         </div>
 
-        {stats.perfect === stats.total && stats.total > 0 && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">✅</span>
-              <div>
-                <h3 className="font-bold text-green-900 mb-1">🎉 완벽합니다!</h3>
-                <p className="text-green-700 text-sm">모든 상품이 SEO 100점을 달성했습니다!</p>
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="mb-6">
+          <input
+            type="text"
+            placeholder="상품명으로 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+        </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <input type="text" placeholder="상품명 또는 네이버 제목 검색..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
-            </div>
+        <div className="mb-6 flex justify-between items-center">
+          <p className="text-sm text-gray-600">
+            총 {products.length}개 상품 {selectedIds.length > 0 && '(' + selectedIds.length + '개 선택)'}
+          </p>
+          <div className="flex gap-3">
             {selectedIds.length > 0 && (
               <>
-                <button onClick={() => setShowAiBulkModal(true)} className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-lg transition flex items-center gap-2">
+                <button onClick={handleAiBulkGenerate} className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition flex items-center gap-2 shadow-md">
                   <span>🤖</span>
-                  <span>{selectedIds.length}개 AI 생성</span>
+                  <span>{selectedIds.length}개 AI 최적화</span>
                 </button>
                 <button onClick={() => setShowBulkEditModal(true)} className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center gap-2">
                   <span>⚡</span>
@@ -234,21 +254,10 @@ export default function NaverSeoPage() {
               </button>
             )}
           </div>
-          {filter !== 'all' && (
-            <div className="mt-4 flex items-center gap-2">
-              <span className="text-sm text-gray-600">활성 필터:</span>
-              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                {filter === 'perfect' && '100점'}
-                {filter === 'good' && '80-99점'}
-                {filter === 'fair' && '70-79점'}
-                {filter === 'poor' && '70점 미만'}
-              </span>
-            </div>
-          )}
         </div>
 
-        <NaverSeoProductTable 
-          products={products} 
+        <NaverSeoProductTable
+          products={products}
           onProductClick={handleProductClick}
           selectedIds={selectedIds}
           onSelectChange={setSelectedIds}
@@ -256,37 +265,33 @@ export default function NaverSeoPage() {
           onRefresh={fetchProducts}
         />
 
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-bold text-blue-900 mb-3 flex items-center gap-2"><span>💡</span>SEO 점수 기준</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
-            <div>
-              <p className="font-medium mb-2">점수 구성:</p>
-              <ul className="space-y-1 text-blue-700">
-                <li>• 네이버 제목: 20점 (10자 이상 권장)</li>
-                <li>• 네이버 키워드: 20점 (3개 이상 권장)</li>
-                <li>• 네이버 설명: 20점 (50자 이상 권장)</li>
-                <li>• 브랜드: 10점</li>
-                <li>• 원산지: 10점</li>
-                <li>• 재질/소재: 10점</li>
-                <li>• 관리 방법: 10점</li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-medium mb-2">점수 등급:</p>
-              <ul className="space-y-1 text-blue-700">
-                <li>• 90점 이상: S급 (완벽)</li>
-                <li>• 80-89점: A급 (양호)</li>
-                <li>• 70-79점: B급 (보통)</li>
-                <li>• 60-69점: C급 (개선 필요)</li>
-                <li>• 60점 미만: D급 (즉시 개선)</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
+        {showBulkEditModal && (
+          <BulkEditModal
+            isOpen={showBulkEditModal}
+            onClose={() => setShowBulkEditModal(false)}
+            onSubmit={handleBulkEdit}
+            selectedCount={selectedIds.length}
+          />
+        )}
 
-      <BulkEditModal isOpen={showBulkEditModal} onClose={() => setShowBulkEditModal(false)} selectedCount={selectedIds.length} onSubmit={handleBulkEdit} />
-      <AiBulkGenerateModal isOpen={showAiBulkModal} onClose={() => setShowAiBulkModal(false)} selectedCount={selectedIds.length} onSubmit={handleAiBulkGenerate} />
+        {showAiBulkModal && (
+          <AiBulkGenerateModal
+            isOpen={showAiBulkModal}
+            onClose={() => setShowAiBulkModal(false)}
+            onConfirm={handleAiBulkGenerate}
+            selectedCount={selectedIds.length}
+          />
+        )}
+
+        {showProgressModal && (
+          <AiProgressModal
+            isOpen={showProgressModal}
+            current={progress.current}
+            total={progress.total}
+            currentProduct={progress.currentProduct}
+          />
+        )}
+      </div>
     </div>
   );
 }

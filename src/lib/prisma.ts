@@ -9,3 +9,6 @@ export const prisma =
   });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+// ✅ default export 추가 (기존 코드와 호환)
+export default prisma;

@@ -1,0 +1,221 @@
+// src/app/api/products/route.ts
+
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+
+// ✅ POST: 상품 등록 (유연한 검증)
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    console.log('📦 상품 등록 요청:', body.name);
+
+    const { supplierId, supplierCode, supplierName, ...productData } = body;
+
+    // Supplier 확인
+    const supplier = await prisma.supplier.findUnique({
+      where: { id: supplierId }
+    });
+
+    if (!supplier) {
+      return NextResponse.json(
+        { success: false, error: 'Supplier를 찾을 수 없습니다' },
+        { status: 404 }
+      );
+    }
+
+    console.log('✅ Supplier 확인:', supplier.name);
+
+    // User 확인/생성 (테스트용)
+    let user = await prisma.user.findUnique({
+      where: { email: 'test@kkotium.com' }
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: 'test@kkotium.com',
+          name: '테스트 관리자',
+          level: 1,
+          exp: 0
+        }
+      });
+      console.log('✨ 더미 User 생성:', user.id);
+    }
+
+    console.log('✅ User 확인:', user.name);
+
+    // ⭐ 데이터 안전 처리 (이미지 선택사항)
+    const safeProductData = {
+      ...productData,
+      images: productData.images && productData.images.length > 0 
+        ? productData.images 
+        : [],
+      imageAltTexts: productData.imageAltTexts && productData.imageAltTexts.length > 0
+        ? productData.imageAltTexts
+        : [],
+      mainImage: productData.mainImage || null,
+      seo_valid: productData.seo_score >= 50, // 50점 이상이면 valid
+    };
+
+    // Product 생성
+    const product = await prisma.product.create({
+      data: {
+        ...safeProductData,
+        supplier: {
+          connect: { id: supplierId }
+        },
+        user: {
+          connect: { id: user.id }
+        }
+      },
+      include: {
+        supplier: true,
+        user: true
+      }
+    });
+
+    console.log('✅ 상품 등록 성공:', product.id);
+    console.log(\`   - 이미지: \${product.images?.length || 0}개\`);
+    console.log(\`   - SEO 점수: \${product.seo_score}/100\`);
+
+    return NextResponse.json({
+      success: true,
+      product,
+      message: '상품이 등록되었습니다',
+    });
+
+  } catch (error: any) {
+    console.error('❌ 상품 등록 실패:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: '상품 등록에 실패했습니다',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// ✅ GET: 상품 목록 조회
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+
+    const products = await prisma.product.findMany({
+      where: status ? { status } : undefined,
+      include: {
+        supplier: true,
+        user: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      products,
+      count: products.length
+    });
+
+  } catch (error: any) {
+    console.error('❌ 상품 조회 실패:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: '상품 조회에 실패했습니다',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// ✅ PATCH: 상품 수정
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, supplierId, ...updateData } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: '상품 ID가 필요합니다' },
+        { status: 400 }
+      );
+    }
+
+    const product = await prisma.product.update({
+      where: { id },
+      data: {
+        ...updateData,
+        ...(supplierId && {
+          supplier: {
+            connect: { id: supplierId }
+          }
+        })
+      },
+      include: {
+        supplier: true,
+        user: true
+      }
+    });
+
+    console.log('✅ 상품 수정 성공:', product.id);
+
+    return NextResponse.json({
+      success: true,
+      product,
+      message: '상품이 수정되었습니다',
+    });
+
+  } catch (error: any) {
+    console.error('❌ 상품 수정 실패:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: '상품 수정에 실패했습니다',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// ✅ DELETE: 상품 삭제
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: '상품 ID가 필요합니다' },
+        { status: 400 }
+      );
+    }
+
+    await prisma.product.delete({
+      where: { id }
+    });
+
+    console.log('✅ 상품 삭제 성공:', id);
+
+    return NextResponse.json({
+      success: true,
+      message: '상품이 삭제되었습니다',
+    });
+
+  } catch (error: any) {
+    console.error('❌ 상품 삭제 실패:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: '상품 삭제에 실패했습니다',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}

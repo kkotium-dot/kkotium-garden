@@ -18,15 +18,20 @@ async function callPerplexityAPI(productName: string) {
 
 다음 형식의 JSON으로 응답해주세요:
 {
-  "naver_title": "상품명을 포함한 매력적인 제목 (15-30자)",
-  "naver_keywords": "관련 키워드를 쉼표로 구분 (5-8개)",
-  "naver_description": "상품 설명 (80-150자, 키워드 자연스럽게 포함)"
+  "naver_title": "네이버 쇼핑 상품명 (공백 포함 25~35자, 최적 27자, 반드시 상품명 포함)",
+  "naver_keywords": "쉼표로 구분 (5~7개, 중복/동의어 최소화)",
+  "naver_description": "네이버 쇼핑 설명 (공백 포함 100~300자, 키워드 자연 삽입)",
+  "seo_title": "일반 SEO 제목 (10~60자)",
+  "seo_description": "일반 SEO 설명 (50~160자)"
 }
 
 규칙:
-- 제목: 실제 네이버 쇼핑에서 인기 있는 키워드 포함, 검색 최적화
-- 키워드: 현재 트렌드를 반영한 구매 의도 높은 키워드 우선
-- 설명: 상품 특징, 용도, 감성 포인트 포함, 실제 구매 후기 스타일
+- 글자 수는 공백 포함 글자 수 기준
+- naver_title: 25~35자 (최적 27자), 키워드 중복 금지, 35자 초과 금지
+- naver_keywords: 5~7개 권장, 구매 의도 높은 키워드 우선
+- naver_description: 100~300자, 상품 특징+용도+배송+선물 상황 포함
+- seo_title: 상품명 포함, 검색 최적화
+- seo_description: 간결하게 50~160자, 핵심만 포함
 - 모두 한국어로 작성
 - 반드시 JSON 형식으로만 응답
 
@@ -39,11 +44,11 @@ JSON만 응답하세요:`;
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'sonar-pro',  // 2026년 현재 사용 가능한 모델
+      model: 'sonar-pro',
       messages: [
         {
           role: 'system',
-          content: '당신은 네이버 쇼핑 SEO 전문가입니다. 실시간 검색 트렌드와 네이버 쇼핑 데이터를 반영하여 최적화된 상품 정보를 생성합니다.',
+          content: '당신은 네이버 쇼핑 SEO 전문가입니다. 2026년 네이버 쇼핑 검색 알고리즘을 기반으로 최적화된 상품 정보를 생성합니다. 상품명 27자 전후, 설명 100~300자가 최적입니다.',
         },
         {
           role: 'user',
@@ -97,26 +102,36 @@ export async function POST(request: NextRequest) {
     const aiResponse = await callPerplexityAPI(productName);
 
     console.log('✅ AI 생성 완료:');
-    console.log('   제목:', aiResponse.naver_title);
+    console.log('   네이버 상품명:', aiResponse.naver_title, `(${aiResponse.naver_title?.length || 0}자)`);
     console.log('   키워드:', aiResponse.naver_keywords);
-    console.log('   설명:', aiResponse.naver_description?.substring(0, 50) + '...');
+    console.log('   네이버 설명:', aiResponse.naver_description?.substring(0, 50) + '...', `(${aiResponse.naver_description?.length || 0}자)`);
+    console.log('   SEO 제목:', aiResponse.seo_title);
+    console.log('   SEO 설명:', aiResponse.seo_description?.substring(0, 50) + '...');
 
-    // DB 업데이트
-    await prisma.product.update({
-      where: { id: productId },
-      data: {
-        naver_title: aiResponse.naver_title,
-        naver_keywords: aiResponse.naver_keywords,
-        naver_description: aiResponse.naver_description,
-      },
-    });
+    // ✨ productId가 'temp'가 아닐 때만 DB 업데이트
+    if (productId !== 'temp') {
+      await prisma.product.update({
+        where: { id: productId },
+        data: {
+          title: aiResponse.seo_title || aiResponse.naver_title,
+          description: aiResponse.seo_description || aiResponse.naver_description?.substring(0, 160),
+          naver_title: aiResponse.naver_title,
+          naver_keywords: aiResponse.naver_keywords,
+          naver_description: aiResponse.naver_description,
+        },
+      });
+      console.log('✅ DB 업데이트 완료!');
+    } else {
+      console.log('⚠️ 신규 등록 모드: DB 업데이트 건너뜀');
+    }
 
-    console.log('✅ DB 업데이트 완료!');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     return NextResponse.json({
       success: true,
       data: {
+        seo_title: aiResponse.seo_title || aiResponse.naver_title,
+        seo_description: aiResponse.seo_description || aiResponse.naver_description?.substring(0, 160),
         naver_title: aiResponse.naver_title,
         naver_keywords: aiResponse.naver_keywords,
         naver_description: aiResponse.naver_description,
@@ -176,6 +191,8 @@ export async function PUT(request: NextRequest) {
         await prisma.product.update({
           where: { id: product.id },
           data: {
+            title: aiResponse.seo_title || aiResponse.naver_title,
+            description: aiResponse.seo_description || aiResponse.naver_description?.substring(0, 160),
             naver_title: aiResponse.naver_title,
             naver_keywords: aiResponse.naver_keywords,
             naver_description: aiResponse.naver_description,

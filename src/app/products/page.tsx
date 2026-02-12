@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, RefreshCw, Filter, Search } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import ProductTable from '@/components/ProductTable';
 import ProductFilters from '@/components/products/ProductFilters';
-import { calculateNaverSeoScore, getSeoGrade } from '@/lib/seo';
+import { calculateNaverSeoScore } from '@/lib/seo';
 
 interface FilterState {
   category: string;
@@ -28,6 +28,7 @@ const CATEGORY_MAP: Record<string, string> = {
 export default function ProductsPage() {
   const [rawProducts, setRawProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     category: '',
     status: '',
@@ -37,7 +38,6 @@ export default function ProductsPage() {
     seoScore: '',
     search: '',
   });
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // 🎯 동적 카테고리 추출 (한글 표시명 포함)
   const categories = useMemo(() => {
@@ -86,26 +86,28 @@ export default function ProductsPage() {
 
       // SEO 점수 필터
       if (filters.seoScore) {
-        if (filters.seoScore === '100+' && seoScore < 100) return false;
+        if (filters.seoScore === '100' && seoScore !== 100) return false;
         if (filters.seoScore === '80-99' && (seoScore < 80 || seoScore >= 100)) return false;
         if (filters.seoScore === '70-79' && (seoScore < 70 || seoScore >= 80)) return false;
+        if (filters.seoScore === '0-69' && seoScore >= 70) return false;
       }
 
       return true;
     }).sort((a: any, b: any) => {
       const scoreA = calculateNaverSeoScore(a);
       const scoreB = calculateNaverSeoScore(b);
-      return scoreB - scoreA; // SEO 점수 내림차순
+      return scoreB - scoreA;
     });
   }, [rawProducts, filters]);
 
-  // 상품 목록 로드
   useEffect(() => {
     fetchProducts();
   }, []);
 
   const fetchProducts = async () => {
     setLoading(true);
+    setError(null);
+
     try {
       const params = new URLSearchParams({
         category: filters.category,
@@ -113,63 +115,74 @@ export default function ProductsPage() {
         ...(filters.priceMin && { minPrice: filters.priceMin }),
         ...(filters.priceMax && { maxPrice: filters.priceMax }),
         ...(filters.seoScore && { seoScore: filters.seoScore }),
+        limit: '50',
       });
 
-      const response = await fetch(`/api/products?${params}`);
+      console.log('🔄 상품 목록 요청 시작...');
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch('/api/products?' + params.toString(), {
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+      }
+
       const data = await response.json();
 
       if (data.success) {
         setRawProducts(data.products);
+        console.log('✅ 상품 ' + data.products.length + '개 로드 완료');
+      } else {
+        throw new Error(data.error || '상품 로드 실패');
       }
-    } catch (error) {
-      console.error('상품 로드 실패:', error);
+    } catch (error: any) {
+      console.error('❌ 상품 로드 실패:', error);
+
+      if (error.name === 'AbortError') {
+        setError('요청 시간 초과 (10초). 서버 상태를 확인해주세요.');
+      } else {
+        setError(error.message || '상품 로드 중 오류가 발생했습니다.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFilterChange = useCallback((newFilters: Partial<FilterState>) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
+  // ✅ ProductFilters가 기대하는 함수 시그니처로 수정
+  const handleFilterChange = useCallback((newFilters: FilterState) => {
+    setFilters(newFilters);
   }, []);
 
-  const handleBulkAction = (action: 'delete' | 'publish') => {
-    console.log('벌크 액션:', action, selectedIds);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-lg text-gray-500">로딩 중...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto p-6">
       {/* 헤더 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-3xl font-bold text-gray-900">
-            상품 목록 ({filteredProducts.length}/{rawProducts.length})
-          </h1>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <span>S등급: {filteredProducts.filter((p: any) => calculateNaverSeoScore(p) >= 100).length}</span>
-            <span>A등급: {filteredProducts.filter((p: any) => calculateNaverSeoScore(p) >= 90).length}</span>
-          </div>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">상품 관리</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            총 {rawProducts.length}개 상품 (필터링: {filteredProducts.length}개)
+          </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3">
           <button
             onClick={fetchProducts}
-            className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            className={'flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 ' + (loading ? 'opacity-50 cursor-not-allowed' : '')}
             disabled={loading}
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RefreshCw className={'w-4 h-4 mr-2 ' + (loading ? 'animate-spin' : '')} />
             새로고침
           </button>
+
           <Link
             href="/products/new"
-            className="flex items-center px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+            className="flex items-center px-4 py-2 bg-pink-600 text-white rounded-lg text-sm font-medium hover:bg-pink-700 transition"
           >
             <Plus className="w-4 h-4 mr-2" />
             새 상품 등록
@@ -177,50 +190,29 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* 필터 & 검색 */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
-          <div className="flex-1 min-w-0">
-            <ProductFilters
-              filters={filters}
-              categories={categories}
-              onFilterChange={handleFilterChange}
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium text-gray-700">
-              선택 {selectedIds.length}개
-            </span>
-            <button
-              onClick={() => handleBulkAction('delete')}
-              className="px-3 py-1 text-sm bg-red-100 text-red-800 rounded-md hover:bg-red-200"
-              disabled={selectedIds.length === 0}
-            >
-              삭제
-            </button>
-            <button
-              onClick={() => handleBulkAction('publish')}
-              className="px-3 py-1 text-sm bg-green-100 text-green-800 rounded-md hover:bg-green-200"
-              disabled={selectedIds.length === 0}
-            >
-              출시
-            </button>
-          </div>
-        </div>
+      {/* 필터 - ✅ onFilterChange prop 사용 */}
+      <div className="mb-6">
+        <ProductFilters
+          onFilterChange={handleFilterChange}
+          categories={categories}
+        />
       </div>
 
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">❌ {error}</p>
+          <button
+            onClick={fetchProducts}
+            className="mt-2 text-sm text-red-600 hover:text-red-700 font-medium"
+          >
+            다시 시도
+          </button>
+        </div>
+      )}
+
       {/* 상품 테이블 */}
-      <ProductTable
-        products={filteredProducts}
-        onEdit={(product: any) => {
-          console.log('편집:', product);
-          // /products/[id]/edit 로 이동
-        }}
-        onDelete={(id: string) => {
-          console.log('삭제:', id);
-        }}
-      />
+      <ProductTable products={filteredProducts} loading={loading} />
     </div>
   );
 }
