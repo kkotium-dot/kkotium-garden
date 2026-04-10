@@ -137,19 +137,22 @@ export async function GET(request: NextRequest) {
           update: { status, updatedAt: new Date() },
           create: {
             id:              naverOrderId,
-            orderDate:       new Date(String(o.paymentDate ?? o.orderDate ?? Date.now())),
+            orderNumber:     naverOrderId,
             status,
             totalAmount,
-            platformOrderId: naverOrderId,
+            totalPrice:      totalAmount,
             customerName:    String(shipping.name    ?? o.receiverName    ?? ''),
+            customerEmail:   '',
             customerPhone:   String(shipping.tel1    ?? shipping.tel      ?? o.receiverTel ?? ''),
             shippingAddress: String(
-              shipping.roadAddress ??
-              (shipping.baseAddress ? `${shipping.baseAddress} ${shipping.detailedAddress ?? ''}`.trim() : '') ??
+              (shipping as Record<string, unknown>).roadAddress ??
+              ((shipping as Record<string, unknown>).baseAddress
+                ? `${(shipping as Record<string, unknown>).baseAddress} ${(shipping as Record<string, unknown>).detailedAddress ?? ''}`.trim()
+                : '') ??
               o.receiverAddress ?? ''
             ),
           },
-        }).catch(() => null);
+        }).catch((e: unknown) => console.error('[naver/orders] upsert error:', e instanceof Error ? e.message : e));
 
         synced++;
       } catch {

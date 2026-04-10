@@ -10,20 +10,26 @@ import { RefreshCw, Package, Truck, Check, AlertTriangle, Search, X, ChevronRigh
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface NaverOrder {
-  productOrderId: string;
-  orderId: string;
-  orderNo?: string;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  totalPaymentAmount: number;
-  orderStatus: string;
-  paymentDate: string;
-  deliveryCompany?: string;
+  // DB fields (from /api/orders)
+  id: string;
+  orderNumber: string;
+  status: string;
+  totalAmount: number;
+  totalPrice?: number;
+  customerName: string;
+  customerPhone: string;
+  shippingAddress?: string;
+  createdAt?: string;
   trackingNumber?: string;
-  receiverName: string;
-  receiverTel?: string;
-  receiverAddress?: string;
+  courierCompany?: string;
+  // Legacy / display helpers
+  productOrderId?: string;
+  productName?: string;
+  quantity?: number;
+  totalPaymentAmount?: number;
+  orderStatus?: string;
+  paymentDate?: string;
+  receiverName?: string;
 }
 
 interface SyncResult {
@@ -36,13 +42,23 @@ interface SyncResult {
 
 // Naver order status → Korean label + color
 const STATUS_META: Record<string, { label: string; color: string; bg: string; dot: string }> = {
+  // Active order statuses
+  PENDING:           { label: '결제대기',   color: '#888',    bg: '#f9fafb', dot: 'bg-gray-400'   },
   PAYMENT_WAITING:   { label: '결제대기',   color: '#888',    bg: '#f9fafb', dot: 'bg-gray-400'   },
+  PAID:              { label: '결제완료',   color: '#2563eb', bg: '#eff6ff', dot: 'bg-blue-500'   },
   PAYED:             { label: '결제완료',   color: '#2563eb', bg: '#eff6ff', dot: 'bg-blue-500'   },
+  SHIPPING:          { label: '배송중',     color: '#7c3aed', bg: '#f5f3ff', dot: 'bg-purple-500' },
   DELIVERING:        { label: '배송중',     color: '#7c3aed', bg: '#f5f3ff', dot: 'bg-purple-500' },
   DELIVERED:         { label: '배송완료',   color: '#16a34a', bg: '#f0fdf4', dot: 'bg-green-500'  },
+  COMPLETED:         { label: '구매확정',   color: '#15803d', bg: '#dcfce7', dot: 'bg-green-600'  },
   PURCHASE_DECIDED:  { label: '구매확정',   color: '#15803d', bg: '#dcfce7', dot: 'bg-green-600'  },
-  CANCELED:          { label: '취소',       color: '#e62310', bg: '#fff0f5', dot: 'bg-red-500'    },
+  // Claim statuses
+  CANCELLED:         { label: '취소완료',   color: '#e62310', bg: '#fff0f5', dot: 'bg-red-500'    },
+  CANCELED:          { label: '취소완료',   color: '#e62310', bg: '#fff0f5', dot: 'bg-red-500'    },
+  CANCEL_DONE:       { label: '취소완료',   color: '#e62310', bg: '#fff0f5', dot: 'bg-red-500'    },
+  CANCEL_REQUESTED:  { label: '취소요청',   color: '#f97316', bg: '#fff7ed', dot: 'bg-orange-400' },
   RETURNED:          { label: '반품완료',   color: '#e62310', bg: '#fff0f5', dot: 'bg-red-400'    },
+  RETURN_DONE:       { label: '반품완료',   color: '#e62310', bg: '#fff0f5', dot: 'bg-red-400'    },
   RETURN_REQUESTED:  { label: '반품요청',   color: '#d97706', bg: '#fffbeb', dot: 'bg-amber-400'  },
   EXCHANGED:         { label: '교환완료',   color: '#0891b2', bg: '#ecfeff', dot: 'bg-cyan-500'   },
 };
@@ -148,9 +164,9 @@ function OrdersInner() {
   };
 
   const toggleAll = () => {
-    const payed = filtered.filter(o => o.orderStatus === 'PAYED');
+    const payed = filtered.filter(o => o.status === 'PAID' || o.status === 'PAYED');
     if (selected.size === payed.length && payed.length > 0) setSelected(new Set());
-    else setSelected(new Set(payed.map(o => o.productOrderId)));
+    else setSelected(new Set(payed.map(o => o.id ?? o.productOrderId ?? '')));
   };
 
   return (
@@ -319,7 +335,7 @@ function OrdersInner() {
           <input
             type="checkbox"
             onChange={toggleAll}
-            checked={selected.size > 0 && selected.size === filtered.filter(o => o.orderStatus === 'PAYED').length}
+            checked={selected.size > 0 && selected.size > 0 && selected.size === filtered.filter(o => o.status === 'PAID' || o.status === 'PAYED').length}
             style={{ width: 15, height: 15 }}
           />
           {['주문번호', '상품', '결제금액', '상태', '주문일', '관리'].map(h => (
@@ -346,40 +362,40 @@ function OrdersInner() {
           </div>
         ) : (
           filtered.map((order, idx) => {
-            const meta   = getStatusMeta(order.orderStatus);
+            const meta   = getStatusMeta(order.status ?? order.orderStatus ?? '');
             const isLast = idx === filtered.length - 1;
-            const isPayed = order.orderStatus === 'PAYED';
+            const isPayed = order.status === 'PAID' || order.status === 'PAYED' || order.orderStatus === 'PAYED';
             return (
               <div key={order.productOrderId}>
                 <div style={{
                   display: 'grid', gridTemplateColumns: '36px 140px 1fr 90px 90px 100px 80px',
                   gap: 8, padding: '12px 16px', alignItems: 'center',
-                  background: selected.has(order.productOrderId) ? 'rgba(230,35,16,0.04)' : 'transparent',
+                  background: selected.has(order.id ?? order.productOrderId ?? '') ? 'rgba(230,35,16,0.04)' : 'transparent',
                 }}
-                  onMouseEnter={e => { if (!selected.has(order.productOrderId)) (e.currentTarget as HTMLElement).style.background = '#FFF8FA'; }}
-                  onMouseLeave={e => { if (!selected.has(order.productOrderId)) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                  onMouseEnter={e => { if (!selected.has(order.id ?? order.productOrderId ?? '')) (e.currentTarget as HTMLElement).style.background = '#FFF8FA'; }}
+                  onMouseLeave={e => { if (!selected.has(order.id ?? order.productOrderId ?? '')) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
                   <input
                     type="checkbox"
-                    checked={selected.has(order.productOrderId)}
+                    checked={selected.has(order.id ?? order.productOrderId ?? '')}
                     disabled={!isPayed}
-                    onChange={() => isPayed && toggleSelect(order.productOrderId)}
+                    onChange={() => isPayed && toggleSelect(order.id ?? order.productOrderId ?? '')}
                     style={{ width: 15, height: 15, opacity: isPayed ? 1 : 0.3 }}
                   />
                   <div>
                     <p style={{ fontSize: 11, fontWeight: 700, color: '#1A1A1A', margin: 0, fontFamily: 'monospace' }}>
-                      {order.productOrderId?.slice(-8) ?? order.orderId?.slice(-8)}
+                      {(order.orderNumber ?? order.productOrderId ?? order.id)?.slice(-12)}
                     </p>
-                    <p style={{ fontSize: 10, color: '#B0A0A8', margin: '2px 0 0' }}>{order.receiverName}</p>
+                    <p style={{ fontSize: 10, color: '#B0A0A8', margin: '2px 0 0' }}>{order.customerName ?? order.receiverName}</p>
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <p style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {order.productName}
+                      {order.productName ?? order.orderNumber ?? '-'}
                     </p>
-                    <p style={{ fontSize: 11, color: '#B0A0A8', margin: '2px 0 0' }}>수량: {order.quantity}개</p>
+                    <p style={{ fontSize: 11, color: '#B0A0A8', margin: '2px 0 0' }}>주문번호: {(order.orderNumber ?? order.id)?.slice(-12)}</p>
                   </div>
                   <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A', textAlign: 'right', margin: 0 }}>
-                    {(order.totalPaymentAmount ?? 0).toLocaleString()}원
+                    {(order.totalAmount ?? order.totalPaymentAmount ?? 0).toLocaleString()}원
                   </p>
                   <div style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -390,12 +406,12 @@ function OrdersInner() {
                     {meta.label}
                   </div>
                   <p style={{ fontSize: 11, color: '#888', margin: 0 }}>
-                    {order.paymentDate ? new Date(order.paymentDate).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}
+                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}
                   </p>
                   <div style={{ display: 'flex', gap: 4 }}>
                     {isPayed && (
                       <button
-                        onClick={() => toggleSelect(order.productOrderId)}
+                        onClick={() => toggleSelect(order.id ?? order.productOrderId ?? '')}
                         style={{ fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 7, background: '#f0fdf4', color: '#16a34a', border: '1px solid #86efac', cursor: 'pointer' }}
                       >
                         확인
