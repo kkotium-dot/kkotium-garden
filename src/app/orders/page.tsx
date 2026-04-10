@@ -80,7 +80,7 @@ function OrdersInner() {
   const [confirming, setConfirming]   = useState<Set<string>>(new Set());
   const [selected, setSelected]       = useState<Set<string>>(new Set());
   const [ipWarning, setIpWarning]     = useState(false);
-  const [hours, setHours]             = useState(48);
+  const [hours, setHours]             = useState(24);
 
   // Sync Naver orders
   const syncOrders = async () => {
@@ -200,7 +200,7 @@ function OrdersInner() {
               onChange={e => setHours(Number(e.target.value))}
               style={{ padding: '8px 12px', borderRadius: 10, border: '1.5px solid #F8DCE5', fontSize: 12, background: '#fff', color: '#555' }}
             >
-              <option value={12}>최근 12시간</option>
+              <option value={24}>최근 24시간</option>
               <option value={48}>최근 48시간</option>
               <option value={168}>최근 7일</option>
               <option value={720}>최근 30일</option>
