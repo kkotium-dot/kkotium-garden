@@ -1,138 +1,148 @@
-'use client'
+'use client';
+// src/components/Kkotti.tsx
+// Kkotti floating character widget — framer-motion replaced with CSS animations
+// No external animation library required
 
-import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react';
 
 interface KkottiProps {
-  mood?: 'neutral' | 'happy' | 'sad' | 'working' | 'thinking'
-  message?: string
-  position?: 'bottom-right' | 'bottom-left' | 'top-right'
-  autoClose?: boolean
+  mood?: 'neutral' | 'happy' | 'sad' | 'working' | 'thinking';
+  message?: string;
+  position?: 'bottom-right' | 'bottom-left' | 'top-right';
+  autoClose?: boolean;
 }
 
-export default function Kkotti({ 
+export default function Kkotti({
   mood = 'neutral',
   message,
   position = 'bottom-right',
-  autoClose = false
+  autoClose = false,
 }: KkottiProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [currentMood, setCurrentMood] = useState(mood)
+  const [isOpen, setIsOpen]       = useState(false);
+  const [currentMood, setCurrentMood] = useState(mood);
+  const [visible, setVisible]     = useState(false);
 
-  useEffect(() => {
-    setCurrentMood(mood)
-  }, [mood])
+  useEffect(() => { setCurrentMood(mood); }, [mood]);
 
   useEffect(() => {
     if (message && autoClose) {
-      setIsOpen(true)
-      const timer = setTimeout(() => setIsOpen(false), 5000)
-      return () => clearTimeout(timer)
+      setIsOpen(true);
+      setVisible(true);
+      const timer = setTimeout(() => {
+        setVisible(false);
+        setTimeout(() => setIsOpen(false), 300);
+      }, 5000);
+      return () => clearTimeout(timer);
     }
-  }, [message, autoClose])
+  }, [message, autoClose]);
 
-  const positionClasses = {
-    'bottom-right': 'bottom-6 right-6',
-    'bottom-left': 'bottom-6 left-6',
-    'top-right': 'top-6 right-6',
-  }
+  const handleToggle = () => {
+    if (isOpen) {
+      setVisible(false);
+      setTimeout(() => setIsOpen(false), 200);
+    } else {
+      setIsOpen(true);
+      setTimeout(() => setVisible(true), 10);
+    }
+  };
 
-  const faces = {
-    neutral: '/kkotti/face-neutral.svg',
-    happy: '/kkotti/face-happy.svg',
-    sad: '/kkotti/face-sad.svg',
-    working: '/kkotti/face-working.svg',
+  const positionStyle: Record<string, React.CSSProperties> = {
+    'bottom-right': { bottom: 24, right: 24 },
+    'bottom-left':  { bottom: 24, left: 24 },
+    'top-right':    { top: 24, right: 24 },
+  };
+
+  const faces: Record<string, string> = {
+    neutral:  '/kkotti/face-neutral.svg',
+    happy:    '/kkotti/face-happy.svg',
+    sad:      '/kkotti/face-sad.svg',
+    working:  '/kkotti/face-working.svg',
     thinking: '/kkotti/face-thinking.svg',
-  }
+  };
 
   return (
-    <div className={`fixed ${positionClasses[position]} z-50`}>
-      {/* 말풍선 */}
-      <AnimatePresence>
-        {(isOpen || message) && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.9 }}
-            transition={{ type: 'spring', damping: 20 }}
-            className="absolute bottom-24 right-0 bg-white rounded-2xl shadow-xl p-4 w-64 mb-2"
-          >
-            <div className="text-sm text-gray-700 leading-relaxed">{message}</div>
-            <div className="absolute -bottom-2 right-8 w-4 h-4 bg-white transform rotate-45 shadow"></div>
-            
-            {!autoClose && (
-              <button
-                onClick={() => setIsOpen(false)}
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
-      {/* 꼬띠 캐릭터 */}
-      <motion.button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative w-20 h-20 focus:outline-none"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
+    <div style={{ position: 'fixed', zIndex: 50, ...positionStyle[position] }}>
+      {/* Speech bubble */}
+      {isOpen && message && (
+        <div style={{
+          position: 'absolute',
+          bottom: 96,
+          right: 0,
+          background: '#fff',
+          borderRadius: 16,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          padding: '12px 16px',
+          width: 256,
+          marginBottom: 8,
+          opacity: visible ? 1 : 0,
+          transform: visible ? 'scale(1) translateY(0)' : 'scale(0.9) translateY(8px)',
+          transition: 'opacity 0.2s ease, transform 0.2s ease',
+        }}>
+          <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, margin: 0 }}>{message}</p>
+          {/* Tail */}
+          <div style={{
+            position: 'absolute',
+            bottom: -6,
+            right: 28,
+            width: 14,
+            height: 14,
+            background: '#fff',
+            transform: 'rotate(45deg)',
+            boxShadow: '2px 2px 4px rgba(0,0,0,0.06)',
+          }} />
+          {!autoClose && (
+            <button
+              onClick={() => { setVisible(false); setTimeout(() => setIsOpen(false), 200); }}
+              style={{ position: 'absolute', top: 6, right: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: 14 }}
+            >
+              x
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Kkotti character button */}
+      <button
+        onClick={handleToggle}
+        style={{
+          position: 'relative',
+          width: 80,
+          height: 80,
+          border: 'none',
+          background: 'none',
+          cursor: 'pointer',
+          outline: 'none',
+          animation: 'kkotti-float 2s ease-in-out infinite',
+        }}
       >
-        {/* 배경 원 */}
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-br from-pink-100 to-red-100 rounded-full shadow-lg"
-          animate={{
-            boxShadow: [
-              '0 4px 20px rgba(255, 68, 88, 0.2)',
-              '0 4px 30px rgba(255, 68, 88, 0.4)',
-              '0 4px 20px rgba(255, 68, 88, 0.2)',
-            ],
-          }}
-          transition={{ duration: 2, repeat: Infinity }}
+        {/* Background circle */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(135deg, #fff0f5, #ffe0e8)',
+          borderRadius: '50%',
+          boxShadow: '0 4px 20px rgba(255,68,88,0.25)',
+        }} />
+        {/* Body */}
+        <img src="/kkotti/body.svg" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+        {/* Face */}
+        <img
+          key={currentMood}
+          src={faces[currentMood]}
+          alt="꼬띠"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
         />
-        
-        {/* 꼬띠 SVG 레이어 */}
-        <motion.div
-          className="relative w-full h-full"
-          animate={{
-            y: [0, -5, 0],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        >
-          {/* 몸통 */}
-          <img 
-            src="/kkotti/body.svg" 
-            alt="꼬띠 몸통"
-            className="absolute inset-0 w-full h-full"
-          />
-          
-          {/* 얼굴 (표정 변화) */}
-          <AnimatePresence mode="wait">
-            <motion.img
-              key={currentMood}
-              src={faces[currentMood]}
-              alt="꼬띠 얼굴"
-              className="absolute inset-0 w-full h-full"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.3 }}
-            />
-          </AnimatePresence>
-          
-          {/* 부츠 */}
-          <img 
-            src="/kkotti/boots.svg" 
-            alt="꼬띠 부츠"
-            className="absolute inset-0 w-full h-full"
-          />
-        </motion.div>
-      </motion.button>
+        {/* Boots */}
+        <img src="/kkotti/boots.svg" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+      </button>
+
+      {/* Float animation keyframes */}
+      <style>{`
+        @keyframes kkotti-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+      `}</style>
     </div>
-  )
+  );
 }
