@@ -1,29 +1,45 @@
 // GET /api/naver/orders — sync Naver orders into DB
 // Called by Vercel Cron (hourly) and manually from dashboard
+// NOTE: Naver API allows max 24h window per request — splits longer ranges automatically
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getOrders } from '@/lib/naver/api-client';
 
-// Naver order status → internal status mapping
-
 export const dynamic = 'force-dynamic';
+
 const STATUS_MAP: Record<string, string> = {
-  PAYMENT_WAITING:     'PENDING',
-  PAYED:               'PAID',
-  DELIVERING:          'SHIPPING',
-  DELIVERED:           'DELIVERED',
-  PURCHASE_DECIDED:    'COMPLETED',
-  EXCHANGED:           'EXCHANGED',
-  CANCELED:            'CANCELLED',
-  RETURNED:            'RETURNED',
-  RETURN_REQUESTED:    'RETURN_REQUESTED',
+  PAYMENT_WAITING:  'PENDING',
+  PAYED:            'PAID',
+  DELIVERING:       'SHIPPING',
+  DELIVERED:        'DELIVERED',
+  PURCHASE_DECIDED: 'COMPLETED',
+  EXCHANGED:        'EXCHANGED',
+  CANCELED:         'CANCELLED',
+  RETURNED:         'RETURNED',
+  RETURN_REQUESTED: 'RETURN_REQUESTED',
 };
+
+// Format date as KST ISO string for Naver API
+const toKST = (d: Date) => d.toISOString().replace('Z', '+09:00');
+
+// Split [from, to] into 24h windows (Naver API limit)
+function splitInto24hWindows(from: Date, to: Date): { from: Date; to: Date }[] {
+  const windows: { from: Date; to: Date }[] = [];
+  const MAX_MS = 23 * 60 * 60 * 1000; // 23h to be safe
+  let cursor = new Date(from);
+  while (cursor < to) {
+    const end = new Date(Math.min(cursor.getTime() + MAX_MS, to.getTime()));
+    windows.push({ from: new Date(cursor), to: end });
+    cursor = end;
+  }
+  return windows;
+}
 
 export async function GET(request: NextRequest) {
   try {
     const url    = new URL(request.url);
-    const hours  = Number(url.searchParams.get('hours') ?? '2');   // default: last 2h
+    const hours  = Number(url.searchParams.get('hours') ?? '2');
     const manual = url.searchParams.get('manual') === '1';
 
     // Auth check for cron calls
@@ -32,49 +48,58 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const fromDate = new Date(Date.now() - hours * 3600_000);
+    const fromDate = new Date(Date.now() - hours * 3_600_000);
     const toDate   = new Date();
 
-    const formatKST = (d: Date) =>
-      d.toISOString().replace('Z', '+09:00');
+    // Split into 24h windows if range > 24h
+    const windows = splitInto24hWindows(fromDate, toDate);
 
-    // Fetch orders from Naver API
-    const orderData = await getOrders({
-      lastChangedFrom: formatKST(fromDate),
-      lastChangedTo:   formatKST(toDate),
-      pageSize: 300,
-    });
+    let allOrders: any[] = [];
 
-    const orders: any[] = orderData?.data ?? orderData?.content ?? orderData?.productOrders ?? [];
-    // Handle case where Naver returns { totalCount, productOrders } or other shapes
-    const orderList: any[] = Array.isArray(orders) ? orders : [];
+    for (const window of windows) {
+      try {
+        const orderData = await getOrders({
+          lastChangedFrom: toKST(window.from),
+          lastChangedTo:   toKST(window.to),
+          pageSize: 300,
+        });
+        const chunk: any[] =
+          orderData?.data ??
+          orderData?.content ??
+          orderData?.productOrders ??
+          [];
+        if (Array.isArray(chunk)) allOrders = allOrders.concat(chunk);
+      } catch (winErr: any) {
+        // Log per-window error but continue
+        console.error(`[naver/orders] window ${toKST(window.from)} ~ ${toKST(window.to)} error:`, winErr.message);
+      }
+    }
 
     let synced = 0;
     let skipped = 0;
 
-    for (const order of orderList) {
+    for (const order of allOrders) {
       try {
-        const naverOrderId = String(order.orderNo ?? order.orderId ?? '');
+        const naverOrderId = String(order.orderNo ?? order.orderId ?? order.productOrderId ?? '');
         if (!naverOrderId) { skipped++; continue; }
 
         const totalAmount = Number(order.generalPaymentAmount ?? order.paymentAmount ?? 0);
         const status      = STATUS_MAP[order.orderStatusType ?? ''] ?? 'PENDING';
 
-        // Upsert order into DB
         await (prisma as any).order.upsert({
           where:  { id: naverOrderId },
           update: { status, updatedAt: new Date() },
           create: {
-            id:           naverOrderId,
-            orderDate:    new Date(order.paymentDate ?? order.orderDate ?? Date.now()),
+            id:              naverOrderId,
+            orderDate:       new Date(order.paymentDate ?? order.orderDate ?? Date.now()),
             status,
             totalAmount,
             platformOrderId: naverOrderId,
-            customerName:    order.orderPerson?.name ?? '',
-            customerPhone:   order.orderPerson?.tel   ?? '',
-            shippingAddress: order.shippingAddress?.roadAddress ?? '',
+            customerName:    order.orderPerson?.name    ?? order.receiverName    ?? '',
+            customerPhone:   order.orderPerson?.tel     ?? order.receiverTel     ?? '',
+            shippingAddress: order.shippingAddress?.roadAddress ?? order.receiverAddress ?? '',
           },
-        }).catch(() => null); // ignore conflicts
+        }).catch(() => null);
 
         synced++;
       } catch {
@@ -86,18 +111,15 @@ export async function GET(request: NextRequest) {
       success: true,
       synced,
       skipped,
-      total: orders.length,
-      period: `${fromDate.toISOString()} ~ ${toDate.toISOString()}`,
+      total:   allOrders.length,
+      windows: windows.length,
+      period:  `${toKST(fromDate)} ~ ${toKST(toDate)}`,
     });
   } catch (e: any) {
     console.error('[naver/orders GET]', e);
-    // Return structured error — never crash cron
     return NextResponse.json({
       success: false,
       error:   e.message,
-      hint:    e.message?.includes('환경변수')
-        ? 'NAVER_CLIENT_ID / NAVER_CLIENT_SECRET을 .env.local에 추가해주세요'
-        : undefined,
     }, { status: 500 });
   }
 }

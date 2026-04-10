@@ -1,4 +1,10 @@
 {
+  "regions": ["icn1"],
+  "functions": {
+    "src/app/api/**": {
+      "regions": ["icn1"]
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/daily",
