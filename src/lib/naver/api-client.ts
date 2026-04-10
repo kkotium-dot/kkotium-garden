@@ -196,7 +196,9 @@ export async function getTodayOrderSummary(): Promise<{
       lastChangedTo:   fmt(now),
       pageSize: 300,
     });
-    const orders: any[] = data?.data ?? data?.content ?? data?.productOrders ?? [];
+    // Naver API response: { data: { contents: [...] } }
+    const inner = data?.data ?? {};
+    const orders: any[] = inner?.contents ?? inner?.data ?? data?.content ?? data?.productOrders ?? [];
     const revenue    = orders.reduce((s: number, o: any) => s + Number(o.totalPaymentAmount ?? o.paymentAmount ?? 0), 0);
     const paidAmount = orders.reduce((s: number, o: any) => s + Number(o.paymentAmount ?? 0), 0);
     return { count: orders.length, revenue, paidAmount };
