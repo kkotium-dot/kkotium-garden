@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import {
   Package, PackagePlus, RefreshCw,
   Search, Layers, Store, Truck,
-  KeyRound, FileText,
+  KeyRound, FileText, ShoppingCart,
   ChevronRight,
 } from 'lucide-react';
 
@@ -42,7 +42,7 @@ interface NavItem {
   href: string;
   label: string;
   iconKey: string;
-  badgeKey?: 'sourcing' | 'zombie';
+  badgeKey?: 'sourcing' | 'zombie' | 'orders';
 }
 
 const NAV: { label: string; items: NavItem[] }[] = [
@@ -68,6 +68,12 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: '/products',              label: '정원 창고',   iconKey: 'shoppingbag' },
       { href: '/naver-seo',             label: '검색 조련사', iconKey: 'search' },
       { href: '/products/reactivation', label: '좀비 부활소', iconKey: 'refreshcw', badgeKey: 'zombie' },
+    ],
+  },
+  {
+    label: 'ORDERS',
+    items: [
+      { href: '/orders', label: '주문 관리', iconKey: 'shoppingcart', badgeKey: 'orders' },
     ],
   },
   {
@@ -143,6 +149,7 @@ function NavIcon({ iconKey, active }: { iconKey: string; active: boolean }) {
     case 'truck':       icon = <Truck       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'keyround':    icon = <KeyRound    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'filetext':    icon = <FileText    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'shoppingcart': icon = <ShoppingCart size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     default:            icon = <Search      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
   }
   return <FlowerIconBox active={active}>{icon}</FlowerIconBox>;
@@ -176,6 +183,7 @@ export default function Sidebar() {
   const [sideStats, setSideStats] = useState<{
     sourcingCount: number;
     zombieCount: number;
+    ordersCount: number;
   } | null>(null);
 
   useEffect(() => {
@@ -187,6 +195,7 @@ export default function Sidebar() {
           setSideStats({
             sourcingCount: s.sourcingCount ?? 0,
             zombieCount:   s.zombieCount   ?? 0,
+            ordersCount:   s.todayOrderCount ?? 0,
           });
         }
       })
@@ -197,6 +206,7 @@ export default function Sidebar() {
     if (!sideStats) return 0;
     if (key === 'sourcing') return sideStats.sourcingCount;
     if (key === 'zombie')   return sideStats.zombieCount;
+    if (key === 'orders')   return sideStats.ordersCount;
     return 0;
   };
 
