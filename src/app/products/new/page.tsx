@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo, useRef, useDeferredValue, useCallback } from 'react';
+import { Suspense, useState, useEffect, useMemo, useRef, useDeferredValue, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx';
@@ -164,7 +164,7 @@ function DSection({ icon, title, summary, children }: {
   );
 }
 
-export default function NewProductPage() {
+function NewProductPageInner() {
   const searchParams = useSearchParams();
   const [catTab, setCatTab]             = useState<'search'|'drill'>('drill');
   const [catQuery, setCatQuery]         = useState('');
@@ -3151,5 +3151,17 @@ const handleGenerate = async () => {
       )}
 
     </div>
+  );
+}
+
+export default function NewProductPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid #FFB3CE', borderTop: '3px solid #e62310', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    }>
+      <NewProductPageInner />
+    </Suspense>
   );
 }

@@ -2,7 +2,7 @@
 // /products — Garden Warehouse v6
 // P2-1: supplier grouping, shipping badge, margin warning, bulk float menu, upload readiness filter
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Suspense, useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -525,7 +525,7 @@ function ApplyTemplateModal({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function ProductsPage() {
+function ProductsPageInner() {
   const searchParams                              = useSearchParams();
   const [raw, setRaw]                         = useState<Product[]>([]);
   const [loading, setLoading]                 = useState(true);
@@ -988,5 +988,17 @@ export default function ProductsPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid #FFB3CE', borderTop: '3px solid #e62310', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    }>
+      <ProductsPageInner />
+    </Suspense>
   );
 }
