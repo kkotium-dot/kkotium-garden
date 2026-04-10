@@ -89,12 +89,11 @@ export async function GET(request: NextRequest) {
     for (const w of windows) {
       try {
         // No status filter = returns ALL statuses including cancelled
-        const q = new URLSearchParams({
-          from:     toKST(w.from),
-          to:       toKST(w.to),
-          pageSize: '300',
-        });
-        const qUrl = `/v1/pay-order/seller/product-orders?${q}`;
+        // Build query manually — URLSearchParams encodes + in timezone as %2B
+        // which some servers decode as space, breaking the date format
+        const fromStr = toKST(w.from);
+        const toStr   = toKST(w.to);
+        const qUrl = `/v1/pay-order/seller/product-orders?from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}&pageSize=300`;
         console.log('[naver/orders] calling:', qUrl);
         const raw = await naverRequest('GET', qUrl);
         console.log('[naver/orders] raw keys:', Object.keys((raw as Record<string,unknown>) ?? {}), 'data keys:', Object.keys(((raw as Record<string,unknown>)?.data as Record<string,unknown>) ?? {}));
