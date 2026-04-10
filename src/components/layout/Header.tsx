@@ -39,19 +39,7 @@ export default function Header() {
             }}
             className="group-hover:scale-105"
           >
-            <Image
-              src="/kkotium-symbol-white.png"
-              alt="KKOTIUM"
-              width={38}
-              height={38}
-              style={{
-                objectFit: 'contain',
-                width: '100%',
-                height: '100%',
-                
-              }}
-            />
-          </div>
+            <img src="/kkotium-symbol-white.svg" alt="KKOTIUM" width={42} height={42} style={{ objectFit: "contain", width: "100%", height: "100%" }} /></div>
           <div className="leading-tight">
             <span style={{ fontSize: '18px', fontWeight: 900, color: '#e62310', fontFamily: "'Arial Black', Impact, sans-serif", letterSpacing: '-0.5px', display: 'block', lineHeight: 1 }}>
               KKOTIUM
