@@ -94,7 +94,10 @@ export async function GET(request: NextRequest) {
           to:       toKST(w.to),
           pageSize: '300',
         });
-        const raw = await naverRequest('GET', `/v1/pay-order/seller/product-orders?${q}`);
+        const qUrl = `/v1/pay-order/seller/product-orders?${q}`;
+        console.log('[naver/orders] calling:', qUrl);
+        const raw = await naverRequest('GET', qUrl);
+        console.log('[naver/orders] raw keys:', Object.keys((raw as Record<string,unknown>) ?? {}), 'data keys:', Object.keys(((raw as Record<string,unknown>)?.data as Record<string,unknown>) ?? {}));
         allOrders = allOrders.concat(extractOrders(raw));
       } catch (err: unknown) {
         console.error('[naver/orders] window error:', err instanceof Error ? err.message : String(err));
