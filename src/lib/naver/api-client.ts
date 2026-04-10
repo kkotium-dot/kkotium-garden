@@ -7,7 +7,7 @@
 //   NAVER_CLIENT_ID      — API 연동 > 클라이언트 ID
 //   NAVER_CLIENT_SECRET  — API 연동 > 클라이언트 시크릿
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const BASE_URL = 'https://api.commerce.naver.com/external';
 const AUTH_URL = 'https://api.commerce.naver.com/external/v1/oauth2/token';
