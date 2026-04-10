@@ -2,12 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Native addons (bcrypt) must not be bundled by Next.js — Next.js 14 key
-  experimental: {
-    serverComponentsExternalPackages: ['bcrypt'],
-  },
-
-  // Image config — allow all remote patterns + unoptimized for local PNGs
   images: {
     unoptimized: true,
     domains: ['localhost', 'kkotium.com'],
