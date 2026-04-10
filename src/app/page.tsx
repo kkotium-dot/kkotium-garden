@@ -1,172 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import StatCard from '@/components/dashboard/StatCard';
-import SalesChart from '@/components/dashboard/SalesChart';
-import OrderStatusChart from '@/components/dashboard/OrderStatusChart';
-import PopularProducts from '@/components/dashboard/PopularProducts';
-import RecentOrders from '@/components/dashboard/RecentOrders';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-interface DashboardStats {
-  todaySales: number;
-  todaySalesChange: number;
-  todayOrders: number;
-  todayOrdersChange: number;
-  monthSales: number;
-  monthOrders: number;
-  weekSales: number[];
-  weekLabels: string[];
-  totalProducts: number;
-  activeProducts: number;
-  outOfStockProducts: number;
-  ordersByStatus: Record<string, number>;
-  topProducts: Array<{
-    id: string;
-    name: string;
-    salesCount: number;
-    revenue: number;
-    mainImage?: string | null;
-  }>;
-  recentOrders: Array<{
-    id: string;
-    orderNumber: string;
-    customerName: string;
-    totalPrice: number;
-    status: string;
-    orderDate: Date;
-  }>;
-}
-
-export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function Home() {
+  const router = useRouter();
 
   useEffect(() => {
-    fetchDashboardStats();
-  }, []);
-
-  const fetchDashboardStats = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/dashboard');
-      const data = await response.json();
-
-      if (data.success) {
-        setStats(data.stats);
-        setError(null);
-      } else {
-        setError(data.error || '통계 조회 실패');
-      }
-    } catch (err) {
-      setError('서버 연결 실패');
-      console.error('Dashboard fetch error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">대시보드 로딩중...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !stats) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">❌ {error || '데이터를 불러올 수 없습니다'}</p>
-          <button
-            onClick={fetchDashboardStats}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-          >
-            다시 시도
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const totalActiveOrders = Object.entries(stats.ordersByStatus)
-    .filter(([key]) => !['cancelled', 'refunded', 'delivered'].includes(key))
-    .reduce((sum, [_, count]) => sum + count, 0);
+    // Redirect to portfolio page
+    router.push('/portfolio');
+  }, [router]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">🌸 대시보드</h1>
-          <p className="text-gray-600">꽃티움 가든 관리 시스템</p>
-        </div>
-
-        {/* 핵심 지표 카드 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="오늘 매출"
-            value={`${stats.todaySales.toLocaleString()}원`}
-            change={stats.todaySalesChange}
-            icon="💰"
-            color="purple"
-          />
-          <StatCard
-            title="오늘 주문"
-            value={`${stats.todayOrders}건`}
-            change={stats.todayOrdersChange}
-            icon="📦"
-            color="blue"
-          />
-          <StatCard
-            title="총 상품"
-            value={`${stats.totalProducts}개`}
-            icon="🌸"
-            color="green"
-          />
-          <StatCard
-            title="미처리 주문"
-            value={`${totalActiveOrders}건`}
-            icon="⏳"
-            color="orange"
-          />
-        </div>
-
-        {/* 월 통계 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-md p-6 text-white">
-            <p className="text-purple-100 text-sm mb-1">이번 달 매출</p>
-            <h3 className="text-3xl font-bold">{stats.monthSales.toLocaleString()}원</h3>
-          </div>
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md p-6 text-white">
-            <p className="text-blue-100 text-sm mb-1">이번 달 주문</p>
-            <h3 className="text-3xl font-bold">{stats.monthOrders}건</h3>
-          </div>
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-md p-6 text-white">
-            <p className="text-green-100 text-sm mb-1">활성 상품</p>
-            <h3 className="text-3xl font-bold">{stats.activeProducts}개</h3>
-          </div>
-        </div>
-
-        {/* 차트 영역 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
-            <SalesChart data={stats.weekSales} labels={stats.weekLabels} />
-          </div>
-          <div>
-            <OrderStatusChart data={stats.ordersByStatus} />
-          </div>
-        </div>
-
-        {/* 인기 상품 & 최근 주문 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PopularProducts products={stats.topProducts} />
-          <RecentOrders orders={stats.recentOrders} />
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+        <p className="text-gray-400">Loading Portfolio...</p>
       </div>
     </div>
   );

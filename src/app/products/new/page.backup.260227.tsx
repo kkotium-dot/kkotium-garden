@@ -1,0 +1,658 @@
+'use client';
+import { useState, useEffect, useMemo } from 'react';
+import * as XLSX from 'xlsx';
+import {
+  getDepth1List, getDepth2List, getDepth3List, getDepth4List, getCategoryId,
+} from '@/lib/naverCategories';
+import {
+  KKOTIUM_DEFAULTS, COURIER_CODES, SHIPPING_FEE_TYPES, TAX_TYPES, ORIGIN_CODES,
+} from '@/lib/naver/codes';
+import { NAVER_EXCEL_COLUMNS } from '@/lib/naver/columns';
+import { calcSeoScore } from '@/lib/seo-calculator';
+import type { SeoResult } from '@/lib/seo-calculator';
+import MarginCalculator from '@/components/calculator/MarginCalculator';
+import type { DiscountResult } from '@/components/calculator/MarginCalculator';
+import AIKeywordGenerator from '@/components/ai/AIKeywordGenerator';
+
+interface Supplier { id: string; name: string; code: string; }
+interface ShippingTemplate {
+  id: string; name: string; naverTemplateNo: string | null;
+  shippingFee: number; freeThreshold: number | null;
+  returnFee: number; exchangeFee: number; courierCode: string;
+}
+interface OptionRow { value: string; price: string; stock: string; }
+
+const inp = 'w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm text-stone-800 placeholder-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-300 focus:border-transparent bg-white transition';
+const sel = inp + ' appearance-none cursor-pointer';
+
+function Field({ label, required, hint, children }: {
+  label: string; required?: boolean; hint?: string; children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-1 mb-1.5">
+        <label className="text-sm font-medium text-gray-700">{label}</label>
+        {required && <span className="text-red-500 text-xs">*</span>}
+      </div>
+      {children}
+      {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
+    </div>
+  );
+}
+
+function RSection({ number, title, badge, children }: {
+  number: number; title: string; badge?: string; children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors">
+        <div className="flex items-center gap-3">
+          <span className="w-7 h-7 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center shrink-0">{number}</span>
+          <span className="font-semibold text-gray-800">{title}</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+          {badge && <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">{badge}</span>}
+        </div>
+        <span className="text-gray-400 text-xs">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && <div className="px-6 pb-6 pt-1 border-t border-gray-100 space-y-4">{children}</div>}
+    </div>
+  );
+}
+
+function DSection({ icon, title, summary, children }: {
+  icon: string; title: string; summary: string; children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`border rounded-2xl overflow-hidden transition-colors ${open ? 'border-amber-300' : 'border-gray-200 bg-white'}`}>
+      <button onClick={() => setOpen(o => !o)} className={`w-full flex items-center justify-between px-5 py-3.5 transition-colors ${open ? 'bg-amber-50' : 'hover:bg-gray-50'}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-base shrink-0">{icon}</span>
+          <span className="font-medium text-gray-700 text-sm shrink-0">{title}</span>
+          {!open && <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full truncate max-w-xs">{summary}</span>}
+        </div>
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          {!open && <span className="text-xs text-amber-600 font-medium">수정 가능 ›</span>}
+          <span className="text-gray-400 text-xs">{open ? '▲ 접기' : '▼'}</span>
+        </div>
+      </button>
+      {open && <div className="px-5 pb-5 pt-4 border-t border-amber-100 space-y-4">{children}</div>}
+    </div>
+  );
+}
+
+export default function NewProductPage() {
+  const [d1, setD1] = useState('');
+  const [d2, setD2] = useState('');
+  const [d3, setD3] = useState('');
+  const [d4, setD4] = useState('');
+  const [productName, setProductName] = useState('');
+  const [sellerCode, setSellerCode]   = useState('');
+  const [price, setPrice]             = useState('');
+  const [supplierPrice, setSupplierPrice] = useState('');
+  const [stock, setStock]             = useState('100');
+  const [taxType, setTaxType]         = useState(KKOTIUM_DEFAULTS.taxType);
+  const [originCode, setOriginCode]   = useState(KKOTIUM_DEFAULTS.originCode);
+  const [brand, setBrand]             = useState(KKOTIUM_DEFAULTS.brand);
+  const [suppliers, setSuppliers]     = useState<Supplier[]>([]);
+  const [selectedSupplierId, setSelectedSupplierId] = useState('');
+  const [optionType, setOptionType]   = useState('조합형');
+  const [optionName, setOptionName]   = useState('');
+  const [optionRows, setOptionRows]   = useState<OptionRow[]>([{ value: '', price: '0', stock: '100' }]);
+  const [mainImage, setMainImage]     = useState('');
+  const [additionalImages, setAdditionalImages] = useState('');
+  const [description, setDescription] = useState('');
+  const [aiKeywords, setAiKeywords]   = useState<string[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [shippingTemplates, setShippingTemplates]   = useState<ShippingTemplate[]>([]);
+  const selectedTemplate = shippingTemplates.find(t => t.id === selectedTemplateId) || null;
+  const [deliveryFeeType, setDeliveryFeeType]       = useState(KKOTIUM_DEFAULTS.shippingFeeType);
+  const [basicDeliveryFee, setBasicDeliveryFee]     = useState(String(KKOTIUM_DEFAULTS.shippingFee));
+  const [conditionalFreeAmount, setConditionalFreeAmount] = useState(String(KKOTIUM_DEFAULTS.freeShippingMin));
+  const [returnFee, setReturnFee]     = useState(String(KKOTIUM_DEFAULTS.returnShippingFee));
+  const [exchangeFee, setExchangeFee] = useState(String(KKOTIUM_DEFAULTS.exchangeShippingFee));
+  const [courierCode, setCourierCode] = useState(KKOTIUM_DEFAULTS.courierCode);
+  const [asPhone, setAsPhone]         = useState(KKOTIUM_DEFAULTS.asPhone);
+  const [asGuide, setAsGuide]         = useState(KKOTIUM_DEFAULTS.asGuide);
+  const [noticeTemplateCode, setNoticeTemplateCode] = useState('');
+  const [discountValue, setDiscountValue] = useState('');
+  const [discountUnit, setDiscountUnit]   = useState('%');
+  const [textReviewPoint, setTextReviewPoint]   = useState('100');
+  const [photoReviewPoint, setPhotoReviewPoint] = useState('500');
+  const [installmentMonths, setInstallmentMonths] = useState('0');
+  const [reviewVisible, setReviewVisible] = useState('Y');
+  const [error, setError]   = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const seoResult: SeoResult = useMemo(() => calcSeoScore({
+    productName, brand,
+    keywords: aiKeywords.join(','),
+    mainImage, description,
+    categoryId: getCategoryId(d1, d2, d3, d4),
+  }), [productName, brand, aiKeywords, mainImage, description, d1, d2, d3, d4]);
+
+  useEffect(() => {
+    fetch('/api/suppliers').then(r => r.ok ? r.json() : { data: [] })
+      .then(d => setSuppliers(d.data || d.suppliers || [])).catch(() => {});
+    fetch('/api/shipping-templates').then(r => r.ok ? r.json() : { templates: [] })
+      .then(d => setShippingTemplates(d.templates || d.data || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (selectedTemplate) {
+      setBasicDeliveryFee(String(selectedTemplate.shippingFee));
+      setConditionalFreeAmount(String(selectedTemplate.freeThreshold ?? KKOTIUM_DEFAULTS.freeShippingMin));
+      setReturnFee(String(selectedTemplate.returnFee ?? KKOTIUM_DEFAULTS.returnShippingFee));
+      setExchangeFee(String(selectedTemplate.exchangeFee ?? KKOTIUM_DEFAULTS.exchangeShippingFee));
+      setCourierCode(selectedTemplate.courierCode ?? KKOTIUM_DEFAULTS.courierCode);
+    }
+  }, [selectedTemplateId]);
+
+  const handleDiscountApplied = (result: DiscountResult) => {
+    setDiscountValue(String(result.discountRate));
+    setDiscountUnit('%');
+  };
+
+  const addOptionRow = () => setOptionRows(p => [...p, { value: '', price: '0', stock: '100' }]);
+  const removeOptionRow = (i: number) => setOptionRows(p => p.filter((_, idx) => idx !== i));
+  const updateOptionRow = (i: number, field: keyof OptionRow, val: string) =>
+    setOptionRows(p => p.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
+
+  const handleD1 = (v: string) => { setD1(v); setD2(''); setD3(''); setD4(''); };
+  const handleD2 = (v: string) => { setD2(v); setD3(''); setD4(''); };
+  const handleD3 = (v: string) => { setD3(v); setD4(''); };
+  const categoryId = getCategoryId(d1, d2, d3, d4);
+  const d4List = d1 && d2 && d3 ? getDepth4List(d1, d2, d3) : [];
+  const requiredDone = !!(productName.trim() && price && categoryId && mainImage.trim());
+
+  const seoColor = seoResult.score >= 80 ? 'text-green-600' : seoResult.score >= 60 ? 'text-yellow-600' : 'text-red-500';
+  const seoBg = seoResult.score >= 80 ? 'from-green-50 to-emerald-50 border-green-200'
+    : seoResult.score >= 60 ? 'from-yellow-50 to-amber-50 border-yellow-200'
+    : 'from-red-50 to-pink-50 border-red-200';
+
+  const handleGenerate = () => {
+    setError(''); setSuccess(false);
+    if (!productName.trim()) return setError('상품명을 입력하세요.');
+    if (!price || isNaN(Number(price)) || Number(price) <= 0) return setError('올바른 판매가를 입력하세요.');
+    if (!categoryId) return setError('카테고리를 끝까지 선택하세요.');
+    if (!mainImage.trim()) return setError('대표 이미지 URL을 입력하세요.');
+    try {
+      const filledRows = optionRows.filter(r => r.value.trim() !== '');
+      const serializedOptionValues = filledRows.map(r => r.value).join(',');
+      const serializedOptionPrices = filledRows.map(r => r.price || '0').join(',');
+      const serializedOptionStocks = filledRows.map(r => r.stock || '100').join(',');
+      const GROUP_ROW: (string | null)[] = [
+        '상품 기본정보', ...Array(19).fill(null),
+        '상품 주요정보', ...Array(8).fill(null),
+        '배송정보', ...Array(15).fill(null),
+        '상품정보제공고시', ...Array(4).fill(null),
+        'A/S, 특이사항', ...Array(3).fill(null),
+        '할인/혜택정보', ...Array(16).fill(null),
+        '기타 정보', ...Array(12).fill(null),
+      ];
+      const finalTplCode = selectedTemplate?.naverTemplateNo || '';
+      const rowData: Record<string, any> = {
+        '판매자 상품코드': sellerCode.trim() || `KKOT-${Date.now()}`,
+        '카테고리코드': categoryId,
+        '상품명': productName.trim(),
+        '상품상태': KKOTIUM_DEFAULTS.productStatus,
+        '판매가': Number(price),
+        '부가세': taxType,
+        '재고수량': Number(stock) || 100,
+        '옵션형태': filledRows.length > 0 ? optionType : '',
+        '옵션명': filledRows.length > 0 ? optionName : '',
+        '옵션값': serializedOptionValues,
+        '옵션가': serializedOptionPrices,
+        '옵션 재고수량': serializedOptionStocks,
+        '직접입력 옵션': 'N',
+        '추가상품명': '', '추가상품값': '', '추가상품가': '', '추가상품 재고수량': '',
+        '대표이미지': mainImage.trim(),
+        '추가이미지': additionalImages.trim(),
+        '상세설명': description.trim(),
+        '브랜드': brand, '제조사': brand,
+        '제조일자': '', '유효일자': '',
+        '원산지코드': originCode,
+        '수입사': '', '복수원산지여부': 'N', '원산지 직접입력': '',
+        '미성년자 구매': KKOTIUM_DEFAULTS.minorPurchase,
+        '배송비 템플릿코드': finalTplCode,
+        '배송방법': KKOTIUM_DEFAULTS.shippingMethod,
+        '택배사코드': courierCode,
+        '배송비유형': deliveryFeeType,
+        '기본배송비': Number(basicDeliveryFee),
+        '배송비 결제방식': KKOTIUM_DEFAULTS.shippingPayType,
+        '조건부무료-\n상품판매가 합계': Number(conditionalFreeAmount) || '',
+        '수량별부과-수량': '', '구간별-\n2구간수량': '', '구간별-\n3구간수량': '',
+        '구간별-\n3구간배송비': '', '구간별-\n추가배송비': '',
+        '반품배송비': Number(returnFee),
+        '교환배송비': Number(exchangeFee),
+        '지역별 차등 배송비': '', '별도설치비': '',
+        '상품정보제공고시 템플릿코드': noticeTemplateCode,
+        '상품정보제공고시\n품명': productName.trim(),
+        '상품정보제공고시\n모델명': sellerCode.trim() || '',
+        '상품정보제공고시\n인증허가사항': '',
+        '상품정보제공고시\n제조자': brand,
+        'A/S 템플릿코드': '',
+        'A/S 전화번호': asPhone,
+        'A/S 안내': asGuide,
+        '판매자특이사항': '',
+        '즉시할인 값\n(기본할인)': Number(discountValue) || '',
+        '즉시할인 단위\n(기본할인)': discountValue ? discountUnit : '',
+        '모바일\n즉시할인 값': '', '모바일\n즉시할인 단위': '',
+        '복수구매할인\n조건 값': '', '복수구매할인\n조건 단위': '',
+        '복수구매할인\n값': '', '복수구매할인\n단위': '',
+        '상품구매시 포인트\n지급 값': '', '상품구매시 포인트\n지급 단위': '',
+        '텍스트리뷰 작성시\n지급 포인트': Number(textReviewPoint),
+        '포토/동영상 리뷰 작성시\n지급 포인트': Number(photoReviewPoint),
+        '한달사용 텍스트리뷰\n작성시 지급 포인트': '',
+        '한달사용\n포토/동영상리뷰 작성시 지급 포인트': '',
+        '알림받기동의 고객 리뷰 작성 시 지급 포인트': '',
+        '무이자\n할부 개월': Number(installmentMonths) || '',
+        '사은품': '', '판매자바코드': '',
+        '구매평 노출여부': reviewVisible,
+        '구매평\n비노출사유': '',
+        '알림받기 동의 고객 전용 여부': 'N',
+        'ISBN': '', 'ISSN': '', '독립출판': '', '출간일': '',
+        '출판사': '', '글작가': '', '그림작가': '', '번역자명': '', '문화비 소득공제': '',
+      };
+      const wsData: any[][] = [
+        GROUP_ROW, NAVER_EXCEL_COLUMNS,
+        NAVER_EXCEL_COLUMNS.map(col => rowData[col] ?? ''),
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!cols'] = NAVER_EXCEL_COLUMNS.map(col =>
+        ['상세설명','대표이미지','추가이미지'].includes(col) ? { wch: 60 } :
+        ['상품명','A/S 안내','판매자특이사항'].includes(col) ? { wch: 35 } : { wch: 16 }
+      );
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '일괄등록');
+      const ts = new Date().toISOString().slice(0,10).replace(/-/g,'');
+      XLSX.writeFile(wb, `naver_upload_${ts}_${productName.trim().slice(0,10)}.xlsx`);
+      setSuccess(true);
+    } catch (e: any) {
+      setError(`엑셀 생성 중 오류: ${e?.message || '알 수 없는 오류'}`);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* 헤더 */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <a href="/products" className="text-gray-400 hover:text-gray-600 text-sm">← 목록</a>
+            <span className="text-gray-300">|</span>
+            <h1 className="text-lg font-bold text-gray-900">🌸 네이버 상품 등록</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs px-3 py-1 rounded-full font-medium ${requiredDone ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+              {requiredDone ? '✅ 필수항목 완료' : '⚠️ 필수항목 미완'}
+            </span>
+            <button onClick={handleGenerate} className="bg-[#03C75A] hover:bg-green-600 text-white px-5 py-2 rounded-xl text-sm font-bold shadow transition-colors">
+              📥 네이버 엑셀 다운로드
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">⚠️ {error}</div>}
+        {success && <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">✅ 엑셀 파일 생성 완료! 다운로드 폴더를 확인하세요.</div>}
+
+        <div className="flex gap-6 items-start">
+
+          {/* ══ 좌측 입력 (flex-1) ══ */}
+          <div className="flex-1 min-w-0 space-y-4">
+
+            {/* ① 카테고리 */}
+            <RSection number={1} title="카테고리">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="대분류" required>
+                  <select className={sel} value={d1} onChange={e => handleD1(e.target.value)}>
+                    <option value="">선택</option>
+                    {getDepth1List().map(v => <option key={v}>{v}</option>)}
+                  </select>
+                </Field>
+                <Field label="중분류" required>
+                  <select className={sel} value={d2} onChange={e => handleD2(e.target.value)} disabled={!d1}>
+                    <option value="">선택</option>
+                    {d1 && getDepth2List(d1).map(v => <option key={v}>{v}</option>)}
+                  </select>
+                </Field>
+                <Field label="소분류" required>
+                  <select className={sel} value={d3} onChange={e => handleD3(e.target.value)} disabled={!d2}>
+                    <option value="">선택</option>
+                    {d2 && getDepth3List(d1, d2).map(v => <option key={v}>{v}</option>)}
+                  </select>
+                </Field>
+                {d4List.length > 0 && (
+                  <Field label="세분류" required>
+                    <select className={sel} value={d4} onChange={e => setD4(e.target.value)}>
+                      <option value="">선택</option>
+                      {d4List.map(v => <option key={v}>{v}</option>)}
+                    </select>
+                  </Field>
+                )}
+              </div>
+              {categoryId && (
+                <p className="text-xs text-green-600 font-medium bg-green-50 px-3 py-2 rounded-lg">
+                  ✓ 카테고리코드: <strong>{categoryId}</strong>
+                </p>
+              )}
+            </RSection>
+
+            {/* ② 기본 정보 + AI 키워드 */}
+            <RSection number={2} title="기본 정보">
+              <Field label="상품명" required hint="최대 100자 · 키워드 포함 권장 (25~50자 최적)">
+                <input className={inp} value={productName} onChange={e => setProductName(e.target.value)}
+                  placeholder="예) 꽃틔움 프리미엄 코튼 이불 세트" maxLength={100} />
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-xs font-medium ${productName.length >= 25 && productName.length <= 50 ? 'text-green-600' : 'text-gray-400'}`}>
+                    {productName.length}/100자 {productName.length >= 25 && productName.length <= 50 ? '✅ 최적' : '(25~50자 권장)'}
+                  </span>
+                </div>
+              </Field>
+
+              {/* AI 키워드 인라인 */}
+              <AIKeywordGenerator productName={productName} onKeywordsGenerated={setAiKeywords} />
+              {aiKeywords.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {aiKeywords.map((kw, i) => (
+                    <span key={i} className="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs">{kw}</span>
+                  ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="판매가" required>
+                  <input className={inp} type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0" min={0} />
+                </Field>
+                <Field label="공급가 (도매가)" hint="마진 계산에 사용">
+                  <input className={inp} type="number" value={supplierPrice} onChange={e => setSupplierPrice(e.target.value)} placeholder="0" min={0} />
+                </Field>
+                <Field label="재고수량">
+                  <input className={inp} type="number" value={stock} onChange={e => setStock(e.target.value)} min={0} />
+                </Field>
+                <Field label="부가세">
+                  <select className={sel} value={taxType} onChange={e => setTaxType(e.target.value)}>
+                    {TAX_TYPES.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
+                  </select>
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="공급사" hint="공급사 관리에서 추가 가능">
+                  <select className={sel} value={selectedSupplierId} onChange={e => setSelectedSupplierId(e.target.value)}>
+                    <option value="">-- 꽃틔움 협력사 (기본) --</option>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </Field>
+                <Field label="판매자 상품코드 (SKU)" hint="비워두면 자동 생성">
+                  <input className={inp} value={sellerCode} onChange={e => setSellerCode(e.target.value)} placeholder="KKOT-202602-001" />
+                </Field>
+              </div>
+            </RSection>
+
+            {/* ③ 옵션 */}
+            <RSection number={3} title="옵션" badge="행 추가/삭제">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="옵션형태">
+                  <select className={sel} value={optionType} onChange={e => setOptionType(e.target.value)}>
+                    <option>조합형</option><option>단독형</option>
+                  </select>
+                </Field>
+                <Field label="옵션명" hint="예) 색상 / 사이즈">
+                  <input className={inp} value={optionName} onChange={e => setOptionName(e.target.value)} placeholder="색상" />
+                </Field>
+              </div>
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <div className="grid grid-cols-12 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500">
+                  <span className="col-span-5">옵션값</span>
+                  <span className="col-span-3">추가금(원)</span>
+                  <span className="col-span-3">재고</span>
+                  <span className="col-span-1"></span>
+                </div>
+                {optionRows.map((row, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-1 px-3 py-2 border-t border-gray-100 items-center">
+                    <input className={`${inp} col-span-5 py-1.5`} value={row.value}
+                      onChange={e => updateOptionRow(i, 'value', e.target.value)} placeholder="화이트 / S" />
+                    <input className={`${inp} col-span-3 py-1.5`} type="number" value={row.price}
+                      onChange={e => updateOptionRow(i, 'price', e.target.value)} />
+                    <input className={`${inp} col-span-3 py-1.5`} type="number" value={row.stock}
+                      onChange={e => updateOptionRow(i, 'stock', e.target.value)} />
+                    <button onClick={() => removeOptionRow(i)} className="col-span-1 text-red-400 hover:text-red-600 text-sm font-bold">✕</button>
+                  </div>
+                ))}
+              </div>
+              <button onClick={addOptionRow} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-green-300 hover:text-green-600 transition">
+                + 옵션 행 추가
+              </button>
+            </RSection>
+
+            {/* ④ 이미지 */}
+            <RSection number={4} title="이미지">
+              <Field label="대표 이미지 URL" required hint="최소 500x500px · HTTPS 권장">
+                <input className={inp} value={mainImage} onChange={e => setMainImage(e.target.value)} placeholder="https://..." />
+              </Field>
+              <Field label="추가 이미지 URL" hint="콤마로 구분, 최대 9개">
+                <textarea className={`${inp} h-20 resize-none`} value={additionalImages}
+                  onChange={e => setAdditionalImages(e.target.value)} placeholder="https://..., https://..." />
+              </Field>
+              <Field label="상세 설명" hint="200자 이상 권장 · HTML 가능">
+                <textarea className={`${inp} h-32 resize-none`} value={description}
+                  onChange={e => setDescription(e.target.value)} placeholder="상품 특징, 소재, 사이즈, A/S 안내 등..." />
+                <div className="flex justify-end mt-1">
+                  <span className={`text-xs ${description.length >= 200 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
+                    {description.length}자 {description.length >= 200 ? '✅' : '(200자 이상 권장)'}
+                  </span>
+                </div>
+              </Field>
+            </RSection>
+
+            {/* ══ D1~D7 기본값 아코디언 ══ */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-400 px-1 uppercase tracking-wide">⚙️ 기본값 — 펼쳐서 수정 가능</p>
+
+              {/* D1 즉시할인 */}
+              <DSection icon="🏷️" title="즉시 할인" summary={`${discountValue || '0'}${discountUnit}`}>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="할인 값">
+                    <input className={inp} type="number" value={discountValue}
+                      onChange={e => setDiscountValue(e.target.value)} placeholder="30" min={0} />
+                  </Field>
+                  <Field label="할인 단위">
+                    <select className={sel} value={discountUnit} onChange={e => setDiscountUnit(e.target.value)}>
+                      <option value="%">% (퍼센트)</option>
+                      <option value="원">원 (금액)</option>
+                    </select>
+                  </Field>
+                </div>
+              </DSection>
+
+              {/* D2 브랜드/원산지 */}
+              <DSection icon="🏭" title="브랜드·원산지" summary={`${brand} · ${originCode}`}>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="브랜드">
+                    <input className={inp} value={brand} onChange={e => setBrand(e.target.value)} />
+                  </Field>
+                  <Field label="원산지코드" hint="0200037 = 서울">
+                    <select className={sel} value={originCode} onChange={e => setOriginCode(e.target.value)}>
+                      {ORIGIN_CODES.map(o => <option key={o.code} value={o.code}>{o.label} ({o.code})</option>)}
+                    </select>
+                  </Field>
+                </div>
+              </DSection>
+
+              {/* D3 배송 */}
+              <DSection icon="🚚" title="배송 설정" summary={`${deliveryFeeType} · ${basicDeliveryFee}원 · ${courierCode}`}>
+                <Field label="배송비 템플릿 (네이버 연동)" hint="선택 시 배송비/반품비 자동 입력">
+                  <select className={sel} value={selectedTemplateId} onChange={e => setSelectedTemplateId(e.target.value)}>
+                    <option value="">-- 직접 입력 --</option>
+                    {shippingTemplates.map(t => (
+                      <option key={t.id} value={t.id}>{t.name} ({t.shippingFee.toLocaleString()}원)</option>
+                    ))}
+                  </select>
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="배송비유형">
+                    <select className={sel} value={deliveryFeeType} onChange={e => setDeliveryFeeType(e.target.value)}>
+                      {SHIPPING_FEE_TYPES.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="기본배송비 (원)">
+                    <input className={inp} type="number" value={basicDeliveryFee} onChange={e => setBasicDeliveryFee(e.target.value)} />
+                  </Field>
+                  <Field label="택배사코드">
+                    <select className={sel} value={courierCode} onChange={e => setCourierCode(e.target.value)}>
+                      {COURIER_CODES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="반품배송비 (원)">
+                    <input className={inp} type="number" value={returnFee} onChange={e => setReturnFee(e.target.value)} />
+                  </Field>
+                  <Field label="교환배송비 (원)">
+                    <input className={inp} type="number" value={exchangeFee} onChange={e => setExchangeFee(e.target.value)} />
+                  </Field>
+                  {deliveryFeeType === '조건부무료' && (
+                    <Field label="무료 기준 금액 (원)">
+                      <input className={inp} type="number" value={conditionalFreeAmount} onChange={e => setConditionalFreeAmount(e.target.value)} />
+                    </Field>
+                  )}
+                </div>
+              </DSection>
+
+              {/* D4 A/S */}
+              <DSection icon="🔧" title="A/S 설정" summary={asPhone}>
+                <Field label="A/S 전화번호">
+                  <input className={inp} value={asPhone} onChange={e => setAsPhone(e.target.value)} />
+                </Field>
+                <Field label="A/S 안내">
+                  <textarea className={`${inp} h-20 resize-none`} value={asGuide} onChange={e => setAsGuide(e.target.value)} />
+                </Field>
+              </DSection>
+
+              {/* D5 리뷰 포인트 */}
+              <DSection icon="⭐" title="리뷰 포인트" summary={`텍스트 ${textReviewPoint}P · 포토 ${photoReviewPoint}P`}>
+                <div className="grid grid-cols-3 gap-3">
+                  <Field label="텍스트리뷰 (P)">
+                    <input className={inp} type="number" value={textReviewPoint} onChange={e => setTextReviewPoint(e.target.value)} />
+                  </Field>
+                  <Field label="포토/동영상 (P)">
+                    <input className={inp} type="number" value={photoReviewPoint} onChange={e => setPhotoReviewPoint(e.target.value)} />
+                  </Field>
+                  <Field label="무이자 할부 (개월)">
+                    <input className={inp} type="number" value={installmentMonths} onChange={e => setInstallmentMonths(e.target.value)} min={0} max={24} />
+                  </Field>
+                </div>
+              </DSection>
+
+              {/* D6 구매평/알림 */}
+              <DSection icon="⚙️" title="구매평·알림" summary={`구매평 ${reviewVisible}`}>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="구매평 노출">
+                    <select className={sel} value={reviewVisible} onChange={e => setReviewVisible(e.target.value)}>
+                      <option value="Y">Y (노출)</option>
+                      <option value="N">N (비노출)</option>
+                    </select>
+                  </Field>
+                </div>
+              </DSection>
+
+              {/* D7 상품정보고시 */}
+              <DSection icon="📋" title="상품정보제공고시" summary={`코드: ${noticeTemplateCode || '미입력'}`}>
+                <Field label="상품정보제공고시 템플릿코드">
+                  <input className={inp} value={noticeTemplateCode} onChange={e => setNoticeTemplateCode(e.target.value)} placeholder="템플릿 코드" />
+                </Field>
+              </DSection>
+            </div>
+
+            {/* 하단 버튼 */}
+            <div className="pt-4 border-t border-gray-200">
+              <button onClick={handleGenerate} className="w-full py-3 bg-[#03C75A] hover:bg-green-600 text-white rounded-xl font-bold shadow transition-colors">
+                📥 네이버 엑셀 다운로드
+              </button>
+            </div>
+
+          </div>{/* 좌측 끝 */}
+
+          {/* ══ 우측 고정 패널 (w-96) ══ */}
+          <div className="w-96 shrink-0 space-y-4 sticky top-20">
+
+            {/* 💰 마진 계산기 */}
+            <MarginCalculator
+              supplierPrice={Number(supplierPrice) || 0}
+              salePrice={Number(price) || 0}
+              shippingFee={Number(basicDeliveryFee) || 3000}
+              onPriceChange={v => setPrice(String(v))}
+              onDiscountApplied={handleDiscountApplied}
+              compact={true}
+            />
+
+            {/* 📊 SEO 점수 */}
+            <div className={`bg-gradient-to-r ${seoBg} rounded-2xl border p-4 space-y-3`}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-gray-900 text-sm">📊 SEO 점수</h3>
+                <span className={`text-3xl font-extrabold ${seoColor}`}>{seoResult.score}점</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-lg font-bold px-3 py-1 rounded-full ${
+                  seoResult.grade === 'S' ? 'bg-green-100 text-green-700' :
+                  seoResult.grade === 'A' ? 'bg-blue-100 text-blue-700' :
+                  seoResult.grade === 'B' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                }`}>등급 {seoResult.grade}</span>
+                <div className="flex-1 bg-white/60 rounded-full h-2.5">
+                  <div className={`h-2.5 rounded-full transition-all duration-500 ${
+                    seoResult.score >= 80 ? 'bg-green-500' : seoResult.score >= 60 ? 'bg-yellow-500' : 'bg-red-400'
+                  }`} style={{ width: `${seoResult.score}%` }} />
+                </div>
+              </div>
+              {/* 체크 항목 */}
+              <div className="space-y-1">
+                {seoResult.checks.slice(0, 5).map((c, i) => (
+                  <div key={i} className="flex items-center justify-between bg-white/70 rounded-lg px-2.5 py-1.5 text-xs">
+                    <span className="text-gray-600">{c.label}</span>
+                    <span className={c.ok ? 'text-green-600 font-bold' : 'text-red-400'}>{c.ok ? `+${c.point}` : '0'}</span>
+                  </div>
+                ))}
+              </div>
+              {/* 개선 제안 */}
+              {seoResult.suggestions.length > 0 && (
+                <div className="space-y-1">
+                  {seoResult.suggestions.slice(0, 2).map((s, i) => (
+                    <p key={i} className="text-xs text-gray-600 bg-white/60 rounded-lg px-2.5 py-1.5">💡 {s}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 📋 엑셀 매핑 미리보기 */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+              <h3 className="font-bold text-gray-900 text-sm mb-3">📋 엑셀 매핑 미리보기</h3>
+              <div className="space-y-1.5 text-xs">
+                {[
+                  { label: '카테고리코드', value: categoryId || '-' },
+                  { label: '판매가', value: price ? `${Number(price).toLocaleString()}원` : '-' },
+                  { label: '할인율', value: discountValue ? `${discountValue}${discountUnit}` : '-' },
+                  { label: '배송비', value: `${Number(basicDeliveryFee).toLocaleString()}원 (${deliveryFeeType})` },
+                  { label: '택배사', value: courierCode },
+                  { label: '반품배송비', value: `${Number(returnFee).toLocaleString()}원` },
+                  { label: '원산지코드', value: originCode },
+                  { label: '브랜드', value: brand },
+                  { label: '리뷰포인트', value: `텍스트 ${textReviewPoint}P · 포토 ${photoReviewPoint}P` },
+                  { label: '상품정보고시', value: noticeTemplateCode || '미입력' },
+                ].map(row => (
+                  <div key={row.label} className="flex justify-between items-center py-1 border-b border-gray-50">
+                    <span className="text-gray-500">{row.label}</span>
+                    <span className={`font-medium ${row.value === '-' || row.value === '미입력' ? 'text-red-400' : 'text-gray-800'}`}>
+                      {row.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>{/* 우측 끝 */}
+        </div>{/* flex 끝 */}
+      </div>
+    </div>
+  );
+}

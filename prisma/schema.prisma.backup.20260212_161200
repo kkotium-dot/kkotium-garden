@@ -1,0 +1,191 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  level     Int       @default(1)
+  exp       Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model Supplier {
+  id          String    @id @default(cuid())
+  name        String
+  code        String    @unique
+  contact     String?
+  address     String?
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+model Product {
+  id                      String    @id @default(cuid())
+
+  // 네이버 SEO 필드 (27개)
+  naver_title             String?
+  naver_keywords          String?
+  naver_description       String?
+  naver_brand             String?
+  naver_manufacturer      String?
+  naver_origin            String?
+  naver_material          String?
+  naver_color             String?
+  naver_size              String?
+  naver_weight            String?
+  naver_care_instructions String?
+  naver_warranty          String?
+  naver_certification     String?
+  naver_tax_type          String?
+  naver_gift_wrapping     Boolean   @default(false)
+  naver_as_info           String?
+  naver_delivery_info     String?
+  naver_exchange_info     String?
+  naver_refund_info       String?
+  naver_min_order         String?
+  naver_max_order         String?
+  naver_adult_only        Boolean   @default(false)
+  naver_parallel_import   Boolean   @default(false)
+  naver_custom_option_1   String?
+  naver_custom_option_2   String?
+  naver_custom_option_3   String?
+  naver_meta_tags         String?
+
+  // 기존 SEO 필드
+  seo_title               String?
+  seo_keywords            String?
+  seo_description         String?
+
+  // 타임스탬프
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  // 추가 이미지 및 AI 관련
+  additionalImages        Json?
+  aiGeneratedDesc         String?
+  aiGeneratedTags         Json?
+  aiGeneratedTitle        String?
+  aiScore                 Int?
+
+  // 상품 기본 정보
+  asInfo                  String    @default("평일 10:00~18:00")
+  asPhone                 String    @default("고객센터 문의")
+  barcode                 String?
+  brand                   String    @default("꽃틔움")
+  category                String?
+  courierCode             String    @default("CJGLS")
+  description             String?
+
+  // 배송 관련
+  exchangeShippingFee     Int       @default(6000)
+  freeShippingMinPrice    Int       @default(30000)
+  freeShippingThreshold   Int?
+  shippingFee             Int       @default(3000)
+  shippingMethod          String    @default("택배배송")
+  shippingPayType         String    @default("선결제")
+  shippingStrategy        String    @default("무료배송")
+  shippingType            String    @default("일반배송")
+  returnShippingFee       Int       @default(3000)
+  supplierReturnFee       Int       @default(0)
+  supplierShippingFee     Int       @default(3000)
+
+  // 옵션 관련
+  hasOptions              Boolean   @default(false)
+  optionName              String?
+  optionType              String?
+  optionValues            Json?
+  options                 Json?
+
+  // 기타
+  hookPhrase              String?
+  internalNote            String?
+  internalTags            Json?
+  keywords                Json?
+  lastSaleDate            DateTime?
+
+  // ⭐ 이미지 필드 (네이버 스마트스토어 2026 기준 - 개선됨)
+  mainImage               String?
+  images                  String[]  @default([])
+  imageAltTexts           String[]  @default([])      // 🆕 SEO용 alt 텍스트 배열
+  imageCount              Int       @default(0)        // 🆕 총 이미지 개수 (캐시)
+
+  manufacturer            String    @default("도매매 공급사")
+  margin                  Float
+  minorPurchase           String    @default("Y")
+  name                    String
+  naverCategoryCode       String    @default("50003307")
+  naverProductId          String?
+  originCode              String    @default("0001")
+  productInfoManufacturer String?
+  productInfoModel        String?
+  productInfoName         String?
+  productStatus           String    @default("신상품")
+  salesCount              Int       @default(0)
+  salePrice               Int
+  sellerCode              String?
+  seoTitle                String?
+  sku                     String    @unique
+  status                  String    @default("DRAFT")
+  supplierPrice           Int
+  tags                    Json?
+  targetKeywords          Json?
+  taxType                 String    @default("과세")
+  vendorCode              String?
+
+  // 관계
+  supplierId              String
+  supplier                Supplier  @relation(fields: [supplierId], references: [id])
+  userId                  String
+  user                    User      @relation(fields: [userId], references: [id])
+  orderItems              OrderItem[]
+
+  @@index([supplierId])
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([imageCount])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  shippingAddress String
+  totalAmount     Int
+  status          String      @default("PENDING")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  orderItems      OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  quantity  Int
+  price     Int
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
+}

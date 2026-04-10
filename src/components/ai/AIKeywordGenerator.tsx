@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 interface AIKeywordGeneratorProps {
   productName: string;
@@ -16,11 +17,12 @@ export default function AIKeywordGenerator({
 
   const handleGenerate = async () => {
     if (!productName) {
-      alert('상품명을 먼저 입력해주세요');
+      toast.error('상품명을 먼저 입력해주세요');
       return;
     }
 
     setLoading(true);
+    const loadingToast = toast.loading('🤖 AI가 키워드를 생성 중입니다...');
 
     try {
       const response = await fetch('/api/ai/keywords', {
@@ -31,14 +33,18 @@ export default function AIKeywordGenerator({
 
       const data = await response.json();
 
+      toast.dismiss(loadingToast);
+
       if (data.success) {
         setKeywords(data.keywords);
         onKeywordsGenerated(data.keywords);
+        toast.success('✨ ' + data.keywords.length + '개 키워드가 생성되었습니다!');
       } else {
-        alert('키워드 생성 실패: ' + data.error);
+        toast.error('키워드 생성 실패: ' + data.error);
       }
     } catch (error) {
-      alert('키워드 생성 중 오류가 발생했습니다');
+      toast.dismiss(loadingToast);
+      toast.error('키워드 생성 중 오류가 발생했습니다');
     } finally {
       setLoading(false);
     }

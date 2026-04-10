@@ -64,11 +64,11 @@ export default function OptionManager({ options, onChange }: OptionManagerProps)
   };
 
   // 옵션값 변경
-  const updateOptionValue = (
+  const updateOptionValue = <K extends keyof OptionValue>(
     optionIndex: number,
     valueIndex: number,
-    field: keyof OptionValue,
-    value: any
+    field: K,
+    value: OptionValue[K]
   ) => {
     const newOptions = [...options];
     newOptions[optionIndex].values[valueIndex][field] = value;

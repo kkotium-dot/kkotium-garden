@@ -13,6 +13,9 @@ module.exports = {
         'cream': '#FFF8F0',
         'green-main': '#4CAF50',
       },
+      animation: {
+        'bounce-slow': 'bounce 2s infinite',
+      },
     },
   },
   plugins: [],

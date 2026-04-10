@@ -1,0 +1,242 @@
+// src/components/OriginSearch.tsx
+// P0-4: Origin search with importer field (required for import origins)
+// Handles 518 origin codes
+
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import { Search, X, AlertCircle } from 'lucide-react';
+
+interface OriginCode {
+  id: string;
+  originCode: string;
+  originName: string;
+}
+
+interface OriginSearchProps {
+  value?: {
+    id: string;
+    code: string;
+    name: string;
+  } | null;
+  importerName?: string;
+  onChange: (origin: {
+    id: string;
+    code: string;
+    name: string;
+  } | null) => void;
+  onImporterChange?: (importer: string) => void;
+  error?: string;
+}
+
+export default function OriginSearch({
+  value,
+  importerName = '',
+  onChange,
+  onImporterChange,
+  error
+}: OriginSearchProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [origins, setOrigins] = useState<OriginCode[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // Import origin keywords (수입산 계열)
+  const IMPORT_KEYWORDS = ['수입', '외국', '미국', '중국', '일본', '독일', '프랑스', '영국', '이탈리아', '스페인'];
+
+  useEffect(() => {
+    loadOrigins();
+  }, []);
+
+  const loadOrigins = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/naver/origins');
+      if (response.ok) {
+        const data = await response.json();
+        setOrigins(data.origins || []);
+      }
+    } catch (error) {
+      console.error('Failed to load origins:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredOrigins = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    
+    const query = searchQuery.toLowerCase();
+    return origins
+      .filter(origin => 
+        origin.originName.toLowerCase().includes(query) ||
+        origin.originCode.toLowerCase().includes(query)
+      )
+      .slice(0, 30);
+  }, [origins, searchQuery]);
+
+  const isImportOrigin = useMemo(() => {
+    if (!value) return false;
+    return IMPORT_KEYWORDS.some(keyword => 
+      value.name.toLowerCase().includes(keyword)
+    );
+  }, [value]);
+
+  const handleSelect = (origin: OriginCode) => {
+    onChange({
+      id: origin.id,
+      code: origin.originCode,
+      name: origin.originName
+    });
+    setShowDropdown(false);
+    setSearchQuery('');
+  };
+
+  const handleClear = () => {
+    onChange(null);
+    if (onImporterChange) {
+      onImporterChange('');
+    }
+    setSearchQuery('');
+  };
+
+  const highlightMatch = (text: string, query: string) => {
+    if (!query) return text;
+    
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return (
+      <span>
+        {parts.map((part, i) => 
+          part.toLowerCase() === query.toLowerCase() ? (
+            <mark key={i} className="bg-yellow-200 font-medium">{part}</mark>
+          ) : (
+            <span key={i}>{part}</span>
+          )
+        )}
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        {/* Origin Search */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Origin
+          </label>
+          <div className="relative">
+            {value ? (
+              <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">{value.name}</p>
+                  <p className="text-xs text-gray-500">Code: {value.code}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowDropdown(true);
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                  placeholder="Search origin..."
+                  className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent ${
+                    error ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+              </div>
+            )}
+
+            {/* Search Dropdown */}
+            {showDropdown && searchQuery && !value && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {loading ? (
+                  <div className="p-4 text-center text-gray-500">Loading...</div>
+                ) : filteredOrigins.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">No origins found</div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {filteredOrigins.map((origin) => (
+                      <button
+                        key={origin.id}
+                        type="button"
+                        onClick={() => handleSelect(origin)}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                      >
+                        <p className="text-sm font-medium text-gray-900">
+                          {highlightMatch(origin.originName, searchQuery)}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Code: {origin.originCode}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Importer Field */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Importer
+            {isImportOrigin && (
+              <span className="text-red-500 ml-1">*</span>
+            )}
+          </label>
+          <input
+            type="text"
+            value={importerName}
+            onChange={(e) => onImporterChange?.(e.target.value)}
+            placeholder={isImportOrigin ? "Required for import origin" : "Optional"}
+            disabled={!isImportOrigin}
+            className={`w-full px-3 py-2 border rounded-lg transition-colors ${
+              isImportOrigin
+                ? error 
+                  ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-transparent'
+                  : 'border-pink-300 bg-pink-50 focus:ring-2 focus:ring-pink-500 focus:border-transparent'
+                : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+            }`}
+          />
+        </div>
+      </div>
+
+      {/* Import Origin Warning */}
+      {isImportOrigin && (
+        <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-yellow-900">
+              Import Origin Selected
+            </p>
+            <p className="text-xs text-yellow-700 mt-1">
+              Importer name is required for import origins. The product cannot be saved without this information.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+    </div>
+  );
+}

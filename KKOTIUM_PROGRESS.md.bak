@@ -1,0 +1,229 @@
+# KKOTIUM GARDEN — 프로젝트 진행 현황
+> 최종 업데이트: 2026-03-31
+> 기준 계획서: Kkotium Master Plan v3.1 FINAL + 크롤링+꼬띠 개선 + 260326 크롤러개선 문서 + 2026 네이버 SEO 검증
+
+---
+
+## 1. 핵심 파이프라인 (최종 목표)
+
+```
+도매 URL/번호 입력
+  → 단건/대량 크롤링 (OpenAPI)
+  → 소싱 정보 자동 수집 (공급사/재고/배송/카테고리/옵션)
+  → 카테고리 자동 추천 + 수수료 자동 반영
+  → 꿀통지수 평가 (소싱 보정 포함)
+  → 소싱 보관함 저장 (SOURCED→PENDING→REGISTERED)
+  → 상품등록 자동 prefill (상품명/가격/이미지/카테고리/옵션)
+  → 꼬띠 AI SEO 최적화
+  → 네이버 88컬럼 엑셀 생성 → 업로드 → 매출
+```
+
+---
+
+## 2. 완료된 작업 ✅
+
+### [크롤러 인프라]
+- [x] HTML/cheerio 크롤러 → 도매꾹 OpenAPI v4.5 완전 교체
+  - API 키: `store_settings.domeggook_api_key`
+  - 반환 필드: sellerNick, sellerId, inventory, shipFee, canMerge, categoryCode 전부
+- [x] 대량 SSE 스트리밍 (`/api/crawler/stream/route.ts`, 5개씩 배치, 350ms throttle)
+- [x] 상품번호 직접 입력 지원 (7-10자리 숫자 → URL 자동 변환)
+- [x] `crawl_logs` 테이블 생성 + sourcing_status 3단계 (SOURCED/PENDING/REGISTERED)
+- [x] domemae + stream API → crawl_logs INSERT (전체 소싱 데이터 포함)
+- [x] `/api/crawler/logs` CRUD API (GET/PATCH/DELETE)
+
+### [단건 탭 — 부분 구현]
+- [x] 크롤링 결과 카드: 공급사명/재고/묶음배송/카테고리/옵션 뱃지 표시
+- [x] 카테고리 자동 추천 UI 구조 (fetchCatSuggestions → 추천 결과 표시)
+- [x] 카테고리 선택 시 naverFeeRate 동적 적용 (getNaverFeeRateByD1)
+- [x] 마진 계산기: 손익분기 역산, 목표수익 입력, 단수조정 버튼
+- [x] 상품등록 prefill: 상품명/가격/이미지/카테고리/옵션/공급사ID 전달
+- [x] 임시저장 (DRAFT)
+
+### [대량 탭 — 완료]
+- [x] 카드형 결과 UI (상품명 편집/도매가 편집/예상수익/공급사/꿀통지수)
+- [x] 손해 상품 빨간 테두리 + 경고 배너
+- [x] D등급 이유 뱃지 2개 (calcHoneyScore 직접 호출)
+- [x] 보관함 담기 전 손해 상품 confirm 모달
+- [x] 묶음배송 레이블 "묶음배송 O/X"
+
+### [소싱 보관함 — 완료]
+- [x] 이력 탭 → 소싱 보관함 완전 전환
+- [x] 상태 필터 (소싱완료/등록대기/등록완료/단건/대량)
+- [x] 공급사별 필터, 상품명 검색
+- [x] 등록 시작 → prefill 자동 이동 + PENDING 상태 변경
+- [x] 일괄 처리 (전체 선택, 등록대기로, 삭제)
+
+### [꿀통지수]
+- [x] calcSourcingAdjustment 구현 (재고/합배송/셀러랭크/배송비 기반 -25~+15점)
+- [x] sourcingBadges 필드 추가
+- [x] honey-score 기본 수수료 0.05733으로 수정
+
+### [설정/기타]
+- [x] domeggookApiKey DB 컬럼 + 설정 UI
+- [x] 배송 A/B/C 전략 토글 (상품등록 배송 섹션)
+
+---
+
+## 3. 이번 세션 작업 범위 (2026-03-29 승인됨)
+
+### Phase 1: 카테고리 검색 완전 교체 (P0) ✅ 완료
+- [x] 크롤러 카테고리 검색 → 상품등록과 동일한 `fullPath.includes()` 방식
+- [x] 결과 12개, d4 포함, 키보드 탐색 (ArrowDown/Up/Enter/Escape)
+- [x] 카테고리 코드 표시 + 검색어 하이라이트
+- TSC 0 에러 ✅
+
+### Phase 2: 소싱 전용 점수 `calcSourcingScore()` 분리 (P0) ✅ 완료
+- [x] SEO 가중치 제거, 소싱 실무 기준으로 재편
+- [x] 가중치: 마진(50%) + 소싱품질(30%) + 가격경쟁력(20%)
+- [x] 소싱품질: 재고(35pt) + 옵션수(25pt) + 합배송(20pt) + 배송비(20pt)
+- [x] 가격경쟁력: 공급사등급(50pt) + 마진적정성(50pt)
+- [x] 등급: S(80+) A(65+) B(45+) C(25+) D(25미만) + kkotti 대사/팁 포함
+- TSC 0 에러 ✅
+
+### Phase 3: 옵션 구조화 (name + qty + addPrice) ✅ 완료
+- [x] `parseOptions` → `CrawledOption[]` 타입 반환 (이름 + 옵션별 재고 + 추가금액)
+- [x] 단건 API (`/api/crawler/domemae`) 교체
+- [x] 대량 API (`/api/crawler/stream`) 교체
+- [x] 크롤 페이지 옵션 표시에 수량(qty)/추가금(addPrice) 표시 + 품절옵션 빨간색
+- [x] crawl_logs options JSON 구조 업데이트 (API에서 구조화된 JSON 저장)
+- 이유: 현재 옵션 이름만 추출, 옵션별 재고(qty)와 추가금(addprice) 누락
+- 실무: 특정 옵션만 재고 0이면 그 옵션 제외 판단 필요, 추가금은 판매가에 영향
+
+### Phase 4: prefill 통합 보강 ✅ 완료
+- [x] 단건 prefill에 `crawlProductNo`, `crawlInventory`, `crawlCategoryCode`, `crawlNaverFeeRate` 추가
+- [x] 대량 prefill에 `crawlProductNo`, `crawlInventory`, `crawlCategoryCode` 추가
+- [x] 소싱보관함 prefill에 `mainImage`, `additionalImgs`, `options`, `crawlInventory`, `crawlCategoryCode`, `catD1` 추가
+  - 이전: 소싱보관함 "등록 시작" 시 이미지/옵션/카테고리 전부 누락 → 수정 완료
+- [x] crawl_logs API에 images, options SELECT 추가 (프론트에 내려주지 않던 것 수정)
+- [x] SourcingItem 타입에 images, options, category_code 필드 추가
+- salePrice 단수조정/수수료 반영은 Phase 5에서 진행
+- TSC 0 에러 ✅
+
+### Phase 5: 대량 탭 "보관함 담기" 동작 정리 ✅ 완료
+- [x] Product DRAFT 생성 → crawl_logs URL 기반 PENDING 변경으로 교체
+- [x] PATCH API에 urls 배치 업데이트 지원 추가
+- [x] Product 생성은 상품등록 페이지에서만 (파이프라인 일관성)
+- TSC 0 에러 ✅
+
+### Phase 6: 대량 탭 smartRound + calcSourcingScore ✅ 완료
+- [x] bAutoRound state + bulkSalePrice() 헬퍼 + 자동 단수조정 체크박스 UI
+- [x] 대량 판매가 6곳 bulkSalePrice() 교체
+- [x] HoneyBadge → calcSourcingScore 교체 (단건+대량)
+- [x] D등급 이유 → calcSourcingScore 교체 (단건+대량)
+- [x] optionCount prop 추가 (단건+대량 HoneyBadge + D등급)
+- [x] crawl_logs INSERT id NULL 버그 수정 (gen_random_uuid)
+- TSC 0 에러 ✅ + API 테스트 통과 ✅
+
+### Phase 7: 소싱 보관함 카드 개선 ✅ 완료
+- [x] 썸네일 이미지 표시
+- [x] 옵션 수 + 품절 옵션 표시
+- [x] 배송비 표시 (무료공급/금액)
+- [x] 카테고리/공급사/재고/묶음배송 (기존 유지)
+- 공급사별 묶음 처리 UI는 P1 공급사 매핑 완료 후 진행
+- TSC 0 에러 ✅ + 데이터 테스트 통과 ✅
+
+### Phase 8: 단건 점수 상세 패널 UI ✅ 완료
+- [x] 마진/소싱/경쟁력 3구간 점수 바 + 수치 표시
+- [x] 등급 원형 뱃지 (S/A/B/C/D) + 총점 + 추천 문구
+- [x] 전체 sourcingBadges 표시 (good/warn/danger 색상 구분)
+- [x] 꼬띠 대사 + 팁 표시
+- [x] 등급별 배경색 (S=보라 A=초록 B=파랑 C=노랑 D=빨강)
+- TSC 0 에러 ✅
+
+### 2026 네이버 SEO 검증 결과
+- calcSeoScore 상품명/키워드/태그/이미지 기준: ✅ 2026 기준 부합
+- 상품명 앞 15자 키워드 가중치: ✅ 구현됨
+- 동일단어 반복/어뷰징 패턴 감지: ✅ 구현됨
+- 속성 100% 입력 점수: ❌ 미반영 (향후 추가)
+- 브랜드 등록란 활용: ❌ 미반영 (향후 추가)
+- 썸네일 화질 기준: ❌ 미반영 (2025 개편 신규)
+
+### 이전 세션 해결된 버그들
+- BUG-1: 카테고리 검색 → 로컬 검색 구현됨 (BUT 검색 범위 좁음 → Phase 1에서 교체)
+- BUG-2+3: autoRound 체크박스 + smartRound ✅ 구현됨
+- BUG-4: HoneyBadge inventory/canMerge/sellerRank/shipFee 전달 ✅ 구현됨
+- BUG-5: D등급 이유 뱃지 ✅ 구현됨
+
+---
+
+## 4. 다음 작업 우선순위
+
+### P0 — 이번 세션 Phase 1~8 전부 완료 ✅
+
+### P1 — 공급사 자동 매핑 + 꼬띠 배송 추천
+
+#### P1-1: 거래처 명단 도매꽉 ID 입력 ✅ 완료
+- [x] Supplier 인터페이스 + EMPTY_FORM에 domeggookSellerId 추가
+- [x] 공급사 추가/수정 모달에 "도매꽉 판매자 ID" 입력란 추가
+- [x] save 함수 payload에 domeggookSellerId 포함
+- [x] edit 모드에서 기존 값 로드
+- [x] 테이블에 "도매꽉 ID" 컨럼 추가
+- [x] 상품등록 "공급사 없음" 배너 링크 /settings/platforms → /settings/suppliers 수정
+- TSC 0 에러 ✅ + 테스트 통과 ✅
+
+#### P1-2: 공급사 자동 매핑 로직 (이미 구현됨)
+- [x] 상품등록 prefill 수신 시 sellerId로 /api/suppliers 조회 → 공급사 자동 선택
+- [x] 매칭 성공 시 플랫폼 + 공급사 + 배송 템플릿 자동 적용
+- [x] 매칭 실패 시 "공급사를 찾을 수 없어요" 배너 + 거래처 등록 링크
+
+#### P1-3: 꼬띠 배송 추천 (이미 구현됨)
+- [x] 판매가/shipFee/canMerge 기반 A/B/C안 자동 추천
+- [x] 매칭된 템플릿 자동 적용 OR 없으면 템플릿 자동 생성 모달
+- [x] 템플릿 네이밍: {Platform}_{Abbr}_{Type}_{Fee} 규칙
+
+#### P1-4: 남은 작업
+- [ ] 공급사별 묶음 처리 UI (소싱 보관함)
+
+### P2 — 대시보드 + UI 통일
+- [ ] 대시보드 메인 페이지 디자인
+- [ ] reactivation 페이지 디자인 통일
+
+### P3 — SEO AI 워크플로우 + 꼬띠 고도화 + 재고 모니터링
+- [ ] calcSeoScore에 속성 입력 점수 추가
+- [ ] 브랜드 등록란 활용 점수 추가
+- [ ] 썸네일 화질 기준 반영 (2025 네이버플러스 스토어 개편 신규)
+- [ ] SEO 4단계 AI 워크플로우 완성 (Perplexity API)
+- [ ] 꼬띠 일일 추천 시스템
+- [ ] 재고 모니터링 + Discord 알림
+
+---
+
+## 5. DB 테이블 현황
+
+| 테이블 | 상태 | 비고 |
+|--------|------|------|
+| Product | ✅ | DRAFT 7개 |
+| Supplier | ✅ | domeggookSellerId null (P1) |
+| ShippingTemplate | ✅ | |
+| NaverCategory | ✅ | 4,993개 시드 |
+| OriginCode | ✅ | 518개 시드 |
+| StoreSettings | ✅ | domeggookApiKey 컬럼 있음 |
+| crawl_logs | ✅ | sourcing_status 3단계 |
+
+---
+
+## 6. 핵심 파일 경로
+
+| 역할 | 경로 |
+|------|------|
+| 크롤러 메인 | `src/app/crawl/page.tsx` |
+| 단건 크롤 API | `src/app/api/crawler/domemae/route.ts` |
+| 대량 크롤 SSE | `src/app/api/crawler/stream/route.ts` |
+| 소싱 보관함 API | `src/app/api/crawler/logs/route.ts` |
+| 카테고리 추천 API | `src/app/api/category/suggest/route.ts` |
+| 꿀통지수 | `src/lib/honey-score.ts` |
+| 네이버 카테고리 (4,993개) | `src/lib/naver/naver-categories-full.ts` |
+| 네이버 수수료 | `src/lib/naver/naver-fee-rates-2026.ts` |
+| 상품등록 | `src/app/products/new/page.tsx` |
+| Prisma 싱글톤 | `src/lib/prisma.ts` |
+
+---
+
+## 7. 코드 작성 원칙
+
+- JSX 이모지 완전 금지 (Lucide React 아이콘만)
+- 주석 영어로만
+- `new PrismaClient()` 금지 → `src/lib/prisma.ts` 싱글톤
+- 카테고리 검색: `NAVER_CATEGORIES_FULL` 로컬 데이터 사용 (API 호출 금지)
+- 수정 후 `npx tsc --noEmit` 필수

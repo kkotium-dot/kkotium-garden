@@ -68,7 +68,7 @@ export default function ExportExcel({ products, selectedIds }: ExportExcelProps)
       ].join('\n');
 
       // UTF-8 BOM 추가 (한글 깨짐 방지)
-      const bom = '\uFEFF';
+      const bom = '﻿';
       const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
 
       // 다운로드

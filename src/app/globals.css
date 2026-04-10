@@ -2,72 +2,152 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════
+   KKOTIUM Design System v5
+   Red #e62310 · Pink #FF6B8A · Pure blush bg #FEF0F3
+   No gray backgrounds — all surfaces white or pink-tinted
+═══════════════════════════════════════════════════════════════ */
+
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 255, 255, 255;
-  --background-end-rgb: 255, 255, 255;
+  --kk-red:        #e62310;
+  --kk-red-dark:   #c41a0b;
+  --kk-red-50:     #fff0ef;
+  --kk-red-100:    #ffd6d3;
+  --kk-pink:       #FF6B8A;
+  --kk-pink-dark:  #e8517a;
+  --kk-pink-50:    #FFF0F5;
+  --kk-pink-100:   #ffd9e8;
+  --kk-pink-200:   #ffb3ce;
+  --app-bg:        #FEF0F3;
+  --surface:       #FFFFFF;
+  --border:        #F8DCE5;
+  --border-mid:    #F0C4D4;
+  /* Text — all strengthened, no washed-out grays */
+  --text-900:      #111111;
+  --text-700:      #3A3A3A;
+  --text-500:      #555555;
+  --text-300:      #888888;
+  --kk-green:      #228f18;
+  --section-line:  #FFC0D0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-family: -apple-system, 'Pretendard Variable', Pretendard,
+    BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-size: 15px;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  color: var(--text-900);
+  /* More white, pink only at bottom 25% */
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 55%, #fff0f5 78%, #ffd6e8 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  line-height: 1.55;
 }
 
-/* 커스텀 스크롤바 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* All page backgrounds: transparent so body gradient shows through */
+main {
+  background: transparent !important;
+  min-height: 100vh;
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+/* ── Remove ALL gray backgrounds — replace with transparent or pink-tint ── */
+.bg-gray-50, .bg-stone-50, .bg-zinc-50, .bg-neutral-50, .bg-slate-50 {
+  background-color: transparent !important;
+}
+.bg-gray-100, .bg-stone-100, .bg-zinc-100 {
+  background-color: #FFF0F5 !important;
+}
+.bg-gray-200, .bg-stone-200 {
+  background-color: #F8DCE5 !important;
+}
+/* min-h-screen bg-gray-50 pattern used in settings pages */
+div[class*="bg-gray-50"] {
+  background-color: transparent !important;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
+/* ── Strengthen gray text classes ── */
+.text-gray-400, .text-stone-400, .text-zinc-400 { color: #888888 !important; }
+.text-gray-500, .text-stone-500                  { color: #555555 !important; }
+.text-gray-600, .text-stone-600                  { color: #3A3A3A !important; }
+.text-gray-700, .text-stone-700                  { color: #2A2A2A !important; }
+
+/* ── Strengthen placeholder text ── */
+::placeholder { color: #999999 !important; opacity: 1; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--kk-pink-200); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--kk-pink); }
+
+/* ── Selection ── */
+::selection { background: var(--kk-pink-100); color: var(--kk-red-dark); }
+
+/* ── Focus ── */
+:focus-visible { outline: 2px solid var(--kk-pink); outline-offset: 2px; border-radius: 4px; }
+
+/* ── kk-card — white surface, pink border, NO gray ── */
+.kk-card {
+  background: #ffffff;
+  border: 1.5px solid #F8DCE5;
+  border-radius: 18px;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+.kk-card:hover {
+  box-shadow: 0 6px 24px rgba(230, 35, 16, 0.10);
+  transform: translateY(-2px);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
+/* ── kk-btn ── */
+.kk-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 20px;
+  background: var(--kk-red); color: #fff;
+  font-weight: 700; font-size: 14px; border-radius: 12px;
+  border: none; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.kk-btn:hover {
+  background: var(--kk-red-dark);
+  transform: translateY(-1px);
 }
 
-/* 로딩 애니메이션 */
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+/* ── kk-input ── */
+.kk-input {
+  width: 100%; padding: 10px 14px; font-size: 14px;
+  background: #fff; border: 1.5px solid var(--border);
+  border-radius: 12px; color: var(--text-900);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.kk-input:focus {
+  outline: none; border-color: var(--kk-pink);
+  box-shadow: 0 0 0 3px rgba(255,107,138,0.14);
+}
+.kk-input::placeholder { color: #999; }
+
+/* ── Gradient text ── */
+.kk-text-gradient {
+  background: linear-gradient(135deg, var(--kk-red) 0%, var(--kk-pink) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
+/* ── Status dots ── */
+.dot-green  { width:7px; height:7px; border-radius:50%; background:#16a34a; display:inline-block; }
+.dot-yellow { width:7px; height:7px; border-radius:50%; background:#f59e0b; display:inline-block; }
+.dot-red    { width:7px; height:7px; border-radius:50%; background:var(--kk-red); display:inline-block; }
+.dot-gray   { width:7px; height:7px; border-radius:50%; background:#888; display:inline-block; }
 
-/* 페이드인 애니메이션 */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* ── Product registration page — remove gray bg, strengthen text ── */
+/* RSection / DSection cards */
+.bg-green-500 { background-color: var(--kk-red) !important; }
 
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
-}
+/* Stone-colored borders and inputs → pink-tinted */
+.border-stone-200 { border-color: #F8DCE5 !important; }
+.placeholder-stone-300::placeholder { color: #999 !important; }
+.text-stone-800 { color: #1A1A1A !important; }

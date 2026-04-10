@@ -1,0 +1,937 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft, Save, Eye, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { calculateNaverSeoScore } from '@/lib/seo';
+import ImageUploader from '@/components/products/ImageUploader';
+import MarginCalculator, { NAVER_CATEGORY_MAP, type DiscountResult } from '@/components/calculator/MarginCalculator';
+
+interface PlatformData {
+  id: string;
+  name: string;
+  code: string;
+  suppliers: Array<{ id: string; name: string; code: string }>;
+}
+interface ShippingTemplate {
+  id: string;
+  name: string;
+  code: string;
+  courierCode: string;
+  shippingType: number;
+  shippingFee: number;
+  freeThreshold: number | null;
+}
+
+export default function ProductNewPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [platforms, setPlatforms] = useState<PlatformData[]>([]);
+  const [shippingTemplates, setShippingTemplates] = useState<ShippingTemplate[]>([]);
+  const [skuPreview, setSkuPreview] = useState('');
+  const [skuAvailable, setSkuAvailable] = useState<boolean | null>(null);
+  const [marginPct, setMarginPct] = useState(0);
+  const [naverCategoryCode, setNaverCategoryCode] = useState('0');
+  const [discountResult, setDiscountResult] = useState<DiscountResult | null>(null);
+
+  // ⭐ 이미지 상태 추가
+  const [uploadedImages, setUploadedImages] = useState<Array<{
+    url: string;
+    isMain: boolean;
+    altText: string;
+  }>>([]);
+
+  const [formData, setFormData] = useState({
+    // 기본 정보
+    name: '',
+    category: '',
+    supplierId: '',
+    supplierPrice: '',
+    salePrice: '',
+    shippingCost: '3000',
+    description: '',
+    keywords: [] as string[],
+    platformId: '',
+    shippingTemplateId: '',
+    supplierProductNo: '',
+    sku: '',
+
+    // ⭐ 이미지 필드 추가
+    mainImage: '',
+    images: [] as string[],
+    imageAltTexts: [] as string[],
+    imageCount: 0,
+
+    // 네이버 SEO 필드 (27개)
+    naver_title: '',
+    naver_keywords: '',
+    naver_description: '',
+    naver_brand: '',
+    naver_manufacturer: '',
+    naver_origin: '국내',
+    naver_material: '',
+    naver_color: '',
+    naver_size: '',
+    naver_weight: '',
+    naver_care_instructions: '',
+    naver_warranty: '',
+    naver_certification: '',
+    naver_tax_type: '과세',
+    naver_gift_wrapping: false,
+    naver_as_info: '',
+    naver_delivery_info: '',
+    naver_exchange_info: '',
+    naver_refund_info: '',
+    naver_min_order: '1',
+    naver_max_order: '999',
+    naver_adult_only: false,
+    naver_parallel_import: false,
+    naver_custom_option_1: '',
+    naver_custom_option_2: '',
+    naver_custom_option_3: '',
+    naver_meta_tags: '',
+  });
+
+  const [seoScore, setSeoScore] = useState(0);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiTitles, setAiTitles] = useState<string[]>([]);
+
+  // ⭐ 이미지 업로드 성공 핸들러
+  const handleImageUpload = (imageData: { url: string; isMain: boolean; altText: string }) => {
+    setUploadedImages(prev => {
+      const newImages = [...prev, imageData];
+
+      // formData 업데이트
+      const mainImage = newImages.find(img => img.isMain)?.url || '';
+      const images = newImages.filter(img => !img.isMain).map(img => img.url);
+      const imageAltTexts = newImages.map(img => img.altText);
+
+      setFormData(prev => ({
+        ...prev,
+        mainImage,
+        images,
+        imageAltTexts,
+        imageCount: newImages.length,
+      }));
+
+      return newImages;
+    });
+  };
+
+  // ⭐ 이미지 삭제 핸들러
+  const handleImageDelete = (url: string) => {
+    setUploadedImages(prev => {
+      const newImages = prev.filter(img => img.url !== url);
+
+      // formData 업데이트
+      const mainImage = newImages.find(img => img.isMain)?.url || '';
+      const images = newImages.filter(img => !img.isMain).map(img => img.url);
+      const imageAltTexts = newImages.map(img => img.altText);
+
+      setFormData(prev => ({
+        ...prev,
+        mainImage,
+        images,
+        imageAltTexts,
+        imageCount: newImages.length,
+      }));
+
+      return newImages;
+    });
+  };
+
+  // 실시간 SEO 점수 계산
+  useEffect(() => {
+    const score = calculateNaverSeoScore({ ...formData, id: 'temp' } as any);
+    const prevScore = seoScore;
+    setSeoScore(score);
+
+    // 100점 달성 시 축하 메시지
+    if (score === 110 && prevScore < 110) {
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    }
+
+    console.log('📊 네이버 SEO 점수:', {
+      title: formData.naver_title?.length || 0,
+      keywords: formData.naver_keywords?.split(',').filter(k => k.trim()).length || 0,
+      description: formData.naver_description?.length || 0,
+      imageCount: formData.imageCount,
+      score: score
+    });
+  }, [formData]);
+
+  // ── 플랫폼 로드 ─────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/platforms', { cache: 'no-store' });
+        const d = await res.json();
+        if (!cancelled && d?.success) setPlatforms(d.platforms);
+      } catch (e) {
+        console.error('플랫폼 로드 실패', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── 플랫폼 변경 → 공급사 리셋 + 배송템플릿 로드 ────────────
+  useEffect(() => {
+    if (!formData.platformId) { setShippingTemplates([]); return; }
+    const plat = platforms.find(p => p.id === formData.platformId);
+    if (plat) {
+      fetch(`/api/shipping-templates?platformCode=${plat.code}`)
+        .then(r => r.json())
+        .then(d => { if (d.success) setShippingTemplates(d.templates); });
+    }
+    setFormData(p => ({ ...p, supplierId: '', shippingTemplateId: '', sku: '', supplierProductNo: '' }));
+    setSkuPreview('');
+    setSkuAvailable(null);
+  }, [formData.platformId]);
+
+  // ── SKU 자동생성 (600ms 디바운스) ────────────────────────
+  const generateSku = useCallback(async () => {
+    if (!formData.supplierId || !formData.supplierProductNo) {
+      setSkuPreview('');
+      setSkuAvailable(null);
+      return;
+    }
+    try {
+      const res = await fetch('/api/products/generate-sku', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierId: formData.supplierId,
+          supplierProductNo: formData.supplierProductNo,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSkuPreview(data.sku);
+        setSkuAvailable(data.available);
+        setFormData(p => ({ ...p, sku: data.sku }));
+      }
+    } catch { /* 네트워크 오류 무시 */ }
+  }, [formData.supplierId, formData.supplierProductNo]);
+
+  useEffect(() => {
+    const t = setTimeout(generateSku, 600);
+    return () => clearTimeout(t);
+  }, [generateSku]);
+
+  // ── 마진율 실시간 계산 ──────────────────────────────────
+  useEffect(() => {
+    const sp = Number(formData.salePrice) || 0;
+    const wp = Number(formData.supplierPrice) || 0;
+    if (sp > 0 && wp > 0) {
+      setMarginPct(Math.round(((sp - wp) / sp) * 1000) / 10);
+    } else {
+      setMarginPct(0);
+    }
+  }, [formData.salePrice, formData.supplierPrice]);
+
+  // ── 할인 적용 확정 콜백 ──────────────────────────────────
+  const handleDiscountApplied = (result: DiscountResult) => {
+    setDiscountResult(result);
+    setNaverCategoryCode(result.categoryCode);
+    setFormData(prev => ({ ...prev, salePrice: String(result.finalPrice) }));
+  };
+
+  const handleChange = (e: any) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/products/new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert('✅ 상품이 등록되었습니다!');
+        router.push('/products');
+      } else {
+        alert(data.error || '상품 등록 실패');
+      }
+    } catch (error) {
+      console.error('등록 실패:', error);
+      alert('서버 오류가 발생했습니다');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 110점 달성 축하 메시지 */}
+      {showSuccess && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-bounce z-50">
+          <CheckCircle className="w-6 h-6" />
+          <span className="font-bold">🎉 SEO 110점 만점 달성! 완벽합니다!</span>
+        </div>
+      )}
+
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/products" className="p-2 hover:bg-gray-100 rounded-lg">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">상품 등록</h1>
+            <p className="text-sm text-gray-500 mt-1">새 상품을 등록하고 네이버 SEO를 최적화하세요</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+          >
+            <Eye className="w-4 h-4" />
+            미리보기
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                등록 중...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                상품 등록
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 메인 폼 (2/3) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* ⭐ 이미지 업로드 섹션 - 최상단 */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">📸 상품 이미지</h2>
+            <ImageUploader
+              existingImages={uploadedImages}
+              onUploadSuccess={handleImageUpload}
+              onDeleteSuccess={handleImageDelete}
+              maxImages={10}
+            />
+            <p className="text-xs text-gray-500 mt-3">
+              ⭐ 네이버 규격: 최소 500x500px, 권장 1000x1000px, 최대 10MB
+            </p>
+            <p className="text-xs text-gray-500">
+              🎯 SEO 팁: 메인 이미지 1개(+5점) + 추가 이미지 3개 이상(+5점) = 총 10점
+            </p>
+          </div>
+
+          {/* 기본 정보 */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">📦 기본 정보</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  상품명 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  placeholder="예: 프리미엄 장미 꽃다발"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    네이버 카테고리
+                    {naverCategoryCode !== '0' && (
+                      <span className="ml-2 text-xs font-mono text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                        코드: {naverCategoryCode}
+                      </span>
+                    )}
+                  </label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={e => {
+                      handleChange(e);
+                      const meta = NAVER_CATEGORY_MAP[e.target.value];
+                      if (meta) setNaverCategoryCode(meta.code);
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                  >
+                    <option value="">선택하세요</option>
+                    {Object.entries(NAVER_CATEGORY_MAP).filter(([k]) => k !== 'default').map(([value, { label, code }]) => (
+                      <option key={value} value={value}>{label} [{code}]</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    플랫폼 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="platformId"
+                    value={formData.platformId}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                  >
+                    <option value="">플랫폼 선택</option>
+                    {platforms.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 공급사 + 공급사 상품번호 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    공급사 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="supplierId"
+                    value={formData.supplierId}
+                    onChange={handleChange}
+                    disabled={!formData.platformId}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 disabled:bg-gray-100 disabled:text-gray-400"
+                  >
+                    <option value="">공급사 선택</option>
+                    {(platforms.find(p => p.id === formData.platformId)?.suppliers ?? []).map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    공급사 상품번호 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="supplierProductNo"
+                    value={formData.supplierProductNo}
+                    onChange={handleChange}
+                    disabled={!formData.supplierId}
+                    placeholder="예: 12345"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 disabled:bg-gray-100"
+                  />
+                </div>
+              </div>
+
+              {/* SKU 자동생성 프리뷰 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  자동 생성 SKU
+                </label>
+                <div className={`px-4 py-2 rounded-lg border text-sm font-mono ${
+                  skuAvailable === true  ? 'border-green-400 bg-green-50 text-green-700' :
+                  skuAvailable === false ? 'border-red-400 bg-red-50 text-red-600' :
+                                           'border-gray-300 bg-gray-50 text-gray-400'
+                }`}>
+                  {skuPreview || '(공급사 + 상품번호 입력 시 자동생성)'}
+                  {skuAvailable === true  && <span className="ml-2 text-xs font-sans">✓ 사용가능</span>}
+                  {skuAvailable === false && <span className="ml-2 text-xs font-sans">⚠️ 중복됨</span>}
+                </div>
+              </div>
+
+              {/* 배송 템플릿 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  배송 템플릿
+                </label>
+                <select
+                  name="shippingTemplateId"
+                  value={formData.shippingTemplateId}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                >
+                  <option value="">배송 템플릿 선택 (선택사항)</option>
+                  {shippingTemplates.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} — {t.shippingFee > 0 ? `${t.shippingFee.toLocaleString()}원` : '무료'}
+                      {t.freeThreshold ? ` (${t.freeThreshold.toLocaleString()}원↑ 무료)` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* ✅ 실전 마진 계산기 (MarginCalculator 컴포넌트) */}
+              <MarginCalculator
+                supplierPrice={Number(formData.supplierPrice) || 0}
+                salePrice={Number(formData.salePrice) || 0}
+                shippingFee={Number(formData.shippingCost) || 3000}
+                category={formData.category || 'default'}
+                onPriceChange={(price) => {
+                  setFormData(prev => ({ ...prev, salePrice: String(price) }));
+                }}
+                onDiscountApplied={(result) => {
+                  handleDiscountApplied(result);
+                }}
+                compact={true}
+              />
+
+              {/* 숨겨진 input — 실제 폼 제출용 (도매가/판매가/배송비 동기화) */}
+              <div className="grid grid-cols-3 gap-4 hidden">
+                <input type="number" name="supplierPrice" value={formData.supplierPrice} onChange={handleChange} />
+                <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} />
+                <input type="number" name="shippingCost" value={formData.shippingCost} onChange={handleChange} />
+              </div>
+
+              {/* 마진율 실시간 표시 — MarginCalculator로 대체됨, 하단 요약만 유지 */}
+              {marginPct > 0 && (
+                <div className={`p-3 rounded-lg border text-sm font-bold text-center ${
+                  marginPct >= 40 ? 'bg-green-50 border-green-200 text-green-700' :
+                  marginPct >= 25 ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
+                                    'bg-red-50 border-red-200 text-red-600'
+                }`}>
+                  예상 마진율 {marginPct}%
+                  {discountResult && (
+                    <span className="ml-2 text-xs font-normal opacity-80">
+                      (할인 후 최종 판매가: {discountResult.finalPrice.toLocaleString()}원 · 마진 {discountResult.marginRate.toFixed(1)}%)
+                    </span>
+                  )}
+                  {marginPct >= 40 ? ' 🎉 우수' : marginPct >= 25 ? ' 😊 양호' : ' ⚠️ 낙음 — 가격 재검토 권장'}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  상품 설명
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                  placeholder="상품에 대한 자세한 설명을 입력하세요"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 네이버 쇼핑 SEO */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                🔍 네이버 쇼핑 SEO
+                <span className="text-xs font-normal text-gray-500">(최대 100점)</span>
+              </h2>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!formData.name?.trim()) {
+                    alert('먼저 상품명을 입력하세요');
+                    return;
+                  }
+
+                  setIsAiLoading(true);
+                  try {
+                    const res = await fetch('/api/products/temp/keywords', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        mode: 'all',
+                        name: formData.name,
+                        category: formData.category,
+                        description: formData.description,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.error || 'AI 생성 실패');
+
+                    // 키워드
+                    if (Array.isArray(data.keywords)) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        naver_keywords: data.keywords.join(', '),
+                      }));
+                    }
+
+                    // 제목 후보
+                    if (Array.isArray(data.titles) && data.titles.length > 0) {
+                      setAiTitles(data.titles);
+                      const first = String(data.titles[0] ?? '').slice(0, 200);
+                      setFormData((prev) => ({
+                        ...prev,
+                        naver_title: first,
+                      }));
+                    }
+
+                    // 설명
+                    if (typeof data.description === 'string') {
+                      setFormData((prev) => ({
+                        ...prev,
+                        naver_description: data.description.slice(0, 1000),
+                      }));
+                    }
+
+                    alert('✨ 꼬띠 AI 생성 완료!');
+                  } catch (e: any) {
+                    alert(e?.message || 'AI 생성 실패');
+                  } finally {
+                    setIsAiLoading(false);
+                  }
+                }}
+                disabled={isAiLoading}
+                className={`shrink-0 px-4 py-2 rounded-lg font-bold text-white text-sm transition ${
+                  isAiLoading
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-pink-500 to-purple-600 hover:shadow-lg'
+                }`}
+              >
+                {isAiLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    생성 중...
+                  </span>
+                ) : (
+                  '🤖 AI 자동완성'
+                )}
+              </button>
+            </div>
+
+            {/* AI 제목 후보 */}
+            {aiTitles.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-gray-600 mb-2">추천 제목 (클릭하면 적용)</p>
+                <div className="flex flex-col gap-2">
+                  {aiTitles.map((t, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          naver_title: String(t).slice(0, 200),
+                        }))
+                      }
+                      className="text-left text-xs px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-pink-50 hover:border-pink-300"
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  네이버 제목 (10-50자 권장) <span className="text-red-500">*</span>
+                  <span className="ml-2 text-xs text-gray-500">
+                    {formData.naver_title.length >= 10 ? '✓ 50자 이상 입력 시 +20점' : `${formData.naver_title.length}/10`}
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  name="naver_title"
+                  value={formData.naver_title}
+                  onChange={handleChange}
+                  maxLength={200}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                  placeholder="꽃틔움 프리미엄 장미 꽃다발 - 생일선물 기념일선물"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  네이버 키워드 (쉼표로 구분, 3-10개 권장)
+                  <span className="ml-2 text-xs text-gray-500">
+                    {formData.naver_keywords.split(',').filter(k => k.trim()).length >= 3 ? '✓ 3개 이상 입력 시 +20점' : `0개 키워드`}
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  name="naver_keywords"
+                  value={formData.naver_keywords}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                  placeholder="장미꽃다발, 생일선물, 프리미엄, 그랑, 특별한날"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  네이버 설명 (50-200자 권장)
+                  <span className="ml-2 text-xs text-gray-500">
+                    {formData.naver_description.length >= 50 ? '✓ 50자 이상 입력 시 +20점' : `${formData.naver_description.length}/50`}
+                  </span>
+                </label>
+                <textarea
+                  name="naver_description"
+                  value={formData.naver_description}
+                  onChange={handleChange}
+                  rows={3}
+                  maxLength={1000}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                  placeholder="신선한 장미로 제작한 프리미엄 꽃다발입니다. 생일, 기념일, 감사 선물로 완벽합니다. 당일 배송 가능하며, 고급 포장재로 제공됩니다."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    브랜드 <span className="ml-1 text-xs text-gray-500">(+10점)</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="naver_brand"
+                    value={formData.naver_brand}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                    placeholder="꽃틔움"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    원산지 <span className="ml-1 text-xs text-gray-500">(+10점)</span>
+                  </label>
+                  <select
+                    name="naver_origin"
+                    value={formData.naver_origin}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                  >
+                    <option value="국내">국내</option>
+                    <option value="해외">해외</option>
+                    <option value="혼합">혼합</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    재질/소재 <span className="ml-1 text-xs text-gray-500">(+10점)</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="naver_material"
+                    value={formData.naver_material}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                    placeholder="생화"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    색상
+                  </label>
+                  <input
+                    type="text"
+                    name="naver_color"
+                    value={formData.naver_color}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                    placeholder="레드, 핑크"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    크기
+                  </label>
+                  <input
+                    type="text"
+                    name="naver_size"
+                    value={formData.naver_size}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                    placeholder="중형(50cm)"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  관리 방법 <span className="ml-1 text-xs text-gray-500">(+10점)</span>
+                </label>
+                <textarea
+                  name="naver_care_instructions"
+                  value={formData.naver_care_instructions}
+                  onChange={handleChange}
+                  rows={2}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                  placeholder="물 갈이 주기, 보관 방법 등"
+                />
+              </div>
+
+              <div className="flex items-center gap-6">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="naver_gift_wrapping"
+                    checked={formData.naver_gift_wrapping}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500"
+                  />
+                  <span className="text-sm text-gray-700">선물 포장 가능</span>
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="naver_adult_only"
+                    checked={formData.naver_adult_only}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500"
+                  />
+                  <span className="text-sm text-gray-700">성인 전용</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 사이드바 SEO 점수 (1/3) */}
+        <div className="space-y-6">
+          <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg shadow-sm border border-pink-200 p-6 sticky top-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              🎯 SEO 최적화 점수
+            </h3>
+
+            {/* 점수 원형 차트 */}
+            <div className="flex items-center justify-center mb-6">
+              <div className="relative w-40 h-40">
+                <svg className="transform -rotate-90 w-40 h-40">
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r="70"
+                    stroke="#e5e7eb"
+                    strokeWidth="12"
+                    fill="none"
+                  />
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r="70"
+                    stroke={seoScore >= 100 ? '#9333ea' : seoScore >= 90 ? '#22c55e' : seoScore >= 80 ? '#3b82f6' : '#eab308'}
+                    strokeWidth="12"
+                    fill="none"
+                    strokeDasharray={`${(seoScore / 110) * 439.6} 439.6`}
+                    strokeLinecap="round"
+                    className="transition-all duration-500"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className={`text-4xl font-bold $${
+                    seoScore >= 100 ? 'text-purple-600' :
+                    seoScore >= 90 ? 'text-green-600' :
+                    seoScore >= 80 ? 'text-blue-600' :
+                    'text-yellow-600'
+                  }`}>
+                    {seoScore}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 점수 항목 */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">제목 최적화</span>
+                <span className={`text-sm font-bold ${formData.naver_title.length >= 10 ? 'text-green-600' : 'text-gray-400'}`}>
+                  {formData.naver_title.length >= 10 ? '✓ 20점' : '○ 20점'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">키워드 설정</span>
+                <span className={`text-sm font-bold ${formData.naver_keywords.split(',').filter(k => k.trim()).length >= 3 ? 'text-green-600' : 'text-gray-400'}`}>
+                  {formData.naver_keywords.split(',').filter(k => k.trim()).length >= 3 ? '✓ 20점' : '○ 20점'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">설명 작성</span>
+                <span className={`text-sm font-bold ${formData.naver_description.length >= 50 ? 'text-green-600' : 'text-gray-400'}`}>
+                  {formData.naver_description.length >= 50 ? '✓ 20점' : '○ 20점'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">브랜드 입력</span>
+                <span className={`text-sm font-bold ${formData.naver_brand ? 'text-green-600' : 'text-gray-400'}`}>
+                  {formData.naver_brand ? '✓ 10점' : '○ 10점'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">상세 정보</span>
+                <span className={`text-sm font-bold ${
+                  (formData.naver_origin ? 10 : 0) + 
+                  (formData.naver_material ? 10 : 0) + 
+                  (formData.naver_care_instructions ? 10 : 0) > 0 
+                  ? 'text-green-600' 
+                  : 'text-gray-400'
+                }`}>
+                  ✓ {(formData.naver_origin ? 10 : 0) + (formData.naver_material ? 10 : 0) + (formData.naver_care_instructions ? 10 : 0)}점
+                </span>
+              </div>
+
+              {/* ⭐ 이미지 점수 추가 */}
+              <div className="pt-3 border-t border-pink-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">이미지 ({formData.imageCount}개)</span>
+                  <span className={`text-sm font-bold ${
+                    formData.mainImage && formData.imageCount >= 4 ? 'text-green-600' :
+                    formData.mainImage ? 'text-blue-600' :
+                    'text-gray-400'
+                  }`}>
+                    {formData.mainImage && formData.imageCount >= 4 ? '✓ 10점' :
+                     formData.mainImage ? `✓ ${5 + Math.min(formData.imageCount - 1, 3)}점` :
+                     '○ 10점'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* SEO 가이드 */}
+            <div className="mt-6 pt-6 border-t border-pink-200">
+              <h4 className="text-sm font-bold text-gray-900 mb-3">📝 SEO 개선 팁</h4>
+              <ul className="space-y-2 text-xs text-gray-600">
+                <li>• 제목에 주요 키워드를 포함하세요 (10-50자)</li>
+                <li>• 키워드는 3-10개를 쉼표로 구분하세요</li>
+                <li>• 설명은 50자 이상 작성하세요 ⭐</li>
+                <li>• 브랜드/원산지 정보를 입력하세요</li>
+                <li>• 상세 정보를 충실히 작성하세요</li>
+                <li className="text-pink-600 font-bold">• 이미지 4개 이상 업로드 시 +10점!</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

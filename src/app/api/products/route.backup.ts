@@ -1,145 +1,234 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, Prisma } from '@prisma/client';
+import prisma from '@/lib/prisma';
 
-const prisma = new PrismaClient();
-
-// SKU 자동 생성
-function generateSKU(): string {
-  const date = new Date();
-  const year = date.getFullYear().toString().slice(-2);
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `SKU${year}${month}${day}${random}`;
-}
-
-// POST: 상품 생성 (user 관계 완전 해결)
 export async function POST(request: NextRequest) {
   try {
-    console.log('\n🎉 Naver SEO 상품 저장 시작!');
-
     const body = await request.json();
-    console.log('📦 입력:', body.name, body.salePrice, body.naver_title);
 
-    // SKU 자동생성
-    const sku = body.sku || generateSKU();
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📦 상품 등록 요청 수신');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`상품명: ${body.name}`);
+    console.log(`SKU: ${body.sku || 'AUTO'}`);
+    console.log(`판매가: ${body.salePrice}`);
+    console.log(`이미지: ${body.images?.length || 0} 개`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // userId 고정 (관계 문제 우회)
-    const userId = 'cm4usertest123456789'; // setup-product.js 사용자
-
-    const productData: Prisma.ProductCreateInput = {
-      id: body.id || crypto.randomUUID(),
-      userId, // 직접 지정 (연결 대신)
-      name: body.name,
-      sku,
-      category: body.category || '화훼',
-      supplierPrice: parseInt(body.supplierPrice) || 0,
-      salePrice: parseInt(body.salePrice) || 0,
-      margin: parseFloat(body.margin) || ((parseInt(body.salePrice || 0) - parseInt(body.supplierPrice || 0)) / parseInt(body.salePrice || 1) * 100),
-      status: body.status || 'DRAFT',
-      // Naver SEO 필드들 (선택적)
-      ...(body.naver_title && { naver_title: body.naver_title }),
-      ...(body.naver_keywords && { naver_keywords: body.naver_keywords }),
-      ...(body.seo_description && { seo_description: body.seo_description }),
-      ...(body.naverCategoryCode && { naverCategoryCode: body.naverCategoryCode }),
-      ...(body.originCode && { originCode: body.originCode }),
-      ...(body.taxType && { taxType: body.taxType }),
-      ...(body.shippingStrategy && { shippingStrategy: body.shippingStrategy }),
-      ...(body.hasOptions !== undefined && { hasOptions: body.hasOptions }),
-      ...(body.optionName && { optionName: body.optionName }),
-      ...(body.optionValues && { optionValues: body.optionValues }),
-      ...(body.mainImage && { mainImage: body.mainImage }),
-      ...(body.description && { description: body.description }),
-      ...(body.keywords && { keywords: body.keywords }),
-    };
-
-    console.log('✅ 저장 데이터 준비 완료');
-
-    // 관계 없이 직접 생성
-    const product = await prisma.product.create({
-      data: productData
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 1단계: 기본 Supplier 확인/생성
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    let defaultSupplier = await prisma.supplier.findUnique({
+      where: { code: 'DEFAULT' },
     });
 
-    console.log('🎉 상품 저장 성공!');
-    console.log('📦', product.name);
-    console.log('💜 Naver:', product.naver_title || '미설정');
-    console.log('✅ SKU:', product.sku);
+    if (!defaultSupplier) {
+      console.log('🔧 기본 공급사 생성 중...');
+      defaultSupplier = await prisma.supplier.create({
+        data: {
+          name: '기본 공급사',
+          code: 'DEFAULT',
+          contact: '02-0000-0000',
+          description: '시스템 기본 공급사',
+        },
+      });
+      console.log('✅ 기본 공급사 생성 완료:', defaultSupplier.id);
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 2단계: 기본 User 확인/생성
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    let defaultUser = await prisma.user.findUnique({
+      where: { email: 'admin@kkotium.com' },
+    });
+
+    if (!defaultUser) {
+      console.log('🔧 기본 사용자 생성 중...');
+      defaultUser = await prisma.user.create({
+        data: {
+          email: 'admin@kkotium.com',
+          name: '꽃틔움 관리자',
+          level: 1,
+          exp: 0,
+        },
+      });
+      console.log('✅ 기본 사용자 생성 완료:', defaultUser.id);
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 3단계: SKU 생성 및 중복 체크
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const sku = body.sku || 'PROD-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const existingProduct = await prisma.product.findUnique({
+      where: { sku },
+    });
+
+    if (existingProduct) {
+      return NextResponse.json(
+        { error: 'SKU가 이미 존재합니다.' },
+        { status: 400 }
+      );
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 4단계: 가격 계산
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const salePrice = parseFloat(body.salePrice);
+    const supplierPrice = parseFloat(body.supplierPrice || '0');
+    const margin = supplierPrice > 0
+      ? ((salePrice - supplierPrice) / salePrice * 100)
+      : 0;
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 5단계: 상품 데이터 생성 (스키마 필드만 사용)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const productData = {
+      // ✅ 필수 외래키
+      supplierId: body.supplierId || defaultSupplier.id,
+      userId: body.userId || defaultUser.id,
+
+      // ✅ 필수 기본 정보
+      name: body.name,
+      sku,
+      salePrice: Math.round(salePrice),
+      supplierPrice: Math.round(supplierPrice),
+      margin: parseFloat(margin.toFixed(2)),
+
+      // ✅ 선택 필드 (스키마에 존재하는 것만)
+      category: body.category || undefined,
+      brand: body.brand || undefined,
+      manufacturer: body.manufacturer || undefined,
+      description: body.description || body.detailDescription || undefined,
+      originCode: body.origin || body.originCode || undefined,
+
+      // ✅ 배송 정보
+      shippingFee: body.shippingFee ? parseInt(body.shippingFee) : undefined,
+
+      // ✅ 이미지
+      images: body.images || [],
+      imageAltTexts: body.imageAltTexts || body.images?.map((_: any, idx: number) => `${body.name} ${idx + 1}`) || [],
+      mainImage: body.mainImage || body.images?.[0] || undefined,
+      imageCount: body.images?.length || 0,
+
+      // ✅ SEO 필드
+      seo_title: body.title || body.seo_title || undefined,
+      seo_description: body.seo_description || undefined,
+      seo_keywords: body.keywords || body.seo_keywords || undefined,
+
+      // ✅ 네이버 필드
+      naver_title: body.naver_title || undefined,
+      naver_description: body.naver_description || undefined,
+      naver_brand: body.naver_brand || body.brand || undefined,
+      naver_manufacturer: body.naver_manufacturer || body.manufacturer || undefined,
+      naver_origin: body.naver_origin || body.origin || undefined,
+      naver_keywords: body.naver_keywords || body.keywords || undefined,
+
+      // ✅ 상태
+      status: 'DRAFT',
+      productStatus: body.productStatus || '신상품',
+    };
+
+    // undefined 값 제거 (Prisma가 기본값 사용하도록)
+    const cleanData = Object.fromEntries(
+      Object.entries(productData).filter(([_, v]) => v !== undefined)
+    );
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 6단계: DB 저장
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const product = await prisma.product.create({
+      data: cleanData as any,
+    });
+
+    console.log('✅ 상품 등록 성공:', product.id);
+    console.log(`   - SKU: ${product.sku}`);
+    console.log(`   - 이미지: ${product.images?.length || 0}개`);
+    console.log(`   - 마진: ${product.margin}%`);
 
     return NextResponse.json({
       success: true,
-      message: '상품 등록 완료! Naver SEO 준비됨',
-      product
+      product,
     });
 
   } catch (error: any) {
-    console.error('❌ 저장 실패:', error);
-    return NextResponse.json({
-      success: false,
-      error: error.message,
-      code: error.code
-    }, { status: 500 });
+    console.error('❌ 상품 등록 실패:', error.message);
+    console.error(error);
+    return NextResponse.json(
+      { error: error.message || '상품 등록 중 오류가 발생했습니다.' },
+      { status: 500 }
+    );
   }
 }
 
-// GET: 상품 목록 (검색 강화)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const search = searchParams.get('search') || '';
-
+    const limit = parseInt(searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
 
-    const where: Prisma.ProductWhereInput = search ? {
-      OR: [
-        { name: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } },
-        { naver_title: { contains: search, mode: 'insensitive' } },
-        { naver_keywords: { contains: search, mode: 'insensitive' } }
-      ]
-    } : {};
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 필터 조건 구성
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const category = searchParams.get('category');
+    const status = searchParams.get('status');
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
+
+    const where: any = {};
+
+    // ✅ 빈 문자열이 아닐 때만 필터 적용
+    if (category && category.trim() !== '') {
+      where.category = category;
+    }
+    if (status && status.trim() !== '') {
+      where.status = status;
+    }
+    if (minPrice) {
+      where.salePrice = { ...where.salePrice, gte: parseInt(minPrice) };
+    }
+    if (maxPrice) {
+      where.salePrice = { ...where.salePrice, lte: parseInt(maxPrice) };
+    }
+
+    console.log('🔍 상품 목록 조회 필터:', where);
+    console.log('📄 페이지:', page, '| 개수:', limit);
 
     const [products, total] = await Promise.all([
       prisma.product.findMany({
+        where,
         skip,
         take: limit,
-        where,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
+        include: {
+          supplier: {
+            select: {
+              name: true,
+              code: true,
+            },
+          },
+        },
       }),
-      prisma.product.count({ where })
+      prisma.product.count({ where }),
     ]);
+
+    console.log(`✅ 상품 ${products.length}개 조회 (전체: ${total}개)`);
 
     return NextResponse.json({
       success: true,
       products,
       pagination: {
+        total,
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     });
-
   } catch (error: any) {
-    console.error('❌ 조회 실패:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
-}
-
-// DELETE: 상품 삭제
-export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) return NextResponse.json({ success: false, error: 'ID 필요' }, { status: 400 });
-
-    await prisma.product.delete({ where: { id } });
-
-    return NextResponse.json({ success: true, message: '삭제 완료' });
-
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error('상품 목록 조회 실패:', error);
+    return NextResponse.json(
+      { error: '상품 목록 조회 중 오류가 발생했습니다.' },
+      { status: 500 }
+    );
   }
 }

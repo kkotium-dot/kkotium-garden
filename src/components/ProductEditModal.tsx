@@ -41,6 +41,7 @@ export default function ProductEditModal({
     seo_description: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
     if (product) {
@@ -178,10 +179,47 @@ export default function ProductEditModal({
 
         {/* Naver SEO 섹션 */}
         <div className="mt-6 p-4 border-2 border-blue-200 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50">
-          <h3 className="font-bold text-lg mb-4 text-blue-800">
-            🌟 Naver SEO 최적화
-          </h3>
-          
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-lg text-blue-800">🌟 Naver SEO 최적화</h3>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!formData.name) { alert('먼저 상품명을 입력하세요'); return; }
+                setIsAiLoading(true);
+                try {
+                  const res = await fetch(`/api/products/${product?.id ?? 'temp'}/keywords`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'all', name: formData.name, category: formData.category }),
+                  });
+                  const data = await res.json();
+                  if (!data.success) throw new Error(data.error);
+                  if (data.keywords) setFormData(prev => ({ ...prev, naver_keywords: data.keywords.join(', ') }));
+                  if (data.titles?.length) setFormData(prev => ({ ...prev, naver_title: data.titles[0].slice(0, 60) }));
+                  if (data.description) setFormData(prev => ({ ...prev, seo_description: data.description.slice(0, 150) }));
+                  alert('✨ AI 생성 완료!');
+                } catch (e: any) {
+                  alert(e.message || 'AI 생성 실패');
+                } finally {
+                  setIsAiLoading(false);
+                }
+              }}
+              disabled={isAiLoading}
+              className={`px-4 py-2 rounded-lg font-bold text-white text-sm transition-all ${
+                isAiLoading
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-pink-500 to-purple-500 hover:shadow-md hover:scale-105'
+              }`}
+            >
+              {isAiLoading ? (
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  생성 중...
+                </span>
+              ) : '🤖 AI 자동 완성'}
+            </button>
+          </div>
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Naver 제목</label>

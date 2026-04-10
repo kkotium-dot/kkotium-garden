@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+
+export const dynamic = 'force-dynamic';
 /**
  * GET: 주문 상세 조회
  */
@@ -15,16 +17,9 @@ export async function GET(
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
-        items: {
+        orderItems: {
           include: {
             product: true,
-          },
-        },
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
           },
         },
       },
@@ -123,16 +118,9 @@ export async function PUT(
       where: { id },
       data: updateData,
       include: {
-        items: {
+        orderItems: {
           include: {
             product: true,
-          },
-        },
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
           },
         },
       },
@@ -168,7 +156,7 @@ export async function DELETE(
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
-        items: true,
+        orderItems: true,
       },
     });
 

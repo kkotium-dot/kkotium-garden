@@ -1,0 +1,413 @@
+
+> kkotium-garden@1.0.0 dev
+> next dev -p 3000
+
+  ▲ Next.js 14.2.0
+  - Local:        http://localhost:3000
+  - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 1566ms
+ ✓ Compiled /api/notifications in 136ms (53 modules)
+ GET /api/notifications 200 in 210ms
+ ○ Compiling /products/new ...
+ ✓ Compiled /products/new in 1730ms (683 modules)
+ GET /products/new 200 in 2120ms
+ ✓ Compiled in 369ms (317 modules)
+ ✓ Compiled /api/shipping-templates in 126ms (369 modules)
+ ✓ Compiled (371 modules)
+ GET /api/notifications 200 in 246ms
+ GET /api/notifications 200 in 60ms
+ GET /api/shipping-templates 200 in 427ms
+ GET /api/shipping-templates 200 in 13ms
+ GET /api/suppliers 200 in 464ms
+ GET /api/suppliers 200 in 21ms
+ GET /api/notifications 200 in 18ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 21ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 24ms
+ GET /api/notifications 200 in 18ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 15ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 18ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 15ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 15ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 16ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 15ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 15ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 16ms
+ GET /api/notifications 200 in 16ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 18ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 17ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 15ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 16ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 15ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 15ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 17ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 16ms
+ ✓ Compiled in 239ms (683 modules)
+ ✓ Compiled in 97ms (317 modules)
+ ✓ Compiled in 128ms (317 modules)
+ ✓ Compiled in 100ms (317 modules)
+ GET /api/notifications 200 in 18ms
+ ✓ Compiled in 98ms (317 modules)
+ ✓ Compiled in 165ms (317 modules)
+ ✓ Compiled in 134ms (317 modules)
+ ✓ Compiled in 113ms (317 modules)
+ ✓ Compiled in 142ms (317 modules)
+ GET /api/notifications 200 in 11ms
+ ✓ Compiled in 344ms (683 modules)
+ GET /api/notifications 200 in 22ms
+ GET /api/notifications 200 in 30ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 48ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 16ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 20ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 25ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 26ms
+ GET /api/notifications 200 in 7ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 15ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 17ms
+ ✓ Compiled /dashboard in 306ms (697 modules)
+ ✓ Compiled /api/dashboard/stats in 81ms (377 modules)
+ GET /api/dashboard/stats?period=7d 200 in 364ms
+ ✓ Compiled /api/dashboard/products in 59ms (379 modules)
+📊 필터 파라미터: {
+  status: null,
+  minScore: null,
+  maxScore: null,
+  category: null,
+  search: null,
+  sortBy: 'createdAt',
+  sortOrder: 'desc'
+}
+🔍 최종 WHERE 절: {}
+✅ 조회 결과: 6개 / 총 6개
+ GET /api/dashboard/products? 200 in 259ms
+ GET /api/dashboard/stats?period=7d 200 in 313ms
+📊 필터 파라미터: {
+  status: null,
+  minScore: null,
+  maxScore: null,
+  category: null,
+  search: null,
+  sortBy: 'createdAt',
+  sortOrder: 'desc'
+}
+🔍 최종 WHERE 절: {}
+✅ 조회 결과: 6개 / 총 6개
+ GET /api/dashboard/products? 200 in 24ms
+ GET /api/notifications 200 in 22ms
+ ✓ Compiled /products in 186ms (710 modules)
+ ✓ Compiled /api/products in 46ms (393 modules)
+ GET /api/products?category=&status=&limit=50 200 in 165ms
+ GET /api/products?category=&status=&limit=50 200 in 21ms
+ ✓ Compiled /naver-seo in 260ms (757 modules)
+ ✓ Compiled /api/naver-seo/products in 96ms (420 modules)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 네이버 SEO Products API 호출됨
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔍 검색 조건:
+   - Filter: all
+   - Search: (없음)
+
+💾 Product 테이블 조회 시작...
+prisma:query SELECT "public"."Product"."id", "public"."Product"."name", "public"."Product"."mainImage", "public"."Product"."salePrice", "public"."Product"."naver_title", "public"."Product"."naver_keywords", "public"."Product"."naver_description", "public"."Product"."naver_brand", "public"."Product"."naver_origin", "public"."Product"."naver_material", "public"."Product"."naver_care_instructions", "public"."Product"."images", "public"."Product"."createdAt" FROM "public"."Product" WHERE 1=1 ORDER BY "public"."Product"."createdAt" DESC OFFSET $1
+✅ 상품 조회 완료!
+   - 총 상품 수: 6
+
+📊 SEO 점수 계산 중...
+   - Premium Flower Wrapping Paper Ribbon Set: 77점 (키워드: 3, 이미지: 1)
+   - Dried Flower Mini Bouquet Gift Set: 77점 (키워드: 3, 이미지: 1)
+   - Monstera Medium Interior Indoor Plant: 77점 (키워드: 3, 이미지: 1)
+   - Stuckey Air Purifying Plant Iron Pot Housewarming Gift: 77점 (키워드: 3, 이미지: 1)
+   - Tulip Bouquet Graduation Gift Spring Flower: 87점 (키워드: 3, 이미지: 1)
+   - Premium Rose Bouquet Birthday Gift Same-Day Delivery: 77점 (키워드: 3, 이미지: 1)
+
+✅ 필터링 완료!
+   - 필터 후 상품 수: 6
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ GET /api/naver-seo/products? 200 in 211ms
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 네이버 SEO Products API 호출됨
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔍 검색 조건:
+   - Filter: all
+   - Search: (없음)
+
+💾 Product 테이블 조회 시작...
+ ⚠ The "images.domains" configuration is deprecated. Please use "images.remotePatterns" configuration instead.
+✅ 상품 조회 완료!
+   - 총 상품 수: 6
+
+📊 SEO 점수 계산 중...
+   - Premium Flower Wrapping Paper Ribbon Set: 77점 (키워드: 3, 이미지: 1)
+   - Dried Flower Mini Bouquet Gift Set: 77점 (키워드: 3, 이미지: 1)
+   - Monstera Medium Interior Indoor Plant: 77점 (키워드: 3, 이미지: 1)
+   - Stuckey Air Purifying Plant Iron Pot Housewarming Gift: 77점 (키워드: 3, 이미지: 1)
+   - Tulip Bouquet Graduation Gift Spring Flower: 87점 (키워드: 3, 이미지: 1)
+   - Premium Rose Bouquet Birthday Gift Same-Day Delivery: 77점 (키워드: 3, 이미지: 1)
+
+✅ 필터링 완료!
+   - 필터 후 상품 수: 6
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ GET /api/naver-seo/products? 200 in 108ms
+prisma:query SELECT "public"."Product"."id", "public"."Product"."name", "public"."Product"."mainImage", "public"."Product"."salePrice", "public"."Product"."naver_title", "public"."Product"."naver_keywords", "public"."Product"."naver_description", "public"."Product"."naver_brand", "public"."Product"."naver_origin", "public"."Product"."naver_material", "public"."Product"."naver_care_instructions", "public"."Product"."images", "public"."Product"."createdAt" FROM "public"."Product" WHERE 1=1 ORDER BY "public"."Product"."createdAt" DESC OFFSET $1
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1548094878-84ced0f6a458?w=800 404
+ ✓ Compiled /api/shipping-templates in 95ms (422 modules)
+ ✓ Compiled (424 modules)
+ GET /api/shipping-templates 405 in 220ms
+ GET /api/shipping-templates 405 in 28ms
+ GET /api/suppliers 200 in 363ms
+ GET /api/suppliers 200 in 25ms
+ GET /api/notifications 200 in 7ms
+ GET /api/notifications 200 in 15ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 18ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 20ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 16ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 15ms
+ GET /api/notifications 200 in 17ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 23ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 20ms
+ GET /api/notifications 200 in 7ms
+ GET /api/notifications 200 in 17ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 15ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 17ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 23ms
+ GET /api/notifications 200 in 7ms
+ GET /api/notifications 200 in 16ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 24ms
+ GET /api/notifications 200 in 7ms
+ GET /api/notifications 200 in 22ms
+ GET /api/notifications 200 in 6ms
+ GET /api/notifications 200 in 20ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 42ms
+ GET /api/notifications 200 in 3ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 73ms
+ GET /api/notifications 200 in 11ms
+ ✓ Compiled in 390ms (355 modules)
+ GET /api/notifications 200 in 8ms
+ ✓ Compiled in 222ms (355 modules)
+ GET /api/notifications 200 in 18ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 34ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 27ms
+ GET /api/notifications 200 in 7ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 9ms
+ ✓ Compiled in 167ms (355 modules)
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 15ms
+ ✓ Compiled in 141ms (355 modules)
+ GET /api/notifications 200 in 9ms
+ ✓ Compiled in 128ms (355 modules)
+ GET /api/notifications 200 in 22ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 18ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 7ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 8ms
+ GET /api/notifications 200 in 41ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 24ms
+ GET /api/notifications 200 in 17ms
+ ✓ Compiled in 411ms (355 modules)
+ ✓ Compiled / in 295ms (719 modules)
+ GET / 200 in 376ms
+ ✓ Compiled /portfolio in 67ms (390 modules)
+ ✓ Compiled in 71ms (345 modules)
+ GET /api/notifications 200 in 207ms
+ GET /api/notifications 200 in 4ms
+ GET /products/new 200 in 158ms
+ ✓ Compiled /api/shipping-templates in 79ms (397 modules)
+ ✓ Compiled (399 modules)
+ GET /api/notifications 200 in 171ms
+ GET /api/shipping-templates 405 in 187ms
+ GET /api/notifications 200 in 22ms
+ GET /api/shipping-templates 405 in 5ms
+ GET /api/suppliers 200 in 407ms
+ GET /api/suppliers 200 in 26ms
+ GET /api/shipping-templates 405 in 15ms
+ GET /api/shipping-templates 405 in 10ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 17ms
+ ○ Compiling /settings/platforms ...
+ ✓ Compiled /settings/platforms in 572ms (747 modules)
+ ✓ Compiled /api/platforms in 100ms (397 modules)
+ GET /api/platforms?includeInactive=true 200 in 126ms
+ GET /api/platforms?includeInactive=true 200 in 129ms
+ GET /api/notifications 200 in 9ms
+ GET /api/notifications 200 in 12ms
+ ✓ Compiled /api/shipping-templates in 75ms (400 modules)
+ ✓ Compiled (402 modules)
+ GET /api/shipping-templates 405 in 171ms
+ GET /api/shipping-templates 405 in 8ms
+ GET /api/suppliers 200 in 290ms
+ GET /api/suppliers 200 in 20ms
+ GET /api/platforms?includeInactive=true 200 in 13ms
+ GET /api/platforms?includeInactive=true 200 in 17ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 15ms
+ GET /api/shipping-templates 405 in 18ms
+ GET /api/shipping-templates 405 in 9ms
+ GET /api/suppliers 200 in 41ms
+ GET /api/suppliers 200 in 24ms
+ GET /api/notifications 200 in 14ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 10ms
+ GET /api/notifications 200 in 11ms
+ GET /api/notifications 200 in 12ms
+ GET /api/notifications 200 in 19ms
+ GET /api/notifications 200 in 13ms
+ GET /api/notifications 200 in 21ms
+ GET /api/notifications 200 in 12ms
+ GET /products/new 200 in 120ms
+ GET /api/notifications 200 in 12ms
+ GET /api/shipping-templates 405 in 13ms
+ GET /api/notifications 200 in 8ms
+ GET /api/shipping-templates 405 in 6ms
+ GET /api/suppliers 200 in 114ms
+ ✓ Compiled /icon.svg in 145ms (427 modules)
+ GET /icon.svg?16865ee7dad53e79 200 in 211ms
+ GET /api/suppliers 200 in 271ms
+ ✓ Compiled /api/platforms in 100ms (429 modules)
+ GET /api/platforms?includeInactive=true 200 in 131ms
+ GET /api/platforms?includeInactive=true 200 in 132ms
+ GET /api/notifications 200 in 12ms
+ GET /api/shipping-templates 405 in 34ms
+ GET /api/shipping-templates 405 in 6ms
+ GET /api/suppliers 200 in 133ms
+ GET /api/suppliers 200 in 24ms

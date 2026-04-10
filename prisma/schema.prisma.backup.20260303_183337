@@ -1,0 +1,293 @@
+// Kkotium Garden - Enhanced Schema v3.1
+// Last updated: 2026-02-27
+// Includes: P0 fields for Naver Smart Store integration
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================================
+// NAVER MASTER DATA (Seeded)
+// ================================
+
+model NaverCategory {
+  id              String   @id @default(uuid())
+  categoryCode    String   @unique @map("category_code")
+  depth1          String?
+  depth2          String?
+  depth3          String?
+  depth4          String?
+  fullPath        String   @map("full_path")
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  products        Product[]
+  
+  @@map("naver_categories")
+  @@index([categoryCode])
+  @@index([depth1, depth2, depth3, depth4])
+}
+
+model OriginCode {
+  id              String   @id @default(uuid())
+  originCode      String   @unique @map("origin_code")
+  originName      String   @map("origin_name")
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  products        Product[]
+  
+  @@map("origin_codes")
+  @@index([originCode])
+}
+
+// ================================
+// SUPPLIERS & SHIPPING
+// ================================
+
+model Supplier {
+  id              String             @id @default(uuid())
+  code            String             @unique // "DMM", "FLOWER", etc.
+  name            String             // "도매매", "꽃도매"
+  platformUrl     String?            @map("platform_url")
+  defaultMargin   Decimal?           @db.Decimal(5, 2) @map("default_margin")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  
+  products        Product[]
+  shippingTemplates ShippingTemplate[]
+  
+  @@map("suppliers")
+  @@index([code])
+}
+
+model ShippingTemplate {
+  id              String    @id @default(uuid())
+  supplierId      String    @map("supplier_id")
+  supplier        Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  
+  naverCode       String?   @unique @map("naver_code") // "2035152"
+  displayName     String    @map("display_name") // "[DMM] 30K무료"
+  presetLabel     String?   @map("preset_label") // "30K 무료"
+  
+  shippingType    String    @map("shipping_type") // "유료", "무료", "조건부 무료"
+  freeThreshold   Int?      @map("free_threshold") // 30000
+  baseFee         Int       @default(2500) @map("base_fee")
+  
+  bundlingAllowed Boolean   @default(true) @map("bundling_allowed")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  products        Product[]
+  
+  @@map("shipping_templates")
+  @@index([supplierId])
+}
+
+// ================================
+// PRODUCTS (Enhanced v3.1)
+// ================================
+
+model Product {
+  id                    String    @id @default(uuid())
+  
+  // Basic Info
+  name                  String
+  description           String?   @db.Text
+  status                String    @default("draft") // "draft", "active", "out-of-stock"
+  
+  // SKU & Codes (P0-3)
+  sellerProductCode     String?   @unique @map("seller_product_code") // Auto-generated: DMM-12345 or KKT-20260227-A3F7
+  supplierProductCode   String?   @map("supplier_product_code") // From supplier
+  
+  // Supplier Relation
+  supplierId            String?   @map("supplier_id")
+  supplier              Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  
+  // Pricing
+  wholesalePrice        Decimal   @db.Decimal(10, 2) @map("wholesale_price")
+  sellingPrice          Decimal   @db.Decimal(10, 2) @map("selling_price")
+  instantDiscount       Decimal?  @db.Decimal(10, 2) @map("instant_discount") // P0-2: 즉시할인
+  
+  discountRate          Decimal?  @db.Decimal(5, 2) @map("discount_rate")
+  marginRate            Decimal?  @db.Decimal(5, 2) @map("margin_rate") // Computed
+  
+  // Category (P0-1)
+  categoryId            String?   @map("category_id")
+  category              NaverCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  
+  // Origin (P0-4)
+  originId              String?   @map("origin_id")
+  origin                OriginCode? @relation(fields: [originId], references: [id], onDelete: SetNull)
+  importerName          String?   @map("importer_name") // Required if origin is import
+
+  // Shipping (P1-7)
+  shippingMethod        String    @default("택배, 소포, 등기") @map("shipping_method") // "택배, 소포, 등기" or "직접배송"
+  shippingFeeType       String    @default("유료") @map("shipping_fee_type") // "유료", "무료", "조건부 무료", etc.
+  carrierCode           String?   @map("carrier_code") // Carrier name
+  
+  shippingTemplateId    String?   @map("shipping_template_id")
+  shippingTemplate      ShippingTemplate? @relation(fields: [shippingTemplateId], references: [id], onDelete: SetNull)
+  
+  // Images (P0-6)
+  mainImageUrl          String?   @db.Text @map("main_image_url")
+  detailImageUrl        String?   @db.Text @map("detail_image_url") // For Excel detail description
+  
+  // SEO (P0-6 + P2-12)
+  seoHookText           String?   @db.Text @map("seo_hook_text") // SEO hook phrase
+  goldenKeywordScore    Int?      @map("golden_keyword_score") // 황금키워드 점수
+  
+  // Stock
+  stock                 Int       @default(0)
+  autoSync              Boolean   @default(false) @map("auto_sync")
+  
+  // Metadata
+  supplierUrl           String?   @db.Text @map("supplier_url")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  options               ProductOption?
+  keywords              Keyword[]
+  substituteProducts    SubstituteProduct[] @relation("OriginalProduct")
+  substitutedBy         SubstituteProduct[] @relation("SubstituteProduct")
+  crawlerLogs           CrawlerLog[]
+  
+  @@map("products")
+  @@index([status])
+  @@index([supplierId])
+  @@index([categoryId])
+  @@index([sellerProductCode])
+  @@index([createdAt])
+}
+
+// ================================
+// PRODUCT OPTIONS (P0-5 - Complete Redesign)
+// ================================
+
+model ProductOption {
+  id              String    @id @default(uuid())
+  productId       String    @unique @map("product_id")
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  // Option Type: "single" | "combination" | "direct"
+  optionType      String    @map("option_type") // "단독형", "조합형", "직접입력형"
+  
+  // For Single & Combination types
+  optionNames     Json?     @map("option_names") // [{"name":"컬러"},{"name":"사이즈"}]
+  optionRows      Json?     @map("option_rows")  // Array of option combinations
+  
+  // For Direct Input type (최대 5개)
+  directInputs    Json?     @map("direct_inputs") // [{"name":"각인문구","enabled":true},...]
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  @@map("product_options")
+}
+
+// ================================
+// KEYWORDS & SEO
+// ================================
+
+model Keyword {
+  id              String    @id @default(uuid())
+  productId       String    @map("product_id")
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  keyword         String
+  naverRank       Int?      @map("naver_rank")
+  searchVolume    Int?      @map("search_volume")
+  difficulty      String?   // "low", "medium", "high"
+  purchaseIntent  String?   @map("purchase_intent") // "high", "medium", "low"
+  source          String?   // "Perplexity", "Manual"
+  score           Decimal?  @db.Decimal(5, 2)
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  @@map("keywords")
+  @@index([productId])
+  @@index([keyword])
+}
+
+// ================================
+// DAILY RECOMMENDATIONS (P2-13)
+// ================================
+
+model DailyRecommendation {
+  id              String    @id @default(uuid())
+  date            DateTime  @db.Date
+  productName     String    @map("product_name")
+  supplierId      String?   @map("supplier_id")
+  
+  honeyScore      Int       @map("honey_score") // 꿀통지수 (0-100)
+  seasonTag       String?   @map("season_tag") // "화이트데이", "발렌타인"
+  status          String    @default("pending") // "pending", "registered", "skipped"
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  @@map("daily_recommendations")
+  @@index([date])
+  @@index([status])
+}
+
+// ================================
+// SUBSTITUTE PRODUCTS
+// ================================
+
+model SubstituteProduct {
+  id              String    @id @default(uuid())
+  productId       String    @map("product_id")
+  product         Product   @relation("OriginalProduct", fields: [productId], references: [id], onDelete: Cascade)
+  
+  substituteId    String    @map("substitute_id")
+  substitute      Product   @relation("SubstituteProduct", fields: [substituteId], references: [id], onDelete: Cascade)
+  
+  status          String    @default("active") // "active", "inactive"
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  @@map("substitute_products")
+  @@index([productId])
+  @@index([substituteId])
+}
+
+// ================================
+// CRAWLER & AUTOMATION LOGS
+// ================================
+
+model CrawlerLog {
+  id              String    @id @default(uuid())
+  productId       String?   @map("product_id")
+  product         Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  
+  url             String    @db.Text
+  status          String    // "success", "warning", "failed"
+  result          String?   @db.Text
+  duration        Int?      // seconds
+  errorMessage    String?   @db.Text @map("error_message")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  @@map("crawler_logs")
+  @@index([productId])
+  @@index([createdAt])
+}
+
+model AutomationLog {
+  id              String    @id @default(uuid())
+  type            String    // "sync", "crawl", "keyword_update", "alert"
+  status          String    // "success", "failed"
+  message         String?   @db.Text
+  affectedCount   Int?      @map("affected_count")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  @@map("automation_logs")
+  @@index([type])
+  @@index([createdAt])
+}

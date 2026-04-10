@@ -1,232 +1,251 @@
 // src/app/api/naver-seo/ai-generate/route.ts
+// AI SEO generator — 3 style modes: orthodox / emotional / niche
+// Provider priority: Gemini (free) > Anthropic > Perplexity
+
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
-const prisma = new PrismaClient();
+// ─── Style mode type ──────────────────────────────────────────────────────────
 
-// Perplexity API 호출 함수
-async function callPerplexityAPI(productName: string) {
-  const apiKey = process.env.PERPLEXITY_API_KEY;
+export const dynamic = 'force-dynamic';
+type SeoStyle = 'orthodox' | 'emotional' | 'niche';
 
-  if (!apiKey) {
-    throw new Error('PERPLEXITY_API_KEY가 설정되지 않았습니다.');
-  }
+// ─── Prompt builders ──────────────────────────────────────────────────────────
 
-  const prompt = `당신은 네이버 쇼핑 SEO 전문가입니다. 다음 상품의 네이버 쇼핑 최적화 정보를 생성해주세요.
+function buildPrompt(productName: string, style: SeoStyle): string {
+  const base = `Product name: ${productName}
+Respond ONLY with a raw JSON object. No markdown, no explanation, no preamble. First char must be {.
 
-상품명: ${productName}
-
-다음 형식의 JSON으로 응답해주세요:
 {
-  "naver_title": "상품명을 포함한 매력적인 제목 (15-30자)",
-  "naver_keywords": "관련 키워드를 쉼표로 구분 (5-8개)",
-  "naver_description": "상품 설명 (80-150자, 키워드 자연스럽게 포함)"
+  "naver_title": "...",
+  "naver_keywords": "kw1,kw2,kw3,kw4,kw5,kw6,kw7",
+  "naver_description": "...",
+  "seo_title": "...",
+  "seo_description": "..."
+}`;
+
+  const styleGuide: Record<SeoStyle, string> = {
+    orthodox: `You are a Naver Smart Store SEO expert (2026 standards).
+Style: Orthodox SEO — maximize search visibility with high-volume exact-match keywords.
+Rules:
+- naver_title: 25-35 Korean chars, primary keyword in first 15 chars, no filler words, no duplicate words 3+ times
+- naver_keywords: 5-7 high search volume Korean keywords, comma-separated
+- naver_description: 80-200 Korean chars, keywords naturally placed, factual and clear
+- seo_title: 15-40 Korean chars, keyword-rich
+- seo_description: 50-150 Korean chars, includes main keywords`,
+
+    emotional: `You are a Korean e-commerce copywriter specializing in emotional targeting.
+Style: Emotional / lifestyle — appeal to feelings, seasons, occasions, gifting moments.
+Rules:
+- naver_title: 25-35 Korean chars, evoke a feeling or occasion (e.g. 선물, 특별한, 일상), includes product keyword
+- naver_keywords: 5-7 keywords mixing product terms with lifestyle/occasion terms
+- naver_description: 80-200 Korean chars, warm tone, paint a scene of use
+- seo_title: 15-40 Korean chars, emotionally resonant
+- seo_description: 50-150 Korean chars, conversational and inviting`,
+
+    niche: `You are a Naver Smart Store long-tail keyword specialist.
+Style: Niche / long-tail — target less competitive specific search queries for higher conversion.
+Rules:
+- naver_title: 25-35 Korean chars, include specific attributes (material, use case, target user, size)
+- naver_keywords: 5-7 long-tail Korean keywords (3+ word phrases preferred), very specific
+- naver_description: 80-200 Korean chars, highly specific benefits and use cases
+- seo_title: 15-40 Korean chars, specific niche angle
+- seo_description: 50-150 Korean chars, speaks to a specific buyer persona`,
+  };
+
+  return `${styleGuide[style]}\n\n${base}`;
 }
 
-규칙:
-- 제목: 실제 네이버 쇼핑에서 인기 있는 키워드 포함, 검색 최적화
-- 키워드: 현재 트렌드를 반영한 구매 의도 높은 키워드 우선
-- 설명: 상품 특징, 용도, 감성 포인트 포함, 실제 구매 후기 스타일
-- 모두 한국어로 작성
-- 반드시 JSON 형식으로만 응답
+// ─── AI provider calls ────────────────────────────────────────────────────────
 
-JSON만 응답하세요:`;
+async function callGemini(productName: string, style: SeoStyle): Promise<Record<string, string>> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
-  const response = await fetch('https://api.perplexity.ai/chat/completions', {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'sonar-pro',  // 2026년 현재 사용 가능한 모델
-      messages: [
-        {
-          role: 'system',
-          content: '당신은 네이버 쇼핑 SEO 전문가입니다. 실시간 검색 트렌드와 네이버 쇼핑 데이터를 반영하여 최적화된 상품 정보를 생성합니다.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.2,
-      max_tokens: 1024,
+      systemInstruction: { parts: [{ text: 'Output ONLY raw JSON. First char must be {, last must be }. No markdown.' }] },
+      contents: [{ parts: [{ text: buildPrompt(productName, style) }] }],
+      generationConfig: { temperature: style === 'emotional' ? 0.7 : 0.2, maxOutputTokens: 1000 },
     }),
   });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Perplexity API 오류: ${response.status} - ${error}`);
-  }
-
-  const data = await response.json();
-  const content = data.choices[0].message.content;
-
-  // JSON 파싱 (마크다운 코드블록 제거)
-  let jsonText = content.trim();
-  if (jsonText.startsWith('```json')) {
-    jsonText = jsonText.replace(/```json\n/, '').replace(/\n```$/, '');
-  } else if (jsonText.startsWith('```')) {
-    jsonText = jsonText.replace(/```\n/, '').replace(/\n```$/, '');
-  }
-
-  return JSON.parse(jsonText);
+  if (!res.ok) throw new Error(`Gemini ${res.status}`);
+  const data = await res.json();
+  const parts: { text?: string; thought?: boolean }[] = data.candidates?.[0]?.content?.parts ?? [];
+  const text = parts.filter(p => !p.thought).map(p => p.text ?? '').join('').trim();
+  return parseJsonSafe(text);
 }
 
-// 단일 상품 AI 생성
+async function callAnthropic(productName: string, style: SeoStyle): Promise<Record<string, string>> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514', max_tokens: 1000,
+      system: '네이버 SEO 전문가. 순수 JSON만 반환. 마크다운 금지.',
+      messages: [{ role: 'user', content: buildPrompt(productName, style) }],
+    }),
+  });
+  if (!res.ok) throw new Error(`Anthropic ${res.status}`);
+  const data = await res.json();
+  return parseJsonSafe(data.content?.[0]?.text ?? '');
+}
+
+async function callPerplexity(productName: string, style: SeoStyle): Promise<Record<string, string>> {
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+  if (!apiKey) throw new Error('PERPLEXITY_API_KEY not set');
+  const res = await fetch('https://api.perplexity.ai/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'sonar-pro',
+      messages: [
+        { role: 'system', content: '네이버 SEO 전문가. 순수 JSON만 반환.' },
+        { role: 'user', content: buildPrompt(productName, style) },
+      ],
+      temperature: 0.2, max_tokens: 1000,
+    }),
+  });
+  if (!res.ok) throw new Error(`Perplexity ${res.status}`);
+  const data = await res.json();
+  return parseJsonSafe(data.choices?.[0]?.message?.content ?? '');
+}
+
+function parseJsonSafe(text: string): Record<string, string> {
+  let t = text.trim().replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '').trim();
+  const start = t.indexOf('{');
+  const end = t.lastIndexOf('}');
+  if (start !== -1 && end !== -1) t = t.slice(start, end + 1);
+  return JSON.parse(t);
+}
+
+async function generateSEO(
+  productName: string,
+  style: SeoStyle = 'orthodox'
+): Promise<{ data: Record<string, string>; provider: string }> {
+  if (process.env.GEMINI_API_KEY) {
+    try { return { data: await callGemini(productName, style), provider: 'gemini-2.5-flash' }; }
+    catch (e) { console.warn('[ai-generate] Gemini failed:', e); }
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    try { return { data: await callAnthropic(productName, style), provider: 'claude-sonnet' }; }
+    catch (e) { console.warn('[ai-generate] Anthropic failed:', e); }
+  }
+  if (process.env.PERPLEXITY_API_KEY) {
+    return { data: await callPerplexity(productName, style), provider: 'perplexity-sonar' };
+  }
+  throw new Error('AI API 키가 없습니다. GEMINI_API_KEY를 .env.local에 추가하세요 (무료).');
+}
+
+// ─── POST: single product ─────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { productId, productName } = body;
+    const { productId, productName, style = 'orthodox' } = body as {
+      productId: string;
+      productName: string;
+      style?: SeoStyle;
+    };
 
-    if (!productId || !productName) {
-      return NextResponse.json(
-        { success: false, error: '상품 ID와 이름이 필요합니다.' },
-        { status: 400 }
-      );
+    if (!productName) {
+      return NextResponse.json({ success: false, error: '상품명이 필요합니다.' }, { status: 400 });
     }
 
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🤖 Perplexity AI SEO 생성 시작 (sonar-pro)');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('상품 ID:', productId);
-    console.log('상품명:', productName);
+    const { data: aiResponse, provider } = await generateSEO(productName, style as SeoStyle);
 
-    // Perplexity API 호출
-    const aiResponse = await callPerplexityAPI(productName);
+    if (productId && productId !== 'temp') {
+      // Parse keywords from comma-separated string to JSON array
+      const keywordsArray = (aiResponse.naver_keywords ?? '')
+        .split(',')
+        .map((k: string) => k.trim())
+        .filter(Boolean);
 
-    console.log('✅ AI 생성 완료:');
-    console.log('   제목:', aiResponse.naver_title);
-    console.log('   키워드:', aiResponse.naver_keywords);
-    console.log('   설명:', aiResponse.naver_description?.substring(0, 50) + '...');
+      await prisma.product.update({
+        where: { id: productId },
+        data: {
+          // Update main product name with AI-optimized title
+          name: aiResponse.naver_title || undefined,
+          // Update keywords JSON array (used by honey score + readiness)
+          keywords: keywordsArray.length > 0 ? keywordsArray : undefined,
+          // SEO-specific naver fields
+          seo_title: aiResponse.seo_title || aiResponse.naver_title,
+          seo_description: aiResponse.seo_description || (aiResponse.naver_description ?? '').substring(0, 160),
+          naver_title: aiResponse.naver_title,
+          naver_keywords: aiResponse.naver_keywords,
+          naver_description: aiResponse.naver_description,
+          // Record AI optimization timestamp
+          aiGeneratedTitle: aiResponse.naver_title,
+          updatedAt: new Date(),
+        },
+      });
+    }
 
-    // DB 업데이트
-    await prisma.product.update({
-      where: { id: productId },
-      data: {
-        naver_title: aiResponse.naver_title,
-        naver_keywords: aiResponse.naver_keywords,
-        naver_description: aiResponse.naver_description,
-      },
-    });
-
-    console.log('✅ DB 업데이트 완료!');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        naver_title: aiResponse.naver_title,
-        naver_keywords: aiResponse.naver_keywords,
-        naver_description: aiResponse.naver_description,
-      },
-    });
+    return NextResponse.json({ success: true, provider, style, data: aiResponse });
   } catch (error) {
-    console.error('❌ AI 생성 에러:', error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : '알 수 없는 에러가 발생했습니다.',
-      },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    const msg = error instanceof Error ? error.message : '알 수 없는 오류';
+    console.error('[api/naver-seo/ai-generate POST]', msg);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
 
-// 일괄 AI 생성
+// ─── PUT: bulk ────────────────────────────────────────────────────────────────
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { productIds } = body;
+    const { productIds, style = 'orthodox' } = body as { productIds: string[]; style?: SeoStyle };
 
-    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '상품 ID 배열이 필요합니다.' },
-        { status: 400 }
-      );
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      return NextResponse.json({ success: false, error: '상품 ID 배열이 필요합니다.' }, { status: 400 });
     }
 
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🤖 Perplexity AI 일괄 SEO 생성 시작 (sonar-pro)');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('상품 개수:', productIds.length);
-
-    // 상품 정보 조회
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
       select: { id: true, name: true },
     });
 
-    const results = [];
     let successCount = 0;
     let failCount = 0;
+    const results = [];
 
-    // 각 상품에 대해 AI 생성
     for (const product of products) {
       try {
-        console.log(`\n🔄 처리 중: ${product.name}`);
-
-        const aiResponse = await callPerplexityAPI(product.name);
-
-        // DB 업데이트
+        const { data: aiResponse } = await generateSEO(product.name, style as SeoStyle);
+        const keywordsArray = (aiResponse.naver_keywords ?? '')
+          .split(',')
+          .map((k: string) => k.trim())
+          .filter(Boolean);
         await prisma.product.update({
           where: { id: product.id },
           data: {
+            name: aiResponse.naver_title || undefined,
+            keywords: keywordsArray.length > 0 ? keywordsArray : undefined,
+            seo_title: aiResponse.seo_title || aiResponse.naver_title,
+            seo_description: aiResponse.seo_description || (aiResponse.naver_description ?? '').substring(0, 160),
             naver_title: aiResponse.naver_title,
             naver_keywords: aiResponse.naver_keywords,
             naver_description: aiResponse.naver_description,
+            aiGeneratedTitle: aiResponse.naver_title,
+            updatedAt: new Date(),
           },
         });
-
-        results.push({
-          productId: product.id,
-          productName: product.name,
-          success: true,
-          data: aiResponse,
-        });
-
+        results.push({ productId: product.id, productName: product.name, success: true });
         successCount++;
-        console.log(`   ✅ 완료`);
-
-        // API Rate Limit 방지 (1초 대기)
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      } catch (error) {
-        console.error(`   ❌ 실패:`, error);
-        results.push({
-          productId: product.id,
-          productName: product.name,
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        await new Promise(r => setTimeout(r, 500)); // rate-limit buffer
+      } catch (err) {
+        results.push({ productId: product.id, productName: product.name, success: false, error: String(err) });
         failCount++;
       }
     }
 
-    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`✅ 일괄 처리 완료: 성공 ${successCount}개, 실패 ${failCount}개`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-    return NextResponse.json({
-      success: true,
-      successCount,
-      failCount,
-      results,
-    });
+    return NextResponse.json({ success: true, successCount, failCount, results });
   } catch (error) {
-    console.error('❌ 일괄 AI 생성 에러:', error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : '알 수 없는 에러가 발생했습니다.',
-      },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    const msg = error instanceof Error ? error.message : '알 수 없는 오류';
+    console.error('[api/naver-seo/ai-generate PUT]', msg);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

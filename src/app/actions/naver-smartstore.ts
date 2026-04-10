@@ -134,7 +134,7 @@ export async function approveProduct(productId: string) {
       hasOptions: false
     };
 
-    const {  insertedData, error: insertError } = await supabase
+    const { data: insertedData, error: insertError } = await supabase
       .from('products')
       .insert([productData])
       .select();

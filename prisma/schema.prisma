@@ -1,13 +1,10 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -22,22 +19,49 @@ model User {
   products  Product[]
 }
 
-model Supplier {
-  id          String    @id @default(cuid())
+model Platform {
+  id          String     @id @default(cuid())
   name        String
-  code        String    @unique
-  contact     String?
-  address     String?
+  code        String     @unique @db.VarChar(10)
+  url         String?
   description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  products    Product[]
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  suppliers   Supplier[]
+
+  @@map("platforms")
+}
+
+model Supplier {
+  id                String            @id @default(cuid())
+  name              String
+  code              String            @unique
+  abbr              String            @unique @db.VarChar(4)
+  platformId        String?
+  platformCode      String            @default("ETC") @db.VarChar(10)
+  platformUrl       String?
+  contact           String?
+  address           String?
+  description       String?
+  domeggookSellerId          String?           @map("domeggook_seller_id") @db.VarChar(100)
+  defaultShippingTemplateId  String?           @map("default_shipping_template_id")
+  defaultMargin              Int               @default(30)
+  active                     Boolean           @default(true)
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+  products                   Product[]
+  platform                   Platform?         @relation(fields: [platformId], references: [id])
+  shippingTemplates          ShippingTemplate[]
+  defaultShippingTemplate    ShippingTemplate? @relation("SupplierDefaultShipping", fields: [defaultShippingTemplateId], references: [id])
+
+  @@index([platformCode])
+  @@index([platformId])
+  @@index([domeggookSellerId], map: "idx_suppliers_domeggook_seller_id")
 }
 
 model Product {
-  id                      String    @id @default(cuid())
-
-  // 네이버 SEO 필드 (27개)
+  id                      String            @id @default(cuid())
   naver_title             String?
   naver_keywords          String?
   naver_description       String?
@@ -52,113 +76,117 @@ model Product {
   naver_warranty          String?
   naver_certification     String?
   naver_tax_type          String?
-  naver_gift_wrapping     Boolean   @default(false)
+  naver_gift_wrapping     Boolean           @default(false)
   naver_as_info           String?
   naver_delivery_info     String?
   naver_exchange_info     String?
   naver_refund_info       String?
   naver_min_order         String?
   naver_max_order         String?
-  naver_adult_only        Boolean   @default(false)
-  naver_parallel_import   Boolean   @default(false)
+  naver_adult_only        Boolean           @default(false)
+  naver_parallel_import   Boolean           @default(false)
   naver_custom_option_1   String?
   naver_custom_option_2   String?
   naver_custom_option_3   String?
   naver_meta_tags         String?
-
-  // 기존 SEO 필드
   seo_title               String?
   seo_keywords            String?
   seo_description         String?
-
-  // 타임스탬프
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
-
-  // 추가 이미지 및 AI 관련
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
   additionalImages        Json?
   aiGeneratedDesc         String?
   aiGeneratedTags         Json?
   aiGeneratedTitle        String?
   aiScore                 Int?
-
-  // 상품 기본 정보
-  asInfo                  String    @default("평일 10:00~18:00")
-  asPhone                 String    @default("고객센터 문의")
+  asInfo                  String            @default("평일 10:00~18:00")
+  asPhone                 String            @default("고객센터 문의")
   barcode                 String?
-  brand                   String    @default("꽃틔움")
+  brand                   String            @default("꽃틔움")
   category                String?
-  courierCode             String    @default("CJGLS")
+  courierCode             String            @default("CJGLS")
   description             String?
-
-  // 배송 관련
-  exchangeShippingFee     Int       @default(6000)
-  freeShippingMinPrice    Int       @default(30000)
+  exchangeShippingFee     Int               @default(6000)
+  freeShippingMinPrice    Int               @default(30000)
   freeShippingThreshold   Int?
-  shippingFee             Int       @default(3000)
-  shippingMethod          String    @default("택배배송")
-  shippingPayType         String    @default("선결제")
-  shippingStrategy        String    @default("무료배송")
-  shippingType            String    @default("일반배송")
-  returnShippingFee       Int       @default(3000)
-  supplierReturnFee       Int       @default(0)
-  supplierShippingFee     Int       @default(3000)
-
-  // 옵션 관련
-  hasOptions              Boolean   @default(false)
+  shippingFee             Int               @default(3000)
+  shippingMethod          String            @default("택배배송")
+  shippingPayType         String            @default("선결제")
+  shippingStrategy        String            @default("무료배송")
+  shippingType            String            @default("일반배송")
+  returnShippingFee       Int               @default(3000)
+  supplierReturnFee       Int               @default(0)
+  supplierShippingFee     Int               @default(3000)
+  hasOptions              Boolean           @default(false)
   optionName              String?
   optionType              String?
   optionValues            Json?
   options                 Json?
-
-  // 기타
   hookPhrase              String?
   internalNote            String?
   internalTags            Json?
   keywords                Json?
   lastSaleDate            DateTime?
-
-  // ⭐ 이미지 필드 (네이버 스마트스토어 2026 기준 - 개선됨)
   mainImage               String?
-  images                  String[]  @default([])
-  imageAltTexts           String[]  @default([])      // 🆕 SEO용 alt 텍스트 배열
-  imageCount              Int       @default(0)        // 🆕 총 이미지 개수 (캐시)
-
-  manufacturer            String    @default("도매매 공급사")
+  images                  String[]          @default([])
+  imageAltTexts           String[]          @default([])
+  imageCount              Int               @default(0)
+  manufacturer            String            @default("도매매 공급사")
   margin                  Float
-  minorPurchase           String    @default("Y")
+  minorPurchase           String            @default("Y")
   name                    String
-  naverCategoryCode       String    @default("50003307")
+  naverCategoryCode       String            @default("50003307")
   naverProductId          String?
-  originCode              String    @default("0001")
+  originCode              String            @default("0001")
   productInfoManufacturer String?
   productInfoModel        String?
   productInfoName         String?
-  productStatus           String    @default("신상품")
-  salesCount              Int       @default(0)
+  productStatus           String            @default("신상품")
+  salesCount              Int               @default(0)
   salePrice               Int
   sellerCode              String?
   seoTitle                String?
-  sku                     String    @unique
-  status                  String    @default("DRAFT")
+  sku                     String            @unique
+  status                  String            @default("DRAFT")
   supplierPrice           Int
   tags                    Json?
   targetKeywords          Json?
-  taxType                 String    @default("과세")
+  taxType                 String            @default("과세")
   vendorCode              String?
-
-  // 관계
   supplierId              String
-  supplier                Supplier  @relation(fields: [supplierId], references: [id])
   userId                  String
-  user                    User      @relation(fields: [userId], references: [id])
+  sellerProductCode       String?           @unique
+  seller_product_code     String?           @unique @db.VarChar(100)
+  supplier_product_code   String?           @db.VarChar(100)
+  category_id             String?
+  origin_id               String?
+  importer_name           String?           @db.VarChar(100)
+  instant_discount        Decimal?          @db.Decimal(10, 2)
+  shipping_method         String?           @default("parcel") @db.VarChar(50)
+  shipping_fee_type       String?           @default("paid") @db.VarChar(50)
+  carrier_code            String?           @db.VarChar(50)
+  shipping_template_id    String?
+  main_image_url          String?
+  detail_image_url        String?
+  seo_hook_text           String?
+  golden_keyword_score    Int?
   orderItems              OrderItem[]
+  supplier                Supplier          @relation(fields: [supplierId], references: [id])
+  user                    User              @relation(fields: [userId], references: [id])
+  naver_categories        NaverCategory?    @relation(fields: [category_id], references: [id], onUpdate: NoAction, map: "fk_products_category")
+  origin_codes            OriginCode?       @relation(fields: [origin_id], references: [id], onUpdate: NoAction, map: "fk_products_origin")
+  shipping_templates      ShippingTemplate? @relation(fields: [shipping_template_id], references: [id], onUpdate: NoAction, map: "fk_products_shipping_template")
+  product_options         product_options?
 
   @@index([supplierId])
   @@index([userId])
   @@index([status])
   @@index([category])
   @@index([imageCount])
+  @@index([category_id], map: "idx_products_category_id")
+  @@index([origin_id], map: "idx_products_origin_id")
+  @@index([seller_product_code], map: "idx_products_seller_code")
+  @@index([shipping_template_id], map: "idx_products_shipping_template")
 }
 
 model Order {
@@ -172,6 +200,20 @@ model Order {
   status          String      @default("PENDING")
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  adminMemo       String?
+  cancelledAt     DateTime?
+  courierCompany  String?
+  deliveredAt     DateTime?
+  paidAt          DateTime?
+  shippedAt       DateTime?
+  shippingRequest String?     @default("")
+  trackingNumber  String?
+  discount        Int?        @default(0)
+  paymentMethod   String?
+  shippingFee     Int?        @default(0)
+  shippingZipcode String?     @default("")
+  totalPrice      Int?
+  userId          String?
   orderItems      OrderItem[]
 }
 
@@ -180,12 +222,157 @@ model OrderItem {
   quantity  Int
   price     Int
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id])
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])
+}
+
+model NaverCategory {
+  id           String    @id @default(cuid())
+  categoryCode String    @unique @map("category_code")
+  depth1       String?
+  depth2       String?
+  depth3       String?
+  depth4       String?
+  fullPath     String    @map("full_path")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  Product      Product[]
+
+  @@index([categoryCode])
+  @@map("naver_categories")
+}
+
+model OriginCode {
+  id         String    @id @default(cuid())
+  originCode String    @unique @map("origin_code")
+  originName String    @map("origin_name")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  Product    Product[]
+
+  @@index([originCode])
+  @@map("origin_codes")
+}
+
+model ShippingTemplate {
+  id              String     @id @default(cuid())
+  name            String
+  code            String     @unique
+  platformCode    String?    @map("platform_code")
+  supplierCode    String?    @map("supplier_code")
+  supplierId      String?    @map("supplier_id")
+  isPrimary       Boolean    @default(false) @map("is_primary")
+  courierCode     String     @default("CJGLS") @map("courier_code")
+  shippingType    Int        @default(1) @map("shipping_type")
+  shippingFee     Int        @default(3000) @map("shipping_fee")
+  freeThreshold   Int?       @map("free_threshold")
+  returnFee       Int        @default(6000) @map("return_fee")
+  exchangeFee     Int        @default(6000) @map("exchange_fee")
+  jejuFee         Int        @default(5000) @map("jeju_fee")
+  islandFee       Int        @default(5000) @map("island_fee")
+  naverTemplateNo String?    @map("naver_template_no")
+  bundleKey       String?    @map("bundle_key")
+  memo            String?
+  active          Boolean    @default(true)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  Product         Product[]
+  supplier        Supplier?  @relation(fields: [supplierId], references: [id])
+  defaultForSuppliers Supplier[] @relation("SupplierDefaultShipping")
+
+  @@index([supplierId], map: "idx_shipping_templates_supplier")
+  @@map("shipping_templates")
+}
+
+model daily_recommendations {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date         DateTime  @db.Date
+  product_name String    @db.VarChar(255)
+  supplier_id  String?
+  honey_score  Int
+  season_tag   String?   @db.VarChar(50)
+  status       String?   @default("pending") @db.VarChar(20)
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([date], map: "idx_daily_recommendations_date")
+  @@index([status], map: "idx_daily_recommendations_status")
+}
+
+model StoreSettings {
+  id                    String   @id @default("default")
+  freeShippingThreshold Int      @default(30000) @map("free_shipping_threshold")
+  storeName             String   @default("") @map("store_name")
+  asPhone               String   @default("") @map("as_phone")
+  asGuide               String   @default("") @map("as_guide")
+  defaultCourierCode    String   @default("CJGLS") @map("default_courier_code")
+  defaultReturnFee      Int      @default(6000) @map("default_return_fee")
+  defaultExchangeFee    Int      @default(6000) @map("default_exchange_fee")
+  domeggookApiKey       String   @default("") @map("domeggook_api_key")
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("store_settings")
+}
+
+model product_options {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id    String    @unique
+  option_type   String    @db.VarChar(50)
+  option_names  Json?
+  option_rows   Json?
+  direct_inputs Json?
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+  Product       Product   @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_product_options_product")
+
+  @@index([product_id], map: "idx_product_options_product_id")
+  @@index([option_type], map: "idx_product_options_type")
+}
+
+// Product event log — records state changes for Discord triggers and timeline UI
+model ProductEvent {
+  id         String   @id @default(cuid())
+  productId  String   @map("product_id")
+  type       String   @db.VarChar(50)  // OOS | PRICE_CHANGE | SCORE_DROP | STATUS_CHANGE
+  oldValue   String?  @map("old_value")
+  newValue   String?  @map("new_value")
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([productId], map: "idx_product_events_product")
+  @@index([type], map: "idx_product_events_type")
+  @@index([createdAt(sort: Desc)], map: "idx_product_events_created")
+  @@map("product_events")
+}
+
+model CrawlLog {
+  id             String   @id @default(uuid())
+  url            String
+  name           String?
+  supplierPrice  Int      @default(0) @map("supplier_price")
+  images         Json     @default("[]")
+  options        Json     @default("[]")
+  status         String   @default("success")   // success | error
+  errorMsg       String?  @map("error_msg")
+  source         String   @default("single")    // single | bulk
+  sellerNick     String?  @map("seller_nick")
+  sellerId       String?  @map("seller_id")
+  sellerRank     Int?     @map("seller_rank")
+  categoryName   String?  @map("category_name")
+  categoryCode   String?  @map("category_code")
+  inventory      Int?
+  shipFee        Int?     @map("ship_fee")
+  canMerge       Boolean? @map("can_merge")
+  // Sourcing status: SOURCED → PENDING → REGISTERED
+  sourcingStatus String   @default("SOURCED") @map("sourcing_status")
+  productId      String?  @map("product_id")   // linked after registration
+  crawledAt      DateTime @default(now()) @map("crawled_at")
+
+  @@index([crawledAt(sort: Desc)])
+  @@index([sourcingStatus])
+  @@index([sellerId])
+  @@map("crawl_logs")
 }

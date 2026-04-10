@@ -7,18 +7,28 @@ import { useState, useRef } from 'react';
 import { Upload, X, Check, Image as ImageIcon, AlertCircle } from 'lucide-react';
 
 interface ImageUploaderProps {
-  existingImages?: Array<{ url: string; isMain: boolean; altText: string }>;  // ⭐ optional로 변경
-  onUploadSuccess: (imageData: { url: string; isMain: boolean; altText: string }) => void;
-  onDeleteSuccess: (url: string) => void;
+  // 기존 상세 모드 (Supabase 직접 업로드)
+  existingImages?: Array<{ url: string; isMain: boolean; altText: string }>;
+  onUploadSuccess?: (imageData: { url: string; isMain: boolean; altText: string }) => void;
+  onDeleteSuccess?: (url: string) => void;
   maxImages?: number;
+  // 단순 모드 (ProductEditPage 등)
+  images?: string[];
+  onChange?: (images: string[]) => void;
 }
 
 export default function ImageUploader({
-  existingImages = [],  // ⭐ 기본값 빈 배열
+  existingImages: existingImagesProp,
   onUploadSuccess,
   onDeleteSuccess,
   maxImages = 10,
+  images: imagesProp,
+  onChange,
 }: ImageUploaderProps) {
+  // 단순 모드(images prop)와 상세 모드(existingImages) 통합
+  const existingImages: Array<{ url: string; isMain: boolean; altText: string }> =
+    existingImagesProp ??
+    (imagesProp ? imagesProp.map((url, i) => ({ url, isMain: i === 0, altText: '' })) : []);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);

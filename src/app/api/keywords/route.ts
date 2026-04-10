@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { generateNaverKeywords } from '@/lib/gemini';
 
+
+export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const { productName, category } = await request.json();

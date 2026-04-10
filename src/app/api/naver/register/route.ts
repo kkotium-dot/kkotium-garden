@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+
+export const dynamic = 'force-dynamic';
 const categoryMap: Record<string, string> = {
   '': '50000006',
   '의류': '50000006',

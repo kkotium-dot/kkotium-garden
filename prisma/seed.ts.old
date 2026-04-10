@@ -1,0 +1,183 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🌱 Seed 시작');
+
+  const user = await prisma.user.upsert({
+    where: { email: 'admin@kkotium.com' },
+    update: {},
+    create: { email: 'admin@kkotium.com', name: '꽃티움 관리자', level: 10, exp: 9999 },
+  });
+
+  const supplier = await prisma.supplier.upsert({
+    where: { code: 'SUP-KKOTIUM-001' },
+    update: {},
+    create: { name: '꽃티움 직시공급', code: 'SUP-KKOTIUM-001', contact: '010-0000-0000', address: '서울시 강남구', description: '협력 공급사' },
+  });
+
+  // FK 안전 삭제 (혹시나 기존 주문 데이터가 있을 때 대비)
+  await prisma.orderItem.deleteMany({});
+  await prisma.order.deleteMany({});
+  await prisma.product.deleteMany({});
+
+  const products = [
+    {
+      name: '프리미엄 장미 꽃다발 생일선물 당일배송',
+      sku: 'ROSE-001',
+      category: 'flower',
+      salePrice: 59000,
+      supplierPrice: 28000,
+      margin: 52.5,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1548094878-84ced0f6a458?w=800',
+      images: ['https://images.unsplash.com/photo-1548094878-84ced0f6a458?w=800'],
+      imageAltTexts: ['프리미엄 장미 꽃다발 메인 이미지'],
+      imageCount: 1,
+      naver_title: '프리미엄 장미 꽃다발 생일선물 기념일 당일배송',
+      naver_keywords: '장미꽃다발, 생일선물, 꽃다발, 기념일꽃, 당일배송꽃',
+      naver_description: '신선한 장미로 제작한 프리미엄 꽃다발. 생일, 기념일, 청혼 선물로 완벽합니다. 당일 배송 가능.',
+      naver_brand: '꽃티움',
+      naver_material: '생화',
+      naver_color: '레드, 핑크',
+      naver_size: '중형(50cm)',
+      shippingFee: 0,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+    },
+    {
+      name: '튤립 꽃다발 졸업선물 입학축하 봄꽃',
+      sku: 'TULIP-001',
+      category: 'flower',
+      salePrice: 45000,
+      supplierPrice: 20000,
+      margin: 55.6,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1520763185298-1b434c919102?w=800',
+      images: ['https://images.unsplash.com/photo-1520763185298-1b434c919102?w=800'],
+      imageAltTexts: ['튤립 꽃다발 메인 이미지'],
+      imageCount: 1,
+      naver_title: '튤립 꽃다발 졸업선물 입학축하 봄꽃 기념일',
+      naver_keywords: '튤립꽃다발, 졸업선물, 입학축하, 봄꽃, 기념일꽃',
+      naver_description: '생동감 넘치는 튤립으로 제작한 꽃다발. 졸업식, 입학식, 기념일 선물로 딱!',
+      naver_brand: '꽃티움',
+      naver_material: '생화',
+      naver_color: '옐로, 핑크, 화이트',
+      naver_size: '중형(45cm)',
+      shippingFee: 3000,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+    },
+    {
+      name: '스투키 공기정화식물 철재화분 집들이선물',
+      sku: 'STUKI-001',
+      category: 'plant',
+      salePrice: 38000,
+      supplierPrice: 15000,
+      margin: 60.5,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=800',
+      images: ['https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=800'],
+      imageAltTexts: ['스투키 화분 메인 이미지'],
+      imageCount: 1,
+      naver_title: '스투키 공기정화식물 철재화분 집들이선물 인테리어화분',
+      naver_keywords: '스투키화분, 공기정화식물, 집들이선물, 철재화분, 관리쉬운식물',
+      naver_description: '관리가 쉽고 공기정화 효과가 뛰어난 스투키. 집들이, 인테리어 식물로 인기.',
+      naver_brand: '꽃티움',
+      naver_material: '생식물',
+      naver_color: '그린',
+      naver_size: '중형(40cm)',
+      shippingFee: 3000,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+    },
+    {
+      name: '몬스테라 중형 인테리어 실내화분',
+      sku: 'MONS-001',
+      category: 'plant',
+      salePrice: 55000,
+      supplierPrice: 22000,
+      margin: 60.0,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800',
+      images: ['https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800'],
+      imageAltTexts: ['몬스테라 화분 메인 이미지'],
+      imageCount: 1,
+      naver_title: '몬스테라 중형 실내화분 인테리어화분',
+      naver_keywords: '몬스테라, 실내화분, 인테리어화분, 관엽식물, 공기정화',
+      naver_description: '트렌디한 인테리어 식물 몬스테라. 집들이 선물로도 좋아요.',
+      naver_brand: '꽃티움',
+      naver_material: '생식물',
+      naver_color: '딥그린',
+      naver_size: '중형(60cm)',
+      shippingFee: 5000,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+    },
+    {
+      name: '드라이플라워 미니부케 선물세트',
+      sku: 'DRY-001',
+      category: 'bouquet',
+      salePrice: 28000,
+      supplierPrice: 10000,
+      margin: 64.3,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=800',
+      images: ['https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=800'],
+      imageAltTexts: ['드라이플라워 미니부케 메인 이미지'],
+      imageCount: 1,
+      naver_title: '드라이플라워 미니부케 선물세트 인테리어소품',
+      naver_keywords: '드라이플라워, 미니부케, 선물세트, 프리저브드플라워, 인테리어소품',
+      naver_description: '오래 지속되는 드라이플라워 미니 부케. 선물/인테리어 소품으로 인기.',
+      naver_brand: '꽃티움',
+      naver_material: '건조화',
+      naver_color: '베이지, 핑크',
+      naver_size: '소형(25cm)',
+      shippingFee: 3000,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+    },
+    {
+      name: '프리미엄 꽃포장지 리본 세트 제작용 부자재',
+      sku: 'WRAP-001',
+      category: 'supplies',
+      salePrice: 15000,
+      supplierPrice: 5000,
+      margin: 66.7,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800',
+      images: ['https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800'],
+      imageAltTexts: ['꽃포장지 리본세트 메인 이미지'],
+      imageCount: 1,
+      naver_title: '프리미엄 꽃포장지 리본세트 꽃집포장재료',
+      naver_keywords: '꽃포장지, 리본, 포장재료, 꽃집부자재, 꽃포장세트',
+      naver_description: '세련된 종이 재질의 포장지와 리본 세트. 선물 포장에 필수 아이템.',
+      naver_brand: '꽃티움',
+      naver_material: '종이, 패브릭',
+      naver_color: '핑크, 화이트, 크라프트',
+      naver_size: '50x60cm',
+      shippingFee: 3000,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+    },
+  ];
+
+  for (const p of products) {
+    const created = await prisma.product.create({
+       { ...p, supplierId: supplier.id, userId: user.id },
+    });
+    console.log('✅ 상품 생성:', created.sku);
+  }
+
+  console.log('🎉 Seed 완료:', products.length, '개');
+}
+
+main()
+  .catch((e) => {
+    console.error('❌ Seed 에러:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

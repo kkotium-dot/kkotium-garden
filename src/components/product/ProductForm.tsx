@@ -1,60 +1,226 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import ProductSeoForm from './seo/ProductSeoForm';
-import { useProductSeo } from '@/hooks/useProductSeo';
+import { toast } from 'react-hot-toast';
+import ProductBasicForm from './basic/ProductBasicForm';
 
-export default function ProductForm() {
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🎯 네이버 스토어 최적화 상품 등록 폼 (프로덕션 완성본)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+interface ProductFormProps {
+  productId?: string;  // 'temp' (신규) 또는 실제 ID (수정)
+  initialData?: any;
+}
+
+export default function ProductForm({ productId = 'temp', initialData }: ProductFormProps = {}) {
   const router = useRouter();
-  const { seoFields, updateSeoFields, validateSeo, toFormData } = useProductSeo();
+  const [activeTab, setActiveTab] = useState('basic');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [suggestedTitles, setSuggestedTitles] = useState<string[]>([]);
 
-  const [activeTab, setActiveTab] = useState<'basic' | 'images' | 'seo'>('basic');
-  const [loading, setLoading] = useState(false);
-
+  // STATE: basic info
   const [formData, setFormData] = useState({
     name: '',
-    category: '',
-    supplierId: '',
+    sku: '',
+    naverCategoryCode: '',
+    naverCategoryPath: '',
+    salePrice: '',
+    supplierPrice: '',
+    stock: '0',
     brand: '',
-    origin: '',
-    price: 0,
-    salePrice: 0,
-    stock: 3000,
-    description: '',
-    naverTitle: '',
-    naverKeywords: '',
-    naverDescription: '',
     manufacturer: '',
-    model: '',
-    size: '',
-    color: '',
-    careInstructions: '',
-    mainImage: '',
-    images: [] as string[],
+    originCode: '0200037',
+    originName: '',
+    shippingFee: '3500',
+    detailDescription: '',
+    sellerProductCode: '',
+    supplierProductCode: '',
+    instantDiscount: '',
+    importerName: '',
   });
 
-  const handleChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STATE: 이미지
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const [images, setImages] = useState<string[]>([]);
+  const [newImageUrl, setNewImageUrl] = useState('');
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STATE: SEO
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const [seoData, setSeoData] = useState({
+    title: '',
+    description: '',
+    keywords: '',
+    naver_title: '',
+    naver_description: '',
+  });
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // SEO 점수 자동 계산 (실시간)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const calculateSeoScore = () => {
+    let score = 0;
+
+    // SEO 제목 (0~20점)
+    if (seoData.title.length >= 10 && seoData.title.length <= 60) {
+      score += 20;
+    } else if (seoData.title.length > 0) {
+      score += 10;
+    }
+
+    // SEO 설명 (0~25점)
+    if (seoData.description.length >= 50 && seoData.description.length <= 160) {
+      score += 25;
+    } else if (seoData.description.length > 0) {
+      score += 12;
+    }
+
+    // 키워드 (0~15점)
+    const keywordCount = seoData.keywords.split(',').filter(k => k.trim()).length;
+    if (keywordCount >= 3 && keywordCount <= 10) {
+      score += 15;
+    } else if (keywordCount > 0) {
+      score += 7;
+    }
+
+    // 네이버 상품명 (0~20점)
+    if (seoData.naver_title.length >= 20 && seoData.naver_title.length <= 26) {
+      score += 20;
+    } else if (seoData.naver_title.length >= 10 && seoData.naver_title.length <= 100) {
+      score += 15;
+    } else if (seoData.naver_title.length > 0) {
+      score += 8;
+    }
+
+    // 네이버 설명 (0~20점)
+    if (seoData.naver_description.length >= 200 && seoData.naver_description.length <= 300) {
+      score += 20;
+    } else if (seoData.naver_description.length >= 50 && seoData.naver_description.length <= 500) {
+      score += 15;
+    } else if (seoData.naver_description.length > 0) {
+      score += 8;
+    }
+
+    return score;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const seoScore = calculateSeoScore();
+  const seoGrade = seoScore >= 80 ? 'A' : seoScore >= 50 ? 'B' : 'C';
+  const seoGradeColor = seoGrade === 'A' ? 'green' : seoGrade === 'B' ? 'yellow' : 'red';
 
-    // SEO 유효성 검증
-    const seoValidation = validateSeo();
-    if (!seoValidation.isValid) {
-      alert('SEO 필드 오류:\n' + seoValidation.errors.join('\n'));
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 필수 항목 검증 (3가지만!)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const isValid = () => {
+    if (!formData.name?.trim()) return false;
+    if (!formData.salePrice || parseFloat(formData.salePrice) <= 0) return false;
+    if (images.length === 0) return false;
+    return true;
+  };
+
+  // Auto-generate SKU (KKT-YYYYMMDD-XXXX format per master plan)
+  useEffect(() => {
+    if (formData.name && !formData.sku) {
+      const now = new Date();
+      const dateStr =
+        String(now.getFullYear()) +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0');
+      const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+      setFormData(prev => ({ ...prev, sku: `KKT-${dateStr}-${rand}` }));
+    }
+    if (formData.name && !seoData.naver_title) {
+      setSeoData(prev => ({ ...prev, naver_title: formData.name }));
+    }
+  }, [formData.name]);
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 이미지 추가/삭제
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const handleAddImage = () => {
+    if (!newImageUrl.trim()) {
+      toast.error('이미지 URL을 입력하세요');
       return;
     }
 
-    setLoading(true);
+    if (images.length >= 5) {
+      toast.error('이미지는 최대 5개까지 등록 가능합니다');
+      return;
+    }
+
+    setImages(prev => [...prev, newImageUrl.trim()]);
+    setNewImageUrl('');
+    toast.success('이미지가 추가되었습니다');
+  };
+
+  const handleDeleteImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+    toast.success('이미지가 삭제되었습니다');
+  };
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 상품 등록 제출
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const handleSubmit = async () => {
+    if (!isValid()) {
+      toast.error('필수 항목: 상품명, 판매가, 이미지 (최소 1개)');
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
+      const margin = formData.supplierPrice && parseFloat(formData.supplierPrice) > 0
+        ? ((parseFloat(formData.salePrice) - parseFloat(formData.supplierPrice)) / parseFloat(formData.salePrice) * 100).toFixed(1)
+        : 0;
+
+      const now = new Date();
+      const dateStr =
+        String(now.getFullYear()) +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0');
+      const fallbackSku = `KKT-${dateStr}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
       const productData = {
-        ...formData,
-        ...toFormData(), // SEO 필드 포함
+        name: formData.name,
+        sku: formData.sku || fallbackSku,
+        category: formData.naverCategoryPath || formData.naverCategoryCode || 'uncategorized',
+        naverCategoryCode: formData.naverCategoryCode || '',
+        naverCategoryPath: formData.naverCategoryPath || '',
+        salePrice: parseFloat(formData.salePrice),
+        supplierPrice: parseFloat(formData.supplierPrice || '0'),
+        stock: parseInt(formData.stock || '0'),
+        brand: formData.brand || '',
+        manufacturer: formData.manufacturer || '',
+        originCode: formData.originCode,
+        originName: formData.originName,
+        shippingFee: parseFloat(formData.shippingFee || '0'),
+        margin: parseFloat(margin.toString()),
+        images,
+        imageAltTexts: images.map((_, idx) => `${formData.name} ${idx + 1}`),
+        mainImage: images[0] || '',
+        detailDescription: formData.detailDescription || '',
+        naver_title: seoData.naver_title || formData.name,
+        naver_description: seoData.naver_description || '',
+        naver_brand: formData.brand || '',
+        naver_manufacturer: formData.manufacturer || '',
+        naver_origin: formData.originCode,
+        naver_keywords: seoData.keywords || '',
+        seo_score: seoScore,
+        status: 'draft',
+        seller_product_code: formData.sellerProductCode || null,
+        supplier_product_code: formData.supplierProductCode || null,
+        instant_discount: formData.instantDiscount ? parseFloat(formData.instantDiscount) : null,
+        importer_name: formData.importerName || null,
       };
+
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📦 상품 등록 데이터:', productData);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       const response = await fetch('/api/products', {
         method: 'POST',
@@ -62,324 +228,379 @@ export default function ProductForm() {
         body: JSON.stringify(productData),
       });
 
-      if (response.ok) {
-        alert('✅ 상품 등록 완료! (Naver SEO 포함)');
-        router.push('/products');
-      } else {
-        const error = await response.json();
-        alert('❌ 등록 실패: ' + error.message);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || '상품 등록에 실패했습니다.');
       }
-    } catch (error) {
-      console.error(error);
-      alert('서버 오류가 발생했습니다');
+
+      console.log('✅ 상품 등록 성공:', data);
+      toast.success('상품이 등록되었습니다!');
+
+      // 1초 후 목록으로 이동
+      setTimeout(() => {
+        router.push('/products');
+      }, 1000);
+
+    } catch (error: any) {
+      console.error('❌ 상품 등록 오류:', error);
+      toast.error(error.message || '상품 등록 중 오류가 발생했습니다.');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 렌더링
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">상품 등록</h1>
-        <button
-          onClick={() => router.push('/products')}
-          className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-        >
-          ← 목록으로
-        </button>
+    <div className="max-w-6xl mx-auto p-6">
+      {/* 헤더 */}
+      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-black text-gray-900">📦 상품 등록</h1>
+            <p className="text-gray-600 mt-2">
+              공급사: <span className="text-pink-600 font-bold">꽃틔움(협력사)</span>
+            </p>
+          </div>
+
+          {/* SEO 점수 */}
+          <div className={`px-6 py-4 rounded-2xl border-2 ${
+            seoGradeColor === 'green' 
+              ? 'bg-green-50 text-green-700 border-green-300' 
+              : seoGradeColor === 'yellow'
+              ? 'bg-yellow-50 text-yellow-700 border-yellow-300'
+              : 'bg-red-50 text-red-700 border-red-300'
+          }`}>
+            <div className="text-center">
+              <div className="text-3xl font-black">{seoGrade}등급</div>
+              <div className="text-sm font-bold mt-1">SEO {seoScore}/100</div>
+              <div className="text-xs mt-1">
+                {seoGrade === 'A' && '우선 노출'}
+                {seoGrade === 'B' && '일반 노출'}
+                {seoGrade === 'C' && '개선 필요'}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6">
-        {/* 탭 네비게이션 */}
-        <div className="flex space-x-4 border-b mb-6">
+      {/* 탭 */}
+      <div className="bg-white rounded-2xl shadow-lg mb-6 p-2 flex gap-2">
+        {[
+          { id: 'basic', label: '기본 정보', icon: '📦' },
+          { id: 'images', label: `이미지 (${images.length})`, icon: '🖼️' },
+          { id: 'detail', label: '상세설명', icon: '📝' },
+          { id: 'seo', label: 'SEO', icon: '📈' },
+        ].map((tab) => (
           <button
-            type="button"
-            onClick={() => setActiveTab('basic')}
-            className={`px-6 py-3 font-medium border-b-2 transition-colors $\{
-              activeTab === 'basic'
-                ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 py-4 px-6 rounded-xl font-bold transition-all ${
+              activeTab === tab.id
+                ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
             }`}
           >
-            📝 기본 정보
+            {tab.icon} {tab.label}
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('images')}
-            className={`px-6 py-3 font-medium border-b-2 transition-colors $\{
-              activeTab === 'images'
-                ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            🖼️ 이미지
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('seo')}
-            className={`px-6 py-3 font-medium border-b-2 transition-colors $\{
-              activeTab === 'seo'
-                ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            🔍 네이버 SEO
-          </button>
-        </div>
+        ))}
+      </div>
 
-        {/* 기본 정보 탭 */}
+      {/* 컨텐츠 */}
+      <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+        {/* basic info tab - delegated to ProductBasicForm */}
         {activeTab === 'basic' && (
+          <ProductBasicForm
+            formData={{
+              name: formData.name,
+              sku: formData.sku,
+              naverCategoryCode: formData.naverCategoryCode,
+              naverCategoryPath: formData.naverCategoryPath,
+              salePrice: formData.salePrice,
+              supplierPrice: formData.supplierPrice,
+              stock: formData.stock,
+              brand: formData.brand,
+              manufacturer: formData.manufacturer,
+              originCode: formData.originCode,
+              originName: formData.originName,
+              shippingFee: formData.shippingFee,
+              sellerProductCode: formData.sellerProductCode,
+              supplierProductCode: formData.supplierProductCode,
+              instantDiscount: formData.instantDiscount,
+              importerName: formData.importerName,
+            }}
+            onChange={(updates) => setFormData(prev => ({ ...prev, ...updates }))}
+          />
+        )}
+        
+
+
+        {/* 이미지 */}
+        {activeTab === 'images' && (
           <div className="space-y-6">
-            {/* 상품명 */}
             <div>
-              <label className="block text-sm font-medium mb-2">
-                상품명 <span className="text-red-500">*</span>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                이미지 URL 추가 <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddImage()}
+                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none"
+                  placeholder="https://example.com/image.jpg"
+                />
+                <button
+                  onClick={handleAddImage}
+                  className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-bold hover:shadow-lg transition-all"
+                >
+                  추가
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {images.length}/5 (권장: 3~5개)
+              </p>
+            </div>
+
+            {images.length > 0 && (
+              <div className="grid grid-cols-3 gap-4">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative border-2 border-gray-200 rounded-xl p-2">
+                    <img
+                      src={img}
+                      alt={`이미지 ${idx + 1}`}
+                      className="w-full h-40 object-cover rounded-lg"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://via.placeholder.com/400x400?text=Image+Error';
+                      }}
+                    />
+                    <button
+                      onClick={() => handleDeleteImage(idx)}
+                      className="absolute top-1 right-1 bg-red-500 text-white w-8 h-8 rounded-full hover:bg-red-600 transition-all"
+                    >
+                      ×
+                    </button>
+                    {idx === 0 && (
+                      <div className="absolute bottom-3 left-3 bg-pink-500 text-white text-xs px-2 py-1 rounded-lg font-bold">
+                        메인
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {images.length === 0 && (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-4xl mb-4">🖼️</p>
+                <p className="text-sm">이미지 URL을 추가하세요</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 상세설명 */}
+        {activeTab === 'detail' && (
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">상세 설명</label>
+            <textarea
+              value={formData.detailDescription}
+              onChange={(e) => setFormData({ ...formData, detailDescription: e.target.value })}
+              rows={10}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none"
+              placeholder="상품의 상세 정보를 입력하세요..."
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.detailDescription.length}자
+            </p>
+          </div>
+        )}
+
+        {/* SEO */}
+        {activeTab === 'seo' && (
+          <div className="space-y-6">
+
+            {/* ✨ 꼬띠 AI 자동 생성 버튼 */}
+            <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-200 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="font-black text-gray-800">✨ 꼬띠 AI 자동 생성</h3>
+                  <p className="text-xs text-gray-500 mt-1">상품명/카테고리로 키워드·제목·설명을 한번에 생성해요</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!formData.name) { toast.error('먼저 상품명을 입력하세요'); return; }
+                    setIsAiLoading(true);
+                    try {
+                      const res = await fetch(`/api/products/temp/keywords`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mode: 'all', name: formData.name, category: formData.naverCategoryPath || formData.naverCategoryCode }),
+                      });
+                      const data = await res.json();
+                      if (!data.success) throw new Error(data.error);
+                      if (data.keywords) setSeoData(prev => ({ ...prev, keywords: data.keywords.join(', ') }));
+                      if (data.titles?.length) {
+                        setSuggestedTitles(data.titles);
+                        setSeoData(prev => ({ ...prev, title: data.titles[0], naver_title: data.titles[0].slice(0, 26) }));
+                      }
+                      if (data.description) setSeoData(prev => ({ ...prev, description: data.description.slice(0, 160), naver_description: data.description.slice(0, 300) }));
+                      toast.success('✨ AI 생성 완료!');
+                    } catch (e: any) {
+                      toast.error(e.message || 'AI 생성 실패');
+                    } finally {
+                      setIsAiLoading(false);
+                    }
+                  }}
+                  disabled={isAiLoading || !formData.name}
+                  className={`px-6 py-3 rounded-xl font-black text-white transition-all ${
+                    isAiLoading || !formData.name
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-pink-500 to-purple-500 hover:shadow-lg hover:scale-105'
+                  }`}
+                >
+                  {isAiLoading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      생성 중...
+                    </span>
+                  ) : '🤖 AI 생성'}
+                </button>
+              </div>
+
+              {/* 추천 제목 선택 */}
+              {suggestedTitles.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-gray-600 mb-2">📌 추천 제목 (클릭하면 적용)</p>
+                  <div className="flex flex-col gap-1">
+                    {suggestedTitles.map((t, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSeoData(prev => ({ ...prev, title: t, naver_title: t.slice(0, 26) }))}
+                        className="text-left text-xs px-3 py-2 bg-white border border-pink-200 rounded-lg hover:bg-pink-50 hover:border-pink-400 transition-all"
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                SEO 제목 (10~60자)
               </label>
               <input
                 type="text"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                placeholder="예: 프리미엄 장미 꽃다발"
-                required
+                value={seoData.title}
+                onChange={(e) => setSeoData({ ...seoData, title: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none"
+                placeholder="검색 결과에 표시될 제목"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {seoData.title.length}/60자
+              </p>
             </div>
 
-            {/* 카테고리 & 공급사 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">카테고리</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => handleChange('category', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="">선택하세요</option>
-                  <option value="식물">식물</option>
-                  <option value="화훼">화훼</option>
-                  <option value="원예용품">원예용품</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">공급사 ID</label>
-                <input
-                  type="text"
-                  value={formData.supplierId}
-                  onChange={(e) => handleChange('supplierId', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                  placeholder="SUP001"
-                />
-              </div>
-            </div>
-
-            {/* 도매가 & 판매가 & 재고 */}
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">도매가</label>
-                <input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => handleChange('price', parseInt(e.target.value))}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">판매가</label>
-                <input
-                  type="number"
-                  value={formData.salePrice}
-                  onChange={(e) => handleChange('salePrice', parseInt(e.target.value))}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">재고</label>
-                <input
-                  type="number"
-                  value={formData.stock}
-                  onChange={(e) => handleChange('stock', parseInt(e.target.value))}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* 상품 설명 */}
             <div>
-              <label className="block text-sm font-medium mb-2">상품 설명</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                SEO 설명 (50~160자)
+              </label>
               <textarea
-                value={formData.description}
-                onChange={(e) => handleChange('description', e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                rows={4}
-                placeholder="상품에 대한 자세한 설명을 입력하세요"
-              />
-            </div>
-
-            {/* 브랜드 & 원산지 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">브랜드</label>
-                <input
-                  type="text"
-                  value={formData.brand}
-                  onChange={(e) => handleChange('brand', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                  placeholder="꽃티움"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">원산지</label>
-                <select
-                  value={formData.origin}
-                  onChange={(e) => handleChange('origin', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="">선택하세요</option>
-                  <option value="국내">국내</option>
-                  <option value="네덜란드">네덜란드</option>
-                  <option value="콜롬비아">콜롬비아</option>
-                  <option value="에콰도르">에콰도르</option>
-                </select>
-              </div>
-            </div>
-
-            {/* 제조사 & 모델 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">제조사</label>
-                <input
-                  type="text"
-                  value={formData.manufacturer}
-                  onChange={(e) => handleChange('manufacturer', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">모델명</label>
-                <input
-                  type="text"
-                  value={formData.model}
-                  onChange={(e) => handleChange('model', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-            </div>
-
-            {/* 재질/소재 & 색상 & 크기 */}
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">재질/소재</label>
-                <input
-                  type="text"
-                  value={formData.size}
-                  onChange={(e) => handleChange('size', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                  placeholder="생화"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">색상</label>
-                <input
-                  type="text"
-                  value={formData.color}
-                  onChange={(e) => handleChange('color', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                  placeholder="레드, 핑크"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">크기</label>
-                <input
-                  type="text"
-                  value={formData.model}
-                  onChange={(e) => handleChange('model', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                  placeholder="중형(50cm)"
-                />
-              </div>
-            </div>
-
-            {/* 관리 방법 */}
-            <div>
-              <label className="block text-sm font-medium mb-2">관리 방법</label>
-              <textarea
-                value={formData.careInstructions}
-                onChange={(e) => handleChange('careInstructions', e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                value={seoData.description}
+                onChange={(e) => setSeoData({ ...seoData, description: e.target.value })}
                 rows={3}
-                placeholder="물 갈이 주기, 보관 방법 등"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none"
+                placeholder="검색 결과에 표시될 설명"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {seoData.description.length}/160자
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                키워드 (3~10개, 쉼표로 구분)
+              </label>
+              <input
+                type="text"
+                value={seoData.keywords}
+                onChange={(e) => setSeoData({ ...seoData, keywords: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none"
+                placeholder="주방정리함,싱크대수저통,스테인리스정리함"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {seoData.keywords.split(',').filter(k => k.trim()).length}개
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                네이버 쇼핑 상품명 (20~26자 권장)
+              </label>
+              <input
+                type="text"
+                value={seoData.naver_title}
+                onChange={(e) => setSeoData({ ...seoData, naver_title: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none"
+                placeholder="네이버 쇼핑 전용 상품명"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {seoData.naver_title.length}자
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                네이버 쇼핑 설명 (200~300자 권장)
+              </label>
+              <textarea
+                value={seoData.naver_description}
+                onChange={(e) => setSeoData({ ...seoData, naver_description: e.target.value })}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none"
+                placeholder="네이버 쇼핑 전용 상품 설명"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {seoData.naver_description.length}자
+              </p>
             </div>
           </div>
         )}
+      </div>
 
-        {/* 이미지 탭 */}
-        {activeTab === 'images' && (
-          <div className="space-y-6">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-              <div className="space-y-4">
-                <div className="text-gray-500">
-                  <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-                <div>
-                  <label className="cursor-pointer">
-                    <span className="mt-2 block text-sm font-medium text-purple-600">
-                      이미지 업로드
-                    </span>
-                    <input type="file" className="hidden" accept="image/*" multiple />
-                  </label>
-                  <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF (최대 10MB)</p>
-                </div>
-              </div>
-            </div>
+      {/* 하단 버튼 */}
+      <div className="bg-white rounded-2xl shadow-lg p-6 flex gap-4">
+        <button
+          onClick={() => router.push('/products')}
+          className="flex-1 py-4 px-6 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-all"
+        >
+          ← 목록으로
+        </button>
 
-            <div className="text-sm text-gray-600">
-              <p>• 메인 이미지 1장 필수</p>
-              <p>• 추가 이미지 최대 10장</p>
-              <p>• 권장 크기: 1000x1000px</p>
-            </div>
-          </div>
-        )}
-
-        {/* SEO 탭 - ProductSeoForm 통합 */}
-        {activeTab === 'seo' && (
-          <ProductSeoForm
-            value={seoFields}
-            onChange={updateSeoFields}
-          />
-        )}
-
-        {/* 제출 버튼 */}
-        <div className="flex justify-end space-x-4 pt-6 border-t mt-6">
-          <button
-            type="button"
-            onClick={() => router.push('/products')}
-            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
-            disabled={loading}
-          >
-            취소
-          </button>
-          <button
-            type="submit"
-            className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
-            disabled={loading}
-          >
-            {loading ? '등록 중...' : '✅ 상품 등록'}
-          </button>
-        </div>
-      </form>
+        <button
+          onClick={handleSubmit}
+          disabled={!isValid() || isSubmitting}
+          className={`flex-1 py-4 px-6 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+            isValid() && !isSubmitting
+              ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:shadow-lg'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          {isSubmitting ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              등록 중...
+            </>
+          ) : (
+            '💾 상품 등록하기'
+          )}
+        </button>
+      </div>
     </div>
   );
 }

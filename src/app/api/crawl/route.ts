@@ -1,118 +1,173 @@
-import { NextRequest, NextResponse } from 'next/server';
-import * as cheerio from 'cheerio';
+import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-export async function POST(request: NextRequest) {
-  try {
-    const { keyword } = await request.json();
+// Bulk batch crawler using Domeggook OpenAPI (getItemView ver=4.5)
+// Replaces the old HTML/cheerio scraper entirely
+// SSE stream: one event per product, then a 'done' event
+// Rate limit: 180/min — we batch 5 at a time with 300ms gap
 
-    if (!keyword) {
-      return NextResponse.json({
-        success: false,
-        message: '키워드를 입력하세요'
-      }, { status: 400 });
-    }
 
-    console.log('\n' + '='.repeat(80));
-    console.log('🔍 크롤링 시작:', keyword);
-    console.log('='.repeat(80));
+export const dynamic = 'force-dynamic';
+const DOMEGGOOK_API = 'https://domeggook.com/ssl/api/';
 
-    // 도매매 검색 URL
-    const searchUrl = `https://www.domeme.com/search?keyword=${encodeURIComponent(keyword)}`;
-    console.log('URL:', searchUrl);
+function extractProductNo(url: string): string | null {
+  const short = url.match(/\/s\/(\d{6,10})/);
+  if (short) return short[1];
+  const uid = url.match(/[?&](?:uid|no)=(\d{6,10})/);
+  if (uid) return uid[1];
+  if (/^\d{6,10}$/.test(url.trim())) return url.trim();
+  return null;
+}
 
-    const response = await fetch(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`도매매 접속 실패: ${response.status}`);
-    }
-
-    const html = await response.text();
-    const $ = cheerio.load(html);
-
-    const products: any[] = [];
-
-    // 도매매 상품 리스트 파싱 (실제 선택자는 도매매 사이트 구조에 맞게 수정 필요)
-    $('.product-item, .item, [class*="product"]').each((index, element) => {
-      if (index >= 20) return false; // 최대 20개
-
-      try {
-        const $el = $(element);
-        
-        // 상품명
-        const name = $el.find('.product-name, .name, h3, h4, [class*="title"]').first().text().trim();
-        
-        // 가격
-        const priceText = $el.find('.price, .product-price, [class*="price"]').first().text().trim();
-        const price = parseInt(priceText.replace(/[^\d]/g, ''));
-        
-        // 이미지
-        const image = $el.find('img').first().attr('src') || $el.find('img').first().attr('data-src') || '';
-        
-        // URL
-        const url = $el.find('a').first().attr('href') || '';
-        const fullUrl = url.startsWith('http') ? url : `https://www.domeme.com${url}`;
-        
-        // 공급업체
-        const supplier = $el.find('.supplier, .shop, [class*="seller"]').first().text().trim();
-
-        if (name && price > 0) {
-          products.push({
-            id: `CRAWL_${Date.now()}_${index}`,
-            name,
-            price,
-            image: image.startsWith('//') ? `https:${image}` : image,
-            url: fullUrl,
-            supplier: supplier || '도매매'
-          });
-
-          console.log(`✅ ${index + 1}. ${name} - ${price.toLocaleString()}원`);
-        }
-      } catch (err) {
-        console.error('상품 파싱 오류:', err);
-      }
-    });
-
-    console.log('\n📊 크롤링 완료:', products.length, '개');
-    console.log('='.repeat(80) + '\n');
-
-    // 실제 크롤링이 안 되면 샘플 데이터 반환 (개발용)
-    if (products.length === 0) {
-      console.log('⚠️  실제 크롤링 실패 - 샘플 데이터 반환');
-      
-      const sampleProducts = Array.from({ length: 10 }, (_, i) => ({
-        id: `SAMPLE_${Date.now()}_${i}`,
-        name: `${keyword} 샘플 상품 ${i + 1}`,
-        price: 15000 + (i * 1000),
-        image: `https://via.placeholder.com/400x300?text=Sample+${i + 1}`,
-        url: `https://www.domeme.com/product/sample_${i}`,
-        supplier: '도매매 샘플'
-      }));
-
-      return NextResponse.json({
-        success: true,
-        products: sampleProducts,
-        message: '샘플 데이터 (실제 크롤링 실패)'
-      });
-    }
-
-    return NextResponse.json({
-      success: true,
-      products,
-      message: `${products.length}개 상품을 찾았습니다`
-    });
-
-  } catch (error) {
-    console.error('\n❌ 크롤링 오류:', error);
-    return NextResponse.json({
-      success: false,
-      message: error instanceof Error ? error.message : '크롤링 실패',
-      products: []
-    }, { status: 500 });
+function parseSupplyPrice(val: unknown): number {
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    const first = val.split('|')[0];
+    const price = parseInt(first.split('+')[1] ?? first, 10);
+    return isNaN(price) ? 0 : price;
   }
+  return 0;
+}
+
+function parseShipFee(deli: Record<string, unknown>): number {
+  const supply = deli?.supply as Record<string, unknown> | undefined;
+  const dome = deli?.dome as Record<string, unknown> | undefined;
+  const src = supply ?? dome;
+  if (!src) return 3000;
+  if (src.type === '무료배송') return 0;
+  const fee = src.fee;
+  if (typeof fee === 'number') return fee;
+  if (typeof fee === 'string') { const n = parseInt(fee, 10); return isNaN(n) ? 3000 : n; }
+  return 3000;
+}
+
+function parseOptions(selectOpt: string | undefined): string[] {
+  if (!selectOpt) return [];
+  try {
+    const p = JSON.parse(selectOpt) as { data?: Record<string, { name?: string; hid?: string | number }> };
+    if (p.data) return Object.values(p.data).filter(o => String(o.hid ?? '0') !== '1').map(o => o.name?.trim() ?? '').filter(Boolean).slice(0, 30);
+  } catch { /* ignore */ }
+  return [];
+}
+
+async function getApiKey(): Promise<string | null> {
+  try {
+    const rows = await prisma.$queryRaw<{ domeggook_api_key: string }[]>`SELECT domeggook_api_key FROM store_settings WHERE id = 'default' LIMIT 1`;
+    return rows[0]?.domeggook_api_key?.trim() || null;
+  } catch { return null; }
+}
+
+async function crawlOne(productNo: string, apiKey: string, url: string): Promise<Record<string, unknown>> {
+  const apiUrl = `${DOMEGGOOK_API}?ver=4.5&mode=getItemView&aid=${apiKey}&no=${productNo}&om=json`;
+  const res = await fetch(apiUrl, { signal: AbortSignal.timeout(12_000) });
+  if (!res.ok) throw new Error(`API HTTP ${res.status}`);
+  const raw = await res.json() as { domeggook?: Record<string, unknown>; errors?: unknown };
+  if (raw.errors || !raw.domeggook) throw new Error(`API error: ${JSON.stringify(raw.errors ?? raw).slice(0, 100)}`);
+
+  const item = raw.domeggook as {
+    basis?: { title?: string; status?: string };
+    price?: { supply?: unknown };
+    qty?: { inventory?: number };
+    deli?: Record<string, unknown>;
+    seller?: { id?: string; nick?: unknown; rank?: number };
+    thumb?: { large?: string; largePng?: string; original?: string };
+    selectOpt?: string;
+    detail?: { country?: string };
+    category?: { current?: { name?: string; code?: string } };
+    channel?: { supply?: boolean };
+  };
+
+  const supplierPrice = parseSupplyPrice(item.price?.supply);
+  const shipFee = parseShipFee(item.deli as Record<string, unknown>);
+  const mergeEnable = (item.deli as Record<string, unknown> | undefined)?.merge as { enable?: string } | undefined;
+
+  return {
+    url,
+    status: 'success',
+    name: item.basis?.title?.replace(/\s+/g, ' ').trim() ?? '',
+    supplierPrice,
+    images: (() => { const t = item.thumb?.largePng ?? item.thumb?.large ?? item.thumb?.original ?? ''; return t ? [t] : []; })(),
+    options: parseOptions(item.selectOpt),
+    description: '',
+    // Extended fields
+    productNo,
+    inventory: item.qty?.inventory ?? 0,
+    shipFee,
+    canMerge: mergeEnable?.enable === 'y',
+    sellerNick: String(item.seller?.nick ?? ''),
+    sellerId: String(item.seller?.id ?? ''),
+    sellerRank: item.seller?.rank ?? 0,
+    categoryName: item.category?.current?.name ?? '',
+    categoryCode: item.category?.current?.code ?? '',
+    country: item.detail?.country ?? '',
+  };
+}
+
+export async function GET(request: NextRequest): Promise<Response> {
+  const { searchParams } = new URL(request.url);
+  const urlsRaw = searchParams.get('urls') ?? '';
+  const urls = urlsRaw.split('|').map(u => decodeURIComponent(u).trim()).filter(Boolean).slice(0, 50);
+
+  if (urls.length === 0) {
+    return new Response('No URLs provided', { status: 400 });
+  }
+
+  const apiKey = await getApiKey();
+  if (!apiKey) {
+    return new Response(JSON.stringify({ type: 'error', message: 'API Key가 설정되지 않았습니다. 네이버 기본값 설정에서 API Key를 입력해주세요.' }), { status: 400 });
+  }
+
+  const encoder = new TextEncoder();
+  let done = 0;
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (obj: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+      };
+
+      // Process in batches of 5
+      const BATCH = 5;
+      for (let i = 0; i < urls.length; i += BATCH) {
+        const batch = urls.slice(i, i + BATCH);
+        await Promise.allSettled(batch.map(async url => {
+          const productNo = extractProductNo(url);
+          if (!productNo) {
+            send({ type: 'result', url, status: 'error', error: '상품번호를 찾을 수 없습니다' });
+            done++;
+          } else {
+            try {
+              const result = await crawlOne(productNo, apiKey, url);
+              send({ type: 'result', ...result });
+              // Save to crawl_logs
+              prisma.$executeRaw`INSERT INTO crawl_logs (url, name, supplier_price, images, options, status, source) VALUES (${url}, ${String(result.name)}, ${Number(result.supplierPrice)}, ${JSON.stringify(result.images)}::jsonb, ${JSON.stringify(result.options)}::jsonb, 'success', 'bulk')`.catch(() => null);
+            } catch (e: unknown) {
+              send({ type: 'result', url, status: 'error', error: e instanceof Error ? e.message : '오류' });
+              prisma.$executeRaw`INSERT INTO crawl_logs (url, name, supplier_price, images, options, status, source, error_msg) VALUES (${url}, '', 0, '[]'::jsonb, '[]'::jsonb, 'error', 'bulk', ${String(e)})`.catch(() => null);
+            }
+            done++;
+          }
+          send({ type: 'progress', done, total: urls.length });
+        }));
+        // Throttle between batches to stay under 180/min
+        if (i + BATCH < urls.length) await new Promise(r => setTimeout(r, 350));
+      }
+
+      send({ type: 'done', total: urls.length });
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
+}
+
+// Keep POST for legacy compatibility (returns 410 gone)
+export async function POST() {
+  return new Response(JSON.stringify({ error: 'Use GET /api/crawler/stream instead' }), { status: 410 });
 }

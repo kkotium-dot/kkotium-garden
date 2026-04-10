@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import * as XLSX from 'xlsx';
+import { prisma } from '@/lib/prisma';
 
-const prisma = new PrismaClient();
 
+export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -21,6 +22,9 @@ export async function POST(req: Request) {
     const data = XLSX.utils.sheet_to_json(sheet);
 
     // 상품 데이터 변환
+    // TODO: Replace 'defaultSupplierId' and 'defaultUserId' with actual values or logic to get them
+    const defaultSupplierId = 1;
+    const defaultUserId = 1;
     const products = data.map((row: any) => ({
       name: row['상품명'] || row['name'],
       sku: row['SKU'] || `SKU${Date.now()}${Math.random().toString(36).substr(2, 5)}`,
@@ -30,6 +34,8 @@ export async function POST(req: Request) {
       margin: parseFloat(row['마진율'] || row['margin']) || 0,
       mainImage: row['이미지'] || row['image'],
       status: 'ACTIVE',
+      supplierId: row['공급사ID'] || row['supplierId'] || defaultSupplierId,
+      userId: row['등록자ID'] || row['userId'] || defaultUserId,
     })).filter(p => p.name && p.supplierPrice > 0);
 
     // DB 저장

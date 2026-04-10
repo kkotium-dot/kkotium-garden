@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+
+export const dynamic = 'force-dynamic';
 /**
  * GET: 주문 목록 조회
  * 쿼리 파라미터:
@@ -39,21 +41,14 @@ export async function GET(request: NextRequest) {
       prisma.order.findMany({
         where,
         include: {
-          items: {
+          orderItems: {
             include: {
               product: true,
             },
           },
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
         },
         orderBy: {
-          orderDate: 'desc',
+          createdAt: 'desc',
         },
         skip,
         take: limit,
@@ -158,11 +153,12 @@ export async function POST(request: NextRequest) {
           shippingRequest: shippingRequest || '',
           paymentMethod,
           totalPrice,
+          totalAmount: totalPrice, // Add this line to satisfy the required field
           shippingFee,
           discount,
           status: 'pending',
           userId: userId || null,
-          items: {
+          orderItems: {
             create: items.map((item: any) => ({
               productId: item.productId,
               productName: item.productName,
@@ -174,7 +170,7 @@ export async function POST(request: NextRequest) {
           },
         },
         include: {
-          items: {
+          orderItems: {
             include: {
               product: true,
             },

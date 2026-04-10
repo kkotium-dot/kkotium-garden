@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+
+export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -18,6 +20,12 @@ export async function POST(request: NextRequest) {
       description,
       images,
       options,
+
+      // 플랫폼/공급사/SKU 필드 (신규)
+      platformId,
+      shippingTemplateId,
+      supplierProductNo,
+      sku: bodysku,
 
       // 이미지 필드
       mainImage,
@@ -107,7 +115,9 @@ export async function POST(request: NextRequest) {
         supplier = await prisma.supplier.create({
           data: {
             code: 'DEFAULT',
-            name: '기본 공급처',
+            name: '기본 공급처',    
+            abbr: 'DEF',          
+            platformCode: 'ETC',
             contact: '010-0000-0000',
             // ✅ Supplier 스키마에 맞춤 (email 제거)
           }
@@ -139,9 +149,20 @@ export async function POST(request: NextRequest) {
       console.log('✅ 기본 사용자 생성 완료:', firstUser.id);
     }
 
-    // SKU 자동 생성
-    const timestamp = Date.now().toString().slice(-8);
-    const sku = `KG-${timestamp}`;
+    // SKU: body에서 온 것 우선, 없으면 자동 생성
+    let sku = bodysku?.trim();
+    if (sku) {
+      const dupCheck = await prisma.product.findUnique({ where: { sku } });
+      if (dupCheck) {
+        return NextResponse.json(
+          { success: false, error: `SKU "${sku}"는 이미 사용 중입니다.` },
+          { status: 409 }
+        );
+      }
+    } else {
+      const timestamp = Date.now().toString().slice(-8);
+      sku = `KG-${timestamp}`;
+    }
 
     // 마진 계산
     const parsedSalePrice = parseInt(salePrice) || 0;
@@ -182,6 +203,9 @@ export async function POST(request: NextRequest) {
         description: description || '',
         status: 'DRAFT',
         userId: firstUser.id,
+        ...(platformId ? { platformId } : {}),
+        ...(shippingTemplateId ? { shippingTemplateId } : {}),
+        ...(supplierProductNo ? { supplierProductNo } : {}),
 
         // 이미지 필드
         mainImage: processedMainImage,

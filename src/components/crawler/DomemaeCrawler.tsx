@@ -196,10 +196,13 @@ export default function DomemaeCrawler() {
         </div>
       )}
 
-      {/* 마진 계산기 */}
+      {/* Margin Calculator */}
       <MarginCalculator
-        supplierPrice={data?.supplierPrice || 0}
-        shippingCost={3000}
+        supplierPrice={data?.supplierPrice ?? 0}
+        salePrice={(data?.supplierPrice ?? 0) * 1.5}
+        shippingFee={3000}
+        onSupplierPriceChange={() => {}}
+        onSalePriceChange={() => {}}
       />
 
       {/* 사용 팁 */}

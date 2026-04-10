@@ -2,8 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // 이미지 최적화
+  // Native addons (bcrypt) must not be bundled by Next.js — Next.js 14 key
+  experimental: {
+    serverComponentsExternalPackages: ['bcrypt'],
+  },
+
+  // Image config — allow all remote patterns + unoptimized for local PNGs
   images: {
+    unoptimized: true,
     domains: ['localhost', 'kkotium.com'],
     remotePatterns: [
       {
@@ -13,28 +19,22 @@ const nextConfig = {
     ],
   },
 
-  // 404 오류 방지
   async headers() {
     return [
       {
         source: '/:path*',
         headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
+          { key: 'X-Frame-Options', value: 'DENY' },
         ],
       },
     ];
   },
 
-  // 개발 서버 설정
   devIndicators: {
     buildActivity: true,
     buildActivityPosition: 'bottom-right',
   },
 
-  // Webpack 설정
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -47,15 +47,11 @@ const nextConfig = {
     return config;
   },
 
-  // 불필요한 요청 무시
   async rewrites() {
     return {
       beforeFiles: [],
       afterFiles: [
-        {
-          source: '/.well-known/:path*',
-          destination: '/404',
-        },
+        { source: '/.well-known/:path*', destination: '/404' },
       ],
       fallback: [],
     };

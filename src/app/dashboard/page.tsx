@@ -1,330 +1,255 @@
 'use client';
+// Dashboard — KKOTIUM v5
+// TASK 3: unified product load — single /api/products call shared to KkottiWidget + DailyPlanWidget
 
-import { useState, useEffect } from 'react';
-import SeoWidget from '@/components/SeoWidget';
-
+import { useEffect, useState, useCallback } from 'react';
+import { Package, TrendingUp, AlertTriangle, Sparkles, Layers, Skull, ArrowRight, ShoppingCart, RefreshCw } from 'lucide-react';
+import KkottiWidget from '@/components/dashboard/KkottiWidget';
+import DailyPlanWidget from '@/components/dashboard/DailyPlanWidget';
+import EventTimeline from '@/components/dashboard/EventTimeline';
 import Link from 'next/link';
-import { formatKRW, formatPercent, formatNumber } from '@/lib/utils/format';
 
-interface Stats {
-  totalProducts: number;
-  totalRevenue: number;
-  totalProfit: number;
-  averageMargin: number;
-  sourcedProducts: {
-    total: number;
-    pending: number;
-    approved: number;
-    listed: number;
-  };
-  recentActivity: Array<{
-    id: number;
-    name: string;
-    status: string;
-    created_at: string;
-  }>;
-  topMarginProducts: Array<{
-    id: number;
-    name: string;
-    wholesale_price: number;
-    retail_price: number;
-    margin: number;
-  }>;
+// ── KPI Card ──────────────────────────────────────────────────────────────
+function KpiCard({
+  label, value, sub, icon: Icon, valueColor, iconBg, iconColor, href,
+}: {
+  label: string; value: string | number; sub?: string;
+  icon: React.ElementType; valueColor: string; iconBg: string; iconColor: string; href?: string;
+}) {
+  const inner = (
+    <div className="kk-card p-5 flex items-start justify-between" style={{ cursor: href ? 'pointer' : 'default' }}>
+      <div>
+        <p style={{ fontSize: '11px', fontWeight: 700, color: '#B0A0A8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>
+          {label}
+        </p>
+        <p style={{ fontSize: '32px', fontWeight: 900, color: valueColor, lineHeight: 1 }}>
+          {value}
+        </p>
+        {sub && <p style={{ fontSize: '12px', color: '#B0A0A8', marginTop: '4px' }}>{sub}</p>}
+      </div>
+      <div className="flex items-center justify-center rounded-xl" style={{ width: 44, height: 44, background: iconBg, flexShrink: 0 }}>
+        <Icon size={20} style={{ color: iconColor }} strokeWidth={2.5} />
+      </div>
+    </div>
+  );
+  return href ? <Link href={href} style={{ textDecoration: 'none', display: 'block' }}>{inner}</Link> : inner;
+}
+
+// ── Pipeline Stage Card ───────────────────────────────────────────────────
+interface PipelineStage {
+  label: string; count: number; icon: React.ElementType;
+  color: string; bg: string; border: string; href: string; hint: string;
+}
+
+function PipelineCard({ stages }: { stages: PipelineStage[] }) {
+  return (
+    <div className="kk-card" style={{ overflow: 'hidden' }}>
+      <div style={{ padding: '14px 20px 12px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Layers size={14} style={{ color: '#e62310' }} />
+        <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>파이프라인 현황</p>
+        <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>소싱 → 등록 → 판매 → 관리</p>
+      </div>
+      <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+        {stages.map((stage) => (
+          <Link key={stage.label} href={stage.href} style={{ textDecoration: 'none' }}>
+            <div style={{ padding: '14px 10px', borderRadius: 14, textAlign: 'center', background: stage.bg, border: `1.5px solid ${stage.border}`, cursor: 'pointer' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, margin: '0 auto 8px', background: '#fff', border: `1.5px solid ${stage.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <stage.icon size={16} style={{ color: stage.color }} />
+              </div>
+              <p style={{ fontSize: 22, fontWeight: 900, color: stage.color, margin: '0 0 2px', lineHeight: 1 }}>{stage.count}</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#1A1A1A', margin: '0 0 3px' }}>{stage.label}</p>
+              <p style={{ fontSize: 10, color: '#B0A0A8', margin: 0, lineHeight: 1.3 }}>{stage.hint}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+      <div style={{ padding: '0 20px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <ArrowRight size={12} style={{ color: '#B0A0A8' }} />
+        <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>각 단계 클릭 시 해당 페이지로 이동합니다</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Today's Performance Card ─────────────────────────────────────────────
+function TodayCard({ orderCount, revenue, paidAmount, loading }: {
+  orderCount: number; revenue: number; paidAmount: number; loading?: boolean;
+}) {
+  const fmt = (n: number) => n >= 10000 ? `${(n / 10000).toFixed(1)}만원` : `${n.toLocaleString()}원`;
+  const items = [
+    { label: '주문 수',   value: loading ? '...' : String(orderCount), unit: '건', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+    { label: '총 매입',   value: loading ? '...' : (revenue > 0 ? fmt(revenue) : '—'), unit: '', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+    { label: '정산 예정', value: loading ? '...' : (paidAmount > 0 ? fmt(paidAmount) : '—'), unit: '', color: '#e62310', bg: '#FFF0F5', border: '#FFB3CE' },
+  ];
+  return (
+    <div className="kk-card" style={{ overflow: 'hidden' }}>
+      <div style={{ padding: '12px 20px 10px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ShoppingCart size={14} style={{ color: '#16a34a' }} />
+          <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>오늘의 실적</p>
+          <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, background: '#dcfce7', color: '#15803d', fontWeight: 700 }}>네이버 실시간</span>
+        </div>
+        <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>
+          {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} KST 기준
+        </p>
+      </div>
+      <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        {items.map(item => (
+          <div key={item.label} style={{ textAlign: 'center', padding: '12px 8px', borderRadius: 12, background: item.bg, border: `1px solid ${item.border}` }}>
+            <p style={{ fontSize: 24, fontWeight: 900, color: item.color, margin: '0 0 4px', lineHeight: 1 }}>{item.value}{item.unit}</p>
+            <p style={{ fontSize: 11, color: item.color, fontWeight: 700, margin: 0, opacity: 0.85 }}>{item.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Shared product shape for widgets ─────────────────────────────────────
+export interface DashboardProduct {
+  id: string; name: string; sku: string; status: string;
+  salePrice: number; supplierPrice: number;
+  naverCategoryCode?: string; keywords?: string[]; tags?: string[];
+  mainImage?: string; aiScore?: number;
+  createdAt?: Date; updatedAt?: Date; lastSaleDate?: Date;
+  supplierName?: string;
+}
+
+interface DashStats {
+  totalProducts: number; activeProducts: number;
+  outOfStockProducts: number; draftProducts: number;
+  avgScore: number; sourcingCount: number; zombieCount: number;
+  todayOrderCount: number; todayRevenue: number; todayPaidAmount: number;
+  naverApiReady: boolean;
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<Stats>({
-    totalProducts: 0,
-    totalRevenue: 0,
-    totalProfit: 0,
-    averageMargin: 0,
-    sourcedProducts: { total: 0, pending: 0, approved: 0, listed: 0 },
-    recentActivity: [],
-    topMarginProducts: []
-  });
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats]               = useState<DashStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  // Shared product list — loaded once, passed to both widgets
+  const [products, setProducts]         = useState<DashboardProduct[]>([]);
+  const [productsLoading, setProdsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchStats();
+  const loadProducts = useCallback(async () => {
+    setProdsLoading(true);
+    try {
+      const res  = await fetch('/api/products?limit=200');
+      const data = await res.json();
+      const raw  = data.products ?? data.data ?? [];
+      setProducts(raw.map((p: any) => ({
+        id: p.id, name: p.name, sku: p.sku, status: p.status,
+        salePrice: p.salePrice ?? 0, supplierPrice: p.supplierPrice ?? 0,
+        naverCategoryCode: p.naverCategoryCode ?? p.category_id ?? '',
+        keywords:  Array.isArray(p.keywords) ? p.keywords : [],
+        tags:      Array.isArray(p.tags) ? p.tags : [],
+        mainImage: p.mainImage ?? p.main_image_url,
+        aiScore:   p.aiScore ?? null,
+        createdAt:    p.createdAt    ? new Date(p.createdAt)    : undefined,
+        updatedAt:    p.updatedAt    ? new Date(p.updatedAt)    : new Date(),
+        lastSaleDate: p.lastSaleDate ? new Date(p.lastSaleDate) : undefined,
+        supplierName: p.supplier?.name ?? p.supplierName,
+      })));
+    } catch (e) {
+      console.error('[Dashboard] products load error:', e);
+    } finally {
+      setProdsLoading(false);
+    }
   }, []);
 
-  const fetchStats = async () => {
-    try {
-      const response = await fetch('/api/dashboard/stats');
-      if (!response.ok) throw new Error('통계를 불러올 수 없습니다');
-      const data = await response.json();
-      setStats({
-        totalProducts: data.totalProducts || 0,
-        totalRevenue: data.totalRevenue || 0,
-        totalProfit: data.totalProfit || 0,
-        averageMargin: data.averageMargin || 0,
-        sourcedProducts: data.sourcedProducts || { total: 0, pending: 0, approved: 0, listed: 0 },
-        recentActivity: data.recentActivity || [],
-        topMarginProducts: data.topMarginProducts || []
-      });
-    } catch (err) {
-      console.error('Failed to fetch stats:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadStats = useCallback(() => {
+    setStatsLoading(true);
+    fetch('/api/dashboard/stats?period=all')
+      .then(r => r.json())
+      .then(d => { if (d.success) setStats(d.data?.summary ?? d.data); })
+      .catch(() => null)
+      .finally(() => setStatsLoading(false));
+  }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-gray-600">로딩 중...</p>
-        </div>
-      </div>
-    );
-  }
+  // Single refresh: reload both stats + products
+  const handleRefresh = useCallback(() => {
+    loadStats();
+    loadProducts();
+  }, [loadStats, loadProducts]);
+
+  useEffect(() => {
+    loadStats();
+    loadProducts();
+  }, [loadStats, loadProducts]);
+
+  const pipelineStages: PipelineStage[] = [
+    { label: '소싱 대기', count: stats?.sourcingCount ?? 0, icon: Layers,     color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', href: '/crawl',                  hint: '보관함 SOURCED' },
+    { label: '등록 대기', count: stats?.draftProducts ?? 0, icon: Package,    color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', href: '/products',               hint: 'DRAFT 상태'    },
+    { label: '판매중',    count: stats?.activeProducts ?? 0, icon: TrendingUp, color: '#16a34a', bg: '#f0fdf4', border: '#86efac', href: '/products',               hint: 'ACTIVE 상태'   },
+    { label: '좀비 감지', count: stats?.zombieCount ?? 0,   icon: Skull,      color: '#e62310', bg: '#fff0ef', border: '#ffd6d3', href: '/products/reactivation', hint: '30일+ 미판매'  },
+  ];
+
+  const isRefreshing = statsLoading || productsLoading;
 
   return (
-    <div className="space-y-6">
-      {/* 주요 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">📦</span>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 mb-1">전체 상품</p>
-          <p className="text-3xl font-bold text-gray-900">
-            {formatNumber(stats.totalProducts)}
-            <span className="text-lg font-normal text-gray-500 ml-1">개</span>
-          </p>
-        </div>
+    <div style={{ minHeight: '100vh', background: 'transparent', padding: '24px', paddingBottom: 56 }} className="space-y-6">
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">💰</span>
+      {/* ── Page header ─────────────────────────────────────── */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ position: 'absolute', top: 0, left: 0 }}>
+                {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r=deg*Math.PI/180; const cx=26+Math.cos(r)*11.4; const cy=26+Math.sin(r)*11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#e62310" />; })}
+                <circle cx="26" cy="26" r="14.6" fill="#e62310" />
+              </svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', zIndex: 1 }}>
+                <path d="M12 22V12"/><path d="M12 12C12 12 8 9 8 6a4 4 0 0 1 8 0c0 3-4 6-4 6z"/>
+                <path d="M12 12c0 0-4 3-7 3"/><path d="M12 12c0 0 4 3 7 3"/>
+                <ellipse cx="12" cy="20" rx="5" ry="2"/>
+              </svg>
             </div>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', letterSpacing: '-0.3px', margin: 0 }}>정원 일지</h1>
           </div>
-          <p className="text-sm text-gray-600 mb-1">총 매출</p>
-          <p className="text-3xl font-bold text-green-600">
-            {formatKRW(stats.totalRevenue)}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">💎</span>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 mb-1">순이익</p>
-          <p className="text-3xl font-bold text-pink-600">
-            {formatKRW(stats.totalProfit)}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">📈</span>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 mb-1">평균 마진율</p>
-          <p className="text-3xl font-bold text-purple-600">
-            {formatPercent(stats.averageMargin)}
-          </p>
-        </div>
-      </div>
-
-      {/* 수집 상품 현황 */}
-      <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900">
-            🌸 수집 상품 현황
-          </h3>
-          <Link 
-            href="/sourced" 
-            className="text-sm text-pink-600 hover:underline font-semibold"
+          {/* Single refresh button — reloads stats + products at once */}
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: '#B0A0A8', opacity: isRefreshing ? 0.4 : 1 }}
           >
-            전체 보기 →
-          </Link>
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+          </button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg p-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">{stats.sourcedProducts.total}</p>
-            <p className="text-sm text-gray-600">전체</p>
-          </div>
-          <div className="bg-white rounded-lg p-4 text-center">
-            <p className="text-2xl font-bold text-yellow-600">{stats.sourcedProducts.pending}</p>
-            <p className="text-sm text-gray-600">⏳ 대기중</p>
-          </div>
-          <div className="bg-white rounded-lg p-4 text-center">
-            <p className="text-2xl font-bold text-blue-600">{stats.sourcedProducts.approved}</p>
-            <p className="text-sm text-gray-600">✅ 승인됨</p>
-          </div>
-          <div className="bg-white rounded-lg p-4 text-center">
-            <p className="text-2xl font-bold text-green-600">{stats.sourcedProducts.listed}</p>
-            <p className="text-sm text-gray-600">🎉 등록완료</p>
-          </div>
-        </div>
+        <div style={{ height: 2.5, background: '#FFB3CE', borderRadius: 99, margin: '8px 0 6px' }} />
+        <p style={{ fontSize: '13px', color: '#888', margin: 0 }}>
+          {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
+        </p>
       </div>
 
-      {/* 2열 레이아웃 */}
+      {/* ── 오늘의 실적 (네이버 API 연동 시에만 표시) ──────── */}
+      {stats?.naverApiReady && (
+        <TodayCard
+          orderCount={stats.todayOrderCount ?? 0}
+          revenue={stats.todayRevenue ?? 0}
+          paidAmount={stats.todayPaidAmount ?? 0}
+          loading={statsLoading}
+        />
+      )}
 
-      {/* 네이버 SEO 위젯 */}
-      <SeoWidget />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 최근 활동 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">📌 최근 활동</h3>
-            <Link href="/sourced" className="text-sm text-pink-600 hover:underline font-semibold">
-              전체 보기 →
-            </Link>
-          </div>
-          {stats.recentActivity.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-3">최근 활동이 없습니다</p>
-              <Link
-                href="/crawl"
-                className="inline-block px-4 py-2 bg-pink-500 text-white text-sm rounded-lg hover:bg-pink-600"
-              >
-                상품 수집 시작하기
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {stats.recentActivity.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-800 truncate">
-                      {activity.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(activity.created_at).toLocaleDateString('ko-KR', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
-                  <span className={`ml-3 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                    activity.status === 'listed' 
-                      ? 'bg-green-100 text-green-800'
-                      : activity.status === 'approved'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {activity.status === 'listed' ? '등록완료' :
-                     activity.status === 'approved' ? '승인됨' :
-                     '대기중'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 마진율 Top 5 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">🏆 마진율 Top 5</h3>
-            <Link href="/sourced" className="text-sm text-pink-600 hover:underline font-semibold">
-              전체 보기 →
-            </Link>
-          </div>
-          {stats.topMarginProducts.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-3">수집된 상품이 없습니다</p>
-              <Link
-                href="/crawl"
-                className="inline-block px-4 py-2 bg-pink-500 text-white text-sm rounded-lg hover:bg-pink-600"
-              >
-                상품 수집하기
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {stats.topMarginProducts.map((product, index) => (
-                <div
-                  key={product.id}
-                  className="flex items-center gap-3 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg hover:from-pink-100 hover:to-purple-100 transition"
-                >
-                  <div className="flex-shrink-0 w-7 h-7 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-800 truncate text-sm">
-                      {product.name}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      도매가: {formatKRW(product.wholesale_price)} → 판매가: {formatKRW(product.retail_price)}
-                    </p>
-                  </div>
-                  <span className={`flex-shrink-0 px-3 py-1 rounded-full text-sm font-bold ${
-                    product.margin >= 100 ? 'bg-green-100 text-green-800' :
-                    product.margin >= 60 ? 'bg-blue-100 text-blue-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {product.margin}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* ── KPI 4개 ─────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <KpiCard label="전체 상품"     value={stats?.totalProducts ?? 0}          sub="등록된 상품 수"  icon={Package}      valueColor="#1A1A1A" iconBg="#F5F5F5" iconColor="#9CA3AF" href="/products" />
+        <KpiCard label="네이버 판매중"  value={stats?.activeProducts ?? 0}         sub="노출 중"        icon={TrendingUp}   valueColor="#16a34a" iconBg="#F0FDF4" iconColor="#16a34a" href="/products" />
+        <KpiCard label="품절"           value={stats?.outOfStockProducts ?? 0}     sub="재고 보충 필요" icon={AlertTriangle} valueColor="#e62310" iconBg="#FFF0EF" iconColor="#e62310" href="/products/reactivation" />
+        <KpiCard label="평균 꿀통지수"  value={stats?.avgScore ? `${stats.avgScore}점` : '—'} sub="AI 상품 품질" icon={Sparkles} valueColor="#FF6B8A" iconBg="#FFF0F5" iconColor="#FF6B8A" />
       </div>
 
-      {/* 빠른 액션 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Link
-          href="/products/new"
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-pink-500 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">➕</span>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-1">상품 등록</h3>
-              <p className="text-sm text-gray-600">새 상품 추가하기</p>
-            </div>
-          </div>
-        </Link>
+      {/* ── 파이프라인 현황 ──────────────────────────────────── */}
+      <PipelineCard stages={pipelineStages} />
 
-        <Link
-          href="/products"
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">📋</span>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-1">상품 관리</h3>
-              <p className="text-sm text-gray-600">상품 목록 보기</p>
-            </div>
-          </div>
-        </Link>
+      {/* ── 오늘 할 일 — products prop으로 단일 로드 공유 ───── */}
+      <DailyPlanWidget products={products} productsLoading={productsLoading} />
 
-        <Link
-          href="/crawl"
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">🔗</span>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-1">도매매 크롤러</h3>
-              <p className="text-sm text-gray-600">상품 불러오기</p>
-            </div>
-          </div>
-        </Link>
-      </div>
+      {/* ── 꼬띠 위젯 — products prop으로 단일 로드 공유 ────── */}
+      <KkottiWidget products={products} productsLoading={productsLoading} />
+
+      {/* Recent event timeline */}
+      <EventTimeline />
+
     </div>
   );
 }

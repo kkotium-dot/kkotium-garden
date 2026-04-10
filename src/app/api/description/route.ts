@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { generateProductDescription, generateProductTitle } from '@/lib/gemini';
 
+
+export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const { productName, keywords, features, type } = await request.json();

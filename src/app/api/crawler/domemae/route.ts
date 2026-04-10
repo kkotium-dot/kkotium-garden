@@ -1,424 +1,227 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as cheerio from 'cheerio';
-import * as iconv from 'iconv-lite';
+import { prisma } from '@/lib/prisma';
 
-export async function POST(request: NextRequest) {
+// Domeggook OpenAPI-based crawler
+// Replaces HTML scraping with official API: https://domeggook.com/ssl/api/
+// API docs: https://docs.channel.io/domeggook_api/ko
+// Rate limit: 180/min, 15,000/day
+
+
+export const dynamic = 'force-dynamic';
+const DOMEGGOOK_API = 'https://domeggook.com/ssl/api/';
+
+// Extract product number from various URL formats
+function extractProductNo(url: string): string | null {
+  // domeme.domeggook.com/s/12345678
+  const shortMatch = url.match(/\/s\/(\d{6,10})/);
+  if (shortMatch) return shortMatch[1];
+  // domeggook.com/...?uid=12345678 or no=12345678
+  const uidMatch = url.match(/[?&](?:uid|no)=(\d{6,10})/);
+  if (uidMatch) return uidMatch[1];
+  // bare number
+  if (/^\d{6,10}$/.test(url.trim())) return url.trim();
+  return null;
+}
+
+// Parse price.supply which can be int or "1+3800|20+3500" string
+function parseSupplyPrice(val: unknown): number {
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    // "1+3800|20+3500|50+3300" — take first tier (minimum order price)
+    const first = val.split('|')[0];
+    const price = parseInt(first.split('+')[1] ?? first, 10);
+    return isNaN(price) ? 0 : price;
+  }
+  return 0;
+}
+
+// Parse shipping fee from deli object
+function parseShipFee(deli: Record<string, unknown>): number {
+  const supply = deli?.supply as Record<string, unknown> | undefined;
+  const dome   = deli?.dome   as Record<string, unknown> | undefined;
+  const src = supply ?? dome;
+  if (!src) return 3000;
+  if (src.type === '무료배송') return 0;
+  const fee = src.fee;
+  if (typeof fee === 'number') return fee;
+  if (typeof fee === 'string') {
+    const n = parseInt(fee, 10);
+    return isNaN(n) ? 3000 : n;
+  }
+  return 3000;
+}
+
+// Structured option from Domeggook API selectOpt
+interface CrawledOption {
+  name: string;
+  qty: number;       // stock per option (0 = out of stock)
+  addPrice: number;  // additional price on top of base supply price
+}
+
+// Parse options from selectOpt JSON string — returns structured data
+function parseOptions(selectOpt: string | undefined): CrawledOption[] {
+  if (!selectOpt) return [];
+  try {
+    const parsed = JSON.parse(selectOpt) as {
+      data?: Record<string, { name?: string; hid?: string | number; qty?: string | number; addprice?: string | number }>;
+      type?: string;
+    };
+    if (parsed.data) {
+      return Object.values(parsed.data)
+        .filter(o => String(o.hid ?? '0') !== '1')  // exclude hidden
+        .map(o => ({
+          name: o.name?.trim() ?? '',
+          qty: parseInt(String(o.qty ?? '0'), 10) || 0,
+          addPrice: parseInt(String(o.addprice ?? '0'), 10) || 0,
+        }))
+        .filter(o => o.name)
+        .slice(0, 30);
+    }
+  } catch { /* fall through */ }
+  return [];
+}
+
+// Get API key from DB
+async function getApiKey(): Promise<string | null> {
+  try {
+    const rows = await prisma.$queryRaw<{ domeggook_api_key: string }[]>`
+      SELECT domeggook_api_key FROM store_settings WHERE id = 'default' LIMIT 1
+    `;
+    const key = rows[0]?.domeggook_api_key?.trim();
+    return key || null;
+  } catch { return null; }
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const { url } = await request.json();
+    if (!url?.trim()) {
+      return NextResponse.json({ success: false, error: 'URL 또는 상품번호를 입력해주세요' }, { status: 400 });
+    }
 
-    if (!url) {
+    // Validate it's a domeggook URL or product number
+    const isValidDomemae = url.includes('domeggook.com') || /^\d{6,10}$/.test(url.trim());
+    if (!isValidDomemae) {
       return NextResponse.json(
-        { success: false, error: 'URL을 입력해주세요' },
+        { success: false, error: '도매매(domeggook.com) URL 또는 상품번호만 지원합니다' },
         { status: 400 }
       );
     }
 
-    if (!url.includes('domemedb.com') && !url.includes('domeggook.com')) {
+    const productNo = extractProductNo(url);
+    if (!productNo) {
+      return NextResponse.json({ success: false, error: '상품번호를 찾을 수 없습니다' }, { status: 400 });
+    }
+
+    // Get API key
+    const apiKey = await getApiKey();
+    if (!apiKey) {
       return NextResponse.json(
-        { success: false, error: '도매매 URL만 지원합니다' },
+        { success: false, error: '도매꾹 API Key가 설정되지 않았습니다. 네이버 기본값 설정에서 API Key를 입력해주세요.' },
         { status: 400 }
       );
     }
 
-    console.log('\n' + '='.repeat(80));
-    console.log('🔍 도매매 크롤링 시작');
-    console.log('='.repeat(80));
-    console.log('📌 URL:', url);
+    // Call Domeggook OpenAPI
+    const apiUrl = `${DOMEGGOOK_API}?ver=4.5&mode=getItemView&aid=${apiKey}&no=${productNo}&om=json`;
+    const res = await fetch(apiUrl, { signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) throw new Error(`API 오류 (HTTP ${res.status})`);
 
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Accept-Encoding': 'gzip, deflate',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    });
+    const raw = await res.json() as { domeggook?: Record<string, unknown>; errors?: unknown };
 
-    if (!response.ok) {
-      throw new Error(`페이지를 불러올 수 없습니다 (HTTP ${response.status})`);
+    // Handle API errors
+    if (raw.errors || !raw.domeggook) {
+      const errMsg = JSON.stringify(raw.errors ?? raw).slice(0, 200);
+      console.error('[crawler-api] API error:', errMsg);
+      return NextResponse.json({ success: false, error: `도매꾹 API 오류: ${errMsg}` }, { status: 400 });
     }
 
-    // EUC-KR 디코딩
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const item = raw.domeggook as {
+      basis?: { title?: string; status?: string };
+      price?: { supply?: unknown; dome?: unknown; resale?: { minimum?: number; Recommand?: number } };
+      qty?: { inventory?: number; supplyUnit?: number };
+      deli?: Record<string, unknown>;
+      seller?: { id?: string; nick?: string; rank?: number; power?: string; score?: { avg?: number }; company?: { name?: string; boss?: string; cno?: string; addr?: string; phone?: string } };
+      thumb?: { large?: string; largePng?: string; original?: string };
+      selectOpt?: string;
+      detail?: { country?: string; manufacturer?: string };
+      category?: { current?: { name?: string; code?: string } };
+      channel?: { supply?: boolean };
+    };
 
-    let html = '';
-    try {
-      html = iconv.decode(buffer, 'euc-kr');
-      console.log('✅ EUC-KR 디코딩 성공');
-    } catch (error) {
-      console.log('⚠️  EUC-KR 디코딩 실패, UTF-8 시도');
-      html = iconv.decode(buffer, 'utf-8');
-    }
+    // Extract core fields
+    const name         = item.basis?.title?.replace(/\s+/g, ' ').trim() ?? '';
+    const status       = item.basis?.status ?? '';
+    const supplyPrice  = parseSupplyPrice(item.price?.supply);
+    const inventory    = item.qty?.inventory ?? 0;
+    const shipFee      = parseShipFee(item.deli as Record<string, unknown>);
+    const mergeShip    = (item.deli as Record<string, unknown> | undefined)?.merge as { enable?: string } | undefined;
+    const canMerge     = mergeShip?.enable === 'y';
+    // company.name is the real business name; nick is often empty string
+    const sellerNick   = String((item.seller as any)?.company?.name || item.seller?.nick || '');
+    const sellerId     = String(item.seller?.id ?? '');
+    const sellerRank   = item.seller?.rank ?? 0;
+    const options      = parseOptions(item.selectOpt);
+    const thumbUrl     = item.thumb?.largePng ?? item.thumb?.large ?? item.thumb?.original ?? '';
+    const images       = thumbUrl ? [thumbUrl] : [];
+    const country      = item.detail?.country ?? '';
+    const categoryName = item.category?.current?.name ?? '';
+    const categoryCode = item.category?.current?.code ?? '';
+    const isOnSupply   = item.channel?.supply === true;
 
-    const $ = cheerio.load(html, { 
-      decodeEntities: false,
-      xmlMode: false,
-    });
+    console.log(`[crawler-api] no=${productNo} | "${name}" | supply=${supplyPrice} | opts=${options.length} | seller=${sellerId}(${sellerNick}) | stock=${inventory}`);
 
-    console.log('\n' + '─'.repeat(80));
-    console.log('📦 데이터 추출 시작');
-    console.log('─'.repeat(80));
-
-    // ========================================================================
-    // 1. 상품명 추출
-    // ========================================================================
-    let name = '';
-
-    const ogTitle = $('meta[property="og:title"]').attr('content');
-    if (ogTitle && ogTitle.trim().length > 3) {
-      name = ogTitle.trim();
-      console.log('\n✓ 상품명 [og:title]:', name);
-    }
-
-    if (!name) {
-      const titleText = $('title').text().trim();
-      const cleaned = titleText.split('|')[0].split('-')[0].split('::')[0].trim();
-      if (cleaned.length > 3) {
-        name = cleaned;
-        console.log('\n✓ 상품명 [title]:', name);
-      }
-    }
-
-    if (!name) {
-      const h1Text = $('h1').first().text().trim();
-      if (h1Text.length > 3) {
-        name = h1Text;
-        console.log('\n✓ 상품명 [h1]:', name);
-      }
-    }
-
-    const nameSelectors = [
-      '.prod_tit', '.product_name', '.goods_name', '.prod_name',
-      '.product-title', '.item_name', '.prd_name', '.goods-name',
-      '#prod_name', '#product_name', '[itemprop="name"]',
-      '.product-info h1', '.goods-info h1',
-    ];
-
-    if (!name) {
-      for (const selector of nameSelectors) {
-        const text = $(selector).first().text().trim();
-        if (text && text.length > 3 && text.length < 300) {
-          name = text;
-          console.log(`\n✓ 상품명 [${selector}]:`, name);
-          break;
-        }
-      }
-    }
-
-    if (name) {
-      name = name
-        .replace(/\s+/g, ' ')
-        .replace(/[\r\n\t]/g, '')
-        .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
-        .trim();
-    }
-
-    // ========================================================================
-    // 2. 가격 추출 (강화된 버전!)
-    // ========================================================================
-    let price = 0;
-
-    console.log('\n💰 가격 추출 시작...');
-
-    // 방법 1: 특정 선택자
-    const priceSelectorsSpecific = [
-      '#supply_price', '#sale_price', '#sell_price',
-      '.supply_price', '.sale_price', '.sell_price',
-      '[name="supply_price"]', '[id*="price"]', '[class*="supply"]',
-    ];
-
-    for (const selector of priceSelectorsSpecific) {
-      const priceText = $(selector).first().text().trim();
-      if (priceText) {
-        const cleaned = priceText.replace(/[^0-9]/g, '');
-        const parsed = parseInt(cleaned);
-        if (!isNaN(parsed) && parsed >= 100 && parsed < 100000000) {
-          price = parsed;
-          console.log(`✓ 가격 [${selector} TEXT]:`, price.toLocaleString() + '원');
-          break;
-        }
-      }
-
-      const priceValue = $(selector).first().attr('value') || 
-                        $(selector).first().attr('data-price') ||
-                        $(selector).first().attr('data-value');
-      if (priceValue) {
-        const cleaned = priceValue.replace(/[^0-9]/g, '');
-        const parsed = parseInt(cleaned);
-        if (!isNaN(parsed) && parsed >= 100 && parsed < 100000000) {
-          price = parsed;
-          console.log(`✓ 가격 [${selector} VALUE]:`, price.toLocaleString() + '원');
-          break;
-        }
-      }
-    }
-
-    // 방법 2: 일반 선택자
-    if (price === 0) {
-      const priceSelectorsGeneral = [
-        '.price', '.product-price', '.price_num', '.goods_price',
-        '.prod_price', '.item_price', '.price-value', '[itemprop="price"]',
-        '[class*="price"]', 'strong.price', 'span.price', 'em.price',
-      ];
-
-      for (const selector of priceSelectorsGeneral) {
-        const priceText = $(selector).first().text().trim();
-        if (priceText) {
-          const cleaned = priceText.replace(/[^0-9]/g, '');
-          const parsed = parseInt(cleaned);
-          if (!isNaN(parsed) && parsed >= 100 && parsed < 100000000) {
-            price = parsed;
-            console.log(`✓ 가격 [${selector}]:`, price.toLocaleString() + '원');
-            break;
-          }
-        }
-      }
-    }
-
-    // 방법 3: HTML 패턴 매칭
-    if (price === 0) {
-      console.log('⚠️  일반 선택자로 가격 못 찾음, HTML 패턴 검색 시도...');
-
-      const bodyText = $('body').text();
-      const pricePatterns = [
-        /공급가[:\s]*([0-9,]+)원/,
-        /판매가[:\s]*([0-9,]+)원/,
-        /도매가[:\s]*([0-9,]+)원/,
-        /가격[:\s]*([0-9,]+)원/,
-        /([0-9]{1,3}(,[0-9]{3})+)원/,
-      ];
-
-      for (const pattern of pricePatterns) {
-        const match = bodyText.match(pattern);
-        if (match && match[1]) {
-          const cleaned = match[1].replace(/[^0-9]/g, '');
-          const parsed = parseInt(cleaned);
-          if (!isNaN(parsed) && parsed >= 100 && parsed < 100000000) {
-            price = parsed;
-            console.log('✓ 가격 [패턴 매칭]:', price.toLocaleString() + '원');
-            break;
-          }
-        }
-      }
-    }
-
-    if (price === 0) {
-      console.log('⚠️  가격을 찾지 못했습니다 (0원으로 설정됨)');
-      console.log('💡 수동으로 입력해주세요!');
-    }
-
-    // ========================================================================
-    // 3. 이미지 추출
-    // ========================================================================
-    const images: string[] = [];
-
-    function isValidProductImage(src: string): boolean {
-      const srcLower = src.toLowerCase();
-
-      const excludePatterns = [
-        'ico_', 'icon_', 'icon-',
-        'btn_', 'button_', 'btn-',
-        'img_lens', 'img_ranking',
-        'img_banner', 'img_logo',
-        'logo', 'banner', 'ad_',
-        'blank', 'spacer', 'pixel',
-        'arrow', 'close', 'plus',
-        'minus', 'check', 'star',
-        'share', 'wish', 'cart',
-        'question', 'info', 'help',
-        'partner', 'sns_', 'social',
-        '/common/', '/icon/', '/btn/',
-      ];
-
-      for (const pattern of excludePatterns) {
-        if (srcLower.includes(pattern)) {
-          return false;
-        }
-      }
-
-      const productPathPatterns = [
-        '/upload/item/',
-        '/upload/product/',
-        '/upload/goods/',
-        '/item/',
-        '/product/',
-        '/goods/',
-      ];
-
-      let hasProductPath = false;
-      for (const pattern of productPathPatterns) {
-        if (srcLower.includes(pattern)) {
-          hasProductPath = true;
-          break;
-        }
-      }
-
-      if (!hasProductPath) {
-        return false;
-      }
-
-      if (src.length < 40) {
-        return false;
-      }
-
-      const hasImageExt = /\.(jpg|jpeg|png|gif|webp)/i.test(src);
-      const hasProductPathStrict = srcLower.includes('/upload/item/') || 
-                                   srcLower.includes('/upload/product/') ||
-                                   srcLower.includes('/upload/goods/');
-
-      if (hasProductPathStrict) {
-        return true;
-      } else {
-        return hasImageExt;
-      }
-    }
-
-    console.log('\n🖼️  이미지 추출 시작');
-
-    const ogImage = $('meta[property="og:image"]').attr('content');
-    if (ogImage && ogImage.startsWith('http')) {
-      if (isValidProductImage(ogImage)) {
-        images.push(ogImage);
-        console.log('  ✓ [og:image]:', ogImage.substring(0, 80) + '...');
-      }
-    }
-
-    const imgSelectors = [
-      '.product-image img',
-      '.prod_img img',
-      '.detail_img img',
-      '.goods_img img',
-      '.item_img img',
-      '#product_image img',
-      '#prod_image img',
-      'img[src*="/upload/item/"]',
-      'img[src*="/product/"]',
-      'img[src*="/goods/"]',
-      '[class*="product"] img',
-      '[class*="goods"] img',
-      '[id*="image"] img',
-    ];
-
-    let foundCount = 0;
-    let filteredCount = 0;
-
-    for (const selector of imgSelectors) {
-      if (images.length >= 10) break;
-
-      $(selector).each((i, elem) => {
-        if (images.length >= 10) return;
-
-        let src = $(elem).attr('src') || 
-                 $(elem).attr('data-src') || 
-                 $(elem).attr('data-original') ||
-                 $(elem).attr('data-lazy');
-
-        if (!src) return;
-
-        if (src.startsWith('//')) {
-          src = 'https:' + src;
-        } else if (src.startsWith('/')) {
-          const baseUrl = new URL(url);
-          src = baseUrl.origin + src;
-        } else if (!src.startsWith('http')) {
-          return;
-        }
-
-        foundCount++;
-
-        if (isValidProductImage(src) && !images.includes(src)) {
-          images.push(src);
-          console.log(`  ✓ 이미지 ${images.length}:`, src.substring(0, 80) + '...');
-        } else {
-          filteredCount++;
-        }
-      });
-
-      if (images.length >= 5) break;
-    }
-
-    console.log(`\n✓ 총 이미지: ${images.length}개`);
-
-    // ========================================================================
-    // 4. 옵션 추출
-    // ========================================================================
-    const options: string[] = [];
-
-    $('select option').each((i, elem) => {
-      if (options.length >= 20) return;
-
-      const optText = $(elem).text().trim();
-      const optValue = $(elem).attr('value') || '';
-
-      if (!optText || optText.length === 0) return;
-
-      const isExcluded = optText === '선택' || 
-                        optText === '옵션선택' || 
-                        optText === '선택하세요' ||
-                        optText.includes('품절') ||
-                        optText.includes('sold') ||
-                        optValue === '' ||
-                        optValue === '0';
-
-      if (!isExcluded && optText.length <= 100 && !options.includes(optText)) {
-        options.push(optText);
-      }
-    });
-
-    if (options.length > 0) {
-      console.log('\n✓ 옵션:', options.length + '개');
-    }
-
-    // ========================================================================
-    // 5. 설명 추출
-    // ========================================================================
-    let description = '';
-
-    const ogDesc = $('meta[property="og:description"]').attr('content');
-    if (ogDesc && ogDesc.length > 10) {
-      description = ogDesc.substring(0, 1000);
-      console.log('\n✓ 설명:', description.substring(0, 50) + '...');
-    }
-
-    // ========================================================================
-    // 6. 최종 결과
-    // ========================================================================
-    console.log('\n' + '='.repeat(80));
-    console.log('📊 크롤링 결과 요약');
-    console.log('='.repeat(80));
-    console.log('✓ 상품명:', name || '찾을 수 없음');
-    console.log('✓ 가격:', price > 0 ? price.toLocaleString() + '원' : '0원 (수동 입력 필요!)');
-    console.log('✓ 이미지:', images.length + '개');
-    console.log('✓ 옵션:', options.length + '개');
-    console.log('='.repeat(80) + '\n');
+    // Save to crawl_logs with full sourcing data
+    prisma.$executeRaw`
+      INSERT INTO crawl_logs (
+        id, url, name, supplier_price, images, options, status, source,
+        seller_nick, seller_id, seller_rank, category_name, category_code,
+        inventory, ship_fee, can_merge, sourcing_status
+      ) VALUES (
+        gen_random_uuid(),
+        ${'https://domeme.domeggook.com/s/' + productNo},
+        ${name}, ${supplyPrice},
+        ${JSON.stringify(images)}::jsonb,
+        ${JSON.stringify(options)}::jsonb,
+        'success', 'single',
+        ${sellerNick}, ${sellerId}, ${Number(sellerRank)},
+        ${categoryName}, ${categoryCode},
+        ${Number(inventory)}, ${Number(shipFee)}, ${Boolean(canMerge)},
+        'SOURCED'
+      )
+    `.catch((e) => console.error('[crawl-log-insert]', e));
 
     return NextResponse.json({
       success: true,
       data: {
-        name: name || '상품명을 찾을 수 없습니다',
-        supplierPrice: price,
-        images: images.slice(0, 10),
-        options: options.slice(0, 20),
-        description: description || '',
-        sourceUrl: url,
+        name:          name || '상품명을 찾을 수 없습니다',
+        supplierPrice: supplyPrice,
+        images,
+        options,
+        description:   '',
+        sourceUrl:     `https://domeme.domeggook.com/s/${productNo}`,
+        // Extended fields from API
+        productNo,
+        inventory,
+        shipFee,
+        canMerge,
+        sellerNick,
+        sellerId,
+        sellerRank,
+        categoryName,
+        categoryCode,
+        country,
+        status,
+        isOnSupply,
       },
+      sessionAgeDays:  0,
+      sessionWarning:  null,
     });
 
-  } catch (error: any) {
-    console.error('\n' + '='.repeat(80));
-    console.error('❌ 크롤링 에러');
-    console.error('='.repeat(80));
-    console.error(error);
-    console.error('='.repeat(80) + '\n');
-
+  } catch (error: unknown) {
+    console.error('[crawler-api] error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || '크롤링 중 오류가 발생했습니다' 
-      },
+      { success: false, error: error instanceof Error ? error.message : '크롤링 중 오류가 발생했습니다' },
       { status: 500 }
     );
   }

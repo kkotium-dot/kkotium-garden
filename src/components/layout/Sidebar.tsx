@@ -1,122 +1,330 @@
-// ~/Downloads/Sidebar_final.tsx
 'use client';
+// Sidebar — KKOTIUM v9
+// - Badge counts: 꿀통 사냥터 (SOURCED), 좀비 부활소 (zombie)
+// - 오늘의 실적 bottom stats
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { TrendingUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  Package, PackagePlus, RefreshCw,
+  Search, Layers, Store, Truck,
+  KeyRound, FileText,
+  ChevronRight,
+} from 'lucide-react';
+
+// Fountain SVG — garden concept, matches dashboard page header icon
+function FountainIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <path d="M12 22V12"/>
+      <path d="M12 12C12 12 8 9 8 6a4 4 0 0 1 8 0c0 3-4 6-4 6z"/>
+      <path d="M12 12c0 0-4 3-7 3"/>
+      <path d="M12 12c0 0 4 3 7 3"/>
+      <ellipse cx="12" cy="20" rx="5" ry="2"/>
+    </svg>
+  );
+}
+
+function ShoppingBagIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <path d="M16 10a4 4 0 0 1-8 0"/>
+    </svg>
+  );
+}
+
+// Nav item type extended with optional badge key
+interface NavItem {
+  href: string;
+  label: string;
+  iconKey: string;
+  badgeKey?: 'sourcing' | 'zombie';
+}
+
+const NAV: { label: string; items: NavItem[] }[] = [
+  {
+    label: 'GARDEN',
+    items: [{ href: '/dashboard', label: '정원 일지', iconKey: 'fountain' }],
+  },
+  {
+    label: 'HUNT',
+    items: [
+      { href: '/crawl', label: '꿀통 사냥터', iconKey: 'layers', badgeKey: 'sourcing' },
+    ],
+  },
+  {
+    label: 'PLANT',
+    items: [
+      { href: '/products/new', label: '씨앗 심기', iconKey: 'packageplus' },
+    ],
+  },
+  {
+    label: 'TEND',
+    items: [
+      { href: '/products',              label: '정원 창고',   iconKey: 'shoppingbag' },
+      { href: '/naver-seo',             label: '검색 조련사', iconKey: 'search' },
+      { href: '/products/reactivation', label: '좀비 부활소', iconKey: 'refreshcw', badgeKey: 'zombie' },
+    ],
+  },
+  {
+    label: 'TOOLS',
+    items: [
+      { href: '/settings/suppliers',       label: '거래처 명단',   iconKey: 'store' },
+      { href: '/settings/shipping',       label: '배송 레시피',   iconKey: 'truck' },
+      { href: '/settings/supplier-login', label: '공급사 열쇠방', iconKey: 'keyround' },
+      { href: '/naver-settings',          label: '네이버 기본값', iconKey: 'filetext' },
+    ],
+  },
+];
+
+function FlowerSVG({ fill, size = 40 }: { fill: string; size?: number }) {
+  const c = size / 2;
+  const petalOffset = size * 0.22;
+  const petalRx     = size * 0.27;
+  const petalRy     = size * 0.20;
+  const centerR     = size * 0.28;
+  const p2 = (n: number) => Math.round(n * 10000) / 10000;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none"
+      style={{ position: 'absolute', top: 0, left: 0 }}>
+      {[0, 60, 120, 180, 240, 300].map((deg, i) => {
+        const rad = (deg * Math.PI) / 180;
+        const cx = p2(c + Math.cos(rad) * petalOffset);
+        const cy = p2(c + Math.sin(rad) * petalOffset);
+        return (
+          <ellipse key={i} cx={cx} cy={cy} rx={p2(petalRx)} ry={p2(petalRy)}
+            transform={`rotate(${deg} ${cx} ${cy})`} fill={fill} />
+        );
+      })}
+      <circle cx={c} cy={c} r={p2(centerR)} fill={fill} />
+    </svg>
+  );
+}
+
+function FlowerIconBox({ active, children }: { active: boolean; children: React.ReactNode }) {
+  const fill = active ? '#e62310' : '#F8DCE5';
+  const size = 40;
+  return (
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <FlowerSVG fill={fill} size={size} />
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex',
+        alignItems: 'center', justifyContent: 'center' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SectionFlower() {
+  return (
+    <div style={{ position: 'relative', width: 14, height: 14, flexShrink: 0 }}>
+      <FlowerSVG fill="#e62310" size={14} />
+    </div>
+  );
+}
+
+function NavIcon({ iconKey, active }: { iconKey: string; active: boolean }) {
+  const color = active ? '#fff' : '#c0687a';
+  const size = 15;
+  let icon;
+  switch (iconKey) {
+    case 'fountain':    icon = <FountainIcon size={size} color={color} />; break;
+    case 'shoppingbag': icon = <ShoppingBagIcon size={size} color={color} />; break;
+    case 'packageplus': icon = <PackagePlus size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'refreshcw':   icon = <RefreshCw   size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'search':      icon = <Search      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'layers':      icon = <Layers      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'store':       icon = <Store       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'truck':       icon = <Truck       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'keyround':    icon = <KeyRound    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'filetext':    icon = <FileText    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    default:            icon = <Search      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+  }
+  return <FlowerIconBox active={active}>{icon}</FlowerIconBox>;
+}
+
+function SectionLine() {
+  return (
+    <div style={{ height: 1, background: '#FFB3CE', margin: '8px 4px 5px', borderRadius: 99, opacity: 0.6 }} />
+  );
+}
+
+// ── Nav badge pill ─────────────────────────────────────────────────────────────
+function NavBadge({ count, active }: { count: number; active: boolean }) {
+  if (count === 0) return null;
+  return (
+    <span style={{
+      fontSize: 10, fontWeight: 900, minWidth: 18, height: 18,
+      padding: '0 5px', borderRadius: 99,
+      background: active ? 'rgba(255,255,255,0.25)' : '#e62310',
+      color: '#fff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0, lineHeight: 1,
+    }}>
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [sideStats, setSideStats] = useState<{
+    sourcingCount: number;
+    zombieCount: number;
+  } | null>(null);
 
-  const menuItems = [
-    {
-      category: '메인',
-      items: [
-        { href: '/dashboard', label: '대시보드', icon: '📊' },
-      ],
-    },
-    {
-      category: '상품',
-      items: [
-        { href: '/products', label: '상품 목록', icon: '📦' },
-        { href: '/products/new', label: '상품 등록', icon: '➕' },
-        { href: '/naver-seo', label: '🔍 네이버 SEO', icon: '🔍' },  // ✅ 추가!
-      ],
-    },
-    {
-      category: '주문',
-      items: [
-        { href: '/orders', label: '주문 관리', icon: '📋' },
-      ],
-    },
-    {
-      category: '크롤링',
-      items: [
-        { href: '/crawl', label: '도매매 크롤러', icon: '🔗' },
-        { href: '/crawler/bulk', label: '대량 크롤링', icon: '🔄' },
-      ],
-    },
-    {
-      category: '설정',
-      items: [
-        { href: '/settings', label: '환경 설정', icon: '⚙️' },
-        { href: '/seo', label: '네이버 SEO', icon: '🔍' },
-      ],
-    },
-  ];
+  useEffect(() => {
+    fetch('/api/dashboard/stats?period=all')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.data?.summary) {
+          const s = d.data.summary;
+          setSideStats({
+            sourcingCount: s.sourcingCount ?? 0,
+            zombieCount:   s.zombieCount   ?? 0,
+          });
+        }
+      })
+      .catch(() => null);
+  }, []);
+
+  const getBadgeCount = (key: NavItem['badgeKey']): number => {
+    if (!sideStats) return 0;
+    if (key === 'sourcing') return sideStats.sourcingCount;
+    if (key === 'zombie')   return sideStats.zombieCount;
+    return 0;
+  };
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
-      {/* 상단 로고 영역 */}
-      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-pink-50 to-purple-50">
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-            <span className="text-2xl font-bold text-white">🌸</span>
-          </div>
-          <div>
-            <h2 className="font-bold text-lg bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
-              꽃틔움 가든
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5">스마트스토어 관리</p>
-          </div>
-        </Link>
-      </div>
-
-      {/* 메뉴 영역 */}
-      <nav className="flex-1 p-4 overflow-y-auto">
-        <div className="space-y-6">
-          {menuItems.map((section) => (
-            <div key={section.category}>
-              <h3 className="px-3 py-1 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                {section.category}
-              </h3>
-              <div className="space-y-1">
-                {section.items.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all w-full group ${
-                      pathname === item.href
-                        ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg scale-105'
-                        : 'text-gray-700 hover:bg-gradient-to-r hover:from-pink-50 hover:to-purple-50 hover:text-pink-600'
-                    }`}
-                  >
-                    <span className="text-lg">{item.icon}</span>
-                    <span className="truncate">{item.label}</span>
-                    {pathname === item.href && (
-                      <div className="ml-auto w-2 h-2 bg-white rounded-full animate-pulse" />
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
+    <aside
+      style={{
+        width: 228,
+        flexShrink: 0,
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        background: '#fff',
+        borderRight: '3px solid #e62310',
+        paddingBottom: 40,
+      }}
+    >
+      {/* ── Brand header ── */}
+      <Link
+        href="/dashboard"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '16px 20px',
+          background: '#e62310',
+          textDecoration: 'none',
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            width: 42, height: 42,
+            background: 'rgba(255,255,255,0.15)',
+            border: '2px solid rgba(255,255,255,0.40)',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Image
+            src="/kkotium-symbol-white.png"
+            alt="KKOTIUM"
+            width={42}
+            height={42}
+            style={{ objectFit: 'contain', width: '100%', height: '100%', mixBlendMode: 'screen' }}
+          />
         </div>
+        <div style={{ lineHeight: 1.2 }}>
+          <p style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: "'Arial Black', Impact, sans-serif", letterSpacing: '-0.5px', margin: 0 }}>
+            KKOTIUM
+          </p>
+          <p style={{ fontSize: 10, fontWeight: 900, color: '#FFB3CE', letterSpacing: '0.28em', textTransform: 'uppercase', margin: 0, marginTop: 2 }}>
+            GARDEN
+          </p>
+        </div>
+      </Link>
+
+      {/* ── Nav ── */}
+      <nav style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
+        {NAV.map((section, si) => (
+          <div key={section.label}>
+            {si > 0 && <SectionLine />}
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '0 12px',
+                marginBottom: 4,
+              }}
+            >
+              <SectionFlower />
+              <p
+                style={{
+                  fontSize: 10,
+                  fontWeight: 900,
+                  color: '#e62310',
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
+                  fontFamily: "'Arial Black', Impact, sans-serif",
+                  margin: 0,
+                }}
+              >
+                {section.label}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {section.items.map(({ href, label, iconKey, badgeKey }) => {
+                const active     = pathname === href;
+                const badgeCount = badgeKey ? getBadgeCount(badgeKey) : 0;
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      borderRadius: 12,
+                      padding: '10px 12px',
+                      fontSize: 14,
+                      fontWeight: 500,
+                      background: active ? '#e62310' : 'transparent',
+                      color: active ? '#fff' : '#3A3A3A',
+                      textDecoration: 'none',
+                      transition: 'background 0.12s, color 0.12s',
+                    }}
+                    onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = '#FFF0F5'; (e.currentTarget as HTMLElement).style.color = '#e62310'; } }}
+                    onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#3A3A3A'; } }}
+                  >
+                    <NavIcon iconKey={iconKey} active={active} />
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+                    {badgeCount > 0 && <NavBadge count={badgeCount} active={active} />}
+                    {active && badgeCount === 0 && <ChevronRight size={13} style={{ color: 'rgba(255,255,255,0.65)', marginLeft: 'auto' }} />}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* 하단 실적 위젯 */}
-      <div className="p-4 border-t border-gray-200 bg-gradient-to-r from-pink-50 to-purple-50">
-        <div className="bg-white rounded-xl p-4 border border-pink-200 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-4 h-4 text-pink-600" />
-            <h3 className="text-xs font-bold text-gray-900">오늘의 실적</h3>
-          </div>
-          <div className="space-y-2 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">💰 매출</span>
-              <span className="font-bold text-pink-600">0원</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">📦 주문</span>
-              <span className="font-bold text-green-600">0건</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">📊 상품</span>
-              <span className="font-bold text-blue-600">0개</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* ── Today stats section removed per P3-A — KPI data visible on dashboard ── */}
     </aside>
   );
 }

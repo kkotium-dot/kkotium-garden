@@ -2,6 +2,8 @@
 
 import { NextResponse } from 'next/server';
 
+
+export const dynamic = 'force-dynamic';
 export async function POST() {
   try {
     // 실제로는 모든 알림을 읽음 처리

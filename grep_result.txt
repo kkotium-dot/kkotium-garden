@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  level     Int       @default(1)
+  exp       Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model Supplier {
+  id           String    @id @default(cuid())
+  name         String
+  code         String    @unique
+  abbr         String    @unique @db.VarChar(4)
+  platformCode String    @default("ETC") @db.VarChar(10)
+  platformUrl  String?
+  contact      String?
+  address      String?
+  description  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  products     Product[]
+
+  @@index([platformCode])
+}
+
+model Product {
+  id                      String            @id @default(cuid())
+  naver_title             String?
+  naver_keywords          String?
+  naver_description       String?
+  naver_brand             String?
+  naver_manufacturer      String?
+  naver_origin            String?
+  naver_material          String?
+  naver_color             String?
+  naver_size              String?
+  naver_weight            String?
+  naver_care_instructions String?
+  naver_warranty          String?
+  naver_certification     String?
+  naver_tax_type          String?
+  naver_gift_wrapping     Boolean           @default(false)
+  naver_as_info           String?
+  naver_delivery_info     String?
+  naver_exchange_info     String?
+  naver_refund_info       String?
+  naver_min_order         String?
+  naver_max_order         String?
+  naver_adult_only        Boolean           @default(false)
+  naver_parallel_import   Boolean           @default(false)
+  naver_custom_option_1   String?
+  naver_custom_option_2   String?
+  naver_custom_option_3   String?
+  naver_meta_tags         String?
+  seo_title               String?
+  seo_keywords            String?
+  seo_description         String?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  additionalImages        Json?
+  aiGeneratedDesc         String?
+  aiGeneratedTags         Json?
+  aiGeneratedTitle        String?
+  aiScore                 Int?
+  asInfo                  String            @default("평일 10:00~18:00")
+  asPhone                 String            @default("고객센터 문의")
+  barcode                 String?
+  brand                   String            @default("꽃틔움")
+  category                String?
+  courierCode             String            @default("CJGLS")
+  description             String?
+  exchangeShippingFee     Int               @default(6000)
+  freeShippingMinPrice    Int               @default(30000)
+  freeShippingThreshold   Int?
+  shippingFee             Int               @default(3000)
+  shippingMethod          String            @default("택배배송")
+  shippingPayType         String            @default("선결제")
+  shippingStrategy        String            @default("무료배송")
+  shippingType            String            @default("일반배송")
+  returnShippingFee       Int               @default(3000)
+  supplierReturnFee       Int               @default(0)
+  supplierShippingFee     Int               @default(3000)
+  hasOptions              Boolean           @default(false)
+  optionName              String?
+  optionType              String?
+  optionValues            Json?
+  options                 Json?
+  hookPhrase              String?
+  internalNote            String?
+  internalTags            Json?
+  keywords                Json?
+  lastSaleDate            DateTime?
+  mainImage               String?
+  images                  String[]          @default([])
+  imageAltTexts           String[]          @default([])
+  imageCount              Int               @default(0)
+  manufacturer            String            @default("도매매 공급사")
+  margin                  Float
+  minorPurchase           String            @default("Y")
+  name                    String
+  naverCategoryCode       String            @default("50003307")
+  naverProductId          String?
+  originCode              String            @default("0001")
+  productInfoManufacturer String?
+  productInfoModel        String?
+  productInfoName         String?
+  productStatus           String            @default("신상품")
+  salesCount              Int               @default(0)
+  salePrice               Int
+  sellerCode              String?
+  seoTitle                String?
+  sku                     String            @unique
+  status                  String            @default("DRAFT")
+  supplierPrice           Int
+  tags                    Json?
+  targetKeywords          Json?
+  taxType                 String            @default("과세")
+  vendorCode              String?
+  supplierId              String
+  userId                  String
+  sellerProductCode       String?           @unique
+  seller_product_code     String?           @unique @db.VarChar(100)
+  supplier_product_code   String?           @db.VarChar(100)
+  category_id             String?
+  origin_id               String?
+  importer_name           String?           @db.VarChar(100)
+  instant_discount        Decimal?          @db.Decimal(10, 2)
+  shipping_method         String?           @default("parcel") @db.VarChar(50)
+  shipping_fee_type       String?           @default("paid") @db.VarChar(50)
+  carrier_code            String?           @db.VarChar(50)
+  shipping_template_id    String?
+  main_image_url          String?
+  detail_image_url        String?
+  seo_hook_text           String?
+  golden_keyword_score    Int?
+  orderItems              OrderItem[]
+  supplier                Supplier          @relation(fields: [supplierId], references: [id])
+  user                    User              @relation(fields: [userId], references: [id])
+  naver_categories        NaverCategory?    @relation(fields: [category_id], references: [id], onUpdate: NoAction, map: "fk_products_category")
+  origin_codes            OriginCode?       @relation(fields: [origin_id], references: [id], onUpdate: NoAction, map: "fk_products_origin")
+  shipping_templates      ShippingTemplate? @relation(fields: [shipping_template_id], references: [id], onUpdate: NoAction, map: "fk_products_shipping_template")
+  product_options         product_options?
+
+  @@index([supplierId])
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([imageCount])
+  @@index([category_id], map: "idx_products_category_id")
+  @@index([origin_id], map: "idx_products_origin_id")
+  @@index([seller_product_code], map: "idx_products_seller_code")
+  @@index([shipping_template_id], map: "idx_products_shipping_template")
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  shippingAddress String
+  totalAmount     Int
+  status          String      @default("PENDING")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  adminMemo       String?
+  cancelledAt     DateTime?
+  courierCompany  String?
+  deliveredAt     DateTime?
+  paidAt          DateTime?
+  shippedAt       DateTime?
+  shippingRequest String?     @default("")
+  trackingNumber  String?
+  discount        Int?        @default(0)
+  paymentMethod   String?
+  shippingFee     Int?        @default(0)
+  shippingZipcode String?     @default("")
+  totalPrice      Int?
+  userId          String?
+  orderItems      OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  quantity  Int
+  price     Int
+  orderId   String
+  productId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model NaverCategory {
+  id           String    @id @default(cuid())
+  categoryCode String    @unique @map("category_code")
+  depth1       String?
+  depth2       String?
+  depth3       String?
+  depth4       String?
+  fullPath     String    @map("full_path")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  Product      Product[]
+
+  @@index([categoryCode])
+  @@map("naver_categories")
+}
+
+model OriginCode {
+  id         String    @id @default(cuid())
+  originCode String    @unique @map("origin_code")
+  originName String    @map("origin_name")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  Product    Product[]
+
+  @@index([originCode])
+  @@map("origin_codes")
+}
+
+model ShippingTemplate {
+  id              String    @id @default(cuid())
+  name            String
+  code            String    @unique
+  platformCode    String?   @map("platform_code")
+  supplierCode    String?   @map("supplier_code")
+  courierCode     String    @default("CJGLS") @map("courier_code")
+  shippingType    Int       @default(1) @map("shipping_type")
+  shippingFee     Int       @default(3000) @map("shipping_fee")
+  freeThreshold   Int?      @map("free_threshold")
+  returnFee       Int       @default(6000) @map("return_fee")
+  exchangeFee     Int       @default(6000) @map("exchange_fee")
+  jejuFee         Int       @default(5000) @map("jeju_fee")
+  islandFee       Int       @default(5000) @map("island_fee")
+  naverTemplateNo String?   @map("naver_template_no")
+  bundleKey       String?   @map("bundle_key")
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  Product         Product[]
+
+  @@map("shipping_templates")
+}
+
+model daily_recommendations {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date         DateTime  @db.Date
+  product_name String    @db.VarChar(255)
+  supplier_id  String?
+  honey_score  Int
+  season_tag   String?   @db.VarChar(50)
+  status       String?   @default("pending") @db.VarChar(20)
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([date], map: "idx_daily_recommendations_date")
+  @@index([status], map: "idx_daily_recommendations_status")
+}
+
+model product_options {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id    String    @unique
+  option_type   String    @db.VarChar(50)
+  option_names  Json?
+  option_rows   Json?
+  direct_inputs Json?
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+  Product       Product   @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_product_options_product")
+
+  @@index([product_id], map: "idx_product_options_product_id")
+  @@index([option_type], map: "idx_product_options_type")
+}

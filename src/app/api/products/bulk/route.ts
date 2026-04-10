@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 // 일괄 삭제
+
+export const dynamic = 'force-dynamic';
 export async function DELETE(request: NextRequest) {
   try {
     const { ids } = await request.json();

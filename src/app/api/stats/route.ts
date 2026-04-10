@@ -1,11 +1,11 @@
 // src/app/api/stats/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 // GET /api/stats - 상세 통계 조회
+
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
         const orders = await prisma.order.findMany({
           where: {
-            orderDate: {
+            createdAt: {
               gte: monthStart,
               lte: monthEnd,
             },
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        const monthSales = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+        const monthSales = orders.reduce((sum, order) => sum + (order.totalAmount ?? order.totalPrice ?? 0), 0);
         data.push(monthSales);
         labels.push(`${m + 1}월`);
       }
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
         const orders = await prisma.order.findMany({
           where: {
-            orderDate: {
+            createdAt: {
               gte: weekStart,
               lte: weekEnd,
             },
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        const weekSales = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+        const weekSales = orders.reduce((sum, order) => sum + (order.totalAmount ?? order.totalPrice ?? 0), 0);
         data.push(weekSales);
         labels.push(`${weekNum}주차`);
         weekNum++;
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
 
         const orders = await prisma.order.findMany({
           where: {
-            orderDate: {
+            createdAt: {
               gte: dayStart,
               lte: dayEnd,
             },
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        const daySales = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+        const daySales = orders.reduce((sum, order) => sum + (order.totalAmount ?? order.totalPrice ?? 0), 0);
         data.push(daySales);
         labels.push(`${day}일`);
       }
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
     // 총 매출 및 주문 수
     const totalOrders = await prisma.order.count({
       where: {
-        orderDate: {
+        createdAt: {
           gte: startDate,
           lte: endDate,
         },
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
 
     const orders = await prisma.order.findMany({
       where: {
-        orderDate: {
+        createdAt: {
           gte: startDate,
           lte: endDate,
         },
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const totalSales = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+    const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount ?? order.totalPrice ?? 0), 0);
     const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
 
     return NextResponse.json({

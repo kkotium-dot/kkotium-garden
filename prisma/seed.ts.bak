@@ -1,0 +1,551 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🌱 씨딩 시작...');
+
+  // 1. User 생성 (upsert)
+  const user = await prisma.user.upsert({
+    where: { email: 'admin@kkotium.com' },
+    update: {},
+    create: {
+      email: 'admin@kkotium.com',
+      name: '꽃티움 관리자',
+      level: 10,
+      exp: 9999,
+    },
+  });
+  console.log('✅ User:', user.email);
+
+  // 2. Supplier 생성 (upsert)
+  const supplier = await prisma.supplier.upsert({
+    where: { code: 'SUP-KKOTIUM-001' },
+    update: {},
+    create: {
+      name: '꽃티움 직시공급',
+      code: 'SUP-KKOTIUM-001',
+      contact: '010-0000-0000',
+      address: '서울시 강남구',
+      description: '게다 협력 공급사',
+    },
+  });
+  console.log('✅ Supplier:', supplier.name);
+
+  // 3. 기존 상품 전체 삭제 (초기화)
+  await prisma.product.deleteMany({});
+  console.log('🗑️ 기존 상품 취소');
+
+  // 4. 샘플 상품 10개
+  const products = [
+    {
+      name: '프리미엄 장미 꽃다발 생일선물 당일배송',
+      sku: 'ROSE-001',
+      category: 'flower',
+      salePrice: 59000,
+      supplierPrice: 28000,
+      margin: 52.5,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1548094878-84ced0f6a458?w=800',
+      images: ['https://images.unsplash.com/photo-1548094878-84ced0f6a458?w=800'],
+      naver_title: '프리미엄 장미 꽃다발 생일선물 기념일 당일배송',
+      naver_keywords: '장미꽃다발, 생일선물, 꽃다발, 기념일꽃, 당일배송꽃',
+      naver_description: '신선한 장미로 제작한 프리미엄 꽃다발. 생일, 기념일, 청혼 선물로 완벽합니다. 당일 배송 가능.',
+      naver_brand: '꽃티움',
+      naver_material: '생화',
+      naver_color: '레드, 핑크',
+      naver_size: '중형(50cm)',
+      shippingFee: 0,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+      imageCount: 1,
+    },
+    {
+      name: '튜립 꽃다발 졸업선물 입학축하 봄꽃',
+      sku: 'TULIP-001',
+      category: 'flower',
+      salePrice: 45000,
+      supplierPrice: 20000,
+      margin: 55.6,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1520763185298-1b434c919102?w=800',
+      images: ['https://images.unsplash.com/photo-1520763185298-1b434c919102?w=800'],
+      naver_title: '튜립 꽃다발 졸업선물 입학축하 비암차선물',
+      naver_keywords: '튜립꽃다발, 졸업선물, 입학축하, 봄꽃, 기념일꽃',
+      naver_description: '생동감 넘치는 튜립으로 제작한 봄보나 꽃다발. 졸업식, 입학식, 중요한 날선물로 취역.',
+      naver_brand: '꽃티움',
+      naver_material: '생화',
+      naver_color: '에루, 핑크, 화이트',
+      naver_size: '중형(45cm)',
+      shippingFee: 3000,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+      imageCount: 1,
+    },
+    {
+      name: '카네이션 꽃바구니 어버이날 선물 모양기르기',
+      sku: 'CARN-001',
+      category: 'basket',
+      salePrice: 69000,
+      supplierPrice: 32000,
+      margin: 53.6,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1490750967868-88df5691cc8b?w=800',
+      images: ['https://images.unsplash.com/photo-1490750967868-88df5691cc8b?w=800'],
+      naver_title: '카네이션 꽃바구니 어버이날 감사선물 모양기르기',
+      naver_keywords: '카네이션꽃바구니, 어버이날꽃, 감사선물, 홈패다이아, 부모님선물',
+      naver_description: '어버이날 모양기르기 피크 카네이션 꽃바구니. 부모님께 전하는 진심어린 마음.',
+      naver_brand: '꽃티움',
+      naver_material: '생화',
+      naver_color: '피크, 레드',
+      naver_size: '대형(60cm)',
+      shippingFee: 0,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+      imageCount: 1,
+    },
+    {
+      name: '스투키 공기정화식물 철재화분 집들이선물',
+      sku: 'STUKI-001',
+      category: 'plant',
+      salePrice: 38000,
+      supplierPrice: 15000,
+      margin: 60.5,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=800',
+      images: ['https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=800'],
+      naver_title: '스투키 공기정화식물 철재화분 집들이선물 인테리어화분',
+      naver_keywords: '스투키화분, 공기정화식물, 집들이선물, 철재화분, 관리쉽는식물',
+      naver_description: '관리가 쉽고 공기정화 효과가 뛰어난 스투키. 집들이, 인테리어 식물로 인기 정상.',
+      naver_brand: '꽃티움',
+      naver_material: '생식물',
+      naver_color: '그린',
+      naver_size: '중형(40cm)',
+      shippingFee: 3000,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+      imageCount: 1,
+    },
+    {
+      name: '모스테라 중형 인테리어 실내화분 가습화분',
+      sku: 'MONS-001',
+      category: 'plant',
+      salePrice: 55000,
+      supplierPrice: 22000,
+      margin: 60.0,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800',
+      images: ['https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800'],
+      naver_title: '모스테라 중형 실내화분 인테리어화분 가습화분',
+      naver_keywords: '모스테라, 실내화분, 인테리어화분, 가습화분, 관엽식물',
+      naver_description: '트렌디한 인테리어 식물 모스테라. 가습 효과와 공기정화 효과까지. 집스럽다는 나 혐주는 화분.',
+      naver_brand: '꽃티움',
+      naver_material: '생식물',
+      naver_color: '딥딩한 그린',
+      naver_size: '중형(60cm)',
+      shippingFee: 5000,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+      imageCount: 1,
+    },
+    {
+      name: '드라이플라워 미니부케 선물세트 인테리어',
+      sku: 'DRY-001',
+      category: 'bouquet',
+      salePrice: 28000,
+      supplierPrice: 10000,
+      margin: 64.3,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=800',
+      images: ['https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=800'],
+      naver_title: '드라이플라워 미니부케 선물세트 인테리어소품',
+      naver_keywords: '드라이플라워, 미니부케, 선물세트, 플레저브드플라워, 인테리어소품',
+      naver_description: '오래 지속되는 드라이플라워 미니 부케. 선물, 인테리어 소품으로 인기.',
+      naver_brand: '꽃티움',
+      naver_material: '건조화',
+      naver_color: '베이지, 피크',
+      naver_size: '소형(25cm)',
+      shippingFee: 3000,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+      imageCount: 1,
+    },
+    {
+      name: '플라워 용돈박스 꽃다발 화뻼 고마운 선물',
+      sku: 'MONEYBOX-001',
+      category: 'flower',
+      salePrice: 89000,
+      supplierPrice: 35000,
+      margin: 60.7,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1567696911980-2eed69a46042?w=800',
+      images: ['https://images.unsplash.com/photo-1567696911980-2eed69a46042?w=800'],
+      naver_title: '플라워 용돈박스 꽃다발 화뻼 수령식선물 고마운선물',
+      naver_keywords: '용돈박스, 플라워용돈박스, 개업선물, 수령식선물, 고마운선물',
+      naver_description: '깃털운 호일 장미화비와 함께 축하금을 담은 용돈박스. 수령식선물로 최고!',
+      naver_brand: '꽃티움',
+      naver_material: '생화+상자',
+      naver_color: '핑크, 골드',
+      naver_size: '중형(40cm)',
+      shippingFee: 0,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+      imageCount: 1,
+    },
+    {
+      name: '꽃 정기구독 4주 시즉년부케 실내배송',
+      sku: 'SUB-001',
+      category: 'flower',
+      salePrice: 120000,
+      supplierPrice: 60000,
+      margin: 50.0,
+      status: 'DRAFT',
+      mainImage: 'https://images.unsplash.com/photo-1487530811015-780780169927?w=800',
+      images: ['https://images.unsplash.com/photo-1487530811015-780780169927?w=800'],
+      naver_title: '꽃 정기구독 4주 코스 매주 시즉년부케',
+      naver_keywords: '꽃정기구독, 주1회꽃, 시즘토시즘녹이씨, 매주꽃배달, 구독형선물',
+      naver_description: '매주 달라지는 시즘꽃으로 센스를 쫓는 구독 서비스. 4주 코스 할인!',
+      naver_brand: '꽃티움',
+      naver_material: '생화(시즘)',
+      naver_color: '매주 변경',
+      naver_size: '다양',
+      shippingFee: 0,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+      imageCount: 1,
+    },
+    {
+      name: '스테인리스 화병 세트 프리미엄 꽃병',
+      sku: 'VASE-001',
+      category: 'supplies',
+      salePrice: 42000,
+      supplierPrice: 15000,
+      margin: 64.3,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1602607143729-a4aa6b0d4e5a?w=800',
+      images: ['https://images.unsplash.com/photo-1602607143729-a4aa6b0d4e5a?w=800'],
+      naver_title: '스테인리스 화병 프리미엄 꽃병세트 인테리어소품',
+      naver_keywords: '화병, 스테인리스화병, 인테리어소품, 프리미엄화병, 꽃병세트',
+      naver_description: '어떤 꽃과도 잘 어울리는 스테인리스 화병 세트. 순리한 디자인으로 인테리어 포인트.',
+      naver_brand: '꽃티움',
+      naver_material: '스테인리스',
+      naver_color: '실버',
+      naver_size: '중형(30cm)',
+      shippingFee: 3000,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+      imageCount: 1,
+    },
+    {
+      name: '프리미엄 꽃포장지 리본 세트 제작용 부자재',
+      sku: 'WRAP-001',
+      category: 'supplies',
+      salePrice: 15000,
+      supplierPrice: 5000,
+      margin: 66.7,
+      status: 'ACTIVE',
+      mainImage: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800',
+      images: ['https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800'],
+      naver_title: '프리미엄 꽃포장지 리본세트 꽃집포장재료',
+      naver_keywords: '꽃포장지, 리본, 구리보라공다, 포장재료, 부자재',
+      naver_description: '세년한 종이 재질의 포장지와 리본 세트. 선물 포장에 필수인 아이템.',
+      naver_brand: '꽃티움',
+      naver_material: '종이, 패브릭',
+      naver_color: '핑크, 화이트, 크라프트',
+      naver_size: '업섭(50x60cm)',
+      shippingFee: 3000,
+      brand: '꽃티움',
+      manufacturer: '꽃티움',
+      imageCount: 1,
+    },
+  ];
+
+  for (const p of products) {
+    const created = await prisma.product.create({
+       {
+        ...p,
+        supplierId: supplier.id,
+        userId: user.id,
+      },
+    });
+    console.log(`✅ 상품 생성: ${created.name} (SEO: ${created.naver_title?.length || 0}자)`);
+  }
+
+  console.log('🎉 씨딩 완료! 상품 10개 생성됨');
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 마스터 데이터: 택배사 (212개 대표 샘플)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const DELIVERY_COMPANIES = [
+  { code: 'CJGLS', name: 'CJ대한통운' },
+  { code: 'HYUNDAI', name: '롯데택배' },
+  { code: 'HANJIN', name: '한진택배' },
+  { code: 'KGB', name: '로젠택배' },
+  { code: 'EPOST', name: '우체국택배' },
+  { code: 'LOGEN', name: '로젠택배' },
+  { code: 'KDEXP', name: '경동택배' },
+  { code: 'CVSNET', name: 'GS Postbox 택배' },
+  { code: 'DAESIN', name: '대신택배' },
+  { code: 'ILYANG', name: '일양로지스' },
+  { code: 'CHUNIL', name: '천일택배' },
+  { code: 'POST', name: '우체국택배' },
+  { code: 'HDEXP', name: '합동택배' },
+  { code: 'HANJINLOGIS', name: '한진택배' },
+  { code: 'DHL', name: 'DHL' },
+  { code: 'FEDEX', name: 'FedEx' },
+  { code: 'UPS', name: 'UPS' },
+  { code: 'TNT', name: 'TNT Express' },
+  { code: 'EMS', name: 'EMS (국제우편)' },
+  { code: 'GSMNTON', name: 'GS Postbox' },
+]
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 마스터 데이터: 네이버 카테고리 (4,993개 대표 샘플)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const NAVER_CATEGORIES = [
+  { code: '50000000', level1: '가구/인테리어', level2: null, level3: null, level4: null },
+  { code: '50001000', level1: '가구/인테리어', level2: '거실가구', level3: null, level4: null },
+  { code: '50001001', level1: '가구/인테리어', level2: '거실가구', level3: '소파', level4: null },
+  { code: '50001002', level1: '가구/인테리어', level2: '거실가구', level3: '거실장', level4: null },
+  { code: '50001003', level1: '가구/인테리어', level2: '거실가구', level3: 'TV/AV 거치대', level4: null },
+  { code: '50002000', level1: '가구/인테리어', level2: '침실가구', level3: null, level4: null },
+  { code: '50002001', level1: '가구/인테리어', level2: '침실가구', level3: '침대', level4: null },
+  { code: '50002002', level1: '가구/인테리어', level2: '침실가구', level3: '매트리스', level4: null },
+  { code: '50003000', level1: '가구/인테리어', level2: 'DIY자재/용품', level3: null, level4: null },
+  { code: '50003307', level1: '가구/인테리어', level2: 'DIY자재/용품', level3: '가구부속품', level4: '가구다리' },
+  { code: '50004000', level1: '가구/인테리어', level2: '수납/정리', level3: null, level4: null },
+  { code: '50005000', level1: '가구/인테리어', level2: '조명/스탠드', level3: null, level4: null },
+  { code: '50006000', level1: '가구/인테리어', level2: '인테리어소품', level3: null, level4: null },
+  { code: '50007000', level1: '가구/인테리어', level2: '커튼/블라인드', level3: null, level4: null },
+  { code: '50008000', level1: '가구/인테리어', level2: '벽지/시트지', level3: null, level4: null },
+  { code: '30000000', level1: '생활/건강', level2: null, level3: null, level4: null },
+  { code: '40000000', level1: '패션의류', level2: null, level3: null, level4: null },
+  { code: '10000000', level1: '디지털/가전', level2: null, level3: null, level4: null },
+  { code: '20000000', level1: '식품', level2: null, level3: null, level4: null },
+  { code: '60000000', level1: '도서', level2: null, level3: null, level4: null },
+]
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 마스터 데이터: 원산지 (518개 대표 샘플)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const ORIGIN_CODES = [
+  { code: '0', region: '국산' },
+  { code: '0001', region: '서울특별시' },
+  { code: '0002', region: '부산광역시' },
+  { code: '0003', region: '대구광역시' },
+  { code: '0004', region: '인천광역시' },
+  { code: '0005', region: '광주광역시' },
+  { code: '0006', region: '대전광역시' },
+  { code: '0007', region: '울산광역시' },
+  { code: '0008', region: '세종특별자치시' },
+  { code: '0009', region: '경기도' },
+  { code: '0010', region: '강원도' },
+  { code: '0011', region: '충청북도' },
+  { code: '0012', region: '충청남도' },
+  { code: '0013', region: '전라북도' },
+  { code: '0014', region: '전라남도' },
+  { code: '0015', region: '경상북도' },
+  { code: '0016', region: '경상남도' },
+  { code: '0017', region: '제주특별자치도' },
+  { code: '0200037', region: '중국' },
+  { code: '0201038', region: '일본' },
+  { code: '0200034', region: '베트남' },
+  { code: '0200027', region: '태국' },
+  { code: '0200039', region: '대만' },
+  { code: '0200031', region: '말레이시아' },
+  { code: '0200036', region: '인도네시아' },
+  { code: '0200035', region: '인도' },
+  { code: '0201110', region: '미국' },
+  { code: '0200074', region: '캐나다' },
+  { code: '0200086', region: '독일' },
+  { code: '0200082', region: '프랑스' },
+  { code: '0200094', region: '이탈리아' },
+  { code: '0200080', region: '영국' },
+  { code: '0200087', region: '스페인' },
+  { code: '0200040', region: '호주' },
+  { code: '0200041', region: '뉴질랜드' },
+]
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 1. 택배사 Seed
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function seedDeliveryCompanies() {
+  console.log('\n📦 택배사 코드 Seed 시작...')
+
+  let successCount = 0
+
+  for (const company of DELIVERY_COMPANIES) {
+    await prisma.deliveryCompany.upsert({
+      where: { code: company.code },
+      update: {},
+      create: {
+        code: company.code,
+        name: company.name,
+        active: true,
+      },
+    })
+    successCount++
+  }
+
+  console.log(`✅ 택배사 Seed 완료: ${successCount}개`)
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 2. 카테고리 Seed
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function seedNaverCategories() {
+  console.log('\n📂 네이버 카테고리 Seed 시작...')
+
+  let successCount = 0
+
+  for (const cat of NAVER_CATEGORIES) {
+    const fullPath = [cat.level1, cat.level2, cat.level3, cat.level4]
+      .filter(Boolean)
+      .join(' > ')
+
+    await prisma.naverCategory.upsert({
+      where: { code: cat.code },
+      update: {},
+      create: {
+        code: cat.code,
+        level1: cat.level1,
+        level2: cat.level2,
+        level3: cat.level3,
+        level4: cat.level4,
+        fullPath: fullPath || null,
+        active: true,
+      },
+    })
+    successCount++
+  }
+
+  console.log(`✅ 카테고리 Seed 완료: ${successCount}개`)
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 3. 원산지 Seed
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function seedOriginCodes() {
+  console.log('\n🌍 원산지 코드 Seed 시작...')
+
+  let successCount = 0
+
+  for (const origin of ORIGIN_CODES) {
+    await prisma.originCode.upsert({
+      where: { code: origin.code },
+      update: {},
+      create: {
+        code: origin.code,
+        region: origin.region,
+        active: true,
+      },
+    })
+    successCount++
+  }
+
+  console.log(`✅ 원산지 Seed 완료: ${successCount}개`)
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 4. 기존 User/Supplier Seed
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function seedBasicData() {
+  console.log('\n👤 기본 데이터 (User, Supplier) Seed 시작...')
+
+  const user = await prisma.user.upsert({
+    where: { email: 'test@kkotium.com' },
+    update: {},
+    create: {
+      email: 'test@kkotium.com',
+      name: '테스트 관리자',
+      level: 1,
+      exp: 0,
+    },
+  })
+  console.log('✅ User 생성 완료:', user.email)
+
+  const supplier = await prisma.supplier.upsert({
+    where: { code: 'SUP001' },
+    update: {},
+    create: {
+      name: '꽃틔움 본사',
+      code: 'SUP001',
+      contact: '02-1234-5678',
+      address: '서울시 강남구 테헤란로 123',
+      description: '프리미엄 꽃 공급 업체',
+    },
+  })
+  console.log('✅ Supplier 생성 완료:', supplier.name)
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 메인 함수
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function main() {
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  console.log('🌱 꽃틔움 가든 - 네이버 통합 설계 Seed 시작')
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+  try {
+    // 1. 기본 데이터
+    await seedBasicData()
+
+    // 2. 네이버 마스터 데이터
+    await seedDeliveryCompanies()
+    await seedNaverCategories()
+    await seedOriginCodes()
+
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('🎉 모든 Seed 데이터 생성 완료!')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+    // 통계 출력
+    const deliveryCount = await prisma.deliveryCompany.count()
+    const categoryCount = await prisma.naverCategory.count()
+    const originCount = await prisma.originCode.count()
+
+    console.log('\n📊 데이터베이스 통계:')
+    console.log(`   택배사: ${deliveryCount}개`)
+    console.log(`   카테고리: ${categoryCount}개`)
+    console.log(`   원산지: ${originCount}개`)
+    console.log(`   총합: ${deliveryCount + categoryCount + originCount}개`)
+
+    console.log('\n💡 참고: Space Files의 전체 엑셀 데이터를 사용하려면')
+    console.log('   prisma/data/ 폴더에 엑셀 파일을 복사하고')
+    console.log('   seed.ts를 확장 버전으로 교체하세요!')
+  } catch (error) {
+    console.error('\n❌ Seed 실행 중 오류 발생:', error)
+    throw error
+  }
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect()
+  })
+  .catch(async (e) => {
+    console.error('❌ 시드 에러:', e)
+    await prisma.$disconnect()
+    process.exit(1)
+  })
