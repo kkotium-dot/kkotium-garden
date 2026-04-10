@@ -26,3 +26,15 @@ prisma/migrations
 Thumbs.db
 *.pem
 .env.local
+
+*.env.backup
+.env.local.backup*
+vercel_env_upload.env
+vercel_env_upload*.env
+patch_*.py
+fix_*.py
+test_*.js
+write_*.py
+write-*.js
+write-sku.js
+write-parser.js
