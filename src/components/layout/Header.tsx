@@ -48,7 +48,7 @@ export default function Header() {
                 objectFit: 'contain',
                 width: '100%',
                 height: '100%',
-                mixBlendMode: 'screen',
+                
               }}
             />
           </div>

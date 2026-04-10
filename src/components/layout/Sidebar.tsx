@@ -244,7 +244,7 @@ export default function Sidebar() {
             alt="KKOTIUM"
             width={42}
             height={42}
-            style={{ objectFit: 'contain', width: '100%', height: '100%', mixBlendMode: 'screen' }}
+            style={{ objectFit: 'contain', width: '100%', height: '100%' }}
           />
         </div>
         <div style={{ lineHeight: 1.2 }}>
