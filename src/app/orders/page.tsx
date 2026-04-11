@@ -343,7 +343,7 @@ function OrdersInner() {
 
         {/* Table header */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '32px 130px 1fr 100px 90px 120px 72px',
+          display: 'grid', gridTemplateColumns: '32px 160px 1fr 100px 100px 110px 80px',
           gap: 8, padding: '9px 16px',
           background: '#FFF0F5', borderBottom: '2px solid #FFB3CE',
           alignItems: 'center',
@@ -379,7 +379,7 @@ function OrdersInner() {
             return (
               <div key={order.id}>
                 <div style={{
-                  display: 'grid', gridTemplateColumns: '32px 130px 1fr 100px 90px 120px 72px',
+                  display: 'grid', gridTemplateColumns: '32px 160px 1fr 100px 100px 110px 80px',
                   gap: 8, padding: '11px 16px', alignItems: 'center',
                   background: isSelected
                     ? 'rgba(230,35,16,0.05)'
@@ -404,21 +404,23 @@ function OrdersInner() {
 
                   {/* Order number + customer */}
                   <div>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: '#1A1A1A', margin: 0, fontFamily: 'monospace', letterSpacing: '0.03em', textDecoration: problem ? 'line-through' : 'none', textDecorationColor: '#fca5a5' }}>
-                      {order.orderNumber?.slice(-12) ?? order.id?.slice(-12)}
+                    <p style={{ fontSize: 10, fontWeight: 700, color: '#1A1A1A', margin: 0, fontFamily: 'monospace', letterSpacing: '0.02em', textDecoration: problem ? 'line-through' : 'none', textDecorationColor: '#fca5a5' }}>
+                      {order.orderNumber ?? order.id}
                     </p>
-                    <p style={{ fontSize: 11, color: '#888', margin: '2px 0 0' }}>
-                      {order.customerName || '—'}
+                    <p style={{ fontSize: 10, color: '#B0A0A8', margin: '1px 0 0' }}>
+                      {order.customerName || order.customerPhone || '—'}
                     </p>
                   </div>
 
                   {/* Product / address */}
                   <div style={{ minWidth: 0 }}>
                     <p style={{ fontSize: 12, fontWeight: 600, color: '#1A1A1A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: problem ? 'line-through' : 'none', textDecorationColor: '#fca5a5' }}>
-                      {order.shippingAddress || order.orderNumber || '—'}
+                      {order.shippingAddress
+                        ? order.shippingAddress
+                        : <span style={{ color: '#D4B0BC', fontStyle: 'italic' }}>배송지 정보 없음</span>}
                     </p>
                     <p style={{ fontSize: 10, color: '#B0A0A8', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {order.customerPhone || '—'}
+                      {order.customerPhone ? order.customerPhone : order.customerName ? order.customerName : '—'}
                     </p>
                   </div>
 
