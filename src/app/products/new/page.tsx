@@ -955,7 +955,8 @@ function NewProductPageInner() {
           brand, originCode, taxType,
           status: 'DRAFT',
           mainImage,
-          description: description || productName.trim(),
+          description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
+          detail_image_url: detailImageUrl || undefined,
           keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
           tags: seoTags.length > 0 ? seoTags : undefined,
           asPhone, asGuide,
@@ -1092,7 +1093,8 @@ const handleGenerate = async () => {
       mainImage: mainImage || '',
       additionalImages: additionalImages || '',
       // Content
-      description: description || productName,
+      description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
+      detail_image_url: detailImageUrl || undefined,
       // ① 기본 — product info
       productStatus: '신상품',
       brand,
