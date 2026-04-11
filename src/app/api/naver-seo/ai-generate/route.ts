@@ -152,11 +152,18 @@ export async function POST(request: NextRequest) {
       style?: SeoStyle;
     };
 
-    if (!productName) {
+    // If productName not provided, fetch from DB using productId
+    let resolvedName = productName;
+    if (!resolvedName && productId && productId !== 'temp') {
+      const found = await prisma.product.findUnique({ where: { id: productId }, select: { name: true } });
+      resolvedName = found?.name ?? '';
+    }
+
+    if (!resolvedName) {
       return NextResponse.json({ success: false, error: '상품명이 필요합니다.' }, { status: 400 });
     }
 
-    const { data: aiResponse, provider } = await generateSEO(productName, style as SeoStyle);
+    const { data: aiResponse, provider } = await generateSEO(resolvedName, style as SeoStyle);
 
     if (productId && productId !== 'temp') {
       // Parse keywords from comma-separated string to JSON array
