@@ -1,6 +1,6 @@
 // GET /api/naver/orders — sync Naver orders into DB
-// Naver API response: { data: { contents: [...], pagination: {...} } }
-// Each item has productOrderStatus (active) or claimStatus (cancelled/returned)
+// Naver API response structure:
+//   { data: { contents: [ { productOrderId, content: { order, productOrder, shippingAddress, ... } } ] } }
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -8,30 +8,24 @@ import { naverRequest } from '@/lib/naver/api-client';
 
 export const dynamic = 'force-dynamic';
 
-// Map Naver statuses to internal statuses
 const STATUS_MAP: Record<string, string> = {
-  // productOrderStatus values
   PAYMENT_WAITING:  'PENDING',
   PAYED:            'PAID',
   DELIVERING:       'SHIPPING',
   DELIVERED:        'DELIVERED',
   PURCHASE_DECIDED: 'COMPLETED',
   EXCHANGED:        'EXCHANGED',
-  // claimStatus values (cancelled/returned orders)
+  CANCELED:         'CANCELLED',
   CANCEL_DONE:      'CANCELLED',
   CANCEL_REQUEST:   'CANCEL_REQUESTED',
+  RETURNED:         'RETURNED',
   RETURN_DONE:      'RETURNED',
   RETURN_REQUEST:   'RETURN_REQUESTED',
-  EXCHANGE_DONE:    'EXCHANGED',
-  // Legacy
-  CANCELED:         'CANCELLED',
-  RETURNED:         'RETURNED',
-  RETURN_REQUESTED: 'RETURN_REQUESTED',
 };
 
 const toKST = (d: Date) => d.toISOString().replace('Z', '+09:00');
 
-function splitWindows(from: Date, to: Date): { from: Date; to: Date }[] {
+function splitWindows(from: Date, to: Date) {
   const MAX_MS = 23 * 60 * 60 * 1000;
   const windows: { from: Date; to: Date }[] = [];
   let cursor = new Date(from);
@@ -46,27 +40,12 @@ function splitWindows(from: Date, to: Date): { from: Date; to: Date }[] {
 function extractOrders(raw: unknown): unknown[] {
   if (!raw || typeof raw !== 'object') return [];
   const r = raw as Record<string, unknown>;
-  // Primary: { data: { contents: [...] } }
   if (r.data && typeof r.data === 'object') {
     const d = r.data as Record<string, unknown>;
     if (Array.isArray(d.contents)) return d.contents;
-    if (Array.isArray(d.data))     return d.data;
   }
-  if (Array.isArray(r.contents))      return r.contents;
-  if (Array.isArray(r.data))          return r.data;
-  if (Array.isArray(r.productOrders)) return r.productOrders;
+  if (Array.isArray(r.contents)) return r.contents;
   return [];
-}
-
-// Determine status from order object — handles both active and claim statuses
-function resolveStatus(o: Record<string, unknown>): string {
-  // Cancelled/returned orders have claimStatus
-  const claimStatus = String(o.claimStatus ?? '');
-  if (claimStatus && STATUS_MAP[claimStatus]) return STATUS_MAP[claimStatus];
-  // Active orders have productOrderStatus
-  const orderStatus = String(o.productOrderStatus ?? '');
-  if (orderStatus && STATUS_MAP[orderStatus]) return STATUS_MAP[orderStatus];
-  return claimStatus || orderStatus || 'PENDING';
 }
 
 export async function GET(request: NextRequest) {
@@ -84,29 +63,22 @@ export async function GET(request: NextRequest) {
     const toDate   = new Date();
     const windows  = splitWindows(fromDate, toDate);
 
-    let allOrders: unknown[] = [];
+    let allItems: unknown[] = [];
 
     for (const w of windows) {
       try {
-        // No status filter = returns ALL statuses including cancelled
-        // Build query manually — URLSearchParams encodes + in timezone as %2B
-        // which some servers decode as space, breaking the date format
-        const fromStr = toKST(w.from);
-        const toStr   = toKST(w.to);
-        const qUrl = `/v1/pay-order/seller/product-orders?from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}&pageSize=300`;
-        console.log('[naver/orders] calling:', qUrl);
-        const raw = await naverRequest('GET', qUrl);
-        console.log('[naver/orders] raw keys:', Object.keys((raw as Record<string,unknown>) ?? {}), 'data keys:', Object.keys(((raw as Record<string,unknown>)?.data as Record<string,unknown>) ?? {}));
-        allOrders = allOrders.concat(extractOrders(raw));
+        const qUrl = `/v1/pay-order/seller/product-orders?from=${encodeURIComponent(toKST(w.from))}&to=${encodeURIComponent(toKST(w.to))}&pageSize=300`;
+        const raw  = await naverRequest('GET', qUrl);
+        allItems   = allItems.concat(extractOrders(raw));
       } catch (err: unknown) {
-        console.error('[naver/orders] window error:', err instanceof Error ? err.message : String(err));
+        console.error('[naver/orders] window error:', err instanceof Error ? err.message : err);
       }
     }
 
     // Deduplicate
     const seen = new Set<string>();
-    const unique = allOrders.filter(o => {
-      const id = String((o as Record<string, unknown>).productOrderId ?? '');
+    const unique = allItems.filter(item => {
+      const id = String((item as Record<string, unknown>).productOrderId ?? '');
       if (!id || seen.has(id)) return false;
       seen.add(id);
       return true;
@@ -114,50 +86,57 @@ export async function GET(request: NextRequest) {
 
     let synced = 0, skipped = 0;
 
-    for (const order of unique) {
-      const o = order as Record<string, unknown>;
+    for (const item of unique) {
+      const i = item as Record<string, unknown>;
       try {
-        const naverOrderId = String(o.productOrderId ?? '');
+        const naverOrderId = String(i.productOrderId ?? '');
         if (!naverOrderId) { skipped++; continue; }
 
-        const status = resolveStatus(o);
+        // Naver wraps all data under 'content'
+        const content      = (i.content as Record<string, unknown>) ?? i;
+        const productOrder = (content.productOrder as Record<string, unknown>) ?? {};
+        const order        = (content.order       as Record<string, unknown>) ?? {};
+        const shipping     = (content.shippingAddress as Record<string, unknown>) ?? {};
 
-        // Payment amount
-        const totalAmount = Number(
-          o.totalPaymentAmount ?? o.generalPaymentAmount ?? o.paymentAmount ?? 0
+        const status = STATUS_MAP[String(productOrder.productOrderStatus ?? '')] ?? 'PENDING';
+        const totalAmount = Number(productOrder.totalPaymentAmount ?? order.generalPaymentAmount ?? 0);
+        const productName = String(productOrder.productName ?? '');
+        const paymentDate = String(order.paymentDate ?? productOrder.orderDate ?? new Date().toISOString());
+
+        const customerName    = String(order.ordererName  ?? shipping.name  ?? '');
+        const customerPhone   = String(order.ordererTel   ?? shipping.tel1  ?? '');
+        const shippingAddress = String(
+          (shipping.roadAddress   as string) ??
+          (shipping.baseAddress   as string) ??
+          ''
         );
-
-        // Shipping address
-        const shipping = (o.shippingAddress as Record<string, unknown>) ?? {};
-
-        // Product info
-        const productName = String(o.productName ?? '');
-        const quantity    = Number(o.quantity ?? 1);
 
         await (prisma as any).order.upsert({
           where:  { id: naverOrderId },
-          update: { status, updatedAt: new Date() },
+          update: {
+            status,
+            totalAmount,
+            customerName,
+            customerPhone,
+            shippingAddress,
+            updatedAt: new Date(),
+          },
           create: {
             id:              naverOrderId,
             orderNumber:     naverOrderId,
             status,
             totalAmount,
             totalPrice:      totalAmount,
-            customerName:    String(shipping.name    ?? o.receiverName    ?? ''),
+            customerName,
             customerEmail:   '',
-            customerPhone:   String(shipping.tel1    ?? shipping.tel      ?? o.receiverTel ?? ''),
-            shippingAddress: String(
-              (shipping as Record<string, unknown>).roadAddress ??
-              ((shipping as Record<string, unknown>).baseAddress
-                ? `${(shipping as Record<string, unknown>).baseAddress} ${(shipping as Record<string, unknown>).detailedAddress ?? ''}`.trim()
-                : '') ??
-              o.receiverAddress ?? ''
-            ),
+            customerPhone,
+            shippingAddress,
           },
         }).catch((e: unknown) => console.error('[naver/orders] upsert error:', e instanceof Error ? e.message : e));
 
         synced++;
-      } catch {
+      } catch (err: unknown) {
+        console.error('[naver/orders] item error:', err instanceof Error ? err.message : err);
         skipped++;
       }
     }

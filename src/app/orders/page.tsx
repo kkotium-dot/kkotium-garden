@@ -43,6 +43,12 @@ interface SyncResult {
 // Naver order status → Korean label + color
 const STATUS_META: Record<string, { label: string; color: string; bg: string; dot: string }> = {
   // Active order statuses
+  // Raw Naver API statuses (in case stored directly)
+  CANCEL_DONE:       { label: '취소완료',   color: '#e62310', bg: '#fff0f5', dot: 'bg-red-500'    },
+  CANCEL_REQUEST:    { label: '취소요청',   color: '#f97316', bg: '#fff7ed', dot: 'bg-orange-400' },
+  RETURN_DONE:       { label: '반품완료',   color: '#e62310', bg: '#fff0f5', dot: 'bg-red-400'    },
+  RETURN_REQUEST:    { label: '반품요청',   color: '#d97706', bg: '#fffbeb', dot: 'bg-amber-400'  },
+  // Internal mapped statuses
   PENDING:           { label: '결제대기',   color: '#888',    bg: '#f9fafb', dot: 'bg-gray-400'   },
   PAYMENT_WAITING:   { label: '결제대기',   color: '#888',    bg: '#f9fafb', dot: 'bg-gray-400'   },
   PAID:              { label: '결제완료',   color: '#2563eb', bg: '#eff6ff', dot: 'bg-blue-500'   },
@@ -55,10 +61,8 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; do
   // Claim statuses
   CANCELLED:         { label: '취소완료',   color: '#e62310', bg: '#fff0f5', dot: 'bg-red-500'    },
   CANCELED:          { label: '취소완료',   color: '#e62310', bg: '#fff0f5', dot: 'bg-red-500'    },
-  CANCEL_DONE:       { label: '취소완료',   color: '#e62310', bg: '#fff0f5', dot: 'bg-red-500'    },
   CANCEL_REQUESTED:  { label: '취소요청',   color: '#f97316', bg: '#fff7ed', dot: 'bg-orange-400' },
   RETURNED:          { label: '반품완료',   color: '#e62310', bg: '#fff0f5', dot: 'bg-red-400'    },
-  RETURN_DONE:       { label: '반품완료',   color: '#e62310', bg: '#fff0f5', dot: 'bg-red-400'    },
   RETURN_REQUESTED:  { label: '반품요청',   color: '#d97706', bg: '#fffbeb', dot: 'bg-amber-400'  },
   EXCHANGED:         { label: '교환완료',   color: '#0891b2', bg: '#ecfeff', dot: 'bg-cyan-500'   },
 };
