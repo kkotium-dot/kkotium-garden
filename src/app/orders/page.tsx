@@ -461,13 +461,13 @@ function OrdersInner() {
 
         {/* Table header */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '30px 110px 1fr 100px 86px 110px 34px',
+          display: 'grid', gridTemplateColumns: '30px 130px 1fr 96px 86px 96px 90px',
           gap: 8, padding: '8px 14px',
           background: '#FFF0F5', borderBottom: '2px solid #FFB3CE', alignItems: 'center',
         }}>
           <input type="checkbox" checked={allPaidSelected} onChange={toggleAllPaid}
             style={{ width: 13, height: 13, cursor: 'pointer', accentColor: '#e62310' }} />
-          {['주문번호', '상품 · 고객', '결제금액', '상태', '주문일', ''].map(h => (
+          {['주문번호 / 고객', '상품명', '결제금액', '상태', '주문일', '처리'].map(h => (
             <span key={h} style={{ fontSize: 10, fontWeight: 900, color: '#e62310', letterSpacing: '0.04em' }}>{h}</span>
           ))}
         </div>
@@ -499,7 +499,7 @@ function OrdersInner() {
                 <div
                   onClick={() => setDrawer(order)}
                   style={{
-                    display: 'grid', gridTemplateColumns: '30px 110px 1fr 100px 86px 110px 34px',
+                    display: 'grid', gridTemplateColumns: '30px 130px 1fr 96px 86px 96px 90px',
                     gap: 8, padding: '10px 14px', alignItems: 'center',
                     background: isSel ? 'rgba(230,35,16,0.05)' : problem ? st.rowBg : 'transparent',
                     opacity: st.rowOpacity,
@@ -519,28 +519,27 @@ function OrdersInner() {
                     />
                   </div>
 
-                  {/* Order number + customer */}
+                  {/* Col: order number + customer */}
                   <div>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: '#1A1A1A', margin: 0, fontFamily: 'monospace', textDecoration: problem ? 'line-through' : 'none', textDecorationColor: '#fca5a5' }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: '#555', margin: 0, fontFamily: 'monospace' }}>
                       {order.orderNumber?.slice(-12)}
                     </p>
-                    <p style={{ fontSize: 11, color: '#888', margin: '2px 0 0' }}>{order.customerName || '—'}</p>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: '#1A1A1A', margin: '2px 0 0' }}>{order.customerName || '—'}</p>
+                    <p style={{ fontSize: 10, color: '#B0A0A8', margin: '1px 0 0' }}>{order.customerPhone || ''}</p>
                   </div>
 
-                  {/* Product + claim reason */}
+                  {/* Col: product name + claim info */}
                   <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: '#1A1A1A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: problem ? 'line-through' : 'none', textDecorationColor: '#fca5a5' }}>
-                      {order.productName || '—'}
+                    <p style={{ fontSize: 12, fontWeight: 600, color: problem ? '#aaa' : '#1A1A1A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: problem ? 'line-through' : 'none', textDecorationColor: '#fca5a5' }}>
+                      {order.productName || '(상품명 없음)'}
                     </p>
                     {problem && order.claimReason ? (
-                      <p style={{ fontSize: 10, color: cancel ? '#dc2626' : '#b45309', margin: '2px 0 0', fontWeight: 700 }}>
-                        {cancel ? '취소' : '반품'}: {order.claimReason}
+                      <p style={{ fontSize: 10, fontWeight: 700, margin: '2px 0 0', color: cancel ? '#dc2626' : '#b45309', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        사유: {order.claimReason}
                       </p>
-                    ) : (
-                      <p style={{ fontSize: 10, color: '#B0A0A8', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {order.customerPhone || '—'}
-                      </p>
-                    )}
+                    ) : order.quantity && order.quantity > 1 ? (
+                      <p style={{ fontSize: 10, color: '#B0A0A8', margin: '2px 0 0' }}>{order.quantity}개</p>
+                    ) : null}
                   </div>
 
                   {/* Amount */}
@@ -566,8 +565,42 @@ function OrdersInner() {
                       : '—'}
                   </p>
 
-                  {/* Arrow */}
-                  <ChevronRight size={14} style={{ color: '#D4B0BC' }} />
+                  {/* Col: actions — only actionable items, no redundant labels */}
+                  <div style={{ display: 'flex', gap: 5, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                    {paid ? (
+                      <button
+                        onClick={() => toggleSelect(order.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          fontSize: 11, fontWeight: 700, padding: '5px 9px', borderRadius: 7,
+                          background: isSel ? '#16a34a' : '#f0fdf4',
+                          color: isSel ? '#fff' : '#16a34a',
+                          border: `1.5px solid ${isSel ? '#16a34a' : '#bbf7d0'}`,
+                          cursor: 'pointer', whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <Check size={11} />
+                        {isSel ? '선택됨' : '발주확인'}
+                      </button>
+                    ) : order.trackingNumber ? (
+                      <button
+                        title={`${order.courierCompany ?? ''} ${order.trackingNumber}`}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          fontSize: 11, fontWeight: 700, padding: '5px 9px', borderRadius: 7,
+                          background: '#eff6ff', color: '#2563eb',
+                          border: '1.5px solid #bfdbfe',
+                          cursor: 'pointer', whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <Truck size={11} /> 배송조회
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: 10, color: '#D4B0BC' }}>
+                        <ChevronRight size={14} />
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {!isLast && <div style={{ height: 1, background: '#F8DCE5', margin: '0 14px' }} />}
               </div>
