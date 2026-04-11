@@ -128,14 +128,17 @@ async function generateSEO(
   productName: string,
   style: SeoStyle = 'orthodox'
 ): Promise<{ data: Record<string, string>; provider: string }> {
+  // Try Gemini first (free tier), fall through on any error including 403
   if (process.env.GEMINI_API_KEY) {
     try { return { data: await callGemini(productName, style), provider: 'gemini-2.5-flash' }; }
-    catch (e) { console.warn('[ai-generate] Gemini failed:', e); }
+    catch (e) { console.warn('[ai-generate] Gemini failed, trying Anthropic:', e instanceof Error ? e.message.slice(0,60) : e); }
   }
+  // Anthropic fallback
   if (process.env.ANTHROPIC_API_KEY) {
     try { return { data: await callAnthropic(productName, style), provider: 'claude-sonnet' }; }
-    catch (e) { console.warn('[ai-generate] Anthropic failed:', e); }
+    catch (e) { console.warn('[ai-generate] Anthropic failed, trying Perplexity:', e instanceof Error ? e.message.slice(0,60) : e); }
   }
+  // Perplexity last resort
   if (process.env.PERPLEXITY_API_KEY) {
     return { data: await callPerplexity(productName, style), provider: 'perplexity-sonar' };
   }

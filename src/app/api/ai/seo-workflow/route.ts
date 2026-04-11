@@ -430,15 +430,26 @@ export async function POST(request: NextRequest) {
     let provider = '';
 
     // Priority: Gemini (free) > Anthropic > Perplexity
+    // Gemini 403/quota errors fall through to next provider
     if (geminiKey) {
-      content = await callGemini(prompt, geminiKey);
-      provider = 'gemini-2.5-flash';
-    } else if (anthropicKey) {
+      try {
+        content = await callGemini(prompt, geminiKey);
+        provider = 'gemini-2.5-flash';
+      } catch (geminiErr: unknown) {
+        const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+        console.warn('[seo-workflow] Gemini failed, trying fallback:', msg.slice(0, 80));
+        // Fall through to next provider
+      }
+    }
+
+    if (!content && anthropicKey) {
       content = await callAnthropic(prompt, anthropicKey);
       provider = 'claude-sonnet';
-    } else {
-      content = await callPerplexity(prompt, perplexityKey!);
+    } else if (!content && perplexityKey) {
+      content = await callPerplexity(prompt, perplexityKey);
       provider = 'perplexity-sonar';
+    } else if (!content) {
+      throw new Error('모든 AI 공급자 실패. API 키를 확인해주세요.');
     }
 
     const normalized = normalize(content, categoryPath ?? '카테고리 AI 자동 추론');
