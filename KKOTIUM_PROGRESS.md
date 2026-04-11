@@ -213,3 +213,23 @@ import { getCategoryAttributeGuide } from '@/lib/category-attributes';
 export const dynamic = 'force-dynamic';
 // 로컬 .env: NAVER_CLIENT_SECRET=\$2a\$04\$... (Vercel은 $ 그대로)
 ```
+
+---
+
+## 2026-04-10 세션 추가 기록
+
+### 완료
+- Vercel 서울 리전(icn1) 설정 (vercel.json)
+- 주문 관리 페이지 완전 재작성 (꽃틔움 가든 디자인)
+- Naver orders API: data.contents 구조 파싱, claimStatus 처리
+- orderNumber/customerEmail upsert 필드 추가
+- 셀렉터 기본값 24시간으로 수정
+
+### 🔴 미해결: Vercel IP_NOT_ALLOWED
+**문제**: Vercel Hobby 플랜은 동적 IP 사용 → 네이버 API 3개 IP 등록 초과
+**현재 Vercel 서버 IP**: `216.198.79.131`, `64.29.17.131` (+ 추가 IP들)
+**해결 방법 옵션**:
+1. **Supabase Edge Function** 프록시 (한국 리전, 고정 IP) ← 추천
+2. **별도 Node.js 서버** (Railway/Render Korea) 프록시
+3. **Vercel Pro** Static IP 기능 (유료)
+**다음 세션 작업**: Supabase Edge Function으로 Naver API 프록시 구현

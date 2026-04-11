@@ -62,12 +62,45 @@ async function getAccessToken(): Promise<string> {
   return _cachedToken;
 }
 
+// ── Supabase Edge Function proxy URL ────────────────────────────────────
+// Routes Naver API calls through Supabase (Seoul region, fixed IP)
+// to avoid Vercel dynamic IP being blocked by GW.IP_NOT_ALLOWED
+const PROXY_URL = process.env.NAVER_PROXY_URL; // e.g. https://xxx.supabase.co/functions/v1/naver-proxy
+const PROXY_SECRET = process.env.PROXY_SECRET ?? process.env.CRON_SECRET ?? '';
+
 // ── Generic request helper ────────────────────────────────────────────────
 export async function naverRequest<T = any>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
   path: string,
   body?: unknown,
 ): Promise<T> {
+  // Route through Supabase proxy (Seoul region, fixed IP) if URL is configured
+  if (PROXY_URL) {
+    // Get token here (Vercel can get token, proxy just relays with fixed IP)
+    const token = await getAccessToken();
+    const res = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type':    'application/json',
+        'x-proxy-secret':  PROXY_SECRET,
+        'x-naver-token':   token,
+      },
+      body: JSON.stringify({ path, method, body }),
+    });
+
+    const text = await res.text();
+    let json: any;
+    try { json = JSON.parse(text); } catch { json = { raw: text }; }
+
+    if (!res.ok) {
+      throw new Error(
+        `Naver API ${method} ${path} 실패 (proxy): HTTP ${res.status} — ${JSON.stringify(json)}`
+      );
+    }
+    return json as T;
+  }
+
+  // Direct call (local dev without proxy)
   const token = await getAccessToken();
 
   const res = await fetch(`${BASE_URL}${path}`, {
