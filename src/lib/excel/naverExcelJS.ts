@@ -259,36 +259,14 @@ export async function buildNaverWorkbook(
   });
   labelRow.height = 30;
 
-  // ── Row 3: Required markers ───────────────────────────────────────────────
-  const reqRow = ws.getRow(3);
-  COLUMN_REQUIRED.forEach((req, idx) => {
-    const cell = reqRow.getCell(idx + 1);
-    cell.value = req;
-    const isRequired = req === '필수';
-    const isCond     = req.includes('조건부');
-    const bgArgb = isRequired ? REQUIRED_ARGB : isCond ? COND_REQ_ARGB : NON_REQ_ARGB;
-    styleCell(cell, {
-      bgArgb,
-      bold: isRequired,
-      fontSize: 8,
-      fontColor: isRequired ? 'FFC00000' : isCond ? 'FF7F6000' : 'FF666666',
-      hAlign: 'center',
-      vAlign: 'middle',
-      italic: !isRequired,
-      borderColor: 'FFDDDDDD',
-      borderStyle: 'thin',
-    });
-  });
-  reqRow.height = 18;
-
-  // ── Data rows (from row 4) ────────────────────────────────────────────────
+  // ── Data rows (from row 3) ────────────────────────────────────────────────
   products.forEach((product, idx) => {
     const enriched: NaverProductData = shippingTemplate
       ? { ...product, deliveryTemplateCode: shippingTemplate.templateCode }
       : product;
 
     const values = buildDataRow(enriched, defaults);
-    const rowNum  = 4 + idx;
+    const rowNum  = 3 + idx;
     const row     = ws.getRow(rowNum);
     const isAlt   = idx % 2 === 1;
     const rowBg   = isAlt ? 'FFF5F5F5' : 'FFFFFFFF';
