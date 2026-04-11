@@ -254,3 +254,27 @@ export const dynamic = 'force-dynamic';
 
 ### Architecture
 - Vercel (OAuth token) -> Supabase Edge Function (fixed Korean IP) -> Naver API
+
+
+---
+
+## 2026-04-11 Session (Continued)
+
+### Excel Pipeline — VERIFIED
+- ExcelSaveTemplate_20260309.xlsx vs app output: 93/93 columns EXACT match
+- Row 3 required/optional labels removed — data starts at Row 3
+- taxType: '과세' -> '과세상품' mapping fixed
+- description: uses detail_image_url as <img src="URL">, empty if no URL (never falls back to name)
+- Shipping templates: 3 Naver codes registered (2976914, 3136301, 3025384)
+- All 8 products connected to shipping template
+- SKU fix: 리본 포인트 홈웨어 잠옷세트 -> DMM-LHMK-RIBBON-HW01
+
+### Remaining Excel Data Gaps (not code issues)
+- detail_image_url: null for all 8 products -> must be entered in 씨앗 심기
+- Until filled, col 25 상세설명 will be empty in excel output
+
+### Next Work Priority
+1. 씨앗 심기 (product registration) UX improvements — detail_image_url input
+2. Dashboard live Naver order stats
+3. 검색 조련사 SEO optimization pipeline
+4. Crawl pipeline improvements
