@@ -233,3 +233,24 @@ export const dynamic = 'force-dynamic';
 2. **별도 Node.js 서버** (Railway/Render Korea) 프록시
 3. **Vercel Pro** Static IP 기능 (유료)
 **다음 세션 작업**: Supabase Edge Function으로 Naver API 프록시 구현
+
+
+---
+
+## 2026-04-11 Session
+
+### Completed
+- Supabase Edge Function `naver-proxy` deployed (Seoul fixed IP, resolves GW.IP_NOT_ALLOWED)
+- Vercel env: NAVER_PROXY_URL added
+- Naver API actual structure confirmed: { productOrderId, content: { order, productOrder, currentClaim } }
+- Order DB: added productName, quantity, paymentDate, claimReason, claimDetail, refundStatus columns
+- Sync route: saves productName, claimReason (Korean), claimDetail, refundStatus, phone, address
+- Orders UI v3 complete:
+  - Status summary cards (click to filter): action / shipping / done / cancel+return
+  - Cancel/return rows: left red border + strikethrough + reason preview
+  - Action column: PAID->confirm button, SHIPPING->tracking button, cancelled->none
+  - Row click -> right drawer: product info, customer, cancel reason, refund status, full detail
+- Verified working: order 2026041073761781 (Lee, wood vase, CANCELLED, intent changed)
+
+### Architecture
+- Vercel (OAuth token) -> Supabase Edge Function (fixed Korean IP) -> Naver API
