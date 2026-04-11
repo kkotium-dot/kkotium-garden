@@ -214,6 +214,14 @@ model Order {
   shippingZipcode String?     @default("")
   totalPrice      Int?
   userId          String?
+  // Naver order detail fields
+  productName     String?     @map("product_name")
+  productId       String?     @map("product_id")
+  quantity        Int?        @default(1)
+  paymentDate     DateTime?   @map("payment_date")
+  claimReason     String?     @map("claim_reason")
+  claimDetail     String?     @map("claim_detail")
+  refundStatus    String?     @map("refund_status")
   orderItems      OrderItem[]
 }
 
