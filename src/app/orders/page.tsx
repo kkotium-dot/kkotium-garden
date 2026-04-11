@@ -1,12 +1,14 @@
 'use client';
-// /orders — Order Management v2
-// Design: status-based visual differentiation, power-seller optimized
+// /orders — Order Management v3
+// Full detail drawer, status-based visual diff, power-seller optimized
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   RefreshCw, Package, Truck, Check, AlertTriangle, Search,
   ShoppingCart, XCircle, RotateCcw, CheckCircle2, Clock,
+  X, Phone, MapPin, CreditCard, Hash, User, Info,
+  ChevronRight,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -20,8 +22,16 @@ interface Order {
   customerPhone: string;
   shippingAddress?: string;
   createdAt?: string;
+  updatedAt?: string;
   trackingNumber?: string;
   courierCompany?: string;
+  productName?: string;
+  quantity?: number;
+  paymentDate?: string;
+  claimReason?: string;
+  claimDetail?: string;
+  refundStatus?: string;
+  shippingRequest?: string;
 }
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -30,59 +40,205 @@ const STATUS: Record<string, {
   label: string; color: string; bg: string; border: string;
   rowBg: string; rowOpacity: number; group: 'action' | 'progress' | 'done' | 'problem';
 }> = {
-  // Action needed
-  PENDING:          { label: '결제대기',  color: '#92400e', bg: '#fffbeb', border: '#fde68a', rowBg: '#fffdf0', rowOpacity: 1,   group: 'action'   },
+  PENDING:          { label: '결제대기',  color: '#92400e', bg: '#fffbeb', border: '#fde68a', rowBg: '#fffdf5', rowOpacity: 1,   group: 'action'   },
   PAID:             { label: '결제완료',  color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe', rowBg: '#f0f7ff', rowOpacity: 1,   group: 'action'   },
-  // In progress
-  SHIPPING:         { label: '배송중',    color: '#6d28d9', bg: '#f5f3ff', border: '#c4b5fd', rowBg: '#faf9ff', rowOpacity: 1,   group: 'progress' },
-  DELIVERED:        { label: '배송완료',  color: '#065f46', bg: '#ecfdf5', border: '#6ee7b7', rowBg: '#f6fefa', rowOpacity: 1,   group: 'progress' },
-  COMPLETED:        { label: '구매확정',  color: '#14532d', bg: '#dcfce7', border: '#86efac', rowBg: '#f4fef7', rowOpacity: 1,   group: 'done'     },
-  // Problem — visually muted
-  CANCELLED:        { label: '취소완료',  color: '#991b1b', bg: '#fef2f2', border: '#fca5a5', rowBg: '#fff5f5', rowOpacity: 0.7, group: 'problem'  },
-  CANCEL_REQUESTED: { label: '취소요청',  color: '#c2410c', bg: '#fff7ed', border: '#fed7aa', rowBg: '#fffaf5', rowOpacity: 1,   group: 'problem'  },
-  RETURNED:         { label: '반품완료',  color: '#7c2d12', bg: '#fff7ed', border: '#fdba74', rowBg: '#fff8f3', rowOpacity: 0.7, group: 'problem'  },
-  RETURN_REQUESTED: { label: '반품요청',  color: '#b45309', bg: '#fffbeb', border: '#fde68a', rowBg: '#fffef5', rowOpacity: 1,   group: 'problem'  },
-  EXCHANGED:        { label: '교환완료',  color: '#0e7490', bg: '#ecfeff', border: '#a5f3fc', rowBg: '#f5feff', rowOpacity: 1,   group: 'done'     },
-  // Raw Naver values (fallback)
   PAYED:            { label: '결제완료',  color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe', rowBg: '#f0f7ff', rowOpacity: 1,   group: 'action'   },
+  SHIPPING:         { label: '배송중',    color: '#6d28d9', bg: '#f5f3ff', border: '#c4b5fd', rowBg: '#faf9ff', rowOpacity: 1,   group: 'progress' },
   DELIVERING:       { label: '배송중',    color: '#6d28d9', bg: '#f5f3ff', border: '#c4b5fd', rowBg: '#faf9ff', rowOpacity: 1,   group: 'progress' },
-  CANCELED:         { label: '취소완료',  color: '#991b1b', bg: '#fef2f2', border: '#fca5a5', rowBg: '#fff5f5', rowOpacity: 0.7, group: 'problem'  },
-  CANCEL_DONE:      { label: '취소완료',  color: '#991b1b', bg: '#fef2f2', border: '#fca5a5', rowBg: '#fff5f5', rowOpacity: 0.7, group: 'problem'  },
-  RETURN_DONE:      { label: '반품완료',  color: '#7c2d12', bg: '#fff7ed', border: '#fdba74', rowBg: '#fff8f3', rowOpacity: 0.7, group: 'problem'  },
+  DELIVERED:        { label: '배송완료',  color: '#065f46', bg: '#ecfdf5', border: '#6ee7b7', rowBg: '#f5fef9', rowOpacity: 1,   group: 'progress' },
+  COMPLETED:        { label: '구매확정',  color: '#14532d', bg: '#dcfce7', border: '#86efac', rowBg: '#f4fef7', rowOpacity: 1,   group: 'done'     },
+  CANCELLED:        { label: '취소완료',  color: '#991b1b', bg: '#fef2f2', border: '#fca5a5', rowBg: '#fff5f5', rowOpacity: 0.72, group: 'problem' },
+  CANCELED:         { label: '취소완료',  color: '#991b1b', bg: '#fef2f2', border: '#fca5a5', rowBg: '#fff5f5', rowOpacity: 0.72, group: 'problem' },
+  CANCEL_DONE:      { label: '취소완료',  color: '#991b1b', bg: '#fef2f2', border: '#fca5a5', rowBg: '#fff5f5', rowOpacity: 0.72, group: 'problem' },
+  CANCEL_REQUESTED: { label: '취소요청',  color: '#c2410c', bg: '#fff7ed', border: '#fed7aa', rowBg: '#fffaf5', rowOpacity: 1,   group: 'problem'  },
+  CANCEL_REQUEST:   { label: '취소요청',  color: '#c2410c', bg: '#fff7ed', border: '#fed7aa', rowBg: '#fffaf5', rowOpacity: 1,   group: 'problem'  },
+  RETURNED:         { label: '반품완료',  color: '#7c2d12', bg: '#fff7ed', border: '#fdba74', rowBg: '#fff8f3', rowOpacity: 0.72, group: 'problem' },
+  RETURN_DONE:      { label: '반품완료',  color: '#7c2d12', bg: '#fff7ed', border: '#fdba74', rowBg: '#fff8f3', rowOpacity: 0.72, group: 'problem' },
+  RETURN_REQUESTED: { label: '반품요청',  color: '#b45309', bg: '#fffbeb', border: '#fde68a', rowBg: '#fffef5', rowOpacity: 1,   group: 'problem'  },
+  RETURN_REQUEST:   { label: '반품요청',  color: '#b45309', bg: '#fffbeb', border: '#fde68a', rowBg: '#fffef5', rowOpacity: 1,   group: 'problem'  },
+  EXCHANGED:        { label: '교환완료',  color: '#0e7490', bg: '#ecfeff', border: '#a5f3fc', rowBg: '#f5feff', rowOpacity: 1,   group: 'done'     },
 };
 
-function getSt(status: string) {
-  return STATUS[status] ?? { label: status || '알 수 없음', color: '#888', bg: '#f9fafb', border: '#e5e7eb', rowBg: 'transparent', rowOpacity: 1, group: 'progress' as const };
+function getSt(s: string) {
+  return STATUS[s] ?? { label: s || '—', color: '#888', bg: '#f9fafb', border: '#e5e7eb', rowBg: 'transparent', rowOpacity: 1, group: 'progress' as const };
+}
+function isPaid(s: string)    { return ['PAID', 'PAYED'].includes(s); }
+function isProblem(s: string) { return getSt(s).group === 'problem'; }
+function isCancel(s: string)  { return s.includes('CANCEL'); }
+
+// ── Detail Drawer ─────────────────────────────────────────────────────────────
+
+function DetailRow({ icon, label, value, highlight }: { icon: React.ReactNode; label: string; value?: string | null; highlight?: boolean }) {
+  if (!value) return null;
+  return (
+    <div style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: '1px solid #F8DCE5' }}>
+      <span style={{ color: '#e62310', flexShrink: 0, marginTop: 1 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: '#B0A0A8', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+        <p style={{ fontSize: 13, color: highlight ? '#dc2626' : '#1A1A1A', margin: 0, lineHeight: 1.5, wordBreak: 'break-word', fontWeight: highlight ? 700 : 400 }}>{value}</p>
+      </div>
+    </div>
+  );
 }
 
-function isPaid(status: string) { return ['PAID', 'PAYED'].includes(status); }
-function isProblem(status: string) { return getSt(status).group === 'problem'; }
+function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) {
+  const st     = getSt(order.status);
+  const problem = isProblem(order.status);
+  const cancel  = isCancel(order.status);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 40, backdropFilter: 'blur(2px)' }}
+      />
+      {/* Drawer */}
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: 380,
+        background: '#fff', boxShadow: '-4px 0 32px rgba(0,0,0,0.12)',
+        zIndex: 50, display: 'flex', flexDirection: 'column', overflowY: 'auto',
+      }}>
+        {/* Drawer header */}
+        <div style={{ padding: '16px 20px', borderBottom: '2px solid #FFB3CE', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: '#FFF0F5' }}>
+          <div>
+            <p style={{ fontSize: 10, color: '#B0A0A8', margin: 0, fontFamily: 'monospace' }}>#{order.orderNumber?.slice(-12)}</p>
+            <p style={{ fontSize: 16, fontWeight: 900, color: '#1A1A1A', margin: '2px 0 0' }}>{order.customerName || '—'}</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '4px 10px', borderRadius: 99,
+              background: st.bg, border: `1px solid ${st.border}`,
+              fontSize: 11, fontWeight: 700, color: st.color,
+            }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: st.color }} />
+              {st.label}
+            </span>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#B0A0A8', borderRadius: 6, display: 'flex', alignItems: 'center' }}>
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Claim alert */}
+        {problem && (
+          <div style={{
+            margin: '16px 20px 0', padding: '12px 14px',
+            background: cancel ? '#fef2f2' : '#fff7ed',
+            border: `1.5px solid ${cancel ? '#fca5a5' : '#fdba74'}`,
+            borderRadius: 12,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <AlertTriangle size={14} style={{ color: cancel ? '#dc2626' : '#d97706' }} />
+              <span style={{ fontSize: 12, fontWeight: 800, color: cancel ? '#dc2626' : '#b45309' }}>
+                {cancel ? '취소 처리된 주문' : '반품 처리된 주문'}
+              </span>
+            </div>
+            {order.claimReason && (
+              <p style={{ fontSize: 12, color: cancel ? '#991b1b' : '#7c2d12', margin: '0 0 4px', fontWeight: 700 }}>
+                사유: {order.claimReason}
+              </p>
+            )}
+            {order.refundStatus && (
+              <p style={{ fontSize: 12, color: '#555', margin: 0 }}>
+                환불: {order.refundStatus}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Detail content */}
+        <div style={{ padding: '16px 20px', flex: 1 }}>
+
+          {/* Product info */}
+          <div style={{ marginBottom: 16, padding: '12px 14px', background: '#FFF8FA', borderRadius: 12, border: '1px solid #F8DCE5' }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: '#B0A0A8', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>상품 정보</p>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A', margin: '0 0 4px', lineHeight: 1.4 }}>
+              {order.productName || '상품명 없음'}
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <span style={{ fontSize: 12, color: '#888' }}>수량: {order.quantity ?? 1}개</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#e62310' }}>
+                {(order.totalAmount ?? 0).toLocaleString()}원
+              </span>
+            </div>
+          </div>
+
+          {/* Order details */}
+          <DetailRow icon={<Hash size={13} />}    label="주문번호"   value={order.orderNumber} />
+          <DetailRow icon={<User size={13} />}     label="주문자"    value={order.customerName} />
+          <DetailRow icon={<Phone size={13} />}    label="연락처"    value={order.customerPhone} />
+          <DetailRow
+            icon={<MapPin size={13} />}
+            label="배송지"
+            value={order.shippingAddress || (problem && cancel ? '취소 주문 — 배송지 정보 없음' : '배송지 정보 없음')}
+            highlight={!order.shippingAddress}
+          />
+          {order.shippingRequest && (
+            <DetailRow icon={<Info size={13} />}   label="배송 메모" value={order.shippingRequest} />
+          )}
+          <DetailRow icon={<CreditCard size={13} />} label="결제금액" value={`${(order.totalAmount ?? 0).toLocaleString()}원`} />
+          <DetailRow
+            icon={<Clock size={13} />}
+            label="결제일시"
+            value={order.paymentDate
+              ? new Date(order.paymentDate).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+              : order.createdAt
+                ? new Date(order.createdAt).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                : null}
+          />
+          {order.trackingNumber && (
+            <DetailRow icon={<Truck size={13} />}  label="송장번호"  value={`${order.courierCompany ?? ''} ${order.trackingNumber}`} />
+          )}
+
+          {/* Claim detail */}
+          {order.claimDetail && (
+            <div style={{ marginTop: 12, padding: '12px 14px', background: cancel ? '#fef2f2' : '#fff7ed', borderRadius: 12, border: `1px solid ${cancel ? '#fca5a5' : '#fdba74'}` }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: '#B0A0A8', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {cancel ? '취소 사유 상세' : '반품 사유 상세'}
+              </p>
+              <p style={{ fontSize: 12, color: '#555', margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                {order.claimDetail}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
 
 // ── Summary card ──────────────────────────────────────────────────────────────
 
 function SummaryCard({ icon, label, count, color, bg, border, onClick, active }: {
   icon: React.ReactNode; label: string; count: number;
-  color: string; bg: string; border: string;
-  onClick: () => void; active: boolean;
+  color: string; bg: string; border: string; onClick: () => void; active: boolean;
 }) {
   return (
     <button onClick={onClick} style={{
-      flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10,
-      padding: '12px 16px', borderRadius: 14,
+      flex: 1, minWidth: 120, display: 'flex', alignItems: 'center', gap: 10,
+      padding: '11px 14px', borderRadius: 14,
       background: active ? color : bg,
       border: `1.5px solid ${active ? color : border}`,
       cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left',
     }}>
       <span style={{ color: active ? '#fff' : color }}>{icon}</span>
       <div>
-        <p style={{ fontSize: 20, fontWeight: 900, color: active ? '#fff' : '#1A1A1A', margin: 0, lineHeight: 1 }}>{count}</p>
-        <p style={{ fontSize: 11, fontWeight: 700, color: active ? 'rgba(255,255,255,0.8)' : '#888', margin: '2px 0 0' }}>{label}</p>
+        <p style={{ fontSize: 22, fontWeight: 900, color: active ? '#fff' : '#1A1A1A', margin: 0, lineHeight: 1 }}>{count}</p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: active ? 'rgba(255,255,255,0.8)' : '#888', margin: '2px 0 0', whiteSpace: 'nowrap' }}>{label}</p>
       </div>
     </button>
   );
 }
 
-// ── Main inner ────────────────────────────────────────────────────────────────
+// ── Filter tabs ───────────────────────────────────────────────────────────────
 
 const FILTER_TABS = [
   { key: '',                 label: '전체'   },
@@ -96,6 +252,8 @@ const FILTER_TABS = [
   { key: 'RETURN_REQUESTED', label: '반품요청' },
 ];
 
+// ── Main ──────────────────────────────────────────────────────────────────────
+
 function OrdersInner() {
   const searchParams = useSearchParams();
   const [orders, setOrders]         = useState<Order[]>([]);
@@ -108,6 +266,7 @@ function OrdersInner() {
   const [selected, setSelected]     = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const [hours, setHours]           = useState(48);
+  const [drawer, setDrawer]         = useState<Order | null>(null);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -152,14 +311,29 @@ function OrdersInner() {
     finally { setConfirming(false); }
   };
 
-  // Filtered + searched
+  // Alias normaliser for filter tab counts
+  const ALIAS: Record<string, string[]> = {
+    PAID:             ['PAID', 'PAYED'],
+    CANCELLED:        ['CANCELLED', 'CANCELED', 'CANCEL_DONE'],
+    RETURNED:         ['RETURNED', 'RETURN_DONE'],
+    SHIPPING:         ['SHIPPING', 'DELIVERING'],
+    CANCEL_REQUESTED: ['CANCEL_REQUESTED', 'CANCEL_REQUEST'],
+    RETURN_REQUESTED: ['RETURN_REQUESTED', 'RETURN_REQUEST'],
+  };
+  const tabCount = (key: string) => {
+    if (!key) return orders.length;
+    const keys = ALIAS[key] ?? [key];
+    return orders.filter(o => keys.includes(o.status)).length;
+  };
+
   const filtered = orders.filter(o => {
     if (!query) return true;
     const q = query.toLowerCase();
     return (
       o.orderNumber?.toLowerCase().includes(q) ||
       o.customerName?.toLowerCase().includes(q) ||
-      o.shippingAddress?.toLowerCase().includes(q)
+      o.productName?.toLowerCase().includes(q) ||
+      o.customerPhone?.includes(q)
     );
   });
 
@@ -169,124 +343,70 @@ function OrdersInner() {
   const problemCount  = orders.filter(o => isProblem(o.status)).length;
   const doneCount     = orders.filter(o => ['COMPLETED', 'EXCHANGED'].includes(o.status)).length;
 
-  // Status counts for filter tabs
-  const statusCounts = orders.reduce((acc, o) => {
-    // Normalize: PAYED→PAID, CANCELED→CANCELLED etc.
-    const norm = STATUS[o.status]?.label ? o.status : o.status;
-    acc[norm] = (acc[norm] ?? 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Count by tab key (account for aliased statuses)
-  function tabCount(key: string) {
-    if (!key) return orders.length;
-    // Aliases
-    const aliases: Record<string, string[]> = {
-      PAID:             ['PAID', 'PAYED'],
-      CANCELLED:        ['CANCELLED', 'CANCELED', 'CANCEL_DONE'],
-      RETURNED:         ['RETURNED', 'RETURN_DONE'],
-      SHIPPING:         ['SHIPPING', 'DELIVERING'],
-      CANCEL_REQUESTED: ['CANCEL_REQUESTED', 'CANCEL_REQUEST'],
-      RETURN_REQUESTED: ['RETURN_REQUESTED', 'RETURN_REQUEST'],
-    };
-    const keys = aliases[key] ?? [key];
-    return orders.filter(o => keys.includes(o.status)).length;
-  }
-
-  const toggleSelect = (id: string) => {
-    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  };
-  const paidOrders = filtered.filter(o => isPaid(o.status));
-  const allPaidSelected = paidOrders.length > 0 && paidOrders.every(o => selected.has(o.id));
-  const toggleAllPaid = () => {
-    if (allPaidSelected) setSelected(new Set());
-    else setSelected(new Set(paidOrders.map(o => o.id)));
-  };
-
-  const S = { padding: '0 24px 48px' };
+  const paidFiltered   = filtered.filter(o => isPaid(o.status));
+  const allPaidSelected = paidFiltered.length > 0 && paidFiltered.every(o => selected.has(o.id));
+  const toggleSelect = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAllPaid = () => allPaidSelected ? setSelected(new Set()) : setSelected(new Set(paidFiltered.map(o => o.id)));
 
   return (
-    <div style={S}>
+    <div style={{ padding: '20px 24px 60px' }}>
 
-      {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0 12px', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <ShoppingCart size={22} style={{ color: '#e62310' }} />
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <ShoppingCart size={20} style={{ color: '#e62310' }} />
           <div>
-            <h1 style={{ fontSize: 20, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>주문 관리</h1>
+            <h1 style={{ fontSize: 19, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>주문 관리</h1>
             <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>네이버 스마트스토어</p>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <select
-            value={hours}
-            onChange={e => setHours(Number(e.target.value))}
-            style={{ padding: '7px 10px', borderRadius: 9, border: '1.5px solid #F8DCE5', fontSize: 12, background: '#fff', color: '#555', cursor: 'pointer' }}
-          >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <select value={hours} onChange={e => setHours(Number(e.target.value))}
+            style={{ padding: '7px 10px', borderRadius: 9, border: '1.5px solid #F8DCE5', fontSize: 12, background: '#fff', color: '#555', cursor: 'pointer' }}>
             <option value={24}>최근 24시간</option>
             <option value={48}>최근 48시간</option>
             <option value={168}>최근 7일</option>
             <option value={720}>최근 30일</option>
           </select>
-          <button
-            onClick={syncOrders}
-            disabled={syncing}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: syncing ? '#FFB3CE' : '#e62310', color: '#fff',
-              padding: '8px 16px', borderRadius: 9, fontWeight: 700, fontSize: 13,
-              border: 'none', cursor: syncing ? 'not-allowed' : 'pointer',
-            }}
-          >
+          <button onClick={syncOrders} disabled={syncing} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: syncing ? '#FFB3CE' : '#e62310', color: '#fff',
+            padding: '8px 15px', borderRadius: 9, fontWeight: 700, fontSize: 13,
+            border: 'none', cursor: syncing ? 'not-allowed' : 'pointer',
+          }}>
             <RefreshCw size={13} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
             {syncing ? '동기화 중...' : '네이버 동기화'}
           </button>
         </div>
       </div>
 
-      <div style={{ height: 2, background: 'linear-gradient(90deg, #e62310, #FFB3CE)', borderRadius: 99, marginBottom: 16 }} />
+      <div style={{ height: 2, background: 'linear-gradient(90deg, #e62310, #FFB3CE)', borderRadius: 99, marginBottom: 14 }} />
 
-      {/* ── Sync result ── */}
+      {/* Sync result banner */}
       {syncMsg && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px',
+          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 13px',
           background: syncOk ? '#f0fdf4' : '#fff0f0',
           border: `1px solid ${syncOk ? '#86efac' : '#fca5a5'}`,
-          borderRadius: 10, marginBottom: 14, fontSize: 12,
+          borderRadius: 10, marginBottom: 13, fontSize: 12,
           color: syncOk ? '#15803d' : '#dc2626',
         }}>
           {syncOk ? <Check size={13} /> : <AlertTriangle size={13} />}
           {syncMsg}
-          <button onClick={() => setSyncMsg('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 14, lineHeight: 1 }}>×</button>
+          <button onClick={() => setSyncMsg('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#aaa' }}>×</button>
         </div>
       )}
 
-      {/* ── Summary cards ── */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-        <SummaryCard
-          icon={<Clock size={18} />} label="처리 필요" count={actionCount}
-          color="#1d4ed8" bg="#eff6ff" border="#bfdbfe"
-          onClick={() => setFilter(filter === 'PAID' ? '' : 'PAID')} active={filter === 'PAID'}
-        />
-        <SummaryCard
-          icon={<Truck size={18} />} label="배송 진행중" count={progressCount}
-          color="#6d28d9" bg="#f5f3ff" border="#c4b5fd"
-          onClick={() => setFilter(filter === 'SHIPPING' ? '' : 'SHIPPING')} active={filter === 'SHIPPING'}
-        />
-        <SummaryCard
-          icon={<CheckCircle2 size={18} />} label="구매확정" count={doneCount}
-          color="#15803d" bg="#dcfce7" border="#86efac"
-          onClick={() => setFilter(filter === 'COMPLETED' ? '' : 'COMPLETED')} active={filter === 'COMPLETED'}
-        />
-        <SummaryCard
-          icon={<XCircle size={18} />} label="취소 / 반품" count={problemCount}
-          color="#dc2626" bg="#fef2f2" border="#fca5a5"
-          onClick={() => setFilter(filter === 'CANCELLED' ? '' : 'CANCELLED')} active={filter === 'CANCELLED'}
-        />
+      {/* Summary cards */}
+      <div style={{ display: 'flex', gap: 9, marginBottom: 14, flexWrap: 'wrap' }}>
+        <SummaryCard icon={<Clock size={17} />}       label="처리 필요"  count={actionCount}   color="#1d4ed8" bg="#eff6ff" border="#bfdbfe" onClick={() => setFilter(f => f === 'PAID'      ? '' : 'PAID')}      active={filter === 'PAID'} />
+        <SummaryCard icon={<Truck size={17} />}        label="배송 진행중" count={progressCount} color="#6d28d9" bg="#f5f3ff" border="#c4b5fd" onClick={() => setFilter(f => f === 'SHIPPING'  ? '' : 'SHIPPING')}  active={filter === 'SHIPPING'} />
+        <SummaryCard icon={<CheckCircle2 size={17} />} label="구매확정"   count={doneCount}     color="#15803d" bg="#dcfce7" border="#86efac" onClick={() => setFilter(f => f === 'COMPLETED' ? '' : 'COMPLETED')} active={filter === 'COMPLETED'} />
+        <SummaryCard icon={<XCircle size={17} />}      label="취소/반품"  count={problemCount}  color="#dc2626" bg="#fef2f2" border="#fca5a5" onClick={() => setFilter(f => f === 'CANCELLED' ? '' : 'CANCELLED')} active={filter === 'CANCELLED'} />
       </div>
 
-      {/* ── Filter tabs ── */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+      {/* Filter tabs — only show tabs with orders */}
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 11 }}>
         {FILTER_TABS.map(({ key, label }) => {
           const cnt = tabCount(key);
           if (cnt === 0 && key !== '') return null;
@@ -294,7 +414,7 @@ function OrdersInner() {
           return (
             <button key={key} onClick={() => setFilter(key)} style={{
               display: 'flex', alignItems: 'center', gap: 4,
-              padding: '5px 12px', borderRadius: 99, fontSize: 12, fontWeight: 700,
+              padding: '5px 11px', borderRadius: 99, fontSize: 12, fontWeight: 700,
               background: active ? '#e62310' : '#fff',
               color: active ? '#fff' : '#555',
               border: `1.5px solid ${active ? '#e62310' : '#F8DCE5'}`,
@@ -311,60 +431,57 @@ function OrdersInner() {
         })}
       </div>
 
-      {/* ── Search + bulk action ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+      {/* Search + actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-          <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#D4B0BC', pointerEvents: 'none' }} />
-          <input
-            type="text" placeholder="주문번호 · 고객명 · 주소 검색"
+          <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#D4B0BC', pointerEvents: 'none' }} />
+          <input type="text" placeholder="주문번호 · 고객명 · 상품명 검색"
             value={query} onChange={e => setQuery(e.target.value)}
-            style={{ width: '100%', paddingLeft: 30, paddingRight: 30, paddingTop: 7, paddingBottom: 7, fontSize: 12, background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 9, outline: 'none', boxSizing: 'border-box' }}
+            style={{ width: '100%', paddingLeft: 28, paddingRight: 26, paddingTop: 7, paddingBottom: 7, fontSize: 12, background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 9, outline: 'none', boxSizing: 'border-box' }}
           />
-          {query && (
-            <button onClick={() => setQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#B0A0A8', fontSize: 14, lineHeight: 1 }}>×</button>
-          )}
+          {query && <button onClick={() => setQuery('')} style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#B0A0A8', fontSize: 14, lineHeight: 1 }}>×</button>}
         </div>
         {selected.size > 0 && (
-          <button
-            onClick={handleConfirm} disabled={confirming}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#16a34a', color: '#fff', padding: '7px 14px', borderRadius: 9, fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer' }}
-          >
-            <Check size={13} /> {selected.size}건 발주확인
+          <button onClick={handleConfirm} disabled={confirming} style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: '#16a34a', color: '#fff', padding: '7px 13px',
+            borderRadius: 9, fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer',
+          }}>
+            <Check size={12} /> {selected.size}건 발주확인
           </button>
         )}
-        <button onClick={fetchOrders} style={{ padding: '7px 9px', borderRadius: 9, border: '1.5px solid #F8DCE5', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-          <RefreshCw size={13} style={{ color: '#B0A0A8' }} />
+        <button onClick={fetchOrders} style={{ padding: '7px 8px', borderRadius: 9, border: '1.5px solid #F8DCE5', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+          <RefreshCw size={12} style={{ color: '#B0A0A8' }} />
         </button>
-        <span style={{ fontSize: 11, color: '#B0A0A8', marginLeft: 4 }}>{filtered.length}건</span>
+        <span style={{ fontSize: 11, color: '#B0A0A8' }}>{filtered.length}건</span>
       </div>
 
-      {/* ── Table ── */}
+      {/* Table */}
       <div style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 16, overflow: 'hidden' }}>
 
         {/* Table header */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '32px 160px 1fr 100px 100px 110px 80px',
-          gap: 8, padding: '9px 16px',
-          background: '#FFF0F5', borderBottom: '2px solid #FFB3CE',
-          alignItems: 'center',
+          display: 'grid', gridTemplateColumns: '30px 110px 1fr 100px 86px 110px 34px',
+          gap: 8, padding: '8px 14px',
+          background: '#FFF0F5', borderBottom: '2px solid #FFB3CE', alignItems: 'center',
         }}>
           <input type="checkbox" checked={allPaidSelected} onChange={toggleAllPaid}
-            style={{ width: 14, height: 14, cursor: 'pointer', accentColor: '#e62310' }} />
-          {['주문번호', '상품 / 고객', '금액', '상태', '주문일', '액션'].map(h => (
-            <span key={h} style={{ fontSize: 10, fontWeight: 900, color: '#e62310', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{h}</span>
+            style={{ width: 13, height: 13, cursor: 'pointer', accentColor: '#e62310' }} />
+          {['주문번호', '상품 · 고객', '결제금액', '상태', '주문일', ''].map(h => (
+            <span key={h} style={{ fontSize: 10, fontWeight: 900, color: '#e62310', letterSpacing: '0.04em' }}>{h}</span>
           ))}
         </div>
 
         {loading ? (
-          <div style={{ padding: '52px', textAlign: 'center' }}>
+          <div style={{ padding: 52, textAlign: 'center' }}>
             <RefreshCw size={22} style={{ color: '#FFB3CE', margin: '0 auto 8px', animation: 'spin 1s linear infinite' }} />
             <p style={{ fontSize: 13, color: '#B0A0A8', margin: 0 }}>불러오는 중...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: '52px', textAlign: 'center' }}>
+          <div style={{ padding: 52, textAlign: 'center' }}>
             <Package size={32} style={{ color: '#F8DCE5', margin: '0 auto 12px' }} />
             <p style={{ fontSize: 13, color: '#B0A0A8', margin: 0 }}>
-              {query ? `"${query}" 검색 결과가 없습니다` : '주문이 없습니다'}
+              {query ? `"${query}" 검색 결과 없음` : '주문이 없습니다'}
             </p>
             <p style={{ fontSize: 11, color: '#D4B0BC', margin: '4px 0 0' }}>우측 상단 "네이버 동기화" 버튼을 눌러주세요</p>
           </div>
@@ -373,55 +490,57 @@ function OrdersInner() {
             const st        = getSt(order.status);
             const paid      = isPaid(order.status);
             const problem   = st.group === 'problem';
-            const isSelected = selected.has(order.id);
+            const cancel    = isCancel(order.status);
+            const isSel     = selected.has(order.id);
             const isLast    = idx === filtered.length - 1;
 
             return (
               <div key={order.id}>
-                <div style={{
-                  display: 'grid', gridTemplateColumns: '32px 160px 1fr 100px 100px 110px 80px',
-                  gap: 8, padding: '11px 16px', alignItems: 'center',
-                  background: isSelected
-                    ? 'rgba(230,35,16,0.05)'
-                    : problem
-                      ? st.rowBg
-                      : 'transparent',
-                  opacity: st.rowOpacity,
-                  transition: 'background 0.1s',
-                  borderLeft: problem ? `3px solid ${st.border}` : '3px solid transparent',
-                }}
-                  onMouseEnter={e => { if (!isSelected && !problem) (e.currentTarget as HTMLDivElement).style.background = '#FFF8FA'; }}
-                  onMouseLeave={e => { if (!isSelected && !problem) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                <div
+                  onClick={() => setDrawer(order)}
+                  style={{
+                    display: 'grid', gridTemplateColumns: '30px 110px 1fr 100px 86px 110px 34px',
+                    gap: 8, padding: '10px 14px', alignItems: 'center',
+                    background: isSel ? 'rgba(230,35,16,0.05)' : problem ? st.rowBg : 'transparent',
+                    opacity: st.rowOpacity,
+                    borderLeft: problem ? `3px solid ${st.border}` : '3px solid transparent',
+                    cursor: 'pointer', transition: 'background 0.1s',
+                  }}
+                  onMouseEnter={e => { if (!isSel && !problem) (e.currentTarget as HTMLDivElement).style.background = '#FFF8FA'; }}
+                  onMouseLeave={e => { if (!isSel && !problem) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
                 >
-                  {/* Checkbox */}
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    disabled={!paid}
-                    onChange={() => paid && toggleSelect(order.id)}
-                    style={{ width: 14, height: 14, cursor: paid ? 'pointer' : 'default', accentColor: '#e62310', opacity: paid ? 1 : 0.2 }}
-                  />
+                  {/* Checkbox — stop click propagation */}
+                  <div onClick={e => e.stopPropagation()}>
+                    <input type="checkbox"
+                      checked={isSel}
+                      disabled={!paid}
+                      onChange={() => paid && toggleSelect(order.id)}
+                      style={{ width: 13, height: 13, cursor: paid ? 'pointer' : 'default', accentColor: '#e62310', opacity: paid ? 1 : 0.2 }}
+                    />
+                  </div>
 
                   {/* Order number + customer */}
                   <div>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: '#1A1A1A', margin: 0, fontFamily: 'monospace', letterSpacing: '0.02em', textDecoration: problem ? 'line-through' : 'none', textDecorationColor: '#fca5a5' }}>
-                      {order.orderNumber ?? order.id}
+                    <p style={{ fontSize: 10, fontWeight: 700, color: '#1A1A1A', margin: 0, fontFamily: 'monospace', textDecoration: problem ? 'line-through' : 'none', textDecorationColor: '#fca5a5' }}>
+                      {order.orderNumber?.slice(-12)}
                     </p>
-                    <p style={{ fontSize: 10, color: '#B0A0A8', margin: '1px 0 0' }}>
-                      {order.customerName || order.customerPhone || '—'}
-                    </p>
+                    <p style={{ fontSize: 11, color: '#888', margin: '2px 0 0' }}>{order.customerName || '—'}</p>
                   </div>
 
-                  {/* Product / address */}
+                  {/* Product + claim reason */}
                   <div style={{ minWidth: 0 }}>
                     <p style={{ fontSize: 12, fontWeight: 600, color: '#1A1A1A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: problem ? 'line-through' : 'none', textDecorationColor: '#fca5a5' }}>
-                      {order.shippingAddress
-                        ? order.shippingAddress
-                        : <span style={{ color: '#D4B0BC', fontStyle: 'italic' }}>배송지 정보 없음</span>}
+                      {order.productName || '—'}
                     </p>
-                    <p style={{ fontSize: 10, color: '#B0A0A8', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {order.customerPhone ? order.customerPhone : order.customerName ? order.customerName : '—'}
-                    </p>
+                    {problem && order.claimReason ? (
+                      <p style={{ fontSize: 10, color: cancel ? '#dc2626' : '#b45309', margin: '2px 0 0', fontWeight: 700 }}>
+                        {cancel ? '취소' : '반품'}: {order.claimReason}
+                      </p>
+                    ) : (
+                      <p style={{ fontSize: 10, color: '#B0A0A8', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {order.customerPhone || '—'}
+                      </p>
+                    )}
                   </div>
 
                   {/* Amount */}
@@ -431,11 +550,10 @@ function OrdersInner() {
 
                   {/* Status badge */}
                   <div style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    padding: '4px 9px', borderRadius: 99,
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '3px 8px', borderRadius: 99,
                     background: st.bg, border: `1px solid ${st.border}`,
-                    fontSize: 11, fontWeight: 700, color: st.color,
-                    whiteSpace: 'nowrap',
+                    fontSize: 11, fontWeight: 700, color: st.color, whiteSpace: 'nowrap',
                   }}>
                     <span style={{ width: 5, height: 5, borderRadius: '50%', background: st.color, flexShrink: 0 }} />
                     {st.label}
@@ -443,54 +561,33 @@ function OrdersInner() {
 
                   {/* Date */}
                   <p style={{ fontSize: 10, color: '#999', margin: 0 }}>
-                    {order.createdAt
-                      ? new Date(order.createdAt).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                    {(order.paymentDate ?? order.createdAt)
+                      ? new Date(order.paymentDate ?? order.createdAt!).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
                       : '—'}
                   </p>
 
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    {paid && (
-                      <button
-                        onClick={() => toggleSelect(order.id)}
-                        style={{ fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, background: isSelected ? '#dcfce7' : '#f0fdf4', color: '#16a34a', border: `1px solid ${isSelected ? '#86efac' : '#bbf7d0'}`, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                      >
-                        {isSelected ? '✓ 선택됨' : '발주확인'}
-                      </button>
-                    )}
-                    {order.trackingNumber && (
-                      <button style={{ padding: '4px 6px', borderRadius: 6, background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                        <Truck size={11} />
-                      </button>
-                    )}
-                    {problem && (
-                      <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 7px', borderRadius: 6, background: st.bg, color: st.color, border: `1px solid ${st.border}`, whiteSpace: 'nowrap' }}>
-                        {st.group === 'problem' && (order.status.includes('RETURN') ? '반품' : '취소')}
-                      </span>
-                    )}
-                  </div>
+                  {/* Arrow */}
+                  <ChevronRight size={14} style={{ color: '#D4B0BC' }} />
                 </div>
-                {!isLast && <div style={{ height: 1, background: '#F8DCE5', margin: '0 16px' }} />}
+                {!isLast && <div style={{ height: 1, background: '#F8DCE5', margin: '0 14px' }} />}
               </div>
             );
           })
         )}
 
-        {/* Table footer */}
+        {/* Footer */}
         {filtered.length > 0 && (
-          <div style={{ padding: '9px 16px', borderTop: '1px solid #F8DCE5', background: '#FFF8FA', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, color: '#B0A0A8' }}>
-              전체 {orders.length}건
-              {query && ` / 검색 결과 ${filtered.length}건`}
-            </span>
+          <div style={{ padding: '8px 14px', borderTop: '1px solid #F8DCE5', background: '#FFF8FA', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 11, color: '#B0A0A8' }}>전체 {orders.length}건{query ? ` / 검색 ${filtered.length}건` : ''}</span>
             {selected.size > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#e62310' }}>{selected.size}건 선택됨</span>
-                <button
-                  onClick={handleConfirm} disabled={confirming}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#16a34a', color: '#fff', padding: '5px 12px', borderRadius: 7, fontWeight: 700, fontSize: 11, border: 'none', cursor: 'pointer' }}
-                >
-                  <Check size={11} /> 발주확인 처리
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#e62310' }}>{selected.size}건 선택</span>
+                <button onClick={handleConfirm} disabled={confirming} style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  background: '#16a34a', color: '#fff', padding: '4px 11px',
+                  borderRadius: 7, fontWeight: 700, fontSize: 11, border: 'none', cursor: 'pointer',
+                }}>
+                  <Check size={10} /> 발주확인 처리
                 </button>
               </div>
             )}
@@ -498,7 +595,9 @@ function OrdersInner() {
         )}
       </div>
 
-      {/* spin animation */}
+      {/* Detail drawer */}
+      {drawer && <OrderDrawer order={drawer} onClose={() => setDrawer(null)} />}
+
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -508,7 +607,7 @@ export default function OrdersPage() {
   return (
     <Suspense fallback={
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <RefreshCw size={24} style={{ color: '#FFB3CE', animation: 'spin 1s linear infinite' }} />
+        <RefreshCw size={22} style={{ color: '#FFB3CE', animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     }>

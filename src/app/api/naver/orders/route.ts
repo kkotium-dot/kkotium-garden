@@ -1,6 +1,5 @@
 // GET /api/naver/orders — sync Naver orders into DB
-// Naver API response structure:
-//   { data: { contents: [ { productOrderId, content: { order, productOrder, shippingAddress, ... } } ] } }
+// Naver API response: { data: { contents: [ { productOrderId, content: { order, productOrder, currentClaim, ... } } ] } }
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -23,6 +22,20 @@ const STATUS_MAP: Record<string, string> = {
   RETURN_REQUEST:   'RETURN_REQUESTED',
 };
 
+// Korean labels for cancel/return reasons
+const CLAIM_REASON_MAP: Record<string, string> = {
+  INTENT_CHANGED:        '단순 변심',
+  WRONG_ITEM_DELIVERED:  '상품 오배송',
+  DEFECTIVE_PRODUCT:     '상품 불량',
+  DIFFERENT_PRODUCT:     '상품 정보 상이',
+  OUT_OF_STOCK:          '재고 부족',
+  DELAYED_DELIVERY:      '배송 지연',
+  WRONG_ORDER:           '주문 실수',
+  PRICE_CHANGE:          '가격 변동',
+  UNAUTHORIZED_ORDER:    '미성년자 결제',
+  OTHER:                 '기타',
+};
+
 const toKST = (d: Date) => d.toISOString().replace('Z', '+09:00');
 
 function splitWindows(from: Date, to: Date) {
@@ -37,7 +50,7 @@ function splitWindows(from: Date, to: Date) {
   return windows;
 }
 
-function extractOrders(raw: unknown): unknown[] {
+function extractItems(raw: unknown): unknown[] {
   if (!raw || typeof raw !== 'object') return [];
   const r = raw as Record<string, unknown>;
   if (r.data && typeof r.data === 'object') {
@@ -69,13 +82,13 @@ export async function GET(request: NextRequest) {
       try {
         const qUrl = `/v1/pay-order/seller/product-orders?from=${encodeURIComponent(toKST(w.from))}&to=${encodeURIComponent(toKST(w.to))}&pageSize=300`;
         const raw  = await naverRequest('GET', qUrl);
-        allItems   = allItems.concat(extractOrders(raw));
+        allItems   = allItems.concat(extractItems(raw));
       } catch (err: unknown) {
         console.error('[naver/orders] window error:', err instanceof Error ? err.message : err);
       }
     }
 
-    // Deduplicate
+    // Deduplicate by productOrderId
     const seen = new Set<string>();
     const unique = allItems.filter(item => {
       const id = String((item as Record<string, unknown>).productOrderId ?? '');
@@ -87,29 +100,43 @@ export async function GET(request: NextRequest) {
     let synced = 0, skipped = 0;
 
     for (const item of unique) {
-      const i = item as Record<string, unknown>;
+      const i       = item as Record<string, unknown>;
+      const naverOrderId = String(i.productOrderId ?? '');
+      if (!naverOrderId) { skipped++; continue; }
+
       try {
-        const naverOrderId = String(i.productOrderId ?? '');
-        if (!naverOrderId) { skipped++; continue; }
-
-        // Naver wraps all data under 'content'
-        const content      = (i.content as Record<string, unknown>) ?? i;
-        const productOrder = (content.productOrder as Record<string, unknown>) ?? {};
-        const order        = (content.order       as Record<string, unknown>) ?? {};
+        // All data is nested under 'content'
+        const content      = (i.content as Record<string, unknown>) ?? {};
+        const productOrder = (content.productOrder  as Record<string, unknown>) ?? {};
+        const order        = (content.order         as Record<string, unknown>) ?? {};
         const shipping     = (content.shippingAddress as Record<string, unknown>) ?? {};
+        const claim        = (content.currentClaim  as Record<string, unknown>) ?? {};
 
-        const status = STATUS_MAP[String(productOrder.productOrderStatus ?? '')] ?? 'PENDING';
-        const totalAmount = Number(productOrder.totalPaymentAmount ?? order.generalPaymentAmount ?? 0);
-        const productName = String(productOrder.productName ?? '');
-        const paymentDate = String(order.paymentDate ?? productOrder.orderDate ?? new Date().toISOString());
+        // Status: from productOrder
+        const rawStatus = String(productOrder.productOrderStatus ?? '');
+        const status    = STATUS_MAP[rawStatus] ?? 'PENDING';
 
-        const customerName    = String(order.ordererName  ?? shipping.name  ?? '');
-        const customerPhone   = String(order.ordererTel   ?? shipping.tel1  ?? '');
+        // Claim info (cancel / return)
+        const claimData    = (claim.cancel ?? claim.return ?? claim.exchange ?? {}) as Record<string, unknown>;
+        const claimReason  = CLAIM_REASON_MAP[String(claimData.cancelReason ?? claimData.returnReason ?? '')] ?? '';
+        const claimDetail  = String(claimData.cancelDetailedReason ?? claimData.returnDetailedReason ?? '').slice(0, 500);
+        const refundStatus = String(claimData.refundStandbyStatus ?? '');
+
+        // Customer info
+        const customerName  = String(order.ordererName  ?? shipping.name ?? '');
+        const customerPhone = String(order.ordererTel   ?? shipping.tel1 ?? '');
+
+        // Shipping address (not available for cancelled orders)
         const shippingAddress = String(
-          (shipping.roadAddress   as string) ??
-          (shipping.baseAddress   as string) ??
+          (shipping.roadAddress   as string | undefined) ??
+          (shipping.baseAddress   as string | undefined) ??
           ''
         );
+
+        const totalAmount = Number(productOrder.totalPaymentAmount ?? order.generalPaymentAmount ?? 0);
+        const productName = String(productOrder.productName ?? '');
+        const quantity    = Number(productOrder.quantity    ?? 1);
+        const paymentDate = order.paymentDate ? new Date(String(order.paymentDate)) : null;
 
         await (prisma as any).order.upsert({
           where:  { id: naverOrderId },
@@ -119,20 +146,34 @@ export async function GET(request: NextRequest) {
             customerName,
             customerPhone,
             shippingAddress,
+            productName,
+            quantity,
+            claimReason:  claimReason  || null,
+            claimDetail:  claimDetail  || null,
+            refundStatus: refundStatus || null,
+            paymentDate,
             updatedAt: new Date(),
           },
           create: {
-            id:              naverOrderId,
-            orderNumber:     naverOrderId,
+            id:             naverOrderId,
+            orderNumber:    naverOrderId,
             status,
             totalAmount,
-            totalPrice:      totalAmount,
+            totalPrice:     totalAmount,
             customerName,
-            customerEmail:   '',
+            customerEmail:  '',
             customerPhone,
             shippingAddress,
+            productName,
+            quantity,
+            claimReason:    claimReason  || null,
+            claimDetail:    claimDetail  || null,
+            refundStatus:   refundStatus || null,
+            paymentDate,
           },
-        }).catch((e: unknown) => console.error('[naver/orders] upsert error:', e instanceof Error ? e.message : e));
+        }).catch((e: unknown) => {
+          console.error('[naver/orders] upsert error:', naverOrderId, e instanceof Error ? e.message : e);
+        });
 
         synced++;
       } catch (err: unknown) {
@@ -151,6 +192,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
+    console.error('[naver/orders] fatal:', msg);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
