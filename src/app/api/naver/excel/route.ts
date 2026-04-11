@@ -37,7 +37,10 @@ export async function POST(request: NextRequest) {
     // Fetch via Prisma singleton — avoids Supabase RLS / schema permission issues
     const rows = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      include: { supplier: { select: { name: true } } },
+      include: {
+        supplier: { select: { name: true } },
+        shipping_templates: { select: { naverTemplateNo: true, shippingFee: true, returnFee: true, exchangeFee: true, courierCode: true, shippingType: true } },
+      },
     });
 
     if (!rows || rows.length === 0) {
@@ -64,7 +67,12 @@ export async function POST(request: NextRequest) {
       brand:                p.brand ?? undefined,
       manufacturer:         p.manufacturer ?? undefined,
       originCode:           p.originCode ?? undefined,
-      deliveryTemplateCode: p.deliveryTemplateCode ?? undefined,
+      deliveryTemplateCode: p.shipping_templates?.naverTemplateNo ?? p.deliveryTemplateCode ?? undefined,
+      // Fallback shipping fields from linked template when no naverTemplateNo
+      returnFee:   p.shipping_templates?.returnFee  ?? p.returnShippingFee   ?? undefined,
+      exchangeFee: p.shipping_templates?.exchangeFee ?? p.exchangeShippingFee ?? undefined,
+      courierCode: p.shipping_templates?.courierCode ?? p.courierCode          ?? undefined,
+      basicDeliveryFee: p.shipping_templates?.shippingFee ?? p.shippingFee     ?? undefined,
       asPhone:              p.asPhone ?? undefined,
       asGuide:              p.asInfo ?? undefined,
     }));
