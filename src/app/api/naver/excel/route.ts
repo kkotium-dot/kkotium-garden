@@ -57,13 +57,30 @@ export async function POST(request: NextRequest) {
       productName:          p.seoTitle ?? p.aiGeneratedTitle ?? p.naver_title ?? p.name ?? '',
       productStatus:        p.productStatus ?? undefined,
       price:                Number(p.salePrice) || 0,
-      taxType:              p.taxType ?? undefined,
+      // Naver requires '과세상품' / '면세상품' / '영세율' not just '과세'
+      taxType: (() => {
+        const t = p.taxType ?? '과세';
+        if (t === '과세' || t === '과세상품') return '과세상품';
+        if (t === '면세' || t === '면세상품') return '면세상품';
+        if (t === '영세' || t === '영세율')  return '영세율';
+        return t;
+      })(),
       stock:                Number(p.stock) || 999,
       mainImage:            p.mainImage ?? '',
       additionalImages:     Array.isArray(p.additionalImages)
         ? p.additionalImages.join('\n')
         : (p.additionalImages ?? undefined),
-      description:          p.aiGeneratedDesc ?? p.description ?? p.name ?? '',
+      // description = HTML img tag pointing to detail page image
+      // Naver accepts: <img src="URL"> or full HTML. Never plain text.
+      description: (() => {
+        const detailUrl = p.detail_image_url ?? p.aiGeneratedDesc ?? p.description ?? '';
+        if (!detailUrl) return '';  // empty is better than wrong text
+        // If it already looks like HTML, use as-is
+        if (detailUrl.startsWith('<')) return detailUrl;
+        // If it's a URL, wrap in img tag
+        if (detailUrl.startsWith('http')) return `<img src="${detailUrl}">`;
+        return detailUrl;
+      })(),
       brand:                p.brand ?? undefined,
       manufacturer:         p.manufacturer ?? undefined,
       originCode:           p.originCode ?? undefined,
