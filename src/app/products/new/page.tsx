@@ -689,6 +689,12 @@ function NewProductPageInner() {
       .catch(() => null);
   }, [searchParams]);
 
+  // Prefill product name from Kkotti recommendation (?prefillName=...)
+  useEffect(() => {
+    const name = searchParams?.get('prefillName');
+    if (name) setProductName(decodeURIComponent(name));
+  }, [searchParams]);
+
   useEffect(() => {
     fetch('/api/platforms?includeInactive=false', { cache: 'no-store' }).then(r => r.ok ? r.json() : { platforms: [] })
       .then(d => setPlatforms(d.platforms || [])).catch(() => {});

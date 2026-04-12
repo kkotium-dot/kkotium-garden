@@ -315,7 +315,21 @@ export default function KkottiDashboardWidget({ products: propProducts, products
                     <span style={{ fontSize: 16, fontWeight: 900, color: '#1A1A1A' }}>{rec.score}</span>
                     <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 7px', borderRadius: 99, background: gs.bg, color: gs.text }}>{gs.label}</span>
                   </div>
-                  <a href="/naver-seo" style={{ color: '#FFB3CE', flexShrink: 0 }}><ExternalLink size={13} /></a>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                    <a
+                      href={`/products/new?prefillName=${encodeURIComponent(rec.name)}`}
+                      title="씨앗 심기로 바로 등록"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 3,
+                        padding: '4px 8px', borderRadius: 8, fontSize: 10, fontWeight: 700,
+                        background: '#e62310', color: '#fff', textDecoration: 'none',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <Package size={9} /> 등록
+                    </a>
+                    <a href="/naver-seo" title="SEO 조련사" style={{ color: '#FFB3CE', flexShrink: 0 }}><ExternalLink size={13} /></a>
+                  </div>
                 </div>
               );
             })}
