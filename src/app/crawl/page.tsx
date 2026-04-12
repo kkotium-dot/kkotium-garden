@@ -517,6 +517,8 @@ export default function CrawlPage() {
   const [histFilter, setHistFilter]   = useState<'all'|'SOURCED'|'PENDING'|'REGISTERED'|'single'|'bulk'>('all');
   const [histSearch, setHistSearch]   = useState('');
   const [histSelected, setHistSelected] = useState<Set<string>>(new Set());
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchResult, setBatchResult]   = useState<{ created: number; skipped: number; errors: number } | null>(null);
   const [histSellerFilter, setHistSellerFilter] = useState<string>('all');
   const [sellerGroups, setSellerGroups] = useState<Record<string, string>>({});
   const [shelfUpdating, setShelfUpdating] = useState<Set<string>>(new Set());
@@ -1546,11 +1548,52 @@ export default function CrawlPage() {
             {histSelected.size > 0 && (
               <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'#FFF0EF', border:'1.5px solid #FFB3CE', borderRadius:12 }}>
                 <span style={{ fontSize:13, fontWeight:700, color:'#e62310' }}>{histSelected.size}개 선택됨</span>
+                {batchResult && (
+                  <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:99,
+                    background: batchResult.errors > 0 ? '#fee2e2' : '#dcfce7',
+                    color: batchResult.errors > 0 ? '#b91c1c' : '#15803d' }}>
+                    {batchResult.created}개 등록완료 {batchResult.skipped > 0 ? `· ${batchResult.skipped}개 스킵` : ''} {batchResult.errors > 0 ? `· 오류 ${batchResult.errors}` : ''}
+                  </span>
+                )}
                 <div style={{ flex:1 }} />
                 <button onClick={() => {
                   Array.from(histSelected).forEach(id => updateSourcingStatus(id, 'PENDING'));
                 }} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 14px', background:'#fffbeb', border:'1px solid #fde68a', borderRadius:8, fontSize:12, fontWeight:700, color:'#92400e', cursor:'pointer' }}>
                   <Clock size={12}/> 등록 대기로
+                </button>
+                {/* Batch DRAFT register — directly creates DRAFT products without going to seed page */}
+                <button
+                  disabled={batchLoading}
+                  onClick={async () => {
+                    if (histSelected.size > 20) { alert('최대 20개까지 일괄 등록 가능합니다.'); return; }
+                    setBatchLoading(true); setBatchResult(null);
+                    try {
+                      const res = await fetch('/api/crawl/batch-register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: Array.from(histSelected), markupRate: 1.3 }),
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        setBatchResult({ created: data.created, skipped: data.skipped, errors: data.errors });
+                        // Refresh logs to show REGISTERED status
+                        setHistSelected(new Set());
+                        // Re-fetch logs
+                        const r2 = await fetch('/api/crawl/logs');
+                        if (r2.ok) { const d2 = await r2.json(); setLogs(d2.logs ?? d2.data ?? []); }
+                      } else {
+                        alert('등록 실패: ' + (data.error || '알 수 없는 오류'));
+                      }
+                    } catch { alert('네트워크 오류'); }
+                    finally { setBatchLoading(false); }
+                  }}
+                  style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 14px',
+                    background: batchLoading ? '#9ca3af' : '#7c3aed',
+                    border:'none', borderRadius:8, fontSize:12, fontWeight:700, color:'#fff',
+                    cursor: batchLoading ? 'not-allowed' : 'pointer' }}>
+                  {batchLoading
+                    ? <><RefreshCw size={11} className="animate-spin"/>등록 중...</>
+                    : <><Package size={11}/>일괄 DRAFT 등록</>}
                 </button>
                 <button onClick={() => {
                   const san = (s: string) => (s||'').replace(/[\x00-\x1F\x7F]/g,' ').replace(/"/g,"'").trim();
