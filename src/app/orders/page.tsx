@@ -267,6 +267,12 @@ function OrdersInner() {
   const [confirming, setConfirming] = useState(false);
   const [hours, setHours]           = useState(48);
   const [drawer, setDrawer]         = useState<Order | null>(null);
+  // Dispatch modal state
+  const [dispatchModal, setDispatchModal] = useState<{ orderId: string; productName: string } | null>(null);
+  const [dispatchCourier, setDispatchCourier]   = useState('CJ대한통운');
+  const [dispatchTracking, setDispatchTracking] = useState('');
+  const [dispatching, setDispatching]           = useState(false);
+  const [dispatchMsg, setDispatchMsg]           = useState('');
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -309,6 +315,31 @@ function OrdersInner() {
       if (d.success) { setSelected(new Set()); fetchOrders(); }
     } catch { }
     finally { setConfirming(false); }
+  };
+
+  const handleDispatch = async () => {
+    if (!dispatchModal || !dispatchTracking.trim()) return;
+    setDispatching(true); setDispatchMsg('');
+    try {
+      const r = await fetch('/api/naver/orders/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productOrderId: dispatchModal.orderId,
+          deliveryCompany: dispatchCourier,
+          trackingNumber:  dispatchTracking.trim(),
+        }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setDispatchModal(null);
+        setDispatchTracking('');
+        fetchOrders();
+      } else {
+        setDispatchMsg(d.error ?? '송장 등록 실패');
+      }
+    } catch { setDispatchMsg('네트워크 오류'); }
+    finally { setDispatching(false); }
   };
 
   // Alias normaliser for filter tab counts
@@ -582,6 +613,19 @@ function OrdersInner() {
                         <Check size={11} />
                         {isSel ? '선택됨' : '발주확인'}
                       </button>
+                    ) : order.status === 'CONFIRMED' && !order.trackingNumber ? (
+                      <button
+                        onClick={() => { setDispatchModal({ orderId: order.id, productName: order.productName ?? '' }); setDispatchMsg(''); setDispatchTracking(''); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          fontSize: 11, fontWeight: 700, padding: '5px 9px', borderRadius: 7,
+                          background: '#fff7ed', color: '#ea580c',
+                          border: '1.5px solid #fed7aa',
+                          cursor: 'pointer', whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <Truck size={11} /> 송장등록
+                      </button>
                     ) : order.trackingNumber ? (
                       <button
                         title={`${order.courierCompany ?? ''} ${order.trackingNumber}`}
@@ -627,6 +671,76 @@ function OrdersInner() {
           </div>
         )}
       </div>
+
+      {/* Dispatch modal — 송장 등록 */}
+      {dispatchModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: 20,
+        }} onClick={() => setDispatchModal(null)}>
+          <div style={{
+            background: '#fff', borderRadius: 18, padding: 28, width: '100%', maxWidth: 400,
+            boxShadow: '0 8px 40px rgba(230,35,16,0.13)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 800, fontSize: 17, color: '#1a0a0a', marginBottom: 4 }}>송장 등록</div>
+            <div style={{ fontSize: 12, color: '#B0A0A8', marginBottom: 20, wordBreak: 'keep-all' }}>{dispatchModal.productName}</div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#4a3a3a', marginBottom: 6 }}>택배사</div>
+              <select
+                value={dispatchCourier}
+                onChange={e => setDispatchCourier(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #F8DCE5', fontSize: 13, outline: 'none' }}
+              >
+                {['CJ대한통운','한진택배','롯데택배','우체국','로젠택배','GS편의점택배','CU편의점택배'].map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#4a3a3a', marginBottom: 6 }}>송장번호</div>
+              <input
+                type="text"
+                value={dispatchTracking}
+                onChange={e => setDispatchTracking(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleDispatch(); }}
+                placeholder="송장번호 입력"
+                autoFocus
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #F8DCE5', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {dispatchMsg && (
+              <div style={{ fontSize: 12, color: '#e62310', marginBottom: 12, padding: '8px 12px', background: '#fff0f0', borderRadius: 8 }}>
+                {dispatchMsg}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setDispatchModal(null)}
+                style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '1.5px solid #F8DCE5', background: '#fff', color: '#B0A0A8', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDispatch}
+                disabled={dispatching || !dispatchTracking.trim()}
+                style={{
+                  flex: 2, padding: '11px 0', borderRadius: 10, border: 'none',
+                  background: dispatching || !dispatchTracking.trim() ? '#F8DCE5' : '#e62310',
+                  color: '#fff', fontWeight: 800, fontSize: 13, cursor: dispatching || !dispatchTracking.trim() ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+              >
+                <Truck size={14} /> {dispatching ? '등록 중...' : '배송 처리'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Detail drawer */}
       {drawer && <OrderDrawer order={drawer} onClose={() => setDrawer(null)} />}
