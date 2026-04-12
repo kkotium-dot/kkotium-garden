@@ -42,7 +42,7 @@ interface NavItem {
   href: string;
   label: string;
   iconKey: string;
-  badgeKey?: 'sourcing' | 'zombie' | 'orders';
+  badgeKey?: 'sourcing' | 'zombie' | 'orders' | 'draft' | 'oos';
 }
 
 const NAV: { label: string; items: NavItem[] }[] = [
@@ -65,7 +65,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
   {
     label: 'TEND',
     items: [
-      { href: '/products',              label: '정원 창고',   iconKey: 'shoppingbag' },
+      { href: '/products',              label: '정원 창고',   iconKey: 'shoppingbag', badgeKey: 'draft' },
       { href: '/naver-seo',             label: '검색 조련사', iconKey: 'search' },
       { href: '/products/reactivation', label: '좀비 부활소', iconKey: 'refreshcw', badgeKey: 'zombie' },
     ],
@@ -182,8 +182,10 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [sideStats, setSideStats] = useState<{
     sourcingCount: number;
-    zombieCount: number;
-    ordersCount: number;
+    zombieCount:   number;
+    ordersCount:   number;
+    draftCount:    number;
+    oosCount:      number;
   } | null>(null);
 
   useEffect(() => {
@@ -193,9 +195,11 @@ export default function Sidebar() {
         if (d.success && d.data?.summary) {
           const s = d.data.summary;
           setSideStats({
-            sourcingCount: s.sourcingCount ?? 0,
-            zombieCount:   s.zombieCount   ?? 0,
+            sourcingCount: s.sourcingCount  ?? 0,
+            zombieCount:   s.zombieCount    ?? 0,
             ordersCount:   s.todayOrderCount ?? 0,
+            draftCount:    s.draftProducts  ?? 0,
+            oosCount:      s.outOfStockProducts ?? 0,
           });
         }
       })
@@ -207,6 +211,8 @@ export default function Sidebar() {
     if (key === 'sourcing') return sideStats.sourcingCount;
     if (key === 'zombie')   return sideStats.zombieCount;
     if (key === 'orders')   return sideStats.ordersCount;
+    if (key === 'draft')    return sideStats.draftCount;
+    if (key === 'oos')      return sideStats.oosCount;
     return 0;
   };
 

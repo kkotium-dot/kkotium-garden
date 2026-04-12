@@ -37,6 +37,7 @@ interface LocalState {
   shippingFee: number;
   packagingCost: number;
   returnRiskRate: number;
+  adCostRate: number;     // ad cost as % of sale price (CPC estimate)
   targetMargin: number;
   feeRateOverride: number | null;
 }
@@ -50,6 +51,7 @@ interface CostBreakdown {
   shippingCost: number;
   packagingCost: number;
   returnRisk: number;
+  adCost: number;         // estimated ad cost (CPC)
   totalCost: number;
   profit: number;
   marginRate: number;
@@ -66,6 +68,7 @@ const DEFAULTS: LocalState = {
   shippingFee: 0,
   packagingCost: 0,       // packaging default: 0 won
   returnRiskRate: 1,
+  adCostRate: 0,           // ad cost default: 0% (opt-in)
   targetMargin: 35,
   feeRateOverride: null,
 };
@@ -340,7 +343,7 @@ export function MarginCalculator({
         naverFee: 0, naverFeeRate: effectiveFeeRate,
         orderMgmtFee: 0, salesFee: 0,
         shippingCost: 0, packagingCost: 0,
-        returnRisk: 0, totalCost: 0, profit: 0, marginRate: 0, roi: 0,
+        returnRisk: 0, adCost: 0, totalCost: 0, profit: 0, marginRate: 0, roi: 0,
       };
     }
 
@@ -348,7 +351,8 @@ export function MarginCalculator({
     const orderMgmtFee = Math.round(effectivePrice * feeBreakdown.orderManagementRate);
     const salesFeeAmt = Math.round(effectivePrice * feeBreakdown.salesFeeRate);
     const returnRisk = Math.round(effectivePrice * (local.returnRiskRate / 100));
-    const totalCost = local.supplierPrice + naverFee + local.shippingFee + local.packagingCost + returnRisk;
+    const adCost = Math.round(effectivePrice * (local.adCostRate / 100));
+    const totalCost = local.supplierPrice + naverFee + local.shippingFee + local.packagingCost + returnRisk + adCost;
     const profit = effectivePrice - totalCost;
     const marginRate = effectivePrice > 0 ? (profit / effectivePrice) * 100 : 0;
     const roi = (local.supplierPrice + local.shippingFee) > 0
@@ -363,6 +367,7 @@ export function MarginCalculator({
       shippingCost: local.shippingFee,
       packagingCost: local.packagingCost,
       returnRisk,
+      adCost,
       totalCost,
       profit,
       marginRate: Math.round(marginRate * 10) / 10,
@@ -622,6 +627,14 @@ export function MarginCalculator({
                   step={0.5}
                 />
                 <NumField
+                  label="광고비(%)"
+                  value={local.adCostRate}
+                  onChange={(v) => updateLocal({ adCostRate: v })}
+                  suffix="%"
+                  small
+                  step={0.5}
+                />
+                <NumField
                   label={`수수료율 (${local.feeRateOverride !== null ? '수동' : '자동'})`}
                   value={displayFeeRate}
                   onChange={(v) => updateLocal({ feeRateOverride: v })}
@@ -674,6 +687,12 @@ export function MarginCalculator({
                   <span>반품 리스크 ({local.returnRiskRate}%)</span>
                   <span>{breakdown.returnRisk.toLocaleString()}원</span>
                 </div>
+                {local.adCostRate > 0 && (
+                  <div className="flex justify-between">
+                    <span>광고비 ({local.adCostRate}%)</span>
+                    <span>{breakdown.adCost.toLocaleString()}원</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold pt-1 border-t border-current/10">
                   <span>총 비용</span>
                   <span>{breakdown.totalCost.toLocaleString()}원</span>
