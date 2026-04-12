@@ -164,8 +164,8 @@ export default function NaverSEOWorkflow({
   // Auto-run SEO analysis when coming from sourcing shelf (?autoSeo=1)
   useEffect(() => {
     if (!autoRun || !isReady || loading || result) return;
-    // Small delay to let prefill data settle before triggering
-    const timer = setTimeout(() => { handleRun(); }, 800);
+    // Longer delay to ensure prefill data has settled before triggering
+    const timer = setTimeout(() => { handleRun(); }, 1500);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRun, isReady]);
