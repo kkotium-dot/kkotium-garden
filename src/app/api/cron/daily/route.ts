@@ -16,6 +16,7 @@ import {
   GRADE_EMOJI,
 } from '@/lib/discord';
 import { fetchNaverTrends, matchProductsToTrends } from '@/lib/trend-analyzer';
+import { naverRequest } from '@/lib/naver/api-client';
 
 // ── Auth guard ──────────────────────────────────────────────────────────────
 function isAuthorized(req: NextRequest): boolean {
@@ -62,6 +63,72 @@ export async function GET(req: NextRequest) {
       orderBy: { updatedAt: 'desc' },
       take: 300,
     });
+
+    // ── 0. B-4: Auto suspend out-of-stock products via Naver API ─────────
+    // Checks naverProductId products for stock=0 and suspends them on Naver
+    try {
+      const naverProducts = await (prisma as any).product.findMany({
+        where: {
+          naverProductId: { not: null },
+          status: { in: ['ACTIVE', 'OUT_OF_STOCK'] },
+        },
+        select: { id: true, name: true, naverProductId: true, status: true, sku: true },
+      });
+
+      let suspendedCount = 0;
+      const suspendedList: string[] = [];
+
+      for (const p of naverProducts) {
+        try {
+          const raw = await naverRequest(
+            'GET',
+            `/v1/products/channel-products/${p.naverProductId}`
+          ) as Record<string, unknown>;
+
+          const origin = (raw?.originProduct ?? {}) as Record<string, unknown>;
+          const stock  = Number(origin.stockQuantity ?? 999);
+          const status = String((raw?.channelProduct as Record<string, unknown>)?.channelProductDisplayStatusType ?? origin.statusType ?? '');
+
+          // If Naver stock is 0 and not already suspended
+          if (stock === 0 && status !== 'SUSPENSION' && status !== 'CLOSE') {
+            // Call Naver API to suspend product
+            await naverRequest(
+              'PUT',
+              `/v1/products/origin-products/${p.naverProductId}`,
+              { originProduct: { ...origin, statusType: 'SUSPENSION' } }
+            ).catch(() => null); // non-fatal if update fails
+
+            // Update local DB
+            await (prisma as any).product.update({
+              where: { id: p.id },
+              data: { status: 'OUT_OF_STOCK', updatedAt: new Date() },
+            }).catch(() => null);
+
+            suspendedList.push(p.name);
+            suspendedCount++;
+          }
+        } catch {
+          // Per-product error — skip silently
+        }
+      }
+
+      results.autoSuspend = { checked: naverProducts.length, suspended: suspendedCount, items: suspendedList };
+
+      // Discord alert if any suspended
+      if (suspendedCount > 0) {
+        await sendDiscord(
+          'STOCK_ALERT',
+          '',
+          [{
+            title: `B-4 자동 품절 처리 — ${suspendedCount}건`,
+            description: suspendedList.map(n => `• ${n}`).join('\n'),
+            color: 0xe62310,
+          }]
+        ).catch(() => null);
+      }
+    } catch (e) {
+      results.autoSuspend = { error: e instanceof Error ? e.message.slice(0, 80) : String(e) };
+    }
 
     // ── 1. OOS detection ──────────────────────────────────────────────────
     const oosProducts = products.filter(p => p.status === 'OUT_OF_STOCK');
