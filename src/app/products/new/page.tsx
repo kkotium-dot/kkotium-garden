@@ -663,6 +663,19 @@ function NewProductPageInner() {
         if (p.brand)         setBrand(p.brand);
         if (p.originCode)    setOriginCode(p.originCode);
         if (p.sku)           setSellerCode(p.sku);
+        // Restore image fields
+        if (p.detail_image_url)   setDetailImageUrl(p.detail_image_url);
+        if (p.images && Array.isArray(p.images) && p.images.length > 0)
+          setAdditionalImages(p.images.join(','));
+        // Restore SEO fields
+        if (p.seoHook)           setSeoHook(p.seoHook);
+        if (p.naver_keywords)    setAiKeywords(
+          typeof p.naver_keywords === 'string'
+            ? p.naver_keywords.split(',').map((k: string) => k.trim()).filter(Boolean)
+            : (p.naver_keywords as string[])
+        );
+        // Restore shipping template
+        if (p.shippingTemplateId) setSelectedTemplateId(p.shippingTemplateId);
         // Restore category drill-down from stored code
         if (p.naverCategoryCode) {
           const found = NAVER_CATEGORIES_FULL.find(c => c.code === p.naverCategoryCode);
