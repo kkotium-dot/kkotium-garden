@@ -762,6 +762,81 @@ export function MarginCalculator({
         </div>
       )}
 
+      {/* Ad profit simulator — shows 3 CPC scenarios at a glance */}
+      {local.supplierPrice > 0 && local.salePrice > 0 && (() => {
+        const scenarios = [
+          { label: '광고 안 함', rate: 0,    hint: '현재 상태' },
+          { label: '소극적 광고', rate: 5,   hint: '클릭당 ~300원' },
+          { label: '적극적 광고', rate: 10,  hint: '클릭당 ~600원' },
+          { label: '경쟁 카테고리', rate: 15, hint: '클릭당 ~900원+' },
+        ];
+        return (
+          <div style={{ background: '#f8f9ff', border: '1.5px solid #e0e7ff', borderRadius: 14, padding: '14px 16px', marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <TrendingUp size={11} style={{ color: '#fff' }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 800, color: '#1e1b4b', margin: 0 }}>광고 켜면 얼마 남나요?</p>
+                  <p style={{ fontSize: 10, color: '#6b7280', margin: 0 }}>광고비 시나리오별 실이익</p>
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {scenarios.map(sc => {
+                const adCostAmt = Math.round(breakdown.effectivePrice * (sc.rate / 100));
+                const adjProfit = breakdown.profit - adCostAmt;
+                const adjMargin = breakdown.effectivePrice > 0
+                  ? Math.round((adjProfit / breakdown.effectivePrice) * 1000) / 10 : 0;
+                const isSafe    = adjMargin >= 20;
+                const isWarn    = adjMargin >= 5 && adjMargin < 20;
+                const isDanger  = adjMargin < 5;
+                const bg     = isSafe ? '#f0fdf4' : isWarn ? '#fffbeb' : '#fef2f2';
+                const border = isSafe ? '#bbf7d0' : isWarn ? '#fde68a' : '#fecaca';
+                const color  = isSafe ? '#15803d' : isWarn ? '#b45309' : '#b91c1c';
+                const icon   = isSafe ? '\u2705' : isWarn ? '\u26a0\ufe0f' : '\u274c';
+                const isActive = local.adCostRate === sc.rate;
+                return (
+                  <button
+                    key={sc.rate}
+                    type="button"
+                    onClick={() => updateLocal({ adCostRate: sc.rate })}
+                    style={{
+                      background: isActive ? bg : '#fff',
+                      border: `2px solid ${isActive ? color : border}`,
+                      borderRadius: 10, padding: '10px 12px',
+                      cursor: 'pointer', textAlign: 'left',
+                      outline: isActive ? `2px solid ${color}` : 'none',
+                      outlineOffset: 1,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>{sc.label}</span>
+                      <span style={{ fontSize: 13 }}>{icon}</span>
+                    </div>
+                    <p style={{ fontSize: 18, fontWeight: 900, color, margin: '0 0 1px' }}>
+                      {adjMargin.toFixed(1)}%
+                    </p>
+                    <p style={{ fontSize: 10, color: '#6b7280', margin: 0 }}>
+                      {adjProfit >= 0 ? '+' : ''}{adjProfit.toLocaleString()}\uc6d0
+                    </p>
+                    {sc.rate > 0 && (
+                      <p style={{ fontSize: 9, color: '#9ca3af', margin: '3px 0 0' }}>
+                        {sc.hint} · {sc.rate}% = {adCostAmt.toLocaleString()}\uc6d0
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 8, textAlign: 'center' }}>
+              \u2705 20%\uc774\uc0c1 \uc548\uc804 &nbsp; \u26a0\ufe0f 5~20% \uc8fc\uc758 &nbsp; \u274c 5% \ubbf8\ub9cc \uc704\ud5d8 &mdash; \uc120\ud0dd\ud558\uba74 \uad11\uace0\ube44 \uc2ac\ub77c\uc774\ub354\uc5d0 \uc790\ub3d9 \uc801\uc6a9
+            </p>
+          </div>
+        );
+      })()}
+
       {/* Margin level guide */}
       <div className="flex gap-1.5 text-[10px]">
         <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded">50%+ 우수</span>
