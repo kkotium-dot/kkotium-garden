@@ -247,6 +247,54 @@ export async function GET(req: NextRequest) {
     const trendBoostMap = new Map(trendMatches.map(m => [m.productId, m.boostScore]));
     results.trends = { source: trends.source, keywords: trends.trendKeywords, matched: trendMatches.length };
 
+    // ── Step 3 (C-5): Include SOURCED crawl_logs in recommendation pool ─
+    // Fetch unregistered sourcing shelf items — treat them as candidate products
+    let sourcingCandidates: Array<{
+      id: string; name: string; score: ReturnType<typeof scoreProduct>;
+      boost: number; isSourcing: true;
+      supplierPrice: number; salePrice: number;
+      keywords: string[];
+    }> = [];
+    try {
+      const crawlItems = await (prisma as any).crawlLog.findMany({
+        where: { sourcingStatus: 'SOURCED', name: { not: null }, supplierPrice: { gt: 0 } },
+        orderBy: { crawledAt: 'desc' },
+        take: 30,
+      });
+
+      // Estimate sale price: supplierPrice × 2.5 (typical markup for analysis)
+      sourcingCandidates = crawlItems
+        .map((c: any) => {
+          const estSalePrice = Math.round(c.supplierPrice * 2.5);
+          const sc = scoreProduct({
+            salePrice:     estSalePrice,
+            supplierPrice: c.supplierPrice,
+            naverCategoryCode: c.categoryCode ?? null,
+            name:          c.name ?? '',
+            keywords:      [],
+            tags:          [],
+            mainImage:     null,
+          });
+          const trendBoost = trendMatches
+            .filter(m => c.name && m.productId === c.id)
+            .reduce((s: number, m: any) => s + m.boostScore, 0);
+          return {
+            id:            c.id,
+            name:          c.name ?? '',
+            score:         { ...sc, total: Math.min(sc.total + trendBoost, 100) },
+            boost:         trendBoost,
+            isSourcing:    true as const,
+            supplierPrice: c.supplierPrice,
+            salePrice:     estSalePrice,
+            keywords:      [],
+          };
+        })
+        .filter((c: any) => c.score.netMarginRate >= 20); // only viable margin
+      results.sourcingPool = { total: crawlItems.length, viable: sourcingCandidates.length };
+    } catch (e) {
+      results.sourcingPool = { error: e instanceof Error ? e.message.slice(0, 60) : String(e) };
+    }
+
     // Score all eligible products — apply trend boost to honey score
     const scored = products
       .filter(p => p.salePrice > 0 && p.supplierPrice > 0)
@@ -286,23 +334,44 @@ export async function GET(req: NextRequest) {
       results.keywordVolume = { error: e instanceof Error ? e.message.slice(0, 60) : String(e) };
     }
 
-    // Re-rank with volume boost and take TOP 5
-    const reRanked = scored
-      .map(item => ({
-        ...item,
-        finalScore: Math.min(item.score.total + (volumeBoostMap.get(item.p.id) ?? 0), 100),
-      }))
+    // Re-rank with volume boost — merge DB products + sourcing candidates, take TOP 5
+    const scoredWithBoost = scored.map(item => ({
+      id:            item.p.id,
+      name:          item.p.name,
+      finalScore:    Math.min(item.score.total + (volumeBoostMap.get(item.p.id) ?? 0), 100),
+      grade:         item.score.grade,
+      netMarginRate: item.score.netMarginRate,
+      supplierName:  (item.p as any).supplier?.name as string | undefined,
+      keywords:      Array.isArray(item.p.keywords) ? (item.p.keywords as string[]).slice(0, 3) : [],
+      volumeBoost:   volumeBoostMap.get(item.p.id) ?? 0,
+      isSourcing:    false as const,
+    }));
+
+    const sourcingWithBoost = sourcingCandidates.map(c => ({
+      id:            c.id,
+      name:          c.name,
+      finalScore:    Math.min(c.score.total + (volumeBoostMap.get(c.id) ?? 0), 100),
+      grade:         c.score.grade,
+      netMarginRate: c.score.netMarginRate,
+      supplierName:  undefined as string | undefined,
+      keywords:      [] as string[],
+      volumeBoost:   volumeBoostMap.get(c.id) ?? 0,
+      isSourcing:    true as const,
+    }));
+
+    const reRanked = [...scoredWithBoost, ...sourcingWithBoost]
       .sort((a, b) => b.finalScore - a.finalScore);
 
     // Top 5 overall (C-5 upgrade: TOP3 → TOP5)
-    const top5 = reRanked.slice(0, 5).map(({ p, score, finalScore }) => ({
-      name:          p.name,
-      score:         finalScore,
-      grade:         score.grade,
-      netMarginRate: score.netMarginRate,
-      supplierName:  (p as any).supplier?.name,
-      keywords:      Array.isArray(p.keywords) ? (p.keywords as string[]).slice(0, 3) : [],
-      volumeBoost:   volumeBoostMap.get(p.id) ?? 0,
+    const top5 = reRanked.slice(0, 5).map(item => ({
+      name:          item.name,
+      score:         item.finalScore,
+      grade:         item.grade,
+      netMarginRate: item.netMarginRate,
+      supplierName:  item.supplierName,
+      keywords:      item.keywords,
+      volumeBoost:   item.volumeBoost,
+      isSourcing:    item.isSourcing,
     }));
     // Keep top3 alias for backward compat with embed builder
     const top3 = top5.slice(0, 3);

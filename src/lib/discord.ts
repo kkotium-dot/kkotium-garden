@@ -103,6 +103,7 @@ export function buildRecommendEmbed(params: {
     `${GRADE_EMOJI[p.grade] ?? ''} 꿀통지수 **${p.score}점** | 순마진 ${p.netMarginRate.toFixed(1)}%`,
     p.keywords?.length ? `키워드: ${p.keywords.slice(0,2).join(' · ')}` : null,
     p.volumeBoost > 0 ? `검색량 블루오션 +${p.volumeBoost}` : null,
+    (p as any).isSourcing ? '[소싱보관함] 등록 전 후보' : null,
     p.supplierName ? `공급사: ${p.supplierName}` : null,
   ].filter(Boolean).join('\n'),
   inline: false,
