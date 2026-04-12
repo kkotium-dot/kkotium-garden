@@ -45,7 +45,7 @@ export default function QuickActions({
         href="/products/new"
         className="inline-flex items-center px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors"
       >
-        <span className="mr-2">➕</span>
+        
         상품 추가
       </Link>
 
@@ -53,7 +53,7 @@ export default function QuickActions({
         href="/products/bulk-upload"
         className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
       >
-        <span className="mr-2">📊</span>
+        
         엑셀 업로드
       </Link>
 
@@ -61,7 +61,7 @@ export default function QuickActions({
         href="/"
         className="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
       >
-        <span className="mr-2">🔗</span>
+        
         크롤링
       </Link>
     </div>

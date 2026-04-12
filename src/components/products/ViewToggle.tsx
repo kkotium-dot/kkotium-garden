@@ -16,7 +16,7 @@ export default function ViewToggle({ view, onViewChange }: ViewToggleProps) {
             : 'text-gray-700 hover:bg-gray-100'
         }`}
       >
-        <span className="mr-2">🔲</span>
+        
         카드
       </button>
       <button
@@ -27,7 +27,7 @@ export default function ViewToggle({ view, onViewChange }: ViewToggleProps) {
             : 'text-gray-700 hover:bg-gray-100'
         }`}
       >
-        <span className="mr-2">📋</span>
+        
         테이블
       </button>
     </div>

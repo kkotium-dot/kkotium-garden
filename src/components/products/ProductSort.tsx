@@ -3,7 +3,7 @@
 interface SortOption {
   label: string;
   value: string;
-  icon: string;
+  icon?: string;
 }
 
 interface ProductSortProps {
@@ -14,12 +14,12 @@ interface ProductSortProps {
 export default function ProductSort({ currentSort, onSortChange }: ProductSortProps) {
   const sortOptions: SortOption[] = [
     { label: '최신순', value: 'date_desc', icon: '🆕' },
-    { label: '오래된순', value: 'date_asc', icon: '📅' },
-    { label: '이름 (가→하)', value: 'name_asc', icon: '🔤' },
-    { label: '이름 (하→가)', value: 'name_desc', icon: '🔡' },
+    { label: '오래된순', value: 'date_asc' },
+    { label: '이름 (가→하)', value: 'name_asc' },
+    { label: '이름 (하→가)', value: 'name_desc' },
     { label: '가격 낮은순', value: 'price_asc', icon: '💰' },
-    { label: '가격 높은순', value: 'price_desc', icon: '💎' },
-    { label: '마진 높은순', value: 'margin_desc', icon: '📈' },
+    { label: '가격 높은순', value: 'price_desc' },
+    { label: '마진 높은순', value: 'margin_desc' },
     { label: '마진 낮은순', value: 'margin_asc', icon: '📉' },
   ];
 

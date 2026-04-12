@@ -42,7 +42,7 @@ export default function SearchFilter({ onSearch, onFilter }: SearchFilterProps) 
             placeholder="상품명, SKU 검색..."
             className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
           />
-          <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+          
         </div>
         <button
           type="submit"

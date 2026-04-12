@@ -51,9 +51,9 @@ export default function SourcedProductManager() {
       }
 
       setProducts(data || []);
-      console.log('✅ 상품 로드 완료:', data?.length);
+      console.log('products loaded:', data?.length);
     } catch (error) {
-      console.error('❌ 상품 로드 실패:', error);
+      console.error('product load failed:', error);
       alert('상품을 불러올 수 없습니다.');
     } finally {
       setLoading(false);
@@ -93,10 +93,10 @@ export default function SourcedProductManager() {
 
       if (error) throw error;
 
-      alert(`✅ 네이버 등록 완료!\n상품ID: ${naverProductId}`);
+      alert(`네이버 등록 완료! 상품ID: ${naverProductId}`);
       fetchProducts();
     } catch (error) {
-      console.error('❌ 등록 실패:', error);
+      console.error('register failed:', error);
       alert('등록 실패: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
@@ -115,7 +115,7 @@ export default function SourcedProductManager() {
       }
 
       setSelected(new Set());
-      alert(`✅ ${productIds.length}개 상품 등록 완료!`);
+      alert(`${productIds.length}개 상품 등록 완료!`);
     } catch (error) {
       alert('대량 등록 실패');
     }
@@ -164,10 +164,10 @@ export default function SourcedProductManager() {
         .update({ status: 'approved' })
         .eq('id', productId);
 
-      alert('✅ 상품이 승인되어 products에 등록되었습니다!');
+      alert('상품이 승인되어 등록되었습니다!');
       fetchProducts();
     } catch (error) {
-      console.error('❌ 승인 실패:', error);
+      console.error('approval failed:', error);
       alert('승인 실패: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
@@ -183,10 +183,10 @@ export default function SourcedProductManager() {
 
       if (error) throw error;
 
-      alert('✅ 삭제 완료');
+      alert('삭제 완료');
       fetchProducts();
     } catch (error) {
-      console.error('❌ 삭제 실패:', error);
+      console.error('delete failed:', error);
       alert('삭제 실패: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
@@ -200,7 +200,7 @@ export default function SourcedProductManager() {
     <div className="max-w-7xl mx-auto p-6">
       
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-2">🌸 수집된 상품 관리</h1>
+        <h1 className="text-4xl font-bold mb-2">수집된 상품 관리</h1>
         <p className="text-gray-600">
           도매매에서 수집한 상품을 확인하고 네이버 스마트스토어에 등록하세요
         </p>
@@ -211,11 +211,11 @@ export default function SourcedProductManager() {
           
           <div className="flex gap-2">
             {[
-              { value: 'all', label: '전체', icon: '📦' },
-              { value: 'pending', label: '대기중', icon: '⏳' },
-              { value: 'approved', label: '승인됨', icon: '✅' },
-              { value: 'listed', label: '등록완료', icon: '🎉' }
-            ].map(({ value, label, icon }) => (
+              { value: 'all', label: '전체' },
+              { value: 'pending', label: '대기중' },
+              { value: 'approved', label: '승인됨' },
+              { value: 'listed', label: '등록완료' }
+            ].map(({ value, label }) => (
               <button
                 key={value}
                 onClick={() => setFilter(value as any)}
@@ -225,7 +225,7 @@ export default function SourcedProductManager() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                {icon} {label}
+                {label}
               </button>
             ))}
           </div>
@@ -242,7 +242,7 @@ export default function SourcedProductManager() {
               disabled={selected.size === 0}
               className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              📤 선택 상품 네이버 등록 ({selected.size})
+              선택 상품 네이버 등록 ({selected.size}개)
             </button>
           </div>
         </div>
@@ -250,12 +250,12 @@ export default function SourcedProductManager() {
 
       {loading ? (
         <div className="text-center py-20">
-          <div className="text-6xl mb-4 animate-bounce">🔄</div>
+          
           <p className="text-xl text-gray-600">상품을 불러오는 중...</p>
         </div>
       ) : products.length === 0 ? (
         <div className="text-center py-20">
-          <div className="text-6xl mb-4">📭</div>
+          
           <p className="text-xl text-gray-600 mb-4">
             {filter === 'all' 
               ? '수집된 상품이 없습니다.' 
@@ -296,9 +296,9 @@ export default function SourcedProductManager() {
                         ? 'bg-blue-100 text-blue-800'
                         : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {product.status === 'listed' ? '🎉 등록완료' :
-                       product.status === 'approved' ? '✅ 승인됨' :
-                       '⏳ 대기중'}
+                      {product.status === 'listed' ? '등록완료' :
+                       product.status === 'approved' ? '승인됨' :
+                       '대기중'}
                     </span>
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                       margin >= 60 ? 'bg-green-100 text-green-800' :
@@ -376,13 +376,13 @@ export default function SourcedProductManager() {
                         onClick={() => handleRegisterToNaver(product.id)}
                         className="w-full py-2 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition text-sm"
                       >
-                        📤 네이버 등록
+                        네이버 등록
                       </button>
                       <button
                         onClick={() => handleApprove(product.id)}
                         className="w-full py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 transition text-sm"
                       >
-                        ✅ 승인 (products로 이동)
+                        승인 (등록목록으로 이동)
                       </button>
                     </>
                   )}

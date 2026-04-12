@@ -32,7 +32,7 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
     const newFilters = { ...filters, [field]: value };
     setFilters(newFilters);
     onFilterChange(newFilters);
-    console.log('🔧 필터 변경:', field, '=', value);
+    console.log('filter changed:', field, '=', value);
   };
 
   const handleReset = () => {
@@ -55,7 +55,7 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-gray-900">🔍 필터</h3>
+          <h3 className="text-lg font-semibold text-gray-900">필터</h3>
           {activeFilterCount > 0 && (
             <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
               {activeFilterCount}개 적용 중
@@ -160,10 +160,10 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 bg-gradient-to-r from-purple-50 to-pink-50"
             >
               <option value="">전체</option>
-              <option value="100">💎 100점 (S급)</option>
+              <option value="100">100점 (S급)</option>
               <option value="80-99">⭐ 80-99점 (A급)</option>
-              <option value="70-79">🌟 70-79점 (B급)</option>
-              <option value="0-69">⚠️ 0-69점 (개선필요)</option>
+              <option value="70-79">70-79점 (B급)</option>
+              <option value="0-69">0-69점 (개선필요)</option>
             </select>
           </div>
         </div>
@@ -202,9 +202,9 @@ export default function ProductFilters({ onFilterChange, categories }: ProductFi
             className="px-3 py-2 border rounded-lg text-sm bg-gradient-to-r from-purple-50 to-pink-50"
           >
             <option value="">전체 SEO</option>
-            <option value="100">💎 100점</option>
+            <option value="100">100점</option>
             <option value="80-99">⭐ 80-99점</option>
-            <option value="0-69">⚠️ 0-69점 이하</option>
+            <option value="0-69">0-69점 이하</option>
           </select>
         </div>
       )}

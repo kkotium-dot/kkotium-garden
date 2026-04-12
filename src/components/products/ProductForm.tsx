@@ -65,7 +65,7 @@ export default function ProductForm() {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">📝 상품 등록</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">상품 등록</h2>
         <p className="text-sm text-gray-600">새로운 상품을 등록하세요</p>
       </div>
 

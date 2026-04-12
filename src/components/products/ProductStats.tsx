@@ -59,37 +59,37 @@ export default function ProductStats({ products }: ProductStatsProps) {
 
   const statCards = [
     {
-      icon: '📦',
+      icon: 'package',
       label: '전체 상품',
       value: stats.total,
       color: 'from-blue-500 to-blue-600',
     },
     {
-      icon: '✅',
+      icon: 'check',
       label: '판매중',
       value: stats.published,
       color: 'from-green-500 to-green-600',
     },
     {
-      icon: '📝',
+      icon: 'edit',
       label: '초안',
       value: stats.draft,
       color: 'from-yellow-500 to-yellow-600',
     },
     {
-      icon: '⏳',
+      icon: 'clock',
       label: '준비중',
       value: stats.todo,
       color: 'from-gray-500 to-gray-600',
     },
     {
-      icon: '📈',
+      icon: 'trending-up',
       label: '평균 마진',
       value: `${stats.avgMargin.toFixed(1)}%`,
       color: 'from-purple-500 to-purple-600',
     },
     {
-      icon: '💰',
+      icon: 'dollar',
       label: '판매 총액',
       value: `${(stats.totalRevenue / 10000).toFixed(0)}만원`,
       color: 'from-pink-500 to-pink-600',
