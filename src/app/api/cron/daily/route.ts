@@ -17,6 +17,7 @@ import {
 } from '@/lib/discord';
 import { fetchNaverTrends, matchProductsToTrends } from '@/lib/trend-analyzer';
 import { naverRequest } from '@/lib/naver/api-client';
+import { fetchKeywordStats } from '@/lib/naver/keyword-api';
 
 // ── Auth guard ──────────────────────────────────────────────────────────────
 function isAuthorized(req: NextRequest): boolean {
@@ -256,14 +257,55 @@ export async function GET(req: NextRequest) {
       })
       .sort((a, b) => b.score.total - a.score.total);
 
-    // Top 3 overall
-    const top3 = scored.slice(0, 3).map(({ p, score }) => ({
+    // ── Step 3-A: Fetch keyword search volume for top candidates ─────────
+    // Use Naver Search Ad API to re-rank by real keyword data
+    // Fetch volume for top 10 candidates, then re-sort with volume boost
+    const top10Candidates = scored.slice(0, 10);
+    const volumeBoostMap = new Map<string, number>();
+    try {
+      // Collect primary keywords from each candidate
+      const keywordBatches: { productId: string; keyword: string }[] = [];
+      for (const { p } of top10Candidates) {
+        const kws = Array.isArray(p.keywords) ? (p.keywords as string[]) : [];
+        if (kws[0]) keywordBatches.push({ productId: p.id, keyword: kws[0] });
+      }
+      if (keywordBatches.length > 0) {
+        // Batch by 5 (API limit)
+        const uniqueKws = [...new Set(keywordBatches.map(k => k.keyword))].slice(0, 5);
+        const stats = await fetchKeywordStats(uniqueKws).catch(() => []);
+        const volumeMap = new Map<string, number>(stats.map(s => [s.keyword, s.totalMonthly] as [string, number]));
+        for (const { productId, keyword } of keywordBatches) {
+          const vol = Number(volumeMap.get(keyword) ?? 0);
+          // Blue-ocean scoring: 1k~10k = sweet spot (+5), <1k = niche (+3), >10k = crowded (+1)
+          const volBoost = vol >= 1000 && vol < 10000 ? 5 : vol < 1000 && vol > 0 ? 3 : vol >= 10000 ? 1 : 0;
+          volumeBoostMap.set(productId, volBoost);
+        }
+      }
+      results.keywordVolume = { fetched: keywordBatches.length, boosted: volumeBoostMap.size };
+    } catch (e) {
+      results.keywordVolume = { error: e instanceof Error ? e.message.slice(0, 60) : String(e) };
+    }
+
+    // Re-rank with volume boost and take TOP 5
+    const reRanked = scored
+      .map(item => ({
+        ...item,
+        finalScore: Math.min(item.score.total + (volumeBoostMap.get(item.p.id) ?? 0), 100),
+      }))
+      .sort((a, b) => b.finalScore - a.finalScore);
+
+    // Top 5 overall (C-5 upgrade: TOP3 → TOP5)
+    const top5 = reRanked.slice(0, 5).map(({ p, score, finalScore }) => ({
       name:          p.name,
-      score:         score.total,
+      score:         finalScore,
       grade:         score.grade,
       netMarginRate: score.netMarginRate,
-      supplierName:  p.supplier?.name,
+      supplierName:  (p as any).supplier?.name,
+      keywords:      Array.isArray(p.keywords) ? (p.keywords as string[]).slice(0, 3) : [],
+      volumeBoost:   volumeBoostMap.get(p.id) ?? 0,
     }));
+    // Keep top3 alias for backward compat with embed builder
+    const top3 = top5.slice(0, 3);
 
     // Season top 2 (keyword match in name)
     const seasonTop2 = season
@@ -290,15 +332,15 @@ export async function GET(req: NextRequest) {
       const recResult = await sendDiscord(
         'KKOTTI_RECOMMEND',
         '',
-        [buildRecommendEmbed({ today, top3, season, seasonTop2, appUrl, trendNote })]
+        [buildRecommendEmbed({ today, top3: top5, season, seasonTop2, appUrl, trendNote })]
       );
-      results.recommendation = { sent: recResult.ok, top3Count: top3.length, trendSource: trends.source };
+      results.recommendation = { sent: recResult.ok, top5Count: top5.length, trendSource: trends.source };
     } else {
       results.recommendation = { sent: false, reason: 'no eligible products' };
     }
 
     // ── 4. Persist today's recommendation to DB ───────────────────────────
-    if (top3.length > 0) {
+    if (top5.length > 0) {
       const todayDate = new Date();
       todayDate.setHours(0, 0, 0, 0);
 
@@ -307,7 +349,7 @@ export async function GET(req: NextRequest) {
       });
 
       await prisma.daily_recommendations.createMany({
-        data: top3.map((item, i) => ({
+        data: top5.map((item) => ({
           date:         todayDate,
           product_name: item.name,
           honey_score:  item.score,
@@ -316,7 +358,7 @@ export async function GET(req: NextRequest) {
         })),
       });
 
-      results.dbSaved = top3.length;
+      results.dbSaved = top5.length;
     }
 
     return NextResponse.json({

@@ -96,14 +96,17 @@ export function buildRecommendEmbed(params: {
   appUrl?: string;
   trendNote?: string;
 }): Record<string, unknown> {
-  const fields: Record<string, unknown>[] = params.top3.map((p, i) => ({
-    name: `${['1️⃣', '2️⃣', '3️⃣'][i]} ${p.name}`,
-    value: [
-      `${GRADE_EMOJI[p.grade] ?? ''} 꿀통지수 **${p.score}점** | 순마진 ${p.netMarginRate.toFixed(1)}%`,
-      p.supplierName ? `공급사: ${p.supplierName}` : null,
-    ].filter(Boolean).join('\n'),
-    inline: false,
-  }));
+  const RANK_EMOJI = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣'];
+  const fields: Record<string, unknown>[] = params.top3.map((p: any, i: number) => ({
+  name: `${RANK_EMOJI[i] ?? `${i+1}.`} ${p.name}`,
+  value: [
+    `${GRADE_EMOJI[p.grade] ?? ''} 꿀통지수 **${p.score}점** | 순마진 ${p.netMarginRate.toFixed(1)}%`,
+    p.keywords?.length ? `키워드: ${p.keywords.slice(0,2).join(' · ')}` : null,
+    p.volumeBoost > 0 ? `검색량 블루오션 +${p.volumeBoost}` : null,
+    p.supplierName ? `공급사: ${p.supplierName}` : null,
+  ].filter(Boolean).join('\n'),
+  inline: false,
+}));
 
   if (params.season && (params.seasonTop2?.length ?? 0) > 0) {
     fields.push({
