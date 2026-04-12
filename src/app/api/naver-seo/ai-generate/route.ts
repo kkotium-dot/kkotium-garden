@@ -58,11 +58,9 @@ Rules:
 
 // ─── AI provider calls ────────────────────────────────────────────────────────
 
-async function callGemini(productName: string, style: SeoStyle): Promise<Record<string, string>> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not set');
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+// Single key call
+async function callGeminiWithKey(productName: string, style: SeoStyle, apiKey: string): Promise<Record<string, string>> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -77,6 +75,30 @@ async function callGemini(productName: string, style: SeoStyle): Promise<Record<
   const parts: { text?: string; thought?: boolean }[] = data.candidates?.[0]?.content?.parts ?? [];
   const text = parts.filter(p => !p.thought).map(p => p.text ?? '').join('').trim();
   return parseJsonSafe(text);
+}
+
+// Round-robin across all available Gemini keys
+async function callGemini(productName: string, style: SeoStyle): Promise<Record<string, string>> {
+  const keys = [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+  ].filter(Boolean) as string[];
+  if (keys.length === 0) throw new Error('GEMINI_API_KEY not set');
+  let lastErr = '';
+  for (const key of keys) {
+    try {
+      return await callGeminiWithKey(productName, style, key);
+    } catch (e) {
+      lastErr = e instanceof Error ? e.message : String(e);
+      if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('403')) {
+        console.warn(`[ai-generate] Gemini key ${key.slice(-6)} quota/403, trying next`);
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error(`Gemini: 모든 키 quota 초과 (${lastErr.slice(0,60)})`);
 }
 
 async function callAnthropic(productName: string, style: SeoStyle): Promise<Record<string, string>> {
@@ -128,10 +150,11 @@ async function generateSEO(
   productName: string,
   style: SeoStyle = 'orthodox'
 ): Promise<{ data: Record<string, string>; provider: string }> {
-  // Try Gemini first (free tier), fall through on any error including 403
-  if (process.env.GEMINI_API_KEY) {
-    try { return { data: await callGemini(productName, style), provider: 'gemini-2.5-flash' }; }
-    catch (e) { console.warn('[ai-generate] Gemini failed, trying Anthropic:', e instanceof Error ? e.message.slice(0,60) : e); }
+  // Try Gemini first (free tier, up to 3 keys), fall through on all quota failures
+  const hasGeminiKey = !!(process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2 || process.env.GEMINI_API_KEY_3);
+  if (hasGeminiKey) {
+    try { return { data: await callGemini(productName, style), provider: 'gemini-2.0-flash' }; }
+    catch (e) { console.warn('[ai-generate] All Gemini keys failed, trying Anthropic:', e instanceof Error ? e.message.slice(0,60) : e); }
   }
   // Anthropic fallback
   if (process.env.ANTHROPIC_API_KEY) {

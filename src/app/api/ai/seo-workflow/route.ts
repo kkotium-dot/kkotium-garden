@@ -304,8 +304,8 @@ function normalize(raw: string, fallbackPath: string): Omit<SEOWorkflowResponse,
   return { category, keywords, productNames, tags, hooks };
 }
 
-// Gemini 2.5 Flash — free tier
-async function callGemini(prompt: string, apiKey: string): Promise<string> {
+// Gemini 2.0 Flash — round-robin across up to 3 API keys to maximize free quota
+async function callGeminiWithKey(prompt: string, apiKey: string): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
@@ -346,6 +346,34 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
     throw new Error(`Gemini API 빈 응답 (finishReason: ${finishReason})`);
   }
   return text;
+}
+
+// Try all available Gemini keys in sequence — stops at first success
+async function callGemini(prompt: string): Promise<string> {
+  const keys = [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+  ].filter(Boolean) as string[];
+
+  if (keys.length === 0) throw new Error('GEMINI_API_KEY not set');
+
+  let lastErr = '';
+  for (const key of keys) {
+    try {
+      return await callGeminiWithKey(prompt, key);
+    } catch (e) {
+      lastErr = e instanceof Error ? e.message : String(e);
+      // 429 quota or 403 permission — try next key
+      if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('403')) {
+        console.warn(`[seo-workflow] Gemini key ${key.slice(-6)} quota/403, trying next key`);
+        continue;
+      }
+      // Other errors (400, network) — don't bother rotating
+      throw e;
+    }
+  }
+  throw new Error(`Gemini: 모든 키 quota 초과. 내일 오전 9시(UTC 자정) 리셋됩니다. (${lastErr.slice(0,60)})`);
 }
 
 // Anthropic Claude Sonnet fallback
@@ -413,11 +441,12 @@ export async function POST(request: NextRequest) {
     // Category is optional — without it, AI infers from product name only (lower quality)
     // qualityScore will be lower (60 vs 75+), prompting user to add category later
 
-    const geminiKey     = process.env.GEMINI_API_KEY;
+    // Check at least one AI key exists
     const anthropicKey  = process.env.ANTHROPIC_API_KEY;
     const perplexityKey = process.env.PERPLEXITY_API_KEY;
+    const hasGeminiKey  = !!(process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2 || process.env.GEMINI_API_KEY_3);
 
-    if (!geminiKey && !anthropicKey && !perplexityKey) {
+    if (!hasGeminiKey && !anthropicKey && !perplexityKey) {
       return NextResponse.json(
         { success: false, error: 'AI API 키가 없습니다. GEMINI_API_KEY를 .env.local에 추가하세요 (무료).' },
         { status: 500 }
@@ -430,15 +459,14 @@ export async function POST(request: NextRequest) {
     let content = '';
     let provider = '';
 
-    // Priority: Gemini (free) > Anthropic > Perplexity
-    // Gemini 403/quota errors fall through to next provider
-    if (geminiKey) {
+    // Priority: Gemini (free, up to 3 keys) > Anthropic > Perplexity
+    if (hasGeminiKey) {
       try {
-        content = await callGemini(prompt, geminiKey);
-        provider = 'gemini-1.5-flash';
+        content = await callGemini(prompt);
+        provider = 'gemini-2.0-flash';
       } catch (geminiErr: unknown) {
         const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
-        console.warn('[seo-workflow] Gemini failed, trying fallback:', msg.slice(0, 80));
+        console.warn('[seo-workflow] All Gemini keys failed, trying fallback:', msg.slice(0, 80));
         // Fall through to next provider
       }
     }
