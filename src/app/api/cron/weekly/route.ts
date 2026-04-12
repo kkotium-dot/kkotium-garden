@@ -1,11 +1,38 @@
 // src/app/api/cron/weekly/route.ts
 // Weekly ops report — runs every Monday at 08:00 KST (23:00 UTC Sunday)
 // Sends summary to #📊운영-리포트 Discord channel
+// Also: Domeggook supplier price drift detection (weekly re-check)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { sendDiscord, buildWeeklyReportEmbed } from '@/lib/discord';
+
+// ── Domeggook API ──────────────────────────────────────────────────────────
+const DOMEGGOOK_API = 'https://domeggook.com/ssl/api';
+
+/** Extract Domeggook product number from URL e.g. https://domeme.domeggook.com/s/55884601 → '55884601' */
+function extractProductNo(url: string): string | null {
+  const m = url.match(/\/s\/(\d+)/);
+  return m ? m[1] : null;
+}
+
+/** Fetch current supplier price from Domeggook OpenAPI */
+async function fetchDomeggookPrice(productNo: string, apiKey: string): Promise<number | null> {
+  try {
+    const url = `${DOMEGGOOK_API}/?ver=4.5&mode=getItemView&aid=${apiKey}&no=${productNo}&om=json`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const item = data?.domeggook?.item ?? data?.item;
+    if (!item) return null;
+    // Price field: unitPrice or minPrice
+    const price = Number(item.unitPrice ?? item.minPrice ?? 0);
+    return price > 0 ? price : null;
+  } catch {
+    return null;
+  }
+}
 
 
 export const dynamic = 'force-dynamic';
@@ -97,6 +124,88 @@ export async function GET(req: NextRequest) {
     // Week label
     const weekLabel = `${weekAgo.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} ~ ${now.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}`;
 
+    // ── Domeggook supplier price drift detection ───────────────────────
+    // Re-fetch current price from Domeggook API for all crawl_logs items
+    // Detect >= 5% drift and alert via Discord
+    const priceDrifts: Array<{ name: string; productNo: string; oldPrice: number; newPrice: number; changeRate: number; linked: boolean }> = [];
+    let priceDriftChecked = 0;
+    try {
+      // Get API key from store_settings
+      const settingsRows = await prisma.$queryRaw<{ domeggook_api_key: string }[]>`
+        SELECT domeggook_api_key FROM store_settings WHERE id = 'default' LIMIT 1
+      `;
+      const apiKey = settingsRows[0]?.domeggook_api_key?.trim();
+
+      if (apiKey) {
+        // Fetch crawl_logs with domeggook URLs (SOURCED or PENDING, not REGISTERED)
+        const crawlTargets = await (prisma as any).crawlLog.findMany({
+          where: {
+            sourcingStatus: { in: ['SOURCED', 'PENDING'] },
+            supplierPrice: { gt: 0 },
+            url: { contains: 'domeggook.com' },
+          },
+          select: { id: true, url: true, name: true, supplierPrice: true, productId: true },
+          take: 20, // limit per week to avoid API rate limits
+        });
+
+        priceDriftChecked = crawlTargets.length;
+
+        for (const item of crawlTargets) {
+          const productNo = extractProductNo(item.url);
+          if (!productNo) continue;
+
+          const currentPrice = await fetchDomeggookPrice(productNo, apiKey);
+          if (!currentPrice) continue;
+
+          const oldPrice = item.supplierPrice as number;
+          const changeRate = (currentPrice - oldPrice) / oldPrice;
+
+          // Alert threshold: >= 5% change (up or down)
+          if (Math.abs(changeRate) >= 0.05) {
+            priceDrifts.push({
+              name:       (item.name as string) ?? productNo,
+              productNo,
+              oldPrice,
+              newPrice:   currentPrice,
+              changeRate: Math.round(changeRate * 1000) / 10, // e.g. 12.3%
+              linked:     !!(item.productId),
+            });
+
+            // Update crawl_log price
+            await (prisma as any).crawlLog.update({
+              where: { id: item.id },
+              data:  { supplierPrice: currentPrice },
+            }).catch(() => null);
+
+            // If linked to a registered product, record PRICE_CHANGE event
+            if (item.productId) {
+              await prisma.productEvent.create({
+                data: {
+                  productId: item.productId as string,
+                  type:      'PRICE_CHANGE',
+                  oldValue:  String(oldPrice),
+                  newValue:  String(currentPrice),
+                  note:      `Domeggook weekly check: ${changeRate > 0 ? '+' : ''}${(changeRate * 100).toFixed(1)}%`,
+                },
+              }).catch(() => null);
+            }
+          }
+        }
+
+        // Send Discord alert if any drifts found
+        if (priceDrifts.length > 0) {
+          const driftLines = priceDrifts.map(d =>
+            `${d.changeRate > 0 ? '\u2191' : '\u2193'} **${d.name.slice(0, 20)}** ${d.oldPrice.toLocaleString()}\uC6D0 \u2192 ${d.newPrice.toLocaleString()}\uC6D0 (${d.changeRate > 0 ? '+' : ''}${d.changeRate}%)${d.linked ? ' [\uB4F1\uB85D\uC0C1\uD488]' : ''}`
+          ).join('\n');
+          await sendDiscord('STOCK_ALERT', '', [{
+            title:       `\uACF5\uAE09\uAC00 \uBCC0\uB3D9 \uAC10\uC9C0 ${priceDrifts.length}\uAC74 \u2014 \uB9C8\uC9C4 \uC7AC\uAC80\uD1A0 \uD544\uC694`,
+            description: driftLines,
+            color:       0xe6a310,
+          }]).catch(() => null);
+        }
+      }
+    } catch { /* non-critical: price drift check failure should not block weekly report */ }
+
     const embed = buildWeeklyReportEmbed({
       weekLabel,
       totalProducts,
@@ -120,6 +229,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
       weekLabel,
       stats: { totalProducts, activeProducts, oosProducts, newRegistered, avgHoneyScore, priceChanges, weekRevenue, weekOrderCount, weekCancelCount, weekNetProfit },
+      priceDrift: { checked: priceDriftChecked, drifts: priceDrifts.length, items: priceDrifts },
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
