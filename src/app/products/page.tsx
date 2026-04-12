@@ -546,6 +546,8 @@ function ProductsPageInner() {
   const [naverSyncing, setNaverSyncing]   = useState(false);
   const [naverSyncMsg, setNaverSyncMsg]   = useState('');
   const [naverMismatches, setNaverMismatches] = useState<Record<string, string>>({});
+  // Inline quick-edit state: { id, field, value }
+  const [inlineEdit, setInlineEdit] = useState<{ id: string; field: 'salePrice' | 'supplierPrice'; value: string } | null>(null);
 
   // Fire Excel download once after readiness check is confirmed
   useEffect(() => {
@@ -683,6 +685,22 @@ function ProductsPageInner() {
     setSelected(new Set());
   };
 
+  // Inline quick-edit save handler
+  const saveInlineEdit = async () => {
+    if (!inlineEdit) return;
+    const num = parseInt(inlineEdit.value.replace(/[^0-9]/g, ''), 10);
+    if (isNaN(num) || num <= 0) { setInlineEdit(null); return; }
+    try {
+      await fetch(`/api/products/${inlineEdit.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [inlineEdit.field]: num }),
+      });
+      setRaw(prev => prev.map(p => p.id === inlineEdit.id ? { ...p, [inlineEdit.field]: num } : p));
+    } catch { /* non-critical */ }
+    setInlineEdit(null);
+  };
+
   // Grid: checkbox | name/sku | status | supplier | shipping | netMargin | salePrice | readiness | score | actions
   const COL = '36px 1fr 90px 110px 130px 62px 90px 72px 68px 70px';
 
@@ -724,9 +742,29 @@ function ProductsPageInner() {
           </div>
           <div className="flex justify-start"><ShippingBadge product={p} /></div>
           <MarginCell hs={p._hs} />
-          <p className="text-right text-sm font-semibold text-gray-900">
-            {p.salePrice > 0 ? p.salePrice.toLocaleString() : '—'}<span className="text-xs font-normal" style={{ color: '#B0A0A8' }}>원</span>
-          </p>
+          {/* Inline-editable sale price cell — double-click to edit */}
+          <div
+            onDoubleClick={e => { e.stopPropagation(); setInlineEdit({ id: p.id, field: 'salePrice', value: String(p.salePrice || '') }); }}
+            title="더블클릭으로 판매가 수정"
+            style={{ cursor: 'text', textAlign: 'right' }}
+          >
+            {inlineEdit?.id === p.id && inlineEdit.field === 'salePrice' ? (
+              <input
+                autoFocus
+                type="number"
+                value={inlineEdit.value}
+                onChange={e => setInlineEdit({ ...inlineEdit, value: e.target.value })}
+                onBlur={saveInlineEdit}
+                onKeyDown={e => { if (e.key === 'Enter') saveInlineEdit(); if (e.key === 'Escape') setInlineEdit(null); }}
+                onClick={e => e.stopPropagation()}
+                style={{ width: 80, fontSize: 13, fontWeight: 700, textAlign: 'right', border: '1.5px solid #e62310', borderRadius: 6, padding: '2px 4px', outline: 'none', background: '#fff9f9' }}
+              />
+            ) : (
+              <p className="text-right text-sm font-semibold text-gray-900" style={{ margin: 0 }}>
+                {p.salePrice > 0 ? p.salePrice.toLocaleString() : '—'}<span className="text-xs font-normal" style={{ color: '#B0A0A8' }}>원</span>
+              </p>
+            )}
+          </div>
           {/* Readiness mini bar */}
           {(() => {
             const rd = calcUploadReadiness({
