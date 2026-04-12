@@ -41,6 +41,25 @@ export async function GET(req: NextRequest) {
       where: { createdAt: { gte: weekAgo } },
     });
 
+    // Order stats this week (B-5 enhancement)
+    let weekRevenue = 0;
+    let weekOrderCount = 0;
+    let weekCancelCount = 0;
+    let weekNetProfit = 0;
+    try {
+      const weekOrders = await (prisma as any).order.findMany({
+        where: { createdAt: { gte: weekAgo } },
+        select: { totalAmount: true, status: true },
+      });
+      weekOrderCount  = weekOrders.filter((o: any) => !['CANCELLED','CANCEL_REQUESTED','RETURNED','RETURN_REQUESTED'].includes(o.status)).length;
+      weekCancelCount = weekOrders.filter((o: any) => ['CANCELLED','RETURNED'].includes(o.status)).length;
+      weekRevenue     = weekOrders
+        .filter((o: any) => !['CANCELLED','CANCEL_REQUESTED','RETURNED','RETURN_REQUESTED'].includes(o.status))
+        .reduce((s: number, o: any) => s + (Number(o.totalAmount) || 0), 0);
+      // Estimated net profit: revenue * (1 - naver fee 5.733% - avg supply ratio 40%)
+      weekNetProfit = Math.round(weekRevenue * (1 - 0.05733 - 0.4));
+    } catch { /* order table may not exist yet */ }
+
     // Price change events this week
     const priceChanges = await prisma.productEvent.count({
       where: { type: 'PRICE_CHANGE', createdAt: { gte: weekAgo } },
@@ -86,8 +105,12 @@ export async function GET(req: NextRequest) {
       newRegistered,
       avgHoneyScore,
       topProduct,
-      noAltOosCount: oosProducts, // simplified: all OOS treated as no-alt until alt system added
+      noAltOosCount: oosProducts,
       priceChanges,
+      weekRevenue,
+      weekOrderCount,
+      weekCancelCount,
+      weekNetProfit,
     });
 
     const result = await sendDiscord('OPS_REPORT', '', [embed]);
@@ -96,7 +119,7 @@ export async function GET(req: NextRequest) {
       ok:        result.ok,
       timestamp: new Date().toISOString(),
       weekLabel,
-      stats: { totalProducts, activeProducts, oosProducts, newRegistered, avgHoneyScore, priceChanges },
+      stats: { totalProducts, activeProducts, oosProducts, newRegistered, avgHoneyScore, priceChanges, weekRevenue, weekOrderCount, weekCancelCount, weekNetProfit },
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);

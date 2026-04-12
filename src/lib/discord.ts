@@ -241,25 +241,37 @@ export function buildWeeklyReportEmbed(params: {
   topProduct?: { name: string; score: number };
   noAltOosCount: number;
   priceChanges: number;
+  weekRevenue?: number;
+  weekOrderCount?: number;
+  weekCancelCount?: number;
+  weekNetProfit?: number;
 }): Record<string, unknown> {
   const p = params;
+  const revenueField = (p.weekRevenue ?? 0) > 0
+    ? { name: '\uC8FC\uAC04 \uB9E4\uCD9C', value: `**${(p.weekRevenue ?? 0).toLocaleString()}\uC6D0** (\uC8FC\uBB38 ${p.weekOrderCount ?? 0}\uAC74 | \uCDE8\uC18C ${p.weekCancelCount ?? 0}\uAC74)`, inline: false }
+    : { name: '\uC8FC\uAC04 \uB9E4\uCD9C', value: '\uC8FC\uBB38 \uC5C6\uC74C', inline: false };
+  const profitField = (p.weekNetProfit ?? 0) > 0
+    ? { name: '\uCD94\uC815 \uC21C\uC774\uC775', value: `**${(p.weekNetProfit ?? 0).toLocaleString()}\uC6D0** (\uB124\uC774\uBC84 \uC218\uC218\uB8CC+\uACF5\uAE09\uAC00 \uC81C\uC678 \uAC1C\uC0B0)`, inline: false }
+    : null;
   return {
-    title: `:bar_chart: 주간 운영 리포트 — ${p.weekLabel}`,
-    description: '지난 7일간 스마트스토어 운영 요약입니다.',
+    title: `:bar_chart: \uC8FC\uAC04 \uC6B4\uC601 \uB9AC\uD3EC\uD2B8 \u2014 ${p.weekLabel}`,
+    description: '\uC9C0\uB09C 7\uC77C\uAC04 \uC2A4\uB9C8\uD2B8\uC2A4\uD1A0\uC5B4 \uC6B4\uC601 \uC694\uC57D\uC785\uB2C8\uB2E4.',
     color: CHANNEL_COLOR.OPS_REPORT,
     fields: [
-      { name: '현황', value: `전체 ${p.totalProducts}개 | 판매중 ${p.activeProducts}개 | 품절 ${p.oosProducts}개`, inline: false },
-      { name: '신규 등록', value: `${p.newRegistered}개`, inline: true },
-      { name: '평균 꿀통지수', value: `${p.avgHoneyScore}점`, inline: true },
-      { name: '공급가 변동', value: `${p.priceChanges}건`, inline: true },
+      revenueField,
+      profitField,
+      { name: '\uC0C1\uD488 \uD604\uD669', value: `\uC804\uCCB4 ${p.totalProducts}\uAC1C | \uD310\uB9E4\uC911 ${p.activeProducts}\uAC1C | \uD488\uC808 ${p.oosProducts}\uAC1C`, inline: false },
+      { name: '\uC2E0\uADDC \uB4F1\uB85D', value: `${p.newRegistered}\uAC1C`, inline: true },
+      { name: '\uD3C9\uADE0 \uAF2D\uD1B5\uC9C0\uC218', value: `${p.avgHoneyScore}\uC810`, inline: true },
+      { name: '\uACF5\uAE09\uAC00 \uBCC0\uB3D9', value: `${p.priceChanges}\uAC74`, inline: true },
       p.topProduct
-        ? { name: ':trophy: 이주의 꿀통 1위', value: `**${p.topProduct.name}** (${p.topProduct.score}점)`, inline: false }
+        ? { name: ':trophy: \uC774\uC8FC\uC758 \uAF2D\uD1B5 1\uC704', value: `**${p.topProduct.name}** (${p.topProduct.score}\uC810)`, inline: false }
         : null,
       p.noAltOosCount > 0
-        ? { name: ':rotating_light: 대체상품 미등록 품절', value: `${p.noAltOosCount}개 상품 — 대체상품을 등록해주세요!`, inline: false }
+        ? { name: ':rotating_light: \uB300\uCCB4\uC0C1\uD488 \uBBF8\uB4F1\uB85D \uD488\uC808', value: `${p.noAltOosCount}\uAC1C \uC0C1\uD488 \u2014 \uB300\uCCB4\uC0C1\uD488\uC744 \uB4F1\uB85D\uD574\uC8FC\uC138\uC694!`, inline: false }
         : null,
     ].filter(Boolean) as Record<string, unknown>[],
-    footer: { text: '꽃티움 가든 · 주간리포트' },
+    footer: { text: '\uAF43\uD2F0\uC6C0 \uAC00\uB4E0 \u00B7 \uC8FC\uAC04\uB9AC\uD3EC\uD2B8' },
     timestamp: new Date().toISOString(),
   };
 }
