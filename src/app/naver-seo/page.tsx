@@ -298,7 +298,7 @@ function NaverSeoInner() {
             style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input type="text" placeholder="상품명, SKU로 검색..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          <input type="text" placeholder="상품명, 상품코드(SKU)로 검색..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             style={{ width: '100%', paddingLeft: 40, paddingRight: 16, paddingTop: 9, paddingBottom: 9, fontSize: 14, background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 12, outline: 'none', color: '#1A1A1A', boxSizing: 'border-box' }}
             onFocus={e => { e.currentTarget.style.borderColor = '#FF6B8A'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(255,107,138,0.13)'; }}
             onBlur={e => { e.currentTarget.style.borderColor = '#F8DCE5'; e.currentTarget.style.boxShadow = ''; }}

@@ -1842,7 +1842,7 @@ const handleGenerate = async () => {
                     )}
                   </div>
                   {skuStatus === 'taken' && (
-                    <p className="mt-1 text-xs text-red-500 font-medium">이미 등록된 SKU입니다. 다른 코드를 사용해주세요.</p>
+                    <p className="mt-1 text-xs text-red-500 font-medium">이미 등록된 상품코드 (SKU)입니다. 다른 코드를 사용해주세요.</p>
                   )}
                 </Field>
               </div>

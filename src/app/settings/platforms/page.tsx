@@ -282,7 +282,7 @@ export default function PlatformsSettingPage() {
                   <input className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pink-300"
                     placeholder="예: DMM" value={platModal.data.code}
                     onChange={e => setPlatModal(p => ({ ...p, data: { ...p.data, code: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') } }))} />
-                  <p className="text-xs text-gray-400 mt-1">SKU 앞 코드로 사용됩니다 — <code className="text-pink-500">DMM</code>-38488</p>
+                  <p className="text-xs text-gray-400 mt-1">상품코드(SKU) 앞 코드로 사용됩니다 — <code className="text-pink-500">DMM</code>-38488</p>
                 </div>
               )}
               <div>
@@ -357,7 +357,7 @@ export default function PlatformsSettingPage() {
                     value={supModal.data.abbr ?? ''}
                     onChange={e => setSupModal(p => ({ ...p, data: { ...p.data, abbr: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') } }))}
                   />
-                  <p className="text-xs text-gray-400 mt-1">SKU/템플릿에 사용</p>
+                  <p className="text-xs text-gray-400 mt-1">상품코드(SKU)/템플릿에 사용</p>
                 </div>
               </div>
               <div>

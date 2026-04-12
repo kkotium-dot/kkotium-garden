@@ -1552,7 +1552,7 @@ export default function CrawlPage() {
                   <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:99,
                     background: batchResult.errors > 0 ? '#fee2e2' : '#dcfce7',
                     color: batchResult.errors > 0 ? '#b91c1c' : '#15803d' }}>
-                    {batchResult.created}개 등록완료 {batchResult.skipped > 0 ? `· ${batchResult.skipped}개 스킵` : ''} {batchResult.errors > 0 ? `· 오류 ${batchResult.errors}` : ''}
+                    {batchResult.created}개 등록완료 {batchResult.skipped > 0 ? `· ${batchResult.skipped}개 건너뜀` : ''} {batchResult.errors > 0 ? `· 오류 ${batchResult.errors}` : ''}
                   </span>
                 )}
                 <div style={{ flex:1 }} />
@@ -1593,7 +1593,7 @@ export default function CrawlPage() {
                     cursor: batchLoading ? 'not-allowed' : 'pointer' }}>
                   {batchLoading
                     ? <><RefreshCw size={11} className="animate-spin"/>등록 중...</>
-                    : <><Package size={11}/>일괄 DRAFT 등록</>}
+                    : <><Package size={11}/>한 번에 임시등록</>}
                 </button>
                 <button onClick={() => {
                   const san = (s: string) => (s||'').replace(/[\x00-\x1F\x7F]/g,' ').replace(/"/g,"'").trim();

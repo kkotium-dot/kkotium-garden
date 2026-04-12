@@ -574,7 +574,7 @@ export function MarginCalculator({
               <p className={`text-lg font-bold ${marginLevel.color}`}>
                 {breakdown.profit.toLocaleString()}원
               </p>
-              <p className="text-xs text-gray-500">ROI {breakdown.roi.toFixed(1)}%</p>
+              <p className="text-xs text-gray-500">투자수익률 (ROI) {breakdown.roi.toFixed(1)}%</p>
             </div>
           </div>
 

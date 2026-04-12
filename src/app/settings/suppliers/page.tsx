@@ -295,7 +295,7 @@ export default function SuppliersPage() {
             </button>
           </div>
           <div style={{ height: 2.5, background: '#FFB3CE', borderRadius: 99, margin: '8px 0 6px' }} />
-          <p style={{ fontSize: 13, color: '#888', margin: 0 }}>플랫폼별 공급사를 등록하고 관리합니다. abbr 코드는 SKU 생성과 배송 템플릿 명명에 사용됩니다.</p>
+          <p style={{ fontSize: 13, color: '#888', margin: 0 }}>플랫폼별 공급사를 등록하고 관리합니다. 약칭 코드는 상품코드(SKU) 생성과 배송 템플릿 명명에 사용됩니다.</p>
         </div>
 
         {/* Filters */}
@@ -471,7 +471,7 @@ export default function SuppliersPage() {
                       setField('code', v);
                       if (modal.mode === 'add') setField('abbr', deriveAbbr(v, modal.data.name));
                     }} />
-                  <p className="text-xs text-gray-400 mt-1">SKU 앞 접두사로 사용</p>
+                  <p className="text-xs text-gray-400 mt-1">상품코드(SKU) 앞 접두사로 사용</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1.5">약자 abbr <span className="text-red-500">*</span></label>

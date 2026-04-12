@@ -216,7 +216,7 @@ function SidePanel({ product, onClose, onDelete }: {
             {([
               ['순마진', `${hs.netMarginRate.toFixed(1)}%`, hs.netMarginRate < 5],
               ['마진율', `${hs.marginRate.toFixed(1)}%`, false],
-              ['SEO', `${hs.seoScore}점`, false],
+              ['SEO 검색최적화', `${hs.seoScore}점`, false],
             ] as [string, string, boolean][]).map(([k, v, warn]) => (
               <div key={k} className="bg-white rounded-xl p-2 text-center">
                 <p style={{ color: '#B0A0A8' }}>{k}</p>
@@ -815,7 +815,7 @@ function ProductsPageInner() {
           checked={selected.size === filtered.length && filtered.length > 0}
           onChange={toggleAll}
           className="w-4 h-4 rounded border-gray-300 text-[#E8001F] focus:ring-[#E8001F]/30" />
-        {['상품명 / SKU', '상태', '공급사', '배송', '순마진', '판매가', '준비도', '점수', '관리'].map(h => (
+        {['상품명 / 상품코드(SKU)', '상태', '공급사', '배송', '순마진', '판매가', '준비도', '점수', '관리'].map(h => (
           <span key={h} className="text-[11px] font-black tracking-wide" style={{ color: '#e62310' }}>{h}</span>
         ))}
       </div>
@@ -968,7 +968,7 @@ function ProductsPageInner() {
 
           <div className="relative min-w-[180px] max-w-xs">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#D4B0BC' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="상품명, SKU 검색"
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="상품명, 상품코드(SKU) 검색"
               className="w-full pl-8 pr-4 py-2 text-sm rounded-xl transition"
               style={{ background: '#fff', border: '1.5px solid #F8DCE5', outline: 'none' }}
               onFocus={e => { e.currentTarget.style.borderColor = '#FF6B8A'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(255,107,138,0.13)'; }}

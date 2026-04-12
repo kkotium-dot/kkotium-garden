@@ -87,7 +87,7 @@ function CloneConfirmModal({
             </div>
             <div className="flex items-start gap-2">
               <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: '#e62310' }}>2</span>
-              <span>새 SKU: <span className="font-mono font-bold">{item.product.sku.replace(/-R\d+$/, '')}-R1</span> (DRAFT 상태)</span>
+              <span>새 상품코드 (SKU): <span className="font-mono font-bold">{item.product.sku.replace(/-R\d+$/, '')}-R1</span> (임시등록 상태)</span>
             </div>
             <div className="flex items-start gap-2">
               <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: '#e62310' }}>3</span>
@@ -178,7 +178,7 @@ export default function ReactivationPage() {
       });
       const result = await res.json();
       if (result.success) {
-        showToast(`복제 완료! SKU: ${result.clonedSku}`);
+        showToast(`복제 완료! 상품코드 (SKU): ${result.clonedSku}`);
         setCloneTarget(null);
         load(); // refresh list
         // Navigate to SEO optimizer for the new clone
