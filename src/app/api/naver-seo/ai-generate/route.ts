@@ -62,14 +62,14 @@ async function callGemini(productName: string, style: SeoStyle): Promise<Record<
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: 'Output ONLY raw JSON. First char must be {, last must be }. No markdown.' }] },
       contents: [{ parts: [{ text: buildPrompt(productName, style) }] }],
-      generationConfig: { temperature: style === 'emotional' ? 0.7 : 0.2, maxOutputTokens: 1000 },
+      generationConfig: { temperature: style === 'emotional' ? 0.7 : 0.2, maxOutputTokens: 2048, responseMimeType: 'application/json' },
     }),
   });
   if (!res.ok) throw new Error(`Gemini ${res.status}`);

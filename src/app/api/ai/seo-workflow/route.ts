@@ -306,7 +306,7 @@ function normalize(raw: string, fallbackPath: string): Omit<SEOWorkflowResponse,
 
 // Gemini 2.5 Flash — free tier
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -319,7 +319,8 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.2,
-        maxOutputTokens: 2000,
+        maxOutputTokens: 4096,
+        responseMimeType: 'application/json',
       },
     }),
   });
@@ -434,7 +435,7 @@ export async function POST(request: NextRequest) {
     if (geminiKey) {
       try {
         content = await callGemini(prompt, geminiKey);
-        provider = 'gemini-2.5-flash';
+        provider = 'gemini-1.5-flash';
       } catch (geminiErr: unknown) {
         const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
         console.warn('[seo-workflow] Gemini failed, trying fallback:', msg.slice(0, 80));
