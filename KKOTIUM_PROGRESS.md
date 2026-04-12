@@ -1,5 +1,5 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-12 (Phase B B-1/B-2/B-3 완료)
+> 최종 업데이트: 2026-04-12 (Phase B 완료 + C-5 꼬띠 추천 시스템 v2 완료)
 > TSC: 0 errors | Naver API: ok=true | 배포: https://kkotium-garden.vercel.app
 > **Phase A 완료 ✅ | Phase B 진행 중 (B-1/B-2/B-3 완료) | B-4/B-5 대기**
 
@@ -35,6 +35,7 @@
 | Vercel 배포 | ✅ https://kkotium-garden.vercel.app |
 | Phase A | **전체 완료** ✅ |
 | Phase B | **B-1~B-5 전체 완료** ✅ |
+| Phase C (C-5) | **꼬띠 추천 시스템 v2** ✅ |
 
 ### 다음 작업 = **Phase C 또는 미분류 개선 항목**
 | Task | 내용 | 상태 |
