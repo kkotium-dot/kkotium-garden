@@ -316,7 +316,7 @@ export default function CrawlPage() {
       let binary = '';
       utf8Bytes.forEach(b => { binary += String.fromCharCode(b); });
       const encoded = btoa(binary);
-      router.push(`/products/new?prefill=${encoded}`);
+      router.push(`/products/new?prefill=${encoded}&autoSeo=1`);
     } catch (e: unknown) { setSError(e instanceof Error ? e.message : '오류'); }
     finally { setSSaving(false); }
   };
@@ -508,7 +508,7 @@ export default function CrawlPage() {
     const jStr = JSON.stringify(prefill);
     const uBytes = new TextEncoder().encode(jStr);
     let bin = ''; uBytes.forEach(b => { bin += String.fromCharCode(b); });
-    router.push(`/products/new?prefill=${btoa(bin)}`);
+    router.push(`/products/new?prefill=${btoa(bin)}&autoSeo=1`);
   };
 
   // ── 소싱 보관함 탭 state ─────────────────────────────────────────────────
@@ -1576,7 +1576,7 @@ export default function CrawlPage() {
                   const j = JSON.stringify(prefill);
                   const b2 = new TextEncoder().encode(j);
                   let bin = ''; b2.forEach((x:number) => { bin += String.fromCharCode(x); });
-                  router.push(`/products/new?prefill=${btoa(bin)}`);
+                  router.push(`/products/new?prefill=${btoa(bin)}&autoSeo=1`);
                 }} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 14px', background:'#e62310', border:'none', borderRadius:8, fontSize:12, fontWeight:700, color:'#fff', cursor:'pointer' }}>
                   <ArrowRight size={12}/> 등록 시작
                 </button>

@@ -4,7 +4,7 @@
 // 5단계: 카테고리 / 황금키워드 / 상품명 3종 / 태그 / 훅문구
 // Design: app unified style — #e62310 accent, #FFB3CE lines, Kkotti face by state
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Sparkles, RotateCcw, Check, Loader2,
   Tag, Search, FileText, Zap, LayoutGrid,
@@ -45,6 +45,7 @@ interface NaverSEOWorkflowProps extends SEOApplyCallbacks {
   price?:           number;
   supplierPrice?:   number;
   currentKeywords?: string[];
+  autoRun?:         boolean; // auto-trigger SEO analysis on mount (from sourcing shelf)
 }
 
 // ── Kkotti face by workflow state ─────────────────────────────────────────────
@@ -111,6 +112,7 @@ const HOOK_TYPE_LABEL: Record<HookVariant['type'], string> = {
 export default function NaverSEOWorkflow({
   productName, categoryPath, categoryCode,
   description, price, supplierPrice, currentKeywords,
+  autoRun,
   onApplyCategory, onApplyKeywords, onApplyProductName, onApplyTags, onApplyHook,
 }: NaverSEOWorkflowProps) {
 
@@ -158,6 +160,15 @@ export default function NaverSEOWorkflow({
       setLoading(false);
     }
   };
+
+  // Auto-run SEO analysis when coming from sourcing shelf (?autoSeo=1)
+  useEffect(() => {
+    if (!autoRun || !isReady || loading || result) return;
+    // Small delay to let prefill data settle before triggering
+    const timer = setTimeout(() => { handleRun(); }, 800);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRun, isReady]);
 
   const handleApplyCategory = () => {
     if (!result?.category) return;

@@ -2946,6 +2946,7 @@ const handleGenerate = async () => {
               price={Number(price) || undefined}
               supplierPrice={Number(supplierPrice) || undefined}
               currentKeywords={aiKeywords.length > 0 ? aiKeywords : undefined}
+              autoRun={searchParams?.get('autoSeo') === '1'}
               onApplyCategory={(code, nd1, nd2, nd3, nd4) => {
                 setD1(nd1); setD2(nd2); setD3(nd3); setD4(nd4);
                 setCatTab('drill');
