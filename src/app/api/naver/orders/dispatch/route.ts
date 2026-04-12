@@ -9,7 +9,7 @@ import { naverRequest } from '@/lib/naver/api-client';
 export const dynamic = 'force-dynamic';
 
 // Naver courier code map — display name -> API code
-export const COURIER_MAP: Record<string, string> = {
+const COURIER_MAP: Record<string, string> = {
   'CJ대한통운': 'CJGLS',
   '한진택배':   'HANJIN',
   '롯데택배':   'LOTTE',
