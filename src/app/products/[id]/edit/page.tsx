@@ -73,7 +73,7 @@ export default function EditProductPage() {
 
       const data = await res.json();
       if (data.success) {
-        alert('✅ 상품 수정 완료!');
+        alert('상품 수정 완료!');
         router.push('/products/sourced');
         router.refresh();
       } else {

@@ -126,7 +126,7 @@ export default function PlatformsSettingPage() {
       {/* Toast */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
-          {toast.type === 'success' ? '✅' : '❌'} {toast.msg}
+          {toast.msg}
         </div>
       )}
 
@@ -156,7 +156,7 @@ export default function PlatformsSettingPage() {
         </div>
         {/* SKU 안내 배너 */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-sm text-blue-800">
-          💡 <strong>SKU 자동생성 규칙:</strong> 플랫폼 코드(대문자) + 상품번호 → 예: 도매매(dmm) + 38488 = <strong>DMM-38488</strong> (네이버 엑셀 "판매자 상품코드"로 자동 입력됩니다)
+          <strong>상품코드(SKU) 자동생성 규칙:</strong> 플랫폼 코드(대문자) + 상품번호 → 예: 도매매(dmm) + 38488 = <strong>DMM-38488</strong> (네이버 엑셀 "판매자 상품코드"로 자동 입력됩니다)
         </div>
 
         {/* 플랫폼 목록 */}

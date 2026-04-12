@@ -127,7 +127,7 @@ export default function SourcedProductsPage() {
 
       const data = await res.json();
       if (data.success) {
-        alert(`✅ ${selectedIds.length}개 상품이 삭제되었습니다.`);
+        alert(`${selectedIds.length}개 상품이 삭제되었습니다.`);
         setSelectedIds([]);
         fetchProducts();
       } else {
@@ -149,7 +149,7 @@ export default function SourcedProductsPage() {
 
       const data = await res.json();
       if (data.success) {
-        alert(`✅ ${selectedIds.length}개 상품의 상태가 변경되었습니다.`);
+        alert(`${selectedIds.length}개 상품의 상태가 변경되었습니다.`);
         setSelectedIds([]);
         fetchProducts();
       } else {
@@ -176,7 +176,7 @@ export default function SourcedProductsPage() {
     <div className="container mx-auto px-4 py-8">
       {/* 헤더 */}
       <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-3xl font-bold">🌸 소싱 상품 관리</h1>
+        <h1 className="text-3xl font-bold">소싱 상품 관리</h1>
         <div className="flex gap-2">
           <ExportExcel products={filteredProducts} selectedIds={selectedIds} />
           <button

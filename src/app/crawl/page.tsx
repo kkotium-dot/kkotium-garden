@@ -637,7 +637,7 @@ export default function CrawlPage() {
               </div>
               {sessionWarning && (
             <div style={{ marginTop: 10, padding:'9px 12px', background:'#fffbeb', border:'1px solid #fde68a', borderRadius:10, fontSize:13, color:'#a16207', display:'flex', alignItems:'center', gap:8 }}>
-              <span style={{ fontSize:15 }}>⚠️</span>
+              <span style={{ display:"inline-flex", alignItems:"center", color:"#e62310" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
               <span>{sessionWarning}</span>
               <a href="/settings/supplier-login" style={{ marginLeft:'auto', fontSize:12, fontWeight:700, color:'#e62310', textDecoration:'none', whiteSpace:'nowrap' }}>재로기인 →</a>
             </div>

@@ -4,6 +4,9 @@ import { useSearchParams } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx';
 import {
+  Tag, Truck, Wrench, Star, Bell, Clipboard, CheckCircle, XCircle,
+} from 'lucide-react';
+import {
   NAVER_CATEGORIES_FULL,
   type NaverCategoryEntry,
 } from '@/lib/naver/naver-categories-full';
@@ -119,7 +122,7 @@ function RSection({ number, title, badge, children }: {
 }
 
 function DSection({ icon, title, summary, children }: {
-  icon: string; title: string; summary: string; children: React.ReactNode;
+  icon: React.ReactNode; title: string; summary: string; children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -139,7 +142,7 @@ function DSection({ icon, title, summary, children }: {
         onMouseLeave={e => { if (!open) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-base shrink-0">{icon}</span>
+          <span className="shrink-0 flex items-center" style={{ color: '#e62310' }}>{icon}</span>
           <span className="font-medium text-sm shrink-0" style={{ color: '#2A2A2A' }}>{title}</span>
           {!open && (
             <span
@@ -1400,15 +1403,15 @@ const handleGenerate = async () => {
             </div>
           </div>
         )}
-        {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">⚠️ {error}</div>}
-        {success && !naverResult && <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">✅ 엑셀 파일 생성 완료! 다운로드 폴더를 확인하세요.</div>}
+        {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">{error}</div>}
+        {success && !naverResult && <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">엑셀 파일 생성 완료! 다운로드 폴더를 확인하세요.</div>}
         {naverResult && (
           <div className={`mb-4 px-4 py-3 rounded-xl text-sm border flex items-start gap-2 ${
             naverResult.ok
               ? 'bg-green-50 border-green-200 text-green-800'
               : 'bg-red-50 border-red-200 text-red-700'
           }`}>
-            <span className="text-base shrink-0">{naverResult.ok ? '✅' : '❌'}</span>
+            <span className="text-base shrink-0">{naverResult.ok ? <CheckCircle size={14} style={{color:'#16a34a'}}/> : <XCircle size={14} style={{color:'#e62310'}}/>}</span>
             <div>
               <p className="font-bold">{naverResult.ok ? '네이버 직접 등록 성공!' : '네이버 등록 실패'}</p>
               <p className="mt-0.5 text-xs opacity-80">{naverResult.message}</p>
@@ -2217,7 +2220,7 @@ const handleGenerate = async () => {
               <p className="text-xs font-semibold text-gray-400 px-1 uppercase tracking-wide">⚙️ 기본값 — 펼쳐서 수정 가능</p>
 
               {/* D1 Brand / Origin / Importer */}
-              <DSection icon="" title="브랜드 / 원산지 / 수입사" summary={`${brand} · ${selectedOrigin?.label ?? originCode}`}>
+              <DSection icon={<Tag size={14}/>} title="브랜드 / 원산지 / 수입사" summary={`${brand} · ${selectedOrigin?.label ?? originCode}`}>
                 <Field label="브랜드">
                   <input className={inp} value={brand} onChange={e => setBrand(e.target.value)} />
                 </Field>
@@ -2365,7 +2368,7 @@ const handleGenerate = async () => {
               })()}
 
               {/* D3 배송 */}
-              <DSection icon="🚚" title="배송 설정" summary={selectedShippingTemplate ? selectedShippingTemplate.name : `${deliveryFeeType} · ${basicDeliveryFee}원 · ${courierCode}`}>
+              <DSection icon={<Truck size={14}/>} title="배송 설정" summary={selectedShippingTemplate ? selectedShippingTemplate.name : `${deliveryFeeType} · ${basicDeliveryFee}원 · ${courierCode}`}>
 
                 {/* Shipping strategy toggle: A / B / C */}
                 {(() => {
@@ -2574,7 +2577,7 @@ const handleGenerate = async () => {
               </DSection>
 
               {/* D4 A/S */}
-              <DSection icon="🔧" title="A/S 설정" summary={asPhone}>
+              <DSection icon={<Wrench size={14}/>} title="A/S 설정" summary={asPhone}>
                 <Field label="A/S 전화번호">
                   <input className={inp} value={asPhone} onChange={e => setAsPhone(e.target.value)} />
                 </Field>
@@ -2584,7 +2587,7 @@ const handleGenerate = async () => {
               </DSection>
 
               {/* D5 리뷰 포인트 */}
-              <DSection icon="⭐" title="리뷰 포인트" summary={`텍스트 ${textReviewPoint}P · 포토 ${photoReviewPoint}P`}>
+              <DSection icon={<Star size={14}/>} title="리뷰 포인트" summary={`텍스트 ${textReviewPoint}P · 포토 ${photoReviewPoint}P`}>
                 <div className="grid grid-cols-3 gap-3">
                   <Field label="텍스트리뷰 (P)">
                     <input className={inp} type="number" value={textReviewPoint} onChange={e => setTextReviewPoint(e.target.value)} />
@@ -2599,7 +2602,7 @@ const handleGenerate = async () => {
               </DSection>
 
               {/* D6 구매평/알림 */}
-              <DSection icon="⚙️" title="구매평·알림" summary={`구매평 ${reviewVisible}`}>
+              <DSection icon={<Bell size={14}/>} title="구매평·알림" summary={`구매평 ${reviewVisible}`}>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="구매평 노출">
                     <select className={sel} value={reviewVisible} onChange={e => setReviewVisible(e.target.value)}>
@@ -2611,7 +2614,7 @@ const handleGenerate = async () => {
               </DSection>
 
               {/* D7 상품정보고시 */}
-              <DSection icon="📋" title="상품정보제공고시" summary={`코드: ${noticeTemplateCode || '미입력'}`}>
+              <DSection icon={<Clipboard size={14}/>} title="상품정보제공고시" summary={`코드: ${noticeTemplateCode || '미입력'}`}>
                 <Field label="상품정보제공고시 템플릿코드">
                   <input className={inp} value={noticeTemplateCode} onChange={e => setNoticeTemplateCode(e.target.value)} placeholder="템플릿 코드" />
                 </Field>
@@ -2907,7 +2910,7 @@ const handleGenerate = async () => {
               />
             )}
 
-            {/* 💰 마진 계산기 */}
+            {/* margin calculator */}
             <MarginCalculator
               supplierPrice={Number(supplierPrice) || 0}
               salePrice={Number(price) || 0}
@@ -2957,10 +2960,10 @@ const handleGenerate = async () => {
               onApplyHook={hook => setSeoHook(hook)}
             />
 
-            {/* 📊 SEO 점수 */}
+            {/* SEO 검색최적화 점수 */}
             <div className={`bg-gradient-to-r ${seoBg} rounded-2xl border p-4 space-y-3`}>
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-900 text-sm">📊 SEO 점수</h3>
+                <h3 className="font-bold text-gray-900 text-sm">SEO 검색최적화 점수</h3>
                 <span className={`text-3xl font-extrabold ${seoColor}`}>{seoResult.score}점</span>
               </div>
               <div className="flex items-center gap-2">
@@ -2988,15 +2991,15 @@ const handleGenerate = async () => {
               {seoResult.suggestions.length > 0 && (
                 <div className="space-y-1">
                   {seoResult.suggestions.slice(0, 2).map((s, i) => (
-                    <p key={i} className="text-xs text-gray-600 bg-white/60 rounded-lg px-2.5 py-1.5">💡 {s}</p>
+                    <p key={i} className="text-xs text-gray-600 bg-white/60 rounded-lg px-2.5 py-1.5">{s}</p>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* 📋 엑셀 매핑 미리보기 */}
+            {/* 엑셀 매핑 미리보기 */}
             <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-              <h3 className="font-bold text-gray-900 text-sm mb-3">📋 엑셀 매핑 미리보기</h3>
+              <h3 className="font-bold text-gray-900 text-sm mb-3">엑셀 매핑 미리보기</h3>
               <div className="space-y-1.5 text-xs">
                 {[
                   { label: '카테고리코드', value: categoryId || '-' },

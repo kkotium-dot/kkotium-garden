@@ -90,7 +90,7 @@ export default function ProductDetailPage() {
 
         <div className="space-y-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">💰 가격 정보</h2>
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">가격 정보</h2>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-600">도매가</span>
