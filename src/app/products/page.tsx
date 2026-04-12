@@ -542,6 +542,10 @@ function ProductsPageInner() {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showReadinessModal, setShowReadinessModal] = useState(false);
   const [excelPending, setExcelPending]             = useState(false);
+  // B-3: Naver real-time sync
+  const [naverSyncing, setNaverSyncing]   = useState(false);
+  const [naverSyncMsg, setNaverSyncMsg]   = useState('');
+  const [naverMismatches, setNaverMismatches] = useState<Record<string, string>>({});
 
   // Fire Excel download once after readiness check is confirmed
   useEffect(() => {
@@ -582,6 +586,30 @@ function ProductsPageInner() {
   }, []);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  // B-3: Naver real-time status sync
+  const handleNaverSync = async () => {
+    setNaverSyncing(true); setNaverSyncMsg('');
+    try {
+      const r = await fetch('/api/naver/products/sync');
+      const d = await r.json();
+      if (d.success) {
+        const mismatches: Record<string, string> = {};
+        for (const p of d.products ?? []) {
+          if (p.mismatch && p.mismatchDetail) mismatches[p.id] = p.mismatchDetail;
+        }
+        setNaverMismatches(mismatches);
+        const mc = d.mismatchCount ?? 0;
+        setNaverSyncMsg(mc > 0
+          ? `${d.total}개 확인 — 불일치 ${mc}건 발견`
+          : `${d.total}개 확인 — 모두 정상`);
+        if (mc > 0) fetchProducts(); // refresh if auto-fixed
+      } else {
+        setNaverSyncMsg(d.error ?? '네이버 동기화 실패');
+      }
+    } catch { setNaverSyncMsg('네트워크 오류'); }
+    finally { setNaverSyncing(false); }
+  };
 
   const scored = useMemo<ScoredProduct[]>(() => raw.map(p => ({
     ...p,
@@ -680,6 +708,11 @@ function ProductsPageInner() {
           <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-900 truncate leading-snug">{p.name}</p>
             <p className="text-xs font-mono truncate mt-0.5" style={{ color: '#B0A0A8' }}>{p.sku}</p>
+            {naverMismatches[p.id] && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#e62310', background: '#fff1f1', border: '1px solid #fca5a5', borderRadius: 6, padding: '1px 6px', marginTop: 2 }}>
+                <AlertTriangle size={9} /> {naverMismatches[p.id]}
+              </span>
+            )}
           </div>
           <div className="flex justify-center"><StatusDot product={p} /></div>
           <div className="min-w-0">
@@ -836,6 +869,30 @@ function ProductsPageInner() {
                   <Layers size={13} /> 공급사별
                 </button>
               </div>
+              {/* B-3: Naver real-time sync button */}
+              <button
+              onClick={handleNaverSync}
+              disabled={naverSyncing}
+                title={naverSyncMsg || '네이버 실시간 상품 상태 동기화'}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40"
+                style={{
+                  border: `1.5px solid ${Object.keys(naverMismatches).length > 0 ? '#fca5a5' : '#F8DCE5'}`,
+                  background: Object.keys(naverMismatches).length > 0 ? '#fff1f1' : '#fff',
+                  color: Object.keys(naverMismatches).length > 0 ? '#e62310' : '#6B6B6B',
+                }}>
+                <RefreshCw size={13} className={naverSyncing ? 'animate-spin' : ''} />
+                {naverSyncing ? '동기화 중...' : '네이버 동기화'}
+                {Object.keys(naverMismatches).length > 0 && (
+                  <span style={{ background: '#e62310', color: '#fff', borderRadius: 99, padding: '1px 6px', fontSize: 10, fontWeight: 800 }}>
+                    {Object.keys(naverMismatches).length}
+                  </span>
+                )}
+              </button>
+              {naverSyncMsg && (
+                <span style={{ fontSize: 11, color: Object.keys(naverMismatches).length > 0 ? '#e62310' : '#16a34a', fontWeight: 600 }}>
+                  {naverSyncMsg}
+                </span>
+              )}
               <button onClick={fetchProducts} disabled={loading}
                 className="p-2 rounded-xl transition disabled:opacity-40"
                 style={{ border: '1.5px solid #F8DCE5', background: '#fff' }}>
