@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx';
 import {
-  Tag, Truck, Wrench, Star, Bell, Clipboard, CheckCircle, XCircle,
+  Tag, Truck, Wrench, Star, Bell, Clipboard, CheckCircle, XCircle, Settings,
 } from 'lucide-react';
 import {
   NAVER_CATEGORIES_FULL,
@@ -1684,7 +1684,7 @@ const handleGenerate = async () => {
                   </div>
                 )}
                 {seoTags.length === 0 && (
-                  <p style={{ fontSize: 11, color: '#B0A0A8', marginTop: 4 }}>태그 10개 입력 시 쳄마마코드가 점수 +8점 반영됩니다</p>
+                  <p style={{ fontSize: 11, color: '#B0A0A8', marginTop: 4 }}>태그 10개 입력 시 SEO 점수에 +8점 반영됩니다</p>
                 )}
               </div>
 
@@ -2217,7 +2217,7 @@ const handleGenerate = async () => {
 
             {/* ══ D1~D7 기본값 아코디언 ══ */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-400 px-1 uppercase tracking-wide">⚙️ 기본값 — 펼쳐서 수정 가능</p>
+              <p className="text-xs font-semibold text-gray-400 px-1 uppercase tracking-wide flex items-center gap-1"><Settings size={12} style={{ color: '#999' }} />{" "}기본값 — 펼쳐서 수정 가능</p>
 
               {/* D1 Brand / Origin / Importer */}
               <DSection icon={<Tag size={14}/>} title="브랜드 / 원산지 / 수입사" summary={`${brand} · ${selectedOrigin?.label ?? originCode}`}>
