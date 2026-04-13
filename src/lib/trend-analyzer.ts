@@ -169,7 +169,7 @@ export async function fetchNaverTrends(): Promise<TrendResult> {
 
   // Silent fallback — Perplexity removed (Pro plan required)
   // Cron continues without trend data; keyword volume re-ranking still works
-  return { trendKeywords: [], source: 'fallback' };
+  return { trendKeywords: [], trendCategories: [], source: 'fallback' };
 }
 
 // ── Match DB products against trend keywords ──────────────────────────────

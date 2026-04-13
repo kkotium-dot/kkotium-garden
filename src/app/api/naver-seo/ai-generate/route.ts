@@ -118,6 +118,27 @@ async function callAnthropic(productName: string, style: SeoStyle): Promise<Reco
   return parseJsonSafe(data.content?.[0]?.text ?? '');
 }
 
+async function callGroq(productName: string, style: SeoStyle): Promise<Record<string, string>> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error('GROQ_API_KEY not set');
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'llama3-8b-8192',
+      messages: [
+        { role: 'system', content: 'Output ONLY raw JSON. First char must be {, last must be }. No markdown.' },
+        { role: 'user', content: buildPrompt(productName, style) },
+      ],
+      temperature: style === 'emotional' ? 0.7 : 0.2,
+      max_tokens: 1024,
+    }),
+  });
+  if (!res.ok) throw new Error(`Groq ${res.status}`);
+  const data = await res.json();
+  return parseJsonSafe(data.choices?.[0]?.message?.content ?? '');
+}
+
 async function callPerplexity(productName: string, style: SeoStyle): Promise<Record<string, string>> {
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) throw new Error('PERPLEXITY_API_KEY not set');
@@ -161,11 +182,16 @@ async function generateSEO(
     try { return { data: await callAnthropic(productName, style), provider: 'claude-sonnet' }; }
     catch (e) { console.warn('[ai-generate] Anthropic failed, trying Perplexity:', e instanceof Error ? e.message.slice(0,60) : e); }
   }
+  // Groq fallback (free tier: 14,400 req/day — fast)
+  if (process.env.GROQ_API_KEY) {
+    try { return { data: await callGroq(productName, style), provider: 'groq-llama3' }; }
+    catch (e) { console.warn('[ai-generate] Groq failed:', e instanceof Error ? e.message.slice(0,60) : e); }
+  }
   // Perplexity last resort (requires Pro plan)
   if (process.env.PERPLEXITY_API_KEY) {
     return { data: await callPerplexity(productName, style), provider: 'perplexity-sonar' };
   }
-  throw new Error('Gemini 일일 할당량 소진 상태입니다. 한국시간 오전 9시(주중 UTC 자정) 이후 다시 사용 가능합니다.');
+  throw new Error('Gemini 일일 할당량 소진 상태입니다. 한국시간 오전 9시 이후 다시 사용 가능합니다. (또는 GROQ_API_KEY 무료 등록)');
 }
 
 // ─── POST: single product ─────────────────────────────────────────────────────

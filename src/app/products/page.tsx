@@ -60,10 +60,10 @@ const TAB_CONFIG: Record<TabKey, {
 }> = {
   all:          { label: '전체',          dot: 'bg-gray-400',   dotLabel: '',              filter: () => true },
   active:       { label: '네이버 판매중', dot: 'bg-green-500',  dotLabel: '네이버 판매중', filter: p => p.status === 'ACTIVE' && !!p.naverProductId },
-  pending:      { label: '등록 대기',     dot: 'bg-amber-400',  dotLabel: '앱 등록(대기)', filter: p => p.status === 'ACTIVE' && !p.naverProductId },
+  pending:      { label: '네이버 등록 대기',     dot: 'bg-amber-400',  dotLabel: '네이버 등록 대기', filter: p => p.status === 'ACTIVE' && !p.naverProductId },
   oos:          { label: '품절',          dot: 'bg-[#E8001F]',  dotLabel: '품절',          filter: p => p.status === 'OUT_OF_STOCK' },
   reactivation: { label: '재활성화 필요', dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
-  draft:        { label: '초안',          dot: 'bg-gray-300',   dotLabel: '초안',          filter: p => p.status === 'DRAFT' },
+  draft:        { label: '임시저장',          dot: 'bg-gray-300',   dotLabel: '임시저장',          filter: p => p.status === 'DRAFT' },
 };
 
 // Check readiness for Naver upload
@@ -397,10 +397,10 @@ function BulkFloatMenu({
   if (selectedIds.length === 0) return null;
 
   const STATUS_OPTIONS = [
-    { value: 'ACTIVE',        label: '등록 대기',    color: '#16a34a' },
+    { value: 'ACTIVE',        label: '판매 중',       color: '#16a34a' },
     { value: 'OUT_OF_STOCK',  label: '품절',        color: '#e62310' },
     { value: 'INACTIVE',      label: '비활성화',    color: '#888' },
-    { value: 'DRAFT',         label: '초안',        color: '#aaa' },
+    { value: 'DRAFT',         label: '임시저장',     color: '#aaa' },
   ];
 
   return (
