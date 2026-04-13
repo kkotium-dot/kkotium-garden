@@ -73,7 +73,7 @@ export default function MarketAnalysisCard({ productName }: { productName: strin
         <div className="flex items-center gap-2">
           <Loader size={14} className="animate-spin" style={{ color: '#0284c7' }} />
           <span className="text-xs font-semibold" style={{ color: '#0284c7' }}>
-            Market Analysis (Naver Shopping)
+            Naver Shopping Market Analysis
           </span>
         </div>
       </div>
@@ -81,23 +81,8 @@ export default function MarketAnalysisCard({ productName }: { productName: strin
   }
 
   if (error) {
-    // Show setup guide if API key not configured
-    if (error.includes('not configured')) {
-      return (
-        <div className="rounded-2xl p-4" style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}>
-          <div className="flex items-center gap-2">
-            <BarChart3 size={14} style={{ color: '#9ca3af' }} />
-            <span className="text-xs font-semibold" style={{ color: '#9ca3af' }}>
-              Market Analysis (Naver Open API)
-            </span>
-          </div>
-          <p className="text-xs mt-1" style={{ color: '#9ca3af' }}>
-            .env.local NAVER_OPENAPI_CLIENT_ID/SECRET
-          </p>
-        </div>
-      );
-    }
-    return null; // Hide on other errors
+    // API key not configured or other errors — hide the card completely
+    return null;
   }
 
   if (!data) return null;
@@ -110,7 +95,7 @@ export default function MarketAnalysisCard({ productName }: { productName: strin
     <div className="rounded-2xl p-4 space-y-3" style={{ background: '#f0f9ff', border: '1px solid #bae6fd' }}>
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold" style={{ color: '#0369a1' }}>
-          Market Analysis (Naver Shopping)
+          Naver Shopping Market Analysis
         </span>
         <span className="text-xs font-bold px-2 py-0.5 rounded-full"
           style={{ background: levelStyle.bg, color: levelStyle.color }}>

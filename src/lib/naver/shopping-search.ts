@@ -12,15 +12,18 @@ const OPENAPI_BASE = 'https://openapi.naver.com/v1';
 const DATALAB_BASE = 'https://openapi.naver.com/v1/datalab';
 
 function getOpenApiHeaders(): Record<string, string> {
+  // Check all possible env var names for Naver Open API (developers.naver.com)
   const clientId = process.env.NAVER_OPENAPI_CLIENT_ID
     ?? process.env.NAVER_DATALAB_CLIENT_ID
+    ?? process.env.NAVER_OPEN_CLIENT_ID
     ?? '';
   const clientSecret = process.env.NAVER_OPENAPI_CLIENT_SECRET
     ?? process.env.NAVER_DATALAB_CLIENT_SECRET
+    ?? process.env.NAVER_OPEN_CLIENT_SECRET
     ?? '';
 
   if (!clientId || !clientSecret) {
-    throw new Error('NAVER_OPENAPI_CLIENT_ID/SECRET not configured');
+    throw new Error('NAVER_OPENAPI_NOT_CONFIGURED');
   }
 
   return {
