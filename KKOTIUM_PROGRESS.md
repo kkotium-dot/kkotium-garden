@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-14 (2026 전략 로드맵 반영, Phase C 재정렬)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: 3fd2b6f
-> **Phase A ✅ | Phase B ✅ | Phase C 진행 중 (Sprint 1 ✅, Sprint 2 C-1 Step 1~3 ✅)**
+> 최종 업데이트: 2026-04-13 (C-1 Step 1~5 완료, PlayMCP+Groq 연동 계획 추가)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: 830825c
+> **Phase A ✅ | Phase B ✅ | Phase C 진행 중 (Sprint 1 ✅, Sprint 2 C-1 ✅)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 
 ---
@@ -34,7 +34,7 @@
 | GitHub | https://github.com/kkotium-dot/kkotium-garden |
 | Phase A | 전체 완료 ✅ |
 | Phase B | 전체 완료 ✅ |
-| Phase C (C-1 Step 1~3) | 진행 중 ✅ |
+| Phase C (C-1) | 완료 ✅ |
 
 ---
 
@@ -71,7 +71,7 @@ Groq 키도 교체 권장: `https://console.groq.com/keys`
 ### Sprint 2: API 전환 (무료, 핵심 업그레이드)
 | Task | 내용 | 상태 | 비용 |
 |------|------|------|------|
-| C-1 | 커머스 API 직접 상품 등록 (엑셀 대비 SEO 적합도 극대화) | ⬜ 대기 | 무료 |
+| C-1 | ✅ 완료 | 커머스 API 직접 상품 등록 (엑셀 대비 SEO 적합도 극대화) | 완료 | 무료 |
 
 ### Sprint 3: AI 최적화 + 운영 모니터링 (무료)
 | Task | 내용 | 상태 | 비용 |

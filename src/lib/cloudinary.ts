@@ -1,12 +1,7 @@
 // lib/cloudinary.ts
-/**
- * Cloudinary 설정
- * 
- * 환경변수 필요 (.env):
- * NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
- * CLOUDINARY_API_KEY=your_api_key
- * CLOUDINARY_API_SECRET=your_api_secret
- */
+// DEPRECATED: Not in active use. All image uploads now go through Supabase Storage.
+// Retained for potential future use. See: src/app/api/upload/image/route.ts
+// See: src/lib/supabase-storage.ts
 
 import { v2 as cloudinary } from 'cloudinary';
 

@@ -13,7 +13,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
  */
 export async function uploadMultipleImages(files: File[]): Promise<string[]> {
   const urls: string[] = [];
-  const bucketName = 'products'; // Supabase bucket 이름
+  const bucketName = 'product-images';
 
   for (const file of files) {
     try {
@@ -59,8 +59,8 @@ export async function uploadMultipleImages(files: File[]): Promise<string[]> {
  */
 export async function deleteImage(url: string): Promise<void> {
   try {
-    const bucketName = 'products';
-    // URL에서 파일 경로 추출
+    const bucketName = 'product-images';
+    // Extract file path from URL
     const filePath = url.split(`/${bucketName}/`)[1];
 
     const { error } = await supabase.storage
