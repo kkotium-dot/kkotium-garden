@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
+import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -246,6 +247,9 @@ function SidePanel({ product, onClose, onDelete }: {
             <p className="text-xs font-mono" style={{ color: '#B0A0A8' }}>{product.shippingTemplateName}</p>
           )}
         </div>
+
+        {/* C-12: Market Analysis */}
+        <MarketAnalysisCard productName={product.name} />
 
         {/* Prices */}
         <div className="space-y-2">
