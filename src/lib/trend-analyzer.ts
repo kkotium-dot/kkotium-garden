@@ -167,8 +167,9 @@ export async function fetchNaverTrends(): Promise<TrendResult> {
   const datalab = await fetchDataLabTrends();
   if (datalab && datalab.trendKeywords.length > 0) return datalab;
 
-  // Fallback to Perplexity
-  return fetchPerplexityTrends();
+  // Silent fallback — Perplexity removed (Pro plan required)
+  // Cron continues without trend data; keyword volume re-ranking still works
+  return { trendKeywords: [], source: 'fallback' };
 }
 
 // ── Match DB products against trend keywords ──────────────────────────────

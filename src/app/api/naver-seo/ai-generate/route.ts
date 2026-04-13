@@ -161,11 +161,11 @@ async function generateSEO(
     try { return { data: await callAnthropic(productName, style), provider: 'claude-sonnet' }; }
     catch (e) { console.warn('[ai-generate] Anthropic failed, trying Perplexity:', e instanceof Error ? e.message.slice(0,60) : e); }
   }
-  // Perplexity last resort
+  // Perplexity last resort (requires Pro plan)
   if (process.env.PERPLEXITY_API_KEY) {
     return { data: await callPerplexity(productName, style), provider: 'perplexity-sonar' };
   }
-  throw new Error('AI API 키가 없습니다. GEMINI_API_KEY를 .env.local에 추가하세요 (무료).');
+  throw new Error('Gemini 일일 할당량 소진 상태입니다. 한국시간 오전 9시(주중 UTC 자정) 이후 다시 사용 가능합니다.');
 }
 
 // ─── POST: single product ─────────────────────────────────────────────────────
