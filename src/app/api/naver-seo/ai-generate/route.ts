@@ -125,7 +125,7 @@ async function callGroq(productName: string, style: SeoStyle): Promise<Record<st
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'llama3-8b-8192',
+      model: 'llama-3.1-8b-instant',
       messages: [
         { role: 'system', content: 'Output ONLY raw JSON. First char must be {, last must be }. No markdown.' },
         { role: 'user', content: buildPrompt(productName, style) },
