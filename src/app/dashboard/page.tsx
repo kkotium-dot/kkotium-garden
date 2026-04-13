@@ -8,6 +8,7 @@ import KkottiWidget from '@/components/dashboard/KkottiWidget';
 import MarketTrendWidget from '@/components/dashboard/MarketTrendWidget';
 import DailyPlanWidget from '@/components/dashboard/DailyPlanWidget';
 import EventTimeline from '@/components/dashboard/EventTimeline';
+import GoodServiceWidget from '@/components/dashboard/GoodServiceWidget';
 import Link from 'next/link';
 
 // ── KPI Card ──────────────────────────────────────────────────────────────
@@ -247,6 +248,9 @@ export default function DashboardPage() {
 
       {/* ── 꼬띠 위젯 — products prop으로 단일 로드 공유 ────── */}
       <KkottiWidget products={products} productsLoading={productsLoading} />
+
+      {/* C-9: Good Service score widget */}
+      <GoodServiceWidget />
 
       {/* C-12: Market trend widget */}
       <MarketTrendWidget products={products} productsLoading={productsLoading} />
