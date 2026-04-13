@@ -4,6 +4,7 @@
 // Returns { comment: string, source: 'gemini' | 'perplexity' | 'fallback' }
 
 import { NextRequest, NextResponse } from 'next/server';
+import { analyzeCompetition } from '@/lib/naver/shopping-search';
 
 
 export const dynamic = 'force-dynamic';
@@ -64,8 +65,9 @@ const KKOTTI_PERSONA = `당신은 꼬띠입니다. 분홍색 카우걸 부츠를
 - 친근하고 귀여운 말체 (~해요, ~이에요)
 - 이모지 완전 금지 — 텍스트 감탄사만 (꺄~, 헉, 오오 등)
 - 구체적 수치 기반 조언 (점수/퍼센트/순위 반드시 언급)
-- 2~3문장, 최대 100자 이내
-- 막연한 "화이팅"보다 "지금 당장 할 수 있는 행동 1가지" 제시`;
+- 2~3문장, 최대 120자 이내
+- 막연한 "화이팅"보다 "지금 당장 할 수 있는 행동 1가지" 제시
+- 시장 데이터가 있으면 경쟁 강도/평균가격/트렌드 언급`;
 
 // ── Static fallbacks (last resort) ───────────────────────────────────────────
 const FALLBACKS: Record<string, string[]> = {
@@ -95,7 +97,7 @@ function getFallback(context: string): string {
 }
 
 // ── Prompt builder ────────────────────────────────────────────────────────────
-function buildPrompt(context: string, products: ProductSummary[]): string {
+function buildPrompt(context: string, products: ProductSummary[], marketData?: string): string {
   const productList = products.slice(0, 5).map((p, i) => {
     const parts = [
       `${i + 1}. ${p.name}`,
@@ -109,19 +111,23 @@ function buildPrompt(context: string, products: ProductSummary[]): string {
     return parts;
   }).join('\n');
 
+  const marketInsight = marketData
+    ? `\n[MARKET DATA]\n${marketData}\n`
+    : '';
+
   const contextPrompts: Record<string, string> = {
     daily:
-      `오늘 등록 후보 TOP ${products.length}개:\n${productList}\n\n`
-      + `위 데이터 기반으로 오늘 가장 먼저 해야 할 액션 1가지를 구체적 수치와 함께 알려주세요. (100자 이내)`,
+      `오늘 등록 후보 TOP ${products.length}개:\n${productList}\n${marketInsight}\n`
+      + `위 데이터 기반으로 오늘 가장 먼저 해야 할 액션 1가지를 구체적 수치와 함께 알려주세요. (120자 이내)`,
     slot_a:
       `꿀통지수 상위 추천 상품:\n${productList}\n\n`
-      + `공통 개선점과 SEO 전략 1가지를 구체적 점수/퍼센트와 함께. (100자 이내)`,
+      + `공통 개선점과 SEO 전략 1가지를 구체적 점수/퍼센트와 함께. (120자 이내)`,
     zombie:
       `부활 후보 좀비 상품:\n${productList}\n\n`
-      + `가장 살릴 가능성 높은 상품과 구체적 부활 방법. (100자 이내)`,
+      + `가장 살릴 가능성 높은 상품과 구체적 부활 방법. (120자 이내)`,
     low_margin:
       `마진 위험 상품:\n${productList}\n\n`
-      + `손익 개선을 위한 현실적 조언 1가지 (구체적 수치 포함). (100자 이내)`,
+      + `손익 개선을 위한 현실적 조언 1가지 (구체적 수치 포함). (120자 이내)`,
   };
 
   return `${KKOTTI_PERSONA}\n\n${contextPrompts[context] ?? contextPrompts.daily}`;
@@ -199,7 +205,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, comment: cached.comment, source: `${cached.source}:cached` });
     }
 
-    const prompt        = buildPrompt(context, products as ProductSummary[]);
+    // C-12: Fetch market data for top product (non-blocking)
+    let marketData = '';
+    try {
+      const hasOpenApiKey = !!(process.env.NAVER_OPENAPI_CLIENT_ID ?? process.env.NAVER_DATALAB_CLIENT_ID);
+      if (hasOpenApiKey && products.length > 0) {
+        const topProduct = (products as ProductSummary[])[0];
+        const market = await analyzeCompetition(topProduct.name);
+        marketData = `${topProduct.name}: ${market.totalResults.toLocaleString()} competitors (${market.competitionLevel}), avg ${market.avgPrice.toLocaleString()} KRW`;
+      }
+    } catch { /* non-critical */ }
+
+    const prompt        = buildPrompt(context, products as ProductSummary[], marketData || undefined);
     const geminiKey     = process.env.GEMINI_API_KEY;
     const perplexityKey = process.env.PERPLEXITY_API_KEY;
 

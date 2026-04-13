@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { analyzeCompetition, type CompetitionAnalysis } from '@/lib/naver/shopping-search';
 
 // ─── Style mode type ──────────────────────────────────────────────────────────
 
@@ -12,8 +13,16 @@ type SeoStyle = 'orthodox' | 'emotional' | 'niche';
 
 // ─── Prompt builders ──────────────────────────────────────────────────────────
 
-function buildPrompt(productName: string, style: SeoStyle): string {
-  const base = `Product name: ${productName}
+function buildPrompt(productName: string, style: SeoStyle, market?: CompetitionAnalysis | null): string {
+  const marketContext = market
+    ? `\n[MARKET DATA — use this to optimize keywords and pricing strategy]
+Competitors: ${market.totalResults.toLocaleString()} results (${market.competitionLevel})
+Price range: ${market.minPrice.toLocaleString()}~${market.maxPrice.toLocaleString()} KRW (avg ${market.avgPrice.toLocaleString()})
+Top sellers: ${market.topSellers.slice(0, 3).join(', ')}
+- If HIGH/VERY_HIGH competition: use long-tail keywords, niche attributes
+- If LOW/MEDIUM: use broad high-volume keywords\n`
+    : '';
+  const base = `Product name: ${productName}${marketContext}
 Respond ONLY with a raw JSON object. No markdown, no explanation, no preamble. First char must be {.
 
 {
@@ -169,27 +178,28 @@ function parseJsonSafe(text: string): Record<string, string> {
 
 async function generateSEO(
   productName: string,
-  style: SeoStyle = 'orthodox'
-): Promise<{ data: Record<string, string>; provider: string }> {
+  style: SeoStyle = 'orthodox',
+  market?: CompetitionAnalysis | null
+): Promise<{ data: Record<string, string>; provider: string; market?: CompetitionAnalysis | null }> {
   // Try Gemini first (free tier, up to 3 keys), fall through on all quota failures
   const hasGeminiKey = !!(process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2 || process.env.GEMINI_API_KEY_3);
   if (hasGeminiKey) {
-    try { return { data: await callGemini(productName, style), provider: 'gemini-2.0-flash' }; }
+    try { return { data: await callGemini(productName, style), provider: 'gemini-2.0-flash', market }; }
     catch (e) { console.warn('[ai-generate] All Gemini keys failed, trying Anthropic:', e instanceof Error ? e.message.slice(0,60) : e); }
   }
   // Anthropic fallback
   if (process.env.ANTHROPIC_API_KEY) {
-    try { return { data: await callAnthropic(productName, style), provider: 'claude-sonnet' }; }
+    try { return { data: await callAnthropic(productName, style), provider: 'claude-sonnet', market }; }
     catch (e) { console.warn('[ai-generate] Anthropic failed, trying Perplexity:', e instanceof Error ? e.message.slice(0,60) : e); }
   }
   // Groq fallback (free tier: 14,400 req/day — fast)
   if (process.env.GROQ_API_KEY) {
-    try { return { data: await callGroq(productName, style), provider: 'groq-llama3' }; }
+    try { return { data: await callGroq(productName, style), provider: 'groq-llama3', market }; }
     catch (e) { console.warn('[ai-generate] Groq failed:', e instanceof Error ? e.message.slice(0,60) : e); }
   }
   // Perplexity last resort (requires Pro plan)
   if (process.env.PERPLEXITY_API_KEY) {
-    return { data: await callPerplexity(productName, style), provider: 'perplexity-sonar' };
+    return { data: await callPerplexity(productName, style), provider: 'perplexity-sonar', market };
   }
   throw new Error('Gemini 일일 할당량 소진 상태입니다. 한국시간 오전 9시 이후 다시 사용 가능합니다. (또는 GROQ_API_KEY 무료 등록)');
 }
@@ -215,7 +225,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '상품명이 필요합니다.' }, { status: 400 });
     }
 
-    const { data: aiResponse, provider } = await generateSEO(resolvedName, style as SeoStyle);
+    // C-12: Fetch competition data for smarter SEO (non-blocking — fallback to null)
+    let market: CompetitionAnalysis | null = null;
+    try {
+      const hasOpenApiKey = !!(process.env.NAVER_OPENAPI_CLIENT_ID ?? process.env.NAVER_DATALAB_CLIENT_ID);
+      if (hasOpenApiKey) {
+        market = await analyzeCompetition(resolvedName);
+      }
+    } catch { /* non-critical — proceed without market data */ }
+
+    const { data: aiResponse, provider } = await generateSEO(resolvedName, style as SeoStyle, market);
 
     if (productId && productId !== 'temp') {
       // Parse keywords from comma-separated string to JSON array
@@ -244,7 +263,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ success: true, provider, style, data: aiResponse });
+    return NextResponse.json({
+      success: true, provider, style, data: aiResponse,
+      ...(market ? { market: { competition: market.competitionLevel, avgPrice: market.avgPrice, totalResults: market.totalResults } } : {}),
+    });
   } catch (error) {
     const msg = error instanceof Error ? error.message : '알 수 없는 오류';
     console.error('[api/naver-seo/ai-generate POST]', msg);
