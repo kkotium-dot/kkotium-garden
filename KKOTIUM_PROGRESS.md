@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-13 (C-1 Step 1~5 완료, PlayMCP+Groq 연동 계획 추가)
+> 최종 업데이트: 2026-04-13 (C-1 완료, C-12 완료, Sprint 3 C-2 다음 작업)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: 830825c
-> **Phase A ✅ | Phase B ✅ | Phase C 진행 중 (Sprint 1 ✅, Sprint 2 C-1 ✅)**
+> **Phase A ✅ | Phase B ✅ | Phase C 진행 중 (Sprint 1 ✅, Sprint 2 C-1 ✅, C-12 ✅)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 
 ---
@@ -223,6 +223,30 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 - 전체 저장 버튼 → PATCH /api/products/{id} 한번에 저장
 - 키워드 월간 검색량 자동 표시
 ```
+
+
+### 2026-04-13 C-1 + C-12 세션
+
+| 작업 | 커밋 | 내용 |
+|------|------|------|
+| C-1 Step 1~3 | 36d5d5f | product-builder.ts + register API + NaverRegisterModal |
+| C-1 Step 4~5 | b361139 | Supabase 버킷 통일 + Cloudinary 비활성화 |
+| C-12 모듈 | dd0758f | shopping-search.ts + market-analysis API |
+| C-12 SEO+꼬띠 | c793a89 | AI SEO에 경쟁 데이터 주입 + 꼬띠 시장 트렌드 |
+| C-12 UI | 2a65bc2 | MarketAnalysisCard 정원 창고 사이드 패널 |
+| C-12 검증 | d72a9ec | Naver OpenAPI + Groq 키 작동 확인 완료 |
+
+### C-12 시장 분석 적용 현황
+- 검색 조련사 AI SEO: 경쟁 데이터(가격/경쟁강도) 프롬프트 주입 ✅
+- 꼬띠 AI 코멘트: 시장 트렌드 인사이트 컨텍스트 추가 ✅
+- 정원 창고 사이드 패널: MarketAnalysisCard (경쟁 뱃지 + AI 인사이트 + 키워드 칩) ✅
+- 시장 분석 API: GET /api/naver/market-analysis?q=keyword (1시간 캐시) ✅
+
+### C-12 미적용 (다음 세션)
+- 씨앗 심기: 상품 등록 시 경쟁 가격대 도우미
+- 소싱 보관함: 크롤링 상품 경쟁 분석 → 소싱 점수 반영
+- 대시보드: 카테고리 트렌드 차트 + 꼬띠 트렌드 코멘트
+- 검색 조련사 테이블: 경쟁 강도 컬럼 추가
 
 ### Phase A~B (이전 세션)
 | Task | 내용 | 완료일 |
