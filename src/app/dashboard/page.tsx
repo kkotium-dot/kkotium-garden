@@ -248,6 +248,9 @@ export default function DashboardPage() {
       {/* ── 꼬띠 위젯 — products prop으로 단일 로드 공유 ────── */}
       <KkottiWidget products={products} productsLoading={productsLoading} />
 
+      {/* C-12: Market trend widget */}
+      <MarketTrendWidget products={products} productsLoading={productsLoading} />
+
       {/* Recent event timeline */}
       <EventTimeline />
 
