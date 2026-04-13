@@ -11,7 +11,7 @@ import {
   Check, AlertTriangle, Truck,
   ChevronDown, ChevronRight,
   Layers, Upload, ArrowRight,
-  LayoutList,
+  LayoutList, Send, Globe, Loader,
 } from 'lucide-react';
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
@@ -287,7 +287,228 @@ function SidePanel({ product, onClose, onDelete }: {
   );
 }
 
-// ─── Readiness Check Modal ────────────────────────────────────────────────────
+// ─── Naver Direct Register Modal ────────────────────────────────────────────── 
+// C-1: Pre-registration validation + sequential API registration
+
+function NaverRegisterModal({
+  products, onClose, onSuccess,
+}: {
+  products: ScoredProduct[];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [phase, setPhase] = useState<'validate' | 'registering' | 'done'>('validate');
+  const [results, setResults] = useState<Array<{ id: string; name: string; ok: boolean; error?: string; naverProductId?: string }>>([]);
+  const [progress, setProgress] = useState(0);
+
+  // Filter: only DRAFT or ACTIVE-without-naverProductId products
+  const registerable = products.filter(p => !p.naverProductId && (p.status === 'DRAFT' || p.status === 'ACTIVE'));
+  const alreadyRegistered = products.filter(p => !!p.naverProductId);
+  const hasNoImage = registerable.filter(p => !p.mainImage);
+  const hasNoCategory = registerable.filter(p => !p.category || p.category === '50003307');
+
+  // Calculate readiness for each product inline
+  const withReadiness = registerable.map(p => ({
+    ...p,
+    readinessScore: calcUploadReadiness({
+      naverCategoryCode: p.naverCategoryCode ?? p.category,
+      keywords: p.keywords,
+      tags: p.tags,
+      name: p.name,
+      mainImage: p.mainImage,
+      images: p.images,
+      shippingTemplateId: p.shippingTemplateId,
+      salePrice: p.salePrice,
+      supplierPrice: p.supplierPrice,
+      shippingFee: p.shippingFee,
+    }).score,
+  }));
+
+  const startRegistration = async () => {
+    setPhase('registering');
+    const allResults: typeof results = [];
+
+    for (let i = 0; i < withReadiness.length; i++) {
+      const p = withReadiness[i];
+      setProgress(i + 1);
+      try {
+        const res = await fetch('/api/naver/products/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId: p.id }),
+        });
+        const data = await res.json();
+        allResults.push({
+          id: p.id,
+          name: p.name,
+          ok: data.success,
+          error: data.error ?? data.validation?.errors?.join(', '),
+          naverProductId: data.naverProductId,
+        });
+      } catch (e: any) {
+        allResults.push({ id: p.id, name: p.name, ok: false, error: e.message });
+      }
+      setResults([...allResults]);
+
+      // Rate limit: 2 sec between API calls
+      if (i < withReadiness.length - 1) {
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+    setPhase('done');
+  };
+
+  const successCount = results.filter(r => r.ok).length;
+  const failCount = results.filter(r => !r.ok).length;
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-50" onClick={onClose} />
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+            <Globe size={16} style={{ color: '#228f18' }} />
+            {phase === 'validate' ? 'Naver Direct Registration' : phase === 'registering' ? 'Registering...' : 'Registration Complete'}
+          </h3>
+          <button onClick={phase === 'done' ? onSuccess : onClose} className="p-1 rounded-lg hover:bg-gray-100">
+            <X size={16} className="text-gray-400" />
+          </button>
+        </div>
+
+        {phase === 'validate' && (
+          <div className="space-y-3">
+            {/* Summary */}
+            <div className="p-3 rounded-xl" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+              <p className="text-sm font-semibold" style={{ color: '#15803d' }}>
+                {withReadiness.length}개 상품 등록 가능
+              </p>
+              {alreadyRegistered.length > 0 && (
+                <p className="text-xs mt-1" style={{ color: '#888' }}>
+                  {alreadyRegistered.length}개는 이미 네이버 등록 완료 (건너뜀)
+                </p>
+              )}
+            </div>
+
+            {/* Warnings */}
+            {hasNoImage.length > 0 && registerable.filter(p => !p.mainImage).length > 0 && (
+              <div className="p-3 rounded-xl" style={{ background: '#fef2f2', border: '1px solid #fca5a5' }}>
+                <p className="text-xs font-semibold flex items-center gap-1" style={{ color: '#b91c1c' }}>
+                  <AlertTriangle size={12} /> 대표이미지 없음 ({hasNoImage.length}개) — 등록 실패 예상
+                </p>
+                <p className="text-xs mt-1" style={{ color: '#999' }}>
+                  {hasNoImage.map(p => p.name).join(', ')}
+                </p>
+              </div>
+            )}
+
+            {hasNoCategory.length > 0 && registerable.filter(p => !p.category || p.category === '50003307').length > 0 && (
+              <div className="p-3 rounded-xl" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+                <p className="text-xs font-semibold flex items-center gap-1" style={{ color: '#a16207' }}>
+                  <AlertTriangle size={12} /> 카테고리 미선택 ({hasNoCategory.length}개) — 등록 차단됨
+                </p>
+              </div>
+            )}
+
+            {/* Product list preview */}
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {withReadiness.map(p => (
+                <div key={p.id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: '#f9fafb' }}>
+                  <span className="text-xs font-semibold text-gray-700 flex-1 truncate">{p.name}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                    style={{
+                      background: p.readinessScore >= 75 ? '#dcfce7' : p.readinessScore >= 45 ? '#fffbeb' : '#fee2e2',
+                      color: p.readinessScore >= 75 ? '#15803d' : p.readinessScore >= 45 ? '#a16207' : '#b91c1c',
+                    }}>
+                    {p.readinessScore}%
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-2 pt-2">
+              <button onClick={onClose}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+                취소
+              </button>
+              <button
+                onClick={startRegistration}
+                disabled={withReadiness.length === 0}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-40"
+                style={{ background: withReadiness.length > 0 ? '#228f18' : '#ccc' }}>
+                <span className="flex items-center justify-center gap-1.5">
+                  <Send size={13} /> {withReadiness.length}개 네이버 등록 시작
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {phase === 'registering' && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Loader size={16} className="text-green-600 animate-spin" />
+              <p className="text-sm font-semibold text-gray-700">
+                {progress} / {withReadiness.length} 등록 중...
+              </p>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2">
+              <div className="h-2 rounded-full transition-all" style={{
+                width: `${(progress / Math.max(withReadiness.length, 1)) * 100}%`,
+                background: '#228f18',
+              }} />
+            </div>
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {results.map(r => (
+                <div key={r.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: r.ok ? '#f0fdf4' : '#fef2f2' }}>
+                  {r.ok ? <Check size={12} className="text-green-600" /> : <X size={12} className="text-red-500" />}
+                  <span className="text-xs flex-1 truncate" style={{ color: r.ok ? '#15803d' : '#b91c1c' }}>{r.name}</span>
+                  {r.ok && <span className="text-xs text-gray-400">{r.naverProductId}</span>}
+                  {!r.ok && <span className="text-xs text-red-400 truncate max-w-[200px]">{r.error}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {phase === 'done' && (
+          <div className="space-y-3">
+            <div className="p-4 rounded-xl text-center" style={{
+              background: successCount > 0 ? '#f0fdf4' : '#fef2f2',
+              border: `1px solid ${successCount > 0 ? '#bbf7d0' : '#fca5a5'}`,
+            }}>
+              <p className="text-lg font-bold" style={{ color: successCount > 0 ? '#15803d' : '#b91c1c' }}>
+                {successCount > 0 ? `${successCount}개 등록 완료` : '등록 실패'}
+              </p>
+              {failCount > 0 && (
+                <p className="text-xs mt-1" style={{ color: '#b91c1c' }}>{failCount}개 실패</p>
+              )}
+            </div>
+            {/* Failed items detail */}
+            {results.filter(r => !r.ok).length > 0 && (
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {results.filter(r => !r.ok).map(r => (
+                  <div key={r.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: '#fef2f2' }}>
+                    <X size={12} className="text-red-500" />
+                    <span className="text-xs text-red-700 flex-1 truncate">{r.name}</span>
+                    <span className="text-xs text-red-400 truncate max-w-[200px]">{r.error}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button onClick={onSuccess}
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-bold text-white transition"
+              style={{ background: '#228f18' }}>
+              확인
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ─── Readiness Check Modal ──────────────────────────────────────────────────── 
 // Shown before bulk Excel download — warns about products with low readiness
 
 function ReadinessCheckModal({
@@ -391,8 +612,8 @@ function ReadinessCheckModal({
 // ─── Bulk Float Menu ──────────────────────────────────────────────────────────
 
 function BulkFloatMenu({
-  selectedIds, onClear, onApplyTemplate, onExcelWithCheck, onBulkStatusChange,
-}: { selectedIds: string[]; onClear: () => void; onApplyTemplate: () => void; onExcelWithCheck: () => void; onBulkStatusChange: (status: string) => void }) {
+  selectedIds, onClear, onApplyTemplate, onExcelWithCheck, onBulkStatusChange, onNaverRegister,
+}: { selectedIds: string[]; onClear: () => void; onApplyTemplate: () => void; onExcelWithCheck: () => void; onBulkStatusChange: (status: string) => void; onNaverRegister: () => void }) {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   if (selectedIds.length === 0) return null;
 
@@ -416,6 +637,11 @@ function BulkFloatMenu({
         <button onClick={onExcelWithCheck}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-green-600 hover:bg-green-700 text-white transition">
           <Upload size={12} /> 엑셀 다운로드
+        </button>
+        <button onClick={onNaverRegister}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition"
+          style={{ background: '#228f18', color: '#fff' }}>
+          <Globe size={12} /> 네이버 직접 등록
         </button>
         <button onClick={onApplyTemplate}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition"
@@ -542,6 +768,7 @@ function ProductsPageInner() {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showReadinessModal, setShowReadinessModal] = useState(false);
   const [excelPending, setExcelPending]             = useState(false);
+  const [showNaverRegisterModal, setShowNaverRegisterModal] = useState(false);
   // B-3: Naver real-time sync
   const [naverSyncing, setNaverSyncing]   = useState(false);
   const [naverSyncMsg, setNaverSyncMsg]   = useState('');
@@ -1060,7 +1287,16 @@ function ProductsPageInner() {
         onApplyTemplate={() => setShowTemplateModal(true)}
         onExcelWithCheck={() => setShowReadinessModal(true)}
         onBulkStatusChange={handleBulkStatusChange}
+        onNaverRegister={() => setShowNaverRegisterModal(true)}
       />
+
+      {showNaverRegisterModal && (
+        <NaverRegisterModal
+          products={scored.filter(p => selected.has(p.id))}
+          onClose={() => setShowNaverRegisterModal(false)}
+          onSuccess={() => { setShowNaverRegisterModal(false); setSelected(new Set()); fetchProducts(); }}
+        />
+      )}
 
       {showReadinessModal && (
         <ReadinessCheckModal
