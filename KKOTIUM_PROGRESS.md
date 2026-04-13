@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-14 (Sprint 4 C-3, C-4, C-9, C-10 전체 완료)
+> 최종 업데이트: 2026-04-14 (Sprint 4 C-11 완료 — Phase C 전체 완료)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: eb36391
-> **Phase A ✅ | Phase B ✅ | Phase C 진행 중 (Sprint 1~4 C-3 ✅, C-4 ✅, C-9 ✅, C-10 ✅, C-12 ✅)**
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ 전체 완료 (Sprint 1~4 전체 완료)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 최신 커밋: eb36391
 
@@ -86,7 +86,7 @@ Groq 키도 교체 권장: `https://console.groq.com/keys`
 | C-4 | 수익성 분석 대시보드 (유입경로별 수수료 + 순이익 시뮬레이터) | ✅ 완료 | 무료 |
 | C-10 | 배송 자동화 확장 (자동 발주확인 + 수량 클레임 대응) | ✅ 완료 | 무료 |
 | C-3 | 대량 등록 배치 파이프라인 (소싱보관함 10개 일괄) | ✅ 완료 | 무료 |
-| C-11 | 씨앗 심기 UX 2-Panel Split 구조 개편 | ⬜ 대기 | 무료 |
+| C-11 | 씨앗 심기 UX 2-Panel Split 구조 개편 | ✅ 완료 | 무료 |
 
 ### 꽃졔님 직접 처리
 | 항목 | 내용 |
@@ -282,6 +282,31 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 - 소싱 보관함: SourcedCompetitionBadge 경쟁 강도 + 평균가 ✅
 - 대시보드: MarketTrendWidget 내 상품 시장 트렌드 위젯 ✅
 - 검색 조련사 테이블: CompetitionCell 경쟁 강도 컬럼 ✅
+
+
+### 2026-04-14 Sprint 4 C-11 씨앗 심기 2-Panel Split 세션
+
+| 작업 | 내용 |
+|------|------|
+| C-11 Tab Nav | 6개 탭 네비게이션 바 (기본정보/옵션/이미지/배송A&S/SEO원산지/혜택) |
+| C-11 2-Panel | 좌측 60% Tab + 우측 38% 고정 패널 (sticky, overflow scroll) |
+| C-11 Tab Icons | Lucide React: Package/Layers/ImageIcon/Truck/Search/Gift |
+| C-11 Tab Logic | activeTab state, conditional rendering per tab |
+| 백업 | page.backup.pre-c11.tsx 보존 |
+
+### C-11 씨앗 심기 2-Panel Split 기능 상세
+```
+- 좌측 60%: 6개 탭으로 기존 RSection/DSection 재배치
+  Tab 1 (기본 정보): 카테고리 4단계/검색 + 상품명/판매가/공급가/재고/SKU/공급사
+  Tab 2 (옵션): 옵션없음/조합형/단독형/직접입력형 테이블 UI
+  Tab 3 (이미지): 대표/추가/상세 이미지 드롭존 + SEO 훅문구
+  Tab 4 (배송 A/S): 꼬띠 배송 추천 + 배송 템플릿 + A/S 설정
+  Tab 5 (SEO 원산지): 브랜드/원산지/수입사 + 상품정보고시
+  Tab 6 (혜택): 리뷰 포인트 + 구매평/알림 + 할부
+- 우측 38% sticky: 업로드 준비도 + 꿀통지수 + 마진계산기 + AI SEO + SEO 점수 + 엑셀 미리보기
+- 하단 플로팅 바: 임시저장 / 네이버 API 등록 / 엑셀 다운로드
+- 모든 기존 로직 100% 보존 (state, handlers, prefill, edit mode)
+```
 
 ### Phase A~B (이전 세션)
 | Task | 내용 | 완료일 |

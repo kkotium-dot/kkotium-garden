@@ -5,7 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx';
 import {
   Tag, Truck, Wrench, Star, Bell, Clipboard, CheckCircle, XCircle, Settings,
-  Package, Image as ImageIcon, Search, Gift, Layers,
 } from 'lucide-react';
 import {
   NAVER_CATEGORIES_FULL,
@@ -221,8 +220,6 @@ function DSection({ icon, title, summary, children }: {
 function NewProductPageInner() {
   const searchParams = useSearchParams();
   const [catTab, setCatTab]             = useState<'search'|'drill'>('drill');
-  // C-11: 2-Panel Split tab navigation state
-  const [activeTab, setActiveTab] = useState<'basic'|'option'|'image'|'shipping'|'seo'|'benefit'>('basic');
   const [catQuery, setCatQuery]         = useState('');
   const [catResults, setCatResults]     = useState<CategorySearchResult[]>([]);
   const [catOpen, setCatOpen]           = useState(false);
@@ -1480,45 +1477,9 @@ const handleGenerate = async () => {
 
         <div className="flex gap-6 items-start">
 
-          {/* C-11: Left input panel 60% with tab navigation */}
-          <div style={{ flex: '0 0 60%', minWidth: 0 }}>
-            {/* Tab navigation bar */}
-            <div style={{ display: 'flex', gap: 4, padding: '4px', background: '#FFF0F5', borderRadius: 16, marginBottom: 16, border: '1.5px solid #F8DCE5', flexWrap: 'wrap' }}>
-              {([
-                { key: 'basic', label: '\uae30\ubcf8 \uc815\ubcf4', Icon: Package },
-                { key: 'option', label: '\uc635\uc158', Icon: Layers },
-                { key: 'image', label: '\uc774\ubbf8\uc9c0', Icon: ImageIcon },
-                { key: 'shipping', label: '\ubc30\uc1a1 \xb7 A/S', Icon: Truck },
-                { key: 'seo', label: 'SEO \xb7 \uc6d0\uc0b0\uc9c0', Icon: Search },
-                { key: 'benefit', label: '\ud61c\ud0dd', Icon: Gift },
-              ] as const).map(tab => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                  style={{
-                    flex: '1 1 auto',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    padding: '10px 14px',
-                    borderRadius: 12,
-                    fontSize: 13, fontWeight: activeTab === tab.key ? 800 : 500,
-                    background: activeTab === tab.key ? '#fff' : 'transparent',
-                    color: activeTab === tab.key ? '#e62310' : '#888',
-                    border: activeTab === tab.key ? '1.5px solid #FFB3CE' : '1.5px solid transparent',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                    boxShadow: activeTab === tab.key ? '0 2px 8px rgba(230,35,16,0.08)' : 'none',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <tab.Icon size={15} />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            <div className="space-y-4">
+          {/* ══ 좌측 입력 (flex-1) ══ */}
+          <div className="flex-1 min-w-0 space-y-4">
 
-            {activeTab === 'basic' && (<>
             {/* ① Category — search tab + drill-down tab */}
             <RSection number={1} title="카테고리" badge={catTab === 'search' ? '검색' : '4단계선택'}>
               <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
@@ -1946,9 +1907,7 @@ const handleGenerate = async () => {
                 </Field>
               </div>
             </RSection>
-            </>)}
 
-            {activeTab === 'option' && (<>
             {/* ③ Option system — Combination / Single / Direct */}
             <RSection number={3} title="옵션" badge={optionType === 'NONE' ? '옵션없음' : optionType === 'COMBINATION' ? '조합형' : optionType === 'SINGLE' ? '단독형' : '직접입력형'}>
               {/* Type radio */}
@@ -2261,9 +2220,7 @@ const handleGenerate = async () => {
                 </div>
               )}
             </RSection>
-            </>)}
 
-            {activeTab === 'image' && (<>
             {/* ④ Images + SEO hook */}
             <RSection number={4} title="이미지 / SEO 훅문구">
               {/* Drag-and-drop image upload to Supabase — auto URL — Excel cols 18/19/20 */}
@@ -2314,9 +2271,7 @@ const handleGenerate = async () => {
                 </div>
               </Field>
             </RSection>
-            </>)}
 
-            {activeTab === 'seo' && (<>
             {/* ══ D1~D7 기본값 아코디언 ══ */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-gray-400 px-1 uppercase tracking-wide flex items-center gap-1"><Settings size={12} style={{ color: '#999' }} />{" "}기본값 — 펼쳐서 수정 가능</p>
@@ -2415,11 +2370,7 @@ const handleGenerate = async () => {
                   </Field>
                 </div>
               </DSection>
-            </div>{/* seo defaults end */}
-            </>)}
 
-            {activeTab === 'shipping' && (<>
-            <div className="space-y-2">
               {/* C5: Kkotti shipping recommendation bubble */}
               {(() => {
                 const saleNum = Number(price) || 0;
@@ -2693,11 +2644,7 @@ const handleGenerate = async () => {
                   <textarea className={`${inp} h-20 resize-none`} value={asGuide} onChange={e => setAsGuide(e.target.value)} />
                 </Field>
               </DSection>
-            </div>{/* shipping defaults end */}
-            </>)}
 
-            {activeTab === 'benefit' && (<>
-            <div className="space-y-2">
               {/* D5 리뷰 포인트 */}
               <DSection icon={<Star size={14}/>} title="리뷰 포인트" summary={`텍스트 ${textReviewPoint}P · 포토 ${photoReviewPoint}P`}>
                 <div className="grid grid-cols-3 gap-3">
@@ -2732,7 +2679,6 @@ const handleGenerate = async () => {
                 </Field>
               </DSection>
             </div>
-            </>)}
 
             {/* 대체상품 관리 패널 — 등록 전 미리 입력 가능 */}
             <AlternativeProductPanel
@@ -2761,7 +2707,6 @@ const handleGenerate = async () => {
               </button>
             </div>
 
-            </div>{/* tab content end */}
           </div>{/* 좌측 끝 */}
 
           <ShippingTemplateModal
@@ -2935,8 +2880,8 @@ const handleGenerate = async () => {
           </div>
         )}
 
-          {/* C-11: Right fixed panel 38% */}
-          <div style={{ flex: "0 0 38%", position: "sticky", top: 80, alignSelf: "flex-start", maxHeight: "calc(100vh - 100px)", overflowY: "auto" }} className="space-y-4">
+          {/* ══ 우측 고정 패널 (w-96) ══ */}
+          <div className="w-96 shrink-0 space-y-4 sticky top-20">
 
             {/* Upload Readiness panel -- shown in edit mode or when key fields are filled */}
             {(() => {
