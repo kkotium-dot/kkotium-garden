@@ -122,6 +122,7 @@ export interface LocalProduct {
   detail_image_url?: string | null;
   description?: string | null;
   hookPhrase?: string | null;
+  aeo_content?: any; // JSONB: { qna: [{q,a}], faq: [{q,a}] }
   keywords?: unknown; // JSON array
   tags?: unknown; // JSON array
   category?: string | null; // naver category code
@@ -338,9 +339,53 @@ export function buildDetailContent(product: LocalProduct): string {
     parts.push(`<div style="padding:20px;font-size:14px;line-height:1.8;color:#555;">${escapeHtml(product.description).replace(/\n/g, '<br/>')}</div>`);
   }
 
+  // C-2: AEO Q&A structured section for Naver AI Briefing optimization
+  const aeoHtml = buildAEOSection(product.aeo_content);
+  if (aeoHtml) {
+    parts.push(aeoHtml);
+  }
+
   if (parts.length === 0) {
     // Minimum required detail content
     parts.push(`<div style="text-align:center;padding:40px;font-size:14px;color:#888;">${escapeHtml(product.name)}</div>`);
+  }
+
+  return parts.join('\n');
+}
+
+/** C-2: Build AEO-optimized Q&A HTML section for Naver AI Briefing */
+function buildAEOSection(aeoContent: any): string | null {
+  if (!aeoContent || typeof aeoContent !== 'object') return null;
+  const qna: Array<{q: string; a: string}> = Array.isArray(aeoContent.qna) ? aeoContent.qna : [];
+  const faq: Array<{q: string; a: string}> = Array.isArray(aeoContent.faq) ? aeoContent.faq : [];
+  if (qna.length === 0 && faq.length === 0) return null;
+
+  const parts: string[] = [];
+
+  // Q&A section — H2/H3 structured for AI parsing
+  if (qna.length > 0) {
+    parts.push('<div style="padding:30px 20px;background:#fafbfc;border-top:1px solid #e5e7eb;">');
+    parts.push('<h2 style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:20px;">\uC0C1\uD488 Q&amp;A</h2>');
+    for (const item of qna) {
+      parts.push('<div style="margin-bottom:16px;">');
+      parts.push(`<h3 style="font-size:14px;font-weight:600;color:#374151;margin-bottom:6px;">Q. ${escapeHtml(item.q)}</h3>`);
+      parts.push(`<p style="font-size:13px;color:#6b7280;line-height:1.7;padding-left:20px;">A. ${escapeHtml(item.a)}</p>`);
+      parts.push('</div>');
+    }
+    parts.push('</div>');
+  }
+
+  // FAQ section — structured list for AI shopping guide
+  if (faq.length > 0) {
+    parts.push('<div style="padding:30px 20px;background:#f9fafb;border-top:1px solid #e5e7eb;">');
+    parts.push('<h2 style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:20px;">\uC790\uC8FC \uBB3B\uB294 \uC9C8\uBB38 (FAQ)</h2>');
+    for (const item of faq) {
+      parts.push('<div style="margin-bottom:14px;">');
+      parts.push(`<p style="font-size:14px;font-weight:600;color:#374151;margin-bottom:4px;">Q. ${escapeHtml(item.q)}</p>`);
+      parts.push(`<p style="font-size:13px;color:#6b7280;line-height:1.6;padding-left:20px;">A. ${escapeHtml(item.a)}</p>`);
+      parts.push('</div>');
+    }
+    parts.push('</div>');
   }
 
   return parts.join('\n');

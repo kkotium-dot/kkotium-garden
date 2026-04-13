@@ -21,6 +21,44 @@ interface SourcedProduct {
   created_at: string;
 }
 
+// C-12: Competition badge for sourced products
+function SourcedCompetitionBadge({ productName }: { productName: string }) {
+  const [info, setInfo] = useState<{ level: string; avg: number } | null>(null);
+
+  useEffect(() => {
+    if (!productName || productName.length < 3) return;
+    const t = setTimeout(() => {
+      fetch(`/api/naver/market-analysis?q=${encodeURIComponent(productName)}`)
+        .then(r => r.json())
+        .then(j => {
+          if (j.success && j.competition) {
+            setInfo({ level: j.competition.competitionLevel, avg: j.competition.avgPrice });
+          }
+        })
+        .catch(() => {});
+    }, 500);
+    return () => clearTimeout(t);
+  }, [productName]);
+
+  if (!info) return null;
+  const BADGE: Record<string, { bg: string; color: string; text: string }> = {
+    LOW:       { bg: '#dcfce7', color: '#15803d', text: '\uACBD\uC7C1 \uB0AE\uC74C' },
+    MEDIUM:    { bg: '#dbeafe', color: '#1d4ed8', text: '\uACBD\uC7C1 \uBCF4\uD1B5' },
+    HIGH:      { bg: '#fef9c3', color: '#a16207', text: '\uACBD\uC7C1 \uB192\uC74C' },
+    VERY_HIGH: { bg: '#fee2e2', color: '#b91c1c', text: '\uACBD\uC7C1 \uCE58\uC5F4' },
+  };
+  const b = BADGE[info.level] ?? BADGE.MEDIUM;
+  return (
+    <div className="flex justify-between items-center text-xs mt-1">
+      <span style={{ color: '#64748b' }}>{'\uC2DC\uC7A5 \uACBD\uC7C1'}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="px-1.5 py-0.5 rounded-full font-bold text-[10px]" style={{ background: b.bg, color: b.color }}>{b.text}</span>
+        <span style={{ color: '#94a3b8', fontSize: 10 }}>{'\uD3C9\uADE0 '}{info.avg.toLocaleString()}{'\uC6D0'}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function SourcedProductManager() {
   const [products, setProducts] = useState<SourcedProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -362,11 +400,13 @@ export default function SourcedProductManager() {
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">순이익</span>
+                    <span className="text-gray-600">{'순이익'}</span>
                     <span className="font-bold text-green-600">
-                      {(product.retail_price - product.wholesale_price).toLocaleString()}원
+                      {(product.retail_price - product.wholesale_price).toLocaleString()}{'원'}
                     </span>
                   </div>
+                  {/* C-12: Competition analysis badge */}
+                  <SourcedCompetitionBadge productName={product.name} />
                 </div>
 
                 <div className="space-y-2">

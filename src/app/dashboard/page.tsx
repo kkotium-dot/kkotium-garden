@@ -5,6 +5,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Package, TrendingUp, AlertTriangle, Sparkles, Layers, Skull, ArrowRight, ShoppingCart, RefreshCw } from 'lucide-react';
 import KkottiWidget from '@/components/dashboard/KkottiWidget';
+import MarketTrendWidget from '@/components/dashboard/MarketTrendWidget';
 import DailyPlanWidget from '@/components/dashboard/DailyPlanWidget';
 import EventTimeline from '@/components/dashboard/EventTimeline';
 import Link from 'next/link';

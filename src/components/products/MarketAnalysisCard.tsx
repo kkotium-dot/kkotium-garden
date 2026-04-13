@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, BarChart3, Loader, AlertCircle } from 'lucide-react';
+import { TrendingUp, Loader } from 'lucide-react';
 
 interface MarketData {
   competition: {
@@ -28,10 +28,10 @@ interface MarketData {
 }
 
 const LEVEL_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  LOW:       { bg: '#dcfce7', color: '#15803d', label: 'LOW' },
-  MEDIUM:    { bg: '#dbeafe', color: '#1d4ed8', label: 'MEDIUM' },
-  HIGH:      { bg: '#fef9c3', color: '#a16207', label: 'HIGH' },
-  VERY_HIGH: { bg: '#fee2e2', color: '#b91c1c', label: 'VERY HIGH' },
+  LOW:       { bg: '#dcfce7', color: '#15803d', label: '\uACBD\uC7C1 \uB0AE\uC74C' },
+  MEDIUM:    { bg: '#dbeafe', color: '#1d4ed8', label: '\uACBD\uC7C1 \uBCF4\uD1B5' },
+  HIGH:      { bg: '#fef9c3', color: '#a16207', label: '\uACBD\uC7C1 \uB192\uC74C' },
+  VERY_HIGH: { bg: '#fee2e2', color: '#b91c1c', label: '\uACBD\uC7C1 \uCE58\uC5F4' },
 };
 
 export default function MarketAnalysisCard({ productName }: { productName: string }) {
@@ -73,48 +73,46 @@ export default function MarketAnalysisCard({ productName }: { productName: strin
         <div className="flex items-center gap-2">
           <Loader size={14} className="animate-spin" style={{ color: '#0284c7' }} />
           <span className="text-xs font-semibold" style={{ color: '#0284c7' }}>
-            Naver Shopping Market Analysis
+            {'\uB124\uC774\uBC84 \uC1FC\uD551 \uC2DC\uC7A5 \uBD84\uC11D \uC911...'}
           </span>
         </div>
       </div>
     );
   }
 
-  if (error) {
-    // API key not configured or other errors — hide the card completely
-    return null;
-  }
-
-  if (!data) return null;
+  if (error || !data) return null;
 
   const { competition: comp, insight } = data;
   const levelStyle = LEVEL_STYLE[comp.competitionLevel] ?? LEVEL_STYLE.MEDIUM;
-  const myPriceIsBelow = true; // TODO: compare with product salePrice
 
   return (
     <div className="rounded-2xl p-4 space-y-3" style={{ background: '#f0f9ff', border: '1px solid #bae6fd' }}>
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold" style={{ color: '#0369a1' }}>
-          Naver Shopping Market Analysis
-        </span>
-        <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+        <div className="flex items-center gap-1.5">
+          <TrendingUp size={13} style={{ color: '#0369a1' }} />
+          <span className="text-xs font-bold" style={{ color: '#0369a1' }}>
+            {'\uB124\uC774\uBC84 \uC1FC\uD551 \uC2DC\uC7A5 \uBD84\uC11D'}
+          </span>
+        </div>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
           style={{ background: levelStyle.bg, color: levelStyle.color }}>
           {levelStyle.label}
         </span>
       </div>
 
-      {/* Competition stats */}
+      {/* Competition stats — Korean labels */}
       <div className="grid grid-cols-3 gap-2 text-xs">
         <div className="bg-white rounded-xl p-2 text-center">
-          <p style={{ color: '#94a3b8' }}>competitors</p>
+          <p style={{ color: '#94a3b8' }}>{'\uACBD\uC7C1 \uC0C1\uD488\uC218'}</p>
           <p className="font-bold text-gray-800">{comp.totalResults.toLocaleString()}</p>
         </div>
         <div className="bg-white rounded-xl p-2 text-center">
-          <p style={{ color: '#94a3b8' }}>avg price</p>
+          <p style={{ color: '#94a3b8' }}>{'\uD3C9\uADE0 \uAC00\uACA9'}</p>
           <p className="font-bold text-gray-800">{comp.avgPrice.toLocaleString()}</p>
         </div>
         <div className="bg-white rounded-xl p-2 text-center">
-          <p style={{ color: '#94a3b8' }}>range</p>
+          <p style={{ color: '#94a3b8' }}>{'\uAC00\uACA9\uB300'}</p>
           <p className="font-bold text-gray-800 text-[10px]">{comp.priceRange}</p>
         </div>
       </div>
@@ -122,7 +120,7 @@ export default function MarketAnalysisCard({ productName }: { productName: strin
       {/* Top sellers */}
       {comp.topSellers.length > 0 && (
         <div className="text-xs">
-          <span style={{ color: '#64748b' }}>Top: </span>
+          <span style={{ color: '#64748b' }}>{'\uC0C1\uC704 \uD310\uB9E4\uC790: '}</span>
           <span className="font-semibold" style={{ color: '#334155' }}>
             {comp.topSellers.slice(0, 3).join(' / ')}
           </span>

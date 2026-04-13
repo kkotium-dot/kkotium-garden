@@ -168,6 +168,8 @@ model Product {
   shipping_template_id    String?
   main_image_url          String?
   detail_image_url        String?
+  aeo_content             Json?
+  aeo_generated_at        DateTime?
   seo_hook_text           String?
   golden_keyword_score    Int?
   orderItems              OrderItem[]

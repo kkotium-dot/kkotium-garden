@@ -7,7 +7,7 @@ import Image from 'next/image';
 import {
   ChevronDown, ChevronRight, Image as ImageIcon,
   Check, AlertTriangle, Zap, Heart, Target,
-  RefreshCw, Edit2, TrendingUp, Save, X,
+  RefreshCw, Edit2, TrendingUp, Save, X, MessageSquarePlus, FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
@@ -72,6 +72,38 @@ function gradeBadgeStyle(score: number): { bg: string; color: string; label: str
   if (score >= 60) return { bg: '#EFF6FF', color: '#2563EB', label: 'B' };
   if (score >= 45) return { bg: '#FFFBEB', color: '#D97706', label: 'C' };
   return              { bg: '#FFF0F5',  color: '#e62310',  label: 'D' };
+}
+
+// C-12: Inline competition level badge for table rows
+function CompetitionCell({ productName }: { productName: string }) {
+  const [level, setLevel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!productName) return;
+    let cancelled = false;
+    fetch(`/api/naver/market-analysis?q=${encodeURIComponent(productName)}`)
+      .then(r => r.json())
+      .then(j => { if (!cancelled && j.success) setLevel(j.competition?.competitionLevel ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [productName]);
+
+  const COMP_BADGE: Record<string, { bg: string; color: string; text: string }> = {
+    LOW:       { bg: '#dcfce7', color: '#15803d', text: '\uB0AE\uC74C' },
+    MEDIUM:    { bg: '#dbeafe', color: '#1d4ed8', text: '\uBCF4\uD1B5' },
+    HIGH:      { bg: '#fef9c3', color: '#a16207', text: '\uB192\uC74C' },
+    VERY_HIGH: { bg: '#fee2e2', color: '#b91c1c', text: '\uCE58\uC5F4' },
+  };
+
+  if (!level) return <div className="text-center text-[10px]" style={{ color: '#ccc' }}>-</div>;
+  const s = COMP_BADGE[level] ?? COMP_BADGE.MEDIUM;
+  return (
+    <div className="text-center">
+      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: s.bg, color: s.color }}>
+        {s.text}
+      </span>
+    </div>
+  );
 }
 
 function ScoreBar({ detail, total }: { detail?: SeoDetail; total: number }) {
@@ -268,7 +300,28 @@ function SeoEditPanel({
   return (
     <div style={{ paddingTop: 12 }}>
       {/* AI style buttons */}
-      <p style={lbl()}>꼬띠 AI 최적화 — 스타일 선택</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <p style={lbl({ marginBottom: 0 })}>꼼띄 AI 최적화 — 스타일 선택</p>
+            <button
+              onClick={async () => {
+                try {
+                  const r = await fetch(`/api/products/${product.id}/aeo-generate`, { method: 'POST' });
+                  const j = await r.json();
+                  if (j.success) alert(`AEO Q&A ${j.qnaCount}개 + FAQ ${j.faqCount}개 생성 완료 (${j.provider})`);
+                  else alert(j.error || 'AEO 생성 실패');
+                } catch { alert('AEO API 오류'); }
+              }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '5px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700,
+                background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac',
+                cursor: 'pointer',
+              }}
+            >
+              <FileText size={12} />
+              {'AEO Q&A 생성'}
+            </button>
+          </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
         {AI_STYLES.map(({ key, icon: Icon, label, desc: d, color, bg, border }) => (
           <button
@@ -456,7 +509,7 @@ export default function NaverSeoProductTable({
 
   const isAllSelected   = selectedIds.length === products.length && products.length > 0;
   const isSomeSelected  = selectedIds.length > 0 && selectedIds.length < products.length;
-  const COL = '36px 1fr 200px 160px 100px';
+  const COL = '36px 1fr 80px 200px 160px 100px';
 
   return (
     <div style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 18, overflow: 'hidden' }}>
@@ -467,7 +520,7 @@ export default function NaverSeoProductTable({
           ref={input => { if (input) input.indeterminate = isSomeSelected; }}
           onChange={handleSelectAll}
           className="w-4 h-4 rounded border-gray-300 text-[#E8001F] focus:ring-[#E8001F]/30" />
-        {['상품명 / SKU', 'SEO 점수 상세', '체크리스트', '작업'].map(h => (
+        {['상품명 / SKU', '경쟁', 'SEO 점수 상세', '체크리스트', '작업'].map(h => (
           <span key={h} className="text-[11px] font-black tracking-wide" style={{ color: '#e62310' }}>{h}</span>
         ))}
       </div>
@@ -535,6 +588,9 @@ export default function NaverSeoProductTable({
                     ? <ChevronDown size={14} className="shrink-0" style={{ color: '#e62310' }} />
                     : <ChevronRight size={14} className="shrink-0" style={{ color: '#D4B0BC' }} />}
                 </div>
+
+                {/* Competition level cell — C-12 */}
+                <CompetitionCell productName={product.name} />
 
                 {/* Score bar */}
                 <ScoreBar detail={product.seoDetail} total={product.seoScore} />

@@ -73,6 +73,56 @@ interface OptionRow { id: string; value: string; price: string; stock: string; s
 const inp = 'w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm text-stone-800 placeholder-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-300 focus:border-transparent bg-white transition';
 const sel = inp + ' appearance-none cursor-pointer';
 
+// C-12: Market price comparison helper chip for sale price field
+function MarketPriceHint({ productName, myPrice }: { productName: string; myPrice: number }) {
+  const [data, setData] = useState<{ avg: number; min: number; max: number; level: string } | null>(null);
+
+  useEffect(() => {
+    if (!productName || productName.length < 3) { setData(null); return; }
+    const timer = setTimeout(() => {
+      fetch(`/api/naver/market-analysis?q=${encodeURIComponent(productName)}`)
+        .then(r => r.json())
+        .then(j => {
+          if (j.success && j.competition) {
+            setData({
+              avg: j.competition.avgPrice,
+              min: j.competition.minPrice,
+              max: j.competition.maxPrice,
+              level: j.competition.competitionLevel,
+            });
+          }
+        })
+        .catch(() => {});
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [productName]);
+
+  if (!data || !myPrice) return null;
+
+  const diff = myPrice - data.avg;
+  const pct = data.avg > 0 ? Math.round((diff / data.avg) * 100) : 0;
+  const isBelow = diff < 0;
+  const isAbove = diff > 0;
+
+  return (
+    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+        style={{ background: '#dbeafe', color: '#1d4ed8' }}>
+        {`\uc2dc\uc7a5 \ud3c9\uade0 ${data.avg.toLocaleString()}\uc6d0`}
+      </span>
+      {myPrice > 0 && (
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+          style={{
+            background: isBelow ? '#dcfce7' : isAbove ? '#fef9c3' : '#f3f4f6',
+            color: isBelow ? '#15803d' : isAbove ? '#a16207' : '#6b7280',
+          }}>
+          {isBelow ? `${Math.abs(pct)}% \uc800\ub834` : isAbove ? `${pct}% \ub192\uc74c` : '\ud3c9\uade0\uac00'}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function Field({ label, required, hint, children }: {
   label: string; required?: boolean; hint?: string; children: React.ReactNode;
 }) {
@@ -1697,6 +1747,8 @@ const handleGenerate = async () => {
               <div className="grid grid-cols-2 gap-3">
                 <Field label="판매가" required>
                   <input className={inp} type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0" min={0} />
+                  {/* C-12: Market price comparison chip */}
+                  <MarketPriceHint productName={productName} myPrice={Number(price) || 0} />
                 </Field>
                 <div className="space-y-1.5">
                   <div className="flex gap-2">
