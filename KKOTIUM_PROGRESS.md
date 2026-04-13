@@ -1,9 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-14 (Sprint 3 C-2 완료, C-12 전체 확장 완료)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: 830825c
-> **Phase A ✅ | Phase B ✅ | Phase C 진행 중 (Sprint 1~3 C-2 ✅, C-12 전체 ✅)**
+> 최종 업데이트: 2026-04-14 (Sprint 3 C-9 완료)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: d91e2cc
+> **Phase A ✅ | Phase B ✅ | Phase C 진행 중 (Sprint 1~3 C-2 ✅, C-9 ✅, C-12 전체 ✅)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
-> 최신 커밋: cdf3157
+> 최신 커밋: d91e2cc
 
 ---
 
@@ -78,7 +78,7 @@ Groq 키도 교체 권장: `https://console.groq.com/keys`
 | Task | 내용 | 상태 | 비용 |
 |------|------|------|------|
 | C-2 | AEO 상세페이지 Q&A + FAQ 자동 생성 (Gemini/Groq) | ✅ 완료 | 무료 |
-| C-9 | 굿서비스 점수 대시보드 (등급 관리 + Discord 알림) | ⬜ 대기 | 무료 |
+| C-9 | 굿서비스 점수 대시보드 (등급 관리 + Discord 알림) | ✅ 완료 | 무료 |
 
 ### Sprint 4: 수익 최적화 + 확장
 | Task | 내용 | 상태 | 비용 |
@@ -227,6 +227,24 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 
 
 
+### 2026-04-14 Sprint 3 C-9 굿서비스 점수 대시보드 세션
+
+| 작업 | 커밋 | 내용 |
+|------|------|------|
+| C-9 계산 라이브러리 | d91e2cc | good-service.ts: 3축 점수 계산 + 등급 시뮬레이터 |
+| C-9 API | d91e2cc | GET /api/good-service: 14일 주문 데이터 집계 → 점수 계산 |
+| C-9 대시보드 위젯 | d91e2cc | GoodServiceWidget: 3축 게이지 + 등급 뱃지 + 개선팁 + 등급 시뮬레이터 |
+
+### C-9 굿서비스 점수 기능 상세
+```
+- 3축 평가: 주문이행(40%) + 배송품질(30%) + 고객만족(30%)
+- 등급 판정: 우수(90+) / 양호(75+) / 보통(60+) / 개선필요(40+) / 위험(0-39)
+- 등급 시뮬레이터: 씨앗~플래티넘 목표 대비 갭 계산 (매출+판매건수+굿서비스점수)
+- 14일 윈도우 데이터 기반 (네이버 기준 동일)
+- 개선 포인트 자동 생성 (24h 발주확인율, 배송 정시율, 문의 응답율 등)
+- API: GET /api/good-service → score + metrics + gradeSimulation + monthlySummary
+```
+
 ### 2026-04-14 Sprint 3 C-2 + C-12 확장 세션
 
 | 작업 | 커밋 | 내용 |
@@ -288,6 +306,9 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | 카테고리 속성 | `src/lib/category-attributes.ts` |
 | 꿀통지수 | `src/lib/honey-score.ts` |
 | SEO 점수 | `src/lib/seo-calculator.ts` |
+| 굿서비스 점수 | `src/lib/good-service.ts` |
+| 굿서비스 API | `src/app/api/good-service/route.ts` |
+| 굿서비스 위젯 | `src/components/dashboard/GoodServiceWidget.tsx` |
 | 트렌드 분석 | `src/lib/trend-analyzer.ts` |
 | 업로드 준비도 | `src/lib/upload-readiness.ts` |
 | Discord | `src/lib/discord.ts` |
