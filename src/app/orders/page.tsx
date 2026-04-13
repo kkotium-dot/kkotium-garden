@@ -274,6 +274,23 @@ function OrdersInner() {
   const [dispatching, setDispatching]           = useState(false);
   const [dispatchMsg, setDispatchMsg]           = useState('');
 
+  // Claim handling
+  const [claimProcessing, setClaimProcessing] = useState<string | null>(null);
+
+  const handleClaim = async (orderId: string, action: string, productName: string) => {
+    setClaimProcessing(orderId);
+    try {
+      const r = await fetch('/api/naver/orders/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, productOrderId: orderId }),
+      });
+      const d = await r.json();
+      if (d.success) fetchOrders();
+    } catch { /* silent */ }
+    finally { setClaimProcessing(null); }
+  };
+
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
@@ -613,6 +630,56 @@ function OrdersInner() {
                         <Check size={11} />
                         {isSel ? '선택됨' : '발주확인'}
                       </button>
+                    ) : ['CANCEL_REQUESTED', 'CANCEL_REQUEST'].includes(order.status) ? (
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button
+                          onClick={() => handleClaim(order.id, 'approve-cancel', order.productName ?? '')}
+                          disabled={claimProcessing === order.id}
+                          style={{
+                            fontSize: 10, fontWeight: 700, padding: '4px 7px', borderRadius: 6,
+                            background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5',
+                            cursor: 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          취소승인
+                        </button>
+                        <button
+                          onClick={() => handleClaim(order.id, 'reject-cancel', order.productName ?? '')}
+                          disabled={claimProcessing === order.id}
+                          style={{
+                            fontSize: 10, fontWeight: 700, padding: '4px 7px', borderRadius: 6,
+                            background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0',
+                            cursor: 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          거부
+                        </button>
+                      </div>
+                    ) : ['RETURN_REQUESTED', 'RETURN_REQUEST'].includes(order.status) ? (
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button
+                          onClick={() => handleClaim(order.id, 'approve-return', order.productName ?? '')}
+                          disabled={claimProcessing === order.id}
+                          style={{
+                            fontSize: 10, fontWeight: 700, padding: '4px 7px', borderRadius: 6,
+                            background: '#fff7ed', color: '#ea580c', border: '1px solid #fed7aa',
+                            cursor: 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          반품승인
+                        </button>
+                        <button
+                          onClick={() => handleClaim(order.id, 'reject-return', order.productName ?? '')}
+                          disabled={claimProcessing === order.id}
+                          style={{
+                            fontSize: 10, fontWeight: 700, padding: '4px 7px', borderRadius: 6,
+                            background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0',
+                            cursor: 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          거부
+                        </button>
+                      </div>
                     ) : order.status === 'CONFIRMED' && !order.trackingNumber ? (
                       <button
                         onClick={() => { setDispatchModal({ orderId: order.id, productName: order.productName ?? '' }); setDispatchMsg(''); setDispatchTracking(''); }}

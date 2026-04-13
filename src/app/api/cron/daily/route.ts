@@ -430,6 +430,54 @@ export async function GET(req: NextRequest) {
       results.dbSaved = top5.length;
     }
 
+    // ── C-10: Auto order confirmation ────────────────────────────────────
+    // Automatically confirm PAID orders that are older than 2 hours
+    try {
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      const pendingOrders = await prisma.order.findMany({
+        where: {
+          status: { in: ['PAID', 'PAYED'] },
+          paidAt: { lt: twoHoursAgo },
+        },
+        select: { id: true, orderNumber: true, productName: true },
+      });
+
+      if (pendingOrders.length > 0) {
+        const ids = pendingOrders.map(o => o.id);
+        try {
+          await naverRequest('POST', '/v1/pay-order/seller/product-orders/confirm', {
+            productOrderIds: ids,
+          });
+          // Update local status
+          await prisma.order.updateMany({
+            where: { id: { in: ids } },
+            data: { status: 'CONFIRMED', updatedAt: new Date() },
+          });
+          results.autoConfirmed = ids.length;
+
+          // Discord notification
+          await sendDiscord('OPS_REPORT', '', [{
+            title: ':white_check_mark: Auto Order Confirmation',
+            description: `${ids.length}건 주문 자동 발주확인 완료`,
+            color: 0x16a34a,
+            fields: pendingOrders.slice(0, 5).map(o => ({
+              name: o.orderNumber?.slice(-12) ?? '',
+              value: o.productName ?? '',
+              inline: true,
+            })),
+            footer: { text: '꽃티움 가든 · 자동 발주' },
+            timestamp: new Date().toISOString(),
+          }]).catch(() => null);
+        } catch (confirmErr) {
+          results.autoConfirmError = String(confirmErr);
+        }
+      } else {
+        results.autoConfirmed = 0;
+      }
+    } catch (e) {
+      results.autoConfirmError = String(e);
+    }
+
     return NextResponse.json({
       ok:        true,
       timestamp: new Date().toISOString(),
