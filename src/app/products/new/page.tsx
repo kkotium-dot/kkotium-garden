@@ -792,10 +792,15 @@ function NewProductPageInner() {
   const deferredOriginQuery = useDeferredValue(originQuery);
   const originCandidates = useMemo(() => {
     const q = deferredOriginQuery.trim().toLowerCase();
+    // Popular origins for dropship sellers (most common first)
+    const POPULAR_CODES = ['0','200037','200014','200036','200044','204000','200034','200048','200008','201005','201046','201035','3','4','5'];
     if (!q) {
       const pinned = selectedOrigin ? [selectedOrigin] : [];
-      const rest = ORIGIN_CODES.filter(o => o.code !== selectedOrigin?.code).slice(0, 19);
-      return [...pinned, ...rest];
+      const popularItems = POPULAR_CODES
+        .filter(c => c !== selectedOrigin?.code)
+        .map(c => ORIGIN_CODES.find(o => o.code === c))
+        .filter((o): o is NonNullable<typeof o> => !!o);
+      return [...pinned, ...popularItems];
     }
     return ORIGIN_CODES.filter(o => o.label.toLowerCase().includes(q) || o.code.includes(q)).slice(0, 30);
   }, [deferredOriginQuery, selectedOrigin]);
@@ -2276,7 +2281,9 @@ const handleGenerate = async () => {
                                     </>
                                   ) : label}
                                 </span>
-                                <span className="text-xs text-gray-400 ml-2 shrink-0">{o.code}</span>
+                                <span className={`text-xs ml-2 shrink-0 px-1.5 py-0.5 rounded ${Number(o.code) >= 200000 ? 'bg-orange-50 text-orange-500' : Number(o.code) <= 17 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
+                                  {Number(o.code) >= 200000 ? '\uc218\uc785\uc0b0' : ['0','3','4','5'].includes(o.code) ? '\ud2b9\uc218' : '\uad6d\ub0b4\uc0b0'}
+                                </span>
                               </button>
                             );
                           })}
