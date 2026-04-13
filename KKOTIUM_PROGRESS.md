@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
 > 최종 업데이트: 2026-04-14 (2026 전략 로드맵 반영, Phase C 재정렬)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: 3fd2b6f
-> **Phase A ✅ | Phase B ✅ | Phase C 진행 중 (C-5 완료, C-6~C-11 신규 추가)**
+> **Phase A ✅ | Phase B ✅ | Phase C 진행 중 (Sprint 1 ✅, Sprint 2 C-1 Step 1~3 ✅)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 
 ---
@@ -34,7 +34,7 @@
 | GitHub | https://github.com/kkotium-dot/kkotium-garden |
 | Phase A | 전체 완료 ✅ |
 | Phase B | 전체 완료 ✅ |
-| Phase C (C-5) | 완료 ✅ |
+| Phase C (C-1 Step 1~3) | 진행 중 ✅ |
 
 ---
 

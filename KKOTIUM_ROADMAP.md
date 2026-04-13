@@ -53,7 +53,7 @@
 
 | Task | 상태 | 내용 | 상세 |
 |------|------|------|------|
-| C-1 | ⬜ | 커머스 API 직접 상품 등록 | `POST /external/v2/products`, deliveryInfo JSON 인라인, 속성/태그/키워드 완벽, C-8 체커 내장 |
+| C-1 | ✅ Step 1~3 | 커머스 API 직접 상품 등록 | product-builder.ts, register API, NaverRegisterModal, 플로팅바 버튼, C-8 체커 내장 |
 
 ### Sprint 3: AI 최적화 + 운영 모니터링 (무료)
 
