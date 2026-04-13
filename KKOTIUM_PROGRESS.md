@@ -1,8 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-13 (C-1 완료, C-12 완료, Sprint 3 C-2 다음 작업)
+> 최종 업데이트: 2026-04-14 (Sprint 3 C-2 완료, C-12 전체 확장 완료)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: 830825c
-> **Phase A ✅ | Phase B ✅ | Phase C 진행 중 (Sprint 1 ✅, Sprint 2 C-1 ✅, C-12 ✅)**
+> **Phase A ✅ | Phase B ✅ | Phase C 진행 중 (Sprint 1~3 C-2 ✅, C-12 전체 ✅)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
+> 최신 커밋: cdf3157
 
 ---
 
@@ -76,7 +77,7 @@ Groq 키도 교체 권장: `https://console.groq.com/keys`
 ### Sprint 3: AI 최적화 + 운영 모니터링 (무료)
 | Task | 내용 | 상태 | 비용 |
 |------|------|------|------|
-| C-2 | AEO 상세페이지 Q&A + FAQ 자동 생성 (Gemini/Groq) | ⬜ 대기 | 무료 |
+| C-2 | AEO 상세페이지 Q&A + FAQ 자동 생성 (Gemini/Groq) | ✅ 완료 | 무료 |
 | C-9 | 굿서비스 점수 대시보드 (등급 관리 + Discord 알림) | ⬜ 대기 | 무료 |
 
 ### Sprint 4: 수익 최적화 + 확장
@@ -225,6 +226,22 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 ```
 
 
+
+### 2026-04-14 Sprint 3 C-2 + C-12 확장 세션
+
+| 작업 | 커밋 | 내용 |
+|------|------|------|
+| C-2 AEO API | cdf3157 | POST/GET /api/products/[id]/aeo-generate, Gemini/Groq Q&A 5~8 + FAQ 3~5 |
+| C-2 product-builder | cdf3157 | buildDetailContent()에 H2/H3 구조화 Q&A/FAQ HTML 자동 삽입 |
+| C-2 검색 조련사 | cdf3157 | AEO Q&A 생성 버튼 인라인 패널에 추가 |
+| C-12 검색 조련사 | cdf3157 | CompetitionCell 경쟁 강도 뱃지 컬럼 (낮음/보통/높음/치열) |
+| C-12 씨앗 심기 | cdf3157 | MarketPriceHint 시장 평균가 비교 칩 |
+| C-12 대시보드 | cdf3157 | MarketTrendWidget 내 상품 시장 트렌드 + 꼬띠 인사이트 |
+| C-12 소싱 보관함 | cdf3157 | SourcedCompetitionBadge 경쟁 강도 + 평균가 |
+| MarketAnalysisCard | cdf3157 | 영어 라벨 전체 한글화 (경쟁 상품수/평균 가격/가격대/경쟁 낮음~치열) |
+| DB | migration | aeo_content JSONB + aeo_generated_at 컬럼 추가 |
+| Prisma | generate | Product 모델 aeo_content Json? + aeo_generated_at DateTime? |
+
 ### 2026-04-13 C-1 + C-12 세션
 
 | 작업 | 커밋 | 내용 |
@@ -242,11 +259,11 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 - 정원 창고 사이드 패널: MarketAnalysisCard (경쟁 뱃지 + AI 인사이트 + 키워드 칩) ✅
 - 시장 분석 API: GET /api/naver/market-analysis?q=keyword (1시간 캐시) ✅
 
-### C-12 미적용 (다음 세션)
-- 씨앗 심기: 상품 등록 시 경쟁 가격대 도우미
-- 소싱 보관함: 크롤링 상품 경쟁 분석 → 소싱 점수 반영
-- 대시보드: 카테고리 트렌드 차트 + 꼬띠 트렌드 코멘트
-- 검색 조련사 테이블: 경쟁 강도 컬럼 추가
+### C-12 전체 적용 완료 (2026-04-14)
+- 씨앗 심기: MarketPriceHint 판매가 아래 시장 평균 비교 칩 ✅
+- 소싱 보관함: SourcedCompetitionBadge 경쟁 강도 + 평균가 ✅
+- 대시보드: MarketTrendWidget 내 상품 시장 트렌드 위젯 ✅
+- 검색 조련사 테이블: CompetitionCell 경쟁 강도 컬럼 ✅
 
 ### Phase A~B (이전 세션)
 | Task | 내용 | 완료일 |
