@@ -68,7 +68,7 @@ Rules:
 // ─── AI provider calls ────────────────────────────────────────────────────────
 
 // Single key call
-async function callGeminiWithKey(productName: string, style: SeoStyle, apiKey: string): Promise<Record<string, string>> {
+async function callGeminiWithKey(productName: string, style: SeoStyle, apiKey: string, market?: CompetitionAnalysis | null): Promise<Record<string, string>> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
@@ -127,9 +127,7 @@ async function callAnthropic(productName: string, style: SeoStyle): Promise<Reco
   return parseJsonSafe(data.content?.[0]?.text ?? '');
 }
 
-async function callGroq(productName: string, style: SeoStyle): Promise<Record<string, string>> {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error('GROQ_API_KEY not set');
+async function callGroqWithKey(productName: string, style: SeoStyle, apiKey: string, market?: CompetitionAnalysis | null): Promise<Record<string, string>> {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -137,13 +135,59 @@ async function callGroq(productName: string, style: SeoStyle): Promise<Record<st
       model: 'llama-3.1-8b-instant',
       messages: [
         { role: 'system', content: 'Output ONLY raw JSON. First char must be {, last must be }. No markdown.' },
-        { role: 'user', content: buildPrompt(productName, style) },
+        { role: 'user', content: buildPrompt(productName, style, market) },
       ],
       temperature: style === 'emotional' ? 0.7 : 0.2,
       max_tokens: 1024,
     }),
   });
   if (!res.ok) throw new Error(`Groq ${res.status}`);
+  const data = await res.json();
+  return parseJsonSafe(data.choices?.[0]?.message?.content ?? '');
+}
+
+// Round-robin across all Groq keys
+async function callGroq(productName: string, style: SeoStyle, market?: CompetitionAnalysis | null): Promise<Record<string, string>> {
+  const keys = [
+    process.env.GROQ_API_KEY,
+    process.env.GROQ_API_KEY_2,
+    process.env.GROQ_API_KEY_3,
+  ].filter(Boolean) as string[];
+  if (keys.length === 0) throw new Error('GROQ_API_KEY not set');
+  let lastErr = '';
+  for (const key of keys) {
+    try {
+      return await callGroqWithKey(productName, style, key, market);
+    } catch (e) {
+      lastErr = e instanceof Error ? e.message : String(e);
+      if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('rate')) {
+        console.warn(`[ai-generate] Groq key ...${key.slice(-6)} rate limited, trying next`);
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error(`Groq: all keys rate limited (${lastErr.slice(0,60)})`);
+}
+
+
+async function callXai(productName: string, style: SeoStyle, market?: CompetitionAnalysis | null): Promise<Record<string, string>> {
+  const apiKey = process.env.XAI_API_KEY;
+  if (!apiKey) throw new Error('XAI_API_KEY not set');
+  const res = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'grok-3-mini-fast',
+      messages: [
+        { role: 'system', content: 'Output ONLY raw JSON. First char must be {, last must be }. No markdown.' },
+        { role: 'user', content: buildPrompt(productName, style, market) },
+      ],
+      temperature: style === 'emotional' ? 0.7 : 0.2,
+      max_tokens: 1024,
+    }),
+  });
+  if (!res.ok) throw new Error(`xAI ${res.status}`);
   const data = await res.json();
   return parseJsonSafe(data.choices?.[0]?.message?.content ?? '');
 }
@@ -181,27 +225,40 @@ async function generateSEO(
   style: SeoStyle = 'orthodox',
   market?: CompetitionAnalysis | null
 ): Promise<{ data: Record<string, string>; provider: string; market?: CompetitionAnalysis | null }> {
-  // Try Gemini first (free tier, up to 3 keys), fall through on all quota failures
+  // Priority: Groq (free, stable, multi-key) -> xAI Grok -> Gemini -> Anthropic -> Perplexity
+
+  // 1. Groq first — free, fast, stable (up to 3 keys round-robin)
+  const hasGroqKey = !!(process.env.GROQ_API_KEY || process.env.GROQ_API_KEY_2 || process.env.GROQ_API_KEY_3);
+  if (hasGroqKey) {
+    try { return { data: await callGroq(productName, style, market), provider: 'groq-llama3', market }; }
+    catch (e) { console.warn('[ai-generate] All Groq keys failed, trying xAI:', e instanceof Error ? e.message.slice(0,60) : e); }
+  }
+
+  // 2. xAI Grok — free tier backup
+  if (process.env.XAI_API_KEY) {
+    try { return { data: await callXai(productName, style, market), provider: 'xai-grok-mini', market }; }
+    catch (e) { console.warn('[ai-generate] xAI failed, trying Gemini:', e instanceof Error ? e.message.slice(0,60) : e); }
+  }
+
+  // 3. Gemini (free tier, up to 3 keys)
   const hasGeminiKey = !!(process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2 || process.env.GEMINI_API_KEY_3);
   if (hasGeminiKey) {
     try { return { data: await callGemini(productName, style), provider: 'gemini-2.0-flash', market }; }
     catch (e) { console.warn('[ai-generate] All Gemini keys failed, trying Anthropic:', e instanceof Error ? e.message.slice(0,60) : e); }
   }
-  // Anthropic fallback
+
+  // 4. Anthropic fallback
   if (process.env.ANTHROPIC_API_KEY) {
     try { return { data: await callAnthropic(productName, style), provider: 'claude-sonnet', market }; }
     catch (e) { console.warn('[ai-generate] Anthropic failed, trying Perplexity:', e instanceof Error ? e.message.slice(0,60) : e); }
   }
-  // Groq fallback (free tier: 14,400 req/day — fast)
-  if (process.env.GROQ_API_KEY) {
-    try { return { data: await callGroq(productName, style), provider: 'groq-llama3', market }; }
-    catch (e) { console.warn('[ai-generate] Groq failed:', e instanceof Error ? e.message.slice(0,60) : e); }
-  }
-  // Perplexity last resort (requires Pro plan)
+
+  // 5. Perplexity last resort
   if (process.env.PERPLEXITY_API_KEY) {
     return { data: await callPerplexity(productName, style), provider: 'perplexity-sonar', market };
   }
-  throw new Error('Gemini 일일 할당량 소진 상태입니다. 한국시간 오전 9시 이후 다시 사용 가능합니다. (또는 GROQ_API_KEY 무료 등록)');
+
+  throw new Error('AI API 키가 모두 실패했습니다. GROQ_API_KEY 또는 XAI_API_KEY를 확인해주세요.');
 }
 
 // ─── POST: single product ─────────────────────────────────────────────────────
