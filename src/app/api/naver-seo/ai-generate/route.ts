@@ -225,7 +225,7 @@ async function generateSEO(
   style: SeoStyle = 'orthodox',
   market?: CompetitionAnalysis | null
 ): Promise<{ data: Record<string, string>; provider: string; market?: CompetitionAnalysis | null }> {
-  // Priority: Groq (free, stable, multi-key) -> xAI Grok -> Gemini -> Anthropic -> Perplexity
+  // Priority: Groq (free, stable, multi-key) -> Gemini -> Anthropic -> Perplexity
 
   // 1. Groq first — free, fast, stable (up to 3 keys round-robin)
   const hasGroqKey = !!(process.env.GROQ_API_KEY || process.env.GROQ_API_KEY_2 || process.env.GROQ_API_KEY_3);
@@ -234,13 +234,7 @@ async function generateSEO(
     catch (e) { console.warn('[ai-generate] All Groq keys failed, trying xAI:', e instanceof Error ? e.message.slice(0,60) : e); }
   }
 
-  // 2. xAI Grok — free tier backup
-  if (process.env.XAI_API_KEY) {
-    try { return { data: await callXai(productName, style, market), provider: 'xai-grok-mini', market }; }
-    catch (e) { console.warn('[ai-generate] xAI failed, trying Gemini:', e instanceof Error ? e.message.slice(0,60) : e); }
-  }
-
-  // 3. Gemini (free tier, up to 3 keys)
+  // 2. Gemini (free tier, up to 3 keys)
   const hasGeminiKey = !!(process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2 || process.env.GEMINI_API_KEY_3);
   if (hasGeminiKey) {
     try { return { data: await callGemini(productName, style), provider: 'gemini-2.0-flash', market }; }
@@ -258,7 +252,7 @@ async function generateSEO(
     return { data: await callPerplexity(productName, style), provider: 'perplexity-sonar', market };
   }
 
-  throw new Error('AI API 키가 모두 실패했습니다. GROQ_API_KEY 또는 XAI_API_KEY를 확인해주세요.');
+  throw new Error('AI API 키가 모두 실패했습니다. GROQ_API_KEY를 확인해주세요.');
 }
 
 // ─── POST: single product ─────────────────────────────────────────────────────

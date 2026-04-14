@@ -144,11 +144,11 @@ function RSection({ number, title, badge, children }: {
 }) {
   const [open, setOpen] = useState(true);
   return (
-    <div style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 18 }}>
+    <div style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 18, overflow: 'hidden' }}>
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-6 py-4 transition-colors"
-        style={{ borderRadius: '18px 18px 0 0' }}
+        style={{ borderRadius: open ? 0 : '18px 18px 0 0' }}
         onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FFF8FA'}
         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
       >
@@ -183,12 +183,13 @@ function DSection({ icon, title, summary, children }: {
         borderRadius: 16,
         background: '#fff',
         transition: 'border-color 0.15s',
+        overflow: 'hidden',
       }}
     >
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-5 py-3.5 transition-colors"
-        style={{ background: open ? '#FFF0F5' : 'transparent', borderRadius: 16 }}
+        style={{ background: open ? '#FFF0F5' : 'transparent', borderRadius: open ? 0 : 16 }}
         onMouseEnter={e => { if (!open) (e.currentTarget as HTMLElement).style.background = '#FFF8FA'; }}
         onMouseLeave={e => { if (!open) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
       >
@@ -2693,6 +2694,13 @@ const handleGenerate = async () => {
                   <textarea className={`${inp} h-20 resize-none`} value={asGuide} onChange={e => setAsGuide(e.target.value)} />
                 </Field>
               </DSection>
+
+              {/* Alternative product management — for out-of-stock replacement */}
+              <AlternativeProductPanel
+                productName={productName || undefined}
+                suppliers={suppliers}
+                onChange={setPendingAlternatives}
+              />
             </div>{/* shipping defaults end */}
             </>)}
 
@@ -2734,14 +2742,7 @@ const handleGenerate = async () => {
             </div>
             </>)}
 
-            {/* 대체상품 관리 패널 — 등록 전 미리 입력 가능 */}
-            <AlternativeProductPanel
-              productName={productName || undefined}
-              suppliers={suppliers}
-              onChange={setPendingAlternatives}
-            />
-
-            {/* 하단 버튼 */}
+{/* 하단 버튼 */}
             <div className="pt-4 border-t border-gray-200 space-y-3">
               <button
                 onClick={handleNaverDirect}
