@@ -250,14 +250,42 @@ export default function DashboardPage() {
       {/* ── 꼬띠 위젯 — products prop으로 단일 로드 공유 ────── */}
       <KkottiWidget products={products} productsLoading={productsLoading} />
 
-      {/* C-4: Profitability analysis widget */}
-      <ProfitabilityWidget />
+      {/* D-2: 2-column grid layout for related widgets */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* C-9: Good Service score widget */}
+        <GoodServiceWidget />
+        {/* C-4: Profitability analysis widget */}
+        <ProfitabilityWidget />
+      </div>
 
-      {/* C-9: Good Service score widget */}
-      <GoodServiceWidget />
-
-      {/* C-12: Market trend widget */}
+      {/* C-12: Market trend widget — full width (product-level data needs space) */}
       <MarketTrendWidget products={products} productsLoading={productsLoading} />
+
+      {/* D-2: Quick action shortcuts */}
+      <div className="kk-card" style={{ overflow: 'hidden' }}>
+        <div style={{ padding: '12px 20px 10px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Sparkles size={14} style={{ color: '#FF6B8A' }} />
+          <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>빠른 작업</p>
+        </div>
+        <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+          {[
+            { label: '\uC528\uC557 \uC2EC\uAE30', href: '/products/new', color: '#e62310', bg: '#FFF0F5', border: '#FFB3CE', icon: Package, hint: '\uC0C1\uD488 \uB4F1\uB85D' },
+            { label: '\uAC80\uC0C9 \uC870\uB828\uC0AC', href: '/naver-seo', color: '#2563eb', bg: '#EFF6FF', border: '#BFDBFE', icon: TrendingUp, hint: 'SEO \uCD5C\uC801\uD654' },
+            { label: '\uC8FC\uBB38 \uAD00\uB9AC', href: '/orders', color: '#16a34a', bg: '#F0FDF4', border: '#BBF7D0', icon: ShoppingCart, hint: '\uBC1C\uC8FC/\uC1A1\uC7A5' },
+            { label: '\uAFD8\uD1B5 \uC0AC\uB0A5\uD130', href: '/crawl', color: '#7c3aed', bg: '#F5F3FF', border: '#DDD6FE', icon: Layers, hint: '\uC0C1\uD488 \uC218\uC9D1' },
+          ].map(item => (
+            <Link key={item.label} href={item.href} style={{ textDecoration: 'none' }}>
+              <div style={{ padding: '14px 10px', borderRadius: 14, textAlign: 'center', background: item.bg, border: `1.5px solid ${item.border}`, cursor: 'pointer', transition: 'transform 0.1s' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, margin: '0 auto 8px', background: '#fff', border: `1.5px solid ${item.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <item.icon size={16} style={{ color: item.color }} />
+                </div>
+                <p style={{ fontSize: 13, fontWeight: 800, color: item.color, margin: '0 0 2px' }}>{item.label}</p>
+                <p style={{ fontSize: 10, color: '#B0A0A8', margin: 0 }}>{item.hint}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
 
       {/* Recent event timeline */}
       <EventTimeline />
