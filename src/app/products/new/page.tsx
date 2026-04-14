@@ -1505,30 +1505,52 @@ const handleGenerate = async () => {
                 { key: 'shipping', label: '\ubc30\uc1a1 \xb7 A/S', Icon: Truck },
                 { key: 'seo', label: 'SEO \xb7 \uc6d0\uc0b0\uc9c0', Icon: Search },
                 { key: 'benefit', label: '\ud61c\ud0dd', Icon: Gift },
-              ] as const).map(tab => (
+              ] as const).map(tab => {
+                // D-5: Tab completeness check
+                const tabDone: Record<string, boolean> = {
+                  basic: !!categoryId && productName.trim().length >= 10 && !!price && Number(price) > 0,
+                  option: optionType === 'NONE' || optionRows.some(r => r.value.trim().length > 0),
+                  image: !!mainImage.trim(),
+                  shipping: !!selectedShippingTemplate || !!selectedTemplateId,
+                  seo: (aiKeywords.length >= 2 || seoTags.length >= 1) && !!originCode,
+                  benefit: true,
+                };
+                const done = tabDone[tab.key] ?? false;
+                const isActive = activeTab === tab.key;
+                // D-5: Highlight tabs with missing required fields (basic, image)
+                const isMissing = !done && (tab.key === 'basic' || tab.key === 'image');
+                return (
                 <button
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key as typeof activeTab)}
                   style={{
                     flex: '1 1 auto',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    padding: '10px 14px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    padding: '10px 12px',
                     borderRadius: 12,
-                    fontSize: 13, fontWeight: activeTab === tab.key ? 800 : 500,
-                    background: activeTab === tab.key ? '#fff' : 'transparent',
-                    color: activeTab === tab.key ? '#e62310' : '#888',
-                    border: activeTab === tab.key ? '1.5px solid #FFB3CE' : '1.5px solid transparent',
+                    fontSize: 13, fontWeight: isActive ? 800 : 500,
+                    background: isActive ? '#fff' : isMissing ? '#FFF5F5' : 'transparent',
+                    color: isActive ? '#e62310' : isMissing ? '#dc2626' : '#888',
+                    border: isActive ? '1.5px solid #FFB3CE' : isMissing ? '1.5px solid #fecaca' : '1.5px solid transparent',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
-                    boxShadow: activeTab === tab.key ? '0 2px 8px rgba(230,35,16,0.08)' : 'none',
+                    boxShadow: isActive ? '0 2px 8px rgba(230,35,16,0.08)' : 'none',
                     whiteSpace: 'nowrap',
+                    position: 'relative',
                   }}
                 >
                   <tab.Icon size={15} />
                   {tab.label}
+                  {done && !isActive && (
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a', flexShrink: 0 }} />
+                  )}
+                  {isMissing && !isActive && (
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#dc2626', flexShrink: 0 }} />
+                  )}
                 </button>
-              ))}
+                );
+              })}
             </div>
             <div className="space-y-4">
 
