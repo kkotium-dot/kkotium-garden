@@ -1,9 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-14 (Phase D-1, D-2, D-5 완료)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: 252337b
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ 전체 완료 | Phase D 진행 중 (D-1, D-2, D-5 완료)**
+> 최종 업데이트: 2026-04-14 (Phase D-1, D-2, D-3, D-5 완료)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: f02ae2e
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ 전체 완료 | Phase D 진행 중 (D-1, D-2, D-3, D-5 완료)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
-> 최신 커밋: eb36391
+> 최신 커밋: f02ae2e
 
 ---
 
@@ -95,7 +95,7 @@
 |------|------|------|------|
 | D-1 | 상품명 품질 체크 (50자 제한, 금지키워드 감지, 실시간 경고) | ✅ 완료 | 무료 |
 | D-2 | 대시보드 위젯 레이아웃 정리 (2열 그리드 + 빠른 작업 바로가기) | ✅ 완료 | 무료 |
-| D-3 | 경쟁 상품 모니터링 (카테고리 상위 키워드 패턴, 가격/리뷰 변화 알림) | ⬜ 대기 | 무료 |
+| D-3 | 경쟁 상품 모니터링 (카테고리 상위 키워드 패턴, 가격/리뷰 변화 알림) | ✅ 완료 | 무료 |
 | D-4 | Naver DataLab API 직접 통합 (카테고리별 실시간 트렌드 차트) | ⬜ 대기 | 무료 |
 | D-5 | 씨앗 심기 탭 UX 추가 개선 (탭 완성도 뱃지, 필수탭 경고) | ✅ 완료 | 무료 |
 
@@ -314,6 +314,26 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | D-1 검색조련사 | c8c05ba | 인라인 편집 패널 네이버 상품명 품질 경고 (상위 2건) |
 | D-1 스토어명 | c8c05ba | store-settings API에서 storeName 자동 로딩 → 셀러명 감지 활성화 |
 
+### 2026-04-14 Phase D-3 경쟁 상품 모니터링 + D-5 탭 UX 개선 세션
+
+| 작업 | 커밋 | 내용 |
+|------|------|------|
+| D-3 라이브러리 | f02ae2e | competition-monitor.ts: 스냅샷/변화감지/Discord 알림 |
+| D-3 API | f02ae2e | GET+POST /api/competition: 전체 상품 경쟁 스캠 |
+| D-3 대시보드 | f02ae2e | CompetitionMonitorWidget: 가격 위치 바 + 상위 경쟁상품 + 변동률 |
+| D-3 cron | f02ae2e | daily cron에 자동 경쟁 스캠 통합 |
+| D-5 탭 점 통일 | f02ae2e | 모든 미완료 탭에 빨간점 표시 (기존: basic/image만) |
+
+### D-3 경쟁 상품 모니터링 기능 상세
+```
+- 네이버 쇼핑 검색 API로 상품별 키워드 경쟁 데이터 수집
+- 평균가/최저가/최고가 + 경쟁 강도(LOW/MEDIUM/HIGH/VERY_HIGH)
+- 내 판매가 위치 시각화 (가격 위치 바)
+- 이전 스냅샷 대비 5% 이상 가격 변동 시 Discord 알림
+- 상위 경쟁상품 3개 표시 (상품명/가격/판매자)
+- 대시보드 위젯: 전체 스캠 버튼 + 상품별 펼침/접기
+- daily cron에서 매일 자동 스캠 실행
+```
 ### 2026-04-14 Phase D-2 대시보드 레이아웃 + D-5 탭 UX 개선 세션
 
 | 작업 | 커밋 | 내용 |
@@ -359,6 +379,9 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | 꿀통지수 | `src/lib/honey-score.ts` |
 | SEO 점수 | `src/lib/seo-calculator.ts` |
 | 상품명 품질체커 | `src/lib/product-name-checker.ts` |
+| 경쟁 모니터 | `src/lib/competition-monitor.ts` |
+| 경쟁 모니터 API | `src/app/api/competition/route.ts` |
+| 경쟁 모니터 위젯 | `src/components/dashboard/CompetitionMonitorWidget.tsx` |
 | 굿서비스 점수 | `src/lib/good-service.ts` |
 | 굿서비스 API | `src/app/api/good-service/route.ts` |
 | 굿서비스 위젯 | `src/components/dashboard/GoodServiceWidget.tsx` |
