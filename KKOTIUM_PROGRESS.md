@@ -1,11 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-14 (Phase D 전체 완료)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: 5a3d0fe
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료**
+> 최종 업데이트: 2026-04-15 (Phase E 진행 중 — E-7 완료)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: ca993ee
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7 완료)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
-> 최신 커밋: 5a3d0fe
-
----
+> 최신 커밋: ca993ee
 
 ## 이 파일의 역할
 
@@ -37,6 +35,7 @@
 | Phase B | 전체 완료 ✅ |
 | Phase C | 전체 완료 ✅ |
 | Phase D | 전체 완료 ✅ |
+| Phase E | 진행 중 (E-7 완료) |
 
 ---
 
@@ -99,6 +98,11 @@
 | D-3 | 경쟁 상품 모니터링 (카테고리 상위 키워드 패턴, 가격/리뷰 변화 알림) | ✅ 완료 | 무료 |
 | D-4 | Naver DataLab API 직접 통합 (카테고리별 실시간 트렌드 차트) | ✅ 완료 | 무료 |
 | D-5 | 씨앗 심기 탭 UX 추가 개선 (탭 완성도 뱃지, 필수탭 경고) | ✅ 완료 | 무료 |
+
+### Phase E: 다음 단계 확장 (진행 중)
+| Task | 내용 | 상태 | 비용 |
+|------|------|------|------|
+| E-7 | 꼬띠 소싱 추천봇 (DataLab 트렌드 + 키워드 검색량 + 경쟁분석 → BlueOcean 점수 → Discord 매일 발송 + 대시보드 위젯) | ✅ 완료 | 무료 |
 
 ### 꽃졔님 직접 처리
 | 항목 | 내용 |
@@ -334,6 +338,28 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 - 카테고리별 순위 표시 (latestRatio 기준)
 - 5분 캐시 TTL
 ```
+### 2026-04-15 Phase E-7 꼬띠 소싱 추천봇 세션
+
+| 작업 | 커밋 | 내용 |
+|------|------|------|
+| E-7 엔진 | ca993ee | sourcing-recommender.ts: DataLab→키워드검색량→경쟁분석→BlueOcean점수→Groq AI 인사이트 |
+| E-7 API | ca993ee | GET+POST /api/sourcing-recommend: 캐시+DB조회 / 스캔+Discord+DB저장 |
+| E-7 위젯 | ca993ee | SourcingRecommendWidget: 트렌드카테고리+AI요약+기회카드+도매꼽/도매매 바로가기 |
+| E-7 cron | ca993ee | daily cron에 소싱 추천 단계 추가 (매일 자동 스캔 + Discord 발송) |
+
+### E-7 꼬띠 소싱 추천봇 기능 상세
+```
+- DataLab API: 오늘 상승 중인 카테고리 TOP 3 추출
+- 카테고리 → 구체적 상품 키워드 확장 (안정적 검색량 구간 카테고리 + 트렌드 키워드)
+- 네이버 검색광고 API: 키워드별 월간 검색량 + 경쟁도 조회 (5개씩 배치)
+- 네이버 쇼핑 검색 API: 키워드별 평균가/경쟁상품수 분석
+- BlueOcean 점수 계산 (0~100): 검색량×경쟁도×가격대×결과수 종합
+- Groq AI: 종합 소싱 전략 + 키워드별 구체 팁 생성
+- Discord #kkotti-daily 채널로 TOP 5 기회 발송
+- DB 저장 (daily_recommendations, season_tag='sourcing')
+- 대시보드 위젯: scan now 버튼 + 기회카드 펼침/접기 + 도매꼽/도매매 바로 검색 링크
+```
+
 ### 2026-04-14 Phase D-3 경쟁 상품 모니터링 + D-5 탭 UX 개선 세션
 
 | 작업 | 커밋 | 내용 |
@@ -405,6 +431,9 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | DataLab API | `src/app/api/datalab/route.ts` |
 | DataLab 트렌드 위젯 | `src/components/dashboard/DataLabTrendWidget.tsx` |
 | 굿서비스 점수 | `src/lib/good-service.ts` |
+| 소싱 추천 엔진 | `src/lib/sourcing-recommender.ts` |
+| 소싱 추천 API | `src/app/api/sourcing-recommend/route.ts` |
+| 소싱 추천 위젯 | `src/components/dashboard/SourcingRecommendWidget.tsx` |
 | 굿서비스 API | `src/app/api/good-service/route.ts` |
 | 굿서비스 위젯 | `src/components/dashboard/GoodServiceWidget.tsx` |
 | 트렌드 분석 | `src/lib/trend-analyzer.ts` |
