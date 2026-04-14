@@ -12,6 +12,7 @@ import GoodServiceWidget from '@/components/dashboard/GoodServiceWidget';
 import ProfitabilityWidget from '@/components/dashboard/ProfitabilityWidget';
 import CompetitionMonitorWidget from '@/components/dashboard/CompetitionMonitorWidget';
 import DataLabTrendWidget from '@/components/dashboard/DataLabTrendWidget';
+import SourcingRecommendWidget from '@/components/dashboard/SourcingRecommendWidget';
 import Link from 'next/link';
 
 // ── KPI Card ──────────────────────────────────────────────────────────────
@@ -268,6 +269,9 @@ export default function DashboardPage() {
 
       {/* D-4: DataLab category trend chart */}
       <DataLabTrendWidget />
+
+      {/* E-7: Kkotti sourcing recommendation bot */}
+      <SourcingRecommendWidget />
 
       {/* D-2: Quick action shortcuts */}
       <div className="kk-card" style={{ overflow: 'hidden' }}>

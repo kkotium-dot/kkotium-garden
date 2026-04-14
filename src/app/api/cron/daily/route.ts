@@ -489,6 +489,23 @@ export async function GET(req: NextRequest) {
       results.competitionError = String(compErr);
     }
 
+    // ── E-7: Kkotti sourcing recommendation (daily trend scan) ───────────
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+      const srcRes = await fetch(`${baseUrl}/api/sourcing-recommend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discord: true }),
+      });
+      const srcData = await srcRes.json();
+      results.sourcingRecommend = {
+        sent: srcData.discordSent ?? false,
+        opportunities: srcData.opportunityCount ?? 0,
+      };
+    } catch (srcErr) {
+      results.sourcingRecommendError = String(srcErr);
+    }
+
     return NextResponse.json({
       ok:        true,
       timestamp: new Date().toISOString(),
