@@ -1517,8 +1517,8 @@ const handleGenerate = async () => {
                 };
                 const done = tabDone[tab.key] ?? false;
                 const isActive = activeTab === tab.key;
-                // D-5: Highlight tabs with missing required fields (basic, image)
-                const isMissing = !done && (tab.key === 'basic' || tab.key === 'image');
+                // D-5 improved: All incomplete tabs show red dot for consistency
+                const isMissing = !done;
                 return (
                 <button
                   key={tab.key}

@@ -478,6 +478,17 @@ export async function GET(req: NextRequest) {
       results.autoConfirmError = String(e);
     }
 
+    // ── D-3: Competition monitoring (daily scan) ─────────────────────────
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+      const compRes = await fetch(`${baseUrl}/api/competition`, { method: 'POST' });
+      const compData = await compRes.json();
+      results.competitionAlerts = compData.alertCount ?? 0;
+      results.competitionChecked = compData.totalChecked ?? 0;
+    } catch (compErr) {
+      results.competitionError = String(compErr);
+    }
+
     return NextResponse.json({
       ok:        true,
       timestamp: new Date().toISOString(),

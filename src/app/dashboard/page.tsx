@@ -10,6 +10,7 @@ import DailyPlanWidget from '@/components/dashboard/DailyPlanWidget';
 import EventTimeline from '@/components/dashboard/EventTimeline';
 import GoodServiceWidget from '@/components/dashboard/GoodServiceWidget';
 import ProfitabilityWidget from '@/components/dashboard/ProfitabilityWidget';
+import CompetitionMonitorWidget from '@/components/dashboard/CompetitionMonitorWidget';
 import Link from 'next/link';
 
 // ── KPI Card ──────────────────────────────────────────────────────────────
@@ -260,6 +261,9 @@ export default function DashboardPage() {
 
       {/* C-12: Market trend widget — full width (product-level data needs space) */}
       <MarketTrendWidget products={products} productsLoading={productsLoading} />
+
+      {/* D-3: Competition monitoring */}
+      <CompetitionMonitorWidget />
 
       {/* D-2: Quick action shortcuts */}
       <div className="kk-card" style={{ overflow: 'hidden' }}>
