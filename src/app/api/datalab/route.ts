@@ -62,15 +62,30 @@ export async function GET(request: NextRequest) {
         trends,
       };
     } else {
-      // Category trends (default: all 10 top categories)
+      // Category trends — DataLab allows max 3 categories per request
+      // Split into batches of 3 and merge results
       const categories = DEFAULT_CATEGORIES;
-      const trends = await getShoppingCategoryTrend(
-        categories,
-        { startDate: fmt(startDate), endDate: fmt(endDate), timeUnit },
-      );
+      const allTrends: Array<{ title: string; data: Array<{ period: string; ratio: number }> }> = [];
+
+      for (let i = 0; i < categories.length; i += 3) {
+        const batch = categories.slice(i, i + 3);
+        try {
+          const batchResult = await getShoppingCategoryTrend(
+            batch,
+            { startDate: fmt(startDate), endDate: fmt(endDate), timeUnit },
+          );
+          allTrends.push(...batchResult);
+        } catch {
+          // Skip failed batch, continue with others
+        }
+        // Rate limit between batches
+        if (i + 3 < categories.length) {
+          await new Promise(r => setTimeout(r, 200));
+        }
+      }
 
       // Sort by latest ratio desc to find trending categories
-      const ranked = trends.map(t => {
+      const ranked = allTrends.map(t => {
         const data = t.data ?? [];
         const latest = data[data.length - 1]?.ratio ?? 0;
         const prev = data.length >= 2 ? data[data.length - 2]?.ratio ?? 0 : latest;
