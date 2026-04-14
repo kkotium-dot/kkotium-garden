@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-14 (Sprint 4 C-11 완료 — Phase C 전체 완료)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: eb36391
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ 전체 완료 (Sprint 1~4 전체 완료)**
+> 최종 업데이트: 2026-04-14 (Phase D-1 완료 — 상품명 품질 체크)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: c8c05ba
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ 전체 완료 | Phase D 진행 중 (D-1 완료)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 최신 커밋: eb36391
 
@@ -93,7 +93,7 @@
 ### Phase D: 중기 개선 (다음 작업)
 | Task | 내용 | 상태 | 비용 |
 |------|------|------|------|
-| D-1 | 상품명 품질 체크 (50자 제한, 금지키워드 감지, 실시간 경고) | ⬜ 대기 | 무료 |
+| D-1 | 상품명 품질 체크 (50자 제한, 금지키워드 감지, 실시간 경고) | ✅ 완료 | 무료 |
 | D-2 | 대시보드 위젯 레이아웃 정리 (GoodService + Profitability + MarketTrend 최적 배치) | ⬜ 대기 | 무료 |
 | D-3 | 경쟁 상품 모니터링 (카테고리 상위 키워드 패턴, 가격/리뷰 변화 알림) | ⬜ 대기 | 무료 |
 | D-4 | Naver DataLab API 직접 통합 (카테고리별 실시간 트렌드 차트) | ⬜ 대기 | 무료 |
@@ -305,6 +305,15 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | C-11 Tab Logic | activeTab state, conditional rendering per tab |
 | 백업 | page.backup.pre-c11.tsx 보존 |
 
+### 2026-04-14 Phase D-1 상품명 품질 체크 세션
+
+| 작업 | 커밋 | 내용 |
+|------|------|------|
+| D-1 라이브러리 | c8c05ba | product-name-checker.ts: 13개 검증룰, 0~100점 점수, S~D 등급, highlight 지원 |
+| D-1 씨앗심기 | c8c05ba | 실시간 글자수 카운터 + 등급 뱃지 + 상위 3건 이슈 인라인 표시 |
+| D-1 검색조련사 | c8c05ba | 인라인 편집 패널 네이버 상품명 품질 경고 (상위 2건) |
+| D-1 스토어명 | c8c05ba | store-settings API에서 storeName 자동 로딩 → 셀러명 감지 활성화 |
+
 ### C-11 씨앗 심기 2-Panel Split 기능 상세
 ```
 - 좌측 60%: 6개 탭으로 기존 RSection/DSection 재배치
@@ -342,6 +351,7 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | 카테고리 속성 | `src/lib/category-attributes.ts` |
 | 꿀통지수 | `src/lib/honey-score.ts` |
 | SEO 점수 | `src/lib/seo-calculator.ts` |
+| 상품명 품질체커 | `src/lib/product-name-checker.ts` |
 | 굿서비스 점수 | `src/lib/good-service.ts` |
 | 굿서비스 API | `src/app/api/good-service/route.ts` |
 | 굿서비스 위젯 | `src/components/dashboard/GoodServiceWidget.tsx` |
