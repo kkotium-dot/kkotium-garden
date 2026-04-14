@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
+import { checkProductName, getGradeColor, getSeverityColor } from '@/lib/product-name-checker';
 import { formatSearchVolume, getCompetitionColor, type KeywordStat } from '@/lib/naver/keyword-api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -379,6 +380,23 @@ function SeoEditPanel({
           </label>
           <input value={title} onChange={e => setTitle(e.target.value)} placeholder="검색 노출용 상품명 (25~35자 권장)"
             style={inp({ borderColor: title.length >= 25 && title.length <= 40 ? '#22C55E' : '#F8DCE5' })} />
+          {/* D-1: Name quality check */}
+          {title.length >= 5 && (() => {
+            const nq = checkProductName(title, { keywords: keywords.split(',').filter(k => k.trim()) });
+            return nq.issues.length > 0 ? (
+              <div style={{ marginTop: 4 }}>
+                {nq.issues.slice(0, 2).map((issue, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 4, fontSize: 11, color: getSeverityColor(issue.severity), marginTop: 2 }}>
+                    <AlertTriangle size={11} style={{ flexShrink: 0, marginTop: 1 }} />
+                    <span>{issue.message}</span>
+                  </div>
+                ))}
+                {nq.issues.length > 2 && (
+                  <span style={{ fontSize: 10, color: '#B0A0A8', marginLeft: 16 }}>+{nq.issues.length - 2}\uAC74 \uCD94\uAC00</span>
+                )}
+              </div>
+            ) : null;
+          })()}
         </div>
 
         {/* 키워드 — full width */}

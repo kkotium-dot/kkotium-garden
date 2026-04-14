@@ -5,8 +5,9 @@ import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx';
 import {
   Tag, Truck, Wrench, Star, Bell, Clipboard, CheckCircle, XCircle, Settings,
-  Package, Image as ImageIcon, Search, Gift, Layers,
+  Package, Image as ImageIcon, Search, Gift, Layers, AlertTriangle, Info, ShieldAlert,
 } from 'lucide-react';
+import { checkProductName, getGradeColor, getSeverityColor, type NameQualityResult } from '@/lib/product-name-checker';
 import {
   NAVER_CATEGORIES_FULL,
   type NaverCategoryEntry,
@@ -301,6 +302,8 @@ function NewProductPageInner() {
   const [pendingAlternatives, setPendingAlternatives] = useState<any[]>([]);
   // Store settings — free shipping threshold from /settings/store
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(30000);
+  // D-1: Store name for product name checker (detects seller name in title)
+  const [storeName, setStoreName] = useState<string | undefined>(undefined);
   // C3: SKU duplicate check state
   const [skuStatus, setSkuStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const skuCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -519,6 +522,16 @@ function NewProductPageInner() {
     mainImage, description,
     categoryId: getCategoryId(d1, d2, d3, d4),
   }), [productName, brand, aiKeywords, mainImage, description, d1, d2, d3, d4]);
+
+  // D-1: Product name quality check (real-time)
+  const nameQuality: NameQualityResult = useMemo(() => checkProductName(
+    productName,
+    {
+      storeName: storeName || undefined,
+      brandName: brand || undefined,
+      keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
+    }
+  ), [productName, brand, aiKeywords, storeName]);
 
   // Prefill from crawler pipeline (?prefill=base64)
   useEffect(() => {
@@ -761,7 +774,7 @@ function NewProductPageInner() {
       .then(d => setShippingTemplates(d.templates || d.data || [])).catch(() => {});
     // Load store settings for free shipping threshold
     fetch('/api/store-settings').then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.success && d.settings?.freeShippingThreshold) setFreeShippingThreshold(d.settings.freeShippingThreshold); })
+      .then(d => { if (d?.success && d.settings) { if (d.settings.freeShippingThreshold) setFreeShippingThreshold(d.settings.freeShippingThreshold); if (d.settings.store_name) setStoreName(d.settings.store_name); } })
       .catch(() => {});
   }, []);
 
@@ -1694,14 +1707,52 @@ const handleGenerate = async () => {
                     </button>
                   )}
                 </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-xs font-medium ${productName.length >= 25 && productName.length <= 50 ? 'text-green-600' : 'text-gray-400'}`}>
-                    {productName.length}/100자 {productName.length >= 25 && productName.length <= 50 ? '최적' : '(25~50자 권장)'}
-                  </span>
-                  {categoryId && (
-                    <span className="text-xs text-green-600">
-                      카테고리 선택됨
+                <div className="mt-1.5 space-y-1">
+                  {/* D-1: Character count + grade badge */}
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium ${nameQuality.isOptimalLength ? 'text-green-600' : productName.length > 50 ? 'text-amber-600' : 'text-gray-400'}`}>
+                      {productName.length}/100자 {nameQuality.isOptimalLength ? '최적' : '(25~50자 권장)'}
                     </span>
+                    {productName.length >= 5 && (
+                      <span
+                        className="text-xs font-bold px-1.5 py-0.5 rounded"
+                        style={{
+                          color: '#fff',
+                          background: getGradeColor(nameQuality.grade),
+                          fontSize: 10,
+                        }}
+                      >
+                        {nameQuality.grade}등급
+                      </span>
+                    )}
+                    {categoryId && (
+                      <span className="text-xs text-green-600">
+                        카테고리 선택됨
+                      </span>
+                    )}
+                  </div>
+
+                  {/* D-1: Quality issues inline — show top 3 */}
+                  {productName.length >= 5 && nameQuality.issues.length > 0 && (
+                    <div className="space-y-0.5">
+                      {nameQuality.issues.slice(0, 3).map((issue, i) => (
+                        <div key={i} className="flex items-start gap-1.5 text-xs" style={{ color: getSeverityColor(issue.severity) }}>
+                          {issue.severity === 'error' ? (
+                            <ShieldAlert size={12} className="mt-0.5 flex-shrink-0" />
+                          ) : issue.severity === 'warning' ? (
+                            <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
+                          ) : (
+                            <Info size={12} className="mt-0.5 flex-shrink-0" />
+                          )}
+                          <span>{issue.message}</span>
+                        </div>
+                      ))}
+                      {nameQuality.issues.length > 3 && (
+                        <span className="text-xs text-gray-400 ml-5">
+                          +{nameQuality.issues.length - 3}건 추가 개선 포인트
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </Field>
