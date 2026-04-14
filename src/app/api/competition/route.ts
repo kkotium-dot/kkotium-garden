@@ -40,9 +40,9 @@ export async function GET() {
 
     const results = products.map(p => {
       const stored = snapshotStore.get(p.id);
-      const kw = p.keywords as string | null;
-      const kwArr = kw ? kw.split(',').map(k => k.trim()).filter(Boolean) : [];
-      const keyword = kwArr[0] ?? p.naver_title ?? p.name;
+      const kw = p.keywords;
+      const kwArr = Array.isArray(kw) ? kw : (typeof kw === 'string' && kw ? kw.split(',').map(k => k.trim()).filter(Boolean) : []);
+      const keyword = String(kwArr[0] ?? '') || p.naver_title || p.name;
       return {
         productId: p.id,
         productName: p.naver_title ?? p.name,
@@ -91,9 +91,9 @@ export async function POST(request: NextRequest) {
     const errors: string[] = [];
 
     for (const product of products) {
-      const kw = product.keywords as string | null;
-      const kwArr = kw ? kw.split(',').map(k => k.trim()).filter(Boolean) : [];
-      const keyword = kwArr[0] ?? product.naver_title ?? product.name;
+      const kw = product.keywords;
+      const kwArr = Array.isArray(kw) ? kw : (typeof kw === 'string' && kw ? kw.split(',').map(k => k.trim()).filter(Boolean) : []);
+      const keyword = String(kwArr[0] ?? '') || product.naver_title || product.name;
 
       if (!keyword) continue;
 
