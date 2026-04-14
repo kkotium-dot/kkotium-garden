@@ -1,9 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-14 (Phase D-1, D-2, D-3, D-5 완료)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: f02ae2e
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ 전체 완료 | Phase D 진행 중 (D-1, D-2, D-3, D-5 완료)**
+> 최종 업데이트: 2026-04-14 (Phase D 전체 완료)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: 8eece6d
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
-> 최신 커밋: f02ae2e
+> 최신 커밋: 8eece6d
 
 ---
 
@@ -96,7 +96,7 @@
 | D-1 | 상품명 품질 체크 (50자 제한, 금지키워드 감지, 실시간 경고) | ✅ 완료 | 무료 |
 | D-2 | 대시보드 위젯 레이아웃 정리 (2열 그리드 + 빠른 작업 바로가기) | ✅ 완료 | 무료 |
 | D-3 | 경쟁 상품 모니터링 (카테고리 상위 키워드 패턴, 가격/리뷰 변화 알림) | ✅ 완료 | 무료 |
-| D-4 | Naver DataLab API 직접 통합 (카테고리별 실시간 트렌드 차트) | ⬜ 대기 | 무료 |
+| D-4 | Naver DataLab API 직접 통합 (카테고리별 실시간 트렌드 차트) | ✅ 완료 | 무료 |
 | D-5 | 씨앗 심기 탭 UX 추가 개선 (탭 완성도 뱃지, 필수탭 경고) | ✅ 완료 | 무료 |
 
 ### 꽃졔님 직접 처리
@@ -314,6 +314,25 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | D-1 검색조련사 | c8c05ba | 인라인 편집 패널 네이버 상품명 품질 경고 (상위 2건) |
 | D-1 스토어명 | c8c05ba | store-settings API에서 storeName 자동 로딩 → 셀러명 감지 활성화 |
 
+### 2026-04-14 Phase D-4 DataLab API 직접 통합 세션
+
+| 작업 | 커밋 | 내용 |
+|------|------|------|
+| D-4 API | 8eece6d | /api/datalab: GET period=7/30/90, 카테고리 10개 3개씩 배치 조회 |
+| D-4 위젯 | f40c765 | DataLabTrendWidget: 스파크라인 차트 + 기간 선택기 + 상승/하락 배지 |
+| D-4 대시보드 | f40c765 | 대시보드에 DataLabTrendWidget 추가 |
+| D-4 배치 수정 | 8eece6d | DataLab API 최대 3개 카테고리 제한 대응 (4번 배치 호출) |
+
+### D-4 DataLab 트렌드 기능 상세
+```
+- 네이버 DataLab Shopping Insight API 직접 호출 (Perplexity 대체)
+- 10개 카테고리 트렌드 데이터 (3개씩 배치 호출, API 제한 대응)
+- 7일/30일/90일 기간 선택기 (자동 timeUnit 조정)
+- 스파크라인 SVG 미니 차트 (카테고리별 추세선)
+- 상승/하락 카테고리 배지 (초록/빨간)
+- 카테고리별 순위 표시 (latestRatio 기준)
+- 5분 캐시 TTL
+```
 ### 2026-04-14 Phase D-3 경쟁 상품 모니터링 + D-5 탭 UX 개선 세션
 
 | 작업 | 커밋 | 내용 |
@@ -382,6 +401,8 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | 경쟁 모니터 | `src/lib/competition-monitor.ts` |
 | 경쟁 모니터 API | `src/app/api/competition/route.ts` |
 | 경쟁 모니터 위젯 | `src/components/dashboard/CompetitionMonitorWidget.tsx` |
+| DataLab API | `src/app/api/datalab/route.ts` |
+| DataLab 트렌드 위젯 | `src/components/dashboard/DataLabTrendWidget.tsx` |
 | 굿서비스 점수 | `src/lib/good-service.ts` |
 | 굿서비스 API | `src/app/api/good-service/route.ts` |
 | 굿서비스 위젯 | `src/components/dashboard/GoodServiceWidget.tsx` |

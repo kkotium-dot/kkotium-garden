@@ -1,6 +1,6 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-04-14 (Phase D 진행 중 — D-1, D-2, D-3, D-5 완료)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ 전체 완료 | Phase D 진행 중 (D-1, D-2, D-3, D-5 완료)**
+> 최종 업데이트: 2026-04-14 (Phase D 전체 완료)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
 
 ---
@@ -82,7 +82,7 @@
 | D-1 | ✅ | 상품명 품질 체크 | 13개 검증룰 (50자 제한, 판매조건 금지어 25개, 수식어 17개, 참조문구, 특수문자, 단어반복, 셀러명, 브랜드위치, 키워드포함, 괄호짝, 앞15자 키워드, 조사과다), S~D 등급, 씨앗심기+검색조련사 적용, 스토어명 자동로딩 |
 | D-2 | ✅ | 대시보드 위젯 레이아웃 정리 | GoodService+Profitability 2열 그리드, MarketTrend 전폭, 빠른 작업 바로가기 4개 (씨앗심기/검색조련사/주문관리/꿘통사낥터) |
 | D-3 | ✅ | 경쟁 상품 모니터링 | competition-monitor.ts 스냅샷/변화감지, /api/competition GET+POST, CompetitionMonitorWidget 대시보드 위젯, 가격위치바+경쟁상품+변동률, daily cron 자동스캠, Discord PRICE_CHANGE 알림 |
-| D-4 | ⬜ | Naver DataLab API 직접 통합 | Perplexity 트렌드 대체, 카테고리별 실시간 트렌드 차트, 이미 ID 발급 완료 (F7Hga62gDOYxZ3KRtLTL) |
+| D-4 | ✅ | Naver DataLab API 직접 통합 | /api/datalab GET period=7/30/90, 10개 카테고리 3개씩 배치 호출, DataLabTrendWidget 스파크라인 차트+기간선택기+상승/하락 배지, Perplexity 대체 완료 |
 | D-5 | ✅ | 씨앗 심기 탭 UX 추가 개선 | 6개 탭별 완성도 동적 판단 (basic: 카테고리+상품명+판매가, image: 대표이미지, option: 옵션없음=완료, shipping: 템플릿연결, seo: 키워드+원산지, benefit: 기본값=완료), 초록점/빨간점+연분홍배경 실시간 반응 |
 
 ### 장기 로드맵 (매출 성장 후)
