@@ -39,21 +39,23 @@
 
 ---
 
-## AI API 키 현황 (2026-04-13 기준)
+## AI API 키 현황 (2026-04-14 기준)
 
 | 서비스 | 환경변수명 | 상태 | 비고 |
 |--------|-----------|------|------|
-| Gemini | GEMINI_API_KEY | 일일 quota 소진 중 | 한국시간 오전 9시 리셋 |
-| Gemini | GEMINI_API_KEY_2 | 일일 quota 소진 중 | 각각 다른 구글 계정 |
-| Gemini | GEMINI_API_KEY_3 | 일일 quota 소진 중 | 무료: 하루 1,500회/계정 |
-| **Groq** | **GROQ_API_KEY** | **정상 작동 ✅** | **무료 14,400회/일, llama-3.1-8b-instant** |
+| **Groq** | **GROQ_API_KEY** | **정상 작동 ✅** | **1순위, 무료 14,400회/일** |
+| **Groq** | **GROQ_API_KEY_2** | **정상 작동 ✅** | **round-robin, 합계 28,800회/일** |
+| Gemini | GEMINI_API_KEY | 429 quota 초과 | 같은 프로젝트 quota 공유 문제 |
+| Gemini | GEMINI_API_KEY_2 | 429 quota 초과 | 다른 Google 계정/프로젝트에서 발급 필요 |
+| Gemini | GEMINI_API_KEY_3 | 429 quota 초과 | 키 유효하지만 무료 quota 소진 |
+| xAI Grok | XAI_API_KEY | 크레딧 미배정 | console.x.ai에서 크레딧 구매 필요 |
 | Perplexity | PERPLEXITY_API_KEY | Pro 만료 (401) | 비활성 |
 
-**AI 우선순위**: Gemini(3키 round-robin) → Groq(무료 fallback) → Perplexity(만료)
+**AI 우선순위**: Groq(2키 round-robin) → xAI Grok → Gemini(3키) → Anthropic → Perplexity
 
-**⚠️ 중요**: 2026-04-13 채팅에서 Gemini 키 3개 + Groq 키 1개가 노출됨.
-Gemini 키는 quota 리셋 후 Google AI Studio에서 새 프로젝트 키로 교체 권장.
-Groq 키도 교체 권장: `https://console.groq.com/keys`
+**Gemini 429 원인**: 3개 키가 같은 Google 프로젝트에서 생성되어 quota 공유.
+각 키를 서로 다른 Google 계정에서 만들면 독립 quota 확보 가능.
+현재 Groq 2개 키로 충분하므로 Gemini는 후순위.
 
 ---
 
