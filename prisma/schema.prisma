@@ -172,6 +172,7 @@ model Product {
   aeo_generated_at        DateTime?
   seo_hook_text           String?
   golden_keyword_score    Int?
+  return_care_enabled     Boolean           @default(false) @map("return_care_enabled")
   orderItems              OrderItem[]
   supplier                Supplier          @relation(fields: [supplierId], references: [id])
   user                    User              @relation(fields: [userId], references: [id])

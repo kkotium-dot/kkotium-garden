@@ -134,6 +134,7 @@ export async function GET(request: NextRequest) {
         shippingFee: true,
         shipping_fee_type: true,
         shipping_template_id: true,
+        return_care_enabled: true,
         keywords: true,
         tags: true,
         supplier: {
@@ -250,6 +251,7 @@ export async function POST(request: NextRequest) {
         supplier_product_code: data.supplier_product_code ? String(data.supplier_product_code) : null,
         instant_discount: data.instant_discount != null ? data.instant_discount : null,
         importer_name: data.importer_name ? String(data.importer_name) : null,
+        return_care_enabled: data.return_care_enabled === true,
         supplierId,
         userId,
       },

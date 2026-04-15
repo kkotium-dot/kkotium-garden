@@ -26,6 +26,10 @@ export interface HoneyScoreInput {
   shipFee?: number;
   // A-6: keyword monthly search volume for competition auto-detection
   keywordMonthlyVolume?: number; // total monthly searches for primary keyword
+  // E-4: Return Care enabled
+  returnCareEnabled?: boolean;
+  // E-2C: Review reward configured optimally
+  reviewRewardOptimal?: boolean;
 }
 
 export interface HoneyScoreResult {
@@ -171,12 +175,16 @@ function calcCompetitionScore(level: 'low' | 'medium' | 'high'): number {
 // ── Bonus score (10%) ─────────────────────────────────────────────────────────
 function calcBonusScore(input: HoneyScoreInput): number {
   let score = 0;
-  if (input.hasDiscountSet) score += 40;
+  if (input.hasDiscountSet) score += 30;
   const reviews = input.reviewCount ?? 0;
-  if (reviews >= 100)     score += 60;
-  else if (reviews >= 50) score += 45;
-  else if (reviews >= 20) score += 30;
-  else if (reviews >= 5)  score += 15;
+  if (reviews >= 100)     score += 40;
+  else if (reviews >= 50) score += 30;
+  else if (reviews >= 20) score += 20;
+  else if (reviews >= 5)  score += 10;
+  // E-4: Return Care bonus (+15 from 100)
+  if (input.returnCareEnabled) score += 15;
+  // E-2C: Review reward bonus (+10 from 100)
+  if (input.reviewRewardOptimal) score += 10;
   return clamp(score);
 }
 
@@ -358,6 +366,8 @@ export function calcHoneyScore(input: HoneyScoreInput): HoneyScoreResult {
   if ((input.tags?.length ?? 0) < 10)            warnings.push(`태그 ${input.tags?.length ?? 0}/10개 — 10개 꽉 채우기 권장`);
   if (!input.hasMainImage)                        warnings.push('대표이미지 미등록 — 클릭률에 직접 영향');
   if (input.hasDiscountSet)                       strengths.push('즉시할인 설정 — 네이버 가격비교 특가 필터 노출 + 전환율 향상');
+  if (input.returnCareEnabled)                    strengths.push('반품안심케어 가입 — 매출 평균 +13.6% 효과 (한양대 연구)');
+  if (input.reviewRewardOptimal)                  strengths.push('리뷰 적립금 최적 설정 — 리뷰 작성률 20~25% 목표');
 
   // A-6: add competition level context to strengths/warnings
   if (resolvedCompetitionLevel === 'low') {

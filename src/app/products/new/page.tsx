@@ -60,6 +60,7 @@ import DetailPageBuilder, { type DetailBlock, blocksToHtml } from '@/components/
 import { PlatformPicker, SupplierPicker } from '@/components/ui/PlatformSupplierPicker';
 import MarginAdvisorPanel from '@/components/products/MarginAdvisorPanel';
 import { calcUploadReadiness, getReadinessColor, READINESS_GRADE_STYLE } from '@/lib/upload-readiness';
+import { getReturnCareFee, RETURN_CARE_STATS } from '@/lib/return-care-fees';
 
 interface Platform { id: string; name: string; code: string; }
 interface Supplier {
@@ -300,6 +301,8 @@ function NewProductPageInner() {
   const [photoReviewPoint, setPhotoReviewPoint] = useState('500');
   const [installmentMonths, setInstallmentMonths] = useState('0');
   const [reviewVisible, setReviewVisible] = useState('Y');
+  // E-4: Return Care toggle
+  const [returnCareEnabled, setReturnCareEnabled] = useState(false);
   // Alternative products (collected pre-save for registration page)
   const [pendingAlternatives, setPendingAlternatives] = useState<any[]>([]);
   // Store settings — free shipping threshold from /settings/store
@@ -737,6 +740,7 @@ function NewProductPageInner() {
         if (p.sku)           setSellerCode(p.sku);
         // Restore image fields
         if (p.detail_image_url)   setDetailImageUrl(p.detail_image_url);
+        if (p.return_care_enabled)   setReturnCareEnabled(p.return_care_enabled);
         if (p.images && Array.isArray(p.images) && p.images.length > 0)
           setAdditionalImages(p.images.join(','));
         // Restore SEO fields
@@ -1267,6 +1271,7 @@ const handleGenerate = async () => {
             mainImage: mainImage || undefined,
             description: description || undefined,
             shipping_template_id: selectedTemplateId || undefined,
+            return_care_enabled: returnCareEnabled,
           }),
         }).catch(() => null),
       ]);
@@ -2785,7 +2790,43 @@ const handleGenerate = async () => {
                 </Field>
               </DSection>
 
-              {/* Alternative product management — for out-of-stock replacement */}
+              {/* E-4: Return Care toggle */}
+              <DSection icon={<ShieldAlert size={14}/>} title="반품안심케어" summary={returnCareEnabled ? `가입 · ${getReturnCareFee(d1).label}` : '미가입'}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A', margin: '0 0 2px' }}>반품안심케어 가입</p>
+                    <p style={{ fontSize: 11, color: '#888', margin: 0 }}>구매자 무료 교환/반품 — 신뢰도 상승, 전환율 향상</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReturnCareEnabled(v => !v)}
+                    style={{
+                      width: 48, height: 26, borderRadius: 13, padding: 2,
+                      background: returnCareEnabled ? '#16a34a' : '#d1d5db',
+                      border: 'none', cursor: 'pointer', transition: 'background 0.2s',
+                      display: 'flex', alignItems: 'center',
+                    }}
+                  >
+                    <div style={{
+                      width: 22, height: 22, borderRadius: '50%', background: '#fff',
+                      transition: 'transform 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      transform: returnCareEnabled ? 'translateX(22px)' : 'translateX(0)',
+                    }} />
+                  </button>
+                </div>
+                {returnCareEnabled && (
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '10px 14px', marginTop: 4 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: '#dcfce7', color: '#15803d' }}>건당 {getReturnCareFee(d1).feePerOrder.toLocaleString()}원</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: '#dbeafe', color: '#1d4ed8' }}>매출 평균 +{RETURN_CARE_STATS.avgRevenueIncrease}%</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: '#fef9c3', color: '#a16207' }}>보상금 상한 8,000원</span>
+                    </div>
+                    <p style={{ fontSize: 11, color: '#166534', margin: 0, lineHeight: 1.6 }}>
+                      {getReturnCareFee(d1).label} 기준 (2025.08.01 개편). {RETURN_CARE_STATS.nDeliveryFreeNote}.
+                    </p>
+                  </div>
+                )}
+              </DSection>
               <AlternativeProductPanel
                 productName={productName || undefined}
                 suppliers={suppliers}
@@ -2809,6 +2850,32 @@ const handleGenerate = async () => {
                     <input className={inp} type="number" value={installmentMonths} onChange={e => setInstallmentMonths(e.target.value)} min={0} max={24} />
                   </Field>
                 </div>
+                {/* E-2C: Review reward optimal guide */}
+                {(() => {
+                  const txtP = Number(textReviewPoint) || 0;
+                  const phoP = Number(photoReviewPoint) || 0;
+                  const isOptimal = txtP >= 500 && phoP >= 1000;
+                  return (
+                    <div style={{
+                      marginTop: 8, padding: '10px 14px', borderRadius: 12,
+                      background: isOptimal ? '#f0fdf4' : '#fffbeb',
+                      border: `1px solid ${isOptimal ? '#bbf7d0' : '#fde68a'}`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                        <Star size={13} style={{ color: isOptimal ? '#16a34a' : '#d97706' }} />
+                        <span style={{ fontSize: 12, fontWeight: 700, color: isOptimal ? '#15803d' : '#92400e' }}>
+                          {isOptimal ? '적립금 최적 설정 완료' : '적립금 권장값 안내'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#555', lineHeight: 1.7 }}>
+                        <p style={{ margin: '0 0 2px' }}>텍스트 리뷰: <strong>500~1,000원</strong> 권장 (현재 {txtP.toLocaleString()}원)</p>
+                        <p style={{ margin: '0 0 2px' }}>포토/동영상 리뷰: <strong>1,000~2,000원</strong> 권장 (현재 {phoP.toLocaleString()}원)</p>
+                        <p style={{ margin: '0 0 2px', color: '#888' }}>베스트 리뷰: 3,000~5,000원 (수동 지급)</p>
+                        <p style={{ margin: '4px 0 0', fontSize: 10, color: '#aaa' }}>목표 리뷰 작성률: 20~25% (구매확정 대비)</p>
+                      </div>
+                    </div>
+                  );
+                })()}
               </DSection>
 
               {/* D6 구매평/알림 */}

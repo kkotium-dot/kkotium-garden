@@ -12,6 +12,7 @@ import {
   ChevronDown, ChevronUp, RotateCcw, RefreshCw,
 } from 'lucide-react';
 import { getNaverFeeRate, getNaverFeeRateByD1, getNaverFeeBreakdown, getMarginProfile } from '@/lib/naver-fee-rates-2026';
+import { getReturnCareFee } from '@/lib/return-care-fees';
 
 // ----------------------------------------------------------------
 // Types
@@ -40,6 +41,8 @@ interface LocalState {
   adCostRate: number;     // ad cost as % of sale price (CPC estimate)
   targetMargin: number;
   feeRateOverride: number | null;
+  returnCareFee: number;  // E-4: per-order return care fee
+  reviewRewardCost: number; // E-2C: avg review reward per order
 }
 
 interface CostBreakdown {
@@ -51,7 +54,9 @@ interface CostBreakdown {
   shippingCost: number;
   packagingCost: number;
   returnRisk: number;
-  adCost: number;         // estimated ad cost (CPC)
+  adCost: number;
+  returnCareFee: number;  // E-4
+  reviewRewardCost: number; // E-2C
   totalCost: number;
   profit: number;
   marginRate: number;
@@ -66,11 +71,13 @@ const DEFAULTS: LocalState = {
   salePrice: 0,
   instantDiscount: 0,
   shippingFee: 0,
-  packagingCost: 0,       // packaging default: 0 won
+  packagingCost: 0,
   returnRiskRate: 1,
-  adCostRate: 0,           // ad cost default: 0% (opt-in)
+  adCostRate: 0,
   targetMargin: 35,
   feeRateOverride: null,
+  returnCareFee: 0,
+  reviewRewardCost: 0,
 };
 
 const MARGIN_LEVELS = [
@@ -310,9 +317,9 @@ export function MarginCalculator({
       const found = mod.NAVER_CATEGORIES_FULL.find((c: any) => c.code === extCatCode);
       if (found?.d1) {
         setSelectedD1(found.d1);
-        // Auto-apply recommended margin from category profile
         const profile = getMarginProfile(found.d1);
-        setLocal(s => ({ ...s, targetMargin: profile.recommended }));
+        const rcFee = getReturnCareFee(found.d1);
+        setLocal(s => ({ ...s, targetMargin: profile.recommended, returnCareFee: rcFee.feePerOrder }));
       }
     }).catch(() => {});
   }, [extCatCode]);
@@ -343,7 +350,8 @@ export function MarginCalculator({
         naverFee: 0, naverFeeRate: effectiveFeeRate,
         orderMgmtFee: 0, salesFee: 0,
         shippingCost: 0, packagingCost: 0,
-        returnRisk: 0, adCost: 0, totalCost: 0, profit: 0, marginRate: 0, roi: 0,
+        returnRisk: 0, adCost: 0, returnCareFee: 0, reviewRewardCost: 0,
+        totalCost: 0, profit: 0, marginRate: 0, roi: 0,
       };
     }
 
@@ -352,7 +360,9 @@ export function MarginCalculator({
     const salesFeeAmt = Math.round(effectivePrice * feeBreakdown.salesFeeRate);
     const returnRisk = Math.round(effectivePrice * (local.returnRiskRate / 100));
     const adCost = Math.round(effectivePrice * (local.adCostRate / 100));
-    const totalCost = local.supplierPrice + naverFee + local.shippingFee + local.packagingCost + returnRisk + adCost;
+    const rcFee = local.returnCareFee;
+    const rrCost = local.reviewRewardCost;
+    const totalCost = local.supplierPrice + naverFee + local.shippingFee + local.packagingCost + returnRisk + adCost + rcFee + rrCost;
     const profit = effectivePrice - totalCost;
     const marginRate = effectivePrice > 0 ? (profit / effectivePrice) * 100 : 0;
     const roi = (local.supplierPrice + local.shippingFee) > 0
@@ -368,6 +378,8 @@ export function MarginCalculator({
       packagingCost: local.packagingCost,
       returnRisk,
       adCost,
+      returnCareFee: rcFee,
+      reviewRewardCost: rrCost,
       totalCost,
       profit,
       marginRate: Math.round(marginRate * 10) / 10,
@@ -381,7 +393,7 @@ export function MarginCalculator({
     const riskRate = local.returnRiskRate / 100;
     const denom = 1 - effectiveFeeRate - riskRate - (local.targetMargin / 100);
     if (denom <= 0) return 0;
-    const raw = (local.supplierPrice + local.shippingFee + local.packagingCost) / denom;
+    const raw = (local.supplierPrice + local.shippingFee + local.packagingCost + local.returnCareFee + local.reviewRewardCost) / denom;
     return Math.ceil(raw / 100) * 100;
   }, [local, effectiveFeeRate]);
 
@@ -431,9 +443,9 @@ export function MarginCalculator({
       setSelectedCategory(cat.fullPath);
       setSelectedCategoryCode(cat.code);
       setSelectedD1(cat.d1);
-      // Auto-apply recommended margin for this category
       const profile = getMarginProfile(cat.d1);
-      updateLocal({ targetMargin: profile.recommended });
+      const rcFee = getReturnCareFee(cat.d1);
+      updateLocal({ targetMargin: profile.recommended, returnCareFee: rcFee.feePerOrder });
       if (!isIndependent) onCategoryChange?.({ code: cat.code, fullPath: cat.fullPath });
     } else {
       setSelectedCategory('');
@@ -635,6 +647,18 @@ export function MarginCalculator({
                   step={0.5}
                 />
                 <NumField
+                  label="반품안심케어 (건당)"
+                  value={local.returnCareFee}
+                  onChange={(v) => updateLocal({ returnCareFee: v })}
+                  small
+                />
+                <NumField
+                  label="리뷰 적립금 (건당)"
+                  value={local.reviewRewardCost}
+                  onChange={(v) => updateLocal({ reviewRewardCost: v })}
+                  small
+                />
+                <NumField
                   label={`수수료율 (${local.feeRateOverride !== null ? '수동' : '자동'})`}
                   value={displayFeeRate}
                   onChange={(v) => updateLocal({ feeRateOverride: v })}
@@ -691,6 +715,18 @@ export function MarginCalculator({
                   <div className="flex justify-between">
                     <span>광고비 ({local.adCostRate}%)</span>
                     <span>{breakdown.adCost.toLocaleString()}원</span>
+                  </div>
+                )}
+                {local.returnCareFee > 0 && (
+                  <div className="flex justify-between">
+                    <span>반품안심케어 (건당)</span>
+                    <span>{breakdown.returnCareFee.toLocaleString()}원</span>
+                  </div>
+                )}
+                {local.reviewRewardCost > 0 && (
+                  <div className="flex justify-between">
+                    <span>리뷰 적립금 (건당 평균)</span>
+                    <span>{breakdown.reviewRewardCost.toLocaleString()}원</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold pt-1 border-t border-current/10">
