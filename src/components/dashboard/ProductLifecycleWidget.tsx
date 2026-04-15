@@ -34,11 +34,11 @@ interface LifecycleResult {
 }
 
 const STAGE_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ElementType }> = {
-  NEW:       { label: 'New',       color: '#2563eb', bg: '#dbeafe', icon: Sprout },
-  GROWING:   { label: 'Growing',   color: '#16a34a', bg: '#dcfce7', icon: TrendingUp },
-  PEAK:      { label: 'Peak',      color: '#9333ea', bg: '#f3e8ff', icon: Star },
-  DECLINING: { label: 'Declining', color: '#b45309', bg: '#fef3c7', icon: TrendingDown },
-  ZOMBIE:    { label: 'Zombie',    color: '#b91c1c', bg: '#fee2e2', icon: Skull },
+  NEW:       { label: '신상품',    color: '#2563eb', bg: '#dbeafe', icon: Sprout },
+  GROWING:   { label: '성장중',    color: '#16a34a', bg: '#dcfce7', icon: TrendingUp },
+  PEAK:      { label: '최고실적',  color: '#9333ea', bg: '#f3e8ff', icon: Star },
+  DECLINING: { label: '하락세',    color: '#b45309', bg: '#fef3c7', icon: TrendingDown },
+  ZOMBIE:    { label: '좀비',      color: '#b91c1c', bg: '#fee2e2', icon: Skull },
 };
 
 function ZombieRiskBar({ risk }: { risk: number }) {
@@ -88,8 +88,8 @@ export default function ProductLifecycleWidget() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Activity size={18} style={{ color: '#e62310' }} />
-          <span style={{ fontWeight: 700, fontSize: 15 }}>product lifecycle</span>
-          {total > 0 && <span style={{ fontSize: 11, color: '#9ca3af' }}>{total} products</span>}
+          <span style={{ fontWeight: 700, fontSize: 15 }}>상품 수명 주기</span>
+          {total > 0 && <span style={{ fontSize: 11, color: '#9ca3af' }}>{total}개 상품</span>}
         </div>
         <button onClick={fetchData} disabled={loading} style={{
           padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: 6,
@@ -142,7 +142,7 @@ export default function ProductLifecycleWidget() {
         <div style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
             <AlertTriangle size={12} style={{ color: data.avgZombieRisk >= 50 ? '#ef4444' : '#f59e0b' }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>avg zombie risk</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>평균 좀비 위험도</span>
           </div>
           <ZombieRiskBar risk={data.avgZombieRisk} />
         </div>
@@ -158,7 +158,7 @@ export default function ProductLifecycleWidget() {
         }}
       >
         {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        {expanded ? 'collapse' : `show all ${total} products`}
+        {expanded ? '접기' : `전체 ${total}개 상품 보기`}
       </button>
 
       {/* Expanded product list */}
@@ -174,9 +174,9 @@ export default function ProductLifecycleWidget() {
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', marginBottom: 2 }}>{p.name}</div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 11, color: '#9ca3af' }}>
                   <span>{p.sku}</span>
-                  <span>{p.ageDays}d old</span>
-                  <span>{p.salesCount} sold</span>
-                  {p.daysSinceLastSale !== null && <span>last sale {p.daysSinceLastSale}d ago</span>}
+                  <span>{p.ageDays}일차</span>
+                  <span>{p.salesCount}건 판매</span>
+                  {p.daysSinceLastSale !== null && <span>마지막 판매 {p.daysSinceLastSale}일 전</span>}
                 </div>
               </div>
               <div style={{
@@ -198,8 +198,8 @@ export default function ProductLifecycleWidget() {
       })}
 
       {/* Loading / empty state */}
-      {loading && !data && <div style={{ textAlign: 'center', padding: 20, color: '#9ca3af', fontSize: 13 }}>loading...</div>}
-      {!loading && total === 0 && <div style={{ textAlign: 'center', padding: 20, color: '#9ca3af', fontSize: 13 }}>no products found</div>}
+      {loading && !data && <div style={{ textAlign: 'center', padding: 20, color: '#9ca3af', fontSize: 13 }}>로딩 중...</div>}
+      {!loading && total === 0 && <div style={{ textAlign: 'center', padding: 20, color: '#9ca3af', fontSize: 13 }}>상품이 없습니다</div>}
     </div>
   );
 }

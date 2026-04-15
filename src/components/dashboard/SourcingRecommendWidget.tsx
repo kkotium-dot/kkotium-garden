@@ -117,7 +117,7 @@ export default function SourcingRecommendWidget() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Sparkles size={18} style={{ color: '#FF6B8A' }} />
           <span style={{ fontWeight: 700, fontSize: 15 }}>
-            sourcing recommendation
+            소싱 추천
           </span>
           {result?.trendSource && (
             <span style={{ fontSize: 11, color: '#9ca3af', background: '#f3f4f6', borderRadius: 4, padding: '2px 6px' }}>
@@ -137,7 +137,7 @@ export default function SourcingRecommendWidget() {
           }}
         >
           <RefreshCw size={13} className={scanning ? 'animate-spin' : ''} />
-          {scanning ? 'scanning...' : 'scan now'}
+          {scanning ? '분석 중...' : '스캔 시작'}
         </button>
       </div>
 
@@ -170,14 +170,14 @@ export default function SourcingRecommendWidget() {
       {/* Loading state */}
       {loading && !result && (
         <div style={{ textAlign: 'center', padding: 20, color: '#9ca3af', fontSize: 13 }}>
-          loading...
+          로딩 중...
         </div>
       )}
 
       {/* Empty state */}
       {result && result.opportunities.length === 0 && !loading && (
         <div style={{ textAlign: 'center', padding: 20, color: '#9ca3af', fontSize: 13 }}>
-          {result.error ?? 'no opportunities found. try scanning.'}
+          {result.error ?? '추천 기회가 없습니다. 스캔을 시도해보세요.'}
         </div>
       )}
 
@@ -262,25 +262,25 @@ export default function SourcingRecommendWidget() {
               <div style={{ padding: '0 12px 12px', borderTop: '1px solid #f3f4f6' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10, fontSize: 12 }}>
                   <div>
-                    <span style={{ color: '#9ca3af' }}>price range</span>
+                    <span style={{ color: '#9ca3af' }}>가격대</span>
                     <div style={{ fontWeight: 600, color: '#374151' }}>
                       {opp.minPrice.toLocaleString()} ~ {opp.maxPrice.toLocaleString()}
                     </div>
                   </div>
                   <div>
-                    <span style={{ color: '#9ca3af' }}>est. supply</span>
+                    <span style={{ color: '#9ca3af' }}>예상 공급가</span>
                     <div style={{ fontWeight: 600, color: '#374151' }}>
                       ~{opp.suggestedSupplyPrice.toLocaleString()}
                     </div>
                   </div>
                   <div>
-                    <span style={{ color: '#9ca3af' }}>search results</span>
+                    <span style={{ color: '#9ca3af' }}>검색 결과수</span>
                     <div style={{ fontWeight: 600, color: '#374151' }}>
                       {opp.totalResults.toLocaleString()}
                     </div>
                   </div>
                   <div>
-                    <span style={{ color: '#9ca3af' }}>competition</span>
+                    <span style={{ color: '#9ca3af' }}>경쟁 강도</span>
                     <div style={{ fontWeight: 600, color: '#374151' }}>
                       {opp.competitionLevel}
                     </div>
@@ -320,7 +320,7 @@ export default function SourcingRecommendWidget() {
                     }}
                   >
                     <Search size={11} />
-                    domeggook search
+                    도매꼽 검색
                   </a>
                   <a
                     href={`https://domeme.domeggook.com/main/index.php?log=search&keyword=${encodeURIComponent(opp.keyword)}`}
@@ -334,7 +334,7 @@ export default function SourcingRecommendWidget() {
                     }}
                   >
                     <Search size={11} />
-                    domemae search
+                    도매매 검색
                   </a>
                 </div>
 
@@ -344,9 +344,9 @@ export default function SourcingRecommendWidget() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
                       <ShoppingBag size={12} style={{ color: '#228f18' }} />
                       <span style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>
-                        wholesale match ({opp.wholesalePlatforms?.join('+') ?? ''})
+                        도매 매칭 ({opp.wholesalePlatforms?.join('+') ?? ''})
                       </span>
-                      <span style={{ fontSize: 10, color: '#9ca3af' }}>min qty=1 only</span>
+                      <span style={{ fontSize: 10, color: '#9ca3af' }}>최소수량 1개</span>
                     </div>
                     {opp.wholesaleMatches.map((w, wi) => (
                       <a

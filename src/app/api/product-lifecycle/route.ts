@@ -78,18 +78,18 @@ function getSuggestion(stage: LifecycleStage, zombieRisk: number, ageDays: numbe
   switch (stage) {
     case 'ZOMBIE':
       return salesCount === 0
-        ? 'No sales since registration. Consider SEO optimization or removal.'
-        : 'Sales stopped. Refresh keywords, lower price, or replace with new product.';
+        ? '등록 후 판매 없음. SEO 최적화 또는 상품 교체를 고려하세요.'
+        : '판매 중단됨. 키워드 갱신, 가격 조정 또는 새 상품으로 교체하세요.';
     case 'DECLINING':
-      return 'Sales declining. Update product name/keywords or run a promotion.';
+      return '판매 감소 중. 상품명/키워드 수정 또는 프로모션을 검토하세요.';
     case 'NEW':
       return ageDays < 3
-        ? 'Just registered. Monitor search ranking for 3-7 days.'
-        : 'Building exposure. Optimize SEO tags and check keyword ranking.';
+        ? '방금 등록됨. 3~7일간 검색 순위를 모니터링하세요.'
+        : '노출 구축 중. SEO 태그를 최적화하고 키워드 순위를 확인하세요.';
     case 'GROWING':
-      return 'Healthy growth. Maintain current strategy and add reviews.';
+      return '건강한 성장 중. 현재 전략을 유지하고 리뷰를 축적하세요.';
     case 'PEAK':
-      return 'Top performer! Consider bundle deals or related product cross-sell.';
+      return '최고 실적! 묶음 판매 또는 관련 상품 교차판매를 고려하세요.';
     default:
       return '';
   }

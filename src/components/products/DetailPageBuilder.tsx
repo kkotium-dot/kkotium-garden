@@ -31,12 +31,12 @@ interface BlockMeta {
 }
 
 const BLOCK_TYPES: BlockMeta[] = [
-  { type: 'hook',    label: 'Hook text',     icon: Sparkles,       defaultData: { text: '' } },
-  { type: 'image',   label: 'Image',          icon: Image,          defaultData: { url: '', alt: '' } },
-  { type: 'text',    label: 'Text block',     icon: Type,           defaultData: { content: '' } },
+  { type: 'hook',    label: '홍보문구',    icon: Sparkles,       defaultData: { text: '' } },
+  { type: 'image',   label: '이미지',      icon: Image,          defaultData: { url: '', alt: '' } },
+  { type: 'text',    label: '텍스트',      icon: Type,           defaultData: { content: '' } },
   { type: 'qna',     label: 'Q&A',            icon: MessageSquare,  defaultData: { q: '', a: '' } },
-  { type: 'specs',   label: 'Spec table',     icon: List,           defaultData: { rows: [{ label: '', value: '' }] } },
-  { type: 'divider', label: 'Divider',        icon: Minus,          defaultData: {} },
+  { type: 'specs',   label: '사양 테이블',  icon: List,           defaultData: { rows: [{ label: '', value: '' }] } },
+  { type: 'divider', label: '구분선',      icon: Minus,          defaultData: {} },
 ];
 
 // ── Unique ID generator ──────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ function HookEditor({ data, onChange }: { data: Record<string, unknown>; onChang
   return (
     <textarea
       className={`${inp} h-16 resize-none`}
-      placeholder="Hook text — appears first (e.g. free shipping today, premium quality)"
+      placeholder="홍보문구 — 가장 위에 표시됨 (예: 당일배송 | 프리미엄 품질)"
       value={String(data.text ?? '')}
       onChange={e => onChange({ ...data, text: e.target.value })}
     />
@@ -74,13 +74,13 @@ function ImageBlockEditor({ data, onChange }: { data: Record<string, unknown>; o
     <div className="space-y-2">
       <input
         className={inp}
-        placeholder="Image URL (Supabase/external)"
+        placeholder="이미지 URL (Supabase/외부 링크)"
         value={String(data.url ?? '')}
         onChange={e => onChange({ ...data, url: e.target.value })}
       />
       <input
         className={inp}
-        placeholder="Alt text (SEO) — product name recommended"
+        placeholder="대체 텍스트 (SEO) — 상품명 권장"
         value={String(data.alt ?? '')}
         onChange={e => onChange({ ...data, alt: e.target.value })}
       />
@@ -102,7 +102,7 @@ function TextBlockEditor({ data, onChange }: { data: Record<string, unknown>; on
   return (
     <textarea
       className={`${inp} h-24 resize-none`}
-      placeholder="Text description — product features, materials, sizing, care instructions..."
+      placeholder="상품 설명 — 특징, 소재, 사이즈, 관리방법 등..."
       value={String(data.content ?? '')}
       onChange={e => onChange({ ...data, content: e.target.value })}
     />
@@ -114,13 +114,13 @@ function QnAEditor({ data, onChange }: { data: Record<string, unknown>; onChange
     <div className="space-y-2">
       <input
         className={inp}
-        placeholder="Q. Question"
+        placeholder="Q. 질문"
         value={String(data.q ?? '')}
         onChange={e => onChange({ ...data, q: e.target.value })}
       />
       <textarea
         className={`${inp} h-16 resize-none`}
-        placeholder="A. Answer"
+        placeholder="A. 답변"
         value={String(data.a ?? '')}
         onChange={e => onChange({ ...data, a: e.target.value })}
       />
@@ -147,15 +147,15 @@ function SpecsEditor({ data, onChange }: { data: Record<string, unknown>; onChan
     <div className="space-y-2">
       {rows.map((row, i) => (
         <div key={i} className="flex gap-2 items-center">
-          <input className={`${inp} flex-1`} placeholder="Label" value={row.label} onChange={e => updateRow(i, 'label', e.target.value)} />
-          <input className={`${inp} flex-1`} placeholder="Value" value={row.value} onChange={e => updateRow(i, 'value', e.target.value)} />
+          <input className={`${inp} flex-1`} placeholder="항목명" value={row.label} onChange={e => updateRow(i, 'label', e.target.value)} />
+          <input className={`${inp} flex-1`} placeholder="값" value={row.value} onChange={e => updateRow(i, 'value', e.target.value)} />
           <button onClick={() => removeRow(i)} className="text-gray-400 hover:text-red-500" title="Delete row">
             <Trash2 size={14} />
           </button>
         </div>
       ))}
       <button onClick={addRow} className="text-xs text-pink-600 hover:text-pink-800 flex items-center gap-1">
-        <Plus size={12} /> add row
+        <Plus size={12} /> 행 추가
       </button>
     </div>
   );
@@ -401,14 +401,14 @@ export default function DetailPageBuilder({ blocks, onChange, productName, aeoCo
             }}
           >
             {showPreview ? <EyeOff size={12} /> : <Eye size={12} />}
-            {showPreview ? 'close' : 'preview'}
+            {showPreview ? '닫기' : '미리보기'}
           </button>
         </div>
       </div>
 
       {/* Block count */}
       <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}>
-        {blocks.length} block{blocks.length !== 1 ? 's' : ''} {blocks.length === 0 && '— add blocks using buttons above'}
+        {blocks.length} 개 블록 {blocks.length === 0 && '— 위 버튼으로 블록을 추가하세요'}
       </div>
 
       {/* Block list */}
@@ -434,7 +434,7 @@ export default function DetailPageBuilder({ blocks, onChange, productName, aeoCo
           }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>
               <Eye size={13} style={{ display: 'inline', marginRight: 4, color: '#228f18' }} />
-              Preview (Naver detail page)
+              미리보기 (네이버 상세페이지)
             </span>
             <button
               onClick={copyHtml}
@@ -447,7 +447,7 @@ export default function DetailPageBuilder({ blocks, onChange, productName, aeoCo
               }}
             >
               {copied ? <Check size={11} /> : <Copy size={11} />}
-              {copied ? 'copied' : 'copy HTML'}
+              {copied ? '복사 완료' : 'HTML 복사'}
             </button>
           </div>
           <div style={{
@@ -459,7 +459,7 @@ export default function DetailPageBuilder({ blocks, onChange, productName, aeoCo
               <div dangerouslySetInnerHTML={{ __html: htmlOutput }} />
             ) : (
               <div style={{ textAlign: 'center', color: '#d1d5db', fontSize: 13, padding: 40 }}>
-                no content yet
+                아직 콘텐츠가 없습니다
               </div>
             )}
           </div>
