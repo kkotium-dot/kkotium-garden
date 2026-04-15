@@ -802,9 +802,9 @@ export function MarginCalculator({
       {local.supplierPrice > 0 && local.salePrice > 0 && (() => {
         const scenarios = [
           { label: '광고 안 함', rate: 0,    hint: '현재 상태' },
-          { label: '소극적 광고', rate: 5,   hint: '클릭당 ~300원' },
-          { label: '적극적 광고', rate: 10,  hint: '클릭당 ~600원' },
-          { label: '경쟁 카테고리', rate: 15, hint: '클릭당 ~900원+' },
+          { label: '소규모 광고', rate: 5,   hint: '판매가의 5% 광고비' },
+          { label: '적극적 광고', rate: 10,  hint: '판매가의 10% 광고비' },
+          { label: '대규모 광고', rate: 15, hint: '판매가의 15% 광고비' },
         ];
         return (
           <div style={{ background: '#f8f9ff', border: '1.5px solid #e0e7ff', borderRadius: 14, padding: '14px 16px', marginBottom: 4 }}>
@@ -831,7 +831,7 @@ export function MarginCalculator({
                 const bg     = isSafe ? '#f0fdf4' : isWarn ? '#fffbeb' : '#fef2f2';
                 const border = isSafe ? '#bbf7d0' : isWarn ? '#fde68a' : '#fecaca';
                 const color  = isSafe ? '#15803d' : isWarn ? '#b45309' : '#b91c1c';
-                const icon   = isSafe ? '\u2705' : isWarn ? '\u26a0\ufe0f' : '\u274c';
+                const statusLabel = isSafe ? '안전' : isWarn ? '주의' : '위험';
                 const isActive = local.adCostRate === sc.rate;
                 return (
                   <button
@@ -849,17 +849,17 @@ export function MarginCalculator({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>{sc.label}</span>
-                      <span style={{ fontSize: 13 }}>{icon}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: isSafe ? '#dcfce7' : isWarn ? '#fef9c3' : '#fecaca', color }}>{statusLabel}</span>
                     </div>
                     <p style={{ fontSize: 18, fontWeight: 900, color, margin: '0 0 1px' }}>
                       {adjMargin.toFixed(1)}%
                     </p>
                     <p style={{ fontSize: 10, color: '#6b7280', margin: 0 }}>
-                      {adjProfit >= 0 ? '+' : ''}{adjProfit.toLocaleString()}\uc6d0
+                      {adjProfit >= 0 ? '+' : ''}{adjProfit.toLocaleString()}원
                     </p>
                     {sc.rate > 0 && (
                       <p style={{ fontSize: 9, color: '#9ca3af', margin: '3px 0 0' }}>
-                        {sc.hint} · {sc.rate}% = {adCostAmt.toLocaleString()}\uc6d0
+                        {sc.hint} ({adCostAmt.toLocaleString()}원)
                       </p>
                     )}
                   </button>
@@ -867,7 +867,7 @@ export function MarginCalculator({
               })}
             </div>
             <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 8, textAlign: 'center' }}>
-              \u2705 20%\uc774\uc0c1 \uc548\uc804 &nbsp; \u26a0\ufe0f 5~20% \uc8fc\uc758 &nbsp; \u274c 5% \ubbf8\ub9cc \uc704\ud5d8 &mdash; \uc120\ud0dd\ud558\uba74 \uad11\uace0\ube44 \uc2ac\ub77c\uc774\ub354\uc5d0 \uc790\ub3d9 \uc801\uc6a9
+              {'20%+ 안전 | 5~20% 주의 | 5% 미만 위험 — 선택 시 위의 광고비(%)에 자동 적용'}
             </p>
           </div>
         );
