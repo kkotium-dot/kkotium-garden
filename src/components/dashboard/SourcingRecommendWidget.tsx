@@ -12,6 +12,16 @@ import {
   BarChart3, Target,
 } from 'lucide-react';
 
+interface WholesaleProduct {
+  platform: string;
+  productNo: string;
+  name: string;
+  supplyPrice: number;
+  minOrderQty: number;
+  estimatedMargin: number;
+  url: string;
+}
+
 interface SourcingOpportunity {
   keyword: string;
   category: string;
@@ -28,6 +38,8 @@ interface SourcingOpportunity {
   reason: string;
   topSellers: string[];
   aiInsight?: string;
+  wholesaleMatches?: WholesaleProduct[];
+  wholesalePlatforms?: string[];
 }
 
 interface SourcingResult {
@@ -325,6 +337,55 @@ export default function SourcingRecommendWidget() {
                     domemae search
                   </a>
                 </div>
+
+                {/* E-8: Wholesale matched products */}
+                {opp.wholesaleMatches && opp.wholesaleMatches.length > 0 && (
+                  <div style={{ marginTop: 12, borderTop: '1px solid #f3f4f6', paddingTop: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+                      <ShoppingBag size={12} style={{ color: '#228f18' }} />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>
+                        wholesale match ({opp.wholesalePlatforms?.join('+') ?? ''})
+                      </span>
+                      <span style={{ fontSize: 10, color: '#9ca3af' }}>min qty=1 only</span>
+                    </div>
+                    {opp.wholesaleMatches.map((w, wi) => (
+                      <a
+                        key={wi}
+                        href={w.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '6px 8px', borderRadius: 6, marginBottom: 4,
+                          background: '#f9fafb', textDecoration: 'none', border: '1px solid #e5e7eb',
+                        }}
+                      >
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, padding: '1px 4px', borderRadius: 3, marginRight: 4,
+                              background: w.platform === 'DMK' ? '#dcfce7' : '#fee2e2',
+                              color: w.platform === 'DMK' ? '#15803d' : '#b91c1c',
+                            }}>{w.platform}</span>
+                            {w.name.slice(0, 35)}{w.name.length > 35 ? '...' : ''}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>
+                            {w.supplyPrice.toLocaleString()}
+                          </span>
+                          <span style={{
+                            fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 4,
+                            background: w.estimatedMargin >= 30 ? '#dcfce7' : '#fef3c7',
+                            color: w.estimatedMargin >= 30 ? '#15803d' : '#b45309',
+                          }}>
+                            {w.estimatedMargin}%
+                          </span>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

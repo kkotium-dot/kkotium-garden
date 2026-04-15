@@ -7,6 +7,7 @@
 import { fetchNaverTrends, type TrendResult } from '@/lib/trend-analyzer';
 import { searchShopping, analyzeCompetition, type CompetitionAnalysis } from '@/lib/naver/shopping-search';
 import { fetchKeywordStats, type KeywordStat } from '@/lib/naver/keyword-api';
+import { matchWholesaleProducts, type WholesaleProduct } from '@/lib/wholesale-matcher';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,9 @@ export interface SourcingOpportunity {
   reason: string;
   topSellers: string[];
   aiInsight?: string;
+  // E-8: Wholesale matches from DMK/DMM
+  wholesaleMatches?: WholesaleProduct[];
+  wholesalePlatforms?: string[];
 }
 
 export interface SourcingRecommendResult {
@@ -315,6 +319,21 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
       if (tip) opp.aiInsight = tip;
     }
 
+    // Step 6 (E-8): Search wholesale platforms for actual products
+    // Match top 5 keywords against Domeggook (min qty=1 filter) + Domemae
+    const top5Opps = opportunities.slice(0, 5);
+    for (const opp of top5Opps) {
+      try {
+        const wholesaleResult = await matchWholesaleProducts(opp.keyword, opp.avgPrice);
+        opp.wholesaleMatches = wholesaleResult.matches;
+        opp.wholesalePlatforms = wholesaleResult.searchedPlatforms;
+      } catch {
+        // Non-fatal: opportunity still valid without wholesale matches
+      }
+      // Rate limit between wholesale searches
+      await new Promise(r => setTimeout(r, 500));
+    }
+
     return {
       date: today,
       trendSource: trends.source,
@@ -354,6 +373,13 @@ export function buildSourcingRecommendEmbed(result: SourcingRecommendResult): Re
         `${marginColor} est.margin **${opp.estimatedMargin}%** | supply ~${opp.suggestedSupplyPrice.toLocaleString()}`,
         opp.topSellers.length > 0 ? `top: ${opp.topSellers.join(' / ')}` : null,
         opp.aiInsight ? `> ${opp.aiInsight}` : null,
+        // E-8: Wholesale matches inline
+        opp.wholesaleMatches && opp.wholesaleMatches.length > 0
+          ? `**wholesale (${opp.wholesalePlatforms?.join('+') ?? ''}):**\n` + opp.wholesaleMatches.slice(0, 2).map(w => {
+              const mIcon = w.estimatedMargin >= 30 ? ':green_heart:' : ':yellow_heart:';
+              return `  [${w.platform}] ${w.supplyPrice.toLocaleString()} ${mIcon}${w.estimatedMargin}% | [view](${w.url})`;
+            }).join('\n')
+          : null,
       ].filter(Boolean).join('\n'),
       inline: false,
     };
