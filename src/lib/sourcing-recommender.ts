@@ -197,7 +197,7 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
     const trends: TrendResult = await fetchNaverTrends();
     const trendCategories = trends.trendCategories.length > 0
       ? trends.trendCategories
-      : ['home_living']; // default for KKOTIUM
+      : ['가구/인테리어']; // default for KKOTIUM
 
     // Step 2: Expand categories to search keywords
     const candidateKeywords: string[] = [];

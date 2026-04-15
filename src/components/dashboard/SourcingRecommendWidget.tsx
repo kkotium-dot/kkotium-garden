@@ -121,7 +121,7 @@ export default function SourcingRecommendWidget() {
           </span>
           {result?.trendSource && (
             <span style={{ fontSize: 11, color: '#9ca3af', background: '#f3f4f6', borderRadius: 4, padding: '2px 6px' }}>
-              {result.trendSource}
+              {result.trendSource === 'fallback' ? '기본값' : result.trendSource === 'datalab' ? 'DataLab' : result.trendSource}
             </span>
           )}
         </div>
