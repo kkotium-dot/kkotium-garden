@@ -1,9 +1,13 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-15 (Phase E 진행 중 — E-7 완료)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: ca993ee
+> 최종 업데이트: 2026-04-16 (Phase E+ 계획 수립 완료, 꽃졔님 승인 대기)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: 52cd5a1
 > **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
-> 최신 커밋: c920ab5
+> 리서치 참고문서 (2026-04-16 세션):
+>   1. `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가`
+>   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
+>   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
+>   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
 ## 이 파일의 역할
 
 > **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스
@@ -18,7 +22,7 @@
 
 ---
 
-## 현재 앱 상태 (2026-04-14)
+## 현재 앱 상태 (2026-04-16)
 
 | 항목 | 현황 |
 |------|------|
@@ -30,15 +34,29 @@
 | TSC | 0 errors ✅ |
 | Vercel 배포 | ✅ https://kkotium-garden.vercel.app |
 | GitHub | https://github.com/kkotium-dot/kkotium-garden |
-| Phase A | 전체 완료 ✅ |
-| Phase B | 전체 완료 ✅ |
-| Phase C | 전체 완료 ✅ |
-| Phase D | 전체 완료 ✅ |
-| Phase E | 진행 중 (E-7 완료) |
+| Phase A~D | 전체 완료 ✅ |
+| Phase E | 진행 중 (E-7, E-1, E-3, E-8 완료) |
+| Phase E+ | 계획 수립 완료, 꽃졔님 승인 대기 |
+| 카카오 비즈니스 채널 | 꽃틔움 KKOTIUM (Public ID: `_xkfALG`) ✅ |
 
 ---
 
-## AI API 키 현황 (2026-04-14 기준)
+## 카카오 비즈니스 채널 정보 (2026-04-16 확인)
+
+```
+채널명: 꽃틔움 KKOTIUM
+검색용 ID: 꽃틔움
+채널 Public ID: _xkfALG
+채널 URL: http://pf.kakao.com/_xkfALG
+채팅 URL: http://pf.kakao.com/_xkfALG/chat
+카테고리: 쇼핑 > 생활용품
+상태: 공개, 검색 허용
+매장관리/톡스토어/톡체크아웃: 미연결
+```
+
+---
+
+## AI API 키 현황 (2026-04-16 기준)
 
 | 서비스 | 환경변수명 | 상태 | 비고 |
 |--------|-----------|------|------|
@@ -52,65 +70,58 @@
 
 **AI 우선순위**: Groq(2키 round-robin) → xAI Grok → Gemini(3키) → Anthropic → Perplexity
 
-**Gemini 429 원인**: 3개 키가 같은 Google 프로젝트에서 생성되어 quota 공유.
-각 키를 서로 다른 Google 계정에서 만들면 독립 quota 확보 가능.
-현재 Groq 2개 키로 충분하므로 Gemini는 후순위.
-
 ---
 
-## 완료된 작업 요약 (Phase A~D 전체 완료)
+## Phase E+ 전략 리서치 요약 (2026-04-16 세션)
 
-> 원칙: 무재고 1인셀러 + 무료 기능 최대 활용 + 검색 노출 직결 순서
-> 전략 근거: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
+### 핵심 발견사항 (4개 리포트 종합)
 
-### Sprint 1: 등록 품질 기반 (무료, 즉시 착수 가능)
-| Task | 내용 | 상태 | 비용 |
-|------|------|------|------|
-| C-6 | ✅ 완료 | 원산지코드 518건 자동완성 (naver-origin-codes.ts 로컬 상수) | 완료 | 무료 |
-| C-7 | ✅ 완료 | 카테고리 4,993건 검증 + 11개 D1 속성 매핑 | 완료 | 무료 |
-| C-8 | ✅ 완료 | calcAttributeCompleteness() 함수 (S/A/B/C/D 등급) | 완료 | 무료 |
+**리뷰 관리:**
+- 네이버 커머스 API에 리뷰 관련 API 없음 (GitHub Discussion #1582 공식 확인)
+- 리뷰 0→10→50 단계별 성장 로드맵: 초기 10개는 알림톡 없이 확보 가능
+- 리뷰 작성률 목표: 20~25% (구매확정 대비)
+- 한달사용 리뷰로 동일 주문에서 리뷰 2건 확보 가능 (2단계 수집 구조)
+- 네이버 자체 무료 리뷰 알림: 배송완료 3일 후 구매확정 요청 + 구매확정 시 리뷰 알림 자동 발송
 
-### Sprint 2: API 전환 (무료, 핵심 업그레이드)
-| Task | 내용 | 상태 | 비용 |
-|------|------|------|------|
-| C-1 | ✅ 완료 | 커머스 API 직접 상품 등록 (엑셀 대비 SEO 적합도 극대화) | 완료 | 무료 |
+**반품안심케어:**
+- 건당 50~650원 투자 → 매출 평균 +13.6% (한양대 연구)
+- 카테고리별 효과: 패션잡화 +58.3%, 가구/인테리어 +46.7%, 디지털/가전 +26.2%
+- 2025.8.1 수수료 개편: 보상금 상한 7,000→8,000원, 카테고리별 이용료 인상
+- N배송 연계 시 반품안심케어 수수료 네이버 지원
 
-### Sprint 3: AI 최적화 + 운영 모니터링 (무료)
-| Task | 내용 | 상태 | 비용 |
-|------|------|------|------|
-| C-2 | AEO 상세페이지 Q&A + FAQ 자동 생성 (Gemini/Groq) | ✅ 완료 | 무료 |
-| C-9 | 굿서비스 점수 대시보드 (등급 관리 + Discord 알림) | ✅ 완료 | 무료 |
+**카카오 비즈니스 채널:**
+- 2025.12.31 친구톡 종료 → 브랜드 메시지 전환 (단가 2.5~3배 인상)
+- 알림톡 건당 8원(카카오 공식) / 13원(솔라피)
+- 카나나 상담매니저: 모든 톡채널에서 완전 무료 (2025.9 정식 출시)
+- 챗봇 빌더: 일반 기능 무료, Event API만 건당 15원
+- 쉬운광고: 일일 100원부터, 신규 6만원 무료 쿠폰
+- 카카오 프로젝트 단골: 연 매출 10억 이하 소상공인 → 비즈월렛 30만원 지원
 
-### Sprint 4: 수익 최적화 + 확장
-| Task | 내용 | 상태 | 비용 |
-|------|------|------|------|
-| C-4 | 수익성 분석 대시보드 (유입경로별 수수료 + 순이익 시뮬레이터) | ✅ 완료 | 무료 |
-| C-10 | 배송 자동화 확장 (자동 발주확인 + 수량 클레임 대응) | ✅ 완료 | 무료 |
-| C-3 | 대량 등록 배치 파이프라인 (소싱보관함 10개 일괄) | ✅ 완료 | 무료 |
-| C-11 | 씨앗 심기 UX 2-Panel Split 구조 개편 | ✅ 완료 | 무료 |
+**알림톡 비용 결론:**
+- 완전 무료 지속 발송 불가능: 모든 서비스가 건당 과금
+- 솔라피 무료 플랜 = 플랫폼 0원 + 건당 13원 + 가입 시 300포인트(약 23건분)
+- m8 무료 플랜 없음 (최저 월 4,800원)
+- 네이버 내장 무료 기능으로 초기 리뷰 10개 확보 충분
+- 알림톡 도입 시점: 월 주문 50건 이상
 
-### Phase D: 중기 개선 (다음 작업)
-| Task | 내용 | 상태 | 비용 |
-|------|------|------|------|
-| D-1 | 상품명 품질 체크 (50자 제한, 금지키워드 감지, 실시간 경고) | ✅ 완료 | 무료 |
-| D-2 | 대시보드 위젯 레이아웃 정리 (2열 그리드 + 빠른 작업 바로가기) | ✅ 완료 | 무료 |
-| D-3 | 경쟁 상품 모니터링 (카테고리 상위 키워드 패턴, 가격/리뷰 변화 알림) | ✅ 완료 | 무료 |
-| D-4 | Naver DataLab API 직접 통합 (카테고리별 실시간 트렌드 차트) | ✅ 완료 | 무료 |
-| D-5 | 씨앗 심기 탭 UX 추가 개선 (탭 완성도 뱃지, 필수탭 경고) | ✅ 완료 | 무료 |
+**파워셀러 전술:**
+- 톡톡 자동응답 12시간 기준 강화 (2025.4)
+- AiTEMS 추천 ON → 횟수 제한 없이 개인화 노출, 전체 클릭 약 10%
+- 2026.2 쇼핑 AI 에이전트: 리뷰를 실시간 분석하여 상품 추천
+- 수수료 개편: 유입수수료 2% 폐지 → 판매수수료 2.73%, 자체 마케팅 유입 시 0.91%
 
-### Phase E: 다음 단계 확장 (진행 중)
-| Task | 내용 | 상태 | 비용 |
-|------|------|------|------|
-| E-7 | 꼬띠 소싱 추천봇 (DataLab 트렌드 + 키워드 검색량 + 경쟁분석 → BlueOcean 점수 → Discord 매일 발송 + 대시보드 위젯) | ✅ 완료 | 무료 |
-| E-1 | 상세페이지 템플릿 빌더 (6종 블록 HTML 에디터 + 실시간 미리보기 + AEO Q&A import + 씨앗심기 통합) | ✅ 완료 | 무료 |
-| E-3 | 상품 수명 주기 대시보드 (5단계 라이프사이클 + 좀비 리스크 바 + 판매속도 + 개선제안) | ✅ 완료 | 무료 |
-| E-8 | 도매 자동 매칭 (도매꾹 OpenAPI 최소수량1 필터 + 도매매 검색 + 마진계산 + Discord/대시보드 통합) | ✅ 완료 | 무료 |
+### E-13B 2단계 접근 전략 (확정)
+```
+1단계(지금 개발): UI만 구현
+  - settings/kakao/page.tsx에 솔라피 API Key/Secret/PFID 입력 필드
+  - 키 미입력 시 "솔라피 연동 후 사용 가능" 안내 표시
+  - 주문 관리 페이지 알림톡 버튼도 UI만 배치
+  - 실제 API 호출 코드는 키가 있을 때만 활성화
 
-### 꽃졔님 직접 처리
-| 항목 | 내용 |
-|------|------|
-| detail_image_url | 기존 8개 상품 씨앗 심기 편집 모드에서 직접 입력 |
-| API 키 교체 | Gemini 3개 새 키 발급 완료 (quota 공유 문제 있음), Groq 2개 정상 |
+2단계(매출 성장 후 활성화): 솔라피 가입 → 키 입력 → 즉시 작동
+  - 코드 추가 개발 없이 키만 넣으면 3단계 자동발송 가동
+  - 월 주문 50건+ 시점에 검토
+```
 
 ---
 
@@ -132,6 +143,7 @@
 12. useSearchParams() 사용 페이지 → 반드시 Suspense로 감싸기
 13. Next.js route 파일: GET/POST/PUT/DELETE/dynamic 외 export 금지
 14. PROGRESS.md + ROADMAP.md 항상 함께 업데이트
+15. 카카오 채널 정보 하드코딩 금지 → store_settings에서 읽기
 ```
 
 ### UI 작성 원칙 (2026-04-13 확정)
@@ -151,7 +163,7 @@
 
 ### 세션 관리
 ```
-- iterm-mcp list_sessions → launch_session (TTY 먼저 확인)
+- iterm-mcp list_all_sessions → 세션 확인 후 사용
 - Chrome MCP: tabs_context_mcp → navigate
 - heredoc 절대 금지 (터미널 행 유발)
 - dev 서버 재시작 필요 시 꽃졔님에게 요청
@@ -165,6 +177,7 @@
 - API 테스트 성공 후 반드시 브라우저 테스트로 재확인
 - Vercel 환경변수 변경 후 반드시 재배포 트리거 필요
   (git commit --allow-empty -m "chore: redeploy ..." && git push)
+- "진행해줘요" = end-to-end 완료 후 통합 브리핑 (중간 보고 없이)
 ```
 
 ---
@@ -180,6 +193,7 @@ DB:         Supabase PostgreSQL (doxfizicftgtqktmtftf)
 스토어:     꽃틔움 KKOTIUM (smartstore.naver.com/kkotium)
 GitHub:     https://github.com/kkotium-dot/kkotium-garden
 Vercel:     vercel.com/kkotjyes-projects/kkotium-garden
+카카오채널: 꽃틔움 KKOTIUM (pf.kakao.com/_xkfALG)
 ```
 
 ---
@@ -209,227 +223,53 @@ TEND:   정원 창고 (/products) ✅
         좀비 부활소 ✅
 ORDERS: 주문 관리 (/orders) ✅
 TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
+        카카오 채널 설정 (/settings/kakao) → E-13A에서 신규 추가 예정
+        인서트 카드 (/tools/insert-card) → E-13C에서 신규 추가 예정
 ```
 
 ---
 
 ## 4. 완료 이력
 
-### 2026-04-13 이번 세션 작업
-
-| 작업 | 내용 | 커밋 |
-|------|------|------|
-| 이모지 전면 제거 | 전체 src/ JSX 이모지 → Lucide React SVG (60+건) | afc3144 |
-| workflow 페이지 재작성 | 5단계 운영 가이드, Lucide 아이콘, 현행 용어 | 3e63830 |
-| 컴포넌트 이모지 제거 | ProductSort/Stats/Table/Filter/SourcedManager 등 | 9dd708b |
-| debug 엔드포인트 삭제 | src/app/api/debug/ 전체 제거 | 773ef10 |
-| cron Perplexity 분리 | trend-analyzer.ts fallback을 silent로 교체 | e595361 |
-| Groq AI fallback 추가 | llama-3.1-8b-instant, 무료 14,400회/일 | 8a16fe3 |
-| Groq 재배포 | GROQ_API_KEY Vercel 등록 후 재배포 트리거 | 94ebf42 |
-| 상태 라벨 정리 | 초안→임시저장, ACTIVE→판매 중, pending→네이버 등록 대기 | b8895aa |
-| 검색 조련사 v3 | SEO 전체 필드 인라인 직접 편집 패널 (저장 버튼 포함) | df5874d |
-
-### 검색 조련사 v3 인라인 편집 패널 기능
-```
-행 클릭 → 하단 패널 열림
-- 꼬띠 AI 최적화: 정석SEO / 감성타겟 / 틈새키워드 버튼 3개
-- SEO 필드 직접 편집:
-  네이버 상품명 (글자수 실시간 표시, 25~40자 권장)
-  키워드 (쉼표 구분, 칩 미리보기, 5~7개 권장)
-  상품 설명 텍스트영역 (80~200자)
-  브랜드 / 원산지 / 소재 / 색상 / 사이즈 / 세탁방법
-  SEO 태그 (최대 10개, 인라인 추가/삭제)
-- 전체 저장 버튼 → PATCH /api/products/{id} 한번에 저장
-- 키워드 월간 검색량 자동 표시
-```
-
-
-
-### 2026-04-14 Sprint 3 C-9 굿서비스 점수 대시보드 세션
+### 2026-04-15~16 Phase E + Phase E+ 계획 수립 세션
 
 | 작업 | 커밋 | 내용 |
 |------|------|------|
-| C-9 계산 라이브러리 | d91e2cc | good-service.ts: 3축 점수 계산 + 등급 시뮬레이터 |
-| C-9 API | d91e2cc | GET /api/good-service: 14일 주문 데이터 집계 → 점수 계산 |
-| C-9 대시보드 위젯 | d91e2cc | GoodServiceWidget: 3축 게이지 + 등급 뱃지 + 개선팁 + 등급 시뮬레이터 |
+| E-7 꼬띠 소싱 추천봇 | ca993ee | DataLab→키워드검색량→경쟁분석→BlueOcean→Groq AI→Discord+위젯 |
+| E-1 상세페이지 빌더 | c920ab5 | 6종 블록 HTML 에디터 + 미리보기 + AEO import + 씨앗심기 통합 |
+| E-3 수명 주기 대시보드 | a530ffb | 5단계 라이프사이클 + 좀비 리스크 + 판매속도 + 개선제안 |
+| E-8 도매 자동 매칭 | 7f71937 | 도매꾹 OpenAPI 최소수량1 필터 + 도매매 검색 + 마진계산 |
+| 한글화 | 93bd517, 52cd5a1 | E-7/E-1/E-3/E-8 위젯·빌더 영문→한글 전환 |
+| Phase E+ 리서치 | - | 4개 리포트 작성 + 종합 개선안 확정 (코드 아닌 전략 수립) |
 
-### C-9 굿서비스 점수 기능 상세
-```
-- 3축 평가: 주문이행(40%) + 배송품질(30%) + 고객만족(30%)
-- 등급 판정: 우수(90+) / 양호(75+) / 보통(60+) / 개선필요(40+) / 위험(0-39)
-- 등급 시뮬레이터: 씨앗~플래티넘 목표 대비 갭 계산 (매출+판매건수+굿서비스점수)
-- 14일 윈도우 데이터 기반 (네이버 기준 동일)
-- 개선 포인트 자동 생성 (24h 발주확인율, 배송 정시율, 문의 응답율 등)
-- API: GET /api/good-service → score + metrics + gradeSimulation + monthlySummary
-```
-
-### 2026-04-14 Sprint 3 C-2 + C-12 확장 세션
+### 2026-04-14 Phase D 완료 세션
 
 | 작업 | 커밋 | 내용 |
 |------|------|------|
-| C-2 AEO API | cdf3157 | POST/GET /api/products/[id]/aeo-generate, Gemini/Groq Q&A 5~8 + FAQ 3~5 |
-| C-2 product-builder | cdf3157 | buildDetailContent()에 H2/H3 구조화 Q&A/FAQ HTML 자동 삽입 |
-| C-2 검색 조련사 | cdf3157 | AEO Q&A 생성 버튼 인라인 패널에 추가 |
-| C-12 검색 조련사 | cdf3157 | CompetitionCell 경쟁 강도 뱃지 컬럼 (낮음/보통/높음/치열) |
-| C-12 씨앗 심기 | cdf3157 | MarketPriceHint 시장 평균가 비교 칩 |
-| C-12 대시보드 | cdf3157 | MarketTrendWidget 내 상품 시장 트렌드 + 꼬띠 인사이트 |
-| C-12 소싱 보관함 | cdf3157 | SourcedCompetitionBadge 경쟁 강도 + 평균가 |
-| MarketAnalysisCard | cdf3157 | 영어 라벨 전체 한글화 (경쟁 상품수/평균 가격/가격대/경쟁 낮음~치열) |
-| DB | migration | aeo_content JSONB + aeo_generated_at 컬럼 추가 |
-| Prisma | generate | Product 모델 aeo_content Json? + aeo_generated_at DateTime? |
+| C-9 굿서비스 점수 | d91e2cc | 3축 게이지 + 등급 시뮬레이터 + 개선팁 |
+| C-2+C-12 AEO+트렌드 | cdf3157 | Groq Q&A 생성 + 경쟁 뱃지 + 시장 분석 |
+| C-11 씨앗심기 2-Panel | - | 좌측 6탭 + 우측 38% sticky 고정패널 |
+| D-1 상품명 품질 체크 | c8c05ba | 13개 검증룰, S~D 등급 |
+| D-3 경쟁 모니터링 | f02ae2e | 스냅샷/변화감지/Discord 알림 |
+| D-4 DataLab API | 5a3d0fe, f40c765 | 스파크라인 차트+기간 선택기 |
+| D-2 대시보드 레이아웃 | 17480d0 | 2열 그리드 + 빠른 작업 바로가기 |
+| D-5 탭 UX 개선 | 252337b | 6개 탭별 완성도 뱃지 |
 
-### 2026-04-13 C-1 + C-12 세션
+### 2026-04-13 UI 원칙 + 검색조련사 v3 세션
 
 | 작업 | 커밋 | 내용 |
 |------|------|------|
-| C-1 Step 1~3 | 36d5d5f | product-builder.ts + register API + NaverRegisterModal |
-| C-1 Step 4~5 | b361139 | Supabase 버킷 통일 + Cloudinary 비활성화 |
-| C-12 모듈 | dd0758f | shopping-search.ts + market-analysis API |
-| C-12 SEO+꼬띠 | c793a89 | AI SEO에 경쟁 데이터 주입 + 꼬띠 시장 트렌드 |
-| C-12 UI | 2a65bc2 | MarketAnalysisCard 정원 창고 사이드 패널 |
-| C-12 검증 | d72a9ec | Naver OpenAPI + Groq 키 작동 확인 완료 |
-
-### C-12 시장 분석 적용 현황
-- 검색 조련사 AI SEO: 경쟁 데이터(가격/경쟁강도) 프롬프트 주입 ✅
-- 꼬띠 AI 코멘트: 시장 트렌드 인사이트 컨텍스트 추가 ✅
-- 정원 창고 사이드 패널: MarketAnalysisCard (경쟁 뱃지 + AI 인사이트 + 키워드 칩) ✅
-- 시장 분석 API: GET /api/naver/market-analysis?q=keyword (1시간 캐시) ✅
-
-### C-12 전체 적용 완료 (2026-04-14)
-- 씨앗 심기: MarketPriceHint 판매가 아래 시장 평균 비교 칩 ✅
-- 소싱 보관함: SourcedCompetitionBadge 경쟁 강도 + 평균가 ✅
-- 대시보드: MarketTrendWidget 내 상품 시장 트렌드 위젯 ✅
-- 검색 조련사 테이블: CompetitionCell 경쟁 강도 컬럼 ✅
-
-
-### 2026-04-14 Sprint 4 C-11 씨앗 심기 2-Panel Split 세션
-
-| 작업 | 내용 |
-|------|------|
-| C-11 Tab Nav | 6개 탭 네비게이션 바 (기본정보/옵션/이미지/배송A&S/SEO원산지/혜택) |
-| C-11 2-Panel | 좌측 60% Tab + 우측 38% 고정 패널 (sticky, overflow scroll) |
-| C-11 Tab Icons | Lucide React: Package/Layers/ImageIcon/Truck/Search/Gift |
-| C-11 Tab Logic | activeTab state, conditional rendering per tab |
-| 백업 | page.backup.pre-c11.tsx 보존 |
-
-### 2026-04-14 Phase D-1 상품명 품질 체크 세션
-
-| 작업 | 커밋 | 내용 |
-|------|------|------|
-| D-1 라이브러리 | c8c05ba | product-name-checker.ts: 13개 검증룰, 0~100점 점수, S~D 등급, highlight 지원 |
-| D-1 씨앗심기 | c8c05ba | 실시간 글자수 카운터 + 등급 뱃지 + 상위 3건 이슈 인라인 표시 |
-| D-1 검색조련사 | c8c05ba | 인라인 편집 패널 네이버 상품명 품질 경고 (상위 2건) |
-| D-1 스토어명 | c8c05ba | store-settings API에서 storeName 자동 로딩 → 셀러명 감지 활성화 |
-
-### 2026-04-14 Phase D-4 DataLab API 직접 통합 세션
-
-| 작업 | 커밋 | 내용 |
-|------|------|------|
-| D-4 API | 5a3d0fe | /api/datalab: GET period=7/30/90, 카테고리 10개 3개씩 배치 조회 |
-| D-4 위젯 | f40c765 | DataLabTrendWidget: 스파크라인 차트 + 기간 선택기 + 상승/하락 배지 |
-| D-4 대시보드 | f40c765 | 대시보드에 DataLabTrendWidget 추가 |
-| D-4 배치 수정 | 5a3d0fe | DataLab API 최대 3개 카테고리 제한 대응 (4번 배치 호출) |
-
-### D-4 DataLab 트렌드 기능 상세
-```
-- 네이버 DataLab Shopping Insight API 직접 호출 (Perplexity 대체)
-- 10개 카테고리 트렌드 데이터 (3개씩 배치 호출, API 제한 대응)
-- 7일/30일/90일 기간 선택기 (자동 timeUnit 조정)
-- 스파크라인 SVG 미니 차트 (카테고리별 추세선)
-- 상승/하락 카테고리 배지 (초록/빨간)
-- 카테고리별 순위 표시 (latestRatio 기준)
-- 5분 캐시 TTL
-```
-### 2026-04-15 Phase E-7 꼬띠 소싱 추천봇 세션
-
-| 작업 | 커밋 | 내용 |
-|------|------|------|
-| E-7 엔진 | ca993ee | sourcing-recommender.ts: DataLab→키워드검색량→경쟁분석→BlueOcean점수→Groq AI 인사이트 |
-| E-7 API | ca993ee | GET+POST /api/sourcing-recommend: 캐시+DB조회 / 스캔+Discord+DB저장 |
-| E-7 위젯 | ca993ee | SourcingRecommendWidget: 트렌드카테고리+AI요약+기회카드+도매꼽/도매매 바로가기 |
-| E-7 cron | ca993ee | daily cron에 소싱 추천 단계 추가 (매일 자동 스캔 + Discord 발송) |
-
-### 2026-04-15 Phase E-1 상세페이지 템플릿 빌더 세션
-
-| 작업 | 커밋 | 내용 |
-|------|------|------|
-| E-1 컴포넌트 | c920ab5 | DetailPageBuilder.tsx: 6종 블록(Hook/Image/Text/Q&A/Specs/Divider), 순서이동, 실시간 HTML 미리보기, AEO import |
-| E-1 통합 | c920ab5 | 씨앗심기 이미지 탭에 빌더 추가, 저장 로직에 빌더 HTML 우선 적용 |
-
-### E-1 상세페이지 빌더 기능 상세
-```
-- 6종 블록: Hook(홍보문구) / Image(이미지) / Text(텍스트) / Q&A / Specs(사양테이블) / Divider(구분선)
-- 블록별 편집기: 이미지 미리보기, 스펙 테이블 동적 행 추가 등
-- 위/아래 순서 이동 + 삭제
-- AEO Q&A import: C-2에서 생성한 Q&A를 한 번에 블록으로 가져오기
-- 실시간 HTML 미리보기 (네이버 상세페이지 스타일)
-- HTML 복사 버튼
-- 저장 시 빌더 HTML > detailImageUrl > description 우선순위
-```
-
-### E-7 꼬띠 소싱 추천봇 기능 상세
-```
-- DataLab API: 오늘 상승 중인 카테고리 TOP 3 추출
-- 카테고리 → 구체적 상품 키워드 확장 (안정적 검색량 구간 카테고리 + 트렌드 키워드)
-- 네이버 검색광고 API: 키워드별 월간 검색량 + 경쟁도 조회 (5개씩 배치)
-- 네이버 쇼핑 검색 API: 키워드별 평균가/경쟁상품수 분석
-- BlueOcean 점수 계산 (0~100): 검색량×경쟁도×가격대×결과수 종합
-- Groq AI: 종합 소싱 전략 + 키워드별 구체 팁 생성
-- Discord #kkotti-daily 채널로 TOP 5 기회 발송
-- DB 저장 (daily_recommendations, season_tag='sourcing')
-- 대시보드 위젯: scan now 버튼 + 기회카드 펼침/접기 + 도매꼽/도매매 바로 검색 링크
-```
-
-### 2026-04-14 Phase D-3 경쟁 상품 모니터링 + D-5 탭 UX 개선 세션
-
-| 작업 | 커밋 | 내용 |
-|------|------|------|
-| D-3 라이브러리 | f02ae2e | competition-monitor.ts: 스냅샷/변화감지/Discord 알림 |
-| D-3 API | f02ae2e | GET+POST /api/competition: 전체 상품 경쟁 스캠 |
-| D-3 대시보드 | f02ae2e | CompetitionMonitorWidget: 가격 위치 바 + 상위 경쟁상품 + 변동률 |
-| D-3 cron | f02ae2e | daily cron에 자동 경쟁 스캠 통합 |
-| D-5 탭 점 통일 | f02ae2e | 모든 미완료 탭에 빨간점 표시 (기존: basic/image만) |
-
-### D-3 경쟁 상품 모니터링 기능 상세
-```
-- 네이버 쇼핑 검색 API로 상품별 키워드 경쟁 데이터 수집
-- 평균가/최저가/최고가 + 경쟁 강도(LOW/MEDIUM/HIGH/VERY_HIGH)
-- 내 판매가 위치 시각화 (가격 위치 바)
-- 이전 스냅샷 대비 5% 이상 가격 변동 시 Discord 알림
-- 상위 경쟁상품 3개 표시 (상품명/가격/판매자)
-- 대시보드 위젯: 전체 스캠 버튼 + 상품별 펼침/접기
-- daily cron에서 매일 자동 스캠 실행
-```
-### 2026-04-14 Phase D-2 대시보드 레이아웃 + D-5 탭 UX 개선 세션
-
-| 작업 | 커밋 | 내용 |
-|------|------|------|
-| D-2 레이아웃 | 17480d0 | GoodService+Profitability 2열 그리드, MarketTrend 전폭, 빠른 작업 바로가기 4개 |
-| D-5 탭 뱃지 | 252337b | 6개 탭별 완성도 동적 판단, 초록점(완료)/빨간점+연분홍배경(필수 미입력), 실시간 반응 |
-
-### C-11 씨앗 심기 2-Panel Split 기능 상세
-```
-- 좌측 60%: 6개 탭으로 기존 RSection/DSection 재배치
-  Tab 1 (기본 정보): 카테고리 4단계/검색 + 상품명/판매가/공급가/재고/SKU/공급사
-  Tab 2 (옵션): 옵션없음/조합형/단독형/직접입력형 테이블 UI
-  Tab 3 (이미지): 대표/추가/상세 이미지 드롭존 + SEO 훅문구
-  Tab 4 (배송 A/S): 꼬띠 배송 추천 + 배송 템플릿 + A/S 설정
-  Tab 5 (SEO 원산지): 브랜드/원산지/수입사 + 상품정보고시
-  Tab 6 (혜택): 리뷰 포인트 + 구매평/알림 + 할부
-- 우측 38% sticky: 업로드 준비도 + 꿀통지수 + 마진계산기 + AI SEO + SEO 점수 + 엑셀 미리보기
-- 하단 플로팅 바: 임시저장 / 네이버 API 등록 / 엑셀 다운로드
-- 모든 기존 로직 100% 보존 (state, handlers, prefill, edit mode)
-```
+| 이모지 전면 제거 | afc3144 | 전체 src/ JSX → Lucide React SVG |
+| Groq AI fallback | 8a16fe3 | llama-3.1-8b-instant, 무료 14,400회/일 |
+| 검색 조련사 v3 | df5874d | SEO 전체 필드 인라인 편집 + AI 버튼 3개 |
+| C-1 커머스 API 등록 | 36d5d5f | product-builder.ts + register API + 모달 |
+| C-12 시장 분석 | dd0758f~2a65bc2 | 네이버 쇼핑검색+Groq 실시간 분석 |
 
 ### Phase A~B (이전 세션)
 | Task | 내용 | 완료일 |
 |------|------|--------|
 | A-1~A-12 | 엑셀 검증, SEO, DataLab, 배포 | 2026-04-10 |
-| B-1 | 주문 관리 v3 | 2026-04-11 |
-| B-2 | 발주확인 + 송장등록 | 2026-04-12 |
-| B-3 | 정원 창고 네이버 동기화 | 2026-04-12 |
-| B-4 | 품절 자동 처리 cron | 2026-04-12 |
-| B-5 | 주간 수익 보고서 Discord | 2026-04-12 |
+| B-1~B-5 | 주문관리, 발주확인, 동기화, 품절처리, 주간보고 | 2026-04-12 |
 | C-5 | 꼬띠 추천 v2 (TOP5+소싱보관함+검색량) | 2026-04-12 |
 
 ---
@@ -446,32 +286,26 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | SEO 점수 | `src/lib/seo-calculator.ts` |
 | 상품명 품질체커 | `src/lib/product-name-checker.ts` |
 | 경쟁 모니터 | `src/lib/competition-monitor.ts` |
-| 경쟁 모니터 API | `src/app/api/competition/route.ts` |
-| 경쟁 모니터 위젯 | `src/components/dashboard/CompetitionMonitorWidget.tsx` |
-| DataLab API | `src/app/api/datalab/route.ts` |
-| DataLab 트렌드 위젯 | `src/components/dashboard/DataLabTrendWidget.tsx` |
 | 굿서비스 점수 | `src/lib/good-service.ts` |
 | 소싱 추천 엔진 | `src/lib/sourcing-recommender.ts` |
-| 소싱 추천 API | `src/app/api/sourcing-recommend/route.ts` |
-| 상세페이지 빌더 | `src/components/products/DetailPageBuilder.tsx` |
-| 소싱 추천 위젯 | `src/components/dashboard/SourcingRecommendWidget.tsx` |
-| 굿서비스 API | `src/app/api/good-service/route.ts` |
-| 굿서비스 위젯 | `src/components/dashboard/GoodServiceWidget.tsx` |
 | 트렌드 분석 | `src/lib/trend-analyzer.ts` |
 | 업로드 준비도 | `src/lib/upload-readiness.ts` |
 | Discord | `src/lib/discord.ts` |
+| 마진 계산기 | `src/components/products/MarginCalculator.tsx` |
+| 상세페이지 빌더 | `src/components/products/DetailPageBuilder.tsx` |
+| 소싱 추천 위젯 | `src/components/dashboard/SourcingRecommendWidget.tsx` |
+| 경쟁 모니터 위젯 | `src/components/dashboard/CompetitionMonitorWidget.tsx` |
+| 굿서비스 위젯 | `src/components/dashboard/GoodServiceWidget.tsx` |
+| DataLab 트렌드 위젯 | `src/components/dashboard/DataLabTrendWidget.tsx` |
+| SEO 테이블 v3 | `src/components/naver-seo/NaverSeoProductTable.tsx` |
 | 씨앗 심기 | `src/app/products/new/page.tsx` |
 | 정원 창고 | `src/app/products/page.tsx` |
 | 검색 조련사 | `src/app/naver-seo/page.tsx` |
-| SEO 테이블 v3 | `src/components/naver-seo/NaverSeoProductTable.tsx` |
-| AI SEO 생성 | `src/app/api/naver-seo/ai-generate/route.ts` |
+| 주문 관리 | `src/app/orders/page.tsx` |
+| 대시보드 | `src/app/dashboard/page.tsx` |
 | cron daily | `src/app/api/cron/daily/route.ts` |
 | cron weekly | `src/app/api/cron/weekly/route.ts` |
-| 주문 관리 | `src/app/orders/page.tsx` |
-| 송장등록 API | `src/app/api/naver/orders/dispatch/route.ts` |
-| 상품 동기화 | `src/app/api/naver/products/sync/route.ts` |
 | Sidebar | `src/components/layout/Sidebar.tsx` |
-| 마진 계산기 | `src/components/products/MarginCalculator.tsx` |
 
 ---
 
@@ -488,6 +322,7 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | 주소록 조회 | ✅ |
 | DataLab 트렌드 | ✅ |
 | 키워드 검색량 | ✅ |
+| 리뷰 API | ❌ 미지원 (GitHub #1582 확인) |
 
 ---
 
@@ -500,9 +335,11 @@ Naver SearchAd: NAVER_SEARCHAD_API_KEY, NAVER_SEARCHAD_SECRET_KEY, NAVER_SEARCHA
 Naver DataLab: NAVER_DATALAB_CLIENT_ID, NAVER_DATALAB_CLIENT_SECRET
 Discord: DISCORD_WEBHOOK_ORDERS, DISCORD_WEBHOOK_STOCK, DISCORD_WEBHOOK_DAILY,
          DISCORD_WEBHOOK_WEEKLY, DISCORD_WEBHOOK_KKOTTI
-AI: GEMINI_API_KEY, GEMINI_API_KEY_2, GEMINI_API_KEY_3, GROQ_API_KEY, PERPLEXITY_API_KEY
+AI: GEMINI_API_KEY, GEMINI_API_KEY_2, GEMINI_API_KEY_3, GROQ_API_KEY, GROQ_API_KEY_2, PERPLEXITY_API_KEY
 Cloudinary: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
 Etc: CRON_SECRET, NEXT_PUBLIC_APP_URL
+향후 추가 예정 (E-13B 활성화 시): SOLAPI_API_KEY, SOLAPI_API_SECRET, KAKAO_PF_ID, SENDER_PHONE_NUMBER
+향후 추가 예정 (E-12 구현 시): DISCORD_WEBHOOK_REVIEW
 ```
 
 ---
@@ -517,32 +354,27 @@ Etc: CRON_SECRET, NEXT_PUBLIC_APP_URL
 | Gemini quota 소진 | 하루 1,500회/계정 | Groq fallback 자동 작동 |
 | NAVER_CLIENT_SECRET $ 이스케이프 | dotenv-expand | 로컬 .env: `\$2a\$04\$...`, Vercel: `$` 그대로 |
 | Vercel 환경변수 변경 후 미반영 | 자동 재배포 안 됨 | `git commit --allow-empty && push` 필요 |
-| GitHub secret scanning 차단 | 키 노출 감지 | Allow secret 승인 후 push |
 | detail_image_url 8개 null | 직접 입력 안 함 | 씨앗 심기 편집 모드에서 직접 입력 |
+| 네이버 리뷰 API 미지원 | 커머스 API 범위 밖 | 수동 입력 + 크롤링만 가능 |
+| 알림톡 완전 무료 불가 | 카카오 딜러사 건당 과금 | 솔라피 건당 13원, 가입 시 300포인트(23건분) |
 
 ---
 
-## 9. 2026 네이버 쇼핑 SEO 전략 인사이트 (04-14 리서치)
+## 9. 2026 네이버 쇼핑 SEO + 리뷰 전략 인사이트 (04-14~16 리서치)
 
-> 상세 내용: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` 참조
-
-### 핵심 변화 3가지
+### 핵심 변화
 ```
 1. 키워드 매칭 → 검색 의도 일치로 전환
-   - 상품명 50자 내외 권장 (25~35자 최적)
-   - 속성+태그 상세 입력 → 상품명에 없는 키워드로도 노출 가능
-   - 셀러명/조사/수식어/중복 키워드 배제
-
+   - 상품명 25~35자 최적, 속성+태그 상세 입력 → 상품명 외 키워드 노출
 2. AI 추천이 검색 트래픽 20%+ 차지
-   - AI 브리핑: 전체 검색의 20% 이상
-   - 네이버플러스 스토어 AI 추천 → 평균 거래액 33%↑
-   - 소규모 업체 매출 16.5%↑ (대규모 6.7%↑ 대비 더 큰 수혜)
-   - 2026/02 쇼핑 AI 에이전트 출시 (대화형 상품 탐색)
-
+   - AiTEMS ON 설정 필수 (전체 클릭 약 10%)
+   - 2026.2 쇼핑 AI 에이전트: 리뷰 실시간 분석 → 상품 추천
 3. 신뢰도(Trust) 지표 급부상
-   - 굿서비스 점수 → 검색 랭킹에 직접 반영
-   - AI 기반 어뷰징 실시간 감지
-   - 리뷰 구체성/감성/제품-리뷰 일치도 AI 분석
+   - 굿서비스 점수 → 검색 랭킹 직접 반영
+   - 톡톡 응답 기준 24h→12h 강화
+4. 반품안심케어 = 즉시 스위치 (건당 50~650원 → 매출 +13.6%)
+5. 리뷰 = 장기 엔진 (0→10 무료로 가능, 50+ 시 알림톡 도입 검토)
+6. 수수료 개편: 유입수수료 2% 폐지 → 판매수수료 2.73%, 자체마케팅 0.91%
 ```
 
 ### 등급 체계 개편 (2025/12 시행)
@@ -551,26 +383,6 @@ Etc: CRON_SECRET, NEXT_PUBLIC_APP_URL
 - 빅파워: 4,000만 → 1,000만원/월
 - 파워: 800만 → 300만원/월
 - 새싹: 200만 → 80만원/월
-- 굿서비스 점수 등급 반영 (주문이행/배송품질/고객만족)
-- 14일간 데이터 매일 갱신 → 월평균 반영
-```
-
-### 수수료 변경 (2025/06)
-```
-- 기존 유입수수료 2% 폐지 → 판매수수료 2.73%로 전환
-- 네이버페이 주문관리 3.63~3.74% 추가
-- 판매자 마케팅 링크 유입 시 판매수수료 0.91%로 절감
-- 배송비에는 수수료 미부과
-- 스토어당 상품 제한: 50만개 → 5만개로 축소
-```
-
-### API 등록 vs 엑셀 등록 차이
-```
-엑셀: 태그/키워드 설정 불가, 속성 입력 제한 → SEO 적합도 저하
-API:  모든 필드 정밀 제어 가능 → 속성/태그/키워드 완벽 입력
-주의: 2026/02/24부터 단위가격 입력 의무화
-주의: 고정 IP 미등록 시 점진적 사용 제한
-주의: 상품 수정 시 요청에 포함되지 않은 정보는 삭제됨
 ```
 
 ---
@@ -593,13 +405,18 @@ export const dynamic = 'force-dynamic';
 // 로컬 .env.local: NAVER_CLIENT_SECRET=\$2a\$04\$...
 // Vercel 환경변수: NAVER_CLIENT_SECRET=$2a$04$... ($ 그대로)
 
-// Gemini round-robin → Groq fallback
+// Groq round-robin
 // ai-generate/route.ts: callGemini() → callGroq() → callPerplexity()
-
-// Vercel 재배포 트리거 (환경변수 변경 후 필수)
-// git commit --allow-empty -m "chore: redeploy for {변수명}" && git push
 
 // 이모지 금지 예시
 // Bad:  <span>🚚</span>
 // Good: <Truck size={14} style={{ color: '#e62310' }} />
+
+// 카카오 채널 QR URL (인서트 카드용)
+// https://pf.kakao.com/_xkfALG
+
+// 솔라피 알림톡 API (E-13B 활성화 시)
+// POST https://api.solapi.com/messages/v4/send
+// 인증: HMAC-SHA256 (apiKey, date, salt, signature)
+// npm: solapi 패키지 사용 가능
 ```
