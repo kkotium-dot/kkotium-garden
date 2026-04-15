@@ -56,6 +56,7 @@ import NaverSEOWorkflow from '@/components/ai/NaverSEOWorkflow';
 import HoneyScorePanel from '@/components/products/HoneyScorePanel';
 import AlternativeProductPanel from '@/components/products/AlternativeProductPanel';
 import ImageUploadDropzone from '@/components/products/ImageUploadDropzone';
+import DetailPageBuilder, { type DetailBlock, blocksToHtml } from '@/components/products/DetailPageBuilder';
 import { PlatformPicker, SupplierPicker } from '@/components/ui/PlatformSupplierPicker';
 import MarginAdvisorPanel from '@/components/products/MarginAdvisorPanel';
 import { calcUploadReadiness, getReadinessColor, READINESS_GRADE_STYLE } from '@/lib/upload-readiness';
@@ -270,6 +271,7 @@ function NewProductPageInner() {
   const [mainImage, setMainImage]     = useState('');
   const [additionalImages, setAdditionalImages] = useState('');
   const [detailImageUrl, setDetailImageUrl] = useState('');
+  const [detailBlocks, setDetailBlocks] = useState<DetailBlock[]>([]);
   const [seoHook, setSeoHook]         = useState('');
   const [description, setDescription] = useState('');
   // D1: golden keywords from AI SEO workflow — stored in DB via keywords JSON column
@@ -1049,7 +1051,7 @@ function NewProductPageInner() {
           brand, originCode, taxType,
           status: 'DRAFT',
           mainImage,
-          description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
+          description: detailBlocks.length > 0 ? blocksToHtml(detailBlocks, productName) : detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
           detail_image_url: detailImageUrl || undefined,
           keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
           tags: seoTags.length > 0 ? seoTags : undefined,
@@ -1187,7 +1189,7 @@ const handleGenerate = async () => {
       mainImage: mainImage || '',
       additionalImages: additionalImages || '',
       // Content
-      description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
+      description: detailBlocks.length > 0 ? blocksToHtml(detailBlocks, productName) : detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
       detail_image_url: detailImageUrl || undefined,
       // ① 기본 — product info
       productStatus: '신상품',
@@ -2364,6 +2366,21 @@ const handleGenerate = async () => {
                 value={detailImageUrl}
                 onChange={setDetailImageUrl}
               />
+
+              {/* E-1: Detail page builder */}
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  <Search size={14} style={{ color: '#FF6B8A' }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>상세페이지 빌더</span>
+                  <span style={{ fontSize: 11, color: '#9ca3af' }}>블록 조합으로 상세페이지 구성</span>
+                </div>
+                <DetailPageBuilder
+                  blocks={detailBlocks}
+                  onChange={setDetailBlocks}
+                  productName={productName}
+                  aeoContent={null}
+                />
+              </div>
               <Field label="SEO 훅문구" hint="네이버 쇼핑 검색 결과 홍보문구 · 최대 100자">
                 <div className="relative">
                   <textarea
