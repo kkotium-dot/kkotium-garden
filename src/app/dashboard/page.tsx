@@ -13,6 +13,7 @@ import ProfitabilityWidget from '@/components/dashboard/ProfitabilityWidget';
 import CompetitionMonitorWidget from '@/components/dashboard/CompetitionMonitorWidget';
 import DataLabTrendWidget from '@/components/dashboard/DataLabTrendWidget';
 import SourcingRecommendWidget from '@/components/dashboard/SourcingRecommendWidget';
+import ProductLifecycleWidget from '@/components/dashboard/ProductLifecycleWidget';
 import Link from 'next/link';
 
 // ── KPI Card ──────────────────────────────────────────────────────────────
@@ -272,6 +273,9 @@ export default function DashboardPage() {
 
       {/* E-7: Kkotti sourcing recommendation bot */}
       <SourcingRecommendWidget />
+
+      {/* E-3: Product lifecycle dashboard */}
+      <ProductLifecycleWidget />
 
       {/* D-2: Quick action shortcuts */}
       <div className="kk-card" style={{ overflow: 'hidden' }}>

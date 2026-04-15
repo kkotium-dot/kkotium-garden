@@ -1,10 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
 > 최종 업데이트: 2026-04-15 (Phase E 진행 중 — E-7 완료)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: ca993ee
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7 완료)**
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1 완료)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
-> 최신 커밋: ca993ee
-
+> 최신 커밋: c920ab5
 ## 이 파일의 역할
 
 > **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스
@@ -103,6 +102,7 @@
 | Task | 내용 | 상태 | 비용 |
 |------|------|------|------|
 | E-7 | 꼬띠 소싱 추천봇 (DataLab 트렌드 + 키워드 검색량 + 경쟁분석 → BlueOcean 점수 → Discord 매일 발송 + 대시보드 위젯) | ✅ 완료 | 무료 |
+| E-1 | 상세페이지 템플릿 빌더 (6종 블록 HTML 에디터 + 실시간 미리보기 + AEO Q&A import + 씨앗심기 통합) | ✅ 완료 | 무료 |
 
 ### 꽃졔님 직접 처리
 | 항목 | 내용 |
@@ -347,6 +347,24 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | E-7 위젯 | ca993ee | SourcingRecommendWidget: 트렌드카테고리+AI요약+기회카드+도매꼽/도매매 바로가기 |
 | E-7 cron | ca993ee | daily cron에 소싱 추천 단계 추가 (매일 자동 스캔 + Discord 발송) |
 
+### 2026-04-15 Phase E-1 상세페이지 템플릿 빌더 세션
+
+| 작업 | 커밋 | 내용 |
+|------|------|------|
+| E-1 컴포넌트 | c920ab5 | DetailPageBuilder.tsx: 6종 블록(Hook/Image/Text/Q&A/Specs/Divider), 순서이동, 실시간 HTML 미리보기, AEO import |
+| E-1 통합 | c920ab5 | 씨앗심기 이미지 탭에 빌더 추가, 저장 로직에 빌더 HTML 우선 적용 |
+
+### E-1 상세페이지 빌더 기능 상세
+```
+- 6종 블록: Hook(홍보문구) / Image(이미지) / Text(텍스트) / Q&A / Specs(사양테이블) / Divider(구분선)
+- 블록별 편집기: 이미지 미리보기, 스펙 테이블 동적 행 추가 등
+- 위/아래 순서 이동 + 삭제
+- AEO Q&A import: C-2에서 생성한 Q&A를 한 번에 블록으로 가져오기
+- 실시간 HTML 미리보기 (네이버 상세페이지 스타일)
+- HTML 복사 버튼
+- 저장 시 빌더 HTML > detailImageUrl > description 우선순위
+```
+
 ### E-7 꼬띠 소싱 추천봇 기능 상세
 ```
 - DataLab API: 오늘 상승 중인 카테고리 TOP 3 추출
@@ -433,6 +451,7 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | 굿서비스 점수 | `src/lib/good-service.ts` |
 | 소싱 추천 엔진 | `src/lib/sourcing-recommender.ts` |
 | 소싱 추천 API | `src/app/api/sourcing-recommend/route.ts` |
+| 상세페이지 빌더 | `src/components/products/DetailPageBuilder.tsx` |
 | 소싱 추천 위젯 | `src/components/dashboard/SourcingRecommendWidget.tsx` |
 | 굿서비스 API | `src/app/api/good-service/route.ts` |
 | 굿서비스 위젯 | `src/components/dashboard/GoodServiceWidget.tsx` |
