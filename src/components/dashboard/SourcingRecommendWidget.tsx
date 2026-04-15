@@ -56,9 +56,9 @@ interface SourcingResult {
 // Competition badge color
 function getCompBadge(comp: string): { label: string; bg: string; text: string } {
   switch (comp) {
-    case 'low':     return { label: 'Low',  bg: '#dcfce7', text: '#15803d' };
-    case 'mid':     return { label: 'Mid',  bg: '#fef3c7', text: '#b45309' };
-    case 'high':    return { label: 'High', bg: '#fee2e2', text: '#b91c1c' };
+    case 'low':     return { label: '낮음',  bg: '#dcfce7', text: '#15803d' };
+    case 'mid':     return { label: '보통',  bg: '#fef3c7', text: '#b45309' };
+    case 'high':    return { label: '높음', bg: '#fee2e2', text: '#b91c1c' };
     default:        return { label: '-',    bg: '#f3f4f6', text: '#6b7280' };
   }
 }
@@ -219,10 +219,10 @@ export default function SourcingRecommendWidget() {
                       {compBadge.label}
                     </span>
                     <span style={{ fontSize: 11, color: '#6b7280' }}>
-                      {opp.monthlySearchVolume.toLocaleString()}/mo
+                      {opp.monthlySearchVolume.toLocaleString()}/월
                     </span>
                     <span style={{ fontSize: 11, color: '#6b7280' }}>
-                      avg {opp.avgPrice.toLocaleString()}
+                      평균 {opp.avgPrice.toLocaleString()}
                     </span>
                   </div>
                 </div>

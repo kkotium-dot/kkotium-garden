@@ -387,7 +387,7 @@ export default function DetailPageBuilder({ blocks, onChange, productName, aeoCo
               }}
             >
               <MessageSquare size={12} />
-              AEO Q&A import
+              AEO Q&A 가져오기
             </button>
           )}
           <button
