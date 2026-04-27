@@ -8,7 +8,7 @@ import {
   RefreshCw, Package, Truck, Check, AlertTriangle, Search,
   ShoppingCart, XCircle, RotateCcw, CheckCircle2, Clock,
   X, Phone, MapPin, CreditCard, Hash, User, Info,
-  ChevronRight,
+  ChevronRight, MessageSquare, Bell, Star,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -23,6 +23,7 @@ interface Order {
   shippingAddress?: string;
   createdAt?: string;
   updatedAt?: string;
+  deliveredAt?: string;
   trackingNumber?: string;
   courierCompany?: string;
   productName?: string;
@@ -65,6 +66,63 @@ function getSt(s: string) {
 function isPaid(s: string)    { return ['PAID', 'PAYED'].includes(s); }
 function isProblem(s: string) { return getSt(s).group === 'problem'; }
 function isCancel(s: string)  { return s.includes('CANCEL'); }
+
+// E-2B: Review prompt stage detection from order timing
+// Stage 1: DELIVERED + 1~3 days  -> 구매확정 유도 (green)
+// Stage 2: COMPLETED + 1~3 days  -> 리뷰 요청 (blue)
+// Stage 3: COMPLETED + 28~32 days -> 한달 리뷰 (purple)
+interface ReviewBadge {
+  label: string;
+  color: string;
+  bg: string;
+  border: string;
+  hint: string;
+  alimtalkType: 'CONFIRM' | 'REVIEW' | 'MONTH_REVIEW';
+}
+function getReviewBadge(order: Order): ReviewBadge | null {
+  const DAY = 86400000;
+  const now = Date.now();
+
+  if (order.status === 'DELIVERED' && order.deliveredAt) {
+    const elapsed = (now - new Date(order.deliveredAt).getTime()) / DAY;
+    if (elapsed >= 1 && elapsed <= 3) {
+      return {
+        label: '구매확정 유도',
+        color: '#15803d',
+        bg: '#dcfce7',
+        border: '#86efac',
+        hint: `배송완료 ${Math.floor(elapsed)}일째 — 알림톡 추천 시점`,
+        alimtalkType: 'CONFIRM',
+      };
+    }
+  }
+
+  if (order.status === 'COMPLETED' && order.updatedAt) {
+    const elapsed = (now - new Date(order.updatedAt).getTime()) / DAY;
+    if (elapsed >= 1 && elapsed <= 3) {
+      return {
+        label: '리뷰 요청',
+        color: '#1d4ed8',
+        bg: '#dbeafe',
+        border: '#93c5fd',
+        hint: `구매확정 ${Math.floor(elapsed)}일째 — 첫 리뷰 알림 시점`,
+        alimtalkType: 'REVIEW',
+      };
+    }
+    if (elapsed >= 28 && elapsed <= 32) {
+      return {
+        label: '한달 리뷰',
+        color: '#7c3aed',
+        bg: '#ede9fe',
+        border: '#c4b5fd',
+        hint: `구매확정 ${Math.floor(elapsed)}일째 — 한달 사용 리뷰 시점`,
+        alimtalkType: 'MONTH_REVIEW',
+      };
+    }
+  }
+
+  return null;
+}
 
 // ── Detail Drawer ─────────────────────────────────────────────────────────────
 
@@ -276,6 +334,9 @@ function OrdersInner() {
 
   // Claim handling
   const [claimProcessing, setClaimProcessing] = useState<string | null>(null);
+
+  // E-2B: alimtalk toast state (UI only, E-13B awaiting solapi connection)
+  const [alimtalkToast, setAlimtalkToast] = useState<{ type: string; productName: string } | null>(null);
 
   const handleClaim = async (orderId: string, action: string, productName: string) => {
     setClaimProcessing(orderId);
@@ -614,7 +675,29 @@ function OrdersInner() {
                   </p>
 
                   {/* Col: actions — only actionable items, no redundant labels */}
-                  <div style={{ display: 'flex', gap: 5, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                  <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
+                    {/* E-2B: Review prompt badge — shown alongside other action buttons */}
+                    {(() => {
+                      const badge = getReviewBadge(order);
+                      if (!badge) return null;
+                      const TypeIcon = badge.alimtalkType === 'MONTH_REVIEW' ? Star : badge.alimtalkType === 'REVIEW' ? MessageSquare : Bell;
+                      return (
+                        <button
+                          onClick={() => setAlimtalkToast({ type: badge.label, productName: order.productName ?? '' })}
+                          title={badge.hint}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 3,
+                            fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 99,
+                            background: badge.bg, color: badge.color,
+                            border: `1px solid ${badge.border}`,
+                            cursor: 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          <TypeIcon size={9} />
+                          {badge.label}
+                        </button>
+                      );
+                    })()}
                     {paid ? (
                       <button
                         onClick={() => toggleSelect(order.id)}
@@ -811,6 +894,34 @@ function OrdersInner() {
 
       {/* Detail drawer */}
       {drawer && <OrderDrawer order={drawer} onClose={() => setDrawer(null)} />}
+
+      {/* E-2B: Alimtalk toast — informs solapi connection required */}
+      {alimtalkToast && (
+        <div
+          style={{
+            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 1100, background: '#1A1A1A', color: '#fff',
+            padding: '14px 22px', borderRadius: 14,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+            display: 'flex', alignItems: 'center', gap: 12, maxWidth: 460,
+          }}
+          onClick={() => setAlimtalkToast(null)}
+        >
+          <Bell size={18} style={{ color: '#FFB3CE', flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700 }}>{alimtalkToast.type} — 알림톡 자동발송은 솔라피 연동 후 사용 가능합니다</p>
+            <p style={{ margin: '3px 0 0', fontSize: 11, color: '#FFB3CE', lineHeight: 1.4 }}>
+              월 주문 50건+ 시점에 설정 → 키만 입력하면 즉시 작동 (E-13A/E-13B)
+            </p>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); setAlimtalkToast(null); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B0A0A8', padding: 4, display: 'flex' }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>

@@ -5,6 +5,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Package, TrendingUp, AlertTriangle, Sparkles, Layers, Skull, ArrowRight, ShoppingCart, RefreshCw } from 'lucide-react';
 import KkottiWidget from '@/components/dashboard/KkottiWidget';
+import ReviewGrowthWidget from '@/components/dashboard/ReviewGrowthWidget';
 import MarketTrendWidget from '@/components/dashboard/MarketTrendWidget';
 import DailyPlanWidget from '@/components/dashboard/DailyPlanWidget';
 import EventTimeline from '@/components/dashboard/EventTimeline';
@@ -254,6 +255,9 @@ export default function DashboardPage() {
       {/* ── 꼬띠 위젯 — products prop으로 단일 로드 공유 ────── */}
       <KkottiWidget products={products} productsLoading={productsLoading} />
 
+      {/* E-2A: Review growth tracker + 9-item operations checklist */}
+      <ReviewGrowthWidget />
+
       {/* D-2: 2-column grid layout for related widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* C-9: Good Service score widget */}
@@ -285,10 +289,10 @@ export default function DashboardPage() {
         </div>
         <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
           {[
-            { label: '\uC528\uC557 \uC2EC\uAE30', href: '/products/new', color: '#e62310', bg: '#FFF0F5', border: '#FFB3CE', icon: Package, hint: '\uC0C1\uD488 \uB4F1\uB85D' },
-            { label: '\uAC80\uC0C9 \uC870\uB828\uC0AC', href: '/naver-seo', color: '#2563eb', bg: '#EFF6FF', border: '#BFDBFE', icon: TrendingUp, hint: 'SEO \uCD5C\uC801\uD654' },
-            { label: '\uC8FC\uBB38 \uAD00\uB9AC', href: '/orders', color: '#16a34a', bg: '#F0FDF4', border: '#BBF7D0', icon: ShoppingCart, hint: '\uBC1C\uC8FC/\uC1A1\uC7A5' },
-            { label: '\uAFD8\uD1B5 \uC0AC\uB0A5\uD130', href: '/crawl', color: '#7c3aed', bg: '#F5F3FF', border: '#DDD6FE', icon: Layers, hint: '\uC0C1\uD488 \uC218\uC9D1' },
+            { label: '씨앗 심기', href: '/products/new', color: '#e62310', bg: '#FFF0F5', border: '#FFB3CE', icon: Package, hint: '상품 등록' },
+            { label: '검색 조련사', href: '/naver-seo', color: '#2563eb', bg: '#EFF6FF', border: '#BFDBFE', icon: TrendingUp, hint: 'SEO 최적화' },
+            { label: '주문 관리', href: '/orders', color: '#16a34a', bg: '#F0FDF4', border: '#BBF7D0', icon: ShoppingCart, hint: '발주/송장' },
+            { label: '꿀통 사냥터', href: '/crawl', color: '#7c3aed', bg: '#F5F3FF', border: '#DDD6FE', icon: Layers, hint: '상품 수집' },
           ].map(item => (
             <Link key={item.label} href={item.href} style={{ textDecoration: 'none' }}>
               <div style={{ padding: '14px 10px', borderRadius: 14, textAlign: 'center', background: item.bg, border: `1.5px solid ${item.border}`, cursor: 'pointer', transition: 'transform 0.1s' }}>
