@@ -1,15 +1,15 @@
 // src/components/dashboard/SourcingRecommendWidget.tsx
-// E-7: Kkotti Sourcing Recommendation Widget for Dashboard
+// E-7 + E-10: Kkotti Sourcing Recommendation Widget for Dashboard
 // Shows blue-ocean product opportunities from trend analysis
-// Includes scan button + opportunity cards with key metrics
+// Includes scan button + opportunity cards with key metrics + entry barrier breakdown
 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Search, TrendingUp, RefreshCw, ArrowRight,
+  Search, TrendingUp, RefreshCw,
   ChevronDown, ChevronUp, Sparkles, ShoppingBag,
-  BarChart3, Target,
+  Target, Shield,
 } from 'lucide-react';
 
 interface WholesaleProduct {
@@ -40,6 +40,13 @@ interface SourcingOpportunity {
   aiInsight?: string;
   wholesaleMatches?: WholesaleProduct[];
   wholesalePlatforms?: string[];
+  // E-10: Entry barrier breakdown
+  entryBarrierLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+  entryBarrierScore?: number;
+  entryBarrierBonus?: number;
+  blueOceanBase?: number;
+  uniqueSellersInTop?: number;
+  priceSpread?: number;
 }
 
 interface SourcingResult {
@@ -61,6 +68,14 @@ function getCompBadge(comp: string): { label: string; bg: string; text: string }
     case 'high':    return { label: '높음', bg: '#fee2e2', text: '#b91c1c' };
     default:        return { label: '-',    bg: '#f3f4f6', text: '#6b7280' };
   }
+}
+
+// E-10: Entry barrier badge style
+function getBarrierBadge(level?: 'LOW' | 'MEDIUM' | 'HIGH'): { label: string; bg: string; text: string; bar: string } | null {
+  if (!level) return null;
+  if (level === 'LOW')    return { label: '낮음', bg: '#dcfce7', text: '#166534', bar: '#16a34a' };
+  if (level === 'HIGH')   return { label: '높음', bg: '#fecaca', text: '#991b1b', bar: '#dc2626' };
+  return                       { label: '보통', bg: '#fef9c3', text: '#854d0e', bar: '#ca8a04' };
 }
 
 // Blue ocean score color
@@ -184,6 +199,7 @@ export default function SourcingRecommendWidget() {
       {/* Opportunity cards */}
       {result?.opportunities.map((opp, i) => {
         const compBadge = getCompBadge(opp.competition);
+        const barrierBadge = getBarrierBadge(opp.entryBarrierLevel);
         const isExpanded = expanded === i;
 
         return (
@@ -211,13 +227,27 @@ export default function SourcingRecommendWidget() {
                   <div style={{ fontWeight: 600, fontSize: 13, color: '#111827' }}>
                     {opp.keyword}
                   </div>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 3, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 3, alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{
                       fontSize: 10, padding: '1px 5px', borderRadius: 4,
                       background: compBadge.bg, color: compBadge.text, fontWeight: 600,
                     }}>
                       {compBadge.label}
                     </span>
+                    {/* E-10: Entry barrier chip */}
+                    {barrierBadge && (
+                      <span
+                        title={`진입장벽 ${barrierBadge.label} (BlueOcean ${(opp.entryBarrierBonus ?? 0) >= 0 ? '+' : ''}${opp.entryBarrierBonus ?? 0})`}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 2,
+                          fontSize: 10, padding: '1px 5px', borderRadius: 4,
+                          background: barrierBadge.bg, color: barrierBadge.text, fontWeight: 600,
+                        }}
+                      >
+                        <Shield size={9} />
+                        진입 {barrierBadge.label}
+                      </span>
+                    )}
                     <span style={{ fontSize: 11, color: '#6b7280' }}>
                       {opp.monthlySearchVolume.toLocaleString()}/월
                     </span>
@@ -260,6 +290,33 @@ export default function SourcingRecommendWidget() {
             {/* Expanded detail */}
             {isExpanded && (
               <div style={{ padding: '0 12px 12px', borderTop: '1px solid #f3f4f6' }}>
+                {/* E-10: BlueOcean score breakdown (base + entry barrier bonus) */}
+                {opp.blueOceanBase !== undefined && opp.entryBarrierBonus !== undefined && (
+                  <div style={{
+                    marginTop: 10, padding: '8px 10px', borderRadius: 6,
+                    background: '#f9fafb', display: 'flex', alignItems: 'center', gap: 8,
+                    fontSize: 11, color: '#374151',
+                  }}>
+                    <Target size={12} style={{ color: getScoreColor(opp.blueOceanScore) }} />
+                    <span>
+                      <span style={{ color: '#9ca3af' }}>BlueOcean:</span>{' '}
+                      <span style={{ fontWeight: 600 }}>기본 {opp.blueOceanBase}</span>
+                      {' '}
+                      <span style={{
+                        color: opp.entryBarrierBonus > 0 ? '#15803d' : opp.entryBarrierBonus < 0 ? '#b91c1c' : '#9ca3af',
+                        fontWeight: 600,
+                      }}>
+                        {opp.entryBarrierBonus > 0 ? '+' : ''}{opp.entryBarrierBonus}
+                      </span>
+                      {' '}
+                      <span style={{ color: '#9ca3af' }}>진입가산 =</span>{' '}
+                      <span style={{ fontWeight: 700, color: getScoreColor(opp.blueOceanScore) }}>
+                        {opp.blueOceanScore}점
+                      </span>
+                    </span>
+                  </div>
+                )}
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10, fontSize: 12 }}>
                   <div>
                     <span style={{ color: '#9ca3af' }}>가격대</span>
@@ -285,6 +342,32 @@ export default function SourcingRecommendWidget() {
                       {opp.competitionLevel}
                     </div>
                   </div>
+
+                  {/* E-10: Entry barrier factors in expanded grid */}
+                  {opp.entryBarrierScore !== undefined && (
+                    <div>
+                      <span style={{ color: '#9ca3af' }}>진입장벽 점수</span>
+                      <div style={{ fontWeight: 600, color: barrierBadge?.bar ?? '#374151' }}>
+                        {opp.entryBarrierScore.toFixed(1)} / 5
+                      </div>
+                    </div>
+                  )}
+                  {opp.uniqueSellersInTop !== undefined && (
+                    <div>
+                      <span style={{ color: '#9ca3af' }}>판매처 다양성</span>
+                      <div style={{ fontWeight: 600, color: '#374151' }}>
+                        {opp.uniqueSellersInTop}개
+                      </div>
+                    </div>
+                  )}
+                  {opp.priceSpread !== undefined && (
+                    <div>
+                      <span style={{ color: '#9ca3af' }}>가격 분산</span>
+                      <div style={{ fontWeight: 600, color: '#374151' }}>
+                        {(opp.priceSpread * 100).toFixed(0)}%
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Top sellers */}
@@ -320,7 +403,7 @@ export default function SourcingRecommendWidget() {
                     }}
                   >
                     <Search size={11} />
-                    도매꼽 검색
+                    도매꾹 검색
                   </a>
                   <a
                     href={`https://domeme.domeggook.com/main/index.php?log=search&keyword=${encodeURIComponent(opp.keyword)}`}
