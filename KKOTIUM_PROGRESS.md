@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 4 E-14 + E-10 경쟁 리뷰 모니터링 — 옵션 A 진입장벽 추정 완료)
+> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 4 E-11 — AI 리뷰 감정분석 + SEO 재활용 완료, Sprint 4 전체 종결)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10)**
-> **다음 작업 후보: E-11 (AI 리뷰 감정 분석 + SEO 재활용) / E-12 (Discord 리뷰 알림) / 수수료 개편 미반영분 적용** — 상세 계획은 `KKOTIUM_ROADMAP.md`의 "다음 채팅에서 시작할 작업 후보" 섹션 참조
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10, E-11)**
+> **다음 작업 후보: 수수료 개편 미반영분 적용 (1순위, 수익성 직결) / E-12 Discord 리뷰 알림 (2순위, 자체 리뷰 발생 후) / E-13B 알림톡 활성화 (월 50건+ 시점)** — 상세 계획은 `KKOTIUM_ROADMAP.md`의 "다음 채팅에서 시작할 작업 후보" 섹션 참조
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
 >   1. `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가`
@@ -322,6 +322,8 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | 등록 준비 명령탑 위젯 (E-14) | `src/components/dashboard/UploadReadinessWidget.tsx` |
 | 리뷰 성장 API (E-2A) | `src/app/api/review-growth/route.ts` |
 | 반품안심케어 수수료 (E-4) | `src/lib/return-care-fees.ts` |
+| **리뷰 감정분석 라이브러리 (E-11)** | **`src/lib/review-sentiment-analyzer.ts`** |
+| **리뷰 감정분석 API (E-11)** | **`src/app/api/review-analysis/route.ts`** |
 | SEO 테이블 v3 | `src/components/naver-seo/NaverSeoProductTable.tsx` |
 | 씨앗 심기 | `src/app/products/new/page.tsx` |
 | 정원 창고 | `src/app/products/page.tsx` |
@@ -566,3 +568,44 @@ Block B 검증 (`?registerId=`):
 - BlueOcean breakdown 구조(`{ base, entryBarrierBonus, total }`)는 향후 다른 가산 항목(예: AI 리뷰 감정분석 가산)을 더하기 쉬운 확장 구조 — E-11 구현 시 자연스럽게 합산 가능
 - 쇼핑검색 API의 reviewCount 안정성이 추후 확인되면 옵션 A + 원래 계획의 하이브리드로 업그레이드 가능 — 하지만 현재 구현으로 궁극적 관점의 "셀러가 주의해야 할 경쟁 강도"를 흔들림 없이 견고하게 표현 가능
 - 라이브 검증 시 DataLab 빈 응답이 나오는 경우가 있으므로, mock 주입·시드 데이터 주입 패턴을 다른 E-시리즈 작업에서도 재사용 권장
+
+
+### 2026-04-29 Phase E+ Sprint 4 최종 완료 세션 (E-11 — AI 리뷰 감정분석 + SEO 재활용)
+
+**범위**: 자체 리뷰 0개 상태에서도 즉시 작동 가능한 "경쟁사 리뷰 / 도매 텍스트 붙여넣기 → Groq AI 감정분석 → SEO 태그 자동 추천" 워크플로우. 검색조련사 인라인 패널에 통합 — 1인 셀러가 소싱→등록 파이프라인 마지막 단계에서 정확한 실수요 키워드를 확정할 수 있는 구조.
+
+| Block | 변경 사항 | 핵심 |
+|-------|----------|------|
+| **Block A — 라이브러리 + API** | `src/lib/review-sentiment-analyzer.ts` (신규 348줄), `src/app/api/review-analysis/route.ts` (신규 78줄) | `analyzeReviewSentiment()` — Groq round-robin (3 keys) → Gemini (3 keys) → Anthropic fallback. 입력 검증 (5~800자, 최대 50개, 30000자), 결과 정규화 (비율 합 100 보정, 키워드/태그 길이 필터, 중복 제거). `parseJsonSafe()` 공유 패턴. SentimentResult: overallSentiment + 3 ratios + topKeywords (완트 12개) + suggestedTags (최대 10개, 2~6자 한국어) + strengths/painPoints (각 최대 4개) + aiSummary (1~2문장)
+| **Block B — 검색조련사 UI 통합** | `src/components/naver-seo/NaverSeoProductTable.tsx` (+368줄) | `ReviewAnalysisPanel` 신규 컴포넌트를 `SeoEditPanel` 내부 SEO 태그 섹션 다음에 통합. 보라색 점선 박스(`#7C3AED`)로 기존 핀크 테마와 시각 분리. Textarea 입력 → AI 분석 시작 버튼 → 결과 영역: AI 요약 박스 + 감정 분포 막대(긍정/중립/부정 3색) + 강점/약점 2열 + Top 키워드(감정별 색) + 추천 SEO 태그 (1클릭 추가 또는 일괄 추가, 남은 슬롯 고려). 상품 설명에 AI 요약 추가 버튼, 다시 분석 버튼.
+| **Block A 보강** (commit `fb418bd`) | `src/lib/review-sentiment-analyzer.ts` (+30/-8줄), `src/app/api/naver-seo/ai-generate/route.ts` (+5/-2줄) | (1) Round-robin이 401/403 auth 에러에서도 다음 키로 fallback (기존에는 429/quota만 처리) (2) JSON 파싱 안전망: trailing comma + smart quotes + control chars 제거 (3) max_tokens 1500→2500 (한국어 토큰이 더 축찜—truncation 방지). 이 보강은 GROQ_API_KEY 회전 후 1번 키가 무효가 되어도 round-robin이 자동으로 2·3번 키로 넘어가도록 보증.
+
+**Groq 키 회전 관련 이벤트** (2026-04-29 세션중 발생):
+- 기존 GROQ_API_KEY (`...qNKdYC`) 이 401 Invalid 로 제공되지 않아 round-robin이 멈으는 문제 발견 — 코드 보증 추가 적용
+- 꿔집님께서 GROQ_API_KEY → `lrltQb` (새 발급), GROQ_API_KEY_3 = `3IGN7i` (신규 추가) 로 교체. GROQ_API_KEY_2 = `3pEakT`는 회전 과정에서 폐기되어 현재 401 무효 상태 — **Vercel에서 해당 키 삭제 권장** (또는 새 키로 교체)
+- Vercel "Needs Attention" 표시 이해: GROQ_API_KEY_2는 렌더링 시 점을 한 소식 없다면 NA로 표시되며, GEMINI_API_KEY/_2/_3은 quota 소진 상태(2026-04 메모리) — 종합 운영되었던 6개의 AI 키중 실제 정상 키는 GROQ × 2개 (lrltQb + 3IGN7i)
+
+**라이브 검증 결과** (Chrome MCP, 10개 mock 리뷰 “꿔 인테리어 소품”):
+- API 응답: HTTP 200 (provider: groq-llama3, GROQ_API_KEY=lrltQb)
+- 전반적 감정: 긍정 80% / 중립 10% / 부정 10% — 명확한 렌더링
+- AI 요약: "선물받은 특별한 일상은 색이 예쁘고 품질 좋으며, 포장이 꼼꼼하다. 고객들은 가성비 최고로 선물용으로 추천한다. 판매자는 사이즈와 배송 속도 개선에 집중할 수 있다."
+- 강점 4개 (소설때 머리일 굹맄): 품질 / 색 / 포장 / 디자인
+- 약점 2개 (회피 포인트): 사이즈가 작다 / 배송이 느리다
+- TOP 키워드 10개 감정별 정확 분류 (긍정 8 + 부정 2 + 중립 0)
+- 추천 SEO 태그 8개: #색이 예쁘다 / #품질 좋다 / #포장이 꼼꼼하다 / #가격대비 좋다 / #고급스럽다 / #가성비 최고 / **#선물용** / **#인테리어**
+  → 꿔집님이 평소 알아차리기 어려운 "선물용", "인테리어" 같은 구매자 쪽 말말을 AI가 채택—이게 E-11 경쟁력
+
+**TSC**: 0 errors
+
+**커밋 이력**:
+- 00272f7 feat(E-11 Block A): review sentiment analyzer library + API endpoint
+- c870707 feat(E-11 Block B): integrate review analysis panel into Naver SEO table
+- fb418bd feat(E-11 Block A hardening): robust AI key fallback + JSON safety + token cap
+- (현 커밋: docs E-11 완료 반영 + ROADMAP 다음 작업 후보 교체)
+
+**구조 결정** (이후 세션 참고):
+- DB 마이그레이션 불필요 — 리뷰 분석 결과는 런타임 계산으로 조달, `Product` 테이블 스키마 변경 없음. 장기 필요 시 `Product.reviewSentiment` JSON 컴럼 추가로 영속화 가능 (재분석 비용 0원 보장)
+- `analyzeReviewSentiment()`는 **single source of truth** — 미래에 씨앗 심기 탭5(SEO 탭5)에도 동일 패널 재사용 가능
+- Provider 우선순위 (보증 포함): Groq round-robin (3 keys, 401/403/JSON 손서닫 fallback) → Gemini round-robin (3 keys) → Anthropic last resort
+- 추천 태그가 currentTags에 이미 있면 시각적으로 구분(취소선 + "이미 추가됨" 표시), 남은 슬롯이 0이면 자동으로 비활성화 — 사용자가 도이하지 않아도 안전
+- E-11이 SEO 자동 추천에 구체 "구매자 언어"를 주입—꿔집님이 평소 알아차릴 수 없는 구매자 심리를 대량 텍스트로부터 추출한다는 점이 핵심 가치

@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 4 E-14 + E-10 경쟁 진입장벽 모니터링 — 옵션 A 간접 추정 방식 완료)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10)**
-> **다음 작업 후보: E-11 (AI 리뷰 감정 분석 + SEO 재활용) / E-12 (Discord 리뷰 알림) / 수수료 개편 미반영분 적용** — 본 문서 하단의 "다음 채팅에서 시작할 작업 후보" 섹션 참조
+> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 4 E-11 — AI 리뷰 감정분석 + SEO 재활용 완료, Sprint 4 전체 종결)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10, E-11)**
+> **다음 작업 후보: 수수료 개편 미반영분 적용 (1순위) / E-12 Discord 리뷰 알림 (2순위) / E-13B 알림톡 활성화 (월 50건+ 시점)** — 본 문서 하단의 "다음 채팅에서 시작할 작업 후보" 섹션 참조
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
 > - `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가` (Claude 리서치 2026-04-16)
@@ -150,7 +150,7 @@
 |------|------|------|----------|------|
 | **E-14** | **✅** | **Upload Readiness Command Center (등록 준비 명령탑)** | `src/components/dashboard/UploadReadinessWidget.tsx` (신규), `src/app/dashboard/page.tsx`, `src/app/products/new/page.tsx`, `src/app/products/page.tsx` | DRAFT 상품 11점 키디니스 점수 정렬 TOP 5 + Stat strip(등록가능/작업필요/평균점수) + 부족 항목 칩 deep-link(`?focus={tab}` → 씨앗심기 5개 탭 자동 활성화) + 90+ "바로 등록" CTA(`?registerId=` → 정원창고 자동 체크 + NaverRegisterModal 자동 노출) + ITEM_TO_TAB 11개 매핑 + Loading skeleton + Empty state. 셀러 첫 등록 차단점 해소 = 매출 발생까지의 인지 부담 5단계 → 1클릭 |
 | **E-10** | **✅** | **경쟁 진입장벽 모니터링 (옵션 A 간접 추정)** | `src/lib/competition-monitor.ts` (+135줄), `src/lib/sourcing-recommender.ts` (+79줄), `src/components/dashboard/CompetitionMonitorWidget.tsx` (+137줄), `src/components/dashboard/SourcingRecommendWidget.tsx` (+95줄), `src/app/api/competition/route.ts` (+9줄) | 원래 계획은 리뷰수/평점 직접 스크래핑이었으나, API 안정성 부족으로 **옵션 A 구현** — 4-factor proxy(topSellers 30%+priceSpread 30%+totalResults 25%+competitionLevel 15%) weighted score로 진입장벽 0~5점 추정. `estimateEntryBarrier()`가 single source of truth. BlueOcean breakdown 구조(`{ base, entryBarrierBonus, total }`)로 +15/+5/0 가산. CompetitionMonitorWidget에 5단계 막대+4-factor+Recommendation 패널, SourcingRecommendWidget에 Shield chip(LOW/MEDIUM/HIGH 3색)+BlueOcean breakdown+3 metrics. **라이브 검증 완료** — Block A+C 8개 상품 실제 데이터, Block B+D mock 주입로 3색 chip 모두 시각 확인. DB 스키마 변경 없음 |
-| **E-11** | ⬜ | **AI 리뷰 감정 분석 + SEO 재활용** | api/review-analysis(신규), 검색조련사 연동 | 리뷰 텍스트 붙여넣기 → Groq AI 감정분석(긍정/부정/중립) + 키워드 추출 → SEO 태그 자동추천, 기존 Groq 인프라 활용(추가비용 0원) |
+| **E-11** | **✅** | **AI 리뷰 감정 분석 + SEO 재활용** | `src/lib/review-sentiment-analyzer.ts` (신규 348줄), `src/app/api/review-analysis/route.ts` (신규 78줄), `src/components/naver-seo/NaverSeoProductTable.tsx` (+368줄), 보강 커밋 `fb418bd` (+35줄) | `analyzeReviewSentiment()` Groq round-robin (3 keys) → Gemini (3 keys) → Anthropic fallback. SentimentResult: 감정 평판/비율 + topKeywords + suggestedTags + strengths/painPoints + aiSummary. ReviewAnalysisPanel이 SeoEditPanel 내부 SEO 태그 섹션 다음에 통합 — 보라색 점선 박스 + Textarea + AI 분석 시작 + 결과(AI 요약/감정분포/강점약점/키워드/추천태그 1클릭·일괄추가). **라이브 검증 완료**: 10개 mock 리뷰 “꿔 인테리어 소품”, 긍정 80% / 추천 태그 8개 (선물용·인테리어 등 구매자 언어 정확 추출). 보강: round-robin이 401/403/JSON 파싱 손서닫 fallback + max_tokens 1500→2500 + parseJsonSafe LLM JSON 정리. 비용: 0 KRW (Groq 무료 14400/키/하루 × 2키 = 28800/하루). |
 
 #### Sprint 5: 알림 자동화 + 수수료 업데이트 (비용 0원)
 
@@ -161,9 +161,87 @@
 
 ---
 
-## 다음 채팅에서 시작할 작업 후보 (E-10 완료 이후)
+## 다음 채팅에서 시작할 작업 후보 (E-11 완료 이후)
 
-> 2026-04-29 E-10 마무리 세션에서 다음 작업 우선순위 재평가. **E-11 → 수수료 개편 → E-12** 순서 권장 (매출 임팩트 + 트리거 적합성 종합 평가).
+> 2026-04-29 E-11 마무리 세션에서 다음 작업 우선순위 재평가. **수수료 개편 → E-12 → E-13B** 순서 권장 (수익성 직결도 + 트리거 적합성 종합 평가). Phase E+ Sprint 4 전체 종결 상태.
+
+### E-11 완료 요약 (2026-04-29)
+
+**구현 결과**: 1인 셀러의 자체 리뷰 0개 상태에서도 즉시 작동하는 "경쟁사/도매 텍스트 붙여넣기 → Groq AI 감정분석 → SEO 태그 자동추천" 워크플로우. 검색조련사 인라인 패널에 통합 — 소싱→등록 파이프라인의 마지막 단계에서 구명자 언어 기반 정확한 태그 확정.
+
+**변경 파일** (총 3개, +831줄, 3 commits):
+- `src/lib/review-sentiment-analyzer.ts` (신규 348줄) — `analyzeReviewSentiment()` + 3-tier provider fallback
+- `src/app/api/review-analysis/route.ts` (신규 78줄) — POST endpoint with input validation
+- `src/components/naver-seo/NaverSeoProductTable.tsx` (+368줄) — ReviewAnalysisPanel + SeoEditPanel 통합
+- 보강: 위 라이브러리 (+30/-8줄) + ai-generate (+5/-2줄) — round-robin 401/403/JSON 손서닫 fallback + max_tokens 2500 + parseJsonSafe LLM JSON 정리
+
+**커밋 이력**: 00272f7 (Block A) → c870707 (Block B) → fb418bd (Block A 보강) → (현 docs)
+
+**Groq 키 회전 이벤트 기록**:
+- 세션 중 GROQ_API_KEY 첨 번좌가 401 Invalid로 확인되어 round-robin이 다음 키로 넘어가지 않은 버그 발견 — 코드 보강 추가
+- 꽃졔님께서 GROQ_API_KEY (`lrltQb`), GROQ_API_KEY_2 (`CAVylw`), GROQ_API_KEY_3 (`3IGN7i`) 3개 모두 신규 발급·등록 완료 (이전 3pEakT 폐기 키는 Vercel에서 회전 처리됨)
+- 최종 정상 키: GROQ × 3개 (lrltQb + CAVylw + 3IGN7i = 43,200회/일 capacity) — 1인 셀러 일 사용량 대비 무한대
+- **키 무효화 근본 원인**: `.env.backup.*`, `.env.back`, `.env.complete.backup` 등 9개 백업 파일이 git에 추적되어 GitHub에 키 노출 → Groq 자동 폐기 시스템 발동. 2026-04-29 마지막 세션에서 모두 `git rm --cached` + `.gitignore` 강화 (.env.* 와일드카드, !.env.example 예외)로 완전 차단. 향후 동일 사고 방지
+- Vercel 존재하는 "Needs Attention" 알림 6개 (GROQ_API_KEY_2 폐기, GEMINI_API_KEY/_2/_3 quota 소진, 기타 보안 권고): 현 작업과 무관, 독립적으로 정리 권장
+
+**라이브 검증 결과** (Chrome MCP, 10개 mock 리뷰):
+- API HTTP 200, provider: groq-llama3, GROQ_API_KEY=lrltQb
+- 감정 분포: 긍정 80% / 중립 10% / 부정 10% — 정확한 렌더링
+- 추천 SEO 태그 8개 (색이예쁘다/품질좋다/포장이꼼꼼하다/가격대비좋다/고급스럽다/가성비최고/선물용/인테리어) — 특히 "선물용·인테리어" 같은 구매자 언어 정확 추출이 핵심 가치
+
+---
+
+### 다음 작업 후보 — 우선순위 평가 (10년차 파워셀러 + UI/UX 디자이너 관점)
+
+| 후보 | 매출 임팩트 | 트리거 적합성 | 종합 |
+|------|------------|---------------|------|
+| **수수료 개편 미반영분 적용** | 높음 — 2025.6.2 개편 미반영 (유입수수료 2% 폐지 → 판매수수료 2.73%, 자체마케팅 0.91%) | C-4 수익성 대시보드 + good-service.ts 미반영분 지금 수정 가능 | **★ 1순위** — 소규모(0.5일 이내) + 수익성 정확도 직결 |
+| **E-12 Discord 리뷰 알림** | 중간 — 운영 알림 강화 | 자체 리뷰 발생 후 의미 (현재 0개) | ★ 2순위 — 자체 리뷰 1건 발생 시점 추천 |
+| **E-13B 알림톡 발송 API** | 높음 — 리뷰 재구매 유도 | 월 50건+ 시점 (현재 미도달) | 장기 — 도달 시 즉시 활성화 가능한 UI 세팅 완료 상태 |
+
+#### 추천 순서 — 수수료 개편 → E-12 → E-13B
+
+**수수료 개편 1순위 이유**:
+1. 2025.6.2 시행된 개편이 현재 수익성 표시/good-service.ts/마진계산기 3곳에 미반영 — 수익성 표시 신뢰도 직접 영향
+2. 독립 작업 + 소규모 (약 0.5일 이내)
+3. C-4 수익성 대시보드(유입경로별 수수료 5.73% vs 3.91%)와 관련되어 양쪽 동시 업데이트 필요
+4. 마진계산기 동기화 필요 — 마진 렌더링 정확도 단소
+
+**구체 작업 항목 (수수료 개편)**:
+- `src/lib/profitability.ts` (또는 유사 라이브러리): 자체마케팅 유입 경로의 수수료 0.91% 도입
+- 기본 유입 수수료 2.73% 적용 (기존 유입수수료 2% 제거)
+- C-4 수익성 위젯에서 유입 경로별 구분 강화
+- `MarginCalculator.tsx`에 구조 적용
+- `good-service.ts`와 연동 (2026-04 커밋 `b5606c4`에서 톡톡 12h 적용 완료, 수수료 부분만 추가 필요)
+
+**E-12 2순위 이유**:
+- 자체 리뷰 발생 후(50건+ 시) 의미 있음 — 현재 자체 리뷰 0개
+- 대시보드 알림 이미 충분 — 운영 경고는 ReviewGrowthWidget(E-2A)이 보완
+
+**E-13B 장기 이유**:
+- 월 주문 50건+ 도달 시점에 활성화 — 현재 소라피 키 입력만 하면 즉시 작동하는 UI 세팅 완료 상태 (E-13A)
+- 1단계: 네이버 내장 무료 리뷰 알림 + 인서트 카드(E-13C)로 충분
+
+---
+
+### 다음 채팅 시작 메시지 템플릿
+
+다음 새 채팅을 시작할 때 그대로 복붙해서 사용:
+
+```
+꿔튰움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md를 읽고
+현재 상태 파악 후 수수료 개편 미반영분 적용 작업을 시작해주세요.
+(2025.6.2 개편: 유입수수료 2% 폐지 → 판매수수료 2.73%, 자체마케팅 유입 0.91%)
+
+작업 시작 전 필수:
+1. git log -5로 직전 작업 잔재 없는지 먼저 확인 (E-11 4개 commit이 origin/main에 push 완료 상태여야 함)
+2. KKOTIUM_PROGRESS.md / KKOTIUM_ROADMAP.md 정독
+3. 관련 코드 파일 (good-service.ts, profitability.ts, MarginCalculator.tsx, C-4 수익성 대시보드) 현재 상태 파악
+4. 작업 계획 브리핑 후 제 승인 받고 시작
+5. 작업 완료 후 PROGRESS.md/ROADMAP.md 업데이트 + git push
+
+추가로 Vercel "Needs Attention" 표시는 GEMINI 키 quota 초과 경고 — GROQ 정상이라 fallback 거치지 않으므로 앱 사용에는 무관. 작업 직접 영향 없음.
+```
 
 ### E-10 완료 요약 (2026-04-29)
 

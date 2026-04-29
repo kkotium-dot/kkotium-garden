@@ -12,8 +12,10 @@ dist
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+# All env files except example (prevents accidental key commits → Groq auto-revokes leaked keys)
 .env
-.env*.local
+.env.*
+!.env.example
 *.db
 *.db-journal
 prisma/migrations
@@ -27,6 +29,7 @@ Thumbs.db
 *.pem
 .env.local
 
+# Belt-and-suspenders: explicit env backup patterns (covered by .env.* above too)
 *.env.backup
 .env.local.backup*
 vercel_env_upload.env
