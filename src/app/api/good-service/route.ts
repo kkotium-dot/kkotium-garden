@@ -88,7 +88,7 @@ export async function GET() {
       return reason.includes('seller') || reason.includes('quality') || reason.includes('wrong');
     }).length;
 
-    // Monthly stats for grade simulation
+    // Monthly stats for grade simulation (1-month window, post 2025-12 reform)
     const monthlyOrders = await prisma.order.findMany({
       where: { createdAt: { gte: thirtyDaysAgo }, status: { not: 'CANCELLED' } },
       select: { totalAmount: true },
@@ -108,7 +108,8 @@ export async function GET() {
       totalReviews: 0, // No review API — placeholder
       avgRating: 0,
       inquiriesTotal: 0,
-      inquiriesAnswered24h: 0,
+      // 2025-04 hardened standard: 12h window for talktalk replies
+      inquiriesAnswered12h: 0,
       returnsBySeller,
       returnsTotal: returnOrders.length,
     };

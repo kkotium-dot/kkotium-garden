@@ -2,6 +2,10 @@
 // Good Service Score Calculator
 // Estimates Naver SmartStore's 3-axis quality score from internal order data
 // Axes: Order Fulfillment + Delivery Quality + Customer Satisfaction
+//
+// 2025-04 update: Talktalk reply standard hardened from 24h to 12h
+// 2025-12 update: Seller grade evaluation window changed 3 months → 1 month
+// Source: Naver SmartStore Center > Seller Grade Policy
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -22,7 +26,8 @@ export interface GoodServiceInput {
   totalReviews: number;
   avgRating: number;
   inquiriesTotal: number;
-  inquiriesAnswered24h: number;
+  // Talktalk reply within 12h (2025-04 hardened standard)
+  inquiriesAnswered12h: number;
   returnsBySeller: number;
   returnsTotal: number;
 }
@@ -39,17 +44,17 @@ export interface GoodServiceScore {
 }
 
 const GRADE_CONFIG = {
-  EXCELLENT: { min: 90, label: '\uC6B0\uC218', color: '#16a34a' },
-  GOOD:      { min: 75, label: '\uC591\uD638', color: '#2563eb' },
-  NORMAL:    { min: 60, label: '\uBCF4\uD1B5', color: '#eab308' },
-  WARNING:   { min: 40, label: '\uAC1C\uC120 \uD544\uC694', color: '#f97316' },
-  DANGER:    { min: 0,  label: '\uC704\uD5D8', color: '#e62310' },
+  EXCELLENT: { min: 90, label: '우수', color: '#16a34a' },
+  GOOD:      { min: 75, label: '양호', color: '#2563eb' },
+  NORMAL:    { min: 60, label: '보통', color: '#eab308' },
+  WARNING:   { min: 40, label: '개선 필요', color: '#f97316' },
+  DANGER:    { min: 0,  label: '위험', color: '#e62310' },
 } as const;
 
 function calcOrderFulfillment(input: GoodServiceInput): { score: number; tips: string[] } {
   const tips: string[] = [];
   if (input.totalOrders === 0) {
-    return { score: 100, tips: ['\uC8FC\uBB38 \uBC1C\uC0DD \uC804\uC785\uB2C8\uB2E4. \uAD00\uB9AC\uAC00 \uD544\uC694 \uC5C6\uC2B5\uB2C8\uB2E4.'] };
+    return { score: 100, tips: ['주문 발생 전입니다. 관리가 필요 없습니다.'] };
   }
   const confirmRate24h = input.confirmedWithin24h / input.totalOrders;
   const cancelRate = input.cancelledBySeller / input.totalOrders;
@@ -57,16 +62,16 @@ function calcOrderFulfillment(input: GoodServiceInput): { score: number; tips: s
   if (confirmRate24h < 0.95) {
     const penalty = Math.round((0.95 - confirmRate24h) * 80);
     score -= penalty;
-    tips.push(`24\uC2DC\uAC04 \uB0B4 \uBC1C\uC8FC\uD655\uC778\uC728 ${(confirmRate24h * 100).toFixed(1)}% - 95% \uC774\uC0C1 \uD544\uC694`);
+    tips.push(`24시간 내 발주확인율 ${(confirmRate24h * 100).toFixed(1)}% - 95% 이상 필요`);
   }
   if (cancelRate > 0.02) {
     const penalty = Math.round((cancelRate - 0.02) * 200);
     score -= penalty;
-    tips.push(`\uD310\uB9E4\uC790 \uADC0\uCC45 \uCDE8\uC18C ${input.cancelledBySeller}\uAC74 (${(cancelRate * 100).toFixed(1)}%) - 2% \uBBF8\uB9CC \uD544\uC694`);
+    tips.push(`판매자 귀책 취소 ${input.cancelledBySeller}건 (${(cancelRate * 100).toFixed(1)}%) - 2% 미만 필요`);
   }
   if (input.lateConfirmations > 0) {
     score -= input.lateConfirmations * 5;
-    tips.push(`48\uC2DC\uAC04 \uCD08\uACFC \uBC1C\uC8FC\uD655\uC778 ${input.lateConfirmations}\uAC74 - \uBE60\uB978 \uCC98\uB9AC\uAC00 \uB4F1\uAE09\uC5D0 \uC9C1\uACB0`);
+    tips.push(`48시간 초과 발주확인 ${input.lateConfirmations}건 - 빠른 처리가 등급에 직결`);
   }
   return { score: Math.max(0, Math.min(100, score)), tips };
 }
@@ -75,7 +80,7 @@ function calcDeliveryQuality(input: GoodServiceInput): { score: number; tips: st
   const tips: string[] = [];
   const totalDelivered = input.deliveredOnTime + input.deliveredLate;
   if (totalDelivered === 0) {
-    return { score: 100, tips: ['\uBC30\uC1A1 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.'] };
+    return { score: 100, tips: ['배송 데이터가 없습니다.'] };
   }
   const onTimeRate = input.deliveredOnTime / totalDelivered;
   const issueRate = input.deliveryIssues / totalDelivered;
@@ -83,12 +88,12 @@ function calcDeliveryQuality(input: GoodServiceInput): { score: number; tips: st
   if (onTimeRate < 0.90) {
     const penalty = Math.round((0.90 - onTimeRate) * 120);
     score -= penalty;
-    tips.push(`\uBC30\uC1A1 \uC815\uC2DC \uB3C4\uCC29\uC728 ${(onTimeRate * 100).toFixed(1)}% - 90% \uC774\uC0C1 \uD544\uC694`);
+    tips.push(`배송 정시 도착률 ${(onTimeRate * 100).toFixed(1)}% - 90% 이상 필요`);
   }
   if (issueRate > 0.01) {
     const penalty = Math.round((issueRate - 0.01) * 300);
     score -= penalty;
-    tips.push(`\uBC30\uC1A1 \uBB38\uC81C(\uD30C\uC190/\uBD84\uC2E4/\uC624\uBC30\uC1A1) ${input.deliveryIssues}\uAC74 - \uD488\uC9C8 \uAD00\uB9AC \uD544\uC694`);
+    tips.push(`배송 문제(파손/분실/오배송) ${input.deliveryIssues}건 - 품질 관리 필요`);
   }
   return { score: Math.max(0, Math.min(100, score)), tips };
 }
@@ -100,15 +105,16 @@ function calcCustomerSatisfaction(input: GoodServiceInput): { score: number; tip
     const penalty = Math.round((4.5 - input.avgRating) * 30);
     score -= penalty;
     if (input.avgRating < 4.0) {
-      tips.push(`\uB9AC\uBDF0 \uD3C9\uC810 ${input.avgRating.toFixed(1)}\uC810 - 4.5\uC810 \uC774\uC0C1\uC774 \uB4F1\uAE09 \uC0C1\uC2B9\uC5D0 \uC720\uB9AC`);
+      tips.push(`리뷰 평점 ${input.avgRating.toFixed(1)}점 - 4.5점 이상이 등급 상승에 유리`);
     }
   }
   if (input.inquiriesTotal > 0) {
-    const responseRate = input.inquiriesAnswered24h / input.inquiriesTotal;
+    // 2025-04 hardened standard: 12h reply window
+    const responseRate = input.inquiriesAnswered12h / input.inquiriesTotal;
     if (responseRate < 0.90) {
       const penalty = Math.round((0.90 - responseRate) * 60);
       score -= penalty;
-      tips.push(`\uBB38\uC758 24\uC2DC\uAC04 \uB0B4 \uC751\uB2F5\uC728 ${(responseRate * 100).toFixed(1)}% - 90% \uC774\uC0C1 \uD544\uC694`);
+      tips.push(`톡톡 12시간 내 응답률 ${(responseRate * 100).toFixed(1)}% - 90% 이상 필요 (2025.4 기준 강화)`);
     }
   }
   if (input.returnsTotal > 0 && input.totalOrders > 0) {
@@ -116,7 +122,7 @@ function calcCustomerSatisfaction(input: GoodServiceInput): { score: number; tip
     if (sellerReturnRate > 0.03) {
       const penalty = Math.round((sellerReturnRate - 0.03) * 200);
       score -= penalty;
-      tips.push(`\uD310\uB9E4\uC790 \uADC0\uCC45 \uBC18\uD488/\uAD50\uD658 ${input.returnsBySeller}\uAC74 - \uC0C1\uD488 \uC0C1\uD0DC \uAD00\uB9AC \uD544\uC694`);
+      tips.push(`판매자 귀책 반품/교환 ${input.returnsBySeller}건 - 상품 상태 관리 필요`);
     }
   }
   return { score: Math.max(0, Math.min(100, score)), tips };
@@ -138,7 +144,7 @@ export function calcGoodServiceScore(input: GoodServiceInput): GoodServiceScore 
 
   const allTips = [...fulfillment.tips, ...delivery.tips, ...satisfaction.tips];
   if (allTips.length === 0) {
-    allTips.push('\uBAA8\uB4E0 \uC9C0\uD45C\uAC00 \uC591\uD638\uD569\uB2C8\uB2E4. \uD604\uC7AC \uC218\uC900\uC744 \uC720\uC9C0\uD558\uC138\uC694!');
+    allTips.push('모든 지표가 양호합니다. 현재 수준을 유지하세요!');
   }
 
   let grade: GoodServiceScore['grade'] = 'DANGER';
@@ -160,6 +166,16 @@ export function calcGoodServiceScore(input: GoodServiceInput): GoodServiceScore 
 }
 
 // ── Grade Simulator ───────────────────────────────────────────────────────────
+// 2025-12 reform: evaluation window changed 3 months → 1 month
+// Lowered thresholds for BIG_POWER / POWER / SAESAK levels
+//
+// Naver Seller Grade Tiers (2025-12 reform):
+//   - Platinum: 1억+ / 월, count 2,000+ (high tier unchanged)
+//   - Premium:  6,000만+ / 월, count 500+
+//   - BigPower: 1,000만+ / 월, count 200+ (was 4,000만+)
+//   - Power:    300만+ / 월, count 80+ (was 800만+)
+//   - Saesak:   80만+ / 월, count 20+ (was 200만+)
+//   - Seed:     0+
 
 export interface GradeTarget {
   grade: string;
@@ -169,12 +185,12 @@ export interface GradeTarget {
 }
 
 export const NAVER_GRADE_TARGETS: GradeTarget[] = [
-  { grade: '\uD50C\uB798\uD2F0\uB118', minSalesAmount: 50_000_000, minSalesCount: 2000, minGoodServiceScore: 90 },
-  { grade: '\uD504\uB9AC\uBBF8\uC5C4', minSalesAmount: 20_000_000, minSalesCount: 500, minGoodServiceScore: 80 },
-  { grade: '\uBE45\uD30C\uC6CC', minSalesAmount: 10_000_000, minSalesCount: 200, minGoodServiceScore: 70 },
-  { grade: '\uD30C\uC6CC',     minSalesAmount: 3_000_000,  minSalesCount: 80,  minGoodServiceScore: 60 },
-  { grade: '\uC0C8\uC2F9',     minSalesAmount: 800_000,    minSalesCount: 20,  minGoodServiceScore: 50 },
-  { grade: '\uC528\uC557',     minSalesAmount: 0,          minSalesCount: 0,   minGoodServiceScore: 0  },
+  { grade: '플래티넘', minSalesAmount: 100_000_000, minSalesCount: 2000, minGoodServiceScore: 90 },
+  { grade: '프리미엄', minSalesAmount: 60_000_000,  minSalesCount: 500,  minGoodServiceScore: 80 },
+  { grade: '빅파워',   minSalesAmount: 10_000_000,  minSalesCount: 200,  minGoodServiceScore: 70 },
+  { grade: '파워',     minSalesAmount: 3_000_000,   minSalesCount: 80,   minGoodServiceScore: 60 },
+  { grade: '새싹',     minSalesAmount: 800_000,     minSalesCount: 20,   minGoodServiceScore: 50 },
+  { grade: '씨앗',     minSalesAmount: 0,           minSalesCount: 0,    minGoodServiceScore: 0  },
 ];
 
 export function simulateGrade(
@@ -182,7 +198,7 @@ export function simulateGrade(
   monthlySalesCount: number,
   goodServiceScore: number,
 ): { currentGrade: string; nextGrade: string | null; gap: { salesAmount: number; salesCount: number; score: number } | null } {
-  let currentGrade = '\uC528\uC557';
+  let currentGrade = '씨앗';
   let nextGradeIdx = -1;
 
   for (let i = 0; i < NAVER_GRADE_TARGETS.length; i++) {

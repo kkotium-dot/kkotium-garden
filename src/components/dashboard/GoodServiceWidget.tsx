@@ -1,11 +1,13 @@
 // src/components/dashboard/GoodServiceWidget.tsx
 // C-9: Good Service Score Dashboard Widget
 // 3-axis gauge + grade badge + improvement tips + grade simulator
+// 2025-04 update: Talktalk reply standard hardened from 24h to 12h
+// 2025-12 update: Seller grade evaluation window changed 3 months → 1 month
 
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Shield, TrendingUp, Truck, Star, AlertTriangle, ChevronRight, RefreshCw, Info } from 'lucide-react';
+import { Shield, TrendingUp, Truck, Star, AlertTriangle, ChevronRight, RefreshCw, Info, MessageCircle } from 'lucide-react';
 
 interface GoodServiceData {
   score: {
@@ -182,6 +184,18 @@ export default function GoodServiceWidget() {
           </div>
         </div>
 
+        {/* Talktalk 12h info chip (2025-04 hardened) */}
+        <div style={{
+          marginTop: 12, padding: '8px 12px', borderRadius: 8,
+          background: '#F0F9FF', border: '1px solid #BAE6FD',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <MessageCircle size={12} style={{ color: '#0369a1', flexShrink: 0 }} />
+          <span style={{ fontSize: 11, color: '#0369a1', fontWeight: 600, lineHeight: 1.4 }}>
+            톡톡 응답 기준 <strong style={{ fontWeight: 800 }}>12시간 강화</strong> (2025.4) - 자동응답 설정 권장
+          </span>
+        </div>
+
         {/* Tips */}
         {score.tips.length > 0 && (
           <div style={{
@@ -215,6 +229,12 @@ export default function GoodServiceWidget() {
             <Info size={12} style={{ color: '#e62310' }} />
             <span style={{ fontSize: 12, fontWeight: 700, color: '#1A1A1A' }}>
               등급 시뮬레이터 (Seller Grade)
+            </span>
+            <span style={{
+              fontSize: 9, padding: '1px 6px', borderRadius: 99,
+              background: '#F8DCE5', color: '#e62310', fontWeight: 700,
+            }}>
+              월 단위 평가 (2025.12 개편)
             </span>
           </div>
           <ChevronRight size={14} style={{
@@ -281,6 +301,16 @@ export default function GoodServiceWidget() {
                 </p>
               </div>
             )}
+
+            {/* Grade reform notice */}
+            <div style={{
+              marginTop: 10, padding: '8px 10px', borderRadius: 6,
+              background: '#FEF3C7', border: '1px solid #FDE68A',
+            }}>
+              <p style={{ fontSize: 10, color: '#92400E', margin: 0, lineHeight: 1.4 }}>
+                <strong style={{ fontWeight: 800 }}>2025.12 등급 개편</strong>: 평가 기간 3개월→1개월, 빅파워 4,000만→1,000만원, 파워 800만→300만원, 새싹 200만→80만원
+              </p>
+            </div>
           </div>
         )}
       </div>
