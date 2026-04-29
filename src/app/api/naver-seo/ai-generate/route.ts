@@ -160,8 +160,9 @@ async function callGroq(productName: string, style: SeoStyle, market?: Competiti
       return await callGroqWithKey(productName, style, key, market);
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
-      if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('rate')) {
-        console.warn(`[ai-generate] Groq key ...${key.slice(-6)} rate limited, trying next`);
+      // Retry on rate/quota AND auth errors — a single revoked key shouldn't kill the whole chain
+      if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('rate') || lastErr.includes('401') || lastErr.includes('403')) {
+        console.warn(`[ai-generate] Groq key ...${key.slice(-6)} failed (${lastErr.slice(0, 30)}), trying next`);
         continue;
       }
       throw e;

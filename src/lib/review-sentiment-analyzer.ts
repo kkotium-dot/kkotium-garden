@@ -87,7 +87,22 @@ function parseJsonSafe(text: string): unknown {
   const start = t.indexOf('{');
   const end = t.lastIndexOf('}');
   if (start !== -1 && end !== -1) t = t.slice(start, end + 1);
-  return JSON.parse(t);
+
+  // Try parsing directly first
+  try {
+    return JSON.parse(t);
+  } catch {
+    // Cleanup common LLM JSON mistakes (especially from llama-3.1-8b-instant):
+    // - trailing commas before } or ]
+    // - smart/curly quotes
+    // - control characters that break JSON
+    const cleaned = t
+      .replace(/,(\s*[}\]])/g, '$1')
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\x00-\x1F\x7F]/g, '');
+    return JSON.parse(cleaned);
+  }
 }
 
 // ── Result validation + normalization ────────────────────────────────────────
@@ -186,7 +201,8 @@ async function callGroqWithKey(prompt: string, apiKey: string): Promise<unknown>
         { role: 'user', content: prompt },
       ],
       temperature: 0.2,
-      max_tokens: 1500,
+      // Korean tokens are ~60% as dense as English. JSON output with up to 12 keywords + 10 tags + 4 strengths/painPoints + summary easily exceeds 1500 — use 2500 to prevent mid-response truncation
+      max_tokens: 2500,
     }),
   });
   if (!res.ok) throw new Error(`Groq ${res.status}`);
@@ -208,8 +224,13 @@ async function callGroq(prompt: string): Promise<unknown> {
       return await callGroqWithKey(prompt, key);
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
-      if (lastErr.includes('429') || lastErr.includes('rate') || lastErr.includes('quota')) {
-        console.warn(`[review-analyzer] Groq key ...${key.slice(-6)} rate-limited, trying next`);
+      // Retry on rate/quota, auth errors, AND JSON parse failures — a single bad response shouldn't kill the chain
+      if (
+        lastErr.includes('429') || lastErr.includes('rate') || lastErr.includes('quota') ||
+        lastErr.includes('401') || lastErr.includes('403') ||
+        lastErr.includes('JSON') || lastErr.includes('Expected') || lastErr.includes('Unexpected')
+      ) {
+        console.warn(`[review-analyzer] Groq key ...${key.slice(-6)} failed (${lastErr.slice(0, 40)}), trying next`);
         continue;
       }
       throw e;
@@ -228,7 +249,7 @@ async function callGeminiWithKey(prompt: string, apiKey: string): Promise<unknow
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.2,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 2500,
         responseMimeType: 'application/json',
       },
     }),
@@ -272,7 +293,7 @@ async function callAnthropic(prompt: string): Promise<unknown> {
     headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
+      max_tokens: 2500,
       system: 'Output ONLY raw JSON. First char must be {, last must be }.',
       messages: [{ role: 'user', content: prompt }],
     }),
