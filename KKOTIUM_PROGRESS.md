@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-16 (Phase E+ Sprint 1 완료 — E-4 반품안심케어 + E-2C 리뷰 적립금)
+> 최종 업데이트: 2026-04-27 (Phase E+ Sprint 2 완료 — E-2A 리뷰 성장 트래커 + E-2B 주문 페이지 리뷰 유도 뱃지)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1 완료 (E-4, E-2C)**
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2 완료 (E-4, E-2C, E-2A, E-2B)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
 >   1. `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가`
@@ -36,7 +36,7 @@
 | GitHub | https://github.com/kkotium-dot/kkotium-garden |
 | Phase A~D | 전체 완료 ✅ |
 | Phase E | 진행 중 (E-7, E-1, E-3, E-8 완료) |
-| Phase E+ | Sprint 1 완료 (E-4 반품안심케어, E-2C 리뷰 적립금) |
+| Phase E+ | Sprint 1 완료 (E-4, E-2C) + Sprint 2 완료 (E-2A, E-2B) |
 | 카카오 비즈니스 채널 | 꽃틔움 KKOTIUM (Public ID: `_xkfALG`) ✅ |
 
 ---
@@ -232,6 +232,15 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 
 ## 4. 완료 이력
 
+### 2026-04-27 Phase E+ Sprint 2 완료 세션
+
+| 작업 | 내용 |
+|------|------|
+| **E-2A** | 리뷰 성장 트래커 + 운영 체크리스트: `/api/review-growth` GET/PATCH (manualReviewCount, reviewChecklist), `ReviewGrowthWidget` 대시보드 위젯, 9항목 체크리스트 (자동감지: returnCare, kakaoQrExposure), 단계 판정 (1: 0~10, 2: 11~50, 3: 51+), 작성률 목표 20~25%, 카카오 채널 칩 (single source of truth from store_settings) |
+| **E-2B** | 주문 페이지 리뷰 유도 뱃지: DELIVERED+1~3일 (구매확정 유도/초록), COMPLETED+1~3일 (리뷰 요청/파랑), COMPLETED+28~32일 (한달 리뷰/보라), 알림톡 토스트 UI (E-13B 솔라피 연동 대기) |
+| **DB 보정** | StoreSettings 스키마 `kakaoChannelUrl` 필드 추가, `kakaoChannelName` 디폴트 오타 (`꽃틄움` → `꽃틔움`) 수정 |
+| **일괄 커밋** | `e09e63c` — 6 files changed, +602/-7 |
+
 ### 2026-04-16 Phase E+ Sprint 1 완료 세션
 
 | 작업 | 내용 |
@@ -305,6 +314,9 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | 경쟁 모니터 위젯 | `src/components/dashboard/CompetitionMonitorWidget.tsx` |
 | 굿서비스 위젯 | `src/components/dashboard/GoodServiceWidget.tsx` |
 | DataLab 트렌드 위젯 | `src/components/dashboard/DataLabTrendWidget.tsx` |
+| 리뷰 성장 트래커 위젯 (E-2A) | `src/components/dashboard/ReviewGrowthWidget.tsx` |
+| 리뷰 성장 API (E-2A) | `src/app/api/review-growth/route.ts` |
+| 반품안심케어 수수료 (E-4) | `src/lib/return-care-fees.ts` |
 | SEO 테이블 v3 | `src/components/naver-seo/NaverSeoProductTable.tsx` |
 | 씨앗 심기 | `src/app/products/new/page.tsx` |
 | 정원 창고 | `src/app/products/page.tsx` |
