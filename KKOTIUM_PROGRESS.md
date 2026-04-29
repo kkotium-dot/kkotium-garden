@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 3 완료 + Sprint 4 E-14 등록 준비 명령탑 완료)
+> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 4 E-14 + E-10 경쟁 리뷰 모니터링 — 옵션 A 진입장벽 추정 완료)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14)**
-> **다음 작업: E-10 경쟁 리뷰 모니터링** — 상세 계획은 `KKOTIUM_ROADMAP.md`의 "다음 채팅에서 시작할 작업 — E-10 경쟁 리뷰 모니터링" 섹션 참조
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10)**
+> **다음 작업 후보: E-11 (AI 리뷰 감정 분석 + SEO 재활용) / E-12 (Discord 리뷰 알림) / 수수료 개편 미반영분 적용** — 상세 계획은 `KKOTIUM_ROADMAP.md`의 "다음 채팅에서 시작할 작업 후보" 섹션 참조
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
 >   1. `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가`
@@ -40,7 +40,7 @@
 | GitHub | https://github.com/kkotium-dot/kkotium-garden |
 | Phase A~D | 전체 완료 ✅ |
 | Phase E | 진행 중 (E-7, E-1, E-3, E-8 완료) |
-| Phase E+ | Sprint 1 완료 (E-4, E-2C) + Sprint 2 완료 (E-2A, E-2B) + Sprint 3 완료 (E-13A, E-13C) + Sprint 4 완료 (E-14) |
+| Phase E+ | Sprint 1 완료 (E-4, E-2C) + Sprint 2 완료 (E-2A, E-2B) + Sprint 3 완료 (E-13A, E-13C) + Sprint 4 완료 (E-14, E-10) |
 | 카카오 비즈니스 채널 | 꽃틔움 KKOTIUM (Public ID: `_xkfALG`) ✅ |
 
 ---
@@ -522,3 +522,47 @@ Block B 검증 (`?registerId=`):
 - ITEM_TO_TAB 매핑 표는 위젯 내부에 격리 — 향후 readiness 항목 추가 시 매핑만 업데이트하면 deep-link 자동 작동
 - 90점 임계값은 위젯에서만 적용 — 정원창고 NaverRegisterModal은 더 관대한(70%+) 기준 유지(기존 정책 유지)
 - E-14는 "셀러의 첫 등록 차단점 해소"가 목적 — 매출 발생 후에는 의미가 줄어드는 작업이므로 우선순위가 가장 높았음
+
+
+### 2026-04-29 Phase E+ Sprint 4 후속 완료 세션 (E-10 — 경쟁 진입장벽 모니터링, 옵션 A 간접 추정 방식)
+
+**범위**: 원래 ROADMAP 계획은 "네이버 쇼핑검색 API로 리뷰수/평점 직접 스크래핑" 이었으나, 실제 API 응답에서 reviewCount/avgRating이 안정적으로 제공되지 않아 더 현실적인 **옵션 A — 진입장벽 간접 추정**으로 적응. 판매처 다양성(topSellers) + 가격 분산(priceSpread) + 총 검색 결과수(totalResults) + 경쟁 강도(competitionLevel) — 이 4개 proxy로 진입장벽을 5단계 추정하고 BlueOcean 점수에 가산.
+
+| Block | 변경 사항 | 핵심 |
+|-------|----------|------|
+| **Block A — 진입장벽 추정 엔진** | `src/lib/competition-monitor.ts` (+135줄), `src/app/api/competition/route.ts` (+9줄) | `estimateEntryBarrier()` 함수 — 4-factor weighted score (topSellers 30% + priceSpread 30% + totalResults 25% + competitionLevel 15%), 0~5 점수 + low/medium/high label + recommendation 문구. POST /api/competition 응답에 entryBarrier 객체 삽입 |
+| **Block B — BlueOcean 가산** | `src/lib/sourcing-recommender.ts` (+79줄) | 진입장벽 낮음 → +15점 / 보통 → +5점 / 높음 → 0점. 기존 BlueOcean 알고리즘에 합산하며 breakdown 구조 도입 — UI에서 "기본 70 +15 진입가산 = 85" 형태로 투명하게 노출 |
+| **Block C — 경쟁 모니터 UI** | `src/components/dashboard/CompetitionMonitorWidget.tsx` (+137줄) | 카드 펼침 시 진입장벽 패널 노출 — 5단계 수평 막대(green→yellow→orange→red 그라데이션) + 4-factor 세분화(판매처 X개·가격분산 X%·검색결과 N건·경쟁강도 치열) + Recommendation 안내문구. **라이브 검증 완료** (8개 상품 데이터, 예: "선물받은 특별한 일상" → 4.5/5 높음 등) |
+| **Block D — 소싱 추천 위젯 UI** | `src/components/dashboard/SourcingRecommendWidget.tsx` (+95줄) | 경쟁 상품 카드 헤더에 Shield 아이콘 + 진입장벽 chip(낮음 녹색/보통 노랑/높음 빨강 3색) + BlueOcean breakdown 표시(기본+진입가산=점수) + 3 metrics 신규 노출(진입장벽 점수 X/5·판매처 다양성·가격 분산). **라이브 검증 완료** (mock 주입으로 LOW/MEDIUM/HIGH 3색 모두 시각 확인) |
+
+**구현 방식 결정 — 옵션 A vs 원래 계획 차이점** (이후 세션 주의):
+
+| 항목 | 원래 ROADMAP 계획 | 실제 구현 (옵션 A) |
+|------|---------------------|---------------------|
+| 데이터 소스 | 네이버 쇼핑검색 API의 reviewCount/productRating 직접 수집 | 기존 수집 데이터 4-factor proxy(topSellers/priceSpread/totalResults/competitionLevel) |
+| DB 스키마 | `CompetitorSnapshot`에 reviewCount, avgRating 컬럼 추가 예정 | **스키마 변경 없음** — 런타임 계산으로 완전히 대체 |
+| 진입장벽 판단 기준 | 리뷰수 100+ = 높음 / 30~99 = 중간 / 0~29 = 낮음 | 4-factor weighted score 0~5점으로 자체 임계값 설정 |
+| 장점 | 리뷰 = 직접 경쟁 지표로 직관적 | API 가용성 의존 없음, 즉시 작동, DB 마이그레이션 불필요 |
+| 단점 | API 응답에 reviewCount가 누락될 때 취약 | 간접 추정이라 일부 도메인(예: 소수 판매자만 있는 틈새 카테고리)에서 과대/과소 추정 가능성 |
+
+**장기적 권고**: E-11 완료 후 자체 리뷰 데이터가 50건+ 축적되면, 자체 스토어 웹 크롤링으로 경쟁사 리뷰 수집 추가 가능(API에 의존하지 않는 경로). 그 시점에서 옵션 A + 원래 계획의 하이브리드 도입이 가장 강력함.
+
+**라이브 검증 결과**:
+- Block A+C: 실제 8개 상품 데이터로 정상 작동 확인. 첫 카드 펼침 결과 — 진입장벽 분석 패널 정상: 5단계 막대(붉은색=높음, 4.5/5) + 4-factor (판매처 5개·가격분산 253%·검색결과 3,756,250·경쟁강도 치열) + Recommendation ("높음 — 포화 시장, 틈새/독특한 앵글이 필요")
+- Block B+D: DataLab API가 fallback 모드(빈 결과)이라 라이브 데이터로 판단 불가, React fiber를 통한 **mock 주입**으로 UI 렌더링 검증. 결과 — Shield chip(LOW 녹색/MEDIUM 노랑/HIGH 빨강 3색 모두 정상) + BlueOcean breakdown(기본 70 +15 진입가산 = 85점) + 3 metrics(진입장벽 점수 1.5/5 · 판매처 다양성 2개 · 가격 분산 68%) 정상 렌더링
+
+**TSC**: 0 errors
+
+**커밋 이력**:
+- d1d6202 feat(E-10 Block A): entry barrier estimation in competition-monitor
+- 0d216fb feat(E-10 Block B): entry barrier bonus integrated into BlueOcean score
+- 9a81b87 feat(E-10 Block C): entry barrier UI in CompetitionMonitorWidget
+- 6c6de96 feat(E-10 Block D): entry barrier display in SourcingRecommendWidget
+- (현 커밋: docs E-10 완료 반영 + ROADMAP 다음 작업 후보 교체)
+
+**구조 결정 (이후 세션 참고)**:
+- DB 마이그레이션 불필요 — 진입장벽 데이터는 완전히 런타임 계산으로 조달됨 (`competition_snapshots` 테이블 구조 변경 없음)
+- `estimateEntryBarrier()`는 **single source of truth** — CompetitionMonitorWidget · SourcingRecommendWidget · sourcing-recommender 모두 이 한 함수를 공유. 임계값 변경 시 한 곳에서 일괄 반영됨
+- BlueOcean breakdown 구조(`{ base, entryBarrierBonus, total }`)는 향후 다른 가산 항목(예: AI 리뷰 감정분석 가산)을 더하기 쉬운 확장 구조 — E-11 구현 시 자연스럽게 합산 가능
+- 쇼핑검색 API의 reviewCount 안정성이 추후 확인되면 옵션 A + 원래 계획의 하이브리드로 업그레이드 가능 — 하지만 현재 구현으로 궁극적 관점의 "셀러가 주의해야 할 경쟁 강도"를 흔들림 없이 견고하게 표현 가능
+- 라이브 검증 시 DataLab 빈 응답이 나오는 경우가 있으므로, mock 주입·시드 데이터 주입 패턴을 다른 E-시리즈 작업에서도 재사용 권장

@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 3 + Sprint 4 E-14 완료)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14)**
-> **다음 작업: E-10 경쟁 리뷰 모니터링** (Phase E+ Sprint 4 후속, ⬜ 대기 중) — 본 문서 하단의 "다음 채팅에서 시작할 작업" 섹션 참조
+> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 4 E-14 + E-10 경쟁 진입장벽 모니터링 — 옵션 A 간접 추정 방식 완료)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10)**
+> **다음 작업 후보: E-11 (AI 리뷰 감정 분석 + SEO 재활용) / E-12 (Discord 리뷰 알림) / 수수료 개편 미반영분 적용** — 본 문서 하단의 "다음 채팅에서 시작할 작업 후보" 섹션 참조
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
 > - `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가` (Claude 리서치 2026-04-16)
@@ -149,7 +149,7 @@
 | Task | 상태 | 내용 | 변경 파일 | 상세 |
 |------|------|------|----------|------|
 | **E-14** | **✅** | **Upload Readiness Command Center (등록 준비 명령탑)** | `src/components/dashboard/UploadReadinessWidget.tsx` (신규), `src/app/dashboard/page.tsx`, `src/app/products/new/page.tsx`, `src/app/products/page.tsx` | DRAFT 상품 11점 키디니스 점수 정렬 TOP 5 + Stat strip(등록가능/작업필요/평균점수) + 부족 항목 칩 deep-link(`?focus={tab}` → 씨앗심기 5개 탭 자동 활성화) + 90+ "바로 등록" CTA(`?registerId=` → 정원창고 자동 체크 + NaverRegisterModal 자동 노출) + ITEM_TO_TAB 11개 매핑 + Loading skeleton + Empty state. 셀러 첫 등록 차단점 해소 = 매출 발생까지의 인지 부담 5단계 → 1클릭 |
-| **E-10** | ⬜ | **경쟁 리뷰 모니터링** | competition-monitor.ts 확장, CompetitionMonitorWidget, sourcing-recommender.ts | 네이버 쇼핑 검색 API로 리뷰 수/평점 추가 수집, 경쟁 리뷰 갭 표시, BlueOcean 점수에 리뷰 진입장벽 가산 |
+| **E-10** | **✅** | **경쟁 진입장벽 모니터링 (옵션 A 간접 추정)** | `src/lib/competition-monitor.ts` (+135줄), `src/lib/sourcing-recommender.ts` (+79줄), `src/components/dashboard/CompetitionMonitorWidget.tsx` (+137줄), `src/components/dashboard/SourcingRecommendWidget.tsx` (+95줄), `src/app/api/competition/route.ts` (+9줄) | 원래 계획은 리뷰수/평점 직접 스크래핑이었으나, API 안정성 부족으로 **옵션 A 구현** — 4-factor proxy(topSellers 30%+priceSpread 30%+totalResults 25%+competitionLevel 15%) weighted score로 진입장벽 0~5점 추정. `estimateEntryBarrier()`가 single source of truth. BlueOcean breakdown 구조(`{ base, entryBarrierBonus, total }`)로 +15/+5/0 가산. CompetitionMonitorWidget에 5단계 막대+4-factor+Recommendation 패널, SourcingRecommendWidget에 Shield chip(LOW/MEDIUM/HIGH 3색)+BlueOcean breakdown+3 metrics. **라이브 검증 완료** — Block A+C 8개 상품 실제 데이터, Block B+D mock 주입로 3색 chip 모두 시각 확인. DB 스키마 변경 없음 |
 | **E-11** | ⬜ | **AI 리뷰 감정 분석 + SEO 재활용** | api/review-analysis(신규), 검색조련사 연동 | 리뷰 텍스트 붙여넣기 → Groq AI 감정분석(긍정/부정/중립) + 키워드 추출 → SEO 태그 자동추천, 기존 Groq 인프라 활용(추가비용 0원) |
 
 #### Sprint 5: 알림 자동화 + 수수료 업데이트 (비용 0원)
@@ -161,72 +161,62 @@
 
 ---
 
-## 다음 채팅에서 시작할 작업 — E-10 경쟁 리뷰 모니터링 (상세 계획)
+## 다음 채팅에서 시작할 작업 후보 (E-10 완료 이후)
 
-> 본 섹션은 컨텍스트 한계 없이 다음 채팅에서 즉시 작업을 이어가기 위한 실행 명세입니다. 2026-04-29 채팅에서 우선순위 분석 후 선정됨.
+> 2026-04-29 E-10 마무리 세션에서 다음 작업 우선순위 재평가. **E-11 → 수수료 개편 → E-12** 순서 권장 (매출 임팩트 + 트리거 적합성 종합 평가).
 
-### 우선순위 결정 근거
+### E-10 완료 요약 (2026-04-29)
 
-10년차 파워셀러 + UI/UX 디자이너 관점에서 본 후보 3개 평가:
+**구현 방식 결정 — 원래 계획 vs 실제 적용** (이후 세션이 혼동하지 않도록 명시):
+
+| 항목 | 원래 ROADMAP 계획 | 실제 구현 (옵션 A) |
+|------|---------------------|---------------------|
+| 데이터 소스 | 네이버 쇼핑검색 API의 reviewCount/productRating 직접 수집 | 기존 수집 데이터 4-factor proxy(topSellers/priceSpread/totalResults/competitionLevel) |
+| DB 스키마 | `CompetitorSnapshot`에 reviewCount, avgRating 컬럼 추가 예정 | **스키마 변경 없음** — 런타임 계산으로 완전히 대체 |
+| 진입장벽 판단 | 리뷰수 100+ = 높음 / 30~99 = 중간 / 0~29 = 낮음 | 4-factor weighted score 0~5점으로 자체 임계값 |
+| 장점 | 리뷰 = 직접 경쟁 지표로 직관적 | API 의존 없음, 즉시 작동, DB 마이그레이션 불필요 |
+| 단점 | API 응답에 reviewCount가 누락될 때 취약 | 간접 추정이라 일부 도메인(소수 판매자만 있는 틈새 카테고리)에서 과대/과소 가능성 |
+
+**구현 결과 변경 파일** (총 5개, +445/-10 lines, 4 commits):
+- `src/lib/competition-monitor.ts` (+135줄) — `estimateEntryBarrier()` + 4-factor weighted score
+- `src/lib/sourcing-recommender.ts` (+79줄) — BlueOcean 가산 로직 + breakdown 구조
+- `src/components/dashboard/CompetitionMonitorWidget.tsx` (+137줄) — 5단계 막대+4-factor+Recommendation 패널
+- `src/components/dashboard/SourcingRecommendWidget.tsx` (+95줄) — Shield chip+BlueOcean breakdown+3 metrics
+- `src/app/api/competition/route.ts` (+9줄) — entryBarrier 세분 응답 삽입
+
+**커밋 이력**: d1d6202 (Block A) → 0d216fb (Block B) → 9a81b87 (Block C) → 6c6de96 (Block D) → (현 docs 커밋)
+
+**장기적 권고**: 쇼핑검색 API의 reviewCount 안정성이 추후 확인되면, 자체 스토어 웹 크롤링으로 경쟁사 리뷰 수집 경로 확보 후 옵션 A + 원래 계획 하이브리드로 업그레이드 권장.
+
+---
+
+### 다음 작업 후보 — 우선순위 평가 (10년차 파워셀러 + UI/UX 디자이너 관점)
 
 | 후보 | 매출 임팩트 | 트리거 적합성 | 종합 |
 |------|------------|---------------|------|
-| **E-10 경쟁 리뷰 모니터링** | 높음 — 어떤 신규 상품을 추가 등록할지 의사결정 가이드 | 즉시 작동 — 자체 리뷰 0개여도 경쟁사 데이터로 동작 | **★ 1순위** |
-| E-11 AI 리뷰 감정분석 | 중간 — SEO 태그 추천 정확도 향상 | 자체 리뷰 필요 (현재 0개) | E-10 다음 자연스러운 후속 |
-| E-12 Discord 리뷰 알림 | 중간 — 운영 알림 강화 | 자체 리뷰 발생 후 의미 | 매출 발생 후 |
+| **E-11 AI 리뷰 감정 분석 + SEO 재활용** | 중간~높음 — 경쟁사 리뷰 붙여넣기 대응 + 실제 SEO 태그 추천 정확도 향상 | 자체 리뷰 0개여도 경쟁사 리뷰 텍스트로 즉시 작동 가능 | **★ 1순위** |
+| **수수료 개편 미반영분 적용** | 높음 — 2025.6.2 개편 미반영 (유입수수료 2% 폐지 → 판매수수료 2.73%, 자체마케팅 0.91%) | 수익성 대시보드(C-4) + good-service.ts 미반영분 지금 수정 가능 | ★ 2순위 — 수익성 정확도 직결 |
+| **E-12 Discord 리뷰 알림** | 중간 — 운영 알림 강화 | 자체 리뷰 발생 후 의미 (현재 0개) | E-11 다음 자연스러운 후속 |
 
-**E-10 선택 이유:**
-1. E-14로 첫 등록 차단점 해소 → 다음 가치 사슬 = "어떤 상품을 추가 등록할지" 의사결정
-2. 자체 리뷰 0개 상태에서도 즉시 작동 (네이버 쇼핑 검색 API에서 경쟁사 리뷰수/평점 데이터 추출)
-3. 기존 인프라 활용도 최대 — competition-monitor.ts / sourcing-recommender.ts / CompetitionMonitorWidget.tsx 모두 이미 존재
-4. BlueOcean 점수 정확도 향상 → 꼬띠 추천 정확도 향상 → 소싱 → 등록 → 매출 흐름 강화
+#### 추천 순서 — E-11 → 수수료 개편 → E-12
 
-### 작업 범위 — Block 단위 분해
+**E-11 1순위 이유**:
+1. E-10으로 진입장벽 추정 모듈 완성 → 다음 가치 = "경쟁사 리뷰의 질적 인사이트"
+2. 자체 리뷰 0개 상태에서도 즉시 작동 (경쟁사 리뷰 텍스트 붙여넣기 → Groq 분석)
+3. 기존 Groq 인프라 활용 (추가비용 0원)
+4. SEO 태그 자동추천 → 검색조련사 정확도 향상 → 등록 품질 ↑ → 매출 흐름 강화
+5. E-10 BlueOcean breakdown에 "AI 감정분석 가산" 항목 추가 자연스러움
 
-**Block A — 데이터 수집 확장 (`competition-monitor.ts`)**
-- 네이버 쇼핑 검색 API 응답 파싱에 reviewCount, productRating 추출 추가
-- DB 스키마 — `CompetitorSnapshot` 테이블에 reviewCount, avgRating 필드 추가 (Supabase SQL Editor)
-- POST /api/competition 시 리뷰 데이터도 함께 스냅샷
-- daily cron 통합 (이미 동작 중인 cron 흐름에 자연스럽게 끼우기)
+**수수료 개편 2순위 이유**:
+- 2025.6.2 시행된 유입수수료 2% 폐지 → 판매수수료 2.73%(자체마케팅 등 0.91%)가 현재 수익성 대시보드(C-4)에 미반영
+- 마진 계산기/수익성 표시와 동기화 필요
+- 독립 작업이며 소규모 (약 0.5일 이내)
 
-**Block B — BlueOcean 점수 보강 (`sourcing-recommender.ts`)**
-- 경쟁상품 평균 리뷰수 계산 → 진입장벽 점수 환산
-  - 평균 리뷰 100+ = 진입장벽 높음 (-10점)
-  - 평균 리뷰 30~99 = 중간 (0점)
-  - 평균 리뷰 0~29 = 낮음 (+15점)
-- 기존 BlueOcean 알고리즘에 가산 (현재 키워드 검색량 + 경쟁분석 기반)
-- 평균 평점이 4.5 미만 = 차별화 기회 점수 추가 가산
+**E-12 후순위 이유**:
+- 자체 리뷰 발생 후(50건+ 시) 의미 있음 — 현재 자체 리뷰 0개
+- 대시보드 알림 이미 충분 — 운영 경고는 ReviewGrowthWidget(E-2A)이 보완
 
-**Block C — UI 표시 (`CompetitionMonitorWidget.tsx`)**
-- 우리 vs 경쟁사 평균 리뷰수 비교 막대 그래프
-- 리뷰 진입장벽 배지 (낮음/중간/높음, 색상 구분)
-- 경쟁사 평균 평점 표시 (별 아이콘)
-
-**Block D — 꼬띠 위젯 통합 (`SourcingRecommendWidget.tsx`)**
-- 추천 상품 카드에 "경쟁 리뷰 평균 N개 / 진입장벽 낮음" 칩 추가
-- BlueOcean 점수 표시에 리뷰 가산점 분리 표시 (예: "기본 70 + 리뷰 가산 +15 = 85")
-
-### 변경 파일 목록 (예상)
-
-| 종류 | 파일 |
-|------|------|
-| 수정 | `src/lib/competition-monitor.ts` (리뷰 데이터 수집 추가) |
-| 수정 | `src/lib/sourcing-recommender.ts` (BlueOcean 가산 로직) |
-| 수정 | `src/components/dashboard/CompetitionMonitorWidget.tsx` (UI 추가) |
-| 수정 | `src/components/dashboard/SourcingRecommendWidget.tsx` (UI 추가) |
-| 수정 | `src/app/api/competition/route.ts` (POST 응답에 리뷰 데이터 추가) |
-| DB | `prisma/schema.prisma` — CompetitorSnapshot에 reviewCount, avgRating 필드 추가 |
-| DB | Supabase prod에 컬럼 추가 (SQL Editor, prisma migrate dev 금지) |
-
-### 예상 작업 시간
-
-- 코드 작업: 2~3시간 (Block A → B → C → D 순서)
-- TSC 0 errors 검증
-- 브라우저 라이브 테스트 (대시보드에서 두 위젯 변화 확인)
-- git commit/push (추천: Block 별로 commit해서 progressive 저장)
-- KKOTIUM_PROGRESS.md / KKOTIUM_ROADMAP.md 업데이트
-
-총 3~4시간 추정. **컨텍스트 한계 도달 위험이 있으므로 Block 별로 commit해서 작업 손실 방지** 권장.
+---
 
 ### 다음 채팅 시작 메시지 템플릿
 
@@ -234,24 +224,21 @@
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md를 읽고
-"다음 채팅에서 시작할 작업 — E-10 경쟁 리뷰 모니터링 (상세 계획)" 섹션의 Block A~D를
-순서대로 진행해주세요.
+현재 상태 파악 후 E-11 (AI 리뷰 감정 분석 + SEO 재활용) 작업을 시작해주세요.
 
 작업 시작 전 필수:
-1. git log -5로 직전 작업 잔재가 있는지 먼저 확인
+1. git log -5로 직전 작업 잔재 없는지 먼저 확인 (E-10 5개 commit이 origin/main에 push 완료 상태여야 함)
 2. KKOTIUM_PROGRESS.md / KKOTIUM_ROADMAP.md 정독
-3. 관련 코드 파일 (competition-monitor.ts, sourcing-recommender.ts, CompetitionMonitorWidget.tsx,
-   SourcingRecommendWidget.tsx, prisma/schema.prisma) read_text_file로 현재 상태 파악
+3. 관련 코드 파일 (sourcing-recommender.ts, naver-seo 페이지, ai-generate API 등) 현재 상태 파악
 4. 작업 계획 브리핑 후 제 승인 받고 시작
 5. Block 별로 commit해서 컨텍스트 한계로 인한 작업 손실 방지
 
-브라우저 테스트는 Chrome MCP로 dashboard에서 CompetitionMonitorWidget +
-SourcingRecommendWidget이 정상 작동하는지 확인해주세요.
+브라우저 테스트는 Chrome MCP로 경쟁사 리뷰 텍스트 붙여넣기 →
+감정분석 결과 + SEO 태그 추천 결과 정상 작동하는지 확인해주세요.
 완료 후 PROGRESS.md/ROADMAP.md 업데이트 + git push로 마무리.
 ```
 
 ---
-
 ## 2026-04-13 완료 작업 (이번 세션)
 
 ### UI 원칙 확립 및 전면 적용
