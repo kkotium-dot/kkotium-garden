@@ -1,11 +1,12 @@
 // src/components/dashboard/ProfitabilityWidget.tsx
 // C-4: Profitability analysis dashboard widget
 // Fee comparison (normal vs marketing link) + margin distribution + top/bottom products
+// 2026-04-29 update: 2025.06.02 fee reform metadata + marketing link guidance + monthly savings sim
 
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, BarChart3, RefreshCw, ChevronRight, Link2 } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, BarChart3, RefreshCw, ChevronRight, Link2, Info } from 'lucide-react';
 
 interface ProfitData {
   summary: {
@@ -36,6 +37,12 @@ interface ProfitData {
     normalRate: number;
     marketingRate: number;
     savedRate: number;
+    orderMgmtRate?: number;
+    salesFeeNormal?: number;
+    salesFeeMarketing?: number;
+    gradeLabel?: string;
+    effectiveDate?: string;
+    note?: string;
   };
 }
 
@@ -145,6 +152,20 @@ export default function ProfitabilityWidget() {
       </div>
 
       <div style={{ padding: '16px 20px' }}>
+        {/* 2025.06.02 reform badge */}
+        {feeComparison.effectiveDate && (
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '3px 9px', borderRadius: 99, marginBottom: 10,
+            background: '#FEF3C7', border: '1px solid #FCD34D',
+          }}>
+            <Info size={10} style={{ color: '#92400E' }} />
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#92400E' }}>
+              2025.6.2 수수료 개편 반영 · {feeComparison.gradeLabel || '중소3 기준'}
+            </span>
+          </div>
+        )}
+
         {/* Key metrics row */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
           <div style={{
@@ -192,6 +213,12 @@ export default function ProfitabilityWidget() {
             <span style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}>
               마케팅 링크 수수료 절감 효과
             </span>
+            <span style={{
+              fontSize: 9, padding: '1px 6px', borderRadius: 4,
+              background: '#FEF3C7', color: '#92400E', fontWeight: 700,
+            }}>
+              자체마케팅
+            </span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'center' }}>
             <div style={{ textAlign: 'center' }}>
@@ -199,6 +226,11 @@ export default function ProfitabilityWidget() {
               <p style={{ fontSize: 14, fontWeight: 900, color: '#B45309', margin: 0 }}>
                 {feeComparison.normalRate.toFixed(2)}%
               </p>
+              {feeComparison.salesFeeNormal !== undefined && (
+                <p style={{ fontSize: 9, color: '#A16207', margin: '2px 0 0' }}>
+                  판매 {feeComparison.salesFeeNormal.toFixed(2)}%
+                </p>
+              )}
             </div>
             <div style={{ textAlign: 'center' }}>
               <ChevronRight size={16} style={{ color: '#F59E0B' }} />
@@ -208,11 +240,35 @@ export default function ProfitabilityWidget() {
               <p style={{ fontSize: 14, fontWeight: 900, color: '#16a34a', margin: 0 }}>
                 {feeComparison.marketingRate.toFixed(2)}%
               </p>
+              {feeComparison.salesFeeMarketing !== undefined && (
+                <p style={{ fontSize: 9, color: '#15803D', margin: '2px 0 0' }}>
+                  판매 {feeComparison.salesFeeMarketing.toFixed(2)}%
+                </p>
+              )}
             </div>
           </div>
-          <p style={{ fontSize: 10, color: '#92400E', margin: '8px 0 0', textAlign: 'center' }}>
-            마케팅 링크 유입 시 건당 {fmt(summary.totalFeeSaved)}원 절감
+          <p style={{ fontSize: 10, color: '#92400E', margin: '8px 0 0', textAlign: 'center', fontWeight: 600 }}>
+            마케팅 링크 유입 시 건당 {fmt(summary.totalFeeSaved)}원 절감 ({feeComparison.savedRate.toFixed(2)}%p)
           </p>
+          {summary.monthlySimulation.difference > 0 && (
+            <p style={{ fontSize: 9, color: '#15803D', margin: '4px 0 0', textAlign: 'center' }}>
+              전체 상품 각 월 30건씩 판매 가정 시 추가 이익 약 {fmt(summary.monthlySimulation.difference)}원
+            </p>
+          )}
+          <details style={{ marginTop: 8 }}>
+            <summary style={{
+              fontSize: 10, color: '#78350F', cursor: 'pointer',
+              listStyle: 'none', textAlign: 'center', fontWeight: 600,
+            }}>
+              마케팅 링크가 뭐예요?
+            </summary>
+            <p style={{
+              fontSize: 10, color: '#78350F', margin: '6px 0 0', lineHeight: 1.55,
+              padding: '8px 10px', background: '#FFFEF7', borderRadius: 6, border: '1px dashed #FDE68A',
+            }}>
+              셀러가 직접 만든 유입 경로—블로그·SNS·검색광고·다른 웹사이트 등을 통해 고객이 스마트스토어로 들어오면 판매수수료 2.73%가 0.91%로 인하됩니다. 네이버 쇼핑검색·플러스스토어는 일반 노출로 분류됩니다. (예외: 디지털/가전, 도서 카테고리는 인하 미적용)
+            </p>
+          </details>
         </div>
 
         {/* Margin distribution */}
