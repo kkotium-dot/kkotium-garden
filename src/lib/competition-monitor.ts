@@ -18,6 +18,25 @@ export interface CompetitorSnapshot {
   competitionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
 }
 
+// E-10: Entry barrier analysis (Option A approach)
+// Naver Shopping Search API does not provide review count or product rating.
+// Instead, we estimate market entry difficulty using indirect signals:
+//   1. Seller diversity (unique mallName count) — concentrated vs fragmented
+//   2. Price spread ((max-min)/avg) — commodity vs differentiation room
+//   3. Total search results — niche vs saturated
+//   4. Competition level from total results bucketing
+export interface EntryBarrierAnalysis {
+  score: number;             // 0~5 (5 = highest barrier)
+  level: 'LOW' | 'MEDIUM' | 'HIGH';
+  factors: {
+    sellerDiversity: number; // unique mallName count in top items
+    priceSpread: number;     // (max-min)/avg, rounded to 2 decimals
+    totalResults: number;
+    competitionLevel: string;
+  };
+  recommendation: string;
+}
+
 export interface CompetitorItem {
   title: string;
   price: number;
@@ -52,6 +71,17 @@ export interface CompetitionReport {
 
 const PRICE_CHANGE_THRESHOLD = 0.05; // 5% price change triggers alert
 const SIGNIFICANT_RESULTS_CHANGE = 0.20; // 20% change in results count
+
+// E-10: Entry barrier scoring weights (Option A — indirect estimation)
+const ENTRY_BARRIER_BASE = 2.5;             // mid-point on 0~5 scale
+const SELLER_DIVERSITY_HIGH = 5;            // 5+ unique sellers = fragmented market (raises barrier slightly)
+const SELLER_DIVERSITY_LOW = 2;             // <=2 = oligopoly (lowers barrier — fewer entrenched players)
+const PRICE_SPREAD_WIDE = 0.5;              // wide spread = differentiation room (lowers barrier)
+const PRICE_SPREAD_TIGHT = 0.2;             // tight spread = commodity (raises barrier)
+const RESULTS_SATURATED = 100000;
+const RESULTS_CROWDED = 30000;
+const RESULTS_MODERATE = 5000;
+const RESULTS_NICHE = 1000;
 
 // -- Core functions ----------------------------------------------------------
 
@@ -90,6 +120,111 @@ export async function takeCompetitorSnapshot(keyword: string): Promise<Competito
     })),
     competitionLevel: level,
   };
+}
+
+/**
+ * E-10: Estimate market entry barrier from a competitor snapshot.
+ * Returns a 0~5 score, a level label, and the underlying factors for UI display.
+ * This is an indirect estimation since Naver Shopping API does not expose review data.
+ */
+export function calcEntryBarrier(snapshot: CompetitorSnapshot): EntryBarrierAnalysis {
+  let score = ENTRY_BARRIER_BASE;
+
+  // Seller diversity — count of unique mallNames in topItems
+  const uniqueSellers = new Set(
+    snapshot.topItems.map(i => i.mallName).filter(Boolean)
+  ).size;
+
+  if (uniqueSellers >= SELLER_DIVERSITY_HIGH) {
+    score += 0.5; // fragmented market — many competitors slightly raise barrier
+  } else if (uniqueSellers > 0 && uniqueSellers <= SELLER_DIVERSITY_LOW) {
+    score -= 0.5; // oligopoly — fewer entrenched sellers, easier to enter
+  }
+
+  // Price spread — (max - min) / avg
+  const spread = snapshot.avgPrice > 0
+    ? (snapshot.maxPrice - snapshot.minPrice) / snapshot.avgPrice
+    : 0;
+
+  if (spread >= PRICE_SPREAD_WIDE) {
+    score -= 0.5; // wide spread = positioning room
+  } else if (spread > 0 && spread < PRICE_SPREAD_TIGHT) {
+    score += 0.5; // tight spread = commodity, hard to differentiate
+  }
+
+  // Total results — saturated vs niche
+  if (snapshot.totalResults >= RESULTS_SATURATED) {
+    score += 1.5;
+  } else if (snapshot.totalResults >= RESULTS_CROWDED) {
+    score += 1.0;
+  } else if (snapshot.totalResults >= RESULTS_MODERATE) {
+    score += 0.5;
+  } else if (snapshot.totalResults < RESULTS_NICHE) {
+    score -= 0.5; // niche market
+  }
+
+  // Competition level — pre-bucketed signal
+  if (snapshot.competitionLevel === 'VERY_HIGH') {
+    score += 0.5;
+  } else if (snapshot.competitionLevel === 'LOW') {
+    score -= 0.5;
+  }
+
+  // Clamp to 0~5 range
+  score = Math.max(0, Math.min(5, score));
+
+  const level: EntryBarrierAnalysis['level'] =
+    score >= 3.5 ? 'HIGH' :
+    score >= 2.0 ? 'MEDIUM' : 'LOW';
+
+  // Korean recommendation text — keep wording short for chip/tooltip use
+  let recommendation: string;
+  if (level === 'LOW') {
+    // 진입장벽 낮음 — 차별화 기회, 브랜드/품질 강화로 진입 권장
+    recommendation = '\uC9C4\uC785\uC7A5\uBCBD \uB0AE\uC74C \u2014 \uCC28\uBCC4\uD654 \uAE30\uD68C, \uBE0C\uB79C\uB4DC\uC640 \uD488\uC9C8\uB85C \uC2B9\uBD80\uD558\uBA74 \uC9C4\uC785 \uC720\uB9AC';
+  } else if (level === 'MEDIUM') {
+    // 보통 — 가격/품질 균형 + SEO 최적화로 승부
+    recommendation = '\uBCF4\uD1B5 \u2014 \uAC00\uACA9\u00B7\uD488\uC9C8 \uADE0\uD615 + SEO \uCD5C\uC801\uD654\uB85C \uC2B9\uBD80';
+  } else {
+    // 높음 — 포화 시장, 틈새/독특한 앵글 필요
+    recommendation = '\uB192\uC74C \u2014 \uD3EC\uD654 \uC2DC\uC7A5, \uD2C8\uC0C8\u00B7\uB3C5\uD2B9\uD55C \uC559\uAE00\uC774 \uD544\uC694';
+  }
+
+  return {
+    score: Math.round(score * 10) / 10,
+    level,
+    factors: {
+      sellerDiversity: uniqueSellers,
+      priceSpread: Math.round(spread * 100) / 100,
+      totalResults: snapshot.totalResults,
+      competitionLevel: snapshot.competitionLevel,
+    },
+    recommendation,
+  };
+}
+
+/**
+ * E-10: Convert entry barrier score to a BlueOcean bonus.
+ * Used by sourcing-recommender to nudge opportunity ranking.
+ *   LOW barrier   → +15 (good entry chance)
+ *   MEDIUM        →   0
+ *   HIGH barrier  → -10 (saturated, harder)
+ */
+export function entryBarrierToBlueOceanBonus(level: EntryBarrierAnalysis['level']): number {
+  if (level === 'LOW') return 15;
+  if (level === 'HIGH') return -10;
+  return 0;
+}
+
+/** Get entry barrier level color for UI badges */
+export function getEntryBarrierColor(level: EntryBarrierAnalysis['level']): { bg: string; text: string; label: string } {
+  if (level === 'LOW') {
+    return { bg: '#dcfce7', text: '#166534', label: '\uB0AE\uC74C' };
+  }
+  if (level === 'HIGH') {
+    return { bg: '#fecaca', text: '#991b1b', label: '\uB192\uC74C' };
+  }
+  return { bg: '#fef9c3', text: '#854d0e', label: '\uBCF4\uD1B5' };
 }
 
 /** Compare two snapshots and detect significant changes */

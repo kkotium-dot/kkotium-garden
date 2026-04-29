@@ -9,7 +9,9 @@ import {
   takeCompetitorSnapshot,
   detectChanges,
   buildCompetitionAlertEmbed,
+  calcEntryBarrier,
   type CompetitorSnapshot,
+  type EntryBarrierAnalysis,
   type PriceChangeAlert,
 } from '@/lib/competition-monitor';
 import { sendDiscord } from '@/lib/discord';
@@ -43,6 +45,12 @@ export async function GET() {
       const kw = p.keywords;
       const kwArr = Array.isArray(kw) ? kw : (typeof kw === 'string' && kw ? kw.split(',').map(k => k.trim()).filter(Boolean) : []);
       const keyword = String(kwArr[0] ?? '') || p.naver_title || p.name;
+
+      // E-10: Compute entry barrier from current snapshot if available
+      const entryBarrier: EntryBarrierAnalysis | null = stored?.current
+        ? calcEntryBarrier(stored.current)
+        : null;
+
       return {
         productId: p.id,
         productName: p.naver_title ?? p.name,
@@ -52,6 +60,7 @@ export async function GET() {
         naverProductId: p.naverProductId,
         snapshot: stored?.current ?? null,
         previousSnapshot: stored?.previous ?? null,
+        entryBarrier,
         hasData: !!stored,
       };
     });
