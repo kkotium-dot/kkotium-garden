@@ -1,13 +1,14 @@
 // src/components/dashboard/CompetitionMonitorWidget.tsx
-// D-3: Competition monitoring dashboard widget
-// Shows competitor price trends, alerts, and market position for each product
+// D-3 + E-10: Competition monitoring dashboard widget
+// Shows competitor price trends, alerts, market position, and entry barrier analysis
 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Activity, TrendingUp, TrendingDown, RefreshCw, AlertTriangle,
+  TrendingUp, TrendingDown, RefreshCw, AlertTriangle,
   Eye, ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Minus,
+  Shield,
 } from 'lucide-react';
 
 interface CompetitorItem {
@@ -27,6 +28,19 @@ interface Snapshot {
   timestamp: string;
 }
 
+// E-10: Entry barrier analysis from API (Option A)
+interface EntryBarrier {
+  score: number;
+  level: 'LOW' | 'MEDIUM' | 'HIGH';
+  factors: {
+    sellerDiversity: number;
+    priceSpread: number;
+    totalResults: number;
+    competitionLevel: string;
+  };
+  recommendation: string;
+}
+
 interface ProductMonitor {
   productId: string;
   productName: string;
@@ -36,6 +50,7 @@ interface ProductMonitor {
   naverProductId: string | null;
   snapshot: Snapshot | null;
   previousSnapshot: Snapshot | null;
+  entryBarrier: EntryBarrier | null;
   hasData: boolean;
 }
 
@@ -52,6 +67,13 @@ const LEVEL_STYLE: Record<string, { bg: string; text: string; label: string }> =
   MEDIUM:    { bg: '#fef9c3', text: '#854d0e', label: '\uBCF4\uD1B5' },
   HIGH:      { bg: '#fed7aa', text: '#9a3412', label: '\uB192\uC74C' },
   VERY_HIGH: { bg: '#fecaca', text: '#991b1b', label: '\uCE58\uC5F4' },
+};
+
+// E-10: Entry barrier badge style by level
+const BARRIER_STYLE: Record<string, { bg: string; text: string; label: string; bar: string }> = {
+  LOW:    { bg: '#dcfce7', text: '#166534', label: '\uB0AE\uC74C', bar: '#16a34a' },
+  MEDIUM: { bg: '#fef9c3', text: '#854d0e', label: '\uBCF4\uD1B5', bar: '#ca8a04' },
+  HIGH:   { bg: '#fecaca', text: '#991b1b', label: '\uB192\uC74C', bar: '#dc2626' },
 };
 
 function PricePosition({ myPrice, avgPrice }: { myPrice: number; avgPrice: number }) {
@@ -91,6 +113,37 @@ function PriceChangeIndicator({ current, previous }: { current: number; previous
       {isUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
       {isUp ? '+' : ''}{pct.toFixed(1)}%
     </span>
+  );
+}
+
+// E-10: Entry barrier 5-segment bar (visualizes 0~5 score)
+function EntryBarrierBar({ score, level }: { score: number; level: 'LOW' | 'MEDIUM' | 'HIGH' }) {
+  const style = BARRIER_STYLE[level];
+  const fillPct = Math.min(100, Math.max(0, (score / 5) * 100));
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{
+        position: 'relative', flex: 1, height: 8, background: '#f3f4f6', borderRadius: 4,
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', top: 0, left: 0,
+          width: `${fillPct}%`, height: 8,
+          background: style.bar, borderRadius: 4,
+          transition: 'width 0.3s ease',
+        }} />
+        {/* 5 segment dividers */}
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} style={{
+            position: 'absolute', top: 0, left: `${i * 20}%`,
+            width: 1, height: 8, background: '#fff',
+          }} />
+        ))}
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 700, color: style.bar, minWidth: 32, textAlign: 'right' }}>
+        {score.toFixed(1)}/5
+      </span>
+    </div>
   );
 }
 
@@ -207,6 +260,8 @@ export default function CompetitionMonitorWidget() {
               const s = p.snapshot;
               const prev = p.previousSnapshot;
               const lvl = s ? LEVEL_STYLE[s.competitionLevel] ?? LEVEL_STYLE.MEDIUM : null;
+              const barrier = p.entryBarrier;
+              const barrierStyle = barrier ? BARRIER_STYLE[barrier.level] : null;
 
               return (
                 <div key={p.productId} style={{
@@ -236,6 +291,22 @@ export default function CompetitionMonitorWidget() {
                     }}>
                       {p.productName}
                     </span>
+
+                    {/* E-10: Entry barrier badge (only when data available) */}
+                    {barrier && barrierStyle && (
+                      <span
+                        title={barrier.recommendation}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 3,
+                          fontSize: 10, fontWeight: 700,
+                          padding: '2px 7px', borderRadius: 8,
+                          background: barrierStyle.bg, color: barrierStyle.text,
+                        }}
+                      >
+                        <Shield size={9} />
+                        {'\uC9C4\uC785 '}{barrierStyle.label}
+                      </span>
+                    )}
 
                     {/* Competition level badge */}
                     {lvl && (
@@ -308,6 +379,66 @@ export default function CompetitionMonitorWidget() {
                             <span>{s.minPrice.toLocaleString()}</span>
                             <span style={{ fontWeight: 700, color: '#e62310' }}>{'\uB0B4 \uAC00\uACA9'}: {p.myPrice.toLocaleString()}</span>
                             <span>{s.maxPrice.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* E-10: Entry barrier panel */}
+                      {barrier && barrierStyle && (
+                        <div style={{
+                          background: '#fff', borderRadius: 10, padding: '10px 12px',
+                          border: '1px solid #f0f0f0', marginBottom: 10,
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                            <Shield size={13} style={{ color: barrierStyle.bar }} />
+                            <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>
+                              {'\uC9C4\uC785\uC7A5\uBCBD \uBD84\uC11D'}
+                            </span>
+                            <span style={{
+                              fontSize: 10, fontWeight: 700,
+                              padding: '2px 7px', borderRadius: 8,
+                              background: barrierStyle.bg, color: barrierStyle.text,
+                            }}>
+                              {barrierStyle.label}
+                            </span>
+                          </div>
+
+                          {/* 0~5 score bar */}
+                          <div style={{ marginBottom: 8 }}>
+                            <EntryBarrierBar score={barrier.score} level={barrier.level} />
+                          </div>
+
+                          {/* Factor grid */}
+                          <div style={{
+                            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6,
+                            fontSize: 11, color: '#555', marginBottom: 8,
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: '#9ca3af' }}>{'\uD310\uB9E4\uCC98 \uC218'}</span>
+                              <span style={{ fontWeight: 600 }}>{barrier.factors.sellerDiversity}{'\uAC1C'}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: '#9ca3af' }}>{'\uAC00\uACA9 \uBD84\uC0B0'}</span>
+                              <span style={{ fontWeight: 600 }}>{(barrier.factors.priceSpread * 100).toFixed(0)}%</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: '#9ca3af' }}>{'\uAC80\uC0C9 \uACB0\uACFC'}</span>
+                              <span style={{ fontWeight: 600 }}>{barrier.factors.totalResults.toLocaleString()}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: '#9ca3af' }}>{'\uACBD\uC7C1 \uAC15\uB3C4'}</span>
+                              <span style={{ fontWeight: 600 }}>
+                                {LEVEL_STYLE[barrier.factors.competitionLevel]?.label ?? barrier.factors.competitionLevel}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Recommendation */}
+                          <div style={{
+                            fontSize: 11, color: '#374151', lineHeight: 1.4,
+                            padding: '6px 8px', background: barrierStyle.bg, borderRadius: 6,
+                          }}>
+                            {barrier.recommendation}
                           </div>
                         </div>
                       )}
