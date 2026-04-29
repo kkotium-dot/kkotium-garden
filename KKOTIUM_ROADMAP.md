@@ -1,6 +1,6 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 3 완료 — E-13A, E-13C)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C)**
+> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 3 + Sprint 4 E-14 완료)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14)**
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
 > - `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가` (Claude 리서치 2026-04-16)
@@ -143,12 +143,13 @@
 | **E-13B** | ⏳ 보류 | **알림톡 발송 API (2단계 접근)** | solapi-client.ts(신규), api/alimtalk(신규) | **1단계(현재)**: UI 진입점만 E-13A에 구현 — 솔라피 키 미입력 상태로 비활성. **2단계(트리거: 월 주문 50건+)**: 솔라피 가입→키 입력→즉시 활성화. 초기에는 네이버 내장 무료 리뷰 알림 + 인서트 카드로 충분 |
 | **E-13C** | **✅** | **인서트 카드 생성기** | `src/app/ops/insert-card/page.tsx`, `src/lib/insert-card-colors.ts` | A6 105×148mm 실시간 미리보기 + 4슬롯 컬러 테마(E-13A 팔레트 상속) + HSL 헬퍼로 9가지 톤 자동 생성(`getCardColorScheme`: background/accentLight/accentMid/accentBorder/textOnLight/textOnDark/headerBg/shadow) + 카카오 QR(`store_settings.kakao_channel_id` 단일 소스) + 리뷰 적립금 3프리셋(텍스트 500/포토 1000/베스트 3000) + A4 4매 배치/A6 단일 + `window.print()` 기반 PDF 저장 |
 
-#### Sprint 4: 경쟁 정보 + AI 분석 강화 (비용 0원)
+#### Sprint 4: 등록 워크플로우 + 경쟁 정보 + AI 분석 강화 (비용 0원) — ✅ E-14 완료 (2026-04-29)
 
-| Task | 내용 | 변경 파일 | 상세 |
-|------|------|----------|------|
-| **E-10** | **경쟁 리뷰 모니터링** | competition-monitor.ts 확장, CompetitionMonitorWidget, sourcing-recommender.ts | 네이버 쇼핑 검색 API로 리뷰 수/평점 추가 수집, 경쟁 리뷰 갭 표시, BlueOcean 점수에 리뷰 진입장벽 가산 |
-| **E-11** | **AI 리뷰 감정 분석 + SEO 재활용** | api/review-analysis(신규), 검색조련사 연동 | 리뷰 텍스트 붙여넣기 → Groq AI 감정분석(긍정/부정/중립) + 키워드 추출 → SEO 태그 자동추천, 기존 Groq 인프라 활용(추가비용 0원) |
+| Task | 상태 | 내용 | 변경 파일 | 상세 |
+|------|------|------|----------|------|
+| **E-14** | **✅** | **Upload Readiness Command Center (등록 준비 명령탑)** | `src/components/dashboard/UploadReadinessWidget.tsx` (신규), `src/app/dashboard/page.tsx`, `src/app/products/new/page.tsx`, `src/app/products/page.tsx` | DRAFT 상품 11점 키디니스 점수 정렬 TOP 5 + Stat strip(등록가능/작업필요/평균점수) + 부족 항목 칩 deep-link(`?focus={tab}` → 씨앗심기 5개 탭 자동 활성화) + 90+ "바로 등록" CTA(`?registerId=` → 정원창고 자동 체크 + NaverRegisterModal 자동 노출) + ITEM_TO_TAB 11개 매핑 + Loading skeleton + Empty state. 셀러 첫 등록 차단점 해소 = 매출 발생까지의 인지 부담 5단계 → 1클릭 |
+| **E-10** | ⬜ | **경쟁 리뷰 모니터링** | competition-monitor.ts 확장, CompetitionMonitorWidget, sourcing-recommender.ts | 네이버 쇼핑 검색 API로 리뷰 수/평점 추가 수집, 경쟁 리뷰 갭 표시, BlueOcean 점수에 리뷰 진입장벽 가산 |
+| **E-11** | ⬜ | **AI 리뷰 감정 분석 + SEO 재활용** | api/review-analysis(신규), 검색조련사 연동 | 리뷰 텍스트 붙여넣기 → Groq AI 감정분석(긍정/부정/중립) + 키워드 추출 → SEO 태그 자동추천, 기존 Groq 인프라 활용(추가비용 0원) |
 
 #### Sprint 5: 알림 자동화 + 수수료 업데이트 (비용 0원)
 

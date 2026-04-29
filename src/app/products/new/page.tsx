@@ -765,6 +765,18 @@ function NewProductPageInner() {
       .catch(() => null);
   }, [searchParams]);
 
+  // E-14: Deep-link from dashboard "Upload Readiness Center" — focus a specific tab
+  // Accepts ?focus=basic|option|image|seo|shipping (corresponds to seed-planting tabs)
+  useEffect(() => {
+    const focus = searchParams?.get('focus');
+    if (!focus) return;
+    const validTabs = ['basic', 'option', 'image', 'seo', 'shipping'];
+    if (validTabs.includes(focus)) {
+      setActiveTab(focus as typeof activeTab);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   // Prefill product name from Kkotti recommendation (?prefillName=...)
   useEffect(() => {
     const name = searchParams?.get('prefillName');

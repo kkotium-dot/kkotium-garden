@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 3 완료 — E-13A 카카오 채널 설정 페이지 + E-13C 인서트 카드 생성기)
+> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 3 완료 + Sprint 4 E-14 등록 준비 명령탑 완료)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C)**
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
 >   1. `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가`
@@ -36,7 +36,7 @@
 | GitHub | https://github.com/kkotium-dot/kkotium-garden |
 | Phase A~D | 전체 완료 ✅ |
 | Phase E | 진행 중 (E-7, E-1, E-3, E-8 완료) |
-| Phase E+ | Sprint 1 완료 (E-4, E-2C) + Sprint 2 완료 (E-2A, E-2B) + Sprint 3 완료 (E-13A, E-13C) |
+| Phase E+ | Sprint 1 완료 (E-4, E-2C) + Sprint 2 완료 (E-2A, E-2B) + Sprint 3 완료 (E-13A, E-13C) + Sprint 4 완료 (E-14) |
 | 카카오 비즈니스 채널 | 꽃틔움 KKOTIUM (Public ID: `_xkfALG`) ✅ |
 
 ---
@@ -315,6 +315,7 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | 굿서비스 위젯 | `src/components/dashboard/GoodServiceWidget.tsx` |
 | DataLab 트렌드 위젯 | `src/components/dashboard/DataLabTrendWidget.tsx` |
 | 리뷰 성장 트래커 위젯 (E-2A) | `src/components/dashboard/ReviewGrowthWidget.tsx` |
+| 등록 준비 명령탑 위젯 (E-14) | `src/components/dashboard/UploadReadinessWidget.tsx` |
 | 리뷰 성장 API (E-2A) | `src/app/api/review-growth/route.ts` |
 | 반품안심케어 수수료 (E-4) | `src/lib/return-care-fees.ts` |
 | SEO 테이블 v3 | `src/components/naver-seo/NaverSeoProductTable.tsx` |
@@ -480,3 +481,40 @@ E-13C `/ops/insert-card`:
 - 카카오 채널 정보는 `store_settings` 테이블이 single source of truth — 어떤 화면에서도 새로 입력받지 않고 GET /api/kakao-settings로 조회만 함
 - 인서트 카드의 컬러 일관성은 `getCardColorScheme` 헬퍼가 보장 — 페이지 컴포넌트 안에서 색상을 직접 계산하지 않는다
 - E-13B(알림톡 발송 API) 활성화 트리거는 **월 주문 50건+ 도달 시점**, 그 전까지는 네이버 내장 리뷰 알림 + 인서트 카드 조합으로 운영
+
+
+### 2026-04-29 Phase E+ Sprint 4 완료 세션 (E-14 — Upload Readiness Command Center)
+
+**범위**: 11점 키디니스 라이브러리(`src/lib/upload-readiness.ts`)를 대시보드 + 정원창고 + 씨앗심기 워크플로우에 deep-link로 통합한 "등록 준비 명령탑" 시스템. 매출 발생 직전의 마지막 마일(상품 등록 차단점)을 해소하기 위한 작업.
+
+| Task | 변경 사항 | 핵심 |
+|------|----------|------|
+| **Block A — 위젯 신규** | `src/components/dashboard/UploadReadinessWidget.tsx` (419줄) | DRAFT 상품 11점 키디니스 점수 정렬 TOP 5 + Stat strip(등록가능/작업필요/평균점수) + 부족 항목 칩 deep-link(`?focus={tab}`) + 90+ "바로 등록" CTA(`?registerId=`) + Loading skeleton + Empty state + ITEM_TO_TAB 매핑(11개 항목 → basic/option/image/seo/shipping 5개 탭) |
+| **Block B — 정원창고 deep-link** | `src/app/products/page.tsx` (+13줄, line 823~834) | `?registerId=` 쿼리 파라미터 → 해당 상품 자동 체크박스 선택 + 하단 액션 바 자동 노출 + NaverRegisterModal 자동 표시(셀러 단일 클릭으로 등록 시작 가능) |
+| **Block C — 씨앗심기 deep-link** | `src/app/products/new/page.tsx` (+12줄, line 768~778) | `?focus=basic\|option\|image\|seo\|shipping` 쿼리 파라미터 → 해당 탭 자동 활성화. 6탭 중 5개 탭 매핑(혜택 탭은 readiness 항목과 무관) |
+| **Block D — 대시보드 통합** | `src/app/dashboard/page.tsx` (+4줄) | UploadReadinessWidget import + DailyPlanWidget 다음 위치에 배치(매출 직결 위젯이라 상위 노출) |
+
+**브라우저 라이브 테스트 결과 (Chrome MCP)**:
+
+대시보드 위젯 (8개 DRAFT 상품 데이터 기준):
+- Stat strip: 0 등록가능 / 8 작업필요 / 평균 42점 ✅
+- 4개 상품 카드 정상 렌더링 (B등급 60점, C등급 52점, D등급 42점, D등급 38점) ✅
+- 부족 항목 칩 8종 정상 표시 (카테고리/태그/키워드/상품명/앞15자/추가/어뷰징/반복/대표/배송/마진) ✅
+
+Block C 검증 (`?focus=seo`):
+- 클릭 → URL `/products/new?edit=cmmwgn3t30003k8hs0ujaw6eh&focus=seo` 정확히 이동 ✅
+- 씨앗심기 진입 시 "SEO·원산지" 탭 자동 활성화(빨간 배경) ✅
+- 우측 수정 준비도 패널 60% B등급 + 부족 항목 5종 인라인 표시 ✅
+
+Block B 검증 (`?registerId=`):
+- URL `/products?registerId=cmmwgn3t30003k8hs0ujaw6eh` 직접 진입 ✅
+- 정원창고에서 해당 상품 체크박스 자동 선택 + "1개 선택" 하단 액션 바 자동 노출 ✅
+- NaverRegisterModal "Naver Direct Registration" 자동 표시(취소 / 1개 네이버 등록 시작) ✅
+
+**TSC**: 0 errors
+
+**구조 결정 (이후 세션 참고)**:
+- `upload-readiness.ts`는 **single source of truth** — 위젯/정원창고/씨앗심기/검색조련사/좀비부활소/cron daily가 모두 동일한 11점 체크 로직을 사용
+- ITEM_TO_TAB 매핑 표는 위젯 내부에 격리 — 향후 readiness 항목 추가 시 매핑만 업데이트하면 deep-link 자동 작동
+- 90점 임계값은 위젯에서만 적용 — 정원창고 NaverRegisterModal은 더 관대한(70%+) 기준 유지(기존 정책 유지)
+- E-14는 "셀러의 첫 등록 차단점 해소"가 목적 — 매출 발생 후에는 의미가 줄어드는 작업이므로 우선순위가 가장 높았음

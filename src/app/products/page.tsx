@@ -820,6 +820,19 @@ function ProductsPageInner() {
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
+  // E-14: Auto-select product from dashboard "Upload Readiness Center" deep-link (?registerId=...)
+  // When the user clicks "바로 등록" on a 90+ point DRAFT card, this opens NaverRegisterModal preselected
+  useEffect(() => {
+    const registerId = searchParams?.get('registerId');
+    if (!registerId || raw.length === 0) return;
+    const exists = raw.some((p) => p.id === registerId);
+    if (exists) {
+      setSelected(new Set([registerId]));
+      setShowNaverRegisterModal(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raw, searchParams]);
+
   // B-3: Naver real-time status sync
   const handleNaverSync = async () => {
     setNaverSyncing(true); setNaverSyncMsg('');

@@ -5,6 +5,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Package, TrendingUp, AlertTriangle, Sparkles, Layers, Skull, ArrowRight, ShoppingCart, RefreshCw } from 'lucide-react';
 import KkottiWidget from '@/components/dashboard/KkottiWidget';
+import UploadReadinessWidget from '@/components/dashboard/UploadReadinessWidget';
 import ReviewGrowthWidget from '@/components/dashboard/ReviewGrowthWidget';
 import MarketTrendWidget from '@/components/dashboard/MarketTrendWidget';
 import DailyPlanWidget from '@/components/dashboard/DailyPlanWidget';
@@ -251,6 +252,9 @@ export default function DashboardPage() {
 
       {/* ── 오늘 할 일 — products prop으로 단일 로드 공유 ───── */}
       <DailyPlanWidget products={products} productsLoading={productsLoading} />
+
+      {/* ── E-14 등록 준비 명령탑 — DRAFT 상품 11점 키디니스 점수 + 부족 항목 deep-link ───── */}
+      <UploadReadinessWidget products={products} productsLoading={productsLoading} />
 
       {/* ── 꼬띠 위젯 — products prop으로 단일 로드 공유 ────── */}
       <KkottiWidget products={products} productsLoading={productsLoading} />
