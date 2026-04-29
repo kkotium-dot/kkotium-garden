@@ -44,3 +44,6 @@ write-parser.js
 
 # TypeScript build cache (regenerated on every build)
 tsconfig.tsbuildinfo
+
+# Temporary commit message files
+.commit-msg-*.txt
