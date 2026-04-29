@@ -11,7 +11,7 @@ import {
   Package, PackagePlus, RefreshCw,
   Search, Layers, Store, Truck,
   KeyRound, FileText, ShoppingCart,
-  ChevronRight,
+  ChevronRight, MessageCircle, CreditCard,
 } from 'lucide-react';
 
 // Fountain SVG — garden concept, matches dashboard page header icon
@@ -77,11 +77,18 @@ const NAV: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    label: 'OPS',
+    items: [
+      { href: '/ops/insert-card', label: '인서트 카드', iconKey: 'creditcard' },
+    ],
+  },
+  {
     label: 'TOOLS',
     items: [
       { href: '/settings/suppliers',       label: '거래처 명단',   iconKey: 'store' },
       { href: '/settings/shipping',       label: '배송 레시피',   iconKey: 'truck' },
       { href: '/settings/supplier-login', label: '공급사 열쇠방', iconKey: 'keyround' },
+      { href: '/settings/kakao',          label: '카카오 채널',   iconKey: 'messagecircle' },
       { href: '/naver-settings',          label: '네이버 기본값', iconKey: 'filetext' },
     ],
   },
@@ -150,6 +157,8 @@ function NavIcon({ iconKey, active }: { iconKey: string; active: boolean }) {
     case 'keyround':    icon = <KeyRound    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'filetext':    icon = <FileText    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'shoppingcart': icon = <ShoppingCart size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'messagecircle': icon = <MessageCircle size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'creditcard':   icon = <CreditCard   size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     default:            icon = <Search      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
   }
   return <FlowerIconBox active={active}>{icon}</FlowerIconBox>;

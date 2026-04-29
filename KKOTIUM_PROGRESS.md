@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-27 (Phase E+ Sprint 2 완료 — E-2A 리뷰 성장 트래커 + E-2B 주문 페이지 리뷰 유도 뱃지)
+> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 3 완료 — E-13A 카카오 채널 설정 페이지 + E-13C 인서트 카드 생성기)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2 완료 (E-4, E-2C, E-2A, E-2B)**
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C)**
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
 >   1. `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가`
@@ -36,7 +36,7 @@
 | GitHub | https://github.com/kkotium-dot/kkotium-garden |
 | Phase A~D | 전체 완료 ✅ |
 | Phase E | 진행 중 (E-7, E-1, E-3, E-8 완료) |
-| Phase E+ | Sprint 1 완료 (E-4, E-2C) + Sprint 2 완료 (E-2A, E-2B) |
+| Phase E+ | Sprint 1 완료 (E-4, E-2C) + Sprint 2 완료 (E-2A, E-2B) + Sprint 3 완료 (E-13A, E-13C) |
 | 카카오 비즈니스 채널 | 꽃틔움 KKOTIUM (Public ID: `_xkfALG`) ✅ |
 
 ---
@@ -440,3 +440,43 @@ export const dynamic = 'force-dynamic';
 // 인증: HMAC-SHA256 (apiKey, date, salt, signature)
 // npm: solapi 패키지 사용 가능
 ```
+
+---
+
+### 2026-04-29 Phase E+ Sprint 3 완료 세션 (E-13A + E-13C)
+
+**범위**: 카카오 비즈니스 채널 통합의 1차 — 설정 페이지(E-13A) + 인서트 카드 생성기(E-13C). E-13B 알림톡 발송 API는 **2단계 접근 전략**에 따라 매출 50건+ 도달 시 활성화 예정 (현재 솔라피 키 미입력 상태에서 UI 진입만 지원).
+
+| Task | 변경 사항 | 핵심 |
+|------|----------|------|
+| **DB 스키마** | `prisma/schema.prisma` `store_settings` 테이블에 5개 필드 추가 | `kakao_channel_id`, `kakao_channel_url`, `solapi_api_key`, `solapi_pf_id`, `sender_phone_number` (single source of truth — Sidebar/Insert Card/Order page가 모두 이 한 곳을 참조) |
+| **Migration** | Supabase prod DB에 위 5개 컬럼 추가 적용 완료 | 채널 정보 입력 즉시 앱 전체에 즉시 반영되는 구조 확정 |
+| **Sidebar** | `src/components/layout/Sidebar.tsx` OPS 그룹 신설 | 카카오 채널(/settings/kakao) + 인서트 카드(/ops/insert-card) 메뉴 항목 추가 |
+| **API** | `src/app/api/kakao-settings/route.ts` 신규 GET/PATCH | `store_settings` 5개 필드 read/write, GET 응답 200 검증 완료 |
+| **E-13A** | `src/app/settings/kakao/page.tsx` + `src/components/kakao/KakaoChannelQR.tsx` | 카카오 채널 정보(URL/검색ID/PFID) 표시 + QR 미리보기(api.qrserver.com) + 4슬롯 컬러 팔레트 + 솔라피 4입력필드(API Key/Secret/PFID/발신번호 — 현재 비활성, 향후 E-13B 활성화 시 사용) + 7항목 연동 가이드 체크리스트 + 전체 저장 |
+| **HSL 헬퍼** | `src/lib/insert-card-colors.ts` `getCardColorScheme(hex)` | 단일 hex 입력으로 9가지 톤 자동 생성 (background/accentLight/accentMid/accentBorder/textOnLight/textOnDark/headerBg/shadow/headerText) — 인서트 카드 컬러 일관성 자동 보장 |
+| **E-13C** | `src/app/ops/insert-card/page.tsx` | A6 105×148mm 실시간 미리보기 + 4슬롯 컬러 테마 즉시 반영 + 카카오 QR(store_settings.kakao_channel_id 단일 소스) + 리뷰 적립금 3프리셋(텍스트 500/포토 1000/베스트 3000) + A4 4매 배치/A6 단일 토글 + `window.print()` 기반 PDF 저장 |
+
+**브라우저 라이브 테스트 결과 (둘 다 정상)**:
+
+E-13A `/settings/kakao`:
+- 채널 정보(꽃틔움 KKOTIUM, `_xkfALG`, http://pf.kakao.com/_xkfALG) 자동 로드 ✅
+- QR 미리보기 정상 렌더 ✅
+- 4슬롯 컬러 팔레트 입력/색상 피커 동작 ✅
+- 솔라피 4입력 필드 (API Key/Secret/PFID/발신번호) ✅
+- 7항목 가이드 체크리스트 ✅
+- 전체 저장 → /api/kakao-settings PATCH 200 ✅
+
+E-13C `/ops/insert-card`:
+- 좌측 입력 패널 (스토어명/메시지/적립금 프리셋/컬러 테마) ✅
+- 우측 A6 실시간 미리보기 ✅
+- **컬러 테마 변경 시 9가지 톤 즉시 반영 (Pink → Red 검증 완료)** ✅
+- A4 4매/A6 단일 토글 ✅
+- 인쇄/PDF 저장 (`window.print()`) ✅
+
+**TSC**: 0 errors
+
+**구조 결정 (이후 세션 참고)**:
+- 카카오 채널 정보는 `store_settings` 테이블이 single source of truth — 어떤 화면에서도 새로 입력받지 않고 GET /api/kakao-settings로 조회만 함
+- 인서트 카드의 컬러 일관성은 `getCardColorScheme` 헬퍼가 보장 — 페이지 컴포넌트 안에서 색상을 직접 계산하지 않는다
+- E-13B(알림톡 발송 API) 활성화 트리거는 **월 주문 50건+ 도달 시점**, 그 전까지는 네이버 내장 리뷰 알림 + 인서트 카드 조합으로 운영

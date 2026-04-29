@@ -38,3 +38,9 @@ write_*.py
 write-*.js
 write-sku.js
 write-parser.js
+
+# Local working assets (personal Excel templates, originals)
+작업용 엑셀 기본포멧/
+
+# TypeScript build cache (regenerated on every build)
+tsconfig.tsbuildinfo
