@@ -11,7 +11,7 @@ import {
   Search, TrendingUp, TrendingDown, Target, Calculator,
   ChevronDown, ChevronUp, RotateCcw, RefreshCw,
 } from 'lucide-react';
-import { getNaverFeeRate, getNaverFeeRateByD1, getNaverFeeBreakdown, getMarginProfile } from '@/lib/naver-fee-rates-2026';
+import { getNaverFeeRate, getNaverFeeRateByD1, getNaverFeeBreakdown, getMarginProfile, type SalesChannel } from '@/lib/naver-fee-rates-2026';
 import { getReturnCareFee } from '@/lib/return-care-fees';
 
 // ----------------------------------------------------------------
@@ -43,6 +43,7 @@ interface LocalState {
   feeRateOverride: number | null;
   returnCareFee: number;  // E-4: per-order return care fee
   reviewRewardCost: number; // E-2C: avg review reward per order
+  salesChannel: SalesChannel; // 2025.06.02 reform: normal exposure vs marketing link
 }
 
 interface CostBreakdown {
@@ -78,6 +79,7 @@ const DEFAULTS: LocalState = {
   feeRateOverride: null,
   returnCareFee: 0,
   reviewRewardCost: 0,
+  salesChannel: 'normal',
 };
 
 const MARGIN_LEVELS = [
@@ -329,17 +331,18 @@ export function MarginCalculator({
   }, []);
 
   // Effective fee rate: override > d1-based > code-based > default
+  // Channel-aware: marketing link reduces sales fee 2.73% → 0.91% on standard categories
   const effectiveFeeRate = useMemo(() => {
     if (local.feeRateOverride !== null) return local.feeRateOverride / 100;
-    if (selectedD1) return getNaverFeeRateByD1(selectedD1);
-    if (selectedCategoryCode) return getNaverFeeRate(selectedCategoryCode);
-    return getNaverFeeRate(undefined); // default 5.5%
-  }, [local.feeRateOverride, selectedD1, selectedCategoryCode]);
+    if (selectedD1) return getNaverFeeRateByD1(selectedD1, local.salesChannel);
+    if (selectedCategoryCode) return getNaverFeeRate(selectedCategoryCode, local.salesChannel);
+    return getNaverFeeRate(undefined, local.salesChannel);
+  }, [local.feeRateOverride, local.salesChannel, selectedD1, selectedCategoryCode]);
 
-  // Fee breakdown for display
+  // Fee breakdown for display (channel-aware)
   const feeBreakdown = useMemo(() => {
-    return getNaverFeeBreakdown(selectedCategoryCode || undefined);
-  }, [selectedCategoryCode]);
+    return getNaverFeeBreakdown(selectedCategoryCode || undefined, local.salesChannel);
+  }, [selectedCategoryCode, local.salesChannel]);
 
   // Core calculation
   const breakdown = useMemo<CostBreakdown>(() => {
@@ -512,11 +515,64 @@ export function MarginCalculator({
         </span>
       </div>
 
+      {/* Channel toggle — 2025.06.02 개편 일반 노출 vs 자체마케팅 링크 */}
+      {!local.feeRateOverride && (
+        <div>
+          <div
+            role="radiogroup"
+            aria-label="유입 채널 선택"
+            className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg"
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={local.salesChannel === 'normal'}
+              onClick={() => updateLocal({ salesChannel: 'normal' })}
+              className={`flex-1 px-2 py-1 text-[11px] font-semibold rounded-md transition-colors ${
+                local.salesChannel === 'normal'
+                  ? 'bg-white text-pink-600 shadow-sm border border-pink-200'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              일반 노출 {feeBreakdown.isExceptionCategory
+                ? `${(getNaverFeeRate(selectedCategoryCode || undefined, 'normal') * 100).toFixed(1)}%`
+                : '5.7%'}
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={local.salesChannel === 'marketing'}
+              onClick={() => updateLocal({ salesChannel: 'marketing' })}
+              disabled={feeBreakdown.isExceptionCategory}
+              title={feeBreakdown.isExceptionCategory
+                ? '예외 카테고리(디지털/가전·도서) — 마케팅 링크 인하 미적용'
+                : '블로그·SNS·검색광고 등 자체 광고 경로로 유입 시'}
+              className={`flex-1 px-2 py-1 text-[11px] font-semibold rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                local.salesChannel === 'marketing'
+                  ? 'bg-white text-green-600 shadow-sm border border-green-200'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              자체마케팅 {feeBreakdown.isExceptionCategory
+                ? '적용안됨'
+                : '3.9%'}
+            </button>
+          </div>
+          <p className="mt-1 text-[10px] text-gray-400 leading-relaxed px-1">
+            {local.salesChannel === 'marketing' && !feeBreakdown.isExceptionCategory
+              ? '자체 경로: 블로그·SNS·검색광고 등 셀러 자체 유입 가정 — 판매수수료 0.91%'
+              : feeBreakdown.isExceptionCategory
+                ? '예외 카테고리 — 마케팅 링크 인하 미적용 (네이버 정책)'
+                : '일반 경로: 네이버 쇼핑검색·플러스스토어 등 일반 노출 기준 — 판매수수료 2.73%'}
+          </p>
+        </div>
+      )}
+
       {/* Fee breakdown tooltip */}
       {!local.feeRateOverride && (
         <div className="text-[10px] text-gray-400 px-1 leading-relaxed">
-          주문관리 {(feeBreakdown.orderManagementRate * 100).toFixed(2)}% + 판매수수료 {(feeBreakdown.salesFeeRate * 100).toFixed(2)}% = {(effectiveFeeRate * 100).toFixed(1)}%
-          <span className="ml-1 text-gray-300">| 중소3 등급 기준</span>
+          주문관리 {(feeBreakdown.orderManagementRate * 100).toFixed(2)}% + 판매수수료 {(feeBreakdown.salesFeeRate * 100).toFixed(2)}%({feeBreakdown.channelLabel}) = {(effectiveFeeRate * 100).toFixed(1)}%
+          <span className="ml-1 text-gray-300">| {feeBreakdown.gradeLabel} · 2025.6.2 개편</span>
         </div>
       )}
 
