@@ -8,6 +8,7 @@ import { fetchNaverTrends, type TrendResult } from '@/lib/trend-analyzer';
 import { searchShopping, analyzeCompetition, type CompetitionAnalysis } from '@/lib/naver/shopping-search';
 import { fetchKeywordStats, type KeywordStat } from '@/lib/naver/keyword-api';
 import { matchWholesaleProducts, type WholesaleProduct } from '@/lib/wholesale-matcher';
+import { entryBarrierToBlueOceanBonus, type EntryBarrierAnalysis } from '@/lib/competition-monitor';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,13 @@ export interface SourcingOpportunity {
   // E-8: Wholesale matches from DMK/DMM
   wholesaleMatches?: WholesaleProduct[];
   wholesalePlatforms?: string[];
+  // E-10: Entry barrier analysis (Option A - indirect estimation)
+  entryBarrierLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+  entryBarrierScore?: number;       // 0~5 (5 = highest barrier)
+  entryBarrierBonus?: number;       // -10, 0, or +15 applied to BlueOcean
+  blueOceanBase?: number;           // Score before entry barrier bonus
+  uniqueSellersInTop?: number;      // unique mallNames in top results
+  priceSpread?: number;             // (max-min)/avg, rounded to 2 decimals
 }
 
 export interface SourcingRecommendResult {
@@ -108,6 +116,53 @@ function calcBlueOceanScore(params: {
   else if (params.avgPrice > 50000 && params.avgPrice <= 100000) score += 3;
 
   return Math.max(0, Math.min(100, score));
+}
+
+// E-10: Estimate entry barrier directly from competition analysis (no full snapshot needed).
+// Reuses the same indirect signals as calcEntryBarrier() in competition-monitor.ts but
+// works against analyzeCompetition() output (which gives topSellers, not topItems).
+function calcEntryBarrierFromComp(params: {
+  topSellers: string[];
+  minPrice: number;
+  maxPrice: number;
+  avgPrice: number;
+  totalResults: number;
+  competitionLevel: string;
+}): { score: number; level: 'LOW' | 'MEDIUM' | 'HIGH'; uniqueSellers: number; priceSpread: number } {
+  let score = 2.5;
+
+  const uniqueSellers = new Set(params.topSellers.filter(Boolean)).size;
+  if (uniqueSellers >= 5) score += 0.5;
+  else if (uniqueSellers > 0 && uniqueSellers <= 2) score -= 0.5;
+
+  const spread = params.avgPrice > 0
+    ? (params.maxPrice - params.minPrice) / params.avgPrice
+    : 0;
+  if (spread >= 0.5) score -= 0.5;
+  else if (spread > 0 && spread < 0.2) score += 0.5;
+
+  if (params.totalResults >= 100000) score += 1.5;
+  else if (params.totalResults >= 30000) score += 1.0;
+  else if (params.totalResults >= 5000) score += 0.5;
+  else if (params.totalResults < 1000) score -= 0.5;
+
+  // analyzeCompetition's competitionLevel is a string label; normalize via known buckets
+  const lvl = (params.competitionLevel ?? '').toUpperCase();
+  if (lvl.includes('VERY') || lvl.includes('ㅈ')) score += 0.5;
+  else if (lvl.includes('LOW') || lvl.includes('ㄴ')) score -= 0.5;
+
+  score = Math.max(0, Math.min(5, score));
+
+  const level: 'LOW' | 'MEDIUM' | 'HIGH' =
+    score >= 3.5 ? 'HIGH' :
+    score >= 2.0 ? 'MEDIUM' : 'LOW';
+
+  return {
+    score: Math.round(score * 10) / 10,
+    level,
+    uniqueSellers,
+    priceSpread: Math.round(spread * 100) / 100,
+  };
 }
 
 // ── Groq AI Insight Generator ────────────────────────────────────────────────
@@ -262,12 +317,24 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
           ? Math.round(((comp.avgPrice - suggestedSupplyPrice - comp.avgPrice * 0.058) / comp.avgPrice) * 100)
           : 0;
 
-        const blueOceanScore = calcBlueOceanScore({
+        const baseScore = calcBlueOceanScore({
           monthlyVolume: kw.totalMonthly,
           competition: kw.competition,
           totalResults: comp.totalResults,
           avgPrice: comp.avgPrice,
         });
+
+        // E-10: Apply entry barrier bonus to BlueOcean score
+        const barrier = calcEntryBarrierFromComp({
+          topSellers: comp.topSellers,
+          minPrice: comp.minPrice,
+          maxPrice: comp.maxPrice,
+          avgPrice: comp.avgPrice,
+          totalResults: comp.totalResults,
+          competitionLevel: comp.competitionLevel,
+        });
+        const entryBarrierBonus = entryBarrierToBlueOceanBonus(barrier.level);
+        const blueOceanScore = Math.max(0, Math.min(100, baseScore + entryBarrierBonus));
 
         // Build reason string
         const reasons: string[] = [];
@@ -277,6 +344,9 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
         if (kw.competition === 'low') reasons.push('low_competition');
         if (comp.totalResults < 5000) reasons.push('few_competitors');
         if (comp.avgPrice >= 10000 && comp.avgPrice <= 50000) reasons.push('good_price_range');
+        // E-10: Reflect entry barrier in reason
+        if (barrier.level === 'LOW') reasons.push('low_entry_barrier');
+        else if (barrier.level === 'HIGH') reasons.push('high_entry_barrier');
 
         // Find matching trend category
         const matchedCat = trendCategories.find(cat =>
@@ -298,6 +368,13 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
           blueOceanScore,
           reason: reasons.join(', ') || 'trend_match',
           topSellers: comp.topSellers.slice(0, 3),
+          // E-10: Entry barrier breakdown for UI display
+          entryBarrierLevel: barrier.level,
+          entryBarrierScore: barrier.score,
+          entryBarrierBonus,
+          blueOceanBase: baseScore,
+          uniqueSellersInTop: barrier.uniqueSellers,
+          priceSpread: barrier.priceSpread,
         });
 
         // Rate limit between competition checks
