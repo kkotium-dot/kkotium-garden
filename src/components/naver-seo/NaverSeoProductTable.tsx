@@ -8,11 +8,13 @@ import {
   ChevronDown, ChevronRight, Image as ImageIcon,
   Check, AlertTriangle, Zap, Heart, Target,
   RefreshCw, Edit2, TrendingUp, Save, X, MessageSquarePlus, FileText,
+  Sparkles, MessageCircle, ThumbsUp, ThumbsDown, Plus,
 } from 'lucide-react';
 import Link from 'next/link';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
 import { checkProductName, getGradeColor, getSeverityColor } from '@/lib/product-name-checker';
 import { formatSearchVolume, getCompetitionColor, type KeywordStat } from '@/lib/naver/keyword-api';
+import type { SentimentResult, KeywordWithSentiment, Sentiment } from '@/lib/review-sentiment-analyzer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -203,6 +205,345 @@ const AI_STYLES = [
   { key: 'emotional' as const, icon: Heart, label: '감성 타겟',  desc: '감성·시즌·선물 소구, 높은 클릭률',  color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
   { key: 'niche' as const, icon: Target,    label: '틈새 키워드', desc: '세부 속성·롱테일, 낮은 경쟁',       color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
 ] as const;
+
+// ─── Review Analysis Panel (E-11) ─────────────────────────────────────────────
+// Pastes competitor reviews / wholesale text → AI sentiment analysis
+// → suggests SEO tags directly applicable to the current product
+
+function sentimentChipStyle(sentiment: Sentiment): React.CSSProperties {
+  const PALETTE: Record<Sentiment, { bg: string; color: string; border: string }> = {
+    POSITIVE: { bg: '#F0FDF4', color: '#15803d', border: '#86efac' },
+    NEGATIVE: { bg: '#FEF2F2', color: '#b91c1c', border: '#fca5a5' },
+    NEUTRAL:  { bg: '#F3F4F6', color: '#4b5563', border: '#d1d5db' },
+  };
+  const p = PALETTE[sentiment];
+  return {
+    fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+    background: p.bg, color: p.color, border: `1px solid ${p.border}`,
+  };
+}
+
+function sentimentLabel(sentiment: Sentiment): string {
+  if (sentiment === 'POSITIVE') return '긍정';
+  if (sentiment === 'NEGATIVE') return '부정';
+  return '중립';
+}
+
+function ReviewAnalysisPanel({
+  productName,
+  currentTags,
+  onApplyTag,
+  onApplyAllTags,
+  onApplySummary,
+}: {
+  productName: string;
+  currentTags: string[];
+  onApplyTag: (tag: string) => void;
+  onApplyAllTags: (tags: string[]) => void;
+  onApplySummary?: (summary: string) => void;
+}) {
+  const [reviewText, setReviewText] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
+  const [result, setResult] = useState<SentimentResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Estimate review count from textarea (one review per non-empty line)
+  const reviewLines = reviewText
+    .split('\n')
+    .map(s => s.trim())
+    .filter(s => s.length >= 5);
+  const reviewCount = reviewLines.length;
+  const totalChars = reviewText.length;
+
+  const canAnalyze = reviewCount >= 1 && reviewCount <= 50 && totalChars <= 30000 && !analyzing;
+
+  const runAnalysis = async () => {
+    if (!canAnalyze) return;
+    setAnalyzing(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await fetch('/api/review-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviews: reviewLines, productName }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setResult(data.data as SentimentResult);
+      } else {
+        setError(data.error ?? '분석 실패');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '네트워크 오류');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const reset = () => {
+    setResult(null);
+    setError(null);
+  };
+
+  // Filter suggested tags: skip ones already added
+  const newTags = result
+    ? result.suggestedTags.filter(t => !currentTags.includes(t))
+    : [];
+  const remainingSlots = 10 - currentTags.length;
+
+  return (
+    <div
+      style={{
+        gridColumn: '1 / -1',
+        marginTop: 8,
+        padding: 14,
+        borderRadius: 12,
+        background: '#FAFAFF',
+        border: '1.5px dashed #C4B5FD',
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Sparkles size={14} style={{ color: '#7C3AED' }} />
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#7C3AED' }}>경쟁사 리뷰 / 도매 텍스트 AI 분석</span>
+        </div>
+        <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 600 }}>
+          무료 · Groq AI
+        </span>
+      </div>
+
+      <p style={{ fontSize: 11, color: '#6B7280', margin: '0 0 10px', lineHeight: 1.55 }}>
+        경쟁사 리뷰나 도매 사이트의 상품 설명을 한 줄에 하나씩 붙여넣고 분석하세요.
+        AI가 감정·핵심 키워드를 추출하여 SEO 태그로 자동 추천합니다.
+      </p>
+
+      {/* Input area */}
+      {!result && (
+        <>
+          <textarea
+            value={reviewText}
+            onChange={e => setReviewText(e.target.value)}
+            rows={5}
+            placeholder="예시:&#10;정말 만족스러워요. 색이 예쁘고 가격대비 좋습니다&#10;선물로 드렸는데 받는 분이 매우 좋아하셨어요&#10;포장이 꼼꼼하고 배송도 빨라요"
+            style={{
+              width: '100%', fontSize: 12, padding: '10px 12px', borderRadius: 8,
+              border: '1.5px solid #DDD6FE', outline: 'none', background: '#fff',
+              color: '#1F2937', boxSizing: 'border-box', resize: 'vertical',
+              fontFamily: 'inherit', lineHeight: 1.6,
+            }}
+            disabled={analyzing}
+          />
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#6B7280' }}>
+              <span style={{ fontWeight: 700, color: reviewCount >= 1 && reviewCount <= 50 ? '#16a34a' : '#dc2626' }}>
+                {reviewCount}개 리뷰
+              </span>
+              <span>·</span>
+              <span>{totalChars.toLocaleString()}자</span>
+              {reviewCount > 50 && <span style={{ color: '#dc2626' }}>(50개 초과)</span>}
+              {totalChars > 30000 && <span style={{ color: '#dc2626' }}>(30000자 초과)</span>}
+            </div>
+            <button
+              onClick={runAnalysis}
+              disabled={!canAnalyze}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8,
+                background: canAnalyze ? '#7C3AED' : '#D1D5DB',
+                color: '#fff', border: 'none',
+                cursor: canAnalyze ? 'pointer' : 'not-allowed',
+                transition: 'background 0.15s',
+              }}
+            >
+              {analyzing
+                ? <RefreshCw size={12} className="animate-spin" />
+                : <Sparkles size={12} />}
+              {analyzing ? '분석 중...' : 'AI 분석 시작'}
+            </button>
+          </div>
+
+          {error && (
+            <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FCA5A5', fontSize: 11, color: '#b91c1c', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertTriangle size={11} />
+              <span>{error}</span>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Result area */}
+      {result && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* AI summary */}
+          {result.aiSummary && (
+            <div style={{ padding: '10px 12px', borderRadius: 8, background: '#fff', border: '1px solid #DDD6FE' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+                <MessageCircle size={11} style={{ color: '#7C3AED' }} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  AI 요약 ({result.reviewCount}개 분석 · {result.provider})
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: '#374151', margin: 0, lineHeight: 1.55 }}>{result.aiSummary}</p>
+              {onApplySummary && (
+                <button
+                  onClick={() => onApplySummary(result.aiSummary)}
+                  style={{
+                    marginTop: 6, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+                    background: '#F5F3FF', color: '#7C3AED', border: '1px solid #DDD6FE', cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                  }}
+                >
+                  <Plus size={10} /> 상품 설명에 추가
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Sentiment distribution bar */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                감정 분포
+              </span>
+              <span style={sentimentChipStyle(result.overallSentiment)}>
+                전반적: {sentimentLabel(result.overallSentiment)}
+              </span>
+            </div>
+            <div style={{ display: 'flex', height: 22, borderRadius: 8, overflow: 'hidden', border: '1px solid #E5E7EB' }}>
+              {result.positiveRatio > 0 && (
+                <div style={{ width: `${result.positiveRatio}%`, background: '#86efac', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#15803d' }}>
+                  {result.positiveRatio >= 12 ? `긍정 ${result.positiveRatio}%` : ''}
+                </div>
+              )}
+              {result.neutralRatio > 0 && (
+                <div style={{ width: `${result.neutralRatio}%`, background: '#D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#4b5563' }}>
+                  {result.neutralRatio >= 12 ? `중립 ${result.neutralRatio}%` : ''}
+                </div>
+              )}
+              {result.negativeRatio > 0 && (
+                <div style={{ width: `${result.negativeRatio}%`, background: '#fca5a5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#b91c1c' }}>
+                  {result.negativeRatio >= 12 ? `부정 ${result.negativeRatio}%` : ''}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Strengths + Pain points */}
+          {(result.strengths.length > 0 || result.painPoints.length > 0) && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {result.strengths.length > 0 && (
+                <div style={{ padding: '8px 10px', borderRadius: 8, background: '#F0FDF4', border: '1px solid #86efac' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                    <ThumbsUp size={11} style={{ color: '#15803d' }} />
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#15803d' }}>강점</span>
+                  </div>
+                  <ul style={{ margin: 0, padding: '0 0 0 14px', fontSize: 11, color: '#166534', lineHeight: 1.6 }}>
+                    {result.strengths.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+              )}
+              {result.painPoints.length > 0 && (
+                <div style={{ padding: '8px 10px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #fca5a5' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                    <ThumbsDown size={11} style={{ color: '#b91c1c' }} />
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#b91c1c' }}>약점 (회피 포인트)</span>
+                  </div>
+                  <ul style={{ margin: 0, padding: '0 0 0 14px', fontSize: 11, color: '#991b1b', lineHeight: 1.6 }}>
+                    {result.painPoints.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Top keywords with sentiment */}
+          {result.topKeywords.length > 0 && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                Top 키워드 (감정별)
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {result.topKeywords.map((kw, i) => (
+                  <span key={i} style={{ ...sentimentChipStyle(kw.sentiment), display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                    {kw.keyword}
+                    {kw.frequency > 1 && <span style={{ opacity: 0.7 }}>×{kw.frequency}</span>}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Suggested SEO tags — main payoff */}
+          {result.suggestedTags.length > 0 && (
+            <div style={{ padding: '10px 12px', borderRadius: 8, background: '#FFF0F5', border: '1.5px solid #FFB3CE' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Sparkles size={11} style={{ color: '#e62310' }} />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#e62310', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    추천 SEO 태그 ({newTags.length}개 추가 가능 · 남은 슬롯 {remainingSlots}/10)
+                  </span>
+                </div>
+                {newTags.length > 0 && remainingSlots > 0 && (
+                  <button
+                    onClick={() => onApplyAllTags(newTags.slice(0, remainingSlots))}
+                    style={{
+                      fontSize: 10, fontWeight: 800, padding: '4px 10px', borderRadius: 6,
+                      background: '#e62310', color: '#fff', border: 'none', cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: 3,
+                    }}
+                  >
+                    <Plus size={10} /> 일괄 추가 ({Math.min(newTags.length, remainingSlots)}개)
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {result.suggestedTags.map((tag, i) => {
+                  const already = currentTags.includes(tag);
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => !already && remainingSlots > 0 && onApplyTag(tag)}
+                      disabled={already || remainingSlots <= 0}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 3,
+                        fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 99,
+                        background: already ? '#E5E7EB' : '#fff',
+                        color: already ? '#9CA3AF' : '#e62310',
+                        border: `1px solid ${already ? '#D1D5DB' : '#FFB3CE'}`,
+                        cursor: already || remainingSlots <= 0 ? 'not-allowed' : 'pointer',
+                        textDecoration: already ? 'line-through' : 'none',
+                      }}
+                    >
+                      {already ? <Check size={9} /> : <Plus size={9} />}
+                      #{tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Reset / re-analyze */}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button
+              onClick={reset}
+              style={{
+                fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 8,
+                background: '#fff', color: '#6B7280', border: '1px solid #D1D5DB',
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
+              }}
+            >
+              <RefreshCw size={11} /> 다시 분석
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Inline SEO Edit Panel ────────────────────────────────────────────────────
 
@@ -485,6 +826,33 @@ function SeoEditPanel({
             </div>
           )}
         </div>
+
+        {/* E-11: Review analysis panel — paste competitor reviews → AI suggested tags */}
+        <ReviewAnalysisPanel
+          productName={product.name}
+          currentTags={tags}
+          onApplyTag={(tag) => {
+            if (!tags.includes(tag) && tags.length < 10) {
+              setTags(prev => [...prev, tag]);
+            }
+          }}
+          onApplyAllTags={(newTags) => {
+            setTags(prev => {
+              const merged = [...prev];
+              for (const t of newTags) {
+                if (!merged.includes(t) && merged.length < 10) merged.push(t);
+              }
+              return merged;
+            });
+          }}
+          onApplySummary={(summary) => {
+            setDesc(prev => {
+              if (!prev) return summary;
+              if (prev.includes(summary)) return prev;
+              return prev + (prev.endsWith('\n') ? '' : '\n') + summary;
+            });
+          }}
+        />
       </div>
     </div>
   );
