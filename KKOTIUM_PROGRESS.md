@@ -1,6 +1,6 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 5 — 2025.06.02 수수료 개편 작업 + 보안/잔재 정리 완료)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: 71afc44
+> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 5 — 2025.06.02 수수료 개편 작업 + 보안/잔재 정리 완료 + E-15 상세 계획 강화)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 이전 커밋: 2a1b4dd
 > **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10, E-11, 수수료 개편)**
 > **다음 작업 후보: E-15 등록 준비 AI 자동 채우기 (1순위, 매출 직결) / E-1 상세페이지 빌더 AEO 강화 (2순위)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 채팅에서 시작할 작업 후보" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
@@ -160,6 +160,8 @@
 16. \uXXXX 유니코드 이스케이프 JSX에서 사용 금지 → 한글 리터럴 직접 사용 (렌더링 깨짐 방지)
 17. **git commit 여러 줄 메시지 금지** → file로 쓰고 `-F` 옵션 사용 또는 한 줄로 압축 (shell dquote 모드 걸림 회피)
 18. **Python `-c` 안 multi-line string 금지** → filesystem:edit_file 또는 file write 사용
+19. **AI 자동 채우기 결과는 DB 직접 적용 절대 금지** → POST(미리보기)와 PATCH(셀러 승인 적용) 2단계 분리 (E-15 이후 표준). AI 생성 결과는 셀러 체크박스 승인 없이 절대 DB 변경 금지
+20. **AI 추천 카테고리는 NAVER_CATEGORIES_FULL 로컬 검색만** → AI가 새 카테고리명 생성하면 무시, 4,993건 매칭에서만 선택
 ```
 
 ### UI 작성 원칙 (2026-04-13 확정)
@@ -395,6 +397,7 @@ Etc: CRON_SECRET, NEXT_PUBLIC_APP_URL
 | detail_image_url 8개 null | 직접 입력 안 함 | 씨앗 심기 편집 모드에서 직접 입력 |
 | 네이버 리뷰 API 미지원 | 커머스 API 범위 밖 | 수동 입력 + 크롤링만 가능 |
 | 알림톡 완전 무료 불가 | 카카오 딜러사 건당 과금 | 솔라피 건당 13원, 가입 시 300포인트(23건분) |
+| **AI 자동 채우기 90점 도달 한계** | 11개 중 4개는 AI 영역 외 (이미지 2개/배송/마진) | 자동 채우기는 max 72점 + 셀러 수동 28점 = 100점. 이미지 2장 추가 + 배송 매핑까지 마치면 90+ |
 | **터미널 multi-line commit 트랩** | `git commit -m "line1\nline2"` 시 shell의 dquote 모드에 갇혀 대기 상태 | 여러 줄 message도 file로 쓰고 `git commit -F .commit-msg.txt` 사용, 여러 줄 이상은 한 줄 message로 압축 |
 | **Python `-c` 안 multiline string 트랩** | `python3 -c "open('f').write('''multi\nline''')"` 도 shell parser에서 dquote 멈춤 유발 | Python script를 직접 쓰기(`heredoc 금지`) 대신 filesystem:edit_file/write_file 이용
 

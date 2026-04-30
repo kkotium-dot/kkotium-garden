@@ -166,27 +166,123 @@
 
 > 2026-04-30 수수료 개편 마무리 세션에서 다음 작업 우선순위 재평가. **E-15 (등록 준비 AI 자동 채우기) → E-1 빌더 AEO 강화 → E-12 → E-13B** 순서 권장. Phase E+ Sprint 5 종결 상태.
 
-### 1순위 확정: E-15 등록 준비 AI 자동 채우기 (가칭, 신규 작업)
+### 1순위 확정: E-15 등록 준비 AI 자동 채우기 (신규 작업, 2026-04-30 강화)
 
-**문제 정의**: 현재 8개 상품이 모두 DRAFT 상태, 평균 등록 준비도 42점. E-14가 부족 항목을 시각화했으나, 실제로 90+까지 끌어올리는 일은 셀러가 하나하나 직접 해야 함. **1인 셀러의 가장 큰 병목 = "등록 차단점 해소까지의 인지/시간 부담".**
+**문제 정의**: 8개 상품 모두 DRAFT, 평균 등록 준비도 42점. E-14가 부족 항목 시각화 + deep-link까지 했으나, 실제 채우기는 셀러 수동 작업으로 남아 매출 발생까지의 마지막 병목.
 
-**해결책**: E-14 위젯에 "AI로 한 번에 채우기" 버튼 추가 → 부족 항목별로 AI 호출 (키워드 생성, SEO 태그 추천, 상품명 개선, 카테고리 정밀화, 어뷰징 회피 등) → 결과 미리보기 모달 → 셀러 승인 → 일괄 적용 → 점수 42 → 80~90+ 도달.
+**해결책**: 위젯에 "AI로 자동 채우기" 버튼 → AI가 가능한 항목 채우기 → 미리보기 모달(항목별 before/after) → 셀러 항목별 체크박스로 선택 적용 → 점수 상승.
 
-**임팩트**: 매출 발생 트리거. 8개 상품 모두 등록 가능 상태로 끌어올리면 즉시 매출 발생 가능.
+#### ⚠️ 중요: 11개 항목 중 AI 자동 채우기 가능 매트릭스 (반드시 다음 채팅이 먼저 읽을 것)
 
-**작업 범위 (예상 1.5~2일)**:
-- **Block A**: `src/lib/upload-readiness-filler.ts` (가칭) 라이브러리 — 11개 ITEM_TO_TAB 매핑 항목별 AI 자동 채우기 함수 (`autoFillKeywords()`, `autoFillSeoTags()`, `autoFillProductName()`, `autoFillFirst15chars()`, etc.). Groq round-robin 사용, 결과 정규화 + 검증.
-- **Block B**: `src/app/api/upload-readiness/auto-fill/route.ts` (신규) — POST endpoint, productId + missingItems 입력 → AI 호출 결과 반환 (아직 적용 안 함, 미리보기 용). PATCH endpoint 추가 — 셀러 승인된 결과 일괄 적용.
-- **Block C**: `src/components/dashboard/UploadReadinessWidget.tsx` 보강 — 상품 카드에 "AI로 자동 채우기" 버튼 + 미리보기 모달(항목별 before/after 제시) + 새 점수 표시 + 적용 / 취소 버튼.
-- **Block D**: 라이브 검증 — 8개 DRAFT 모두 자동 채우기 → 90+ 도달 검증, 생성된 SEO 내용 품질 확인 (구매자 언어 반영 여부).
+현재 `upload-readiness.ts`의 11개 항목을 실제 코드로 검증한 결과, **자동 채우기 가능 7개 + 셀러 수동 4개**로 나뉜다:
 
-**비용**: 0원 (Groq round-robin 인프라 활용, 8 상품 × 5 항목 = 40 호출, 14400/일 capacity 대비 무시 가능)
+| ItemId | 통과 조건 | weight | AI 가능? | 자동 채우기 방법 |
+|--------|----------|--------|---------|---------------|
+| `name_length` | 25~50자 | 8 | ✅ | 현재 상품명을 25~50자로 재작성 |
+| `no_abuse` | ABUSE_WORDS(17개) 미포함 | 10 | ✅ | 어뷰징 단어 제거하고 자연스럽게 재작성 |
+| `no_repeat` | 동일 단어 3회+ 반복 없음 | 8 | ✅ | 반복 단어 제거하고 다양화 |
+| `keyword_in_front` | 앞 15자에 키워드 1개+ 포함 | 10 | ✅ | 키워드를 상품명 앞 15자로 재배치 |
+| `keywords_count` | keywords ≥ 5개 | 12 | ✅ | 카테고리+상품명에서 5~10개 키워드 생성 |
+| `tags_count` | tags ≥ 10개 | 10 | ✅ | E-11 패턴 재사용, 구매자 언어 10~12개 |
+| `category` | naverCategoryCode ≠ 50003307 | 14 | ⚠️ 부분 | 상품명에서 d1/d2 추천 → 셀러 확인 후 NAVER_CATEGORIES_FULL 매핑 |
+| `main_image` | mainImage 존재 | 12 | ❌ | 셀러 직접 업로드 (씨앗 심기 이미지 탭) |
+| `extra_images` | extra ≥ 3장 | 8 | ❌ | 셀러 직접 업로드 |
+| `shipping_template` | shippingTemplateId 존재 | 10 | ❌ | 셀러가 도구 탭에서 매핑 |
+| `net_margin` | 순마진 ≥ 30% | 8 | ❌ | 가격 결정권은 셀러 (AI 자동 변경 시 적자 위험) |
 
-**구조 결정 (작업 시작 전 추가 필요)**:
-- 자동 채우기 결과는 **바로 DB에 적용하지 않고** 셀러 승인 단계 필수 — AI 오류 롤백을 위한 안전 장치
-- AI 생성 결과는 구매자 언어 프롬프트 필요 (E-11 review-sentiment-analyzer의 패턴 참고)
-- 수수료 라이브러리는 이미 single source of truth 상태 — 추가 작업 필요 없음
-- 아이콘 명칭: 'AI로 자동 채우기' 버튼은 `Sparkles` 또는 `Wand2` (Lucide React)
+**자동 채우기로 도달 가능 점수 = 최대 72점** (8+10+8+10+12+10+14, 완벽 시나리오)
+**나머지 28점 = 이미지 20점 + 배송 10점 + 마진 8점 = 셀러 수동 영역**
+
+→ **"42점 → 90+" 약속은 비현실적**. 정직한 목표 = **"42점 → 70~80점"**으로 끌어올리고, 잔여 28점에 대해 셀러가 수동으로 채워야 할 항목을 명확히 표시. 이미지 작업이 가장 큰 항목이므로 셀러가 등록 전에 이미지 2장 추가 + 배송 매핑까지 마치면 90+.
+
+**작업 범위 (예상 1.5~2일, Block 별 commit 필수)**:
+
+#### Block A — 라이브러리 (`src/lib/upload-readiness-filler.ts` 신규)
+
+**핵심 함수 시그니처** (다음 채팅이 그대로 사용 가능):
+```typescript
+export interface AutoFillInput {
+  productId: string;
+  productName?: string | null;
+  productDescription?: string | null;
+  naverCategoryCode?: string | null;
+  naverCategoryName?: string | null;  // d1>d2>d3 path
+  currentKeywords?: string[];
+  currentTags?: string[];
+}
+
+export interface AutoFillSuggestion {
+  itemId: ReadinessItemId;
+  before: string | string[];
+  after: string | string[];
+  reason: string;        // why this fix matters
+  confidence: 'high' | 'medium' | 'low';
+}
+
+// 7개 자동 채우기 함수 (각각 1개 itemId 담당)
+export async function autoFillProductName(input, mode: 'length'|'abuse'|'repeat'|'frontKeyword'): Promise<AutoFillSuggestion | null>
+export async function autoFillKeywords(input): Promise<AutoFillSuggestion | null>
+export async function autoFillSeoTags(input): Promise<AutoFillSuggestion | null>
+export async function autoFillCategory(input): Promise<AutoFillSuggestion | null>  // 추천만, 매핑은 별도 단계
+
+// 일괄 호출 (UI에서 사용)
+export async function autoFillAll(input, items: ReadinessItemId[]): Promise<AutoFillSuggestion[]>
+```
+
+**Provider/패턴 재사용**:
+- `src/lib/review-sentiment-analyzer.ts`의 `analyzeReviewSentiment` 함수 구조를 그대로 모방 (Groq round-robin → Gemini → Anthropic fallback, parseJsonSafe, 결과 정규화)
+- `src/app/api/naver-seo/ai-generate/route.ts`의 `callGroq` / `callGemini` 함수도 그대로 활용 가능 (이미 검증됨)
+- 카테고리 매핑은 `src/lib/naver/naver-categories-full.ts`의 `NAVER_CATEGORIES_FULL` 로컬 검색 (API 호출 금지)
+
+#### Block B — API endpoint (`src/app/api/upload-readiness/auto-fill/route.ts` 신규)
+```typescript
+// POST: 미리보기 (DB 미적용)
+// body: { productId, items: ReadinessItemId[] }
+// resp: { suggestions: AutoFillSuggestion[], unfillable: ReadinessItemId[] }
+
+// PATCH: 셀러 승인된 결과만 DB 적용
+// body: { productId, accepted: { itemId, value: string|string[] }[] }
+// resp: { success, newScore, newReadiness, applied: ReadinessItemId[] }
+
+export const dynamic = 'force-dynamic';
+```
+- PATCH 적용 시 `Product` 테이블의 `name`, `keywords`, `tags`, `naverCategoryCode` 등 해당 필드만 업데이트
+- DB 적용 후 `calcUploadReadiness`로 새 점수 계산해서 응답
+
+#### Block C — UI (`UploadReadinessWidget.tsx` 보강)
+- 각 ProductRow에 `Sparkles` 아이콘 + "AI로 자동 채우기" 버튼 추가 (등록 가능 90+ 카드는 이미 "바로 등록" CTA가 있으니 보조 위치)
+- 클릭 시 모달 오픈 → API POST 호출 → 결과 도착 시 항목별 before/after 카드 + 체크박스 (기본 모두 체크)
+- 셀러가 체크박스 선택 후 "적용" 버튼 → API PATCH 호출 → 새 점수 표시 → 모달 닫기 + 위젯 자동 새로고침
+- **자동 채우기 불가 4개 항목**은 모달 하단에 별도 안내: "이미지 2장 + 배송 매핑은 직접 입력 필요" + 해당 탭으로 deep-link
+- 모달 컴포넌트: `src/components/dashboard/AutoFillModal.tsx` (신규)
+
+#### Block D — 라이브 검증 (Chrome MCP)
+1. 8개 DRAFT 상품 모두 자동 채우기 시도
+2. 자동 채우기 후 평균 점수 측정 (예상: 42점 → 60~75점, 카테고리 매핑 반영 시 70~80점)
+3. 생성된 키워드/태그 품질 확인 (구매자 언어 반영, 어뷰징 단어 미포함, 한국어 자연스러움)
+4. 카테고리 추천 정확도 (NAVER_CATEGORIES_FULL 4,993건 중 합리적 d2/d3 매칭)
+5. "수동 영역 4개" 안내가 명확하게 셀러에게 전달되는지 확인
+
+**비용**: 0원 (Groq round-robin 28,800회/일 capacity, 8 상품 × 7 항목 = 56 호출 × 1회 = 1회 실험에 0.2% 사용)
+
+#### 안전 장치 (절대 어기지 말 것)
+1. **AI 결과는 절대 DB 직접 적용 금지** → POST(미리보기)와 PATCH(승인 적용) 2단계 분리
+2. **자동 채우기 불가 4개 항목은 절대 시도 금지** → 이미지 자동 생성/배송 자동 매핑/가격 자동 변경은 설계상 제외
+3. **카테고리 추천은 4,993건 로컬 검색만** → AI가 새 카테고리명 만들면 무시
+4. **AI 응답 JSON 파싱 실패 시** → review-sentiment-analyzer.ts의 `parseJsonSafe` 그대로 재사용 (trailing comma + smart quotes + control chars 제거)
+5. **어뷰징 단어 화이트리스트 검증** → AI 응답에 ABUSE_WORDS 17개 들어가 있으면 자동 거부 + 재요청
+6. **결과는 한국어만** → AI가 영어 섞으면 거부
+7. **상품명 길이 25~50자 강제** → 25자 미만/50자 초과 시 거부 + 재요청
+8. **셀러가 모달에서 항목별 체크 해제 가능** → 모든 결과를 강제 적용하지 않음
+
+**최종 commit 순서 (Block 별 progressive)**:
+```
+1. feat(E-15 Block A): upload-readiness-filler library + 7 auto-fill functions
+2. feat(E-15 Block B): auto-fill API endpoint (POST preview + PATCH apply)
+3. feat(E-15 Block C): AI auto-fill button + AutoFillModal in UploadReadinessWidget
+4. feat(E-15 Block D): live verification + edge-case handling
+5. docs(E-15): mark complete in PROGRESS.md + ROADMAP.md
+```
 
 ### 2순위: E-1 상세페이지 빌더 AEO 강화
 
@@ -205,25 +301,36 @@
 
 ---
 
-### 다음 채팅 시작 메시지 템플릿 (E-15 시작용)
-
-다음 새 채팅을 시작할 때 그대로 복붙해서 사용:
+### 다음 채팅 시작 메시지 템플릿 (E-15 시작용 — 그대로 복붙)
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md를 읽고
-현재 상태 파악 후 E-15 (등록 준비 AI 자동 채우기) 작업을 시작해주세요.
+E-15 (등록 준비 AI 자동 채우기) 작업을 시작해주세요.
 
 작업 시작 전 필수:
-1. git log -5로 직전 작업 잔재 없는지 먼저 확인 (수수료 개편 7 commits + cleanup 1 commit이 origin/main에 push 완료 상태여야 함)
-2. KKOTIUM_PROGRESS.md / KKOTIUM_ROADMAP.md 정독
-3. 관련 코드 파일 (upload-readiness.ts, UploadReadinessWidget.tsx, ai-generate/route.ts, review-sentiment-analyzer.ts) read_text_file로 현재 상태 파악
+1. git log -5로 직전 작업 잔재 없는지 먼저 확인 (HEAD = 2a1b4dd, 수수료 개편 7 commits + cleanup + docs finalize 9 commits이 origin/main 동기화 상태여야 함)
+2. KKOTIUM_PROGRESS.md / KKOTIUM_ROADMAP.md 정독, 특히 ROADMAP의 "E-15 ITEM_TO_TAB 매트릭스" 섹션 (11개 중 7개만 AI 가능, 4개는 셀러 수동) 반드시 확인
+3. 관련 코드 파일 4개 read_text_file:
+   - src/lib/upload-readiness.ts (11개 항목 정의 + calcUploadReadiness)
+   - src/components/dashboard/UploadReadinessWidget.tsx (E-14 위젯 + ITEM_TO_TAB 매핑)
+   - src/lib/review-sentiment-analyzer.ts (E-11 패턴 — Groq round-robin + parseJsonSafe + 결과 정규화)
+   - src/app/api/naver-seo/ai-generate/route.ts (callGroq/callGemini 함수)
 4. 작업 계획 브리핑 후 제 승인 받고 시작
-5. Block 별로 commit해서 컨텍스트 한계로 인한 작업 손실 방지
+5. Block 별로 commit (Block A→B→C→D 4 commits)해서 컨텍스트 한계 시에도 손실 없도록
 
-브라우저 테스트는 Chrome MCP로 dashboard에서 8개 DRAFT 상품에 "AI로 자동 채우기" 버튼이 정상 작동해서
-점수가 42→90+로 올라가는지 확인해주세요.
+중요한 안전 장치 (반드시 지킬 것):
+- AI 결과는 POST(미리보기)와 PATCH(승인 적용) 2단계 분리, DB 직접 적용 절대 금지
+- 자동 채우기 불가 4개 항목(main_image, extra_images, shipping_template, net_margin)은 시도 금지, 셀러 수동 안내만
+- 카테고리 추천은 NAVER_CATEGORIES_FULL 로컬 검색만, AI가 새 카테고리명 만들면 무시
+- 어뷰징 단어 17개 ABUSE_WORDS 자동 검증, 발견 시 AI 응답 거부 + 재요청
+- 상품명 길이 25~50자 강제, 한국어만 허용
+
+현실적 목표: 42점 → 70~80점 (자동 가능 7개 항목 max 72점). 90+ 도달은 셀러가 이미지 2장 추가 + 배송 매핑하면 가능.
+
+브라우저 테스트는 Chrome MCP로 dashboard에서 8개 DRAFT 모두 자동 채우기 시도 → 모달의 항목별 before/after 확인 → 평균 점수 상승 검증.
 완료 후 PROGRESS.md/ROADMAP.md 업데이트 + git push로 마무리.
 ```
+
 
 ---
 
