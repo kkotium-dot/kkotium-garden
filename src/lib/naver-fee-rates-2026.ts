@@ -1,5 +1,10 @@
 // lib/naver-fee-rates-2026.ts
-// Naver Smartstore Commission Rates — 2026 확정 기준 (2025.06.02 개편 반영)
+// Naver Smartstore Commission Rates — 2026 확정 기준
+//
+// [2025-06-02 개편 핵심]
+// - 유입수수료 2% 폐지 → 매출연동 판매수수료로 통합
+// - 네이버플러스스토어 일반노출:    2.73% (기본 노출/검색 유입)
+// - 판매자 마케팅링크 경유:         0.91% (셀러 자체 마케팅: SNS/광고/외부 유입)
 //
 // [2026 수수료 구조]
 // ┌─────────────────────────────────────────────────────────────────────┐
@@ -9,51 +14,59 @@
 // │   영세:  1.947%   중소1: 2.563%   중소2: 2.728%                       │
 // │   중소3: 3.003%   일반:  3.630%                                        │
 // │                                                                       │
-// │ 판매수수료 (유입 채널별, 2025.06.02 개편):                              │
-// │   일반 노출(쇼핑검색·플러스스토어 등):           2.73%                  │
-// │   판매자 자체마케팅 링크(블로그/SNS/검색광고 등): 0.91%                  │
-// │   ※ 기존 유입수수료 2% 폐지 → 판매수수료에 통합                          │
+// │ 판매수수료 (채널별, 2025-06-02 개편):                                  │
+// │   normal   = 일반노출:        2.73% (네이버 검색/플러스스토어 유입)     │
+// │   marketing = 자체마케팅 링크: 0.91% (셀러 SNS/외부광고/직접 유입)      │
 // │                                                                       │
 // │ 스마트스토어 실질 마진 계산 기본값 (중소3 + 일반노출):                   │
-// │   3.003% + 2.73% = 5.733%                                              │
-// │ 자체마케팅 링크 유입 시 (중소3 + 마케팅):                                │
-// │   3.003% + 0.91% = 3.913% (절감 1.82%p)                                │
+// │   3.003% + 2.73% = 5.733% ≈ 5.8% (VAT 별도 고려 시 실질 적용치)       │
+// │   3.003% + 0.91% = 3.913% (자체마케팅 유입 시 단가별 약 1.82% 절감)    │
 // │                                                                       │
-// │ 카테고리별 수수료 편차: 일반 카테고리는 동일                             │
-// │   예외 — 디지털/가전(대형가전 포함) 4.8%, 도서(정가제) 4.5%             │
-// │   ※ 예외 카테고리는 마케팅 링크 인하 미적용(보수적 적용)                 │
-// │ Source: 네이버 스마트스토어센터 수수료 안내 (2025.06.02 개편 기준)       │
+// │ 카테고리별 수수료 편차 없음 (2026 기준) — 등급 기준만 적용              │
+// │ 예외: 디지털/가전·도서는 별도 정책 (마케팅 인하 미적용 보수 추정)       │
+// │ Source: 네이버 스마트스토어센터 수수료 안내 2026.01 기준                 │
 // └─────────────────────────────────────────────────────────────────────┘
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Channel type — 유입 채널별 판매수수료 차등
+// 2026 실질 적용 수수료율
+// 참고: 네이버는 카테고리별 수수료 차등 없음 (2025-06-02 개편 이후)
+// 단, 디지털/가전 일부 대형가전 품목은 별도 정책 존재
 // ──────────────────────────────────────────────────────────────────────────────
-export type SalesChannel = 'normal' | 'marketing';
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 2026 핵심 상수 — 단일 소스 보장
-// ──────────────────────────────────────────────────────────────────────────────
-/** Order management fee — 중소3 등급 (신규 셀러 기본) */
-export const NAVER_ORDER_MGMT_RATE_DEFAULT = 0.03003;
-/** Sales fee — 일반 노출(쇼핑검색·플러스스토어 등) */
-export const NAVER_SALES_FEE_NORMAL = 0.0273;
-/** Sales fee — 판매자 자체마케팅 링크(블로그/SNS/검색광고 등) */
-export const NAVER_SALES_FEE_MARKETING = 0.0091;
-/** Effective date of the 2025.06.02 fee reform */
-export const FEE_REFORM_DATE = '2025-06-02';
-
 const NAVER_FEE_BY_GRADE = {
-  영세:  0.01947 + NAVER_SALES_FEE_NORMAL, // 4.677%
-  중소1: 0.02563 + NAVER_SALES_FEE_NORMAL, // 5.293%
-  중소2: 0.02728 + NAVER_SALES_FEE_NORMAL, // 5.458%
-  중소3: 0.03003 + NAVER_SALES_FEE_NORMAL, // 5.733% ← 신규 셀러 기본 적용
-  일반:  0.03630 + NAVER_SALES_FEE_NORMAL, // 6.360%
+  영세:  0.01947 + 0.0273, // 4.677%
+  중소1: 0.02563 + 0.0273, // 5.293%
+  중소2: 0.02728 + 0.0273, // 5.458%
+  중소3: 0.03003 + 0.0273, // 5.733% ← 신규 셀러 기본 적용
+  일반:  0.03630 + 0.0273, // 6.360%
 } as const;
 
-/** 마진 계산 기본값: 중소3 + 일반 노출 (신규 셀러) */
+// 마진 계산 기본값: 중소3 (신규 셀러 적용 등급)
 export const NAVER_DEFAULT_FEE_RATE = NAVER_FEE_BY_GRADE['중소3']; // 0.05733
-/** 자체마케팅 링크 유입 시 기본값: 중소3 + 마케팅 */
-export const NAVER_DEFAULT_FEE_RATE_MARKETING = NAVER_ORDER_MGMT_RATE_DEFAULT + NAVER_SALES_FEE_MARKETING; // 0.03913
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Channel-based sales fee (2025-06-02 reform)
+// All non-exception categories share the same channel-level reduction (1.82pp).
+// Exception categories (digital/electronics, books) bypass the marketing reduction
+// because their effective rates already include category-specific policy adjustments.
+// ──────────────────────────────────────────────────────────────────────────────
+export type FeeChannel = 'normal' | 'marketing';
+// Semantic alias for callers that read better as "sales channel"
+export type SalesChannel = FeeChannel;
+
+export const NAVER_SALES_FEE_NORMAL = 0.0273;     // 2.73% standard exposure (search/Plus Store)
+export const NAVER_SALES_FEE_MARKETING = 0.0091;  // 0.91% seller marketing link (SNS/ads/direct)
+export const NAVER_MARKETING_FEE_REDUCTION =
+  NAVER_SALES_FEE_NORMAL - NAVER_SALES_FEE_MARKETING; // 0.0182 (1.82pp)
+export const NAVER_FEE_REFORM_DATE = '2025-06-02';
+export const NAVER_FEE_REFORM_NOTE =
+  '2025.6.2 개편: 유입수수료 2% 폐지 → 매출연동 판매수수료 통합 (일반 2.73% / 자체마케팅 0.91%)';
+
+// Exception D1 categories — marketing-link reduction does NOT apply
+const EXCEPTION_D1S: ReadonlySet<string> = new Set(['디지털/가전', '도서']);
+
+function isExceptionD1(d1?: string): boolean {
+  return d1 ? EXCEPTION_D1S.has(d1) : false;
+}
 
 // D1 카테고리별 수수료 — 2026 기준 카테고리 구분 없음, 모두 동일
 // 단, 대형가전/디지털 일부는 별도이므로 보수적으로 낮게 설정
@@ -86,13 +99,6 @@ export const NAVER_FEE_RATES_BY_D1: Record<string, number> = {
 // - 최저선(min): 이것 미만이면 사실상 손해 위험 구간
 // - 권장(recommended): 파워셀러 평균 목표치
 // - 우수(good): 상위 20% 셀러 달성치
-//
-// [카테고리별 마진 특성 요약]
-// 패션: 반품 많지만 마진 높음 → 목표 35%+
-// 뷰티: 재구매 높고 단가 낮음 → 목표 30%+
-// 식품: 단가 낮고 배송비 부담 → 목표 20%+
-// 가전: 단가 높고 AS 부담 → 목표 15%+
-// 생활용품: 경쟁 치열, 박리다매 → 목표 20%+
 // ──────────────────────────────────────────────────────────────────────────────
 export interface MarginProfile {
   min: number;          // 최소 마진율 (이 이하면 손해 위험)
@@ -197,55 +203,49 @@ function buildCodeToD1Cache(): Map<string, string> {
   return _codeToD1Cache;
 }
 
+/** Resolve d1 from category code (helper) */
+function resolveD1FromCode(categoryCode?: string): string | undefined {
+  if (!categoryCode) return undefined;
+  return buildCodeToD1Cache().get(categoryCode);
+}
+
 /** Get Naver fee rate by category code (2026)
- *  @param channel 'normal' (default) | 'marketing' — marketing link reduces sales fee 2.73% → 0.91%
+ *  @param channel 'normal' (default) standard exposure 2.73% / 'marketing' seller link 0.91%
+ *  Marketing reduction does NOT apply to exception categories (digital/electronics, books).
  */
-export function getNaverFeeRate(categoryCode?: string, channel: SalesChannel = 'normal'): number {
-  const baseRate = (() => {
-    if (!categoryCode) return NAVER_DEFAULT_FEE_RATE;
-    const cache = buildCodeToD1Cache();
-    const d1 = cache.get(categoryCode);
-    if (d1 && NAVER_FEE_RATES_BY_D1[d1] !== undefined) return NAVER_FEE_RATES_BY_D1[d1];
-    return NAVER_DEFAULT_FEE_RATE;
-  })();
-  return applyChannelToRate(baseRate, categoryCode, channel);
+export function getNaverFeeRate(categoryCode?: string, channel: FeeChannel = 'normal'): number {
+  const d1 = resolveD1FromCode(categoryCode);
+  const base = d1 && NAVER_FEE_RATES_BY_D1[d1] !== undefined
+    ? NAVER_FEE_RATES_BY_D1[d1]
+    : NAVER_DEFAULT_FEE_RATE;
+  if (channel === 'marketing' && !isExceptionD1(d1)) {
+    return base - NAVER_MARKETING_FEE_REDUCTION;
+  }
+  return base;
 }
 
 /** Get fee rate by d1 name directly
- *  @param channel 'normal' (default) | 'marketing'
+ *  @param channel 'normal' (default) standard exposure 2.73% / 'marketing' seller link 0.91%
+ *  Marketing reduction does NOT apply to exception categories (digital/electronics, books).
  */
-export function getNaverFeeRateByD1(d1Name?: string, channel: SalesChannel = 'normal'): number {
-  const baseRate = d1Name && NAVER_FEE_RATES_BY_D1[d1Name] !== undefined
-    ? NAVER_FEE_RATES_BY_D1[d1Name]
-    : NAVER_DEFAULT_FEE_RATE;
-  return applyChannelByD1(baseRate, d1Name, channel);
-}
-
-/** Internal: apply channel reduction to a base rate (categoryCode-aware) */
-function applyChannelToRate(baseRate: number, categoryCode: string | undefined, channel: SalesChannel): number {
-  if (channel === 'normal') return baseRate;
-  // Marketing channel — only standard categories receive the 0.91% sales fee reduction
-  // Exception categories (digital/home appliances, books) keep their conservative rates
-  if (!categoryCode) {
-    return NAVER_ORDER_MGMT_RATE_DEFAULT + NAVER_SALES_FEE_MARKETING;
+export function getNaverFeeRateByD1(d1Name?: string, channel: FeeChannel = 'normal'): number {
+  const base = !d1Name
+    ? NAVER_DEFAULT_FEE_RATE
+    : (NAVER_FEE_RATES_BY_D1[d1Name] ?? NAVER_DEFAULT_FEE_RATE);
+  if (channel === 'marketing' && !isExceptionD1(d1Name)) {
+    return base - NAVER_MARKETING_FEE_REDUCTION;
   }
-  const cache = buildCodeToD1Cache();
-  const d1 = cache.get(categoryCode);
-  return applyChannelByD1(baseRate, d1, channel);
-}
-
-/** Internal: apply channel reduction with d1 awareness */
-function applyChannelByD1(baseRate: number, d1Name: string | undefined, channel: SalesChannel): number {
-  if (channel === 'normal') return baseRate;
-  // Exception categories — marketing link reduction not applied (Naver policy)
-  if (d1Name === '디지털/가전' || d1Name === '도서') return baseRate;
-  // Standard categories — swap normal sales fee (2.73%) with marketing (0.91%)
-  return baseRate - NAVER_SALES_FEE_NORMAL + NAVER_SALES_FEE_MARKETING;
+  return base;
 }
 
 /** Get fee rate as formatted string e.g. "5.7%" */
-export function getNaverFeeRateFormatted(categoryCode?: string, channel: SalesChannel = 'normal'): string {
+export function getNaverFeeRateFormatted(categoryCode?: string, channel: FeeChannel = 'normal'): string {
   return `${(getNaverFeeRate(categoryCode, channel) * 100).toFixed(1)}%`;
+}
+
+/** Convenience: marketing-link savings per item at the given price (KRW) */
+export function getMarketingFeeSavings(salePrice: number): number {
+  return Math.round(Math.max(0, salePrice) * NAVER_MARKETING_FEE_REDUCTION);
 }
 
 /** Get recommended margin profile by d1 name */
@@ -262,58 +262,49 @@ export function getMarginProfileByCode(categoryCode?: string): MarginProfile {
   return getMarginProfile(d1);
 }
 
-/** Detailed breakdown for display — includes channel info & marketing savings */
+/** Detailed breakdown for display */
 export interface NaverFeeBreakdown {
   orderManagementRate: number;
   salesFeeRate: number;
   totalRate: number;
-  channel: SalesChannel;
-  channelLabel: string;
-  /** Marketing channel savings vs normal (positive when channel='marketing' on standard categories) */
-  marketingSavedRate: number;
   gradeLabel: string;
-  note: string;
-  effectiveDate: string;
-  /** True when this category is exempt from marketing link reduction */
+  channel: FeeChannel;
+  channelLabel: string;
   isExceptionCategory: boolean;
+  note: string;
 }
 
-export function getNaverFeeBreakdown(categoryCode?: string, channel: SalesChannel = 'normal'): NaverFeeBreakdown {
-  const cache = buildCodeToD1Cache();
-  const d1 = categoryCode ? cache.get(categoryCode) : undefined;
-  const isExceptionCategory = d1 === '디지털/가전' || d1 === '도서';
-
-  const total = getNaverFeeRate(categoryCode, channel);
-  // Order management rate is fixed at 3.003% for the default 중소3 grade
-  // For exception categories the order-mgmt component cannot be precisely split,
-  // so we compute salesFeeRate as the residual (>= 0)
-  const orderManagementRate = NAVER_ORDER_MGMT_RATE_DEFAULT;
-  const salesFeeRate = Math.max(0, total - orderManagementRate);
-
-  // Compute marketing savings (positive only when channel='marketing' on standard categories)
-  const normalTotal = getNaverFeeRate(categoryCode, 'normal');
-  const marketingTotal = getNaverFeeRate(categoryCode, 'marketing');
-  const marketingSavedRate = Math.max(0, normalTotal - marketingTotal);
-
-  const channelLabel = channel === 'marketing' ? '자체마케팅 링크' : '일반 노출';
-  const noteParts: string[] = [
-    `주문관리 ${(orderManagementRate * 100).toFixed(2)}%`,
-    `판매수수료 ${(salesFeeRate * 100).toFixed(2)}%(${channelLabel})`,
-  ];
-  if (isExceptionCategory) {
-    noteParts.push('예외 카테고리 — 마케팅 링크 인하 미적용');
-  }
-
+/** Detailed fee breakdown
+ *  @param channel 'normal' (default) or 'marketing' — affects salesFeeRate, totalRate, and orderManagementRate
+ *  Exception categories (digital/electronics, books) skip the marketing reduction.
+ */
+export function getNaverFeeBreakdown(
+  categoryCode?: string,
+  channel: FeeChannel = 'normal',
+): NaverFeeBreakdown {
+  const d1 = resolveD1FromCode(categoryCode);
+  const isException = isExceptionD1(d1);
+  // Effective channel: marketing reduction skipped for exception categories
+  const effectiveChannel: FeeChannel = isException ? 'normal' : channel;
+  const total = getNaverFeeRate(categoryCode, effectiveChannel);
+  const salesFee = effectiveChannel === 'marketing'
+    ? NAVER_SALES_FEE_MARKETING
+    : NAVER_SALES_FEE_NORMAL;
+  const orderMgmt = Math.max(0, total - salesFee);
+  const channelLabel = effectiveChannel === 'marketing' ? '자체마케팅' : '일반';
+  const note = isException
+    ? `주문관리 ${(orderMgmt * 100).toFixed(2)}% + 판매수수료 ${(salesFee * 100).toFixed(2)}% — 예외 카테고리 (마케팅 인하 미적용)`
+    : effectiveChannel === 'marketing'
+      ? `주문관리 ${(orderMgmt * 100).toFixed(2)}% + 자체마케팅 판매수수료 ${(salesFee * 100).toFixed(2)}% (2025.6.2 개편)`
+      : `주문관리 ${(orderMgmt * 100).toFixed(2)}% + 일반노출 판매수수료 ${(salesFee * 100).toFixed(2)}% (2025.6.2 개편)`;
   return {
-    orderManagementRate,
-    salesFeeRate,
+    orderManagementRate: orderMgmt,
+    salesFeeRate: salesFee,
     totalRate: total,
-    channel,
-    channelLabel,
-    marketingSavedRate,
     gradeLabel: '중소3 (신규 기본)',
-    note: noteParts.join(' + ') + ' (2025.06.02 개편 기준)',
-    effectiveDate: FEE_REFORM_DATE,
-    isExceptionCategory,
+    channel: effectiveChannel,
+    channelLabel,
+    isExceptionCategory: isException,
+    note,
   };
 }

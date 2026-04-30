@@ -1,19 +1,19 @@
 // src/app/api/profitability/route.ts
 // C-4: Profitability analysis API
-// Aggregates all products' margin data + fee comparison by traffic source
-// 2026-04-29 update: per-category fee rates via naver-fee-rates-2026 (single source of truth)
-//                    + 2025.06.02 reform metadata (effectiveDate / channel breakdown)
+// Aggregates all products' margin data + fee comparison by traffic channel.
+//
+// 2025-06-02 reform: sales-fee channel split (normal 2.73% / marketing 0.91%).
+// All commission math is centralized in lib/naver-fee-rates-2026.ts.
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
   getNaverFeeRate,
-  NAVER_ORDER_MGMT_RATE_DEFAULT,
   NAVER_SALES_FEE_NORMAL,
   NAVER_SALES_FEE_MARKETING,
-  NAVER_DEFAULT_FEE_RATE,
-  NAVER_DEFAULT_FEE_RATE_MARKETING,
-  FEE_REFORM_DATE,
+  NAVER_MARKETING_FEE_REDUCTION,
+  NAVER_FEE_REFORM_DATE,
+  NAVER_FEE_REFORM_NOTE,
 } from '@/lib/naver-fee-rates-2026';
 
 export const dynamic = 'force-dynamic';
@@ -36,22 +36,22 @@ export async function GET() {
       },
     });
 
-    // Per-product profitability — fee rates resolved per category via single-source-of-truth library
+    // Per-product profitability — uses each product's category-specific rate
     const productAnalysis = products.map(p => {
       const effectivePrice = p.salePrice - Number(p.instant_discount ?? 0);
-      const code = p.naverCategoryCode || undefined;
-      const rateNormal = getNaverFeeRate(code, 'normal');
-      const rateMarketing = getNaverFeeRate(code, 'marketing');
-
-      const feeNormal = Math.round(effectivePrice * rateNormal);
-      const feeMarketing = Math.round(effectivePrice * rateMarketing);
+      // Resolve category-aware fee for both channels via single source of truth
+      const code = p.naverCategoryCode ?? undefined;
+      const totalRateNormal = getNaverFeeRate(code, 'normal');
+      const totalRateMarketing = getNaverFeeRate(code, 'marketing');
+      const feeNormal = Math.round(effectivePrice * totalRateNormal);
+      const feeMarketing = Math.round(effectivePrice * totalRateMarketing);
       const baseCost = p.supplierPrice + (p.shippingFee ?? 0);
 
       const profitNormal = effectivePrice - baseCost - feeNormal;
       const profitMarketing = effectivePrice - baseCost - feeMarketing;
       const marginNormal = effectivePrice > 0 ? (profitNormal / effectivePrice) * 100 : 0;
       const marginMarketing = effectivePrice > 0 ? (profitMarketing / effectivePrice) * 100 : 0;
-      const feeSaved = feeNormal - feeMarketing; // savings with marketing link (0 for exception categories)
+      const feeSaved = feeNormal - feeMarketing; // savings with marketing link
 
       return {
         id: p.id,
@@ -63,13 +63,14 @@ export async function GET() {
         effectivePrice,
         feeNormal,
         feeMarketing,
-        feeRateNormal: Math.round(rateNormal * 10000) / 100,        // %
-        feeRateMarketing: Math.round(rateMarketing * 10000) / 100,  // %
         profitNormal: Math.round(profitNormal),
         profitMarketing: Math.round(profitMarketing),
         marginNormal: Math.round(marginNormal * 10) / 10,
         marginMarketing: Math.round(marginMarketing * 10) / 10,
         feeSaved,
+        // Per-product effective rates (for transparency in UI tooltips later)
+        rateNormal: Math.round(totalRateNormal * 10000) / 10000,
+        rateMarketing: Math.round(totalRateMarketing * 10000) / 10000,
       };
     });
 
@@ -84,6 +85,8 @@ export async function GET() {
     const sumFeeMarketing = productAnalysis.reduce((s, p) => s + p.feeMarketing, 0);
     const avgMarginNormal = totalProducts > 0
       ? Math.round(productAnalysis.reduce((s, p) => s + p.marginNormal, 0) / totalProducts * 10) / 10 : 0;
+    const avgMarginMarketing = totalProducts > 0
+      ? Math.round(productAnalysis.reduce((s, p) => s + p.marginMarketing, 0) / totalProducts * 10) / 10 : 0;
 
     // Margin distribution buckets
     const distribution = { excellent: 0, good: 0, normal: 0, low: 0, danger: 0 };
@@ -106,6 +109,15 @@ export async function GET() {
     const dailyRevenueMarketing = sumMarketingProfit;
     const monthlyRevenueMarketing = dailyRevenueMarketing * 30;
 
+    // Fee comparison rates — derived from category-aware totals when products exist,
+    // otherwise show the standard middle-small-3 grade default
+    const avgRateNormal = totalProducts > 0
+      ? productAnalysis.reduce((s, p) => s + p.rateNormal, 0) / totalProducts
+      : 0.05733;
+    const avgRateMarketing = totalProducts > 0
+      ? productAnalysis.reduce((s, p) => s + p.rateMarketing, 0) / totalProducts
+      : 0.05733 - NAVER_MARKETING_FEE_REDUCTION;
+
     return NextResponse.json({
       success: true,
       data: {
@@ -113,6 +125,7 @@ export async function GET() {
           totalProducts,
           activeCount: activeProducts.length,
           avgMarginNormal,
+          avgMarginMarketing,
           totalFeeNormal: sumFeeNormal,
           totalFeeMarketing: sumFeeMarketing,
           totalFeeSaved: sumFeeSaved,
@@ -128,16 +141,14 @@ export async function GET() {
         top5,
         bottom5,
         feeComparison: {
-          // Default 중소3 + standard categories — used for the dashboard summary card
-          normalRate: NAVER_DEFAULT_FEE_RATE * 100,                   // 5.733
-          marketingRate: NAVER_DEFAULT_FEE_RATE_MARKETING * 100,     // 3.913
-          savedRate: (NAVER_SALES_FEE_NORMAL - NAVER_SALES_FEE_MARKETING) * 100, // 1.82
-          orderMgmtRate: NAVER_ORDER_MGMT_RATE_DEFAULT * 100,        // 3.003
-          salesFeeNormal: NAVER_SALES_FEE_NORMAL * 100,              // 2.73
-          salesFeeMarketing: NAVER_SALES_FEE_MARKETING * 100,        // 0.91
-          gradeLabel: '중소3 (신규 기본)',
-          effectiveDate: FEE_REFORM_DATE,
-          note: '2025.06.02 개편 — 유입수수료 2% 폐지 → 판매수수료(일반 2.73% / 자체마케팅 0.91%)으로 통합',
+          // Average effective rates, accounting for category mix
+          normalRate: Math.round(avgRateNormal * 10000) / 100,        // e.g. 5.73
+          marketingRate: Math.round(avgRateMarketing * 10000) / 100,  // e.g. 3.91
+          savedRate: Math.round((avgRateNormal - avgRateMarketing) * 10000) / 100, // e.g. 1.82
+          salesFeeNormal: NAVER_SALES_FEE_NORMAL * 100,
+          salesFeeMarketing: NAVER_SALES_FEE_MARKETING * 100,
+          reformDate: NAVER_FEE_REFORM_DATE,
+          reformNote: NAVER_FEE_REFORM_NOTE,
         },
       },
     });

@@ -1,18 +1,24 @@
 // src/components/dashboard/ProfitabilityWidget.tsx
 // C-4: Profitability analysis dashboard widget
 // Fee comparison (normal vs marketing link) + margin distribution + top/bottom products
-// 2026-04-29 update: 2025.06.02 fee reform metadata + marketing link guidance + monthly savings sim
+//
+// 2025-06-02 reform: traffic-channel-aware fee display.
+// All commission math comes from /api/profitability (single source of truth).
 
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, BarChart3, RefreshCw, ChevronRight, Link2, Info } from 'lucide-react';
+import {
+  DollarSign, TrendingUp, BarChart3, RefreshCw,
+  ChevronRight, Link2, Info, CalendarClock,
+} from 'lucide-react';
 
 interface ProfitData {
   summary: {
     totalProducts: number;
     activeCount: number;
     avgMarginNormal: number;
+    avgMarginMarketing: number;
     totalFeeNormal: number;
     totalFeeMarketing: number;
     totalFeeSaved: number;
@@ -37,12 +43,10 @@ interface ProfitData {
     normalRate: number;
     marketingRate: number;
     savedRate: number;
-    orderMgmtRate?: number;
-    salesFeeNormal?: number;
-    salesFeeMarketing?: number;
-    gradeLabel?: string;
-    effectiveDate?: string;
-    note?: string;
+    salesFeeNormal: number;
+    salesFeeMarketing: number;
+    reformDate: string;
+    reformNote: string;
   };
 }
 
@@ -88,6 +92,7 @@ export default function ProfitabilityWidget() {
   const [data, setData] = useState<ProfitData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDetail, setShowDetail] = useState(false);
+  const [showMarketingTip, setShowMarketingTip] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -122,6 +127,7 @@ export default function ProfitabilityWidget() {
   const { summary, distribution, top5, bottom5, feeComparison } = data;
   const fmt = (n: number) => n >= 10000 ? `${(n / 10000).toFixed(1)}만` : n.toLocaleString();
   const marginColor = summary.avgMarginNormal >= 30 ? '#16a34a' : summary.avgMarginNormal >= 15 ? '#eab308' : '#e62310';
+  const monthlySaved = summary.totalFeeSaved * 30;
 
   return (
     <div className="kk-card" style={{ overflow: 'hidden' }}>
@@ -131,7 +137,7 @@ export default function ProfitabilityWidget() {
         borderBottom: '1px solid #F8DCE5',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <DollarSign size={14} style={{ color: '#e62310' }} />
           <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>
             수익성 분석
@@ -141,6 +147,18 @@ export default function ProfitabilityWidget() {
             background: '#FEF0F3', color: '#e62310', fontWeight: 700,
           }}>
             {summary.totalProducts}개 상품
+          </span>
+          {/* 2025.6.2 reform badge */}
+          <span
+            title={feeComparison.reformNote}
+            style={{
+              fontSize: 9, padding: '2px 6px', borderRadius: 99,
+              background: '#ECFDF5', color: '#15803D', fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+            }}
+          >
+            <CalendarClock size={9} />
+            {feeComparison.reformDate} 개편 반영
           </span>
         </div>
         <button onClick={loadData} disabled={loading} style={{
@@ -152,20 +170,6 @@ export default function ProfitabilityWidget() {
       </div>
 
       <div style={{ padding: '16px 20px' }}>
-        {/* 2025.06.02 reform badge */}
-        {feeComparison.effectiveDate && (
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '3px 9px', borderRadius: 99, marginBottom: 10,
-            background: '#FEF3C7', border: '1px solid #FCD34D',
-          }}>
-            <Info size={10} style={{ color: '#92400E' }} />
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#92400E' }}>
-              2025.6.2 수수료 개편 반영 · {feeComparison.gradeLabel || '중소3 기준'}
-            </span>
-          </div>
-        )}
-
         {/* Key metrics row */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
           <div style={{
@@ -208,67 +212,83 @@ export default function ProfitabilityWidget() {
           padding: '12px 14px', borderRadius: 10,
           background: '#FFFBEB', border: '1px solid #FDE68A', marginBottom: 12,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-            <Link2 size={12} style={{ color: '#B45309' }} />
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}>
-              마케팅 링크 수수료 절감 효과
-            </span>
-            <span style={{
-              fontSize: 9, padding: '1px 6px', borderRadius: 4,
-              background: '#FEF3C7', color: '#92400E', fontWeight: 700,
-            }}>
-              자체마케팅
-            </span>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 6, marginBottom: 8,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Link2 size={12} style={{ color: '#B45309' }} />
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}>
+                자체마케팅 링크 수수료 절감
+              </span>
+            </div>
+            <button
+              onClick={() => setShowMarketingTip(v => !v)}
+              aria-label="자체마케팅 링크 설명"
+              style={{
+                padding: 2, borderRadius: 4, border: 'none', background: 'transparent',
+                cursor: 'pointer', color: '#B45309', display: 'flex',
+              }}
+            >
+              <Info size={12} />
+            </button>
           </div>
+
+          {showMarketingTip && (
+            <div style={{
+              padding: '8px 10px', borderRadius: 8, marginBottom: 8,
+              background: '#FFFFFF', border: '1px solid #FDE68A',
+              fontSize: 10, color: '#78350F', lineHeight: 1.5,
+            }}>
+              <strong style={{ color: '#92400E' }}>자체마케팅 링크란?</strong>{' '}
+              네이버 검색이 아닌 <em>셀러가 직접 만든 유입 경로</em>로 들어와 구매한 주문입니다.
+              블로그·인스타그램·카카오 채널·외부 검색광고 등이 해당.
+              해당 경로로 들어온 주문은 판매수수료가 2.73% → 0.91%로 인하 적용됩니다.
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'center' }}>
             <div style={{ textAlign: 'center' }}>
               <p style={{ fontSize: 10, color: '#92400E', margin: '0 0 2px' }}>일반 노출</p>
               <p style={{ fontSize: 14, fontWeight: 900, color: '#B45309', margin: 0 }}>
                 {feeComparison.normalRate.toFixed(2)}%
               </p>
-              {feeComparison.salesFeeNormal !== undefined && (
-                <p style={{ fontSize: 9, color: '#A16207', margin: '2px 0 0' }}>
-                  판매 {feeComparison.salesFeeNormal.toFixed(2)}%
-                </p>
-              )}
+              <p style={{ fontSize: 9, color: '#A16207', margin: '2px 0 0' }}>
+                판매수수료 {feeComparison.salesFeeNormal.toFixed(2)}%
+              </p>
             </div>
             <div style={{ textAlign: 'center' }}>
               <ChevronRight size={16} style={{ color: '#F59E0B' }} />
             </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 10, color: '#15803D', margin: '0 0 2px' }}>마케팅 링크</p>
+              <p style={{ fontSize: 10, color: '#15803D', margin: '0 0 2px' }}>자체마케팅</p>
               <p style={{ fontSize: 14, fontWeight: 900, color: '#16a34a', margin: 0 }}>
                 {feeComparison.marketingRate.toFixed(2)}%
               </p>
-              {feeComparison.salesFeeMarketing !== undefined && (
-                <p style={{ fontSize: 9, color: '#15803D', margin: '2px 0 0' }}>
-                  판매 {feeComparison.salesFeeMarketing.toFixed(2)}%
-                </p>
-              )}
+              <p style={{ fontSize: 9, color: '#15803D', margin: '2px 0 0' }}>
+                판매수수료 {feeComparison.salesFeeMarketing.toFixed(2)}%
+              </p>
             </div>
           </div>
-          <p style={{ fontSize: 10, color: '#92400E', margin: '8px 0 0', textAlign: 'center', fontWeight: 600 }}>
-            마케팅 링크 유입 시 건당 {fmt(summary.totalFeeSaved)}원 절감 ({feeComparison.savedRate.toFixed(2)}%p)
-          </p>
-          {summary.monthlySimulation.difference > 0 && (
-            <p style={{ fontSize: 9, color: '#15803D', margin: '4px 0 0', textAlign: 'center' }}>
-              전체 상품 각 월 30건씩 판매 가정 시 추가 이익 약 {fmt(summary.monthlySimulation.difference)}원
-            </p>
-          )}
-          <details style={{ marginTop: 8 }}>
-            <summary style={{
-              fontSize: 10, color: '#78350F', cursor: 'pointer',
-              listStyle: 'none', textAlign: 'center', fontWeight: 600,
-            }}>
-              마케팅 링크가 뭐예요?
-            </summary>
-            <p style={{
-              fontSize: 10, color: '#78350F', margin: '6px 0 0', lineHeight: 1.55,
-              padding: '8px 10px', background: '#FFFEF7', borderRadius: 6, border: '1px dashed #FDE68A',
-            }}>
-              셀러가 직접 만든 유입 경로—블로그·SNS·검색광고·다른 웹사이트 등을 통해 고객이 스마트스토어로 들어오면 판매수수료 2.73%가 0.91%로 인하됩니다. 네이버 쇼핑검색·플러스스토어는 일반 노출로 분류됩니다. (예외: 디지털/가전, 도서 카테고리는 인하 미적용)
-            </p>
-          </details>
+
+          <div style={{
+            marginTop: 8, padding: '6px 8px', borderRadius: 6,
+            background: '#FFFFFF', border: '1px solid #FCD34D',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{ fontSize: 10, color: '#92400E' }}>
+              건당 절감 <strong>{fmt(summary.totalFeeSaved)}원</strong>
+            </span>
+            {monthlySaved > 0 && (
+              <span style={{
+                fontSize: 10, color: '#15803D', fontWeight: 700,
+                display: 'inline-flex', alignItems: 'center', gap: 3,
+              }}>
+                <TrendingUp size={10} />
+                100% 자체마케팅 시 월 +{fmt(monthlySaved)}원
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Margin distribution */}
