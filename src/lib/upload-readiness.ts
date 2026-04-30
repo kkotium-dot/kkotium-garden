@@ -3,7 +3,7 @@
 // Used by: products/new (side panel), reactivation cards, products table, excel modal
 
 // ── Abuse word blacklist (Naver algorithm penalty triggers) ──────────────────
-const ABUSE_WORDS = [
+export const ABUSE_WORDS = [
   '무료배송', '최저가', '특가', '할인', '세일', '긴급', '한정',
   '품절임박', '마감임박', '무조건', '보장', '100%', '완전무료',
   '대박', '초특가', '역대급', '레전드',
