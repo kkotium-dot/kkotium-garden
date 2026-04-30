@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 6 — E-15 Block A+B 완료, Block C+D 대기 중)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 이전 커밋: fd31dd4
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B ✅, Block C+D ⏳)**
-> **다음 작업: E-15 Block C (위젯 AutoFillModal UI) + Block D (Chrome MCP 라이브 검증)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 채팅에서 시작할 작업" 섹션 참조
+> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 6 — E-15 Block A+B+C 완료, Block D 라이브 검증 대기 중)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 이전 커밋: b2f9b4e
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅, Block D ⏳ Chrome MCP 라이브 검증 대기)**
+> **다음 작업: E-15 Block D (Chrome MCP 라이브 검증 + 검증 결과에 따른 마이크로 조정)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 채팅에서 시작할 작업" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -341,6 +341,7 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | **리뷰 감정분석 API (E-11)** | **`src/app/api/review-analysis/route.ts`** |
 | **등록 준비 AI 자동 채우기 라이브러리 (E-15)** | **`src/lib/upload-readiness-filler.ts`** |
 | **등록 준비 AI 자동 채우기 API (E-15)** | **`src/app/api/upload-readiness/auto-fill/route.ts`** |
+| **등록 준비 AI 자동 채우기 모달 UI (E-15 Block C)** | **`src/components/dashboard/AutoFillModal.tsx`** |
 | SEO 테이블 v3 | `src/components/naver-seo/NaverSeoProductTable.tsx` |
 | 씨앗 심기 | `src/app/products/new/page.tsx` |
 | 정원 창고 | `src/app/products/page.tsx` |
@@ -726,4 +727,45 @@ Block B 검증 (`?registerId=`):
 - name fix는 4가지 mode 중 하나만 적용 (priority: length → abuse → repeat → frontKeyword) — length 재작성이 대개 다른 세 mode도 side-effect로 고침
 - name_length 추천이 실패하는 경우도 있음 (라이브 검증에서 "선물받은 특별한 일상" 11자 → 25자로 늘리는 곳에서 isKoreanText 또는 repeat 검증 실패 듯) — Block C에서 "추천 실패" 안내 UI 필요
 - Manual-only 4개 항목(`extra_images`, `main_image`, `shipping_template`, `net_margin`) 시도 절대 안 함 — unfillable 배열로 셀러에게 안내만
+
+
+### 2026-04-30 Phase E+ Sprint 6 완료 세션 (E-15 Block C — AutoFillModal UI 통합)
+
+**범위**: Block A+B가 만든 POST(미리보기) + PATCH(적용) 2단계 API를 셀러가 클릭 한 번에 이용할 수 있도록 AutoFillModal 신규 + UploadReadinessWidget 통합 + Dashboard onRefresh 연결. 이 모달이 자동 채우기 파이프라인의 "마지막 1클릭" 완성. 셀러 안전 장치는 그대로 유지 (POST/PATCH 검증 이중 방어선 그대로).
+
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `src/components/dashboard/AutoFillModal.tsx` (신규 510줄) | client component | (1) mount 즉시 API POST 호출 → loading state. (2) suggestions 도착 시 nameRelated 4모드 조합을 라디오 그룹(상품명은 하나의 string 필드이므로) + others(keywords/tags/category)는 독립 체크박스. (3) 자동 선택 기본값: 첫 년 nameRelated 1개 + 모든 others. (4) "적용" 클릭시 selected에만 PATCH 호출 → newScore 응답 → done 화면 1.8초 표시 → onApplied() 호출 → 모달 자동 닫기. (5) Esc 키 닫기 + 적용 중 사용자 조작 차단. (6) Empty/Error/Done/Loading 4개 디스패치 phase. (7) Manual-only 4개 항목은 ManualItemCard로 deep-link(`/products/new?edit=...&focus=...`) 노출 |
+| `src/components/dashboard/UploadReadinessWidget.tsx` (+207/-124 줄) | server↔client | (1) `AutoFillModal` import 추가. (2) `modalTarget` state로 단일 모달 관리. (3) `ProductRow` props에 `onAutoFill` 추가. (4) ready90이 아닌 카드에 `Sparkles + AI 채우기` 버튼(보라 #7c3aed) 상단 추가. (5) 기존 `수정하기` 버튼은 `직접 수정`으로 이름 변경 + outline 스타일로 보조 CTA로 낮춤. (6) `hasAnyAutofillable()` 검사로 manual-only 4개만 남은 경우 AI 버튼 숨김. (7) `onRefresh` prop 신규 — 모달 적용 완료 시 dashboard의 handleRefresh를 호출해 위젯 자동 재로드 |
+| `src/app/dashboard/page.tsx` (+1/-1 줄) | server | `<UploadReadinessWidget>`에 `onRefresh={handleRefresh}` prop 1줄 추가. handleRefresh는 이미 loadStats + loadProducts 둘 다 호출하도록 되어 있으며, 모달 적용 완료 시 위젯이 최신 점수로 다시 구성됨 |
+
+**UI 동작 흐름 (시퀀스)**:
+```
+[셀러] 대시보드 위젯의 DRAFT 카드(예: 42점) → "AI 채우기" 버튼 클릭
+  → [모달] phase=loading, Loader2 spin
+  → [API] POST /api/upload-readiness/auto-fill { productId } → suggestions[] + unfillable[]
+  → [모달] phase=ready — 세 섹션 렌더:
+      A) 상품명 재작성 라디오 (1개만 선택, 첫 항목 자동 선택)
+      B) 키워드/태그/카테고리 독립 체크박스 (기본 모두 체크)
+      C) Manual-only 카드 (노란 테두리, 클릭시 씨앗심기 탭으로 deep-link)
+  → [셀러] 검토 후 "N개 적용" 버튼 클릭
+  → [API] PATCH /api/upload-readiness/auto-fill { productId, accepted } → newScore
+  → [모달] phase=done — CheckCircle2 + "42점 → 75점 (+33)" 표시 — 1.8초
+  → onApplied() → dashboard 재로드 → 모달 자동 닫기 → 위젯 카드 최신 점수로 갱신됨
+```
+
+**TSC**: 0 errors
+
+**커밋**:
+- b2f9b4e feat(E-15 Block C): AutoFillModal + widget integration with auto-fill button (3 files, +911 / -124)
+
+**구조 결정 (이후 세션 참고)**:
+- AutoFillModal은 **완전히 자기완결** (props: productId, productName, currentScore, onClose, onApplied) — 향후 씨앗심기/정원창고/검색조련사 페이지 등 다른 곳에서도 동일 패턴으로 재사용 가능
+- 상품명 재작성 4모드(`name_length`, `no_abuse`, `no_repeat`, `keyword_in_front`)는 모두 `product.name` 단일 필드를 덮어쓰므로 충돌 발생 — 따라서 **라디오 그룹**으로 1개만 적용 가능하게 함. PATCH switch case도 `update.name = v`로 겹치고 마지막이 이기는 구조이므로 이 라디오 제약이 명시적 방어선
+- onApplied()가 dashboard.handleRefresh()를 호출하면 loadStats + loadProducts 둘 다 재로드 — 위젯 점수 + 파이프라인 카운트 + KPI 모두 신선해짐
+- 남은 7개 자동 항목 중 일부만 적용해도 완전 작동 — PATCH가 each itemId를 독립적으로 검증하고 거부된 것은 rejected로 반환함
+- "직접 수정" 버튼은 항상 존재 — AI 채우기가 필요하지 않더라도 셀러가 수동 라우트로 진입 가능
+- 모달 있는 동안 대시보드는 읽기 전용 — 이중 모달 방지를 위해 setModalTarget는 단일값
+- AI 답변이 모두 검증 실패해서 suggestions가 비었을 때 — 모달은 "AI 자동 채우기 가능 항목이 없습니다" 노란 바 + manual 카드만 렌더 — 셀러가 혼란하지 않음
+- **Block D 라이브 검증 대기 중** — Chrome MCP로 8개 DRAFT 시도 + 점수 상승 검증, 응답시간 측정, edge case 확인 필요
 
