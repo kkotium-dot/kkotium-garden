@@ -1,12 +1,13 @@
 'use client';
-// UploadReadinessWidget — Phase E+ Sprint 4 / E-14 (Upload Readiness Command Center)
+// UploadReadinessWidget — Phase E+ Sprint 4 / E-14 + Sprint 6 / E-15 Block C
 // Surfaces DRAFT products with their 11-point readiness score on the dashboard,
 // turning the existing upload-readiness library into an actionable command center.
 // - Lists top 5 unregistered products sorted by readiness score
 // - Each card shows missing items as clickable chips (deep-link to seed-planting tabs)
 // - Items at 90+ get a "register now" CTA that takes user to garden warehouse with the product preselected
+// - E-15: Each card under 90 also has an "AI auto-fill" button that opens AutoFillModal
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   CheckCircle2, AlertCircle, ChevronRight, Sparkles,
   TrendingUp, Package, Image as ImageIcon, Tag, Truck,
@@ -21,6 +22,7 @@ import {
   type ReadinessResult,
 } from '@/lib/upload-readiness';
 import type { DashboardProduct } from '@/app/dashboard/page';
+import AutoFillModal from './AutoFillModal';
 
 // ── Mapping: readiness item -> seed-planting tab + icon ──────────────────────
 // Each problem chip deep-links into the right tab on the seed-planting page.
@@ -38,19 +40,32 @@ const ITEM_TO_TAB: Record<ReadinessItemId, { tab: string; Icon: React.ElementTyp
   net_margin:        { tab: 'basic',    Icon: DollarSign,  short: '마진' },
 };
 
+// Helper: detect if a product has any AI-fillable failed item (used to show/hide auto-fill button)
+const AUTOFILLABLE_SET = new Set<ReadinessItemId>([
+  'name_length', 'no_abuse', 'no_repeat', 'keyword_in_front',
+  'keywords_count', 'tags_count', 'category',
+]);
+
+function hasAnyAutofillable(readiness: ReadinessResult): boolean {
+  return readiness.failed.some((f) => AUTOFILLABLE_SET.has(f.id));
+}
+
 // ── Card row (single DRAFT product) ──────────────────────────────────────────
 function ProductRow({
   product,
   readiness,
+  onAutoFill,
 }: {
   product: DashboardProduct;
   readiness: ReadinessResult;
+  onAutoFill: (productId: string, productName: string, score: number) => void;
 }) {
   const grade   = readiness.grade;
   const gStyle  = READINESS_GRADE_STYLE[grade];
   const barCol  = getReadinessColor(readiness.score);
   const ready90 = readiness.score >= 90;
   const failed  = readiness.failed.slice(0, 4);
+  const showAutoFill = !ready90 && hasAnyAutofillable(readiness);
 
   // Pick highest-impact missing item for "fix this first" deep-link
   const topProblem = failed[0];
@@ -176,7 +191,7 @@ function ProductRow({
         )}
       </div>
 
-      {/* Right — action buttons */}
+      {/* Right — action buttons (E-15: stack auto-fill + manual fix) */}
       <div
         style={{
           display: 'flex',
@@ -184,7 +199,7 @@ function ProductRow({
           gap: 4,
           alignItems: 'stretch',
           justifyContent: 'center',
-          minWidth: 90,
+          minWidth: 110,
         }}
       >
         {ready90 ? (
@@ -209,26 +224,53 @@ function ProductRow({
             바로 등록
           </Link>
         ) : (
-          <Link
-            href={fixHref}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              padding: '6px 8px',
-              borderRadius: 8,
-              background: '#e62310',
-              color: '#fff',
-              fontSize: 11,
-              fontWeight: 800,
-              textDecoration: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            수정하기
-            <ChevronRight size={11} />
-          </Link>
+          <>
+            {/* E-15: AI auto-fill button (top, primary CTA for sub-90 cards) */}
+            {showAutoFill && (
+              <button
+                onClick={() => onAutoFill(product.id, product.name || '', readiness.score)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  padding: '6px 8px',
+                  borderRadius: 8,
+                  background: '#7c3aed',
+                  color: '#fff',
+                  border: 'none',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                }}
+                title="AI가 부족한 항목을 자동으로 채웁니다"
+              >
+                <Sparkles size={11} />
+                AI 채우기
+              </button>
+            )}
+            <Link
+              href={fixHref}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                padding: '6px 8px',
+                borderRadius: 8,
+                background: '#fff',
+                color: '#e62310',
+                fontSize: 11,
+                fontWeight: 700,
+                textDecoration: 'none',
+                cursor: 'pointer',
+                border: '1px solid #FFB3CE',
+              }}
+            >
+              직접 수정
+              <ChevronRight size={11} />
+            </Link>
+          </>
         )}
         <span style={{ fontSize: 9, color: '#B0A0A8', textAlign: 'center' }}>
           {ready90 ? '90점 이상' : `+${100 - readiness.score}점 필요`}
@@ -242,12 +284,35 @@ function ProductRow({
 interface UploadReadinessWidgetProps {
   products?: DashboardProduct[];
   productsLoading?: boolean;
+  /** Called after a successful AI auto-fill apply, so the dashboard can reload product data. */
+  onRefresh?: () => void;
 }
 
 export default function UploadReadinessWidget({
   products,
   productsLoading,
+  onRefresh,
 }: UploadReadinessWidgetProps) {
+  // E-15: AutoFill modal state (one product at a time)
+  const [modalTarget, setModalTarget] = useState<{
+    productId: string;
+    productName: string;
+    score: number;
+  } | null>(null);
+
+  function handleOpenAutoFill(productId: string, productName: string, score: number) {
+    setModalTarget({ productId, productName, score });
+  }
+
+  function handleModalClose() {
+    setModalTarget(null);
+  }
+
+  function handleAutoFillApplied() {
+    // Tell the dashboard to reload products so the score updates immediately
+    if (onRefresh) onRefresh();
+  }
+
   // Compute readiness for all unregistered products (DRAFT or no naverProductId)
   const ranked = useMemo(() => {
     if (!products) return [];
@@ -356,110 +421,29 @@ export default function UploadReadinessWidget({
 
   // ── Main render ────────────────────────────────────────────────────────────
   return (
-    <div className="kk-card" style={{ overflow: 'hidden' }}>
-      {/* Header */}
-      <div
-        style={{
-          padding: '14px 20px 12px',
-          borderBottom: '1px solid #F8DCE5',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 8,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Package size={14} style={{ color: '#e62310' }} />
-          <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>
-            등록 준비 명령탑
-          </p>
-          <span style={{ fontSize: 11, color: '#B0A0A8' }}>
-            DRAFT 상품을 네이버에 올릴 준비도 점수
-          </span>
-        </div>
-        <Link
-          href="/products"
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: '#e62310',
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 3,
-          }}
-        >
-          전체 보기 <ChevronRight size={11} />
-        </Link>
-      </div>
-
-      {/* Stat strip */}
-      <div
-        style={{
-          padding: '10px 20px',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 8,
-          background: '#FFF0F5',
-          borderBottom: '1px solid #F8DCE5',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: 18, fontWeight: 900, color: '#16a34a', margin: 0, lineHeight: 1 }}>
-            {readyCount}
-          </p>
-          <p style={{ fontSize: 10, color: '#15803d', fontWeight: 700, margin: '3px 0 0' }}>
-            지금 등록 가능
-          </p>
-        </div>
-        <div style={{ textAlign: 'center', borderLeft: '1px solid #FFB3CE', borderRight: '1px solid #FFB3CE' }}>
-          <p style={{ fontSize: 18, fontWeight: 900, color: '#e62310', margin: 0, lineHeight: 1 }}>
-            {workCount}
-          </p>
-          <p style={{ fontSize: 10, color: '#b91c1c', fontWeight: 700, margin: '3px 0 0' }}>
-            작업 필요
-          </p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: 18, fontWeight: 900, color: '#1A1A1A', margin: 0, lineHeight: 1 }}>
-            {avgScore}
-          </p>
-          <p style={{ fontSize: 10, color: '#B0A0A8', fontWeight: 700, margin: '3px 0 0' }}>
-            평균 점수
-          </p>
-        </div>
-      </div>
-
-      {/* Top 5 product rows */}
-      <div
-        style={{
-          padding: '12px 20px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-        }}
-      >
-        {top5.map(({ product, readiness }) => (
-          <ProductRow key={product.id} product={product} readiness={readiness} />
-        ))}
-      </div>
-
-      {/* Footer hint — only when there are more than 5 */}
-      {ranked.length > 5 && (
+    <>
+      <div className="kk-card" style={{ overflow: 'hidden' }}>
+        {/* Header */}
         <div
           style={{
-            padding: '10px 20px',
-            borderTop: '1px solid #F8DCE5',
-            background: '#FFF0F5',
+            padding: '14px 20px 12px',
+            borderBottom: '1px solid #F8DCE5',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 8,
           }}
         >
-          <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>
-            DRAFT 상품 {ranked.length}개 중 상위 5개 표시 중
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Package size={14} style={{ color: '#e62310' }} />
+            <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>
+              등록 준비 명령탑
+            </p>
+            <span style={{ fontSize: 11, color: '#B0A0A8' }}>
+              DRAFT 상품을 네이버에 올릴 준비도 점수
+            </span>
+          </div>
           <Link
             href="/products"
             style={{
@@ -472,10 +456,109 @@ export default function UploadReadinessWidget({
               gap: 3,
             }}
           >
-            정원 창고에서 전체 보기 <ChevronRight size={11} />
+            전체 보기 <ChevronRight size={11} />
           </Link>
         </div>
+
+        {/* Stat strip */}
+        <div
+          style={{
+            padding: '10px 20px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 8,
+            background: '#FFF0F5',
+            borderBottom: '1px solid #F8DCE5',
+          }}
+        >
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: 18, fontWeight: 900, color: '#16a34a', margin: 0, lineHeight: 1 }}>
+              {readyCount}
+            </p>
+            <p style={{ fontSize: 10, color: '#15803d', fontWeight: 700, margin: '3px 0 0' }}>
+              지금 등록 가능
+            </p>
+          </div>
+          <div style={{ textAlign: 'center', borderLeft: '1px solid #FFB3CE', borderRight: '1px solid #FFB3CE' }}>
+            <p style={{ fontSize: 18, fontWeight: 900, color: '#e62310', margin: 0, lineHeight: 1 }}>
+              {workCount}
+            </p>
+            <p style={{ fontSize: 10, color: '#b91c1c', fontWeight: 700, margin: '3px 0 0' }}>
+              작업 필요
+            </p>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: 18, fontWeight: 900, color: '#1A1A1A', margin: 0, lineHeight: 1 }}>
+              {avgScore}
+            </p>
+            <p style={{ fontSize: 10, color: '#B0A0A8', fontWeight: 700, margin: '3px 0 0' }}>
+              평균 점수
+            </p>
+          </div>
+        </div>
+
+        {/* Top 5 product rows */}
+        <div
+          style={{
+            padding: '12px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}
+        >
+          {top5.map(({ product, readiness }) => (
+            <ProductRow
+              key={product.id}
+              product={product}
+              readiness={readiness}
+              onAutoFill={handleOpenAutoFill}
+            />
+          ))}
+        </div>
+
+        {/* Footer hint — only when there are more than 5 */}
+        {ranked.length > 5 && (
+          <div
+            style={{
+              padding: '10px 20px',
+              borderTop: '1px solid #F8DCE5',
+              background: '#FFF0F5',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>
+              DRAFT 상품 {ranked.length}개 중 상위 5개 표시 중
+            </p>
+            <Link
+              href="/products"
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: '#e62310',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+              }}
+            >
+              정원 창고에서 전체 보기 <ChevronRight size={11} />
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* E-15 Block C: AutoFill modal (one at a time) */}
+      {modalTarget && (
+        <AutoFillModal
+          productId={modalTarget.productId}
+          productName={modalTarget.productName}
+          currentScore={modalTarget.score}
+          onClose={handleModalClose}
+          onApplied={handleAutoFillApplied}
+        />
       )}
-    </div>
+    </>
   );
 }

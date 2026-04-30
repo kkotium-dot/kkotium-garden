@@ -254,7 +254,7 @@ export default function DashboardPage() {
       <DailyPlanWidget products={products} productsLoading={productsLoading} />
 
       {/* ── E-14 등록 준비 명령탑 — DRAFT 상품 11점 키디니스 점수 + 부족 항목 deep-link ───── */}
-      <UploadReadinessWidget products={products} productsLoading={productsLoading} />
+      <UploadReadinessWidget products={products} productsLoading={productsLoading} onRefresh={handleRefresh} />
 
       {/* ── 꼬띠 위젯 — products prop으로 단일 로드 공유 ────── */}
       <KkottiWidget products={products} productsLoading={productsLoading} />
