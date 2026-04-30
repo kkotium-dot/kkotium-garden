@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 6 — E-15 Block A+B+C 완료, Block D 라이브 검증 대기 중)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 이전 커밋: b2f9b4e
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅, Block D ⏳ Chrome MCP 라이브 검증 대기)**
-> **다음 작업: E-15 Block D (Chrome MCP 라이브 검증 + 검증 결과에 따른 마이크로 조정)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 채팅에서 시작할 작업" 섹션 참조
+> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 6 — E-15 Block A+B+C ✅, Block D Part 1 ✅ 1상품 라이브 검증 완료, Part 2 대기)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: b746400
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅, Part 2 ⏳ 8개 일괄 검증 + Edge case 4개 + score 일관성 마이크로 조정 대기)**
+> **다음 작업: E-15 Block D Part 2 (8개 DRAFT 일괄 자동 채우기 + Edge case 4개 + PATCH/위젯 점수 일관성 버그 수정)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2용)" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -773,4 +773,65 @@ Block B 검증 (`?registerId=`):
 - **Block D 라이브 검증 대기 중** — Chrome MCP로 8개 DRAFT 시도 + 점수 상승 검증, 응답시간 측정, edge case 확인 필요
 
 **⚠️ 본 Block C가 마무리된 후 시작된 다음 채팅에서 작업원칙 21번 사건이 두 번째로 발생**: user 메시지가 "HEAD = 0694982, 10 commits 동기화 상태"라는 작업 가정을 명시했지만 실제 origin/main = b6e6da3 + Block A+B+C 완료(16 commits) 상태였음. 새 채팅이 그 가정을 무비판으로 받아 AutoFillModal을 처음부터 새로 쓰려 했으나, write_file이 중간에 끊어져 working tree clean이 유지되어 손실 없이 멈춤. user가 "커밋 푸시 단계였습니다 상황을 확인하고 진행해주세요"로 즉시 잡아주심. 본 사건 학습으로 작업원칙 23·24번 신설 — **다음 채팅이 같은 사건을 또 만들지 않도록**
+
+
+### 2026-04-30 Phase E+ Sprint 6 진행 중 (E-15 Block D Part 1 — 1상품 라이브 검증 완료)
+
+**범위**: Chrome MCP로 첫 DRAFT 카드(60점, 무타공 두꺼비집가리개)에서 AI 채우기 모달 → POST 미리보기 → PATCH 적용 → 위젯 자동 갱신 전 과정을 라이브 검증. 시나리오 1~6 통과. 발견된 score 일관성 버그는 Part 2 새 채팅에서 수정 예정.
+
+**검증 결과 — 시나리오 1~6 (모두 ✅)**:
+
+| 시나리오 | 결과 | 검증 데이터 |
+|---------|------|------------|
+| 1. dev 서버 응답 | ✅ HTTP 200 / 0.13초 / 8 DRAFT 정상 fetch | `curl /dashboard` + `/api/products?status=DRAFT` |
+| 2. 위젯 렌더링 | ✅ Stat strip(0/8/42) + 5개 카드 + AI 채우기 5개 + 직접 수정 5개 | DRAFT 8개 중 위젯 TOP 5 표시 |
+| 3. 모달 열림 (loading→ready) | ✅ POST elapsed 약 4~5초 (Groq round-robin 정상) | 첫 클릭 = "무타공 두꺼비집가리개 대형 45x34cm WIFI 블라인드 분전함커버" (60점 카드) |
+| 4. ready phase 3섹션 렌더 | ✅ 키워드 5개+ 체크박스 + SEO 태그 10개+ 체크박스 + extra_images 노란 카드 (radio 0개 = 이 상품에 상품명 재작성 추천 없음, 이미 통과) | suggestions 2 + unfillable 1 = 모달 정상 분리 |
+| 5. 적용 → done | ✅ PATCH 6.0초 / `applied: [keywords_count, tags_count]` / `rejected: []` / `newScore: 92, newGrade: 'S'` | DB 즉시 적용 + 모달 자동 닫힘 (1.8초) |
+| 6. 위젯 자동 갱신 | ✅ 첫 카드 60점 → 82점 (등급 B → A) / Stat 평균 42 → 45 / 부족칩 4개 → 3개 (앞15자/추가/배송) | onApplied → handleRefresh → loadStats + loadProducts 모두 정상 |
+
+**라이브 데이터 (PATCH 응답 발췌)**:
+```json
+{
+  "success": true,
+  "applied": ["keywords_count", "tags_count"],
+  "newScore": 92,
+  "newGrade": "S",
+  "newLabel": "92% — 앞15자 키워드, 추가이미지 (0장)",
+  "rejected": []
+}
+```
+
+**적용된 키워드** (구매자 언어 정확 반영):
+- keywords_count: `인터폰박스, 가구인테리어, 인테리어소품, 무타공가리개, 대형블라인드, 분전함커버, 인터폰커버`
+- tags_count: `선물용, 고급스러움, 감각적, 인테리어용, 모던, 고급, 디자인, 품질좋음, 인테리어소품, 인테리어박스, 고상함, 인테리어용품`
+
+**⚠️ 발견된 마이크로 조정 후보 (Part 2 수정 대상)**:
+
+**[Bug #1] PATCH newScore(92) ≠ 위젯 reload 점수(82) — 차이 10점**
+- 분석: keywords_count(12) + tags_count(10) = 22점 → 위젯 60+22=82 (정상). PATCH 응답은 60+32=92로 계산.
+- 차이 10점은 정확히 `shipping_template` weight 값. PATCH 시점에서 `calcUploadReadiness`가 shipping_template을 통과로 잘못 계산했을 가능성.
+- 수정 위치: `src/app/api/upload-readiness/auto-fill/route.ts` PATCH 핸들러 마지막 부분 — `prisma.product.update` 후 `calcUploadReadiness` 호출 시 전달하는 product 객체의 shippingTemplateId 필드 검증
+- 영향도: 모달 done 화면 표시 점수와 위젯 갱신 점수가 다름 → 셀러 혼란. 데이터 손실 없음.
+- 우선순위: Part 2 첫 작업
+
+**[Note] AutoFillModal은 inline style 사용 (Tailwind 아님)**:
+- `position: fixed; zIndex: 1000` — Chrome MCP 셀렉터로 잡으려면 `getComputedStyle(d).position === 'fixed'` 패턴 사용 필요
+- Tailwind class `[class*=fixed][class*=inset-0]` 패턴은 작동하지 않음
+- Part 2 검증 시 동일 패턴 재사용 권장
+
+**Vercel 환경변수 "Needs Attention"**: 키 회전 없음 확인. 단순 마지막 배포 이후 시간 경과 알림으로 추정. 빈 commit + push로 재배포 트리거하여 해소.
+
+**TSC**: 0 errors (코드 변경 없음, 라이브 검증 + docs만 진행)
+
+**커밋 이력 (Part 1)**:
+- (현 commit) docs(E-15 Block D Part 1): 1-product live verification + score consistency bug + handoff for Part 2
+- (현 commit + 1) chore: redeploy to refresh Vercel env var Needs Attention status
+
+**구조 결정 (이후 세션 참고)**:
+- AutoFillModal은 React Portal 없이 일반 React 트리 안에서 inline style position:fixed로 렌더 — z-index 1000으로 충분히 위에 뜸
+- Chrome MCP에서 모달 셀렉터는 반드시 computed style 검사 (Tailwind class 패턴 안 통함)
+- PATCH 응답의 newScore와 위젯 reload 점수가 다른 경우 calcUploadReadiness 호출 두 경로의 ItemId 집합 일관성 점검 필요
+- Part 1과 Part 2를 분리한 이유: 컨텍스트 한계 회피 + Part 1에서 발견된 버그를 Part 2 시작 시점에 정확하게 파악하기 위함
+
 
