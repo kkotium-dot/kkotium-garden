@@ -1,8 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 4 E-11 — AI 리뷰 감정분석 + SEO 재활용 완료, Sprint 4 전체 종결)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10, E-11)**
-> **다음 작업 후보: 수수료 개편 미반영분 적용 (1순위, 수익성 직결) / E-12 Discord 리뷰 알림 (2순위, 자체 리뷰 발생 후) / E-13B 알림톡 활성화 (월 50건+ 시점)** — 상세 계획은 `KKOTIUM_ROADMAP.md`의 "다음 채팅에서 시작할 작업 후보" 섹션 참조
+> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 5 — 2025.06.02 수수료 개편 작업 + 보안/잔재 정리 완료)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 최신 커밋: 71afc44
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10, E-11, 수수료 개편)**
+> **다음 작업 후보: E-15 등록 준비 AI 자동 채우기 (1순위, 매출 직결) / E-1 상세페이지 빌더 AEO 강화 (2순위)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 채팅에서 시작할 작업 후보" 섹션 참조
+> **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
 >   1. `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가`
@@ -26,11 +27,11 @@
 
 ---
 
-## 현재 앱 상태 (2026-04-16)
+## 현재 앱 상태 (2026-04-30)
 
 | 항목 | 현황 |
 |------|------|
-| 전체 상품 | 8개 |
+| 전체 상품 | 8개 (모두 DRAFT — 평균 등록 준비도 42점, E-15 1순위 근거) |
 | 네이버 Commerce API | ok=true ✅ |
 | 네이버 검색광고 API | ✅ 키워드 검색량 실시간 |
 | 네이버 DataLab API | ✅ ID: F7Hga62gDOYxZ3KRtLTL |
@@ -40,7 +41,8 @@
 | GitHub | https://github.com/kkotium-dot/kkotium-garden |
 | Phase A~D | 전체 완료 ✅ |
 | Phase E | 진행 중 (E-7, E-1, E-3, E-8 완료) |
-| Phase E+ | Sprint 1 완료 (E-4, E-2C) + Sprint 2 완료 (E-2A, E-2B) + Sprint 3 완료 (E-13A, E-13C) + Sprint 4 완료 (E-14, E-10) |
+| Phase E+ | Sprint 1·2·3·4·5 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10, E-11, 수수료 개편 7 commits) |
+| .env 파일 (2026-04-30 정리) | `.env`, `.env.example`, `.env.local` 3개만 유지, .env.backup + FIX-11-check-env.sh 제거 |
 | 카카오 비즈니스 채널 | 꽃틔움 KKOTIUM (Public ID: `_xkfALG`) ✅ |
 
 ---
@@ -60,19 +62,26 @@
 
 ---
 
-## AI API 키 현황 (2026-04-16 기준)
+## AI API 키 현황 (2026-04-30 기준)
 
 | 서비스 | 환경변수명 | 상태 | 비고 |
 |--------|-----------|------|------|
 | **Groq** | **GROQ_API_KEY** | **정상 작동 ✅** | **1순위, 무료 14,400회/일** |
 | **Groq** | **GROQ_API_KEY_2** | **정상 작동 ✅** | **round-robin, 합계 28,800회/일** |
-| Gemini | GEMINI_API_KEY | 429 quota 초과 | 같은 프로젝트 quota 공유 문제 |
-| Gemini | GEMINI_API_KEY_2 | 429 quota 초과 | 다른 Google 계정/프로젝트에서 발급 필요 |
-| Gemini | GEMINI_API_KEY_3 | 429 quota 초과 | 키 유효하지만 무료 quota 소진 |
-| xAI Grok | XAI_API_KEY | 크레딧 미배정 | console.x.ai에서 크레딧 구매 필요 |
+| **Groq** | **GROQ_API_KEY_3** | **정상 작동 ✅** | **3키 총 합 43,200회/일** |
+| Gemini | GEMINI_API_KEY | 429 quota 초과 | **운영 실질 기여 0** — fallback 순위 하위 |
+| Gemini | GEMINI_API_KEY_2 | 429 quota 초과 | **운영 실질 기여 0** — 차선 키 확보 시 정리 예정 |
+| Gemini | GEMINI_API_KEY_3 | 429 quota 초과 | **운영 실질 기여 0** — 키 유효하지만 무료 quota 소진 |
+| xAI Grok | XAI_API_KEY | 크레딧 미배정 | console.x.ai 크레딧 구매 완료 시 GROQ 다음 fallback 우선 차선 후보 |
 | Perplexity | PERPLEXITY_API_KEY | Pro 만료 (401) | 비활성 |
 
-**AI 우선순위**: Groq(2키 round-robin) → xAI Grok → Gemini(3키) → Anthropic → Perplexity
+**AI fallback 순서 (코드 실제)**: Groq round-robin (3키 + 401/403/JSON parse safety fallback) → Gemini round-robin (3키) → Anthropic last-resort
+
+**운영 정책 (2026-04-30 확정)**:
+- GROQ 단독 capacity 28,800~43,200회/일는 1인 셀러 일 사용량 대비 무한대 충분 — fallback이 Gemini까지 갈 일 없음
+- **Gemini 3개 키는 실질 운영 기여 0** — 향후 차선 API(Grok 크레딧 구매 또는 새 무료 키) 확보 시 Gemini 정리 예정
+- Vercel "Needs Attention" 표시의 GEMINI 경고는 운영 영향 없음 (fallback으로 갈 일 없음)
+- xAI Grok 크레딧 구매 완료 시 XAI_API_KEY를 GROQ 다음 fallback으로 우선순위 재배치 권장
 
 ---
 
@@ -149,6 +158,8 @@
 14. PROGRESS.md + ROADMAP.md 항상 함께 업데이트
 15. 카카오 채널 정보 하드코딩 금지 → store_settings에서 읽기
 16. \uXXXX 유니코드 이스케이프 JSX에서 사용 금지 → 한글 리터럴 직접 사용 (렌더링 깨짐 방지)
+17. **git commit 여러 줄 메시지 금지** → file로 쓰고 `-F` 옵션 사용 또는 한 줄로 압축 (shell dquote 모드 걸림 회피)
+18. **Python `-c` 안 multi-line string 금지** → filesystem:edit_file 또는 file write 사용
 ```
 
 ### UI 작성 원칙 (2026-04-13 확정)
@@ -384,6 +395,8 @@ Etc: CRON_SECRET, NEXT_PUBLIC_APP_URL
 | detail_image_url 8개 null | 직접 입력 안 함 | 씨앗 심기 편집 모드에서 직접 입력 |
 | 네이버 리뷰 API 미지원 | 커머스 API 범위 밖 | 수동 입력 + 크롤링만 가능 |
 | 알림톡 완전 무료 불가 | 카카오 딜러사 건당 과금 | 솔라피 건당 13원, 가입 시 300포인트(23건분) |
+| **터미널 multi-line commit 트랩** | `git commit -m "line1\nline2"` 시 shell의 dquote 모드에 갇혀 대기 상태 | 여러 줄 message도 file로 쓰고 `git commit -F .commit-msg.txt` 사용, 여러 줄 이상은 한 줄 message로 압축 |
+| **Python `-c` 안 multiline string 트랩** | `python3 -c "open('f').write('''multi\nline''')"` 도 shell parser에서 dquote 멈춤 유발 | Python script를 직접 쓰기(`heredoc 금지`) 대신 filesystem:edit_file/write_file 이용
 
 ---
 
@@ -578,22 +591,22 @@ Block B 검증 (`?registerId=`):
 |-------|----------|------|
 | **Block A — 라이브러리 + API** | `src/lib/review-sentiment-analyzer.ts` (신규 348줄), `src/app/api/review-analysis/route.ts` (신규 78줄) | `analyzeReviewSentiment()` — Groq round-robin (3 keys) → Gemini (3 keys) → Anthropic fallback. 입력 검증 (5~800자, 최대 50개, 30000자), 결과 정규화 (비율 합 100 보정, 키워드/태그 길이 필터, 중복 제거). `parseJsonSafe()` 공유 패턴. SentimentResult: overallSentiment + 3 ratios + topKeywords (완트 12개) + suggestedTags (최대 10개, 2~6자 한국어) + strengths/painPoints (각 최대 4개) + aiSummary (1~2문장)
 | **Block B — 검색조련사 UI 통합** | `src/components/naver-seo/NaverSeoProductTable.tsx` (+368줄) | `ReviewAnalysisPanel` 신규 컴포넌트를 `SeoEditPanel` 내부 SEO 태그 섹션 다음에 통합. 보라색 점선 박스(`#7C3AED`)로 기존 핀크 테마와 시각 분리. Textarea 입력 → AI 분석 시작 버튼 → 결과 영역: AI 요약 박스 + 감정 분포 막대(긍정/중립/부정 3색) + 강점/약점 2열 + Top 키워드(감정별 색) + 추천 SEO 태그 (1클릭 추가 또는 일괄 추가, 남은 슬롯 고려). 상품 설명에 AI 요약 추가 버튼, 다시 분석 버튼.
-| **Block A 보강** (commit `fb418bd`) | `src/lib/review-sentiment-analyzer.ts` (+30/-8줄), `src/app/api/naver-seo/ai-generate/route.ts` (+5/-2줄) | (1) Round-robin이 401/403 auth 에러에서도 다음 키로 fallback (기존에는 429/quota만 처리) (2) JSON 파싱 안전망: trailing comma + smart quotes + control chars 제거 (3) max_tokens 1500→2500 (한국어 토큰이 더 축찜—truncation 방지). 이 보강은 GROQ_API_KEY 회전 후 1번 키가 무효가 되어도 round-robin이 자동으로 2·3번 키로 넘어가도록 보증.
+| **Block A 보강** (commit `fb418bd`) | `src/lib/review-sentiment-analyzer.ts` (+30/-8줄), `src/app/api/naver-seo/ai-generate/route.ts` (+5/-2줄) | (1) Round-robin이 401/403 auth 에러에서도 다음 키로 fallback (기존에는 429/quota만 처리) (2) JSON 파싱 안전망: trailing comma + smart quotes + control chars 제거 (3) max_tokens 1500→2500 (한국어 토큰이 더 축적—truncation 방지). 이 보강은 GROQ_API_KEY 회전 후 1번 키가 무효가 되어도 round-robin이 자동으로 2·3번 키로 넘어가도록 보증.
 
 **Groq 키 회전 관련 이벤트** (2026-04-29 세션중 발생):
-- 기존 GROQ_API_KEY (`...qNKdYC`) 이 401 Invalid 로 제공되지 않아 round-robin이 멈으는 문제 발견 — 코드 보증 추가 적용
-- 꿔집님께서 GROQ_API_KEY → `lrltQb` (새 발급), GROQ_API_KEY_3 = `3IGN7i` (신규 추가) 로 교체. GROQ_API_KEY_2 = `3pEakT`는 회전 과정에서 폐기되어 현재 401 무효 상태 — **Vercel에서 해당 키 삭제 권장** (또는 새 키로 교체)
+- 기존 GROQ_API_KEY (`...qNKdYC`) 이 401 Invalid 로 제공되지 않아 round-robin이 멈추는 문제 발견 — 코드 보증 추가 적용
+- 꽃졔님께서 GROQ_API_KEY → `lrltQb` (새 발급), GROQ_API_KEY_3 = `3IGN7i` (신규 추가) 로 교체. GROQ_API_KEY_2 = `3pEakT`는 회전 과정에서 폐기되어 현재 401 무효 상태 — **Vercel에서 해당 키 삭제 권장** (또는 새 키로 교체)
 - Vercel "Needs Attention" 표시 이해: GROQ_API_KEY_2는 렌더링 시 점을 한 소식 없다면 NA로 표시되며, GEMINI_API_KEY/_2/_3은 quota 소진 상태(2026-04 메모리) — 종합 운영되었던 6개의 AI 키중 실제 정상 키는 GROQ × 2개 (lrltQb + 3IGN7i)
 
-**라이브 검증 결과** (Chrome MCP, 10개 mock 리뷰 “꿔 인테리어 소품”):
+**라이브 검증 결과** (Chrome MCP, 10개 mock 리뷰 “꽃 인테리어 소품”):
 - API 응답: HTTP 200 (provider: groq-llama3, GROQ_API_KEY=lrltQb)
 - 전반적 감정: 긍정 80% / 중립 10% / 부정 10% — 명확한 렌더링
 - AI 요약: "선물받은 특별한 일상은 색이 예쁘고 품질 좋으며, 포장이 꼼꼼하다. 고객들은 가성비 최고로 선물용으로 추천한다. 판매자는 사이즈와 배송 속도 개선에 집중할 수 있다."
-- 강점 4개 (소설때 머리일 굹맄): 품질 / 색 / 포장 / 디자인
+- 강점 4개 (긍정 키워드): 품질 / 색 / 포장 / 디자인
 - 약점 2개 (회피 포인트): 사이즈가 작다 / 배송이 느리다
 - TOP 키워드 10개 감정별 정확 분류 (긍정 8 + 부정 2 + 중립 0)
 - 추천 SEO 태그 8개: #색이 예쁘다 / #품질 좋다 / #포장이 꼼꼼하다 / #가격대비 좋다 / #고급스럽다 / #가성비 최고 / **#선물용** / **#인테리어**
-  → 꿔집님이 평소 알아차리기 어려운 "선물용", "인테리어" 같은 구매자 쪽 말말을 AI가 채택—이게 E-11 경쟁력
+  → 꽃졔님이 평소 알아차리기 어려운 "선물용", "인테리어" 같은 구매자 쪽 말투를 AI가 채택—이게 E-11 경쟁력
 
 **TSC**: 0 errors
 
@@ -606,6 +619,49 @@ Block B 검증 (`?registerId=`):
 **구조 결정** (이후 세션 참고):
 - DB 마이그레이션 불필요 — 리뷰 분석 결과는 런타임 계산으로 조달, `Product` 테이블 스키마 변경 없음. 장기 필요 시 `Product.reviewSentiment` JSON 컴럼 추가로 영속화 가능 (재분석 비용 0원 보장)
 - `analyzeReviewSentiment()`는 **single source of truth** — 미래에 씨앗 심기 탭5(SEO 탭5)에도 동일 패널 재사용 가능
-- Provider 우선순위 (보증 포함): Groq round-robin (3 keys, 401/403/JSON 손서닫 fallback) → Gemini round-robin (3 keys) → Anthropic last resort
-- 추천 태그가 currentTags에 이미 있면 시각적으로 구분(취소선 + "이미 추가됨" 표시), 남은 슬롯이 0이면 자동으로 비활성화 — 사용자가 도이하지 않아도 안전
-- E-11이 SEO 자동 추천에 구체 "구매자 언어"를 주입—꿔집님이 평소 알아차릴 수 없는 구매자 심리를 대량 텍스트로부터 추출한다는 점이 핵심 가치
+- Provider 우선순위 (보증 포함): Groq round-robin (3 keys, 401/403/JSON 손상 fallback) → Gemini round-robin (3 keys) → Anthropic last resort
+- 추천 태그가 currentTags에 이미 있으면 시각적으로 구분(취소선 + "이미 추가됨" 표시), 남은 슬롯이 0이면 자동으로 비활성화 — 사용자가 동의하지 않아도 안전
+- E-11이 SEO 자동 추천에 구체 "구매자 언어"를 주입—꽃졔님이 평소 알아차릴 수 없는 구매자 심리를 대량 텍스트로부터 추출한다는 점이 핵심 가치
+
+
+### 2026-04-29~30 Phase E+ Sprint 5 완료 세션 (2025.06.02 수수료 개편 + 보안/잔재 정리)
+
+**범위**: 2025-06-02 시행된 네이버 수수료 개편 (유입수수료 2% 폐지 → 판매수수료 2.73% / 자체마케팅 0.91%)을 라이브러리 + API + 위젯 + 마진계산기 4곳에 일관 반영. 2026-04-30 추가 리팩토링으로 export 표준화 + 카테고리별 가중평균 + 월간 절감 UI 완성. 다음 근거: 수익성 정확도 직결 + 독립 작업량 0.5일 수준.
+
+| Block | 커밋 | 내용 |
+|-------|------|------|
+| **Block 1** | `17a07e2` | `naver-fee-rates-2026.ts`: `FeeChannel` 타입 + `getNaverFeeRate(code, channel)` + `getNaverFeeBreakdown` 채널 인지 라이브러리화 |
+| **Block 2** | `87f9943` | `profitability/route.ts`: 라이브러리 단일 소스 사용, 카테고리별 수수료 정확 반영 |
+| **Block 3** | `687a9c9` | `ProfitabilityWidget.tsx`: 일반/마케팅 채널 비교 카드 + 마케팅 가이드 표시 |
+| **Block 4** | `7e32364` | `MarginCalculator.tsx`: 자체마케팅 채널 토글 — 마진 실시간 재계산 |
+| **Redeploy** | `e813b28` | Vercel 프로덕션 롤아웃 검증 |
+| **Refactor** | `e73d098` | NAVER_ prefix 일관화 (`NAVER_FEE_REFORM_DATE`, `NAVER_FEE_REFORM_NOTE`, `NAVER_MARKETING_FEE_REDUCTION`) + per-category weighted avg + 월간 절감 UI + `EXCEPTION_D1S` 명시화 (디지털/가전·도서 마케팅 인하 미적용) + `SalesChannel = FeeChannel` alias |
+| **Cleanup** | `71afc44` | `FIX-11-check-env.sh` (1월 7일자 디버그 스크립트) 제거 — `DATABASE_URL`을 stdout에 노출하는 보안 이슈 + 의존 `FIX-10-migrate.sh` 이미 삭제됨. `.env.backup` 잔재 정리 |
+
+**라이브 검증 결과** (`curl http://localhost:3000/api/profitability`):
+```json
+{
+  "normalRate": 5.73,
+  "marketingRate": 3.91,
+  "savedRate": 1.82,
+  "salesFeeNormal": 2.73,
+  "salesFeeMarketing": 0.91,
+  "reformDate": "2025-06-02",
+  "reformNote": "2025.6.2 개편: 유입수수료 2% 폐지 → 매출연동 판매수수료 통합 (일반 2.73% / 자체마케팅 0.91%)"
+}
+```
+→ 둘 다 2025.06.02 개편 정확 반영 + 카테고리별 접근 완료
+
+**환경 정리 결과**:
+- `.env` 파일: `.env`, `.env.example`, `.env.local` 3개만 유지 (.env.backup, FIX-11-check-env.sh 제거)
+- AI 키 정책: GROQ × 3개 (lrltQb + CAVylw + 3IGN7i = 43,200회/일 capacity) 단독 운영, GEMINI 3개는 실질 기여 0으로 확정
+- `.gitignore` 이미 강화됨 (`.env.*` 와일드카드 + `*.env.backup` + `vercel_env_upload*.env` 명시) — 향후 자동 차단
+
+**TSC**: 0 errors
+
+**구조 결정 (이후 세션 참고)**:
+- 수수료 계산 single source of truth = `naver-fee-rates-2026.ts`. profitability API · ProfitabilityWidget · MarginCalculator · 크롤러가 모두 이 라이브러리를 공유
+- channel 인지 계산은 `FeeChannel = 'normal' | 'marketing'` 타입으로 명시 — 호출구에서 `getNaverFeeRate(code, 'marketing')` 도 바로 사용 가능
+- 예외 카테고리 (`EXCEPTION_D1S` = 디지털/가전·도서)는 마케팅 인하 미적용 — 이미 축소된 수수료이므로
+- profitability API는 이제 카테고리 가중평균 기반 (`avgRateNormal`, `avgRateMarketing`)으로 제공 — 실제 상품 구성에 맞는 정확도 향상
+- 다음 작업 후보 1순위: **E-15 등록 준비 AI 자동 채우기** (8개 DRAFT 평균 42점을 90+로 끌어올려 매출 발생 트리거 — ROADMAP "다음 채팅에서 시작할 작업 후보" 세션 참조)

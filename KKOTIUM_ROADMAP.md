@@ -1,7 +1,8 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-04-29 (Phase E+ Sprint 4 E-11 — AI 리뷰 감정분석 + SEO 재활용 완료, Sprint 4 전체 종결)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10, E-11)**
-> **다음 작업 후보: 수수료 개편 미반영분 적용 (1순위) / E-12 Discord 리뷰 알림 (2순위) / E-13B 알림톡 활성화 (월 50건+ 시점)** — 본 문서 하단의 "다음 채팅에서 시작할 작업 후보" 섹션 참조
+> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 5 — 2025.06.02 수수료 개편 + 보안/잔재 정리 완료)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10, E-11, 수수료 개편)**
+> **다음 작업 후보: E-15 등록 준비 AI 자동 채우기 (1순위, 매출 직결) / E-1 상세페이지 빌더 AEO 강화 (2순위)** — 본 문서 하단의 "다음 채팅에서 시작할 작업 후보" 섹션 참조
+> **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
 > - `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가` (Claude 리서치 2026-04-16)
@@ -150,20 +151,83 @@
 |------|------|------|----------|------|
 | **E-14** | **✅** | **Upload Readiness Command Center (등록 준비 명령탑)** | `src/components/dashboard/UploadReadinessWidget.tsx` (신규), `src/app/dashboard/page.tsx`, `src/app/products/new/page.tsx`, `src/app/products/page.tsx` | DRAFT 상품 11점 키디니스 점수 정렬 TOP 5 + Stat strip(등록가능/작업필요/평균점수) + 부족 항목 칩 deep-link(`?focus={tab}` → 씨앗심기 5개 탭 자동 활성화) + 90+ "바로 등록" CTA(`?registerId=` → 정원창고 자동 체크 + NaverRegisterModal 자동 노출) + ITEM_TO_TAB 11개 매핑 + Loading skeleton + Empty state. 셀러 첫 등록 차단점 해소 = 매출 발생까지의 인지 부담 5단계 → 1클릭 |
 | **E-10** | **✅** | **경쟁 진입장벽 모니터링 (옵션 A 간접 추정)** | `src/lib/competition-monitor.ts` (+135줄), `src/lib/sourcing-recommender.ts` (+79줄), `src/components/dashboard/CompetitionMonitorWidget.tsx` (+137줄), `src/components/dashboard/SourcingRecommendWidget.tsx` (+95줄), `src/app/api/competition/route.ts` (+9줄) | 원래 계획은 리뷰수/평점 직접 스크래핑이었으나, API 안정성 부족으로 **옵션 A 구현** — 4-factor proxy(topSellers 30%+priceSpread 30%+totalResults 25%+competitionLevel 15%) weighted score로 진입장벽 0~5점 추정. `estimateEntryBarrier()`가 single source of truth. BlueOcean breakdown 구조(`{ base, entryBarrierBonus, total }`)로 +15/+5/0 가산. CompetitionMonitorWidget에 5단계 막대+4-factor+Recommendation 패널, SourcingRecommendWidget에 Shield chip(LOW/MEDIUM/HIGH 3색)+BlueOcean breakdown+3 metrics. **라이브 검증 완료** — Block A+C 8개 상품 실제 데이터, Block B+D mock 주입로 3색 chip 모두 시각 확인. DB 스키마 변경 없음 |
-| **E-11** | **✅** | **AI 리뷰 감정 분석 + SEO 재활용** | `src/lib/review-sentiment-analyzer.ts` (신규 348줄), `src/app/api/review-analysis/route.ts` (신규 78줄), `src/components/naver-seo/NaverSeoProductTable.tsx` (+368줄), 보강 커밋 `fb418bd` (+35줄) | `analyzeReviewSentiment()` Groq round-robin (3 keys) → Gemini (3 keys) → Anthropic fallback. SentimentResult: 감정 평판/비율 + topKeywords + suggestedTags + strengths/painPoints + aiSummary. ReviewAnalysisPanel이 SeoEditPanel 내부 SEO 태그 섹션 다음에 통합 — 보라색 점선 박스 + Textarea + AI 분석 시작 + 결과(AI 요약/감정분포/강점약점/키워드/추천태그 1클릭·일괄추가). **라이브 검증 완료**: 10개 mock 리뷰 “꿔 인테리어 소품”, 긍정 80% / 추천 태그 8개 (선물용·인테리어 등 구매자 언어 정확 추출). 보강: round-robin이 401/403/JSON 파싱 손서닫 fallback + max_tokens 1500→2500 + parseJsonSafe LLM JSON 정리. 비용: 0 KRW (Groq 무료 14400/키/하루 × 2키 = 28800/하루). |
+| **E-11** | **✅** | **AI 리뷰 감정 분석 + SEO 재활용** | `src/lib/review-sentiment-analyzer.ts` (신규 348줄), `src/app/api/review-analysis/route.ts` (신규 78줄), `src/components/naver-seo/NaverSeoProductTable.tsx` (+368줄), 보강 커밋 `fb418bd` (+35줄) | `analyzeReviewSentiment()` Groq round-robin (3 keys) → Gemini (3 keys) → Anthropic fallback. SentimentResult: 감정 평판/비율 + topKeywords + suggestedTags + strengths/painPoints + aiSummary. ReviewAnalysisPanel이 SeoEditPanel 내부 SEO 태그 섹션 다음에 통합 — 보라색 점선 박스 + Textarea + AI 분석 시작 + 결과(AI 요약/감정분포/강점약점/키워드/추천태그 1클릭·일괄추가). **라이브 검증 완료**: 10개 mock 리뷰 “꿔 인테리어 소품”, 긍정 80% / 추천 태그 8개 (선물용·인테리어 등 구매자 언어 정확 추출). 보강: round-robin이 401/403/JSON 파싱 손상 fallback + max_tokens 1500→2500 + parseJsonSafe LLM JSON 정리. 비용: 0 KRW (Groq 무료 14400/키/하루 × 2키 = 28800/하루). |
 
 #### Sprint 5: 알림 자동화 + 수수료 업데이트 (비용 0원)
 
 | Task | 내용 | 변경 파일 | 상세 |
 |------|------|----------|------|
 | **E-12** | **Discord 리뷰 알림** | cron/daily, Discord 웹훅 | 자체 스토어 리뷰 페이지 폴링 → 신규 리뷰 감지 → Discord `#review-alert` 알림, 6번째 웹훅 채널 추가 |
-| **기존개선** | **굿서비스+수수료 업데이트** | good-service.ts, 수익성 대시보드(C-4) | 톡톡 응답 기준 24h→12h **부분 완료** (2025-04 톡톡 12h 기준 commit b5606c4 반영 — good-service.ts), 2025.6.2 수수료 개편(유입수수료 2% 폐지→판매수수료 2.73%, 자체마케팅 유입 0.91%) 미반영 |
+| **기존개선** | **굿서비스+수수료 업데이트** | good-service.ts, 수익성 대시보드(C-4) | 톡톡 응답 기준 24h→12h **완료** (commit b5606c4), 2025.6.2 수수료 개편(유입수수료 2% 폐지→판매수수료 2.73%, 자체마케팅 유입 0.91%) **✅ 100% 완료** (Block 1·2·3·4 + redeploy + refactor + cleanup, 7 commits) |
 
 ---
 
-## 다음 채팅에서 시작할 작업 후보 (E-11 완료 이후)
+## 다음 채팅에서 시작할 작업 후보 (수수료 개편 완료 이후 — 2026-04-30 갱신)
 
-> 2026-04-29 E-11 마무리 세션에서 다음 작업 우선순위 재평가. **수수료 개편 → E-12 → E-13B** 순서 권장 (수익성 직결도 + 트리거 적합성 종합 평가). Phase E+ Sprint 4 전체 종결 상태.
+> 2026-04-30 수수료 개편 마무리 세션에서 다음 작업 우선순위 재평가. **E-15 (등록 준비 AI 자동 채우기) → E-1 빌더 AEO 강화 → E-12 → E-13B** 순서 권장. Phase E+ Sprint 5 종결 상태.
+
+### 1순위 확정: E-15 등록 준비 AI 자동 채우기 (가칭, 신규 작업)
+
+**문제 정의**: 현재 8개 상품이 모두 DRAFT 상태, 평균 등록 준비도 42점. E-14가 부족 항목을 시각화했으나, 실제로 90+까지 끌어올리는 일은 셀러가 하나하나 직접 해야 함. **1인 셀러의 가장 큰 병목 = "등록 차단점 해소까지의 인지/시간 부담".**
+
+**해결책**: E-14 위젯에 "AI로 한 번에 채우기" 버튼 추가 → 부족 항목별로 AI 호출 (키워드 생성, SEO 태그 추천, 상품명 개선, 카테고리 정밀화, 어뷰징 회피 등) → 결과 미리보기 모달 → 셀러 승인 → 일괄 적용 → 점수 42 → 80~90+ 도달.
+
+**임팩트**: 매출 발생 트리거. 8개 상품 모두 등록 가능 상태로 끌어올리면 즉시 매출 발생 가능.
+
+**작업 범위 (예상 1.5~2일)**:
+- **Block A**: `src/lib/upload-readiness-filler.ts` (가칭) 라이브러리 — 11개 ITEM_TO_TAB 매핑 항목별 AI 자동 채우기 함수 (`autoFillKeywords()`, `autoFillSeoTags()`, `autoFillProductName()`, `autoFillFirst15chars()`, etc.). Groq round-robin 사용, 결과 정규화 + 검증.
+- **Block B**: `src/app/api/upload-readiness/auto-fill/route.ts` (신규) — POST endpoint, productId + missingItems 입력 → AI 호출 결과 반환 (아직 적용 안 함, 미리보기 용). PATCH endpoint 추가 — 셀러 승인된 결과 일괄 적용.
+- **Block C**: `src/components/dashboard/UploadReadinessWidget.tsx` 보강 — 상품 카드에 "AI로 자동 채우기" 버튼 + 미리보기 모달(항목별 before/after 제시) + 새 점수 표시 + 적용 / 취소 버튼.
+- **Block D**: 라이브 검증 — 8개 DRAFT 모두 자동 채우기 → 90+ 도달 검증, 생성된 SEO 내용 품질 확인 (구매자 언어 반영 여부).
+
+**비용**: 0원 (Groq round-robin 인프라 활용, 8 상품 × 5 항목 = 40 호출, 14400/일 capacity 대비 무시 가능)
+
+**구조 결정 (작업 시작 전 추가 필요)**:
+- 자동 채우기 결과는 **바로 DB에 적용하지 않고** 셀러 승인 단계 필수 — AI 오류 롤백을 위한 안전 장치
+- AI 생성 결과는 구매자 언어 프롬프트 필요 (E-11 review-sentiment-analyzer의 패턴 참고)
+- 수수료 라이브러리는 이미 single source of truth 상태 — 추가 작업 필요 없음
+- 아이콘 명칭: 'AI로 자동 채우기' 버튼은 `Sparkles` 또는 `Wand2` (Lucide React)
+
+### 2순위: E-1 상세페이지 빌더 AEO 강화
+
+**문제 정의**: E-1로 6종 블록 빌더는 완성되어 있지만, 2026.2 쇼핑 AI 에이전트가 리뷰를 실시간 분석하여 상품 추천에 사용하기 시작. 즉 상세페이지의 Q&A/FAQ 구조화가 매출에 직접 영향.
+
+**해결책**: 빌더에 "AI Q&A 자동 생성" 버튼 추가 (이미 C-2에 일부 있음) + AEO 친화적 헤딩 구조 자동 검증 + Q&A 블록 → JSON-LD schema.org/FAQPage 자동 변환 등.
+
+**임팩트**: 등록된 상품에만 의미. **E-15 완료 후 등록 상품 발생 시점**에 진행하는 것이 합리적.
+
+### 후순위: E-12, E-13B (트리거 미도달)
+
+| 후보 | 상태 | 트리거 조건 |
+|------|------|--------|
+| E-12 Discord 리뷰 알림 | 트리거 미도달 (자체 리뷰 0개) | 자체 리뷰 1건+ 발생 시 |
+| E-13B 알림톡 활성화 | 트리거 미도달 (월 50건 미달) | 월 주문 50건+ 도달 시 |
+
+---
+
+### 다음 채팅 시작 메시지 템플릿 (E-15 시작용)
+
+다음 새 채팅을 시작할 때 그대로 복붙해서 사용:
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md를 읽고
+현재 상태 파악 후 E-15 (등록 준비 AI 자동 채우기) 작업을 시작해주세요.
+
+작업 시작 전 필수:
+1. git log -5로 직전 작업 잔재 없는지 먼저 확인 (수수료 개편 7 commits + cleanup 1 commit이 origin/main에 push 완료 상태여야 함)
+2. KKOTIUM_PROGRESS.md / KKOTIUM_ROADMAP.md 정독
+3. 관련 코드 파일 (upload-readiness.ts, UploadReadinessWidget.tsx, ai-generate/route.ts, review-sentiment-analyzer.ts) read_text_file로 현재 상태 파악
+4. 작업 계획 브리핑 후 제 승인 받고 시작
+5. Block 별로 commit해서 컨텍스트 한계로 인한 작업 손실 방지
+
+브라우저 테스트는 Chrome MCP로 dashboard에서 8개 DRAFT 상품에 "AI로 자동 채우기" 버튼이 정상 작동해서
+점수가 42→90+로 올라가는지 확인해주세요.
+완료 후 PROGRESS.md/ROADMAP.md 업데이트 + git push로 마무리.
+```
+
+---
+
+### 이전 평가 기록 (E-11 완료 시점)
 
 ### E-11 완료 요약 (2026-04-29)
 
