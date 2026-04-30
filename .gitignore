@@ -50,3 +50,4 @@ tsconfig.tsbuildinfo
 
 # Temporary commit message files
 .commit-msg-*.txt
+.env*.local
