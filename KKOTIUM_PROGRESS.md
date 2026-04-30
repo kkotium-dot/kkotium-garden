@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 5 — 2025.06.02 수수료 개편 작업 + 보안/잔재 정리 완료 + E-15 상세 계획 강화)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 이전 커밋: 2a1b4dd
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10, E-11, 수수료 개편)**
-> **다음 작업 후보: E-15 등록 준비 AI 자동 채우기 (1순위, 매출 직결) / E-1 상세페이지 빌더 AEO 강화 (2순위)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 채팅에서 시작할 작업 후보" 섹션 참조
+> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 6 — E-15 Block A+B 완료, Block C+D 대기 중)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 이전 커밋: fd31dd4
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B ✅, Block C+D ⏳)**
+> **다음 작업: E-15 Block C (위젯 AutoFillModal UI) + Block D (Chrome MCP 라이브 검증)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 채팅에서 시작할 작업" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -162,6 +162,8 @@
 18. **Python `-c` 안 multi-line string 금지** → filesystem:edit_file 또는 file write 사용
 19. **AI 자동 채우기 결과는 DB 직접 적용 절대 금지** → POST(미리보기)와 PATCH(셀러 승인 적용) 2단계 분리 (E-15 이후 표준). AI 생성 결과는 셀러 체크박스 승인 없이 절대 DB 변경 금지
 20. **AI 추천 카테고리는 NAVER_CATEGORIES_FULL 로컬 검색만** → AI가 새 카테고리명 생성하면 무시, 4,993건 매칭에서만 선택
+21. **새 채팅 시작 시 git HEAD ≠ origin/main 일 수 있음** — 직전 채팅이 컨텍스트 한계로 끝나는 순간 commit은 될 수 있지만 push는 못 하는 경우가 있음. **반드시 `git rev-parse HEAD origin/main`으로 교차 확인** + `git status`의 "ahead of origin/main by N commits" 메시지 체크. 단순 `git log -5` 결과만으로 잔재 없음을 판단하면 이미 만들어진 차이 있는 코드를 그대로 덮어쓰게 됨 (E-15 Block A+B 세션에서 실제 발생)
+22. **AI 자동 채우기 라이브러리의 검증은 PATCH 검증과 일치시키기** — 라이브러리가 제안한 값이 PATCH에서 다시 거부되면 셀러 경험 나빨. 예: tags_count에 PATCH가 10개 이상 요구하면 라이브러리도 merged 10개 미만 시 null 반환
 ```
 
 ### UI 작성 원칙 (2026-04-13 확정)
@@ -337,6 +339,8 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | 반품안심케어 수수료 (E-4) | `src/lib/return-care-fees.ts` |
 | **리뷰 감정분석 라이브러리 (E-11)** | **`src/lib/review-sentiment-analyzer.ts`** |
 | **리뷰 감정분석 API (E-11)** | **`src/app/api/review-analysis/route.ts`** |
+| **등록 준비 AI 자동 채우기 라이브러리 (E-15)** | **`src/lib/upload-readiness-filler.ts`** |
+| **등록 준비 AI 자동 채우기 API (E-15)** | **`src/app/api/upload-readiness/auto-fill/route.ts`** |
 | SEO 테이블 v3 | `src/components/naver-seo/NaverSeoProductTable.tsx` |
 | 씨앗 심기 | `src/app/products/new/page.tsx` |
 | 정원 창고 | `src/app/products/page.tsx` |
@@ -398,6 +402,7 @@ Etc: CRON_SECRET, NEXT_PUBLIC_APP_URL
 | 네이버 리뷰 API 미지원 | 커머스 API 범위 밖 | 수동 입력 + 크롤링만 가능 |
 | 알림톡 완전 무료 불가 | 카카오 딜러사 건당 과금 | 솔라피 건당 13원, 가입 시 300포인트(23건분) |
 | **AI 자동 채우기 90점 도달 한계** | 11개 중 4개는 AI 영역 외 (이미지 2개/배송/마진) | 자동 채우기는 max 72점 + 셀러 수동 28점 = 100점. 이미지 2장 추가 + 배송 매핑까지 마치면 90+ |
+| **새 채팅에서 HEAD ≠ origin/main 자각 실패** | 직전 채팅이 commit 했으나 push 안 한 상태로 끝난 경우 working tree clean이지만 HEAD가 origin보다 앞서있음 | 새 채팅 시작 체크리스트에 `git rev-parse HEAD origin/main` + `git status` ahead메시지 교차 확인. (E-15 Block A+B 세션에서 실제 발생: 우리가 처음 git log에서 origin/main 표시만 보고 "잔재 없음" 판단→ write_file로 좋은 직전 코드 덮엄. 다행히 git restore로 복구) |
 | **터미널 multi-line commit 트랩** | `git commit -m "line1\nline2"` 시 shell의 dquote 모드에 갇혀 대기 상태 | 여러 줄 message도 file로 쓰고 `git commit -F .commit-msg.txt` 사용, 여러 줄 이상은 한 줄 message로 압축 |
 | **Python `-c` 안 multiline string 트랩** | `python3 -c "open('f').write('''multi\nline''')"` 도 shell parser에서 dquote 멈춤 유발 | Python script를 직접 쓰기(`heredoc 금지`) 대신 filesystem:edit_file/write_file 이용
 
@@ -668,3 +673,57 @@ Block B 검증 (`?registerId=`):
 - 예외 카테고리 (`EXCEPTION_D1S` = 디지털/가전·도서)는 마케팅 인하 미적용 — 이미 축소된 수수료이므로
 - profitability API는 이제 카테고리 가중평균 기반 (`avgRateNormal`, `avgRateMarketing`)으로 제공 — 실제 상품 구성에 맞는 정확도 향상
 - 다음 작업 후보 1순위: **E-15 등록 준비 AI 자동 채우기** (8개 DRAFT 평균 42점을 90+로 끌어올려 매출 발생 트리거 — ROADMAP "다음 채팅에서 시작할 작업 후보" 세션 참조)
+
+
+### 2026-04-30 Phase E+ Sprint 6 완료 세션 (E-15 Block A + B — 등록 준비 AI 자동 채우기 백엔드)
+
+**범위**: 웅로드 준비도 11점 체크리스트의 7개는 AI가 자동 채우고, 4개는 셀러 수동으로 명시하는 라이브러리 + API. UI(Block C) + 라이브 검증(Block D)은 컨텍스트 분할로 다음 채팅에서 진행.
+
+**⚠️ 세션 중 발생한 주요 이벤트 (이후 세션 참고 필수)**:
+- 세션 시작 시 첫 git log에서 `0694982 (HEAD -> main, origin/main, origin/HEAD)`로 표시되어 동기화 된 줄 자각 → 실제는 직전 채팅이 Block A (`527e381`) + Block B (`fd31dd4`) commit 경로 push 못한 상태였음
+- 우리가 그 사실을 모르고 `write_file`로 upload-readiness-filler.ts 새로 작성 → 직전 commit의 더 풍부한 코드(`NON_AUTOFILLABLE_ITEMS`, `NonAutoFillableItemId` 타입, 한국어 prompt 등) 덮어쓴
+- TSC 에러(`partitionReadinessItems` 없음 등) 발생 → `git status`의 "ahead of origin/main by 2 commits" 메시지로 진짜 상황 발견
+- `git restore`로 우리 변경 전수 취소 → 직전 commit이 이미 다 너무 잘 작성되어 있음을 재확인 (PATCH 검증과 일치, isKoreanText 검증, 카테고리 d1 강제 등 모두 포함)
+- 그대로 push (`0694982..fd31dd4 main -> main`) — 우리 수정 필요 없음
+- 교훈: **새 채팅 시작 체크리스트에 `git rev-parse HEAD origin/main` + `git status` ahead메시지 교차 확인 추가 필수** (작업 원칙 21/22번으로 명명)
+
+| Block | 커밋 | 내용 | 핵심 |
+|-------|------|------|------|
+| **Block A** | `527e381` | `src/lib/upload-readiness-filler.ts` (622줄) | 7개 자동 채우기 함수: `autoFillProductName(mode: length\|abuse\|repeat\|frontKeyword)` + `autoFillKeywords` + `autoFillSeoTags` + `autoFillCategory` + `autoFillAll` + `partitionReadinessItems`. `AUTOFILLABLE_ITEMS`(7) + `NON_AUTOFILLABLE_ITEMS`(4) const tuple로 정의. Provider chain: Groq round-robin (3 keys, 401/403/JSON fallback) → Gemini (3 keys) → Anthropic. parseJsonSafe (trailing comma + smart quotes + control chars). 안전장치: isKoreanText (ASCII letters ≤30%), containsAbuse (17개 blacklist), hasRepeat3Plus, clampLen, 카테고리 NAVER_CATEGORIES_FULL d1 강제. tags는 cleaned >= 10 요구, keywords는 cleaned >= 5 요구 (PATCH 검증과 일치) |
+| **Block B** | `fd31dd4` | `src/app/api/upload-readiness/auto-fill/route.ts` (347줄) | POST + PATCH 2단계. POST: 상품 fetch → calcUploadReadiness로 failed.id 계산 → partitionReadinessItems(autofillable + nonAutofillable) → autoFillAll() 실행 → `{ suggestions[], unfillable[], autofillableRequested[], autofillableSucceeded[] }`. PATCH: 각 itemId별 재검증 (이용자 tampered payload 방어) → update 구성 → prisma.product.update → calcUploadReadiness 재계산 → `{ applied[], rejected[], newScore, newGrade, newLabel }`. 카테고리는 PATCH 시점에서도 NAVER_CATEGORIES_FULL.some(c.code === code) 최종 방어선 추가 |
+
+**라이브 API 검증** (curl POST `/api/upload-readiness/auto-fill` with productId `cmnh8vx0m0001r7mnxbgrvkzi` "선물받은 특별한 일상"):
+```json
+{
+  "success": true,
+  "suggestions": [
+    {
+      "itemId": "tags_count",
+      "after": ["선물용", "일상용", "편안한", "여유로운", "감각적", "고급스러움", "리본포인트", "매직", "홈웨어", "일상룩", "선물세트", "편안한생활"],
+      "confidence": "high", "provider": "groq-llama3"
+    },
+    { "itemId": "category", "after": "50005707", "confidence": "medium", "provider": "groq-llama3" }
+  ],
+  "unfillable": ["extra_images", "net_margin"],
+  "autofillableRequested": ["category", "tags_count", "name_length"],
+  "autofillableSucceeded": ["tags_count", "category"]
+}
+```
+→ 다음 세션의 Block C(UI)에서 이 패턴을 그대로 활용 가능: `tags_count`(12개 제안), `category`(코드 매칭 추천), `unfillable`(셀러 수동 안내 영역)
+
+**TSC**: 0 errors
+
+**커밋 이력**:
+- 527e381 feat(E-15 Block A): upload-readiness-filler library + 7 auto-fill functions
+- fd31dd4 feat(E-15 Block B): auto-fill API endpoint (POST preview + PATCH apply)
+- (현 커밋: docs E-15 Block A+B 완료 반영 + Block C+D 대기 설명 + 작업 원칙 21/22 추가)
+
+**구조 결정 (이후 세션 참고)**:
+- `upload-readiness-filler.ts`는 **single source of truth** — 7개 자동 채우기 함수 모두 독립 호출 가능 (`autoFillKeywords`, `autoFillSeoTags`, `autoFillCategory`, `autoFillProductName(mode)`). Block C UI 에서는 `autoFillAll`도 그대로 사용 가능
+- POST 응답 타입 완전 확정: `{ success, suggestions: AutoFillSuggestion[], unfillable: ReadinessItemId[], autofillableRequested: AutoFillableItemId[], autofillableSucceeded: AutoFillableItemId[], message? }`
+- PATCH 응답 타입 완전 확정: `{ success, applied: AutoFillableItemId[], rejected: { itemId, reason }[], newScore, newGrade, newLabel }`
+- 카테고리는 "AI 추천 코드"를 PATCH가 다시 검증 (NAVER_CATEGORIES_FULL.some(c.code === code)) — 이중 방어선
+- name fix는 4가지 mode 중 하나만 적용 (priority: length → abuse → repeat → frontKeyword) — length 재작성이 대개 다른 세 mode도 side-effect로 고침
+- name_length 추천이 실패하는 경우도 있음 (라이브 검증에서 "선물받은 특별한 일상" 11자 → 25자로 늘리는 곳에서 isKoreanText 또는 repeat 검증 실패 듯) — Block C에서 "추천 실패" 안내 UI 필요
+- Manual-only 4개 항목(`extra_images`, `main_image`, `shipping_template`, `net_margin`) 시도 절대 안 함 — unfillable 배열로 셀러에게 안내만
+
