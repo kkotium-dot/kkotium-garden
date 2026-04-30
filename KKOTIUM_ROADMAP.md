@@ -1,6 +1,6 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 6 — E-15 Block A+B+C 완료, Block D 라이브 검증 대기)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅, Block D ⏳ Chrome MCP 라이브 검증 대기)**
+> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 6 — E-15 Block A+B+C ✅ + Block D Part 1 ✅ 1상품 라이브 검증 완료, Part 2 대기)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅, Part 2 ⏳ 8개 일괄 검증 + Edge case 4개 + score 일관성 마이크로 조정 대기)**
 > **다음 작업: E-15 Block D Part 2 (8개 DRAFT 일괄 검증 + Edge case 4개 + score 일관성 버그 수정) — 본 문서 하단의 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2용)" 섹션 그대로 복붙해서 사용**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
@@ -276,7 +276,7 @@ Block D 라이브 검증 시나리오 (Chrome MCP):
 |------|------|------|----------|------|
 | **E-14** | **✅** | **Upload Readiness Command Center (등록 준비 명령탑)** | `src/components/dashboard/UploadReadinessWidget.tsx` (신규), `src/app/dashboard/page.tsx`, `src/app/products/new/page.tsx`, `src/app/products/page.tsx` | DRAFT 상품 11점 키디니스 점수 정렬 TOP 5 + Stat strip(등록가능/작업필요/평균점수) + 부족 항목 칩 deep-link(`?focus={tab}` → 씨앗심기 5개 탭 자동 활성화) + 90+ "바로 등록" CTA(`?registerId=` → 정원창고 자동 체크 + NaverRegisterModal 자동 노출) + ITEM_TO_TAB 11개 매핑 + Loading skeleton + Empty state. 셀러 첫 등록 차단점 해소 = 매출 발생까지의 인지 부담 5단계 → 1클릭 |
 | **E-10** | **✅** | **경쟁 진입장벽 모니터링 (옵션 A 간접 추정)** | `src/lib/competition-monitor.ts` (+135줄), `src/lib/sourcing-recommender.ts` (+79줄), `src/components/dashboard/CompetitionMonitorWidget.tsx` (+137줄), `src/components/dashboard/SourcingRecommendWidget.tsx` (+95줄), `src/app/api/competition/route.ts` (+9줄) | 원래 계획은 리뷰수/평점 직접 스크래핑이었으나, API 안정성 부족으로 **옵션 A 구현** — 4-factor proxy(topSellers 30%+priceSpread 30%+totalResults 25%+competitionLevel 15%) weighted score로 진입장벽 0~5점 추정. `estimateEntryBarrier()`가 single source of truth. BlueOcean breakdown 구조(`{ base, entryBarrierBonus, total }`)로 +15/+5/0 가산. CompetitionMonitorWidget에 5단계 막대+4-factor+Recommendation 패널, SourcingRecommendWidget에 Shield chip(LOW/MEDIUM/HIGH 3색)+BlueOcean breakdown+3 metrics. **라이브 검증 완료** — Block A+C 8개 상품 실제 데이터, Block B+D mock 주입로 3색 chip 모두 시각 확인. DB 스키마 변경 없음 |
-| **E-11** | **✅** | **AI 리뷰 감정 분석 + SEO 재활용** | `src/lib/review-sentiment-analyzer.ts` (신규 348줄), `src/app/api/review-analysis/route.ts` (신규 78줄), `src/components/naver-seo/NaverSeoProductTable.tsx` (+368줄), 보강 커밋 `fb418bd` (+35줄) | `analyzeReviewSentiment()` Groq round-robin (3 keys) → Gemini (3 keys) → Anthropic fallback. SentimentResult: 감정 평판/비율 + topKeywords + suggestedTags + strengths/painPoints + aiSummary. ReviewAnalysisPanel이 SeoEditPanel 내부 SEO 태그 섹션 다음에 통합 — 보라색 점선 박스 + Textarea + AI 분석 시작 + 결과(AI 요약/감정분포/강점약점/키워드/추천태그 1클릭·일괄추가). **라이브 검증 완료**: 10개 mock 리뷰 “꿔 인테리어 소품”, 긍정 80% / 추천 태그 8개 (선물용·인테리어 등 구매자 언어 정확 추출). 보강: round-robin이 401/403/JSON 파싱 손상 fallback + max_tokens 1500→2500 + parseJsonSafe LLM JSON 정리. 비용: 0 KRW (Groq 무료 14400/키/하루 × 2키 = 28800/하루). |
+| **E-11** | **✅** | **AI 리뷰 감정 분석 + SEO 재활용** | `src/lib/review-sentiment-analyzer.ts` (신규 348줄), `src/app/api/review-analysis/route.ts` (신규 78줄), `src/components/naver-seo/NaverSeoProductTable.tsx` (+368줄), 보강 커밋 `fb418bd` (+35줄) | `analyzeReviewSentiment()` Groq round-robin (3 keys) → Gemini (3 keys) → Anthropic fallback. SentimentResult: 감정 평판/비율 + topKeywords + suggestedTags + strengths/painPoints + aiSummary. ReviewAnalysisPanel이 SeoEditPanel 내부 SEO 태그 섹션 다음에 통합 — 보라색 점선 박스 + Textarea + AI 분석 시작 + 결과(AI 요약/감정분포/강점약점/키워드/추천태그 1클릭·일괄추가). **라이브 검증 완료**: 10개 mock 리뷰 “꽃 인테리어 소품”, 긍정 80% / 추천 태그 8개 (선물용·인테리어 등 구매자 언어 정확 추출). 보강: round-robin이 401/403/JSON 파싱 손상 fallback + max_tokens 1500→2500 + parseJsonSafe LLM JSON 정리. 비용: 0 KRW (Groq 무료 14400/키/하루 × 2키 = 28800/하루). |
 
 #### Sprint 5: 알림 자동화 + 수수료 업데이트 (비용 0원)
 
@@ -581,7 +581,7 @@ E-15 (등록 준비 AI 자동 채우기) 작업을 시작해주세요.
 다음 새 채팅을 시작할 때 그대로 복붙해서 사용:
 
 ```
-꿔튰움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md를 읽고
+꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md를 읽고
 현재 상태 파악 후 수수료 개편 미반영분 적용 작업을 시작해주세요.
 (2025.6.2 개편: 유입수수료 2% 폐지 → 판매수수료 2.73%, 자체마케팅 유입 0.91%)
 
