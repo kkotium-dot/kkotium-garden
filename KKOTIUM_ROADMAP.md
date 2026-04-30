@@ -20,10 +20,12 @@
 꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md를 읽고
 E-15 Block D (Chrome MCP 라이브 검증) 작업을 시작해주세요.
 
-작업 시작 전 필수 체크 (작업 원칙 21번 강화 적용):
-1. git rev-parse HEAD origin/main 두 값을 모두 비교 — 같은지 확인 (단순 git log 결과의 origin/main 라벨만 보고 동기화 판단 금지)
-   기준 HEAD = 113aee9 또는 그 이후 (E-15 Block C 완료 + docs commit)
-   git status에 "ahead of origin/main" 또는 "modified" 항목이 있으면 직전 채팅이 push 못 한 잔재 가능성 — 절대 덮어쓰지 말고 먼저 내용 검토
+작업 시작 전 필수 체크 (작업 원칙 21+23+24 강화 적용):
+1. **(a)** `git rev-parse HEAD origin/main` 두 값 비교 — 같은지 확인 (단순 git log 결과의 origin/main 라벨만 보고 동기화 판단 금지)
+   **(b)** `git --no-pager log --oneline -10` 으로 이 시작 메시지에 명시되지 않은 commit이 있는지 확인. 기준 HEAD = b6e6da3 또는 그 이후 (이 안내 문서 다음에 조그 더 추가 commit이 있을 수 있음 — 있으면 읽고 대응)
+   **(c)** `git status`에 "ahead of origin/main" 또는 "modified" 항목이 있으면 직전 채팅이 push 못 한 잔재 가능성 — 절대 덮어쓰지 말고 먼저 내용 검토
+   **(d)** 이 시작 메시지에 "HEAD = X" 같은 명시적 가정이 있어도 (a)(b)(c) 결과와 다르면 즉시 정직 보고 후 재분석. 이미 완료된 작업을 다시 시도하지 않기 (작업원칙 23번)
+   **(e)** 본 세션에서 commit 한 경우 그 turn 안에서 반드시 push까지 한 줄 명령으로 완료하기 (작업원칙 24번) — 다음 채팅이 본 작업을 볼 수 있으려면 push 필수
 2. KKOTIUM_PROGRESS.md 정독 — 특히 "2026-04-30 Phase E+ Sprint 6 완료 세션 (E-15 Block A+B+C)" 부분의 동작 흐름 시퀀스 숙지
 3. KKOTIUM_ROADMAP.md 정독 — "E-15 ITEM_TO_TAB 매트릭스" + "안전 장치 8개" + 본 시작 메시지 섹션 재확인
 4. 관련 코드 파일 read — 시그니처만 확인 (라이브 검증 전이라 수정하지 말 것):

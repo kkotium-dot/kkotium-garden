@@ -164,6 +164,8 @@
 20. **AI 추천 카테고리는 NAVER_CATEGORIES_FULL 로컬 검색만** → AI가 새 카테고리명 생성하면 무시, 4,993건 매칭에서만 선택
 21. **새 채팅 시작 시 git HEAD ≠ origin/main 일 수 있음** — 직전 채팅이 컨텍스트 한계로 끝나는 순간 commit은 될 수 있지만 push는 못 하는 경우가 있음. **반드시 `git rev-parse HEAD origin/main`으로 교차 확인** + `git status`의 "ahead of origin/main by N commits" 메시지 체크. 단순 `git log -5` 결과만으로 잔재 없음을 판단하면 이미 만들어진 차이 있는 코드를 그대로 덮어쓰게 됨 (E-15 Block A+B 세션에서 실제 발생)
 22. **AI 자동 채우기 라이브러리의 검증은 PATCH 검증과 일치시키기** — 라이브러리가 제안한 값이 PATCH에서 다시 거부되면 셀러 경험 나빨. 예: tags_count에 PATCH가 10개 이상 요구하면 라이브러리도 merged 10개 미만 시 null 반환
+23. **새 채팅 메시지의 "현재 HEAD/commits 가정"을 의심하라** — user 메시지에 "HEAD = X, N commits 상태" 같은 가정이 적혀 있어도 그 정보는 직전 세션 작성 시점 기준이라 현재 origin/main 과 다를 수 있음. 새 채팅 시작 즉시 **(a) `git rev-parse HEAD origin/main`로 실제 HEAD 확인 → (b) `git --no-pager log --oneline -10`로 user 메시지에 명시되지 않은 commit이 있는지 확인 → (c) user 가정과 실제가 다르면 즉시 정직 보고하고 작업을 다시 분석한 후 진행**. (E-15 두 채팅 연속 발생: Block A+B 세션에서 첫 번째, Block C 시작 채팅에서도 두 번째 발생. 두 번째 채팅에서는 user가 "HEAD = 0694982, 10 commits"로 적었으나 실제는 b6e6da3 + Block A+B+C 완료된 16 commits 상태였음. 다행히 write_file이 중간에 끊어져 손실 없이 멈춤)
+24. **Block 단위 작업 진행 시 매 commit + push를 한 묶음으로 끝내기** — 컨텍스트 한계 직전에 user에게 마무리 보고를 받아 새 채팅으로 인계되더라도, 마지막 commit이 push까지 완료되지 않으면 다음 채팅의 git log에서 보이지 않아 작업원칙 21·23 트랩에 빠짐. 따라서 **commit한 그 turn 안에서 반드시 push까지 한 줄 명령으로 끝낸다**: `git add ... && git commit -m "..." && git push origin main`. 절대 commit 후 "다음 turn에 push"로 미루지 않음
 ```
 
 ### UI 작성 원칙 (2026-04-13 확정)
@@ -404,6 +406,7 @@ Etc: CRON_SECRET, NEXT_PUBLIC_APP_URL
 | 알림톡 완전 무료 불가 | 카카오 딜러사 건당 과금 | 솔라피 건당 13원, 가입 시 300포인트(23건분) |
 | **AI 자동 채우기 90점 도달 한계** | 11개 중 4개는 AI 영역 외 (이미지 2개/배송/마진) | 자동 채우기는 max 72점 + 셀러 수동 28점 = 100점. 이미지 2장 추가 + 배송 매핑까지 마치면 90+ |
 | **새 채팅에서 HEAD ≠ origin/main 자각 실패** | 직전 채팅이 commit 했으나 push 안 한 상태로 끝난 경우 working tree clean이지만 HEAD가 origin보다 앞서있음 | 새 채팅 시작 체크리스트에 `git rev-parse HEAD origin/main` + `git status` ahead메시지 교차 확인. (E-15 Block A+B 세션에서 실제 발생: 우리가 처음 git log에서 origin/main 표시만 보고 "잔재 없음" 판단→ write_file로 좋은 직전 코드 덮엄. 다행히 git restore로 복구) |
+| **user 메시지의 작업 가정과 실제 git 상태 불일치** | 직전 채팅이 컨텍스트 한계 직전에 더 진행됐지만 user 메시지는 자신의 메시지 작성 시점의 가정만 명시 | user 메시지에 "HEAD = X, N commits 상태" 같은 명시적 가정이 있어도 의심하고 실제 git 상태를 교차 확인. (E-15 Block C 시작 채팅에서 실제 발생: user는 "HEAD = 0694982, 10 commits"로 적었으나 실제는 b6e6da3 + Block A+B+C 완료된 16 commits 상태. 작업원칙 23번으로 명문화) |
 | **터미널 multi-line commit 트랩** | `git commit -m "line1\nline2"` 시 shell의 dquote 모드에 갇혀 대기 상태 | 여러 줄 message도 file로 쓰고 `git commit -F .commit-msg.txt` 사용, 여러 줄 이상은 한 줄 message로 압축 |
 | **Python `-c` 안 multiline string 트랩** | `python3 -c "open('f').write('''multi\nline''')"` 도 shell parser에서 dquote 멈춤 유발 | Python script를 직접 쓰기(`heredoc 금지`) 대신 filesystem:edit_file/write_file 이용
 
@@ -768,4 +771,6 @@ Block B 검증 (`?registerId=`):
 - 모달 있는 동안 대시보드는 읽기 전용 — 이중 모달 방지를 위해 setModalTarget는 단일값
 - AI 답변이 모두 검증 실패해서 suggestions가 비었을 때 — 모달은 "AI 자동 채우기 가능 항목이 없습니다" 노란 바 + manual 카드만 렌더 — 셀러가 혼란하지 않음
 - **Block D 라이브 검증 대기 중** — Chrome MCP로 8개 DRAFT 시도 + 점수 상승 검증, 응답시간 측정, edge case 확인 필요
+
+**⚠️ 본 Block C가 마무리된 후 시작된 다음 채팅에서 작업원칙 21번 사건이 두 번째로 발생**: user 메시지가 "HEAD = 0694982, 10 commits 동기화 상태"라는 작업 가정을 명시했지만 실제 origin/main = b6e6da3 + Block A+B+C 완료(16 commits) 상태였음. 새 채팅이 그 가정을 무비판으로 받아 AutoFillModal을 처음부터 새로 쓰려 했으나, write_file이 중간에 끊어져 working tree clean이 유지되어 손실 없이 멈춤. user가 "커밋 푸시 단계였습니다 상황을 확인하고 진행해주세요"로 즉시 잡아주심. 본 사건 학습으로 작업원칙 23·24번 신설 — **다음 채팅이 같은 사건을 또 만들지 않도록**
 
