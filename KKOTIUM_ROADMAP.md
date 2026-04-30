@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 5 — 2025.06.02 수수료 개편 + 보안/잔재 정리 완료)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10, E-11, 수수료 개편)**
-> **다음 작업 후보: E-15 등록 준비 AI 자동 채우기 (1순위, 매출 직결) / E-1 상세페이지 빌더 AEO 강화 (2순위)** — 본 문서 하단의 "다음 채팅에서 시작할 작업 후보" 섹션 참조
+> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 6 — E-15 Block A+B+C 완료, Block D 라이브 검증 대기)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅, Block D ⏳ Chrome MCP 라이브 검증 대기)**
+> **다음 작업: E-15 Block D (Chrome MCP 라이브 검증) — 본 문서 하단의 "다음 새 채팅 시작 메시지 (E-15 Block D 라이브 검증용)" 섹션 그대로 복붙해서 사용**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -9,6 +9,63 @@
 > - `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리` (Claude 리서치 2026-04-16)
 > - `카카오 비즈니스 채널 2025-2026 완전 가이드` (Claude 리서치 2026-04-16)
 > - `스마트스토어 셀러의 무료 알림톡, 정말 가능한가` (Claude 리서치 2026-04-16)
+
+---
+
+## 🎯 다음 새 채팅 시작 메시지 (E-15 Block D 라이브 검증용 — 2026-04-30 작성)
+
+다음 세션 시작 시 그대로 복붙해서 사용:
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md를 읽고
+E-15 Block D (Chrome MCP 라이브 검증) 작업을 시작해주세요.
+
+작업 시작 전 필수 체크 (작업 원칙 21번 강화 적용):
+1. git rev-parse HEAD origin/main 두 값을 모두 비교 — 같은지 확인 (단순 git log 결과의 origin/main 라벨만 보고 동기화 판단 금지)
+   기준 HEAD = 113aee9 또는 그 이후 (E-15 Block C 완료 + docs commit)
+   git status에 "ahead of origin/main" 또는 "modified" 항목이 있으면 직전 채팅이 push 못 한 잔재 가능성 — 절대 덮어쓰지 말고 먼저 내용 검토
+2. KKOTIUM_PROGRESS.md 정독 — 특히 "2026-04-30 Phase E+ Sprint 6 완료 세션 (E-15 Block A+B+C)" 부분의 동작 흐름 시퀀스 숙지
+3. KKOTIUM_ROADMAP.md 정독 — "E-15 ITEM_TO_TAB 매트릭스" + "안전 장치 8개" + 본 시작 메시지 섹션 재확인
+4. 관련 코드 파일 read — 시그니처만 확인 (라이브 검증 전이라 수정하지 말 것):
+   - src/components/dashboard/AutoFillModal.tsx (Block C 신규)
+   - src/components/dashboard/UploadReadinessWidget.tsx (Block C 통합)
+   - src/app/api/upload-readiness/auto-fill/route.ts (Block B POST/PATCH)
+   - src/lib/upload-readiness-filler.ts (Block A 7개 자동 함수)
+5. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
+
+Block D 라이브 검증 시나리오 (Chrome MCP):
+- [시나리오 1] dev 서버 상태 확인 (npm run dev 이미 실행 중일 수 있음 — 먼저 확인하고 없으면 꽃졔님께 실행 요청)
+- [시나리오 2] http://localhost:3000/dashboard 접속 → "등록 준비 명령탑" 위젯에서 8개 DRAFT 카드 확인
+- [시나리오 3] 첫 카드의 "AI 채우기" 버튼 클릭 → 모달 열림 → loading state 스크린샷
+- [시나리오 4] suggestions 도착 후 모달 ready phase 렌더 확인 (3 섹션):
+  A) 상품명 재작성 라디오 (1개만 선택, 첫 항목 기본 선택)
+  B) 키워드/태그/카테고리 독립 체크박스 (모두 체크됨)
+  C) Manual-only 카드 (노란 테두리, 클릭하면 씨앗심기 탭으로 deep-link)
+- [시나리오 5] "N개 적용" 클릭 → PATCH 응답 확인 → done 화면의 점수 상승 표시 (예: 42 → 70+점)
+- [시나리오 6] 모달 자동 닫힌 후 위젯 카드 점수가 실제로 갱신되는지 확인 (Dashboard handleRefresh 연결 검증)
+- [시나리오 7] 8개 DRAFT 모두 시도 → 평균 점수 상승 측정 (목표: 42 → 70~80점)
+- [시나리오 8] Edge case A: AI 답변이 모두 검증 실패 → 모달이 "자동 채우기 가능한 항목이 없습니다" 안내만 표시
+- [시나리오 9] Edge case B: Manual-only 4개만 남은 카드 → AI 채우기 버튼 숨겨지는지
+- [시나리오 10] Edge case C: 체크박스 모두 해제 → 적용 버튼 비활성화
+- [시나리오 11] Edge case D: 네트워크 오류 시 phase=error 정상 처리 + 닫기 가능
+
+안전 장치 재확인 (절대 우회하지 말 것):
+- AI 결과는 POST(미리보기) + PATCH(적용) 2단계로 이미 분리되어 있음 — 이 구조 절대 우회 금지
+- AutoFillModal이 manual-only 4개를 PATCH로 보내지 않는지 검증 (Block A FILLABLE_ITEMS만 허용)
+- 카테고리 코드는 PATCH에서도 NAVER_CATEGORIES_FULL.some(c.code === code) 이중 방어선 존재 — 동작 확인
+- 라이브 결과에서 버그 발견 시 가능성 높은 원인: (1) 한국어 검증 실패 (2) 상품명 25~50자 범위 안 맞음 (3) 카테고리 매칭 실패. 해당 시 Block A/B의 해당 부분만 edit_file로 수정 (write_file 전체 교체 금지)
+
+컨텍스트 관리:
+- 본 세션은 Block D + 검증 결과 기반 마이크로 조정만 진행
+- 꽃졔님이 Block D 완료 후 별도로 웹 브라우저 전체 디자인(위젯 배치, 색상 통일성 등) 시각 검토 예정
+- 완료 후 PROGRESS.md / ROADMAP.md 갱신 + git push로 마무리
+- 새 채팅에서도 이어갈 수 있도록 인계 메시지 항상 갱신
+
+참고:
+- AutoFillModal.tsx 동작 구조: mountEffect 자동 POST → 4 phase (loading→ready→applying→done|error) → onApplied()가 dashboard.handleRefresh()를 트리거
+- AI 호출 비용 0원 (Groq 무료 14,400/key/일, 3키 합산 43,200/일)
+- 사용 모델 llama-3.1-8b-instant — 한국어 출력 안정성 약점 있음. 라이브에서 "name_length" 재작성이 검증 실패로 처리될 가능성 있음 (디버그 대상)
+```
 
 ---
 
@@ -159,6 +216,61 @@
 |------|------|----------|------|
 | **E-12** | **Discord 리뷰 알림** | cron/daily, Discord 웹훅 | 자체 스토어 리뷰 페이지 폴링 → 신규 리뷰 감지 → Discord `#review-alert` 알림, 6번째 웹훅 채널 추가 |
 | **기존개선** | **굿서비스+수수료 업데이트** | good-service.ts, 수익성 대시보드(C-4) | 톡톡 응답 기준 24h→12h **완료** (commit b5606c4), 2025.6.2 수수료 개편(유입수수료 2% 폐지→판매수수료 2.73%, 자체마케팅 유입 0.91%) **✅ 100% 완료** (Block 1·2·3·4 + redeploy + refactor + cleanup, 7 commits) |
+
+#### Sprint 6: 등록 준비 AI 자동 채우기 (비용 0원) — 진행 중 (E-15 Block A+B+C 완료, Block D 대기)
+
+| Task | 상태 | 내용 | 변경 파일 | 상세 |
+|------|------|------|----------|------|
+| **E-15 Block A** | ✅ | **AI 자동 채우기 라이브러리** | `src/lib/upload-readiness-filler.ts` (신규 622줄), `src/lib/upload-readiness.ts` (ABUSE_WORDS export) | 7개 자동 함수 (autoFillProductName 4모드 / autoFillKeywords / autoFillSeoTags / autoFillCategory) + autoFillAll 일괄 호출. Groq round-robin (3키) → Gemini fallback → Anthropic last-resort. parseJsonSafe (trailing comma + smart quotes + control chars 제거). 한국어·길이·어뷰징·반복 검증 다중 방어선. 카테고리는 NAVER_CATEGORIES_FULL 4,993건에서만 매칭 (AI 할루시네이션 거부). 커밋 527e381 |
+| **E-15 Block B** | ✅ | **자동 채우기 API 엔드포인트** | `src/app/api/upload-readiness/auto-fill/route.ts` (신규 347줄) | POST = 미리보기 (DB 동기적 변경 없음) → suggestions[] + unfillable[]. PATCH = 셀러 승인 항목만 DB 적용 → newScore 응답. PATCH 시점에 이중 검증 재실행 (containsAbuse + hasRepeat3Plus + length 25~50 + 카테고리 NAVER_CATEGORIES_FULL.some 포함). AUTOFILLABLE_ITEMS 화이트리스트 밖의 항목 자동 거부. 커밋 fd31dd4 |
+| **E-15 Block C** | ✅ | **AutoFillModal UI + 위젯 통합** | `src/components/dashboard/AutoFillModal.tsx` (신규), `src/components/dashboard/UploadReadinessWidget.tsx` (통합), `src/app/dashboard/page.tsx` (onRefresh 1줄) | 대시보드 위젯의 DRAFT 카드에 `Sparkles` 보라 버튼(`#7c3aed`) "AI 채우기" 추가. 클릭 → 모달 열림 → 4 phase (loading→ready→applying→done|error) 디스패치. ready phase 3섹션 (상품명 라디오 1개만 / 키워드·태그·카테고리 독립 체크박스 / Manual-only 도움 카드 deep-link). 적용 완료 시 점수 상승 표시 후 onApplied() → dashboard.handleRefresh() 트리거 → 위젯 자동 갱신. ready90 카드에는 AI 버튼 숨김, hasAnyAutofillable() 검사로 manual-only만 남은 카드도 숨김. 커밋 b2f9b4e |
+| **E-15 Block D** | ⏳ | **Chrome MCP 라이브 검증** | (수정 없음 — 검증 전용) | 상세는 본 문서 최상단의 "다음 새 채팅 시작 메시지 (E-15 Block D 라이브 검증용)" 섹션 참조. 8개 DRAFT 시도 + 평균 점수 상승 측정 + edge case 4개 + 검증 결과 기반 마이크로 조정 |
+
+**E-15 동작 흐름 (레퍼런스)**:
+```
+[셀러] 대시보드 위젯의 DRAFT 카드(예: 42점) → "AI 채우기" 클릭
+  → [모달] phase=loading, Loader2 회전
+  → [API] POST /api/upload-readiness/auto-fill { productId } → suggestions[] + unfillable[]
+  → [모달] phase=ready — 세 섹션 렌더:
+      A) 상품명 재작성 라디오 (1개만 선택, 첫 항목 자동 선택)
+      B) 키워드/태그/카테고리 독립 체크박스 (기본 모두 체크)
+      C) Manual-only 카드 (노란 테두리, 클릭 시 씨앗심기 탭으로 deep-link)
+  → [셀러] 검토 후 "N개 적용" 클릭
+  → [API] PATCH /api/upload-readiness/auto-fill { productId, accepted } → newScore
+  → [모달] phase=done — CheckCircle2 + "42점 → 75점 (+33)" 표시
+  → onApplied() → dashboard 재로드 → 모달 닫기 → 위젯 카드 최신 점수로 갱신됨
+```
+
+**안전 장치 8개 (절대 우회 금지 — Block A·B·C가 이미 구현)**:
+1. AI 결과는 POST(미리보기) + PATCH(적용) 2단계로 완전 분리 — DB 직접 적용 절대 금지
+2. Manual-only 4개 항목(main_image, extra_images, shipping_template, net_margin) PATCH 보내지 않음
+3. 카테고리 추천은 NAVER_CATEGORIES_FULL 4,993건 로컬 검색만 — PATCH에서도 이중 방어선
+4. 어뷰징 단어 17개 ABUSE_WORDS 자동 검증 (Block A 생성 단계 + Block B PATCH 단계 이중)
+5. 상품명 길이 25~50자 강제 (범위 밖 AI 응답 거부)
+6. parseJsonSafe 안전망 (trailing comma + smart quotes + control chars 제거)
+7. round-robin 401/403/JSON 파싱 실패 시 다음 키로 자동 fallback (E-11 패턴)
+8. 셀러가 모달에서 항목별 체크 해제 가능 — 강제 적용 없음
+
+**현실적 목표 (공식 확정)**:
+- 자동 채우기로 도달 가능 = 최대 72점 (8+10+8+10+12+10+14, 7개 자동 항목 weight 합계)
+- 나머지 28점 = 이미지 20점 + 배송 10점 + 마진 8점 = 셀러 수동 영역
+- 42점 → 70~80점이 현실적 목표. 90+ 도달은 셀러가 이미지 2장 + 배송 매핑 추가 필요
+
+**커밋 이력 (Sprint 6)**:
+- 527e381 feat(E-15 Block A): upload-readiness-filler library + 7 auto-fill functions
+- fd31dd4 feat(E-15 Block B): auto-fill API endpoint (POST preview + PATCH apply)
+- c4cf6f1 docs(E-15): preserve handoff notes from prior session - principles 21-22 + HEAD-vs-origin issue
+- b2f9b4e feat(E-15 Block C): AutoFillModal + widget integration with auto-fill button
+- 113aee9 docs(E-15 Block C): mark Block A+B+C complete + handoff for Block D
+- (현 커밋) docs(E-15 Sprint 6): clean Block C completion record + Block D handoff in ROADMAP
+
+**구조 결정 (이후 세션 참고)**:
+- AutoFillModal은 완전 자기완결 (props: productId, productName, currentScore, onClose, onApplied) — 향후 씨앗심기·정원창고·검색조련사 등 다른 페이지에서도 동일 패턴으로 재사용 가능
+- 상품명 재작성 4모드(name_length·no_abuse·no_repeat·keyword_in_front)는 모두 product.name 단일 필드를 덮어쓰므로 충돌 발생 — 따라서 **라디오 그룹으로 1개만 적용 가능하게 함**. PATCH switch case도 update.name = v로 겹치고 마지막이 이기는 구조 — 이 라디오 제약이 명시적 방어선
+- onApplied()가 dashboard.handleRefresh()를 호출하면 loadStats + loadProducts 둘 다 재로드 — 위젯 점수 + 파이프라인 카운트 + KPI 모두 신선해짐
+- DB 변경 없이 런타임만으로 완전 조달 — Product 테이블 스키마 그대로 유지
+- AI 답변이 모두 검증 실패해서 suggestions가 비었을 때 — 모달은 "AI 자동 채우기 가능 항목이 없습니다" 안내바 + manual 카드만 렌더 — 셀러 혼란 없음
+- **Block D 라이브 검증 대기 중** — Chrome MCP로 8개 DRAFT 시도 + 점수 상승 검증, 응답시간 측정, edge case 확인 필요
 
 ---
 
