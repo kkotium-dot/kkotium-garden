@@ -122,6 +122,12 @@ export interface DashboardProduct {
   mainImage?: string; aiScore?: number;
   createdAt?: Date; updatedAt?: Date; lastSaleDate?: Date;
   supplierName?: string;
+  // E-15 Block D Part 2: fields needed by UploadReadinessWidget for accurate score calc.
+  // Without these, widget always treated shipping_template/extra_images as failed,
+  // causing PATCH newScore to disagree with widget-reload score by up to 18 points.
+  shippingTemplateId?: string | null;
+  images?: string[];
+  shippingFee?: number;
 }
 
 interface DashStats {
@@ -157,6 +163,10 @@ export default function DashboardPage() {
         updatedAt:    p.updatedAt    ? new Date(p.updatedAt)    : new Date(),
         lastSaleDate: p.lastSaleDate ? new Date(p.lastSaleDate) : undefined,
         supplierName: p.supplier?.name ?? p.supplierName,
+        // E-15 Block D Part 2: include fields used by UploadReadinessWidget
+        shippingTemplateId: p.shippingTemplateId ?? p.shipping_template_id ?? null,
+        images: Array.isArray(p.images) ? p.images : [],
+        shippingFee: p.shippingFee ?? p.shipping_fee ?? 3000,
       })));
     } catch (e) {
       console.error('[Dashboard] products load error:', e);

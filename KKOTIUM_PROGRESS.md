@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 6 — E-15 Block A+B+C ✅, Block D Part 1 ✅ 1상품 라이브 검증 완료, Part 2 대기)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: b746400
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅, Part 2 ⏳ 8개 일괄 검증 + Edge case 4개 + score 일관성 마이크로 조정 대기)**
-> **다음 작업: E-15 Block D Part 2 (8개 DRAFT 일괄 자동 채우기 + Edge case 4개 + PATCH/위젯 점수 일관성 버그 수정)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2용)" 섹션 참조
+> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 단계 1 완료 + 단계 2 1개 카드 라이브 검증 완료)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: (이번 commit으로 갱신)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1 ✅ + 단계 2 1개 카드 검증 ✅, 나머지 3개 카드 일괄 + Edge case 4개 대기)**
+> **다음 작업: E-15 Block D Part 2 나머지 (3개 DRAFT 카드 일괄 자동 채우기 + Edge case 4개)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 나머지용)" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -13,6 +13,44 @@
 ## 이 파일의 역할
 
 > **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스
+
+---
+
+## 2026-05-01 세션 요약 — E-15 Block D Part 2 (단계 1 + 단계 2 부분 검증)
+
+### 환경변수 정리 (세션 초반, 일회성 조정)
+- vercel CLI 설치 + login → production env 검증
+- `vercel link --yes` 명령이 development env로 .env.local 덮어쓴 사고 발생 → production env 기준으로 즉시 재구성 (안전 복구)
+- .env.local을 스크린샷 스타일로 재디자인 (10개 섹션 한글 주석)
+- GROQ_API_KEY_2/_3에 Development 환경 추가 (꽃졔님 Vercel UI에서 수동 실행)
+- 결과: GROQ 3개 키 모두 Production+Preview+Development에 단일 entry로 통합 ✅ "Needs Attention" 9개 모두 해소
+
+### [단계 1 완료] score 일관성 버그 수정
+
+**진짜 원인** (Part 1에서 "PATCH의 shipping_template 잘못 계산 가능성"으로 잠정 진단했으나 실제로는 반대):
+- `DashboardProduct` 타입과 `loadProducts` 매핑에 `shippingTemplateId`/`images` 필드가 애초에 정의/매핑되지 않음
+- 위젯의 `calcUploadReadiness({ shippingTemplateId: (p as any).shippingTemplateId ?? ... })`가 항상 `undefined` 결과로 shippingPassed=false (-10점)
+- 반면 PATCH 핸들러는 prisma.product.update의 select에서 shipping_template_id를 정확히 가져와서 정상 점수 반영
+- → PATCH 적용 당시에는 "newScore=92"로 정답이지만, 위젯 reload가 -10점 잘못 계산해서 82점만 표시되는 현상
+- 차이 = shipping_template weight 10점 (Part 1 관찰결과와 일치)
+
+**수정 파일** (1곳만):
+- `src/app/dashboard/page.tsx` `DashboardProduct` interface에 `shippingTemplateId`/`images`/`shippingFee` 3개 필드 추가
+- `loadProducts` 내 매핑에 동일한 3개 필드 이제 포함
+- PATCH 핸들러 수정 불필요 (이미 정확했음)
+
+### [단계 2 부분 검증] 1개 카드 라이브 일관성 재검증
+
+수정 적용 후 대시보드 재로드 → 이전 Part 1에서 60→82점으로 갱신되었던 카드(무타공 두꺼비집가리개)가 **92점 (S등급)**으로 정상 표시 ✅. PATCH 응답의 newScore=92와 완벽 일치.
+
+동시에 "선물받은 특별한 일상" 카드(62점)에서 AI 채우기 모달 호출 → SEO 태그 12개 + 카테고리 매핑 제안 확인 → "2개 적용" 클릭 → done phase → 모달 자동 닫힘 → 위젯 재로드 → **86점 (A등급)** 갱신 직접 확인. PATCH newScore = 위젯 reload 점수 일치 ✅.
+
+평균 점수: 42 → 55 → **58** (두 카드 적용 이후)
+
+### 다음 채팅에서 진행할 작업 (상세는 KKOTIUM_ROADMAP.md 시작 메시지 참조)
+- 단계 2 나머지: 3개 DRAFT 카드 (52, 48, 48점)에서 자동 채우기 일괄 검증 → 평균 점수 최종 측정 (목표: 70+점)
+- 단계 3: Edge case 4개 검증
+- E-15 전체 완료 처리 + 다음 작업 후보 평가
 > 새 채팅 시작 시 **가장 먼저 읽는 파일**
 >
 > **새 채팅 시작 순서:**

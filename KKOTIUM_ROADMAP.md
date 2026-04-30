@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-04-30 (Phase E+ Sprint 6 — E-15 Block A+B+C ✅ + Block D Part 1 ✅ 1상품 라이브 검증 완료, Part 2 대기)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅, Part 2 ⏳ 8개 일괄 검증 + Edge case 4개 + score 일관성 마이크로 조정 대기)**
-> **다음 작업: E-15 Block D Part 2 (8개 DRAFT 일괄 검증 + Edge case 4개 + score 일관성 버그 수정) — 본 문서 하단의 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2용)" 섹션 그대로 복붙해서 사용**
+> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 단계 1 완료 + 단계 2 1개 카드 라이브 검증 완료)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1 ✅ + 단계 2 1개 카드 검증 ✅, 나머지 3개 카드 일괄 + Edge case 4개 대기)**
+> **다음 작업: E-15 Block D Part 2 나머지 (3개 DRAFT 카드 일괄 자동 채우기 + Edge case 4개) — 본 문서 하단의 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 나머지용)" 섹션 그대로 복붙해서 사용**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -11,6 +11,64 @@
 > - `스마트스토어 셀러의 무료 알림톡, 정말 가능한가` (Claude 리서치 2026-04-16)
 
 ---
+
+## 🎯 다음 새 채팅 시작 메시지 (E-15 Block D Part 2 나머지용 — 2026-05-01 갱신)
+
+> **Part 2 단계 1 + 단계 2 1개 카드 검증 ✅ 완료 (2026-05-01)**: score 일관성 버그 원인 정확 진단 + `src/app/dashboard/page.tsx` 수정. 이전 60→82점 카드가 92점으로 정상 표시 + 다른 카드 62→86점 적용 확인 (PATCH=Widget 일치 ✅). 상세는 PROGRESS.md "2026-05-01 세션 요약" 섹션 참조.
+>
+> **버그 원인 재해석**: ROADMAP에 적혀 있던 "PATCH가 shipping_template을 잘못 계산"은 잘못된 진단이었으며, 실제로는 반대로 PATCH가 정답이고 **위젯이 `DashboardProduct` 타입과 `loadProducts` 매핑에 `shippingTemplateId`/`images` 필드를 누락해서 잘못 계산**하고 있었음. 단일 파일 수정으로 해소 완료.
+>
+> **아래 코드 블록을 그대로 복붙해서 사용** — Part 2 나머지 = 단계 2 나머지 3개 카드 + 단계 3 Edge case 4개.
+
+```
+꽃틄움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md를 읽고
+E-15 Block D Part 2 나머지 (3개 DRAFT 카드 일괄 자동 채우기 + Edge case 4개) 작업을 시작해주세요.
+
+작업 시작 전 필수 (작업원칙 21+23+24 강화 적용):
+1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인
+   (b) git --no-pager log --oneline -10 → 이번 메시지의 명시되지 않은 commit 있으면 읽고 대응
+   (c) git status가 깨끗해야 함 (있으면 먼저 검토)
+   (d) 이 메시지의 가정과 실제가 다르면 즉시 정직 보고 후 재분석
+   (e) 본 세션 commit은 그 turn 안에서 push까지 한 줄로 완료
+2. KKOTIUM_PROGRESS.md "2026-05-01 세션 요약 — E-15 Block D Part 2" 섹션 정독 — 특히 [단계 1 완료] 세부 내용
+3. KKOTIUM_ROADMAP.md 본 섹션 재확인
+4. 관련 코드 파일 관찰:
+   - src/app/dashboard/page.tsx (Part 2 단계 1에서 수정 완료 — 참고용)
+   - src/components/dashboard/AutoFillModal.tsx (모달 UI)
+   - src/components/dashboard/UploadReadinessWidget.tsx (위젯 구조)
+   - src/app/api/upload-readiness/auto-fill/route.ts (POST/PATCH 핸들러 — 수정 불필요, 참고용)
+5. 작업 계획 브리핑 후 꽃제님 승인 받고 시작
+
+Part 2 나머지 작업 범위 (2단계):
+
+[단계 2 나머지] 3개 DRAFT 카드 일괄 검증 (코드 변경 없음, 라이브 검증만):
+현재 상태 (2026-05-01 세션 종료 당시) 평균 점수 = 58점. 다음 3개 카드 처리 계획:
+  - 인테리어 미니 가습기 사무실 탁상 가습기 (52점)
+  - 모나미 펭수 유성매직 둘근늿 24색 세트 (48점)
+  - 차량용 행빛가리개 자동차 (48점)
+  계획: AI 채우기 버튼 클릭 → SEO 태그/카테고리 매핑 제안 확인 → 적용 → 점수 갱신 확인
+  목표: 평균 점수 70+점 도달
+
+[단계 3] Edge case 4개 검증:
+- A) AI 답변 모두 검증 실패 → "자동 채우기 가능 항목 없음" 안내만 + manual 카드만
+- B) Manual-only만 남은 카드 → AI 채우기 버튼 숨김 (hasAnyAutofillable)
+- C) 체크박스 모두 해제 → 적용 버튼 비활성화 (totalSelected === 0)
+- D) 네트워크 오류 → phase=error 처리 + 닫기 가능
+
+완료 기준:
+- 평균 점수 70+점 도달 시 E-15 전체 완료 처리
+- PROGRESS.md/ROADMAP.md 업데이트 + commit + push (작업원칙 24번)
+- 다음 작업 후보 평가: E-1 빌더 AEO 강화 vs E-12 Discord 리뷰 알림 vs 다른 작업
+
+참고 (Chrome MCP 패턴):
+- AutoFillModal은 inline style (Tailwind 아님) — 셔렉터: getComputedStyle(d).position === 'fixed' && cs.zIndex === '1000'
+- AI 호출 비용 0원 (Groq 3키 합산 43,200/일)
+- 사용 모델 llama-3.1-8b-instant — 짧은 상품명은 name_length 재작성 검증 실패 가능 (알려진 이슈, 정상)
+```
+
+---
+
+## 📜 Part 2 전체 메시지 (참고용 보존 — deprecated, 위 "Part 2 나머지용" 메시지를 대신 사용)
 
 ## 🎯 다음 새 채팅 시작 메시지 (E-15 Block D Part 2용 — 2026-04-30 갱신)
 
@@ -293,7 +351,8 @@ Block D 라이브 검증 시나리오 (Chrome MCP):
 | **E-15 Block B** | ✅ | **자동 채우기 API 엔드포인트** | `src/app/api/upload-readiness/auto-fill/route.ts` (신규 347줄) | POST = 미리보기 (DB 동기적 변경 없음) → suggestions[] + unfillable[]. PATCH = 셀러 승인 항목만 DB 적용 → newScore 응답. PATCH 시점에 이중 검증 재실행 (containsAbuse + hasRepeat3Plus + length 25~50 + 카테고리 NAVER_CATEGORIES_FULL.some 포함). AUTOFILLABLE_ITEMS 화이트리스트 밖의 항목 자동 거부. 커밋 fd31dd4 |
 | **E-15 Block C** | ✅ | **AutoFillModal UI + 위젯 통합** | `src/components/dashboard/AutoFillModal.tsx` (신규), `src/components/dashboard/UploadReadinessWidget.tsx` (통합), `src/app/dashboard/page.tsx` (onRefresh 1줄) | 대시보드 위젯의 DRAFT 카드에 `Sparkles` 보라 버튼(`#7c3aed`) "AI 채우기" 추가. 클릭 → 모달 열림 → 4 phase (loading→ready→applying→done|error) 디스패치. ready phase 3섹션 (상품명 라디오 1개만 / 키워드·태그·카테고리 독립 체크박스 / Manual-only 도움 카드 deep-link). 적용 완료 시 점수 상승 표시 후 onApplied() → dashboard.handleRefresh() 트리거 → 위젯 자동 갱신. ready90 카드에는 AI 버튼 숨김, hasAnyAutofillable() 검사로 manual-only만 남은 카드도 숨김. 커밋 b2f9b4e |
 | **E-15 Block D Part 1** | ✅ | **1상품 라이브 검증 완료** | (수정 없음 — 라이브 검증) | Chrome MCP로 첫 DRAFT(60점, 무타공 두꺼비집가리개)에서 시나리오 1~6 통과. POST/PATCH/위젯 갱신/모달 자동 닫힘 정상. **발견된 버그**: PATCH newScore(92) ≠ 위젯 reload(82) 차이 10점 = shipping_template weight (Part 2에서 수정) |
-| **E-15 Block D Part 2** | ⏳ | **8개 일괄 + Edge case + 버그 수정** | src/app/api/upload-readiness/auto-fill/route.ts (버그 수정) | 단계 1 score 일관성 버그 수정 + 단계 2 8개 DRAFT 일괄 검증 (평균 42 → 70~80점 목표) + 단계 3 Edge case 4개. 상세는 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2용)" 참조 |
+| **E-15 Block D Part 2 단계 1** | ✅ | **score 일관성 버그 수정** | src/app/dashboard/page.tsx | DashboardProduct 타입 + loadProducts 매핑에 shippingTemplateId/images/shippingFee 3개 필드 추가. 위젯의 calcUploadReadiness가 정확한 데이터로 계산 → PATCH=Widget 일치. 2026-05-01 세션에서 1개 카드(무타공 두꺼비집가리개) 92점 정상 표시 + 1개 카드(선물받은 특별한 일상) 62→86점 적용 확인 |
+| **E-15 Block D Part 2 단계 2/3** | ⏳ | **3개 카드 일괄 + Edge case 4개** | (코드 변경 없음, 라이브 검증만) | 3개 DRAFT 카드 (52, 48, 48점) 자동 채우기 일괄 + 평균 점수 최종 측정 (목표: 70+점) + Edge case 4개 검증. 상세는 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 나머지용)" 참조 |
 
 **E-15 동작 흐름 (레퍼런스)**:
 ```
