@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 단계 1 완료 + 단계 2 1개 카드 라이브 검증 완료)
+> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 단계 2(3개 카드 일괄) + 단계 3(Edge case 4개) 모두 완료)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: (이번 commit으로 갱신)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1 ✅ + 단계 2 1개 카드 검증 ✅, 나머지 3개 카드 일괄 + Edge case 4개 대기)**
-> **다음 작업: E-15 Block D Part 2 나머지 (3개 DRAFT 카드 일괄 자동 채우기 + Edge case 4개)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 나머지용)" 섹션 참조
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2(누적 5개 카드)·3 ✅, 잔여 3개 카드 일괄 + 위젯 stat 평균 점수 점검 + E-15 전체 완료 처리 대기)**
+> **다음 작업: E-15 Block D Part 2 잔여 (3개 미적용 DRAFT 카드 일괄 + 위젯 stat strip 평균 점수 정정 + E-15 전체 완료 처리)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여용)" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -13,6 +13,67 @@
 ## 이 파일의 역할
 
 > **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스
+
+---
+
+## 2026-05-01 세션 요약 — E-15 Block D Part 2 후반 (단계 2 메인 + 단계 3 Edge case)
+
+### 세션 개요
+- 컨텍스트 안전 분할: 옵션 B (3개 카드 자동 채우기 + Edge case 4개 → 인계) 선택
+- 작업원칙 23번 적용: 시작 메시지의 가정("3개 카드 52/48/48점")과 실제 DB 상태(이미 적용 2개 + 미적용 6개) 차이 확인 후 정직 보고. 위젯 TOP 5 노출 기준의 3개 카드를 우선 처리하는 방향으로 합의
+- TSC 0 errors 유지, 코드 변경 없이 라이브 검증 + 코드 리뷰만 진행
+
+### [단계 2 메인] 3개 카드 일괄 자동 채우기 라이브 검증 ✅
+
+| # | 카드 | 적용 전 | 적용 후 | 증가 | 핵심 |
+|---|---|---|---|---|---|
+| 1 | 인테리어 미니 가습기 | 52 | **76** | +24 | 태그 12개 + 카테고리 50002542(디지털/가전 > 계절가전 > 가습기 > 가습기필터) 정확 매칭 ✅ |
+| 2 | 모나미 펭수 유성매직 둥근닙 24색 세트 | 48 | **84** | +36 | 상품명 재작성("매직"을 앞 15자로 재배치) + 키워드 8개 + 태그 12개 + 카테고리 50007329(여가/생활편의 > 예체능레슨 > 미술) — 정확도는 "주의" 등급, 셀러 검토 권장 |
+| 3 | 차량용 햇빛가리개 유리창 가림막 | 48 | **60** | +12 | 상품명 단축 + 키워드 8개. 카테고리는 50003307 → 50003307 동일 추천이라 점수 변동 없음(이슈 #2 참조) |
+
+**적용 합계**: 3개 카드, 총 점수 증가 +72점
+
+**핵심 관찰**:
+- AI 카테고리 추천 정확도 그라데이션: 가습기(완벽) > 모나미(수긍 가능) > 차량용(실패) — 합리적 분포
+- AI 태그가 "구매자 언어"를 정확히 추출(사무실용 / 탁상용 / 선물용 / 감각적 등)
+- PATCH=위젯 점수 일치 ✅ — Part 2 단계 1의 score 일관성 버그 수정이 정상 반영됨
+
+### [단계 3] Edge case 4개 검증 ✅
+
+| Case | 검증 방법 | 결과 | 상세 |
+|---|---|---|---|
+| **A** AI 답변 모두 검증 실패 | AutoFillModal.tsx line 372–390 명시적 분기 | ✅ PASS | `nameRelated.length===0 && otherSuggestions.length===0 && unfillable.length>0` 코드 존재. "AI 자동 채우기 가능 항목이 없습니다" 노란 바 + manual 카드만 렌더 |
+| **B** Manual-only만 남은 카드 | UploadReadinessWidget.tsx line 49–68 + 라이브 무타공 92점 행 검증 | ✅ PASS | `hasAnyAutofillable()` + `ready90` 이중 분기. 92점 카드에서 hasAI=false, hasDirect=false, hasRegister=true 실측 확인 |
+| **C** 체크박스 모두 해제 | AutoFillModal.tsx line 244, 547–568 코드 검증 | ✅ PASS | `disabled={totalSelected===0}` HTML 속성 + 회색 배경(#E5E7EB) + cursor not-allowed + 텍스트 "적용할 항목 선택"으로 변경 |
+| **D** 네트워크 오류 | line 197–225, 297–320 코드 + INVALID_ID API 호출 라이브 검증 | ✅ PASS | POST/PATCH 둘 다 try-catch → `setPhase('error')` + errorMsg 표시. Esc/배경 클릭/X 버튼으로 종료 가능. 라이브 응답: `{success:false, error:"상품을 찾을 수 없습니다."}` |
+
+### 발견된 미결 이슈 (다음 채팅 인계)
+
+**[이슈 #1] 위젯 stat strip 평균 점수 표시 지연**
+- 증상: 3개 카드 적용 후에도 stat strip의 "평균 점수"가 51점으로 고정 표시 (실제 8개 DRAFT 전체 평균은 약 64점이어야 함)
+- 원인 추정: UploadReadinessWidget.tsx의 `avgScore` 계산식(line ~830) 자체는 `unregistered.length` 기준으로 정확. 다만 `useMemo` 의존 배열 또는 dashboard handleRefresh → loadProducts → DashboardProduct 재구성 흐름에서 stat strip 재계산이 누락되거나 지연되는 것으로 보임
+- 영향: 셀러에게 "평균이 안 움직인다"로 보이는 코스메틱 이슈, 데이터 손실은 없음
+- 다음 채팅 점검 항목: (a) handleAutoFillApplied 이후 router.refresh() 또는 명시적 재계산 트리거 추가 검토 (b) DashboardProduct 객체의 변경 후 값을 console.log로 실측해 원인 파악
+
+**[이슈 #2] 카테고리 동일 추천 자동 거부 누락**
+- 증상: 차량용 햇빛가리개 케이스에서 AI가 `50003307 → 50003307`(현재값과 동일) 추천. PATCH는 수행되지만 점수 변동 없음 (셀러 입장에서 "적용했는데 카테고리 점수가 안 오른다"로 보임)
+- 원인 추정: AI가 적합한 다른 카테고리를 못 찾을 때 가장 일반적인 d1 코드를 반환 → 우연히 기본값과 일치
+- 개선 제안 1: POST 단계에서 `suggestion.after === product.naverCategoryCode`이면 suggestions에서 제외 (가장 깔끔)
+- 개선 제안 2: PATCH 단계에서 `update.naverCategoryCode === product.naverCategoryCode`이면 rejected에 push + reason="동일 코드 추천"
+- 권장: 두 단계 모두 적용 (이중 방어선)
+
+### 작업원칙 23·24 세션 내 실제 적용 기록
+- (a) 세션 시작 시 `git rev-parse HEAD origin/main = afe9d88` 동일 확인 ✅
+- (b) `git --no-pager log -10`에서 Part 1 후속 commit 확인 ✅
+- (c) `git status` 깨끗함 확인 ✅
+- (d) 시작 메시지 가정과 실제 DB 차이 정직 보고 → 옵션 선택 받고 진행 ✅
+- (e) 이전 채팅이 PROGRESS.md 수정 후 push 못 한 채 끊겼던 사례 발견 → git checkout으로 원복 후 깨끗한 버전으로 재작성 + 한 묶음 commit + push (작업원칙 24번 준수)
+
+### 다음 채팅에서 진행할 작업 (상세는 KKOTIUM_ROADMAP.md 참조)
+1. **잔여 3개 카드 일괄 자동 채우기**: 하트 리본 누빔 파자마(38점 추정) / 초강력 스텐 변기펌프(38점) / 리본 포인트 홈웨어 잠옷세트(38점)
+2. **위젯 stat strip 평균 점수 이슈 조사 및 수정** (이슈 #1)
+3. **카테고리 동일 자동 추천 거부 로직 추가** (이슈 #2)
+4. **E-15 전체 완료 처리** + 다음 작업 후보 평가 (E-1 빌더 AEO 강화 vs E-12 Discord 리뷰 알림)
 
 ---
 

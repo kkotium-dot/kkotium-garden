@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 단계 1 완료 + 단계 2 1개 카드 라이브 검증 완료)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1 ✅ + 단계 2 1개 카드 검증 ✅, 나머지 3개 카드 일괄 + Edge case 4개 대기)**
-> **다음 작업: E-15 Block D Part 2 나머지 (3개 DRAFT 카드 일괄 자동 채우기 + Edge case 4개) — 본 문서 하단의 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 나머지용)" 섹션 그대로 복붙해서 사용**
+> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 단계 2(3개 카드 일괄) + 단계 3(Edge case 4개) 모두 완료)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2(누적 5개 카드)·3 ✅, 잔여 3개 카드 일괄 + 이슈 #1·#2 수정 + E-15 전체 완료 처리 대기)**
+> **다음 작업: E-15 Block D Part 2 잔여 (3개 미적용 DRAFT 카드 일괄 + 위젯 stat strip 평균 점수 정정 + 카테고리 동일 추천 거부 + E-15 전체 완료 처리) — 본 문서 하단의 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여용)" 섹션을 그대로 복붙해서 사용**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -12,9 +12,86 @@
 
 ---
 
-## 🎯 다음 새 채팅 시작 메시지 (E-15 Block D Part 2 나머지용 — 2026-05-01 갱신)
+## 🎯 다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여용 — 2026-05-01 후반 갱신)
 
-> **Part 2 단계 1 + 단계 2 1개 카드 검증 ✅ 완료 (2026-05-01)**: score 일관성 버그 원인 정확 진단 + `src/app/dashboard/page.tsx` 수정. 이전 60→82점 카드가 92점으로 정상 표시 + 다른 카드 62→86점 적용 확인 (PATCH=Widget 일치 ✅). 상세는 PROGRESS.md "2026-05-01 세션 요약" 섹션 참조.
+> **Part 2 단계 2 메인 + 단계 3 Edge case ✅ 완료 (2026-05-01 후반 세션)**
+> - 단계 2: 3개 DRAFT 카드 자동 채우기 라이브 검증 — 인테리어 미니 가습기(52→76), 모나미 펭수 유성매직(48→84), 차량용 햇빛가리개(48→60) — 총 +72점 증가
+> - 단계 3: Edge case A·B·C·D 모두 PASS (코드 명시적 분기 확인 + 라이브)
+> - 상세는 PROGRESS.md "2026-05-01 세션 요약 — E-15 Block D Part 2 후반" 섹션 참조
+>
+> **발견된 미결 이슈 (본 채팅 아이템)**:
+> - 이슈 #1: 위젯 stat strip "평균 점수"가 51점으로 고정 표시 (실제 약 64점). avgScore 계산식은 정확하나 재계산/재렌더 지연 의심
+> - 이슈 #2: 카테고리 AI가 동일 코드(50003307→50003307) 추천 시 자동 거부 로직 누락. 셀러 혼란 원인
+>
+> **아래 코드 블록을 그대로 복붙해서 사용** — 잔여 = 3개 미적용 카드 + 이슈 #1·#2 수정 + E-15 전체 완료 처리.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md를 읽고
+E-15 Block D Part 2 잔여 (3개 미적용 DRAFT 카드 일괄 + 이슈 #1·#2 수정 + E-15 전체 완료 처리) 작업을 시작해주세요.
+
+작업 시작 전 필수 (작업원칙 21+23+24 강화 적용):
+1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인
+   (b) git --no-pager log --oneline -10 → 이번 메시지에 명시되지 않은 commit 있으면 읽고 대응
+   (c) git status가 깨끗해야 함 (있으면 먼저 검토)
+   (d) 이 메시지의 가정과 실제가 다르면 즉시 정직 보고 후 재분석
+   (e) 본 세션 commit은 그 turn 안에서 push까지 한 줄로 완료 (작업원칙 24번)
+2. KKOTIUM_PROGRESS.md "2026-05-01 세션 요약 — E-15 Block D Part 2 후반" 섹션 정독 — 특히 [이슈 #1] [이슈 #2] 세부 내용
+3. KKOTIUM_ROADMAP.md 본 섹션 재확인
+4. 관련 코드 파일 관찰:
+   - src/components/dashboard/UploadReadinessWidget.tsx (avgScore 계산 로직 확인, line ~830)
+   - src/app/dashboard/page.tsx (handleAutoFillApplied → handleRefresh 흐름 확인)
+   - src/app/api/upload-readiness/auto-fill/route.ts (POST/PATCH 둘 다 카테고리 동일 추천 거부 로직 추가 대상)
+   - src/lib/upload-readiness-filler.ts (autoFillCategory 로직 관찰, 수정은 route.ts 쪽이 깔끔)
+5. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
+
+[단계 1] 잔여 3개 카드 일괄 자동 채우기 (라이브 검증):
+  - 하트 리본 누빔 여성 파자마 세트 (38점 추정)
+  - 초강력 스텐 파워 변기건 펌프 일체형 (38점 추정)
+  - 리본 포인트 홈웨어 잠옷세트 (38점 추정)
+  계획: AI 채우기 버튼 클릭 → suggestions 확인 → 적용 → 점수 갱신 확인
+  목표: 8개 DRAFT 평균 점수 70+점 도달
+
+[단계 2] 이슈 #1 수정 — 위젯 stat strip 평균 점수 재계산 트리거:
+  증상: 3개 카드 적용 후에도 "평균 점수"가 51점으로 고정 표시
+  조사 단계:
+    1. dashboard/page.tsx의 handleAutoFillApplied → handleRefresh 흐름 추적
+    2. UploadReadinessWidget의 useMemo 의존 배열 검증
+    3. 필요 시 router.refresh() 또는 명시적 재계산 트리거 추가
+  검증: 적용 전후 stat strip 실시간 갱신 확인
+
+[단계 3] 이슈 #2 수정 — 카테고리 동일 추천 자동 거부:
+  이중 방어선 구현:
+    A) src/lib/upload-readiness-filler.ts autoFillCategory 안에서 suggestion.after === product.naverCategoryCode면 null 반환
+    B) src/app/api/upload-readiness/auto-fill/route.ts PATCH 핸들러에서 update.naverCategoryCode === product.naverCategoryCode면 rejected에 push, reason="동일 코드 추천"
+  검증: 차량용 카드 외에도 동일 입력 케이스로 null/rejected 나오는지 검증 (jest 없으면 라이브 API curl)
+
+[단계 4] E-15 전체 완료 처리:
+  완료 기준:
+    - 평균 점수 70+ 도달
+    - stat strip 실시간 갱신 정상
+    - 카테고리 동일 추천 거부 동작
+  마무리:
+    - PROGRESS.md와 ROADMAP.md E-15 전체 "✅ 완료" 자리에 기록
+    - 다음 작업 후보 결정 (E-1 빌더 AEO 강화 vs E-12 Discord 리뷰 알림)
+
+작업 분할 권장 (컨텍스트 한계 회피):
+  - 본 채팅: 단계 1 (3개 카드) + 단계 2 (이슈 #1 수정)까지
+  - 다음 채팅: 단계 3 (이슈 #2) + 단계 4 (E-15 완료 처리) + 다음 작업 결정
+  - 또는 단계별 종료 판단은 꽃졔님이 세션 중 지시
+
+참고 (Chrome MCP 패턴):
+- AutoFillModal은 inline style (Tailwind 아님) — 셀렉터: getComputedStyle(d).position === 'fixed' && cs.zIndex === '1000'
+- AI 호출 비용 0원 (Groq 3키 합산 43,200/일)
+- 사용 모델 llama-3.1-8b-instant — 짧은 상품명은 name_length 재작성 검증 실패 가능 (알려진 이슈, 정상)
+- DB ID 참고 (3개 잔여 카드):
+  · 하트 리본 누빔 파자마: cmn7984jx0005130klv0...
+  · 초강력 스텐 파워 변기펌프: cmn7984ff0001130kjfj...
+  · 리본 포인트 홈웨어: cmmvx028n0001jmv3vr8...
+```
+
+---
+
+## 📜 Part 2 나머지용 메시지 (참고용 보존 — deprecated, 위 "Part 2 잔여용" 메시지를 대신 사용)
 >
 > **버그 원인 재해석**: ROADMAP에 적혀 있던 "PATCH가 shipping_template을 잘못 계산"은 잘못된 진단이었으며, 실제로는 반대로 PATCH가 정답이고 **위젯이 `DashboardProduct` 타입과 `loadProducts` 매핑에 `shippingTemplateId`/`images` 필드를 누락해서 잘못 계산**하고 있었음. 단일 파일 수정으로 해소 완료.
 >
@@ -37,15 +114,15 @@ E-15 Block D Part 2 나머지 (3개 DRAFT 카드 일괄 자동 채우기 + Edge 
    - src/components/dashboard/AutoFillModal.tsx (모달 UI)
    - src/components/dashboard/UploadReadinessWidget.tsx (위젯 구조)
    - src/app/api/upload-readiness/auto-fill/route.ts (POST/PATCH 핸들러 — 수정 불필요, 참고용)
-5. 작업 계획 브리핑 후 꽃제님 승인 받고 시작
+5. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
 
 Part 2 나머지 작업 범위 (2단계):
 
 [단계 2 나머지] 3개 DRAFT 카드 일괄 검증 (코드 변경 없음, 라이브 검증만):
 현재 상태 (2026-05-01 세션 종료 당시) 평균 점수 = 58점. 다음 3개 카드 처리 계획:
   - 인테리어 미니 가습기 사무실 탁상 가습기 (52점)
-  - 모나미 펭수 유성매직 둘근늿 24색 세트 (48점)
-  - 차량용 행빛가리개 자동차 (48점)
+  - 모나미 펭수 유성매직 둥근닙 24색 세트 (48점)
+  - 차량용 햇빛가리개 자동차 (48점)
   계획: AI 채우기 버튼 클릭 → SEO 태그/카테고리 매핑 제안 확인 → 적용 → 점수 갱신 확인
   목표: 평균 점수 70+점 도달
 
@@ -352,7 +429,9 @@ Block D 라이브 검증 시나리오 (Chrome MCP):
 | **E-15 Block C** | ✅ | **AutoFillModal UI + 위젯 통합** | `src/components/dashboard/AutoFillModal.tsx` (신규), `src/components/dashboard/UploadReadinessWidget.tsx` (통합), `src/app/dashboard/page.tsx` (onRefresh 1줄) | 대시보드 위젯의 DRAFT 카드에 `Sparkles` 보라 버튼(`#7c3aed`) "AI 채우기" 추가. 클릭 → 모달 열림 → 4 phase (loading→ready→applying→done|error) 디스패치. ready phase 3섹션 (상품명 라디오 1개만 / 키워드·태그·카테고리 독립 체크박스 / Manual-only 도움 카드 deep-link). 적용 완료 시 점수 상승 표시 후 onApplied() → dashboard.handleRefresh() 트리거 → 위젯 자동 갱신. ready90 카드에는 AI 버튼 숨김, hasAnyAutofillable() 검사로 manual-only만 남은 카드도 숨김. 커밋 b2f9b4e |
 | **E-15 Block D Part 1** | ✅ | **1상품 라이브 검증 완료** | (수정 없음 — 라이브 검증) | Chrome MCP로 첫 DRAFT(60점, 무타공 두꺼비집가리개)에서 시나리오 1~6 통과. POST/PATCH/위젯 갱신/모달 자동 닫힘 정상. **발견된 버그**: PATCH newScore(92) ≠ 위젯 reload(82) 차이 10점 = shipping_template weight (Part 2에서 수정) |
 | **E-15 Block D Part 2 단계 1** | ✅ | **score 일관성 버그 수정** | src/app/dashboard/page.tsx | DashboardProduct 타입 + loadProducts 매핑에 shippingTemplateId/images/shippingFee 3개 필드 추가. 위젯의 calcUploadReadiness가 정확한 데이터로 계산 → PATCH=Widget 일치. 2026-05-01 세션에서 1개 카드(무타공 두꺼비집가리개) 92점 정상 표시 + 1개 카드(선물받은 특별한 일상) 62→86점 적용 확인 |
-| **E-15 Block D Part 2 단계 2/3** | ⏳ | **3개 카드 일괄 + Edge case 4개** | (코드 변경 없음, 라이브 검증만) | 3개 DRAFT 카드 (52, 48, 48점) 자동 채우기 일괄 + 평균 점수 최종 측정 (목표: 70+점) + Edge case 4개 검증. 상세는 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 나머지용)" 참조 |
+| **E-15 Block D Part 2 단계 2** | ✅ | **3개 카드 일괄 자동 채우기 라이브 검증** | (코드 변경 없음, 라이브 검증만) | 인테리어 미니 가습기 52→76 (+24) / 모나미 펭수 유성매직 48→84 (+36, 상품명 재작성도 검증) / 차량용 햇빛가리개 48→60 (+12). 총 +72점. AI 카테고리 추천 정확도 그라데이션: 완벽 > 수긍 > 실패 합리적. PATCH=위젯 점수 일치 ✅ — 단계 1 버그 수정 정상 반영 |
+| **E-15 Block D Part 2 단계 3** | ✅ | **Edge case 4개 검증** | (코드 변경 없음, 코드 리뷰 + 라이브 검증) | A) AI 답변 모두 검증 실패 — AutoFillModal.tsx line 372–390 명시적 분기 ✅ PASS / B) Manual-only만 남은 카드 — hasAnyAutofillable + ready90 이중분기, 무타공 92점 행 라이브 검증 ✅ / C) 체크박스 모두 해제 — disabled + 회색 + cursor not-allowed ✅ / D) 네트워크 오류 — try-catch + setPhase('error'), Esc/배경/X로 종료 가능, INVALID_ID 라이브 검증 ✅ |
+| **E-15 Block D Part 2 잔여** | ⏳ | **3개 미적용 카드 + 이슈 #1·#2 수정 + E-15 완료 처리** | UploadReadinessWidget.tsx · dashboard/page.tsx · upload-readiness-filler.ts · auto-fill/route.ts | 이슈 #1: 위젯 stat strip "평균 점수" 51점 고정 표시 (실제 약 64점) — 재계산/재렌더 지연 의심. 이슈 #2: 카테고리 AI가 동일 코드(50003307→50003307) 추천 시 거부 로직 누락. 상세는 상단 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여용)" 섹션 참조 |
 
 **E-15 동작 흐름 (레퍼런스)**:
 ```
