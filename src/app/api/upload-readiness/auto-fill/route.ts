@@ -173,6 +173,20 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Issue #2 fix (2026-05-01): Fetch current product state to detect same-code
+    // category recommendations. Without this, an AI suggestion that happens to match
+    // the seller's current category would be applied with no readiness score change.
+    const currentProduct = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { naverCategoryCode: true },
+    });
+    if (!currentProduct) {
+      return NextResponse.json(
+        { success: false, error: '상품을 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
+
     // Build update payload — strict whitelist by itemId, validation re-applied
     const update: Record<string, unknown> = {};
     const applied: AutoFillableItemId[] = [];
@@ -271,6 +285,14 @@ export async function PATCH(request: NextRequest) {
           const code = a.value.trim();
           if (!code || code === '50003307') {
             rejected.push({ itemId: a.itemId, reason: 'empty or default category' });
+            break;
+          }
+          // Issue #2 second-line defense (2026-05-01): Reject same-code recommendation.
+          // The library autoFillCategory already filters this, but PATCH receives raw
+          // payload which could be tampered or stale (e.g. seller editing category in
+          // another tab between POST and PATCH).
+          if (code === currentProduct.naverCategoryCode) {
+            rejected.push({ itemId: a.itemId, reason: '현재 카테고리와 동일한 코드 거부' });
             break;
           }
           // Final defense: ensure code exists in NAVER_CATEGORIES_FULL

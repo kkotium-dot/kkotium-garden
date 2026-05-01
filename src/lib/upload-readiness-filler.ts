@@ -521,17 +521,39 @@ ${d1List.join(' / ')}
     .sort((a, b) => b.s - a.s);
 
   const best = sorted[0];
+
+  // Issue #5 fix (2026-05-01): Reject d1-level fallback when no confident d2/d3 match.
+  // Previous behavior picked the first d3 of d1 candidates, which produced nonsensical
+  // mappings (toilet pump -> DVD/documentary, women pajamas -> men underwear/running).
+  // Better to leave category empty and let seller pick manually than suggest a wrong one.
   if (!best || best.s < 50) {
-    // No confident match → low-confidence d1-level guess
-    const fallback = candidates.find(c => c.d3) ?? candidates[0];
-    return {
-      itemId: 'category',
-      before: input.naverCategoryCode ?? null,
-      after: fallback.code,
-      reason: `${reason || 'AI 추천'} — 정확한 d2/d3 매칭이 없어 d1 단위 추천 (${fallback.fullPath}). 셀러 직접 검토 권장.`,
-      confidence: 'low',
-      provider,
-    };
+    return null;
+  }
+
+  // Issue #2 fix (2026-05-01): Reject when AI recommends the same code as current.
+  // A non-default code that happens to equal the current one provides no value to the
+  // seller and inflates the applied count without changing the score.
+  if (input.naverCategoryCode && best.entry.code === input.naverCategoryCode) {
+    return null;
+  }
+
+  // Issue #5 extra defense (2026-05-01): Reject when the matched category name has no
+  // token overlap with the product name. AI may have hallucinated a d2/d3 path that
+  // happens to score >= 50 by coincidence (e.g. shared common syllables), but the actual
+  // category content is unrelated to the product.
+  const lowerName = currentName.toLowerCase();
+  const matchedCategoryText = `${best.entry.d2} ${best.entry.d3 ?? ''} ${best.entry.d4 ?? ''}`.toLowerCase();
+  const productTokens = lowerName.split(/[\s/,()-]+/).filter(t => t.length >= 2);
+  const hasAnyOverlap = productTokens.some(token =>
+    matchedCategoryText.includes(token) || token.includes(best.entry.d2.toLowerCase())
+  );
+  // Also accept if AI's reasoning explicitly mentions a key category word
+  const reasonHasCategoryHint = reason && (
+    reason.includes(best.entry.d2) ||
+    (best.entry.d3 && reason.includes(best.entry.d3))
+  );
+  if (!hasAnyOverlap && !reasonHasCategoryHint && best.s < 90) {
+    return null;
   }
 
   const confidence: AutoFillSuggestion['confidence'] =

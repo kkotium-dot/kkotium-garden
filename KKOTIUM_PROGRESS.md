@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여 3개 카드 적용 투입 완료 + 이슈 #1 자연 해소 검증 + 이슈 #4 수정 + 이슈 #5 발견)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: de239b0 (docs E-15 Part 2 마무리 이슈 #3 인계) + (본 마무리 commit으로 갱신)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2(누적 8개 카드 모두 적용)·3 ✅ + 이슈 #4 위젯 노출 수정 ✅, 이슈 #2+#5 카테고리 거부 로직 + 이슈 #3 점검 + E-15 전체 완료 처리 대기)**
-> **다음 작업: E-15 Block D Part 2 잔여 (이슈 #2+#5 통합 수정 + 이슈 #3 점검 + E-15 전체 완료 처리)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·2용)" 섹션 참조
+> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여·2 완료 — 이슈 #2+#5 카테고리 거부 로직 이중 방어선 라이브 검증 + 신규 이슈 #6 발견 인계)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: a5d7b37 (E-15 Part 2 잔여 1차) + (본 마무리 commit으로 갱신)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2·3 ✅ + 이슈 #4 ✅ + 이슈 #1 자연 해소 ✅ + 잔여·2 이슈 #2+#5 거부 로직 ✅, 이슈 #3 점검 + 이슈 #6 카테고리 추천 정확도 + E-15 전체 완료 처리 대기)**
+> **다음 작업: E-15 Block D Part 2 잔여·3 (이슈 #3 ready90 점검 + 이슈 #6 카테고리 추천 정확도 개선 + E-15 전체 완료 처리)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·3용)" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -12,7 +12,34 @@
 >   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
 ## 이 파일의 역할
 
-> **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스
+> **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스 (세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md 참조)
+
+---
+
+## 2026-05-01 세션 요약 — E-15 Block D Part 2 잔여·2 (이슈 #2+#5 거부 로직 이중 방어선 + 이슈 #6 신규 발견)
+
+> 자세한 세션 기록은 **KKOTIUM_SESSION_LOG.md 최상단** 참조.
+
+### 주요 성과
+- **이슈 #2 차단 성공**: src/lib/upload-readiness-filler.ts autoFillCategory + src/app/api/upload-readiness/auto-fill/route.ts PATCH 이중 방어선 구축. 동일 코드(50003307→50003307) 추천 차단 라이브 검증
+- **이슈 #5 차단 성공**: d1 fallback 무차별 카테고리 반환 폐기 + token overlap 검증 추가. DVD/교양(변기펌프), 남성언더웨어(여성잠옷) 같은 말도 안 되는 매칭 차단
+- **TSC 0 errors** 유지
+
+### 이슈 #6 신규 발견 (다음 세션 주 작업)
+- 증상: 홈웨어 잠옷세트/파자마 카드에서 AI가 50021261(여성의류>니트>베스트) 추천. 차단 로직을 통과했으나 잠옷 상품을 여성 조끼로 매핑한 부적합 결과
+- 원인: AI 프롬프트의 카테고리 설명 부족 (잠옷/홈웨어 vs 니트 텍스처 구분 안 됨)
+- 우선순위: 다음 세션 주 작업 적합 (AI 추천 정확도 향상, 상적 통과 에러와는 성격 다름)
+- 개선 방안: 프롬프트 강화 + few-shot 예시 + d3 substring 일치 가중치 투증
+
+### 이번 세션 작업원칙 25번 신설
+- macOS NFC/NFD 정규화 차이로 edit_file 매칭 실패 발생 → Python 수동 정규화 시도 중 ~2,000줄 삭제 사고 발생 (git restore로 복구). 세부 대응은 작업원칙 25번 참조
+
+### 다음 세션에서 진행할 작업 (잔여·3)
+1. 이슈 #6 카테고리 추천 정확도 개선 (주 작업)
+2. 이슈 #3 ready90 카드 AI 버튼 점검 (선택, 코스메틱)
+3. E-15 전체 완료 처리 + 다음 작업 후보 평가
+
+자세한 인계 메시지는 KKOTIUM_ROADMAP.md "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·3용)" 섹션 참조.
 
 ---
 
@@ -376,6 +403,7 @@
 22. **AI 자동 채우기 라이브러리의 검증은 PATCH 검증과 일치시키기** — 라이브러리가 제안한 값이 PATCH에서 다시 거부되면 셀러 경험 나빨. 예: tags_count에 PATCH가 10개 이상 요구하면 라이브러리도 merged 10개 미만 시 null 반환
 23. **새 채팅 메시지의 "현재 HEAD/commits 가정"을 의심하라** — user 메시지에 "HEAD = X, N commits 상태" 같은 가정이 적혀 있어도 그 정보는 직전 세션 작성 시점 기준이라 현재 origin/main 과 다를 수 있음. 새 채팅 시작 즉시 **(a) `git rev-parse HEAD origin/main`로 실제 HEAD 확인 → (b) `git --no-pager log --oneline -10`로 user 메시지에 명시되지 않은 commit이 있는지 확인 → (c) user 가정과 실제가 다르면 즉시 정직 보고하고 작업을 다시 분석한 후 진행**. (E-15 두 채팅 연속 발생: Block A+B 세션에서 첫 번째, Block C 시작 채팅에서도 두 번째 발생. 두 번째 채팅에서는 user가 "HEAD = 0694982, 10 commits"로 적었으나 실제는 b6e6da3 + Block A+B+C 완료된 16 commits 상태였음. 다행히 write_file이 중간에 끊어져 손실 없이 멈춤)
 24. **Block 단위 작업 진행 시 매 commit + push를 한 묶음으로 끝내기** — 컨텍스트 한계 직전에 user에게 마무리 보고를 받아 새 채팅으로 인계되더라도, 마지막 commit이 push까지 완료되지 않으면 다음 채팅의 git log에서 보이지 않아 작업원칙 21·23 트랩에 빠짐. 따라서 **commit한 그 turn 안에서 반드시 push까지 한 줄 명령으로 끝낸다**: `git add ... && git commit -m "..." && git push origin main`. 절대 commit 후 "다음 turn에 push"로 미루지 않음
+25. **한글 NFC/NFD 정규화 트랩 대응** — macOS 파일 시스템은 한글을 NFD로 저장하는 경우가 있는데, edit_file/iterm 입력은 NFC로 들어가서 byte 매칭 실패가 빈번. **절대 Python으로 수동 NFC 정규화 시도 금지** (split/재조립 과정에서 파일 대규모 손실 사고 발생, 2026-05-01 잔여·2 세션에서 ~2,000줄 삭제됨, git restore로 복구). 매칭 실패 시: (a) git restore로 깨끗한 원본 회복, (b) edit_file의 newText에 한글 직접 입력(unicode escape \uXXXX는 NFD와 불일치 위험), (c) 한 번에 50줄 이상 변경 금지. 세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md에 작성, PROGRESS.md/ROADMAP.md는 핵심 요약만 유지
 ```
 
 ### UI 작성 원칙 (2026-04-13 확정)
