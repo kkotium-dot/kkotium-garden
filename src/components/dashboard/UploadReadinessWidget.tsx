@@ -1,11 +1,13 @@
 'use client';
-// UploadReadinessWidget — Phase E+ Sprint 4 / E-14 + Sprint 6 / E-15 Block C
+// UploadReadinessWidget — Phase E+ Sprint 4 / E-14 + Sprint 6 / E-15 Block C+D Part 2
 // Surfaces DRAFT products with their 11-point readiness score on the dashboard,
 // turning the existing upload-readiness library into an actionable command center.
-// - Lists top 5 unregistered products sorted by readiness score
+// - Lists unregistered products sorted by score ASCENDING (lowest first = most work-needed at top)
+// - Shows up to 8 cards so all DRAFT cards are visible in one screen for solo sellers
 // - Each card shows missing items as clickable chips (deep-link to seed-planting tabs)
 // - Items at 90+ get a "register now" CTA that takes user to garden warehouse with the product preselected
 // - E-15: Each card under 90 also has an "AI auto-fill" button that opens AutoFillModal
+// - 2026-05-01 Part 2 issue #4 fix: ascending sort + slice(0, 8) ensures unfilled DRAFTs are always reachable from widget
 
 import { useMemo, useState } from 'react';
 import {
@@ -335,10 +337,11 @@ export default function UploadReadinessWidget({
           shippingFee: (p as any).shippingFee ?? 3000,
         }),
       }))
-      .sort((a, b) => b.readiness.score - a.readiness.score);
+      // ascending sort: lowest-score (most work-needed) cards appear first
+      .sort((a, b) => a.readiness.score - b.readiness.score);
   }, [products]);
 
-  const top5         = ranked.slice(0, 5);
+  const visibleCards = ranked.slice(0, 8);
   const readyCount   = ranked.filter((r) => r.readiness.score >= 90).length;
   const workCount    = ranked.length - readyCount;
   const avgScore     = ranked.length === 0
@@ -506,7 +509,7 @@ export default function UploadReadinessWidget({
             gap: 6,
           }}
         >
-          {top5.map(({ product, readiness }) => (
+          {visibleCards.map(({ product, readiness }) => (
             <ProductRow
               key={product.id}
               product={product}
@@ -516,8 +519,8 @@ export default function UploadReadinessWidget({
           ))}
         </div>
 
-        {/* Footer hint — only when there are more than 5 */}
-        {ranked.length > 5 && (
+        {/* Footer hint — only when there are more than 8 */}
+        {ranked.length > 8 && (
           <div
             style={{
               padding: '10px 20px',
@@ -529,7 +532,7 @@ export default function UploadReadinessWidget({
             }}
           >
             <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>
-              DRAFT 상품 {ranked.length}개 중 상위 5개 표시 중
+              DRAFT 상품 {ranked.length}개 중 작업 필요한 상위 8개 표시 중
             </p>
             <Link
               href="/products"

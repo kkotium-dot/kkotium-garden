@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 단계 2(3개 카드 일괄) + 단계 3(Edge case 4개) 모두 완료 + 이슈 #3 문서화)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2(누적 5개 카드)·3 ✅, 잔여 3개 카드 일괄 + 이슈 #1·#2·#3 수정 + E-15 전체 완료 처리 대기)**
-> **다음 작업: E-15 Block D Part 2 잔여 (3개 미적용 DRAFT 카드 일괄 + 이슈 #1 위젯 stat strip 평균 점수 정정 + 이슈 #2 카테고리 동일 추천 거부 + 이슈 #3 ready90 AI 버튼 재표시 점검 + E-15 전체 완료 처리) — 본 문서 하단의 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여용)" 섹션을 그대로 복붙해서 사용**
+> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여 3개 카드 적용 투입 완료 + 이슈 #1 자연 해소 검증 + 이슈 #4 수정 ✅ + 이슈 #5 발견)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2(누적 8개 카드 적용)·3 ✅ + 이슈 #4 ✅, 이슈 #2+#5 카테고리 거부 + 이슈 #3 점검 + E-15 전체 완료 처리 대기)**
+> **다음 작업: E-15 Block D Part 2 잔여·2 (이슈 #2+#5 통합 수정 + 이슈 #3 점검 + E-15 전체 완료 처리) — 본 문서 하단의 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·2용)" 섹션을 그대로 복붙해서 사용**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -11,6 +11,95 @@
 > - `스마트스토어 셀러의 무료 알림톡, 정말 가능한가` (Claude 리서치 2026-04-16)
 
 ---
+
+## 🎯 다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·2용 — 2026-05-01 마지막 갱신)
+
+> **잔여 3개 카드 적용 투입 + 이슈 #1 검증 + 이슈 #4 수정 ✅ 완료 (2026-05-01 마지막 세션)**
+> - 단계 A 완료: 잔여 3개 DRAFT 카드 자동 채우기 라이브 검증 — 하트 리본(40→50), 초강력 스텐(48→70, 상품명 재작성됨), 리본 포인트 홈웨어(48→80) — 8개 DRAFT 평균 67→**75점** 달성
+> - 단계 B 완료: 이슈 #1 "stat strip 51점 고정"은 자연 해소 (실제 라이브 세션 시작 시점 67점 → 적용 시 자동 갱신 정상) — 코드 수정 불필요
+> - 이슈 #4 (신규 발견 + 수정 ✅): 위젯 정렬을 점수 낮은 순(ASC) + 한도를 slice(0, 8)로 수정. 미적용 카드 노출 보장 (UploadReadinessWidget.tsx)
+> - 상세는 PROGRESS.md "2026-05-01 세션 요약 — E-15 Block D Part 2 잔여" 섹션 참조
+>
+> **남은 미결 이슈**:
+> - **이슈 #2** — 카테고리 AI가 동일 코드(예: 50003307→50003307) 추천 시 자동 거부 로직 누락
+> - **이슈 #5** (신규) — 카테고리 d1 fallback 부적합 매칭. 예: 변기펌프→"DVD/교양/다큐멘터리", 여성잠옷→"남성언더웨어/러닝". AI reasoning 의도와 실제 after 코드가 무관한 d1 자식으로 매핑됨
+> - **이슈 #3** — ready90 카드 AI 버튼 일시 재표시 정황 (코스메틱)
+>
+> **이슈 #2와 #5는 단일 수정으로 통합 해결 권장** — 둘 다 카테고리 거부 로직이 핵심. POST + PATCH 이중 방어선으로 한 번에 해결.
+>
+> **아래 코드 블록을 그대로 복붙해서 사용**.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md를 읽고
+E-15 Block D Part 2 잔여·2 (이슈 #2+#5 카테고리 거부 통합 수정 + 이슈 #3 점검 + E-15 전체 완료 처리) 작업을 시작해주세요.
+
+작업 시작 전 필수 (작업원칙 21+23+24 강화 적용):
+1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인
+   (b) git --no-pager log --oneline -10 → 이번 메시지에 명시되지 않은 commit 있으면 읽고 대응
+   (c) git status가 깨끗해야 함 (있으면 먼저 검토)
+   (d) 이 메시지의 가정과 실제가 다르면 즉시 정직 보고 후 재분석
+   (e) 본 세션 commit은 그 turn 안에서 push까지 한 줄로 완료 (작업원칙 24번)
+2. KKOTIUM_PROGRESS.md "2026-05-01 세션 요약 — E-15 Block D Part 2 잔여" 섹션 정독 — 특히 [이슈 #5 신규 발견] 섹션
+3. KKOTIUM_ROADMAP.md 본 섹션 재확인
+4. 관련 코드 파일 관찰:
+   - src/lib/upload-readiness-filler.ts (autoFillCategory 함수 — 이슈 #2+#5 1차 방어선)
+   - src/app/api/upload-readiness/auto-fill/route.ts (POST 결과 필터 + PATCH update 검증 — 이슈 #2+#5 2차 방어선)
+   - src/components/dashboard/UploadReadinessWidget.tsx (이슈 #3 점검용, ProductRow rendering condition)
+   - src/app/dashboard/page.tsx (이슈 #3 점검용, handleAutoFillApplied 흐름)
+5. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
+
+[단계 1] 이슈 #2+#5 통합 수정 — 카테고리 거부 로직 이중 방어선:
+  A) src/lib/upload-readiness-filler.ts autoFillCategory:
+     - 케이스 #1 (이슈 #2): suggestion.after === product.naverCategoryCode → null 반환
+     - 케이스 #2 (이슈 #5): AI reasoning에 "d1 단위", "정확한 d2/d3 매칭이 없" 포함되거나, NAVER_CATEGORIES_FULL에서 fallback 코드의 카테고리명 키워드(예: "DVD", "남성언더웨어")가 product.name 키워드와 명백히 무관한 경우 null 반환
+  B) src/app/api/upload-readiness/auto-fill/route.ts PATCH 핸들러:
+     - update.naverCategoryCode === product.naverCategoryCode → rejected.push({reason: "동일 코드 추천 거부"})
+     - PATCH도 reasoning 또는 카테고리명 부적합 검증 (POST에서 빠질 수 있는 변형 케이스 대비)
+  C) 라이브 검증 (curl 또는 Chrome MCP):
+     - 차량용 햇빛가리개 카드 (현재 카테고리 50003307 — 이슈 #2 재현)
+     - 초강력 스텐 변기펌프 카드 (DVD/교양 fallback 재현 가능)
+     - 리본 포인트 홈웨어 카드 (남성언더웨어/러닝 fallback 재현 가능)
+     - 세 케이스 모두 카테고리 항목이 unfillable로 거부되고 다른 항목은 정상 제안되는지 확인
+
+[단계 2] 이슈 #3 점검 (선택적, 코스메틱):
+  증상: 92점 S등급 카드에서 AI 채우기 버튼이 일시적으로 재표시되는 순간 포착
+  점검:
+    1. UploadReadinessWidget.tsx ProductRow의 hasAnyAutofillable && !ready90 조건 평가 시점 검토
+    2. handleAutoFillApplied → handleRefresh → loadProducts 흐름에서 stale prop 일시 사용 여부 확인
+    3. 필요 시 useMemo 의존 배열에 product.id+score+completedItems 추가
+  우선순위: 낮음 — 데이터 손실 없음, 이슈 #2+#5 수정 후 여유 있을 때
+
+[단계 3] E-15 전체 완료 처리:
+  완료 기준:
+    - 카테고리 거부 로직 라이브 검증 통과
+    - 평균 점수 75점 유지 (적용 카드 변동 없음)
+    - 이슈 #3 점검 결과 기록
+  마무리:
+    - PROGRESS.md와 ROADMAP.md E-15 전체 "✅ 완료" 자리에 기록 + 헤더 갱신
+    - 다음 작업 후보 결정 (E-1 빌더 AEO 강화 vs E-12 Discord 리뷰 알림 vs 다른 작업)
+    - 새 채팅 시작 메시지 신규 작성
+
+[단계 4 — 선택적] stat strip 정확도 부가 점검:
+  - 현재 75점 도달 상태에서 셀러 인지 부담을 줄이는 부가 정보 검토 (예: "등록 가능 임계 90점까지 N점" 표시)
+  - 우선순위: 낮음, E-15 완료 처리 후 여유 시
+
+작업 분할 권장 (컨텍스트 한계 회피):
+  - 본 채팅: 단계 1 (이슈 #2+#5 통합 수정) + 단계 3 (E-15 완료 처리) + 새 인계 메시지 작성
+  - 단계 2 (이슈 #3 점검)는 필요 시 별도 채팅으로
+  - 단계 4 (stat strip 부가 정보)는 다음 작업 결정 후 별도 진행
+
+참고 (Chrome MCP 패턴 + 주의사항):
+- AutoFillModal은 inline style (Tailwind 아님) — 셀렉터: getComputedStyle(d).position === 'fixed' && cs.zIndex === '1000'
+- AI 호출 비용 0원 (Groq 3키 합산 43,200/일)
+- 사용 모델 llama-3.1-8b-instant — 짧은 상품명은 name_length 재작성 검증 실패 가능 (알려진 이슈, 정상)
+- 작업원칙 18번 보강: filesystem:edit_file에서 한글 unicode escape (\uXXXX) 사용 시 모음/받침 미세 깨짐 패턴 발견 — 한글 직접 입력 권장
+- 8개 DRAFT 모두 적용된 상태 — 다음 채팅에서는 "새로운 미적용 카드"가 없음. 이슈 #2+#5 검증은 기존 적용 카드의 카테고리 재추천을 다시 트리거해서 진행
+- 코드 수정 후 반드시 `npx tsc --noEmit` 실행해서 0 errors 확인 (작업원칙 5번)
+```
+
+---
+
+## 📜 Part 2 잔여용 메시지 (참고용 보존 — deprecated, 위 "잔여·2용" 메시지를 대신 사용)
 
 ## 🎯 다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여용 — 2026-05-01 후반 갱신)
 
@@ -440,7 +529,8 @@ Block D 라이브 검증 시나리오 (Chrome MCP):
 | **E-15 Block D Part 2 단계 1** | ✅ | **score 일관성 버그 수정** | src/app/dashboard/page.tsx | DashboardProduct 타입 + loadProducts 매핑에 shippingTemplateId/images/shippingFee 3개 필드 추가. 위젯의 calcUploadReadiness가 정확한 데이터로 계산 → PATCH=Widget 일치. 2026-05-01 세션에서 1개 카드(무타공 두꺼비집가리개) 92점 정상 표시 + 1개 카드(선물받은 특별한 일상) 62→86점 적용 확인 |
 | **E-15 Block D Part 2 단계 2** | ✅ | **3개 카드 일괄 자동 채우기 라이브 검증** | (코드 변경 없음, 라이브 검증만) | 인테리어 미니 가습기 52→76 (+24) / 모나미 펭수 유성매직 48→84 (+36, 상품명 재작성도 검증) / 차량용 햇빛가리개 48→60 (+12). 총 +72점. AI 카테고리 추천 정확도 그라데이션: 완벽 > 수긍 > 실패 합리적. PATCH=위젯 점수 일치 ✅ — 단계 1 버그 수정 정상 반영 |
 | **E-15 Block D Part 2 단계 3** | ✅ | **Edge case 4개 검증** | (코드 변경 없음, 코드 리뷰 + 라이브 검증) | A) AI 답변 모두 검증 실패 — AutoFillModal.tsx line 372–390 명시적 분기 ✅ PASS / B) Manual-only만 남은 카드 — hasAnyAutofillable + ready90 이중분기, 무타공 92점 행 라이브 검증 ✅ / C) 체크박스 모두 해제 — disabled + 회색 + cursor not-allowed ✅ / D) 네트워크 오류 — try-catch + setPhase('error'), Esc/배경/X로 종료 가능, INVALID_ID 라이브 검증 ✅ |
-| **E-15 Block D Part 2 잔여** | ⏳ | **3개 미적용 카드 + 이슈 #1·#2·#3 + E-15 완료 처리** | UploadReadinessWidget.tsx · dashboard/page.tsx · upload-readiness-filler.ts · auto-fill/route.ts | 이슈 #1: 위젯 stat strip "평균 점수" 51점 고정 표시 (실제 약 64점) — 재계산/재렌더 지연 의심. 이슈 #2: 카테고리 AI가 동일 코드(50003307→50003307) 추천 시 거부 로직 누락. 이슈 #3: ready90 92점 카드에서 AI 채우기 버튼 일시적 재표시 정황 (코스메틱). 상세는 상단 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여용)" 섹션 참조 |
+| **E-15 Block D Part 2 잔여 (1차)** | ✅ | **잔여 3개 카드 적용 투입 완료 + 이슈 #1 자연 해소 + 이슈 #4 위젯 노출 수정** | UploadReadinessWidget.tsx (정렬 ASC + slice 8) | 라이브 검증: 하트 리본(40→50), 초강력 스텐(48→70 상품명 재작성됨), 리본 포인트 홈웨어(48→80) — 8개 DRAFT 평균 67→**75점**. 이슈 #1 자연 해소 (실제 67점 시작 → 자동 갱신 정상). 이슈 #4 신규 발견: 위젯 정렬 점수 높은순(DESC) + slice(0,5)로 잔여 미적용 카드 노출 안 됨 → ASC + slice(0,8)로 수정. 상세는 PROGRESS.md "2026-05-01 세션 요약 — E-15 Block D Part 2 잔여" 참조 |
+| **E-15 Block D Part 2 잔여·2** | ⏳ | **이슈 #2+#5 통합 수정 + 이슈 #3 점검 + E-15 완료 처리** | upload-readiness-filler.ts (autoFillCategory 1차 방어선) · auto-fill/route.ts (PATCH 2차 방어선) · UploadReadinessWidget.tsx + dashboard/page.tsx (이슈 #3 점검) | 이슈 #2: AI가 동일 코드(예: 50003307→50003307) 추천 시 거부 로직 누락. 이슈 #5 (신규): 카테고리 d1 fallback 부적합 매칭 (변기펌프→DVD/교양, 여성잠옷→남성언더웨어/러닝). 두 이슈 모두 카테고리 거부 로직이 핵심이라 통합 해결 권장 (POST + PATCH 이중 방어선). 이슈 #3 ready90 AI 버튼 일시 재표시는 코스메틱이라 선택적. 상세는 상단 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·2용)" 섹션 참조 |
 
 **E-15 동작 흐름 (레퍼런스)**:
 ```
