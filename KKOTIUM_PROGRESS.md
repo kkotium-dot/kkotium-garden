@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 단계 2(3개 카드 일괄) + 단계 3(Edge case 4개) 모두 완료)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: (이번 commit으로 갱신)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2(누적 5개 카드)·3 ✅, 잔여 3개 카드 일괄 + 위젯 stat 평균 점수 점검 + E-15 전체 완료 처리 대기)**
-> **다음 작업: E-15 Block D Part 2 잔여 (3개 미적용 DRAFT 카드 일괄 + 위젯 stat strip 평균 점수 정정 + E-15 전체 완료 처리)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여용)" 섹션 참조
+> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 단계 2(3개 카드 일괄) + 단계 3(Edge case 4개) 모두 완료 + 이슈 #3 문서화)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 41b2811 (docs E-15 Block D Part 2 후반) + (본 마무리 commit으로 갱신)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2(누적 5개 카드)·3 ✅, 잔여 3개 카드 일괄 + 이슈 #1·#2·#3 수정/점검 + E-15 전체 완료 처리 대기)**
+> **다음 작업: E-15 Block D Part 2 잔여 (3개 미적용 DRAFT 카드 일괄 + 이슈 #1·#2·#3 + E-15 전체 완료 처리)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여용)" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -62,6 +62,18 @@
 - 개선 제안 2: PATCH 단계에서 `update.naverCategoryCode === product.naverCategoryCode`이면 rejected에 push + reason="동일 코드 추천"
 - 권장: 두 단계 모두 적용 (이중 방어선)
 
+**[이슈 #3] 무타공 두꺼비집가리개(ready90, 92점) 카드에서 AI 채우기 버튼이 일시적으로 재표시되는 정황**
+- 증상: 라이브 검증 중 92점 S등급 카드에서 일시적으로 "AI 채우기" 버튼이 보이는 순간이 포착됨. 평소에는 hasAnyAutofillable=false + ready90=true 조건으로 정상 숨김 처리되지만, 특정 타이밍에서 재표시됨
+- 원인 추정 (3가지 시나리오):
+  - (a) handleAutoFillApplied 직후 위젯 재로드 사이의 race condition — newScore 92 적용은 됐지만 loadProducts가 fresh 데이터로 갱신되기 전에 stale 점수로 잠깐 렌더
+  - (b) `hasAnyAutofillable()`이 product.failedItems 같은 동적 데이터에 의존 → 스냅샷 타이밍 문제
+  - (c) optimistic update와 server-side recalc 사이 reconciliation 깜빡임
+- 영향: 코스메틱 (셀러가 클릭해도 모달이 "자동 채우기 가능 항목 없음" 안내로 안전하게 종료) — 데이터 손실 없음
+- 다음 채팅 점검 항목:
+  - UploadReadinessWidget.tsx의 ProductRow rendering condition 재검토 — `hasAnyAutofillable && !ready90` 조건의 평가 시점 확인
+  - handleAutoFillApplied → handleRefresh → loadProducts 흐름에서 위젯 재렌더 전에 stale prop 사용하는지 console.log
+  - 필요 시 ProductRow에 `useMemo` 의존 배열에 product.id + product.score + product.completedItems 추가해 재계산 강제
+
 ### 작업원칙 23·24 세션 내 실제 적용 기록
 - (a) 세션 시작 시 `git rev-parse HEAD origin/main = afe9d88` 동일 확인 ✅
 - (b) `git --no-pager log -10`에서 Part 1 후속 commit 확인 ✅
@@ -73,7 +85,8 @@
 1. **잔여 3개 카드 일괄 자동 채우기**: 하트 리본 누빔 파자마(38점 추정) / 초강력 스텐 변기펌프(38점) / 리본 포인트 홈웨어 잠옷세트(38점)
 2. **위젯 stat strip 평균 점수 이슈 조사 및 수정** (이슈 #1)
 3. **카테고리 동일 자동 추천 거부 로직 추가** (이슈 #2)
-4. **E-15 전체 완료 처리** + 다음 작업 후보 평가 (E-1 빌더 AEO 강화 vs E-12 Discord 리뷰 알림)
+4. **ready90 카드 AI 버튼 재표시 점검** (이슈 #3, 선택적 — 코스메틱)
+5. **E-15 전체 완료 처리** + 다음 작업 후보 평가 (E-1 빌더 AEO 강화 vs E-12 Discord 리뷰 알림)
 
 ---
 
