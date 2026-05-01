@@ -18,11 +18,11 @@
 
 > **잔여·2 완료 ✅ (2026-05-01 마지막 세션)**:
 > - **이슈 #2 차단 성공**: autoFillCategory + PATCH 이중 방어선으로 동일 코드 추천 차단 (차량용 햇빛가리개 라이브 검증)
-> - **이슈 #5 차단 성공**: d1 fallback 폐기 + token overlap 검증 (변기펌프→DVD/교양 주니 매핑 차단)
+> - **이슈 #5 차단 성공**: d1 fallback 폐기 + token overlap 검증 (변기펌프→DVD/교양 부적합 매핑 차단)
 > - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 참조
 >
 > **남은 미결 이슈**:
-> - **이슈 #6 (주 작업)**: AI가 홈웨어 잠옷세트/파자마 카드에 50021261(여성의류>니트>베스트) 추천. 거부 로직은 통과했으나 잠옷을 조끼로 매핑한 부적합 결과. 개선 방안: 프롬프트 강화 + few-shot 3~5개 + d3 substring 가중치 투증
+> - **이슈 #6 (주 작업)**: AI가 홈웨어 잠옷세트/파자마 카드에 50021261(여성의류>니트>베스트) 추천. 거부 로직은 통과했으나 잠옷을 조끼로 매핑한 부적합 결과. 개선 방안: 프롬프트 강화 + few-shot 3~5개 + d3 substring 가중치 투입
 > - **이슈 #3 (선택, 코스메틱)**: ready90 카드 AI 버튼 일시 재표시 정황
 >
 > 아래 코드 블록을 그대로 복붙해서 사용.
@@ -44,13 +44,13 @@ E-15 Block D Part 2 잔여·3 (이슈 #6 카테고리 추천 정확도 개선 + 
    - src/lib/upload-readiness-filler.ts (autoFillCategory 프롬프트 + score 함수 — 이슈 #6 주대상)
    - src/lib/naver/naver-categories-full.ts (잠옷/홈웨어 카테고리 실제 코드 확인)
    - src/components/dashboard/UploadReadinessWidget.tsx + dashboard/page.tsx (이슈 #3 점검용)
-5. 작업 계획 브리핑 후 꽃제님 승인 받고 시작
+5. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
 
-[단계 1] 이슈 #6 카테고리 추천 정확도 개선 — 프롬프트 강화 + score 가중치 투증:
+[단계 1] 이슈 #6 카테고리 추천 정확도 개선 — 프롬프트 강화 + score 가중치 투입:
   A) src/lib/upload-readiness-filler.ts autoFillCategory:
      - 프롬프트에 명시적 카테고리 구분 안내 추가 (잠옷/홈웨어·파자마·속옷 → "여성의류 > 잠옷/홈웨어", 니트 텍스처 ≠ 잠옷)
      - few-shot 예시 3~5개 추가 (잠옷 세트/파자마 세트/홈웨어 쇼트 → 올바른 카테고리명)
-     - score() 가중치 투증: d3 substring 일치 +20 → +35 (행태 특이적 단어 "잠옷·파자마·홈웨어·속옷" 명시 매칭 시 더 큰 가중치)
+     - score() 가중치 투입: d3 substring 일치 +20 → +35 (형태 특이적 단어 "잠옷·파자마·홈웨어·속옷" 명시 매칭 시 더 큰 가중치)
   B) 라이브 검증:
      - 홈웨어 잠옷세트 카드 + 파자마 세트 카드 재테스트 → 50021261(여성의류>니트>베스트) 대신 맞는 잠옷/홈웨어 카테고리 추천 확인
      - 기존 필터 통과 상품(가습기, 매직 등)은 이전 정확도 동일하게 나오는지 회귀 검증
@@ -78,7 +78,7 @@ E-15 Block D Part 2 잔여·3 (이슈 #6 카테고리 추천 정확도 개선 + 
   - 단계 2 (이슈 #3 점검)는 선택적이므로 여유 있을 때만 진행, 아닌 경우 다음 채팅으로 이월
 
 참고 (Chrome MCP 패턴 + 주의사항):
-- AutoFillModal은 inline style (Tailwind 아님) — 셰렉터: getComputedStyle(d).position === 'fixed' && cs.zIndex === '1000'
+- AutoFillModal은 inline style (Tailwind 아님) — 셀렉터: getComputedStyle(d).position === 'fixed' && cs.zIndex === '1000'
 - AI 호출 비용 0원 (Groq 3키 합산 43,200/일)
 - 사용 모델 llama-3.1-8b-instant — 프롬프트에 명시적 안내 + few-shot 예시 필수
 - 코드 수정 후 반드시 `npx tsc --noEmit` 0 errors 확인
@@ -522,8 +522,8 @@ Block D 라이브 검증 시나리오 (Chrome MCP):
 | **E-15 Block D Part 2 단계 2** | ✅ | **3개 카드 일괄 자동 채우기 라이브 검증** | (코드 변경 없음, 라이브 검증만) | 인테리어 미니 가습기 52→76 (+24) / 모나미 펭수 유성매직 48→84 (+36, 상품명 재작성도 검증) / 차량용 햇빛가리개 48→60 (+12). 총 +72점. AI 카테고리 추천 정확도 그라데이션: 완벽 > 수긍 > 실패 합리적. PATCH=위젯 점수 일치 ✅ — 단계 1 버그 수정 정상 반영 |
 | **E-15 Block D Part 2 단계 3** | ✅ | **Edge case 4개 검증** | (코드 변경 없음, 코드 리뷰 + 라이브 검증) | A) AI 답변 모두 검증 실패 — AutoFillModal.tsx line 372–390 명시적 분기 ✅ PASS / B) Manual-only만 남은 카드 — hasAnyAutofillable + ready90 이중분기, 무타공 92점 행 라이브 검증 ✅ / C) 체크박스 모두 해제 — disabled + 회색 + cursor not-allowed ✅ / D) 네트워크 오류 — try-catch + setPhase('error'), Esc/배경/X로 종료 가능, INVALID_ID 라이브 검증 ✅ |
 | **E-15 Block D Part 2 잔여 (1차)** | ✅ | **잔여 3개 카드 적용 투입 완료 + 이슈 #1 자연 해소 + 이슈 #4 위젯 노출 수정** | UploadReadinessWidget.tsx (정렬 ASC + slice 8) | 라이브 검증: 하트 리본(40→50), 초강력 스텐(48→70 상품명 재작성됨), 리본 포인트 홈웨어(48→80) — 8개 DRAFT 평균 67→**75점**. 이슈 #1 자연 해소 (실제 67점 시작 → 자동 갱신 정상). 이슈 #4 신규 발견: 위젯 정렬 점수 높은순(DESC) + slice(0,5)로 잔여 미적용 카드 노출 안 됨 → ASC + slice(0,8)로 수정. 상세는 PROGRESS.md "2026-05-01 세션 요약 — E-15 Block D Part 2 잔여" 참조 |
-| **E-15 Block D Part 2 잔여·2** | ✅ | **이슈 #2+#5 카테고리 거부 로직 이중 방어선 구축 + 이슈 #6 신규 발견** | upload-readiness-filler.ts (+42/-8줄) · auto-fill/route.ts (+22줄) | autoFillCategory 거부 구조 3개 (#5 fallback 폐기, #2 동일 코드, #5 token overlap) + PATCH currentProduct fetch + 동일 코드 2차 방어선. 라이브 검증: 차량용 햇빛가리개(이슈 #2)와 변기펌프(이슈 #5) 차단 성공. 단 홈웨어 잠옷세트/파자파 카드에서 AI가 50021261(여성의류>니트>베스트) 추천 — 이슈 #6 신규 발견. 이슈 #6은 AI 추천 정확도 향상 영역 (주 작업 아닌 "틀린 추천 차단"은 완성). 자세한 기록은 KKOTIUM_SESSION_LOG.md 참조 |
-| **E-15 Block D Part 2 잔여·3** | ⏳ | **이슈 #6 카테고리 추천 정확도 개선 + 이슈 #3 점검 + E-15 전체 완료 처리** | upload-readiness-filler.ts autoFillCategory (프롬프트 + score 가중치) · UploadReadinessWidget.tsx + dashboard/page.tsx (이슈 #3 점검) | 이슈 #6: AI가 잠옷/홈웨어 상품을 "여성의류>니트>베스트"로 매핑. 프롬프트 강화 + few-shot 3~5개 + d3 substring 일치 가중치 투증 필요. 이슈 #3은 코늤메틱 대상 선택. 완료 시 Sprint 6 마무리 선언·다음 작업 후보 평가 (E-1 빌더 AEO 강화 vs E-12 Discord 리뷰 알림 vs E-13B 알림톡 활성화). 자세한 인계 메시지는 상단 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·3용)" 섹션 참조 |
+| **E-15 Block D Part 2 잔여·2** | ✅ | **이슈 #2+#5 카테고리 거부 로직 이중 방어선 구축 + 이슈 #6 신규 발견** | upload-readiness-filler.ts (+42/-8줄) · auto-fill/route.ts (+22줄) | autoFillCategory 거부 구조 3개 (#5 fallback 폐기, #2 동일 코드, #5 token overlap) + PATCH currentProduct fetch + 동일 코드 2차 방어선. 라이브 검증: 차량용 햇빛가리개(이슈 #2)와 변기펌프(이슈 #5) 차단 성공. 단 홈웨어 잠옷세트/파자마 카드에서 AI가 50021261(여성의류>니트>베스트) 추천 — 이슈 #6 신규 발견. 이슈 #6은 AI 추천 정확도 향상 영역 (주 작업 아닌 "틀린 추천 차단"은 완성). 자세한 기록은 KKOTIUM_SESSION_LOG.md 참조 |
+| **E-15 Block D Part 2 잔여·3** | ⏳ | **이슈 #6 카테고리 추천 정확도 개선 + 이슈 #3 점검 + E-15 전체 완료 처리** | upload-readiness-filler.ts autoFillCategory (프롬프트 + score 가중치) · UploadReadinessWidget.tsx + dashboard/page.tsx (이슈 #3 점검) | 이슈 #6: AI가 잠옷/홈웨어 상품을 "여성의류>니트>베스트"로 매핑. 프롬프트 강화 + few-shot 3~5개 + d3 substring 일치 가중치 투입 필요. 이슈 #3은 코스메틱 대상 선택. 완료 시 Sprint 6 마무리 선언·다음 작업 후보 평가 (E-1 빌더 AEO 강화 vs E-12 Discord 리뷰 알림 vs E-13B 알림톡 활성화). 자세한 인계 메시지는 상단 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·3용)" 섹션 참조 |
 
 **E-15 동작 흐름 (레퍼런스)**:
 ```
