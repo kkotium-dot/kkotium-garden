@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-02 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여·3 — 이슈 #6 부분 해결: 잠옷/홈웨어 + 차량용 카테고리 정확도 개선 라이브 검증 ✅, 변기펌프 AI hallucination 신규 이슈 #7 인계)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: e1acbf0 (잔여·2 commit) → 본 마무리 commit으로 갱신
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2·3 ✅ + 이슈 #4 ✅ + 이슈 #1 자연 해소 ✅ + 잔여·2 이슈 #2+#5 거부 로직 ✅ + 잔여·3 이슈 #6 부분 해결 (잠옷/홈웨어/차량용 라이브 검증 ✅) + 이슈 #7 신규 발견 (변기펌프 AI 자기모순 매핑), 이슈 #3 점검 + 이슈 #7 해결 + E-15 전체 완료 처리 대기)**
-> **다음 작업: E-15 Block D Part 2 잔여·4 (이슈 #7 변기펌프 거부 로직 + 이슈 #3 ready90 점검 + E-15 전체 완료 처리)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·4용)" 섹션 참조
+> 최종 업데이트: 2026-05-02 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여·4 — 이슈 #7 근본 해결: AI 자기모순 hallucination 도메인-무관 일반 검증 추가 ✅)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 64c4e43 (잔여·4 코드 패치) → 본 마무리 commit으로 갱신 + push 예정
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2·3 ✅ + 이슈 #4 ✅ + 이슈 #1 자연 해소 ✅ + 잔여·2 이슈 #2+#5 거부 로직 ✅ + 잔여·3 이슈 #6 부분 해결 ✅ + 잔여·4 이슈 #7 근본 해결 ✅, 이슈 #3 점검 + E-15 전체 완료 처리 대기)**
+> **다음 작업: E-15 Block D Part 2 잔여·5 (이슈 #3 ready90 점검 + E-15 전체 완료 처리 + 다음 Sprint 결정: E-4 반품안심케어 마진 시뮬레이터 vs E-2C 리뷰 보상 최적 설정 가이드)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·5용)" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -13,6 +13,25 @@
 ## 이 파일의 역할
 
 > **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스 (세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md 참조)
+
+---
+
+## 2026-05-02 세션 요약 — E-15 Block D Part 2 잔여·4 (이슈 #7 근본 해결: AI 자기모순 hallucination 도메인-무관 일반 검증)
+- 사전 점검 (작업원칙 21+23): HEAD=c9bb79e ↔ origin/main 동기화 ✅, working tree clean ✅, MD 줄 수 1108/1108/252 ✅, dev 서버 포트 3000 살아있음 ✅
+- 근본 원인 재분석: 직전 인계 메시지의 score() 강화안은 **변기펌프 한 케이스만 보호**하는 도메인별 패치 — SLEEPWEAR/BATHROOM/CAR 3영역 외 4,990+ 다른 카테고리는 무방비 상태였음. groq-llama3 hallucination은 모델 한계라 검증으로만 잡을 수 있음
+- 해결 전략 전환: 도메인별 키워드 추가 대신 **모든 4,993개 카테고리에 작동하는 일반 검증 3겹** 추가 — 두더지잡기식 패치 종결
+- 코드 패치 (commit 64c4e43, src/lib/upload-readiness-filler.ts +53/-9):
+  1. **신규 도메인-무관 검증** (핵심): AI reason 텍스트에서 한국어 명사 토큰 추출 (length>=2, stopwords 제외) → 매핑된 d2/d3/d4 어디에도 substring 일치 없으면 **score 무관 하드 reject**. AI가 reason엔 "욕실용품"이라 적고 코드는 CCTV 출력하는 자기모순 패턴이 모든 도메인에서 잡힘
+  2. **categoryHasBathroom 강화**: 너무 느슨한 `'생활용품'` 단일 매칭 제거 → 욕실/변기/뚫어/배수/세면 키워드가 d2/d3/d4에 실제 있을 때만 인정 (CCTV·세제 등 잘못된 d3는 "생활용품" 하위지만 욕실 아님)
+  3. **reasonHasCategoryHint 강화**: GENERIC_D2 set (`생활용품, 주방용품, 식품, 디지털/가전, 가구`) 일반 d2 이름은 단독 hint 인정 안 함, length >= 3 + d3 일치 동반 시에만 인정
+  4. BATHROOM_WORDS 오타 정정 (`'뚫어뻑'`→`'뚫어뻥'`) + 누락 키워드 추가 (`'펌프', '배수호스', '하수구', '파이프'`)
+  5. 욕실 mismatch 패널티 -20 → -50 (sleepwear/car 분기와 동등한 가중치)
+- 단위 시뮬레이션 6/6 통과: (1) reason="욕실용품"+코드=CCTV 자기모순 → REJECT_REASON_MISMATCH ✅ (2) 변기펌프→배수구세정제 reason 일치 → ACCEPT ✅ (3) 변기펌프→뚫어뻥 정답 → ACCEPT ✅ (4) reason="DVD 다큐"+코드=DVD 이슈 #5 케이스 → REJECT_REASON_MISMATCH ✅ (5) 잠옷 회귀 → ACCEPT ✅ (6) 차량용 회귀 → ACCEPT ✅
+- 라이브 검증 4/4 통과: 변기펌프 카드 → 50002502 (배수구세정제, reason과 d4 일치하므로 합리적 ACCEPT) | 파자마 세트 → 50000826 (잠옷/홈웨어) ✅ | 홈웨어 잠옷세트 → 50000826 ✅ | 차량용 햇빛가리개 → 50004092 ✅
+- TSC: 0 errors ✅
+- **본 세션 작업원칙 26번 신설**: "근본 원인 분석 — 한 케이스가 아닌 동일 패턴 일반화". 한 상품의 매핑 오류는 빙산의 일각이고, 같은 종류의 모델 한계가 다른 카테고리·다른 자동 채우기 항목에서도 동일 패턴으로 재발할 수 있음. 패치 시 항상 (a) 이 한 상품만 막을 것인가 (b) 같은 종류의 문제가 어디서 또 일어날 수 있는가 두 관점으로 본 후 (b)를 우선 선택
+- 본 세션 학습 (작업원칙 25 보강): groq-llama3 응답이 24h 캐시에 저장되어 라이브 호출 5회 모두 같은 응답 반환. 따라서 새 검증 로직의 결정적 검증은 단위 시뮬레이션(Python으로 score() 재구현)으로 확보 + 라이브는 회귀 검증용으로 사용
+- 검증 결과로 본 의의: 변기펌프 한 케이스가 아니라 **이슈 #5 (DVD 매핑) + 이슈 #7 (CCTV/세정제 hallucination) + 미래 발생 가능성 있는 모든 식품/화장품/가전/도서 영역의 같은 패턴까지 동일한 검증 로직으로 차단**. score() 보호 영역이 SLEEPWEAR/BATHROOM/CAR 3개 → 카테고리 4,993개 전체로 확장됨
 
 ---
 
@@ -436,7 +455,8 @@
 22. **AI 자동 채우기 라이브러리의 검증은 PATCH 검증과 일치시키기** — 라이브러리가 제안한 값이 PATCH에서 다시 거부되면 셀러 경험 나빨. 예: tags_count에 PATCH가 10개 이상 요구하면 라이브러리도 merged 10개 미만 시 null 반환
 23. **새 채팅 메시지의 "현재 HEAD/commits 가정"을 의심하라** — user 메시지에 "HEAD = X, N commits 상태" 같은 가정이 적혀 있어도 그 정보는 직전 세션 작성 시점 기준이라 현재 origin/main 과 다를 수 있음. 새 채팅 시작 즉시 **(a) `git rev-parse HEAD origin/main`로 실제 HEAD 확인 → (b) `git --no-pager log --oneline -10`로 user 메시지에 명시되지 않은 commit이 있는지 확인 → (c) user 가정과 실제가 다르면 즉시 정직 보고하고 작업을 다시 분석한 후 진행**. (E-15 두 채팅 연속 발생: Block A+B 세션에서 첫 번째, Block C 시작 채팅에서도 두 번째 발생. 두 번째 채팅에서는 user가 "HEAD = 0694982, 10 commits"로 적었으나 실제는 b6e6da3 + Block A+B+C 완료된 16 commits 상태였음. 다행히 write_file이 중간에 끊어져 손실 없이 멈춤)
 24. **Block 단위 작업 진행 시 매 commit + push를 한 묶음으로 끝내기** — 컨텍스트 한계 직전에 user에게 마무리 보고를 받아 새 채팅으로 인계되더라도, 마지막 commit이 push까지 완료되지 않으면 다음 채팅의 git log에서 보이지 않아 작업원칙 21·23 트랩에 빠짐. 따라서 **commit한 그 turn 안에서 반드시 push까지 한 줄 명령으로 끝낸다**: `git add ... && git commit -m "..." && git push origin main`. 절대 commit 후 "다음 turn에 push"로 미루지 않음
-25. **한글 NFC/NFD 정규화 트랩 대응** — macOS 파일 시스템은 한글을 NFD로 저장하는 경우가 있는데, edit_file/iterm 입력은 NFC로 들어가서 byte 매칭 실패가 빈번. **절대 Python으로 수동 NFC 정규화 시도 금지** (split/재조립 과정에서 파일 대규모 손실 사고 발생, 2026-05-01 잔여·2 세션에서 ~2,000줄 삭제됨, git restore로 복구). 매칭 실패 시: (a) git restore로 깨끗한 원본 회복, (b) edit_file의 newText에 한글 직접 입력(unicode escape \uXXXX는 NFD와 불일치 위험), (c) 한 번에 50줄 이상 변경 금지. 세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md에 작성, PROGRESS.md/ROADMAP.md는 핵심 요약만 유지
+25. **한글 NFC/NFD 정규화 트랩 대응** — macOS 파일 시스템은 한글을 NFD로 저장하는 경우가 있는데, edit_file/iterm 입력은 NFC로 들어가서 byte 매칭 실패가 빈번. **절대 Python으로 수동 NFC 정규화 시도 금지** (split/재조립 과정에서 파일 대규모 손실 사고 발생, 2026-05-01 잔여·2 세션에서 ~2,000줄 삭제됨, git restore로 복구). 매칭 실패 시: (a) git restore로 깨끗한 원본 회복, (b) edit_file의 newText에 한글 직접 입력(unicode escape \uXXXX는 NFD와 불일치 위험), (c) 한 번에 50줄 이상 변경 금지. **25-1 추가 (2026-05-02 잔여·4 후속 학습)**: read_text_file의 head/tail 미리보기는 깨진 글자처럼 렌더링되는 경우가 있으나 실제 파일은 NFC 정상인 케이스가 자주 발생. 화면에서 깨져 보여도 즉시 정정 시도하지 말고 **반드시 raw 검증을 먼저** — Python으로 `\uFFFD` (Replacement Character) 카운트 + `unicodedata.normalize('NFC', text) != text` 카운트를 측정해 **둘 다 0이면 파일은 정상**이므로 정정 작업 자체를 시작하지 않음. 세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md에 작성, PROGRESS.md/ROADMAP.md는 핵심 요약만 유지
+26. **근본 원인 분석 — 한 케이스가 아닌 동일 패턴 일반화 (2026-05-02 잔여·4 신설, 꽃졔님 직접 지시)** — 사용자가 보고한 한 상품의 오류는 **드러난 증상**일 뿐이고, 같은 종류의 문제가 **다른 카테고리·다른 자동 채우기 항목·다른 도메인**에서도 동일 패턴으로 발생할 수 있음. 패치 시 반드시 두 단계: **(a) 즉각 원인 (Why this product?)**: 이 한 상품 매핑이 왜 잘못됐는지 — 입력 데이터, AI 응답 형태, score 가중치 등 직접적 원인 분석. **(b) 일반화 원인 (What pattern is this an instance of?)**: 같은 종류의 실패가 어디서 또 일어날 수 있는지 — 모델 한계, 검증 누락, 가정 오류 등 패턴 식별. 패치는 가능한 한 **(b) 패턴 전체를 잡는 일반 검증**을 우선 선택, 도메인별 하드코딩 키워드 패치는 임시방편으로만 추가. 예시 (이슈 #7): groq-llama3의 reason↔code 자기모순은 모델 한계 → 키워드 리스트 추가는 SLEEPWEAR/BATHROOM/CAR 3영역만 보호하는 두더지잡기 → reason 토큰과 매핑 코드 d2/d3/d4 일반 substring 일치성 검증으로 4,993개 카테고리 전체 보호 + 미래 자동 채우기 항목(태그·키워드·상품명)에도 응용 가능. **AI 자동 채우기 외에도 모든 모듈(엑셀 export, 거래처 매칭, 주문 동기화 등)에서 같은 원칙 적용**: 셀러가 보고한 한 케이스 = 시스템 한 영역 전반의 보호 갭
 ```
 
 ### UI 작성 원칙 (2026-04-13 확정)

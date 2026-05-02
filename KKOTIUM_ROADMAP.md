@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-02 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여·3 — 이슈 #6 부분 해결: 잠옷/홈웨어 + 차량용 카테고리 정확도 개선 라이브 검증 ✅ + 신규 이슈 #7 변기펌프 AI 자기모순 매핑 발견)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2·3 ✅ + 이슈 #4 ✅ + 이슈 #1 자연 해소 ✅ + 잔여·2 이슈 #2+#5 거부 로직 ✅ + 잔여·3 이슈 #6 부분 해결 ✅, 이슈 #7 + 이슈 #3 + E-15 전체 완료 대기)**
-> **다음 작업: E-15 Block D Part 2 잔여·4 (이슈 #7 변기펌프 AI 자기모순 매핑 거부 로직 + 이슈 #3 점검 + E-15 전체 완료 처리) — 본 문서 하단의 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·4용)" 섹션을 그대로 복붙해서 사용**
+> 최종 업데이트: 2026-05-02 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여·4 — 이슈 #7 근본 해결: AI 자기모순 hallucination 도메인-무관 일반 검증 추가 ✅, 작업원칙 26번 신설)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2·3 ✅ + 이슈 #4 ✅ + 이슈 #1 자연 해소 ✅ + 잔여·2 이슈 #2+#5 거부 로직 ✅ + 잔여·3 이슈 #6 부분 해결 ✅ + 잔여·4 이슈 #7 근본 해결 ✅, 이슈 #3 점검 + E-15 전체 완료 대기)**
+> **다음 작업: E-15 Block D Part 2 잔여·5 (이슈 #3 ready90 점검 + E-15 전체 완료 처리 + 다음 Sprint 결정) — 본 문서 하단의 "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·5용)" 섹션을 그대로 복붙해서 사용**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -13,6 +13,84 @@
 ---
 
 ---
+
+## 🎯 다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·5용 — 2026-05-02 마지막 갱신)
+
+> **잔여·4 완료 ✅ (2026-05-02 마지막 세션, commit 64c4e43 + MD 마무리 commit)**:
+> - **이슈 #7 근본 해결 (AI 자기모순 hallucination)**: src/lib/upload-readiness-filler.ts에 도메인-무관 일반 검증 3겹 추가
+>   - 신규: AI reason의 한국어 명사 토큰과 매핑된 d2/d3/d4 substring 일치성 검증 (불일치 시 score 무관 하드 reject) — 4,993개 카테고리 전체 보호
+>   - 강화: categoryHasBathroom에서 너무 느슨한 '생활용품' 매칭 제거 (CCTV·세제 등 잘못된 d3 차단)
+>   - 강화: reasonHasCategoryHint에 GENERIC_D2 set 도입 ('생활용품', '주방용품', '식품', '디지털/가전', '가구' 일반 d2는 단독 hint 불가)
+>   - 보강: BATHROOM_WORDS 오타 정정 (`'뚫어뻑'`→`'뚫어뻥'`) + 누락 키워드 추가 (`'펌프', '배수호스', '하수구', '파이프'`)
+>   - 강화: 욕실 mismatch 패널티 -20 → -50 (sleepwear/car 분기와 동등)
+> - 단위 시뮬레이션 6/6 통과 (Python으로 score() 재구현 검증) + 라이브 4/4 통과 (변기펌프 50002502 reason 일치 ACCEPT, 잠옷/홈웨어/차량용 회귀 정상)
+> - **작업원칙 26번 신설**: "근본 원인 분석 — 한 케이스가 아닌 동일 패턴 일반화" (꽃졔님 직접 지시 반영, PROGRESS.md L0 작업원칙 섹션 참조)
+> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 참조
+>
+> **남은 미결 이슈**:
+> - **이슈 #3 (선택, 코스메틱)**: ready90 카드 AI 버튼 일시 재표시 정황 — 데이터 손실 없음, 우선순위 낮음
+>
+> **E-15 전체 완료 처리 (잔여·5의 핵심)**: 이슈 #3 점검 후 E-15 마무리 + 다음 Sprint 결정 (Sprint 1 E-4 반품안심케어 마진 시뮬레이터 vs E-2C 리뷰 보상 최적 설정 가이드)
+>
+> 아래 코드 블록을 그대로 복붙해서 사용.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md, KKOTIUM_SESSION_LOG.md를 읽고
+E-15 Block D Part 2 잔여·5 (이슈 #3 ready90 점검 + E-15 전체 완료 처리 + 다음 Sprint 결정) 작업을 시작해주세요.
+
+작업 시작 전 필수 (작업원칙 21+23+24+25+26 적용):
+1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 본 세션에서 push 한 최신 commit, 잔여·4 마무리 commit)
+   (b) git --no-pager log --oneline -10 → 이번 메시지에 명시되지 않은 commit 있으면 읽고 대응
+   (c) git status가 깨끗해야 함 (있으면 먼저 검토)
+   (d) lsof -i :3000 → dev 서버 상태 확인 (죽었으면 npm run dev 재시작)
+   (e) 이 메시지의 가정과 실제가 다르면 즉시 정직 보고 후 재분석
+   (f) 본 세션 commit은 그 turn 안에서 push까지 한 줄로 완료
+   (g) edit_file에서 한글 매칭 실패 시 절대 Python 수동 NFC 정규화 금지 → git restore + 한글 직접 입력 패턴 (작업원칙 25번)
+   (h) 문제 분석은 항상 (a) 즉각 원인 (b) 일반화 원인 두 단계로 — 한 케이스가 아닌 동일 패턴 전체 보호 (작업원칙 26번)
+2. KKOTIUM_PROGRESS.md "2026-05-02 세션 요약 — E-15 Block D Part 2 잔여·4" 섹션 정독 (이슈 #7 근본 해결 상세, 단위/라이브 검증 결과)
+3. KKOTIUM_SESSION_LOG.md 최상단 세션 정독 (이슈 #7 도메인-무관 일반 검증 설계 의도 + 적용 결과)
+4. 관련 코드 파일 관찰:
+   - src/components/dashboard/UploadReadinessWidget.tsx + dashboard/page.tsx (이슈 #3 점검용)
+   - src/lib/upload-readiness-filler.ts (이슈 #7 해결 후 현재 상태 — 추가 자동 채우기 항목 보호 갭 점검)
+5. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
+
+[단계 1] 이슈 #3 점검 (코스메틱):
+  증상: 92점 S등급 카드에서 AI 채우기 버튼이 일시적으로 재표시되는 순간 포착
+  점검 절차:
+    1. UploadReadinessWidget.tsx ProductRow rendering condition 재검토
+    2. handleAutoFillApplied → handleRefresh → loadProducts 흐름에서 stale prop 일시 사용 여부 console.log
+    3. 필요 시 useMemo 의존 배열에 product.id+score+completedItems 추가
+    4. 작업원칙 26번 적용: 같은 종류의 stale prop 트랩이 다른 위젯/페이지(주문 관리 / 정원 창고 / 검색 조련사 등)에서도 발생할 수 있는지 점검
+  우선순위: 낮음 (데이터 손실 없음, 사용자 경험 미세 개선)
+
+[단계 2] E-15 전체 완료 처리:
+  완료 기준:
+    - 이슈 #3 점검 결과 (수정 또는 의도적 보류 결정)
+    - 잔여·4까지 모든 카테고리 자동 채우기 검증 회귀 안 일어난 것 재확인 (8개 DRAFT 카드 전체 회귀)
+  마무리:
+    - PROGRESS.md / ROADMAP.md / SESSION_LOG.md 세 파일 갱신
+    - PROGRESS.md 상태 라인 "E-15 전체 완료"로 변경
+    - 다음 작업 후보 결정:
+      · 옵션 A: Sprint 1 E-4 반품안심케어 마진 시뮬레이터 (씨앗심기 배송탭) — return-care-fees.ts 이미 1단계 완료 상태, 2~7단계 진행 필요
+      · 옵션 B: Sprint 1 E-2C 리뷰 보상 최적 설정 가이드 (혜택탭) — 미착수
+    - 새 인계 메시지 작성 (다음 새 채팅 시작용)
+
+작업 분할 권장 (컨텍스트 한계 회피):
+  - 본 채팅: 단계 1 (이슈 #3 점검) + 단계 2 (E-15 완료 처리) + commit + push
+  - 만약 컨텍스트 빡빡해지면 단계 2의 다음 작업 선정 + 새 인계 메시지 작성을 다음 채팅으로 이월
+
+참고 (주의사항):
+- AutoFillModal은 inline style (Tailwind 아님) — 셀렉터: getComputedStyle(d).position === 'fixed' && cs.zIndex === '1000'
+- AI 호출 비용 0원 (Groq 3키 합산 43,200/일)
+- 사용 모델 llama-3.1-8b-instant — 카테고리 검증 도메인-무관 일반 검증 적용 완료 (잔여·4)
+- 코드 수정 후 반드시 `npx tsc --noEmit` 0 errors 확인
+- 8개 DRAFT 전체 회귀 필요 시 curl "http://localhost:3000/api/products?status=DRAFT&limit=20" 사용 (zsh ? glob 회피 위해 따옴표 필수)
+- 세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md에 작성, PROGRESS.md/ROADMAP.md는 핵심 요약만 유지
+```
+
+---
+
+## 📜 Part 2 잔여·4용 메시지 (참고용 보존 — deprecated, 위 "잔여·5용" 메시지를 대신 사용)
 
 ## 🎯 다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·4용 — 2026-05-02 마지막 갱신)
 
