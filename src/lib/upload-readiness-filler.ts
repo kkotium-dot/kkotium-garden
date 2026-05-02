@@ -536,7 +536,7 @@ Few-shot 예시 (이 형식과 정확도를 따르세요):
   // the matched category MUST contain those words in d2 or d3 — otherwise it's a misclassification.
   // Without this bonus, AI sometimes routes pajamas to "women's clothing > knit > vest" which is wrong.
   const SLEEPWEAR_WORDS = ['잠옷', '파자마', '홈웨어', '속옷', '언더웨어', '내복', '내의'];
-  const BATHROOM_WORDS = ['변기', '뚫어뻑', '배수구', '세면대'];
+  const BATHROOM_WORDS = ['변기', '뚫어뻥', '뚫어뻑', '펌프', '배수구', '배수호스', '하수구', '파이프', '세면대'];
   const CAR_WORDS = ['차량용', '카커튼', '자동차'];
 
   function score(entry: NaverCategoryEntry): number {
@@ -575,10 +575,18 @@ Few-shot 예시 (이 형식과 정확도를 따르세요):
     }
     const productHasBathroom = BATHROOM_WORDS.some(w => currentName.includes(w));
     if (productHasBathroom) {
-      const categoryHasBathroom = entryD2Lower.includes('욕실') || entryD3Lower.includes('욕실') ||
-        entryD2Lower.includes('생활용품') || entry.d3.includes('변기') || entry.d4?.includes('변기');
+      // Issue #7 fix (2026-05-02): drop loose '생활용품' match. d2='생활용품' alone
+      // lets unrelated subcategories (보안용품/CCTV, 세제/세정제, etc.) pass even when
+      // the actual subcategory is not bathroom-related. Require a tighter keyword
+      // (욕실/변기/뚫어/배수/세면) somewhere in d2/d3/d4.
+      const categoryHasBathroom =
+        entryD2Lower.includes('욕실') || entryD3Lower.includes('욕실') || entryD4Lower.includes('욕실') ||
+        entry.d3.includes('변기') || (entry.d4 ?? '').includes('변기') ||
+        entry.d3.includes('뚫어') || (entry.d4 ?? '').includes('뚫어') ||
+        entry.d3.includes('배수') || (entry.d4 ?? '').includes('배수') ||
+        entry.d3.includes('세면') || (entry.d4 ?? '').includes('세면');
       if (categoryHasBathroom) s += 35;
-      else s -= 20;
+      else s -= 50; // Escalated from -20 to match sleepwear/car penalty severity.
     }
     const productHasCar = CAR_WORDS.some(w => currentName.includes(w));
     if (productHasCar) {
@@ -612,6 +620,37 @@ Few-shot 예시 (이 형식과 정확도를 따르세요):
     return null;
   }
 
+  // Issue #7 fix (2026-05-02): AI self-contradiction detection (DOMAIN-AGNOSTIC).
+  // When AI's reason text and the actual mapped d2/d3/d4 share zero meaningful
+  // category-word overlap, the AI hallucinated — reason says one thing, code points
+  // elsewhere. Example: reason='변기펌프는 욕실용품에 해당' but mapped entry is
+  // d2='생활용품' d3='보안용품' d4='CCTV'. The token '욕실용품' is in reason but
+  // appears nowhere in the mapped entry — hard reject regardless of score.
+  //
+  // Token extraction: split reason on non-Korean delimiters and keep tokens of
+  // length >= 2 that contain Korean characters. We then check whether any token
+  // appears as a substring of the entry's d2/d3/d4 (lowercased).
+  const reasonTokensRaw = (reason || '')
+    .split(/[\s,./()\[\]'">\-—:;!?·•\u3000]+/)
+    .filter(t => t.length >= 2 && /[\uAC00-\uD7A3]/.test(t));
+  // Drop ultra-generic words that are too common to be category-meaningful.
+  const REASON_STOPWORDS = new Set([
+    '해당', '관련', '카테고리', '상품', '계열', '경우', '제품', '사용',
+    '입니다', '있습니다', '됩니다', '맞습니다', '대표', '추천', '선택',
+    '정확', '가장', '중에서', '입력', '필요', '확인', '바랍니다',
+  ]);
+  const reasonTokens = reasonTokensRaw.filter(t => !REASON_STOPWORDS.has(t));
+  const matchedCategoryTextForReason = `${best.entry.d2} ${best.entry.d3 ?? ''} ${best.entry.d4 ?? ''}`;
+  if (reasonTokens.length > 0) {
+    const reasonOverlapsCategory = reasonTokens.some(token =>
+      matchedCategoryTextForReason.includes(token)
+    );
+    if (!reasonOverlapsCategory) {
+      // AI self-contradiction signature: hard reject regardless of score.
+      return null;
+    }
+  }
+
   // Issue #5 extra defense (2026-05-01): Reject when the matched category name has no
   // token overlap with the product name. AI may have hallucinated a d2/d3 path that
   // happens to score >= 50 by coincidence (e.g. shared common syllables), but the actual
@@ -627,11 +666,16 @@ Few-shot 예시 (이 형식과 정확도를 따르세요):
     token.includes(best.entry.d2.toLowerCase()) ||
     (best.entry.d4 && lowerNameNoSpace.includes(best.entry.d4.toLowerCase()))
   );
-  // Also accept if AI's reasoning explicitly mentions a key category word
-  const reasonHasCategoryHint = reason && (
-    reason.includes(best.entry.d2) ||
-    (best.entry.d3 && reason.includes(best.entry.d3))
-  );
+  // Issue #7 fix (2026-05-02): Tighten reasonHasCategoryHint. Previously, a reason like
+  // '...생활용품의 욕실용품...' triggered hint=true for entry d2='생활용품' alone,
+  // letting CCTV/보안용품 sneak through. Now require the matched word to be at least
+  // 3 characters AND not be a generic top-level d2 ('생활용품', '디지털/가전', etc.)
+  // unless d3 also matches — otherwise hint is too permissive.
+  const GENERIC_D2 = new Set(['생활용품', '주방용품', '식품', '디지털/가전', '가구']);
+  const reasonHasCategoryHint = !!(reason && (
+    (best.entry.d2.length >= 3 && reason.includes(best.entry.d2) && !GENERIC_D2.has(best.entry.d2)) ||
+    (best.entry.d3 && best.entry.d3.length >= 3 && reason.includes(best.entry.d3))
+  ));
   if (!hasAnyOverlap && !reasonHasCategoryHint && best.s < 90) {
     return null;
   }
