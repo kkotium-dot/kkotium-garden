@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-01 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여·2 완료 — 이슈 #2+#5 카테고리 거부 로직 이중 방어선 라이브 검증 + 신규 이슈 #6 발견 인계)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: a5d7b37 (E-15 Part 2 잔여 1차) + (본 마무리 commit으로 갱신)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2·3 ✅ + 이슈 #4 ✅ + 이슈 #1 자연 해소 ✅ + 잔여·2 이슈 #2+#5 거부 로직 ✅, 이슈 #3 점검 + 이슈 #6 카테고리 추천 정확도 + E-15 전체 완료 처리 대기)**
-> **다음 작업: E-15 Block D Part 2 잔여·3 (이슈 #3 ready90 점검 + 이슈 #6 카테고리 추천 정확도 개선 + E-15 전체 완료 처리)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·3용)" 섹션 참조
+> 최종 업데이트: 2026-05-02 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여·3 — 이슈 #6 부분 해결: 잠옷/홈웨어 + 차량용 카테고리 정확도 개선 라이브 검증 ✅, 변기펌프 AI hallucination 신규 이슈 #7 인계)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: e1acbf0 (잔여·2 commit) → 본 마무리 commit으로 갱신
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2·3 ✅ + 이슈 #4 ✅ + 이슈 #1 자연 해소 ✅ + 잔여·2 이슈 #2+#5 거부 로직 ✅ + 잔여·3 이슈 #6 부분 해결 (잠옷/홈웨어/차량용 라이브 검증 ✅) + 이슈 #7 신규 발견 (변기펌프 AI 자기모순 매핑), 이슈 #3 점검 + 이슈 #7 해결 + E-15 전체 완료 처리 대기)**
+> **다음 작업: E-15 Block D Part 2 잔여·4 (이슈 #7 변기펌프 거부 로직 + 이슈 #3 ready90 점검 + E-15 전체 완료 처리)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·4용)" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -13,6 +13,39 @@
 ## 이 파일의 역할
 
 > **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스 (세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md 참조)
+
+---
+
+## 2026-05-02 세션 요약 — E-15 Block D Part 2 잔여·3 (이슈 #6 부분 해결: 잠옷/홈웨어/차량용 카테고리 정확도 개선 + 이슈 #7 신규 발견)
+
+> 자세한 세션 기록은 **KKOTIUM_SESSION_LOG.md 최상단** 참조.
+
+### 주요 성과
+- **이슈 #6 부분 해결**: src/lib/upload-readiness-filler.ts autoFillCategory 프롬프트 강화 + score() 가중치 재조정으로 3개 카드 라이브 검증 통과:
+  - 리본 포인트 홈웨어 잠옷세트 → 50000826 (여성의류>잠옷/홈웨어) high ✅
+  - 하트 리본 누빔 여성 파자마 세트 → 50000826 high ✅
+  - 차량용 햇빛가리개 → 50004092 (자동차용품>인테리어용품>차량용햇빛가리개) ✅
+- **코드 변경**: src/lib/upload-readiness-filler.ts (+83/-3 lines) — autoFillCategory 프롬프트 강화(잠옷/홈웨어/차량용 명시 가이드 + few-shot 5개) + score() 가중치(d4 서브스트링 매칭 +25→+60, 공백 제거 매칭 추가, 잠옷/욕실/차량 형태 특이적 보너스 +35 / 패널티 -30)
+- **TSC 0 errors** 유지
+
+### 이슈 #7 신규 발견 (다음 세션 주 작업)
+- **증상**: 변기펌프 카드(cmn7984ff0001130kjfj6mnas) 재테스트 시 AI가 50002707(생활/건강>생활용품>보안용품>CCTV) 추천. AI reason 텍스트에는 "변기펌프/뚫어뻥은 욕실용품"이라고 적으면서 실제 코드는 CCTV를 출력한 **자기모순 hallucination**
+- **원인**: AI(groq-llama3) 추론 단계 자체의 논리 괴리. score() 이 d4="CCTV"와 상품명 "변기/펌프/뚫어뻥" substring 매칭이 없으니 형태특이 보너스/패널티가 적용되지 않아 거부하지 못함
+- **우선순위**: 다음 세션 주 작업 적합 (AI 자기모순 검증 구조 필요)
+- **개선 방안**:
+  1. score()에 "reason 텍스트 vs 실제 매핑 d3/d4 일치성" 검증 추가
+  2. 욕실용품 관련 키워드(변기/펌프/뚫어뻥/배수구) + 그 어떤 d2/d3도 "욱실/배수·파이프" 등과 일치 안 하면 강한 패널티
+  3. AI fallback 제2 차(볐경: GPT-4o-mini 또는 계산형 추세도) 검토
+
+### 이슈 #3 미검 (적재・코스메틱)
+이번 세션에서 도 시간 부족으로 점검 미실시. 다음 세션에서 이슈 #7 해결 이후 처리.
+
+### 다음 세션에서 진행할 작업 (잔여·4)
+1. 이슈 #7 변기펌프 AI 자기모순 매핑 거부 로직 (주 작업)
+2. 이슈 #3 ready90 카드 AI 버튼 점검 (선택, 코스메틱)
+3. E-15 전체 완료 처리 + 다음 작업 후보 평가
+
+자세한 인계 메시지는 KKOTIUM_ROADMAP.md "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·4용)" 섹션 참조.
 
 ---
 
@@ -497,7 +530,7 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 |------|------|
 | **E-2A** | 리뷰 성장 트래커 + 운영 체크리스트: `/api/review-growth` GET/PATCH (manualReviewCount, reviewChecklist), `ReviewGrowthWidget` 대시보드 위젯, 9항목 체크리스트 (자동감지: returnCare, kakaoQrExposure), 단계 판정 (1: 0~10, 2: 11~50, 3: 51+), 작성률 목표 20~25%, 카카오 채널 칩 (single source of truth from store_settings) |
 | **E-2B** | 주문 페이지 리뷰 유도 뱃지: DELIVERED+1~3일 (구매확정 유도/초록), COMPLETED+1~3일 (리뷰 요청/파랑), COMPLETED+28~32일 (한달 리뷰/보라), 알림톡 토스트 UI (E-13B 솔라피 연동 대기) |
-| **DB 보정** | StoreSettings 스키마 `kakaoChannelUrl` 필드 추가, `kakaoChannelName` 디폴트 오타 (`꽃틄움` → `꽃틔움`) 수정 |
+| **DB 보정** | StoreSettings 스키마 `kakaoChannelUrl` 필드 추가, `kakaoChannelName` 디폴트 오타 (`꽃틔움` → `꽃틔움`) 수정 |
 | **일괄 커밋** | `e09e63c` — 6 files changed, +602/-7 |
 
 ### 2026-04-16 Phase E+ Sprint 1 완료 세션

@@ -474,10 +474,39 @@ ${input.productDescription ? `상품 설명: "${input.productDescription.slice(0
 가능한 d1 카테고리 목록 (정확히 이 중에서만 선택):
 ${d1List.join(' / ')}
 
+중요 카테고리 분류 가이드 (반드시 따를 것):
+- 잠옷/홈웨어/파자마/내복/내의/속옷/언더웨어 단어가 들어간 상품 → 절대 "여성의류 > 니트" 또는 "여성의류 > 스웨터" 같은 일반 의류 카테고리로 분류하지 마세요. 반드시 "여성언더웨어/잠옷" 또는 "남성언더웨어/잠옷" d2를 선택하고, d3는 "잠옷/홈웨어" 또는 "시즌성내의"를 선택하세요.
+- 니트/스웨터 텍스처여도 잠옷·홈웨어 용도면 "여성언더웨어/잠옷 > 잠옷/홈웨어"가 정답입니다.
+- 변기펌프/뚫어뻥/배수구 도구 → "생활/건강 > 생활용품 > 욕실용품" 계열을 우선 검토하세요. "DVD" 같은 무관 카테고리에 절대 매핑하지 마세요.
+- 차량용 햇빛가리개/카커튼/선바이저 → "생활/건강 > 자동차용품 > 인테리어용품" 또는 "익스테리어용품" d3를 우선 검토하세요. "편의용품" d3가 아닙니다 (편의용품은 가습기·청소기·면도기 등).
+- 가습기 → "디지털/가전 > 계절가전 > 가습기" d3 안에서 가열식/초음파식/가습기필터 중 가장 가까운 d4 선택.
+
+Few-shot 예시 (이 형식과 정확도를 따르세요):
+예시 1) 상품명: "리본 포인트 홈웨어 잠옷세트"
+  → d1: "패션의류", d2: "여성언더웨어/잠옷", d3: "잠옷/홈웨어"
+  reason: "홈웨어 잠옷세트는 여성언더웨어/잠옷 카테고리의 잠옷/홈웨어 d3가 정확합니다."
+
+예시 2) 상품명: "하트 리본 누빔 여성 파자마 세트"
+  → d1: "패션의류", d2: "여성언더웨어/잠옷", d3: "잠옷/홈웨어"
+  reason: "파자마 세트는 잠옷/홈웨어 d3에 해당합니다. 니트/스웨터 카테고리가 아닙니다."
+
+예시 3) 상품명: "인테리어 미니 가습기 사무실 탁상"
+  → d1: "디지털/가전", d2: "계절가전", d3: "가습기"
+  reason: "가습기는 계절가전 d2의 가습기 d3로 정확히 매핑됩니다."
+
+예시 4) 상품명: "무타공 두꺼비집가리개 분전함커버"
+  → d1: "가구/인테리어", d2: "인테리어소품", d3: "커버/가리개"
+  reason: "분전함커버는 인테리어소품의 가리개 계열입니다."
+
+예시 5) 상품명: "차량용 햇빛가리개 자동차 카커튼"
+  → d1: "생활/건강", d2: "자동차용품", d3: "인테리어용품"
+  reason: "차량용 햇빛가리개는 자동차용품의 인테리어용품 d3에 해당합니다. 편의용품이 아닙니다."
+
 엄격한 규칙:
 - 반드시 위 d1 목록에서만 d1을 고르세요
 - d2, d3는 자연스러운 한국어 카테고리명을 추천하세요 (네이버 실제 분류와 유사하게)
 - 새 카테고리를 만들지 마세요
+- 잠옷/홈웨어/파자마 상품을 일반 의류 카테고리로 분류하지 마세요
 - 추측이 어려우면 가장 큰 범주만 정확히 답하세요
 
 응답은 JSON 한 개만 반환하세요. 첫 글자는 {, 마지막은 }.
@@ -502,17 +531,63 @@ ${d1List.join(' / ')}
   const candidates = NAVER_CATEGORIES_FULL.filter(c => c.d1 === d1);
   if (candidates.length === 0) return null;
 
+  // Issue #6 fix (2026-05-01): Form-specific keyword bonus.
+  // When the product name contains domain-specific words like sleepwear/homewear/pajamas,
+  // the matched category MUST contain those words in d2 or d3 — otherwise it's a misclassification.
+  // Without this bonus, AI sometimes routes pajamas to "women's clothing > knit > vest" which is wrong.
+  const SLEEPWEAR_WORDS = ['잠옷', '파자마', '홈웨어', '속옷', '언더웨어', '내복', '내의'];
+  const BATHROOM_WORDS = ['변기', '뚫어뻑', '배수구', '세면대'];
+  const CAR_WORDS = ['차량용', '카커튼', '자동차'];
+
   function score(entry: NaverCategoryEntry): number {
     let s = 0;
     const lname = currentName.toLowerCase();
+    const lnameNoSpace = lname.replace(/\s+/g, '');
+    const entryD2Lower = entry.d2.toLowerCase();
+    const entryD3Lower = (entry.d3 ?? '').toLowerCase();
+    const entryD4Lower = (entry.d4 ?? '').toLowerCase();
+
     if (d2 && entry.d2.includes(d2)) s += 50;
     if (d2 && d2.includes(entry.d2)) s += 30;
     if (d3 && entry.d3.includes(d3)) s += 70;
     if (d3 && d3.includes(entry.d3) && entry.d3.length >= 2) s += 40;
-    if (entry.d3 && lname.includes(entry.d3.toLowerCase())) s += 20;
-    if (entry.d4 && lname.includes(entry.d4.toLowerCase())) s += 25;
+    if (entry.d3 && (lname.includes(entryD3Lower) || lnameNoSpace.includes(entryD3Lower))) s += 20;
+    // Issue #6 sub-fix: d4 exact substring match in product name is a VERY strong signal
+    // (e.g. "차량용햇빛가리개" d4 matches product "차량용 햇빛가리개 자동차"). Bumped from +25 to +60.
+    if (entry.d4 && (lname.includes(entryD4Lower) || lnameNoSpace.includes(entryD4Lower))) s += 60;
     if (entry.d3) s += 5;
     if (entry.d4) s += 5;
+
+    // Form-specific bonus: if product name has domain word, category must have it too.
+    // This single check punishes wrong d2 (e.g. "여성의류" instead of "여성언더웨어/잠옷")
+    // and rewards correct d2/d3 with strong weight (+35 per matched domain word).
+    const productHasSleepwear = SLEEPWEAR_WORDS.some(w => currentName.includes(w));
+    if (productHasSleepwear) {
+      const categoryHasSleepwear = SLEEPWEAR_WORDS.some(w =>
+        entry.d2.includes(w) || (entry.d3 ?? '').includes(w) || (entry.d4 ?? '').includes(w)
+      );
+      if (categoryHasSleepwear) {
+        s += 35;
+      } else {
+        // Penalty: product is sleepwear but category is not — strong negative signal
+        s -= 30;
+      }
+    }
+    const productHasBathroom = BATHROOM_WORDS.some(w => currentName.includes(w));
+    if (productHasBathroom) {
+      const categoryHasBathroom = entryD2Lower.includes('욕실') || entryD3Lower.includes('욕실') ||
+        entryD2Lower.includes('생활용품') || entry.d3.includes('변기') || entry.d4?.includes('변기');
+      if (categoryHasBathroom) s += 35;
+      else s -= 20;
+    }
+    const productHasCar = CAR_WORDS.some(w => currentName.includes(w));
+    if (productHasCar) {
+      const categoryHasCar = entry.d2.includes('자동차') || entry.d3.includes('자동차') ||
+        entry.d2.includes('차량') || entry.d3.includes('차량');
+      if (categoryHasCar) s += 35;
+      else s -= 20;
+    }
+
     return s;
   }
 
@@ -542,10 +617,15 @@ ${d1List.join(' / ')}
   // happens to score >= 50 by coincidence (e.g. shared common syllables), but the actual
   // category content is unrelated to the product.
   const lowerName = currentName.toLowerCase();
+  const lowerNameNoSpace = lowerName.replace(/\s+/g, '');
   const matchedCategoryText = `${best.entry.d2} ${best.entry.d3 ?? ''} ${best.entry.d4 ?? ''}`.toLowerCase();
+  const matchedCategoryTextNoSpace = matchedCategoryText.replace(/\s+/g, '');
   const productTokens = lowerName.split(/[\s/,()-]+/).filter(t => t.length >= 2);
   const hasAnyOverlap = productTokens.some(token =>
-    matchedCategoryText.includes(token) || token.includes(best.entry.d2.toLowerCase())
+    matchedCategoryText.includes(token) ||
+    matchedCategoryTextNoSpace.includes(token) ||
+    token.includes(best.entry.d2.toLowerCase()) ||
+    (best.entry.d4 && lowerNameNoSpace.includes(best.entry.d4.toLowerCase()))
   );
   // Also accept if AI's reasoning explicitly mentions a key category word
   const reasonHasCategoryHint = reason && (
