@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-03 (옵션 C 완료 ✅ — 사이드바 5종 배지 SWR 실시간화)
+> 최종 업데이트: 2026-05-03 (옵션 D 완료 ✅ — 대시보드 위젯 SWR 확장 + 공통 hook 추출)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit으로 갱신 예정
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 실시간화 완료 ✅**
-> **다음 작업: 다음 Sprint 결정 대기 — 옵션 A(E-1 빌더 AEO 강화 Q&A/FAQ JSON-LD) vs 옵션 B(E-12 Discord 리뷰 알림, 트리거 미도달) vs 옵션 D(대시보드 위젯 SWR 확장 — 옵션 C 결과 계승)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 참조
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅**
+> **다음 작업: 다음 Sprint 결정 대기 — 옵션 A(E-1 빌더 AEO 강화 Q&A/FAQ JSON-LD) vs 옵션 B(E-12 Discord 리뷰 알림, 트리거 미도달) vs 옵션 E(MID 5개 위젯 SWR 확장 — ReviewGrowth/GoodService/DataLabTrend/UploadReadiness/SourcingRecommend)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -13,6 +13,33 @@
 ## 이 파일의 역할
 
 > **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스 (세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md 참조)
+
+---
+
+## 2026-05-03 세션 요약 — 옵션 D 완료 (대시보드 위젯 SWR 확장 + 공통 hook 추출)
+- 사전 점검 (작업원칙 21+23): HEAD=28524a5 ↔ origin/main 동기화 ✅, working tree dirty (4개 파일 변경 보존: useDashboardData.ts 신규 + Sidebar/Profitability/DailyPlan 수정) ✅, dev 서버 포트 3000 살아있음 (HTTP 200) ✅, TSC 0 errors ✅, 세 MD 정독 ✅
+- **본 세션은 작업원칙 24번 회수 작업**: 직전 채팅에서 코드 패치 4건(신규 1 + 수정 3) + TSC + 1차 브라우저 검증까지 완료한 후 MCP 서버 응답 불가로 commit/push가 한 turn 안에 끝나지 않음 → 본 세션이 회귀 검증 + MD 갱신 + commit/push를 한 묶음으로 마무리
+- **코드 변경 요약** (직전 채팅에서 수행, 본 세션은 그대로 보존):
+  1. **신규**: `src/lib/hooks/useDashboardData.ts` (186줄) — 옵션 C SWR 패턴을 도메인별 공통 hook으로 일반화
+     - `DASHBOARD_SWR_DEFAULTS` 공통 상수 (60s refreshInterval + revalidateOnFocus + 10s dedupingInterval + keepPreviousData)
+     - `useSidebarStats()` — 사이드바 5종 배지용
+     - `useProfitability()` — Profitability 위젯용
+     - `useProductsList({enabled})` — DRAFT 상품 리스트용 (conditional fetch 지원)
+  2. **마이그레이션**: `src/components/layout/Sidebar.tsx` v10 → v11 — 인라인 useSWR → `useSidebarStats()` 1줄 호출로 단순화 (-7 lines)
+  3. **마이그레이션**: `src/components/dashboard/ProfitabilityWidget.tsx` — useEffect+fetch+useState → `useProfitability()` (-37 lines)
+  4. **마이그레이션**: `src/components/dashboard/DailyPlanWidget.tsx` — useEffect+fetch → `useProductsList({enabled: !usingProps})` conditional fetch 패턴 도입 (props 받으면 fetch 건너뛰기)
+- **diff stat**: 3 files changed, +80/-144 lines (코드 단순화 정상)
+- **TSC**: 0 errors ✅ (직전 채팅 + 본 세션 둘 다 검증)
+- **브라우저 라이브 회귀 검증** (Chrome MCP, 작업원칙 22번):
+  - **8개 DRAFT 평균 75점 회귀 검증 ✅**: 50,60,70,76,80,84,86,92 (옵션 C 결과와 100% 일치, E-15 자산 보존 확정)
+  - **revalidateOnFocus 자동 재호출 검증 ✅**: blur+focus 시뮬레이션 → t=1ms에 `/api/profitability` 200 자동 재호출 (ProfitabilityWidget의 useProfitability() 훅 정상 작동 확인)
+  - **conditional fetch 검증 ✅**: DailyPlanWidget이 dashboard에서 props를 받는 상태(usingProps=true)이므로 자체 fetch 건너뛰기 정상 작동 (네트워크 로그에서 /api/products?status=DRAFT 호출 안 됨)
+  - **사이드바 배지 5종 정상 ✅** (옵션 C 결과 계승, 본 세션 회귀 없음)
+- **작업원칙 26번 일반화 진척**: 옵션 C에서 사이드바 1개 → 옵션 D에서 위젯 3개(ProfitabilityWidget HIGH + DailyPlanWidget HIGH + Sidebar 마이그레이션)까지 패턴 확장 + 공통 hook으로 추출 완료. MID 5개 위젯(ReviewGrowthWidget/GoodServiceWidget/DataLabTrendWidget/UploadReadinessWidget/SourcingRecommendWidget) 미적용 — 옵션 E로 인계
+- **다음 Sprint 후보 (꽃졔님 결정 대기)**:
+  - 옵션 A: E-1 상세페이지 빌더 AEO 강화 (Q&A/FAQ JSON-LD) — 등록 상품 발생 시점에 적합
+  - 옵션 B: E-12 Discord 리뷰 알림 — 자체 리뷰 1건+ 발생 시점에 적합
+  - **옵션 E (옵션 D 후속)**: MID 5개 위젯 SWR 확장 — 본 세션 결과 계승, 동일한 useDashboardData hook에 추가 추출
 
 ---
 

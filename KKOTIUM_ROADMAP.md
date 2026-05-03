@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-03 (옵션 C 완료 ✅ — 사이드바 5종 배지 SWR 실시간화 / 다음: 옵션 D 대시보드 위젯 SWR 확장)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅**
-> **다음 작업: 옵션 D — 대시보드 위젯 SWR 확장 (옵션 C 결과 계승, 작업원칙 26번 일반화 적용) — 상세는 본 문서 하단 "다음 새 채팅 시작 메시지" 섹션 참조**
+> 최종 업데이트: 2026-05-03 (옵션 D 완료 ✅ — 대시보드 위젯 SWR 확장 + 공통 hook 추출 / 다음: 옵션 E MID 5개 위젯 SWR 확장 또는 옵션 A/B 대기)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅**
+> **다음 작업: 다음 Sprint 결정 대기 — 옵션 A(E-1 빌더 AEO 강화) vs 옵션 B(E-12 Discord 리뷰 알림) vs 옵션 E(MID 5개 위젯 SWR 확장 — 옵션 D 결과 계승) — 상세는 본 문서 하단 "다음 새 채팅 시작 메시지" 섹션 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -14,19 +14,24 @@
 
 ---
 
-## 🎯 다음 새 채팅 시작 메시지 (옵션 D 대시보드 위젯 SWR 확장 — 2026-05-03 작성)
+## 🎯 다음 새 채팅 시작 메시지 (옵션 E MID 5개 위젯 SWR 확장 — 2026-05-03 작성)
 
-> **옵션 C 완료 ✅ (2026-05-03 본 세션, commit f9f2300 + MD 마무리 commit)**:
-> - **SWR 도입**: `src/components/layout/Sidebar.tsx` v9 → v10. swr@2.4.1 설치 + useEffect/useState 단발성 fetch → useSWR 훅 (60초 refreshInterval + revalidateOnFocus + 10초 dedupingInterval + keepPreviousData)
-> - **TSC 0 errors** + **8개 DRAFT 회귀 평균 75점** 라이브 검증 완료 (Chrome MCP)
-> - **revalidateOnFocus 실행 검증 ✅**: blur+focus 시 t=202ms에 자동 재호출 / dedupingInterval 10초 경계 정확 작동
-> - **사이드바 배지 5종 정상 렌더링 ✅**: 꿀통 사냥터 3 / 정원 창고 8 / 나머지 0 (현재 DB 데이터 100% 일치)
-> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션 — 옵션 C 완료" 참조
+> **옵션 D 완료 ✅ (2026-05-03 본 세션, commit 본 세션 마무리 commit)**:
+> - **공통 hook 추출**: `src/lib/hooks/useDashboardData.ts` 신규 (186줄) — `DASHBOARD_SWR_DEFAULTS` + `useSidebarStats` + `useProfitability` + `useProductsList({enabled})`
+> - **3개 컴포넌트 마이그레이션**: Sidebar.tsx (v10→v11), ProfitabilityWidget.tsx, DailyPlanWidget.tsx — diff stat +80/-144 lines (코드 단순화)
+> - **TSC 0 errors** + **8개 DRAFT 회귀 평균 75점** + **revalidateOnFocus 자동 재호출 t=1ms** 라이브 검증 완료 (Chrome MCP)
+> - **conditional fetch 패턴 도입**: DailyPlanWidget은 props 받으면 fetch 건너뛰기 — 같은 hook의 두 가지 사용 패턴(self-fetch vs prop-driven) 지원
+> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션 — 옵션 D 완료" 참조
 >
-> **다음 Sprint 후보 (옵션 D 추천): 대시보드 위젯 SWR 확장** (옵션 C 결과 계승, 작업원칙 26번 일반화 적용):
-> - **현재 상태**: 옵션 C에서 사이드바 1개에 SWR 도입 → 안정성 검증 완료. 동일한 stale 데이터 패턴이 대시보드 위젯/다른 페이지에 다수 존재
-> - **목표**: 대시보드 위젯 5~6개에 SWR 패턴 확장 (ProfitabilityWidget, ReviewGrowthWidget, GoodServiceWidget, DataLabTrendWidget, UploadReadinessWidget, OrderManagementWidget 등)
-> - **이유**: 사이드바와 동일한 UX 효과 — 탭 복귀 시 즉각 갱신, 60초 자동 폴링으로 stale 상태 제거. SWR 패턴 1개에서 검증된 후 일반화 (작업원칙 26번)
+> **다음 Sprint 후보 (옵션 E 추천): MID 5개 위젯 SWR 확장** (옵션 D 결과 계승, 작업원칙 26번 일반화 적용):
+> - **현재 상태**: 옵션 C+D에서 HIGH 우선순위 위젯 3개(Sidebar + Profitability + DailyPlan)에 SWR 적용 완료. MID 5개 위젯이 여전히 단발성 fetch + stale state 패턴 보유
+> - **목표 위젯 5개** (`src/components/dashboard/`):
+>   - `ReviewGrowthWidget.tsx` — 리뷰 단계 + 9항목 체크리스트
+>   - `GoodServiceWidget.tsx` — 굿서비스 3축 게이지 + 등급 시뮬레이터
+>   - `DataLabTrendWidget.tsx` — 트렌드 스파크라인 (24h 캐시 가능, refreshInterval 길게)
+>   - `UploadReadinessWidget.tsx` — 등록 준비 명령탑 (E-15에서 가장 자주 갱신되는 위젯)
+>   - `SourcingRecommendWidget.tsx` — 꼬띠 소싱 추천 (BlueOcean 점수, 24h 캐시 가능)
+> - **이유**: HIGH 위젯은 매일 다회 조회되어 옵션 D에서 우선 처리. MID는 일 1~2회 조회 패턴이라 refreshInterval을 더 길게(예: 5분 또는 24h) 설정 가능 — 같은 hook 패턴이지만 옵션은 위젯별로 다름
 > - **참고용 보존된 다른 Sprint 후보** (이번엔 진행 안 함, 미래 작업):
 >   - 옵션 A — E-1 빌더 AEO 강화 (Q&A/FAQ JSON-LD): 등록 상품 0개라 효과 지연
 >   - 옵션 B — E-12 Discord 리뷰 알림: 자체 리뷰 0개라 트리거 미도달
@@ -35,66 +40,57 @@
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md, KKOTIUM_SESSION_LOG.md를 읽고
-옵션 D — 대시보드 위젯 SWR 확장 작업을 시작해주세요.
+옵션 E — MID 5개 위젯 SWR 확장 작업을 시작해주세요.
 
 작업 시작 전 필수 (작업원칙 21+22+23+24+25+26 적용):
-1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 옵션 C 마무리 commit)
+1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 옵션 D 마무리 commit)
    (b) git --no-pager log --oneline -10 → 이번 메시지에 명시되지 않은 commit 있으면 읽고 대응
-   (c) git status 깨끗한지 확인 (dirty면 검토 후 처리)
-   (d) lsof -i :3000 또는 curl http://localhost:3000 → dev 서버 상태 확인 (죽었으면 nohup npm run dev > /tmp/kkotium-dev.log 2>&1 & 재시작, lsof 빈 결과 ≠ 서버 죽음, curl 200 우선)
+   (c) git status 깨끗한지 확인 (dirty면 검토 후 처리 — 덮어쓰기 절대 금지)
+   (d) lsof -i :3000 또는 curl http://localhost:3000 → dev 서버 상태 확인
    (e) 이 메시지의 가정과 실제가 다르면 즉시 정직 보고 후 재분석
    (f) 본 세션 commit은 그 turn 안에서 push까지 한 줄로 완료
-   (g) edit_file에서 한글 매칭 실패 시 절대 Python 수동 NFC 정규화 금지 → git restore + 한글 직접 입력 패턴 (작업원칙 25번)
-   (h) edit_file이 에러 응답을 반환해도 파일에는 적용될 수 있음 → 매칭 실패 시 즉시 재시도 금지, head/grep/xxd로 raw 검증 우선 (작업원칙 25번 보강)
-   (i) 문제 분석은 항상 (a) 즉각 원인 (b) 일반화 원인 두 단계로 — 한 케이스가 아닌 동일 패턴 전체 보호 (작업원칙 26번)
-   (j) 브라우저 테스트는 API 200 응답으로 대체 불가 — Chrome MCP로 실제 화면/숫자/동작 검증 필수 (작업원칙 22번)
-2. KKOTIUM_PROGRESS.md "2026-05-03 세션 요약 — 옵션 C 완료" 섹션 정독
-3. KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션 — 옵션 C 완료" 정독 (SWR 패턴 결정 사유 + 검증 결과)
+   (g) edit_file에서 한글 매칭 실패 시 절대 Python 수동 NFC 정규화 금지 → git restore + 한글 직접 입력 패턴
+   (h) edit_file 에러 응답 받아도 파일에 일부 적용될 수 있음 → head/grep/xxd로 raw 검증 우선
+   (i) 문제 분석은 항상 (a) 즉각 원인 (b) 일반화 원인 두 단계로
+   (j) 브라우저 테스트는 API 200 응답으로 대체 불가 — Chrome MCP로 실제 화면/숫자/동작 검증 필수
+2. KKOTIUM_PROGRESS.md "2026-05-03 세션 요약 — 옵션 D 완료" 섹션 정독
+3. KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션 — 옵션 D 완료" 정독 (공통 hook 패턴 + 검증 결과)
 4. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
 
-[단계 0] 사전 분석 — 대시보드 위젯 stale 패턴 전수 점검:
-  목표: 옵션 C 사이드바와 동일한 단발성 fetch + stale state 패턴 위젯 식별
+[단계 0] 사전 분석 — MID 5개 위젯 stale 패턴 점검:
+  목표: 5개 위젯의 fetch 호출 빈도 + 데이터 신선도 가치 평가
   점검 절차:
-    1. src/components 전체에서 useEffect + fetch 패턴 grep
-       명령 예: grep -rn "useEffect" src/components --include="*.tsx" | grep -B1 "fetch\|api/"
-    2. 후보 우선순위 매핑 (실무 빈도 × 데이터 신선도 가치):
-       - **HIGH**: ProfitabilityWidget, OrderManagementWidget (매일 다회 조회)
-       - **MID**: ReviewGrowthWidget, GoodServiceWidget (일 1~2회 조회)
-       - **LOW**: DataLabTrendWidget (트렌드 정보, 24시간 단위면 충분)
-    3. 작업 분량 추정 후 본 세션 처리 범위 결정 (HIGH 2개만 vs HIGH+MID 4개 vs 전체)
+    1. 각 위젯의 useEffect + fetch 패턴 grep
+       명령: grep -n "useEffect\|fetch(" src/components/dashboard/{ReviewGrowthWidget,GoodServiceWidget,DataLabTrendWidget,UploadReadinessWidget,SourcingRecommendWidget}.tsx
+    2. 각 위젯별 refreshInterval 분류:
+       - **자주 갱신** (60s, HIGH 동일): UploadReadinessWidget — DRAFT 상태 변화 잦음
+       - **중간 갱신** (5분 = 300s): ReviewGrowthWidget, GoodServiceWidget — 일 1~2회 조회
+       - **드물게 갱신** (24h = 86400s): DataLabTrendWidget, SourcingRecommendWidget — 트렌드/추천 데이터 안정적
+    3. 각 위젯의 API 응답 타입을 useDashboardData.ts에 hook으로 추출
 
-[단계 1] SWR 패턴 일반화 — 공통 hook 추출 (선택, 권장):
-  목표: useDashboardStats() 같은 도메인별 공통 hook으로 정리해 향후 재사용성 확보
-  사전 검토:
-    1. 현재 사이드바는 인라인 useSWR 사용 — 위젯 5~6개도 인라인이면 코드 중복 발생
-    2. 권장: src/lib/hooks/useDashboardData.ts에 도메인별 hook 추출
-       - useSidebarStats() (사이드바 — 옵션 C 이미 적용)
-       - useProfitabilityStats(period)
-       - useReviewGrowth(productId?)
-       - useOrderManagement()
-    3. 각 hook은 기본 SWR 옵션 (60s refreshInterval + revalidateOnFocus + 10s dedupe + keepPreviousData) 공유
-    4. TypeScript 타입은 API 응답 타입 그대로 재사용 (별도 정의 X)
+[단계 1] useDashboardData.ts hook 5개 추가:
+  - useReviewGrowth() — refreshInterval: 5분
+  - useGoodService() — refreshInterval: 5분
+  - useDataLabTrend() — refreshInterval: 24h (혹은 dedupingInterval만 길게)
+  - useUploadReadiness() — refreshInterval: 60s (HIGH 동일)
+  - useSourcingRecommend() — refreshInterval: 24h
+  각 hook 추가 시 export interface도 정의 (옵션 D의 ProfitabilityApiData 패턴 참고)
 
-[단계 2] 우선순위 위젯 SWR 적용 (HIGH 2개 우선 권장):
-  - ProfitabilityWidget.tsx → useProfitabilityStats() 도입
-  - OrderManagementWidget.tsx → useOrderManagement() 도입
-  - 각 위젯 패치 후 npx tsc --noEmit 0 errors 확인
-  - 브라우저 라이브 회귀: 위젯 렌더링 + focus 시 자동 재호출 + 8개 DRAFT 평균 75점 회귀 안 일어남
+[단계 2] 5개 위젯 마이그레이션:
+  각 위젯 패치 후 npx tsc --noEmit 0 errors 확인. 각 위젯의 conditional fetch 필요 여부 검토 (props로 데이터를 받는 패턴이 있는지)
 
 [단계 3] 마무리 (작업원칙 22+24번 확약):
   - npx tsc --noEmit 0 errors 최종
-  - Chrome MCP로 대시보드 전체 페이지 라이브 검증 (위젯 5~6개 모두 정상 동작 + revalidateOnFocus 실행 확인)
-  - PROGRESS.md / ROADMAP.md / SESSION_LOG.md 갱신 (본 세션 자세한 기록)
+  - Chrome MCP로 대시보드 전체 페이지 라이브 검증 (5개 위젯 정상 렌더링 + 각 위젯 refreshInterval 정확)
+  - PROGRESS.md / ROADMAP.md / SESSION_LOG.md 갱신
   - commit + push 한 묶음 (그 turn 안에서)
-  - 새 인계 메시지 작성 (다음 Sprint: 옵션 A vs B vs 옵션 D 잔여 위젯)
+  - 새 인계 메시지 작성 (다음 Sprint: 옵션 A vs B vs 옵션 F 다른 페이지 SWR 확장)
 
-참고 (주의사항):
-- 옵션 C에서 사이드바는 인라인 useSWR — 옵션 D에서 추출형 hook 패턴 도입 시 사이드바도 같이 마이그레이션할지 결정 (호환성 깨짐 X, 코드 일관성만 향상)
+참고:
 - AI 호출 비용 0원 (Groq 3키 합산 43,200/일)
-- 사용 모델 llama-3.1-8b-instant
 - 코드 수정 후 반드시 `npx tsc --noEmit` 0 errors 확인
-- 브라우저 회귀: Chrome MCP `tabs_context_mcp` → `navigate` → JS로 위젯 데이터 추출 + focus 이벤트 시뮬레이션
-- 8개 DRAFT 회귀 필요 시 curl "http://localhost:3000/api/products?status=DRAFT&limit=20" 사용 (zsh ? glob 회피 위해 따옴표 필수)
+- 각 위젯은 옵션 D의 useProfitability() 패턴을 그대로 따라 — `useDashboardData` 단일 소스 유지
+- 24h 캐시 위젯은 `dedupingInterval`을 길게(예: 1시간)로 설정해 SWR 자체 효율 극대화
 - 세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md에 작성, PROGRESS.md/ROADMAP.md는 핵심 요약만 유지
 ```
 

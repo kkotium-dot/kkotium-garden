@@ -2,8 +2,12 @@
 // DailyPlanWidget — "오늘 할 일" Slot A/B/C
 // Early-stage mode: shows DRAFT products with action buttons when no ACTIVE products exist
 // Normal mode: Kkotti recommended / user-picked / reactivation candidates
+//
+// Option D (2026-05-03): migrated self-fetch path to useProductsList() shared SWR hook.
+// - Conditional fetching: parent-provided products bypass SWR entirely (key=null)
+// - 60s polling + revalidateOnFocus when running in standalone mode
 
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo } from 'react';
 import {
   Sparkles, User, RefreshCw, CheckCircle,
   XCircle, AlertTriangle, ChevronRight, ExternalLink,
@@ -11,6 +15,7 @@ import {
 } from 'lucide-react';
 import { buildDailyPlan, DAILY_SLOT_CONFIG, type DailyPlan, type SlotItem } from '@/lib/daily-slots';
 import { getSeasonContext } from '@/lib/discord';
+import { useProductsList } from '@/lib/hooks/useDashboardData';
 import type { DashboardProduct } from '@/app/dashboard/page';
 
 const GRADE_STYLE: Record<string, { bg: string; text: string }> = {
@@ -98,7 +103,7 @@ function OnboardingGuide() {
         </span>
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        {steps.map((step, i) => (
+        {steps.map((step) => (
           <a
             key={step.num}
             href={step.href}
@@ -220,61 +225,57 @@ interface DailyPlanWidgetProps {
   productsLoading?: boolean;
 }
 
+// Normalize a raw API product object into the DashboardProduct shape used by buildDailyPlan.
+// Kept identical to the legacy v9 inline normalizer to avoid behavioral drift.
+function normalizeRawProduct(p: any): DashboardProduct {
+  return {
+    id: p.id,
+    name: p.name,
+    sku: p.sku,
+    status: p.status,
+    salePrice: p.salePrice ?? 0,
+    supplierPrice: p.supplierPrice ?? 0,
+    naverCategoryCode: p.naverCategoryCode ?? p.category_id ?? '',
+    keywords:  Array.isArray(p.keywords) ? p.keywords : [],
+    tags:      Array.isArray(p.tags) ? p.tags : [],
+    mainImage: p.mainImage ?? p.main_image_url,
+    aiScore:   p.aiScore ?? null,
+    lastSaleDate: p.lastSaleDate ? new Date(p.lastSaleDate) : undefined,
+    createdAt:    p.createdAt ? new Date(p.createdAt) : undefined,
+    updatedAt:    p.updatedAt ? new Date(p.updatedAt) : new Date(),
+    supplierName: p.supplier?.name ?? p.supplierName,
+  };
+}
+
 export default function DailyPlanWidget({ products: propProducts, productsLoading: propLoading }: DailyPlanWidgetProps = {}) {
-  const [plan, setPlan]           = useState<DailyPlan | null>(null);
-  const [loading, setLoading]     = useState(true);
-  const [isEarlyStage, setEarly]  = useState(false);
+  // Conditional SWR fetch: when parent passes products via props, skip the network call entirely.
+  // This preserves the legacy "if propProducts is defined, do not fetch" guard.
+  const usingProps = propProducts !== undefined;
+  const { rawProducts, isLoading: swrLoading, refresh } = useProductsList({ enabled: !usingProps });
 
-  const buildPlan = useCallback((rawProducts: DashboardProduct[]) => {
-    const activeCount = rawProducts.filter((p) => p.status === 'ACTIVE').length;
-    setEarly(activeCount === 0);
+  // Resolve the actual product list to use (parent-provided takes precedence).
+  // Memoized so buildDailyPlan only re-runs when the underlying source array changes.
+  const products: DashboardProduct[] | null = useMemo(() => {
+    if (usingProps) return propProducts ?? [];
+    if (rawProducts == null) return null;
+    return (rawProducts as any[]).map(normalizeRawProduct);
+  }, [usingProps, propProducts, rawProducts]);
+
+  // Build the plan whenever the resolved products list changes.
+  const plan: DailyPlan | null = useMemo(() => {
+    if (products == null) return null;
     const season = getSeasonContext();
-    const built  = buildDailyPlan(rawProducts, season ?? undefined);
-    setPlan(built);
-  }, []);
+    return buildDailyPlan(products, season ?? undefined);
+  }, [products]);
 
-  const load = useCallback(async () => {
-    // If parent already loaded products, skip fetch
-    if (propProducts !== undefined) return;
-    setLoading(true);
-    try {
-      const res   = await fetch('/api/products?limit=200');
-      const data  = await res.json();
-      const prods = (data.products ?? data.data ?? []).map((p: any) => ({
-        id: p.id, name: p.name, sku: p.sku, status: p.status,
-        salePrice: p.salePrice ?? 0, supplierPrice: p.supplierPrice ?? 0,
-        naverCategoryCode: p.naverCategoryCode ?? p.category_id ?? '',
-        keywords:  Array.isArray(p.keywords) ? p.keywords : [],
-        tags:      Array.isArray(p.tags) ? p.tags : [],
-        mainImage: p.mainImage ?? p.main_image_url,
-        aiScore:   p.aiScore ?? null,
-        lastSaleDate: p.lastSaleDate ? new Date(p.lastSaleDate) : undefined,
-        createdAt:    p.createdAt ? new Date(p.createdAt) : undefined,
-        updatedAt:    p.updatedAt ? new Date(p.updatedAt) : new Date(),
-        supplierName: p.supplier?.name ?? p.supplierName,
-      }));
-      buildPlan(prods);
-    } catch (e) {
-      console.error('[DailyPlanWidget]', e);
-    } finally {
-      setLoading(false);
-    }
-  }, [propProducts, buildPlan]);
+  const isEarlyStage = useMemo(() => {
+    if (products == null) return false;
+    return products.filter((p) => p.status === 'ACTIVE').length === 0;
+  }, [products]);
 
-  // When parent provides products, build plan immediately without fetch
-  useEffect(() => {
-    if (propProducts !== undefined) {
-      setLoading(propLoading ?? false);
-      if (!propLoading && propProducts.length >= 0) {
-        buildPlan(propProducts);
-        setLoading(false);
-      }
-    }
-  }, [propProducts, propLoading, buildPlan]);
+  const loading = usingProps ? (propLoading ?? false) : swrLoading;
 
-  useEffect(() => { load(); }, [load]);
-
-  if (loading) {
+  if (loading && !plan) {
     return (
       <div className="kk-card" style={{ padding: 20 }}>
         <div style={{ height: 14, background: '#F8DCE5', borderRadius: 8, width: '35%', marginBottom: 12 }} />
@@ -319,7 +320,7 @@ export default function DailyPlanWidget({ products: propProducts, productsLoadin
             </span>
           )}
           <button
-            onClick={load}
+            onClick={refresh}
             style={{
               padding: 6, borderRadius: 8, background: 'transparent',
               border: 'none', cursor: 'pointer', color: '#B0A0A8',

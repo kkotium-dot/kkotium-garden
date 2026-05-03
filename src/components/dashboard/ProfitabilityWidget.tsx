@@ -4,55 +4,23 @@
 //
 // 2025-06-02 reform: traffic-channel-aware fee display.
 // All commission math comes from /api/profitability (single source of truth).
+//
+// Option D (2026-05-03): migrated to useProfitability() shared SWR hook.
+// - 60s polling + revalidateOnFocus for live updates
+// - Single source of truth for SWR options (src/lib/hooks/useDashboardData.ts)
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
   DollarSign, TrendingUp, BarChart3, RefreshCw,
   ChevronRight, Link2, Info, CalendarClock,
 } from 'lucide-react';
-
-interface ProfitData {
-  summary: {
-    totalProducts: number;
-    activeCount: number;
-    avgMarginNormal: number;
-    avgMarginMarketing: number;
-    totalFeeNormal: number;
-    totalFeeMarketing: number;
-    totalFeeSaved: number;
-    totalProfitNormal: number;
-    totalProfitMarketing: number;
-    monthlySimulation: {
-      normal: number;
-      marketing: number;
-      difference: number;
-    };
-  };
-  distribution: {
-    excellent: number;
-    good: number;
-    normal: number;
-    low: number;
-    danger: number;
-  };
-  top5: Array<{ id: string; name: string; sku: string; profitNormal: number; marginNormal: number }>;
-  bottom5: Array<{ id: string; name: string; sku: string; profitNormal: number; marginNormal: number }>;
-  feeComparison: {
-    normalRate: number;
-    marketingRate: number;
-    savedRate: number;
-    salesFeeNormal: number;
-    salesFeeMarketing: number;
-    reformDate: string;
-    reformNote: string;
-  };
-}
+import { useProfitability, type ProfitabilityApiData } from '@/lib/hooks/useDashboardData';
 
 // Compact bar for margin distribution
 function DistributionBar({ distribution, total }: {
-  distribution: ProfitData['distribution']; total: number;
+  distribution: ProfitabilityApiData['distribution']; total: number;
 }) {
   if (total === 0) return null;
   const segments = [
@@ -89,27 +57,15 @@ function DistributionBar({ distribution, total }: {
 }
 
 export default function ProfitabilityWidget() {
-  const [data, setData] = useState<ProfitData | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Live profitability data via shared SWR hook (Option D, 2026-05-03)
+  // - isLoading: true on first render only (keepPreviousData=true keeps stale visible)
+  // - isValidating: true while a background refetch is in flight (drives the spinner)
+  // - refresh(): triggers a manual mutate() — used by the header refresh button
+  const { data, isLoading, isValidating, refresh } = useProfitability();
   const [showDetail, setShowDetail] = useState(false);
   const [showMarketingTip, setShowMarketingTip] = useState(false);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/profitability');
-      const json = await res.json();
-      if (json.success) setData(json.data);
-    } catch (e) {
-      console.error('[Profitability] load error:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  if (loading) {
+  if (isLoading && !data) {
     return (
       <div className="kk-card" style={{ padding: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -161,11 +117,11 @@ export default function ProfitabilityWidget() {
             {feeComparison.reformDate} 개편 반영
           </span>
         </div>
-        <button onClick={loadData} disabled={loading} style={{
+        <button onClick={refresh} disabled={isValidating} style={{
           padding: 4, borderRadius: 6, background: 'transparent', border: 'none',
           cursor: 'pointer', color: '#B0A0A8',
         }}>
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+          <RefreshCw size={12} className={isValidating ? 'animate-spin' : ''} />
         </button>
       </div>
 

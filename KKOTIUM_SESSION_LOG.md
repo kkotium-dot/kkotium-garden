@@ -9,6 +9,116 @@
 
 ---
 
+## 2026-05-03 세션 — 옵션 D 완료 (대시보드 위젯 SWR 확장 + 공통 hook 추출)
+
+### 세션 개요
+- 직전 채팅이 옵션 D 코드 패치 4건(useDashboardData.ts 신규 + Sidebar/Profitability/DailyPlan 마이그레이션) + TSC 0 errors + 1차 브라우저 검증까지 완료한 상태에서 MCP 서버 응답 불가로 commit/push가 한 turn 안에 끝나지 않은 채로 종료된 상태에서 시작 (작업원칙 24번 위반 회수 작업)
+- 본 세션 목표: 작업원칙 24번 위반 회수 — 직전 패치를 그대로 보존한 채 회귀 검증 + MD 3종 갱신 + commit + push 한 묶음으로 마무리, 옵션 E(MID 5개 위젯 SWR 확장) 인계 메시지 작성
+- 작업원칙 21·22·23·24·25·26 모두 적용
+
+### [Sprint 1] 사전 환경 점검 (작업원칙 21+23번)
+**Git 상태 검증**:
+- HEAD = origin/main = `28524a5` (옵션 C 마무리 commit, "feat(옵션C): SWR 도입으로 사이드바 5종 배지 실시간화") 동기화 ✅
+- working tree dirty: 4개 파일 변경 보존 확인 ✅
+  - 신규: `src/lib/hooks/useDashboardData.ts` (186줄, 6220 bytes)
+  - 수정: `src/components/layout/Sidebar.tsx` (+9/-28 lines, v10→v11 인라인 useSWR → useSidebarStats() 1줄 호출)
+  - 수정: `src/components/dashboard/ProfitabilityWidget.tsx` (+11/-63 lines, useEffect+useState → useProfitability())
+  - 수정: `src/components/dashboard/DailyPlanWidget.tsx` (+60/-53 lines, useEffect+fetch → useProductsList({enabled: !usingProps}) conditional fetch)
+- `git diff --stat`: 3 files changed, +80/-144 lines (코드 단순화 정상) — 직전 채팅 패치 그대로 보존 확인
+
+**Dev 서버 상태**:
+- `curl http://localhost:3000` → DEV:200 ✅
+
+**TSC 검증**:
+- `npx tsc --noEmit` → EXIT=0, 0 errors ✅
+
+**hook 파일 검증**:
+- `wc -l src/lib/hooks/useDashboardData.ts` → 186줄
+- `grep -n "^export " src/lib/hooks/useDashboardData.ts` → DASHBOARD_SWR_DEFAULTS / SidebarBadgeCounts / useSidebarStats / ProfitabilityApiData / useProfitability / useProductsList — 6개 export 정상
+
+**위젯 마이그레이션 검증** (grep으로 import + 사용 패턴 확인):
+- Sidebar.tsx L9: `import { useSidebarStats } from '@/lib/hooks/useDashboardData';` + L196: `const { counts: sideStats } = useSidebarStats();` ✅
+- ProfitabilityWidget.tsx L19: `import { useProfitability, type ProfitabilityApiData } from '@/lib/hooks/useDashboardData';` + L64: `const { data, isLoading, isValidating, refresh } = useProfitability();` ✅
+- DailyPlanWidget.tsx L18: `import { useProductsList } from '@/lib/hooks/useDashboardData';` + L253-254: `const usingProps = propProducts !== undefined; const { rawProducts, isLoading: swrLoading, refresh } = useProductsList({ enabled: !usingProps });` ✅
+
+### [Sprint 2] 브라우저 라이브 회귀 검증 (Chrome MCP, 작업원칙 22번)
+
+**검증 1 — 8개 DRAFT 평균 75점 회귀 ✅**:
+- DOM 점수 추출: `[50,60,70,76,80,84,86,92]`
+- 평균: (50+60+70+76+80+84+86+92)/8 = 598/8 = 74.75 → 75점 ✅
+- 직전 세션(옵션 C, 잔여·5)과 100% 일치 → E-15 자산 보존 + 옵션 D 회귀 없음 확정
+
+**검증 2 — revalidateOnFocus 자동 재호출 ✅**:
+- window.fetch 패치로 네트워크 로그 캡처
+- blur+focus 시뮬레이션 → t=1ms에 `/api/profitability` HTTP 200 자동 재호출 발생
+- 결론: ProfitabilityWidget의 useProfitability() 훅이 옵션 C와 동일하게 SWR revalidateOnFocus 패턴 정상 작동
+
+**검증 3 — conditional fetch 패턴 ✅**:
+- DailyPlanWidget이 dashboard.tsx에서 propProducts를 받는 상태(usingProps=true)이므로 자체 fetch 건너뛰기
+- 네트워크 로그에서 `/api/products?status=DRAFT` 호출 발생 안 함 → conditional fetch (`enabled: !usingProps`) 정상 작동
+- 같은 hook의 두 가지 사용 패턴(self-fetch vs prop-driven)을 모두 지원하는 설계 검증
+
+**검증 4 — DOM 점수 추출 추가 발견**:
+- API의 `aiScore` 필드는 모두 0이지만, DailyPlanWidget이 화면에 그리는 honeyScore는 `honey-score.ts` 라이브러리가 별도 계산하는 값 → DOM에서만 보이고 API JSON에는 없음
+- 위와 같은 이유로 단순 API curl이 아닌 Chrome MCP DOM 추출이 필수 (작업원칙 22번 — 브라우저 테스트 절대 대체 불가)
+
+### [Sprint 3] MD 3종 갱신 (작업원칙 25번 — 한글 직접 입력)
+
+**갱신 범위**:
+1. **PROGRESS.md**:
+   - 헤더 4줄 갱신 (옵션 D 완료 반영)
+   - 첫 anchor "## 2026-05-03 세션 요약 — 옵션 C 완료" 직전에 옵션 D 완료 섹션 prepend
+2. **ROADMAP.md**:
+   - 헤더 3줄 갱신 (옵션 D 완료 + 다음 옵션 E)
+   - 시작 메시지 섹션 헤더 + 본문을 옵션 E(MID 5개 위젯 SWR 확장)용으로 전체 교체
+3. **SESSION_LOG.md** (본 파일):
+   - 첫 anchor "## 2026-05-03 세션 — 옵션 C 완료" 직전에 본 세션 entry prepend
+
+**구현 방식**:
+- Python 스크립트(`_patch_md_option_d.py`) 사용 — `Filesystem:write_file`로 작성, 한글 직접 입력 (작업원칙 25번 — Python 수동 NFC 정규화 절대 금지)
+- 각 anchor 매칭 실패 시 즉시 assertion 실패로 작업 중단 → 잘못된 위치에 prepend 방지
+
+### [Sprint 4] commit + push 한 묶음 마무리 (작업원칙 24번)
+
+**commit 메시지** (꽃졔님 지정):
+```
+feat(옵션D): 대시보드 위젯 SWR 확장 + 공통 hook 추출 (Sidebar v11 + Profitability + DailyPlan)
+```
+
+**commit 본문에 포함**:
+- 신규 파일: `src/lib/hooks/useDashboardData.ts` 186줄 (3종 hook + DASHBOARD_SWR_DEFAULTS)
+- 마이그레이션: Sidebar v10→v11, ProfitabilityWidget, DailyPlanWidget
+- diff stat: 3 files changed, +80/-144 lines (코드 단순화)
+- 검증: TSC 0 errors + 8개 DRAFT 평균 75점 회귀 + revalidateOnFocus 자동 재호출 + conditional fetch 검증
+- 작업원칙 24번 회수: 직전 채팅 commit/push 누락분 본 세션에서 한 묶음으로 마무리
+
+### 본 세션 핵심 성과
+- **공통 hook 추출 완료**: 옵션 C 인라인 useSWR → 옵션 D `useDashboardData` 도메인별 hook으로 일반화 (재사용성 + 단일 SWR 옵션 소스 확보)
+- **HIGH 우선순위 위젯 3개 SWR 적용 완료**: Sidebar(v11) + ProfitabilityWidget + DailyPlanWidget
+- **conditional fetch 패턴 도입**: prop-driven 위젯이 fetch 건너뛰기 → 같은 hook의 두 가지 사용 패턴 지원
+- **TSC 0 errors** ✅
+- **브라우저 라이브 회귀 검증 완료**: 8개 DRAFT 75점 + revalidateOnFocus + conditional fetch 모두 정상
+- **MD 3종 갱신 완료** + **commit + push 한 묶음 마무리** (작업원칙 24번 회수)
+- **다음 Sprint 옵션 E 인계**: MID 5개 위젯(ReviewGrowth/GoodService/DataLabTrend/UploadReadiness/SourcingRecommend)에 같은 패턴 확장 — refreshInterval만 위젯별 데이터 신선도에 맞게 차등 (60s/5분/24h)
+
+### 작업원칙 적용 내역
+- **21번 (사전 분석)**: git status + HEAD/origin 동기화 + dev 서버 200 + TSC 0 errors + hook 파일 줄 수 + grep으로 import/사용 패턴 모두 사전 검증
+- **22번 (브라우저 테스트 필수)**: Chrome MCP로 라이브 회귀 4건 (8개 DRAFT 점수 + revalidateOnFocus + conditional fetch + DOM 추출). API curl 단독으로는 honeyScore 같은 클라이언트 계산값을 검증 못 함 → DOM 추출 필수
+- **23번 (정직한 보고)**: 직전 채팅의 commit/push 누락을 즉시 보고하고 회수 작업 진행. 또한 검증 1차에서 API의 aiScore 필드가 0인 것을 발견했을 때 즉시 보고 후 DOM 추출로 전환
+- **24번 (코드 패치 후 commit/push 한 turn 마무리)**: 본 세션이 회수 — MD 3종 + 코드 4파일(신규 1 + 수정 3) 모두 한 묶음으로 commit + push
+- **25번 (한글 매칭 안전 패턴)**: Python 스크립트(`_patch_md_option_d.py`)에 한글 직접 입력 + assertion 검증. Python 수동 NFC 정규화 절대 금지 원칙 준수
+- **26번 (즉각 원인 + 일반화 원인)**:
+  - 즉각 원인 (옵션 D 완료): HIGH 위젯 3개의 stale fetch 패턴 해소
+  - 일반화 원인 (옵션 E 인계): MID 5개 위젯에 동일 패턴 존재 → refreshInterval 차등 정책으로 옵션 E 인계
+  - 추가 일반화: useDashboardData hook을 page-level(예: products/page.tsx, orders/page.tsx)에도 확장 가능 → 옵션 F 후보로 메모
+
+### 환경/도구 사용 내역
+- **iterm-mcp**: TTY `/dev/ttys005` 신규 launch_session, git/curl/wc/sed/grep/npx/git commit/push 명령 사용
+- **Filesystem MCP (user)**: `_patch_md_option_d.py` 작성 (write_file) — 한글 직접 입력
+- **Chrome MCP**: tabs_context_mcp 신규 (createIfEmpty=true), javascript_tool로 DOM 점수 추출 + window.fetch 패치 + blur/focus 이벤트 시뮬레이션 + 네트워크 로그 캡처
+
+---
+
 ## 2026-05-03 세션 — 옵션 C 완료 (사이드바 5종 배지 SWR 실시간화)
 
 ### 세션 개요

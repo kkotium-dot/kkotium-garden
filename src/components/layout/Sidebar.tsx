@@ -1,12 +1,12 @@
 'use client';
-// Sidebar — KKOTIUM v10 (SWR realtime, 2026-05-03 옵션 C)
-// - 5 badges (sourcing/zombie/orders/draft/oos) backed by useSWR
-// - 60s refreshInterval + revalidateOnFocus for live updates
+// Sidebar — KKOTIUM v11 (SWR realtime via shared hook, 2026-05-03 옵션 D)
+// - 5 badges (sourcing/zombie/orders/draft/oos) backed by useSidebarStats()
+// - Polling cadence + focus revalidation handled centrally in useDashboardData
 
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import useSWR from 'swr';
+import { useSidebarStats } from '@/lib/hooks/useDashboardData';
 import {
   Package, PackagePlus, RefreshCw,
   Search, Layers, Store, Truck,
@@ -187,34 +187,13 @@ function NavBadge({ count, active }: { count: number; active: boolean }) {
   );
 }
 
-// SWR fetcher — returns parsed JSON from the dashboard stats API
-const statsFetcher = (url: string) => fetch(url).then(r => r.json());
-
 export default function Sidebar() {
   const pathname = usePathname();
 
-  // SWR with 60s polling + revalidate on focus (탭 전환·창 복귀 시 즉시 갱신)
-  // — replaces single-shot useEffect/useState pattern (옵션 C, 2026-05-03)
-  const { data: statsResp } = useSWR(
-    '/api/dashboard/stats?period=all',
-    statsFetcher,
-    {
-      refreshInterval: 60_000,    // poll every 60s
-      revalidateOnFocus: true,    // refetch when user switches back to the tab
-      dedupingInterval: 10_000,   // suppress duplicate fetches within 10s
-      keepPreviousData: true,     // avoid badge flicker on revalidation
-    },
-  );
-
-  const sideStats = statsResp?.success && statsResp?.data?.summary
-    ? {
-        sourcingCount: statsResp.data.summary.sourcingCount       ?? 0,
-        zombieCount:   statsResp.data.summary.zombieCount         ?? 0,
-        ordersCount:   statsResp.data.summary.todayOrderCount     ?? 0,
-        draftCount:    statsResp.data.summary.draftProducts       ?? 0,
-        oosCount:      statsResp.data.summary.outOfStockProducts  ?? 0,
-      }
-    : null;
+  // Live badge counts from shared SWR hook (Option D, 2026-05-03)
+  // — replaces inline useSWR call from v10. Polling cadence + focus revalidation
+  //   options live in src/lib/hooks/useDashboardData.ts (single source of truth).
+  const { counts: sideStats } = useSidebarStats();
 
   const getBadgeCount = (key: NavItem['badgeKey']): number => {
     if (!sideStats) return 0;
