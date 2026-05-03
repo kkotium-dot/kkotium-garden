@@ -1,7 +1,10 @@
 'use client';
-// AutoFillModal — Phase E+ Sprint 6 / E-15 Block C
+// AutoFillModal — Phase E+ Sprint 6 / E-15 Block C + Part 2 잔여·5 (issue #3 fix)
 // Two-stage workflow: POST preview -> seller approval (checkboxes) -> PATCH apply
 // AI-generated values are NEVER applied to DB without explicit checkbox approval.
+// Issue #3 fix (2026-05-02): onApplied callback now receives (productId, newScore) so
+// the widget can apply an optimistic score update immediately, eliminating the
+// brief window where the AI button reappears on a now-90+ card before fetch completes.
 //
 // UI sections:
 //   1. Header   — product name + score transition (current -> projected)
@@ -128,7 +131,13 @@ interface AutoFillModalProps {
   productName: string;
   currentScore: number;
   onClose: () => void;
-  onApplied: () => void;  // called after successful PATCH so widget reloads
+  /**
+   * Called after a successful PATCH apply.
+   * Receives the productId and the server-canonical newScore so the widget can apply
+   * an optimistic score override during the brief reload window — preventing the
+   * sub-90 "AI fill" button from reappearing on a card that just crossed 90+ (issue #3).
+   */
+  onApplied: (productId: string, newScore: number | null) => void;
 }
 
 export default function AutoFillModal({
@@ -233,11 +242,13 @@ export default function AutoFillModal({
         setErrorMsg(data.error ?? '적용에 실패했습니다');
         return;
       }
-      setNewScore(typeof data.newScore === 'number' ? data.newScore : null);
+      const serverScore = typeof data.newScore === 'number' ? data.newScore : null;
+      setNewScore(serverScore);
       setAppliedItems(Array.isArray(data.applied) ? data.applied : []);
       setPhase('done');
-      // Notify parent to reload widget data
-      onApplied();
+      // Notify parent — pass productId + newScore so widget can do an optimistic
+      // score override while loadProducts() is fetching fresh data (issue #3 fix).
+      onApplied(productId, serverScore);
       // Auto-close after brief success display
       setTimeout(() => onClose(), 1800);
     } catch (e) {

@@ -1,5 +1,5 @@
 'use client';
-// UploadReadinessWidget — Phase E+ Sprint 4 / E-14 + Sprint 6 / E-15 Block C+D Part 2
+// UploadReadinessWidget — Phase E+ Sprint 4 / E-14 + Sprint 6 / E-15 Block C+D Part 2 잔여·5
 // Surfaces DRAFT products with their 11-point readiness score on the dashboard,
 // turning the existing upload-readiness library into an actionable command center.
 // - Lists unregistered products sorted by score ASCENDING (lowest first = most work-needed at top)
@@ -8,8 +8,12 @@
 // - Items at 90+ get a "register now" CTA that takes user to garden warehouse with the product preselected
 // - E-15: Each card under 90 also has an "AI auto-fill" button that opens AutoFillModal
 // - 2026-05-01 Part 2 issue #4 fix: ascending sort + slice(0, 8) ensures unfilled DRAFTs are always reachable from widget
+// - 2026-05-02 Part 2 잔여·5 issue #3 fix: optimistic score override eliminates the brief window
+//   where the AI button reappears on a now-90+ card before loadProducts() finishes.
+//   AutoFillModal passes (productId, newScore) on apply, widget overrides the readiness score
+//   for that productId until the next products prop change clears the override automatically.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2, AlertCircle, ChevronRight, Sparkles,
   TrendingUp, Package, Image as ImageIcon, Tag, Truck,
@@ -302,6 +306,22 @@ export default function UploadReadinessWidget({
     score: number;
   } | null>(null);
 
+  // Issue #3 fix (2026-05-02 잔여·5): optimistic score overrides keyed by productId.
+  // Set immediately on AI fill apply (before loadProducts() finishes) and cleared
+  // automatically when the products prop reference changes (= fresh DB data arrived).
+  const [optimisticScores, setOptimisticScores] = useState<Map<string, number>>(
+    () => new Map()
+  );
+
+  // Whenever the parent passes a new products array reference, the fresh DB data
+  // has arrived — clear all optimistic overrides so canonical scores take over.
+  useEffect(() => {
+    if (optimisticScores.size > 0) {
+      setOptimisticScores(new Map());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products]);
+
   function handleOpenAutoFill(productId: string, productName: string, score: number) {
     setModalTarget({ productId, productName, score });
   }
@@ -310,8 +330,19 @@ export default function UploadReadinessWidget({
     setModalTarget(null);
   }
 
-  function handleAutoFillApplied() {
-    // Tell the dashboard to reload products so the score updates immediately
+  // Receives (productId, newScore) from AutoFillModal so we can override the
+  // displayed score immediately, eliminating the brief reappearance of the AI
+  // fill button on a card that just crossed 90+ (issue #3).
+  function handleAutoFillApplied(productId: string, newScore: number | null) {
+    if (typeof newScore === 'number') {
+      setOptimisticScores((prev) => {
+        const next = new Map(prev);
+        next.set(productId, newScore);
+        return next;
+      });
+    }
+    // Tell the dashboard to reload products so the score updates immediately.
+    // The useEffect above will clear overrides once fresh data arrives.
     if (onRefresh) onRefresh();
   }
 
@@ -322,9 +353,8 @@ export default function UploadReadinessWidget({
       (p) => p.status === 'DRAFT' || !(p as any).naverProductId
     );
     return unregistered
-      .map((p) => ({
-        product: p,
-        readiness: calcUploadReadiness({
+      .map((p) => {
+        const readiness = calcUploadReadiness({
           naverCategoryCode: p.naverCategoryCode,
           keywords: p.keywords,
           tags: p.tags,
@@ -335,11 +365,19 @@ export default function UploadReadinessWidget({
           salePrice: p.salePrice,
           supplierPrice: p.supplierPrice,
           shippingFee: (p as any).shippingFee ?? 3000,
-        }),
-      }))
+        });
+        // Issue #3 fix: if we have an optimistic override for this product
+        // (= AI fill was just applied), trust the server-canonical newScore over
+        // the locally-recomputed score until the next products prop refresh.
+        const override = optimisticScores.get(p.id);
+        if (typeof override === 'number') {
+          return { product: p, readiness: { ...readiness, score: override } };
+        }
+        return { product: p, readiness };
+      })
       // ascending sort: lowest-score (most work-needed) cards appear first
       .sort((a, b) => a.readiness.score - b.readiness.score);
-  }, [products]);
+  }, [products, optimisticScores]);
 
   const visibleCards = ranked.slice(0, 8);
   const readyCount   = ranked.filter((r) => r.readiness.score >= 90).length;
