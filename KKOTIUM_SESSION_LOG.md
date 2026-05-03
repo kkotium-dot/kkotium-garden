@@ -9,6 +9,129 @@
 
 ---
 
+## 2026-05-03 세션 — 옵션 E Part 1 완료 (MID 3개 위젯 SWR 확장 + hook 5개 일괄 추가)
+
+### 세션 개요
+- 직전 채팅이 옵션 D 마무리 commit 6c8a5b5 push 완료 후 종료. 새 세션에서 옵션 E (MID 5개 위젯 SWR 확장) 시작.
+- 작업량 안전 마진 확보를 위해 **Part 1 (단순 3개) + Part 2 (복잡 2개)로 분할**해 컨텍스트 끊김 방지.
+- Part 1 목표: hook 5개 모두 추가 (Part 2용 미리 정의) + 단순 3개 위젯 마이그레이션 + 라이브 검증 + commit/push.
+
+### 사전 점검 (작업원칙 21+23)
+- HEAD `6c8a5b5` = origin/main ✅
+- git status clean ✅
+- TSC 0 errors ✅
+- dev 서버 HTTP 200 ✅
+- 5개 위젯의 stale 패턴 grep 분석:
+  - GoodService: useState + useEffect 단발 (가장 단순)
+  - ReviewGrowth: useState + POST/PUT 후 manual reload
+  - DataLabTrend: period 변경 시 fetch (key 동적)
+  - UploadReadiness: optimisticScores Map 패턴 (E-15 Part 2 도입분)
+  - SourcingRecommend: GET cache + POST scan 분리
+
+### 우선순위 결정 (이커머스 운영 효율 기준)
+| 순위 | 위젯 | 사용 빈도 | 데이터 가치 | Part |
+|------|------|---------|-----------|-----|
+| 1위 | UploadReadiness | 매일 다회 | 매우 높음 | **Part 2** (복잡) |
+| 2위 | ReviewGrowth | 일 1~2회 | 높음 | **Part 2** (복잡) |
+| 3위 | GoodService | 일 1회 | 중간 | **Part 1** (단순) |
+| 4위 | DataLabTrend | 주 1~2회 | 낮음 | **Part 1** (단순) |
+| 5위 | SourcingRecommend | 주 1~2회 | 낮음 | **Part 1** (단순) |
+
+### Step 1 — useDashboardData.ts에 hook 5개 일괄 추가
+- 파일: `src/lib/hooks/useDashboardData.ts` 186줄 → 450줄 (+264줄)
+- 추가된 hook 5종 + 각자의 SWR profile:
+  ```ts
+  // 5분 profile — 매출/리뷰 데이터 (revalidateOnFocus true, 1min dedupe)
+  export const SWR_PROFILE_5MIN = {
+    refreshInterval: 300_000,
+    revalidateOnFocus: true,
+    dedupingInterval: 60_000,
+    keepPreviousData: true,
+  };
+
+  // 24h profile — 트렌드/추천 데이터 (revalidateOnFocus FALSE, 1h dedupe)
+  export const SWR_PROFILE_24H = {
+    refreshInterval: 86_400_000,
+    revalidateOnFocus: false,  // 절약 효과 — 트렌드는 안정적
+    dedupingInterval: 3_600_000,
+    keepPreviousData: true,
+  };
+
+  // useGoodService — 5분 profile
+  export function useGoodService() { ... }
+
+  // useDataLabTrend(period) — 24h profile, period as SWR key
+  export function useDataLabTrend(period: number) { ... }
+
+  // useSourcingRecommend — 24h profile + setData() for POST scan replace
+  export function useSourcingRecommend() { ... }
+
+  // useReviewGrowth — 5분 profile + refresh() helper for POST/PUT
+  export function useReviewGrowth() { ... }
+
+  // useUploadReadiness — 60s profile (HIGH equivalent)
+  export function useUploadReadiness() { ... }
+  ```
+- 작업원칙 25번 적용: 한글 직접 입력 (NFC 정규화 절대 금지) — Filesystem write_file로 처리
+- iTerm heredoc은 작업원칙 25번에 따라 **절대 금지** — Python script + filesystem write로 우회
+
+### Step 2 — 위젯 3개 마이그레이션
+- **GoodServiceWidget.tsx**: useEffect+useState fetch → useGoodService(). manual refresh 버튼은 mutate() 호출
+- **DataLabTrendWidget.tsx**: period 변경 시 새 SWR key로 자동 fetch. 7일/30일/90일 토글 즉시 반응
+- **SourcingRecommendWidget.tsx**: GET cache는 useSourcingRecommend(). POST scan 후 setData()로 캐시 직접 업데이트
+- diff stat: +304/-170 (코드 단순화 효과)
+
+### Step 3 — TSC 검증
+- `npx tsc --noEmit` → **0 errors** ✅
+
+### Step 4 — Chrome MCP 라이브 검증
+| 검증 항목 | 결과 |
+|---------|------|
+| 3개 위젯 정상 렌더링 | ✅ |
+| 초기 fetch 1회씩 발생 | ✅ |
+| GoodService(5min) blur+focus 자동 재호출 | ✅ (1→2) |
+| DataLab(24h) focus 시 호출 안 함 | ✅ (1→1, 의도된 절약) |
+| Sourcing(24h) focus 시 호출 안 함 | ✅ (1→1, 의도된 절약) |
+| GoodService manual refresh 버튼 mutate | ✅ (2→3) |
+| DataLab period 30→7 새 SWR key | ✅ (자동 fetch) |
+| ProfitabilityWidget 옵션 D 결과 유지 | ✅ (8개 상품, 6.2% 마진율) |
+
+### Step 5 — 직전 패치 스크립트 anchor 매칭 실패 (작업원칙 25번 강화 사례)
+- 첫 번째 시도: `_patch_md3_optE_part1.py`로 ROADMAP/SESSION_LOG anchor 기반 매칭 시도
+- 실패 원인: ROADMAP.md L17~98 영역의 다양한 마크다운 변형 (공백/하이픈/이모지 줄바꿈)으로 anchor 미스매치
+- **근본 원인 (일반화)**: anchor 기반 매칭은 한국어 + 마크다운 + 이모지 혼재 영역에서 부서지기 쉬움
+- **해결 패턴 (작업원칙 27번 신설 후보)**: **줄번호 기반 슬라이싱**으로 전환
+  - boundary 줄 번호 검증 후 `lines[:N]` + 새 섹션 + `lines[M:]`로 합치기
+  - PROGRESS는 anchor가 짧은 1~3줄이라 성공, ROADMAP는 80줄짜리 대형 섹션이라 실패
+- 회수 작업: PROGRESS는 정상 patch 완료 (commit 대기), ROADMAP은 본 패치 스크립트(_patch_md_optE_part1_finalize.py)로 줄번호 기반 재처리
+
+### Step 6 — MD 3종 갱신 + commit/push 한 묶음 (작업원칙 24번)
+- PROGRESS.md: 헤더 4줄 + L13~ 신규 섹션 추가 (이미 적용됨)
+- ROADMAP.md: 헤더 L2~4 + L17~98 옵션 E Part 2 시작 메시지로 교체
+- SESSION_LOG.md: 본 entry prepend
+- commit 메시지: `feat(옵션E Part 1): MID 3개 위젯 SWR 확장 + hook 5종 일괄 추가 (GoodService/DataLab/Sourcing)`
+
+### 본 세션 핵심 성과
+- **hook 5종 모두 정의 완료** → Part 2는 위젯 마이그레이션만 하면 됨 (컨텍스트 절약)
+- **24h profile + revalidateOnFocus false** 설계 검증 → 트렌드 데이터 비용 절감 효과 입증
+- **MD anchor 매칭 실패 시 줄번호 슬라이싱으로 우회 패턴** 확립 (향후 비슷한 상황 대비)
+
+### 작업 유의사항 (꽃졔님 강조 사항 정리)
+1. **이모지 완전 금지** (JSX/주석/코드 모두) — Lucide React 아이콘만 사용
+2. **한글 주석 금지** — 모든 주석은 영어
+3. **한글 리터럴 금지** — 영어 상수로 분리
+4. **코드 작성 전 read_file로 현재 상태 확인** 후 수정
+5. **수정 후 npx tsc --noEmit** 0 errors 확인
+6. **iTerm heredoc 금지** — Python script로 우회
+7. **Python 스크립트 한글 직접 입력** — `\uXXXX` escape 절대 금지 (rendering 깨짐)
+8. **commit + push는 한 turn 안에 한 묶음으로** (작업원칙 24번)
+9. **브라우저 라이브 검증 필수** — API 200 응답만으로 검증 종결 절대 안 됨 (작업원칙 22번)
+10. **컨텍스트 한계 대응** — 작업량을 Part로 분할해 새 채팅에서 이어서 진행 가능하도록 설계
+
+---
+
+---
+
 ## 2026-05-03 세션 — 옵션 D 완료 (대시보드 위젯 SWR 확장 + 공통 hook 추출)
 
 ### 세션 개요

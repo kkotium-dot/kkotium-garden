@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-03 (옵션 D 완료 ✅ — 대시보드 위젯 SWR 확장 + 공통 hook 추출)
+> 최종 업데이트: 2026-05-03 (옵션 E Part 1 완료 ✅ — MID 3개 위젯 SWR 확장 / 다음: 옵션 E Part 2 — UploadReadiness + ReviewGrowth)
 > TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit으로 갱신 예정
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅**
-> **다음 작업: 다음 Sprint 결정 대기 — 옵션 A(E-1 빌더 AEO 강화 Q&A/FAQ JSON-LD) vs 옵션 B(E-12 Discord 리뷰 알림, 트리거 미도달) vs 옵션 E(MID 5개 위젯 SWR 확장 — ReviewGrowth/GoodService/DataLabTrend/UploadReadiness/SourcingRecommend)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 참조
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ (GoodService/DataLab/Sourcing)**
+> **다음 작업: 옵션 E Part 2 — 복잡한 2개 위젯 SWR 확장 (UploadReadinessWidget, ReviewGrowthWidget) — 새 채팅에서 진행 권장. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -10,6 +10,34 @@
 >   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
 >   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
 >   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
+
+## 2026-05-03 세션 요약 — 옵션 E Part 1 완료 ✅
+
+### 본 세션 핵심 성과
+- **공통 hook 5개 추가**: `src/lib/hooks/useDashboardData.ts` 186줄 → 450줄 (+264줄)
+  - `useGoodService()` — 5분 cadence (revalidateOnFocus + 1분 dedupe)
+  - `useDataLabTrend(period)` — 24h cadence + period as part of SWR key
+  - `useSourcingRecommend()` — 24h cadence + setData() for POST scan replace
+  - `useReviewGrowth()` — 5분 cadence + refresh() for POST/PUT (Part 2용 미리 추가)
+  - `useUploadReadiness()` — 60s cadence (HIGH 동일, Part 2용 미리 추가)
+- **위젯 3개 마이그레이션**: GoodService/DataLab/Sourcing — diff stat +304/-170 (코드 단순화)
+- **TSC 0 errors** + **Chrome MCP 라이브 검증 완료**:
+  - 3개 API 초기 1회씩 호출 ✅
+  - GoodService(5min profile): blur+focus 시 자동 재호출 1→2 ✅
+  - DataLab/Sourcing(24h profile): focus 시 절약 (호출 안 함) ✅ — 의도된 SWR 효율 극대화
+  - GoodService manual refresh 버튼 mutate 정상 (2→3) ✅
+  - DataLab period 30→7 클릭 시 새 SWR key로 자동 fetch ✅
+
+### 옵션 E의 SWR profile 설계
+- **5분 profile** (GoodService, ReviewGrowth): refreshInterval 300_000ms / revalidateOnFocus true / dedupingInterval 60_000ms
+- **24h profile** (DataLab, Sourcing): refreshInterval 86_400_000ms / revalidateOnFocus **false** / dedupingInterval 3_600_000ms — 트렌드 데이터 안정적이라 focus 재호출 절약으로 비용 최소화
+- **60s profile** (UploadReadiness): DASHBOARD_SWR_DEFAULTS 그대로 재사용 — DRAFT 상태 변동 잦아 HIGH equivalent
+
+### Part 2로 인계되는 작업
+- **UploadReadinessWidget**: optimisticScores Map<string, number> 패턴 보유 → SWR keepPreviousData로 통합 시 더 깔끔하지만 신중한 마이그레이션 필요
+- **ReviewGrowthWidget**: POST/PUT 후 수동 reload 패턴 → useReviewGrowth().refresh() 호출로 변경
+
+
 ## 이 파일의 역할
 
 > **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스 (세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md 참조)

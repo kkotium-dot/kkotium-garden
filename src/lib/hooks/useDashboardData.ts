@@ -184,3 +184,267 @@ export function useProductsList(options?: {
     refresh: () => { void mutate(); },
   };
 }
+
+
+// ============================================================================
+// OPTION E (2026-05-03) — MID priority hooks
+// 5 additional hooks for MID-priority dashboard widgets.
+// Refresh intervals tuned per widget data freshness value:
+//   - Good Service       : 5 min   (sales counters update gradually)
+//   - DataLab Trend      : 24h     (category trend data is daily)
+//   - Sourcing Recommend : 24h     (BlueOcean recommendation cached)
+//   - Review Growth      : 5 min   (manual count entry, infrequent)
+//   - Upload Readiness   : 60s     (DRAFT changes are frequent, HIGH equiv)
+// ============================================================================
+
+// ─── Refresh interval profiles ──────────────────────────────────────────────
+const FIVE_MIN_MS    = 5 * 60 * 1000;       // 300_000
+const ONE_HOUR_MS    = 60 * 60 * 1000;      // 3_600_000
+const ONE_DAY_MS     = 24 * 60 * 60 * 1000; // 86_400_000
+
+const SWR_PROFILE_5MIN: SWRConfiguration = {
+  refreshInterval: FIVE_MIN_MS,
+  revalidateOnFocus: true,
+  dedupingInterval: 60_000,         // 1 min dedupe (5min refresh)
+  keepPreviousData: true,
+};
+
+const SWR_PROFILE_24H: SWRConfiguration = {
+  refreshInterval: ONE_DAY_MS,
+  revalidateOnFocus: false,         // do NOT revalidate on focus for 24h-cached data
+  dedupingInterval: ONE_HOUR_MS,    // 1 hour dedupe (max SWR efficiency)
+  keepPreviousData: true,
+};
+
+// 60s profile reuses DASHBOARD_SWR_DEFAULTS (HIGH equivalent).
+
+// ─── 4. Good Service score (5 min cadence) ──────────────────────────────────
+export interface GoodServiceApiData {
+  score: {
+    orderFulfillment: number;
+    deliveryQuality: number;
+    customerSatisfaction: number;
+    overall: number;
+    grade: string;
+    gradeLabel: string;
+    gradeColor: string;
+    tips: string[];
+  };
+  gradeSimulation: {
+    currentGrade: string;
+    nextGrade: string | null;
+    gap: { salesAmount: number; salesCount: number; score: number } | null;
+  };
+  monthlySummary: {
+    salesAmount: number;
+    salesCount: number;
+  };
+}
+
+interface GoodServiceApiResponse {
+  success?: boolean;
+  data?: GoodServiceApiData;
+}
+
+export function useGoodService(): {
+  data: GoodServiceApiData | null;
+  isLoading: boolean;
+  isValidating: boolean;
+  refresh: () => void;
+} {
+  const { data, isLoading, isValidating, mutate } = useSWR<GoodServiceApiResponse>(
+    '/api/good-service',
+    jsonFetcher,
+    SWR_PROFILE_5MIN,
+  );
+
+  return {
+    data: data?.success ? data?.data ?? null : null,
+    isLoading,
+    isValidating,
+    refresh: () => { void mutate(); },
+  };
+}
+
+// ─── 5. DataLab Trend (24h cadence + period as part of SWR key) ─────────────
+export interface DataLabTrendPoint {
+  period: string;
+  ratio: number;
+}
+export interface DataLabCategoryTrend {
+  title: string;
+  latestRatio: number;
+  change: number;
+  data: DataLabTrendPoint[];
+}
+export interface DataLabApiData {
+  success: boolean;
+  type: string;
+  period: number;
+  timeUnit: string;
+  startDate: string;
+  endDate: string;
+  trends: DataLabCategoryTrend[];
+  topRising: string[];
+  topDecline: string[];
+  cached?: boolean;
+  error?: string;
+  help?: string;
+}
+
+export function useDataLabTrend(period: number): {
+  data: DataLabApiData | null;
+  isLoading: boolean;
+  isValidating: boolean;
+  error: string | null;
+  refresh: () => void;
+} {
+  // SWR key includes the period so changing it re-fetches.
+  const { data, isLoading, isValidating, mutate, error: swrError } = useSWR<DataLabApiData>(
+    `/api/datalab?period=${period}`,
+    jsonFetcher,
+    SWR_PROFILE_24H,
+  );
+
+  // The /api/datalab endpoint embeds success/error inside the JSON body
+  // even on HTTP 200, so we surface that here for the widget.
+  const apiError = data && !data.success ? (data.error ?? 'Failed to fetch') : null;
+  const networkError = swrError ? 'Network error' : null;
+
+  return {
+    data: data && data.success ? data : null,
+    isLoading,
+    isValidating,
+    error: apiError ?? networkError,
+    refresh: () => { void mutate(); },
+  };
+}
+
+// ─── 6. Sourcing Recommend (24h cadence + setData for POST scan) ────────────
+export interface SourcingWholesaleProduct {
+  platform: string;
+  productNo: string;
+  name: string;
+  supplyPrice: number;
+  minOrderQty: number;
+  estimatedMargin: number;
+  url: string;
+}
+
+export interface SourcingOpportunityItem {
+  keyword: string;
+  category: string;
+  monthlySearchVolume: number;
+  competition: string;
+  avgPrice: number;
+  minPrice: number;
+  maxPrice: number;
+  totalResults: number;
+  competitionLevel: string;
+  suggestedSupplyPrice: number;
+  estimatedMargin: number;
+  blueOceanScore: number;
+  reason: string;
+  topSellers: string[];
+  aiInsight?: string;
+  wholesaleMatches?: SourcingWholesaleProduct[];
+  wholesalePlatforms?: string[];
+  entryBarrierLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+  entryBarrierScore?: number;
+  entryBarrierBonus?: number;
+  blueOceanBase?: number;
+  uniqueSellersInTop?: number;
+  priceSpread?: number;
+}
+
+export interface SourcingRecommendApiData {
+  ok: boolean;
+  cached?: boolean;
+  date: string;
+  trendSource: string;
+  trendCategories: string[];
+  opportunities: SourcingOpportunityItem[];
+  aiSummary?: string;
+  error?: string;
+}
+
+export function useSourcingRecommend(): {
+  data: SourcingRecommendApiData | null;
+  isLoading: boolean;
+  isValidating: boolean;
+  /** Replace the SWR cache entry without refetching (e.g. after POST scan). */
+  setData: (next: SourcingRecommendApiData) => void;
+  refresh: () => void;
+} {
+  const { data, isLoading, isValidating, mutate } = useSWR<SourcingRecommendApiData>(
+    '/api/sourcing-recommend',
+    jsonFetcher,
+    SWR_PROFILE_24H,
+  );
+
+  return {
+    data: data && data.ok ? data : null,
+    isLoading,
+    isValidating,
+    setData: (next) => { void mutate(next, { revalidate: false }); },
+    refresh: () => { void mutate(); },
+  };
+}
+
+// ─── 7. Review Growth (5 min cadence + refresh for POST/PUT) ────────────────
+// Loose typing — the /api/review-growth response shape is owned by
+// ReviewGrowthWidget. We pass it through unchanged so the widget keeps
+// its own domain types.
+type ReviewGrowthApiResponse = unknown;
+
+export function useReviewGrowth<T = ReviewGrowthApiResponse>(): {
+  data: T | null;
+  isLoading: boolean;
+  isValidating: boolean;
+  /** Force a re-fetch (use after POST/PUT to /api/review-growth). */
+  refresh: () => void;
+} {
+  const { data, isLoading, isValidating, mutate } = useSWR<T>(
+    '/api/review-growth',
+    jsonFetcher,
+    SWR_PROFILE_5MIN,
+  );
+
+  return {
+    data: data ?? null,
+    isLoading,
+    isValidating,
+    refresh: () => { void mutate(); },
+  };
+}
+
+// ─── 8. Upload Readiness (60s cadence — DRAFT churn is high) ────────────────
+// Reuses the existing /api/products?status=DRAFT contract. The widget
+// continues to own its Map<string, number> optimistic-score cache; this
+// hook only replaces the raw fetch + state plumbing.
+type UploadReadinessApiResponse = unknown;
+
+export function useUploadReadiness<T = UploadReadinessApiResponse>(options?: {
+  enabled?: boolean;
+}): {
+  data: T | null;
+  isLoading: boolean;
+  isValidating: boolean;
+  refresh: () => void;
+} {
+  const enabled = options?.enabled ?? true;
+  const key = enabled ? '/api/products?status=DRAFT&limit=200' : null;
+
+  const { data, isLoading, isValidating, mutate } = useSWR<T>(
+    key,
+    jsonFetcher,
+    DASHBOARD_SWR_DEFAULTS,        // 60s, same as Profitability/Sidebar
+  );
+
+  return {
+    data: data ?? null,
+    isLoading,
+    isValidating,
+    refresh: () => { void mutate(); },
+  };
+}

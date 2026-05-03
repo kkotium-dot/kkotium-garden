@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-03 (옵션 D 완료 ✅ — 대시보드 위젯 SWR 확장 + 공통 hook 추출 / 다음: 옵션 E MID 5개 위젯 SWR 확장 또는 옵션 A/B 대기)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅**
-> **다음 작업: 다음 Sprint 결정 대기 — 옵션 A(E-1 빌더 AEO 강화) vs 옵션 B(E-12 Discord 리뷰 알림) vs 옵션 E(MID 5개 위젯 SWR 확장 — 옵션 D 결과 계승) — 상세는 본 문서 하단 "다음 새 채팅 시작 메시지" 섹션 참조**
+> 최종 업데이트: 2026-05-03 (옵션 E Part 1 완료 ✅ — MID 3개 위젯 SWR 확장 / 다음: 옵션 E Part 2 — UploadReadiness + ReviewGrowth)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ (GoodService/DataLab/Sourcing)**
+> **다음 작업: 옵션 E Part 2 — 복잡한 2개 위젯 SWR 확장 (UploadReadinessWidget, ReviewGrowthWidget) — 새 채팅에서 진행 권장. 상세는 본 문서 하단 "다음 새 채팅 시작 메시지" 섹션 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -14,36 +14,49 @@
 
 ---
 
-## 🎯 다음 새 채팅 시작 메시지 (옵션 E MID 5개 위젯 SWR 확장 — 2026-05-03 작성)
+## 🎯 다음 새 채팅 시작 메시지 (옵션 E Part 2 — UploadReadiness + ReviewGrowth — 2026-05-03 작성)
 
-> **옵션 D 완료 ✅ (2026-05-03 본 세션, commit 본 세션 마무리 commit)**:
-> - **공통 hook 추출**: `src/lib/hooks/useDashboardData.ts` 신규 (186줄) — `DASHBOARD_SWR_DEFAULTS` + `useSidebarStats` + `useProfitability` + `useProductsList({enabled})`
-> - **3개 컴포넌트 마이그레이션**: Sidebar.tsx (v10→v11), ProfitabilityWidget.tsx, DailyPlanWidget.tsx — diff stat +80/-144 lines (코드 단순화)
-> - **TSC 0 errors** + **8개 DRAFT 회귀 평균 75점** + **revalidateOnFocus 자동 재호출 t=1ms** 라이브 검증 완료 (Chrome MCP)
-> - **conditional fetch 패턴 도입**: DailyPlanWidget은 props 받으면 fetch 건너뛰기 — 같은 hook의 두 가지 사용 패턴(self-fetch vs prop-driven) 지원
-> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션 — 옵션 D 완료" 참조
+> **옵션 E Part 1 완료 ✅ (2026-05-03 본 세션, commit 본 세션 마무리 commit)**:
+> - **공통 hook 5개 추가**: `src/lib/hooks/useDashboardData.ts` 186줄 → 450줄 (+264줄)
+>   - `useGoodService()` — 5분 cadence (revalidateOnFocus + 1분 dedupe)
+>   - `useDataLabTrend(period)` — 24h cadence + period as part of SWR key
+>   - `useSourcingRecommend()` — 24h cadence + setData() for POST scan replace
+>   - `useReviewGrowth()` — 5분 cadence + refresh() (Part 2용 미리 추가)
+>   - `useUploadReadiness()` — 60s cadence (Part 2용 미리 추가)
+> - **위젯 3개 마이그레이션**: GoodService/DataLab/Sourcing — diff stat +304/-170 (코드 단순화)
+> - **TSC 0 errors** + **Chrome MCP 라이브 검증 완료**:
+>   - 3개 API 초기 1회씩 호출 ✅
+>   - GoodService(5min profile): blur+focus 시 자동 재호출 1→2 ✅
+>   - DataLab/Sourcing(24h profile): focus 시 절약 (호출 안 함) ✅ — 의도된 SWR 효율 극대화
+>   - GoodService manual refresh 버튼 mutate 정상 (2→3) ✅
+>   - DataLab period 30→7 클릭 시 새 SWR key로 자동 fetch ✅
+> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션 — 옵션 E Part 1 완료" 참조
 >
-> **다음 Sprint 후보 (옵션 E 추천): MID 5개 위젯 SWR 확장** (옵션 D 결과 계승, 작업원칙 26번 일반화 적용):
-> - **현재 상태**: 옵션 C+D에서 HIGH 우선순위 위젯 3개(Sidebar + Profitability + DailyPlan)에 SWR 적용 완료. MID 5개 위젯이 여전히 단발성 fetch + stale state 패턴 보유
-> - **목표 위젯 5개** (`src/components/dashboard/`):
+> **다음 Sprint (옵션 E Part 2): 복잡한 2개 위젯 SWR 확장**:
+> - **목표 위젯 2개** (`src/components/dashboard/`):
+>   - `UploadReadinessWidget.tsx` — DRAFT 상품 등록 준비 명령탑 (E-15 매일 가장 자주 보는 위젯)
+>     - 특수 패턴: `optimisticScores: Map<string, number>` 보유 (E-15 Part 2에서 도입) — AI 점수 즉각 반영용
+>     - 마이그레이션 전략: useUploadReadiness() 훅(60s cadence)으로 fetch 단순화 + optimisticScores Map은 그대로 유지 (SWR `keepPreviousData`와 별개로 작동)
+>     - 검증 포인트: 8개 DRAFT 평균 점수 회귀 + AI 분석 후 점수 반영 + revalidateOnFocus 자동 재호출
 >   - `ReviewGrowthWidget.tsx` — 리뷰 단계 + 9항목 체크리스트
->   - `GoodServiceWidget.tsx` — 굿서비스 3축 게이지 + 등급 시뮬레이터
->   - `DataLabTrendWidget.tsx` — 트렌드 스파크라인 (24h 캐시 가능, refreshInterval 길게)
->   - `UploadReadinessWidget.tsx` — 등록 준비 명령탑 (E-15에서 가장 자주 갱신되는 위젯)
->   - `SourcingRecommendWidget.tsx` — 꼬띠 소싱 추천 (BlueOcean 점수, 24h 캐시 가능)
-> - **이유**: HIGH 위젯은 매일 다회 조회되어 옵션 D에서 우선 처리. MID는 일 1~2회 조회 패턴이라 refreshInterval을 더 길게(예: 5분 또는 24h) 설정 가능 — 같은 hook 패턴이지만 옵션은 위젯별로 다름
-> - **참고용 보존된 다른 Sprint 후보** (이번엔 진행 안 함, 미래 작업):
->   - 옵션 A — E-1 빌더 AEO 강화 (Q&A/FAQ JSON-LD): 등록 상품 0개라 효과 지연
->   - 옵션 B — E-12 Discord 리뷰 알림: 자체 리뷰 0개라 트리거 미도달
+>     - 특수 패턴: 리뷰 카운트 입력 시 POST `/api/review-growth` + 체크리스트 PUT — 양쪽 모두 mutate 호출 필요
+>     - 마이그레이션 전략: useReviewGrowth() 훅(5분 cadence)으로 GET 단순화 + POST/PUT 후 `refresh()` 호출로 mutate 트리거
+>     - 검증 포인트: 리뷰 입력 → 즉각 반영 / 체크리스트 toggle → 즉각 반영 / 5분 후 자동 재검증
+> - **이유**: Part 1에서 hook 5종 모두 정의 완료 → Part 2는 위젯 마이그레이션만 (단순 작업)
+>
+> **참고용 보존된 다른 Sprint 후보** (Part 2 마무리 후 진행):
+> - 옵션 A — E-1 빌더 AEO 강화 (Q&A/FAQ JSON-LD): 등록 상품 0개라 효과 지연
+> - 옵션 B — E-12 Discord 리뷰 알림: 자체 리뷰 0개라 트리거 미도달
+> - 옵션 F — 다른 페이지 SWR 확장 (정원 창고 / 검색 조련사 / 좀비 부활소 등)
 >
 > 아래 코드 블록을 그대로 복붙해서 사용.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md, KKOTIUM_SESSION_LOG.md를 읽고
-옵션 E — MID 5개 위젯 SWR 확장 작업을 시작해주세요.
+옵션 E Part 2 — UploadReadinessWidget + ReviewGrowthWidget SWR 확장 작업을 시작해주세요.
 
 작업 시작 전 필수 (작업원칙 21+22+23+24+25+26 적용):
-1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 옵션 D 마무리 commit)
+1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 옵션 E Part 1 마무리 commit)
    (b) git --no-pager log --oneline -10 → 이번 메시지에 명시되지 않은 commit 있으면 읽고 대응
    (c) git status 깨끗한지 확인 (dirty면 검토 후 처리 — 덮어쓰기 절대 금지)
    (d) lsof -i :3000 또는 curl http://localhost:3000 → dev 서버 상태 확인
@@ -53,44 +66,46 @@
    (h) edit_file 에러 응답 받아도 파일에 일부 적용될 수 있음 → head/grep/xxd로 raw 검증 우선
    (i) 문제 분석은 항상 (a) 즉각 원인 (b) 일반화 원인 두 단계로
    (j) 브라우저 테스트는 API 200 응답으로 대체 불가 — Chrome MCP로 실제 화면/숫자/동작 검증 필수
-2. KKOTIUM_PROGRESS.md "2026-05-03 세션 요약 — 옵션 D 완료" 섹션 정독
-3. KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션 — 옵션 D 완료" 정독 (공통 hook 패턴 + 검증 결과)
-4. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
+2. KKOTIUM_PROGRESS.md "2026-05-03 세션 요약 — 옵션 E Part 1 완료" 섹션 정독
+3. KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션 — 옵션 E Part 1 완료" 정독 (hook 5개 패턴 + 검증 결과)
+4. `src/lib/hooks/useDashboardData.ts` L1~450 정독 — useUploadReadiness() / useReviewGrowth() 정의가 이미 추가되어 있음
+5. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
 
-[단계 0] 사전 분석 — MID 5개 위젯 stale 패턴 점검:
-  목표: 5개 위젯의 fetch 호출 빈도 + 데이터 신선도 가치 평가
+[단계 0] 사전 분석 — 2개 위젯 현재 패턴 점검:
+  목표: optimisticScores 보존 + POST/PUT mutate 트리거 정확성 확인
   점검 절차:
-    1. 각 위젯의 useEffect + fetch 패턴 grep
-       명령: grep -n "useEffect\|fetch(" src/components/dashboard/{ReviewGrowthWidget,GoodServiceWidget,DataLabTrendWidget,UploadReadinessWidget,SourcingRecommendWidget}.tsx
-    2. 각 위젯별 refreshInterval 분류:
-       - **자주 갱신** (60s, HIGH 동일): UploadReadinessWidget — DRAFT 상태 변화 잦음
-       - **중간 갱신** (5분 = 300s): ReviewGrowthWidget, GoodServiceWidget — 일 1~2회 조회
-       - **드물게 갱신** (24h = 86400s): DataLabTrendWidget, SourcingRecommendWidget — 트렌드/추천 데이터 안정적
-    3. 각 위젯의 API 응답 타입을 useDashboardData.ts에 hook으로 추출
+    1. UploadReadinessWidget.tsx: optimisticScores Map 사용 위치 grep
+       명령: grep -n "optimisticScores\|fetch\|useEffect\|useState" src/components/dashboard/UploadReadinessWidget.tsx | head -30
+    2. ReviewGrowthWidget.tsx: POST/PUT 후 reload 패턴 확인
+       명령: grep -n "fetch\|method:\|useEffect" src/components/dashboard/ReviewGrowthWidget.tsx | head -20
+    3. 각 위젯의 props (parent에서 받는 데이터 있는지) 확인 — 있으면 conditional fetch 필요
 
-[단계 1] useDashboardData.ts hook 5개 추가:
-  - useReviewGrowth() — refreshInterval: 5분
-  - useGoodService() — refreshInterval: 5분
-  - useDataLabTrend() — refreshInterval: 24h (혹은 dedupingInterval만 길게)
-  - useUploadReadiness() — refreshInterval: 60s (HIGH 동일)
-  - useSourcingRecommend() — refreshInterval: 24h
-  각 hook 추가 시 export interface도 정의 (옵션 D의 ProfitabilityApiData 패턴 참고)
+[단계 1] UploadReadinessWidget 마이그레이션:
+  - `useUploadReadiness()` 훅 호출로 단순 fetch 교체
+  - optimisticScores Map은 그대로 보존 (별도 useState)
+  - data 도착 시 optimisticScores 자동 클리어하는 useEffect 유지
+  - AI 분석 완료 후 setOptimisticScores → 다음 SWR refresh에 자연스럽게 반영
+  - npx tsc --noEmit 0 errors 확인
 
-[단계 2] 5개 위젯 마이그레이션:
-  각 위젯 패치 후 npx tsc --noEmit 0 errors 확인. 각 위젯의 conditional fetch 필요 여부 검토 (props로 데이터를 받는 패턴이 있는지)
+[단계 2] ReviewGrowthWidget 마이그레이션:
+  - `useReviewGrowth()` 훅의 data + refresh 사용
+  - 리뷰 카운트 POST 후 await refresh() 호출 → 5분 cadence 무관하게 즉시 반영
+  - 체크리스트 PUT 후 await refresh() 호출
+  - npx tsc --noEmit 0 errors 확인
 
 [단계 3] 마무리 (작업원칙 22+24번 확약):
   - npx tsc --noEmit 0 errors 최종
-  - Chrome MCP로 대시보드 전체 페이지 라이브 검증 (5개 위젯 정상 렌더링 + 각 위젯 refreshInterval 정확)
+  - Chrome MCP로 대시보드 라이브 검증:
+    - UploadReadiness: 8개 DRAFT 평균 75점 회귀 / AI 분석 후 점수 즉각 반영 / blur+focus 자동 재호출
+    - ReviewGrowth: 리뷰 카운트 +1 후 즉각 반영 / 체크리스트 toggle 즉각 반영
   - PROGRESS.md / ROADMAP.md / SESSION_LOG.md 갱신
   - commit + push 한 묶음 (그 turn 안에서)
-  - 새 인계 메시지 작성 (다음 Sprint: 옵션 A vs B vs 옵션 F 다른 페이지 SWR 확장)
+  - 새 인계 메시지 작성 (다음 Sprint: 옵션 A vs B vs F 선택)
 
 참고:
 - AI 호출 비용 0원 (Groq 3키 합산 43,200/일)
 - 코드 수정 후 반드시 `npx tsc --noEmit` 0 errors 확인
-- 각 위젯은 옵션 D의 useProfitability() 패턴을 그대로 따라 — `useDashboardData` 단일 소스 유지
-- 24h 캐시 위젯은 `dedupingInterval`을 길게(예: 1시간)로 설정해 SWR 자체 효율 극대화
+- 본 Part는 Part 1보다 위젯이 적지만(2개) 각각 특수 패턴 보유 → 신중한 검증 필요
 - 세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md에 작성, PROGRESS.md/ROADMAP.md는 핵심 요약만 유지
 ```
 

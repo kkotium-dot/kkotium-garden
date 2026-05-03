@@ -2,34 +2,14 @@
 // C-9: Good Service Score Dashboard Widget
 // 3-axis gauge + grade badge + improvement tips + grade simulator
 // 2025-04 update: Talktalk reply standard hardened from 24h to 12h
-// 2025-12 update: Seller grade evaluation window changed 3 months → 1 month
+// 2025-12 update: Seller grade evaluation window changed 3 months -> 1 month
+// Option E (2026-05-03): SWR migration via useGoodService() hook (5 min cadence)
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Shield, TrendingUp, Truck, Star, AlertTriangle, ChevronRight, RefreshCw, Info, MessageCircle } from 'lucide-react';
-
-interface GoodServiceData {
-  score: {
-    orderFulfillment: number;
-    deliveryQuality: number;
-    customerSatisfaction: number;
-    overall: number;
-    grade: string;
-    gradeLabel: string;
-    gradeColor: string;
-    tips: string[];
-  };
-  gradeSimulation: {
-    currentGrade: string;
-    nextGrade: string | null;
-    gap: { salesAmount: number; salesCount: number; score: number } | null;
-  };
-  monthlySummary: {
-    salesAmount: number;
-    salesCount: number;
-  };
-}
+import { useGoodService } from '@/lib/hooks/useDashboardData';
 
 // Circular gauge component
 function ScoreGauge({ value, label, icon: Icon, color, size = 80 }: {
@@ -69,7 +49,7 @@ function ScoreGauge({ value, label, icon: Icon, color, size = 80 }: {
 }
 
 // Grade badge with Naver-style labels
-function GradeBadge({ grade, label, color, overall }: {
+function GradeBadge({ label, color, overall }: {
   grade: string; label: string; color: string; overall: number;
 }) {
   return (
@@ -101,26 +81,14 @@ function GradeBadge({ grade, label, color, overall }: {
 }
 
 export default function GoodServiceWidget() {
-  const [data, setData] = useState<GoodServiceData | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Option E: SWR-backed data fetching (5 min refreshInterval + revalidateOnFocus)
+  const { data, isLoading, isValidating, refresh } = useGoodService();
   const [showSimulator, setShowSimulator] = useState(false);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/good-service');
-      const json = await res.json();
-      if (json.success) setData(json.data);
-    } catch (e) {
-      console.error('[GoodService] load error:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Spinner shows on either initial load OR background revalidation.
+  const showSpinner = isLoading || isValidating;
 
-  useEffect(() => { loadData(); }, [loadData]);
-
-  if (loading) {
+  if (isLoading && !data) {
     return (
       <div className="kk-card" style={{ padding: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -158,11 +126,11 @@ export default function GoodServiceWidget() {
             14일 기준
           </span>
         </div>
-        <button onClick={loadData} disabled={loading} style={{
+        <button onClick={refresh} disabled={showSpinner} style={{
           padding: 4, borderRadius: 6, background: 'transparent', border: 'none',
-          cursor: 'pointer', color: '#B0A0A8',
+          cursor: showSpinner ? 'not-allowed' : 'pointer', color: '#B0A0A8',
         }}>
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+          <RefreshCw size={12} className={showSpinner ? 'animate-spin' : ''} />
         </button>
       </div>
 

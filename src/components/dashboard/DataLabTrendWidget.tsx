@@ -1,43 +1,18 @@
 // src/components/dashboard/DataLabTrendWidget.tsx
 // D-4: Naver DataLab real-time category trend chart widget
 // Displays category shopping trends with sparkline mini-charts
+// Option E (2026-05-03): SWR migration via useDataLabTrend(period) hook (24h cadence + period as key)
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   TrendingUp, TrendingDown, Minus, RefreshCw, BarChart3, ChevronRight,
 } from 'lucide-react';
-
-interface TrendDataPoint {
-  period: string;
-  ratio: number;
-}
-
-interface CategoryTrend {
-  title: string;
-  latestRatio: number;
-  change: number;
-  data: TrendDataPoint[];
-}
-
-interface DataLabResult {
-  success: boolean;
-  type: string;
-  period: number;
-  timeUnit: string;
-  startDate: string;
-  endDate: string;
-  trends: CategoryTrend[];
-  topRising: string[];
-  topDecline: string[];
-  cached?: boolean;
-  error?: string;
-  help?: string;
-}
+import { useDataLabTrend, type DataLabTrendPoint } from '@/lib/hooks/useDashboardData';
 
 // Mini sparkline SVG chart
-function Sparkline({ data, color }: { data: TrendDataPoint[]; color: string }) {
+function Sparkline({ data, color }: { data: DataLabTrendPoint[]; color: string }) {
   if (data.length < 2) return null;
   const vals = data.map(d => d.ratio);
   const min = Math.min(...vals);
@@ -95,34 +70,18 @@ const PERIOD_OPTIONS = [
 ];
 
 export default function DataLabTrendWidget() {
-  const [data, setData] = useState<DataLabResult | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Period state still owned locally — drives the SWR key inside the hook.
   const [period, setPeriod] = useState(30);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async (p: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/datalab?period=${p}`);
-      const json = await res.json();
-      if (json.success) {
-        setData(json);
-      } else {
-        setError(json.error ?? 'Failed to fetch');
-      }
-    } catch {
-      setError('Network error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Option E: SWR-backed (24h refresh, period included in cache key).
+  const { data, isLoading, isValidating, error, refresh } = useDataLabTrend(period);
 
-  useEffect(() => { fetchData(period); }, [fetchData, period]);
+  // Combined indicator: spinner shows on either initial load OR background revalidation.
+  const showSpinner = isLoading || isValidating;
 
   const handlePeriodChange = (p: number) => {
     setPeriod(p);
-    fetchData(p);
+    // SWR will auto-fetch when the key changes (period -> different URL).
   };
 
   return (
@@ -161,15 +120,15 @@ export default function DataLabTrendWidget() {
             ))}
           </div>
           <button
-            onClick={() => fetchData(period)}
-            disabled={loading}
+            onClick={refresh}
+            disabled={showSpinner}
             style={{
               display: 'flex', alignItems: 'center', padding: '4px 8px',
               borderRadius: 8, border: '1px solid #e5e5e5', background: '#fff',
-              cursor: loading ? 'not-allowed' : 'pointer', fontSize: 11,
+              cursor: showSpinner ? 'not-allowed' : 'pointer', fontSize: 11,
             }}
           >
-            <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            <RefreshCw size={12} style={{ animation: showSpinner ? 'spin 1s linear infinite' : 'none' }} />
           </button>
         </div>
       </div>
@@ -185,7 +144,7 @@ export default function DataLabTrendWidget() {
           </div>
         )}
 
-        {loading && !data && (
+        {isLoading && !data && (
           <div style={{ textAlign: 'center', padding: 24, color: '#aaa', fontSize: 13 }}>
             {'\uD2B8\uB80C\uB4DC \uB370\uC774\uD130 \uBD88\uB7EC\uC624\uB294 \uC911...'}
           </div>

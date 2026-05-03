@@ -2,63 +2,17 @@
 // E-7 + E-10: Kkotti Sourcing Recommendation Widget for Dashboard
 // Shows blue-ocean product opportunities from trend analysis
 // Includes scan button + opportunity cards with key metrics + entry barrier breakdown
+// Option E (2026-05-03): SWR migration via useSourcingRecommend() hook (24h cadence + setData for POST scan)
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Search, TrendingUp, RefreshCw,
   ChevronDown, ChevronUp, Sparkles, ShoppingBag,
   Target, Shield,
 } from 'lucide-react';
-
-interface WholesaleProduct {
-  platform: string;
-  productNo: string;
-  name: string;
-  supplyPrice: number;
-  minOrderQty: number;
-  estimatedMargin: number;
-  url: string;
-}
-
-interface SourcingOpportunity {
-  keyword: string;
-  category: string;
-  monthlySearchVolume: number;
-  competition: string;
-  avgPrice: number;
-  minPrice: number;
-  maxPrice: number;
-  totalResults: number;
-  competitionLevel: string;
-  suggestedSupplyPrice: number;
-  estimatedMargin: number;
-  blueOceanScore: number;
-  reason: string;
-  topSellers: string[];
-  aiInsight?: string;
-  wholesaleMatches?: WholesaleProduct[];
-  wholesalePlatforms?: string[];
-  // E-10: Entry barrier breakdown
-  entryBarrierLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
-  entryBarrierScore?: number;
-  entryBarrierBonus?: number;
-  blueOceanBase?: number;
-  uniqueSellersInTop?: number;
-  priceSpread?: number;
-}
-
-interface SourcingResult {
-  ok: boolean;
-  cached?: boolean;
-  date: string;
-  trendSource: string;
-  trendCategories: string[];
-  opportunities: SourcingOpportunity[];
-  aiSummary?: string;
-  error?: string;
-}
+import { useSourcingRecommend, type SourcingRecommendApiData } from '@/lib/hooks/useDashboardData';
 
 // Competition badge color
 function getCompBadge(comp: string): { label: string; bg: string; text: string } {
@@ -87,25 +41,14 @@ function getScoreColor(score: number): string {
 }
 
 export default function SourcingRecommendWidget() {
-  const [result, setResult] = useState<SourcingResult | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Option E: SWR-backed cache + setData for POST scan replace.
+  const { data: result, isLoading, setData } = useSourcingRecommend();
   const [scanning, setScanning] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
 
-  // Fetch cached result on mount
-  const fetchCached = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/sourcing-recommend');
-      const data = await res.json();
-      if (data.ok) setResult(data);
-    } catch { /* silent */ }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { fetchCached(); }, [fetchCached]);
-
-  // Trigger fresh scan
+  // Trigger fresh scan via POST and replace SWR cache directly with the response.
+  // Note: do NOT call refresh() after scan — that would re-GET and overwrite
+  // the fresh result with a possibly-stale cached one.
   const runScan = async () => {
     setScanning(true);
     try {
@@ -114,8 +57,8 @@ export default function SourcingRecommendWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ discord: true }),
       });
-      const data = await res.json();
-      if (data.ok) setResult(data);
+      const json: SourcingRecommendApiData = await res.json();
+      if (json.ok) setData(json);
     } catch { /* silent */ }
     setScanning(false);
   };
@@ -183,14 +126,14 @@ export default function SourcingRecommendWidget() {
       )}
 
       {/* Loading state */}
-      {loading && !result && (
+      {isLoading && !result && (
         <div style={{ textAlign: 'center', padding: 20, color: '#9ca3af', fontSize: 13 }}>
           로딩 중...
         </div>
       )}
 
       {/* Empty state */}
-      {result && result.opportunities.length === 0 && !loading && (
+      {result && result.opportunities.length === 0 && !isLoading && (
         <div style={{ textAlign: 'center', padding: 20, color: '#9ca3af', fontSize: 13 }}>
           {result.error ?? '추천 기회가 없습니다. 스캔을 시도해보세요.'}
         </div>
