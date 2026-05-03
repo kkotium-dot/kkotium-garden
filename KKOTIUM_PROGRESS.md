@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-02 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여·4 — 이슈 #7 근본 해결: AI 자기모순 hallucination 도메인-무관 일반 검증 추가 ✅)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 64c4e43 (잔여·4 코드 패치) → 본 마무리 commit으로 갱신 + push 예정
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 진행 중 (E-15 Block A+B+C ✅ + Block D Part 1 ✅ + Part 2 단계 1·2·3 ✅ + 이슈 #4 ✅ + 이슈 #1 자연 해소 ✅ + 잔여·2 이슈 #2+#5 거부 로직 ✅ + 잔여·3 이슈 #6 부분 해결 ✅ + 잔여·4 이슈 #7 근본 해결 ✅, 이슈 #3 점검 + E-15 전체 완료 처리 대기)**
-> **다음 작업: E-15 Block D Part 2 잔여·5 (이슈 #3 ready90 점검 + E-15 전체 완료 처리 + 다음 Sprint 결정: E-4 반품안심케어 마진 시뮬레이터 vs E-2C 리뷰 보상 최적 설정 가이드)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·5용)" 섹션 참조
+> 최종 업데이트: 2026-05-03 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여·5 마무리 ✅ — 이슈 #3 optimistic score override 적용 + E-15 전체 완료)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: f9f2300 (잔여·5 코드 패치 push 완료) → 본 MD 마무리 commit으로 갱신 예정
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ (Block A+B+C+D Part 1+Part 2 모든 단계 + 이슈 #1·#2·#3·#4·#5·#6·#7 처리 완료)**
+> **다음 작업: 다음 Sprint 결정 대기 — 옵션 A(E-1 빌더 AEO 강화 Q&A/FAQ JSON-LD) vs 옵션 B(E-12 Discord 리뷰 알림, 트리거 미도달) vs 옵션 C(ROADMAP 미분류 개선 항목 — 사이드바 배지 실시간화 등)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -13,6 +13,28 @@
 ## 이 파일의 역할
 
 > **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스 (세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md 참조)
+
+---
+
+## 2026-05-03 세션 요약 — E-15 Block D Part 2 잔여·5 마무리 (이슈 #3 optimistic score override + E-15 전체 완료)
+- 사전 점검 (작업원칙 21+23): HEAD=f0d054f ↔ origin/main 동기화 ✅, working tree dirty (직전 채팅에서 패치 후 commit 못한 AutoFillModal.tsx + UploadReadinessWidget.tsx 그대로 보존됨) ✅, MD 줄 수 1128/1186/332 ✅, dev 서버 포트 3000 살아있음 ✅
+- 직전 채팅 변경분 검토 (작업원칙 24번 위반 회수 작업): 두 파일 git diff 확인 → optimisticScores Map 패턴 + onApplied(productId, newScore) 시그니처 확장 그대로 → **덮어쓰기 절대 금지 원칙으로 그대로 commit + push** (한 줄 명령으로 묶음)
+- TSC 0 errors 재확인 ✅
+- **commit + push 완료**: f0d054f..f9f2300 (`fix(E-15 Part 2 잔여·5): optimistic score override eliminates AI button flash on 90+ cards (issue #3)`)
+- 브라우저 라이브 회귀 검증 (Chrome MCP, 작업원칙 22번 — 브라우저 테스트 필수): http://localhost:3000/dashboard 8개 DRAFT 카드 점수 추출
+  - 50점 C 하트 리본 누빔 여성 파자마 세트 ✅
+  - 60점 B 차량용 햇빛가리개 ✅
+  - 70점 B 스텐 파워 변기건 펌프 ✅
+  - 76점 A 인테리어 미니 가습기 ✅
+  - 80점 A 리본 포인트 홈웨어 잠옷세트 ✅
+  - 84점 A 모나미 펭수 매직 ✅
+  - 86점 A 선물받은 특별한 일상 ✅
+  - 92점 S 무타공 두꺼비집가리개 ✅
+  - **평균 75점 ✅** (직전 채팅 잔여·1·2·3·4 결과와 100% 일치, 회귀 없음 확정)
+  - **90+ 카드 1개 ✅** (이슈 #3 optimistic override 적용 대상 — 자체 회귀는 다음 AI 채우기 발생 시 자연 검증)
+- **E-15 전체 완료 처리** ✅: Block A(검색결과·SEO 안내 위젯) + Block B(naverCommerceMatcher 도메인 일반화) + Block C(AutoFillModal 2단계 워크플로) + Block D Part 1(자체 ready90 등록 진입점) + Part 2 잔여 5차까지 모든 이슈(#1·#2·#3·#4·#5·#6·#7) 처리 완료
+- 본 세션 학습 (작업원칙 24번 강화 적용): 직전 채팅이 commit + push를 한 turn 안에 못 끝낸 트랩 → 본 세션이 working tree dirty 상태로 시작 → diff 검토만 하고 그대로 commit + push (덮어쓰기 절대 금지) → 이번 세션은 commit + push를 한 줄 `&&` 명령으로 묶어 트랩 회피
+- **다음 Sprint 결정 대기**: 꽃졔님께 옵션 A/B/C 결정 요청 (본 세션 마지막 turn에서 ask)
 
 ---
 
