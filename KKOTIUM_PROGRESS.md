@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-03 (옵션 E Part 1 완료 ✅ — MID 3개 위젯 SWR 확장 / 다음: 옵션 E Part 2 — UploadReadiness + ReviewGrowth)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit으로 갱신 예정
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ (GoodService/DataLab/Sourcing)**
-> **다음 작업: 옵션 E Part 2 — 복잡한 2개 위젯 SWR 확장 (UploadReadinessWidget, ReviewGrowthWidget) — 새 채팅에서 진행 권장. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 참조**
+> 최종 업데이트: 2026-05-03 (대시보드 워크플로우 재설계 계획 확정 ✅ / 다음: 새 채팅에서 Part A1 구조 재구성 + SWR 통합 + 꼬띠 일일브리핑 + 모드전환 + 꼬띠 아이덴티티 강화)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit (계획 문서만, 코드 변경 없음)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 (꽃졔님 요청 2026-05-03)**
+> **다음 작업: 워크플로우 재설계 Sprint (Part A1 → A2 → B → C 분할) — 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -10,6 +10,97 @@
 >   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
 >   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
 >   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
+
+## 2026-05-03 세션 요약 — 워크플로우 재설계 Sprint 계획 확정 (계획 전용, 코드 변경 없음) ✅
+
+### 본 세션 성격
+- **꽃졔님 요청 핵심 (2026-05-03)**: "앱 기능이 많아져서 대시보드 구조가 복잡해졌다. 셀러 워크플로우 중심으로 재구성하면서 옵션 E Part 2 SWR 통합도 함께 처리해달라. 그 외 앱 최적화는 자율 판단."
+- **추가 요청 (같은 세션)**: 꼬띠가 말할 때 캐릭터 아이덴티티(빨간 튤립 + 분홍 카우걸 부츠) 살려서 반응/문장 구사하도록 강화.
+- **본 세션은 계획 전용 세션** — 실제 코드 작업은 다음 새 채팅에서 진행 (꽃졔님 직접 지시).
+
+### 사전 분석 완료 항목
+- 현재 대시보드 = 12개 위젯이 평면 나열 (`src/app/dashboard/page.tsx` 329줄, 6,459줄 위젯 파일 합산)
+- 사이드바 구조는 셀러 동선과 잘 맞춤 (HUNT → PLANT → TEND → ORDERS → OPS → TOOLS) — 재구성 불필요
+- 대시보드만 재구성 대상 — 4섹션 워크플로우 구조로 (오늘의 결과 / 오늘의 액션 / 소싱·시장 / 도구·활동)
+- 데이터 흐름: `dashboard/page.tsx`의 `loadProducts` + `loadStats` 부모 fetch 2건이 SWR 미적용 마지막 영역
+- 자식 4개 위젯(DailyPlan/UploadReadiness/Kkotti/MarketTrend)이 props로 products 공유 — 옵션 D에서 conditional fetch 패턴 도입 완료
+- 자체 fetch 위젯 7개 중 3개(GoodService/DataLab/Sourcing) Part 1 완료 + 1개(Profitability) 옵션 D 완료 + 2개(ReviewGrowth/CompetitionMonitor/ProductLifecycle) 미적용
+
+### 2026 최신 파워셀러 트렌드 검증 (web_search 2회)
+- **에이전틱 커머스**: AI 쇼핑 에이전트 2026.02 베타 출시, 출시 2개월 만에 사용자 +20%, 대화 +40%. 15억 건 스마트스토어 상품 대상 AI 추천.
+- **숏폼/숏클립**: 쇼핑라이브 매출 +48%, 단골 +128%. 네이버가 직접 셀러 대상 숏클립 제작 교육 진행 중. 시청 경험률 82.7%.
+- **단골 커머스**: 60만 셀러 대상 단골 도구 → 2026 단골 10억 건 달성 임박. 알림받기 + 받아보기 + 상품찜 = 단골 시그널.
+- **제로클릭 + GEO**: 검색→클릭→구매 공식 붕괴, 생성형 AI 트래픽 1,200% 상승. 클릭 SEO에 더해 GEO(Generative Engine Optimization) 전략 필요.
+- **트렌드 코리아 2026 키워드**: HORSE POWER, 픽셀라이프, 1.5가구, 근본이즘, 필코노미.
+
+### 워크플로우 재설계 Sprint 최종 범위 (꽃졔님 자율 결정 위임)
+
+**Part A1 (다음 새 채팅 1차) — 구조 재구성 + SWR 완성 + 꼬띠 일일 브리핑 + 모드 전환**
+1. `src/app/dashboard/page.tsx` 부모 fetch SWR화 (loadProducts → useProductsList, loadStats → 신규 useDashboardStats hook)
+2. 4섹션 컴포넌트 신설: `SectionHeader`, `CollapsibleSection` (`src/components/dashboard/layout/`)
+3. 대시보드 4섹션 재배치: 오늘의 결과 / 오늘의 액션 / 소싱·시장 / 도구·활동
+4. ReviewGrowthWidget useReviewGrowth() 마이그레이션 (옵션 E Part 2 흡수)
+5. UploadReadinessWidget — 부모 SWR화로 자동 혜택 수혈 (위젯 자체 변경 없음, optimisticScores 보존)
+6. **신규 위젯**: `src/components/dashboard/KkottiBriefingWidget.tsx` — 매일 1줄 자동 브리핑 (Profitability + GoodService + UploadReadiness + ReviewGrowth 통합 분석)
+7. **신규 토글**: 대시보드 상단 [오늘 / 이번주 / 이번달] 모드 전환 — 가끔 보는 위젯 자동 숨김/노출
+8. **꼬띠 아이덴티티 강화 1차**: 일일 브리핑 + Kkotti API persona 보강 (빨간 튤립 + 카우걸 부츠 정체성 강화 어휘 풀, 정원사 비유, 감탄사 풀 확장)
+
+**Part A2 (Part A1 분량 초과 시 분할) — 시각 디테일 + 잔여 위젯 SWR**
+- CompetitionMonitorWidget + ProductLifecycleWidget SWR 통합 (남은 2개)
+- 시각 정밀화 (간격, 위계, 색상 의미 부여)
+- 빈 상태 UX 개선 (DRAFT 0개, 리뷰 0건 등)
+
+**Part B (Part A 안정화 후) — 매출 직결 신기능**
+- 꿀통지수 12번째 항목: AI 에이전트 친화도 (`honey-score.ts` +1 함수, 정규식 기반)
+- 숏클립 등록 체크리스트 (UploadReadiness +1 항목, 네이버 매출 +48% 트리거)
+- 시각적 디테일 정밀화 마무리
+
+**Part C (Part B 안정화 후) — 단골 커머스**
+- 단골 대시보드 위젯 (Commerce API 알림받기/단골/재구매율) — C-1 Commerce API 직접 연동 완료 후 진행
+
+**Part D (등록 상품 발생 후) — AEO/GEO 강화**
+- E-1 상세페이지 빌더 AEO 강화 (Q&A/FAQ JSON-LD)
+- 옵션 A 흡수
+
+### 꼬띠 아이덴티티 강화 설계
+**현재 페르소나** (`src/app/api/kkotti-comment/route.ts` L61):
+- 분홍 카우걸 부츠 + 빨간 튤립 캐릭터, 10년차 파워셀러 전문가
+- 친근한 ~해요 말체, 이모지 금지, 텍스트 감탄사(꺄~, 헉, 오오), 구체 수치 기반, 2~3문장 / 120자 이내, 행동 1가지 제시
+- KKOTTI_FACE 5단계: ✿ㅅ✿ / ^ㅅ^ / ·ㅅ· / ;ㅅ; (S/A/B/C/D 등급)
+
+**강화 포인트** (Part A1):
+1. **정원사 메타포 어휘 풀 확장** — "씨앗 심기", "꽃이 피었어요", "물 줄 시점", "잡초 뽑기", "수확", "정원이 잘 자라고 있어요"
+2. **카우걸 정체성 어휘** — "출동", "투입", "달려가요", "이번 작전", "현장으로"
+3. **빨간 튤립 시각 어휘** — 튤립이 활짝 / 봉오리 / 시들 / 꽃잎 등 상태 비유
+4. **상황별 감탄사 풀** — 좋을 때(꺄~, 우와, 오~), 놀랄 때(헉, 어머나, 오마이), 걱정 때(어이쿠, 음...), 응원 때(자, 가요, 시작해요)
+5. **꼬띠 일일 브리핑 전용 톤** — 한 문장 12자~30자 이내, 데이터 기반 + 정체성 + 즉각 액션
+   - 좋은 예: "오늘 정원 상태 좋아요. DRAFT 3개가 90점 넘었어요 — 등록 출동!"
+   - 좋은 예: "튤립이 시들 시점이에요. 좀비 5개를 부활소로 데려가요!"
+   - 좋은 예: "꺄~ 단골이 5명 늘었어요. 알림톡 한 발 발사할까요?"
+6. **상태별 face 더 다양화** — 현재 5단계 → 9단계 (idle/scanning/done/warn/celebrate/sleepy/working/proud/concerned)
+
+### Part A1 완성 시 효과 (예상)
+- 대시보드 스크롤 길이 6,000~8,000px → 모드별 1,500~3,000px (모드 전환 토글 효과)
+- "오늘 뭐 할까?" 결정 피로 0 (꼬띠 일일 브리핑이 즉시 답)
+- 옵션 E Part 2 SWR 통합 자연스럽게 흡수 (별도 작업 불필요)
+- 셀러 매일 시작점이 "위젯 12개 스캔"에서 "꼬띠 한 줄 → 액션 클릭"으로 전환
+
+### 작업 안전성 — 다음 새 채팅용 작업원칙 강조
+- **작업원칙 21**: 사전 점검 (git/dev/TSC/HEAD-origin/working tree clean)
+- **작업원칙 22**: Chrome MCP 라이브 검증 — API 200 응답으로 종결 절대 금지
+- **작업원칙 23**: 가정과 실제 다르면 즉시 정직 보고
+- **작업원칙 24**: commit + push 한 turn 안에 한 묶음
+- **작업원칙 25**: Python 스크립트 한글 직접 입력 (NFC 정규화 절대 금지)
+- **작업원칙 26**: 근본 원인 일반화 (한 케이스 X, 동일 패턴 전체 점검)
+- **작업원칙 27** (신설 후보): **"기능 0개 삭제 원칙"** — 위치 재배치 OK, 삭제/축소 0
+- **컨텍스트 한계 대응**: Part A1이 무거우면 즉시 Part A1a/A1b로 분할 + MD 인계
+
+### 본 세션 commit 예정
+- 코드 변경 0건 (계획 전용)
+- MD 3종 갱신만 (PROGRESS prepend + ROADMAP starter message 교체 + SESSION_LOG prepend)
+- commit 메시지: `docs(workflow-redesign): 대시보드 워크플로우 재설계 Sprint 계획 확정 + 옵션 E Part 2 흡수 + 꼬띠 아이덴티티 강화 1차 설계 (다음 채팅에서 Part A1 시작)`
+
+---
 
 ## 2026-05-03 세션 요약 — 옵션 E Part 1 완료 ✅
 

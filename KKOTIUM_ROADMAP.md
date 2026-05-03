@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-03 (옵션 E Part 1 완료 ✅ — MID 3개 위젯 SWR 확장 / 다음: 옵션 E Part 2 — UploadReadiness + ReviewGrowth)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ (GoodService/DataLab/Sourcing)**
-> **다음 작업: 옵션 E Part 2 — 복잡한 2개 위젯 SWR 확장 (UploadReadinessWidget, ReviewGrowthWidget) — 새 채팅에서 진행 권장. 상세는 본 문서 하단 "다음 새 채팅 시작 메시지" 섹션 참조**
+> 최종 업데이트: 2026-05-03 (대시보드 워크플로우 재설계 계획 확정 ✅ / 다음: 새 채팅에서 Part A1 구조 재구성 + SWR 완성 + 꼬띠 일일브리핑 + 모드전환 + 꼬띠 아이덴티티 강화)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C/D/E Part 1 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 (꽃졔님 요청)**
+> **다음 작업: 워크플로우 재설계 Sprint Part A1 — 새 채팅에서 진행. 상세는 본 문서 하단 "다음 새 채팅 시작 메시지" 섹션 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -14,98 +14,105 @@
 
 ---
 
-## 🎯 다음 새 채팅 시작 메시지 (옵션 E Part 2 — UploadReadiness + ReviewGrowth — 2026-05-03 작성)
+## 🎯 다음 새 채팅 시작 메시지 (워크플로우 재설계 Sprint Part A1 — 2026-05-03 작성)
 
-> **옵션 E Part 1 완료 ✅ (2026-05-03 본 세션, commit 본 세션 마무리 commit)**:
-> - **공통 hook 5개 추가**: `src/lib/hooks/useDashboardData.ts` 186줄 → 450줄 (+264줄)
->   - `useGoodService()` — 5분 cadence (revalidateOnFocus + 1분 dedupe)
->   - `useDataLabTrend(period)` — 24h cadence + period as part of SWR key
->   - `useSourcingRecommend()` — 24h cadence + setData() for POST scan replace
->   - `useReviewGrowth()` — 5분 cadence + refresh() (Part 2용 미리 추가)
->   - `useUploadReadiness()` — 60s cadence (Part 2용 미리 추가)
-> - **위젯 3개 마이그레이션**: GoodService/DataLab/Sourcing — diff stat +304/-170 (코드 단순화)
-> - **TSC 0 errors** + **Chrome MCP 라이브 검증 완료**:
->   - 3개 API 초기 1회씩 호출 ✅
->   - GoodService(5min profile): blur+focus 시 자동 재호출 1→2 ✅
->   - DataLab/Sourcing(24h profile): focus 시 절약 (호출 안 함) ✅ — 의도된 SWR 효율 극대화
->   - GoodService manual refresh 버튼 mutate 정상 (2→3) ✅
->   - DataLab period 30→7 클릭 시 새 SWR key로 자동 fetch ✅
-> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션 — 옵션 E Part 1 완료" 참조
->
-> **다음 Sprint (옵션 E Part 2): 복잡한 2개 위젯 SWR 확장**:
-> - **목표 위젯 2개** (`src/components/dashboard/`):
->   - `UploadReadinessWidget.tsx` — DRAFT 상품 등록 준비 명령탑 (E-15 매일 가장 자주 보는 위젯)
->     - 특수 패턴: `optimisticScores: Map<string, number>` 보유 (E-15 Part 2에서 도입) — AI 점수 즉각 반영용
->     - 마이그레이션 전략: useUploadReadiness() 훅(60s cadence)으로 fetch 단순화 + optimisticScores Map은 그대로 유지 (SWR `keepPreviousData`와 별개로 작동)
->     - 검증 포인트: 8개 DRAFT 평균 점수 회귀 + AI 분석 후 점수 반영 + revalidateOnFocus 자동 재호출
->   - `ReviewGrowthWidget.tsx` — 리뷰 단계 + 9항목 체크리스트
->     - 특수 패턴: 리뷰 카운트 입력 시 POST `/api/review-growth` + 체크리스트 PUT — 양쪽 모두 mutate 호출 필요
->     - 마이그레이션 전략: useReviewGrowth() 훅(5분 cadence)으로 GET 단순화 + POST/PUT 후 `refresh()` 호출로 mutate 트리거
->     - 검증 포인트: 리뷰 입력 → 즉각 반영 / 체크리스트 toggle → 즉각 반영 / 5분 후 자동 재검증
-> - **이유**: Part 1에서 hook 5종 모두 정의 완료 → Part 2는 위젯 마이그레이션만 (단순 작업)
->
-> **참고용 보존된 다른 Sprint 후보** (Part 2 마무리 후 진행):
-> - 옵션 A — E-1 빌더 AEO 강화 (Q&A/FAQ JSON-LD): 등록 상품 0개라 효과 지연
-> - 옵션 B — E-12 Discord 리뷰 알림: 자체 리뷰 0개라 트리거 미도달
-> - 옵션 F — 다른 페이지 SWR 확장 (정원 창고 / 검색 조련사 / 좀비 부활소 등)
->
+> **계획 세션 완료 ✅ (2026-05-03 본 세션, 코드 변경 없음, MD 3종 갱신 only)**:
+> - **꽃졔님 요청 명확화**: 대시보드 구조 복잡 → 셀러 워크플로우 중심 재구성 + 옵션 E Part 2 SWR 통합 흡수 + 꼬띠 아이덴티티 강화
+> - **2026 최신 트렌드 검증 완료**: 에이전틱 커머스 / 숏폼 매출 +48% / 단골 10억 건 / 제로클릭 / 트렌드 코리아 2026 (web_search 2회)
+> - **재설계 안 확정**: 4섹션 워크플로우 구조 (오늘의 결과 / 오늘의 액션 / 소싱·시장 / 도구·활동) + 모드 전환 토글 + 꼬띠 일일 브리핑
+> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션 — 워크플로우 재설계 Sprint 계획 확정" 참조
+
+> **워크플로우 재설계 Sprint Part A1 작업 범위**:
+> 1. **`src/app/dashboard/page.tsx` 부모 fetch SWR화** (loadProducts → useProductsList, loadStats → 신규 useDashboardStats hook)
+> 2. **4섹션 컴포넌트 신설** (`src/components/dashboard/layout/SectionHeader.tsx` + `CollapsibleSection.tsx`)
+> 3. **대시보드 4섹션 재배치** — 오늘의 결과(KPI/Pipeline/Profitability/GoodService) / 오늘의 액션(DailyPlan/UploadReadiness/ReviewGrowth) / 소싱·시장(Kkotti/MarketTrend/DataLab/Competition/Sourcing/Lifecycle) / 도구·활동(QuickActions/EventTimeline)
+> 4. **ReviewGrowthWidget** useReviewGrowth() 마이그레이션 (옵션 E Part 2 흡수)
+> 5. **UploadReadinessWidget** 부모 SWR화로 자동 혜택 수혈 (위젯 자체 변경 0, optimisticScores Map 보존)
+> 6. **신규 위젯**: `src/components/dashboard/KkottiBriefingWidget.tsx` — 매일 1줄 자동 브리핑 (4개 데이터 소스 통합)
+> 7. **신규 토글**: 대시보드 상단 [오늘 / 이번주 / 이번달] 모드 전환 — Section 3을 모드별 자동 표시
+> 8. **꼬띠 아이덴티티 강화 1차**: API persona 보강 + KKOTTI_FACE 5→9단계 + 정원사/카우걸/튤립 어휘 풀
+
+> **기존 기능 0개 삭제** — 12개 위젯 + 모든 카드 + 빠른 작업 + EventTimeline 모두 보존, 위치만 재배치
+
 > 아래 코드 블록을 그대로 복붙해서 사용.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md, KKOTIUM_SESSION_LOG.md를 읽고
-옵션 E Part 2 — UploadReadinessWidget + ReviewGrowthWidget SWR 확장 작업을 시작해주세요.
+워크플로우 재설계 Sprint Part A1 작업을 시작해주세요.
 
-작업 시작 전 필수 (작업원칙 21+22+23+24+25+26 적용):
-1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 옵션 E Part 1 마무리 commit)
+작업 시작 전 필수 (작업원칙 21+22+23+24+25+26+27 적용):
+1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 본 세션 마무리 commit — 계획 문서만)
    (b) git --no-pager log --oneline -10 → 이번 메시지에 명시되지 않은 commit 있으면 읽고 대응
    (c) git status 깨끗한지 확인 (dirty면 검토 후 처리 — 덮어쓰기 절대 금지)
    (d) lsof -i :3000 또는 curl http://localhost:3000 → dev 서버 상태 확인
    (e) 이 메시지의 가정과 실제가 다르면 즉시 정직 보고 후 재분석
    (f) 본 세션 commit은 그 turn 안에서 push까지 한 줄로 완료
-   (g) edit_file에서 한글 매칭 실패 시 절대 Python 수동 NFC 정규화 금지 → git restore + 한글 직접 입력 패턴
+   (g) edit_file에서 한글 매칭 실패 시 Python 수동 NFC 정규화 절대 금지 → git restore + 한글 직접 입력
    (h) edit_file 에러 응답 받아도 파일에 일부 적용될 수 있음 → head/grep/xxd로 raw 검증 우선
    (i) 문제 분석은 항상 (a) 즉각 원인 (b) 일반화 원인 두 단계로
    (j) 브라우저 테스트는 API 200 응답으로 대체 불가 — Chrome MCP로 실제 화면/숫자/동작 검증 필수
-2. KKOTIUM_PROGRESS.md "2026-05-03 세션 요약 — 옵션 E Part 1 완료" 섹션 정독
-3. KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션 — 옵션 E Part 1 완료" 정독 (hook 5개 패턴 + 검증 결과)
-4. `src/lib/hooks/useDashboardData.ts` L1~450 정독 — useUploadReadiness() / useReviewGrowth() 정의가 이미 추가되어 있음
-5. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
+   (k) **NEW 작업원칙 27**: 기존 기능 0개 삭제 — 위치 재배치 OK, 삭제/축소 0
+2. KKOTIUM_PROGRESS.md "2026-05-03 세션 요약 — 워크플로우 재설계 Sprint 계획 확정" 정독
+3. KKOTIUM_SESSION_LOG.md 최상단 동일 세션 정독 (재설계 안 + 꼬띠 강화 어휘 풀 + 4섹션 매핑 표)
+4. `src/lib/hooks/useDashboardData.ts` L1~450 정독 — useUploadReadiness/useReviewGrowth 정의 이미 추가됨
+5. `src/app/dashboard/page.tsx` (329줄) 정독 — loadProducts/loadStats SWR화 대상
+6. `src/app/api/kkotti-comment/route.ts` L55~75 정독 — KKOTTI_PERSONA 강화 대상
+7. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
 
-[단계 0] 사전 분석 — 2개 위젯 현재 패턴 점검:
-  목표: optimisticScores 보존 + POST/PUT mutate 트리거 정확성 확인
-  점검 절차:
-    1. UploadReadinessWidget.tsx: optimisticScores Map 사용 위치 grep
-       명령: grep -n "optimisticScores\|fetch\|useEffect\|useState" src/components/dashboard/UploadReadinessWidget.tsx | head -30
-    2. ReviewGrowthWidget.tsx: POST/PUT 후 reload 패턴 확인
-       명령: grep -n "fetch\|method:\|useEffect" src/components/dashboard/ReviewGrowthWidget.tsx | head -20
-    3. 각 위젯의 props (parent에서 받는 데이터 있는지) 확인 — 있으면 conditional fetch 필요
+[단계 0] 사전 분석:
+   - dashboard/page.tsx: useEffect+useState+loadProducts/loadStats 패턴 정확히 파악
+   - 12개 위젯의 props vs self-fetch 패턴 매핑
+   - 4섹션 매핑 — 어느 위젯이 어느 섹션에 들어가는지 SESSION_LOG 표 참조
 
-[단계 1] UploadReadinessWidget 마이그레이션:
-  - `useUploadReadiness()` 훅 호출로 단순 fetch 교체
-  - optimisticScores Map은 그대로 보존 (별도 useState)
-  - data 도착 시 optimisticScores 자동 클리어하는 useEffect 유지
-  - AI 분석 완료 후 setOptimisticScores → 다음 SWR refresh에 자연스럽게 반영
-  - npx tsc --noEmit 0 errors 확인
+[단계 1] 신규 hook + 컴포넌트 신설:
+   - `src/lib/hooks/useDashboardData.ts`에 useDashboardStats() 추가 (refresh interval 60s, /api/dashboard/stats?period=all)
+   - `src/components/dashboard/layout/SectionHeader.tsx` — 아이콘 + 섹션명 + 한 줄 설명 + 옵션 토글
+   - `src/components/dashboard/layout/CollapsibleSection.tsx` — 펼치기/접기 (localStorage 사용 X — useState만, 옵션 D 패턴 준수)
+   - npx tsc --noEmit 0 errors
 
-[단계 2] ReviewGrowthWidget 마이그레이션:
-  - `useReviewGrowth()` 훅의 data + refresh 사용
-  - 리뷰 카운트 POST 후 await refresh() 호출 → 5분 cadence 무관하게 즉시 반영
-  - 체크리스트 PUT 후 await refresh() 호출
-  - npx tsc --noEmit 0 errors 확인
+[단계 2] 꼬띠 일일 브리핑 위젯 신설:
+   - `src/components/dashboard/KkottiBriefingWidget.tsx` — 4개 데이터 소스 통합 (Profitability/GoodService/UploadReadiness/ReviewGrowth)
+   - 규칙 기반 추론 (AI 호출 없음, 빠른 응답)
+   - 정원사/카우걸/튤립 메타포 어휘 풀 import
+   - npx tsc --noEmit 0 errors
 
-[단계 3] 마무리 (작업원칙 22+24번 확약):
-  - npx tsc --noEmit 0 errors 최종
-  - Chrome MCP로 대시보드 라이브 검증:
-    - UploadReadiness: 8개 DRAFT 평균 75점 회귀 / AI 분석 후 점수 즉각 반영 / blur+focus 자동 재호출
-    - ReviewGrowth: 리뷰 카운트 +1 후 즉각 반영 / 체크리스트 toggle 즉각 반영
-  - PROGRESS.md / ROADMAP.md / SESSION_LOG.md 갱신
-  - commit + push 한 묶음 (그 turn 안에서)
-  - 새 인계 메시지 작성 (다음 Sprint: 옵션 A vs B vs F 선택)
+[단계 3] 꼬띠 아이덴티티 강화 1차:
+   - `src/app/api/kkotti-comment/route.ts` KKOTTI_PERSONA 강화 (어휘 풀 + 상황별 감탄사 풀)
+   - `src/components/dashboard/KkottiWidget.tsx` KKOTTI_FACE 5→9단계
+   - npx tsc --noEmit 0 errors
 
-참고:
-- AI 호출 비용 0원 (Groq 3키 합산 43,200/일)
-- 코드 수정 후 반드시 `npx tsc --noEmit` 0 errors 확인
-- 본 Part는 Part 1보다 위젯이 적지만(2개) 각각 특수 패턴 보유 → 신중한 검증 필요
+[단계 4] 대시보드 재구성:
+   - `src/app/dashboard/page.tsx` loadProducts/loadStats → useProductsList/useDashboardStats 교체
+   - 모드 전환 useState (today/week/month, 기본 today)
+   - 4섹션으로 위젯 재배치
+   - handleRefresh → mutate 함수 호출로 단순화
+   - npx tsc --noEmit 0 errors
+
+[단계 5] ReviewGrowth + UploadReadiness 마이그레이션:
+   - ReviewGrowthWidget — useReviewGrowth() 훅 사용, PATCH 후 refresh()
+   - UploadReadinessWidget — 부모 SWR화 자동 혜택 (변경 0, optimisticScores 보존 검증)
+   - npx tsc --noEmit 0 errors
+
+[단계 6] 검증 (작업원칙 22번 필수):
+   - npx tsc --noEmit 0 errors 최종
+   - Chrome MCP 라이브 검증:
+     - 4섹션 정상 렌더 / 모드 전환 정상 동작
+     - 꼬띠 일일 브리핑 1줄 표시 + 메타포 어휘 노출
+     - 8개 DRAFT 평균 75점 회귀 (옵션 C+D+E Part 1 결과 보존)
+     - revalidateOnFocus 자동 재호출 (blur+focus 시뮬레이션)
+     - ReviewGrowth PATCH 후 즉각 반영
+     - AI 분석 후 optimisticScores 즉각 반영 + 캐노니컬 자동 클리어
+     - 12개 위젯 모두 정상 표시 (모드별 적절히)
+
+[단계 7] 마무리 (작업원칙 24번 회수):
+   - PROGRESS/ROADMAP/SESSION_LOG 갱신
+   - commit + push 한 묶음 (그 turn 안에서)
+   - 새 인계 메시지 작성 (Part A2: 시각 디테일 + 잔여 위젯 SWR + 빈 상태 UX 개선)
+
+작업 분량 안전 마진:
+- Part A1이 컨텍스트 한계 80% 도달 시 즉시 마무리 + Part A1a / A1b로 안전 분할 (단계 6/7 우선)
+- AI 호출 비용 0원 (꼬띠 브리핑은 규칙 기반)
+- 본 Part는 12개 위젯 모두 영향 → 신중한 검증 필요
 - 세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md에 작성, PROGRESS.md/ROADMAP.md는 핵심 요약만 유지
 ```
 
