@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
 > 최종 업데이트: 2026-05-03 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여·5 마무리 ✅ — 이슈 #3 optimistic score override 적용 + E-15 전체 완료)
 > **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ (Block A+B+C+D Part 1+Part 2 모든 단계 + 이슈 #1·#2·#3·#4·#5·#6·#7 모두 처리)**
-> **다음 작업: 다음 Sprint 결정 대기 — 옵션 A(E-1 빌더 AEO 강화) vs 옵션 B(E-12 Discord 리뷰 알림) vs 옵션 C(미분류 개선 항목) — 꽃졔님 선택 후 본 문서 하단 "다음 새 채팅 시작 메시지" 섹션 갱신**
+> **다음 작업: 옵션 C 확정 (꽃졔님 승인 2026-05-03) — 사이드바 배지 실시간화 (`src/components/layout/Sidebar.tsx` 5종 배지: sourcing/zombie/orders/draft/oos) — 상세는 본 문서 하단 "다음 새 채팅 시작 메시지" 섹션 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -14,7 +14,7 @@
 
 ---
 
-## 🎯 다음 새 채팅 시작 메시지 (E-15 마무리 후 다음 Sprint용 — 2026-05-03 마지막 갱신)
+## 🎯 다음 새 채팅 시작 메시지 (옵션 C 사이드바 배지 실시간화 — 2026-05-03 확정)
 
 > **잔여·5 마무리 완료 ✅ (2026-05-03 본 세션, commit f9f2300 + MD 마무리 commit)**:
 > - **이슈 #3 optimistic score override 적용**: AutoFillModal `onApplied` 시그니처 확장 → `(productId, newScore) => void`. UploadReadinessWidget에 `optimisticScores: Map<string, number>` state 추가. AI 채우기 적용 즉시 위젯이 서버 canonical score로 override → loadProducts() 완료 전 sub-90 "AI 채우기" 버튼 재표시 트랩 제거. `useEffect([products])`로 fresh DB 데이터 도착 시 자동 정리
@@ -22,16 +22,16 @@
 > - **E-15 전체 완료 ✅**: Block A(검색결과·SEO 안내 위젯) + Block B(naverCommerceMatcher 도메인 일반화) + Block C(AutoFillModal 2단계 워크플로우) + Block D Part 1(자체 ready90 등록 진입점) + Part 2 잔여 5차까지 모든 이슈(#1·#2·#3·#4·#5·#6·#7) 처리 완료
 > - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션" 참조
 >
-> **다음 Sprint 후보** (꽃졔님 결정에 따라 한 가지 선택):
-> - **옵션 A — E-1 빌더 AEO 강화 (Q&A/FAQ JSON-LD)**: 등록 상품 상세페이지가 AI 쇼핑 에이전트(2026.2 출시)에 노출되도록 schema.org 자동 변환. 임팩트 높음 단 등록 상품 0개라 효과 지연
-> - **옵션 B — E-12 Discord 리뷰 알림**: 자체 리뷰 페이지 폴링 → Discord 알림. 자체 리뷰 0개라 트리거 미도달, 효과 지연
-> - **옵션 C (추천) — 미분류 개선 항목 (사이드바 배지 실시간화 등)**: 등록 상품 0개 단계에서도 즉시 효과를 볼 수 있는 매일 쓰는 UX 마찰 감소 작업
+> **다음 Sprint 확정: 옵션 C — 사이드바 배지 실시간화** (꽃졔님 승인 2026-05-03):
+> - **현재 상태**: `src/components/layout/Sidebar.tsx` (348줄)에 5종 배지 시스템 이미 구현됨 — sourcing/zombie/orders/draft/oos. L200~201에서 `useEffect`로 `/api/dashboard/stats?period=all` **단발성 fetch**만 함 → 상품 등록/삭제/상태 변경 시 사이드바가 stale 상태 유지
+> - **목표**: 매일 쓰는 UX 마찰 감소 — 상품 추가/사라짐 즉시 사이드바 배지에 반영
+> - **이유**: 등록 상품 0개 단계에서도 즉시 효과를 볼 수 있는 작업 — 옵션 A(빌더 AEO) / 옵션 B(Discord 리뷰 알림)은 효과 지연 (미래 작업으로 보류)
 >
-> 아래 코드 블록을 그대로 복붙해서 사용 (옵션 C 기준, A/B 선택 시 "단계 1" 부분만 교체).
-
+> 아래 코드 블록을 그대로 복붙해서 사용.
+>
 ```
 꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md, KKOTIUM_SESSION_LOG.md를 읽고
-E-15 마무리 후 다음 Sprint 작업을 시작해주세요.
+옵션 C — 사이드바 배지 실시간화 작업을 시작해주세요.
 
 작업 시작 전 필수 (작업원칙 21+23+24+25+26 적용):
 1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 잔여·5 MD 마무리 commit)
@@ -47,37 +47,37 @@ E-15 마무리 후 다음 Sprint 작업을 시작해주세요.
 3. KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션" 정독 (optimistic score override 설계 의도 + 적용 결과)
 4. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
 
-[단계 1 — 옵션 C 기준: 미분류 개선 항목 (사이드바 배지 실시간화)]
-  목표: 매일 쓰는 UX 마찰 감소 — 등록 상품 0개 단계에서도 즉시 효과를 볼 수 있는 작업
-  점검 절차:
-    1. ROADMAP.md "미분류 개선 항목" 섹션에서 우선순위 항목 확인
-    2. 사이드바 컴포넌트 위치 파악 (src/components/Sidebar.tsx 추정)
-    3. DRAFT 상품 개수 실시간 폴링 또는 SWR 도입 검토
-    4. 작업원칙 26번 적용: 같은 종류의 배지/카운터가 다른 페이지(주문 관리 / 정원 창고 / 검색 조련사 등)에서도 stale 상태로 표시되는지 일반화 점검
-    5. 작업 분량 큰 경우 새 채팅으로 분할
+[단계 1] 사이드바 배지 실시간화:
+  목표: 상품 추가/삭제/상태 변경 시 사이드바 5종 배지(sourcing/zombie/orders/draft/oos)가 즉시 갱신되도록
+  사전 분석 (이미 파악됨):
+    - 파일: src/components/layout/Sidebar.tsx (348줄)
+    - 현재: useEffect로 /api/dashboard/stats?period=all 단발성 fetch (L200~201)
+    - 구조: NavItem.badgeKey ('sourcing'|'zombie'|'orders'|'draft'|'oos') → NavBadge 컴포넌트 렌더링 (L173~)
+  구현 단계:
+    1. 현 Sidebar.tsx 전체 독해 (useEffect 흐름, 상태 구조 파악)
+    2. /api/dashboard/stats 응답 구조 확인 (이미 5종 count를 돌려주는지)
+    3. 구현 전략 결정 (세 가지 중 선택):
+       (a) **SWR 도입** — swr 패키지 설치 + 60초 간격 refreshInterval + revalidateOnFocus: true
+       (b) **수동 이벤트 기반** — BroadcastChannel 또는 window event로 상품 mutation 시 Sidebar fetch 재호출
+       (c) **단순 주기적 폴링** — setInterval 30초마다 fetch (가장 간단, 대역폭 소극)
+       결정 추천: (a) SWR — next.js 생태계 표준, focus revalidation으로 이종 탭/돌아올 때 자연스럽게 갱신
+    4. 구현 + 테스트:
+       - SWR 설치: `npm install swr`
+       - Sidebar.tsx에 useSWR 훅 도입 + 60초 refreshInterval + revalidateOnFocus: true
+       - 코드 수정 후 `npx tsc --noEmit` 0 errors 확인
+       - 브라우저 테스트: 씨앗 심기 또는 정원 창고에서 DRAFT 상품 하나 등록/상태 변경 → 60초 안에 사이드바 숫자 변경 확인, 또는 탭 전환 시 즉시 갱신 확인
+    5. 작업원칙 26번 적용 (일반화 점검):
+       - 같은 stale 데이터 패턴이 다른 위젯/페이지에서도 발생하는지 점검
+       - 후보: 대시보드 상점 위젯, 관리자 페이지 통계, 검색 조련사 결과
+       - 대시보드 등 다른 페이지까지 SWR 도입을 이번 Sprint에 포함할지 다음으로 미룰지 꽃졔님 결정
+  작업 분량 추정: 중간 (1차: SWR 도입 + Sidebar 패치 + 테스트 → 한 채팅 안에 가능)
 
-[단계 1 대안 — 옵션 A: E-1 빌더 AEO 강화 (Q&A/FAQ JSON-LD)]
-  목표: 등록 상품 상세페이지가 AI 쇼핑 에이전트(2026.2)에 노출되도록 schema.org 자동 변환
-  점검 절차:
-    1. src/lib/builder/ 디렉토리 빌더 출력 구조 확인
-    2. JSON-LD `<script type="application/ld+json">` 자동 삽입 위치 결정 (head 또는 description 끝)
-    3. Q&A: 자주 묻는 질문 5~10개 자동 생성 (AI) — `Question` 스키마
-    4. FAQ: 카테고리별 표준 FAQ 템플릿 — `FAQPage` 스키마
-    5. 등록 상품 0개 단계라 효과 지연 가능 — 빌더 코드만 정비하고 효과는 첫 등록 시 검증
-
-[단계 1 대안 — 옵션 B: E-12 Discord 리뷰 알림]
-  목표: 자체 리뷰 페이지 폴링 → Discord 알림 채널 발송
-  점검 절차:
-    1. src/lib/discord/ 5채널 시스템 확인 (알림 채널 추가)
-    2. /api/reviews 폴링 또는 webhook 도입 (Naver Commerce API 미사용 단계라 자체 리뷰만)
-    3. 자체 리뷰 0개라 트리거 미도달 — 코드만 정비하고 첫 리뷰 시 검증
-
-[단계 2] 마무리 (모든 옵션 공통):
+[단계 2] 마무리:
   - npx tsc --noEmit 0 errors
-  - 브라우저 라이브 회귀 (Chrome MCP) — 작업한 기능 동작 + 8개 DRAFT 평균 75점 회귀 안 일어남
+  - 브라우저 라이브 회귀 (Chrome MCP) — 사이드바 배지 실시간 갱신 실제 동작 + 8개 DRAFT 평균 75점 회귀 안 일어남
   - PROGRESS.md / ROADMAP.md / SESSION_LOG.md 갱신
   - commit + push 한 묶음
-  - 새 인계 메시지 작성
+  - 새 인계 메시지 작성 (다음 Sprint: 옵션 A vs B vs 다른 미분류 개선 항목)
 
 참고 (주의사항):
 - AutoFillModal은 inline style (Tailwind 아님) — 셀렉터: getComputedStyle(d).position === 'fixed' && cs.zIndex === '1000'
