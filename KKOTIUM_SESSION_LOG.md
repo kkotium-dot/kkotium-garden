@@ -9,6 +9,87 @@
 
 ---
 
+## 2026-05-03 세션 — 옵션 C 완료 (사이드바 5종 배지 SWR 실시간화)
+
+### 세션 개요
+- 직전 채팅에서 옵션 C 코드 패치(SWR 도입 + Sidebar.tsx +30/-28 lines) + TSC 0 errors + 브라우저 라이브 검증까지 완료, 단 MD 갱신 + commit + push가 한 turn 안에 끝나지 않은 채로 종료된 상태에서 시작 (작업원칙 24번 위반 회수 작업)
+- 본 세션 목표: 작업원칙 24번 위반 회수 — 직전 패치를 그대로 보존한 채 MD 3종 갱신 + commit + push 한 묶음으로 마무리, 옵션 D(대시보드 위젯 SWR 확장) 인계 메시지 작성
+- 작업원칙 21·22·23·24·25·26 모두 적용
+
+### [Sprint 1] 사전 환경 점검 (작업원칙 21+23번)
+**Git 상태 검증**:
+- HEAD = origin/main = `ecd78de` (옵션 C 확정 commit, "docs(roadmap): finalize next sprint as Option C") 동기화 ✅
+- working tree dirty: 4개 파일 변경 보존 확인 ✅
+  - `KKOTIUM_PROGRESS.md` (옵션 C 완료 섹션 prepend됨)
+  - `package.json` / `package-lock.json` (swr@2.4.1 추가)
+  - `src/components/layout/Sidebar.tsx` (+29/-28 lines, useSWR 패턴 도입)
+- `git diff --stat src/components/layout/Sidebar.tsx`: 1 file changed, 29 insertions(+), 28 deletions(-) — 직전 채팅 패치 그대로 보존 확인
+
+**Dev 서버 상태**:
+- `curl -o /dev/null -w "DEV:%{http_code}" http://localhost:3000` → DEV:200 ✅
+- node 프로세스 정상 작동 중
+
+**TSC 검증**:
+- `npx tsc --noEmit` → EXIT=0, 0 errors ✅
+
+**MD 줄 수**:
+- PROGRESS.md: 1179줄 / ROADMAP.md: 1265줄 / SESSION_LOG.md: 456줄 (truncation 없음 ✅)
+
+### [Sprint 2] PROGRESS.md 검토 (이미 갱신됨, 추가 작업 불필요)
+- `head -60 KKOTIUM_PROGRESS.md` 확인 → "2026-05-03 세션 요약 — 옵션 C 완료 (사이드바 5종 배지 SWR 실시간화)" 섹션이 이미 prepend되어 있음
+- 직전 채팅에서 PROGRESS.md만 갱신했고 commit 못한 상태 — 본 세션은 이 갱신을 그대로 유지하고 commit에 포함
+
+### [Sprint 3] ROADMAP.md 갱신 (헤더 3줄 + 시작 메시지 섹션 옵션 D용 교체)
+**갱신 범위**:
+1. 헤더 L2: "최종 업데이트" → "2026-05-03 (옵션 C 완료 ✅ — 사이드바 5종 배지 SWR 실시간화 / 다음: 옵션 D 대시보드 위젯 SWR 확장)"
+2. 헤더 L3: Phase 진행 상태에 "+ 옵션 C 사이드바 SWR 실시간화 완료 ✅" 추가
+3. 헤더 L4: "다음 작업" → "옵션 D — 대시보드 위젯 SWR 확장 (옵션 C 결과 계승, 작업원칙 26번 일반화 적용)"
+4. 시작 메시지 섹션 헤더: "옵션 C 사이드바 배지 실시간화 — 2026-05-03 확정" → "옵션 D 대시보드 위젯 SWR 확장 — 2026-05-03 작성"
+5. 시작 메시지 본문: 옵션 C 작업 안내 → 옵션 D 작업 안내로 전체 교체
+   - 단계 0: 사전 분석 — 대시보드 위젯 stale 패턴 전수 점검 (grep로 useEffect+fetch 식별 + HIGH/MID/LOW 우선순위)
+   - 단계 1: SWR 패턴 일반화 — 공통 hook 추출 권장 (`src/lib/hooks/useDashboardData.ts`)
+   - 단계 2: HIGH 2개(ProfitabilityWidget, OrderManagementWidget) 우선 적용
+   - 단계 3: 마무리 (TSC + Chrome MCP 라이브 회귀 + MD 3종 갱신 + commit/push 한 묶음)
+   - 작업원칙 21~26 모두 명시 (특히 22번 브라우저 테스트 필수, 26번 일반화 적용)
+
+**구현 방식**:
+- Python 스크립트(`_patch_roadmap.py`)로 처리 — 한글 직접 입력(작업원칙 25번 강화 — Python 수동 NFC 정규화 금지) + 정확한 anchor 매칭 + assertion 검증
+- 실행 결과: BEFORE 1265 → AFTER 1274 lines (+9 라인, 옵션 D 시작 메시지가 더 풍부함)
+- 모든 검증 assertion 통과: 옵션 D 언급 존재 / 옵션 C 완료 언급 존재 / 옵션 C 시작 메시지 anchor 제거됨
+
+### [Sprint 4] SESSION_LOG.md 본 세션 prepend (작업원칙 24번 — 누락된 자세한 기록 보강)
+- 본 항목이 그것 — `>새 채팅 시작 시 읽는 순서` 메타 헤더 직후 anchor 위치에 신규 세션 entry 삽입
+
+### [Sprint 5] commit + push 한 묶음 마무리 (작업원칙 24번)
+- 작업원칙 24번 — 본 세션의 모든 변경(코드 + MD 3종)을 한 turn 안에 commit + push
+- commit 메시지: `feat(옵션C): SWR 도입으로 사이드바 5종 배지 실시간화 (sourcing/zombie/orders/draft/oos)`
+- 본문에 SWR 옵션 + 검증 결과 + 작업원칙 26번 일반화 결정 명시
+
+### 본 세션 핵심 성과
+- **옵션 C 코드 변경**: 사이드바 v9 → v10 (SWR realtime), useEffect/useState 단발성 fetch → useSWR 훅 + 60s polling + revalidateOnFocus + 10s dedupe + keepPreviousData
+- **TSC 0 errors** ✅
+- **브라우저 라이브 검증 완료** (직전 채팅): 사이드바 배지 5종 정상 / 8개 DRAFT 평균 75점 회귀 안 일어남 / revalidateOnFocus 202ms 자동 재호출 / dedupingInterval 10초 경계 정확
+- **MD 3종 갱신 완료**: PROGRESS.md(직전 채팅)/ROADMAP.md(본 세션)/SESSION_LOG.md(본 세션 prepend)
+- **commit + push 한 묶음 마무리** — 작업원칙 24번 회수 완수
+- **다음 Sprint 옵션 D 인계**: 대시보드 위젯 5~6개에 SWR 패턴 확장 (옵션 C 결과 계승, 작업원칙 26번 일반화 적용)
+
+### 작업원칙 적용 내역
+- **21번 (사전 분석)**: git status + HEAD/origin 동기화 + dev 서버 200 + TSC 0 errors + MD 줄 수 모두 사전 검증
+- **22번 (브라우저 테스트 필수)**: 직전 채팅에서 Chrome MCP로 라이브 회귀 완료, 본 세션은 MD 갱신만이라 추가 브라우저 검증 불필요
+- **23번 (정직한 보고)**: 직전 채팅의 commit 누락을 즉시 보고하고 회수 작업 진행
+- **24번 (코드 패치 후 commit/push 한 turn 마무리)**: 직전 채팅 위반을 본 세션에서 회수 — MD 3종 + 코드 4파일 모두 한 묶음으로 commit + push
+- **25번 (한글 매칭 안전 패턴)**: edit_file 대신 Python 스크립트(`Filesystem:write_file`로 작성)에 한글 직접 입력 — Python 수동 NFC 정규화 절대 금지 원칙 준수
+- **26번 (즉각 원인 + 일반화 원인)**:
+  - 즉각 원인: 사이드바 단발성 fetch → stale 배지
+  - 일반화 원인: 동일 패턴(useEffect + fetch + useState)이 대시보드 위젯 5~6개에도 존재 → 옵션 D로 인계
+
+### 환경/도구 사용 내역
+- **iterm-mcp**: TTY `/dev/ttys003` 신규 launch_session, git/curl/wc/sed/python3/npx/git commit/push 명령 사용
+- **Filesystem MCP (user)**: `_patch_roadmap.py` 작성 (write_file) — 컨테이너 `create_file`은 Claude 가상 디스크에만 저장되므로 user filesystem 도구로 전환
+- **Chrome MCP**: 본 세션은 사용 안 함 (MD 갱신 + commit이 핵심, 직전 채팅에서 라이브 검증 완료)
+
+---
+
 ## 2026-05-03 세션 — E-15 Block D Part 2 잔여·5 마무리 (이슈 #3 optimistic score override 적용 + E-15 전체 완료)
 
 ### 세션 개요

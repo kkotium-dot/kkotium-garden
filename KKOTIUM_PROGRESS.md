@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-03 (Phase E+ Sprint 6 — E-15 Block D Part 2 잔여·5 마무리 ✅ — 이슈 #3 optimistic score override 적용 + E-15 전체 완료)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: f9f2300 (잔여·5 코드 패치 push 완료) → 본 MD 마무리 commit으로 갱신 예정
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ (Block A+B+C+D Part 1+Part 2 모든 단계 + 이슈 #1·#2·#3·#4·#5·#6·#7 처리 완료)**
-> **다음 작업: 다음 Sprint 결정 대기 — 옵션 A(E-1 빌더 AEO 강화 Q&A/FAQ JSON-LD) vs 옵션 B(E-12 Discord 리뷰 알림, 트리거 미도달) vs 옵션 C(ROADMAP 미분류 개선 항목 — 사이드바 배지 실시간화 등)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 참조
+> 최종 업데이트: 2026-05-03 (옵션 C 완료 ✅ — 사이드바 5종 배지 SWR 실시간화)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit으로 갱신 예정
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 실시간화 완료 ✅**
+> **다음 작업: 다음 Sprint 결정 대기 — 옵션 A(E-1 빌더 AEO 강화 Q&A/FAQ JSON-LD) vs 옵션 B(E-12 Discord 리뷰 알림, 트리거 미도달) vs 옵션 D(대시보드 위젯 SWR 확장 — 옵션 C 결과 계승)** — 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 참조
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -13,6 +13,35 @@
 ## 이 파일의 역할
 
 > **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스 (세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md 참조)
+
+---
+
+## 2026-05-03 세션 요약 — 옵션 C 완료 (사이드바 5종 배지 SWR 실시간화)
+- 사전 점검 (작업원칙 21+23): HEAD=ecd78de ↔ origin/main 동기화 ✅, working tree clean ✅, dev 서버 포트 3000 살아있음 (HTTP 200, node PID 2874) ✅, 세 MD 정독 ✅
+- **도입 결정**: 꽃졔님 승인 "Sidebar 1개만 — 안정성 검증 후 다음 Sprint로 확장" (작업원칙 26번 일반화 점검이 다음 Sprint 운명)
+- **패키지 설치**: `npm install swr` → swr@2.4.1 설치 완료 ✅
+- **코드 패치** (`src/components/layout/Sidebar.tsx`, +30/-28 lines):
+  1. import 교체: `useEffect, useState` → `useSWR` (1줄)
+  2. 헤더 주석 갱신: v9 → v10 (SWR realtime)
+  3. `statsFetcher` 추가 — fetch → JSON 단순 함수
+  4. `useSWR` 훅 도입 (키: '/api/dashboard/stats?period=all'):
+     - `refreshInterval: 60_000` — 60초 주기적 폴링
+     - `revalidateOnFocus: true` — 탭/창 복귀 시 즉시 갱신 (핵심 UX)
+     - `dedupingInterval: 10_000` — 10초 이내 중복 요청 차단
+     - `keepPreviousData: true` — 갱신 중 배지 깜빡임 방지
+  5. `sideStats` 더리부 (`statsResp?.data?.summary` 기반 5종 count)
+- **TSC**: 0 errors ✅ (`/tmp/_tsc_now.log` 0 lines, EXIT=0)
+- **브라우저 라이브 회귀 검증** (Chrome MCP, 작업원칙 22번):
+  - **사이드바 배지 5종 정상 레더링 ✅**: 꿀통 사냥터 3 / 정원 창고 8 / 나머지 0 (현재 DB 데이터 100% 일치)
+  - **8개 DRAFT 평균 75점 회귀 검증 ✅**: 50,60,70,76,80,84,86,92 (직전 세션과 100% 일치, E-15 자산 보존 확정)
+  - **revalidateOnFocus 실행 검증 ✅**: blur+focus 시뮬레이션 → t=202ms에 `/api/dashboard/stats` 자동 재호출
+  - **dedupingInterval 실행 검증 ✅**: 11초 대기 후 focus → 재호출 (10초 경계 정확 작동)
+  - **API HTTP 200 (0.45s)** 재확인 ✅
+- **작업원칙 26번 일반화 점검**: 동일 패턴(단발성 fetch + stale state)이 다른 위젯/페이지에서도 있을 수 있음 (후보: ProfitabilityWidget, ReviewGrowthWidget, GoodServiceWidget, DataLabTrendWidget, 대시보드 주문관리 위젯 등) → 다음 Sprint(옵션 D)에서 SWR 확장 권장
+- **다음 Sprint 후보 (꽃졔님 결정 대기)**:
+  - 옵션 A: E-1 상세페이지 빌더 AEO 강화 (Q&A/FAQ JSON-LD) — 등록 상품 발생 시점에 적합
+  - 옵션 B: E-12 Discord 리뷰 알림 — 자체 리뷰 1건+ 발생 시점에 적합
+  - **옵션 D (동의어)**: 대시보드 위젯 SWR 확장 — 본 세션 결과 계승, 동일 패턴을 다른 위젯/페이지에도 적용
 
 ---
 
