@@ -9,6 +9,98 @@
 
 ---
 
+## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A2b 완료 (모드별 정렬 + 동적 subtitle + ActionHint) ✅
+
+### 세션 성격
+- 직전 세션 commit `cdc30ad` (A2a 정리) 이후 본 세션 신규 작업.
+- 꽃졔님 위임 — "최선의 개선안 방법으로 진행 + 컨텍스트 오버 방지". 자체 판단으로 단순 정렬(ROADMAP 인계 단계 1만)을 넘어 파워셀러 리서치 4종 정독 기반의 가치 개선 3종을 한 번에 통합 적용.
+- 작업원칙 26번 일반화 사례 — 이번에 적용된 "memory.md heredoc 절대 금지"를 본 세션에서 한 번 위반(heredoc 시도 → 출력 망가짐) → 즉시 Ctrl-C + Filesystem write_file로 전환하여 회수.
+
+### 파워셀러 리서치 검증 (프로젝트 파일)
+- `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리.md` 정독 (1~136 line).
+- **이미 반영된 항목**: 반품안심케어 (E-4), Discord 5채널 웹훅, 경쟁 모니터링 (D-3+A2a), 데이터랩 (D-4+옵션E), 라이프사이클 (D-1+A2a), 리뷰 성장 (A1b), 굿서비스 (Phase E), 카카오 알림톡 인프라 (E-13B UI만).
+- **미반영 항목 — A3 후보로 등록**: (1) 구매확정율 추적 + 알림톡 리마인더 (★★☆ 최고 ROI MVP, 커머스 API + 솔라피 13원/건), (2) 한달사용 리뷰 2단계 구조 (리뷰 볼륨 2배), (3) AI 브리핑 노출 최적화 (검색 조련사 보강).
+
+### 단계 1 — Section 3 위젯 모드별 정렬 (ROADMAP 인계 그대로)
+**`src/app/dashboard/page.tsx`** (+72 line):
+- 신규 상수 `SECTION3_ORDER: Record<DashboardMode, Record<Section3WidgetKey, number>>`
+  - today: kkotti=1, marketTrend=2, datalab=3, competition=4, sourcing=5, lifecycle=6
+  - week: datalab=1, competition=2, kkotti=3, marketTrend=4, sourcing=5, lifecycle=6
+  - month: lifecycle=1, sourcing=2, kkotti=3, marketTrend=4, datalab=5, competition=6
+- Section 3 컨테이너 변경: `<div className="space-y-4">` → `<div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>`
+- DataLab + Competition 2-col grid 묶음 풀고 6개 위젯 모두 같은 flex column으로 단일화 (모든 모드에서 layout shift 0).
+- 각 위젯 wrap div에 inline `style={{ order: SECTION3_ORDER[mode].XXX }}` 적용.
+
+### 단계 2 — sectionMarketSubtitle 정적 → 동적 데이터 (보너스, 파워셀러 가치)
+**`buildMarketSubtitle(mode, stats)` 신규 함수** (+22 line):
+- 정적 텍스트("주간 트렌드 + 경쟁 분석 — DataLab/Competition 강조") → 동적 SWR 데이터 기반.
+- today: `오늘 액션 — 등록 대기 ${draft} · 품절 ${oos} · 좀비 ${zombie}`
+- week: `주간 시장 — 데이터랩 트렌드 + 경쟁사 가격 모니터 (소싱 후보 ${sourcing}건)`
+- month: `월간 개선 — 좀비 ${zombie}건 (판매중 대비 ${zombiePct}%) · 소싱 ${sourcing}건 점검`
+- 사용 데이터: `stats.sourcingCount`, `stats.draftProducts`, `stats.outOfStockProducts`, `stats.zombieCount`, `stats.activeProducts` (모두 기존 SWR 호출에서 받아오는 필드 — 추가 API 0).
+
+### 단계 3 — ModeActionHint 슬림 배너 (보너스, 디자인 가치)
+**`ModeActionHint` 컴포넌트 신규** (+50 line):
+- 모드 토글 바로 아래에 1줄 짜리 슬림 배너로 모드 의도 시각화.
+- today: green tone — "오늘은 처리해야 할 액션 — DRAFT 등록 / 품절 보충 / 발주 처리에 집중하세요"
+- week: blue tone — "이번주는 시장 신호 — 데이터랩 트렌드 + 경쟁사 가격 모니터링에 집중하세요"
+- month: purple tone — "이번달은 구조 개선 — 좀비 부활 후보 + 라이프사이클 + 소싱 다양화를 점검하세요"
+- 디자이너 꽃졔님의 UX 강점 활용 — 모드 전환의 의도가 시각적으로 즉시 전달.
+- ARIA: `role="status"` + `aria-live="polite"` (스크린리더 지원).
+
+### 단계 4 — Chrome MCP 라이브 검증 (작업원칙 22번 강제) — 6항목 100% 통과
+**검증 스크립트 (browser_batch 1회)**:
+```js
+// Section 3 컨테이너의 6개 자식 div의 computed order 읽고 정렬, 실제 시각 순서 캡처
+const sec3 = Array.from(document.querySelectorAll('div')).filter(d=>
+  d.style.display==='flex' && d.style.flexDirection==='column' && d.children.length===6)[0];
+const captureOrder = ()=> Array.from(sec3.children)
+  .map(ch=>({order:parseInt(getComputedStyle(ch).order,10), key:identifyByText(ch)}))
+  .sort((a,b)=>a.order-b.order).map(x=>x.key);
+```
+**결과**:
+| 모드 | 라이브 캡처 순서 | 의도된 순서 | 일치 |
+|------|------------------|-------------|------|
+| today | kkotti / marketTrend / datalab / competition / sourcing / lifecycle | 동일 | ✅ |
+| week | datalab / competition / kkotti / marketTrend / sourcing / lifecycle | 동일 | ✅ |
+| month | lifecycle / sourcing / kkotti / marketTrend / datalab / competition | 동일 | ✅ |
+| ModeActionHint | 모드별 메시지 정확 | 동일 | ✅ |
+| sectionMarketSubtitle | "오늘 액션 — 등록 대기 8 · 품절 0 · 좀비 0" / "주간 시장 — 데이터랩 트렌드 + 경쟁사 가격 모니터 (소싱 후보 3건)" / "월간 개선 — 좀비 0건 (판매중 대비 0%) · 소싱 3건 점검" | 동일 | ✅ |
+| DRAFT 8개 75점 회귀 | 50/60/70/76/80/84/86/92 모두 발견 (74.75 ≈ 75점) | 동일 | ✅ |
+| 4섹션 mascot pill 보존 | ^_^/^ㅂ^/^ㅂ^/✿ㅅ✿ 모두 표시 | 동일 (A2a 결과) | ✅ |
+
+### 사전 점검 결과 (작업원칙 21)
+- HEAD `cdc30ad` = origin/main 동기화 ✅
+- working tree clean ✅
+- TSC 0 errors ✅ (작업 후에도 0)
+- dev :3000 HTTP 200 ✅
+- A2a 직전 commit 2개 (`0ee46dc` + `cdc30ad`) push 완료 확인
+- 한글 깨짐 검사 (꽀/꿔/꺼/꿈/꿃/꺾) — 0개 ✅
+- 본 세션 변경 후 grep raw 검증 — 6 helper 모두 정상 ✅
+
+### 본 세션 commit 예정
+- 코드 변경: `src/app/dashboard/page.tsx` 1개 (+139/-22)
+- 패치 스크립트: `_patch_a2b_dashboard_mode.py` (작업 후 정리 commit으로 삭제)
+- MD 갱신: PROGRESS + ROADMAP + SESSION_LOG 3종
+- 본체 commit 메시지: `feat(workflow-redesign A2b): Section 3 모드별 위젯 정렬 + 동적 subtitle + ModeActionHint 슬림 배너`
+- 정리 commit 메시지: `chore: remove temporary patch script (A2b 정리)`
+
+### 적용된 작업원칙 (모두 준수)
+- **#21 사전 점검**: 8항목 통과 후 코드 작업 시작
+- **#22 라이브 검증**: API 200 응답 종결 X — Chrome MCP 6항목 모두 시각/숫자 검증
+- **#23 정직 보고**: heredoc 1회 위반 발생 → 즉시 Ctrl-C로 회수, 꽃졔님께 transparent 보고 (메모리 내 "heredoc 절대 금지" 작업원칙 위반 인지)
+- **#24 commit + push 한 묶음**: 다음 turn에서 한 줄로 처리 예정
+- **#25 한글 직접 입력**: NFC 정규화 0회, Filesystem write_file 한글 그대로 작성
+- **#26 근본 원인 일반화**: heredoc 위반은 "메모리 작업원칙은 즉시 떠올려야 한다"로 일반화 (다음 세션에서 작업 시작 전 메모리 다시 확인)
+- **#27 기능 0개 삭제**: 6개 위젯 + 4섹션 + 모드 토글 + KkottiBriefing + mascot pill 모두 보존, 의미 부여만 추가
+
+### 자체 판단 가치 개선 (꽃졔님 위임 사항 응답)
+- 단순 정렬(단계 1)만 진행하면 ROADMAP 인계 그대로지만 사용자가 모드 전환의 가치를 체감하기 어려움.
+- 추가 API 0개로 동적 subtitle + ActionHint를 통합 → 모드 전환이 "위젯 순서 + 의미 + 시각 디테일" 3개 차원에서 동시에 변화.
+- 파워셀러 리서치의 핵심 인사이트(즉각 행동 / 트렌드 의사결정 / 구조 개선 3-tier 분리)가 시각적으로 명료히 전달.
+
+---
+
 ## 2026-05-04 세션 — 워크플로우 재설계 Sprint Part A2a 완료 (Competition/Lifecycle SWR + SectionHeader mascot pill) ✅
 
 ### 세션 성격

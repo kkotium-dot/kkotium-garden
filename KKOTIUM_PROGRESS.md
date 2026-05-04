@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-04 (워크플로우 재설계 Sprint Part A2a 완료 ✅ — Competition/Lifecycle SWR + SectionHeader mascot pill + 라이브 검증 6항목 통과 / 다음: 새 채팅에서 Part A2b — 모드별 위젯 정렬 + 추가 위젯 SWR 후보)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit (A2a — Competition/Lifecycle SWR 마이그레이션 + SectionHeader mascot pill 통합)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a 완료 ✅**
-> **다음 작업: 워크플로우 재설계 Sprint Part A2b — 모드별 위젯 정렬 (mode=week 시 DataLab/Competition 상단, mode=month 시 Lifecycle/Sourcing 상단) + 추가 위젯 SWR 후보 (Sourcing/EventTimeline) — 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
+> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A2b 완료 ✅ — Section 3 모드별 위젯 정렬 + 동적 sectionMarketSubtitle + ModeActionHint 슬림 배너 + 라이브 검증 6항목 통과 / 다음: 새 채팅에서 Part A3 — 구매확정율 추적 + EventTimeline SWR + 다른 페이지 SWR 확장 후보)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit (A2b — Section 3 모드별 정렬 + 동적 subtitle + ModeActionHint 통합)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅**
+> **다음 작업: 워크플로우 재설계 Sprint Part A3 — (1) 구매확정율 추적 + 알림톡 리마인더 (★★☆ 최고 ROI MVP), (2) EventTimeline SWR 마이그, (3) 다른 페이지 SWR 확장 (정원 창고/검색 조련사), (4) mascot SVG 자산 추가 — 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (Part A3)" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -10,6 +10,65 @@
 >   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
 >   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
 >   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
+
+## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A2b 완료 (모드별 정렬 + 동적 subtitle + ActionHint) ✅
+
+### 본 세션 성격
+- 직전 commit `cdc30ad` (A2a 정리) 이후 본 세션에서 **A2b 신규 작업** 진행.
+- 꽃졔님 위임 — "최선의 개선안 방법으로 진행 + 컨텍스트 오버 방지". 자체 판단으로 단순 정렬을 넘어 파워셀러 리서치 기반 가치 개선 3종(정렬 + 동적 subtitle + ActionHint) 통합.
+- 단일 파일 (`dashboard/page.tsx`) 변경 + 추가 API 호출 0개 + 기존 SWR 데이터에서 모든 동적 값 파생 → 컨텍스트 안전 + 운영 비용 0.
+
+### 변경된 파일 (1개)
+| 파일 | diff | 핵심 |
+|------|------|------|
+| `src/app/dashboard/page.tsx` | +139/-22 | (1) `SECTION3_ORDER` 상수 + 6개 위젯 inline `order` 적용 (DataLab+Competition 2-col grid 풀고 단일 column flex로 통일), (2) `buildMarketSubtitle(mode, stats)` 함수로 sectionMarketSubtitle 동적 생성, (3) `ModeActionHint` 컴포넌트 신설 (모드별 슬림 배너) |
+
+### A2b 핵심 결정 — "기능 추가가 아닌 의미 부여"
+- 기존 `sectionMarketSubtitle`는 정적 텍스트("주간 트렌드 + 경쟁 분석 — DataLab/Competition 강조") → 의미 0.
+- 동적 변경: today=`등록 대기 8 · 품절 0 · 좀비 0`, week=`데이터랩 트렌드 + 경쟁사 가격 모니터 (소싱 후보 3건)`, month=`좀비 0건 (판매중 대비 0%) · 소싱 3건 점검`
+- 파워셀러 리서치 인용 — AI 시대(2026)는 즉각 행동 가능한 신호 + 트렌드 의사결정 + 구조 개선 3개 모드를 명확히 분리해야 운영 효율 극대화.
+
+### Section 3 위젯 모드별 순서 매핑 (라이브 검증 결과)
+| 모드 | 1 | 2 | 3 | 4 | 5 | 6 |
+|------|---|---|---|---|---|---|
+| today | Kkotti | MarketTrend | DataLab | Competition | Sourcing | Lifecycle |
+| week  | DataLab | Competition | Kkotti | MarketTrend | Sourcing | Lifecycle |
+| month | Lifecycle | Sourcing | Kkotti | MarketTrend | DataLab | Competition |
+
+### Chrome MCP 라이브 검증 6항목 (작업원칙 22번 강제) — 100% 통과
+1. ✅ today 모드 — 기본 순서 정확 (Kkotti 첫째, Lifecycle 마지막), subtitle "오늘 액션 — 등록 대기 8 · 품절 0 · 좀비 0"
+2. ✅ week 모드 — DataLab/Competition 1·2번 promotion, subtitle "주간 시장 — 데이터랩 트렌드 + 경쟁사 가격 모니터 (소싱 후보 3건)"
+3. ✅ month 모드 — Lifecycle/Sourcing 1·2번 promotion, subtitle "월간 개선 — 좀비 0건 (판매중 대비 0%) · 소싱 3건 점검"
+4. ✅ ModeActionHint 슬림 배너 — 모드 토글 바로 아래 표시, 모드별 메시지 정확 변경
+5. ✅ DRAFT 8개 평균 75점 회귀 — 50/60/70/76/80/84/86/92 점수 모두 발견 (KkottiWidget TOP 5 + UploadReadiness)
+6. ✅ 4섹션 mascot pill 보존 — ^_^ (gardener) / ^ㅂ^ (hunter ×2) / ✿ㅅ✿ (celebrator) 모두 유지 (A2a 결과 회귀 안 함)
+
+### 사전 점검 결과 (작업원칙 21)
+- HEAD `cdc30ad` = origin/main 동기화 ✅, working tree clean ✅, TSC 0 errors ✅, dev :3000 HTTP 200 ✅
+- 한글 깨짐 잔재 검사 (꽀/꿔/꺼/꿈/꿃/꺾) — 0개 ✅
+
+### 본 세션 commit 예정
+- 코드 변경: `src/app/dashboard/page.tsx` 1개 (+139/-22)
+- MD 갱신: PROGRESS + ROADMAP + SESSION_LOG 3종
+- commit 메시지: `feat(workflow-redesign A2b): Section 3 모드별 위젯 정렬 + 동적 subtitle + ModeActionHint 슬림 배너`
+
+### 적용된 작업원칙
+- **#21 사전 점검**: 8항목 모두 통과 후 작업 시작
+- **#22 라이브 검증**: API 200 응답으로 종결 X — Chrome MCP 라이브 6항목 통과
+- **#23 정직 보고**: heredoc 시도 시 출력 망가짐 즉시 인식 → Ctrl-C + Filesystem write_file로 전환 (메모리 내 작업원칙 — heredoc 절대 금지 일반화)
+- **#24 commit + push 한 묶음**: 다음 turn에서 한 줄로 처리 예정
+- **#25 한글 직접 입력**: NFC 정규화 0회, write_file로 한글 그대로 작성
+- **#26 일반화**: heredoc 금지를 메모리 작업원칙으로 영구 등록
+- **#27 기능 0개 삭제**: 6개 위젯 + 4섹션 + 모드 토글 + KkottiBriefing + mascot pill 모두 보존, 정렬과 의미 부여만 추가
+
+### A3 (다음 Sprint) 인계 범위
+- (1) **구매확정율 추적 + 알림톡 리마인더** — 파워셀러 리서치 ★★☆ 최고 ROI MVP. 커머스 API `GET /v1/pay-order/seller/product-orders/last-changed-statuses` + 솔라피 알림톡(건당 13원). 배송완료 D+3~5에 미확정 주문에 자동 발송.
+- (2) **EventTimeline SWR 마이그** — `EventTimeline.tsx` 자체 fetch 패턴 → `useEventTimeline()` 5분 cadence 신설.
+- (3) **다른 페이지 SWR 확장** — 정원 창고(`/products`) 또는 검색 조련사(`/products/new`)의 자체 fetch 위젯 점검.
+- (4) **mascot SVG 자산** — 꽃졔님 디자인 후 `KKOTTI_VARIANTS` accessory 텍스트 → 인라인 SVG 교체.
+- (선택) **한달사용 리뷰 2단계 구조 가이드** — 리뷰 볼륨 2배 효과, 새 위젯/페이지 후보.
+
+---
 
 ## 2026-05-04 세션 요약 — 워크플로우 재설계 Sprint Part A2a 완료 (Competition/Lifecycle SWR + SectionHeader mascot pill) ✅
 

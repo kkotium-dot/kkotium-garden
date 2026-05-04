@@ -1,15 +1,20 @@
 'use client';
-// Dashboard — KKOTIUM v6 (Workflow Redesign Sprint Part A1b)
+// Dashboard — KKOTIUM v7 (Workflow Redesign Sprint Part A2b)
 //
-// Workflow Redesign (2026-05-03):
+// Workflow Redesign (2026-05-03 → 2026-05-05):
 //  - Parent fetch SWR migration (loadProducts/loadStats removed → SWR hooks)
 //  - Four-section layout (today / action / market / tools) via CollapsibleSection
-//  - Mode toggle (today / week / month) — drives Section 3 visual emphasis
+//  - Mode toggle (today / week / month) — drives Section 3 widget order
 //  - KkottiBriefingWidget integrated at the top of Section 1
 //  - ReviewGrowth + UploadReadiness now benefit automatically from parent SWR
 //
+// A2b additions (2026-05-05):
+//  - Section 3 widgets reorder per mode via inline `order` (no widget hidden)
+//  - sectionMarketSubtitle is data-driven (zero extra API — derived from SWR stats)
+//  - ModeActionHint slim banner under the mode toggle (power-seller intent at-a-glance)
+//
 // Behavior preservation:
-//  - Zero widget removed — every previous widget kept, only repositioned
+//  - Zero widget removed — every prior widget kept, only repositioned
 //  - Single refresh button still triggers a global mutate via SWR hook refresh
 //  - revalidateOnFocus is enabled (DASHBOARD_SWR_DEFAULTS) so the dashboard
 //    self-updates when the user returns to the tab — no manual reload needed.
@@ -241,6 +246,103 @@ function normalizeProducts(raw: unknown[]): DashboardProduct[] {
   });
 }
 
+// ── Section 3 widget order map (A2b) ─────────────────────────────────────
+// Mode-driven order for the six market-section widgets. Each value is a CSS
+// `order` integer: lower comes first. Rendering stays in a single flex column
+// for layout-shift-free mode transitions.
+//   - today : default order (Kkotti briefing first, then trend → datalab/comp → sourcing/lifecycle)
+//   - week  : DataLab + Competition lifted to the top (trend + competition emphasis)
+//   - month : Lifecycle + Sourcing lifted to the top (lifecycle + sourcing emphasis)
+type Section3WidgetKey =
+  | 'kkotti'
+  | 'marketTrend'
+  | 'datalab'
+  | 'competition'
+  | 'sourcing'
+  | 'lifecycle';
+
+const SECTION3_ORDER: Record<DashboardMode, Record<Section3WidgetKey, number>> = {
+  today: { kkotti: 1, marketTrend: 2, datalab: 3, competition: 4, sourcing: 5, lifecycle: 6 },
+  week:  { datalab: 1, competition: 2, kkotti: 3, marketTrend: 4, sourcing: 5, lifecycle: 6 },
+  month: { lifecycle: 1, sourcing: 2, kkotti: 3, marketTrend: 4, datalab: 5, competition: 6 },
+};
+
+// ── Mode action hint (A2b) ───────────────────────────────────────────────
+// Slim banner directly under the mode toggle that announces the current
+// mode's intent in a single line. Pure presentation, no data dependency.
+interface ModeActionHintProps {
+  mode: DashboardMode;
+}
+
+function ModeActionHint({ mode }: ModeActionHintProps) {
+  const config: Record<DashboardMode, { label: string; tone: string; bg: string; border: string }> = {
+    today: {
+      label: '오늘은 처리해야 할 액션 — DRAFT 등록 / 품절 보충 / 발주 처리에 집중하세요',
+      tone:  '#16a34a',
+      bg:    '#F0FDF4',
+      border:'#BBF7D0',
+    },
+    week: {
+      label: '이번주는 시장 신호 — 데이터랩 트렌드 + 경쟁사 가격 모니터링에 집중하세요',
+      tone:  '#2563eb',
+      bg:    '#EFF6FF',
+      border:'#BFDBFE',
+    },
+    month: {
+      label: '이번달은 구조 개선 — 좀비 부활 후보 + 라이프사이클 + 소싱 다양화를 점검하세요',
+      tone:  '#7c3aed',
+      bg:    '#F5F3FF',
+      border:'#DDD6FE',
+    },
+  };
+  const c = config[mode];
+  return (
+    <div
+      style={{
+        marginTop: 6,
+        padding: '8px 14px',
+        borderRadius: 10,
+        background: c.bg,
+        border: `1px solid ${c.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+      }}
+      role="status"
+      aria-live="polite"
+    >
+      <ArrowRight size={12} style={{ color: c.tone, flexShrink: 0 }} />
+      <p style={{ fontSize: 12, fontWeight: 700, color: c.tone, margin: 0, lineHeight: 1.4 }}>
+        {c.label}
+      </p>
+    </div>
+  );
+}
+
+// ── Build dynamic Section 3 subtitle from already-fetched SWR stats (A2b) ─
+// Replaces the prior static string. Uses only fields the dashboard already
+// fetches via useDashboardStats() — no extra API call.
+function buildMarketSubtitle(
+  mode: DashboardMode,
+  stats: DashboardStatsApiData | undefined,
+): string {
+  const sourcing = stats?.sourcingCount ?? 0;
+  const draft    = stats?.draftProducts ?? 0;
+  const oos      = stats?.outOfStockProducts ?? 0;
+  const zombie   = stats?.zombieCount ?? 0;
+  const active   = stats?.activeProducts ?? 0;
+
+  if (mode === 'today') {
+    return `오늘 액션 — 등록 대기 ${draft} · 품절 ${oos} · 좀비 ${zombie}`;
+  }
+  if (mode === 'week') {
+    return `주간 시장 — 데이터랩 트렌드 + 경쟁사 가격 모니터 (소싱 후보 ${sourcing}건)`;
+  }
+  // month
+  const zombiePct = active > 0 ? Math.round((zombie / active) * 100) : 0;
+  return `월간 개선 — 좀비 ${zombie}건 (판매중 대비 ${zombiePct}%) · 소싱 ${sourcing}건 점검`;
+}
+
 // ── Stats type alias for the dashboard ───────────────────────────────────
 // We keep the local DashStats shape narrowed to what the page renders.
 type DashStats = DashboardStatsApiData;
@@ -287,16 +389,10 @@ export default function DashboardPage() {
     { label: '좀비 감지', count: stats?.zombieCount ?? 0,   icon: Skull,      color: '#e62310', bg: '#fff0ef', border: '#ffd6d3', href: '/products/reactivation', hint: '30일+ 미판매'  },
   ];
 
-  // Mode-specific Section 3 emphasis label (purely visual, no widget hidden).
-  // - today : focus on immediate sourcing signals (Kkotti + Trend)
-  // - week  : add competition snapshot
-  // - month : add lifecycle deep-dive
-  const sectionMarketSubtitle =
-    mode === 'today'
-      ? '꿀통 사냥 / 트렌드 / 경쟁 분석 — 오늘의 시장 신호'
-      : mode === 'week'
-        ? '주간 트렌드 + 경쟁 분석 — DataLab/Competition 강조'
-        : '월간 리뷰 + 라이프사이클 — Lifecycle/Sourcing 강조';
+  // Mode-specific Section 3 subtitle is now data-driven (A2b).
+  // Power-seller intent: at-a-glance, every mode shows numeric deltas
+  // pulled from already-fetched SWR stats (zero extra API).
+  const sectionMarketSubtitle = buildMarketSubtitle(mode, stats);
 
   return (
     <div style={{ minHeight: '100vh', background: 'transparent', padding: '24px', paddingBottom: 56 }} className="space-y-2">
@@ -334,6 +430,10 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {/* Mode action hint — slim banner announcing the current mode intent (A2b) */}
+        <ModeActionHint mode={mode} />
+
         <div style={{ height: 2.5, background: '#FFB3CE', borderRadius: 99, margin: '8px 0 6px' }} />
         <p style={{ fontSize: '13px', color: '#888', margin: 0 }}>
           {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
@@ -404,22 +504,39 @@ export default function DashboardPage() {
         variant="hunter"
         subtitle={sectionMarketSubtitle}
       >
-        <div className="space-y-4">
+        {/* A2b: flex column with inline `order` per widget — preserves all six
+            widgets (zero hidden) while reordering on mode change. Single column
+            keeps layout-shift to zero across mode transitions. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Kkotti AI — full breakdown for the products list */}
-          <KkottiWidget products={products} productsLoading={productsLoading} />
+          <div style={{ order: SECTION3_ORDER[mode].kkotti }}>
+            <KkottiWidget products={products} productsLoading={productsLoading} />
+          </div>
 
           {/* Market trend (full width — product-level data needs space) */}
-          <MarketTrendWidget products={products} productsLoading={productsLoading} />
+          <div style={{ order: SECTION3_ORDER[mode].marketTrend }}>
+            <MarketTrendWidget products={products} productsLoading={productsLoading} />
+          </div>
 
-          {/* DataLab + Competition in 2-col grid (week mode emphasizes this row) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* DataLab — promoted to top row in week mode */}
+          <div style={{ order: SECTION3_ORDER[mode].datalab }}>
             <DataLabTrendWidget />
+          </div>
+
+          {/* Competition monitor — promoted to top row in week mode */}
+          <div style={{ order: SECTION3_ORDER[mode].competition }}>
             <CompetitionMonitorWidget />
           </div>
 
-          {/* Sourcing recommend + Lifecycle (month mode emphasizes this row) */}
-          <SourcingRecommendWidget />
-          <ProductLifecycleWidget />
+          {/* Sourcing recommend — promoted to top row in month mode */}
+          <div style={{ order: SECTION3_ORDER[mode].sourcing }}>
+            <SourcingRecommendWidget />
+          </div>
+
+          {/* Product lifecycle — promoted to top row in month mode */}
+          <div style={{ order: SECTION3_ORDER[mode].lifecycle }}>
+            <ProductLifecycleWidget />
+          </div>
         </div>
       </CollapsibleSection>
 
