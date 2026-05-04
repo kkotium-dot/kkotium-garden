@@ -91,12 +91,22 @@ JavaScript instrumentation + read_network_requests 사용:
 - 다른 위젯들은 60s dedupingInterval 윈도우 내라 호출 절약 — 옵션 E Part 1과 동일한 의도된 SWR 효율
 SWR `revalidateOnFocus: true` 정상 작동 확인.
 
-#### 6. ReviewGrowth PATCH 후 즉각 반영 ✅
-코드 패턴 검증 (라이브 PATCH는 데이터 변경 위험으로 생략):
+#### 6. ReviewGrowth PATCH 후 즉각 반영 ✅ (본 세션 검증 회수에서 라이브 토글까지 추가 검증)
+**코드 패턴**:
 - `refresh()` 호출 7회 등장 (saveReviewCount, toggleChecklist, manual refresh button, error revert 포함)
 - `optimisticChecklist` state로 토글 즉시 UI 반영 + useEffect on `data` 클리어
 - saveReviewCount: PATCH 후 refresh() → SWR 재fetch → useEffect → setReviewInput 갱신
 - 라이브 검증: ReviewGrowthWidget 렌더 정상, 구매확정 0 / 리뷰수 3 / 작성률 0% / 카카오 채널 표시 / 체크리스트 9개 중 3개 완료 (33%)
+
+**본 세션 추가 라이브 토글 검증 (토글 즉시 원복 패턴으로 데이터 무결성 보존)**:
+- 대상: 첫 비-자동감지 항목 ("리뷰 적립금 설정")
+- 토글 1회: 배경색 즉시 반영 `rgb(240,253,244)` (체크됨 녹색) → `rgb(251,254,252)` (옵티미스틱 거의 흰색)
+  → optimisticChecklist state 즉각 작동 확인 ✅
+- PATCH + refresh() 호출 카운트: 토글 2회 (체크↔언체크) = 4회 fetch (= 2 PATCH + 2 GET refresh)
+  → refresh() 정상 트리거 확인 ✅
+- 데이터 무결성 최종 검증: GET `/api/review-growth` 직접 호출 → reviewReward: true (초기와 동일)
+  → 토글-원복 패턴으로 사용자 데이터 손실 0 ✅
+- Single refresh 버튼 SWR mutate: products+1 / stats+1 정상 호출 (refreshStats + refreshProducts 정상 트리거)
 
 #### 7. 12개 위젯 모두 정상 표시 ✅
 | Section | 위젯 | 라이브 표시 |
