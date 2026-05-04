@@ -9,6 +9,43 @@
 
 ---
 
+## 2026-05-04 세션 — A1b 검증 회수 + A2 인계 메시지 페르소나/유의사항 통합 ✅
+
+### 세션 성격
+- 본 세션 시작 시 꽃졔님이 "Part A1b 작업을 시작해주세요" 요청 → 사전 점검에서 working tree dirty 발견.
+- 즉시 정직 보고(작업원칙 23) → 꽃졔님 옵션 A(보존 + 회수) 승인 → 코드 정독 검증 진행.
+- 정독 도중 MCP 서버 4분 무응답 → 정직 보고 + 재시도 요청.
+- 재시도 시점에 git log 확인 결과: **다른 세션에서 A1b가 이미 완전히 완료됨** (commit `dc95d14` + `2dec434`).
+- 본 세션은 추가 코드 작업 없이 **A2 인계 메시지 페르소나/유의사항 통합 작업**으로 전환.
+
+### 검증 결과 (코드 정독 — 본 세션 직접 수행)
+| 파일 | 검증 결과 |
+|------|----------|
+| `src/app/dashboard/page.tsx` (465줄) | 17개 위젯 모두 보존 / 4섹션 재배치 정확 / variant 매핑 (gardener/hunter/hunter/celebrator) 정확 / SWR 마이그레이션 (useProductsList + useDashboardStats) 정확 / `normalizeProducts()` 헬퍼로 E-15 Block D Part 2 스키마(shippingTemplateId/images/shippingFee) 보존 / ModeToggle 신설 / `sectionMarketSubtitle` 모드별 분기 / `handleRefresh` 양쪽 mutate 트리거 |
+| `src/components/dashboard/ReviewGrowthWidget.tsx` (342줄) | useReviewGrowth() 훅 도입 정확 / PATCH 후 `refresh()` 호출 정확 / `optimisticChecklist` 즉각 UI 반영 / useEffect로 fresh data 도착 시 optimisticChecklist clear / 9개 체크리스트 + 3개 KPI + progress + 카카오 채널 + 자동 감지 모두 보존 |
+| 작업원칙 27 (기능 0개 삭제) | ✅ 12개 위젯 + 빠른 작업 4 + EventTimeline 모두 보존 (위치 재배치만) |
+
+### 인계 메시지 폴리싱 (본 세션 commit 대상)
+- **목적**: 꽃졔님이 새 채팅 시작할 때마다 페르소나(시니어 개발자 + UI/UX 디자이너) + 핵심 유의사항(근본 원인 일반화 / 브라우저 테스트 필수 / 정직 보고 / 분할 처리 / MD 3종 갱신)을 매번 직접 붙여넣는 수고를 덜기 위함.
+- **방법**: ROADMAP.md L49(`워크플로우 재설계 Sprint Part A2 작업을 시작해주세요.`) 직후에 페르소나 블록 + 유의사항 블록을 직접 삽입하여, 코드 블록 복붙 한 번으로 모든 컨텍스트가 새 채팅에 전달되도록 수정.
+- **포함 내용**: 10년차 파워셀러 페르소나 / 운영 효율 + 매출 극대화 / 모든 도구 활용 / 작업원칙 26번 일반화 / Chrome MCP 브라우저 테스트 필수 / 정직 보고 의무 / 컨텍스트 한계 분할 / MD 3종 갱신.
+
+### 본 세션 commit 예정
+- 코드 변경 0건 (검증만)
+- MD 3종 갱신: ROADMAP(인계 메시지 본문 보강) + SESSION_LOG(본 세션 prepend) + PROGRESS(헤더 timestamp 갱신)
+- commit 메시지: `docs(workflow-redesign A1b 후속): A2 인계 메시지 페르소나/유의사항 통합 + 본 세션 검증 회수 기록`
+
+### 새 채팅 진입 시 강조 — 작업원칙 21~27 (변경 없음)
+- **작업원칙 21**: 사전 점검 (git/dev/TSC/HEAD-origin/working tree clean)
+- **작업원칙 22**: Chrome MCP 라이브 검증 — API 200 응답으로 종결 절대 금지
+- **작업원칙 23**: 가정과 실제 다르면 즉시 정직 보고 (본 세션 핵심 적용 사례 — 본 세션 두 차례 발동: working tree dirty 발견 + MCP 무응답)
+- **작업원칙 24**: commit + push 한 turn 안에 한 묶음
+- **작업원칙 25**: Python 스크립트 한글 직접 입력 (NFC 정규화 절대 금지)
+- **작업원칙 26**: 근본 원인 일반화 (한 케이스 X, 동일 패턴 전체 점검)
+- **작업원칙 27**: 기능 0개 삭제 — 위치 재배치 OK, 삭제/축소 0
+
+---
+
 ## 2026-05-04 세션 — 워크플로우 재설계 Sprint Part A1b 완료 (대시보드 재구성 + 통합 + 라이브 검증 회수) ✅
 
 ### 세션 개요
