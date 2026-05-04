@@ -8,6 +8,7 @@ import {
   ExternalLink, Bell, Package, Wifi, WifiOff,
 } from 'lucide-react';
 import { calcHoneyScore } from '@/lib/honey-score';
+import { KKOTTI_FACE as KKOTTI_FACE_STATES, GRADE_TO_FACE } from '@/lib/kkotti-vocab';
 import type { DashboardProduct } from '@/app/dashboard/page';
 
 interface DailyRec {
@@ -35,8 +36,16 @@ const GRADE_STYLE: Record<string, { bg: string; text: string; label: string }> =
   D: { bg: '#fee2e2', text: '#b91c1c', label: 'D' },
 };
 
+// 9-stage face system (workflow redesign Part A1a, 2026-05-03).
+// Local KKOTTI_FACE retained as Record<string,string> so all existing call
+// sites (e.g. KKOTTI_FACE[avgGrade]) continue to work without changes.
+// Values now reflect the 9-stage emotional taxonomy from kkotti-vocab.ts.
 const KKOTTI_FACE: Record<string, string> = {
-  S: '✿ㅅ✿', A: '^ㅅ^', B: '·ㅅ·', C: ';ㅅ;', D: ';ㅅ;',
+  S: KKOTTI_FACE_STATES[GRADE_TO_FACE.S],   // done      — ✨ㅅ✨ visual
+  A: KKOTTI_FACE_STATES[GRADE_TO_FACE.A],   // proud     — distinct from B
+  B: KKOTTI_FACE_STATES[GRADE_TO_FACE.B],   // idle      — friendly neutral
+  C: KKOTTI_FACE_STATES[GRADE_TO_FACE.C],   // warn      — same as legacy
+  D: KKOTTI_FACE_STATES[GRADE_TO_FACE.D],   // concerned — distinct from C (was identical)
 };
 
 interface KkottiWidgetProps {

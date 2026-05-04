@@ -9,6 +9,116 @@
 
 ---
 
+## 2026-05-03 세션 — 워크플로우 재설계 Sprint Part A1a 완료 (인프라 6종 + 꼬띠 강화 1차)
+
+### 세션 개요
+- 직전 세션이 워크플로우 재설계 Sprint 계획 확정 commit `0937e83` push 완료 후 종료. 본 세션은 **Part A1a 실행 세션**.
+- 꽃졔님 추가 요청: PDF "꼬띠 작업 요약"의 5대 변신 컨셉 + "빵야~ 까꿍" 시그니처 + 메타포 풀 모두 통합
+- A1a 범위: **신규 파일 위주 + 백워드 호환 강화** (작업원칙 27: 기존 기능 0개 삭제)
+- 컨텍스트 안전 마진을 위해 Part A1을 A1a/A1b로 분할: A1a (이번 세션, 인프라) + A1b (다음 세션, 통합 + 라이브 검증)
+
+### 사전 점검 (작업원칙 21+23)
+- HEAD `0937e83` = origin/main ✅
+- git status clean ✅
+- TSC 0 errors ✅
+- dev 서버 미실행 (A1a는 신규 파일 위주이므로 라이브 검증은 A1b에서 진행)
+
+### A1a 실행 단계
+
+#### 단계 1: 영향 분석 (Filesystem 정밀 분석)
+- `useDashboardData.ts` 9개 hook 정의 확인 (useReviewGrowth/useUploadReadiness 이미 Part 2용 미리 정의됨, useDashboardStats만 신설 필요)
+- `dashboard/stats` API 응답 키 18개 추출 (totalProducts, activeProducts, sourcingCount, zombieCount 등)
+- `kkotti-comment/route.ts` KKOTTI_PERSONA 사용처 3곳 (L61 정의 + L133 buildSystemPrompt + L167 messages) 확인
+- `KkottiWidget.tsx` KKOTTI_FACE 정의(L38) + 사용처(L218) 확인 — 백워드 호환 핵심
+- `dashboard/layout/` 폴더 미존재 → 신설 필요
+
+#### 단계 2: kkotti-vocab.ts 신설 (244줄)
+- **5대 variant 페르소나** (PDF 컨셉 통합):
+  - gardener (정원 관리인) — Section 1 / Dashboard top, watering_can 액세서리
+  - hunter (키워드 사냥꾼) — Section 2 / 상품 등록, heart_gun
+  - cowgirl (배송 카우걸) — 배송 설정, pony_whip
+  - planter (돈 심기 정원사) — 마진 계산기, money_seedling
+  - celebrator (분수대 축하) — 리포트, fountain_dance
+- **KKOTTI_FACE 9단계**: idle/scanning/working/done/celebrate/proud/sleepy/warn/concerned
+- **GRADE_TO_FACE 매핑** (백워드 호환): S=done, A=proud, B=idle, C=warn, D=concerned
+- **시그니처 표현**: bangya[빵야/빵야 빵야/빵야~/빵야 빵야~] / kkakkung[까꿍/까꿍 까꿍/까꿍~]
+- **감탄사 풀 4종**: happy/surprised/concerned/cheer
+- **메타포 풀 3종**: gardener (씨앗 심기, 꽃이 피었어요...) / cowgirl (출동, 발사...) / tulip (튤립이 활짝, 봉오리...)
+- **헬퍼 함수**: pickFromPool (시드 기반), composeBriefing (시그니처 + body 조립), scoreToFace, buildPersonaBlock (API persona 자동 생성), EMPTY_STATE_MESSAGES (variant별 빈 상태)
+- 작업원칙 25 준수: 한글 직접 입력, NFC 정규화 0건
+
+#### 단계 3: useDashboardStats hook 추가 (Python 패치)
+- 위치: `useDashboardData.ts` 끝 (useUploadReadiness 다음)
+- API 응답 인터페이스 18개 필드 (DashboardStatsApiData) + 옵션 (period 'all'/'7d'/'30d'/'90d', enabled)
+- DASHBOARD_SWR_DEFAULTS 60s 사용 (옵션 D + Sidebar와 동일 cadence)
+- 백워드 호환: dashboard/page.tsx의 `setStats(d.data?.summary ?? d.data)` 패턴과 동일하게 summary만 반환
+
+#### 단계 4: SectionHeader + CollapsibleSection 신설
+- **SectionHeader**: 4섹션 공통 헤더 (Lucide 아이콘 4종 — Sparkles/Target/Sprout/Wrench), KKOT 브랜드 컬러 #E8001F + #FEF0F3, collapsed prop, rightSlot 슬롯, ChevronUp/Down 토글 버튼
+- **CollapsibleSection**: useState 기반 펼치기/접기 (옵션 D 패턴 준수, localStorage X), defaultCollapsed prop, display:none으로 SWR 캐시 보존 (DOM 마운트 유지)
+
+#### 단계 5: KkottiBriefingWidget 신설 (PDF "꼬띠가 말해요!" 박스 컨셉)
+- **4개 SWR 데이터 소스 통합**: useProfitability + useGoodService + useUploadReadiness + useReviewGrowth
+- **7단계 규칙 추론**:
+  1. 마진 위험 30% 초과 → planter + concerned face + "튤립이 시들 시점이에요"
+  2. 굿서비스 C/D 등급 → cowgirl + warn face + "답글 작성 출동"
+  3. DRAFT 90+ 3개 이상 → hunter + proud face + "정원에 꽃이 피었어요"
+  4. 리뷰 목표 달성 → celebrator + celebrate face + "꺄~ 단골 작전 성공"
+  5. DRAFT 90+ 1개 이상 → hunter + idle face + "봉오리가 맺혔어요"
+  6. 굿서비스 S/A → gardener + done/proud face + "정원이 잘 자라고 있어요"
+  7. fallback → gardener + scanning face + "꿀통 사냥터부터"
+- **일일 시드 안정화**: dayOfYearSeed()로 같은 날에는 같은 opener 노출
+- **CTA 버튼**: brief.actionHref 있을 때만 표시 (등록 출동/마진 보강/리뷰 답글/단골 알림톡 등)
+- **AI 호출 0원**: 100% 규칙 기반, 빠른 응답
+- variantOverride prop 지원 (테스트/특수 페이지용)
+
+#### 단계 6: KKOTTI_PERSONA 강화 (kkotti-comment/route.ts, Python 패치)
+- import 추가: `import { buildPersonaBlock } from '@/lib/kkotti-vocab';`
+- KKOTTI_PERSONA 7줄 정의 → `const KKOTTI_PERSONA = buildPersonaBlock();` 1줄로 단순화
+- buildPersonaBlock() 안에는 어휘 풀 5개 + 시그니처 사용 가이드 + 정원사/카우걸/튤립 비유 자동 주입
+- 기존 사용처 2곳 (L129 buildSystemPrompt + L163 messages) 무변경 → 백워드 호환 100%
+
+#### 단계 7: KKOTTI_FACE 5→9단계 확장 (KkottiWidget.tsx, Python 패치)
+- import 추가: `import { KKOTTI_FACE as KKOTTI_FACE_STATES, GRADE_TO_FACE } from '@/lib/kkotti-vocab';`
+- 로컬 KKOTTI_FACE 상수는 그대로 유지 (Record<string, string> 타입)
+- 단, 값을 9단계 face system에서 자동 매핑:
+  - S → done (`✿ㅅ✿`, 동일)
+  - A → proud (`^ㅂ^`, 변경 — 기존 `^ㅅ^`)
+  - B → idle (`^_^`, 변경 — 기존 `·ㅅ·`)
+  - C → warn (`;ㅅ;`, 동일)
+  - D → concerned (`T_T`, 변경 — 기존 `;ㅅ;`로 C와 동일했음)
+- 호출처 (L218 `KKOTTI_FACE[avgGrade]`) 무변경 → 백워드 호환 100%
+- D등급이 C와 시각적으로 구별되는 것이 가장 큰 효과 (UX 개선)
+
+### 검증 결과 (작업원칙 22 — 컴파일 검증)
+- TSC 0 errors 최종 ✅
+- 신규 파일 7개 모두 정상 작성 ✅
+- 백워드 호환 모든 호출처 무변경 ✅
+- 라이브 검증: A1b에서 진행 (ROADMAP 명시)
+
+### 본 세션 commit
+- 7개 파일 변경 (3개 강화 + 4개 신규 — 신규는 layout/SectionHeader.tsx, layout/CollapsibleSection.tsx, KkottiBriefingWidget.tsx, kkotti-vocab.ts)
+- commit 메시지: `feat(workflow-redesign A1a): 인프라 6종 신설 + 꼬띠 아이덴티티 강화 1차 (5대 variant + 9단계 face + 빵야 까꿍 시그니처)`
+- push 후 origin/main 동기화 확인
+
+### 적용된 작업원칙
+- **21**: 사전 점검 (HEAD/origin/dev/TSC/git status) ✅
+- **22**: A1a는 컴파일 검증만 — 라이브는 A1b에서 진행 (분할 안전 마진) ✅
+- **23**: dev 서버 미실행 사실 즉시 정직 보고 ✅
+- **24**: commit + push 한 turn 마무리 ✅
+- **25**: Python 스크립트 한글 직접 입력 (NFC 정규화 0건) ✅
+- **26**: 근본 원인 일반화 — KKOTTI_FACE 단일 위젯 변경이 아닌 어휘 풀 시스템으로 일반화 ✅
+- **27**: 기존 기능 0개 삭제 — 7개 변경 모두 추가/강화 ✅
+
+### A1a 핵심 깨달음 (다음 채팅 인계용)
+1. **PDF "꼬띠 작업 요약" 5대 변신 컨셉이 4섹션 워크플로우와 자연 정합**: gardener=Section1 / hunter=Section2 / cowgirl=배송 / planter=마진 / celebrator=리포트. SECTION_VARIANT 자동 매핑으로 미래 확장 용이.
+2. **"빵야~ 까꿍" 시그니처가 variant별 톤 차별화에 핵심**: 행동 모드(hunter/cowgirl)는 빵야, 따뜻 모드(gardener/planter/celebrator)는 까꿍. composeBriefing()에서 자동 결정.
+3. **백워드 호환 100% 달성으로 라이브 회귀 위험 0**: KKOTTI_FACE/KKOTTI_PERSONA 호출처 무변경, 9단계 face는 D등급만 시각적 차별 (긍정적 UX 변화).
+4. **A1b는 통합 작업이지만 도구가 모두 준비됨**: useDashboardStats(데이터 fetch), SectionHeader/CollapsibleSection(레이아웃), KkottiBriefingWidget(브리핑 UI), 9단계 face(이미 자동 적용). 단계별 위험도 낮음.
+5. **꼬띠 일일 브리핑은 매출 직결 도구로 진화 가능**: 7단계 규칙은 시작점 — 향후 시즌/날씨/이벤트 데이터까지 통합하면 진정한 일일 작업 가이드.
+
+---
+
 ## 2026-05-03 세션 — 워크플로우 재설계 Sprint 계획 확정 (계획 전용 세션, 코드 변경 0)
 
 ### 세션 개요

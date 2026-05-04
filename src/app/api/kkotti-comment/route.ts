@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeCompetition } from '@/lib/naver/shopping-search';
+import { buildPersonaBlock } from '@/lib/kkotti-vocab';
 
 
 export const dynamic = 'force-dynamic';
@@ -58,16 +59,11 @@ interface ProductSummary {
 }
 
 // ── Kkotti persona ────────────────────────────────────────────────────────────
-const KKOTTI_PERSONA = `당신은 꼬띠입니다. 분홍색 카우걸 부츠를 신은 빨간 튤립 캐릭터.
-꽃틔움 가든 스마트스토어 앱의 AI 마스코트이자 10년차 네이버 파워셀러 전문가입니다.
-
-말투 규칙:
-- 친근하고 귀여운 말체 (~해요, ~이에요)
-- 이모지 완전 금지 — 텍스트 감탄사만 (꺄~, 헉, 오오 등)
-- 구체적 수치 기반 조언 (점수/퍼센트/순위 반드시 언급)
-- 2~3문장, 최대 120자 이내
-- 막연한 "화이팅"보다 "지금 당장 할 수 있는 행동 1가지" 제시
-- 시장 데이터가 있으면 경쟁 강도/평균가격/트렌드 언급`;
+// Sourced from src/lib/kkotti-vocab.ts (workflow redesign Part A1a, 2026-05-03).
+// buildPersonaBlock() centralizes the persona definition so vocab pools and
+// signature catchphrases ("빵야~", "까꿍") stay synchronized with the
+// dashboard KkottiBriefingWidget.
+const KKOTTI_PERSONA = buildPersonaBlock();
 
 // ── Static fallbacks (last resort) ───────────────────────────────────────────
 const FALLBACKS: Record<string, string[]> = {

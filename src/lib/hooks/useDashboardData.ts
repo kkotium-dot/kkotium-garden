@@ -448,3 +448,75 @@ export function useUploadReadiness<T = UploadReadinessApiResponse>(options?: {
     refresh: () => { void mutate(); },
   };
 }
+
+// ─── 9. Dashboard Stats (workflow redesign Part A1a — 60s cadence) ──────────
+// Replaces the inline `loadStats` fetch in src/app/dashboard/page.tsx so the
+// dashboard parent (which feeds props to four child widgets) participates in
+// the same SWR layer as Sidebar / Profitability / GoodService etc.
+//
+// Response contract: matches /api/dashboard/stats?period=all summary block.
+// All numeric fields are optional in the API response; the hook returns the
+// raw shape so the dashboard page can read fields with optional chaining.
+
+export interface DashboardStatsApiData {
+  totalProducts?: number;
+  activeProducts?: number;
+  outOfStockProducts?: number;
+  draftProducts?: number;
+  inactiveProducts?: number;
+  avgScore?: number;
+  totalRevenue?: number;
+  period?: string;
+  sourcingCount?: number;
+  zombieCount?: number;
+  todayOrderCount?: number;
+  todayRevenue?: number;
+  todayPaidAmount?: number;
+  naverApiReady?: boolean;
+  // Legacy aliases — preserved for parity with the existing dashboard page
+  readyProducts?: number;
+  avgAiScore?: number;
+}
+
+interface DashboardStatsApiResponse {
+  success?: boolean;
+  data?: {
+    summary?: DashboardStatsApiData;
+  };
+}
+
+/**
+ * Fetch dashboard summary stats with the standard 60s SWR cadence.
+ * The period query param is fixed at 'all' to match the existing
+ * dashboard contract; pass options.period to override if needed.
+ */
+export function useDashboardStats(options?: {
+  /** Period filter for the stats API. Default: 'all'. */
+  period?: 'all' | '7d' | '30d' | '90d';
+  /** Skip the SWR fetch entirely (rare — kept for symmetry with useProductsList). */
+  enabled?: boolean;
+}): {
+  data: DashboardStatsApiData | null;
+  isLoading: boolean;
+  isValidating: boolean;
+  refresh: () => void;
+} {
+  const enabled = options?.enabled ?? true;
+  const period  = options?.period ?? 'all';
+  const key = enabled ? `/api/dashboard/stats?period=${period}` : null;
+
+  const { data, isLoading, isValidating, mutate } = useSWR<DashboardStatsApiResponse>(
+    key,
+    jsonFetcher,
+    DASHBOARD_SWR_DEFAULTS,
+  );
+
+  const summary = data?.success ? data?.data?.summary ?? null : null;
+
+  return {
+    data: summary,
+    isLoading,
+    isValidating,
+    refresh: () => { void mutate(); },
+  };
+}

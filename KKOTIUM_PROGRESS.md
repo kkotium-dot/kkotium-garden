@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-03 (대시보드 워크플로우 재설계 계획 확정 ✅ / 다음: 새 채팅에서 Part A1 구조 재구성 + SWR 통합 + 꼬띠 일일브리핑 + 모드전환 + 꼬띠 아이덴티티 강화)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit (계획 문서만, 코드 변경 없음)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 (꽃졔님 요청 2026-05-03)**
-> **다음 작업: 워크플로우 재설계 Sprint (Part A1 → A2 → B → C 분할) — 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
+> 최종 업데이트: 2026-05-03 (워크플로우 재설계 Sprint Part A1a 완료 ✅ — 인프라 6종 + 꼬띠 아이덴티티 강화 1차 / 다음: 새 채팅에서 Part A1b — 대시보드 재구성 + 통합 + 라이브 검증)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: A1a 마무리 commit (kkotti-vocab 신설 + useDashboardStats + layout 2종 + KkottiBriefingWidget + 페르소나/face 강화)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 (꽃졔님 요청 2026-05-03) + 워크플로우 재설계 Sprint Part A1a 완료 ✅**
+> **다음 작업: 워크플로우 재설계 Sprint Part A1b — 대시보드 재구성 + 모드 전환 + 위젯 마이그레이션 + Chrome MCP 라이브 검증 — 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -10,6 +10,91 @@
 >   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
 >   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
 >   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
+
+## 2026-05-03 세션 요약 — 워크플로우 재설계 Sprint Part A1a 완료 (인프라 6종 + 꼬띠 강화 1차) ✅
+
+### 본 세션 성격
+- 직전 세션이 워크플로우 재설계 Sprint 계획 확정 commit `0937e83` push 완료 후 종료. 본 세션은 **Part A1a 실행 세션** (신규 파일 위주, 백워드 호환 강화).
+- 꽃졔님 추가 요청: 첨부 PDF "꼬띠 작업 요약"의 5대 변신 컨셉 (정원 관리인 / 키워드 사냥꾼 / 배송 카우걸 / 돈 심기 정원사 / 분수대 축하) + 시그니처 표현 ("빵야~", "까꿍") 모두 어휘 풀에 통합.
+- 기존 기능 0개 삭제 (작업원칙 27 적용) — 모든 변경은 추가 또는 강화.
+
+### A1a 작업 완료 항목 (7개 파일 변경)
+| # | 파일 | 종류 | 핵심 |
+|---|------|------|------|
+| 1 | `src/lib/kkotti-vocab.ts` | 신규 | 5대 variant + 9단계 face + 시그니처 + 4종 감탄사 + 3종 메타포 풀 + helper 함수 + buildPersonaBlock |
+| 2 | `src/lib/hooks/useDashboardData.ts` | 추가 | `useDashboardStats` hook 추가 (60s, /api/dashboard/stats?period=all) |
+| 3 | `src/components/dashboard/layout/SectionHeader.tsx` | 신규 | 4섹션 공통 헤더 (Lucide 아이콘, KKOT 브랜드 컬러, collapsed prop) |
+| 4 | `src/components/dashboard/layout/CollapsibleSection.tsx` | 신규 | 펼치기/접기 wrapper (useState 기반, 옵션 D 패턴 준수, display:none으로 SWR 캐시 보존) |
+| 5 | `src/components/dashboard/KkottiBriefingWidget.tsx` | 신규 | 매일 1줄 자동 브리핑 — 4개 SWR 데이터 통합 + 7단계 규칙 추론 + 일일 시드 안정화 + CTA 버튼 |
+| 6 | `src/app/api/kkotti-comment/route.ts` | 강화 | KKOTTI_PERSONA → buildPersonaBlock() 호출로 대체 (백워드 호환, 어휘 풀 자동 주입) |
+| 7 | `src/components/dashboard/KkottiWidget.tsx` | 강화 | KKOTTI_FACE 5단계 → 9단계 (호출처 무변경, A는 ^ㅂ^, B는 ^_^, D는 T_T로 시각 차별화) |
+
+### 꼬띠 아이덴티티 강화 1차 — PDF 컨셉 통합
+**5대 variant 페르소나** (각 섹션/페이지별 자동 변신):
+- `gardener` (정원 관리인) — Section 1 / Dashboard top, watering_can, "빵야~ 오늘 정원 가꿔요. 까꿍!"
+- `hunter` (키워드 사냥꾼) — Section 2 / 상품 등록, heart_gun, "빵야 빵야~ 황금 키워드 사냥. 까꿍!"
+- `cowgirl` (배송 카우걸) — 배송 설정, pony_whip, "까꿍 까꿍! 배송비 사냥 타임 빵야~"
+- `planter` (돈 심기 정원사) — 마진 계산기, money_seedling, "빵야~ 마진 묘목 심어요. 까꿍!"
+- `celebrator` (분수대 축하) — 리포트, fountain_dance, "까꿍 까꿍! 빵야 빵야 축하해요!"
+
+**KKOTTI_FACE 9단계** (기존 5단계 → 확장):
+- idle: `^_^` / scanning: `·_·` / working: `>_<` / done: `✿ㅅ✿` / celebrate: `\(^o^)/`
+- proud: `^ㅂ^` / sleepy: `~_~` / warn: `;ㅅ;` / concerned: `T_T`
+
+**KkottiBriefingWidget 7단계 규칙 추론** (우선순위 순):
+1. 마진 위험 30% 초과 → planter + concerned face + "튤립이 시들 시점이에요"
+2. 굿서비스 C/D 등급 → cowgirl + warn + "답글 작성 출동"
+3. DRAFT 90+ 3개 이상 → hunter + proud + "정원에 꽃이 피었어요"
+4. 리뷰 목표 달성 → celebrator + celebrate + "꺄~ 단골 작전 성공"
+5. DRAFT 90+ 1개 이상 → hunter + idle + "봉오리가 맺혔어요"
+6. 굿서비스 S/A → gardener + done/proud + "정원이 잘 자라고 있어요"
+7. fallback → gardener + scanning + "꿀통 사냥터부터"
+
+### 사전 점검 결과 (작업원칙 21)
+- HEAD `0937e83` = origin/main ✅
+- TSC 0 errors ✅ (시작 시점 + 종료 시점 모두)
+- git status clean ✅ (시작 시점)
+- dev server: 미실행 (A1a는 신규 파일 위주이므로 라이브 검증은 A1b에서 진행 — ROADMAP 명시)
+
+### 검증 결과 (작업원칙 22 — A1a는 컴파일 검증만, 라이브는 A1b)
+- TSC 0 errors 최종 ✅
+- 백워드 호환 검증: KkottiWidget의 `KKOTTI_FACE[avgGrade]` 호출처 무변경 ✅
+- 백워드 호환 검증: kkotti-comment/route.ts의 `KKOTTI_PERSONA` 사용처 (L129/L163) 무변경 ✅
+- A1a 신규 파일 7개 모두 정상 작성 ✅
+
+### 본 세션 commit 예정
+- 7개 파일 변경 (3개 강화 + 4개 신규)
+- commit 메시지: `feat(workflow-redesign A1a): 인프라 6종 신설 + 꼬띠 아이덴티티 강화 1차 (5대 variant + 9단계 face + 빵야 까꿍 시그니처)`
+- push 후 origin/main 동기화 확인
+
+### 적용된 작업원칙
+- **21**: 사전 점검 (git/TSC/dev server) ✅
+- **22**: 라이브 검증 — A1a는 신규 파일 + 백워드 호환만 → TSC만 (ROADMAP 명시 라이브 검증은 A1b 단계 6) ✅
+- **23**: 가정 vs 실제 정직 보고 — dev server 미실행 사실 즉시 보고 ✅
+- **24**: commit + push 한 turn 마무리 (A1a 끝나는 시점) ✅
+- **25**: Python 스크립트 한글 직접 입력 (NFC 정규화 0건) ✅
+- **26**: 근본 원인 일반화 — KKOTTI_FACE 변경을 단일 위젯이 아닌 어휘 풀로 일반화 ✅
+- **27**: 기존 기능 0개 삭제 — 7개 변경 모두 추가/강화, 삭제 0 ✅
+
+### A1b 인계 (다음 새 채팅용)
+**A1a에서 준비된 도구**:
+- `useDashboardStats` hook (대시보드 부모 fetch SWR화 준비됨)
+- `SectionHeader` + `CollapsibleSection` (4섹션 레이아웃 준비됨)
+- `KkottiBriefingWidget` (대시보드 통합 대기 중 — 아직 어디에도 import 안 됨)
+- `kkotti-vocab` 어휘 풀 (페르소나 + 어휘 + 시그니처 모두 사용 준비됨)
+- 9단계 face 시스템 (KkottiWidget 자동 적용됨)
+
+**A1b 작업 범위 (다음 채팅)**:
+1. `dashboard/page.tsx` loadProducts/loadStats → useProductsList/useDashboardStats 교체
+2. 4섹션 재배치 (`SectionHeader` + `CollapsibleSection` 적용)
+3. 모드 전환 토글 (today/week/month, useState)
+4. `KkottiBriefingWidget` Section 1 최상단에 배치
+5. `ReviewGrowthWidget` `useReviewGrowth()` 마이그레이션 (옵션 E Part 2 흡수)
+6. `UploadReadinessWidget` 부모 SWR 자동 혜택 검증 (변경 0)
+7. **Chrome MCP 라이브 검증 7항목** (작업원칙 22번 강제)
+8. MD 3종 갱신 + commit + push
+
+---
 
 ## 2026-05-03 세션 요약 — 워크플로우 재설계 Sprint 계획 확정 (계획 전용, 코드 변경 없음) ✅
 
