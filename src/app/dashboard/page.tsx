@@ -1,10 +1,23 @@
 'use client';
-// Dashboard — KKOTIUM v5
-// TASK 3: unified product load — single /api/products call shared to KkottiWidget + DailyPlanWidget
+// Dashboard — KKOTIUM v6 (Workflow Redesign Sprint Part A1b)
+//
+// Workflow Redesign (2026-05-03):
+//  - Parent fetch SWR migration (loadProducts/loadStats removed → SWR hooks)
+//  - Four-section layout (today / action / market / tools) via CollapsibleSection
+//  - Mode toggle (today / week / month) — drives Section 3 visual emphasis
+//  - KkottiBriefingWidget integrated at the top of Section 1
+//  - ReviewGrowth + UploadReadiness now benefit automatically from parent SWR
+//
+// Behavior preservation:
+//  - Zero widget removed — every previous widget kept, only repositioned
+//  - Single refresh button still triggers a global mutate via SWR hook refresh
+//  - revalidateOnFocus is enabled (DASHBOARD_SWR_DEFAULTS) so the dashboard
+//    self-updates when the user returns to the tab — no manual reload needed.
 
-import { useEffect, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Package, TrendingUp, AlertTriangle, Sparkles, Layers, Skull, ArrowRight, ShoppingCart, RefreshCw } from 'lucide-react';
 import KkottiWidget from '@/components/dashboard/KkottiWidget';
+import KkottiBriefingWidget from '@/components/dashboard/KkottiBriefingWidget';
 import UploadReadinessWidget from '@/components/dashboard/UploadReadinessWidget';
 import ReviewGrowthWidget from '@/components/dashboard/ReviewGrowthWidget';
 import MarketTrendWidget from '@/components/dashboard/MarketTrendWidget';
@@ -16,6 +29,12 @@ import CompetitionMonitorWidget from '@/components/dashboard/CompetitionMonitorW
 import DataLabTrendWidget from '@/components/dashboard/DataLabTrendWidget';
 import SourcingRecommendWidget from '@/components/dashboard/SourcingRecommendWidget';
 import ProductLifecycleWidget from '@/components/dashboard/ProductLifecycleWidget';
+import CollapsibleSection from '@/components/dashboard/layout/CollapsibleSection';
+import {
+  useProductsList,
+  useDashboardStats,
+  type DashboardStatsApiData,
+} from '@/lib/hooks/useDashboardData';
 import Link from 'next/link';
 
 // ── KPI Card ──────────────────────────────────────────────────────────────
@@ -114,6 +133,65 @@ function TodayCard({ orderCount, revenue, paidAmount, loading }: {
   );
 }
 
+// ── Mode Toggle (today / week / month) ───────────────────────────────────
+type DashboardMode = 'today' | 'week' | 'month';
+
+interface ModeToggleProps {
+  mode: DashboardMode;
+  onChange: (next: DashboardMode) => void;
+}
+
+const MODE_OPTIONS: Array<{ id: DashboardMode; label: string; hint: string }> = [
+  { id: 'today', label: '오늘',   hint: '오늘 처리할 액션 위주' },
+  { id: 'week',  label: '이번주', hint: '주간 시장 + 트렌드 분석' },
+  { id: 'month', label: '이번달', hint: '월간 분석 + 라이프사이클' },
+];
+
+function ModeToggle({ mode, onChange }: ModeToggleProps) {
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: 3,
+        borderRadius: 10,
+        background: '#FEF0F3',
+        border: '1px solid #F8DCE5',
+      }}
+      role="tablist"
+      aria-label="대시보드 모드 전환"
+    >
+      {MODE_OPTIONS.map((opt) => {
+        const active = opt.id === mode;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(opt.id)}
+            title={opt.hint}
+            style={{
+              padding: '6px 14px',
+              fontSize: 12,
+              fontWeight: 700,
+              border: 'none',
+              borderRadius: 7,
+              cursor: 'pointer',
+              background: active ? '#FFFFFF' : 'transparent',
+              color: active ? '#E8001F' : '#737373',
+              boxShadow: active ? '0 1px 3px rgba(232, 0, 31, 0.12)' : 'none',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Shared product shape for widgets ─────────────────────────────────────
 export interface DashboardProduct {
   id: string; name: string; sku: string; status: string;
@@ -130,70 +208,77 @@ export interface DashboardProduct {
   shippingFee?: number;
 }
 
-interface DashStats {
-  totalProducts: number; activeProducts: number;
-  outOfStockProducts: number; draftProducts: number;
-  avgScore: number; sourcingCount: number; zombieCount: number;
-  todayOrderCount: number; todayRevenue: number; todayPaidAmount: number;
-  naverApiReady: boolean;
+// ── Raw product normalizer (extracted from previous loadProducts callback) ──
+function normalizeProducts(raw: unknown[]): DashboardProduct[] {
+  return raw.map((rawItem) => {
+    const p = rawItem as Record<string, unknown>;
+    const supplier = p.supplier as Record<string, unknown> | undefined;
+    return {
+      id: String(p.id ?? ''),
+      name: String(p.name ?? ''),
+      sku: String(p.sku ?? ''),
+      status: String(p.status ?? 'DRAFT'),
+      salePrice: typeof p.salePrice === 'number' ? p.salePrice : 0,
+      supplierPrice: typeof p.supplierPrice === 'number' ? p.supplierPrice : 0,
+      naverCategoryCode: (p.naverCategoryCode as string | undefined) ?? (p.category_id as string | undefined) ?? '',
+      keywords: Array.isArray(p.keywords) ? (p.keywords as string[]) : [],
+      tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+      mainImage: (p.mainImage as string | undefined) ?? (p.main_image_url as string | undefined),
+      aiScore: typeof p.aiScore === 'number' ? p.aiScore : undefined,
+      createdAt: p.createdAt ? new Date(p.createdAt as string) : undefined,
+      updatedAt: p.updatedAt ? new Date(p.updatedAt as string) : new Date(),
+      lastSaleDate: p.lastSaleDate ? new Date(p.lastSaleDate as string) : undefined,
+      supplierName: (supplier?.name as string | undefined) ?? (p.supplierName as string | undefined),
+      // E-15 Block D Part 2: include fields used by UploadReadinessWidget
+      shippingTemplateId: (p.shippingTemplateId as string | null | undefined) ?? (p.shipping_template_id as string | null | undefined) ?? null,
+      images: Array.isArray(p.images) ? (p.images as string[]) : [],
+      shippingFee: typeof p.shippingFee === 'number'
+        ? p.shippingFee
+        : typeof p.shipping_fee === 'number'
+          ? p.shipping_fee
+          : 3000,
+    };
+  });
 }
 
+// ── Stats type alias for the dashboard ───────────────────────────────────
+// We keep the local DashStats shape narrowed to what the page renders.
+type DashStats = DashboardStatsApiData;
+
 export default function DashboardPage() {
-  const [stats, setStats]               = useState<DashStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(true);
-  // Shared product list — loaded once, passed to both widgets
-  const [products, setProducts]         = useState<DashboardProduct[]>([]);
-  const [productsLoading, setProdsLoading] = useState(true);
+  // ── Mode toggle (today / week / month) ─────────────────────────────────
+  const [mode, setMode] = useState<DashboardMode>('today');
 
-  const loadProducts = useCallback(async () => {
-    setProdsLoading(true);
-    try {
-      const res  = await fetch('/api/products?limit=200');
-      const data = await res.json();
-      const raw  = data.products ?? data.data ?? [];
-      setProducts(raw.map((p: any) => ({
-        id: p.id, name: p.name, sku: p.sku, status: p.status,
-        salePrice: p.salePrice ?? 0, supplierPrice: p.supplierPrice ?? 0,
-        naverCategoryCode: p.naverCategoryCode ?? p.category_id ?? '',
-        keywords:  Array.isArray(p.keywords) ? p.keywords : [],
-        tags:      Array.isArray(p.tags) ? p.tags : [],
-        mainImage: p.mainImage ?? p.main_image_url,
-        aiScore:   p.aiScore ?? null,
-        createdAt:    p.createdAt    ? new Date(p.createdAt)    : undefined,
-        updatedAt:    p.updatedAt    ? new Date(p.updatedAt)    : new Date(),
-        lastSaleDate: p.lastSaleDate ? new Date(p.lastSaleDate) : undefined,
-        supplierName: p.supplier?.name ?? p.supplierName,
-        // E-15 Block D Part 2: include fields used by UploadReadinessWidget
-        shippingTemplateId: p.shippingTemplateId ?? p.shipping_template_id ?? null,
-        images: Array.isArray(p.images) ? p.images : [],
-        shippingFee: p.shippingFee ?? p.shipping_fee ?? 3000,
-      })));
-    } catch (e) {
-      console.error('[Dashboard] products load error:', e);
-    } finally {
-      setProdsLoading(false);
-    }
-  }, []);
+  // ── SWR hooks (replaces useState + useEffect + loadProducts/loadStats) ─
+  // Each hook polls on a 60s cadence and revalidates on tab focus, so the
+  // dashboard self-updates without any manual reload.
+  const {
+    rawProducts,
+    isLoading: productsLoading,
+    refresh: refreshProducts,
+  } = useProductsList({ limit: 200 });
 
-  const loadStats = useCallback(() => {
-    setStatsLoading(true);
-    fetch('/api/dashboard/stats?period=all')
-      .then(r => r.json())
-      .then(d => { if (d.success) setStats(d.data?.summary ?? d.data); })
-      .catch(() => null)
-      .finally(() => setStatsLoading(false));
-  }, []);
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    refresh: refreshStats,
+  } = useDashboardStats({ period: 'all' });
 
-  // Single refresh: reload both stats + products
+  // Normalize the raw payload once per fetch — preserves the previous behavior
+  // exactly (including supplier.name fallback + shipping_fee default 3000).
+  const products: DashboardProduct[] = useMemo(
+    () => (rawProducts ? normalizeProducts(rawProducts) : []),
+    [rawProducts],
+  );
+
+  // Single refresh: trigger SWR mutate on both endpoints.
+  // SWR handles deduping so repeated taps within 10s are coalesced.
   const handleRefresh = useCallback(() => {
-    loadStats();
-    loadProducts();
-  }, [loadStats, loadProducts]);
+    refreshStats();
+    refreshProducts();
+  }, [refreshStats, refreshProducts]);
 
-  useEffect(() => {
-    loadStats();
-    loadProducts();
-  }, [loadStats, loadProducts]);
+  const isRefreshing = statsLoading || productsLoading;
 
   const pipelineStages: PipelineStage[] = [
     { label: '소싱 대기', count: stats?.sourcingCount ?? 0, icon: Layers,     color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', href: '/crawl',                  hint: '보관함 SOURCED' },
@@ -202,14 +287,23 @@ export default function DashboardPage() {
     { label: '좀비 감지', count: stats?.zombieCount ?? 0,   icon: Skull,      color: '#e62310', bg: '#fff0ef', border: '#ffd6d3', href: '/products/reactivation', hint: '30일+ 미판매'  },
   ];
 
-  const isRefreshing = statsLoading || productsLoading;
+  // Mode-specific Section 3 emphasis label (purely visual, no widget hidden).
+  // - today : focus on immediate sourcing signals (Kkotti + Trend)
+  // - week  : add competition snapshot
+  // - month : add lifecycle deep-dive
+  const sectionMarketSubtitle =
+    mode === 'today'
+      ? '꿀통 사냥 / 트렌드 / 경쟁 분석 — 오늘의 시장 신호'
+      : mode === 'week'
+        ? '주간 트렌드 + 경쟁 분석 — DataLab/Competition 강조'
+        : '월간 리뷰 + 라이프사이클 — Lifecycle/Sourcing 강조';
 
   return (
-    <div style={{ minHeight: '100vh', background: 'transparent', padding: '24px', paddingBottom: 56 }} className="space-y-6">
+    <div style={{ minHeight: '100vh', background: 'transparent', padding: '24px', paddingBottom: 56 }} className="space-y-2">
 
       {/* ── Page header ─────────────────────────────────────── */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ marginBottom: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ position: 'absolute', top: 0, left: 0 }}>
@@ -224,14 +318,21 @@ export default function DashboardPage() {
             </div>
             <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', letterSpacing: '-0.3px', margin: 0 }}>정원 일지</h1>
           </div>
-          {/* Single refresh button — reloads stats + products at once */}
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: '#B0A0A8', opacity: isRefreshing ? 0.4 : 1 }}
-          >
-            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
-          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Mode toggle — drives Section 3 visual emphasis */}
+            <ModeToggle mode={mode} onChange={setMode} />
+
+            {/* Single refresh button — reloads stats + products at once via SWR mutate */}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: '#B0A0A8', opacity: isRefreshing ? 0.4 : 1 }}
+              aria-label="대시보드 새로고침"
+            >
+              <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+            </button>
+          </div>
         </div>
         <div style={{ height: 2.5, background: '#FFB3CE', borderRadius: 99, margin: '8px 0 6px' }} />
         <p style={{ fontSize: '13px', color: '#888', margin: 0 }}>
@@ -239,90 +340,125 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* ── 오늘의 실적 (네이버 API 연동 시에만 표시) ──────── */}
-      {stats?.naverApiReady && (
-        <TodayCard
-          orderCount={stats.todayOrderCount ?? 0}
-          revenue={stats.todayRevenue ?? 0}
-          paidAmount={stats.todayPaidAmount ?? 0}
-          loading={statsLoading}
-        />
-      )}
+      {/* ════════════════════════════════════════════════════════════════════
+          SECTION 1 — 오늘의 결과
+          꼬띠 일일 브리핑 + 오늘 실적 + KPI + 파이프라인 + 수익성/굿서비스
+          ════════════════════════════════════════════════════════════════════ */}
+      <CollapsibleSection section="today" variant="gardener">
+        <div className="space-y-4">
+          {/* Kkotti daily briefing — one-line auto inference (zero AI cost) */}
+          <KkottiBriefingWidget />
 
-      {/* ── KPI 4개 ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <KpiCard label="전체 상품"     value={stats?.totalProducts ?? 0}          sub="등록된 상품 수"  icon={Package}      valueColor="#1A1A1A" iconBg="#F5F5F5" iconColor="#9CA3AF" href="/products" />
-        <KpiCard label="네이버 판매중"  value={stats?.activeProducts ?? 0}         sub="노출 중"        icon={TrendingUp}   valueColor="#16a34a" iconBg="#F0FDF4" iconColor="#16a34a" href="/products" />
-        <KpiCard label="품절"           value={stats?.outOfStockProducts ?? 0}     sub="재고 보충 필요" icon={AlertTriangle} valueColor="#e62310" iconBg="#FFF0EF" iconColor="#e62310" href="/products/reactivation" />
-        <KpiCard label="평균 꿀통지수"  value={stats?.avgScore ? `${stats.avgScore}점` : '—'} sub="AI 상품 품질" icon={Sparkles} valueColor="#FF6B8A" iconBg="#FFF0F5" iconColor="#FF6B8A" />
-      </div>
+          {/* Today's Naver API performance (only when API connected) */}
+          {stats?.naverApiReady && (
+            <TodayCard
+              orderCount={stats.todayOrderCount ?? 0}
+              revenue={stats.todayRevenue ?? 0}
+              paidAmount={stats.todayPaidAmount ?? 0}
+              loading={statsLoading}
+            />
+          )}
 
-      {/* ── 파이프라인 현황 ──────────────────────────────────── */}
-      <PipelineCard stages={pipelineStages} />
+          {/* KPI 4-card grid */}
+          <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+            <KpiCard label="전체 상품"     value={stats?.totalProducts ?? 0}          sub="등록된 상품 수"  icon={Package}      valueColor="#1A1A1A" iconBg="#F5F5F5" iconColor="#9CA3AF" href="/products" />
+            <KpiCard label="네이버 판매중"  value={stats?.activeProducts ?? 0}         sub="노출 중"        icon={TrendingUp}   valueColor="#16a34a" iconBg="#F0FDF4" iconColor="#16a34a" href="/products" />
+            <KpiCard label="품절"           value={stats?.outOfStockProducts ?? 0}     sub="재고 보충 필요" icon={AlertTriangle} valueColor="#e62310" iconBg="#FFF0EF" iconColor="#e62310" href="/products/reactivation" />
+            <KpiCard label="평균 꿀통지수"  value={stats?.avgScore ? `${stats.avgScore}점` : '—'} sub="AI 상품 품질" icon={Sparkles} valueColor="#FF6B8A" iconBg="#FFF0F5" iconColor="#FF6B8A" />
+          </div>
 
-      {/* ── 오늘 할 일 — products prop으로 단일 로드 공유 ───── */}
-      <DailyPlanWidget products={products} productsLoading={productsLoading} />
+          {/* Pipeline progression */}
+          <PipelineCard stages={pipelineStages} />
 
-      {/* ── E-14 등록 준비 명령탑 — DRAFT 상품 11점 키디니스 점수 + 부족 항목 deep-link ───── */}
-      <UploadReadinessWidget products={products} productsLoading={productsLoading} onRefresh={handleRefresh} />
-
-      {/* ── 꼬띠 위젯 — products prop으로 단일 로드 공유 ────── */}
-      <KkottiWidget products={products} productsLoading={productsLoading} />
-
-      {/* E-2A: Review growth tracker + 9-item operations checklist */}
-      <ReviewGrowthWidget />
-
-      {/* D-2: 2-column grid layout for related widgets */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* C-9: Good Service score widget */}
-        <GoodServiceWidget />
-        {/* C-4: Profitability analysis widget */}
-        <ProfitabilityWidget />
-      </div>
-
-      {/* C-12: Market trend widget — full width (product-level data needs space) */}
-      <MarketTrendWidget products={products} productsLoading={productsLoading} />
-
-      {/* D-3: Competition monitoring */}
-      <CompetitionMonitorWidget />
-
-      {/* D-4: DataLab category trend chart */}
-      <DataLabTrendWidget />
-
-      {/* E-7: Kkotti sourcing recommendation bot */}
-      <SourcingRecommendWidget />
-
-      {/* E-3: Product lifecycle dashboard */}
-      <ProductLifecycleWidget />
-
-      {/* D-2: Quick action shortcuts */}
-      <div className="kk-card" style={{ overflow: 'hidden' }}>
-        <div style={{ padding: '12px 20px 10px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Sparkles size={14} style={{ color: '#FF6B8A' }} />
-          <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>빠른 작업</p>
+          {/* Profitability + Good Service in 2-col grid (D-2 layout preserved) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <GoodServiceWidget />
+            <ProfitabilityWidget />
+          </div>
         </div>
-        <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-          {[
-            { label: '씨앗 심기', href: '/products/new', color: '#e62310', bg: '#FFF0F5', border: '#FFB3CE', icon: Package, hint: '상품 등록' },
-            { label: '검색 조련사', href: '/naver-seo', color: '#2563eb', bg: '#EFF6FF', border: '#BFDBFE', icon: TrendingUp, hint: 'SEO 최적화' },
-            { label: '주문 관리', href: '/orders', color: '#16a34a', bg: '#F0FDF4', border: '#BBF7D0', icon: ShoppingCart, hint: '발주/송장' },
-            { label: '꿀통 사냥터', href: '/crawl', color: '#7c3aed', bg: '#F5F3FF', border: '#DDD6FE', icon: Layers, hint: '상품 수집' },
-          ].map(item => (
-            <Link key={item.label} href={item.href} style={{ textDecoration: 'none' }}>
-              <div style={{ padding: '14px 10px', borderRadius: 14, textAlign: 'center', background: item.bg, border: `1.5px solid ${item.border}`, cursor: 'pointer', transition: 'transform 0.1s' }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, margin: '0 auto 8px', background: '#fff', border: `1.5px solid ${item.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <item.icon size={16} style={{ color: item.color }} />
-                </div>
-                <p style={{ fontSize: 13, fontWeight: 800, color: item.color, margin: '0 0 2px' }}>{item.label}</p>
-                <p style={{ fontSize: 10, color: '#B0A0A8', margin: 0 }}>{item.hint}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+      </CollapsibleSection>
 
-      {/* Recent event timeline */}
-      <EventTimeline />
+      {/* ════════════════════════════════════════════════════════════════════
+          SECTION 2 — 오늘의 액션
+          오늘 할 일 + 등록 준비 명령탑 + 리뷰 성장 트래커
+          ════════════════════════════════════════════════════════════════════ */}
+      <CollapsibleSection section="action" variant="hunter">
+        <div className="space-y-4">
+          {/* Today's actionable plan */}
+          <DailyPlanWidget products={products} productsLoading={productsLoading} />
+
+          {/* DRAFT readiness command center — auto-benefits from parent SWR */}
+          <UploadReadinessWidget products={products} productsLoading={productsLoading} onRefresh={handleRefresh} />
+
+          {/* Review growth tracker — uses useReviewGrowth() internally */}
+          <ReviewGrowthWidget />
+        </div>
+      </CollapsibleSection>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          SECTION 3 — 소싱 · 시장
+          꼬띠 AI + 시장 트렌드 + 데이터랩 + 경쟁 모니터 + 소싱 추천 + 라이프사이클
+          ════════════════════════════════════════════════════════════════════ */}
+      <CollapsibleSection
+        section="market"
+        variant="hunter"
+        subtitle={sectionMarketSubtitle}
+      >
+        <div className="space-y-4">
+          {/* Kkotti AI — full breakdown for the products list */}
+          <KkottiWidget products={products} productsLoading={productsLoading} />
+
+          {/* Market trend (full width — product-level data needs space) */}
+          <MarketTrendWidget products={products} productsLoading={productsLoading} />
+
+          {/* DataLab + Competition in 2-col grid (week mode emphasizes this row) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <DataLabTrendWidget />
+            <CompetitionMonitorWidget />
+          </div>
+
+          {/* Sourcing recommend + Lifecycle (month mode emphasizes this row) */}
+          <SourcingRecommendWidget />
+          <ProductLifecycleWidget />
+        </div>
+      </CollapsibleSection>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          SECTION 4 — 도구 · 활동
+          빠른 작업 + 이벤트 타임라인
+          ════════════════════════════════════════════════════════════════════ */}
+      <CollapsibleSection section="tools" variant="celebrator">
+        <div className="space-y-4">
+          {/* Quick action shortcuts */}
+          <div className="kk-card" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '12px 20px 10px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Sparkles size={14} style={{ color: '#FF6B8A' }} />
+              <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>빠른 작업</p>
+            </div>
+            <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              {[
+                { label: '씨앗 심기', href: '/products/new', color: '#e62310', bg: '#FFF0F5', border: '#FFB3CE', icon: Package, hint: '상품 등록' },
+                { label: '검색 조련사', href: '/naver-seo', color: '#2563eb', bg: '#EFF6FF', border: '#BFDBFE', icon: TrendingUp, hint: 'SEO 최적화' },
+                { label: '주문 관리', href: '/orders', color: '#16a34a', bg: '#F0FDF4', border: '#BBF7D0', icon: ShoppingCart, hint: '발주/송장' },
+                { label: '꿀통 사냥터', href: '/crawl', color: '#7c3aed', bg: '#F5F3FF', border: '#DDD6FE', icon: Layers, hint: '상품 수집' },
+              ].map(item => (
+                <Link key={item.label} href={item.href} style={{ textDecoration: 'none' }}>
+                  <div style={{ padding: '14px 10px', borderRadius: 14, textAlign: 'center', background: item.bg, border: `1.5px solid ${item.border}`, cursor: 'pointer', transition: 'transform 0.1s' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, margin: '0 auto 8px', background: '#fff', border: `1.5px solid ${item.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <item.icon size={16} style={{ color: item.color }} />
+                    </div>
+                    <p style={{ fontSize: 13, fontWeight: 800, color: item.color, margin: '0 0 2px' }}>{item.label}</p>
+                    <p style={{ fontSize: 10, color: '#B0A0A8', margin: 0 }}>{item.hint}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent event timeline */}
+          <EventTimeline />
+        </div>
+      </CollapsibleSection>
 
     </div>
   );

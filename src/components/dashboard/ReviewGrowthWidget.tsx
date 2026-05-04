@@ -3,14 +3,23 @@
 // Target: 20-25% review writing rate
 // Stages: 1 (0-10), 2 (11-50), 3 (51+)
 // Naver review API not supported (GitHub #1582) — manual review count only
+//
+// Workflow Redesign Part A1b (2026-05-03):
+//   - Migrated from local useState + useEffect + loadData callback
+//     to useReviewGrowth() SWR hook (5 min cadence, auto revalidate on focus).
+//   - PATCH calls now finish with refresh() to force immediate cache invalidation,
+//     so user-edited review counts and checklist toggles reflect within ~250ms
+//     instead of waiting for the next 5 min poll.
+//   - Loading state derives from hook + waiting until first frame of data arrives.
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import {
   MessageSquare, Star, TrendingUp, Target, RefreshCw,
   CheckCircle2, Circle, Edit3, Save, ExternalLink, Info, Zap,
 } from 'lucide-react';
+import { useReviewGrowth } from '@/lib/hooks/useDashboardData';
 
 interface ReviewData {
   totalConfirmed: number;
@@ -28,6 +37,11 @@ interface ReviewData {
   lastUpdated: string | null;
 }
 
+interface ReviewGrowthApiResponse {
+  success?: boolean;
+  data?: ReviewData;
+}
+
 const CHECKLIST_ITEMS: Array<{ key: string; label: string; hint: string; phase: string }> = [
   { key: 'reviewReward',      label: '리뷰 적립금 설정',           hint: '텍스트 500원 + 포토 1,000원 권장 (E-2C 가이드)',     phase: '필수' },
   { key: 'insertCard',        label: '인서트 카드 동봉',           hint: '꼬띠 캐릭터 + 카카오 QR + 적립금 안내 카드',           phase: '필수' },
@@ -41,29 +55,29 @@ const CHECKLIST_ITEMS: Array<{ key: string; label: string; hint: string; phase: 
 ];
 
 export default function ReviewGrowthWidget() {
-  const [data, setData] = useState<ReviewData | null>(null);
-  const [loading, setLoading] = useState(true);
+  // SWR-driven read (5 min cadence + revalidate on focus)
+  const { data: apiResponse, isLoading: hookLoading, refresh } =
+    useReviewGrowth<ReviewGrowthApiResponse>();
+  const data: ReviewData | null = apiResponse?.success ? apiResponse.data ?? null : null;
+
+  // Local UI state (does not depend on SWR)
   const [editingCount, setEditingCount] = useState(false);
   const [reviewInput, setReviewInput] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/review-growth');
-      const json = await res.json();
-      if (json.success) {
-        setData(json.data);
-        setReviewInput(String(json.data.manualReviewCount));
-      }
-    } catch (e) {
-      console.error('[ReviewGrowth] load error:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Optimistic checklist overlay — reflects toggle clicks immediately so
+  // users see the chip flip without waiting for the SWR re-fetch round trip.
+  // Cleared whenever a fresh server payload arrives.
+  const [optimisticChecklist, setOptimisticChecklist] =
+    useState<Record<string, boolean> | null>(null);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // Whenever the server data changes, refresh local mirrors
+  useEffect(() => {
+    if (data) {
+      setReviewInput(String(data.manualReviewCount));
+      setOptimisticChecklist(null);
+    }
+  }, [data]);
 
   const saveReviewCount = async () => {
     const n = parseInt(reviewInput, 10);
@@ -75,7 +89,8 @@ export default function ReviewGrowthWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ manualReviewCount: n }),
       });
-      await loadData();
+      // Force SWR re-fetch so the count + writing-rate KPIs refresh immediately.
+      refresh();
       setEditingCount(false);
     } finally {
       setSaving(false);
@@ -85,21 +100,28 @@ export default function ReviewGrowthWidget() {
   const toggleChecklist = async (key: string, current: boolean) => {
     if (!data) return;
     if (data.autoDetected.includes(key)) return; // auto-detected items not togglable
-    const next = { ...data.checklist, [key]: !current };
-    setData({ ...data, checklist: next, checkedCount: Object.values(next).filter(Boolean).length });
+
+    // Optimistic UI: flip the chip immediately
+    const baseChecklist = optimisticChecklist ?? data.checklist;
+    const next = { ...baseChecklist, [key]: !current };
+    setOptimisticChecklist(next);
+
     try {
       await fetch('/api/review-growth', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reviewChecklist: next }),
       });
+      // Force SWR re-fetch — the useEffect on `data` will clear optimisticChecklist.
+      refresh();
     } catch {
       // revert on error
-      loadData();
+      setOptimisticChecklist(null);
+      refresh();
     }
   };
 
-  if (loading || !data) {
+  if (hookLoading || !data) {
     return (
       <div className="kk-card" style={{ padding: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -109,6 +131,10 @@ export default function ReviewGrowthWidget() {
       </div>
     );
   }
+
+  // Apply optimistic checklist overlay if present
+  const displayChecklist = optimisticChecklist ?? data.checklist;
+  const displayCheckedCount = Object.values(displayChecklist).filter(Boolean).length;
 
   // Rate color
   const rateOk = data.writingRate >= 20;
@@ -127,7 +153,7 @@ export default function ReviewGrowthWidget() {
             {data.stage.label} (다음 목표 {data.stage.nextGoal}개)
           </span>
         </div>
-        <button onClick={loadData} style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: '#B0A0A8' }}>
+        <button onClick={refresh} style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: '#B0A0A8' }}>
           <RefreshCw size={13} />
         </button>
       </div>
@@ -243,20 +269,20 @@ export default function ReviewGrowthWidget() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <MessageSquare size={12} style={{ color: '#e62310' }} />
             <span style={{ fontSize: 12, fontWeight: 800, color: '#1A1A1A' }}>운영 체크리스트</span>
-            <span style={{ fontSize: 11, color: '#B0A0A8' }}>9개 중 {data.checkedCount}개 완료</span>
+            <span style={{ fontSize: 11, color: '#B0A0A8' }}>9개 중 {displayCheckedCount}개 완료</span>
           </div>
           <div style={{
             padding: '2px 9px', borderRadius: 99, fontSize: 10, fontWeight: 800,
-            background: data.checkedCount >= 7 ? '#dcfce7' : data.checkedCount >= 4 ? '#fef3c7' : '#fef2f2',
-            color: data.checkedCount >= 7 ? '#15803d' : data.checkedCount >= 4 ? '#b45309' : '#dc2626',
+            background: displayCheckedCount >= 7 ? '#dcfce7' : displayCheckedCount >= 4 ? '#fef3c7' : '#fef2f2',
+            color: displayCheckedCount >= 7 ? '#15803d' : displayCheckedCount >= 4 ? '#b45309' : '#dc2626',
           }}>
-            {Math.round((data.checkedCount / data.totalChecklistItems) * 100)}%
+            {Math.round((displayCheckedCount / data.totalChecklistItems) * 100)}%
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           {CHECKLIST_ITEMS.map((item) => {
-            const checked = data.checklist[item.key] ?? false;
+            const checked = displayChecklist[item.key] ?? false;
             const isAuto = data.autoDetected.includes(item.key);
             const phaseColor = item.phase === '필수' ? '#e62310' : item.phase === '확장' ? '#2563eb' : '#7c3aed';
             return (

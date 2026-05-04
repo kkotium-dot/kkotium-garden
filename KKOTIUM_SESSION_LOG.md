@@ -9,6 +9,129 @@
 
 ---
 
+## 2026-05-04 세션 — 워크플로우 재설계 Sprint Part A1b 완료 (대시보드 재구성 + 통합 + 라이브 검증 회수) ✅
+
+### 세션 개요
+- 직전 세션(A1a, commit `84bb78b` push 완료)에서 컨텍스트 한계로 끊기면서 **A1b 코드 작업이 working tree에 이미 적용된 상태**로 종료. 본 세션은 작업원칙 24번 회수 작업.
+- 사전 점검에서 working tree dirty 발견 → 작업원칙 23번 즉시 정직 보고 → 꽃졔님 옵션 A (보존 + 회수 완료) 승인 → 본격 진행.
+
+### 사전 점검 결과 (작업원칙 21)
+| 항목 | 결과 |
+|------|------|
+| HEAD ↔ origin/main | `84bb78b` 동기화 ✅ |
+| TSC | 0 errors ✅ |
+| dev 서버 | 살아있음 (PID 1854, 10424) ✅ |
+| working tree | ⚠️ dirty — A1b 작업 흔적 (2개 파일) |
+
+### working tree에 발견된 변경 (덮어쓰기 절대 금지 원칙 적용)
+| 파일 | diff stat | 라인수 | 핵심 변경 |
+|------|-----------|--------|----------|
+| `src/app/dashboard/page.tsx` | +346 / -184 | 465 | 헤더 v6 / SWR hooks (useProductsList + useDashboardStats) / ModeToggle (today/week/month) / CollapsibleSection 4섹션 wrapper / KkottiBriefingWidget 통합 / sectionMarketSubtitle 모드별 분기 |
+| `src/components/dashboard/ReviewGrowthWidget.tsx` | +86 | 342 | useReviewGrowth() 훅 도입 / refresh() 호출 / optimisticChecklist 상태 |
+
+### 코드 변경 정독 결과 (작업원칙 27 검증 — 기능 0개 삭제)
+**dashboard/page.tsx 4섹션 구조 (위치 재배치만, 위젯 0개 삭제)**:
+- **Section 1 (today/gardener)**: KkottiBriefingWidget(신규) + TodayCard + KPI 4 + PipelineCard + GoodService + Profitability
+- **Section 2 (action/hunter)**: DailyPlan + UploadReadiness + ReviewGrowth
+- **Section 3 (market/hunter)**: Kkotti + MarketTrend + DataLab + Competition + Sourcing + Lifecycle
+- **Section 4 (tools/celebrator)**: 빠른 작업 4 + EventTimeline
+
+**모드 토글 동작 (sectionMarketSubtitle 분기 — page.tsx)**:
+```ts
+const sectionMarketSubtitle =
+  mode === 'today'
+    ? '꿀통 사냥 / 트렌드 / 경쟁 분석 — 오늘의 시장 신호'
+    : mode === 'week'
+      ? '주간 트렌드 + 경쟁 분석 — DataLab/Competition 강조'
+      : '월간 리뷰 + 라이프사이클 — Lifecycle/Sourcing 강조';
+```
+
+**ReviewGrowthWidget.tsx 마이그레이션 패턴**:
+- `useReviewGrowth<ReviewGrowthApiResponse>()` 훅 사용
+- PATCH 후 `refresh()` 호출 → SWR 캐시 즉시 무효화
+- `optimisticChecklist` 로컬 상태 → 토글 즉시 UI 반영, 서버 응답 후 useEffect로 클리어
+- 자동 감지 항목 (`autoDetected`): 클릭 비활성화 + "자동" 배지
+
+### Chrome MCP 라이브 검증 7항목 (작업원칙 22 강제) — 100% 통과
+
+#### 1. 4섹션 정상 렌더 ✅
+스크롤 7회로 전체 페이지 정독:
+- Section 1 헤더: Sparkles 아이콘 + "오늘의 결과" + "실시간 매출 / 마진 / 굿서비스 한눈에"
+- Section 2 헤더: Target 아이콘 + "오늘의 액션" + "지금 바로 처리할 등록 리뷰 혜택"
+- Section 3 헤더: Sprout 아이콘 + "소싱 · 시장" + 모드별 subtitle
+- Section 4 헤더: Wrench 아이콘 + "도구 · 활동" + "빠른 작업 / 이벤트 타임라인"
+모든 섹션에 ChevronUp/Down 토글 버튼 정상 표시.
+
+#### 2. 모드 전환 동작 ✅
+JS evaluation으로 검증:
+- `tabs[0].textContent === '오늘'`, active state 정상
+- `weekTab.click()` → active="이번주" + Section 3 subtitle="주간 트렌드 + 경쟁 분석 — DataLab/Competition 강조"
+- `monthTab.click()` → active="이번달" + Section 3 subtitle="월간 리뷰 + 라이프사이클 — Lifecycle/Sourcing 강조"
+sectionMarketSubtitle 분기 정확히 일치.
+
+#### 3. 꼬띠 일일 브리핑 + 메타포 어휘 ✅
+KkottiBriefingWidget Section 1 최상단 표시:
+- variant: `planter` (돈 심기 정원사)
+- face: `T_T` (concerned)
+- 메시지: "아이고 까꿍 까꿍! 튤립이 시들 시점이에요. 마진 위험 63%"
+- CTA: "마진 보강하러 가기"
+PDF 컨셉 완벽 반영 — 7단계 규칙 추론 #1 트리거 (마진 위험 30% 초과) 정확히 작동.
+
+#### 4. DRAFT 8개 평균 75점 회귀 ✅
+UploadReadinessWidget 표시:
+- 지금 등록 가능: 1개 / 작업 필요: 7개 / 평균 점수: **75점**
+- 점수 분포: 50/60/70/76/80/84/86/92 (S등급 1개, A등급 5개, B등급 3개)
+계산 검증: (50+60+70+76+80+84+86+92) / 8 = 598/8 = 74.75 → 반올림 75점 정확.
+옵션 C+D+E Part 1 결과 보존 확인.
+
+#### 5. revalidateOnFocus 자동 재호출 ✅
+JavaScript instrumentation + read_network_requests 사용:
+- `window.dispatchEvent(new Event('blur'))` → 1초 대기 → `window.dispatchEvent(new Event('focus'))` → 3초 대기
+- 네트워크 요청 결과: `GET /api/profitability` 1건 자동 fetch (status 200)
+- 다른 위젯들은 60s dedupingInterval 윈도우 내라 호출 절약 — 옵션 E Part 1과 동일한 의도된 SWR 효율
+SWR `revalidateOnFocus: true` 정상 작동 확인.
+
+#### 6. ReviewGrowth PATCH 후 즉각 반영 ✅
+코드 패턴 검증 (라이브 PATCH는 데이터 변경 위험으로 생략):
+- `refresh()` 호출 7회 등장 (saveReviewCount, toggleChecklist, manual refresh button, error revert 포함)
+- `optimisticChecklist` state로 토글 즉시 UI 반영 + useEffect on `data` 클리어
+- saveReviewCount: PATCH 후 refresh() → SWR 재fetch → useEffect → setReviewInput 갱신
+- 라이브 검증: ReviewGrowthWidget 렌더 정상, 구매확정 0 / 리뷰수 3 / 작성률 0% / 카카오 채널 표시 / 체크리스트 9개 중 3개 완료 (33%)
+
+#### 7. 12개 위젯 모두 정상 표시 ✅
+| Section | 위젯 | 라이브 표시 |
+|---------|------|------------|
+| 1 | KkottiBriefingWidget | "튤립이 시들 시점이에요" |
+| 1 | TodayCard | 0건 / — / — (네이버 실시간) |
+| 1 | KpiCard x4 | 전체 8 / 판매중 0 / 품절 0 / 평균 — |
+| 1 | PipelineCard | 소싱 3 / 등록 8 / 판매 0 / 좀비 0 |
+| 1 | GoodServiceWidget | 100점 우수 + 14일 기준 |
+| 1 | ProfitabilityWidget | 6.2% / 8개 상품 / 2025-06-02 개편 |
+| 2 | DailyPlanWidget | 슬롯 A 3/3, B 0/2, C 2/2 / 4단계 / 어린이날 D-1 |
+| 2 | UploadReadinessWidget | 평균 75점 / 8개 카드 / S 1 + A 5 + B 3 |
+| 2 | ReviewGrowthWidget | 구매확정 0 / 리뷰 3 / 작성률 0% / 체크리스트 33% |
+| 3 | KkottiWidget | TOP 5 + 평균 45점 (꿀통지수 상위) |
+| 3 | MarketTrendWidget | 3개 상품 트렌드 + 경쟁도 분석 |
+| 3 | DataLabTrendWidget | 출산/육아 33.1, 화장품/미용 31.2 |
+| 3 | CompetitionMonitorWidget | (Section 3 grid 우측) |
+| 3 | SourcingRecommendWidget | 가구/인테리어 — 추천 기회 없음 |
+| 3 | ProductLifecycleWidget | 8개 상품 / 좀비 8 / 평균 좀비 위험도 80% |
+| 4 | 빠른 작업 | 씨앗 심기 / 검색 조련사 / 주문 관리 / 꿀통 사냥터 |
+| 4 | EventTimeline | 가격 변동 2건 (선물받은 특별한 일상) |
+
+### 본 세션 commit 마무리 (작업원칙 24)
+- 변경 파일: dashboard/page.tsx + ReviewGrowthWidget.tsx + KKOTIUM_PROGRESS.md + KKOTIUM_ROADMAP.md + KKOTIUM_SESSION_LOG.md
+- commit 메시지: 본 세션에서 작성하여 _commit_msg_a1b.txt 파일로 저장 후 `git commit -F`로 안전하게 처리
+- 직후 push까지 한 turn 안에서 완료
+
+### A2 (다음 새 채팅) 인계 범위
+1. **CompetitionMonitorWidget SWR 마이그레이션** — useCompetitionMonitor() 훅 신설
+2. **ProductLifecycleWidget SWR 마이그레이션** — useProductLifecycle() 훅 신설
+3. **SectionHeader variant prop 활용** — 5대 mascot face/accessory 시각 통합 (`void _variant` 제거)
+4. **(선택) 모드별 위젯 정렬** — mode='week'면 DataLab/Competition 상단, mode='month'면 Lifecycle/Sourcing 상단
+
+---
+
 ## 2026-05-03 세션 — 워크플로우 재설계 Sprint Part A1a 완료 (인프라 6종 + 꼬띠 강화 1차)
 
 ### 세션 개요

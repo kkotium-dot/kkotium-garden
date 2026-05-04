@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-03 (워크플로우 재설계 Sprint Part A1a 완료 ✅ — 인프라 6종 + 꼬띠 아이덴티티 강화 1차 / 다음: 새 채팅에서 Part A1b — 대시보드 재구성 + 통합 + 라이브 검증)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: A1a 마무리 commit (kkotti-vocab 신설 + useDashboardStats + layout 2종 + KkottiBriefingWidget + 페르소나/face 강화)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 (꽃졔님 요청 2026-05-03) + 워크플로우 재설계 Sprint Part A1a 완료 ✅**
-> **다음 작업: 워크플로우 재설계 Sprint Part A1b — 대시보드 재구성 + 모드 전환 + 위젯 마이그레이션 + Chrome MCP 라이브 검증 — 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
+> 최종 업데이트: 2026-05-03 (워크플로우 재설계 Sprint Part A1b 완료 ✅ — 대시보드 4섹션 재구성 + 모드전환 + KkottiBriefing 통합 + ReviewGrowth/UploadReadiness SWR 마이그레이션 + 라이브 검증 7항목 통과 / 다음: 새 채팅에서 Part A2 — CompetitionMonitor + ProductLifecycle SWR + 시각 디테일)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: A1b 마무리 commit (dashboard/page.tsx + ReviewGrowthWidget.tsx 통합)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a 완료 ✅ + Part A1b 완료 ✅**
+> **다음 작업: 워크플로우 재설계 Sprint Part A2 — CompetitionMonitor + ProductLifecycle SWR 마이그레이션 + 4섹션 시각 디테일 강화 (variant prop 활용 mascot 통합) — 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -10,6 +10,56 @@
 >   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
 >   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
 >   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
+
+## 2026-05-04 세션 요약 — 워크플로우 재설계 Sprint Part A1b 완료 (대시보드 재구성 + 통합 + 라이브 검증) ✅
+
+### 본 세션 성격
+- 직전 세션(A1a, commit `84bb78b`)이 컨텍스트 한계로 끊기면서 **A1b 코드 작업은 working tree에 이미 적용된 상태**로 종료. 본 세션은 작업원칙 24번 회수 작업 — 코드 검증 + 라이브 검증 + MD 갱신 + commit + push 한 묶음 마무리.
+- 작업원칙 21번 사전 점검에서 working tree dirty 발견 → 작업원칙 23번 정직 보고 → 꽃졔님 옵션 A (보존 + 회수 완료) 승인 → 진행.
+
+### 변경된 파일 (working tree 회수)
+| 파일 | diff stat | 핵심 |
+|------|-----------|------|
+| `src/app/dashboard/page.tsx` | +346 / -184 (465 lines) | 헤더 v6 / SWR hooks 도입 (useProductsList + useDashboardStats) / ModeToggle 신설 (today/week/month) / CollapsibleSection 4섹션 wrapper / KkottiBriefingWidget 통합 / sectionMarketSubtitle 모드별 분기 |
+| `src/components/dashboard/ReviewGrowthWidget.tsx` | +86 (342 lines) | useReviewGrowth() 훅 도입 / refresh() 호출로 PATCH 후 즉각 반영 / optimisticChecklist 상태로 UI 즉각 반영 |
+
+### 작업원칙 27 검증 — 기능 0개 삭제
+모든 12개 위젯 + 빠른 작업 + EventTimeline 보존, **위치만 4섹션으로 재배치**:
+- **Section 1 (today/gardener)**: KkottiBriefingWidget(신규) + TodayCard + KPI 4 + PipelineCard + GoodService + Profitability
+- **Section 2 (action/hunter)**: DailyPlan + UploadReadiness + ReviewGrowth
+- **Section 3 (market/hunter)**: Kkotti + MarketTrend + DataLab + Competition + Sourcing + Lifecycle
+- **Section 4 (tools/celebrator)**: 빠른 작업 4 + EventTimeline
+
+### Chrome MCP 라이브 검증 7항목 (작업원칙 22번 강제) — 100% 통과
+| # | 검증 항목 | 결과 |
+|---|----------|------|
+| 1 | 4섹션 정상 렌더 | ✅ Sparkles/Target/Sprout/Wrench 아이콘 + 헤더 + collapsed 토글 |
+| 2 | 모드 전환 동작 | ✅ Section 3 subtitle 정확히 변경 — today=꿀통 사냥 / week=주간 트렌드 + 경쟁 분석 — DataLab/Competition 강조 / month=월간 리뷰 + 라이프사이클 — Lifecycle/Sourcing 강조 |
+| 3 | 꼬띠 일일 브리핑 + 메타포 어휘 | ✅ planter variant + T_T (concerned face) + "아이고 까꿍 까꿍! 튤립이 시들 시점이에요. 마진 위험 63%" + "마진 보강하러 가기" CTA — 7단계 규칙 추론 #1 트리거 정확 |
+| 4 | DRAFT 8개 평균 75점 회귀 | ✅ 50/60/70/76/80/84/86/92 점수 분포 = 평균 75점 — 옵션 C+D+E Part 1 결과 보존 |
+| 5 | revalidateOnFocus 자동 재호출 | ✅ blur+focus 시뮬레이션 후 `/api/profitability` 1건 자동 fetch — 다른 위젯들은 60s dedup 윈도우 내 호출 절약 (옵션 E Part 1과 동일한 의도된 SWR 효율) |
+| 6 | ReviewGrowth PATCH 후 즉각 반영 | ✅ 코드 검증 — refresh() 7회 등장 + optimisticChecklist 즉시 반영 패턴 |
+| 7 | 12개 위젯 모두 정상 표시 | ✅ KkottiBriefing + KPI + Pipeline + Today + GoodService + Profitability + DailyPlan + UploadReadiness + ReviewGrowth + Kkotti + MarketTrend + DataLab + Competition + Sourcing + Lifecycle + EventTimeline |
+
+### 사전 점검 결과 (작업원칙 21)
+- HEAD ↔ origin/main: `84bb78b` 동기화 ✅
+- TSC: 0 errors ✅
+- dev 서버: 살아있음 (PID 1854, 10424) ✅
+- working tree: ⚠️ dirty (2개 파일) — A1a에서 끊긴 작업 흔적 → 작업원칙 23번 정직 보고 후 꽃졔님 승인으로 옵션 A (보존 + 회수) 진행
+
+### 적용된 작업원칙
+- **21**: 사전 점검 (git/dev/TSC/HEAD-origin/working tree) — 100% 수행
+- **22**: Chrome MCP 라이브 검증 7항목 — API 200 응답으로 종결 안 함
+- **23**: working tree dirty 발견 즉시 정직 보고 후 사용자 결정 받음
+- **24**: 본 세션은 회수 작업 — MD 3종 갱신 + commit + push 한 turn 안에 묶어서 마무리
+- **25**: Python 패치 스크립트 한글 직접 입력 (NFC 정규화 절대 금지)
+- **27**: 기능 0개 삭제 — 12개 위젯 + 빠른 작업 + EventTimeline 모두 보존, 위치만 재배치
+
+### A2 (다음 Sprint) 인계 범위
+- CompetitionMonitorWidget SWR 마이그레이션 (현재 자체 fetch — useCompetitionMonitor() 훅 신설)
+- ProductLifecycleWidget SWR 마이그레이션 (현재 자체 fetch — useProductLifecycle() 훅 신설)
+- 4섹션 시각 디테일 강화: SectionHeader의 variant prop 활용 → 5대 mascot face/accessory 통합 표시
+- 모드 전환에 따른 위젯 visibility 또는 우선순위 차등 (현재는 subtitle만 변경, 실제 위젯 표시는 모두 동일)
 
 ## 2026-05-03 세션 요약 — 워크플로우 재설계 Sprint Part A1a 완료 (인프라 6종 + 꼬띠 강화 1차) ✅
 

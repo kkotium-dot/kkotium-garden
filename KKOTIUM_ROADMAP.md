@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-03 (워크플로우 재설계 Sprint Part A1a 완료 ✅ / 다음: 새 채팅에서 Part A1b — 대시보드 재구성 + 모드전환 + 위젯 마이그레이션 + 라이브 검증)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C/D/E Part 1 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a 완료 ✅**
-> **다음 작업: 워크플로우 재설계 Sprint Part A1b — 새 채팅에서 진행. 상세는 본 문서 하단 "다음 새 채팅 시작 메시지" 섹션 참조**
+> 최종 업데이트: 2026-05-04 (워크플로우 재설계 Sprint Part A1b 완료 ✅ / 다음: 새 채팅에서 Part A2 — CompetitionMonitor + ProductLifecycle SWR + 시각 디테일)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C/D/E Part 1 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b 완료 ✅**
+> **다음 작업: 워크플로우 재설계 Sprint Part A2 — 새 채팅에서 진행. 상세는 본 문서 하단 "다음 새 채팅 시작 메시지" 섹션 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -14,42 +14,42 @@
 
 ---
 
-## 🎯 다음 새 채팅 시작 메시지 (워크플로우 재설계 Sprint Part A1b — 2026-05-03 작성)
+## 🎯 다음 새 채팅 시작 메시지 (워크플로우 재설계 Sprint Part A2 — 2026-05-04 작성)
 
-> **A1a 완료 ✅ (2026-05-03 본 세션, commit 본 세션 마무리 commit)**:
-> - **인프라 6종 신설**: kkotti-vocab.ts (5대 variant + 9단계 face + 시그니처 + 메타포 풀) / useDashboardStats hook / SectionHeader / CollapsibleSection / KkottiBriefingWidget / 9단계 face 적용
-> - **꼬띠 아이덴티티 강화 1차**: PDF "꼬띠 작업 요약"의 5대 변신 컨셉 + "빵야~ 까꿍" 시그니처 + 정원사·카우걸·튤립 메타포 풀 모두 어휘 풀에 통합
-> - **백워드 호환 100%**: KkottiWidget의 face 호출처 무변경, kkotti-comment의 PERSONA 호출처 무변경, 기존 동작 모두 보존
-> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-03 세션 — 워크플로우 재설계 Sprint Part A1a 완료" 참조
+> **A1b 완료 ✅ (2026-05-04 본 세션, commit 본 세션 마무리 commit)**:
+> - **dashboard/page.tsx 전면 재구성** (465줄): SWR hooks (useProductsList + useDashboardStats) / ModeToggle (today/week/month) / CollapsibleSection 4섹션 wrapper / KkottiBriefingWidget 통합 / sectionMarketSubtitle 모드별 분기
+> - **ReviewGrowthWidget.tsx 마이그레이션** (342줄): useReviewGrowth() 훅 + refresh() PATCH 후 즉각 반영 + optimisticChecklist 상태
+> - **UploadReadinessWidget**: 변경 0 — 부모 SWR 자동 혜택 검증 완료
+> - **Chrome MCP 라이브 검증 7항목 100% 통과**: 4섹션 정상 / 모드 전환 (subtitle 정확) / 꼬띠 브리핑 (planter + T_T + 튤립 + 까꿍 시그니처 + 마진 63%) / DRAFT 75점 회귀 / revalidateOnFocus auto-fetch / ReviewGrowth refresh 패턴 / 12개 위젯 보존
+> - **작업원칙 27 검증**: 기능 0개 삭제 — Section 1(gardener)/Section 2(hunter)/Section 3(hunter)/Section 4(celebrator) 4섹션 재배치
+> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-04 세션 — 워크플로우 재설계 Sprint Part A1b 완료" 참조
 
-> **워크플로우 재설계 Sprint Part A1b 작업 범위**:
-> 1. **`src/app/dashboard/page.tsx` 부모 fetch SWR화** (loadProducts → useProductsList, loadStats → useDashboardStats — A1a에서 hook 준비됨)
-> 2. **4섹션 재배치** (SectionHeader + CollapsibleSection 적용 — A1a에서 컴포넌트 준비됨):
->    - Section 1 (오늘의 결과): KkottiBriefingWidget 최상단 + KPI/Pipeline/Profitability/GoodService
->    - Section 2 (오늘의 액션): DailyPlan/UploadReadiness/ReviewGrowth
->    - Section 3 (소싱·시장): Kkotti/MarketTrend/DataLab/Competition/Sourcing/Lifecycle
->    - Section 4 (도구·활동): QuickActions/EventTimeline
-> 3. **모드 전환 토글 신설** — 대시보드 상단 [오늘 / 이번주 / 이번달] useState 기반
-> 4. **`KkottiBriefingWidget` 통합** — Section 1 최상단에 배치 (A1a에서 위젯 준비됨)
-> 5. **`ReviewGrowthWidget` 마이그레이션** — useReviewGrowth() 훅 사용, PATCH 후 refresh() (옵션 E Part 2 흡수)
-> 6. **`UploadReadinessWidget` 부모 SWR 자동 혜택 검증** — 위젯 자체 변경 0, optimisticScores Map 보존 검증
-> 7. **Chrome MCP 라이브 검증 7항목** (작업원칙 22번 강제):
->    - 4섹션 정상 렌더 / 모드 전환 동작 / 꼬띠 일일 브리핑 1줄 표시 + 메타포 어휘 노출
->    - 8개 DRAFT 평균 75점 회귀 (옵션 C+D+E Part 1 결과 보존)
->    - revalidateOnFocus 자동 재호출 (blur+focus 시뮬레이션)
->    - ReviewGrowth PATCH 후 즉각 반영 / AI 분석 후 optimisticScores 즉각 반영
->    - 12개 위젯 모두 정상 표시 (모드별 적절히)
+> **워크플로우 재설계 Sprint Part A2 작업 범위**:
+> 1. **CompetitionMonitorWidget SWR 마이그레이션** — useCompetitionMonitor() 훅 신설 (5분 또는 24h cadence 결정 필요), 현재 자체 fetch 패턴
+> 2. **ProductLifecycleWidget SWR 마이그레이션** — useProductLifecycle() 훅 신설 (60s cadence 추천 — DRAFT 변동과 동일 비중)
+> 3. **4섹션 시각 디테일 강화** — `SectionHeader.tsx`의 reserved `variant` prop 활용:
+>    - Section 1 gardener — 빨간 튤립 + watering_can 액세서리 작은 SVG
+>    - Section 2 hunter — heart_gun 액세서리 + 동작 face (^ㅂ^)
+>    - Section 3 hunter — 동일 mascot but proud face
+>    - Section 4 celebrator — fountain_dance + ✿ㅅ✿ done face
+> 4. **모드 전환 위젯 차등 (선택)** — 현재 subtitle만 변경. mode='week'면 DataLab/Competition을 grid 상단에, mode='month'면 Lifecycle/Sourcing을 grid 상단에 배치 (위젯 표시는 모두 유지, 정렬만 변경)
+> 5. **Chrome MCP 라이브 검증 5항목**:
+>    - 2개 위젯 SWR fetch 동작 + dedup 정상
+>    - 4섹션 mascot 시각 표시 + 각 face 정확히 노출
+>    - 모드 전환 시 위젯 정렬 변경 (선택 4번 시행 시)
+>    - DRAFT 8개 평균 75점 회귀 (옵션 C+D+E Part 1 + A1b 결과 보존)
+>    - revalidateOnFocus 자동 재호출 (focus 시 5분 위젯 1개 이상 fetch)
 
-> **기존 기능 0개 삭제** (작업원칙 27) — 12개 위젯 + 모든 카드 + 빠른 작업 + EventTimeline 모두 보존, 위치만 재배치
+> **기존 기능 0개 삭제** (작업원칙 27) — 12개 위젯 + 4섹션 + 모드 토글 + KkottiBriefing 모두 보존, 시각 디테일과 SWR만 추가
 
 > 아래 코드 블록을 그대로 복붙해서 사용.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md, KKOTIUM_SESSION_LOG.md를 읽고
-워크플로우 재설계 Sprint Part A1b 작업을 시작해주세요.
+워크플로우 재설계 Sprint Part A2 작업을 시작해주세요.
 
 작업 시작 전 필수 (작업원칙 21+22+23+24+25+26+27 적용):
-1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 본 세션 마무리 commit — A1a 인프라)
+1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 본 세션 마무리 commit — A1b 통합)
    (b) git --no-pager log --oneline -10 → 이번 메시지에 명시되지 않은 commit 있으면 읽고 대응
    (c) git status 깨끗한지 확인 (dirty면 검토 후 처리 — 덮어쓰기 절대 금지)
    (d) lsof -i :3000 또는 curl http://localhost:3000 → dev 서버 상태 확인
@@ -60,52 +60,47 @@
    (i) 문제 분석은 항상 (a) 즉각 원인 (b) 일반화 원인 두 단계로
    (j) 브라우저 테스트는 API 200 응답으로 대체 불가 — Chrome MCP로 실제 화면/숫자/동작 검증 필수
    (k) 작업원칙 27: 기존 기능 0개 삭제 — 위치 재배치 OK, 삭제/축소 0
-2. KKOTIUM_PROGRESS.md "2026-05-03 세션 요약 — 워크플로우 재설계 Sprint Part A1a 완료" 정독
-3. KKOTIUM_SESSION_LOG.md 최상단 동일 세션 정독 (A1a에서 준비된 도구 목록 + A1b 작업 범위)
-4. `src/lib/kkotti-vocab.ts` 정독 — 어휘 풀 / 5대 variant / KKOTTI_VARIANTS / SECTION_VARIANT
-5. `src/components/dashboard/layout/` 두 파일 정독 — SectionHeader / CollapsibleSection 사용법
-6. `src/components/dashboard/KkottiBriefingWidget.tsx` 정독 — variantOverride prop / 7단계 규칙 추론
-7. `src/lib/hooks/useDashboardData.ts` L367~ (useDashboardStats) 정독 — 응답 스키마 확인
-8. `src/app/dashboard/page.tsx` (329줄) 정독 — loadProducts/loadStats 패턴 + 12개 위젯 props 흐름
-9. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
+2. KKOTIUM_PROGRESS.md "2026-05-04 세션 요약 — 워크플로우 재설계 Sprint Part A1b 완료" 정독
+3. KKOTIUM_SESSION_LOG.md 최상단 동일 세션 정독
+4. `src/components/dashboard/CompetitionMonitorWidget.tsx` + `src/components/dashboard/ProductLifecycleWidget.tsx` 정독 — 현재 fetch 패턴 + state 구조
+5. `src/lib/hooks/useDashboardData.ts` 정독 — 기존 hook 패턴 (useReviewGrowth/useGoodService/useDataLabTrend) 모방용
+6. `src/components/dashboard/layout/SectionHeader.tsx` 정독 — variant prop 통합 지점 (`void _variant`)
+7. `src/lib/kkotti-vocab.ts` 정독 — KKOTTI_VARIANTS / SECTION_VARIANT / accessory 매핑
+8. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
 
-[단계 1] 대시보드 부모 fetch SWR화:
-   - dashboard/page.tsx loadProducts → useProductsList 교체
-   - loadStats → useDashboardStats 교체
-   - useEffect/useState 정리 (revalidateOnFocus 자동 동작)
+[단계 1] 2개 위젯 SWR 마이그레이션:
+   - useCompetitionMonitor() 훅 신설 (cadence 결정 — 추천 24h profile)
+   - useProductLifecycle() 훅 신설 (cadence 결정 — 추천 60s)
+   - CompetitionMonitorWidget useEffect/useState → 훅 + refresh
+   - ProductLifecycleWidget useEffect/useState → 훅 + refresh
    - npx tsc --noEmit 0 errors
 
-[단계 2] 4섹션 재배치 + 모드 전환 토글:
-   - <CollapsibleSection section="today/action/market/tools"> 4개 wrapper로 감싸기
-   - 모드 토글 useState (today/week/month, 기본 today)
-   - 모드별 Section 3 위젯 표시 분기 (week/month는 더 많은 분석 위젯 노출)
+[단계 2] SectionHeader variant 통합:
+   - SECTION_VARIANT mapping에서 받은 variant로 face + accessory 작은 SVG 표시
+   - 위치: 아이콘 옆 또는 우측 상단
+   - kkotti-vocab.ts의 KKOTTI_FACE 9단계 활용
    - npx tsc --noEmit 0 errors
 
-[단계 3] 꼬띠 일일 브리핑 통합:
-   - dashboard/page.tsx Section 1 최상단에 <KkottiBriefingWidget /> 추가
-   - 라이브 메시지 노출 확인
+[단계 3] (선택) 모드 전환 위젯 정렬:
+   - mode === 'week' → DataLab/Competition을 Section 3 상단으로
+   - mode === 'month' → Lifecycle/Sourcing을 Section 3 상단으로
+   - 위젯은 모두 유지 (display 변경 X, order만 변경)
 
-[단계 4] ReviewGrowth + UploadReadiness 마이그레이션:
-   - ReviewGrowthWidget — useReviewGrowth() 훅 사용 + PATCH 후 refresh() 호출
-   - UploadReadinessWidget — 부모 SWR 자동 혜택 검증 (변경 0)
-   - npx tsc --noEmit 0 errors
+[단계 4] Chrome MCP 라이브 검증 5항목:
+   - 2개 위젯 SWR fetch 동작 + dedup 정상
+   - 4섹션 mascot 시각 표시
+   - 모드 전환 시 위젯 정렬 변경 (선택 단계 시행 시)
+   - DRAFT 75점 회귀
+   - revalidateOnFocus auto-fetch
 
-[단계 5] Chrome MCP 라이브 검증 (작업원칙 22번 필수):
-   - dev server 실행 (백그라운드)
-   - 4섹션 정상 렌더 + 모드 전환 동작
-   - 꼬띠 브리핑 1줄 + 메타포 어휘 노출 검증
-   - DRAFT 평균 75점 회귀 (옵션 C+D+E Part 1 결과 보존)
-   - revalidateOnFocus blur+focus 시뮬레이션
-   - 12개 위젯 정상 표시 (모드별 적절히)
-
-[단계 6] 마무리 (작업원칙 24번 회수):
+[단계 5] 마무리:
    - PROGRESS/ROADMAP/SESSION_LOG 갱신
-   - commit + push 한 묶음 (그 turn 안에서)
-   - 새 인계 메시지 작성 (Part A2: CompetitionMonitor + ProductLifecycle SWR + 시각 디테일)
+   - commit + push 한 묶음
+   - 새 인계 메시지 작성 (Part A3 후보 — 다른 페이지 SWR 확장 / 옵션 A E-1 빌더 / 옵션 B E-12 Discord)
 
 작업 분량 안전 마진:
-- A1b가 컨텍스트 한계 80% 도달 시 즉시 마무리 + Part A1b1/A1b2로 분할
-- 본 Part는 12개 위젯 모두 영향 → 신중한 검증 필요
+- A2가 컨텍스트 한계 80% 도달 시 즉시 마무리 + Part A2a/A2b로 분할
+- 시각 디테일 단계는 SVG 토큰 비용이 큼 → 단계별 commit 권장
 - 세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md에 작성, PROGRESS.md/ROADMAP.md는 핵심 요약만 유지
 ```
 
