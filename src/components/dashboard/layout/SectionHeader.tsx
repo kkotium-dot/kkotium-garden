@@ -1,10 +1,11 @@
 // src/components/dashboard/layout/SectionHeader.tsx
 // Workflow Redesign Sprint Part A1a (2026-05-03)
-// Section header for the four-section dashboard layout.
+// Updated by Part A2 (2026-05-04) — mascot face + accessory label integration.
 //
 // Each dashboard section gets one of these as its top row.
-// Variants map 1:1 to KkottiVariant so future Part A1b can render the
-// matching mascot face / accessory next to the header.
+// Variants map 1:1 to KkottiVariant; Part A2 surfaces the matching face
+// expression and accessory label next to the icon badge so each section
+// gets a visible Kkotti persona signal at a glance.
 //
 // Style decisions:
 //  - No JSX emoji — Lucide React icons only (work principle)
@@ -23,7 +24,13 @@ import {
   ChevronUp,
   type LucideIcon,
 } from 'lucide-react';
-import type { KkottiVariant } from '@/lib/kkotti-vocab';
+import {
+  KKOTTI_FACE,
+  KKOTTI_VARIANTS,
+  SECTION_VARIANT,
+  type KkottiFaceState,
+  type KkottiVariant,
+} from '@/lib/kkotti-vocab';
 
 // Section identifiers — match SECTION_VARIANT keys in kkotti-vocab.ts
 export type SectionId = 'today' | 'action' | 'market' | 'tools';
@@ -35,7 +42,7 @@ interface SectionHeaderProps {
   title?: string;
   /** Optional one-line description (Korean text). */
   subtitle?: string;
-  /** Persona variant for future mascot integration (Part A1b). */
+  /** Persona variant override — defaults to SECTION_VARIANT[section]. */
   variant?: KkottiVariant;
   /** Currently collapsed? Drives chevron direction (caller-managed state). */
   collapsed?: boolean;
@@ -71,11 +78,31 @@ const SECTION_PRESETS: Record<SectionId, { title: string; subtitle: string; Icon
   },
 };
 
+// Part A2 (2026-05-04): Per-variant face expression and accessory label.
+// Section-default face conveys persona mood at the head of each section.
+// Accessory labels mirror KKOTTI_VARIANTS[v].accessory but in Korean for UI.
+// SVG icon assets will replace the text labels in a future sprint.
+const VARIANT_FACE_DEFAULT: Record<KkottiVariant, KkottiFaceState> = {
+  gardener:   'idle',     // resting / neutral garden tending
+  hunter:     'proud',    // satisfied keyword hunting / action
+  cowgirl:    'proud',    // confident shipping action
+  planter:    'idle',     // calm money seeding
+  celebrator: 'done',     // celebrating completed harvests
+};
+
+const ACCESSORY_LABEL: Record<KkottiVariant, string> = {
+  gardener:   '물조리개',        // watering can
+  hunter:     '하트총',          // heart gun
+  cowgirl:    '꽃잎 채찍',       // petal whip
+  planter:    '돈 묘목',         // money seedling
+  celebrator: '분수대 댄스',     // fountain dance
+};
+
 export default function SectionHeader({
   section,
   title,
   subtitle,
-  variant: _variant,  // reserved for Part A1b mascot integration
+  variant,
   collapsed = false,
   onToggle,
   rightSlot,
@@ -86,8 +113,15 @@ export default function SectionHeader({
   const Icon = preset.Icon;
   const Chevron = collapsed ? ChevronDown : ChevronUp;
 
-  // Suppress unused warning for the reserved variant prop
-  void _variant;
+  // Part A2 (2026-05-04): Resolve persona variant.
+  // Caller-supplied prop wins, otherwise fall back to the section default
+  // (SECTION_VARIANT). This way the four dashboard sections each get a
+  // consistent mascot signal even when callers omit `variant`.
+  const resolvedVariant: KkottiVariant = variant ?? SECTION_VARIANT[section];
+  const variantMeta = KKOTTI_VARIANTS[resolvedVariant];
+  const faceState   = VARIANT_FACE_DEFAULT[resolvedVariant];
+  const faceText    = KKOTTI_FACE[faceState];
+  const accessoryLabel = ACCESSORY_LABEL[resolvedVariant];
 
   return (
     <div
@@ -132,6 +166,42 @@ export default function SectionHeader({
             }}
           >
             {displayTitle}
+            {/* Part A2: Mascot persona pill — face expression + accessory label.
+                Sits inline with the title so it scales naturally with screen width. */}
+            <span
+              title={`${variantMeta.label} · ${variantMeta.signature}`}
+              aria-label={`${variantMeta.label} 모드, ${accessoryLabel}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                marginLeft: 10,
+                padding: '3px 9px',
+                fontSize: 11,
+                fontWeight: 700,
+                color: '#E8001F',
+                background: '#FEF0F3',
+                border: '1px solid #F8DCE5',
+                borderRadius: 999,
+                verticalAlign: 'middle',
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                  fontSize: 11,
+                  color: '#E8001F',
+                  letterSpacing: '-0.5px',
+                }}
+              >
+                {faceText}
+              </span>
+              <span style={{ color: '#525252', fontWeight: 600 }}>
+                {accessoryLabel}
+              </span>
+            </span>
           </h2>
           {displaySubtitle && (
             <p

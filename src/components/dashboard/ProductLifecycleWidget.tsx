@@ -4,11 +4,12 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Activity, AlertTriangle, TrendingUp, TrendingDown,
   Skull, Sprout, Star, ChevronDown, ChevronUp, RefreshCw,
 } from 'lucide-react';
+import { useProductLifecycle } from '@/lib/hooks/useDashboardData';
 
 interface ProductLifecycle {
   id: string;
@@ -54,21 +55,19 @@ function ZombieRiskBar({ risk }: { risk: number }) {
 }
 
 export default function ProductLifecycleWidget() {
-  const [data, setData] = useState<LifecycleResult | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Workflow Redesign Part A2 (2026-05-04): SWR migration.
+  // 60s cadence matches Sidebar / Profitability / DRAFT readiness so the
+  // dashboard's freshness floor stays uniform.
+  const { data: rawData, isLoading: loading, refresh } =
+    useProductLifecycle<{ ok?: boolean } & LifecycleResult>();
+
+  // Surface only successful payloads to the existing rendering path.
+  // Anything else is treated as "no data yet" (matches previous fetchData
+  // behavior which silently skipped on json.ok === false).
+  const data: LifecycleResult | null =
+    rawData && rawData.ok ? rawData : null;
+
   const [expanded, setExpanded] = useState(false);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/product-lifecycle');
-      const json = await res.json();
-      if (json.ok) setData(json);
-    } catch { /* silent */ }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   const stages = data?.stageCounts ?? {};
   const total = data?.total ?? 0;
@@ -91,7 +90,7 @@ export default function ProductLifecycleWidget() {
           <span style={{ fontWeight: 700, fontSize: 15 }}>상품 수명 주기</span>
           {total > 0 && <span style={{ fontSize: 11, color: '#9ca3af' }}>{total}개 상품</span>}
         </div>
-        <button onClick={fetchData} disabled={loading} style={{
+        <button onClick={refresh} disabled={loading} style={{
           padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: 6,
           background: '#fff', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 11,
         }}>

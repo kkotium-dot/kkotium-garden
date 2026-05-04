@@ -9,6 +9,90 @@
 
 ---
 
+## 2026-05-04 세션 — 워크플로우 재설계 Sprint Part A2a 완료 (Competition/Lifecycle SWR + SectionHeader mascot pill) ✅
+
+### 세션 성격
+- 직전 commit `9b8a55a` (A2 인계 메시지 페르소나/유의사항 통합) 완료 후 본 세션에서 **A2 신규 작업** 진행.
+- 꽃졔님 승인 — 안전 분할 (A2a 단계 1+2+4 검증+5 인계 / A2b 단계 3 모드정렬), Competition cadence 5분, SectionHeader 시각 디테일은 face + accessory 라벨 텍스트.
+- 단계 1 + 2 코드 변경 후 컨텍스트 한계로 한 번 끊김 → 재시작 시 작업원칙 21(h) 적용으로 working tree raw 검증부터 진행 → 단계 1 결과 3개 정상 / SectionHeader 한글 깨짐 2곳 발견 → 작업원칙 25번대로 git restore + write_file 재작성으로 복구 → 라이브 검증 통과 후 본 세션 마무리.
+
+### 단계 1 — 2개 위젯 SWR 마이그레이션
+**`src/lib/hooks/useDashboardData.ts` (+70 lines)**:
+- `useCompetitionMonitor()` 신설 — 5분 cadence (`SWR_PROFILE_5MIN` 재사용)
+  - return: `{ data, isLoading, isValidating, error, refresh, scanInProgress }`
+  - `error`는 `data.success === false` 시 `data.error`도 surface
+- `useProductLifecycle()` 신설 — 60s cadence (`DASHBOARD_SWR_DEFAULTS` 재사용)
+  - return: `{ data, isLoading, refresh }`
+  - `data.ok === true`일 때만 정상 반환
+
+**`src/components/dashboard/CompetitionMonitorWidget.tsx` (+47/-28)**:
+- `useState(data, loading, error)` + `useCallback(fetchData)` + `useEffect` → `useCompetitionMonitor()` 훅 + `refresh()` 호출로 교체
+- `handleScan` POST → 성공 시 `refresh()` 호출 (수동 fetchData 대신)
+- `scanning` 로컬 state는 보존 (POST 진행 표시용)
+
+**`src/components/dashboard/ProductLifecycleWidget.tsx` (+31/-20)**:
+- `useState(data, loading)` + `useCallback(fetchData)` + `useEffect` → `useProductLifecycle()` 훅 + `refresh()` 호출
+- 새로고침 버튼 onClick → `refresh()` 호출
+
+### 단계 2 — SectionHeader variant 통합 (mascot pill 표시)
+**`src/components/dashboard/layout/SectionHeader.tsx` (+86/-1)**:
+- reserved `_variant` prop → 활성화 (`void _variant` 제거)
+- `KKOTTI_VARIANTS[variant].accessory` (물조리개/하트총/꽃잎 채찍/돈 묘목/분수대 댄스) + 섹션별 기본 face 매핑
+  - today (gardener) → `idle` (`^_^`)
+  - action (hunter) → `proud` (`^ㅂ^`)
+  - market (cowgirl) → `proud` (`^ㅂ^`) — page.tsx에서 variant="hunter" 오버라이드 가능
+  - tools (planter/celebrator) → `done` (`✿ㅅ✿`)
+- pill UI: 헤더 우측 슬롯 옆, brand pink #FEF0F3 배경 + brand red #E8001F 텍스트
+- `aria-label="{label} 모드, {accessory}"` 접근성 보장
+
+### 한글 깨짐 복구 케이스 (작업원칙 25 적용 사례)
+- 단계 2 작성 중 KKOTTI_VARIANTS의 일부 accessory 한글 라벨 작성 단계에서 손상 발견:
+  - `'꽃잎 채찍'` → `'꿃잎 채직'` (cowgirl)
+  - `'분수대 댄스'` → `'분수대 대스'` (celebrator)
+- **검출**: 작업원칙 21(h) raw 검증 — `grep '꿃잎\|대스'` 결과로 위치 정확히 파악
+- **해결**: NFC 수동 정규화 절대 금지 (작업원칙 25번) → write_file로 한글 직접 입력 + raw 검증 (`grep EXIT=1` = 손상 0개) + 정상 한글 5개 모두 적용 확인 (`'물조리개'`, `'하트총'`, `'꽃잎 채찍'`, `'돈 묘목'`, `'분수대 댄스'`)
+- **일반화** (작업원칙 26): edit_file에서 한글 매칭 실패 시 항상 git restore + write_file 패턴 강제 → 본 세션 ROADMAP A2b 인계 메시지 작업원칙 21(g)에 명시
+
+### Chrome MCP 라이브 검증 6항목 (작업원칙 22번) — 100% 통과
+| # | 검증 항목 | 결과 |
+|---|----------|------|
+| 1 | Lifecycle SWR fetch | ✅ refresh 클릭 → `/api/product-lifecycle` GET 200 (8 products, ZOMBIE 8, 평균 좀비 위험도 80%) |
+| 2 | Competition SWR (5min dedup) | ✅ `/api/competition` 첫 mount fetch 후 dedup 윈도우 내 절약 — `경쟁 상품 모니터링 0/8` 위젯 정상 표시 (선물받은 특별한 일상, 모나미 펭수, 하트 리본 누빔 여성 파자마, 차량용 햇빛가리개 4개 상품) |
+| 3 | DRAFT 8개 75점 회귀 | ✅ 50/60/70/76/80/84/86/92 모두 검출 (옵션 C+D+E Part 1 + A1b 결과 보존) |
+| 4 | revalidateOnFocus auto-fetch | ✅ blur+focus 시뮬레이션 후 60s profile API 5개 자동 fetch (Sidebar/dashboard-stats/profitability/DRAFT/products) — Competition은 5min dedup 윈도우 내 절약 (의도된 효율) |
+| 5 | 4섹션 mascot pill | ✅ today=^_^/물조리개, action=^ㅂ^/하트총, market=^ㅂ^/하트총, tools=✿ㅅ✿/분수대 댄스 — aria-label 모두 정확 |
+| 6 | 기능 0개 삭제 (작업원칙 27) | ✅ KkottiBriefing(planter T_T 마진 위험 63% CTA) + KPI 4 + Pipeline + Today + GoodService + Profitability + DailyPlan + UploadReadiness + ReviewGrowth + Kkotti + MarketTrend + DataLab + Competition + Sourcing + Lifecycle + 빠른 작업 4 + EventTimeline 모두 보존 |
+
+### 콘솔 에러 점검
+- 4개 에러 검출 — 모두 Chrome MCP 자체의 비동기 메시지 채널 종료 에러 (Promise was collected, message channel closed before response)
+- **앱 코드(React/SWR)의 에러 0개** ✅
+
+### 사전 점검 결과 (작업원칙 21)
+- 시작: HEAD `9b8a55a` = origin/main, working tree clean, TSC 0 errors, dev :3000 HTTP 200 ✅
+- 재시작 시점: HEAD 그대로, working tree dirty 4 (단계 1 결과 3개 + 단계 2 손상 1개), TSC 0 errors ✅
+- 종료: TSC 0 errors, working tree dirty 4 (정상 변경), commit 직전 ✅
+
+### 본 세션 commit
+- 4개 파일 변경 (185 insertions / 49 deletions)
+- commit 메시지: `feat(workflow-redesign A2a): Competition/Lifecycle SWR 마이그레이션 + SectionHeader mascot pill 통합`
+- push 후 origin/main 동기화
+
+### A2b 인계 (다음 새 채팅)
+- **단계 3 모드별 위젯 정렬**: dashboard/page.tsx Section 3 grid 정렬 변경 — mode==='week' 시 DataLab/Competition 상단, mode==='month' 시 Lifecycle/Sourcing 상단 (위젯 표시는 모두 유지, order만 변경)
+- **선택 추가**: EventTimeline 자체 fetch SWR 검토 / 다른 페이지 위젯 SWR 확장 / 시각 디테일 2차 (mascot SVG 자산 추가 시 텍스트 → SVG 인라인 교체)
+
+### 적용된 작업원칙
+- **21**: 사전 점검 (시작 + 재시작 모두 수행)
+- **21(h)**: edit_file 에러 응답 시 raw 검증 우선 — SectionHeader 손상 raw 발견 사례
+- **22**: Chrome MCP 라이브 검증 6항목 — API 200 응답으로 종결 안 함
+- **23**: 컨텍스트 한계 끊김 후 재시작 시 가정/실제 일치 여부 정직 보고
+- **24**: 본 세션 commit + push 한 turn 안에 묶음
+- **25**: 한글 깨짐 발견 시 NFC 수동 정규화 금지 → git restore + write_file 직접 입력
+- **26**: 손상 케이스 일반화 → A2b 인계 메시지 작업원칙 21(g)에 패턴 명시
+- **27**: 기능 0개 삭제 — 12개 위젯 + 빠른 작업 + EventTimeline + 4섹션 + 모드 토글 + KkottiBriefing + 4섹션 mascot pill 모두 보존
+
+---
+
 ## 2026-05-04 세션 — A1b 검증 회수 + A2 인계 메시지 페르소나/유의사항 통합 ✅
 
 ### 세션 성격

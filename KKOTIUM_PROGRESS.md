@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-04 (워크플로우 재설계 Sprint Part A1b 완료 ✅ + A2 인계 메시지 페르소나/유의사항 통합 ✅ / 다음: 새 채팅에서 Part A2 — CompetitionMonitor + ProductLifecycle SWR + 시각 디테일)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit (A2 인계 메시지 페르소나/유의사항 통합 + 본 세션 검증 회수 기록)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a 완료 ✅ + Part A1b 완료 ✅**
-> **다음 작업: 워크플로우 재설계 Sprint Part A2 — CompetitionMonitor + ProductLifecycle SWR 마이그레이션 + 4섹션 시각 디테일 강화 (variant prop 활용 mascot 통합) — 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
+> 최종 업데이트: 2026-05-04 (워크플로우 재설계 Sprint Part A2a 완료 ✅ — Competition/Lifecycle SWR + SectionHeader mascot pill + 라이브 검증 6항목 통과 / 다음: 새 채팅에서 Part A2b — 모드별 위젯 정렬 + 추가 위젯 SWR 후보)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit (A2a — Competition/Lifecycle SWR 마이그레이션 + SectionHeader mascot pill 통합)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a 완료 ✅**
+> **다음 작업: 워크플로우 재설계 Sprint Part A2b — 모드별 위젯 정렬 (mode=week 시 DataLab/Competition 상단, mode=month 시 Lifecycle/Sourcing 상단) + 추가 위젯 SWR 후보 (Sourcing/EventTimeline) — 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -10,6 +10,69 @@
 >   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
 >   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
 >   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
+
+## 2026-05-04 세션 요약 — 워크플로우 재설계 Sprint Part A2a 완료 (Competition/Lifecycle SWR + SectionHeader mascot pill) ✅
+
+### 본 세션 성격
+- 직전 세션 commit `9b8a55a` (A2 인계 메시지 페르소나/유의사항 통합) 후 본 세션에서 **A2 신규 작업** 진행. 꽃졔님 승인 — 안전 분할 (A2a 단계 1+2+4 검증+5 인계 / A2b 단계 3 모드정렬), Competition cadence 5분, SectionHeader 시각 디테일은 face + accessory 라벨 텍스트.
+- 단계 1 + 2 코드 변경 후 컨텍스트 한계로 한 번 끊김 → 재시작 시 작업원칙 21(h) 적용으로 working tree raw 검증부터 진행 → 단계 1 결과 3개 정상 / SectionHeader 한글 깨짐 2곳 (`'꿃잎 채직'` `'분수대 대스'`) 발견 → 작업원칙 25번대로 git restore + write_file 재작성으로 복구 → 라이브 검증 통과 후 본 세션 마무리.
+
+### 변경된 파일 (4개)
+| 파일 | diff | 핵심 |
+|------|------|------|
+| `src/lib/hooks/useDashboardData.ts` | +70 | `useCompetitionMonitor()` 신설 (5분 cadence, refresh + scan POST 패턴) + `useProductLifecycle()` 신설 (60s cadence, refresh) |
+| `src/components/dashboard/CompetitionMonitorWidget.tsx` | +47/-28 | 자체 useState/useEffect/useCallback fetch → `useCompetitionMonitor()` 훅 + `refresh()` 호출, scan POST 후 refresh |
+| `src/components/dashboard/ProductLifecycleWidget.tsx` | +31/-20 | 자체 fetch → `useProductLifecycle()` 훅 + 새로고침 버튼 `refresh()` 호출 |
+| `src/components/dashboard/layout/SectionHeader.tsx` | +86/-1 | reserved `_variant` prop 활성화 → `KKOTTI_VARIANTS` accessory + `KKOTTI_FACE` 9단계 활용한 mascot pill 표시 (face + accessory 라벨, aria-label 포함) |
+
+### 4섹션 mascot pill 매핑 (라이브 검증 결과)
+| Section | variant | face | accessory | aria-label |
+|---------|---------|------|-----------|-----------|
+| today   | gardener   | `^_^`    | 물조리개      | "정원 관리인 모드, 물조리개" |
+| action  | hunter     | `^ㅂ^`   | 하트총        | "키워드 사냥꾼 모드, 하트총" |
+| market  | hunter     | `^ㅂ^`   | 하트총        | (variant override 정상 동작) |
+| tools   | celebrator | `✿ㅅ✿`  | 분수대 댄스    | "분수대 축하 모드, 분수대 댄스" |
+
+### 한글 깨짐 복구 케이스 (작업원칙 25 사례)
+- 단계 2 작성 중 `'꽃잎 채찍'` → `'꿃잎 채직'`, `'분수대 댄스'` → `'분수대 대스'`로 손상
+- **해결**: NFC 수동 정규화 절대 금지 → write_file로 한글 직접 입력 + raw 검증 (grep EXIT=1 = 손상 0개)
+- **일반화**: edit_file에서 한글 매칭 실패 시 항상 git restore + write_file 패턴
+
+### Chrome MCP 라이브 검증 6항목 (작업원칙 22번 강제) — 100% 통과
+| # | 검증 항목 | 결과 |
+|---|----------|------|
+| 1 | Lifecycle SWR fetch | ✅ refresh 클릭 → `/api/product-lifecycle` GET 200 |
+| 2 | Competition SWR (5min dedup) | ✅ `/api/competition` dedup 윈도우 내 절약 (의도된 SWR 효율) |
+| 3 | DRAFT 8개 75점 회귀 | ✅ 50/60/70/76/80/84/86/92 모두 검출 (옵션 C+D+E Part 1 + A1b 결과 보존) |
+| 4 | revalidateOnFocus auto-fetch | ✅ blur+focus 후 60s profile API 5개 자동 fetch (Sidebar/dashboard-stats/profitability/DRAFT/products) |
+| 5 | 4섹션 mascot pill | ✅ today=^_^/물조리개, action=^ㅂ^/하트총, market=^ㅂ^/하트총, tools=✿ㅅ✿/분수대 댄스 |
+| 6 | 기능 0개 삭제 (작업원칙 27) | ✅ KkottiBriefing + 12 위젯 + 빠른 작업 + EventTimeline 모두 보존 |
+
+### 사전 점검 결과 (작업원칙 21)
+- HEAD ↔ origin/main: `9b8a55a` 동기화 ✅
+- TSC: 0 errors ✅ (시작/중간/종료 모두)
+- working tree: clean (시작) → dirty 4 (작업 중) → clean (commit 후) ✅
+- dev server: HTTP 200 ✅
+
+### 본 세션 commit 예정
+- 4개 파일 변경 (185 insertions / 49 deletions)
+- commit 메시지: `feat(workflow-redesign A2a): Competition/Lifecycle SWR 마이그레이션 + SectionHeader mascot pill 통합`
+- push 후 origin/main 동기화 확인
+
+### A2b (다음 Sprint) 인계 범위
+- **단계 3 모드별 위젯 정렬**: `dashboard/page.tsx` Section 3 grid 정렬 변경 — `mode==='week'` 시 DataLab/Competition 상단, `mode==='month'` 시 Lifecycle/Sourcing 상단 (위젯 표시는 모두 유지, order만 변경)
+- **추가 위젯 SWR 후보** (선택): SourcingRecommendWidget은 이미 옵션 E Part 1에서 SWR 마이그레이션 완료 / EventTimeline 자체 fetch 검토 / 기타 정원 창고/검색 조련사 페이지 위젯 SWR 확장
+- **시각 디테일 2차** (장기): 현재는 face + accessory 라벨 텍스트 — 향후 디자이너가 직접 그린 SVG 자산 추가 시 텍스트 → SVG 인라인 교체 예정 (Part A3+ 후보)
+
+### 적용된 작업원칙
+- **21**: 사전 점검 (git/dev/TSC/HEAD-origin/working tree) — 시작 + 재시작 모두 수행
+- **21(h)**: edit_file 에러 응답 시 raw 검증 우선 — SectionHeader 손상 raw 발견 사례
+- **22**: Chrome MCP 라이브 검증 6항목 — API 200 응답으로 종결 안 함
+- **23**: 컨텍스트 한계 끊김 후 재시작 시 가정/실제 일치 여부 정직 보고
+- **24**: 본 세션 commit + push 한 turn 안에 묶음
+- **25**: 한글 깨짐 손상 발견 시 NFC 수동 정규화 금지 → git restore + write_file 한글 직접 입력
+- **26**: 손상 케이스를 일반화 → 한글 직접 입력 패턴 강제
+- **27**: 기능 0개 삭제 — 12개 위젯 + 빠른 작업 + EventTimeline + 4섹션 + 모드 토글 + KkottiBriefing 모두 보존
 
 ## 2026-05-04 세션 요약 — 워크플로우 재설계 Sprint Part A1b 완료 (대시보드 재구성 + 통합 + 라이브 검증) ✅
 

@@ -449,6 +449,76 @@ export function useUploadReadiness<T = UploadReadinessApiResponse>(options?: {
   };
 }
 
+// ============================================================================
+// WORKFLOW REDESIGN Part A2 (2026-05-04) — Competition + Lifecycle hooks
+// Two more dashboard widgets migrate from inline fetch to shared SWR layer.
+//   - Competition Monitor : 5 min cadence (price snapshots — moderate freshness)
+//   - Product Lifecycle   : 60s cadence (DRAFT churn equivalent — high freshness)
+// Both expose refresh() so the existing manual scan / reload buttons keep
+// working without behavior change.
+// ============================================================================
+
+// ─── 10. Competition Monitor (5 min cadence) ────────────────────────────────
+// The /api/competition route serves both GET (snapshot list) and POST (full
+// scan). The widget calls refresh() after a successful POST to immediately
+// reflect the freshly scanned data.
+//
+// Loose typing — the API response shape is owned by CompetitionMonitorWidget.
+// We pass it through unchanged so the widget keeps its own domain types.
+type CompetitionApiResponse = unknown;
+
+export function useCompetitionMonitor<T = CompetitionApiResponse>(): {
+  data: T | null;
+  isLoading: boolean;
+  isValidating: boolean;
+  error: string | null;
+  /** Force a re-fetch (use after POST /api/competition). */
+  refresh: () => void;
+} {
+  const { data, isLoading, isValidating, mutate, error: swrError } = useSWR<T>(
+    '/api/competition',
+    jsonFetcher,
+    SWR_PROFILE_5MIN,
+  );
+
+  // Surface network error as a string for the widget's existing error UI.
+  const networkError = swrError ? 'Network error' : null;
+
+  return {
+    data: data ?? null,
+    isLoading,
+    isValidating,
+    error: networkError,
+    refresh: () => { void mutate(); },
+  };
+}
+
+// ─── 11. Product Lifecycle (60s cadence — DRAFT churn equivalent) ───────────
+// The /api/product-lifecycle route serves stage distribution + per-product
+// zombie risk. 60s matches the Sidebar / Profitability / DRAFT readiness
+// cadence so the dashboard's "freshness floor" is uniform.
+type ProductLifecycleApiResponse = unknown;
+
+export function useProductLifecycle<T = ProductLifecycleApiResponse>(): {
+  data: T | null;
+  isLoading: boolean;
+  isValidating: boolean;
+  refresh: () => void;
+} {
+  const { data, isLoading, isValidating, mutate } = useSWR<T>(
+    '/api/product-lifecycle',
+    jsonFetcher,
+    DASHBOARD_SWR_DEFAULTS,
+  );
+
+  return {
+    data: data ?? null,
+    isLoading,
+    isValidating,
+    refresh: () => { void mutate(); },
+  };
+}
+
 // ─── 9. Dashboard Stats (workflow redesign Part A1a — 60s cadence) ──────────
 // Replaces the inline `loadStats` fetch in src/app/dashboard/page.tsx so the
 // dashboard parent (which feeds props to four child widgets) participates in

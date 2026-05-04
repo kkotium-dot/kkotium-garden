@@ -4,12 +4,13 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   TrendingUp, TrendingDown, RefreshCw, AlertTriangle,
   Eye, ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Minus,
   Shield,
 } from 'lucide-react';
+import { useCompetitionMonitor } from '@/lib/hooks/useDashboardData';
 
 interface CompetitorItem {
   title: string;
@@ -148,46 +149,42 @@ function EntryBarrierBar({ score, level }: { score: number; level: 'LOW' | 'MEDI
 }
 
 export default function CompetitionMonitorWidget() {
-  const [data, setData] = useState<MonitorData | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Workflow Redesign Part A2 (2026-05-04): SWR migration.
+  // Replaces inline useState + useEffect + useCallback fetch with the shared
+  // 5-min-cadence hook so this widget participates in the dashboard's
+  // unified SWR layer (revalidateOnFocus, dedup, polling).
+  const { data, isLoading: loading, error: networkError, refresh } =
+    useCompetitionMonitor<MonitorData>();
+
+  // POST scan still owns its own loading state (different from the SWR
+  // background revalidation) plus its own error message.
   const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/competition');
-      const json = await res.json();
-      if (json.success) setData(json);
-      else setError(json.error ?? 'Failed to fetch');
-    } catch {
-      setError('Network error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleScan = async () => {
     setScanning(true);
-    setError(null);
+    setScanError(null);
     try {
       const res = await fetch('/api/competition', { method: 'POST' });
       const json = await res.json();
       if (json.success) {
-        await fetchData();
+        // Trigger SWR revalidation so the freshly scanned snapshots show up
+        // immediately without waiting for the next 5-minute interval.
+        refresh();
       } else {
-        setError(json.error ?? 'Scan failed');
+        setScanError(json.error ?? 'Scan failed');
       }
     } catch {
-      setError('Scan failed');
+      setScanError('Scan failed');
     } finally {
       setScanning(false);
     }
   };
+
+  // Surface network error from SWR OR the local POST error — both share UI.
+  const error = scanError ?? networkError;
 
   return (
     <div style={{
