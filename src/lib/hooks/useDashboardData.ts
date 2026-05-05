@@ -143,45 +143,85 @@ export function useProfitability(): {
   };
 }
 
-// ─── 3. Products list (for DailyPlanWidget) ─────────────────────────────────
+// ─── 3. Products list (for DailyPlanWidget + Garden Warehouse page) ─────────
 // Conditional fetch: when the parent already passes products via props the
 // widget should NOT trigger a network request. SWR honours `key === null` by
 // skipping the fetch entirely, which is exactly what we need.
+//
+// PART A3-3b (2026-05-05) — generic strengthening so the Garden Warehouse
+// page (products/page.tsx) can narrow `rawProducts` to its strict `Product[]`
+// type without forcing every other caller to adopt the strict shape. Existing
+// callers (dashboard/page.tsx, DailyPlanWidget.tsx) keep `unknown[]` via the
+// default generic, so they are not affected by this change.
+//
+// New surface (additive, all opt-in for migration):
+//   - generic `<T = unknown[]>` for caller-side narrowing
+//   - `isValidating` for parity with peer hooks (Profitability, NaverSeoProducts...)
+//   - `error: string | null` so consumers can drop manual try/catch + setError state
+//   - `setRawProducts(updater)` to mutate the SWR cache for optimistic updates
+//     without forcing a refetch (used by inline-edit, status toggle, bulk status)
 
 // The shape returned by /api/products is loose (partial server-side schema),
-// so we keep the type as `unknown[]` and let the widget normalize it. This
-// matches the widget's existing `.map((p: any) => ...)` normalization.
+// so we keep the inner type as `unknown[]` and let the widget/page normalize
+// it. The generic `T` only narrows what consumers see — internally the SWR
+// cache still holds the full RawProductsApiResponse envelope.
 type RawProductsApiResponse = {
   products?: unknown[];
   data?: unknown[];
 };
 
-export function useProductsList(options?: {
+export function useProductsList<T = unknown[]>(options?: {
   /** Skip the SWR fetch entirely (e.g. parent provides products). */
   enabled?: boolean;
   /** Override the limit query param. Default: 200. */
   limit?: number;
 }): {
-  rawProducts: unknown[] | null;
+  rawProducts: T | null;
   isLoading: boolean;
+  isValidating: boolean;
+  error: string | null;
+  /** Force a re-fetch (e.g. after DELETE / POST /api/products). */
   refresh: () => void;
+  /** Optimistically update the cached list without triggering a network refetch. */
+  setRawProducts: (updater: (prev: T) => T) => void;
 } {
   const enabled = options?.enabled ?? true;
   const limit = options?.limit ?? 200;
   const key = enabled ? `/api/products?limit=${limit}` : null;
 
-  const { data, isLoading, mutate } = useSWR<RawProductsApiResponse>(
+  const { data, isLoading, isValidating, mutate, error: swrError } = useSWR<RawProductsApiResponse>(
     key,
     jsonFetcher,
     DASHBOARD_SWR_DEFAULTS,
   );
 
-  const rawProducts = data ? ((data.products ?? data.data ?? []) as unknown[]) : null;
+  const rawProducts = data
+    ? ((data.products ?? data.data ?? []) as unknown as T)
+    : null;
+
+  const errorMsg: string | null = swrError
+    ? (swrError instanceof Error ? swrError.message : 'Unknown error')
+    : null;
 
   return {
     rawProducts,
     isLoading,
+    isValidating,
+    error: errorMsg,
     refresh: () => { void mutate(); },
+    setRawProducts: (updater) => {
+      void mutate((current) => {
+        // Pull the current list out of the response envelope, run the caller's
+        // updater against the narrow type, then write the result back into the
+        // `products` field. Consumers always read `products ?? data ?? []` so
+        // this is sufficient regardless of which field the server populated.
+        const currentList = current
+          ? ((current.products ?? current.data ?? []) as unknown as T)
+          : ([] as unknown as T);
+        const next = updater(currentList);
+        return { ...(current ?? {}), products: next as unknown as unknown[] };
+      }, { revalidate: false });
+    },
   };
 }
 

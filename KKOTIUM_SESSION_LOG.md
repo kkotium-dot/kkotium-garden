@@ -9,6 +9,74 @@
 
 ---
 
+## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-3b 완료 (정원 창고 SWR 마이그레이션) ✅
+
+### 본 세션 성격
+- 직전 commit `f7ec92a` (A3-3a) 이후 본 세션에서 **Part A3-3b 신규 작업** 진행. **이어받기 세션** — 직전 채팅에서 단계 1~5 완료(코드 수정 + TSC + Chrome MCP 검증) 후 단계 6 MD 갱신 직전 컨텍스트 한계로 중단 → 본 세션에서 git status 확인 결과 working tree에 변경사항 그대로 보존(`M src/app/products/page.tsx`, `M src/lib/hooks/useDashboardData.ts`, +72/-27) → 단계 6부터 이어서 진행.
+- 꽃졔님 지시 — "A3-3 단독 분할 결정에 따른 후속 단계 — 정원 창고 SWR 마이그를 단독 진행". A3-3a + A3-3b로 페이지 SWR 확장 2/2 완료.
+- 작업원칙 (m) 이어받기 강화 + 작업원칙 (o) MD 한글 직접 입력 + 작업원칙 27 기능 0개 삭제 모두 준수.
+
+### 단계별 진행 (단계 1~5는 직전 채팅에서 완료, 본 세션은 단계 6~7만)
+
+**[단계 1] 사전 점검 (직전 채팅 완료, 본 세션 재확인)**
+- HEAD `f7ec92a` = origin/main 동기화, working tree에 본 세션 변경 2개 보존
+- dev :3000 HTTP 200 정상
+- MD 3종 라인 정상
+
+**[단계 2] `useProductsList` 강화 (직전 채팅 완료)**
+- `src/lib/hooks/useDashboardData.ts` (+54줄 일부): 제네릭 `<T = unknown[]>(...)` 추가 (호출처 0영향 보장 — `dashboard/page.tsx:362` + `DailyPlanWidget.tsx:254` 둘 다 기본값 `unknown[]` 의존)
+- `setRawProducts(updater)` 신설 — SWR cache mutate로 optimistic update 지원 (page.tsx의 L915/L928/L943 setRaw 3곳 호환)
+- `error: string | null` + `isValidating` 노출 (`useNaverSeoProducts` 패턴 일관성)
+- `DASHBOARD_SWR_DEFAULTS` 60s revalidate 적용 (다른 13개 훅과 동일)
+
+**[단계 3] `products/page.tsx` 마이그 (직전 채팅 완료)**
+- useState 3개 제거 (`raw`/`loading`/`error`) → SWR 훅 호출로 교체
+- `fetchProducts` useCallback + 첫 useEffect 제거 → SWR 자동 fetch + alias `refresh: fetchProducts` (L852/L907/L1314/L1335 호출처 0줄 변경)
+- L915/L928/L943 `setRaw` → `setRawProducts` rename (optimistic update 보존)
+- `raw = useMemo(() => rawProducts ?? [], [rawProducts])` 호환 레이어
+- import에서 `useCallback` 제거 (사용처 0개 — fetchProducts에서만 사용했음)
+- 액션성 fetch 보존 (작업원칙 27): register / shipping-templates / naver/excel / naver/products/sync / DELETE / PATCH × 3 — 쓰기라 SWR 대상 아님
+- UI/렌더 0줄 변경, 호출처 코드 변경 0줄
+- diff 통계: `products/page.tsx` +45/-... ≈ 1352 → 약 1330줄로 정리 (정확 +18 -27 = -9 net)
+
+**[단계 4] TSC 검증 (직전 채팅 완료)**
+- `npx tsc --noEmit` → **0 errors** 통과
+
+**[단계 5] Chrome MCP 라이브 검증 5항목 (직전 채팅 완료)**
+- `/products` 페이지 렌더링 정상 — 8개 상품, 탭 카운트(전체 8 / 임시저장 8), 점수/준비도 모두 정상
+- 회귀 `/dashboard` — `useProductsList` 호출 2곳(dashboard/page + DailyPlanWidget) 모두 정상
+- 회귀 `/naver-seo` — A3-3a SWR도 회귀 OK
+- HTTP 레벨 검증: `/products` 200 / `/api/products?limit=5` 200 (8 products, keys: success/products/total — 훅과 호환) / `/dashboard` 200 / `/naver-seo` 200
+
+**[단계 6] MD 갱신 + commit + push (본 세션 — 이어받기 핵심)**
+- PROGRESS/ROADMAP/SESSION_LOG 갱신 (본 세션 중)
+- diff 통계 최종: `src/app/products/page.tsx` 45 lines / `src/lib/hooks/useDashboardData.ts` 54 lines (+72 / -27)
+- commit 메시지(단일 라인): `feat(workflow-redesign A3-3b): 정원 창고 SWR 마이그레이션 — useProductsList 제네릭<T> + setRawProducts(updater) + error/isValidating 노출 + 자체 fetch 제거 (페이지 SWR 확장 2/2 완료)`
+
+**[단계 7] A3-4 후보 인계 메시지 작성 (본 세션)**
+- A3-4 후보: mascot SVG 위젯 / 한달리뷰 / NaverSeoProductTable row-level fetch (`market-analysis`, `keyword-stats`)
+- 답변 마지막에 코드 블록으로 명시
+
+### 훅 카운트 (확장만, 신규 없음)
+- **합계**: 14개 (A3-2 13개 + A3-3a +1 / A3-3b는 기존 `useProductsList` 강화만 — 제네릭/error/setRawProducts 추가)
+
+### A3-3a + A3-3b 페이지 SWR 확장 2/2 완료 ✅
+| Part | 파일 | 변경 | 결과 |
+|---|---|---|---|
+| A3-3a | `naver-seo/page.tsx` | -41줄, 14번째 훅 신설 | 검색 조련사 SWR 마이그 ✅ |
+| A3-3b | `products/page.tsx` | -9 net, 기존 훅 강화 | 정원 창고 SWR 마이그 ✅ |
+
+### 학습 — 이어받기 세션 안전 패턴
+- **(o) MD 한글 직접 입력 — 정규화 절대 금지**: edit_file에서 한글 매칭 실패해도 Python NFC 정규화 시도 금지. git restore + write_file로 한글 직접 입력. 본 세션에서는 SESSION_LOG 헤더 한 줄 매칭이라 깔끔.
+- **(m) 이어받기 사전 점검**: 직전 채팅이 commit 직전 중단된 경우 git status로 working tree 보존 확인 → 그대로 단계 6 진입. 새로 코드 재작성 절대 금지(중복 작업 사고 위험).
+- **메모리 #26 4분 hang 확장**: 세션 시작부터 iterm/Filesystem 양쪽 모두 4분 hang 시 → 같은 도구 재시도 금지 + Claude Desktop 재시작 요청. 작업 시작 전 반드시 정직 보고.
+
+### A3-4 인계 범위 (다음 채팅)
+- **A3-4 후보**: mascot SVG 위젯 (대시보드 4섹션 mascot pill 강화) / 한달리뷰 (E-2C 잔여 — 검토 필요) / NaverSeoProductTable row-level fetch (`market-analysis`, `keyword-stats`) — 행별 동적 query라 useSWR 직접 사용이 더 적합
+- 작업원칙 27 (기능 0개 삭제) 그대로 유지 — A3-4도 마이그/강화 위주
+
+---
+
 ## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-3a 완료 (검색 조련사 SWR 마이그레이션) ✅
 
 ### 본 세션 성격

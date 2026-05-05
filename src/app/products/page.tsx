@@ -2,7 +2,7 @@
 // /products — Garden Warehouse v6
 // P2-1: supplier grouping, shipping badge, margin warning, bulk float menu, upload readiness filter
 
-import { Suspense, useState, useEffect, useMemo, useCallback } from 'react';
+import { Suspense, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -17,6 +17,7 @@ import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
 import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
+import { useProductsList } from '@/lib/hooks/useDashboardData';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -757,9 +758,22 @@ function ApplyTemplateModal({
 
 function ProductsPageInner() {
   const searchParams                              = useSearchParams();
-  const [raw, setRaw]                         = useState<Product[]>([]);
-  const [loading, setLoading]                 = useState(true);
-  const [error, setError]                     = useState<string | null>(null);
+  // PART A3-3b (2026-05-05) — migrated self-fetch path to useProductsList()
+  // shared SWR hook. The local useState({raw, loading, error}) + useCallback
+  // (fetchProducts) + useEffect bootstrap are all replaced by destructuring
+  // below. `fetchProducts` is preserved as an alias for `refresh` so the 3
+  // call sites (refresh button, NaverRegisterModal onSuccess, sync handler)
+  // and the 2 supplier-filter helpers do not need to change.
+  const {
+    rawProducts,
+    isLoading: loading,
+    error,
+    refresh: fetchProducts,
+    setRawProducts,
+  } = useProductsList<Product[]>({ limit: 500 });
+  // Stable empty-array fallback so downstream useMemo dependencies do not
+  // re-fire on every render while the SWR fetch is in flight.
+  const raw = useMemo<Product[]>(() => rawProducts ?? [], [rawProducts]);
   const [tab, setTab]                         = useState<TabKey>('all');
   const [search, setSearch]                   = useState('');
   // supplierFilter: pre-populated from ?supplier= URL param (거래처 명단 연결)
@@ -806,19 +820,10 @@ function ProductsPageInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [excelPending]);
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
-      const res = await fetch('/api/products?limit=500');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setRaw(data.products ?? []);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
-    } finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  // PART A3-3b: fetchProducts is now an alias for the SWR hook's `refresh()`
+  // (declared at the top of this component). The previous useCallback +
+  // bootstrap useEffect are no longer needed — SWR auto-fetches on mount
+  // and revalidates on focus per DASHBOARD_SWR_DEFAULTS.
 
   // E-14: Auto-select product from dashboard "Upload Readiness Center" deep-link (?registerId=...)
   // When the user clicks "바로 등록" on a 90+ point DRAFT card, this opens NaverRegisterModal preselected
@@ -912,7 +917,7 @@ function ProductsPageInner() {
     const next: Record<string, string> = { ACTIVE: 'OUT_OF_STOCK', OUT_OF_STOCK: 'INACTIVE', INACTIVE: 'ACTIVE', DRAFT: 'ACTIVE', HIDDEN: 'ACTIVE' };
     const newStatus = next[product.status] ?? 'ACTIVE';
     await fetch(`/api/products/${product.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
-    setRaw(prev => prev.map(p => p.id === product.id ? { ...p, status: newStatus } : p));
+    setRawProducts(prev => prev.map(p => p.id === product.id ? { ...p, status: newStatus } : p));
   };
 
   // Bulk status change for selected products
@@ -925,7 +930,7 @@ function ProductsPageInner() {
         body: JSON.stringify({ status }),
       })
     ));
-    setRaw(prev => prev.map(p => selected.has(p.id) ? { ...p, status } : p));
+    setRawProducts(prev => prev.map(p => selected.has(p.id) ? { ...p, status } : p));
     setSelected(new Set());
   };
 
@@ -940,7 +945,7 @@ function ProductsPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [inlineEdit.field]: num }),
       });
-      setRaw(prev => prev.map(p => p.id === inlineEdit.id ? { ...p, [inlineEdit.field]: num } : p));
+      setRawProducts(prev => prev.map(p => p.id === inlineEdit.id ? { ...p, [inlineEdit.field]: num } : p));
     } catch { /* non-critical */ }
     setInlineEdit(null);
   };
