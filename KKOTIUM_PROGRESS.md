@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A3-2 완료 ✅ — EventTimeline SWR 마이그 + 13번째 훅 useEventTimeline 신설 + Chrome MCP 5항목 라이브 검증 통과 / 다음: 새 채팅에서 Part A3-3 — 다른 페이지 SWR 확장 (정원 창고/검색 조련사) 추천)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit (A3-2 — EventTimeline SWR 마이그)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 + Part A3-1b UI 완료 ✅ (구매확정 리마인더 MVP 100% 완성) + Part A3-2 EventTimeline SWR 마이그 완료 ✅ (대시보드 13개 훅 SWR 통일)**
-> **다음 작업: 워크플로우 재설계 Sprint Part A3-3 — 자체 판단 추천: 2번 다른 페이지 SWR 확장 (정원 창고 또는 검색 조련사 — 페이지별 분석 후 단독/묶음 결정). 그 외 후보: 3번 mascot SVG 자산 통합, 4번 (보너스) 한달사용 리뷰 2단계 가이드 — 모두 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (Part A3-3)" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
+> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A3-3a 완료 ✅ — 검색 조련사(/naver-seo) SWR 마이그 + 14번째 훅 useNaverSeoProducts 신설 + Chrome MCP 5항목 라이브 검증 통과 / 다음: 새 채팅에서 Part A3-3b — 정원 창고(/products) SWR 마이그 (`useProductsList({ limit: 500 })` 기존 훅 활용))
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit (A3-3a — naver-seo SWR 마이그)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 + Part A3-1b UI 완료 ✅ (구매확정 리마인더 MVP 100% 완성) + Part A3-2 EventTimeline SWR 마이그 완료 ✅ + Part A3-3a 검색 조련사 SWR 마이그 완료 ✅ (페이지 SWR 확장 1/2 — 다음 A3-3b 정원 창고)**
+> **다음 작업: 워크플로우 재설계 Sprint Part A3-3b — 정원 창고(/products) SWR 마이그. 기존 `useProductsList({ limit: 500 })` 훅 활용 + 제네릭 타입 강화 (호환성 유지) + 자체 fetch 제거. 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (Part A3-3b)" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -10,6 +10,64 @@
 >   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
 >   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
 >   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
+
+## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-3a 완료 (검색 조련사 SWR 마이그레이션) ✅
+
+### 본 세션 성격
+- 직전 commit `df75068` (A3-2) 이후 본 세션에서 **Part A3-3a 신규 작업** 진행. 이어받기 세션 (직전 채팅에서 단계 4 완료 후 단계 5 라이브 검증 중단됨 → 본 세션에서 검증 완료).
+- 꽃졔님 지시 — "옵션 A 승인. 컨텍스트 안전 최우선으로 검색 조련사(/naver-seo) 마이그를 단독 진행". A3-3을 a/b 두 채팅으로 분할: A3-3a = 검색 조련사 (본 세션), A3-3b = 정원 창고 (다음 채팅).
+
+### 변경된 파일 (2개)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `src/lib/hooks/useDashboardData.ts` | EDIT (+104줄, 14번째 훅) | `useNaverSeoProducts({ filter, searchQuery, presetIds })` 훅 추가 — 동적 SWR key (3개 매개변수 → URLSearchParams) + strict typing (`NaverSeoProductApiItem` interface export, 23개 필드) + `DASHBOARD_SWR_DEFAULTS` 60s cadence + `error` 메시지 surface + `refresh()` 노출. `useDataLabTrend(period)` 동적 key 패턴 차용. |
+| `src/app/naver-seo/page.tsx` | EDIT (-41줄, 365 → 324) | `useState`/`useEffect`/`fetchProducts` trio 제거 + `import { useNaverSeoProducts, type NaverSeoProductApiItem as Product }` (alias 트릭으로 Product type 사용 코드 0줄 변경) + `refresh: fetchProducts` alias (5곳 호출 위치 변경 0줄). UI/렌더 0 변경. |
+
+### 안전 분할 결정 (본 세션 핵심 학습)
+- **분석 결과**: 정원 창고 메인 fetch 1개 + 검색 조련사 메인 fetch 1개 = 안전 마진 충족 (작업원칙 22 "페이지당 3개+ 발견 시 분할" 미적용 영역).
+- **그러나** 꽃졔님이 컨텍스트 안전 최우선으로 단독 분할 결정 → A3-3a (본 세션) + A3-3b (다음 채팅) 2회로 진행. 현실적으로 본 세션은 단계 3에서 deferred 도구 중복 적용 사고 발생(즉시 git restore 복구) → 분할의 정당성 입증.
+
+### 단계 3 사고: deferred 도구 중복 적용 (정직 보고 + 복구)
+- **사고**: 첫 호출 `filesystem:edit_file`(소문자)이 deferred error 응답을 보냈으나 실제로 파일에 적용됨. 두 번째 호출 `Filesystem:edit_file`(대문자)이 첫 추가분 끝부분의 매칭 패턴을 다시 찾아 또 추가 → `useNaverSeoProducts` 중복 정의 발생.
+- **즉각 원인**: 다른 namespace의 동일 도구(소문자 vs 대문자)가 모두 deferred였는데, 첫 호출이 에러 응답을 받아도 파일에는 적용. 두 번째 호출의 `oldText`가 첫 호출이 만든 새 라인과 매칭됨.
+- **일반화 원인 (작업원칙 26번 적용)**: deferred 도구 첫 호출 에러 시 `head/wc/grep`로 raw 상태 검증을 건너뛰면 중복 작업 위험.
+- **복구**: `git restore src/lib/hooks/useDashboardData.ts` → 다시 한 번만 추가 → raw 검증(`wc -l 789`, `grep -c "^export function" 14`, `grep -c "useNaverSeoProducts" 1`) 통과.
+- **본 사고가 영구 기록한 학습**: deferred 도구는 namespace 중복 시 첫 호출이 "에러 응답이지만 적용" 상태가 가능 — edit 후 즉시 raw 검증을 작업원칙 (h)로 강제.
+
+### Chrome MCP 라이브 검증 5항목 (작업원칙 #22)
+| # | 항목 | 결과 |
+|---|---|---|
+| 1 | 대시보드 4섹션 mascot pill 회귀 | ✅ ^_^/^ㅂ^×2/✿ㅅ✿ 모두 보존 + EventTimeline 2건 + ConfirmationReminderWidget + UploadReadiness 75점 회귀 |
+| 2 | 검색 조련사 페이지 정상 로드 | ✅ 8개 상품, 평균 31점, B급 2개(65점/70점), D급 6개(35×2/10×4) 정확 표시 |
+| 3 | searchQuery 동적 SWR key 동작 | ✅ "리본" 입력 → 8 → 2개로 즉시 갱신 (하트 리본 누빔, 리본 포인트 홈웨어 매칭) |
+| 4 | 검색 초기화 → SWR refetch | ✅ "초기화" 버튼 클릭 → 2 → 8개 복귀 (8개 상품 모두 정확 표시) |
+| 5 | refresh 버튼 alias 동작 | ✅ ref_52 RefreshCw 클릭 → mutate() 트리거 + 8개 회귀 정상 |
+
+### API 라이브 검증 (회귀 점검)
+- `curl /api/naver-seo/products?filter=all` → total=8, products=8 ✅
+- `curl /api/naver-seo/products?filter=perfect` → total=0 ✅
+- `curl /api/naver-seo/products?filter=good` → total=0 ✅
+- `curl /api/naver-seo/products?filter=fair` → total=2 ✅
+- `curl /api/naver-seo/products?filter=poor` → total=6 ✅
+- 합계 0+0+2+6=8 = filter=all 8개와 정확 일치 (filter band 분포 검증 완료)
+
+### 14개 훅 cadence 매트릭스 (본 세션 후 확정)
+- **60s (DASHBOARD_SWR_DEFAULTS)**: Sidebar / Profitability / ProductsList / UploadReadiness / ProductLifecycle / DashboardStats / **NaverSeoProducts (신규)** — 7개
+- **5min (SWR_PROFILE_5MIN)**: GoodService / ReviewGrowth / CompetitionMonitor / ConfirmationPending / EventTimeline — 5개
+- **24h (SWR_PROFILE_24H)**: DataLabTrend / SourcingRecommend — 2개
+- **합계**: 14개 (A3-2 13개 + A3-3a +1)
+
+### 본 세션 commit
+- 코드 변경: `src/lib/hooks/useDashboardData.ts` (+104줄), `src/app/naver-seo/page.tsx` (-41줄)
+- MD 갱신: PROGRESS + ROADMAP + SESSION_LOG 3종
+- commit 메시지(단일 라인): `feat(workflow-redesign A3-3a): 검색 조련사 SWR 마이그레이션 — useNaverSeoProducts 14번째 훅 신설 (동적 key) + 자체 fetch 제거 + alias 트릭으로 호출처 0변경`
+
+### A3-3b 인계 범위 (다음 채팅)
+- **정원 창고(/products) SWR 마이그**: 메인 fetch `/api/products?limit=500` 1개 → 기존 `useProductsList({ limit: 500 })` 훅 활용 + 제네릭 타입 강화(`<T = unknown[]>` 추가)로 strict typing 옵션 제공. 호출처 무영향 보장.
+- 부수 fetch (액션성 — 마이그레이션 대상 아님): register / shipping-templates / naver/excel / naver/products/sync / DELETE / PATCH × 3 — 그대로 보존.
+- NaverSeoProductTable.tsx의 row-level fetch (market-analysis, keyword-stats)는 작업원칙 27에 따라 A3-4+로 보류.
+
+---
 
 ## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-2 완료 (EventTimeline SWR 마이그레이션) ✅
 
@@ -1604,7 +1662,7 @@ Block B 검증 (`?registerId=`):
 
 ### 2026-04-30 Phase E+ Sprint 6 완료 세션 (E-15 Block A + B — 등록 준비 AI 자동 채우기 백엔드)
 
-**범위**: 웅로드 준비도 11점 체크리스트의 7개는 AI가 자동 채우고, 4개는 셀러 수동으로 명시하는 라이브러리 + API. UI(Block C) + 라이브 검증(Block D)은 컨텍스트 분할로 다음 채팅에서 진행.
+**범위**: 업로드 준비도 11점 체크리스트의 7개는 AI가 자동 채우고, 4개는 셀러 수동으로 명시하는 라이브러리 + API. UI(Block C) + 라이브 검증(Block D)은 컨텍스트 분할로 다음 채팅에서 진행.
 
 **⚠️ 세션 중 발생한 주요 이벤트 (이후 세션 참고 필수)**:
 - 세션 시작 시 첫 git log에서 `0694982 (HEAD -> main, origin/main, origin/HEAD)`로 표시되어 동기화 된 줄 자각 → 실제는 직전 채팅이 Block A (`527e381`) + Block B (`fd31dd4`) commit 경로 push 못한 상태였음

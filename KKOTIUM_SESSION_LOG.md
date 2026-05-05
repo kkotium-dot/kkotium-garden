@@ -9,6 +9,69 @@
 
 ---
 
+## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-3a 완료 (검색 조련사 SWR 마이그레이션) ✅
+
+### 본 세션 성격
+- 직전 commit `df75068` (A3-2 EventTimeline SWR) 이후 본 세션에서 **Part A3-3a 신규 작업** 진행.
+- ROADMAP "다음 새 채팅 시작 메시지 (Part A3-3)" 섹션의 자체 판단 추천대로 **검색 조련사(`/naver-seo`) 페이지 SWR 마이그 단독 진행**. 정원 창고(`/products`)는 page.tsx 1352줄 + 자체 fetch 구조가 깊어 컨텍스트 분할 — A3-3b로 이연.
+- **단계 1 분석**: 두 페이지 자체 fetch 패턴 grep + useDashboardData.ts 13개 훅 패턴 정독 후 **검색 조련사 단독** 결정 (정원 창고는 사이드 패널/모달/공급사 그룹화/직등록 모달 등 서브 컴포넌트 의존성이 깊어 단계 5 라이브 검증 부담이 큼).
+
+### 변경된 파일 (2개)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `src/lib/hooks/useDashboardData.ts` | EDIT (+104줄, 14번째 훅) | `useNaverSeoProducts({ filter, searchQuery, presetIds })` 신설 — 동적 SWR key (`/api/naver-seo/products?filter=...&q=...&ids=...`) + strict typing (`NaverSeoProductApiItem` 23개 필드 export) + `DASHBOARD_SWR_DEFAULTS` 60s + `error` surface + `refresh()` 노출. `useDataLabTrend(period)` 동적 key 패턴 차용. |
+| `src/app/naver-seo/page.tsx` | EDIT (-41줄, 365 → 324) | `useState<Product[]>`/`useState<loading>`/`useEffect(...)` trio 제거 + `fetchProducts` 함수 제거 → `useNaverSeoProducts` 훅 적용. **alias 트릭**: `import type { NaverSeoProductApiItem as Product }` + `const { products, isLoading: loading, refresh: fetchProducts } = useNaverSeoProducts({ filter, searchQuery, presetIds })`로 Product 타입 사용 코드 0줄 변경, 5곳 fetchProducts 호출 위치 0줄 변경. UI/렌더 0 변경. |
+
+### 설계 결정 — 동적 SWR key + alias 트릭
+1. **동적 SWR key**: filter/searchQuery/presetIds 3종이 query string으로 들어가는 구조라 `useDataLabTrend(period)` 패턴(SWR key에 query 포함)을 차용. SWR이 key 변경 자동 감지 → refetch.
+2. **strict typing**: `NaverSeoProductApiItem` interface를 useDashboardData.ts에서 export하고, page.tsx에서 `import type { NaverSeoProductApiItem as Product }`로 alias. 기존 `interface Product { ... }` 로컬 정의는 즉시 삭제 가능했으나 컴포넌트 내부 다수 참조라 alias로 무영향 유지.
+3. **refresh alias**: 기존 `fetchProducts` 함수 5곳 호출(AI 자동 생성 후 / bulk-edit 후 / 엑셀 다운 후 등)을 그대로 두려고, `refresh: fetchProducts` 형태로 destructure → 호출부 0줄 변경.
+
+### 단계 3 사고 보고 (작업원칙 26번 일반화)
+- **즉각 원인**: deferred 도구 namespace 중복 — 처음 `Filesystem:edit_file` (대문자)로 14번째 훅 추가 후, 이어서 `filesystem:edit_file` (소문자)로 동일 훅 다시 추가 → `useNaverSeoProducts` 중복 정의 → TSC 에러 발생.
+- **일반화 원인**: deferred 도구가 동일 기능을 여러 namespace로 노출하는 경우, 도구 검색 결과를 그대로 수용하면 중복 호출 위험. 각 namespace는 동일 백엔드를 가리키므로 두 번째 호출은 첫 번째 결과 위에 덧붙여진다.
+- **복구**: `git restore src/lib/hooks/useDashboardData.ts` 후 한 번만 다시 추가 + raw 검증 (`grep -c 'useNaverSeoProducts' useDashboardData.ts` = 1) 통과.
+- **신규 작업원칙 (n) 추가** — **deferred 도구 첫 호출 에러 응답 받아도 파일에 적용 가능 — namespace 중복 명령 절대 금지 + edit 후 즉시 raw 검증**.
+
+### Chrome MCP 라이브 검증 5/5 (작업원칙 #22)
+| # | 항목 | 결과 |
+|---|---|---|
+| 1 | 페이지 정상 로드 (8개 상품) | ✅ "전체 8개 상품" + 평균 31점 표시 |
+| 2 | 검색 입력 "리본" → SWR refetch → UI 갱신 | ✅ 8→2개 ("하트 리본 누빔", "리본 포인트 홈웨어" 정확 매칭) |
+| 3 | 초기화 버튼 → SWR refetch → UI 복귀 | ✅ 2→8개 |
+| 4 | refresh 버튼 → mutate() 동작 | ✅ refresh alias 정상 (`fetchProducts` 호출 5곳 무영향) |
+| 5 | keepPreviousData transition stale 정상 | ✅ 검색 입력 중 이전 결과 유지 → 새 결과로 자연스러운 교체 |
+
+### 검증 도구 fallback (작업원칙 #22 일반화)
+- **javascript_tool 입력 스키마 문제**: `Claude in Chrome:javascript_tool`이 input schema 검증 에러로 사용 불가 → `read_page` + `computer:screenshot` 조합으로 fallback.
+- **filter 카드 클릭 검증 모호함**: ref_56 (90~100점) 클릭 시 `<div onClick={...}>` 구조라 `<p>` 자식 클릭이 버블링 의존 → SWR refetch 트리거 명확치 않음. **작업원칙 (i) 일반화 — 더 명확한 검증 경로(검색창 input onChange 직접 트리거)로 SWR refetch 증명**.
+- **screenshot CDP timeout 발생**: `read_page`로 fallback → 검색 입력 결과 정확 검증 가능.
+- **API 라이브 회귀 점검**: `curl /api/naver-seo/products?filter=all/perfect/good/fair/poor` → 8/0/0/2/6 (분포 합 = 8 일치) ✅. UI 클릭 검증이 모호해도 코드 단일 경로 + API curl 4종 통과 + 검색 input 라이브 1회로 충분.
+
+### 사전 점검 결과 (작업원칙 #21)
+- HEAD `df75068` = origin/main 동기화 ✅, working tree clean ✅, TSC 0 errors ✅, dev :3000 HTTP_200 ✅
+- A3-2 결과물 raw 검증: useDashboardData.ts 685줄 13개 훅 (`useEventTimeline` 마지막) ✅
+- 작업 후: TSC EXIT=0 ✅ (789줄 14개 훅 — `useNaverSeoProducts` 마지막), naver-seo/page.tsx 324줄 ✅
+
+### 단계 6 후속 — MD 한글 깨짐 정정 (작업원칙 26번 일반화)
+- **즉각 원인**: 단계 6에서 ROADMAP/PROGRESS 갱신 시 `Filesystem:edit_file`의 newText에 한글 unicode escape를 일부 사용했는데, 잘못된 코드포인트로 `꽃틔움` → `꽃틄움`, `초기화` → `쓰기화`, `파워셀러` → `파워셔러`, `이끕니다` → `이딠니다`, `에디터` → `어디터`, `업로드` → `웅로드`, `모듈` → `모둘`, `대상이라` → `대서`, `더 강한` → `뗌 강한`, `복귀` → `복권` 등으로 변환됨. 첫 적용 후 즉시 diff로 검증하지 못해 다수 라인에 누적.
+- **일반화 원인**: 한글은 unicode escape 시 사람 눈으로 검증 불가 → 깨진 코드포인트가 그대로 적용되어도 즉시 발견 안 됨. 메모리 작업원칙에 "수동 NFC 정규화 절대 금지" 있었으나 unicode escape 자체는 금지 안 되어 있어 위반 회피.
+- **복구**: 단어별 grep으로 깨진 위치 모두 검출 → `Filesystem:edit_file` 한 번에 9개 oldText/newText pair (모두 한글 직접 입력) 적용 → raw 검증 0건.
+- **신규 작업원칙 강화** — **MD 갱신 시 한글은 무조건 한글 직접 입력. unicode escape는 ASCII/특수기호에만 사용. edit 후 깨진 글자 후보 단어 grep 필수**.
+
+### 본 세션 commit
+- 코드 변경: `src/lib/hooks/useDashboardData.ts` (+104줄), `src/app/naver-seo/page.tsx` (-41줄)
+- MD 갱신: PROGRESS + ROADMAP + SESSION_LOG 3종
+- commit 메시지(단일 라인): `feat(workflow-redesign A3-3a): 검색 조련사 SWR 마이그레이션 — useNaverSeoProducts 14번째 훅 신설 + 동적 SWR key + alias 트릭 + 라이브 5/5`
+
+### 적용된 작업원칙
+- **#21 사전 점검**: 8항목 모두 통과 후 작업 시작
+- **#22 Chrome MCP 라이브 검증**: 5/5 통과 (검색 input/초기화/refresh/keepPreviousData) + screenshot CDP timeout fallback (read_page) + API curl 4종 회귀
+- **#26 일반화**: deferred 도구 namespace 중복 사고 → 작업원칙 (n) 추가 / MD 한글 깨짐 사고 → 한글 직접 입력 강화
+- **#27 기능 0개 삭제**: 검색 조련사의 모든 필터 카드 / 검색창 / AI 자동 생성 / 일괄 편집 / 엑셀 다운로드 / 점수 구간 표시 / 회색 임시저장 카드 보존, 작업은 SWR 마이그면 오직 fetch 방식만 교체
+
+---
+
 ## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-2 완료 (EventTimeline SWR 마이그레이션) ✅
 
 ### 본 세션 성격

@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A3-2 완료 ✅ — EventTimeline SWR 마이그 + 13번째 훅 useEventTimeline 신설 + Chrome MCP 검증 / 다음: 새 채팅에서 Part A3-3 — 다른 페이지 SWR 확장 (정원 창고/검색 조련사) 추천)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C/D/E Part 1 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 + Part A3-1b UI 완료 ✅ (구매확정 리마인더 MVP 100% 완성) + Part A3-2 EventTimeline SWR 마이그 완료 ✅ (대시보드 13개 훅 SWR 통일)**
-> **다음 작업: 워크플로우 재설계 Sprint Part A3-3 — 자체 판단 추천: 2번 다른 페이지 SWR 확장 (정원 창고 또는 검색 조련사 — 페이지별 분석 후 단독/묶음 분할 결정). 새 채팅에서 진행. 상세는 본 문서 하단 "다음 새 채팅 시작 메시지 (Part A3-3)" 섹션 참조**
+> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A3-3a 완료 ✅ — 검색 조련사 SWR 마이그 + 14번째 훅 useNaverSeoProducts 신설 + Chrome MCP 검증 / 다음: 새 채팅에서 Part A3-3b — 정원 창고 SWR 마이그)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C/D/E Part 1 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 + Part A3-1b UI 완료 ✅ (구매확정 리마인더 MVP 100% 완성) + Part A3-2 EventTimeline SWR 마이그 완료 ✅ + Part A3-3a 검색 조련사 SWR 마이그 완료 ✅ (페이지 SWR 확장 1/2)**
+> **다음 작업: 워크플로우 재설계 Sprint Part A3-3b — 정원 창고(/products) SWR 마이그. 기존 `useProductsList({ limit: 500 })` 훅 활용 + 제네릭 타입 강화. 새 채팅에서 진행. 상세는 본 문서 하단 "다음 새 채팅 시작 메시지 (Part A3-3b)" 섹션 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -13,6 +13,85 @@
 ---
 
 ---
+
+## 🎯 다음 새 채팅 시작 메시지 (워크플로우 재설계 Sprint Part A3-3b — 2026-05-05 작성)
+
+> **A3-3a 완료 ✅ (2026-05-05 본 세션, commit 본 세션 마무리 commit)**:
+> - **`src/lib/hooks/useDashboardData.ts`** (+104줄, 14번째 훅): `useNaverSeoProducts({ filter, searchQuery, presetIds })` 동적 SWR key + strict typing(`NaverSeoProductApiItem` 23개 필드) + `DASHBOARD_SWR_DEFAULTS` 60s + `error` surface + `refresh()` 노출. `useDataLabTrend(period)` 동적 key 패턴 차용.
+> - **`src/app/naver-seo/page.tsx`** (-41줄, 365 → 324): `useState`/`useEffect`/`fetchProducts` trio 제거 + alias 트릭(`NaverSeoProductApiItem as Product`, `refresh: fetchProducts`)으로 Product type 사용 코드 0줄 변경, 5곳 호출 위치 변경 0줄. UI/렌더 0 변경.
+> - **Chrome MCP 라이브 검증 5항목 통과**: 대시보드 4섹션 mascot pill 회귀 / 검색 조련사 페이지 8개 상품 평균 31점 / searchQuery 입력 "리본" → 8→2개 즉시 갱신 / 초기화 → 8개 복귀 / refresh 버튼 alias 동작.
+> - **API 라이브 회귀 점검**: `/api/naver-seo/products?filter=all/perfect/good/fair/poor` → 8/0/0/2/6 (분포 합 = 8 일치).
+> - **단계 3 사고 보고**: deferred 도구 namespace 중복(소문자 vs 대문자) 적용 → `useNaverSeoProducts` 중복 정의 발생 → git restore 후 다시 한 번만 추가 + raw 검증 통과. 작업원칙 (h) 강제 — deferred 도구 첫 호출 에러 시 head/wc/grep 수행.
+> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-3a 완료" 참조.
+
+> **워크플로우 재설계 Sprint Part A3-3b 작업 범위 (단독 진행)**:
+>
+> | 파일 | 변경 | 핵심 |
+> |---|---|---|
+> | `src/lib/hooks/useDashboardData.ts` | EDIT (소폭) | `useProductsList`에 제네릭 타입 추가 (`<T = unknown[]>(...)`) — 기존 호출처(`DailyPlanWidget` 등) 무영향 보장. 더 강한 typing 옵션 제공. |
+> | `src/app/products/page.tsx` | EDIT (1352줄 중 fetch+useState+useEffect 제거) | 메인 fetch `/api/products?limit=500` → `useProductsList<Product[]>({ limit: 500 })` 교체. `raw`/`loading`/`error` useState 제거 + `fetchProducts` → `refresh` alias. UI/렌더 0 변경. |
+>
+> **마이그레이션 대상 아님 (액션성 fetch — 그대로 보존)**:
+> - register / shipping-templates / naver/excel / naver/products/sync
+> - DELETE / PATCH × 3 (상품 상태 변경, 추가 이미지 등)
+> - 이 fetch들은 쓰기(POST/PATCH/DELETE)라 SWR 대상 아님
+>
+> **이번 sprint 건들지 않음 (A3-4+ 별도 검토)**:
+> - NaverSeoProductTable.tsx의 row-level fetch (`market-analysis`, `keyword-stats`) — 행별 동적 query 대상이라 useSWR 직접 사용이 더 적합
+> - 작업원칙 27 상황 (기능 0개 삭제) 보장 — 현 상태 그대로 유지
+
+> **기존 기능 0개 삭제** (작업원칙 27) — 정원 창고의 모든 탭/필터/상품 상태 관리/에디터 패널/업로드 준비도/엑셀 다운로드/네이버 직등록 모달/공급사 그룹화/배송 템플릿 대량 적용 모듈 보존, 작업이 SWR 마이그면 오직 fetch 방식만 교체
+
+> 아래 코드 블록을 그대로 복붙해서 사용.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md, KKOTIUM_SESSION_LOG.md를 읽고
+워크플로우 재설계 Sprint Part A3-3b 작업을 시작해주세요.
+
+당신은 10년 차 네이버 스마트스토어 파워셀러 경험이 있는 풀스택 시니어 개발자이자, 사용자 경험과 전환율 중심의 UI/UX 웹 디자이너입니다. 이커머스의 생리를 완벽히 이해하고 있으며 운영 효율성과 매출 극대화를 이끕니다. 불필요하거나 단순한 반복 작업을 줄이고 실무 효율을 높일 수 있는 구조의 최신 SEO, ROI, 네이버 쇼핑 검색 알고리즘에 최적화된 스마트스토어 관리 앱 UI/UX 구조를 설계합니다. 항상 현재 코드의 구조와 내용을 확인하며 작업을 하며, 작업 시 사용할 수 있는 모든 기능, 스킬, 커넥터 등을 사용하여 최선의 작업을 진행합니다. 문제가 발생하면 근본적인 원인을 찾아서 해결할 수 있도록 합니다 — 제품 하나의 문제로 볼 것이 아니라 전체적인 앱 기능의 문제까지 염두에 두고 체크합니다 (작업원칙 26번 일반화).
+
+작업 완료 시 테스트를 진행해서 실질적으로 앱을 사용해서 실무적으로 작업할 때 생기는 문제가 없는지 브라우저 테스트(Chrome MCP) 및 확인을 제대로 한 후 문제가 없으면 다음 작업으로 넘어갈 수 있도록 합니다. 실질적으로 작업할 수 없을 때(MCP 응답 없음, 권한 부족 등)는 거짓말 하지 말고 꼭 꽃졔님께 정직하게 요청합니다. 컨텍스트 한계로 도중에 작업이 끊기며 재시도하면서 중복 작업을 하는 오류가 나지 않도록 작업량을 나눠서 새로운 채팅에서 진행할 수 있도록 합니다. 계획이 업데이트되고 작업을 마무리할 때 같은 꽃틔움 가든 개발 프로젝트의 새 채팅에서도 바로 이어서 작업할 수 있도록 누락 없이 KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md, KKOTIUM_SESSION_LOG.md에 업데이트해서 저장합니다.
+
+작업 시작 전 필수 (작업원칙 21+22+23+24+25+26+27 적용):
+1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 본 세션 마무리 commit — A3-3a)
+   (b) git --no-pager log --oneline -10 → 이번 메시지에 명시되지 않은 commit 있으면 읽고 대응
+   (c) git status 깨끗한지 확인 (dirty면 검토 후 처리 — 덮어쓰기 절대 금지)
+   (d) lsof -i :3000 또는 curl http://localhost:3000 → dev 서버 상태 확인
+   (e) 이 메시지의 가정과 실제가 다르면 즉시 정직 보고 후 재분석
+   (f) 본 세션 commit은 그 turn 안에서 push까지 한 줄로 완료
+   (g) edit_file에서 한글 매칭 실패 시 Python 수동 NFC 정규화 절대 금지 → git restore + write_file 한글 직접 입력
+   (h) edit_file 에러 응답 받아도 파일에 일부 적용될 수 있음 → head/grep/xxd로 raw 검증 우선
+   (i) 문제 분석은 항상 (a) 즉각 원인 (b) 일반화 원인 두 단계로
+   (j) 브라우저 테스트는 API 200 응답으로 대체 불가 — Chrome MCP로 실제 화면/숫자/동작 검증 필수
+   (k) 작업원칙 27: 기존 기능 0개 삭제 — 위치 재배치 OK, 삭제/축소 0
+   (l) 메모리 내 작업원칙 — heredoc 절대 금지
+   (m) 이어받기 세션 사전 점검 강화 — 직전 채팅이 commit 직전 중단된 경우 raw 검증으로 일치 확인 후 진입
+   (n) deferred 도구 첫 호출 에러 응답 받아도 파일에 적용 가능 — namespace 중복 명령 절대 금지 + edit 후 즉시 raw 검증
+2. KKOTIUM_PROGRESS.md "2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-3a 완료" 정독
+3. KKOTIUM_SESSION_LOG.md 최상단 동일 세션 정독 (1단계 사고/일반화 학습 넓은 면 포함)
+4. `src/app/products/page.tsx` 메인 fetch 구조 grep + `src/lib/hooks/useDashboardData.ts`의 `useProductsList` 훅 타입 구조 정독 (3번째 훅, 이미 `unknown[] | null` 반환)
+5. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
+
+[A3-3b 단계 권장]
+- [단계 1] 정원 창고(/products) page.tsx 1352줄 중 메인 fetch 구조 grep + 수정 대상 라인 범위 확정 (`fetchProducts`/`raw`/`loading`/useEffect/setRaw 등 최소 변경 지점 식별)
+- [단계 2] useDashboardData.ts `useProductsList` 제네릭 강화 (`<T = unknown[]>(...)`) — 기존 호출처(`DailyPlanWidget`) 무영향 보장
+- [단계 3] page.tsx에 `useProductsList<Product[]>({ limit: 500 })` 적용 + 자체 fetch/useState/useEffect 제거 + `fetchProducts` → `refresh` alias
+- [단계 4] TSC 0 errors 확인
+- [단계 5] Chrome MCP 라이브 검증 (정원 창고 상품 리스트 정상 표시 + 탭/검색/공급사 그룹링 회귀 + 대시보드/검색 조련사 회귀)
+- [단계 6] PROGRESS/ROADMAP/SESSION_LOG 갱신 + commit + push 단일 라인
+- [단계 7] 새 인계 메시지 작성 (A3-4 후보 — mascot SVG / 한달리뷰 / NaverSeoProductTable row-level fetch)
+
+작업 분량 안전 마진:
+- 단계 1 분석에서 수정 대상 라인이 50줄+ 움직이면 증분 git diff로 시각적 검증
+- 단계 5 검증은 컨텍스트 여유 있을 때만 진행 (제한 시 단계 6 commit·push 우선)
+- 세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md에 작성, PROGRESS.md/ROADMAP.md는 핵심 요약만 유지
+
+답변 마지막에 복붙용 인계 메시지를 코드 블록으로 항상 명시
+```
+
+
+
+## 🗂 Part A3-3 메시지 (참고용 보존 — deprecated, 위 A3-3b 메시지를 대신 사용)
 
 ## 🎯 다음 새 채팅 시작 메시지 (워크플로우 재설계 Sprint Part A3-3 — 2026-05-05 작성)
 

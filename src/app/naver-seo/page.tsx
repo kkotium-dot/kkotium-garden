@@ -3,44 +3,14 @@
 // P2-2: category check, attribute score, inline AI accordion (3 styles), 2026 score weights
 // Accepts ?ids=id1,id2 from Garden Warehouse bulk float menu
 
-import { useEffect, useState, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import NaverSeoProductTable from '@/components/naver-seo/NaverSeoProductTable';
 import BulkEditModal, { BulkEditData } from '@/components/naver-seo/BulkEditModal';
 import AiProgressModal from '@/components/naver-seo/AiProgressModal';
 import { RefreshCw, Search, Download } from 'lucide-react';
-
-interface Product {
-  id: string;
-  name: string;
-  sku?: string;
-  mainImage: string | null;
-  salePrice: number;
-  naverCategoryCode?: string | null;
-  naver_title: string | null;
-  naver_keywords: string | null;
-  naver_description: string | null;
-  naver_brand: string | null;
-  naver_origin: string | null;
-  naver_material: string | null;
-  naver_color: string | null;
-  naver_size: string | null;
-  naver_care_instructions: string | null;
-  supplierName?: string | null;
-  seoScore: number;
-  seoDetail?: {
-    categoryScore: number;
-    titleScore: number;
-    attributeScore: number;
-    keywordScore: number;
-    imageScore: number;
-  };
-  suggestions: string[];
-  needsImprovement: boolean;
-  keywordCount: number;
-  imageCount: number;
-}
+import { useNaverSeoProducts, type NaverSeoProductApiItem as Product } from '@/lib/hooks/useDashboardData';
 
 // Score band thresholds (2026 revised 100-point scale)
 type FilterKey = 'all' | 'perfect' | 'good' | 'fair' | 'poor';
@@ -57,8 +27,6 @@ function NaverSeoInner() {
   const searchParams = useSearchParams();
   const presetIds = searchParams.get('ids') ?? '';
 
-  const [products, setProducts]           = useState<Product[]>([]);
-  const [loading, setLoading]             = useState(true);
   const [filter, setFilter]               = useState<FilterKey>('all');
   const [searchQuery, setSearchQuery]     = useState('');
   const [selectedIds, setSelectedIds]     = useState<string[]>(() =>
@@ -68,24 +36,15 @@ function NaverSeoInner() {
   const [showProgressModal, setShowProgressModal]   = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, currentProduct: '' });
 
-  useEffect(() => { fetchProducts(); }, [filter, searchQuery]);
-
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (filter !== 'all') params.append('filter', filter);
-      if (searchQuery) params.append('search', searchQuery);
-      if (presetIds) params.append('ids', presetIds);
-      const res = await fetch('/api/naver-seo/products?' + params.toString());
-      const data = await res.json();
-      if (data.success) setProducts(data.products);
-    } catch {
-      toast.error('상품 목록을 불러오는데 실패했습니다');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // SWR-backed products fetch (A3-3a) — replaces useState/useEffect/fetchProducts trio.
+  // SWR auto-refetches when filter/searchQuery/presetIds change (key-as-dependency contract),
+  // so no manual useEffect dependency on filter/searchQuery is needed.
+  // refresh is aliased to fetchProducts so existing call sites stay unchanged.
+  const { products, isLoading: loading, refresh: fetchProducts } = useNaverSeoProducts({
+    filter,
+    searchQuery,
+    presetIds,
+  });
 
   // Single product AI generate (called from inline accordion with style)
   const handleAiGenerate = async (productId: string, style: 'orthodox' | 'emotional' | 'niche' = 'orthodox') => {

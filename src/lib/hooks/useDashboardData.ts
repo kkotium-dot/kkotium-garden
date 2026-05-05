@@ -683,3 +683,107 @@ export function useEventTimeline(): {
     refresh: () => { void mutate(); },
   };
 }
+
+// ============================================================================
+// PART A3-3a (2026-05-05) — Naver SEO Products hook
+// ============================================================================
+// Surfaces the products listing for the SEO trainer page (/naver-seo).
+// Migrates naver-seo/page.tsx from inline fetch + useEffect to the shared
+// SWR layer with dynamic SWR keys driven by user-controlled filter/search.
+// SWR's key-as-dependency contract removes the need for a manual
+// useEffect([filter, searchQuery]) refetch trigger.
+// Cadence: 60s (DASHBOARD_SWR_DEFAULTS) — SEO score editing is interactive
+// and the user expects fresh data after AI generation / bulk edit actions.
+// ============================================================================
+
+// ─── 14. Naver SEO Products (60s cadence, dynamic key) ──────────────────────
+// Strict typing mirrors the page's local Product interface so naver-seo/page.tsx
+// can drop the duplicate definition. Optional/nullable fields preserved exactly
+// as the API serializes them in /api/naver-seo/products/route.ts.
+
+export interface NaverSeoProductApiItem {
+  id: string;
+  name: string;
+  sku?: string;
+  mainImage: string | null;
+  salePrice: number;
+  naverCategoryCode?: string | null;
+  naver_title: string | null;
+  naver_keywords: string | null;
+  naver_description: string | null;
+  naver_brand: string | null;
+  naver_origin: string | null;
+  naver_material: string | null;
+  naver_color: string | null;
+  naver_size: string | null;
+  naver_care_instructions: string | null;
+  supplierName?: string | null;
+  seoScore: number;
+  seoDetail?: {
+    categoryScore: number;
+    titleScore: number;
+    attributeScore: number;
+    keywordScore: number;
+    imageScore: number;
+  };
+  suggestions: string[];
+  needsImprovement: boolean;
+  keywordCount: number;
+  imageCount: number;
+}
+
+interface NaverSeoProductsApiResponse {
+  success?: boolean;
+  products?: NaverSeoProductApiItem[];
+  total?: number;
+  error?: string;
+}
+
+export function useNaverSeoProducts(options?: {
+  /** Filter band: 'all' | 'perfect' | 'good' | 'fair' | 'poor'. Default 'all'. */
+  filter?: string;
+  /** Free-text search across name/sku/keywords. */
+  searchQuery?: string;
+  /** Preset comma-separated product ids (deep-link from /products bulk menu). */
+  presetIds?: string;
+}): {
+  products: NaverSeoProductApiItem[];
+  isLoading: boolean;
+  isValidating: boolean;
+  error: string | null;
+  /** Force a re-fetch (use after AI generation / bulk edit). */
+  refresh: () => void;
+} {
+  const filter = options?.filter ?? 'all';
+  const searchQuery = options?.searchQuery ?? '';
+  const presetIds = options?.presetIds ?? '';
+
+  // Build SWR key — same params shape as the original fetchProducts() in
+  // naver-seo/page.tsx so server-side filtering remains identical.
+  const params = new URLSearchParams();
+  if (filter !== 'all') params.append('filter', filter);
+  if (searchQuery) params.append('search', searchQuery);
+  if (presetIds) params.append('ids', presetIds);
+  const queryStr = params.toString();
+  const key = queryStr ? `/api/naver-seo/products?${queryStr}` : '/api/naver-seo/products';
+
+  const { data, isLoading, isValidating, mutate, error: swrError } = useSWR<NaverSeoProductsApiResponse>(
+    key,
+    jsonFetcher,
+    DASHBOARD_SWR_DEFAULTS,
+  );
+
+  const errorMsg: string | null = swrError
+    ? (swrError instanceof Error ? swrError.message : 'Unknown error')
+    : (data && data.success === false && data.error)
+      ? data.error
+      : null;
+
+  return {
+    products: data?.success && Array.isArray(data?.products) ? data.products : [],
+    isLoading,
+    isValidating,
+    error: errorMsg,
+    refresh: () => { void mutate(); },
+  };
+}
