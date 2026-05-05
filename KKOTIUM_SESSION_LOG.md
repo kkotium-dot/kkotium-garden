@@ -9,6 +9,74 @@
 
 ---
 
+## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-1a 백엔드 완료 (구매확정 리마인더 도메인 로직 + API + SWR 훅) ✅
+
+### 세션 성격
+- 직전 commit `dac4cec` (A2b 통합) 이후 본 세션에서 **Part A3-1a 신규 작업** 진행.
+- 꽃졔님 위임 — "최선의 개선안 + 컨텍스트 오버 방지". 자체 판단으로 **A3-1을 a/b 두 채팅으로 안전 분할**:
+  - **A3-1a (이번 채팅)**: 백엔드 + API + SWR 훅 + API 라이브 검증 + commit + push
+  - **A3-1b (다음 채팅)**: UI 위젯 + 대시보드 Section 1 통합 + Chrome MCP 라이브 검증 + 마무리
+- 컨텍스트 사용량을 단계별로 모니터링: 사전 점검 + 코드 베이스 탐색 + 핵심 파일 정독 후 ~50% 도달, 위젯 작업 시 80% 위험 → 분할 결정.
+
+### 사전 점검 결과 (작업원칙 21번)
+- HEAD `dac4cec` = origin/main 동기화 ✅
+- working tree clean ✅
+- TSC 0 errors ✅
+- dev :3000 HTTP 200 ✅
+- 직전 commit `dac4cec feat(workflow-redesign A2b): Section 3 모드별 정렬 + 동적 subtitle + ModeActionHint 슬림 배너` ✅
+
+### 코드 베이스 탐색 (작업원칙 1번)
+- `src/lib/naver/api-client.ts` (10KB): `naverRequest()` + `getOrders({ lastChangedFrom, lastChangedTo })` 이미 존재. OAuth bcrypt 토큰 + Supabase Edge proxy 구조.
+- `src/app/api/naver/orders/route.ts` (5.5KB): KST 시간 처리 + 23h 윈도우 분할 + STATUS_MAP (`PURCHASE_DECIDED → COMPLETED`, `DELIVERED → DELIVERED`). 주문 sync 로직.
+- `src/app/api/naver/orders/confirm/route.ts`: 셀러측 강제 구매확정 API. (이번 작업 목적은 셀러 강제가 아닌 구매자 알림이므로 별도 path)
+- `src/app/api/kakao-settings/route.ts`: `solapiConfigured = Boolean(solapiApiKey && solapiApiSecret && kakaoSenderId)` 패턴 + 50건 임계치 + monthlyDeliveredCount 계산. 이번 API에서 그대로 미러링.
+- `prisma/schema.prisma` Order 모델: `status`, `deliveredAt: DateTime?`, `paidAt: DateTime?`, `paymentDate`, `customerName/Phone`, `productName`, `quantity`, `totalAmount`. 단, sync route는 `deliveredAt`을 항상 채우지 않음 → fallback 필요.
+- `src/lib/hooks/useDashboardData.ts` (18KB → 20.5KB): SWR 훅 11개 (Sidebar/Profitability/Products/GoodService/DataLab/Sourcing/Review/Upload/Competition/Lifecycle/Stats). `SWR_PROFILE_5MIN` 프로파일 (refreshInterval 5분, dedupingInterval 1분, revalidateOnFocus true) 그대로 재사용.
+
+### 단계별 실행
+- **단계 1**: 코드 베이스 + 데이터 모델 파악 (위 탐색 결과 기반)
+- **단계 2**: `src/lib/confirmation-pending.ts` NEW (~200줄)
+  - 정책 상수: `REMINDER_WINDOW_MIN_DAYS=3`, `REMINDER_WINDOW_MAX_DAYS=5`, `PAYMENT_TO_DELIVERY_LAG_DAYS=3`, `NAVER_AUTO_CONFIRM_DAYS=8`
+  - `maskKoreanName()`: 1자/2자/3자+ 케이스 분기 (`김O희` 등)
+  - `daysSince()`: ms/day 정수 계산
+  - `buildReminderPreview()`: 한글 알림톡 미리보기 텍스트 (4줄)
+  - `findReminderEligibleOrders()`: primary (deliveredAt 1차) + fallback (paymentDate 2차) Promise.all 병렬 쿼리, accept() 함수로 dedup + 윈도우 검증 + 자동확정 horizon 차단
+- **단계 3**: `src/app/api/orders/confirmation-pending/route.ts` NEW (~75줄)
+  - GET: findReminderEligibleOrders() + storeSettings 조회 + monthlyDeliveredCount 계산
+  - 응답: orders + count + primaryCount + fallbackCount + scanWindow + solapi { configured, eligibleForActivation, monthlyDeliveredCount, activationThreshold, sendActive, progressPercent }
+  - 단일 fetch로 위젯 전체 상태 표현 (이중 round-trip 회피)
+- **단계 4**: `src/lib/hooks/useDashboardData.ts` (+34줄, Python patch script)
+  - `useConfirmationPending<T>()` 훅 추가
+  - SWR_PROFILE_5MIN cadence (D+N 일 단위라 5분이면 충분)
+  - refresh() 노출 — 향후 Solapi POST 후 즉시 갱신용
+  - 기존 11개 훅 패턴 그대로 (CompetitionMonitor/Lifecycle 패턴 인용)
+- **단계 5**: TSC 검증 (EXIT=0) + API 라이브 검증
+  - `curl http://localhost:3000/api/orders/confirmation-pending` HTTP 200
+  - 응답: success=true / orders=[] / count=0 / primaryCount=0 / fallbackCount=0 / scanWindow.fromIso=2026-04-30 / scanWindow.toIso=2026-05-02 / solapi.configured=false / solapi.activationThreshold=50 / solapi.sendActive=false / solapi.progressPercent=0
+  - 현재 DB 주문 0건이라 빈 배열 정상 — 매출 발생 시 자동 채워짐
+- **단계 6**: MD 3종 갱신 + commit + push (이번 turn에서 한 줄로 처리)
+
+### 정책 결정 — 파워셀러 리서치 인용
+- **D+3~5 윈도우 선택**: 네이버 D+8 자동확정 — D+3~5에 알림톡 한 번이 구매확정율 큰 폭 상승. 너무 빠르면 buyer 미수령, 너무 늦으면 자동확정과 충돌.
+- **2단계 신호 결합 (작업원칙 26 일반화)**: 한 신호만으로는 sync route의 `deliveredAt` 누락 케이스 못 잡음 → primary + fallback 결합. 이 패턴이 향후 D+1 발송 알림, D+10 휴면 케어 등에도 그대로 재사용 가능.
+- **Solapi 활성화 정책 미러링**: `/api/kakao-settings`의 50건 임계치 + `solapiConfigured` 부울 그대로 사용. 단일 임계치 단일 source.
+- **개인정보 보호**: customerName → 마스킹된 본문만 UI에 노출, customerPhone은 향후 Solapi POST 핸들러만 소비.
+
+### 적용된 작업원칙
+- **#21 사전 점검**: 8항목 모두 통과 후 작업 시작
+- **#22 라이브 검증**: 백엔드 단계는 API 200 + 응답 구조 검증 (UI 검증은 A3-1b에서 Chrome MCP로 — 작업원칙 22번 강제)
+- **#23 정직 보고**: heredoc 시도 0회, write_file + Python script 패턴 일관 사용. 컨텍스트 사용량을 추정 + 분할 결정 transparent 보고
+- **#24 commit + push 한 묶음**: 본 turn에서 한 줄로 처리
+- **#25 한글 직접 입력**: 한글 마스킹 함수 + reminder preview 텍스트 모두 write_file 직접 입력 (NFC 정규화 0회)
+- **#26 일반화**: 2단계 신호 결합 패턴이 향후 D+1/D+10 등 새 신호 추가 시 그대로 재사용 가능
+- **#27 기능 0개 삭제**: 모든 기존 위젯/섹션/모드/mascot pill 보존, 신규 백엔드만 추가
+
+### A3-1b 인계 (다음 채팅)
+- 신규 위젯 `ConfirmationReminderWidget.tsx` 작성 + 대시보드 Section 1 today 모드 통합 + Chrome MCP 라이브 검증 5항목 + 마무리.
+- 자세한 단계와 작업원칙은 KKOTIUM_ROADMAP.md "다음 새 채팅 시작 메시지 (Part A3-1b)" 섹션 참조.
+
+---
+
 ## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A2b 완료 (모드별 정렬 + 동적 subtitle + ActionHint) ✅
 
 ### 세션 성격

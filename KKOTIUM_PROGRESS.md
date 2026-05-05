@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A2b 완료 ✅ — Section 3 모드별 위젯 정렬 + 동적 sectionMarketSubtitle + ModeActionHint 슬림 배너 + 라이브 검증 6항목 통과 / 다음: 새 채팅에서 Part A3 — 구매확정율 추적 + EventTimeline SWR + 다른 페이지 SWR 확장 후보)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit (A2b — Section 3 모드별 정렬 + 동적 subtitle + ModeActionHint 통합)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅**
-> **다음 작업: 워크플로우 재설계 Sprint Part A3 — (1) 구매확정율 추적 + 알림톡 리마인더 (★★☆ 최고 ROI MVP), (2) EventTimeline SWR 마이그, (3) 다른 페이지 SWR 확장 (정원 창고/검색 조련사), (4) mascot SVG 자산 추가 — 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (Part A3)" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
+> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A3-1a 백엔드 완료 ✅ — 구매확정 리마인더 도메인 로직 + API route + useConfirmationPending 훅 + API 라이브 검증 통과 / 다음: 새 채팅에서 Part A3-1b — ConfirmationReminderWidget UI 위젯 + 대시보드 Section 1 통합 + Chrome MCP 라이브 검증)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit (A3-1a 백엔드 — confirmation-pending lib + API route + SWR 훅)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 완료 ✅ (UI는 A3-1b)**
+> **다음 작업: 워크플로우 재설계 Sprint Part A3-1b — ConfirmationReminderWidget UI 위젯 신설 + 대시보드 Section 1 today 모드 통합 + Solapi 키 미입력 시 미리보기 정책 표시 + Chrome MCP 라이브 검증. 백엔드 (lib + API + SWR 훅)는 A3-1a에서 완료됨. 그 후 (2) EventTimeline SWR 마이그, (3) 다른 페이지 SWR 확장, (4) mascot SVG 자산 작업이 대기 중 — 모두 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (Part A3-1b)" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -10,6 +10,61 @@
 >   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
 >   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
 >   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
+
+## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-1a 백엔드 완료 (구매확정 리마인더 도메인 로직 + API + SWR 훅) ✅
+
+### 본 세션 성격
+- 직전 commit `dac4cec` (A2b 통합) 이후 본 세션에서 **Part A3-1a 신규 작업** 진행.
+- 꽃졔님 위임 — "최선의 개선안 + 컨텍스트 오버 방지". 자체 판단으로 **A3-1을 a/b 두 채팅으로 안전 분할**:
+  - **A3-1a (이번 채팅)**: 백엔드 + API + SWR 훅 + API 라이브 검증 + commit + push (컨텍스트 ~50%)
+  - **A3-1b (다음 채팅)**: UI 위젯 + 대시보드 Section 1 통합 + Chrome MCP 라이브 검증 + 마무리
+- 기존 패턴(A2a, A2b) 그대로 따라 신규 신호: SWR 5분 cadence, 단일 fetch로 orders + solapi 상태 둘 다 반환.
+
+### 변경/생성된 파일 (3개)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `src/lib/confirmation-pending.ts` | NEW (~200줄) | `findReminderEligibleOrders()` 도메인 로직 — `status='DELIVERED'` AND `deliveredAt` ∈ [D-5, D-3] 1차 신호 + `paymentDate + 3일 lag` 2차 fallback. `maskKoreanName()` 개인정보 보호 + `buildReminderPreview()` 알림톡 미리보기 텍스트 생성 |
+| `src/app/api/orders/confirmation-pending/route.ts` | NEW (~75줄) | GET → `{ orders, count, primaryCount, fallbackCount, scanWindow, solapi: { configured, eligibleForActivation, monthlyDeliveredCount, activationThreshold, sendActive, progressPercent } }`. 단일 fetch로 위젯 전체 상태 표현 가능 |
+| `src/lib/hooks/useDashboardData.ts` | EDIT (+34) | `useConfirmationPending()` 훅 추가 (SWR_PROFILE_5MIN, refresh 노출). 기존 11개 훅(Sidebar/Profitability/Products/GoodService/DataLab/Sourcing/Review/Upload/Competition/Lifecycle/Stats) 패턴 그대로 |
+
+### 정책 결정 (파워셀러 리서치 기반)
+- **D+3~5 윈도우**: 네이버 D+8 자동확정 — 그 사이 D+3~5에 알림톡 한 번이 구매확정율 큰 폭 상승. 너무 빠르면 buyer 미수령, 너무 늦으면 자동확정과 충돌.
+- **2단계 신호 결합**: sync route(`/api/naver/orders`)가 `deliveredAt`을 항상 채우지 않음 → primary 누락 시 `paymentDate + 3일 lag`로 추정 (보수적 lag — 대부분 1~3일 배송).
+- **Solapi 활성화 정책 미러링**: `/api/kakao-settings`의 50건 임계치 + `solapiConfigured` 부울 그대로 사용. 단일 임계치 단일 source.
+- **개인정보 보호**: `customerName` → `김O희` 형식 마스킹 (`maskKoreanName()`). UI는 마스킹 본만 사용, `customerPhone`은 향후 Solapi POST 핸들러만 소비.
+
+### API 라이브 검증 (작업원칙 22 — 단계 적합)
+- `curl http://localhost:3000/api/orders/confirmation-pending` → HTTP 200 + JSON 정확
+- 응답 구조: `success=true / orders=[] / count=0 / scanWindow.fromIso=2026-04-30 / scanWindow.toIso=2026-05-02 / solapi.configured=false / solapi.activationThreshold=50 / solapi.sendActive=false / solapi.progressPercent=0`
+- 현재 DB 주문 0건이라 빈 배열은 정상. 매출 발생 시 자동 채워짐.
+- **UI 검증은 A3-1b에서 Chrome MCP로**: 위젯 표시, dry-run 미리보기, 75점 회귀, mascot pill 보존.
+
+### 사전 점검 결과 (작업원칙 21)
+- HEAD `dac4cec` = origin/main 동기화 ✅, working tree clean ✅, TSC 0 errors ✅, dev :3000 HTTP 200 ✅
+- 작업 후: TSC EXIT=0 ✅, 신규 3 파일 모두 typed pass.
+
+### 본 세션 commit
+- 코드 변경: `src/lib/confirmation-pending.ts` (NEW), `src/app/api/orders/confirmation-pending/route.ts` (NEW), `src/lib/hooks/useDashboardData.ts` (+34줄)
+- MD 갱신: PROGRESS + ROADMAP + SESSION_LOG 3종
+- commit 메시지: `feat(workflow-redesign A3-1a): 구매확정 리마인더 백엔드 — confirmation-pending lib + API route + useConfirmationPending SWR 훅`
+
+### 적용된 작업원칙
+- **#21 사전 점검**: 8항목 모두 통과 후 작업 시작
+- **#22 라이브 검증**: 백엔드 단계는 API 200 + 응답 구조 검증 (UI 검증은 A3-1b에서 Chrome MCP로)
+- **#23 정직 보고**: heredoc 시도 0회, write_file + Python script 패턴 일관 사용
+- **#24 commit + push 한 묶음**: 본 turn에서 한 줄로 처리 예정
+- **#25 한글 직접 입력**: 한글 마스킹 함수 + reminder preview 텍스트 모두 write_file 직접 입력 (NFC 정규화 0회)
+- **#26 일반화**: 신규 lib + API + 훅 패턴이 향후 신호 추가 시 그대로 재사용 가능 (D+1 발송 후속, D+10 휴면 등)
+- **#27 기능 0개 삭제**: 모든 기존 위젯/섹션/모드/mascot pill 보존, 신규 백엔드만 추가
+
+### A3-1b 인계 범위 (다음 채팅)
+1. **신규 위젯 `ConfirmationReminderWidget.tsx`** — `useConfirmationPending()` 훅 사용, 카드 형태 (count + 미리보기 N건 + Solapi 상태 배너)
+2. **대시보드 Section 1 today 모드 통합** — `dashboard/page.tsx`에 위젯 import + Section 1 grid에 배치
+3. **Solapi 키 미입력 시 정책 안내 토스트** — 위젯 내부 또는 카드 푸터: "지금은 미리보기 — 월 50건+ 도달 후 키 입력하면 자동 발송"
+4. **Chrome MCP 라이브 검증 5항목**: 위젯 표시 + dry-run 미리보기 + 75점 회귀 + 4섹션 mascot pill 보존 + ModeActionHint + Section 3 정렬 보존
+5. **MD 3종 갱신 + commit + push + 새 인계 메시지** (A3-2 후보 — EventTimeline SWR / 다른 페이지 SWR / mascot SVG)
+
+---
 
 ## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A2b 완료 (모드별 정렬 + 동적 subtitle + ActionHint) ✅
 

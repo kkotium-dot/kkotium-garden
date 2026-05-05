@@ -590,3 +590,43 @@ export function useDashboardStats(options?: {
     refresh: () => { void mutate(); },
   };
 }
+
+// ============================================================================
+// WORKFLOW REDESIGN Part A3-1 (2026-05-05) — Confirmation Pending hook
+// Surfaces orders eligible for a purchase-confirmation reminder
+// (DELIVERED in [D+3, D+5] window) + Solapi activation status so the
+// dashboard widget can render either a live preview or a stat-only view
+// without a second round-trip.
+//   - Confirmation Pending : 5 min cadence (D+N is day-granular, fast enough)
+// ============================================================================
+
+// ─── 12. Confirmation Pending (5 min cadence) ───────────────────────────────
+// Loose typing — the response shape is owned by ConfirmationReminderWidget.
+// The widget consumes both `orders` and `solapi` blocks from a single
+// SWR fetch (see /api/orders/confirmation-pending route handler).
+type ConfirmationPendingApiResponse = unknown;
+
+export function useConfirmationPending<T = ConfirmationPendingApiResponse>(): {
+  data: T | null;
+  isLoading: boolean;
+  isValidating: boolean;
+  error: string | null;
+  /** Force a re-fetch (use after manual scan or alimtalk send). */
+  refresh: () => void;
+} {
+  const { data, isLoading, isValidating, mutate, error: swrError } = useSWR<T>(
+    '/api/orders/confirmation-pending',
+    jsonFetcher,
+    SWR_PROFILE_5MIN,
+  );
+
+  const networkError = swrError ? 'Network error' : null;
+
+  return {
+    data: data ?? null,
+    isLoading,
+    isValidating,
+    error: networkError,
+    refresh: () => { void mutate(); },
+  };
+}
