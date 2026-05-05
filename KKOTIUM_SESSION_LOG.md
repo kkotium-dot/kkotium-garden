@@ -67,7 +67,67 @@
 - 변경 파일 5개: `src/lib/month-review-pending.ts` (NEW 232줄), `src/app/api/orders/month-review-pending/route.ts` (NEW 86줄), `src/lib/hooks/useDashboardData.ts` (+43줄), MD 3개
 - commit 메시지: `feat(workflow-redesign A3-4a): 한달리뷰 백엔드 — month-review-pending lib + API route + useMonthReviewPending SWR 훅 (15번째)`
 
-### A3-4b 인계 범위 (다음 채팅)
+### A3-4b 인계 범위 재조정 (⚠ 우선순위 변경 — A3-4-DIAG 도입)
+
+결정: A3-4b 대신 **A3-4-DIAG 먼저** 진행 (Order 데이터 흐름 막힌 상태에서 UI 위젯 만드는 것은 빈 화면만 보게 됨).
+
+### 라이브 검증 중 발견된 동기화 문제 (작업원칙 26번 적용 — 근본 원인 일반화)
+
+**꽃졔님 보고**: 새 주문 2건이 들어왔는데 앱에 반영 안 됨.
+
+**진단 경로 (Supabase MCP + Vercel MCP 직접 검증)**:
+
+| 검증 항목 | 결과 | 판정 |
+|---|---|---|
+| Naver API 연결 (`/api/naver/sync` GET) | `apiReady: true` | ✅ 정상 |
+| 수동 sync (`/api/naver/orders?manual=1&hours=720`) | `synced=0, total=0, windows=32` | ⚠ 네이버 API는 200 응답이나 contents=[] |
+| Dev DB Order 조회 (`/api/orders?limit=10`) | 1건만 (4월 10일 CANCELLED) | ⚠ 새 주문 미반영 |
+| **Production DB 직접 검증 (Supabase MCP)** | 동일한 1건만 | 🟥 dev=prod, 근본 원인 아님 |
+| **Vercel runtime logs 7일 (cron/daily)** | **0회 호출** | 🟥 production cron 미작동 |
+| **Vercel runtime logs 7일 (naver/orders)** | **0회 호출** | 🟥 자동 sync 수행 흔적 없음 |
+| Vercel deployment 자체 | `/icon.svg`, `/` 200 | ✅ 사이트 정상 |
+
+**근본 원인 후보 (작업원칙 26번 일반화 적용)**:
+
+1. **🟥 sync route endpoint deprecated 의심 (제1 용의)** — `src/app/api/naver/orders/route.ts` L83에서 호출하는 `/v1/pay-order/seller/product-orders?from=&to=&pageSize=300`은 네이버가 200 반환하지만 contents 빈 배열만 준다. 네이버 Commerce API 공식 2024년 이후 endpoint는 `/v1/pay-order/seller/product-orders/last-changed-statuses?lastChangedFrom=&lastChangedTo=&lastChangedType=` 형태.
+2. **🟧 Production cron 미작동 (제2)** — `vercel.json` cron 설정 있으나 7일 간 0회 호출. CRON_SECRET env 누락 또는 Vercel Hobby plan cron 제약 가능성. endpoint 고쳐도 production 자동화는 별도 복구 필요.
+3. **🟨 네이버 셀러센터 권한 가능성 (제3)** — endpoint가 맞아도 "주문조회" 권한이 비활성/만료일 수 있음. 꽃졔님 손수 확인 필요.
+
+### 동기화 의존 기능 전체 점검 매트릭스 (작업원칙 26번 — 한 케이스 X, 동일 패턴 일반화)
+
+| 기능 | 의존 API | 본 세션 점검 |
+|---|---|---|
+| **Order sync** (한달리뷰/구매확정/주문관리/굿서비스/수익성) | Naver Commerce API | ⚠ 0건 반환 발견됨 |
+| Product price/stock sync | Naver Commerce API | ✅ 연결 OK (활성 상품 0개라 검증 필요 아직 없음) |
+| 키워드 검색량 | Naver Search Ad API (CUSTOMER_ID 3755315) | ❓ 미점검 (DIAG sprint) |
+| 카테고리 트렌드 | Naver DataLab API | ❓ 미점검 (DIAG sprint) |
+| 경쟁 상품 | Naver Shopping Search API | ❓ 미점검 (DIAG sprint) |
+| 도매꾹 OpenAPI | `domeggook_api_key` (DB) | ❓ 미점검 (DIAG sprint) |
+| Gemini/Groq AI | env keys | ✅ E-15에서 검증됨 |
+| Solapi 알림톡 | env (미입력) | ✅ 미입력 정상 (월 50건+ 트리거 대기) |
+| Discord 웹훅 | env webhook URLs | ⚠ cron 미작동시 알림 안 옴 |
+| 일일 cron | Vercel `0 23 * * *` UTC | 🟥 7일 0회 호출 |
+
+### 다음 sprint 우선순위 재조정
+
+- ❌ A3-4b (UI 신규) — 데이터 흐름 정상화 전에 만들면 평생 빈 화면
+- ✅ **A3-4-DIAG (Order sync 정상화 + 동기화 의존 기능 전수 점검)** 을 최우선
+
+DIAG sprint 핵심 액션:
+1. 네이버 Commerce API 공식 문서 web_search — last-changed-statuses 사양 확인
+2. 로컬 endpoint A/B 테스트 — curl 직접 호출로 어느 endpoint가 새 주문 반환하는지 확인
+3. sync route 수정 — endpoint 교체 + lastChangedType parameter 추가
+4. Supabase MCP로 새 주문 2건 DB 진입 검증
+5. Production CRON_SECRET / Vercel cron plan 확인 또는 수동 폴링 대안으로 자동화 복구
+6. Search Ad / DataLab / Domeggook / Discord 웹훅 광역 점검
+
+### 활용한 MCP 직접 도구 (본 세션 학습)
+
+- **Supabase:execute_sql** project_id=doxfizicftgtqktmtftf — 브라우저 없이 prod DB 직접 SQL 검증 가능
+- **Vercel:get_runtime_logs** projectId=prj_H5HamuDSG0Na6j5dwDlYe9A6FfC4, teamId=team_uwIkDWZsS2gogA04mZIVDuPF — 별도 페이지 접속 없이 production 로그 직접 쿼리
+- DB column 명명 (Prisma `@map` 적용): `productName` → `product_name`, `paymentDate` → `payment_date` 등 주의
+
+### 본 세션 commit (단일 라인)
 - **MonthReviewWidget.tsx 신규** (~600줄, ConfirmationReminderWidget 미러) — 보라 팔레트 (`#7c3aed`/`#ede9fe`/`#c4b5fd`) 사용해 일반 리뷰(파랑)와 시각 구분.
 - **dashboard/page.tsx Section 2 today 모드 통합** (+2줄, ConfirmationReminderWidget 옆 또는 아래에 배치).
 - **products/new/page.tsx 혜택탭 (Tab6) E-2C 영역 가이드 추가** (~50줄) — L2865 `{/* E-2C: Review reward optimal guide */}` 다음에 한달리뷰 운영 가이드 섹션 추가 (한달 사용 리뷰 적립금 기본값 1000원 권장 + isOptimal 체크 로직 + 매출 임팩트 안내).
