@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A3-1b UI 완료 ✅ — ConfirmationReminderWidget 신설 + 대시보드 Section 2 today 통합 + Chrome MCP 5항목 라이브 검증 통과 / 다음: 새 채팅에서 Part A3-2 — EventTimeline SWR 마이그 단독 진행 추천)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit (A3-1b UI — ConfirmationReminderWidget + Section 2 통합)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 + Part A3-1b UI 완료 ✅ (구매확정 리마인더 MVP 100% 완성)**
-> **다음 작업: 워크플로우 재설계 Sprint Part A3-2 — A3-2 후보 4종 중 자체 판단 추천: 1번 EventTimeline SWR 마이그 단독 진행 (작은 컨텍스트, 패턴 일치, 빠른 완료). 그 외 후보: 2번 다른 페이지 SWR 확장 (정원 창고/검색 조련사), 3번 mascot SVG 자산 통합, 4번 (보너스) 한달사용 리뷰 2단계 가이드 — 모두 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (Part A3-2)" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
+> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A3-2 완료 ✅ — EventTimeline SWR 마이그 + 13번째 훅 useEventTimeline 신설 + Chrome MCP 5항목 라이브 검증 통과 / 다음: 새 채팅에서 Part A3-3 — 다른 페이지 SWR 확장 (정원 창고/검색 조련사) 추천)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 본 세션 마무리 commit (A3-2 — EventTimeline SWR 마이그)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 + Part A3-1b UI 완료 ✅ (구매확정 리마인더 MVP 100% 완성) + Part A3-2 EventTimeline SWR 마이그 완료 ✅ (대시보드 13개 훅 SWR 통일)**
+> **다음 작업: 워크플로우 재설계 Sprint Part A3-3 — 자체 판단 추천: 2번 다른 페이지 SWR 확장 (정원 창고 또는 검색 조련사 — 페이지별 분석 후 단독/묶음 결정). 그 외 후보: 3번 mascot SVG 자산 통합, 4번 (보너스) 한달사용 리뷰 2단계 가이드 — 모두 새 채팅에서 진행. 상세는 `KKOTIUM_ROADMAP.md` "다음 새 채팅 시작 메시지 (Part A3-3)" 섹션 + `KKOTIUM_SESSION_LOG.md` 본 세션 기록 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -10,6 +10,67 @@
 >   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
 >   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
 >   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
+
+## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-2 완료 (EventTimeline SWR 마이그레이션) ✅
+
+### 본 세션 성격
+- 직전 commit `4f596c3` (A3-1b UI) 이후 본 세션에서 **Part A3-2 신규 작업** 진행.
+- ROADMAP "다음 새 채팅 시작 메시지 (Part A3-2)" 섹션의 자체 판단 추천대로 **1번 EventTimeline SWR 마이그 단독 진행**. 2~4번 후보(다른 페이지 SWR 확장 / mascot SVG / 한달사용 리뷰 가이드)는 A3-3 이후로 이연.
+- 컨텍스트 효율 우선 — 단독 채팅 1회로 단계 1~6 모두 완료.
+
+### 변경된 파일 (2개)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `src/lib/hooks/useDashboardData.ts` | EDIT (+53줄, 13번째 훅) | `useEventTimeline()` 훅 추가 — strict typing (`ProductEventApiItem` interface export) + `SWR_PROFILE_5MIN` cadence + `refresh()` 노출. 기존 12개 훅 패턴 그대로. |
+| `src/components/dashboard/EventTimeline.tsx` | EDIT (-12 +6 = 정합 -6줄, 자체 fetch 제거) | `useState`/`useEffect`/`load()` 함수 제거 + `import { useEventTimeline }` 추가 + 컴포넌트 내부 `const { events, isLoading, isValidating, refresh } = useEventTimeline()` + 로컬 `interface ProductEvent` 정의 삭제. RefreshCw 버튼 `onClick={load}` → `onClick={refresh}`. UI/렌더 0 변경. |
+
+### 설계 결정 — Cadence: SWR_PROFILE_5MIN 채택 (3가지 근거)
+1. **이벤트 생성 메커니즘**: ProductEvent는 cron + 사용자 액션에 의해 append-only로 생성 — 1분 단위 즉각 갱신 불필요
+2. **방금 완료된 A3-1a/b 패턴 일치**: 가장 최근 추가된 `useConfirmationPending`도 5분 cadence — 패턴 일관성 보존
+3. **dedupingInterval=60s**: 사용자 RefreshCw 클릭 시 즉시 refresh 가능 + idle 폴링 부하 최소화
+
+### 13개 훅 cadence 매트릭스
+- **60s (DASHBOARD_SWR_DEFAULTS)**: Sidebar / Profitability / ProductsList / UploadReadiness / ProductLifecycle / DashboardStats — 6개
+- **5min (SWR_PROFILE_5MIN)**: GoodService / ReviewGrowth / CompetitionMonitor / ConfirmationPending / **EventTimeline (신규)** — 5개
+- **24h (SWR_PROFILE_24H)**: DataLabTrend / SourcingRecommend — 2개
+
+### Chrome MCP 라이브 검증 5항목 (작업원칙 #22)
+| # | 항목 | 결과 |
+|---|---|---|
+| 1 | EventTimeline 위젯 (API 2건 = UI 2건 일치) | ✅ "최근 이벤트 / 2건 / 가격 변동 / 26일 전 / 선물받은 특별한 일상 / -9.2% / +10.1%" 정확 표시 |
+| 2 | ConfirmationReminderWidget 회귀 (A3-1b) | ✅ 위젯 정상 표시 |
+| 3 | UploadReadiness 75점 회귀 | ✅ 75 평균 점수 정확 표시 |
+| 4 | 4섹션 mascot pill (^_^/^ㅂ^×2/✿ㅅ✿) 보존 | ✅ sec1_smile=true / sec2_pbpb=2개 / sec3_ssss=true |
+| 5 | 자체 fetch 패턴 제거 (useState/useEffect 0개) | ✅ EventTimeline.tsx import + 사용 0회 검증 완료 |
+
+### API 라이브 검증 (회귀 점검)
+- `curl /api/events/recent` → HTTP 200 + JSON 정확 (events 2건)
+- `curl /api/orders/confirmation-pending` → HTTP 200 + JSON 정확 (A3-1b 회귀 정상)
+
+### 사전 점검 결과 (작업원칙 #21)
+- HEAD `4f596c3` = origin/main 동기화 ✅, working tree clean ✅, TSC 0 errors ✅, dev :3000 PID 1711+2018 ✅
+- A3-1b 결과물 raw 검증: ConfirmationReminderWidget.tsx 22KB / confirmation-pending.ts 10KB / route.ts 3KB 모두 존재 ✅
+- 작업 후: TSC EXIT=0 ✅, Filesystem:edit_file 모든 매칭 1회 성공 (NFC 정규화 0회)
+
+### 적용된 작업원칙
+- **#21 사전 점검**: 8항목 모두 통과
+- **#22 라이브 검증**: API 200 + Chrome MCP 5항목 실제 화면 검증
+- **#23 정직 보고**: heredoc 시도 0회, edit_file 직접 매칭 일관 사용
+- **#24 commit + push 단일 라인**: 본 turn에서 한 줄로 처리
+- **#25 한글 직접 입력**: edit_file 모든 매칭 1회 성공 (NFC 정규화 0회 — 새 코드는 영어 주석/타입만 사용해 한글 매칭 risk 자체 회피)
+- **#26 일반화**: 본 패턴(자체 fetch → useDashboardData 훅)은 A3-3 후보(정원 창고 / 검색 조련사) 시 그대로 재사용 가능
+- **#27 기능 0개 삭제**: 13개 위젯 + 4섹션 + 모드 토글 + KkottiBriefing + 4섹션 mascot pill + 동적 subtitle + ModeActionHint + Section 3 모드별 정렬 + 구매확정 리마인더 위젯 모두 보존, EventTimeline은 fetch 방식만 교체 (UI/렌더 0 변경)
+
+### 본 세션이 영구 기록한 핵심 학습
+- **작은 SWR 마이그는 단독 채팅 1회로 안전 완수 가능**: 자체 fetch 1개 위젯 + 신규 훅 1개 추가는 컨텍스트 ~30%로 단계 1~6 모두 완료 가능.
+- **Strict typing 우선 (loose typing 회피)**: `ProductEventApiItem` strict export로 작성 — 위젯 측 normalization 코드 0줄 → 신규 버그 risk 0.
+
+### A3-3 인계 범위 (다음 채팅)
+- 2번 다른 페이지 SWR 확장 (정원 창고 / 검색 조련사) — **자체 판단 추천**
+- 3번 mascot SVG 자산 통합 (꽃졔님 디자인 자산 입력 대기)
+- 4번 (보너스) 한달사용 리뷰 2단계 가이드 — A3-1b 패턴 재사용 가능
+
+---
 
 ## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-1b 완료 (ConfirmationReminderWidget UI + 대시보드 통합 + Chrome MCP 검증) ✅
 

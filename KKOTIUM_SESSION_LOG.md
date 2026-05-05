@@ -9,6 +9,74 @@
 
 ---
 
+## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-2 완료 (EventTimeline SWR 마이그레이션) ✅
+
+### 본 세션 성격
+- 직전 commit `4f596c3` (A3-1b UI) 이후 본 세션에서 **Part A3-2 신규 작업** 진행.
+- ROADMAP "다음 새 채팅 시작 메시지 (Part A3-2)" 섹션의 자체 판단 추천대로 **1번 EventTimeline SWR 마이그 단독 진행**. 2~4번 후보는 A3-3 이후로 이연.
+- 컨텍스트 효율 우선 — 단독 채팅 1회로 단계 1~6 모두 완료 (꽃졔님 직접 지시).
+
+### 변경된 파일 (2개)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `src/lib/hooks/useDashboardData.ts` | EDIT (+53줄, 13번째 훅) | `useEventTimeline()` 훅 추가 — strict typing (`ProductEventApiItem` interface export) + `SWR_PROFILE_5MIN` cadence + `refresh()` 노출. 기존 12개 훅 패턴 그대로. |
+| `src/components/dashboard/EventTimeline.tsx` | EDIT (-12 +6 = 정합 -6줄, 자체 fetch 제거) | `useState`/`useEffect`/`load()` 함수 제거 + `import { useEventTimeline } from '@/lib/hooks/useDashboardData'` 추가 + 컴포넌트 내부 `const { events, isLoading, isValidating, refresh } = useEventTimeline()` + `loading = isLoading \|\| isValidating` 합성 + 로컬 `interface ProductEvent` 정의 삭제. RefreshCw 버튼 `onClick={load}` → `onClick={refresh}` 교체. UI/렌더 0 변경. |
+
+### 설계 결정 — Cadence: SWR_PROFILE_5MIN 채택 (3가지 근거)
+1. **이벤트 생성 메커니즘**: ProductEvent는 cron + 사용자 액션에 의해 append-only로 생성 — 1분 단위 즉각 갱신 불필요.
+2. **방금 완료된 A3-1a/b 패턴 일치**: 가장 최근 추가된 `useConfirmationPending`도 5분 cadence — 패턴 일관성 보존.
+3. **dedupingInterval=60s**: 사용자 RefreshCw 클릭 시 즉시 refresh 가능 + idle 폴링 부하 최소화 (5min refresh = 12회/시간).
+
+### 13개 훅 cadence 매트릭스 (본 세션 후 확정)
+- **60s (DASHBOARD_SWR_DEFAULTS)**: Sidebar / Profitability / ProductsList / UploadReadiness / ProductLifecycle / DashboardStats — 6개
+- **5min (SWR_PROFILE_5MIN)**: GoodService / ReviewGrowth / CompetitionMonitor / ConfirmationPending / **EventTimeline (신규)** — 5개
+- **24h (SWR_PROFILE_24H)**: DataLabTrend / SourcingRecommend — 2개
+- **합계**: 13개 (옵션 D 12개 + Part A3-2에서 +1)
+
+### Chrome MCP 라이브 검증 5항목 (작업원칙 #22)
+| # | 항목 | 결과 |
+|---|---|---|
+| 1 | EventTimeline 위젯 (API 2건 = UI 2건 일치) | ✅ "최근 이벤트 / 2건 / 가격 변동 / 26일 전 / 선물받은 특별한 일상 / -9.2% margin: 9.6%->17.3% / +10.1% margin: 17.3%->9.6%" 정확 표시 |
+| 2 | ConfirmationReminderWidget 회귀 (A3-1b) | ✅ 위젯 정상 표시 |
+| 3 | UploadReadiness 75점 회귀 | ✅ 75 평균 점수 정확 표시 |
+| 4 | 4섹션 mascot pill (^_^/^ㅂ^×2/✿ㅅ✿) 보존 | ✅ sec1_smile=true / sec2_pbpb=2개 / sec3_ssss=true |
+| 5 | 자체 fetch 패턴 제거 (useState/useEffect 0개) | ✅ EventTimeline.tsx 새 import 구조 검증 완료 |
+
+### API 라이브 검증 (회귀 점검)
+- `curl /api/events/recent` → HTTP 200 + JSON 정확 (events 2건: PRICE_CHANGE 양방향)
+- `curl /api/orders/confirmation-pending` → HTTP 200 + JSON 정확 (A3-1b 회귀 정상)
+
+### 사전 점검 결과 (작업원칙 #21)
+- HEAD `4f596c3` = origin/main 동기화 ✅, working tree clean ✅, TSC 0 errors ✅, dev :3000 PID 1711+2018 ✅
+- A3-1b 결과물 raw 검증: ConfirmationReminderWidget.tsx 22KB / confirmation-pending.ts 10KB / route.ts 3KB 모두 존재 ✅
+- 작업 후: TSC EXIT=0 ✅, Filesystem:edit_file 모든 매칭 1회 성공 (NFC 정규화 0회)
+
+### 본 세션 commit
+- 코드 변경: `src/lib/hooks/useDashboardData.ts` (+53줄), `src/components/dashboard/EventTimeline.tsx` (-12 +6 = 정합 -6줄)
+- MD 갱신: PROGRESS + ROADMAP + SESSION_LOG 3종
+- commit 메시지(단일 라인): `feat(workflow-redesign A3-2): EventTimeline SWR 마이그레이션 — useEventTimeline 13번째 훅 신설 + 자체 fetch 제거 + 5min cadence`
+
+### 적용된 작업원칙
+- **#21 사전 점검**: 8항목 모두 통과 후 작업 시작
+- **#22 라이브 검증**: API 200 + Chrome MCP 5항목 실제 화면 검증 완료
+- **#23 정직 보고**: heredoc 시도 0회, edit_file 직접 매칭 일관 사용
+- **#24 commit + push 단일 라인**: 본 turn에서 한 줄로 처리
+- **#25 한글 직접 입력**: edit_file 모든 매칭 1회 성공 (NFC 정규화 0회 — 새 코드는 영어 주석/타입만 사용해 한글 매칭 risk 자체 회피)
+- **#26 일반화**: 본 패턴(자체 fetch → useDashboardData 훅)은 향후 A3-3 후보(정원 창고 / 검색 조련사) 시 그대로 재사용 가능
+- **#27 기능 0개 삭제**: 13개 위젯 + 4섹션 + 모드 토글 + KkottiBriefing + 4섹션 mascot pill + 동적 subtitle + ModeActionHint + Section 3 모드별 정렬 + 구매확정 리마인더 위젯 모두 보존, EventTimeline은 fetch 방식만 교체 (UI/렌더 0 변경)
+
+### 본 세션이 영구 기록한 핵심 학습
+- **작은 SWR 마이그는 단독 채팅 1회로 안전 완수 가능**: A3-2처럼 자체 fetch 1개 위젯 + 신규 훅 1개 추가는 컨텍스트 ~30%로 단계 1~6 모두 완료 가능. A3-3+ 후보(다른 페이지 SWR / mascot SVG / 한달리뷰)는 페이지/위젯 수에 따라 분할 결정 필요.
+- **Strict typing 우선 (loose typing 회피)**: `useEventTimeline`은 `T = unknown` 패턴이 아닌 `ProductEventApiItem` strict export로 작성 — 위젯 측 normalization 코드 0줄 → 마이그 시 신규 버그 risk 0.
+- **한글 매칭 risk 회피 전략**: 새로 작성하는 코드 주석/타입은 전부 영어로 작성 — 이모지/한글 주석 금지 원칙 준수 동시에 NFC 정규화 이슈 자체 회피.
+
+### A3-3 인계 범위 (다음 채팅)
+- 2번 다른 페이지 SWR 확장 (정원 창고 / 검색 조련사) — **자체 판단 추천**
+- 3번 mascot SVG 자산 통합 (꽃졔님 디자인 자산 입력 대기)
+- 4번 (보너스) 한달사용 리뷰 2단계 가이드 — A3-1b 패턴 재사용 가능
+
+---
+
 ## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-1b UI 완료 (ConfirmationReminderWidget UI + 대시보드 통합 + Chrome MCP 검증) ✅
 
 ### 본 세션 성격

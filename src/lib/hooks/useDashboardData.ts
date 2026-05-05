@@ -630,3 +630,56 @@ export function useConfirmationPending<T = ConfirmationPendingApiResponse>(): {
     refresh: () => { void mutate(); },
   };
 }
+
+// ============================================================================
+// WORKFLOW REDESIGN Part A3-2 (2026-05-05) — Event Timeline hook
+// Surfaces the most recent ProductEvent records (OOS, PRICE_CHANGE,
+// SCORE_DROP, STATUS_CHANGE) for the dashboard event feed widget.
+// Migrates EventTimeline.tsx from inline fetch + useEffect to the shared
+// SWR layer so the dashboard's freshness contract stays uniform.
+//   - Event Timeline : 5 min cadence (events are append-only and the
+//     dashboard does not need sub-minute precision for this surface).
+// ============================================================================
+
+// ─── 13. Event Timeline (5 min cadence) ─────────────────────────────────
+// Strict typing here mirrors the widget's previous local ProductEvent
+// interface so EventTimeline.tsx can drop the duplicate definition.
+// productName is intentionally `string | null` to match the API enrichment
+// (returns null when the parent product has been deleted).
+
+export interface ProductEventApiItem {
+  id: string;
+  productId: string;
+  type: string;
+  oldValue?: string | null;
+  newValue?: string | null;
+  note?: string | null;
+  createdAt: string;
+  productName?: string | null;
+}
+
+interface EventTimelineApiResponse {
+  success?: boolean;
+  events?: ProductEventApiItem[];
+}
+
+export function useEventTimeline(): {
+  events: ProductEventApiItem[];
+  isLoading: boolean;
+  isValidating: boolean;
+  /** Force a re-fetch (use after a manual refresh button click). */
+  refresh: () => void;
+} {
+  const { data, isLoading, isValidating, mutate } = useSWR<EventTimelineApiResponse>(
+    '/api/events/recent',
+    jsonFetcher,
+    SWR_PROFILE_5MIN,
+  );
+
+  return {
+    events: data?.success ? data.events ?? [] : [],
+    isLoading,
+    isValidating,
+    refresh: () => { void mutate(); },
+  };
+}

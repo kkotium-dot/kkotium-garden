@@ -1,20 +1,12 @@
 'use client';
 // EventTimeline — mini event timeline card for dashboard
 // Shows recent ProductEvent records (OOS, PRICE_CHANGE, SCORE_DROP, STATUS_CHANGE)
+// Workflow Redesign A3-2 (2026-05-05): migrated from inline fetch to
+// useEventTimeline SWR hook (5 min cadence) so the dashboard's freshness
+// contract is uniform across all 13 hooks.
 
-import { useState, useEffect } from 'react';
 import { Clock, TrendingDown, Package, DollarSign, RefreshCw, Activity } from 'lucide-react';
-
-interface ProductEvent {
-  id: string;
-  productId: string;
-  type: string;
-  oldValue?: string | null;
-  newValue?: string | null;
-  note?: string | null;
-  createdAt: string;
-  productName?: string;
-}
+import { useEventTimeline } from '@/lib/hooks/useDashboardData';
 
 const EVENT_META: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   OOS:            { label: '품절 감지',    icon: Package,      color: '#dc2626', bg: '#fee2e2' },
@@ -35,23 +27,11 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function EventTimeline() {
-  const [events, setEvents] = useState<ProductEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res  = await fetch('/api/events/recent');
-      const data = await res.json();
-      if (data.success) setEvents(data.events ?? []);
-    } catch {
-      // non-critical — fail silently
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
+  // SWR-backed: events + loading flags + refresh come from the shared hook.
+  // `loading` collapses isLoading|isValidating so the spinner UI is identical
+  // to the previous self-managed state.
+  const { events, isLoading, isValidating, refresh } = useEventTimeline();
+  const loading = isLoading || isValidating;
 
   return (
     <div className="kk-card" style={{ overflow: 'hidden' }}>
@@ -76,7 +56,7 @@ export default function EventTimeline() {
           )}
         </div>
         <button
-          onClick={load}
+          onClick={refresh}
           style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: '#B0A0A8' }}
         >
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
