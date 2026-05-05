@@ -9,6 +9,72 @@
 
 ---
 
+## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-4a 완료 (한달리뷰 백엔드) ✅
+
+### 본 세션 성격
+- 직전 commit `34d66f2` (A3-3b) 이후 본 세션에서 **Part A3-4a 신규 작업** 진행. 페이지 SWR 확장 2/2 완료(A3-3a/b) 후 새 도메인 진입 — 한달리뷰 (E-2C 잔여, 후보 B 선택).
+- 꽃졔님 지시 — "우선 진행해서 결과보고 후에 테스트및 구조를 보고 결정". A3-1a/b 분할 패턴 그대로 차용 — 본 세션 a (백엔드만), 다음 세션 b (UI + 혜택탭 가이드).
+
+### 후보 선택 근거
+- 3개 후보(A 마스코트 SVG / B 한달리뷰 / C row-level fetch SWR) 중 **B 선택** — 새싹｢파워셀러 매출 임팩트 최대.
+- 파워셀러 조건(구매확정률+리뷰수+굿서비스) 중 **리뷰수**가 가장 영향력 큰 변수. 일반 리뷰(D+1~3) + 한달리뷰(D+28~32) 2단계 = 동일 주문에서 리뷰 수 2배 가능.
+- A3-1b 패턴(D+윈도우)을 D+28~32로 거의 그대로 변형 가능 — 리스크 최소.
+
+### 변경된 파일 (3개 신규/추가)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `src/lib/month-review-pending.ts` | NEW (232줄) | `findMonthReviewEligibleOrders()` + 9 exports. confirmation-pending.ts (249줄) 미러 — fallback signal 제거(COMPLETED 전이는 sync route가 100% updatedAt 갱신해서 단일 시그널 충분). `MonthReviewSignal = 'completed_at'`, `daysSinceConfirmation`, `buildMonthReviewPreview()` (한달 사용 후 솔직 후기 + 단골 혜택 안내 메시지). |
+| `src/app/api/orders/month-review-pending/route.ts` | NEW (86줄) | GET endpoint. confirmation-pending route 미러 — 동일 Solapi 활성화 게이트(`SOLAPI_ACTIVATION_THRESHOLD = 50`). 응답에 `orders` + `solapi` 블록 번들로 단일 SWR fetch로 위젯 전체 구동. |
+| `src/lib/hooks/useDashboardData.ts` | EDIT (+43줄, 829→872) | **15번째 훅** `useMonthReviewPending<T>()` 추가. `SWR_PROFILE_5MIN` cadence (D+N day-granular, A3-1a 동일). `error/refresh` 노출. 기존 14개 훅 패턴 그대로. |
+
+### 설계 결정 — confirmation-pending 대비 차이점
+| 항목 | confirmation-pending (A3-1a) | month-review-pending (A3-4a) |
+|---|---|---|
+| 윈도우 | D+3~5 | **D+28~32** (orders/page.tsx Stage 3 정렬) |
+| Status | DELIVERED | **COMPLETED** |
+| Reference | deliveredAt + paymentDate fallback | **updatedAt** (단일 — sync route 100% 갱신) |
+| Auto-cutoff | Naver D+8 자동 확정 cutoff | **별도 cutoff 불필요** (이미 COMPLETED 상태) |
+| Signal | 'delivered_at' / 'payment_date_fallback' | **'completed_at'** (단일) |
+| Field 변경 | `daysSinceDelivery` | **`daysSinceConfirmation`** |
+| Preview | 구매확정 유도 | **한달 사용 후 솔직한 리뷰 + 단골 혜택 안내** |
+| Lookback floor | 13일 (auto-confirm 8 + 5) | **60일** (review window 32 + 28일 tail) |
+
+### 15개 훅 cadence 매트릭스 (본 세션 후 확정)
+- **60s (DASHBOARD_SWR_DEFAULTS)**: Sidebar / Profitability / ProductsList / UploadReadiness / ProductLifecycle / DashboardStats / NaverSeoProducts — 7개
+- **5min (SWR_PROFILE_5MIN)**: GoodService / ReviewGrowth / CompetitionMonitor / ConfirmationPending / EventTimeline / **MonthReviewPending (신규)** — 6개
+- **24h (SWR_PROFILE_24H)**: DataLabTrend / SourcingRecommend — 2개
+- **합계**: 15개 (A3-3b 14개 + A3-4a +1)
+
+### 단계 1 사고: create_file 잘못 사용 (정직 보고 + 즉시 복구)
+- **사고**: 첫 호출 `create_file`(Claude 컨테이너 도구) 사용 — 응답은 "Successfully"였지만 사용자 파일시스템에는 작성 안됨.
+- **즉각 원인**: `create_file`은 Claude 컨테이너용 (`/home/claude`/`/mnt`)이고 사용자 컴퓨터는 Filesystem MCP의 `write_file`이 필요.
+- **즉시 복구**: `ls -la src/lib/month-review-pending.ts` → "No such file" 즉시 검증 → `Filesystem:write_file`로 다시 작성 → `wc -l 232 줄` 검증 통과.
+- **일반화 (작업원칙 26번 적용)**: Claude 컨테이너 vs 사용자 컴퓨터 두 파일시스템 구분이 모호한 도구 응답 ("Successfully wrote" 메시지가 동일) — Filesystem write 후 항상 iterm `ls`/`wc -l`로 raw 검증 강제.
+- **본 사고가 영구 기록한 학습**: 도구 응답이 "Successfully"여도 raw 검증 (작업원칙 (h)) 우선. Filesystem MCP 양쪽 namespace 모두 사용 가능하나, 한 번 정한 namespace로 일관 사용 (작업원칙 (n)).
+
+### TSC + API 라이브 검증 (작업원칙 #22)
+| # | 항목 | 결과 |
+|---|---|---|
+| 1 | `npx tsc --noEmit` | ✅ EXIT 0 (0 errors) |
+| 2 | API HTTP `/api/orders/month-review-pending` | ✅ 200 |
+| 3 | JSON 구조 — `success: true` | ✅ |
+| 4 | JSON 구조 — `orders: []`, `count: 0` (현 컨텍스트 적합) | ✅ (이번 달 COMPLETED 0건 — 새싹셀러 정상) |
+| 5 | scanWindow `2026-04-03 ~ 2026-04-07 UTC` (D+32~D+28) | ✅ 윈도우 계산 정확 |
+| 6 | Solapi `configured: false`, `progressPercent: 0` | ✅ (키 미입력 상태 정상 반영) |
+| 7 | `useMonthReviewPending` 1회만 등장 (중복 0) | ✅ (작업원칙 (h) (n) 적용 결과) |
+
+### 본 세션 commit (단일 라인)
+- 변경 파일 5개: `src/lib/month-review-pending.ts` (NEW 232줄), `src/app/api/orders/month-review-pending/route.ts` (NEW 86줄), `src/lib/hooks/useDashboardData.ts` (+43줄), MD 3개
+- commit 메시지: `feat(workflow-redesign A3-4a): 한달리뷰 백엔드 — month-review-pending lib + API route + useMonthReviewPending SWR 훅 (15번째)`
+
+### A3-4b 인계 범위 (다음 채팅)
+- **MonthReviewWidget.tsx 신규** (~600줄, ConfirmationReminderWidget 미러) — 보라 팔레트 (`#7c3aed`/`#ede9fe`/`#c4b5fd`) 사용해 일반 리뷰(파랑)와 시각 구분.
+- **dashboard/page.tsx Section 2 today 모드 통합** (+2줄, ConfirmationReminderWidget 옆 또는 아래에 배치).
+- **products/new/page.tsx 혜택탭 (Tab6) E-2C 영역 가이드 추가** (~50줄) — L2865 `{/* E-2C: Review reward optimal guide */}` 다음에 한달리뷰 운영 가이드 섹션 추가 (한달 사용 리뷰 적립금 기본값 1000원 권장 + isOptimal 체크 로직 + 매출 임팩트 안내).
+- **Chrome MCP 라이브 검증 5항목** — 위젯 표시 / 혜택탭 가이드 / 회귀(A3-3b 정원 창고 + A3-3a 검색 조련사 + 4섹션 mascot pill / EventTimeline / ConfirmationReminderWidget).
+
+---
+
 ## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-3b 완료 (정원 창고 SWR 마이그레이션) ✅
 
 ### 본 세션 성격

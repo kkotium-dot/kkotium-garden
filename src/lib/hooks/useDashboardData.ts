@@ -827,3 +827,46 @@ export function useNaverSeoProducts(options?: {
     refresh: () => { void mutate(); },
   };
 }
+
+// ============================================================================
+// WORKFLOW REDESIGN Part A3-4a (2026-05-05) — Month Review Pending hook
+// Surfaces orders eligible for a one-month-use review reminder
+// (COMPLETED in [D+28, D+32] window) + Solapi activation status so the
+// dashboard widget can render either a live preview or a stat-only view
+// without a second round-trip.
+//
+// Cadence: 5 min (SWR_PROFILE_5MIN) — D+N is day-granular; matches the
+// confirmation-pending hook so the two-stage review pipeline shares the
+// same freshness contract.
+// ============================================================================
+
+// ─── 15. Month Review Pending (5 min cadence) ───────────────────────────────
+// Loose typing — the response shape is owned by MonthReviewWidget (A3-4b).
+// The widget consumes both `orders` and `solapi` blocks from a single
+// SWR fetch (see /api/orders/month-review-pending route handler).
+type MonthReviewPendingApiResponse = unknown;
+
+export function useMonthReviewPending<T = MonthReviewPendingApiResponse>(): {
+  data: T | null;
+  isLoading: boolean;
+  isValidating: boolean;
+  error: string | null;
+  /** Force a re-fetch (use after manual scan or alimtalk send). */
+  refresh: () => void;
+} {
+  const { data, isLoading, isValidating, mutate, error: swrError } = useSWR<T>(
+    '/api/orders/month-review-pending',
+    jsonFetcher,
+    SWR_PROFILE_5MIN,
+  );
+
+  const networkError = swrError ? 'Network error' : null;
+
+  return {
+    data: data ?? null,
+    isLoading,
+    isValidating,
+    error: networkError,
+    refresh: () => { void mutate(); },
+  };
+}

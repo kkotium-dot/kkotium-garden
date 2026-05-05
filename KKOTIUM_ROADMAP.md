@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A3-3b 완료 ✅ — 정원 창고 SWR 마이그 + useProductsList 강화(제네릭/error/setRawProducts) + Chrome MCP 검증 / 페이지 SWR 확장 2/2 완료 / 다음: 새 채팅에서 Part A3-4 후보)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C/D/E Part 1 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 + Part A3-1b UI 완료 ✅ (구매확정 리마인더 MVP 100% 완성) + Part A3-2 EventTimeline SWR 마이그 완료 ✅ + Part A3-3a 검색 조련사 SWR 마이그 완료 ✅ + Part A3-3b 정원 창고 SWR 마이그 완료 ✅ (페이지 SWR 확장 2/2 완료)**
-> **다음 작업: 워크플로우 재설계 Sprint Part A3-4 후보 — mascot SVG 위젯 강화 / 한달리뷰 (E-2C 잔여) / NaverSeoProductTable row-level fetch (`market-analysis`, `keyword-stats`). 새 채팅에서 진행. 상세는 본 문서 하단 "다음 새 채팅 시작 메시지 (Part A3-4)" 섹션 참조**
+> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A3-4a 완료 ✅ — 한달리뷰 백엔드 / month-review-pending lib + API + useMonthReviewPending SWR 훅 (15번째) / TSC 0 errors / API 200 검증 / 다음: 새 채팅에서 Part A3-4b — UI + 혜택탭 가이드 + Chrome MCP 검증)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C/D/E Part 1 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 + Part A3-1b UI 완료 ✅ (구매확정 리마인더 MVP 100% 완성) + Part A3-2 EventTimeline SWR 마이그 완료 ✅ + Part A3-3a 검색 조련사 SWR 마이그 완료 ✅ + Part A3-3b 정원 창고 SWR 마이그 완료 ✅ (페이지 SWR 확장 2/2 완료) + Part A3-4a 한달리뷰 백엔드 완료 ✅ (15번째 훅)**
+> **다음 작업: 워크플로우 재설계 Sprint Part A3-4b — MonthReviewWidget UI 신규 + 대시보드 Section 2 today 통합 + products/new 혜택탭 E-2C 영역 한달리뷰 운영 가이드 추가 + Chrome MCP 검증. 새 채팅에서 진행. 상세는 SESSION_LOG.md 관련 세션 + 답변 끝 인계 코드 블록 참조 (기존 A3-4 세션 메시지는 deprecated)**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
