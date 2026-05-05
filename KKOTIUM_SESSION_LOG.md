@@ -9,6 +9,68 @@
 
 ---
 
+## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-1b UI 완료 (ConfirmationReminderWidget UI + 대시보드 통합 + Chrome MCP 검증) ✅
+
+### 본 세션 성격
+- 직전 commit `451c5e7` (A3-1a 백엔드) 이후 본 세션에서 **Part A3-1b UI 마무리** 진행.
+- 본 채팅은 이어받기 세션 — 직전 'A3-1b 시작' 채팅이 단계 1~5 완료 후 단계 6 commit 직전 중단됨. 본 채팅에서 정직 보고(작업원칙 #23) 후 단계 6, 7 마무리만 수행.
+- 자체 판단 추가 개선 4종(★1~★4) 통합으로 ROADMAP 기본 + 파워셀러 가치 동시 달성.
+
+### 변경/생성된 파일 (2개)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `src/components/dashboard/ConfirmationReminderWidget.tsx` | NEW (658줄 / 22KB) | `useConfirmationPending()` 훅 사용 카드 위젯. Solapi 키 상태별 3-mode 분기(미입력/입력+미달/입력+도달) + D+3·D+4·D+5 시급성 컬러 구분(yellow→orange→red) + 마스킹된 미리보기 N건 expandable + Solapi 미입력 시 CTA 링크 (`/settings/kakao`) + RefreshCw 액션 + count=0 빈 상태 안심 메시지 |
+| `src/app/dashboard/page.tsx` | EDIT (+2줄) | L28 `import ConfirmationReminderWidget`, L499 `{mode === 'today' && <ConfirmationReminderWidget />}` Section 2 (action) 끝에 today 모드 조건부 배치 |
+
+### 자체 판단 개선 4종
+- **★1 시급성 컬러 구분**: D+3=yellow, D+4=orange, D+5=red. 자동확정(D+8) 임박할수록 시각 우선순위 ↑ — 한눈 파악
+- **★2 폐기 (정합성 보존)**: 위젯 내부 mascot pill 추가는 Section 자체가 mascot을 보유하므로 일관성 깨짐 → 위젯 자체 status pill로 대체
+- **★3 Solapi 미입력 CTA**: "지금은 미리보기 — 월 50건+ 도달 후 키 입력하면 자동 발송" 안내와 함께 `/settings/kakao` 직접 이동 링크 → 활성화 흐름 마찰 0
+- **★4 dry-run 미리보기 expandable**: `buildReminderPreview()` 결과를 expandable로 노출 → 발송 전 텍스트 검수 가능 + 향후 발송 토글 추가 시 그대로 재사용
+
+### Chrome MCP 라이브 검증 5항목 (작업원칙 #22)
+| # | 항목 | 결과 |
+|---|---|---|
+| 1 | ConfirmationReminderWidget 표시 | ✅ Section 2 끝 today 모드에서 정상 렌더링 (count=0 빈 상태 안심 메시지 표시) |
+| 2 | Solapi 미입력 안내 + progressPercent 0% | ✅ "지금은 미리보기 — 월 50건+ 도달" 배너 + 진행률 바 0/50 (0%) 정상 |
+| 3 | DRAFT 8개 평균 75점 회귀 | ✅ UploadReadinessWidget "75 평균 점수" 정확 회귀 |
+| 4 | 4섹션 mascot pill 보존 | ✅ ^_^/^ㅂ^×2/✿ㅅ✿ 모두 정상 표시 |
+| 5 | A2b 결과 회귀 안 함 | ✅ Section 3 모드별 정렬 + 동적 subtitle + ModeActionHint 모두 정상 |
+
+### API 라이브 검증 (회귀 점검)
+- `curl /api/orders/confirmation-pending` → HTTP 200 + JSON 정확: `success=true / orders=[] / count=0 / primaryCount=0 / fallbackCount=0 / scanWindow.fromIso=2026-04-30 / scanWindow.toIso=2026-05-02 / solapi.configured=false / solapi.activationThreshold=50 / solapi.progressPercent=0`
+- 현재 DB 주문 0건이라 빈 배열은 정상. 매출 발생 시 자동 채워짐.
+
+### 사전 점검 결과 (작업원칙 #21)
+- HEAD `451c5e7` = origin/main 동기화 ✅, working tree clean (이어받기 시점) ✅, TSC 0 errors ✅, dev :3000 HTTP 200 ✅
+- 작업 후: 신규 658줄 위젯 + dashboard 2줄 변경, TSC EXIT=0 ✅
+
+### 본 세션 commit
+- 코드 변경: `src/components/dashboard/ConfirmationReminderWidget.tsx` (NEW), `src/app/dashboard/page.tsx` (+2줄)
+- MD 갱신: PROGRESS + ROADMAP + SESSION_LOG 3종
+- commit 메시지(단일 라인): `feat(workflow-redesign A3-1b): 구매확정 리마인더 UI 위젯 — ConfirmationReminderWidget 신설 + 대시보드 Section 2 today 통합 + 시급성 컬러/CTA/expandable 미리보기`
+
+### 적용된 작업원칙
+- **#21 사전 점검**: 8항목 모두 통과 후 작업 시작 + 이어받기 시 실제 파일 상태 raw 검증으로 보고와 일치 확인
+- **#22 라이브 검증**: API 200으로 종결 X — Chrome MCP 5항목 실제 화면 검증 완료
+- **#23 정직 보고**: 직전 채팅 종료 시 단계 6 미완료 상태 즉시 보고 → 사용자 승인 후 이어받기 진행
+- **#24 commit + push 단일 라인**: 본 turn에서 한 줄 명령으로 처리
+- **#25 한글 직접 입력**: write_file 직접 입력 (NFC 정규화 0회)
+- **#26 일반화**: 시급성 컬러 + CTA 링크 + expandable 미리보기 패턴은 향후 다른 알림 위젯(D+1 발송, D+10 휴면 등) 추가 시 그대로 재사용 가능
+- **#27 기능 0개 삭제**: 12개 위젯 + 4섹션 + 모드 토글 + KkottiBriefing + 4섹션 mascot pill + 동적 subtitle + ModeActionHint + Section 3 모드별 정렬 모두 보존, 신규 위젯 1개만 추가 (총 13개)
+
+### 본 세션이 영구 기록한 핵심 학습
+- **이어받기 세션 사전 점검 강화**: 직전 채팅이 commit 직전 중단된 경우, 보고된 상태(파일 작성 완료, TSC 통과)와 실제 working tree 상태(untracked / modified)를 raw 검증으로 일치 확인 후 진입. PROGRESS.md 헤더의 "다음 작업" 라인이 실제 결과물 존재 여부와 불일치할 수 있음 — 항상 `ls`/`grep`로 raw 검증 우선.
+- **A3-1b 완료로 구매확정 리마인더 MVP 100% 완성**: 백엔드(A3-1a) + UI(A3-1b) 동시 완성 → 매출 발생 즉시 작동 가능. Solapi 키 입력만 하면 자동 발송 활성화 (월 50건+ 임계치 후).
+
+### A3-2 인계 범위 (다음 채팅)
+- 1번 EventTimeline SWR 마이그 (작음, 빠른 마무리) — **자체 판단 추천**
+- 2번 다른 페이지 SWR 확장 (정원 창고 / 검색 조련사)
+- 3번 mascot SVG 자산 통합 (디자인 자산 필요)
+- 4번 (보너스) 한달사용 리뷰 2단계 가이드
+
+---
+
 ## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-1a 백엔드 완료 (구매확정 리마인더 도메인 로직 + API + SWR 훅) ✅
 
 ### 세션 성격

@@ -25,6 +25,7 @@ import KkottiWidget from '@/components/dashboard/KkottiWidget';
 import KkottiBriefingWidget from '@/components/dashboard/KkottiBriefingWidget';
 import UploadReadinessWidget from '@/components/dashboard/UploadReadinessWidget';
 import ReviewGrowthWidget from '@/components/dashboard/ReviewGrowthWidget';
+import ConfirmationReminderWidget from '@/components/dashboard/ConfirmationReminderWidget';
 import MarketTrendWidget from '@/components/dashboard/MarketTrendWidget';
 import DailyPlanWidget from '@/components/dashboard/DailyPlanWidget';
 import EventTimeline from '@/components/dashboard/EventTimeline';
@@ -492,6 +493,10 @@ export default function DashboardPage() {
 
           {/* Review growth tracker — uses useReviewGrowth() internally */}
           <ReviewGrowthWidget />
+
+          {/* A3-1b: Purchase confirmation reminder — D+3~5 window */}
+          {/* Mounted in 'today' mode only since reminders are a daily action item. */}
+          {mode === 'today' && <ConfirmationReminderWidget />}
         </div>
       </CollapsibleSection>
 

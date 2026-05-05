@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A3-1a 백엔드 완료 ✅ — confirmation-pending lib + API + SWR 훅 / 다음: 새 채팅에서 Part A3-1b — ConfirmationReminderWidget UI + 대시보드 Section 1 통합 + Chrome MCP 검증)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C/D/E Part 1 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 완료 ✅**
-> **다음 작업: 워크플로우 재설계 Sprint Part A3-1b — ConfirmationReminderWidget UI + 대시보드 Section 1 통합. 새 채팅에서 진행. 상세는 본 문서 하단 "다음 새 채팅 시작 메시지 (Part A3-1b)" 섹션 참조**
+> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A3-1b UI 완료 ✅ — ConfirmationReminderWidget 신설 + 대시보드 Section 2 today 통합 + Chrome MCP 검증 / 다음: 새 채팅에서 Part A3-2 — EventTimeline SWR 마이그 단독 진행 추천)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C/D/E Part 1 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 + Part A3-1b UI 완료 ✅ (구매확정 리마인더 MVP 100% 완성)**
+> **다음 작업: 워크플로우 재설계 Sprint Part A3-2 — 자체 판단 추천: 1번 EventTimeline SWR 마이그 단독 진행. 새 채팅에서 진행. 상세는 본 문서 하단 "다음 새 채팅 시작 메시지 (Part A3-2)" 섹션 참조**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -14,84 +14,79 @@
 
 ---
 
-## 🎯 다음 새 채팅 시작 메시지 (워크플로우 재설계 Sprint Part A3-1b — 2026-05-05 작성)
+## 🎯 다음 새 채팅 시작 메시지 (워크플로우 재설계 Sprint Part A3-2 — 2026-05-05 작성)
 
-> **A3-1a 백엔드 완료 ✅ (2026-05-05 본 세션, commit 본 세션 마무리 commit)**:
-> - **`src/lib/confirmation-pending.ts`** (NEW): `findReminderEligibleOrders()` — primary 신호 (deliveredAt D+3~5) + fallback 신호 (paymentDate + 3일 lag). `maskKoreanName()` 개인정보 보호 + `buildReminderPreview()` 알림톡 미리보기 텍스트.
-> - **`src/app/api/orders/confirmation-pending/route.ts`** (NEW): GET → `{ orders, count, primaryCount, fallbackCount, scanWindow, solapi: { configured, eligibleForActivation, monthlyDeliveredCount, activationThreshold, sendActive, progressPercent } }`. 단일 fetch로 위젯 전체 상태 표현.
-> - **`src/lib/hooks/useDashboardData.ts`** (+34): `useConfirmationPending()` 훅 (SWR_PROFILE_5MIN, refresh 노출).
-> - **API 라이브 검증 통과**: HTTP 200 + JSON 정확 (success=true / orders=[] / count=0 / solapi.configured=false / solapi.activationThreshold=50 / solapi.progressPercent=0). 현재 DB 주문 0건이라 빈 배열은 정상.
-> - **UI 검증은 A3-1b에서 Chrome MCP로 진행** (작업원칙 22번 — 라이브 검증 필수).
-> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-1a 백엔드 완료" 참조.
+> **A3-1b UI 완료 ✅ (2026-05-05 본 세션, commit 본 세션 마무리 commit)**:
+> - **`src/components/dashboard/ConfirmationReminderWidget.tsx`** (NEW, 658줄 / 22KB): `useConfirmationPending()` 훅 사용 카드 위젯. Solapi 키 상태별 3-mode 분기(미입력/입력+미달/입력+도달) + D+3·D+4·D+5 시급성 컬러 구분(yellow→orange→red) + 마스킹된 미리보기 N건 expandable + Solapi 미입력 시 CTA 링크 (`/settings/kakao`) + RefreshCw 액션 + count=0 빈 상태 안심 메시지.
+> - **`src/app/dashboard/page.tsx`** (+2줄): L28 import + L499 Section 2 (action) 끝에 `mode === 'today'` 조건부 배치.
+> - **Chrome MCP 라이브 검증 5항목 통과**: 위젯 표시 / Solapi 미입력 안내 + 진행률 0% / DRAFT 8개 평균 75점 회귀 / 4섹션 mascot pill (^_^/^ㅂ^×2/✿ㅅ✿) 보존 / Section 3 모드별 정렬 + 동적 subtitle + ModeActionHint 보존.
+> - **API 라이브 회귀 점검**: `/api/orders/confirmation-pending` HTTP 200 + JSON 정확.
+> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-1b UI 완료" 참조.
 
-> **워크플로우 재설계 Sprint Part A3-1b 작업 범위 (UI 마무리)**:
-> 1. **신규 위젯 `src/components/dashboard/ConfirmationReminderWidget.tsx`**
->    - `useConfirmationPending()` 훅 사용, 카드 형태
->    - 헤더: count + "구매확정 리마인더 대기" 라벨
->    - 본문: 미리보기 N건 (mask된 customerName + productName + daysSinceDelivery)
->    - Solapi 미입력 시: "지금은 미리보기 — 월 50건+ 도달 후 키 입력하면 자동 발송" 안내 + progressPercent 진행률 바
->    - Solapi 입력 시 + 미달: 진행률 + 활성화 임계치까지 N건 안내
->    - Solapi 입력 시 + 도달: "발송 가능 N건" + (향후 Solapi POST 핸들러 트리거 버튼은 향후 추가)
->    - refresh 버튼 (RefreshCw lucide-react 아이콘)
->    - 기존 위젯 패턴 그대로: SectionHeader X (위젯이 Section 1 자식), 카드 border + bg, 빈 상태 처리
-> 2. **대시보드 Section 1 today 모드 통합**
->    - `src/app/dashboard/page.tsx`에 import 추가
->    - Section 1 grid 자식으로 배치 (UploadReadinessWidget / DailyPlanWidget / ReviewGrowthWidget 옆)
->    - mode === 'today' 일 때만 표시할지, 또는 항상 표시할지 결정 (today만 추천 — 데일리 워크플로우 흐름)
-> 3. **Chrome MCP 라이브 검증 5항목**
->    - 위젯 표시 (count=0이라도 빈 상태 카드 표시)
->    - dry-run 미리보기 — Solapi 미입력 안내 + progressPercent 0% 표시 정확
->    - DRAFT 8개 평균 75점 회귀 (옵션 C+D+E Part 1+A1b+A2a+A2b+A3-1a 결과 보존)
->    - 4섹션 mascot pill 보존 (^_^/^ㅂ^×2/✿ㅅ✿)
->    - Section 3 모드별 정렬 + 동적 subtitle + ModeActionHint 보존 (A2b 결과 회귀 안 함)
-> 4. **마무리**
->    - PROGRESS/ROADMAP/SESSION_LOG 갱신
->    - commit + push 한 묶음 (작업원칙 24)
->    - 새 인계 메시지 작성 (A3-2 후보 — EventTimeline SWR / 다른 페이지 SWR / mascot SVG)
->    - 답변 마지막에 복붙용 인계 메시지 코드 블록으로 항상 명시 (꽃졔님 직접 지시)
+> **워크플로우 재설계 Sprint Part A3-2 작업 후보 (자체 판단 우선순위)**:
+>
+> | 우선순위 | 작업 | 컨텍스트 비용 | 근거 |
+> |---|---|---|---|
+> | **1번 (★ 추천)** | **EventTimeline SWR 마이그** | 작음 (단독 안전) | 자체 fetch 패턴 → `useEventTimeline()` 5분 cadence 신설. 기존 11개 SWR 훅 패턴 그대로 답습 → 빠른 마무리. A3-1b 직후 가벼운 정착 작업으로 적합. |
+> | 2번 | 다른 페이지 SWR 확장 (정원 창고 / 검색 조련사) | 가변 (페이지별 분할 권장) | 자체 fetch가 아직 남아있는 페이지들. 페이지별로 컨텍스트 비용 다르므로 첫 분석 후 분할 결정. |
+> | 3번 | mascot SVG 자산 통합 | 작음~중 (디자인 자산 필요) | accessory 텍스트(`watering_can`, `heart_gun`, `fountain_dance`) → 인라인 SVG. 꽃졔님 디자인 자산 입력 대기. |
+> | 4번 | (보너스) 한달사용 리뷰 2단계 가이드 | 가변 | 리뷰 볼륨 2배 효과. A3-1b 패턴(D+30 윈도우)을 그대로 재사용 가능 — D+30~35 미작성 추적 + 알림톡 발송. |
+>
+> **자체 판단 추천**: A3-2 첫 채팅에서 **1번 EventTimeline SWR 단독 진행**. 그 후 A3-3에서 2번 묶음, A3-4에서 3·4번 결정.
 
-> **기존 기능 0개 삭제** (작업원칙 27) — 12개 위젯 + 4섹션 + 모드 토글 + KkottiBriefing + 4섹션 mascot pill + 동적 subtitle + ModeActionHint + Section 3 모드별 정렬 모두 보존, 신규 위젯만 추가
+> **A3-2 작업 범위 (1번 EventTimeline SWR 마이그 가정)**:
+> 1. `src/components/dashboard/EventTimelineWidget.tsx` (또는 동등 위치) 정독 — 자체 fetch 패턴 확인
+> 2. `src/lib/hooks/useDashboardData.ts`에 `useEventTimeline()` 훅 추가 (SWR_PROFILE_5MIN 또는 적절 cadence)
+> 3. EventTimelineWidget.tsx에서 자체 fetch 제거 + 훅 사용으로 교체 + refresh 노출
+> 4. Chrome MCP 라이브 검증: EventTimeline 정상 표시 + 다른 위젯 회귀 없음 + 75점 회귀
+> 5. PROGRESS/ROADMAP/SESSION_LOG 갱신 + commit + push 단일 라인
+> 6. 새 인계 메시지 작성 (A3-3 후보 — 다른 페이지 SWR 확장 / mascot SVG / 한달리뷰 가이드)
+
+> **기존 기능 0개 삭제** (작업원칙 27) — 13개 위젯 + 4섹션 + 모드 토글 + KkottiBriefing + 4섹션 mascot pill + 동적 subtitle + ModeActionHint + Section 3 모드별 정렬 + 구매확정 리마인더 위젯 모두 보존, 작업이 SWR 마이그면 오직 fetch 방식만 교체
 
 > 아래 코드 블록을 그대로 복붙해서 사용.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md, KKOTIUM_SESSION_LOG.md를 읽고
-워크플로우 재설계 Sprint Part A3-1b 작업을 시작해주세요.
+워크플로우 재설계 Sprint Part A3-2 작업을 시작해주세요.
 
 당신은 10년 차 네이버 스마트스토어 파워셀러 경험이 있는 풀스택 시니어 개발자이자, 사용자 경험과 전환율 중심의 UI/UX 웹 디자이너입니다. 이커머스의 생리를 완벽히 이해하고 있으며 운영 효율성과 매출 극대화를 이끕니다. 불필요하거나 단순한 반복 작업을 줄이고 실무 효율을 높일 수 있는 구조의 최신 SEO, ROI, 네이버 쇼핑 검색 알고리즘에 최적화된 스마트스토어 관리 앱 UI/UX 구조를 설계합니다. 항상 현재 코드의 구조와 내용을 확인하며 작업을 하며, 작업 시 사용할 수 있는 모든 기능, 스킬, 커넥터 등을 사용하여 최선의 작업을 진행합니다. 문제가 발생하면 근본적인 원인을 찾아서 해결할 수 있도록 합니다 — 제품 하나의 문제로 볼 것이 아니라 전체적인 앱 기능의 문제까지 염두에 두고 체크합니다 (작업원칙 26번 일반화).
 
 작업 완료 시 테스트를 진행해서 실질적으로 앱을 사용해서 실무적으로 작업할 때 생기는 문제가 없는지 브라우저 테스트(Chrome MCP) 및 확인을 제대로 한 후 문제가 없으면 다음 작업으로 넘어갈 수 있도록 합니다. 실질적으로 작업할 수 없을 때(MCP 응답 없음, 권한 부족 등)는 거짓말 하지 말고 꼭 꽃졔님께 정직하게 요청합니다. 컨텍스트 한계로 도중에 작업이 끊기며 재시도하면서 중복 작업을 하는 오류가 나지 않도록 작업량을 나눠서 새로운 채팅에서 진행할 수 있도록 합니다. 계획이 업데이트되고 작업을 마무리할 때 같은 꽃틔움 가든 개발 프로젝트의 새 채팅에서도 바로 이어서 작업할 수 있도록 누락 없이 KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md, KKOTIUM_SESSION_LOG.md에 업데이트해서 저장합니다.
 
 작업 시작 전 필수 (작업원칙 21+22+23+24+25+26+27 적용):
-1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 본 세션 마무리 commit — A3-1a 백엔드)
+1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인 (기준 HEAD는 본 세션 마무리 commit — A3-1b UI)
    (b) git --no-pager log --oneline -10 → 이번 메시지에 명시되지 않은 commit 있으면 읽고 대응
    (c) git status 깨끗한지 확인 (dirty면 검토 후 처리 — 덮어쓰기 절대 금지)
    (d) lsof -i :3000 또는 curl http://localhost:3000 → dev 서버 상태 확인
    (e) 이 메시지의 가정과 실제가 다르면 즉시 정직 보고 후 재분석
-   (f) 본 세션 commit은 그 turn 안에서 push까지 한 줄로 완료
+   (f) 본 세션 commit은 그 turn 안에서 push까지 한 줄로 완료 (단일 라인 commit 메시지)
    (g) edit_file에서 한글 매칭 실패 시 Python 수동 NFC 정규화 절대 금지 → git restore + write_file 한글 직접 입력
    (h) edit_file 에러 응답 받아도 파일에 일부 적용될 수 있음 → head/grep/xxd로 raw 검증 우선
    (i) 문제 분석은 항상 (a) 즉각 원인 (b) 일반화 원인 두 단계로
    (j) 브라우저 테스트는 API 200 응답으로 대체 불가 — Chrome MCP로 실제 화면/숫자/동작 검증 필수
    (k) 작업원칙 27: 기존 기능 0개 삭제 — 위치 재배치 OK, 삭제/축소 0
    (l) 메모리 내 작업원칙 — heredoc 절대 금지 (Python 스크립트는 Filesystem write_file 사용)
-2. KKOTIUM_PROGRESS.md "2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-1a 백엔드 완료" 정독
+   (m) 이어받기 세션 사전 점검 강화 — 직전 채팅이 commit 직전 중단된 경우 보고된 상태와 실제 working tree 상태를 raw 검증으로 일치 확인 후 진입 (A3-1b 이어받기에서 일반화)
+2. KKOTIUM_PROGRESS.md "2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-1b 완료" 정독
 3. KKOTIUM_SESSION_LOG.md 최상단 동일 세션 정독
-4. `src/lib/confirmation-pending.ts`, `src/app/api/orders/confirmation-pending/route.ts`, `src/lib/hooks/useDashboardData.ts` (useConfirmationPending 부분) 정독 — 백엔드 인터페이스 + 응답 구조 정확히 파악
-5. `src/app/dashboard/page.tsx` Section 1 부분 정독 — 신규 위젯 배치할 곳 찾기
-6. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
+4. 1번 EventTimeline SWR 마이그를 진행할 경우: `src/components/dashboard/EventTimelineWidget.tsx`(또는 동등 위치) 정독 + `src/lib/hooks/useDashboardData.ts`의 기존 11~12개 SWR 훅 패턴 정독
+5. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
 
-[A3-1b 단계 권장]
-- [단계 1] 신규 위젯 `src/components/dashboard/ConfirmationReminderWidget.tsx` 작성 (~250-300줄 예상)
-- [단계 2] `dashboard/page.tsx` Section 1에 위젯 import + 배치 (mode === 'today' 일 때만)
-- [단계 3] Chrome MCP 라이브 검증 5항목 (위젯 표시 + dry-run 미리보기 + 75점 회귀 + mascot pill 보존 + Section 3 모드별 정렬 보존)
-- [단계 4] PROGRESS/ROADMAP/SESSION_LOG 갱신 + commit + push 한 묶음
-- [단계 5] 새 인계 메시지 작성 (A3-2 후보 — EventTimeline SWR / 다른 페이지 SWR / mascot SVG / 한달리뷰 가이드)
+[A3-2 단계 권장 — 1번 EventTimeline SWR 가정]
+- [단계 1] EventTimelineWidget.tsx 자체 fetch 패턴 정독 + useDashboardData.ts 훅 패턴 정독
+- [단계 2] useEventTimeline() 훅 추가 (SWR_PROFILE_5MIN 또는 적절 cadence)
+- [단계 3] EventTimelineWidget.tsx에서 자체 fetch 제거 + 훅 + refresh 사용으로 교체
+- [단계 4] TSC 0 errors 확인 + Chrome MCP 라이브 검증 (EventTimeline 정상 + 위젯 회귀 없음 + 75점 회귀)
+- [단계 5] PROGRESS/ROADMAP/SESSION_LOG 갱신 + commit + push 단일 라인
+- [단계 6] 새 인계 메시지 작성 (A3-3 후보)
 
 작업 분량 안전 마진:
-- 단계 1 위젯이 컨텍스트 한계 60% 도달 시 즉시 중간 commit + 새 채팅으로 분할
-- 단계 3 검증은 컨텍스트 여유 있을 때만 진행
+- 단계 1~2가 컨텍스트 한계 60% 도달 시 즉시 중간 commit + 새 채팅으로 분할 (A3-2a / A3-2b)
+- 단계 4 검증은 컨텍스트 여유 있을 때만 진행
 - 세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md에 작성, PROGRESS.md/ROADMAP.md는 핵심 요약만 유지
+
+답변 마지막에 복붙용 인계 메시지를 코드 블록으로 항상 명시 (꽃졔님 직접 지시 — 2026-05-04)
 ```
 
 
