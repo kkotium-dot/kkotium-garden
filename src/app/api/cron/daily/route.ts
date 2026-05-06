@@ -430,6 +430,32 @@ export async function GET(req: NextRequest) {
       results.dbSaved = top5.length;
     }
 
+    // ── A3-CRON-SYNC: Naver orders sync (added 2026-05-06) ────────────────
+    // Daily auto-sync of last 24h orders. Without this, downstream modules
+    // (auto confirm below, confirmation reminder widget, month review widget,
+    // dashboard stats) all run on stale data. The sync route routes through
+    // Tailscale Funnel via NAVER_PROXY_URL when set (production) or direct
+    // Naver API call when not set (dev with registered home IP).
+    try {
+      const baseUrl    = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+      const cronSecret = process.env.CRON_SECRET ?? '';
+      const syncRes = await fetch(`${baseUrl}/api/naver/orders?hours=24`, {
+        headers: cronSecret
+          ? { Authorization: `Bearer ${cronSecret}` }
+          : {},
+      });
+      const syncData = await syncRes.json();
+      results.naverSync = {
+        ok:      syncData.success ?? false,
+        synced:  syncData.synced  ?? 0,
+        skipped: syncData.skipped ?? 0,
+        total:   syncData.total   ?? 0,
+        period:  syncData.period  ?? null,
+      };
+    } catch (syncErr) {
+      results.naverSyncError = syncErr instanceof Error ? syncErr.message.slice(0, 80) : String(syncErr);
+    }
+
     // ── C-10: Auto order confirmation ────────────────────────────────────
     // Automatically confirm PAID orders that are older than 2 hours
     try {
