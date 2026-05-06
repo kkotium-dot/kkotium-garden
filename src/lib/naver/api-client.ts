@@ -1,16 +1,34 @@
 // src/lib/naver/api-client.ts
 // Naver SmartStore Channel API client
 // Docs: https://api.commerce.naver.com/docs
-// Auth: OAuth 2.0 Client Credentials (client_id + client_secret → access_token)
+// Auth: OAuth 2.0 Client Credentials (client_id + client_secret -> access_token)
 //
-// Required env vars:
-//   NAVER_CLIENT_ID      — API 연동 > 클라이언트 ID
-//   NAVER_CLIENT_SECRET  — API 연동 > 클라이언트 시크릿
+// Architecture (2026-05-06, A3-4-DIAG follow-up):
+//   When NAVER_PROXY_URL is set: ALL traffic (including token) goes through proxy.
+//     The proxy runs on a registered IP (home computer via Tailscale Funnel, or
+//     Naver Cloud VM in the future) and handles token + API calls.
+//   When NAVER_PROXY_URL is empty: direct OAuth + API call from current process.
+//     Used in local dev where the registered home IP is the originating IP.
+//
+// Required env vars (PROXY mode):
+//   NAVER_PROXY_URL  -- e.g. https://your-mac.tailnet.ts.net (Tailscale Funnel)
+//   PROXY_SECRET     -- shared secret matching home-proxy
+// Required env vars (direct mode, local dev):
+//   NAVER_CLIENT_ID
+//   NAVER_CLIENT_SECRET (bcrypt salt format $2a$04$...; in .env.local must escape $ as \$)
 
 import bcrypt from 'bcryptjs';
 
 const BASE_URL = 'https://api.commerce.naver.com/external';
 const AUTH_URL = 'https://api.commerce.naver.com/external/v1/oauth2/token';
+
+// Read env at runtime (not module load) so dev/prod behavior matches
+function getProxyConfig() {
+  return {
+    url:    process.env.NAVER_PROXY_URL ?? '',
+    secret: process.env.PROXY_SECRET ?? process.env.CRON_SECRET ?? '',
+  };
+}
 
 // ── Token cache (in-memory, refreshed when expired) ──────────────────────
 let _cachedToken: string | null = null;
@@ -22,18 +40,50 @@ async function getAccessToken(): Promise<string> {
     return _cachedToken;
   }
 
+  const proxy = getProxyConfig();
+
+  // [Mode 1] Proxy mode: route token request through proxy (which has registered IP)
+  if (proxy.url) {
+    const res = await fetch(proxy.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type':   'application/json',
+        'x-proxy-secret': proxy.secret,
+      },
+      body: JSON.stringify({ action: 'token' }),
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(
+        `Naver OAuth via proxy 실패: HTTP ${res.status} - ${text.slice(0, 300)}`
+      );
+    }
+
+    let data: { access_token?: string; expires_in?: number };
+    try { data = JSON.parse(text); } catch { throw new Error(`Proxy OAuth response not JSON: ${text.slice(0, 200)}`); }
+
+    if (!data.access_token) {
+      throw new Error(`Proxy OAuth response missing access_token: ${text.slice(0, 200)}`);
+    }
+
+    _cachedToken = data.access_token;
+    _tokenExpiry = Date.now() + (data.expires_in ?? 3600) * 1000;
+    return _cachedToken;
+  }
+
+  // [Mode 2] Direct mode: bcrypt-sign + fetch from current process IP
   const clientId     = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
     throw new Error(
       'NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 환경변수가 설정되지 않았습니다. ' +
-      '.env.local 파일에 추가해주세요.'
+      '.env.local 파일에 추가하거나 NAVER_PROXY_URL 사용을 검토하세요.'
     );
   }
 
   // Naver Commerce OAuth: bcrypt signature
-  // Equivalent to Python: base64( bcrypt.hashpw( (clientId+'_'+timestamp).encode('utf-8'), clientSecret.encode('utf-8') ) )
   const timestamp = Date.now().toString();
   const hashed    = await bcrypt.hash(`${clientId}_${timestamp}`, clientSecret);
   const signature = Buffer.from(hashed).toString('base64');
@@ -52,7 +102,7 @@ async function getAccessToken(): Promise<string> {
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Naver OAuth 실패: ${res.status} — ${err}`);
+    throw new Error(`Naver OAuth 실패: ${res.status} - ${err}`);
   }
 
   const data = await res.json();
@@ -62,28 +112,21 @@ async function getAccessToken(): Promise<string> {
   return _cachedToken;
 }
 
-// ── Supabase Edge Function proxy URL ────────────────────────────────────
-// Routes Naver API calls through Supabase (Seoul region, fixed IP)
-// to avoid Vercel dynamic IP being blocked by GW.IP_NOT_ALLOWED
-const PROXY_URL = process.env.NAVER_PROXY_URL; // e.g. https://xxx.supabase.co/functions/v1/naver-proxy
-const PROXY_SECRET = process.env.PROXY_SECRET ?? process.env.CRON_SECRET ?? '';
-
 // ── Generic request helper ────────────────────────────────────────────────
 export async function naverRequest<T = any>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
   path: string,
   body?: unknown,
 ): Promise<T> {
-  // Route through Supabase proxy (Seoul region, fixed IP) if URL is configured
-  if (PROXY_URL) {
-    // Get token here (Vercel can get token, proxy just relays with fixed IP)
-    const token = await getAccessToken();
-    const res = await fetch(PROXY_URL, {
+  const proxy = getProxyConfig();
+
+  // [Mode 1] Proxy mode: just POST {path, method, body} - proxy handles token
+  if (proxy.url) {
+    const res = await fetch(proxy.url, {
       method: 'POST',
       headers: {
-        'Content-Type':    'application/json',
-        'x-proxy-secret':  PROXY_SECRET,
-        'x-naver-token':   token,
+        'Content-Type':   'application/json',
+        'x-proxy-secret': proxy.secret,
       },
       body: JSON.stringify({ path, method, body }),
     });
@@ -94,13 +137,13 @@ export async function naverRequest<T = any>(
 
     if (!res.ok) {
       throw new Error(
-        `Naver API ${method} ${path} 실패 (proxy): HTTP ${res.status} — ${JSON.stringify(json)}`
+        `Naver API ${method} ${path} 실패 (proxy): HTTP ${res.status} - ${JSON.stringify(json)}`
       );
     }
     return json as T;
   }
 
-  // Direct call (local dev without proxy)
+  // [Mode 2] Direct mode: get token + fetch directly
   const token = await getAccessToken();
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -118,7 +161,7 @@ export async function naverRequest<T = any>(
 
   if (!res.ok) {
     throw new Error(
-      `Naver API ${method} ${path} 실패: HTTP ${res.status} — ${JSON.stringify(json)}`
+      `Naver API ${method} ${path} 실패: HTTP ${res.status} - ${JSON.stringify(json)}`
     );
   }
 
@@ -172,7 +215,7 @@ export interface NaverProductPayload {
   };
 }
 
-/** Register a new product → returns naverProductId */
+/** Register a new product -> returns naverProductId */
 export async function registerProduct(payload: NaverProductPayload): Promise<string> {
   const data = await naverRequest<any>('POST', '/v2/products', payload);
   return data.productNo ?? data.originProductNo ?? data.id;

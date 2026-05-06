@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        com.kkotium.home-proxy.plist
+        Runs scripts/home-proxy.mjs as a background daemon on the home Mac.
+
+        Activates Naver Commerce API access from the registered home IP
+        (219.248.15.46). Vercel production reaches this proxy via
+        Tailscale Funnel (NAVER_PROXY_URL env var).
+
+        Install (꽃졔 to run once):
+          cp /Users/jyekkot/Desktop/kkotium-garden/scripts/com.kkotium.home-proxy.plist \
+             ~/Library/LaunchAgents/
+          launchctl load ~/Library/LaunchAgents/com.kkotium.home-proxy.plist
+
+        Stop / restart:
+          launchctl unload ~/Library/LaunchAgents/com.kkotium.home-proxy.plist
+          launchctl load   ~/Library/LaunchAgents/com.kkotium.home-proxy.plist
+
+        Status:
+          launchctl list | grep kkotium
+
+        Logs:
+          tail -f /tmp/kkotium-home-proxy.log
+          tail -f /tmp/kkotium-home-proxy.err
+
+        Manual run (for debugging):
+          /opt/homebrew/bin/node /Users/jyekkot/Desktop/kkotium-garden/scripts/home-proxy.mjs
+    -->
+
+    <key>Label</key>
+    <string>com.kkotium.home-proxy</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/node</string>
+        <string>/Users/jyekkot/Desktop/kkotium-garden/scripts/home-proxy.mjs</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/jyekkot/Desktop/kkotium-garden</string>
+
+    <!-- Run once at login/load. KeepAlive auto-restarts if the process exits. -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <!-- Throttle restarts: wait 30 seconds between restart attempts on crash -->
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <!-- Logs -->
+    <key>StandardOutPath</key>
+    <string>/tmp/kkotium-home-proxy.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/kkotium-home-proxy.err</string>
+
+    <!-- Process priority -->
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <!-- Environment: ensure PATH is set so node can find tools if needed -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>

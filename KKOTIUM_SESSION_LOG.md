@@ -6,6 +6,72 @@
 
 ---
 
+## 2026-05-06 세션 (이어받기) — Tailscale Funnel 아키텍처 구축 완료 ✅ (production 영구 정상화 인프라)
+
+### 본 세션 성격
+- 직전 세션에서 A3-4-DIAG로 **dev sync 정상화**는 완료되었으나, **production은 여전히 GW.IP_NOT_ALLOWED 차단** 상태. Vercel outbound IP가 동적이고(11회 호출 시 10+ 고유 IP 관측), Naver Commerce API는 등록 IP 3개만 허용 → 구조적으로 production은 직접 호출 불가능.
+- **근본 해결**: 집 컴퓨터(등록 IP `219.248.15.46`)에서 proxy 구동 + Tailscale Funnel로 외부에 안전하게 노출. Vercel은 Tailscale URL로만 API 호출.
+- 꽃졔님 지시 — "누락없이 최우선으로 분담작업할수있게 진행해주시고 제가 해야할 작업에 대해서 디테일하지만 이해하기 쉽게 알려주세요". 병렬 진행: 꽃졔님이 Tailscale 계정/설치/ACL 확인을 진행하는 동안 Claude는 코드 장착 + 검증. 둘째 단계에서 꽃졔님이 이미 Tailscale CLI v1.96.5 설치 + 연결 + ACL 디폴트 funnel 권한 상태임을 확인 → 나머지 작업 Claude 단독 수행 가능.
+
+### 변경된 파일 (5개)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `scripts/home-proxy.mjs` | NEW (267줄) | 자체완결 Node.js 프록시. localhost:3001만 listen (Funnel이 public↔localhost forward). bcryptjs로 Naver OAuth + in-memory token caching + Naver relay. POST endpoint 2가지: `{action:'token'}` 와 `{path,method,body}`. `.env.local` 자동 로드 + 달러기호 escape 처리. x-proxy-secret 인증. /health 디버그용 endpoint. |
+| `scripts/com.kkotium.home-proxy.plist` | NEW | launchd 자동시작. Label `com.kkotium.home-proxy`. RunAtLoad+KeepAlive(crash 재시작). ThrottleInterval 30s. node 경로 `/opt/homebrew/bin/node` (Apple Silicon). StandardOut /tmp/kkotium-home-proxy.log. plutil -lint 통과. |
+| `scripts/install-home-proxy.sh` | NEW | 6단계 자동화 (prereq → unload 기존 job → copy plist → load → verify health → 다음 단계 안내). 재설치 안전. 설치 완료 시 launchctl + curl + tail + tailscale 관리 명령어 출력. |
+| `src/lib/naver/api-client.ts` | EDIT | `getProxyConfig()` runtime helper 추가 (env 런타임 읽기). `getAccessToken`: PROXY_URL 설정 시 POST `{action:'token'}` 경유 / 미설정 시 기존 bcrypt+직접 fetch. `naverRequest`: PROXY mode에서는 token 사전 요청 제거 (proxy가 내부에서 처리, 1-call 구조). TSC 0 errors. |
+| `supabase/functions/naver-proxy/index.ts` | EDIT (v2 보존) | 직전 세션 v2 IP-echo + token-relay 코드 유지. 새 아키텍처에서는 미사용이나 비상 폴백 + 미래 진단 도구로 보존. |
+
+### 의사결정 배경
+
+**Cloudflare Tunnel vs Tailscale Funnel** (해결책 분석):
+- Cloudflare Tunnel: 안정 URL에 **본인 소유 도메인 필수** (예: kkotium.com). 꽃졔님 도메인 미보유 → 부적합.
+- Cloudflare Quick Tunnel: 무료 + 도메인 불필요, 하지만 URL 재시작마다 변경 → production 부적합.
+- ngrok reserved domain: 월 $8 → 부적합 (꽃졔님 무료 우선 결정).
+- localtunnel/serveo: 무료이나 불안정.
+- **Tailscale Funnel**: 무료 + 도메인 불필요 + 안정 URL `<machine>.<tailnet>.ts.net` + 자동 HTTPS + 영구 + 1GB/월(꽃졔님 용도 충분) → **최적**.
+
+**dev server vs 전용 proxy script**: 초기 제안은 dev server를 production runtime으로 계속 실행하는 방식이었으나, 꽃졔님 지적 — "앱 배포했는데도 dev 실행해야하나요?". 꽃졔님 지적이 정답. 전용 소형 proxy script로 재설계 → 작업원칙 #28 신설.
+
+### 병렬 작업 수행 타임라인 (~30분)
+
+| Time | 꽃졔님 작업 | Claude 작업 |
+|------|-------------|--------------|
+| 0분 | Tailscale 계정/설치 확인 시작 | home-proxy.mjs 작성 |
+| 5분 | (Tailscale 이미 완료) | api-client.ts 수정 + TSC 0 errors |
+| 10분 | ACL 설정 광활(기본값 그대로 완벽) | plist + install-home-proxy.sh 작성 |
+| 15분 | (입력 제공 필요 없음) | launchd 등록 + home-proxy /health 200 OK 검증 |
+| 20분 | 꽃졔님 확인 | Chrome MCP로 Tailscale Funnel 활성화 버튼 자동 클릭 |
+| 22분 | (자동 클릭 완료) | `tailscale funnel --bg http://localhost:3001` 실행 → URL 발급 |
+| 25분 | (Vercel env 대시보드 이미 열림 관찰) | Chrome MCP로 Vercel `NAVER_PROXY_URL` 값 교체 + Save 클릭 |
+| 30분 | 완료 관찰 | MD 갱신 + commit 준비 |
+
+### 검증 결과
+
+**End-to-end via internet** (`https://macbook-pro.tail36c35f.ts.net`):
+- Cold start 첫 호출 health: 17s, token: 10s (Tailscale 처음 연결)
+- Warm health (3회 연속): 14ms / 12ms / 12ms
+- Naver API `/v1/seller/channels`: HTTP 200, 220ms (집 IP로부터 Naver 완주, 실제 꽃틔움 KKOTIUM channel 정보 정확)
+- token caching 검증: cached=true, expires_in 8310s
+
+**dev sync 정상 작동 재확인** (수정된 api-client.ts에서 PROXY 미설정 시 Direct mode가 제대로 작동하는지):
+- `curl /api/naver/orders?manual=1&hours=24` → HTTP 200, synced=1, total=1, period 2026-05-05~2026-05-06
+- 수정 전과 동일한 결과 → 회귀 없음.
+
+### 핵심 학습 — 작업원칙 #28
+**"App is deployed to Vercel production. NEVER propose architectures that require running `npm run dev` as production runtime."**
+
+이유: deployed 앱이 있는데 dev server를 production runtime으로 쓰는 건 모두 심각한 구조 오류. (1) dev server는 production용 최적화 부재 (HMR overhead, port 독점). (2) 꽃졔님이 재시작 시점 명시 불가능. (3) 코드 수정 시도 되면 production이 불안정. 올바른 해결책: 전용 소형 proxy script (~250줄, Cloudflare Tunnel + 작은 Node.js relay, 또는 Tailscale Funnel 채택) 또는 유료 VM (Naver Cloud Compact 월 6-9천원).
+
+### 다음 세션 (코드 commit 후)
+1. Vercel auto-deploy 완료 관찰 (commit push 후 ~2분)
+2. production naver-doctor 호출: `curl https://kkotium-garden.vercel.app/api/debug/naver-doctor?secret=kkotium2026cron` → token 200 + ORDER 4-way 결과 수집
+3. production sync 호출: `curl https://kkotium-garden.vercel.app/api/naver/orders?manual=1&hours=24` → GREEN 예상
+4. production cron `vercel.json` + CRON_SECRET 점검 (전 세션에서 발견된 7일 0회 호출 이슈)
+5. A3-4b 한달리뷰 UI
+
+---
+
 ## 2026-05-06 세션 — A3-4-DIAG sprint 완료 ✅ (Naver Commerce API 403 근본원인 해결 + sync 정상화)
 
 ### 본 세션 성격
