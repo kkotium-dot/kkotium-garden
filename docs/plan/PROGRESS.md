@@ -1,22 +1,32 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-08 (Z-3b 사이드바 보관함 deep-link 추가 ✅ — HUNT 섹션에 "소싱 보관함" 메뉴 신설(`/crawl?tab=history`) + computeActive 함수로 query-based active 정밀화 + crawl 페이지 derived value 패턴(URL 단일 source of truth) 적용 + dev hot-reload 캐시 충돌 진단/해소 + 작업원칙 #26 일반화 2건 등록(같은 컴포넌트 2회 패치 시 .next 정리 / Chrome MCP js 도구 hang 패턴). 5 시나리오 Chrome MCP 검증 통과. 직전: Z-3d Phase A sub-graph cleanup commit `0e6df93`)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 0e6df93 (Z-3d) → 본 세션 commit (Z-3b sidebar deep-link) | working tree: dirty (코드 2 파일 + MD 갱신 3건)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ | Phase E (E-7, E-1, E-3, E-8) ✅ | Phase E+ Sprint 1·2·3·4·5 ✅ | Sprint 6 E-15 전체 완료 ✅ | 옵션 C/D/E Part 1 SWR 확장 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a 완료 ✅ | Tailscale Funnel architecture ✅ | cron sync 통합 ✅ | 폴더 구조 정리 + 작업원칙 #29 강화 ✅ | UX/IA 마스터 블루프린트 v1 ✅ | Z-1 동기화 진단 ✅ + Z-2 워크플로우 점검 ✅ + Z-3a 깨진 CTA 수정 ✅ + Z-3d Phase A sub-graph cleanup ✅ + Z-3b 사이드바 보관함 deep-link ✅**
-> **다음 작업 (꽃졔님 본격 소싱 시작 직결, 우선순위 순)**: 1) **Z-3c' /products/sourced 의미 명확화** — 메인 워크플로우 4곳 영향(`/products/[id]/edit` × 3, `/products/upload` × 1) 신중히 처리. Rename or 보존 결정. 2) **Z-3e 백업 파일 49개 일괄 정리** (별도 sub-graph). 3) **Z-Sec 14개 테이블 RLS 정책 설계** (보안 advisory). 후순위: Z-4 (Clone), Z-5 (자동화 헬스 카드). 자세한 인계 메시지는 본 답변 끝의 코드 블록 참조.
-> **본 세션 산출물 (2026-05-08 Z-3b)**: (1) **Sidebar.tsx**: HUNT 섹션 "소싱 보관함" 메뉴 추가 + computeActive 함수 + NAV_HREFS 모듈 상수 + NavIcon `package` 케이스 (+30줄). (2) **crawl/page.tsx**: useSearchParams import + derived value 패턴(`useState`/`useEffect` 0개, URL 단일 source) + setTab useCallback wrapper. (3) **작업원칙 #26 일반화 2건**: 같은 컴포넌트 한 세션 내 2회 패치 시 .next 정리 + dev 재시작 워크플로우 의무 / Chrome MCP javascript_tool 및 Control Chrome execute_javascript 4분 hang 패턴 — `tabs_context_mcp` URL 비교 + screenshot 시각 확인 1순위. (4) **5 시나리오 검증 통과**: 사이드바 진입 + active 정밀 + 페이지 탭 클릭 → URL replace + 새로고침 보존 + dashboard 회귀 0.
-> **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
-> 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
-> 리서치 참고문서 (2026-04-16 세션):
->   1. `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가`
->   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
->   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
->   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
 
-## ⚠️ 작업원칙 #26 신규 일반화 — 2026-05-08 Z-3c' 사고로 영구 등록
+> **최종 업데이트**: 2026-05-08 (본 세션: 리서치 통합 + 갭 분석 + Sprint 6·7·8 계획 + MD 분할)
+> **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app | **HEAD**: b6837bc (origin/main 일치)
+> **Working tree**: 신규 리서치 MD 1건 추가 / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅
+> **다음 작업 (우선순위 순)**: 본 세션 도출 Sprint 6 (P0-A 도매꾹 옵션 정확도 + P0-B 골든윈도우 트래커 + P0-C 효자상품 자동식별) → Sprint 7 (P1 SEO 정확도) → Sprint 8 (P2 운영 도구) → 후순위 Z-3c'/Z-3e/Z-Sec
+> **참고 문서**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md` (15개 핵심 발견사항 + 단계별 체크리스트), `docs/plan/archive/PROGRESS_2026Q2_MAY.md` (5월 누적 세션 기록)
 
-직전 Z-3c' 사고: `/products/sourced` (사이드바 미등록 고아 라우트) 의 backlink 4곳을 `/products`로 변경했으나, 변경 대상이었던 `/products/[id]/edit`, `/products/upload` 도 모두 사이드바에 *등록되지 않은* 고아 라우트로 판명. 즉 *고아 라우트끼리의 backlink 정리*는 의미 없는 작업이었으며, 만약 commit했다면 *구버전이 마치 살아있는 것처럼 깨끗한 상태로 굳어질* 위험이었음. 변경사항은 즉시 git stash로 보존 (`stash@{0}: z3c-misdirected-changes-needs-redo`).
+---
 
-**근본 원인**: 코드 grep만으로 IA 결정을 내림. *"이 라우트는 사이드바에 등록되어 있는가? = 실제 사용 흐름인가?"* 를 먼저 확인하지 않음.
+## 핵심 인덱스
+
+- [작업원칙 #26](#작업원칙-26) — IA 점검 의무화 + 고아 라우트 처리
+- [작업원칙 #29](#작업원칙-29) — 한글 처리 절대 규칙 5가지
+- [작업원칙 #31](#작업원칙-31) — MD 과부하 자동 분할 (본 세션 신규)
+- [Sprint 6/7/8 계획](#sprint-678-계획-2026-05-08-신규) — 리서치 갭 분석 기반 신규 계획
+- [현재 앱 상태](#현재-앱-상태)
+- [환경/메뉴/파이프라인](#환경--메뉴--파이프라인)
+- [핵심 파일 경로](#핵심-파일-경로)
+- [절대 작업 원칙 (코드/UI/세션/보고)](#절대-작업-원칙)
+
+---
+
+## 작업원칙 #26 — IA 점검 의무화 + 고아 라우트 처리 (2026-05-08)
+
+직전 Z-3c' 사고: `/products/sourced` (사이드바 미등록 고아 라우트) 의 backlink 4곳을 `/products`로 변경했으나, 변경 대상이었던 `/products/[id]/edit`, `/products/upload` 도 모두 사이드바 미등록 고아 라우트로 판명. 즉 *고아 라우트끼리의 backlink 정리*는 의미 없는 작업이었으며, 만약 commit했다면 *구버전이 마치 살아있는 것처럼 굳어질* 위험이었음. 변경사항은 stash 보존 (`stash@{0}: z3c-misdirected-changes-needs-redo`).
+
+**근본 원인**: 코드 grep만으로 IA 결정 → "이 라우트는 사이드바에 등록되어 있는가? = 실제 사용 흐름인가?"를 먼저 확인하지 않음.
 
 **일반화 규칙 3가지 (강제 적용)**:
 
@@ -24,1055 +34,193 @@
   ```bash
   grep -nE "href:.*'(/products|/crawl|...)" src/components/layout/Sidebar.tsx
   ```
-  사이드바에 등록 = 실제 사용 흐름 → 신중 처리.
-  사이드바 미등록 = 고아 라우트 → 구버전 잔재 의심 → *수정/삭제 결정 전에 꽃제님께 "이거 살아있나요?" 확인*.
+  사이드바에 등록 = 실제 사용 흐름 → 신중 처리. 사이드바 미등록 = 고아 라우트 → 구버전 잔재 의심 → 수정/삭제 결정 전에 꽃졔님께 "이거 살아있나요?" 확인.
 
-(b) **고아 라우트끼리의 backlink 정리는 의미 없음** — 둘 다 사용자가 도달하지 않는 페이지면, 둘 사이를 깨끗이 잇는 작업은 *구버전 활성화 착시*만 만들 뿐. 고아 라우트는 정리(삭제 또는 redirect)의 대상이지 backlink 정비 대상이 아님.
+(b) **고아 라우트끼리의 backlink 정리는 의미 없음** — 둘 다 사용자가 도달하지 않는 페이지면 둘 사이를 깨끗이 잇는 작업은 *구버전 활성화 착시*만 만들 뿐. 고아 라우트는 정리(삭제 또는 redirect)의 대상이지 backlink 정비 대상이 아님.
 
-(c) **구버전 의심 페이지는 *수정/삭제 전에* 살아있는지 확인** — 페이지 컴포넌트가 import되는 위치 + 라우트가 사이드바에 있는지 + 실제 브라우저로 진입 시 어떻게 보이는지를 모두 검증한 후 판단. 단순 grep만으로는 부족.
+(c) **구버전 의심 페이지는 수정/삭제 전에 살아있는지 확인** — 페이지 컴포넌트가 import되는 위치 + 라우트가 사이드바에 있는지 + 실제 브라우저 진입 결과를 모두 검증한 후 판단. 단순 grep만으로는 부족.
 
-**본 사고의 부수 학습 (Filesystem:edit_file vs git diff 모순)**: `Filesystem:edit_file`이 diff 출력으로 성공을 보고했으나 일부 파일은 `git status`에 변경으로 나타나지 않을 수 있음 → 작업 후 *반드시 `git status --short`로 raw 검증* 의무화.
+**부수 학습 (Filesystem:edit_file vs git diff 모순)**: `Filesystem:edit_file`이 diff 출력으로 성공을 보고했으나 일부 파일은 `git status`에 변경으로 나타나지 않을 수 있음 → 작업 후 *반드시 `git status --short`로 raw 검증* 의무화.
+
+**작업원칙 #26 추가 일반화 (2026-05-08 Z-3b 세션 학습)**:
+
+(d) **같은 컴포넌트 한 세션 내 2회 패치 시 .next 정리 + dev 재시작 워크플로우 의무화** — Next.js dev hot-reload는 동일 파일을 짧은 시간에 두 번 수정하면 캐시 충돌로 옛 버전을 서빙하는 경우가 있음. 두 번째 패치 직후 반드시: `kill -2 <dev_pid> && rm -rf .next && nohup npm run dev > /tmp/dev.log 2>&1 &`.
+
+(e) **Chrome MCP javascript_tool / Control Chrome execute_javascript는 4분 hang 패턴 보유** — 세션 끝 부근(commit/push 직전 또는 큰 MD 패치 직후)에 자주 멈춤. 검증 1순위는 `tabs_context_mcp` URL 비교 + `screenshot` 시각 확인. JS 도구는 한 번 hang하면 같은 세션 내 재시도 금지.
 
 ---
 
-## ⚠️ 작업원칙 #29 (한글 처리 절대 규칙) — 2026-05-06 강화 5가지
+## 작업원칙 #29 — 한글 처리 절대 규칙 (2026-05-06 강화 5가지)
 
 본 프로젝트는 한글 사용이 많아 한글 깨짐 사고가 반복 발생했습니다. 도구의 인코딩 layer 한계가 근본 원인이며, 워크플로우 차원의 회피 패턴으로 100% 방지 가능합니다.
 
 **5가지 규칙 (강제 적용)**:
 
-(a) **edit_file의 newText에 한글 다량 포함 절대 금지** — escape 변환 layer에서 글자 단위 오류 발생 가능 (사례: "꽃젤" / "혁섭셀러" / "쿠드" / "릴고시키는" 등)
+(a) **edit_file의 newText에 한글 다량 포함 절대 금지** — escape 변환 layer에서 글자 단위 오류 발생 가능 (사례: 꽃젤 / 혁섭셀러 / 쿠드 / 릴고 등)
 
 (b) **MD 갱신은 항상 write_file 직접 입력** 또는 별도 임시 파일 + Python 안전 삽입 패턴 사용. edit_file은 oldText/newText 모두 영어/구두점만일 때만 사용 가능
 
-(c) **코드 edit는 영어 주석/타입만 사용** — 한글 자체 회피로 risk 0 (작업원칙 #25 일관)
+(c) **코드 edit는 영어 주석/타입만 사용** — 한글 자체 회피로 risk 0
 
-(d) **셸 명령에 한글 직접 입력 금지** — `echo "꽃졔"` 대신 한글은 파일에 작성 후 `cat .tmp_message.txt` 또는 `python3 -c "with open(...) as f: print(f.read())"` 패턴
+(d) **셸 명령에 한글 직접 입력 금지** — `echo "꽃졔"` 대신 한글은 파일에 작성 후 `cat .tmp_message.txt` 또는 Python 파일 읽기 패턴
 
-(e) **한글 작업 후 즉시 grep 검증 의무화** — 검증 패턴:
+(e) **한글 작업 후 즉시 grep 검증 의무화**:
   ```bash
-  grep -nE "꽃젤|혁섭|쿠드|식타|릴고|헌서|위젝|스칵|정과|쿠두" docs/plan/*.md docs/research/*.md
+  grep -nE "꽃젤|혁섭|쿠드|식타|릴고|헌서|위젝|스칵|쿠두" docs/plan/*.md docs/research/*.md
   ```
-  결과 0건이어야 정상. 매칭 발견 시 즉시 git restore + write_file 패턴으로 재작성.
+  결과 0건이어야 정상. 매칭 발견 시 즉시 git restore + write_file 패턴으로 재작성. (주의: "정과" 패턴은 가정과/이정과 등 정상 단어 거짓양성 빈발 → 본 세션부터 검증 패턴에서 제외)
+
+**29-1 (2026-05-02 강화)**: read_text_file의 head/tail 미리보기는 깨진 글자처럼 렌더링되는 경우가 있으나 실제 파일은 NFC 정상인 케이스가 자주 발생. 화면에서 깨져 보여도 즉시 정정 시도하지 말고 **반드시 raw 검증 먼저** — Python으로 `\uFFFD` 카운트 + `unicodedata.normalize('NFC', text) != text` 카운트 측정해 둘 다 0이면 파일 정상 → 정정 작업 자체를 시작하지 않음.
 
 ---
 
-## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-3a 완료 (검색 조련사 SWR 마이그레이션) ✅
+## 작업원칙 #31 — MD 과부하 자동 분할 (2026-05-08 신규)
 
-### 본 세션 성격
-- 직전 commit `df75068` (A3-2) 이후 본 세션에서 **Part A3-3a 신규 작업** 진행. 이어받기 세션 (직전 채팅에서 단계 4 완료 후 단계 5 라이브 검증 중단됨 → 본 세션에서 검증 완료).
-- 꽃졔님 지시 — "옵션 A 승인. 컨텍스트 안전 최우선으로 검색 조련사(/naver-seo) 마이그를 단독 진행". A3-3을 a/b 두 채팅으로 분할: A3-3a = 검색 조련사 (본 세션), A3-3b = 정원 창고 (다음 채팅).
+**배경**: PROGRESS.md가 1864줄로 성장하면서 (a) 본문 검색 시간 증가 (b) 매 세션 read 비용 증가 (c) 단일 파일 손상 위험 증가 (d) 새 채팅 시작 시 컨텍스트에 핵심 요약을 다 담기 어려움. 이러한 문제는 Anthropic context 한계 운영의 가장 큰 적.
 
-### 변경된 파일 (2개)
-| 파일 | 종류 | 핵심 |
-|------|------|------|
-| `src/lib/hooks/useDashboardData.ts` | EDIT (+104줄, 14번째 훅) | `useNaverSeoProducts({ filter, searchQuery, presetIds })` 훅 추가 — 동적 SWR key (3개 매개변수 → URLSearchParams) + strict typing (`NaverSeoProductApiItem` interface export, 23개 필드) + `DASHBOARD_SWR_DEFAULTS` 60s cadence + `error` 메시지 surface + `refresh()` 노출. `useDataLabTrend(period)` 동적 key 패턴 차용. |
-| `src/app/naver-seo/page.tsx` | EDIT (-41줄, 365 → 324) | `useState`/`useEffect`/`fetchProducts` trio 제거 + `import { useNaverSeoProducts, type NaverSeoProductApiItem as Product }` (alias 트릭으로 Product type 사용 코드 0줄 변경) + `refresh: fetchProducts` alias (5곳 호출 위치 변경 0줄). UI/렌더 0 변경. |
+**규칙 (자동 적용 — 사용자 지시 없이도)**:
 
-### 안전 분할 결정 (본 세션 핵심 학습)
-- **분석 결과**: 정원 창고 메인 fetch 1개 + 검색 조련사 메인 fetch 1개 = 안전 마진 충족 (작업원칙 22 "페이지당 3개+ 발견 시 분할" 미적용 영역).
-- **그러나** 꽃졔님이 컨텍스트 안전 최우선으로 단독 분할 결정 → A3-3a (본 세션) + A3-3b (다음 채팅) 2회로 진행. 현실적으로 본 세션은 단계 3에서 deferred 도구 중복 적용 사고 발생(즉시 git restore 복구) → 분할의 정당성 입증.
+(a) **MD 파일 1500줄 초과 시 자동 분할 의무** — Claude는 매 세션 시작 시 `wc -l docs/plan/*.md docs/research/*.md` 검사 → 1500줄 초과 파일 발견 시 즉시 분할 제안.
 
-### 단계 3 사고: deferred 도구 중복 적용 (정직 보고 + 복구)
-- **사고**: 첫 호출 `filesystem:edit_file`(소문자)이 deferred error 응답을 보냈으나 실제로 파일에 적용됨. 두 번째 호출 `Filesystem:edit_file`(대문자)이 첫 추가분 끝부분의 매칭 패턴을 다시 찾아 또 추가 → `useNaverSeoProducts` 중복 정의 발생.
-- **즉각 원인**: 다른 namespace의 동일 도구(소문자 vs 대문자)가 모두 deferred였는데, 첫 호출이 에러 응답을 받아도 파일에는 적용. 두 번째 호출의 `oldText`가 첫 호출이 만든 새 라인과 매칭됨.
-- **일반화 원인 (작업원칙 26번 적용)**: deferred 도구 첫 호출 에러 시 `head/wc/grep`로 raw 상태 검증을 건너뛰면 중복 작업 위험.
-- **복구**: `git restore src/lib/hooks/useDashboardData.ts` → 다시 한 번만 추가 → raw 검증(`wc -l 789`, `grep -c "^export function" 14`, `grep -c "useNaverSeoProducts" 1`) 통과.
-- **본 사고가 영구 기록한 학습**: deferred 도구는 namespace 중복 시 첫 호출이 "에러 응답이지만 적용" 상태가 가능 — edit 후 즉시 raw 검증을 작업원칙 (h)로 강제.
+(b) **분할 정책**:
+- **PROGRESS.md** (1500줄 초과): 세션 누적 기록을 `docs/plan/archive/PROGRESS_{YYYY}Q{N}_{MONTH}.md`로 이동. 본 파일은 (헤더 + 작업원칙 + 최신 Sprint 계획 + 영구 참조 섹션)만 유지.
+- **SESSION_LOG.md** (1500줄 초과): 직전 5세션만 본 파일에 유지, 나머지를 `docs/plan/archive/SESSION_LOG_{YYYY}Q{N}_{MONTH}.md`로 이동.
+- **ROADMAP.md** (1500줄 초과): 완료된 Phase/Sprint 항목을 `docs/plan/archive/ROADMAP_{YYYY}Q{N}_{MONTH}.md`로 이동. 본 파일은 진행중/예정 Sprint만 유지.
+- **리서치 MD**: 분할 안 함 (단일 주제별 보존이 검색에 유리).
 
-### Chrome MCP 라이브 검증 5항목 (작업원칙 #22)
-| # | 항목 | 결과 |
-|---|---|---|
-| 1 | 대시보드 4섹션 mascot pill 회귀 | ✅ ^_^/^ㅂ^×2/✿ㅅ✿ 모두 보존 + EventTimeline 2건 + ConfirmationReminderWidget + UploadReadiness 75점 회귀 |
-| 2 | 검색 조련사 페이지 정상 로드 | ✅ 8개 상품, 평균 31점, B급 2개(65점/70점), D급 6개(35×2/10×4) 정확 표시 |
-| 3 | searchQuery 동적 SWR key 동작 | ✅ "리본" 입력 → 8 → 2개로 즉시 갱신 (하트 리본 누빔, 리본 포인트 홈웨어 매칭) |
-| 4 | 검색 초기화 → SWR refetch | ✅ "초기화" 버튼 클릭 → 2 → 8개 복귀 (8개 상품 모두 정확 표시) |
-| 5 | refresh 버튼 alias 동작 | ✅ ref_52 RefreshCw 클릭 → mutate() 트리거 + 8개 회귀 정상 |
+(c) **분할 후 본 파일 상단에 "분할 안내 박스" 필수 삽입**:
+  ```
+  > 본 파일은 작업원칙 #31에 따라 YYYY-MM-DD에 분할되었습니다.
+  > 누적 기록은 docs/plan/archive/{파일명}.md 참조.
+  ```
 
-### API 라이브 검증 (회귀 점검)
-- `curl /api/naver-seo/products?filter=all` → total=8, products=8 ✅
-- `curl /api/naver-seo/products?filter=perfect` → total=0 ✅
-- `curl /api/naver-seo/products?filter=good` → total=0 ✅
-- `curl /api/naver-seo/products?filter=fair` → total=2 ✅
-- `curl /api/naver-seo/products?filter=poor` → total=6 ✅
-- 합계 0+0+2+6=8 = filter=all 8개와 정확 일치 (filter band 분포 검증 완료)
+(d) **분할 작업 자체도 작업원칙 #29 준수** — 한글 분할은 반드시 `Filesystem:write_file` 직접 입력 또는 Python 안전 삽입 패턴. 셸 heredoc 절대 금지.
 
-### 14개 훅 cadence 매트릭스 (본 세션 후 확정)
-- **60s (DASHBOARD_SWR_DEFAULTS)**: Sidebar / Profitability / ProductsList / UploadReadiness / ProductLifecycle / DashboardStats / **NaverSeoProducts (신규)** — 7개
-- **5min (SWR_PROFILE_5MIN)**: GoodService / ReviewGrowth / CompetitionMonitor / ConfirmationPending / EventTimeline — 5개
-- **24h (SWR_PROFILE_24H)**: DataLabTrend / SourcingRecommend — 2개
-- **합계**: 14개 (A3-2 13개 + A3-3a +1)
+(e) **사용자 명시적 지시 없이도 자동 진행** — 본 원칙은 꽃졔님이 2026-05-08 명시적으로 지시한 것: "앞으로 내용이 과부화되면 제가 지시하지 않아도 그렇게 진행하도록". 매 세션 시작 시 MD 사이즈 점검을 체크리스트의 첫 항목으로 둠.
 
-### 본 세션 commit
-- 코드 변경: `src/lib/hooks/useDashboardData.ts` (+104줄), `src/app/naver-seo/page.tsx` (-41줄)
-- MD 갱신: PROGRESS + ROADMAP + SESSION_LOG 3종
-- commit 메시지(단일 라인): `feat(workflow-redesign A3-3a): 검색 조련사 SWR 마이그레이션 — useNaverSeoProducts 14번째 훅 신설 (동적 key) + 자체 fetch 제거 + alias 트릭으로 호출처 0변경`
-
-### A3-3b 인계 범위 (다음 채팅)
-- **정원 창고(/products) SWR 마이그**: 메인 fetch `/api/products?limit=500` 1개 → 기존 `useProductsList({ limit: 500 })` 훅 활용 + 제네릭 타입 강화(`<T = unknown[]>` 추가)로 strict typing 옵션 제공. 호출처 무영향 보장.
-- 부수 fetch (액션성 — 마이그레이션 대상 아님): register / shipping-templates / naver/excel / naver/products/sync / DELETE / PATCH × 3 — 그대로 보존.
-- NaverSeoProductTable.tsx의 row-level fetch (market-analysis, keyword-stats)는 작업원칙 27에 따라 A3-4+로 보류.
+**최초 적용 결과 (2026-05-08 본 세션)**:
+- `docs/plan/PROGRESS.md`: 1864줄 → 약 700줄 (헤더 + 영구 참조만 유지)
+- `docs/plan/archive/PROGRESS_2026Q2_MAY.md`: 신규 1007줄 (5월 누적 세션 기록)
+- `docs/plan/SESSION_LOG.md` 분할은 **다음 세션으로 위임** (Sprint 6 시작 직전, 2685줄)
+- `docs/plan/ROADMAP.md` 정리는 **다음 세션으로 위임** (1594줄)
 
 ---
 
-## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-2 완료 (EventTimeline SWR 마이그레이션) ✅
+## Sprint 6/7/8 계획 (2026-05-08 신규)
 
-### 본 세션 성격
-- 직전 commit `4f596c3` (A3-1b UI) 이후 본 세션에서 **Part A3-2 신규 작업** 진행.
-- ROADMAP "다음 새 채팅 시작 메시지 (Part A3-2)" 섹션의 자체 판단 추천대로 **1번 EventTimeline SWR 마이그 단독 진행**. 2~4번 후보(다른 페이지 SWR 확장 / mascot SVG / 한달사용 리뷰 가이드)는 A3-3 이후로 이연.
-- 컨텍스트 효율 우선 — 단독 채팅 1회로 단계 1~6 모두 완료.
+본 계획은 `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md` 리서치(15개 핵심 발견사항) + 현재 앱 코드 grep 갭 분석으로 도출. 각 항목은 *리서치의 1·2·3순위* + *새싹셀러 ROI*로 우선순위 결정.
 
-### 변경된 파일 (2개)
-| 파일 | 종류 | 핵심 |
-|------|------|------|
-| `src/lib/hooks/useDashboardData.ts` | EDIT (+53줄, 13번째 훅) | `useEventTimeline()` 훅 추가 — strict typing (`ProductEventApiItem` interface export) + `SWR_PROFILE_5MIN` cadence + `refresh()` 노출. 기존 12개 훅 패턴 그대로. |
-| `src/components/dashboard/EventTimeline.tsx` | EDIT (-12 +6 = 정합 -6줄, 자체 fetch 제거) | `useState`/`useEffect`/`load()` 함수 제거 + `import { useEventTimeline }` 추가 + 컴포넌트 내부 `const { events, isLoading, isValidating, refresh } = useEventTimeline()` + 로컬 `interface ProductEvent` 정의 삭제. RefreshCw 버튼 `onClick={load}` → `onClick={refresh}`. UI/렌더 0 변경. |
+### 갭 분석 요약 (20개 항목 매핑)
 
-### 설계 결정 — Cadence: SWR_PROFILE_5MIN 채택 (3가지 근거)
-1. **이벤트 생성 메커니즘**: ProductEvent는 cron + 사용자 액션에 의해 append-only로 생성 — 1분 단위 즉각 갱신 불필요
-2. **방금 완료된 A3-1a/b 패턴 일치**: 가장 최근 추가된 `useConfirmationPending`도 5분 cadence — 패턴 일관성 보존
-3. **dedupingInterval=60s**: 사용자 RefreshCw 클릭 시 즉시 refresh 가능 + idle 폴링 부하 최소화
-
-### 13개 훅 cadence 매트릭스
-- **60s (DASHBOARD_SWR_DEFAULTS)**: Sidebar / Profitability / ProductsList / UploadReadiness / ProductLifecycle / DashboardStats — 6개
-- **5min (SWR_PROFILE_5MIN)**: GoodService / ReviewGrowth / CompetitionMonitor / ConfirmationPending / **EventTimeline (신규)** — 5개
-- **24h (SWR_PROFILE_24H)**: DataLabTrend / SourcingRecommend — 2개
-
-### Chrome MCP 라이브 검증 5항목 (작업원칙 #22)
-| # | 항목 | 결과 |
-|---|---|---|
-| 1 | EventTimeline 위젯 (API 2건 = UI 2건 일치) | ✅ "최근 이벤트 / 2건 / 가격 변동 / 26일 전 / 선물받은 특별한 일상 / -9.2% / +10.1%" 정확 표시 |
-| 2 | ConfirmationReminderWidget 회귀 (A3-1b) | ✅ 위젯 정상 표시 |
-| 3 | UploadReadiness 75점 회귀 | ✅ 75 평균 점수 정확 표시 |
-| 4 | 4섹션 mascot pill (^_^/^ㅂ^×2/✿ㅅ✿) 보존 | ✅ sec1_smile=true / sec2_pbpb=2개 / sec3_ssss=true |
-| 5 | 자체 fetch 패턴 제거 (useState/useEffect 0개) | ✅ EventTimeline.tsx import + 사용 0회 검증 완료 |
-
-### API 라이브 검증 (회귀 점검)
-- `curl /api/events/recent` → HTTP 200 + JSON 정확 (events 2건)
-- `curl /api/orders/confirmation-pending` → HTTP 200 + JSON 정확 (A3-1b 회귀 정상)
-
-### 사전 점검 결과 (작업원칙 #21)
-- HEAD `4f596c3` = origin/main 동기화 ✅, working tree clean ✅, TSC 0 errors ✅, dev :3000 PID 1711+2018 ✅
-- A3-1b 결과물 raw 검증: ConfirmationReminderWidget.tsx 22KB / confirmation-pending.ts 10KB / route.ts 3KB 모두 존재 ✅
-- 작업 후: TSC EXIT=0 ✅, Filesystem:edit_file 모든 매칭 1회 성공 (NFC 정규화 0회)
-
-### 적용된 작업원칙
-- **#21 사전 점검**: 8항목 모두 통과
-- **#22 라이브 검증**: API 200 + Chrome MCP 5항목 실제 화면 검증
-- **#23 정직 보고**: heredoc 시도 0회, edit_file 직접 매칭 일관 사용
-- **#24 commit + push 단일 라인**: 본 turn에서 한 줄로 처리
-- **#25 한글 직접 입력**: edit_file 모든 매칭 1회 성공 (NFC 정규화 0회 — 새 코드는 영어 주석/타입만 사용해 한글 매칭 risk 자체 회피)
-- **#26 일반화**: 본 패턴(자체 fetch → useDashboardData 훅)은 A3-3 후보(정원 창고 / 검색 조련사) 시 그대로 재사용 가능
-- **#27 기능 0개 삭제**: 13개 위젯 + 4섹션 + 모드 토글 + KkottiBriefing + 4섹션 mascot pill + 동적 subtitle + ModeActionHint + Section 3 모드별 정렬 + 구매확정 리마인더 위젯 모두 보존, EventTimeline은 fetch 방식만 교체 (UI/렌더 0 변경)
-
-### 본 세션이 영구 기록한 핵심 학습
-- **작은 SWR 마이그는 단독 채팅 1회로 안전 완수 가능**: 자체 fetch 1개 위젯 + 신규 훅 1개 추가는 컨텍스트 ~30%로 단계 1~6 모두 완료 가능.
-- **Strict typing 우선 (loose typing 회피)**: `ProductEventApiItem` strict export로 작성 — 위젯 측 normalization 코드 0줄 → 신규 버그 risk 0.
-
-### A3-3 인계 범위 (다음 채팅)
-- 2번 다른 페이지 SWR 확장 (정원 창고 / 검색 조련사) — **자체 판단 추천**
-- 3번 mascot SVG 자산 통합 (꽃졔님 디자인 자산 입력 대기)
-- 4번 (보너스) 한달사용 리뷰 2단계 가이드 — A3-1b 패턴 재사용 가능
-
----
-
-## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-1b 완료 (ConfirmationReminderWidget UI + 대시보드 통합 + Chrome MCP 검증) ✅
-
-### 본 세션 성격
-- 직전 commit `451c5e7` (A3-1a 백엔드) 이후 본 세션에서 **Part A3-1b UI 마무리** 진행.
-- 본 채팅은 이어받기 세션 — 직전 'A3-1b 시작' 채팅이 단계 1~5 완료 후 단계 6 commit 직전 중단됨. 본 채팅에서 정직 보고(작업원칙 #23) 후 단계 6, 7 마무리만 수행.
-- 자체 판단 추가 개선 4종(★1~★4) 통합으로 ROADMAP 기본 + 파워셀러 가치 동시 달성.
-
-### 변경/생성된 파일 (2개)
-| 파일 | 종류 | 핵심 |
-|------|------|------|
-| `src/components/dashboard/ConfirmationReminderWidget.tsx` | NEW (658줄 / 22KB) | `useConfirmationPending()` 훅 사용 카드 위젯. Solapi 키 상태별 3-mode 분기(미입력/입력+미달/입력+도달) + D+3·D+4·D+5 시급성 컬러 구분(yellow→orange→red) + 마스킹된 미리보기 N건 expandable + Solapi 미입력 시 CTA 링크 (`/settings/kakao`) + RefreshCw 액션 + count=0 빈 상태 안심 메시지 |
-| `src/app/dashboard/page.tsx` | EDIT (+2줄) | L28 `import ConfirmationReminderWidget`, L499 `{mode === 'today' && <ConfirmationReminderWidget />}` Section 2 (action) 끝에 today 모드 조건부 배치 |
-
-### 자체 판단 개선 4종
-- **★1 시급성 컬러 구분**: D+3=yellow, D+4=orange, D+5=red. 자동확정(D+8) 임박할수록 시각 우선순위 ↑ — 한눈 파악
-- **★2 폐기 (정합성 보존)**: 위젯 내부 mascot pill 추가는 Section 자체가 mascot을 보유하므로 일관성 깨짐 → 위젯 자체 status pill로 대체
-- **★3 Solapi 미입력 CTA**: "지금은 미리보기 — 월 50건+ 도달 후 키 입력하면 자동 발송" 안내와 함께 `/settings/kakao` 직접 이동 링크 → 활성화 흐름 마찰 0
-- **★4 dry-run 미리보기 expandable**: `buildReminderPreview()` 결과를 expandable로 노출 → 발송 전 텍스트 검수 가능 + 향후 발송 토글 추가 시 그대로 재사용
-
-### Chrome MCP 라이브 검증 5항목 (작업원칙 #22)
-| # | 항목 | 결과 |
-|---|---|---|
-| 1 | ConfirmationReminderWidget 표시 | ✅ Section 2 끝 today 모드에서 정상 렌더링 (count=0 빈 상태 안심 메시지 표시) |
-| 2 | Solapi 미입력 안내 + progressPercent 0% | ✅ "지금은 미리보기 — 월 50건+ 도달" 배너 + 진행률 바 0/50 (0%) 정상 |
-| 3 | DRAFT 8개 평균 75점 회귀 | ✅ UploadReadinessWidget "75 평균 점수" 정확 회귀 |
-| 4 | 4섹션 mascot pill 보존 | ✅ ^_^/^ㅂ^×2/✿ㅅ✿ 모두 정상 표시 |
-| 5 | A2b 결과 회귀 안 함 | ✅ Section 3 모드별 정렬 + 동적 subtitle + ModeActionHint 모두 정상 |
-
-### API 라이브 검증 (회귀 점검)
-- `curl /api/orders/confirmation-pending` → HTTP 200 + JSON 정확: `success=true / orders=[] / count=0 / primaryCount=0 / fallbackCount=0 / scanWindow.fromIso=2026-04-30 / scanWindow.toIso=2026-05-02 / solapi.configured=false / solapi.activationThreshold=50 / solapi.progressPercent=0`
-- 현재 DB 주문 0건이라 빈 배열은 정상. 매출 발생 시 자동 채워짐.
-
-### 사전 점검 결과 (작업원칙 #21)
-- HEAD `451c5e7` = origin/main 동기화 ✅, working tree clean (이어받기 시점) ✅, TSC 0 errors ✅, dev :3000 HTTP 200 ✅
-- 작업 후: 신규 658줄 위젯 + dashboard 2줄 변경, TSC EXIT=0 ✅
-
-### 본 세션 commit
-- 코드 변경: `src/components/dashboard/ConfirmationReminderWidget.tsx` (NEW), `src/app/dashboard/page.tsx` (+2줄)
-- MD 갱신: PROGRESS + ROADMAP + SESSION_LOG 3종
-- commit 메시지(단일 라인): `feat(workflow-redesign A3-1b): 구매확정 리마인더 UI 위젯 — ConfirmationReminderWidget 신설 + 대시보드 Section 2 today 통합 + 시급성 컬러/CTA/expandable 미리보기`
-
-### 적용된 작업원칙
-- **#21 사전 점검**: 8항목 모두 통과 후 작업 시작 + 이어받기 시 실제 파일 상태 raw 검증으로 보고와 일치 확인
-- **#22 라이브 검증**: API 200으로 종결 X — Chrome MCP 5항목 실제 화면 검증 완료
-- **#23 정직 보고**: 직전 채팅 종료 시 단계 6 미완료 상태 즉시 보고 → 사용자 승인 후 이어받기 진행
-- **#24 commit + push 단일 라인**: 본 turn에서 한 줄 명령으로 처리
-- **#25 한글 직접 입력**: write_file 직접 입력 (NFC 정규화 0회)
-- **#26 일반화**: 시급성 컬러 + CTA 링크 + expandable 미리보기 패턴은 향후 다른 알림 위젯(D+1 발송, D+10 휴면 등) 추가 시 그대로 재사용 가능
-- **#27 기능 0개 삭제**: 12개 위젯 + 4섹션 + 모드 토글 + KkottiBriefing + 4섹션 mascot pill + 동적 subtitle + ModeActionHint + Section 3 모드별 정렬 모두 보존, 신규 위젯 1개만 추가 (총 13개)
-
-### 본 세션이 영구 기록한 핵심 학습
-- **이어받기 세션 사전 점검 강화**: 직전 채팅이 commit 직전 중단된 경우, 보고된 상태(파일 작성 완료, TSC 통과)와 실제 working tree 상태(untracked / modified)를 raw 검증으로 일치 확인 후 진입. PROGRESS.md 헤더의 "다음 작업" 라인이 실제 결과물 존재 여부와 불일치할 수 있음 — 항상 `ls`/`grep`로 raw 검증 우선.
-- **A3-1b 완료로 구매확정 리마인더 MVP 100% 완성**: 백엔드(A3-1a) + UI(A3-1b) 동시 완성 → 매출 발생 즉시 작동 가능. Solapi 키 입력만 하면 자동 발송 활성화 (월 50건+ 임계치 후).
-
-### A3-2 인계 범위 (다음 채팅)
-- 1번 EventTimeline SWR 마이그 (작음, 빠른 마무리) — **자체 판단 추천**
-- 2번 다른 페이지 SWR 확장 (정원 창고 / 검색 조련사)
-- 3번 mascot SVG 자산 통합 (디자인 자산 필요)
-- 4번 (보너스) 한달사용 리뷰 2단계 가이드
-
----
-
-## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-1a 백엔드 완료 (구매확정 리마인더 도메인 로직 + API + SWR 훅) ✅
-
-### 본 세션 성격
-- 직전 commit `dac4cec` (A2b 통합) 이후 본 세션에서 **Part A3-1a 신규 작업** 진행.
-- 꽃졔님 위임 — "최선의 개선안 + 컨텍스트 오버 방지". 자체 판단으로 **A3-1을 a/b 두 채팅으로 안전 분할**:
-  - **A3-1a (이번 채팅)**: 백엔드 + API + SWR 훅 + API 라이브 검증 + commit + push (컨텍스트 ~50%)
-  - **A3-1b (다음 채팅)**: UI 위젯 + 대시보드 Section 1 통합 + Chrome MCP 라이브 검증 + 마무리
-- 기존 패턴(A2a, A2b) 그대로 따라 신규 신호: SWR 5분 cadence, 단일 fetch로 orders + solapi 상태 둘 다 반환.
-
-### 변경/생성된 파일 (3개)
-| 파일 | 종류 | 핵심 |
-|------|------|------|
-| `src/lib/confirmation-pending.ts` | NEW (~200줄) | `findReminderEligibleOrders()` 도메인 로직 — `status='DELIVERED'` AND `deliveredAt` ∈ [D-5, D-3] 1차 신호 + `paymentDate + 3일 lag` 2차 fallback. `maskKoreanName()` 개인정보 보호 + `buildReminderPreview()` 알림톡 미리보기 텍스트 생성 |
-| `src/app/api/orders/confirmation-pending/route.ts` | NEW (~75줄) | GET → `{ orders, count, primaryCount, fallbackCount, scanWindow, solapi: { configured, eligibleForActivation, monthlyDeliveredCount, activationThreshold, sendActive, progressPercent } }`. 단일 fetch로 위젯 전체 상태 표현 가능 |
-| `src/lib/hooks/useDashboardData.ts` | EDIT (+34) | `useConfirmationPending()` 훅 추가 (SWR_PROFILE_5MIN, refresh 노출). 기존 11개 훅(Sidebar/Profitability/Products/GoodService/DataLab/Sourcing/Review/Upload/Competition/Lifecycle/Stats) 패턴 그대로 |
-
-### 정책 결정 (파워셀러 리서치 기반)
-- **D+3~5 윈도우**: 네이버 D+8 자동확정 — 그 사이 D+3~5에 알림톡 한 번이 구매확정율 큰 폭 상승. 너무 빠르면 buyer 미수령, 너무 늦으면 자동확정과 충돌.
-- **2단계 신호 결합**: sync route(`/api/naver/orders`)가 `deliveredAt`을 항상 채우지 않음 → primary 누락 시 `paymentDate + 3일 lag`로 추정 (보수적 lag — 대부분 1~3일 배송).
-- **Solapi 활성화 정책 미러링**: `/api/kakao-settings`의 50건 임계치 + `solapiConfigured` 부울 그대로 사용. 단일 임계치 단일 source.
-- **개인정보 보호**: `customerName` → `김O희` 형식 마스킹 (`maskKoreanName()`). UI는 마스킹 본만 사용, `customerPhone`은 향후 Solapi POST 핸들러만 소비.
-
-### API 라이브 검증 (작업원칙 22 — 단계 적합)
-- `curl http://localhost:3000/api/orders/confirmation-pending` → HTTP 200 + JSON 정확
-- 응답 구조: `success=true / orders=[] / count=0 / scanWindow.fromIso=2026-04-30 / scanWindow.toIso=2026-05-02 / solapi.configured=false / solapi.activationThreshold=50 / solapi.sendActive=false / solapi.progressPercent=0`
-- 현재 DB 주문 0건이라 빈 배열은 정상. 매출 발생 시 자동 채워짐.
-- **UI 검증은 A3-1b에서 Chrome MCP로**: 위젯 표시, dry-run 미리보기, 75점 회귀, mascot pill 보존.
-
-### 사전 점검 결과 (작업원칙 21)
-- HEAD `dac4cec` = origin/main 동기화 ✅, working tree clean ✅, TSC 0 errors ✅, dev :3000 HTTP 200 ✅
-- 작업 후: TSC EXIT=0 ✅, 신규 3 파일 모두 typed pass.
-
-### 본 세션 commit
-- 코드 변경: `src/lib/confirmation-pending.ts` (NEW), `src/app/api/orders/confirmation-pending/route.ts` (NEW), `src/lib/hooks/useDashboardData.ts` (+34줄)
-- MD 갱신: PROGRESS + ROADMAP + SESSION_LOG 3종
-- commit 메시지: `feat(workflow-redesign A3-1a): 구매확정 리마인더 백엔드 — confirmation-pending lib + API route + useConfirmationPending SWR 훅`
-
-### 적용된 작업원칙
-- **#21 사전 점검**: 8항목 모두 통과 후 작업 시작
-- **#22 라이브 검증**: 백엔드 단계는 API 200 + 응답 구조 검증 (UI 검증은 A3-1b에서 Chrome MCP로)
-- **#23 정직 보고**: heredoc 시도 0회, write_file + Python script 패턴 일관 사용
-- **#24 commit + push 한 묶음**: 본 turn에서 한 줄로 처리 예정
-- **#25 한글 직접 입력**: 한글 마스킹 함수 + reminder preview 텍스트 모두 write_file 직접 입력 (NFC 정규화 0회)
-- **#26 일반화**: 신규 lib + API + 훅 패턴이 향후 신호 추가 시 그대로 재사용 가능 (D+1 발송 후속, D+10 휴면 등)
-- **#27 기능 0개 삭제**: 모든 기존 위젯/섹션/모드/mascot pill 보존, 신규 백엔드만 추가
-
-### A3-1b 인계 범위 (다음 채팅)
-1. **신규 위젯 `ConfirmationReminderWidget.tsx`** — `useConfirmationPending()` 훅 사용, 카드 형태 (count + 미리보기 N건 + Solapi 상태 배너)
-2. **대시보드 Section 1 today 모드 통합** — `dashboard/page.tsx`에 위젯 import + Section 1 grid에 배치
-3. **Solapi 키 미입력 시 정책 안내 토스트** — 위젯 내부 또는 카드 푸터: "지금은 미리보기 — 월 50건+ 도달 후 키 입력하면 자동 발송"
-4. **Chrome MCP 라이브 검증 5항목**: 위젯 표시 + dry-run 미리보기 + 75점 회귀 + 4섹션 mascot pill 보존 + ModeActionHint + Section 3 정렬 보존
-5. **MD 3종 갱신 + commit + push + 새 인계 메시지** (A3-2 후보 — EventTimeline SWR / 다른 페이지 SWR / mascot SVG)
-
----
-
-## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A2b 완료 (모드별 정렬 + 동적 subtitle + ActionHint) ✅
-
-### 본 세션 성격
-- 직전 commit `cdc30ad` (A2a 정리) 이후 본 세션에서 **A2b 신규 작업** 진행.
-- 꽃졔님 위임 — "최선의 개선안 방법으로 진행 + 컨텍스트 오버 방지". 자체 판단으로 단순 정렬을 넘어 파워셀러 리서치 기반 가치 개선 3종(정렬 + 동적 subtitle + ActionHint) 통합.
-- 단일 파일 (`dashboard/page.tsx`) 변경 + 추가 API 호출 0개 + 기존 SWR 데이터에서 모든 동적 값 파생 → 컨텍스트 안전 + 운영 비용 0.
-
-### 변경된 파일 (1개)
-| 파일 | diff | 핵심 |
-|------|------|------|
-| `src/app/dashboard/page.tsx` | +139/-22 | (1) `SECTION3_ORDER` 상수 + 6개 위젯 inline `order` 적용 (DataLab+Competition 2-col grid 풀고 단일 column flex로 통일), (2) `buildMarketSubtitle(mode, stats)` 함수로 sectionMarketSubtitle 동적 생성, (3) `ModeActionHint` 컴포넌트 신설 (모드별 슬림 배너) |
-
-### A2b 핵심 결정 — "기능 추가가 아닌 의미 부여"
-- 기존 `sectionMarketSubtitle`는 정적 텍스트("주간 트렌드 + 경쟁 분석 — DataLab/Competition 강조") → 의미 0.
-- 동적 변경: today=`등록 대기 8 · 품절 0 · 좀비 0`, week=`데이터랩 트렌드 + 경쟁사 가격 모니터 (소싱 후보 3건)`, month=`좀비 0건 (판매중 대비 0%) · 소싱 3건 점검`
-- 파워셀러 리서치 인용 — AI 시대(2026)는 즉각 행동 가능한 신호 + 트렌드 의사결정 + 구조 개선 3개 모드를 명확히 분리해야 운영 효율 극대화.
-
-### Section 3 위젯 모드별 순서 매핑 (라이브 검증 결과)
-| 모드 | 1 | 2 | 3 | 4 | 5 | 6 |
-|------|---|---|---|---|---|---|
-| today | Kkotti | MarketTrend | DataLab | Competition | Sourcing | Lifecycle |
-| week  | DataLab | Competition | Kkotti | MarketTrend | Sourcing | Lifecycle |
-| month | Lifecycle | Sourcing | Kkotti | MarketTrend | DataLab | Competition |
-
-### Chrome MCP 라이브 검증 6항목 (작업원칙 22번 강제) — 100% 통과
-1. ✅ today 모드 — 기본 순서 정확 (Kkotti 첫째, Lifecycle 마지막), subtitle "오늘 액션 — 등록 대기 8 · 품절 0 · 좀비 0"
-2. ✅ week 모드 — DataLab/Competition 1·2번 promotion, subtitle "주간 시장 — 데이터랩 트렌드 + 경쟁사 가격 모니터 (소싱 후보 3건)"
-3. ✅ month 모드 — Lifecycle/Sourcing 1·2번 promotion, subtitle "월간 개선 — 좀비 0건 (판매중 대비 0%) · 소싱 3건 점검"
-4. ✅ ModeActionHint 슬림 배너 — 모드 토글 바로 아래 표시, 모드별 메시지 정확 변경
-5. ✅ DRAFT 8개 평균 75점 회귀 — 50/60/70/76/80/84/86/92 점수 모두 발견 (KkottiWidget TOP 5 + UploadReadiness)
-6. ✅ 4섹션 mascot pill 보존 — ^_^ (gardener) / ^ㅂ^ (hunter ×2) / ✿ㅅ✿ (celebrator) 모두 유지 (A2a 결과 회귀 안 함)
-
-### 사전 점검 결과 (작업원칙 21)
-- HEAD `cdc30ad` = origin/main 동기화 ✅, working tree clean ✅, TSC 0 errors ✅, dev :3000 HTTP 200 ✅
-- 한글 깨짐 잔재 검사 (꽀/꿔/꺼/꿈/꿃/꺾) — 0개 ✅
-
-### 본 세션 commit 예정
-- 코드 변경: `src/app/dashboard/page.tsx` 1개 (+139/-22)
-- MD 갱신: PROGRESS + ROADMAP + SESSION_LOG 3종
-- commit 메시지: `feat(workflow-redesign A2b): Section 3 모드별 위젯 정렬 + 동적 subtitle + ModeActionHint 슬림 배너`
-
-### 적용된 작업원칙
-- **#21 사전 점검**: 8항목 모두 통과 후 작업 시작
-- **#22 라이브 검증**: API 200 응답으로 종결 X — Chrome MCP 라이브 6항목 통과
-- **#23 정직 보고**: heredoc 시도 시 출력 망가짐 즉시 인식 → Ctrl-C + Filesystem write_file로 전환 (메모리 내 작업원칙 — heredoc 절대 금지 일반화)
-- **#24 commit + push 한 묶음**: 다음 turn에서 한 줄로 처리 예정
-- **#25 한글 직접 입력**: NFC 정규화 0회, write_file로 한글 그대로 작성
-- **#26 일반화**: heredoc 금지를 메모리 작업원칙으로 영구 등록
-- **#27 기능 0개 삭제**: 6개 위젯 + 4섹션 + 모드 토글 + KkottiBriefing + mascot pill 모두 보존, 정렬과 의미 부여만 추가
-
-### A3 (다음 Sprint) 인계 범위
-- (1) **구매확정율 추적 + 알림톡 리마인더** — 파워셀러 리서치 ★★☆ 최고 ROI MVP. 커머스 API `GET /v1/pay-order/seller/product-orders/last-changed-statuses` + 솔라피 알림톡(건당 13원). 배송완료 D+3~5에 미확정 주문에 자동 발송.
-- (2) **EventTimeline SWR 마이그** — `EventTimeline.tsx` 자체 fetch 패턴 → `useEventTimeline()` 5분 cadence 신설.
-- (3) **다른 페이지 SWR 확장** — 정원 창고(`/products`) 또는 검색 조련사(`/products/new`)의 자체 fetch 위젯 점검.
-- (4) **mascot SVG 자산** — 꽃졔님 디자인 후 `KKOTTI_VARIANTS` accessory 텍스트 → 인라인 SVG 교체.
-- (선택) **한달사용 리뷰 2단계 구조 가이드** — 리뷰 볼륨 2배 효과, 새 위젯/페이지 후보.
-
----
-
-## 2026-05-04 세션 요약 — 워크플로우 재설계 Sprint Part A2a 완료 (Competition/Lifecycle SWR + SectionHeader mascot pill) ✅
-
-### 본 세션 성격
-- 직전 세션 commit `9b8a55a` (A2 인계 메시지 페르소나/유의사항 통합) 후 본 세션에서 **A2 신규 작업** 진행. 꽃졔님 승인 — 안전 분할 (A2a 단계 1+2+4 검증+5 인계 / A2b 단계 3 모드정렬), Competition cadence 5분, SectionHeader 시각 디테일은 face + accessory 라벨 텍스트.
-- 단계 1 + 2 코드 변경 후 컨텍스트 한계로 한 번 끊김 → 재시작 시 작업원칙 21(h) 적용으로 working tree raw 검증부터 진행 → 단계 1 결과 3개 정상 / SectionHeader 한글 깨짐 2곳 (`'꿃잎 채직'` `'분수대 대스'`) 발견 → 작업원칙 25번대로 git restore + write_file 재작성으로 복구 → 라이브 검증 통과 후 본 세션 마무리.
-
-### 변경된 파일 (4개)
-| 파일 | diff | 핵심 |
-|------|------|------|
-| `src/lib/hooks/useDashboardData.ts` | +70 | `useCompetitionMonitor()` 신설 (5분 cadence, refresh + scan POST 패턴) + `useProductLifecycle()` 신설 (60s cadence, refresh) |
-| `src/components/dashboard/CompetitionMonitorWidget.tsx` | +47/-28 | 자체 useState/useEffect/useCallback fetch → `useCompetitionMonitor()` 훅 + `refresh()` 호출, scan POST 후 refresh |
-| `src/components/dashboard/ProductLifecycleWidget.tsx` | +31/-20 | 자체 fetch → `useProductLifecycle()` 훅 + 새로고침 버튼 `refresh()` 호출 |
-| `src/components/dashboard/layout/SectionHeader.tsx` | +86/-1 | reserved `_variant` prop 활성화 → `KKOTTI_VARIANTS` accessory + `KKOTTI_FACE` 9단계 활용한 mascot pill 표시 (face + accessory 라벨, aria-label 포함) |
-
-### 4섹션 mascot pill 매핑 (라이브 검증 결과)
-| Section | variant | face | accessory | aria-label |
-|---------|---------|------|-----------|-----------|
-| today   | gardener   | `^_^`    | 물조리개      | "정원 관리인 모드, 물조리개" |
-| action  | hunter     | `^ㅂ^`   | 하트총        | "키워드 사냥꾼 모드, 하트총" |
-| market  | hunter     | `^ㅂ^`   | 하트총        | (variant override 정상 동작) |
-| tools   | celebrator | `✿ㅅ✿`  | 분수대 댄스    | "분수대 축하 모드, 분수대 댄스" |
-
-### 한글 깨짐 복구 케이스 (작업원칙 25 사례)
-- 단계 2 작성 중 `'꽃잎 채찍'` → `'꿃잎 채직'`, `'분수대 댄스'` → `'분수대 대스'`로 손상
-- **해결**: NFC 수동 정규화 절대 금지 → write_file로 한글 직접 입력 + raw 검증 (grep EXIT=1 = 손상 0개)
-- **일반화**: edit_file에서 한글 매칭 실패 시 항상 git restore + write_file 패턴
-
-### Chrome MCP 라이브 검증 6항목 (작업원칙 22번 강제) — 100% 통과
-| # | 검증 항목 | 결과 |
-|---|----------|------|
-| 1 | Lifecycle SWR fetch | ✅ refresh 클릭 → `/api/product-lifecycle` GET 200 |
-| 2 | Competition SWR (5min dedup) | ✅ `/api/competition` dedup 윈도우 내 절약 (의도된 SWR 효율) |
-| 3 | DRAFT 8개 75점 회귀 | ✅ 50/60/70/76/80/84/86/92 모두 검출 (옵션 C+D+E Part 1 + A1b 결과 보존) |
-| 4 | revalidateOnFocus auto-fetch | ✅ blur+focus 후 60s profile API 5개 자동 fetch (Sidebar/dashboard-stats/profitability/DRAFT/products) |
-| 5 | 4섹션 mascot pill | ✅ today=^_^/물조리개, action=^ㅂ^/하트총, market=^ㅂ^/하트총, tools=✿ㅅ✿/분수대 댄스 |
-| 6 | 기능 0개 삭제 (작업원칙 27) | ✅ KkottiBriefing + 12 위젯 + 빠른 작업 + EventTimeline 모두 보존 |
-
-### 사전 점검 결과 (작업원칙 21)
-- HEAD ↔ origin/main: `9b8a55a` 동기화 ✅
-- TSC: 0 errors ✅ (시작/중간/종료 모두)
-- working tree: clean (시작) → dirty 4 (작업 중) → clean (commit 후) ✅
-- dev server: HTTP 200 ✅
-
-### 본 세션 commit 예정
-- 4개 파일 변경 (185 insertions / 49 deletions)
-- commit 메시지: `feat(workflow-redesign A2a): Competition/Lifecycle SWR 마이그레이션 + SectionHeader mascot pill 통합`
-- push 후 origin/main 동기화 확인
-
-### A2b (다음 Sprint) 인계 범위
-- **단계 3 모드별 위젯 정렬**: `dashboard/page.tsx` Section 3 grid 정렬 변경 — `mode==='week'` 시 DataLab/Competition 상단, `mode==='month'` 시 Lifecycle/Sourcing 상단 (위젯 표시는 모두 유지, order만 변경)
-- **추가 위젯 SWR 후보** (선택): SourcingRecommendWidget은 이미 옵션 E Part 1에서 SWR 마이그레이션 완료 / EventTimeline 자체 fetch 검토 / 기타 정원 창고/검색 조련사 페이지 위젯 SWR 확장
-- **시각 디테일 2차** (장기): 현재는 face + accessory 라벨 텍스트 — 향후 디자이너가 직접 그린 SVG 자산 추가 시 텍스트 → SVG 인라인 교체 예정 (Part A3+ 후보)
-
-### 적용된 작업원칙
-- **21**: 사전 점검 (git/dev/TSC/HEAD-origin/working tree) — 시작 + 재시작 모두 수행
-- **21(h)**: edit_file 에러 응답 시 raw 검증 우선 — SectionHeader 손상 raw 발견 사례
-- **22**: Chrome MCP 라이브 검증 6항목 — API 200 응답으로 종결 안 함
-- **23**: 컨텍스트 한계 끊김 후 재시작 시 가정/실제 일치 여부 정직 보고
-- **24**: 본 세션 commit + push 한 turn 안에 묶음
-- **25**: 한글 깨짐 손상 발견 시 NFC 수동 정규화 금지 → git restore + write_file 한글 직접 입력
-- **26**: 손상 케이스를 일반화 → 한글 직접 입력 패턴 강제
-- **27**: 기능 0개 삭제 — 12개 위젯 + 빠른 작업 + EventTimeline + 4섹션 + 모드 토글 + KkottiBriefing 모두 보존
-
-## 2026-05-04 세션 요약 — 워크플로우 재설계 Sprint Part A1b 완료 (대시보드 재구성 + 통합 + 라이브 검증) ✅
-
-### 본 세션 성격
-- 직전 세션(A1a, commit `84bb78b`)이 컨텍스트 한계로 끊기면서 **A1b 코드 작업은 working tree에 이미 적용된 상태**로 종료. 본 세션은 작업원칙 24번 회수 작업 — 코드 검증 + 라이브 검증 + MD 갱신 + commit + push 한 묶음 마무리.
-- 작업원칙 21번 사전 점검에서 working tree dirty 발견 → 작업원칙 23번 정직 보고 → 꽃졔님 옵션 A (보존 + 회수 완료) 승인 → 진행.
-
-### 변경된 파일 (working tree 회수)
-| 파일 | diff stat | 핵심 |
-|------|-----------|------|
-| `src/app/dashboard/page.tsx` | +346 / -184 (465 lines) | 헤더 v6 / SWR hooks 도입 (useProductsList + useDashboardStats) / ModeToggle 신설 (today/week/month) / CollapsibleSection 4섹션 wrapper / KkottiBriefingWidget 통합 / sectionMarketSubtitle 모드별 분기 |
-| `src/components/dashboard/ReviewGrowthWidget.tsx` | +86 (342 lines) | useReviewGrowth() 훅 도입 / refresh() 호출로 PATCH 후 즉각 반영 / optimisticChecklist 상태로 UI 즉각 반영 |
-
-### 작업원칙 27 검증 — 기능 0개 삭제
-모든 12개 위젯 + 빠른 작업 + EventTimeline 보존, **위치만 4섹션으로 재배치**:
-- **Section 1 (today/gardener)**: KkottiBriefingWidget(신규) + TodayCard + KPI 4 + PipelineCard + GoodService + Profitability
-- **Section 2 (action/hunter)**: DailyPlan + UploadReadiness + ReviewGrowth
-- **Section 3 (market/hunter)**: Kkotti + MarketTrend + DataLab + Competition + Sourcing + Lifecycle
-- **Section 4 (tools/celebrator)**: 빠른 작업 4 + EventTimeline
-
-### Chrome MCP 라이브 검증 7항목 (작업원칙 22번 강제) — 100% 통과
-| # | 검증 항목 | 결과 |
-|---|----------|------|
-| 1 | 4섹션 정상 렌더 | ✅ Sparkles/Target/Sprout/Wrench 아이콘 + 헤더 + collapsed 토글 |
-| 2 | 모드 전환 동작 | ✅ Section 3 subtitle 정확히 변경 — today=꿀통 사냥 / week=주간 트렌드 + 경쟁 분석 — DataLab/Competition 강조 / month=월간 리뷰 + 라이프사이클 — Lifecycle/Sourcing 강조 |
-| 3 | 꼬띠 일일 브리핑 + 메타포 어휘 | ✅ planter variant + T_T (concerned face) + "아이고 까꿍 까꿍! 튤립이 시들 시점이에요. 마진 위험 63%" + "마진 보강하러 가기" CTA — 7단계 규칙 추론 #1 트리거 정확 |
-| 4 | DRAFT 8개 평균 75점 회귀 | ✅ 50/60/70/76/80/84/86/92 점수 분포 = 평균 75점 — 옵션 C+D+E Part 1 결과 보존 |
-| 5 | revalidateOnFocus 자동 재호출 | ✅ blur+focus 시뮬레이션 후 `/api/profitability` 1건 자동 fetch — 다른 위젯들은 60s dedup 윈도우 내 호출 절약 (옵션 E Part 1과 동일한 의도된 SWR 효율) |
-| 6 | ReviewGrowth PATCH 후 즉각 반영 | ✅ 코드 검증 — refresh() 7회 등장 + optimisticChecklist 즉시 반영 패턴 |
-| 7 | 12개 위젯 모두 정상 표시 | ✅ KkottiBriefing + KPI + Pipeline + Today + GoodService + Profitability + DailyPlan + UploadReadiness + ReviewGrowth + Kkotti + MarketTrend + DataLab + Competition + Sourcing + Lifecycle + EventTimeline |
-
-### 사전 점검 결과 (작업원칙 21)
-- HEAD ↔ origin/main: `84bb78b` 동기화 ✅
-- TSC: 0 errors ✅
-- dev 서버: 살아있음 (PID 1854, 10424) ✅
-- working tree: ⚠️ dirty (2개 파일) — A1a에서 끊긴 작업 흔적 → 작업원칙 23번 정직 보고 후 꽃졔님 승인으로 옵션 A (보존 + 회수) 진행
-
-### 적용된 작업원칙
-- **21**: 사전 점검 (git/dev/TSC/HEAD-origin/working tree) — 100% 수행
-- **22**: Chrome MCP 라이브 검증 7항목 — API 200 응답으로 종결 안 함
-- **23**: working tree dirty 발견 즉시 정직 보고 후 사용자 결정 받음
-- **24**: 본 세션은 회수 작업 — MD 3종 갱신 + commit + push 한 turn 안에 묶어서 마무리
-- **25**: Python 패치 스크립트 한글 직접 입력 (NFC 정규화 절대 금지)
-- **27**: 기능 0개 삭제 — 12개 위젯 + 빠른 작업 + EventTimeline 모두 보존, 위치만 재배치
-
-### A2 (다음 Sprint) 인계 범위
-- CompetitionMonitorWidget SWR 마이그레이션 (현재 자체 fetch — useCompetitionMonitor() 훅 신설)
-- ProductLifecycleWidget SWR 마이그레이션 (현재 자체 fetch — useProductLifecycle() 훅 신설)
-- 4섹션 시각 디테일 강화: SectionHeader의 variant prop 활용 → 5대 mascot face/accessory 통합 표시
-- 모드 전환에 따른 위젯 visibility 또는 우선순위 차등 (현재는 subtitle만 변경, 실제 위젯 표시는 모두 동일)
-
-## 2026-05-03 세션 요약 — 워크플로우 재설계 Sprint Part A1a 완료 (인프라 6종 + 꼬띠 강화 1차) ✅
-
-### 본 세션 성격
-- 직전 세션이 워크플로우 재설계 Sprint 계획 확정 commit `0937e83` push 완료 후 종료. 본 세션은 **Part A1a 실행 세션** (신규 파일 위주, 백워드 호환 강화).
-- 꽃졔님 추가 요청: 첨부 PDF "꼬띠 작업 요약"의 5대 변신 컨셉 (정원 관리인 / 키워드 사냥꾼 / 배송 카우걸 / 돈 심기 정원사 / 분수대 축하) + 시그니처 표현 ("빵야~", "까꿍") 모두 어휘 풀에 통합.
-- 기존 기능 0개 삭제 (작업원칙 27 적용) — 모든 변경은 추가 또는 강화.
-
-### A1a 작업 완료 항목 (7개 파일 변경)
-| # | 파일 | 종류 | 핵심 |
-|---|------|------|------|
-| 1 | `src/lib/kkotti-vocab.ts` | 신규 | 5대 variant + 9단계 face + 시그니처 + 4종 감탄사 + 3종 메타포 풀 + helper 함수 + buildPersonaBlock |
-| 2 | `src/lib/hooks/useDashboardData.ts` | 추가 | `useDashboardStats` hook 추가 (60s, /api/dashboard/stats?period=all) |
-| 3 | `src/components/dashboard/layout/SectionHeader.tsx` | 신규 | 4섹션 공통 헤더 (Lucide 아이콘, KKOT 브랜드 컬러, collapsed prop) |
-| 4 | `src/components/dashboard/layout/CollapsibleSection.tsx` | 신규 | 펼치기/접기 wrapper (useState 기반, 옵션 D 패턴 준수, display:none으로 SWR 캐시 보존) |
-| 5 | `src/components/dashboard/KkottiBriefingWidget.tsx` | 신규 | 매일 1줄 자동 브리핑 — 4개 SWR 데이터 통합 + 7단계 규칙 추론 + 일일 시드 안정화 + CTA 버튼 |
-| 6 | `src/app/api/kkotti-comment/route.ts` | 강화 | KKOTTI_PERSONA → buildPersonaBlock() 호출로 대체 (백워드 호환, 어휘 풀 자동 주입) |
-| 7 | `src/components/dashboard/KkottiWidget.tsx` | 강화 | KKOTTI_FACE 5단계 → 9단계 (호출처 무변경, A는 ^ㅂ^, B는 ^_^, D는 T_T로 시각 차별화) |
-
-### 꼬띠 아이덴티티 강화 1차 — PDF 컨셉 통합
-**5대 variant 페르소나** (각 섹션/페이지별 자동 변신):
-- `gardener` (정원 관리인) — Section 1 / Dashboard top, watering_can, "빵야~ 오늘 정원 가꿔요. 까꿍!"
-- `hunter` (키워드 사냥꾼) — Section 2 / 상품 등록, heart_gun, "빵야 빵야~ 황금 키워드 사냥. 까꿍!"
-- `cowgirl` (배송 카우걸) — 배송 설정, pony_whip, "까꿍 까꿍! 배송비 사냥 타임 빵야~"
-- `planter` (돈 심기 정원사) — 마진 계산기, money_seedling, "빵야~ 마진 묘목 심어요. 까꿍!"
-- `celebrator` (분수대 축하) — 리포트, fountain_dance, "까꿍 까꿍! 빵야 빵야 축하해요!"
-
-**KKOTTI_FACE 9단계** (기존 5단계 → 확장):
-- idle: `^_^` / scanning: `·_·` / working: `>_<` / done: `✿ㅅ✿` / celebrate: `\(^o^)/`
-- proud: `^ㅂ^` / sleepy: `~_~` / warn: `;ㅅ;` / concerned: `T_T`
-
-**KkottiBriefingWidget 7단계 규칙 추론** (우선순위 순):
-1. 마진 위험 30% 초과 → planter + concerned face + "튤립이 시들 시점이에요"
-2. 굿서비스 C/D 등급 → cowgirl + warn + "답글 작성 출동"
-3. DRAFT 90+ 3개 이상 → hunter + proud + "정원에 꽃이 피었어요"
-4. 리뷰 목표 달성 → celebrator + celebrate + "꺄~ 단골 작전 성공"
-5. DRAFT 90+ 1개 이상 → hunter + idle + "봉오리가 맺혔어요"
-6. 굿서비스 S/A → gardener + done/proud + "정원이 잘 자라고 있어요"
-7. fallback → gardener + scanning + "꿀통 사냥터부터"
-
-### 사전 점검 결과 (작업원칙 21)
-- HEAD `0937e83` = origin/main ✅
-- TSC 0 errors ✅ (시작 시점 + 종료 시점 모두)
-- git status clean ✅ (시작 시점)
-- dev server: 미실행 (A1a는 신규 파일 위주이므로 라이브 검증은 A1b에서 진행 — ROADMAP 명시)
-
-### 검증 결과 (작업원칙 22 — A1a는 컴파일 검증만, 라이브는 A1b)
-- TSC 0 errors 최종 ✅
-- 백워드 호환 검증: KkottiWidget의 `KKOTTI_FACE[avgGrade]` 호출처 무변경 ✅
-- 백워드 호환 검증: kkotti-comment/route.ts의 `KKOTTI_PERSONA` 사용처 (L129/L163) 무변경 ✅
-- A1a 신규 파일 7개 모두 정상 작성 ✅
-
-### 본 세션 commit 예정
-- 7개 파일 변경 (3개 강화 + 4개 신규)
-- commit 메시지: `feat(workflow-redesign A1a): 인프라 6종 신설 + 꼬띠 아이덴티티 강화 1차 (5대 variant + 9단계 face + 빵야 까꿍 시그니처)`
-- push 후 origin/main 동기화 확인
-
-### 적용된 작업원칙
-- **21**: 사전 점검 (git/TSC/dev server) ✅
-- **22**: 라이브 검증 — A1a는 신규 파일 + 백워드 호환만 → TSC만 (ROADMAP 명시 라이브 검증은 A1b 단계 6) ✅
-- **23**: 가정 vs 실제 정직 보고 — dev server 미실행 사실 즉시 보고 ✅
-- **24**: commit + push 한 turn 마무리 (A1a 끝나는 시점) ✅
-- **25**: Python 스크립트 한글 직접 입력 (NFC 정규화 0건) ✅
-- **26**: 근본 원인 일반화 — KKOTTI_FACE 변경을 단일 위젯이 아닌 어휘 풀로 일반화 ✅
-- **27**: 기존 기능 0개 삭제 — 7개 변경 모두 추가/강화, 삭제 0 ✅
-
-### A1b 인계 (다음 새 채팅용)
-**A1a에서 준비된 도구**:
-- `useDashboardStats` hook (대시보드 부모 fetch SWR화 준비됨)
-- `SectionHeader` + `CollapsibleSection` (4섹션 레이아웃 준비됨)
-- `KkottiBriefingWidget` (대시보드 통합 대기 중 — 아직 어디에도 import 안 됨)
-- `kkotti-vocab` 어휘 풀 (페르소나 + 어휘 + 시그니처 모두 사용 준비됨)
-- 9단계 face 시스템 (KkottiWidget 자동 적용됨)
-
-**A1b 작업 범위 (다음 채팅)**:
-1. `dashboard/page.tsx` loadProducts/loadStats → useProductsList/useDashboardStats 교체
-2. 4섹션 재배치 (`SectionHeader` + `CollapsibleSection` 적용)
-3. 모드 전환 토글 (today/week/month, useState)
-4. `KkottiBriefingWidget` Section 1 최상단에 배치
-5. `ReviewGrowthWidget` `useReviewGrowth()` 마이그레이션 (옵션 E Part 2 흡수)
-6. `UploadReadinessWidget` 부모 SWR 자동 혜택 검증 (변경 0)
-7. **Chrome MCP 라이브 검증 7항목** (작업원칙 22번 강제)
-8. MD 3종 갱신 + commit + push
-
----
-
-## 2026-05-03 세션 요약 — 워크플로우 재설계 Sprint 계획 확정 (계획 전용, 코드 변경 없음) ✅
-
-### 본 세션 성격
-- **꽃졔님 요청 핵심 (2026-05-03)**: "앱 기능이 많아져서 대시보드 구조가 복잡해졌다. 셀러 워크플로우 중심으로 재구성하면서 옵션 E Part 2 SWR 통합도 함께 처리해달라. 그 외 앱 최적화는 자율 판단."
-- **추가 요청 (같은 세션)**: 꼬띠가 말할 때 캐릭터 아이덴티티(빨간 튤립 + 분홍 카우걸 부츠) 살려서 반응/문장 구사하도록 강화.
-- **본 세션은 계획 전용 세션** — 실제 코드 작업은 다음 새 채팅에서 진행 (꽃졔님 직접 지시).
-
-### 사전 분석 완료 항목
-- 현재 대시보드 = 12개 위젯이 평면 나열 (`src/app/dashboard/page.tsx` 329줄, 6,459줄 위젯 파일 합산)
-- 사이드바 구조는 셀러 동선과 잘 맞춤 (HUNT → PLANT → TEND → ORDERS → OPS → TOOLS) — 재구성 불필요
-- 대시보드만 재구성 대상 — 4섹션 워크플로우 구조로 (오늘의 결과 / 오늘의 액션 / 소싱·시장 / 도구·활동)
-- 데이터 흐름: `dashboard/page.tsx`의 `loadProducts` + `loadStats` 부모 fetch 2건이 SWR 미적용 마지막 영역
-- 자식 4개 위젯(DailyPlan/UploadReadiness/Kkotti/MarketTrend)이 props로 products 공유 — 옵션 D에서 conditional fetch 패턴 도입 완료
-- 자체 fetch 위젯 7개 중 3개(GoodService/DataLab/Sourcing) Part 1 완료 + 1개(Profitability) 옵션 D 완료 + 2개(ReviewGrowth/CompetitionMonitor/ProductLifecycle) 미적용
-
-### 2026 최신 파워셀러 트렌드 검증 (web_search 2회)
-- **에이전틱 커머스**: AI 쇼핑 에이전트 2026.02 베타 출시, 출시 2개월 만에 사용자 +20%, 대화 +40%. 15억 건 스마트스토어 상품 대상 AI 추천.
-- **숏폼/숏클립**: 쇼핑라이브 매출 +48%, 단골 +128%. 네이버가 직접 셀러 대상 숏클립 제작 교육 진행 중. 시청 경험률 82.7%.
-- **단골 커머스**: 60만 셀러 대상 단골 도구 → 2026 단골 10억 건 달성 임박. 알림받기 + 받아보기 + 상품찜 = 단골 시그널.
-- **제로클릭 + GEO**: 검색→클릭→구매 공식 붕괴, 생성형 AI 트래픽 1,200% 상승. 클릭 SEO에 더해 GEO(Generative Engine Optimization) 전략 필요.
-- **트렌드 코리아 2026 키워드**: HORSE POWER, 픽셀라이프, 1.5가구, 근본이즘, 필코노미.
-
-### 워크플로우 재설계 Sprint 최종 범위 (꽃졔님 자율 결정 위임)
-
-**Part A1 (다음 새 채팅 1차) — 구조 재구성 + SWR 완성 + 꼬띠 일일 브리핑 + 모드 전환**
-1. `src/app/dashboard/page.tsx` 부모 fetch SWR화 (loadProducts → useProductsList, loadStats → 신규 useDashboardStats hook)
-2. 4섹션 컴포넌트 신설: `SectionHeader`, `CollapsibleSection` (`src/components/dashboard/layout/`)
-3. 대시보드 4섹션 재배치: 오늘의 결과 / 오늘의 액션 / 소싱·시장 / 도구·활동
-4. ReviewGrowthWidget useReviewGrowth() 마이그레이션 (옵션 E Part 2 흡수)
-5. UploadReadinessWidget — 부모 SWR화로 자동 혜택 수혈 (위젯 자체 변경 없음, optimisticScores 보존)
-6. **신규 위젯**: `src/components/dashboard/KkottiBriefingWidget.tsx` — 매일 1줄 자동 브리핑 (Profitability + GoodService + UploadReadiness + ReviewGrowth 통합 분석)
-7. **신규 토글**: 대시보드 상단 [오늘 / 이번주 / 이번달] 모드 전환 — 가끔 보는 위젯 자동 숨김/노출
-8. **꼬띠 아이덴티티 강화 1차**: 일일 브리핑 + Kkotti API persona 보강 (빨간 튤립 + 카우걸 부츠 정체성 강화 어휘 풀, 정원사 비유, 감탄사 풀 확장)
-
-**Part A2 (Part A1 분량 초과 시 분할) — 시각 디테일 + 잔여 위젯 SWR**
-- CompetitionMonitorWidget + ProductLifecycleWidget SWR 통합 (남은 2개)
-- 시각 정밀화 (간격, 위계, 색상 의미 부여)
-- 빈 상태 UX 개선 (DRAFT 0개, 리뷰 0건 등)
-
-**Part B (Part A 안정화 후) — 매출 직결 신기능**
-- 꿀통지수 12번째 항목: AI 에이전트 친화도 (`honey-score.ts` +1 함수, 정규식 기반)
-- 숏클립 등록 체크리스트 (UploadReadiness +1 항목, 네이버 매출 +48% 트리거)
-- 시각적 디테일 정밀화 마무리
-
-**Part C (Part B 안정화 후) — 단골 커머스**
-- 단골 대시보드 위젯 (Commerce API 알림받기/단골/재구매율) — C-1 Commerce API 직접 연동 완료 후 진행
-
-**Part D (등록 상품 발생 후) — AEO/GEO 강화**
-- E-1 상세페이지 빌더 AEO 강화 (Q&A/FAQ JSON-LD)
-- 옵션 A 흡수
-
-### 꼬띠 아이덴티티 강화 설계
-**현재 페르소나** (`src/app/api/kkotti-comment/route.ts` L61):
-- 분홍 카우걸 부츠 + 빨간 튤립 캐릭터, 10년차 파워셀러 전문가
-- 친근한 ~해요 말체, 이모지 금지, 텍스트 감탄사(꺄~, 헉, 오오), 구체 수치 기반, 2~3문장 / 120자 이내, 행동 1가지 제시
-- KKOTTI_FACE 5단계: ✿ㅅ✿ / ^ㅅ^ / ·ㅅ· / ;ㅅ; (S/A/B/C/D 등급)
-
-**강화 포인트** (Part A1):
-1. **정원사 메타포 어휘 풀 확장** — "씨앗 심기", "꽃이 피었어요", "물 줄 시점", "잡초 뽑기", "수확", "정원이 잘 자라고 있어요"
-2. **카우걸 정체성 어휘** — "출동", "투입", "달려가요", "이번 작전", "현장으로"
-3. **빨간 튤립 시각 어휘** — 튤립이 활짝 / 봉오리 / 시들 / 꽃잎 등 상태 비유
-4. **상황별 감탄사 풀** — 좋을 때(꺄~, 우와, 오~), 놀랄 때(헉, 어머나, 오마이), 걱정 때(어이쿠, 음...), 응원 때(자, 가요, 시작해요)
-5. **꼬띠 일일 브리핑 전용 톤** — 한 문장 12자~30자 이내, 데이터 기반 + 정체성 + 즉각 액션
-   - 좋은 예: "오늘 정원 상태 좋아요. DRAFT 3개가 90점 넘었어요 — 등록 출동!"
-   - 좋은 예: "튤립이 시들 시점이에요. 좀비 5개를 부활소로 데려가요!"
-   - 좋은 예: "꺄~ 단골이 5명 늘었어요. 알림톡 한 발 발사할까요?"
-6. **상태별 face 더 다양화** — 현재 5단계 → 9단계 (idle/scanning/done/warn/celebrate/sleepy/working/proud/concerned)
-
-### Part A1 완성 시 효과 (예상)
-- 대시보드 스크롤 길이 6,000~8,000px → 모드별 1,500~3,000px (모드 전환 토글 효과)
-- "오늘 뭐 할까?" 결정 피로 0 (꼬띠 일일 브리핑이 즉시 답)
-- 옵션 E Part 2 SWR 통합 자연스럽게 흡수 (별도 작업 불필요)
-- 셀러 매일 시작점이 "위젯 12개 스캔"에서 "꼬띠 한 줄 → 액션 클릭"으로 전환
-
-### 작업 안전성 — 다음 새 채팅용 작업원칙 강조
-- **작업원칙 21**: 사전 점검 (git/dev/TSC/HEAD-origin/working tree clean)
-- **작업원칙 22**: Chrome MCP 라이브 검증 — API 200 응답으로 종결 절대 금지
-- **작업원칙 23**: 가정과 실제 다르면 즉시 정직 보고
-- **작업원칙 24**: commit + push 한 turn 안에 한 묶음
-- **작업원칙 25**: Python 스크립트 한글 직접 입력 (NFC 정규화 절대 금지)
-- **작업원칙 26**: 근본 원인 일반화 (한 케이스 X, 동일 패턴 전체 점검)
-- **작업원칙 27** (신설 후보): **"기능 0개 삭제 원칙"** — 위치 재배치 OK, 삭제/축소 0
-- **컨텍스트 한계 대응**: Part A1이 무거우면 즉시 Part A1a/A1b로 분할 + MD 인계
-
-### 본 세션 commit 예정
-- 코드 변경 0건 (계획 전용)
-- MD 3종 갱신만 (PROGRESS prepend + ROADMAP starter message 교체 + SESSION_LOG prepend)
-- commit 메시지: `docs(workflow-redesign): 대시보드 워크플로우 재설계 Sprint 계획 확정 + 옵션 E Part 2 흡수 + 꼬띠 아이덴티티 강화 1차 설계 (다음 채팅에서 Part A1 시작)`
-
----
-
-## 2026-05-03 세션 요약 — 옵션 E Part 1 완료 ✅
-
-### 본 세션 핵심 성과
-- **공통 hook 5개 추가**: `src/lib/hooks/useDashboardData.ts` 186줄 → 450줄 (+264줄)
-  - `useGoodService()` — 5분 cadence (revalidateOnFocus + 1분 dedupe)
-  - `useDataLabTrend(period)` — 24h cadence + period as part of SWR key
-  - `useSourcingRecommend()` — 24h cadence + setData() for POST scan replace
-  - `useReviewGrowth()` — 5분 cadence + refresh() for POST/PUT (Part 2용 미리 추가)
-  - `useUploadReadiness()` — 60s cadence (HIGH 동일, Part 2용 미리 추가)
-- **위젯 3개 마이그레이션**: GoodService/DataLab/Sourcing — diff stat +304/-170 (코드 단순화)
-- **TSC 0 errors** + **Chrome MCP 라이브 검증 완료**:
-  - 3개 API 초기 1회씩 호출 ✅
-  - GoodService(5min profile): blur+focus 시 자동 재호출 1→2 ✅
-  - DataLab/Sourcing(24h profile): focus 시 절약 (호출 안 함) ✅ — 의도된 SWR 효율 극대화
-  - GoodService manual refresh 버튼 mutate 정상 (2→3) ✅
-  - DataLab period 30→7 클릭 시 새 SWR key로 자동 fetch ✅
-
-### 옵션 E의 SWR profile 설계
-- **5분 profile** (GoodService, ReviewGrowth): refreshInterval 300_000ms / revalidateOnFocus true / dedupingInterval 60_000ms
-- **24h profile** (DataLab, Sourcing): refreshInterval 86_400_000ms / revalidateOnFocus **false** / dedupingInterval 3_600_000ms — 트렌드 데이터 안정적이라 focus 재호출 절약으로 비용 최소화
-- **60s profile** (UploadReadiness): DASHBOARD_SWR_DEFAULTS 그대로 재사용 — DRAFT 상태 변동 잦아 HIGH equivalent
-
-### Part 2로 인계되는 작업
-- **UploadReadinessWidget**: optimisticScores Map<string, number> 패턴 보유 → SWR keepPreviousData로 통합 시 더 깔끔하지만 신중한 마이그레이션 필요
-- **ReviewGrowthWidget**: POST/PUT 후 수동 reload 패턴 → useReviewGrowth().refresh() 호출로 변경
-
-
-## 이 파일의 역할
-
-> **KKOTIUM_PROGRESS.md** = 현재 상태 + 작업 원칙 + 완료 이력 + 기술 레퍼런스 (세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md 참조)
-
----
-
-## 2026-05-03 세션 요약 — 옵션 D 완료 (대시보드 위젯 SWR 확장 + 공통 hook 추출)
-- 사전 점검 (작업원칙 21+23): HEAD=28524a5 ↔ origin/main 동기화 ✅, working tree dirty (4개 파일 변경 보존: useDashboardData.ts 신규 + Sidebar/Profitability/DailyPlan 수정) ✅, dev 서버 포트 3000 살아있음 (HTTP 200) ✅, TSC 0 errors ✅, 세 MD 정독 ✅
-- **본 세션은 작업원칙 24번 회수 작업**: 직전 채팅에서 코드 패치 4건(신규 1 + 수정 3) + TSC + 1차 브라우저 검증까지 완료한 후 MCP 서버 응답 불가로 commit/push가 한 turn 안에 끝나지 않음 → 본 세션이 회귀 검증 + MD 갱신 + commit/push를 한 묶음으로 마무리
-- **코드 변경 요약** (직전 채팅에서 수행, 본 세션은 그대로 보존):
-  1. **신규**: `src/lib/hooks/useDashboardData.ts` (186줄) — 옵션 C SWR 패턴을 도메인별 공통 hook으로 일반화
-     - `DASHBOARD_SWR_DEFAULTS` 공통 상수 (60s refreshInterval + revalidateOnFocus + 10s dedupingInterval + keepPreviousData)
-     - `useSidebarStats()` — 사이드바 5종 배지용
-     - `useProfitability()` — Profitability 위젯용
-     - `useProductsList({enabled})` — DRAFT 상품 리스트용 (conditional fetch 지원)
-  2. **마이그레이션**: `src/components/layout/Sidebar.tsx` v10 → v11 — 인라인 useSWR → `useSidebarStats()` 1줄 호출로 단순화 (-7 lines)
-  3. **마이그레이션**: `src/components/dashboard/ProfitabilityWidget.tsx` — useEffect+fetch+useState → `useProfitability()` (-37 lines)
-  4. **마이그레이션**: `src/components/dashboard/DailyPlanWidget.tsx` — useEffect+fetch → `useProductsList({enabled: !usingProps})` conditional fetch 패턴 도입 (props 받으면 fetch 건너뛰기)
-- **diff stat**: 3 files changed, +80/-144 lines (코드 단순화 정상)
-- **TSC**: 0 errors ✅ (직전 채팅 + 본 세션 둘 다 검증)
-- **브라우저 라이브 회귀 검증** (Chrome MCP, 작업원칙 22번):
-  - **8개 DRAFT 평균 75점 회귀 검증 ✅**: 50,60,70,76,80,84,86,92 (옵션 C 결과와 100% 일치, E-15 자산 보존 확정)
-  - **revalidateOnFocus 자동 재호출 검증 ✅**: blur+focus 시뮬레이션 → t=1ms에 `/api/profitability` 200 자동 재호출 (ProfitabilityWidget의 useProfitability() 훅 정상 작동 확인)
-  - **conditional fetch 검증 ✅**: DailyPlanWidget이 dashboard에서 props를 받는 상태(usingProps=true)이므로 자체 fetch 건너뛰기 정상 작동 (네트워크 로그에서 /api/products?status=DRAFT 호출 안 됨)
-  - **사이드바 배지 5종 정상 ✅** (옵션 C 결과 계승, 본 세션 회귀 없음)
-- **작업원칙 26번 일반화 진척**: 옵션 C에서 사이드바 1개 → 옵션 D에서 위젯 3개(ProfitabilityWidget HIGH + DailyPlanWidget HIGH + Sidebar 마이그레이션)까지 패턴 확장 + 공통 hook으로 추출 완료. MID 5개 위젯(ReviewGrowthWidget/GoodServiceWidget/DataLabTrendWidget/UploadReadinessWidget/SourcingRecommendWidget) 미적용 — 옵션 E로 인계
-- **다음 Sprint 후보 (꽃졔님 결정 대기)**:
-  - 옵션 A: E-1 상세페이지 빌더 AEO 강화 (Q&A/FAQ JSON-LD) — 등록 상품 발생 시점에 적합
-  - 옵션 B: E-12 Discord 리뷰 알림 — 자체 리뷰 1건+ 발생 시점에 적합
-  - **옵션 E (옵션 D 후속)**: MID 5개 위젯 SWR 확장 — 본 세션 결과 계승, 동일한 useDashboardData hook에 추가 추출
-
----
-
-## 2026-05-03 세션 요약 — 옵션 C 완료 (사이드바 5종 배지 SWR 실시간화)
-- 사전 점검 (작업원칙 21+23): HEAD=ecd78de ↔ origin/main 동기화 ✅, working tree clean ✅, dev 서버 포트 3000 살아있음 (HTTP 200, node PID 2874) ✅, 세 MD 정독 ✅
-- **도입 결정**: 꽃졔님 승인 "Sidebar 1개만 — 안정성 검증 후 다음 Sprint로 확장" (작업원칙 26번 일반화 점검이 다음 Sprint 운명)
-- **패키지 설치**: `npm install swr` → swr@2.4.1 설치 완료 ✅
-- **코드 패치** (`src/components/layout/Sidebar.tsx`, +30/-28 lines):
-  1. import 교체: `useEffect, useState` → `useSWR` (1줄)
-  2. 헤더 주석 갱신: v9 → v10 (SWR realtime)
-  3. `statsFetcher` 추가 — fetch → JSON 단순 함수
-  4. `useSWR` 훅 도입 (키: '/api/dashboard/stats?period=all'):
-     - `refreshInterval: 60_000` — 60초 주기적 폴링
-     - `revalidateOnFocus: true` — 탭/창 복귀 시 즉시 갱신 (핵심 UX)
-     - `dedupingInterval: 10_000` — 10초 이내 중복 요청 차단
-     - `keepPreviousData: true` — 갱신 중 배지 깜빡임 방지
-  5. `sideStats` 더리부 (`statsResp?.data?.summary` 기반 5종 count)
-- **TSC**: 0 errors ✅ (`/tmp/_tsc_now.log` 0 lines, EXIT=0)
-- **브라우저 라이브 회귀 검증** (Chrome MCP, 작업원칙 22번):
-  - **사이드바 배지 5종 정상 레더링 ✅**: 꿀통 사냥터 3 / 정원 창고 8 / 나머지 0 (현재 DB 데이터 100% 일치)
-  - **8개 DRAFT 평균 75점 회귀 검증 ✅**: 50,60,70,76,80,84,86,92 (직전 세션과 100% 일치, E-15 자산 보존 확정)
-  - **revalidateOnFocus 실행 검증 ✅**: blur+focus 시뮬레이션 → t=202ms에 `/api/dashboard/stats` 자동 재호출
-  - **dedupingInterval 실행 검증 ✅**: 11초 대기 후 focus → 재호출 (10초 경계 정확 작동)
-  - **API HTTP 200 (0.45s)** 재확인 ✅
-- **작업원칙 26번 일반화 점검**: 동일 패턴(단발성 fetch + stale state)이 다른 위젯/페이지에서도 있을 수 있음 (후보: ProfitabilityWidget, ReviewGrowthWidget, GoodServiceWidget, DataLabTrendWidget, 대시보드 주문관리 위젯 등) → 다음 Sprint(옵션 D)에서 SWR 확장 권장
-- **다음 Sprint 후보 (꽃졔님 결정 대기)**:
-  - 옵션 A: E-1 상세페이지 빌더 AEO 강화 (Q&A/FAQ JSON-LD) — 등록 상품 발생 시점에 적합
-  - 옵션 B: E-12 Discord 리뷰 알림 — 자체 리뷰 1건+ 발생 시점에 적합
-  - **옵션 D (동의어)**: 대시보드 위젯 SWR 확장 — 본 세션 결과 계승, 동일 패턴을 다른 위젯/페이지에도 적용
-
----
-
-## 2026-05-03 세션 요약 — E-15 Block D Part 2 잔여·5 마무리 (이슈 #3 optimistic score override + E-15 전체 완료)
-- 사전 점검 (작업원칙 21+23): HEAD=f0d054f ↔ origin/main 동기화 ✅, working tree dirty (직전 채팅에서 패치 후 commit 못한 AutoFillModal.tsx + UploadReadinessWidget.tsx 그대로 보존됨) ✅, MD 줄 수 1128/1186/332 ✅, dev 서버 포트 3000 살아있음 ✅
-- 직전 채팅 변경분 검토 (작업원칙 24번 위반 회수 작업): 두 파일 git diff 확인 → optimisticScores Map 패턴 + onApplied(productId, newScore) 시그니처 확장 그대로 → **덮어쓰기 절대 금지 원칙으로 그대로 commit + push** (한 줄 명령으로 묶음)
-- TSC 0 errors 재확인 ✅
-- **commit + push 완료**: f0d054f..f9f2300 (`fix(E-15 Part 2 잔여·5): optimistic score override eliminates AI button flash on 90+ cards (issue #3)`)
-- 브라우저 라이브 회귀 검증 (Chrome MCP, 작업원칙 22번 — 브라우저 테스트 필수): http://localhost:3000/dashboard 8개 DRAFT 카드 점수 추출
-  - 50점 C 하트 리본 누빔 여성 파자마 세트 ✅
-  - 60점 B 차량용 햇빛가리개 ✅
-  - 70점 B 스텐 파워 변기건 펌프 ✅
-  - 76점 A 인테리어 미니 가습기 ✅
-  - 80점 A 리본 포인트 홈웨어 잠옷세트 ✅
-  - 84점 A 모나미 펭수 매직 ✅
-  - 86점 A 선물받은 특별한 일상 ✅
-  - 92점 S 무타공 두꺼비집가리개 ✅
-  - **평균 75점 ✅** (직전 채팅 잔여·1·2·3·4 결과와 100% 일치, 회귀 없음 확정)
-  - **90+ 카드 1개 ✅** (이슈 #3 optimistic override 적용 대상 — 자체 회귀는 다음 AI 채우기 발생 시 자연 검증)
-- **E-15 전체 완료 처리** ✅: Block A(검색결과·SEO 안내 위젯) + Block B(naverCommerceMatcher 도메인 일반화) + Block C(AutoFillModal 2단계 워크플로) + Block D Part 1(자체 ready90 등록 진입점) + Part 2 잔여 5차까지 모든 이슈(#1·#2·#3·#4·#5·#6·#7) 처리 완료
-- 본 세션 학습 (작업원칙 24번 강화 적용): 직전 채팅이 commit + push를 한 turn 안에 못 끝낸 트랩 → 본 세션이 working tree dirty 상태로 시작 → diff 검토만 하고 그대로 commit + push (덮어쓰기 절대 금지) → 이번 세션은 commit + push를 한 줄 `&&` 명령으로 묶어 트랩 회피
-- **다음 Sprint 결정 대기**: 꽃졔님께 옵션 A/B/C 결정 요청 (본 세션 마지막 turn에서 ask)
-
----
-
-## 2026-05-02 세션 요약 — E-15 Block D Part 2 잔여·4 (이슈 #7 근본 해결: AI 자기모순 hallucination 도메인-무관 일반 검증)
-- 사전 점검 (작업원칙 21+23): HEAD=c9bb79e ↔ origin/main 동기화 ✅, working tree clean ✅, MD 줄 수 1108/1108/252 ✅, dev 서버 포트 3000 살아있음 ✅
-- 근본 원인 재분석: 직전 인계 메시지의 score() 강화안은 **변기펌프 한 케이스만 보호**하는 도메인별 패치 — SLEEPWEAR/BATHROOM/CAR 3영역 외 4,990+ 다른 카테고리는 무방비 상태였음. groq-llama3 hallucination은 모델 한계라 검증으로만 잡을 수 있음
-- 해결 전략 전환: 도메인별 키워드 추가 대신 **모든 4,993개 카테고리에 작동하는 일반 검증 3겹** 추가 — 두더지잡기식 패치 종결
-- 코드 패치 (commit 64c4e43, src/lib/upload-readiness-filler.ts +53/-9):
-  1. **신규 도메인-무관 검증** (핵심): AI reason 텍스트에서 한국어 명사 토큰 추출 (length>=2, stopwords 제외) → 매핑된 d2/d3/d4 어디에도 substring 일치 없으면 **score 무관 하드 reject**. AI가 reason엔 "욕실용품"이라 적고 코드는 CCTV 출력하는 자기모순 패턴이 모든 도메인에서 잡힘
-  2. **categoryHasBathroom 강화**: 너무 느슨한 `'생활용품'` 단일 매칭 제거 → 욕실/변기/뚫어/배수/세면 키워드가 d2/d3/d4에 실제 있을 때만 인정 (CCTV·세제 등 잘못된 d3는 "생활용품" 하위지만 욕실 아님)
-  3. **reasonHasCategoryHint 강화**: GENERIC_D2 set (`생활용품, 주방용품, 식품, 디지털/가전, 가구`) 일반 d2 이름은 단독 hint 인정 안 함, length >= 3 + d3 일치 동반 시에만 인정
-  4. BATHROOM_WORDS 오타 정정 (`'뚫어뻑'`→`'뚫어뻥'`) + 누락 키워드 추가 (`'펌프', '배수호스', '하수구', '파이프'`)
-  5. 욕실 mismatch 패널티 -20 → -50 (sleepwear/car 분기와 동등한 가중치)
-- 단위 시뮬레이션 6/6 통과: (1) reason="욕실용품"+코드=CCTV 자기모순 → REJECT_REASON_MISMATCH ✅ (2) 변기펌프→배수구세정제 reason 일치 → ACCEPT ✅ (3) 변기펌프→뚫어뻥 정답 → ACCEPT ✅ (4) reason="DVD 다큐"+코드=DVD 이슈 #5 케이스 → REJECT_REASON_MISMATCH ✅ (5) 잠옷 회귀 → ACCEPT ✅ (6) 차량용 회귀 → ACCEPT ✅
-- 라이브 검증 4/4 통과: 변기펌프 카드 → 50002502 (배수구세정제, reason과 d4 일치하므로 합리적 ACCEPT) | 파자마 세트 → 50000826 (잠옷/홈웨어) ✅ | 홈웨어 잠옷세트 → 50000826 ✅ | 차량용 햇빛가리개 → 50004092 ✅
-- TSC: 0 errors ✅
-- **본 세션 작업원칙 26번 신설**: "근본 원인 분석 — 한 케이스가 아닌 동일 패턴 일반화". 한 상품의 매핑 오류는 빙산의 일각이고, 같은 종류의 모델 한계가 다른 카테고리·다른 자동 채우기 항목에서도 동일 패턴으로 재발할 수 있음. 패치 시 항상 (a) 이 한 상품만 막을 것인가 (b) 같은 종류의 문제가 어디서 또 일어날 수 있는가 두 관점으로 본 후 (b)를 우선 선택
-- 본 세션 학습 (작업원칙 25 보강): groq-llama3 응답이 24h 캐시에 저장되어 라이브 호출 5회 모두 같은 응답 반환. 따라서 새 검증 로직의 결정적 검증은 단위 시뮬레이션(Python으로 score() 재구현)으로 확보 + 라이브는 회귀 검증용으로 사용
-- 검증 결과로 본 의의: 변기펌프 한 케이스가 아니라 **이슈 #5 (DVD 매핑) + 이슈 #7 (CCTV/세정제 hallucination) + 미래 발생 가능성 있는 모든 식품/화장품/가전/도서 영역의 같은 패턴까지 동일한 검증 로직으로 차단**. score() 보호 영역이 SLEEPWEAR/BATHROOM/CAR 3개 → 카테고리 4,993개 전체로 확장됨
-
----
-
-## 2026-05-02 세션 요약 — E-15 Block D Part 2 잔여·3 (이슈 #6 부분 해결: 잠옷/홈웨어/차량용 카테고리 정확도 개선 + 이슈 #7 신규 발견)
-
-> 자세한 세션 기록은 **KKOTIUM_SESSION_LOG.md 최상단** 참조.
-
-### 주요 성과
-- **이슈 #6 부분 해결**: src/lib/upload-readiness-filler.ts autoFillCategory 프롬프트 강화 + score() 가중치 재조정으로 3개 카드 라이브 검증 통과:
-  - 리본 포인트 홈웨어 잠옷세트 → 50000826 (여성의류>잠옷/홈웨어) high ✅
-  - 하트 리본 누빔 여성 파자마 세트 → 50000826 high ✅
-  - 차량용 햇빛가리개 → 50004092 (자동차용품>인테리어용품>차량용햇빛가리개) ✅
-- **코드 변경**: src/lib/upload-readiness-filler.ts (+83/-3 lines) — autoFillCategory 프롬프트 강화(잠옷/홈웨어/차량용 명시 가이드 + few-shot 5개) + score() 가중치(d4 서브스트링 매칭 +25→+60, 공백 제거 매칭 추가, 잠옷/욕실/차량 형태 특이적 보너스 +35 / 패널티 -30)
-- **TSC 0 errors** 유지
-
-### 이슈 #7 신규 발견 (다음 세션 주 작업)
-- **증상**: 변기펌프 카드(cmn7984ff0001130kjfj6mnas) 재테스트 시 AI가 50002707(생활/건강>생활용품>보안용품>CCTV) 추천. AI reason 텍스트에는 "변기펌프/뚫어뻥은 욕실용품"이라고 적으면서 실제 코드는 CCTV를 출력한 **자기모순 hallucination**
-- **원인**: AI(groq-llama3) 추론 단계 자체의 논리 괴리. score() 이 d4="CCTV"와 상품명 "변기/펌프/뚫어뻥" substring 매칭이 없으니 형태특이 보너스/패널티가 적용되지 않아 거부하지 못함
-- **우선순위**: 다음 세션 주 작업 적합 (AI 자기모순 검증 구조 필요)
-- **개선 방안**:
-  1. score()에 "reason 텍스트 vs 실제 매핑 d3/d4 일치성" 검증 추가
-  2. 욕실용품 관련 키워드(변기/펌프/뚫어뻥/배수구) + 그 어떤 d2/d3도 "욱실/배수·파이프" 등과 일치 안 하면 강한 패널티
-  3. AI fallback 제2 차(볐경: GPT-4o-mini 또는 계산형 추세도) 검토
-
-### 이슈 #3 미검 (적재・코스메틱)
-이번 세션에서 도 시간 부족으로 점검 미실시. 다음 세션에서 이슈 #7 해결 이후 처리.
-
-### 다음 세션에서 진행할 작업 (잔여·4)
-1. 이슈 #7 변기펌프 AI 자기모순 매핑 거부 로직 (주 작업)
-2. 이슈 #3 ready90 카드 AI 버튼 점검 (선택, 코스메틱)
-3. E-15 전체 완료 처리 + 다음 작업 후보 평가
-
-자세한 인계 메시지는 KKOTIUM_ROADMAP.md "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·4용)" 섹션 참조.
-
----
-
-## 2026-05-01 세션 요약 — E-15 Block D Part 2 잔여·2 (이슈 #2+#5 거부 로직 이중 방어선 + 이슈 #6 신규 발견)
-
-> 자세한 세션 기록은 **KKOTIUM_SESSION_LOG.md 최상단** 참조.
-
-### 주요 성과
-- **이슈 #2 차단 성공**: src/lib/upload-readiness-filler.ts autoFillCategory + src/app/api/upload-readiness/auto-fill/route.ts PATCH 이중 방어선 구축. 동일 코드(50003307→50003307) 추천 차단 라이브 검증
-- **이슈 #5 차단 성공**: d1 fallback 무차별 카테고리 반환 폐기 + token overlap 검증 추가. DVD/교양(변기펌프), 남성언더웨어(여성잠옷) 같은 말도 안 되는 매칭 차단
-- **TSC 0 errors** 유지
-
-### 이슈 #6 신규 발견 (다음 세션 주 작업)
-- 증상: 홈웨어 잠옷세트/파자마 카드에서 AI가 50021261(여성의류>니트>베스트) 추천. 차단 로직을 통과했으나 잠옷 상품을 여성 조끼로 매핑한 부적합 결과
-- 원인: AI 프롬프트의 카테고리 설명 부족 (잠옷/홈웨어 vs 니트 텍스처 구분 안 됨)
-- 우선순위: 다음 세션 주 작업 적합 (AI 추천 정확도 향상, 정상 통과 에러와는 성격 다름)
-- 개선 방안: 프롬프트 강화 + few-shot 예시 + d3 substring 일치 가중치 투입
-
-### 이번 세션 작업원칙 25번 신설
-- macOS NFC/NFD 정규화 차이로 edit_file 매칭 실패 발생 → Python 수동 정규화 시도 중 ~2,000줄 삭제 사고 발생 (git restore로 복구). 세부 대응은 작업원칙 25번 참조
-
-### 다음 세션에서 진행할 작업 (잔여·3)
-1. 이슈 #6 카테고리 추천 정확도 개선 (주 작업)
-2. 이슈 #3 ready90 카드 AI 버튼 점검 (선택, 코스메틱)
-3. E-15 전체 완료 처리 + 다음 작업 후보 평가
-
-자세한 인계 메시지는 KKOTIUM_ROADMAP.md "다음 새 채팅 시작 메시지 (E-15 Block D Part 2 잔여·3용)" 섹션 참조.
-
----
-
-## 2026-05-01 세션 요약 — E-15 Block D Part 2 잔여 (3개 카드 적용 투입 + 이슈 #1 검증 + 이슈 #4 수정 + 이슈 #5 발견)
-
-### 세션 개요
-- 컨텍스트 안전 분할: 옵션 A (단계 A 3개 카드 + 단계 B 이슈 #1 검증 + 발견된 이슈 #4 수정) → 다음 채팅 인계
-- 작업원칙 23번 적용: 시작 메시지의 가정("stat strip 51점 고정")과 실제 라이브 데이터(67점) 차이 정직 보고
-- 작업원칙 24번 적용: 코드 수정 + 라이브 검증 + commit + push 한 묶음으로 완료
-- TSC 0 errors 유지
-
-### [단계 A] 잔여 3개 카드 일괄 자동 채우기 라이브 검증 ✅
-
-위젯 UI에서 직접 클릭하는 셀러 UX 그대로 검증 (Chrome MCP):
-
-| # | 카드 | 적용 전 | 적용 후 | 증가 | 적용 항목 | 거부 항목 |
-|---|---|---|---|---|---|---|
-| 1 | 하트 리본 누빔 여성 파자마 세트 | 40 | **50** | +10 | SEO 태그 12개만 | 키워드/카테고리/상품명 (검증 실패 또는 미제안) |
-| 2 | 초강력 스텐 변기펌프 | 48 | **70** | +22 | 상품명 재작성(앞15자) + 키워드 8개 + 태그 12개 | 카테고리 (셀러가 의도적 체크 해제 — d1 fallback 부적합) |
-| 3 | 리본 포인트 홈웨어 잠옷세트 | 48 | **80** | +32 | 키워드 8개 + 태그 12개 | 카테고리 (체크 해제) + 상품명 (미제안) |
-
-**적용 합계**: 3개 카드, 점수 증가 누계 +64점
-
-**8개 DRAFT 평균 점수 변화**: 67 → 68 → 71 → **75점** ✅ 목표 70+ 달성
-
-**최종 평균 점수 75점에 도달 후 8개 카드 상태**:
-```
-50점 하트 리본 누빔 여성 파자마 세트       (D→C 등급)
-60점 차량용 햇빛가리개 유리창 가림막       (이전 세션)
-70점 스텐 파워 변기건 펌프 일체형         (B 등급, 상품명 재작성됨)
-76점 인테리어 미니 가습기                  (이전 세션)
-80점 리본 포인트 홈웨어 잠옷세트          (A 등급)
-84점 모나미 펭수 매직                      (이전 세션)
-86점 선물받은 특별한 일상                  (이전 세션)
-92점 무타공 두꺼비집가리개                 (S 등급, Part 1)
-```
-
-### [단계 B] 이슈 #1 자연 해소 검증 ✅
-
-인계 메시지의 "stat strip 평균 점수 51점 고정" 보고는 **이번 세션에서 자연 해소 확인**:
-- 세션 시작 시점 stat strip = 67점 (인계 가정 51점과 다름) — 이미 정상 상태
-- 3개 카드 적용 시 stat strip이 자동으로 67 → 68 → 71 → 75점으로 매번 정상 갱신됨
-- 코드 분석: `avgScore` 계산식(UploadReadinessWidget.tsx line ~830)의 `useMemo([products])` 의존 배열이 정확히 작동
-- handleAutoFillApplied → onRefresh → handleRefresh → loadStats + loadProducts 흐름 정상
-
-**결론**: 이슈 #1은 **인계 시점의 일시적 캐시 또는 초기 로드 상태**였으며 코드 수정 불필요. 다음 채팅에서 같은 증상 재발 시에만 추가 조사 권장.
-
-### [이슈 #4 신규 발견 + 수정 ✅] 위젯 TOP 5 한도로 미적용 카드 노출 안 됨
-
-**증상**: 단계 A 시작 시 위젯의 정렬이 점수 높은 순(`b.readiness.score - a.readiness.score`) + `slice(0, 5)`로 인해 잔여 3개 미적용 카드(40, 48, 48점)가 위젯 TOP 5 노출에서 빠지고 셀러가 자동 채우기 버튼을 클릭할 수 없는 상태
-
-**원인**: E-14 위젯 설계 당시 "점수 높은 카드부터 보여주기" 정책이었으나, 실제 셀러 워크플로우는 "작업 필요한 카드부터 처리"가 더 합리적
-
-**수정** (`src/components/dashboard/UploadReadinessWidget.tsx`):
-- 정렬: `b - a` (DESC) → `a - b` (ASC) — 작업 필요한 낮은 점수 카드 우선
-- 한도: `slice(0, 5)` → `slice(0, 8)` — 8개 DRAFT 모두 한 화면에 노출 (90+ 카드는 stat strip의 "지금 등록 가능"에 카운트되어 있어 위젯 마지막에 와도 OK)
-- 변수명: `top5` → `visibleCards`, footer 메시지 한글도 `상위 5개 표시 중` → `작업 필요한 상위 8개 표시 중`로 갱신
-- 헤더 주석 갱신 + Part 2 issue #4 fix 명시
-
-**검증**: 코드 수정 후 브라우저 새로고침 → 위젯에 8개 카드 모두 노출됨 + 정렬 ASC 정상 ✅
-
-### [이슈 #5 신규 발견 — 다음 채팅 인계] 카테고리 d1 fallback 부적합 매칭
-
-**증상**: AutoFillModal에서 카테고리 자동 매핑이 d2/d3 매칭 실패 시 d1 단위 fallback으로 떨어지는데, fallback 선택 카테고리가 명백히 부적합한 매칭을 표시:
-
-| 카드 | AI 분석 의도 | 실제 fallback 추천 | 문제 |
-|------|------------|---------------|------|
-| 초강력 스텐 변기펌프 | 욕실/세면 카테고리 | 50000241 "생활/건강 > **DVD > 교양/다큐멘터리**" | 변기펌프가 DVD 카테고리로 매핑 |
-| 리본 포인트 홈웨어 잠옷세트 | 패션의류 > 여성 잠옷 | 50000846 "패션의류 > **남성언더웨어/잠옷 > 러닝**" | 여성 잠옷이 남성 카테고리로 매핑 |
-
-**원인 추정**: `autoFillCategory` 또는 PATCH route가 d1 코드만 받았을 때 d1 자식 카테고리 중 첫 번째를 자동 선택하는 로직이 있을 가능성. AI는 정확한 카테고리 트리 의도를 reasoning에 적었지만 실제 `after` 코드가 그 의도와 무관한 d1 자식이 됨
-
-**셀러 영향**: "주의" 라벨만 보고 카테고리 체크박스를 그대로 두면 부적합 카테고리가 적용됨. 본 세션에서는 의도적으로 체크 해제하여 회피했지만, 셀러가 실수로 적용하면 카테고리 망가짐
-
-**다음 채팅 작업 (이슈 #2와 통합)**: 카테고리 거부 로직 이중 방어선 구축
-- 이슈 #2: `suggestion.after === product.naverCategoryCode` (동일 코드) 시 거부
-- 이슈 #5: AI reasoning에 "d1 단위 추천" 또는 "정확한 d2/d3 매칭이 없"가 포함되거나, fallback 코드의 카테고리명이 AI reasoning 키워드와 명백히 무관한 경우 거부
-- 적용 위치: POST 단계(`autoFillCategory` 결과 필터) + PATCH 단계(`update.naverCategoryCode` 검증) 이중 방어선
-
-### 이번 세션 작업원칙 학습 — 18번 한글 입력 안정성
-
-작업원칙 18번 "Python `-c` 안 multiline string 금지"에 더해, **filesystem:edit_file에서 한글 unicode escape (\uXXXX)를 사용하면 모음/받침이 미세하게 깨지는 패턴 발견** (이번 세션 헤더 입력 시 "잔여→잾여→잔여", "위젯→위젤→위젟→위젯" 3단계 정정 발생).
-
-**권장**: filesystem:edit_file의 newText에 한글 입력 시 가능한 한 **한글 문자를 직접 입력**하고 unicode escape는 최소화. escape 사용 시 반드시 직후 view로 결과를 검증.
-
-### 작업원칙 23·24 세션 내 실제 적용 기록
-- (a) 세션 시작 시 `git rev-parse HEAD origin/main = de239b0` 동일 확인 ✅
-- (b) `git --no-pager log -10`에서 인계 메시지에 명시된 commits 확인 ✅
-- (c) `git status` 깨끗함 확인 ✅
-- (d) 시작 메시지 가정과 실제 stat strip 점수 차이 즉시 정직 보고 ✅
-- (e) commit + push 한 줄 명령으로 마무리 ✅ (작업원칙 24번)
-- 이슈 #4를 인계 외 발견 사항으로 정직 보고 후 사용자 묵시적 승인 하에 수정 진행 (작업원칙 19번 "AI 결과는 셀러 승인 없이 적용 금지"는 라이브러리 동작에 관한 것, 위젯 UX 개선은 별개 범주)
-
-### 다음 채팅에서 진행할 작업 (상세는 KKOTIUM_ROADMAP.md 참조)
-1. **이슈 #2 + 이슈 #5 통합 수정**: 카테고리 거부 로직 이중 방어선 (POST + PATCH)
-2. **이슈 #3 점검** (선택적, 코스메틱): ready90 카드 AI 버튼 재표시 정황
-3. **E-15 전체 완료 처리** + 다음 작업 후보 평가 (E-1 빌더 AEO 강화 vs E-12 Discord 리뷰 알림)
-4. **stat strip 평균 점수 정확도 추가 점검** (선택적): 75점 도달 상태에서 셀러 인지 부담을 줄이는 부가 정보(예: "등록 가능 임계 90점까지 N점") 추가 검토
-
----
-
-## 2026-05-01 세션 요약 — E-15 Block D Part 2 후반 (단계 2 메인 + 단계 3 Edge case)
-
-### 세션 개요
-- 컨텍스트 안전 분할: 옵션 B (3개 카드 자동 채우기 + Edge case 4개 → 인계) 선택
-- 작업원칙 23번 적용: 시작 메시지의 가정("3개 카드 52/48/48점")과 실제 DB 상태(이미 적용 2개 + 미적용 6개) 차이 확인 후 정직 보고. 위젯 TOP 5 노출 기준의 3개 카드를 우선 처리하는 방향으로 합의
-- TSC 0 errors 유지, 코드 변경 없이 라이브 검증 + 코드 리뷰만 진행
-
-### [단계 2 메인] 3개 카드 일괄 자동 채우기 라이브 검증 ✅
-
-| # | 카드 | 적용 전 | 적용 후 | 증가 | 핵심 |
-|---|---|---|---|---|---|
-| 1 | 인테리어 미니 가습기 | 52 | **76** | +24 | 태그 12개 + 카테고리 50002542(디지털/가전 > 계절가전 > 가습기 > 가습기필터) 정확 매칭 ✅ |
-| 2 | 모나미 펭수 유성매직 둥근닙 24색 세트 | 48 | **84** | +36 | 상품명 재작성("매직"을 앞 15자로 재배치) + 키워드 8개 + 태그 12개 + 카테고리 50007329(여가/생활편의 > 예체능레슨 > 미술) — 정확도는 "주의" 등급, 셀러 검토 권장 |
-| 3 | 차량용 햇빛가리개 유리창 가림막 | 48 | **60** | +12 | 상품명 단축 + 키워드 8개. 카테고리는 50003307 → 50003307 동일 추천이라 점수 변동 없음(이슈 #2 참조) |
-
-**적용 합계**: 3개 카드, 총 점수 증가 +72점
-
-**핵심 관찰**:
-- AI 카테고리 추천 정확도 그라데이션: 가습기(완벽) > 모나미(수긍 가능) > 차량용(실패) — 합리적 분포
-- AI 태그가 "구매자 언어"를 정확히 추출(사무실용 / 탁상용 / 선물용 / 감각적 등)
-- PATCH=위젯 점수 일치 ✅ — Part 2 단계 1의 score 일관성 버그 수정이 정상 반영됨
-
-### [단계 3] Edge case 4개 검증 ✅
-
-| Case | 검증 방법 | 결과 | 상세 |
+| # | 리서치 항목 | 현재 앱 | 갭 |
 |---|---|---|---|
-| **A** AI 답변 모두 검증 실패 | AutoFillModal.tsx line 372–390 명시적 분기 | ✅ PASS | `nameRelated.length===0 && otherSuggestions.length===0 && unfillable.length>0` 코드 존재. "AI 자동 채우기 가능 항목이 없습니다" 노란 바 + manual 카드만 렌더 |
-| **B** Manual-only만 남은 카드 | UploadReadinessWidget.tsx line 49–68 + 라이브 무타공 92점 행 검증 | ✅ PASS | `hasAnyAutofillable()` + `ready90` 이중 분기. 92점 카드에서 hasAI=false, hasDirect=false, hasRegister=true 실측 확인 |
-| **C** 체크박스 모두 해제 | AutoFillModal.tsx line 244, 547–568 코드 검증 | ✅ PASS | `disabled={totalSelected===0}` HTML 속성 + 회색 배경(#E5E7EB) + cursor not-allowed + 텍스트 "적용할 항목 선택"으로 변경 |
-| **D** 네트워크 오류 | line 197–225, 297–320 코드 + INVALID_ID API 호출 라이브 검증 | ✅ PASS | POST/PATCH 둘 다 try-catch → `setPhase('error')` + errorMsg 표시. Esc/배경 클릭/X 버튼으로 종료 가능. 라이브 응답: `{success:false, error:"상품을 찾을 수 없습니다."}` |
+| 1 | 등급 체계 매출+굿서비스 이중 | ✅ GoodServiceWidget | 800만원 상향 반영 확인 |
+| 2 | 적합도/인기도/신뢰도 3축 | ✅ honey-score.ts | 인기도(찜·클릭) 추적 부재 |
+| 3 | 단건 vs CSV 일괄 | ✅ 메인 흐름 단건 | /products/upload 잔재 |
+| 4 | 상품명 25-50자 | ✅ 25-35자 hint + 점수화 | 금기어 검증 미강화 |
+| 5 | 황금 키워드 7-10개 | ✅ 검색 조련사 5단계 | 검색량/경쟁률 자동 산정 보강 |
+| 6 | 카테고리 1페이지 분석 | ⚠️ category/suggest 있음 | **1페이지 일치율 검증 룰 부재** |
+| 7 | 태그 사전 등재 검증 | ❌ | **신규** |
+| 8 | 다크패턴 정가 부풀리기 경고 | ❌ | **신규** |
+| 9 | AI 카테고리 추천 정확도 | ✅ category/suggest | 사람 검수 단계 명시 부재 |
+| 10 | 등록 7일 골든 윈도우 | ❌ | **신규 ★** |
+| 11 | 도매꾹 v4.5 옵션 해시+텍스트 | ❌ | **신규 ★** |
+| 12 | 도매꾹 vacation/channel 검증 | ❌ | **신규 ★** |
+| 13 | Naver Commerce API 등록 | ✅ register/route | 본격 활용 미실행 |
+| 14 | AiTEMS 자연어 키워드 | ⚠️ trend-analyzer 있음 | 등록 시 자연어 제안 없음 |
+| 15 | D+30 한달사용 알림톡 | ✅ month-review-pending | 50건+ 후 활성화 |
+| 16 | D+3~5 구매확정 알림톡 | ✅ confirmation-pending | 동일 |
+| 17 | 반품안심케어 매출 +13.6% | ✅ return-care-fees + honey 가산 | 완료 |
+| 18 | 효자 상품 식별 (멱법칙) | ❌ | **신규 ★** |
+| 19 | 상품명 금기어 페널티 | ⚠️ 부분 | 명시적 알림 부재 |
+| 20 | 광고 ROAS 추적 | ⚠️ 시뮬레이터만 | 실제 추적 부재 |
 
-### 발견된 미결 이슈 (다음 채팅 인계)
+### Sprint 6 — P0 (즉시 ROI, 매출 직접 영향)
 
-**[이슈 #1] 위젯 stat strip 평균 점수 표시 지연**
-- 증상: 3개 카드 적용 후에도 stat strip의 "평균 점수"가 51점으로 고정 표시 (실제 8개 DRAFT 전체 평균은 약 64점이어야 함)
-- 원인 추정: UploadReadinessWidget.tsx의 `avgScore` 계산식(line ~830) 자체는 `unregistered.length` 기준으로 정확. 다만 `useMemo` 의존 배열 또는 dashboard handleRefresh → loadProducts → DashboardProduct 재구성 흐름에서 stat strip 재계산이 누락되거나 지연되는 것으로 보임
-- 영향: 셀러에게 "평균이 안 움직인다"로 보이는 코스메틱 이슈, 데이터 손실은 없음
-- 다음 채팅 점검 항목: (a) handleAutoFillApplied 이후 router.refresh() 또는 명시적 재계산 트리거 추가 검토 (b) DashboardProduct 객체의 변경 후 값을 console.log로 실측해 원인 파악
+**기간 목표**: 2-3 채팅 세션 안에 P0-A·B·C 모두 완료.
 
-**[이슈 #2] 카테고리 동일 추천 자동 거부 누락**
-- 증상: 차량용 햇빛가리개 케이스에서 AI가 `50003307 → 50003307`(현재값과 동일) 추천. PATCH는 수행되지만 점수 변동 없음 (셀러 입장에서 "적용했는데 카테고리 점수가 안 오른다"로 보임)
-- 원인 추정: AI가 적합한 다른 카테고리를 못 찾을 때 가장 일반적인 d1 코드를 반환 → 우연히 기본값과 일치
-- 개선 제안 1: POST 단계에서 `suggestion.after === product.naverCategoryCode`이면 suggestions에서 제외 (가장 깔끔)
-- 개선 제안 2: PATCH 단계에서 `update.naverCategoryCode === product.naverCategoryCode`이면 rejected에 push + reason="동일 코드 추천"
-- 권장: 두 단계 모두 적용 (이중 방어선)
+**P0-A. 도매꾹 OpenAPI v4.5 옵션 정확도 강화** (리서치 11번)
+- `selectOpt` 해시값 + 옵션 텍스트 동시 비교 → 변경 감지 시 알림
+- `seller.vacation` 휴가 기간 검증 → 휴가 중 공급사 상품 등록 차단
+- `channel` (도매꾹/도매매) 검증 → 마진 오차 차단
+- 위치: `src/lib/crawler/auto-mapper.ts`, `src/app/crawl/page.tsx`, `src/lib/option-integrity.ts` (신규)
+- 검증: 실제 도매꾹 상품 5건으로 옵션 변경/휴가/채널 케이스 테스트
 
-**[이슈 #3] 무타공 두꺼비집가리개(ready90, 92점) 카드에서 AI 채우기 버튼이 일시적으로 재표시되는 정황**
-- 증상: 라이브 검증 중 92점 S등급 카드에서 일시적으로 "AI 채우기" 버튼이 보이는 순간이 포착됨. 평소에는 hasAnyAutofillable=false + ready90=true 조건으로 정상 숨김 처리되지만, 특정 타이밍에서 재표시됨
-- 원인 추정 (3가지 시나리오):
-  - (a) handleAutoFillApplied 직후 위젯 재로드 사이의 race condition — newScore 92 적용은 됐지만 loadProducts가 fresh 데이터로 갱신되기 전에 stale 점수로 잠깐 렌더
-  - (b) `hasAnyAutofillable()`이 product.failedItems 같은 동적 데이터에 의존 → 스냅샷 타이밍 문제
-  - (c) optimistic update와 server-side recalc 사이 reconciliation 깜빡임
-- 영향: 코스메틱 (셀러가 클릭해도 모달이 "자동 채우기 가능 항목 없음" 안내로 안전하게 종료) — 데이터 손실 없음
-- 다음 채팅 점검 항목:
-  - UploadReadinessWidget.tsx의 ProductRow rendering condition 재검토 — `hasAnyAutofillable && !ready90` 조건의 평가 시점 확인
-  - handleAutoFillApplied → handleRefresh → loadProducts 흐름에서 위젯 재렌더 전에 stale prop 사용하는지 console.log
-  - 필요 시 ProductRow에 `useMemo` 의존 배열에 product.id + product.score + product.completedItems 추가해 재계산 강제
+**P0-B. 등록 7일 골든 윈도우 트래킹 위젯** (리서치 10번)
+- DB: `Product.registeredAt` 활용. D+1, D+3, D+7 시점에 클릭/판매 상태 체크
+- 미달 상품 → 정원 일지 위젯에 알림
+- "상품명 토큰 1개 교체 권장" 자동 제안 (가장 약한 키워드)
+- 위치: `src/lib/golden-window-tracker.ts` (신규), `src/components/dashboard/GoldenWindowWidget.tsx` (신규)
+- 검증: 임의 등록일 5건 mock 주입 → D+1/3/7 분기별 위젯 렌더링 확인
 
-### 작업원칙 23·24 세션 내 실제 적용 기록
-- (a) 세션 시작 시 `git rev-parse HEAD origin/main = afe9d88` 동일 확인 ✅
-- (b) `git --no-pager log -10`에서 Part 1 후속 commit 확인 ✅
-- (c) `git status` 깨끗함 확인 ✅
-- (d) 시작 메시지 가정과 실제 DB 차이 정직 보고 → 옵션 선택 받고 진행 ✅
-- (e) 이전 채팅이 PROGRESS.md 수정 후 push 못 한 채 끊겼던 사례 발견 → git checkout으로 원복 후 깨끗한 버전으로 재작성 + 한 묶음 commit + push (작업원칙 24번 준수)
+**P0-C. 효자 상품 자동 식별 (멱법칙 시각화)** (리서치 10번)
+- 매출 상위 20% 상품 자동 식별 → 정원 일지 위젯
+- "이 상품에 광고 80% 집중하세요" 가이드
+- 위치: `src/lib/pareto-analyzer.ts` (신규), `src/components/dashboard/ParetoTopWidget.tsx` (신규)
+- 검증: orders 데이터 mock 50건 → Top 20% 분류 + 위젯 렌더링
 
-### 다음 채팅에서 진행할 작업 (상세는 KKOTIUM_ROADMAP.md 참조)
-1. **잔여 3개 카드 일괄 자동 채우기**: 하트 리본 누빔 파자마(38점 추정) / 초강력 스텐 변기펌프(38점) / 리본 포인트 홈웨어 잠옷세트(38점)
-2. **위젯 stat strip 평균 점수 이슈 조사 및 수정** (이슈 #1)
-3. **카테고리 동일 자동 추천 거부 로직 추가** (이슈 #2)
-4. **ready90 카드 AI 버튼 재표시 점검** (이슈 #3, 선택적 — 코스메틱)
-5. **E-15 전체 완료 처리** + 다음 작업 후보 평가 (E-1 빌더 AEO 강화 vs E-12 Discord 리뷰 알림)
+### Sprint 7 — P1 (SEO 정확도 강화, 노출 직접 영향)
 
----
+**P1-A. 카테고리 1페이지 일치율 검증** (리서치 6번)
+- 메인 키워드로 네이버 쇼핑 검색 → 1페이지 상품 카테고리 분포 → 80% 일치 카테고리만 추천
+- 위치: `src/lib/category-page-validator.ts` (신규), `src/app/api/category/suggest/route.ts` 강화
 
-## 2026-05-01 세션 요약 — E-15 Block D Part 2 (단계 1 + 단계 2 부분 검증)
+**P1-B. 상품명 금기어 페널티 강화** (리서치 4번)
+- 이벤트/할인/배송/적립/쿠폰 키워드 + 중복 단어 3회+ + 허용 외 특수문자 → 명시적 빨간 알림
+- 위치: `src/lib/honey-score.ts` 강화, 씨앗심기 UI 추가
 
-### 환경변수 정리 (세션 초반, 일회성 조정)
-- vercel CLI 설치 + login → production env 검증
-- `vercel link --yes` 명령이 development env로 .env.local 덮어쓴 사고 발생 → production env 기준으로 즉시 재구성 (안전 복구)
-- .env.local을 스크린샷 스타일로 재디자인 (10개 섹션 한글 주석)
-- GROQ_API_KEY_2/_3에 Development 환경 추가 (꽃졔님 Vercel UI에서 수동 실행)
-- 결과: GROQ 3개 키 모두 Production+Preview+Development에 단일 entry로 통합 ✅ "Needs Attention" 9개 모두 해소
+**P1-C. 태그 사전 등재 검증** (리서치 7번)
+- 입력된 태그가 네이버 태그사전에 있는지 검증 → 없으면 "SEO 효과 미미" 경고
+- 활용: 네이버 검색광고 API 키워드 도구 (CUSTOMER_ID: 3755315)
+- 위치: `src/lib/naver/tag-dictionary.ts` (신규)
 
-### [단계 1 완료] score 일관성 버그 수정
+### Sprint 8 — P2 (운영 도구 강화)
 
-**진짜 원인** (Part 1에서 "PATCH의 shipping_template 잘못 계산 가능성"으로 잠정 진단했으나 실제로는 반대):
-- `DashboardProduct` 타입과 `loadProducts` 매핑에 `shippingTemplateId`/`images` 필드가 애초에 정의/매핑되지 않음
-- 위젯의 `calcUploadReadiness({ shippingTemplateId: (p as any).shippingTemplateId ?? ... })`가 항상 `undefined` 결과로 shippingPassed=false (-10점)
-- 반면 PATCH 핸들러는 prisma.product.update의 select에서 shipping_template_id를 정확히 가져와서 정상 점수 반영
-- → PATCH 적용 당시에는 "newScore=92"로 정답이지만, 위젯 reload가 -10점 잘못 계산해서 82점만 표시되는 현상
-- 차이 = shipping_template weight 10점 (Part 1 관찰결과와 일치)
+**P2-A. 다크패턴 정가 부풀리기 경고** (리서치 8번)
+- 도매가 대비 판매가 3배 이상 + 즉시할인 30%+ 동시 → "공정위 다크패턴 위험" 경고
+- 위치: `src/components/products/MarginCalculator.tsx` 강화
 
-**수정 파일** (1곳만):
-- `src/app/dashboard/page.tsx` `DashboardProduct` interface에 `shippingTemplateId`/`images`/`shippingFee` 3개 필드 추가
-- `loadProducts` 내 매핑에 동일한 3개 필드 이제 포함
-- PATCH 핸들러 수정 불필요 (이미 정확했음)
+**P2-B. AiTEMS 자연어 키워드 제안기** (리서치 13번)
+- 카테고리별 "상황·용도·세대" 키워드 제안 (예: 가구 → "원룸 미니멀", "신혼 첫집", "MZ 자취")
+- 위치: `src/lib/aitems-natural-keywords.ts` (신규)
 
-### [단계 2 부분 검증] 1개 카드 라이브 일관성 재검증
+**P2-C. 등급 임계값 2025.12.2 개편 반영** (리서치 1번)
+- 파워 등급 기준 800만원 + 굿서비스 이중 평가 → GoodServiceWidget 명시
+- 위치: `src/components/dashboard/GoodServiceWidget.tsx` 강화
 
-수정 적용 후 대시보드 재로드 → 이전 Part 1에서 60→82점으로 갱신되었던 카드(무타공 두꺼비집가리개)가 **92점 (S등급)**으로 정상 표시 ✅. PATCH 응답의 newScore=92와 완벽 일치.
+### P3 — 후순위 (매출 600만원+ 후)
 
-동시에 "선물받은 특별한 일상" 카드(62점)에서 AI 채우기 모달 호출 → SEO 태그 12개 + 카테고리 매핑 제안 확인 → "2개 적용" 클릭 → done phase → 모달 자동 닫힘 → 위젯 재로드 → **86점 (A등급)** 갱신 직접 확인. PATCH newScore = 위젯 reload 점수 일치 ✅.
+- **P3-A**. Tailscale Funnel + home-proxy 큐 분리 (재시도 3회 + DLQ)
+- **P3-B**. Naver Commerce API 본격 활용
+- **P3-C**. 광고 ROAS 추적 (네이버 검색광고 API)
 
-평균 점수: 42 → 55 → **58** (두 카드 적용 이후)
+### 잔여 Z-시리즈 (별도 sub-graph)
 
-### 다음 채팅에서 진행할 작업 (상세는 KKOTIUM_ROADMAP.md 시작 메시지 참조)
-- 단계 2 나머지: 3개 DRAFT 카드 (52, 48, 48점)에서 자동 채우기 일괄 검증 → 평균 점수 최종 측정 (목표: 70+점)
-- 단계 3: Edge case 4개 검증
-- E-15 전체 완료 처리 + 다음 작업 후보 평가
-> 새 채팅 시작 시 **가장 먼저 읽는 파일**
->
-> **새 채팅 시작 순서:**
-> 0. **git log -5로 직전 작업 잔재 확인** — Sprint 3·4에서 이미 완료된 작업을 다시 시작할 뻔했던 패턴 대비 (컨텍스트 한계로 이전 채팅이 끝난 경우)
-> 1. `KKOTIUM_PROGRESS.md` 전체 읽기
-> 2. `KKOTIUM_ROADMAP.md` 전체 읽기 (특히 "다음 채팅에서 시작할 작업" 섹션)
-> 3. 해당 TASK 관련 코드 파일 read_file
-> 4. 꽃졔님 승인 후 작업 시작
-> 5. **작업 중 Block/단계별로 commit해서 progressive 저장** (컨텍스트 손실 방지)
-> 6. 완료 후 두 파일 모두 업데이트 + git push
-> 7. 임시 파일은 `.commit-msg-*.txt` 패턴으로 .gitignore 처리됨 (2026-04-29 적용)
+- **Z-3c'**: `/products/sourced` + `/products/upload` + `/products/[id]/edit` Hard delete (Q1·Q2·Q3 진단 완료, 꽃졔님 개별 Y/N 승인 필요)
+- **Z-3e**: 백업 파일 67개 일괄 정리
+- **Z-Sec**: 14개 Supabase 테이블 RLS 정책 설계
 
 ---
 
-## 현재 앱 상태 (2026-04-30)
+## 현재 앱 상태
 
 | 항목 | 현황 |
 |------|------|
-| 전체 상품 | 8개 (모두 DRAFT — 평균 등록 준비도 42점, E-15 1순위 근거) |
+| 전체 상품 | 8개 (모두 DRAFT) |
 | 네이버 Commerce API | ok=true ✅ |
-| 네이버 검색광고 API | ✅ 키워드 검색량 실시간 |
+| 네이버 검색광고 API | ✅ (CUSTOMER_ID: 3755315) |
 | 네이버 DataLab API | ✅ ID: F7Hga62gDOYxZ3KRtLTL |
 | Discord | 5채널 ✅ |
 | TSC | 0 errors ✅ |
-| Vercel 배포 | ✅ https://kkotium-garden.vercel.app |
+| Vercel 배포 | https://kkotium-garden.vercel.app ✅ |
 | GitHub | https://github.com/kkotium-dot/kkotium-garden |
 | Phase A~D | 전체 완료 ✅ |
 | Phase E | 진행 중 (E-7, E-1, E-3, E-8 완료) |
-| Phase E+ | Sprint 1·2·3·4·5 완료 (E-4, E-2C, E-2A, E-2B, E-13A, E-13C, E-14, E-10, E-11, 수수료 개편 7 commits) |
-| .env 파일 (2026-04-30 정리) | `.env`, `.env.example`, `.env.local` 3개만 유지, .env.backup + FIX-11-check-env.sh 제거 |
-| 카카오 비즈니스 채널 | 꽃틔움 KKOTIUM (Public ID: `_xkfALG`) ✅ |
+| Phase E+ | Sprint 1·2·3·4·5 완료 |
+| 카카오 비즈니스 채널 | 꽃틔움 KKOTIUM (`_xkfALG`) ✅ |
+| Solapi 알림톡 | 키 미입력 (월 50건+ 시 활성화) |
 
----
-
-## 카카오 비즈니스 채널 정보 (2026-04-16 확인)
+### 카카오 비즈니스 채널 정보
 
 ```
 채널명: 꽃틔움 KKOTIUM
@@ -1081,157 +229,26 @@
 채널 URL: http://pf.kakao.com/_xkfALG
 채팅 URL: http://pf.kakao.com/_xkfALG/chat
 카테고리: 쇼핑 > 생활용품
-상태: 공개, 검색 허용
-매장관리/톡스토어/톡체크아웃: 미연결
 ```
+
+### AI API 키 현황 (2026-04-30 기준)
+
+| 서비스 | 환경변수명 | 상태 |
+|---|---|---|
+| **Groq** (1순위) | GROQ_API_KEY (lrltQb) | 정상 ✅ |
+| **Groq** | GROQ_API_KEY_3 (3IGN7i) | 정상 ✅ |
+| Groq | GROQ_API_KEY_2 (3pEakT) | 401 Invalid (Vercel 삭제 권장) |
+| Gemini | GEMINI_API_KEY/_2/_3 | 429 quota 초과 (운영 기여 0) |
+| xAI Grok | XAI_API_KEY | 크레딧 미배정 |
+| Perplexity | PERPLEXITY_API_KEY | Pro 만료 (401, 비활성) |
+
+**fallback 순서**: Groq round-robin (3키, 401/403/JSON parse safety) → Gemini round-robin → Anthropic last-resort
 
 ---
 
-## AI API 키 현황 (2026-04-30 기준)
+## 환경 / 메뉴 / 파이프라인
 
-| 서비스 | 환경변수명 | 상태 | 비고 |
-|--------|-----------|------|------|
-| **Groq** | **GROQ_API_KEY** | **정상 작동 ✅** | **1순위, 무료 14,400회/일** |
-| **Groq** | **GROQ_API_KEY_2** | **정상 작동 ✅** | **round-robin, 합계 28,800회/일** |
-| **Groq** | **GROQ_API_KEY_3** | **정상 작동 ✅** | **3키 총 합 43,200회/일** |
-| Gemini | GEMINI_API_KEY | 429 quota 초과 | **운영 실질 기여 0** — fallback 순위 하위 |
-| Gemini | GEMINI_API_KEY_2 | 429 quota 초과 | **운영 실질 기여 0** — 차선 키 확보 시 정리 예정 |
-| Gemini | GEMINI_API_KEY_3 | 429 quota 초과 | **운영 실질 기여 0** — 키 유효하지만 무료 quota 소진 |
-| xAI Grok | XAI_API_KEY | 크레딧 미배정 | console.x.ai 크레딧 구매 완료 시 GROQ 다음 fallback 우선 차선 후보 |
-| Perplexity | PERPLEXITY_API_KEY | Pro 만료 (401) | 비활성 |
-
-**AI fallback 순서 (코드 실제)**: Groq round-robin (3키 + 401/403/JSON parse safety fallback) → Gemini round-robin (3키) → Anthropic last-resort
-
-**운영 정책 (2026-04-30 확정)**:
-- GROQ 단독 capacity 28,800~43,200회/일는 1인 셀러 일 사용량 대비 무한대 충분 — fallback이 Gemini까지 갈 일 없음
-- **Gemini 3개 키는 실질 운영 기여 0** — 향후 차선 API(Grok 크레딧 구매 또는 새 무료 키) 확보 시 Gemini 정리 예정
-- Vercel "Needs Attention" 표시의 GEMINI 경고는 운영 영향 없음 (fallback으로 갈 일 없음)
-- xAI Grok 크레딧 구매 완료 시 XAI_API_KEY를 GROQ 다음 fallback으로 우선순위 재배치 권장
-
----
-
-## Phase E+ 전략 리서치 요약 (2026-04-16 세션)
-
-### 핵심 발견사항 (4개 리포트 종합)
-
-**리뷰 관리:**
-- 네이버 커머스 API에 리뷰 관련 API 없음 (GitHub Discussion #1582 공식 확인)
-- 리뷰 0→10→50 단계별 성장 로드맵: 초기 10개는 알림톡 없이 확보 가능
-- 리뷰 작성률 목표: 20~25% (구매확정 대비)
-- 한달사용 리뷰로 동일 주문에서 리뷰 2건 확보 가능 (2단계 수집 구조)
-- 네이버 자체 무료 리뷰 알림: 배송완료 3일 후 구매확정 요청 + 구매확정 시 리뷰 알림 자동 발송
-
-**반품안심케어:**
-- 건당 50~650원 투자 → 매출 평균 +13.6% (한양대 연구)
-- 카테고리별 효과: 패션잡화 +58.3%, 가구/인테리어 +46.7%, 디지털/가전 +26.2%
-- 2025.8.1 수수료 개편: 보상금 상한 7,000→8,000원, 카테고리별 이용료 인상
-- N배송 연계 시 반품안심케어 수수료 네이버 지원
-
-**카카오 비즈니스 채널:**
-- 2025.12.31 친구톡 종료 → 브랜드 메시지 전환 (단가 2.5~3배 인상)
-- 알림톡 건당 8원(카카오 공식) / 13원(솔라피)
-- 카나나 상담매니저: 모든 톡채널에서 완전 무료 (2025.9 정식 출시)
-- 챗봇 빌더: 일반 기능 무료, Event API만 건당 15원
-- 쉬운광고: 일일 100원부터, 신규 6만원 무료 쿠폰
-- 카카오 프로젝트 단골: 연 매출 10억 이하 소상공인 → 비즈월렛 30만원 지원
-
-**알림톡 비용 결론:**
-- 완전 무료 지속 발송 불가능: 모든 서비스가 건당 과금
-- 솔라피 무료 플랜 = 플랫폼 0원 + 건당 13원 + 가입 시 300포인트(약 23건분)
-- m8 무료 플랜 없음 (최저 월 4,800원)
-- 네이버 내장 무료 기능으로 초기 리뷰 10개 확보 충분
-- 알림톡 도입 시점: 월 주문 50건 이상
-
-**파워셀러 전술:**
-- 톡톡 자동응답 12시간 기준 강화 (2025.4)
-- AiTEMS 추천 ON → 횟수 제한 없이 개인화 노출, 전체 클릭 약 10%
-- 2026.2 쇼핑 AI 에이전트: 리뷰를 실시간 분석하여 상품 추천
-- 수수료 개편: 유입수수료 2% 폐지 → 판매수수료 2.73%, 자체 마케팅 유입 시 0.91%
-
-### E-13B 2단계 접근 전략 (확정)
-```
-1단계(지금 개발): UI만 구현
-  - settings/kakao/page.tsx에 솔라피 API Key/Secret/PFID 입력 필드
-  - 키 미입력 시 "솔라피 연동 후 사용 가능" 안내 표시
-  - 주문 관리 페이지 알림톡 버튼도 UI만 배치
-  - 실제 API 호출 코드는 키가 있을 때만 활성화
-
-2단계(매출 성장 후 활성화): 솔라피 가입 → 키 입력 → 즉시 작동
-  - 코드 추가 개발 없이 키만 넣으면 3단계 자동발송 가동
-  - 월 주문 50건+ 시점에 검토
-```
-
----
-
-## 0. 절대 작업 원칙 (확약)
-
-### 코드 작성 규칙
-```
-1. JSX 이모지 완전 금지 → Lucide React SVG 아이콘만 사용
-2. 주석 영어만 작성, 한글 리터럴 타입 금지 ('조합형' 등)
-3. new PrismaClient() 금지 → src/lib/prisma.ts 싱글톤만
-4. 카테고리 → NAVER_CATEGORIES_FULL 로컬 상수만 (API 호출 금지)
-5. 수정 후 반드시 npx tsc --noEmit → 0 errors 확인
-6. 600줄+ TSX → write_file 전체 교체 (edit_file은 소규모만)
-7. Python 패치: write_file → execute → rm (heredoc 절대 금지)
-8. prisma migrate dev 금지 → db execute 또는 Supabase SQL Editor
-9. framer-motion 사용 금지 (미설치) → CSS animations
-10. bcrypt 사용 금지 → bcryptjs (Vercel Linux 호환)
-11. API route에 반드시 export const dynamic = 'force-dynamic' 추가
-12. useSearchParams() 사용 페이지 → 반드시 Suspense로 감싸기
-13. Next.js route 파일: GET/POST/PUT/DELETE/dynamic 외 export 금지
-14. PROGRESS.md + ROADMAP.md 항상 함께 업데이트
-15. 카카오 채널 정보 하드코딩 금지 → store_settings에서 읽기
-16. \uXXXX 유니코드 이스케이프 JSX에서 사용 금지 → 한글 리터럴 직접 사용 (렌더링 깨짐 방지)
-17. **git commit 여러 줄 메시지 금지** → file로 쓰고 `-F` 옵션 사용 또는 한 줄로 압축 (shell dquote 모드 걸림 회피)
-18. **Python `-c` 안 multi-line string 금지** → filesystem:edit_file 또는 file write 사용
-19. **AI 자동 채우기 결과는 DB 직접 적용 절대 금지** → POST(미리보기)와 PATCH(셀러 승인 적용) 2단계 분리 (E-15 이후 표준). AI 생성 결과는 셀러 체크박스 승인 없이 절대 DB 변경 금지
-20. **AI 추천 카테고리는 NAVER_CATEGORIES_FULL 로컬 검색만** → AI가 새 카테고리명 생성하면 무시, 4,993건 매칭에서만 선택
-21. **새 채팅 시작 시 git HEAD ≠ origin/main 일 수 있음** — 직전 채팅이 컨텍스트 한계로 끝나는 순간 commit은 될 수 있지만 push는 못 하는 경우가 있음. **반드시 `git rev-parse HEAD origin/main`으로 교차 확인** + `git status`의 "ahead of origin/main by N commits" 메시지 체크. 단순 `git log -5` 결과만으로 잔재 없음을 판단하면 이미 만들어진 차이 있는 코드를 그대로 덮어쓰게 됨 (E-15 Block A+B 세션에서 실제 발생)
-22. **AI 자동 채우기 라이브러리의 검증은 PATCH 검증과 일치시키기** — 라이브러리가 제안한 값이 PATCH에서 다시 거부되면 셀러 경험 나빨. 예: tags_count에 PATCH가 10개 이상 요구하면 라이브러리도 merged 10개 미만 시 null 반환
-23. **새 채팅 메시지의 "현재 HEAD/commits 가정"을 의심하라** — user 메시지에 "HEAD = X, N commits 상태" 같은 가정이 적혀 있어도 그 정보는 직전 세션 작성 시점 기준이라 현재 origin/main 과 다를 수 있음. 새 채팅 시작 즉시 **(a) `git rev-parse HEAD origin/main`로 실제 HEAD 확인 → (b) `git --no-pager log --oneline -10`로 user 메시지에 명시되지 않은 commit이 있는지 확인 → (c) user 가정과 실제가 다르면 즉시 정직 보고하고 작업을 다시 분석한 후 진행**. (E-15 두 채팅 연속 발생: Block A+B 세션에서 첫 번째, Block C 시작 채팅에서도 두 번째 발생. 두 번째 채팅에서는 user가 "HEAD = 0694982, 10 commits"로 적었으나 실제는 b6e6da3 + Block A+B+C 완료된 16 commits 상태였음. 다행히 write_file이 중간에 끊어져 손실 없이 멈춤)
-24. **Block 단위 작업 진행 시 매 commit + push를 한 묶음으로 끝내기** — 컨텍스트 한계 직전에 user에게 마무리 보고를 받아 새 채팅으로 인계되더라도, 마지막 commit이 push까지 완료되지 않으면 다음 채팅의 git log에서 보이지 않아 작업원칙 21·23 트랩에 빠짐. 따라서 **commit한 그 turn 안에서 반드시 push까지 한 줄 명령으로 끝낸다**: `git add ... && git commit -m "..." && git push origin main`. 절대 commit 후 "다음 turn에 push"로 미루지 않음
-25. **한글 NFC/NFD 정규화 트랩 대응** — macOS 파일 시스템은 한글을 NFD로 저장하는 경우가 있는데, edit_file/iterm 입력은 NFC로 들어가서 byte 매칭 실패가 빈번. **절대 Python으로 수동 NFC 정규화 시도 금지** (split/재조립 과정에서 파일 대규모 손실 사고 발생, 2026-05-01 잔여·2 세션에서 ~2,000줄 삭제됨, git restore로 복구). 매칭 실패 시: (a) git restore로 깨끗한 원본 회복, (b) edit_file의 newText에 한글 직접 입력(unicode escape \uXXXX는 NFD와 불일치 위험), (c) 한 번에 50줄 이상 변경 금지. **25-1 추가 (2026-05-02 잔여·4 후속 학습)**: read_text_file의 head/tail 미리보기는 깨진 글자처럼 렌더링되는 경우가 있으나 실제 파일은 NFC 정상인 케이스가 자주 발생. 화면에서 깨져 보여도 즉시 정정 시도하지 말고 **반드시 raw 검증을 먼저** — Python으로 `\uFFFD` (Replacement Character) 카운트 + `unicodedata.normalize('NFC', text) != text` 카운트를 측정해 **둘 다 0이면 파일은 정상**이므로 정정 작업 자체를 시작하지 않음. 세션별 자세한 기록은 KKOTIUM_SESSION_LOG.md에 작성, PROGRESS.md/ROADMAP.md는 핵심 요약만 유지
-26. **근본 원인 분석 — 한 케이스가 아닌 동일 패턴 일반화 (2026-05-02 잔여·4 신설, 꽃졔님 직접 지시)** — 사용자가 보고한 한 상품의 오류는 **드러난 증상**일 뿐이고, 같은 종류의 문제가 **다른 카테고리·다른 자동 채우기 항목·다른 도메인**에서도 동일 패턴으로 발생할 수 있음. 패치 시 반드시 두 단계: **(a) 즉각 원인 (Why this product?)**: 이 한 상품 매핑이 왜 잘못됐는지 — 입력 데이터, AI 응답 형태, score 가중치 등 직접적 원인 분석. **(b) 일반화 원인 (What pattern is this an instance of?)**: 같은 종류의 실패가 어디서 또 일어날 수 있는지 — 모델 한계, 검증 누락, 가정 오류 등 패턴 식별. 패치는 가능한 한 **(b) 패턴 전체를 잡는 일반 검증**을 우선 선택, 도메인별 하드코딩 키워드 패치는 임시방편으로만 추가. 예시 (이슈 #7): groq-llama3의 reason↔code 자기모순은 모델 한계 → 키워드 리스트 추가는 SLEEPWEAR/BATHROOM/CAR 3영역만 보호하는 두더지잡기 → reason 토큰과 매핑 코드 d2/d3/d4 일반 substring 일치성 검증으로 4,993개 카테고리 전체 보호 + 미래 자동 채우기 항목(태그·키워드·상품명)에도 응용 가능. **AI 자동 채우기 외에도 모든 모듈(엑셀 export, 거래처 매칭, 주문 동기화 등)에서 같은 원칙 적용**: 셀러가 보고한 한 케이스 = 시스템 한 영역 전반의 보호 갭
-```
-
-### UI 작성 원칙 (2026-04-13 확정)
-```
-- 이모지 금지: Lucide React SVG 아이콘으로 100% 교체
-- 전문 용어: 한글 설명 + (영문) 병기
-  예) 상품코드 (SKU), SEO 검색최적화, 투자수익률 (ROI)
-- 기능 버튼: 순한글
-  예) 한 번에 임시등록, 건너뜀, 전체 저장
-- 상태 라벨 통일:
-  DRAFT = 임시저장 (초안 금지)
-  ACTIVE (naverProductId 있음) = 네이버 판매중
-  ACTIVE (naverProductId 없음) = 네이버 등록 대기
-  OUT_OF_STOCK = 품절
-  INACTIVE/HIDDEN = 재활성화 필요
-```
-
-### 세션 관리
-```
-- iterm-mcp list_all_sessions → 세션 확인 후 사용
-- Chrome MCP: tabs_context_mcp → navigate
-- heredoc 절대 금지 (터미널 행 유발)
-- dev 서버 재시작 필요 시 꽃졔님에게 요청
-- 브라우저 테스트 필수: API 레벨 성공 ≠ 브라우저 완료
-```
-
-### 보고 원칙
-```
-- 직접 실행 불가 시 거짓말 금지, 즉시 상황 설명
-- Filesystem:edit_file 실패 후엔 Python 패치로 대체
-- API 테스트 성공 후 반드시 브라우저 테스트로 재확인
-- Vercel 환경변수 변경 후 반드시 재배포 트리거 필요
-  (git commit --allow-empty -m "chore: redeploy ..." && git push)
-- "진행해줘요" = end-to-end 완료 후 통합 브리핑 (중간 보고 없이)
-```
-
----
-
-## 1. 환경 정보
+### 환경 정보
 
 ```
 앱 루트:    /Users/jyekkot/Desktop/kkotium-garden
@@ -1245,101 +262,48 @@ Vercel:     vercel.com/kkotjyes-projects/kkotium-garden
 카카오채널: 꽃틔움 KKOTIUM (pf.kakao.com/_xkfALG)
 ```
 
----
+### 사이드바 메뉴 구조 (9개 섹션, 2026-05-08 확정)
 
-## 2. 앱 파이프라인
+```
+GARDEN: 정원 일지 (/dashboard) ✅
+HUNT:   꿀통 사냥터 (/crawl) ✅ + 소싱 보관함 (/crawl?tab=history) ✅ [Z-3b]
+PLANT:  씨앗 심기 (/products/new) ✅ 신버전 6탭 통합 (수정 모드 ?edit=ID 포함)
+TEND:   정원 창고 (/products) ✅
+        검색 조련사 (/naver-seo) ✅ v3 인라인 편집
+        좀비 부활소 (/products/reactivation) ✅
+ORDERS: 주문 관리 (/orders) ✅
+OPS:    인서트 카드 (/ops/insert-card) ✅
+TOOLS:  거래처 명단 (/settings/suppliers) ✅
+        배송 레시피 (/settings/shipping) ✅
+        공급사 열쇠방 (/settings/supplier-login) ✅
+        카카오 채널 (/settings/kakao) ✅
+        네이버 기본값 (/naver-settings) ✅
+```
+
+### 사이드바 미등록 라우트 (정리 대상 — Z-3c'/Z-3e)
+
+- `/products/[id]/edit` — 외부 진입 0건 (구버전 ProductForm.tsx 582줄, 메인 흐름은 `/products/new?edit=ID`로 통합됨)
+- `/products/upload` — CSV 일괄 업로드 (새싹 단계에서 권장 안 함, 리서치 3번)
+- `/products/sourced` — 카드 그리드 뷰 (사이드바 미등록)
+- `/products/out-of-stock` — `:158`이 dead route `/products/[id]/edit`를 가리킴 (수정 필요)
+- 백업 파일 67개 (`*.bak*`, `*.backup*`, `*.v[0-9]*`)
+
+### 앱 파이프라인
 
 ```
 꿀통 사냥터 (크롤링) → 소싱 보관함 (SOURCED→PENDING→REGISTERED)
-→ 씨앗 심기 (등록/편집) → 정원 창고 (목록/인라인 편집)
+→ 씨앗 심기 (등록/편집, 6탭 통합)
+→ 정원 창고 (목록/인라인 편집)
 → 검색 조련사 (SEO 점수 + AI 최적화 + 인라인 편집)
-→ 엑셀 다운로드 → 네이버 스마트스토어 일괄등록
+→ 엑셀 다운로드 또는 네이버 직접 등록 (Commerce API)
 → 대시보드 (실적/꼬띠추천/이벤트)
-→ 주문 관리 (발주확인/송장등록)
+→ 주문 관리 (발주확인/송장등록 + 알림톡)
 → 좀비 부활소 (재등록)
 ```
 
 ---
 
-## 3. 메뉴 구조
-
-```
-GARDEN: 정원 일지 (/dashboard) ✅
-HUNT:   꿀통 사냥터 (/crawl) ✅
-PLANT:  씨앗 심기 (/products/new) ✅
-TEND:   정원 창고 (/products) ✅
-        검색 조련사 (/naver-seo) ✅ v3 인라인 편집
-        좀비 부활소 ✅
-ORDERS: 주문 관리 (/orders) ✅
-TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
-        카카오 채널 설정 (/settings/kakao) → E-13A에서 신규 추가 예정
-        인서트 카드 (/tools/insert-card) → E-13C에서 신규 추가 예정
-```
-
----
-
-## 4. 완료 이력
-
-### 2026-04-27 Phase E+ Sprint 2 완료 세션
-
-| 작업 | 내용 |
-|------|------|
-| **E-2A** | 리뷰 성장 트래커 + 운영 체크리스트: `/api/review-growth` GET/PATCH (manualReviewCount, reviewChecklist), `ReviewGrowthWidget` 대시보드 위젯, 9항목 체크리스트 (자동감지: returnCare, kakaoQrExposure), 단계 판정 (1: 0~10, 2: 11~50, 3: 51+), 작성률 목표 20~25%, 카카오 채널 칩 (single source of truth from store_settings) |
-| **E-2B** | 주문 페이지 리뷰 유도 뱃지: DELIVERED+1~3일 (구매확정 유도/초록), COMPLETED+1~3일 (리뷰 요청/파랑), COMPLETED+28~32일 (한달 리뷰/보라), 알림톡 토스트 UI (E-13B 솔라피 연동 대기) |
-| **DB 보정** | StoreSettings 스키마 `kakaoChannelUrl` 필드 추가, `kakaoChannelName` 디폴트 오타 (`꽃틔움` → `꽃틔움`) 수정 |
-| **일괄 커밋** | `e09e63c` — 6 files changed, +602/-7 |
-
-### 2026-04-16 Phase E+ Sprint 1 완료 세션
-
-| 작업 | 내용 |
-|------|------|
-| **E-4** | 반품안심케어 마진 시뮬레이터: `return-care-fees.ts` 16개 카테고리별 수수료(2025.08.01), DB `return_care_enabled` 필드, 씨앗심기 Tab4 토글+수수료/효과 배지, 마진계산기 건당비용 반영, 꽀통지수 +15점 |
-| **E-2C** | 리뷰 적립금 최적 설정 가이드: 혜택탭 적립금 권장값 안내(텍스트 500~1,000/포토 1,000~2,000/베스트 3,000~5,000), 최적 설정 시 초록 변경, 마진계산기 건당비용, 꽀통지수 +10점 |
-
-### 2026-04-15~16 Phase E + Phase E+ 계획 수립 세션
-
-| 작업 | 커밋 | 내용 |
-|------|------|------|
-| E-7 꼬띠 소싱 추천봇 | ca993ee | DataLab→키워드검색량→경쟁분석→BlueOcean→Groq AI→Discord+위젯 |
-| E-1 상세페이지 빌더 | c920ab5 | 6종 블록 HTML 에디터 + 미리보기 + AEO import + 씨앗심기 통합 |
-| E-3 수명 주기 대시보드 | a530ffb | 5단계 라이프사이클 + 좀비 리스크 + 판매속도 + 개선제안 |
-| E-8 도매 자동 매칭 | 7f71937 | 도매꾹 OpenAPI 최소수량1 필터 + 도매매 검색 + 마진계산 |
-| 한글화 | 93bd517, 52cd5a1 | E-7/E-1/E-3/E-8 위젯·빌더 영문→한글 전환 |
-| Phase E+ 리서치 | - | 4개 리포트 작성 + 종합 개선안 확정 (코드 아닌 전략 수립) |
-
-### 2026-04-14 Phase D 완료 세션
-
-| 작업 | 커밋 | 내용 |
-|------|------|------|
-| C-9 굿서비스 점수 | d91e2cc | 3축 게이지 + 등급 시뮬레이터 + 개선팁 |
-| C-2+C-12 AEO+트렌드 | cdf3157 | Groq Q&A 생성 + 경쟁 뱃지 + 시장 분석 |
-| C-11 씨앗심기 2-Panel | - | 좌측 6탭 + 우측 38% sticky 고정패널 |
-| D-1 상품명 품질 체크 | c8c05ba | 13개 검증룰, S~D 등급 |
-| D-3 경쟁 모니터링 | f02ae2e | 스냅샷/변화감지/Discord 알림 |
-| D-4 DataLab API | 5a3d0fe, f40c765 | 스파크라인 차트+기간 선택기 |
-| D-2 대시보드 레이아웃 | 17480d0 | 2열 그리드 + 빠른 작업 바로가기 |
-| D-5 탭 UX 개선 | 252337b | 6개 탭별 완성도 뱃지 |
-
-### 2026-04-13 UI 원칙 + 검색조련사 v3 세션
-
-| 작업 | 커밋 | 내용 |
-|------|------|------|
-| 이모지 전면 제거 | afc3144 | 전체 src/ JSX → Lucide React SVG |
-| Groq AI fallback | 8a16fe3 | llama-3.1-8b-instant, 무료 14,400회/일 |
-| 검색 조련사 v3 | df5874d | SEO 전체 필드 인라인 편집 + AI 버튼 3개 |
-| C-1 커머스 API 등록 | 36d5d5f | product-builder.ts + register API + 모달 |
-| C-12 시장 분석 | dd0758f~2a65bc2 | 네이버 쇼핑검색+Groq 실시간 분석 |
-
-### Phase A~B (이전 세션)
-| Task | 내용 | 완료일 |
-|------|------|--------|
-| A-1~A-12 | 엑셀 검증, SEO, DataLab, 배포 | 2026-04-10 |
-| B-1~B-5 | 주문관리, 발주확인, 동기화, 품절처리, 주간보고 | 2026-04-12 |
-| C-5 | 꼬띠 추천 v2 (TOP5+소싱보관함+검색량) | 2026-04-12 |
-
----
-
-## 5. 핵심 파일 경로
+## 핵심 파일 경로
 
 | 역할 | 경로 |
 |------|------|
@@ -1347,101 +311,175 @@ TOOLS:  거래처 ✅ | 배송 레시피 ✅ | 네이버 기본값 ✅
 | Naver API (bcryptjs) | `src/lib/naver/api-client.ts` |
 | 카테고리 (4,993개) | `src/lib/naver/naver-categories-full.ts` |
 | 카테고리 속성 | `src/lib/category-attributes.ts` |
-| 꿀통지수 | `src/lib/honey-score.ts` |
+| **꿀통지수 (SEO+마진+경쟁+보너스)** | `src/lib/honey-score.ts` |
 | SEO 점수 | `src/lib/seo-calculator.ts` |
-| 상품명 품질체커 | `src/lib/product-name-checker.ts` |
+| 상품명 품질 체커 | `src/lib/product-name-checker.ts` |
 | 경쟁 모니터 | `src/lib/competition-monitor.ts` |
 | 굿서비스 점수 | `src/lib/good-service.ts` |
 | 소싱 추천 엔진 | `src/lib/sourcing-recommender.ts` |
 | 트렌드 분석 | `src/lib/trend-analyzer.ts` |
 | 업로드 준비도 | `src/lib/upload-readiness.ts` |
-| Discord | `src/lib/discord.ts` |
+| 반품안심케어 수수료 | `src/lib/return-care-fees.ts` |
+| 리뷰 감정분석 (E-11) | `src/lib/review-sentiment-analyzer.ts` |
+| 자동 채우기 (E-15) | `src/lib/upload-readiness-filler.ts` |
+| 도매꾹 자동 매핑 | `src/lib/crawler/auto-mapper.ts` |
+| 네이버 상품 빌더 | `src/lib/naver/product-builder.ts` |
 | 마진 계산기 | `src/components/products/MarginCalculator.tsx` |
 | 상세페이지 빌더 | `src/components/products/DetailPageBuilder.tsx` |
-| 소싱 추천 위젯 | `src/components/dashboard/SourcingRecommendWidget.tsx` |
-| 경쟁 모니터 위젯 | `src/components/dashboard/CompetitionMonitorWidget.tsx` |
-| 굿서비스 위젯 | `src/components/dashboard/GoodServiceWidget.tsx` |
-| DataLab 트렌드 위젯 | `src/components/dashboard/DataLabTrendWidget.tsx` |
-| 리뷰 성장 트래커 위젯 (E-2A) | `src/components/dashboard/ReviewGrowthWidget.tsx` |
-| 등록 준비 명령탑 위젯 (E-14) | `src/components/dashboard/UploadReadinessWidget.tsx` |
-| 리뷰 성장 API (E-2A) | `src/app/api/review-growth/route.ts` |
-| 반품안심케어 수수료 (E-4) | `src/lib/return-care-fees.ts` |
-| **리뷰 감정분석 라이브러리 (E-11)** | **`src/lib/review-sentiment-analyzer.ts`** |
-| **리뷰 감정분석 API (E-11)** | **`src/app/api/review-analysis/route.ts`** |
-| **등록 준비 AI 자동 채우기 라이브러리 (E-15)** | **`src/lib/upload-readiness-filler.ts`** |
-| **등록 준비 AI 자동 채우기 API (E-15)** | **`src/app/api/upload-readiness/auto-fill/route.ts`** |
-| **등록 준비 AI 자동 채우기 모달 UI (E-15 Block C)** | **`src/components/dashboard/AutoFillModal.tsx`** |
 | SEO 테이블 v3 | `src/components/naver-seo/NaverSeoProductTable.tsx` |
-| 씨앗 심기 | `src/app/products/new/page.tsx` |
-| 정원 창고 | `src/app/products/page.tsx` |
+| 자동 채우기 모달 | `src/components/dashboard/AutoFillModal.tsx` |
+| 등록 준비 위젯 (E-14) | `src/components/dashboard/UploadReadinessWidget.tsx` |
+| 리뷰 성장 위젯 (E-2A) | `src/components/dashboard/ReviewGrowthWidget.tsx` |
+| 굿서비스 위젯 | `src/components/dashboard/GoodServiceWidget.tsx` |
+| 구매확정 리마인더 위젯 | `src/components/dashboard/ConfirmationReminderWidget.tsx` |
+| 한달리뷰 리마인더 API | `src/app/api/orders/month-review-pending/route.ts` |
+| 구매확정 리마인더 API | `src/app/api/orders/confirmation-pending/route.ts` |
+| 네이버 등록 API | `src/app/api/naver/register/route.ts` |
+| 자동 채우기 API (E-15) | `src/app/api/upload-readiness/auto-fill/route.ts` |
+| 카카오 설정 API | `src/app/api/kakao-settings/route.ts` |
+| 씨앗 심기 (3,476줄) | `src/app/products/new/page.tsx` |
+| 정원 창고 (1,357줄) | `src/app/products/page.tsx` |
 | 검색 조련사 | `src/app/naver-seo/page.tsx` |
 | 주문 관리 | `src/app/orders/page.tsx` |
 | 대시보드 | `src/app/dashboard/page.tsx` |
+| 카카오 채널 설정 | `src/app/settings/kakao/page.tsx` |
+| 인서트 카드 | `src/app/ops/insert-card/page.tsx` |
+| 사이드바 | `src/components/layout/Sidebar.tsx` |
 | cron daily | `src/app/api/cron/daily/route.ts` |
 | cron weekly | `src/app/api/cron/weekly/route.ts` |
-| Sidebar | `src/components/layout/Sidebar.tsx` |
 
 ---
 
-## 6. 네이버 API 현황
+## 네이버 API 현황
 
 | API | 상태 |
 |-----|------|
 | 토큰 발급 (bcryptjs) | ✅ |
 | 채널 정보 | ✅ 꽃틔움 KKOTIUM |
-| 주문 조회 | ✅ |
-| 발주 확인 | ✅ |
-| 송장 등록 | ✅ |
+| 주문 조회 / 발주 확인 / 송장 등록 | ✅ |
 | 상품 실시간 동기화 | ✅ |
 | 주소록 조회 | ✅ |
 | DataLab 트렌드 | ✅ |
-| 키워드 검색량 | ✅ |
-| 리뷰 API | ❌ 미지원 (GitHub #1582 확인) |
+| 검색광고 키워드 검색량 | ✅ (CUSTOMER_ID: 3755315) |
+| 리뷰 API | ❌ 미지원 (GitHub #1582) |
 
----
-
-## 7. Vercel 환경변수 (현재 등록 목록)
+## Vercel 환경변수
 
 ```
-DB: DATABASE_URL, DIRECT_URL, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-Naver: NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, NAVER_PROXY_URL
-Naver SearchAd: NAVER_SEARCHAD_API_KEY, NAVER_SEARCHAD_SECRET_KEY, NAVER_SEARCHAD_CUSTOMER_ID
-Naver DataLab: NAVER_DATALAB_CLIENT_ID, NAVER_DATALAB_CLIENT_SECRET
-Discord: DISCORD_WEBHOOK_ORDERS, DISCORD_WEBHOOK_STOCK, DISCORD_WEBHOOK_DAILY,
-         DISCORD_WEBHOOK_WEEKLY, DISCORD_WEBHOOK_KKOTTI
-AI: GEMINI_API_KEY, GEMINI_API_KEY_2, GEMINI_API_KEY_3, GROQ_API_KEY, GROQ_API_KEY_2, PERPLEXITY_API_KEY
-Cloudinary: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
-Etc: CRON_SECRET, NEXT_PUBLIC_APP_URL
-향후 추가 예정 (E-13B 활성화 시): SOLAPI_API_KEY, SOLAPI_API_SECRET, KAKAO_PF_ID, SENDER_PHONE_NUMBER
-향후 추가 예정 (E-12 구현 시): DISCORD_WEBHOOK_REVIEW
+DB:         DATABASE_URL, DIRECT_URL, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+Naver:      NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, NAVER_PROXY_URL
+Naver SEO:  NAVER_SEARCHAD_API_KEY, NAVER_SEARCHAD_SECRET_KEY, NAVER_SEARCHAD_CUSTOMER_ID
+DataLab:    NAVER_DATALAB_CLIENT_ID, NAVER_DATALAB_CLIENT_SECRET
+Discord:    DISCORD_WEBHOOK_ORDERS, _STOCK, _DAILY, _WEEKLY, _KKOTTI
+AI:         GROQ_API_KEY, GROQ_API_KEY_3 (실사용 2개), GEMINI_API_KEY/_2/_3 (quota 초과)
+Cloudinary: CLOUDINARY_CLOUD_NAME, _API_KEY, _API_SECRET
+Etc:        CRON_SECRET, NEXT_PUBLIC_APP_URL
+향후 (E-13B): SOLAPI_API_KEY, SOLAPI_API_SECRET, KAKAO_PF_ID, SENDER_PHONE_NUMBER
+향후 (E-12): DISCORD_WEBHOOK_REVIEW
 ```
 
 ---
 
-## 8. 알려진 이슈 및 주의사항
+## 절대 작업 원칙
+
+### 코드 작성 규칙
+
+```
+1.  JSX 이모지 완전 금지 → Lucide React SVG 아이콘만
+2.  주석 영어만 작성, 한글 리터럴 타입 금지
+3.  new PrismaClient() 금지 → src/lib/prisma.ts 싱글톤
+4.  카테고리 → NAVER_CATEGORIES_FULL 로컬 상수만 (API 호출 금지)
+5.  수정 후 npx tsc --noEmit → 0 errors 확인
+6.  600줄+ TSX는 write_file 전체 교체 (edit_file 소규모만)
+7.  Python 패치: write_file → execute → rm (heredoc 금지)
+8.  prisma migrate dev 금지 → Supabase SQL Editor 사용
+9.  framer-motion 사용 금지 → CSS animations
+10. bcrypt 금지 → bcryptjs (Vercel Linux 호환)
+11. API route에 export const dynamic = 'force-dynamic' 필수
+12. useSearchParams() 사용 페이지 → Suspense로 감싸기
+13. Next.js route 파일: GET/POST/PUT/DELETE/dynamic 외 export 금지
+14. PROGRESS.md + ROADMAP.md 항상 함께 업데이트
+15. 카카오 채널 정보 하드코딩 금지 → store_settings에서 읽기
+16. \uXXXX 유니코드 이스케이프 JSX에서 사용 금지
+17. git commit 여러 줄 메시지 금지 → -F 옵션 또는 한 줄 압축
+18. Python -c 안 multi-line string 금지 → write_file 사용
+19. AI 자동 채우기 결과는 DB 직접 적용 절대 금지 → POST(미리보기) + PATCH(셀러 승인 적용) 2단계
+20. AI 추천 카테고리는 NAVER_CATEGORIES_FULL 로컬 검색만
+21. 새 채팅 시작 시 git rev-parse HEAD origin/main 교차 확인 의무
+22. AI 라이브러리 검증과 PATCH 검증 일치시키기
+23. 새 채팅 메시지의 "현재 HEAD/commits 가정"을 의심하라
+24. Block 단위 작업 시 commit + push를 한 묶음으로 한 turn 안에 끝내기
+25. 한글 NFC/NFD 정규화 트랩 — Python 수동 정규화 절대 금지, raw 검증 우선
+26. (위 작업원칙 #26 섹션 참조 — IA 점검 의무화 + 고아 라우트 처리)
+27. 근본 원인 분석 — 한 케이스가 아닌 동일 패턴 일반화
+28. 배포 운영 — npm run dev 의존 절대 금지, Vercel 배포가 source of truth.
+    Naver IP 화이트리스트 등 home-proxy 필요 시 별도 standalone 스크립트
+    (Cloudflare Tunnel + tiny Node.js relay 또는 Naver Cloud Compact)
+29. (위 작업원칙 #29 섹션 참조 — 한글 처리 절대 규칙 5가지)
+30. 환경 확인 — MCP 미연결 시 즉시 정직 보고 후 종료
+31. (위 작업원칙 #31 섹션 참조 — MD 과부하 자동 분할)
+```
+
+### UI 작성 원칙 (2026-04-13 확정)
+
+```
+- 이모지 금지: Lucide React SVG 아이콘 100% 교체
+- 전문 용어: 한글 + (영문) 병기  예) 상품코드 (SKU)
+- 기능 버튼: 순한글  예) 한 번에 임시등록, 건너뜀
+- 상태 라벨 통일:
+    DRAFT = 임시저장
+    ACTIVE (naverProductId 있음) = 네이버 판매중
+    ACTIVE (naverProductId 없음) = 네이버 등록 대기
+    OUT_OF_STOCK = 품절
+    INACTIVE/HIDDEN = 재활성화 필요
+```
+
+### 세션 관리
+
+```
+- iterm-mcp list_all_sessions 후 사용 (primary tty: /dev/ttys000)
+- Chrome MCP: tabs_context_mcp → navigate (JS 도구는 hang 패턴 주의)
+- heredoc 절대 금지 (터미널 hang 유발)
+- dev 서버 재시작 필요 시 꽃졔님에게 요청 (또는 fresh build 명령 한 줄로 전달)
+- 브라우저 테스트 필수: API 200 ≠ 브라우저 완료
+```
+
+### 보고 원칙
+
+```
+- 직접 실행 불가 시 거짓말 금지, 즉시 상황 설명
+- Filesystem:edit_file 실패 후 Python 패치로 대체
+- API 테스트 성공 후 반드시 브라우저 테스트로 재확인
+- Vercel 환경변수 변경 후 재배포 트리거 (git commit --allow-empty + push)
+- "진행해줘요" = end-to-end 완료 후 통합 브리핑 (중간 보고 없이)
+- 꽃졔님 결정 필요한 사항은 *개별 Y/N 승인* — Claude 단독 판단 금지
+```
+
+---
+
+## 알려진 이슈 및 주의사항
 
 | 이슈 | 원인 | 대응 |
 |------|------|------|
 | prisma migrate dev 실패 | shadow DB 없음 | Supabase SQL Editor 사용 |
-| framer-motion 미설치 | 설치 안 함 | CSS animations로 대체 |
+| framer-motion 미설치 | 설치 안 함 | CSS animations 대체 |
 | bcrypt 금지 | Vercel Linux 호환 안 됨 | bcryptjs 사용 |
 | Gemini quota 소진 | 하루 1,500회/계정 | Groq fallback 자동 작동 |
-| NAVER_CLIENT_SECRET $ 이스케이프 | dotenv-expand | 로컬 .env: `\$2a\$04\$...`, Vercel: `$` 그대로 |
-| Vercel 환경변수 변경 후 미반영 | 자동 재배포 안 됨 | `git commit --allow-empty && push` 필요 |
-| detail_image_url 8개 null | 직접 입력 안 함 | 씨앗 심기 편집 모드에서 직접 입력 |
-| 네이버 리뷰 API 미지원 | 커머스 API 범위 밖 | 수동 입력 + 크롤링만 가능 |
-| 알림톡 완전 무료 불가 | 카카오 딜러사 건당 과금 | 솔라피 건당 13원, 가입 시 300포인트(23건분) |
-| **AI 자동 채우기 90점 도달 한계** | 11개 중 4개는 AI 영역 외 (이미지 2개/배송/마진) | 자동 채우기는 max 72점 + 셀러 수동 28점 = 100점. 이미지 2장 추가 + 배송 매핑까지 마치면 90+ |
-| **새 채팅에서 HEAD ≠ origin/main 자각 실패** | 직전 채팅이 commit 했으나 push 안 한 상태로 끝난 경우 working tree clean이지만 HEAD가 origin보다 앞서있음 | 새 채팅 시작 체크리스트에 `git rev-parse HEAD origin/main` + `git status` ahead메시지 교차 확인. (E-15 Block A+B 세션에서 실제 발생: 우리가 처음 git log에서 origin/main 표시만 보고 "잔재 없음" 판단→ write_file로 좋은 직전 코드 덮엄. 다행히 git restore로 복구) |
-| **user 메시지의 작업 가정과 실제 git 상태 불일치** | 직전 채팅이 컨텍스트 한계 직전에 더 진행됐지만 user 메시지는 자신의 메시지 작성 시점의 가정만 명시 | user 메시지에 "HEAD = X, N commits 상태" 같은 명시적 가정이 있어도 의심하고 실제 git 상태를 교차 확인. (E-15 Block C 시작 채팅에서 실제 발생: user는 "HEAD = 0694982, 10 commits"로 적었으나 실제는 b6e6da3 + Block A+B+C 완료된 16 commits 상태. 작업원칙 23번으로 명문화) |
-| **터미널 multi-line commit 트랩** | `git commit -m "line1\nline2"` 시 shell의 dquote 모드에 갇혀 대기 상태 | 여러 줄 message도 file로 쓰고 `git commit -F .commit-msg.txt` 사용, 여러 줄 이상은 한 줄 message로 압축 |
-| **Python `-c` 안 multiline string 트랩** | `python3 -c "open('f').write('''multi\nline''')"` 도 shell parser에서 dquote 멈춤 유발 | Python script를 직접 쓰기(`heredoc 금지`) 대신 filesystem:edit_file/write_file 이용
+| NAVER_CLIENT_SECRET $ 이스케이프 | dotenv-expand | 로컬: `\$2a\$04\$...`, Vercel: `$` 그대로 |
+| Vercel 환경변수 변경 후 미반영 | 자동 재배포 안 됨 | `git commit --allow-empty && push` |
+| 네이버 리뷰 API 미지원 | 커머스 API 범위 밖 | 수동 입력 + 크롤링만 |
+| 알림톡 완전 무료 불가 | 카카오 딜러사 건당 과금 | 솔라피 13원, 가입 시 300포인트(23건분) |
+| AI 자동 채우기 90점 도달 한계 | 11개 중 4개는 AI 영역 외 (이미지 2개/배송/마진) | 자동 max 72점 + 셀러 수동 28점 = 100점 |
+| 새 채팅에서 HEAD ≠ origin/main 가능성 | 직전 채팅이 push 못하고 끝난 경우 | `git rev-parse HEAD origin/main` 교차 확인 의무 |
+| 도매꾹 v4.5 옵션 해시 미스매치 | 공급사 부분 수정 시 해시 동일·텍스트 변경 | 해시 + 텍스트 동시 비교 (Sprint 6 P0-A) |
+| 도매꾹 vacation 무시 | 휴가 공급사 등록 시 굿서비스 폭락 | seller.vacation 검증 (Sprint 6 P0-A) |
 
 ---
 
-## 9. 2026 네이버 쇼핑 SEO + 리뷰 전략 인사이트 (04-14~16 리서치)
+## 2026 네이버 쇼핑 SEO + 리뷰 전략 인사이트
 
-### 핵심 변화
+### 핵심 변화 (리서치 통합)
+
 ```
 1. 키워드 매칭 → 검색 의도 일치로 전환
    - 상품명 25~35자 최적, 속성+태그 상세 입력 → 상품명 외 키워드 노출
@@ -1450,23 +488,44 @@ Etc: CRON_SECRET, NEXT_PUBLIC_APP_URL
    - 2026.2 쇼핑 AI 에이전트: 리뷰 실시간 분석 → 상품 추천
 3. 신뢰도(Trust) 지표 급부상
    - 굿서비스 점수 → 검색 랭킹 직접 반영
-   - 톡톡 응답 기준 24h→12h 강화
+   - 톡톡 응답 기준 24h → 12h 강화
 4. 반품안심케어 = 즉시 스위치 (건당 50~650원 → 매출 +13.6%)
-5. 리뷰 = 장기 엔진 (0→10 무료로 가능, 50+ 시 알림톡 도입 검토)
-6. 수수료 개편: 유입수수료 2% 폐지 → 판매수수료 2.73%, 자체마케팅 0.91%
+5. 리뷰 = 장기 엔진 (0→10 무료, 50+ 시 알림톡 도입 검토)
+6. 수수료 개편: 유입수수료 2% 폐지 → 판매수수료 2.73%
 ```
 
-### 등급 체계 개편 (2025/12 시행)
+### 등급 체계 개편 (2025/12 시행, 2025.12.2 기준)
+
 ```
 - 평가 기간: 3개월 → 1개월
 - 빅파워: 4,000만 → 1,000만원/월
-- 파워: 800만 → 300만원/월
-- 새싹: 200만 → 80만원/월
+- 파워:   800만 → 300만원/월 (실무 보고: 800만으로 상향)
+- 새싹:   200만 → 80만원/월
+- 굿서비스 점수가 등급 산정에 정식 반영 (이중 평가)
+```
+
+### 단계별 운영 전략 (리서치 D항목)
+
+```
+씨앗 (월 0~200만원):
+  SKU 30개 이하, 100% 단건 등록, 마진 50%+ 카테고리 집중
+  전체 시간 70%를 등록 정밀도에 투자
+
+새싹 (월 200~600만원):
+  SKU 50~100개, 효자 상품 5개 식별 후 광고 집중
+  반품안심케어 가입 필수 (매출 +13.6%)
+  굿서비스 점수 일 단위 모니터링
+
+파워 진입 (월 600~3,000만원):
+  SKU 100~300개, 매출 상위 20% 상품에 광고 80% 집중
+  Commerce API 자동 등록 일부 전환
+  단골 커머스 도구 활용
+  굿서비스 100건 중 2건 이내 실수 유지
 ```
 
 ---
 
-## 10. 기술 패턴 레퍼런스
+## 기술 패턴 레퍼런스
 
 ```typescript
 // Prisma 싱글톤
@@ -1482,10 +541,10 @@ import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 export const dynamic = 'force-dynamic';
 
 // 로컬 .env.local: NAVER_CLIENT_SECRET=\$2a\$04\$...
-// Vercel 환경변수: NAVER_CLIENT_SECRET=$2a$04$... ($ 그대로)
+// Vercel 환경변수:  NAVER_CLIENT_SECRET=$2a$04$...
 
-// Groq round-robin
-// ai-generate/route.ts: callGemini() → callGroq() → callPerplexity()
+// Groq round-robin (3keys + 401/403/JSON parse safety fallback)
+// callGroq() → callGemini() → callAnthropic()
 
 // 이모지 금지 예시
 // Bad:  <span>🚚</span>
@@ -1494,371 +553,32 @@ export const dynamic = 'force-dynamic';
 // 카카오 채널 QR URL (인서트 카드용)
 // https://pf.kakao.com/_xkfALG
 
-// 솔라피 알림톡 API (E-13B 활성화 시)
+// 솔라피 알림톡 (E-13B 활성화 시)
 // POST https://api.solapi.com/messages/v4/send
 // 인증: HMAC-SHA256 (apiKey, date, salt, signature)
-// npm: solapi 패키지 사용 가능
+// npm: solapi 패키지
+
+// 도매꾹 OpenAPI v4.5 (Sprint 6 P0-A 활용)
+// https://domeggook.com/ssl/api/?ver=4.5&mode=getItemView&aid={KEY}&no={no}&om=json
+// 응답: { domeggook: { basis, price, qty, deli, seller, thumb, selectOpt, category } }
+// seller.vacation 휴가 검증 + channel 검증 필수
 ```
 
 ---
 
-### 2026-04-29 Phase E+ Sprint 3 완료 세션 (E-13A + E-13C)
-
-**범위**: 카카오 비즈니스 채널 통합의 1차 — 설정 페이지(E-13A) + 인서트 카드 생성기(E-13C). E-13B 알림톡 발송 API는 **2단계 접근 전략**에 따라 매출 50건+ 도달 시 활성화 예정 (현재 솔라피 키 미입력 상태에서 UI 진입만 지원).
-
-| Task | 변경 사항 | 핵심 |
-|------|----------|------|
-| **DB 스키마** | `prisma/schema.prisma` `store_settings` 테이블에 5개 필드 추가 | `kakao_channel_id`, `kakao_channel_url`, `solapi_api_key`, `solapi_pf_id`, `sender_phone_number` (single source of truth — Sidebar/Insert Card/Order page가 모두 이 한 곳을 참조) |
-| **Migration** | Supabase prod DB에 위 5개 컬럼 추가 적용 완료 | 채널 정보 입력 즉시 앱 전체에 즉시 반영되는 구조 확정 |
-| **Sidebar** | `src/components/layout/Sidebar.tsx` OPS 그룹 신설 | 카카오 채널(/settings/kakao) + 인서트 카드(/ops/insert-card) 메뉴 항목 추가 |
-| **API** | `src/app/api/kakao-settings/route.ts` 신규 GET/PATCH | `store_settings` 5개 필드 read/write, GET 응답 200 검증 완료 |
-| **E-13A** | `src/app/settings/kakao/page.tsx` + `src/components/kakao/KakaoChannelQR.tsx` | 카카오 채널 정보(URL/검색ID/PFID) 표시 + QR 미리보기(api.qrserver.com) + 4슬롯 컬러 팔레트 + 솔라피 4입력필드(API Key/Secret/PFID/발신번호 — 현재 비활성, 향후 E-13B 활성화 시 사용) + 7항목 연동 가이드 체크리스트 + 전체 저장 |
-| **HSL 헬퍼** | `src/lib/insert-card-colors.ts` `getCardColorScheme(hex)` | 단일 hex 입력으로 9가지 톤 자동 생성 (background/accentLight/accentMid/accentBorder/textOnLight/textOnDark/headerBg/shadow/headerText) — 인서트 카드 컬러 일관성 자동 보장 |
-| **E-13C** | `src/app/ops/insert-card/page.tsx` | A6 105×148mm 실시간 미리보기 + 4슬롯 컬러 테마 즉시 반영 + 카카오 QR(store_settings.kakao_channel_id 단일 소스) + 리뷰 적립금 3프리셋(텍스트 500/포토 1000/베스트 3000) + A4 4매 배치/A6 단일 토글 + `window.print()` 기반 PDF 저장 |
-
-**브라우저 라이브 테스트 결과 (둘 다 정상)**:
-
-E-13A `/settings/kakao`:
-- 채널 정보(꽃틔움 KKOTIUM, `_xkfALG`, http://pf.kakao.com/_xkfALG) 자동 로드 ✅
-- QR 미리보기 정상 렌더 ✅
-- 4슬롯 컬러 팔레트 입력/색상 피커 동작 ✅
-- 솔라피 4입력 필드 (API Key/Secret/PFID/발신번호) ✅
-- 7항목 가이드 체크리스트 ✅
-- 전체 저장 → /api/kakao-settings PATCH 200 ✅
-
-E-13C `/ops/insert-card`:
-- 좌측 입력 패널 (스토어명/메시지/적립금 프리셋/컬러 테마) ✅
-- 우측 A6 실시간 미리보기 ✅
-- **컬러 테마 변경 시 9가지 톤 즉시 반영 (Pink → Red 검증 완료)** ✅
-- A4 4매/A6 단일 토글 ✅
-- 인쇄/PDF 저장 (`window.print()`) ✅
-
-**TSC**: 0 errors
-
-**구조 결정 (이후 세션 참고)**:
-- 카카오 채널 정보는 `store_settings` 테이블이 single source of truth — 어떤 화면에서도 새로 입력받지 않고 GET /api/kakao-settings로 조회만 함
-- 인서트 카드의 컬러 일관성은 `getCardColorScheme` 헬퍼가 보장 — 페이지 컴포넌트 안에서 색상을 직접 계산하지 않는다
-- E-13B(알림톡 발송 API) 활성화 트리거는 **월 주문 50건+ 도달 시점**, 그 전까지는 네이버 내장 리뷰 알림 + 인서트 카드 조합으로 운영
-
-
-### 2026-04-29 Phase E+ Sprint 4 완료 세션 (E-14 — Upload Readiness Command Center)
-
-**범위**: 11점 키디니스 라이브러리(`src/lib/upload-readiness.ts`)를 대시보드 + 정원창고 + 씨앗심기 워크플로우에 deep-link로 통합한 "등록 준비 명령탑" 시스템. 매출 발생 직전의 마지막 마일(상품 등록 차단점)을 해소하기 위한 작업.
-
-| Task | 변경 사항 | 핵심 |
-|------|----------|------|
-| **Block A — 위젯 신규** | `src/components/dashboard/UploadReadinessWidget.tsx` (419줄) | DRAFT 상품 11점 키디니스 점수 정렬 TOP 5 + Stat strip(등록가능/작업필요/평균점수) + 부족 항목 칩 deep-link(`?focus={tab}`) + 90+ "바로 등록" CTA(`?registerId=`) + Loading skeleton + Empty state + ITEM_TO_TAB 매핑(11개 항목 → basic/option/image/seo/shipping 5개 탭) |
-| **Block B — 정원창고 deep-link** | `src/app/products/page.tsx` (+13줄, line 823~834) | `?registerId=` 쿼리 파라미터 → 해당 상품 자동 체크박스 선택 + 하단 액션 바 자동 노출 + NaverRegisterModal 자동 표시(셀러 단일 클릭으로 등록 시작 가능) |
-| **Block C — 씨앗심기 deep-link** | `src/app/products/new/page.tsx` (+12줄, line 768~778) | `?focus=basic\|option\|image\|seo\|shipping` 쿼리 파라미터 → 해당 탭 자동 활성화. 6탭 중 5개 탭 매핑(혜택 탭은 readiness 항목과 무관) |
-| **Block D — 대시보드 통합** | `src/app/dashboard/page.tsx` (+4줄) | UploadReadinessWidget import + DailyPlanWidget 다음 위치에 배치(매출 직결 위젯이라 상위 노출) |
-
-**브라우저 라이브 테스트 결과 (Chrome MCP)**:
-
-대시보드 위젯 (8개 DRAFT 상품 데이터 기준):
-- Stat strip: 0 등록가능 / 8 작업필요 / 평균 42점 ✅
-- 4개 상품 카드 정상 렌더링 (B등급 60점, C등급 52점, D등급 42점, D등급 38점) ✅
-- 부족 항목 칩 8종 정상 표시 (카테고리/태그/키워드/상품명/앞15자/추가/어뷰징/반복/대표/배송/마진) ✅
-
-Block C 검증 (`?focus=seo`):
-- 클릭 → URL `/products/new?edit=cmmwgn3t30003k8hs0ujaw6eh&focus=seo` 정확히 이동 ✅
-- 씨앗심기 진입 시 "SEO·원산지" 탭 자동 활성화(빨간 배경) ✅
-- 우측 수정 준비도 패널 60% B등급 + 부족 항목 5종 인라인 표시 ✅
-
-Block B 검증 (`?registerId=`):
-- URL `/products?registerId=cmmwgn3t30003k8hs0ujaw6eh` 직접 진입 ✅
-- 정원창고에서 해당 상품 체크박스 자동 선택 + "1개 선택" 하단 액션 바 자동 노출 ✅
-- NaverRegisterModal "Naver Direct Registration" 자동 표시(취소 / 1개 네이버 등록 시작) ✅
-
-**TSC**: 0 errors
-
-**구조 결정 (이후 세션 참고)**:
-- `upload-readiness.ts`는 **single source of truth** — 위젯/정원창고/씨앗심기/검색조련사/좀비부활소/cron daily가 모두 동일한 11점 체크 로직을 사용
-- ITEM_TO_TAB 매핑 표는 위젯 내부에 격리 — 향후 readiness 항목 추가 시 매핑만 업데이트하면 deep-link 자동 작동
-- 90점 임계값은 위젯에서만 적용 — 정원창고 NaverRegisterModal은 더 관대한(70%+) 기준 유지(기존 정책 유지)
-- E-14는 "셀러의 첫 등록 차단점 해소"가 목적 — 매출 발생 후에는 의미가 줄어드는 작업이므로 우선순위가 가장 높았음
-
-
-### 2026-04-29 Phase E+ Sprint 4 후속 완료 세션 (E-10 — 경쟁 진입장벽 모니터링, 옵션 A 간접 추정 방식)
-
-**범위**: 원래 ROADMAP 계획은 "네이버 쇼핑검색 API로 리뷰수/평점 직접 스크래핑" 이었으나, 실제 API 응답에서 reviewCount/avgRating이 안정적으로 제공되지 않아 더 현실적인 **옵션 A — 진입장벽 간접 추정**으로 적응. 판매처 다양성(topSellers) + 가격 분산(priceSpread) + 총 검색 결과수(totalResults) + 경쟁 강도(competitionLevel) — 이 4개 proxy로 진입장벽을 5단계 추정하고 BlueOcean 점수에 가산.
-
-| Block | 변경 사항 | 핵심 |
-|-------|----------|------|
-| **Block A — 진입장벽 추정 엔진** | `src/lib/competition-monitor.ts` (+135줄), `src/app/api/competition/route.ts` (+9줄) | `estimateEntryBarrier()` 함수 — 4-factor weighted score (topSellers 30% + priceSpread 30% + totalResults 25% + competitionLevel 15%), 0~5 점수 + low/medium/high label + recommendation 문구. POST /api/competition 응답에 entryBarrier 객체 삽입 |
-| **Block B — BlueOcean 가산** | `src/lib/sourcing-recommender.ts` (+79줄) | 진입장벽 낮음 → +15점 / 보통 → +5점 / 높음 → 0점. 기존 BlueOcean 알고리즘에 합산하며 breakdown 구조 도입 — UI에서 "기본 70 +15 진입가산 = 85" 형태로 투명하게 노출 |
-| **Block C — 경쟁 모니터 UI** | `src/components/dashboard/CompetitionMonitorWidget.tsx` (+137줄) | 카드 펼침 시 진입장벽 패널 노출 — 5단계 수평 막대(green→yellow→orange→red 그라데이션) + 4-factor 세분화(판매처 X개·가격분산 X%·검색결과 N건·경쟁강도 치열) + Recommendation 안내문구. **라이브 검증 완료** (8개 상품 데이터, 예: "선물받은 특별한 일상" → 4.5/5 높음 등) |
-| **Block D — 소싱 추천 위젯 UI** | `src/components/dashboard/SourcingRecommendWidget.tsx` (+95줄) | 경쟁 상품 카드 헤더에 Shield 아이콘 + 진입장벽 chip(낮음 녹색/보통 노랑/높음 빨강 3색) + BlueOcean breakdown 표시(기본+진입가산=점수) + 3 metrics 신규 노출(진입장벽 점수 X/5·판매처 다양성·가격 분산). **라이브 검증 완료** (mock 주입으로 LOW/MEDIUM/HIGH 3색 모두 시각 확인) |
-
-**구현 방식 결정 — 옵션 A vs 원래 계획 차이점** (이후 세션 주의):
-
-| 항목 | 원래 ROADMAP 계획 | 실제 구현 (옵션 A) |
-|------|---------------------|---------------------|
-| 데이터 소스 | 네이버 쇼핑검색 API의 reviewCount/productRating 직접 수집 | 기존 수집 데이터 4-factor proxy(topSellers/priceSpread/totalResults/competitionLevel) |
-| DB 스키마 | `CompetitorSnapshot`에 reviewCount, avgRating 컬럼 추가 예정 | **스키마 변경 없음** — 런타임 계산으로 완전히 대체 |
-| 진입장벽 판단 기준 | 리뷰수 100+ = 높음 / 30~99 = 중간 / 0~29 = 낮음 | 4-factor weighted score 0~5점으로 자체 임계값 설정 |
-| 장점 | 리뷰 = 직접 경쟁 지표로 직관적 | API 가용성 의존 없음, 즉시 작동, DB 마이그레이션 불필요 |
-| 단점 | API 응답에 reviewCount가 누락될 때 취약 | 간접 추정이라 일부 도메인(예: 소수 판매자만 있는 틈새 카테고리)에서 과대/과소 추정 가능성 |
-
-**장기적 권고**: E-11 완료 후 자체 리뷰 데이터가 50건+ 축적되면, 자체 스토어 웹 크롤링으로 경쟁사 리뷰 수집 추가 가능(API에 의존하지 않는 경로). 그 시점에서 옵션 A + 원래 계획의 하이브리드 도입이 가장 강력함.
-
-**라이브 검증 결과**:
-- Block A+C: 실제 8개 상품 데이터로 정상 작동 확인. 첫 카드 펼침 결과 — 진입장벽 분석 패널 정상: 5단계 막대(붉은색=높음, 4.5/5) + 4-factor (판매처 5개·가격분산 253%·검색결과 3,756,250·경쟁강도 치열) + Recommendation ("높음 — 포화 시장, 틈새/독특한 앵글이 필요")
-- Block B+D: DataLab API가 fallback 모드(빈 결과)이라 라이브 데이터로 판단 불가, React fiber를 통한 **mock 주입**으로 UI 렌더링 검증. 결과 — Shield chip(LOW 녹색/MEDIUM 노랑/HIGH 빨강 3색 모두 정상) + BlueOcean breakdown(기본 70 +15 진입가산 = 85점) + 3 metrics(진입장벽 점수 1.5/5 · 판매처 다양성 2개 · 가격 분산 68%) 정상 렌더링
-
-**TSC**: 0 errors
-
-**커밋 이력**:
-- d1d6202 feat(E-10 Block A): entry barrier estimation in competition-monitor
-- 0d216fb feat(E-10 Block B): entry barrier bonus integrated into BlueOcean score
-- 9a81b87 feat(E-10 Block C): entry barrier UI in CompetitionMonitorWidget
-- 6c6de96 feat(E-10 Block D): entry barrier display in SourcingRecommendWidget
-- (현 커밋: docs E-10 완료 반영 + ROADMAP 다음 작업 후보 교체)
-
-**구조 결정 (이후 세션 참고)**:
-- DB 마이그레이션 불필요 — 진입장벽 데이터는 완전히 런타임 계산으로 조달됨 (`competition_snapshots` 테이블 구조 변경 없음)
-- `estimateEntryBarrier()`는 **single source of truth** — CompetitionMonitorWidget · SourcingRecommendWidget · sourcing-recommender 모두 이 한 함수를 공유. 임계값 변경 시 한 곳에서 일괄 반영됨
-- BlueOcean breakdown 구조(`{ base, entryBarrierBonus, total }`)는 향후 다른 가산 항목(예: AI 리뷰 감정분석 가산)을 더하기 쉬운 확장 구조 — E-11 구현 시 자연스럽게 합산 가능
-- 쇼핑검색 API의 reviewCount 안정성이 추후 확인되면 옵션 A + 원래 계획의 하이브리드로 업그레이드 가능 — 하지만 현재 구현으로 궁극적 관점의 "셀러가 주의해야 할 경쟁 강도"를 흔들림 없이 견고하게 표현 가능
-- 라이브 검증 시 DataLab 빈 응답이 나오는 경우가 있으므로, mock 주입·시드 데이터 주입 패턴을 다른 E-시리즈 작업에서도 재사용 권장
-
-
-### 2026-04-29 Phase E+ Sprint 4 최종 완료 세션 (E-11 — AI 리뷰 감정분석 + SEO 재활용)
-
-**범위**: 자체 리뷰 0개 상태에서도 즉시 작동 가능한 "경쟁사 리뷰 / 도매 텍스트 붙여넣기 → Groq AI 감정분석 → SEO 태그 자동 추천" 워크플로우. 검색조련사 인라인 패널에 통합 — 1인 셀러가 소싱→등록 파이프라인 마지막 단계에서 정확한 실수요 키워드를 확정할 수 있는 구조.
-
-| Block | 변경 사항 | 핵심 |
-|-------|----------|------|
-| **Block A — 라이브러리 + API** | `src/lib/review-sentiment-analyzer.ts` (신규 348줄), `src/app/api/review-analysis/route.ts` (신규 78줄) | `analyzeReviewSentiment()` — Groq round-robin (3 keys) → Gemini (3 keys) → Anthropic fallback. 입력 검증 (5~800자, 최대 50개, 30000자), 결과 정규화 (비율 합 100 보정, 키워드/태그 길이 필터, 중복 제거). `parseJsonSafe()` 공유 패턴. SentimentResult: overallSentiment + 3 ratios + topKeywords (완트 12개) + suggestedTags (최대 10개, 2~6자 한국어) + strengths/painPoints (각 최대 4개) + aiSummary (1~2문장)
-| **Block B — 검색조련사 UI 통합** | `src/components/naver-seo/NaverSeoProductTable.tsx` (+368줄) | `ReviewAnalysisPanel` 신규 컴포넌트를 `SeoEditPanel` 내부 SEO 태그 섹션 다음에 통합. 보라색 점선 박스(`#7C3AED`)로 기존 핀크 테마와 시각 분리. Textarea 입력 → AI 분석 시작 버튼 → 결과 영역: AI 요약 박스 + 감정 분포 막대(긍정/중립/부정 3색) + 강점/약점 2열 + Top 키워드(감정별 색) + 추천 SEO 태그 (1클릭 추가 또는 일괄 추가, 남은 슬롯 고려). 상품 설명에 AI 요약 추가 버튼, 다시 분석 버튼.
-| **Block A 보강** (commit `fb418bd`) | `src/lib/review-sentiment-analyzer.ts` (+30/-8줄), `src/app/api/naver-seo/ai-generate/route.ts` (+5/-2줄) | (1) Round-robin이 401/403 auth 에러에서도 다음 키로 fallback (기존에는 429/quota만 처리) (2) JSON 파싱 안전망: trailing comma + smart quotes + control chars 제거 (3) max_tokens 1500→2500 (한국어 토큰이 더 축적—truncation 방지). 이 보강은 GROQ_API_KEY 회전 후 1번 키가 무효가 되어도 round-robin이 자동으로 2·3번 키로 넘어가도록 보증.
-
-**Groq 키 회전 관련 이벤트** (2026-04-29 세션중 발생):
-- 기존 GROQ_API_KEY (`...qNKdYC`) 이 401 Invalid 로 제공되지 않아 round-robin이 멈추는 문제 발견 — 코드 보증 추가 적용
-- 꽃졔님께서 GROQ_API_KEY → `lrltQb` (새 발급), GROQ_API_KEY_3 = `3IGN7i` (신규 추가) 로 교체. GROQ_API_KEY_2 = `3pEakT`는 회전 과정에서 폐기되어 현재 401 무효 상태 — **Vercel에서 해당 키 삭제 권장** (또는 새 키로 교체)
-- Vercel "Needs Attention" 표시 이해: GROQ_API_KEY_2는 렌더링 시 점을 한 소식 없다면 NA로 표시되며, GEMINI_API_KEY/_2/_3은 quota 소진 상태(2026-04 메모리) — 종합 운영되었던 6개의 AI 키중 실제 정상 키는 GROQ × 2개 (lrltQb + 3IGN7i)
-
-**라이브 검증 결과** (Chrome MCP, 10개 mock 리뷰 “꽃 인테리어 소품”):
-- API 응답: HTTP 200 (provider: groq-llama3, GROQ_API_KEY=lrltQb)
-- 전반적 감정: 긍정 80% / 중립 10% / 부정 10% — 명확한 렌더링
-- AI 요약: "선물받은 특별한 일상은 색이 예쁘고 품질 좋으며, 포장이 꼼꼼하다. 고객들은 가성비 최고로 선물용으로 추천한다. 판매자는 사이즈와 배송 속도 개선에 집중할 수 있다."
-- 강점 4개 (긍정 키워드): 품질 / 색 / 포장 / 디자인
-- 약점 2개 (회피 포인트): 사이즈가 작다 / 배송이 느리다
-- TOP 키워드 10개 감정별 정확 분류 (긍정 8 + 부정 2 + 중립 0)
-- 추천 SEO 태그 8개: #색이 예쁘다 / #품질 좋다 / #포장이 꼼꼼하다 / #가격대비 좋다 / #고급스럽다 / #가성비 최고 / **#선물용** / **#인테리어**
-  → 꽃졔님이 평소 알아차리기 어려운 "선물용", "인테리어" 같은 구매자 쪽 말투를 AI가 채택—이게 E-11 경쟁력
-
-**TSC**: 0 errors
-
-**커밋 이력**:
-- 00272f7 feat(E-11 Block A): review sentiment analyzer library + API endpoint
-- c870707 feat(E-11 Block B): integrate review analysis panel into Naver SEO table
-- fb418bd feat(E-11 Block A hardening): robust AI key fallback + JSON safety + token cap
-- (현 커밋: docs E-11 완료 반영 + ROADMAP 다음 작업 후보 교체)
-
-**구조 결정** (이후 세션 참고):
-- DB 마이그레이션 불필요 — 리뷰 분석 결과는 런타임 계산으로 조달, `Product` 테이블 스키마 변경 없음. 장기 필요 시 `Product.reviewSentiment` JSON 컴럼 추가로 영속화 가능 (재분석 비용 0원 보장)
-- `analyzeReviewSentiment()`는 **single source of truth** — 미래에 씨앗 심기 탭5(SEO 탭5)에도 동일 패널 재사용 가능
-- Provider 우선순위 (보증 포함): Groq round-robin (3 keys, 401/403/JSON 손상 fallback) → Gemini round-robin (3 keys) → Anthropic last resort
-- 추천 태그가 currentTags에 이미 있으면 시각적으로 구분(취소선 + "이미 추가됨" 표시), 남은 슬롯이 0이면 자동으로 비활성화 — 사용자가 동의하지 않아도 안전
-- E-11이 SEO 자동 추천에 구체 "구매자 언어"를 주입—꽃졔님이 평소 알아차릴 수 없는 구매자 심리를 대량 텍스트로부터 추출한다는 점이 핵심 가치
-
-
-### 2026-04-29~30 Phase E+ Sprint 5 완료 세션 (2025.06.02 수수료 개편 + 보안/잔재 정리)
-
-**범위**: 2025-06-02 시행된 네이버 수수료 개편 (유입수수료 2% 폐지 → 판매수수료 2.73% / 자체마케팅 0.91%)을 라이브러리 + API + 위젯 + 마진계산기 4곳에 일관 반영. 2026-04-30 추가 리팩토링으로 export 표준화 + 카테고리별 가중평균 + 월간 절감 UI 완성. 다음 근거: 수익성 정확도 직결 + 독립 작업량 0.5일 수준.
-
-| Block | 커밋 | 내용 |
-|-------|------|------|
-| **Block 1** | `17a07e2` | `naver-fee-rates-2026.ts`: `FeeChannel` 타입 + `getNaverFeeRate(code, channel)` + `getNaverFeeBreakdown` 채널 인지 라이브러리화 |
-| **Block 2** | `87f9943` | `profitability/route.ts`: 라이브러리 단일 소스 사용, 카테고리별 수수료 정확 반영 |
-| **Block 3** | `687a9c9` | `ProfitabilityWidget.tsx`: 일반/마케팅 채널 비교 카드 + 마케팅 가이드 표시 |
-| **Block 4** | `7e32364` | `MarginCalculator.tsx`: 자체마케팅 채널 토글 — 마진 실시간 재계산 |
-| **Redeploy** | `e813b28` | Vercel 프로덕션 롤아웃 검증 |
-| **Refactor** | `e73d098` | NAVER_ prefix 일관화 (`NAVER_FEE_REFORM_DATE`, `NAVER_FEE_REFORM_NOTE`, `NAVER_MARKETING_FEE_REDUCTION`) + per-category weighted avg + 월간 절감 UI + `EXCEPTION_D1S` 명시화 (디지털/가전·도서 마케팅 인하 미적용) + `SalesChannel = FeeChannel` alias |
-| **Cleanup** | `71afc44` | `FIX-11-check-env.sh` (1월 7일자 디버그 스크립트) 제거 — `DATABASE_URL`을 stdout에 노출하는 보안 이슈 + 의존 `FIX-10-migrate.sh` 이미 삭제됨. `.env.backup` 잔재 정리 |
-
-**라이브 검증 결과** (`curl http://localhost:3000/api/profitability`):
-```json
-{
-  "normalRate": 5.73,
-  "marketingRate": 3.91,
-  "savedRate": 1.82,
-  "salesFeeNormal": 2.73,
-  "salesFeeMarketing": 0.91,
-  "reformDate": "2025-06-02",
-  "reformNote": "2025.6.2 개편: 유입수수료 2% 폐지 → 매출연동 판매수수료 통합 (일반 2.73% / 자체마케팅 0.91%)"
-}
-```
-→ 둘 다 2025.06.02 개편 정확 반영 + 카테고리별 접근 완료
-
-**환경 정리 결과**:
-- `.env` 파일: `.env`, `.env.example`, `.env.local` 3개만 유지 (.env.backup, FIX-11-check-env.sh 제거)
-- AI 키 정책: GROQ × 3개 (lrltQb + CAVylw + 3IGN7i = 43,200회/일 capacity) 단독 운영, GEMINI 3개는 실질 기여 0으로 확정
-- `.gitignore` 이미 강화됨 (`.env.*` 와일드카드 + `*.env.backup` + `vercel_env_upload*.env` 명시) — 향후 자동 차단
-
-**TSC**: 0 errors
-
-**구조 결정 (이후 세션 참고)**:
-- 수수료 계산 single source of truth = `naver-fee-rates-2026.ts`. profitability API · ProfitabilityWidget · MarginCalculator · 크롤러가 모두 이 라이브러리를 공유
-- channel 인지 계산은 `FeeChannel = 'normal' | 'marketing'` 타입으로 명시 — 호출구에서 `getNaverFeeRate(code, 'marketing')` 도 바로 사용 가능
-- 예외 카테고리 (`EXCEPTION_D1S` = 디지털/가전·도서)는 마케팅 인하 미적용 — 이미 축소된 수수료이므로
-- profitability API는 이제 카테고리 가중평균 기반 (`avgRateNormal`, `avgRateMarketing`)으로 제공 — 실제 상품 구성에 맞는 정확도 향상
-- 다음 작업 후보 1순위: **E-15 등록 준비 AI 자동 채우기** (8개 DRAFT 평균 42점을 90+로 끌어올려 매출 발생 트리거 — ROADMAP "다음 채팅에서 시작할 작업 후보" 세션 참조)
-
-
-### 2026-04-30 Phase E+ Sprint 6 완료 세션 (E-15 Block A + B — 등록 준비 AI 자동 채우기 백엔드)
-
-**범위**: 업로드 준비도 11점 체크리스트의 7개는 AI가 자동 채우고, 4개는 셀러 수동으로 명시하는 라이브러리 + API. UI(Block C) + 라이브 검증(Block D)은 컨텍스트 분할로 다음 채팅에서 진행.
-
-**⚠️ 세션 중 발생한 주요 이벤트 (이후 세션 참고 필수)**:
-- 세션 시작 시 첫 git log에서 `0694982 (HEAD -> main, origin/main, origin/HEAD)`로 표시되어 동기화 된 줄 자각 → 실제는 직전 채팅이 Block A (`527e381`) + Block B (`fd31dd4`) commit 경로 push 못한 상태였음
-- 우리가 그 사실을 모르고 `write_file`로 upload-readiness-filler.ts 새로 작성 → 직전 commit의 더 풍부한 코드(`NON_AUTOFILLABLE_ITEMS`, `NonAutoFillableItemId` 타입, 한국어 prompt 등) 덮어쓴
-- TSC 에러(`partitionReadinessItems` 없음 등) 발생 → `git status`의 "ahead of origin/main by 2 commits" 메시지로 진짜 상황 발견
-- `git restore`로 우리 변경 전수 취소 → 직전 commit이 이미 다 너무 잘 작성되어 있음을 재확인 (PATCH 검증과 일치, isKoreanText 검증, 카테고리 d1 강제 등 모두 포함)
-- 그대로 push (`0694982..fd31dd4 main -> main`) — 우리 수정 필요 없음
-- 교훈: **새 채팅 시작 체크리스트에 `git rev-parse HEAD origin/main` + `git status` ahead메시지 교차 확인 추가 필수** (작업 원칙 21/22번으로 명명)
-
-| Block | 커밋 | 내용 | 핵심 |
-|-------|------|------|------|
-| **Block A** | `527e381` | `src/lib/upload-readiness-filler.ts` (622줄) | 7개 자동 채우기 함수: `autoFillProductName(mode: length\|abuse\|repeat\|frontKeyword)` + `autoFillKeywords` + `autoFillSeoTags` + `autoFillCategory` + `autoFillAll` + `partitionReadinessItems`. `AUTOFILLABLE_ITEMS`(7) + `NON_AUTOFILLABLE_ITEMS`(4) const tuple로 정의. Provider chain: Groq round-robin (3 keys, 401/403/JSON fallback) → Gemini (3 keys) → Anthropic. parseJsonSafe (trailing comma + smart quotes + control chars). 안전장치: isKoreanText (ASCII letters ≤30%), containsAbuse (17개 blacklist), hasRepeat3Plus, clampLen, 카테고리 NAVER_CATEGORIES_FULL d1 강제. tags는 cleaned >= 10 요구, keywords는 cleaned >= 5 요구 (PATCH 검증과 일치) |
-| **Block B** | `fd31dd4` | `src/app/api/upload-readiness/auto-fill/route.ts` (347줄) | POST + PATCH 2단계. POST: 상품 fetch → calcUploadReadiness로 failed.id 계산 → partitionReadinessItems(autofillable + nonAutofillable) → autoFillAll() 실행 → `{ suggestions[], unfillable[], autofillableRequested[], autofillableSucceeded[] }`. PATCH: 각 itemId별 재검증 (이용자 tampered payload 방어) → update 구성 → prisma.product.update → calcUploadReadiness 재계산 → `{ applied[], rejected[], newScore, newGrade, newLabel }`. 카테고리는 PATCH 시점에서도 NAVER_CATEGORIES_FULL.some(c.code === code) 최종 방어선 추가 |
-
-**라이브 API 검증** (curl POST `/api/upload-readiness/auto-fill` with productId `cmnh8vx0m0001r7mnxbgrvkzi` "선물받은 특별한 일상"):
-```json
-{
-  "success": true,
-  "suggestions": [
-    {
-      "itemId": "tags_count",
-      "after": ["선물용", "일상용", "편안한", "여유로운", "감각적", "고급스러움", "리본포인트", "매직", "홈웨어", "일상룩", "선물세트", "편안한생활"],
-      "confidence": "high", "provider": "groq-llama3"
-    },
-    { "itemId": "category", "after": "50005707", "confidence": "medium", "provider": "groq-llama3" }
-  ],
-  "unfillable": ["extra_images", "net_margin"],
-  "autofillableRequested": ["category", "tags_count", "name_length"],
-  "autofillableSucceeded": ["tags_count", "category"]
-}
-```
-→ 다음 세션의 Block C(UI)에서 이 패턴을 그대로 활용 가능: `tags_count`(12개 제안), `category`(코드 매칭 추천), `unfillable`(셀러 수동 안내 영역)
-
-**TSC**: 0 errors
-
-**커밋 이력**:
-- 527e381 feat(E-15 Block A): upload-readiness-filler library + 7 auto-fill functions
-- fd31dd4 feat(E-15 Block B): auto-fill API endpoint (POST preview + PATCH apply)
-- (현 커밋: docs E-15 Block A+B 완료 반영 + Block C+D 대기 설명 + 작업 원칙 21/22 추가)
-
-**구조 결정 (이후 세션 참고)**:
-- `upload-readiness-filler.ts`는 **single source of truth** — 7개 자동 채우기 함수 모두 독립 호출 가능 (`autoFillKeywords`, `autoFillSeoTags`, `autoFillCategory`, `autoFillProductName(mode)`). Block C UI 에서는 `autoFillAll`도 그대로 사용 가능
-- POST 응답 타입 완전 확정: `{ success, suggestions: AutoFillSuggestion[], unfillable: ReadinessItemId[], autofillableRequested: AutoFillableItemId[], autofillableSucceeded: AutoFillableItemId[], message? }`
-- PATCH 응답 타입 완전 확정: `{ success, applied: AutoFillableItemId[], rejected: { itemId, reason }[], newScore, newGrade, newLabel }`
-- 카테고리는 "AI 추천 코드"를 PATCH가 다시 검증 (NAVER_CATEGORIES_FULL.some(c.code === code)) — 이중 방어선
-- name fix는 4가지 mode 중 하나만 적용 (priority: length → abuse → repeat → frontKeyword) — length 재작성이 대개 다른 세 mode도 side-effect로 고침
-- name_length 추천이 실패하는 경우도 있음 (라이브 검증에서 "선물받은 특별한 일상" 11자 → 25자로 늘리는 곳에서 isKoreanText 또는 repeat 검증 실패 듯) — Block C에서 "추천 실패" 안내 UI 필요
-- Manual-only 4개 항목(`extra_images`, `main_image`, `shipping_template`, `net_margin`) 시도 절대 안 함 — unfillable 배열로 셀러에게 안내만
-
-
-### 2026-04-30 Phase E+ Sprint 6 완료 세션 (E-15 Block C — AutoFillModal UI 통합)
-
-**범위**: Block A+B가 만든 POST(미리보기) + PATCH(적용) 2단계 API를 셀러가 클릭 한 번에 이용할 수 있도록 AutoFillModal 신규 + UploadReadinessWidget 통합 + Dashboard onRefresh 연결. 이 모달이 자동 채우기 파이프라인의 "마지막 1클릭" 완성. 셀러 안전 장치는 그대로 유지 (POST/PATCH 검증 이중 방어선 그대로).
-
-| 파일 | 종류 | 핵심 |
-|------|------|------|
-| `src/components/dashboard/AutoFillModal.tsx` (신규 510줄) | client component | (1) mount 즉시 API POST 호출 → loading state. (2) suggestions 도착 시 nameRelated 4모드 조합을 라디오 그룹(상품명은 하나의 string 필드이므로) + others(keywords/tags/category)는 독립 체크박스. (3) 자동 선택 기본값: 첫 년 nameRelated 1개 + 모든 others. (4) "적용" 클릭시 selected에만 PATCH 호출 → newScore 응답 → done 화면 1.8초 표시 → onApplied() 호출 → 모달 자동 닫기. (5) Esc 키 닫기 + 적용 중 사용자 조작 차단. (6) Empty/Error/Done/Loading 4개 디스패치 phase. (7) Manual-only 4개 항목은 ManualItemCard로 deep-link(`/products/new?edit=...&focus=...`) 노출 |
-| `src/components/dashboard/UploadReadinessWidget.tsx` (+207/-124 줄) | server↔client | (1) `AutoFillModal` import 추가. (2) `modalTarget` state로 단일 모달 관리. (3) `ProductRow` props에 `onAutoFill` 추가. (4) ready90이 아닌 카드에 `Sparkles + AI 채우기` 버튼(보라 #7c3aed) 상단 추가. (5) 기존 `수정하기` 버튼은 `직접 수정`으로 이름 변경 + outline 스타일로 보조 CTA로 낮춤. (6) `hasAnyAutofillable()` 검사로 manual-only 4개만 남은 경우 AI 버튼 숨김. (7) `onRefresh` prop 신규 — 모달 적용 완료 시 dashboard의 handleRefresh를 호출해 위젯 자동 재로드 |
-| `src/app/dashboard/page.tsx` (+1/-1 줄) | server | `<UploadReadinessWidget>`에 `onRefresh={handleRefresh}` prop 1줄 추가. handleRefresh는 이미 loadStats + loadProducts 둘 다 호출하도록 되어 있으며, 모달 적용 완료 시 위젯이 최신 점수로 다시 구성됨 |
-
-**UI 동작 흐름 (시퀀스)**:
-```
-[셀러] 대시보드 위젯의 DRAFT 카드(예: 42점) → "AI 채우기" 버튼 클릭
-  → [모달] phase=loading, Loader2 spin
-  → [API] POST /api/upload-readiness/auto-fill { productId } → suggestions[] + unfillable[]
-  → [모달] phase=ready — 세 섹션 렌더:
-      A) 상품명 재작성 라디오 (1개만 선택, 첫 항목 자동 선택)
-      B) 키워드/태그/카테고리 독립 체크박스 (기본 모두 체크)
-      C) Manual-only 카드 (노란 테두리, 클릭시 씨앗심기 탭으로 deep-link)
-  → [셀러] 검토 후 "N개 적용" 버튼 클릭
-  → [API] PATCH /api/upload-readiness/auto-fill { productId, accepted } → newScore
-  → [모달] phase=done — CheckCircle2 + "42점 → 75점 (+33)" 표시 — 1.8초
-  → onApplied() → dashboard 재로드 → 모달 자동 닫기 → 위젯 카드 최신 점수로 갱신됨
-```
-
-**TSC**: 0 errors
-
-**커밋**:
-- b2f9b4e feat(E-15 Block C): AutoFillModal + widget integration with auto-fill button (3 files, +911 / -124)
-
-**구조 결정 (이후 세션 참고)**:
-- AutoFillModal은 **완전히 자기완결** (props: productId, productName, currentScore, onClose, onApplied) — 향후 씨앗심기/정원창고/검색조련사 페이지 등 다른 곳에서도 동일 패턴으로 재사용 가능
-- 상품명 재작성 4모드(`name_length`, `no_abuse`, `no_repeat`, `keyword_in_front`)는 모두 `product.name` 단일 필드를 덮어쓰므로 충돌 발생 — 따라서 **라디오 그룹**으로 1개만 적용 가능하게 함. PATCH switch case도 `update.name = v`로 겹치고 마지막이 이기는 구조이므로 이 라디오 제약이 명시적 방어선
-- onApplied()가 dashboard.handleRefresh()를 호출하면 loadStats + loadProducts 둘 다 재로드 — 위젯 점수 + 파이프라인 카운트 + KPI 모두 신선해짐
-- 남은 7개 자동 항목 중 일부만 적용해도 완전 작동 — PATCH가 each itemId를 독립적으로 검증하고 거부된 것은 rejected로 반환함
-- "직접 수정" 버튼은 항상 존재 — AI 채우기가 필요하지 않더라도 셀러가 수동 라우트로 진입 가능
-- 모달 있는 동안 대시보드는 읽기 전용 — 이중 모달 방지를 위해 setModalTarget는 단일값
-- AI 답변이 모두 검증 실패해서 suggestions가 비었을 때 — 모달은 "AI 자동 채우기 가능 항목이 없습니다" 노란 바 + manual 카드만 렌더 — 셀러가 혼란하지 않음
-- **Block D 라이브 검증 대기 중** — Chrome MCP로 8개 DRAFT 시도 + 점수 상승 검증, 응답시간 측정, edge case 확인 필요
-
-**⚠️ 본 Block C가 마무리된 후 시작된 다음 채팅에서 작업원칙 21번 사건이 두 번째로 발생**: user 메시지가 "HEAD = 0694982, 10 commits 동기화 상태"라는 작업 가정을 명시했지만 실제 origin/main = b6e6da3 + Block A+B+C 완료(16 commits) 상태였음. 새 채팅이 그 가정을 무비판으로 받아 AutoFillModal을 처음부터 새로 쓰려 했으나, write_file이 중간에 끊어져 working tree clean이 유지되어 손실 없이 멈춤. user가 "커밋 푸시 단계였습니다 상황을 확인하고 진행해주세요"로 즉시 잡아주심. 본 사건 학습으로 작업원칙 23·24번 신설 — **다음 채팅이 같은 사건을 또 만들지 않도록**
-
-
-### 2026-04-30 Phase E+ Sprint 6 진행 중 (E-15 Block D Part 1 — 1상품 라이브 검증 완료)
-
-**범위**: Chrome MCP로 첫 DRAFT 카드(60점, 무타공 두꺼비집가리개)에서 AI 채우기 모달 → POST 미리보기 → PATCH 적용 → 위젯 자동 갱신 전 과정을 라이브 검증. 시나리오 1~6 통과. 발견된 score 일관성 버그는 Part 2 새 채팅에서 수정 예정.
-
-**검증 결과 — 시나리오 1~6 (모두 ✅)**:
-
-| 시나리오 | 결과 | 검증 데이터 |
-|---------|------|------------|
-| 1. dev 서버 응답 | ✅ HTTP 200 / 0.13초 / 8 DRAFT 정상 fetch | `curl /dashboard` + `/api/products?status=DRAFT` |
-| 2. 위젯 렌더링 | ✅ Stat strip(0/8/42) + 5개 카드 + AI 채우기 5개 + 직접 수정 5개 | DRAFT 8개 중 위젯 TOP 5 표시 |
-| 3. 모달 열림 (loading→ready) | ✅ POST elapsed 약 4~5초 (Groq round-robin 정상) | 첫 클릭 = "무타공 두꺼비집가리개 대형 45x34cm WIFI 블라인드 분전함커버" (60점 카드) |
-| 4. ready phase 3섹션 렌더 | ✅ 키워드 5개+ 체크박스 + SEO 태그 10개+ 체크박스 + extra_images 노란 카드 (radio 0개 = 이 상품에 상품명 재작성 추천 없음, 이미 통과) | suggestions 2 + unfillable 1 = 모달 정상 분리 |
-| 5. 적용 → done | ✅ PATCH 6.0초 / `applied: [keywords_count, tags_count]` / `rejected: []` / `newScore: 92, newGrade: 'S'` | DB 즉시 적용 + 모달 자동 닫힘 (1.8초) |
-| 6. 위젯 자동 갱신 | ✅ 첫 카드 60점 → 82점 (등급 B → A) / Stat 평균 42 → 45 / 부족칩 4개 → 3개 (앞15자/추가/배송) | onApplied → handleRefresh → loadStats + loadProducts 모두 정상 |
-
-**라이브 데이터 (PATCH 응답 발췌)**:
-```json
-{
-  "success": true,
-  "applied": ["keywords_count", "tags_count"],
-  "newScore": 92,
-  "newGrade": "S",
-  "newLabel": "92% — 앞15자 키워드, 추가이미지 (0장)",
-  "rejected": []
-}
-```
-
-**적용된 키워드** (구매자 언어 정확 반영):
-- keywords_count: `인터폰박스, 가구인테리어, 인테리어소품, 무타공가리개, 대형블라인드, 분전함커버, 인터폰커버`
-- tags_count: `선물용, 고급스러움, 감각적, 인테리어용, 모던, 고급, 디자인, 품질좋음, 인테리어소품, 인테리어박스, 고상함, 인테리어용품`
-
-**⚠️ 발견된 마이크로 조정 후보 (Part 2 수정 대상)**:
-
-**[Bug #1] PATCH newScore(92) ≠ 위젯 reload 점수(82) — 차이 10점**
-- 분석: keywords_count(12) + tags_count(10) = 22점 → 위젯 60+22=82 (정상). PATCH 응답은 60+32=92로 계산.
-- 차이 10점은 정확히 `shipping_template` weight 값. PATCH 시점에서 `calcUploadReadiness`가 shipping_template을 통과로 잘못 계산했을 가능성.
-- 수정 위치: `src/app/api/upload-readiness/auto-fill/route.ts` PATCH 핸들러 마지막 부분 — `prisma.product.update` 후 `calcUploadReadiness` 호출 시 전달하는 product 객체의 shippingTemplateId 필드 검증
-- 영향도: 모달 done 화면 표시 점수와 위젯 갱신 점수가 다름 → 셀러 혼란. 데이터 손실 없음.
-- 우선순위: Part 2 첫 작업
-
-**[Note] AutoFillModal은 inline style 사용 (Tailwind 아님)**:
-- `position: fixed; zIndex: 1000` — Chrome MCP 셀렉터로 잡으려면 `getComputedStyle(d).position === 'fixed'` 패턴 사용 필요
-- Tailwind class `[class*=fixed][class*=inset-0]` 패턴은 작동하지 않음
-- Part 2 검증 시 동일 패턴 재사용 권장
-
-**Vercel 환경변수 "Needs Attention"**: 키 회전 없음 확인. 단순 마지막 배포 이후 시간 경과 알림으로 추정. 빈 commit + push로 재배포 트리거하여 해소.
-
-**TSC**: 0 errors (코드 변경 없음, 라이브 검증 + docs만 진행)
-
-**커밋 이력 (Part 1)**:
-- (현 commit) docs(E-15 Block D Part 1): 1-product live verification + score consistency bug + handoff for Part 2
-- (현 commit + 1) chore: redeploy to refresh Vercel env var Needs Attention status
-
-**구조 결정 (이후 세션 참고)**:
-- AutoFillModal은 React Portal 없이 일반 React 트리 안에서 inline style position:fixed로 렌더 — z-index 1000으로 충분히 위에 뜸
-- Chrome MCP에서 모달 셀렉터는 반드시 computed style 검사 (Tailwind class 패턴 안 통함)
-- PATCH 응답의 newScore와 위젯 reload 점수가 다른 경우 calcUploadReadiness 호출 두 경로의 ItemId 집합 일관성 점검 필요
-- Part 1과 Part 2를 분리한 이유: 컨텍스트 한계 회피 + Part 1에서 발견된 버그를 Part 2 시작 시점에 정확하게 파악하기 위함
-
-
+## 참고 문서 인덱스
+
+### docs/research/
+- `SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md` — 본 세션 신규 (15개 핵심 + 단계별 체크리스트)
+- `COMMERCE_API_403_ROOT_CAUSE.md`
+- `COMMERCE_API_ORDER_DIAGNOSIS.md`
+
+### docs/plan/archive/
+- `PROGRESS_2026Q2_MAY.md` — 5월 누적 세션 기록 (작업원칙 #31 분할)
+
+### 프로젝트 파일 (외부 리서치)
+- `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
+- `스마트스토어 리뷰 관리와 반품안심케어, 무엇을 먼저 할 것인가`
+- `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
+- `카카오 비즈니스 채널 2025-2026 완전 가이드`
+- `Smartstore_Sprout_to_Power_Seller_Workflow_Optimization_Guide__May_2026.md`
