@@ -9,6 +9,63 @@
 
 ---
 
+## 2026-05-06 세션 — Track B Deep Diagnosis 연구 완료 ✅ (주문 API 403 원인 분석 전문 보고서 신규)
+
+### 본 세션 성격
+- 직전 commit `2b7ce19` (origin/main, working tree clean) 이후 본 세션에서 **연구 전용 세션** 진행. 코드 변경 0개 — 마크다운 보고서만 생성.
+- 꽃졔님 지시 — "C) 둘 다 — B를 먼저 빠르게 끝내고 그 결과로 DIAG 진행, A는 그 다음 채팅에서 별도 진행". Track B(주문 API 집중 분석) 먼저 완료 → Track A(전체 API 레퍼런스 + 파워셀러 로드맵)는 다음 세션 이원으로 분산.
+- 컨텍스트 보존 최우선 — 연구 자료는 `launch_extended_search_task`로 단일 파일로 떨어지게 설계. 채팅 중단되어도 파일만 있으면 다음 채팅에서 그대로 이어받을 수 있도록 구성.
+
+### 변경된 파일 (1개 신규)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `docs/api/COMMERCE_API_ORDER_DIAGNOSIS.md` | NEW (330줄, 27.9KB) | Track B Deep Diagnosis 전문 보고서. TL;DR 3줄 + Key Findings 6항 + Details §1~10 + Recommendations Stage 0~3 + Caveats. 7일 81건 403 원인 분석, 3-엔드포인트 흐름 확정, 403 의사결정 트리, 응답 코드 매핑 표, `api-client.ts` 수정안 1/2, `naver-doctor` 진단 라우트 설계 포함. |
+
+### 보고서 핵심 결론 (다음 세션 접근 일괄용)
+1. **403의 1순위 원인** = "API호출 IP 미등록 + 내스토어 애플리케이션 인증/활성 상태 불일치". `lastChangedFrom`↔`from` 미스매치는 **별개의 2차 버그** (400 BAD_REQUEST를 만듬, 403이 아님).
+2. **"3-엔드포인트 흐름"의 정답** = (B) 2단계 흐름(`last-changed-statuses` GET → `query` POST) + 보조 단일 호출(`product-orders` GET, 2024-08-07 신규). 세 endpoint 모두 현재 지원 중이며 deprecated 아님. 꽃틔움 가든의 **대시보드 즉시 조회**에는 단일 호출, **누락 방지 sync**에는 2단계 흐름 권장.
+3. **즉시 수정 우선순위 3단** = (1) 꽃졔님 채팅 외부 접근 — 커머스API센터서 활성/IP 등록/통합관리자/마지막 호출일/권한 그룹 5종 GREEN 확인 → (2) Vercel KR 리전(`icn1`) 또는 KR NAT 고정 IP 적용 → (3) `api-client.ts` 파라미터/HTTP 메서드/Content-Type/날짜 포맷 1:1 정정.
+4. **새싹셀러 특이점** = API 권한 자체에는 등급별 차이 없음. 거래건수가 적어 빈 배열 반환이 정상일 수 있음. "초당 2회" 제한은 커뮤니티 보고일 뿐 공식 SLA 아님.
+
+### 설계 결정 — Track A/B 분할 근거
+- **Track B (본 세션)**: A3-4-DIAG와 직결되는 주문 API 영역만 집중 분석. `재현 가이드 + 의사결정 트리 + 코드 수정안`까지 마치면 다음 채팅에서 즉시 적용 가능.
+- **Track A (다음 채팅 ①)**: 커머스 API 전체 endpoint 레퍼런스 + 디버깅 가이드 + 변경사항/deprecated 추적 → `docs/api/COMMERCE_API_REFERENCE.md` + `docs/api/COMMERCE_API_DEBUGGING.md`.
+- **새싹→파워셀러 전략 (다음 채팅 ②)**: Q&A 자동응답, 리뷰 자동답글, 랭킹 신호 역추적, 등급별 API 제약, Excel→API 마이그레이션 로드맵, 반품안심케어/톡톡/쇼핑라이브 연계 → `docs/strategy/SEEDLING_TO_POWER_ROADMAP.md`.
+
+### A3-4-DIAG 다음 세션 진입점 (Stage 0~2)
+- **Stage 0 (꽃졔님 세션 외부, 5분)**: 커머스API센터 5종 점검(활성/IP/통합관리자/마지막호출일/권한그룹). 시크릿 변경시 Vercel Env + 애플 재배포.
+- **Stage 1 (코드 정합화, 30분)**: `api-client.ts` 수정안 1(대시보드 즉시) 또는 수정안 2(십장 sync) 중 선택. 둘 다 필요시 명명 분리. `traceId/code/message/IP` Prisma 로그 적재.
+- **Stage 2 (진단 라우트, 1~2시간)**: `app/api/_debug/naver-doctor/route.ts` 신규 — ENV/CLOCK/SIGN/TOKEN/IP/ORDER-A/ORDER-B/REPORT 8개 체크, 한국어 트래픽 라이트로 결과 표시.
+
+### 추후 Stage 3 (운영 안정화)
+- `vercel.json` 에 `"functions": { "app/api/**": { "region": "icn1" } }` 명시 — KR 리전 강제.
+- 토큰 캐싱 (TTL 90% 시점 사전 갱신, mutex 동시성 차단).
+- 슬라이딩 윈도우 sync — 5분 단위 `[t-6m, t-1m]` 슬롯 호출, 1분 마진 (시계 편차 흡수).
+
+### 상세 고안 일단
+- 결정: Track A/B 이분할 → 3파일로 재분할(B 단일 + A 이원). Track B 파일명은 `COMMERCE_API_ORDER_DIAGNOSIS.md`로 명명(diagnosis 키워드 논쟁어 prefix 통일, Track A의 REFERENCE/DEBUGGING과 일관성).
+- 결정: 디렉토리 구조 = `docs/api/` (API 관련 전체) + `docs/strategy/` (전략문서) — 이후 자료도 이 이분할에 따라 추가.
+- 결정: 연구 결과물에 "다음 채팅 인계 안내" 섹션을 필수로 포함 — 채팅 중단 후 재개 시접근점 명확화.
+- 결정: Track B는 코드 작업 없이 문서만 출력 — 컨텍스트 안전 최우선 원칙. A3-4-DIAG 코드 작업은 다음 채팅에서 진행.
+
+### 꽃졔님 직접 점검 항목 (Stage 0 꽃졔님 외부 작업)
+1. https://apicenter.commerce.naver.com → 내 스토어 애플리케이션 관리 접속.
+2. "활성" 등록완료 상태인지 확인 (이니셔 앞에 백색 원/체크 표시).
+3. **API 호출 IP 등록** — "내 현재 공인 IP" + "Vercel 서울 리전 IP 대역" … 최대 3개. (Stage 1 이전에는 "내 IP" 하나만 등록해 dev 테스트용으로 먼저 적용 OK)
+4. **통합관리자** = 꽃졔님 아이디가 사업자 대표/통합관리자 계정으로 설정돼있어야 함.
+5. **마지막 호출일** = "7일 이내"에 호출 기록 있으면 OK (휴면 대상 아님). 14일 초과면 이메일 재인증 필요.
+6. **권한 그룹** 수정 → "주문(주문 판매자)", "상품", "판매자정보" 3종 체크되어 있는지 확인. 누락시 추가 + 저장 후 5~30분 대기.
+7. 만약 재발급 필요해 시크릿이 바뀌었다면 → Vercel Project Env 에 즉시 적용 + 애플 재배포(캐싱된 Bearer 토큰 폐기용).
+
+### 다음 세션 진입할 때 먼저 읽을 구간 (`COMMERCE_API_ORDER_DIAGNOSIS.md`)
+- TL;DR + Key Findings (파악용, 2분)
+- §1 3개 endpoint 사양표 (sync 재작성 시 직접 참조)
+- §6 403 의사결정 트리 (curl 응답 분기 시 매핑)
+- §9 `api-client.ts` 수정안 1/2 (그대로 붙여넣기 가능)
+- §10 진단 라우트 8개 체크 (`naver-doctor` 구현 시 직접 참조)
+
+---
+
 ## 2026-05-05 세션 — 워크플로우 재설계 Sprint Part A3-4a 완료 (한달리뷰 백엔드) ✅
 
 ### 본 세션 성격
