@@ -1,5 +1,6 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-05 (워크플로우 재설계 Sprint Part A3-4a 완료 ✅ — 한달리뷰 백엔드 / month-review-pending lib + API + useMonthReviewPending SWR 훅 (15번째) / TSC 0 errors / API 200 검증 / 다음: 새 채팅에서 Part A3-4b — UI + 혜택탭 가이드 + Chrome MCP 검증)
+> 최종 업데이트: 2026-05-06 (Tailscale Funnel 아키텍처 구축 완료 ✅ — production 영구 정상화 인프라. Vercel → Tailscale Funnel `https://macbook-pro.tail36c35f.ts.net` → 집 Mac home-proxy(launchd 자동시작) → 집 IP `219.248.15.46` → Naver API. End-to-end 검증: production sync HTTP 200 + synced=1. 작업원칙 #28 신설. commit `cf433e0` → origin/main. 다음 우선수위: A) production cron 정상화 / B) A3-4b 한달리뷰 UI / C) Sprint 6 E-13B Kakao 알림톡 UI 스캐폴드. 아래 "다음 새 채팅 시작 메시지 — 2026-05-06 Tailscale 이후" 섹션 참조)
+> ~~최종 업데이트 (구)~~: 2026-05-05 (워크플로우 재설계 Sprint Part A3-4a 완료 ✅ — 한달리뷰 백엔드 / month-review-pending lib + API + useMonthReviewPending SWR 훅 (15번째) / TSC 0 errors / API 200 검증 / 다음: 새 채팅에서 Part A3-4b — UI + 혜택탭 가이드 + Chrome MCP 검증)
 > **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C/D/E Part 1 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 + Part A3-1b UI 완료 ✅ (구매확정 리마인더 MVP 100% 완성) + Part A3-2 EventTimeline SWR 마이그 완료 ✅ + Part A3-3a 검색 조련사 SWR 마이그 완료 ✅ + Part A3-3b 정원 창고 SWR 마이그 완료 ✅ (페이지 SWR 확장 2/2 완료) + Part A3-4a 한달리뷰 백엔드 완료 ✅ (15번째 훅)**
 > **다음 작업: 워크플로우 재설계 Sprint Part A3-4b — MonthReviewWidget UI 신규 + 대시보드 Section 2 today 통합 + products/new 혜택탭 E-2C 영역 한달리뷰 운영 가이드 추가 + Chrome MCP 검증. 새 채팅에서 진행. 상세는 SESSION_LOG.md 관련 세션 + 답변 끝 인계 코드 블록 참조 (기존 A3-4 세션 메시지는 deprecated)**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
@@ -14,7 +15,46 @@
 
 ---
 
-## 🎯 다음 새 채팅 시작 메시지 (워크플로우 재설계 Sprint Part A3-4 — 2026-05-05 작성)
+## 🎯 다음 새 채팅 시작 메시지 — 2026-05-06 Tailscale 이후 (현재 유효 ✅)
+
+> **직전 세션(2026-05-06 이어받기) 결과 — commit `cf433e0` 완료**:
+> - **production 영구 정상화 인프라 구축**: Vercel → Tailscale Funnel `https://macbook-pro.tail36c35f.ts.net` → 집 Mac home-proxy(`scripts/home-proxy.mjs` 267줄, launchd PID 56146 자동시작 + crash 재시작) → 집 IP `219.248.15.46` → Naver API.
+> - **검증 완료**: production `/api/naver/orders?manual=1&hours=24` → HTTP 200, 1.7s, synced=1, total=1. 외부 인터넷에서 warm health 12-15ms, Naver API 220ms.
+> - **산출물**: `scripts/home-proxy.mjs` + `scripts/com.kkotium.home-proxy.plist` + `scripts/install-home-proxy.sh` (3개 NEW) + `src/lib/naver/api-client.ts` (PROXY mode token 라우팅 추가) + `supabase/functions/naver-proxy/index.ts` (v2 보존).
+> - **Vercel ENV 업데이트 완료**: `NAVER_PROXY_URL=https://macbook-pro.tail36c35f.ts.net` (Production/Preview/Development).
+> - **작업원칙 #28 신설**: "App is deployed to Vercel production. NEVER propose architectures requiring `npm run dev` as production runtime."
+> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-06 세션 (이어받기) — Tailscale Funnel 아키텍처 구축 완료" 참조.
+
+> **현재 infra 상태** (관리 명령어):
+> - home-proxy: `launchctl list | grep kkotium` (active 확인) / `tail -f /tmp/kkotium-home-proxy.log` (로그) / `curl http://127.0.0.1:3001/health` (로컬 헬스)
+> - Tailscale: `tailscale funnel status` (Funnel ON 확인)
+> - Production: `curl "https://kkotium-garden.vercel.app/api/naver/orders?manual=1&hours=24"` (동기 검증)
+> - Mac 재부팅 시 home-proxy + Tailscale 모두 자동 시작 (수동 작업 불필요)
+
+> **다음 세션 작업 후보 (꽃졔님 선택 필요)**:
+>
+> | 후보 | 작업 내용 | 추정 분량 | 끊지마 관점 |
+> |------|------|------|------|
+> | **A. production cron 정상화** | `vercel.json` cron 표현식 + `CRON_SECRET` + Hobby plan 정책 검증. 직전 7일 0회 호출 이슈 원인 추적. Tailscale 해결로 IP 차단 이슈 제거되었으니 cron 자체 문제 독립 레이아웃 | M | 단일 세션 충분 |
+> | **B. A3-4b 한달리뷰 UI** | MonthReviewWidget UI 신규 + 대시보드 Section 2 today 통합 + `products/new` 혜택탭 E-2C 영역 한달리뷰 운영 가이드 추가 + Chrome MCP 검증 | L | 2-3개 세션 분할 권장 |
+> | **C. Sprint 6 E-13B Kakao 알림톡** | `settings/kakao/page.tsx` UI 스캐폴드 (Solapi API Key/Secret/PFID 입력 필드, 키 없을 때 비활성화). 월 50건 도달 시 실제 전송 활성화. | M | 단일 세션 충분 |
+
+> **세션 시작 시 추천 프롬프트** (아래 그대로 복사해서 새 채팅에 붙여넣기):
+>
+> ```
+> 꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md와 KKOTIUM_ROADMAP.md를 읽고 현재 상태를 파악한 후 브리핑해주세요.
+> ```
+>
+> Claude가 자동으로:
+> - PROGRESS.md 헤더와 ROADMAP.md 헤더 확인
+> - SESSION_LOG.md 최상단 두 세션 (Tailscale 구축 + A3-4-DIAG) 확인
+> - 위 작업 후보 A/B/C 제시 → 꽃졔님 선택 후 진행
+
+---
+
+---
+
+## 🎯 다음 새 채팅 시작 메시지 (워크플로우 재설계 Sprint Part A3-4 — 2026-05-05 작성, deprecated)
 
 > **A3-3b 완료 ✅ (2026-05-05 본 세션, commit 본 세션 마무리 commit)**:
 > - **`src/lib/hooks/useDashboardData.ts`** (+54줄 일부): `useProductsList<T = unknown[]>(...)` 제네릭 강화 + `setRawProducts(updater)` 신설 (SWR mutate optimistic update) + `error: string | null` + `isValidating` 노출. `DASHBOARD_SWR_DEFAULTS` 60s revalidate. 호출처 0영향 보장(`dashboard/page.tsx:362` + `DailyPlanWidget.tsx:254` 둘 다 기본값 `unknown[]` 의존).
