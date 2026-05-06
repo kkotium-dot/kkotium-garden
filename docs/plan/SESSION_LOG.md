@@ -6,6 +6,145 @@
 
 ---
 
+## 2026-05-06 세션 (UX/IA 마스터 블루프린트 v1) — 디자인 전 단계 화면 설계서 영구 산출물 ✅
+
+### 본 세션 성격
+- 직전 세션 commit `579e1af` (폴더 정리 + 작업원칙 #29 강화) 직후, 꽃졔님이 B-1/B-2/C 후보 진행 대신 **새로운 방향** 제시 — "디자인은 나중에 전체적으로 손을 봐야해서 우선은 시니어 UX/UI 설계자로서 1인 셀러 업무 효율을 극대화하기 위한 스마트스토어 상품 관리 자동화 웹앱의 화면을 설계해주세요".
+- 시각 디자인이 아닌 **UX/IA 차원의 화면 설계** 요청. 기존 꽃틔움 가든 자산(Phase A~E + Workflow A1a~A3-4a)을 보존하면서 1인 셀러 ERP/백오피스 표준 패턴(파이프라인 가시화 / 시간축 위젯 / 자동화 헬스 / 단일 허브)으로 재구조화 제안.
+- 꽃졔님 응답 — "우선 진행해주세요 결과물을 보고 또 개선하도록 해요. 우선 마무리하고 다음 채팅에서 진행할 수 있도록".
+- 본 세션은 **영구 산출물 1차** — 디자인 작업 시작 시 기준점이 되는 마스터 블루프린트 v1 정착.
+
+### 변경된 파일 (신규 2개 + MD 갱신 3개)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `docs/design/` | NEW DIR | 디자인/UX/IA 설계서 영구 폴더 신설 (docs/plan/, docs/research/와 같은 정책 패턴) |
+| `docs/design/MASTER_UX_BLUEPRINT.md` | NEW (849줄) | 시니어 UX/IA 설계자 답변. Part 1~9 + 부록 A~C |
+| `docs/design/README.md` | NEW (56줄) | 폴더 정책 + 사용 패턴 + 신규 문서 추가 가이드 |
+| `docs/plan/PROGRESS.md` | EDIT (헤더) | 본 세션 산출물 + 다음 작업 우선순위 갱신 |
+| `docs/plan/ROADMAP.md` | EDIT (헤더) | 최종 업데이트 + Phase 상태 + 다음 작업 갱신 |
+| `docs/plan/SESSION_LOG.md` | EDIT (새 섹션 최상단) | 본 세션 상세 기록 (이 섹션) |
+
+### 마스터 블루프린트 v1 — Part 별 핵심 요약
+
+**Part 1. 진단 — 1인 셀러 5대 페인포인트**:
+- P1 컨텍스트 스위칭 비용 (하루 8~12회 점프, 누적 10~15분 손실)
+- P2 누락 위험 (시간 윈도우 silent failure — 구매확정/한달리뷰)
+- P3 등록 품질 = 매출 직결 (60%로 등록한 좀비가 정원 창고에 쌓임)
+- P4 데이터의 비대칭 (Source of Truth 분산 — 카카오/솔라피/배송/공급사 흩어짐)
+- P5 자동화의 가시성 부족 (cron 7가지 작업의 실행 결과 불투명)
+
+**Part 2. 설계 원칙 7개**:
+- DP1 시간축 우선 (D+3~5/D+8/D+28~32 윈도우 시각화)
+- DP2 자동화 우선, 수동 마감 (시스템이 처리하고 셀러는 결정만)
+- DP3 단일 화면 단일 결정
+- DP4 컨텍스트 보존 (Deep-link first)
+- DP5 파이프라인 가시화 (사이드바 배지)
+- DP6 매출 임팩트 정렬
+- DP7 Empty State는 안심 메시지
+
+**Part 3. IA — 현재 vs 권장 v2**:
+- 현재: GARDEN/HUNT/PLANT/TEND/ORDERS/OPS/TOOLS 7섹션, 24개 라우트
+- 권장 v2: OPS → ORDERS 흡수, TOOLS → SETTINGS 재구조화 (Master Data + External Channels 2그룹), `/settings/store` 단일 허브 신규
+- 메타포(가든 컨셉) 유지 + hover 부제목으로 직설 라벨 추가
+
+**Part 4. 핵심 화면 8개 설계**:
+1. 정원 일지 (Dashboard) — 일일 명령탑, today/week/month 3-mode, Section 1~4 구조
+2. 꿀통 사냥터 — 매출 후보 발굴, 보관함 = 결정 유예 공간
+3. 씨앗 심기 — 6탭 + Sticky 패널, AI 자동 채우기 + 미리보기
+4. 정원 창고 — 라이프사이클 5단계 + 다중 선택 일괄 액션
+5. 검색 조련사 — 인라인 편집 + AI 3버튼(정석/감성/틈새) + 리뷰 감정분석
+6. 주문 관리 — 시간축 뱃지(D+3~5 초록/리뷰 파랑/한달리뷰 보라)
+7. 좀비 부활소 — Clone for 재등록 워크플로우 명시화
+8. SETTINGS — `/settings/store` 단일 설정 허브 신규 + Master/External 그룹
+
+**Part 5. 사용자 여정 4가지**:
+- 신규 상품 등록 (90분 → 20분, 78% 단축 목표)
+- 일일 운영 (출근 → 오늘 할 일 → 마감, hub-and-spoke 패턴)
+- 리뷰/매출 성장 (D+0→D+3~5→D+8→D+9~11→D+28~32)
+- 좀비 상품 부활 (DECLINING→ZOMBIE→Clone 4단계)
+
+**Part 6. 자동화/알림 매트릭스**:
+- cron daily 08:00 KST 7가지 작업 / weekly 주간 보고서
+- 통합 알림 센터 신규 제안 (Discord 5채널 + 카카오 + Toast 통합)
+
+**Part 7. 신규 화면 3개**:
+- 일일 마감 (End of Day) — `/dashboard?mode=eod`
+- 통합 검색 / 명령 팔레트 — `Cmd+K`
+- 운영 일지 (Activity Feed) — `/activity`
+
+**Part 8. 디자인 손볼 때 우선순위**:
+- Tier 1 (즉시): Design Tokens + 컴포넌트 라이브러리 + 마스코트 SVG 인라인화
+- Tier 2 (중기): 반응형(Tablet) + 다크 모드 + 접근성
+- Tier 3 (장기): 모바일 PWA + 음성 입력
+
+**Part 9. 즉시 적용 UX 개선 10선** (디자인 작업 없이 효과):
+1. 자동화 헬스 카드 신규 (P5 해결, M)
+2. /settings/store 단일 설정 허브 (P4 해결, M)
+3. 통합 검색 Cmd+K (매우 큼, L)
+4. 일일 마감 화면 (P1 해결, M)
+5. Saved Views (정원 창고/주문, M)
+6. 인라인 편집 (정원 창고 가격/재고, S)
+7. 씨앗심기 Autosave 30초 (S)
+8. Clone for 재등록 워크플로우 명시화 (S)
+9. /sourced 라우트 일원화 (S)
+10. 알림 센터 통합 (`/notifications`, L)
+
+**부록 A**: 컴포넌트 라이브러리 권장 항목 (KpiCard / WidgetCard / EmptyState / Chip / TabBar 등)
+**부록 B**: 키보드 단축키 매핑 (Cmd+K / g d/h/p/w/s/o)
+**부록 C**: 모바일 고려사항 (PWA, Tier 3)
+
+### 검증 결과 (작업원칙 #22 + #29(e))
+- `wc -l`: MASTER 849줄, README 56줄 (총 905줄)
+- 한글 깨짐 grep (검증 패턴 `꽃젤|혁섭|쿠드|식타|릴고|헌서|위젝|스칵|정과|쿠두`): README의 검증 패턴 자체 인용 1건 외 깨짐 0건 ✅
+- TSC: 0 errors (코드 변경 없음, MD 산출만) ✅
+- working tree: 본 commit 전 dirty (docs/design/ 신규 2개 + MD 갱신 3개)
+
+### 적용된 작업원칙
+- **#21 사전 점검**: 8항목 모두 통과 (HEAD `579e1af` = origin/main, working tree clean, TSC 0, dev :3000 PID 34501)
+- **#22 라이브 검증**: write_file → `wc -l` + `grep -nE` raw 검증
+- **#23 정직 보고**: 시각화(visualizer)가 답변 토큰 한계로 중간 끊김 → 정직히 "시각화 생략, MD 산출 + 인계로 마무리" 결정
+- **#24 commit + push 단일 라인**: 본 turn에서 한 줄로 처리
+- **#25 한글 직접 입력**: 모든 한글은 write_file로 직접 입력 (NFC 정규화 0회)
+- **#26 일반화**: 시각화 도구의 토큰 한계 사고 → 향후 대용량 visualizer 호출 시 미리 분량 견적 + answer 끝부분에 두지 않기
+- **#27 기능 0개 삭제**: 신규 폴더 + 신규 문서만, 기존 0 영향
+- **#28 production runtime**: 0 영향 (문서 산출만)
+- **#29 한글 처리 5가지 규칙 모두 준수**:
+  - (a) edit_file 한글 다량 newText 0건 (모두 write_file 사용)
+  - (b) MD 갱신 = .tmp 임시 파일 + Python 안전 삽입 패턴
+  - (c) 코드 edit 0건 (MD만)
+  - (d) 셸 명령 한글 직접 입력 0건 (commit msg는 -F 또는 영문)
+  - (e) 한글 작업 후 즉시 grep 검증 의무화 ✅
+
+### 본 세션이 영구 등록한 핵심 학습
+- **메타 산출물의 가치**: 기능 1개를 더 만드는 것보다, *디자인 작업 전체의 기준점*이 되는 블루프린트가 장기 ROI에서 압도적으로 큼. 향후 모든 시각 디자인 + UX 의사결정이 이 문서를 참조.
+- **docs/design/ 폴더 정책 정착**: docs/plan/(매 세션 정독), docs/research/(필요 시 grep), docs/design/(디자인 작업 시점 정독)의 3폴더 정책이 영구 등록. 새 디자인 산출물은 본 폴더에 누적.
+- **시각 디자인 ≠ UX/IA 설계**: 꽃졔님이 명확히 분리해서 요청한 의도 — "시각은 나중에, 우선 IA/UX 골격부터". 본 블루프린트는 시각 디자인 단계에서 자유롭게 변형 가능하지만 IA/UX 골격은 고정점.
+- **시각화 도구 답변 한계 사례**: visualizer를 답변 끝부분에 길게 호출 시 토큰 한계로 중간 끊김 가능 → 향후 시각화는 답변 시작/중간 또는 별도 turn으로 분리 (작업원칙 #26 일반화).
+
+### 다음 채팅 작업 후보 (꽃졔님 선택 필요)
+
+| 후보 | 작업 내용 | 추정 분량 | 근거 |
+|------|------|------|------|
+| **A. 블루프린트 v2 진화** | 꽃졔님 v1 검토 + 피드백 반영 + 추가 화면 설계 + Part 갱신 | 가변 (피드백 분량에 따라) | v1을 v2로 진화시키면 디자인 작업의 기준점이 더 단단해짐 |
+| **B. Tier 1 디자인 토큰 작업** | Design Tokens (색상/타이포/spacing) + 컴포넌트 라이브러리 정리 + 마스코트 꼬띠 SVG 인라인화 | M~L (1~2주) | 블루프린트 Part 8의 첫 단계, 시각 디자인 본격 착수 |
+| **C. 즉시 적용 UX 개선 10선** | 우선순위 1~3개 구현 (자동화 헬스 / 단일 설정 허브 / Cmd+K 중 선택) | M each | 디자인 작업 없이 IA/UX만으로 효과, 빠른 가치 |
+| **D. B-1 (MonthReviewWidget)** | 보류 중이던 한달리뷰 UI — 블루프린트 Section 2 today에 자연스럽게 자리 잡음 | M | 백엔드 완성 상태(A3-4a), UI만 신규 작성 |
+
+**꽃졔님 새싹셀러 컨텍스트 추천**: 
+1. 만약 *블루프린트 자체*에 의문점/추가 아이디어 있으면 → A 진행 (디자인 본격 시작 전 IA 확정)
+2. 만약 *지금 매출 임팩트가 가장 급한 작업*이라면 → D (한달리뷰 UI, 새싹→파워셀러 핵심)
+3. 만약 *디자인 본격 시작*이라면 → B (Tier 1 디자인 토큰)
+4. 만약 *작은 가치 빠르게 누적*이라면 → C 중 1번(자동화 헬스 카드)
+
+### 본 세션 commit
+- 신규: `docs/design/MASTER_UX_BLUEPRINT.md` (849줄), `docs/design/README.md` (56줄)
+- 갱신: `docs/plan/PROGRESS.md` (헤더), `docs/plan/ROADMAP.md` (헤더), `docs/plan/SESSION_LOG.md` (새 섹션 최상단)
+- commit 메시지(영문 단일 라인, git -F 사용): `docs(design): UX/IA master blueprint v1 — solo seller ERP back-office screen design (849 lines, Part 1-9 + appendix A-C)`
+- push: `579e1af..(본 세션 commit) main -> main` 예정
+
+
+---
+
 ## 2026-05-06 세션 (폴더 정리 + 작업원칙 #29 강화) — 메타 개선 완료 ✅ (구조 + 한글 깨짐 근본 솔루션)
 
 ### 본 세션 성격

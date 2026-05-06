@@ -1,9 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-06 (폴더 구조 정리 + 작업원칙 #29 강화 완료 ✅ — 루트의 KKOTIUM_*.md 3종을 `docs/plan/`으로 이동, `docs/api/` 보고서 2종을 `docs/research/`로 이동, 각 폴더에 README.md 신규. 한글 깨짐 근본 해결을 위한 작업원칙 #29를 5가지 규칙으로 강화. 직전: cron sync 통합 commit `63d8c6e` + production 검증 HTTP 200/4.4초/synced=1 완료)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 63d8c6e (cron sync) → 본 세션 commit 예정 (폴더 정리 + 작업원칙 강화) | working tree: dirty (rename 5건 + 신규 2건 + 본 헤더 갱신)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ | Phase E (E-7, E-1, E-3, E-8) ✅ | Phase E+ Sprint 1·2·3·4·5 ✅ | Sprint 6 E-15 전체 완료 ✅ | 옵션 C/D/E Part 1 SWR 확장 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a 완료 ✅ | Tailscale Funnel architecture ✅ | cron sync 통합 ✅ + production 검증 ✅ | 폴더 구조 정리 + 작업원칙 #29 강화 ✅**
-> **다음 작업 (우선순위 순)**: 1) **A3-4b 한달리뷰 UI 분할 진행** — sync 자동화 보장 + 폴더 구조 깔끔. B-1 (MonthReviewWidget UI 신규) → 단독 채팅 1회. B-2 (혜택탭 E-2C 가이드) → 단독 채팅 1회. **매출 임팩트 최대 — 새싹셀러 → 파워셀러 성장 핵심 (리뷰수 직접 견인)**. 2) **Sprint 6 E-13B Kakao 알림톡 UI 스캐폴드** — `settings/kakao/page.tsx` 신규. 월 50건 도달 시 활성화.
-> **본 세션 산출물 (2026-05-06 폴더 정리 + #29 강화)**: (1) `docs/plan/` 신규 폴더 + `KKOTIUM_PROGRESS.md`/`KKOTIUM_ROADMAP.md`/`KKOTIUM_SESSION_LOG.md` → `PROGRESS.md`/`ROADMAP.md`/`SESSION_LOG.md`로 이동(파일명 단축, 폴더 컨텍스트로 명확). (2) `docs/research/` 신규 폴더 + `docs/api/` → `docs/research/`로 이동 + 빈 `docs/api/` 폴더 삭제. (3) `docs/plan/README.md` 신규(매 세션 정독 가이드 + 작업원칙 #29 5가지 규칙). (4) `docs/research/README.md` 신규(보고서 인덱스 + 사용 패턴 + 새 보고서 추가 가이드). (5) **작업원칙 #29 강화** — 한글 처리 5가지 규칙(MD/코드/셸/Python/검증) + 매 작업 후 grep 검증 의무화 패턴 등록.
+> 최종 업데이트: 2026-05-06 (UX/IA 마스터 블루프린트 v1 완료 ✅ — `docs/design/` 신규 폴더 + `MASTER_UX_BLUEPRINT.md` 849줄 (Part 1~9 + 부록 A~C) + `README.md` 56줄. 시니어 UX/IA 설계자 답변, 디자인 손보기 전 IA/UX 확정 단계의 영구 산출물. 직전: 폴더 구조 정리 + 작업원칙 #29 강화 commit `579e1af`)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 579e1af (#29 강화) → 본 세션 commit 예정 (UX 블루프린트 v1) | working tree: dirty (docs/design/ 신규 2개 + MD 갱신 3개)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ | Phase E (E-7, E-1, E-3, E-8) ✅ | Phase E+ Sprint 1·2·3·4·5 ✅ | Sprint 6 E-15 전체 완료 ✅ | 옵션 C/D/E Part 1 SWR 확장 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a 완료 ✅ | Tailscale Funnel architecture ✅ | cron sync 통합 ✅ + production 검증 ✅ | 폴더 구조 정리 + 작업원칙 #29 강화 ✅ | UX/IA 마스터 블루프린트 v1 ✅**
+> **다음 작업 (우선순위 순)**: 1) **블루프린트 v1 검토 + 피드백 → v2 진화** — 꽃졔님 검토 후 디자인 작업 전 IA/UX 확정. 2) **Tier 1 디자인 토큰 작업 시작** — Design Tokens + 컴포넌트 라이브러리 + 마스코트 꼬띠 SVG (블루프린트 Part 8). 3) **즉시 적용 UX 개선 10선** — 자동화 헬스 카드 / 단일 설정 허브 / Cmd+K 명령 팔레트 (블루프린트 Part 9). 4) **B-1 (MonthReviewWidget) 보류 → 진행** — 블루프린트 Section 2 today에 자리 잡음. 자세한 인계 메시지는 본 답변 끝의 코드 블록 참조.
+> **본 세션 산출물 (2026-05-06 UX/IA 블루프린트 v1)**: (1) `docs/design/` 신규 폴더 + 폴더 정책 정착(plan/research/design 3폴더). (2) `MASTER_UX_BLUEPRINT.md` 849줄 — 1인 셀러 5대 페인포인트(P1~P5) + 설계 원칙 7개(DP1~DP7) + IA 진단/권장 v2 + 핵심 화면 8개 + 사용자 여정 4개 + 자동화·알림 매트릭스 + 신규 화면 3개(일일마감/Cmd+K/운영일지) + 디자인 우선순위 Tier 1~3 + UX 개선 10선 + 부록 A~C(컴포넌트 라이브러리/단축키/모바일). (3) `docs/design/README.md` — 폴더 정책 + 사용 패턴 + 신규 문서 추가 가이드.
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -11,8 +11,6 @@
 >   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
 >   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
 >   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
-
----
 
 ## ⚠️ 작업원칙 #29 (한글 처리 절대 규칙) — 2026-05-06 강화 5가지
 

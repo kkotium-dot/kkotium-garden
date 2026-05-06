@@ -1,9 +1,10 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-06 (폴더 구조 정리 + 작업원칙 #29 강화 완료 ✅ — 루트 KKOTIUM_*.md 3종을 `docs/plan/`으로 + `docs/api/` 보고서 2종을 `docs/research/`로 이동, 각 폴더에 README.md 신규. 한글 처리 5가지 규칙 영구 등록. 직전 cron sync 통합 commit `63d8c6e` + production 검증 HTTP 200/4.4초/synced=1 완료)
+> 최종 업데이트: 2026-05-06 (UX/IA 마스터 블루프린트 v1 완료 ✅ — `docs/design/MASTER_UX_BLUEPRINT.md` 849줄 영구 산출물. 시니어 UX/IA 설계자 답변. 디자인 손보기 전 IA/UX 확정 단계. Part 1~9 + 부록 A~C. 직전: 폴더 구조 정리 + 작업원칙 #29 강화 commit `579e1af`)
+> ~~최종 업데이트 (구)~~: 2026-05-06 (폴더 구조 정리 + 작업원칙 #29 강화 완료)
 > ~~최종 업데이트 (구)~~: 2026-05-06 (cron sync 통합 완료 — 7-day 0-call 이슈 근본 해결)
 > ~~최종 업데이트 (구)~~: 2026-05-06 (Tailscale Funnel 아키텍처 구축 완료 — production 영구 정상화 인프라)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ | Phase E (E-7, E-1, E-3, E-8) ✅ | Phase E+ Sprint 1·2·3·4·5 ✅ | Sprint 6 E-15 전체 완료 ✅ | 옵션 C/D/E Part 1 SWR 확장 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a 완료 ✅ | Tailscale Funnel architecture ✅ | cron sync 통합 ✅ + production 검증 ✅ | 폴더 구조 정리 + 작업원칙 #29 강화 ✅**
-> **다음 작업: A3-4b 한달리뷰 UI 분할 진행 (B-1 MonthReviewWidget UI → 단독 채팅 1회). 매출 임팩트 최대 (새싹셀러 → 파워셀러 성장 핵심 — 리뷰수 직접 견인). 또는 Sprint 6 E-13B Kakao 알림톡 UI 스캐폴드. 새 채팅에서 진행. 상세는 `docs/plan/SESSION_LOG.md` "2026-05-06 세션 (폴더 정리 + 작업원칙 #29 강화)" + 답변 끝 인계 코드 블록 참조 (이전 cron sync 통합 메시지는 deprecated)**
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ | Phase E (E-7, E-1, E-3, E-8) ✅ | Phase E+ Sprint 1·2·3·4·5 ✅ | Sprint 6 E-15 전체 완료 ✅ | 옵션 C/D/E Part 1 SWR 확장 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a 완료 ✅ | Tailscale Funnel architecture ✅ | cron sync 통합 ✅ + production 검증 ✅ | 폴더 구조 정리 + 작업원칙 #29 강화 ✅ | UX/IA 마스터 블루프린트 v1 ✅**
+> **다음 작업: 꽃졔님 후보 A/B/C/D 중 선택 후 진행** — A) 블루프린트 v1 검토 + 피드백 → v2 진화 (디자인 작업 전 IA/UX 확정), B) Tier 1 디자인 토큰 작업 시작 (Design Tokens + 컴포넌트 라이브러리), C) 즉시 적용 UX 개선 10선 우선순위 1~3개 (자동화 헬스/단일 설정 허브/Cmd+K), D) 보류 중이던 B-1 MonthReviewWidget UI 진행. 자세한 후보 비교표 + 새 채팅 시작 메시지는 `docs/plan/SESSION_LOG.md` "2026-05-06 세션 (UX/IA 마스터 블루프린트 v1)" + 답변 끝 인계 코드 블록 참조 (이전 #29 강화 메시지는 deprecated)
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -11,8 +12,6 @@
 > - `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리` (Claude 리서치 2026-04-16)
 > - `카카오 비즈니스 채널 2025-2026 완전 가이드` (Claude 리서치 2026-04-16)
 > - `스마트스토어 셀러의 무료 알림톡, 정말 가능한가` (Claude 리서치 2026-04-16)
-
----
 
 ---
 
