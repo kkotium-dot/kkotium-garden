@@ -4,7 +4,7 @@
 // Design: Kkotium system (red #e62310, pink lines, white cards)
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import {
   Layers, Search, RefreshCw, ExternalLink, ArrowRight,
@@ -168,7 +168,14 @@ function StatusBadge({ status }: { status: string }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function CrawlPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>('single');
+  const searchParams = useSearchParams();
+  // Z-3b: tab is derived from URL query — URL is the single source of truth (no useState/useEffect to avoid race conditions)
+  const tabParam = searchParams.get('tab');
+  const tab: Tab = (tabParam === 'bulk' || tabParam === 'history') ? tabParam : 'single';
+  // setTab updates URL only — tab automatically re-derives on next render via useSearchParams
+  const setTab = useCallback((next: Tab) => {
+    router.replace(next === 'single' ? '/crawl' : `/crawl?tab=${next}`, { scroll: false });
+  }, [router]);
 
   // ── 단건 탭 state ─────────────────────────────────────────────────────────
   const [sUrl, setSUrl]           = useState('');

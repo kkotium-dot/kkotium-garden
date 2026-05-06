@@ -5,7 +5,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useSidebarStats } from '@/lib/hooks/useDashboardData';
 import {
   Package, PackagePlus, RefreshCw,
@@ -54,6 +54,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
     label: 'HUNT',
     items: [
       { href: '/crawl', label: '꿀통 사냥터', iconKey: 'layers', badgeKey: 'sourcing' },
+      { href: '/crawl?tab=history', label: '소싱 보관함', iconKey: 'package' },
     ],
   },
   {
@@ -93,6 +94,32 @@ const NAV: { label: string; items: NavItem[] }[] = [
     ],
   },
 ];
+
+// Pre-computed href list for sibling deep-link detection (module-level, single pass)
+const NAV_HREFS: string[] = NAV.flatMap(s => s.items).map(i => i.href);
+
+// Z-3b: active path matcher — supports query-based deep-links (e.g., /crawl?tab=history)
+// - Plain href (/crawl) is active when pathname matches AND current tab does NOT match any sibling deep-link
+// - Query href (/crawl?tab=history) is active when pathname AND tab query both match exactly
+function computeActive(href: string, pathname: string, tabQuery: string | null): boolean {
+  const qIdx = href.indexOf('?');
+  if (qIdx === -1) {
+    if (pathname !== href) return false;
+    if (!tabQuery) return true;
+    for (const h of NAV_HREFS) {
+      const i = h.indexOf('?');
+      if (i === -1) continue;
+      if (h.slice(0, i) !== pathname) continue;
+      const sq = new URLSearchParams(h.slice(i + 1));
+      if (sq.get('tab') === tabQuery) return false;
+    }
+    return true;
+  }
+  const hPath = href.slice(0, qIdx);
+  if (pathname !== hPath) return false;
+  const hq = new URLSearchParams(href.slice(qIdx + 1));
+  return hq.get('tab') === tabQuery;
+}
 
 function FlowerSVG({ fill, size = 40 }: { fill: string; size?: number }) {
   const c = size / 2;
@@ -159,6 +186,7 @@ function NavIcon({ iconKey, active }: { iconKey: string; active: boolean }) {
     case 'shoppingcart': icon = <ShoppingCart size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'messagecircle': icon = <MessageCircle size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'creditcard':   icon = <CreditCard   size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'package':      icon = <Package      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     default:            icon = <Search      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
   }
   return <FlowerIconBox active={active}>{icon}</FlowerIconBox>;
@@ -189,6 +217,8 @@ function NavBadge({ count, active }: { count: number; active: boolean }) {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tabQuery = searchParams.get('tab');
 
   // Live badge counts from shared SWR hook (Option D, 2026-05-03)
   // — replaces inline useSWR call from v10. Polling cadence + focus revalidation
@@ -288,7 +318,7 @@ export default function Sidebar() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {section.items.map(({ href, label, iconKey, badgeKey }) => {
-                const active     = pathname === href;
+                const active     = computeActive(href, pathname, tabQuery);
                 const badgeCount = badgeKey ? getBadgeCount(badgeKey) : 0;
                 return (
                   <Link

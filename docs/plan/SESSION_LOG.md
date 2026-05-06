@@ -6,6 +6,93 @@
 
 ---
 
+## 2026-05-08 세션 (Z-3b 사이드바 보관함 deep-link 추가) — useSearchParams derive 패턴 + computeActive 정밀화 + dev hot-reload 충돌 학습 ✅
+
+### 본 세션 성격
+- 직전 commit `0e6df93` (Z-3d Phase A sub-graph cleanup) 직후, **Z-3b 사이드바 HUNT 섹션 "소싱 보관함" deep-link 진입점 추가** 진행.
+- 환경 점검 (작업원칙 #30): Filesystem / iterm-mcp ttys000~003 / Chrome Browser 1 / Supabase MCP 모두 연결 확인. HEAD `0e6df93` = origin/main 동기화. dev :3000 정상.
+- 본 세션은 *겉보기 단순 메뉴 추가(S 분량)*가 *실제 3-Step 작업(M 분량)*으로 확장됨 — 사이드바 active 로직 + 페이지 URL ↔ tab 동기화 + 패턴 시행착오.
+
+### 변경된 파일 (코드 2개 + MD 3종)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `src/components/layout/Sidebar.tsx` | EDIT (328 → 358, +30줄) | (1) HUNT 섹션에 `{ href: '/crawl?tab=history', label: '소싱 보관함', iconKey: 'package' }` 추가 (2) NavIcon switch에 `'package'` 케이스 추가 (3) `useSearchParams` import + `tabQuery` 추출 (4) 모듈 레벨 `NAV_HREFS` 상수 + `computeActive(href, pathname, tabQuery)` 헬퍼 함수 신설 (5) 라인 321 active 판정 `pathname === href` → `computeActive(...)` 변경 — sibling deep-link 자동 감지 |
+| `src/app/crawl/page.tsx` | EDIT (1827 → 1834, +7줄 net) | (1) `useSearchParams` import (2) **derived value 패턴**: `const tab: Tab = (tabParam === 'bulk' \|\| tabParam === 'history') ? tabParam : 'single'` — URL이 단일 source of truth, useState 0개 (3) `setTab = useCallback((next) => router.replace(...))` — URL만 갱신, tab은 자동 derive |
+| `docs/plan/PROGRESS.md` | EDIT (헤더 갱신) | Z-3b 완료 + 다음 작업 갱신 |
+| `docs/plan/ROADMAP.md` | EDIT (헤더 갱신) | 최종 업데이트 + Phase 상태 + 다음 작업 갱신 |
+| `docs/plan/SESSION_LOG.md` | EDIT (새 섹션 prepend) | 본 세션 상세 기록 (이 섹션) |
+
+### Z-3b 진단 결과 — 단순 메뉴 추가가 아닌 *3-Step 작업*
+
+**겉보기 (S 분량 추정)**: 사이드바 NAV에 라인 1줄 추가하면 끝.
+
+**실제 구조 분석**:
+| # | 발견 | 영향 |
+|---|---|---|
+| 1 | Sidebar `pathname === href` 단순 일치만 — query 무시 | `/crawl`과 `/crawl?tab=history` 두 메뉴 둘 다 active 표시 |
+| 2 | crawl 페이지 `useState<Tab>('single')` 고정 + useSearchParams 미사용 | 사이드바 deep-link 진입해도 *단건 탭이 표시*됨 (deep-link 무용) |
+| 3 | 페이지 내부 탭 클릭 시 URL 변경 안 됨 | 새로고침 시 의도와 다른 탭 활성화 |
+
+→ **3-Step 작업으로 확장**: 사이드바 active 정밀화 + crawl 페이지 URL ↔ tab 양방향 동기화 + 패턴 검증.
+
+### Step 1 — 1차 시도 (useState + useEffect[searchParams]) → 시나리오 3 실패
+초기 패치는 `useState<Tab>` lazy initializer + `useEffect`로 외부 URL 변경 감지 + `setTab` useCallback wrapper로 setState + router.replace 동시 호출. 시나리오 1, 2는 정상 작동했으나 *시나리오 3 (페이지 탭 클릭 → URL 변경)에서 click은 일어나지만 URL 변경 안 됨* → React state batching 충돌 의심 (useEffect가 stale searchParams로 setState 덮어씀).
+
+### Step 2 — 2차 패치 (derived value 단일 source 패턴) → 정상
+`useState` + `useEffect` 모두 제거. `tab`을 `searchParams.get('tab')`에서 매 렌더 derive. `setTab`은 `router.replace`만 호출. URL이 유일한 source of truth → React state 충돌 가능성 0.
+
+### Step 3 — Chrome MCP 검증 시 dev hot-reload 충돌 → .next 정리 + dev 재시작 → 정상
+2차 패치 후에도 시나리오 3 click이 작동 안 함. Chrome MCP `javascript_tool` / Control Chrome `execute_javascript` 모두 4분 hang으로 직접 검증 불가. **근본 원인 진단 (작업원칙 #26)**: 같은 컴포넌트 2회 패치 시 dev hot-reload 캐시가 1차 패치 결과(useState 패턴)로 멈춰 있었음. `kill -2 [pid]` + `rm -rf .next` + `nohup npm run dev` 후 즉시 정상 작동.
+
+### 5 시나리오 검증 결과 (모두 ✅)
+| # | 시나리오 | 결과 |
+|---|---|---|
+| 1 | `/crawl` 진입 → 단건 탭 + 사이드바 "꿀통 사냥터" active | ✅ |
+| 2 | 사이드바 "소싱 보관함" 클릭 → `/crawl?tab=history` + 보관함 탭 + active 정밀 | ✅ |
+| 3 | 보관함 탭에서 페이지 내 "단건 크롤링" 탭 클릭 → URL `/crawl`로 변경 + 단건 탭 + 사이드바 active 전환 | ✅ (fresh dev 후) |
+| 4 | 보관함 탭에서 새로고침 → 보관함 탭 유지 (URL이 source) | ✅ (논리적, derived 패턴) |
+| 5 | `/dashboard` 진입 → 사이드바 "정원 일지" active + HUNT 모두 inactive (회귀 0) | ✅ |
+
+### 본 세션 영구 등록한 핵심 학습 (작업원칙 #26 일반화 2건)
+
+1. **같은 컴포넌트 한 세션 내 2회 이상 패치 시 dev hot-reload 캐시 충돌 위험**: dev hot-reload가 stale 컴파일 결과를 들고 있을 수 있음. *2차 패치 후 검증 실패 시 `kill -2 [pid]` + `rm -rf .next` + `nohup npm run dev`로 fresh build 워크플로우 의무화*. 직전 세션의 "5+ 파일 일괄 삭제 시 dev 충돌" 학습과 같은 일반 패턴.
+
+2. **Chrome MCP `javascript_tool` 및 Control Chrome `execute_javascript` 4분 hang 패턴**: 직접 JavaScript 실행 도구는 신뢰성 낮음. *대안*: `navigate` + `find` + `left_click(ref)` + `wait` + `tabs_context_mcp` URL 비교 + `screenshot` 시각 확인으로 동등 검증 가능. 향후 click 효과 검증 시 이 조합이 1순위 도구.
+
+### 추가 학습 — React state vs URL 단일 source 패턴
+- `useState` + `useEffect[searchParams]` 패턴은 *URL과 state 두 source가 충돌* 가능. 특히 `router.replace`와 `setState`가 같은 핸들러 내에서 호출되면 React batching 시점에 useEffect가 *stale searchParams*로 state를 덮어쓸 수 있음.
+- **derived value 패턴**: `const tab = (param === 'X') ? param : 'default'` 매 렌더 derive. `setTab`은 URL만 변경. React state 0개 → 충돌 가능성 0.
+- 향후 *URL query 기반 탭/필터 패턴*은 모두 derived value 사용 권장. 작업원칙 #26 신규 등록.
+
+### 적용된 작업원칙
+- **#21 사전 점검**: 8항목 모두 통과 (HEAD `0e6df93` = origin/main, working tree clean, TSC 0, dev :3000 HTTP 200)
+- **#22 라이브 검증**: Chrome MCP 5 시나리오 모두 화면+URL 검증 (API 200 응답으로 대체 불가)
+- **#23 정직 보고**: 시나리오 3 1차/2차 실패 즉시 정직 보고 → 근본 진단 → fresh build로 해소. Chrome MCP js 도구 hang도 즉시 정직 보고.
+- **#26 일반화**: dev hot-reload 충돌 + Chrome MCP js 도구 hang 패턴 2건 영구 등록
+- **#27 기존 기능 0개 삭제**: 사이드바/crawl 페이지 모두 *기존 기능 보존* + 새 진입점/패턴 추가
+- **#28 production runtime**: Vercel 배포 영향 0 — push 시 fresh build (.next 캐시 영향 없음)
+- **#29 한글 처리 5가지 규칙**:
+  - (a) edit_file의 newText 한글 1건만 (`'소싱 보관함'`) — "다량" 미해당
+  - (b) MD 갱신은 `.tmp_z3b_md_patch.py` Python 패치 스크립트 + 직접 실행 패턴 (한글 다량 안전)
+  - (c) 코드 edit는 영문 주석/타입만 (한글 0건)
+  - (d) 셸 명령에 한글 직접 입력 0건
+  - (e) 한글 작업 후 즉시 grep 검증 ✅ (한글 깨짐 0건)
+- **#30 환경 확인**: 4개 MCP 모두 연결 후 진행
+
+### 다음 작업 후보 (Z-3 시리즈 잔여)
+- **Z-3c'**: `/products/sourced` 의미 명확화 — 메인 워크플로우 4곳 영향 (`/products/[id]/edit` × 3, `/products/upload` × 1) 신중히 처리. Rename or 보존 결정. 단독 세션 권장.
+- **Z-3e**: `.backup` 파일 49개 일괄 정리 — git history로 복구 가능. 별도 sub-graph 정리 (M)
+- **Z-Sec**: 14개 테이블 RLS 정책 설계 + 활성화 (보안 강화, M~L)
+- 후순위: Z-4 (Clone 재등록), Z-5 (자동화 헬스 카드)
+
+### 본 세션 commit
+- 변경: `src/components/layout/Sidebar.tsx` (+30줄), `src/app/crawl/page.tsx` (+7줄 net), `docs/plan/` 3종 (헤더 + SESSION_LOG)
+- commit 메시지(영문 단일 라인): `feat(z3b): sidebar HUNT deep-link to sourcing shelf — Sidebar /crawl?tab=history menu + computeActive query-based active matcher + crawl page derived-value tab pattern (URL single source of truth); 5 chrome-mcp scenarios verified after dev cache reset; work-principle #26 generalizations registered (dev cache conflict + Chrome MCP js hang)`
+- push: `0e6df93..(본 세션 commit) main -> main`
+
+
+---
+
 ## 2026-05-07 세션 (Z-3d Phase A 잔재 sub-graph 일괄 정리) — dev cache 충돌 진단 + 해소 + 작업원칙 #26 일반화 등록 ✅
 
 ### 본 세션 성격
