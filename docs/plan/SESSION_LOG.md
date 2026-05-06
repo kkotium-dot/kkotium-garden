@@ -1,10 +1,186 @@
 # KKOTIUM GARDEN — 세션별 작업 로그
 
 > **이 파일의 역할**: 세션별 자세한 작업 이력을 누적 기록합니다.
-> - **KKOTIUM_PROGRESS.md**: 핵심 현재 상태 + 작업 원칙 + 환경/도구 정보 (헤더만 갱신, 짧은 요약)
-> - **KKOTIUM_ROADMAP.md**: 미래 작업 계획 + Phase별 상태 표 + 다음 새 채팅 시작 메시지
+> - **docs/plan/PROGRESS.md** (구 KKOTIUM_PROGRESS.md): 핵심 현재 상태 + 작업 원칙 + 환경/도구 정보 (헤더만 갱신, 짧은 요약)
+> - **docs/plan/ROADMAP.md** (구 KKOTIUM_ROADMAP.md): 미래 작업 계획 + Phase별 상태 표 + 다음 새 채팅 시작 메시지
 
 ---
+
+## 2026-05-06 세션 (폴더 정리 + 작업원칙 #29 강화) — 메타 개선 완료 ✅ (구조 + 한글 깨짐 근본 솔루션)
+
+### 본 세션 성격
+- 직전 세션 commit `63d8c6e` (cron sync 통합) + production 검증 HTTP 200/4.4초/synced=1 완료 직후, 꽃졔님이 메타 개선 3가지 요청 — (1) 연구자료 매번 체크 비효율 (2) 폴더 정리 (3) 한글 깨짐 근본 해결.
+- 꽃졔님 지시 — "전문가로서 제가 언급하지 않는 부분이라도 먼저 알려주고 최선의 방법으로 해결". 자체 분석 후 통합 개선안 제안 + 승인 후 본 세션에서 일괄 처리.
+- **본 세션이 영구 등록한 메타 개선**: 폴더 구조 + 작업원칙 #29 강화 + 새 채팅 인계 패턴 갱신. 향후 모든 세션이 본 세션 산출물 위에서 작동.
+
+### 변경된 파일 (rename 5건 + 신규 2건 + 갱신 3건)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `KKOTIUM_PROGRESS.md` → `docs/plan/PROGRESS.md` | RENAME | 루트에서 docs/plan/으로 이동 + 파일명 단축 (폴더 컨텍스트로 명확) |
+| `KKOTIUM_ROADMAP.md` → `docs/plan/ROADMAP.md` | RENAME | 동일 |
+| `KKOTIUM_SESSION_LOG.md` → `docs/plan/SESSION_LOG.md` | RENAME | 동일 |
+| `docs/api/COMMERCE_API_403_ROOT_CAUSE.md` → `docs/research/` | RENAME | api 폴더가 너무 좁은 분류라 research로 일반화 |
+| `docs/api/COMMERCE_API_ORDER_DIAGNOSIS.md` → `docs/research/` | RENAME | 동일. 빈 docs/api/ 폴더 삭제 |
+| `docs/plan/README.md` | NEW | 매 세션 정독 가이드 + 작업원칙 #29 5가지 규칙 + 새 채팅 시작 작업 흐름 + 파일 갱신 정책 |
+| `docs/research/README.md` | NEW | 보고서 인덱스(현재 2종) + 사용 패턴(grep으로 필요시 참고) + 새 보고서 추가 가이드(파일명 규칙 + 4섹션 구조) |
+| `docs/plan/PROGRESS.md` | EDIT (헤더) | 폴더 구조 변경 + 작업원칙 #29 5가지 규칙 + 다음 작업 우선순위 갱신 |
+| `docs/plan/ROADMAP.md` | EDIT (헤더 + 새 시작 메시지) | 새 채팅 시작 메시지에 docs/plan/ 경로 + 단축 파일명 반영. 이전 메시지는 deprecated 표시 |
+| `docs/plan/SESSION_LOG.md` | EDIT (새 섹션 최상단 추가) | 본 세션 상세 기록 (이 섹션) |
+
+### 폴더 구조 — Before / After
+
+**Before (산만)**:
+```
+kkotium-garden/
+├── KKOTIUM_PROGRESS.md       (루트, 159KB)
+├── KKOTIUM_ROADMAP.md        (루트, 142KB)
+├── KKOTIUM_SESSION_LOG.md    (루트, 170KB)
+├── docs/
+│   ├── api/
+│   │   ├── COMMERCE_API_403_ROOT_CAUSE.md
+│   │   └── COMMERCE_API_ORDER_DIAGNOSIS.md
+│   └── decisions/  (legacy)
+└── ... (코드 파일들)
+```
+
+**After (정리)**:
+```
+kkotium-garden/
+├── docs/
+│   ├── plan/                       ← 매 세션 필수 정독
+│   │   ├── README.md               ← 정독 가이드 + 작업원칙 #29
+│   │   ├── PROGRESS.md
+│   │   ├── ROADMAP.md
+│   │   └── SESSION_LOG.md
+│   ├── research/                   ← 필요할 때만 grep/read
+│   │   ├── README.md               ← 보고서 인덱스
+│   │   ├── COMMERCE_API_403_ROOT_CAUSE.md
+│   │   └── COMMERCE_API_ORDER_DIAGNOSIS.md
+│   └── decisions/                  ← legacy (그대로 유지)
+└── ... (코드 파일들 — 루트 깔끔)
+```
+
+### 작업원칙 #29 강화 — 한글 처리 5가지 규칙 (영구 등록)
+
+지금까지 발생한 한글 깨짐 사고 패턴 분석 → 도구 인코딩 layer 한계가 근본 원인 확인 → 워크플로우 차원에서 100% 회피 가능 패턴 정착.
+
+**5가지 규칙**:
+1. (a) **edit_file의 newText에 한글 다량 포함 절대 금지** — escape 변환 layer에서 글자 단위 오류 발생 가능
+2. (b) **MD 갱신은 항상 write_file 직접 입력** 또는 별도 임시 파일 + Python 안전 삽입 패턴 사용
+3. (c) **코드 edit는 영어 주석/타입만 사용** — 한글 자체 회피 (#25 일관)
+4. (d) **셸 명령에 한글 직접 입력 금지** — `echo "한글"` 대신 파일에 작성 후 `cat` / `python3 read` 패턴
+5. (e) **한글 작업 후 즉시 grep 검증 의무화** — 검증 패턴 `꽃젤|혁섭|쿠드|식타|릴고|헌서|위젝|스칵|정과|쿠두`
+
+본 세션은 위 5가지 규칙을 즉시 적용한 첫 사례 — write_file로 별도 임시 파일에 한글 작성 → Python으로 안전 삽입 → grep 검증으로 깨짐 0 확인.
+
+### 검증 결과 (작업원칙 #22 + #29(e))
+- **rename 검증**: `git status -s`에서 `RM` (rename + modified) 3건 + `R` (rename) 2건 정상
+- **README 신규 검증**: `docs/plan/README.md` 4.6KB / `docs/research/README.md` 2.5KB 모두 정상 작성
+- **한글 깨짐 grep**: `grep -nE "꽃젤|혁섭|쿠드|식타|릴고|헌서|위젝|스칵|정과|쿠두" docs/plan/*.md docs/research/*.md` → 본 세션이 추가한 모든 한글 0건 깨짐 (이전 세션 사고 인용 텍스트만 매칭, 정상)
+- **TSC**: 0 errors (코드 변경 없음, MD/폴더 구조만 변경)
+
+### 본 세션 commit 예정
+- rename 5건 + 신규 README 2개 + 헤더/섹션 갱신 3건
+- commit 메시지(단일 라인): `chore(docs): reorganize plan/research folders + reinforce work principle #29 (한글 처리 5가지 규칙)`
+- push: `63d8c6e..(본 세션 commit) main -> main` 예정
+
+### 적용된 작업원칙
+- **#21 사전 점검**: 8항목 모두 통과 (HEAD `63d8c6e` = origin/main, working tree dirty 상태 인지 후 진행)
+- **#22 라이브 검증**: production cron sync HTTP 200/4.4초/synced=1 + git status로 rename/신규/edit 모두 검증 + grep 한글 깨짐 검증
+- **#23 정직 보고**: 직전 세션의 MD 갱신 1차 시도에서 발생한 한글 깨짐 사고를 솔직히 보고 → 사용자 메타 개선 요청 트리거
+- **#24 commit + push 단일 라인**: 본 turn에서 한 줄로 처리 예정
+- **#25 한글 직접 입력**: write_file로 한글 그대로 작성 (NFC 정규화 0회). 본 섹션도 같은 패턴
+- **#26 일반화**: 한글 깨짐 사고 1건이 아니라 도구 인코딩 layer 한계의 일반화된 risk → 워크플로우 5가지 규칙으로 영구 회피
+- **#27 기능 0개 삭제**: 모든 기존 MD 파일 내용 보존 (rename만, 내용 변경 없음). 추가 README 2개로 사용성만 향상
+- **#28 production runtime**: 본 세션은 production 영향 없음 (문서 구조 변경)
+- **#29 (강화) 한글 처리 5가지 규칙**: 본 섹션이 영구 등록 대상
+
+### 본 세션이 영구 기록한 핵심 학습
+- **메타 개선의 가치**: 단순 기능 개발이 아니라 **작업 환경 자체의 개선**이 장기 ROI에 가장 큼. 폴더 구조 + 작업 패턴 + 검증 의무화는 향후 모든 세션의 효율을 끌어올림.
+- **사용자 의도 선제 파악**: 꽃졔님이 "전문가로서 제가 언급하지 않는 부분이라도 먼저 알려주고 최선의 방법으로 해결" 요청 → 매 세션 시작 시 작업 환경 자체에 대한 개선 가능성 점검 의무화. 단순 작업 수행이 아니라 **작업 환경 진단 + 개선 제안**도 동등한 가치.
+- **README 패턴의 가치**: 폴더 안에 README.md를 두면 새 채팅 인계 시 "docs/plan/ 정독" 한 마디로 끝. 인계 메시지 길이 단축 + 명확성 증가.
+
+### 새 채팅 인계 안내 (변경된 경로/파일명)
+**이전**:
+```
+KKOTIUM_PROGRESS.md, KKOTIUM_ROADMAP.md, KKOTIUM_SESSION_LOG.md를 읽고 ...
+```
+
+**현재 (본 세션 후)**:
+```
+docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md를 읽고 ...
+```
+
+리서치 보고서는 `docs/research/`에 있으며 매 세션 정독 불필요. 필요할 때만 grep/read.
+
+### 다음 채팅 작업 후보 (꽃졔님 선택 필요)
+- **B-1. A3-4b 한달리뷰 UI 신규 (MonthReviewWidget)** — 매출 임팩트 최대, **추천**
+- **B-2. A3-4b 한달리뷰 혜택탭 E-2C 가이드** — B-1 후속, 분할 권장
+- **C. Sprint 6 E-13B Kakao 알림톡 UI 스캐폴드** — 월 50건 도달 시 활성화
+
+
+---
+
+## 2026-05-06 세션 (cron sync 통합) — production cron Naver orders sync 통합 완료 ✅ (자동 매출 동기화 파이프라인 완성)
+
+### 본 세션 성격
+- 직전 세션 commit `cf433e0` (Tailscale Funnel) + ROADMAP 한글 깨짐 정정 commit `1f1f6c4` 이후 본 세션에서 **production cron 정상화 (후보 A) 단독 진행**.
+- 꽃졔님 지시 — "최선의 개선안 방법으로 진행 + 컨텍스트 오버 방지". 자체 판단으로 후보 A (production cron 정상화) 단독 선택. 이유: B(한달리뷰 UI)는 L 분량으로 안전 분할 필요, C(Kakao 알림톡)는 현재 월 50건 전이라 대기. A는 M 단일 세션 충분 + 인프라 신뢰성 선행 효과 (한달리뷰/리마인더 데이터 자동 갱신 보장).
+
+### 근본 원인 진단
+- production `/api/cron/daily` 자체는 **정상 작동 입증** (HTTP 200, 2.2초, CRON_SECRET Bearer 인증 통과).
+- 그러나 cron daily route 내에 **Naver orders sync 호출이 누락**. OOS detection / score drop / recommendation / DB persist / autoConfirm / competition / sourcing 단계는 모두 있으나, `fetch /api/naver/orders` 호출 없음.
+- 이로 인해 매출 데이터 자동 동기화는 manual 사용자 클릭에만 의존. daily cron 추가 이후 confirmation reminder widget / month review widget / dashboard stats / C-10 auto confirm 모두 stale 데이터 상태.
+- 일반화 원인 (작업원칙 #26): cron 헤더 주석은 "Triggers: daily recommendation, OOS detection, score drop detection, **Naver sync**"로 명시되어 있었으나 실제 단계는 누락. 주석 계획과 코드 구현의 일관성 검증 실패 사례.
+
+### 수정 결정 근거
+- **Vercel Hobby plan cron limit = 2** (이미 daily + weekly 사용 중). 새 cron entry 추가 불가능.
+- 기존 daily cron route 안에 sync 호출 통합 (D-3 competition, E-7 sourcing과 동일한 fetch 패턴).
+- 위치: C-10 auto order confirmation **직전**. sync 후 신선한 PAID orders로 C-10이 동작하는 자연스러운 흐름. 다른 단계 (OOS/score/recommendation)는 product 테이블에만 의존해서 sync와 무관함.
+- naverRequest는 이미 NAVER_PROXY_URL 분기를 가지므로 자동으로 Tailscale Funnel 경유 동작. 추가 코드 비용 0.
+
+### 변경된 파일 (1개)
+| 파일 | diff | 핵심 |
+|------|------|------|
+| `src/app/api/cron/daily/route.ts` | +26 | C-10 auto confirmation 직전에 A3-CRON-SYNC 블록 추가. `fetch /api/naver/orders?hours=24` + Bearer CRON_SECRET. results.naverSync 안전 구조 (`{ ok, synced, skipped, total, period }`) + try/catch error surface (results.naverSyncError). 기존 단계 흐름 0 영향. |
+
+### 검증 결과 (작업원칙 #22)
+- **raw verify**: `grep -c "A3-CRON-SYNC"` = 1 ✅ (중복 없음, 작업원칙 #h 적용)
+- **TSC**: 0 errors ✅
+- **dev cron daily**: HTTP 200 / 4.7초 (sync 추가로 2.2초 → 4.7초, sync 자체 약 2.5초로 정상 범위)
+- **naverSync 응답**: `{ ok: true, synced: 1, skipped: 0, total: 1, period: '2026-05-05T10:26:33.404+09:00 ~ 2026-05-06T10:26:33.404+09:00' }` ✅ 24시간 윈도우 정확 + 1건 sync 완료
+- 기존 단계 회귀 검증: `autoConfirmed=0` (DB PAID 0건), `autoSuspend.checked=0`, `competitionAlerts=0`. 모두 이전과 동일한 결과.
+
+### 본 세션 commit
+- `63d8c6e feat(cron): integrate Naver orders sync into daily cron — 7-day 0-call issue resolved` (1 file changed, 26 insertions)
+- push: `1f1f6c4..63d8c6e main -> main` ✅
+- production Vercel auto-deploy 진행 중 (~1-2분 소요)
+
+### 적용된 작업원칙
+- **#21 사전 점검**: 8항목 모두 통과 (HEAD `1f1f6c4` = origin/main, working tree clean, TSC 0, dev :3000 PID 34501)
+- **#22 라이브 검증**: dev API 200 + naverSync 응답 구조 검증. Production 검증은 deploy 후 진행 예정.
+- **#23 정직 보고**: heredoc 시도 0회. **MD 갱신 1차 시도에서 unicode escape 변환 중 한글 일부 깨짐 발생 → 즉시 정직 보고 + git restore + write_file 직접 입력 패턴으로 재작성 (작업원칙 #25 + #o 강제 적용 사례)**.
+- **#24 commit + push 단일 라인**: 본 turn에서 한 줄로 처리.
+- **#25 한글 직접 입력**: code edit는 영어/이모지만 사용 (한글 매칭 risk 0), MD 갱신은 write_file로 한글 직접 입력 (NFC 정규화 0회).
+- **#26 일반화**: 주석 계획과 코드 구현의 일치 누락 사례를 향후 다른 cron 수정 시 헤더 주석 대비 실제 코드 단계 교차 검증 패턴으로 일반화.
+- **#27 기능 0개 삭제**: 기존 daily cron 6개 단계 (B-4/OOS/score/recommend/persist/C-10/D-3/E-7) 보존, sync 1개만 신규 추가.
+- **#28 production runtime**: dev server를 production runtime으로 사용 금지. 본 세션은 production Vercel cron + Tailscale Funnel 경유 구조 유지.
+
+### 본 세션이 영구 기록한 핵심 학습
+- **주석-코드 교차 검증 일반화 (작업원칙 #26 확장)**: 헤더 주석은 의도를 명시하는 계약. "Triggers: ... Naver sync"는 설계자의 의도이지만 코드가 그 의도를 반영하지 않으면 사용자도 모르는 사고 발생. 다음 세션 시작 시 cron 다른 라우트 검증 시 헤더 주석 대비 실제 코드 단계 교차 검증 의무화.
+- **Vercel Hobby 제약 하에서의 통합 원칙**: 월 cron 제약 2개 환경에서는 "새 쓰면 새 cron"이 아닌 "기존 cron에 통합"이 원칙. fetch + Bearer 패턴 (D-3, E-7과 동일) 재사용.
+- **edit_file에서 unicode escape 변환 시 한글 깨짐 risk 영구 등록 (작업원칙 #29 신설)**: edit_file의 oldText/newText가 영어/이모지만 포함하면 안전하지만, 한글이 newText에 다량 포함되면 escape 변환 과정에서 글자 단위 오류 발생 가능. **MD 갱신은 항상 write_file 직접 입력 또는 별도 파일 생성 후 Python 안전 삽입 패턴 사용**. 코드 edit는 영어 주석만 사용해 risk 자체 회피.
+
+### 결합 이점 (새싹셀러 → 파워셀러 성장 관점)
+1. 매일 08:00 KST cron이 24시간 경과 주문을 자동 동기화. 새싹셀러 수동 처리 부담 0.
+2. confirmation reminder widget (D+3~5)이 자동으로 신선한 DELIVERED orders 활용 가능.
+3. 한달리뷰 위젯 (A3-4b 예정)도 자동으로 월 단위 동기화된 데이터로 작동 가능.
+4. C-10 auto confirmation이 매일 신선한 PAID orders를 확인해 D+8 자동확정 이전에 수동 조치 가능.
+5. 파워셀러 조건 중 구매확정율 / 리뷰수 / 굿서비스 세 가지의 자동화 인프라 완성.
+
+### A3-4b 인계 범위 (다음 채팅 추천)
+- B 후보 (한달리뷰 UI) 진행 시 이제 sync 자동화가 보장되므로 MonthReviewWidget UI가 실제 데이터로 작동 가능.
+- B-1 (MonthReviewWidget UI 신규) + B-2 (혜택탭 E-2C 가이드) 분할 권장.
 
 ## 2026-05-06 세션 (이어받기) — Tailscale Funnel 아키텍처 구축 완료 ✅ (production 영구 정상화 인프라)
 

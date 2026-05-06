@@ -1,8 +1,9 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-06 (Tailscale Funnel 아키텍처 구축 완료 ✅ — production 영구 정상화 인프라. Vercel → Tailscale Funnel `https://macbook-pro.tail36c35f.ts.net` → 집 Mac home-proxy(launchd 자동시작) → 집 IP `219.248.15.46` → Naver API. End-to-end 검증: production sync HTTP 200 + synced=1. 작업원칙 #28 신설. commit `cf433e0` → origin/main. 다음 우선수위: A) production cron 정상화 / B) A3-4b 한달리뷰 UI / C) Sprint 6 E-13B Kakao 알림톡 UI 스캐폴드. 아래 "다음 새 채팅 시작 메시지 — 2026-05-06 Tailscale 이후" 섹션 참조)
-> ~~최종 업데이트 (구)~~: 2026-05-05 (워크플로우 재설계 Sprint Part A3-4a 완료 ✅ — 한달리뷰 백엔드 / month-review-pending lib + API + useMonthReviewPending SWR 훅 (15번째) / TSC 0 errors / API 200 검증 / 다음: 새 채팅에서 Part A3-4b — UI + 혜택탭 가이드 + Chrome MCP 검증)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C/D/E Part 1 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 + Part A3-1b UI 완료 ✅ (구매확정 리마인더 MVP 100% 완성) + Part A3-2 EventTimeline SWR 마이그 완료 ✅ + Part A3-3a 검색 조련사 SWR 마이그 완료 ✅ + Part A3-3b 정원 창고 SWR 마이그 완료 ✅ (페이지 SWR 확장 2/2 완료) + Part A3-4a 한달리뷰 백엔드 완료 ✅ (15번째 훅)**
-> **다음 작업: 워크플로우 재설계 Sprint Part A3-4b — MonthReviewWidget UI 신규 + 대시보드 Section 2 today 통합 + products/new 혜택탭 E-2C 영역 한달리뷰 운영 가이드 추가 + Chrome MCP 검증. 새 채팅에서 진행. 상세는 SESSION_LOG.md 관련 세션 + 답변 끝 인계 코드 블록 참조 (기존 A3-4 세션 메시지는 deprecated)**
+> 최종 업데이트: 2026-05-06 (폴더 구조 정리 + 작업원칙 #29 강화 완료 ✅ — 루트 KKOTIUM_*.md 3종을 `docs/plan/`으로 + `docs/api/` 보고서 2종을 `docs/research/`로 이동, 각 폴더에 README.md 신규. 한글 처리 5가지 규칙 영구 등록. 직전 cron sync 통합 commit `63d8c6e` + production 검증 HTTP 200/4.4초/synced=1 완료)
+> ~~최종 업데이트 (구)~~: 2026-05-06 (cron sync 통합 완료 — 7-day 0-call 이슈 근본 해결)
+> ~~최종 업데이트 (구)~~: 2026-05-06 (Tailscale Funnel 아키텍처 구축 완료 — production 영구 정상화 인프라)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ | Phase E (E-7, E-1, E-3, E-8) ✅ | Phase E+ Sprint 1·2·3·4·5 ✅ | Sprint 6 E-15 전체 완료 ✅ | 옵션 C/D/E Part 1 SWR 확장 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a 완료 ✅ | Tailscale Funnel architecture ✅ | cron sync 통합 ✅ + production 검증 ✅ | 폴더 구조 정리 + 작업원칙 #29 강화 ✅**
+> **다음 작업: A3-4b 한달리뷰 UI 분할 진행 (B-1 MonthReviewWidget UI → 단독 채팅 1회). 매출 임팩트 최대 (새싹셀러 → 파워셀러 성장 핵심 — 리뷰수 직접 견인). 또는 Sprint 6 E-13B Kakao 알림톡 UI 스캐폴드. 새 채팅에서 진행. 상세는 `docs/plan/SESSION_LOG.md` "2026-05-06 세션 (폴더 정리 + 작업원칙 #29 강화)" + 답변 끝 인계 코드 블록 참조 (이전 cron sync 통합 메시지는 deprecated)**
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
@@ -15,40 +16,88 @@
 
 ---
 
-## 🎯 다음 새 채팅 시작 메시지 — 2026-05-06 Tailscale 이후 (현재 유효 ✅)
+## 🎯 다음 새 채팅 시작 메시지 — 2026-05-06 폴더 정리 + #29 강화 이후 (현재 유효 ✅)
 
-> **직전 세션(2026-05-06 이어받기) 결과 — commit `cf433e0` 완료**:
-> - **production 영구 정상화 인프라 구축**: Vercel → Tailscale Funnel `https://macbook-pro.tail36c35f.ts.net` → 집 Mac home-proxy(`scripts/home-proxy.mjs` 267줄, launchd PID 56146 자동시작 + crash 재시작) → 집 IP `219.248.15.46` → Naver API.
-> - **검증 완료**: production `/api/naver/orders?manual=1&hours=24` → HTTP 200, 1.7s, synced=1, total=1. 외부 인터넷에서 warm health 12-15ms, Naver API 220ms.
-> - **산출물**: `scripts/home-proxy.mjs` + `scripts/com.kkotium.home-proxy.plist` + `scripts/install-home-proxy.sh` (3개 NEW) + `src/lib/naver/api-client.ts` (PROXY mode token 라우팅 추가) + `supabase/functions/naver-proxy/index.ts` (v2 보존).
-> - **Vercel ENV 업데이트 완료**: `NAVER_PROXY_URL=https://macbook-pro.tail36c35f.ts.net` (Production/Preview/Development).
-> - **작업원칙 #28 신설**: "App is deployed to Vercel production. NEVER propose architectures requiring `npm run dev` as production runtime."
-> - 자세한 기록은 KKOTIUM_SESSION_LOG.md 최상단 "2026-05-06 세션 (이어받기) — Tailscale Funnel 아키텍처 구축 완료" 참조.
+> **직전 세션(2026-05-06 폴더 정리 + #29 강화) 결과**:
+> - **폴더 구조 재정리**: 루트의 `KKOTIUM_PROGRESS.md`/`KKOTIUM_ROADMAP.md`/`KKOTIUM_SESSION_LOG.md` 3종을 `docs/plan/PROGRESS.md`/`ROADMAP.md`/`SESSION_LOG.md`로 이동(파일명 단축). `docs/api/COMMERCE_API_*.md` 2종을 `docs/research/`로 이동. 빈 `docs/api/` 폴더 삭제.
+> - **README 2개 신규**: `docs/plan/README.md`(매 세션 정독 가이드 + 작업원칙 #29 5가지 규칙), `docs/research/README.md`(보고서 인덱스 + 사용 패턴 + 새 보고서 추가 가이드).
+> - **작업원칙 #29 강화 (5가지 규칙)**: (a) edit_file의 newText에 한글 다량 포함 절대 금지 (b) MD 갱신은 write_file 직접 입력 또는 별도 임시 파일 + Python 안전 삽입 (c) 코드 edit는 영어 주석/타입만 사용 (d) 셸 명령에 한글 직접 입력 금지 (e) 한글 작업 후 즉시 grep 검증 의무화.
+> - **직전 cron sync 통합** (commit `63d8c6e`): production 검증 완료 — HTTP 200, 4.4초, naverSync.ok=true, synced=1, total=1, 24시간 윈도우 정확. 매일 08:00 KST 자동 동기화 보장.
+> - 자세한 기록은 `docs/plan/SESSION_LOG.md` 최상단 "2026-05-06 세션 (폴더 정리 + 작업원칙 #29 강화)" 참조.
 
 > **현재 infra 상태** (관리 명령어):
 > - home-proxy: `launchctl list | grep kkotium` (active 확인) / `tail -f /tmp/kkotium-home-proxy.log` (로그) / `curl http://127.0.0.1:3001/health` (로컬 헬스)
 > - Tailscale: `tailscale funnel status` (Funnel ON 확인)
-> - Production: `curl "https://kkotium-garden.vercel.app/api/naver/orders?manual=1&hours=24"` (동기 검증)
+> - Production cron: `curl https://kkotium-garden.vercel.app/api/cron/daily -H "Authorization: Bearer kkotium2026cron"` (수동 트리거 + 검증)
+> - Production sync (단독): `curl "https://kkotium-garden.vercel.app/api/naver/orders?manual=1&hours=24"`
 > - Mac 재부팅 시 home-proxy + Tailscale 모두 자동 시작 (수동 작업 불필요)
 
 > **다음 세션 작업 후보 (꽃졔님 선택 필요)**:
 >
-> | 후보 | 작업 내용 | 추정 분량 | 끊지마 관점 |
+> | 후보 | 작업 내용 | 추정 분량 | 컨텍스트 안전 |
 > |------|------|------|------|
-> | **A. production cron 정상화** | `vercel.json` cron 표현식 + `CRON_SECRET` + Hobby plan 정책 검증. 직전 7일 0회 호출 이슈 원인 추적. Tailscale 해결로 IP 차단 이슈 제거되었으니 cron 자체 문제 독립 레이아웃 | M | 단일 세션 충분 |
-> | **B. A3-4b 한달리뷰 UI** | MonthReviewWidget UI 신규 + 대시보드 Section 2 today 통합 + `products/new` 혜택탭 E-2C 영역 한달리뷰 운영 가이드 추가 + Chrome MCP 검증 | L | 2-3개 세션 분할 권장 |
-> | **C. Sprint 6 E-13B Kakao 알림톡** | `settings/kakao/page.tsx` UI 스캐폴드 (Solapi API Key/Secret/PFID 입력 필드, 키 없을 때 비활성화). 월 50건 도달 시 실제 전송 활성화. | M | 단일 세션 충분 |
+> | **B-1. A3-4b 한달리뷰 UI 신규** | sync 자동화 완성 → MonthReviewWidget UI 실제 데이터 작동. `src/components/dashboard/MonthReviewWidget.tsx` 신규 + `dashboard/page.tsx` Section 2 today 통합 + Chrome MCP 검증. **매출 임팩트 최대** (새싹셀러 → 파워셀러 성장 핵심 — 리뷰수 직접 견인). | M | 단독 세션 1회 충분 |
+> | **B-2. A3-4b 한달리뷰 혜택탭 E-2C 가이드** | `products/new` 혜택탭에 한달리뷰 운영 가이드 추가 (B-1 후속). 분할 권장 — B-1 완료 후 단독 진행. | M | 단독 세션 1회 충분 |
+> | **C. Sprint 6 E-13B Kakao 알림톡 UI 스캐폴드** | `settings/kakao/page.tsx` UI 스캐폴드 (Solapi API Key/Secret/PFID 입력 필드, 키 없을 때 비활성화). 월 50건 도달 시 실제 전송 활성화. | M | 단일 세션 충분 |
+
+> **꽃졔님 새싹셀러 컨텍스트 추천**: **B-1 (MonthReviewWidget UI 신규)** 가 매출 임팩트 가장 큼. cron sync 통합으로 데이터 자동화가 완성된 지금이 한달리뷰 UI를 만들 최적 시점.
 
 > **세션 시작 시 추천 프롬프트** (아래 그대로 복사해서 새 채팅에 붙여넣기):
 >
 > ```
-> 꽃틔움 가든 개발 이어서 진행합니다. KKOTIUM_PROGRESS.md와 KKOTIUM_ROADMAP.md를 읽고 현재 상태를 파악한 후 브리핑해주세요.
-> ```
+> 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md를 읽고 현재 상태를 파악한 후 브리핑해주세요.
 >
-> Claude가 자동으로:
-> - PROGRESS.md 헤더와 ROADMAP.md 헤더 확인
-> - SESSION_LOG.md 최상단 두 세션 (Tailscale 구축 + A3-4-DIAG) 확인
-> - 위 작업 후보 A/B/C 제시 → 꽃졔님 선택 후 진행
+> [폴더 구조 변경 안내 — 2026-05-06]
+> 계획서 3종은 루트가 아닌 docs/plan/ 폴더에 있습니다 (파일명 단축: PROGRESS.md / ROADMAP.md / SESSION_LOG.md).
+> 리서치/진단 보고서는 docs/research/ 폴더에 있습니다 (매 세션 정독 불필요, 필요할 때만 grep/read).
+> 각 폴더에 README.md가 있어 사용 가이드 안내합니다.
+>
+> [직전 세션 결과 — 2026-05-06 폴더 정리 + 작업원칙 #29 강화]
+> commit (본 세션 마무리 commit) → origin/main, working tree clean, TSC 0 errors.
+> 폴더 구조 재정리 + README 2개 + 작업원칙 #29 강화 5가지 규칙 등록.
+> 그 직전 cron sync 통합 commit 63d8c6e + production 검증 HTTP 200/4.4초/synced=1 완료.
+>
+> [다음 우선순위 — 꽃졔님 선택]
+> B-1. A3-4b 한달리뷰 UI 신규 (MonthReviewWidget) — 매출 임팩트 최대, 추천
+> B-2. A3-4b 한달리뷰 혜택탭 E-2C 가이드 (B-1 후속, 분할 권장)
+> C. Sprint 6 E-13B Kakao 알림톡 UI 스캐폴드
+>
+> 당신은 10년 차 네이버 스마트스토어 파워셀러 경험이 있는 풀스택 시니어 개발자이자, 사용자 경험과 전환율 중심의 UI/UX 웹 디자이너입니다. 운영 효율성과 매출 극대화를 이끕니다. 불필요하거나 단순한 반복 작업을 줄이고 실무 효율을 높일 수 있는 구조의 최신 SEO, ROI, 네이버 쇼핑 검색 알고리즘에 최적화된 스마트스토어 관리 앱 UI/UX 구조를 설계합니다. 항상 현재 코드의 구조와 내용을 확인하며 작업을 하며, 작업 시 사용할 수 있는 모든 기능, 스킬, 커넥터 등을 사용하여 최선의 작업을 진행합니다. 문제가 발생하면 근본적인 원인을 찾아서 해결할 수 있도록 합니다 — 제품 하나의 문제로 볼 것이 아니라 전체적인 앱 기능의 문제까지 염두에 두고 체크합니다 (작업원칙 26번 일반화). 현재 꽃졔님은 파워셀러가 아닌 새싹셀러이지만 파워셀러로 성장하기 위한 스텝을 위한 앱 작업 중이라는 걸 염두해주세요.
+>
+> 작업 완료 시 테스트를 진행해서 실질적으로 앱을 사용해서 실무적으로 작업할 때 생기는 문제가 없는지 브라우저 테스트(Chrome MCP) 및 확인을 제대로 한 후 문제가 없으면 다음 작업으로 넘어갈 수 있도록 합니다. 실질적으로 작업할 수 없을 때(MCP 응답 없음, 권한 부족 등)는 거짓말 하지 말고 꼭 꽃졔님께 정직하게 요청합니다. 컨텍스트 한계로 도중에 작업이 끊기며 재시도하면서 중복 작업을 하는 오류가 나지 않도록 작업량을 나눠서 새로운 채팅에서 진행할 수 있도록 합니다. 계획이 업데이트되고 작업을 마무리할 때 같은 꽃틔움 가든 개발 프로젝트의 새 채팅에서도 바로 이어서 작업할 수 있도록 누락 없이 docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md에 업데이트해서 저장합니다.
+>
+> 작업 시작 전 필수 (작업원칙 21~29 적용):
+> 1. (a) git rev-parse HEAD origin/main → 두 값 같은지 확인
+>    (b) git --no-pager log --oneline -10 → 이번 메시지에 명시되지 않은 commit 있으면 읽고 대응
+>    (c) git status 깨끗한지 확인
+>    (d) lsof -i :3000 또는 curl http://localhost:3000 → dev 서버 상태 확인
+>    (e) 이 메시지의 가정과 실제가 다르면 즉시 정직 보고 후 재분석
+>    (f) 본 세션 commit은 그 turn 안에서 push까지 한 줄로 완료
+>    (g) edit_file에서 한글 매칭 실패 시 Python 수동 NFC 정규화 절대 금지 → git restore + write_file 한글 직접 입력
+>    (h) edit_file 에러 응답 받아도 파일에 일부 적용될 수 있음 → head/grep/xxd로 raw 검증 우선
+>    (i) 문제 분석은 항상 (a) 즉각 원인 (b) 일반화 원인 두 단계로
+>    (j) 브라우저 테스트는 API 200 응답으로 대체 불가 — Chrome MCP로 실제 화면/숫자/동작 검증 필수
+>    (k) 작업원칙 #27: 기존 기능 0개 삭제 — 위치 재배치 OK, 삭제/축소 0
+>    (l) 메모리 내 작업원칙 — heredoc 절대 금지
+>    (m) 이어받기 세션 사전 점검 강화 — 직전 채팅이 commit 직전 중단된 경우 git status로 working tree 보존 확인 후 코드 재작성 절대 금지
+>    (n) deferred 도구 첫 호출 에러 응답 받아도 파일에 적용 가능 — namespace 중복 명령 절대 금지 + edit 후 즉시 raw 검증
+>    (o) MD 한글 직접 입력 — 정규화 절대 금지 (A3-3a 사고 교훈)
+>    (p) Claude Desktop MCP 4분 hang 패턴 — iterm/Filesystem 양쪽 모두 hang 시 재시도 금지 + Claude Desktop 재시작 요청
+>    (q) **작업원칙 #29 (강화 2026-05-06)**: 한글 처리 5가지 규칙 — (a) edit_file의 newText에 한글 다량 포함 절대 금지 (b) MD 갱신은 write_file 직접 입력 또는 별도 임시 파일 + Python 안전 삽입 (c) 코드 edit는 영어 주석/타입만 사용 (d) 셸 명령에 한글 직접 입력 금지 (e) 한글 작업 후 즉시 grep 검증 의무화 (검증 패턴: `꽃젤|혁섭|쿠드|식타|릴고|헌서|위젝|스칵|정과|쿠두`)
+>    (r) **작업원칙 #28 production runtime**: dev server를 production runtime으로 사용 금지. Tailscale Funnel + home-proxy 인프라 활용.
+>    (s) **주석-코드 교차 검증 (#26 확장)**: cron 또는 다른 라우트 헤더 주석 (예 "Triggers: ...")은 의도 명시 — 실제 코드 단계와 교차 검증 의무화.
+> 2. docs/plan/PROGRESS.md 상단 헤더 + 작업원칙 #29 섹션 정독
+> 3. docs/plan/SESSION_LOG.md 최상단 "2026-05-06 세션 (폴더 정리 + 작업원칙 #29 강화)" + 직전 "cron sync 통합" 정독
+> 4. 꽃졔님 선택한 후보(B-1/B-2/C)에 따른 대상 파일 정독
+> 5. 작업 계획 브리핑 후 꽃졔님 승인 받고 시작
+>
+> [후보별 단계 권장]
+> - 후보 B-1 (MonthReviewWidget UI): src/lib/month-review-pending.ts 라이브러리 + /api/orders/month-review-pending route 정독 → 단계 1 신규 컴포넌트 src/components/dashboard/MonthReviewWidget.tsx 작성 + 단계 2 dashboard/page.tsx Section 2 today 통합 + 단계 3 Chrome MCP 라이브 검증 + 단계 4 commit + push.
+> - 후보 B-2 (혜택탭 E-2C 가이드): products/new 혜택탭 영역에 한달리뷰 운영 가이드 추가 (B-1 패턴 재사용) + Chrome MCP 검증.
+> - 후보 C (Kakao UI 스캐폴드): src/app/settings/kakao/page.tsx 신규 + Solapi API Key/Secret/PFID 입력 필드 + 키 없을 때 disabled 상태 UI + monthlyDeliveredCount API 활용.
+>
+> 답변 마지막에 복붙용 인계 메시지를 코드 블록으로 항상 명시
+> ```
 
 ---
 

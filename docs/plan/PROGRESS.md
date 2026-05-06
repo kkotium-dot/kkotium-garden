@@ -1,9 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-06 (Tailscale Funnel 아키텍처 구축 완료 ✅ — Vercel production → Tailscale Funnel `https://macbook-pro.tail36c35f.ts.net` → 집 컴퓨터 home-proxy(launchd 자동시작 PID 56146, port 3001) → 집 IP `219.248.15.46` → Naver API. End-to-end 검증: warm health 12-15ms, Naver API 220ms, 외부 인터넷에서 정상 응답. Vercel `NAVER_PROXY_URL` Tailscale URL로 업데이트 완료. **작업원칙 #28 신설** — dev server를 production runtime으로 사용 금지)
-> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 71301b2 (origin/main) | working tree: M src/lib/naver/api-client.ts + M supabase/functions/naver-proxy/index.ts + NEW scripts/home-proxy.mjs + NEW scripts/com.kkotium.home-proxy.plist + NEW scripts/install-home-proxy.sh
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ 전체 완료 | Phase E 진행 중 (E-7, E-1, E-3, E-8 완료) | Phase E+ Sprint 1·2·3·4·5 완료 + Sprint 6 E-15 전체 완료 ✅ + 옵션 C 사이드바 SWR 실시간화 완료 ✅ + 옵션 D 대시보드 위젯 SWR 확장 완료 ✅ + 옵션 E Part 1 MID 3개 위젯 SWR 확장 완료 ✅ + 옵션 E Part 2 → "워크플로우 재설계 Sprint"로 흡수 + 워크플로우 재설계 Sprint Part A1a + A1b + A2a + A2b 완료 ✅ + Part A3-1a 백엔드 + Part A3-1b UI 완료 ✅ (구매확정 리마인더 MVP 100% 완성) + Part A3-2 EventTimeline SWR 마이그 완료 ✅ + Part A3-3a 검색 조련사 SWR 마이그 완료 ✅ + Part A3-3b 정원 창고 SWR 마이그 완료 ✅ (페이지 SWR 확장 2/2 완료) + Part A3-4a 한달리뷰 백엔드 완료 ✅ (15번째 훅) + A3-4-DIAG 완료 ✅ (sync 정상화) + Tailscale Funnel architecture 완료 ✅ (production 영구 정상화 인프라)**
-> **다음 작업 (우선순위 순)**: 1) commit + push → Vercel auto-deploy 완료 후 production naver-doctor + sync 검증 (집 IP 경유로 GREEN 예상). 2) **production cron 정상화** — 직전 세션에서 발견된 7일 0회 호출 이슈. `vercel.json` cron + `CRON_SECRET` + Hobby plan 정책 검증. 3) **A3-4b 한달리뷰 UI** — sync 정상화 활용해 진행 가능. 4) Sprint 6 E-13B Kakao 알림톡 (월 50건 도달 시 활성화).**
-> **본 세션(2026-05-06 Tailscale Funnel) 산출물**: 1) `scripts/home-proxy.mjs` 신규(267줄) — 자체완결 Node.js 프록시 (bcryptjs OAuth + token caching + Naver relay, localhost:3001 only). 2) `scripts/com.kkotium.home-proxy.plist` 신규 — launchd 자동시작 + crash 재시작 (PID 56146 active). 3) `scripts/install-home-proxy.sh` 신규 — 6단계 자동화 설치 스크립트 (재설치 안전). 4) `src/lib/naver/api-client.ts` 수정 — token도 PROXY 경유하도록 getAccessToken/naverRequest 분기 재설계 (PROXY mode = POST {action:'token'} 먼저, 그 다음 POST {path,method,body} | Direct mode = bcrypt sign 후 직접 fetch). 5) Tailscale Funnel 활성화 (`https://login.tailscale.com/f/funnel?node=...` Chrome MCP 클릭 → "Funnel is ready to use") → `https://macbook-pro.tail36c35f.ts.net` 영구 URL 발급. 6) Vercel `NAVER_PROXY_URL` 환경변수 업데이트 (Supabase URL → Tailscale URL, all 3 environments). 7) 작업원칙 #28 신설 ("dev server를 production runtime으로 사용 금지").**
+> 최종 업데이트: 2026-05-06 (폴더 구조 정리 + 작업원칙 #29 강화 완료 ✅ — 루트의 KKOTIUM_*.md 3종을 `docs/plan/`으로 이동, `docs/api/` 보고서 2종을 `docs/research/`로 이동, 각 폴더에 README.md 신규. 한글 깨짐 근본 해결을 위한 작업원칙 #29를 5가지 규칙으로 강화. 직전: cron sync 통합 commit `63d8c6e` + production 검증 HTTP 200/4.4초/synced=1 완료)
+> TSC: 0 errors | 배포: https://kkotium-garden.vercel.app | 직전 commit: 63d8c6e (cron sync) → 본 세션 commit 예정 (폴더 정리 + 작업원칙 강화) | working tree: dirty (rename 5건 + 신규 2건 + 본 헤더 갱신)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ | Phase E (E-7, E-1, E-3, E-8) ✅ | Phase E+ Sprint 1·2·3·4·5 ✅ | Sprint 6 E-15 전체 완료 ✅ | 옵션 C/D/E Part 1 SWR 확장 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a 완료 ✅ | Tailscale Funnel architecture ✅ | cron sync 통합 ✅ + production 검증 ✅ | 폴더 구조 정리 + 작업원칙 #29 강화 ✅**
+> **다음 작업 (우선순위 순)**: 1) **A3-4b 한달리뷰 UI 분할 진행** — sync 자동화 보장 + 폴더 구조 깔끔. B-1 (MonthReviewWidget UI 신규) → 단독 채팅 1회. B-2 (혜택탭 E-2C 가이드) → 단독 채팅 1회. **매출 임팩트 최대 — 새싹셀러 → 파워셀러 성장 핵심 (리뷰수 직접 견인)**. 2) **Sprint 6 E-13B Kakao 알림톡 UI 스캐폴드** — `settings/kakao/page.tsx` 신규. 월 50건 도달 시 활성화.
+> **본 세션 산출물 (2026-05-06 폴더 정리 + #29 강화)**: (1) `docs/plan/` 신규 폴더 + `KKOTIUM_PROGRESS.md`/`KKOTIUM_ROADMAP.md`/`KKOTIUM_SESSION_LOG.md` → `PROGRESS.md`/`ROADMAP.md`/`SESSION_LOG.md`로 이동(파일명 단축, 폴더 컨텍스트로 명확). (2) `docs/research/` 신규 폴더 + `docs/api/` → `docs/research/`로 이동 + 빈 `docs/api/` 폴더 삭제. (3) `docs/plan/README.md` 신규(매 세션 정독 가이드 + 작업원칙 #29 5가지 규칙). (4) `docs/research/README.md` 신규(보고서 인덱스 + 사용 패턴 + 새 보고서 추가 가이드). (5) **작업원칙 #29 강화** — 한글 처리 5가지 규칙(MD/코드/셸/Python/검증) + 매 작업 후 grep 검증 의무화 패턴 등록.
 > **수수료 개편 (2025.06.02): 100% 완료** (Block 1~4 + redeploy + refactor + cleanup, 7 commits)
 > 전략 참고문서: `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵` (프로젝트 파일)
 > 리서치 참고문서 (2026-04-16 세션):
@@ -11,6 +11,30 @@
 >   2. `네이버 스마트스토어 파워셀러의 2025-2026 실전 무기 총정리`
 >   3. `카카오 비즈니스 채널 2025-2026 완전 가이드`
 >   4. `스마트스토어 셀러의 무료 알림톡, 정말 가능한가`
+
+---
+
+## ⚠️ 작업원칙 #29 (한글 처리 절대 규칙) — 2026-05-06 강화 5가지
+
+본 프로젝트는 한글 사용이 많아 한글 깨짐 사고가 반복 발생했습니다. 도구의 인코딩 layer 한계가 근본 원인이며, 워크플로우 차원의 회피 패턴으로 100% 방지 가능합니다.
+
+**5가지 규칙 (강제 적용)**:
+
+(a) **edit_file의 newText에 한글 다량 포함 절대 금지** — escape 변환 layer에서 글자 단위 오류 발생 가능 (사례: "꽃젤" / "혁섭셀러" / "쿠드" / "릴고시키는" 등)
+
+(b) **MD 갱신은 항상 write_file 직접 입력** 또는 별도 임시 파일 + Python 안전 삽입 패턴 사용. edit_file은 oldText/newText 모두 영어/구두점만일 때만 사용 가능
+
+(c) **코드 edit는 영어 주석/타입만 사용** — 한글 자체 회피로 risk 0 (작업원칙 #25 일관)
+
+(d) **셸 명령에 한글 직접 입력 금지** — `echo "꽃졔"` 대신 한글은 파일에 작성 후 `cat .tmp_message.txt` 또는 `python3 -c "with open(...) as f: print(f.read())"` 패턴
+
+(e) **한글 작업 후 즉시 grep 검증 의무화** — 검증 패턴:
+  ```bash
+  grep -nE "꽃젤|혁섭|쿠드|식타|릴고|헌서|위젝|스칵|정과|쿠두" docs/plan/*.md docs/research/*.md
+  ```
+  결과 0건이어야 정상. 매칭 발견 시 즉시 git restore + write_file 패턴으로 재작성.
+
+---
 
 ## 2026-05-05 세션 요약 — 워크플로우 재설계 Sprint Part A3-3a 완료 (검색 조련사 SWR 마이그레이션) ✅
 

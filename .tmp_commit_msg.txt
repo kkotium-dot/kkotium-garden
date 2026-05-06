@@ -1,0 +1,48 @@
+chore(docs): reorganize plan/research folders + reinforce work principle #29
+
+Folder reorganization:
+- KKOTIUM_PROGRESS.md / KKOTIUM_ROADMAP.md / KKOTIUM_SESSION_LOG.md (root)
+  -> docs/plan/PROGRESS.md / ROADMAP.md / SESSION_LOG.md
+  (shorter names, folder context disambiguates)
+- docs/api/COMMERCE_API_403_ROOT_CAUSE.md
+- docs/api/COMMERCE_API_ORDER_DIAGNOSIS.md
+  -> docs/research/ (api was too narrow scope, research is more general)
+- empty docs/api/ removed
+
+New READMEs (2):
+- docs/plan/README.md: must-read-every-session guide + work principle #29
+  + new chat workflow + file maintenance policy
+- docs/research/README.md: report index + on-demand grep usage pattern
+  + new report addition guide (4-section structure)
+
+Work principle #29 (Korean text handling) reinforced with 5 rules:
+(a) NEVER include large Korean text in edit_file newText
+    (escape layer can corrupt characters)
+(b) MD updates: always use write_file direct input
+    or tmp file + Python safe insert pattern
+(c) Code edits: English comments/types only (avoid Korean entirely)
+(d) Shell commands: no Korean inline (use cat tmp_message.txt instead)
+(e) After Korean work: immediate grep verification mandatory
+    Pattern: kkot-jel hyukseop kude sikta rilgo heonseo wijek skak jungkwa kudu
+    (each Korean corruption pattern documented in ASCII transliteration)
+
+Root cause for #29 reinforcement: repeated Korean character corruption
+incidents in edit_file (e.g. kkot-jel instead of kkot-je, hyukseop-seller
+instead of saessak-seller). Tool encoding layer limitation. Workaround:
+workflow patterns to avoid the failure mode entirely.
+
+Documentation updates:
+- PROGRESS.md / ROADMAP.md / SESSION_LOG.md headers updated to reflect
+  new folder structure + work principle #29 5 rules + new chat handoff
+  message with updated paths
+- Previous Tailscale + cron sync handoff messages preserved as deprecated
+
+Verification:
+- TSC: 0 errors
+- Integrity grep: zero new Korean corruption
+  (6 matches all intentional #29 sample text or pattern definition)
+- File rename count: 5 (3 RM + 2 R)
+- New file count: 2 (READMEs)
+- Header updates: 3 (PROGRESS / ROADMAP / SESSION_LOG)
+
+No code changes. Documentation and process improvements only.
