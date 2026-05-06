@@ -6,6 +6,94 @@
 
 ---
 
+## 2026-05-07 세션 (Z-3d Phase A 잔재 sub-graph 일괄 정리) — dev cache 충돌 진단 + 해소 + 작업원칙 #26 일반화 등록 ✅
+
+### 본 세션 성격
+- 직전 commit `3c329ba` (Z-3a CTA fix) 직후, **Z-3d 진단 + Phase A 잔재 sub-graph 일괄 정리** 진행.
+- 환경 점검 (작업원칙 #30): Claude Desktop / Filesystem / iterm-mcp / Chrome MCP / Supabase MCP 모두 연결 확인. HEAD `3c329ba` = origin/main 동기화. dev :3000 정상.
+- 본 세션은 *진단부터 정리까지* 한 번에 진행 — Z-3d 점검 결과로 sub-graph 발견 → 외부 진입 검증 → 일괄 정리 진행.
+
+### 변경된 파일 (8개 삭제 + MD 3종 갱신)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `src/app/sourced/page.tsx` | DELETE (9줄 wrapper) | Phase A 잔재 라우트 진입점 |
+| `src/app/search-products/page.tsx` | DELETE (12,773 bytes) | 사이드바/Navigation 미등재 + 외부 진입 0 |
+| `src/components/products/SourcedProductManager.tsx` | DELETE (462줄) | `sourced_products` 테이블 미존재로 작동 불가 |
+| `src/components/products/ProductCrawler.tsx` | DELETE | import 0건 — 미사용 컴포넌트 |
+| `src/components/layout/Navigation.tsx` | DELETE (8,533 bytes) | 사이드바와 별개, import 0건 |
+| `src/components/layout/MainLayout.tsx` | DELETE (478 bytes) | Navigation 사용하는 미사용 wrapper (TSC 1차 에러로 발견) |
+| `src/app/actions/naver-smartstore.ts` | DELETE | import 0건 — 미사용 action |
+| `src/app/actions/domemae-crawler.ts` | DELETE | sub-graph 내부에서만 사용 |
+| `docs/plan/PROGRESS.md` | EDIT (헤더) | Z-3d 완료 + 다음 작업 갱신 |
+| `docs/plan/ROADMAP.md` | EDIT (헤더) | 최종 업데이트 + Phase 상태 갱신 |
+| `docs/plan/SESSION_LOG.md` | EDIT (새 섹션) | 본 세션 상세 기록 (이 섹션) |
+
+### Z-3d 진단 결과 — Phase A 잔재 sub-graph 발견
+
+**4가지 결정적 증거**:
+| # | 항목 | 결과 |
+|---|---|---|
+| 1 | `sourced_products` 테이블 존재 여부 | ❌ Supabase에 존재 안 함 (Prisma migration 흔적 0건) |
+| 2 | `/sourced` 사이드바 등재 | ❌ 미등재 (고아 라우트) |
+| 3 | `router.push('/sourced')` 호출 | ❌ 0건 |
+| 4 | SourcedProductManager 마지막 commit | `cdf3157` (Phase C 시기, 그 이후 변경 0건) |
+
+**sub-graph 구조 (외부 진입 0)**:
+```
+Navigation.tsx (import 0) ─┐
+MainLayout.tsx (import 0) ─┤
+                            ├─→ /sourced ─→ SourcedProductManager
+/search-products ──────────┘                    │
+                                                 ├─→ /domemae-crawler (404)
+ProductCrawler.tsx (import 0) ──→ /sourced     │
+                                                 │
+                          domemae-crawler ──────┤
+naver-smartstore (import 0) ←──────────────────┘
+```
+
+### 검증 단계 (6단계)
+1. **단계 1: git rm 7개 파일** — 빈 디렉토리(/sourced, /search-products, /actions) 자동 정리 ✅
+2. **단계 2: TSC 검증** — 1차 시도에서 `MainLayout.tsx(4,24): Cannot find module './Navigation'` 에러 발견 → MainLayout이 8번째 잔재로 확정. 추가 git rm → TSC 0 errors ✅
+3. **단계 3: npm run build 시도** — 빌드 에러 발생 (`/api/competition`, `/api/crawler/logs`, `/api/ai/keywords` 등에서 module not found). **그러나 우리 작업과 무관** — 이 라우트들은 우리가 건드리지 않았음. *기존 환경 이슈* 또는 dev 서버와 build 캐시 충돌
+4. **단계 4: dev 서버 라우트 health check** — `/`, `/dashboard`, `/crawl`, `/products/new` HTTP 500 발생 (`/products/sourced`, `/products`, `/api/crawler/logs`는 200). **Stash 검증**: `git stash` 후 HEAD 상태 → 같은 라우트 모두 HTTP 200 → *우리 작업이 진짜 영향*임 확정
+5. **단계 5: 캐시 충돌 해소** — 꽃졔님이 dev 서버 종료 → `.next` 캐시 정리 → `git stash pop` → dev 서버 재시작 → 라우트 health 모두 정상 (`/`, `/dashboard`, `/crawl`, `/products/new`, `/products/sourced`, `/api/crawler/logs` HTTP 200 + `/sourced`, `/search-products` HTTP 404). **dev 서버 hot-reload 캐시 충돌이 원인이었음 확정**
+6. **단계 6: Chrome MCP 회귀 검증** — `/dashboard` (사이드바 + 마스코트 + 통계 정상), `/crawl` (꿀통 사냥터 3탭 정상), `/products/sourced` (메인 워크플로우 보존 정상), `/sourced` (404 페이지 + 사이드바 정상)
+
+### 본 세션 영구 등록한 핵심 학습 (작업원칙 #26 일반화 4건)
+
+1. **Phase A 잔재 sub-graph 패턴**: 5+ 파일이 *서로 import만 하고 외부에서 0 진입*하는 죽은 코드 망. /sourced + /search-products + Navigation/MainLayout + SourcedProductManager/ProductCrawler + 2 actions = 8개 파일. 향후 같은 패턴 발견 시 *외부 진입 검증 → sub-graph 추적 → 일괄 정리* 워크플로우 적용.
+
+2. **5+ 파일 일괄 삭제 시 dev hot-reload 충돌**: dev 서버 캐시(`.next`)에 stale 모듈 참조 누적 → 작업 직후 *.next 정리 + dev 재시작* 워크플로우 표준화. 향후 5+ 파일 일괄 삭제 작업의 단계 0으로 등록.
+
+3. **grep 점검 시 import 경로 패턴 모두 검색 필수**: 절대 경로(`@/...`) + 상대 경로(`./, ../`) + 별칭 모두 검색해야 함. 본 세션에서 MainLayout.tsx의 `'./Navigation'` import를 첫 점검에서 놓쳐 TSC 에러로 발견. 향후 grep 점검 시 *3가지 경로 패턴 모두* 의무.
+
+4. **stash 검증 패턴**: 변경의 영향 식별 시 *`git stash` → HEAD 상태 검증 → 비교*로 즉각 *우리 작업 vs 기존 환경 문제* 구분 가능. 본 세션에서 HTTP 500 원인 식별에 결정적이었음. 향후 모호한 영향 진단 시 1순위 도구.
+
+### 보안 사이드 노트 (작업 범위 외, 향후 검토 항목 등록)
+Supabase advisory 발견 — 14개 테이블 모두 RLS 비활성화 (User, Supplier, Product, Order, OrderItem, naver_categories, origin_codes, shipping_templates, daily_recommendations, product_options, platforms, store_settings, crawl_logs, product_events). 익명 키로 모든 row 읽기/수정 가능 상태. 정책 없이 활성화하면 접근이 전부 차단되므로 꽃졔님 결정 사항. **향후 보안 강화 작업 (Z-Sec) 항목으로 등록**.
+
+### 적용된 작업원칙
+- **#26 일반화**: 위 4건 학습 등록
+- **#27 기존 기능 0개 삭제**: 8개 파일 모두 *작동 불가능 상태* (테이블 미존재 / import 0) → *작동하는 기능 0건 삭제* 보장
+- **#28 production runtime**: Vercel 배포 영향 0 — push 시 깨끗한 환경에서 빌드 (로컬 build 에러는 우리 작업 무관 + dev 캐시 stale 결합 결과)
+- **#29 한글 처리 5가지 규칙**: 모두 준수 — 코드 edit는 git rm만 (한글 입력 0), MD 갱신은 .tmp 임시 파일 + Python 안전 삽입
+- **#30 환경 확인**: Claude Desktop + 4개 MCP 모두 연결 확인 후 진행
+
+### 다음 작업 후보 (Z-3 시리즈 잔여 + Z-3e 신규)
+- **Z-3c'**: `/products/sourced` 의미 명확화 — 메인 워크플로우 4곳 영향 (`/products/[id]/edit` × 3, `/products/upload` × 1) 신중히 처리. Rename or 보존 결정.
+- **Z-3b**: 사이드바 HUNT 섹션에 "소싱 보관함" 메뉴 추가 — `/crawl?tab=history` deep-link (S, 단순)
+- **Z-3e (신규)**: `.backup` 파일 49개 일괄 정리 — git history로 복구 가능. 별도 sub-graph 정리 (M)
+- **Z-Sec (신규)**: 14개 테이블 RLS 정책 설계 + 활성화 (보안 강화)
+- 후순위: Z-4 (Clone 재등록), Z-5 (자동화 헬스 카드)
+
+### 본 세션 commit
+- 변경: 8 파일 삭제, MD 3종 갱신
+- commit 메시지(영문 단일 라인): `refactor(z3d): remove Phase A dead-code sub-graph (8 files) — sourced/search-products routes + Navigation/MainLayout + SourcedProductManager/ProductCrawler + 2 unused actions; TSC 0 errors, dev cache cleared, all main workflows verified (HTTP 200) + deleted routes 404 as expected`
+- push: `3c329ba..(본 세션 commit) main -> main` 예정
+
+
+---
+
 ## 2026-05-06 세션 (소싱 워크플로우 진단 + 깨진 CTA 빠른 수정) — Z-1/Z-2 진단 완료 ✅
 
 ### 본 세션 성격

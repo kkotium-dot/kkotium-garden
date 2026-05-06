@@ -1,11 +1,12 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-06 (소싱 워크플로우 진단 + 깨진 CTA 빠른 수정 ✅ — Z-1 대시보드 동기화 진단(시스템 정상 확인) + Z-2 워크플로우 IA 점검(3중복 발견) + Z-3a `/products/sourced/create` 깨진 링크 즉시 수정. 직전: UX/IA 마스터 블루프린트 v1 commit `02f6fa3`)
+> 최종 업데이트: 2026-05-07 (Z-3d Phase A 잔재 sub-graph 일괄 정리 ✅ — 8개 파일 삭제 + dev 캐시 충돌 해소 + 작업원칙 #26 일반화 4건 등록. 직전: Z-3a CTA fix commit `3c329ba`)
+> ~~최종 업데이트 (구)~~: 2026-05-06 (소싱 워크플로우 진단 + 깨진 CTA 빠른 수정 ✅ — Z-1 대시보드 동기화 진단(시스템 정상 확인) + Z-2 워크플로우 IA 점검(3중복 발견) + Z-3a `/products/sourced/create` 깨진 링크 즉시 수정. 직전: UX/IA 마스터 블루프린트 v1 commit `02f6fa3`)
 > ~~최종 업데이트 (구)~~: 2026-05-06 (UX/IA 마스터 블루프린트 v1 완료)
 > ~~최종 업데이트 (구)~~: 2026-05-06 (폴더 구조 정리 + 작업원칙 #29 강화 완료)
 > ~~최종 업데이트 (구)~~: 2026-05-06 (cron sync 통합 완료 — 7-day 0-call 이슈 근본 해결)
 > ~~최종 업데이트 (구)~~: 2026-05-06 (Tailscale Funnel 아키텍처 구축 완료 — production 영구 정상화 인프라)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ | Phase E (E-7, E-1, E-3, E-8) ✅ | Phase E+ Sprint 1·2·3·4·5 ✅ | Sprint 6 E-15 전체 완료 ✅ | 옵션 C/D/E Part 1 SWR 확장 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a 완료 ✅ | Tailscale Funnel architecture ✅ | cron sync 통합 ✅ | 폴더 구조 정리 + 작업원칙 #29 강화 ✅ | UX/IA 마스터 블루프린트 v1 ✅ | Z-1/Z-2 진단 + Z-3a fix ✅**
-> **다음 작업: 꽃졔님 본격 소싱 시작 직결 — Z-3b/3c/3d (라우트 일원화) → Z-4 (Clone 재등록) → Z-5 (자동화 헬스 카드) 순.** 자세한 인계 메시지는 `docs/plan/SESSION_LOG.md` "2026-05-06 세션 (소싱 워크플로우 진단)" 정독 + 답변 끝 인계 코드 블록 참조 (이전 블루프린트 v1 메시지는 deprecated)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ | Phase E (E-7, E-1, E-3, E-8) ✅ | Phase E+ Sprint 1·2·3·4·5 ✅ | Sprint 6 E-15 전체 완료 ✅ | 옵션 C/D/E Part 1 SWR 확장 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a 완료 ✅ | Tailscale Funnel architecture ✅ | cron sync 통합 ✅ | 폴더 구조 정리 + 작업원칙 #29 강화 ✅ | UX/IA 마스터 블루프린트 v1 ✅ | Z-1/Z-2 진단 + Z-3a fix ✅ | Z-3d Phase A sub-graph cleanup ✅**
+> **다음 작업: Z-3c' (/products/sourced 의미 명확화, 메인 워크플로우 4곳 영향) → Z-3b (사이드바 보관함 deep-link) → Z-3e (백업 파일 49개 일괄 정리) → Z-Sec (RLS 정책) 순.** 자세한 인계 메시지는 `docs/plan/SESSION_LOG.md` "2026-05-07 세션 (Z-3d Phase A 잔재 sub-graph 일괄 정리)" 정독 + 답변 끝 인계 코드 블록 참조 (이전 Z-3 메시지는 deprecated)
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
