@@ -6,6 +6,164 @@
 
 ---
 
+## 2026-05-06 세션 (소싱 워크플로우 진단 + 깨진 CTA 빠른 수정) — Z-1/Z-2 진단 완료 ✅
+
+### 본 세션 성격
+- 직전 commit `02f6fa3` (UX/IA 마스터 블루프린트 v1) 직후, 꽃졔님이 우선순위 재조정 요청 — "본격적으로 상품을 소싱해서 올리려고 합니다 / 대시보드 정원일지 동기화 안 되는 것 같습니다 / 시간 소요 적은 최우선 부분은 먼저 작업해도 됩니다 / 마스코트 SVG는 별도 프로젝트라 Tier 1에서 빼야 함".
+- 본 세션 범위: **Z-1 대시보드 동기화 진단 + Z-2 소싱→등록 워크플로우 end-to-end 점검 + Z-3a 깨진 CTA 빠른 수정 1건**.
+- 시간 + 컨텍스트 한계로 라우트 일원화/사이드바 보관함 진입점 신설 등은 다음 채팅으로 인계.
+
+### 변경된 파일 (코드 수정 1건 + MD 갱신 3건)
+| 파일 | 종류 | 핵심 |
+|------|------|------|
+| `src/app/products/sourced/page.tsx` | EDIT 라인 183 | 깨진 `/products/sourced/create` 링크를 `/products/new`로 변경 (404 방지) |
+| `docs/plan/PROGRESS.md` | EDIT (헤더) | 본 세션 진단 결과 + Z-3a 수정 + 다음 작업 우선순위 재정립 |
+| `docs/plan/ROADMAP.md` | EDIT (헤더) | 최종 업데이트 + Phase 상태 + 다음 작업 갱신 |
+| `docs/plan/SESSION_LOG.md` | EDIT (새 섹션 최상단) | 본 세션 상세 기록 (이 섹션) |
+
+### Z-1: 대시보드 동기화 진단 결과
+
+**Supabase 직접 쿼리로 확인된 시간축**:
+
+| 테이블 | rows | 마지막 갱신 | 경과 | 진단 |
+|---|---|---|---|---|
+| Order | 7 | 2026-05-06 01:53 KST | 2.6시간 | ✅ daily cron 정상 |
+| daily_recommendations | 142 | 2026-05-06 01:53 KST | 2.6시간 | ✅ daily cron 정상 |
+| Product | 8 | 2026-04-30 20:39 KST | 5.3일 | 🟡 정상 (DRAFT만이라 변동 없음) |
+| crawl_logs | 4 | 2026-04-11 17:14 KST | 24.5일 | 🟡 정상 (꽃졔님 본격 소싱 시작 전) |
+| product_events | 2 | 2026-04-08 00:03 KST | 28.2일 | 🟡 정상 (라이프사이클 변동 없음) |
+
+**핵심 결론**: 8개 Product 모두 **DRAFT 상태**.
+- 라이프사이클 자동 분류 / 점수 drop 감지 / OOS 감지는 모두 *판매 중인 상품*에 작동
+- DRAFT는 cron이 자연스럽게 skip하므로 product_events / Product.updatedAt이 정체
+- 즉 **시스템은 정상**, 단지 *움직일 데이터가 없어서* 화면에 변화가 안 보이는 것
+- 꽃졔님이 "동기화 안 되는 것 같다"고 느끼신 정체 = *상태 분포의 결과*, 시스템 버그 아님
+- 본격 등록(SELLING) 시작 시 자연스럽게 데이터가 흐르며 대시보드가 살아남
+
+**Order sync 정상 확인**: 매일 새벽 cron이 24시간 절 sync 수행, 본 세션 기준 2.6시간 전 갱신 — production 정상.
+
+### Z-2: 소싱→등록 워크플로우 end-to-end 점검 결과
+
+**정상 흐름 ✅**:
+- `/crawl` (꿀통 사냥터) → `router.push('/products/new?prefill=...&autoSeo=1')` (라인 319, 511)
+- 즉 **도매꾹 단건 검색 → 즉시 씨앗 심기 prefill로 이동**은 정상 작동
+
+**끊긴 흐름 ⚠️ (3가지 발견)**:
+
+1. **`/products/sourced` 라인 183 깨진 CTA**
+   - `+ 상품 추가` 버튼 → `router.push('/products/sourced/create')`
+   - **`/products/sourced/create` 라우트 미존재 → 404 에러**
+   - 본 세션에서 즉시 수정 완료 (Z-3a) — `/products/new`로 변경
+
+2. **IA 혼란 — 3가지 다른 "소싱" 페이지**:
+   - `/crawl`: 도매꾹 단건 검색 + prefill 등록 (메인 흐름)
+   - `/sourced` (9줄 wrapper): `<SourcedProductManager />` 사용 — 도매매 자동 수집 + 직접 Naver 등록 (Phase A 잔재 의심)
+   - `/products/sourced` (259줄): `/api/products` fetch — Product 테이블 필터일 뿐, crawl_logs 안 봄. *이름과 역할 불일치*
+
+3. **사이드바에 보관함 진입점 0건**:
+   - `/sourced`, `/products/sourced` 모두 사이드바에 없음 (고아 라우트)
+   - 진짜 보관함 데이터는 `/crawl`의 "소싱 보관함" 탭(라인 595)에 존재 — 별도 라우트 없이 같은 페이지 내 탭
+
+4. **데이터 흐름 mismatch**:
+   - `/crawl` 보관함 담기 → `crawl_logs.sourcing_status='PENDING'` 행 추가 (PATCH `/api/crawler/logs`)
+   - `/products/sourced`는 `/api/products` fetch — *crawl_logs 안 봄*
+   - 즉 보관함 데이터(`crawl_logs`)를 깔끔하게 노출하는 페이지가 없음
+   - `/api/products/sourced` endpoint도 미존재
+
+### Z-3a 빠른 수정 (본 세션 완료 ✅)
+
+**수정 내용**: `src/app/products/sourced/page.tsx` 라인 183
+```diff
+-onClick={() => router.push('/products/sourced/create')}
++onClick={() => router.push('/products/new')}
+```
+
+**근거**:
+- `/products/sourced/create` 라우트 미존재로 404 발생
+- "+ 상품 추가" 버튼의 의도는 *신상품 등록 페이지로 이동*이므로 `/products/new`가 자연스러움
+- newText 한글 0건 (작업원칙 #29(a) 준수)
+- 5분 내 완료, TSC 0 errors 유지
+
+### 검증 결과
+- TSC: 0 errors ✅
+- 한글 깨짐 grep: 본 세션 신규 깨짐 0건 ✅
+- working tree: 본 commit 전 dirty (코드 1건 + MD 갱신 3건)
+
+### 적용된 작업원칙
+- **#21 사전 점검**: 8항목 모두 통과 (HEAD `02f6fa3` = origin/main, working tree clean, TSC 0, dev :3000 PID 34501)
+- **#22 라이브 검증**: Supabase MCP 직접 query → 시간축 데이터 확인
+- **#23 정직 보고**: "동기화 안 됨" 가설을 검증한 결과 *시스템 정상, 데이터 분포의 결과*임을 정직히 보고
+- **#24 commit + push 단일 라인**: 본 turn에서 한 줄로 처리 예정
+- **#25 한글 직접 입력**: write_file로 직접 입력 (NFC 정규화 0회)
+- **#26 일반화**: "동기화 안 보임" 증상 → *데이터 분포가 cron 동작과 자연스럽게 정합*. 향후 유사 증상 시 *데이터 분포부터 확인*
+- **#27 기능 0개 삭제**: 코드 수정 1줄(깨진 링크), 기존 0 영향
+- **#28 production runtime**: 0 영향 (push 후 Vercel 자동 재배포 시 깨진 CTA 자동 fix)
+- **#29 한글 처리 5가지 규칙 모두 준수**:
+  - (a) edit_file의 newText에 한글 다량 0건 (path string만)
+  - (b) MD 갱신 = .tmp 임시 파일 + Python 안전 삽입 패턴 (직전 세션과 동일)
+  - (c) 코드 edit는 path string만 (영문)
+  - (d) 셸 명령에 한글 직접 입력 0건 (commit msg는 영문)
+  - (e) 한글 작업 후 즉시 grep 검증 의무화 ✅
+
+### 본 세션 영구 등록한 핵심 학습
+
+1. **"동기화 안 됨" 증상 진단 패턴 영구 등록**:
+   - 1단계: Supabase에서 각 테이블의 마지막 갱신 시간 확인
+   - 2단계: cron 작동 확인 (Order/daily_recommendations 갱신되면 cron 정상)
+   - 3단계: *움직일 데이터가 있는지* 확인 (DRAFT만이면 라이프사이클 등 cron이 skip)
+   - 결론 **시스템 정상 vs 시스템 버그**를 정확히 구분
+   - **이 진단 방법론을 작업원칙 #26 일반화 대상으로 등록**
+
+2. **소싱 워크플로우 IA 진단 결과**:
+   - `/crawl`이 메인 진입점으로 잘 작동
+   - `/products/sourced`는 *이름과 역할 불일치* — Product 테이블 필터인데 "소싱 상품 관리"로 명명되어 혼란
+   - `/sourced`는 Phase A 시기 별도 흐름 (도매매 자동 수집), 현재 사용 빈도 미상
+   - 진짜 보관함(`crawl_logs`)을 깔끔하게 노출하는 페이지 부재 — 다음 채팅에서 결정
+
+3. **블루프린트 Part 9 #9 (라우트 일원화) 우선순위 상향**:
+   - 본 진단으로 *추측이 아닌 검증된 사실*로 확정
+   - 본격 소싱 시작 시 IA 혼란이 실제 운영에 영향
+   - 다음 채팅 우선 작업으로 격상
+
+### 다음 채팅 작업 후보 (꽃졔님 선택)
+
+**1순위 — 소싱 워크플로우 직결 (M)**:
+- **Z-3b: 사이드바 HUNT 섹션에 보관함 진입점 추가**
+  - 현재 `/crawl` 1개만 있음 → 보관함 라우트 신규 추가 또는 `/crawl?tab=history` deep-link
+  - 셀러가 *어디서* 보관함에 접근하는지 명확화
+
+- **Z-3c: `/products/sourced` 페이지 의미 명확화**
+  - Option 1 — Rename: "소싱 상품 관리" → "DRAFT 상품 관리" 또는 deprecation
+  - Option 2 — 진짜 보관함 페이지로 변환 (`/api/products` → `crawl_logs` fetch)
+  - Option 3 — Deprecation + redirect to `/crawl`
+
+- **Z-3d: `/sourced` 라우트 점검**
+  - SourcedProductManager가 무엇을 fetch하는지 (Supabase 직접 query) 확인
+  - 사용 빈도에 따라 deprecation or 유지 결정
+
+**2순위 — 좀비 부활 워크플로우 (S)**:
+- **Z-4: Clone for 재등록 워크플로우 명시화** (블루프린트 Part 9 #8)
+  - 좀비 상품을 신규 ID로 복제 + 씨앗 심기 자동 이동 + 기존 데이터 prefilled
+  - 4단계 가이드 화면 신규
+
+**3순위 — 자동화 가시성 (M)**:
+- **Z-5: 자동화 헬스 카드** (블루프린트 Part 9 #1)
+  - 대시보드 Section 2에 cron 마지막 실행 시각 + 7가지 작업 성공/실패 표시
+  - "동기화 안 보이는" 미래 가설을 즉시 차단하는 영구 가시성 도구
+
+**후순위 (워크플로우 안정 후)**:
+- B (Tier 1 디자인 토큰): 마스코트는 별도 프로젝트 진행 중이므로 *색상/타이포만* 작업
+- A (블루프린트 v2 진화): Z-3~Z-5 결과 반영
+- D (B-1 MonthReviewWidget): 한달리뷰 D+28~32 윈도우, 본격 등록 시작 후 30일 여유
+
+### 본 세션 commit
+- 변경: `src/app/products/sourced/page.tsx` (1줄 fix), `docs/plan/` 3종 (헤더 + SESSION_LOG)
+- commit 메시지(영문 단일 라인): `fix(sourcing): broken /products/sourced/create CTA — redirect to /products/new (404 prevention before bulk sourcing starts)`
+- push: `02f6fa3..(본 세션 commit) main -> main` 예정
+
+
+---
+
 ## 2026-05-06 세션 (UX/IA 마스터 블루프린트 v1) — 디자인 전 단계 화면 설계서 영구 산출물 ✅
 
 ### 본 세션 성격

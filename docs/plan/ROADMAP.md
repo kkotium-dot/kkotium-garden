@@ -1,10 +1,11 @@
 # KKOTIUM GARDEN — 전체 작업 로드맵
-> 최종 업데이트: 2026-05-06 (UX/IA 마스터 블루프린트 v1 완료 ✅ — `docs/design/MASTER_UX_BLUEPRINT.md` 849줄 영구 산출물. 시니어 UX/IA 설계자 답변. 디자인 손보기 전 IA/UX 확정 단계. Part 1~9 + 부록 A~C. 직전: 폴더 구조 정리 + 작업원칙 #29 강화 commit `579e1af`)
+> 최종 업데이트: 2026-05-06 (소싱 워크플로우 진단 + 깨진 CTA 빠른 수정 ✅ — Z-1 대시보드 동기화 진단(시스템 정상 확인) + Z-2 워크플로우 IA 점검(3중복 발견) + Z-3a `/products/sourced/create` 깨진 링크 즉시 수정. 직전: UX/IA 마스터 블루프린트 v1 commit `02f6fa3`)
+> ~~최종 업데이트 (구)~~: 2026-05-06 (UX/IA 마스터 블루프린트 v1 완료)
 > ~~최종 업데이트 (구)~~: 2026-05-06 (폴더 구조 정리 + 작업원칙 #29 강화 완료)
 > ~~최종 업데이트 (구)~~: 2026-05-06 (cron sync 통합 완료 — 7-day 0-call 이슈 근본 해결)
 > ~~최종 업데이트 (구)~~: 2026-05-06 (Tailscale Funnel 아키텍처 구축 완료 — production 영구 정상화 인프라)
-> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ | Phase E (E-7, E-1, E-3, E-8) ✅ | Phase E+ Sprint 1·2·3·4·5 ✅ | Sprint 6 E-15 전체 완료 ✅ | 옵션 C/D/E Part 1 SWR 확장 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a 완료 ✅ | Tailscale Funnel architecture ✅ | cron sync 통합 ✅ + production 검증 ✅ | 폴더 구조 정리 + 작업원칙 #29 강화 ✅ | UX/IA 마스터 블루프린트 v1 ✅**
-> **다음 작업: 꽃졔님 후보 A/B/C/D 중 선택 후 진행** — A) 블루프린트 v1 검토 + 피드백 → v2 진화 (디자인 작업 전 IA/UX 확정), B) Tier 1 디자인 토큰 작업 시작 (Design Tokens + 컴포넌트 라이브러리), C) 즉시 적용 UX 개선 10선 우선순위 1~3개 (자동화 헬스/단일 설정 허브/Cmd+K), D) 보류 중이던 B-1 MonthReviewWidget UI 진행. 자세한 후보 비교표 + 새 채팅 시작 메시지는 `docs/plan/SESSION_LOG.md` "2026-05-06 세션 (UX/IA 마스터 블루프린트 v1)" + 답변 끝 인계 코드 블록 참조 (이전 #29 강화 메시지는 deprecated)
+> **Phase A ✅ | Phase B ✅ | Phase C ✅ | Phase D ✅ | Phase E (E-7, E-1, E-3, E-8) ✅ | Phase E+ Sprint 1·2·3·4·5 ✅ | Sprint 6 E-15 전체 완료 ✅ | 옵션 C/D/E Part 1 SWR 확장 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a 완료 ✅ | Tailscale Funnel architecture ✅ | cron sync 통합 ✅ | 폴더 구조 정리 + 작업원칙 #29 강화 ✅ | UX/IA 마스터 블루프린트 v1 ✅ | Z-1/Z-2 진단 + Z-3a fix ✅**
+> **다음 작업: 꽃졔님 본격 소싱 시작 직결 — Z-3b/3c/3d (라우트 일원화) → Z-4 (Clone 재등록) → Z-5 (자동화 헬스 카드) 순.** 자세한 인계 메시지는 `docs/plan/SESSION_LOG.md` "2026-05-06 세션 (소싱 워크플로우 진단)" 정독 + 답변 끝 인계 코드 블록 참조 (이전 블루프린트 v1 메시지는 deprecated)
 > **수수료 개편 (2025.06.02): 100% 완료** — 7 commits (Block 1·2·3·4 + redeploy + refactor + cleanup)
 > 전략 참고문서:
 > - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`

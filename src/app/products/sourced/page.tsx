@@ -180,7 +180,7 @@ export default function SourcedProductsPage() {
         <div className="flex gap-2">
           <ExportExcel products={filteredProducts} selectedIds={selectedIds} />
           <button
-            onClick={() => router.push('/products/sourced/create')}
+            onClick={() => router.push('/products/new')}
             className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600"
           >
             + 상품 추가
