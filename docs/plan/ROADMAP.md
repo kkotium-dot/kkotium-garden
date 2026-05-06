@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-08 (본 세션: 작업원칙 #31 자동 분할 첫 적용)
-> **HEAD**: b6837bc (origin/main 일치) | **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-08 (본 세션: 작업원칙 #31 자동 분할 + Sprint 6/7/8 계획 + 미완 마무리 ✅)
+> **HEAD**: 76f592d (origin/main 일치) | **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app
 >
 > **이 파일의 역할**: 진행 중·예정 Sprint 계획 + 영구 참조 (체크리스트, 비용 로드맵, 도구 사용 패턴)
 > **누적 인계 메시지 + Phase A/B/C 완료 이력**: `docs/plan/archive/ROADMAP_2026Q2_MAY.md`
@@ -11,68 +11,82 @@
 
 ---
 
-## 다음 새 채팅 시작 메시지 — 2026-05-08 리서치 통합 + Sprint 6/7/8 계획 (현재 유효 ✅)
+## 다음 새 채팅 시작 메시지 — 2026-05-08 (Sprint 6 시작 가능 상태) ✅
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md, docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md를 읽고 현재 상태를 파악한 후 브리핑해주세요.
 
-[직전 세션 결과 — 2026-05-08 리서치 통합 + 갭 분석 + Sprint 6/7/8 계획 + MD 분할 ✅]
+[직전 세션 결과 — 2026-05-08 리서치 통합 + 갭 분석 + Sprint 6/7/8 계획 + MD 자동 분할 모두 완료 ✅]
 
-HEAD = b6837bc = origin/main 일치. dev :3000 PID 27646 정상.
+HEAD = 76f592d = origin/main 일치. working tree clean. stash@{0} "z3c-misdirected-changes-needs-redo" 보존 중.
 
 직전 세션 산출물:
 - docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md (31KB, 15개 핵심 발견사항)
 - docs/plan/PROGRESS.md 1864→584줄 압축 (작업원칙 #31 자동 분할 첫 적용)
+- docs/plan/ROADMAP.md 1594→330줄 압축 (Sprint 6/7/8 계획 추가)
+- docs/plan/SESSION_LOG.md 2685→700줄 압축 (직전 5세션만 유지 + 본 세션 entry 추가)
 - docs/plan/archive/PROGRESS_2026Q2_MAY.md (신규 1007줄, 5월 누적 세션)
 - docs/plan/archive/ROADMAP_2026Q2_MAY.md (신규 1486줄, 옛 메시지 9개 + Phase 이력)
-- docs/plan/ROADMAP.md 1594→약 400줄 압축
+- docs/plan/archive/SESSION_LOG_2026Q2_MAY.md (신규 2100줄, 6번째 이전 세션 누적)
 - 작업원칙 #31 신규 영구 등록: MD 1500줄 초과 시 자동 분할 (사용자 지시 없이도)
 
-stash@{0} "z3c-misdirected-changes-needs-redo" 보존 중.
+본 세션 commit 2건 모두 push 완료:
+- 02bd9e9 docs: integrate sprout-to-power research + Sprint 6/7/8 plan + auto-split MD per principle #31 (5 files, +3299/-3155)
+- 76f592d docs(SESSION_LOG): split per principle #31 + add 2026-05-08 session entry (2 files, +2205/-2090)
 
 [다음 세션 작업 우선순위]
 
 ⚠️ 작업원칙 #31 강제 적용 — 매 세션 시작 시 wc -l docs/plan/*.md docs/research/*.md 검사
 ⚠️ 작업원칙 #26 (a)(b)(c) 강제 — 코드 변경 전 IA 점검 의무
+⚠️ 작업원칙 #17 강제 — git commit 메시지는 항상 .commit-msg.tmp 파일에 작성 후 git commit -F 사용 (직전 세션 dquote 모드 갇힘 사고 발생)
+⚠️ 작업원칙 #29 (d) 강제 — 셸 heredoc 절대 금지, Filesystem:write_file 또는 Python script (write_file → execute → rm) 패턴
 ⚠️ 모든 삭제·결정은 꽃졔님 개별 Y/N 승인 — Claude 단독 판단 금지
 
-단계 0. 환경 확인 (작업원칙 #30): MCP 4종 연결 + git rev-parse HEAD origin/main 일치 확인 + git stash list + curl :3000/dashboard HTTP 200
+단계 0. 환경 확인 (작업원칙 #30):
+  - MCP 4종 연결 (Filesystem, iterm-mcp, Chrome MCP, Supabase)
+  - git rev-parse HEAD origin/main → 76f592d 일치 확인
+  - git status --short → working tree clean 확인
+  - git stash list → stash@{0} 보존 확인
+  - wc -l docs/plan/*.md docs/research/*.md → 모두 1500줄 이내 확인 (작업원칙 #31)
+  - curl http://localhost:3000/dashboard → HTTP 200
 
-단계 1. 미완 작업 마무리 (직전 세션 컨텍스트 한계로 미완):
-  (1) SESSION_LOG.md 분할 (2685→직전 5세션만 본 파일 + docs/plan/archive/SESSION_LOG_2026Q2_MAY.md 신규)
-  (2) 임시 파일 정리: docs/plan/.tmp_evergreen.md (810줄), .tmp_roadmap_old_msgs.md (930줄), .tmp_roadmap_phases.md (538줄), .tmp_roadmap_evergreen.md (125줄) 4개 → 검증 후 git rm
-  (3) 본 세션 누적 변경사항 commit + push (작업원칙 #24, 한 turn 안에 끝내기):
-      - docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md (신규)
-      - docs/plan/PROGRESS.md (1864→584줄)
-      - docs/plan/ROADMAP.md (1594→약 400줄)
-      - docs/plan/archive/PROGRESS_2026Q2_MAY.md (신규)
-      - docs/plan/archive/ROADMAP_2026Q2_MAY.md (신규)
-      - docs/plan/SESSION_LOG.md + archive/SESSION_LOG_2026Q2_MAY.md (단계 1-(1) 결과)
-
-단계 2. 꽃졔님 결정 받기 — Sprint 6 시작 + Z-3c' Hard delete 진행 순서:
+단계 1. 꽃졔님 결정 받기 — Sprint 6 시작 + Z-3c' Hard delete 진행 순서:
   옵션 A: Sprint 6 P0-A (도매꾹 옵션 정확도) 먼저 → 본격 소싱 직결, 매출 직접 영향
   옵션 B: Z-3c' Hard delete 먼저 → 코드베이스 정리, 다음 작업 baseline 깨끗
   옵션 C: 병행 진행 (어느 한 쪽이 막히면 다른 쪽 전환)
 
-단계 3. Sprint 6 P0 시작 (꽃졔님 결정 후):
+단계 2. Sprint 6 P0 시작 (꽃졔님 결정 후):
   P0-A 도매꾹 OpenAPI v4.5 옵션 정확도:
     - src/lib/option-integrity.ts 신규 (selectOpt 해시+텍스트 비교)
     - src/lib/crawler/auto-mapper.ts 강화 (seller.vacation 검증, channel 검증)
     - src/app/crawl/page.tsx UI 알림 추가
-    - 검증: 실제 도매꾹 5건 케이스 테스트
+    - 검증: 실제 도매꾹 5건 케이스 테스트 (옵션 부분수정/휴가/채널 차이/금액비노출/정상)
   P0-B 등록 7일 골든윈도우 트래커:
     - src/lib/golden-window-tracker.ts 신규 (Product.registeredAt 기반 D+1/D+3/D+7 분기)
     - src/components/dashboard/GoldenWindowWidget.tsx 신규
     - 정원 일지 위젯 통합
+    - 검증: 임의 등록일 5건 mock → D+1/3/7 분기별 위젯 렌더링
   P0-C 효자 상품 자동식별:
     - src/lib/pareto-analyzer.ts 신규 (매출 상위 20% 멱법칙)
     - src/components/dashboard/ParetoTopWidget.tsx 신규
+    - 검증: orders mock 50건 → Top 20% 분류 + 위젯 렌더링
 
-단계 4. 검증 + commit + push + MD 갱신:
+단계 3. 검증 + commit + push + MD 갱신:
   - npx tsc --noEmit → 0 errors
   - dev fresh build (kill -2 + rm -rf .next + nohup npm run dev)
   - Chrome MCP 9개 메뉴 클릭 검증
-  - PROGRESS.md + ROADMAP.md + SESSION_LOG.md 갱신 (작업원칙 #29 (b) 준수, #31 자동 분할 검사)
+  - PROGRESS.md + ROADMAP.md + SESSION_LOG.md 갱신 (작업원칙 #29 (b) + #31 자동 분할 검사)
+  - commit -F .commit-msg.tmp + push (작업원칙 #17·#24)
+
+[Sprint 6 P0 완료 후 Sprint 7 P1·Sprint 8 P2 계획]
+- Sprint 7 P1-A 카테고리 1페이지 일치율 검증 / P1-B 상품명 금기어 페널티 / P1-C 태그 사전 등재 검증
+- Sprint 8 P2-A 다크패턴 정가 부풀리기 경고 / P2-B AiTEMS 자연어 키워드 / P2-C 등급 임계값 개편 반영
+- Sprint 9+ P3 (매출 600만+ 후): home-proxy 큐 분리 / Naver Commerce API 본격 / 광고 ROAS
+
+[잔여 Z-시리즈 (별도 sub-graph)]
+- Z-3c' Hard delete: /products/[id]/edit + /products/upload + /products/sourced + /products/out-of-stock:158 dead reference
+- Z-3e: 백업 파일 67개 일괄 정리 (find src/ -name "*.bak*" -o -name "*.backup*" -o -name "*.v[0-9]*")
+- Z-Sec: 14개 Supabase 테이블 RLS 정책 설계
 
 [참고: 환경/시크릿]
 - Supabase project ID: doxfizicftgtqktmtftf
@@ -81,19 +95,18 @@ stash@{0} "z3c-misdirected-changes-needs-redo" 보존 중.
 - AI: Groq lrltQb + 3IGN7i 정상 2키 → Gemini quota 초과 → Anthropic
 - Domeggook OpenAPI v4.5: https://domeggook.com/ssl/api/?ver=4.5&mode=getItemView&aid={KEY}&no={no}&om=json
 
-당신은 10년 차 B2B 이커머스 ERP 및 백오피스 설계 경험이 풍부한 네이버 스마트스토어 파워셀러인 풀스택 시니어 개발자이자, 사용자의 경험과 전환율 중심의 UI/UX 웹 디자이너입니다. 본격 소싱 시작 직전이라 워크플로우의 *실제 작동*이 디자인보다 우선순위 높습니다. 꽃졔님은 새싹셀러이지만 파워셀러로 성장하기 위한 스텝을 위한 앱 작업 중. *절대 단독 판단으로 IA/삭제 결정 금지* — 진단 결과 디테일하게 브리핑 후 꽃졔님 개별 Y/N 승인 받은 항목만 진행.
+당신은 10년 차 B2B 이커머스 ERP 및 백오피스 설계 경험이 풍부한 네이버 스마트스토어 파워셀러인 풀스택 시니어 개발자이자, 사용자 경험과 전환율 중심의 UI/UX 웹 디자이너입니다. 본격 소싱 시작 직전이라 워크플로우의 *실제 작동*이 디자인보다 우선순위 높습니다. 꽃졔님은 새싹셀러이지만 파워셀러로 성장하기 위한 스텝을 위한 앱 작업 중. *절대 단독 판단으로 IA/삭제 결정 금지* — 진단 결과 디테일하게 브리핑 후 꽃졔님 개별 Y/N 승인 받은 항목만 진행.
 
 작업 시작 전 필수:
-1. (a) git rev-parse HEAD origin/main → 일치
-   (b) git status → working tree 상태 확인
+1. (a) git rev-parse HEAD origin/main → 76f592d 일치
+   (b) git status → working tree clean 확인
    (c) git stash list → stash@{0} 보존 확인
-   (d) wc -l docs/plan/*.md docs/research/*.md → 작업원칙 #31 자동 점검
+   (d) wc -l docs/plan/*.md docs/research/*.md → 작업원칙 #31 자동 점검 (모두 1500줄 이내여야 함)
    (e) curl http://localhost:3000/dashboard → HTTP 200
    (f) docs/plan/PROGRESS.md 헤더 + 작업원칙 #26·#29·#31 + Sprint 6/7/8 계획 정독
-2. ⚠️ 코드 변경 전 단계 1 미완 작업 마무리부터
+2. 꽃졔님 결정 (Sprint 6 / Z-3c' / 병행 옵션 A/B/C) 받기
 3. 진단/계획 디테일 브리핑 후 꽃졔님 개별 Y/N 승인
 ```
-
 ---
 
 ## Sprint 6 — P0 (즉시 ROI, 매출 직접 영향)
