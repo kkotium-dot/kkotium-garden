@@ -3,6 +3,76 @@
 > **이 파일의 역할**: 세션별 자세한 작업 이력을 누적 기록합니다.
 > - **KKOTIUM_PROGRESS.md**: 핵심 현재 상태 + 작업 원칙 + 환경/도구 정보 (헤더만 갱신, 짧은 요약)
 > - **KKOTIUM_ROADMAP.md**: 미래 작업 계획 + Phase별 상태 표 + 다음 새 채팅 시작 메시지
+
+---
+
+## 2026-05-06 세션 — A3-4-DIAG sprint 완료 ✅ (Naver Commerce API 403 근본원인 해결 + sync 정상화)
+
+### 본 세션 성격
+- 직전 세션 연구 결과(`docs/api/COMMERCE_API_ORDER_DIAGNOSIS.md`)를 구현/검증하는 세션. Track B Deep Diagnosis 보고서 가설을 실제 진단 라우트로 검증 → 근본원인 확정→수정→sync 정상화 검증.
+- 꽃졔님 지시 — "최선의방법으로 컨텍스트 중단되지않게 진행". 옵션 A(코드 재작성 중심) + Vercel 후처리는 commit 자동 배포에 의존하는 방식으로 하나로 묶음.
+
+### 진단 흐름 요약
+
+| Stage | 작업 | 결과 |
+|---|---|---|
+| 0 | apicenter 5종 점검 (꽃졔 직접 명시 외부) | 모두 GREEN. 등록 IP 3개: `219.248.15.46`(KR 집), `64.29.17.131`/`216.198.79.131`(미국, 정체불명) |
+| 1 | api-client.ts + sync route + .env.local 정독 | 하나씩 검증. 초기 가설(`from`↔`lastChangedFrom` 불일치)은 나중에 잘못된 것으로 드러남 |
+| 2 | 진단 라우트 `/api/debug/naver-doctor` 신규(~330줄) | 8-체크: ENV / CLOCK / SIGN / TOKEN / IP echo / PROXY / ORDER 4-way / FINAL diagnosis 자동 분류 |
+| 3 | 첫 진단 실행 | `Next.js \`_\`-prefix 폴더는 private → 라우팅 제외` 404. `_debug` → `debug`로 이동 후 정상 호출 |
+| 4 | 근본원인 확정 | `NAVER_CLIENT_SECRET length=10`, `prefix7=/X8O2XQ`, `isBcryptSalt=false`. bcrypt 설명: `Invalid salt version: /X` |
+| 5 | 원인 분석 | 원본 `\$2a\$04\$4H8P4wcs8Yv3/X8O2XQRJ.`(29자)에서 `\$2a`/`\$04`/`\$4H8P4wcs8Yv3`가 dotenv-expand에 의해 변수 참조로 해석되어 빈 문자열로 치환 → `/X8O2XQRJ.`(10자)만 남음. prefix7 정확 일치 → 패턴 확정 |
+| 6 | Fix #1 적용 | `.env.local`에 `\\\$2a\\\$04\\\$...` (\$ 앞에 \\) escape. dev 재시작 |
+| 7 | 재진단 | length=29, isBcryptSalt=true, OAuth 토큰 200 OK, ORDER 4-way 수행 |
+| 8 | ORDER 4-way 대반전 | A_current_code(`from`/`to`)=200 OK 2건 ✅. B1(`lastChangedFrom`)=400 "from 필드 필수값". B2 last-changed-statuses=200 OK. B3 POST query=400. → **현재 코드 이미 정답**, Track B 보고서 가설 틀림 |
+| 9 | sync route 첫 호출 (PROXY 활성) | `synced=0, total=0`. dev 로그에서 **모든 윈도우가 GW.IP_NOT_ALLOWED** 발견. PROXY(Supabase Edge Function) outbound IP가 등록 안 됨 |
+| 10 | Fix #2 (dev only) | `.env.local`에서 `NAVER_PROXY_URL` 주석처리. 직접 호출 모드 → dev 집 IP가 등록되어 있으므로 정상 |
+| 11 | sync 재검증 | `manual=1&hours=720` → `synced=4, total=4` (4월 7일 4건). `manual=1&hours=24` → `synced=2, total=2` (꽃졔 보고하셨던 어제/오늘 주문) |
+| 12 | Supabase MCP DB 검증 | 6건 진입 확인: 4월 7일 4건(이연주/김주애 3건 COMPLETED) + 5/4 김진 31,200원 PAID + 5/5 김세희 8,320원 PAID. 기존 1건(4/11 이병관 CANCELLED) 포함 |
+| 13 | 문서화 | `docs/api/COMMERCE_API_403_ROOT_CAUSE.md` 신규. TL;DR + 단계별 trail + Track B 틀린 이유 + Recommendations(short/medium term) + userMemories 추가 권고 |
+
+### 근본원인 한 줄 요약
+
+```diff
+# .env.local
+- NAVER_CLIENT_SECRET="$2a$04$4H8P4wcs8Yv3/X8O2XQRJ."   # $ 이스케이프 안 됨 → dotenv-expand가 변수로 해석 → 10자로 잘림
++ NAVER_CLIENT_SECRET="\$2a\$04\$4H8P4wcs8Yv3/X8O2XQRJ."   # 정상 (29자, bcrypt salt)
+```
+
+**주의**: Vercel ENV에서는 dotenv-expand 안 쓰므로 `달러 escape 없이 `그대로 입력해야 함. dev .env.local에서만 escape 필수.
+
+### Track B 보고서가 틀린 지점
+
+| 보고서 주장 | 실제 |
+|---|---|
+| "1순위 원인 = IP 미등록 + 인증 상태 불일치" | 실제는 dev `.env.local` 문자 escape 버그. apicenter는 내내 건강 |
+| "`lastChangedFrom`↔`from` 미스매치는 2차 버그(400)" | 현재 코드는 `from`/`to`를 쓰고 있고 이게 정답. `lastChangedFrom`으로 바꿈 → 오히려 400 |
+| "수정 우선순위 3단: IP → 시크릿 재발급 → api-client 정정" | 3개 모두 불필요. `.env.local` 한 줄만 고침 |
+
+**교훈**: 100% 호출 실패 시 가장 단순한 설명(로컬 credential/환경 변수 로딩 버그)을 먼저 의심해야 함. 원격 API 계약/프로토콜 가설은 후순위.
+
+### 본 세션 변경 파일
+
+| 파일 | 변경 |
+|---|---|
+| `.env.local` | (1) `NAVER_CLIENT_SECRET` `달러 escape (2) `NAVER_PROXY_URL` dev용 주석처리 (3) 헤더 코멘트 갱신. **.gitignore되어 commit 안 됨** |
+| `src/app/api/debug/naver-doctor/route.ts` | NEW (~330줄) 진단 라우트 |
+| `docs/api/COMMERCE_API_403_ROOT_CAUSE.md` | NEW 진단 보고서 |
+| `KKOTIUM_PROGRESS.md` | 헤더 갱신 |
+| `KKOTIUM_SESSION_LOG.md` | 본 세션 섹션 추가 |
+
+`src/lib/naver/api-client.ts` + `src/app/api/naver/orders/route.ts`: **변경 없음** (이미 정답)
+
+### Pending (다음 세션)
+
+1. **Vercel production 검증** — commit/push 후 auto-deploy 대기. `https://kkotium-garden.vercel.app/api/debug/naver-doctor?secret=kkotium2026cron` 호출해 production ENV 정상 여부 + PROXY 상태 확인.
+2. **PROXY IP 문제 해결** — Supabase Edge Function 내부에 `https://api.ipify.org` 호출 endpoint 추가해 실제 outbound IP 확인 → apicenter 등록 또는 고정 IP NAT 교체. 등록된 미국 IP 2개의 정체 조사.
+3. **production cron 정상화** — 직전 세션 7일 0회 호출 이슈. `vercel.json` cron 스케줄 + `CRON_SECRET` + Hobby plan 차단 점검.
+4. **A3-4b 한달리뷰 UI** — sync 정상화되었으니 진행 가능.
+5. **userMemories 추가 권고** — 본 세션 교훈: "시크릿 작업 후 진단 라우트로 length+prefix 검증 필수".
+
+---
+
 > - **KKOTIUM_SESSION_LOG.md (이 파일)**: 세션별 자세한 작업 이력 (시간 역순, 최신이 위)
 
 > 새 채팅 시작 시 읽는 순서: PROGRESS.md → ROADMAP.md → SESSION_LOG.md (최근 1~2개 세션만)
