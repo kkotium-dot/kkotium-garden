@@ -3,7 +3,7 @@
 // Tabs: [단건] single URL | [대량] bulk SSE | [이력] crawl logs
 // Design: Kkotium system (red #e62310, pink lines, white cards)
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -166,7 +166,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function CrawlPage() {
+function CrawlPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   // Z-3b: tab is derived from URL query — URL is the single source of truth (no useState/useEffect to avoid race conditions)
@@ -1830,5 +1830,15 @@ export default function CrawlPage() {
 
       </div>
     </div>
+  );
+}
+
+// Suspense wrapper required because CrawlPageInner uses useSearchParams
+// (Next.js 14: any client component using useSearchParams must be inside <Suspense>)
+export default function CrawlPage() {
+  return (
+    <Suspense fallback={null}>
+      <CrawlPageInner />
+    </Suspense>
   );
 }

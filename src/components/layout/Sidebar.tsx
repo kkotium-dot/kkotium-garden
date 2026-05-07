@@ -3,6 +3,7 @@
 // - 5 badges (sourcing/zombie/orders/draft/oos) backed by useSidebarStats()
 // - Polling cadence + focus revalidation handled centrally in useDashboardData
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -215,7 +216,7 @@ function NavBadge({ count, active }: { count: number; active: boolean }) {
   );
 }
 
-export default function Sidebar() {
+function SidebarInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabQuery = searchParams.get('tab');
@@ -354,5 +355,15 @@ export default function Sidebar() {
 
       {/* ── Today stats section removed per P3-A — KPI data visible on dashboard ── */}
     </aside>
+  );
+}
+
+// Suspense wrapper required because SidebarInner uses useSearchParams
+// (Next.js 14: any client component using useSearchParams must be inside <Suspense>)
+export default function Sidebar() {
+  return (
+    <Suspense fallback={null}>
+      <SidebarInner />
+    </Suspense>
   );
 }
