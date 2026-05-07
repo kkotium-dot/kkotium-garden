@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-08 (본 세션: 해외 직소싱 baseline + 6-Pre 1·2단계 완료, 6-Pre 3단계 + 6.5 전체는 다음 채팅 인계 ✅)
-> **HEAD**: 본 세션 commit 후 갱신 예정 (origin/main 일치) | **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-08 (본 세션: 6.5 SourceAdapter 패턴 PoC 완료 — Sprint 6/7/8 다중 플랫폼 자유도 확보 ✅)
+> **HEAD**: e8810c2 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 26/26 OK | **배포**: https://kkotium-garden.vercel.app (READY)
 >
 > **이 파일의 역할**: 진행 중·예정 Sprint 계획 + 영구 참조 (체크리스트, 비용 로드맵, 도구 사용 패턴)
 > **누적 인계 메시지 + Phase A/B/C 완료 이력**: `docs/plan/archive/ROADMAP_2026Q2_MAY.md`
@@ -10,6 +10,105 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
+
+## 다음 새 채팅 시작 메시지 — 2026-05-08 (6.5 SourceAdapter PoC 완료, 6-Pre 3단계 잔여) ✅
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md, docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md를 모두 읽고 현재 상태를 파악한 후 브리핑해주세요.
+
+[직전 세션 결과 — 2026-05-08 6.5 SourceAdapter 패턴 PoC 완료 ✅]
+
+HEAD = e8810c2 = origin/main 일치. working tree clean. stash@{0} "z3c-misdirected-changes-needs-redo" 보존 중.
+
+직전 세션 산출물:
+- src/lib/sources/source-adapter.ts (신규) — 6개 메서드 인터페이스 + 공통 타입 (ItemDetail / SearchFilter / InventorySnapshot / Category / OrderRequest / CrawledOption) + SourceAdapterError + notImplemented 헬퍼
+- src/lib/sources/domemae-adapter.ts (신규) — 도매꾹 OpenAPI v4.5 어댑터, getItemDetail + getMinQuantity 구현 / 나머지 4개 메서드 NotImplementedError stub (Sprint 6/8 준비)
+- src/lib/sources/ownerclan-adapter.ts (신규 stub) — 오너클랜 어댑터, 6개 메서드 모두 console.log + NotImplementedError (향후 API 키 발급 시 활성화)
+- src/lib/sources/index.ts (신규) — ADAPTERS 레지스트리 + getAdapter(code) 조회
+- src/app/api/crawler/domemae/route.ts (수정) — 어댑터 호출 wrapper로 슬림화, 외부 컨트랙트 100% 보존 (3곳 호출처 변경 0)
+- Platform 테이블에 OWC 오너클랜 row 추가 (DMM + OWC 2개)
+
+직전 세션 commit:
+- feat(6.5): introduce SourceAdapter pattern for B2B sources (PoC) — 5 files +856/-179
+- TSC 0 errors / npm run build 26/26 prerender OK / Vercel READY
+- production 회귀 검증: productNo 55884601 → 도매매 API 정상 (name 일치, price 12600, opts 2, seller ozz_growth, inventory ~13140)
+
+[현재 상태]
+
+▶ Platform 2개: 도매매(DMM) + 오너클랜(OWC)
+▶ Adapter 2개: domemaeAdapter (활성, getItemDetail 구현) + ownerClanAdapter (stub)
+▶ /api/crawler/domemae 외부 컨트랙트 보존 (호출처 3곳 변경 0)
+▶ naver-auto-fill/route.ts는 *아직 어댑터로 이주 안 함* — 별도 후속 작업 (S 분량)
+▶ 발견된 잔재 파일: src/lib/crawler/domemae-parser.ts (import 0건 + 깨진 한글 문자열) — 작업원칙 #34 보고 항목, 별도 Y/N 승인 필요
+
+[다음 세션 작업 — Plan A 세션 1 잔여 = 6-Pre 3단계]
+
+⚠️ STEP 0 (필수) — 환경 점검 + 4개 MD 정독 (PROGRESS / ROADMAP / SESSION_LOG / DOMEGGOOK_API_INTEGRATION_STRATEGY)
+
+⚠️ 작업원칙 강제:
+- #17 commit msg는 .commit-msg.tmp + git commit -F
+- #21 사전 점검 (HEAD/status/stash/wc)
+- #22 시각 검증 의무 (API 200 ≠ 브라우저 완료)
+- #24 commit + push 한 turn 안에 끝내기
+- #26 (a~e) IA 점검 + dev 캐시 정리 + Chrome MCP js hang 회피
+- #29 (a~e+) 한글 처리 5+1 규칙 — *사용자 이름 답변 본문 호명 절대 금지* (memory 등록됨)
+- #31 MD 1500줄 자동 점검 + idempotent 가드 (e)
+- #32 push 전 npm run build 의무
+- #33 useSearchParams Suspense 자동 점검
+- #34 명백한 오류 파일 발견 시 사용자 알림
+
+세션 잔여 작업 = 6-Pre 3단계 (Discord 5채널 본문 정비, M):
+1. 현재 5채널 (orders / stock-alerts / daily / weekly / kkotti) 발송 본문 grep 진단
+2. src/lib/notifications/discord-builder.ts (신규) — 5채널 표준 메시지 빌더 (꼬띠 톤 + 액션 가이드 통합)
+3. 5채널 각각 재설계 — 단순 정보 → *셀러 다음 액션 명시* 톤 전환
+4. 꼬띠 톤 (밝고 경쾌한 카우걸 + 가든 컨셉) 유지
+5. 5채널 모두 새 본문 테스트 발송 검증
+6. commit (.commit-msg.tmp + git commit -F) + push (한 turn 안에)
+7. PROGRESS / ROADMAP / SESSION_LOG 갱신 (idempotent 가드)
+
+[작업원칙 #34 발견 항목 (별도 Y/N 승인 필요)]
+
+src/lib/crawler/domemae-parser.ts:
+- import 0건 (사용처 0)
+- 깨진 한글 문자열 포함 (예: text !== '????', priceMatch[1].match(/\\+?([0-9,]+)??/))
+- 옛 HTML 스크래핑 시절 잔재로 보임 (현재는 도매꾹 OpenAPI v4.5로 전환됨)
+- 권고: 다음 세션에서 git rm로 정리 (작업원칙 #34 보고 + 사용자 승인 후)
+
+[참고: 환경/시크릿]
+- Supabase project ID: doxfizicftgtqktmtftf
+- Naver Search Ad CUSTOMER_ID: 3755315
+- 카카오 채널 Public ID: _xkfALG (꽃틔움 KKOTIUM)
+- AI: Groq lrltQb + 3IGN7i 정상 2키 → Gemini quota 초과 → Anthropic
+- 도매매 Open API Key: a6ff…c470bb (32자, 정상 작동 검증 완료)
+- 도매꾹 Private API: 신청 진행 중 (1~3일 결과 대기)
+- Discord 5채널 webhook URL: orders / stock-alerts / daily / weekly / kkotti (Vercel 환경변수)
+
+[Sprint 6.5 이후 일정 (참고)]
+- 세션 2: 6-A 재고 폴링 단독 + 첫 실제 상품 등록으로 검증
+- 세션 3: 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가)
+- 세션 4: 6-E + 6-D (카테고리 매핑 + 꼬띠 4모드 추천)
+- Sprint 7: AI Studio 4모듈 (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트) + 7-X 반품안심케어 위젯
+- Sprint 8: Private 발급 후 자동발주 (Discord 버튼)
+
+10년 차 B2B 이커머스 ERP 및 백오피스 설계 경험 풍부한 네이버 스마트스토어 파워셀러인 풀스택 시니어 개발자 + UX/UI 디자이너 관점에서, 본격 소싱 시작 직전이라 워크플로우의 *실제 작동*이 디자인보다 우선순위 높습니다. 새싹셀러이지만 파워셀러로 성장하기 위한 스텝 작업 중. *절대 단독 판단으로 IA/삭제 결정 금지* — 진단 결과 디테일하게 브리핑 후 사용자 개별 Y/N 승인 받은 항목만 진행.
+
+작업 시작 전 필수:
+1. (a) git rev-parse HEAD origin/main → 일치 (e8810c2)
+   (b) git status → working tree clean
+   (c) git stash list → stash@{0} 보존
+   (d) wc -l docs/plan/*.md docs/research/*.md → 1500줄 임계 점검
+   (e) curl -sIo /dev/null -w "%{http_code}" https://kkotium-garden.vercel.app/dashboard → HTTP 200
+   (f) 4개 MD 정독 (PROGRESS / ROADMAP / SESSION_LOG / DOMEGGOOK_API_INTEGRATION_STRATEGY)
+   (g) tool_search "filesystem write_file" 호출하여 Filesystem:write_file 도구 활성화
+2. 6-Pre 3단계 디테일 계획서 한 번 더 브리핑 + 사용자 개별 Y/N 승인
+3. 작업 시작 → 검증 → commit + push → MD 갱신 (한 turn 안에)
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-08 (해외 직소싱 baseline + 6-Pre 1·2 완료 후, Plan A 세션 1 잔여 작업)~~ (deprecated, 본 세션에서 6.5 완료)
+
+*아래 메시지는 본 세션 이전 버전입니다. 위의 새 시작 메시지를 사용하세요.*
 
 ## 다음 새 채팅 시작 메시지 — 2026-05-08 (해외 직소싱 baseline + 6-Pre 1·2 완료 후, Plan A 세션 1 잔여 작업) ✅
 

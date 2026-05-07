@@ -9,6 +9,142 @@
 > **현재 본 파일에는 직전 5세션만 유지** (분할 시점 기준 2026-05-06 ~ 2026-05-08).
 ---
 
+## 2026-05-08 세션 (Plan A 세션 1 잔여: 6.5 SourceAdapter 패턴 PoC) ✅
+
+### 본 세션 성격
+- 직전 commit `d68f012` (해외 직소싱 baseline + 6-Pre 1·2단계 완료) 직후, 사용자 컨텍스트 안전 우선 지시에 따라 **A 옵션 (6.5 어댑터 패턴 먼저)** 선택.
+- Sprint 6 본격 시작 *전*에 어댑터 패턴 정착 → 향후 Sprint 6 (재고 폴링/가격 변동/꼬띠 추천 등 5개 작업) 모두 어댑터 위에서 작성되어 미래 자유도 확보.
+- 결과: SourceAdapter 인터페이스 + 도매매 어댑터 + 오너클랜 stub + 라우트 슬림화 + Platform DB row + 회귀 검증까지 한 세션 안에 완료. 6-Pre 3단계 (Discord 정비)는 컨텍스트 안전을 위해 다음 세션 인계.
+
+### 시작 직전 상태 (작업원칙 #21 사전 점검 통과)
+- HEAD `d68f012` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} 보존 ✅
+- MD 모두 1500줄 이내 (PROGRESS 716 / ROADMAP 690 / SESSION_LOG 1124) ✅
+- production HTTP 200 ✅
+
+### 주요 작업
+
+#### 작업 1: 사전 분석 (영향 범위 파악)
+grep 결과로 확인된 핵심 사실:
+- `auto-mapper.ts` 사용처: `naver-auto-fill/route.ts` 1곳만 (autoMapProduct + optimizeProductName)
+- `scrapeProduct` 사용처: `naver-auto-fill/route.ts` 1곳만
+- `domemae-parser.ts` 사용처: **0곳** (잔재 파일 의심, 작업원칙 #34 보고)
+- `/api/crawler/domemae` 호출처: 3곳 (`/crawl/page.tsx:249`, `AlternativeProductPanel.tsx:156`, `DomemaeCrawler.tsx:33`)
+- Platform 테이블: DMM 1개만 등록 → OWC 오너클랜 추가 필요
+
+→ **외부 컨트랙트 100% 보존하면서 내부만 어댑터로 이주** 전략 확정.
+
+#### 작업 2: SourceAdapter 인터페이스 정의 (`src/lib/sources/source-adapter.ts` 신규)
+- 6개 메서드 인터페이스: `getItemDetail / searchItems / getInventory / getCategories / placeOrder / getMinQuantity`
+- 공통 타입: `ItemDetail`, `CrawledOption`, `SearchFilter`, `ItemSummary`, `ItemListResult`, `InventorySnapshot`, `Category`, `OrderRequest`, `OrderResult`
+- `SourceAdapterError` 클래스 (kind: NotFound / AuthFailed / RateLimited / NotImplemented / Network / BadResponse / Unknown)
+- `notImplemented()` 헬퍼 (stub 어댑터용)
+- 작업원칙 #29 (c) 준수: 영문 주석 + 영문 식별자만, 한글 리터럴 0건
+
+#### 작업 3: 도매매 어댑터 구현 (`src/lib/sources/domemae-adapter.ts` 신규)
+- 기존 `domemae/route.ts`의 `extractProductNo / parseSupplyPrice / parseShipFee / parseOptions / getApiKey` 함수 이주
+- `getItemDetail()` 완전 구현 (도매꾹 OpenAPI v4.5 `getItemView` 호출)
+- `getMinQuantity()` 구현 (현재 항상 1 반환, OpenAPI v4.5에 MOQ 필드 없음)
+- `searchItems / getInventory / getCategories / placeOrder` = NotImplementedError stub (Sprint 6/8용)
+- `domemaeAdapter` 싱글톤 export
+
+#### 작업 4: 도매매 라우트 슬림화 (`src/app/api/crawler/domemae/route.ts` 수정)
+- 어댑터 호출 wrapper로 변경
+- 외부 컨트랙트 100% 보존 — 요청 body `{ url }` + 응답 shape 모두 동일
+- `SourceAdapterError` 분기로 사용자 메시지 매핑 (AuthFailed → API key 미설정 안내, BadResponse → API 에러 안내)
+- `crawl_logs` insert 로직은 라우트에 그대로 유지 (어댑터 외부 책임)
+
+#### 작업 5: 오너클랜 어댑터 stub (`src/lib/sources/ownerclan-adapter.ts` 신규)
+- platformCode `OWC`, platformName `OwnerClan`
+- 6개 메서드 모두 `console.log` + `notImplemented()` 호출
+- 향후 OwnerClan API 키 발급 시 본문 채울 수 있는 골격
+- 활성화 단계 4가지 주석으로 명시 (credentials 확보 → env 등록 → 본문 구현 → 테스트 → 레지스트리 등록)
+
+#### 작업 6: 어댑터 레지스트리 (`src/lib/sources/index.ts` 신규)
+- `ADAPTERS: Record<string, SourceAdapter>` 매핑 (DMM → domemaeAdapter, OWC → ownerClanAdapter)
+- `getAdapter(code)` 조회 함수
+- `listAdapterCodes()` 헬퍼 (cron job용)
+- 모든 공통 타입 + `SourceAdapterError` 재export
+
+#### 작업 7: Platform 테이블 OWC row 추가 (Supabase MCP migration)
+- Migration 명: `add_ownerclan_platform_for_sprint_6_5`
+- INSERT INTO platforms (id='cm_ownerclan_owc_001', name='오너클랜', code='OWC', url='https://ownerclan.com', active=true) ON CONFLICT DO NOTHING (idempotent 가드)
+- 검증: `SELECT * FROM platforms ORDER BY code` → DMM + OWC 2개 확인 ✅
+
+#### 작업 8: 검증 (작업원칙 #32 의무)
+- `npx tsc --noEmit` → 0 errors ✅
+- `npm run build` → Compiled successfully + 26/26 static pages prerendered ✅
+- `git status --short`: 1 modified + 4 new files, 정확히 의도한 변경만
+
+#### 작업 9: commit + push (작업원칙 #17 + #24, 한 turn 안에)
+- commit hash: `e8810c2` (origin/main 동기화)
+- 메시지 작성: `.commit-msg.tmp` (Filesystem:write_file 안전 패턴) → `git commit -F .commit-msg.tmp` → cleanup
+- 5 files changed, +856/-179
+- Vercel deployment `dpl_927kzd2JVmZo4qq9nMYqunz19gUh` → state READY ✅
+
+#### 작업 10: production 회귀 검증 (작업원칙 #22)
+- POST https://kkotium-garden.vercel.app/api/crawler/domemae `{"url": "55884601"}`
+- 결과: success=true, name 일치, supplyPrice=12600, options=2, seller=ozz_growth (주식회사이티엔), inventory=13140, shipFee=3000, canMerge=true, isOnSupply=false, productNo="55884601"
+- 직전 채팅 검증값과 100% 일치 (inventory만 자연 변동 13139→13140) ✅
+- **외부 컨트랙트 보존 확정** — 3곳 호출처 (/crawl page, AlternativeProductPanel, DomemaeCrawler) 변경 0건이지만 정상 작동
+
+### 다음 채팅으로 안전 분할 인계 (사용자 컨텍스트 안전 우선 지시 반영)
+
+**6-Pre 3단계 (Discord 5채널 본문 정비, M)**:
+- 신규 `src/lib/notifications/discord-builder.ts` 5채널 표준 메시지 빌더
+- 5채널 각각 재설계 (orders / stock-alerts / daily / weekly / kkotti)
+- 단순 정보 → *셀러 다음 액션 명시* 톤 전환
+- 꼬띠 톤 + 가든 컨셉 유지
+- 5채널 모두 새 본문 테스트 발송 검증
+
+**작업원칙 #34 별도 보고 항목**:
+- `src/lib/crawler/domemae-parser.ts` (60줄, cheerio 기반 HTML 파싱)
+- import 0건, 깨진 한글 문자열 포함 (`text !== '????'` 등)
+- 옛 HTML 스크래핑 시절 잔재로 보임 (현재는 도매꾹 OpenAPI v4.5로 전환됨)
+- 본 세션에서 삭제하지 않음, 다음 세션에서 사용자 Y/N 승인 후 정리 권고
+
+### 적용된 작업원칙
+
+- **#17** commit -F 패턴 ✅ (.commit-msg.tmp + git commit -F + cleanup)
+- **#21** 사전 점검 ✅ (8항목 모두 통과)
+- **#22** 시각 검증 — production HTTP 호출 + JSON 응답 필드별 일치 확인
+- **#24** commit + push 한 turn 안에 ✅
+- **#26** 단독 판단 0 — 모든 작업 사용자 Y/N 승인 후 시작
+- **#27** 외부 컨트랙트 100% 보존 — 호출처 3곳 변경 0건이면서 정상 작동 입증
+- **#28** Vercel 배포 = source of truth — push 후 production 회귀 검증으로 보장
+- **#29 (a~e+)** 한글 처리 5+1 규칙 모두 준수:
+  - (a) edit_file의 newText 한글 다량 0건 (Filesystem:write_file 직접 사용)
+  - (b) MD 갱신은 .tmp_md_update.py + Python 안전 삽입 패턴
+  - (c) 코드 edit는 영문 주석/타입만 (한글 0건, 한글 리터럴은 모두 \uXXXX escape)
+  - (d) 셸 명령 한글 직접 입력 0건 (commit msg는 영문)
+  - (e) 한글 작업 후 grep 검증 의무 ✅
+  - (e+) 사용자 이름 답변 본문 호명 0건 ✅
+- **#31 (e)** idempotent 가드 — Python 스크립트 모든 patch에 `if marker in content: skip` 패턴
+- **#32** TSC ≠ Production 빌드 — `npm run build` 26/26 prerender 통과 ✅
+- **#33** useSearchParams Suspense — 본 세션 추가/이동 0건 (영향 없음)
+- **#34** 명백한 오류 파일 발견 → 사용자 보고 (`domemae-parser.ts` 잔재) — 본 세션 삭제 안 함, 별도 승인 권고
+
+### 본 세션 학습
+
+1. **어댑터 패턴 진입 시점의 가치** — Sprint 6 *전*에 도입 vs *후*에 도입의 차이는 *5개 작업의 리팩토링 비용*. Sprint 6 본격 시작 직전인 본 시점이 *가장 저비용으로 최대 효과*. 이 패턴이 향후 1688/도매토피아/SUPER DELIVERY 어댑터 추가 시에도 동일하게 적용됨.
+2. **외부 컨트랙트 보존 = 호출처 코드 변경 0** — 도매매 라우트 내부 로직을 100% 어댑터로 이주했지만 응답 JSON shape를 1bit도 안 바꾸니 3곳 호출처(`/crawl`, `AlternativeProductPanel`, `DomemaeCrawler`)는 *완전히 무지한 채* 정상 작동. 향후 어댑터 추가 시도 동일 원칙 적용 가능.
+3. **컨텍스트 안전 분할의 두 번째 사례** — 직전 채팅의 6-Pre 1·2 + 본 세션의 6.5 + 다음 채팅의 6-Pre 3 = 3분할. 한 채팅에 강행하지 않고 분할한 결과 *각 작업 모두 깨끗한 컨텍스트*에서 진행되어 검증 누락 0건.
+4. **idempotent Python 패치 + ON CONFLICT DO NOTHING** — Platform row INSERT, MD 헤더 swap, SESSION_LOG entry prepend 모두 marker 체크로 *재실행 안전성* 확보. 작업원칙 #31 (e)의 실전 적용 첫 사례.
+5. **production 회귀 검증의 정밀도** — 직전 검증값과 9개 필드 모두 비교해서 inventory만 자연 변동(13139→13140) 확인. 단순 HTTP 200이 아니라 *비즈니스 로직 결과 일치*까지 검증해야 외부 컨트랙트 보존을 진짜 입증 가능.
+
+### 본 세션 commit
+- 신규: `src/lib/sources/source-adapter.ts`, `src/lib/sources/domemae-adapter.ts`, `src/lib/sources/ownerclan-adapter.ts`, `src/lib/sources/index.ts`
+- 수정: `src/app/api/crawler/domemae/route.ts` (어댑터 호출로 슬림화)
+- DB: platforms 테이블에 OWC 오너클랜 row 추가 (idempotent migration)
+- MD 갱신: PROGRESS.md / ROADMAP.md / SESSION_LOG.md (헤더 + 새 entry)
+- commit 메시지(영문, .commit-msg.tmp + git commit -F): `feat(6.5): introduce SourceAdapter pattern for B2B sources (PoC)`
+- commit hash: `e8810c2` / Vercel deployment READY
+
+
+---
+
+
 ## 2026-05-08 세션 (해외 직소싱 baseline 보고서 + 6-Pre 1·2단계: DRAFT 8개 삭제 + 잔재 파일 정리) ✅
 
 ### 본 세션 성격
