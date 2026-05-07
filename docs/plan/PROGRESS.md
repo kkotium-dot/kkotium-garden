@@ -1,10 +1,10 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
 
-> **최종 업데이트**: 2026-05-08 (본 세션: 리서치 통합 + 갭 분석 + Sprint 6·7·8 계획 + MD 분할)
-> **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app | **HEAD**: b6837bc (origin/main 일치)
-> **Working tree**: 신규 리서치 MD 1건 추가 / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **최종 업데이트**: 2026-05-07 (본 세션: Z-Hotfix 빌드복구 + Phase 2 IA 재구조화 — 꿀통 꽃나들이 + 꽃수레)
+> **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app | **HEAD**: ec32099 (origin/main 일치)
+> **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅
-> **다음 작업 (우선순위 순)**: 본 세션 도출 Sprint 6 (P0-A 도매꾹 옵션 정확도 + P0-B 골든윈도우 트래커 + P0-C 효자상품 자동식별) → Sprint 7 (P1 SEO 정확도) → Sprint 8 (P2 운영 도구) → 후순위 Z-3c'/Z-3e/Z-Sec
+> **다음 작업 (우선순위 순)**: Sprint 6 P0-A 도매꾹 옵션 정확도 → P0-B 골든윈도우 트래커 → P0-C 효자상품 자동식별 → **P0-D 검색품질 시뮬레이터** (꽃졔 결정 옵션 B 추가) → S-2 D+1~7 액션 매트릭스 → Sprint 7/8
 > **참고 문서**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md` (15개 핵심 발견사항 + 단계별 체크리스트), `docs/plan/archive/PROGRESS_2026Q2_MAY.md` (5월 누적 세션 기록)
 
 ---
@@ -13,7 +13,10 @@
 
 - [작업원칙 #26](#작업원칙-26) — IA 점검 의무화 + 고아 라우트 처리
 - [작업원칙 #29](#작업원칙-29) — 한글 처리 절대 규칙 5가지
-- [작업원칙 #31](#작업원칙-31) — MD 과부하 자동 분할 (본 세션 신규)
+- [작업원칙 #31](#작업원칙-31) — MD 과부하 자동 분할
+- [작업원칙 #32](#작업원칙-32) — TSC ≠ Production 빌드 검증 (본 세션 신규)
+- [작업원칙 #33](#작업원칙-33) — useSearchParams Suspense 자동 점검 (본 세션 신규)
+- [작업원칙 #34](#작업원칙-34) — 명백한 오류 파일 발견 시 사용자 알림 의무 (본 세션 신규)
 - [Sprint 6/7/8 계획](#sprint-678-계획-2026-05-08-신규) — 리서치 갭 분석 기반 신규 계획
 - [현재 앱 상태](#현재-앱-상태)
 - [환경/메뉴/파이프라인](#환경--메뉴--파이프라인)
@@ -71,6 +74,61 @@
   결과 0건이어야 정상. 매칭 발견 시 즉시 git restore + write_file 패턴으로 재작성. (주의: "정과" 패턴은 가정과/이정과 등 정상 단어 거짓양성 빈발 → 본 세션부터 검증 패턴에서 제외)
 
 **29-1 (2026-05-02 강화)**: read_text_file의 head/tail 미리보기는 깨진 글자처럼 렌더링되는 경우가 있으나 실제 파일은 NFC 정상인 케이스가 자주 발생. 화면에서 깨져 보여도 즉시 정정 시도하지 말고 **반드시 raw 검증 먼저** — Python으로 `\uFFFD` 카운트 + `unicodedata.normalize('NFC', text) != text` 카운트 측정해 둘 다 0이면 파일 정상 → 정정 작업 자체를 시작하지 않음.
+
+---
+
+## 작업원칙 #32 — TSC ≠ Production 빌드 검증 (2026-05-07 Z-Hotfix 학습)
+
+Z-Hotfix 사고: 5개 commit 연속 Vercel 빌드 ERROR가 누적됐는데 매 commit마다 `npx tsc --noEmit`은 0 errors로 통과. 차이는 *Next.js의 prerender 단계에서 useSearchParams를 Suspense 없이 사용*하면 TSC는 catch 못하지만 production build는 실패. 꽃졔님은 이 동안 production이 5번 깨졌는지 인지하지 못한 상태로 작업 진행.
+
+**규칙**: push 전 의무 검증 = `npx tsc --noEmit` AND `npm run build` 둘 다 0 errors. 빌드 시간 20-40초 소요는 작업원칙 #28 (Vercel = source of truth) 보호의 *최소 비용*. TSC 통과만으로 push하면 production이 부서져도 모름.
+
+---
+
+## 작업원칙 #33 — useSearchParams 추가 시 Suspense 자동 점검 (2026-05-07 Z-Hotfix 학습)
+
+Z-3b commit `32e56f9`이 `Sidebar.tsx`에 `useSearchParams()`를 추가했지만 layout.tsx에서 `<Sidebar />`를 Suspense로 감싸지 않아 23개 페이지 prerender 모두 실패. 작업원칙 #12 (useSearchParams pages must be wrapped in Suspense)의 *적용 범위가 layout-level 컴포넌트까지 확장됨*을 파악하지 못한 결과.
+
+**규칙**: `useSearchParams()` 호출을 추가/이동할 때 즉시 다음 점검:
+  1. 호출이 page.tsx 안에 있으면 → 해당 page를 Suspense로 감쌌는가?
+  2. 호출이 *layout-level component* (Sidebar, Header 등 모든 페이지에서 import됨)에 있으면 → **모든 페이지가 영향**, 컴포넌트 *내부*에서 `Inner()` 분리 + default export `<Suspense fallback={null}><Inner /></Suspense>` 패턴.
+  3. 패치 후 *반드시* `npm run build` (작업원칙 #32 연동) — TSC만으로 catch 안 됨.
+
+**Z-Hotfix 적용 패턴 예시**:
+```tsx
+// BEFORE (broken)
+export default function Sidebar() {
+  const searchParams = useSearchParams(); // breaks all pages
+  // ...
+}
+
+// AFTER (correct)
+function SidebarInner() {
+  const searchParams = useSearchParams();
+  // ...
+}
+export default function Sidebar() {
+  return <Suspense fallback={null}><SidebarInner /></Suspense>;
+}
+```
+
+---
+
+## 작업원칙 #34 — 명백한 오류 파일 발견 시 사용자 알림 의무 (2026-05-07 Z-Hotfix 부수 학습)
+
+Z-Hotfix 정리 중 발견된 2개 잔재 파일:
+- `src/app/api/crawler/page.tsx` — Next.js 패턴 위반 (`/api/` 폴더 안 page.tsx). 진짜 크롤러는 `/crawl`. placeholder + 작동 안 하는 onClick.
+- `src/app/chart-test/page.tsx` — 1월 21일 dev 테스트 잔재. 사이드바 미등록, 외부 import 0건, 4개월 미수정.
+
+꽃졔님은 비개발자로 모든 코드 파일을 파악할 수 없으므로 *Claude가 발견한 명백한 오류는 알림 + 정리 제안 의무*.
+
+**규칙**: 다음 상황에 사용자에게 즉시 보고:
+  - Next.js 라우팅 패턴 위반 (`/api/.../page.tsx`, route handler 위치 오류 등)
+  - 사이드바 미등록 + 외부 import 0건 + 6개월+ 미수정 = 강력 잔재 의심 (단순 grep만으로 결정 금지 — 작업원칙 #26 a/c 연동)
+  - import 사이클 / 사용하지 않는 export / dead code subgraph
+  - **발견 즉시 보고 + 삭제/유지 결정 받기** (혼자 결정 금지)
+
+**작업원칙 #26 (b)와의 차이**: #26 (b)는 *수정 작업 중 발견한 고아 라우트끼리의 backlink*에 대한 규칙. #34는 *오류 패턴 자체 발견 시* 별도 보고 의무.
 
 ---
 

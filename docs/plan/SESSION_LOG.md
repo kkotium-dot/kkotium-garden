@@ -9,6 +9,83 @@
 > **현재 본 파일에는 직전 5세션만 유지** (분할 시점 기준 2026-05-06 ~ 2026-05-08).
 ---
 
+## 2026-05-07 세션 (Z-Hotfix 빌드복구 + Phase 2 IA 재구조화 + 작업원칙 #32/#33/#34 등록) ✅
+
+### 본 세션 성격
+- 직전 세션(2026-05-08 docs 통합) 이후 첫 코드 변경 세션.
+- 두 단계로 진행: **Phase 1 = Z-Hotfix** (5건 누적 Vercel ERROR 진단 + 수정), **Phase 2 = IA 재구조화** (사이드바 일관성 회복 + 정체성 통일).
+- 꽃졔님이 Phase 2 텍스트 변경의 *95%를 직접* 적용하신 후, Claude가 검증/commit/push/MD 갱신 마무리.
+
+### Phase 1 — Z-Hotfix (commit b393001) ✅
+
+**진단**: Vercel MCP 빌드 로그 직접 조회 결과 5개 commit 연속 ERROR. 마지막 성공 = `0e6df93` (Z-3d). 이후 Z-3b sidebar deep-link, work-principle #26, sprout research, SESSION_LOG split, ROADMAP handoff 5건 모두 production 미반영.
+
+**근본 원인**: Z-3b commit `32e56f9`가 `Sidebar.tsx:220`에 `useSearchParams()` 추가했으나 layout.tsx에서 `<Sidebar />`를 Suspense로 감싸지 않음 → 모든 23개 페이지 prerender 실패. 작업원칙 #12 (useSearchParams Suspense)의 *layout-level 적용 범위* 미파악.
+
+**해결** (4 files):
+1. `Sidebar.tsx`: `SidebarInner()` 분리 + default export `<Suspense fallback={null}><SidebarInner /></Suspense>` 패턴
+2. `crawl/page.tsx`: 동일 `CrawlPageInner()` + Suspense wrapper 패턴
+3. `src/app/api/crawler/page.tsx` 삭제 — Next.js 패턴 위반 (`/api/` 폴더 안 page.tsx)
+4. `src/app/chart-test/page.tsx` 삭제 — 1월 21일 dev 테스트 잔재 (사이드바 미등록, import 0건)
+
+**검증**: TSC 0 errors, `npm run build` 20초 성공 (모든 routes prerendered), Vercel 빌드 READY (`dpl_9bt3Au2ThTkzM946xpCkYQdkRyJg`), production HTTP 200, `/crawl?tab=history` 보관함 탭 자동 활성화 + 데이터 4건 표시 확인.
+
+**부수 사고**: heredoc 사용 사고 (작업원칙 #29(d) 위반) → Ctrl-C 복구 → `Filesystem:write_file`로 `.tmp_commit_msg.txt` 작성 → `git commit -F` 정상 처리.
+
+### Phase 2 — IA 재구조화 (commit ec32099) ✅
+
+**문제 인식 (꽃졔님 직접 지적)**: 직전 Z-3b가 사이드바 HUNT 섹션에 "소싱 보관함" deep-link 추가했으나, 다른 6개 메뉴 (씨앗 심기 6탭 / 검색 조련사 3종 / 정원 창고 5단계 등)는 모두 *내부 탭이 많아도 사이드바에는 1개*. 꿀통 사냥터만 비대칭 = IA 일관성 위반.
+
+**Claude 분석 (개선안 5개 + 추천)**:
+1. 보관함 우선 페이지 (진입 시 보관함이 첫 화면)
+2. 사이드바 배지를 보관함 카운트로 의미 변경
+3. 첫 진입 시 모드 선택 카드
+4. **하이브리드 (1+2) ⭐ 추천**
+5. 메뉴명 메타포 정밀화
+
+**꽃졔님 결정**: 개선안 4 + 메뉴명 변경 (가든/카우걸/유머러스 컨셉)
+- 사이드바 메뉴: 꿀통 사냥터 → **꿀통 꽃나들이** (밝고 경쾌한 카우걸이 햇살 좋은 날 들판으로 소풍을 나가 보물 같은 상품들을 바구니에 담아오는)
+- 단건 크롤링 → **꽃 한 송이 담기**
+- 대량 크롤링 → **꽃 한아름 담기**
+- 소싱 보관함 → **꿀통 꽃수레** (예시 부제: "지금 꽃수레에 담긴 예쁜 상품 8개")
+
+**구현** — 꽃졔님이 7개 파일 모든 텍스트 변경을 *직접* 적용 후 Claude가 검증/commit/push:
+| 파일 | 변경 내용 | 분량 |
+|---|---|---|
+| Sidebar.tsx | "꿀통 사냥터"→"꿀통 꽃나들이", deep-link 메뉴 제거 | 2줄 |
+| crawl/page.tsx | h1/부제/탭 순서·라벨 14곳 + 기본탭=history + setTab 라우팅 | 40줄 |
+| dashboard/page.tsx | 빠른액션 카드 라벨/hint | 1줄 |
+| naver-settings/page.tsx | 도움말 2곳 | 2줄 |
+| settings/store/page.tsx | subtitle/action label/description | 3줄 |
+| workflow/page.tsx | 빠른 액션 | 2줄 |
+| KkottiBriefingWidget.tsx | 브리핑 메시지 2곳 | 2줄 |
+
+**Claude 추가 분석 결과 — 보완 작업 0건**:
+1. 사이드바 배지 = 이미 꽃수레 카운트 (`useSidebarStats.sourcingCount` → `prisma.crawlLog.count({ where: { sourcingStatus: 'SOURCED' } })`). 변수명만 `sourcing`이고 *데이터 의미는 꽃수레*. 변수명 리팩토링은 5+ 파일 영향 → 별도 Sprint로 미룸.
+2. "단건/대량 액션 버튼 강등"은 의도적 생략 — 꽃졔님이 *탭 3개 구조 유지 + 꽃수레 첫 탭*으로 시각 우선순위 충족 결정.
+
+**검증**: TSC 0 errors, `npm run build` 성공, push (b393001..ec32099), Vercel 빌드 READY 65초 (`dpl_2CsX1TwFaxf7RUYTsRPyGNFPtu9N`), HTTP 200.
+
+**미완**: 인터랙티브 시각 검증 — Control Chrome MCP 4분 hang (작업원칙 #26(e) 패턴 재현). 같은 세션 재시도 금지 → `Vercel:web_fetch_vercel_url`로 응답 확인 (CSR 모드 빈 본문 = Suspense fallback null이 의도대로 작동), 페이지 chunk fetch 시도 도중 세션 중단. **다음 세션 첫 작업으로 이관**.
+
+### 부수 사고 — `.commit-msg.tmp` commit 포함 (작업원칙 #17 미세 위반)
+
+`git add -A`가 `.commit-msg.tmp`까지 포함 → 직후 `rm -f`로 워킹트리는 정리됐지만 commit tree에 들어감. `git add -A && git commit --amend --no-edit`로 즉시 정정 (ec32099, 7 files clean). 
+
+**작업원칙 #17 보강 후보**: `.commit-msg.tmp` 작성 시 `.gitignore`에 패턴 사전 등록 또는 `git add` 명시 파일 지정.
+
+### 신규 작업원칙 3개 영구 등록 (PROGRESS.md)
+
+- **#32**: TSC ≠ Production 빌드 검증 — push 전 `npm run build` 의무. TSC 통과만으로는 prerender 단계 실패 catch 못 함.
+- **#33**: useSearchParams 추가 시 Suspense 자동 점검 — layout-level 컴포넌트(Sidebar, Header)에 추가하면 *모든 페이지 영향*. `Inner()` 분리 + Suspense wrapper 패턴.
+- **#34**: 명백한 오류 파일 발견 시 사용자 알림 의무 — 꽃졔는 비개발자, Claude가 발견한 패턴 위반/잔재 파일은 즉시 보고 + 결정 받기.
+
+### 학습 — Control Chrome MCP 4분 hang 재현
+
+작업원칙 #26(e) 패턴이 *코드 작업 후 검증 단계*에서도 재현됨을 확인. 직전 학습은 *MD 패치 직후*였는데 본 세션은 *production fetch 직전*에 발생. 패턴 일반화: **세션 후반부에는 브라우저 자동화 MCP가 hang 가능성 높음** → 1차 시도 실패 시 즉시 `web_fetch` / `Vercel:web_fetch_vercel_url`로 fallback.
+
+---
+
 ## 2026-05-08 세션 (리서치 통합 + 갭 분석 + Sprint 6/7/8 계획 + MD 자동 분할 #31 첫 적용) ✅
 
 ### 본 세션 성격

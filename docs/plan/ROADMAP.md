@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-08 (본 세션: 작업원칙 #31 자동 분할 + Sprint 6/7/8 계획 + 미완 마무리 ✅)
-> **HEAD**: 76f592d (origin/main 일치) | **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-07 (본 세션: Z-Hotfix 빌드복구 + Phase 2 IA 재구조화 + 작업원칙 #32/#33/#34 등록 ✅)
+> **HEAD**: ec32099 (origin/main 일치) | **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app
 >
 > **이 파일의 역할**: 진행 중·예정 Sprint 계획 + 영구 참조 (체크리스트, 비용 로드맵, 도구 사용 패턴)
 > **누적 인계 메시지 + Phase A/B/C 완료 이력**: `docs/plan/archive/ROADMAP_2026Q2_MAY.md`
@@ -11,7 +11,63 @@
 
 ---
 
-## 다음 새 채팅 시작 메시지 — 2026-05-08 (Sprint 6 시작 가능 상태) ✅
+## 다음 새 채팅 시작 메시지 — 2026-05-07 (Sprint 6 시작 가능 상태) ✅
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md, docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md를 읽고 현재 상태를 파악한 후 브리핑해주세요.
+
+[직전 세션 결과 — 2026-05-07 Z-Hotfix + Phase 2 IA 재구조화 완료 ✅]
+
+HEAD = ec32099 = origin/main 일치. working tree clean. stash@{0} "z3c-misdirected-changes-needs-redo" 보존 중.
+
+직전 세션 commit 2건 모두 push 완료 + Vercel 빌드 READY:
+- b393001 fix(z-hotfix): production build error after 5 consecutive ERROR deployments
+  → Sidebar.tsx useSearchParams() Suspense wrap + crawl/page.tsx 동일 패턴 + 잔재 파일 2건 삭제 (api/crawler/page.tsx, chart-test/page.tsx)
+- ec32099 feat(ia): unify hunt section identity to "꿀통 꽃나들이" + "꿀통 꽃수레"
+  → Phase 2 IA 재구조화: 사이드바 1개 메뉴 + 꽃수레 첫 탭 + 7개 파일 모든 텍스트 통일
+
+신규 작업원칙 3개 영구 등록:
+- #32 TSC ≠ Production 빌드 검증 (push 전 npm run build 의무)
+- #33 useSearchParams 추가 시 Suspense 자동 점검 (layout-level 컴포넌트 특히 주의)
+- #34 명백한 오류 파일 발견 시 사용자 알림 의무 (꽃졔는 비개발자)
+
+[현재 IA 상태]
+
+사이드바 HUNT 섹션 = "꿀통 꽃나들이" 1개 메뉴 (다른 6개 섹션과 일관 패턴).
+페이지 진입 시 = 꿀통 꽃수레 (보관함) 첫 화면 — 매일 사용자 결정 모드 우선.
+탭 라벨: 꿀통 꽃수레 / 꽃 한 송이 담기 / 꽃 한아름 담기.
+사이드바 배지 = 꽃수레 카운트 (이미 sourcingStatus=SOURCED 의미 일치 — 변수명만 sourcingCount 그대로).
+
+[다음 세션 작업 우선순위]
+
+⚠️ 작업원칙 #22 미완료 — Phase 2 IA 인터랙티브 시각 검증 (Control Chrome 4분 hang으로 미완)
+   첫 작업으로 https://kkotium-garden.vercel.app/crawl 직접 브라우저 진입 → 다음 4점 시각 확인:
+   1. 사이드바: "꿀통 꽃나들이" 표시 + "소싱 보관함" 메뉴 사라짐
+   2. 페이지 진입 첫 화면: 꿀통 꽃수레 탭 활성화 (보관함 데이터 표시)
+   3. 탭 라벨 3개: 꿀통 꽃수레 / 꽃 한 송이 담기 / 꽃 한아름 담기
+   4. 부제: "지금 꽃수레에 담긴 예쁜 상품 N개"
+   꽃졔님이 직접 확인하셔도 OK.
+
+⚠️ 작업원칙 #31 강제 적용 — 매 세션 시작 시 wc -l docs/plan/*.md docs/research/*.md 검사
+⚠️ 작업원칙 #26 (a)(b)(c) 강제 — 코드 변경 전 IA 점검 의무
+⚠️ 작업원칙 #29 (a~e) 강제 — 한글 처리 절대 규칙 5가지
+⚠️ 작업원칙 #32 강제 — push 전 npm run build 검증 의무
+⚠️ 작업원칙 #33 강제 — useSearchParams 추가 시 Suspense 자동 점검
+⚠️ 작업원칙 #34 강제 — 명백한 오류 파일 발견 시 사용자 알림
+
+본 세션 마지막 시각 검증을 마친 후, Sprint 6 시작:
+1. Sprint 6 P0-A 도매꾹 옵션 정확도 (`getItemView ver=4.5` selectOpt 전체 옵션 반영 검증)
+2. Sprint 6 P0-B 골든윈도우 트래커 (3-7일 신상품 가산점 추적 위젯)
+3. Sprint 6 P0-C 효자상품 자동식별 (Pareto top 위젯)
+4. Sprint 6 P0-D 검색품질 시뮬레이터 (셀러센터 빨간 항목 0개 임계 — 꽃졔 결정 옵션 B)
+5. Sprint 6 S-2 D+1~7 액션 매트릭스 (등록 후 7일 골든윈도우 액션 가이드)
+
+(Sprint 7 P1, Sprint 8 P2, Sprint 9 P3는 ROADMAP.md 본문 참조)
+```
+
+---
+
+## 다음 새 채팅 시작 메시지 — 2026-05-08 (이전 세션, 참고용)
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md, docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md를 읽고 현재 상태를 파악한 후 브리핑해주세요.
