@@ -1,177 +1,95 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { domemaeAdapter, extractProductNo } from '@/lib/sources/domemae-adapter';
+import { SourceAdapterError } from '@/lib/sources/source-adapter';
 
-// Domeggook OpenAPI-based crawler
-// Replaces HTML scraping with official API: https://domeggook.com/ssl/api/
-// API docs: https://docs.channel.io/domeggook_api/ko
-// Rate limit: 180/min, 15,000/day
-
+// Domeggook OpenAPI-based crawler.
+// Replaces HTML scraping with the official API: https://domeggook.com/ssl/api/
+// Docs: https://docs.channel.io/domeggook_api/ko
+// Rate limit: 180/min, 15,000/day.
+//
+// As of Sprint 6.5 the parsing/networking logic now lives in
+// src/lib/sources/domemae-adapter.ts. This route is a thin HTTP wrapper
+// that preserves the existing external contract (request body { url } and
+// response shape) so callers (/crawl page, AlternativeProductPanel,
+// DomemaeCrawler component) need no changes.
 
 export const dynamic = 'force-dynamic';
-const DOMEGGOOK_API = 'https://domeggook.com/ssl/api/';
-
-// Extract product number from various URL formats
-function extractProductNo(url: string): string | null {
-  // domeme.domeggook.com/s/12345678
-  const shortMatch = url.match(/\/s\/(\d{6,10})/);
-  if (shortMatch) return shortMatch[1];
-  // domeggook.com/...?uid=12345678 or no=12345678
-  const uidMatch = url.match(/[?&](?:uid|no)=(\d{6,10})/);
-  if (uidMatch) return uidMatch[1];
-  // bare number
-  if (/^\d{6,10}$/.test(url.trim())) return url.trim();
-  return null;
-}
-
-// Parse price.supply which can be int or "1+3800|20+3500" string
-function parseSupplyPrice(val: unknown): number {
-  if (typeof val === 'number') return val;
-  if (typeof val === 'string') {
-    // "1+3800|20+3500|50+3300" — take first tier (minimum order price)
-    const first = val.split('|')[0];
-    const price = parseInt(first.split('+')[1] ?? first, 10);
-    return isNaN(price) ? 0 : price;
-  }
-  return 0;
-}
-
-// Parse shipping fee from deli object
-function parseShipFee(deli: Record<string, unknown>): number {
-  const supply = deli?.supply as Record<string, unknown> | undefined;
-  const dome   = deli?.dome   as Record<string, unknown> | undefined;
-  const src = supply ?? dome;
-  if (!src) return 3000;
-  if (src.type === '무료배송') return 0;
-  const fee = src.fee;
-  if (typeof fee === 'number') return fee;
-  if (typeof fee === 'string') {
-    const n = parseInt(fee, 10);
-    return isNaN(n) ? 3000 : n;
-  }
-  return 3000;
-}
-
-// Structured option from Domeggook API selectOpt
-interface CrawledOption {
-  name: string;
-  qty: number;       // stock per option (0 = out of stock)
-  addPrice: number;  // additional price on top of base supply price
-}
-
-// Parse options from selectOpt JSON string — returns structured data
-function parseOptions(selectOpt: string | undefined): CrawledOption[] {
-  if (!selectOpt) return [];
-  try {
-    const parsed = JSON.parse(selectOpt) as {
-      data?: Record<string, { name?: string; hid?: string | number; qty?: string | number; addprice?: string | number }>;
-      type?: string;
-    };
-    if (parsed.data) {
-      return Object.values(parsed.data)
-        .filter(o => String(o.hid ?? '0') !== '1')  // exclude hidden
-        .map(o => ({
-          name: o.name?.trim() ?? '',
-          qty: parseInt(String(o.qty ?? '0'), 10) || 0,
-          addPrice: parseInt(String(o.addprice ?? '0'), 10) || 0,
-        }))
-        .filter(o => o.name)
-        .slice(0, 30);
-    }
-  } catch { /* fall through */ }
-  return [];
-}
-
-// Get API key from DB
-async function getApiKey(): Promise<string | null> {
-  try {
-    const rows = await prisma.$queryRaw<{ domeggook_api_key: string }[]>`
-      SELECT domeggook_api_key FROM store_settings WHERE id = 'default' LIMIT 1
-    `;
-    const key = rows[0]?.domeggook_api_key?.trim();
-    return key || null;
-  } catch { return null; }
-}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const { url } = await request.json();
     if (!url?.trim()) {
-      return NextResponse.json({ success: false, error: 'URL 또는 상품번호를 입력해주세요' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'URL \uB610\uB294 \uC0C1\uD488\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694' },
+        { status: 400 },
+      );
     }
 
-    // Validate it's a domeggook URL or product number
-    const isValidDomemae = url.includes('domeggook.com') || /^\d{6,10}$/.test(url.trim());
+    const isValidDomemae =
+      url.includes('domeggook.com') || /^\d{6,10}$/.test(url.trim());
     if (!isValidDomemae) {
       return NextResponse.json(
-        { success: false, error: '도매매(domeggook.com) URL 또는 상품번호만 지원합니다' },
-        { status: 400 }
+        {
+          success: false,
+          error:
+            '\uB3C4\uB9E4\uB9E4(domeggook.com) URL \uB610\uB294 \uC0C1\uD488\uBC88\uD638\uB9CC \uC9C0\uC6D0\uD569\uB2C8\uB2E4',
+        },
+        { status: 400 },
       );
     }
 
     const productNo = extractProductNo(url);
     if (!productNo) {
-      return NextResponse.json({ success: false, error: '상품번호를 찾을 수 없습니다' }, { status: 400 });
-    }
-
-    // Get API key
-    const apiKey = await getApiKey();
-    if (!apiKey) {
       return NextResponse.json(
-        { success: false, error: '도매꾹 API Key가 설정되지 않았습니다. 네이버 기본값 설정에서 API Key를 입력해주세요.' },
-        { status: 400 }
+        { success: false, error: '\uC0C1\uD488\uBC88\uD638\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4' },
+        { status: 400 },
       );
     }
 
-    // Call Domeggook OpenAPI
-    const apiUrl = `${DOMEGGOOK_API}?ver=4.5&mode=getItemView&aid=${apiKey}&no=${productNo}&om=json`;
-    const res = await fetch(apiUrl, { signal: AbortSignal.timeout(15_000) });
-    if (!res.ok) throw new Error(`API 오류 (HTTP ${res.status})`);
-
-    const raw = await res.json() as { domeggook?: Record<string, unknown>; errors?: unknown };
-
-    // Handle API errors
-    if (raw.errors || !raw.domeggook) {
-      const errMsg = JSON.stringify(raw.errors ?? raw).slice(0, 200);
-      console.error('[crawler-api] API error:', errMsg);
-      return NextResponse.json({ success: false, error: `도매꾹 API 오류: ${errMsg}` }, { status: 400 });
+    // Delegate the heavy lifting to the adapter
+    let detail;
+    try {
+      detail = await domemaeAdapter.getItemDetail(productNo);
+    } catch (e) {
+      if (e instanceof SourceAdapterError) {
+        // Map adapter errors to user-facing messages, preserving previous behavior
+        if (e.kind === 'AuthFailed') {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                '\uB3C4\uB9E4\uAFB9 API Key\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uB124\uC774\uBC84 \uAE30\uBCF8\uAC12 \uC124\uC815\uC5D0\uC11C API Key\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.',
+            },
+            { status: 400 },
+          );
+        }
+        if (e.kind === 'BadResponse') {
+          console.error('[crawler-api] adapter bad response:', e.message);
+          return NextResponse.json(
+            { success: false, error: `\uB3C4\uB9E4\uAFB9 API \uC624\uB958: ${e.message}` },
+            { status: 400 },
+          );
+        }
+        throw e; // unhandled adapter error -> outer catch
+      }
+      throw e;
     }
 
-    const item = raw.domeggook as {
-      basis?: { title?: string; status?: string };
-      price?: { supply?: unknown; dome?: unknown; resale?: { minimum?: number; Recommand?: number } };
-      qty?: { inventory?: number; supplyUnit?: number };
-      deli?: Record<string, unknown>;
-      seller?: { id?: string; nick?: string; rank?: number; power?: string; score?: { avg?: number }; company?: { name?: string; boss?: string; cno?: string; addr?: string; phone?: string } };
-      thumb?: { large?: string; largePng?: string; original?: string };
-      selectOpt?: string;
-      detail?: { country?: string; manufacturer?: string };
-      category?: { current?: { name?: string; code?: string } };
-      channel?: { supply?: boolean };
-    };
+    if (!detail) {
+      return NextResponse.json(
+        { success: false, error: '\uC0C1\uD488\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4' },
+        { status: 404 },
+      );
+    }
 
-    // Extract core fields
-    const name         = item.basis?.title?.replace(/\s+/g, ' ').trim() ?? '';
-    const status       = item.basis?.status ?? '';
-    const supplyPrice  = parseSupplyPrice(item.price?.supply);
-    const inventory    = item.qty?.inventory ?? 0;
-    const shipFee      = parseShipFee(item.deli as Record<string, unknown>);
-    const mergeShip    = (item.deli as Record<string, unknown> | undefined)?.merge as { enable?: string } | undefined;
-    const canMerge     = mergeShip?.enable === 'y';
-    // company.name is the real business name; nick is often empty string
-    const sellerNick   = String((item.seller as any)?.company?.name || item.seller?.nick || '');
-    const sellerId     = String(item.seller?.id ?? '');
-    const sellerRank   = item.seller?.rank ?? 0;
-    const options      = parseOptions(item.selectOpt);
-    const thumbUrl     = item.thumb?.largePng ?? item.thumb?.large ?? item.thumb?.original ?? '';
-    const images       = thumbUrl ? [thumbUrl] : [];
-    const country      = item.detail?.country ?? '';
-    const categoryName = item.category?.current?.name ?? '';
-    const categoryCode = item.category?.current?.code ?? '';
-    const isOnSupply   = item.channel?.supply === true;
+    console.log(
+      `[crawler-api] no=${detail.productNo} | "${detail.name}" | ` +
+        `supply=${detail.supplierPrice} | opts=${detail.options.length} | ` +
+        `seller=${detail.sellerId}(${detail.sellerNick}) | stock=${detail.inventory}`,
+    );
 
-    console.log(`[crawler-api] no=${productNo} | "${name}" | supply=${supplyPrice} | opts=${options.length} | seller=${sellerId}(${sellerNick}) | stock=${inventory}`);
-
-    // Save to crawl_logs with full sourcing data
+    // Persist sourcing snapshot (preserve original behavior including non-blocking insert)
     prisma.$executeRaw`
       INSERT INTO crawl_logs (
         id, url, name, supplier_price, images, options, status, source,
@@ -179,14 +97,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         inventory, ship_fee, can_merge, sourcing_status
       ) VALUES (
         gen_random_uuid(),
-        ${'https://domeme.domeggook.com/s/' + productNo},
-        ${name}, ${supplyPrice},
-        ${JSON.stringify(images)}::jsonb,
-        ${JSON.stringify(options)}::jsonb,
+        ${detail.sourceUrl},
+        ${detail.name}, ${detail.supplierPrice},
+        ${JSON.stringify(detail.images)}::jsonb,
+        ${JSON.stringify(detail.options)}::jsonb,
         'success', 'single',
-        ${sellerNick}, ${sellerId}, ${Number(sellerRank)},
-        ${categoryName}, ${categoryCode},
-        ${Number(inventory)}, ${Number(shipFee)}, ${Boolean(canMerge)},
+        ${detail.sellerNick}, ${detail.sellerId}, ${Number(detail.sellerRank)},
+        ${detail.categoryName}, ${detail.categoryCode},
+        ${Number(detail.inventory)}, ${Number(detail.shipFee)}, ${Boolean(detail.canMerge)},
         'SOURCED'
       )
     `.catch((e) => console.error('[crawl-log-insert]', e));
@@ -194,35 +112,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({
       success: true,
       data: {
-        name:          name || '상품명을 찾을 수 없습니다',
-        supplierPrice: supplyPrice,
-        images,
-        options,
-        description:   '',
-        sourceUrl:     `https://domeme.domeggook.com/s/${productNo}`,
-        // Extended fields from API
-        productNo,
-        inventory,
-        shipFee,
-        canMerge,
-        sellerNick,
-        sellerId,
-        sellerRank,
-        categoryName,
-        categoryCode,
-        country,
-        status,
-        isOnSupply,
+        // Match the original response shape verbatim
+        name: detail.name || '\uC0C1\uD488\uBA85\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4',
+        supplierPrice: detail.supplierPrice,
+        images: detail.images,
+        options: detail.options,
+        description: detail.description,
+        sourceUrl: detail.sourceUrl,
+        productNo: detail.productNo,
+        inventory: detail.inventory,
+        shipFee: detail.shipFee,
+        canMerge: detail.canMerge,
+        sellerNick: detail.sellerNick,
+        sellerId: detail.sellerId,
+        sellerRank: detail.sellerRank,
+        categoryName: detail.categoryName,
+        categoryCode: detail.categoryCode,
+        country: detail.country,
+        status: detail.status,
+        isOnSupply: detail.isOnSupply,
       },
-      sessionAgeDays:  0,
-      sessionWarning:  null,
+      sessionAgeDays: 0,
+      sessionWarning: null,
     });
-
   } catch (error: unknown) {
     console.error('[crawler-api] error:', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : '크롤링 중 오류가 발생했습니다' },
-      { status: 500 }
+      {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : '\uD06C\uB864\uB9C1 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4',
+      },
+      { status: 500 },
     );
   }
 }
