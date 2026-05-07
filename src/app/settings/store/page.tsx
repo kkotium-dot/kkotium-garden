@@ -261,7 +261,7 @@ export default function StoreSettingsPage() {
         <SettingSection icon={<Key size={16} />} title="도매꾹 API Key">
           <Field
             label="도매꾹 OpenAPI Key"
-            hint="도매꾹(domeggook.com) → 마이페이지 → API 관리에서 발급받은 키를 입력하세요. 크롤러(꿀통 사냥터) 작동에 필수입니다."
+            hint="도매꾹(domeggook.com) → 마이페이지 → API 관리에서 발급받은 키를 입력하세요. 크롤러(꿀통 꽃나들이) 작동에 필수입니다."
           >
             <input
               type="password"
@@ -281,7 +281,7 @@ export default function StoreSettingsPage() {
         <SettingSection icon={<Key size={16} />} title="도매꾹 API Key">
           <Field
             label="도매꾹 OpenAPI Key"
-            hint="도매꾹(domeggook.com) → 마이페이지 → API 관리에서 발급받은 키를 입력하세요. 크롤러(꿀통 사냥터) 작동에 필수입니다."
+            hint="도매꾹(domeggook.com) → 마이페이지 → API 관리에서 발급받은 키를 입력하세요. 크롤러(꿀통 꽃나들이) 작동에 필수입니다."
           >
             <input
               type="password"

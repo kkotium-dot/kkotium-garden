@@ -171,10 +171,10 @@ function CrawlPageInner() {
   const searchParams = useSearchParams();
   // Z-3b: tab is derived from URL query — URL is the single source of truth (no useState/useEffect to avoid race conditions)
   const tabParam = searchParams.get('tab');
-  const tab: Tab = (tabParam === 'bulk' || tabParam === 'history') ? tabParam : 'single';
+  const tab: Tab = (tabParam === 'single' || tabParam === 'bulk') ? tabParam : 'history';
   // setTab updates URL only — tab automatically re-derives on next render via useSearchParams
   const setTab = useCallback((next: Tab) => {
-    router.replace(next === 'single' ? '/crawl' : `/crawl?tab=${next}`, { scroll: false });
+    router.replace(next === 'history' ? '/crawl' : `/crawl?tab=${next}`, { scroll: false });
   }, [router]);
 
   // ── 단건 탭 state ─────────────────────────────────────────────────────────
@@ -350,7 +350,7 @@ function CrawlPageInner() {
           sourcingStatus: 'SOURCED',
         }),
       }).catch(() => null);
-      setSSuccess('소싱 보관함에 담겼습니다!');
+      setSSuccess('꿀통 꽃수레에 담겼습니다!');
       setTimeout(() => setSSuccess(''), 2500);
     } finally { setSSaving(false); }
   };
@@ -479,7 +479,7 @@ function CrawlPageInner() {
       const updated = data.updated ?? urls.length;
       setBActionResult({
         ok: true,
-        message: `${updated}개 소싱 보관함에 담겼습니다! "소싱 보관함" 탭에서 확인하세요.`,
+        message: `${updated}개 꿀통 꽃수레에 담겼습니다! "꿀통 꽃수레" 탭에서 확인하세요.`,
       });
     } catch (e: unknown) {
       setBActionResult({ ok: false, message: e instanceof Error ? e.message : '저장 실패' });
@@ -586,20 +586,20 @@ function CrawlPageInner() {
               </svg>
               <Layers size={18} color="#fff" strokeWidth={2.5} style={{ position:'relative', zIndex:1 }} />
             </div>
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>꿀통 사냥터</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>꿀통 꽃나들이</h1>
           </div>
           <PinkLine />
           <p style={{ fontSize: 13, color: '#888', marginTop: 6 }}>
-            도매매 상품을 크롤링해서 네이버 상품 등록으로 바로 연결합니다
+            햇살 좋은 날, 꽃 한 송이씩 담아 꿀통 꽃수레로 가져와요
           </p>
         </div>
 
         {/* ── Tab switcher ── */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#F5F5F5', borderRadius: 14, padding: 4 }}>
           {([
-            { key: 'single',  label: '단건 크롤링',  icon: <Search size={14} /> },
-            { key: 'bulk',    label: '대량 크롤링',  icon: <Layers size={14} /> },
-            { key: 'history', label: '소싱 보관함',  icon: <Package size={14} /> },
+            { key: 'history', label: '꿀통 꽃수레',     icon: <Package size={14} /> },
+            { key: 'single',  label: '꽃 한 송이 담기', icon: <Search size={14} /> },
+            { key: 'bulk',    label: '꽃 한아름 담기',  icon: <Layers size={14} /> },
           ] as const).map(({ key, label, icon }) => (
             <button
               key={key}
@@ -1092,7 +1092,7 @@ function CrawlPageInner() {
                   </button>
                   <button onClick={handleSaveOnly} disabled={sSaving||supPrice===0||sellPrice===0}
                     style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'12px 14px', background:'#fff', color:'#555', fontSize:13, fontWeight:600, borderRadius:12, border:'1.5px solid #F8DCE5', cursor: sSaving||supPrice===0||sellPrice===0?'not-allowed':'pointer' }}>
-                    <Package size={13}/>보관함 담기
+                    <Package size={13}/>꽃수레에 담기
                   </button>
                 </div>
               </div>
@@ -1438,7 +1438,7 @@ function CrawlPageInner() {
                   })}
                 </div>
 
-                {/* 하단 단일 CTA — 보관함 담기 1개만 */}
+                {/* 하단 단일 CTA — 꽃수레에 담기 1개만 */}
                 {/* Loss items warning summary */}
                 {(() => {
                   const lossItems = bRows.filter(r => selectedIds.has(r.id) && r.status === 'success' && !r.excluded).filter(r => {
@@ -1459,13 +1459,13 @@ function CrawlPageInner() {
                       const sp = bulkSalePrice(r.editedPrice??r.supplierPrice??0);
                       return (sp - (r.editedPrice??r.supplierPrice??0) - (r.shipFee??3000)) < 0;
                     }).length;
-                    if (lossCount > 0 && !window.confirm(`${lossCount}개 손해 상품이 포함되어 있습니다.\n보관함에 담으시겠습니까?`)) return;
+                    if (lossCount > 0 && !window.confirm(`${lossCount}개 손해 상품이 포함되어 있습니다.\n꽃수레에 담으시겠습니까?`)) return;
                     handleBulkExcel();
                   }} disabled={selectedIds.size===0||excelLoading}
                     style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'14px 20px', background: selectedIds.size===0?'#F8DCE5':'#e62310', color: selectedIds.size===0?'#B0A0A8':'#fff', fontSize:15, fontWeight:900, borderRadius:14, border:'none', cursor: selectedIds.size===0?'not-allowed':'pointer', boxShadow: selectedIds.size>0?'0 2px 8px rgba(230,35,16,0.25)':'none' }}>
                     {excelLoading
-                      ? <><RefreshCw size={15} className="animate-spin"/> 보관함 저장 중...</>
-                      : <><Package size={15}/> 선택한 {selectedIds.size}개 보관함에 담기</>}
+                      ? <><RefreshCw size={15} className="animate-spin"/> 꽃수레에 담는 중...</>
+                      : <><Package size={15}/> 선택한 {selectedIds.size}개 꽃수레에 담기</>}
                   </button>
                 </div>
               </>
@@ -1474,7 +1474,7 @@ function CrawlPageInner() {
         )}
 
         {/* ╔════ 이력 탭 ════╗ */}
-        {/* ════ 소싱 보관함 탭 ════ */}
+        {/* ════ 꿀통 꽃수레 탭 ════ */}
         {tab === 'history' && (
           <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
 
@@ -1483,8 +1483,8 @@ function CrawlPageInner() {
               <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                   <div style={{ width:3, height:16, background:'#e62310', borderRadius:99 }} />
-                  <span style={{ fontSize:13, fontWeight:900, color:'#e62310' }}>소싱 보관함</span>
-                  <span style={{ fontSize:11, color:'#aaa' }}>(크롤링 저장 무한)</span>
+                  <span style={{ fontSize:13, fontWeight:900, color:'#e62310' }}>꿀통 꽃수레</span>
+                  <span style={{ fontSize:11, color:'#aaa' }}>지금 꽃수레에 담긴 예쁜 상품 {logs.length}개</span>
                 </div>
                 {/* Status filter */}
                 <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
@@ -1637,7 +1637,7 @@ function CrawlPageInner() {
             {logsLoading ? (
               <div style={{ padding:'48px', textAlign:'center', background:'#fff', borderRadius:16, border:'1.5px solid #F8DCE5' }}>
                 <RefreshCw size={24} className="animate-spin" color="#e62310" style={{ margin:'0 auto 10px', display:'block' }} />
-                <p style={{ fontSize:13, color:'#888', margin:0 }}>소싱 보관함 불러오는 중...</p>
+                <p style={{ fontSize:13, color:'#888', margin:0 }}>꿀통 꽃수레 불러오는 중...</p>
               </div>
             ) : (() => {
               const filtered = logs.filter(log => {
@@ -1649,10 +1649,10 @@ function CrawlPageInner() {
                 <div style={{ padding:'56px 20px', textAlign:'center', background:'#fff', borderRadius:16, border:'1.5px solid #F8DCE5' }}>
                   <Package size={32} color="#FFB3CE" style={{ margin:'0 auto 12px', display:'block' }} />
                   <p style={{ fontSize:15, fontWeight:700, color:'#1A1A1A', marginBottom:4 }}>
-                    {logs.length === 0 ? '소싱 보관함이 비어 있습니다' : '검색 결과가 없습니다'}
+                    {logs.length === 0 ? '꿀통 꽃수레가 비어 있어요' : '검색 결과가 없습니다'}
                   </p>
                   <p style={{ fontSize:13, color:'#AAA', margin:0 }}>
-                    {logs.length === 0 ? '단건/대량 크롤링 후 "보관함에 담기"를 누르면 이곳에 모입니다' : ''}
+                    {logs.length === 0 ? '꽃 한 송이/한아름 담기 후 "꽃수레에 담기"를 누르면 여기 모여요' : ''}
                   </p>
                 </div>
               );

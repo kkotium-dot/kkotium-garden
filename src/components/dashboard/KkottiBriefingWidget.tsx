@@ -184,11 +184,11 @@ function inferBriefing(opts: {
   return {
     body: drafts.total > 0
       ? `등록 대기 ${drafts.total}개. 씨앗 심기부터 시작해요`
-      : '오늘 정원이 조용해요. 꿀통 사냥터부터 둘러봐요',
+      : '오늘 정원이 조용해요. 꿀통 꽃나들이부터 둘러봐요',
     tone: 'cheer',
     face: 'scanning',
     variant: 'gardener',
-    actionLabel: drafts.total > 0 ? '검색 조련사로' : '꿀통 사냥터로',
+    actionLabel: drafts.total > 0 ? '검색 조련사로' : '꿀통 꽃나들이로',
     actionHref: drafts.total > 0 ? '/seo-tamer' : '/sourcing',
     rationale: 'fallback',
   };

@@ -25,10 +25,10 @@ export default function WorkflowPage() {
       id: 1,
       icon: <Search size={28} />,
       title: '1단계: 상품 수집',
-      subtitle: '꿀통 사냥터에서 도매 상품 크롤링',
+      subtitle: '꿀통 꽃나들이에서 도매 상품 크롤링',
       description: '도매매·도매꾹에서 판매할 상품을 검색하고 소싱 보관함에 저장합니다.',
       actions: [
-        { label: '꿀통 사냥터 이동', href: '/crawl', description: 'URL 크롤링 · 대량 수집 · 소싱 보관함' },
+        { label: '꿀통 꽃나들이 이동', href: '/crawl', description: '꽃 한 송이/한아름 담기 · 꿀통 꽃수레' },
       ],
       tips: [
         '처음에는 URL 단건 크롤링으로 상품을 하나씩 확인하세요',

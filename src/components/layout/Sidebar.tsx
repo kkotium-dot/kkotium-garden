@@ -54,8 +54,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
   {
     label: 'HUNT',
     items: [
-      { href: '/crawl', label: '꿀통 사냥터', iconKey: 'layers', badgeKey: 'sourcing' },
-      { href: '/crawl?tab=history', label: '소싱 보관함', iconKey: 'package' },
+      { href: '/crawl', label: '꿀통 꽃나들이', iconKey: 'layers', badgeKey: 'sourcing' },
     ],
   },
   {

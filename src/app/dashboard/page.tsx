@@ -562,7 +562,7 @@ export default function DashboardPage() {
                 { label: '씨앗 심기', href: '/products/new', color: '#e62310', bg: '#FFF0F5', border: '#FFB3CE', icon: Package, hint: '상품 등록' },
                 { label: '검색 조련사', href: '/naver-seo', color: '#2563eb', bg: '#EFF6FF', border: '#BFDBFE', icon: TrendingUp, hint: 'SEO 최적화' },
                 { label: '주문 관리', href: '/orders', color: '#16a34a', bg: '#F0FDF4', border: '#BBF7D0', icon: ShoppingCart, hint: '발주/송장' },
-                { label: '꿀통 사냥터', href: '/crawl', color: '#7c3aed', bg: '#F5F3FF', border: '#DDD6FE', icon: Layers, hint: '상품 수집' },
+                { label: '꿀통 꽃나들이', href: '/crawl', color: '#7c3aed', bg: '#F5F3FF', border: '#DDD6FE', icon: Layers, hint: '꽃 한 송이씩 담기' },
               ].map(item => (
                 <Link key={item.label} href={item.href} style={{ textDecoration: 'none' }}>
                   <div style={{ padding: '14px 10px', borderRadius: 14, textAlign: 'center', background: item.bg, border: `1.5px solid ${item.border}`, cursor: 'pointer', transition: 'transform 0.1s' }}>

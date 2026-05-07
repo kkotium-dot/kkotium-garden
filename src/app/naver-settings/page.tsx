@@ -188,7 +188,7 @@ export default function NaverSettingsPage() {
               </button>
             </div>
             <p style={{ fontSize: 11, color: '#B0A0A8', marginTop: 6, lineHeight: 1.5 }}>
-              꿀통 사냥터 크롤링에 사용됩니다. 도매꾹 파트너센터 → API 관리에서 발급받을 수 있습니다.
+              꿀통 꽃나들이 크롤링에 사용됩니다. 도매꾹 파트너센터 → API 관리에서 발급받을 수 있습니다.
             </p>
           </div>
         </div>
