@@ -4,8 +4,8 @@
 > **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app | **HEAD**: ec32099 (origin/main 일치)
 > **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅
-> **다음 작업 (우선순위 순)**: Sprint 6 P0-A 도매꾹 옵션 정확도 → P0-B 골든윈도우 트래커 → P0-C 효자상품 자동식별 → **P0-D 검색품질 시뮬레이터** (꽃졔 결정 옵션 B 추가) → S-2 D+1~7 액션 매트릭스 → Sprint 7/8
-> **참고 문서**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md` (15개 핵심 발견사항 + 단계별 체크리스트), `docs/plan/archive/PROGRESS_2026Q2_MAY.md` (5월 누적 세션 기록)
+> **다음 작업 (우선순위 순)**: STEP 0 리서치 재검토 → Sprint 6-A 재고 실시간 폴링 → 6-B 가격 변동 감지 → 6-C 공급사 휴가 모니터 → 6-D 꼬띠 AI 추천 v1 → 6-E 카테고리 트리 풀 캐시 → Sprint 7/8 (Private 발급 후 자동발주)
+> **참고 문서**: `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md` (도매꾹/도매매 Private API 통합 전략, 266줄, 2026-05-07 신규), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md` (15개 핵심 발견사항 + 단계별 체크리스트), `docs/plan/archive/PROGRESS_2026Q2_MAY.md` (5월 누적 세션 기록)
 
 ---
 
@@ -161,6 +161,45 @@ Z-Hotfix 정리 중 발견된 2개 잔재 파일:
 - `docs/plan/archive/PROGRESS_2026Q2_MAY.md`: 신규 1007줄 (5월 누적 세션 기록)
 - `docs/plan/SESSION_LOG.md` 분할은 **다음 세션으로 위임** (Sprint 6 시작 직전, 2685줄)
 - `docs/plan/ROADMAP.md` 정리는 **다음 세션으로 위임** (1594줄)
+
+---
+
+## Sprint 6 재구성 (2026-05-07) — Open API ROI Top 5 우선 + Private API 신청 진행
+
+본 세션(2026-05-07) 도매꾹 Private API 리서치 결과로 Sprint 6 우선순위 *완전 재구성*. 직전 인계의 P0-A → P0-B → P0-C → P0-D → S-2 순서를 폐기하고, **Open API ROI Top 5 묶음**으로 변경. 옛 Sprint 6 계획(아래 "Sprint 6/7/8 계획 (2026-05-08 신규)" 섹션)은 *deprecated*, 본 섹션이 우선.
+
+### 우선순위 결정 근거
+- 새싹 단계 ROI Top 5 = 모두 Open API만으로 충분 (Private 발급 대기 시간 0)
+- 5월 14일 변경 영향 0 (실사용 mode 유지)
+- Private API 신청 완료 (전체 28개 + 샘플 D 연동목적)
+
+### Sprint 6 신규 작업 (Open API ROI Top 5)
+
+| # | 작업 | 신규 파일 | 매출 임팩트 |
+|---|---|---|---|
+| 6-A | 재고 실시간 폴링 | `src/lib/dome-inventory-poller.ts` + `src/app/api/cron/inventory-sync/route.ts` | 직접 (품절 손실 방지) |
+| 6-B | 가격 변동 감지 | `src/lib/dome-price-tracker.ts` + PriceHistory 모델 | 직접 (마진 보호) |
+| 6-C | 공급사 휴가/응답률 모니터 | `src/lib/dome-seller-monitor.ts` + SellerStatus 캐시 | 직접 (클레임 방지) |
+| 6-D | 꼬띠 AI 추천 v1 (Open 기반) | `src/lib/dome-curator.ts` + 정원 일지 위젯 | 운영효율 (소싱시간↓) |
+| 6-E | 카테고리 트리 풀 캐시 | `src/lib/dome-category-cache.ts` + DomeCategory + CategoryMapping | 운영효율 (등록시간↓) |
+
+### Private API 신청 (병행 진행)
+- 신청 일시: 2026-05-07 본 세션
+- 권한 범위: 전체 28개 (구매용 6 + 판매용 13 + 공통 3 + 기타 6)
+- 연동 유형: ③ 자사몰/오픈마켓 직접 연동
+- 연동 목적: 샘플 D (광범위 권한용, 145자)
+- 통과 예측: 도매꾹 1년+ 사업자 회원 + 기존 키 정상 + 정합성
+- 결과 대기: 1~3일 영업일
+
+### Sprint 8 (파워셀러 대비 — Private 발급 후)
+- 자동 발주 (`setOrder` + `getOrderList` + `getOrderView`)
+- 송장 자동 회수
+- 재고 일괄 확인 (`getAllSupplyChk` 전환 — Open 폴링 → Private 일괄)
+- 반품 자동화 (`getOrderReturn`)
+
+### 참고 문서
+- 전략 보고서: `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md` (266줄)
+- 본 세션 상세: `docs/plan/SESSION_LOG.md` 2026-05-07 entry
 
 ---
 

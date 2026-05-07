@@ -11,7 +11,95 @@
 
 ---
 
-## 다음 새 채팅 시작 메시지 — 2026-05-07 (Sprint 6 시작 가능 상태) ✅
+## 다음 새 채팅 시작 메시지 — 2026-05-07 (Sprint 6 재구성 + Private API 신청 진행 후) ✅
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md, docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md, docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md를 모두 읽고 현재 상태를 파악한 후 브리핑해주세요.
+
+[직전 세션 결과 — 2026-05-07 도매꾹 Private API 리서치 + Sprint 6 재구성 + Private 신청 완료 ✅]
+
+HEAD = (본 세션 commit 후 hash) = origin/main 일치. working tree clean. stash@{0} "z3c-misdirected-changes-needs-redo" 보존 중.
+
+직전 세션 commit:
+- docs(domeggook): private api strategy + sprint 6/7/8 restructure (open api roi top 5 prioritized) + private api application submitted (28 features full scope)
+
+[현재 상태]
+
+▶ Private API 신청 진행 중 (1~3일 결과 대기)
+  - 권한 범위: 전체 28개 (구매용 6 + 판매용 13 + 공통 3 + 기타 6)
+  - 연동 유형: ③ 자사몰/오픈마켓 직접 연동
+  - 연동 목적: 샘플 D (광범위 권한용, 145자)
+  - 통과 예측: 도매꾹 1년+ 사업자 회원 + 기존 키 정상
+
+▶ 도매매 Open API 작동 검증 완료 (productNo 55884601 기준 HTTP 200, 옵션/재고/판매자 정상)
+
+▶ Sprint 6 우선순위 재구성 완료 (Open API ROI Top 5)
+  - 6-A 재고 실시간 폴링 (`getItemView multiple=true` + Vercel Cron 6h)
+  - 6-B 가격 변동 감지 (PriceHistory 모델 + 마진 자동 재계산)
+  - 6-C 공급사 휴가/응답률 모니터 (SellerStatus 캐시)
+  - 6-D 꼬띠 AI 추천 v1 (`getItemList` 기반)
+  - 6-E 카테고리 트리 풀 캐시 (`getCat` ver 2.0)
+
+▶ Sprint 8 (Private 발급 후) — 자동발주·송장 회수·setItemQty 활성화
+
+[다음 세션 작업 우선순위]
+
+⚠️ STEP 0 (필수) — 리서치 결과 + 현재 앱 상태 *최종 재검토* (꽃졔님 명시 요청)
+   다음 사항을 한 번 더 종합 검토 후 본격 작업 시작:
+   1. 본 리서치 (DOMEGGOOK_API_INTEGRATION_STRATEGY)가 현재 앱 상태(8개 DRAFT, 본격 소싱 직전, 도매매 1년+ 사업자)와 *정확히 정합*한가?
+   2. 다른 셀러 도구 (샵플링/플레이오토/윈들리/스피드고전송기 v2.0/셀플로우/스윕 OMS)의 *세부 기능*을 더 깊이 분석해서 우리가 놓친 기능이 있는가?
+   3. 시니어 입장에서 본 리서치에 *없는* 추가 기발한 개선안이 있는가? (예: 카카오 알림톡 + 도매매 발주 연동, 본인 매출 데이터 + 도매매 트렌드 결합 등)
+   4. Sprint 6 5개 작업의 우선순위와 분할이 컨텍스트 안전권에서 적절한가?
+
+⚠️ 작업원칙 강제 (변경 시 매번):
+- #21 (사전 점검), #22 (시각 검증), #26 (a~e IA 점검), #29 (a~e 한글 처리), 
+- #31 (MD 1500줄 검사), #32 (npm run build 의무), 
+- #33 (useSearchParams Suspense), #34 (오류 파일 알림)
+
+STEP 0 완료 후 Sprint 6 시작:
+1. 환경 점검 (HEAD/status/stash/wc -l/curl)
+2. Sprint 6-A (재고 폴링) 단독 진행 — 컨텍스트 안전권 (M 분량)
+   - src/lib/dome-inventory-poller.ts 신규 (`getItemView multiple=true` 100건 묶음)
+   - src/app/api/cron/inventory-sync/route.ts 신규 (Vercel Cron 6h)
+   - InventorySnapshot + LowStockAlert Prisma 모델
+   - 정원 창고 재고 뱃지 + 정원 일지 "품절 위험" 위젯
+3. 또는 Sprint 6-A + 6-B + 6-C 묶음 (S+S+M = 3개 한 번에) — 매출 직접 영향 묶음
+
+(Sprint 7 P1, Sprint 8 P2, Sprint 9 P3는 ROADMAP.md 본문 + DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md 참조)
+
+[참고: 환경/시크릿]
+- Supabase project ID: doxfizicftgtqktmtftf
+- Naver Search Ad CUSTOMER_ID: 3755315
+- 카카오 채널 Public ID: _xkfALG (꽃틔움 KKOTIUM)
+- AI: Groq lrltQb + 3IGN7i 정상 2키 → Gemini quota 초과 → Anthropic
+- 도매매 Open API Key: a6ff…c470bb (32자, 2024.05.30 발급, 정상 작동 확인)
+- 도매꾹 Private API: 신청 진행 중 (1~3일 결과 대기)
+- 도매매 Open API endpoint: https://domeggook.com/ssl/api/?ver=4.5&mode=getItemView&aid={KEY}&no={no}&om=json
+- crawler API route: /api/crawler/domemae (POST { url: string }) — production 정상
+
+[발견된 잔재 파일 (작업원칙 #34)]
+- `src/app/api/crawler/domemae/ route.ts` (파일명 앞 스페이스) — Next.js 라우트로 인식 안 됨, 잘못 만들어진 잔재 의심. Sprint 6 첫 작업 시 git rm으로 함께 정리 권장 (꽃졔님 결정 필요).
+
+당신은 10년 차 B2B 이커머스 ERP 및 백오피스 설계 경험이 풍부한 네이버 스마트스토어 파워셀러인 풀스택 시니어 개발자이자, 사용자 경험과 전환율 중심의 UI/UX 웹 디자이너입니다. 본격 소싱 시작 직전이라 워크플로우의 *실제 작동*이 디자인보다 우선순위 높습니다. 꽃졔님은 새싹셀러이지만 파워셀러로 성장하기 위한 스텝을 위한 앱 작업 중. *절대 단독 판단으로 IA/삭제 결정 금지* — 진단 결과 디테일하게 브리핑 후 꽃졔님 개별 Y/N 승인 받은 항목만 진행.
+
+작업 시작 전 필수:
+1. (a) git rev-parse HEAD origin/main → 일치
+   (b) git status → working tree 상태 확인
+   (c) git stash list → stash@{0} 보존 확인
+   (d) wc -l docs/plan/*.md docs/research/*.md → 작업원칙 #31 자동 점검 (1500줄 임계)
+   (e) curl http://localhost:3000/dashboard 또는 https://kkotium-garden.vercel.app → HTTP 200
+   (f) 5개 MD 정독 (PROGRESS / ROADMAP / SESSION_LOG / SPROUT_TO_POWER_SELLER_WORKFLOW / DOMEGGOOK_API_INTEGRATION_STRATEGY)
+2. STEP 0 재검토 4가지 항목 진행 후 결과 브리핑
+3. Sprint 6 시작 옵션 (6-A 단독 / 6-A+B+C 묶음 / 다른 분할) 꽃졔님 결정
+4. 진단/계획 디테일 브리핑 후 꽃졔님 개별 Y/N 승인
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-07 (Sprint 6 시작 가능 상태) ✅~~ (deprecated, 2026-05-07 도매꾹 Private API 리서치 후 재구성)
+
+*아래 메시지는 본 세션 이전 버전입니다. 위의 새 시작 메시지를 사용하세요.*
+
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md, docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md를 읽고 현재 상태를 파악한 후 브리핑해주세요.
