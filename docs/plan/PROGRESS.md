@@ -1,11 +1,12 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
 
-> **최종 업데이트**: 2026-05-07 (본 세션: STEP 0 재검토 + 꽃졔님 피드백 통합 + Sprint 6/7 대폭 재구성 — 코드 변경 0, docs만)
-> **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app | **HEAD**: efb819c (origin/main 일치 — 본 세션 commit 직후 갱신 예정)
-> **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
-> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅
-> **다음 작업 (Plan A 4세션 확정)**: 세션 1 = 6-Pre (DRAFT 8개 삭제 + 잔재 파일 정리 + Discord 5채널 본문 정비) + 6.5 (B2B 어댑터 패턴 PoC) → 세션 2 = 6-A 재고 폴링 단독 → 세션 3 = 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가) → 세션 4 = 6-E + 6-D (카테고리 매핑 + 꼬띠 4모드 추천) → Sprint 7 = AI Studio 4모듈 (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트) + 7-X 반품안심케어 위젯 → Sprint 8 = Private 발급 후 자동발주 (Discord 버튼)
-> **참고 문서**: `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md` (도매꾹/도매매 Private API 통합 전략), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md` (15개 핵심 발견사항), `docs/plan/archive/PROGRESS_2026Q2_MAY.md` (5월 누적 세션)
+> **최종 업데이트**: 2026-05-08 (본 세션: 해외 직소싱 baseline 보고서 신규 + 6-Pre 1·2단계 완료 — DRAFT 8개 삭제 + 잔재 파일 정리, 코드 0줄 / 보고서 + DB 정리만)
+> **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app | **HEAD**: a0dd3e6 → 본 세션 commit 후 갱신 예정 (origin/main 일치)
+> **Working tree**: 본 세션 종료 시 clean (보고서 신규 + README + 잔재 git rm + MD 3종 갱신) / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **상품 상태**: **0개** (DRAFT 8개 모두 삭제 완료 — 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 4개 보존
+> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | **6-Pre 1·2단계 ✅**
+> **다음 작업 (Plan A 4세션 — 본 세션 1단계 부분 완료)**: 세션 1 잔여 = 6-Pre 3단계 (Discord 5채널 본문 정비) + 6.5 전체 (B2B 어댑터 패턴 PoC, 오너클랜 stub) → 세션 2 = 6-A 재고 폴링 단독 → 세션 3 = 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가) → 세션 4 = 6-E + 6-D (카테고리 매핑 + 꼬띠 4모드 추천) → Sprint 7 = AI Studio 4모듈 → Sprint 8 = Private 발급 후 자동발주
+> **참고 문서**: `docs/research/OVERSEAS_SOURCING_BASELINE_2026_05.md` (해외 직소싱 영구 baseline, 본 세션 신규 512줄), `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md`, `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`, `docs/plan/archive/PROGRESS_2026Q2_MAY.md`
 
 ---
 
