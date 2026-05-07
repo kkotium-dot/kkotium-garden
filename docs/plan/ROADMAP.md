@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-07 (본 세션: Z-Hotfix 빌드복구 + Phase 2 IA 재구조화 + 작업원칙 #32/#33/#34 등록 ✅)
-> **HEAD**: ec32099 (origin/main 일치) | **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-07 (본 세션: STEP 0 재검토 + Sprint 6/7 대폭 재구성 — 코드 변경 0, docs만 ✅)
+> **HEAD**: efb819c (origin/main 일치 — 본 세션 commit 직후 갱신 예정) | **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app
 >
 > **이 파일의 역할**: 진행 중·예정 Sprint 계획 + 영구 참조 (체크리스트, 비용 로드맵, 도구 사용 패턴)
 > **누적 인계 메시지 + Phase A/B/C 완료 이력**: `docs/plan/archive/ROADMAP_2026Q2_MAY.md`
@@ -10,6 +10,113 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
+
+## 다음 새 채팅 시작 메시지 — 2026-05-07 (STEP 0 재검토 + Sprint 6/7 대폭 재구성 후) ✅
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md, docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md, docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md를 모두 읽고 현재 상태를 파악한 후 브리핑해주세요.
+
+[직전 세션 결과 — 2026-05-07 STEP 0 재검토 + 꽃졔님 피드백 통합 + Sprint 6/7 대폭 재구성 ✅]
+
+HEAD = (본 세션 commit hash) = origin/main 일치. working tree clean. stash@{0} "z3c-misdirected-changes-needs-redo" 보존 중.
+
+직전 세션 commit:
+- docs(plan): step 0 review + integrate user feedback (sprint 6/7 major restructure: add 6-pre + 6.5 b2b adapter pattern + 7 ai studio 4 modules + 6-B alt source tracking + 6-C cumulative supplier scoring)
+
+[현재 상태]
+
+▶ Private API 신청 진행 중 (1~3일 결과 대기)
+
+▶ 도매매 Open API 작동 검증 완료 (productNo 55884601 HTTP 200)
+
+▶ Sprint 6/7 대폭 재구성 완료 — Plan A 4세션 + Sprint 6.5 신규 + Sprint 6-Pre 신규 + Sprint 7 신규 (AI Studio 4모듈)
+
+▶ 8개 DRAFT 상품 = 테스트 데이터로 무작위 등록 → 6-Pre에서 *전부 삭제 + 깨끗한 시작* 결정
+
+▶ 작업원칙 #34 발견 잔재 파일: src/app/api/crawler/domemae/ route.ts (스페이스 포함, 라우트 인식 안 됨) → 6-Pre에서 git rm
+
+[다음 세션 작업 — Plan A 세션 1 = 6-Pre + 6.5]
+
+⚠️ STEP 0a (필수) — 본 세션 시작 시점에 꽃졔님께 *B2B 업체 이름 1개* 받기:
+   오너클랜 / 도매토피아 / 온채널 / 사오라 / 1688 중 또는 직접 입력.
+   이게 6.5의 신규 어댑터 stub 1개 대상.
+
+⚠️ 작업원칙 강제 (변경 시 매번):
+- #17 commit msg는 .commit-msg.tmp + git commit -F
+- #21 사전 점검 (HEAD/status/stash/wc)
+- #22 시각 검증 의무 (API 200 ≠ 브라우저 완료)
+- #24 commit + push 한 turn 안에 끝내기
+- #26 (a~e) IA 점검 + dev 캐시 정리 + Chrome MCP js hang 회피
+- #29 (a~e) 한글 처리 5규칙 — 첫 단계 = tool_search "filesystem write_file" 호출하여 deferred 도구 로드
+- #31 MD 1500줄 자동 점검
+- #32 push 전 npm run build 의무 (TSC ≠ build)
+- #33 useSearchParams Suspense 자동 점검
+- #34 명백한 오류 파일 발견 시 사용자 알림
+
+세션 1 작업 (6-Pre + 6.5):
+
+6-Pre (인프라 정비, S+S+M):
+1. DRAFT 8개 삭제 (Supabase MCP apply_migration: DELETE FROM "Product" WHERE status='DRAFT' + 연관 cleanup)
+2. 잔재 파일 정리 (git rm -r "src/app/api/crawler/domemae/ route.ts")
+3. Discord 5채널 본문 정비:
+   - 현재 5채널 (orders/stock-alerts/daily/weekly/kkotti) 코드 grep
+   - src/lib/notifications/discord-builder.ts (신규) — 5채널 표준 메시지 빌더
+   - 각 채널별 재설계: 단순 정보 → *셀러가 다음에 무엇을 해야 하는지* 명시
+   - 꼬띠 톤 + 액션 가능 정보 추가
+   - 5채널 모두 새 본문으로 테스트 발송 검증
+
+6.5 (B2B 어댑터 PoC, M+):
+1. src/lib/sources/source-adapter.ts (신규) — 인터페이스 정의:
+   - searchItems(), getItemDetail(), getInventory(), getCategories(), placeOrder(), getMinQuantity()
+2. src/lib/sources/domemae-adapter.ts (신규) — 도매매 어댑터:
+   - 기존 src/lib/crawler/auto-mapper.ts + src/app/api/crawler/domemae/route.ts 로직을 어댑터 안으로 이주
+   - minq=1 필터 헬퍼 추가
+3. src/lib/sources/{꽃졔님_업체}-adapter.ts (신규) — 신규 B2B 어댑터 stub:
+   - 인터페이스만 구현, 메서드 본문은 TODO + console 로그
+   - 인터페이스 컨트랙트 검증
+4. Platform/Supplier 검증 — Platform 테이블 row 확인 + 신규 업체 row 추가 SQL
+5. TSC + build + 회귀 검증:
+   - npx tsc --noEmit (0 errors)
+   - npm run build (작업원칙 #32, prerender 검증)
+   - /crawl 페이지 기존 동작 (단건 크롤링 정상)
+6. commit + push (작업원칙 #17 .commit-msg.tmp + #24 한 turn)
+7. PROGRESS.md + ROADMAP.md + SESSION_LOG.md 갱신 (작업원칙 #29 (b))
+
+[참고: 환경/시크릿]
+- Supabase project ID: doxfizicftgtqktmtftf
+- Naver Search Ad CUSTOMER_ID: 3755315
+- 카카오 채널 Public ID: _xkfALG (꽃틔움 KKOTIUM)
+- AI: Groq lrltQb + 3IGN7i 정상 2키 → Gemini quota 초과 → Anthropic
+- 도매매 Open API Key: a6ff…c470bb (32자, 2024.05.30 발급, 정상 작동 확인)
+- 도매꾹 Private API: 신청 진행 중 (1~3일 결과 대기)
+
+[Sprint 6 이후 일정 (참고)]
+- 세션 2: 6-A 재고 폴링 단독 + 첫 실제 상품 등록으로 검증
+- 세션 3: 6-B (가격 변동 + 다른 셀러 추적 + AlternativeSource) + 6-C (공급사 누적 평가)
+- 세션 4: 6-E (카테고리 매핑) + 6-D (꼬띠 4모드 추천: 현재 핫 / 선행 매수 / 니치 / 꽃틔움 맞춤)
+- Sprint 7: AI Studio 4모듈 (M1 썸네일 → M2 상세페이지 5섹션 → M4 A/B → M3 어도비) + 7-X 반품안심케어
+- Sprint 8: Private 발급 후 자동발주 (Discord 버튼 방식)
+
+당신은 10년 차 B2B 이커머스 ERP 및 백오피스 설계 경험이 풍부한 네이버 스마트스토어 파워셀러인 풀스택 시니어 개발자이자, 사용자 경험과 전환율 중심의 UI/UX 웹 디자이너입니다. 본격 소싱 시작 직전이라 워크플로우의 *실제 작동*이 디자인보다 우선순위 높습니다. 꽃졔님은 새싹셀러이지만 파워셀러로 성장하기 위한 스텝을 위한 앱 작업 중. *절대 단독 판단으로 IA/삭제 결정 금지* — 진단 결과 디테일하게 브리핑 후 꽃졔님 개별 Y/N 승인 받은 항목만 진행.
+
+작업 시작 전 필수:
+1. (a) git rev-parse HEAD origin/main → 일치
+   (b) git status → working tree 상태 확인
+   (c) git stash list → stash@{0} 보존 확인
+   (d) wc -l docs/plan/*.md docs/research/*.md → 작업원칙 #31 자동 점검 (1500줄 임계)
+   (e) curl -sIo /dev/null -w "%{http_code}" https://kkotium-garden.vercel.app/dashboard → HTTP 200
+   (f) 5개 MD 정독 (PROGRESS / ROADMAP / SESSION_LOG / SPROUT_TO_POWER_SELLER_WORKFLOW / DOMEGGOOK_API_INTEGRATION_STRATEGY)
+   (g) tool_search "filesystem write_file" 호출하여 Filesystem:write_file 도구 활성화 (작업원칙 #29 b 안전 패턴)
+2. STEP 0a — 꽃졔님께 B2B 업체 이름 받기 (오너클랜/도매토피아/온채널/사오라/1688 또는 직접 입력)
+3. 6-Pre + 6.5 디테일 계획서 한 번 더 브리핑 + 꽃졔님 개별 Y/N 승인
+4. 작업 시작 → 검증 → commit + push → MD 갱신 (한 turn 안에)
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-07 (Sprint 6 재구성 + Private API 신청 진행 후) ✅~~ (deprecated, 2026-05-07 STEP 0 재검토 후 재구성)
+
+*아래 메시지는 본 세션 이전 버전입니다. 위의 새 시작 메시지를 사용하세요.*
 
 ## 다음 새 채팅 시작 메시지 — 2026-05-07 (Sprint 6 재구성 + Private API 신청 진행 후) ✅
 
@@ -453,7 +560,7 @@ HEAD = 76f592d = origin/main 일치. working tree clean. stash@{0} "z3c-misdirec
 - Next.js dev hot-reload: 같은 컴포넌트 한 세션 2회 패치 시 .next 정리 + dev 재시작 의무
 - 도매꾹 OpenAPI v4.5: https://domeggook.com/ssl/api/?ver=4.5&mode=getItemView&aid={KEY}&no={no}&om=json
 - Supabase 마이그레이션: SQL Editor 또는 Supabase MCP apply_migration (project doxfizicftgtqktmtftf)
-- 한글 작업 후: grep -nE "꽃젤|혁섭|쿠드|식타|릴고|헌서|위젝|스칵|쿠두" 검증 (작업원칙 #29 (e))
+- 한글 작업 후: grep -nE "꽃졔|혁섭|쿠드|식타|릴고|헌서|위젝|스칵|쿠두" 검증 (작업원칙 #29 (e))
 ```
 
 ### 도매매/도매꾹 플랫폼 이해

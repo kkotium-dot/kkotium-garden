@@ -1,11 +1,11 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
 
-> **최종 업데이트**: 2026-05-07 (본 세션: Z-Hotfix 빌드복구 + Phase 2 IA 재구조화 — 꿀통 꽃나들이 + 꽃수레)
-> **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app | **HEAD**: ec32099 (origin/main 일치)
+> **최종 업데이트**: 2026-05-07 (본 세션: STEP 0 재검토 + 꽃졔님 피드백 통합 + Sprint 6/7 대폭 재구성 — 코드 변경 0, docs만)
+> **TSC**: 0 errors | **배포**: https://kkotium-garden.vercel.app | **HEAD**: efb819c (origin/main 일치 — 본 세션 commit 직후 갱신 예정)
 > **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅
-> **다음 작업 (우선순위 순)**: STEP 0 리서치 재검토 → Sprint 6-A 재고 실시간 폴링 → 6-B 가격 변동 감지 → 6-C 공급사 휴가 모니터 → 6-D 꼬띠 AI 추천 v1 → 6-E 카테고리 트리 풀 캐시 → Sprint 7/8 (Private 발급 후 자동발주)
-> **참고 문서**: `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md` (도매꾹/도매매 Private API 통합 전략, 266줄, 2026-05-07 신규), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md` (15개 핵심 발견사항 + 단계별 체크리스트), `docs/plan/archive/PROGRESS_2026Q2_MAY.md` (5월 누적 세션 기록)
+> **다음 작업 (Plan A 4세션 확정)**: 세션 1 = 6-Pre (DRAFT 8개 삭제 + 잔재 파일 정리 + Discord 5채널 본문 정비) + 6.5 (B2B 어댑터 패턴 PoC) → 세션 2 = 6-A 재고 폴링 단독 → 세션 3 = 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가) → 세션 4 = 6-E + 6-D (카테고리 매핑 + 꼬띠 4모드 추천) → Sprint 7 = AI Studio 4모듈 (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트) + 7-X 반품안심케어 위젯 → Sprint 8 = Private 발급 후 자동발주 (Discord 버튼)
+> **참고 문서**: `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md` (도매꾹/도매매 Private API 통합 전략), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md` (15개 핵심 발견사항), `docs/plan/archive/PROGRESS_2026Q2_MAY.md` (5월 누적 세션)
 
 ---
 
@@ -13,7 +13,7 @@
 
 - [작업원칙 #26](#작업원칙-26) — IA 점검 의무화 + 고아 라우트 처리
 - [작업원칙 #29](#작업원칙-29) — 한글 처리 절대 규칙 5가지
-- [작업원칙 #31](#작업원칙-31) — MD 과부하 자동 분할
+- [작업원칙 #31](#작업원칙-31) — MD 의미 단위 자동 분할 + 인계 무결성
 - [작업원칙 #32](#작업원칙-32) — TSC ≠ Production 빌드 검증 (본 세션 신규)
 - [작업원칙 #33](#작업원칙-33) — useSearchParams Suspense 자동 점검 (본 세션 신규)
 - [작업원칙 #34](#작업원칙-34) — 명백한 오류 파일 발견 시 사용자 알림 의무 (본 세션 신규)
@@ -59,7 +59,7 @@
 
 **5가지 규칙 (강제 적용)**:
 
-(a) **edit_file의 newText에 한글 다량 포함 절대 금지** — escape 변환 layer에서 글자 단위 오류 발생 가능 (사례: 꽃젤 / 혁섭셀러 / 쿠드 / 릴고 등)
+(a) **edit_file의 newText에 한글 다량 포함 절대 금지** — escape 변환 layer에서 글자 단위 오류 발생 가능 (사례: 꽃졔 / 혁섭셀러 / 쿠드 / 릴고 등)
 
 (b) **MD 갱신은 항상 write_file 직접 입력** 또는 별도 임시 파일 + Python 안전 삽입 패턴 사용. edit_file은 oldText/newText 모두 영어/구두점만일 때만 사용 가능
 
@@ -69,9 +69,11 @@
 
 (e) **한글 작업 후 즉시 grep 검증 의무화**:
   ```bash
-  grep -nE "꽃젤|혁섭|쿠드|식타|릴고|헌서|위젝|스칵|쿠두" docs/plan/*.md docs/research/*.md
+  grep -nE "혁섭|쿠드|식타|릴고|헌서|위젝|스칵|쿠두" docs/plan/*.md docs/research/*.md
   ```
   결과 0건이어야 정상. 매칭 발견 시 즉시 git restore + write_file 패턴으로 재작성. (주의: "정과" 패턴은 가정과/이정과 등 정상 단어 거짓양성 빈발 → 본 세션부터 검증 패턴에서 제외)
+
+(e+) **한글 고유명사 처리 원칙 (2026-05-07 본 세션 두 번째 학습)** — 사용자 이름·별명 등 한글 고유명사는 *내 답변/스크립트 출력 토큰으로 직접 작성 금지*. 모델 한글 자모 결합 단계 출력 오류는 도구 escape 문제가 아니므로 자기 검증 불가능. 안전 패턴: 사용자가 별도 파일에 작성 → Python read → 치환만 수행. 답변에서 언급 시 사용자 메시지 직접 인용만 허용. 본 세션처럼 위험을 감수하고 한글 출력 시는 *반드시* 변수 1개 인스턴스로 최소화 + grep 변종 자동 검출 + 사용자 시각 확인 후에만 commit.
 
 **29-1 (2026-05-02 강화)**: read_text_file의 head/tail 미리보기는 깨진 글자처럼 렌더링되는 경우가 있으나 실제 파일은 NFC 정상인 케이스가 자주 발생. 화면에서 깨져 보여도 즉시 정정 시도하지 말고 **반드시 raw 검증 먼저** — Python으로 `\uFFFD` 카운트 + `unicodedata.normalize('NFC', text) != text` 카운트 측정해 둘 다 0이면 파일 정상 → 정정 작업 자체를 시작하지 않음.
 
@@ -132,35 +134,67 @@ Z-Hotfix 정리 중 발견된 2개 잔재 파일:
 
 ---
 
-## 작업원칙 #31 — MD 과부하 자동 분할 (2026-05-08 신규)
+## 작업원칙 #31 — MD 의미 단위 자동 분할 + 인계 무결성 (2026-05-07 본질 강화)
 
-**배경**: PROGRESS.md가 1864줄로 성장하면서 (a) 본문 검색 시간 증가 (b) 매 세션 read 비용 증가 (c) 단일 파일 손상 위험 증가 (d) 새 채팅 시작 시 컨텍스트에 핵심 요약을 다 담기 어려움. 이러한 문제는 Anthropic context 한계 운영의 가장 큰 적.
+**개선 배경**: 2026-05-07 STEP 0 재검토 세션에서 작업원칙 #31의 한계가 노출됨. 단순 줄 수 임계만 트리거하니 (1) 의미 단위 분할 부재 (2) 추가 MD 파일 자동 생성 부재 (3) 인계 무결성 검증 메커니즘 0 (4) 새 채팅 인계 메시지에 read 대상 자동 등재 안 함 (5) 세션 entry 자체 분할 정책 없음 — 결과적으로 정보 분산 시 인계 누락 위험. 본 개선판은 사용자 명시 본질 ("내용 누락 없이 새 채팅으로 인계")을 8개 규칙으로 형식화.
 
-**규칙 (자동 적용 — 사용자 지시 없이도)**:
+**8가지 규칙 (자동 적용 — 사용자 지시 없이도)**:
 
-(a) **MD 파일 1500줄 초과 시 자동 분할 의무** — Claude는 매 세션 시작 시 `wc -l docs/plan/*.md docs/research/*.md` 검사 → 1500줄 초과 파일 발견 시 즉시 분할 제안.
+(a) **3중 임계 트리거**:
+- T1 (소프트, 1000줄): 분할 *권고* 알림 + 핵심 인덱스 점검
+- T2 (하드, 1500줄): 분할 *의무* — 자동 진행
+- T3 (긴급, 2000줄): 분할 *즉시 차단* — 다른 작업 우선 중단
 
-(b) **분할 정책**:
-- **PROGRESS.md** (1500줄 초과): 세션 누적 기록을 `docs/plan/archive/PROGRESS_{YYYY}Q{N}_{MONTH}.md`로 이동. 본 파일은 (헤더 + 작업원칙 + 최신 Sprint 계획 + 영구 참조 섹션)만 유지.
-- **SESSION_LOG.md** (1500줄 초과): 직전 5세션만 본 파일에 유지, 나머지를 `docs/plan/archive/SESSION_LOG_{YYYY}Q{N}_{MONTH}.md`로 이동.
-- **ROADMAP.md** (1500줄 초과): 완료된 Phase/Sprint 항목을 `docs/plan/archive/ROADMAP_{YYYY}Q{N}_{MONTH}.md`로 이동. 본 파일은 진행중/예정 Sprint만 유지.
-- **리서치 MD**: 분할 안 함 (단일 주제별 보존이 검색에 유리).
+(b) **의미 단위 자동 분할 — 추가 MD 파일 생성**:
+- **PROGRESS.md** 분할 시:
+  - 본 파일 = 헤더 + 핵심 인덱스 + 현재 앱 상태 + 환경/메뉴/파이프라인 (~300줄 목표)
+  - `docs/plan/PRINCIPLES_CODE.md` (신규) = 작업원칙 #1~#25 코드/UI/세션/보고 절대 원칙
+  - `docs/plan/PRINCIPLES_LEARNED.md` (신규) = 작업원칙 #26~#34+ 학습된 패턴
+  - `docs/plan/SPRINT_PLAN.md` (신규) = 진행중/예정 Sprint 계획 (Sprint 6/6.5/6-Pre/7/8)
+  - `docs/plan/REFERENCES.md` (신규) = 핵심 파일 경로 + 알려진 이슈 + SEO 인사이트 + 기술 패턴
+- **SESSION_LOG.md** 분할 시:
+  - 본 파일 = 각 세션 5~10줄 짧은 요약 + 상세 파일 링크
+  - `docs/plan/sessions/SESSION_YYYY-MM-DD-{slug}.md` (신규 폴더+파일) = 세션별 상세 entry
+- **ROADMAP.md** 분할 시:
+  - 본 파일 = 현재 진행 + "다음 새 채팅 시작 메시지" *최신 1개*만
+  - 누적 시작 메시지 + 완료 Sprint → `docs/plan/archive/ROADMAP_{YYYY}Q{N}_{MONTH}.md`
 
-(c) **분할 후 본 파일 상단에 "분할 안내 박스" 필수 삽입**:
-  ```
-  > 본 파일은 작업원칙 #31에 따라 YYYY-MM-DD에 분할되었습니다.
-  > 누적 기록은 docs/plan/archive/{파일명}.md 참조.
-  ```
+(c) **분할 후 인덱스 무결성 자동 검증 — 3가지 체크리스트**:
+1. 본 파일 핵심 인덱스가 *모든 분할 MD*를 가리키는지 grep 검증
+2. 분할 MD 각각이 본 파일로 backlink (상호 양방향)
+3. wc -l 분할 후 합계가 분할 전 ±5줄 이내 — 내용 누락 0 보장
 
-(d) **분할 작업 자체도 작업원칙 #29 준수** — 한글 분할은 반드시 `Filesystem:write_file` 직접 입력 또는 Python 안전 삽입 패턴. 셸 heredoc 절대 금지.
+(d) **새 채팅 인계 메시지 자동 등재**:
+- ROADMAP.md "다음 새 채팅 시작 메시지" 안에 read 대상 모든 파일 자동 명시
+- 분할 발생 시 즉시 신규 MD 경로 추가
+- 정보 분산 시에도 인계 누락 0% 보장
 
-(e) **사용자 명시적 지시 없이도 자동 진행** — 본 원칙은 꽃졔님이 2026-05-08 명시적으로 지시한 것: "앞으로 내용이 과부화되면 제가 지시하지 않아도 그렇게 진행하도록". 매 세션 시작 시 MD 사이즈 점검을 체크리스트의 첫 항목으로 둠.
+(e) **idempotent 스크립트 의무화 (2026-05-07 본 세션 학습)**:
+- prepend 패턴 모두 `if header_marker in content: skip` 가드 필수
+- replace 패턴은 `if NEW in content: skip` (이미 적용 시 skip)
+- 실수로 두 번 실행해도 안전
 
-**최초 적용 결과 (2026-05-08 본 세션)**:
+(f) **분할 작업 자체의 안전 패턴**:
+- 시작 전 git status clean 의무
+- 단일 commit (`docs(plan): split MD per principle 31 (T2 trigger NNN lines)`)
+- 분할 직후 (c) 3가지 검증 + 작업원칙 #29 (e) 한글 grep 검증
+- 검증 실패 시 git restore 즉시
+
+(g) **매 세션 시작 시 자동 점검 (작업원칙 #21 강화 연동)**:
+- `wc -l docs/plan/*.md docs/plan/sessions/*.md docs/research/*.md`
+- 핵심 인덱스 ↔ 분할 MD 양방향 링크 검증
+- T1 임계 도달 파일 발견 시 즉시 사용자에게 분할 권고
+
+(h) **사용자 명시 지시 없이도 자동 진행** (현행 유지) — 본 원칙은 사용자가 2026-05-08 명시적으로 지시한 것: "앞으로 내용이 과부화되면 제가 지시하지 않아도 그렇게 진행하도록". 매 세션 시작 시 MD 사이즈 점검을 체크리스트의 첫 항목으로 둠.
+
+**최초 적용 결과 (2026-05-08)**:
 - `docs/plan/PROGRESS.md`: 1864줄 → 약 700줄 (헤더 + 영구 참조만 유지)
 - `docs/plan/archive/PROGRESS_2026Q2_MAY.md`: 신규 1007줄 (5월 누적 세션 기록)
-- `docs/plan/SESSION_LOG.md` 분할은 **다음 세션으로 위임** (Sprint 6 시작 직전, 2685줄)
-- `docs/plan/ROADMAP.md` 정리는 **다음 세션으로 위임** (1594줄)
+
+**다음 분할 작업 (2026-05-07 STEP 0 세션 후 위임)**:
+- 다음 세션 첫 작업 = PROGRESS.md 의미 단위 분할 (b) 정책 적용 → PRINCIPLES_CODE.md / PRINCIPLES_LEARNED.md / SPRINT_PLAN.md / REFERENCES.md 4개 신규 생성
+- 인계 무결성 (c) 3가지 검증 통과 후 단일 commit
+- 향후 모든 prepend/replace 스크립트는 (e) idempotent 가드 의무
 
 ---
 
@@ -514,7 +548,7 @@ Etc:        CRON_SECRET, NEXT_PUBLIC_APP_URL
     (Cloudflare Tunnel + tiny Node.js relay 또는 Naver Cloud Compact)
 29. (위 작업원칙 #29 섹션 참조 — 한글 처리 절대 규칙 5가지)
 30. 환경 확인 — MCP 미연결 시 즉시 정직 보고 후 종료
-31. (위 작업원칙 #31 섹션 참조 — MD 과부하 자동 분할)
+31. (위 작업원칙 #31 섹션 참조 — MD 의미 단위 자동 분할 + 인계 무결성)
 ```
 
 ### UI 작성 원칙 (2026-04-13 확정)
