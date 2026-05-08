@@ -1,0 +1,35 @@
+feat(notifications): split discord-builder + 4-section structure for 5 channels
+
+Implements 6-Pre 3 (Discord 5-channel content overhaul) per the planned roadmap.
+
+Changes:
+- New module src/lib/notifications/discord-builder.ts (5 builders)
+- New dictionary src/lib/notifications/discord-strings.ko.json (87 strings)
+- src/lib/discord.ts slimmed to sender + helpers; re-exports builders for back-compat
+- Removed orphan src/lib/crawler/domemae-parser.ts (work principle #34)
+- New scripts/verify-korean-dict.py for ongoing Korean integrity checks
+- Updated scripts/test-discord-5-channels.mjs to load dictionary directly
+
+Each embed now follows a 4-section structure:
+1) Situation (what happened)
+2) Impact   (so what)
+3) Action   (concrete next steps with deep links)
+4) Kkotti   (mascot voice — cowgirl-garden tone)
+
+Korean text safety pattern (work principle #29 hardening):
+- All user-facing Korean lives in a single JSON dictionary.
+- Builder code contains zero Korean literals or escape sequences.
+- This 100% prevents jamo-corruption typos that occur when the model
+  generates Korean escape codes directly. Verified via verify-korean-dict.py
+  against 21 known-typo patterns plus NFC and replacement-char checks.
+
+Verification:
+- TSC --noEmit: 0 errors
+- npm run build: 26/26 prerender OK
+- 5-channel live send: all HTTP 204
+- Korean integrity: 87 strings, 0 NFC violations, 0 known typos
+
+Sender username corrected from "Kkotti" (English) to "꼬띠" (Korean) in test script
+to match production sendDiscord behavior.
+
+Refs: docs/plan/PROGRESS.md, docs/plan/ROADMAP.md

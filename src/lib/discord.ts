@@ -1,6 +1,10 @@
 // src/lib/discord.ts
-// Centralised Discord webhook client for all Kkotium alert channels
-// All channels, message builders, and helpers in one place
+// Centralised Discord webhook sender for all Kkotium alert channels.
+// Embed builders moved to src/lib/notifications/discord-builder.ts (work principle 6.5/6-Pre 3 split).
+// This file now contains only:
+//   - Channel registry (DISCORD_WEBHOOKS)
+//   - sendDiscord() core sender
+//   - Shared helpers used by builders (getSeasonContext, GRADE_EMOJI)
 
 export const DISCORD_WEBHOOKS = {
   /** #🌸꼬띠-오늘추천 — daily recommendation 08:00 KST */
@@ -17,20 +21,21 @@ export const DISCORD_WEBHOOKS = {
 
 export type DiscordChannel = keyof typeof DISCORD_WEBHOOKS;
 
-// Kkotti avatar
+// Kkotti avatar (used by all 5 channels for consistency)
 const KKOTTI_AVATAR =
-  `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://kkotium.vercel.app'}/kkotti-avatar.png`;
+  `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://kkotium-garden.vercel.app'}/kkotti-avatar.png`;
 
 // ── Season detector ────────────────────────────────────────────────────────────
+// Returns the next upcoming Korean shopping holiday within 30 days, with suggested keywords.
 export function getSeasonContext(): { label: string; daysLeft: number; words: string[] } | null {
   const now = new Date();
   const EVENTS = [
-    { month: 2,  day: 14, label: '발렌타인데이',  words: ['주를릿', '발렌타인', '선물', '포장'] },
-    { month: 3,  day: 14, label: '화이트데이',    words: ['사탕', '화이트', '선물', '포장'] },
-    { month: 5,  day: 5,  label: '어린이날',      words: ['장난감', '어린이', '선물', '놀이'] },
-    { month: 5,  day: 8,  label: '어버이날',      words: ['카네이션', '선물', '부모님'] },
-    { month: 11, day: 11, label: '빼빼로데이',    words: ['빼빼로', '과자', '선물', '포장'] },
-    { month: 12, day: 25, label: '크리스마스',    words: ['크리스마스', '산타', '선물', '트리'] },
+    { month: 2,  day: 14, label: '\uBC1C\uB80C\uD0C0\uC778\uB370\uC774',  words: ['\uC8FC\uCF5C\uB9BF', '\uBC1C\uB80C\uD0C0\uC778', '\uC120\uBB3C', '\uD3EC\uC7A5'] },
+    { month: 3,  day: 14, label: '\uD654\uC774\uD2B8\uB370\uC774',        words: ['\uC0AC\uD0D5', '\uD654\uC774\uD2B8', '\uC120\uBB3C', '\uD3EC\uC7A5'] },
+    { month: 5,  day: 5,  label: '\uC5B4\uB9B0\uC774\uB0A0',               words: ['\uC7A5\uB09C\uAC10', '\uC5B4\uB9B0\uC774', '\uC120\uBB3C', '\uB180\uC774'] },
+    { month: 5,  day: 8,  label: '\uC5B4\uBC84\uC774\uB0A0',               words: ['\uCE74\uB124\uC774\uC158', '\uC120\uBB3C', '\uBD80\uBAA8\uB2D8'] },
+    { month: 11, day: 11, label: '\uBE7C\uBE7C\uB85C\uB370\uC774',        words: ['\uBE7C\uBE7C\uB85C', '\uACFC\uC790', '\uC120\uBB3C', '\uD3EC\uC7A5'] },
+    { month: 12, day: 25, label: '\uD06C\uB9AC\uC2A4\uB9C8\uC2A4',        words: ['\uD06C\uB9AC\uC2A4\uB9C8\uC2A4', '\uC0B0\uD0C0', '\uC120\uBB3C', '\uD2B8\uB9AC'] },
   ];
   for (const ev of EVENTS) {
     const target = new Date(now.getFullYear(), ev.month - 1, ev.day);
@@ -40,21 +45,13 @@ export function getSeasonContext(): { label: string; daysLeft: number; words: st
   return null;
 }
 
+// Honey-score grade -> Discord emoji shortcode
 export const GRADE_EMOJI: Record<string, string> = {
   S: ':purple_heart:',
   A: ':green_heart:',
   B: ':blue_heart:',
   C: ':yellow_heart:',
   D: ':broken_heart:',
-};
-
-// Discord embed color by channel type
-const CHANNEL_COLOR: Record<DiscordChannel, number> = {
-  KKOTTI_RECOMMEND: 0x9333ea, // purple
-  STOCK_ALERT:      0xf97316, // orange
-  PRICE_CHANGE:     0xeab308, // yellow
-  KKOTTI_SCORE:     0xef4444, // red
-  OPS_REPORT:       0x3b82f6, // blue
 };
 
 // ── Core sender ──────────────────────────────────────────────────────────────
@@ -68,7 +65,7 @@ export async function sendDiscord(
 
   try {
     const body: Record<string, unknown> = {
-      username:   '꼬띠',
+      username:   '\uAF2C\uB6F2',
       avatar_url: KKOTTI_AVATAR,
     };
     if (embeds && embeds.length > 0) body.embeds = embeds;
@@ -85,197 +82,14 @@ export async function sendDiscord(
   }
 }
 
-// ── Embed builders ────────────────────────────────────────────────────────────
-
-/** #🌸꼬띠-오늘추천 embed */
-export function buildRecommendEmbed(params: {
-  today: string;
-  top3: { name: string; score: number; grade: string; netMarginRate: number; supplierName?: string }[];
-  season?: { label: string; daysLeft: number } | null;
-  seasonTop2?: { name: string; score: number }[];
-  appUrl?: string;
-  trendNote?: string;
-}): Record<string, unknown> {
-  const RANK_EMOJI = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣'];
-  const fields: Record<string, unknown>[] = params.top3.map((p: any, i: number) => ({
-  name: `${RANK_EMOJI[i] ?? `${i+1}.`} ${p.name}`,
-  value: [
-    `${GRADE_EMOJI[p.grade] ?? ''} 꿀통지수 **${p.score}점** | 순마진 ${p.netMarginRate.toFixed(1)}%`,
-    p.keywords?.length ? `키워드: ${p.keywords.slice(0,2).join(' · ')}` : null,
-    p.volumeBoost > 0 ? `검색량 블루오션 +${p.volumeBoost}` : null,
-    (p as any).isSourcing ? '[소싱보관함] 등록 전 후보' : null,
-    p.supplierName ? `공급사: ${p.supplierName}` : null,
-  ].filter(Boolean).join('\n'),
-  inline: false,
-}));
-
-  if (params.season && (params.seasonTop2?.length ?? 0) > 0) {
-    fields.push({
-      name: `📅 시즌 추천 — ${params.season.label} D-${params.season.daysLeft}`,
-      value: params.seasonTop2!.map((p, i) =>
-        `${i + 4}. **${p.name}** (꿀통 ${p.score}점)`).join('\n'),
-      inline: false,
-    });
-  }
-
-  return {
-    title: `🌸 꼬띠 오늘의 추천 — ${params.today}`,
-    description: `오늘 등록하기 좋은 꿀통 상품 TOP 3입니다!\n[앱에서 바로 등록](${params.appUrl ?? 'http://localhost:3000'}/products/new)${params.trendNote ?? ''}`,
-    color: CHANNEL_COLOR.KKOTTI_RECOMMEND,
-    fields,
-    footer: { text: '꽃티움 가든 · 꼬띠' },
-    timestamp: new Date().toISOString(),
-  };
-}
-
-/** #📦재고-알림 embed */
-export function buildStockAlertEmbed(params: {
-  products: {
-    name: string;
-    sku: string;
-    salePrice: number;
-    honeyScore: number;
-    honeyGrade: string;
-    netMarginRate: number;
-    daysOos?: number;
-    alternatives?: { alt_product_name: string; platform_code: string; platform_url?: string }[];
-  }[];
-}): Record<string, unknown> {
-  const fields = params.products.slice(0, 15).map(p => {
-    const altLines = p.alternatives?.length
-      ? p.alternatives.map((a, i) => `${i + 1}. ${a.alt_product_name} (${a.platform_code})${a.platform_url ? ` — [보기](${a.platform_url})` : ''}`).join('\n')
-      : '⚠️ 대체상품 미등록';
-
-    return {
-      name: `📦 ${p.name}${p.daysOos ? ` — ${p.daysOos}일째 품절` : ''}`,
-      value: [
-        `SKU: \`${p.sku}\` | 판매가: **${p.salePrice.toLocaleString()}원**`,
-        `${GRADE_EMOJI[p.honeyGrade] ?? ''} 꿀통 **${p.honeyScore}점** | 순마진 ${p.netMarginRate.toFixed(1)}%`,
-        `**대체상품:**\n${altLines}`,
-      ].join('\n'),
-      inline: false,
-    };
-  });
-
-  return {
-    title: `:warning: 품절 감지 — ${params.products.length}개 상품`,
-    description: '다음 상품이 품절되었어요. 빠른 조치가 필요합니다!',
-    color: CHANNEL_COLOR.STOCK_ALERT,
-    fields,
-    footer: { text: '꽃티움 가든 · 재고모니터' },
-    timestamp: new Date().toISOString(),
-  };
-}
-
-/** #💰가격-변동 embed */
-export function buildPriceChangeEmbed(params: {
-  changes: {
-    productName: string;
-    sku: string;
-    oldPrice: number;
-    newPrice: number;
-    changePct: number;
-    oldMargin: number;
-    newMargin: number;
-  }[];
-}): Record<string, unknown> {
-  const fields = params.changes.slice(0, 10).map(c => {
-    const isUp = c.newPrice > c.oldPrice;
-    const arrow = isUp ? '🔺' : '🔻';
-    return {
-      name: `${arrow} ${c.productName}`,
-      value: [
-        `SKU: \`${c.sku}\``,
-        `공급가: ${c.oldPrice.toLocaleString()}원 → **${c.newPrice.toLocaleString()}원** (${isUp ? '+' : ''}${c.changePct.toFixed(1)}%)`,
-        `순마진: ${c.oldMargin.toFixed(1)}% → **${c.newMargin.toFixed(1)}%**${c.newMargin < 20 ? ' :rotating_light: 위험' : ''}`,
-      ].join('\n'),
-      inline: false,
-    };
-  });
-
-  return {
-    title: `:money_with_wings: 공급가 변동 감지 — ${params.changes.length}개 상품`,
-    description: '공급사 가격이 변동되었어요. 마진율을 확인해주세요!',
-    color: CHANNEL_COLOR.PRICE_CHANGE,
-    fields,
-    footer: { text: '꽃티움 가든 · 가격모니터' },
-    timestamp: new Date().toISOString(),
-  };
-}
-
-/** #📉꼬띠-점수급락 embed */
-export function buildScoreDropEmbed(params: {
-  drops: {
-    productName: string;
-    sku: string;
-    oldScore: number;
-    newScore: number;
-    dropAmt: number;
-    reason: string;
-  }[];
-}): Record<string, unknown> {
-  const fields = params.drops.slice(0, 10).map(d => ({
-    name: `:chart_with_downwards_trend: ${d.productName}`,
-    value: [
-      `SKU: \`${d.sku}\``,
-      `점수: **${d.oldScore}점** → **${d.newScore}점** (↓${d.dropAmt}점)`,
-      `원인: ${d.reason}`,
-    ].join('\n'),
-    inline: false,
-  }));
-
-  return {
-    title: `:warning: 꼬띠 점수 급락 알림`,
-    description: `아래 상품들의 꿀통지수가 **20점 이상** 하락했어요!`,
-    color: CHANNEL_COLOR.KKOTTI_SCORE,
-    fields,
-    footer: { text: '꽃티움 가든 · 꼬띠' },
-    timestamp: new Date().toISOString(),
-  };
-}
-
-/** #📊운영-리포트 embed (weekly) */
-export function buildWeeklyReportEmbed(params: {
-  weekLabel: string;
-  totalProducts: number;
-  activeProducts: number;
-  oosProducts: number;
-  newRegistered: number;
-  avgHoneyScore: number;
-  topProduct?: { name: string; score: number };
-  noAltOosCount: number;
-  priceChanges: number;
-  weekRevenue?: number;
-  weekOrderCount?: number;
-  weekCancelCount?: number;
-  weekNetProfit?: number;
-}): Record<string, unknown> {
-  const p = params;
-  const revenueField = (p.weekRevenue ?? 0) > 0
-    ? { name: '\uC8FC\uAC04 \uB9E4\uCD9C', value: `**${(p.weekRevenue ?? 0).toLocaleString()}\uC6D0** (\uC8FC\uBB38 ${p.weekOrderCount ?? 0}\uAC74 | \uCDE8\uC18C ${p.weekCancelCount ?? 0}\uAC74)`, inline: false }
-    : { name: '\uC8FC\uAC04 \uB9E4\uCD9C', value: '\uC8FC\uBB38 \uC5C6\uC74C', inline: false };
-  const profitField = (p.weekNetProfit ?? 0) > 0
-    ? { name: '\uCD94\uC815 \uC21C\uC774\uC775', value: `**${(p.weekNetProfit ?? 0).toLocaleString()}\uC6D0** (\uB124\uC774\uBC84 \uC218\uC218\uB8CC+\uACF5\uAE09\uAC00 \uC81C\uC678 \uAC1C\uC0B0)`, inline: false }
-    : null;
-  return {
-    title: `:bar_chart: \uC8FC\uAC04 \uC6B4\uC601 \uB9AC\uD3EC\uD2B8 \u2014 ${p.weekLabel}`,
-    description: '\uC9C0\uB09C 7\uC77C\uAC04 \uC2A4\uB9C8\uD2B8\uC2A4\uD1A0\uC5B4 \uC6B4\uC601 \uC694\uC57D\uC785\uB2C8\uB2E4.',
-    color: CHANNEL_COLOR.OPS_REPORT,
-    fields: [
-      revenueField,
-      profitField,
-      { name: '\uC0C1\uD488 \uD604\uD669', value: `\uC804\uCCB4 ${p.totalProducts}\uAC1C | \uD310\uB9E4\uC911 ${p.activeProducts}\uAC1C | \uD488\uC808 ${p.oosProducts}\uAC1C`, inline: false },
-      { name: '\uC2E0\uADDC \uB4F1\uB85D', value: `${p.newRegistered}\uAC1C`, inline: true },
-      { name: '\uD3C9\uADE0 \uAF2D\uD1B5\uC9C0\uC218', value: `${p.avgHoneyScore}\uC810`, inline: true },
-      { name: '\uACF5\uAE09\uAC00 \uBCC0\uB3D9', value: `${p.priceChanges}\uAC74`, inline: true },
-      p.topProduct
-        ? { name: ':trophy: \uC774\uC8FC\uC758 \uAF2D\uD1B5 1\uC704', value: `**${p.topProduct.name}** (${p.topProduct.score}\uC810)`, inline: false }
-        : null,
-      p.noAltOosCount > 0
-        ? { name: ':rotating_light: \uB300\uCCB4\uC0C1\uD488 \uBBF8\uB4F1\uB85D \uD488\uC808', value: `${p.noAltOosCount}\uAC1C \uC0C1\uD488 \u2014 \uB300\uCCB4\uC0C1\uD488\uC744 \uB4F1\uB85D\uD574\uC8FC\uC138\uC694!`, inline: false }
-        : null,
-    ].filter(Boolean) as Record<string, unknown>[],
-    footer: { text: '\uAF43\uD2F0\uC6C0 \uAC00\uB4E0 \u00B7 \uC8FC\uAC04\uB9AC\uD3EC\uD2B8' },
-    timestamp: new Date().toISOString(),
-  };
-}
+// ── Backward-compatibility re-exports ────────────────────────────────────────
+// Existing callers import builders from '@/lib/discord'.
+// To minimize churn, re-export builders from the new module.
+// New code should import directly from '@/lib/notifications/discord-builder'.
+export {
+  buildRecommendEmbed,
+  buildStockAlertEmbed,
+  buildPriceChangeEmbed,
+  buildScoreDropEmbed,
+  buildWeeklyReportEmbed,
+} from '@/lib/notifications/discord-builder';
