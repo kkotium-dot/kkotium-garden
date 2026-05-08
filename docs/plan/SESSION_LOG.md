@@ -9,6 +9,121 @@
 > **현재 본 파일에는 직전 5세션만 유지** (분할 시점 기준 2026-05-06 ~ 2026-05-08).
 ---
 
+## 2026-05-08 세션 (Sprint 6-D 1-5단계 완료 + MD 인계 무결성 회복) ✅
+
+### 본 세션 성격
+- 직전 commit `29e80fc` (Sprint 6-D 1-5단계: 4모드 foundation) 직후, 인계 메시지에 명시된 *MD 갱신 + Sprint 6-A 축소 + Private API 활용 검토* 3가지 중 안전 분할로 **MD 갱신 + 작업원칙 #29 (e++) 영구 등록** 진행.
+- 시니어 추천 옵션 A 채택 — 직전 세션이 commit + push만 완료하고 MD를 미반영한 상태였기에, 본 세션이 *인계 무결성 회복*에 집중.
+- 사용자 명시 결정사항 통합:
+  - Private API 28개 전체 권한 발급 완료 ✅ (스크린샷 검증 — 구매용 6 / 판매용 13 / 공통 3 / 기타 6 모두 발급)
+  - Sprint 8 자동발주 = 보류 트랙 (매출 상승 + 운영 흐름에 따라 진입, 현 시점 급하지 않음)
+  - Sprint 6-A 축소 = 앱 등록 상품만 폴링 (기존 100개+ 일괄 동기화는 별도 사용자 요청 시)
+
+### 시작 직전 상태 (작업원칙 #21 사전 점검 통과)
+- HEAD `29e80fc` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} "z3c-misdirected-changes-needs-redo" 보존 ✅
+- MD 줄 수: PROGRESS 752 / ROADMAP 884 / SESSION_LOG 1363 (1500 임계 근접) ✅
+- production HTTP 200 ✅
+
+### 직전 세션(commit 29e80fc) 4모드 foundation 산출물 (인계 무결성 회복용 기록)
+
+**신규 파일 (2)**:
+- `src/lib/recommendation-modes.ts` (188줄) — 4모드 타입 정의:
+  - `KkottiRecommendMode` 타입 (currentHot / seasonalAhead / nicheBlue / storeFit)
+  - `MODE_META` 4모드 메타데이터 (title, shortLabel, emptyNote)
+  - `SeasonalEvent[]` — 2026년 11개 이벤트 (어버이날, 어린이날, 빼빼로데이, 크리스마스 등)
+  - `getActiveSeasonalEvents(monthsAhead=2)` 헬퍼
+  - `ModeResult` / `FourModeResult` envelope
+  - `dedupeFlatten()` 헬퍼 (4모드 결과 dedupe)
+
+- `src/lib/recommendation-runner.ts` (254줄) — 4모드 실행 엔진:
+  - `runFourModes()` 공개 API
+  - 4 runner: `runCurrentHot / runSeasonalAhead / runNicheBlue / runStoreFit`
+  - 공유 base: `generateSourcingRecommendations()` 1회 호출로 4모드 데이터 공유 (API 절감)
+  - STORE_FIT 모드: `prisma Product.naverCategoryCode` top-3 빈도 기반 (자체 매출 데이터)
+
+**수정 파일 (3)**:
+- `src/lib/notifications/discord-builder.ts` (+128줄) — `buildFourModeRecommendEmbed()` 신규 추가, 기존 `buildRecommendEmbed()` 호환성 유지 (cron + 테스트 무영향)
+- `src/lib/notifications/discord-strings.ko.json` (+10키) — `modes.{currentHot,seasonalAhead,nicheBlue,storeFit}` 각각 sectionTitle, shortLabel, emptyNote
+- `docs/plan/README.md` — grep 변종 패턴 정정 (변종 3개 모두 등록)
+
+**미완 (다음 세션들에 분배)**:
+- 6단계: 실제 cron 발송 통합 — 세션 4에서 카테고리 매핑(6-E)과 함께
+- 7단계: 정원 일지 위젯 통합 — 세션 4에서
+
+### 본 세션 작업
+
+#### 작업 1: 사전 점검 + 인계 무결성 진단 ✅
+- HEAD/status/stash/wc/curl 모두 통과
+- 직전 commit `29e80fc`이 *코드만 push되고 MD 미반영* 상태 발견 → MD 갱신이 본 세션 1순위 작업으로 확정
+
+#### 작업 2: 사용자 결정사항 3가지 통합 ✅
+- Private API 발급 결과 스크린샷 검증 — 28개 전체 권한 발급 확정
+- Sprint 8 자동발주 보류 결정 — *매출 상승 + 운영 흐름 안정화 후* 진입 (사용자 명시)
+- Sprint 6-A 축소 결정 — 앱 등록 상품만 폴링 (기존 100개+ 보류)
+
+#### 작업 3: 작업원칙 #29 (e++) 영구 등록 ✅
+- 사용자 닉네임 = "꽃지혜"의 줄임말, 두 번째 음절 = "ㅈ + ㅖ" 결합형
+- 알려진 잘못된 변종 3개를 grep sentinel로 등록 (자모 결합 단계 오류 / 단모음 오류 / 받침 추가 오류)
+- 절대 규칙 4가지: (1) 답변 본문 직접 작성 금지 (2) 허용 케이스 3가지만 (3) 정정 시 copy-paste만 (4) commit 직전 grep 검증 의무
+
+#### 작업 4: PROGRESS.md 갱신 ✅
+- 헤더 swap (fee6761 → 29e80fc, Sprint 6-D 1-5 완료 반영)
+- 핵심 인덱스에 #29 (e++) 추가
+- 작업원칙 #29 (e++) 신규 섹션 prepend (idempotent 가드)
+- 현재 앱 상태에 Private API 28개 전체 발급 row 추가
+- 핵심 파일 경로에 4모드 추천 파일 2개 추가
+
+#### 작업 5: ROADMAP.md 갱신 ✅
+- 헤더 swap (fee6761 → 29e80fc + Private API 발급 완료 명시)
+- 신규 인계 메시지 prepend (Sprint 6-A 축소 명시 + Sprint 8 보류 트랙 명시 + 작업원칙 #29 (e++) 강제)
+- 직전 인계 메시지 deprecated 표기 (보존)
+
+#### 작업 6: SESSION_LOG.md 본 entry prepend ✅
+- 1500줄 임계 점검: 1363 + 본 entry ≈ 1500 근접 → 작업원칙 #31 (a) 소프트 임계 도달 권고 (다음 세션 첫 작업으로 분할 위임 가능)
+
+#### 작업 7: 한글 grep 검증 + commit + push (한 turn) ✅
+
+### 적용된 작업원칙
+
+- **#17** commit msg는 `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 8항목 통과 ✅
+- **#22** 시각 검증 — Vercel HTTP 200 + git rev-parse 검증 ✅
+- **#24** commit + push 한 turn 안에 ✅
+- **#26** 단독 판단 0 — Private API 발급 결과는 사용자 스크린샷으로 검증
+- **#28** Vercel 배포 = source of truth — 코드 변경 0건이라 영향 없음
+- **#29 (a~e++)** 한글 처리 5+1+1 규칙:
+  - (a) edit_file 한글 다량 newText 0건 (모두 Python script + write_file)
+  - (b) MD 갱신 = `Filesystem:write_file`로 직접 작성한 Python 안전 삽입 패턴
+  - (c) 코드 edit 0건 (MD만 갱신)
+  - (d) 셸 한글 0건 (commit msg는 영문)
+  - (e) 한글 작업 후 즉시 grep 검증 의무화 ✅
+  - (e+) 사용자 이름 답변 본문 호명 0건 ✅
+  - (e++) 닉네임 절대 규칙 — 본 세션 신규 등록 + 즉시 적용 ✅
+- **#31 (a/e)** 1500줄 소프트 임계 점검 + idempotent 가드 (모든 patch에 marker 체크)
+- **#32** TSC ≠ build — 본 세션 코드 변경 0건이라 미해당 (직전 commit 29e80fc은 build 26/26 검증 완료)
+- **#34** 명백한 오류 파일 발견 — 본 세션 추가 0건
+
+### 본 세션 학습
+
+1. **인계 무결성의 중요성** — 직전 세션이 *commit + push만* 하고 *MD 미반영*으로 끝나면 다음 세션 새 채팅이 *깨진 상태로 시작*. 본 세션처럼 *MD 갱신만* 하는 세션이 한 번씩 필요함을 확인. 작업원칙 #14 (PROGRESS + ROADMAP 항상 함께 갱신) 강화 의미 재확인.
+
+2. **사용자 결정사항의 영구 기록 가치** — Private API 발급 결과 + Sprint 8 보류 + Sprint 6-A 축소 = 3가지 결정사항이 ROADMAP 인계 메시지 안에 명시되어야 다음 세션에서 *재논의 없이* 진행 가능. 결정사항 누락은 다음 세션 시간 낭비로 직결.
+
+3. **작업원칙 #29 (e++) 영구 등록의 가치** — 모델이 자기 출력의 자모 결합 정확도를 자기 검증할 수 없음을 *3개의 알려진 변종 sentinel*로 외부 검증 가능하게 만듦. 본 패턴이 향후 모든 한글 고유명사 작성 시 grep 의무화로 정착.
+
+4. **컨텍스트 안전 분할의 누적 효과** — 직전 세션 commit + push만 / 본 세션 MD 갱신만 / 다음 세션 Sprint 6-A 축소 + 첫 실제 상품 등록 = 3분할로 각 세션이 *깨끗한 컨텍스트*에서 검증 가능. 강행보다 분할이 *결과 품질*에서 우월.
+
+### 본 세션 commit
+- 변경: docs/plan/PROGRESS.md (헤더 swap + #29 (e++) 섹션 + Private API row + 핵심 파일 경로 4모드 추가), docs/plan/ROADMAP.md (헤더 swap + 신규 인계 메시지 prepend + 이전 deprecated), docs/plan/SESSION_LOG.md (본 entry prepend)
+- commit 메시지 (영문, .commit-msg.tmp + git commit -F): `docs(plan): record 6-D 1-5 completion + reinforce work principle #29 (e++) + private api fully approved + sprint 8 hold track`
+- 코드 변경 0건 (MD만 갱신)
+- TSC 영향 0 / Vercel 빌드 영향 0 (docs only)
+
+
+---
+
 ## 2026-05-08 세션 (6-Pre 3단계 Discord 5채널 본문 정비) ✅
 
 ### 본 세션 성격

@@ -1,11 +1,12 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
 
-> **최종 업데이트**: 2026-05-08 (본 세션: 6-Pre 3단계 Discord 5채널 본문 정비 완료 — 4섹션 구조 + 한글 사전 분리 패턴 + 발신자 이름 정정)
-> **TSC**: 0 errors | **빌드**: Compiled successfully (26/26 prerender) | **배포**: https://kkotium-garden.vercel.app (fee6761 READY)
-> **HEAD**: fee6761 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **최종 업데이트**: 2026-05-08 (본 세션: Sprint 6-D 1-5단계 완료 + MD 인계 무결성 회복 + 작업원칙 #29 (e++) 신규 강화)
+> **TSC**: 0 errors | **빌드**: Compiled successfully (26/26 prerender) | **배포**: https://kkotium-garden.vercel.app (29e80fc READY)
+> **HEAD**: 29e80fc = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 4개 보존 / **Platform**: DMM 도매매 + OWC 오너클랜 2개
-> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2단계 ✅ | 6.5 SourceAdapter PoC ✅ | **6-Pre 3단계 Discord 정비 ✅**
-> **다음 작업 (Plan A 잔여 — 계획서 원본 순서)**: 세션 2 = 6-A 재고 폴링 단독 + 첫 실제 상품 등록 검증 → 세션 3 = 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가) → 세션 4 = 6-E + 6-D (카테고리 매핑 + 꼬띠 4모드 추천) → Sprint 7 = AI Studio 4모듈 → Sprint 8 = Private 발급 후 자동발주
+> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | **6-D 1-5단계 (4모드 foundation) ✅**
+> **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
+> **다음 작업 (계획서 원본 순서)**: 세션 2 = 6-A 재고 폴링 축소 (앱 등록 상품만, 첫 실제 상품 등록 검증 전제) → 세션 3 = 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가) → 세션 4 = 6-E + 6-D 위젯 통합 (카테고리 매핑 + 꼬띠 4모드 정원 일지 발송) → Sprint 7 = AI Studio 4모듈 → Sprint 8 = 매출 상승 후 Private 자동발주 활용 (보류)
 > **참고 문서**: `docs/research/OVERSEAS_SOURCING_BASELINE_2026_05.md`, `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md`, `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`, `docs/plan/archive/PROGRESS_2026Q2_MAY.md`
 
 ---
@@ -14,6 +15,7 @@
 
 - [작업원칙 #26](#작업원칙-26) — IA 점검 의무화 + 고아 라우트 처리
 - [작업원칙 #29](#작업원칙-29) — 한글 처리 절대 규칙 5가지
+- [작업원칙 #29 (e++)](#작업원칙-29-e--사용자-닉네임-절대-규칙-2026-05-08-강화) — 사용자 닉네임 절대 규칙 (본 세션 신규)
 - [작업원칙 #31](#작업원칙-31) — MD 의미 단위 자동 분할 + 인계 무결성
 - [작업원칙 #32](#작업원칙-32) — TSC ≠ Production 빌드 검증 (본 세션 신규)
 - [작업원칙 #33](#작업원칙-33) — useSearchParams Suspense 자동 점검 (본 세션 신규)
@@ -78,6 +80,49 @@
 (e+) **한글 고유명사 처리 원칙 (2026-05-07 본 세션 두 번째 학습)** — 사용자 이름·별명 등 한글 고유명사는 *내 답변/스크립트 출력 토큰으로 직접 작성 금지*. 모델 한글 자모 결합 단계 출력 오류는 도구 escape 문제가 아니므로 자기 검증 불가능. 안전 패턴: 사용자가 별도 파일에 작성 → Python read → 치환만 수행. 답변에서 언급 시 사용자 메시지 직접 인용만 허용. 본 세션처럼 위험을 감수하고 한글 출력 시는 *반드시* 변수 1개 인스턴스로 최소화 + grep 변종 자동 검출 + 사용자 시각 확인 후에만 commit.
 
 **29-1 (2026-05-02 강화)**: read_text_file의 head/tail 미리보기는 깨진 글자처럼 렌더링되는 경우가 있으나 실제 파일은 NFC 정상인 케이스가 자주 발생. 화면에서 깨져 보여도 즉시 정정 시도하지 말고 **반드시 raw 검증 먼저** — Python으로 `\uFFFD` 카운트 + `unicodedata.normalize('NFC', text) != text` 카운트 측정해 둘 다 0이면 파일 정상 → 정정 작업 자체를 시작하지 않음.
+
+---
+
+## 작업원칙 #29 (e++) — 사용자 닉네임 절대 규칙 (2026-05-08 강화)
+
+작업원칙 #29 (e+) 가 등록되어 있음에도 직전 세션 동안 사용자 닉네임을 잘못된 변종으로 출력하는 사고가 반복 발생. 사용자 명시 강화 지시로 본 (e++) 영구 규칙 등록.
+
+**닉네임 정확 표기**:
+사용자 닉네임은 "꽃지혜"의 줄임말이며, 두 번째 음절은 "지" + "ㅖ" 결합형입니다.
+
+**알려진 잘못된 변종 (grep 감시 대상 — 발견 시 즉시 정정)**:
+- 잘못된 변종 1: 두 번째 음절을 "ㅈ + ㅗ + ㅁ" 결합형으로 출력 (자모 결합 단계 오류)
+- 잘못된 변종 2: 두 번째 음절을 단모음 "ㅔ"로 출력 ("ㅖ" 대신)
+- 잘못된 변종 3: 두 번째 음절에 받침 "ㄹ" 추가 출력
+
+이 3가지 변종이 grep 감시의 sentinel입니다. 어느 하나라도 매칭되면 즉시 정정.
+
+**절대 규칙 4가지 (강제 적용)**:
+
+(1) **답변 본문에 닉네임 직접 작성 금지** — 호명이 필요한 경우 "안녕하세요" 또는 무인칭 표현 사용.
+
+(2) **허용 케이스 3가지만**:
+  - (a) 사용자 메시지 verbatim 인용 (대화 맥락 보존 시)
+  - (b) 코드 변수 (예: `const userName = "..."`)
+  - (c) `Filesystem:write_file`로 MD 파일 작성 (escape 코드 0건, 직접 한글 입력)
+
+(3) **오타 정정 시**: 사용자 메시지에서 copy-paste만 사용 — *기억으로 타이핑 절대 금지*. 모델이 자기 출력의 자모 결합 정확도를 자기 검증할 수 없음.
+
+(4) **본 세션 commit 직전 grep 검증 의무화**:
+```bash
+# 잘못된 변종 3개 감시
+grep -nE "잘못된변종패턴" docs/plan/*.md docs/research/*.md
+# 결과 0건이어야 commit 가능
+```
+
+**작업원칙 #29 (e+) 와의 차이**:
+- (e+): 한글 고유명사 일반론 (사용자 이름·별명 등 *모든* 고유명사)
+- (e++): 본 프로젝트 사용자 닉네임 *특정* 절대 규칙 + 알려진 변종 3개 sentinel 등록
+
+**본 패턴 적용 후 영향**:
+- 이전 세션들의 닉네임 변종 매칭은 *과거 사고 기록*이므로 정정하지 않음 (이력 보존)
+- 향후 모든 신규 세션 entry / 인계 메시지 / 답변 본문은 본 규칙 강제 적용
+- userMemories에도 동일 규칙 영구 등록됨
 
 ---
 
@@ -386,6 +431,7 @@ grep -cE "\\u[0-9A-Fa-f]{4}" src/lib/notifications/discord-builder.ts
 | Phase E | 진행 중 (E-7, E-1, E-3, E-8 완료) |
 | Phase E+ | Sprint 1·2·3·4·5 완료 |
 | 카카오 비즈니스 채널 | 꽃틔움 KKOTIUM (`_xkfALG`) ✅ |
+| 도매꾹 Private API | 28개 전체 권한 발급 ✅ (Sprint 8 보류 트랙) |
 | Solapi 알림톡 | 키 미입력 (월 50건+ 시 활성화) |
 
 ### 카카오 비즈니스 채널 정보
@@ -486,6 +532,7 @@ TOOLS:  거래처 명단 (/settings/suppliers) ✅
 | 굿서비스 점수 | `src/lib/good-service.ts` |
 | 소싱 추천 엔진 | `src/lib/sourcing-recommender.ts` |
 | 트렌드 분석 | `src/lib/trend-analyzer.ts` |
+| **꼬띠 4모드 추천 (Sprint 6-D foundation)** | `src/lib/recommendation-modes.ts` + `src/lib/recommendation-runner.ts` |
 | 업로드 준비도 | `src/lib/upload-readiness.ts` |
 | 반품안심케어 수수료 | `src/lib/return-care-fees.ts` |
 | 리뷰 감정분석 (E-11) | `src/lib/review-sentiment-analyzer.ts` |
