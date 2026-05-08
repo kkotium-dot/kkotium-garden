@@ -54,6 +54,7 @@ model Supplier {
   platform                   Platform?         @relation(fields: [platformId], references: [id])
   shippingTemplates          ShippingTemplate[]
   defaultShippingTemplate    ShippingTemplate? @relation("SupplierDefaultShipping", fields: [defaultShippingTemplateId], references: [id])
+  stockProfiles              SupplierStockProfile[]
 
   @@index([platformCode])
   @@index([platformId])
@@ -180,6 +181,8 @@ model Product {
   origin_codes            OriginCode?       @relation(fields: [origin_id], references: [id], onUpdate: NoAction, map: "fk_products_origin")
   shipping_templates      ShippingTemplate? @relation(fields: [shipping_template_id], references: [id], onUpdate: NoAction, map: "fk_products_shipping_template")
   product_options         product_options?
+  inventorySnapshots      InventorySnapshot[]
+  lowStockAlerts          LowStockAlert[]
 
   @@index([supplierId])
   @@index([userId])
@@ -402,4 +405,71 @@ model CrawlLog {
   @@index([sourcingStatus])
   @@index([sellerId])
   @@map("crawl_logs")
+}
+
+// ============================================================================
+// Sprint 6-A: Inventory Polling Foundation (Option C - Hybrid Dynamic Threshold)
+// ============================================================================
+
+// Time-series snapshot of stock data, polled every 6 hours via cron.
+// Includes DRAFT products (for pre-registration trend tracking).
+// Alerts are only triggered for ACTIVE products (naverProductId IS NOT NULL).
+model InventorySnapshot {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId  String   @map("product_id")
+  productNo  String   @map("product_no") @db.VarChar(20)
+  qty        Int      @default(0)
+  status     String?  @db.VarChar(50)
+  minq       Int      @default(1)        // minimum order quantity (>1 means warning for solo seller)
+  isDraft    Boolean  @default(false) @map("is_draft")
+  polledAt   DateTime @default(now()) @map("polled_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId], map: "idx_inv_snap_product")
+  @@index([polledAt(sort: Desc)], map: "idx_inv_snap_polled")
+  @@index([productId, polledAt(sort: Desc)], map: "idx_inv_snap_product_polled")
+  @@index([productNo], map: "idx_inv_snap_product_no")
+  @@map("inventory_snapshots")
+}
+
+// Multi-level alert tracking. Triggered when stock crosses dynamic thresholds.
+// level: 'yellow' (caution, dashboard widget only) | 'orange' (warning, Discord) | 'red' (critical, Discord + immediate)
+model LowStockAlert {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId       String    @map("product_id")
+  level           String    @db.VarChar(10)
+  threshold       Int                                  // computed dynamic threshold at trigger time
+  currentQty      Int       @map("current_qty")
+  statusReason    String?   @map("status_reason") @db.VarChar(100)
+  triggeredAt     DateTime  @default(now()) @map("triggered_at")
+  resolvedAt      DateTime? @map("resolved_at")
+  resolutionNote  String?   @map("resolution_note") @db.VarChar(200)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId], map: "idx_low_stock_alerts_product")
+  @@index([triggeredAt(sort: Desc)], map: "idx_low_stock_alerts_triggered")
+  @@map("low_stock_alerts")
+}
+
+// Per-product learned avg daily depletion. Computed from 7-day rolling window.
+// Used to derive dynamic thresholds: yellow = D*7, orange = D*3, red = D*1.
+// Trustworthy = false when 7+ days of zero variation detected (stale supplier).
+model SupplierStockProfile {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productNo           String    @unique @map("product_no") @db.VarChar(20)
+  supplierId          String?   @map("supplier_id")
+  avgDailyDepletion   Float     @default(0) @map("avg_daily_depletion")
+  sampleCount         Int       @default(0) @map("sample_count")
+  isTrustworthy       Boolean   @default(true) @map("is_trustworthy")
+  lastNoChangeDays    Int       @default(0) @map("last_no_change_days")
+  computedAt          DateTime  @default(now()) @map("computed_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  supplier            Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  @@index([productNo], map: "idx_supplier_stock_profiles_product_no")
+  @@index([supplierId], map: "idx_supplier_stock_profiles_supplier")
+  @@map("supplier_stock_profiles")
 }

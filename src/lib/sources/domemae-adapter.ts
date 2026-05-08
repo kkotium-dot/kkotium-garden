@@ -301,11 +301,116 @@ export class DomemaeAdapter implements SourceAdapter {
   }
 
   /**
-   * 3. Bulk inventory - scaffolded for Sprint 6-A (getItemView multiple=true
-   * 100-batch chunked polling). Will be enabled when 6-A is started.
+   * 3. Bulk inventory snapshot via getItemView multiple=true.
+   * Domeggook OpenAPI v4.5 supports up to 100 productNos per call.
+   * Caller must chunk inputs > 100 (caller responsibility, not adapter).
+   * Returns same-length array; missing/error productNos get qty=-1, status='unknown'.
+   * Rate limit: 180/min, 15000/day. Adapter does NOT throttle internally.
    */
-  async getInventory(_productNos: string[]): Promise<InventorySnapshot[]> {
-    notImplemented(PLATFORM_CODE, 'getInventory');
+  async getInventory(productNos: string[]): Promise<InventorySnapshot[]> {
+    if (productNos.length === 0) return [];
+    if (productNos.length > 100) {
+      throw new SourceAdapterError(
+        PLATFORM_CODE,
+        'BadResponse',
+        `getInventory accepts max 100 productNos per call (got ${productNos.length}). Caller must chunk.`,
+      );
+    }
+
+    const apiKey = await getApiKey();
+    if (!apiKey) {
+      throw new SourceAdapterError(
+        PLATFORM_CODE,
+        'AuthFailed',
+        'Domeggook API key is not configured (store_settings.domeggook_api_key).',
+      );
+    }
+
+    const polledAt = new Date();
+    const idsParam = productNos.join(',');
+    const apiUrl =
+      `${DOMEGGOOK_API}?ver=4.5&mode=getItemView` +
+      `&aid=${encodeURIComponent(apiKey)}&no=${encodeURIComponent(idsParam)}` +
+      `&multiple=true&om=json`;
+
+    let res: Response;
+    try {
+      res = await fetch(apiUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS * 2) });
+    } catch (e) {
+      throw new SourceAdapterError(
+        PLATFORM_CODE,
+        'Network',
+        `Network error in getInventory (${productNos.length} ids)`,
+        e,
+      );
+    }
+
+    if (!res.ok) {
+      throw new SourceAdapterError(
+        PLATFORM_CODE,
+        'BadResponse',
+        `getInventory returned HTTP ${res.status}`,
+      );
+    }
+
+    const raw = (await res.json()) as {
+      domeggook?:
+        | {
+            multipleResult?: {
+              item?: Array<{
+                no?: string | number;
+                basis?: { status?: string; minq?: number | string };
+                qty?: { inventory?: number };
+              }>;
+            };
+            // Single-item fallback shape (when API returns 1 item without multipleResult wrapper)
+            basis?: { status?: string; minq?: number | string };
+            qty?: { inventory?: number };
+          };
+      errors?: unknown;
+    };
+
+    if (raw.errors || !raw.domeggook) {
+      // On global error, return all as unknown (qty=-1)
+      return productNos.map((no) => ({
+        productNo: no,
+        qty: -1,
+        status: 'unknown',
+        polledAt,
+      }));
+    }
+
+    const dome = raw.domeggook;
+    // multiple=true wraps in multipleResult.item; single result returns basis/qty at root
+    const items = dome.multipleResult?.item ?? (dome.basis ? [dome] : []);
+
+    // Build a map for O(1) lookup, then preserve input order
+    const resultMap = new Map<string, InventorySnapshot>();
+    for (const it of items) {
+      const no = String((it as { no?: string | number }).no ?? '');
+      const qtyVal = (it as { qty?: { inventory?: number } }).qty?.inventory ?? -1;
+      const statusVal = (it as { basis?: { status?: string } }).basis?.status ?? 'unknown';
+      // Note: minq is parsed by the poller from a separate getItemDetail call when needed.
+      // multiple=true response does not always include basis.minq for performance reasons.
+      if (no) {
+        resultMap.set(no, {
+          productNo: no,
+          qty: typeof qtyVal === 'number' ? qtyVal : -1,
+          status: String(statusVal),
+          polledAt,
+        });
+      }
+    }
+
+    return productNos.map(
+      (no) =>
+        resultMap.get(no) ?? {
+          productNo: no,
+          qty: -1,
+          status: 'unknown',
+          polledAt,
+        },
+    );
   }
 
   /**
