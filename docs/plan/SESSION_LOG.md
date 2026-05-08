@@ -9,6 +9,109 @@
 > **현재 본 파일에는 직전 5세션만 유지** (분할 시점 기준 2026-05-06 ~ 2026-05-08).
 ---
 
+## 2026-05-08 세션 (6-Pre 3단계 Discord 5채널 본문 정비) ✅
+
+### 본 세션 성격
+- 직전 commit `6542178` (6.5 SourceAdapter PoC + 인계 갱신) 직후, Plan A 세션 1 잔여 작업인 6-Pre 3단계 진행.
+- 사용자 명시 우선순위: "테스트 데이터 말고 실제 운영 직결 알림이 오게" + "꼬띠 페르소나 적용 가능" + "계획서 원본 순서 유지".
+- 결과: 5채널 4섹션 구조 빌더 분리 + 한글 사전 패턴 + 발신자 이름 영문→한글 정정. 작업원칙 #35 신규 등록.
+
+### 시작 직전 상태 (작업원칙 #21 사전 점검)
+- HEAD `6542178` = origin/main 일치 ✅
+- working tree clean (사전 점검에서 미커밋 6건 발견 — 본 세션 시작 시 즉시 시각 보고)
+- stash@{0} 보존
+- MD 모두 1500줄 이내
+- production HTTP 200
+
+### 주요 작업
+
+#### 작업 1: 사전 진단 (5채널 데이터 출처 확인)
+- 모든 5채널이 이미 `prisma.product` (앱 DB)만 보고 있음 확인 ✅
+- "테스트 데이터" 느낌의 진짜 원인 = 메시지 본문이 4섹션 구조 안 갖춰짐 + 자동 폴링 미구현 (Sprint 6-A/B로 별도 트랙)
+- 결론: 6-Pre 3단계 = 본문 구조 정비 + 잔재 정리
+
+#### 작업 2: 1차 빌더 작성 + 발송 (실패)
+- `discord-builder.ts` 436줄 4섹션 구조로 작성
+- 한글을 `\uXXXX` escape로 직접 작성 시도
+- 5채널 발송 HTTP 204 OK
+- **사용자 스크린샷 검증 결과 7건 자모 결합 오류 발견** (일찰/즈시/융지/론이/오를(잘 팔리는)/좌비/꼬뜸한)
+- 추가 발견: 발신자 이름 영문 `Kkotti` (테스트 스크립트만, production은 정상)
+
+#### 작업 3: 근본 원인 분석 + 영구 해결책 도출
+- 모델이 한글 escape 코드 *생성* 단계에서 자모 결합 확률적 오류
+- 자기 검증 불가능 (모델이 자기 출력을 시각 확인 못함)
+- 작업원칙 #29 (e+) 적용 영역 한계 — *대량 한글 작성*에는 부족
+- → 신규 작업원칙 #35: 한글 사전 분리 패턴
+
+#### 작업 4: 한글 사전 파일 신규
+- `src/lib/notifications/discord-strings.ko.json` (87 strings)
+- `Filesystem:write_file`로 직접 작성 (escape 코드 0건)
+- `scripts/verify-korean-dict.py` 검증 (NFC 0 / FFFD 0 / 알려진 오타 21패턴 0건)
+
+#### 작업 5: 빌더 재작성 (한글 0건)
+- `discord-builder.ts` 100% 영문 식별자 + 사전 키 참조
+- `STRINGS.recommend.title` / `fmt(template, vars)` 패턴
+- escape 코드 grep 검사 결과 0건 ✅
+
+#### 작업 6: 테스트 스크립트 갱신
+- `scripts/test-discord-5-channels.mjs` 사전 import 패턴
+- 발신자 username `Kkotti` → `\uAF2C\uB6F2` (꼬띠) 정정
+- mock 데이터 5채널 모두 사전 키 사용
+
+#### 작업 7: 검증 + 재발송
+- TSC 0 errors / build 26/26 prerender OK
+- 5채널 발송 모두 HTTP 204
+- 사용자 시각 검증 통과 ("이정도면 충분합니다. 알림의 내용에 맞게 오타없이 나왔습니다.")
+
+#### 작업 8: 잔재 파일 정리 (작업원칙 #34)
+- `src/lib/crawler/domemae-parser.ts` 삭제 (import 0건, 깨진 한글 포함)
+
+#### 작업 9: commit + push (한 turn 안에)
+- commit hash: `fee6761` (origin/main 동기화)
+- 메시지: `feat(notifications): split discord-builder + 4-section structure for 5 channels`
+- 8 files changed (5 new + 1 modified + 1 deleted + 1 commit-msg cleanup)
+
+### 발견된 진행 일탈 (사용자 지적 후 정정)
+- 본 세션 마지막에 Claude가 "정원 일지에 위젯 표시 추가" + "기존 네이버 100개+ 연동" 등 *계획서에 없는 신규 항목*을 우선순위로 제안.
+- 사용자 지적: "현재 지금 진행되는 작업이 계획서랑 좀 다른것 같아요"
+- **정정 결정**: 계획서 원본 순서 유지 (세션 2 = Sprint 6-A 단독). 계획서에 없는 신규 항목 제안 금지.
+- 인계 메시지에 "기존 네이버 100개+ 연동" = 보류 트랙 (사용자가 진행 요청 시에만 시작) 명시.
+
+### 적용된 작업원칙
+
+- **#17** commit -F 패턴 ✅ (.commit-msg.tmp + git commit -F)
+- **#21** 사전 점검 ✅ (8항목 — 미커밋 6건 발견 시 즉시 시각 보고)
+- **#22** 시각 검증 — 사용자 디스코드 스크린샷 5장 검증 통과
+- **#24** commit + push 한 turn 안에 ✅
+- **#26** 단독 판단 0 — 모든 작업 사용자 Y/N 승인 후 시작
+- **#28** Vercel 배포 = source of truth ✅
+- **#29 (a~e+)** 한글 처리 5+1 규칙 — 대량 작업 한계 노출 → #35로 강화
+- **#31** MD 1500줄 점검 + idempotent 가드 ✅
+- **#32** TSC ≠ Production 빌드 — `npm run build` 26/26 통과 ✅
+- **#33** useSearchParams Suspense — 본 세션 추가 0건
+- **#34** 명백한 오류 파일 발견 → 사용자 보고 (`domemae-parser.ts`) → 정리
+- **#35 (신규)** 한글 사전 분리 패턴 — 본 세션 도출 + 영구 등록
+
+### 본 세션 학습
+
+1. **자기 검증 불가 영역 인식** — 모델이 자기가 생성한 한글 escape의 자모 결합 정확도를 자기 검증할 수 없음. 사용자 시각 검증 또는 외부 사전 파일이 유일한 보호막.
+
+2. **사전 분리 패턴의 부수 효과** — 한글이 코드와 분리되니 (a) 향후 다른 채널 추가 시 사전만 확장 (b) 다국어 지원 가능성 (c) 한글 톤 변경 시 코드 빌드 불필요 (d) 검증 스크립트로 사전 단독 검사.
+
+3. **계획서 원본 순서 유지의 중요성** — 사용자가 명시적으로 결정한 작업 순서를 Claude가 임의로 추가/변경하면 작업 일관성이 깨짐. *제안* 시에도 계획서에 있는 항목만 거론.
+
+4. **세션 시작 시 미커밋 변경 즉시 보고** — `git status --short` 깨끗하지 않으면 (a) 첫 보고 항목으로 (b) 직전 세션 결과인지 본 세션 시작 전 결과인지 판단 (c) 살릴지 버릴지 사용자 결정.
+
+### 본 세션 commit
+- 신규: `src/lib/notifications/discord-builder.ts` (436줄), `src/lib/notifications/discord-strings.ko.json` (87 strings), `scripts/verify-korean-dict.py`, `scripts/locate-broken.py`, `scripts/check-korean-integrity.py`
+- 수정: `src/lib/discord.ts` (sender 슬림화 + re-export), `scripts/test-discord-5-channels.mjs` (사전 import + 발신자 이름 정정)
+- 삭제: `src/lib/crawler/domemae-parser.ts` (작업원칙 #34)
+- commit hash: `fee6761` / Vercel deployment READY
+- 다음 세션 작업: Sprint 6-A 재고 폴링 단독 (계획서 원본 순서)
+
+
+---
+
 ## 2026-05-08 세션 (Plan A 세션 1 잔여: 6.5 SourceAdapter 패턴 PoC) ✅
 
 ### 본 세션 성격

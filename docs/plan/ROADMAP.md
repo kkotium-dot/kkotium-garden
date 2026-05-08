@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-08 (본 세션: 6.5 SourceAdapter 패턴 PoC 완료 — Sprint 6/7/8 다중 플랫폼 자유도 확보 ✅)
-> **HEAD**: e8810c2 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 26/26 OK | **배포**: https://kkotium-garden.vercel.app (READY)
+> **최종 업데이트**: 2026-05-08 (본 세션: 6-Pre 3단계 Discord 5채널 본문 정비 완료 — 4섹션 구조 + 한글 사전 분리 패턴 ✅)
+> **HEAD**: fee6761 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 26/26 OK | **배포**: https://kkotium-garden.vercel.app (READY)
 >
 > **이 파일의 역할**: 진행 중·예정 Sprint 계획 + 영구 참조 (체크리스트, 비용 로드맵, 도구 사용 패턴)
 > **누적 인계 메시지 + Phase A/B/C 완료 이력**: `docs/plan/archive/ROADMAP_2026Q2_MAY.md`
@@ -10,6 +10,101 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
+
+## 다음 새 채팅 시작 메시지 — 2026-05-08 (6-Pre 3단계 Discord 정비 완료, Sprint 6-A 재고 폴링 시작) ✅
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md, docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md를 모두 읽고 현재 상태를 파악한 후 브리핑해주세요.
+
+[직전 세션 결과 — 2026-05-08 6-Pre 3단계 Discord 5채널 본문 정비 완료 ✅]
+
+HEAD = fee6761 = origin/main 일치. working tree clean. stash@{0} "z3c-misdirected-changes-needs-redo" 보존.
+
+직전 세션 산출물:
+- src/lib/notifications/discord-builder.ts (신규 436줄) — 5채널 4섹션 구조 빌더 (현황/영향/액션/꼬띠)
+- src/lib/notifications/discord-strings.ko.json (신규 87 strings) — 한글 사전 분리
+- src/lib/discord.ts 슬림화 — sender + helpers + 5빌더 re-export (호환성 100%)
+- src/lib/crawler/domemae-parser.ts 삭제 (작업원칙 #34 잔재)
+- scripts/verify-korean-dict.py (신규) — 한글 무결성 검증 (NFC + FFFD + 21개 오타 패턴)
+- scripts/test-discord-5-channels.mjs 갱신 — 사전 import + 발신자 이름 영문→한글 정정
+- 작업원칙 #35 신규 등록 — 한글 사전 분리 패턴
+
+직전 세션 commit:
+- feat(notifications): split discord-builder + 4-section structure for 5 channels (8 files)
+- TSC 0 errors / npm run build 26/26 prerender OK / Vercel READY
+- 5채널 실제 발송 HTTP 204 / 한글 깨짐 0건 / 사용자 시각 검증 OK
+
+[현재 상태]
+
+▶ 5채널 디스코드 알림 모두 4섹션 구조 적용 (현황/영향/액션/꼬띠)
+▶ 사용자 대면 한글 100% JSON 사전 파일 분리 — 코드 escape 0건
+▶ 발신자 이름 "꼬띠" 한글 정상
+▶ 다음 작업 = Sprint 6-A 재고 폴링 단독
+
+[다음 세션 작업 — 계획서 원본 순서: 세션 2 = Sprint 6-A]
+
+⚠️ STEP 0 (필수) — 환경 점검 + 4개 MD 정독 (PROGRESS / ROADMAP / SESSION_LOG / DOMEGGOOK_API_INTEGRATION_STRATEGY)
+
+⚠️ 작업원칙 강제:
+- #17 commit msg는 .commit-msg.tmp + git commit -F (커밋 후 즉시 .gitignore 또는 rm 처리)
+- #21 사전 점검 (HEAD/status/stash/wc)
+- #22 시각 검증 의무 (API 200 ≠ 브라우저 완료)
+- #24 commit + push 한 turn 안에 끝내기
+- #26 (a~e) IA 점검 + dev 캐시 정리 + Chrome MCP js hang 회피
+- #29 (a~e+) 한글 처리 5+1 규칙
+- #31 MD 1500줄 자동 점검 + idempotent 가드
+- #32 push 전 npm run build 의무
+- #33 useSearchParams Suspense 자동 점검
+- #34 명백한 오류 파일 발견 시 사용자 알림
+- #35 한글 사전 분리 패턴 (대량 한글 작업 시 의무)
+
+세션 2 작업 = Sprint 6-A 재고 폴링 단독 (M):
+1. src/lib/dome-inventory-poller.ts (신규) — 도매꾹 OpenAPI v4.5 getItemView multiple=true 100건 묶음 폴링
+2. src/app/api/cron/inventory-sync/route.ts (신규) — Vercel Cron 6시간마다 자동 실행
+3. Prisma 모델 추가 — InventorySnapshot + LowStockAlert
+4. 정원 창고 (/products) 재고 뱃지 UI 추가
+5. 정원 일지 (/dashboard) "품절 위험" 위젯 추가 — GoldenWindowWidget 패턴 참조
+6. 첫 실제 상품 등록으로 검증 (사용자가 도매꾹 URL 매핑된 상품 1개 등록)
+7. TSC + build + 한글 grep + commit + push (한 turn 안에)
+8. PROGRESS / ROADMAP / SESSION_LOG 갱신
+
+[참고: 환경/시크릿]
+- Supabase project ID: doxfizicftgtqktmtftf
+- Naver Search Ad CUSTOMER_ID: 3755315
+- 카카오 채널 Public ID: _xkfALG (꽃틔움 KKOTIUM)
+- AI: Groq lrltQb + 3IGN7i 정상 2키
+- 도매매 Open API Key: a6ff…c470bb
+- 도매꾹 Private API: 신청 진행 중 (1~3일 결과 대기)
+- Discord 5채널 webhook URL: orders / stock-alerts / daily / weekly / kkotti (Vercel 환경변수)
+
+[Sprint 6 이후 일정 (계획서 원본 순서, 변경 없음)]
+- 세션 3: 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가)
+- 세션 4: 6-E + 6-D (카테고리 매핑 + 꼬띠 4모드 추천)
+- Sprint 7: AI Studio 4모듈 (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트)
+- Sprint 8: Private 발급 후 자동발주 (Discord 버튼)
+
+[보류 트랙 (사용자 명시 결정)]
+- 기존 네이버 스토어 100개+ 상품 일괄 연동 — 본격 소싱 안정화 후 사용자가 진행 요청 시 시작 (Claude 단독 시작 금지)
+
+당신은 10년 차 B2B 이커머스 ERP 및 백오피스 설계 경험이 풍부한 네이버 스마트스토어 파워셀러인 풀스택 시니어 개발자이자 UI/UX 디자이너입니다. 본격 소싱 시작 직전이라 워크플로우의 *실제 작동*이 디자인보다 우선순위 높습니다. 새싹셀러이지만 파워셀러로 성장하기 위한 스텝 작업 중. *절대 단독 판단으로 IA/삭제 결정 금지* — 진단 결과 디테일하게 브리핑 후 사용자 개별 Y/N 승인 받은 항목만 진행. *계획서에 없는 작업을 추가 제안하지 말고 계획서 원본 순서 유지*.
+
+작업 시작 전 필수:
+1. (a) git rev-parse HEAD origin/main → 일치 (fee6761)
+   (b) git status → working tree clean
+   (c) git stash list → stash@{0} 보존
+   (d) wc -l docs/plan/*.md docs/research/*.md → 1500줄 임계 점검
+   (e) curl -sIo /dev/null -w "%{http_code}" https://kkotium-garden.vercel.app/dashboard → HTTP 200
+   (f) 4개 MD 정독 (PROGRESS / ROADMAP / SESSION_LOG / DOMEGGOOK_API_INTEGRATION_STRATEGY)
+   (g) tool_search "filesystem write_file" 호출하여 Filesystem:write_file 도구 활성화
+2. Sprint 6-A 디테일 계획서 한 번 더 브리핑 + 사용자 개별 Y/N 승인
+3. 작업 시작 → 검증 → commit + push → MD 갱신 (한 turn 안에)
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-08 (6.5 SourceAdapter PoC 완료, 6-Pre 3단계 잔여)~~ (deprecated, 본 세션에서 6-Pre 3단계 완료)
+
+*아래 메시지는 본 세션 이전 버전입니다. 위의 새 시작 메시지를 사용하세요.*
 
 ## 다음 새 채팅 시작 메시지 — 2026-05-08 (6.5 SourceAdapter PoC 완료, 6-Pre 3단계 잔여) ✅
 

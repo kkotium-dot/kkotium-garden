@@ -54,3 +54,6 @@ tsconfig.tsbuildinfo
 
 # Temporary work files (added 2026-05-06 — work principle #29 (b) safety pattern)
 .tmp_*
+
+.commit-msg.tmp
+.tmp_*.py

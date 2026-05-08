@@ -1,11 +1,11 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
 
-> **최종 업데이트**: 2026-05-08 (본 세션: 6.5 SourceAdapter 패턴 PoC 완료 — 신규 4파일 + 도매매 라우트 슬림화 + 오너클랜 OWC platform 추가)
-> **TSC**: 0 errors | **빌드**: Compiled successfully (26/26 prerender) | **배포**: https://kkotium-garden.vercel.app (e8810c2 READY)
-> **HEAD**: e8810c2 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **최종 업데이트**: 2026-05-08 (본 세션: 6-Pre 3단계 Discord 5채널 본문 정비 완료 — 4섹션 구조 + 한글 사전 분리 패턴 + 발신자 이름 정정)
+> **TSC**: 0 errors | **빌드**: Compiled successfully (26/26 prerender) | **배포**: https://kkotium-garden.vercel.app (fee6761 READY)
+> **HEAD**: fee6761 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 4개 보존 / **Platform**: DMM 도매매 + OWC 오너클랜 2개
-> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2단계 ✅ | **6.5 SourceAdapter PoC ✅**
-> **다음 작업 (Plan A 잔여)**: 세션 1 잔여 = 6-Pre 3단계 (Discord 5채널 본문 정비) → 세션 2 = 6-A 재고 폴링 단독 + 첫 실제 상품 등록 검증 → 세션 3 = 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가) → 세션 4 = 6-E + 6-D (카테고리 매핑 + 꼬띠 4모드 추천) → Sprint 7 = AI Studio 4모듈 → Sprint 8 = Private 발급 후 자동발주
+> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2단계 ✅ | 6.5 SourceAdapter PoC ✅ | **6-Pre 3단계 Discord 정비 ✅**
+> **다음 작업 (Plan A 잔여 — 계획서 원본 순서)**: 세션 2 = 6-A 재고 폴링 단독 + 첫 실제 상품 등록 검증 → 세션 3 = 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가) → 세션 4 = 6-E + 6-D (카테고리 매핑 + 꼬띠 4모드 추천) → Sprint 7 = AI Studio 4모듈 → Sprint 8 = Private 발급 후 자동발주
 > **참고 문서**: `docs/research/OVERSEAS_SOURCING_BASELINE_2026_05.md`, `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md`, `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`, `docs/plan/archive/PROGRESS_2026Q2_MAY.md`
 
 ---
@@ -17,7 +17,8 @@
 - [작업원칙 #31](#작업원칙-31) — MD 의미 단위 자동 분할 + 인계 무결성
 - [작업원칙 #32](#작업원칙-32) — TSC ≠ Production 빌드 검증 (본 세션 신규)
 - [작업원칙 #33](#작업원칙-33) — useSearchParams Suspense 자동 점검 (본 세션 신규)
-- [작업원칙 #34](#작업원칙-34) — 명백한 오류 파일 발견 시 사용자 알림 의무 (본 세션 신규)
+- [작업원칙 #34](#작업원칙-34) — 명백한 오류 파일 발견 시 사용자 알림 의무
+- [작업원칙 #35](#작업원칙-35) — 한글 사전 분리 패턴 (2026-05-08 본 세션 신규)
 - [Sprint 6/7/8 계획](#sprint-678-계획-2026-05-08-신규) — 리서치 갭 분석 기반 신규 계획
 - [현재 앱 상태](#현재-앱-상태)
 - [환경/메뉴/파이프라인](#환경--메뉴--파이프라인)
@@ -196,6 +197,41 @@ Z-Hotfix 정리 중 발견된 2개 잔재 파일:
 - 다음 세션 첫 작업 = PROGRESS.md 의미 단위 분할 (b) 정책 적용 → PRINCIPLES_CODE.md / PRINCIPLES_LEARNED.md / SPRINT_PLAN.md / REFERENCES.md 4개 신규 생성
 - 인계 무결성 (c) 3가지 검증 통과 후 단일 commit
 - 향후 모든 prepend/replace 스크립트는 (e) idempotent 가드 의무
+
+---
+
+## 작업원칙 #35 — 한글 사전 분리 패턴 (2026-05-08 본 세션 학습)
+
+본 세션 디스코드 5채널 본문에서 7건의 한글 자모 결합 오류 발생 (일찰/즈시/융지/론이/오를(잘 팔리는)/좌비/꼬뜸한). 작업원칙 #29 (e+) 가 등록되어 있음에도 escape 코드 *생성 단계*에서는 작동 안 함이 확인됨.
+
+**근본 원인**: 모델이 한글 escape 코드 자체를 생성할 때 (예: `\uC4DE\uC2DC`(즉시) → `\uC988\uC2DC`(즈시)) 자모 결합 단계에서 확률적 오류. 모델이 자기 출력을 시각 검증할 수 없어 자기 발견 불가능.
+
+**영구 해결책 (강제 적용)**:
+
+(a) **모든 한글 사용자 대면 텍스트는 외부 JSON 사전 파일로 분리** — 코드 파일은 한글 0건 보장.
+- 예: `src/lib/notifications/discord-strings.ko.json` (87 strings)
+- 빌더 코드는 키 참조만: `STRINGS.recommend.title`
+
+(b) **사전 파일은 항상 `Filesystem:write_file`로 직접 작성** — 직접 한글 입력만 사용, escape 코드 생성 금지.
+
+(c) **검증 스크립트 의무 실행** — `scripts/verify-korean-dict.py`
+- NFC 정규화 검사 (위반 0건)
+- FFFD replacement char 검사 (0건)
+- 알려진 오타 21개 패턴 매칭 (0건)
+- 신규 오타 발견 시 검증 패턴에 추가 (누적 사전)
+
+(d) **escape 코드 grep 0건 확인** — 한글 텍스트가 코드에 안 들어가 있는지 자동 검사:
+```bash
+grep -cE "\\u[0-9A-Fa-f]{4}" src/lib/notifications/discord-builder.ts
+# 결과 0이면 통과
+```
+
+(e) **본 패턴은 이번처럼 *대량 한글 작성 작업*에만 적용** — 1~2줄 한글은 작업원칙 #29 (e+) 안전 패턴(사용자 메시지 인용)으로 충분.
+
+**실전 적용 결과 (2026-05-08)**:
+- 5개 빌더 함수 4섹션 구조 작성 (87 strings 사전)
+- TSC 0 errors / 빌드 26/26 / 5채널 발송 HTTP 204 / 한글 깨짐 0건
+- 발신자 이름 영문 `Kkotti` → 한글 `꼬띠` 정정 (test-discord-5-channels.mjs)
 
 ---
 
