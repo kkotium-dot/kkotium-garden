@@ -17,14 +17,14 @@
   },
   "recommend": {
     "title": "🌸 꼬띠 오늘의 추천 — {today}",
-    "description": "오늘 등록하기 좋은 꿀통 상품 TOP {count}이에요!",
-    "footer": "꽃틔움 가든 · 꼬띠 추천",
+    "description": "지금 이 순간 가장 좋은 4가지 모드별로 발굴했어요!",
+    "footer": "꽃틔움 가든 · 꼬띠 4모드 추천",
     "noProducts": "오늘 추천할 상품이 없어요. 새 상품을 소싱해볼까요?",
     "tag_volumeBoost": "검색량 블루오션 +{n}",
     "tag_sourcing": "소싱보관함 후보",
     "kw_label": "키워드",
     "supplier_label": "공급사",
-    "impact_base": "오늘 등록하면 7일 신상품 가산점 유지 기간이 시작돼요. 경쟁 낮고 마진 높은 순으로 엄선했어요.",
+    "impact_base": "오늘 등록하면 7일 신상품 가산점 유지 기간이 시작돼요. 4가지 모드별로 우선순위 다르게 검토해보세요.",
     "impact_seasonNear": "\n⚡ 지금 {label} D-{days} — 골든타임이에요!",
     "impact_seasonFar": "\n📅 {label} D-{days} — 시즌 키워드 선점 기회",
     "action_register": "씨앗 심기에서 바로 등록",
@@ -33,6 +33,28 @@
     "kkotti_top": "\"{name}\"부터 등록하면 매출이 제일 빨리 올라올 것 같아요!",
     "kkotti_empty": "내일은 더 좋은 꿀통이 기다리고 있을 거예요.",
     "season_extraTitle": "🎁 시즌 추가 추천 — {label} D-{days}"
+  },
+  "modes": {
+    "currentHot": {
+      "sectionTitle": "🔥 현재 핫 — 지금 매출 폭발 카테고리",
+      "shortLabel": "현재 핫",
+      "emptyNote": "오늘은 명확한 핫 트렌드가 잡히지 않았어요"
+    },
+    "seasonalAhead": {
+      "sectionTitle": "📅 선행 매수 — {context}",
+      "shortLabel": "선행 매수",
+      "emptyNote": "30일 이내 다가오는 시즌 이벤트가 없어요"
+    },
+    "nicheBlue": {
+      "sectionTitle": "🌊 니치 — 경쟁 낮은 블루오션",
+      "shortLabel": "니치",
+      "emptyNote": "오늘은 블루오션 후보가 부족해요"
+    },
+    "storeFit": {
+      "sectionTitle": "✨ 꽃틔움 맞춤 — {context} 강점 카테고리",
+      "shortLabel": "꽃틔움 맞춤",
+      "emptyNote": "아직 등록 상품이 부족해서 맞춤 추천을 못 만들었어요"
+    }
   },
   "stockAlert": {
     "title": "📦 품절 감지 — {n}개 상품",

@@ -5,21 +5,21 @@
 //   3) Action   (Now what — concrete next steps for the seller)
 //   4) Kkotti   (mascot voice — encouragement / warning / praise in cowgirl-garden tone)
 //
-// Design principles:
-// - Every embed must answer: "What just happened? Why does it matter? What do I do next?"
-// - Action items are clickable links to the exact app screen (deep links).
-// - Kkotti voice: warm cowgirl-garden tone — short, supportive, occasionally playful.
-// - All builders share CHANNEL_COLOR and timestamp footer for visual consistency.
+// Sprint 6-D extension (2026-05-08): KKOTTI_RECOMMEND now supports 4-mode structure:
+//   1. CURRENT_HOT    — sales-explosion categories
+//   2. SEASONAL_AHEAD — seasonal D-30 lead time
+//   3. NICHE_BLUE     — low competition + decent margin
+//   4. STORE_FIT      — seller's category strengths
+// Legacy buildRecommendEmbed retained for backward compatibility (cron/test scripts).
 //
-// Korean text safety pattern (work principle #29):
+// Korean text safety pattern (work principle #29 + #35):
 // - All user-facing Korean strings live in `discord-strings.ko.json`.
 // - This file contains NO Korean literals or escape sequences — only English identifiers.
-// - The dictionary file is loaded once at module load and never mutated.
-// - This 100% prevents jamo-corruption typos that occur when the model generates Korean escapes.
 
 import { GRADE_EMOJI } from '@/lib/discord';
 import type { DiscordChannel } from '@/lib/discord';
 import STRINGS from './discord-strings.ko.json';
+import type { FourModeResult, ModeResult } from '@/lib/recommendation-modes';
 
 // ── Visual identity ──────────────────────────────────────────────────────────
 
@@ -33,26 +33,21 @@ const CHANNEL_COLOR: Record<DiscordChannel, number> = {
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://kkotium-garden.vercel.app';
 
-// Shape of Discord embed object (fields list + meta)
 type DiscordEmbed = Record<string, unknown>;
 type EmbedField = { name: string; value: string; inline?: boolean };
 
-// Helper: substitute {key} placeholders with values from a record
 function fmt(template: string, vars: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
 }
 
-// Helper: format a number with thousand separators
 function won(n: number): string {
   return n.toLocaleString();
 }
 
-// Helper: wrap a URL in markdown link syntax for Discord
 function link(label: string, path: string): string {
   return `[${label}](${APP_URL}${path})`;
 }
 
-// Helper: build a 4-section field list given each section's content
 function buildFourSectionFields(sections: {
   situation: string;
   impact:    string;
@@ -68,7 +63,7 @@ function buildFourSectionFields(sections: {
   ];
 }
 
-// ── 1. Daily recommendation (KKOTTI_RECOMMEND) ───────────────────────────────
+// ── 1. Daily recommendation (KKOTTI_RECOMMEND) — Legacy single-mode ─────────
 
 export interface RecommendProduct {
   id?: string;
@@ -83,22 +78,24 @@ export interface RecommendProduct {
 }
 
 export interface RecommendEmbedParams {
-  today: string; // YYYY-MM-DD or 'M월 D일'
+  today: string;
   top3: RecommendProduct[];
   season?: { label: string; daysLeft: number } | null;
   seasonTop2?: { name: string; score: number }[];
   trendNote?: string;
-  /** Optional override for app URL — kept for backward compatibility with existing callers. */
   appUrl?: string;
 }
 
+/**
+ * Legacy single-mode embed (kept for backward compatibility with cron + test scripts).
+ * For the new 4-mode flow, prefer `buildFourModeRecommendEmbed`.
+ */
 export function buildRecommendEmbed(params: RecommendEmbedParams): DiscordEmbed {
   const S = STRINGS.recommend;
   const C = STRINGS.common;
   const RANK_EMOJI = ['1️⃣', '2️⃣', '3️⃣'];
   const top = params.top3.slice(0, 3);
 
-  // Situation: top-3 list
   const situationLines = top.map((p, i) => {
     const tagPieces: string[] = [];
     tagPieces.push(`${GRADE_EMOJI[p.grade] ?? ''}${C.honeyScore} ${p.score}${C.ptSuffix}`);
@@ -118,7 +115,6 @@ export function buildRecommendEmbed(params: RecommendEmbedParams): DiscordEmbed 
     ? situationLines.join('\n\n')
     : S.noProducts;
 
-  // Impact: explain why these matter today
   const seasonNote = params.season && params.season.daysLeft <= 7
     ? fmt(S.impact_seasonNear, { label: params.season.label, days: params.season.daysLeft })
     : params.season
@@ -126,7 +122,6 @@ export function buildRecommendEmbed(params: RecommendEmbedParams): DiscordEmbed 
       : '';
   const impact = `${S.impact_base}${seasonNote}`;
 
-  // Action: deep link to register flow
   const actionLines: string[] = [
     `1. ${link(S.action_register, '/products/new')}`,
     `2. ${link(S.action_seoCheck, '/naver-seo')}`,
@@ -134,13 +129,11 @@ export function buildRecommendEmbed(params: RecommendEmbedParams): DiscordEmbed 
   if (params.trendNote) actionLines.push(`3. ${params.trendNote}`);
   const action = actionLines.join('\n');
 
-  // Kkotti voice
   const kkottiTail = top.length > 0
     ? fmt(S.kkotti_top, { name: top[0].name })
     : S.kkotti_empty;
   const kkotti = `${S.kkotti_intro} ${kkottiTail}`;
 
-  // Season top-2 as auxiliary block
   const fields = buildFourSectionFields({ situation, impact, action, kkotti });
   if (params.season && params.seasonTop2 && params.seasonTop2.length > 0) {
     fields.push({
@@ -160,6 +153,93 @@ export function buildRecommendEmbed(params: RecommendEmbedParams): DiscordEmbed 
     footer: { text: S.footer },
     timestamp: new Date().toISOString(),
   };
+}
+
+// ── 1b. Daily recommendation 4-MODE (Sprint 6-D foundation) ─────────────────
+
+export interface FourModeEmbedParams {
+  today: string;
+  result: FourModeResult;
+}
+
+/**
+ * Build a Discord embed showing all 4 recommendation modes side-by-side.
+ * Each mode becomes one field in the Situation section, keeping the 4-section
+ * outer structure (Situation / Impact / Action / Kkotti) consistent with other channels.
+ */
+export function buildFourModeRecommendEmbed(params: FourModeEmbedParams): DiscordEmbed {
+  const S = STRINGS.recommend;
+  const M = STRINGS.modes;
+  const C = STRINGS.common;
+  const result = params.result;
+
+  // Situation: per-mode summary lines (concat into single string for uniformity)
+  const situationLines: string[] = [];
+  for (const m of result.modes) {
+    const dictKey = modeDictKey(m.mode);
+    const meta = M[dictKey];
+    const title = m.contextNote
+      ? fmt(meta.sectionTitle, { context: m.contextNote })
+      : meta.sectionTitle;
+    situationLines.push(`**${title}**`);
+
+    if (m.items.length === 0) {
+      situationLines.push(`_${meta.emptyNote}_`);
+    } else {
+      m.items.forEach((opp, i) => {
+        const margin = opp.estimatedMargin.toFixed(0);
+        situationLines.push(
+          `${i + 1}. **${opp.keyword}** — ${C.netMargin} ${margin}% / 경쟁 ${opp.competition} / ${opp.monthlySearchVolume.toLocaleString()}회/월`
+        );
+      });
+    }
+    situationLines.push('');
+  }
+  const situation = situationLines.join('\n').trim() || S.noProducts;
+
+  // Impact: collapse seasonal context if present
+  let impact = S.impact_base;
+  const seasonalMode = result.modes.find(m => m.mode === 'SEASONAL_AHEAD');
+  if (seasonalMode && seasonalMode.contextNote && seasonalMode.items.length > 0) {
+    const match = /D-(\d+)/.exec(seasonalMode.contextNote);
+    const days = match ? parseInt(match[1], 10) : 30;
+    const label = seasonalMode.contextNote.split(' ')[0];
+    impact += days <= 7
+      ? fmt(S.impact_seasonNear, { label, days })
+      : fmt(S.impact_seasonFar, { label, days });
+  }
+
+  // Action
+  const action = [
+    `1. ${link(S.action_register, '/products/new')}`,
+    `2. ${link(S.action_seoCheck, '/naver-seo')}`,
+  ].join('\n');
+
+  // Kkotti voice — speak to the strongest mode's first item
+  const strongMode = result.modes.find(m => m.items.length > 0);
+  const kkottiTail = strongMode
+    ? fmt(S.kkotti_top, { name: strongMode.items[0].keyword })
+    : S.kkotti_empty;
+  const kkotti = `${S.kkotti_intro} ${kkottiTail}`;
+
+  return {
+    title: fmt(S.title, { today: params.today }),
+    description: S.description,
+    color: CHANNEL_COLOR.KKOTTI_RECOMMEND,
+    fields: buildFourSectionFields({ situation, impact, action, kkotti }),
+    footer: { text: S.footer },
+    timestamp: new Date().toISOString(),
+  };
+}
+
+// Internal: map RecommendationMode to the dict key in discord-strings.ko.json
+function modeDictKey(mode: ModeResult['mode']): 'currentHot' | 'seasonalAhead' | 'nicheBlue' | 'storeFit' {
+  switch (mode) {
+    case 'CURRENT_HOT':    return 'currentHot';
+    case 'SEASONAL_AHEAD': return 'seasonalAhead';
+    case 'NICHE_BLUE':     return 'nicheBlue';
+    case 'STORE_FIT':      return 'storeFit';
+  }
 }
 
 // ── 2. Stock alert (STOCK_ALERT) ─────────────────────────────────────────────
@@ -187,7 +267,6 @@ export function buildStockAlertEmbed(params: StockAlertEmbedParams): DiscordEmbe
   const list = params.products.slice(0, 5);
   const totalCount = params.products.length;
 
-  // Situation: list of OOS products
   const situationLines = list.map((p, i) => {
     const oosLabel = p.daysOos ? ` (${fmt(S.oosLabel, { days: p.daysOos })})` : '';
     return `${i + 1}. **${p.name}**${oosLabel}\n   ${GRADE_EMOJI[p.honeyGrade] ?? ''}${C.honeyScore} ${p.honeyScore}${C.ptSuffix} | ${C.salePrice} ${won(p.salePrice)}${C.wonSuffix} | ${C.netMargin} ${p.netMarginRate.toFixed(1)}%`;
@@ -199,20 +278,17 @@ export function buildStockAlertEmbed(params: StockAlertEmbedParams): DiscordEmbe
     situation += `\n\n_${fmt(C.more, { n: totalCount - list.length })}_`;
   }
 
-  // Impact: revenue loss
   const lossNote = params.estimatedDailyLossWon
     ? fmt(S.loss_estimate, { won: won(params.estimatedDailyLossWon) })
     : S.loss_default;
   const impact = fmt(S.impact_base, { loss: lossNote });
 
-  // Action: 3 concrete next steps
   const actionLines = [
     `1. ${link(S.action_check, '/products?status=OUT_OF_STOCK')}`,
     `2. ${S.action_supplier}`,
     `3. ${link(S.action_alt, '/products')}`,
   ];
 
-  // Show alternative info inline if available
   const altLines = list
     .map(p => {
       if (!p.alternatives || p.alternatives.length === 0) return null;
@@ -229,7 +305,6 @@ export function buildStockAlertEmbed(params: StockAlertEmbedParams): DiscordEmbe
     ? `${actionLines.join('\n')}\n\n${S.alt_section}\n${altLines.join('\n\n')}`
     : actionLines.join('\n');
 
-  // Kkotti voice
   const kkotti = totalCount === 1
     ? S.kkotti_one
     : fmt(S.kkotti_many, { n: totalCount });
@@ -267,7 +342,6 @@ export function buildPriceChangeEmbed(params: PriceChangeEmbedParams): DiscordEm
   const list = params.changes.slice(0, 5);
   const totalCount = params.changes.length;
 
-  // Situation
   const situationLines = list.map(c => {
     const isUp = c.newPrice > c.oldPrice;
     const arrow = isUp ? '🔺' : '🔻';
@@ -281,7 +355,6 @@ export function buildPriceChangeEmbed(params: PriceChangeEmbedParams): DiscordEm
     situation += `\n\n_${fmt(C.more, { n: totalCount - list.length })}_`;
   }
 
-  // Impact: detect dangerous margin
   const dangerCount = list.filter(c => c.newMargin < 20).length;
   const negativeCount = list.filter(c => c.newMargin < 0).length;
   let impactHead = S.impact_safe;
@@ -292,7 +365,6 @@ export function buildPriceChangeEmbed(params: PriceChangeEmbedParams): DiscordEm
   }
   const impact = `${impactHead}${S.impact_tail}`;
 
-  // Action
   const actionLines = [
     `1. ${link(S.action_adjust, '/products')}`,
     `2. ${S.action_simulate}`,
@@ -300,7 +372,6 @@ export function buildPriceChangeEmbed(params: PriceChangeEmbedParams): DiscordEm
   ];
   const action = actionLines.join('\n');
 
-  // Kkotti voice
   const kkotti = negativeCount > 0
     ? S.kkotti_negative
     : dangerCount > 0
@@ -339,7 +410,6 @@ export function buildScoreDropEmbed(params: ScoreDropEmbedParams): DiscordEmbed 
   const list = params.drops.slice(0, 5);
   const totalCount = params.drops.length;
 
-  // Situation
   const situationLines = list.map(d =>
     `📉 **${d.productName}** (\`${d.sku}\`)\n   ${d.oldScore}${C.ptSuffix} → **${d.newScore}${C.ptSuffix}** (↓${d.dropAmt}${C.ptSuffix})\n   ${S.reason_label}: ${d.reason}`
   );
@@ -350,10 +420,8 @@ export function buildScoreDropEmbed(params: ScoreDropEmbedParams): DiscordEmbed 
     situation += `\n\n_${fmt(C.more, { n: totalCount - list.length })}_`;
   }
 
-  // Impact
   const impact = S.impact;
 
-  // Action
   const actionLines = [
     `1. ${link(S.action_seo, '/naver-seo')}`,
     `2. ${S.action_token}`,
@@ -361,7 +429,6 @@ export function buildScoreDropEmbed(params: ScoreDropEmbedParams): DiscordEmbed 
   ];
   const action = actionLines.join('\n');
 
-  // Kkotti voice
   const kkotti = S.kkotti;
 
   return {
@@ -397,7 +464,6 @@ export function buildWeeklyReportEmbed(params: WeeklyReportEmbedParams): Discord
   const p = params;
   const hasRevenue = (p.weekRevenue ?? 0) > 0;
 
-  // Situation: factual snapshot
   const situationLines: string[] = [];
   if (hasRevenue) {
     situationLines.push(fmt(S.revenue_with, {
@@ -424,7 +490,6 @@ export function buildWeeklyReportEmbed(params: WeeklyReportEmbedParams): Discord
   }
   const situation = situationLines.join('\n');
 
-  // Impact: prioritized signals
   const impactPieces: string[] = [];
   if (p.noAltOosCount > 0) {
     impactPieces.push(fmt(S.warn_noAlt, { n: p.noAltOosCount }));
@@ -440,7 +505,6 @@ export function buildWeeklyReportEmbed(params: WeeklyReportEmbedParams): Discord
   }
   const impact = impactPieces.join('\n');
 
-  // Action: top 3 priorities for the upcoming week
   const actionItems: string[] = [];
   if (p.noAltOosCount > 0) {
     actionItems.push(fmt(S.task_alt, { n: p.noAltOosCount }));
@@ -458,7 +522,6 @@ export function buildWeeklyReportEmbed(params: WeeklyReportEmbedParams): Discord
   actionLines.push(`${S.action_first.split(':')[0]}: ${link(S.action_first.split(':').slice(1).join(':').trim(), '/dashboard')}`);
   const action = actionLines.join('\n');
 
-  // Kkotti voice
   const kkotti = hasRevenue ? S.kkotti_revenue : S.kkotti_zero;
 
   return {
