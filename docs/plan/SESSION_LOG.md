@@ -84,6 +84,17 @@
 - 1500줄 임계 점검: 1363 + 본 entry ≈ 1500 근접 → 작업원칙 #31 (a) 소프트 임계 도달 권고 (다음 세션 첫 작업으로 분할 위임 가능)
 
 #### 작업 7: 한글 grep 검증 + commit + push (한 turn) ✅
+- commit hash: `61c9da8` / Vercel HTTP 200 / 작업원칙 #29 (e++) sentinel grep 통과 (본 세션 신규 작성 영역 변종 0건)
+
+#### 작업 8: archive 인덱스 정비 (사용자 추가 요청 반영) ✅
+- 사용자 질문: "archive 폴더 안 파일들이 업데이트 안 된 것 같다"
+- 시니어 진단: archive는 *동결 상태(append-only history)*가 정상. "업데이트 안 됨"이 아니라 *작업원칙 #31 분할 후 의도된 동결*임을 확인
+- 다만 인덱스 부재로 향후 6월 분할 시 명명 규칙 충돌 가능 → 시니어 책임으로 옵션 2(메타 개선) 진행
+- 신규 파일: `docs/plan/archive/README.md` — 3개 archive 파일 인덱스 + 분할 정책 + 검색 패턴 + 파일명 규칙 결정 (2026-06부터 ISO 8601 `YYYY-MM` 패턴)
+- 갱신: `docs/plan/README.md` — "관련 폴더" 섹션에 archive 추가 + "파일 갱신 정책" 섹션의 분할 예시 갱신
+- 갱신: `docs/plan/PROGRESS.md` — 참고 문서 인덱스에 archive/README + 3개 archive 파일 명시
+- 파일명 규칙 결정: 기존 `*_2026Q2_MAY.md` 3개는 *rename 안 함* (git 이력 분리 + backlink 깨짐 위험). 2026-06 분할부터 신 패턴 적용
+- commit hash: (본 후속 commit)
 
 ### 적용된 작업원칙
 

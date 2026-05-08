@@ -1,6 +1,6 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
 
-> **최종 업데이트**: 2026-05-08 (본 세션: Sprint 6-D 1-5단계 완료 + MD 인계 무결성 회복 + 작업원칙 #29 (e++) 신규 강화)
+> **최종 업데이트**: 2026-05-08 (본 세션: Sprint 6-D 1-5단계 완료 + MD 인계 무결성 회복 + 작업원칙 #29 (e++) 신규 강화 + archive 인덱스 정비)
 > **TSC**: 0 errors | **빌드**: Compiled successfully (26/26 prerender) | **배포**: https://kkotium-garden.vercel.app (29e80fc READY)
 > **HEAD**: 29e80fc = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 4개 보존 / **Platform**: DMM 도매매 + OWC 오너클랜 2개
@@ -789,7 +789,10 @@ export const dynamic = 'force-dynamic';
 - `COMMERCE_API_ORDER_DIAGNOSIS.md`
 
 ### docs/plan/archive/
-- `PROGRESS_2026Q2_MAY.md` — 5월 누적 세션 기록 (작업원칙 #31 분할)
+- `README.md` — archive 폴더 인덱스 (분할 정책 + 검색 패턴 + 파일명 규칙)
+- `PROGRESS_2026Q2_MAY.md` — 5월 누적 PROGRESS 헤더 이력 (작업원칙 #31 분할, 동결)
+- `ROADMAP_2026Q2_MAY.md` — deprecated 인계 메시지 9개 + Phase A/B/C 완료 이력 (동결)
+- `SESSION_LOG_2026Q2_MAY.md` — 2026-05-01 ~ 2026-05-06 세션 24+ 건 (동결)
 
 ### 프로젝트 파일 (외부 리서치)
 - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`

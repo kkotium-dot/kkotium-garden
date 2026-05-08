@@ -70,6 +70,7 @@ grep -nE "꽃졤|꽃제|꽃젤|혁섭|쿠드|식타|릴고|헌서|위젝|스칵|
 
 ## 📁 관련 폴더
 
+- **docs/plan/archive/**: 작업원칙 #31에 따라 분할된 옛 누적 기록 보관소. 동결 상태(append-only history)이므로 매 세션 정독 불필요. 검색 시에만 grep으로 참조. 자세한 내용은 `archive/README.md` 참조.
 - **docs/research/**: 리서치 보고서 + API 진단 보고서. 매 세션 정독 불필요. 필요할 때만 grep/read.
 - **docs/decisions/**: 기존 의사결정 기록 (legacy).
 - **docs/design/**: UX/IA 마스터 블루프린트. 디자인 작업 시점에 정독.
@@ -84,8 +85,7 @@ grep -nE "꽃졤|꽃제|꽃젤|혁섭|쿠드|식타|릴고|헌서|위젝|스칵|
 
 각 파일이 1500줄 초과 시 신규 MD 파일 생성 (작업원칙 #31 자동 분할):
 
-- 예: `archive/SESSION_LOG_2026Q3.md` 분할 (분기별)
-- 예: `archive/PROGRESS_2026Q2_MAY.md` (5월 누적 세션)
-- 예: `archive/ROADMAP_2026Q2_MAY.md` (deprecated 시작 메시지 누적)
+- **2026-05 분할 (첫 분할, 동결됨)**: `archive/PROGRESS_2026Q2_MAY.md` / `archive/ROADMAP_2026Q2_MAY.md` / `archive/SESSION_LOG_2026Q2_MAY.md`
+- **2026-06부터 신 패턴 적용**: `archive/PROGRESS_2026-06.md` / `archive/ROADMAP_2026-06.md` / `archive/SESSION_LOG_2026-06.md` (ISO 8601 YYYY-MM)
 
-분할 시 README + 헤더에도 새 파일 명시.
+분할 시 `archive/README.md`의 인덱스 표 + 본 파일 + 분할된 본문 파일 헤더 모두 갱신 (작업원칙 #31 (c) 무결성 검증).
