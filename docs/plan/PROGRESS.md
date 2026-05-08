@@ -1,12 +1,12 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
 
-> **최종 업데이트**: 2026-05-08 (본 세션: Sprint 6-D 1-5단계 완료 + MD 인계 무결성 회복 + 작업원칙 #29 (e++) 신규 강화 + archive 인덱스 정비)
-> **TSC**: 0 errors | **빌드**: Compiled successfully (26/26 prerender) | **배포**: https://kkotium-garden.vercel.app (29e80fc READY)
-> **HEAD**: 29e80fc = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
-> **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 4개 보존 / **Platform**: DMM 도매매 + OWC 오너클랜 2개
-> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | **6-D 1-5단계 (4모드 foundation) ✅**
+> **최종 업데이트**: 2026-05-08 (본 세션: Sprint 6-A 백엔드 완료 — Option C 하이브리드 동적 임계값 + 꿀통 꽃수레 7개 정리)
+> **TSC**: 0 errors | **빌드**: Compiled successfully (26/26 prerender + /api/cron/inventory-sync 포함) | **배포**: https://kkotium-garden.vercel.app (66c3bdb READY)
+> **HEAD**: 66c3bdb = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (7개 모두 정리됨, 본 세션 사용자 결정) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
+> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 (4모드 foundation) ✅ | **6-A 백엔드 (Option C 하이브리드) ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업 (계획서 원본 순서)**: 세션 2 = 6-A 재고 폴링 축소 (앱 등록 상품만, 첫 실제 상품 등록 검증 전제) → 세션 3 = 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가) → 세션 4 = 6-E + 6-D 위젯 통합 (카테고리 매핑 + 꼬띠 4모드 정원 일지 발송) → Sprint 7 = AI Studio 4모듈 → Sprint 8 = 매출 상승 후 Private 자동발주 활용 (보류)
+> **다음 작업 (계획서 원본 순서)**: ~~세션 2 = 6-A 재고 폴링 백엔드~~ ✅ 완료 → **다음 세션 = 6-A UI (재고 뱃지 + LowStockAlertWidget) + 사용자 첫 실제 도매꾹 상품 등록으로 폴링 검증** → 세션 3 = 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가) → 세션 4 = 6-E + 6-D 위젯 통합 (카테고리 매핑 + 꼬띠 4모드 정원 일지 발송) → Sprint 7 = AI Studio 4모듈 → Sprint 8 = 매출 상승 후 Private 자동발주 활용 (보류)
 > **참고 문서**: `docs/research/OVERSEAS_SOURCING_BASELINE_2026_05.md`, `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md`, `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`, `docs/plan/archive/PROGRESS_2026Q2_MAY.md`
 
 ---

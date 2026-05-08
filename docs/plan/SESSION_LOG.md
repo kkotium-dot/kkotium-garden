@@ -1,3 +1,142 @@
+## 2026-05-08 세션 (Sprint 6-A 축소 백엔드 — Option C 하이브리드 동적 임계값) ✅
+
+### 본 세션 성격
+- 직전 commit `dc6fadc` (archive 인덱스 정비) 직후, 인계 메시지에 명시된 다음 작업 = Sprint 6-A 축소 (재고 폴링) 진행.
+- 사용자 추가 요청으로 *이전 대화 (`7d388a55-...`, 2026-05-07 STEP 0 재검토)* 디테일 검토 후 누락 사항 3가지 발견 → 본 세션 계획에 통합.
+- *임계값 100 vs 10 토론* 끝에 사용자 통찰 ("게으른 공급사 패턴")로 **Option C 하이브리드 동적 임계값** 채택. 시장 도구 (샵플링/플레이오토)는 고정 임계값만 — 우리 앱은 자동 학습 → 차별화 무기.
+
+### 시작 직전 상태 (작업원칙 #21 사전 점검 통과)
+- HEAD `dc6fadc` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} "z3c-misdirected-changes-needs-redo" 보존 ✅
+- MD 줄 수: PROGRESS 802 / ROADMAP 980 / SESSION_LOG 1489 (1500 임계 근접) ✅
+- production HTTP 200 ✅
+
+### 사용자 핵심 인사이트 (영구 기록)
+
+**임계값 토론**:
+- 사용자: "100은 너무 높고 10은 너무 낮다"
+- 사용자 통찰: *"부지런하지 않게 재고를 업데이트 안 하는 업체를 여럿 봤다"* — 공급사마다 재고 변동 패턴이 완전히 다름
+- 시니어 분석: 시장 도구 (샵플링/플레이오토 등) 모두 *고정 임계값 + 셀러 수동 설정*. 동적 학습은 어디에도 없음.
+- 결론: 동적 임계값 + 다단계 색상 + 게으른 공급사 자동 감지 = **Option C 하이브리드** 채택
+
+### 본 세션 작업
+
+#### 작업 1: 꿀통 꽃수레 7개 모두 삭제 ✅
+- 사용자 결정: 6 SOURCED + 1 PENDING 모두 테스트 데이터 → 일괄 삭제
+- Supabase MCP: `DELETE FROM crawl_logs WHERE sourcing_status IN ('SOURCED', 'PENDING')`
+- 결과: crawl_logs 0개 (완전 깨끗한 상태)
+
+#### 작업 2: Prisma 스키마 + DB 마이그레이션 ✅
+- Supabase migration: `sprint_6_a_inventory_polling_with_dynamic_threshold`
+- 신규 테이블 3개:
+  - `inventory_snapshots` — 시계열 재고 일기장 (productId, productNo, qty, status, minq, isDraft, polledAt)
+  - `low_stock_alerts` — 3단계 비상 호출 노트 (level: yellow/orange/red, threshold, currentQty, statusReason, resolvedAt)
+  - `supplier_stock_profiles` — 7일 rolling 평균 학습 (productNo, avgDailyDepletion, sampleCount, isTrustworthy, lastNoChangeDays)
+- Prisma schema 갱신 + Product/Supplier 역관계 추가
+- `npx prisma generate` 정상 (Prisma Client v5.22.0)
+
+#### 작업 3: domemae-adapter.ts getInventory() 활성화 ✅
+- 기존 `notImplemented()` stub → 실제 구현
+- 도매꾹 OpenAPI v4.5 `getItemView` `multiple=true` 100건 묶음
+- 100건 초과 시 caller 책임으로 chunking (어댑터는 throw)
+- multipleResult.item / 단일 fallback 모두 처리
+- API 에러 시 placeholder snapshot (qty=-1, status='unknown') 반환 (poller가 결정)
+
+#### 작업 4: dome-inventory-poller.ts 신규 작성 (580줄) ✅
+
+**공개 API**: `pollAppRegisteredInventory()` (cron 진입점)
+
+**Option C 하이브리드 로직**:
+- 7일 rolling 평균 일일 변동량 학습 (`SupplierStockProfile`)
+- 동적 3단계 임계값:
+  - yellow = D × 7 (1주일 안전재고, 위젯만)
+  - orange = D × 3 (Discord 알림)
+  - red = D × 1 또는 status != "판매중" (Discord 즉시)
+- 콜드 스타트 fallback (sample_count < 7):
+  - yellow=100, orange=30, red=10
+- 게으른 공급사 자동 감지:
+  - 7일+ 연속 무변동 (qty>0) → `is_trustworthy=false`
+  - 30일에 한 번 강제 알림 ("이 공급사 직접 확인 권장")
+- DRAFT 처리:
+  - snapshot 기록 (시세/재고 추적)
+  - LowStockAlert 발생 X (Discord 알림 폭격 방지)
+- ACTIVE 처리:
+  - snapshot 기록 + LowStockAlert 트리거
+  - 같은 레벨 중복 방지 (escalation 시에만 새 row)
+  - orange/red만 Discord 발송 (yellow는 위젯만)
+- minq 컬럼: 본 세션 1로 고정 (multiple=true 응답에 minq 미포함)
+  - 다음 세션 UI 작업 시 별도 getItemDetail 호출로 보강
+
+#### 작업 5: cron/inventory-sync route + vercel.json ✅
+- `src/app/api/cron/inventory-sync/route.ts` 신규
+- `CRON_SECRET` Bearer 인증
+- `maxDuration: 60` (전체 폴링 사이클 안전 여유)
+- vercel.json `crons` 배열에 6시간 주기 추가 (`0 */6 * * *`)
+
+#### 작업 6: 검증 + commit + push (한 turn) ✅
+- TSC: 0 errors
+- npm run build: Compiled successfully + 27 routes prerendered (inventory-sync 포함)
+- 한글 sentinel grep: 0건 (꽃졤/꽃제/꽃젤/혁섭/쿠드)
+- commit hash: `66c3bdb`
+- push: `dc6fadc..66c3bdb main -> main`
+- 5 files changed, +719/-4
+
+#### 작업 7: MD 갱신 (idempotent) ✅
+- PROGRESS.md 헤더 swap + 단계 진행도 갱신
+- ROADMAP.md 헤더 swap + 신규 인계 메시지 prepend (이전 deprecated)
+- SESSION_LOG.md 본 entry prepend
+
+### 적용된 작업원칙
+
+- **#17** commit msg .commit-msg.tmp + git commit -F ✅
+- **#21** 사전 점검 8항목 통과 ✅
+- **#22** 시각 검증 — Vercel HTTP 200 + git rev-parse 검증 ✅
+- **#24** commit + push 한 turn 안에 ✅
+- **#26** 단독 판단 0 — 모든 결정 사용자 Y/N 승인
+- **#27** 외부 컨트랙트 보존 — getInventory 활성화로 다른 코드 영향 0
+- **#28** Vercel 배포 = source of truth ✅
+- **#29 (a~e++)** 한글 처리 5+1+1 규칙:
+  - (a) edit_file 한글 다량 newText 0건 (모두 \uXXXX escape)
+  - (b) MD 갱신 = Filesystem:write_file Python 안전 삽입 패턴
+  - (c) 코드 edit 영문 식별자만
+  - (d) 셸 명령 한글 0건 (commit msg 영문)
+  - (e) 한글 작업 후 grep 검증 ✅
+  - (e+) 사용자 닉네임 답변 본문 호명 0건 ✅
+  - (e++) sentinel 변종 3개 매칭 0건 ✅
+- **#31 (e)** idempotent 가드 — 모든 patch에 marker 체크
+- **#32** TSC ≠ Production 빌드 — npm run build 27/27 통과 ✅
+- **#33** useSearchParams Suspense — 본 세션 추가 0건
+- **#34** 명백한 오류 파일 발견 — 본 세션 추가 0건
+- **#35** 한글 사전 분리 패턴 — 본 세션은 \uXXXX escape로 작성 (한글 사용 영역 매우 적음)
+
+### 본 세션 학습
+
+1. **사용자 통찰의 가치** — "임계값 100 vs 10" 토론에서 사용자가 *"게으른 공급사 패턴"*을 직접 본 경험을 공유. 이 통찰이 없었다면 단순 고정 임계값으로 끝났을 것. **시장 도구 어디에도 없는 차별화 기능 (Option C)** 도출.
+
+2. **Option C의 차별화 가치** — 샵플링/플레이오토 등 유료 솔루션은 *고정 임계값 + 셀러 수동 설정*만 제공. 우리 앱은 *자동 학습 + 다단계 색상 + 게으른 공급사 감지*까지. 1인 셀러 시간 절감 효과가 압도적.
+
+3. **DRAFT 폴링의 가치** — DRAFT도 snapshot은 기록 (시세 추적용). 알림은 X (소음 방지). *추적 데이터 분리 + 알림 분리* 패턴 정착.
+
+4. **컨텍스트 안전 분할 효과** — 백엔드 (본 세션) + UI (다음 세션) + 첫 실제 상품 등록 검증 (다음 세션) 3분할로 각 작업 모두 깨끗한 컨텍스트에서 진행.
+
+### 보류된 항목 (다음 세션 작업)
+
+1. **정원 창고 재고 뱃지 UI** — 각 상품 row에 최신 snapshot 표시
+2. **LowStockAlertWidget** — 정원 일지에 미해결 알림 위젯
+3. **씨앗 심기 minq>1 경고** — DRAFT 상품 등록 시 위탁판매 불가 경고
+4. **첫 실제 상품 등록 + 폴링 실측 검증** — 사용자 액션 필요
+5. **minq 보강** — getItemDetail 별도 호출로 정확한 minq 값 수집
+
+### 본 세션 commit
+- 신규: `src/lib/dome-inventory-poller.ts`, `src/app/api/cron/inventory-sync/route.ts`
+- 수정: `prisma/schema.prisma`, `src/lib/sources/domemae-adapter.ts`, `vercel.json`
+- DB: `crawl_logs` 7개 삭제 + 3개 신규 테이블 생성
+- commit hash: `66c3bdb` / Vercel deployment READY
+
+
+---
+
 # KKOTIUM GARDEN — 세션별 작업 로그
 
 > **이 파일의 역할**: 세션별 자세한 작업 이력을 누적 기록합니다.

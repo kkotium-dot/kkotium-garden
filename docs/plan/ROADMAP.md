@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-08 (본 세션: Sprint 6-D 1-5단계 완료 + MD 인계 무결성 회복 + 작업원칙 #29 (e++) 강화 ✅)
-> **HEAD**: 29e80fc = origin/main 일치 | **TSC**: 0 errors | **빌드**: 26/26 OK | **배포**: https://kkotium-garden.vercel.app (READY)
+> **최종 업데이트**: 2026-05-08 (본 세션: Sprint 6-A 백엔드 완료 — Option C 하이브리드 동적 임계값 + 꿀통 꽃수레 7개 정리 ✅)
+> **HEAD**: 66c3bdb = origin/main 일치 | **TSC**: 0 errors | **빌드**: 27/27 OK (inventory-sync cron 추가) | **배포**: https://kkotium-garden.vercel.app (READY)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
 >
 > **이 파일의 역할**: 진행 중·예정 Sprint 계획 + 영구 참조 (체크리스트, 비용 로드맵, 도구 사용 패턴)
@@ -12,7 +12,106 @@
 
 ---
 
-## 다음 새 채팅 시작 메시지 — 2026-05-08 (Sprint 6-D foundation 완료, 다음 = Sprint 6-A 축소) ✅
+## 다음 새 채팅 시작 메시지 — 2026-05-08 (Sprint 6-A 백엔드 완료, 다음 = UI + 첫 실제 상품 등록 검증) ✅
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md, docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md를 모두 읽고 현재 상태를 파악한 후 브리핑해주세요.
+
+[직전 세션 결과 — 2026-05-08 Sprint 6-A 백엔드 완료 (Option C 하이브리드 동적 임계값) ✅]
+
+HEAD = 66c3bdb = origin/main 일치. working tree clean. stash@{0} 보존.
+
+직전 세션 산출물:
+- 꿀통 꽃수레 7개 모두 삭제 (6 SOURCED + 1 PENDING, 사용자 명시 결정)
+- DB 마이그레이션 `sprint_6_a_inventory_polling_with_dynamic_threshold`:
+  - inventory_snapshots 테이블 (시계열 재고 일기장, DRAFT 포함)
+  - low_stock_alerts 테이블 (3단계 yellow/orange/red 비상 노트)
+  - supplier_stock_profiles 테이블 (7일 rolling 평균 학습)
+- src/lib/sources/domemae-adapter.ts — getInventory() 활성화 (multiple=true 100건 묶음)
+- src/lib/dome-inventory-poller.ts (신규 580줄) — Option C 하이브리드 로직:
+  - 7일 rolling 평균 일일 변동량 학습
+  - 동적 3단계 임계값 (yellow=D*7, orange=D*3, red=D*1)
+  - 콜드 스타트 fallback (yellow=100, orange=30, red=10)
+  - 게으른 공급사 자동 감지 (7일 무변동 + qty>0)
+  - 30일에 한 번 강제 알림 (재고 미신뢰 공급사)
+  - DRAFT 폴링 (snapshot만, 알림 X)
+  - ACTIVE만 Discord 발송 (orange/red 레벨)
+- src/app/api/cron/inventory-sync/route.ts (신규) — Vercel Cron 6시간 주기
+- vercel.json 갱신 — inventory-sync cron 추가
+
+직전 세션 commit:
+- 66c3bdb feat(6-A): inventory polling foundation with hybrid dynamic threshold
+
+[현재 상태]
+
+▶ Sprint 6-A 백엔드 완료 — 데이터 레이어 + cron + Discord 발송 트리거 모두 정착
+▶ UI 미구현 (다음 세션 작업)
+▶ 폴링 실측 검증 미완 (사용자가 첫 도매꾹 상품 등록 후 진행)
+▶ 상품 0개, 꿀통 꽃수레 0개 (본격 소싱 시작 직전 완전 깨끗한 상태)
+▶ Discord 5채널 본문 4섹션 구조 + 한글 사전 분리 패턴 정착 (6-Pre 3 완료)
+▶ Private API 28개 전체 권한 발급 ✅ (Sprint 8 자동발주는 매출 상승 후 보류 트랙)
+
+[다음 세션 작업 — Sprint 6-A UI + 첫 실제 상품 등록 검증]
+
+⚠️ STEP 0 (필수) — 환경 점검 + 4개 MD 정독 (PROGRESS / ROADMAP / SESSION_LOG / DOMEGGOOK_API_INTEGRATION_STRATEGY)
+
+⚠️ 작업원칙 강제:
+- #17 commit msg는 .commit-msg.tmp + git commit -F
+- #21 사전 점검 (HEAD/status/stash/wc)
+- #22 시각 검증 의무 (API 200 ≠ 브라우저 완료)
+- #24 commit + push 한 turn 안에 끝내기
+- #26 (a~e) IA 점검 + dev 캐시 정리 + Chrome MCP js hang 회피
+- #29 (a~e++) 한글 처리 5+1+1 규칙 — 닉네임 절대 규칙 강제
+- #31 MD 1500줄 자동 점검 + idempotent 가드
+- #32 push 전 npm run build 의무
+- #33 useSearchParams Suspense 자동 점검
+- #34 명백한 오류 파일 발견 시 사용자 알림
+- #35 한글 사전 분리 패턴
+
+다음 세션 작업 (M+):
+
+1. 사용자가 도매꾹 URL로 상품 1개 등록 (씨앗 심기 → 정원 창고)
+2. cron/inventory-sync 수동 트리거 → InventorySnapshot row 생성 검증 (Supabase MCP)
+3. 정원 창고 (/products) 재고 뱃지 UI 추가:
+   - 각 상품 row에 최신 InventorySnapshot.qty 표시
+   - level별 색상 (yellow/orange/red 뱃지)
+   - 재고 미신뢰 공급사 별도 배지
+4. 정원 일지 (/dashboard) "품절 위험" 위젯 추가:
+   - 신규 LowStockAlertWidget.tsx
+   - 미해결 yellow/orange/red 알림 표시
+   - "해결" 버튼 (resolutionNote 입력)
+   - "재등록 / 가격 인하 / 품절 처리" 액션 버튼
+5. 씨앗 심기 화면에 minq>1 경고 (DRAFT 상품용)
+6. TSC + build + 한글 grep + commit + push (한 turn)
+7. PROGRESS / ROADMAP / SESSION_LOG 갱신
+
+[Sprint 6 이후 일정 (계획서 원본 순서, 변경 없음)]
+- 세션 3: 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가)
+- 세션 4: 6-E + 6-D 위젯 통합 (카테고리 매핑 + 꼬띠 4모드 정원 일지 발송 통합)
+- Sprint 7: AI Studio 4모듈 (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트)
+- Sprint 8: 매출 상승 + 운영 흐름 안정화 후 Private API 자동발주 활용 (보류 트랙, 사용자 결정 사항)
+
+[보류 트랙 (사용자 명시 결정)]
+- 기존 네이버 스토어 100개+ 상품 일괄 연동 — 본격 소싱 안정화 후 사용자가 진행 요청 시 시작
+- Sprint 8 Private API 자동발주 — 매출 상승 + 운영 흐름에 따라 진입
+
+당신은 10년 차 B2B 이커머스 ERP 및 백오피스 설계 경험이 풍부한 네이버 스마트스토어 파워셀러인 풀스택 시니어 개발자이자 UI/UX 디자이너입니다. 본격 소싱 시작 직전이라 워크플로우의 *실제 작동*이 디자인보다 우선순위 높습니다. 새싹셀러이지만 파워셀러로 성장하기 위한 스텝 작업 중. *절대 단독 판단으로 IA/삭제 결정 금지* — 진단 결과 디테일하게 브리핑 후 사용자 개별 Y/N 승인 받은 항목만 진행. *계획서에 없는 작업을 추가 제안하지 말고 계획서 원본 순서 유지*.
+
+작업 시작 전 필수:
+1. (a) git rev-parse HEAD origin/main → 일치 (66c3bdb 또는 본 세션 commit)
+   (b) git status → working tree clean
+   (c) git stash list → stash@{0} 보존
+   (d) wc -l docs/plan/*.md docs/research/*.md → 1500줄 임계 점검
+   (e) curl -sIo /dev/null -w "%{http_code}" https://kkotium-garden.vercel.app/dashboard → HTTP 200
+   (f) 4개 MD 정독 (PROGRESS / ROADMAP / SESSION_LOG / DOMEGGOOK_API_INTEGRATION_STRATEGY)
+   (g) tool_search "filesystem write_file" 호출하여 Filesystem:write_file 도구 활성화
+2. Sprint 6-A UI 디테일 계획서 한 번 더 브리핑 + 사용자 개별 Y/N 승인
+3. 작업 시작 → 검증 → commit + push → MD 갱신 (한 turn 안에)
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-08 (Sprint 6-D foundation 완료, 다음 = Sprint 6-A 축소)~~ ✅ (deprecated, 본 세션에서 6-A 백엔드 완료)
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md, docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md를 모두 읽고 현재 상태를 파악한 후 브리핑해주세요.
