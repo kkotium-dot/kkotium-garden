@@ -545,12 +545,14 @@ function NewProductPageInner() {
     try {
       // Decode UTF-8-safe Base64 using TextDecoder (handles Korean + any Unicode)
       // Encoder uses: btoa(unescape(encodeURIComponent(JSON.stringify(data))))
-      const bin = atob(raw.replace(/-/g, '+').replace(/_/g, '/'));
+      // URLSearchParams.get decodes "+" as space (form-encoded rule); restore it
+      // before atob. Also accept URL-safe base64 (-/_) from updated encoders.
+      const bin = atob(raw.replace(/ /g, '+').replace(/-/g, '+').replace(/_/g, '/'));
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i) & 0xff;
-      // Strip control characters that break JSON.parse
+      // Strip every C0 control + DEL — JSON spec forbids raw control chars inside string literals
       const jsonStr = new TextDecoder('utf-8').decode(bytes)
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ');
+        .replace(/[\x00-\x1F\x7F]/g, ' ');
       const data = JSON.parse(jsonStr);
       if (data.productName)    setProductName(data.productName);
       if (data.supplierPrice)  setSupplierPrice(String(data.supplierPrice));
@@ -590,8 +592,8 @@ function NewProductPageInner() {
         }
       }
       setError('');
-    } catch {
-      // ignore malformed prefill
+    } catch (e) {
+      console.error('[prefill] decode failed — banner will show but form stays empty', e);
     }
   }, [searchParams]);
 
@@ -600,10 +602,10 @@ function NewProductPageInner() {
     const raw = searchParams?.get('prefill');
     if (!raw) return;
     try {
-      const bin = atob(raw.replace(/-/g, '+').replace(/_/g, '/'));
+      const bin = atob(raw.replace(/ /g, '+').replace(/-/g, '+').replace(/_/g, '/'));
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i) & 0xff;
-      const jsonStr = new TextDecoder('utf-8').decode(bytes).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ');
+      const jsonStr = new TextDecoder('utf-8').decode(bytes).replace(/[\x00-\x1F\x7F]/g, ' ');
       const data = JSON.parse(jsonStr);
       const sellerId = data.crawlSellerId;
       if (!sellerId) return;

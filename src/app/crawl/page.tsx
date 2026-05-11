@@ -1626,7 +1626,9 @@ function CrawlPageInner() {
                   const j = JSON.stringify(prefill);
                   const b2 = new TextEncoder().encode(j);
                   let bin = ''; b2.forEach((x:number) => { bin += String.fromCharCode(x); });
-                  router.push(`/products/new?prefill=${btoa(bin)}&autoSeo=1`);
+                  // URL-safe base64: standard "+" gets eaten by URLSearchParams (form-encoded space)
+                  const safe = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_');
+                  router.push(`/products/new?prefill=${safe}&autoSeo=1`);
                 }} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 14px', background:'#e62310', border:'none', borderRadius:8, fontSize:12, fontWeight:700, color:'#fff', cursor:'pointer' }}>
                   <ArrowRight size={12}/> 등록 시작
                 </button>
@@ -1794,7 +1796,9 @@ function CrawlPageInner() {
                               const j = JSON.stringify(prefill);
                               const b2 = new TextEncoder().encode(j);
                               let bin = ''; b2.forEach((x:number)=>{ bin += String.fromCharCode(x); });
-                              router.push(`/products/new?prefill=${btoa(bin)}`);
+                              // URL-safe base64: standard "+" gets eaten by URLSearchParams (form-encoded space)
+                              const safe = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_');
+                              router.push(`/products/new?prefill=${safe}`);
                             }} style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 14px', background:'#e62310', color:'#fff', border:'none', borderRadius:9, fontSize:12, fontWeight:700, cursor:'pointer' }}>
                               {isUpdating ? <RefreshCw size={11} className="animate-spin"/> : <ArrowRight size={11}/>}
                               등록 시작
