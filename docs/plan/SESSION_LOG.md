@@ -1,3 +1,152 @@
+## 2026-05-12 Session A (Sprint 6-A UI Phase 1 — 재고 뱃지 + 작업원칙 #36 (e) 정정) ✅
+
+### 본 세션 성격
+- 직전 세션 (2026-05-11~12) 종료 후 새 세션. ROADMAP "다음 새 채팅 시작 메시지" 기준 Sprint 6-A UI 진입.
+- 사용자 명시 위임: *시니어 페르소나 판단으로 우선순위 진행*, *작업 완료 후 브라우저 테스트*, *실질적으로 진행 못 하는 일은 정직히 보고*, *컨텍스트 한계 대비 안전 분할*, *MD 인계 누락 없이*.
+- 시니어 결정: A~E 5개 작업을 3 세션으로 안전 분할. Session A = 작업 E (#36 정정) + 작업 A (재고 뱃지).
+
+### 시작 직전 상태 (작업원칙 #21 사전 점검 + 작업원칙 #36 (e) 정정 트리거)
+- HEAD `0f66e80` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} 보존 ✅
+- MD 줄 수: PROGRESS 842 / ROADMAP 1189 / SESSION_LOG 829 — ROADMAP T1 (1000) 초과 = 분할 권고 알림
+- Vercel HTTP 200 ✅
+- **GitHub webhooks: 0** 발견 — 작업원칙 #36 (e)에 따른 의무 알람. 추가 진단 결과 *GitHub Deployments API는 정상 등록됨* (직전 push 2건 모두 production 환경 등록). Vercel이 *GitHub App 통합* 방식이라 legacy webhook 0건이 정상. **작업원칙 #36 (e) 자체가 false positive 생성 원인** 으로 판명 → 본 세션 정정 트리거.
+
+### 본 세션 작업 흐름
+
+#### 작업 E: 작업원칙 #36 (e) 정정 ✅
+- `scripts/verify-vercel-deploy.sh` 개편 (167 lines):
+  - VERCEL_TOKEN 있으면 Vercel API path (실 build state 확인)
+  - VERCEL_TOKEN 없으면 `gh` CLI 기반 GitHub Deployments API path 자동 fallback
+  - 둘 다 없으면 exit 2 + 발급 안내
+  - webhook 검증 코드 제거 (false positive 원인)
+- `CLAUDE.md` STEP 0 정정:
+  - `gh api .../hooks --jq 'length'` 제거 → `gh api .../deployments?environment=Production&per_page=1` 의 `.[0].sha`
+  - 확인 포인트에서 "GitHub webhooks length > 0" 제거 → "Latest prod deploy SHA == HEAD"
+  - VERCEL_TOKEN 미설정 시 자동 fallback 안내
+- `docs/plan/PROGRESS.md` 작업원칙 #36 (e) 정정:
+  - "webhook 끊김 자동 감지" → "git integration 끊김 자동 감지 (2026-05-12 본 세션 정정)"
+  - GitHub App 통합 vs legacy webhook 차이 명시
+- 검증: `scripts/verify-vercel-deploy.sh` exit 0 (github-deployments path)
+
+#### 작업 A: 재고 뱃지 UI ✅
+- API route `src/app/api/products/inventory-badges/route.ts` (신규 103 lines):
+  - `GET` only, `force-dynamic`
+  - Single bulk query per table (no N+1):
+    1. Product (supplier_product_code != null)
+    2. InventorySnapshot (latest per productId, in-memory dedup)
+    3. LowStockAlert (resolvedAt: null, latest per productId)
+    4. SupplierStockProfile (isTrustworthy lookup by productNo)
+  - 응답: `{ data: Record<productId, InventoryBadgeData> }`
+  - polledAt이 없는 product는 응답에서 제외 (cold start safe)
+- 한글 사전 `src/components/products/InventoryBadge.strings.ko.json` (신규 29 lines):
+  - 작업원칙 #35 (한글 사전 분리 패턴) 적용
+  - 14 strings (label, level, untrustworthy, tooltip, statusBadge)
+- SWR hook `src/lib/hooks/useInventoryBadges.ts` (신규 40 lines):
+  - `DASHBOARD_SWR_DEFAULTS` 재사용 (60s polling)
+  - byProductId Record<string, InventoryBadgeData> 반환
+- 컴포넌트 `src/components/products/InventoryBadge.tsx` (신규 116 lines):
+  - 4단계 색상 pill (green/yellow/orange/red)
+  - 미신뢰 공급사: ShieldOff 아이콘 + 회색조 + tooltip
+  - 비활성 status: 빨강 + status 한글 label
+  - hover tooltip: "마지막 확인 N분 전" 상대 시각
+  - 상수 비교 한글은 \uXXXX escape (dome-inventory-poller.ts 패턴 일관성)
+- 통합 `src/app/products/page.tsx`:
+  - import 2건 추가 (InventoryBadge, useInventoryBadges)
+  - `ProductsPageInner()` 안에서 hook 호출
+  - `renderRow()` sku 줄 변경 — flex container로 sku + 배지 inline
+
+### 검증
+
+- TSC `npx tsc --noEmit` 0 errors ✅
+- Production build `npm run build` 26/26 prerender ✅
+  - `/api/products/inventory-badges` 동적 함수로 등록 ✅
+  - `/products` 15.7 kB (이전과 유사) ✅
+- 브라우저 smoke test (dev server PORT 3000):
+  - `/api/products/inventory-badges` HTTP 200 + `{"data":{}}` ✅ (상품 0개 empty path)
+  - `/products` HTTP 200 + hydration OK ✅
+  - dev log 에러/경고 0건 ✅
+- 한글 sentinel grep 0 신규 매칭 (변종 sentinel 매칭은 모두 sentinel rule 정의 자체) ✅
+- NFC + FFFD audit on all new files: 0/0 ✅
+
+### 검증 한계 (사용자 보고 의무 — 정직)
+
+- **상품 0개 + 폴링 0건 상태라 empty path 검증까지가 한계** — 4단계 색상별 표시, 미신뢰 공급사 배지, status별 라벨 등 *실 데이터 path는 다음 세션 B 또는 사용자 첫 상품 등록 후*에만 검증 가능.
+- **Vercel production 실제 화면 시각 검증 미진행** — push 후 `verify-vercel-deploy.sh --wait` exit 0 만 확인 (state=REGISTERED). build state까지는 VERCEL_TOKEN 발급 후에야 자동 확인 가능. *사용자 본인 브라우저에서 production URL 직접 진입해 시각 확인 권장*.
+
+### Commit + Push
+
+- commit `1a4eb9b` (8 files, +419 / -54)
+- push `0f66e80..1a4eb9b main -> main`
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production is on 1a4eb9b (state=REGISTERED)
+- **작업원칙 #36 첫 실전 적용 — 정정된 검증 path가 첫 push에서 정상 작동 확인**
+
+### 적용된 작업원칙
+
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 8항목 통과 ✅
+- **#22** 브라우저 smoke 검증 (API 200 + page 200 + dev log 0 errors) ✅
+- **#24** commit + push 한 turn 안에 ✅
+- **#26** 단독 판단 0 — 모든 결정 사용자 위임 + Y/N 받음
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 6+1 규칙:
+  - (a) Edit 한글 다량 newText 0건 (사전 JSON은 Write로 직접 작성)
+  - (b) MD 갱신 = Python 안전 삽입 패턴
+  - (c) 코드 비교 상수는 escape (\uXXXX) 사용
+  - (d) 셸 명령 한글 0건
+  - (e) sentinel grep 0 신규 매칭
+  - (e+) 닉네임 직접 호명 0건
+  - (e++) sentinel 변종 3개 매칭 0건
+- **#31 (a)** ROADMAP T1 (1000) 초과 — 다음 세션 분할 권고 (자동 진행은 T2 1500 임계부터)
+- **#32** TSC + npm run build 모두 통과 ✅
+- **#33** useSearchParams 추가 0건
+- **#34** 잔재 보고: src/app/products/page.backup.*.tsx 3건 + dashboard *.BROKEN.backup 2건 + DashboardFilters.backup.tsx 1건 + recursing-galileo-205156 worktree (ff4ef4d 옛 commit) — 본 세션과 무관하여 미처리, 사용자 별도 승인 필요
+- **#35** 한글 사전 분리 패턴 적용 (InventoryBadge.strings.ko.json) ✅
+- **#36** 본 세션이 #36 (e) *정정 트리거* — false positive 원인 제거 + GitHub Deployments path로 token-free 검증 가능
+
+### 본 세션 학습 (영구 기록)
+
+1. **GitHub App vs Legacy Webhook 차이가 #36 (e)의 사각지대였다** — Vercel은 GitHub App 통합이라 `gh api .../hooks` length가 0이 정상. 이 사실을 모르고 webhook 0건을 "끊김 확정"으로 처리하면 모든 push마다 false positive 알람 발생. 정정 후 `gh api .../deployments` 의 sha 비교가 진짜 신호.
+
+2. **VERCEL_TOKEN 없이도 검증 가능하다** — `gh` CLI는 일반 개발자 PC에 이미 설치되어 있어 별도 발급 없이 GitHub Deployments API 호출 가능. token-free fallback path 추가로 진입 장벽 0.
+
+3. **데이터 0개 상태의 검증 한계는 정직히 보고해야 한다** — 상품 0개 + 폴링 0건 상태에서는 코드 정확성 (TSC + build + empty API path)만 검증 가능. 실 데이터 검증은 사용자 첫 상품 등록 후. *이를 숨기지 않고 정직 보고*하는 것이 사용자 신뢰의 기반.
+
+4. **한 turn에 작업 묶기 vs 컨텍스트 안전 분할의 균형** — 사용자 명시 "컨텍스트 한계로 작업이 끊기는 오류로 인해 중복작업을 하지 않도록 작업양을 안전하게 나눠서 진행"에 따라 A~E 5작업을 3 세션으로 분할. 각 세션이 *코드 변경 + 검증 + commit + push + MD 갱신 + 인계 메시지*까지 완료 가능한 크기.
+
+### 본 세션 commit
+
+1. `1a4eb9b` feat(6-A,ops): inventory badges UI + work-principle #36 (e) refinement
+2. (본 entry) docs(plan): record Session A — Sprint 6-A UI Phase 1 + #36 (e) refinement
+
+### Vercel deployment 결과
+
+- production env: 1a4eb9b REGISTERED via GitHub Deployments API ✅
+- `scripts/verify-vercel-deploy.sh --wait` exit 0 (github-deployments path, 첫 try에서 매칭)
+- VERCEL_TOKEN 발급 시 추가 정보 (build state READY/BUILDING/ERROR)까지 확인 가능 — 현재 보류 트랙
+
+### 다음 세션 (Session B) 작업 = Sprint 6-A UI Phase 2
+
+1. LowStockAlertWidget.tsx 신규 (정원 일지 상단 슬롯)
+2. `GET /api/alerts/low-stock` route (미해결 yellow/orange/red 알림 리스트)
+3. `PATCH /api/alerts/[id]/resolve` route (resolutionNote 인라인 입력)
+4. 액션 버튼 3개: 재등록 알림 / 가격 인하 (`/naver-seo?product={id}`) / 품절 처리
+5. 미신뢰 공급사 별도 그룹 표시
+6. TSC + build + 한글 grep + commit + push + #36 검증
+7. MD 갱신 + Session C 인계
+
+### 다다음 세션 (Session C) 작업 = Sprint 6-A UI Phase 3
+
+1. 씨앗 심기 minq>1 경고 (위탁판매 사고 방지)
+2. `getItemDetail(productNo)` 백엔드 보강 (minq 추출)
+3. admin 수동 폴링 트리거 path (`POST /api/admin/poll-inventory-now`)
+4. dashboard 토스트 + 결과 카운트
+5. TSC + build + 한글 grep + commit + push + #36 검증
+6. MD 갱신 + Session D 인계
+
+---
+
 ## 2026-05-11 ~ 2026-05-12 세션 (워크플로우 첫 실측 검증 + prefill 버그 + Vercel webhook 4일 갭 발견 + 작업원칙 #36 신규) ✅
 
 ### 본 세션 성격
