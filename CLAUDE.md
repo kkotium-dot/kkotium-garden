@@ -1,0 +1,265 @@
+# 꽃틔움 가든 (Kkotium Garden) — Claude Code Context
+
+> 이 파일은 Claude Code가 세션 시작 시 자동으로 읽는 영구 컨텍스트입니다.
+> 실시간 진행 상태는 항상 `docs/plan/PROGRESS.md` / `ROADMAP.md` / `SESSION_LOG.md`를 정독해서 확인하세요.
+
+---
+
+## 1. 세션 시작 시 필수 절차 (순서 준수)
+
+매 새 세션 첫 turn에 반드시 아래 4단계를 수행하세요. 사용자가 별도 요청을 하기 전까지 본 작업을 시작하지 마세요.
+
+### STEP 0 — 환경 점검 (bash)
+
+```bash
+cd /Users/jyekkot/Desktop/kkotium-garden && \
+  git rev-parse HEAD origin/main && \
+  git status --short && \
+  git stash list && \
+  git --no-pager log --oneline -5 && \
+  wc -l docs/plan/*.md && \
+  curl -sIo /dev/null -w "Vercel HTTP: %{http_code}\n" https://kkotium-garden.vercel.app/dashboard
+```
+
+확인 포인트:
+- HEAD == origin/main (불일치 시 사용자에게 보고)
+- working tree clean (변경 있으면 보고)
+- `docs/plan/SESSION_LOG.md`가 1500줄 초과 시 → 작업원칙 #31 분할 자동 진행
+- Vercel HTTP 200 (5xx면 사용자에게 보고)
+
+### STEP 1 — 핵심 MD 4개 정독
+
+순서대로 정독:
+
+1. `docs/plan/PROGRESS.md` — 현재 진행 상태 + 작업원칙 #26~#35 + 핵심 인덱스
+2. `docs/plan/ROADMAP.md` — Sprint 계획 + 다음 새 채팅 시작 메시지 영역
+3. `docs/plan/SESSION_LOG.md` — 직전 5세션 상세 기록
+4. (선택) `docs/research/` 하위 — 진행 중 Sprint에 관련된 리서치 보고서
+
+**Archive는 정독 대상 아님**: `docs/plan/archive/` 폴더는 분기/월별로 동결된 누적 기록입니다. `grep`으로 검색이 필요할 때만 참조하세요.
+
+### STEP 2 — 사용자에게 현재 상태 브리핑
+
+다음을 포함:
+- 현재 HEAD 커밋 + 직전 세션 산출물 요약
+- 다음 본 작업 (ROADMAP.md의 "다음 새 채팅 시작 메시지" 영역 기준)
+- working tree에 미커밋 변경 또는 untracked 파일이 있다면 정확히 보고
+- SESSION_LOG.md 분할 필요 여부
+
+### STEP 3 — 사용자 승인 대기
+
+작업원칙 강제: **명시적 승인 없이는 본 작업 시작 금지**. 브리핑 후 사용자 응답을 기다리세요.
+
+---
+
+## 2. 프로젝트 개요
+
+### 본질
+
+1인 네이버 스마트스토어 셀러(스토어명: 꽃틔움 KKOTIUM)를 위한 운영 자동화 SaaS. 도매꾹/오너클랜 크롤링 → 마진 계산 → AI SEO 최적화 → 네이버 Commerce API 등록 / 엑셀 일괄 등록까지 풀 파이프라인.
+
+### 스택
+
+- Frontend: Next.js 14 (App Router) + TypeScript + Tailwind CSS
+- ORM: Prisma
+- DB: Supabase PostgreSQL (project id: `doxfizicftgtqktmtftf`)
+- AI: Gemini (3 키 round-robin, 주력) → Groq llama-3.1-8b-instant (무료 fallback, 14,400 req/day)
+- 배포: Vercel production = `https://kkotium-garden.vercel.app` (source of truth)
+- 알림: Discord 5채널 webhook + Solapi 알림톡 (월 50건 초과 시 활성화)
+
+### 주요 외부 연동
+
+- 도매꾹 OpenAPI (key: `a6ff7578051627fce0fa502046c470bb`)
+- 네이버 Commerce API (Private API 28개 권한 전체 발급 완료)
+- 네이버 검색광고 API (Customer ID: `3755315`)
+- Supabase MCP 마이그레이션 (project id로 직접 SQL DDL 가능)
+
+### 현재 단계 (스냅샷 — 항상 PROGRESS.md로 재확인)
+
+- Phase A·B·C·D ✅
+- Phase E ✅ (E-1/E-3/E-7/E-8)
+- Phase E+ Sprint 1~5 ✅
+- 워크플로우 재설계 Sprint A1a~A3-4a ✅
+- Sprint 6-Pre 1·2·3 ✅, 6.5 SourceAdapter PoC ✅
+- Sprint 6-D 1-5단계 (꼬띠 4모드 foundation) ✅
+- Sprint 6-A 백엔드 (Option C 하이브리드 동적 임계값 재고 폴링) ✅
+- **다음**: Sprint 6-A UI (재고 뱃지 + LowStockAlertWidget) + 첫 실제 도매꾹 상품 등록으로 폴링 검증
+
+---
+
+## 3. 코드 작성 절대 규칙
+
+위반 시 즉시 롤백 + 사용자 보고. 예외 없음.
+
+### 3-1. 한글 처리
+
+- JSX에 이모지 절대 금지 — Lucide React 아이콘만 사용
+- 모든 코드 주석은 영어로 작성
+- 타입 리터럴(`'조합형'` 등)에 한글 문자열 금지 → 영어 상수로 분리
+- 한글 사전 분리 패턴: 사용자 노출 한글 문구는 `src/lib/i18n/` 또는 별도 상수 파일에 격리
+
+### 3-2. Prisma
+
+- `new PrismaClient()` 절대 금지 → `src/lib/prisma.ts`의 싱글톤 import
+- `keywords` 같은 JsonValue 필드는 항상 `Array.isArray()` 가드 후 사용
+- 스키마 변경 후 `npx prisma generate` + dev 서버 재시작 필수
+
+### 3-3. 네이버 카테고리
+
+- 로컬 데이터(`src/lib/naver/naver-categories-full.ts` 4,993건) 사용
+- API 호출 금지
+- AI 프롬프트에 전체 데이터셋 전달 금지 (토큰 초과)
+
+### 3-4. 환경 변수
+
+- `.env.local`의 `$` 포함 값(bcrypt salt 등)은 `\$`로 이스케이프 필수
+- dotenv-expand가 bare `$`를 변수 확장으로 처리하므로 깨짐
+
+### 3-5. 검증
+
+- 모든 수정 후 `npx tsc --noEmit` 0 errors 필수
+- 작업 완료 마킹 전 **브라우저 테스트 의무** (API 200 응답만으로 불충분)
+- 작업원칙 #32: TSC 통과 ≠ Production 빌드 통과 → 의심 시 `npm run build` 추가 실행
+
+---
+
+## 4. 작업 흐름 절대 규칙
+
+### 4-1. 승인 게이트
+
+- 본 작업 시작은 사용자 명시 승인 후
+- 한 turn 안에서 완료 가능한 단위로 분할 (컨텍스트 한계 대비)
+- 중간 보고 금지 — 완료 후 한 번에 보고
+- 못 하는 작업은 즉시 정직하게 알리고 사용자에게 위임
+
+### 4-2. 닉네임 규칙 (작업원칙 #29 e++)
+
+- 응답 본문 prose에 사용자 닉네임 "꽃졔" 사용 절대 금지
+- 허용 예외: 사용자 메시지 직접 인용, 코드 변수명, `Filesystem:write_file`로 MD 파일에 기록
+- 호칭이 필요할 때는 "안녕하세요" 또는 호칭 생략
+- 알려진 오타 변종(grep 검출 sentinel): 꽃졤 / 꽃제 / 꽃젤 — 절대 출력 금지
+- 닉네임 오타 수정 시 사용자 verbatim 메시지에서 복사-붙여넣기, 절대 기억에서 타이핑 금지
+
+### 4-3. MD 파일 갱신 (작업원칙 #29 b + #31)
+
+- 한글 다량 포함 MD 갱신은 `Read` + `Write`(전체 덮어쓰기) 또는 Python 안전 삽입 패턴
+- `Edit`는 oldText/newText가 영어/구두점만일 때만 허용
+- 1500줄 초과 시 `docs/plan/archive/`로 분할 (작업원칙 #31)
+- 분할 후 한글 grep 검증 의무: 매 작업 후 아래 패턴 0건 확인
+
+```bash
+grep -nE "혁섭|쿠드|식타|릴고|헌서|위젝|스칵|쿠두" docs/plan/*.md docs/research/*.md
+```
+
+### 4-4. Git
+
+- 모든 commit/push 전 TSC 0 errors + working tree 정합성 확인
+- 커밋 메시지 prefix: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`
+- 커밋 메시지에 한글 다량 포함 시 `.commit-msg.tmp` 파일 작성 → `git commit -F .commit-msg.tmp` (작업원칙 #17)
+- main에 직접 push (1인 개발, 브랜치 없음)
+- 작업원칙 #28: Vercel production이 source of truth. `npm run dev` 가정 production 아키텍처 절대 제안 금지
+
+### 4-5. 의심 파일 발견 시 (작업원칙 #34)
+
+명백히 잘못된 파일명/구조 발견 시 (예: 공백 포함 파일명, deprecated 폴더 잔존) 자동 처리 금지 → 사용자에게 즉시 알리고 결정 위임.
+
+---
+
+## 5. 핵심 파일 경로
+
+### 데이터 / 상수
+
+- `src/lib/naver/naver-categories-full.ts` — 4,993 카테고리 (로컬)
+- `src/lib/naver/naver-origin-codes.ts` — 518 원산지 코드 (로컬)
+- `src/lib/prisma.ts` — Prisma 싱글톤
+- `src/lib/sources/` — SourceAdapter 패턴 (DMM 도매매 + OWC 오너클랜)
+
+### 핵심 비즈니스 로직
+
+- `src/lib/naver/api-client.ts` — `naverRequest` (Commerce API)
+- `src/lib/dome-inventory-poller.ts` — Sprint 6-A 재고 폴링 (Option C 하이브리드)
+- `src/app/api/cron/inventory-sync/route.ts` — 6시간 주기 cron
+
+### 컴포넌트
+
+- `src/components/layout/Sidebar.tsx` — IA 결정의 source of truth (작업원칙 #26)
+- `src/components/dashboard/` — 대시보드 위젯들
+
+### 계획 / 진행 (이 폴더는 매 세션 정독 대상)
+
+- `docs/plan/PROGRESS.md`
+- `docs/plan/ROADMAP.md`
+- `docs/plan/SESSION_LOG.md`
+- `docs/plan/archive/` (동결, 검색용)
+
+---
+
+## 6. Claude Code 환경 특이사항
+
+### 6-1. 도구 매핑
+
+웹 채팅과 비교:
+
+| 작업 | 웹 채팅 | Claude Code |
+|---|---|---|
+| 파일 읽기 | Filesystem MCP | `Read` |
+| 파일 쓰기 | `Filesystem:write_file` | `Write` |
+| 파일 부분 수정 | `Filesystem:edit_file` | `Edit` |
+| bash 실행 | `iterm-mcp:execute_command_in_terminal` | `Bash` |
+| 코드베이스 검색 | 없음 | `Grep`, `Glob` |
+
+### 6-2. 권장 MCP 추가
+
+```bash
+# 브라우저 테스트 (Chrome MCP 대체)
+claude mcp add playwright -- npx -y @playwright/mcp@latest
+
+# Supabase (마이그레이션 직접 실행)
+claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
+  --access-token=YOUR_SUPABASE_TOKEN
+```
+
+설정 후 `/mcp` 명령으로 연결 확인.
+
+### 6-3. 슬래시 커맨드
+
+- `/clear` — 컨텍스트 초기화
+- `/compact` — 누적 대화 압축
+- `/cost` — 토큰 사용량
+- `/model` — Opus/Sonnet 전환
+- `/mcp` — MCP 연결 상태
+- `#` 접두사 — 메시지 앞에 `#`을 붙이면 본 CLAUDE.md에 자동 추가됨
+
+### 6-4. Auto-accept 주의
+
+`Shift+Tab`으로 켜면 파일 수정/bash가 자동 승인됩니다. `git push --force`, `rm -rf` 등 위험 명령 직전엔 반드시 꺼주세요. 평소엔 개별 승인 권장.
+
+---
+
+## 7. 작업원칙 빠른 인덱스 (자세한 내용은 PROGRESS.md)
+
+- **#17** — commit message는 `.commit-msg.tmp` + `git commit -F`
+- **#21** — 사전 점검 의무 (HEAD/status/stash/wc)
+- **#24** — 한 turn 안에 분할된 작업 완료
+- **#26** — IA 점검 의무화 + 고아 라우트 처리 (Sidebar.tsx 기준)
+- **#28** — Vercel production이 source of truth (dev 서버 가정 금지)
+- **#29 (a~e++)** — 한글 처리 절대 규칙 6가지
+- **#31** — MD 의미 단위 자동 분할 (1500줄 임계)
+- **#32** — TSC ≠ Production 빌드 검증
+- **#33** — useSearchParams Suspense 자동 점검
+- **#34** — 명백한 오류 파일 발견 시 사용자 알림 의무
+- **#35** — 한글 사전 분리 패턴
+
+---
+
+## 8. 새 세션 첫 메시지 권장 템플릿
+
+사용자가 새 세션을 시작할 때 본 CLAUDE.md를 자동으로 읽지만, 명시적 트리거가 필요할 수 있습니다. 권장 첫 메시지:
+
+```
+docs/plan/PROGRESS.md, ROADMAP.md, SESSION_LOG.md를 모두 읽고
+환경 점검(git status, wc -l, Vercel HTTP)을 수행한 후 현재 상태를
+브리핑해주세요. 본 작업 시작은 제 승인 후에 진행해주세요.
+```
+
+ROADMAP.md의 "다음 새 채팅 시작 메시지" 영역에 더 구체적인 컨텍스트가 명시되어 있을 수 있으니, 정독 후 그 메시지를 우선 적용하세요.
