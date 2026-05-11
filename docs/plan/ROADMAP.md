@@ -12,6 +12,114 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
+## 다음 새 채팅 시작 메시지 — 2026-05-12 (워크플로우 첫 실측 + prefill fix + Vercel 4일 갭 해소 + 작업원칙 #36 신규) ✅
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md를 모두 읽고 STEP 0 환경 점검(git status, wc -l, Vercel HTTP, **GitHub webhook 개수, scripts/verify-vercel-deploy.sh**)을 수행한 후 현재 상태를 브리핑해주세요. 본 작업 시작은 제 승인 후에 진행해주세요.
+
+[직전 세션 결과 — 2026-05-11~12 (워크플로우 첫 실측 + prefill fix + Vercel 4일 갭 해소) ✅]
+
+HEAD = b1ab153 = origin/main 일치. working tree clean. stash@{0} 보존.
+
+직전 세션 commit 9건:
+- 4657173 chore: cleanup leftover crawler files + split SESSION_LOG per principle 31
+- bb9ea1b fix(crawl): prefill data lost on /products/new — URLSearchParams ate base64 "+"
+- 61810d5 chore: trigger vercel deploy probe (diagnose webhook integration)
+- a5dfe53 feat(ops): work principle #36 + verify-vercel-deploy.sh — prevent silent webhook breakage
+- 8f98346 fix(vercel): downgrade inventory-sync cron to daily for Hobby plan
+- f22f05f docs(plan): record 2026-05-11~12 session entry + header swap
+- b1ab153 docs(plan): handoff message for next session (Sprint 6-A UI + first real product completion)
+
+직전 세션 핵심 산출물:
+- src/app/products/new/page.tsx (디코더 2곳 + catch 1곳) — URL-safe base64 디코드 + silent failure 방지
+- src/app/crawl/page.tsx (인코더 2곳, batch + single) — URL-safe base64 출력
+- vercel.json — inventory-sync cron 6시간 → daily (Hobby plan 호환)
+- scripts/verify-vercel-deploy.sh (신규 130줄, 실행권한) — push 후 commit SHA 일치 자동 검증
+- 작업원칙 #36 신규 등록 (PROGRESS.md, CLAUDE.md, ROADMAP.md) — Vercel deploy 검증 의무화 5 sub-rule
+- CLAUDE.md STEP 0 보강 — gh api hooks + verify script 자동 실행
+- 잔재 3건 삭제 + .gitignore .claude/worktrees/ 추가
+- SESSION_LOG.md 분할 (1628 → 656 + archive 997, ISO 8601 패턴)
+
+[현재 상태]
+
+▶ Vercel git integration 정상 복구 — Vercel CLI direct deploy 1회로 webhook 자동 재연결됨 (commit f22f05f 자동 build 트리거 확인)
+▶ Production 모든 commit 반영 — kkotium-garden.vercel.app 최신 코드 서빙 중
+▶ prefill 워크플로우 100% 검증 통과 — 꽃수레 → 등록 시작 → 씨앗 심기 자동 채움 (상품명/판매가/공급가/카테고리 코드/공급사 매핑 안내 등 모두 정상)
+▶ 작업원칙 #36 첫 실전 적용 — push 후 list_deployments로 자동 검증 메커니즘 작동
+▶ 본격 상품 등록 워크플로우 첫 실측 시작 (사용자가 도매매 단건 크롤링 + 꽃수레 PENDING 1건 보유)
+▶ Sprint 6-A UI 미진행 (다음 세션 핵심 작업)
+
+[다음 세션 작업 — Sprint 6-A UI + 첫 실제 상품 등록 완료]
+
+⚠️ STEP 0 (필수) — 환경 점검 + 3개 MD 정독 (PROGRESS / ROADMAP / SESSION_LOG)
+- 작업원칙 #36 (c)에 따라 STEP 0 환경 점검에 `gh api repos/kkotium-dot/kkotium-garden/hooks --jq 'length'` 및 `scripts/verify-vercel-deploy.sh` 포함
+- webhook 개수 0이거나 verify script exit 1 발생 시 본 작업 시작 전 사용자 즉시 보고 의무
+
+⚠️ 작업원칙 강제:
+- #17 commit msg는 .commit-msg.tmp + git commit -F
+- #21 사전 점검 (HEAD/status/stash/wc + GitHub webhook 개수 + verify-vercel-deploy.sh)
+- #22 시각 검증 의무 (API 200 ≠ 브라우저 완료)
+- #24 commit + push 한 turn 안에 끝내기
+- #26 (a~e) IA 점검 + dev 캐시 정리 + Chrome MCP js hang 회피
+- #29 (a~e++) 한글 처리 5+1+1 규칙 — 닉네임 절대 규칙 강제
+- #31 MD 1500줄 자동 점검 + idempotent 가드
+- #32 push 전 npm run build 의무
+- #33 useSearchParams Suspense 자동 점검
+- #34 명백한 오류 파일 발견 시 사용자 알림
+- #35 한글 사전 분리 패턴
+- #36 Vercel deploy 검증 의무 (push 후 verify-vercel-deploy.sh --wait, webhook 끊김 자동 감지)
+
+다음 세션 작업 (M+):
+
+1. 사용자가 씨앗 심기 6탭 완성 — 카테고리/이미지/배송/SEO/혜택까지 채워서 DRAFT 또는 ACTIVE 저장 (사용자 액션 우선)
+2. 저장 직후 Product 테이블에 row 생성 + supplier_product_code 채워졌는지 검증 (Supabase MCP)
+3. cron/inventory-sync 수동 트리거 → InventorySnapshot row 생성 검증
+4. 정원 창고 (/products) 재고 뱃지 UI 구현 (최신 InventorySnapshot.qty + level별 색상 + 미신뢰 공급사 별도 배지)
+5. 정원 일지 (/dashboard) LowStockAlertWidget.tsx 신규 (미해결 알림 + 해결 버튼 + 액션 버튼)
+6. 씨앗 심기 minq>1 경고 (DRAFT 상품용, 위탁판매 불가 알림)
+7. TSC + npm run build + 한글 grep + commit + push → 작업원칙 #36 검증 (verify-vercel-deploy.sh --wait)
+8. PROGRESS / ROADMAP / SESSION_LOG 갱신
+
+[Sprint 6 이후 일정 (계획서 원본 순서, 변경 없음)]
+- 세션 3: 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가)
+- 세션 4: 6-E + 6-D 위젯 통합 (카테고리 매핑 + 꼬띠 4모드 정원 일지 발송 통합)
+- Sprint 7: AI Studio 4모듈 (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트)
+- Sprint 8: 매출 상승 + 운영 흐름 안정화 후 Private API 자동발주 활용 (보류 트랙)
+
+[보류 트랙 (사용자 결정 필요)]
+- Vercel Pro plan upgrade ($20/월) — 결정 시 vercel.json `0 0 * * *` → `0 */6 * * *` 한 줄 수정으로 6시간 cron 복귀. 폴링 빈도 24h → 6h로 강화, 재고 변동 감지 4배 빠름. 매출 600만원+ 도달 후 진입 권장.
+- VERCEL_TOKEN 환경변수 등록 — scripts/verify-vercel-deploy.sh 자동 실행 가능. https://vercel.com/account/tokens에서 발급 후 .env.local 또는 shell rc 등록.
+- 기존 네이버 스토어 100개+ 상품 일괄 연동 — 본격 소싱 안정화 후 사용자 요청 시 시작
+- Sprint 8 Private API 자동발주 — 매출 상승 + 운영 흐름에 따라 진입
+
+[참고: 환경/시크릿]
+- Supabase project ID: doxfizicftgtqktmtftf
+- Naver Search Ad CUSTOMER_ID: 3755315
+- 카카오 채널 Public ID: _xkfALG (꽃틔움 KKOTIUM)
+- AI: Groq lrltQb + 3IGN7i 정상 2키
+- 도매매 Open API Key: a6ff…c470bb
+- 도매꾹 Private API: 28개 전체 권한 발급 ✅ (Sprint 8 보류 트랙)
+- Vercel project: prj_H5HamuDSG0Na6j5dwDlYe9A6FfC4
+- Vercel team: team_uwIkDWZsS2gogA04mZIVDuPF
+- Discord 5채널 webhook URL: orders / stock-alerts / daily / weekly / kkotti (Vercel 환경변수)
+
+당신은 10년 차 B2B 이커머스 ERP 및 백오피스 설계 경험이 풍부한 네이버 스마트스토어 파워셀러인 풀스택 시니어 개발자이자 UI/UX 디자이너입니다. 본격 소싱 시작 직후, 워크플로우의 *실제 작동* 검증이 진행 중. 새싹셀러이지만 파워셀러로 성장하기 위한 스텝 작업 중. *절대 단독 판단으로 IA/삭제 결정 금지* — 진단 결과 디테일하게 브리핑 후 사용자 개별 Y/N 승인 받은 항목만 진행. *계획서에 없는 작업을 추가 제안하지 말고 계획서 원본 순서 유지*.
+
+작업 시작 전 필수:
+1. (a) git rev-parse HEAD origin/main → 일치 (b1ab153 또는 본 세션 commit)
+   (b) git status → working tree clean
+   (c) git stash list → stash@{0} 보존
+   (d) wc -l docs/plan/*.md docs/research/*.md → 1500줄 임계 점검
+   (e) curl -sIo /dev/null -w "%{http_code}" https://kkotium-garden.vercel.app/dashboard → HTTP 200
+   (f) gh api repos/kkotium-dot/kkotium-garden/hooks --jq 'length' → 0이 아닌 값 (webhook 정상)
+   (g) scripts/verify-vercel-deploy.sh 또는 list_deployments MCP → 최신 production deployment SHA == HEAD
+   (h) 3개 MD 정독 (PROGRESS / ROADMAP / SESSION_LOG)
+2. Sprint 6-A UI 디테일 계획서 한 번 더 브리핑 + 사용자 개별 Y/N 승인
+3. 작업 시작 → 검증 (TSC + build + 브라우저 시각 + verify-vercel-deploy.sh) → commit + push → MD 갱신 (한 turn 안에)
+```
+
+---
+
 
 ## ~~다음 새 채팅 시작 메시지 — 2026-05-08 (Sprint 6-A 백엔드 완료, 다음 = UI + 첫 실제 상품 등록 검증)~~ (deprecated, 2026-05-12 세션에서 prefill fix + Vercel 4일 갭 해소 완료)
 
