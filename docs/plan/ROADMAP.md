@@ -13,7 +13,7 @@
 
 ---
 
-## 다음 새 채팅 시작 메시지 — 2026-05-08 (Sprint 6-A 백엔드 완료, 다음 = UI + 첫 실제 상품 등록 검증) ✅
+## ~~다음 새 채팅 시작 메시지 — 2026-05-08 (Sprint 6-A 백엔드 완료, 다음 = UI + 첫 실제 상품 등록 검증)~~ (deprecated, 2026-05-12 세션에서 prefill fix + Vercel 4일 갭 해소 완료)
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md, docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md를 모두 읽고 현재 상태를 파악한 후 브리핑해주세요.
