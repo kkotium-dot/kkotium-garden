@@ -1,3 +1,149 @@
+## 2026-05-12 Session D (Sprint 6-A UI Phase 3 — 4가지 잔여 작업 모두 완료) ✅
+
+### 본 세션 성격
+- Session C-1 (ROADMAP T1 분할) 직후 같은 워크트리에서 Session D 진입. 사용자 명시: 각 작업 완료마다 브라우저 시각 검증 후 다음 작업으로 이동.
+- 작업 ① + ② + ③ + ④ 한 turn 안에 모두 완료 + dev 브라우저 시각 검증 + 오타 1건 발견·수정 + commit + push + Vercel verify.
+- 본 세션 결정 위임 3건 모두 권장안(A) 채택: ② 도매꾹만 + OWC stub 유지 / ④ 모달 default = 앱 only / ③ 폴링 버튼 위치 = LowStockAlertWidget 헤더.
+
+### 시작 직전 상태
+- HEAD `c1ff6b8` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} 보존 ✅
+- MD 줄 수: PROGRESS 842 / ROADMAP 409 / SESSION_LOG 1190 (T1 1000 초과 / T2 1500 미달)
+- Latest prod deploy SHA == HEAD ✅
+
+### 본 세션 작업
+
+#### Task ② — 도매꾹 minq 백엔드 보강 (4파일)
+- `source-adapter.ts`: `ItemDetail.minQuantity` 필드 신규 (1 = no MOQ, >=2 = consignment risk).
+- `domemae-adapter.ts`:
+  - `parseMinq(val)` 헬퍼 export — number / numeric string / NaN 모두 안전.
+  - `getItemView` 응답의 `basis.minq` 파싱 → `ItemDetail.minQuantity` 채움.
+  - `getMinQuantity(productNo)` stub 제거 → `getItemDetail` 호출해 minQuantity 반환 (실 구현).
+- `crawler/domemae/route.ts`: response data에 `minQuantity` 포함.
+- `crawl/page.tsx`:
+  - `SingleResult.minQuantity?` + `BulkRow.minQuantity?` 타입 확장.
+  - 단건 prefill payload + 일괄 prefill payload 둘 다 `crawlMinQuantity` 포함.
+- `ownerclan-adapter.ts`: 변경 없음 (stub 유지 — 사용자 결정 위임 Q1 권장안).
+
+#### Task ① — 씨앗 심기 minq 경고 배너 (1파일)
+- `products/new/page.tsx`:
+  - `crawlMinQuantity` useState 추가 (default = 1).
+  - prefill effect에서 `data.crawlMinQuantity` 읽기 (1 미만 가드).
+  - `MINQ_BANNER_STRINGS` const — 작업원칙 #35 한글 사전 분리 (yellow / red 두 케이스).
+  - `MinQuantityWarningBanner` 컴포넌트 — minq>=5 빨간 stripe / minq>=2 노란 stripe.
+  - prefill 안내 배너 *바로 아래* 마운트 (셀러 시선 흐름 보존).
+- 시니어 정책 (사용자 결정 위임 X — 본 세션 명시 결정): 등록 버튼 disable *제거*, 경고만. 셀러 자율성 보호.
+
+#### Task ③ — admin 수동 폴링 트리거 (2파일)
+- 신규: `src/app/api/admin/poll-inventory-now/route.ts`
+  - 인증 3-layer: Bearer CRON_SECRET / localhost host / same-origin (Origin or Referer가 `NEXT_PUBLIC_APP_URL` 또는 request host 매칭).
+  - Rate limit: module-scoped `lastPollStartedAt` + `MIN_INTERVAL_MS = 3 * 60 * 1000`. 위반 시 429 + `Retry-After` 헤더.
+  - 성공 시 `pollAppRegisteredInventory()` 결과 + `runAt` ISO 시각 반환.
+- `LowStockAlertWidget.tsx`:
+  - 헤더에 "지금 폴링" 버튼 (`RefreshCw` 아이콘) + busy state + Loader2 회전.
+  - 토스트 4종: `success` / `error` / `info` (rate-limited) / `info` (no products). `outOfStockNaverSuccess` / `outOfStockNaverFail`도 추가.
+  - `ToastBanner` 컴포넌트 + `TOAST_DURATION_MS = 5000` 자동 닫힘.
+
+#### Task ④ — mark-oos Naver Commerce 옵션 (3파일)
+- `api-client.ts`: `setProductOutOfStock(productNo)` — `updateStock(no, 0)` 호출. Naver는 stockQuantity=0 시 자동으로 statusType=OUTOFSTOCK 전환 (statusType 직접 set은 readonly).
+- `mark-oos/route.ts` 전체 재작성:
+  - `?alsoNaver=1` (또는 body `{alsoNaver: true}`) 읽기, default false (안전).
+  - `alsoNaver=true` AND `product.naverProductId` 존재 시: `setProductOutOfStock` 호출. DB transaction은 *항상* commit (Naver는 best-effort).
+  - response: `{ data, naverFlipped, naverError? }`.
+  - resolution note 3종: app only / app + naver / app + naver-failed.
+- `LowStockAlertWidget.tsx`:
+  - `OosConfirmModal` 컴포넌트 — 2-option (앱만 default autofocus / 앱+네이버 옵트인) + Esc/backdrop cancel.
+  - AlertRow의 oos 액션을 modal trigger로 교체 (직접 호출 안 함).
+  - "위탁판매 상품에서만 권장" 안내 문구 + 셀러 직접 처리 가이드.
+
+#### 사전 분리 갱신
+- `LowStockAlertWidget.strings.ko.json`:
+  - `header.pollNow` / `pollNowHint` / `polling` 추가.
+  - `oosModal` 섹션 신규 (7키).
+  - `toast.pollSuccess` / `pollNoProducts` / `pollRateLimited` / `pollFail` / `outOfStockNaverSuccess` / `outOfStockNaverFail` 신규.
+  - `action.markOutOfStockHint` 갱신 — 새 모달 의미 반영.
+
+### 검증
+
+- TSC `npx tsc --noEmit` 0 errors ✅
+- Production build `npm run build` 26/26 prerender ✅ (새 admin route 등록 확인)
+- dev smoke (PORT 3000):
+  - `/dashboard` HTTP 200 + 위젯 mount + "지금 폴링" 버튼 시각 확인 ✅
+  - `/products/new` HTTP 200 ✅
+  - `/api/alerts/low-stock` HTTP 200 ✅
+  - `POST /api/admin/poll-inventory-now` (Origin header 있음) → 200 + `totalProducts:0` empty path ✅
+  - `POST /api/admin/poll-inventory-now` (재호출) → 429 rate-limited ✅
+- 브라우저 시각 검증 (Claude Preview MCP):
+  - 폴링 버튼 클릭 → info 토스트 "폴링 대상 상품이 없습니다 — 첫 상품을 등록해주세요" 등장 (background #eff6ff blue-50) ✅
+  - `/products/new?prefill=<base64 with crawlMinQuantity:5>` → 빨간 배너 (background #fef2f2 red-50, stripe #dc2626 red-600 4px) ✅
+  - `/products/new?prefill=<base64 with crawlMinQuantity:3>` → 노란 배너 (background #fefce8 yellow-50, stripe #eab308 yellow-500 4px) ✅
+  - `/products/new?prefill=<base64 with crawlMinQuantity:1>` → 배너 비출현 ✅
+- 한글 sentinel grep 0 신규 매칭 (10개 파일) ✅
+
+### 본 세션 학습 (영구 기록)
+
+1. **브라우저 시각 검증 단계가 오타 1건 잡음** — 빨간 배너 문구 "즐시 재고 소진" → "즉시" 오타 + "개을 직접 발주" → "개를" 오타. TSC + build + grep sentinel 모두 통과했으나 *시각 검증 단계에서 발견*. 작업원칙 #22 "API 200 ≠ 실작동 완료"의 가치 재확인. Claude Preview `preview_eval`로 `textContent` 읽기 → 한글 가독성 직접 검증 가능.
+2. **작업원칙 #29 (e) sentinel 한계** — 사용자 닉네임 변종 위주이고 "즐시"/"개을"은 sentinel에 없음. 자모 결합 오타는 모델 자기 검증 어려움 → *사용자 노출 한글은 반드시 브라우저 시각 검증*. (sentinel 패턴 확장은 사용자 결정 필요 — 보류 트랙).
+3. **워크트리에서의 commit + ff-merge 패턴** — 본 세션은 worktree (`sharp-sanderson-0b0edd`) 환경. 패턴:
+   1. worktree에서 코드 변경 + commit on worktree branch.
+   2. main repo로 cd → `git merge claude/<worktree> --ff-only`.
+   3. main repo에서 `git push origin main`.
+   4. `scripts/verify-vercel-deploy.sh --wait`.
+   5. (선택) worktree 브랜치 정리.
+4. **`.claude/launch.json` 파일은 worktree-only 환경 보조** — Claude Preview용. `.gitignore`의 `.claude/worktrees/`만 ignore, `.claude/launch.json`은 추적 가능하지만 본 세션은 worktree 한정 보조 파일로 두고 commit 제외. 추후 다른 worktree에서도 만들어질 것 — 일관성을 위해 `.gitignore`에 `.claude/launch.json` 추가는 보류 트랙.
+
+### 검증 한계 (사용자 보고 의무 — 정직)
+
+- **작업 ② minq 파싱은 실 도매꾹 API 호출 없이 검증 불가** — 코드 path까지만 검증. 사용자가 첫 실 상품 등록 시 (도매꾹 minq>=2 상품으로) 검증 가능. 본 한계 PROGRESS.md "다음 작업"에 명시.
+- **작업 ④ mark-oos 모달 trigger 시각 검증 불가** — alerts 0건이라 모달이 등장할 alert row가 없음. `npm run build` 26/26 prerender + 컴포넌트 import path는 통과. 실 alert 발생 시 검증.
+- **Vercel production 시각 검증** — `verify-vercel-deploy.sh --wait`은 deployment 등록(state=REGISTERED)까지만 확인. build state READY 자동 확인은 VERCEL_TOKEN 발급 후 가능. 사용자가 https://kkotium-garden.vercel.app/dashboard 직접 진입해 *지금 폴링 버튼 가시성 + 헤더 레이아웃* 시각 확인 권장.
+
+### Commit + Push
+
+- `218b167` feat(6-A): Phase 3 — minq banner + manual poll + Naver OOS opt-in (+628 / -38, 10 files, 1 신규 route)
+- worktree → main: `git merge claude/sharp-sanderson-0b0edd --ff-only` (ff)
+- push `c1ff6b8..218b167 main -> main`
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production is on 218b167 (state=REGISTERED) ✅
+
+### 적용된 작업원칙
+
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 통과 ✅
+- **#22** 브라우저 시각 검증 의무 (Claude Preview MCP textContent + style inspect) — 오타 1건 catch ✅
+- **#24** 한 turn 안에 4가지 작업 + 검증 + commit + push + MD 갱신
+- **#26** IA 점검 — `/products/new` prefill banner *바로 아래* 슬롯 위치 (셀러 시선 흐름 보존)
+- **#27** 외부 컨트랙트 보존 — `ItemDetail`에 `minQuantity` *추가만*, 기존 필드 변경 0. `mark-oos` 응답에 `naverFlipped`/`naverError` *추가만*, 기존 `data` 필드 변경 0.
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 6+1 규칙:
+  - (a) Edit 한글 다량 newText 0건
+  - (b) MD 갱신 = Python 안전 삽입 패턴 (본 entry 포함)
+  - (c) API route 한글 const 분리
+  - (d) 셸 명령 한글 0건
+  - (e) sentinel grep 0 신규 매칭
+  - (e+, e++) 닉네임 호명 0건
+- **#31 (a)** ROADMAP 345 / PROGRESS 842 / SESSION_LOG 1190 → 본 entry 추가 후 SESSION_LOG ~1310. T2 미달, 권고만.
+- **#32** TSC + npm run build 모두 통과 ✅
+- **#33** useSearchParams 추가 0건
+- **#34** 본 세션 신규 발견 잔재 0건
+- **#35** 한글 사전 분리 패턴 — `MINQ_BANNER_STRINGS` const + `LowStockAlertWidget.strings.ko.json` 확장 ✅
+- **#36** push 후 `verify-vercel-deploy.sh --wait` exit 0 (github-deployments path) ✅
+
+### 본 세션 commit
+
+1. `218b167` feat(6-A): Phase 3 — minq banner + manual poll + Naver OOS opt-in
+2. (본 entry) docs(plan): record Session D + Session E handoff
+
+### 다음 세션 (Session E) 작업 = Sprint 6-B + 6-C
+
+본 세션 종료 시 6-A 코드 완료 (실 데이터 검증은 사용자 첫 상품 등록 후 자동). Session E는 *원본 계획서 순서* 따라 6-B + 6-C 진입:
+
+1. **6-B 가격 변동 추적** — 도매꾹 supplierPrice 폴링 + 변동 감지 + 알림 (구조는 6-A 폴러와 유사 — DiffSnapshot + alert).
+2. **6-C 다른 셀러 추적** — 같은 productNo의 경쟁 셀러 가격/재고 추적. 도매꾹 search API 통합 필요.
+3. **공급사 누적 평가** — `SupplierStockProfile`을 기반으로 *공급사 단위* trust score 누적 → 새 상품 등록 시 가이드.
+
+---
+
 ## 2026-05-12 Session C-1 (작업원칙 #31 (b) ROADMAP T1 분할 — Session C 5개 작업 중 1개 완료) ✅
 
 ### 본 세션 성격
