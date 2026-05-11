@@ -793,6 +793,7 @@ export const dynamic = 'force-dynamic';
 - `PROGRESS_2026Q2_MAY.md` — 5월 누적 PROGRESS 헤더 이력 (작업원칙 #31 분할, 동결)
 - `ROADMAP_2026Q2_MAY.md` — deprecated 인계 메시지 9개 + Phase A/B/C 완료 이력 (동결)
 - `SESSION_LOG_2026Q2_MAY.md` — 2026-05-01 ~ 2026-05-06 세션 24+ 건 (동결)
+- `SESSION_LOG_2026-05.md` — 2026-05-06 ~ 2026-05-08 세션 9건 (두 번째 분할 2026-05-11, 동결)
 
 ### 프로젝트 파일 (외부 리서치)
 - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`

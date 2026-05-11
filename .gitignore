@@ -57,3 +57,6 @@ tsconfig.tsbuildinfo
 
 .commit-msg.tmp
 .tmp_*.py
+
+# Claude Code worktrees (added 2026-05-11 — keep CLAUDE.md tracked, ignore worktree dirs only)
+.claude/worktrees/
