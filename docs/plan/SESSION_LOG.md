@@ -1,3 +1,127 @@
+## 2026-05-12 Session B (Sprint 6-A UI Phase 2 — LowStockAlertWidget + 4 alert API routes) ✅
+
+### 본 세션 성격
+- Session A 완료 (재고 뱃지 + #36 (e) 정정) 직후 같은 사용자가 명시한 우선순위 위임에 따라 *세션 마무리 직후 바로 이어서* Session B 진행.
+- 사용자 추가 피드백 1건 본 세션 초입에 반영: *세션 마지막 인계 메시지는 짧게 (MD에는 풀 디테일 보존)*. ROADMAP.md `<!-- session-b-handoff-short v1 -->` 마커로 단축 적용 + 메모리에 영구 등록 후 본 세션 작업 진입.
+
+### 시작 직전 상태
+- HEAD `9209048` = origin/main 일치 ✅ (Session A의 단축 메시지 patch가 직전 commit)
+- working tree clean ✅
+- stash@{0} 보존 ✅
+- MD 줄 수: PROGRESS 842 / ROADMAP 1281 (단축으로 1297 → 1281, T1 여전히 초과) / SESSION_LOG 978
+- production HTTP 200 ✅
+- Latest prod deploy SHA == HEAD 일치 ✅
+
+### 본 세션 작업
+
+#### 새 API routes (4건 — 모두 force-dynamic, no N+1)
+
+1. `GET /api/alerts/low-stock` (127 lines)
+   - 미해결 알림 list, 레벨 priority sort (red > orange > yellow), latest 50
+   - product/supplier/trust/latest snapshot qty join — 1 round-trip
+2. `PATCH /api/alerts/[id]/resolve` (57 lines)
+   - `resolutionNote` (200자 truncate) + `resolvedAt = now()`
+   - Idempotent: 이미 resolved면 no-op + 기존 row 반환
+3. `POST /api/alerts/[id]/relist-reminder` (78 lines)
+   - Discord STOCK_ALERT 채널 nudge embed 발송
+   - 자동 resolve + resolutionNote = "재등록 요청 — 공급사 알림 발송"
+   - 한글 string constants는 별도 const로 분리 (작업원칙 #29 c)
+4. `POST /api/alerts/[id]/mark-oos` (59 lines)
+   - prisma transaction: Product.status = 'OUT_OF_STOCK' + LowStockAlert resolve
+   - Naver Commerce API status flip은 *Session C로 의도적 이연* (셀러 직접 확인 단계 보존)
+
+#### 새 컴포넌트 + hook + 사전
+
+5. `src/lib/hooks/useLowStockAlerts.ts` (39 lines)
+   - `DASHBOARD_SWR_DEFAULTS` 재사용 (60s poll + focus revalidation)
+6. `src/components/dashboard/LowStockAlertWidget.strings.ko.json` (54 lines)
+   - 작업원칙 #35 한글 사전 분리 패턴 적용
+   - 7 sections: header / level / qty / action / untrustworthy / supplier / time / toast — 30+ strings
+7. `src/components/dashboard/LowStockAlertWidget.tsx` (437 lines)
+   - level stripe row (red/orange/yellow border-left 4px)
+   - 3 inline actions: 재등록 알림 (Bell) / 가격 조정 (`/naver-seo?product={id}` link) / 품절 처리 (CircleX)
+   - inline resolve note input + Enter/Escape 단축키
+   - busyAction state로 동시 액션 차단
+   - **미신뢰 공급사 별도 그룹** — `isTrustworthy=false` row는 informational only (action 비활성). 노이즈 알림으로부터 셀러 보호.
+   - 빈 상태: CheckCircle2 + 친절한 안내 (happy path)
+
+#### 통합
+
+8. `src/app/dashboard/page.tsx`
+   - import 1줄 추가 (`LowStockAlertWidget`)
+   - SECTION 2 (오늘의 액션) 최상단에 마운트 — DailyPlanWidget 위. 시니어 결정: 재고 부족은 *오늘의 액션 중 최우선* 가시성 필요.
+
+### 검증
+
+- TSC `npx tsc --noEmit` 0 errors ✅
+- Production build `npm run build` 26/26 prerender ✅
+  - 4 alert routes 모두 동적 함수로 등록 (`mark-oos`, `relist-reminder`, `resolve`, `low-stock`) ✅
+- 브라우저 smoke (dev server PORT 3000):
+  - `GET /api/alerts/low-stock` HTTP 200 + `{"data":[]}` ✅ (alerts 0건 empty path)
+  - `/dashboard` HTTP 200 + hydration OK (846 modules) ✅
+  - dev log 에러/경고 0건 ✅
+- 한글 sentinel grep 0 신규 매칭 ✅
+- NFC + FFFD audit 8개 파일 모두 0/0 ✅
+
+### 검증 한계 (사용자 보고 의무 — 정직)
+
+- **alerts 0건 + 상품 0개 상태라 *empty path만 검증* 가능** — 레벨별 색상 stripe, 3개 액션 버튼 실행, 미신뢰 공급사 그룹, 해결 메모 입력 등 *실 데이터 path는 사용자 첫 상품 등록 + cron 1회 폴링 + qty가 임계 미달이 되어야* 검증 가능. 본 세션 검증은 *코드 정확성 + empty UI* 까지.
+- **Vercel production 시각 검증 미진행** — `verify-vercel-deploy.sh --wait`은 deployment 등록(state=REGISTERED)만 확인. build state READY 자동 확인은 VERCEL_TOKEN 발급 후 가능. 사용자가 https://kkotium-garden.vercel.app/dashboard 직접 진입해 빈 상태 정상 표시 확인 권장.
+- **Naver Commerce API status flip 미연결** — `mark-oos`는 DB만 변경. Naver 스토어에는 *현재 반영 안 됨*. Session C에서 admin 확인 단계로 별도 연결 예정.
+
+### Commit + Push
+
+- commit `9fabfca` (8 files, +855 lines) feat(6-A): LowStockAlertWidget — Session B
+- push `9209048..9fabfca main -> main`
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production is on 9fabfca (state=REGISTERED)
+
+### 적용된 작업원칙
+
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 통과 ✅
+- **#22** dev smoke 검증 (API 200 + page 200 + dev log 0 errors) ✅
+- **#24** 한 turn 안에 commit + push + verify + MD 갱신 모두 완료
+- **#26** IA 점검 — dashboard SECTION 2 (오늘의 액션) 슬롯 위치 사용자 동선 일관성 확보
+- **#27** 외부 컨트랙트 보존 — 기존 `Product` 모델에 status update만 추가, 다른 코드 영향 0
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 6+1 규칙:
+  - (a) Edit 한글 다량 newText 0건
+  - (b) MD 갱신 = Python 안전 삽입 패턴 (본 entry 포함)
+  - (c) API route 한글 const 분리 (자모 결합 오류 회피)
+  - (d) 셸 명령 한글 0건
+  - (e) sentinel grep 0 신규 매칭
+  - (e+, e++) 닉네임 호명 0건
+- **#31 (a)** ROADMAP T1 (1000) 초과 — T2 (1500) 미달이라 본 세션 분할 의무 아님. Session C로 이연 (작업원칙 #31 (a) 권고 임계).
+- **#32** TSC + npm run build 모두 통과 ✅
+- **#33** useSearchParams 추가 0건
+- **#34** 본 세션 신규 발견 잔재 0건
+- **#35** 한글 사전 분리 패턴 (LowStockAlertWidget.strings.ko.json) ✅
+- **#36** push 후 `verify-vercel-deploy.sh --wait` exit 0 (github-deployments path) ✅
+
+### 본 세션 학습 (영구 기록)
+
+1. **인계 메시지의 *짧음 vs 풀 디테일* 분리** — 사용자 피드백으로 학습. ROADMAP.md "다음 새 채팅 시작 메시지" 영역의 코드블록은 *복사-붙여넣기용 최소 명세*만 (STEP 0 + 본 세션 핵심 + 페르소나). 풀 디테일은 SESSION_LOG entry + PROGRESS 헤더 + ROADMAP의 *별도 sibling 섹션*. 메모리 영구 등록.
+2. **dashboard SECTION 2 슬롯 위치 결정의 가치** — 위젯을 *기존 위젯 위 또는 아래* 결정 시 *오늘의 액션 우선순위*가 기준이 되어야 함. 재고 부족 알림은 다른 todo보다 시급 → SECTION 2 최상단. 평범한 결정 같지만 *셀러 1초 스캔 동선*에 직접 영향.
+3. **prisma transaction의 가치** — `mark-oos`에서 Product update + LowStockAlert resolve를 transaction으로 묶어 race condition 차단. 단일 API 호출이라도 multi-table mutation은 transaction 우선.
+4. **Naver API 연결의 *의도적 이연*** — `mark-oos`가 DB만 건드리는 것은 *셀러 직접 확인 단계 보존*을 위한 의도된 디자인. 새싹 셀러가 익숙해지기 전 자동 Naver API 호출은 위험 (실수 시 복구 비용 큼). Session C admin confirm 단계 통해서만 Naver 호출 허용.
+
+### 본 세션 commit
+
+1. `9fabfca` feat(6-A): LowStockAlertWidget — Session B (Sprint 6-A UI Phase 2)
+2. (본 entry) docs(plan): record Session B 2026-05-12 + Session C handoff
+
+### 다음 세션 (Session C) 작업 = Sprint 6-A UI Phase 3
+
+1. 씨앗 심기 (`/products/new`) `minq>1` 경고 배너 (위탁판매 사고 방지)
+2. `getItemDetail(productNo)` 백엔드 보강 — minq를 InventorySnapshot에 정확히 기록
+3. admin 수동 폴링 트리거 path (`POST /api/admin/poll-inventory-now`) + dashboard 토스트
+4. `mark-oos` Naver Commerce API 연결 — admin confirm 모달 + status flip 호출
+5. ROADMAP.md T1 (1281줄) 분할 — archive/ROADMAP_2026Q2_MAY.md로 deprecated 인계 이전
+6. 검증 + commit + push + verify
+7. MD 갱신 + Session D 인계
+
+---
+
 ## 2026-05-12 Session A (Sprint 6-A UI Phase 1 — 재고 뱃지 + 작업원칙 #36 (e) 정정) ✅
 
 ### 본 세션 성격

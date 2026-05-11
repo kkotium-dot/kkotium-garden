@@ -1,12 +1,12 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
 
-> **최종 업데이트**: 2026-05-12 Session A (Sprint 6-A UI Phase 1 — 재고 뱃지 + 작업원칙 #36 (e) 정정 + Vercel deploy 검증 첫 실전 적용 ✅)
-> **TSC**: 0 errors | **빌드**: 26/26 prerender | **배포**: https://kkotium-garden.vercel.app (1a4eb9b REGISTERED via GitHub Deployments API path)
-> **HEAD**: 1a4eb9b = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **최종 업데이트**: 2026-05-12 Session B (Sprint 6-A UI Phase 2 — LowStockAlertWidget + 4 alert API routes ✅)
+> **TSC**: 0 errors | **빌드**: 26/26 prerender | **배포**: https://kkotium-garden.vercel.app (9fabfca REGISTERED via GitHub Deployments API path)
+> **HEAD**: 9fabfca = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
-> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 (4모드 foundation) ✅ | 6-A 백엔드 (Option C 하이브리드) ✅ | **6-A UI Phase 1 (재고 뱃지 inline) ✅**
+> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 (4모드 foundation) ✅ | 6-A 백엔드 (Option C 하이브리드) ✅ | 6-A UI Phase 1 (재고 뱃지 inline) ✅ | **6-A UI Phase 2 (LowStockAlertWidget + 4 alert API routes) ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업 (계획서 원본 순서)**: 6-A UI Phase 1 완료 → **Session B = 6-A UI Phase 2 (LowStockAlertWidget + 정원 일지 슬롯)** → **Session C = 6-A UI Phase 3 (씨앗 심기 minq>1 경고 + getItemDetail 백엔드 보강 + admin 수동 폴링 트리거)** → 사용자 첫 실 상품 등록 후 cron/inventory-sync 실측 검증 → 세션 D = 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가) → 세션 E = 6-E + 6-D 위젯 통합 (카테고리 매핑 + 꼬띠 4모드 정원 일지 발송) → Sprint 7 = AI Studio 4모듈 → Sprint 8 = 매출 상승 후 Private 자동발주 활용 (보류)
+> **다음 작업 (계획서 원본 순서)**: 6-A UI Phase 1·2 완료 → **Session C = 6-A UI Phase 3 (씨앗 심기 minq>1 경고 + getItemDetail 백엔드 보강 + admin 수동 폴링 트리거 + Naver Commerce API mark-oos 연결 + ROADMAP T1 분할)** → 사용자 첫 실 상품 등록 후 cron/inventory-sync 실측 검증 → 세션 D = 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가) → 세션 E = 6-E + 6-D 위젯 통합 (카테고리 매핑 + 꼬띠 4모드 정원 일지 발송) → Sprint 7 = AI Studio 4모듈 → Sprint 8 = 매출 상승 후 Private 자동발주 활용 (보류)
 > **참고 문서**: `docs/research/OVERSEAS_SOURCING_BASELINE_2026_05.md`, `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md`, `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`, `docs/plan/archive/PROGRESS_2026Q2_MAY.md`
 
 ---
