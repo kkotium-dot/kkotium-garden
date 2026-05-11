@@ -1,0 +1,29 @@
+{
+  "label": {
+    "qtyPrefix": "재고",
+    "qtyUnit": "개",
+    "unknownStatus": "상태 미확인",
+    "unknownPoll": "폴링 대기"
+  },
+  "level": {
+    "yellow": "주의",
+    "orange": "경고",
+    "red": "긴급"
+  },
+  "untrustworthy": {
+    "label": "재고 미신뢰",
+    "tooltip": "공급사가 재고를 7일 이상 그대로 두고 있어요. 직접 확인 권장."
+  },
+  "tooltip": {
+    "polledAtPrefix": "마지막 확인",
+    "minutesAgoSuffix": "분 전",
+    "hoursAgoSuffix": "시간 전",
+    "daysAgoSuffix": "일 전",
+    "justNow": "방금"
+  },
+  "statusBadge": {
+    "soldOut": "품절",
+    "stopped": "판매 중지",
+    "hidden": "비공개"
+  }
+}

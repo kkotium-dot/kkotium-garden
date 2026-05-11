@@ -16,8 +16,10 @@ import {
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
 import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
+import InventoryBadge from '@/components/products/InventoryBadge';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
 import { useProductsList } from '@/lib/hooks/useDashboardData';
+import { useInventoryBadges } from '@/lib/hooks/useInventoryBadges';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -771,6 +773,9 @@ function ProductsPageInner() {
     refresh: fetchProducts,
     setRawProducts,
   } = useProductsList<Product[]>({ limit: 500 });
+  // Sprint 6-A UI — latest inventory snapshot + open alert per product, keyed by productId.
+  // Empty object {} when no products have been polled yet (cold start safe).
+  const { byProductId: inventoryByProductId } = useInventoryBadges();
   // Stable empty-array fallback so downstream useMemo dependencies do not
   // re-fire on every render while the SWR fetch is in flight.
   const raw = useMemo<Product[]>(() => rawProducts ?? [], [rawProducts]);
@@ -974,7 +979,10 @@ function ProductsPageInner() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-900 truncate leading-snug">{p.name}</p>
-            <p className="text-xs font-mono truncate mt-0.5" style={{ color: '#B0A0A8' }}>{p.sku}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+              <p className="text-xs font-mono truncate" style={{ color: '#B0A0A8', minWidth: 0 }}>{p.sku}</p>
+              {inventoryByProductId[p.id] && <InventoryBadge inv={inventoryByProductId[p.id]} />}
+            </div>
             {naverMismatches[p.id] && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#e62310', background: '#fff1f1', border: '1px solid #fca5a5', borderRadius: 6, padding: '1px 6px', marginTop: 2 }}>
                 <AlertTriangle size={9} /> {naverMismatches[p.id]}

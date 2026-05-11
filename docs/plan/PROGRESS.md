@@ -297,7 +297,7 @@ grep -cE "\\u[0-9A-Fa-f]{4}" src/lib/notifications/discord-builder.ts
 
 (d) **MD 기록 표기 강화** — PROGRESS.md / ROADMAP.md / SESSION_LOG.md에 "배포 READY"라고 적기 전 *반드시 (a) 검증 통과한 commit SHA*만 기록. 검증 안 된 상태에서는 "push만 완료, deploy 미확인"으로 정직하게 표기.
 
-(e) **webhook 끊김 자동 감지** — push 후 180초 내 새 deployment 미발생 시 `gh api repos/<owner>/<repo>/hooks` 자동 호출. 빈 배열이면 *git integration 끊김 확정*. 사용자에게 Vercel 대시보드 → Settings → Git → Connect Git Repository 단계 안내.
+(e) **git integration 끊김 자동 감지 (2026-05-12 본 세션 정정)** — push 후 180초 내 새 deployment 미발생 시 git integration 끊김 의심. 진단은 `gh api 'repos/<owner>/<repo>/deployments?environment=Production&per_page=1'`로 *최신 production deployment SHA == HEAD SHA* 확인이 우선 신호. `gh api .../hooks` 의 빈 배열은 **GitHub App 통합 시 정상 상태**이므로 검증 신호로 사용하지 않음 (false positive 원인). 끊김 확정 신호는 *commit SHA 불일치 또는 Vercel 대시보드 Settings → Git 비어있음*. 확정 시 사용자에게 Vercel 대시보드 → Settings → Git → Connect Git Repository 안내. 본 정정 트리거: 2026-05-12 STEP 0 점검에서 webhook 0건 알람이 false positive로 판명 (Vercel은 GitHub App으로 통합되어 있어 legacy webhook 미사용).
 
 **적용 예시 (본 세션 사고 흐름)**:
 ```

@@ -19,7 +19,7 @@ cd /Users/jyekkot/Desktop/kkotium-garden && \
   git --no-pager log --oneline -5 && \
   wc -l docs/plan/*.md && \
   curl -sIo /dev/null -w "Vercel HTTP: %{http_code}\n" https://kkotium-garden.vercel.app/dashboard && \
-  echo "GitHub webhooks: $(gh api repos/kkotium-dot/kkotium-garden/hooks --jq 'length' 2>/dev/null || echo '?')" && \
+  echo "Latest prod deploy SHA: $(gh api 'repos/kkotium-dot/kkotium-garden/deployments?environment=Production&per_page=1' --jq '.[0].sha[0:7] // "NONE"' 2>/dev/null || echo '?')" && \
   scripts/verify-vercel-deploy.sh 2>&1 || true
 ```
 
@@ -28,8 +28,8 @@ cd /Users/jyekkot/Desktop/kkotium-garden && \
 - working tree clean (변경 있으면 보고)
 - `docs/plan/SESSION_LOG.md`가 1500줄 초과 시 → 작업원칙 #31 분할 자동 진행
 - Vercel HTTP 200 (5xx면 사용자에게 보고)
-- **GitHub webhooks length > 0** (0이면 Vercel git integration 끊김 → 작업원칙 #36 발동, 사용자 즉시 보고)
-- **verify-vercel-deploy.sh exit 0** (mismatch면 production이 옛 commit → 작업원칙 #36 발동). 본 검증에는 `VERCEL_TOKEN` 환경변수 필요. 미설정이면 사용자에게 token 발급 요청 (https://vercel.com/account/tokens)
+- **Latest prod deploy SHA == HEAD** (불일치 시 git integration 끊김 의심 → 작업원칙 #36 발동, 사용자 즉시 보고). Vercel은 GitHub App 통합 방식이므로 `gh api .../hooks` length는 0이 정상일 수 있음 — webhook 개수는 더 이상 검증 신호로 사용하지 않음 (2026-05-12 #36 (e) 정정).
+- **verify-vercel-deploy.sh exit 0** (mismatch면 production이 옛 commit → 작업원칙 #36 발동). `VERCEL_TOKEN` 미설정 시 자동으로 `gh` CLI 기반 GitHub Deployments path로 fallback (token 발급 권장이지만 의무 아님).
 
 ### STEP 1 — 핵심 MD 4개 정독
 
