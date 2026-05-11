@@ -14,109 +14,93 @@
 ---
 ## 다음 새 채팅 시작 메시지 — 2026-05-12 Session B (Sprint 6-A UI Phase 2 — LowStockAlertWidget)
 
+<!-- session-b-handoff-short v1 -->
+
 ```
-꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, docs/plan/ROADMAP.md, docs/plan/SESSION_LOG.md를 모두 읽고 STEP 0 환경 점검(git status, wc -l, Vercel HTTP, **Latest prod deploy SHA == HEAD via gh api deployments**, scripts/verify-vercel-deploy.sh)을 수행한 후 현재 상태를 브리핑해주세요. 본 작업 시작은 제 승인 후에 진행해주세요.
+꽃틔움 가든 — Session B 시작.
 
-[직전 세션 결과 — 2026-05-12 Session A (Sprint 6-A UI Phase 1 + 작업원칙 #36 (e) 정정) ✅]
+docs/plan/PROGRESS.md → ROADMAP.md → SESSION_LOG.md 정독하고, 아래 STEP 0 환경 점검 후 현재 상태 + Session B 디테일 계획을 브리핑해주세요. 본 작업 시작은 제 Y/N 승인 후 진행.
 
-HEAD = 1a4eb9b = origin/main 일치. working tree clean. stash@{0} 보존.
+[STEP 0 환경 점검]
+git rev-parse HEAD origin/main && \
+  git status --short && \
+  git stash list && \
+  wc -l docs/plan/*.md && \
+  curl -sIo /dev/null -w "Vercel HTTP: %{http_code}\n" https://kkotium-garden.vercel.app/dashboard && \
+  echo "Latest prod deploy SHA: $(gh api 'repos/kkotium-dot/kkotium-garden/deployments?environment=Production&per_page=1' --jq '.[0].sha[0:7]')" && \
+  scripts/verify-vercel-deploy.sh
 
-직전 세션 commit:
-- 1a4eb9b feat(6-A,ops): inventory badges UI + work-principle #36 (e) refinement (+419/-54)
+[본 세션 핵심 — 디테일은 SESSION_LOG.md 직전 entry / PROGRESS.md 헤더 / 본 ROADMAP.md 아래 섹션 참고]
+- Sprint 6-A UI Phase 2 = LowStockAlertWidget (정원 일지 상단 슬롯)
+- 작업원칙 #31 (b) 분할 진행 — ROADMAP.md T1 (1297줄) 초과, archive로 누적 시작 메시지 이전
 
-직전 세션 핵심 산출물:
-- src/app/api/products/inventory-badges/route.ts (신규 103 lines, single bulk query, no N+1)
-- src/components/products/InventoryBadge.tsx (신규 116 lines, 4-level + ShieldOff)
-- src/components/products/InventoryBadge.strings.ko.json (신규 29 lines, 14 strings, 작업원칙 #35)
-- src/lib/hooks/useInventoryBadges.ts (신규 40 lines, SWR 60s)
-- src/app/products/page.tsx — renderRow sku 줄에 inline 배지 통합
-- scripts/verify-vercel-deploy.sh — GitHub Deployments API fallback (token-free) 추가
-- CLAUDE.md STEP 0 + PROGRESS.md #36 (e) — webhook count 검증 제거, deployment SHA 검증으로 정정
+[페르소나]
+B2B 이커머스 ERP + 네이버 파워셀러 + UI/UX 시니어. 단독 IA/삭제 결정 금지. 계획서 원본 순서 유지.
+```
 
-[현재 상태]
+---
 
-▶ Vercel git integration 정상 (GitHub App 통합 방식 — webhook 0건은 정상)
-▶ Production 1a4eb9b REGISTERED ✅ (GitHub Deployments API path 검증 통과)
-▶ /products 정원 창고에 재고 뱃지 inline 통합 완료 (단 상품 0개라 빈 상태만 검증)
-▶ 작업원칙 #36 (e) false positive 원인 제거 + token-free 검증 path 확보
-▶ 다음 = Session B (LowStockAlertWidget)
+## Session B 작업 디테일 (인계 메시지 본문에서 분리 — 새 세션이 정독 시 흡수)
 
-[다음 세션 작업 — Sprint 6-A UI Phase 2 = LowStockAlertWidget]
+### 작업 범위 — LowStockAlertWidget (Sprint 6-A UI Phase 2)
 
-⚠️ STEP 0 (필수) — 환경 점검 + 3개 MD 정독
-- 작업원칙 #36 (e) 정정 적용: webhook count 검증 ❌ → `gh api .../deployments`의 SHA 비교 ✅
-- `scripts/verify-vercel-deploy.sh` 단독 실행으로 exit 0 확인 (token 없어도 github-deployments path 자동 작동)
-
-⚠️ 작업원칙 강제:
-- #17 commit msg는 `.commit-msg.tmp` + `git commit -F`
-- #21 사전 점검 (HEAD/status/stash/wc + Latest prod deploy SHA == HEAD)
-- #22 브라우저 smoke 검증 의무 (API 200 ≠ 실작동 완료)
-- #24 commit + push 한 turn 안에
-- #26 IA 점검 — dashboard 위젯 슬롯 위치 + 기존 위젯과 시각 일관성
-- #29 (a~e++) 한글 처리 6+1 규칙 — 사전 분리 패턴 (작업원칙 #35) 우선
-- #31 MD 1500줄 자동 점검 — **현재 ROADMAP.md T1 (1000) 초과 = 분할 권고 임계** ⚠️
-- #32 push 전 npm run build 의무
-- #33 useSearchParams Suspense 자동 점검
-- #34 명백한 오류 파일 발견 시 사용자 알림
-- #35 한글 사전 분리 패턴
-- #36 Vercel deploy 검증 의무 (push 후 verify-vercel-deploy.sh --wait, GitHub Deployments path)
-
-다음 세션 작업 (Session B):
-
-1. `LowStockAlertWidget.tsx` 신규 — src/components/dashboard/
+1. `LowStockAlertWidget.tsx` 신규 — `src/components/dashboard/`
    - 미해결 알림 리스트 (red → orange → yellow 정렬)
    - 각 row 인라인 액션: 재등록 알림 / 가격 인하 (`/naver-seo?product={id}`) / 품절 처리
    - resolutionNote 인라인 입력 + Enter 즉시 저장
    - 미신뢰 공급사 별도 그룹 ("이 공급사 직접 확인 권장")
 2. `GET /api/alerts/low-stock` route (resolvedAt: null, latest 50)
 3. `PATCH /api/alerts/[id]/resolve` route (resolutionNote, resolvedAt: now)
-4. src/app/dashboard/page.tsx — 위젯 상단 슬롯 통합 (시각 일관성 + 기존 위젯 패턴 따름)
-5. 한글 사전 LowStockAlertWidget.strings.ko.json 신규
-6. SWR hook useLowStockAlerts (DASHBOARD_SWR_DEFAULTS)
+4. `src/app/dashboard/page.tsx` — 위젯 상단 슬롯 통합 (기존 위젯 패턴 따름)
+5. 한글 사전 `LowStockAlertWidget.strings.ko.json` 신규 (작업원칙 #35)
+6. SWR hook `useLowStockAlerts` (DASHBOARD_SWR_DEFAULTS)
 7. 검증: TSC + build + 한글 grep + dev smoke
 8. commit + push + verify-vercel-deploy.sh --wait
 9. MD 갱신 — Session B 결과 + Session C 인계
-10. ROADMAP.md T1 초과 (1189+) → **Session B 작업과 함께 작업원칙 #31 (b) 의미 단위 분할 진행** (archive/ROADMAP_2026Q2_MAY.md로 누적 시작 메시지 이전, 본 파일은 최신 1개만)
+10. ROADMAP.md T1 초과 → 작업원칙 #31 (b) 의미 단위 분할 (archive/ROADMAP_2026Q2_MAY.md로 누적 시작 메시지 이전, 본 파일은 최신 1개만)
 
-[Sprint 6 이후 일정 (계획서 원본 순서, 변경 없음)]
-- Session C (= Sprint 6-A UI Phase 3): 씨앗 심기 minq>1 경고 + getItemDetail 백엔드 보강 + admin 수동 폴링 트리거
-- Session D: 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가)
-- Session E: 6-E + 6-D 위젯 통합 (카테고리 매핑 + 꼬띠 4모드 정원 일지 발송 통합)
-- Sprint 7: AI Studio 4모듈 (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트)
-- Sprint 8: 매출 상승 + 운영 흐름 안정화 후 Private API 자동발주 활용 (보류 트랙)
+### 작업원칙 강제 (요약 — 풀 디테일은 PROGRESS.md)
 
-[보류 트랙 (사용자 결정 필요)]
-- VERCEL_TOKEN 발급 (https://vercel.com/account/tokens) — 발급 시 verify-vercel-deploy.sh이 *build state까지* 확인 (READY/BUILDING/ERROR). 현재는 GitHub Deployments path로 *deployment 등록*만 확인 가능. 두 path 모두 자동 fallback.
-- Vercel Pro plan upgrade ($20/월) — vercel.json `0 0 * * *` → `0 */6 * * *` 한 줄 수정으로 6시간 cron 복귀. 재고 변동 감지 4배 빠름. 매출 600만원+ 도달 후 진입 권장.
-- 잔재 파일 정리 (작업원칙 #34 보고) — src/app/products/page.backup.*.tsx 3건 + dashboard *.BROKEN.backup 2건 + DashboardFilters.backup.tsx 1건 + recursing-galileo-205156 worktree (ff4ef4d 옛 commit). 사용자 별도 승인 시 별도 세션 처리.
-- 기존 네이버 스토어 100개+ 상품 일괄 연동 — 본격 소싱 안정화 후 사용자 요청 시 시작
-- Sprint 8 Private API 자동발주 — 매출 상승 + 운영 흐름에 따라 진입
+- #17 commit msg `.commit-msg.tmp` + `git commit -F`
+- #21 사전 점검 (HEAD/status/stash/wc + Latest prod deploy SHA == HEAD)
+- #22 브라우저 smoke 검증 의무 (API 200 ≠ 실작동 완료)
+- #24 commit + push 한 turn 안에
+- #26 IA 점검 (dashboard 위젯 슬롯 위치 + 시각 일관성)
+- #29 (a~e++) 한글 처리 6+1 규칙
+- #31 MD 1500줄 자동 점검 — **ROADMAP.md T1 초과 = 분할 의무**
+- #32 push 전 `npm run build` 의무
+- #33 useSearchParams Suspense 자동 점검
+- #34 명백한 오류 파일 발견 시 사용자 알림
+- #35 한글 사전 분리 패턴
+- #36 Vercel deploy 검증 의무 (push 후 `verify-vercel-deploy.sh --wait`)
 
-[참고: 환경/시크릿]
-- Supabase project ID: doxfizicftgtqktmtftf
-- Naver Search Ad CUSTOMER_ID: 3755315
-- 카카오 채널 Public ID: _xkfALG (꽃틔움 KKOTIUM)
+### Sprint 6 이후 일정 (계획서 원본 순서, 변경 없음)
+
+- **Session C** (Sprint 6-A UI Phase 3): 씨앗 심기 minq>1 경고 + getItemDetail 백엔드 보강 + admin 수동 폴링 트리거
+- **Session D**: 6-B + 6-C (가격 변동 + 다른 셀러 추적 + 공급사 누적 평가)
+- **Session E**: 6-E + 6-D 위젯 통합 (카테고리 매핑 + 꼬띠 4모드 정원 일지 발송 통합)
+- **Sprint 7**: AI Studio 4모듈 (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트)
+- **Sprint 8**: 매출 상승 + 운영 흐름 안정화 후 Private API 자동발주 활용 (보류 트랙)
+
+### 보류 트랙 (사용자 결정 필요)
+
+- **VERCEL_TOKEN 발급** (https://vercel.com/account/tokens) — 발급 시 `verify-vercel-deploy.sh`이 build state까지 확인 (READY/BUILDING/ERROR). 현재는 GitHub Deployments path로 deployment 등록까지만 확인. 두 path 모두 자동 fallback.
+- **Vercel Pro plan upgrade** ($20/월) — `vercel.json` 한 줄 수정으로 6시간 cron 복귀. 매출 600만원+ 도달 후 진입 권장.
+- **잔재 파일 정리** (작업원칙 #34 보고) — `src/app/products/page.backup.*.tsx` 3건 + dashboard `*.BROKEN.backup` 2건 + `DashboardFilters.backup.tsx` 1건 + `recursing-galileo-205156` worktree (ff4ef4d 옛 commit). 사용자 별도 승인 시 별도 세션 처리.
+- **기존 네이버 스토어 100개+ 상품 일괄 연동** — 본격 소싱 안정화 후 사용자 요청 시 시작.
+- **Sprint 8 Private API 자동발주** — 매출 상승 + 운영 흐름에 따라 진입.
+
+### 환경 / 시크릿 (참고용)
+
+- Supabase project ID: `doxfizicftgtqktmtftf`
+- Naver Search Ad CUSTOMER_ID: `3755315`
+- 카카오 채널 Public ID: `_xkfALG` (꽃틔움 KKOTIUM)
 - AI: Groq lrltQb + 3IGN7i 정상 2키
-- 도매매 Open API Key: a6ff…c470bb
+- 도매매 Open API Key: `a6ff…c470bb`
 - 도매꾹 Private API: 28개 전체 권한 발급 ✅ (Sprint 8 보류 트랙)
-- Vercel project: prj_H5HamuDSG0Na6j5dwDlYe9A6FfC4
-- Vercel team: team_uwIkDWZsS2gogA04mZIVDuPF
+- Vercel project: `prj_H5HamuDSG0Na6j5dwDlYe9A6FfC4`
+- Vercel team: `team_uwIkDWZsS2gogA04mZIVDuPF`
 - Discord 5채널 webhook URL: orders / stock-alerts / daily / weekly / kkotti (Vercel 환경변수)
-
-당신은 10년 차 B2B 이커머스 ERP 및 백오피스 설계 경험이 풍부한 네이버 스마트스토어 파워셀러인 풀스택 시니어 개발자이자 UI/UX 디자이너입니다. Sprint 6-A UI Phase 1 (재고 뱃지) ✅ 완료, 본 세션은 Phase 2 (LowStockAlertWidget). 새싹셀러이지만 파워셀러로 성장하기 위한 스텝 작업 중. *절대 단독 판단으로 IA/삭제 결정 금지* — 진단 결과 디테일하게 브리핑 후 사용자 개별 Y/N 승인 받은 항목만 진행. *계획서에 없는 작업을 추가 제안하지 말고 계획서 원본 순서 유지*.
-
-작업 시작 전 필수:
-1. (a) git rev-parse HEAD origin/main → 일치 (1a4eb9b 또는 본 세션 commit)
-   (b) git status → working tree clean
-   (c) git stash list → stash@{0} 보존
-   (d) wc -l docs/plan/*.md docs/research/*.md → **ROADMAP.md T1 초과 확인 → 분할 작업 우선 검토**
-   (e) curl -sIo /dev/null -w "%{http_code}" https://kkotium-garden.vercel.app/dashboard → HTTP 200
-   (f) `gh api 'repos/kkotium-dot/kkotium-garden/deployments?environment=Production&per_page=1' --jq '.[0].sha[0:7]'` → HEAD short SHA 일치
-   (g) scripts/verify-vercel-deploy.sh → exit 0 (github-deployments path)
-   (h) 3개 MD 정독 (PROGRESS / ROADMAP / SESSION_LOG)
-2. Session B 디테일 계획서 브리핑 + 사용자 개별 Y/N 승인
-3. 작업 시작 → 검증 (TSC + build + 브라우저 smoke + verify-vercel-deploy.sh --wait) → commit + push → MD 갱신 (한 turn 안에)
-```
 
 ---
 
