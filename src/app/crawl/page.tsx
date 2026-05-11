@@ -35,6 +35,7 @@ interface SingleResult {
   categoryCode?: string;
   country?: string;
   status?: string;
+  minQuantity?: number;
 }
 interface BulkRow {
   id: string; url: string;
@@ -52,6 +53,7 @@ interface BulkRow {
   sellerRank?: number;
   categoryName?: string;
   categoryCode?: string;
+  minQuantity?: number;
 }
 interface SourcingItem {
   id: string; url: string; name: string | null; supplier_price: number;
@@ -314,6 +316,7 @@ function CrawlPageInner() {
         crawlInventory:  sResult.inventory  ?? null,
         crawlCategoryCode: sResult.categoryCode ?? null,
         crawlNaverFeeRate: naverFeeRate,
+        crawlMinQuantity:  sResult.minQuantity ?? 1,
         // Source URL — used by seed-new to mark sourcing log as REGISTERED after Excel download
         crawlSourceUrl: sResult.sourceUrl ?? sUrl.trim() ?? null,
       };
@@ -510,6 +513,7 @@ function CrawlPageInner() {
       crawlProductNo:  r.productNo  ?? null,
       crawlInventory:  r.inventory  ?? null,
       crawlCategoryCode: r.categoryCode ?? null,
+      crawlMinQuantity:  r.minQuantity ?? 1,
     };
     // TextEncoder-based base64 (same as single crawl)
     const jStr = JSON.stringify(prefill);

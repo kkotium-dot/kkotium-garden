@@ -131,6 +131,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         country: detail.country,
         status: detail.status,
         isOnSupply: detail.isOnSupply,
+        minQuantity: detail.minQuantity,
       },
       sessionAgeDays: 0,
       sessionWarning: null,

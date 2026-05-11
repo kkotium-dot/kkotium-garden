@@ -222,6 +222,61 @@ function DSection({ icon, title, summary, children }: {
   );
 }
 
+// ─── Sprint 6-A UI Phase 3: minq consignment-risk banner ───────────────────
+// Senior policy: warn only, never disable submission (seller autonomy).
+// Korean strings separated per work principle #35.
+const MINQ_BANNER_STRINGS = {
+  yellow: {
+    title: '위탁판매 주의 — 최소발주 수량 확인',
+    body: (n: number) =>
+      `공급사가 최소 ${n}개 묶음으로만 판매합니다. ` +
+      `주문 1건당 ${n}개를 직접 발주해야 하므로, ` +
+      `묶음 상품으로 등록하거나 사전 재고 보유를 권장합니다.`,
+  },
+  red: {
+    title: '고위험 — 위탁판매 부적합 상품',
+    body: (n: number) =>
+      `최소발주 ${n}개 이상 상품입니다. ` +
+      `1건 주문 시 즉시 재고 소진 + 손실 위험이 큽니다. ` +
+      `묶음 상품 전용으로 등록하거나 ${n}개 이상 사전 재고를 확보하세요.`,
+  },
+};
+
+function MinQuantityWarningBanner({ minQuantity }: { minQuantity: number }) {
+  const isRed = minQuantity >= 5;
+  const palette = isRed
+    ? { bg: '#fef2f2', border: '#fecaca', titleColor: '#991b1b', bodyColor: '#7f1d1d', stripe: '#dc2626' }
+    : { bg: '#fefce8', border: '#fde68a', titleColor: '#a16207', bodyColor: '#854d0e', stripe: '#eab308' };
+  const Icon = isRed ? ShieldAlert : AlertTriangle;
+  const strings = isRed ? MINQ_BANNER_STRINGS.red : MINQ_BANNER_STRINGS.yellow;
+  return (
+    <div
+      role="alert"
+      style={{
+        marginBottom: 16,
+        padding: '12px 14px',
+        background: palette.bg,
+        border: `1.5px solid ${palette.border}`,
+        borderLeft: `4px solid ${palette.stripe}`,
+        borderRadius: 12,
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 10,
+      }}
+    >
+      <Icon size={20} style={{ color: palette.stripe, flexShrink: 0, marginTop: 1 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: palette.titleColor, lineHeight: 1.3 }}>
+          {strings.title}
+        </p>
+        <p style={{ margin: '4px 0 0', fontSize: 12, color: palette.bodyColor, lineHeight: 1.55 }}>
+          {strings.body(minQuantity)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function NewProductPageInner() {
   const searchParams = useSearchParams();
   const [catTab, setCatTab]             = useState<'search'|'drill'>('drill');
@@ -352,6 +407,9 @@ function NewProductPageInner() {
     shipFee?: number;
     canMerge?: boolean;
   } | null>(null);
+  // Minimum order quantity from crawler prefill. 1 = no restriction.
+  // Values >= 2 trigger a consignment-risk warning banner.
+  const [crawlMinQuantity, setCrawlMinQuantity] = useState<number>(1);
   const [showTemplateCreateModal, setShowTemplateCreateModal] = useState(false);
   const [pendingTemplateData, setPendingTemplateData] = useState<{
     name: string; code: string; shippingType: number;
@@ -560,6 +618,9 @@ function NewProductPageInner() {
       if (data.mainImage)      setMainImage(data.mainImage);
       if (data.additionalImgs) setAdditionalImages(data.additionalImgs);
       if (data.description)    setDescription(data.description);
+      if (typeof data.crawlMinQuantity === 'number' && data.crawlMinQuantity >= 1) {
+        setCrawlMinQuantity(data.crawlMinQuantity);
+      }
       // Inject crawlSourceUrl into URL so handleGenerate can mark sourcing log REGISTERED
       if (data.crawlSourceUrl && typeof window !== 'undefined') {
         const currentUrl = new URL(window.location.href);
@@ -1495,6 +1556,11 @@ const handleGenerate = async () => {
               <p style={{ fontSize: 12, color: '#888', margin: 0 }}>카테고리 선택 후 나머지 항목을 확인하고 엑셀을 다운로드하세요</p>
             </div>
           </div>
+        )}
+        {/* Sprint 6-A UI Phase 3 — minq>=2 consignment risk banner. */}
+        {/* Senior policy: warn only, do not disable submission (seller autonomy). */}
+        {crawlMinQuantity >= 2 && (
+          <MinQuantityWarningBanner minQuantity={crawlMinQuantity} />
         )}
         {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">{error}</div>}
         {success && !naverResult && <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">엑셀 파일 생성 완료! 다운로드 폴더를 확인하세요.</div>}

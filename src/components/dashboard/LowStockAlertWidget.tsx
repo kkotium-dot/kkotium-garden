@@ -1,9 +1,10 @@
 // src/components/dashboard/LowStockAlertWidget.tsx
 // ============================================================================
-// Sprint 6-A UI Phase 2: triage widget for unresolved LowStockAlerts.
+// Sprint 6-A UI Phase 2 + 3: triage widget for unresolved LowStockAlerts.
 //
 // Layout (senior decision — fastest scan for solo seller):
-//   - Header with title, subtitle, and active count badge.
+//   - Header with title, subtitle, active count badge, and "Poll now" trigger.
+//   - Inline toast banner area (auto-dismisses after 5s).
 //   - Two groups vertically stacked:
 //       (1) Active alerts (trustworthy suppliers) — actionable rows.
 //       (2) Untrustworthy supplier group — direct-check only, no actions.
@@ -12,8 +13,12 @@
 //   - Each row has 3 inline actions:
 //       - 재등록 알림   → POST relist-reminder (Discord nudge + resolve)
 //       - 가격 조정     → Link to /naver-seo?product={id}
-//       - 품절 처리     → POST mark-oos (Product status flip + resolve)
+//       - 품절 처리     → opens OOS confirm modal (default: app-only)
 //   - "해결" toggle reveals an inline note input → PATCH resolve.
+//
+// Phase 3 additions:
+//   - "Poll now" button: POST /api/admin/poll-inventory-now (3-min rate limit)
+//   - OOS confirm modal: choose app-only or app+Naver Commerce API flip
 //
 // Empty state: friendly hint (no alerts is the happy path).
 // Korean strings live in LowStockAlertWidget.strings.ko.json (work principle #35).
@@ -21,12 +26,12 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   AlertOctagon, AlertTriangle, Info,
   Bell, DollarSign, CircleX, CheckCircle2,
-  ShieldOff, ExternalLink, Loader2,
+  ShieldOff, ExternalLink, Loader2, RefreshCw, X,
 } from 'lucide-react';
 import strings from './LowStockAlertWidget.strings.ko.json';
 import { useLowStockAlerts, type LowStockAlertRow } from '@/lib/hooks/useLowStockAlerts';
@@ -42,6 +47,53 @@ const LEVEL_COLOR: Record<Level, { stripe: string; pill: string; pillBg: string;
 };
 
 const LEVEL_PRIORITY: Record<Level, number> = { red: 3, orange: 2, yellow: 1 };
+
+const TOAST_DURATION_MS = 5000;
+
+// ─── Toast ──────────────────────────────────────────────────────────────────
+
+type ToastKind = 'success' | 'error' | 'info';
+interface ToastState {
+  kind: ToastKind;
+  message: string;
+}
+
+function ToastBanner({ toast, onClose }: { toast: ToastState; onClose: () => void }) {
+  const palette: Record<ToastKind, { bg: string; border: string; color: string }> = {
+    success: { bg: '#f0fdf4', border: '#bbf7d0', color: '#15803d' },
+    error:   { bg: '#fef2f2', border: '#fecaca', color: '#b91c1c' },
+    info:    { bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8' },
+  };
+  const c = palette[toast.kind];
+  return (
+    <div
+      role="status"
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '8px 12px',
+        background: c.bg,
+        border: `1px solid ${c.border}`,
+        borderRadius: 8,
+        marginBottom: 10,
+        fontSize: 12,
+        fontWeight: 600,
+        color: c.color,
+      }}
+    >
+      <span style={{ flex: 1 }}>{toast.message}</span>
+      <button
+        onClick={onClose}
+        aria-label="close"
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: c.color, padding: 2, display: 'flex',
+        }}
+      >
+        <X size={14} />
+      </button>
+    </div>
+  );
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -102,41 +154,170 @@ function ActionButton({
   );
 }
 
+// ─── OOS confirm modal ──────────────────────────────────────────────────────
+
+function OosConfirmModal({
+  productName,
+  onCancel,
+  onConfirm,
+  busy,
+}: {
+  productName: string;
+  onCancel: () => void;
+  onConfirm: (alsoNaver: boolean) => void;
+  busy: boolean;
+}) {
+  // Senior policy: default selection = app-only (safe). Seller must click to
+  // opt in to the Naver Commerce API flip. Esc / backdrop cancels.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !busy) onCancel();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onCancel, busy]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={strings.oosModal.title}
+      onClick={busy ? undefined : onCancel}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        background: 'rgba(15, 23, 42, 0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: '#fff',
+          borderRadius: 14,
+          padding: 20,
+          maxWidth: 460,
+          width: '100%',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <CircleX size={20} style={{ color: '#dc2626' }} />
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#111827' }}>
+            {strings.oosModal.title}
+          </h3>
+        </div>
+        <p style={{ margin: '0 0 4px', fontSize: 13, color: '#374151', lineHeight: 1.5 }}>
+          <strong style={{ color: '#111827' }}>{productName}</strong>
+        </p>
+        <p style={{ margin: '0 0 14px', fontSize: 13, color: '#374151', lineHeight: 1.55 }}>
+          {strings.oosModal.question}
+        </p>
+
+        {/* Option A: App-only (default — auto-focused) */}
+        <button
+          autoFocus
+          disabled={busy}
+          onClick={() => onConfirm(false)}
+          style={{
+            display: 'block', width: '100%', textAlign: 'left',
+            background: '#f0fdf4', border: '1.5px solid #86efac',
+            borderRadius: 10, padding: '10px 14px', marginBottom: 8,
+            cursor: busy ? 'not-allowed' : 'pointer',
+            opacity: busy ? 0.6 : 1,
+          }}
+        >
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#15803d' }}>
+            {strings.oosModal.appOnly}
+          </p>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#166534', lineHeight: 1.4 }}>
+            {strings.oosModal.appOnlyHint}
+          </p>
+        </button>
+
+        {/* Option B: App + Naver Commerce */}
+        <button
+          disabled={busy}
+          onClick={() => onConfirm(true)}
+          style={{
+            display: 'block', width: '100%', textAlign: 'left',
+            background: '#fff7ed', border: '1.5px solid #fed7aa',
+            borderRadius: 10, padding: '10px 14px', marginBottom: 10,
+            cursor: busy ? 'not-allowed' : 'pointer',
+            opacity: busy ? 0.6 : 1,
+          }}
+        >
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#9a3412' }}>
+            {strings.oosModal.alsoNaver}
+          </p>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#7c2d12', lineHeight: 1.4 }}>
+            {strings.oosModal.alsoNaverHint}
+          </p>
+        </button>
+
+        <p style={{ margin: '0 0 12px', fontSize: 11, color: '#6b7280', lineHeight: 1.5 }}>
+          {strings.oosModal.consignmentOnly}
+        </p>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={onCancel}
+            disabled={busy}
+            style={{
+              fontSize: 12, fontWeight: 700, color: '#6b7280',
+              background: 'transparent', border: '1px solid #e5e7eb',
+              borderRadius: 8, padding: '6px 14px',
+              cursor: busy ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {strings.oosModal.cancel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Row ─────────────────────────────────────────────────────────────────────
 
 interface RowProps {
   alert: LowStockAlertRow;
-  onAction: () => void; // refresh trigger
+  onAction: () => void;
+  onToast: (toast: ToastState) => void;
+  onRequestOos: (alert: LowStockAlertRow) => void;
 }
 
-function AlertRow({ alert, onAction }: RowProps) {
+function AlertRow({ alert, onAction, onToast, onRequestOos }: RowProps) {
   const level: Level = alert.level;
   const palette = LEVEL_COLOR[level];
   const Icon = palette.icon;
 
   const [resolving, setResolving] = useState(false);
-  const [busyAction, setBusyAction] = useState<'relist' | 'oos' | 'resolve' | null>(null);
+  const [busyAction, setBusyAction] = useState<'relist' | 'resolve' | null>(null);
   const [note, setNote] = useState('');
 
-  async function doAction(action: 'relist' | 'oos' | 'resolve') {
+  async function doAction(action: 'relist' | 'resolve') {
     setBusyAction(action);
     try {
       const url =
         action === 'relist' ? `/api/alerts/${alert.id}/relist-reminder` :
-        action === 'oos'    ? `/api/alerts/${alert.id}/mark-oos` :
                               `/api/alerts/${alert.id}/resolve`;
       const opts: RequestInit = action === 'resolve'
         ? { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resolutionNote: note }) }
         : { method: 'POST' };
       const res = await fetch(url, opts);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      onAction(); // trigger SWR refresh
+      onAction();
       setResolving(false);
       setNote('');
+      onToast({
+        kind: 'success',
+        message: action === 'relist' ? strings.toast.relistAlertSuccess : strings.toast.resolveSuccess,
+      });
     } catch (err) {
-      // Toast: surface to console; widget keeps row visible for retry.
       // eslint-disable-next-line no-console
       console.error('[LowStockAlertWidget] action failed', action, err);
+      onToast({ kind: 'error', message: strings.toast.resolveFail });
     } finally {
       setBusyAction(null);
     }
@@ -230,9 +411,9 @@ function AlertRow({ alert, onAction }: RowProps) {
               bg={LEVEL_COLOR.red.pillBg}
               border={LEVEL_COLOR.red.pillBorder}
               title={strings.action.markOutOfStockHint}
-              busy={busyAction === 'oos'}
-              disabled={busyAction !== null && busyAction !== 'oos'}
-              onClick={() => void doAction('oos')}
+              busy={false}
+              disabled={busyAction !== null}
+              onClick={() => onRequestOos(alert)}
             />
             <button
               onClick={() => setResolving(true)}
@@ -332,6 +513,17 @@ function UntrustworthyRow({ alert }: { alert: LowStockAlertRow }) {
 
 export default function LowStockAlertWidget() {
   const { alerts, isLoading, refresh } = useLowStockAlerts();
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [polling, setPolling] = useState(false);
+  const [oosTarget, setOosTarget] = useState<LowStockAlertRow | null>(null);
+  const [oosBusy, setOosBusy] = useState(false);
+
+  // Auto-dismiss toast after TOAST_DURATION_MS.
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), TOAST_DURATION_MS);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   // Split: trustworthy supplier alerts (actionable) vs untrustworthy (direct check).
   const trustworthy: LowStockAlertRow[] = [];
@@ -349,6 +541,75 @@ export default function LowStockAlertWidget() {
   });
 
   const hasAny = alerts.length > 0;
+
+  async function handlePollNow() {
+    if (polling) return;
+    setPolling(true);
+    try {
+      const res = await fetch('/api/admin/poll-inventory-now', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 429) {
+        setToast({ kind: 'info', message: strings.toast.pollRateLimited });
+        return;
+      }
+      if (!res.ok) {
+        const errMsg = typeof data?.error === 'string' ? data.error : `HTTP ${res.status}`;
+        setToast({ kind: 'error', message: `${strings.toast.pollFail} (${errMsg})` });
+        return;
+      }
+
+      if (typeof data?.totalProducts === 'number' && data.totalProducts === 0) {
+        setToast({ kind: 'info', message: strings.toast.pollNoProducts });
+      } else {
+        const newAlerts = data?.newAlerts ?? { yellow: 0, orange: 0, red: 0 };
+        const newCount = (newAlerts.yellow ?? 0) + (newAlerts.orange ?? 0) + (newAlerts.red ?? 0);
+        const summary =
+          `${strings.toast.pollSuccess} — ` +
+          `${data?.totalProducts ?? 0}${strings.qty.unit} / ` + // N products checked
+          `${strings.qty.current} ${data?.snapshotsSaved ?? 0} · ` + // snapshots saved
+          `new ${newCount}`;
+        setToast({ kind: 'success', message: summary });
+      }
+      refresh();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[LowStockAlertWidget] poll failed', err);
+      setToast({ kind: 'error', message: strings.toast.pollFail });
+    } finally {
+      setPolling(false);
+    }
+  }
+
+  async function handleOosConfirm(alsoNaver: boolean) {
+    if (!oosTarget || oosBusy) return;
+    setOosBusy(true);
+    try {
+      const url = `/api/alerts/${oosTarget.id}/mark-oos${alsoNaver ? '?alsoNaver=1' : ''}`;
+      const res = await fetch(url, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof data?.error === 'string' ? data.error : `HTTP ${res.status}`);
+
+      if (alsoNaver) {
+        // The API returns naverFlipped flag when alsoNaver was requested.
+        const naverOk = data?.naverFlipped === true;
+        setToast({
+          kind: naverOk ? 'success' : 'error',
+          message: naverOk ? strings.toast.outOfStockNaverSuccess : strings.toast.outOfStockNaverFail,
+        });
+      } else {
+        setToast({ kind: 'success', message: strings.toast.outOfStockSuccess });
+      }
+      setOosTarget(null);
+      refresh();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[LowStockAlertWidget] mark-oos failed', err);
+      setToast({ kind: 'error', message: strings.toast.resolveFail });
+    } finally {
+      setOosBusy(false);
+    }
+  }
 
   return (
     <div
@@ -386,7 +647,31 @@ export default function LowStockAlertWidget() {
             {strings.header.subtitle}
           </p>
         </div>
+        <button
+          onClick={() => void handlePollNow()}
+          disabled={polling}
+          title={strings.header.pollNowHint}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            fontSize: 11, fontWeight: 700,
+            color: polling ? '#9ca3af' : '#1d4ed8',
+            background: polling ? '#f9fafb' : '#eff6ff',
+            border: `1px solid ${polling ? '#e5e7eb' : '#bfdbfe'}`,
+            borderRadius: 6, padding: '4px 10px',
+            cursor: polling ? 'not-allowed' : 'pointer',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          {polling
+            ? <Loader2 size={11} className="animate-spin" style={{ flexShrink: 0 }} />
+            : <RefreshCw size={11} style={{ flexShrink: 0 }} />}
+          <span>{polling ? strings.header.polling : strings.header.pollNow}</span>
+        </button>
       </div>
+
+      {/* Toast */}
+      {toast && <ToastBanner toast={toast} onClose={() => setToast(null)} />}
 
       {/* Body */}
       {!hasAny && !isLoading && (
@@ -404,7 +689,13 @@ export default function LowStockAlertWidget() {
       {hasAny && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {trustworthy.map((a) => (
-            <AlertRow key={a.id} alert={a} onAction={refresh} />
+            <AlertRow
+              key={a.id}
+              alert={a}
+              onAction={refresh}
+              onToast={setToast}
+              onRequestOos={(target) => setOosTarget(target)}
+            />
           ))}
 
           {untrustworthy.length > 0 && (
@@ -431,6 +722,15 @@ export default function LowStockAlertWidget() {
             </div>
           )}
         </div>
+      )}
+
+      {oosTarget && (
+        <OosConfirmModal
+          productName={oosTarget.product.name}
+          busy={oosBusy}
+          onCancel={() => { if (!oosBusy) setOosTarget(null); }}
+          onConfirm={(alsoNaver) => void handleOosConfirm(alsoNaver)}
+        />
       )}
     </div>
   );

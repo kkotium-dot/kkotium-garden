@@ -135,6 +135,21 @@ export function parseOptions(selectOpt: string | undefined): CrawledOption[] {
 }
 
 /**
+ * Parse basis.minq from getItemView. Domeggook returns this as number or
+ * numeric string; values <= 0 or NaN are treated as no MOQ (returns 1).
+ */
+export function parseMinq(val: unknown): number {
+  if (typeof val === 'number' && Number.isFinite(val) && val >= 1) {
+    return Math.floor(val);
+  }
+  if (typeof val === 'string') {
+    const n = parseInt(val.trim(), 10);
+    if (Number.isFinite(n) && n >= 1) return n;
+  }
+  return 1;
+}
+
+/**
  * Read the Domeggook API key from store_settings. Returns null when missing.
  */
 async function getApiKey(): Promise<string | null> {
@@ -211,7 +226,7 @@ export class DomemaeAdapter implements SourceAdapter {
     }
 
     const item = raw.domeggook as {
-      basis?: { title?: string; status?: string };
+      basis?: { title?: string; status?: string; minq?: number | string };
       price?: {
         supply?: unknown;
         dome?: unknown;
@@ -261,6 +276,7 @@ export class DomemaeAdapter implements SourceAdapter {
     const categoryCode = item.category?.current?.code ?? '';
     const isOnSupply = item.channel?.supply === true;
     const status = item.basis?.status ?? '';
+    const minQuantity = parseMinq(item.basis?.minq);
 
     return {
       productNo,
@@ -281,16 +297,18 @@ export class DomemaeAdapter implements SourceAdapter {
       country,
       status,
       isOnSupply,
+      minQuantity,
     };
   }
 
   /**
-   * 6. Get the minimum order quantity. Currently always 1 because
-   * Domeggook OpenAPI v4.5 does not surface MOQ in getItemView.
-   * Sprint 6 may parse this from getItemList when it is wired up.
+   * 6. Get the minimum order quantity via getItemView (single call).
+   * Domeggook OpenAPI v4.5 returns basis.minq in the single-item shape.
+   * Returns 1 when MOQ cannot be determined (treated as no restriction).
    */
-  async getMinQuantity(_productNo: string): Promise<number> {
-    return 1;
+  async getMinQuantity(productNo: string): Promise<number> {
+    const detail = await this.getItemDetail(productNo);
+    return detail?.minQuantity ?? 1;
   }
 
   /**

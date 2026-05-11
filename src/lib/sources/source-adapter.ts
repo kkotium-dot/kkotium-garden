@@ -83,6 +83,12 @@ export interface ItemDetail {
   status: string;
   /** True if the product is also sold on the supply (도매매) channel. */
   isOnSupply: boolean;
+  /**
+   * Minimum order quantity at the source. 1 means no MOQ restriction.
+   * Values >= 2 indicate the item is unsuitable for unit-by-unit dropshipping
+   * (consignment risk). Adapters that cannot determine MOQ return 1.
+   */
+  minQuantity: number;
 }
 
 /**

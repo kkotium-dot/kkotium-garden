@@ -295,6 +295,17 @@ export async function updateStock(
   });
 }
 
+/**
+ * Force a product to OUTOFSTOCK in Naver Commerce by setting stockQuantity=0.
+ * Naver flips statusType to OUTOFSTOCK automatically when stock reaches zero,
+ * which is the seller-controllable path (statusType itself is read-only).
+ * Throws on any Commerce API error so the caller can decide whether to
+ * surface a partial-success message.
+ */
+export async function setProductOutOfStock(productNo: string): Promise<void> {
+  await updateStock(productNo, 0);
+}
+
 /** Bulk inventory update for multiple products */
 export async function bulkUpdateStock(
   items: Array<{ productNo: string; stockQuantity: number }>
