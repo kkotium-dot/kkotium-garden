@@ -1,8 +1,9 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-08 (본 세션: Sprint 6-A 백엔드 완료 — Option C 하이브리드 동적 임계값 + 꿀통 꽃수레 7개 정리 ✅)
-> **HEAD**: 66c3bdb = origin/main 일치 | **TSC**: 0 errors | **빌드**: 27/27 OK (inventory-sync cron 추가) | **배포**: https://kkotium-garden.vercel.app (READY)
+> **최종 업데이트**: 2026-05-12 (본 세션: 워크플로우 첫 실측 검증 + prefill 버그 fix + Vercel 4일 갭 해소 + 작업원칙 #36 신규 등록 ✅)
+> **HEAD**: 8f98346 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 27/27 OK | **배포**: https://kkotium-garden.vercel.app (`dpl_CEBVUD74...` READY via Vercel CLI direct deploy)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
+> **Vercel Hobby 제한 주의**: inventory-sync cron은 현재 daily (`0 0 * * *`). Pro plan upgrade 시 `vercel.json` 한 줄로 6시간 cron 복귀 가능
 >
 > **이 파일의 역할**: 진행 중·예정 Sprint 계획 + 영구 참조 (체크리스트, 비용 로드맵, 도구 사용 패턴)
 > **누적 인계 메시지 + Phase A/B/C 완료 이력**: `docs/plan/archive/ROADMAP_2026Q2_MAY.md`

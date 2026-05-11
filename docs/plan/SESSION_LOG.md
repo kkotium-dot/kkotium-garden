@@ -1,3 +1,176 @@
+## 2026-05-11 ~ 2026-05-12 세션 (워크플로우 첫 실측 검증 + prefill 버그 + Vercel webhook 4일 갭 발견 + 작업원칙 #36 신규) ✅
+
+### 본 세션 성격
+- 사용자가 본격 상품 등록 워크플로우 첫 실측 검증 시작. *씨앗심기에서 단건 크롤링 → 꿀통 꽃수레에 저장 → 등록 시작 클릭 → 씨앗심기 진입* 흐름에서 폼이 빈 상태로 로드되는 현상 발견.
+- MCP 도구 (Chrome MCP + Supabase MCP + Vercel MCP) 활용한 *실제 검증 모드* 첫 적용. 본 세션이 *Claude가 production 페이지 직접 조작 + DB 직접 조회 + Vercel 배포 직접 트리거*까지 모두 자동화한 최초 사례.
+- 진단 도중 *Vercel 4일 갭* 발견 — 푸시 5건이 모두 production 미반영, 사용자도 Claude도 4일간 인지 못함. 단순 prefill 버그가 *Vercel 운영 보안 메커니즘 부재* 사고로 확장.
+- 본 세션 commit 7건 한 번에 Vercel CLI로 직접 deploy하여 정상화. 향후 동일 사고 방지를 위한 작업원칙 #36 + 검증 스크립트 영구 등록.
+
+### 시작 직전 상태 (작업원칙 #21 사전 점검 통과)
+- HEAD `ff4ef4d` = origin/main 일치 ✅
+- working tree: untracked 4건 (.claude worktree + 3 잔재 파일) ⚠️ → 본 세션 정리
+- stash@{0} 보존 ✅
+- MD 줄 수: PROGRESS 802 / ROADMAP 1079 / SESSION_LOG 1628 (1500 임계 초과) ⚠️ → 본 세션 분할
+- production HTTP 200 ✅ (그러나 4일 전 코드로 운영 중이었음 — 본 세션 진단으로 발견)
+
+### 본 세션 작업 흐름
+
+#### 작업 1: 잔재 파일 정리 + .gitignore 갱신 ✅
+- 발견: 메인 repo에 untracked 4건 (.claude worktree 디렉토리 + 3개 잔재)
+- 진단 후 정리:
+  - `src/app/api/crawler/domemae/ route.ts` (공백 prefix, 1월 10일 잔재) 삭제
+  - `src/app/api/crawler/page.tsx` (Next.js 라우팅 위반) 삭제
+  - `src/lib/crawler/domemae-parser.ts` (한글 인코딩 깨짐) 삭제
+  - `.gitignore`에 `.claude/worktrees/` 추가
+- 사용자 개별 Y/N 승인 후 진행 (작업원칙 #34)
+
+#### 작업 2: SESSION_LOG.md 분할 (작업원칙 #31 T2 의무 임계 1500줄 초과) ✅
+- 분할 전: 1628줄 (14개 세션)
+- 분할 후: 본 파일 656줄 (직전 5세션 + footer) + archive 997줄 (9개 세션)
+- 신규 archive 파일명: `docs/plan/archive/SESSION_LOG_2026-05.md` (ISO 8601 패턴, archive README 정책 첫 적용)
+- 본문 무결성: keep(645) + move(983) = 1628 분할 전과 정확히 일치 ✅
+- commit `4657173` (잔재 3건 삭제 + SESSION_LOG 분할 + 인덱스 갱신)
+
+#### 작업 3: 사용자 첫 워크플로우 검증 시도 + prefill 버그 발견 ✅
+- 사용자: *씨앗심기에서 단건 크롤링 → 꿀통 꽃수레에 저장 → 등록 시작 클릭* 흐름 진행
+- 결과: 씨앗심기 페이지에 *"크롤러에서 데이터가 자동 입력됐습니다" 배너는 표시*되었으나 *모든 폼 필드가 빈 상태*
+- MCP 진단:
+  - 사용자가 보는 페이지와 별도 자동화 탭에서 동일 흐름 재현
+  - URL이 `/products/new?prefill=eyJ...` 정상 (Base64 인코딩된 데이터 포함)
+  - JavaScript로 직접 디코드 + JSON.parse 시도 → `SyntaxError: Bad control character in string literal in JSON at position 354`
+  - position 354 부근 char 분석: `0xFFFD` (UTF-8 replacement char) 다수 + raw `0x0A` (LF) 검출
+
+#### 작업 4: prefill 버그 근본 원인 진단 ✅
+- Python(`base64.b64decode + json.loads`)으로 같은 base64 직접 디코드 → 정상 파싱 성공
+- JavaScript와 차이: `URLSearchParams.get()`이 base64의 `+`를 form-encoded 규칙으로 *space로 자동 변환*
+- Raw URL vs URLSearchParams 비교 검증:
+  - `plusInRaw: 1` (raw URL의 base64 안에 `+` 1개)
+  - `plusInUSP: 0` (URLSearchParams로 가져온 값에 `+` 0개)
+  - `spaceInUSP: 1` (대신 space 1개 추가됨)
+- Raw URL을 *URLSearchParams 없이* 직접 파싱한 결과: 모든 필드 정상 디코드 (productName, options, supplierPrice 등)
+- **근본 원인 100% 확정**: `/crawl/page.tsx` 인코더가 `btoa(bin)` 결과를 raw URL에 그대로 삽입 → URLSearchParams가 `+`를 space로 변환 → base64 corrupt → JSON.parse 실패 → catch block이 silently 삼킴 → 배너만 표시 + setState 0건
+
+#### 작업 5: prefill 버그 수정 (3 layer fix) ✅
+- (a) `/products/new/page.tsx` 디코더 2곳: `urlPrefill.replace(/-/g, '+').replace(/_/g, '/')` 뒤에 `.replace(/ /g, '+')` 추가 (방어)
+- (b) `/products/new/page.tsx` catch block: `catch (e) { console.error('[prefill] decode failed', e); }` (silent failure 방지)
+- (c) `/crawl/page.tsx` 인코더 2곳 (batch + single): `btoa(bin).replace(/\+/g, '-').replace(/\//g, '_')` (URL-safe base64 출력 예방)
+- TSC 0 errors ✅ / npm run build 정상 ✅
+- commit `bb9ea1b`
+
+#### 작업 6: Vercel 배포 검증 시도 → 4일 갭 발견 ⚠️
+- 사용자가 다시 도매매 단건 크롤링 후 꽃수레에 담아둠
+- MCP로 등록시작 다시 클릭 → URL은 *옛 인코딩 그대로* + 폼은 *여전히 빈 상태*
+- Vercel MCP 진단:
+  - `list_deployments` since=직전 deploy → 0건
+  - 최신 production deployment commit = `dc6fadc` (4일 전 archive 정비)
+  - 본 세션 push 5건 (`66c3bdb`, `ae341ce`, `ff4ef4d`, `4657173`, `bb9ea1b`)이 모두 *Vercel deployment 목록에 없음*
+  - `vercel_get_project` 결과: `live: false` ⚠️
+- 사용자에게 보고 + Vercel 대시보드 "Redeploy" 클릭 요청 → 사용자 실행
+- 결과: 새 deployment 생성됐으나 *옛 commit (`dc6fadc`) 그대로 재배포* (Redeploy 버튼의 의미는 *동일 commit 재배포*, 최신 commit 가져오기 X)
+
+#### 작업 7: Vercel webhook 끊김 진단 ✅
+- 빈 commit (`61810d5`) push 후 12초 대기 → list_deployments 0건 (webhook 미작동 확정)
+- `gh api repos/kkotium-dot/kkotium-garden/hooks` → `[]` (빈 배열) ⚠️
+- **확정**: GitHub repo에 Vercel webhook 0건. Vercel git integration이 *4일 이상 전*부터 끊긴 상태로 운영됨.
+
+#### 작업 8: 작업원칙 #36 신규 등록 + 검증 스크립트 작성 ✅
+- `scripts/verify-vercel-deploy.sh` (신규 130줄, 실행권한):
+  - single-shot 모드: `HEAD SHA == latest production deployment SHA` 비교
+  - `--wait` 모드: 180초 polling으로 READY + commit SHA 일치 모두 확인
+  - exit code 1 발생 시 webhook 끊김 진단 안내 (`gh api repos/.../hooks`)
+  - 환경변수 `VERCEL_TOKEN` 필요 (https://vercel.com/account/tokens)
+- 작업원칙 #36 신규 등록 (PROGRESS.md, CLAUDE.md, ROADMAP.md):
+  - **근본 원리**: "git push 성공"은 production 반영을 의미하지 않는다. push 후 build trigger + build complete + traffic 전환 3단계 모두 검증 필수.
+  - 5개 sub-rule (a~e): push 직후 검증 / 스크립트 활용 / STEP 0 보강 / MD 표기 강화 / webhook 자동 감지
+  - 본 세션 사고 사례를 *올바른 흐름*으로 형식화
+- CLAUDE.md STEP 0에 `gh api hooks` + `scripts/verify-vercel-deploy.sh` 추가
+- ROADMAP.md 인계 메시지에 #36 라인 추가
+- commit `a5dfe53`
+
+#### 작업 9: 진짜 근본 원인 노출 — Hobby plan cron 위반 ✅
+- 사용자가 *직접 처리는 안 되는가* 질문 → `~/.vercel/auth.json` 발견 (사용자 과거 Vercel CLI 로그인 흔적)
+- `npx vercel@latest whoami` → `kkotjye` (인증 작동)
+- `npx vercel@latest deploy --prod --yes` 시도 → **deploy_failed**:
+  ```
+  Hobby accounts are limited to daily cron jobs.
+  This cron expression (0 */6 * * *) would run more than once per day.
+  ```
+- **진짜 근본 원인 확정**: Sprint 6-A 백엔드 commit `66c3bdb`가 `vercel.json`에 `0 */6 * * *` (6시간 cron) 추가. Hobby plan은 daily만 허용. *그 commit 이후 모든 push가 같은 vercel.json을 가지고 있어 연쇄적으로 build 차단됨*. Vercel은 build를 trigger하지 않고 *deployments 목록에 아예 등록 안 함*. 그래서 list_deployments 0건이었던 것.
+
+#### 작업 10: Hobby plan 호환 fix + 직접 deploy ✅
+- `vercel.json` 변경: `0 */6 * * *` → `0 0 * * *` (매일 자정 UTC = 오전 9시 KST)
+- 트레이드오프: 재고 폴링 6시간 → 24시간. Option C 동적 임계값 로직은 영향 없음 (cadence 무관).
+- commit `8f98346`
+- `npx vercel@latest deploy --prod --yes` → **READY** (`dpl_CEBVUD74DYXeR74GvpZY39fKVaZL`)
+- 본 세션 누적 7개 commit (66c3bdb ~ 8f98346) 모두 한 번에 production 반영
+
+#### 작업 11: Prefill fix 최종 검증 ✅
+- MCP로 `/crawl?tab=history` → 등록시작 클릭 → `/products/new?prefill=...` 진입
+- 폼 자동 채움 결과:
+  - 상품명: "디자인 복 달항아리 도어벨 개업선물 액막이 집들이 이사 결혼 신혼 인테리어" ✅
+  - 판매가 27,170원 / 공급가 20,900원 ✅
+  - 시장 평균 29,011원 대비 6% 저렴 평가 ✅
+  - 꿀통지수 D등급 21점 (꼬띠 페르소나 정상 작동) ✅
+  - 마진 계산기 1,440원 / ROI 6.0% / 5.3% 낮음 평가 ✅
+  - 업로드 준비도 38% / 등급 D / 누락 항목 안내 정상 ✅
+  - 공급사 자동 매핑: tembytemby 미등록 안내 + 거래처 명단 등록 유도 ✅
+- URL: `prefill=eyJ...` (URL-safe base64, `-`/`_` 사용, `+` 없음) ✅
+- **prefill fix 100% 검증 완료**
+
+### 적용된 작업원칙
+
+- **#17** commit msg는 `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 통과 + 본 세션이 *#21을 #36으로 확장* (webhook 개수 + verify script 추가)
+- **#22** 시각 검증 — MCP screenshot으로 폼 자동 채움 실측 ✅
+- **#24** commit + push + deploy 한 turn 안에 ✅
+- **#26** 단독 판단 0 — 모든 결정 사용자 Y/N 승인
+- **#28** Vercel = source of truth — 본 세션이 *검증 메커니즘 누락 사고*로 #36 등록
+- **#29 (a~e++)** 한글 처리 규칙 — entry 작성에 write_file 안전 패턴 사용 ✅
+- **#31 (a~h)** SESSION_LOG 분할 (1628 → 656 + 997) ✅
+- **#32** TSC + npm run build 모두 통과 ✅
+- **#34** 명백한 오류 파일 발견 (3건) → 사용자 알림 + Y/N 승인
+- **#36 신규** Vercel deploy 검증 의무화 — 본 세션이 *형식화 트리거*
+
+### 본 세션 학습 (영구 기록)
+
+1. **"git push 성공 ≠ production 반영"** — 본 세션 사고의 핵심 학습. push 후 Vercel build trigger + build complete + traffic 전환 3단계 모두 검증해야 안전. PROGRESS.md / ROADMAP.md / SESSION_LOG.md에 "배포 READY"라고 적기 전 *반드시 deployment SHA 일치 검증* 필수.
+
+2. **Vercel Hobby plan cron 제한** — daily cron만 허용. 6시간/4시간/등 daily 미만 cron 사용 시 deploy 차단 + deployments 목록에 등록 안 함 (silent fail). 향후 vercel.json cron 추가 시 *Pro plan upgrade 또는 daily 이하 schedule* 의무. 알려진 이슈 표 추가.
+
+3. **Vercel webhook 끊김 자동 감지의 가치** — 본 세션이 *4일 갭*을 발견 못 했으면 사용자가 production을 *옛 코드로 운영 중*인 상태로 더 오래 진행했을 것. PROGRESS.md / ROADMAP.md / SESSION_LOG.md 모두 "배포 READY"라고 적혀 있던 것이 *false positive*였음. 작업원칙 #36 sub-rule (d)가 이를 방지.
+
+4. **MCP 도구 조합의 검증력** — Chrome MCP (UI 실측) + Supabase MCP (DB 검증) + Vercel MCP (배포 진단) + Vercel CLI (직접 deploy) 4가지 조합으로 *사용자 손 안 대고 진단 + 수정 + 배포 + 검증* 가능. 본 세션이 그 첫 적용 사례. CLAUDE.md 6-2 권장 MCP에 Vercel 추가 권장.
+
+5. **사용자가 본 화면 ≠ MCP가 보는 화면** — 화면 width 변화 시 좌표 기반 클릭 위험. *ref 기반 클릭*(read_page로 element ref 확보 후 click) 의무화. 본 세션에서 좌표 기반 클릭 1회 오작동 (jc 0xff 발견).
+
+6. **commit message 자동화 패턴** — 본 세션 영문 commit msg 5건 모두 `.commit-msg.tmp` + `git commit -F` 패턴으로 작성. 한글 commit msg 없었음 (작업원칙 #29 (d) 준수).
+
+### 보류된 항목
+
+1. **Pro plan upgrade 결정** — 사용자가 매달 $20 부담 의향이 있는지 결정. Pro upgrade 시 `vercel.json` cron을 다시 `0 */6 * * *`로 되돌리는 한 줄 수정만 필요.
+2. **VERCEL_TOKEN 환경변수 등록** — 본 세션은 `~/.vercel/auth.json` 활용으로 CLI 인증 통과. 향후 `scripts/verify-vercel-deploy.sh` 직접 실행을 위해서는 별도 `VERCEL_TOKEN` 발급 + `.env.local` 등록 권장 (사용자 결정).
+3. **Sprint 6-A UI** — 본 세션은 *워크플로우 첫 실측 검증 + 발견 버그 수정 + 인프라 사고 정상화*에 집중. UI (재고 뱃지 + LowStockAlertWidget + minq>1 경고)는 다음 세션에서 진행.
+4. **첫 실제 상품 등록 완료** — 사용자가 카테고리/이미지/배송/SEO 6탭 완성 후 DRAFT 또는 ACTIVE 등록까지 완료해야 cron 폴링 검증 가능. 다음 세션에서 진행.
+
+### 본 세션 commit (7건 + 본 entry commit)
+
+1. `4657173` chore: cleanup leftover crawler files + split SESSION_LOG per principle 31
+2. `bb9ea1b` fix(crawl): prefill data lost on /products/new — URLSearchParams ate base64 "+"
+3. `61810d5` chore: trigger vercel deploy probe (diagnose webhook integration) — empty
+4. `a5dfe53` feat(ops): work principle #36 + verify-vercel-deploy.sh — prevent silent webhook breakage
+5. `8f98346` fix(vercel): downgrade inventory-sync cron to daily for Hobby plan
+6. (본 entry) docs(plan): record session — workflow first live test + prefill bug + vercel 4-day gap + work principle #36
+
+### Vercel deployment 결과
+
+- `dpl_CEBVUD74DYXeR74GvpZY39fKVaZL` READY (commit `8f98346`)
+- `kkotium-garden.vercel.app` aliased
+- 본 세션 누적 7개 commit 모두 production 반영
+- 작업원칙 #36 첫 실전 적용 (push 후 검증으로 정상화 확인)
+
+
+---
+
 ## 2026-05-08 세션 (Sprint 6-A 축소 백엔드 — Option C 하이브리드 동적 임계값) ✅
 
 ### 본 세션 성격

@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
 
-> **최종 업데이트**: 2026-05-08 (본 세션: Sprint 6-A 백엔드 완료 — Option C 하이브리드 동적 임계값 + 꿀통 꽃수레 7개 정리)
-> **TSC**: 0 errors | **빌드**: Compiled successfully (26/26 prerender + /api/cron/inventory-sync 포함) | **배포**: https://kkotium-garden.vercel.app (66c3bdb READY)
-> **HEAD**: 66c3bdb = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **최종 업데이트**: 2026-05-12 (본 세션: 워크플로우 첫 실측 검증 + prefill 버그 fix + Vercel 4일 갭 해소 + 작업원칙 #36 신규 등록)
+> **TSC**: 0 errors | **빌드**: 27/27 prerender | **배포**: https://kkotium-garden.vercel.app (8f98346 READY via Vercel CLI direct deploy `dpl_CEBVUD74DYXeR74GvpZY39fKVaZL`)
+> **HEAD**: 8f98346 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (7개 모두 정리됨, 본 세션 사용자 결정) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 (4모드 foundation) ✅ | **6-A 백엔드 (Option C 하이브리드) ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
