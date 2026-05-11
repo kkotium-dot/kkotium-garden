@@ -1,0 +1,54 @@
+{
+  "header": {
+    "title": "품절 위험 알림",
+    "subtitle": "재고 임계값을 넘은 활성 상품들",
+    "emptyAll": "현재 품절 위험 알림이 없습니다",
+    "emptyHint": "재고 폴링이 6시간 또는 24시간마다 자동 갱신됩니다"
+  },
+  "level": {
+    "red": "긴급",
+    "orange": "경고",
+    "yellow": "주의",
+    "redDesc": "즉시 조치 필요",
+    "orangeDesc": "3일 이내 보충",
+    "yellowDesc": "1주일 안전재고"
+  },
+  "qty": {
+    "current": "현재 재고",
+    "threshold": "임계값",
+    "unit": "개"
+  },
+  "action": {
+    "relistAlert": "재등록 알림",
+    "relistAlertHint": "공급사에 재고 보충 요청 알림",
+    "priceCut": "가격 조정",
+    "priceCutHint": "검색 조련사로 이동해 가격 인하 + SEO 점검",
+    "markOutOfStock": "품절 처리",
+    "markOutOfStockHint": "네이버 스토어에 품절 상태로 전환",
+    "resolve": "해결",
+    "resolveHint": "메모를 적고 Enter로 알림 종료",
+    "resolveNotePlaceholder": "해결 방법 메모 (선택)"
+  },
+  "untrustworthy": {
+    "groupTitle": "재고 미신뢰 공급사",
+    "groupSubtitle": "최근 7일간 재고가 그대로 — 공급사 직접 확인 권장. 자동 처리는 비활성화됩니다.",
+    "directCheckLabel": "공급사 직접 확인"
+  },
+  "supplier": {
+    "noSupplier": "공급사 미설정",
+    "noProductCode": "도매꾹 매핑 없음"
+  },
+  "time": {
+    "minutesAgoSuffix": "분 전",
+    "hoursAgoSuffix": "시간 전",
+    "daysAgoSuffix": "일 전",
+    "justNow": "방금"
+  },
+  "toast": {
+    "resolveSuccess": "알림이 해결됨으로 처리되었습니다",
+    "resolveFail": "처리 실패 — 다시 시도해 주세요",
+    "relistAlertSuccess": "재등록 알림이 디스코드로 전송되었습니다",
+    "outOfStockSuccess": "품절 처리되었습니다",
+    "actionPending": "처리 중..."
+  }
+}

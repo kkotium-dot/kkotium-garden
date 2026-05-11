@@ -23,6 +23,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { Package, TrendingUp, AlertTriangle, Sparkles, Layers, Skull, ArrowRight, ShoppingCart, RefreshCw } from 'lucide-react';
 import KkottiWidget from '@/components/dashboard/KkottiWidget';
 import KkottiBriefingWidget from '@/components/dashboard/KkottiBriefingWidget';
+import LowStockAlertWidget from '@/components/dashboard/LowStockAlertWidget';
 import UploadReadinessWidget from '@/components/dashboard/UploadReadinessWidget';
 import ReviewGrowthWidget from '@/components/dashboard/ReviewGrowthWidget';
 import ConfirmationReminderWidget from '@/components/dashboard/ConfirmationReminderWidget';
@@ -485,6 +486,9 @@ export default function DashboardPage() {
           ════════════════════════════════════════════════════════════════════ */}
       <CollapsibleSection section="action" variant="hunter">
         <div className="space-y-4">
+          {/* Sprint 6-A UI Phase 2 — low-stock alerts triage (highest priority action) */}
+          <LowStockAlertWidget />
+
           {/* Today's actionable plan */}
           <DailyPlanWidget products={products} productsLoading={productsLoading} />
 
