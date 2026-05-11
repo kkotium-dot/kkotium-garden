@@ -18,7 +18,9 @@ cd /Users/jyekkot/Desktop/kkotium-garden && \
   git stash list && \
   git --no-pager log --oneline -5 && \
   wc -l docs/plan/*.md && \
-  curl -sIo /dev/null -w "Vercel HTTP: %{http_code}\n" https://kkotium-garden.vercel.app/dashboard
+  curl -sIo /dev/null -w "Vercel HTTP: %{http_code}\n" https://kkotium-garden.vercel.app/dashboard && \
+  echo "GitHub webhooks: $(gh api repos/kkotium-dot/kkotium-garden/hooks --jq 'length' 2>/dev/null || echo '?')" && \
+  scripts/verify-vercel-deploy.sh 2>&1 || true
 ```
 
 확인 포인트:
@@ -26,12 +28,14 @@ cd /Users/jyekkot/Desktop/kkotium-garden && \
 - working tree clean (변경 있으면 보고)
 - `docs/plan/SESSION_LOG.md`가 1500줄 초과 시 → 작업원칙 #31 분할 자동 진행
 - Vercel HTTP 200 (5xx면 사용자에게 보고)
+- **GitHub webhooks length > 0** (0이면 Vercel git integration 끊김 → 작업원칙 #36 발동, 사용자 즉시 보고)
+- **verify-vercel-deploy.sh exit 0** (mismatch면 production이 옛 commit → 작업원칙 #36 발동). 본 검증에는 `VERCEL_TOKEN` 환경변수 필요. 미설정이면 사용자에게 token 발급 요청 (https://vercel.com/account/tokens)
 
 ### STEP 1 — 핵심 MD 4개 정독
 
 순서대로 정독:
 
-1. `docs/plan/PROGRESS.md` — 현재 진행 상태 + 작업원칙 #26~#35 + 핵심 인덱스
+1. `docs/plan/PROGRESS.md` — 현재 진행 상태 + 작업원칙 #26~#36 + 핵심 인덱스
 2. `docs/plan/ROADMAP.md` — Sprint 계획 + 다음 새 채팅 시작 메시지 영역
 3. `docs/plan/SESSION_LOG.md` — 직전 5세션 상세 기록
 4. (선택) `docs/research/` 하위 — 진행 중 Sprint에 관련된 리서치 보고서
@@ -158,6 +162,7 @@ grep -nE "혁섭|쿠드|식타|릴고|헌서|위젝|스칵|쿠두" docs/plan/*.m
 - 커밋 메시지에 한글 다량 포함 시 `.commit-msg.tmp` 파일 작성 → `git commit -F .commit-msg.tmp` (작업원칙 #17)
 - main에 직접 push (1인 개발, 브랜치 없음)
 - 작업원칙 #28: Vercel production이 source of truth. `npm run dev` 가정 production 아키텍처 절대 제안 금지
+- **작업원칙 #36** — push 직후 `scripts/verify-vercel-deploy.sh --wait` 실행 의무. 180초 polling으로 production이 push한 commit으로 갱신됐는지 검증. exit code 1 발생 시 webhook 끊김 즉시 진단 (`gh api repos/<owner>/<repo>/hooks`)
 
 ### 4-5. 의심 파일 발견 시 (작업원칙 #34)
 
@@ -249,6 +254,7 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 - **#33** — useSearchParams Suspense 자동 점검
 - **#34** — 명백한 오류 파일 발견 시 사용자 알림 의무
 - **#35** — 한글 사전 분리 패턴
+- **#36** — Vercel deploy 검증 의무화 (push 후 `scripts/verify-vercel-deploy.sh --wait` 실행, webhook 끊김 자동 감지)
 
 ---
 

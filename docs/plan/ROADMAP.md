@@ -57,7 +57,7 @@ HEAD = 66c3bdb = origin/main 일치. working tree clean. stash@{0} 보존.
 
 ⚠️ 작업원칙 강제:
 - #17 commit msg는 .commit-msg.tmp + git commit -F
-- #21 사전 점검 (HEAD/status/stash/wc)
+- #21 사전 점검 (HEAD/status/stash/wc + GitHub webhook 개수 + verify-vercel-deploy.sh)
 - #22 시각 검증 의무 (API 200 ≠ 브라우저 완료)
 - #24 commit + push 한 turn 안에 끝내기
 - #26 (a~e) IA 점검 + dev 캐시 정리 + Chrome MCP js hang 회피
@@ -67,6 +67,7 @@ HEAD = 66c3bdb = origin/main 일치. working tree clean. stash@{0} 보존.
 - #33 useSearchParams Suspense 자동 점검
 - #34 명백한 오류 파일 발견 시 사용자 알림
 - #35 한글 사전 분리 패턴
+- #36 Vercel deploy 검증 의무 (push 후 scripts/verify-vercel-deploy.sh --wait, webhook 끊김 자동 감지)
 
 다음 세션 작업 (M+):
 

@@ -21,6 +21,7 @@
 - [작업원칙 #33](#작업원칙-33) — useSearchParams Suspense 자동 점검 (본 세션 신규)
 - [작업원칙 #34](#작업원칙-34) — 명백한 오류 파일 발견 시 사용자 알림 의무
 - [작업원칙 #35](#작업원칙-35) — 한글 사전 분리 패턴 (2026-05-08 본 세션 신규)
+- [작업원칙 #36](#작업원칙-36--vercel-deploy-검증-의무화-2026-05-12-본-세션-학습) — Vercel deploy 검증 의무화 (2026-05-12 본 세션 신규)
 - [Sprint 6/7/8 계획](#sprint-678-계획-2026-05-08-신규) — 리서치 갭 분석 기반 신규 계획
 - [현재 앱 상태](#현재-앱-상태)
 - [환경/메뉴/파이프라인](#환경--메뉴--파이프라인)
@@ -277,6 +278,44 @@ grep -cE "\\u[0-9A-Fa-f]{4}" src/lib/notifications/discord-builder.ts
 - 5개 빌더 함수 4섹션 구조 작성 (87 strings 사전)
 - TSC 0 errors / 빌드 26/26 / 5채널 발송 HTTP 204 / 한글 깨짐 0건
 - 발신자 이름 영문 `Kkotti` → 한글 `꼬띠` 정정 (test-discord-5-channels.mjs)
+
+---
+
+## 작업원칙 #36 — Vercel deploy 검증 의무화 (2026-05-12 본 세션 학습)
+
+본 세션 prefill 버그 수정 검증 중 *4일간 git push 5건이 모두 Vercel에 도달 못한* 사실 발견. GitHub repo의 webhook 목록이 빈 배열 (Vercel git integration 끊김). PROGRESS.md / ROADMAP.md / SESSION_LOG.md에 "배포 READY"로 명시된 모든 최근 진행 (Sprint 6-A 백엔드 / archive 정비 / CLAUDE.md / cleanup) 실제로는 4일 전 옛 코드로 production이 운영됨. 사용자도 Claude도 인지 못한 채로 진행됨.
+
+**근본 원리**: *"git push 성공"은 production 반영을 의미하지 않는다*. push 후 Vercel build trigger + Vercel build complete + production traffic 전환까지 3단계 모두 검증되어야 함. 작업원칙 #28 (Vercel = source of truth)의 *검증 메커니즘 부재*가 본 사고의 직접 원인.
+
+**규칙 (강제 적용)**:
+
+(a) **push 직후 commit SHA 일치 검증 의무** — 모든 production push 후 Vercel `list_deployments`로 최신 production deployment의 `meta.githubCommitSha`가 `git rev-parse HEAD`와 일치하는지 확인 의무.
+
+(b) **검증 스크립트 활용** — `scripts/verify-vercel-deploy.sh --wait` 실행. 180초 polling으로 새 deployment의 READY 상태 + commit SHA 일치 모두 확인. exit code 1 발생 시 webhook 끊김 진단 + 사용자 즉시 보고.
+
+(c) **세션 시작 STEP 0 보강** — 매 새 세션 첫 turn 환경 점검에 `gh api repos/<owner>/<repo>/hooks` + Vercel `list_deployments` 결과 비교 추가. 직전 commit SHA가 production에 반영 안 됐으면 *본 작업 시작 전 사용자 보고 + 해결 의무*.
+
+(d) **MD 기록 표기 강화** — PROGRESS.md / ROADMAP.md / SESSION_LOG.md에 "배포 READY"라고 적기 전 *반드시 (a) 검증 통과한 commit SHA*만 기록. 검증 안 된 상태에서는 "push만 완료, deploy 미확인"으로 정직하게 표기.
+
+(e) **webhook 끊김 자동 감지** — push 후 180초 내 새 deployment 미발생 시 `gh api repos/<owner>/<repo>/hooks` 자동 호출. 빈 배열이면 *git integration 끊김 확정*. 사용자에게 Vercel 대시보드 → Settings → Git → Connect Git Repository 단계 안내.
+
+**적용 예시 (본 세션 사고 흐름)**:
+```
+push: 4657173 (cleanup + SESSION_LOG split)
+→ list_deployments since=마지막 → 0건  ⚠️ 위반
+→ 본 작업원칙 미적용 = 위반 인지 X, 다음 작업 진행
+→ 4일 후 다음 작업 (prefill fix) 검증 중 발견 = 4일 누적 정보 손실
+
+올바른 흐름 (본 작업원칙 적용 시):
+push: 4657173 직후
+→ scripts/verify-vercel-deploy.sh --wait
+→ exit 1 (180s 후 mismatch) → webhook 진단
+→ gh api hooks → [] → Vercel 대시보드 안내
+→ 사용자 재연결 → 정상 deploy + push 검증
+→ 4일 갭 0
+```
+
+**본 작업원칙은 작업원칙 #28의 *검증 메커니즘*을 형식화**. #28이 *원칙*이라면 #36이 *집행 도구*.
 
 ---
 
