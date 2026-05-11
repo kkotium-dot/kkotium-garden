@@ -1,3 +1,91 @@
+## 2026-05-12 Session C-1 (작업원칙 #31 (b) ROADMAP T1 분할 — Session C 5개 작업 중 1개 완료) ✅
+
+### 본 세션 성격
+- Session A + B를 같은 채팅에서 연속 처리 후 사용자가 컨텍스트 한계 질문 + "이어서 진행" 명시. 누적 컨텍스트 부담 인지하고 *Session C 5개 작업 중 ROADMAP 분할 1개만 본 turn 진행*. 나머지 4개는 Session D로 안전 분리.
+- 사용자 질문에 답변: Claude Code도 한 채팅 = 한 컨텍스트 윈도우(200K) 한계. 누적 시 자동 압축. 본 프로젝트 패턴은 MD에 풀 디테일 보존 + 짧은 인계 메시지로 새 채팅 시작 → 컨텍스트 안전 분할 가능.
+
+### 시작 직전 상태
+- HEAD `d0313a5` = origin/main 일치 ✅
+- working tree clean ✅
+- MD 줄 수: PROGRESS 842 / ROADMAP 1351 (T1 초과) / SESSION_LOG 1102 (T1 초과)
+- Latest prod deploy SHA == HEAD ✅
+
+### 본 세션 작업
+
+#### Session C-1: ROADMAP.md T1 분할 (작업원칙 #31 (b))
+
+목표: ROADMAP.md 1351줄 → live는 ~350줄 영역으로 축소, deprecated 영역은 archive로 동결.
+
+- 신규: `docs/plan/archive/ROADMAP_2026-05.md` (1019줄)
+  - ISO 8601 파일명 패턴 (`*_YYYY-MM.md`) — archive README 정책 따름
+  - 헤더 11줄 + 이전 payload 1008줄
+  - 포함: Session B 작업 디테일 (Sprint 6-A UI Phase 2 LowStockAlertWidget, commit `9fabfca`) + deprecated 인계 메시지 9개 (2026-05-07 ~ 2026-05-12 Session A/B 이전)
+- 갱신: `docs/plan/ROADMAP.md` (1351 → 345줄)
+  - 유지: 헤더 + Session C 인계 메시지 + Session C 작업 디테일 + Sprint 6/7/8/9+ 계획 + 영구 참조 (체크리스트, 비용 로드맵, 도구 패턴 등)
+  - 제거: Session B 작업 디테일 + deprecated 인계 9개
+- 갱신: `docs/plan/archive/README.md`
+  - 인덱스 표에 `ROADMAP_2026-05.md` 행 추가 + 분할 시점 (2026-05-12) + 포함 내용 메타데이터
+  - 기존 `SESSION_LOG_2026-05.md` 행과 동일 패턴 유지
+
+작업원칙 #31 (c) 무결성 검증:
+- wc -l 합계: live 345 + archive 1019 = 1364 vs 원본 1351 + 헤더 11 = 1362 → 차이 2줄 (±5 이내 ✅)
+- NFC + FFFD audit 3개 파일 모두 0/0 ✅
+- 한글 sentinel 0 신규 매칭 ✅
+
+작업원칙 #31 (e) idempotent 가드:
+- `scripts/.tmp_split_roadmap.py` — `if ARCHIVE.exists(): skip` + README 매칭 marker
+- 재실행 시 no-op 보장 ✅
+
+### 검증 + Commit + Push
+
+- `11805b1` docs(plan): split ROADMAP per principle 31 (b) — T1 1351 → 345 + archive (+1023 / -1007)
+- push `d0313a5..11805b1 main -> main`
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production is on 11805b1 (state=REGISTERED)
+
+### 적용된 작업원칙
+
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 통과 ✅
+- **#22** 분할은 코드 변경 없음 — git diff stat 으로 검증 충분
+- **#24** 분할 + 검증 + commit + push + MD 갱신 한 turn 안에
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 규칙:
+  - (b) MD 갱신 = Python 안전 삽입 패턴
+  - (e) sentinel grep 0 신규 매칭
+- **#31 (a~h)** 본 세션이 핵심 적용:
+  - (a) T1 (1000) 임계 도달 ROADMAP 자동 분할
+  - (b) 의미 단위 분할 (deprecated 인계 + 완료 세션 디테일만 이전)
+  - (c) 인덱스 무결성 ±5 이내 통과
+  - (e) idempotent 가드 적용
+  - (g) wc -l + 양방향 backlink 검증
+- **#32** TSC + build 영향 0 (MD 변경만)
+- **#34** 본 세션 신규 발견 잔재 0건
+- **#36** push 후 verify-vercel-deploy.sh --wait exit 0 ✅
+
+### 본 세션 학습 (영구 기록)
+
+1. **한 채팅 = 한 컨텍스트 윈도우 = 안전 분할 우선** — Claude Code도 한 채팅 안에서 컨텍스트 오버 가능. 작업원칙 #24 "한 turn 안에 완료"의 *실질적 의미는 한 turn에 안전한 크기로*. Session A+B를 한 채팅에서 처리한 누적 부담 인지 후 Session C 5개를 한 turn에 진행하지 않고 *1개씩 작은 단위 분할*로 결정한 것이 본 세션 시니어 판단의 핵심.
+
+2. **archive/README.md 인덱스 표 갱신 의무** — 분할 자체는 작업원칙 #31 (b) 자동이지만 README 인덱스 표는 *수동 갱신 의무*. 누락 시 archive 검색 효율 저하. 모든 분할 commit에 README 갱신 포함 필수.
+
+3. **ISO 8601 파일명 패턴 일관성** — 본 분할이 archive 정책 적용 두 번째 케이스. 첫 분할(SESSION_LOG_2026-05.md, 2026-05-11)과 동일 패턴. 향후 모든 분할은 본 패턴 강제.
+
+### 본 세션 commit
+
+1. `11805b1` docs(plan): split ROADMAP per principle 31 (b) — T1 1351 → 345 + archive
+2. (본 entry) docs(plan): record Session C-1 + Session D handoff
+
+### 다음 세션 (Session D) 작업 = Sprint 6-A UI Phase 3 잔여
+
+1. 씨앗 심기 (`/products/new`) `minq>1` 경고 배너 (위탁판매 사고 방지)
+2. `getItemDetail(productNo)` 백엔드 보강 — minq를 InventorySnapshot에 정확히 기록
+3. admin 수동 폴링 트리거 path (`POST /api/admin/poll-inventory-now`) + dashboard 토스트
+4. `mark-oos` Naver Commerce API 연결 — admin confirm 모달 + status flip 호출
+5. 검증 + commit + push + verify
+6. MD 갱신 + Session E 인계
+
+---
+
 ## 2026-05-12 Session B (Sprint 6-A UI Phase 2 — LowStockAlertWidget + 4 alert API routes) ✅
 
 ### 본 세션 성격
