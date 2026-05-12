@@ -357,8 +357,12 @@ Etc:        CRON_SECRET, NEXT_PUBLIC_APP_URL
 - `README.md` — archive 폴더 인덱스 (분할 정책 + 검색 패턴 + 파일명 규칙)
 - `PROGRESS_2026Q2_MAY.md` — 5월 누적 PROGRESS 헤더 이력 (작업원칙 #31 분할, 동결)
 - `ROADMAP_2026Q2_MAY.md` — deprecated 인계 메시지 9개 + Phase A/B/C 완료 이력 (동결)
+- `ROADMAP_2026-05.md` — Session B 작업 + deprecated 인계 메시지 (2026-05-12 분할, 동결)
 - `SESSION_LOG_2026Q2_MAY.md` — 2026-05-01 ~ 2026-05-06 세션 24+ 건 (동결)
 - `SESSION_LOG_2026-05.md` — 2026-05-06 ~ 2026-05-08 세션 9건 (두 번째 분할 2026-05-11, 동결)
+- `SESSION_LOG_2026-05-12.md` — Session B 외 8 entries (세 번째 분할 2026-05-12, 동결)
+- `SESSION_LOG_2026-05-12-PM.md` — Session E-2 Phase 1~5 + 7개 (네 번째 분할 2026-05-12 PM, 동결)
+- `SESSION_LOG_2026-05-13.md` — 2026-05-12 5 entries (v3.1 FINAL + v2.0 + Sprint 7 P0/P0-B/P1) (다섯 번째 분할 2026-05-13, 동결)
 
 ### 프로젝트 파일 (외부 리서치)
 - `260413-꽃틔움 가든 개선안 검증과 2026년 전략 로드맵`
