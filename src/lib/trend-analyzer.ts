@@ -52,31 +52,39 @@ async function fetchDataLabTrends(): Promise<TrendResult | null> {
     const fmt = (d: Date) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-    const body = {
-      startDate: fmt(startDate),
-      endDate:   fmt(endDate),
-      timeUnit:  'date',
-      category:  DATALAB_CATEGORIES.map(c => ({
-        name:   c.name,
-        param:  [c.param],
-      })),
-    };
+    // DataLab Shopping Insights enforces max 3 categories per request — we
+    // chunk the top-10 and merge. Sprint 7 P0-B (2026-05-12) fix: prior code
+    // sent 10 in one call and silently fell back due to HTTP 400.
+    const CHUNK = 3;
+    const batches: typeof DATALAB_CATEGORIES[] = [];
+    for (let i = 0; i < DATALAB_CATEGORIES.length; i += CHUNK) {
+      batches.push(DATALAB_CATEGORIES.slice(i, i + CHUNK));
+    }
 
-    const res = await fetch(DATALAB_URL, {
-      method:  'POST',
-      headers: {
-        'Content-Type':          'application/json',
-        'X-Naver-Client-Id':     clientId,
-        'X-Naver-Client-Secret': clientSecret,
-      },
-      body: JSON.stringify(body),
-    });
+    const results: Array<{ title: string; data: Array<{ period: string; ratio: number }> }> = [];
 
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    const results: Array<{ title: string; data: Array<{ period: string; ratio: number }> }> =
-      data.results ?? [];
+    for (const batch of batches) {
+      const body = {
+        startDate: fmt(startDate),
+        endDate:   fmt(endDate),
+        timeUnit:  'date',
+        category:  batch.map(c => ({ name: c.name, param: [c.param] })),
+      };
+      const res = await fetch(DATALAB_URL, {
+        method:  'POST',
+        headers: {
+          'Content-Type':          'application/json',
+          'X-Naver-Client-Id':     clientId,
+          'X-Naver-Client-Secret': clientSecret,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) continue; // Skip failed batch, keep partial results
+      const data = await res.json();
+      const batchResults: Array<{ title: string; data: Array<{ period: string; ratio: number }> }> =
+        data.results ?? [];
+      results.push(...batchResults);
+    }
 
     if (results.length === 0) return null;
 

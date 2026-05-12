@@ -128,72 +128,80 @@ export async function refreshCategoryTrendCache(): Promise<RefreshTrendResult> {
     };
   }
 
-  // Pull last-7-day ratios for all top-10 categories in one POST
+  // DataLab Shopping Insights `categories` endpoint enforces a hard limit
+  // of *3 categories per request*. We chunk the top-10 into batches of 3
+  // and merge results. Ratios within a batch are normalized to that batch's
+  // max — for the hot/normal/cold market-level bucket this batch-local
+  // normalization is acceptable (we are not doing precise cross-category
+  // comparison, only relative trend strength).
   const endDate = new Date();
   const startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
   const fmt = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-  let res: Response;
-  try {
-    res = await fetch(DATALAB_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Naver-Client-Id': clientId,
-        'X-Naver-Client-Secret': clientSecret,
-      },
-      body: JSON.stringify({
-        startDate: fmt(startDate),
-        endDate: fmt(endDate),
-        timeUnit: 'date',
-        category: DATALAB_CATEGORIES.map((c) => ({ name: c.name, param: [c.param] })),
-      }),
-      signal: AbortSignal.timeout(10_000),
-    });
-  } catch (e) {
+  const CHUNK = 3;
+  const batches: typeof DATALAB_CATEGORIES[] = [];
+  for (let i = 0; i < DATALAB_CATEGORIES.length; i += CHUNK) {
+    batches.push(DATALAB_CATEGORIES.slice(i, i + CHUNK));
+  }
+
+  // Collect latest-day ratios across all batches
+  const raw: Array<{ title: string; ratio: number }> = [];
+  let lastError: string | undefined;
+
+  for (const batch of batches) {
+    let res: Response;
+    try {
+      res = await fetch(DATALAB_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Naver-Client-Id': clientId,
+          'X-Naver-Client-Secret': clientSecret,
+        },
+        body: JSON.stringify({
+          startDate: fmt(startDate),
+          endDate: fmt(endDate),
+          timeUnit: 'date',
+          category: batch.map((c) => ({ name: c.name, param: [c.param] })),
+        }),
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch (e) {
+      lastError = e instanceof Error ? e.message.slice(0, 200) : 'datalab_network_error';
+      continue;
+    }
+
+    if (!res.ok) {
+      lastError = `datalab_http_${res.status}`;
+      continue;
+    }
+
+    const data = (await res.json()) as {
+      results?: Array<{ title?: string; data?: Array<{ period?: string; ratio?: number }> }>;
+    };
+    for (const r of data.results ?? []) {
+      const title = r.title ?? '';
+      const latest = r.data && r.data.length > 0 ? r.data[r.data.length - 1] : null;
+      const ratio = latest?.ratio ?? 0;
+      if (title) raw.push({ title, ratio });
+    }
+  }
+
+  if (raw.length === 0) {
     return {
       fetched: 0,
       upserted: 0,
       durationMs: Date.now() - startedAt,
-      error: e instanceof Error ? e.message.slice(0, 200) : 'datalab_network_error',
+      error: lastError ?? 'datalab_empty_results',
     };
   }
 
-  if (!res.ok) {
-    return {
-      fetched: 0,
-      upserted: 0,
-      durationMs: Date.now() - startedAt,
-      error: `datalab_http_${res.status}`,
-    };
-  }
-
-  const data = (await res.json()) as {
-    results?: Array<{ title?: string; data?: Array<{ period?: string; ratio?: number }> }>;
-  };
-  const results = data.results ?? [];
-  if (results.length === 0) {
-    return {
-      fetched: 0,
-      upserted: 0,
-      durationMs: Date.now() - startedAt,
-      error: 'datalab_empty_results',
-    };
-  }
-
-  // Compute latest-day ratio per category, then rescale to 0..100 against max.
-  const raw = results.map((r) => {
-    const title = r.title ?? '';
-    const latest = (r.data && r.data.length > 0) ? r.data[r.data.length - 1] : null;
-    const ratio = latest?.ratio ?? 0;
-    return { title, ratio };
-  });
+  // Cross-batch normalization: use the global max across all collected ratios
   const maxRatio = Math.max(...raw.map((r) => r.ratio), 1);
 
   let upserted = 0;
   for (const r of raw) {
-    if (!r.title) continue;
     const trendScore = Math.round((r.ratio / maxRatio) * 100);
     const marketLevel: MarketLevel = trendScore >= 60 ? 'hot' : trendScore >= 30 ? 'normal' : 'cold';
     await prisma.categoryTrendCache.upsert({
@@ -220,6 +228,7 @@ export async function refreshCategoryTrendCache(): Promise<RefreshTrendResult> {
     fetched: raw.length,
     upserted,
     durationMs: Date.now() - startedAt,
+    error: lastError, // surface partial failures so caller can see
   };
 }
 
