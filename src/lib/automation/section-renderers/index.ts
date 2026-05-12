@@ -27,6 +27,11 @@ import { shippingRenderer } from './shipping';
 import { corePerformanceRenderer } from './corePerformance';
 import { technologyRenderer } from './technology';
 import { clinicalRenderer } from './clinical';
+import { optionIntroRenderer } from './optionIntro';
+import { seasonalHookRenderer } from './seasonalHook';
+import { optionsRenderer } from './options';
+import { eventDetailsRenderer } from './eventDetails';
+import { benefitsRenderer } from './benefits';
 
 const REGISTRY: Record<string, SectionRenderer> = {
   // Phase 1 (S2 workhorse)
@@ -46,6 +51,12 @@ const REGISTRY: Record<string, SectionRenderer> = {
   corePerformance: corePerformanceRenderer,
   technology:      technologyRenderer,
   clinical:        clinicalRenderer,
+  // Phase 2-b-2 (event/set track: S5 / S8 / S11)
+  optionIntro:     optionIntroRenderer,
+  seasonalHook:    seasonalHookRenderer,
+  options:         optionsRenderer,
+  eventDetails:    eventDetailsRenderer,
+  benefits:        benefitsRenderer,
 };
 
 /** Look up the renderer for a section id. Returns the placeholder

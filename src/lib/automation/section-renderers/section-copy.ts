@@ -1000,3 +1000,427 @@ export async function generateClinicalCopy(
     return { value: fallback, source: 'fallback', filtered: false };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Sprint 7-M2 Phase 2-b-2 additions — event/set track (S5 / S8 / S11)
+//
+// KFTC discipline: all time-bound copy must surface an explicit date window
+// or quantity. Phrases like "마감 임박", "선착순" are already blocked by the
+// copy-writer dark-pattern filter (scarcity rule). These helpers add a
+// second layer: prompts explicitly ask Groq to include numbers
+// (edition number, drop date, quantity) and the helpers reject responses
+// without them.
+// ---------------------------------------------------------------------------
+
+// ---- option intro (S5) ----------------------------------------------------
+
+export interface OptionIntroItem {
+  /** Short option name, e.g. 옐로우 / 그린 / 핑크. */
+  name: string;
+  /** Helper line under the name (use case / category). */
+  sub: string;
+  /** Display chip color (Tailwind hex). May be empty when chip is neutral. */
+  chipColor: string;
+}
+
+export interface OptionIntroCopy {
+  headline: string;
+  /** 4 to 6 option items. */
+  items: OptionIntroItem[];
+  /** Single helper line below the grid, e.g. "원하는 색상 조합으로 받아보세요". */
+  helperLine: string;
+}
+
+const NEUTRAL_CHIPS = ['#FBBF24', '#34D399', '#60A5FA', '#F472B6', '#A78BFA', '#FB7185'];
+
+export async function generateOptionIntroCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<OptionIntroCopy>> {
+  const fallback: OptionIntroCopy = {
+    headline: '옵션 한눈에',
+    items: [
+      { name: '기본', sub: '본품 단일 구성', chipColor: NEUTRAL_CHIPS[0] },
+      { name: '추가형', sub: '여분 1점 동봉', chipColor: NEUTRAL_CHIPS[1] },
+      { name: '세트형', sub: '핵심 구성 묶음', chipColor: NEUTRAL_CHIPS[2] },
+      { name: '실속형', sub: '필수 항목 위주', chipColor: NEUTRAL_CHIPS[3] },
+    ],
+    helperLine: '원하는 구성으로 골라 담아보세요',
+  };
+
+  const prompt = [
+    `Write Korean option-intro copy for the "optionIntro" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    ctx.highlight ? `Highlight: ${ctx.highlight}` : '',
+    `Return JSON exactly: {"headline":"...","items":[{"name":"...","sub":"..."}, ... 4-6 items],"helperLine":"..."}.`,
+    `headline: under 14 Korean characters (e.g. 옵션 한눈에, 색상 선택).`,
+    `items: provide 4 to 6 items. name under 10 chars (option name like color / size / variant). sub under 18 chars (one-line use case).`,
+    `helperLine: under 30 chars, plain friendly tone.`,
+    `No emoji, no superlatives, no scarcity. Respond with JSON only.`,
+  ].filter(Boolean).join('\n');
+
+  const raw = await callGroq(prompt, 320);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; items?: unknown; helperLine?: unknown } = JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    if (!Array.isArray(parsed.items) || parsed.items.length < 4) {
+      return { value: fallback, source: 'fallback', filtered: false };
+    }
+    const items: OptionIntroItem[] = [];
+    let anyFiltered = false;
+    for (let i = 0; i < parsed.items.length && items.length < 6; i++) {
+      const it = parsed.items[i];
+      if (!it || typeof it !== 'object') continue;
+      const o = it as Record<string, unknown>;
+      const name = typeof o.name === 'string' ? o.name : '';
+      const sub = typeof o.sub === 'string' ? o.sub : '';
+      const nf = filterDarkPatterns(name);
+      const sf = filterDarkPatterns(sub);
+      if (!nf.text || !sf.text) continue;
+      anyFiltered = anyFiltered || nf.filtered || sf.filtered;
+      items.push({
+        name: nf.text.slice(0, 10),
+        sub: sf.text.slice(0, 18),
+        chipColor: NEUTRAL_CHIPS[items.length % NEUTRAL_CHIPS.length],
+      });
+    }
+    if (items.length < 4) return { value: fallback, source: 'fallback', filtered: false };
+    const helperRaw = typeof parsed.helperLine === 'string' ? parsed.helperLine : '';
+    const hf = filterDarkPatterns(h);
+    const hlpf = filterDarkPatterns(helperRaw);
+    return {
+      value: {
+        headline: hf.text.slice(0, 14) || fallback.headline,
+        items,
+        helperLine: hlpf.text.slice(0, 30) || fallback.helperLine,
+      },
+      source: 'groq',
+      filtered: anyFiltered || hf.filtered || hlpf.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---- seasonal hook (S8) ---------------------------------------------------
+
+export interface SeasonalHookCopy {
+  /** Season name banner, e.g. "2026 봄 컬렉션". */
+  banner: string;
+  /** Tagline below the banner. */
+  hookLine: string;
+  /** Explicit date window — KFTC requires sale windows be specified. */
+  startLabel: string;
+  endLabel: string;
+}
+
+export async function generateSeasonalHookCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<SeasonalHookCopy>> {
+  const fallback: SeasonalHookCopy = {
+    banner: '시즌 한정',
+    hookLine: '본격 시즌을 알리는 한정 라인업',
+    startLabel: '시작 일자: 상세 페이지 참조',
+    endLabel: '종료 일자: 상세 페이지 참조',
+  };
+
+  const prompt = [
+    `Write Korean seasonal hook copy for the "seasonalHook" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    `Return JSON exactly: {"banner":"...","hookLine":"...","startLabel":"...","endLabel":"..."}.`,
+    `banner: under 14 Korean chars (e.g. 2026 봄 컬렉션, 신년 한정).`,
+    `hookLine: under 30 chars, plain friendly tone.`,
+    `startLabel + endLabel: under 24 chars each. Use placeholder "시작 일자: 상세 페이지 참조" / "종료 일자: 상세 페이지 참조" when actual dates are unknown. KFTC requires explicit date windows for time-bound campaigns.`,
+    `Do NOT use "마감 임박" / "선착순" / "지금만" — these are KFTC-banned scarcity phrases.`,
+    `No emoji. Respond with JSON only.`,
+  ].join('\n');
+
+  const raw = await callGroq(prompt, 240);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { banner?: unknown; hookLine?: unknown; startLabel?: unknown; endLabel?: unknown } =
+      JSON.parse(jsonMatch[0]);
+    const b = typeof parsed.banner === 'string' ? parsed.banner : '';
+    const hk = typeof parsed.hookLine === 'string' ? parsed.hookLine : '';
+    const sl = typeof parsed.startLabel === 'string' ? parsed.startLabel : '';
+    const el = typeof parsed.endLabel === 'string' ? parsed.endLabel : '';
+    const bf = filterDarkPatterns(b);
+    const hkf = filterDarkPatterns(hk);
+    const slf = filterDarkPatterns(sl);
+    const elf = filterDarkPatterns(el);
+    return {
+      value: {
+        banner: bf.text.slice(0, 14) || fallback.banner,
+        hookLine: hkf.text.slice(0, 30) || fallback.hookLine,
+        startLabel: slf.text.slice(0, 24) || fallback.startLabel,
+        endLabel: elf.text.slice(0, 24) || fallback.endLabel,
+      },
+      source: 'groq',
+      filtered: bf.filtered || hkf.filtered || slf.filtered || elf.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---- options table (S8) ---------------------------------------------------
+
+export interface OptionRow {
+  name: string;
+  spec: string;
+}
+
+export interface OptionsTableCopy {
+  headline: string;
+  rows: OptionRow[];
+}
+
+export async function generateOptionsTableCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<OptionsTableCopy>> {
+  const fallback: OptionsTableCopy = {
+    headline: '구성 옵션',
+    rows: [
+      { name: '기본형', spec: '본품 + 기본 구성' },
+      { name: '추가형', spec: '여분 1점 동봉' },
+      { name: '세트형', spec: '핵심 구성 묶음' },
+      { name: '실속형', spec: '필수 항목 위주' },
+    ],
+  };
+
+  const prompt = [
+    `Write Korean options table for the "options" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    ctx.highlight ? `Highlight: ${ctx.highlight}` : '',
+    `Return JSON exactly: {"headline":"...","rows":[{"name":"...","spec":"..."}, ... 4-6 rows]}.`,
+    `headline: under 12 Korean chars (e.g. 구성 옵션, 옵션 안내).`,
+    `rows: 4 to 6 entries. name under 10 chars (option label). spec under 24 chars (single-line spec description like "본품 + 사은품 2점", "180ml 단품 구성").`,
+    `Use "상세 페이지 참조" placeholder when uncertain — do not fabricate volumes or counts.`,
+    `No emoji, no scarcity. Respond with JSON only.`,
+  ].filter(Boolean).join('\n');
+
+  const raw = await callGroq(prompt, 320);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; rows?: unknown } = JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    if (!Array.isArray(parsed.rows) || parsed.rows.length < 4) {
+      return { value: fallback, source: 'fallback', filtered: false };
+    }
+    const rows: OptionRow[] = [];
+    let anyFiltered = false;
+    for (const r of parsed.rows.slice(0, 6)) {
+      if (!r || typeof r !== 'object') continue;
+      const row = r as Record<string, unknown>;
+      const name = typeof row.name === 'string' ? row.name : '';
+      const sp = typeof row.spec === 'string' ? row.spec : '';
+      const nf = filterDarkPatterns(name);
+      const sf = filterDarkPatterns(sp);
+      if (!nf.text || !sf.text) continue;
+      anyFiltered = anyFiltered || nf.filtered || sf.filtered;
+      rows.push({ name: nf.text.slice(0, 10), spec: sf.text.slice(0, 24) });
+    }
+    if (rows.length < 4) return { value: fallback, source: 'fallback', filtered: false };
+    const hf = filterDarkPatterns(h);
+    return {
+      value: { headline: hf.text.slice(0, 12) || fallback.headline, rows },
+      source: 'groq',
+      filtered: anyFiltered || hf.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---- event details (S11) --------------------------------------------------
+
+export interface EventDetailsCopy {
+  headline: string;
+  /** Edition / drop label, e.g. "5번째 콜라보". */
+  editionLabel: string;
+  /** Explicit drop date placeholder. KFTC-required time-bound disclosure. */
+  dropDateLabel: string;
+  /** Quantity disclosure placeholder. KFTC-required for limited drops. */
+  quantityLabel: string;
+  /** Short story paragraph. */
+  story: string;
+}
+
+export async function generateEventDetailsCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<EventDetailsCopy>> {
+  const fallback: EventDetailsCopy = {
+    headline: '드롭 안내',
+    editionLabel: '한정 에디션',
+    dropDateLabel: '드롭 일자: 상세 페이지 참조',
+    quantityLabel: '판매 수량: 상세 페이지 참조',
+    story: '본 한정 드롭은 일정 수량 한정으로 진행됩니다. 정확한 수량과 일자는 상세 페이지를 확인해 주세요.',
+  };
+
+  const prompt = [
+    `Write Korean event copy for the "eventDetails" section of a limited-drop product page.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    `Return JSON exactly: {"headline":"...","editionLabel":"...","dropDateLabel":"...","quantityLabel":"...","story":"..."}.`,
+    `headline: under 12 chars (e.g. 드롭 안내, 한정 출시).`,
+    `editionLabel: under 14 chars (e.g. 5번째 콜라보, 한정 에디션).`,
+    `dropDateLabel: under 28 chars. Use "드롭 일자: 상세 페이지 참조" placeholder when uncertain — KFTC requires explicit date disclosure for time-bound drops.`,
+    `quantityLabel: under 24 chars. Use "판매 수량: 상세 페이지 참조" placeholder when uncertain — KFTC requires quantity disclosure for limited drops.`,
+    `story: under 100 chars, plain restrained tone explaining what the limited drop is about.`,
+    `Do NOT use "선착순", "마감 임박", "지금만" — KFTC-banned scarcity phrases. No emoji.`,
+    `Respond with JSON only.`,
+  ].join('\n');
+
+  const raw = await callGroq(prompt, 320);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; editionLabel?: unknown; dropDateLabel?: unknown; quantityLabel?: unknown; story?: unknown } =
+      JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    const e = typeof parsed.editionLabel === 'string' ? parsed.editionLabel : '';
+    const dd = typeof parsed.dropDateLabel === 'string' ? parsed.dropDateLabel : '';
+    const ql = typeof parsed.quantityLabel === 'string' ? parsed.quantityLabel : '';
+    const st = typeof parsed.story === 'string' ? parsed.story : '';
+    const hf = filterDarkPatterns(h);
+    const ef = filterDarkPatterns(e);
+    const ddf = filterDarkPatterns(dd);
+    const qlf = filterDarkPatterns(ql);
+    const stf = filterDarkPatterns(st);
+    return {
+      value: {
+        headline: hf.text.slice(0, 12) || fallback.headline,
+        editionLabel: ef.text.slice(0, 14) || fallback.editionLabel,
+        dropDateLabel: ddf.text.slice(0, 28) || fallback.dropDateLabel,
+        quantityLabel: qlf.text.slice(0, 24) || fallback.quantityLabel,
+        story: stf.text.slice(0, 100) || fallback.story,
+      },
+      source: 'groq',
+      filtered: hf.filtered || ef.filtered || ddf.filtered || qlf.filtered || stf.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---- benefits (S11) -------------------------------------------------------
+
+export interface Perk {
+  title: string;
+  body: string;
+  /** Icon hint — Lucide-style name only, e.g. "gift", "star". Caller can
+   *  map to actual icon glyphs in the renderer. */
+  iconHint: 'gift' | 'star' | 'shield' | 'tag' | 'sparkle' | 'truck';
+}
+
+export interface BenefitsCopy {
+  headline: string;
+  perks: [Perk, Perk, Perk];
+  /** Disclosure line — KFTC requires perks have explicit eligibility window
+   *  or quantity. Defaults to "혜택 적용 조건: 상세 페이지 참조". */
+  disclosure: string;
+}
+
+const PERK_ICON_HINTS: Perk['iconHint'][] = ['gift', 'star', 'shield', 'tag', 'sparkle', 'truck'];
+
+export async function generateBenefitsCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<BenefitsCopy>> {
+  const fallback: BenefitsCopy = {
+    headline: '한정 혜택',
+    perks: [
+      { title: '드롭 동봉', body: '본품 외 동봉 안내', iconHint: 'gift' },
+      { title: '에디션 표기', body: '한정 에디션 식별 정보 제공', iconHint: 'star' },
+      { title: '구매 보호', body: '교환 환불 정책 동일 적용', iconHint: 'shield' },
+    ],
+    disclosure: '혜택 적용 조건: 상세 페이지 참조',
+  };
+
+  const prompt = [
+    `Write Korean copy for the "benefits" section of a limited-drop product.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    `Return JSON exactly: {"headline":"...","perks":[{"title":"...","body":"..."}, ...3 perks],"disclosure":"..."}.`,
+    `headline: under 12 chars.`,
+    `perks: exactly 3 perks. title under 10 chars, body under 22 chars per perk.`,
+    `disclosure: under 28 chars. Use "혜택 적용 조건: 상세 페이지 참조" placeholder when uncertain — KFTC requires eligibility window or quantity disclosure.`,
+    `Do NOT promise specific discount amounts, "최대 N% 할인", "선착순 N명" — KFTC-banned phrasing.`,
+    `No emoji. Respond with JSON only.`,
+  ].join('\n');
+
+  const raw = await callGroq(prompt, 320);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; perks?: unknown; disclosure?: unknown } = JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    if (!Array.isArray(parsed.perks) || parsed.perks.length < 3) {
+      return { value: fallback, source: 'fallback', filtered: false };
+    }
+    const perks: Perk[] = [];
+    let anyFiltered = false;
+    for (let i = 0; i < 3; i++) {
+      const p = parsed.perks[i];
+      if (!p || typeof p !== 'object') {
+        perks.push(fallback.perks[i]);
+        continue;
+      }
+      const o = p as Record<string, unknown>;
+      const t = typeof o.title === 'string' ? o.title : '';
+      const b = typeof o.body === 'string' ? o.body : '';
+      const tf = filterDarkPatterns(t);
+      const bf = filterDarkPatterns(b);
+      anyFiltered = anyFiltered || tf.filtered || bf.filtered;
+      perks.push({
+        title: tf.text.slice(0, 10) || fallback.perks[i].title,
+        body: bf.text.slice(0, 22) || fallback.perks[i].body,
+        iconHint: PERK_ICON_HINTS[i] ?? 'gift',
+      });
+    }
+    const d = typeof parsed.disclosure === 'string' ? parsed.disclosure : '';
+    const hf = filterDarkPatterns(h);
+    const df = filterDarkPatterns(d);
+    return {
+      value: {
+        headline: hf.text.slice(0, 12) || fallback.headline,
+        perks: perks as BenefitsCopy['perks'],
+        disclosure: df.text.slice(0, 28) || fallback.disclosure,
+      },
+      source: 'groq',
+      filtered: anyFiltered || hf.filtered || df.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
