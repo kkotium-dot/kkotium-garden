@@ -1,3 +1,113 @@
+## 2026-05-12 Session E-2 Phase 2 (4-Section dashboard 재편 — Hero/Inbox/Health/Potential/More) ✅
+
+### 본 세션 성격
+- Session E-2 Phase 1 (/automation 골격) 직후 같은 IA 통합 설계안 일환으로 Phase 2 진입. 사용자 명시: 환경 점검 + 정독 후 본 작업 진행 (별도 Y/N 게이트 없이 이어서 진행).
+- 본 Phase = dashboard 구조 재편만. 새 기능 추가/제거 0건, 기존 위젯 0건 삭제 (모든 위젯 Section 5 더보기에 흡수 보존).
+- 한 turn 안에 8 파일 + 검증 + commit + push + verify + MD 갱신 완료.
+
+### 시작 직전 상태
+- HEAD `8da78a9` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} 보존 ✅
+- MD 줄 수: PROGRESS 842 / ROADMAP 343 / SESSION_LOG 1525 (T2 1500 도달, Phase 2 진입 후 갱신 + 본 entry 추가 → 다음 세션 STEP 0에서 자동 분할 트리거 예상)
+- Latest prod deploy SHA == HEAD ✅
+- verify-vercel-deploy.sh OK ✅
+
+### 본 세션 작업
+
+#### A. SectionId + SECTION_VARIANT 5 신규 키 추가 (legacy 보존)
+- `src/lib/kkotti-vocab.ts` — `SECTION_VARIANT`에 hero/inbox/health/potential/more 5 키 추가. legacy today/action/market/tools 4 키 유지 (작업원칙 #27 외부 컨트랙트 보존).
+- `src/components/dashboard/layout/SectionHeader.tsx`:
+  - `SectionId` 유니온에 5 신규 추가
+  - `SECTION_PRESETS`에 5 신규 항목 (Flower2/Inbox/Heart/TrendingUp/Layers Lucide 아이콘)
+  - 각 섹션 한글 title + subtitle (사전 분리 패턴은 적용 안 함 — preset 객체가 사실상 사전 역할)
+
+#### B. 신규 카드 컴포넌트 4개 (`src/components/dashboard/cards/`)
+- `InboxPlaceholderRow.tsx` (96줄) — 6-B/6-C/P0-B/P0-C placeholder. dashed border + Sprint 라벨 + `/automation` 링크.
+- `TopProductsCard.tsx` (88줄) — P0-C 효자 상품 TOP 5 placeholder. yellow stripe + "P0-C 준비 중" 배지 + 멱법칙 설명문.
+- `HealthCombinedCard.tsx` (158줄) — GoodService grade + Review delta 2-half small card. useGoodService + useReviewGrowth SWR 통합. 클릭 시 settings drill-down.
+- `ZombieReactivationCard.tsx` (123줄) — 좀비 부활소. zombieCount 임계 3단계 톤 (0=green / 1~3=yellow / 4+=red) + 판매중 대비 % 표시 + /products/reactivation 링크.
+
+#### C. dashboard/page.tsx 재편 (413줄, +229/-176)
+- 새 5-section 레이아웃 (Hero / Inbox / Health / Potential / More):
+  - **Section 1 영웅(Hero)** `variant=gardener` — KkottiBriefingWidget standalone (행동 단 1개)
+  - **Section 2 받은편지함(Inbox)** `variant=hunter` — LowStockAlertWidget + ConfirmationReminderWidget(today only) + DailyPlanWidget + 4 placeholder rows (6-B/6-C/P0-B/P0-C)
+  - **Section 3 정원 건강(Health)** `variant=celebrator` — 3-col grid: TodayCard / TopProductsCard / HealthCombinedCard
+  - **Section 4 잠재력(Potential)** `variant=planter` — UploadReadinessWidget + KkottiWidget(4-mode) + 2-col grid(ZombieReactivationCard + ReviewGrowthWidget)
+  - **Section 5 더보기(More) `defaultCollapsed` `variant=cowgirl`** — KPI 4-cards + Pipeline + GoodServiceWidget(full) + ProfitabilityWidget + 5 시장 widget (mode-driven order) + 빠른 작업 + EventTimeline
+- TodayCard 인라인 helper를 small-card 변형으로 재작성 (Section 3 grid에 fit).
+- `MORE_ORDER` map — Section 5 시장 widget mode-driven 순서 (today/week/month). 기존 SECTION3_ORDER 패턴 유지.
+- ModeToggle + ModeActionHint 유지.
+
+### 검증
+- TSC `npx tsc --noEmit` 0 errors ✅
+- Production build `npm run build` 27/27 prerender ✅ (/dashboard 47.6 kB, /automation 6.89 kB)
+- NFC + FFFD audit 7개 파일 모두 0/0 ✅
+- 한글 sentinel grep 0 신규 매칭 ✅
+- Production smoke (push 후):
+  - `GET /dashboard` HTTP 200 ✅
+  - `GET /automation` HTTP 200 ✅
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production d1486e5 (state=REGISTERED) ✅
+
+### 본 세션 학습 (영구 기록)
+1. **Section ID 확장 패턴 (additive)** — 기존 `SectionId` 유니온에 새 키만 추가하고 legacy 키도 유지하는 패턴은 작업원칙 #27 (외부 컨트랙트 보존)에 정합. SECTION_VARIANT에 legacy 4 + 신규 5 = 9 키 모두 유지하면 다른 어딘가에서 legacy SectionId를 import하더라도 깨지지 않음. legacy 제거는 향후 grep로 사용처 0건 확인 후 별도 cleanup 세션에서 진행 (보류 트랙).
+2. **Inbox registry-driven 패턴** — `InboxPlaceholderRow`는 `/automation` 페이지로 링크. 향후 6-B/6-C/P0-B/P0-C 실 위젯 만들 때 placeholder row를 *실 alert 컴포넌트로 교체*하면 됨. registry (`automation-registry.ts`) 엔트리 status를 pending → active로 변경하면 /automation에서 자동 반영. 두 surface (dashboard Inbox + /automation 관제) 모두 동일 작업 가치 (Phase 1 학습 2 재확인).
+3. **Section 5 default collapsed 패턴이 시야 정리 + 위젯 0 삭제 보장 양립** — 모든 legacy 위젯 (Profitability, MarketTrend, DataLab, Competition, Sourcing, Lifecycle, EventTimeline, KPI, Pipeline, 빠른 작업)을 Section 5에 마운트하되 기본 접힘. `CollapsibleSection`이 `display:none`으로 DOM 마운트 유지 → SWR 캐시 warm 유지 → 사용자가 펼치면 즉시 렌더 (옵션 D 패턴).
+4. **Section 3 grid `auto-fit minmax(240px, 1fr)`** — 3-col 의도지만 좁은 viewport에서 자동 줄바꿈. 모바일 안전.
+5. **TodayCard 재작성 (full → small)** — 기존 TodayCard는 전체 너비 풀카드. 재편 후 Section 3 grid의 1/3 칸에 맞춰야 해서 inline 재작성 (3 stat → 1 hero + 2 small). 기존 디자인의 "오늘의 실적" → "오늘 매출"로 라벨 단순화.
+
+### 검증 한계 (사용자 보고 의무 — 정직)
+- **사용자 시각 검증 권장** — https://kkotium-garden.vercel.app/dashboard 직접 진입해 5 section 펼침/접힘 동작 + Section 3·4 card grid 가시성 + InboxPlaceholderRow dashed border + ZombieReactivationCard 0건 상태 톤 (green "깨끗해요") 모두 확인 권장. 본 세션은 dev 서버에서 시각 검증 안 수행 (worktree 환경의 dev 서버 안 띄움) — production smoke (HTTP 200)와 build 27/27만 검증.
+- **반응형 검증** — Section 3 auto-fit grid은 작은 viewport에서 2-col / 1-col로 자동 적응하지만 실제 모바일 검증은 사용자 환경에서.
+- **6-A 실 데이터 검증** — 사용자 첫 도매꾹 상품 등록 후 본 5-section dashboard에서 LowStockAlert + KkottiBriefing rule (drafts_partial/drafts_ready) 시각 검증 가능.
+
+### Commit + Push
+- `d1486e5` feat(dashboard): Phase 2 — 4-Section redesign (Hero/Inbox/Health/Potential) + More fallback (+798 / -176, 7 파일 — 신규 4 + 수정 3)
+- worktree → main: `git merge claude/xenodochial-golick-2019d7 --ff-only` (ff)
+- push `8da78a9..d1486e5 main -> main`
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production d1486e5 (state=REGISTERED) ✅
+
+### 적용된 작업원칙
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 통과 ✅
+- **#22** production smoke (`/dashboard` 200 + `/automation` 200) — 시각 검증은 사용자 환경에서 (보고 의무 충족)
+- **#24** 한 turn 안에 7 파일 + 검증 + commit + push + verify + MD 갱신
+- **#26** IA 점검 — Sidebar 변경 0건, dashboard 내부 5 section만 재편 (사이드바 단순화는 Phase 2 후 별도 사용자 결정 게이트 그대로 유지)
+- **#27** 외부 컨트랙트 보존 — SectionId / SECTION_VARIANT / DashboardProduct export 모두 추가만 (legacy 키 0 변경). KkottiWidget의 DashboardProduct import 깨지지 않음.
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 6+1 규칙:
+  - (a) Edit 한글 다량 newText 0건 (SECTION_PRESETS는 짧은 라벨/부제)
+  - (b) MD 갱신 = Python 안전 삽입 패턴 (본 entry)
+  - (c) 카드 컴포넌트 한글 const → 객체 분리 (대량 사전 분리 불요, 1~2줄)
+  - (d) 셸 명령 한글 0건
+  - (e) sentinel grep 0 신규 매칭
+  - (e+, e++) 닉네임 호명 0건
+- **#31 (a)** SESSION_LOG 1525 + 본 entry → ~1640 (T2 1500 초과 + 추가 100여 줄). 다음 세션 (Phase 3) STEP 0에서 자동 분할 트리거 예상.
+- **#32** TSC + npm run build 모두 통과 ✅
+- **#33** useSearchParams 추가 0건
+- **#34** 본 세션 신규 발견 잔재 0건
+- **#35** 한글 사전 분리 패턴 — 신규 카드들의 한글 (좀비 부활소, 효자 상품 TOP 5 등)은 1~2줄 짧은 라벨이라 const 객체 분리만으로 충분. 대량 사전 분리 불요.
+- **#36** push 후 `verify-vercel-deploy.sh --wait` exit 0 (github-deployments path) ✅
+
+### 본 세션 commit
+1. `d1486e5` feat(dashboard): Phase 2 — 4-Section redesign (Hero/Inbox/Health/Potential) + More fallback
+2. (본 entry) docs(plan): record Session E-2 Phase 2 + Phase 3 handoff
+
+### 다음 세션 (Session E-2 Phase 3) 작업 = Sprint 6-B 가격 변동 백엔드
+1. `src/lib/dome-price-poller.ts` (신규) — 도매꾹 supplierPrice 폴링. 6-A 폴러와 통합 검토 (`getInventory`/`getItemView` 응답에 price.supply 포함 → 한 호출로 inventory + price 동시 수집 가능). DB schema 결정: 별도 `PriceSnapshot` 테이블 vs 기존 `InventorySnapshot` 확장 — 사용자 위임.
+2. 변동 감지 임계 분기:
+   - ±5% 이상 → 알림 (warning)
+   - ±10% 이상 → 알림 (critical) + Discord PRICE_CHANGE 채널 발송
+   - ±15% 이상 → 알림 (emergency) + mark-oos modal 옵션 trigger
+3. `src/app/api/cron/price-sync/route.ts` (신규) — Vercel Hobby plan 제약으로 daily cron (`0 0 * * *`). Pro plan upgrade 시 6시간 cron 복귀.
+4. `src/lib/automation-registry.ts` — `price-poll` entry status pending → active 전환. live signal: latest PriceSnapshot.polledAt를 lastRun으로.
+5. Inbox `InboxPlaceholderRow(가격 변동 감지)` → 실 alert 위젯 (`PriceMovementWidget` 또는 inline alert row)로 교체.
+6. 검증 + commit + push + verify-vercel-deploy.sh --wait
+7. MD 갱신 + Phase 4 (Sprint 6-C 다른 셀러 추적 + 공급사 누적 평가) 인계
+
+
+---
+
 ## 2026-05-12 Session E-2 Phase 1 (/automation 관제 페이지 + 26-entry registry 골격) ✅
 
 ### 본 세션 성격

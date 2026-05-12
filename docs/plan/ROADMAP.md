@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-12 Session E-2 Phase 1 (/automation 관제 페이지 + 26-entry registry 골격 ✅)
-> **HEAD**: 0e1fb3f = origin/main 일치 | **TSC**: 0 errors | **빌드**: 27/27 OK (+/automation 6.89 kB static) | **배포**: https://kkotium-garden.vercel.app (0e1fb3f REGISTERED via GitHub Deployments path)
+> **최종 업데이트**: 2026-05-12 Session E-2 Phase 2 (4-Section dashboard 재편 ✅)
+> **HEAD**: d1486e5 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 27/27 OK (/dashboard 47.6 kB / /automation 6.89 kB) | **배포**: https://kkotium-garden.vercel.app (d1486e5 REGISTERED via GitHub Deployments path)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
 > **Vercel Hobby 제한 주의**: inventory-sync cron은 현재 daily (`0 0 * * *`). Pro plan upgrade 시 `vercel.json` 한 줄로 6시간 cron 복귀 가능
 >
@@ -12,14 +12,14 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-12 Session E-2 Phase 2 (4-Section dashboard 재편)
+## 다음 새 채팅 시작 메시지 — 2026-05-12 Session E-2 Phase 3 (Sprint 6-B 가격 변동 백엔드)
 
-<!-- session-e2-p2-handoff-short v1 -->
+<!-- session-e2-p3-handoff-short v1 -->
 
 ```
-꽃틔움 가든 — Session E-2 Phase 2 시작.
+꽃틔움 가든 — Session E-2 Phase 3 시작.
 
-docs/plan/PROGRESS.md → ROADMAP.md → SESSION_LOG.md 정독하고, 아래 STEP 0 환경 점검 후 현재 상태 + Phase 2 디테일 계획을 브리핑해주세요. 본 작업 시작은 제 Y/N 승인 후 진행.
+docs/plan/PROGRESS.md → ROADMAP.md → SESSION_LOG.md 정독하고, 아래 STEP 0 환경 점검 후 현재 상태 + Phase 3 디테일 계획을 브리핑해주세요. 본 작업 시작은 제 Y/N 승인 후 진행.
 
 [STEP 0 환경 점검]
 git rev-parse HEAD origin/main && \
@@ -31,12 +31,17 @@ git rev-parse HEAD origin/main && \
   scripts/verify-vercel-deploy.sh
 
 [본 세션 핵심 — 디테일은 SESSION_LOG.md 직전 entry / PROGRESS.md 헤더 / 본 ROADMAP.md 아래 섹션 참고]
-- Phase 1 (/automation 골격) 완료 — production 0e1fb3f
-- Phase 2 = 4-Section dashboard 재편 (Section 1 Hero + Section 2 Inbox + Section 3·4 카드)
-- 본 Phase 후 Phase 3 = Sprint 6-B 가격 변동 백엔드 (Inbox + /automation 자동 흡수)
+- Phase 2 (4-Section dashboard 재편) 완료 — production d1486e5 (Hero/Inbox/Health/Potential + More collapsed)
+- Phase 3 = Sprint 6-B 가격 변동 백엔드
+  • `src/lib/dome-price-poller.ts` (신규) — 도매꾹 supplierPrice 폴링 + ±5%/10%/15% 분기 알림
+  • Prisma: `PriceSnapshot` 신규 또는 `InventorySnapshot` 확장 결정 — 6-A 폴러와 통합 검토 (getItemView 응답에 price.supply 포함)
+  • `src/app/api/cron/price-sync/route.ts` (신규) — daily cron (Hobby plan 제한)
+  • `src/lib/automation-registry.ts` — `price-poll` entry를 pending → active 전환
+  • Inbox `InboxPlaceholderRow(가격 변동 감지)` → 실 alert 위젯으로 교체 (Sprint 6-B widget)
+- 본 Phase 후 Phase 4 = Sprint 6-C 다른 셀러 추적 + 공급사 누적 평가
 
 [페르소나]
-B2B 이커머스 ERP + 네이버 파워셀러 + UI/UX 시니어. 단독 IA/삭제 결정 금지. 새 IA 통합 설계안 (PROGRESS 헤더 참조) 채택 후 진행.
+B2B 이커머스 ERP + 네이버 파워셀러 + UI/UX 시니어. 단독 IA/삭제 결정 금지. PriceSnapshot vs InventorySnapshot 확장 결정은 사용자 위임.
 ```
 
 ---
