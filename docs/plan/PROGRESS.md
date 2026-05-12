@@ -1,13 +1,13 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황 (슬림 진입점)
 
-> **최종 업데이트**: 2026-05-12 Session E-2 Phase 4 (Sprint 6-C 다른 셀러 + 공급사 누적 평가 ✅ — 6-A 폴러에 piggy-back)
-> **TSC**: 0 errors | **빌드**: 28/28 prerender (/dashboard 50.4 kB / /automation 6.89 kB / +3 신규 API) | **배포**: https://kkotium-garden.vercel.app (b836687 REGISTERED via GitHub Deployments path)
-> **HEAD**: b836687 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
-> **시각 검증 (Production smoke)**: `/dashboard` 200 / `/automation` 200 / `/api/alerts/price-movements` 200 `{"data":[]}` / `/api/competitors/latest` 200 `{"data":[]}` / `/api/suppliers/scores` 200 `{"data":[]}` (cold start 정상) ✅
+> **최종 업데이트**: 2026-05-12 Session E-2 Phase 5 = Session F (Sprint 6-E 카테고리 캐시 ✅ — cron-weekly piggy-back / 6-D 4모드 이미 active 확인)
+> **TSC**: 0 errors | **빌드**: 28/28 prerender (/dashboard 50.4 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (a8a58c2 REGISTERED via GitHub Deployments path)
+> **HEAD**: a8a58c2 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **시각 검증 (Production smoke)**: `/dashboard` 200 / `/automation` 200 / `/api/category/suggest` cold→hot path 실증 (1st call no cacheHit + 2nd call `cacheHit: "name_hash"`) ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
-> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 (4모드 foundation) ✅ | 6-A 백엔드 + UI Phase 1·2·3 ✅ | Session E-2 Phase 1 (/automation 골격) ✅ | Session E-2 Phase 2 (5-section dashboard) ✅ | Session E-2 Phase 3 (Sprint 6-B 가격 변동 + PriceMovementWidget) ✅ | **Session E-2 Phase 4 (Sprint 6-C 다른 셀러 + 공급사 누적 평가 + CompetitorRadarWidget + SupplierGardenWidget) ✅**
+> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | **6-D 1-5단계 (4모드 foundation) ✅ + 4모드 발송 production active 확인 ✅** | 6-A 백엔드 + UI Phase 1·2·3 ✅ | Session E-2 Phase 1 (/automation 골격) ✅ | Session E-2 Phase 2 (5-section dashboard) ✅ | Session E-2 Phase 3 (Sprint 6-B 가격 변동 + PriceMovementWidget) ✅ | Session E-2 Phase 4 (Sprint 6-C 다른 셀러 + 공급사 누적 평가) ✅ | **Session E-2 Phase 5 = Session F (Sprint 6-E 카테고리 캐시 + Gemini hit-rate cache) ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업**: **Phase 5 = Session F = Sprint 6-E 카테고리 캐시 (`dome-category-cache.ts` + DomeCategory + CategoryMapping 테이블 + AI 카테고리 매핑 강화) + Sprint 6-D 4모드 발송 통합 (꼬띠 4모드 → 정원 일지 발송 path 활성화)** → Sprint 7 P0/P1 → Sprint 7 Track B AI Studio → Sprint 8 P2 → Sprint 9 P3 (매출 600만원+ 후)
+> **다음 작업**: **Sprint 7 = P0/P1 (P0-A 도매꾹 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + P1-A 카테고리 1페이지 + P1-B 금기어 페널티 + P1-C 태그 사전 등재 검증)** → Sprint 7 Track B AI Studio (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트) → Sprint 8 P2 → Sprint 9 P3 (매출 600만원+ 후)
 > **참고 문서**: `docs/research/OVERSEAS_SOURCING_BASELINE_2026_05.md`, `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md`, `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---

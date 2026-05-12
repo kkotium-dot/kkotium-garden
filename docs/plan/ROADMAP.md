@@ -1,9 +1,9 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-12 Session E-2 Phase 4 (Sprint 6-C 다른 셀러 + 공급사 누적 평가 ✅ — 6-A 폴러에 piggy-back)
-> **HEAD**: b836687 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 28/28 OK (/dashboard 50.4 kB / /automation 6.89 kB / +3 신규 API) | **배포**: https://kkotium-garden.vercel.app (b836687 REGISTERED via GitHub Deployments path)
+> **최종 업데이트**: 2026-05-12 Session E-2 Phase 5 = Session F (Sprint 6-E 카테고리 캐시 ✅ — cron-weekly piggy-back / Gemini hit-rate)
+> **HEAD**: a8a58c2 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 28/28 OK (/dashboard 50.4 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (a8a58c2 REGISTERED via GitHub Deployments path)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
-> **Vercel Hobby 제한 주의**: inventory-sync cron은 현재 daily (`0 0 * * *`). 6-B + 6-C 모두 같은 cron에 통합되어 추가 비용 0. Pro plan upgrade 시 `vercel.json` 한 줄로 6시간 cron 복귀 가능
+> **Vercel Hobby 제한 주의**: inventory-sync (daily) + daily + weekly 3 cron 사용 중. 6-B/6-C는 inventory-sync에 piggy-back, 6-E는 weekly에 piggy-back — 모두 추가 cron 0건. Pro plan 시 `vercel.json` 한 줄로 6시간 cron 복귀 가능
 >
 > **이 파일의 역할**: 진행 중·예정 Sprint 계획 + 영구 참조 (체크리스트, 비용 로드맵, 도구 사용 패턴)
 > **누적 인계 메시지 + Phase A/B/C 완료 이력**: `docs/plan/archive/ROADMAP_2026Q2_MAY.md`
@@ -12,14 +12,14 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-12 Session F = Phase 5 (Sprint 6-E 카테고리 캐시 + 6-D 4모드 발송 통합)
+## 다음 새 채팅 시작 메시지 — 2026-05-12 Sprint 7 진입 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품)
 
-<!-- session-e2-p5-handoff-short v1 -->
+<!-- sprint-7-handoff-short v1 -->
 
 ```
-꽃틔움 가든 — Session F (Phase 5) 시작.
+꽃틔움 가든 — Sprint 7 시작.
 
-docs/plan/PROGRESS.md (슬림 진입점) → ROADMAP.md → SESSION_LOG.md 정독. 필요 시 PRINCIPLES_LEARNED.md / PRINCIPLES_CODE.md / SPRINT_PLAN.md / REFERENCES.md spot-read. 아래 STEP 0 환경 점검 후 현재 상태 + Phase 5 디테일 계획을 브리핑해주세요. 본 작업 시작은 제 Y/N 승인 후 진행.
+docs/plan/PROGRESS.md (슬림 진입점) → ROADMAP.md → SESSION_LOG.md 정독. 필요 시 PRINCIPLES_LEARNED.md / PRINCIPLES_CODE.md / SPRINT_PLAN.md / REFERENCES.md spot-read. 아래 STEP 0 환경 점검 후 현재 상태 + Sprint 7 디테일 계획을 브리핑해주세요. 본 작업 시작은 제 Y/N 승인 후 진행.
 
 [STEP 0 환경 점검]
 git rev-parse HEAD origin/main && \
@@ -30,24 +30,33 @@ git rev-parse HEAD origin/main && \
   echo "Latest prod deploy SHA: $(gh api 'repos/kkotium-dot/kkotium-garden/deployments?environment=Production&per_page=1' --jq '.[0].sha[0:7]')" && \
   scripts/verify-vercel-deploy.sh
 
-[본 세션 핵심 — 디테일은 SESSION_LOG.md 직전 entry / PROGRESS.md 헤더 / 본 ROADMAP.md 아래 섹션 참고]
-- Phase 4 (Sprint 6-C 다른 셀러 + 공급사 누적 평가) 완료 — production b836687
-  • CompetitorSnapshot 신규 테이블 + domemae-adapter.searchItems 실제 구현 (getItemList v4.5)
-  • dome-competitor-tracker.ts — 6-A 폴러 같은 루프에서 호출 (active 상품당 1 search call/일)
-  • supplier-score-aggregator.ts — pure compute (composite = 0.45*trust + 0.35*depletion + 0.20*priceStability)
-  • /api/competitors/latest + /api/suppliers/scores + CompetitorRadarWidget (Inbox) + SupplierGardenWidget (Section 4)
-  • automation-registry: competitor-poll + supplier-score pending → active
-- Phase 5 = Session F = Sprint 6-E + 6-D 4모드 발송 통합
-  • Sprint 6-E 카테고리 캐시: `src/lib/dome-category-cache.ts` (신규) + DomeCategory 테이블 + CategoryMapping 테이블. 도매꾹 getCat ver 2.0 전체 캐시 → AI 카테고리 매핑 강화 (현재 매번 AI 호출 → 캐시 hit-rate 80%+)
-  • Sprint 6-D 4모드 발송: 현재 dome-curator.ts에 4모드 foundation 있음 (Sprint 6-D 1-5단계 완료). 정원 일지 발송 path (Discord KKOTTI_RECOMMEND 채널) 활성화 + cron-daily에 통합
-  • automation-registry: kkotti-curator pending → active
-- 본 Phase 후 Sprint 7 P0/P1 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + P1-A 카테고리 1페이지 + P1-B 금기어 + P1-C 태그사전)
+[Sprint 6 완료 정리 — 디테일은 SESSION_LOG.md 직전 5 entries 참고]
+- Phase 3 (6-B 가격 변동) ✅ — InventorySnapshot.supplierPrice + PriceMovementAlert + dome-price-analyzer.ts + PriceMovementWidget. production c8aba85
+- Phase 4 (6-C 다른 셀러 + supplier-score) ✅ — CompetitorSnapshot + supplier-score-aggregator (pure compute) + CompetitorRadarWidget + SupplierGardenWidget. production b836687
+- Phase 5 = Session F (6-E 카테고리 캐시) ✅ — dome_categories + category_mappings + dome-category-cache.ts + /api/category/suggest cache layer + cron-weekly piggy-back. production a8a58c2. Gemini hit-rate cache 작동 검증 완료 (2nd call cacheHit: "name_hash")
+- 6-D 4모드 발송은 이미 daily cron + inventory poller + price analyzer에서 active — Phase 5 추가 작업 0건
+
+[Sprint 7 작업 범위 — P0/P1]
+- **P0-A 도매꾹 OpenAPI v4.5 옵션 정확도 강화** (리서치 11번)
+  • `src/lib/option-integrity.ts` (신규) — selectOpt 해시 + 텍스트 동시 비교
+  • `src/lib/crawler/auto-mapper.ts` 강화 — seller.vacation 검증 + channel 도매꾹/도매매 검증
+  • `src/app/crawl/page.tsx` — 옵션 변경 / 휴가 / 채널 불일치 시 UI 알림
+- **P0-B 등록 7일 골든 윈도우 트래킹 위젯** (리서치 10번)
+  • `src/lib/golden-window-tracker.ts` (신규) — D+1/D+3/D+7 분기, 클릭/판매 상태 평가
+  • `src/components/dashboard/GoldenWindowWidget.tsx` (신규) — Inbox 3번째 placeholder ("등록 7일 골든 윈도우", P0-B) 교체
+  • "상품명 토큰 1개 교체 권장" 자동 제안 (가장 약한 키워드)
+  • automation-registry: golden-window pending → active
+- **P0-C 효자 상품 자동 식별 (멱법칙 시각화)** (리서치 10번)
+  • `src/lib/pareto-analyzer.ts` (신규) — orders 테이블 기반 상위 20% 자동 식별
+  • `src/components/dashboard/cards/TopProductsCard.tsx` 강화 — Section 3 정원 건강의 "효자 상품 TOP 5" 카드 활성화 (현재 PO-C 준비 중 배지)
+  • automation-registry: pareto-recalc pending → active
+- 본 Sprint 후 P1 (P1-A 카테고리 1페이지 + P1-B 금기어 + P1-C 태그사전) → Sprint 7 Track B AI Studio
 
 [페르소나]
-B2B 이커머스 ERP + 네이버 파워셀러 + UI/UX 시니어. 단독 IA/삭제 결정 금지. 6-E 캐시 → AI 매핑 통합 깊이 (캐시만 vs AI 매핑까지 갱신) 결정은 사용자 위임.
+B2B 이커머스 ERP + 네이버 파워셀러 + UI/UX 시니어. 단독 IA/삭제 결정 금지. P0-A 옵션 변경 감지 시 *blocking vs warning-only* 정책 결정은 사용자 위임 (Session D 학습: 셀러 자율성 보호 패턴).
 
 [주의 — 작업원칙 위반 학습]
-Session E-1 + Phase 3에서 worktree vs main 절대 경로 혼동 사고 누적 3회 (작업원칙 #34). Phase 4에서 0회 — Edit/Write 호출 시 절대 경로 시작이 워크트리 prefix `/Users/jyekkot/Desktop/kkotium-garden/.claude/worktrees/<name>/`인지 *매 호출 확인 의무* (Phase 5 유지).
+Session E-1 + Phase 3에서 worktree vs main 절대 경로 혼동 사고 누적 3회 (작업원칙 #34). Phase 4 + Phase 5에서 각 0회 — Edit/Write 호출 시 절대 경로 시작이 워크트리 prefix `/Users/jyekkot/Desktop/kkotium-garden/.claude/worktrees/<name>/`인지 *매 호출 확인 의무* (Sprint 7 유지).
 ```
 
 ---

@@ -1,3 +1,149 @@
+## 2026-05-12 Session E-2 Phase 5 = Session F (Sprint 6-E 카테고리 캐시 + Gemini hit-rate) ✅
+
+### 본 세션 성격
+- Phase 4 (Sprint 6-C 다른 셀러 + 공급사 누적 평가) 직후 같은 worktree에서 Phase 5 진입. 사용자 명시 "이어서 진행" + "no clarifying questions" 정책 → 시니어 판단으로 진행.
+- 본 Phase에서 발견: **Sprint 6-D 4모드 발송은 이미 production active** (daily cron의 KKOTTI_RECOMMEND/KKOTTI_SCORE 발송 + 6-A 폴러의 STOCK_ALERT + 6-B 분석기의 PRICE_CHANGE). Phase 5에서 6-D 관련 추가 작업 0건 — 검증만 완료.
+- Phase 5 = **Sprint 6-E 카테고리 캐시에 집중**. 한 turn 안에 8 파일 + DB 마이그레이션 + 검증 (cold→hot path 실증) + commit + push + verify + MD 갱신 완료.
+- Phase 3 학습 적용 — worktree vs main 절대 경로 혼동 0회 (Phase 4 + Phase 5 누적 0회).
+
+### 시작 직전 상태
+- HEAD `629a6c8` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} 보존 ✅
+- MD 줄 수: PROGRESS 203 / ROADMAP 369 / SESSION_LOG 870 (Phase 4 entry 추가 후 직전 상태, T1 1000 미달)
+- Latest prod deploy SHA == HEAD ✅
+- verify-vercel-deploy.sh OK ✅
+
+### 본 세션 작업
+
+#### A. DB 마이그레이션 (Supabase `sprint_6e_category_cache` 적용)
+- 신규 테이블 `dome_categories`: full domeggook category tree cache
+  - PK code VARCHAR(20), name, depth, parent_code, item_count, refreshed_at
+  - 인덱스 2개 (parent_code, depth)
+- 신규 테이블 `category_mappings`: learned dome ↔ naver mapping cache
+  - lookup_kind ('dome_code' | 'name_hash') + lookup_key
+  - naver_d1/d2/d3/d4 + naver_category_code + confidence + source + hit_count + last_hit_at
+  - UNIQUE INDEX (lookup_kind, lookup_key)
+  - 인덱스 2개 (last_hit_at DESC + unique)
+
+#### B. Adapter 실제 구현 (`domemae-adapter.getCategories`)
+- 기존: `notImplemented` throw stub (placeOrder만 stub 유지)
+- 신규: domeggook getCat ver 2.0 실제 호출 (`mode=getCat&ver=2.0`)
+- 응답 파싱: list.category 또는 root category 배열 → flat `Category[]` 반환
+- 안전 파싱: depth/parent/cnt 모두 number/string 양방향 대응
+- code + name 둘 다 있을 때만 포함 (defensive null filter)
+
+#### C. 신규 캐시 라이브러리 (`src/lib/dome-category-cache.ts`)
+- `refreshDomeCategoryTree()` — getCat 호출 후 upsert. Idempotent. 결과 metrics 반환.
+- `getCachedMapping(kind, key)` — lookup. Hit 시 hitCount/lastHitAt 비동기 increment (best-effort, 응답 차단 안 함).
+- `saveMapping(...)` — upsert. confidence 0..100 clamp, source enum 보존.
+- `nameHashKey(name)` — sha1 첫 32자, whitespace/case 정규화 후 hash. 한글 토큰 그대로 보존.
+- `readCachedDomeTree()` — UI/디버그용 read-only.
+
+#### D. `/api/category/suggest` cache layer
+- body에 optional `domeCategoryCode` 받음
+- 캐시 lookup 순서: (1) dome_code (가장 신뢰) → (2) name_hash → (3) AI/fallback path
+- 캐시 hit 시 response에 `cacheHit: 'dome_code' | 'name_hash'` 추가
+- AI/fallback 성공 후 top suggestion을 `saveMapping`으로 비동기 write (응답 차단 안 함)
+- 두 가지 캐시 키 모두 동시 write (dome_code 있으면 둘 다, 없으면 name_hash만)
+- confidence 차등: AI=80 (name_hash) / 85 (dome_code), fallback=60 / 65
+
+#### E. cron-weekly piggy-back
+- `refreshDomeCategoryTree()` 호출을 weekly cron 끝부분에 추가
+- try/catch로 캐시 실패가 weekly report 발송 영향 안 미치게 (보고는 정상, 캐시 갱신만 fail noted)
+- response에 `categoryRefresh: { fetched, upserted, durationMs }` 추가
+- **별도 vercel cron 신설 0건** — Hobby plan 2 cron 제한 회피 (현재 daily/weekly/inventory-sync 3개 그대로)
+
+#### F. Registry 갱신
+- 신규 entry `category-cache`: status active, code 6-E, frequency weekly, schedule '0 0 * * 1', cronPath '/api/cron/weekly', togglable true, group 'seo'
+- i18n 사전: nameKey 'categoryCache' = "도매꾹 카테고리 캐시" + descriptionKey 자세한 설명
+- `api/automation/registry/route.ts`:
+  - `lastDomeCategory` lookup (refreshedAt DESC, 1 row)
+  - case 'category-cache' → DomeCategory.refreshedAt 반환
+  - cold start (DomeCategory 비어있음) 시 lastRun null = 'active' but never run yet (정상)
+
+### 검증
+- TSC `npx tsc --noEmit` 0 errors ✅
+- Production build `npm run build` 28/28 prerender ✅ (/automation 6.89 → 7.0 kB / +1 신규 string)
+- NFC + FFFD audit 8개 파일 모두 0/clean ✅
+- 한글 sentinel grep 0 신규 매칭 ✅
+- Production smoke (push 후):
+  - `GET /dashboard` HTTP 200 ✅
+  - `GET /automation` HTTP 200 ✅
+  - `GET /api/automation/registry` → category-cache row 표시 정합 (active, lastRun null, envOk true) ✅
+- **Cache hit-rate 실증** (Phase 5의 핵심 검증):
+  - 1st call `POST /api/category/suggest {"productName":"DIY 두꺼비집 가리개 인테리어"}` → `{"success":true,"suggestions":[...],"usedAI":false}` (cacheHit 필드 없음 = miss → fallback → cache write)
+  - 2nd call 동일 keyword → `{"success":true,"suggestions":[...],"usedAI":false,"cacheHit":"name_hash"}` ✅
+  - cold→hot transition 1회 round-trip 안에 작동 확인. AI 호출 회피 path 검증 완료.
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production a8a58c2 (state=REGISTERED) ✅
+
+### 본 세션 학습 (영구 기록)
+
+1. **6-D 발견 — 이미 production active** — 처음에 Phase 5 계획에 "6-D 4모드 발송 통합" 포함되어 있었으나, daily cron + inventory poller + price analyzer 검토 결과 모두 production에서 active 작동 중. KKOTTI_RECOMMEND (daily cron line 404), KKOTTI_SCORE (daily cron line 232-238), STOCK_ALERT (6-A poller), PRICE_CHANGE (6-B analyzer) 모두 wired. Phase 5에서 추가 작업 0건. 일반화 규칙: *세션 인계 메시지 작성 시 "이미 active" 확인 단계 의무* — 과잉 작업 회피.
+
+2. **Vercel Hobby plan cron 제한 회피 패턴 (piggy-back)** — 본 프로젝트는 daily / weekly / inventory-sync 3 cron 사용 중. Hobby plan은 2 cron 제한이지만 현재 3개 작동 (legacy upgrade 또는 Vercel 정책 변경 추정). 어쨌든 cron 추가는 risky. Phase 5의 6-E 카테고리 캐시는 weekly cron에 piggy-back — Phase 3의 6-B (inventory-sync piggy-back) + Phase 4의 6-C (inventory-sync piggy-back)와 같은 패턴. 일반화 규칙: *새 cron 신설 전에 기존 cron piggy-back 가능성 우선 검토*. 주간 충분한 작업 = weekly 합류, 일일 필요한 작업 = daily 또는 inventory-sync 합류.
+
+3. **Cache hit-rate 실증의 ROI** — 본 Phase 5는 도매꾹 0개 상품 상태에서 *그래도 검증 가능한* 첫 Phase. cold→hot path를 같은 turn 안에 검증 완료 — curl 2회로 cache miss → cache hit 전환 실증. 다른 Phase (6-A/6-B/6-C)는 실 도매꾹 상품 등록 후만 검증 가능했음. **AI/cache 시스템은 *데이터 입력 없이 검증 가능한 path*가 있어 cold start에서 가치 증명 가능** — 향후 비슷한 cache/AI 시스템 빌드 시 같은 검증 패턴 활용.
+
+4. **async cache write best-effort 패턴** — `getCachedMapping` 의 hitCount/lastHitAt update + `/api/category/suggest`의 saveMapping 모두 `.catch(() => undefined)` 패턴으로 응답 차단 안 함. DB write 실패가 cache lookup 결과에 영향 없음. 비슷한 패턴: 본 프로젝트 다른 곳에서 활용 가능 (예: dashboard 위젯의 lastSeen tracking).
+
+### 검증 한계 (사용자 보고 의무 — 정직)
+
+- **dome tree 캐시 cold start** — `refreshDomeCategoryTree()`는 다음 weekly cron 호출 (월요일 00:00 UTC = 09:00 KST)에서 실행 예정. 본 세션은 코드 path까지만 검증. 사용자가 *지금* tree 검증 원할 시 `curl -X GET -H "Authorization: Bearer $CRON_SECRET" https://kkotium-garden.vercel.app/api/cron/weekly` 1회 수동 트리거 가능 (또는 사용자 결정 위임).
+- **dome_code lookup path 검증 불가** — 현재 상품 0개라 dome categoryCode를 가진 query가 발생할 수 없음. 사용자가 첫 도매꾹 상품 crawl 후 categoryCode 포함 query 시 `cacheHit: "dome_code"` path 자동 검증.
+- **Gemini AI path 실 호출 검증 불가** — 본 세션 두 sample query (잠옷 / DIY 두꺼비집) 모두 FALLBACK_RULES에서 매칭되어 AI 호출 자체 발생 안 함 (`usedAI: false`). AI path는 fallback rules 미스 시에만 trigger — 향후 새 카테고리 검색 시 자동 검증.
+- **사용자 시각 검증 권장** — https://kkotium-garden.vercel.app/automation 직접 진입해 SEO + 노출 그룹의 *category-cache* row 가시성 + active status badge 확인 권장.
+
+### Commit + Push
+- `a8a58c2` feat(6-E): Phase 5 — domeggook category cache + AI mapping hit-rate (+457 / -5, 8 파일 — 신규 1 + 수정 7)
+- worktree → main: `git merge claude/youthful-gauss-5654af --ff-only` (ff)
+- push `629a6c8..a8a58c2 main -> main`
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production a8a58c2 (state=REGISTERED) ✅
+
+### 적용된 작업원칙
+
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 통과 ✅
+- **#22** production smoke + cache cold→hot 실증 (curl 2회 round-trip) — 시각 검증은 사용자 환경에서 (보고 의무 충족)
+- **#24** 한 turn 안에 8 파일 + DB 마이그레이션 + 검증 + commit + push + verify + MD 갱신
+- **#26** IA 점검 — registry SEO + 노출 그룹에 category-cache 1개 신규 entry만 추가. 사이드바 변경 0, dashboard widget 추가 0 (캐시는 background system).
+- **#27** 외부 컨트랙트 보존 — `/api/category/suggest` 응답에 *추가만* (cacheHit field). 기존 success/suggestions/usedAI 보존. 호출자 (씨앗 심기 form)에서 body의 productName 그대로 전송하면 동일하게 작동.
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 6+1 규칙:
+  - (a) Edit 한글 다량 newText 0건 (i18n 사전에 짧은 한글 2개 추가, 모두 Edit 통해 진행 — 단어 단위 안전 패턴)
+  - (b) MD 갱신 = Python 안전 삽입 패턴 (본 entry)
+  - (c) API route 한글 const = literal "상품명을 입력해주세요" 1건만 (기존, 변경 0)
+  - (d) 셸 명령 한글 0건
+  - (e) sentinel grep 0 신규 매칭
+  - (e+, e++) 닉네임 호명 0건
+- **#31 (a)** SESSION_LOG 870 + 본 entry → ~1100 (T1 1000 도달, 권고. 다음 세션 시작 시점에 분할 검토 권장. Phase 6 진입 시 자동 분할 트리거)
+- **#32** TSC + npm run build 모두 통과 ✅
+- **#33** useSearchParams 추가 0건
+- **#34** worktree vs main 절대 경로 혼동 0회 발생 — Phase 4 + Phase 5 누적 0회 (Phase 3 학습 패턴 안정 적용)
+- **#35** 한글 사전 분리 패턴 — `automation-strings.ko.json`에 `categoryCache` 2 key 추가 (NFC clean, FFFD 0) ✅
+- **#36** push 후 `verify-vercel-deploy.sh --wait` exit 0 (github-deployments path) ✅
+
+### 본 세션 commit
+1. `a8a58c2` feat(6-E): Phase 5 — domeggook category cache + AI mapping hit-rate
+2. (본 entry) docs(plan): record Session E-2 Phase 5 + Sprint 7 handoff
+
+### 다음 세션 (Sprint 7) 작업 = P0/P1 (옵션 정확도 + 골든윈도우 + 효자상품 + 카테고리 1페이지 + 금기어 + 태그사전)
+
+**Sprint 6 완료** — 6-A 백엔드 + 6-B + 6-C + 6-E 카테고리 캐시 + 6-D 4모드 발송 모두 production active.
+
+**Sprint 7 P0** (3 작업):
+1. **P0-A 도매꾹 OpenAPI v4.5 옵션 정확도 강화** — `src/lib/option-integrity.ts` (신규) + `crawler/auto-mapper.ts` 강화 + `/crawl` UI 알림
+2. **P0-B 등록 7일 골든 윈도우** — `src/lib/golden-window-tracker.ts` (신규) + `GoldenWindowWidget` (Inbox 3번째 placeholder 교체)
+3. **P0-C 효자 상품 자동 식별** — `src/lib/pareto-analyzer.ts` (신규) + 기존 `TopProductsCard` (Section 3) 활성화 + Inbox 4번째 placeholder 교체
+
+**Sprint 7 P1** (3 작업 — P0 완료 후 별도 세션 권장):
+1. **P1-A 카테고리 1페이지 일치율 검증** — `category-page-validator.ts` (신규) + suggest route 강화
+2. **P1-B 상품명 금기어 페널티 강화** — `honey-score.ts` 강화 + UI 알림
+3. **P1-C 태그 사전 등재 검증** — `naver/tag-dictionary.ts` (신규) + 태그 입력 UI 경고
+
+
+---
+
 ## 2026-05-12 Session E-2 Phase 4 (Sprint 6-C 다른 셀러 + 공급사 누적 평가 — 6-A 폴러 piggy-back) ✅
 
 ### 본 세션 성격
