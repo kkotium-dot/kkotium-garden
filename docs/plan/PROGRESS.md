@@ -1,16 +1,61 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-13 (Sprint 7-M2 Phase 2-b-1 — 신뢰 트랙 3 렌더러 완료, S4·S7 완전 dedicated)
+> 최종 업데이트: 2026-05-13 (Sprint 7-M2 Phase 2-b-2 — 이벤트/세트 트랙 5 렌더러 완료, S8·S11 완전 dedicated)
 > 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
 > TSC: 0 errors | npm run build 28/28 OK | Production: https://kkotium-garden.vercel.app
-> 다음 작업: Sprint 7-M2 Phase 2-b-2 (이벤트/세트 트랙 — S5/S8/S11 전용 5 렌더러)
+> 다음 작업: Sprint 7-M2 Phase 2-b-3 (감각/B2B 트랙 — S9/S10/S12 + S3 잔여 package 합산 7 렌더러) + ko.json dict migration 권고
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 + production active ✅ | 6-A/6-B/6-C/6-E ✅ | Session E-2 Phase 1~5 ✅ | Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + DataLab market context) ✅ | **Sprint 7 P1 (P1-A 카테고리 1페이지 + P1-B 금기어 + P1-C 태그사전) ✅ + 브라우저 E2E 시각 검증 완료 ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업**: **Sprint 7-M2 Phase 2-b-2** (이벤트/세트 트랙, S5/S8/S11 전용 5 렌더러) — Sprint 7-M2 Phase 2-b-1 완료 (fff2867), 신뢰 트랙 3 렌더러 + S4·S7 완전 dedicated, dedicated 14/26 섹션 ids 도달
+> **다음 작업**: **Sprint 7-M2 Phase 2-b-3** (감각/B2B 트랙, S9/S10/S12 + S3 잔여 package, 7 렌더러) + **ko.json dict migration 우선 권고** (한글 fallback ~45건, 작업원칙 #35 30건 임계 초과) — Sprint 7-M2 Phase 2-b-2 완료 (5fe44d5), 이벤트/세트 5 렌더러 + S8·S11 완전 dedicated, dedicated 19/26 ids 도달
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-13 Sprint 7-M2 Phase 2-b-2 — 이벤트/세트 트랙 5 렌더러 완료 (S8·S11 완전 dedicated)
+
+5개 신규 렌더러 + section-copy.ts 5 신규 Groq 헬퍼:
+
+- `optionIntro.ts` (108 LOC) — S5. 2-column grid + 색상 chip + 옵션 이름/sub
+- `seasonalHook.ts` (113 LOC) — S8. 시즌 banner + hook line + **START/END 날짜 카드 의무 렌더링** (KFTC date window 노출)
+- `options.ts` (99 LOC) — S8. 옵션 테이블 (이름/구성, zebra striping)
+- `eventDetails.ts` (102 LOC) — S11. **EDITION / DROP DATE / QUANTITY 3 카드 의무 렌더링** (KFTC limited drop 의무 disclosure)
+- `benefits.ts` (144 LOC) — S11. 3 perk cards (inline SVG glyphs: gift/star/shield/tag/sparkle/truck) + 하단 disclosure strip 의무
+
+section-copy.ts 확장 (5 신규 Groq 헬퍼):
+- `generateOptionIntroCopy` — `{headline, items: [{name, sub}] 4-6, helperLine}`
+- `generateSeasonalHookCopy` — `{banner, hookLine, startLabel, endLabel}`
+- `generateOptionsTableCopy` — `{headline, rows: [{name, spec}] 4-6}`
+- `generateEventDetailsCopy` — `{headline, editionLabel, dropDateLabel, quantityLabel, story}`
+- `generateBenefitsCopy` — `{headline, perks: [{title, body, iconHint}] × 3, disclosure}`
+
+전체 dedicated 커버리지 (Phase 1 + 2-a + 2-b-1 + 2-b-2 합산):
+- **dedicated 19 / 26 섹션 ids**
+- **placeholder 7 / 26 잔여**: material · styledShot · philosophy · detail · reviews · specTable · specifications · package (Phase 2-b-3 대상)
+
+**완전 dedicated 골격 누적 6개**: S1 · S2 · S4 · S7 · **S8** · **S11**
+
+골격 변경분:
+- S5: 1/4 → **2/4** (optionIntro 추가)
+- S8: 3/5 → **5/5 ✅ 완전** (seasonalHook + options 추가)
+- S11: 2/4 → **4/4 ✅ 완전** (eventDetails + benefits 추가)
+
+KFTC discipline 강화 (이벤트/세트 트랙 특히 중요):
+- `seasonalHook` — START/END 날짜 카드 *항상 렌더링*, 미상 시 「상세 페이지 참조」 placeholder
+- `eventDetails` — EDITION/DROP DATE/QUANTITY 3 카드 *항상 렌더링*, 미상 시 placeholder
+- `benefits` — 하단 disclosure strip *항상 렌더링* (「혜택 적용 조건: 상세 페이지 참조」)
+- Groq prompt 명시: "마감 임박" / "선착순" / "지금만" 사용 금지 (dark pattern filter scarcity rule 외 추가 layer)
+
+검증:
+- npx tsc --noEmit 0 errors ✅
+- npm run build 28/28 routes ✅
+- 한글 sentinel grep 0건 ✅
+
+Commit: `5fe44d5` feat(automation): add 5 event/set section renderers (Sprint 7-M2 Phase 2-b-2)
+
+**다음 = Sprint 7-M2 Phase 2-b-3 (감각/B2B 트랙) 진입 *전* ko.json dict migration 우선 권고** — 한글 fallback 누적 ~45건으로 작업원칙 #35 30건 임계 초과. Phase 2-b-3 + 2-b-4가 추가 ~25건 도입 예상이라 *지금 분리*가 효율적.
 
 ---
 

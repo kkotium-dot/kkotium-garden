@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-13 Sprint 7-M2 Phase 2-b-1 — 신뢰 트랙 3 렌더러 (fff2867, branch push 후 main merge 사용자 승인 대기)
-> **HEAD**: fff2867 (worktree) / origin/main d6a12c3 (Sprint 7-M2 Phase 2-a 배포 완료) | **TSC**: 0 errors | **빌드**: 28/28 OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-13 Sprint 7-M2 Phase 2-b-2 — 이벤트/세트 트랙 5 렌더러 (5fe44d5, branch push 후 main merge 사용자 승인 대기)
+> **HEAD**: 5fe44d5 (worktree) / origin/main c942b8e (Sprint 7-M2 Phase 2-b-1 + SESSION_LOG 분할 배포 완료) | **TSC**: 0 errors | **빌드**: 28/28 OK | **배포**: https://kkotium-garden.vercel.app
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
@@ -14,9 +14,86 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-b-2: 이벤트/세트 트랙) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (ko.json dict migration → Sprint 7-M2 Phase 2-b-3) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 Phase 2-b-2 완료 (commit 5fe44d5):
+- src/lib/automation/section-renderers/optionIntro.ts (S5)
+- src/lib/automation/section-renderers/seasonalHook.ts (S8, KFTC date 카드 의무)
+- src/lib/automation/section-renderers/options.ts (S8)
+- src/lib/automation/section-renderers/eventDetails.ts (S11, KFTC 3 카드 의무)
+- src/lib/automation/section-renderers/benefits.ts (S11, inline SVG glyphs + disclosure)
+- section-copy.ts 5 신규 Groq 헬퍼
+- S8·S11 완전 dedicated, dedicated 19/26 ids
+
+본 세션 진입 작업 = ko.json dict migration 우선 + Sprint 7-M2 Phase 2-b-3:
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  특히 5fe44d5가 main에 머지/배포됐는지 verify-vercel-deploy.sh로 확인
+
+STEP A — ko.json dict migration (작업원칙 #35 강제 적용)
+  배경: 한글 fallback inline 누적 ~45건 (Phase 1 + 2-a + 2-b-1 + 2-b-2),
+  작업원칙 #35 의 *대량 한글 작성 작업* 임계 30건을 이미 초과.
+  Phase 2-b-3 + 2-b-4 진입 시 추가 ~25건 도입 예상.
+
+  대상 파일 신규:
+    - src/lib/automation/section-renderers/strings.ko.json (모든 fallback Korean strings)
+    - src/lib/automation/section-renderers/strings.ts (loader + 키 typing)
+    - scripts/verify-korean-dict.py (있으면 본 dict 검증에 포함)
+
+  마이그레이션 패턴:
+    1. 각 *Copy fallback 객체의 한글 strings를 strings.ko.json으로 추출
+    2. 키 네이밍: "{slot}.{field}.{index?}" 예: "hero.title.default", "problem.bullets.1"
+    3. section-copy.ts의 fallback 정의를 STRINGS.hero.title.default 등 키 참조로 교체
+    4. 컨텍스트 보간 (${ctx.category} 같은) 은 strings.ts의 헬퍼 함수로 처리
+    5. 검증: TSC 0 + verify-korean-dict.py NFC + FFFD + sentinel 모두 0건
+
+STEP B — Sprint 7-M2 Phase 2-b-3 (감각/B2B 트랙) + 2-b-4
+  대상 파일 신규 (7 렌더러):
+    Phase 2-b-3 (감각 트랙):
+      - material.ts (S9) — material macro + origin caption
+      - styledShot.ts (S6) — 3 styled lifestyle shots
+      - philosophy.ts (S10) — brand philosophy paragraph
+      - detail.ts (S10) — detail macro grid 2x2
+      - reviews.ts (S10) — 3 customer review cards
+    Phase 2-b-3 (B2B 트랙):
+      - specTable.ts (S12) — full-width spec table
+      - specifications.ts (S12) — regulation + compliance grid
+    Phase 2-b-4 (cleanup):
+      - package.ts (S3) — package unboxing sequence
+
+  7 렌더러 너무 많으면 sub-phase 추가 분할 권장:
+    Phase 2-b-3-a: 감각 5 (material/styledShot/philosophy/detail/reviews)
+    Phase 2-b-3-b: B2B 2 + S3 cleanup 1 = 3
+
+  본 phase 완료 시 dedicated 26/26 ✅ 100% — 12 골격 모두 완전 dedicated.
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- 5fe44d5가 main에 도달했는지 verify-vercel-deploy.sh로 검증
+- SESSION_LOG.md 534줄 (분할 후 슬림, T1 1000 미달) — 본 세션 직접 entry 추가 가능
+- ko.json migration이 *Phase 2-b-3 진입 전 의무* — Phase 2-b-3 fallback 도입 시 dict 키 참조 패턴 사용
+
+다음 = Sprint 7-M2 Phase 2-c (lifestyle-picker) + Sprint 7-M2 Phase 3
+(/api/products/[id]/generate-detail route + Diagnosis 연동).
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward
+merge 사용자 위임.
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-b-2: 이벤트/세트 트랙)~~ ✅ COMPLETED
+
+> Sprint 7-M2 Phase 2-b-2 (이벤트/세트 트랙) completed on 2026-05-13 (commit 5fe44d5). S8 / S11 완전 dedicated. dedicated 19/26 섹션 ids.
+> Phase 2-b-3 / 2-b-4 + ko.json migration = active handoff above. The message below is preserved for git history.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,

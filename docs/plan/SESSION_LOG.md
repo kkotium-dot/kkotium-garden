@@ -1,3 +1,120 @@
+## 2026-05-13 Sprint 7-M2 Phase 2-b-2 — 이벤트/세트 트랙 5 렌더러 (S8·S11 완전 dedicated) ✅
+
+### 본 세션 성격
+
+직전 Sprint 7-M2 Phase 2-b-1 + SESSION_LOG 분할 완료 (e6df007 + c942b8e, main FF merge + production deploy 검증) 직후 동일 turn 연속 진입. v3.1 매트릭스 26 섹션 ids 중 S5/S8/S11 이벤트/세트 트랙 5개를 dedicated 렌더러로 격상.
+
+### 본 세션 산출물 (7 파일 변경, 신규 5 + 확장 2)
+
+| 파일 | LOC | 골격 | 역할 |
+|---|---|---|---|
+| `optionIntro.ts` | 108 | S5 | 2-col grid + 색상 chip + 옵션 이름/sub |
+| `seasonalHook.ts` | 113 | S8 | banner + hook + **START/END 카드 의무** (KFTC) |
+| `options.ts` | 99 | S8 | 옵션 테이블 (zebra striping) |
+| `eventDetails.ts` | 102 | S11 | **EDITION/DROP DATE/QUANTITY 카드 의무** (KFTC) |
+| `benefits.ts` | 144 | S11 | 3 perk cards + inline SVG glyphs + disclosure strip 의무 |
+| `section-copy.ts` | +424 | (확장) | 5 신규 Groq 헬퍼 |
+| `index.ts` | +15 | (확장) | Phase 2-b-2 registry block |
+
+### KFTC Discipline — 이벤트/세트 트랙 핵심 안전 장치
+
+본 phase 5 렌더러 중 3개 (seasonalHook · eventDetails · benefits)가 *시간/수량 한정 영역*. KFTC fair-trade 규정에 따라:
+
+**seasonalHook.ts**:
+- START / END 두 카드 *항상* 렌더링 (date 미상 시 「상세 페이지 참조」 placeholder)
+- Banner + hookLine + date cards 3-block 레이아웃으로 *date window 숨김 불가능* 구조 보장
+
+**eventDetails.ts**:
+- EDITION / DROP DATE / QUANTITY 3 카드 *항상* 렌더링
+- KFTC limited drop 의무 disclosure 3 element 모두 표면화
+
+**benefits.ts**:
+- 하단 brand-accent disclosure strip 「혜택 적용 조건: 상세 페이지 참조」 *항상* 렌더링
+- Groq 응답으로 override 불가 (fallback 값으로 강제)
+
+**3 렌더러 모두**:
+- Groq prompt 명시: "마감 임박" / "선착순" / "지금만" 사용 금지
+- copy-writer dark pattern filter scarcity rule이 1차 필터 → prompt 자체에서 2차 차단
+
+### 5 신규 Groq 헬퍼 (section-copy.ts +424 LOC)
+
+각각 JSON output + filterDarkPatterns + 결정형 fallback 패턴 유지:
+
+- `generateOptionIntroCopy` — `{headline, items: [{name, sub}] 4-6, helperLine}` (chipColor는 NEUTRAL_CHIPS palette에서 순차)
+- `generateSeasonalHookCopy` — `{banner, hookLine, startLabel, endLabel}` (KFTC 의무 fields)
+- `generateOptionsTableCopy` — `{headline, rows: [{name, spec}] 4-6}`
+- `generateEventDetailsCopy` — `{headline, editionLabel, dropDateLabel, quantityLabel, story}` (KFTC 의무 fields × 3)
+- `generateBenefitsCopy` — `{headline, perks: [{title, body, iconHint}] × 3, disclosure}` (iconHint = 'gift'|'star'|'shield'|'tag'|'sparkle'|'truck')
+
+### 골격 dedicated 커버리지 변화
+
+| 골격 | 변경 전 | 변경 후 |
+|---|---|---|
+| S5 | 1/4 | **2/4** (optionIntro 추가, usage는 graceful fallback) |
+| S8 | 3/5 | **5/5 ✅ 완전** (seasonalHook + options 추가) |
+| S11 | 2/4 | **4/4 ✅ 완전** (eventDetails + benefits 추가) |
+
+**완전 dedicated 골격 누적 6 개**: S1 · S2 · S4 · S7 · **S8** · **S11**
+**dedicated 19 / 26 섹션 ids** (Phase 1 + 2-a + 2-b-1 + 2-b-2 합산)
+**placeholder 7 / 26 잔여**: material · styledShot · philosophy · detail · reviews · specTable · specifications · package (Phase 2-b-3/4 대상)
+
+### Phase 2-b 진행 상태
+
+- Phase 2-b-1 (S4/S7 신뢰 트랙) ✅
+- Phase 2-b-2 (S5/S8/S11 이벤트/세트 트랙) ✅ 본 세션
+- Phase 2-b-3 (S9/S10/S12 감각/B2B 트랙) — 다음 세션 (ko.json migration 후)
+- Phase 2-b-4 (S3 package) — Phase 2-b-3 합산 가능
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 28/28 routes ✅
+- 한글 sentinel grep 0건 ✅
+- section-builder가 모든 SkeletonId 정상 dispatch ✅
+- 작업원칙 #38 strict 준수 — 이미지 *생성* 0건 ✅
+
+### 한글 fallback 누적 — **ko.json migration 우선 권고 발동**
+
+본 phase 도입 fallback ~15건 (5 helpers × 3+ fields). Phase 1 + 2-a + 2-b-1 + 2-b-2 합산 **약 45건** 도달 — 작업원칙 #35 의 *대량 한글 작성 작업 임계 30건을 명확히 초과*.
+
+다음 세션 진입 시:
+1. **STEP A: ko.json migration** — Phase 2-b-3 진입 *전* `strings.ko.json` 분리 의무
+2. **STEP B: Phase 2-b-3** — dict 키 참조 패턴으로 신규 fallback 작성
+
+migration 후 inline 한글 0건 도달이 목표. 본 sprint의 fallback 패턴이 이미 일관성 있어 자동화 추출 가능.
+
+### 본 세션 commit (1건)
+
+1. `5fe44d5` feat(automation): add 5 event/set section renderers (Sprint 7-M2 Phase 2-b-2)
+
+### Push 정책 — main 직접 push 차단 6회 연속 패턴 (worktree 한정 확정)
+
+이번 turn 누적 6 sub-phase 동일 패턴. 사용자 fast-forward merge 6회 연속 — *worktree 한정 정책*으로 확정.
+
+### 적용된 작업원칙
+
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- #21 사전 점검 통과 (HEAD c942b8e == origin/main = production)
+- #24 sprint 단위 commit + push 한 turn 안에 종료 + *sub-phase 분할로 #24 보호*
+- #26 IA 점검 — 신규 *lib only*, 라우트 0
+- #27 외부 컨트랙트 보존 ✅
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — 코드 0 / fallback inline 신규 ~15건 grep 통과
+- #31 SESSION_LOG 534 + 본 entry ~110 = ~644 (분할 직후 슬림 상태, T1 1000 미달 안전)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #35 **ko.json 분리 임계 초과 — 다음 세션 STEP A 우선 적용 의무** (본 세션 patch 안 함, *별도 phase 분리*가 안전)
+- #36 main push 후 verify-vercel-deploy.sh --wait — 사용자 승인 후
+- #38 Production runtime static assets only ✅
+- #39 CTI inference entry point ✅
+- #40 Designer Sense 보존 — KFTC disclosure 카드 *자동 표면화*로 designer 검수 부담 감소 + 누락 위험 0
+
+### 다음 세션 = ko.json migration (STEP A) → Sprint 7-M2 Phase 2-b-3 (STEP B)
+
+ROADMAP.md ACTIVE 메시지 (본 commit에서 prepend) 그대로 적용.
+
+---
+
 ## 2026-05-13 Sprint 7-M2 Phase 2-b-1 — 신뢰 트랙 3 렌더러 (S4·S7 완전 dedicated) ✅
 
 ### 본 세션 성격
