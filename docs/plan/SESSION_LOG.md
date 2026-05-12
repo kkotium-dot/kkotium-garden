@@ -1,3 +1,87 @@
+## 2026-05-13 Sprint 7-Diag MVP (v3.1 FINAL Smart Asset Workflow Phase 1 + 2-A + 2-B) ✅
+
+### 본 세션 성격
+
+직전 2026-05-12 v3.1 FINAL 채택 + PDF Part 1/2/3 디테일 반영 직후 동일 turn에서 본격 Sprint 7-Diag MVP 코드 작업 진입.
+v3.1 패키지의 진단 모듈 foundation을 *DB + 3 lib + 1 endpoint*로 한 turn에 완성. PDF 검증 케이스 3건이 production에서 정확 매칭 확인.
+
+### 본 turn 누적 commit (7건)
+
+1. `4b58a52` docs(plan): adopt v3.1 FINAL Smart Asset Workflow (CTI + 12 skeletons + Claude design integration)
+2. `5e14e9e` docs(plan): align PROGRESS + ROADMAP headers with v3.1 FINAL (follow-up to 4b58a52)
+3. `29a3907` docs(research): enrich v3.1 package with PDF Part 1/2/3 details (Critical 3 + Important 3)
+4. `0dd3bbd` feat(diagnosis): add Sharp 4-axis image-quality scorer (Phase 1)
+5. `d98a11c` feat(diagnosis): add CTI 8-axis inference + L1-L4 grading (Phase 2-A)
+6. `df66111` feat(diagnose): wire Diagnosis pipeline end-to-end (Phase 2-B)
+7. (본 entry) docs(plan): record Sprint 7-Diag MVP completion + Sprint 7-Skel handoff
+
+### Sprint 7-Diag MVP 산출물 (1,188 라인 + DB 2 테이블 + 1 endpoint)
+
+| 모듈 | 라인 | 역할 |
+|---|---|---|
+| `src/lib/diagnosis/image-quality.ts` | 354 | Sharp 4축 (resolution/composition/bgUniformity/exposure) + colorMood/photoStyle 1차 추론 |
+| `src/lib/diagnosis/concept-tone-inference.ts` | 359 | CTI 8축 룰 기반 + skeleton-matcher (S1~S12 분기 트리) |
+| `src/lib/diagnosis/grading.ts` | 178 | L1~L4 등급 + 신뢰도 분기 (≥90 auto / 70-89 review / <70 designer) + SKELETON_SECTIONS 매트릭스 |
+| `src/app/api/diagnose/route.ts` | 297 | POST endpoint, nodejs runtime, productId/direct input dual path, persist upsert |
+
+DB:
+- `Diagnosis` 테이블 (Product FK ON DELETE CASCADE, UNIQUE productId, GIN indexes on grade + skeletonId)
+- `LifestyleAsset` 테이블 (category + tags + moodTags + GIN indexes for skeleton-tag lookup)
+- Supabase migration #16 `sprint_7_diag_smart_asset_workflow` applied
+
+### Production Functional Test — PDF 3 예시 모두 정확 매칭 ✅
+
+| 케이스 | 응답 시간 | HTTP | 예상 skeleton | 실 skeleton | 매칭 |
+|---|---|---|---|---|---|
+| A 유아 실리콘 식판 4종 세트 (15,000원/평균 25,000원) | 2.00s* | 200 | S5 | **S5** | ✅ |
+| B 독일 명품 향초 (150,000원/평균 30,000원) | 1.07s | 200 | S6 또는 S10 | **S10** | ✅ |
+| C 전동 드릴 18V 부품 7종 (80,000원/평균 80,000원) | 0.43s | 200 | S4 | **S4** | ✅ |
+
+`*` Test A는 Vercel cold start 포함. Test B/C는 warm cache로 v3.1 패키지 명시 *<1초 목표* 충족.
+
+### 회귀 검증 (실전 작업 무사고 확인)
+
+- Production smoke 7건 endpoint 모두 200 (/dashboard, /crawl, /products/new, /automation, /orders, /api/products/pareto, /api/golden-window/active)
+- 기존 22 테이블 rows 변경 0 (Product 0, Order 9, daily_recommendations 147, category_trend_cache 10 등 동일)
+- 신규 2 테이블 0 rows로 정상 등록
+- TSC 0 errors / npm run build 28/28 prerender + /api/diagnose ƒ Dynamic 등록
+- `verify-vercel-deploy.sh --wait` exit 0 (4회 production 검증 모두 통과)
+- Stash@{0} z3c-misdirected-changes-needs-redo 보존 ✅
+
+### 시스템 정책 학습 — DDL 마이그레이션 명시 directive 의무
+
+본 sprint 진행 중 Supabase `apply_migration` 2회 거부됨 (vague directive). 시스템이 *공유 production DB DDL은 정확한 이름 + 명시 승인*만 받아들임. 우회 시도 0건. 사용자가 "sprint_7_diag_smart_asset_workflow 마이그레이션 진행해주세요" 정확 표현 제공 후 통과. 본 패턴을 향후 모든 *공유 DB DDL 작업*의 표준 directive 양식으로 채택.
+
+### 정직 보고 — RLS Advisory (보류 트랙)
+
+본 sprint 도입 2 테이블 (Diagnosis + LifestyleAsset) 포함 24개 public 테이블 모두 RLS disabled 상태. Supabase MCP 명시 의무로 surface — 기존 22 테이블도 동일 상태로 *본 sprint 도입 영향 0*, ROADMAP Z-Sec 보류 트랙에서 일괄 처리 예정. 사용자 결정 위임 사안.
+
+### 적용된 작업원칙
+
+- #14 PROGRESS + ROADMAP 함께 갱신 (본 entry commit에서 처리)
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` (7회 모두) ✅
+- #21 사전 점검 통과 ✅
+- #22 production functional test 실제 진단 결과 검증 ✅ (3건 PDF 예시 매칭)
+- #24 sprint 단위 commit + push 한 turn 안에 종료 (Phase 1 → 2-A → 2-B 분할 commit)
+- #26 IA 점검 — 사이드바 변경 0, 신규 endpoint `/api/diagnose`는 *시스템 호출용* 라우트라 메뉴 등록 0
+- #27 외부 컨트랙트 보존 — 기존 22 테이블 + 기존 endpoint 변경 0
+- #28 Vercel = source of truth ✅ (production functional test로 검증)
+- #29 (a~e++) 한글 처리 — Python 안전 추출 패턴 / 코드 안 한글 0건 (matching 토큰만 inline)
+- #31 SESSION_LOG 626 + 본 entry → ~750 (T1 1000 미달, 분할 불요)
+- #32 push 전 TSC + npm run build 의무 통과 (4회 모두)
+- #34 worktree 절대 경로 혼동 0회 (본 turn 누적 0회)
+- #36 push 후 verify-vercel-deploy.sh --wait exit 0 (4회 모두)
+- #37 (v2.0 채택, v3.1에서 #38로 강화) — Vercel 런타임이 이미지 *생성* API 호출 0건. Sharp는 *합성·분석*이라 허용.
+- #38 (v3.1 신규) — Production runtime static assets only. 본 sprint는 이미지 *분석*만, 생성 0.
+- #39 (v3.1 신규) — CTI inference 본 sprint의 entry point로 채택, 시스템 출발점이 됨.
+- #40 (v3.1 신규) — Designer Sense 보존 — 본 시스템이 컨셉·톤·골격을 *추천*만, 디자이너가 1클릭 교체 가능 (Sprint 7-Skel에서 UI 마운트 예정).
+
+### 다음 세션 = Sprint 7-Skel (12 골격 JSON 정의 + Skills theme-factory 일괄 생성)
+
+ROADMAP.md ACTIVE 메시지 (본 commit에서 prepend됨) 그대로 적용.
+
+---
+
 ## 2026-05-12 세션 (기획 점검 v3.1 FINAL — CTI + 12 골격 + Claude 디자인 통합) ✅
 
 ### 본 세션 성격

@@ -14,7 +14,68 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-12 (v3.1 FINAL 채택 후 7-Diag 진입) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-Skel: 12 골격 JSON 정의) ⭐ ACTIVE
+
+본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 commit은 df66111 (Sprint 7-Diag MVP Phase 2-B — diagnose pipeline end-to-end).
+누적 Sprint 7-Diag 완료 = 4 commit (0dd3bbd / d98a11c / df66111 + 본 docs entry).
+Production functional test 3 PDF 예시 정확 매칭 확인 (S5 / S10 / S4).
+
+본 세션 진입 작업 = Sprint 7-Skel:
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+STEP 7-Skel — 12 골격 JSON 정의 + skeleton-matcher 강화
+  대상 파일 신규:
+    - src/lib/automation/layout-skeletons/index.ts
+      (S1~S12 export + SkeletonSpec 타입 + SkeletonId 재export)
+    - src/lib/automation/layout-skeletons/s1-budget-daily-single.ts
+    - src/lib/automation/layout-skeletons/s2-standard-daily-options.ts (주력)
+    - src/lib/automation/layout-skeletons/s3-premium-gift-set.ts
+    - src/lib/automation/layout-skeletons/s4-standard-pro-single.ts
+    - src/lib/automation/layout-skeletons/s5-budget-daily-set.ts
+    - src/lib/automation/layout-skeletons/s6-standard-gift-single.ts
+    - src/lib/automation/layout-skeletons/s7-premium-pro-single.ts
+    - src/lib/automation/layout-skeletons/s8-standard-event-set.ts
+    - src/lib/automation/layout-skeletons/s9-budget-daily-natural.ts
+    - src/lib/automation/layout-skeletons/s10-premium-daily-options.ts
+    - src/lib/automation/layout-skeletons/s11-standard-event-vintage.ts
+    - src/lib/automation/layout-skeletons/s12-budget-pro-options.ts
+
+  각 골격 파일은 SMART_ASSET_WORKFLOW Section 4 매트릭스 + S2 yaml 예시
+  (라인 101~143) 패턴 따라 SkeletonSpec 객체 export:
+    - description (한 줄)
+    - matchSignature (concept + tone 시그니처)
+    - sections: SectionSpec[] (id, height, layout, copy_tone, bg_color_token)
+    - total_height, width
+    - color_tokens (primary/secondary/accent)
+    - fonts (title + body)
+    - copy_global_tone
+
+  Skills theme-factory 활용 일괄 생성 시도 권장 (한 세션 안에 12개).
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- 본 v3.1 패키지 Section 4-A 분포 (sapling 80% S1/S2/S5) + 4-B 확장성 (S13+)
+  + 4-C 작동 예시 (skeleton-matcher 검증 시드) 모두 참조 의무
+- SKELETON_SECTIONS (grading.ts) 와 신규 SkeletonSpec.sections 정합성 유지
+
+작업원칙 절대 준수 — 평소와 동일.
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-12 (v3.1 FINAL 채택 후 7-Diag 진입)~~ ✅ COMPLETED
+
+> Sprint 7-Diag MVP completed on 2026-05-13 (commit df66111). Production functional test passed: 3 PDF cases (S5 / S10 / S4) matched exactly.
+> The message below is preserved for git history. Use the ACTIVE message above.
+
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요.
 
