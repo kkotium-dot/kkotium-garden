@@ -1,7 +1,8 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-12 Sprint 7 P1 (P1-A 1페이지 + P1-B 금기어 + P1-C 태그사전 ✅ + 브라우저 E2E 검증)
-> **HEAD**: a495572 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 28/28 OK (/products/new 61.2 kB / /dashboard 51.7 kB / /crawl 20.1 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (a495572 REGISTERED via GitHub Deployments path)
+> **최종 업데이트**: 2026-05-12 v2.0 아키텍처 채택 (사용자 제공 리서치 PDF + SVG) — Sprint X/Y/Z 신설, 작업원칙 #37, SESSION_LOG T2 분할
+> **HEAD**: f958bb0 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 28/28 OK (/products/new 61.2 kB / /dashboard 51.7 kB / /crawl 20.1 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (f958bb0 REGISTERED via GitHub Deployments path)
+> **v2.0 영구 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
 > **Vercel Hobby 제한 주의**: inventory-sync (daily) + daily + weekly 3 cron 사용 중. 6-B/6-C는 inventory-sync에 piggy-back, 6-E는 weekly에 piggy-back, P0-B/P0-C는 on-event (widget fetch 시 pure compute) — 모두 추가 cron 0건. Pro plan 시 `vercel.json` 한 줄로 6시간 cron 복귀 가능
 >
@@ -12,7 +13,79 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-12 Sprint 7 Track B AI Studio (M1~M4)
+## 다음 새 채팅 시작 메시지 — 2026-05-12 Sprint X (v2.0 아키텍처 채택 + Gemini 제거 + 정적 자산 라이브러리)
+
+<!-- sprint-x-handoff-short v1 -->
+
+```
+꽃틔움 가든 — Sprint X (v2.0 아키텍처 채택) 시작.
+
+docs/plan/PROGRESS.md (슬림 진입점) → ROADMAP.md → SESSION_LOG.md 정독. 본 Sprint는 사용자 제공 리서치 v2.0 채택이라 *반드시 docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md 전체 정독 의무*. PRINCIPLES_LEARNED.md 작업원칙 #37 신규 정독. SPRINT_PLAN.md Sprint X / Y / Z 정의 정독. STEP 0 환경 점검 후 현재 상태 + Sprint X 디테일 계획 + Day 1~7 분할 권장안을 브리핑해주세요. 본 작업 시작은 제 Y/N 승인 후 진행.
+
+[STEP 0 환경 점검]
+git rev-parse HEAD origin/main && \
+  git status --short && \
+  git stash list && \
+  wc -l docs/plan/*.md && \
+  curl -sIo /dev/null -w "Vercel HTTP: %{http_code}\n" https://kkotium-garden.vercel.app/dashboard && \
+  echo "Latest prod deploy SHA: $(gh api 'repos/kkotium-dot/kkotium-garden/deployments?environment=Production&per_page=1' --jq '.[0].sha[0:7]')" && \
+  scripts/verify-vercel-deploy.sh
+
+[v2.0 아키텍처 핵심 메시지 — 정독 후 반드시 인지]
+- "Vercel 런타임 = 정적 자산 + 안전한 서버 연산만"
+- "Production runtime never calls image generation APIs" (작업원칙 #37)
+- 2-Phase 분리:
+  • Phase 1 (Creative): Claude Web Pro Max 세션 — Adobe MCP / Canva MCP / Artifacts. 신규 카테고리·시즌·A급 단건. API 키 노출 위험 0.
+  • Phase 2 (Production): Vercel 런타임. Groq만 사용. 일 10~100건 자동.
+- Gemini 완전 제거 — 비용 77% 절감 + 자동 폐기 사고 0회 절감
+
+[Sprint 7 P0/P1 + P0-B enhancement 완료 정리]
+- P0-A 옵션 정확도 / P0-B 골든윈도우 + DataLab market context / P0-C 효자상품 ✅
+- P1-A 카테고리 1페이지 일치율 / P1-B 금기어 페널티 / P1-C 태그 사전 등재 검증 ✅
+- 브라우저 E2E 검증 완료 (Claude Preview MCP, 3 시나리오)
+- production a495572 → f958bb0 (MD only)
+
+[Sprint X 작업 범위 — 7일 액션 플랜 분할 권장]
+**디자이너 작업 (사용자 Claude Web 세션에서, Day 1~3)**:
+- Day 1: Adobe MCP search_design + create_firefly_board로 카테고리별 템플릿 + 무드보드 + Lightroom 50장 큐레이션 → Supabase Storage 업로드
+- Day 2: 5섹션 마스터 PSD 제작 (Photoshop Variables 정의)
+- Day 3: Lightroom 마스터 프리셋 (카테고리 5-7개)
+
+**본 앱 코드 작업 (Day 4~7)**:
+- **Day 4 우선** (Sprint X 첫 본 세션):
+  • 신규 src/lib/image/cloudinary.ts (누끼 + 패딩 빌더)
+  • 신규 src/lib/image/sharp-composite.ts (5섹션 합성)
+  • 신규 src/lib/image/lifestyle-picker.ts (Supabase Storage 인덱스 기반 선택기)
+  • Gemini 의존성 제거 — /api/category/suggest의 suggestWithGemini() 함수 제거 + .env.local 3개 변수 제거 + Vercel env 제거
+  • TSC 0 errors 확인
+- Day 5: Groq 카피라이팅 + 다크패턴 정규식 필터 강화
+- Day 6: A/B/C 분류 알고리즘 + 검수 위젯 (Claude Artifacts 4.1/4.4 본 앱 구현체)
+- Day 7: 네이버 커머스 API 연동 + 첫 C급 일괄 등록
+
+[Sprint Y / Sprint Z 후속 (Sprint X 완료 후 별도 세션)]
+- Sprint Y: 5섹션 상세페이지 자동 생성 (Sharp + Groq + 다크패턴 + DetailPagePreview + ABCSimulator + BatchProgressMonitor)
+- Sprint Z: 라이프스타일 큐레이션 + DesignTokenPanel + 보안 체크리스트 자동 검증 스크립트
+
+[페르소나]
+B2B 이커머스 ERP + 네이버 파워셀러 + UI/UX 시니어. 단독 IA/삭제 결정 금지. Sprint X Day 4 작업 시 *각 신규 lib 파일별로 사용자 명시 승인 단계 진행* — Sharp / Cloudinary 합성 결과 시각 검증 단계가 핵심.
+
+[중요 — 본 Sprint는 7일짜리 분할 의무]
+v2.0 PDF의 7일 액션 플랜은 "한 세션에 모두" 가 아닌 *Day 단위 분할*. Sprint X 첫 세션 = Day 4 본 앱 코드 작업만 (Day 1~3은 사용자 디자이너 작업이며 본 앱 작업 의존성 없음, 병렬 진행). Day 5/6/7 각각 별도 세션 권장.
+
+[제한사항 정직 보고]
+- Adobe Firefly Services API: 라이선스 차단 확정 (Adobe Developer Console "License required" 메시지). v2.0 PDF의 Phase 1 Adobe MCP path는 사용자가 *Claude Web Pro Max + Adobe MCP* 통해 진행 (Vercel API 통합 불가).
+- 본 세션은 사용자가 직접 Claude Web 세션에서 Adobe MCP 사용 가능한지 확인 후 Day 1~3 작업 병렬 시작.
+- 본 앱은 Day 4부터 코드 작업 진행, 정적 자산이 Supabase Storage에 채워지면 자동으로 활성화.
+
+[주의 — 작업원칙 위반 학습]
+worktree vs main 절대 경로 혼동 사고 누적 3회 (Phase 3 이전). Phase 4 + Phase 5 + Sprint 7 P0/P1 누적 0회 — Edit/Write 호출 시 절대 경로 시작이 워크트리 prefix `/Users/jyekkot/Desktop/kkotium-garden/.claude/worktrees/<name>/`인지 *매 호출 확인 의무*.
+
+[silent failure 학습 — 2회 발견 패턴]
+"API 키 다 등록했는데 실제 작동하나?" 의문이 silent bug 발견의 핵심 트리거. Sprint X Day 4에서 Gemini 의존성 제거 후에도 *Cloudinary + Groq + Supabase Storage 모든 path functional test 의무*. 본 v2.0 채택의 핵심 가치 (보안 표면 0)가 실제 production에서 작동하는지 production curl + 브라우저 E2E로 매 commit 검증.
+```
+
+---
+## 직전 인계 메시지 — Sprint 7 Track B AI Studio (취소됨 — v2.0 아키텍처 채택으로 Sprint X로 대체)
 
 <!-- sprint-7-trackb-handoff-short v1 -->
 

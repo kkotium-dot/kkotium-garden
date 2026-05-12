@@ -47,6 +47,7 @@ SESSION_LOG.md (라이브, 직전 5세션 + 본 세션)
 |------|----------|------|
 | `SESSION_LOG_2026-05.md` | 2026-05-11 | 2026-05-06 ~ 2026-05-08 세션 9건 (Z-3d Phase A + UX/IA 블루프린트 v1 + 소싱 워크플로우 진단 Z-1/Z-2 + Z-3b 사이드바 deep-link + Sprint 6/7/8 계획 + Z-Hotfix 빌드복구 + Private API 리서치 + STEP 0 재검토 등) |
 | `SESSION_LOG_2026-05-12.md` | 2026-05-12 | Session B 외 8개 (Session A / 2026-05-11~12 / 2026-05-08 5개) | 동결 |
+| `SESSION_LOG_2026-05-12-PM.md` | 2026-05-12 PM | Session E-2 Phase 1~5 + E-1 + D + C-1 등 8 entries — Sprint 7 P1 완료 후 v2.0 인계 작성 직전 T2 1500줄 임박 분할 |
 | `ROADMAP_2026-05.md` | 2026-05-12 | Session B 작업 디테일 (Sprint 6-A UI Phase 2 LowStockAlertWidget, commit `9fabfca`) + deprecated 인계 메시지 9개 (2026-05-07 ~ 2026-05-12 Session A/B 이전) |
 
 **포함 기간**:

@@ -1,13 +1,14 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황 (슬림 진입점)
 
-> **최종 업데이트**: 2026-05-12 Sprint 7 P1 (P1-A 1페이지 + P1-B 금기어 + P1-C 태그사전 ✅ + 브라우저 E2E 시각 검증 완료)
-> **TSC**: 0 errors | **빌드**: 28/28 prerender (/dashboard 51.7 kB / /crawl 20.1 kB / /products/new 61.2 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (a495572 REGISTERED via GitHub Deployments path)
-> **HEAD**: a495572 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
-> **시각 검증 (Production smoke + Functional + 브라우저 E2E)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
+> **최종 업데이트**: 2026-05-12 **v2.0 아키텍처 채택** (사용자 제공 리서치 PDF + SVG) — Sprint X/Y/Z 신설, 작업원칙 #37, SESSION_LOG T2 분할
+> **TSC**: 0 errors | **빌드**: 28/28 prerender (/dashboard 51.7 kB / /crawl 20.1 kB / /products/new 61.2 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (f958bb0 REGISTERED via GitHub Deployments path)
+> **HEAD**: f958bb0 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **v2.0 영구 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (10 section 본 원칙 근거 + 7일 액션 플랜 + 비용 재계산 + Caveats) — **다음 세션부터 반드시 정독**
+> **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 + production active ✅ | 6-A/6-B/6-C/6-E ✅ | Session E-2 Phase 1~5 ✅ | Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + DataLab market context) ✅ | **Sprint 7 P1 (P1-A 카테고리 1페이지 + P1-B 금기어 + P1-C 태그사전) ✅ + 브라우저 E2E 시각 검증 완료 ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업**: **Sprint 7 Track B AI Studio (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트)** → Sprint 8 P2 (다크패턴 정가 부풀리기 경고 + AiTEMS 자연어 키워드 제안기 + 등급 임계값 개편 반영) → Sprint 9 P3 (매출 600만원+ 후)
+> **다음 작업**: **Sprint X (v2.0 아키텍처 채택 = Gemini 제거 + 정적 자산 라이브러리 구축)** — 본 v2.0 채택으로 Sprint 7 Track B AI Studio는 *재구성* (Adobe Firefly Services API 라이선스 차단 + v2.0 보안 표면 0 원칙). Day 4 본 앱 작업부터 진입 (Day 1~3은 사용자 Claude Web 세션 디자이너 작업, 병렬 진행) → Sprint Y (5섹션 상세페이지 자동 생성) → Sprint Z (라이프스타일 큐레이션 + 보조 위젯) → Sprint 8 P2 (다크패턴 + AiTEMS + 등급 임계값) → Sprint 9 P3 (매출 600만원+ 후)
 > **참고 문서**: `docs/research/OVERSEAS_SOURCING_BASELINE_2026_05.md`, `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md`, `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---

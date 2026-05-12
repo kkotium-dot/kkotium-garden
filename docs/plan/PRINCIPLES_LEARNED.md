@@ -294,3 +294,80 @@ push: 4657173 직후
 **본 작업원칙은 작업원칙 #28의 *검증 메커니즘*을 형식화**. #28이 *원칙*이라면 #36이 *집행 도구*.
 
 ---
+
+## 작업원칙 #37 — Production runtime never calls image generation APIs (2026-05-12 v2.0 아키텍처 채택)
+
+본 원칙은 **2026-05-12 사용자 제공 "꽃틔움 가든 아키텍처 v2.0" 리서치** 직접 채택 결과입니다 (`docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` 영구 참조).
+
+### 배경
+
+Vercel 환경에서 Google 계열 API 키 (특히 Gemini)가 자주 폐기되는 실제 원인은 단순한 하드코딩 실수가 아닙니다. 표면은 여러 곳에 존재:
+
+- `.env.backup.*` 같은 백업 파일이 git에 추적되어 GitHub secret scanning에 감지
+- Vercel build logs에 환경변수 echo 가능성 (`console.log(process.env)` 디버그 실수)
+- Edge Function 에러 로그가 환경변수 일부를 노출
+- Source map이 production에 포함되면 클라이언트 번들에서 키 추적 가능
+- `NEXT_PUBLIC_` prefix 실수로 client bundle 포함
+- API route가 `process.env`를 echo back하는 디버그 코드
+- Vercel preview deployment URL이 검색엔진 인덱싱
+- 외부 모니터링 도구 (Sentry, LogRocket) 가 env 자동 캡처
+
+**Groq는 키 폐기 후 즉시 새 키 발급이 가능하지만, Google은 폐기 시 프로젝트 격리·결제 정지까지 가는 경우가 많아 사고 비용이 비대칭적으로 큼.** 즉 Gemini를 자동화 파이프라인에 두면 매출이 늘수록 사고 확률이 비례 증가합니다.
+
+### 새 원칙 (강제 적용)
+
+> **"Vercel 런타임 = 정적 자산 + 안전한 서버 연산만"**
+>
+> "Production runtime never calls image generation APIs. Static assets created in Claude Web sessions are the only image source."
+
+### 4가지 작업 종류별 허용 규칙
+
+| 작업 종류 | Vercel 런타임 허용? | 적용 |
+|---|---|---|
+| 이미지 **생성** (create) | ❌ **불가** | Phase 1 Claude Web 세션에서 1회성 생성 → 정적 자산화 → Supabase Storage |
+| 이미지 **변환** (transform) | ✅ 허용 | Cloudinary URL 기반, 키 클라이언트 노출 없음 |
+| 이미지 **합성** (composite) | ✅ 허용 | Sharp 라이브러리, 로컬 연산 |
+| 텍스트 **생성** (LLM) | ⚠️ 제한 허용 | **Groq만** 사용 (검증된 회전 정책 + 키 즉시 재발급 가능) |
+
+### 2-Phase 아키텍처
+
+**Phase 1 (Creative — Claude Web Pro Max)**:
+- **빈도**: 신규 카테고리 진입 시, 시즌별, A급 상품 단건
+- **출력**: 정적 자산 (PSD/PNG/SVG/JSON 템플릿)
+- **API 키 노출 위험**: 0 (모두 Claude.ai 세션 내부에서 처리)
+- **자원**: Adobe for Creativity MCP + Canva MCP + Claude Artifacts + Lightroom 라이브러리
+
+**Phase 2 (Production Runtime — Vercel)**:
+- **빈도**: 신상품 등록 시 자동, 일 10~100건
+- **입력**: Phase 1 정적 자산 + 도매꾹 실시간 상품 데이터
+- **사용 가능 API**: Groq (LLM) + Cloudinary (transform) + Supabase + Naver Commerce API + 도매꾹 OpenAPI
+- **금지 API**: Gemini (이미지 + 텍스트 모두), OpenAI DALL-E, Adobe Firefly Services API (라이선스 차단 + 본 원칙)
+
+### 위반 시 대응
+
+본 원칙 위반 코드 발견 시:
+1. **즉시 제거** (commit + push) — 매출 늘수록 사고 위험 비례 증가하므로 미루지 않음
+2. `.env.local` + Vercel 환경변수에서 해당 키 제거
+3. 정적 자산 대체 path 구축 (Phase 1 Claude Web 세션 작업 또는 Cloudinary transform)
+4. PROGRESS.md "알려진 이슈" 섹션에 *재발 방지* 노트 추가
+
+### 본 원칙 영구 참조 문서
+
+- `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (전체 10 section 본 원칙 근거 + 7일 액션 플랜 + 비용 재계산 + Caveats)
+
+### 본 앱 현 상태 (2026-05-12 채택 시점)
+
+**위반 코드 발견 시 제거 대상**:
+- `src/app/api/category/suggest/route.ts` 의 `suggestWithGemini()` 함수 (Phase 5 캐시 layer로 회피했지만 fallback path 잔존)
+- `src/lib/trend-analyzer.ts` 의 Gemini fallback (이미 DataLab만 사용 중이지만 import 잔존 가능)
+- `.env.local` 의 `GEMINI_API_KEY` / `_2` / `_3` 3개 변수
+- Vercel 환경변수의 동일 3개 변수
+- 검색 조련사 / AI Studio 등 Gemini direct call 코드 (별도 grep 후 식별)
+
+**즉시 채택 가능 path** (이미 보유):
+- Cloudinary (`CLOUDINARY_CLOUD_NAME` 등) → Phase 2 이미지 변환 즉시 사용
+- Groq (`GROQ_API_KEY` + `_3`) → Phase 2 LLM stack 이미 채택
+- Supabase Storage → 정적 자산 저장소 패턴 이미 운영 중
+- Adobe Creative Cloud 구독 + 2,000 Firefly credits (사용자 보유) → Phase 1 Creative Phase 자원
+
+---

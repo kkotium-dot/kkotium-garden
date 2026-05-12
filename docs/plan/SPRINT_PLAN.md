@@ -140,3 +140,121 @@
 - **Z-Sec**: 14개 Supabase 테이블 RLS 정책 설계
 
 ---
+
+## v2.0 아키텍처 채택 — Sprint X / Sprint Y / Sprint Z (2026-05-12 신설)
+
+본 시리즈는 **2026-05-12 사용자 제공 "꽃틔움 가든 아키텍처 v2.0" 리서치** (`docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md`) 채택에 따른 새 Sprint 트랙입니다.
+
+기존 Sprint 7 Track B (M1~M4 AI Studio) 계획은 *Adobe Firefly Services API 라이선스 차단* + v2.0 아키텍처 채택으로 **재구성**됨. 본 Sprint X/Y/Z가 Track B의 새 형태.
+
+작업원칙 #37 (Production runtime never calls image generation APIs) 강제 적용. 자세한 근거는 `KKOTIUM_V2_ARCHITECTURE_2026_05.md` 0~10 section 참조.
+
+### Sprint X — Gemini 제거 + 정적 자산 라이브러리 구축 (7일 액션 플랜)
+
+본 Sprint는 v2.0 PDF Section 7 "수정된 7일 액션 플랜"의 직접 반영.
+
+**Day 1 — Claude 세션에서 Adobe MCP 탐색 + 정적 자산 라이브러리 초기 구축**
+- 사용자가 Claude Web Pro Max 세션에서 진행:
+  - Adobe `search_design` 으로 꽃·리빙·식품 카테고리별 Express 템플릿 5종 후보 수집
+  - `create_firefly_board` 로 카테고리별 무드보드 1개씩 생성 (Firefly Web credit 활용)
+  - Lightroom에서 보유 사진 50장 골라 카테고리 태깅
+- 본 앱 측: Supabase Storage 버킷 구조 설계 (`templates/`, `lifestyle/`, `branding/`, `psd-masters/`) + 인덱스 테이블 마이그레이션
+
+**Day 2 — Photoshop 마스터 PSD + Variables 정의 (사용자 작업)**
+- 5섹션 마스터 PSD 제작 (가로 860px 통일)
+- 각 텍스트/이미지 레이어 Variables 정의 (Text/Pixel/Visibility)
+- 테스트 CSV 1개로 5상품 일괄 익스포트 검증
+
+**Day 3 — Lightroom 마스터 프리셋 + 카테고리 분기 (사용자 작업)**
+- 카테고리별 5-7개 프리셋 (꽃/리빙/패션/식품/잡화)
+- 익스포트 프리셋: 860px-JPG-q90, 1080×1080 IG, 1080×1920 Story, 300px 썸네일
+
+**Day 4 — Vercel 런타임 파이프라인 핵심 코드 (본 앱 작업)**
+- 신규 `src/lib/image/cloudinary.ts` — 누끼 + 패딩 + 업스케일 URL 빌더
+- 신규 `src/lib/image/sharp-composite.ts` — 5섹션 합성 함수 (마스터 PNG + 동적 SVG 오버레이)
+- 신규 `src/lib/image/lifestyle-picker.ts` — 카테고리/태그 기반 라이프스타일 컷 선택기 (Supabase Storage 인덱스 활용)
+- **Gemini 의존성 코드 전체 제거**:
+  - `src/app/api/category/suggest/route.ts` 의 `suggestWithGemini()` 제거 (캐시 layer + 1페이지 검증 + fallback rules만 남김)
+  - `src/lib/trend-analyzer.ts` 의 Gemini import 잔존 시 제거
+  - 검색 조련사 / AI Studio 등 grep 후 Gemini direct call 모두 제거
+  - `.env.local` 의 `GEMINI_API_KEY` / `_2` / `_3` 3개 변수 삭제
+  - Vercel 환경변수의 동일 3개 변수 삭제
+- `npx tsc --noEmit` 으로 타입 에러 0 확인
+
+**Day 5 — Groq 카피라이팅 + 다크패턴 필터 강화 (본 앱 작업)**
+- Groq Llama-3.1-8b-instant 프롬프트 작성 (상품명 25-35자, 특장점 3개, FAQ 5개)
+- 정규식 필터 모듈: 다크패턴 6유형 + 신뢰도 페널티 표현
+- 단위가격 의무 입력(2026-02-24 시행) 자동 계산 로직
+
+**Day 6 — Claude Artifacts 검수 위젯 + 분류 알고리즘**
+- A/B/C 점수 산출: Groq + PlayMCP 데이터랩 트렌드 보조 점수
+- 검수용 Claude Artifact (4.1 + 4.4): 디자이너가 Claude 세션 내에서 카피 검증 가능
+- 본 앱의 검수 UI는 Next.js로 별도 구현 (Artifact는 임시 보조)
+
+**Day 7 — 네이버 커머스 API 연동 + 첫 C급 일괄 등록**
+- 등록 함수: tier별 분기
+- C급 10개 자동 등록 → 24시간 노출 데이터 모니터링
+- Vercel MCP로 배포·로그 모니터링 셋업
+
+**일주일 후 KPI**:
+- 정적 자산 라이브러리: 카테고리별 lifestyle 50장+, 템플릿 5종 확보
+- 자동화 end-to-end 작동: 도매꾹 → DB → C급 자동 등록
+- API 키 노출 위험 자산: Gemini 0건 (전체 제거 확인)
+
+### Sprint Y — 5섹션 상세페이지 자동 생성 (Sprint X Day 4-5 완료 후)
+
+본 Sprint는 v2.0 PDF Section 3 B/C급 Production Runtime 흐름의 본 앱 구현.
+
+**Y-1 5섹션 합성 backend**
+- 신규 `/api/products/[id]/generate-detail` (POST) — Sharp 합성 트리거
+- Input: productId
+- Steps:
+  1. DB에서 상품 데이터 + supplier_product_code fetch
+  2. `cloudinary.ts` 로 도매꾹 원본 이미지 → 누끼 + 패딩 URL 생성
+  3. `lifestyle-picker.ts` 로 카테고리·태그 기반 라이프스타일 컷 1장 선택 (Supabase Storage 인덱스 lookup, 30일 cooldown 보장)
+  4. `sharp-composite.ts` 로 5섹션 마스터 PNG 위에 상품 이미지 + 라이프스타일 컷 + 동적 SVG 오버레이 (상품명 / 가격 / 특장점) 합성
+  5. Groq Llama로 SEO 카피 (상품명 25-35자 + 특장점 3개 + FAQ 5개) 생성
+  6. 다크패턴 정규식 필터 적용
+  7. 결과를 Supabase Storage 업로드 → DB의 product.detail_image_url 갱신
+- Output: `{ detailImageUrl, copy: {title, features, faq}, processingMs }`
+
+**Y-2 검수 UI**
+- 신규 `DetailPagePreview` 컴포넌트 (Claude Artifacts 4.1 본 앱 구현체)
+- 씨앗 심기 / 검색 조련사에서 "상세페이지 미리보기" 버튼 → 5섹션 결과 PC/모바일 토글 프리뷰
+- 검수 통과 시 네이버 등록, 거부 시 Claude Web 세션으로 A급 재처리 자동 큐 이동
+
+**Y-3 검수 분류 시뮬레이터**
+- 신규 `ABCSimulatorCard` 컴포넌트 (Claude Artifacts 4.2 본 앱 구현체)
+- 대시보드 또는 /products 에 마운트
+- 마진율·경쟁도·옵션 수·트렌드 점수 슬라이더 + 실시간 점수 + 등급 표시 + 예상 처리 시간·비용
+
+**Y-4 일괄 처리 진행 모니터**
+- 신규 `BatchProgressMonitor` 컴포넌트 (Claude Artifacts 4.5 본 앱 구현체)
+- 대시보드 Section 5 More에 마운트
+- 폴링으로 Supabase products 테이블 상태 변화 시각화 (칸반)
+
+### Sprint Z — 라이프스타일 컷 큐레이션 + Claude Artifacts 보조 위젯 (Sprint Y 완료 후)
+
+**Z-1 라이프스타일 큐레이션 워크플로우**
+- Phase 1 (사용자 Claude Web 세션):
+  - Adobe MCP `asset_search` 로 Adobe Stock Free 카테고리 + Lightroom 라이브러리에서 카테고리별 50-100장 큐레이션
+  - 결과를 Supabase Storage `lifestyle/{category}/{tag}/{filename}.jpg` 구조로 업로드
+- Phase 2 (본 앱):
+  - 신규 `lifestyle_assets` DB 테이블 (id, storage_path, category, tags[], last_used_at, used_count)
+  - `lifestyle-picker.ts` 가 30일 cooldown + 카테고리·태그 매칭 알고리즘으로 무작위 선택
+
+**Z-2 디자인 토큰 시안 패널**
+- 신규 `DesignTokenPanel` 컴포넌트 (Claude Artifacts 4.6 본 앱 구현체)
+- 색상·폰트·간격 토큰을 슬라이더로 조정 → 5섹션 미리보기 실시간 반영
+- export to Tailwind config 버튼
+
+**Z-3 보안 체크리스트 자동 검증 (Vercel 환경변수 v2.0 § 8)**
+- 신규 `scripts/verify-env-security.sh` — 본 PDF Section 8 10개 항목 자동 검증
+  - `.gitignore` 패턴 검사
+  - `.env.backup.*` 추적 여부
+  - `git-secrets` / `gitleaks` 설치 여부
+  - source map production 비활성화 확인 (`next.config.js`)
+  - API route 코드에서 `console.log(process.env)` 패턴 grep
+- pre-commit hook 통합 검토
+
+---
