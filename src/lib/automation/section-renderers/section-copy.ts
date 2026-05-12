@@ -744,3 +744,259 @@ export async function generateWarrantyCopy(
     return { value: fallback, source: 'fallback', filtered: false };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Sprint 7-M2 Phase 2-b-1 additions — trust track (S4 / S7)
+//
+// KFTC-strict rules apply here. None of these helpers ask Groq to invent
+// numerical claims (output values, study sample sizes, clinical outcomes).
+// Groq only generates labels, captions, and qualitative metric *names* —
+// real values come from product data via SectionRenderContext or remain
+// "상세 페이지 참조" placeholders.
+// ---------------------------------------------------------------------------
+
+// ---- core performance metrics (S4) ----------------------------------------
+
+export interface MetricCard {
+  /** Metric name, e.g. 출력 / 무게 / 작동 시간. */
+  label: string;
+  /** Numeric or short text value. Placeholder allowed. */
+  value: string;
+  /** Unit string, e.g. W / kg / dB / h. Empty string when not applicable. */
+  unit: string;
+  /** Short qualitative caption under the value, under 16 Korean chars. */
+  caption: string;
+}
+
+export interface CoreMetricsCopy {
+  headline: string;
+  cards: [MetricCard, MetricCard, MetricCard, MetricCard];
+}
+
+export async function generateCoreMetrics(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<CoreMetricsCopy>> {
+  const fallback: CoreMetricsCopy = {
+    headline: '핵심 사양',
+    cards: [
+      { label: '출력', value: '상세 참조', unit: '', caption: '카테고리 표준 대비 적정' },
+      { label: '무게', value: '상세 참조', unit: '', caption: '한 손 사용에 적합' },
+      { label: '소음', value: '상세 참조', unit: '', caption: '실내 사용에 무리 없음' },
+      { label: '인증', value: '상세 참조', unit: '', caption: '판매자 인증 정보 제공' },
+    ],
+  };
+
+  const prompt = [
+    `Pick four core metric names for a "corePerformance" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    ctx.category ? `Category: ${ctx.category}` : '',
+    `Return JSON exactly: {"headline":"...","cards":[{"label":"...","unit":"...","caption":"..."}, ... 4 total]}.`,
+    `headline: under 12 Korean characters.`,
+    `For each card, return only Korean label (e.g. 출력 / 무게 / 소음 / 작동 시간 / 용량 / 배터리 / 인증 / 보증), the unit string (e.g. W / kg / dB / h / Ah / mAh / "" if non-numeric), and a 16-char caption.`,
+    `DO NOT invent specific numeric values — leave the numeric value out entirely (the caller fills it from product data or shows "상세 참조").`,
+    `Avoid superlatives like 최고 / 최저. Plain professional tone, no emoji.`,
+    `Respond with JSON only.`,
+  ].filter(Boolean).join('\n');
+
+  const raw = await callGroq(prompt, 320);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; cards?: unknown } = JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    if (!Array.isArray(parsed.cards) || parsed.cards.length < 4) {
+      return { value: fallback, source: 'fallback', filtered: false };
+    }
+    const cards: MetricCard[] = [];
+    let anyFiltered = false;
+    for (const c of parsed.cards.slice(0, 4)) {
+      if (!c || typeof c !== 'object') {
+        cards.push(fallback.cards[cards.length] ?? fallback.cards[0]);
+        continue;
+      }
+      const cc = c as Record<string, unknown>;
+      const label = typeof cc.label === 'string' ? cc.label : '';
+      const unit = typeof cc.unit === 'string' ? cc.unit : '';
+      const caption = typeof cc.caption === 'string' ? cc.caption : '';
+      const lf = filterDarkPatterns(label);
+      const uf = filterDarkPatterns(unit);
+      const cf = filterDarkPatterns(caption);
+      anyFiltered = anyFiltered || lf.filtered || uf.filtered || cf.filtered;
+      cards.push({
+        label: lf.text.slice(0, 10) || '항목',
+        value: '상세 참조',
+        unit: uf.text.slice(0, 4),
+        caption: cf.text.slice(0, 16) || '판매자 정보 참조',
+      });
+    }
+    while (cards.length < 4) cards.push(fallback.cards[cards.length]);
+    const hf = filterDarkPatterns(h);
+    return {
+      value: {
+        headline: hf.text.slice(0, 12) || fallback.headline,
+        cards: cards.slice(0, 4) as CoreMetricsCopy['cards'],
+      },
+      source: 'groq',
+      filtered: anyFiltered || hf.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---- technology mechanism (S7) --------------------------------------------
+
+export interface TechnologyCopy {
+  headline: string;
+  /** Short label sitting next to the diagram, e.g. "3단계 처리". */
+  mechanismLabel: string;
+  /** Three pipeline step names (each under 10 Korean chars). */
+  steps: [string, string, string];
+  /** Caption beneath the diagram, under 60 Korean chars. */
+  caption: string;
+}
+
+export async function generateTechnologyCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<TechnologyCopy>> {
+  const fallback: TechnologyCopy = {
+    headline: '작동 원리',
+    mechanismLabel: '3단계 처리',
+    steps: ['입력', '처리', '출력'],
+    caption: '핵심 단계를 명확히 분리하여 사용 흐름을 단순하게 유지합니다.',
+  };
+
+  const prompt = [
+    `Write Korean copy for the "technology" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    ctx.category ? `Category: ${ctx.category}` : '',
+    `Return JSON exactly: {"headline":"...","mechanismLabel":"...","steps":["s1","s2","s3"],"caption":"..."}.`,
+    `headline: under 12 Korean characters (e.g. 작동 원리, 핵심 기술).`,
+    `mechanismLabel: under 12 chars (e.g. 3단계 처리, 듀얼 필터).`,
+    `steps: 3 short Korean labels under 10 chars each, describing pipeline stages.`,
+    `caption: under 60 Korean characters, plain professional tone, no claims of medical efficacy or superlatives.`,
+    `No emoji, no fabricated mechanism names. Respond with JSON only.`,
+  ].filter(Boolean).join('\n');
+
+  const raw = await callGroq(prompt, 280);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; mechanismLabel?: unknown; steps?: unknown; caption?: unknown } =
+      JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    const m = typeof parsed.mechanismLabel === 'string' ? parsed.mechanismLabel : '';
+    if (!Array.isArray(parsed.steps) || parsed.steps.length < 3) {
+      return { value: fallback, source: 'fallback', filtered: false };
+    }
+    const steps = parsed.steps.slice(0, 3).map((s) => filterDarkPatterns(typeof s === 'string' ? s : ''));
+    if (steps.some((s) => !s.text)) return { value: fallback, source: 'fallback', filtered: false };
+    const cap = typeof parsed.caption === 'string' ? parsed.caption : '';
+    const hf = filterDarkPatterns(h);
+    const mf = filterDarkPatterns(m);
+    const cf = filterDarkPatterns(cap);
+    return {
+      value: {
+        headline: hf.text.slice(0, 12) || fallback.headline,
+        mechanismLabel: mf.text.slice(0, 12) || fallback.mechanismLabel,
+        steps: [
+          steps[0].text.slice(0, 10) || fallback.steps[0],
+          steps[1].text.slice(0, 10) || fallback.steps[1],
+          steps[2].text.slice(0, 10) || fallback.steps[2],
+        ],
+        caption: cf.text.slice(0, 60) || fallback.caption,
+      },
+      source: 'groq',
+      filtered: hf.filtered || mf.filtered || cf.filtered || steps.some((s) => s.filtered),
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---- clinical data placeholder (S7) ---------------------------------------
+//
+// CRITICAL: this renderer must never display fabricated clinical numbers.
+// Groq is asked only for labels and the caveat copy — numeric values come
+// from a future ctx.clinicalData field (Sprint 7-Lib will populate from
+// product data) or render as "상세 페이지 참조".
+//
+// All clinical copy carries an explicit "임상 데이터 출처: 상세 페이지 참조"
+// caveat to stay KFTC-compliant for health-adjacent product detail pages.
+
+export interface ClinicalCopy {
+  headline: string;
+  /** Short study meta label, e.g. "8주 임상 32명". */
+  studyMeta: string;
+  /** Outcome metric label, e.g. "만족도". */
+  outcomeLabel: string;
+  /** Always present caveat line — surfaces the data-source disclaimer. */
+  caveat: string;
+}
+
+export async function generateClinicalCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<ClinicalCopy>> {
+  const fallback: ClinicalCopy = {
+    headline: '임상 데이터',
+    studyMeta: '판매자 제공 임상 자료',
+    outcomeLabel: '주요 지표',
+    caveat: '임상 데이터 출처: 상세 페이지 참조',
+  };
+
+  const prompt = [
+    `Write Korean labels (not numeric values) for the "clinical" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    `Return JSON exactly: {"headline":"...","studyMeta":"...","outcomeLabel":"..."}.`,
+    `headline: under 14 chars (e.g. 임상 데이터, 임상 결과).`,
+    `studyMeta: under 22 chars, Korean phrase describing the study setup (e.g. "8주 임상", "판매자 제공 자료"). DO NOT make up specific sample sizes or durations.`,
+    `outcomeLabel: under 14 chars naming the outcome metric (e.g. 만족도, 사용감, 적용성).`,
+    `Avoid medical efficacy claims, no superlatives, no fabricated trial numbers. Plain factual tone, no emoji.`,
+    `Respond with JSON only.`,
+  ].join('\n');
+
+  const raw = await callGroq(prompt, 200);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; studyMeta?: unknown; outcomeLabel?: unknown } =
+      JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    const s = typeof parsed.studyMeta === 'string' ? parsed.studyMeta : '';
+    const o = typeof parsed.outcomeLabel === 'string' ? parsed.outcomeLabel : '';
+    const hf = filterDarkPatterns(h);
+    const sf = filterDarkPatterns(s);
+    const of = filterDarkPatterns(o);
+    return {
+      value: {
+        headline: hf.text.slice(0, 14) || fallback.headline,
+        studyMeta: sf.text.slice(0, 22) || fallback.studyMeta,
+        outcomeLabel: of.text.slice(0, 14) || fallback.outcomeLabel,
+        // Caveat is invariant — never sourced from Groq.
+        caveat: fallback.caveat,
+      },
+      source: 'groq',
+      filtered: hf.filtered || sf.filtered || of.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
