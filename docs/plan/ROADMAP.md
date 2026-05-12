@@ -19,7 +19,7 @@
 ```
 꽃틔움 가든 — Session E-2 Phase 3 시작.
 
-docs/plan/PROGRESS.md → ROADMAP.md → SESSION_LOG.md 정독하고, 아래 STEP 0 환경 점검 후 현재 상태 + Phase 3 디테일 계획을 브리핑해주세요. 본 작업 시작은 제 Y/N 승인 후 진행.
+docs/plan/PROGRESS.md (슬림 진입점) → ROADMAP.md → SESSION_LOG.md 정독. 필요 시 PRINCIPLES_LEARNED.md / PRINCIPLES_CODE.md / SPRINT_PLAN.md / REFERENCES.md spot-read. 아래 STEP 0 환경 점검 후 현재 상태 + Phase 3 디테일 계획을 브리핑해주세요. 본 작업 시작은 제 Y/N 승인 후 진행.
 
 [STEP 0 환경 점검]
 git rev-parse HEAD origin/main && \
