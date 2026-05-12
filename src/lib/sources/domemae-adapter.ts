@@ -564,10 +564,99 @@ export class DomemaeAdapter implements SourceAdapter {
   }
 
   /**
-   * 4. Category tree - scaffolded for Sprint 6-E (getCat ver 2.0 full cache).
+   * 4. Category tree via getCat ver 2.0.
+   * Sprint 6-E: powers the dome category cache. Returns the full domeggook
+   * category tree (4-5 depth, thousands of nodes).
+   *
+   * Strategy: one root call returns the entire tree in a flat list. Each item
+   * carries its own code, name, depth and parent code. We do not paginate.
+   *
+   * Rate limit: domeggook treats getCat as a low-cost call (single shot) but
+   * we still respect the shared 180/min bucket. Adapter does not throttle —
+   * caller (weekly cron) calls once per week so throttling is moot.
    */
   async getCategories(): Promise<Category[]> {
-    notImplemented(PLATFORM_CODE, 'getCategories');
+    const apiKey = await getApiKey();
+    if (!apiKey) {
+      throw new SourceAdapterError(
+        PLATFORM_CODE,
+        'AuthFailed',
+        'Domeggook API key is not configured (store_settings.domeggook_api_key).',
+      );
+    }
+
+    const params = new URLSearchParams();
+    params.set('ver', '2.0');
+    params.set('mode', 'getCat');
+    params.set('aid', apiKey);
+    params.set('om', 'json');
+
+    let res: Response;
+    try {
+      res = await fetch(`${DOMEGGOOK_API}?${params.toString()}`, {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS * 2),
+      });
+    } catch (e) {
+      throw new SourceAdapterError(
+        PLATFORM_CODE,
+        'Network',
+        'Network error in getCategories',
+        e,
+      );
+    }
+
+    if (!res.ok) {
+      throw new SourceAdapterError(
+        PLATFORM_CODE,
+        'BadResponse',
+        `getCategories returned HTTP ${res.status}`,
+      );
+    }
+
+    type RawNode = {
+      code?: string | number;
+      name?: string;
+      depth?: number | string;
+      parent?: string | number;
+      parentCode?: string | number;
+      itemCount?: number | string;
+      cnt?: number | string;
+    };
+
+    const raw = (await res.json()) as {
+      domeggook?: {
+        list?: { category?: RawNode[] };
+        category?: RawNode[];
+      };
+      errors?: unknown;
+    };
+
+    if (raw.errors || !raw.domeggook) return [];
+
+    const rawList: RawNode[] =
+      raw.domeggook.list?.category ?? raw.domeggook.category ?? [];
+
+    return rawList
+      .map((node) => {
+        const code = String(node.code ?? '').trim();
+        const name = (node.name ?? '').trim();
+        const depthRaw = node.depth;
+        const depth = typeof depthRaw === 'number'
+          ? depthRaw
+          : parseInt(String(depthRaw ?? '1'), 10) || 1;
+        const parent = node.parent ?? node.parentCode;
+        const parentCode = parent === undefined || parent === null || parent === ''
+          ? null
+          : String(parent);
+        const cnt = node.itemCount ?? node.cnt ?? 0;
+        const itemCount = typeof cnt === 'number'
+          ? cnt
+          : parseInt(String(cnt), 10) || 0;
+        return code && name
+          ? ({ code, name, depth, parentCode, itemCount } satisfies Category)
+          : null;
+      })
+      .filter((c): c is Category => c !== null);
   }
 
   /**

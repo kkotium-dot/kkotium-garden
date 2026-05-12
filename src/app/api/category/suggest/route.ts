@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
+import { getCachedMapping, saveMapping, nameHashKey } from '@/lib/dome-category-cache';
 
 // ── AI: Gemini without full category list in prompt ───────────────────────────
 // Keeping prompt small (< 500 tokens) so Gemini has room to respond
@@ -194,16 +195,45 @@ function validateSuggestion(
 // ── Handler ───────────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   try {
-    const { productName } = await request.json();
+    const body = await request.json();
+    const productName: string = body?.productName ?? '';
+    const domeCategoryCode: string | undefined = body?.domeCategoryCode;
     if (!productName?.trim()) {
       return NextResponse.json({ success: false, error: '상품명을 입력해주세요' }, { status: 400 });
+    }
+
+    const name = productName.trim();
+
+    // Sprint 6-E: cache-first lookup. Try dome code (most reliable) then name hash.
+    if (domeCategoryCode) {
+      const hit = await getCachedMapping('dome_code', domeCategoryCode);
+      if (hit) {
+        return NextResponse.json({
+          success: true,
+          suggestions: [{ d1: hit.d1, d2: hit.d2, d3: hit.d3, d4: hit.d4 ?? undefined }],
+          usedAI: false,
+          cacheHit: 'dome_code',
+        });
+      }
+    }
+    const nameKey = nameHashKey(name);
+    if (nameKey) {
+      const hit = await getCachedMapping('name_hash', nameKey);
+      if (hit) {
+        return NextResponse.json({
+          success: true,
+          suggestions: [{ d1: hit.d1, d2: hit.d2, d3: hit.d3, d4: hit.d4 ?? undefined }],
+          usedAI: false,
+          cacheHit: 'name_hash',
+        });
+      }
     }
 
     let rawSuggestions: Array<{ d1: string; d2: string; d3: string; d4?: string }> = [];
     let usedAI = false;
 
     try {
-      const aiResults = await suggestWithGemini(productName.trim());
+      const aiResults = await suggestWithGemini(name);
       usedAI = true;
       for (const s of aiResults) {
         const validated = validateSuggestion(s.d1, s.d2, s.d3);
@@ -213,8 +243,10 @@ export async function POST(request: NextRequest) {
       console.warn('[category/suggest] AI failed, using fallback:', String(aiError).slice(0, 120));
     }
 
+    let source: 'ai' | 'fallback' = usedAI && rawSuggestions.length > 0 ? 'ai' : 'fallback';
     if (rawSuggestions.length === 0) {
-      rawSuggestions = suggestFallback(productName.trim());
+      rawSuggestions = suggestFallback(name);
+      source = 'fallback';
     }
 
     // Deduplicate
@@ -225,6 +257,33 @@ export async function POST(request: NextRequest) {
       seen.add(key);
       return true;
     });
+
+    // Sprint 6-E: write top suggestion to cache (best-effort, don't block response)
+    const top = suggestions[0];
+    if (top && nameKey) {
+      saveMapping({
+        kind: 'name_hash',
+        key: nameKey,
+        d1: top.d1,
+        d2: top.d2,
+        d3: top.d3,
+        d4: top.d4 ?? null,
+        confidence: source === 'ai' ? 80 : 60,
+        source,
+      }).catch((e) => console.warn('[category/suggest] cache write failed:', String(e).slice(0, 120)));
+    }
+    if (top && domeCategoryCode) {
+      saveMapping({
+        kind: 'dome_code',
+        key: domeCategoryCode,
+        d1: top.d1,
+        d2: top.d2,
+        d3: top.d3,
+        d4: top.d4 ?? null,
+        confidence: source === 'ai' ? 85 : 65,
+        source,
+      }).catch((e) => console.warn('[category/suggest] cache write failed:', String(e).slice(0, 120)));
+    }
 
     return NextResponse.json({ success: true, suggestions, usedAI });
   } catch (e: unknown) {

@@ -436,6 +436,43 @@ model InventorySnapshot {
   @@map("inventory_snapshots")
 }
 
+// Sprint 6-E: domeggook category tree cache (refreshed weekly from getCat ver 2.0).
+model DomeCategory {
+  code        String   @id @db.VarChar(20)
+  name        String   @db.VarChar(200)
+  depth       Int
+  parentCode  String?  @map("parent_code") @db.VarChar(20)
+  itemCount   Int      @default(0) @map("item_count")
+  refreshedAt DateTime @default(now()) @map("refreshed_at")
+
+  @@index([parentCode], map: "idx_dome_categories_parent")
+  @@index([depth], map: "idx_dome_categories_depth")
+  @@map("dome_categories")
+}
+
+// Sprint 6-E: learned mapping cache (dome category OR product-name hash -> naver path).
+// Avoids the per-product Gemini call once a mapping has been seen.
+model CategoryMapping {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lookupKey         String    @map("lookup_key") @db.VarChar(120)
+  lookupKind        String    @map("lookup_kind") @db.VarChar(20)
+  naverD1           String    @map("naver_d1") @db.VarChar(60)
+  naverD2           String    @map("naver_d2") @db.VarChar(60)
+  naverD3           String    @map("naver_d3") @db.VarChar(60)
+  naverD4           String?   @map("naver_d4") @db.VarChar(60)
+  naverCategoryCode String?   @map("naver_category_code") @db.VarChar(20)
+  confidence        Int       @default(70)
+  source            String    @db.VarChar(20)
+  hitCount          Int       @default(0) @map("hit_count")
+  lastHitAt         DateTime? @map("last_hit_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([lookupKind, lookupKey], map: "idx_category_mappings_lookup")
+  @@index([lastHitAt(sort: Desc)], map: "idx_category_mappings_last_hit")
+  @@map("category_mappings")
+}
+
 // Sprint 6-C: competitor snapshots. Per-product per-poll capture of 1-page sellers
 // from domeggook getItemList search. Stored as aggregates (median/min/max + count)
 // instead of raw seller list to keep volume bounded.

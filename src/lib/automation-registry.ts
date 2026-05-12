@@ -155,6 +155,19 @@ export const AUTOMATIONS: AutomationMeta[] = [
 
   // ── SEO + 노출 ──────────────────────────────────────────────────────────────
   {
+    id: 'category-cache',
+    group: 'seo',
+    nameKey: 'categoryCache',
+    code: '6-E',
+    frequency: 'weekly',
+    schedule: '0 0 * * 1',
+    status: 'active',
+    targetPhase: 'Session F',
+    togglable: true,
+    descriptionKey: 'categoryCache',
+    cronPath: '/api/cron/weekly',
+  },
+  {
     id: 'golden-window',
     group: 'seo',
     nameKey: 'goldenWindow',

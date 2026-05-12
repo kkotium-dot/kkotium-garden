@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { sendDiscord, buildWeeklyReportEmbed } from '@/lib/discord';
+import { refreshDomeCategoryTree } from '@/lib/dome-category-cache';
 
 // ── Domeggook API ──────────────────────────────────────────────────────────
 const DOMEGGOOK_API = 'https://domeggook.com/ssl/api';
@@ -224,12 +225,30 @@ export async function GET(req: NextRequest) {
 
     const result = await sendDiscord('OPS_REPORT', '', [embed]);
 
+    // Sprint 6-E: piggy-back dome category tree refresh on weekly cron.
+    // Domeggook categories change slowly — weekly is plenty and avoids
+    // adding a 4th cron route that would exceed Vercel Hobby plan limit.
+    let categoryRefresh: { fetched: number; upserted: number; durationMs: number; error?: string } = {
+      fetched: 0,
+      upserted: 0,
+      durationMs: 0,
+    };
+    try {
+      const refresh = await refreshDomeCategoryTree();
+      categoryRefresh = refresh;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      categoryRefresh.error = msg.slice(0, 200);
+      console.warn('[cron/weekly] dome category refresh failed:', msg.slice(0, 200));
+    }
+
     return NextResponse.json({
       ok:        result.ok,
       timestamp: new Date().toISOString(),
       weekLabel,
       stats: { totalProducts, activeProducts, oosProducts, newRegistered, avgHoneyScore, priceChanges, weekRevenue, weekOrderCount, weekCancelCount, weekNetProfit },
       priceDrift: { checked: priceDriftChecked, drifts: priceDrifts.length, items: priceDrifts },
+      categoryRefresh,
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);

@@ -41,6 +41,10 @@ export async function GET() {
     orderBy: { polledAt: 'desc' },
     select: { polledAt: true },
   });
+  const lastDomeCategory = await prisma.domeCategory.findFirst({
+    orderBy: { refreshedAt: 'desc' },
+    select: { refreshedAt: true },
+  });
 
   // ── Env-based liveness checks ──────────────────────────────────────────────
   const discordEnv = {
@@ -84,6 +88,10 @@ export async function GET() {
         // 6-C.2 is computed on-demand by /api/suppliers/scores. Surface the
         // latest competitor poll (its primary data source) as a proxy.
         lastRun = lastCompetitorSnap?.polledAt?.toISOString() ?? null;
+        break;
+      case 'category-cache':
+        // 6-E refreshes on the weekly cron; surface the latest DomeCategory.refreshedAt.
+        lastRun = lastDomeCategory?.refreshedAt?.toISOString() ?? null;
         break;
       case 'discord-kkotti-recommend':
       case 'discord-stock-alert':
