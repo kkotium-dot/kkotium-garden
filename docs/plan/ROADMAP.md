@@ -13,8 +13,57 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
+## 다음 새 채팅 시작 메시지 — 2026-05-12 (v3.1 FINAL 채택 후 7-Diag 진입) ⭐ ACTIVE
+
+본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md, 
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고 
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 commit은 (실제 commit hash 확인 후 기재).
+직전 작업은 'v3.1 FINAL docs 일괄 갱신' (docs-only).
+
+본 세션 진입 작업:
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+STEP 7-Diag — 진단 모듈 MVP 본격 코드 작업
+  대상 파일 신규/수정:
+    - src/lib/diagnosis/concept-tone-inference.ts (신규)
+    - src/lib/diagnosis/image-quality.ts (신규, Sharp 4축)
+    - src/lib/diagnosis/grading.ts (신규, L1~L4 + CTI 통합)
+    - src/lib/diagnosis/prompts/vision-quality-prompt.ts (신규, Claude Vision 보강용)
+    - prisma/schema.prisma (Diagnosis 모델 추가, ConceptTone JSON 필드)
+    - app/api/diagnose/route.ts (신규, 동기 처리 1초 미만 목표)
+  
+  CTI 8축은 본 진입 작업의 핵심.
+  구체 명세는 docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 참조.
+
+진입 전 확인:
+- 5개 MD 정독 + 신규 research 문서 정독
+- ANTHROPIC_API_KEY 도입 시 환경변수 보안 체크리스트 12개 항목 적용 (research 문서 Appendix E)
+- 7-Skel(12 골격 정의)은 본 세션에서 Skills theme-factory 활용해 한 번에 일괄 생성 시도
+
+작업원칙 절대 준수 — 평소와 동일.
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-11 (Sprint X 채택 후) ✅~~ (deprecated, 2026-05-12 v3.1 FINAL 채택으로 폐기)
+
+*아래 메시지는 v3.1 FINAL 채택 전 버전입니다. 위의 ACTIVE 메시지를 사용하세요. 본 섹션은 변경 이력 보존 목적으로만 남깁니다.*
+
+(직전 'Sprint X' 인계 메시지 본문은 그대로 보존)
+
+---
+
+---
+
 ## 다음 새 채팅 시작 메시지 — 2026-05-12 Sprint X (v2.0 아키텍처 채택 + Gemini 제거 + 정적 자산 라이브러리)
 
+
+> **DEPRECATED** — 2026-05-12 v3.1 FINAL adoption. Use the ACTIVE message above. This section preserved for git history only.
 <!-- sprint-x-handoff-short v1 -->
 
 ```

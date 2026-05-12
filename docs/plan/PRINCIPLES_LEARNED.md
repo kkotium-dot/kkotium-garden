@@ -371,3 +371,61 @@ Vercel 환경에서 Google 계열 API 키 (특히 Gemini)가 자주 폐기되는
 - Adobe Creative Cloud 구독 + 2,000 Firefly credits (사용자 보유) → Phase 1 Creative Phase 자원
 
 ---
+
+## 작업원칙 #38 — Production Runtime = Static Assets Only
+
+Vercel 런타임은 정적 자산과 안전한 서버 연산만 수행한다.
+
+**허용**:
+- 이미지 변환(Cloudinary URL 기반)
+- 이미지 합성(Sharp 라이브러리, 로컬 연산)
+- 텍스트 생성(Groq, Anthropic API — 회전 정책 안정한 것만)
+- 정적 자산 서빙(Supabase Storage CDN)
+
+**금지**:
+- 이미지 생성 API 직접 호출(Gemini 등 자동 폐기 위험)
+- Adobe Firefly API 직접 호출(Web UI 전용, 일반 API 미공개)
+- 환경변수 echo back (`console.log(process.env)`, API route response에 env 전체 포함)
+- `NEXT_PUBLIC_` 접두사로 시크릿 노출
+- Source map production 활성화
+
+이미지 생성이 필요하면 Claude Web Pro Max 세션에서 Adobe MCP + Firefly Boards로 사전 생성 → 정적 자산으로 추출 → Supabase Storage 저장 → 런타임에서 정적 자산만 참조.
+
+근거: Gemini API 키 자동 폐기 사고(2026-04-11, 04-29 등 다회 발생) 이후 채택.
+
+## 작업원칙 #39 — CTI Inference is the Entry Point
+
+모든 상세페이지 자동화는 CTI(Concept-Tone Inference) 8축 추론에서 시작한다.
+
+**8축**:
+- 컨셉 4축: 페르소나(20s/30-40s/senior/kidsmom) · 맥락(daily/gift/pro/event) · 가격(budget/standard/premium) · 유형(single/options/set)
+- 톤 4축: 컬러무드(warm/calm/vivid/mono) · 감성톤(friendly/professional/sensory/trust) · 사진스타일(white/lifestyle/detail) · 장르(korean/minimal/vintage/natural)
+
+**추론 → 골격 매칭**: CTI 결과로 S1~S12 중 1개 자동 선택. 디자이너는 1클릭으로 교체 가능.
+
+**추론 도구**: 1차 Groq Llama 3.1 8B(무료), 2차 보강 Claude Vision(옵션 2, 신뢰도 <70%일 때만).
+
+**원칙**: 디자이너는 0에서 시작하지 않는다. 시스템이 추론한 컨셉/톤이 출발점, 디자이너는 그 위에서 1클릭 교체 또는 디테일 작업.
+
+근거: 광범위 일괄 컨셉 가정(v2.0 PDF)이 새싹 셀러의 상품 1개 단위 작업 흐름과 어긋난다는 진단(2026-05-12 v3.1 FINAL 기획 점검).
+
+## 작업원칙 #40 — Designer Sense is the Sacred Resource
+
+자동화는 디자이너 감각을 대신하는 게 아니라, 디자이너 감각이 발휘될 시간을 벌어주는 도구다.
+
+**L1/L2 자동 트랙**: 0번부터 99번까지 반복 작업을 시스템이 처리. 디자이너는 모바일 PWA 스와이프 검수만(L1 6초/건, L2 5-8분/건).
+
+**L3/L4 디자이너 트랙**: 100번에 1번의 정성스러운 작업. 시스템은 골격·무드보드·라이프스타일 컷 후보를 미리 펼쳐두고, 디자이너는 채색·디테일에만 집중(L3 15-25분, L4 30-60분).
+
+**시간 분배**: 디자이너 시간 단가가 가장 비싼 자원이므로, ROI 양수 상품에만 L4 손길을 투입. ROI 계산은 진단 단계에서 자동 수행.
+
+**금지 패턴**:
+- 모든 상품에 균일한 시간 투입
+- 카테고리·매출 잠재력 무시한 풀 수동 작업
+- "이 정도면 됐다"는 임의 판단 — 진단 결과를 우선 신뢰하되 사용자 슬라이더로 강제 변경 가능
+
+근거: 사용자 자기 정의 — "자동화는 내 감각을 대신하는 게 아니라, 내 감각이 온전히 발휘될 시간을 벌어주는 도구여야 합니다."(2026-05-12 v3.1 FINAL 기획 점검).
+
+---
+
+---

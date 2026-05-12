@@ -141,6 +141,47 @@
 
 ---
 
+## Sprint 7 — Smart Asset Workflow v3.1 FINAL (2026-05-12 채택)
+
+### Sprint 7 목표
+상품 1개를 소싱한 시점에 손길 필요도가 자동 진단되고, 진단 결과에 따라 썸네일부터 상세페이지까지 작업 범위가 자동 결정되는 시스템. 디자이너 감각은 L3/L4 상품에만 집중 투입.
+
+### Sprint 7 매트릭스
+
+| Sprint | 작업 | Claude 활용 | 분량 | API | 우선순위 |
+|---|---|---|---|---|---|
+| **7-Diag** | 진단 모듈 MVP + CTI 8축 추론 | Vision 프롬프트 다듬기 / Artifacts 시각화 위젯 | L | Anthropic(옵션) | ⭐⭐⭐ |
+| **7-Skel** | 12개 골격 정의 + skeleton-matcher | Skills theme-factory 일괄 생성 / Artifacts 갤러리 | M | — | ⭐⭐⭐ |
+| **7-M1** | 썸네일 자동화 4변형 (clean/price/badge/lifestyle) | Skills canvas-design / Artifacts 미리보기 | M+ | Cloudinary | ⭐⭐⭐ |
+| **7-M2** | 5섹션 빌더 (골격 기반 가변 3-6섹션) | Adobe MCP fill_text / Skills frontend-design | L | — | ⭐⭐⭐ |
+| **7-Lib** | 라이프스타일 라이브러리 (골격 태그 인덱싱) | Adobe MCP asset_search 월초 큐레이션 | M | Adobe MCP | ⭐⭐⭐ |
+| **7-M4** | 썸네일 A/B 테스트 (CTR 기반 자동 승자) | Artifacts A/B 결과 시각화 | S | — | ⭐⭐ |
+| **7-M3** | 어도비 워크플로우 (PSD Variables CSV 머지) | Skills xlsx 무결성 검증 | M | — | ⭐⭐ |
+| **7-X** | 반품안심케어 적용 ↔ 미적용 매출 검증 | Artifacts 비교 시각화 | S | — | ⭐⭐ |
+
+### 12주 점진적 로드맵
+
+| 시점 | 작업 | 산출물 (그 시점에 사용 가능한 MVP) |
+|---|---|---|
+| Week 1-2 | 7-Diag MVP | Sharp 4축 + CTI 룰 기반 + 대시보드 L 배지 |
+| Week 2-3 | 7-Skel 12개 골격 정의 | Skills theme-factory 일괄 생성 + JSON 명세 + Tailwind 토큰 |
+| Week 3-5 | 7-M1 + 7-M2 | 썸네일 4변형 자동 생성 + 5섹션 가변 합성 + Groq 카피 + 다크패턴 필터 |
+| Week 6-8 | 7-Lib + 사전 큐레이션 | Adobe MCP 100-200장 시드 + Supabase Storage 인덱스 + cooldown 관리 |
+| Week 9-12 | 7-M3 + L4 풀 워크플로우 | Photoshop CSV 머지 + Lightroom 마스터 프리셋 + 디자이너 핸드오프 |
+
+### Sprint 7 진입 조건
+- Sprint 6 마무리(6.5/6-Pre/6-A~E)는 별도 트랙으로 병렬 진행
+- 7-Diag MVP는 Sprint 6과 의존성 없음, 본 v3.1 FINAL 채택 직후 진입 가능
+
+### Sprint 7 완료 조건
+- 새 상품 1개 소싱 → 진단 → 자동 L 등급 결정 → 등급별 자동 합성 → 검수 → 등록까지 end-to-end 작동
+- CTI 자동 매칭 정확도 사람 판단 대비 80% 이상
+- 상품 등록 시간 평균 60분 → 등급별 평균 5-15분으로 단축
+
+---
+
+---
+
 ## v2.0 아키텍처 채택 — Sprint X / Sprint Y / Sprint Z (2026-05-12 신설)
 
 본 시리즈는 **2026-05-12 사용자 제공 "꽃틔움 가든 아키텍처 v2.0" 리서치** (`docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md`) 채택에 따른 새 Sprint 트랙입니다.

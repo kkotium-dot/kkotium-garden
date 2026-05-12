@@ -1,3 +1,80 @@
+## 2026-05-12 세션 (기획 점검 v3.1 FINAL — CTI + 12 골격 + Claude 디자인 통합) ✅
+
+### 본 세션 성격
+- 클로드 웹에서 진행한 *기획 점검 전용* 세션. 코드 변경 0건.
+- 직전 세션(2026-05-11 'Sprint X = Gemini 제거 + 5섹션 일괄 템플릿') 결정사항을 *광범위 일괄 컨셉 가정*이 본질과 어긋난다는 진단으로 폐기.
+- 직전 'Sprint 6 재검토' 채팅의 5섹션 자체 제작 + HTML 카피 원칙은 유지하면서, 상품 단위 적응형 자동화 v3.1 FINAL로 통합.
+
+### v3.1 FINAL 채택 — Smart Asset Workflow 구조
+
+3단계 파이프라인:
+- **Diagnosis(진단)**: 손길 필요도 자동 판정 (이미지 품질 + 경쟁 수준 + AI ROI + **CTI 8축 추론**)
+- **Automation(자동화)**: L1~L4 등급별 분기 처리
+- **Refinement(디자인)**: 디자이너 손길 워크플로우 (등급별 깊이 차이)
+
+핵심 신규 모듈 2가지:
+1. **CTI(Concept-Tone Inference)** — 8축 자동 추론으로 상품의 컨셉·톤 자동 결정
+2. **12개 사전 정의 골격(S1~S12)** — CTI 결과를 받아 자동 매칭, 디자이너는 1클릭으로 교체 가능
+
+### 결정된 5가지
+
+(a) **CTI 8축 채택**:
+   - 컨셉 4축: 페르소나(20s/30-40s/senior/kidsmom) / 맥락(daily/gift/pro/event) / 가격(budget/standard/premium) / 유형(single/options/set)
+   - 톤 4축: 컬러무드(warm/calm/vivid/mono) / 감성톤(friendly/professional/sensory/trust) / 사진스타일(white/lifestyle/detail) / 장르(korean/minimal/vintage/natural)
+
+(b) **12개 골격 채택**: S1~S12 그대로, 새싹→파워 성장하며 S13~ 디자이너 직접 추가 가능
+
+(c) **Claude Vision 정책**: 옵션 1 + 옵션 2 둘 다 진행
+   - 옵션 1 = Claude.ai 세션에서 수동 (A급 단건, 비용 0)
+   - 옵션 2 = 본 앱 Anthropic API 호출 (D 등급/CTI 신뢰도 70% 미만 자동 보강, 월 ₩2,000-5,000 예상)
+   - ANTHROPIC_API_KEY는 Vercel Sensitive 토글 + gitleaks pre-commit + ANTHROPIC_MONTHLY_CAP 환경변수
+
+(d) **Sprint 7 순서**: 7-Diag(CTI 포함) → 7-Skel(12개 골격) → 7-M1(썸네일) → 7-M2(5섹션 빌더) → 7-Lib(라이프스타일 라이브러리)
+
+(e) **5섹션 자체 제작 + HTML 카피 원칙 유지** (직전 'Sprint 6 재검토' 채팅 결정)
+
+### 클로드 디자인 기능 명시 통합
+
+| 자원 | L3/L4 디자이너 트랙 활용 |
+|---|---|
+| Adobe for Creativity MCP | create_firefly_board(무드보드) + search_design+fill_text(Express 5섹션) + asset_search(Stock 라이프스타일) + image_apply_preset(80+ Lightroom 프리셋) |
+| Canva MCP | generate-design + export-design (SNS·블로그·이벤트 배너 보조) |
+| Claude Artifacts | 5섹션 미리보기 / CTI 시각화 / A/B/C/D 시뮬레이터 / SEO 점수 / 다크패턴 필터 검증 |
+| Claude Skills | theme-factory(12 골격 일괄 생성) + canvas-design(SVG 오버레이) + frontend-design(검수 UI) + pdf/docx/xlsx(부속 문서) + brand-guidelines(추후) |
+| PlayMCP NaverSearch | datalab_shopping_category(트렌드 보조) + search_shop(경쟁 분석) |
+
+### 신규 작업원칙 3건
+
+- **#38** — Production Runtime = Static Assets Only (Vercel은 정적 자산 + 안전 연산만)
+- **#39** — CTI Inference is the Entry Point (모든 상세페이지 자동화의 출발점)
+- **#40** — Designer Sense is the Sacred Resource (자동화는 감각을 대신하지 않고 발휘 시간을 벌어줌)
+
+### Sprint 7 v3.1 FINAL 매트릭스
+
+| Sprint | 작업 | 우선순위 |
+|---|---|---|
+| 7-Diag | 진단 모듈 MVP + CTI 8축 추론 | ⭐⭐⭐ |
+| 7-Skel | 12개 골격 정의 + skeleton-matcher | ⭐⭐⭐ |
+| 7-M1 | 썸네일 자동화 4변형 (골격 톤 토큰 적용) | ⭐⭐⭐ |
+| 7-M2 | 5섹션 빌더 (골격 기반 가변 구조) | ⭐⭐⭐ |
+| 7-Lib | 라이프스타일 라이브러리 (골격 태그 인덱싱) | ⭐⭐⭐ |
+| 7-M4 | 썸네일 A/B 테스트 | ⭐⭐ |
+| 7-M3 | 어도비 워크플로우 (CSV 머지) | ⭐⭐ |
+| 7-X | 반품안심케어 매출 검증 | ⭐⭐ |
+
+### 본 세션 산출물
+- 신규 research 문서: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (Section 6 내용)
+- 변경 영향 파일: docs/plan/{PROGRESS,ROADMAP,SPRINT_PLAN,SESSION_LOG,PRINCIPLES_LEARNED}.md 5종
+- 코드 변경: 0건
+
+### 다음 세션 (Sprint 7-Diag 진입)
+- ROADMAP.md 인계 메시지 영역(L17)에 명시
+- STEP A(docs 갱신) 완료 후 사용자 승인 → STEP B(7-Diag MVP 코드) 진입
+
+---
+
+---
+
 ## 2026-05-12 v2.0 아키텍처 채택 (사용자 제공 리서치 PDF + SVG → Sprint X/Y/Z 신설 + 작업원칙 #37 + SESSION_LOG T2 분할) ✅
 
 ### 본 세션 성격
