@@ -1,3 +1,110 @@
+## 2026-05-13 Sprint 7-M2 Phase 3-A + 3-B — API foundation + 온실 아틀리에 UI mount ✅
+
+### 본 세션 성격
+
+직전 Sprint 7-M2 Phase 2-b-3-b (118425d, dedicated 27/27 ✅ 100%) 직후 사용자가 *콘텐츠 자동화 UI가 어디 있는지* 질문. 진단 결과 — 라이브러리 100% 빌드, API 2개 존재, UI 마운트 0건. 사용자 페르소나 주입 (10년차 파워셀러 + 풀스택 + UI/UX) + AskUserQuestion으로 IA 설계 확정 후 Phase 3-A (API) + Phase 3-B (UI) 동시 진행.
+
+### 사용자 결정 사항
+
+- 메뉴 명칭: **"온실 아틀리에"** (atelier 메타포 + KKOTIUM 정원 톤)
+- IA 위치: TEND 섹션 4번째 (정원 창고 / 검색 조련사 / 좀비 부활소 / **온실 아틀리에**)
+- 진입 범위: /studio + API foundation 동시 (Recommended) — sub-phase 분할로 안전 진행
+- SESSION_LOG.md 947줄 → 분할 우선 (T1 1000 권고 임박)
+
+### 본 turn 누적 commit (3건)
+
+1. `e6a1941` docs(plan): split SESSION_LOG per principle 31 (T1 947 + Phase 3 entry trigger)
+2. `5b543fe` feat(automation): Phase 3-A — Supabase Storage adapter + 2 API routes
+3. `<sha>` feat(automation): Phase 3-B — 온실 아틀리에 UI + Sidebar mount + i18n strings
+
+### Phase 3-A 산출물 (5b543fe, 3 파일 신규)
+
+- `src/lib/storage/automation-storage.ts` (118 LOC) — Supabase Storage 어댑터. bucket=product-assets (product-images와 분리, lifecycle 분리 가능), path={productId}/{kind}-{variant}-{ts}.png, SUPABASE_SERVICE_ROLE_KEY 서버측 전용
+- `src/app/api/products/[id]/generate-detail/route.ts` (114 LOC) — POST endpoint. Product fetch + 최근 Diagnosis 조회 → buildDetailPage 호출 → base64 PNG + section metadata JSON. overrideSkeletonId 지원 (designer 1-click swap)
+- `src/app/api/products/[id]/save-assets/route.ts` (138 LOC) — POST endpoint. thumbBase64/detailBase64 → Storage upload → public URL 응답. 두 에셋 독립 처리
+
+publish-assets (Naver Commerce API patch)는 Phase 3-C로 분리 — production data 검증 안전 분리.
+
+### Phase 3-B 산출물 (commit 3, 4 파일, +2 수정)
+
+- `src/lib/i18n/studio-strings.ko.json` (77 strings, 신규) — 온실 아틀리에 페이지 사용자 노출 한글 (page/filters/productList/header/diagnosis/thumbnail/detail/actions/kftc)
+- `src/app/studio/page.tsx` (~640 LOC, 신규) — 2-pane 페이지
+  - 좌측 (320px): 상품 리스트 + 자동 선택 + 카드 UI (이미지 썸네일 44px + 이름 + 카테고리/공급가)
+  - 우측 (flex, max 1100): 4 카드 (DiagnosisCard / ThumbnailCard / DetailPageCard / ActionsCard)
+  - State: useState로 상품 선택 + 4 API call 결과 + busy/error 별도 관리
+  - URL deep-link 지원: `/studio?product=ID` (PLANT/TEND 연동 대비)
+- `src/components/layout/Sidebar.tsx` (수정 +5) — TEND 섹션 4번째 entry `/studio` 추가, Palette icon (lucide-react)
+- `scripts/verify-korean-dict.py` (수정 +1) — DEFAULTS에 studio-strings.ko.json 추가, 향후 자동 검증
+
+### 페이지 작동 흐름 (사용자 시나리오)
+
+```
+1. 사이드바 → TEND → 온실 아틀리에 클릭
+2. 좌측 상품 리스트에서 상품 선택 (첫 상품 자동 선택)
+3. 우측 진단 카드 "AI 진단 실행" 버튼 → POST /api/diagnose
+   → 컨셉/톤/추천 골격/등급/신뢰도/이미지 품질 카드 표시
+4. 썸네일 카드 "썸네일 생성" 버튼 → POST /api/thumbnail/[sku]
+   → 4 변형 (Clean/Price/Badge/Lifestyle) base64 미리보기 + 메인 1개 선택
+5. 상세 카드 "상세 페이지 생성" 버튼 → POST /api/products/[id]/generate-detail
+   → 5섹션 합성 PNG zoom-fit 미리보기 (max-height 520px overflow scroll)
+   → 골격 드롭다운 (S1~S12)로 1-click 교체 → 재생성
+6. 액션 카드 "에셋 저장" 버튼 → POST /api/products/[id]/save-assets
+   → Supabase Storage 업로드 → public URL 2개 (썸네일 + 상세) 표시
+7. "네이버 즉시 등록" 버튼 — disabled placeholder (Phase 3-C 활성화)
+```
+
+### 디자인 결정 (UI/UX)
+
+- **2-pane vs single-column**: 2-pane 선택. 좌측 320px 상품 컨텍스트 항상 유지 → 작업자가 다음 상품 빠르게 전환 (10년차 파워셀러의 일 5-20건 페이스)
+- **카드 색상 코딩**: 진단=primary red (#e62310), 썸네일=gold (#C9A66B), 상세=sage (#84A98C), 액션=dark (#1F2937) → 4 단계 워크플로우 시각적 구분
+- **메인 변형 선택 UI**: 4 썸네일 각각 "메인으로 사용" 버튼 → 1클릭 라디오 패턴. 선택 변형은 빨간 2.5px 테두리 + filled 버튼
+- **골격 1-click 교체**: 드롭다운 (자동 추천 + S1~S12 12 옵션) → 재생성 버튼 → 디자이너가 즉시 다른 골격 시도 가능 (작업원칙 #40 Designer Sense)
+- **상세 미리보기 zoom-fit**: 5섹션 합성은 5000~7000px 세로 길이 → max-height 520px + overflow scroll로 카드 컴팩트 유지
+
+### KFTC 준수 surfaces
+
+- 썸네일 메인 변형 선택 시 dark-pattern filter 결과는 후속 (Phase 3-C에서 표시 권고). 현재는 filterDarkPatterns가 prompt + copy-writer에서 자동 처리됨
+- 상세 페이지 미리보기는 reviews/clinical/spec 의 invariant placeholder가 자동 노출 — *디자이너가 visual로 검수 가능*
+- "네이버 즉시 등록" disabled — Phase 3-C에서 Naver API patch 시 KFTC 검토 (인증번호/날짜/수량 placeholder는 디자이너 verify 의무 명시)
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 정상 빌드, `/studio` ○ Static (7.45 kB), `/api/products/[id]/generate-detail` + `/save-assets` ƒ Dynamic 등록 ✅
+- `python3 scripts/verify-korean-dict.py` 3 dicts 모두 통과 (99+178+77 strings, 0 replace/not_nfc/typo) ✅
+- 신규 파일 sentinel grep 0건 ✅
+- 신규 페이지 inline 한글: i18n strings 100% 분리 (작업원칙 #29 c, #35) — 단 page.tsx의 "상품 목록" L530 헤더 + Phase 3-C 주석 1건만 인라인
+
+### 작업원칙 적용
+
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` ✅ (3 commits 모두)
+- #21 사전 점검 통과 (HEAD 118425d == origin/main = production)
+- #24 sprint 단위 commit + push 한 turn 안에 종료, sub-phase 분할로 보호
+- #26 IA 점검 — Sidebar.tsx TEND 섹션 4번째 entry 추가, lucide-react Palette icon, computeActive 정상 작동
+- #27 외부 컨트랙트 보존 — 기존 routes/lib 변경 0, 신규 routes는 모두 dynamic + nodejs 명시
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — 코드 inline 0 (i18n 분리), JSDoc 예시 2건만
+- #29 (b) MD 갱신 — temp file Write + Python prepend 패턴
+- #31 SESSION_LOG 509 + 본 entry ~110 = ~619 (T1 1000 미달, 안전 — 분할 후 깨끗한 상태)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #35 신규 i18n studio-strings.ko.json 77 strings 분리 (사용자 노출 한글 100% 격리)
+- #36 main push 후 verify-vercel-deploy.sh --wait — 사용자 승인 후
+- #38 Production runtime static assets only — Supabase Storage 업로드는 *합성 결과 영속화*, *생성 API 호출 0*
+- #39 CTI inference entry point — /studio가 이제 *디자이너 UI 진입점*으로 정착
+- #40 Designer Sense 보존 — 골격 1-click 교체 + 메인 변형 선택 + 재생성 버튼으로 자동화 ≠ 무검수 원칙 강제
+
+### 다음 = Phase 3-C (PLANT 7번째 탭) + Phase 3-D (TEND per-row 액션)
+
+Phase 3-B는 *self-contained MVP* — 현재 상태로도 사용자가 /studio에서 콘텐츠 자동화 전체 흐름 사용 가능 (진단 → 썸네일 → 상세 → 저장). Phase 3-C/3-D는 *진입점 다양화*:
+
+- Phase 3-C: PLANT 등록 흐름에 7번째 탭 "🎨 비주얼 자동화" 통합 — *등록 직전* 콘텐츠 ready 강제 → 7일 골든윈도우 매출 ↑
+- Phase 3-D: TEND /products per-row "콘텐츠" 액션 — *기존 상품 재가공 흐름* 활성화 → 매출 부진 상품 콘텐츠 보강 (꿀통 점수 낮은 상품, OOS, 좀비 부활 직후)
+
+추가로 Phase 3-E (Naver API publish-assets) — production data 검증 안전 분리, Phase 3-C 통합 시점에 합산 권고.
+
+---
+
 ## 2026-05-13 Sprint 7-M2 Phase 2-b-3-b — B2B + S3 cleanup 3 렌더러 (dedicated 27/27 ✅ 100%) ✅
 
 ### 본 세션 성격

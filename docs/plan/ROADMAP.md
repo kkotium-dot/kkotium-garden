@@ -14,9 +14,87 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-c lifestyle-picker) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 3-C — PLANT 7번째 탭 "비주얼 자동화") ⭐ ACTIVE
 
-본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장. **SESSION_LOG.md 947줄로 T1 1000 근접 — STEP 0에서 분할 권고 판단 의무**.
+본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 Phase 3-A + 3-B 완료 (commit 3건):
+- e6a1941 SESSION_LOG split (947 → 509)
+- 5b543fe Phase 3-A — Supabase Storage 어댑터 + 2 API routes
+  (generate-detail / save-assets)
+- <sha> Phase 3-B — 온실 아틀리에 UI mount
+  - src/lib/i18n/studio-strings.ko.json (77 strings)
+  - src/app/studio/page.tsx (640 LOC, 2-pane MVP)
+  - src/components/layout/Sidebar.tsx (TEND 4번째 entry)
+  - scripts/verify-korean-dict.py (DEFAULTS 확장)
+
+본 세션 진입 작업 = Sprint 7-M2 Phase 3-C (PLANT 7번째 탭 통합):
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  Phase 3-B commit이 main 머지/배포됐는지 verify-vercel-deploy.sh로 확인.
+  /studio 페이지가 production HTTP 200 응답하는지 확인.
+
+STEP 7-M2 Phase 3-C — PLANT 등록 흐름에 "비주얼 자동화" 탭 통합
+  배경: 사용자가 신상품 등록 (씨앗 심기, /products/new) 직후 7일 신상품
+  가산점 골든윈도우를 받는다. 그런데 빈 상세페이지로 등록되면 골든윈도우
+  기간이 *콘텐츠 보강 작업 중*에 소진된다. 등록 흐름 안에 콘텐츠
+  자동화를 강제해서 *콘텐츠 완성 = 등록 직후*가 되도록 한다.
+
+  대상 파일 신규/수정:
+    - src/app/products/new/page.tsx 또는 관련 탭 구조 — 7번째 탭 추가
+      "🎨 비주얼 자동화" (실제 위치는 기존 6탭 구조 확인 후 결정)
+    - src/components/studio/PlantStudioTab.tsx (신규) — /studio 페이지의
+      카드 컴포넌트들 재사용해 PLANT 탭 안에 마운트
+      (DiagnosisCard, ThumbnailCard, DetailPageCard, ActionsCard 추출
+      필요시 src/components/studio/ 폴더로 이동해 두 페이지가 공유)
+
+  탭 동작:
+    - 6번째 탭 "검토" 완료 후 7번째 탭 unlock
+    - 7번째 탭 진입 시 productId가 *이미 임시저장 됨* — diagnose/generate-detail
+      호출 가능 상태
+    - 탭 안에서 진단 → 썸네일 → 상세 → 저장 → "등록 완료" 버튼이
+      네이버 Commerce API 등록과 함께 publish-assets 호출
+    - 등록 완료 후 7일 골든윈도우 카운트다운 표시 (대시보드 P0-B 위젯 연결)
+
+  Phase 3-D 동시 진입 권고:
+    - src/app/products/page.tsx — per-row "콘텐츠" 액션 추가
+    - 행 우측 액션 영역 (편집/SEO/콘텐츠) 3개 아이콘
+    - 클릭 시 /studio?product=ID deep-link → 기존 상품 재가공
+      (꿀통 점수 낮은 상품, OOS, 좀비 부활 직후 콘텐츠 보강)
+
+  Phase 3-E (Naver API publish-assets):
+    - src/app/api/products/[id]/publish-assets/route.ts (신규)
+    - POST body: {thumbUrl?, detailUrl?}
+    - Internal: getProduct(naverProductId) → updateProduct() 호출
+      네이버 상품 대표이미지 / 상세 페이지 HTML 영역 patch
+    - Phase 3-C와 함께 진입 — 등록 흐름 종료점이 publish-assets 호출
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- /studio production 상태 확인 (Phase 3-B 동작 검증)
+- /products/new 현재 6탭 구조 파악 (탭 추가 위치 결정)
+- 작업원칙 #26 IA 점검 — PLANT 변경 시 Sidebar 영향 0
+- 작업원칙 #40 Designer Sense — 등록 직전 *콘텐츠 검수 의무화* (자동 등록 금지)
+
+다음 = Sprint 7-M3 (designer UI 마운트, lifestyle-picker, 운영 메트릭
+대시보드) → Sprint 7-M4 (실제 상품 등록 통합 검증, Naver Commerce API
+publish 작동 확인).
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward
+merge 사용자 위임.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-c lifestyle-picker)~~ ⏸️ SUPERSEDED
+
+> Phase 2-c (lifestyle-picker) was postponed in favor of Phase 3-A+B (API foundation + /studio UI mount) per user IA discussion 2026-05-13. SESSION_LOG split (e6a1941) + Phase 3-A (5b543fe) + Phase 3-B (commit 3) delivered instead. Phase 2-c는 후속 sprint (3-C 이후) 재진입 권고. The message below is preserved for git history.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,

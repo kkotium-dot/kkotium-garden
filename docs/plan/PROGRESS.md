@@ -1,16 +1,71 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-13 (Sprint 7-M2 Phase 2-b-3-b — B2B + S3 cleanup 3 렌더러 완료, **dedicated 27/27 ✅ 100% 달성**, 12 골격 모두 완전 dedicated)
+> 최종 업데이트: 2026-05-13 (Sprint 7-M2 Phase 3-A + 3-B — **온실 아틀리에 UI mount + API foundation 완료**, 콘텐츠 자동화 사용자 진입점 정착)
 > 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
 > TSC: 0 errors | npm run build 28/28 OK | Production: https://kkotium-garden.vercel.app
-> 다음 작업: Sprint 7-M2 Phase 2-c (lifestyle-picker: LifestyleAsset 30일 cooldown + 태그 매칭) → Phase 3 (`/api/products/[id]/generate-detail` route + Diagnosis 연동 + Supabase Storage 업로드)
+> 다음 작업: Sprint 7-M2 Phase 3-C (PLANT 7번째 탭 "비주얼 자동화" 통합) + Phase 3-D (TEND per-row 액션) + Phase 3-E (Naver API publish-assets)
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 + production active ✅ | 6-A/6-B/6-C/6-E ✅ | Session E-2 Phase 1~5 ✅ | Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + DataLab market context) ✅ | **Sprint 7 P1 (P1-A 카테고리 1페이지 + P1-B 금기어 + P1-C 태그사전) ✅ + 브라우저 E2E 시각 검증 완료 ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업**: **Sprint 7-M2 Phase 2-c** (lifestyle-picker — LifestyleAsset 30일 cooldown + 태그 매칭 알고리즘) → Phase 3 (`/api/products/[id]/generate-detail` route). Phase 2 렌더러 단계는 본 phase로 안정 종료 — **dedicated 27/27 ✅ 100%, 12 골격 모두 완전 dedicated** (이전 docs의 "26"은 off-by-one 정정)
+> **다음 작업**: **Sprint 7-M2 Phase 3-C** (PLANT 7번째 탭 "비주얼 자동화" 통합 — 등록 흐름에 콘텐츠 자동화 강제, 7일 골든윈도우 매출 ↑) + **Phase 3-D** (TEND per-row 액션, 기존 상품 재가공 흐름) + **Phase 3-E** (Naver API publish-assets). 현재 상태: /studio MVP 2-pane (Diagnosis → Thumbnail → Detail → Save) 작동 가능, dedicated 27/27 100%, lifestyle-picker는 Phase 2-c로 *후속 분리* (현재 ctx.lifestyleAssetUrl fallback만 사용)
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-13 Sprint 7-M2 Phase 3-A + 3-B — API foundation + 온실 아틀리에 UI mount
+
+사용자 페르소나 주입 (10년차 파워셀러 + 풀스택 + UI/UX) + AskUserQuestion으로 IA 확정 후 Phase 3-A (API) + Phase 3-B (UI) 동시 진행. **콘텐츠 자동화 UI 진입점 정착** — 27 dedicated renderers를 사용자가 클릭으로 사용 가능.
+
+본 turn 누적 commit (3건):
+
+- `e6a1941` docs(plan): split SESSION_LOG per principle 31 (T1 947 + Phase 3 entry trigger)
+- `5b543fe` feat(automation): Phase 3-A — Supabase Storage adapter + 2 API routes
+- `<sha>` feat(automation): Phase 3-B — 온실 아틀리에 UI + Sidebar mount + i18n strings
+
+Phase 3-A (API, 3 신규 파일):
+
+- `src/lib/storage/automation-storage.ts` (118 LOC) — Supabase Storage 어댑터, bucket=product-assets 분리, SUPABASE_SERVICE_ROLE_KEY 서버측
+- `src/app/api/products/[id]/generate-detail/route.ts` (114 LOC) — POST, Product + Diagnosis 조회 → buildDetailPage → base64 PNG + section meta
+- `src/app/api/products/[id]/save-assets/route.ts` (138 LOC) — POST, base64 → Storage upload → public URL 응답
+
+Phase 3-B (UI, 4 파일 신규 + 2 수정):
+
+- `src/lib/i18n/studio-strings.ko.json` (77 strings, 신규) — 페이지 사용자 노출 한글 분리
+- `src/app/studio/page.tsx` (~640 LOC, 신규) — 2-pane MVP (좌 320px 상품 리스트 + 우 4 카드: Diagnosis/Thumbnail/Detail/Actions)
+- `src/components/layout/Sidebar.tsx` (수정) — TEND 4번째 entry "온실 아틀리에" + Palette icon
+- `scripts/verify-korean-dict.py` (수정) — DEFAULTS에 studio-strings.ko.json 추가
+
+페이지 작동 흐름 (사용자 시나리오):
+
+1. 사이드바 TEND → **온실 아틀리에** 진입
+2. 좌측 상품 리스트 자동 첫 상품 선택
+3. 우측 4 카드 워크플로우:
+   - 진단 카드 → POST /api/diagnose → 컨셉/톤/골격/등급/신뢰도 카드
+   - 썸네일 카드 → POST /api/thumbnail/[sku] → 4 변형 미리보기 + 메인 선택
+   - 상세 카드 → POST /api/products/[id]/generate-detail → 5섹션 zoom-fit 미리보기 + 골격 1-click 교체
+   - 액션 카드 → POST /api/products/[id]/save-assets → Supabase Storage public URL 발급
+4. "네이버 즉시 등록" disabled placeholder (Phase 3-C 활성화)
+
+설계 결정:
+
+- 2-pane 채택 — 상품 컨텍스트 항상 유지 (10년차 셀러 일 5-20건 페이스)
+- 카드 색상 코딩 — primary/gold/sage/dark 4단계 워크플로우 시각적 구분
+- 골격 드롭다운 자동/S1~S12 — 디자이너 1-click swap (작업원칙 #40)
+- 상세 미리보기 max-height 520px overflow scroll — 5000~7000px 세로 길이 컴팩트화
+
+검증:
+
+- npx tsc --noEmit 0 errors ✅
+- npm run build 정상, `/studio` ○ Static (7.45 kB), generate-detail/save-assets ƒ Dynamic 등록 ✅
+- dict.py 3 dicts 통과 (99+178+77 strings, 0 replace/not_nfc/typo) ✅
+- 신규 파일 sentinel grep 0건 ✅
+- 한글 i18n 100% 분리 (작업원칙 #29 c, #35)
+
+다음 = **Phase 3-C** (PLANT 7번째 탭 "비주얼 자동화" — 등록 흐름 통합으로 7일 골든윈도우 매출 ↑) + **Phase 3-D** (TEND per-row 액션 — 기존 상품 재가공 흐름 활성화) + **Phase 3-E** (Naver API publish-assets — production data 검증).
+
+Commit: 본 turn 3 commit이 단일 branch에 push. 사용자 FF merge 후 production deploy 검증.
 
 ---
 
