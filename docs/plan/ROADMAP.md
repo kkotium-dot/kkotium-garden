@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-13 Sprint 7-M1 썸네일 자동화 4변형 완료 (9bedaaf, branch push 후 main merge 사용자 승인 대기)
-> **HEAD**: 9bedaaf (worktree) / origin/main 09a6b48 (Sprint 7-Skel 배포 완료) | **TSC**: 0 errors | **빌드**: 28/28 + /api/thumbnail/[sku] ƒ Dynamic OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-13 Sprint 7-M2 Phase 1 — 5섹션 빌더 + S2 5 렌더러 완료 (993098f, branch push 후 main merge 사용자 승인 대기)
+> **HEAD**: 993098f (worktree) / origin/main 9843705 (Sprint 7-M1 배포 완료) | **TSC**: 0 errors | **빌드**: 28/28 OK | **배포**: https://kkotium-garden.vercel.app
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
@@ -14,9 +14,81 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2: 5섹션 상세페이지 빌더) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2: 21 잔여 렌더러 + lifestyle-picker) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 Phase 1 완료 (commit 993098f):
+- src/lib/automation/section-renderers/ (10 신규 파일)
+- types.ts + section-copy.ts + _placeholder.ts + hero/problem/solution/usage/cta + index.ts
+- src/lib/automation/section-builder.ts (top-level orchestrator)
+- S2 주력 5 섹션 end-to-end + 21 나머지 ids는 _placeholder safety net
+- 1,306 LOC, TSC 0, build 28/28, 한글 sentinel 0
+
+본 세션 진입 작업 = Sprint 7-M2 Phase 2 (21 잔여 렌더러 + lifestyle-picker):
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  특히 993098f가 main에 머지/배포됐는지 verify-vercel-deploy.sh로 확인
+
+STEP 7-M2 Phase 2 — 21 잔여 렌더러 + lifestyle-picker
+  대상 파일 신규:
+    section-renderers/:
+      - spec.ts (S1/S3/S6 공유, 2-column 스펙 테이블)
+      - story.ts (S3/S6/S10 공유, editorial paragraph + signature shot)
+      - product.ts (S3/S8 공유, product detail grid 2x2)
+      - package.ts (S3, package unboxing sequence)
+      - corePerformance.ts (S4, 4 metric cards)
+      - comparison.ts (S4/S7 공유, comparison table)
+      - warranty.ts (S4/S7 공유, warranty terms + cert logos)
+      - optionIntro.ts (S5, option grid with color chips)
+      - styledShot.ts (S6, 3 styled lifestyle shots)
+      - technology.ts (S7, mechanism diagram + caption)
+      - clinical.ts (S7, bar chart + study meta)
+      - seasonalHook.ts (S8, seasonal banner + date window)
+      - options.ts (S8, option grid with thumbnail chips)
+      - material.ts (S9, material macro + origin caption)
+      - shipping.ts (S1/S9/S12 공유, shipping + return + recyclable badge)
+      - philosophy.ts (S10, brand philosophy paragraph)
+      - detail.ts (S10, detail macro grid 2x2)
+      - reviews.ts (S10, 3 customer review cards)
+      - eventDetails.ts (S11, drop calendar + edition meta)
+      - benefits.ts (S11, 3 perk cards)
+      - specTable.ts (S12, full-width spec table)
+      - specifications.ts (S12, regulation + compliance grid)
+
+    automation/:
+      - lifestyle-picker.ts (LifestyleAsset 30일 cooldown + 태그 매칭 알고리즘)
+
+  각 renderer = SectionRenderer 시그니처 준수.
+  필요 시 section-copy.ts에 신규 슬롯 (storyParagraph / specRows / benefitItems
+  등) 추가 — JSON 출력 + filterDarkPatterns + 결정형 fallback.
+
+  21개 너무 많으면 sub-phase 추가 분할 권장:
+    Phase 2-a: 공유 렌더러 6개 (spec/story/product/comparison/warranty/shipping)
+    Phase 2-b: 골격 전용 렌더러 15개
+    Phase 2-c: lifestyle-picker
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- 993098f가 main에 도달했는지 verify-vercel-deploy.sh로 검증
+- SESSION_LOG.md 임박 분할 — T1 1000 도달 직후 (~1020 줄). 본 세션 STEP 0에서
+  분할 권고/의무 판단 후 진행 (작업원칙 #31 (a)).
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward merge 사용자 위임.
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2: 5섹션 상세페이지 빌더)~~ ✅ PARTIAL (Phase 1 완료)
+
+> Sprint 7-M2 Phase 1 (5섹션 빌더 + S2 5 렌더러) completed on 2026-05-13 (commit 993098f). 10 신규 파일 1,306 LOC, npm run build 28/28, S2 주력 골격 end-to-end + 21 나머지 ids placeholder safety net.
+> Phase 2/3 = active handoff above. The message below is preserved for git history.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,

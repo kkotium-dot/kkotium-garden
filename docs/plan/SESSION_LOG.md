@@ -1,3 +1,89 @@
+## 2026-05-13 Sprint 7-M2 Phase 1 — 5섹션 detail page 빌더 + S2 5 렌더러 (v3.1 FINAL Smart Asset Workflow) ✅
+
+### 본 세션 성격
+
+직전 Sprint 7-M1 썸네일 4변형 완료 (9bedaaf + 9843705, main FF merge + production deploy 검증) 직후 동일 turn 연속 진입. v3.1 패키지 Section 4 매트릭스 + Section 6 코드 구조 따라 5섹션 detail page builder를 Phase 분할로 10 신규 파일 + 1 commit으로 종료.
+
+### 본 세션 산출물 (10 파일, 1,306 LOC)
+
+| 파일 | LOC | 역할 |
+|---|---|---|
+| `src/lib/automation/section-renderers/types.ts` | 91 | SectionRenderer 시그니처 + SectionRenderContext + `resolveBgColor` (skeleton colorTokens 매핑) |
+| `src/lib/automation/section-renderers/section-copy.ts` | 390 | section-specific Groq 헬퍼 (hero / problem / solution / usage / cta), JSON-array 파싱 + filterDarkPatterns + 결정형 fallback |
+| `src/lib/automation/section-renderers/_placeholder.ts` | 62 | 미구현 섹션 id 안전망. 점선 테두리 + 섹션 라벨 |
+| `src/lib/automation/section-renderers/hero.ts` | 126 | 11/12 골격 사용. 상품 이미지 + 타이틀 + 서브타이틀 + 브랜드 stripe |
+| `src/lib/automation/section-renderers/problem.ts` | 83 | S2. 공감 질문 + 3 페인 포인트 카드 |
+| `src/lib/automation/section-renderers/solution.ts` | 116 | S2. 상품 closeup + headline + 3 numbered benefits |
+| `src/lib/automation/section-renderers/usage.ts` | 71 | S2/S5/S6/S8/S9/S10/S12. 라이프스타일 backdrop + vignette + caption |
+| `src/lib/automation/section-renderers/cta.ts` | 107 | S2/S3/S4/S5/S6/S7/S8/S10/S11. 안심 line + shipping/return 카드 + GOOD SERVICE stripe |
+| `src/lib/automation/section-renderers/index.ts` | 51 | 섹션 id → renderer 매핑, `getSectionRenderer` / `hasDedicatedRenderer` |
+| `src/lib/automation/section-builder.ts` | 209 | top-level orchestrator, skeleton 선택 (override 또는 match) + sections[] 순회 + 수직 stacking + error isolation |
+
+### Phase 분할 결정 — 작업원칙 #24 보호
+
+v3.1 매트릭스에 26개 section id가 등장하지만 본 turn에 *S2 주력 5개 + placeholder safety net* 으로 1단계 완료. 사유:
+
+- 본 turn에 이미 누적 3 sprint (7-Diag MVP + 7-Skel + 7-M1) 완성, 컨텍스트 보호 필요
+- Sprint 7-M2 Phase 2 (나머지 21 렌더러)는 *별도 sprint*가 자연스러움
+- _placeholder.ts safety net 덕분에 *어떤 SkeletonId든 end-to-end 빌드 가능* — Phase 1 단독으로도 의미있는 마일스톤
+
+### 핵심 안전 장치 — section-builder error isolation
+
+`renderSectionSafely(spec, section, ctx)` 패턴:
+- renderer try-catch → 실패 시 placeholder fallback (높이 유지)
+- 1개 렌더러 실패가 detail page 전체를 무너뜨리지 않음
+- 콜드 스타트 시 도매꾹 원본 이미지 fetch 실패도 graceful (hero는 텍스트만, solution은 텍스트만)
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 28/28 routes (Phase 1은 신규 route 0건 — Phase 3에서 추가 예정) ✅
+- 한글 sentinel grep 0건 ✅
+- 작업원칙 #38 strict 준수 — 이미지 *생성* API 호출 0, *변환* (Cloudinary fetch URL) + *합성* (Sharp local Buffer) 만 ✅
+- worktree 절대 경로 혼동 0회 (본 turn 누적 0건) ✅
+
+### 한글 처리 정직 보고 — section-copy.ts 인라인 fallback
+
+`section-copy.ts`에 10개 한글 fallback 문자열 인라인 (Groq 실패 시 결정형 응답). 작업원칙 #29 (c) "코드 edit는 영어 주석/타입만 사용"의 *zero-risk* 권장과 충돌. 사유:
+
+- 모두 짧은 문자열 (32자 미만)
+- 컨텍스트 보간 필요 (`${ctx.category ?? '이런 상황'}` 등)
+- 한글 sentinel grep 0건 통과
+- 별도 `ko.json` dict 분리 (작업원칙 #35)는 *대량 한글 작성*에만 권장 — Phase 1 10건은 임계 미만
+
+향후 Phase 2/3 에서 누적 한글 fallback 30+ 도달 시 dict 분리 migration 권장.
+
+### 본 세션 commit (1건)
+
+1. `993098f` feat(automation): add 5-section detail page builder Phase 1 (Sprint 7-M2)
+
+### Push 정책 정직 보고 — main 직접 push 차단 3회 연속 재발
+
+Sprint 7-Skel / 7-M1 / 본 7-M2 Phase 1 모두 동일 harness 정책 (main direct push deny) 충돌. 사용자 fast-forward merge 경로 3회 연속 사용 패턴 정착 — 향후 sprint에서도 동일 절차 권장. 직전 7-Diag MVP 4 commit은 통과한 이력이라 *worktree 한정 정책*으로 추정.
+
+### 적용된 작업원칙
+
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- #21 사전 점검 통과 (HEAD 9843705 == origin/main = production)
+- #24 sprint 단위 commit + push 한 turn 안에 종료 + *Phase 분할로 # 24 보호*
+- #26 IA 점검 — 신규 *lib only*, 사이드바 변경 0, 신규 라우트 0 (Phase 3에서 추가)
+- #27 외부 컨트랙트 보존 — 기존 lib/API 변경 0
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — 코드 0 / fallback 인라인 10건 grep 통과
+- #31 SESSION_LOG ~870 + 본 entry ~150 = ~1020 (T1 1000 임계 도달, 다음 세션 분할 권고)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #36 main push 후 verify-vercel-deploy.sh --wait — 사용자 승인 후 진행
+- #38 Production runtime static assets only ✅
+- #39 CTI inference entry point — section-builder의 skeleton 선택이 matchSkeleton 통해 CTI consume
+- #40 Designer Sense 보존 — `overrideSkeletonId` 1클릭 교체, `hasDedicatedRenderer` 메타데이터로 placeholder UI 노출
+
+### 다음 세션 = Sprint 7-M2 Phase 2 (21 잔여 렌더러 + lifestyle-picker)
+
+ROADMAP.md ACTIVE 메시지 (본 commit에서 prepend) 그대로 적용.
+
+---
+
 ## 2026-05-13 Sprint 7-M1 — 썸네일 자동화 4변형 (v3.1 FINAL Smart Asset Workflow) ✅
 
 ### 본 세션 성격
