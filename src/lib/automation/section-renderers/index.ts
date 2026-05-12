@@ -18,13 +18,27 @@ import { problemRenderer } from './problem';
 import { solutionRenderer } from './solution';
 import { usageRenderer } from './usage';
 import { ctaRenderer } from './cta';
+import { specRenderer } from './spec';
+import { storyRenderer } from './story';
+import { productRenderer } from './product';
+import { comparisonRenderer } from './comparison';
+import { warrantyRenderer } from './warranty';
+import { shippingRenderer } from './shipping';
 
 const REGISTRY: Record<string, SectionRenderer> = {
-  hero:     heroRenderer,
-  problem:  problemRenderer,
-  solution: solutionRenderer,
-  usage:    usageRenderer,
-  cta:      ctaRenderer,
+  // Phase 1 (S2 workhorse)
+  hero:       heroRenderer,
+  problem:    problemRenderer,
+  solution:   solutionRenderer,
+  usage:      usageRenderer,
+  cta:        ctaRenderer,
+  // Phase 2-a (shared renderers used by multiple skeletons)
+  spec:       specRenderer,
+  story:      storyRenderer,
+  product:    productRenderer,
+  comparison: comparisonRenderer,
+  warranty:   warrantyRenderer,
+  shipping:   shippingRenderer,
 };
 
 /** Look up the renderer for a section id. Returns the placeholder
