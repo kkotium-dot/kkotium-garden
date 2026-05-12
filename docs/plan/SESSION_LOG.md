@@ -1,3 +1,102 @@
+## 2026-05-13 Sprint 7-M2 Phase 2-b-1 — 신뢰 트랙 3 렌더러 (S4·S7 완전 dedicated) ✅
+
+### 본 세션 성격
+
+직전 Sprint 7-M2 Phase 2-a 완료 (449719b + d6a12c3, main FF merge + production deploy 검증) 직후 동일 turn 연속 진입. v3.1 매트릭스 26 섹션 ids 중 S4(전문 신뢰) / S7(임상·전문) 골격 전용 3개를 dedicated 렌더러로 격상 — KFTC strict 모드로 작성.
+
+### 본 세션 산출물 (5 파일 변경, 신규 3 + 확장 2)
+
+| 파일 | LOC | 골격 | 역할 |
+|---|---|---|---|
+| `corePerformance.ts` | 122 | S4 | 2x2 metric card grid (label / value placeholder / unit / caption) |
+| `technology.ts` | 134 | S7 | 3-step pipeline diagram (chips + arrows + step labels + caption) |
+| `clinical.ts` | 183 | S7 | KFTC strict — placeholder bar chart + invariant caveat strip |
+| `section-copy.ts` | +280 | (확장) | 3 신규 Groq 헬퍼 (`generateCoreMetrics` / `generateTechnologyCopy` / `generateClinicalCopy`) |
+| `index.ts` | +9 | (확장) | Phase 2-b-1 registry block 추가 |
+
+### KFTC Discipline — Phase 2-b-1 핵심 안전 장치
+
+신뢰 트랙은 *법적 노출 위험이 가장 높은* 섹션 영역. 본 phase의 3 렌더러는 다음 규칙으로 KFTC-safe 보장:
+
+**clinical.ts** (가장 엄격):
+- Groq 응답으로부터 *숫자 0건 수신* — JSON schema에서 numeric value 필드 자체 제거
+- Bar chart는 *항상* 「상세 페이지 참조」 placeholder + 점선 outline (대시 8/6)
+- Invariant caveat strip 「임상 데이터 출처: 상세 페이지 참조」 *하드코딩*, Groq override 불가, body API 통한 override 불가
+- 디자이너가 product data로부터 numeric을 publish 전 *수동 검증 의무*
+
+**corePerformance.ts**:
+- Groq prompt에 명시: "DO NOT invent specific numeric values — leave the numeric value out entirely"
+- 응답 schema에서 `value` 필드 자체 제거 — Groq는 label / unit / caption 만 생성
+- 코드에서 강제: `value: '상세 참조'` (Sprint 7-Lib에서 ctx.metrics 도입 시 replace 예정)
+
+**technology.ts**:
+- Groq prompt에 명시: "no fabricated mechanism names", "no medical efficacy claims"
+- pipeline step labels (입력/처리/출력 같은 일반어)만 허용
+- 의학·과학적 효능 주장 단어는 filterDarkPatterns에서 별도 차단 안 됨 — Groq prompt 자체에서 제거
+
+### 골격 dedicated 커버리지 변화
+
+| 골격 | 변경 전 | 변경 후 |
+|---|---|---|
+| S4 | 4/5 | **5/5 ✅** |
+| S7 | 4/6 | **6/6 ✅** |
+| 기타 | 변화 없음 | — |
+
+**완전 dedicated 골격 누적**: S1 / S2 / S4 / S7 (총 4 골격)
+**dedicated 14 / 26 섹션 ids** (Phase 1 + 2-a + 2-b-1 합산)
+**placeholder 12 / 26 잔여**: optionIntro · styledShot · seasonalHook · options · material · philosophy · detail · reviews · eventDetails · benefits · specTable · specifications · package
+
+### Phase 2-b 분할 진행 상태
+
+- Phase 2-b-1 (S4/S7 신뢰 트랙, 3 렌더러) — ✅ 본 세션
+- Phase 2-b-2 (S5/S8/S11 이벤트/세트 트랙, 5 렌더러) — 다음 세션
+- Phase 2-b-3 (S9/S10/S12 감각/B2B 트랙, 6 렌더러) — 다다음 세션
+- Phase 2-b-4 (S3 잔여 package, 1 렌더러) — Phase 2-b-3 합산 가능
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 28/28 routes ✅
+- 한글 sentinel grep 0건 ✅
+- section-builder가 모든 SkeletonId 정상 dispatch ✅
+- 작업원칙 #38 strict 준수 — 이미지 *생성* 0건, *합성* 만 ✅
+- worktree 절대 경로 혼동 0회 (본 turn 누적 0건) ✅
+
+### 본 세션 commit (1건)
+
+1. `fff2867` feat(automation): add 3 trust-track section renderers (Sprint 7-M2 Phase 2-b-1)
+
+### Push 정책 — main 직접 push 차단 5회 연속 패턴 (worktree 한정 확정)
+
+이번 turn 5회 sprint 모두 동일 패턴. 사용자 fast-forward merge로 main 도달 — 안정적인 작업 흐름으로 정착.
+
+### 한글 fallback 누적 — 작업원칙 #35 ko.json 분리 임계 임박
+
+본 phase 도입 fallback 4건 (corePerformance 4 cards × 4 fields의 fallback / technology 5 fields / clinical 4 fields의 일부)을 합산 — Phase 1 + 2-a + 2-b-1 누적 약 30~32건 도달. 작업원칙 #35 의 *대량 한글 작성 작업* 임계 30건에 정확히 임박. **다음 Phase 2-b-2 진입 시 ko.json 분리 migration 권고** — 단, 작업원칙 #24 (한 turn 분할)에 따라 *별도 phase로 migration*하는 게 안전.
+
+### 적용된 작업원칙
+
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- #21 사전 점검 통과 (HEAD d6a12c3 == origin/main = production)
+- #24 sprint 단위 commit + push 한 turn 안에 종료 + *sub-phase 분할로 #24 보호*
+- #26 IA 점검 — 신규 *lib only*, 라우트 0
+- #27 외부 컨트랙트 보존 ✅
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — 코드 0 / fallback inline 신규 4건 grep 통과
+- #31 SESSION_LOG ~1170 + 본 entry ~150 = ~1320 (T2 1500 미달, T1 권고만)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #36 main push 후 verify-vercel-deploy.sh --wait — 사용자 승인 후
+- #38 Production runtime static assets only ✅
+- #39 CTI inference entry point ✅ (skeleton-matcher consume)
+- #40 Designer Sense 보존 — clinical placeholder 디자이너 verify 의무화로 *자동화 ≠ 무검수* 원칙 강조
+
+### 다음 세션 = Sprint 7-M2 Phase 2-b-2 (이벤트/세트 트랙, S5/S8/S11)
+
+ROADMAP.md ACTIVE 메시지 (본 commit에서 prepend) 그대로 적용.
+
+---
+
 ## 2026-05-13 Sprint 7-M2 Phase 2-a — 6 공유 섹션 렌더러 (v3.1 FINAL Smart Asset Workflow) ✅
 
 ### 본 세션 성격

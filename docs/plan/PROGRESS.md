@@ -1,16 +1,51 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-13 (Sprint 7-M2 Phase 2-a — 6 공유 렌더러 완료)
+> 최종 업데이트: 2026-05-13 (Sprint 7-M2 Phase 2-b-1 — 신뢰 트랙 3 렌더러 완료, S4·S7 완전 dedicated)
 > 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
 > TSC: 0 errors | npm run build 28/28 OK | Production: https://kkotium-garden.vercel.app
-> 다음 작업: Sprint 7-M2 Phase 2-b (15 골격 전용 렌더러) + Phase 2-c (lifestyle-picker)
+> 다음 작업: Sprint 7-M2 Phase 2-b-2 (이벤트/세트 트랙 — S5/S8/S11 전용 5 렌더러)
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 + production active ✅ | 6-A/6-B/6-C/6-E ✅ | Session E-2 Phase 1~5 ✅ | Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + DataLab market context) ✅ | **Sprint 7 P1 (P1-A 카테고리 1페이지 + P1-B 금기어 + P1-C 태그사전) ✅ + 브라우저 E2E 시각 검증 완료 ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업**: **Sprint 7-M2 Phase 2-b** (15 골격 전용 렌더러) + Phase 2-c (lifestyle-picker) — Sprint 7-M2 Phase 2-a 완료 (449719b), 6 공유 렌더러 + 5 신규 Groq 헬퍼, dedicated 11/26 섹션 ids, S1/S2/S3/S4/S6/S7/S9/S12 부분~완전 dedicated 커버리지
+> **다음 작업**: **Sprint 7-M2 Phase 2-b-2** (이벤트/세트 트랙, S5/S8/S11 전용 5 렌더러) — Sprint 7-M2 Phase 2-b-1 완료 (fff2867), 신뢰 트랙 3 렌더러 + S4·S7 완전 dedicated, dedicated 14/26 섹션 ids 도달
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-13 Sprint 7-M2 Phase 2-b-1 — 신뢰 트랙 3 렌더러 완료 (S4·S7 완전 dedicated)
+
+3개 신규 렌더러 + section-copy.ts 3 신규 Groq 헬퍼:
+
+- `corePerformance.ts` (122 LOC) — S4. 2x2 metric card grid (label / value / unit / caption). **Groq는 라벨·단위·캡션만 생성, 수치는 fabricate 0건** (KFTC strict).
+- `technology.ts` (134 LOC) — S7. 3-step pipeline diagram (브랜드 primary chips + arrows + step labels) + caption.
+- `clinical.ts` (183 LOC) — S7. **KFTC critical** — 임상 데이터는 *항상* 「상세 페이지 참조」 placeholder (점선 outline bars), invariant caveat strip 「임상 데이터 출처: 상세 페이지 참조」 하드코딩. Groq 응답 override 불가.
+
+section-copy.ts 확장 (3 신규 Groq 헬퍼):
+- `generateCoreMetrics` — `{headline, cards: [{label, unit, caption}] × 4}` (numeric value 의도적 omit)
+- `generateTechnologyCopy` — `{headline, mechanismLabel, steps: [3], caption}`
+- `generateClinicalCopy` — `{headline, studyMeta, outcomeLabel, caveat (invariant)}`
+
+전체 dedicated 커버리지 (Phase 1 + 2-a + 2-b-1 합산):
+- **dedicated 14 / 26 섹션 ids**: hero · problem · solution · usage · cta · spec · story · product · comparison · warranty · shipping · **corePerformance** · **technology** · **clinical**
+- **placeholder 12 / 26**: optionIntro · styledShot · seasonalHook · options · material · philosophy · detail · reviews · eventDetails · benefits · specTable · specifications · package
+
+골격별 dedicated 커버리지 (변경분):
+- S4: 4/5 → **5/5 ✅ 완전**
+- S7: 4/6 → **6/6 ✅ 완전**
+
+**완전 dedicated 골격 누적 4개**: S1 · S2 · S4 · S7
+
+검증:
+- npx tsc --noEmit 0 errors ✅
+- npm run build 28/28 routes ✅
+- 한글 sentinel grep 0건 ✅
+- section-builder가 모든 SkeletonId 정상 dispatch ✅
+
+Commit: `fff2867` feat(automation): add 3 trust-track section renderers (Sprint 7-M2 Phase 2-b-1)
+
+다음 = Sprint 7-M2 Phase 2-b-2 (이벤트/세트 트랙 — S5/S8/S11 전용 5 렌더러: optionIntro · seasonalHook · options · eventDetails · benefits).
 
 ---
 

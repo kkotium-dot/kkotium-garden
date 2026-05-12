@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-13 Sprint 7-M2 Phase 2-a — 6 공유 렌더러 완료 (449719b, branch push 후 main merge 사용자 승인 대기)
-> **HEAD**: 449719b (worktree) / origin/main 25a1abb (Sprint 7-M2 Phase 1 배포 완료) | **TSC**: 0 errors | **빌드**: 28/28 OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-13 Sprint 7-M2 Phase 2-b-1 — 신뢰 트랙 3 렌더러 (fff2867, branch push 후 main merge 사용자 승인 대기)
+> **HEAD**: fff2867 (worktree) / origin/main d6a12c3 (Sprint 7-M2 Phase 2-a 배포 완료) | **TSC**: 0 errors | **빌드**: 28/28 OK | **배포**: https://kkotium-garden.vercel.app
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
@@ -14,9 +14,77 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-b: 15 골격 전용 렌더러) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-b-2: 이벤트/세트 트랙) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 Phase 2-b-1 완료 (commit fff2867):
+- src/lib/automation/section-renderers/corePerformance.ts (S4)
+- src/lib/automation/section-renderers/technology.ts (S7)
+- src/lib/automation/section-renderers/clinical.ts (S7, KFTC strict)
+- section-copy.ts 3 신규 Groq 헬퍼 (numeric value fabricate 0건)
+- TSC 0, build 28/28, 한글 sentinel 0
+- S4·S7 완전 dedicated 도달 (S1·S2와 함께 4 골격 완전)
+- dedicated 14/26 섹션 ids
+
+본 세션 진입 작업 = Sprint 7-M2 Phase 2-b-2 (이벤트/세트 트랙):
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  특히 fff2867이 main에 머지/배포됐는지 verify-vercel-deploy.sh로 확인
+
+STEP 7-M2 Phase 2-b-2 — 5 렌더러 (S5/S8/S11 전용)
+  대상 파일 신규:
+    - optionIntro.ts (S5) — option grid with color chips (food/kids multi-pack)
+    - seasonalHook.ts (S8) — seasonal banner + explicit date window (KFTC: 날짜
+      범위 명시 의무, "마감 임박" 금지)
+    - options.ts (S8) — option grid with thumbnail chips (single-line option spec)
+    - eventDetails.ts (S11) — drop calendar + edition meta (limited collab)
+    - benefits.ts (S11) — 3 perk cards with icons (시간 한정 혜택 — fair-trade
+      phrasing 의무)
+
+  필요 시 section-copy.ts에 4 신규 슬롯 추가:
+    - generateOptionIntroCopy ({headline, options:[{name, sub}], helperLine})
+    - generateSeasonalHook ({banner, dateWindow:{start, end}, hookLine})
+    - generateOptionsTableCopy ({headline, rows:[{name, spec}]})
+    - generateEventDetails ({headline, edition, dropDate, quantity, story})
+    - generateBenefitsCopy ({headline, perks:[{title, body, iconHint}]})
+
+  KFTC discipline 강화:
+    - seasonalHook + eventDetails: 날짜 명시 의무, "선착순 N", "마감 임박" 금지
+    - benefits: 시간 한정 혜택의 *시작-종료* 날짜 또는 *수량*을 명시
+    - copy-writer dark pattern filter가 'scarcity' rule로 이미 차단 중 — 추가
+      검증 의무 없음
+
+  S5/S8/S11 골격 진입 후 dedicated 커버리지 변화:
+    - S5: 1/4 → 2/4 (optionIntro)
+    - S8: 3/5 → 5/5 ✅ (seasonalHook + options 추가)
+    - S11: 2/4 → 4/4 ✅ (eventDetails + benefits 추가)
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- fff2867이 main에 도달했는지 verify-vercel-deploy.sh로 검증
+- SESSION_LOG.md 1170+ 줄 추정 — 본 세션 STEP 0에서 분할 권고 (작업원칙
+  #31 (a) T1 1000 권고 임계 초과, T2 1500 의무 임계 미달)
+- 작업원칙 #35 한글 fallback 누적 ~32건 도달 시 ko.json 분리 권고 (현재 30건)
+
+다음 = Sprint 7-M2 Phase 2-b-3 (감각/B2B 트랙, S9/S10/S12 전용 6 렌더러).
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward
+merge 사용자 위임.
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-b: 15 골격 전용 렌더러)~~ ✅ PARTIAL (Phase 2-b-1 완료)
+
+> Sprint 7-M2 Phase 2-b-1 (신뢰 트랙) completed on 2026-05-13 (commit fff2867). S4 / S7 완전 dedicated. dedicated 14/26 섹션 ids.
+> Phase 2-b-2 / 2-b-3 / 2-b-4 = active handoff above. The message below is preserved for git history.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
