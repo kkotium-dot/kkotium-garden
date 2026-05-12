@@ -154,7 +154,7 @@ function inferBriefing(opts: {
       face: 'idle',
       variant: 'hunter',
       actionLabel: '검색 조련사로',
-      actionHref: '/seo-tamer',
+      actionHref: '/naver-seo',
       rationale: 'drafts_partial',
     };
   }
@@ -189,7 +189,7 @@ function inferBriefing(opts: {
     face: 'scanning',
     variant: 'gardener',
     actionLabel: drafts.total > 0 ? '검색 조련사로' : '꿀통 꽃나들이로',
-    actionHref: drafts.total > 0 ? '/seo-tamer' : '/sourcing',
+    actionHref: drafts.total > 0 ? '/naver-seo' : '/crawl',
     rationale: 'fallback',
   };
 }
