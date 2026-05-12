@@ -31,14 +31,19 @@ cd /Users/jyekkot/Desktop/kkotium-garden && \
 - **Latest prod deploy SHA == HEAD** (불일치 시 git integration 끊김 의심 → 작업원칙 #36 발동, 사용자 즉시 보고). Vercel은 GitHub App 통합 방식이므로 `gh api .../hooks` length는 0이 정상일 수 있음 — webhook 개수는 더 이상 검증 신호로 사용하지 않음 (2026-05-12 #36 (e) 정정).
 - **verify-vercel-deploy.sh exit 0** (mismatch면 production이 옛 commit → 작업원칙 #36 발동). `VERCEL_TOKEN` 미설정 시 자동으로 `gh` CLI 기반 GitHub Deployments path로 fallback (token 발급 권장이지만 의무 아님).
 
-### STEP 1 — 핵심 MD 4개 정독
+### STEP 1 — 핵심 MD 정독
 
 순서대로 정독:
 
-1. `docs/plan/PROGRESS.md` — 현재 진행 상태 + 작업원칙 #26~#36 + 핵심 인덱스
+1. `docs/plan/PROGRESS.md` — 슬림 상태 스냅샷 + 인덱스 (202줄, 2026-05-12 분할 후 진입점)
 2. `docs/plan/ROADMAP.md` — Sprint 계획 + 다음 새 채팅 시작 메시지 영역
 3. `docs/plan/SESSION_LOG.md` — 직전 5세션 상세 기록
-4. (선택) `docs/research/` 하위 — 진행 중 Sprint에 관련된 리서치 보고서
+4. (필요시 spot-read) — 작업 성격에 따라:
+   - `docs/plan/PRINCIPLES_LEARNED.md` — 작업원칙 #26~#36 학습된 패턴
+   - `docs/plan/PRINCIPLES_CODE.md` — 작업원칙 #1~#25 절대 작업 원칙
+   - `docs/plan/SPRINT_PLAN.md` — Sprint 6/6.5/6-D/7/8/9+ 계획
+   - `docs/plan/REFERENCES.md` — 핵심 파일 경로 / 알려진 이슈 / SEO / 기술 패턴
+5. (선택) `docs/research/` 하위 — 진행 중 Sprint에 관련된 리서치 보고서
 
 **Archive는 정독 대상 아님**: `docs/plan/archive/` 폴더는 분기/월별로 동결된 누적 기록입니다. `grep`으로 검색이 필요할 때만 참조하세요.
 
@@ -192,9 +197,13 @@ grep -nE "혁섭|쿠드|식타|릴고|헌서|위젝|스칵|쿠두" docs/plan/*.m
 
 ### 계획 / 진행 (이 폴더는 매 세션 정독 대상)
 
-- `docs/plan/PROGRESS.md`
-- `docs/plan/ROADMAP.md`
-- `docs/plan/SESSION_LOG.md`
+- `docs/plan/PROGRESS.md` — 슬림 상태 + 인덱스 (분할 이후 진입점)
+- `docs/plan/ROADMAP.md` — Sprint 계획 + 새 채팅 시작 메시지
+- `docs/plan/SESSION_LOG.md` — 직전 5세션 상세 기록
+- `docs/plan/PRINCIPLES_CODE.md` — 작업원칙 #1~#25 (코드/UI/세션/보고)
+- `docs/plan/PRINCIPLES_LEARNED.md` — 작업원칙 #26~#36 (학습된 패턴)
+- `docs/plan/SPRINT_PLAN.md` — Sprint 6/6.5/6-D/7/8/9+
+- `docs/plan/REFERENCES.md` — 파일 경로 / 알려진 이슈 / SEO / 기술 패턴
 - `docs/plan/archive/` (동결, 검색용)
 
 ---
@@ -241,7 +250,7 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 
 ---
 
-## 7. 작업원칙 빠른 인덱스 (자세한 내용은 PROGRESS.md)
+## 7. 작업원칙 빠른 인덱스 (#1~#25 → PRINCIPLES_CODE.md / #26~#36 → PRINCIPLES_LEARNED.md)
 
 - **#17** — commit message는 `.commit-msg.tmp` + `git commit -F`
 - **#21** — 사전 점검 의무 (HEAD/status/stash/wc)
@@ -249,7 +258,7 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 - **#26** — IA 점검 의무화 + 고아 라우트 처리 (Sidebar.tsx 기준)
 - **#28** — Vercel production이 source of truth (dev 서버 가정 금지)
 - **#29 (a~e++)** — 한글 처리 절대 규칙 6가지
-- **#31** — MD 의미 단위 자동 분할 (1500줄 임계)
+- **#31** — MD 의미 단위 자동 분할 (1500줄 임계, 2026-05-12 본 3번째 분할 완료)
 - **#32** — TSC ≠ Production 빌드 검증
 - **#33** — useSearchParams Suspense 자동 점검
 - **#34** — 명백한 오류 파일 발견 시 사용자 알림 의무
