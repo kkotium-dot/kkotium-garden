@@ -35,12 +35,14 @@ import { useMemo, useState, useCallback } from 'react';
 import {
   Package, TrendingUp, AlertTriangle, Sparkles, Layers, Skull,
   ArrowRight, ShoppingCart, RefreshCw,
-  Users, Trophy,
+  Trophy,
 } from 'lucide-react';
 import KkottiWidget from '@/components/dashboard/KkottiWidget';
 import KkottiBriefingWidget from '@/components/dashboard/KkottiBriefingWidget';
 import LowStockAlertWidget from '@/components/dashboard/LowStockAlertWidget';
 import PriceMovementWidget from '@/components/dashboard/PriceMovementWidget';
+import CompetitorRadarWidget from '@/components/dashboard/CompetitorRadarWidget';
+import SupplierGardenWidget from '@/components/dashboard/SupplierGardenWidget';
 import UploadReadinessWidget from '@/components/dashboard/UploadReadinessWidget';
 import ReviewGrowthWidget from '@/components/dashboard/ReviewGrowthWidget';
 import ConfirmationReminderWidget from '@/components/dashboard/ConfirmationReminderWidget';
@@ -507,12 +509,7 @@ export default function DashboardPage() {
               곧 합류할 알림
             </p>
             <PriceMovementWidget />
-            <InboxPlaceholderRow
-              Icon={Users}
-              title="다른 셀러 추적"
-              description="같은 상품의 1페이지 경쟁 셀러 가격·재고 변화 감지"
-              sprintLabel="6-C"
-            />
+            <CompetitorRadarWidget />
             <InboxPlaceholderRow
               Icon={Sparkles}
               title="등록 7일 골든 윈도우"
@@ -560,6 +557,7 @@ export default function DashboardPage() {
         <div className="space-y-4">
           <UploadReadinessWidget products={products} productsLoading={productsLoading} onRefresh={handleRefresh} />
           <KkottiWidget products={products} productsLoading={productsLoading} />
+          <SupplierGardenWidget />
           <div
             style={{
               display: 'grid',

@@ -35,6 +35,7 @@ import { prisma } from '@/lib/prisma';
 import { getAdapter } from '@/lib/sources';
 import { sendDiscord } from '@/lib/discord';
 import { evaluatePriceMovement } from '@/lib/dome-price-analyzer';
+import { evaluateCompetitor } from '@/lib/dome-competitor-tracker';
 import type { SourceAdapter, InventorySnapshot as AdapterSnapshot } from '@/lib/sources';
 
 // ----------------------------------------------------------------------------
@@ -68,6 +69,9 @@ interface PollResult {
   // Sprint 6-B: price movement alerts produced this run
   newPriceAlerts: { yellow: number; orange: number; red: number };
   resolvedPriceAlerts: number;
+  // Sprint 6-C: competitor snapshots captured this run
+  competitorSnapshotsSaved: number;
+  competitorErrors: number;
   errors: string[];
   durationMs: number;
 }
@@ -101,6 +105,8 @@ export async function pollAppRegisteredInventory(): Promise<PollResult> {
     untrustworthyReminders: 0,
     newPriceAlerts: { yellow: 0, orange: 0, red: 0 },
     resolvedPriceAlerts: 0,
+    competitorSnapshotsSaved: 0,
+    competitorErrors: 0,
     errors: [],
     durationMs: 0,
   };
@@ -206,6 +212,20 @@ export async function pollAppRegisteredInventory(): Promise<PollResult> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       result.errors.push(`Price eval failed for ${snap.productNo}: ${msg}`);
+    }
+
+    // Sprint 6-C: competitor tracking on the same product (single search call).
+    // Uses adapter.searchItems internally — separate API quota from getItemView.
+    try {
+      const compEval = await evaluateCompetitor(adapter, meta, snap.supplierPrice ?? null);
+      if (compEval.snapshotSaved) {
+        result.competitorSnapshotsSaved += 1;
+        if (compEval.error) result.competitorErrors += 1;
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      result.errors.push(`Competitor eval failed for ${snap.productNo}: ${msg}`);
+      result.competitorErrors += 1;
     }
   }
 

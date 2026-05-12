@@ -37,6 +37,10 @@ export async function GET() {
     orderBy: { polledAt: 'desc' },
     select: { polledAt: true },
   });
+  const lastCompetitorSnap = await prisma.competitorSnapshot.findFirst({
+    orderBy: { polledAt: 'desc' },
+    select: { polledAt: true },
+  });
 
   // ── Env-based liveness checks ──────────────────────────────────────────────
   const discordEnv = {
@@ -70,6 +74,16 @@ export async function GET() {
         // 6-B piggy-backs on the same getItemView call as 6-A, so they share
         // the latest inventory snapshot timestamp as their lastRun signal.
         lastRun = lastInventorySnap?.polledAt?.toISOString() ?? null;
+        break;
+      case 'competitor-poll':
+        // 6-C piggy-backs in the same cron loop but uses search API; track
+        // the latest CompetitorSnapshot.polledAt independently.
+        lastRun = lastCompetitorSnap?.polledAt?.toISOString() ?? null;
+        break;
+      case 'supplier-score':
+        // 6-C.2 is computed on-demand by /api/suppliers/scores. Surface the
+        // latest competitor poll (its primary data source) as a proxy.
+        lastRun = lastCompetitorSnap?.polledAt?.toISOString() ?? null;
         break;
       case 'discord-kkotti-recommend':
       case 'discord-stock-alert':

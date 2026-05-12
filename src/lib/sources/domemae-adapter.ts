@@ -27,6 +27,7 @@ import {
   CrawledOption,
   SearchFilter,
   ItemListResult,
+  ItemSummary,
   InventorySnapshot,
   Category,
   OrderRequest,
@@ -312,10 +313,131 @@ export class DomemaeAdapter implements SourceAdapter {
   }
 
   /**
-   * 2. Search items - scaffolded for Sprint 6 (getItemList integration).
+   * 2. Search items via getItemList ver 4.5.
+   * Sprint 6-C: powers competitor tracker. Returns a page of search results.
+   * Each result is a lightweight ItemSummary (no options / no description).
+   *
+   * Rate limit: 180/min, 15000/day (shared bucket with getItemView).
+   * Caller throttles externally — adapter does no throttling.
+   *
+   * Filters mapped to native query params:
+   *   keyword     → kw
+   *   categoryCode → ca
+   *   minPrice    → sp
+   *   maxPrice    → ep
+   *   sortBy      → so (recent=date, popular=hit, priceAsc=price_asc,
+   *                     priceDesc=price_desc, sales=sale)
+   *   page        → pg (1-based)
+   *   pageSize    → sz (1..100; default 20)
    */
-  async searchItems(_filter: SearchFilter): Promise<ItemListResult> {
-    notImplemented(PLATFORM_CODE, 'searchItems');
+  async searchItems(filter: SearchFilter): Promise<ItemListResult> {
+    const apiKey = await getApiKey();
+    if (!apiKey) {
+      throw new SourceAdapterError(
+        PLATFORM_CODE,
+        'AuthFailed',
+        'Domeggook API key is not configured (store_settings.domeggook_api_key).',
+      );
+    }
+
+    const page = Math.max(1, filter.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, filter.pageSize ?? 20));
+
+    const sortMap: Record<NonNullable<SearchFilter['sortBy']>, string> = {
+      recent:    'date',
+      popular:   'hit',
+      priceAsc:  'price_asc',
+      priceDesc: 'price_desc',
+      sales:     'sale',
+    };
+    const so = filter.sortBy ? sortMap[filter.sortBy] : 'hit';
+
+    const params = new URLSearchParams();
+    params.set('ver', '4.5');
+    params.set('mode', 'getItemList');
+    params.set('aid', apiKey);
+    params.set('om', 'json');
+    params.set('pg', String(page));
+    params.set('sz', String(pageSize));
+    params.set('so', so);
+    if (filter.keyword)      params.set('kw', filter.keyword);
+    if (filter.categoryCode) params.set('ca', filter.categoryCode);
+    if (filter.minPrice != null) params.set('sp', String(filter.minPrice));
+    if (filter.maxPrice != null) params.set('ep', String(filter.maxPrice));
+
+    let res: Response;
+    try {
+      res = await fetch(`${DOMEGGOOK_API}?${params.toString()}`, {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+    } catch (e) {
+      throw new SourceAdapterError(
+        PLATFORM_CODE,
+        'Network',
+        `Network error in searchItems (kw=${filter.keyword ?? ''})`,
+        e,
+      );
+    }
+
+    if (!res.ok) {
+      throw new SourceAdapterError(
+        PLATFORM_CODE,
+        'BadResponse',
+        `searchItems returned HTTP ${res.status}`,
+      );
+    }
+
+    const raw = (await res.json()) as {
+      domeggook?: {
+        header?: { numberOfItems?: number | string };
+        list?: {
+          item?: Array<{
+            no?: string | number;
+            title?: string;
+            price?: number | string;
+            seller?: { id?: string | number; nick?: string; company?: { name?: string } };
+            thumb?: string;
+            url?: string;
+            minq?: number | string;
+          }>;
+        };
+      };
+      errors?: unknown;
+    };
+
+    if (raw.errors || !raw.domeggook) {
+      return { items: [], totalCount: 0, page, pageSize };
+    }
+
+    const dome = raw.domeggook;
+    const rawItems = dome.list?.item ?? [];
+    const totalCount = parseInt(String(dome.header?.numberOfItems ?? '0'), 10) || 0;
+
+    const items: ItemSummary[] = rawItems.map((it) => {
+      const productNo = String(it.no ?? '');
+      const name = (it.title ?? '').replace(/\s+/g, ' ').trim();
+      const priceRaw = it.price;
+      const supplierPrice = typeof priceRaw === 'number'
+        ? priceRaw
+        : parseInt(String(priceRaw ?? '0'), 10) || 0;
+      const sellerId = String(it.seller?.id ?? '');
+      const sellerNick = String(it.seller?.company?.name || it.seller?.nick || '');
+      const thumbUrl = String(it.thumb ?? '');
+      const sourceUrl = String(it.url ?? (productNo ? `https://domeme.domeggook.com/s/${productNo}` : ''));
+      const minQuantity = parseMinq(it.minq);
+      return {
+        productNo,
+        name,
+        supplierPrice,
+        thumbUrl,
+        sellerId,
+        sellerNick,
+        sourceUrl,
+        minQuantity,
+      };
+    });
+
+    return { items, totalCount, page, pageSize };
   }
 
   /**

@@ -184,6 +184,7 @@ model Product {
   inventorySnapshots      InventorySnapshot[]
   lowStockAlerts          LowStockAlert[]
   priceMovementAlerts     PriceMovementAlert[]
+  competitorSnapshots     CompetitorSnapshot[]
 
   @@index([supplierId])
   @@index([userId])
@@ -433,6 +434,31 @@ model InventorySnapshot {
   @@index([productId, polledAt(sort: Desc)], map: "idx_inv_snap_product_polled")
   @@index([productNo], map: "idx_inv_snap_product_no")
   @@map("inventory_snapshots")
+}
+
+// Sprint 6-C: competitor snapshots. Per-product per-poll capture of 1-page sellers
+// from domeggook getItemList search. Stored as aggregates (median/min/max + count)
+// instead of raw seller list to keep volume bounded.
+model CompetitorSnapshot {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId       String    @map("product_id")
+  productNo       String    @map("product_no") @db.VarChar(20)
+  searchKeyword   String    @map("search_keyword") @db.VarChar(200)
+  competitorCount Int       @map("competitor_count")
+  minPrice        Int?      @map("min_price")
+  maxPrice        Int?      @map("max_price")
+  medianPrice     Int?      @map("median_price")
+  ourRank         Int?      @map("our_rank")
+  ourPrice        Int?      @map("our_price")
+  errorNote       String?   @map("error_note") @db.VarChar(200)
+  polledAt        DateTime  @default(now()) @map("polled_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId], map: "idx_competitor_snapshots_product")
+  @@index([polledAt(sort: Desc)], map: "idx_competitor_snapshots_polled")
+  @@index([productId, polledAt(sort: Desc)], map: "idx_competitor_snapshots_product_polled")
+  @@map("competitor_snapshots")
 }
 
 // Sprint 6-B: Price movement alert (mirror of LowStockAlert).

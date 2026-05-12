@@ -133,21 +133,24 @@ export const AUTOMATIONS: AutomationMeta[] = [
     nameKey: 'competitorPoll',
     code: '6-C',
     frequency: 'daily',
-    status: 'pending',
-    targetPhase: 'Session F',
-    togglable: false,
+    schedule: '0 0 * * *',
+    status: 'active',
+    targetPhase: 'Session E-2',
+    togglable: true,
     descriptionKey: 'competitorPoll',
+    cronPath: '/api/cron/inventory-sync', // piggy-backs on 6-A poller (1 extra search call per product)
   },
   {
     id: 'supplier-score',
     group: 'competition',
     nameKey: 'supplierScore',
     code: '6-C.2',
-    frequency: 'daily',
-    status: 'pending',
-    targetPhase: 'Session F',
+    frequency: 'on-event',
+    status: 'active',
+    targetPhase: 'Session E-2',
     togglable: false,
     descriptionKey: 'supplierScore',
+    // No cronPath — supplier-score is computed on-demand by /api/suppliers/scores
   },
 
   // ── SEO + 노출 ──────────────────────────────────────────────────────────────
