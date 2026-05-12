@@ -1,8 +1,9 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-12 v2.0 아키텍처 채택 (사용자 제공 리서치 PDF + SVG) — Sprint X/Y/Z 신설, 작업원칙 #37, SESSION_LOG T2 분할
-> **HEAD**: f958bb0 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 28/28 OK (/products/new 61.2 kB / /dashboard 51.7 kB / /crawl 20.1 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (f958bb0 REGISTERED via GitHub Deployments path)
-> **v2.0 영구 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
+> **최종 업데이트**: 2026-05-12 v3.1 FINAL 채택 (CTI 8축 + 12 골격 + L1~L4 등급) — v2.0 Sprint X 폐기 후 재구성 (작업원칙 #38·#39·#40 신설)
+> **HEAD**: 4b58a52 = origin/main = production | **TSC**: 0 errors | **빌드**: 28/28 OK (docs-only commit, 코드 변경 0) | **배포**: https://kkotium-garden.vercel.app (4b58a52 REGISTERED via GitHub Deployments path)
+> **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
+> **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
 > **Vercel Hobby 제한 주의**: inventory-sync (daily) + daily + weekly 3 cron 사용 중. 6-B/6-C는 inventory-sync에 piggy-back, 6-E는 weekly에 piggy-back, P0-B/P0-C는 on-event (widget fetch 시 pure compute) — 모두 추가 cron 0건. Pro plan 시 `vercel.json` 한 줄로 6시간 cron 복귀 가능
 >
@@ -22,7 +23,7 @@
 SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고 
 현재 상태를 파악한 후 브리핑해주세요.
 
-직전 commit은 (실제 commit hash 확인 후 기재).
+직전 docs commit은 4b58a52 (v3.1 FINAL adoption).
 직전 작업은 'v3.1 FINAL docs 일괄 갱신' (docs-only).
 
 본 세션 진입 작업:
