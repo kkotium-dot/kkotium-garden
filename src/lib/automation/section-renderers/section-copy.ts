@@ -1763,3 +1763,285 @@ export async function generateBenefitsCopy(
     return { value: fallback, source: 'fallback', filtered: false };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Sprint 7-M2 Phase 2-b-3-b additions — B2B + S3 cleanup track (S3 / S12)
+//
+// KFTC discipline: spec values are NEVER Groq-generated. Groq only supplies
+// parameter labels and unit hints. Certification numbers and regulatory
+// codes are always dict placeholders. Package step copy is gift-handover
+// tone, never time-bound or scarcity-led.
+// ---------------------------------------------------------------------------
+
+// ---- spec table (S12) -----------------------------------------------------
+
+export interface SpecTableRow {
+  parameter: string;
+  /** Numeric/text value. KFTC critical: caller fills from product data
+   *  or renders as placeholder. */
+  value: string;
+  /** Unit string (mm, kg, V, A, etc.). Empty string for non-numeric rows. */
+  unit: string;
+}
+
+export interface SpecTableCopy {
+  headline: string;
+  columnHeaders: {
+    parameter: string;
+    value: string;
+    unit: string;
+  };
+  rows: SpecTableRow[];
+}
+
+export async function generateSpecTableCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<SpecTableCopy>> {
+  const fallback: SpecTableCopy = {
+    headline: STRINGS.specTable.headline,
+    columnHeaders: {
+      parameter: STRINGS.specTable.columnHeaders.parameter,
+      value: STRINGS.specTable.columnHeaders.value,
+      unit: STRINGS.specTable.columnHeaders.unit,
+    },
+    rows: STRINGS.specTable.rows.map((r) => ({
+      parameter: r.parameter,
+      value: r.value,
+      unit: r.unit,
+    })),
+  };
+
+  const prompt = [
+    `Pick spec table parameter labels for the "specTable" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    ctx.category ? `Category: ${ctx.category}` : '',
+    `Return JSON exactly: {"headline":"...","rows":[{"parameter":"...","unit":"..."}, ... 5-6 rows]}.`,
+    `headline: under 12 Korean characters (e.g. 주요 사양, 기술 사양).`,
+    `rows: 5 to 6 parameter labels typical for this product category. parameter under 12 chars (e.g. 크기, 무게, 정격 전압, 정격 전류, 재질, 마감). unit string follows SI / standard (mm, kg, V, A, W, dB, h, Ah) or "" for non-numeric rows.`,
+    `DO NOT invent specific numeric values — value column is omitted from your output and always rendered as "상세 페이지 참조" placeholder.`,
+    `Plain professional tone, no emoji, no superlatives. Respond with JSON only.`,
+  ].filter(Boolean).join('\n');
+
+  const raw = await callGroq(prompt, 360);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; rows?: unknown } = JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    if (!Array.isArray(parsed.rows) || parsed.rows.length < 4) {
+      return { value: fallback, source: 'fallback', filtered: false };
+    }
+    const rows: SpecTableRow[] = [];
+    let anyFiltered = false;
+    for (const r of parsed.rows.slice(0, 6)) {
+      if (!r || typeof r !== 'object') continue;
+      const row = r as Record<string, unknown>;
+      const p = typeof row.parameter === 'string' ? row.parameter : '';
+      const u = typeof row.unit === 'string' ? row.unit : '';
+      const pf = filterDarkPatterns(p);
+      const uf = filterDarkPatterns(u);
+      if (!pf.text) continue;
+      anyFiltered = anyFiltered || pf.filtered || uf.filtered;
+      rows.push({
+        parameter: pf.text.slice(0, 12),
+        // Value column is invariant placeholder — never sourced from Groq.
+        value: STRINGS.common.detailsReference,
+        unit: uf.text.slice(0, 4),
+      });
+    }
+    if (rows.length < 4) return { value: fallback, source: 'fallback', filtered: false };
+    const hf = filterDarkPatterns(h);
+    return {
+      value: {
+        headline: hf.text.slice(0, 12) || fallback.headline,
+        columnHeaders: fallback.columnHeaders,
+        rows,
+      },
+      source: 'groq',
+      filtered: anyFiltered || hf.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---- specifications grid (S12) --------------------------------------------
+//
+// KFTC CRITICAL: certification numbers and regulatory codes are NEVER
+// Groq-generated. The renderer always renders the dict placeholders until
+// ctx supplies actual values from product data (Sprint 7-Lib follow-up).
+
+export interface SpecificationItem {
+  /** Regulation/cert label (e.g. KC 인증, KS 표준). */
+  label: string;
+  /** Always a placeholder — caller fills from product data. */
+  value: string;
+}
+
+export interface SpecificationsCopy {
+  headline: string;
+  items: SpecificationItem[];
+  /** Invariant caveat strip — never sourced from Groq. */
+  caveat: string;
+}
+
+export async function generateSpecificationsCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<SpecificationsCopy>> {
+  const fallback: SpecificationsCopy = {
+    headline: STRINGS.specifications.headline,
+    items: STRINGS.specifications.items.map((i) => ({ label: i.label, value: i.value })),
+    caveat: STRINGS.specifications.caveat,
+  };
+
+  const prompt = [
+    `Pick regulation/certification labels for the "specifications" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    ctx.category ? `Category: ${ctx.category}` : '',
+    `Return JSON exactly: {"headline":"...","items":[{"label":"..."}, ... 4 items]}.`,
+    `headline: under 14 Korean characters (e.g. 규격 및 인증, 컴플라이언스).`,
+    `items: exactly 4 regulation labels typical for this product (e.g. KC 인증, KS 표준, 안전 기준, 제조 번호, FCC, RoHS, ISO 9001).`,
+    `Each label under 14 Korean characters.`,
+    `DO NOT invent specific cert numbers or codes — value column is omitted from your output and always rendered as a "상세 페이지 참조" placeholder.`,
+    `Plain factual tone, no emoji, no superlatives. Respond with JSON only.`,
+  ].filter(Boolean).join('\n');
+
+  const raw = await callGroq(prompt, 240);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; items?: unknown } = JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    if (!Array.isArray(parsed.items) || parsed.items.length < 4) {
+      return { value: fallback, source: 'fallback', filtered: false };
+    }
+    const items: SpecificationItem[] = [];
+    let anyFiltered = false;
+    for (let i = 0; i < 4; i++) {
+      const it = parsed.items[i];
+      if (!it || typeof it !== 'object') {
+        items.push(fallback.items[i] ?? fallback.items[0]);
+        continue;
+      }
+      const o = it as Record<string, unknown>;
+      const lbl = typeof o.label === 'string' ? o.label : '';
+      const lf = filterDarkPatterns(lbl);
+      anyFiltered = anyFiltered || lf.filtered;
+      items.push({
+        label: lf.text.slice(0, 14) || fallback.items[i].label,
+        // Value is invariant — never sourced from Groq.
+        value: fallback.items[i].value,
+      });
+    }
+    const hf = filterDarkPatterns(h);
+    return {
+      value: {
+        headline: hf.text.slice(0, 14) || fallback.headline,
+        items,
+        // Caveat is invariant.
+        caveat: fallback.caveat,
+      },
+      source: 'groq',
+      filtered: anyFiltered || hf.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---- package unboxing (S3) ------------------------------------------------
+
+export interface PackageStep {
+  /** Short step label (under 10 chars). */
+  label: string;
+  /** Two-sentence caption (under 28 chars). */
+  caption: string;
+}
+
+export interface PackageCopy {
+  headline: string;
+  steps: [PackageStep, PackageStep, PackageStep];
+}
+
+export async function generatePackageCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<PackageCopy>> {
+  const fallback: PackageCopy = {
+    headline: STRINGS.package.headline,
+    steps: [
+      { label: STRINGS.package.steps[0].label, caption: STRINGS.package.steps[0].caption },
+      { label: STRINGS.package.steps[1].label, caption: STRINGS.package.steps[1].caption },
+      { label: STRINGS.package.steps[2].label, caption: STRINGS.package.steps[2].caption },
+    ],
+  };
+
+  const prompt = [
+    `Write Korean copy for the "package" unboxing section of a premium gift set.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    ctx.highlight ? `Highlight: ${ctx.highlight}` : '',
+    `Return JSON exactly: {"headline":"...","steps":[{"label":"...","caption":"..."}, ... 3 steps]}.`,
+    `headline: under 12 Korean characters (e.g. 패키지 구성, 박스 안의 풍경).`,
+    `steps: exactly 3 steps tracing the unboxing sequence (outer box → inner contents → final presentation).`,
+    `Each label under 10 Korean characters. Each caption under 28 Korean characters, gift-handover scenario phrasing.`,
+    `Editorial restrained tone. No emoji, no scarcity, no superlatives. Respond with JSON only.`,
+  ].filter(Boolean).join('\n');
+
+  const raw = await callGroq(prompt, 280);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; steps?: unknown } = JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    if (!Array.isArray(parsed.steps) || parsed.steps.length < 3) {
+      return { value: fallback, source: 'fallback', filtered: false };
+    }
+    const steps: PackageStep[] = [];
+    let anyFiltered = false;
+    for (let i = 0; i < 3; i++) {
+      const st = parsed.steps[i];
+      if (!st || typeof st !== 'object') {
+        steps.push(fallback.steps[i]);
+        continue;
+      }
+      const o = st as Record<string, unknown>;
+      const lbl = typeof o.label === 'string' ? o.label : '';
+      const cap = typeof o.caption === 'string' ? o.caption : '';
+      const lf = filterDarkPatterns(lbl);
+      const cf = filterDarkPatterns(cap);
+      anyFiltered = anyFiltered || lf.filtered || cf.filtered;
+      steps.push({
+        label: lf.text.slice(0, 10) || fallback.steps[i].label,
+        caption: cf.text.slice(0, 28) || fallback.steps[i].caption,
+      });
+    }
+    const hf = filterDarkPatterns(h);
+    return {
+      value: {
+        headline: hf.text.slice(0, 12) || fallback.headline,
+        steps: steps as PackageCopy['steps'],
+      },
+      source: 'groq',
+      filtered: anyFiltered || hf.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}

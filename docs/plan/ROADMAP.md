@@ -14,9 +14,87 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-b-3-b — 100% 완성, 3 렌더러) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-c lifestyle-picker) ⭐ ACTIVE
 
-본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장. **SESSION_LOG.md 947줄로 T1 1000 근접 — STEP 0에서 분할 권고 판단 의무**.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 Phase 2-b-3-b 완료 (B2B + S3 cleanup 3 렌더러):
+- src/lib/automation/section-renderers/specTable.ts (S12, KFTC value placeholder)
+- src/lib/automation/section-renderers/specifications.ts (S12, KFTC 4 cards
+  invariant value + caveat strip)
+- src/lib/automation/section-renderers/package.ts (S3, 3-step unboxing)
+- section-copy.ts 3 신규 Groq 헬퍼 + strings.ko.json 3 슬롯
+- S3 + S12 완전 dedicated, **dedicated 27/27 ✅ 100%** 달성
+- 12 골격 모두 완전 dedicated, Sprint 7-M2 Phase 2 (렌더러) 종료
+- 이전 docs의 "26"은 off-by-one — 실제 unique section ids 27
+
+본 세션 진입 작업 = Sprint 7-M2 Phase 2-c (lifestyle-picker):
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  특히 Phase 2-b-3-b commit이 main 머지/배포됐는지 verify-vercel-deploy.sh
+  로 확인. SESSION_LOG.md 947줄 (T1 1000 근접) — *분할 권고 판단 의무*.
+
+STEP 7-M2 Phase 2-c — lifestyle-picker
+  배경: 현재 모든 lifestyle/usage 렌더러는 `ctx.lifestyleAssetUrl ??
+  ctx.sourceImageUrl` fallback만 사용. 즉 lifestyleAssetUrl이 주어지면
+  쓰고, 없으면 원본 상품 이미지를 그대로 lifestyle 자리에 사용 — 평범한
+  fallback이지만 *brand cohesion이 떨어지는* 한계.
+
+  Phase 2-c 목표: LifestyleAsset DB 테이블 (Sprint 7-Diag MVP에서 생성됨,
+  현재 0 rows)을 consume하는 lifestyle-picker 알고리즘 도입.
+
+  대상 파일 신규:
+    - src/lib/automation/lifestyle-picker.ts (LifestyleAsset 쿼리 + 매칭)
+      - INPUT: SectionRenderContext (category / highlight / brandName) +
+        sectionId
+      - OUTPUT: LifestyleAsset row 1개 (url + moodTags + lastUsedAt) 또는 null
+      - 매칭 로직:
+        1) category 일치 LifestyleAsset 후보 fetch
+        2) moodTags 교집합으로 정렬 (concept-tone과의 매칭)
+        3) **30일 cooldown**: lastUsedAt > 30일 전 자산만 picker pool에 포함
+           (top brand 사용자 인지 피로 방지)
+        4) Random pick from top-3
+        5) lastUsedAt 업데이트 (atomicity 보장)
+
+    - src/lib/automation/lifestyle-picker.test.ts (unit test, optional)
+
+  Renderer 패치 (선택적 — Phase 2-c는 *foundation* 도입이라 패치는
+  Phase 2-c-2로 분리 가능):
+    - usage.ts / styledShot.ts / detail.ts 등 lifestyle 자산 사용하는
+      렌더러들이 lifestyle-picker.ts 호출
+    - 현재 fallback (ctx.lifestyleAssetUrl) 우선, picker는 lastUsedAt 갱신
+      side-effect 있음 — *Phase 3 API route에서만 호출* 권장
+
+  진입 전 확인:
+    - Supabase LifestyleAsset 테이블 schema 확인 (current Sprint 7-Diag MVP)
+    - 30일 cooldown 정책 KFTC 의미 (피로 방지 = brand cohesion + 다크패턴 0)
+    - lastUsedAt 업데이트 atomicity (race condition 방지 — UPDATE WHERE)
+    - Phase 2-c는 *foundation only*, 실제 LifestyleAsset 데이터 seed는
+      별도 작업 (Sprint 7-Lib 또는 사용자 manual seed)
+
+  사용자 결정 위임:
+    - Phase 2-c를 본 세션에서 진입할지, Phase 3 (API route)를 우선할지
+    - Sprint 7-M2 Phase 2 종료 시점 (현재) 이미 의미 있는 마일스톤이라
+      *Phase 3 우선*도 합리적 (production 통합 신호)
+
+다음 = Sprint 7-M2 Phase 3 (API route + Diagnosis 연동 + Supabase Storage)
+→ Sprint 7-M3 (designer UI 마운트, 1클릭 골격 교체).
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward
+merge 사용자 위임. SESSION_LOG.md 분할 우선 처리 권고.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-b-3-b — 100% 완성, 3 렌더러)~~ ✅ COMPLETED
+
+> Phase 2-b-3-b (B2B + S3 cleanup 3 렌더러) completed on 2026-05-13. **dedicated 27/27 ✅ 100%** (이전 docs의 "26"은 off-by-one 정정). 12 골격 모두 완전 dedicated. Phase 2-c (lifestyle-picker) = active handoff above.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,

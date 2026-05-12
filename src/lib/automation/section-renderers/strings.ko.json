@@ -274,5 +274,84 @@
     "headline": "실제 사용자 후기",
     "placeholderQuote": "후기 영역은 등록 후 실제 데이터로 채워집니다.",
     "placeholderAttribution": "사용자"
+  },
+  "specTable": {
+    "headline": "주요 사양",
+    "columnHeaders": {
+      "parameter": "항목",
+      "value": "값",
+      "unit": "단위"
+    },
+    "rows": [
+      {
+        "parameter": "크기",
+        "value": "상세 페이지 참조",
+        "unit": "mm"
+      },
+      {
+        "parameter": "무게",
+        "value": "상세 페이지 참조",
+        "unit": "kg"
+      },
+      {
+        "parameter": "정격 전압",
+        "value": "상세 페이지 참조",
+        "unit": "V"
+      },
+      {
+        "parameter": "정격 전류",
+        "value": "상세 페이지 참조",
+        "unit": "A"
+      },
+      {
+        "parameter": "재질",
+        "value": "상세 페이지 참조",
+        "unit": ""
+      },
+      {
+        "parameter": "마감",
+        "value": "상세 페이지 참조",
+        "unit": ""
+      }
+    ]
+  },
+  "specifications": {
+    "headline": "규격 및 인증",
+    "items": [
+      {
+        "label": "KC 인증",
+        "value": "인증 번호: 상세 페이지 참조"
+      },
+      {
+        "label": "KS 표준",
+        "value": "표준 코드: 상세 페이지 참조"
+      },
+      {
+        "label": "안전 기준",
+        "value": "기준 코드: 상세 페이지 참조"
+      },
+      {
+        "label": "제조 번호",
+        "value": "Lot 번호: 상세 페이지 참조"
+      }
+    ],
+    "caveat": "정확한 인증 정보는 상세 페이지에서 확인해 주세요"
+  },
+  "package": {
+    "headline": "패키지 구성",
+    "steps": [
+      {
+        "label": "외부 박스",
+        "caption": "단정하게 마무리한 외장"
+      },
+      {
+        "label": "내부 구성",
+        "caption": "본품과 동봉물 정돈된 배치"
+      },
+      {
+        "label": "마지막 한 컷",
+        "caption": "받는 분에게 닿는 첫 인상"
+      }
+    ]
   }
 }

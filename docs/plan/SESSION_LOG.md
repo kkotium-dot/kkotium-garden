@@ -1,3 +1,118 @@
+## 2026-05-13 Sprint 7-M2 Phase 2-b-3-b — B2B + S3 cleanup 3 렌더러 (dedicated 27/27 ✅ 100%) ✅
+
+### 본 세션 성격
+
+직전 Sprint 7-M2 Phase 2-b-3-a (e64e00c, main FF merge + production deploy 검증) 직후 동일 turn 연속 진입. 잔여 3 placeholder ids (specTable / specifications / package)를 dedicated 렌더러로 격상해 **12 골격 전체 완전 dedicated 100%** 도달.
+
+### 본 세션의 중요한 발견 — 매트릭스 카운트 정정
+
+`grading.SKELETON_SECTIONS` 12 골격 정의의 unique section ids를 Python set으로 정확 카운트한 결과 **27개** (이전 docs의 "26"은 off-by-one error). 본 phase 완료로 **27/27 = 100% dedicated coverage** 달성. 이전 docs (PROGRESS.md, ROADMAP.md, SESSION_LOG.md entries)에서 "26"으로 기록된 모든 곳을 향후 정정 권고.
+
+### 본 세션 산출물 (6 파일 변경, 신규 3 + 확장 3)
+
+| 파일 | LOC | 골격 | 역할 |
+|---|---|---|---|
+| `specTable.ts` | 141 | S12 | 3-column 기술 사양 테이블 (parameter / value / unit), 6 zebra rows, value 컬럼 invariant placeholder |
+| `specifications.ts` | 134 | S12 | 2x2 규제·인증 grid (KC/KS/안전기준/제조번호 카드) + 좌측 accent stripe + 하단 invariant caveat strip |
+| `package.ts` | 158 | S3 | 3-step horizontal unboxing sequence (numbered badge + arrow connector + label + caption) |
+| `section-copy.ts` | +320 LOC | (확장) | 3 신규 Groq 헬퍼 |
+| `strings.ko.json` | +3 슬롯, 178 strings | (확장) | specTable (rows + columnHeaders) / specifications (4 items + caveat) / package (3 steps) |
+| `index.ts` | +8 LOC | (확장) | Phase 2-b-3-b registry block, 27 entries 도달 |
+
+### 3 신규 Groq 헬퍼 (section-copy.ts)
+
+각 helper는 동일 패턴 유지 (JSON output + filterDarkPatterns + STRINGS dict fallback). KFTC critical 패턴 강화:
+
+- `generateSpecTableCopy` — `{headline, columnHeaders, rows: [{parameter, value, unit}] × 5-6}` (Groq는 parameter + unit만, **value는 invariant placeholder** STRINGS.common.detailsReference)
+- `generateSpecificationsCopy` — `{headline, items: [{label, value}] × 4, caveat (invariant)}` (Groq는 label만, **value는 dict invariant**)
+- `generatePackageCopy` — `{headline, steps: [{label, caption}] × 3}` (gift-handover tone, scarcity 금지 prompt)
+
+### KFTC Discipline — B2B 트랙 안전 장치
+
+specTable / specifications 두 렌더러는 *법적 노출 위험이 가장 높은* B2B 영역 (인증번호 / 표준코드 / 측정값 fabricate 시 매출 정지 가능):
+
+**specTable.ts**:
+- value 컬럼 *항상* dict placeholder, Groq 응답 schema에서 value 필드 제외
+- 6 rows 기본 (크기/무게/정격 전압/정격 전류/재질/마감), Groq가 카테고리 적합 parameter labels 선택
+- unit 컬럼은 SI/표준 (mm/kg/V/A/W/dB) — 단위 자체는 universal이라 fabricate 위험 0
+
+**specifications.ts**:
+- 4 카드 모두 value invariant ("인증 번호: 상세 페이지 참조" 등)
+- 하단 invariant caveat strip "정확한 인증 정보는 상세 페이지에서 확인해 주세요" — Groq override 불가
+- 좌측 accent stripe (6px brand primary)로 카드 시각적 분리
+
+**package.ts**:
+- scarcity 패턴 금지 prompt ("마감 임박" / "선착순"), gift-handover tone 강제
+- 3 numbered badges + arrow connectors로 unboxing 순서 명시
+- 동봉물 / 사은품 fabricate 금지 (caption 28자 제한, 일반화 phrasing)
+
+### 골격 dedicated 커버리지 변화 (실제 27/27 기준)
+
+| 골격 | 변경 전 | 변경 후 |
+|---|---|---|
+| S3 | 5/6 | **6/6 ✅ 완전** (package 추가) |
+| S12 | 3/5 | **5/5 ✅ 완전** (specTable + specifications 추가) |
+| 기타 9 골격 | 이미 완전 | 변화 없음 |
+
+**완전 dedicated 골격 12/12 ✅ 100%**: S1 · S2 · S3 · S4 · S5(*) · S6 · S7 · S8 · S9 · S10 · S11 · S12
+`(*) S5는 optionIntro 1 + S2 graceful fallback usage/cta 사용 — 직접 등록 entries 기준 완전`
+
+**dedicated 섹션 ids 27/27 ✅ 100%** (Phase 1 + 2-a + 2-b-1/2/3-a/3-b 합산)
+
+### Phase 2-b 전체 완료 = Sprint 7-M2 Phase 2 (렌더러 단계) 종료
+
+본 phase로 *모든 v3.1 SkeletonSpec section id*에 dedicated 렌더러 매핑. _placeholder safety net은 이제 *unknown future section ids* (Sprint 7-Skel에서 S13+ 추가 시) 대비용으로만 의의.
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 정상 빌드 ✅
+- `python3 scripts/verify-korean-dict.py` ✅ (178 strings, 0 typo)
+- 신규 3 renderer 일반 한글 inline: specTable.ts L6의 JSDoc comment 1건 (`"상세 페이지 참조"` 예시) — 사용자 노출 외, dict 대상 외
+- registry 27 entries == SKELETON_SECTIONS unique ids 27 (Python set verification)
+- 작업원칙 #38 strict 준수 — 이미지 *생성* 0건 ✅
+
+### Phase 2-b-3-b의 STEP A 효과 검증 (2회 연속)
+
+본 phase 도입 신규 fallback ~22건이 *모두 dict 키 추가만으로 작성*. STEP A의 STRINGS 패턴이 KFTC-strict 케이스 (invariant placeholder × 2 + invariant caveat × 1)를 완벽 지원:
+- specifications.caveat: Groq override 불가, dict invariant
+- specifications.items[N].value: Groq응답 ignore, dict 직접 사용
+- specTable.rows[N].value: Groq schema에서 제외, STRINGS.common.detailsReference 강제
+
+### 본 세션 commit (1건 예정)
+
+1. `<sha>` feat(automation): add 3 B2B/cleanup section renderers — Sprint 7-M2 complete at 27/27 (Phase 2-b-3-b)
+
+### 적용된 작업원칙
+
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- #21 사전 점검 통과 (HEAD e64e00c = production)
+- #24 sprint 단위 commit + push 한 turn 안에 종료
+- #26 IA 점검 — lib only, 라우트 0
+- #27 외부 컨트랙트 보존 ✅ (registry entry 추가만, 기존 entry 변경 0)
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — *코드 inline 0건 (specTable.ts JSDoc 예시 1건만 잔존)*
+- #29 (b) MD 갱신 — temp file Write + Python prepend
+- #31 SESSION_LOG ~832 + 본 entry ~100 = ~932 (T1 1000 근접, 다음 세션 분할 권고)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #35 STEP A 패턴 *2회 연속 검증* — 신규 fallback inline 0건 ✅
+- #36 main push 후 verify-vercel-deploy.sh --wait — 사용자 승인 후
+- #38 Production runtime static assets only ✅
+- #39 CTI inference entry point ✅
+- #40 Designer Sense 보존 — KFTC invariant 패턴이 designer 검수 의무화 + 자동 표면화 동시 확보
+
+### 다음 = Sprint 7-M2 Phase 2-c (lifestyle-picker) → Phase 3 (API route)
+
+Phase 2 렌더러 단계는 본 phase로 완전 종료. 다음 단계:
+
+- **Phase 2-c — lifestyle-picker**: LifestyleAsset DB 테이블 consume 패턴 + 30일 cooldown + 태그 매칭 알고리즘. 현재 모든 lifestyle/usage 렌더러는 `ctx.lifestyleAssetUrl ?? ctx.sourceImageUrl` fallback만 사용 → lifestyle 풀에서 적합 자산 선택 로직 도입.
+- **Phase 3 — API route**: `/api/products/[id]/generate-detail` POST endpoint + Diagnosis 연동 (skeleton-matcher 8축) + Supabase Storage 업로드 (PNG → CDN URL → Naver Commerce API 등록 ready).
+
+본 phase 완료로 Sprint 7-M2의 *foundation* 단계는 안정 완성 — Phase 2-c + 3는 production 통합 단계.
+
+---
+
 ## 2026-05-13 Sprint 7-M2 Phase 2-b-3-a — 감각 트랙 5 렌더러 (S6·S9·S10 완전 dedicated) ✅
 
 ### 본 세션 성격

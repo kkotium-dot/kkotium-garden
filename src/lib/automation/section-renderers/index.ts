@@ -37,6 +37,9 @@ import { styledShotRenderer } from './styledShot';
 import { philosophyRenderer } from './philosophy';
 import { detailRenderer } from './detail';
 import { reviewsRenderer } from './reviews';
+import { specTableRenderer } from './specTable';
+import { specificationsRenderer } from './specifications';
+import { packageRenderer } from './package';
 
 const REGISTRY: Record<string, SectionRenderer> = {
   // Phase 1 (S2 workhorse)
@@ -68,6 +71,10 @@ const REGISTRY: Record<string, SectionRenderer> = {
   philosophy:      philosophyRenderer,
   detail:          detailRenderer,
   reviews:         reviewsRenderer,
+  // Phase 2-b-3-b (B2B + S3 cleanup: S3 / S12) — completes dedicated 26/26
+  specTable:       specTableRenderer,
+  specifications:  specificationsRenderer,
+  package:         packageRenderer,
 };
 
 /** Look up the renderer for a section id. Returns the placeholder
