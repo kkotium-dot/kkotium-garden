@@ -60,19 +60,43 @@
   },
   "productGrid": {
     "cells": [
-      { "title": "소재", "caption": "꼼꼼한 마감과 견고한 구성" },
-      { "title": "디테일", "caption": "실용을 우선한 형태" },
-      { "title": "사용", "caption": "일상에서 편하게 손에 익는" },
-      { "title": "관리", "caption": "간편한 보관과 관리" }
+      {
+        "title": "소재",
+        "caption": "꼼꼼한 마감과 견고한 구성"
+      },
+      {
+        "title": "디테일",
+        "caption": "실용을 우선한 형태"
+      },
+      {
+        "title": "사용",
+        "caption": "일상에서 편하게 손에 익는"
+      },
+      {
+        "title": "관리",
+        "caption": "간편한 보관과 관리"
+      }
     ]
   },
   "comparison": {
     "headline": "한눈에 비교",
     "baselineLabel": "카테고리 평균",
     "rows": [
-      { "feature": "기능", "ours": "핵심 기능 충실", "baseline": "기본 기능" },
-      { "feature": "내구성", "ours": "꼼꼼한 마감", "baseline": "일반 수준" },
-      { "feature": "편의성", "ours": "간편한 사용", "baseline": "일반 수준" }
+      {
+        "feature": "기능",
+        "ours": "핵심 기능 충실",
+        "baseline": "기본 기능"
+      },
+      {
+        "feature": "내구성",
+        "ours": "꼼꼼한 마감",
+        "baseline": "일반 수준"
+      },
+      {
+        "feature": "편의성",
+        "ours": "간편한 사용",
+        "baseline": "일반 수준"
+      }
     ]
   },
   "comparisonRenderer": {
@@ -90,16 +114,32 @@
   "coreMetrics": {
     "headline": "핵심 사양",
     "cards": [
-      { "label": "출력", "caption": "카테고리 표준 대비 적정" },
-      { "label": "무게", "caption": "한 손 사용에 적합" },
-      { "label": "소음", "caption": "실내 사용에 무리 없음" },
-      { "label": "인증", "caption": "판매자 인증 정보 제공" }
+      {
+        "label": "출력",
+        "caption": "카테고리 표준 대비 적정"
+      },
+      {
+        "label": "무게",
+        "caption": "한 손 사용에 적합"
+      },
+      {
+        "label": "소음",
+        "caption": "실내 사용에 무리 없음"
+      },
+      {
+        "label": "인증",
+        "caption": "판매자 인증 정보 제공"
+      }
     ]
   },
   "technology": {
     "headline": "작동 원리",
     "mechanismLabel": "3단계 처리",
-    "steps": ["입력", "처리", "출력"],
+    "steps": [
+      "입력",
+      "처리",
+      "출력"
+    ],
     "caption": "핵심 단계를 명확히 분리하여 사용 흐름을 단순하게 유지합니다."
   },
   "clinical": {
@@ -115,10 +155,22 @@
   "optionIntro": {
     "headline": "옵션 한눈에",
     "items": [
-      { "name": "기본", "sub": "본품 단일 구성" },
-      { "name": "추가형", "sub": "여분 1점 동봉" },
-      { "name": "세트형", "sub": "핵심 구성 묶음" },
-      { "name": "실속형", "sub": "필수 항목 위주" }
+      {
+        "name": "기본",
+        "sub": "본품 단일 구성"
+      },
+      {
+        "name": "추가형",
+        "sub": "여분 1점 동봉"
+      },
+      {
+        "name": "세트형",
+        "sub": "핵심 구성 묶음"
+      },
+      {
+        "name": "실속형",
+        "sub": "필수 항목 위주"
+      }
     ],
     "helperLine": "원하는 구성으로 골라 담아보세요"
   },
@@ -131,10 +183,22 @@
   "options": {
     "headline": "구성 옵션",
     "rows": [
-      { "name": "기본형", "spec": "본품 + 기본 구성" },
-      { "name": "추가형", "spec": "여분 1점 동봉" },
-      { "name": "세트형", "spec": "핵심 구성 묶음" },
-      { "name": "실속형", "spec": "필수 항목 위주" }
+      {
+        "name": "기본형",
+        "spec": "본품 + 기본 구성"
+      },
+      {
+        "name": "추가형",
+        "spec": "여분 1점 동봉"
+      },
+      {
+        "name": "세트형",
+        "spec": "핵심 구성 묶음"
+      },
+      {
+        "name": "실속형",
+        "spec": "필수 항목 위주"
+      }
     ]
   },
   "optionsRenderer": {
@@ -151,10 +215,64 @@
   "benefits": {
     "headline": "한정 혜택",
     "perks": [
-      { "title": "드롭 동봉", "body": "본품 외 동봉 안내" },
-      { "title": "에디션 표기", "body": "한정 에디션 식별 정보 제공" },
-      { "title": "구매 보호", "body": "교환 환불 정책 동일 적용" }
+      {
+        "title": "드롭 동봉",
+        "body": "본품 외 동봉 안내"
+      },
+      {
+        "title": "에디션 표기",
+        "body": "한정 에디션 식별 정보 제공"
+      },
+      {
+        "title": "구매 보호",
+        "body": "교환 환불 정책 동일 적용"
+      }
     ],
     "disclosure": "혜택 적용 조건: 상세 페이지 참조"
+  },
+  "material": {
+    "headline": "소재 이야기",
+    "originLabel": "원산지: 상세 페이지 참조",
+    "macroCaption": "결을 따라 마감한 정교한 직조",
+    "certLine": "인증 정보: 상세 페이지 참조"
+  },
+  "styledShot": {
+    "headline": "일상 속 한 컷",
+    "captions": [
+      "차분한 아침의 공기 속에서",
+      "오후의 자연광이 닿는 자리에",
+      "하루를 닫는 조용한 의식"
+    ]
+  },
+  "philosophy": {
+    "headline": "브랜드 철학",
+    "paragraph": "오래 두고 쓸수록 손에 익는 형태와 무게를 추구합니다. 소재의 본질을 해치지 않는 마감과 사용자가 의식하지 않아도 자연스럽게 닿는 동선을 우선합니다. 그 자리에 머무를수록 단단해지는 사용감이 진짜라고 믿습니다.",
+    "signature": "꽃틔움 KKOTIUM"
+  },
+  "detail": {
+    "headline": "디테일",
+    "cells": [
+      {
+        "title": "소재 결",
+        "body": "결을 따라 마감한 정교한 직조"
+      },
+      {
+        "title": "이음새",
+        "body": "균일한 간격의 박음질"
+      },
+      {
+        "title": "안감",
+        "body": "촉감 자극이 적은 안감 마감"
+      },
+      {
+        "title": "마감",
+        "body": "엣지 처리로 오래 형태 유지"
+      }
+    ]
+  },
+  "reviews": {
+    "headline": "실제 사용자 후기",
+    "placeholderQuote": "후기 영역은 등록 후 실제 데이터로 채워집니다.",
+    "placeholderAttribution": "사용자"
   }
 }

@@ -1318,6 +1318,356 @@ export async function generateEventDetailsCopy(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Sprint 7-M2 Phase 2-b-3-a additions — sensory track (S6 / S9 / S10)
+//
+// KFTC discipline: material origin and clinical-style claims must be
+// placeholder-safe. Reviews are NEVER Groq-generated — only the headline.
+// Philosophy/detail are restrained editorial — no medical or scientific
+// efficacy claims allowed in the prompt.
+// ---------------------------------------------------------------------------
+
+// ---- material (S9) --------------------------------------------------------
+
+export interface MaterialCopy {
+  headline: string;
+  /** Origin disclosure label. Always a placeholder when ctx lacks origin data. */
+  originLabel: string;
+  /** Macro-shot caption describing texture / construction. */
+  macroCaption: string;
+  /** Certification line — always a placeholder unless ctx provides cert info. */
+  certLine: string;
+}
+
+export async function generateMaterialCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<MaterialCopy>> {
+  const fallback: MaterialCopy = {
+    headline: STRINGS.material.headline,
+    originLabel: STRINGS.material.originLabel,
+    macroCaption: STRINGS.material.macroCaption,
+    certLine: STRINGS.material.certLine,
+  };
+
+  const prompt = [
+    `Write Korean copy for the "material" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    ctx.category ? `Category: ${ctx.category}` : '',
+    `Return JSON exactly: {"headline":"...","originLabel":"...","macroCaption":"...","certLine":"..."}.`,
+    `headline: under 14 Korean characters (e.g. 소재 이야기, 원료 안내).`,
+    `originLabel: under 24 chars. Use placeholder "원산지: 상세 페이지 참조" when uncertain — DO NOT fabricate countries or regions.`,
+    `macroCaption: under 24 chars describing texture / construction (e.g. 결을 따라 마감한 정교한 직조).`,
+    `certLine: under 22 chars. Use placeholder "인증 정보: 상세 페이지 참조" when uncertain — DO NOT fabricate certification numbers.`,
+    `No emoji, no superlatives, no medical claims. Plain factual tone.`,
+    `Respond with JSON only.`,
+  ].filter(Boolean).join('\n');
+
+  const raw = await callGroq(prompt, 240);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; originLabel?: unknown; macroCaption?: unknown; certLine?: unknown } =
+      JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    const o = typeof parsed.originLabel === 'string' ? parsed.originLabel : '';
+    const m = typeof parsed.macroCaption === 'string' ? parsed.macroCaption : '';
+    const c = typeof parsed.certLine === 'string' ? parsed.certLine : '';
+    const hf = filterDarkPatterns(h);
+    const of = filterDarkPatterns(o);
+    const mf = filterDarkPatterns(m);
+    const cf = filterDarkPatterns(c);
+    return {
+      value: {
+        headline: hf.text.slice(0, 14) || fallback.headline,
+        originLabel: of.text.slice(0, 24) || fallback.originLabel,
+        macroCaption: mf.text.slice(0, 24) || fallback.macroCaption,
+        certLine: cf.text.slice(0, 22) || fallback.certLine,
+      },
+      source: 'groq',
+      filtered: hf.filtered || of.filtered || mf.filtered || cf.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---- styled lifestyle shots (S6) ------------------------------------------
+
+export interface StyledShotCopy {
+  headline: string;
+  /** Three mood-led captions, one per shot. */
+  captions: [string, string, string];
+}
+
+export async function generateStyledShotCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<StyledShotCopy>> {
+  const fallback: StyledShotCopy = {
+    headline: STRINGS.styledShot.headline,
+    captions: [
+      STRINGS.styledShot.captions[0],
+      STRINGS.styledShot.captions[1],
+      STRINGS.styledShot.captions[2],
+    ],
+  };
+
+  const prompt = [
+    `Write Korean copy for the "styledShot" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    `Return JSON exactly: {"headline":"...","captions":["c1","c2","c3"]}.`,
+    `headline: under 14 Korean characters (e.g. 일상 속 한 컷, 무드 보드).`,
+    `captions: exactly 3 short Korean phrases under 22 characters each, mood-led.`,
+    `Each caption suggests a different time of day or scene (morning / afternoon / evening, or living room / desk / nightstand).`,
+    `Sensory restrained tone. No emoji, no claims, no superlatives.`,
+    `Respond with JSON only.`,
+  ].join('\n');
+
+  const raw = await callGroq(prompt, 240);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; captions?: unknown } = JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    if (!Array.isArray(parsed.captions) || parsed.captions.length < 3) {
+      return { value: fallback, source: 'fallback', filtered: false };
+    }
+    const caps = parsed.captions.slice(0, 3).map((c) => filterDarkPatterns(typeof c === 'string' ? c : ''));
+    if (caps.some((c) => !c.text)) return { value: fallback, source: 'fallback', filtered: false };
+    const hf = filterDarkPatterns(h);
+    return {
+      value: {
+        headline: hf.text.slice(0, 14) || fallback.headline,
+        captions: [
+          caps[0].text.slice(0, 22) || fallback.captions[0],
+          caps[1].text.slice(0, 22) || fallback.captions[1],
+          caps[2].text.slice(0, 22) || fallback.captions[2],
+        ],
+      },
+      source: 'groq',
+      filtered: hf.filtered || caps.some((c) => c.filtered),
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---- brand philosophy (S10) -----------------------------------------------
+
+export interface PhilosophyCopy {
+  headline: string;
+  /** Editorial paragraph, three sentences, value-led. */
+  paragraph: string;
+  /** Short signature line (brand or studio name). */
+  signature: string;
+}
+
+export async function generatePhilosophyCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<PhilosophyCopy>> {
+  const fallback: PhilosophyCopy = {
+    headline: STRINGS.philosophy.headline,
+    paragraph: STRINGS.philosophy.paragraph,
+    signature: ctx.brandName ?? STRINGS.philosophy.signature,
+  };
+
+  const prompt = [
+    `Write a Korean brand philosophy paragraph for the "philosophy" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    ctx.brandName ? `Brand: ${ctx.brandName}` : '',
+    `Return JSON exactly: {"headline":"...","paragraph":"...","signature":"..."}.`,
+    `headline: under 14 Korean characters (e.g. 브랜드 철학, 가치).`,
+    `paragraph: 3 Korean sentences under 200 characters total, restrained editorial tone, value-led.`,
+    `Focus on craft, intent, longevity. DO NOT make medical, scientific, or efficacy claims. DO NOT use superlatives.`,
+    `signature: under 18 characters (brand or studio name).`,
+    `No emoji. Respond with JSON only.`,
+  ].filter(Boolean).join('\n');
+
+  const raw = await callGroq(prompt, 320);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; paragraph?: unknown; signature?: unknown } = JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    const p = typeof parsed.paragraph === 'string' ? parsed.paragraph : '';
+    const s = typeof parsed.signature === 'string' ? parsed.signature : '';
+    const hf = filterDarkPatterns(h);
+    const pf = filterDarkPatterns(p);
+    const sf = filterDarkPatterns(s);
+    return {
+      value: {
+        headline: hf.text.slice(0, 14) || fallback.headline,
+        paragraph: pf.text.slice(0, 200) || fallback.paragraph,
+        signature: sf.text.slice(0, 18) || fallback.signature,
+      },
+      source: 'groq',
+      filtered: hf.filtered || pf.filtered || sf.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---- detail macro grid 2x2 (S10) ------------------------------------------
+
+export interface DetailCell {
+  title: string;
+  body: string;
+}
+
+export interface DetailGridCopy {
+  headline: string;
+  cells: [DetailCell, DetailCell, DetailCell, DetailCell];
+}
+
+export async function generateDetailGridCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<DetailGridCopy>> {
+  const fallback: DetailGridCopy = {
+    headline: STRINGS.detail.headline,
+    cells: [
+      { title: STRINGS.detail.cells[0].title, body: STRINGS.detail.cells[0].body },
+      { title: STRINGS.detail.cells[1].title, body: STRINGS.detail.cells[1].body },
+      { title: STRINGS.detail.cells[2].title, body: STRINGS.detail.cells[2].body },
+      { title: STRINGS.detail.cells[3].title, body: STRINGS.detail.cells[3].body },
+    ],
+  };
+
+  const prompt = [
+    `Write Korean copy for a 2x2 detail macro grid in the "detail" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    `Return JSON exactly: {"headline":"...","cells":[{"title":"...","body":"..."}, ... 4 total]}.`,
+    `headline: under 12 Korean characters (e.g. 디테일, 마감, 손길).`,
+    `Provide exactly 4 cells, each describing one tactile/visual detail (material grain / stitching / lining / edge finishing).`,
+    `title: under 8 Korean characters. body: under 24 Korean characters.`,
+    `Plain editorial tone. No emoji, no claims, no superlatives. Respond with JSON only.`,
+  ].join('\n');
+
+  const raw = await callGroq(prompt, 300);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown; cells?: unknown } = JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    if (!Array.isArray(parsed.cells) || parsed.cells.length < 4) {
+      return { value: fallback, source: 'fallback', filtered: false };
+    }
+    const cells: DetailCell[] = [];
+    let anyFiltered = false;
+    for (let i = 0; i < 4; i++) {
+      const c = parsed.cells[i];
+      if (!c || typeof c !== 'object') {
+        cells.push(fallback.cells[i]);
+        continue;
+      }
+      const o = c as Record<string, unknown>;
+      const t = typeof o.title === 'string' ? o.title : '';
+      const b = typeof o.body === 'string' ? o.body : '';
+      const tf = filterDarkPatterns(t);
+      const bf = filterDarkPatterns(b);
+      anyFiltered = anyFiltered || tf.filtered || bf.filtered;
+      cells.push({
+        title: tf.text.slice(0, 8) || fallback.cells[i].title,
+        body: bf.text.slice(0, 24) || fallback.cells[i].body,
+      });
+    }
+    const hf = filterDarkPatterns(h);
+    return {
+      value: {
+        headline: hf.text.slice(0, 12) || fallback.headline,
+        cells: cells as DetailGridCopy['cells'],
+      },
+      source: 'groq',
+      filtered: anyFiltered || hf.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---- reviews (S10) --------------------------------------------------------
+//
+// KFTC CRITICAL: review quotes are NEVER Groq-generated. Only the headline
+// passes through Groq. The renderer paints three placeholder cards using
+// dict-supplied placeholder text until Sprint 7-Lib populates real review
+// data from ctx.
+
+export interface ReviewsCopy {
+  headline: string;
+  /** Placeholder card text — repeated across all three cards until product
+   *  data supplies real reviews. */
+  placeholderQuote: string;
+  placeholderAttribution: string;
+}
+
+export async function generateReviewsCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<ReviewsCopy>> {
+  const fallback: ReviewsCopy = {
+    headline: STRINGS.reviews.headline,
+    placeholderQuote: STRINGS.reviews.placeholderQuote,
+    placeholderAttribution: STRINGS.reviews.placeholderAttribution,
+  };
+
+  const prompt = [
+    `Write a Korean headline for the "reviews" section.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    `Return JSON exactly: {"headline":"..."}.`,
+    `headline: under 14 Korean characters (e.g. 실제 사용자 후기, 고객 후기).`,
+    `Plain factual tone. No emoji. Respond with JSON only.`,
+  ].join('\n');
+
+  const raw = await callGroq(prompt, 80);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { headline?: unknown } = JSON.parse(jsonMatch[0]);
+    const h = typeof parsed.headline === 'string' ? parsed.headline : '';
+    const hf = filterDarkPatterns(h);
+    return {
+      value: {
+        headline: hf.text.slice(0, 14) || fallback.headline,
+        // Placeholder quote/attribution are invariant — never sourced from Groq.
+        placeholderQuote: fallback.placeholderQuote,
+        placeholderAttribution: fallback.placeholderAttribution,
+      },
+      source: 'groq',
+      filtered: hf.filtered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
 // ---- benefits (S11) -------------------------------------------------------
 
 export interface Perk {

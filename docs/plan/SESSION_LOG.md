@@ -1,3 +1,107 @@
+## 2026-05-13 Sprint 7-M2 Phase 2-b-3-a — 감각 트랙 5 렌더러 (S6·S9·S10 완전 dedicated) ✅
+
+### 본 세션 성격
+
+직전 Sprint 7-M2 STEP A (ko.json dict migration, b8d4938) 완료 직후 동일 turn 연속 진입. v3.1 매트릭스 26 섹션 ids 중 S6/S9/S10 감각·프리미엄 트랙 5개를 dedicated 렌더러로 격상. STEP A로 fallback inline 0 패턴이 정착해 본 phase 신규 fallback은 *dict 키 추가 + STRINGS 참조*만으로 작성.
+
+### 본 세션 산출물 (8 파일 변경, 신규 5 + 확장 3)
+
+| 파일 | LOC | 골격 | 역할 |
+|---|---|---|---|
+| `material.ts` | 122 | S9 | 헤드라인 + macro shot + caption + 원산지/인증 2 카드 (KFTC: 모두 placeholder-safe) |
+| `styledShot.ts` | 111 | S6 | 헤드라인 + 3 stacked lifestyle shots + mood-led 캡션 ×3 |
+| `philosophy.ts` | 100 | S10 | 헤드라인 + editorial paragraph (wrap) + signature + brand accent stripe |
+| `detail.ts` | 142 | S10 | 헤드라인 + 2x2 macro detail grid (white cards, shared image per cell) |
+| `reviews.ts` | 121 | S10 | 헤드라인 + 3 placeholder review cards (KFTC: 동일 placeholder × 3, 5-dot neutral icon strip) |
+| `section-copy.ts` | +320 (확장) | (확장) | 5 신규 Groq 헬퍼 |
+| `strings.ko.json` | +43 (확장) | (확장) | material/styledShot/philosophy/detail/reviews 슬롯 |
+| `index.ts` | +10 (확장) | (확장) | 5 신규 registry 등록 |
+
+### 5 신규 Groq 헬퍼 (section-copy.ts)
+
+각 helper는 동일 패턴 유지 (JSON output + filterDarkPatterns + STRINGS dict fallback):
+
+- `generateMaterialCopy` — `{headline, originLabel, macroCaption, certLine}` (KFTC strict: origin/cert fabricate 금지 prompt)
+- `generateStyledShotCopy` — `{headline, captions: [3]}` (mood-led, no claims)
+- `generatePhilosophyCopy` — `{headline, paragraph, signature}` (3 sentences, 의학·과학 효능 차단)
+- `generateDetailGridCopy` — `{headline, cells: [{title, body}] × 4}` (tactile detail)
+- `generateReviewsCopy` — `{headline, placeholderQuote, placeholderAttribution}` (KFTC critical: 헤드라인만 Groq, quote/attribution는 invariant dict)
+
+### KFTC Discipline — 감각/프리미엄 트랙 핵심 안전 장치
+
+본 phase 5 렌더러 중 3개가 *법적 노출 위험 영역*. KFTC 규정에 따라:
+
+**reviews.ts** (가장 엄격):
+- Groq 응답으로부터 *quote 0건 수신* — JSON schema에서 placeholder fields 제외
+- 3 카드 모두 동일 placeholder quote 「후기 영역은 등록 후 실제 데이터로 채워집니다.」
+- Attribution은 「사용자 1 / 2 / 3」 numeric index로 placeholder 본질 명시
+- 5-dot star strip은 *neutral grey* (별점 fabricate 0)
+
+**material.ts**:
+- originLabel · certLine 둘 다 dict placeholder 「원산지: 상세 페이지 참조」 / 「인증 정보: 상세 페이지 참조」
+- Groq prompt 명시: "DO NOT fabricate countries or regions / cert numbers"
+
+**philosophy.ts**:
+- prompt 명시: "DO NOT make medical, scientific, or efficacy claims"
+- restrained editorial tone, value-led (craft/longevity 위주)
+
+### 골격 dedicated 커버리지 변화
+
+| 골격 | 변경 전 | 변경 후 |
+|---|---|---|
+| S6 | 4/5 | **5/5 ✅ 완전** (styledShot 추가) |
+| S9 | 3/4 | **4/4 ✅ 완전** (material 추가) |
+| S10 | 4/6 | **6/6 ✅ 완전** (philosophy + detail + reviews 추가) |
+
+**완전 dedicated 골격 누적 9개**: S1 · S2 · S4 · S6 · S7 · S8 · S9 · S10 · S11
+**dedicated 24 / 26 섹션 ids** (Phase 1 + 2-a + 2-b-1 + 2-b-2 + 2-b-3-a 합산, 92%)
+**placeholder 2 / 26 잔여**: specTable · specifications · package (Phase 2-b-3-b 대상, 1 sub-phase로 종료 가능)
+
+### Phase 2-b-3-a + STEP A 의 시너지 — fallback inline 0 패턴 정착
+
+STEP A 효과 검증:
+- 본 phase 도입 신규 fallback ~28건 — *모두 dict 키 추가만으로 작성, inline 0건*
+- generateReviewsCopy의 placeholderQuote/placeholderAttribution는 invariant fallback으로 *Groq override 불가* — STEP A의 STRINGS export 패턴이 이런 KFTC-strict 케이스를 안전하게 지원
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 정상 빌드 ✅
+- `python3 scripts/verify-korean-dict.py` ✅ (strings.ko.json: 139 strings, 0 typo)
+- 신규 5 renderer 파일 inline 한글 sentinel 0건 ✅
+- 신규 5 renderer 파일 일반 한글 inline 0건 ✅ (전부 STRINGS / copy.value 참조)
+- section-builder가 모든 SkeletonId 정상 dispatch ✅
+- 작업원칙 #38 strict 준수 — 이미지 *생성* 0건, *변환* (Cloudinary fetch) + *합성* (Sharp Buffer) ✅
+
+### 본 세션 commit (1건 예정)
+
+1. `<sha>` feat(automation): add 5 sensory section renderers (Sprint 7-M2 Phase 2-b-3-a)
+
+### 적용된 작업원칙
+
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- #21 사전 점검 통과 (HEAD b8d4938 = STEP A push)
+- #24 sprint 단위 commit + push 한 turn 안에 종료 + sub-phase 분할로 #24 보호
+- #26 IA 점검 — lib only, 라우트 0
+- #27 외부 컨트랙트 보존 ✅ (registry에 entry 추가만, 기존 entry 변경 0)
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — *코드 inline 0건* (STEP A 패턴 효과)
+- #29 (b) MD 갱신 — temp file Write + Python prepend 패턴
+- #31 SESSION_LOG ~728 + 본 entry ~85 = ~813 (T1 1000 미달, 안전)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #35 본 phase는 STEP A의 *효과 검증* turn — 신규 fallback inline 0건 도달 ✅
+- #36 main push 후 verify-vercel-deploy.sh --wait — 사용자 승인 후
+- #38 Production runtime static assets only ✅
+- #39 CTI inference entry point ✅
+- #40 Designer Sense 보존 — reviews placeholder 패턴이 KFTC 강제력 + designer override 가능성 동시 확보
+
+### 다음 = Sprint 7-M2 Phase 2-b-3-b (B2B + S3 cleanup, 3 렌더러로 100% 완성)
+
+3 잔여 placeholder: specTable / specifications / package. 본 sub-phase 완료 시 dedicated **26/26 ✅ 100%** — 12 골격 모두 완전 dedicated.
+
+---
+
 ## 2026-05-13 Sprint 7-M2 STEP A — ko.json dict migration (작업원칙 #35 강제 적용) ✅
 
 ### 본 세션 성격

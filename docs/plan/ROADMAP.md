@@ -14,9 +14,83 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-b-3-a 감각 트랙 5 렌더러) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-b-3-b — 100% 완성, 3 렌더러) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 Phase 2-b-3-a 완료 (감각 트랙 5 렌더러):
+- src/lib/automation/section-renderers/material.ts (S9, KFTC origin/cert placeholder)
+- src/lib/automation/section-renderers/styledShot.ts (S6, 3 stacked shots)
+- src/lib/automation/section-renderers/philosophy.ts (S10, editorial paragraph)
+- src/lib/automation/section-renderers/detail.ts (S10, 2x2 macro grid)
+- src/lib/automation/section-renderers/reviews.ts (S10, KFTC critical
+  placeholder × 3, 사용자 1/2/3 attribution, neutral 5-dot icon)
+- section-copy.ts 5 신규 Groq 헬퍼 + strings.ko.json 5 슬롯
+- S6/S9/S10 모두 완전 dedicated, dedicated 24/26 ids 도달
+
+본 세션 진입 작업 = Sprint 7-M2 Phase 2-b-3-b (100% 완성, 3 렌더러):
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  특히 Phase 2-b-3-a commit이 main에 머지/배포됐는지 verify-vercel-deploy.sh로 확인
+
+STEP 7-M2 Phase 2-b-3-b — 3 렌더러 (B2B + S3 cleanup)
+  대상 파일 신규:
+    - specTable.ts (S12) — full-width 다열 spec table (S1의 spec 보다 detail
+      한 단계 위, 측정값 + 단위 + 카테고리 표준값 표기, KFTC: 측정값
+      fabricate 0)
+    - specifications.ts (S12) — regulation + compliance grid (인증번호 /
+      KC mark / 안전기준 표기, KFTC: 인증번호 fabricate 0 — 모두
+      placeholder, 디자이너 verify 의무)
+    - package.ts (S3) — package unboxing sequence (3-step horizontal flow
+      또는 vertical sequence, 박스 → 내용물 → 사은품)
+
+  section-copy.ts에 3 신규 Groq 헬퍼 추가:
+    - generateSpecTableCopy ({headline, columns: [3-4 col labels], rows: [...]})
+    - generateSpecificationsCopy ({headline, regulations: [{label, value}] × 4})
+    - generatePackageCopy ({headline, steps: [{label, caption} × 3]})
+
+  중요 — Phase 2-b-3-a 패턴 그대로 *신규 fallback inline 한글 0건*:
+    1. strings.ko.json에 3 신규 슬롯 추가 (specTable/specifications/package)
+    2. section-copy.ts의 3 신규 헬퍼는 STRINGS.{slot} 참조만 사용
+    3. ctx 보간이 필요하면 strings.ts 헬퍼 또는 TS template literal
+
+  KFTC discipline:
+    - specTable: 측정값 fabricate 0, 카테고리 표준 컬럼은 "상세 페이지 참조"
+      placeholder
+    - specifications: 인증번호 fabricate 0, KC mark / 안전기준 placeholder
+    - package: 사은품·번들 placeholder 유지 (수량 fabricate 0)
+
+  S3 / S12 골격 진입 후 dedicated 커버리지 변화:
+    - S3: 5/6 → 6/6 ✅ 완전 (package 추가)
+    - S12: 3/5 → 5/5 ✅ 완전 (specTable + specifications 추가)
+  완전 dedicated 골격 누적: 9 → 11 → 12 (S3/S12 추가, **전 골격 완전**)
+  dedicated 커버리지: 24/26 → 26/26 ✅ **100% 도달**
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- Phase 2-b-3-a commit이 main에 도달했는지 verify-vercel-deploy.sh로 검증
+- SESSION_LOG.md ~832줄 (T1 1000 미달, 안전)
+- ko.json migration 정착 — Phase 2-b-3-b fallback은 dict 키 추가만으로 작성
+
+다음 = Sprint 7-M2 Phase 2-c (lifestyle-picker — LifestyleAsset 30일 cooldown
++ 태그 매칭 알고리즘) → Sprint 7-M2 Phase 3 (/api/products/[id]/generate-detail
+route + Diagnosis 연동 + Supabase Storage 업로드).
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward
+merge 사용자 위임.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-b-3-a 감각 트랙 5 렌더러)~~ ✅ COMPLETED
+
+> Phase 2-b-3-a (감각 트랙 5 렌더러) completed on 2026-05-13. S6 / S9 / S10 완전 dedicated. dedicated 24/26 섹션 ids. Phase 2-b-3-b = active handoff above.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,

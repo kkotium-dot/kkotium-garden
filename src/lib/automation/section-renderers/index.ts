@@ -32,6 +32,11 @@ import { seasonalHookRenderer } from './seasonalHook';
 import { optionsRenderer } from './options';
 import { eventDetailsRenderer } from './eventDetails';
 import { benefitsRenderer } from './benefits';
+import { materialRenderer } from './material';
+import { styledShotRenderer } from './styledShot';
+import { philosophyRenderer } from './philosophy';
+import { detailRenderer } from './detail';
+import { reviewsRenderer } from './reviews';
 
 const REGISTRY: Record<string, SectionRenderer> = {
   // Phase 1 (S2 workhorse)
@@ -57,6 +62,12 @@ const REGISTRY: Record<string, SectionRenderer> = {
   options:         optionsRenderer,
   eventDetails:    eventDetailsRenderer,
   benefits:        benefitsRenderer,
+  // Phase 2-b-3-a (sensory track: S6 / S9 / S10)
+  material:        materialRenderer,
+  styledShot:      styledShotRenderer,
+  philosophy:      philosophyRenderer,
+  detail:          detailRenderer,
+  reviews:         reviewsRenderer,
 };
 
 /** Look up the renderer for a section id. Returns the placeholder
