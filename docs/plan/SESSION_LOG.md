@@ -1,3 +1,110 @@
+## 2026-05-12 Session E-2 Phase 1 (/automation 관제 페이지 + 26-entry registry 골격) ✅
+
+### 본 세션 성격
+- Session E-1 (KkottiBriefingWidget CTA hotfix) 직후 사용자 보고 *IA 재설계 통합 설계안* 합의 후 새 작업 순서로 진입.
+- 원래 계획 = Session E-2 본 작업은 6-B + 6-C + 공급사 누적 평가. 본 세션에서 *IA 재설계 통합안* 합의 후 작업 순서 재정렬: Phase 1 = /automation 골격 → Phase 2 = 4-Section dashboard → Phase 3 = 6-B 등.
+- 근거: /automation이 *모든 다음 자동화의 등록 지점* — 가장 먼저 만들어두면 6-B/6-C/공급사 작업 시 별도 IA 작업 0건으로 자동 흡수.
+
+### 시작 직전 상태
+- HEAD `c70dc5d` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} 보존 ✅
+- MD 줄 수: PROGRESS 842 / ROADMAP 342 / SESSION_LOG 1418 (T2 1500 미달)
+- Latest prod deploy SHA == HEAD ✅
+- verify-vercel-deploy.sh OK ✅
+
+### 본 세션 작업
+
+#### A. IA 재설계 통합 설계안 (사용자 합의 후 진입)
+- 9 섹션 사이드바 / 6 위젯 대시보드 → *4-Section dashboard + 6-섹션 사이드바 + /automation 관제* 통합 IA.
+- Sprint 6 ~ 9의 *모든 계획 기능* (6-B / 6-C / 공급사 / 6-E / 6-D / Sprint 7 P0+P1+Track B / Sprint 8 P2+Private / Sprint 9 P3) 어디에 어떻게 흡수되는지 매핑 (PROGRESS 헤더 + 본 entry 다음 Phase 계획 참조).
+- 본 IA 적용 후 Sprint 7~9 신규 사이드바 항목 +0개, 신규 위젯 +0개 (모두 기존 슬롯 흡수).
+
+#### B. Phase 1 — /automation 골격 (8 파일)
+- `src/lib/automation-registry.ts` (신규, 383줄) — 26 entries (5 active / 14 pending / 5 hold / 2 preparing). Sprint 6 ~ 9 모든 자동화 single source of truth.
+- `src/lib/i18n/automation-strings.ko.json` (신규, 139줄) — 한국어 라벨 + 설명 사전 (작업원칙 #35 한글 사전 분리).
+- `src/app/api/automation/registry/route.ts` (신규, 131줄) — GET 엔드포인트. static 메타 + live signal 머지:
+  - inventory-poll lastRun ← latest `InventorySnapshot.polledAt`
+  - 5 Discord 채널 ← env presence (`envOk` flag, 미설정 시 status → pending)
+  - alimtalk D+3 / D+30 ← solapi env + 지난 30일 주문수 ≥ 50 → auto-active
+- `src/app/automation/page.tsx` (신규, 263줄) — 클라이언트 SWR fetch + 4 pill summary + 9 group 렌더.
+- `src/components/automation/StatusBadge.tsx` (신규, 43줄) — pill component.
+- `src/components/automation/AutomationRow.tsx` (신규, 167줄) — 단일 행 + 인라인 drill (모달 X — Phase 1 단순화).
+- `src/components/automation/AutomationGroup.tsx` (신규, 53줄) — 그룹 헤더 + 행 묶음.
+- `src/components/layout/Sidebar.tsx` 수정 — OPS 섹션에 `자동화 관제` (`Workflow` 아이콘) 항목 추가.
+
+#### C. 알려진 26 자동화 등록 (사이드바 노출 X, /automation 진입 후 확인)
+- 재고 (2): `inventory-poll` (active, 6-A) / `naver-oos-flip` (hold)
+- 가격 (2): `price-poll` (pending, 6-B) / `margin-recalc` (pending)
+- 경쟁 + 공급사 (2): `competitor-poll` (pending, 6-C) / `supplier-score` (pending)
+- SEO + 노출 (4): `golden-window` (pending, P0-B) / `pareto-recalc` (pending, P0-C) / `category-1page` (pending, P1-A) / `tag-dictionary` (pending, P1-C)
+- 신뢰도 (2): `good-service-track` (active) / `talktalk-monitor` (pending)
+- 알림 발송 (7): 5 Discord active (KKOTTI_RECOMMEND / STOCK_ALERT / PRICE_CHANGE / KKOTTI_SCORE / OPS_REPORT) + alimtalk D+3 (hold) + alimtalk D+30 (hold)
+- 기존 cron (2): `cron-daily` (active) / `cron-weekly` (active)
+- Sprint 8 Private (3 hold): auto-order / invoice / returns
+- Sprint 9 P3 (2 preparing): roas-tracking / home-proxy
+
+### 검증
+- TSC `npx tsc --noEmit` 0 errors ✅
+- Production build `npm run build` 27/27 prerender (+/automation 6.89 kB static) ✅
+- 한글 sentinel grep 0 신규 매칭 (8개 신규 파일) ✅
+- Production smoke (push 후):
+  - `GET /automation` HTTP 200 ✅
+  - `GET /api/automation/registry` HTTP 200 + valid JSON (26 automations + summary + context) ✅
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production 0e1fb3f (state=REGISTERED) ✅
+
+### 본 세션 학습 (영구 기록)
+1. **워크트리 `.env.local` 누락 시 `npm run build` 실패 패턴** — Build의 page data collection 단계에서 `/api/upload` route의 `supabaseKey is required` 에러 발생. 해결: `ln -s /Users/jyekkot/Desktop/kkotium-garden/.env.local .env.local` (worktree-internal, gitignore된 worktree 경로 안이라 main 미영향). 본 패턴 Session E-1과 동일 — *워크트리 새로 만들 때마다 .env.local 심볼릭 링크 + .claude/launch.json 생성 의무 (`#33-1` 후보)*.
+2. **Registry-driven IA 패턴의 가치** — 모든 자동화를 한 사전 파일(`automation-registry.ts`)로 통일 → 새 작업 시 행 1줄 추가만으로 /automation 자동 등록 + i18n 사전에 키 추가만. 이후 Phase 3 (6-B 가격 변동) 작업 시 lib + cron path + registry 행 1줄 = 사용자에게 자동으로 가시화. 본 패턴은 *Sprint 7~9 누적 시 IA 노이즈 0* 보장의 핵심.
+3. **`kk-spin` 클래스 vs `animate-spin`** — globals.css에 `kk-spin` 정의 0 (기존 코드는 Tailwind `animate-spin` 사용). 본 세션 첫 시도에서 `kk-spin` 사용 → 빌드는 통과 (CSS unknown class는 에러 X)지만 회전 없음 → `animate-spin`으로 정정. 향후 신규 컴포넌트에서 spinner는 Tailwind `animate-spin` 사용.
+
+### 검증 한계 (사용자 보고 의무 — 정직)
+- **alimtalk auto-active 검증 불가** — 본 세션 production에서 `last30DaysOrders = 0` (실 주문 0건). 솔라피 키도 미설정. 사용자가 솔라피 키 입력 + 월 50건+ 도달 시 자동 검증됨.
+- **`naver-oos-flip` 상태 시각 검증 불가** — alerts 0건 + opt-in 모달이 LowStockAlertWidget에서만 trigger. 실 OOS 발생 시 검증.
+- **Live `lastRun` 검증** — inventory-poll lastRun은 production에서 null로 반환 (DRAFT 상품 0개 → polling 대상 0). 사용자 첫 실 도매꾹 상품 등록 후 자동 채워짐.
+- **사용자 시각 검증 권장** — https://kkotium-garden.vercel.app/automation 직접 진입해 (a) 4 pill summary 가시성 / (b) 9 그룹 배치 / (c) 행 클릭 drill 펼침 / (d) Sidebar OPS 섹션 `자동화 관제` 진입 동선 확인.
+
+### Commit + Push
+- `0e1fb3f` feat(automation): Phase 1 — /automation control page + 26-entry registry skeleton (+1,182 / -1, 8 파일)
+- worktree → main: `git merge claude/eloquent-wu-919f72 --ff-only` (ff)
+- push `c70dc5d..0e1fb3f main -> main`
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production 0e1fb3f (state=REGISTERED) ✅
+
+### 적용된 작업원칙
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 통과 ✅
+- **#22** production smoke (`/automation` 200 + API JSON 검증) — 시각 검증은 사용자 환경에서 (보고 의무 충족)
+- **#24** 한 turn 안에 8 파일 + 검증 + commit + push + verify + MD 갱신
+- **#26** IA 점검 — Sidebar OPS 섹션 추가 (단독 IA 결정 회피하고 사용자 합의 IA 통합 설계안 따름)
+- **#27** 외부 컨트랙트 보존 — 기존 라우트 / API / DB 스키마 변경 0
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 6+1 규칙:
+  - (a) Edit 한글 다량 newText 0건
+  - (b) MD 갱신 = Python 안전 삽입 패턴 (본 entry)
+  - (c) API route / 컴포넌트 한글 const → 사전 분리
+  - (d) 셸 명령 한글 0건
+  - (e) sentinel grep 0 신규 매칭
+  - (e+, e++) 닉네임 호명 0건
+- **#31 (a)** SESSION_LOG 1418 + 본 entry → ~1530 (T2 1500 도달). 다음 Phase 2 진입 시 자동 분할 트리거.
+- **#32** TSC + npm run build 모두 통과 ✅
+- **#33** useSearchParams 추가 0건
+- **#34** 본 세션 신규 발견 잔재 0건
+- **#35** 한글 사전 분리 패턴 — `automation-strings.ko.json` (139줄, NFC 정상, FFFD 0건) ✅
+- **#36** push 후 `verify-vercel-deploy.sh --wait` exit 0 (github-deployments path) ✅
+
+### 본 세션 commit
+1. `0e1fb3f` feat(automation): Phase 1 — /automation control page + 26-entry registry skeleton
+2. (본 entry) docs(plan): record Session E-2 Phase 1 + Phase 2 handoff
+
+### 다음 세션 (Session E-2 Phase 2) 작업 = 4-Section dashboard 재편
+1. KkottiBriefingWidget → Section 1 Hero 진화 (행동 단 1개 알고리즘)
+2. Section 2 Inbox 통합 — LowStockAlertWidget 흡수 + 향후 6-B/6-C/P0-B/P0-C 알림 자동 합류
+3. Section 3 (정원 건강) 3 카드 — 오늘 매출 + 효자 상품 TOP 5 (P0-C foundation) + GoodService/Review 작은 카드 흡수
+4. Section 4 (잠재력) 3 카드 — 등록 준비 + 꼬띠 4모드 (6-D foundation 활용) + 좀비 부활소
+5. 사이드바 단순화는 Phase 2 후 별도 사용자 결정 게이트로 분리 (#26 IA 결정 사용자 위임)
+6. 검증 + commit + push + verify-vercel-deploy.sh --wait
+7. MD 갱신 + Phase 3 (6-B 가격 변동 백엔드) 인계
+
 ## 2026-05-12 Session E-1 (대시보드 KkottiBriefingWidget CTA dead route hotfix) ✅
 
 ### 본 세션 성격
