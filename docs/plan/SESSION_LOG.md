@@ -1,3 +1,91 @@
+## 2026-05-13 Sprint 7-M1 — 썸네일 자동화 4변형 (v3.1 FINAL Smart Asset Workflow) ✅
+
+### 본 세션 성격
+
+직전 Sprint 7-Skel 12 골격 spec 완료 (a29e8c5 + 09a6b48, main fast-forward merge 후 production deploy state=success 검증) 직후 동일 turn 연속 진입. v3.1 패키지 Section 5 (Claude 자원 활용 맵 — Skills canvas-design / theme-factory) + Section 6 (코드 구조) 따라 thumbnail 4변형 자동 생성기를 6 신규 파일 + 1 commit으로 종료.
+
+### 본 세션 산출물 (6 파일, 1,424 LOC)
+
+| 파일 | LOC | 역할 |
+|---|---|---|
+| `src/lib/automation/skeleton-matcher.ts` | 166 | SKELETONS 컬렉션 consuming 8축 점수화, ConceptTone → SkeletonId + ranked list + ambiguous flag |
+| `src/lib/automation/sharp-composite.ts` | 233 | Sharp Buffer 빌딩블록 (canvas/fit/SVG overlay/badge/vignette/jpeg export, xmlEscape 안전) |
+| `src/lib/automation/cloudinary-pipeline.ts` | 180 | Cloudinary fetch-mode URL builder, **업로드 없음** (작업원칙 #38 strict), 4 named preset |
+| `src/lib/automation/copy-writer.ts` | 270 | Groq Llama 3.1 8B + 다크패턴 정규식 필터 6 규칙 + retry + 결정형 fallback |
+| `src/lib/automation/thumbnail-generator.ts` | 395 | 4변형 orchestrate (clean/price/badge/lifestyle), 독립 renderer, VARIANT_HINTS 매핑 |
+| `src/app/api/thumbnail/[sku]/route.ts` | 180 | POST endpoint, Product 조회 + Diagnosis conceptTone fetch + base64 응답 |
+
+### Skeleton-matcher scoring 알고리즘 (legacy if-tree → SKELETONS 기반 점수화)
+
+기존 `concept-tone-inference.ts` 안의 inline `matchSkeleton` if-tree를 SKELETONS 매트릭스 기반 점수화로 격상.
+
+- 입력: ConceptTone (8축)
+- 각 axis: matchSignature가 `[]` or `undefined` → wildcard 0.5 / `includes(input)` → match 1.0 / 미일치 → mismatch 0.0
+- 총점: sum / 8 × 100 (소수 1자리)
+- Tie-break: FALLBACK_ORDER (S2 → S1 → S5 → ...)
+- Ambiguous: top 2 score 차이 5pp 미만 → designer review prompt 권장
+
+기존 `pickSkeletonId(tone)` convenience export로 후방 호환. legacy if-tree는 보존 (fallback symmetry).
+
+### 4변형 매트릭스 + 골격 권장 (VARIANT_HINTS)
+
+| 변형 | 합성 패턴 | 권장 골격 |
+|---|---|---|
+| clean | 흰배경 padded fit + 상품명 hook + 골격 accent stripe | S1 / S4 / S7 / S12 (white photoStyle) |
+| price | 골격 secondary 색 bg + 상품 이미지 + 가격 badge (Groq) | S5 (vivid 가성비) |
+| badge | 흰배경 padded fit + 카테고리 badge bottom (Groq) | S3 / S8 / S11 (gift/event) |
+| lifestyle | 라이프스타일 backdrop + 상품 overlay + bottom vignette + caption (Groq) | S2 / S6 / S9 / S10 (lifestyle photoStyle) |
+
+### 다크패턴 필터 6 규칙 (KFTC 2025 fair-trade gate)
+
+1. scarcity — `마감 임박` / `품절 임박` / `단 N개` / `선착순 N`
+2. anchor-discount — `원래 가격` / `정상가` / `할인 N %` / `즉시 할인`
+3. superlative — `최저가` / `최고` / `1위` / `독점` / `유일`
+4. authenticity — `100 % 정품` / `100 % 공식`
+5. coupon-stack — `쿠폰 중복` / `적립 중복` / `혜택 폭탄`
+6. emoji — Unicode 1F300-1FAFF + 2600-27BF (작업원칙 #29 + 브랜드 가이드)
+
+필터 hit 시 retry 1회 (하드닝 프롬프트 "do not use X") → 두 번째도 fail 시 결정형 fallback (productName tokens).
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 28/28 routes + `/api/thumbnail/[sku]` ƒ Dynamic 등록 ✅
+- 코드 내 한글 0건 (6 파일 모두 작업원칙 #29 (c) 영문) ✅
+- 작업원칙 #38 strict 준수 — 이미지 *생성* API 0회, *변환* (Cloudinary fetch URL) + *합성* (Sharp local Buffer) 만 ✅
+- worktree 절대 경로 혼동 0회 (본 turn 누적 0건) ✅
+
+### 본 세션 commit (1건)
+
+1. `9bedaaf` feat(automation): add thumbnail generator + skeleton matcher (Sprint 7-M1)
+
+### Push 정책 정직 보고 — main 직접 push 차단 재발
+
+Sprint 7-Skel turn에서 처음 발생한 harness 정책 (main direct push deny)이 본 turn에도 재현 예상. 직전과 동일하게 `claude/thirsty-rubin-2e231d` branch push 후 사용자 fast-forward merge 경로 권장. 정직 보고: 7-Diag MVP turn (4 commit `0dd3bbd`~`56bb2fc`)은 main 직접 push 통과한 반면 본 worktree에서는 차단되는 비대칭이 본 세션도 유지.
+
+### 적용된 작업원칙
+
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- #21 사전 점검 통과 (HEAD 09a6b48 == origin/main = production ✅)
+- #24 sprint 단위 commit + push 한 turn 안에 종료 (단, main push는 사용자 위임)
+- #26 IA 점검 — 신규 *lib + API route only*, 사이드바 변경 0 (`/api/thumbnail/[sku]` = 시스템 호출용)
+- #27 외부 컨트랙트 보존 — 기존 lib / API 변경 0
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — 코드 0 / MD entry는 안전 패턴
+- #31 SESSION_LOG 785 + 본 entry ~120 = ~905 (T1 1000 미달)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #36 main push 후 `verify-vercel-deploy.sh --wait` 사용자 승인 후 진행 예정
+- #38 Production runtime static assets only — 본 sprint는 Cloudinary 변환 + Sharp 합성만 ✅
+- #39 CTI inference entry point — skeleton-matcher가 ConceptTone consume의 *공식 진입점*
+- #40 Designer Sense 보존 — `overrideSkeletonId` body param으로 디자이너 1클릭 골격 교체, `ambiguous` flag로 review UI surface
+
+### 다음 세션 = Sprint 7-M2 (5섹션 상세페이지 빌더)
+
+ROADMAP.md ACTIVE 메시지 (본 commit에서 prepend) 그대로 적용.
+
+---
+
 ## 2026-05-13 Sprint 7-Skel — 12 골격 SkeletonSpec 정의 (v3.1 FINAL Smart Asset Workflow) ✅
 
 ### 본 세션 성격

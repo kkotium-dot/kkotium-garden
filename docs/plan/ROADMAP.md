@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-13 Sprint 7-Skel 12 골격 spec 완료 (a29e8c5, branch push 후 main merge 사용자 승인 대기)
-> **HEAD**: a29e8c5 (worktree) / origin/main 56bb2fc | **TSC**: 0 errors | **빌드**: 28/28 OK | **배포**: https://kkotium-garden.vercel.app (main에 본 commit 머지 후 verify-vercel-deploy.sh --wait 예정)
+> **최종 업데이트**: 2026-05-13 Sprint 7-M1 썸네일 자동화 4변형 완료 (9bedaaf, branch push 후 main merge 사용자 승인 대기)
+> **HEAD**: 9bedaaf (worktree) / origin/main 09a6b48 (Sprint 7-Skel 배포 완료) | **TSC**: 0 errors | **빌드**: 28/28 + /api/thumbnail/[sku] ƒ Dynamic OK | **배포**: https://kkotium-garden.vercel.app
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
@@ -14,9 +14,87 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M1: 썸네일 자동화 4변형) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2: 5섹션 상세페이지 빌더) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M1 썸네일 자동화 4변형 완료 (commit 9bedaaf):
+- src/lib/automation/skeleton-matcher.ts (SKELETONS 8축 점수화)
+- src/lib/automation/sharp-composite.ts (Buffer 빌딩블록 8개)
+- src/lib/automation/cloudinary-pipeline.ts (fetch-mode URL builder)
+- src/lib/automation/copy-writer.ts (Groq + 다크패턴 6 규칙)
+- src/lib/automation/thumbnail-generator.ts (4변형 orchestrator)
+- src/app/api/thumbnail/[sku]/route.ts (POST endpoint)
+- 1,424 LOC, TSC 0, build 28/28 + ƒ /api/thumbnail/[sku], 코드 한글 0건
+
+본 세션 진입 작업 = Sprint 7-M2 (5섹션 상세페이지 빌더):
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  특히 9bedaaf가 main에 머지/배포됐는지 verify-vercel-deploy.sh로 확인
+
+STEP 7-M2 — 5섹션 가변 상세페이지 빌더
+  대상 파일 신규:
+    - src/lib/automation/section-builder.ts (entry: 골격별 sections[] consume → 합성)
+    - src/lib/automation/lifestyle-picker.ts (LifestyleAsset 30일 cooldown + 태그 매칭)
+    - src/lib/automation/section-renderers/ (폴더, 섹션 id별 renderer)
+        ├── hero.ts
+        ├── problem.ts
+        ├── solution.ts
+        ├── usage.ts
+        ├── cta.ts
+        ├── spec.ts (S1/S3/S6 공유)
+        ├── story.ts (S3/S6/S10 공유)
+        ├── corePerformance.ts (S4)
+        ├── comparison.ts (S4/S7)
+        ├── warranty.ts (S4/S7)
+        ├── optionIntro.ts (S5)
+        ├── styledShot.ts (S6)
+        ├── technology.ts (S7)
+        ├── clinical.ts (S7)
+        ├── seasonalHook.ts (S8)
+        ├── product.ts (S3/S8)
+        ├── options.ts (S8)
+        ├── material.ts (S9)
+        ├── shipping.ts (S1/S9/S12 공유)
+        ├── philosophy.ts (S10)
+        ├── detail.ts (S10)
+        ├── reviews.ts (S10)
+        ├── eventDetails.ts (S11)
+        ├── benefits.ts (S11)
+        ├── specTable.ts (S12)
+        ├── package.ts (S3)
+        └── specifications.ts (S12)
+    - src/app/api/products/[id]/generate-detail/route.ts (POST: 단일 상품 상세페이지 합성)
+
+  각 섹션 renderer = (skeleton: SkeletonSpec, section: SectionSpec, ctx: ProductContext, copy: SectionCopy) => Promise<Buffer>.
+  section-builder는 골격의 sections[] 순회 + 각 renderer 호출 + 수직 stacking 합성 (Sharp).
+  copy-writer.ts에 section-specific slot 추가 (heroTitle / problemBullets / solutionBenefits 등).
+
+  Skills frontend-design / canvas-design 활용 권장 (Artifacts 검수 위젯 = Sprint Y-2 DetailPagePreview).
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- Sprint 7-M1 commit 9bedaaf가 main에 도달했는지 verify-vercel-deploy.sh로 검증
+- 26+ 섹션 renderer 일괄 생성 시 작업원칙 #24 (한 turn 안에) 무리하지 말고 sub-phase 분할 권장:
+    Phase 1: section-builder.ts + 5 핵심 렌더러 (hero/problem/solution/usage/cta = S2 주력)
+    Phase 2: 나머지 21 렌더러 + lifestyle-picker
+    Phase 3: /api/products/[id]/generate-detail route + Diagnosis 연동
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward merge 사용자 위임.
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M1: 썸네일 자동화 4변형)~~ ✅ COMPLETED
+
+> Sprint 7-M1 썸네일 4변형 completed on 2026-05-13 (commit 9bedaaf). 6 신규 파일 1,424 LOC, npm run build 28/28 + ƒ /api/thumbnail/[sku], 다크패턴 6 규칙 + 작업원칙 #38 strict 준수.
+> The message below is preserved for git history. Use the ACTIVE message above.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
