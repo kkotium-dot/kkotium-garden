@@ -1,3 +1,145 @@
+## 2026-05-12 Sprint 7 P1 (P1-A 1페이지 + P1-B 금기어 + P1-C 태그사전) + 브라우저 E2E 시각 검증 ✅
+
+### 본 세션 성격
+- Sprint 7 P0-B enhancement 직후 같은 worktree에서 P1 진입. 사용자 명시 강화:
+  - "작업 완료 후 브라우저 테스트 + 실무 워크플로우 검증"
+  - "실질적으로 할 수 없는 작업은 거짓말 없이 요청"
+  - "문제 없을 때만 다음 작업으로 넘어갈 것"
+- 본 세션 = P1 구현 3개 + functional test 2 사이클 + 브라우저 E2E 시각 검증 + 학습 정직 보고.
+- 4 commits (feat + 2 fix + docs) + worktree 혼동 0회 누적 유지.
+
+### 시작 직전 상태
+- HEAD `bdfa7d7` = origin/main 일치 ✅
+- working tree clean ✅
+- MD 줄 수: PROGRESS 203 / ROADMAP 429 / SESSION_LOG 1298 (T1 권고)
+- Vercel deploy OK ✅
+
+### 본 세션 작업
+
+#### A. P1-A 카테고리 1페이지 일치율 검증 (research 6)
+- 신규 `src/lib/naver/category-page-validator.ts`:
+  - Naver Shopping Search API `/v1/search/shop.json` 통합 (display=30, sort=sim)
+  - d1+d2 distribution aggregation + dominant detection threshold 60%
+  - 응답 shape: `{ totalItems, distribution[], dominant{d1,d2,share,count}, error }`
+- `/api/category/suggest` 통합:
+  - **3 modes**: agreed (AI top 일치) / override (dominant 우선 prepend) / synthesized (suggestions 비었을 때 page-1으로 합성)
+  - Response field: `pageValidation: { applied, dominantD1, dominantD2, dominantShare, totalItems, error }`
+  - `synthesized` mode 사용처: AI가 "북유럽 거실 인테리어 소품 데코" 같은 ambiguous name에 실패 시 page-1 다수파 자동 매핑 (사용자 검증으로 80% share → 가구/인테리어>인테리어소품>기타장식용품 자동 채택 확인)
+- **silent bug fix #1** (functional test 발견): `NAVER_CLIENT_ID/_SECRET`이 Open API에 invalid (errorCode 024). DATALAB credentials가 실제 작동. trend-analyzer와 동일 fallback chain 적용.
+
+#### B. P1-B 상품명 금기어 페널티 강화 (research 4)
+- 신규 `src/lib/honey-name-rules.ts`:
+  - `BANNED_WORDS` 15개: 이벤트/할인/특가/최저가/무료배송/쿠폰/적립/오늘만/한정/당일/깜짝/폭탄/대박/핫딜/땡처리
+  - 4 rule codes: banned_word / duplicate_word (3+ times) / special_chars (allowlist 기반) / too_short / too_long (25-50자)
+  - `RuleSeverity`: critical / warning / info
+  - `detectNameRules(name)` returns findings + topSeverity + nameLength
+- `src/lib/honey-score.ts` 통합: `buildHoneyScoreWarnings(name)` 호출 결과를 기존 `warnings[]`에 push (additive, 외부 컨트랙트 보존)
+- 신규 `src/components/products/NameRulesPanel.tsx`:
+  - Inline panel, `role="alert"` for critical / `role="status"` for warning
+  - Tone: critical 빨강 (#FEF2F2) / warning 노랑 (#FEFCE8) / info 파랑 (#EFF6FF)
+  - 5자 미만 시 미노출 (typing 중 noise 방지)
+- `/products/new`에 마운트 (상품명 input 직후, char count 위)
+- /naver-seo는 인라인 편집 구조라 별도 follow-up (사용자 위임)
+
+#### C. P1-C 태그 사전 등재 검증 (research 7)
+- 신규 `src/lib/naver/tag-dictionary.ts`:
+  - Search Ad `keywordstool` API를 dictionary proxy로 활용
+  - 5/request batch, 결과 status: verified / weak / missing / error
+  - **silent bug fix #2** (functional test 발견): Naver는 `<10` 케이스를 volume=10으로 반환 → naive `volume > 0` 체크가 garbage 키워드도 verified 분류. **임계값 조정 30/10**:
+    - verified: volume >= 30 (실 SEO 가치)
+    - weak: 10..29 (낮지만 존재)
+    - missing: < 10 또는 not found
+- 신규 `POST /api/tags/verify` (body `{tags: string[]}`, cap 20)
+- 신규 `src/components/products/TagVerificationPanel.tsx`:
+  - 수동 trigger 버튼 "검증 시작" (Search Ad rate limit 보호)
+  - 색상별 결과 표시 + summary line
+
+#### D. Registry + i18n
+- `category-1page` + `tag-dictionary` pending → active (frequency on-event, no cron)
+- `registry/route.ts`: 두 entry 모두 `lastRun: null` (live state)
+
+### 검증
+
+#### Functional API tests (curl)
+- P1-A 레깅스 (확실 카테고리): `applied: "agreed"` + dominantShare 1.0 (30/30 items) ✅
+- P1-A 인테리어 소품 (AI 실패): `applied: "synthesized"` + dominantShare 0.8 (4/5 items) → 가구/인테리어>인테리어소품>기타장식용품 ✅
+- P1-C 5 태그: verified 3 (실 SEO 키워드) / weak 2 (garbage 임계값 fix 후 색상 강등) ✅
+
+#### 브라우저 E2E (Claude Preview MCP — local dev :3000)
+- **P1-B 시나리오 1** (금기어 + 중복): "이벤트 할인 무료배송 적립 쿠폰 가을 가을 가을 잠옷" → role=alert + bgColor `rgb(254, 242, 242)` critical red + "금기어 5개 발견 — 이벤트, 할인, 무료배송, 쿠폰, 적립 (Naver de-rank 위험)" + "중복 단어 1개 — 가을×3" ✅
+- **P1-B 시나리오 2** (특수문자): "★☆♥🎉 특수문자 잠옷 세트 가을 신상품 추천" → role=status + bgColor `rgb(254, 252, 232)` warning yellow + "허용 외 문자 4종 — ★ ☆ ♥ 🎉" ✅
+- **P1-B 시나리오 3** (정상): "꽃틔움 프리미엄 코튼 잠옷 세트 여성용 가을 신상품" → panel 미노출 (panelFound=false, alertsTotal=0) ✅
+- **P1-A E2E**: 정상 상품명 + "카테고리 자동 추천" 버튼 click → API 호출 → 페이지에 "패션의류 > 여성언더웨어/잠옷 > 잠옷/홈웨어" 자동 입력 + 카테고리 코드 50000826 확인 ✅
+- **P1-C UI E2E**: 태그 3개 입력 (레깅스/요가복/asdfqwerty123) → "검증 시작" click → API 응답 후 panel 렌더링 "SEO 유효 2 / 약함 1 / 미등재 0" + 개별 row "#레깅스 월 19,830회 검색 — SEO 유효" / "#요가복 월 37,830회" / "#asdfqwerty123 월 10회 — 검색량 낮음" ✅
+
+### 본 세션 학습 (영구 기록)
+
+1. **functional test에서 silent bug 2건 더 발견** — 본 세션은 사용자 명시 "실무적으로 사용 시 문제 없는지 검증"의 가치 또 한 번 입증.
+   - Bug #1: NAVER_CLIENT_ID/_SECRET가 Open API에 invalid (Commerce API only 추정). DATALAB credentials로 fallback 필요.
+   - Bug #2: Naver Search Ad의 `<10` 응답이 volume=10으로 들어와 naive threshold가 garbage를 verified 분류.
+   둘 다 *구현 직후 자동 functional test*에서 즉시 발견 → 같은 turn 안에서 fix + 재검증. **일반화 규칙: API 통합 후 즉시 production functional test 의무화** (Phase 5 학습 5와 같은 패턴, 이번에 추가 적용).
+
+2. **브라우저 E2E + functional test 조합 = 실무 워크플로우 검증의 표준** — 사용자 명시 강화 지시 후 본 세션부터 적용:
+   - functional test (curl) = API 정확성 (응답 shape + 임계값 + 비즈니스 로직)
+   - 브라우저 E2E (Claude Preview MCP) = UI 통합 정확성 (panel 렌더링 + tone + interaction)
+   - 두 layer 모두 통과해야 "다음 작업으로 넘어감"의 기준 충족.
+   본 세션부터 향후 모든 Sprint 진행 시 *둘 다 의무 적용*.
+
+3. **/products/new 상품명 input은 모든 P1-B 시나리오에서 인스턴트 반응** — useMemo 기반 detector라 typing 직후 panel update. 사용자 친화성 검증.
+
+4. **TagVerificationPanel은 수동 trigger 패턴이 옳음** — 입력 직후 자동 verify면 Search Ad rate limit 위험 (5/request, 5천/일). 사용자가 "검증 시작" 버튼 누를 때만 호출 = 5번 무한 입력해도 1번만 API hit. 패턴 일반화 권장: rate-limited API 호출은 *명시 trigger* 패턴.
+
+### 검증 한계 (사용자 보고 의무 — 정직)
+
+본 세션에서 검증 못 한 항목 (의도적 정직 보고):
+
+- **/naver-seo NameRulesPanel 마운트 보류** — 인라인 편집 구조라 P1-B panel 마운트 위치가 복잡. `/products/new` 주력 등록 flow에만 통합. 사용자가 필요 시 별도 follow-up.
+- **honey-score 단위 테스트 미실행** — `tsx` ESM resolver가 TS 모듈 직접 import 실패. Build verification (TSC type check) + 브라우저 E2E로 *통합 검증*만 진행. 순수 단위 테스트는 추후 vitest/jest 도입 시.
+- **P1-A 80%+ override 시나리오 실증 못 함** — agreed (100%) + synthesized (80%) 모두 검증했지만, *override* (AI top vs dominant 불일치) 케이스는 AI가 정상 상품명에 대해 정확히 답하는 경우라 trigger 어려움. 코드 path는 build로 검증, 실 trigger는 사용자 실 데이터로 자동.
+- **`/api/category/suggest`의 응답에 추가된 `pageValidation` 필드를 UI에서 surface 안 함** — Phase 5의 cache hit `cacheHit` field도 마찬가지로 raw response만 노출. 사용자가 어떤 mode (agreed/override/synthesized)로 매핑됐는지 UI에 명시되지 않음. 향후 enhancement.
+- **사용자 시각 검증 권장** — Production https://kkotium-garden.vercel.app/products/new 진입해:
+  - 상품명에 "이벤트 할인 무료배송" 입력 시 빨간 panel 발화 확인
+  - 정상 상품명 + 카테고리 자동 추천 버튼 클릭 시 정확한 카테고리 자동 입력 확인
+  - 태그 3개 이상 입력 후 "검증 시작" 버튼 클릭 시 색상별 결과 표시 확인
+
+### Commit + Push (4 commits)
+1. `03cfbdd` feat(7-P1): Sprint 7 P1 — category 1page + name rules + tag dictionary (11 파일, +871 / -9)
+2. `8b710d4` fix(p1-a): category-page-validator credential fallback (HTTP 401)
+3. `9df3d66` feat(p1-a): synthesize suggestion from page validation when AI fails
+4. `a495572` fix(p1-c): tighten tag verification thresholds (30/10 vs naive >0)
+- worktree → main: `git merge claude/youthful-gauss-5654af --ff-only` 매 commit 후 ff
+- 모든 verify-vercel-deploy.sh --wait exit 0 ✅
+
+### 적용된 작업원칙
+
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` (4회 모두) ✅
+- **#21** 사전 점검 통과 ✅
+- **#22** 브라우저 시각 검증 의무 — **사용자 명시 강화 적용** + Claude Preview MCP로 3 시나리오 + E2E flow 모두 실증 ✅
+- **#24** 한 turn 안에 11 파일 + 4 commit + functional test + 브라우저 E2E + MD 갱신
+- **#26** IA 점검 — registry-driven 패턴 유지. 사이드바 변경 0.
+- **#27** 외부 컨트랙트 보존 — `/api/category/suggest` 응답에 *추가만* (pageValidation). HoneyScoreResult 변경 0. Tag input flow 변경 0.
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 6+1 규칙 모두 통과 (Write로 한글 직접 입력 + Python audit 0/clean)
+- **#31 (a)** SESSION_LOG 1298 + 본 entry → ~1500 (T2 1500 도달 임박, 다음 세션 STEP 0 자동 분할 트리거)
+- **#32** TSC + npm run build 모두 통과 (4 commit 동안 4회 검증) ✅
+- **#33** useSearchParams 추가 0건
+- **#34** worktree 혼동 0회 (Phase 4 + Phase 5 + Sprint 7 P0 + 7-P0-B + 7-P1 누적 0회)
+- **#35** 한글 사전 분리 패턴 — NameRulesPanel + TagVerificationPanel 두 컴포넌트의 한글은 직접 코드 inline (10줄 미만 짧은 단어), 별도 .strings.ko.json 불요. honey-name-rules.ts의 BANNED_WORDS 배열은 *상수 정의* (literal 한글 15개)
+- **#36** push 후 `verify-vercel-deploy.sh --wait` exit 0 (4회 모두) ✅
+
+### 본 세션 commit
+1. `03cfbdd` feat(7-P1): Sprint 7 P1 — category 1page + name rules + tag dictionary
+2. `8b710d4` fix(p1-a): category-page-validator credential fallback (HTTP 401)
+3. `9df3d66` feat(p1-a): synthesize suggestion from page validation when AI fails
+4. `a495572` fix(p1-c): tighten tag verification thresholds (30/10 vs naive >0)
+5. (본 entry) docs(plan): record Sprint 7 P1 + browser E2E + Sprint 7 Track B handoff
+
+### 다음 세션 (Sprint 7 Track B = AI Studio M1~M4)
+
+ROADMAP.md "Sprint 7 Track B" 새 인계 메시지 (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트). **Cloudinary 환경변수 보유** ✅. Adobe Firefly API 키 보유 여부는 사용자 사전 확인 필요.
+
+---
+
 ## 2026-05-12 Sprint 7 P0-B enhancement (DataLab market context + 10→3 chunked silent bug fix) ✅
 
 ### 본 세션 성격

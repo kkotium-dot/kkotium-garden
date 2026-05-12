@@ -1,13 +1,13 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황 (슬림 진입점)
 
-> **최종 업데이트**: 2026-05-12 Sprint 7 P0-B *enhancement* (DataLab market context + silent bug fix — 10→3 chunked categories)
-> **TSC**: 0 errors | **빌드**: 28/28 prerender (/dashboard 51.7 kB / /crawl 20.1 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (772b111 REGISTERED via GitHub Deployments path)
-> **HEAD**: 772b111 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
-> **시각 검증 (Production smoke + 실증)**: `/dashboard` 200 / `/crawl` 200 / `/automation` 200 / `/api/golden-window/active` 200 / `/api/products/pareto` 200 / **DataLab cron-daily 수동 trigger → categoryTrendRefresh fetched=10 upserted=10, trends.source = "datalab" (이전 silent fallback 해소)** / **category_trend_cache DB 10 rows 정상 저장 (생활/건강 100, 디지털/가전 99, 패션잡화 89, ..., 화장품/미용 34)** ✅
+> **최종 업데이트**: 2026-05-12 Sprint 7 P1 (P1-A 1페이지 + P1-B 금기어 + P1-C 태그사전 ✅ + 브라우저 E2E 시각 검증 완료)
+> **TSC**: 0 errors | **빌드**: 28/28 prerender (/dashboard 51.7 kB / /crawl 20.1 kB / /products/new 61.2 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (a495572 REGISTERED via GitHub Deployments path)
+> **HEAD**: a495572 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **시각 검증 (Production smoke + Functional + 브라우저 E2E)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
-> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 + production active ✅ | 6-A/6-B/6-C/6-E ✅ | Session E-2 Phase 1~5 ✅ | **Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + Inbox 4 placeholders 모두 live) ✅**
+> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 + production active ✅ | 6-A/6-B/6-C/6-E ✅ | Session E-2 Phase 1~5 ✅ | Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + DataLab market context) ✅ | **Sprint 7 P1 (P1-A 카테고리 1페이지 + P1-B 금기어 + P1-C 태그사전) ✅ + 브라우저 E2E 시각 검증 완료 ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업**: **Sprint 7 P1 (P1-A 카테고리 1페이지 일치율 검증 + P1-B 상품명 금기어 페널티 강화 + P1-C 태그 사전 등재 검증)** → Sprint 7 Track B AI Studio (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트) → Sprint 8 P2 → Sprint 9 P3 (매출 600만원+ 후)
+> **다음 작업**: **Sprint 7 Track B AI Studio (M1 썸네일 / M2 상세페이지 5섹션 / M3 어도비 통합 / M4 A/B 테스트)** → Sprint 8 P2 (다크패턴 정가 부풀리기 경고 + AiTEMS 자연어 키워드 제안기 + 등급 임계값 개편 반영) → Sprint 9 P3 (매출 600만원+ 후)
 > **참고 문서**: `docs/research/OVERSEAS_SOURCING_BASELINE_2026_05.md`, `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md`, `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---

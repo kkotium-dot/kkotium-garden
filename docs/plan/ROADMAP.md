@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-12 Sprint 7 P0-B *enhancement* (DataLab market context + silent bug fix 10→3 chunked categories)
-> **HEAD**: 772b111 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 28/28 OK (/dashboard 51.7 kB / /crawl 20.1 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (772b111 REGISTERED via GitHub Deployments path)
+> **최종 업데이트**: 2026-05-12 Sprint 7 P1 (P1-A 1페이지 + P1-B 금기어 + P1-C 태그사전 ✅ + 브라우저 E2E 검증)
+> **HEAD**: a495572 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 28/28 OK (/products/new 61.2 kB / /dashboard 51.7 kB / /crawl 20.1 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (a495572 REGISTERED via GitHub Deployments path)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
 > **Vercel Hobby 제한 주의**: inventory-sync (daily) + daily + weekly 3 cron 사용 중. 6-B/6-C는 inventory-sync에 piggy-back, 6-E는 weekly에 piggy-back, P0-B/P0-C는 on-event (widget fetch 시 pure compute) — 모두 추가 cron 0건. Pro plan 시 `vercel.json` 한 줄로 6시간 cron 복귀 가능
 >
@@ -12,7 +12,66 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-12 Sprint 7 P1 (카테고리 1페이지 + 금기어 + 태그 사전)
+## 다음 새 채팅 시작 메시지 — 2026-05-12 Sprint 7 Track B AI Studio (M1~M4)
+
+<!-- sprint-7-trackb-handoff-short v1 -->
+
+```
+꽃틔움 가든 — Sprint 7 Track B (AI Studio) 시작.
+
+docs/plan/PROGRESS.md (슬림 진입점) → ROADMAP.md → SESSION_LOG.md 정독. 필요 시 PRINCIPLES_LEARNED.md / PRINCIPLES_CODE.md / SPRINT_PLAN.md / REFERENCES.md spot-read. STEP 0 환경 점검 후 현재 상태 + Track B 디테일 계획을 브리핑해주세요. 본 작업 시작은 제 Y/N 승인 후 진행.
+
+[STEP 0 환경 점검]
+git rev-parse HEAD origin/main && \
+  git status --short && \
+  git stash list && \
+  wc -l docs/plan/*.md && \
+  curl -sIo /dev/null -w "Vercel HTTP: %{http_code}\n" https://kkotium-garden.vercel.app/dashboard && \
+  echo "Latest prod deploy SHA: $(gh api 'repos/kkotium-dot/kkotium-garden/deployments?environment=Production&per_page=1' --jq '.[0].sha[0:7]')" && \
+  scripts/verify-vercel-deploy.sh
+
+[Sprint 7 P0 + P1 완료 정리]
+- P0-A 옵션 정확도 / P0-B 골든윈도우 / P0-C 효자상품 (Inbox 4 placeholders 모두 live)
+- P0-B enhancement: DataLab market context cache + silent 10→3 chunked bug fix
+- P1-A 카테고리 1페이지 일치율 검증 — Naver Shopping search API 통합. agreed/override/synthesized 3 모드
+- P1-B 상품명 금기어 페널티 — banned_word 15개 + duplicate + special_chars + length 4 rule. NameRulesPanel 인라인 발화
+- P1-C 태그 사전 등재 검증 — Search Ad keyword volume proxy + threshold 30/10. TagVerificationPanel 수동 trigger
+- **브라우저 E2E 검증 완료** (Claude Preview MCP) — 3 입력 시나리오 / 카테고리 자동 추천 / 태그 검증 panel 모두 실제 작동 확인
+- production a495572
+
+[Sprint 7 Track B AI Studio 작업 범위]
+**M1 썸네일 (AI 이미지 생성/편집)** — 도매꾹 원본 이미지 → AI 배경 제거 + 깨끗한 흰배경 + 텍스트 추가
+- Adobe Firefly / Imagen / Cloudinary AI transforms 검토 (이미 NEXT_PUBLIC_CLOUDINARY_* 환경변수 보유)
+- `src/lib/ai-image/thumbnail-generator.ts` (신규)
+- `씨앗 심기` 이미지 업로드 영역에 "AI 썸네일 자동 생성" 버튼
+
+**M2 상세페이지 5섹션** — AI가 자동 생성하는 상세페이지 구조
+- 5섹션: 후킹 / 핵심특징 / 사용법 / 스펙 / 신뢰
+- 기존 `aeo_content` 필드 + 기존 `seo_hook_text` 활용
+- AI 호출 Gemini → Groq fallback (기존 패턴)
+
+**M3 어도비 통합** — Adobe MCP / Adobe Firefly API 통합 가능성 검토
+- 현재 NEXT_PUBLIC_CLOUDINARY로 단순 이미지 변환만
+- Adobe Firefly API 키 사용자 보유 여부 사전 확인 필요
+
+**M4 A/B 테스트** — 썸네일/상세페이지 변형 2개를 동시 등록 후 CTR/전환율 비교
+- 사용자 첫 상품 등록 + 7일+ 실 데이터 누적 필요 — 본 Sprint에서는 *infrastructure*만, 검증은 보류
+
+[페르소나]
+B2B 이커머스 ERP + 네이버 파워셀러 + UI/UX 시니어. 단독 IA/삭제 결정 금지. M3 어도비 통합 깊이 (Cloudinary로 충분 vs Firefly 풀 통합) 결정은 사용자 위임 (API 키 확인 필요).
+
+[참고 — MD 분할 권고]
+SESSION_LOG.md 현재 ~1400줄 (T1 1000 초과, T2 1500 미달). Track B 진입 시 자동 분할 권장.
+
+[주의 — 작업원칙 위반 학습]
+worktree vs main 절대 경로 혼동 사고 누적 3회 (Phase 3 이전). Phase 4 + Phase 5 + Sprint 7 P0/P1 누적 0회 — Edit/Write 호출 시 절대 경로 시작이 워크트리 prefix `/Users/jyekkot/Desktop/kkotium-garden/.claude/worktrees/<name>/`인지 *매 호출 확인 의무*.
+
+[silent failure 패턴 학습]
+Sprint 7 P0-B에서 DataLab 10→3 chunk 실패, Sprint 7 P1-A에서 NAVER_CLIENT_ID Open API 401 모두 functional test에서만 발견됨. *"API 키 다 등록했는데 실제 작동하나?"* 의 의문이 silent bug 발견의 핵심 트리거. Track B AI Studio 진입 시 사용자 등록된 Cloudinary + Adobe / Firefly 키도 *동일하게 functional test로 작동 검증 의무*.
+```
+
+---
+## 직전 인계 메시지 — Sprint 7 P1 (참고용, 완료됨)
 
 <!-- sprint-7-p1-handoff-short v1 -->
 
