@@ -95,9 +95,10 @@ export async function GET() {
         break;
       case 'golden-window':
       case 'pareto-recalc':
-        // P0-B + P0-C are computed on-demand by widget fetch. No lastRun
-        // signal — they always reflect current DB state. Set null to indicate
-        // "live" rather than "scheduled". Widget liveness implicit.
+      case 'category-1page':
+      case 'tag-dictionary':
+        // P0-B + P0-C + P1-A + P1-C are computed on-demand. No lastRun signal —
+        // they reflect live state. Set null to indicate "live" rather than scheduled.
         lastRun = null;
         break;
       case 'discord-kkotti-recommend':

@@ -196,22 +196,24 @@ export const AUTOMATIONS: AutomationMeta[] = [
     group: 'seo',
     nameKey: 'category1page',
     code: 'P1-A',
-    frequency: 'on-register',
-    status: 'pending',
+    frequency: 'on-event',
+    status: 'active',
     targetPhase: 'Sprint 7 P1',
     togglable: false,
     descriptionKey: 'category1page',
+    // No cronPath — invoked on each /api/category/suggest call
   },
   {
     id: 'tag-dictionary',
     group: 'seo',
     nameKey: 'tagDictionary',
     code: 'P1-C',
-    frequency: 'on-register',
-    status: 'pending',
+    frequency: 'on-event',
+    status: 'active',
     targetPhase: 'Sprint 7 P1',
     togglable: false,
     descriptionKey: 'tagDictionary',
+    // No cronPath — invoked on /api/tags/verify by 씨앗 심기 UI
   },
 
   // ── 신뢰도 ──────────────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 import { getCachedMapping, saveMapping, nameHashKey } from '@/lib/dome-category-cache';
+import { validatePageCategory } from '@/lib/naver/category-page-validator';
 
 // ── AI: Gemini without full category list in prompt ───────────────────────────
 // Keeping prompt small (< 500 tokens) so Gemini has room to respond
@@ -251,12 +252,52 @@ export async function POST(request: NextRequest) {
 
     // Deduplicate
     const seen = new Set<string>();
-    const suggestions = rawSuggestions.filter(s => {
+    let suggestions = rawSuggestions.filter(s => {
       const key = `${s.d1}|${s.d2}|${s.d3}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
+
+    // Sprint 7 P1-A: validate top suggestion against Naver Shopping page-1 distribution.
+    // If page-1 has a dominant d1/d2 (>=60% share) AND our top suggestion's d1/d2
+    // disagrees, prepend the page-validated suggestion (override). We do NOT erase
+    // the AI suggestion — append it so user sees both.
+    let pageValidation: Awaited<ReturnType<typeof validatePageCategory>> | null = null;
+    let pageValidationApplied: 'override' | 'agreed' | 'no_signal' | 'error' = 'no_signal';
+    try {
+      pageValidation = await validatePageCategory(name);
+      if (pageValidation.error) {
+        pageValidationApplied = 'error';
+      } else if (pageValidation.dominant && suggestions[0]) {
+        const dom = pageValidation.dominant;
+        const topMatchesDom =
+          suggestions[0].d1 === dom.d1 && suggestions[0].d2 === dom.d2;
+        if (topMatchesDom) {
+          pageValidationApplied = 'agreed';
+        } else {
+          // Override: prepend dom-matched suggestion using fuzzy d3 from existing AI
+          // candidates if any happen to share d1+d2, else use the AI's d3 verbatim
+          // (better to have *some* d3 than empty).
+          const matchingD3 = suggestions.find((s) => s.d1 === dom.d1 && s.d2 === dom.d2);
+          const overrideD3 = matchingD3?.d3 ?? suggestions[0].d3;
+          const overrideD4 = matchingD3?.d4 ?? suggestions[0].d4;
+          const overrideSuggestion = {
+            d1: dom.d1,
+            d2: dom.d2,
+            d3: overrideD3,
+            d4: overrideD4,
+          };
+          suggestions = [overrideSuggestion, ...suggestions.filter((s) =>
+            !(s.d1 === overrideSuggestion.d1 && s.d2 === overrideSuggestion.d2 && s.d3 === overrideSuggestion.d3),
+          )].slice(0, 3);
+          pageValidationApplied = 'override';
+        }
+      }
+    } catch (e) {
+      pageValidationApplied = 'error';
+      console.warn('[category/suggest] page validation failed:', String(e).slice(0, 120));
+    }
 
     // Sprint 6-E: write top suggestion to cache (best-effort, don't block response)
     const top = suggestions[0];
@@ -285,7 +326,21 @@ export async function POST(request: NextRequest) {
       }).catch((e) => console.warn('[category/suggest] cache write failed:', String(e).slice(0, 120)));
     }
 
-    return NextResponse.json({ success: true, suggestions, usedAI });
+    return NextResponse.json({
+      success: true,
+      suggestions,
+      usedAI,
+      pageValidation: pageValidation
+        ? {
+            applied: pageValidationApplied,
+            dominantD1: pageValidation.dominant?.d1 ?? null,
+            dominantD2: pageValidation.dominant?.d2 ?? null,
+            dominantShare: pageValidation.dominant?.share ?? null,
+            totalItems: pageValidation.totalItems,
+            error: pageValidation.error ?? null,
+          }
+        : null,
+    });
   } catch (e: unknown) {
     console.error('[category/suggest] error:', e);
     return NextResponse.json({ success: false, error: String(e) }, { status: 500 });

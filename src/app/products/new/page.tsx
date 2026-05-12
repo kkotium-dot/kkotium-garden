@@ -50,6 +50,8 @@ import { NAVER_EXCEL_COLUMNS } from '@/lib/naver/columns';
 import { calcSeoScore } from '@/lib/seo-calculator';
 import type { SeoResult } from '@/lib/seo-calculator';
 import { MarginCalculator } from '@/components/products/MarginCalculator';
+import NameRulesPanel from '@/components/products/NameRulesPanel';
+import TagVerificationPanel from '@/components/products/TagVerificationPanel';
 import { BulkEditModal } from '@/components/products/BulkEditModal';
 import { ShippingTemplateModal, type ShippingTemplateItem } from '@/components/products/ShippingTemplateModal';
 import NaverSEOWorkflow from '@/components/ai/NaverSEOWorkflow';
@@ -1816,6 +1818,10 @@ const handleGenerate = async () => {
                     </button>
                   )}
                 </div>
+                {/* Sprint 7 P1-B: name-rule violations inline panel */}
+                <div className="mt-2">
+                  <NameRulesPanel productName={productName} />
+                </div>
                 <div className="mt-1.5 space-y-1">
                   {/* D-1: Character count + grade badge */}
                   <div className="flex items-center gap-2">
@@ -1941,6 +1947,8 @@ const handleGenerate = async () => {
                 {seoTags.length === 0 && (
                   <p style={{ fontSize: 11, color: '#B0A0A8', marginTop: 4 }}>태그 10개 입력 시 SEO 점수에 +8점 반영됩니다</p>
                 )}
+                {/* Sprint 7 P1-C: Naver tag-dictionary verification */}
+                <TagVerificationPanel tags={seoTags} />
               </div>
 
               {/* Price block — sale price + instant discount inline (Naver order) */}

@@ -3,6 +3,9 @@
 // Kkotti character system integrated — grade drives emoji + dialogue
 // Based on: margin tier + Naver 2026 SEO compliance + competition + bonus
 // A-6: keyword search volume based competition weight
+// Sprint 7 P1-B: name-rule warnings surfaced via honey-name-rules.ts
+
+import { buildHoneyScoreWarnings } from '@/lib/honey-name-rules';
 
 export interface HoneyScoreInput {
   salePrice: number;
@@ -361,6 +364,12 @@ export function calcHoneyScore(input: HoneyScoreInput): HoneyScoreResult {
       strengths.push('상품명 앞 15자에 핵심 키워드 포함 — 네이버 2026 검색 알고리즘 최적화');
     } else {
       warnings.push('상품명 앞 15자에 키워드 없음 — 핵심 키워드를 상품명 앞쪽에 배치하세요');
+    }
+  }
+  // Sprint 7 P1-B: surface name-rule violations (banned words / duplicates / special chars)
+  if (pName.length > 0) {
+    for (const msg of buildHoneyScoreWarnings(pName)) {
+      warnings.push(msg);
     }
   }
   if ((input.tags?.length ?? 0) < 10)            warnings.push(`태그 ${input.tags?.length ?? 0}/10개 — 10개 꽉 채우기 권장`);
