@@ -1,9 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황 (슬림 진입점)
 
-> **최종 업데이트**: 2026-05-12 Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 ✅ — Inbox 4 placeholders 모두 live widget으로 교체)
-> **TSC**: 0 errors | **빌드**: 28/28 prerender (/dashboard 51.6 kB / /crawl 20.1 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (8c477ee REGISTERED via GitHub Deployments path)
-> **HEAD**: 8c477ee = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
-> **시각 검증 (Production smoke)**: `/dashboard` 200 / `/crawl` 200 / `/automation` 200 / `/api/golden-window/active` 200 `{"data":[]}` / `/api/products/pareto` 200 `{"totalRevenue":0,...}` (cold start 정상) ✅
+> **최종 업데이트**: 2026-05-12 Sprint 7 P0-B *enhancement* (DataLab market context + silent bug fix — 10→3 chunked categories)
+> **TSC**: 0 errors | **빌드**: 28/28 prerender (/dashboard 51.7 kB / /crawl 20.1 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (772b111 REGISTERED via GitHub Deployments path)
+> **HEAD**: 772b111 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **시각 검증 (Production smoke + 실증)**: `/dashboard` 200 / `/crawl` 200 / `/automation` 200 / `/api/golden-window/active` 200 / `/api/products/pareto` 200 / **DataLab cron-daily 수동 trigger → categoryTrendRefresh fetched=10 upserted=10, trends.source = "datalab" (이전 silent fallback 해소)** / **category_trend_cache DB 10 rows 정상 저장 (생활/건강 100, 디지털/가전 99, 패션잡화 89, ..., 화장품/미용 34)** ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 + production active ✅ | 6-A/6-B/6-C/6-E ✅ | Session E-2 Phase 1~5 ✅ | **Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + Inbox 4 placeholders 모두 live) ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)

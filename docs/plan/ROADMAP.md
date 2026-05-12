@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-12 Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 ✅ — Inbox 4 placeholders 모두 live widget으로 교체)
-> **HEAD**: 8c477ee = origin/main 일치 | **TSC**: 0 errors | **빌드**: 28/28 OK (/dashboard 51.6 kB / /crawl 20.1 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (8c477ee REGISTERED via GitHub Deployments path)
+> **최종 업데이트**: 2026-05-12 Sprint 7 P0-B *enhancement* (DataLab market context + silent bug fix 10→3 chunked categories)
+> **HEAD**: 772b111 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 28/28 OK (/dashboard 51.7 kB / /crawl 20.1 kB / /automation 7.0 kB) | **배포**: https://kkotium-garden.vercel.app (772b111 REGISTERED via GitHub Deployments path)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
 > **Vercel Hobby 제한 주의**: inventory-sync (daily) + daily + weekly 3 cron 사용 중. 6-B/6-C는 inventory-sync에 piggy-back, 6-E는 weekly에 piggy-back, P0-B/P0-C는 on-event (widget fetch 시 pure compute) — 모두 추가 cron 0건. Pro plan 시 `vercel.json` 한 줄로 6시간 cron 복귀 가능
 >

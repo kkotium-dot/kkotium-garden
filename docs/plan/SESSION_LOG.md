@@ -1,3 +1,145 @@
+## 2026-05-12 Sprint 7 P0-B enhancement (DataLab market context + 10→3 chunked silent bug fix) ✅
+
+### 본 세션 성격
+- Sprint 7 P0 완료 직후 사용자 질문 "모든 관련 API키를 등록했는데 활용할수없는건가요?" + "정확히 클릭데이터가 뭔가요?" 답변 + 즉시 개선 작업.
+- "클릭 데이터" 정의 명확화 (impression → click → dwell → purchase 깔때기 중 2단계) + Naver Commerce API + 검색광고 + DataLab + 도매꾹 *4개 API 키* 재점검 → **DataLab Shopping Insights aggregate category click 비중 데이터는 *사용 가능*** 발견.
+- 본 개선: 카테고리 트렌드 캐시 추가 + 골든윈도우 평가에 *시장 맥락(market context)* 통합 + **기존 trend-analyzer.ts의 silent 실패 버그도 같이 해소**.
+- 한 turn 안에 8 파일 + DB 마이그레이션 + 2 commit (feat + bug-fix) + 검증 + 실증 (수동 cron trigger) + MD 갱신 완료. worktree 혼동 0회.
+
+### 시작 직전 상태
+- HEAD `54635f4` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} 보존 ✅
+- MD 줄 수: PROGRESS 203 / ROADMAP 427 / SESSION_LOG 1156 (T1 권고)
+- Latest prod deploy SHA == HEAD ✅
+- verify-vercel-deploy.sh OK ✅
+
+### 본 세션 작업
+
+#### A. DB 마이그레이션 (Supabase `sprint_7_p0b_category_trend_cache` 적용)
+- 신규 테이블 `category_trend_cache`:
+  - UNIQUE `cache_key` (`d1:<depth1Name>` 패턴, future-proof `code:<code>` 키도 지원)
+  - `trend_score` 0..100 (DataLab ratio 정규화)
+  - `volume_score` 0..100 (예약, Search Ad keyword 통합용)
+  - `market_level` 'hot' / 'normal' / 'cold'
+  - `data_source` + `refreshed_at`
+- 인덱스 2개 (unique cache_key, refreshed_at DESC)
+
+#### B. 신규 라이브러리 (`src/lib/naver/category-trend-cache.ts`)
+- `refreshCategoryTrendCache()` — DataLab 호출 + upsert. Cron-daily에서 호출.
+- `getCachedTrend(cacheKey)` — read-only cache lookup
+- `resolveProductMarketContext(category)` — 상품 category 문자열 → depth1 추출 → cache lookup
+- `buildD1Key(depth1)` — 표준 key 생성
+- 실패 경로는 partial cache 보존 (delete 안 함, lastError만 surface)
+
+#### C. golden-window-tracker.ts 확장
+- `GoldenWindowRow`에 3 필드 추가 (additive — 외부 컨트랙트 보존 #27):
+  - `marketLevel: 'hot' | 'normal' | 'cold' | 'unknown'`
+  - `marketTrendScore: 0..100`
+  - `severity: 'critical' | 'warning' | 'note' | 'ok'`
+- `computeSeverity(stage, status, marketLevel)` — needs_action + hot = critical / needs_action + normal/unknown = warning / needs_action + cold = note / status='ok' = ok
+- `buildMessage` 시장 맥락 별 권장 메시지 분기:
+  - hot + miss: "시장 hot인데 미달, 상품명 토큰 교체 권장"
+  - cold + miss: "시장 cold라 인내 권장 (광고 ROI 낮음)"
+  - normal/unknown + miss: 기존 메시지
+- Sort severity rank 기반 (critical → warning → note → ok), tiebreak hours-since-registration DESC
+
+#### D. GoldenWindowWidget UI 갱신
+- tone driven by `severity` 대신 단순 `status` (4단계 색상: 빨강/주황/회색/녹색)
+- 신규 *market badge*: 상품명 옆에 "시장 hot / 시장 보통 / 시장 cold / 시장 미확정" 표시 (hover-title에 정확 trend_score)
+- i18n: `marketLabel` 4 key 추가
+
+#### E. cron-daily piggy-back
+- `refreshCategoryTrendCache()` 호출을 daily cron 끝부분 (sourcing recommendation 직후) 추가
+- 실패 = 비치명적 (`results.categoryTrendRefreshError`에 기록, ok=true 유지)
+- **별도 vercel cron 0건** — daily 3개 (`daily / weekly / inventory-sync`) 그대로 유지, 4번째 cron 추가하지 않음
+
+#### F. **silent DataLab 버그 fix (bonus discovery)**
+- 1차 수동 trigger 후 결과: `categoryTrendRefresh: { error: 'datalab_http_400' }` + `trends.source: 'fallback'`
+- 직접 DataLab API 테스트로 원인 확인: `errMsg "TypeError: .category -> should NOT have more than 3 items"`
+- **DataLab Shopping Insights는 category 배열 최대 3개 제한**. 기존 `trend-analyzer.ts`도 10개 전송 중이라 *Daily cron의 Discord 추천이 모두 Perplexity fallback으로 동작 중*이었음 (사용자는 모르고 있었음).
+- Fix: 두 모듈 모두 3개씩 chunk 후 sequential POST (4 batches × 3 cats = 5번째 batch는 1개 cat).
+- 2차 trigger 후 결과: **`{fetched: 10, upserted: 10}`**, **`trends.source: 'datalab'`**, trend keywords `['청소기', '공기청정기', '이어폰']` (실 도매꾹 트렌드 노출).
+
+### 검증
+- TSC `npx tsc --noEmit` 0 errors (2회) ✅
+- Production build `npm run build` 28/28 prerender (/dashboard 51.6 → 51.7 kB +0.1 kB market badge)
+- NFC + FFFD audit 6개 파일 모두 0/clean ✅
+- 한글 sentinel grep 0 신규 매칭 ✅
+- Production smoke (push 후):
+  - `GET /dashboard` 200 ✅
+  - `GET /crawl` 200 ✅
+  - `GET /automation` 200 ✅
+- **실증** (Phase 5와 같은 패턴 — 코드 path가 production에서 실제 작동 확인):
+  - 수동 trigger `GET /api/cron/daily` → `ok: true` + `categoryTrendRefresh: {fetched: 10, upserted: 10}` + `trends.source: 'datalab'`
+  - `category_trend_cache` 테이블 10 rows 정상 (생활/건강 100, 디지털/가전 99, ..., 화장품/미용 34 — 모두 정렬됨)
+  - hot 5개 + normal 5개 — 본 골든 윈도우 평가에서 사용자 상품 등록 시 즉시 활용 가능
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production 772b111 ✅
+
+### 본 세션 학습 (영구 기록)
+
+1. **사용자 질문이 *silent bug 발견*으로 이어진 사례** — 사용자가 "API 키 다 등록했는데 활용 안 됩니까?" 질문이 없었으면 trend-analyzer.ts의 10→fallback silent failure는 계속 숨어있었을 것. *재점검 트리거*로서 사용자 의문의 가치 증명. 일반화 규칙: *"이게 정말 작동하나요?"* 식 질문은 항상 검증을 다시 수행할 것.
+
+2. **DataLab Shopping Insights API 제약** — 공식 문서에 명시되어 있지만 우리 코드에서 누락:
+   - **category 배열 max 3 items** — 본 세션에서 발견
+   - timeUnit `'date' | 'week' | 'month'`
+   - startDate / endDate (yyyy-MM-dd)
+   - device / gender / ages 선택 필터
+   - 응답 ratio는 *batch 내 최대값을 100으로 정규화*
+   - Cross-batch 정규화 필요 시 *anchor category*를 매 batch에 포함하는 패턴 사용 가능 (본 세션은 global max 후-정규화 simpler 방식 채택)
+
+3. **클릭 데이터 — 진단적 가치 + 비공개 한계 + 대안** —
+   - "클릭"의 정확한 정의: 검색 결과 페이지에서 *상품 상세 페이지로 유입한* 사용자 (impression 다음 단계).
+   - per-product 클릭 데이터는 Naver Commerce API + 검색광고 API + DataLab 어디서도 노출 안 됨 (스마트스토어 관리자 패널 UI에서만, public API 없음).
+   - 대신 사용 가능한 *aggregate level click* 데이터: DataLab Shopping Insights → 카테고리별/연령별/성별 click 비중. *상품 수준은 아니지만 시장 맥락으로 활용 가능*.
+   - 본 세션 enhancement는 *카테고리 트렌드*를 골든윈도우 평가에 통합 — 같은 D+3 0건이라도 hot 시장 = critical (상품명 토큰 교체), cold 시장 = note (인내 권장). 진단 정밀도 향상.
+
+4. **silent failure 패턴의 조기 발견 → 별도 commit 분리** — 본 세션의 두 commit:
+   - `c08b761` feat(7-P0-B): enhance golden window with DataLab market context
+   - `772b111` fix(datalab): chunk DataLab category requests to 3-per-batch (silent failure)
+   분리 commit으로 git history에서 *feature vs bug fix*가 명확. 향후 rollback 시 bug fix만 보존 가능.
+
+### 검증 한계 (사용자 보고 의무 — 정직)
+
+- **사용자 상품 0개 → market context 활용 검증 불가** — 카테고리 trend cache는 채워졌지만 (10 rows DB 검증 완료) 골든윈도우 평가 시 product.category 매핑이 *실 상품에서* 어떻게 결정되는지는 사용자 첫 도매꾹 상품 등록 후만 검증 가능.
+- **product.category 필드 source 한계** — 본 세션 enrich 로직은 `product.category` (자유 텍스트 필드) → depth1 추출. 사용자가 씨앗 심기에서 *어떻게 category 입력하는지*에 따라 매칭률이 달라짐. naverCategoryCode 기반 lookup도 추가하면 더 정확 (별도 Sprint).
+- **DataLab batch normalization** — 본 fix는 global max 후-정규화 방식. *anchor 패턴*보다 cross-batch 비교 정확도 약간 떨어질 수 있음 (~10% noise). hot/normal/cold buckets 분류에는 충분, 정밀 비교 필요 시 향후 anchor 패턴 도입.
+- **사용자 시각 검증 권장** — https://kkotium-garden.vercel.app/dashboard 진입해 Section 2 Inbox 골든윈도우 widget의 empty state는 시장 badge 미표시 정상 (활성 상품 0건). 사용자 첫 상품 등록 + D+1 시점 도래 시 *market badge* + *severity tone* 자동 surface 확인 권장.
+
+### Commit + Push (2 commit)
+- `c08b761` feat(7-P0-B): enhance golden window with DataLab market context (+377 / -19, 6 파일 — 신규 1 + 수정 5)
+- `772b111` fix(datalab): chunk DataLab category requests to 3-per-batch (silent failure) (+86 / -69, 2 파일)
+- worktree → main: `git merge claude/youthful-gauss-5654af --ff-only` (ff)
+- push `54635f4..772b111 main -> main`
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production 772b111 ✅
+
+### 적용된 작업원칙
+
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` (2회) ✅
+- **#21** 사전 점검 통과 ✅
+- **#22** production smoke + **수동 cron trigger로 실증** (categoryTrendRefresh + trends.source 둘 다 검증) ✅
+- **#24** 한 turn 안에 8 파일 + DB 마이그레이션 + 2 commit + 검증 + 실증 + MD 갱신
+- **#26** IA 점검 — GoldenWindowWidget *내부 UI* 만 갱신 (market badge 추가). 다른 widget / 카드 변경 0.
+- **#27** 외부 컨트랙트 보존 — `GoldenWindowRow`에 *추가만* (marketLevel + marketTrendScore + severity). 기존 consumer 영향 0.
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 6+1 규칙: (a~e++) 모두 통과 — strings.ko.json에 marketLabel 4 key 추가 (NFC clean, sentinel grep 0)
+- **#31 (a)** SESSION_LOG 1156 + 본 entry → ~1400 (T1 1000 초과, T2 1500 미달, 권고만)
+- **#32** TSC + npm run build 모두 통과 ✅
+- **#33** useSearchParams 추가 0건
+- **#34** worktree 혼동 0회 (Phase 4 + Phase 5 + Sprint 7 P0 + 7-P0-B enhancement 누적 0회)
+- **#35** 한글 사전 분리 패턴 — `GoldenWindowWidget.strings.ko.json` 확장 (marketLabel 4 key)
+- **#36** push 후 `verify-vercel-deploy.sh --wait` exit 0 (2회 모두) ✅
+
+### 본 세션 commit
+1. `c08b761` feat(7-P0-B): enhance golden window with DataLab market context
+2. `772b111` fix(datalab): chunk DataLab category requests to 3-per-batch (silent failure)
+3. (본 entry) docs(plan): record Sprint 7 P0-B enhancement + DataLab fix
+
+### 다음 세션 (Sprint 7 P1) 작업 변경 없음
+ROADMAP.md "Sprint 7 P1" 인계 메시지 그대로 유효 (P1-A 카테고리 1페이지 + P1-B 금기어 + P1-C 태그 사전). 본 P0-B enhancement는 *P0 후속 작업*으로 P1 진입을 막지 않음.
+
+---
+
 ## 2026-05-12 Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 — Inbox 4 placeholders 모두 live) ✅
 
 ### 본 세션 성격
