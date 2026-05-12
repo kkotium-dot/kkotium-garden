@@ -74,8 +74,18 @@ export async function validatePageCategory(
     return { totalItems: 0, distribution: [], dominant: null, error: 'empty_keyword' };
   }
 
-  const clientId = process.env.NAVER_CLIENT_ID;
-  const clientSecret = process.env.NAVER_CLIENT_SECRET;
+  // Open API credentials. Mirror trend-analyzer's fallback chain because some
+  // projects register the same client_id under NAVER_DATALAB_* (which is what
+  // currently works in this project — NAVER_CLIENT_ID by itself is Commerce
+  // API's separate ID and not valid for /v1/search).
+  const clientId =
+    process.env.NAVER_DATALAB_CLIENT_ID ??
+    process.env.NAVER_OPEN_API_CLIENT_ID ??
+    process.env.NAVER_CLIENT_ID;
+  const clientSecret =
+    process.env.NAVER_DATALAB_CLIENT_SECRET ??
+    process.env.NAVER_OPEN_API_CLIENT_SECRET ??
+    process.env.NAVER_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
     return { totalItems: 0, distribution: [], dominant: null, error: 'open_api_credentials_missing' };
   }
