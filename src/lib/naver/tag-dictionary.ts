@@ -106,11 +106,19 @@ export async function verifyTags(tags: string[]): Promise<TagVerificationResult>
     }
   }
 
+  // Threshold tuning (functional test discovery 2026-05-12):
+  // Naver Search Ad parser returns 5-10 for "< 10" responses, which means
+  // even random garbage strings (e.g. 'asdfqwerty') get monthlyVolume=10
+  // and pass naive "volume > 0" verified check. Real SEO impact requires
+  // sustained search volume; we use 30/month as practical threshold.
+  const VERIFIED_MIN = 30;   // monthly volume >= 30 → meaningful SEO signal
+  const WEAK_MIN = 10;       // 10..29 → low but real; Naver dictionary has it
+
   const verifications: TagVerification[] = allResults.map((r) => {
     if (r.error) {
       return { tag: r.tag, status: 'error', monthlyVolume: 0, hint: 'API 조회 실패' };
     }
-    if (r.found && r.volume > 0) {
+    if (r.found && r.volume >= VERIFIED_MIN) {
       return {
         tag: r.tag,
         status: 'verified',
@@ -118,19 +126,20 @@ export async function verifyTags(tags: string[]): Promise<TagVerificationResult>
         hint: `월 ${r.volume.toLocaleString()}회 검색 — SEO 유효`,
       };
     }
-    if (r.found && r.volume === 0) {
+    if (r.found && r.volume >= WEAK_MIN) {
       return {
         tag: r.tag,
         status: 'weak',
-        monthlyVolume: 0,
-        hint: '사전 등재 확인 — 검색량 0, SEO 효과 미미',
+        monthlyVolume: r.volume,
+        hint: `월 ${r.volume}회 — 검색량 낮음, 사전 등재만 확인`,
       };
     }
+    // r.volume < 10 OR not found in Search Ad response → treat as missing
     return {
       tag: r.tag,
       status: 'missing',
-      monthlyVolume: 0,
-      hint: 'Naver 태그 사전 미등재 — 등재 키워드로 교체 권장',
+      monthlyVolume: r.volume,
+      hint: 'Naver 사전 미등재 또는 검색량 0 — 등재 키워드로 교체 권장',
     };
   });
 
