@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-13 Sprint 7-M2 Phase 1 — 5섹션 빌더 + S2 5 렌더러 완료 (993098f, branch push 후 main merge 사용자 승인 대기)
-> **HEAD**: 993098f (worktree) / origin/main 9843705 (Sprint 7-M1 배포 완료) | **TSC**: 0 errors | **빌드**: 28/28 OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-13 Sprint 7-M2 Phase 2-a — 6 공유 렌더러 완료 (449719b, branch push 후 main merge 사용자 승인 대기)
+> **HEAD**: 449719b (worktree) / origin/main 25a1abb (Sprint 7-M2 Phase 1 배포 완료) | **TSC**: 0 errors | **빌드**: 28/28 OK | **배포**: https://kkotium-garden.vercel.app
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
@@ -14,9 +14,78 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2: 21 잔여 렌더러 + lifestyle-picker) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-b: 15 골격 전용 렌더러) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 Phase 2-a 완료 (commit 449719b):
+- src/lib/automation/section-renderers/spec.ts, story.ts, product.ts,
+  comparison.ts, warranty.ts, shipping.ts (6 공유 렌더러)
+- section-copy.ts 5 신규 Groq 헬퍼 추가
+- index.ts registry 갱신 (dedicated 11/26 섹션 ids)
+- TSC 0, build 28/28, 한글 sentinel 0
+
+골격별 dedicated 커버리지: S1 3/3 / S2 5/5 / S3 5/6 / S4 4/5 / S6 4/5 /
+                          S7 4/6 / S9 3/4 / S12 3/5 / 나머지 부분 커버
+
+본 세션 진입 작업 = Sprint 7-M2 Phase 2-b (15 골격 전용 렌더러):
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  특히 449719b가 main에 머지/배포됐는지 verify-vercel-deploy.sh로 확인
+
+STEP 7-M2 Phase 2-b — 15 골격 전용 렌더러
+  대상 파일 신규 (각 SectionRenderer 시그니처):
+    - corePerformance.ts (S4) — 4 metric cards with units
+    - technology.ts (S7) — mechanism diagram + caption
+    - clinical.ts (S7) — bar chart + study meta (sample size / duration)
+    - optionIntro.ts (S5) — option grid with color chips
+    - styledShot.ts (S6) — 3 styled lifestyle shots
+    - seasonalHook.ts (S8) — seasonal banner + date window
+    - options.ts (S8) — option grid with thumbnail chips
+    - material.ts (S9) — material macro + origin caption
+    - philosophy.ts (S10) — brand philosophy paragraph
+    - detail.ts (S10) — detail macro grid 2x2
+    - reviews.ts (S10) — 3 customer review cards
+    - eventDetails.ts (S11) — drop calendar + edition meta
+    - benefits.ts (S11) — 3 perk cards with icons
+    - specTable.ts (S12) — full-width spec table
+    - specifications.ts (S12) — regulation + compliance grid
+    - package.ts (S3) — package unboxing sequence
+
+  필요 시 section-copy.ts에 신규 슬롯 추가 — JSON 출력 + filterDarkPatterns
+  + 결정형 fallback 패턴 유지.
+
+  15개 너무 많으면 sub-phase 추가 분할 권장:
+    Phase 2-b-1: S4/S7 전용 (corePerformance/technology/clinical) — 신뢰 트랙
+    Phase 2-b-2: S5/S8/S11 전용 (option/seasonalHook/options/eventDetails/benefits) — 이벤트/세트 트랙
+    Phase 2-b-3: S9/S10/S12 전용 (material/philosophy/detail/reviews/specTable/specifications) — 감각/B2B 트랙
+    Phase 2-b-4: S3 잔여 (package) — 1개
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- 449719b가 main에 도달했는지 verify-vercel-deploy.sh로 검증
+- SESSION_LOG.md T1 1000 임박 상태 — 본 세션 STEP 0에서 분할 권고/의무
+  판단 후 진행 (작업원칙 #31 (a) T1 임계 도달 또는 초과)
+
+다음 Sprint 7-M2 Phase 2-c (lifestyle-picker) + Phase 3 (API route)는
+별도 세션에서 진행 권장.
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward
+merge 사용자 위임.
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2: 21 잔여 렌더러 + lifestyle-picker)~~ ✅ PARTIAL (Phase 2-a 완료)
+
+> Sprint 7-M2 Phase 2-a (6 공유 렌더러) completed on 2026-05-13 (commit 449719b). dedicated 11/26 섹션 ids.
+> Phase 2-b/2-c = active handoff above. The message below is preserved for git history.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,

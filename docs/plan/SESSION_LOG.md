@@ -1,3 +1,104 @@
+## 2026-05-13 Sprint 7-M2 Phase 2-a — 6 공유 섹션 렌더러 (v3.1 FINAL Smart Asset Workflow) ✅
+
+### 본 세션 성격
+
+직전 Sprint 7-M2 Phase 1 완료 (993098f + 25a1abb, main FF merge + production deploy 검증) 직후 동일 turn 연속 진입. v3.1 매트릭스 26 섹션 ids 중 *복수 골격이 공유하는* 6개를 dedicated 렌더러로 격상 — 1 commit 종료.
+
+### 본 세션 산출물 (7 파일 변경, 신규 6 + 확장 1)
+
+| 파일 | LOC | 골격 | 역할 |
+|---|---|---|---|
+| `spec.ts` | 87 | S1/S3/S6 | 2-column spec table + zebra striping |
+| `story.ts` | 117 | S3/S6/S10 | Editorial paragraph + 한국어 wrap + signature image strip |
+| `product.ts` | 139 | S3/S8 | 2x2 product detail grid (공유 product image) |
+| `comparison.ts` | 120 | S4/S7 | 3-column comparison table, KFTC-safe filter |
+| `warranty.ts` | 79 | S4/S7 | Headline + 3 line cards (circle-check icons) |
+| `shipping.ts` | 93 | S1/S9/S12 | CTA copy 재사용 + S9 recyclable badge |
+| `section-copy.ts` | +320 | (확장) | 5 신규 Groq 헬퍼 |
+| `index.ts` | +12 | (확장) | registry에 6 entry 추가 |
+
+### 5 신규 Groq 헬퍼 (section-copy.ts)
+
+각각 JSON output + filterDarkPatterns + 결정형 fallback 패턴 유지:
+
+- `generateSpecRows` — `{rows: [{label, value}]}` 5-6 rows (label ≤8, value ≤24)
+- `generateStoryParagraph` — `{paragraph, attribution}` (paragraph ≤200, attribution ≤20)
+- `generateProductGrid` — `{cells: [{title, caption} × 4]}` (title ≤8, caption ≤20)
+- `generateComparisonCopy` — `{headline, baselineLabel, rows: [{feature, ours, baseline}]}` 3-4 rows
+- `generateWarrantyCopy` — `{headline, lines: [3]}` (lines ≤22 each)
+
+### Dedicated 커버리지 매트릭스 (Phase 1 + 2-a 합산)
+
+**dedicated 11 / 26 섹션 ids**:
+`hero / problem / solution / usage / cta / spec / story / product / comparison / warranty / shipping`
+
+**placeholder 15 / 26 (Phase 2-b 대상)**:
+`corePerformance / technology / clinical / optionIntro / styledShot / seasonalHook / options / material / philosophy / detail / reviews / eventDetails / benefits / specTable / specifications / package`
+
+**골격별 dedicated 커버리지**:
+| 골격 | dedicated / total | placeholder 잔여 |
+|---|---|---|
+| S1 | 3/3 ✅ | — |
+| S2 | 5/5 ✅ | — (Phase 1) |
+| S3 | 5/6 | package |
+| S4 | 4/5 | corePerformance |
+| S6 | 4/5 | styledShot |
+| S7 | 4/6 | technology, clinical |
+| S9 | 3/4 | material |
+| S12 | 3/5 | specTable, specifications |
+| S5 | 1/4 | optionIntro + (usage는 S2 lifestyle 변형으로 graceful fallback) |
+| S8 | 3/5 | seasonalHook, options |
+| S10 | 4/6 | detail, reviews |
+| S11 | 2/4 | eventDetails, benefits |
+
+### KFTC Safety — Phase 2-a 강화
+
+새 Groq 헬퍼 5개 모두 *공정위 다크패턴 필터* 통과:
+
+- `generateComparisonCopy` — "최고/1위/독점" superlatives 차단, 경쟁사 이름 fabricate 금지 프롬프트
+- `generateWarrantyCopy` — 인증번호 fabricate 금지, "판매자 1년 보증" 같은 placeholder 사용 권장 프롬프트
+- `generateSpecRows` — 정확한 측정값 fabricate 금지, "상세 페이지 참조" placeholder 권장
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 28/28 routes ✅
+- 한글 sentinel grep 0건 ✅
+- section-builder가 모든 SkeletonId 정상 dispatch ✅
+- 작업원칙 #38 strict 준수 — 이미지 *생성* 0건, *변환* + *합성*만 ✅
+- worktree 절대 경로 혼동 0회 (본 turn 누적 0건) ✅
+
+### 본 세션 commit (1건)
+
+1. `449719b` feat(automation): add 6 shared section renderers (Sprint 7-M2 Phase 2-a)
+
+### Push 정책 정직 보고 — main 직접 push 차단 4회 연속 재발
+
+직전 Sprint 7-Skel / 7-M1 / 7-M2 Phase 1과 동일하게 harness 정책 (main direct push deny) 충돌 예상. 사용자 fast-forward merge 4회 연속 패턴 — *worktree 한정 정책*으로 확정.
+
+### 적용된 작업원칙
+
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- #21 사전 점검 통과 (HEAD 25a1abb == origin/main = production ✅)
+- #24 sprint 단위 commit + push 한 turn 안에 종료 + *Phase 분할로 #24 보호*
+- #26 IA 점검 — 신규 *lib only*, 사이드바 변경 0, 신규 라우트 0
+- #27 외부 컨트랙트 보존 — 기존 lib/API 변경 0
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — 코드 0 / 신규 fallback inline 14건 grep 통과 (누적 Phase 1+2-a = 24건, 작업원칙 #35 30건 임계 미달)
+- #31 SESSION_LOG ~1020 + 본 entry ~150 = ~1170 (T2 1500 미달, T1 권고만)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #36 main push 후 verify-vercel-deploy.sh --wait — 사용자 승인 후 진행
+- #38 Production runtime static assets only ✅
+- #39 CTI inference entry point — section-builder가 ConceptTone consume의 *공식 진입점*
+- #40 Designer Sense 보존 — `overrideSkeletonId` 1클릭 교체, `hasDedicatedRenderer` 메타데이터로 placeholder UI 노출
+
+### 다음 세션 = Sprint 7-M2 Phase 2-b (15 골격 전용 렌더러)
+
+ROADMAP.md ACTIVE 메시지 (본 commit에서 prepend) 그대로 적용. Phase 2-b는 *15 렌더러 + 신규 Groq 헬퍼*로 본 sprint급 작업 — sub-phase 2-b-1/2/3/4 분할 권장안 명시.
+
+---
+
 ## 2026-05-13 Sprint 7-M2 Phase 1 — 5섹션 detail page 빌더 + S2 5 렌더러 (v3.1 FINAL Smart Asset Workflow) ✅
 
 ### 본 세션 성격
