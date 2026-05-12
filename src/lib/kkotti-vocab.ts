@@ -70,11 +70,24 @@ export const KKOTTI_VARIANTS: Record<KkottiVariant, KkottiVariantMeta> = {
 };
 
 // Default variant per dashboard section (Part A1b will consume these).
-export const SECTION_VARIANT: Record<'today' | 'action' | 'market' | 'tools', KkottiVariant> = {
-  today:  'gardener',     // Section 1: 오늘의 결과
-  action: 'hunter',       // Section 2: 오늘의 액션
-  market: 'cowgirl',      // Section 3: 소싱·시장
-  tools:  'planter',      // Section 4: 도구·활동
+// Session E-2 Phase 2 (2026-05-12): Added 5 new IDs for 4-Section dashboard
+// redesign (hero/inbox/health/potential/more). Legacy 4 (today/action/market/tools)
+// are kept as deprecated aliases until removed in a future cleanup sweep.
+export const SECTION_VARIANT: Record<
+  'today' | 'action' | 'market' | 'tools' | 'hero' | 'inbox' | 'health' | 'potential' | 'more',
+  KkottiVariant
+> = {
+  // Legacy (deprecated — kept for backward compat with any external imports)
+  today:  'gardener',
+  action: 'hunter',
+  market: 'cowgirl',
+  tools:  'planter',
+  // Phase 2 redesign
+  hero:      'gardener',   // Section 1: hero briefing (single action)
+  inbox:     'hunter',     // Section 2: alert inbox (action triage)
+  health:    'celebrator', // Section 3: garden health (results + grade)
+  potential: 'planter',    // Section 4: potential (DRAFT + 4-mode + zombie)
+  more:      'cowgirl',    // Section 5: more (market analysis + activity)
 };
 
 // ============================================================================

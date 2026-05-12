@@ -20,6 +20,11 @@ import {
   Target,
   Sprout,
   Wrench,
+  Flower2,
+  Inbox,
+  Heart,
+  TrendingUp,
+  Layers,
   ChevronDown,
   ChevronUp,
   type LucideIcon,
@@ -33,7 +38,18 @@ import {
 } from '@/lib/kkotti-vocab';
 
 // Section identifiers — match SECTION_VARIANT keys in kkotti-vocab.ts
-export type SectionId = 'today' | 'action' | 'market' | 'tools';
+// Session E-2 Phase 2 (2026-05-12): Added hero/inbox/health/potential/more for
+// 4-Section dashboard redesign. Legacy today/action/market/tools kept until cleanup.
+export type SectionId =
+  | 'today'
+  | 'action'
+  | 'market'
+  | 'tools'
+  | 'hero'
+  | 'inbox'
+  | 'health'
+  | 'potential'
+  | 'more';
 
 interface SectionHeaderProps {
   /** Section identifier — drives icon + default copy. */
@@ -56,6 +72,7 @@ interface SectionHeaderProps {
 // All Korean text is source-of-truth here so the dashboard page does not
 // have to repeat it.
 const SECTION_PRESETS: Record<SectionId, { title: string; subtitle: string; Icon: LucideIcon }> = {
+  // Legacy presets — kept for backward compat (not used by redesigned dashboard).
   today: {
     title: '오늘의 결과',
     subtitle: '실시간 매출 / 마진 / 굿서비스 한눈에',
@@ -75,6 +92,32 @@ const SECTION_PRESETS: Record<SectionId, { title: string; subtitle: string; Icon
     title: '도구 · 활동',
     subtitle: '빠른 작업 / 이벤트 타임라인',
     Icon: Wrench,
+  },
+  // Session E-2 Phase 2 (2026-05-12) redesigned 4-Section dashboard.
+  hero: {
+    title: '오늘 한 가지',
+    subtitle: '지금 가장 먼저 할 일 한 줄로',
+    Icon: Flower2,
+  },
+  inbox: {
+    title: '받은 편지함',
+    subtitle: '품절·가격·경쟁사·골든윈도우 알림 한곳에',
+    Icon: Inbox,
+  },
+  health: {
+    title: '정원 건강',
+    subtitle: '오늘 매출 · 효자 상품 · 굿서비스/리뷰',
+    Icon: Heart,
+  },
+  potential: {
+    title: '잠재력',
+    subtitle: '등록 대기 · 꼬띠 4모드 · 좀비 부활소',
+    Icon: TrendingUp,
+  },
+  more: {
+    title: '더보기',
+    subtitle: '시장 모니터링 · 빠른 작업 · 활동 타임라인',
+    Icon: Layers,
   },
 };
 

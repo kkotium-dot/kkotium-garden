@@ -1,26 +1,42 @@
 'use client';
-// Dashboard — KKOTIUM v7 (Workflow Redesign Sprint Part A2b)
+// Dashboard — KKOTIUM v8 (Session E-2 Phase 2 — 4-Section redesign, 2026-05-12)
 //
-// Workflow Redesign (2026-05-03 → 2026-05-05):
-//  - Parent fetch SWR migration (loadProducts/loadStats removed → SWR hooks)
-//  - Four-section layout (today / action / market / tools) via CollapsibleSection
-//  - Mode toggle (today / week / month) — drives Section 3 widget order
-//  - KkottiBriefingWidget integrated at the top of Section 1
-//  - ReviewGrowth + UploadReadiness now benefit automatically from parent SWR
+// Redesign goal:
+//   New primary view = 4 sections (Hero / Inbox / Health / Potential) +
+//   1 collapsed "더보기" section that preserves every legacy widget.
 //
-// A2b additions (2026-05-05):
-//  - Section 3 widgets reorder per mode via inline `order` (no widget hidden)
-//  - sectionMarketSubtitle is data-driven (zero extra API — derived from SWR stats)
-//  - ModeActionHint slim banner under the mode toggle (power-seller intent at-a-glance)
+//   Section 1 (Hero / 영웅)        : KkottiBriefingWidget — single focused action
+//   Section 2 (Inbox / 받은편지함) : LowStockAlertWidget + ConfirmationReminder
+//                                   + DailyPlanWidget + placeholders for 6-B
+//                                   (price), 6-C (competitor), P0-B (golden
+//                                   window), P0-C (pareto). Placeholders link
+//                                   to /automation for live status.
+//   Section 3 (Health / 정원 건강) : 3-col grid of small cards —
+//                                   TodayCard / TopProductsCard (P0-C placeholder)
+//                                   / HealthCombinedCard (GoodService+Review)
+//   Section 4 (Potential / 잠재력) : UploadReadinessWidget + KkottiWidget (4-mode)
+//                                   + ZombieReactivationCard
+//   Section 5 (More / 더보기)      : KPI 4-cards + Pipeline + Profitability +
+//                                   MarketTrend + DataLab + Competition +
+//                                   Sourcing + Lifecycle + Quick actions +
+//                                   EventTimeline. Default collapsed.
 //
 // Behavior preservation:
-//  - Zero widget removed — every prior widget kept, only repositioned
-//  - Single refresh button still triggers a global mutate via SWR hook refresh
-//  - revalidateOnFocus is enabled (DASHBOARD_SWR_DEFAULTS) so the dashboard
-//    self-updates when the user returns to the tab — no manual reload needed.
+//   - Zero widget removed — every prior widget is mounted (Section 5 carries
+//     the long tail). DOM-mounted-but-hidden via CollapsibleSection.
+//   - Single refresh button still triggers a global SWR mutate.
+//   - revalidateOnFocus stays enabled (DASHBOARD_SWR_DEFAULTS).
+//
+// Backward compat:
+//   - DashboardProduct export retained for KkottiWidget import chain.
+//   - SectionId additions are additive (legacy IDs untouched).
 
 import { useMemo, useState, useCallback } from 'react';
-import { Package, TrendingUp, AlertTriangle, Sparkles, Layers, Skull, ArrowRight, ShoppingCart, RefreshCw } from 'lucide-react';
+import {
+  Package, TrendingUp, AlertTriangle, Sparkles, Layers, Skull,
+  ArrowRight, ShoppingCart, RefreshCw,
+  CircleDollarSign, Users, Trophy,
+} from 'lucide-react';
 import KkottiWidget from '@/components/dashboard/KkottiWidget';
 import KkottiBriefingWidget from '@/components/dashboard/KkottiBriefingWidget';
 import LowStockAlertWidget from '@/components/dashboard/LowStockAlertWidget';
@@ -37,6 +53,10 @@ import DataLabTrendWidget from '@/components/dashboard/DataLabTrendWidget';
 import SourcingRecommendWidget from '@/components/dashboard/SourcingRecommendWidget';
 import ProductLifecycleWidget from '@/components/dashboard/ProductLifecycleWidget';
 import CollapsibleSection from '@/components/dashboard/layout/CollapsibleSection';
+import InboxPlaceholderRow from '@/components/dashboard/cards/InboxPlaceholderRow';
+import TopProductsCard from '@/components/dashboard/cards/TopProductsCard';
+import HealthCombinedCard from '@/components/dashboard/cards/HealthCombinedCard';
+import ZombieReactivationCard from '@/components/dashboard/cards/ZombieReactivationCard';
 import {
   useProductsList,
   useDashboardStats,
@@ -44,7 +64,7 @@ import {
 } from '@/lib/hooks/useDashboardData';
 import Link from 'next/link';
 
-// ── KPI Card ──────────────────────────────────────────────────────────────
+// ── KPI Card (legacy — Section 5) ─────────────────────────────────────────
 function KpiCard({
   label, value, sub, icon: Icon, valueColor, iconBg, iconColor, href,
 }: {
@@ -70,7 +90,7 @@ function KpiCard({
   return href ? <Link href={href} style={{ textDecoration: 'none', display: 'block' }}>{inner}</Link> : inner;
 }
 
-// ── Pipeline Stage Card ───────────────────────────────────────────────────
+// ── Pipeline Stage Card (legacy — Section 5) ──────────────────────────────
 interface PipelineStage {
   label: string; count: number; icon: React.ElementType;
   color: string; bg: string; border: string; href: string; hint: string;
@@ -106,36 +126,87 @@ function PipelineCard({ stages }: { stages: PipelineStage[] }) {
   );
 }
 
-// ── Today's Performance Card ─────────────────────────────────────────────
+// ── Today's Performance Card (Section 3) ──────────────────────────────────
 function TodayCard({ orderCount, revenue, paidAmount, loading }: {
   orderCount: number; revenue: number; paidAmount: number; loading?: boolean;
 }) {
   const fmt = (n: number) => n >= 10000 ? `${(n / 10000).toFixed(1)}만원` : `${n.toLocaleString()}원`;
-  const items = [
-    { label: '주문 수',   value: loading ? '...' : String(orderCount), unit: '건', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-    { label: '총 매입',   value: loading ? '...' : (revenue > 0 ? fmt(revenue) : '—'), unit: '', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-    { label: '정산 예정', value: loading ? '...' : (paidAmount > 0 ? fmt(paidAmount) : '—'), unit: '', color: '#e62310', bg: '#FFF0F5', border: '#FFB3CE' },
-  ];
   return (
-    <div className="kk-card" style={{ overflow: 'hidden' }}>
-      <div style={{ padding: '12px 20px 10px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <ShoppingCart size={14} style={{ color: '#16a34a' }} />
-          <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>오늘의 실적</p>
-          <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, background: '#dcfce7', color: '#15803d', fontWeight: 700 }}>네이버 실시간</span>
-        </div>
-        <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>
-          {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} KST 기준
+    <div
+      className="kk-card"
+      style={{
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        minHeight: 168,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <ShoppingCart size={14} style={{ color: '#16a34a' }} />
+        <p
+          style={{
+            fontSize: 13,
+            fontWeight: 800,
+            color: '#1A1A1A',
+            margin: 0,
+            flex: 1,
+          }}
+        >
+          오늘 매출
         </p>
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            color: '#15803d',
+            background: '#dcfce7',
+            padding: '2px 7px',
+            borderRadius: 999,
+          }}
+        >
+          네이버
+        </span>
       </div>
-      <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-        {items.map(item => (
-          <div key={item.label} style={{ textAlign: 'center', padding: '12px 8px', borderRadius: 12, background: item.bg, border: `1px solid ${item.border}` }}>
-            <p style={{ fontSize: 24, fontWeight: 900, color: item.color, margin: '0 0 4px', lineHeight: 1 }}>{item.value}{item.unit}</p>
-            <p style={{ fontSize: 11, color: item.color, fontWeight: 700, margin: 0, opacity: 0.85 }}>{item.label}</p>
+
+      <div
+        style={{
+          flex: 1,
+          background: '#F0FDF4',
+          border: '1px solid #BBF7D0',
+          borderRadius: 10,
+          padding: '12px 14px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          gap: 6,
+        }}
+      >
+        <div>
+          <p style={{ margin: 0, fontSize: 11, color: '#15803d', fontWeight: 700 }}>주문 수</p>
+          <p style={{ margin: '2px 0 0', fontSize: 22, fontWeight: 900, color: '#16a34a', lineHeight: 1 }}>
+            {loading ? '—' : orderCount}건
+          </p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 10, color: '#16a34a', fontWeight: 700 }}>총 매입</p>
+            <p style={{ margin: '2px 0 0', fontSize: 13, fontWeight: 800, color: '#15803d' }}>
+              {loading ? '—' : (revenue > 0 ? fmt(revenue) : '—')}
+            </p>
           </div>
-        ))}
+          <div>
+            <p style={{ margin: 0, fontSize: 10, color: '#16a34a', fontWeight: 700 }}>정산 예정</p>
+            <p style={{ margin: '2px 0 0', fontSize: 13, fontWeight: 800, color: '#15803d' }}>
+              {loading ? '—' : (paidAmount > 0 ? fmt(paidAmount) : '—')}
+            </p>
+          </div>
+        </div>
       </div>
+
+      <p style={{ margin: 0, fontSize: 10, color: '#A3A3A3' }}>
+        {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} KST 기준
+      </p>
     </div>
   );
 }
@@ -207,9 +278,6 @@ export interface DashboardProduct {
   mainImage?: string; aiScore?: number;
   createdAt?: Date; updatedAt?: Date; lastSaleDate?: Date;
   supplierName?: string;
-  // E-15 Block D Part 2: fields needed by UploadReadinessWidget for accurate score calc.
-  // Without these, widget always treated shipping_template/extra_images as failed,
-  // causing PATCH newScore to disagree with widget-reload score by up to 18 points.
   shippingTemplateId?: string | null;
   images?: string[];
   shippingFee?: number;
@@ -236,7 +304,6 @@ function normalizeProducts(raw: unknown[]): DashboardProduct[] {
       updatedAt: p.updatedAt ? new Date(p.updatedAt as string) : new Date(),
       lastSaleDate: p.lastSaleDate ? new Date(p.lastSaleDate as string) : undefined,
       supplierName: (supplier?.name as string | undefined) ?? (p.supplierName as string | undefined),
-      // E-15 Block D Part 2: include fields used by UploadReadinessWidget
       shippingTemplateId: (p.shippingTemplateId as string | null | undefined) ?? (p.shipping_template_id as string | null | undefined) ?? null,
       images: Array.isArray(p.images) ? (p.images as string[]) : [],
       shippingFee: typeof p.shippingFee === 'number'
@@ -248,30 +315,22 @@ function normalizeProducts(raw: unknown[]): DashboardProduct[] {
   });
 }
 
-// ── Section 3 widget order map (A2b) ─────────────────────────────────────
-// Mode-driven order for the six market-section widgets. Each value is a CSS
-// `order` integer: lower comes first. Rendering stays in a single flex column
-// for layout-shift-free mode transitions.
-//   - today : default order (Kkotti briefing first, then trend → datalab/comp → sourcing/lifecycle)
-//   - week  : DataLab + Competition lifted to the top (trend + competition emphasis)
-//   - month : Lifecycle + Sourcing lifted to the top (lifecycle + sourcing emphasis)
-type Section3WidgetKey =
-  | 'kkotti'
+// ── Section 5 ("더보기") widget order map (preserves the legacy A2b feel) ──
+// Mode-driven order for market widgets. Lower order renders first.
+type MoreWidgetKey =
   | 'marketTrend'
   | 'datalab'
   | 'competition'
   | 'sourcing'
   | 'lifecycle';
 
-const SECTION3_ORDER: Record<DashboardMode, Record<Section3WidgetKey, number>> = {
-  today: { kkotti: 1, marketTrend: 2, datalab: 3, competition: 4, sourcing: 5, lifecycle: 6 },
-  week:  { datalab: 1, competition: 2, kkotti: 3, marketTrend: 4, sourcing: 5, lifecycle: 6 },
-  month: { lifecycle: 1, sourcing: 2, kkotti: 3, marketTrend: 4, datalab: 5, competition: 6 },
+const MORE_ORDER: Record<DashboardMode, Record<MoreWidgetKey, number>> = {
+  today: { marketTrend: 1, datalab: 2, competition: 3, sourcing: 4, lifecycle: 5 },
+  week:  { datalab: 1, competition: 2, marketTrend: 3, sourcing: 4, lifecycle: 5 },
+  month: { lifecycle: 1, sourcing: 2, marketTrend: 3, datalab: 4, competition: 5 },
 };
 
-// ── Mode action hint (A2b) ───────────────────────────────────────────────
-// Slim banner directly under the mode toggle that announces the current
-// mode's intent in a single line. Pure presentation, no data dependency.
+// ── Mode action hint ─────────────────────────────────────────────────────
 interface ModeActionHintProps {
   mode: DashboardMode;
 }
@@ -321,10 +380,8 @@ function ModeActionHint({ mode }: ModeActionHintProps) {
   );
 }
 
-// ── Build dynamic Section 3 subtitle from already-fetched SWR stats (A2b) ─
-// Replaces the prior static string. Uses only fields the dashboard already
-// fetches via useDashboardStats() — no extra API call.
-function buildMarketSubtitle(
+// ── Section 5 subtitle (data-driven) ─────────────────────────────────────
+function buildMoreSubtitle(
   mode: DashboardMode,
   stats: DashboardStatsApiData | undefined,
 ): string {
@@ -340,22 +397,13 @@ function buildMarketSubtitle(
   if (mode === 'week') {
     return `주간 시장 — 데이터랩 트렌드 + 경쟁사 가격 모니터 (소싱 후보 ${sourcing}건)`;
   }
-  // month
   const zombiePct = active > 0 ? Math.round((zombie / active) * 100) : 0;
   return `월간 개선 — 좀비 ${zombie}건 (판매중 대비 ${zombiePct}%) · 소싱 ${sourcing}건 점검`;
 }
 
-// ── Stats type alias for the dashboard ───────────────────────────────────
-// We keep the local DashStats shape narrowed to what the page renders.
-type DashStats = DashboardStatsApiData;
-
 export default function DashboardPage() {
-  // ── Mode toggle (today / week / month) ─────────────────────────────────
   const [mode, setMode] = useState<DashboardMode>('today');
 
-  // ── SWR hooks (replaces useState + useEffect + loadProducts/loadStats) ─
-  // Each hook polls on a 60s cadence and revalidates on tab focus, so the
-  // dashboard self-updates without any manual reload.
   const {
     rawProducts,
     isLoading: productsLoading,
@@ -368,15 +416,11 @@ export default function DashboardPage() {
     refresh: refreshStats,
   } = useDashboardStats({ period: 'all' });
 
-  // Normalize the raw payload once per fetch — preserves the previous behavior
-  // exactly (including supplier.name fallback + shipping_fee default 3000).
   const products: DashboardProduct[] = useMemo(
     () => (rawProducts ? normalizeProducts(rawProducts) : []),
     [rawProducts],
   );
 
-  // Single refresh: trigger SWR mutate on both endpoints.
-  // SWR handles deduping so repeated taps within 10s are coalesced.
   const handleRefresh = useCallback(() => {
     refreshStats();
     refreshProducts();
@@ -391,10 +435,7 @@ export default function DashboardPage() {
     { label: '좀비 감지', count: stats?.zombieCount ?? 0,   icon: Skull,      color: '#e62310', bg: '#fff0ef', border: '#ffd6d3', href: '/products/reactivation', hint: '30일+ 미판매'  },
   ];
 
-  // Mode-specific Section 3 subtitle is now data-driven (A2b).
-  // Power-seller intent: at-a-glance, every mode shows numeric deltas
-  // pulled from already-fetched SWR stats (zero extra API).
-  const sectionMarketSubtitle = buildMarketSubtitle(mode, stats);
+  const moreSubtitle = buildMoreSubtitle(mode, stats);
 
   return (
     <div style={{ minHeight: '100vh', background: 'transparent', padding: '24px', paddingBottom: 56 }} className="space-y-2">
@@ -418,10 +459,7 @@ export default function DashboardPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Mode toggle — drives Section 3 visual emphasis */}
             <ModeToggle mode={mode} onChange={setMode} />
-
-            {/* Single refresh button — reloads stats + products at once via SWR mutate */}
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -433,7 +471,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Mode action hint — slim banner announcing the current mode intent (A2b) */}
         <ModeActionHint mode={mode} />
 
         <div style={{ height: 2.5, background: '#FFB3CE', borderRadius: 99, margin: '8px 0 6px' }} />
@@ -443,24 +480,119 @@ export default function DashboardPage() {
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
-          SECTION 1 — 오늘의 결과
-          꼬띠 일일 브리핑 + 오늘 실적 + KPI + 파이프라인 + 수익성/굿서비스
+          SECTION 1 — 영웅 (Hero)
+          꼬띠 한 줄 브리핑 — 지금 가장 먼저 할 행동 단 1개
           ════════════════════════════════════════════════════════════════════ */}
-      <CollapsibleSection section="today" variant="gardener">
-        <div className="space-y-4">
-          {/* Kkotti daily briefing — one-line auto inference (zero AI cost) */}
-          <KkottiBriefingWidget />
+      <CollapsibleSection section="hero" variant="gardener">
+        <KkottiBriefingWidget />
+      </CollapsibleSection>
 
-          {/* Today's Naver API performance (only when API connected) */}
-          {stats?.naverApiReady && (
-            <TodayCard
-              orderCount={stats.todayOrderCount ?? 0}
-              revenue={stats.todayRevenue ?? 0}
-              paidAmount={stats.todayPaidAmount ?? 0}
+      {/* ════════════════════════════════════════════════════════════════════
+          SECTION 2 — 받은편지함 (Inbox)
+          품절·발주 알림 + 향후 가격/경쟁사/골든윈도우/효자상품 자동 합류
+          ════════════════════════════════════════════════════════════════════ */}
+      <CollapsibleSection section="inbox" variant="hunter">
+        <div className="space-y-4">
+          {/* Active feeds */}
+          <LowStockAlertWidget />
+
+          {/* Today-only: confirmation reminder + daily plan */}
+          {mode === 'today' && <ConfirmationReminderWidget />}
+          <DailyPlanWidget products={products} productsLoading={productsLoading} />
+
+          {/* Pending feeds — link to /automation for live status */}
+          <div className="space-y-2">
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#A3A3A3', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '12px 0 6px' }}>
+              곧 합류할 알림
+            </p>
+            <InboxPlaceholderRow
+              Icon={CircleDollarSign}
+              title="가격 변동 감지"
+              description="도매꾹 공급가 ±5% 이상 변동 시 자동 알림"
+              sprintLabel="6-B"
+            />
+            <InboxPlaceholderRow
+              Icon={Users}
+              title="다른 셀러 추적"
+              description="같은 상품의 1페이지 경쟁 셀러 가격·재고 변화 감지"
+              sprintLabel="6-C"
+            />
+            <InboxPlaceholderRow
+              Icon={Sparkles}
+              title="등록 7일 골든 윈도우"
+              description="신상품 가산점 종료 전 클릭·판매 모멘텀 추적"
+              sprintLabel="P0-B"
+            />
+            <InboxPlaceholderRow
+              Icon={Trophy}
+              title="효자 상품 자동 식별"
+              description="상위 20% 상품이 매출 70~80% 차지하는 패턴 자동 분석"
+              sprintLabel="P0-C"
+            />
+          </div>
+        </div>
+      </CollapsibleSection>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          SECTION 3 — 정원 건강 (Garden Health)
+          3 카드: 오늘 매출 / 효자 상품 TOP 5 / 굿서비스·리뷰 합쳐서
+          ════════════════════════════════════════════════════════════════════ */}
+      <CollapsibleSection section="health" variant="celebrator">
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: 14,
+          }}
+        >
+          <TodayCard
+            orderCount={stats?.todayOrderCount ?? 0}
+            revenue={stats?.todayRevenue ?? 0}
+            paidAmount={stats?.todayPaidAmount ?? 0}
+            loading={statsLoading}
+          />
+          <TopProductsCard />
+          <HealthCombinedCard />
+        </div>
+      </CollapsibleSection>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          SECTION 4 — 잠재력 (Potential)
+          등록 준비 + 꼬띠 4모드 + 좀비 부활소
+          ════════════════════════════════════════════════════════════════════ */}
+      <CollapsibleSection section="potential" variant="planter">
+        <div className="space-y-4">
+          <UploadReadinessWidget products={products} productsLoading={productsLoading} onRefresh={handleRefresh} />
+          <KkottiWidget products={products} productsLoading={productsLoading} />
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: 14,
+            }}
+          >
+            <ZombieReactivationCard
+              zombieCount={stats?.zombieCount ?? 0}
+              activeCount={stats?.activeProducts ?? 0}
               loading={statsLoading}
             />
-          )}
+            <ReviewGrowthWidget />
+          </div>
+        </div>
+      </CollapsibleSection>
 
+      {/* ════════════════════════════════════════════════════════════════════
+          SECTION 5 — 더보기 (More) — DEFAULT COLLAPSED
+          KPI / 파이프라인 / 수익성 / 굿서비스 / 시장 / 빠른 작업 / 활동
+          모든 기존 위젯 보존 — Phase 2 진입 시점 자동 접힘으로 시야 정리
+          ════════════════════════════════════════════════════════════════════ */}
+      <CollapsibleSection
+        section="more"
+        variant="cowgirl"
+        subtitle={moreSubtitle}
+        defaultCollapsed
+      >
+        <div className="space-y-4">
           {/* KPI 4-card grid */}
           <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
             <KpiCard label="전체 상품"     value={stats?.totalProducts ?? 0}          sub="등록된 상품 수"  icon={Package}      valueColor="#1A1A1A" iconBg="#F5F5F5" iconColor="#9CA3AF" href="/products" />
@@ -469,92 +601,33 @@ export default function DashboardPage() {
             <KpiCard label="평균 꿀통지수"  value={stats?.avgScore ? `${stats.avgScore}점` : '—'} sub="AI 상품 품질" icon={Sparkles} valueColor="#FF6B8A" iconBg="#FFF0F5" iconColor="#FF6B8A" />
           </div>
 
-          {/* Pipeline progression */}
           <PipelineCard stages={pipelineStages} />
 
-          {/* Profitability + Good Service in 2-col grid (D-2 layout preserved) */}
+          {/* Full GoodService + Profitability (Section 3 only shows the small card) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <GoodServiceWidget />
             <ProfitabilityWidget />
           </div>
-        </div>
-      </CollapsibleSection>
 
-      {/* ════════════════════════════════════════════════════════════════════
-          SECTION 2 — 오늘의 액션
-          오늘 할 일 + 등록 준비 명령탑 + 리뷰 성장 트래커
-          ════════════════════════════════════════════════════════════════════ */}
-      <CollapsibleSection section="action" variant="hunter">
-        <div className="space-y-4">
-          {/* Sprint 6-A UI Phase 2 — low-stock alerts triage (highest priority action) */}
-          <LowStockAlertWidget />
-
-          {/* Today's actionable plan */}
-          <DailyPlanWidget products={products} productsLoading={productsLoading} />
-
-          {/* DRAFT readiness command center — auto-benefits from parent SWR */}
-          <UploadReadinessWidget products={products} productsLoading={productsLoading} onRefresh={handleRefresh} />
-
-          {/* Review growth tracker — uses useReviewGrowth() internally */}
-          <ReviewGrowthWidget />
-
-          {/* A3-1b: Purchase confirmation reminder — D+3~5 window */}
-          {/* Mounted in 'today' mode only since reminders are a daily action item. */}
-          {mode === 'today' && <ConfirmationReminderWidget />}
-        </div>
-      </CollapsibleSection>
-
-      {/* ════════════════════════════════════════════════════════════════════
-          SECTION 3 — 소싱 · 시장
-          꼬띠 AI + 시장 트렌드 + 데이터랩 + 경쟁 모니터 + 소싱 추천 + 라이프사이클
-          ════════════════════════════════════════════════════════════════════ */}
-      <CollapsibleSection
-        section="market"
-        variant="hunter"
-        subtitle={sectionMarketSubtitle}
-      >
-        {/* A2b: flex column with inline `order` per widget — preserves all six
-            widgets (zero hidden) while reordering on mode change. Single column
-            keeps layout-shift to zero across mode transitions. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Kkotti AI — full breakdown for the products list */}
-          <div style={{ order: SECTION3_ORDER[mode].kkotti }}>
-            <KkottiWidget products={products} productsLoading={productsLoading} />
+          {/* Market analysis */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ order: MORE_ORDER[mode].marketTrend }}>
+              <MarketTrendWidget products={products} productsLoading={productsLoading} />
+            </div>
+            <div style={{ order: MORE_ORDER[mode].datalab }}>
+              <DataLabTrendWidget />
+            </div>
+            <div style={{ order: MORE_ORDER[mode].competition }}>
+              <CompetitionMonitorWidget />
+            </div>
+            <div style={{ order: MORE_ORDER[mode].sourcing }}>
+              <SourcingRecommendWidget />
+            </div>
+            <div style={{ order: MORE_ORDER[mode].lifecycle }}>
+              <ProductLifecycleWidget />
+            </div>
           </div>
 
-          {/* Market trend (full width — product-level data needs space) */}
-          <div style={{ order: SECTION3_ORDER[mode].marketTrend }}>
-            <MarketTrendWidget products={products} productsLoading={productsLoading} />
-          </div>
-
-          {/* DataLab — promoted to top row in week mode */}
-          <div style={{ order: SECTION3_ORDER[mode].datalab }}>
-            <DataLabTrendWidget />
-          </div>
-
-          {/* Competition monitor — promoted to top row in week mode */}
-          <div style={{ order: SECTION3_ORDER[mode].competition }}>
-            <CompetitionMonitorWidget />
-          </div>
-
-          {/* Sourcing recommend — promoted to top row in month mode */}
-          <div style={{ order: SECTION3_ORDER[mode].sourcing }}>
-            <SourcingRecommendWidget />
-          </div>
-
-          {/* Product lifecycle — promoted to top row in month mode */}
-          <div style={{ order: SECTION3_ORDER[mode].lifecycle }}>
-            <ProductLifecycleWidget />
-          </div>
-        </div>
-      </CollapsibleSection>
-
-      {/* ════════════════════════════════════════════════════════════════════
-          SECTION 4 — 도구 · 활동
-          빠른 작업 + 이벤트 타임라인
-          ════════════════════════════════════════════════════════════════════ */}
-      <CollapsibleSection section="tools" variant="celebrator">
-        <div className="space-y-4">
           {/* Quick action shortcuts */}
           <div className="kk-card" style={{ overflow: 'hidden' }}>
             <div style={{ padding: '12px 20px 10px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', gap: 8 }}>
