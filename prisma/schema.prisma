@@ -185,6 +185,7 @@ model Product {
   lowStockAlerts          LowStockAlert[]
   priceMovementAlerts     PriceMovementAlert[]
   competitorSnapshots     CompetitorSnapshot[]
+  diagnosis               Diagnosis?
 
   @@index([supplierId])
   @@index([userId])
@@ -578,4 +579,54 @@ model SupplierStockProfile {
   @@index([productNo], map: "idx_supplier_stock_profiles_product_no")
   @@index([supplierId], map: "idx_supplier_stock_profiles_supplier")
   @@map("supplier_stock_profiles")
+}
+
+model Diagnosis {
+  id                  String   @id @default(cuid())
+  productId           String   @unique
+
+  qualityScore        Float
+  qualitySignals      Json
+  visionComment       String?
+
+  competitionScore    Float
+  competitionSamples  Json     @default("[]")
+
+  roiScore            Float
+  roiBreakdown        Json     @default("{}")
+
+  conceptTone         Json
+  skeletonId          String
+  inferenceConfidence Float
+
+  grade               String
+  confidenceLevel     String
+  recommendedSections String[] @default([])
+
+  diagnosedAt         DateTime @default(now())
+
+  product             Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([grade])
+  @@index([skeletonId])
+}
+
+model LifestyleAsset {
+  id           String    @id @default(cuid())
+  category     String
+  tags         String[]  @default([])
+  moodTags     String[]  @default([])
+  source       String
+  licenseUrl   String?
+  storageUrl   String
+  width        Int
+  height       Int
+  colorPalette Json?
+  lastUsedAt   DateTime?
+  usedBySkus   String[]  @default([])
+  createdAt    DateTime  @default(now())
+
+  @@index([category])
+  @@index([tags])
+  @@index([moodTags])
 }
