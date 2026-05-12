@@ -1,3 +1,79 @@
+## 2026-05-13 Sprint 7-Skel — 12 골격 SkeletonSpec 정의 (v3.1 FINAL Smart Asset Workflow) ✅
+
+### 본 세션 성격
+
+직전 Sprint 7-Diag MVP 완료 (4 commit, 0dd3bbd → 56bb2fc) 직후 본 세션 진입. v3.1 패키지 Section 4 매트릭스 + S2 YAML 예시 + Section 4-C 검증 케이스에 따라 12개 골격을 각 1개 spec 파일로 export. Sprint 7-M1·M2·Lib에서 골격 spec을 consume할 foundation 1개 commit으로 종료.
+
+### 본 세션 산출물
+
+13개 신규 파일 (`src/lib/automation/layout-skeletons/`):
+
+| 파일 | 컨셉 시그니처 | 톤 시그니처 | sections |
+|---|---|---|---|
+| `index.ts` | — | — | SkeletonSpec 타입 + SKELETONS 컬렉션 + module-load invariant |
+| `s1-budget-daily-single.ts` | budget·daily·single | friendly·white·minimal | hero, spec, shipping (3) |
+| `s2-standard-daily-options.ts` | standard·daily·{single,options} | friendly·lifestyle·korean | hero, problem, solution, usage, cta (5, 주력) |
+| `s3-premium-gift-set.ts` | premium·gift·set | trust·detail·minimal | hero, story, product, package, spec, cta (6) |
+| `s4-standard-pro-single.ts` | standard·pro·single | professional·white·minimal | hero, corePerformance, comparison, warranty, cta (5) |
+| `s5-budget-daily-set.ts` | kidsmom·budget·daily·set | friendly·vivid·korean | hero, optionIntro, usage, cta (4) |
+| `s6-standard-gift-single.ts` | standard·gift·single | sensory·lifestyle·minimal | hero, story, styledShot, spec, cta (5) |
+| `s7-premium-pro-single.ts` | premium·pro·single | trust·white·minimal | hero, technology, clinical, comparison, warranty, cta (6) |
+| `s8-standard-event-set.ts` | standard·event·set | sensory·vivid·korean | seasonalHook, product, options, usage, cta (5) |
+| `s9-budget-daily-natural.ts` | budget·daily·single | friendly·warm·natural | hero, material, usage, shipping (4) |
+| `s10-premium-daily-options.ts` | premium·daily·{single,options} | sensory·calm·minimal | hero, philosophy, detail, usage, reviews, cta (6) |
+| `s11-standard-event-vintage.ts` | standard·event·single | friendly·vivid·vintage | hero, eventDetails, benefits, cta (4) |
+| `s12-budget-pro-options.ts` | budget·pro·options | professional·{mono,calm}·minimal | hero, specTable, specifications, usage, shipping (5) |
+
+각 spec은 `SkeletonSpec` 인터페이스 준수: `id` / `description` (영문) / `matchSignature` (concept 4축 + tone 4축, 빈 배열은 wildcard 의미) / `sections: SectionSpec[]` (id, height, layout, copyTone, bgColorToken) / `totalHeight` / `width` (860px) / `colorTokens` (primary, secondary, accent) / `fonts` / `copyGlobalTone`.
+
+### 정합성 보장 — index.ts module-load invariant
+
+`assertSectionIdAlignment` IIFE가 12 골격 각각에 대해 `SKELETON_SECTIONS[id]` (grading.ts) 와 `SKELETONS[id].sections.map(s=>s.id)` 가 길이·순서·값 모두 1:1 정합인지 확인. 드리프트 발견 시 throw → `npm run build` page-data 수집 단계에서 즉시 차단. 이 자동 검증으로 향후 grading.ts 또는 spec 파일 어느 한쪽 수정 시 silent drift 0건 보장.
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors
+- `npm run build` — 28/28 prerender + ƒ Dynamic routes 모두 통과. index.ts invariant module-load 단계 (page-data collection) 무사고
+- 코드 내 한글 0건 (작업원칙 #29 (c) 강제 적용 — description / copyTone / copyGlobalTone 모두 영문, 디자이너 노출 한글 라벨은 후속 dict 파일에서)
+- worktree 절대 경로 혼동 0회 (본 turn 누적 0건, Sprint 7-Diag turn에서도 0건)
+- v3.1 Section 4-A 분포 패턴 (sapling 80% = S1/S2/S5, 베스트셀러 후보 15% = S3/S6/S10, 전문 5% = S4/S7/S12) — spec 파일이 본 분포를 코드 주석으로 반영
+- Sprint 7-Diag MVP 검증 케이스 3건 (S5 / S10 / S4)의 인라인 참조를 해당 spec 파일에 표기 (S2, S4, S5, S10) — future skeleton-matcher unit test 시드로 활용
+
+### 본 세션 commit (2건)
+
+1. `a29e8c5` feat(automation): add 12 layout skeletons (Sprint 7-Skel)
+2. (본 entry) docs(plan): record Sprint 7-Skel completion + Sprint 7-M1 handoff
+
+### Push 정책 정직 보고 — main 직접 push 차단
+
+본 세션 turn에서 `git push origin claude/thirsty-rubin-2e231d:main` 시도 시 harness 정책이 차단 (default branch direct push deny). 본 worktree branch (`claude/thirsty-rubin-2e231d`) 로는 정상 push. CLAUDE.md의 "main에 직접 push (1인 개발, 브랜치 없음)" 패턴과 harness 정책 충돌 — *사용자 명시 승인 또는 settings 권한 추가 필요*.
+
+직전 Sprint 7-Diag MVP 4 commit (0dd3bbd → 56bb2fc)은 main에 직접 push 성공 — 본 정책이 본 worktree에 한정된 것인지, 신규 정책인지 사용자 확인 위임.
+
+### 적용된 작업원칙
+
+- #14 PROGRESS + SESSION_LOG 함께 갱신 ✅ (본 entry commit 2회에서 처리)
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- #21 사전 점검 통과 ✅ (HEAD 56bb2fc = origin/main 일치)
+- #24 sprint 단위 commit + push 한 turn 안에 종료 ✅ (단, main push는 사용자 위임)
+- #26 IA 점검 — Sprint 7-Skel은 *lib만 추가*, 사이드바 변경 0, 신규 라우트 0
+- #27 외부 컨트랙트 보존 — 기존 lib/API 변경 0
+- #28 Vercel = source of truth ✅ (main push 사용자 승인 후 `verify-vercel-deploy.sh --wait` 진행 예정)
+- #29 (a~e++) 한글 처리 — 코드 0 / MD entry는 안전 패턴 (Edit oldText/newText 영문·구두점 또는 Read 후 Write 전체)
+- #31 SESSION_LOG 709 + 본 entry ~80 = ~790 (T1 1000 미달, 분할 불요)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #36 main push 후 `verify-vercel-deploy.sh --wait` 진행 의무 (현재 사용자 승인 대기로 미진행, 사용자 승인 직후 실행 예정)
+- #38 Production runtime static assets only — 본 sprint는 *spec 파일만 추가*, runtime image generation 0
+- #39 CTI inference entry point — SkeletonSpec.matchSignature가 향후 skeleton-matcher 강화 시 consume 대상
+- #40 Designer Sense 보존 — 12 골격은 *디자이너 1클릭 교체 가능*한 후보 라이브러리, S13+ 확장 가능 (v3.1 Section 4-B)
+
+### 다음 세션 = Sprint 7-M1 (썸네일 자동화 4변형)
+
+ROADMAP.md ACTIVE 메시지 (본 commit에서 prepend) 그대로 적용.
+
+---
+
 ## 2026-05-13 Sprint 7-Diag MVP (v3.1 FINAL Smart Asset Workflow Phase 1 + 2-A + 2-B) ✅
 
 ### 본 세션 성격

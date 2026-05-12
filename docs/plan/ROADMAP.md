@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-12 v3.1 FINAL 채택 (CTI 8축 + 12 골격 + L1~L4 등급) — v2.0 Sprint X 폐기 후 재구성 (작업원칙 #38·#39·#40 신설)
-> **HEAD**: 4b58a52 = origin/main = production | **TSC**: 0 errors | **빌드**: 28/28 OK (docs-only commit, 코드 변경 0) | **배포**: https://kkotium-garden.vercel.app (4b58a52 REGISTERED via GitHub Deployments path)
+> **최종 업데이트**: 2026-05-13 Sprint 7-Skel 12 골격 spec 완료 (a29e8c5, branch push 후 main merge 사용자 승인 대기)
+> **HEAD**: a29e8c5 (worktree) / origin/main 56bb2fc | **TSC**: 0 errors | **빌드**: 28/28 OK | **배포**: https://kkotium-garden.vercel.app (main에 본 commit 머지 후 verify-vercel-deploy.sh --wait 예정)
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
@@ -14,9 +14,61 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-Skel: 12 골격 JSON 정의) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M1: 썸네일 자동화 4변형) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-Skel 12 골격 spec 완료 (commit a29e8c5):
+- src/lib/automation/layout-skeletons/ (신규 13 파일)
+- index.ts module-load invariant로 grading.SKELETON_SECTIONS와 정합성 자동 검증
+- 12개 SkeletonSpec 객체 (S1~S12) 각 matchSignature 8축 + sections[] + colorTokens
+- npm run build 28/28 통과, 코드 내 한글 0건
+
+본 세션 진입 작업 = Sprint 7-M1 (썸네일 자동화 4변형):
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  특히 a29e8c5가 main에 머지/배포됐는지 verify-vercel-deploy.sh로 확인
+
+STEP 7-M1 — 썸네일 4변형 자동 생성기
+  대상 파일 신규:
+    - src/lib/automation/thumbnail-generator.ts (4변형 entry, clean/price/badge/lifestyle)
+    - src/lib/automation/cloudinary-pipeline.ts (named transformation wrapper)
+    - src/lib/automation/sharp-composite.ts (Sharp 합성 빌딩블록)
+    - src/lib/automation/copy-writer.ts (Groq 카피 + 다크패턴 정규식 필터)
+    - src/lib/automation/skeleton-matcher.ts (SkeletonSpec.matchSignature consume,
+      ConceptTone → SkeletonId scoring; 현재 concept-tone-inference.ts 안의
+      단순 if 트리를 SKELETONS 컬렉션 기반 점수화로 강화)
+    - src/app/api/thumbnail/[sku]/route.ts (POST: 4변형 일괄 생성)
+
+  각 변형 = 골격 colorTokens + 텍스트 오버레이 + 도매꾹 원본 이미지 합성:
+    - clean    누끼 + 흰 배경 + 상품명만
+    - price    누끼 + 가격 강조 배지
+    - badge    누끼 + 카테고리/시즌 배지 (S8/S11 골격 활용)
+    - lifestyle Supabase Storage 라이프스타일 컷 + 상품 오버레이 (S2/S6/S9/S10)
+
+  4변형 미리보기 = Claude Artifacts skill canvas-design 활용 권장 (Sprint 7-M2 합성 빌더 결과를 사전 시각화).
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- Sprint 7-Skel commit a29e8c5가 main에 도달했는지 verify-vercel-deploy.sh로 검증
+- skeleton-matcher 강화 시 SKELETONS[id].matchSignature를 점수화 함수에 직접 consume
+  (단순 wildcard match → 가중 점수 + tie-breaking 디폴트 S2)
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 확인 의무 (직전 세션 turn에서 차단 1회).
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-Skel: 12 골격 JSON 정의)~~ ✅ COMPLETED
+
+> Sprint 7-Skel 12 골격 spec completed on 2026-05-13 (commit a29e8c5). 13 신규 파일, npm run build 통과, section id 정합성 invariant 자동 검증.
+> The message below is preserved for git history. Use the ACTIVE message above.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
