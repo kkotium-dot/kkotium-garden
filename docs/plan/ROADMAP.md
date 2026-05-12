@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-12 Session D (Sprint 6-A UI Phase 3 잔여 4가지 모두 완료 + 오타 1건 시각 검증 catch + production 218b167 deploy ✅)
-> **HEAD**: 218b167 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 26/26 OK | **배포**: https://kkotium-garden.vercel.app (218b167 REGISTERED via GitHub Deployments path)
+> **최종 업데이트**: 2026-05-12 Session E-1 (KkottiBriefingWidget CTA dead route hotfix — production 2b0b540 deploy ✅)
+> **HEAD**: 2b0b540 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 26/26 OK | **배포**: https://kkotium-garden.vercel.app (2b0b540 REGISTERED via GitHub Deployments path)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
 > **Vercel Hobby 제한 주의**: inventory-sync cron은 현재 daily (`0 0 * * *`). Pro plan upgrade 시 `vercel.json` 한 줄로 6시간 cron 복귀 가능
 >

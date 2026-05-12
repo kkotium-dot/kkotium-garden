@@ -1,3 +1,85 @@
+## 2026-05-12 Session E-1 (대시보드 KkottiBriefingWidget CTA dead route hotfix) ✅
+
+### 본 세션 성격
+- Session E 정식 작업(Sprint 6-B + 6-C) 진입 직전 사용자 보고 즉시 ROI 버그 1건 처리. 본 세션은 hotfix 1건만 수행하고 Session E-2 = 6-B + 6-C로 안전 분할.
+- 사용자 시각 검증으로 발견된 *dead route 4건* — Session D 패턴 (브라우저 시각 검증의 가치) 재확인.
+
+### 시작 직전 상태
+- HEAD `2ef2de0` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} 보존 ✅
+- MD 줄 수: PROGRESS 842 / ROADMAP 342 / SESSION_LOG 1336 (T1 1000 초과 / T2 1500 미달, 권고만)
+- Latest prod deploy SHA == HEAD ✅
+- verify-vercel-deploy.sh OK ✅
+
+### 본 세션 작업
+
+#### Hotfix: KkottiBriefingWidget CTA actionHref 정정 (1파일, 2줄)
+- `src/components/dashboard/KkottiBriefingWidget.tsx`:
+  - Rule 5 (drafts_partial) line 157: `actionHref: '/seo-tamer'` → `'/naver-seo'`
+  - Rule 7 (fallback)      line 192: `actionHref: drafts.total > 0 ? '/seo-tamer' : '/sourcing'` → `'/naver-seo' : '/crawl'`
+- 캐노니컬 라우트는 `src/components/layout/Sidebar.tsx:57,70` 기준 (꿀통 꽃나들이 → `/crawl`, 검색 조련사 → `/naver-seo`).
+- `/sourcing` / `/seo-tamer`는 실제 라우트 파일이 존재하지 않음 (`ls src/app/sourcing src/app/seo-tamer` → No such file or directory). 본 hotfix 이전 사용자가 "정원 관리인" 페르소나 fallback 상태(상품 0개)에서 우측 CTA 클릭 시 404 라우트로 진입했던 원인.
+- 트리거: Rule 7 fallback이 매번 발동하는 상태였음 (current: products 0, drafts 0 → all rules 미충족 → fallback path).
+
+#### 부수 작업
+- 워크트리 환경 보강: `.env.local` 심볼릭 링크 + `.claude/launch.json` 생성 (worktree-internal, gitignore된 `.claude/worktrees/` 경로 안이라 main 커밋 미영향).
+
+### 검증
+- TSC `npx tsc --noEmit` 0 errors ✅
+- Production build `npm run build` 26/26 prerender ✅ (`/crawl` 19.7 kB, `/naver-seo` 149 kB 모두 prerender 정상)
+- curl smoke:
+  - `/dashboard` 200 / `/crawl` 200 / `/naver-seo` 200 ✅
+  - `/sourcing` 404 / `/seo-tamer` 404 ✅ (이전 dead route 확정)
+- Claude Preview MCP 브라우저 검증 (사용자 보고 동선 그대로 재현):
+  - dashboard 로드 → KkottiBriefingWidget 마운트 → 페르소나 라벨 "정원 관리인" 우측 CTA `꿀통 꽃나들이로` 발견.
+  - **Before fix**: anchor `href='/sourcing'` (dead). **After hot-reload**: anchor `href='/crawl'` ✅ + deadLinks 0건 ✅.
+  - 버튼 클릭 → `/crawl`로 즉시 이동 + h1 "꿀통 꽃나들이" 렌더 확인 ✅.
+- 한글 sentinel grep 0 신규 매칭 ✅
+
+### 본 세션 학습 (영구 기록)
+1. **워크트리에서 절대 경로 Edit 시 main 경로 vs 워크트리 경로 혼동 위험** — 본 세션 첫 Edit 2회가 main repo 경로(`/Users/jyekkot/Desktop/kkotium-garden/src/...`)에 적용됐고, 그 결과 (1) main working tree dirty (CLAUDE.md "HEAD == origin/main + clean" 위반) (2) 워크트리에서 돌던 dev server는 옛 코드 그대로 → preview_eval 브라우저 검증에서 `/sourcing` 잔존이 발견되어 catch. 복구: main `git restore` + 워크트리 경로로 재적용. 본 워크트리 패턴에서는 Edit 호출 시 절대 경로의 시작이 워크트리 prefix(`.claude/worktrees/...`)인지 확인 의무.
+2. **브라우저 시각 검증 단계가 또 한 번 가치 입증** — TSC + build + curl 모두 통과한 상태에서 실제 anchor `href` 속성 inspect로 잘못된 경로 적용 catch. Session D ("즐시"→"즉시" 오타) 와 동일 패턴. Claude Preview MCP `preview_eval`로 `document.querySelectorAll('a')` 순회 + label 매칭 + `getAttribute('href')` 검사 = 본 hotfix류 검증의 표준 패턴.
+3. **CTA dead route는 사이드바와 widget 사이 *경로 시소스 불일치* 패턴의 전형** — Sidebar.tsx는 IA의 source of truth (작업원칙 #26). KkottiBriefingWidget(또는 비슷한 widget)이 CTA href를 작성할 때 *반드시 Sidebar.tsx의 href 값과 정합 검증*. 향후 hotfix 빈도 감소 위해 lint rule 또는 grep 검증 패턴(`actionHref:.*'/[a-z-]+'` 결과를 Sidebar href 집합과 diff) 도입 검토 가능 (사용자 결정 위임).
+
+### 검증 한계
+- 본 hotfix 검증은 *Rule 7 fallback path만 실제 click 검증*. Rule 5 (drafts_partial)는 DRAFT 상품 1개+honeyScore>=90 조건 필요해 mock 없이 검증 불가 → 코드 path까지만 보장. 사용자 첫 상품 등록 + 점수 90 달성 시 자동 검증됨.
+
+### Commit + Push
+- `2b0b540` fix(dashboard): KkottiBriefingWidget CTA dead routes — /seo-tamer → /naver-seo, /sourcing → /crawl (+2 / -2)
+- worktree → main: `git merge claude/quizzical-bouman-76829c --ff-only` (ff)
+- push `2ef2de0..2b0b540 main -> main`
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production is on 2b0b540 (state=REGISTERED) ✅
+
+### 적용된 작업원칙
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 통과 ✅
+- **#22** 브라우저 시각 검증 의무 (Claude Preview anchor href inspect + click 결과 페이지 heading 검증) ✅
+- **#24** 한 turn 안에 hotfix + 검증 + commit + push + verify + MD 갱신
+- **#26** IA 점검 — Sidebar.tsx (IA source of truth)와 widget CTA 경로 정합성 회복
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 6+1 규칙:
+  - (a) Edit 한글 다량 newText 0건 (수정 부분은 영문 라우트 path만)
+  - (b) MD 갱신 = Write 안전 패턴 (본 entry)
+  - (e) sentinel grep 0 신규 매칭
+- **#31 (a)** SESSION_LOG 1336 + 본 entry → ~1430 (T2 1500 미달, 권고만)
+- **#32** TSC + npm run build 모두 통과 ✅
+- **#34** 본 세션 발견 잔재: `src/app/naver-seo/page.tsx.backup` (Feb 3, 9.6KB) — 별도 정리 트랙 보류 (사용자 위임).
+- **#36** push 후 `verify-vercel-deploy.sh --wait` exit 0 (github-deployments path) ✅
+
+### 본 세션 commit
+1. `2b0b540` fix(dashboard): KkottiBriefingWidget CTA dead routes — /seo-tamer → /naver-seo, /sourcing → /crawl
+2. (본 entry) docs(plan): record Session E-1 hotfix + Session E-2 handoff
+
+### 다음 세션 (Session E-2) 작업 = Sprint 6-B + 6-C (원본 Session E 계획 그대로)
+1. Sprint 6-B 가격 변동 추적 — `src/lib/dome-price-poller.ts` (신규) + `PriceMovementWidget` (신규)
+2. Sprint 6-C 다른 셀러 추적 — `src/lib/competitor-tracker.ts` (신규) + `CompetitorRadarWidget` (신규)
+3. 공급사 누적 평가 — `SupplierStockProfile` 확장 + `SupplierGardenWidget` (신규)
+4. 검증 + commit + push + verify-vercel-deploy.sh --wait
+5. MD 갱신 + Session F 인계
+
+---
+
 ## 2026-05-12 Session D (Sprint 6-A UI Phase 3 — 4가지 잔여 작업 모두 완료) ✅
 
 ### 본 세션 성격

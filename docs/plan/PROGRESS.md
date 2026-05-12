@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
 
-> **최종 업데이트**: 2026-05-12 Session D (Sprint 6-A UI Phase 3 잔여 4가지 모두 완료 + 브라우저 시각 검증으로 오타 1건 catch ✅)
-> **TSC**: 0 errors | **빌드**: 26/26 prerender | **배포**: https://kkotium-garden.vercel.app (218b167 REGISTERED via GitHub Deployments API path)
-> **HEAD**: 218b167 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **최종 업데이트**: 2026-05-12 Session E-1 (KkottiBriefingWidget CTA dead route hotfix — /seo-tamer→/naver-seo, /sourcing→/crawl ✅)
+> **TSC**: 0 errors | **빌드**: 26/26 prerender | **배포**: https://kkotium-garden.vercel.app (2b0b540 REGISTERED via GitHub Deployments API path)
+> **HEAD**: 2b0b540 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 (4모드 foundation) ✅ | 6-A 백엔드 (Option C 하이브리드) ✅ | 6-A UI Phase 1 (재고 뱃지 inline) ✅ | 6-A UI Phase 2 (LowStockAlertWidget + 4 alert API routes) ✅ | ROADMAP T1 분할 (Session C-1) ✅ | **6-A UI Phase 3 (Session D — minq 배너 + 수동 폴링 + Naver OOS 옵트인) ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
