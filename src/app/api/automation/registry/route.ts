@@ -66,6 +66,9 @@ export async function GET() {
 
     switch (a.id) {
       case 'inventory-poll':
+      case 'price-poll':
+        // 6-B piggy-backs on the same getItemView call as 6-A, so they share
+        // the latest inventory snapshot timestamp as their lastRun signal.
         lastRun = lastInventorySnap?.polledAt?.toISOString() ?? null;
         break;
       case 'discord-kkotti-recommend':

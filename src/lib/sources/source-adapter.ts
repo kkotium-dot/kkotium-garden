@@ -147,6 +147,8 @@ export interface InventorySnapshot {
   qty: number;
   /** Status flag (mirrors ItemDetail.status). */
   status: string;
+  /** Sprint 6-B: supplier price captured on the same poll. null when unavailable. */
+  supplierPrice?: number | null;
   /** When the snapshot was captured. */
   polledAt: Date;
 }

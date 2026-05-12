@@ -1,0 +1,17 @@
+{
+  "title": "가격 변동 감지",
+  "subtitleEmpty": "도매꾹 공급가 ±5% 이상 변동 시 자동 알림",
+  "subtitleHasAlerts": "지난 폴링 대비 공급가 변동 — 마진 확인 권장",
+  "emptyOk": "이상 없음",
+  "loading": "확인 중…",
+  "error": "알림 조회 실패",
+  "more": "건 외 더 보기",
+  "directionUp": "상승",
+  "directionDown": "하락",
+  "levelYellow": "주의",
+  "levelOrange": "경고",
+  "levelRed": "긴급",
+  "baselineLabel": "기준",
+  "currentLabel": "현재",
+  "sprintLabel": "6-B"
+}

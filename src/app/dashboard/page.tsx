@@ -35,11 +35,12 @@ import { useMemo, useState, useCallback } from 'react';
 import {
   Package, TrendingUp, AlertTriangle, Sparkles, Layers, Skull,
   ArrowRight, ShoppingCart, RefreshCw,
-  CircleDollarSign, Users, Trophy,
+  Users, Trophy,
 } from 'lucide-react';
 import KkottiWidget from '@/components/dashboard/KkottiWidget';
 import KkottiBriefingWidget from '@/components/dashboard/KkottiBriefingWidget';
 import LowStockAlertWidget from '@/components/dashboard/LowStockAlertWidget';
+import PriceMovementWidget from '@/components/dashboard/PriceMovementWidget';
 import UploadReadinessWidget from '@/components/dashboard/UploadReadinessWidget';
 import ReviewGrowthWidget from '@/components/dashboard/ReviewGrowthWidget';
 import ConfirmationReminderWidget from '@/components/dashboard/ConfirmationReminderWidget';
@@ -505,12 +506,7 @@ export default function DashboardPage() {
             <p style={{ fontSize: 11, fontWeight: 700, color: '#A3A3A3', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '12px 0 6px' }}>
               곧 합류할 알림
             </p>
-            <InboxPlaceholderRow
-              Icon={CircleDollarSign}
-              title="가격 변동 감지"
-              description="도매꾹 공급가 ±5% 이상 변동 시 자동 알림"
-              sprintLabel="6-B"
-            />
+            <PriceMovementWidget />
             <InboxPlaceholderRow
               Icon={Users}
               title="다른 셀러 추적"

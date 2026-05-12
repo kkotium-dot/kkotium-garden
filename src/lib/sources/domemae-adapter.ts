@@ -379,11 +379,13 @@ export class DomemaeAdapter implements SourceAdapter {
                 no?: string | number;
                 basis?: { status?: string; minq?: number | string };
                 qty?: { inventory?: number };
+                price?: { supply?: number | string };
               }>;
             };
             // Single-item fallback shape (when API returns 1 item without multipleResult wrapper)
             basis?: { status?: string; minq?: number | string };
             qty?: { inventory?: number };
+            price?: { supply?: number | string };
           };
       errors?: unknown;
     };
@@ -394,6 +396,7 @@ export class DomemaeAdapter implements SourceAdapter {
         productNo: no,
         qty: -1,
         status: 'unknown',
+        supplierPrice: null,
         polledAt,
       }));
     }
@@ -408,6 +411,11 @@ export class DomemaeAdapter implements SourceAdapter {
       const no = String((it as { no?: string | number }).no ?? '');
       const qtyVal = (it as { qty?: { inventory?: number } }).qty?.inventory ?? -1;
       const statusVal = (it as { basis?: { status?: string } }).basis?.status ?? 'unknown';
+      const supplyRaw = (it as { price?: { supply?: number | string } }).price?.supply;
+      // parseSupplyPrice returns 0 when unavailable. Distinguish 0 (unknown) from
+      // a real "free item" by treating only undefined as null.
+      const supplierPrice =
+        supplyRaw === undefined || supplyRaw === null ? null : parseSupplyPrice(supplyRaw);
       // Note: minq is parsed by the poller from a separate getItemDetail call when needed.
       // multiple=true response does not always include basis.minq for performance reasons.
       if (no) {
@@ -415,6 +423,7 @@ export class DomemaeAdapter implements SourceAdapter {
           productNo: no,
           qty: typeof qtyVal === 'number' ? qtyVal : -1,
           status: String(statusVal),
+          supplierPrice,
           polledAt,
         });
       }
@@ -426,6 +435,7 @@ export class DomemaeAdapter implements SourceAdapter {
           productNo: no,
           qty: -1,
           status: 'unknown',
+          supplierPrice: null,
           polledAt,
         },
     );

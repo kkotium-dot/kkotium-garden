@@ -34,6 +34,7 @@
 import { prisma } from '@/lib/prisma';
 import { getAdapter } from '@/lib/sources';
 import { sendDiscord } from '@/lib/discord';
+import { evaluatePriceMovement } from '@/lib/dome-price-analyzer';
 import type { SourceAdapter, InventorySnapshot as AdapterSnapshot } from '@/lib/sources';
 
 // ----------------------------------------------------------------------------
@@ -64,6 +65,9 @@ interface PollResult {
   newAlerts: { yellow: number; orange: number; red: number };
   resolvedAlerts: number;
   untrustworthyReminders: number;
+  // Sprint 6-B: price movement alerts produced this run
+  newPriceAlerts: { yellow: number; orange: number; red: number };
+  resolvedPriceAlerts: number;
   errors: string[];
   durationMs: number;
 }
@@ -95,6 +99,8 @@ export async function pollAppRegisteredInventory(): Promise<PollResult> {
     newAlerts: { yellow: 0, orange: 0, red: 0 },
     resolvedAlerts: 0,
     untrustworthyReminders: 0,
+    newPriceAlerts: { yellow: 0, orange: 0, red: 0 },
+    resolvedPriceAlerts: 0,
     errors: [],
     durationMs: 0,
   };
@@ -132,7 +138,13 @@ export async function pollAppRegisteredInventory(): Promise<PollResult> {
       result.errors.push(`Chunk poll failed: ${msg}`);
       // Push placeholder snapshots so we don't lose track
       for (const no of chunk) {
-        allSnapshots.push({ productNo: no, qty: -1, status: 'error', polledAt: new Date() });
+        allSnapshots.push({
+          productNo: no,
+          qty: -1,
+          status: 'error',
+          supplierPrice: null,
+          polledAt: new Date(),
+        });
       }
     }
   }
@@ -149,6 +161,7 @@ export async function pollAppRegisteredInventory(): Promise<PollResult> {
         qty: s.qty,
         status: s.status ?? 'unknown',
         minq: 1, // multiple=true does not always include minq; refined by separate detail call
+        supplierPrice: s.supplierPrice ?? null, // Sprint 6-B: captured on same poll
         isDraft: meta.isDraft,
         polledAt: s.polledAt,
       };
@@ -181,6 +194,18 @@ export async function pollAppRegisteredInventory(): Promise<PollResult> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       result.errors.push(`Alert eval failed for ${snap.productNo}: ${msg}`);
+    }
+
+    // Sprint 6-B: price movement analysis on the same snapshot
+    try {
+      const priceEval = await evaluatePriceMovement(meta, snap);
+      if (priceEval.newAlert) {
+        result.newPriceAlerts[priceEval.newAlert.level] += 1;
+      }
+      result.resolvedPriceAlerts += priceEval.resolvedCount;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      result.errors.push(`Price eval failed for ${snap.productNo}: ${msg}`);
     }
   }
 

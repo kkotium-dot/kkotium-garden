@@ -108,10 +108,11 @@ export const AUTOMATIONS: AutomationMeta[] = [
     code: '6-B',
     frequency: 'daily',
     schedule: '0 0 * * *',
-    status: 'pending',
+    status: 'active',
     targetPhase: 'Session E-2',
-    togglable: false,
+    togglable: true,
     descriptionKey: 'pricePoll',
+    cronPath: '/api/cron/inventory-sync',
   },
   {
     id: 'margin-recalc',

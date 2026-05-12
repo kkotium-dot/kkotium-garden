@@ -183,6 +183,7 @@ model Product {
   product_options         product_options?
   inventorySnapshots      InventorySnapshot[]
   lowStockAlerts          LowStockAlert[]
+  priceMovementAlerts     PriceMovementAlert[]
 
   @@index([supplierId])
   @@index([userId])
@@ -415,22 +416,46 @@ model CrawlLog {
 // Includes DRAFT products (for pre-registration trend tracking).
 // Alerts are only triggered for ACTIVE products (naverProductId IS NOT NULL).
 model InventorySnapshot {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  productId  String   @map("product_id")
-  productNo  String   @map("product_no") @db.VarChar(20)
-  qty        Int      @default(0)
-  status     String?  @db.VarChar(50)
-  minq       Int      @default(1)        // minimum order quantity (>1 means warning for solo seller)
-  isDraft    Boolean  @default(false) @map("is_draft")
-  polledAt   DateTime @default(now()) @map("polled_at")
-  createdAt  DateTime @default(now()) @map("created_at")
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId     String   @map("product_id")
+  productNo     String   @map("product_no") @db.VarChar(20)
+  qty           Int      @default(0)
+  status        String?  @db.VarChar(50)
+  minq          Int      @default(1)        // minimum order quantity (>1 means warning for solo seller)
+  supplierPrice Int?     @map("supplier_price") // Sprint 6-B: domeggook price.supply captured on same poll. null when not parsed yet.
+  isDraft       Boolean  @default(false) @map("is_draft")
+  polledAt      DateTime @default(now()) @map("polled_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId], map: "idx_inv_snap_product")
   @@index([polledAt(sort: Desc)], map: "idx_inv_snap_polled")
   @@index([productId, polledAt(sort: Desc)], map: "idx_inv_snap_product_polled")
   @@index([productNo], map: "idx_inv_snap_product_no")
   @@map("inventory_snapshots")
+}
+
+// Sprint 6-B: Price movement alert (mirror of LowStockAlert).
+// level: 'yellow' (>=5%), 'orange' (>=10%), 'red' (>=15%) — absolute |delta|.
+// direction: 'up' (price increased — margin risk) | 'down' (price decreased — opportunity).
+model PriceMovementAlert {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId       String    @map("product_id")
+  level           String    @db.VarChar(10)
+  direction       String    @db.VarChar(10)
+  baselinePrice   Int       @map("baseline_price")   // 7-day rolling baseline before this snapshot
+  currentPrice    Int       @map("current_price")    // snapshot's supplierPrice that triggered
+  deltaPct        Float     @map("delta_pct")        // signed percentage delta from baseline
+  reason          String?   @db.VarChar(100)
+  triggeredAt     DateTime  @default(now()) @map("triggered_at")
+  resolvedAt      DateTime? @map("resolved_at")
+  resolutionNote  String?   @map("resolution_note") @db.VarChar(200)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId], map: "idx_price_movement_alerts_product")
+  @@index([triggeredAt(sort: Desc)], map: "idx_price_movement_alerts_triggered")
+  @@map("price_movement_alerts")
 }
 
 // Multi-level alert tracking. Triggered when stock crosses dynamic thresholds.
