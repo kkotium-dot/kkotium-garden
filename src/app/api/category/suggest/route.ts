@@ -264,34 +264,47 @@ export async function POST(request: NextRequest) {
     // disagrees, prepend the page-validated suggestion (override). We do NOT erase
     // the AI suggestion — append it so user sees both.
     let pageValidation: Awaited<ReturnType<typeof validatePageCategory>> | null = null;
-    let pageValidationApplied: 'override' | 'agreed' | 'no_signal' | 'error' = 'no_signal';
+    let pageValidationApplied: 'override' | 'agreed' | 'synthesized' | 'no_signal' | 'error' = 'no_signal';
     try {
       pageValidation = await validatePageCategory(name);
       if (pageValidation.error) {
         pageValidationApplied = 'error';
-      } else if (pageValidation.dominant && suggestions[0]) {
+      } else if (pageValidation.dominant) {
         const dom = pageValidation.dominant;
-        const topMatchesDom =
-          suggestions[0].d1 === dom.d1 && suggestions[0].d2 === dom.d2;
-        if (topMatchesDom) {
-          pageValidationApplied = 'agreed';
-        } else {
-          // Override: prepend dom-matched suggestion using fuzzy d3 from existing AI
-          // candidates if any happen to share d1+d2, else use the AI's d3 verbatim
-          // (better to have *some* d3 than empty).
-          const matchingD3 = suggestions.find((s) => s.d1 === dom.d1 && s.d2 === dom.d2);
-          const overrideD3 = matchingD3?.d3 ?? suggestions[0].d3;
-          const overrideD4 = matchingD3?.d4 ?? suggestions[0].d4;
-          const overrideSuggestion = {
-            d1: dom.d1,
-            d2: dom.d2,
-            d3: overrideD3,
-            d4: overrideD4,
-          };
-          suggestions = [overrideSuggestion, ...suggestions.filter((s) =>
-            !(s.d1 === overrideSuggestion.d1 && s.d2 === overrideSuggestion.d2 && s.d3 === overrideSuggestion.d3),
-          )].slice(0, 3);
-          pageValidationApplied = 'override';
+        // Case A: AI/fallback produced suggestions — agree or override
+        if (suggestions.length > 0) {
+          const topMatchesDom =
+            suggestions[0].d1 === dom.d1 && suggestions[0].d2 === dom.d2;
+          if (topMatchesDom) {
+            pageValidationApplied = 'agreed';
+          } else {
+            const matchingD3 = suggestions.find((s) => s.d1 === dom.d1 && s.d2 === dom.d2);
+            const overrideD3 = matchingD3?.d3 ?? suggestions[0].d3;
+            const overrideD4 = matchingD3?.d4 ?? suggestions[0].d4;
+            const overrideSuggestion = {
+              d1: dom.d1, d2: dom.d2, d3: overrideD3, d4: overrideD4,
+            };
+            suggestions = [overrideSuggestion, ...suggestions.filter((s) =>
+              !(s.d1 === overrideSuggestion.d1 && s.d2 === overrideSuggestion.d2 && s.d3 === overrideSuggestion.d3),
+            )].slice(0, 3);
+            pageValidationApplied = 'override';
+          }
+        }
+        // Case B: AI/fallback both failed — synthesize from page validation alone
+        else {
+          // Resolve d3 by picking the most-popular d3 in the same d1+d2 from NAVER_CATEGORIES_FULL
+          const d1d2Matches = NAVER_CATEGORIES_FULL.filter(
+            (c) => c.d1 === dom.d1 && c.d2 === dom.d2,
+          );
+          const d3Pick = d1d2Matches[0]; // first match is usually canonical
+          if (d3Pick) {
+            suggestions = [{
+              d1: dom.d1, d2: dom.d2,
+              d3: d3Pick.d3,
+              d4: d3Pick.d4,
+            }];
+            pageValidationApplied = 'synthesized';
+          }
         }
       }
     } catch (e) {
