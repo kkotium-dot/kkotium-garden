@@ -14,9 +14,89 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-13 (ko.json dict migration → Sprint 7-M2 Phase 2-b-3) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 2-b-3-a 감각 트랙 5 렌더러) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 STEP A 완료 (ko.json dict migration):
+- src/lib/automation/section-renderers/strings.ko.json (신규 160 LOC, 116 strings)
+- src/lib/automation/section-renderers/strings.ts (신규 49 LOC, typed loader)
+- section-copy.ts 18 fallback 객체 STRINGS 키 참조로 교체
+- clinical/comparison/options/spec.ts SVG hardcoded Korean → STRINGS slot
+- scripts/verify-korean-dict.py argv 지원 (두 dict 기본 검증)
+- 작업원칙 #35 강제 적용, inline 한글 0건 (Groq prompt 예시 제외)
+- TSC 0 + npm run build OK + dict verify 통과 + sentinel grep 0
+
+본 세션 진입 작업 = Sprint 7-M2 Phase 2-b-3-a (감각 트랙 5 렌더러):
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  특히 STEP A commit이 main에 머지/배포됐는지 verify-vercel-deploy.sh로 확인
+
+STEP 7-M2 Phase 2-b-3-a — 5 렌더러 (감각 트랙)
+  대상 파일 신규:
+    - material.ts (S9) — material macro + origin caption (KFTC: 원산지
+      claim placeholder, fabricate 0)
+    - styledShot.ts (S6) — 3 styled lifestyle shots
+    - philosophy.ts (S10) — brand philosophy paragraph (의학·과학 효능 차단)
+    - detail.ts (S10) — detail macro grid 2x2
+    - reviews.ts (S10) — 3 customer review cards (별점 fabricate 금지,
+      "실제 사용자 후기" placeholder)
+
+  section-copy.ts에 5 신규 Groq 헬퍼 추가:
+    - generateMaterialCopy ({headline, originLabel, macroCaption, certLine})
+    - generateStyledShotCopy ({headline, captions: [3]})
+    - generatePhilosophyCopy ({headline, paragraph, signature})
+    - generateDetailGridCopy ({headline, cells: [{title, body} × 4]})
+    - generateReviewsCopy ({headline, reviews: [{quote, attribution} × 3]})
+
+  중요 — Phase 2-b-3-a의 *신규 fallback inline 한글 0건* 패턴:
+    1. strings.ko.json에 신규 슬롯 5개 추가 (material/styledShot/philosophy/detail/reviews)
+    2. section-copy.ts의 5 신규 헬퍼는 STRINGS.{slot} 참조만 사용 (inline 0)
+    3. ctx 보간이 필요한 경우 buildSpecRows 같은 strings.ts 헬퍼 패턴 또는
+       TS template literal로 처리 (한글은 dict, 변수는 TS)
+
+  KFTC discipline 강화 (감각 트랙은 효능 주장 위험 높음):
+    - philosophy.ts: 의학·과학 효능 주장 단어 prompt 차단 (filterDarkPatterns
+      외 추가 layer, copy-writer dark pattern rule 'superlative' 의존)
+    - reviews.ts: 별점 fabricate 금지, reviewerName placeholder "사용자",
+      "고객 ○○님" 같은 익명화 패턴
+    - material.ts: 원산지·재질 fabricate 금지, "상세 페이지 참조" placeholder
+
+  S6/S9/S10 골격 진입 후 dedicated 커버리지 변화:
+    - S6: 4/5 → 5/5 ✅ 완전 (styledShot 추가)
+    - S9: 3/4 → 4/4 ✅ 완전 (material 추가)
+    - S10: 4/6 → 6/6 ✅ 완전 (philosophy/detail/reviews 추가)
+
+  완전 dedicated 골격 누적: S1 · S2 · S4 · S6 · S7 · S8 · S9 · S10 · S11
+  = 9개 (12 골격 중 75%)
+  dedicated 커버리지: 19/26 → 24/26 (2개 잔여: specTable / specifications
+  / package — Phase 2-b-3-b 처리)
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- STEP A commit이 main에 도달했는지 verify-vercel-deploy.sh로 검증
+- SESSION_LOG.md ~728줄 (T1 1000 미달, 안전)
+- ko.json migration 완료 — Phase 2-b-3-a fallback은 dict 키 추가만으로 작성
+
+다음 = Sprint 7-M2 Phase 2-b-3-b (B2B 2 + S3 cleanup 1, 3 렌더러: specTable
+/specifications/package) + Phase 2-c (lifestyle-picker) + Phase 3 (API route
+/api/products/[id]/generate-detail).
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward
+merge 사용자 위임.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (ko.json dict migration → Sprint 7-M2 Phase 2-b-3)~~ ✅ PARTIAL (STEP A 완료)
+
+> STEP A (ko.json dict migration) completed on 2026-05-13. STEP B (Phase 2-b-3) split into 2-b-3-a (감각 5) + 2-b-3-b (B2B 2 + S3 cleanup 1) = active handoff above. The message below is preserved for git history.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,

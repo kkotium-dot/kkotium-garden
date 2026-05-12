@@ -9,6 +9,7 @@ import {
   overlayOnto,
 } from '../sharp-composite';
 import { generateSpecRows } from './section-copy';
+import { STRINGS } from './strings';
 import type { SectionRenderer } from './types';
 import { resolveBgColor, CANONICAL_WIDTH } from './types';
 
@@ -32,7 +33,7 @@ export const specRenderer: SectionRenderer = async (spec, section, ctx) => {
     `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">` +
       `<rect x="${tableX}" y="${tableTop}" width="${tableWidth}" height="${headerH}" rx="12" ry="12" fill="${spec.colorTokens.accent}" />` +
       `<text x="${tableX + 28}" y="${tableTop + 52}" fill="white" font-size="28" font-weight="700" ` +
-      `font-family="-apple-system, sans-serif">상품 정보</text>` +
+      `font-family="-apple-system, sans-serif">${STRINGS.specRenderer.header}</text>` +
       '</svg>',
   );
 

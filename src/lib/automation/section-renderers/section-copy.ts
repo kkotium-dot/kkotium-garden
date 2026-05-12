@@ -16,6 +16,7 @@
 import type { SkeletonSpec } from '../layout-skeletons';
 import { filterDarkPatterns } from '../copy-writer';
 import type { SectionRenderContext } from './types';
+import { STRINGS, buildSpecRows } from './strings';
 
 // ---------------------------------------------------------------------------
 // Groq plumbing (mirrors copy-writer.ts — kept local so this module has no
@@ -173,11 +174,11 @@ export async function generateProblemCopy(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<ProblemCopy>> {
   const fallback: ProblemCopy = {
-    question: `${ctx.category ?? '이런 상황'} 매번 비슷한 고민이 생기지 않나요?`,
+    question: `${ctx.category ?? STRINGS.common.thisSituation} ${STRINGS.problem.questionSuffix}`,
     bullets: [
-      '딱 맞는 제품 고르기가 어렵습니다',
-      '오래 쓸 수 있을지 걱정됩니다',
-      '구매 후 관리가 번거롭습니다',
+      STRINGS.problem.bullets[0],
+      STRINGS.problem.bullets[1],
+      STRINGS.problem.bullets[2],
     ],
   };
 
@@ -232,7 +233,7 @@ export async function generateProblemCopy(
 // ---------------------------------------------------------------------------
 
 export interface SolutionCopy {
-  /** Single-line headline, e.g. "이렇게 달라집니다". Used above the benefit list. */
+  /** Single-line headline introducing the three benefits. */
   headline: string;
   benefits: [string, string, string];
 }
@@ -242,11 +243,11 @@ export async function generateSolutionCopy(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<SolutionCopy>> {
   const fallback: SolutionCopy = {
-    headline: '이렇게 달라집니다',
+    headline: STRINGS.solution.headline,
     benefits: [
-      '핵심 기능을 충실하게 갖춘 구성',
-      '꼼꼼한 마감으로 사용 만족도 향상',
-      '간편한 사용 동선으로 편의성 강화',
+      STRINGS.solution.benefits[0],
+      STRINGS.solution.benefits[1],
+      STRINGS.solution.benefits[2],
     ],
   };
 
@@ -303,7 +304,8 @@ export async function generateUsageCaption(
   spec: SkeletonSpec,
   ctx: SectionRenderContext,
 ): Promise<CopyResult<string>> {
-  const fallback = `${ctx.productName.split(/\s+/)[0] ?? '이 상품'}을 일상에서 자연스럽게 사용해보세요.`;
+  const productHead = ctx.productName.split(/\s+/)[0] ?? STRINGS.common.thisProduct;
+  const fallback = `${productHead}${STRINGS.usage.captionSuffix}`;
 
   const prompt = [
     `Write a Korean two-sentence caption for the "usage" section.`,
@@ -343,9 +345,9 @@ export async function generateCtaCopy(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<CtaCopy>> {
   const fallback: CtaCopy = {
-    reassurance: '안심하고 받아보실 수 있도록 준비했습니다',
-    shippingLine: '평일 오후 2시 이전 주문 시 당일 출고',
-    returnLine: '단순 변심 7일 이내 무료 반품',
+    reassurance: STRINGS.cta.reassurance,
+    shippingLine: STRINGS.cta.shippingLine,
+    returnLine: STRINGS.cta.returnLine,
   };
 
   const prompt = [
@@ -409,13 +411,7 @@ export async function generateSpecRows(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<SpecRowsCopy>> {
   const fallback: SpecRowsCopy = {
-    rows: [
-      { label: '구성', value: ctx.highlight ?? '본품 1점' },
-      { label: '카테고리', value: ctx.category ?? '일반' },
-      { label: '원산지', value: '상세 페이지 참조' },
-      { label: '제조사', value: '상세 페이지 참조' },
-      { label: 'A/S', value: '판매자 문의 채널' },
-    ],
+    rows: buildSpecRows({ highlight: ctx.highlight, category: ctx.category }),
   };
 
   const prompt = [
@@ -474,12 +470,10 @@ export async function generateStoryParagraph(
   spec: SkeletonSpec,
   ctx: SectionRenderContext,
 ): Promise<CopyResult<StoryCopy>> {
+  const productHead = ctx.productName.split(/\s+/)[0] ?? STRINGS.common.theProduct;
   const fallback: StoryCopy = {
-    paragraph:
-      `${ctx.productName.split(/\s+/)[0] ?? '본 상품'}을 일상에 자연스럽게 들이는 ` +
-      '경험을 위해 소재와 마감, 사용 동선을 세심하게 다듬었습니다. ' +
-      '오래 두고 쓸수록 손에 익는 형태와 무게가 매일의 사용을 거들어 줍니다.',
-    attribution: ctx.brandName ?? '꽃틔움 KKOTIUM',
+    paragraph: `${productHead}${STRINGS.story.paragraphSuffix}`,
+    attribution: ctx.brandName ?? STRINGS.common.brandDefault,
   };
 
   const prompt = [
@@ -537,10 +531,10 @@ export async function generateProductGrid(
 ): Promise<CopyResult<GridCopy>> {
   const fallback: GridCopy = {
     cells: [
-      { title: '소재', caption: '꼼꼼한 마감과 견고한 구성' },
-      { title: '디테일', caption: '실용을 우선한 형태' },
-      { title: '사용', caption: '일상에서 편하게 손에 익는' },
-      { title: '관리', caption: '간편한 보관과 관리' },
+      { ...STRINGS.productGrid.cells[0] },
+      { ...STRINGS.productGrid.cells[1] },
+      { ...STRINGS.productGrid.cells[2] },
+      { ...STRINGS.productGrid.cells[3] },
     ],
   };
 
@@ -578,8 +572,8 @@ export async function generateProductGrid(
       const cf = filterDarkPatterns(cap);
       anyFiltered = anyFiltered || tf.filtered || cf.filtered;
       cells.push({
-        title: tf.text.slice(0, 8) || '디테일',
-        caption: cf.text.slice(0, 20) || '상세 페이지 참조',
+        title: tf.text.slice(0, 8) || STRINGS.common.detailPlaceholder,
+        caption: cf.text.slice(0, 20) || STRINGS.common.detailsReference,
       });
     }
     return {
@@ -611,13 +605,13 @@ export async function generateComparisonCopy(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<ComparisonCopy>> {
   const fallback: ComparisonCopy = {
-    headline: '한눈에 비교',
-    baselineLabel: '카테고리 평균',
-    rows: [
-      { feature: '기능', ours: '핵심 기능 충실', baseline: '기본 기능' },
-      { feature: '내구성', ours: '꼼꼼한 마감', baseline: '일반 수준' },
-      { feature: '편의성', ours: '간편한 사용', baseline: '일반 수준' },
-    ],
+    headline: STRINGS.comparison.headline,
+    baselineLabel: STRINGS.comparison.baselineLabel,
+    rows: STRINGS.comparison.rows.map((r) => ({
+      feature: r.feature,
+      ours: r.ours,
+      baseline: r.baseline,
+    })),
   };
 
   const prompt = [
@@ -693,11 +687,11 @@ export async function generateWarrantyCopy(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<WarrantyCopy>> {
   const fallback: WarrantyCopy = {
-    headline: '안심 보증',
+    headline: STRINGS.warranty.headline,
     lines: [
-      '판매자 1년 보증',
-      '교환 환불 정책 준수',
-      '국내 A/S 채널 운영',
+      STRINGS.warranty.lines[0],
+      STRINGS.warranty.lines[1],
+      STRINGS.warranty.lines[2],
     ],
   };
 
@@ -778,12 +772,12 @@ export async function generateCoreMetrics(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<CoreMetricsCopy>> {
   const fallback: CoreMetricsCopy = {
-    headline: '핵심 사양',
+    headline: STRINGS.coreMetrics.headline,
     cards: [
-      { label: '출력', value: '상세 참조', unit: '', caption: '카테고리 표준 대비 적정' },
-      { label: '무게', value: '상세 참조', unit: '', caption: '한 손 사용에 적합' },
-      { label: '소음', value: '상세 참조', unit: '', caption: '실내 사용에 무리 없음' },
-      { label: '인증', value: '상세 참조', unit: '', caption: '판매자 인증 정보 제공' },
+      { label: STRINGS.coreMetrics.cards[0].label, value: STRINGS.common.detailsReferenceShort, unit: '', caption: STRINGS.coreMetrics.cards[0].caption },
+      { label: STRINGS.coreMetrics.cards[1].label, value: STRINGS.common.detailsReferenceShort, unit: '', caption: STRINGS.coreMetrics.cards[1].caption },
+      { label: STRINGS.coreMetrics.cards[2].label, value: STRINGS.common.detailsReferenceShort, unit: '', caption: STRINGS.coreMetrics.cards[2].caption },
+      { label: STRINGS.coreMetrics.cards[3].label, value: STRINGS.common.detailsReferenceShort, unit: '', caption: STRINGS.coreMetrics.cards[3].caption },
     ],
   };
 
@@ -829,10 +823,10 @@ export async function generateCoreMetrics(
       const cf = filterDarkPatterns(caption);
       anyFiltered = anyFiltered || lf.filtered || uf.filtered || cf.filtered;
       cards.push({
-        label: lf.text.slice(0, 10) || '항목',
-        value: '상세 참조',
+        label: lf.text.slice(0, 10) || STRINGS.common.itemPlaceholder,
+        value: STRINGS.common.detailsReferenceShort,
         unit: uf.text.slice(0, 4),
-        caption: cf.text.slice(0, 16) || '판매자 정보 참조',
+        caption: cf.text.slice(0, 16) || STRINGS.common.sellerInfoReference,
       });
     }
     while (cards.length < 4) cards.push(fallback.cards[cards.length]);
@@ -867,10 +861,10 @@ export async function generateTechnologyCopy(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<TechnologyCopy>> {
   const fallback: TechnologyCopy = {
-    headline: '작동 원리',
-    mechanismLabel: '3단계 처리',
-    steps: ['입력', '처리', '출력'],
-    caption: '핵심 단계를 명확히 분리하여 사용 흐름을 단순하게 유지합니다.',
+    headline: STRINGS.technology.headline,
+    mechanismLabel: STRINGS.technology.mechanismLabel,
+    steps: [STRINGS.technology.steps[0], STRINGS.technology.steps[1], STRINGS.technology.steps[2]],
+    caption: STRINGS.technology.caption,
   };
 
   const prompt = [
@@ -951,10 +945,10 @@ export async function generateClinicalCopy(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<ClinicalCopy>> {
   const fallback: ClinicalCopy = {
-    headline: '임상 데이터',
-    studyMeta: '판매자 제공 임상 자료',
-    outcomeLabel: '주요 지표',
-    caveat: '임상 데이터 출처: 상세 페이지 참조',
+    headline: STRINGS.clinical.headline,
+    studyMeta: STRINGS.clinical.studyMeta,
+    outcomeLabel: STRINGS.clinical.outcomeLabel,
+    caveat: STRINGS.clinical.caveat,
   };
 
   const prompt = [
@@ -1038,14 +1032,14 @@ export async function generateOptionIntroCopy(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<OptionIntroCopy>> {
   const fallback: OptionIntroCopy = {
-    headline: '옵션 한눈에',
+    headline: STRINGS.optionIntro.headline,
     items: [
-      { name: '기본', sub: '본품 단일 구성', chipColor: NEUTRAL_CHIPS[0] },
-      { name: '추가형', sub: '여분 1점 동봉', chipColor: NEUTRAL_CHIPS[1] },
-      { name: '세트형', sub: '핵심 구성 묶음', chipColor: NEUTRAL_CHIPS[2] },
-      { name: '실속형', sub: '필수 항목 위주', chipColor: NEUTRAL_CHIPS[3] },
+      { name: STRINGS.optionIntro.items[0].name, sub: STRINGS.optionIntro.items[0].sub, chipColor: NEUTRAL_CHIPS[0] },
+      { name: STRINGS.optionIntro.items[1].name, sub: STRINGS.optionIntro.items[1].sub, chipColor: NEUTRAL_CHIPS[1] },
+      { name: STRINGS.optionIntro.items[2].name, sub: STRINGS.optionIntro.items[2].sub, chipColor: NEUTRAL_CHIPS[2] },
+      { name: STRINGS.optionIntro.items[3].name, sub: STRINGS.optionIntro.items[3].sub, chipColor: NEUTRAL_CHIPS[3] },
     ],
-    helperLine: '원하는 구성으로 골라 담아보세요',
+    helperLine: STRINGS.optionIntro.helperLine,
   };
 
   const prompt = [
@@ -1126,10 +1120,10 @@ export async function generateSeasonalHookCopy(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<SeasonalHookCopy>> {
   const fallback: SeasonalHookCopy = {
-    banner: '시즌 한정',
-    hookLine: '본격 시즌을 알리는 한정 라인업',
-    startLabel: '시작 일자: 상세 페이지 참조',
-    endLabel: '종료 일자: 상세 페이지 참조',
+    banner: STRINGS.seasonalHook.banner,
+    hookLine: STRINGS.seasonalHook.hookLine,
+    startLabel: STRINGS.seasonalHook.startLabel,
+    endLabel: STRINGS.seasonalHook.endLabel,
   };
 
   const prompt = [
@@ -1194,13 +1188,8 @@ export async function generateOptionsTableCopy(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<OptionsTableCopy>> {
   const fallback: OptionsTableCopy = {
-    headline: '구성 옵션',
-    rows: [
-      { name: '기본형', spec: '본품 + 기본 구성' },
-      { name: '추가형', spec: '여분 1점 동봉' },
-      { name: '세트형', spec: '핵심 구성 묶음' },
-      { name: '실속형', spec: '필수 항목 위주' },
-    ],
+    headline: STRINGS.options.headline,
+    rows: STRINGS.options.rows.map((r) => ({ name: r.name, spec: r.spec })),
   };
 
   const prompt = [
@@ -1272,11 +1261,11 @@ export async function generateEventDetailsCopy(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<EventDetailsCopy>> {
   const fallback: EventDetailsCopy = {
-    headline: '드롭 안내',
-    editionLabel: '한정 에디션',
-    dropDateLabel: '드롭 일자: 상세 페이지 참조',
-    quantityLabel: '판매 수량: 상세 페이지 참조',
-    story: '본 한정 드롭은 일정 수량 한정으로 진행됩니다. 정확한 수량과 일자는 상세 페이지를 확인해 주세요.',
+    headline: STRINGS.eventDetails.headline,
+    editionLabel: STRINGS.eventDetails.editionLabel,
+    dropDateLabel: STRINGS.eventDetails.dropDateLabel,
+    quantityLabel: STRINGS.eventDetails.quantityLabel,
+    story: STRINGS.eventDetails.story,
   };
 
   const prompt = [
@@ -1354,13 +1343,13 @@ export async function generateBenefitsCopy(
   ctx: SectionRenderContext,
 ): Promise<CopyResult<BenefitsCopy>> {
   const fallback: BenefitsCopy = {
-    headline: '한정 혜택',
+    headline: STRINGS.benefits.headline,
     perks: [
-      { title: '드롭 동봉', body: '본품 외 동봉 안내', iconHint: 'gift' },
-      { title: '에디션 표기', body: '한정 에디션 식별 정보 제공', iconHint: 'star' },
-      { title: '구매 보호', body: '교환 환불 정책 동일 적용', iconHint: 'shield' },
+      { title: STRINGS.benefits.perks[0].title, body: STRINGS.benefits.perks[0].body, iconHint: 'gift' },
+      { title: STRINGS.benefits.perks[1].title, body: STRINGS.benefits.perks[1].body, iconHint: 'star' },
+      { title: STRINGS.benefits.perks[2].title, body: STRINGS.benefits.perks[2].body, iconHint: 'shield' },
     ],
-    disclosure: '혜택 적용 조건: 상세 페이지 참조',
+    disclosure: STRINGS.benefits.disclosure,
   };
 
   const prompt = [

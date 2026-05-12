@@ -1,3 +1,80 @@
+## 2026-05-13 Sprint 7-M2 STEP A — ko.json dict migration (작업원칙 #35 강제 적용) ✅
+
+### 본 세션 성격
+
+직전 Sprint 7-M2 Phase 2-b-2 완료 (5fe44d5 + 374ae18, main FF merge + production deploy 검증) 직후 동일 turn 연속 진입. Phase 1 + 2-a + 2-b-1 + 2-b-2 누적 한글 fallback inline ~45건 도달 → 작업원칙 #35 *대량 한글 작성 임계 30건 초과*. Phase 2-b-3 진입 *전* dict migration 의무 발동.
+
+### 본 세션 산출물 (8 파일, 신규 2 + 확장 6)
+
+| 파일 | 변경 | 역할 |
+|---|---|---|
+| `strings.ko.json` | +160 LOC (신규) | 116 strings, 슬롯별 계층 (common · 16 section slots · 4 Renderer SVG slots) |
+| `strings.ts` | +49 LOC (신규) | typed loader (`STRINGS`), `fill()` 보간 헬퍼, `buildSpecRows()` 컨텍스트 헬퍼 |
+| `section-copy.ts` | -159 +123 | 18 fallback 객체 전부 STRINGS 키 참조 교체, ctx 보간은 TS template literal 유지 |
+| `clinical.ts` | +1 import, 6 replace | SVG 본 상품/비교 기준/상세 참조 ×4 → STRINGS |
+| `comparison.ts` | +1 import, 2 replace | SVG 항목/본 상품 헤더 → STRINGS.comparisonRenderer |
+| `options.ts` | +1 import, 2 replace | SVG 옵션/구성 헤더 → STRINGS.optionsRenderer |
+| `spec.ts` | +1 import, 1 replace | SVG 상품 정보 헤더 → STRINGS.specRenderer |
+| `scripts/verify-korean-dict.py` | -28 +82 | argv 지원 (인자 0개면 두 dict 기본 검증), main() exit code, FileNotFoundError handling |
+
+### dict 구조 (slot 계층, 116 strings)
+
+- `common.*` (11) — 공유 placeholder (detailsReference / detailsReferenceShort / theProduct / thisProduct / brandDefault / singleItem / categoryFallback / sellerInfoReference / itemPlaceholder / detailPlaceholder / thisSituation)
+- 16 슬롯별 fallback 객체 (problem · solution · usage · cta · spec · story · productGrid · comparison · warranty · coreMetrics · technology · clinical · optionIntro · seasonalHook · options · eventDetails · benefits)
+- 4 *Renderer 전용* 슬롯 (specRenderer · comparisonRenderer · optionsRenderer · clinicalRenderer) — SVG hardcoded header 보존
+
+### 검증
+
+- `python3 scripts/verify-korean-dict.py` ✅
+  - discord-strings.ko.json: 99 strings, 0 replace, 0 not_nfc, 0 typos
+  - strings.ko.json: 116 strings, 0 replace, 0 not_nfc, 0 typos
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 전체 routes 정상 빌드 ✅
+- 신규 파일 sentinel grep: typo prevention list (verify-korean-dict.py)만 매치 = 의도된 prevention 자체. 실제 typo 도입 0건 ✅
+- section-copy.ts 남은 한글: 모두 Groq prompt instruction 안의 *예시* 문자열 (e.g. `(e.g. 작동 원리, 핵심 기술)`) — 사용자 노출 0건, dict 대상 외
+
+### 작업원칙 #35 적용 효과
+
+migration *전* (인벤토리):
+- section-copy.ts inline 한글 fallback ~38건 + renderer 4 파일 SVG inline ~7건 = 누적 ~45건
+- Phase 2-b-3 진입 시 추가 ~25건 도입 예상 → 70건 임박
+
+migration *후*:
+- 사용자 노출 fallback 전수 dict 격리, inline 한글 0건 (Groq prompt 예시 제외)
+- 신규 fallback은 *dict 키 추가만으로* 작성 가능 — Phase 2-b-3-a/b 진입 시 inline Korean re-introduction 0 위험
+
+### Phase 2-b-3 진입 준비 완료
+
+7 신규 렌더러 (감각 5 + B2B 2) + 1 cleanup (S3 package) 의 신규 fallback이 모두 *dict 신규 키 추가 + 렌더러 ts에서 키 참조*만으로 작성 가능. STRINGS.material, STRINGS.styledShot 등 미리 정의된 슬롯 패턴 자연스럽게 확장됨. 본 STEP A의 *유일한* 외부 인터페이스 변경은 STRINGS export 신설로, 기존 import 변경 0.
+
+### 본 세션 commit (1건 예정)
+
+1. `<sha>` chore(automation): migrate Korean fallback strings to strings.ko.json dict (Sprint 7-M2 STEP A, 작업원칙 #35)
+
+### 적용된 작업원칙
+
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- #21 사전 점검 통과 (HEAD 374ae18 == origin/main = production)
+- #24 STEP A 단일 commit + push 한 turn 안에 종료
+- #26 IA 점검 — lib only, 라우트 0
+- #27 외부 컨트랙트 보존 (STRINGS export 신설, 기존 import 변경 0) ✅
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — 코드 inline fallback 한글 0건 (Groq prompt 예시 잔존, 사용자 노출 외)
+- #29 (b) MD 갱신 — temp file Write + Python prepend 패턴 (escape 변환 layer 0)
+- #31 SESSION_LOG 651 + 본 entry ~75 = ~726 (T1 1000 미달, 안전)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #35 **본 STEP의 핵심 발동 원칙** — *대량 한글 작성 임계 30건 초과* 시 dict 분리, 본 sprint에서 ko.json migration 완료 ✅
+- #36 main push 후 verify-vercel-deploy.sh --wait — 사용자 승인 후
+
+### 다음 = Sprint 7-M2 Phase 2-b-3 (감각 5 + B2B 2 + S3 cleanup)
+
+dict migration 완료로 신규 7 렌더러는 fallback inline 0 패턴으로 작성. sub-phase 분할 권고:
+- Phase 2-b-3-a: 감각 5 (material/styledShot/philosophy/detail/reviews)
+- Phase 2-b-3-b: B2B 2 + S3 cleanup 1 (specTable/specifications/package)
+
+---
+
 ## 2026-05-13 Sprint 7-M2 Phase 2-b-2 — 이벤트/세트 트랙 5 렌더러 (S8·S11 완전 dedicated) ✅
 
 ### 본 세션 성격

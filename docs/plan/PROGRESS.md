@@ -1,16 +1,52 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-13 (Sprint 7-M2 Phase 2-b-2 — 이벤트/세트 트랙 5 렌더러 완료, S8·S11 완전 dedicated)
+> 최종 업데이트: 2026-05-13 (Sprint 7-M2 STEP A — ko.json dict migration 완료, 작업원칙 #35 적용)
 > 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
 > TSC: 0 errors | npm run build 28/28 OK | Production: https://kkotium-garden.vercel.app
-> 다음 작업: Sprint 7-M2 Phase 2-b-3 (감각/B2B 트랙 — S9/S10/S12 + S3 잔여 package 합산 7 렌더러) + ko.json dict migration 권고
+> 다음 작업: Sprint 7-M2 Phase 2-b-3-a (감각 트랙 5 렌더러: material/styledShot/philosophy/detail/reviews) — STEP A 완료, fallback inline 0 패턴
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 + production active ✅ | 6-A/6-B/6-C/6-E ✅ | Session E-2 Phase 1~5 ✅ | Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + DataLab market context) ✅ | **Sprint 7 P1 (P1-A 카테고리 1페이지 + P1-B 금기어 + P1-C 태그사전) ✅ + 브라우저 E2E 시각 검증 완료 ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업**: **Sprint 7-M2 Phase 2-b-3** (감각/B2B 트랙, S9/S10/S12 + S3 잔여 package, 7 렌더러) + **ko.json dict migration 우선 권고** (한글 fallback ~45건, 작업원칙 #35 30건 임계 초과) — Sprint 7-M2 Phase 2-b-2 완료 (5fe44d5), 이벤트/세트 5 렌더러 + S8·S11 완전 dedicated, dedicated 19/26 ids 도달
+> **다음 작업**: **Sprint 7-M2 Phase 2-b-3-a** (감각 트랙, material/styledShot/philosophy/detail/reviews, 5 렌더러) — STEP A 완료 (strings.ko.json 116 strings dict 분리 + STRINGS 키 참조 패턴 정착), dedicated 19/26 ids 유지, Phase 2-b-3 신규 fallback은 dict 키 추가만으로 작성
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-13 Sprint 7-M2 STEP A — ko.json dict migration (작업원칙 #35)
+
+8 파일 변경 (신규 2 + 확장 6):
+
+- `strings.ko.json` (160 LOC, 신규) — 116 strings, 슬롯별 계층 (common 11 + 16 section slots + 4 Renderer SVG slots)
+- `strings.ts` (49 LOC, 신규) — typed loader, `fill()` 보간 헬퍼, `buildSpecRows()` 컨텍스트 헬퍼
+- `section-copy.ts` (-159 +123) — 18 fallback 객체 STRINGS 키 참조 교체
+- `clinical.ts` / `comparison.ts` / `options.ts` / `spec.ts` — SVG hardcoded Korean 헤더 → `STRINGS.*Renderer` 슬롯
+- `scripts/verify-korean-dict.py` — argv 지원, 두 dict 기본 검증, main() exit code
+
+dict 구조 (slot 계층):
+
+- `common.*` (11) — 공유 placeholder (detailsReference / theProduct / brandDefault / categoryFallback 등)
+- 16 section slots (problem · solution · usage · cta · spec · story · productGrid · comparison · warranty · coreMetrics · technology · clinical · optionIntro · seasonalHook · options · eventDetails · benefits)
+- 4 *Renderer 전용* slots (specRenderer · comparisonRenderer · optionsRenderer · clinicalRenderer) — SVG hardcoded header 보존
+
+검증:
+
+- `python3 scripts/verify-korean-dict.py`: 두 dict 검증 통과 (115+99 strings, 0 replace/not_nfc/typo) ✅
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 정상 빌드 ✅
+- 신규 파일 sentinel grep 0건 (verify-korean-dict.py의 typo prevention list만 매치 = 의도) ✅
+- section-copy.ts 남은 한글: Groq prompt instruction *예시* 문자열만, 사용자 노출 외
+
+작업원칙 #35 효과:
+
+- migration *전* 누적 ~45건 (Phase 1 + 2-a + 2-b-1 + 2-b-2 합산, 임계 30건 초과)
+- migration *후* 사용자 노출 fallback dict 격리, inline 한글 0건 (Groq prompt 예시 제외)
+- 신규 fallback은 *dict 키 추가만으로* 작성 가능 — Phase 2-b-3 진입 시 re-introduction 0 위험
+
+Commit: 본 STEP에서 별도 commit + push 직후 `verify-vercel-deploy.sh --wait`로 production 검증.
+
+다음 = Sprint 7-M2 Phase 2-b-3-a (감각 트랙 5 렌더러: material/styledShot/philosophy/detail/reviews).
 
 ---
 

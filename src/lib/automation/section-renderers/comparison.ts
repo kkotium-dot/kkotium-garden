@@ -12,6 +12,7 @@ import {
   overlayOnto,
 } from '../sharp-composite';
 import { generateComparisonCopy } from './section-copy';
+import { STRINGS } from './strings';
 import type { SectionRenderer } from './types';
 import { resolveBgColor, CANONICAL_WIDTH } from './types';
 
@@ -47,8 +48,8 @@ export const comparisonRenderer: SectionRenderer = async (spec, section, ctx) =>
   const headerSvg = Buffer.from(
     `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">` +
       `<rect x="${tableX}" y="${tableTop}" width="${tableW}" height="${headerH}" rx="10" ry="10" fill="${spec.colorTokens.accent}" />` +
-      `<text x="${tableX + 20}" y="${tableTop + 42}" fill="white" font-size="20" font-weight="700" font-family="-apple-system, sans-serif">항목</text>` +
-      `<text x="${tableX + featureColW + 20}" y="${tableTop + 42}" fill="white" font-size="20" font-weight="700" font-family="-apple-system, sans-serif">본 상품</text>` +
+      `<text x="${tableX + 20}" y="${tableTop + 42}" fill="white" font-size="20" font-weight="700" font-family="-apple-system, sans-serif">${STRINGS.comparisonRenderer.featureHeader}</text>` +
+      `<text x="${tableX + featureColW + 20}" y="${tableTop + 42}" fill="white" font-size="20" font-weight="700" font-family="-apple-system, sans-serif">${STRINGS.comparisonRenderer.oursHeader}</text>` +
       `<text x="${tableX + featureColW + dataColW + 20}" y="${tableTop + 42}" fill="white" font-size="20" font-weight="700" font-family="-apple-system, sans-serif">${copy.value.baselineLabel}</text>` +
       '</svg>',
   );

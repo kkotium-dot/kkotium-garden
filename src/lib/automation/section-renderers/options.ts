@@ -11,6 +11,7 @@ import {
   overlayOnto,
 } from '../sharp-composite';
 import { generateOptionsTableCopy } from './section-copy';
+import { STRINGS } from './strings';
 import type { SectionRenderer } from './types';
 import { resolveBgColor, CANONICAL_WIDTH } from './types';
 
@@ -44,8 +45,8 @@ export const optionsRenderer: SectionRenderer = async (spec, section, ctx) => {
   const headerSvg = Buffer.from(
     `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">` +
       `<rect x="${tableX}" y="${tableTop}" width="${tableW}" height="${headerH}" rx="10" ry="10" fill="${spec.colorTokens.primary}" />` +
-      `<text x="${tableX + 20}" y="${tableTop + 36}" fill="white" font-size="18" font-weight="700" font-family="-apple-system, sans-serif">옵션</text>` +
-      `<text x="${tableX + nameColW + 20}" y="${tableTop + 36}" fill="white" font-size="18" font-weight="700" font-family="-apple-system, sans-serif">구성</text>` +
+      `<text x="${tableX + 20}" y="${tableTop + 36}" fill="white" font-size="18" font-weight="700" font-family="-apple-system, sans-serif">${STRINGS.optionsRenderer.nameHeader}</text>` +
+      `<text x="${tableX + nameColW + 20}" y="${tableTop + 36}" fill="white" font-size="18" font-weight="700" font-family="-apple-system, sans-serif">${STRINGS.optionsRenderer.specHeader}</text>` +
       '</svg>',
   );
 

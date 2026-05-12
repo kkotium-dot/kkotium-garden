@@ -1,0 +1,160 @@
+{
+  "_meta": {
+    "version": 1,
+    "description": "Korean fallback strings for section-renderers (Sprint 7-M2). Migrated from inline TS fallbacks per principle 35 (ko.json migration threshold reached at 30+ inline Korean strings)."
+  },
+  "common": {
+    "detailsReference": "상세 페이지 참조",
+    "detailsReferenceShort": "상세 참조",
+    "categoryFallback": "일반",
+    "thisSituation": "이런 상황",
+    "thisProduct": "이 상품",
+    "theProduct": "본 상품",
+    "brandDefault": "꽃틔움 KKOTIUM",
+    "singleItem": "본품 1점",
+    "sellerInfoReference": "판매자 정보 참조",
+    "itemPlaceholder": "항목",
+    "detailPlaceholder": "디테일"
+  },
+  "problem": {
+    "questionSuffix": "매번 비슷한 고민이 생기지 않나요?",
+    "bullets": [
+      "딱 맞는 제품 고르기가 어렵습니다",
+      "오래 쓸 수 있을지 걱정됩니다",
+      "구매 후 관리가 번거롭습니다"
+    ]
+  },
+  "solution": {
+    "headline": "이렇게 달라집니다",
+    "benefits": [
+      "핵심 기능을 충실하게 갖춘 구성",
+      "꼼꼼한 마감으로 사용 만족도 향상",
+      "간편한 사용 동선으로 편의성 강화"
+    ]
+  },
+  "usage": {
+    "captionSuffix": "을 일상에서 자연스럽게 사용해보세요."
+  },
+  "cta": {
+    "reassurance": "안심하고 받아보실 수 있도록 준비했습니다",
+    "shippingLine": "평일 오후 2시 이전 주문 시 당일 출고",
+    "returnLine": "단순 변심 7일 이내 무료 반품"
+  },
+  "spec": {
+    "labels": {
+      "composition": "구성",
+      "category": "카테고리",
+      "origin": "원산지",
+      "manufacturer": "제조사",
+      "support": "A/S"
+    },
+    "values": {
+      "supportChannel": "판매자 문의 채널"
+    }
+  },
+  "specRenderer": {
+    "header": "상품 정보"
+  },
+  "story": {
+    "paragraphSuffix": "을 일상에 자연스럽게 들이는 경험을 위해 소재와 마감, 사용 동선을 세심하게 다듬었습니다. 오래 두고 쓸수록 손에 익는 형태와 무게가 매일의 사용을 거들어 줍니다."
+  },
+  "productGrid": {
+    "cells": [
+      { "title": "소재", "caption": "꼼꼼한 마감과 견고한 구성" },
+      { "title": "디테일", "caption": "실용을 우선한 형태" },
+      { "title": "사용", "caption": "일상에서 편하게 손에 익는" },
+      { "title": "관리", "caption": "간편한 보관과 관리" }
+    ]
+  },
+  "comparison": {
+    "headline": "한눈에 비교",
+    "baselineLabel": "카테고리 평균",
+    "rows": [
+      { "feature": "기능", "ours": "핵심 기능 충실", "baseline": "기본 기능" },
+      { "feature": "내구성", "ours": "꼼꼼한 마감", "baseline": "일반 수준" },
+      { "feature": "편의성", "ours": "간편한 사용", "baseline": "일반 수준" }
+    ]
+  },
+  "comparisonRenderer": {
+    "featureHeader": "항목",
+    "oursHeader": "본 상품"
+  },
+  "warranty": {
+    "headline": "안심 보증",
+    "lines": [
+      "판매자 1년 보증",
+      "교환 환불 정책 준수",
+      "국내 A/S 채널 운영"
+    ]
+  },
+  "coreMetrics": {
+    "headline": "핵심 사양",
+    "cards": [
+      { "label": "출력", "caption": "카테고리 표준 대비 적정" },
+      { "label": "무게", "caption": "한 손 사용에 적합" },
+      { "label": "소음", "caption": "실내 사용에 무리 없음" },
+      { "label": "인증", "caption": "판매자 인증 정보 제공" }
+    ]
+  },
+  "technology": {
+    "headline": "작동 원리",
+    "mechanismLabel": "3단계 처리",
+    "steps": ["입력", "처리", "출력"],
+    "caption": "핵심 단계를 명확히 분리하여 사용 흐름을 단순하게 유지합니다."
+  },
+  "clinical": {
+    "headline": "임상 데이터",
+    "studyMeta": "판매자 제공 임상 자료",
+    "outcomeLabel": "주요 지표",
+    "caveat": "임상 데이터 출처: 상세 페이지 참조"
+  },
+  "clinicalRenderer": {
+    "barALabel": "본 상품",
+    "barBLabel": "비교 기준"
+  },
+  "optionIntro": {
+    "headline": "옵션 한눈에",
+    "items": [
+      { "name": "기본", "sub": "본품 단일 구성" },
+      { "name": "추가형", "sub": "여분 1점 동봉" },
+      { "name": "세트형", "sub": "핵심 구성 묶음" },
+      { "name": "실속형", "sub": "필수 항목 위주" }
+    ],
+    "helperLine": "원하는 구성으로 골라 담아보세요"
+  },
+  "seasonalHook": {
+    "banner": "시즌 한정",
+    "hookLine": "본격 시즌을 알리는 한정 라인업",
+    "startLabel": "시작 일자: 상세 페이지 참조",
+    "endLabel": "종료 일자: 상세 페이지 참조"
+  },
+  "options": {
+    "headline": "구성 옵션",
+    "rows": [
+      { "name": "기본형", "spec": "본품 + 기본 구성" },
+      { "name": "추가형", "spec": "여분 1점 동봉" },
+      { "name": "세트형", "spec": "핵심 구성 묶음" },
+      { "name": "실속형", "spec": "필수 항목 위주" }
+    ]
+  },
+  "optionsRenderer": {
+    "nameHeader": "옵션",
+    "specHeader": "구성"
+  },
+  "eventDetails": {
+    "headline": "드롭 안내",
+    "editionLabel": "한정 에디션",
+    "dropDateLabel": "드롭 일자: 상세 페이지 참조",
+    "quantityLabel": "판매 수량: 상세 페이지 참조",
+    "story": "본 한정 드롭은 일정 수량 한정으로 진행됩니다. 정확한 수량과 일자는 상세 페이지를 확인해 주세요."
+  },
+  "benefits": {
+    "headline": "한정 혜택",
+    "perks": [
+      { "title": "드롭 동봉", "body": "본품 외 동봉 안내" },
+      { "title": "에디션 표기", "body": "한정 에디션 식별 정보 제공" },
+      { "title": "구매 보호", "body": "교환 환불 정책 동일 적용" }
+    ],
+    "disclosure": "혜택 적용 조건: 상세 페이지 참조"
+  }
+}

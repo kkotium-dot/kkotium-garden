@@ -24,6 +24,7 @@ import {
   overlayOnto,
 } from '../sharp-composite';
 import { generateClinicalCopy } from './section-copy';
+import { STRINGS } from './strings';
 import type { SectionRenderer } from './types';
 import { resolveBgColor, CANONICAL_WIDTH } from './types';
 
@@ -88,7 +89,7 @@ export const clinicalRenderer: SectionRenderer = async (spec, section, ctx) => {
       '</svg>',
   );
   const barALabel = await renderTextOverlay(size, {
-    text: '본 상품',
+    text: STRINGS.clinicalRenderer.barALabel,
     x: chartX,
     y: barAY + barHeight / 2 + 8,
     fontSizePx: 22,
@@ -97,7 +98,7 @@ export const clinicalRenderer: SectionRenderer = async (spec, section, ctx) => {
     fontWeight: 700,
   });
   const barAValue = await renderTextOverlay(size, {
-    text: '상세 참조',
+    text: STRINGS.common.detailsReferenceShort,
     x: chartX + labelColumnWidth + barColumnWidth + 12,
     y: barAY + barHeight / 2 + 8,
     fontSizePx: 20,
@@ -117,7 +118,7 @@ export const clinicalRenderer: SectionRenderer = async (spec, section, ctx) => {
       '</svg>',
   );
   const barBLabel = await renderTextOverlay(size, {
-    text: '비교 기준',
+    text: STRINGS.clinicalRenderer.barBLabel,
     x: chartX,
     y: barBY + barHeight / 2 + 8,
     fontSizePx: 22,
@@ -126,7 +127,7 @@ export const clinicalRenderer: SectionRenderer = async (spec, section, ctx) => {
     fontWeight: 700,
   });
   const barBValue = await renderTextOverlay(size, {
-    text: '상세 참조',
+    text: STRINGS.common.detailsReferenceShort,
     x: chartX + labelColumnWidth + barColumnWidth + 12,
     y: barBY + barHeight / 2 + 8,
     fontSizePx: 20,
@@ -172,8 +173,8 @@ export const clinicalRenderer: SectionRenderer = async (spec, section, ctx) => {
       headline: copy.value.headline,
       studyMeta: copy.value.studyMeta,
       outcomeLabel: copy.value.outcomeLabel,
-      ourValue: '상세 참조',
-      baselineValue: '상세 참조',
+      ourValue: STRINGS.common.detailsReferenceShort,
+      baselineValue: STRINGS.common.detailsReferenceShort,
       caveat: copy.value.caveat,
     },
     sectionId: section.id,
