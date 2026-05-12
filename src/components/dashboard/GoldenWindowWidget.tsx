@@ -61,15 +61,25 @@ export default function GoldenWindowWidget() {
 }
 
 function GoldenRow({ row }: { row: GoldenWindowRow }) {
-  const needsAction = row.status === 'needs_action';
-  const tone = needsAction
-    ? { bg: '#FFF7ED', border: '#FED7AA', accent: '#EA580C', text: '#9A3412' }
-    : row.stage === 'expired'
-      ? { bg: '#FAFAFA', border: '#E5E5E5', accent: '#737373', text: '#525252' }
-      : { bg: '#F0FDF4', border: '#BBF7D0', accent: '#16A34A', text: '#15803D' };
+  // Sprint 7 P0-B enhancement: tone driven by severity (which blends stage status
+  // with market context). critical = red, warning = orange, note = gray, ok = green.
+  const tone = row.severity === 'critical'
+    ? { bg: '#FEF2F2', border: '#FCA5A5', accent: '#DC2626', text: '#991B1B' }
+    : row.severity === 'warning'
+      ? { bg: '#FFF7ED', border: '#FED7AA', accent: '#EA580C', text: '#9A3412' }
+      : row.severity === 'note'
+        ? { bg: '#FAFAFA', border: '#E5E5E5', accent: '#737373', text: '#525252' }
+        : row.stage === 'expired'
+          ? { bg: '#FAFAFA', border: '#E5E5E5', accent: '#737373', text: '#525252' }
+          : { bg: '#F0FDF4', border: '#BBF7D0', accent: '#16A34A', text: '#15803D' };
 
-  const Icon = needsAction ? AlertTriangle : row.stage === 'expired' ? Clock : Check;
+  const Icon =
+    row.severity === 'critical' ? AlertTriangle :
+    row.severity === 'warning'  ? AlertTriangle :
+    row.stage === 'expired'     ? Clock :
+                                   Check;
   const stageLabel = strings.stageLabel[row.stage];
+  const marketLabel = strings.marketLabel[row.marketLevel];
   const productLabel = row.productName.length > 26
     ? `${row.productName.slice(0, 26)}…`
     : row.productName;
@@ -97,7 +107,7 @@ function GoldenRow({ row }: { row: GoldenWindowRow }) {
           <Icon size={14} strokeWidth={2.5} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 12, fontWeight: 800, color: tone.text }}>
               {productLabel}
             </span>
@@ -109,6 +119,16 @@ function GoldenRow({ row }: { row: GoldenWindowRow }) {
               }}
             >
               {stageLabel}
+            </span>
+            <span
+              style={{
+                fontSize: 10, fontWeight: 600, color: '#525252',
+                background: '#F5F5F5', padding: '2px 6px',
+                borderRadius: 999, border: '1px solid #E5E5E5',
+              }}
+              title={`DataLab 카테고리 트렌드 ${row.marketTrendScore}`}
+            >
+              {marketLabel}
             </span>
           </div>
           <p style={{ margin: '2px 0 0', fontSize: 11, color: '#525252', lineHeight: 1.4 }}>

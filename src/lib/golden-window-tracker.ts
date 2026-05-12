@@ -26,6 +26,7 @@
 // ============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { resolveProductMarketContext, type MarketLevel } from '@/lib/naver/category-trend-cache';
 
 // ----------------------------------------------------------------------------
 // Constants
@@ -51,6 +52,8 @@ const TARGET_D_PLUS_7 = 3; // at least 3 sales by D+7
 
 export type GoldenStage = 'day_0' | 'd_plus_1' | 'd_plus_3' | 'd_plus_7' | 'expired';
 export type GoldenStatus = 'ok' | 'needs_action';
+/** Higher severity = more actionable. */
+export type GoldenSeverity = 'critical' | 'warning' | 'note' | 'ok';
 
 export interface GoldenWindowRow {
   productId: string;
@@ -65,6 +68,11 @@ export interface GoldenWindowRow {
   target: number;
   /** Korean message suitable for an Inbox row. */
   message: string;
+  /** Sprint 7 P0-B enhancement: market context from DataLab cache. */
+  marketLevel: MarketLevel | 'unknown';
+  marketTrendScore: number;
+  /** Final severity after combining stage status + market context. */
+  severity: GoldenSeverity;
 }
 
 // ----------------------------------------------------------------------------
@@ -83,6 +91,7 @@ export async function evaluateGoldenWindow(): Promise<GoldenWindowRow[]> {
     select: {
       id: true,
       name: true,
+      category: true,
       supplier_product_code: true,
       naverProductId: true,
       salesCount: true,
@@ -94,7 +103,12 @@ export async function evaluateGoldenWindow(): Promise<GoldenWindowRow[]> {
 
   const now = Date.now();
 
-  const rows: GoldenWindowRow[] = products.map((p) => {
+  // Resolve market context for each product (cache hit is async but small)
+  const contexts = await Promise.all(
+    products.map((p) => resolveProductMarketContext(p.category)),
+  );
+
+  const rows: GoldenWindowRow[] = products.map((p, i) => {
     const hoursElapsed = Math.max(0, (now - p.createdAt.getTime()) / MS_PER_HOUR);
     const stage = classifyStage(hoursElapsed);
     const target = targetForStage(stage);
@@ -104,6 +118,10 @@ export async function evaluateGoldenWindow(): Promise<GoldenWindowRow[]> {
       if (stage === 'expired') return 'ok'; // closed window — no actionable target
       return sales >= target ? 'ok' : 'needs_action';
     })();
+    const ctx = contexts[i];
+    const marketLevel: MarketLevel | 'unknown' = ctx?.marketLevel ?? 'unknown';
+    const marketTrendScore = ctx?.trendScore ?? 0;
+    const severity = computeSeverity(stage, status, marketLevel);
     return {
       productId: p.id,
       productNo: p.supplier_product_code,
@@ -115,19 +133,26 @@ export async function evaluateGoldenWindow(): Promise<GoldenWindowRow[]> {
       status,
       salesCount: sales,
       target,
-      message: buildMessage(stage, status, sales, target),
+      message: buildMessage(stage, status, sales, target, marketLevel),
+      marketLevel,
+      marketTrendScore,
+      severity,
     };
   });
 
-  // Sort: needs_action first, then by stage descending urgency (d_plus_7 most urgent ≠
-  // earlier stages because the window is closing). Simpler order: needs_action by
-  // hours descending (closer to expired = more urgent), then ok by stage ascending.
+  // Sprint 7 P0-B enhancement: sort by severity rank (critical -> warning -> note -> ok),
+  // then by hours-since-registration descending (closer to expired = more urgent).
+  const severityRank: Record<GoldenSeverity, number> = {
+    critical: 0,
+    warning: 1,
+    note: 2,
+    ok: 3,
+  };
   rows.sort((a, b) => {
-    if (a.status !== b.status) return a.status === 'needs_action' ? -1 : 1;
-    if (a.status === 'needs_action') {
-      return b.hoursSinceRegistration - a.hoursSinceRegistration; // older first
-    }
-    return a.hoursSinceRegistration - b.hoursSinceRegistration; // newer first within ok
+    const sa = severityRank[a.severity];
+    const sb = severityRank[b.severity];
+    if (sa !== sb) return sa - sb;
+    return b.hoursSinceRegistration - a.hoursSinceRegistration;
   });
 
   return rows;
@@ -160,6 +185,7 @@ function buildMessage(
   status: GoldenStatus,
   sales: number,
   target: number,
+  marketLevel: MarketLevel | 'unknown',
 ): string {
   if (stage === 'day_0') {
     // 등록 직후 — 첫 24시간은 골든윈도우 진입 전입니다
@@ -174,8 +200,35 @@ function buildMessage(
     // {stageLabel} 통과 — 판매 {sales}건/{target}건 목표 달성
     return `${stageLabel} 통과 — 판매 ${sales}건/${target}건 목표 달성`;
   }
-  // {stageLabel} 미달 — 현재 판매 {sales}건, 목표 {target}건. 상품명 토큰 1개 교체 권장.
+  // Sprint 7 P0-B enhancement: market context shapes the recommended action.
+  // hot market + zero sales = product name issue. cold market = patience.
+  if (marketLevel === 'hot') {
+    return `${stageLabel} 미달 — 판매 ${sales}건/${target}건 · 시장 hot인데 미달, 상품명 토큰 교체 권장`;
+  }
+  if (marketLevel === 'cold') {
+    return `${stageLabel} 미달 — 판매 ${sales}건/${target}건 · 시장 cold라 인내 권장 (광고 ROI 낮음)`;
+  }
   return `${stageLabel} 미달 — 판매 ${sales}건/${target}건 · 상품명 토큰 교체 권장`;
+}
+
+/**
+ * Combine stage status with market context to produce a final severity bucket.
+ *
+ *   critical  needs_action + hot market    — clearest "fix the listing" signal
+ *   warning   needs_action + normal/unknown — standard needs_action
+ *   note      needs_action + cold market    — possibly fine, surface as info
+ *   ok        status === 'ok'
+ */
+function computeSeverity(
+  stage: GoldenStage,
+  status: GoldenStatus,
+  marketLevel: MarketLevel | 'unknown',
+): GoldenSeverity {
+  if (status === 'ok') return 'ok';
+  if (stage === 'day_0' || stage === 'expired') return 'ok';
+  if (marketLevel === 'hot') return 'critical';
+  if (marketLevel === 'cold') return 'note';
+  return 'warning';
 }
 
 /**

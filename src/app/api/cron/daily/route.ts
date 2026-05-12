@@ -16,6 +16,7 @@ import {
   GRADE_EMOJI,
 } from '@/lib/discord';
 import { fetchNaverTrends, matchProductsToTrends } from '@/lib/trend-analyzer';
+import { refreshCategoryTrendCache } from '@/lib/naver/category-trend-cache';
 import { naverRequest } from '@/lib/naver/api-client';
 import { fetchKeywordStats } from '@/lib/naver/keyword-api';
 
@@ -530,6 +531,15 @@ export async function GET(req: NextRequest) {
       };
     } catch (srcErr) {
       results.sourcingRecommendError = String(srcErr);
+    }
+
+    // Sprint 7 P0-B enhancement: refresh DataLab category trend cache.
+    // Powers the golden-window-tracker market context. Failure is non-fatal.
+    try {
+      const trendRefresh = await refreshCategoryTrendCache();
+      results.categoryTrendRefresh = trendRefresh;
+    } catch (trendErr) {
+      results.categoryTrendRefreshError = String(trendErr).slice(0, 200);
     }
 
     return NextResponse.json({

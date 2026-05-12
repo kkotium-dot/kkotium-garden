@@ -13,5 +13,11 @@
     "d_plus_7": "D+7",
     "expired": "종료"
   },
+  "marketLabel": {
+    "hot": "시장 hot",
+    "normal": "시장 보통",
+    "cold": "시장 cold",
+    "unknown": "시장 미확정"
+  },
   "sprintLabel": "P0-B"
 }
