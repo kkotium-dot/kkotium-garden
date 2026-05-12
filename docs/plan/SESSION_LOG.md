@@ -1,3 +1,196 @@
+## 2026-05-12 Session E-2 Phase 4 (Sprint 6-C 다른 셀러 + 공급사 누적 평가 — 6-A 폴러 piggy-back) ✅
+
+### 본 세션 성격
+- Phase 3 (Sprint 6-B 가격 변동 백엔드 + 시각 검증) 직후 같은 worktree에서 Phase 4 진입. 사용자 명시 "이어서 진행" + "no clarifying questions" 정책 → 시니어 판단으로 (a) DB 스키마 (신규 competitor_snapshots 별도 vs SupplierStockProfile 확장) (b) Widget 마운트 슬롯 (Inbox vs Potential) 모두 결정.
+- DB 결정: **신규 `competitor_snapshots` 별도 테이블 + 공급사 평가는 pure compute (신규 테이블 0)**. 근거: raw competitor data와 aggregated supplier score는 본질적으로 다른 layer (시계열 raw vs aggregated read-model). SupplierStockProfile에 가격 변동성 컬럼 추가는 score-only 컬럼이 누적되어 schema rot 위험.
+- Widget 마운트: **CompetitorRadarWidget → Inbox Section 2 (placeholder 교체)**, **SupplierGardenWidget → Section 4 잠재력**. 근거: 경쟁사 알림은 *액션 가능 알림*이므로 Inbox 적합 (PriceMovementWidget와 동일 패턴). 공급사 점수는 *축적된 인사이트*이므로 Potential 영역 적합.
+- 한 turn 안에 14 파일 + DB 마이그레이션 + 검증 + commit + push + verify + MD 갱신 완료. **Phase 3 학습 적용 — worktree vs main 절대 경로 혼동 0회**.
+
+### 시작 직전 상태
+- HEAD `9511e5c` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} 보존 ✅
+- MD 줄 수: PROGRESS 203 / ROADMAP 348 / SESSION_LOG 677 (Phase 3 entry 추가 후 직전 상태)
+- Latest prod deploy SHA == HEAD ✅
+- verify-vercel-deploy.sh OK ✅
+
+### 본 세션 작업
+
+#### A. DB 마이그레이션 (Supabase `sprint_6c_competitor_snapshot` 적용)
+- 신규 테이블 `competitor_snapshots`:
+  - per-product per-poll capture (productId, productNo, searchKeyword)
+  - aggregates: competitorCount, minPrice, maxPrice, medianPrice, ourRank, ourPrice
+  - errorNote VARCHAR(200) (search 실패 시에도 한 row는 저장)
+  - 인덱스 3개 (product, polled DESC, product+polled DESC)
+  - FK product_id → "Product"(id) ON DELETE CASCADE
+- SupplierStockProfile 확장 0건 — pure compute approach 채택
+
+#### B. Adapter 실제 구현 (`domemae-adapter.searchItems`)
+- 기존: `notImplemented` throw stub
+- 신규: domeggook getItemList ver 4.5 실제 호출
+- SearchFilter 매핑:
+  - keyword → kw / categoryCode → ca / minPrice → sp / maxPrice → ep
+  - sortBy {recent: 'date', popular: 'hit', priceAsc: 'price_asc', priceDesc: 'price_desc', sales: 'sale'}
+  - page → pg / pageSize → sz (1..100, default 20)
+- 응답 파싱 → `ItemSummary[]` (price 파싱은 number/string 양방향 안전)
+- 에러 처리: errors 또는 domeggook 누락 시 빈 결과 + page/pageSize 보존
+
+#### C. 신규 분석기 (`src/lib/dome-competitor-tracker.ts`)
+- `evaluateCompetitor(adapter, meta, ourPrice)` — 활성 상품 1개당 1 search call
+- 키워드: 상품명에서 괄호류 정리 후 첫 3 token (whitespace split)
+- ourRank: page-1 결과를 linearly scan하며 productNo 매칭. 발견 시 1-based, 미발견 null
+- 통계: competitors 가격 sort → min/max/median (even count는 lower middle)
+- 실패 경로: search API throw 시 에러를 errorNote에 기록한 row 한 줄 저장 (다음 폴링에서 retry)
+
+#### D. 신규 분석기 (`src/lib/supplier-score-aggregator.ts`)
+- pure compute, no new tables. 3 source query in one round trip:
+  1. `prisma.supplier.findMany` (with products)
+  2. `prisma.supplierStockProfile.findMany` (where productNo IN [...])
+  3. `prisma.priceMovementAlert.findMany` (where supplier IN, triggeredAt >= since)
+- 3 sub-scores:
+  - **trustScore**: untrustworthy 비율 (no profile → 100 default)
+  - **depletionScore**: median avgDailyDepletion → 0-100 mapping (0 → 30, 1 → 60, 5+ → 100, 선형)
+  - **priceStability**: 1 - recentPriceAlerts / 8 (8+ alerts in 30d → 0)
+- composite = 0.45 × trust + 0.35 × depletion + 0.20 × priceStability
+- Tier 매핑: 80+ green / 60+ yellow / red
+- sort: composite DESC (best first)
+
+#### E. 폴러 통합 (`dome-inventory-poller.ts`)
+- `PollResult` 확장: `competitorSnapshotsSaved` + `competitorErrors`
+- active loop 안에서 evaluateAlert → evaluatePriceMovement → evaluateCompetitor (3중 분석 직렬)
+- 각 분석마다 try/catch 분리 — 한 쪽 실패가 다른 쪽 영향 없음
+
+#### F. API 표면
+- `GET /api/competitors/latest` — `$queryRaw` DISTINCT ON으로 product당 최신 snapshot 1개씩, naverProductId NOT NULL 필터, polledAt DESC LIMIT 50
+- `GET /api/suppliers/scores` — `computeSupplierScores()` on-demand 호출, 5min SWR refresh interval
+
+#### G. UI 표면 (4 신규 파일 + dashboard 통합)
+- `CompetitorRadarWidget.tsx` + `.strings.ko.json`:
+  - empty-state OK row (PriceMovementWidget 패턴) — 활성 상품 0 시 "추적 대기 중" green row
+  - alert row: 우리 가격 vs median 비교 tone (≥10% red / 5-10% yellow / 그 외 green)
+  - 우리 노출 순위 (#1~#20) badge / 1페이지 외 시 "1페이지 외" 표시
+- `SupplierGardenWidget.tsx` + `.strings.ko.json`:
+  - Section 4 잠재력 마운트 (UploadReadiness + KkottiWidget + SupplierGarden + Zombie/Review grid)
+  - 카드 그리드 `auto-fit minmax(220px, 1fr)` — 최대 6 카드 노출 + N건 외 더보기
+  - 카드: composite score(큰 숫자) + 3 sub-metric mini cards + 알림 배지 (untrustworthy / recent alerts)
+- `dashboard/page.tsx`:
+  - import 2개 신규 + Users 아이콘 제거 (CompetitorRadarWidget이 자체 import)
+  - Inbox 두 번째 placeholder ("다른 셀러 추적") → `<CompetitorRadarWidget />`
+  - Section 4 잠재력 KkottiWidget 직후 `<SupplierGardenWidget />` 마운트
+
+#### H. Registry 갱신
+- `competitor-poll` status pending → active, frequency daily, schedule '0 0 * * *', cronPath '/api/cron/inventory-sync' (공유)
+- `supplier-score` status pending → active, frequency on-event (cronPath 없음 — widget fetch 시 compute)
+- `api/automation/registry/route.ts`:
+  - `lastCompetitorSnap` lookup 추가
+  - `case 'competitor-poll'` → lastCompetitorSnap.polledAt
+  - `case 'supplier-score'` → lastCompetitorSnap.polledAt (primary data source proxy)
+
+### 검증
+- TSC `npx tsc --noEmit` 0 errors ✅ (첫 build에서 ItemSummary import 누락 1건 catch → 즉시 정정)
+- Production build `npm run build` 28/28 prerender ✅ (/dashboard 48.7 → 50.4 kB / +3 신규 API routes)
+- NFC + FFFD audit 14개 파일 모두 0/clean ✅
+- 한글 sentinel grep 0 신규 매칭 ✅
+- Production smoke (push 후):
+  - `GET /dashboard` HTTP 200 ✅
+  - `GET /automation` HTTP 200 ✅
+  - `GET /api/alerts/price-movements` HTTP 200 `{"data":[]}` (Phase 3 path 유지) ✅
+  - `GET /api/competitors/latest` HTTP 200 `{"data":[]}` (cold start 정상) ✅
+  - `GET /api/suppliers/scores` HTTP 200 `{"data":[]}` (cold start 정상) ✅
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production b836687 (state=REGISTERED) ✅
+
+### 본 세션 학습 (영구 기록)
+
+1. **worktree 혼동 0회 — Phase 3 학습 적용 성공** — Phase 3에서 worktree vs main 절대 경로 혼동이 2회 발생했지만 Phase 4에서는 0회. 적용 패턴:
+   - 모든 Edit/Write 호출 직전에 file_path가 `/Users/jyekkot/Desktop/kkotium-garden/.claude/worktrees/youthful-gauss-5654af/`로 시작하는지 1초 확인.
+   - DDL 적용 직후 `cd /Users/jyekkot/Desktop/kkotium-garden && git status --short`로 main 상태 점검 (clean이어야 정합).
+   - `git status --short`를 worktree에서 실행해 변경 파일이 모두 worktree에 잡혔는지 매 turn 확인.
+   본 패턴은 Phase 5+ 영구 적용 권장.
+
+2. **신규 테이블 결정 — 별도 vs 확장 trade-off** — 본 세션 두 자동화 (6-C / supplier-score)가 정반대 결정:
+   - **CompetitorSnapshot 신규 별도**: raw time-series capture. SupplierStockProfile에 추가 컬럼 (avgCompetitorPrice, lastSearchPolledAt 등) 이 가능하지만 *raw + aggregated 한 테이블*이 schema rot 위험.
+   - **SupplierScore = pure compute**: 새 테이블 0. Supplier + SupplierStockProfile + PriceMovementAlert 세 source에서 직접 계산. 추후 캐시 필요 시 별도 read-model 테이블 추가 옵션 보존.
+   - 일반화 규칙: raw event-style data = 별도 테이블 / aggregated read-model = 우선 pure compute → 비용 hit 시 캐시.
+
+3. **`prisma.$queryRaw` + DISTINCT ON 패턴** — `/api/competitors/latest`는 "product당 최신 1 row" 필요. Prisma는 native DISTINCT ON 미지원이라 `prisma.$queryRaw<...>\`...\`` 패턴 사용:
+   ```ts
+   await prisma.$queryRaw<...>`
+     SELECT ... FROM (
+       SELECT DISTINCT ON (product_id) *
+       FROM competitor_snapshots
+       ORDER BY product_id, polled_at DESC
+     ) s
+     JOIN "Product" p ON p.id = s.product_id
+     WHERE p."naverProductId" IS NOT NULL
+     ORDER BY s.polled_at DESC LIMIT 50
+   `;
+   ```
+   PostgreSQL camelCase column ("naverProductId")은 quoted 사용 필수. Phase 3 (Product table 대소문자) 학습 재확인.
+
+4. **3중 분석 직렬 호출 한 turn 안에 (6-A + 6-B + 6-C)** — `dome-inventory-poller` active loop가 이제 *evaluateAlert → evaluatePriceMovement → evaluateCompetitor* 3중 분석. 각 try/catch 분리로 한 쪽 실패가 다른 쪽 영향 없음. 단일 cron 호출에 *세 가지 자동화 동시 처리* — Vercel daily quota 추가 비용 0 (cron 1개 그대로). 향후 6-D 4모드 발송도 같은 루프 끝에 합류 검토 가능.
+
+### 검증 한계 (사용자 보고 의무 — 정직)
+
+- **실 데이터 검증 불가** — 활성 상품 0개 → competitor poll 대상 0건 → CompetitorSnapshot 생성 0건. 사용자 첫 도매꾹 상품 등록 + 첫 cron 호출 후 자동 검증됨.
+- **공급사 점수도 cold start** — 0 suppliers/products라면 `/api/suppliers/scores`는 빈 배열. 사용자 첫 거래처 + 상품 등록 후 점수 산정 시작.
+- **사용자 시각 검증 권장** — https://kkotium-garden.vercel.app/dashboard 직접 진입해:
+  - Section 2 Inbox 두 번째 row: CompetitorRadarWidget의 empty-state OK row (green, "추적 대기 중")
+  - Section 4 잠재력 KkottiWidget 직후: SupplierGardenWidget의 empty-state ("거래처 등록 대기")
+- **getItemList API 실제 응답 검증** — 본 세션 코드 path까지만. 실 search 호출은 사용자 첫 상품 polling cycle에서 자동 검증. 응답 shape이 가정과 다른 경우 errorNote에 캐치되어 분석 가능.
+- **Sprint 7-A 카테고리 1페이지 일치율 위젯과 통합 가능성** — Phase 4 ROADMAP에 명시한 검토 사항. 본 Phase는 위젯 분리 (CompetitorRadar는 *우리 상품 vs 다른 셀러*, 7-A는 *우리 카테고리 vs 1페이지 분포*). Sprint 7 진입 시 재검토.
+
+### Commit + Push
+- `b836687` feat(6-C): Phase 4 — competitor tracker + supplier score (piggy-back on 6-A poller) (+1266 / -16, 14 파일 — 신규 8 + 수정 6)
+- worktree → main: `git merge claude/youthful-gauss-5654af --ff-only` (ff)
+- push `9511e5c..b836687 main -> main`
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production b836687 (state=REGISTERED) ✅
+
+### 적용된 작업원칙
+
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 통과 ✅
+- **#22** production smoke (5개 endpoint 모두 200 + 신규 API 2개 cold start `{"data":[]}` 검증) — 시각 검증은 사용자 환경에서 (보고 의무 충족)
+- **#24** 한 turn 안에 14 파일 + DB 마이그레이션 + 검증 + commit + push + verify + MD 갱신
+- **#26** IA 점검 — Inbox 두 번째 placeholder만 교체 + Section 4 잠재력 KkottiWidget 직후 신규 위젯 1개 마운트 (Sidebar 변경 0, registry-driven IA 패턴 보존)
+- **#27** 외부 컨트랙트 보존 — `SearchFilter` interface 변경 0, `ItemSummary` interface 변경 0 (이미 정의되어 있어 import만 추가). `PollResult`에 *추가만* (`competitorSnapshotsSaved` + `competitorErrors`).
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 6+1 규칙:
+  - (a) Edit 한글 다량 newText 0건 (모든 한글은 Write 통해 직접 입력 → Python audit 통과)
+  - (b) MD 갱신 = Python 안전 삽입 패턴 (본 entry)
+  - (c) 카드 컴포넌트 한글 const → strings.ko.json 분리 (#35 패턴, 2개 신규 사전)
+  - (d) 셸 명령 한글 0건
+  - (e) sentinel grep 0 신규 매칭
+  - (e+, e++) 닉네임 호명 0건
+- **#31 (a)** SESSION_LOG 677 + 본 entry → ~900 (T1 1000 미달, 권고 없음)
+- **#32** TSC + npm run build 모두 통과 ✅ (ItemSummary import 누락 1회 catch → 정정 후 통과)
+- **#33** useSearchParams 추가 0건
+- **#34** worktree vs main 절대 경로 혼동 0회 발생 — Phase 3 학습 적용 성공 (위 학습 1 참조)
+- **#35** 한글 사전 분리 패턴 — `CompetitorRadarWidget.strings.ko.json` (15 strings) + `SupplierGardenWidget.strings.ko.json` (22 strings), 모두 NFC clean / FFFD 0 ✅
+- **#36** push 후 `verify-vercel-deploy.sh --wait` exit 0 (github-deployments path) ✅
+
+### 본 세션 commit
+1. `b836687` feat(6-C): Phase 4 — competitor tracker + supplier score (piggy-back on 6-A poller)
+2. (본 entry) docs(plan): record Session E-2 Phase 4 + Phase 5 (Session F) handoff
+
+### 다음 세션 (Session F = Phase 5) 작업 = Sprint 6-E 카테고리 캐시 + 6-D 4모드 발송 통합
+
+1. **Sprint 6-E 도매꾹 카테고리 캐시** — `src/lib/dome-category-cache.ts` (신규)
+   - 도매꾹 getCat ver 2.0 전체 카테고리 트리 캐시 (4-5 depth, 수천 노드)
+   - 신규 테이블 `DomeCategory` (캐시) + `CategoryMapping` (도매꾹 → 네이버 매핑 기억)
+   - AI 카테고리 매핑 (`api/category/suggest`) 강화: 캐시 hit 시 AI 호출 skip (현재 매번 AI 호출 → 80%+ hit-rate 목표)
+   - cron-weekly에 캐시 갱신 통합
+
+2. **Sprint 6-D 4모드 발송 통합** — 꼬띠 4모드 (Recommend / Stock / Price / Score) Discord 발송 path 활성화
+   - 현재 `dome-curator.ts`에 4모드 foundation 완료 (Sprint 6-D 1-5단계)
+   - Phase 5에서 cron-daily에 통합 + Discord KKOTTI_RECOMMEND 채널 발송 활성화
+   - `automation-registry`: `kkotti-curator` (또는 동등 entry) pending → active
+
+3. 검증 + commit + push + verify-vercel-deploy.sh --wait
+4. MD 갱신 + Sprint 7 인계
+
+
+---
+
 ## 2026-05-12 Session E-2 Phase 3 (Sprint 6-B 가격 변동 백엔드 — 6-A 폴러에 통합) ✅
 
 ### 본 세션 성격
