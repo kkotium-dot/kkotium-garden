@@ -1,3 +1,135 @@
+## 2026-05-12 Session E-2 Phase 3 (Sprint 6-B 가격 변동 백엔드 — 6-A 폴러에 통합) ✅
+
+### 본 세션 성격
+- Session E-2 Phase 2 (4-Section dashboard 재편) 직후 같은 worktree에서 Phase 3 진입. 사용자 명시 "이어서 진행 (Y/N 게이트 생략)" + "no clarifying questions" 정책 적용 → 시니어 판단으로 DB 스키마 결정 (사용자 위임 사항).
+- DB 결정: **InventorySnapshot 확장 + PriceMovementAlert 신규 테이블** (별도 PriceSnapshot 테이블 안 만듦). 근거: 도매꾹 getItemView가 basis + qty + price.supply를 한 호출에 반환 → 별도 cron route 신설 불필요 + Vercel daily quota 추가 비용 0. i18n 사전 `automation-strings.ko.json`이 이미 "6-A 폴러와 같은 cron 호출에 곁들임 (별도 호출 0)"으로 명시되어 있었음 (Phase 1 작성).
+- 한 turn 안에 11 파일 + 검증 + commit + push + verify + MD 갱신 완료.
+
+### 시작 직전 상태
+- HEAD `0874f9f` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} 보존 ✅
+- MD 줄 수: PROGRESS 203 / ROADMAP 348 / SESSION_LOG 545 (분할 직후 슬림 상태, T1 미달)
+- Latest prod deploy SHA == HEAD ✅
+- verify-vercel-deploy.sh OK ✅
+
+### 본 세션 작업
+
+#### A. DB 스키마 (Supabase 마이그레이션 `sprint_6b_price_movement` 적용)
+- `inventory_snapshots.supplier_price INTEGER` 컬럼 추가 (NULL 허용, 기존 row 영향 0)
+- `price_movement_alerts` 신규 테이블 — LowStockAlert 미러 + direction (up/down) + baselinePrice / currentPrice / deltaPct
+- FK: `product_id` → `"Product"(id)` ON DELETE CASCADE (low_stock_alerts와 동일 패턴)
+- CHECK 제약: level ∈ {yellow, orange, red}, direction ∈ {up, down}
+- 인덱스 2개: product_id, triggered_at DESC
+
+#### B. Adapter 확장 (`source-adapter.ts` + `domemae-adapter.ts`)
+- `InventorySnapshot` interface: `supplierPrice?: number | null` 필드 추가 (additive — 작업원칙 #27 외부 컨트랙트 보존)
+- `DomemaeAdapter.getInventory`:
+  - 응답 파싱에 `price.supply` 추출 추가 (parseSupplyPrice 재사용 — tiered pricing "1+3800|20+3500" 안전 파싱)
+  - `supplyRaw === undefined → null`, 그 외에는 parseSupplyPrice 적용 (0 반환 가능성 인지)
+  - 에러 경로 + cold-start 경로 모두 `supplierPrice: null` 명시
+- `ownerclan-adapter`: 변경 0 (stub 유지)
+
+#### C. 신규 분석기 (`src/lib/dome-price-analyzer.ts`)
+- `evaluatePriceMovement(meta, snap)` — 한 snapshot 입력 받아 7일 rolling baseline 계산 후 alert 생성/해소
+- baseline = 직전 7일 InventorySnapshot 중 `supplierPrice IS NOT NULL AND > 0`의 평균 (현재 snapshot 제외)
+- 임계: |deltaPct| ≥ 5% (yellow) / 10% (orange) / 15% (red). 안전 band 복귀 시 모든 open alert 자동 resolve.
+- Dedupe: LowStockAlert와 동일 패턴 — 같은 level + 같은 direction이 open이면 신규 alert 생성 안 함. 다른 level/direction이면 기존 resolve 후 새로 생성.
+- Discord: orange/red만 PRICE_CHANGE 채널 발송 (yellow는 dashboard widget only — spam 방지). embed 한글 직접 입력 (40자, Write tool raw byte — Python audit FFFD=0 NFC clean).
+
+#### D. 폴러 통합 (`dome-inventory-poller.ts`)
+- `PollResult`에 `newPriceAlerts` + `resolvedPriceAlerts` 필드 추가
+- snapshot persist에 `supplierPrice: s.supplierPrice ?? null` 포함
+- active loop에서 evaluateAlert 호출 직후 `evaluatePriceMovement(meta, snap)` 호출 — 같은 트랜잭션 흐름 (try/catch 분리해서 한 쪽 실패가 다른 쪽 영향 안 미침)
+- 별도 cron route 신설 0 (작업원칙 #27 패턴 — 기존 cron 재사용)
+
+#### E. API + UI 표면
+- `GET /api/alerts/price-movements` (신규) — unresolved alerts 50건 + product summary. level priority sort (red > orange > yellow).
+- `src/components/dashboard/PriceMovementWidget.tsx` + `.strings.ko.json` (신규) — compact Inbox row group.
+  - 정상 상태: 단일 green "이상 없음" row
+  - alerts 있을 때: yellow/orange/red tinted rows (최대 5건) + N건 외 더 보기 link
+  - SWR `refreshInterval: 60_000`
+- `dashboard/page.tsx`: 첫 InboxPlaceholderRow ("가격 변동 감지") → `<PriceMovementWidget />` 교체. `CircleDollarSign` import 제거 (lint 회피).
+- `automation-registry.ts`: `price-poll` entry `status: pending → active`, `togglable: true`, `cronPath: '/api/cron/inventory-sync'` 추가 (inventory-poll과 공유)
+- `api/automation/registry/route.ts`: `case 'price-poll'`을 inventory-poll case에 합류 — `lastRun` = 최신 InventorySnapshot.polledAt 공유
+
+### 검증
+- TSC `npx tsc --noEmit` 0 errors ✅
+- Production build `npm run build` 28/28 prerender ✅ (/dashboard 47.6 → 48.7 kB / /automation 6.89 kB 유지 / /api/alerts/price-movements 신규 등록)
+- NFC + FFFD audit 11개 파일 모두 0/clean ✅
+- 한글 sentinel grep 0 신규 매칭 ✅
+- Production smoke (push 후):
+  - `GET /dashboard` HTTP 200 ✅
+  - `GET /automation` HTTP 200 ✅
+  - `GET /api/alerts/price-movements` HTTP 200 + `{"data":[]}` (cold start 정상) ✅
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production c8aba85 (state=REGISTERED) ✅
+
+### 본 세션 학습 (영구 기록)
+
+1. **워크트리 vs main 절대 경로 혼동 사고 재발 — 본 세션만 2회** — Session E-1 학습 1에서 명시한 위험이 본 세션에서 두 번 발생:
+   - 사고 1: 최초 Edit 4건 (Prisma + source-adapter + domemae-adapter + dome-price-analyzer Write) 모두 절대 경로 `/Users/jyekkot/Desktop/kkotium-garden/...` 사용 → main repo로. `git diff > /tmp/p3-tracked.patch` + `git restore` + 워크트리에 `git apply`로 복구.
+   - 사고 2: dome-inventory-poller.ts Edit 4건이 또 main repo로 (worktree로 cd 전 이후에도 main 경로 사용). 같은 패턴으로 복구 (`/tmp/p3-poller.patch`).
+   - 근본 원인: Edit 호출의 file_path가 `/Users/jyekkot/Desktop/kkotium-garden/...`로 시작하면 main, `/Users/jyekkot/Desktop/kkotium-garden/.claude/worktrees/<name>/...`이어야 worktree. 같은 prefix가 main을 가리키는 함정 패턴 인지 부족.
+   - **재발 방지 패턴 (영구 적용)**: Edit/Write 호출 직전 file_path의 시작 부분이 `.claude/worktrees/<name>/` 포함하는지 1초 검증 의무. 같은 경로 패턴 사고가 본 프로젝트에서 3회+ 누적이므로 *Edit 호출 시 자동 점검 의무*로 격상.
+
+2. **i18n 사전 사전 작성의 가치 입증** — Phase 1에서 `automation-strings.ko.json`에 적은 `pricePoll` description "6-A 폴러와 같은 cron 호출에 곁들임 (별도 호출 0)"이 본 Phase 3 설계 결정의 *외부 컨트랙트* 역할을 함. 별도 cron route 신설 옵션을 사용자에게 묻기 전에 i18n 사전 확인 → 사전이 이미 명시한 정답으로 진행. 작업원칙 #27 (외부 컨트랙트 보존)의 자연스러운 확장 — i18n 사전도 컨트랙트의 일부.
+
+3. **Supabase MCP DDL permission 차단 패턴** — 기본적으로 production DB DDL 차단됨. 본 세션에서 첫 `apply_migration` 호출이 permission denied로 차단됨 → 사용자에게 명확한 (A) MCP 1회 승인 / (B) SQL 파일 + Editor 수동 / (C) 진행 불가 선택지 제시 → (A) 채택 → 진행. 본 패턴이 *작업원칙 #36 강화 후속*으로 가치 있음 — DB 변경은 명시 승인 의무 (CLAUDE.md "actions with care" 원칙과 정합).
+
+4. **piggy-back cron 패턴이 i18n + registry + cron 3중 정합** — price-poll의 cronPath를 `/api/cron/inventory-sync`로 *공유*. 한 cron 호출에서 두 자동화 모두 lastRun 갱신 → /automation 페이지에서 둘 다 정상 active로 노출 + 동일 lastRun timestamp 표시. 추가 cron route / 추가 Vercel daily quota 부담 0. 향후 6-D (꼬띠 4모드 발송) + competitor-poll도 같은 패턴 적용 가능 — *cron piggy-back이 새싹 단계 Vercel Hobby plan 비용 0 보장의 핵심*.
+
+### 검증 한계 (사용자 보고 의무 — 정직)
+
+- **실 데이터 검증 불가** — 현재 상품 0개 → 폴링 대상 0 → 알림 생성 0건. Phase 3 검증은 (1) TSC + build (2) cold start API 200 + 빈 배열 응답까지만. 사용자 첫 도매꾹 상품 등록 + 8일 후 (baseline 7일 rolling 정상 누적 후) 첫 실 가격 변동 시 자동 검증됨.
+- **사용자 시각 검증 권장** — https://kkotium-garden.vercel.app/dashboard 직접 진입해 Section 2 Inbox에서 PriceMovementWidget의 *empty-state OK row* (green tone) 시각 확인 권장. 본 세션은 worktree dev 안 띄움 + Claude Preview 안 씀 (시각 검증은 production smoke로만).
+- **Discord PRICE_CHANGE 채널 발송 검증 불가** — orange/red alert 0건이라 발송 path 미검증. 실 alert 발생 시 자동 검증됨.
+- **Sprint 7-A 카테고리 1페이지 일치율 위젯과 통합 검토는 Phase 4에서** — `PriceMovementWidget`의 알림 표시 방식과 향후 `CompetitorRadarWidget`이 같은 Inbox slot에서 어떻게 공존할지는 Phase 4에서 사용자 IA 결정.
+
+### Commit + Push
+- `c8aba85` feat(6-B): Phase 3 — price movement backend (piggy-back on 6-A poller) (+739 / -20, 11 파일 — 신규 4 + 수정 7)
+- worktree → main: `git merge claude/youthful-gauss-5654af --ff-only` (ff)
+- push `0874f9f..c8aba85 main -> main`
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production c8aba85 (state=REGISTERED) ✅
+
+### 적용된 작업원칙
+
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 통과 ✅
+- **#22** production smoke + cold start API JSON 검증 (시각 검증은 사용자 환경에서)
+- **#24** 한 turn 안에 11 파일 + DB 마이그레이션 + 검증 + commit + push + verify + MD 갱신
+- **#26** IA 점검 — Inbox 첫 placeholder만 교체 (Sidebar 변경 0, registry-driven IA 패턴 보존)
+- **#27** 외부 컨트랙트 보존 — `InventorySnapshot` interface에 *추가만* (`supplierPrice?` optional). `PollResult`에 *추가만*. i18n 사전 변경 0. Sidebar 변경 0.
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 6+1 규칙:
+  - (a) Edit 한글 다량 newText 0건 (한글은 모두 Write 통해 직접 입력 → Python audit 통과)
+  - (b) MD 갱신 = Python 안전 삽입 패턴 (본 entry)
+  - (c) 카드 컴포넌트 한글 const → strings.ko.json 분리 (#35 패턴)
+  - (d) 셸 명령 한글 0건
+  - (e) sentinel grep 0 신규 매칭
+  - (e+, e++) 닉네임 호명 0건
+- **#31 (a)** SESSION_LOG 545 + 본 entry → ~700 (T1 1000 미달, 권고 없음)
+- **#32** TSC + npm run build 모두 통과 ✅
+- **#33** useSearchParams 추가 0건
+- **#34** worktree vs main 절대 경로 혼동 사고 2회 발생 — 즉시 사용자 보고 + 복구 (위 학습 1 참조)
+- **#35** 한글 사전 분리 패턴 — `PriceMovementWidget.strings.ko.json` (15 strings, NFC clean, FFFD 0) ✅
+- **#36** push 후 `verify-vercel-deploy.sh --wait` exit 0 (github-deployments path) ✅
+
+### 본 세션 commit
+1. `c8aba85` feat(6-B): Phase 3 — price movement backend (piggy-back on 6-A poller)
+2. (본 entry) docs(plan): record Session E-2 Phase 3 + Phase 4 handoff
+
+### 다음 세션 (Session E-2 Phase 4) 작업 = Sprint 6-C 다른 셀러 추적 + 공급사 누적 평가
+1. `src/lib/competitor-tracker.ts` (신규) — 도매꾹 search API `getItemList` 통합 (현재 `domemae-adapter.searchItems`는 notImplemented throw stub). 같은 카테고리 + 비슷한 키워드로 1페이지에 노출되는 다른 셀러의 가격/재고/리뷰 추적.
+2. `src/components/dashboard/CompetitorRadarWidget.tsx` (신규) — Inbox Section 2의 두 번째 placeholder ("다른 셀러 추적", sprintLabel="6-C") 교체. PriceMovementWidget과 같은 compact pattern.
+3. `SupplierStockProfile` 확장 + 공급사 단위 trust score 집계 — 현재 상품 단위 → 공급사 단위 score (평균 depletion + 미신뢰 상품 비율 + 가격 변동성 = Phase 3 PriceMovementAlert 활용).
+4. `src/components/dashboard/SupplierGardenWidget.tsx` (신규) — Section 4 잠재력에 마운트 검토 (사용자 IA 결정 위임).
+5. automation-registry: `competitor-poll` + `supplier-score` pending → active 전환.
+6. 검증 + commit + push + verify-vercel-deploy.sh --wait
+7. MD 갱신 + Phase 5 (Session F = 6-E 카테고리 캐시 + 6-D 4모드 발송 통합) 인계
+
+
+---
+
 ## 2026-05-12 Session E-2 Phase 2 (4-Section dashboard 재편 — Hero/Inbox/Health/Potential/More) ✅
 
 ### 본 세션 성격

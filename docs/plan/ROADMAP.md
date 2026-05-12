@@ -1,9 +1,9 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-12 Session E-2 Phase 2 (4-Section dashboard 재편 ✅)
-> **HEAD**: d1486e5 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 27/27 OK (/dashboard 47.6 kB / /automation 6.89 kB) | **배포**: https://kkotium-garden.vercel.app (d1486e5 REGISTERED via GitHub Deployments path)
+> **최종 업데이트**: 2026-05-12 Session E-2 Phase 3 (Sprint 6-B 가격 변동 백엔드 ✅ — 6-A 폴러에 통합)
+> **HEAD**: c8aba85 = origin/main 일치 | **TSC**: 0 errors | **빌드**: 28/28 OK (/dashboard 48.7 kB / /automation 6.89 kB) | **배포**: https://kkotium-garden.vercel.app (c8aba85 REGISTERED via GitHub Deployments path)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
-> **Vercel Hobby 제한 주의**: inventory-sync cron은 현재 daily (`0 0 * * *`). Pro plan upgrade 시 `vercel.json` 한 줄로 6시간 cron 복귀 가능
+> **Vercel Hobby 제한 주의**: inventory-sync cron은 현재 daily (`0 0 * * *`). 6-B는 같은 cron에 통합되어 추가 비용 0. Pro plan upgrade 시 `vercel.json` 한 줄로 6시간 cron 복귀 가능
 >
 > **이 파일의 역할**: 진행 중·예정 Sprint 계획 + 영구 참조 (체크리스트, 비용 로드맵, 도구 사용 패턴)
 > **누적 인계 메시지 + Phase A/B/C 완료 이력**: `docs/plan/archive/ROADMAP_2026Q2_MAY.md`
@@ -12,14 +12,14 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-12 Session E-2 Phase 3 (Sprint 6-B 가격 변동 백엔드)
+## 다음 새 채팅 시작 메시지 — 2026-05-12 Session E-2 Phase 4 (Sprint 6-C 다른 셀러 추적 + 공급사 누적 평가)
 
-<!-- session-e2-p3-handoff-short v1 -->
+<!-- session-e2-p4-handoff-short v1 -->
 
 ```
-꽃틔움 가든 — Session E-2 Phase 3 시작.
+꽃틔움 가든 — Session E-2 Phase 4 시작.
 
-docs/plan/PROGRESS.md (슬림 진입점) → ROADMAP.md → SESSION_LOG.md 정독. 필요 시 PRINCIPLES_LEARNED.md / PRINCIPLES_CODE.md / SPRINT_PLAN.md / REFERENCES.md spot-read. 아래 STEP 0 환경 점검 후 현재 상태 + Phase 3 디테일 계획을 브리핑해주세요. 본 작업 시작은 제 Y/N 승인 후 진행.
+docs/plan/PROGRESS.md (슬림 진입점) → ROADMAP.md → SESSION_LOG.md 정독. 필요 시 PRINCIPLES_LEARNED.md / PRINCIPLES_CODE.md / SPRINT_PLAN.md / REFERENCES.md spot-read. 아래 STEP 0 환경 점검 후 현재 상태 + Phase 4 디테일 계획을 브리핑해주세요. 본 작업 시작은 제 Y/N 승인 후 진행.
 
 [STEP 0 환경 점검]
 git rev-parse HEAD origin/main && \
@@ -31,43 +31,53 @@ git rev-parse HEAD origin/main && \
   scripts/verify-vercel-deploy.sh
 
 [본 세션 핵심 — 디테일은 SESSION_LOG.md 직전 entry / PROGRESS.md 헤더 / 본 ROADMAP.md 아래 섹션 참고]
-- Phase 2 (4-Section dashboard 재편) 완료 — production d1486e5 (Hero/Inbox/Health/Potential + More collapsed)
-- Phase 3 = Sprint 6-B 가격 변동 백엔드
-  • `src/lib/dome-price-poller.ts` (신규) — 도매꾹 supplierPrice 폴링 + ±5%/10%/15% 분기 알림
-  • Prisma: `PriceSnapshot` 신규 또는 `InventorySnapshot` 확장 결정 — 6-A 폴러와 통합 검토 (getItemView 응답에 price.supply 포함)
-  • `src/app/api/cron/price-sync/route.ts` (신규) — daily cron (Hobby plan 제한)
-  • `src/lib/automation-registry.ts` — `price-poll` entry를 pending → active 전환
-  • Inbox `InboxPlaceholderRow(가격 변동 감지)` → 실 alert 위젯으로 교체 (Sprint 6-B widget)
-- 본 Phase 후 Phase 4 = Sprint 6-C 다른 셀러 추적 + 공급사 누적 평가
+- Phase 3 (Sprint 6-B 가격 변동 백엔드) 완료 — production c8aba85
+  • InventorySnapshot.supplierPrice 확장 + PriceMovementAlert 신규 테이블 (Supabase migration 적용)
+  • dome-price-analyzer.ts (±5/10/15% 7일 rolling baseline) — 6-A 폴러 같은 루프에서 호출 (별도 cron 0)
+  • /api/alerts/price-movements + PriceMovementWidget — Inbox placeholder 1건 교체
+  • automation-registry: price-poll status pending → active (cronPath = /api/cron/inventory-sync 공유)
+- Phase 4 = Sprint 6-C 다른 셀러 추적 + 공급사 누적 평가
+  • `src/lib/competitor-tracker.ts` (신규) — 도매꾹 search API getItemList 통합 (현재 searchItems는 stub)
+  • 같은 카테고리 + 비슷한 키워드로 1페이지에 노출되는 다른 셀러의 가격/재고/리뷰 추적
+  • `src/components/dashboard/CompetitorRadarWidget` — Inbox placeholder "다른 셀러 추적" 교체
+  • SupplierStockProfile 확장 — 상품 단위 → 공급사 단위 score 집계 (평균 depletion + 미신뢰 상품 비율 + 가격 변동성)
+  • `src/components/dashboard/SupplierGardenWidget` (신규, Section 4 잠재력 영역 마운트 검토)
+  • automation-registry: competitor-poll + supplier-score pending → active
+- 본 Phase 후 Phase 5 = Session F (6-E 카테고리 캐시 + 6-D 4모드 통합)
 
 [페르소나]
-B2B 이커머스 ERP + 네이버 파워셀러 + UI/UX 시니어. 단독 IA/삭제 결정 금지. PriceSnapshot vs InventorySnapshot 확장 결정은 사용자 위임.
+B2B 이커머스 ERP + 네이버 파워셀러 + UI/UX 시니어. 단독 IA/삭제 결정 금지. Widget 마운트 슬롯 (Inbox Section 2 vs Potential Section 4) 결정은 사용자 위임.
+
+[주의 — 작업원칙 위반 학습]
+Phase 3에서 worktree vs main 절대 경로 혼동 사고 2회 발생 (작업원칙 #34 / Session E-1 학습 1 재발). Edit/Write 호출 시 절대 경로 시작이 워크트리 prefix `/Users/jyekkot/Desktop/kkotium-garden/.claude/worktrees/<name>/`인지 *매 호출 확인 의무*.
 ```
 
 ---
 
 ## Session E 작업 디테일 (인계 메시지 본문에서 분리 — 새 세션이 정독 시 흡수)
 
-### 작업 범위 — Sprint 6-B + 6-C
+### Phase 3 (Sprint 6-B 가격 변동 백엔드) — 완료 요약
 
-1. **Sprint 6-B 가격 변동 추적** — `src/lib/dome-price-poller.ts` (신규)
-   - 도매꾹 supplierPrice 폴링 + DB `PriceSnapshot` 테이블 (또는 기존 `InventorySnapshot` 확장)
-   - 변동 감지 임계: ±5% 이상 → 알림. ±10%+ 또는 ±15%+ 레벨 분기.
-   - 6-A 폴러와 통합 가능성 검토 — `getInventory` 호출 시 `supplierPrice`도 함께 추출 가능 (도매꾹 multiple=true 응답에 price.supply 포함). DB schema migration 우선 결정.
-   - dashboard `PriceMovementWidget` (신규) — 7일 / 30일 변동 그래프 + 가장 흔들리는 공급사 TOP 5.
+- DB 결정: **InventorySnapshot 확장 채택** (사용자 위임 사항). PriceMovementAlert 별도 테이블 (LowStockAlert 미러).
+- 통합 전략: 도매꾹 getItemView가 basis + qty + price.supply를 한 호출로 반환 → 별도 cron 0, 별도 API 호출 0. dome-inventory-poller의 active loop에서 evaluatePriceMovement도 함께 호출.
+- Cold start: 사전 snapshot < 1건일 때는 alert 비발생 (baseline 계산 불가).
+- Discord: orange/red만 PRICE_CHANGE 채널 발송 (yellow는 dashboard widget only — spam 방지).
 
-2. **Sprint 6-C 다른 셀러 추적** — `src/lib/competitor-tracker.ts` (신규)
+### Phase 4 작업 범위 — Sprint 6-C + 공급사 누적 평가
+
+1. **Sprint 6-C 다른 셀러 추적** — `src/lib/competitor-tracker.ts` (신규)
    - 같은 카테고리 + 비슷한 키워드로 1페이지에 노출되는 *다른 셀러*의 가격/재고/리뷰 추적
-   - 도매꾹 search API (`getItemList`) 통합 필요 — 현재 `searchItems`는 stub
+   - 도매꾹 search API (`getItemList`) 통합 필요 — 현재 `domemae-adapter.searchItems`는 stub (notImplemented throw)
    - dashboard `CompetitorRadarWidget` (신규) — 우리 상품의 1페이지 동일 상품 다른 셀러 가격 표 + Sprint 7-A 카테고리 1페이지 일치율 위젯과 통합 가능성 검토.
+   - Inbox Section 2의 두 번째 placeholder ("다른 셀러 추적", sprintLabel="6-C") 교체.
 
-3. **공급사 누적 평가** — `SupplierStockProfile` 확장 + 공급사 단위 trust score
+2. **공급사 누적 평가** — `SupplierStockProfile` 확장 + 공급사 단위 trust score
    - 현재는 *상품 단위* trust score (no-change days, isTrustworthy boolean)
-   - Session E에서 *공급사 단위* score 집계 — 평균 depletion + 미신뢰 상품 비율 + 가격 변동성
-   - dashboard `SupplierGardenWidget` (신규) — 거래처별 score grid + 클릭 시 상품 list drill-down.
+   - Phase 4에서 *공급사 단위* score 집계 — 평균 depletion + 미신뢰 상품 비율 + 가격 변동성 (Phase 3에서 추가된 PriceMovementAlert 활용)
+   - dashboard `SupplierGardenWidget` (신규) — 거래처별 score grid + 클릭 시 상품 list drill-down. Section 4 Potential 마운트 검토.
 
-4. 검증 + commit + push + verify-vercel-deploy.sh --wait
-5. MD 갱신 + Session F 인계
+3. 검증 + commit + push + verify-vercel-deploy.sh --wait
+4. MD 갱신 + Phase 5 인계
 
 ### 작업원칙 강제 (요약 — 풀 디테일은 PROGRESS.md)
 

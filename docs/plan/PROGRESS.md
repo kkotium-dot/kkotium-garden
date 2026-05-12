@@ -1,13 +1,13 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황 (슬림 진입점)
 
-> **최종 업데이트**: 2026-05-12 Session E-2 Phase 2 (4-Section dashboard 재편 ✅) + MD 재구조화 (PROGRESS 842→202 / SESSION_LOG 1635→543 / 4 신규 파일 + 1 archive)
-> **TSC**: 0 errors | **빌드**: 27/27 prerender (/dashboard 47.6 kB / /automation 6.89 kB) | **배포**: https://kkotium-garden.vercel.app (5892c42 REGISTERED via GitHub Deployments path)
-> **HEAD**: 5892c42 = origin/main 일치 / **Working tree**: clean (분할 commit 진행 중) / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
-> **시각 검증**: Chrome MCP로 5-section 모두 정상 렌더링 확인 (페르소나 라벨 / 4 placeholder rows / 좀비 부활소 green 톤 / More defaultCollapsed) ✅
+> **최종 업데이트**: 2026-05-12 Session E-2 Phase 3 (Sprint 6-B 가격 변동 백엔드 ✅ — 6-A 폴러에 통합)
+> **TSC**: 0 errors | **빌드**: 28/28 prerender (/dashboard 48.7 kB / /automation 6.89 kB) | **배포**: https://kkotium-garden.vercel.app (c8aba85 REGISTERED via GitHub Deployments path)
+> **HEAD**: c8aba85 = origin/main 일치 / **Working tree**: clean / **Stash**: stash@{0} z3c-misdirected-changes-needs-redo (보존)
+> **시각 검증 (Production smoke)**: `/dashboard` 200 / `/automation` 200 / `/api/alerts/price-movements` 200 `{"data":[]}` (cold start 정상) ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
-> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 (4모드 foundation) ✅ | 6-A 백엔드 + UI Phase 1·2·3 ✅ | Session E-2 Phase 1 (/automation 골격) ✅ | **Session E-2 Phase 2 (Hero/Inbox/Health/Potential/More 5-section dashboard + 시각 검증) ✅** | **MD 재구조화 (#31 b 4 신규 파일 분리) ✅**
+> **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 (4모드 foundation) ✅ | 6-A 백엔드 + UI Phase 1·2·3 ✅ | Session E-2 Phase 1 (/automation 골격) ✅ | Session E-2 Phase 2 (Hero/Inbox/Health/Potential/More 5-section dashboard) ✅ | **Session E-2 Phase 3 (Sprint 6-B 가격 변동 백엔드 + PriceMovementWidget Inbox 통합) ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업**: **Phase 3 = Sprint 6-B 가격 변동 백엔드 (`dome-price-poller.ts` + PriceSnapshot 테이블 + Inbox `price-poll` placeholder를 active로 전환 + /automation registry 갱신)** → Phase 4 = 6-C 다른 셀러 + 공급사 누적 → Phase 5 = Session F (6-E 카테고리 캐시 + 6-D 4모드) → Sprint 7 P0/P1 → Sprint 7 Track B AI Studio → Sprint 8 P2 → Sprint 9 P3 (매출 600만원+ 후)
+> **다음 작업**: **Phase 4 = Sprint 6-C 다른 셀러 추적 (도매꾹 search API + competitor-tracker.ts + CompetitorRadarWidget Inbox 통합) + 공급사 누적 평가 (SupplierStockProfile 확장 + SupplierGardenWidget)** → Phase 5 = Session F (6-E 카테고리 캐시 + 6-D 4모드 발송 통합) → Sprint 7 P0/P1 → Sprint 7 Track B AI Studio → Sprint 8 P2 → Sprint 9 P3 (매출 600만원+ 후)
 > **참고 문서**: `docs/research/OVERSEAS_SOURCING_BASELINE_2026_05.md`, `docs/research/DOMEGGOOK_API_INTEGRATION_STRATEGY_2026_05.md`, `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
