@@ -1,3 +1,143 @@
+## 2026-05-12 Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 — Inbox 4 placeholders 모두 live) ✅
+
+### 본 세션 성격
+- Phase 5 (Sprint 6-E 카테고리 캐시) 직후 같은 worktree에서 Sprint 7 P0 진입. 사용자 명시 "이어서 진행" + "no clarifying questions" 정책 → 시니어 판단으로 진행.
+- 본 Sprint 7 P0의 **궁극 성과**: 2026-05-12 한 채팅 안에서 시작했던 dashboard 5-section 재편 (Phase 2)부터 시작한 *Inbox 4 placeholders 모두 live widget으로 교체* — Phase 3 (가격 변동) → Phase 4 (다른 셀러) → Sprint 7 P0-B (골든 윈도우) → Sprint 7 P0-C (효자 상품). Inbox Section 2는 이제 0 placeholders.
+- 한 turn 안에 15 파일 (+1171 / -51) + 검증 + commit + push + verify + MD 갱신 완료. **Phase 3 학습 적용 — worktree vs main 절대 경로 혼동 0회 (Phase 4 + Phase 5 + Sprint 7 P0 누적 0회)**.
+
+### 시작 직전 상태
+- HEAD `b91872a` = origin/main 일치 ✅
+- working tree clean ✅
+- stash@{0} 보존 ✅
+- MD 줄 수: PROGRESS 203 / ROADMAP 378 / SESSION_LOG 1016 (T1 1000 도달, 권고만)
+- Latest prod deploy SHA == HEAD ✅
+- verify-vercel-deploy.sh OK ✅
+
+### 본 세션 작업
+
+#### A. P0-A 도매꾹 OpenAPI v4.5 옵션 정확도 (리서치 11번)
+- 신규 `src/lib/option-integrity.ts`:
+  - `hashOptions(options)` — selectOpt 정규화 → sha1 첫 32자 (no_options:0 sentinel for empty)
+  - `validateStatus(status)` — 비-'판매중' 시 vacation flag (level: block)
+  - `validateChannel(isOnSupply)` — !isOnSupply 시 channel_mismatch flag (level: warning)
+  - `detectOptionDrift(prev, curr)` — hash 미스매치 시 options_drift flag (level: warning)
+  - `evaluateIntegrity()` + `aggregateLevel()` — single-call wrapper
+- `/api/crawler/domemae/route.ts`: response에 `optionsHash` + `integrityFlags` + `integrityLevel` 추가 (additive, 기존 consumer 영향 0)
+- `/crawl/page.tsx`: `SingleResult` interface에 integrityFlags 필드 추가 + `IntegrityBanner` 컴포넌트 (단건 결과 카드 위에 마운트, tone: block 빨강 / warning 노랑 / ok 녹색)
+
+#### B. P0-B 등록 7일 골든 윈도우 (리서치 10번)
+- 신규 `src/lib/golden-window-tracker.ts`:
+  - 5 stages: day_0 (<24h) / d_plus_1 (24-72h) / d_plus_3 (72-168h) / d_plus_7 (168-336h) / expired (336h+)
+  - 목표: D+3 = 1 sale, D+7 = 3 sales (sales = Product.salesCount)
+  - Status: ok / needs_action. Sorted needs_action first, oldest first within needs_action (가장 시급한 것 위로).
+  - `isInsideGoldenWindow(createdAt, asOf)` helper export
+- 신규 `GET /api/golden-window/active`
+- 신규 `GoldenWindowWidget.tsx` + `.strings.ko.json` — Inbox 3rd placeholder 교체
+  - Empty state: green "추적 대기 중" (활성 상품 0건 시)
+  - Alert row: needs_action orange tone, expired gray tone, ok green tone
+
+#### C. P0-C 효자 상품 자동 식별 (리서치 10번 — 멱법칙)
+- 신규 `src/lib/pareto-analyzer.ts`:
+  - `computePareto()` — 30-day OrderItem aggregation (status NOT IN CANCELLED/RETURNED/...)
+  - paretoSlice = top 20% by count (min 1)
+  - topFive (대시보드용) + paretoShare (총 매출 대비 %) + totalRevenue
+- 신규 `GET /api/products/pareto`
+- `TopProductsCard.tsx` (Section 3) 활성화:
+  - 기존 "P0-C 준비 중" placeholder → 매출 있을 때 ranked list (rank + 상품명 + share %), 매출 0건 시 친화 empty body 유지
+  - Badge: "30일 기준" (active) vs "P0-C 대기" / "계산 중" / "조회 실패"
+- 신규 `ParetoInboxRow.tsx` + `.strings.ko.json` — Inbox 4th placeholder 교체
+  - Compact 1-row summary: "TOP N/M · X% 차지" + #1 상품명 short
+
+#### D. Dashboard 통합 (Inbox 4 placeholders → 4 live widgets)
+- `dashboard/page.tsx`:
+  - import 2개 신규 (GoldenWindowWidget, ParetoInboxRow), Trophy/InboxPlaceholderRow import 제거
+  - Inbox Section 2: PriceMovementWidget + CompetitorRadarWidget + **GoldenWindowWidget** + **ParetoInboxRow** (placeholder 0건)
+
+#### E. Registry 갱신
+- `golden-window` pending → active, frequency on-event (no cron — widget fetch 시 pure compute)
+- `pareto-recalc` pending → active, frequency on-event (no cron — pure compute)
+- `api/automation/registry/route.ts`: case 'golden-window' / 'pareto-recalc' → lastRun null (on-demand, always live)
+
+### 검증
+- TSC `npx tsc --noEmit` 0 errors ✅
+- Production build `npm run build` 28/28 prerender ✅ (/dashboard 50.4 → 51.6 kB +1.2 kB, /crawl 19.7 → 20.1 kB +0.4 kB IntegrityBanner)
+- NFC + FFFD audit 15개 파일 모두 0/clean (crawl/page.tsx의 FFFD 2건은 기존 sanitize 정규식, 본 세션 무관) ✅
+- 한글 sentinel grep 0 신규 매칭 ✅
+- Production smoke (push 후):
+  - `GET /dashboard` HTTP 200 ✅
+  - `GET /crawl` HTTP 200 ✅
+  - `GET /automation` HTTP 200 ✅
+  - `GET /api/golden-window/active` HTTP 200 `{"data":[]}` (cold start, 활성 상품 0건 → []) ✅
+  - `GET /api/products/pareto` HTTP 200 `{"totalRevenue":0,"totalOrders":0,...}` (cold start) ✅
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production 8c477ee (state=REGISTERED) ✅
+
+### 본 세션 학습 (영구 기록)
+
+1. **Inbox placeholder 4건 모두 live 전환 완료 — 본 채팅 1일의 누적 성과** — 2026-05-12 한 채팅에서:
+   - Phase 2 (4-Section dashboard 재편)에서 4 placeholders 도입
+   - Phase 3 → 가격 변동 (1번째 placeholder live)
+   - Phase 4 → 다른 셀러 (2번째 placeholder live)
+   - Sprint 7 P0-B → 골든 윈도우 (3번째 placeholder live)
+   - Sprint 7 P0-C → 효자 상품 (4번째 placeholder live)
+   Inbox Section 2가 이제 4개의 production-active widget으로 가득 참. Sidebar 변경 0건, dashboard layout 변경 0건 — *registry-driven IA 패턴이 4 Sprint 누적에서 자연 일관성 유지*. Phase 1 (/automation 골격)의 가치 증명.
+
+2. **on-event frequency 패턴 — cron-less automation** — P0-B (골든윈도우) + P0-C (효자상품) 모두 cron 없음. Widget이 fetch 시 server-side에서 pure compute (Product / OrderItem 테이블 직접 쿼리). Vercel cron quota 0건 추가, 데이터는 항상 최신 (lastRun null로 명시). 향후 비슷한 *"DB에서 직접 계산 가능한 분석"*은 같은 패턴 적용 가능 — 즉시 *live* 상태로 신규 자동화 등록 가능.
+
+3. **TopProductsCard graceful activation** — Phase 2에서 마운트한 placeholder card를 P0-C에서 *덮어쓰기 0*으로 activation. Hook 추가 (useSWR) + 조건부 body 분기 (`hasData ? RankedList : EmptyBody`). 기존 empty 텍스트는 그대로 보존 → cold start에서 사용자 경험 미변경, 데이터 누적 후 자동 시각 전환. *Phase 2에서 정한 카드 골격이 Sprint 7까지 안정 유지*.
+
+4. **integrity flags 점진 적용 패턴** — `/api/crawler/domemae` 응답에 *additive* 필드만 추가 (`optionsHash`, `integrityFlags`, `integrityLevel`). 기존 consumer (씨앗 심기 prefill, AlternativeProductPanel, DomemaeCrawler 등)은 변경 0건. 새 consumer (`/crawl` IntegrityBanner) 만 read. 외부 컨트랙트 보존 (#27) 원칙 적용.
+
+### 검증 한계 (사용자 보고 의무 — 정직)
+
+- **P0-A 실 데이터 검증 불가** — 현재 도매꾹 상품 0건이라 첫 crawl 동선에서 integrityFlags 발화 불가. 사용자 첫 도매꾹 URL crawl 시 *vacation* (status != 판매중) / *channel_mismatch* (!isOnSupply) flag 자동 trigger. *options_drift*는 prevHash 필요 — 첫 crawl 후 *재크롤*에서만 발화 (현재 재크롤 UI는 없음 — 별도 Sprint).
+- **P0-B 골든 윈도우 cold start** — 활성 상품 0건 → empty state. 사용자 첫 도매꾹 상품 등록 + naverProductId 발급 후 day_0 stage 즉시 trigger.
+- **P0-C Pareto cold start** — 주문 0건 → totalRevenue 0. 사용자 첫 판매 후 30-day window에 누적 시 자동 산정.
+- **사용자 시각 검증 권장** — https://kkotium-garden.vercel.app/dashboard 직접 진입해 Section 2 Inbox 4 widgets 모두 empty state green row + Section 3 TopProductsCard "P0-C 대기" badge → "30일 기준" 자동 전환 (주문 발생 시) 확인 권장.
+- **클릭 데이터 미수집** — 골든 윈도우 D+1 target은 *클릭* 1+ 기준이지만 본 프로젝트는 Naver Commerce API click 데이터 미수집 (별도 integration 필요). 현재 D+1 target=0 (사실상 항상 통과). 향후 클릭 데이터 수집 시 target 상향 조정 권장.
+
+### Commit + Push
+- `8c477ee` feat(7-P0): Sprint 7 P0 — option integrity + golden window + pareto (+1171 / -51, 15 파일 — 신규 9 + 수정 6)
+- worktree → main: `git merge claude/youthful-gauss-5654af --ff-only` (ff)
+- push `b91872a..8c477ee main -> main`
+- `verify-vercel-deploy.sh --wait` 결과: OK (github-deployments) — production 8c477ee (state=REGISTERED) ✅
+
+### 적용된 작업원칙
+
+- **#17** commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- **#21** 사전 점검 통과 ✅
+- **#22** production smoke (5개 endpoint 200 + 신규 2개 API cold start `{"data":[]}` / `{"totalRevenue":0,...}` 검증) — 시각 검증은 사용자 환경에서 (보고 의무 충족)
+- **#24** 한 turn 안에 15 파일 + 검증 + commit + push + verify + MD 갱신
+- **#26** IA 점검 — Inbox 두 placeholder 교체 + Section 3 기존 카드 activation (Sidebar 변경 0, registry-driven IA 패턴 보존)
+- **#27** 외부 컨트랙트 보존 — `/api/crawler/domemae` 응답 *추가만* (optionsHash + integrityFlags + integrityLevel). `SearchFilter` / `ItemDetail` interface 변경 0.
+- **#28** Vercel = source of truth ✅
+- **#29 (a~e++)** 한글 처리 6+1 규칙:
+  - (a) Edit 한글 다량 newText 1건 (option-integrity의 IntegrityFlag message — 짧은 단어, NFC clean) — 모두 Write로 처리하고 grep 검증 통과
+  - (b) MD 갱신 = Python 안전 삽입 패턴 (본 entry)
+  - (c) 위젯 한글 const → strings.ko.json 분리 (#35 패턴, 2개 신규 사전)
+  - (d) 셸 명령 한글 0건
+  - (e) sentinel grep 0 신규 매칭
+  - (e+, e++) 닉네임 호명 0건
+- **#31 (a)** SESSION_LOG 1016 + 본 entry → ~1300 (T1 1000 초과 + T2 1500 미달, 권고만. 다음 세션 진입 시 자동 분할 진행 권장)
+- **#32** TSC + npm run build 모두 통과 ✅
+- **#33** useSearchParams 추가 0건
+- **#34** worktree vs main 절대 경로 혼동 0회 발생 — Phase 4 + Phase 5 + Sprint 7 P0 누적 0회 (Phase 3 학습 패턴 안정 적용)
+- **#35** 한글 사전 분리 패턴 — `GoldenWindowWidget.strings.ko.json` (10 keys) + `ParetoInboxRow.strings.ko.json` (10 keys), 모두 NFC clean / FFFD 0 ✅
+- **#36** push 후 `verify-vercel-deploy.sh --wait` exit 0 (github-deployments path) ✅
+
+### 본 세션 commit
+1. `8c477ee` feat(7-P0): Sprint 7 P0 — option integrity + golden window + pareto
+2. (본 entry) docs(plan): record Sprint 7 P0 + Sprint 7 P1 handoff
+
+### 다음 세션 (Sprint 7 P1) 작업 = 카테고리 1페이지 + 금기어 + 태그 사전
+
+1. **P1-A 카테고리 1페이지 일치율 검증** — `src/lib/category-page-validator.ts` (신규) + `/api/category/suggest` 강화 (Phase 5 cache layer 위에 1페이지 분포 분석 추가)
+2. **P1-B 상품명 금기어 페널티 강화** — `src/lib/honey-score.ts` 강화 (이벤트/할인/배송/적립/쿠폰 키워드 + 중복 단어 3회+ + 허용 외 특수문자) + 씨앗 심기 / 검색 조련사 UI 빨간 알림
+3. **P1-C 태그 사전 등재 검증** — `src/lib/naver/tag-dictionary.ts` (신규, 네이버 검색광고 API 키워드 도구 활용) + 태그 입력 UI 경고
+4. automation-registry: category-1page + tag-dictionary pending → active
+5. 검증 + commit + push + verify + MD 갱신 + Sprint 7 Track B AI Studio (M1~M4) 인계
+
+---
+
 ## 2026-05-12 Session E-2 Phase 5 = Session F (Sprint 6-E 카테고리 캐시 + Gemini hit-rate) ✅
 
 ### 본 세션 성격
