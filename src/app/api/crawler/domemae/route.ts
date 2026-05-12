@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { domemaeAdapter, extractProductNo } from '@/lib/sources/domemae-adapter';
 import { SourceAdapterError } from '@/lib/sources/source-adapter';
+import { evaluateIntegrity, aggregateLevel } from '@/lib/option-integrity';
 
 // Domeggook OpenAPI-based crawler.
 // Replaces HTML scraping with the official API: https://domeggook.com/ssl/api/
@@ -109,6 +110,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     `.catch((e) => console.error('[crawl-log-insert]', e));
 
+    // Sprint 7 P0-A: integrity check (vacation + channel + options hash)
+    const integrity = evaluateIntegrity({
+      options: detail.options,
+      status: detail.status,
+      isOnSupply: detail.isOnSupply,
+    });
+    const integrityLevel = aggregateLevel(integrity.flags);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -132,6 +141,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         status: detail.status,
         isOnSupply: detail.isOnSupply,
         minQuantity: detail.minQuantity,
+        // Sprint 7 P0-A additive fields (existing consumers ignore safely)
+        optionsHash: integrity.optionsHash,
+        integrityFlags: integrity.flags,
+        integrityLevel,
       },
       sessionAgeDays: 0,
       sessionWarning: null,

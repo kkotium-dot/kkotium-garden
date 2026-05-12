@@ -35,13 +35,14 @@ import { useMemo, useState, useCallback } from 'react';
 import {
   Package, TrendingUp, AlertTriangle, Sparkles, Layers, Skull,
   ArrowRight, ShoppingCart, RefreshCw,
-  Trophy,
 } from 'lucide-react';
 import KkottiWidget from '@/components/dashboard/KkottiWidget';
 import KkottiBriefingWidget from '@/components/dashboard/KkottiBriefingWidget';
 import LowStockAlertWidget from '@/components/dashboard/LowStockAlertWidget';
 import PriceMovementWidget from '@/components/dashboard/PriceMovementWidget';
 import CompetitorRadarWidget from '@/components/dashboard/CompetitorRadarWidget';
+import GoldenWindowWidget from '@/components/dashboard/GoldenWindowWidget';
+import ParetoInboxRow from '@/components/dashboard/ParetoInboxRow';
 import SupplierGardenWidget from '@/components/dashboard/SupplierGardenWidget';
 import UploadReadinessWidget from '@/components/dashboard/UploadReadinessWidget';
 import ReviewGrowthWidget from '@/components/dashboard/ReviewGrowthWidget';
@@ -56,7 +57,6 @@ import DataLabTrendWidget from '@/components/dashboard/DataLabTrendWidget';
 import SourcingRecommendWidget from '@/components/dashboard/SourcingRecommendWidget';
 import ProductLifecycleWidget from '@/components/dashboard/ProductLifecycleWidget';
 import CollapsibleSection from '@/components/dashboard/layout/CollapsibleSection';
-import InboxPlaceholderRow from '@/components/dashboard/cards/InboxPlaceholderRow';
 import TopProductsCard from '@/components/dashboard/cards/TopProductsCard';
 import HealthCombinedCard from '@/components/dashboard/cards/HealthCombinedCard';
 import ZombieReactivationCard from '@/components/dashboard/cards/ZombieReactivationCard';
@@ -510,18 +510,8 @@ export default function DashboardPage() {
             </p>
             <PriceMovementWidget />
             <CompetitorRadarWidget />
-            <InboxPlaceholderRow
-              Icon={Sparkles}
-              title="등록 7일 골든 윈도우"
-              description="신상품 가산점 종료 전 클릭·판매 모멘텀 추적"
-              sprintLabel="P0-B"
-            />
-            <InboxPlaceholderRow
-              Icon={Trophy}
-              title="효자 상품 자동 식별"
-              description="상위 20% 상품이 매출 70~80% 차지하는 패턴 자동 분석"
-              sprintLabel="P0-C"
-            />
+            <GoldenWindowWidget />
+            <ParetoInboxRow />
           </div>
         </div>
       </CollapsibleSection>

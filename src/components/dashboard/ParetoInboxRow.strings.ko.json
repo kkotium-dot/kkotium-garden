@@ -1,0 +1,12 @@
+{
+  "title": "효자 상품 자동 식별",
+  "subtitleEmpty": "상위 20% 상품이 매출 70~80% 차지하는 패턴 자동 분석",
+  "emptyOk": "추적 대기 중",
+  "emptyHint": "주문 누적 시 자동 산정 (30일 기준)",
+  "loading": "확인 중…",
+  "error": "조회 실패",
+  "share": "차지",
+  "labelTop": "TOP",
+  "labelOf": "/",
+  "sprintLabel": "P0-C"
+}

@@ -20,6 +20,11 @@ interface CrawledOption {
   qty: number;       // stock per option
   addPrice: number;  // additional price on top of base
 }
+interface IntegrityFlag {
+  code: 'vacation' | 'channel_mismatch' | 'options_drift' | 'no_options_data';
+  level: 'ok' | 'warning' | 'block';
+  message: string;
+}
 interface SingleResult {
   name: string; supplierPrice: number;
   images: string[]; options: CrawledOption[]; description: string; sourceUrl?: string;
@@ -36,6 +41,10 @@ interface SingleResult {
   country?: string;
   status?: string;
   minQuantity?: number;
+  // Sprint 7 P0-A integrity signals
+  optionsHash?: string;
+  integrityFlags?: IntegrityFlag[];
+  integrityLevel?: 'ok' | 'warning' | 'block';
 }
 interface BulkRow {
   id: string; url: string;
@@ -164,6 +173,45 @@ function StatusBadge({ status }: { status: string }) {
     <span style={{ display:'inline-flex', alignItems:'center', gap:3, fontSize:11, fontWeight:700, color:'#888', background:'#F5F5F5', border:'1px solid #e5e5e5', borderRadius:99, padding:'2px 8px' }}>
       <Clock size={10} /> 대기
     </span>
+  );
+}
+
+// Sprint 7 P0-A: banner showing integrity flags from /api/crawler/domemae.
+// Top-level tone follows aggregateLevel: block (red) > warning (yellow) > ok.
+function IntegrityBanner({ flags, level }: { flags: IntegrityFlag[]; level: 'ok'|'warning'|'block' }) {
+  const tone = level === 'block'
+    ? { bg: '#FEF2F2', border: '#FCA5A5', text: '#991B1B', icon: '#DC2626' }
+    : level === 'warning'
+      ? { bg: '#FEFCE8', border: '#FEF08A', text: '#854D0E', icon: '#CA8A04' }
+      : { bg: '#F0FDF4', border: '#BBF7D0', text: '#15803D', icon: '#16A34A' };
+  return (
+    <div
+      style={{
+        marginBottom: 12,
+        padding: '12px 14px',
+        borderRadius: 12,
+        background: tone.bg,
+        border: `1.5px solid ${tone.border}`,
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 10,
+      }}
+      role={level === 'block' ? 'alert' : 'status'}
+    >
+      <AlertCircle size={16} color={tone.icon} style={{ flexShrink: 0, marginTop: 2 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: tone.text }}>
+          {level === 'block' ? '등록 전 확인 필요' : level === 'warning' ? '주의 사항' : '안내'}
+        </p>
+        <ul style={{ margin: '4px 0 0', padding: 0, listStyle: 'none' }}>
+          {flags.map((f) => (
+            <li key={f.code} style={{ fontSize: 11.5, color: tone.text, lineHeight: 1.5 }}>
+              · {f.message}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }
 
@@ -656,6 +704,11 @@ function CrawlPageInner() {
           {sError && <div style={{ marginTop: 10, padding:'9px 12px', background:'#fff0ef', border:'1px solid #ffd6d3', borderRadius:10, fontSize:13, color:'#b91c1c' }}>{sError}</div>}
               {sSuccess && <div style={{ marginTop: 10, padding:'9px 12px', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:10, fontSize:13, color:'#15803d', display:'flex', alignItems:'center', gap:6 }}><CheckCircle size={13}/>{sSuccess}</div>}
             </div>
+
+            {/* Sprint 7 P0-A: integrity banner (vacation / channel / options drift) */}
+            {sResult?.integrityFlags && sResult.integrityFlags.length > 0 && (
+              <IntegrityBanner flags={sResult.integrityFlags} level={sResult.integrityLevel ?? 'ok'} />
+            )}
 
             {/* 결과 카드 — 라벨+값 구조로 모든 정보 명확히 표시 */}
             {sResult && (

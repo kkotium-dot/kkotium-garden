@@ -172,22 +172,24 @@ export const AUTOMATIONS: AutomationMeta[] = [
     group: 'seo',
     nameKey: 'goldenWindow',
     code: 'P0-B',
-    frequency: 'daily',
-    status: 'pending',
+    frequency: 'on-event',
+    status: 'active',
     targetPhase: 'Sprint 7 P0',
     togglable: false,
     descriptionKey: 'goldenWindow',
+    // No cronPath — evaluated on demand by /api/golden-window/active widget fetch
   },
   {
     id: 'pareto-recalc',
     group: 'seo',
     nameKey: 'paretoRecalc',
     code: 'P0-C',
-    frequency: 'daily',
-    status: 'pending',
+    frequency: 'on-event',
+    status: 'active',
     targetPhase: 'Sprint 7 P0',
     togglable: false,
     descriptionKey: 'paretoRecalc',
+    // No cronPath — pure compute on /api/products/pareto fetch
   },
   {
     id: 'category-1page',

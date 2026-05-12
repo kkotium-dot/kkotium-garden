@@ -93,6 +93,13 @@ export async function GET() {
         // 6-E refreshes on the weekly cron; surface the latest DomeCategory.refreshedAt.
         lastRun = lastDomeCategory?.refreshedAt?.toISOString() ?? null;
         break;
+      case 'golden-window':
+      case 'pareto-recalc':
+        // P0-B + P0-C are computed on-demand by widget fetch. No lastRun
+        // signal — they always reflect current DB state. Set null to indicate
+        // "live" rather than "scheduled". Widget liveness implicit.
+        lastRun = null;
+        break;
       case 'discord-kkotti-recommend':
       case 'discord-stock-alert':
       case 'discord-price-change':
