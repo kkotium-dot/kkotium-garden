@@ -14,9 +14,92 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 3-C-1 — StudioPanel 컴포넌트 추출) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 3-C-2 — PLANT 7번째 탭 통합) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 Phase 3-C-1 완료 (Studio 컴포넌트 추출):
+- src/components/studio/ 9 신규 파일 (types / shell / useStudioActions /
+  4 cards / ProductListPane / index barrel)
+- /studio/page.tsx 1068 → 250 LOC (-77%), byte-identical markup
+- i18n studio-strings.ko.json +4 strings (productList.title +
+  publishPatched{Thumb,Detail,Sep})
+- 5 API routes 변경 0, 동작 완전 동일
+- TSC 0, build OK, dict 통과, sentinel 0
+
+본 세션 진입 작업 = Sprint 7-M2 Phase 3-C-2 (PLANT 7번째 탭 통합):
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  직전 commit이 main 머지/배포됐는지 verify-vercel-deploy.sh로 확인.
+
+STEP 7-M2 Phase 3-C-2 — PLANT /products/new 6→7 tab 확장
+
+  배경: PLANT page.tsx (188KB, ~4000 LOC) 안에 6 tab (basic / option /
+  image / shipping / seo / benefit) 구조. 7번째 탭 "비주얼 자동화" 추가
+  필요. 등록 직후 *7일 골든윈도우* 활용해 콘텐츠 자동화 → 매출 ↑.
+
+  대상 파일 수정:
+    - src/app/products/new/page.tsx:
+      1) L286: activeTab type 확장
+         `'basic'|'option'|'image'|'shipping'|'seo'|'benefit'|'visual'`
+      2) L838: validTabs 배열에 'visual' 추가 (deep-link 지원)
+      3) L1597: tab navigation bar에 7번째 탭 추가
+         label: '비주얼 자동화', Icon: Palette (lucide)
+         tabDone 조건: actions.publish != null (Phase 3-C-3에서 활성화)
+      4) L1646 이후: 7번째 tab panel 추가
+         조건부 렌더링: `{activeTab === 'visual' && (...)}`
+
+    7번째 탭 panel 컨텐츠:
+      - 임시저장 productId 확인 (savedProductId)
+      - savedProductId 없으면 안내 ("먼저 기본 탭에서 저장하세요")
+      - 있으면 4 카드 마운트:
+        ```typescript
+        const actions = useStudioActions(savedProductId);
+        const hasNaverId = !!savedNaverProductId; // 등록 후 활성화
+        const canPublish = actions.hasSavedAsset && hasNaverId
+                           && !actions.publishBusy;
+        
+        <DiagnosisCard {...actions} ... />
+        <ThumbnailCard {...actions} ... />
+        <DetailPageCard {...actions} ... />
+        <ActionsCard ... canPublish={canPublish} hasNaverId={hasNaverId} />
+        ```
+
+  검증:
+    1. PLANT에서 신규 상품 등록 흐름 끝까지 진행 (6 tab 채움)
+    2. 임시저장 후 7번째 탭 활성화 확인
+    3. 7번째 탭에서 AI 진단 → 썸네일 → 상세 → 저장 작동 확인
+    4. 골든윈도우 시뮬레이션: 등록 직후 콘텐츠가 채워지는 시점
+
+  Phase 3-C-3 (별도 sub-phase):
+    - 등록 → publish-assets 자동 호출 wire-up
+    - "에셋 저장 후 자동 갱신" 토글 추가
+    - 등록 완료 후 대시보드로 navigate + 골든윈도우 카운트다운 노출
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- 직전 commit main 도달 + production 200 확인
+- SESSION_LOG.md ~820줄 추정 (T1 1000 미달, 안전)
+- PLANT page.tsx 188KB 거대 파일 — 변경 최소화 의무 (탭 추가만)
+
+다음 = Phase 3-C-3 (등록 → publish 자동 wire-up) → Sprint 7-M3 (운영
+메트릭 대시보드, lifestyle-picker 등 후속 기능).
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward
+merge 사용자 위임.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 3-C-1 — StudioPanel 컴포넌트 추출)~~ ✅ COMPLETED
+
+> Phase 3-C-1 completed on 2026-05-13. 9 신규 파일 in `src/components/studio/`, `/studio/page.tsx` 1068→250 LOC (-77%), byte-identical markup. Phase 3-C-2 (PLANT 7번째 탭) = active handoff above. The message below is preserved for git history.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,

@@ -19,6 +19,7 @@
     "empty": "조건에 맞는 상품이 없어요"
   },
   "productList": {
+    "title": "상품 목록",
     "loading": "상품 목록 불러오는 중…",
     "error": "상품 목록을 불러오지 못했어요",
     "retry": "다시 시도",
@@ -96,6 +97,9 @@
     "publishHintNeedNaverId": "이 상품은 아직 네이버에 등록되지 않았어요. PLANT(씨앗 심기)에서 먼저 네이버 등록 후 갱신 가능",
     "publishSuccess": "네이버 상품 정보 갱신 완료 — 스마트스토어에서 확인",
     "publishError": "갱신 실패:",
+    "publishPatchedThumb": "썸네일 ✓",
+    "publishPatchedDetail": "상세 ✓",
+    "publishPatchedSep": " / ",
     "saveError": "저장 실패:"
   },
   "workflow": {

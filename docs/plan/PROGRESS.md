@@ -1,16 +1,52 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-13 (Sprint 7-M2 Phase 3-D + 3-E + UX polish — **`/studio` 자체로 완결된 콘텐츠 자동화 워크플로우**, TEND per-row deep-link + Naver publish-assets API + workflow step indicator)
+> 최종 업데이트: 2026-05-13 (Sprint 7-M2 Phase 3-C-1 — Studio 컴포넌트 9 파일 추출 (`src/components/studio/`), `/studio/page.tsx` 1068→250 LOC (-77%), refactor only — Phase 3-C-2 PLANT 통합 준비 완료)
 > 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
 > TSC: 0 errors | npm run build 28/28 OK | Production: https://kkotium-garden.vercel.app
-> 다음 작업: Sprint 7-M2 Phase 3-C (PLANT 7번째 탭 "비주얼 자동화" 통합) — sub-phase 3 분할 (컴포넌트 추출 → 탭 추가 → 등록 흐름 wire-up)
+> 다음 작업: Sprint 7-M2 Phase 3-C-2 (PLANT /products/new 6→7 tab 확장 + savedProductId 컨텍스트 + useStudioActions 마운트) → Phase 3-C-3 (등록 후 publish-assets 자동 호출)
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 + production active ✅ | 6-A/6-B/6-C/6-E ✅ | Session E-2 Phase 1~5 ✅ | Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + DataLab market context) ✅ | **Sprint 7 P1 (P1-A 카테고리 1페이지 + P1-B 금기어 + P1-C 태그사전) ✅ + 브라우저 E2E 시각 검증 완료 ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업**: **Sprint 7-M2 Phase 3-C** (PLANT 7번째 탭 "비주얼 자동화" 통합 — 7일 골든윈도우 매출 ↑). 본 turn 완료 사항: Phase 3-D (TEND per-row deep-link 활성화) + Phase 3-E (publish-assets API 작성 + /studio publish 버튼 실 wire-up) + UX polish (workflow step indicator + disabled hint). 현재 /studio가 *진단 → 썸네일 → 상세 → 에셋 저장 → Naver 갱신* end-to-end 완결 워크플로우, dedicated 27/27 100% 유지. lifestyle-picker는 Phase 2-c로 후속 분리.
+> **다음 작업**: **Sprint 7-M2 Phase 3-C-2** (PLANT /products/new 6→7 tab 확장 + 7번째 탭 "비주얼 자동화" 마운트 + savedProductId 컨텍스트 전달). 본 turn 완료: Phase 3-C-1 컴포넌트 추출 (refactor only) — `src/components/studio/` 9 신규 파일, `/studio/page.tsx` 1068→250 LOC (-77%), byte-identical markup. PLANT 통합이 import 1줄로 가능. /studio end-to-end 워크플로우 (Diagnosis → Thumbnail → Detail → Save → Naver Publish) 정상 작동, dedicated 27/27 100% 유지.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-13 Sprint 7-M2 Phase 3-C-1 — Studio 컴포넌트 추출 (refactor only)
+
+PLANT 7번째 탭 통합(3-C-2)의 필수 사전 작업. `/studio/page.tsx` 1068 LOC → 250 LOC (-77%), 4 카드 + ProductListPane + useStudioActions hook + StudioCardShell을 `src/components/studio/`로 추출.
+
+신규 (9 파일, 1059 LOC):
+
+- `types.ts` (96) — 6 interface + 2 상수 (SkeletonIdLiteral / SKELETON_IDS / ThumbVariant / THUMB_VARIANTS / ProductRow / DiagnosisResult / ThumbnailResult / DetailResult / SaveResult / PublishResult)
+- `StudioCardShell.tsx` (172) — Card / Pill / PrimaryButton / SecondaryButton + pickGradePalette / fmtPrice 헬퍼
+- `useStudioActions.ts` (242) — 11 state + 5 async handlers + reset useEffect + canSave/hasSavedAsset derived. productId만 받으면 동작
+- 4 카드 (DiagnosisCard 62 / ThumbnailCard 102 / DetailPageCard 95 / ActionsCard 163)
+- `ProductListPane.tsx` (92)
+- `index.ts` (35) — barrel export
+
+수정:
+- `src/app/studio/page.tsx` (1068 → 250 LOC, -77%) — shell만 유지
+- `src/lib/i18n/studio-strings.ko.json` (+4 strings = 89) — productList.title + publishPatched{Thumb,Detail,Sep} (인라인 한글 → i18n migration)
+
+설계 결정:
+- **byte-identical markup** — JSX 완전 동일 보존, production /studio 시각 변경 0
+- **useStudioActions hook** — productId 하나만 받음, PLANT에서 `useStudioActions(savedProductId)`로 동일 호출 가능
+- **canPublish는 hook 외부** — `hasNaverId`가 caller-specific이라 caller 계산
+- **인라인 한글 0** — 기존 ActionsCard "썸네일 ✓"/"상세 ✓" inline도 i18n으로 migration
+
+검증 (refactor 전후 완전 동일):
+- npx tsc --noEmit 0 errors ✅
+- npm run build 정상, /studio 8.32 → 8.52 kB (barrel + i18n 미미한 overhead) ✅
+- 5 API routes 변경 0 ✅
+- dict.py 3 dicts 통과 (99+178+89, 0 typo) ✅
+- 신규 파일 sentinel 0건 ✅
+
+Phase 3-C-2 진입 준비 완료 — PLANT 7번째 탭에서 `import { ... } from '@/components/studio'` 한 줄로 동일 워크플로우 마운트 가능.
+
+다음 = Phase 3-C-2 (PLANT /products/new 6 → 7 tab 확장) → Phase 3-C-3 (등록 흐름에 publish-assets 자동 호출).
 
 ---
 

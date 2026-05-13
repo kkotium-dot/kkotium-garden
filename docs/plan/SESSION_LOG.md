@@ -1,3 +1,116 @@
+## 2026-05-13 Sprint 7-M2 Phase 3-C-1 — Studio 컴포넌트 추출 (refactor only) ✅
+
+### 본 세션 성격
+
+직전 Phase 3-D + 3-E + UX polish (commit f7ce38c, production deploy 검증) 직후 사용자 스크린샷 확인 ("스크린샷 확인 후 이어서 작업 진행해주세요") → Phase 3-C-1 진입. *내부 refactor*라 사용자 시각/기능 변경 0이지만, **Phase 3-C-2 (PLANT 7번째 탭) 통합의 필수 사전 작업**. 동일 카드 4개를 두 페이지(`/studio` + `/products/new`)에서 재사용하려면 *공유 컴포넌트로 분리* 선행 필요.
+
+### 본 세션 산출물 (9 신규 파일 + 2 수정)
+
+| 파일 | LOC | 역할 |
+|---|---|---|
+| `src/components/studio/types.ts` | 96 | SkeletonIdLiteral / SKELETON_IDS / ThumbVariant / 6 API 응답 interface + ProductRow |
+| `src/components/studio/StudioCardShell.tsx` | 172 | Card / Pill / PrimaryButton / SecondaryButton + pickGradePalette / fmtPrice 헬퍼 |
+| `src/components/studio/useStudioActions.ts` | 242 | 11 state + 5 async handlers + useEffect reset + 2 derived (canSave / hasSavedAsset). productId만 받으면 동작 — PLANT에서 재사용 가능 |
+| `src/components/studio/DiagnosisCard.tsx` | 62 | step 1 카드 (concept/tone/grade/skeleton pill) |
+| `src/components/studio/ThumbnailCard.tsx` | 102 | step 2 카드 (4 변형 grid + 메인 선택) |
+| `src/components/studio/DetailPageCard.tsx` | 95 | step 3 카드 (zoom-fit preview + 골격 드롭다운) |
+| `src/components/studio/ActionsCard.tsx` | 163 | step 4 카드 (save row + publish row, 2-row 구조) |
+| `src/components/studio/ProductListPane.tsx` | 92 | 좌측 320px 상품 리스트 (loading/empty/list 3 상태) |
+| `src/components/studio/index.ts` | 35 | barrel export — 두 consumer가 단일 경로로 import |
+| `src/app/studio/page.tsx` | **1068 → 250** (**-77%**) | shell만 유지 (product list fetch + 2-pane layout + 페이지 헤더), 모든 카드/state/handler는 import |
+| `src/lib/i18n/studio-strings.ko.json` | 85 → 89 (+4) | productList.title / publishPatched{Thumb,Detail,Sep} 추가 (인라인 한글 → i18n migration) |
+
+### 리팩토링 패턴
+
+**Before** (Phase 3-D 기준):
+```
+src/app/studio/page.tsx (1068 LOC)
+├ types (interfaces × 6, 상수 × 2)
+├ helpers (pickGradePalette, fmtPrice)
+├ Card / Pill / PrimaryButton / SecondaryButton (shared shell)
+├ ProductListPane
+├ DiagnosisCard / ThumbnailCard / DetailPageCard / ActionsCard
+├ StudioInner (state × 14, handlers × 5, layout)
+└ StudioPage (Suspense wrapper)
+```
+
+**After** (Phase 3-C-1 기준):
+```
+src/components/studio/  (9 files, 1059 LOC)
+└ types / shell / actions hook / 4 cards / list pane / barrel
+
+src/app/studio/page.tsx (250 LOC, -77%)
+└ StudioInner (page-specific: product list fetch + selectedId + hasNaverId/canPublish 계산)
+└ StudioPage (Suspense wrapper)
+```
+
+### 핵심 설계 결정
+
+1. **useStudioActions hook** — 11 state + 5 handlers + 2 derived를 productId 하나만 받는 hook으로 묶음. PLANT에서 `useStudioActions(savedProductId)` 호출하면 동일 동작
+2. **canPublish는 hook 외부 계산** — `hasNaverId`가 caller-specific (selectedProduct.naverProductId vs PLANT saved naverProductId). hook은 `hasSavedAsset`만 제공
+3. **인라인 한글 0 (사용자 노출)** — 기존 ActionsCard L688의 "썸네일 ✓"/"상세 ✓" 인라인 한글도 i18n으로 migration (`publishPatchedThumb` / `publishPatchedDetail` / `publishPatchedSep` 3 신규 string)
+4. **barrel export** — 두 consumer가 `import { ... } from '@/components/studio'` 단일 경로로 사용. Phase 3-C-2의 PLANT 통합 시 import 1줄로 마운트 가능
+5. **byte-identical markup** — 모든 카드의 JSX는 *완전히 동일*하게 보존 (style 속성 + class name + 위치 모두). production /studio 시각 변경 0
+
+### 검증 (refactor 전후 완전 동일)
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 정상, `/studio` 8.32 → 8.52 kB (barrel import 패턴 + 4 신규 i18n string 추가로 미미한 +0.2 kB)
+- API routes 변경 0 (5 routes 그대로 등록) ✅
+- `python3 scripts/verify-korean-dict.py` 3 dicts (99+178+89, +4 신규, 0 typo) ✅
+- 신규/수정 파일 sentinel grep 0건 ✅
+- 신규 컴포넌트 inline 한글: types.ts L6 + StudioCardShell.tsx L14 (모두 JSDoc 주석의 example string, 사용자 노출 외) ✅
+
+### Phase 3-C-2 진입 준비 완료
+
+다음 phase에서 PLANT `/products/new` 7번째 탭 "비주얼 자동화" 통합 시 *코드 패턴*:
+
+```typescript
+// src/app/products/new/page.tsx (예상)
+import {
+  DiagnosisCard, ThumbnailCard, DetailPageCard, ActionsCard,
+  useStudioActions,
+} from '@/components/studio';
+
+// 7번째 탭 패널 안에서:
+const actions = useStudioActions(savedProductId);
+const hasNaverId = !!savedProduct?.naverProductId;
+const canPublish = actions.hasSavedAsset && hasNaverId && !actions.publishBusy;
+
+<DiagnosisCard {...actions} />
+<ThumbnailCard {...actions} />
+<DetailPageCard {...actions} />
+<ActionsCard ... canPublish={canPublish} hasNaverId={hasNaverId} />
+```
+
+PLANT page.tsx (188KB / ~4000 LOC) 변경 최소화 — 7번째 탭 추가 + savedProductId 컨텍스트 전달만 필요.
+
+### 적용된 작업원칙
+
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- #21 사전 점검 통과 (HEAD f7ce38c == origin/main == production)
+- #24 단일 commit + push 한 turn 안에 종료 (refactor 단일 단위)
+- #26 IA 점검 — Sidebar/route 변경 0, /studio 동작 byte-identical
+- #27 외부 컨트랙트 보존 — API 5 routes 변경 0, i18n keys 4 추가만
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — 사용자 노출 inline 한글 0건 (i18n migration 완료)
+- #31 SESSION_LOG 704 + 본 entry ~75 = ~779 (T1 1000 미달, 안전)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #35 인라인 한글 i18n migration 4건 추가 (refactor 부수 효과)
+- #36 main push 후 verify-vercel-deploy.sh --wait — 사용자 승인 후
+- #38 Production runtime static assets only ✅
+- #40 Designer Sense 보존 — 골격 1-click swap / 메인 선택 / publish 검증 모두 그대로
+
+### 다음 = Sprint 7-M2 Phase 3-C-2 (PLANT /products/new 7번째 탭 "비주얼 자동화")
+
+본 phase의 컴포넌트 추출이 *완전 self-contained*이라 PLANT 통합이 *추가 변경 없이* 가능. Phase 3-C-2 핵심 작업:
+1. /products/new 6 tab → 7 tab 확장 (activeTab type 갱신 + tab navigation bar)
+2. savedProductId 컨텍스트 전달 (PLANT 임시저장 후 7번째 탭 unlock)
+3. 7번째 탭 패널에 useStudioActions + 4 카드 마운트
+
+---
+
 ## 2026-05-13 Sprint 7-M2 Phase 3-D + 3-E + /studio UX polish ✅
 
 ### 본 세션 성격
