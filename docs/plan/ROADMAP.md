@@ -14,9 +14,77 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 3-C — PLANT 7번째 탭 "비주얼 자동화") ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 3-C-1 — StudioPanel 컴포넌트 추출) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 Phase 3-D + 3-E + /studio UX polish 완료:
+- src/app/api/products/[id]/publish-assets/route.ts (신규, Naver Commerce API patch)
+- src/app/products/page.tsx (per-row "콘텐츠" Palette icon → /studio?product=ID deep-link)
+- src/app/studio/page.tsx (UX: step indicator 1→4, disabled hint, publish 버튼 실 wire-up)
+- src/lib/i18n/studio-strings.ko.json (+8 strings, 85 total)
+- /studio가 *진단 → 썸네일 → 상세 → 저장 → Naver 갱신* end-to-end 완결
+
+본 세션 진입 작업 = Sprint 7-M2 Phase 3-C-1 (StudioPanel 컴포넌트 추출):
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  직전 commit이 main 머지/배포됐는지 verify-vercel-deploy.sh로 확인.
+
+STEP 7-M2 Phase 3-C-1 — 컴포넌트 추출 (refactor only, 동일 동작 보장)
+
+  배경: Phase 3-C-2에서 PLANT page.tsx (188KB, 6 tab) 7번째 탭에 동일
+  카드들을 마운트하려면 *공유 컴포넌트로 추출*이 선행 필요. /studio
+  page.tsx 안의 inline 카드 4개를 src/components/studio/ 폴더로
+  외부화 — refactor 전후 /studio 동작 100% 동일해야 함.
+
+  대상 파일 신규 (src/components/studio/):
+    - StudioCardShell.tsx — Card 컴포넌트 + 공유 Pill / PrimaryButton /
+      SecondaryButton 분리
+    - DiagnosisCard.tsx — /studio page.tsx에서 추출
+    - ThumbnailCard.tsx — 동일
+    - DetailPageCard.tsx — 동일
+    - ActionsCard.tsx — 동일 (save + publish 2-row 구조)
+    - useStudioActions.ts — useState 11개 + 4 fetch handler 묶음
+      (runDiagnose / runThumbnail / runDetail / runSave / runPublish)
+      → 두 페이지에서 재사용
+    - types.ts — DiagnosisResult / ThumbnailResult / DetailResult /
+      SaveResult / PublishResult / ProductRow 인터페이스 모음
+
+  대상 파일 수정:
+    - src/app/studio/page.tsx — 카드 import 변경 (~200 LOC 제거),
+      useStudioActions 사용으로 단순화 (~400 LOC 제거)
+    - 결과: /studio page.tsx ~640 LOC → ~150 LOC (shell only,
+      ProductListPane + 카드 import + handler hook)
+
+  중요 — refactor 전후 시각/기능 100% 동일:
+    1. 추출 전후 `npm run build` 결과 size 비교 (/studio 8.32 kB 유지)
+    2. 추출 전후 /studio production 동작 비교 (수동 클릭 테스트)
+    3. TSC + sentinel + dict.py 모두 통과
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- 직전 commit main 도달 + production 200 확인
+- SESSION_LOG.md 704줄 (T1 1000 미달, 안전)
+
+다음 = Phase 3-C-2 (PLANT 7번째 탭 추가) → Phase 3-C-3 (등록 흐름
+wire-up). Phase 3-C 전체 완료 시 콘텐츠 자동화가 *PLANT 등록 흐름*과
+*TEND 재가공 흐름* 양쪽에서 자연스럽게 도달 가능.
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward
+merge 사용자 위임.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 3-C — PLANT 7번째 탭 "비주얼 자동화")~~ ⏸️ PARTIAL (3-D + 3-E + UX 우선 delivery)
+
+> Phase 3-D (TEND per-row deep-link) + Phase 3-E (publish-assets API + /studio publish 버튼 실 wire-up) + UX polish 우선 진행됨 (사용자 피드백 반영). Phase 3-C는 Phase 3-C-1/2/3로 sub-phase 분할되어 active handoff above. The message below is preserved for git history.
 
 ```
 꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,

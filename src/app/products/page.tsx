@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   Plus, RefreshCw, Search, Edit2,
-  Trash2, X, Package,
+  Trash2, X, Package, Palette,
   Check, AlertTriangle, Truck,
   ChevronDown, ChevronRight,
   Layers, Upload, ArrowRight,
@@ -1056,6 +1056,7 @@ function ProductsPageInner() {
               </svg>
             </button>
             <Link href={`/products/new?edit=${p.id}`} className="p-1.5 rounded-lg transition text-blue-400 hover:text-blue-600 hover:bg-blue-50" title="수정"><Edit2 size={13} /></Link>
+            <Link href={`/studio?product=${p.id}`} className="p-1.5 rounded-lg transition text-pink-400 hover:text-pink-600 hover:bg-pink-50" title="콘텐츠 자동화 (온실 아틀리에)"><Palette size={13} /></Link>
             <button onClick={() => deleteProduct(p.id)} className="p-1.5 rounded-lg transition text-red-300 hover:text-red-500 hover:bg-red-50" title="삭제"><Trash2 size={13} /></button>
           </div>
         </div>

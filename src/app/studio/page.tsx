@@ -19,7 +19,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Palette, Loader2, RefreshCw, Sparkles, Image as ImageIcon, FileImage, Save, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Palette, Loader2, RefreshCw, Sparkles, Image as ImageIcon, FileImage, Save, AlertTriangle, CheckCircle2, Send } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -44,6 +44,14 @@ interface ProductRow {
   supplierPrice: number | null;
   aiScore: number | null;
   status: string;
+  naverProductId: string | null;
+}
+
+interface PublishResult {
+  ok: boolean;
+  naverProductId: string;
+  patched: { thumbnail: boolean; detail: boolean };
+  publishedAt: string;
 }
 
 interface DiagnosisResult {
@@ -116,7 +124,13 @@ function fmtPrice(n: number | null | undefined): string {
 
 // ── Subcomponents ─────────────────────────────────────────────────────────
 
-function Card({ title, subtitle, children, accent }: { title: string; subtitle?: string; children: React.ReactNode; accent?: string }) {
+function Card({
+  title, subtitle, children, accent,
+  step, totalSteps, done,
+}: {
+  title: string; subtitle?: string; children: React.ReactNode; accent?: string;
+  step?: number; totalSteps?: number; done?: boolean;
+}) {
   return (
     <section
       className="kk-card"
@@ -126,9 +140,29 @@ function Card({ title, subtitle, children, accent }: { title: string; subtitle?:
         borderLeft: `4px solid ${accent ?? '#FFB3CE'}`,
       }}
     >
-      <header style={{ marginBottom: 14 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>{title}</h3>
-        {subtitle && <p style={{ fontSize: 12, color: '#7A6873', margin: '4px 0 0' }}>{subtitle}</p>}
+      <header style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+        {step != null && totalSteps != null && (
+          <div
+            style={{
+              flexShrink: 0,
+              width: 34, height: 34,
+              borderRadius: 17,
+              background: done ? '#15803d' : (accent ?? '#FFB3CE'),
+              color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 13, fontWeight: 900,
+              fontFamily: "'Arial Black', Impact, sans-serif",
+              boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+            }}
+            aria-label={done ? strings.workflow.stepDone : `${strings.workflow.stepLabel} ${step}/${totalSteps}`}
+          >
+            {done ? '✓' : step}
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>{title}</h3>
+          {subtitle && <p style={{ fontSize: 12, color: '#7A6873', margin: '4px 0 0' }}>{subtitle}</p>}
+        </div>
       </header>
       {children}
     </section>
@@ -293,7 +327,14 @@ function DiagnosisCard({
 }) {
   const gradePalette = pickGradePalette(diagnosis?.grade);
   return (
-    <Card title={strings.diagnosis.title} subtitle={strings.diagnosis.subtitle} accent="#e62310">
+    <Card
+      title={strings.diagnosis.title}
+      subtitle={strings.diagnosis.subtitle}
+      accent="#e62310"
+      step={1}
+      totalSteps={4}
+      done={diagnosis != null}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <PrimaryButton
           onClick={onRun}
@@ -341,7 +382,14 @@ function ThumbnailCard({
   onSelectMain: (v: ThumbVariant) => void;
 }) {
   return (
-    <Card title={strings.thumbnail.title} subtitle={strings.thumbnail.subtitle} accent="#C9A66B">
+    <Card
+      title={strings.thumbnail.title}
+      subtitle={strings.thumbnail.subtitle}
+      accent="#C9A66B"
+      step={2}
+      totalSteps={4}
+      done={thumbnails != null}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <PrimaryButton
           onClick={onRun}
@@ -429,7 +477,14 @@ function DetailPageCard({
   onOverrideChange: (s: SkeletonIdLiteral | '') => void;
 }) {
   return (
-    <Card title={strings.detail.title} subtitle={strings.detail.subtitle} accent="#84A98C">
+    <Card
+      title={strings.detail.title}
+      subtitle={strings.detail.subtitle}
+      accent="#84A98C"
+      step={3}
+      totalSteps={4}
+      done={detail != null}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
         <PrimaryButton
           onClick={onRun}
@@ -499,53 +554,139 @@ function DetailPageCard({
 // ── Actions card ──────────────────────────────────────────────────────────
 
 function ActionsCard({
-  canSave, busy, save, error, onSave,
+  canSave, saveBusy, save, saveError, onSave,
+  canPublish, publishBusy, publish, publishError, onPublish,
+  hasSavedAsset, hasNaverId,
 }: {
-  canSave: boolean; busy: boolean; save: SaveResult | null; error: string | null;
+  canSave: boolean; saveBusy: boolean; save: SaveResult | null; saveError: string | null;
   onSave: () => void;
+  canPublish: boolean; publishBusy: boolean; publish: PublishResult | null; publishError: string | null;
+  onPublish: () => void;
+  hasSavedAsset: boolean; hasNaverId: boolean;
 }) {
+  const showSaveHint = !canSave && !saveBusy && save == null;
+  const showPublishNeedSaveHint = !hasSavedAsset && !publishBusy && publish == null;
+  const showPublishNeedNaverHint = hasSavedAsset && !hasNaverId && !publishBusy && publish == null;
+
   return (
-    <Card title={strings.actions.title} accent="#1F2937">
+    <Card
+      title={strings.actions.title}
+      accent="#1F2937"
+      step={4}
+      totalSteps={4}
+      done={save != null || publish != null}
+    >
+      {/* ── Save row ──────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
         <PrimaryButton
           onClick={onSave}
           disabled={!canSave}
-          busy={busy}
+          busy={saveBusy}
           icon={<Save size={16} />}
         >
-          {busy ? strings.actions.saving : strings.actions.saveButton}
+          {saveBusy ? strings.actions.saving : strings.actions.saveButton}
         </PrimaryButton>
-        <SecondaryButton disabled onClick={() => { /* Phase 3-C에서 활성화 */ }}>
-          {strings.actions.publishButton}
-        </SecondaryButton>
-        <span style={{ fontSize: 11, color: '#7A6873' }}>{strings.actions.publishDisabled}</span>
+        {showSaveHint && (
+          <span style={{
+            fontSize: 12, color: '#a16207', fontWeight: 600,
+            background: '#fefce8', border: '1px solid #fde68a',
+            borderRadius: 6, padding: '6px 10px',
+          }}>
+            ⓘ {strings.actions.saveHint}
+          </span>
+        )}
       </div>
-      {error && (
+
+      {/* ── Publish row ───────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+        <PrimaryButton
+          onClick={onPublish}
+          disabled={!canPublish}
+          busy={publishBusy}
+          icon={<Send size={16} />}
+        >
+          {publishBusy ? strings.actions.publishing : strings.actions.publishButton}
+        </PrimaryButton>
+        {showPublishNeedSaveHint && (
+          <span style={{
+            fontSize: 12, color: '#7A6873', fontWeight: 600,
+            background: '#F5F0F2', border: '1px solid #FFE0EC',
+            borderRadius: 6, padding: '6px 10px',
+          }}>
+            ⓘ {strings.actions.publishHintNeedSave}
+          </span>
+        )}
+        {showPublishNeedNaverHint && (
+          <span style={{
+            fontSize: 12, color: '#a16207', fontWeight: 600,
+            background: '#fefce8', border: '1px solid #fde68a',
+            borderRadius: 6, padding: '6px 10px',
+          }}>
+            ⚠ {strings.actions.publishHintNeedNaverId}
+          </span>
+        )}
+      </div>
+
+      {/* ── Save error ───────────────────────────────────────── */}
+      {saveError && (
         <div style={{
           padding: 10, background: '#fef2f2', border: '1px solid #fecaca',
           borderRadius: 8, color: '#b91c1c', fontSize: 12, fontWeight: 600,
+          marginBottom: 8,
         }}>
-          {strings.actions.saveError} {error}
+          {strings.actions.saveError} {saveError}
         </div>
       )}
+
+      {/* ── Save success ─────────────────────────────────────── */}
       {save && (
         <div style={{
           padding: 12, background: '#f0fdf4', border: '1px solid #bbf7d0',
           borderRadius: 8, fontSize: 12, fontWeight: 500, color: '#15803d',
+          marginBottom: 8,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontWeight: 700 }}>
             <CheckCircle2 size={14} /> {strings.actions.saved}
           </div>
           {save.thumbUrl && (
             <p style={{ margin: '4px 0', wordBreak: 'break-all' }}>
-              <b>{strings.actions.savedThumb}</b> <a href={save.thumbUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#15803d' }}>{save.thumbUrl}</a>
+              <b>{strings.actions.savedThumb}</b>{' '}
+              <a href={save.thumbUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#15803d' }}>{save.thumbUrl}</a>
             </p>
           )}
           {save.detailUrl && (
             <p style={{ margin: '4px 0', wordBreak: 'break-all' }}>
-              <b>{strings.actions.savedDetail}</b> <a href={save.detailUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#15803d' }}>{save.detailUrl}</a>
+              <b>{strings.actions.savedDetail}</b>{' '}
+              <a href={save.detailUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#15803d' }}>{save.detailUrl}</a>
             </p>
           )}
+        </div>
+      )}
+
+      {/* ── Publish error ────────────────────────────────────── */}
+      {publishError && (
+        <div style={{
+          padding: 10, background: '#fef2f2', border: '1px solid #fecaca',
+          borderRadius: 8, color: '#b91c1c', fontSize: 12, fontWeight: 600,
+          marginBottom: 8,
+        }}>
+          {strings.actions.publishError} {publishError}
+        </div>
+      )}
+
+      {/* ── Publish success ─────────────────────────────────── */}
+      {publish && (
+        <div style={{
+          padding: 12, background: '#eff6ff', border: '1px solid #bfdbfe',
+          borderRadius: 8, fontSize: 12, fontWeight: 500, color: '#1d4ed8',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
+            <CheckCircle2 size={14} /> {strings.actions.publishSuccess}
+          </div>
+          <p style={{ margin: '6px 0 0', fontSize: 11 }}>
+            naverProductId: <code style={{ background: '#dbeafe', padding: '1px 6px', borderRadius: 4 }}>{publish.naverProductId}</code>
+            {' · '}patched: {publish.patched.thumbnail ? '썸네일 ✓' : ''}{publish.patched.thumbnail && publish.patched.detail ? ' / ' : ''}{publish.patched.detail ? '상세 ✓' : ''}
+          </p>
         </div>
       )}
     </Card>
@@ -583,6 +724,10 @@ function StudioInner() {
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const [publish, setPublish] = useState<PublishResult | null>(null);
+  const [publishBusy, setPublishBusy] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
   // ── Fetch product list on mount ──────────────────────────────────────────
   useEffect(() => {
     const fetchProducts = async () => {
@@ -598,6 +743,7 @@ function StudioInner() {
           supplierPrice: p.supplierPrice ?? null,
           aiScore: p.aiScore ?? null,
           status: p.status,
+          naverProductId: p.naverProductId ?? null,
         }));
         setProducts(list);
         // Auto-select first product if URL didn't specify and list non-empty
@@ -623,6 +769,8 @@ function StudioInner() {
     setOverrideSkeletonId('');
     setSave(null);
     setSaveError(null);
+    setPublish(null);
+    setPublishError(null);
   }, [selectedId]);
 
   const selectedProduct = useMemo(
@@ -726,6 +874,33 @@ function StudioInner() {
   }
 
   const canSave = (thumbnails != null || detail != null) && !saveBusy;
+
+  async function runPublish() {
+    if (!selectedProduct || !save) return;
+    setPublishBusy(true);
+    setPublishError(null);
+    try {
+      const body: Record<string, string> = {};
+      if (save.thumbUrl) body.thumbUrl = save.thumbUrl;
+      if (save.detailUrl) body.detailUrl = save.detailUrl;
+      const res = await fetch(`/api/products/${selectedProduct.id}/publish-assets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      setPublish(json as PublishResult);
+    } catch (err) {
+      setPublishError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPublishBusy(false);
+    }
+  }
+
+  const hasSavedAsset = !!(save && (save.thumbUrl || save.detailUrl));
+  const hasNaverId = !!selectedProduct?.naverProductId;
+  const canPublish = hasSavedAsset && hasNaverId && !publishBusy;
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
@@ -858,10 +1033,17 @@ function StudioInner() {
             />
             <ActionsCard
               canSave={canSave}
-              busy={saveBusy}
+              saveBusy={saveBusy}
               save={save}
-              error={saveError}
+              saveError={saveError}
               onSave={runSave}
+              canPublish={canPublish}
+              publishBusy={publishBusy}
+              publish={publish}
+              publishError={publishError}
+              onPublish={runPublish}
+              hasSavedAsset={hasSavedAsset}
+              hasNaverId={hasNaverId}
             />
           </>
         )}

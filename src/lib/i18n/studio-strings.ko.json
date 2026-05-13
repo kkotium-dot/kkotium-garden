@@ -89,9 +89,19 @@
     "saved": "저장 완료 — public URL 발급됨",
     "savedThumb": "썸네일 URL:",
     "savedDetail": "상세 페이지 URL:",
-    "publishButton": "네이버 즉시 등록 (Phase 3-C)",
-    "publishDisabled": "Phase 3-C에서 활성화 — PLANT 7번째 탭에서 등록 흐름과 통합 예정",
+    "saveHint": "썸네일 또는 상세 페이지를 먼저 생성하면 저장 가능합니다",
+    "publishButton": "네이버 상품 정보 갱신",
+    "publishing": "갱신 중…",
+    "publishHintNeedSave": "에셋을 먼저 저장하세요 (네이버 갱신에 public URL 필요)",
+    "publishHintNeedNaverId": "이 상품은 아직 네이버에 등록되지 않았어요. PLANT(씨앗 심기)에서 먼저 네이버 등록 후 갱신 가능",
+    "publishSuccess": "네이버 상품 정보 갱신 완료 — 스마트스토어에서 확인",
+    "publishError": "갱신 실패:",
     "saveError": "저장 실패:"
+  },
+  "workflow": {
+    "stepLabel": "STEP",
+    "stepOf": "/",
+    "stepDone": "완료"
   },
   "kftc": {
     "reviewsPlaceholder": "후기 영역은 등록 후 실제 데이터로 채워집니다.",

@@ -1,16 +1,52 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-13 (Sprint 7-M2 Phase 3-A + 3-B — **온실 아틀리에 UI mount + API foundation 완료**, 콘텐츠 자동화 사용자 진입점 정착)
+> 최종 업데이트: 2026-05-13 (Sprint 7-M2 Phase 3-D + 3-E + UX polish — **`/studio` 자체로 완결된 콘텐츠 자동화 워크플로우**, TEND per-row deep-link + Naver publish-assets API + workflow step indicator)
 > 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
 > TSC: 0 errors | npm run build 28/28 OK | Production: https://kkotium-garden.vercel.app
-> 다음 작업: Sprint 7-M2 Phase 3-C (PLANT 7번째 탭 "비주얼 자동화" 통합) + Phase 3-D (TEND per-row 액션) + Phase 3-E (Naver API publish-assets)
+> 다음 작업: Sprint 7-M2 Phase 3-C (PLANT 7번째 탭 "비주얼 자동화" 통합) — sub-phase 3 분할 (컴포넌트 추출 → 탭 추가 → 등록 흐름 wire-up)
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 + production active ✅ | 6-A/6-B/6-C/6-E ✅ | Session E-2 Phase 1~5 ✅ | Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + DataLab market context) ✅ | **Sprint 7 P1 (P1-A 카테고리 1페이지 + P1-B 금기어 + P1-C 태그사전) ✅ + 브라우저 E2E 시각 검증 완료 ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업**: **Sprint 7-M2 Phase 3-C** (PLANT 7번째 탭 "비주얼 자동화" 통합 — 등록 흐름에 콘텐츠 자동화 강제, 7일 골든윈도우 매출 ↑) + **Phase 3-D** (TEND per-row 액션, 기존 상품 재가공 흐름) + **Phase 3-E** (Naver API publish-assets). 현재 상태: /studio MVP 2-pane (Diagnosis → Thumbnail → Detail → Save) 작동 가능, dedicated 27/27 100%, lifestyle-picker는 Phase 2-c로 *후속 분리* (현재 ctx.lifestyleAssetUrl fallback만 사용)
+> **다음 작업**: **Sprint 7-M2 Phase 3-C** (PLANT 7번째 탭 "비주얼 자동화" 통합 — 7일 골든윈도우 매출 ↑). 본 turn 완료 사항: Phase 3-D (TEND per-row deep-link 활성화) + Phase 3-E (publish-assets API 작성 + /studio publish 버튼 실 wire-up) + UX polish (workflow step indicator + disabled hint). 현재 /studio가 *진단 → 썸네일 → 상세 → 에셋 저장 → Naver 갱신* end-to-end 완결 워크플로우, dedicated 27/27 100% 유지. lifestyle-picker는 Phase 2-c로 후속 분리.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-13 Sprint 7-M2 Phase 3-D + 3-E + /studio UX polish
+
+직전 Phase 3-A + 3-B production deploy + `product-assets` bucket 생성 검증 후 동일 turn 연속 진입. 사용자 피드백 (disabled 버튼 이유 불명, 다음 작업 진입 요청) 반영.
+
+본 turn 작업 (3 파일 신규/수정 + i18n 확장):
+
+- **Phase 3-E** — `src/app/api/products/[id]/publish-assets/route.ts` (109 LOC, 신규) — POST endpoint, naverProductId 확인 → `originProduct.images.representativeImageUrl` + `detailContent` HTML patch → updateProduct 호출. HTTPS URL validation 포함. 미등록 상품 → 422 명시 에러.
+- **Phase 3-D** — `src/app/products/page.tsx` (2 lines) — per-row "콘텐츠" 아이콘 (Palette / pink) 추가, `/studio?product={id}` deep-link. 기존 상품 재가공 진입점 활성화.
+- **/studio UX polish** — `src/app/studio/page.tsx` (~140 LOC 변경)
+  - Workflow step indicator: 각 4 카드 헤더에 1→2→3→4 numeric badge (완료 시 ✓ 초록)
+  - Disabled state hints: 노란 ⓘ 안내 inline 표시
+  - Publish 버튼 실 wire-up: disabled placeholder → 실제 publish-assets 호출 (canPublish = hasSavedAsset && hasNaverId)
+  - 3가지 disabled 상태별 hint (no asset / no naverId)
+  - publish 성공 시 파란 박스에 naverProductId + patched 결과 표시
+  - lucide Send icon 추가
+- **i18n** — `src/lib/i18n/studio-strings.ko.json` (+8 strings, 85 total) — actions.* 6 신규 + workflow.* 3 신규
+
+검증:
+- npx tsc --noEmit 0 errors ✅
+- npm run build 정상 (`/studio` 7.45 → 8.32 kB, `publish-assets` ƒ Dynamic 등록) ✅
+- dict.py 3 dicts 통과 (99+178+85, 0 typo) ✅
+- 신규/수정 파일 sentinel 0건 ✅
+
+페이지 작동 흐름 (전후 비교):
+- **이전**: 4 카드 동일 weight → 어디부터 시작 헷갈림 → disabled 이유 안 보임
+- **이후**: ① AI 진단 → ② 썸네일 → ③ 상세 → ④ 에셋 저장 + 네이버 갱신 (번호 + 색상 코딩 + inline hint) → 실 네이버 상품 갱신까지 한 페이지에서 종결
+
+다음 = **Phase 3-C** (PLANT 7번째 탭 "비주얼 자동화"). PLANT page.tsx (188KB) + 4 카드 컴포넌트 추출 필요로 *전용 sub-phase 분리 권고*:
+- Phase 3-C-1: src/components/studio/ 4 카드 추출 (refactor only)
+- Phase 3-C-2: PLANT 7번째 탭 + tab navigation 갱신
+- Phase 3-C-3: 등록 → publish-assets 자동 호출 wire-up
+
+Commit: 본 turn에서 단일 commit + push (`claude/phase-3de-publish-ux-{ts}` branch). 사용자 FF merge 후 production deploy 검증.
 
 ---
 

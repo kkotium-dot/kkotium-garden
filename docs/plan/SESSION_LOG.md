@@ -1,3 +1,91 @@
+## 2026-05-13 Sprint 7-M2 Phase 3-D + 3-E + /studio UX polish ✅
+
+### 본 세션 성격
+
+직전 Phase 3-A + 3-B (commit 396269c) 사용자 production deploy + `product-assets` bucket 생성 검증 직후 동일 turn 연속 진입. 사용자가 *콘텐츠 자동화 메뉴가 보이지 않는다* → `/studio` 진입 → "에셋 저장" disabled → "다음 작업으로" 흐름으로 Phase 3-D/E 진입.
+
+스크린샷으로 확인된 사항:
+- `/studio` 페이지 production HTTP 200 + 모든 UI 요소 정상 (좌측 320px 상품 리스트 + 우측 4 카드 색상 코딩)
+- `product-assets` bucket: `public=true / 10485760 bytes / image/png+jpeg / 2026-05-13 00:01:44 생성` — 정확히 권장 사양
+
+UX 문제 발견: "에셋 저장" 버튼 disabled 상태에서 *왜* 비활성화인지 사용자에게 안 보이는 paper-cut → 전환율 손실. 본 turn에 함께 개선.
+
+### 본 turn 작업 (단일 commit + push 예정)
+
+**Phase 3-E** — `/api/products/[id]/publish-assets/route.ts` (109 LOC, 신규)
+- POST endpoint: `{thumbUrl?, detailUrl?}` 입력
+- Product 조회 → `naverProductId` 확인 (없으면 422 명시적 에러)
+- 미니멀 patch payload (`originProduct.images.representativeImageUrl` + `detailContent` HTML wrap)
+- `updateProduct()` 호출 (PUT /v2/products/origin-products/{productNo})
+- 응답: `{ok, productId, naverProductId, patched: {thumbnail, detail}, publishedAt}`
+- runtime=nodejs + dynamic=force-dynamic
+- HTTPS URL validation (XSS / 잘못된 URL 차단)
+- Production verification은 Phase 3-C 진입 시 실 상품 등록 흐름과 합산 검증
+
+**Phase 3-D** — `/products` per-row "콘텐츠" 아이콘 (2 lines)
+- 기존 "수정" / "삭제" 사이에 Palette icon Link 추가
+- `href="/studio?product={p.id}"` deep-link → 기존 상품 *재가공* 진입점 활성화
+- 매출 부진 상품 / OOS / 좀비 부활 직후 콘텐츠 보강 흐름 자연스럽게 도달 가능
+
+**/studio UX polish** (140 LOC 변경):
+- **Workflow step indicator**: 각 4 카드 헤더에 *1→2→3→4* numeric badge (accent color, 완료 시 ✓ 초록 background). 사용자가 흐름 순서를 시각적으로 즉시 인지
+- **Disabled state hints**: "에셋 저장" disabled 상태에서 *옆에 hint*: 「썸네일 또는 상세 페이지를 먼저 생성하면 저장 가능합니다」 (노란 bg, ⓘ 아이콘)
+- **Publish 버튼 실 wire-up**: 기존 "네이버 즉시 등록 (Phase 3-C)" disabled placeholder를 *실제 호출 가능* PrimaryButton으로 격상
+  - `canPublish = hasSavedAsset && hasNaverId && !publishBusy`
+  - 3가지 disabled 상태 별도 hint:
+    - `!hasSavedAsset` → 「에셋을 먼저 저장하세요 (네이버 갱신에 public URL 필요)」
+    - `hasSavedAsset && !hasNaverId` → 「이 상품은 아직 네이버에 등록되지 않았어요. PLANT에서 먼저 등록 후 갱신 가능」 (⚠ 노란 bg)
+  - publish 성공 시 파란 박스에 naverProductId + patched 카드 표시
+- **새 lucide icon import**: Send (publish 버튼용)
+
+i18n 확장:
+- studio-strings.ko.json `actions.*` 6개 신규 (saveHint / publishing / publishHintNeedSave / publishHintNeedNaverId / publishSuccess / publishError)
+- studio-strings.ko.json `workflow.*` 신규 (stepLabel / stepOf / stepDone) — 향후 step indicator 다국어화 대비
+
+### 페이지 작동 흐름 (전후 비교)
+
+**Phase 3-B 이전**: 4 카드 동일 weight → 사용자가 *어디부터 시작?* 헷갈림 → 잘못된 순서로 클릭 → "에셋 저장" disabled 이유 안 보임 → 작업 중단
+
+**Phase 3-D/E 이후**: ① AI 진단 → ② 썸네일 → ③ 상세 → ④ 에셋 저장 + 네이버 갱신 — 번호 + 색상 코딩으로 흐름 자명. 각 단계마다 disabled 이유 inline 표시. 마지막 단계에서 *실제 네이버 상품 갱신*까지 한 페이지에서 종결 (페이지 이동 0).
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 정상 (`/studio` 7.45 → 8.32 kB, `/api/products/[id]/publish-assets` ƒ Dynamic 등록) ✅
+- `python3 scripts/verify-korean-dict.py` 3 dicts (99+178+85 strings, +8 신규, 0 typo) ✅
+- 신규/수정 파일 sentinel grep 0건 ✅
+- product-assets bucket 검증 (SELECT only) 정상 사양 ✅
+
+### Phase 3-C 진입 전 준비 완료
+
+본 turn으로 *`/studio` 자체로 완결된 콘텐츠 자동화 워크플로우* 확립 — *Phase 3-C는 같은 흐름을 PLANT 7번째 탭에 *재마운트*하는 작업*. 핵심 컴포넌트 (DiagnosisCard / ThumbnailCard / DetailPageCard / ActionsCard) 재사용 위해 src/components/studio/ 폴더로 추출이 다음 sprint 첫 작업.
+
+### 적용된 작업원칙
+
+- #17 commit msg `.commit-msg.tmp` + `git commit -F` ✅
+- #21 사전 점검 통과 (HEAD 396269c == origin/main == production)
+- #24 본 turn 작업이 *단일 commit*에 fit — sub-phase 분할 불요 (변경 규모 적정)
+- #26 IA 점검 — Sidebar 변경 0, /products row 아이콘 추가만 (사이드바 영향 0)
+- #27 외부 컨트랙트 보존 — 기존 routes/lib 변경 0, 신규 1 route + 기존 1 row 액션 확장
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — i18n 분리 100% (코드 inline 0)
+- #31 SESSION_LOG 616 + 본 entry ~95 = ~711 (T1 1000 미달, 안전)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #35 신규 fallback 모두 dict 키 추가 패턴 유지 (Phase 3-A 패턴 그대로 정착)
+- #36 main push 후 verify-vercel-deploy.sh --wait — 사용자 승인 후
+- #38 Production runtime static assets only ✅ (publish-assets는 Naver API patch만, image 생성 0)
+- #40 Designer Sense 보존 — publish 버튼이 hasNaverId 검증으로 *미등록 상품 잘못된 publish 차단*, KFTC 안전 패턴
+
+### 다음 = Sprint 7-M2 Phase 3-C (PLANT /products/new 7번째 탭 "비주얼 자동화")
+
+PLANT page.tsx는 188KB / ~4000+ LOC 거대 파일 + 6 tab 구조 → *전용 sub-phase 분리 권고*:
+- Phase 3-C-1: src/components/studio/ 폴더로 4 카드 + 공유 helper 추출 (refactor only, 동일 동작)
+- Phase 3-C-2: PLANT page.tsx 7번째 탭 추가 + tab navigation 갱신 + productId 컨텍스트 전달
+- Phase 3-C-3: 등록 흐름 wire-up (저장 → 네이버 등록 → publish-assets 자동 호출)
+
+---
+
 ## 2026-05-13 Sprint 7-M2 Phase 3-A + 3-B — API foundation + 온실 아틀리에 UI mount ✅
 
 ### 본 세션 성격
