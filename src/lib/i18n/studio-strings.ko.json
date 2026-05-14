@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "description": "온실 아틀리에 (/studio) — Sprint 7-M2 Phase 3-B Korean strings. Co-author Diagnosis + Thumbnail + Detail page creation flow."
+    "description": "온실 아틀리에 (/studio) — Sprint 7-M2 Phase 3-B Korean strings. Co-author Diagnosis + Thumbnail + Detail page creation flow. Phase 3-C-2 added plantTab section for PLANT 7th tab integration."
   },
   "page": {
     "title": "온실 아틀리에",
@@ -106,6 +106,14 @@
     "stepLabel": "STEP",
     "stepOf": "/",
     "stepDone": "완료"
+  },
+  "plantTab": {
+    "label": "비주얼 자동화",
+    "needSaveTitle": "임시저장이 필요해요",
+    "needSaveBody": "기본 정보 탭을 채우고 「네이버 직접 등록」 버튼을 눌러 상품을 먼저 저장한 뒤, 이 탭에서 AI 진단 → 썸네일 → 상세 → 갱신 흐름으로 콘텐츠 자동화를 진행하세요.",
+    "savedBadge": "저장 완료",
+    "panelTitle": "비주얼 자동화 (저장 후 활성화)",
+    "panelSubtitle": "방금 저장된 상품을 7일 골든윈도우 안에 콘텐츠로 채워 매출 기반을 만드세요."
   },
   "kftc": {
     "reviewsPlaceholder": "후기 영역은 등록 후 실제 데이터로 채워집니다.",

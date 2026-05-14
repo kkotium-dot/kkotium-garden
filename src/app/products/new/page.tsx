@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import {
   Tag, Truck, Wrench, Star, Bell, Clipboard, CheckCircle, XCircle, Settings,
   Package, Image as ImageIcon, Search, Gift, Layers, AlertTriangle, Info, ShieldAlert,
+  Palette,
 } from 'lucide-react';
 import { checkProductName, getGradeColor, getSeverityColor, type NameQualityResult } from '@/lib/product-name-checker';
 import {
@@ -63,6 +64,12 @@ import { PlatformPicker, SupplierPicker } from '@/components/ui/PlatformSupplier
 import MarginAdvisorPanel from '@/components/products/MarginAdvisorPanel';
 import { calcUploadReadiness, getReadinessColor, READINESS_GRADE_STYLE } from '@/lib/upload-readiness';
 import { getReturnCareFee, RETURN_CARE_STATS } from '@/lib/return-care-fees';
+// Sprint 7-M2 Phase 3-C-2 — Studio cards mounted in 7th tab (visual automation)
+import {
+  DiagnosisCard, ThumbnailCard, DetailPageCard, ActionsCard,
+  useStudioActions,
+} from '@/components/studio';
+import studioStrings from '@/lib/i18n/studio-strings.ko.json';
 
 interface Platform { id: string; name: string; code: string; }
 interface Supplier {
@@ -279,11 +286,61 @@ function MinQuantityWarningBanner({ minQuantity }: { minQuantity: number }) {
   );
 }
 
+// Sprint 7-M2 Phase 3-C-2 — Mounts the same Studio cards used in /studio
+// inside PLANT's 7th tab. Defined at module level so the hook isn't
+// re-created on every PLANT render. Receives the saved DB id (gates the
+// whole tab) and the optional Naver product id (gates publish-assets).
+function PlantVisualInner({ productId, naverProductId }: { productId: string; naverProductId: string | null }) {
+  const actions = useStudioActions(productId);
+  const hasNaverId = !!naverProductId;
+  const canPublish = actions.hasSavedAsset && hasNaverId && !actions.publishBusy;
+  return (
+    <div className="space-y-3">
+      <DiagnosisCard
+        diagnosis={actions.diagnosis}
+        busy={actions.diagBusy}
+        error={actions.diagError}
+        onRun={actions.runDiagnose}
+      />
+      <ThumbnailCard
+        thumbnails={actions.thumbnails}
+        busy={actions.thumbBusy}
+        error={actions.thumbError}
+        onRun={actions.runThumbnail}
+        mainVariant={actions.mainVariant}
+        onSelectMain={actions.setMainVariant}
+      />
+      <DetailPageCard
+        detail={actions.detail}
+        busy={actions.detailBusy}
+        error={actions.detailError}
+        onRun={actions.runDetail}
+        overrideSkeletonId={actions.overrideSkeletonId}
+        onOverrideChange={actions.setOverrideSkeletonId}
+      />
+      <ActionsCard
+        canSave={actions.canSave}
+        saveBusy={actions.saveBusy}
+        save={actions.save}
+        saveError={actions.saveError}
+        onSave={actions.runSave}
+        canPublish={canPublish}
+        publishBusy={actions.publishBusy}
+        publish={actions.publish}
+        publishError={actions.publishError}
+        onPublish={actions.runPublish}
+        hasSavedAsset={actions.hasSavedAsset}
+        hasNaverId={hasNaverId}
+      />
+    </div>
+  );
+}
+
 function NewProductPageInner() {
   const searchParams = useSearchParams();
   const [catTab, setCatTab]             = useState<'search'|'drill'>('drill');
   // C-11: 2-Panel Split tab navigation state
-  const [activeTab, setActiveTab] = useState<'basic'|'option'|'image'|'shipping'|'seo'|'benefit'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic'|'option'|'image'|'shipping'|'seo'|'benefit'|'visual'>('basic');
   const [catQuery, setCatQuery]         = useState('');
   const [catResults, setCatResults]     = useState<CategorySearchResult[]>([]);
   const [catOpen, setCatOpen]           = useState(false);
@@ -374,6 +431,10 @@ function NewProductPageInner() {
   const [success, setSuccess]   = useState(false);
   const [naverLoading, setNaverLoading] = useState(false);
   const [naverResult, setNaverResult]   = useState<{ ok: boolean; message: string } | null>(null);
+  // Sprint 7-M2 Phase 3-C-2 — track saved product id for the 7th "visual" tab.
+  // savedProductId unlocks the visual tab; savedNaverProductId enables publish.
+  const [savedProductId, setSavedProductId] = useState<string | null>(null);
+  const [savedNaverProductId, setSavedNaverProductId] = useState<string | null>(null);
 
   // Quick-add / edit modals for platform and supplier
   const PLATFORM_CODES_VALID = ['DMM', 'DMK', 'OWN', 'ETC'] as const;
@@ -835,7 +896,7 @@ function NewProductPageInner() {
   useEffect(() => {
     const focus = searchParams?.get('focus');
     if (!focus) return;
-    const validTabs = ['basic', 'option', 'image', 'seo', 'shipping'];
+    const validTabs = ['basic', 'option', 'image', 'seo', 'shipping', 'visual'];
     if (validTabs.includes(focus)) {
       setActiveTab(focus as typeof activeTab);
     }
@@ -1144,6 +1205,9 @@ function NewProductPageInner() {
 
       const productId = saveData.product?.id;
       if (!productId) throw new Error('상품 ID를 받지 못했습니다');
+      // Phase 3-C-2: unlock 7th "visual" tab even if naver register later fails.
+      setSavedProductId(productId);
+      setSavedNaverProductId(saveData.product?.naverProductId ?? null);
 
       // 2. Register on Naver via API
       const naverRes = await fetch('/api/naver/products', {
@@ -1155,6 +1219,8 @@ function NewProductPageInner() {
 
       if (naverData.success) {
         setNaverResult({ ok: true, message: naverData.message });
+        // Phase 3-C-2: capture naverProductId for publish-assets enablement.
+        if (naverData.naverProductId) setSavedNaverProductId(String(naverData.naverProductId));
         setSuccess(true);
         setTimeout(() => setSuccess(false), 5000);
       } else {
@@ -1594,6 +1660,8 @@ const handleGenerate = async () => {
                 { key: 'shipping', label: '\ubc30\uc1a1 \xb7 A/S', Icon: Truck },
                 { key: 'seo', label: 'SEO \xb7 \uc6d0\uc0b0\uc9c0', Icon: Search },
                 { key: 'benefit', label: '\ud61c\ud0dd', Icon: Gift },
+                // Sprint 7-M2 Phase 3-C-2 \u2014 visual automation tab (label from i18n).
+                { key: 'visual', label: studioStrings.plantTab.label, Icon: Palette },
               ] as const).map(tab => {
                 // D-5: Tab completeness check
                 const tabDone: Record<string, boolean> = {
@@ -1603,6 +1671,10 @@ const handleGenerate = async () => {
                   shipping: !!selectedShippingTemplate || !!selectedTemplateId,
                   seo: (aiKeywords.length >= 2 || seoTags.length >= 1) && !!originCode,
                   benefit: true,
+                  // Phase 3-C-2: visual tab is "done" once asset save returns
+                  // a public URL (tracked indirectly via savedProductId existence
+                  // \u2014 we don't surface partial completion here to avoid noise).
+                  visual: !!savedProductId,
                 };
                 const done = tabDone[tab.key] ?? false;
                 const isActive = activeTab === tab.key;
@@ -2984,6 +3056,23 @@ const handleGenerate = async () => {
                   <input className={inp} value={noticeTemplateCode} onChange={e => setNoticeTemplateCode(e.target.value)} placeholder="템플릿 코드" />
                 </Field>
               </DSection>
+            </div>
+            </>)}
+
+            {activeTab === 'visual' && (<>
+            <div className="space-y-3">
+              {!savedProductId ? (
+                <div style={{ padding: 24, background: '#FFF5F7', border: '1.5px solid #FFB3CE', borderRadius: 16 }}>
+                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#1A1A1A' }}>
+                    {studioStrings.plantTab.needSaveTitle}
+                  </h3>
+                  <p style={{ margin: '6px 0 0', fontSize: 12, color: '#7A6873', lineHeight: 1.6 }}>
+                    {studioStrings.plantTab.needSaveBody}
+                  </p>
+                </div>
+              ) : (
+                <PlantVisualInner productId={savedProductId} naverProductId={savedNaverProductId} />
+              )}
             </div>
             </>)}
 
