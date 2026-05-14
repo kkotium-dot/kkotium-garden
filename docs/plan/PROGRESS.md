@@ -1,9 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-13 (Sprint 7-M2 Phase 3-C-1 — Studio 컴포넌트 9 파일 추출 (`src/components/studio/`), `/studio/page.tsx` 1068→250 LOC (-77%), refactor only — Phase 3-C-2 PLANT 통합 준비 완료)
+> 최종 업데이트: 2026-05-14 (Sprint 7-M2 Phase 3-C-2 — PLANT `/products/new` 7번째 탭 "비주얼 자동화" 통합 (Studio 4 카드 마운트), 신규 상품 등록 직후 7일 골든윈도우 안에 콘텐츠 자동화 동일 페이지 종결)
 > 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
-> TSC: 0 errors | npm run build 28/28 OK | Production: https://kkotium-garden.vercel.app
-> 다음 작업: Sprint 7-M2 Phase 3-C-2 (PLANT /products/new 6→7 tab 확장 + savedProductId 컨텍스트 + useStudioActions 마운트) → Phase 3-C-3 (등록 후 publish-assets 자동 호출)
+> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (c1616c0 verified)
+> 다음 작업: Sprint 7-M2 Phase 3-C-3 (등록 → publish-assets 자동 wire-up + autoRunVisual 토글 + 대시보드 골든윈도우 위젯)
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
@@ -11,6 +11,63 @@
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
 > **다음 작업**: **Sprint 7-M2 Phase 3-C-2** (PLANT /products/new 6→7 tab 확장 + 7번째 탭 "비주얼 자동화" 마운트 + savedProductId 컨텍스트 전달). 본 turn 완료: Phase 3-C-1 컴포넌트 추출 (refactor only) — `src/components/studio/` 9 신규 파일, `/studio/page.tsx` 1068→250 LOC (-77%), byte-identical markup. PLANT 통합이 import 1줄로 가능. /studio end-to-end 워크플로우 (Diagnosis → Thumbnail → Detail → Save → Naver Publish) 정상 작동, dedicated 27/27 100% 유지.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-14 Sprint 7-M2 Phase 3-C-2 — PLANT 7번째 탭 "비주얼 자동화" 통합
+
+직전 Phase 3-C-1 (Studio 컴포넌트 추출) 직후 사용자 승인 후 진입. **`/studio` 전용이던 콘텐츠 자동화 워크플로우를 PLANT `/products/new` 7번째 탭에 마운트** — 신규 상품 등록 직후 7일 골든윈도우 안에 동일 페이지에서 진단 → 썸네일 → 상세 → 갱신까지 종결.
+
+본 turn 작업 (2 파일, +100/-3):
+
+- **`src/app/products/new/page.tsx`** (+93/-3) — Phase 3-C-1에서 추출한 4 카드 + `useStudioActions` hook 한 줄 import로 7번째 탭에 마운트:
+  - `Palette` lucide icon 추가
+  - `import { DiagnosisCard, ThumbnailCard, DetailPageCard, ActionsCard, useStudioActions } from '@/components/studio'` + `import studioStrings from '@/lib/i18n/studio-strings.ko.json'`
+  - 모듈 레벨 `PlantVisualInner({ productId, naverProductId })` sub-component — hook 호출 + 4 카드 마운트 + canPublish 계산 (caller-specific hasNaverId)
+  - `activeTab` type에 `'visual'` 추가 (6 → 7 tab)
+  - 2 신규 state: `savedProductId` + `savedNaverProductId`
+  - `handleNaverDirect` — local DB save 직후 `setSavedProductId(productId)` (네이버 등록 실패해도 visual 탭 unlock), 네이버 등록 성공 시 `setSavedNaverProductId(naverData.naverProductId)`
+  - `validTabs` deep-link 배열에 `'visual'` 추가 (`?focus=visual` 지원)
+  - tab navigation 7번째 entry: `{ key: 'visual', label: studioStrings.plantTab.label, Icon: Palette }`
+  - `tabDone.visual = !!savedProductId`
+  - 7번째 panel: `savedProductId` 없으면 안내 카드 (`needSaveTitle` + `needSaveBody`), 있으면 `<PlantVisualInner />` 렌더
+
+- **`src/lib/i18n/studio-strings.ko.json`** (+6 strings, 89 → 95) — PLANT 탭 전용 string 분리:
+  - `plantTab.label` = "비주얼 자동화" (탭 라벨)
+  - `plantTab.needSaveTitle` / `needSaveBody` (savedProductId 가드 안내 카드)
+  - `plantTab.savedBadge` / `panelTitle` / `panelSubtitle` (보조 슬롯, 향후 확장 대비)
+
+설계 결정:
+
+1. **module-level sub-component** — `PlantVisualInner`를 `NewProductPageInner` 내부가 아닌 *모듈 레벨*에 정의 → PLANT 매 렌더마다 hook 재생성 방지
+2. **savedProductId 분리** — `productId` (handleNaverDirect 내부 local var)와 별도로 React state로 노출 → 7번째 탭이 page-level state로 접근 가능
+3. **불완전 등록 graceful** — 네이버 등록 실패해도 local DB save 성공이면 visual 탭 unlock. 사용자가 publish 없이 진단/썸네일/상세/저장만 활용 가능
+4. **i18n 100% 분리** — 신규 사용자 노출 한글 6 strings 모두 dict 분리. PLANT 코드는 `studioStrings.plantTab.*` 키 참조만 (작업원칙 #29 c, #35)
+5. **byte-identical existing tabs** — 기존 6 탭의 label/Icon/tabDone 모두 그대로 보존, 7번째만 *추가*
+
+검증:
+
+- npx tsc --noEmit 0 errors ✅
+- npm run build 정상, `/products/new` 62 kB (PLANT, 약간 증가), `/studio` 3.73 kB (shared chunk 추출로 감소) ✅
+- python3 scripts/verify-korean-dict.py: 99+178+95 strings, 0 typo ✅
+- sentinel grep clean (한글 자모 변종 0건) ✅
+- 코드 inline 한글 주석 0건 (작업원칙 #29 c) ✅
+
+페이지 작동 흐름 (Phase 3-C-2 이후):
+
+1. PLANT `/products/new` 진입 → 6 탭 (기본/옵션/이미지/배송/SEO/혜택) 채움
+2. "네이버 직접 등록 (API)" 버튼 클릭 → local DB save → `setSavedProductId(id)` → 7번째 탭 unlock
+3. 7번째 탭 "비주얼 자동화" 클릭 → `<PlantVisualInner />` 마운트:
+   - AI 진단 카드 (1) → POST /api/diagnose
+   - 썸네일 카드 (2) → POST /api/thumbnail/[sku] → 4 변형 + 메인 선택
+   - 상세 카드 (3) → POST /api/products/[id]/generate-detail → 5섹션 + 골격 1-click 교체
+   - 액션 카드 (4) → POST /api/products/[id]/save-assets + publish-assets (네이버 등록 성공 시)
+4. 골든윈도우 활용: 등록 후 7일 안에 콘텐츠 채우기 → 매출 기반 형성
+
+다음 = **Sprint 7-M2 Phase 3-C-3** (등록 → publish-assets 자동 호출 wire-up + "에셋 저장 후 자동 갱신" 토글 + 대시보드 골든윈도우 카운트다운).
+
+Commit: `c1616c0` feat(automation): Phase 3-C-2 — PLANT 7th tab "비주얼 자동화" mounts Studio cards
+Production deploy 검증: `scripts/verify-vercel-deploy.sh --wait` exit 0, prod is on c1616c0 ✅
 
 ---
 

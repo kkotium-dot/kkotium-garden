@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-13 Sprint 7-M2 Phase 2-b-2 — 이벤트/세트 트랙 5 렌더러 (5fe44d5, branch push 후 main merge 사용자 승인 대기)
-> **HEAD**: 5fe44d5 (worktree) / origin/main c942b8e (Sprint 7-M2 Phase 2-b-1 + SESSION_LOG 분할 배포 완료) | **TSC**: 0 errors | **빌드**: 28/28 OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-14 Sprint 7-M2 Phase 3-C-2 — PLANT 7번째 탭 통합 (c1616c0, production verified)
+> **HEAD**: c1616c0 (origin/main, production verified) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
@@ -14,6 +14,94 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
+## 다음 새 채팅 시작 메시지 — 2026-05-14 (Sprint 7-M2 Phase 3-C-3 — 등록 → publish 자동 wire-up) ⭐ ACTIVE
+
+본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 Phase 3-C-2 완료 (PLANT 7번째 탭 통합):
+- src/app/products/new/page.tsx +93/-3 (3552 → 3641 LOC) — 7th tab
+  "비주얼 자동화" + module-level <PlantVisualInner /> + savedProductId/
+  savedNaverProductId state + handleNaverDirect wire-up
+- studio-strings.ko.json +6 strings (plantTab.*, 89 → 95)
+- 0 API route 변경, byte-identical 기존 6 탭
+- TSC 0, build OK (/products/new 62 kB), dict 99+178+95 통과,
+  sentinel 0건, 인라인 한글 주석 0건
+- production deploy: c1616c0 verified ✅
+
+본 세션 진입 작업 = Sprint 7-M2 Phase 3-C-3 (등록 → publish 자동 wire-up):
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  직전 commit이 main 머지/배포됐는지 verify-vercel-deploy.sh로 확인.
+
+STEP 7-M2 Phase 3-C-3 — 등록 흐름 자동화 + 골든윈도우 surface
+
+  배경: Phase 3-C-2로 7번째 탭 마운트 완료. 사용자가 *수동 클릭 5단계*
+  (탭 클릭 → 진단 → 썸네일 → 상세 → 저장 → publish)를 거쳐야 함. 
+  Phase 3-C-3는 *수동 단계 제거*가 핵심:
+
+  대상 변경 1 — handleNaverDirect 자동 흐름 토글:
+    - src/app/products/new/page.tsx
+      1) 신규 state: autoRunVisual (bool, default true) + autoRunBusy
+      2) 기본 탭 하단에 토글 UI: "등록 후 비주얼 자동 생성" (체크박스)
+      3) handleNaverDirect 네이버 등록 성공 후 (L1156+):
+         if (autoRunVisual) {
+           setActiveTab('visual');
+           // 다음 tick에서 PlantVisualInner mount → useStudioActions
+           // 자동 호출 sequence: runDiagnose → runThumbnail → runSave 
+           // → runPublish (pre-condition 검증 포함)
+         }
+      4) PlantVisualInner에 autorun prop 추가 → useEffect로 mount 시
+         자동 sequence 실행 (idempotent — 이미 결과 있으면 skip)
+
+  대상 변경 2 — 대시보드 골든윈도우 위젯:
+    - src/app/dashboard/page.tsx
+      1) 신규 위젯 GoldenWindowWidget (등록 후 D+1, D+3, D+7 카운트다운)
+      2) Product.createdAt + ACTIVE 상태 + 등록 후 7일 미만 상품 목록
+      3) per-row 액션: "콘텐츠 보강" → /products/new?edit=ID&focus=visual
+
+  대상 변경 3 — useStudioActions에 autorun helper:
+    - src/components/studio/useStudioActions.ts
+      1) 신규 export: runFullSequence(): Promise<void>
+         — runDiagnose → runThumbnail → runSave → runPublish (각 단계
+         pre-condition 검증, 실패 시 sequence 중단 + 에러 표시)
+      2) PlantVisualInner / studio page 양쪽에서 호출 가능
+
+  검증:
+    1. PLANT 신규 상품 등록 + 토글 ON → 자동 sequence 작동 확인
+    2. 토글 OFF → 기존 수동 흐름 보존
+    3. 대시보드 골든윈도우 위젯 0건 (등록 7일 미만 상품 없을 때) /
+       N건 (있을 때) 표시 확인
+    4. 자동 sequence 중간 실패 시 에러 surface + 부분 결과 보존
+
+  Phase 3-D (별도 sprint):
+    - lifestyle-picker 30일 cooldown + 태그 매칭
+    - L3/L4 등급 분기 (Claude Vision 보강 호출)
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- 직전 commit (c1616c0) main 도달 + production 200 확인
+- SESSION_LOG.md ~937줄 추정 (T1 1500 미달, 안전)
+- PLANT page.tsx 3641 LOC + dashboard page.tsx 거대 파일 — 변경 최소화
+  의무 (state/wire-up + 위젯 추가만, 기존 흐름 byte-preserve)
+
+다음 = Phase 3-D (lifestyle-picker) → Sprint 7-M3 (운영 메트릭 대시보드).
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward
+merge 사용자 위임.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 3-C-2 — PLANT 7번째 탭 통합)~~ ✅ COMPLETED
+
+> Phase 3-C-2 completed on 2026-05-14. 2 files +100/-3, c1616c0 production verified. Phase 3-C-3 (등록 → publish 자동 wire-up) = active handoff above. The message below is preserved for git history.
+
 ## 다음 새 채팅 시작 메시지 — 2026-05-13 (Sprint 7-M2 Phase 3-C-2 — PLANT 7번째 탭 통합) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.

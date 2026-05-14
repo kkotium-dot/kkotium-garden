@@ -1,3 +1,100 @@
+## 2026-05-14 Sprint 7-M2 Phase 3-C-2 — PLANT 7번째 탭 통합 ✅
+
+### 본 세션 성격
+
+직전 Phase 3-C-1 (4aa14c7, Studio 컴포넌트 추출, refactor only) 완료 후 사용자 명시 승인으로 Phase 3-C-2 진입. **Phase 3-C-1에서 추출한 4 카드 + `useStudioActions` hook을 PLANT `/products/new` 7번째 탭에 마운트** — 이제 신규 상품 등록 흐름 끝에서 *동일 페이지* 내에 콘텐츠 자동화까지 진행 가능. 7일 골든윈도우 활용도 향상.
+
+### 본 세션 산출물 (2 파일 변경, +100/-3)
+
+| 파일 | 변경 | 역할 |
+|---|---|---|
+| `src/app/products/new/page.tsx` | +93/-3 (3552 → 3641 LOC) | Studio import + module-level `PlantVisualInner` + 7번째 탭 nav/panel + savedProductId state 통합 |
+| `src/lib/i18n/studio-strings.ko.json` | +10/-1 (89 → 95 strings) | `plantTab.*` 6 신규 string (label/needSaveTitle/needSaveBody/savedBadge/panelTitle/panelSubtitle) |
+
+### PLANT 변경 11개소 상세
+
+1. **L9 lucide imports** — `Palette` icon 추가 (탭 nav용)
+2. **L67 (after existing imports)** — `import { DiagnosisCard, ThumbnailCard, DetailPageCard, ActionsCard, useStudioActions } from '@/components/studio'` + `import studioStrings from '@/lib/i18n/studio-strings.ko.json'`
+3. **L71-119 (before NewProductPageInner)** — module-level `PlantVisualInner({ productId, naverProductId })` sub-component:
+   - `useStudioActions(productId)` 호출
+   - `hasNaverId = !!naverProductId`, `canPublish = actions.hasSavedAsset && hasNaverId && !actions.publishBusy`
+   - 4 카드 (DiagnosisCard / ThumbnailCard / DetailPageCard / ActionsCard) 렌더
+   - **module 레벨 정의** — PLANT 매 렌더마다 hook 재생성 방지
+4. **L286 activeTab type** — `'basic'|'option'|'image'|'shipping'|'seo'|'benefit'` → `... |'visual'` (6 → 7 키)
+5. **L437-440 신규 state** — `savedProductId` + `savedNaverProductId` (둘 다 nullable string)
+6. **L1149-1151 handleNaverDirect (save 후)** — `setSavedProductId(productId); setSavedNaverProductId(saveData.product?.naverProductId ?? null);` (네이버 등록 실패해도 visual 탭 unlock)
+7. **L1162 handleNaverDirect (네이버 success)** — `if (naverData.naverProductId) setSavedNaverProductId(String(naverData.naverProductId));`
+8. **L838 validTabs** — `['basic', 'option', 'image', 'seo', 'shipping']` → `[..., 'visual']` (deep-link `?focus=visual` 지원)
+9. **L1591-1597 tab nav array** — 7번째 entry 추가: `{ key: 'visual', label: studioStrings.plantTab.label, Icon: Palette }`
+10. **L1607 tabDone** — `visual: !!savedProductId`
+11. **L3017-3033 7번째 panel** — `activeTab === 'visual'` 조건부 렌더:
+    - `!savedProductId` 시 안내 카드 (FFF5F7 bg + FFB3CE border + needSaveTitle/needSaveBody)
+    - `savedProductId` 있으면 `<PlantVisualInner productId={savedProductId} naverProductId={savedNaverProductId} />`
+
+### 핵심 설계 결정
+
+1. **Phase 3-C-1 컴포넌트 *완전* 재사용** — barrel export (`@/components/studio`) 한 줄 import로 4 카드 + hook 마운트. PLANT page에 0 카드 코드 복사
+2. **PlantVisualInner는 module 레벨** — `NewProductPageInner` 내부 정의 시 매 PLANT 렌더마다 새 컴포넌트 → useStudioActions 재초기화 → state loss. module 레벨로 Identity 유지
+3. **savedProductId 자체로 visual 탭 unlock** — 네이버 등록 성공 여부와 *무관*. publish-assets만 hasNaverId 검증. 사용자가 등록 실패 시에도 콘텐츠 자동화 활용 가능
+4. **i18n 100% 분리 (작업원칙 #29 + #35)** — 신규 6 한글 string 모두 dict, PLANT 코드 inline 한글 0건. dict.py 자동 검증으로 NFC + typo prevention
+5. **기존 6 탭 변경 0** — label/Icon/tabDone 모두 byte-identical 보존. 변경은 *7번째 추가*만
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` 정상 — `/products/new` 62 kB (약간 증가), `/studio` 3.73 kB (shared chunk 추출 효과로 감소) ✅
+- `python3 scripts/verify-korean-dict.py`: 99+178+95 strings, 0 replace/not_nfc/typo ✅
+- sentinel grep 0건 (한글 자모 변종 검출 16 패턴) ✅
+- 코드 inline 한글 주석 0건 (작업원칙 #29 c) ✅
+- production deploy: `scripts/verify-vercel-deploy.sh --wait` exit 0, prod is on c1616c0 ✅
+
+### 작은 사고 + 자가 정정
+
+- 첫 state 추가 Edit이 "internal error" 출력했으나 실제 file에는 적용됨 → 두 번째 Edit이 *중복* state 선언 도입 → TSC 8 errors (TS2451 redeclare) → 즉시 dedupe Edit으로 정정 → TSC clean
+- 인라인 한글 주석 1건 ("Studio cards mounted in 7th tab \"비주얼 자동화\"") 작성 후 작업원칙 #29 (c) 위반 인지 → 즉시 영문으로 정정 ("(visual automation)")
+
+### Phase 3-C-2 이후 사용자 시나리오
+
+```
+1. PLANT /products/new 진입
+2. 6 탭 (기본/옵션/이미지/배송/SEO/혜택) 채우기
+3. "네이버 직접 등록 (API)" 클릭
+   → local DB save 성공 → savedProductId 채워짐 → 7번째 탭 unlock
+   → 네이버 등록 성공 → savedNaverProductId 채워짐 → publish 버튼 활성화
+4. 7번째 탭 "비주얼 자동화" 클릭
+   → AI 진단 (1) → 썸네일 (2) → 상세 (3) → 저장 + 갱신 (4)
+   → 네이버 상품 정보가 *방금 저장된 상품에* 자동 patch
+5. 7일 골든윈도우 안에 콘텐츠 + 노출 = 매출 기반 형성
+```
+
+### 적용된 작업원칙
+
+- #17 commit msg via `.commit-msg.tmp` + `git commit -F` ✅
+- #21 STEP 0 환경 점검 통과 (HEAD 4aa14c7 == origin == prod, working tree clean)
+- #24 단일 commit + push 한 turn 안 종료
+- #26 IA 점검 — Sidebar 변경 0, /studio entry 그대로, /products/new 진입점 보존
+- #27 외부 컨트랙트 보존 — API route 변경 0, i18n key 6 추가만 (기존 89 keys 그대로)
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — i18n 분리 100%, 코드 inline 한글 0건
+- #29 (b) MD 갱신 — `.tmp_*` Write + Python prepend 패턴
+- #31 SESSION_LOG ~817 + 본 entry ~120 = ~937 (T1 1500 미달, 안전)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #35 신규 한글 6 strings dict 추가만 (코드 inline 0)
+- #36 push 후 verify-vercel-deploy.sh --wait → exit 0 (180s 안에 production READY) ✅
+- #38 production runtime static assets only — 신규 API call 0
+- #39 CTI inference entry point — PLANT 7번째 탭이 *등록 직후* 진단 시작점 추가
+- #40 Designer Sense 보존 — 골격 1-click 교체 + 메인 thumb 선택 + publish 검증 모두 그대로
+
+### 다음 = Sprint 7-M2 Phase 3-C-3 (등록 → publish 자동 wire-up)
+
+본 phase로 *PLANT 안에서* 콘텐츠 자동화 사용 가능. Phase 3-C-3는 *수동 클릭 단계 제거*:
+1. 등록 흐름 wire-up — 네이버 등록 성공 직후 자동으로 (a) 진단 → (b) 썸네일 메인 선택 → (c) 상세 생성 → (d) 저장 → (e) publish-assets 자동 호출 (사용자 토글로 on/off)
+2. 골든윈도우 surface — 대시보드에 등록 후 D+1, D+3, D+7 카운트다운 위젯 노출
+3. 등록 완료 후 자동 navigate — `/dashboard?recent=ID&autorun=visual` 패턴
+
+---
+
 ## 2026-05-13 Sprint 7-M2 Phase 3-C-1 — Studio 컴포넌트 추출 (refactor only) ✅
 
 ### 본 세션 성격
