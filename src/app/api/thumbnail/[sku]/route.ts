@@ -24,6 +24,10 @@ import {
   type ThumbnailRequest,
   type ThumbnailVariant,
 } from '@/lib/automation/thumbnail-generator';
+import {
+  pickLifestyleAsset,
+  markLifestyleAssetUsed,
+} from '@/lib/automation/lifestyle-picker';
 import type {
   ConceptTone,
   SkeletonId,
@@ -93,6 +97,7 @@ export async function POST(
     },
     select: {
       id: true,
+      sku: true,
       name: true,
       category: true,
       salePrice: true,
@@ -143,6 +148,34 @@ export async function POST(
     );
   }
 
+  // Phase 2-c-1 (2026-05-15): pick a lifestyle backdrop asset matching the
+  // product's ConceptTone (30-day cooldown + per-SKU exclusion). When no
+  // eligible asset exists (empty library or all assets in cooldown), the
+  // picker returns null and the lifestyle variant falls back to the
+  // existing brand-color backdrop path inside thumbnail-generator. The
+  // body override (designer manual pick) takes precedence over auto-pick.
+  let pickedLifestyleAssetId: string | null = null;
+  let lifestyleBackdropUrl = body.lifestyleBackdropUrl;
+  if (!lifestyleBackdropUrl) {
+    try {
+      const picked = await pickLifestyleAsset({
+        conceptTone,
+        productCategory: product.category ?? undefined,
+        sku: product.sku,
+      });
+      if (picked) {
+        pickedLifestyleAssetId = picked.assetId;
+        lifestyleBackdropUrl = picked.storageUrl;
+      }
+    } catch (err) {
+      // Picker failure is non-fatal — log and continue with brand-color
+      // fallback. Don't break the entire thumbnail render over a DB
+      // hiccup in the lifestyle library.
+      // eslint-disable-next-line no-console
+      console.warn('[thumbnail/route] pickLifestyleAsset failed (non-fatal):', err);
+    }
+  }
+
   const req: ThumbnailRequest = {
     productName: product.name,
     salePrice:
@@ -151,13 +184,31 @@ export async function POST(
     highlight: body.highlight,
     conceptTone,
     sourceImageUrl,
-    lifestyleBackdropUrl: body.lifestyleBackdropUrl,
+    lifestyleBackdropUrl,
     overrideSkeletonId: body.overrideSkeletonId,
     variants: body.variants,
   };
 
   try {
     const result = await generateThumbnails(req);
+
+    // Phase 2-c-1: lazy-mark the picked asset as used only after the
+    // generator returns a lifestyle variant in outputs. If lifestyle
+    // failed (partial outputs without 'lifestyle'), the asset stays
+    // available for the next attempt — no wasted cooldown.
+    if (pickedLifestyleAssetId) {
+      const lifestyleSucceeded = result.outputs.some((o) => o.variant === 'lifestyle');
+      if (lifestyleSucceeded) {
+        try {
+          await markLifestyleAssetUsed(pickedLifestyleAssetId, product.sku);
+        } catch (err) {
+          // Mark-used failure is non-fatal; log only.
+          // eslint-disable-next-line no-console
+          console.warn('[thumbnail/route] markLifestyleAssetUsed failed (non-fatal):', err);
+        }
+      }
+    }
+
     return NextResponse.json({
       productId: product.id,
       skeletonId: result.skeletonId,
@@ -175,6 +226,9 @@ export async function POST(
       // Phase 3-C-3-h2: surface partial-failure info even on HTTP 200 so
       // clients can flag warnings (e.g., 3/4 variants succeeded).
       errors: result.errors,
+      // Phase 2-c-1: surface which lifestyle asset was used (or null when
+      // the brand-color fallback was taken) for debugging + UI hinting.
+      lifestyleAssetId: pickedLifestyleAssetId,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown error';
