@@ -125,3 +125,73 @@ export async function listProductAssets(productId: string): Promise<
     };
   });
 }
+
+// ----------------------------------------------------------------------------
+// Sprint 7-M2 Phase 2-c-2 — Lifestyle backdrop library helpers
+//
+// Lifestyle assets live under the same bucket but a dedicated path prefix:
+//   product-assets/
+//     lifestyle/
+//       {assetId}.{ext}
+//
+// Same bucket means the same RLS + lifecycle policy as automation outputs;
+// the path prefix keeps the audit trail clean and lets us list them with
+// a single `.list('lifestyle')` call when needed.
+// ----------------------------------------------------------------------------
+
+export interface UploadLifestyleAssetOptions {
+  /** Pre-allocated cuid for the LifestyleAsset row. Caller owns the id so
+   *  the storage path matches the DB primary key 1:1 and rollback is
+   *  trivial (delete the storage object before INSERT or after FAILED
+   *  upload). */
+  assetId: string;
+  /** Image buffer in PNG/JPEG/WebP. */
+  buffer: Buffer;
+  /** Lowercase file extension without the leading dot (e.g. 'png'). */
+  ext: string;
+  /** Optional content type override. Defaults to image/{ext}. */
+  contentType?: string;
+}
+
+export interface UploadLifestyleAssetResult {
+  path: string;
+  publicUrl: string;
+  uploadedAt: string;
+}
+
+export async function uploadLifestyleAsset(
+  opts: UploadLifestyleAssetOptions,
+): Promise<UploadLifestyleAssetResult> {
+  const supabase = getServerClient();
+  const safeExt = opts.ext.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'png';
+  const path = `lifestyle/${opts.assetId}.${safeExt}`;
+  const contentType = opts.contentType ?? `image/${safeExt === 'jpg' ? 'jpeg' : safeExt}`;
+
+  const { error } = await supabase.storage
+    .from(BUCKET_NAME)
+    .upload(path, opts.buffer, {
+      contentType,
+      cacheControl: '31536000',
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(`uploadLifestyleAsset failed: ${error.message}`);
+  }
+
+  const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
+
+  return {
+    path,
+    publicUrl: urlData.publicUrl,
+    uploadedAt: new Date().toISOString(),
+  };
+}
+
+export async function deleteLifestyleAsset(path: string): Promise<void> {
+  const supabase = getServerClient();
+  const { error } = await supabase.storage.from(BUCKET_NAME).remove([path]);
+  if (error) {
+    throw new Error(`deleteLifestyleAsset failed: ${error.message}`);
+  }
+}

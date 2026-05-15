@@ -19,6 +19,7 @@ DEFAULTS = [
     'src/lib/notifications/discord-strings.ko.json',
     'src/lib/automation/section-renderers/strings.ko.json',
     'src/lib/i18n/studio-strings.ko.json',
+    'src/lib/i18n/lifestyle-assets-strings.ko.json',
 ]
 
 TYPOS = [

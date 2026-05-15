@@ -1,0 +1,60 @@
+{
+  "_meta": {
+    "description": "라이프스타일 자산 라이브러리 (/settings/lifestyle-assets) — Sprint 7-M2 Phase 2-c-2 admin UI."
+  },
+  "page": {
+    "title": "라이프 자산 라이브러리",
+    "subtitle": "썸네일 lifestyle 변형의 배경 자산 풀. ConceptTone 태그 매칭 + 30일 cooldown으로 picker가 자동 선택합니다."
+  },
+  "stats": {
+    "total": "총 {n}개",
+    "ready": "사용 가능 {n}개",
+    "cooldown": "cooldown 중 {n}개"
+  },
+  "upload": {
+    "title": "자산 업로드",
+    "fileLabel": "이미지 파일",
+    "fileHint": "PNG · JPEG · WebP / 10MB 이하",
+    "categoryLabel": "카테고리",
+    "categoryHint": "상품 카테고리와 매칭 (예: 리빙, 패션, 식품). 모든 카테고리 허용 시 \"*\" 입력",
+    "tagsLabel": "태그 (콤마 구분)",
+    "tagsHint": "ConceptTone 매칭 태그 (예: 30-40s, gift, premium, single)",
+    "moodTagsLabel": "분위기 태그 (콤마 구분)",
+    "moodTagsHint": "색상/감성/스타일/장르 (예: warm, minimal, sensory, natural)",
+    "sourceLabel": "출처",
+    "sourceHint": "예: Adobe Firefly, Unsplash, 자체 촬영",
+    "licenseUrlLabel": "라이선스 URL (선택)",
+    "uploadButton": "업로드",
+    "uploading": "업로드 중…",
+    "uploadSuccess": "업로드 완료",
+    "uploadError": "업로드 실패:"
+  },
+  "list": {
+    "title": "등록된 자산",
+    "empty": "아직 등록된 자산이 없어요. 첫 자산을 업로드하면 picker가 즉시 활성화됩니다.",
+    "loading": "목록 불러오는 중…",
+    "error": "목록을 불러오지 못했어요",
+    "retry": "다시 시도",
+    "category": "카테고리",
+    "tags": "태그",
+    "moodTags": "분위기",
+    "source": "출처",
+    "dimensions": "크기",
+    "lastUsed": "마지막 사용",
+    "lastUsedNever": "사용 기록 없음",
+    "usedBySkus": "사용된 상품",
+    "usedBySkusNone": "없음",
+    "createdAt": "등록일",
+    "deleteButton": "삭제",
+    "deleting": "삭제 중…",
+    "deleteConfirm": "이 자산을 삭제할까요? Storage 파일 + DB row가 모두 제거됩니다.",
+    "cooldownActive": "cooldown 중 (사용 후 30일)",
+    "cooldownReady": "사용 가능"
+  },
+  "errors": {
+    "categoryRequired": "카테고리는 필수입니다",
+    "sourceRequired": "출처는 필수입니다 (예: Adobe Firefly)",
+    "fileRequired": "파일을 선택해주세요",
+    "fileTooLarge": "파일이 너무 큽니다 (10MB 이하)"
+  }
+}

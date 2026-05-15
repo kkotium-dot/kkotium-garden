@@ -13,7 +13,7 @@ import {
   Search, Layers, Store, Truck,
   KeyRound, FileText, ShoppingCart,
   ChevronRight, MessageCircle, CreditCard, Workflow,
-  Palette,
+  Palette, Images,
 } from 'lucide-react';
 
 // Fountain SVG — garden concept, matches dashboard page header icon
@@ -89,11 +89,12 @@ const NAV: { label: string; items: NavItem[] }[] = [
   {
     label: 'TOOLS',
     items: [
-      { href: '/settings/suppliers',       label: '거래처 명단',   iconKey: 'store' },
-      { href: '/settings/shipping',       label: '배송 레시피',   iconKey: 'truck' },
-      { href: '/settings/supplier-login', label: '공급사 열쇠방', iconKey: 'keyround' },
-      { href: '/settings/kakao',          label: '카카오 채널',   iconKey: 'messagecircle' },
-      { href: '/naver-settings',          label: '네이버 기본값', iconKey: 'filetext' },
+      { href: '/settings/suppliers',         label: '거래처 명단',   iconKey: 'store' },
+      { href: '/settings/shipping',         label: '배송 레시피',   iconKey: 'truck' },
+      { href: '/settings/supplier-login',   label: '공급사 열쇠방', iconKey: 'keyround' },
+      { href: '/settings/kakao',            label: '카카오 채널',   iconKey: 'messagecircle' },
+      { href: '/naver-settings',            label: '네이버 기본값', iconKey: 'filetext' },
+      { href: '/settings/lifestyle-assets', label: '라이프 자산',   iconKey: 'images' },
     ],
   },
 ];
@@ -192,6 +193,7 @@ function NavIcon({ iconKey, active }: { iconKey: string; active: boolean }) {
     case 'workflow':     icon = <Workflow     size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'palette':      icon = <Palette      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'package':      icon = <Package      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'images':       icon = <Images       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     default:            icon = <Search      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
   }
   return <FlowerIconBox active={active}>{icon}</FlowerIconBox>;
