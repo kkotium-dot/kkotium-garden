@@ -81,12 +81,20 @@ export interface ThumbnailOutput {
   size: CanvasSize;
 }
 
+export interface ThumbnailVariantError {
+  variant: ThumbnailVariant;
+  message: string;
+}
+
 export interface ThumbnailGenerationResult {
   skeletonId: SkeletonId;
   skeleton: SkeletonSpec;
   matchScore: number;
   matchAmbiguous: boolean;
   outputs: ThumbnailOutput[];
+  /** Per-variant errors collected during the render loop. Present even when
+   *  some variants succeed — clients can surface partial-failure warnings. */
+  errors: ThumbnailVariantError[];
   /** Total wall-clock milliseconds spent across all variants. */
   elapsedMs: number;
 }
@@ -374,6 +382,7 @@ export async function generateThumbnails(
 
   const variants: ThumbnailVariant[] = req.variants ?? ['clean', 'price', 'badge', 'lifestyle'];
   const outputs: ThumbnailOutput[] = [];
+  const errors: ThumbnailVariantError[] = [];
 
   // Render sequentially so a single failing variant doesn't poison the
   // others. Each renderer fetches its own image so they don't share state.
@@ -382,9 +391,22 @@ export async function generateThumbnails(
       const out = await RENDERERS[v](spec, req);
       outputs.push(out);
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
       // eslint-disable-next-line no-console
       console.error(`[thumbnail-generator] variant ${v} failed:`, err);
+      errors.push({ variant: v, message });
     }
+  }
+
+  // Phase 3-C-3-h2 (2026-05-15): when *every* variant fails, treat the call
+  // itself as a failure so the API route can return 5xx instead of HTTP 200
+  // with outputs:[]. The earlier silent-fail behavior masked the Cloudinary
+  // restriction for hours; clients now see a structured error immediately.
+  if (outputs.length === 0 && variants.length > 0) {
+    const summary = errors.map((e) => `${e.variant}: ${e.message}`).join(' | ');
+    throw new Error(
+      `all ${variants.length} thumbnail variants failed (${summary})`,
+    );
   }
 
   return {
@@ -393,6 +415,7 @@ export async function generateThumbnails(
     matchScore: req.overrideSkeletonId ? 100 : match.score,
     matchAmbiguous: match.ambiguous,
     outputs,
+    errors,
     elapsedMs: Date.now() - start,
   };
 }

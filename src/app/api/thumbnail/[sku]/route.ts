@@ -172,6 +172,9 @@ export async function POST(
         base64: o.buffer.toString('base64'),
         mimeType: 'image/jpeg',
       })),
+      // Phase 3-C-3-h2: surface partial-failure info even on HTTP 200 so
+      // clients can flag warnings (e.g., 3/4 variants succeeded).
+      errors: result.errors,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown error';
