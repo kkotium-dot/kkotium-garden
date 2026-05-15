@@ -19,10 +19,13 @@
 
 import { matchSkeleton } from './skeleton-matcher';
 import { generateCopy } from './copy-writer';
-import {
-  urlCleanWhite,
-  urlCleanBrand,
-} from './cloudinary-pipeline';
+// Phase 3-C-3-h hardening (2026-05-15): Cloudinary fetch mode is restricted
+// at the account level (returns 401 "Images of type fetch are restricted").
+// We bypass the Cloudinary preprocessing layer and let Sharp handle resize +
+// background fill directly. fitImage() below produces the same canonical
+// 1080x1080 padded output without any external dependency, in line with
+// workflow principle #38 (production runtime = no external image API calls
+// that can disappear or rate-limit silently).
 import {
   createCanvas,
   fetchImageBuffer,
@@ -122,7 +125,7 @@ async function renderClean(
   spec: SkeletonSpec,
   req: ThumbnailRequest,
 ): Promise<ThumbnailOutput> {
-  const previewUrl = urlCleanWhite(req.sourceImageUrl);
+  const previewUrl = req.sourceImageUrl;
   const productBuffer = await fetchImageBuffer(previewUrl);
 
   const canvas = await createCanvas(CANVAS, '#FFFFFF');
@@ -173,7 +176,7 @@ async function renderPrice(
   spec: SkeletonSpec,
   req: ThumbnailRequest,
 ): Promise<ThumbnailOutput> {
-  const previewUrl = urlCleanBrand(req.sourceImageUrl, spec.colorTokens.secondary);
+  const previewUrl = req.sourceImageUrl;
   const productBuffer = await fetchImageBuffer(previewUrl);
 
   const canvas = await createCanvas(CANVAS, spec.colorTokens.secondary);
@@ -223,7 +226,7 @@ async function renderBadge(
   spec: SkeletonSpec,
   req: ThumbnailRequest,
 ): Promise<ThumbnailOutput> {
-  const previewUrl = urlCleanWhite(req.sourceImageUrl);
+  const previewUrl = req.sourceImageUrl;
   const productBuffer = await fetchImageBuffer(previewUrl);
 
   const canvas = await createCanvas(CANVAS, '#FFFFFF');
@@ -269,7 +272,7 @@ async function renderLifestyle(
   spec: SkeletonSpec,
   req: ThumbnailRequest,
 ): Promise<ThumbnailOutput> {
-  const productPreviewUrl = urlCleanWhite(req.sourceImageUrl);
+  const productPreviewUrl = req.sourceImageUrl;
   const productBuffer = await fetchImageBuffer(productPreviewUrl);
 
   const backdropUrl = req.lifestyleBackdropUrl;

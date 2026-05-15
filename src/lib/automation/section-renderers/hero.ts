@@ -22,7 +22,8 @@ import {
   renderTextOverlay,
   overlayOnto,
 } from '../sharp-composite';
-import { urlGalleryThumb } from '../cloudinary-pipeline';
+// Phase 3-C-3-h (2026-05-15): bypass Cloudinary fetch (account-restricted),
+// fetch source URL directly. Sharp fitImage handles resize + bg below.
 import sharp from 'sharp';
 import { generateHeroCopy } from './section-copy';
 import type { SectionRenderer } from './types';
@@ -60,8 +61,7 @@ export const heroRenderer: SectionRenderer = async (spec, section, ctx) => {
   // shouldn't break the moment a single source image is missing).
   let withImage: Buffer = canvas;
   try {
-    const productUrl = urlGalleryThumb(ctx.sourceImageUrl);
-    const buf = await fetchImageBuffer(productUrl);
+    const buf = await fetchImageBuffer(ctx.sourceImageUrl);
     const fitted = await fitImage(
       buf,
       { width: 560, height: imageBlockHeight - 40 },

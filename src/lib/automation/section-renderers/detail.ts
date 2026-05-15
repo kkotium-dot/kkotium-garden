@@ -16,7 +16,8 @@ import {
   renderTextOverlay,
   overlayOnto,
 } from '../sharp-composite';
-import { urlGalleryThumb } from '../cloudinary-pipeline';
+// Phase 3-C-3-h (2026-05-15): bypass Cloudinary fetch (account-restricted),
+// fetch source URL directly.
 import { generateDetailGridCopy } from './section-copy';
 import type { SectionRenderer } from './types';
 import { resolveBgColor, CANONICAL_WIDTH } from './types';
@@ -74,8 +75,7 @@ export const detailRenderer: SectionRenderer = async (spec, section, ctx) => {
   // Reusable macro image
   let baseImage: Buffer | null = null;
   try {
-    const url = urlGalleryThumb(ctx.lifestyleAssetUrl ?? ctx.sourceImageUrl);
-    baseImage = await fetchImageBuffer(url);
+    baseImage = await fetchImageBuffer(ctx.lifestyleAssetUrl ?? ctx.sourceImageUrl);
   } catch {
     baseImage = null;
   }
