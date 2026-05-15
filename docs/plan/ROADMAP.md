@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-14 Sprint 7-M2 Phase 3-C-2 — PLANT 7번째 탭 통합 (c1616c0, production verified)
-> **HEAD**: c1616c0 (origin/main, production verified) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-15 Sprint 7-M2 Phase 3-C-3 — register-then-autorun + sequence + golden-window deep-link (1daded2, production verified)
+> **HEAD**: 1daded2 (origin/main, production verified) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
@@ -14,6 +14,78 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
+## 다음 새 채팅 시작 메시지 — 2026-05-15 (Sprint 7-M2 Phase 2-c — lifestyle-picker 30일 cooldown) ⭐ ACTIVE
+
+본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 Phase 3-C-3 완료 (Phase 3-C 트리오 완결):
+- src/components/studio/useStudioActions.ts +186/-43 — 5 handler
+  결과 반환 형 refactor + override 파라미터 + runFullSequence
+- src/app/products/new/page.tsx +129/-1 (3641 → 3769 LOC) —
+  autoRunVisual state + 토글 UI + handleNaverDirect 자동 활성화 +
+  edit-mode unlock + PlantVisualInner autorun + SequenceStatusBanner
+- src/components/dashboard/GoldenWindowWidget.tsx +2/-1 — href에
+  &focus=visual 추가
+- studio-strings.ko.json +10 strings (autorun + sequence chip 라벨,
+  95 → 105)
+- TSC 0, build OK (/products/new 62.5 kB), dict 99+178+105 통과,
+  sentinel 0건, 인라인 한글 주석 0건
+- production deploy: 1daded2 verified ✅
+
+본 세션 진입 작업 = 사용자 의사결정 분기 후 진행
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  직전 commit이 main 머지/배포됐는지 verify-vercel-deploy.sh로 확인.
+
+STEP 1 — 사용자 의사결정 청취 (3 옵션):
+
+  옵션 1 (queued sprint): Sprint 7-M2 Phase 2-c — lifestyle-picker
+    - 신규 src/lib/automation/lifestyle-picker.ts
+    - Prisma LifestyleAsset 모델 추가 (id, url, tags[], lastUsedAt)
+    - 카테고리/계절/감성톤 태그 매칭 + 30일 cooldown
+    - thumbnail-generator의 lifestyle variant가 picker 호출
+    - **권고**: 자산 풀이 비어있으면 작동 0 — 자산 입력 흐름 우선
+      필요 (Phase 1 Claude Web 세션에서 정적 자산 사전 생성 후
+      Supabase Storage에 업로드 → DB seed)
+
+  옵션 2 (event-driven, 권고): 첫 실 상품 등록 + 콘텐츠 자동화 검증
+    - 도매꾹 OpenAPI 또는 직접 입력으로 첫 상품 등록 (현재 0건)
+    - PLANT 등록 → autoRunVisual 자동 흐름 실 production 검증
+    - 발견된 paper-cut 즉시 수정 (Phase 3-C-3 hardening)
+    - 골든윈도우 위젯 실제 데이터 노출 확인
+
+  옵션 3 (보류 트랙): Sprint 8 자동발주 (Private API 28권한 보유)
+    - 매출 상승 + 운영 흐름 안정화 후 진입 권고
+
+  → 사용자 의사결정 후 그 옵션의 sub-phase 분할 + 단일 commit 단위
+    작업 진행
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- 직전 commit (1daded2) main 도달 + production 200 확인
+- SESSION_LOG.md ~1104줄 추정 (T1 1500 미달, 안전)
+- PLANT page.tsx 3769 LOC + dashboard page.tsx 거대 파일 — 옵션 1
+  진입 시 lifestyle-picker는 src/lib/automation/ 별도 파일이라 PLANT
+  변경 0건 가능
+
+다음 = 사용자 선택 옵션의 다음 sub-phase + Sprint 7-M3 (운영 메트릭)
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward
+merge 사용자 위임.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-14 (Sprint 7-M2 Phase 3-C-3 — 등록 → publish 자동 wire-up)~~ ✅ COMPLETED
+
+> Phase 3-C-3 completed on 2026-05-15. 4 files +290/-43, 1daded2 production verified. Sprint 7-M2 Phase 3-C trio (3-C-1 → 3-C-2 → 3-C-3) closed. Next handoff above.
+
 ## 다음 새 채팅 시작 메시지 — 2026-05-14 (Sprint 7-M2 Phase 3-C-3 — 등록 → publish 자동 wire-up) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.

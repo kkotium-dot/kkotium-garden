@@ -1,9 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-14 (Sprint 7-M2 Phase 3-C-2 — PLANT `/products/new` 7번째 탭 "비주얼 자동화" 통합 (Studio 4 카드 마운트), 신규 상품 등록 직후 7일 골든윈도우 안에 콘텐츠 자동화 동일 페이지 종결)
+> 최종 업데이트: 2026-05-15 (Sprint 7-M2 Phase 3-C-3 — register-then-autorun + sequence chaining + golden-window deep-link, Phase 3-C 트리오 완결)
 > 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
-> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (c1616c0 verified)
-> 다음 작업: Sprint 7-M2 Phase 3-C-3 (등록 → publish-assets 자동 wire-up + autoRunVisual 토글 + 대시보드 골든윈도우 위젯)
+> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (1daded2 verified)
+> 다음 작업: 사용자 의사결정 분기 — 옵션 1 (Phase 2-c lifestyle-picker), 옵션 2 (첫 실 상품 등록 검증, 권고), 옵션 3 (Sprint 8 자동발주, 보류)
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
@@ -11,6 +11,85 @@
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
 > **다음 작업**: **Sprint 7-M2 Phase 3-C-2** (PLANT /products/new 6→7 tab 확장 + 7번째 탭 "비주얼 자동화" 마운트 + savedProductId 컨텍스트 전달). 본 turn 완료: Phase 3-C-1 컴포넌트 추출 (refactor only) — `src/components/studio/` 9 신규 파일, `/studio/page.tsx` 1068→250 LOC (-77%), byte-identical markup. PLANT 통합이 import 1줄로 가능. /studio end-to-end 워크플로우 (Diagnosis → Thumbnail → Detail → Save → Naver Publish) 정상 작동, dedicated 27/27 100% 유지.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-15 Sprint 7-M2 Phase 3-C-3 — register-then-autorun + sequence chaining + golden-window deep-link
+
+직전 Phase 3-C-2 (PLANT 7번째 탭 통합, c1616c0/d9256b2) 직후 사용자 명시 승인으로 진입. **Sprint 7-M2 Phase 3-C 트리오 완결** — extract (3-C-1) → mount (3-C-2) → wire-up (3-C-3). 이제 PLANT에서 네이버 등록 직후 콘텐츠 자동화가 *자동으로 흐른다*. 대시보드 골든윈도우 위젯 클릭도 비주얼 탭으로 직진.
+
+본 turn 작업 (4 파일, +290/-43):
+
+- **`src/components/studio/useStudioActions.ts`** (+186/-43) — 5 핸들러를 *결과 반환* 형으로 refactor:
+  - `runDiagnose / runThumbnail / runDetail` → 각각 `Promise<XResult | null>` 반환
+  - `runSave(overrides?)` → `RunSaveOverrides` 타입으로 thumbnails/mainVariant/detail override 지원 (closure stale-state 회피)
+  - `runPublish(saveOverride?)` → save override 지원
+  - **신규** `runFullSequence({ hasNaverId?, withDetail? })` → 5단계 chain (diagnose → thumbnail → [detail] → save → [publish])
+  - 신규 state 3개: `sequenceBusy / sequenceStages / sequenceError`
+  - 기존 `onRun: () => void` props는 그대로 작동 (Promise<X>는 Promise<void>에 assignable)
+
+- **`src/lib/i18n/studio-strings.ko.json`** (+10 strings, 95 → 105) — autoRun + sequence 관련 신규:
+  - `plantTab.autoRunLabel` = "등록 후 비주얼 자동 생성"
+  - `plantTab.autoRunHint` (체크박스 옆 설명)
+  - `plantTab.autorunRunning / autorunDone / autorunFailed`
+  - `plantTab.autorunStage{Diagnose,Thumbnail,Detail,Save,Publish}` (배너 chip 라벨)
+
+- **`src/app/products/new/page.tsx`** (+129/-1) — PLANT autorun 통합:
+  - `PlantVisualInner`에 `autorun` prop 추가 → `autorunRanRef`로 productId당 1회 idempotent useEffect
+  - 신규 `SequenceStatusBanner` — 4 카드 위에 sequence 진행 상태 (busy=blue / done=green / error=red) + 단계별 ✓ chip
+  - 신규 state `autoRunVisual` (default true)
+  - 토글 UI (체크박스 + label) — 하단 버튼 위에 핑크 chrome (`#FFF5F7`/`#FFB3CE`)
+  - `handleNaverDirect` 네이버 등록 성공 후: `if (autoRunVisual) setActiveTab('visual')` → PlantVisualInner 마운트 → autorun useEffect 발화 → runFullSequence
+  - **edit-mode useEffect (`?edit=ID`)** — `setSavedProductId(p.id)` + `setSavedNaverProductId(p.naverProductId ?? null)` 자동 채움 → 골든윈도우 deep-link `?edit=ID&focus=visual`이 작동하는 visual 탭에 도달
+
+- **`src/components/dashboard/GoldenWindowWidget.tsx`** (+2/-1) — `GoldenRow` href를 `/products/new?edit=ID` → `/products/new?edit=ID&focus=visual`로 변경. 위젯 클릭이 곧장 비주얼 탭으로 진입
+
+설계 결정:
+
+1. **closure stale-state 회피 — handler 결과 반환 + override 파라미터** — React useState는 setState 후 다음 렌더 전까지 closure에서 옛 값을 봅니다. Sequence가 `await runDiagnose()` 후 곧바로 `runSave()` 호출하면 setSave가 본 thumbnails는 *이전 렌더의 null*. 해결: 각 handler가 결과를 직접 반환 + runSave/runPublish는 override 파라미터 수용 → sequence가 fresh 데이터를 명시적으로 전달
+2. **autorun idempotent (productId당 1회)** — `useRef`로 마지막 실행한 productId 추적. autorun=true 상태에서 hasNaverId 변경 등으로 useEffect deps가 재발화해도 같은 productId면 skip
+3. **detail은 autorun에서 opt-out** — runFullSequence의 `withDetail` 기본 false. 상세 페이지 합성은 5000~7000px 무거운 Sharp 연산 + 골격 1-click 교체가 디자이너 가치라서 자동화 부적합. 사용자가 명시적으로 `withDetail: true` 전달 시만 포함
+4. **publish는 hasNaverId 검증** — naverProductId 없으면 sequence가 publish 단계 skip. 등록 실패 케이스에서도 진단/썸네일/저장은 성공
+5. **edit-mode 자동 unlock** — 골든윈도우 위젯 / TEND per-row 액션에서 *기존 상품으로* 진입 시 임시저장이 없어도 visual 탭이 작동해야 함. edit-mode useEffect에서 product.id를 savedProductId로 set
+6. **i18n 100% 분리 (작업원칙 #29 + #35)** — 신규 10 한글 string 모두 dict, 코드 inline 한글 0건
+
+검증:
+
+- npx tsc --noEmit 0 errors ✅
+- npm run build OK (`/products/new` 62.5 kB, `/studio` 3.73 kB) ✅
+- python3 scripts/verify-korean-dict.py: 99+178+105 strings, 0 typo ✅
+- sentinel grep clean (4 파일 모두) ✅
+- 코드 inline 한글 주석 0건 ✅
+
+사용자 시나리오 (Phase 3-C-3 이후):
+
+```
+A. 신규 등록 흐름 (autoRunVisual on, default):
+   1. PLANT 6 탭 채움 → "네이버 직접 등록" 클릭
+   2. local DB save + naver register 양쪽 성공
+   3. → 비주얼 탭 자동 활성화
+   4. → SequenceStatusBanner: "비주얼 자동화 진행 중..." (blue)
+   5. → diagnose ✓ → thumbnail ✓ → save ✓ → publish ✓ chip 순차 추가
+   6. → 배너 green: "비주얼 자동화 완료 — 모든 단계 성공"
+   7. 상품이 *콘텐츠까지 갖춘 채로* 스마트스토어에 노출
+
+B. 기존 상품 보강 흐름 (대시보드 골든윈도우):
+   1. 대시보드 → 골든윈도우 위젯의 D+1/D+3/D+7 row 클릭
+   2. → /products/new?edit=ID&focus=visual 직접 진입
+   3. → edit-mode useEffect로 savedProductId 자동 채워짐
+   4. → 비주얼 탭 자동 활성화 (?focus=visual + validTabs 매칭)
+   5. → 4 카드 수동 호출 (autorun off — 이미 등록된 상품이라 등록 재실행 없음)
+   6. → 디자이너가 상세/골격을 손봐서 publish 갱신
+
+C. autorun off 케이스:
+   - 토글 해제하고 등록 → 자동 흐름 차단, 비주얼 탭 unlock만
+   - 사용자가 본인 페이스로 카드 클릭
+```
+
+다음 = **Sprint 7-M2 Phase 2-c (lifestyle-picker 30일 cooldown)** — 썸네일 4 변형 중 lifestyle 변형의 background 자산 풀 관리. 같은 자산을 30일 안에 재사용 금지 + 카테고리/계절/감성톤 태그 매칭으로 적합 자산 선택. 또는 Sprint 8 자동발주 (Private API 28권한 보유, 매출 상승 시점 진입).
+
+Commit: `1daded2` feat(automation): Phase 3-C-3 — register-then-autorun + sequence chaining + golden-window deep-link
+Production deploy 검증: `scripts/verify-vercel-deploy.sh --wait` exit 0, prod is on 1daded2 ✅
 
 ---
 

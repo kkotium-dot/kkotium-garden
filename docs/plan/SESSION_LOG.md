@@ -1,3 +1,195 @@
+## 2026-05-15 Sprint 7-M2 Phase 3-C-3 — register-then-autorun + sequence + golden-window deep-link ✅
+
+### 본 세션 성격
+
+직전 Phase 3-C-2 (c1616c0 + d9256b2 docs) 사용자 검증 후 동일 흐름으로 진입. **Sprint 7-M2 Phase 3-C 3단계 sub-phase 트리오 완결**:
+
+- 3-C-1 (4aa14c7) — Studio 컴포넌트 9 파일 추출
+- 3-C-2 (c1616c0) — PLANT 7번째 탭에 마운트
+- 3-C-3 (1daded2) — 등록 → 자동 sequence + 대시보드 deep-link 완성
+
+이제 사용자가 *PLANT 등록 한 번*으로 콘텐츠 자동화까지 *수동 클릭 0회*로 종결 가능. 골든윈도우 위젯 클릭도 정확한 탭으로 진입.
+
+### 본 세션 산출물 (4 파일, +290/-43)
+
+| 파일 | 변경 | 역할 |
+|---|---|---|
+| `src/components/studio/useStudioActions.ts` | +186/-43 | 5 handler 결과 반환 형 refactor + override 파라미터 + 신규 runFullSequence |
+| `src/lib/i18n/studio-strings.ko.json` | +10 strings (95 → 105) | autoRun + sequence stage chip 라벨 |
+| `src/app/products/new/page.tsx` | +129/-1 (3641 → 3769 LOC) | autoRunVisual state + 토글 UI + handleNaverDirect 자동 활성화 + edit-mode unlock + PlantVisualInner autorun + SequenceStatusBanner |
+| `src/components/dashboard/GoldenWindowWidget.tsx` | +2/-1 | href에 `&focus=visual` 추가 |
+
+### useStudioActions refactor 핵심
+
+**Before** (Phase 3-C-1/2 기준):
+```typescript
+runDiagnose: () => Promise<void>; // setState만, 결과 반환 없음
+runThumbnail: () => Promise<void>;
+runDetail: () => Promise<void>;
+runSave: () => Promise<void>; // 내부적으로 thumbnails state 읽음
+runPublish: () => Promise<void>; // 내부적으로 save state 읽음
+```
+
+**After** (Phase 3-C-3):
+```typescript
+runDiagnose: () => Promise<DiagnosisResult | null>;
+runThumbnail: () => Promise<ThumbnailResult | null>;
+runDetail: () => Promise<DetailResult | null>;
+runSave: (overrides?: RunSaveOverrides) => Promise<SaveResult | null>;
+runPublish: (saveOverride?: SaveResult | null) => Promise<PublishResult | null>;
+runFullSequence: (opts?: RunFullSequenceOptions) => Promise<RunFullSequenceResult>;
+```
+
+호환성: 카드 컴포넌트의 `onRun: () => void` prop은 그대로 작동 — `Promise<X>`는 `Promise<void>`에 assignable (caller가 결과 무시).
+
+### runFullSequence 흐름
+
+```typescript
+async function runFullSequence(opts?: { hasNaverId?, withDetail? }): Promise<{ stages, error? }> {
+  const stages: string[] = [];
+  
+  // Stage 1: Diagnose
+  const diag = await runDiagnose();
+  if (!diag) return finish('diagnose failed');
+  stages.push('diagnose'); setSequenceStages([...stages]);
+  
+  // Stage 2: Thumbnail
+  const thumb = await runThumbnail();
+  if (!thumb) return finish('thumbnail failed');
+  stages.push('thumbnail'); setSequenceStages([...stages]);
+  
+  // Stage 3 (optional): Detail
+  let detailResult = null;
+  if (opts?.withDetail) {
+    detailResult = await runDetail();
+    if (!detailResult) return finish('detail failed');
+    stages.push('detail'); setSequenceStages([...stages]);
+  }
+  
+  // Stage 4: Save (overrides로 fresh data 전달)
+  const saved = await runSave({ thumbnails: thumb, detail: detailResult });
+  if (!saved) return finish('save failed');
+  stages.push('save'); setSequenceStages([...stages]);
+  
+  // Stage 5 (conditional): Publish
+  if (opts?.hasNaverId) {
+    const pub = await runPublish(saved);
+    if (!pub) return finish('publish failed');
+    stages.push('publish'); setSequenceStages([...stages]);
+  }
+  
+  return finish();
+}
+```
+
+### PlantVisualInner autorun 패턴
+
+```typescript
+const autorunRanRef = useRef<string | null>(null);
+useEffect(() => {
+  if (!autorun || !productId) return;
+  if (autorunRanRef.current === productId) return; // idempotent per productId
+  autorunRanRef.current = productId;
+  void actions.runFullSequence({ hasNaverId });
+}, [autorun, productId, hasNaverId]);
+```
+
+핵심: `autorunRanRef`로 productId당 1회만 발화. autorun=true에서 hasNaverId가 늦게 채워져도 sequence 재실행 없음.
+
+### 핵심 설계 결정
+
+1. **closure stale-state 해결 = handler 결과 반환 + override** — `await runDiagnose()` 후 `runSave()` 호출 시 setState가 commit되기 전 closure는 옛 thumbnails(null)를 봄. 결과를 *직접 반환*해서 sequence가 chain. runSave/runPublish는 override 파라미터로 fresh data 수용
+2. **detail은 autorun opt-out** — Sharp 무거운 합성 + 디자이너 1-click 교체 가치 → 자동화에서 기본 제외. `withDetail: true` 명시 시만 포함
+3. **publish는 hasNaverId 조건부** — 네이버 등록 실패해도 진단/썸네일/저장은 성공 (graceful degradation)
+4. **edit-mode 자동 unlock** — `?edit=ID` 진입 시 product.id를 savedProductId로 자동 set → 골든윈도우 deep-link 작동
+5. **i18n 분리 100%** — 신규 10 한글 string 모두 dict, PLANT/Widget 코드 inline 한글 0건
+6. **기존 카드 prop 호환 유지** — `onRun: () => void`는 그대로, hook handler가 더 풍부한 반환을 줘도 caller가 무시
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` OK — `/products/new` 62.5 kB (3641 → 3769 LOC + 토글 + 배너), `/studio` 3.73 kB (그대로) ✅
+- `python3 scripts/verify-korean-dict.py`: 99+178+105 strings, 0 replace/not_nfc/typo ✅
+- sentinel grep 0건 (4 파일 모두) ✅
+- 코드 inline 한글 주석 0건 (작업원칙 #29 c) ✅
+- production deploy: `scripts/verify-vercel-deploy.sh --wait` exit 0, prod is on 1daded2 ✅
+
+### Phase 3-C 트리오 완결 — 회고
+
+| Sub-phase | Commit | 핵심 변경 | LOC |
+|---|---|---|---|
+| 3-C-1 | 4aa14c7 | 9 신규 파일 추출, /studio 1068→250 (-77%), refactor only | +1059 |
+| 3-C-2 | c1616c0 | PLANT 7번째 탭 마운트, savedProductId state | +100/-3 |
+| 3-C-3 | 1daded2 | autorun + sequence + edit unlock + widget deep-link | +290/-43 |
+
+3 sub-phase 모두 *byte-identical 기존 흐름 보존*. /studio도, PLANT 6 탭도, 대시보드 골든윈도우 위젯의 시각/카드도 변경 없음. 새 진입점/wire-up만 *추가*했고 기존 손길은 0건.
+
+### Phase 3-C-3 사용자 시나리오 (3가지)
+
+```
+A. 신규 등록 → 자동 흐름 (autoRunVisual ON, default):
+   1. PLANT 6 탭 채움 → "네이버 직접 등록" 클릭
+   2. local DB save + naver register 둘 다 성공
+   3. → 비주얼 탭 자동 활성화
+   4. → SequenceStatusBanner: "비주얼 자동화 진행 중..." (blue)
+   5. → diagnose ✓ → thumbnail ✓ → save ✓ → publish ✓ chip 순차
+   6. → green: "비주얼 자동화 완료 — 모든 단계 성공"
+   7. 상품이 콘텐츠까지 갖춘 채로 스마트스토어 노출
+
+B. 기존 상품 보강 (대시보드 골든윈도우 click):
+   1. 대시보드 → 골든윈도우 위젯의 D+1/D+3/D+7 row 클릭
+   2. → /products/new?edit=ID&focus=visual 직진
+   3. → edit-mode useEffect로 savedProductId 자동 set
+   4. → 비주얼 탭 자동 활성화 (?focus=visual)
+   5. → 4 카드 수동 호출 (autorun 없음, 이미 등록 상품)
+   6. → 디자이너가 골격/상세 손봐서 publish 갱신
+
+C. autorun OFF (수동 흐름 보존):
+   1. 토글 해제 → 등록만 수행, 자동 sequence 차단
+   2. 비주얼 탭은 unlock 됨, 사용자가 본인 페이스로 카드 클릭
+```
+
+### 적용된 작업원칙
+
+- #17 commit msg via `.commit-msg.tmp` + `git commit -F` ✅
+- #21 STEP 0 환경 점검 통과 (HEAD d9256b2 == origin == prod)
+- #24 단일 commit + push 한 turn 안에 종료
+- #26 IA 점검 — Sidebar/대시보드 mount 변경 0, 위젯 시각 동일, PLANT 7th 탭 그대로
+- #27 외부 컨트랙트 보존 — API route 변경 0, hook return type 확장(assignable)만
+- #28 Vercel = source of truth ✅
+- #29 (a~e++) 한글 처리 — i18n 100% 분리, 코드 inline 0
+- #29 (b) MD 갱신 — Write + Python prepend 패턴
+- #31 SESSION_LOG ~914 + 본 entry ~190 = ~1104 (T1 1500 미달)
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #34 worktree 절대 경로 혼동 0회 ✅
+- #35 신규 한글 10 strings dict 추가만
+- #36 push 후 verify-vercel-deploy.sh --wait → exit 0, 1daded2 ✅
+- #38 production runtime static assets only — 신규 API call 0
+- #39 CTI inference entry point — autorun이 diagnose 첫 stage로 발화
+- #40 Designer Sense 보존 — autorun OFF 토글로 수동 흐름 선택 가능, detail은 기본 자동화 제외 (디자이너 1-click 교체 가치 보존), 골든윈도우 위젯이 ROI 양수 윈도우만 surface하므로 디자이너 시간이 집중되는 곳에 deep-link
+
+### 다음 = Sprint 7-M2 Phase 2-c (lifestyle-picker 30일 cooldown)
+
+본 phase로 *PLANT 안에서* 콘텐츠 자동화 트리오 완결. 다음 자연스러운 단계는:
+
+**옵션 1 (queued, sprint plan)**: Sprint 7-M2 Phase 2-c — lifestyle-picker
+- `src/lib/automation/lifestyle-picker.ts` 신규
+- 카테고리/계절/감성톤 태그 기반 lifestyle 자산 풀 매칭
+- 30일 cooldown — 같은 자산 30일 안에 재사용 금지
+- Prisma `LifestyleAsset` 모델 (id, url, tags[], lastUsedAt) — schema 추가 필요
+- thumbnail-generator의 lifestyle variant가 picker 호출 → 자산 결정
+
+**옵션 2 (event-driven)**: 사용자 첫 실 상품 등록 (현재 0건) — Phase 3-C-3 end-to-end 검증
+- 도매꾹 OpenAPI 또는 직접 입력으로 첫 상품 등록
+- autoRunVisual 흐름 실 production 검증
+- 발견된 paper-cut 즉시 수정
+
+**옵션 3 (Sprint 8 보류 트랙)**: 자동발주 — Private API 28권한 보유, 매출 상승 후 진입
+
+권고: 옵션 2 (실 상품 등록 검증) → 옵션 1 (lifestyle-picker)이 매출 우선순위. 그러나 사용자 결정 영역.
+
+---
+
 ## 2026-05-14 Sprint 7-M2 Phase 3-C-2 — PLANT 7번째 탭 통합 ✅
 
 ### 본 세션 성격
