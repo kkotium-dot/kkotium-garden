@@ -1,9 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-15 PM (Sprint 7-M2 Phase 3-C-3-h2 — thumbnail empty-outputs을 5xx로 surface, 첫 실 상품 등록 시도 전 안전망 강화)
+> 최종 업데이트: 2026-05-15 PM (Sprint 7-M2 Phase 2-c-1 — lifestyle-picker (30일 cooldown + ConceptTone tag matching) library + route 통합, asset seeding은 Phase 2-c-2 admin UI 대기)
 > 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
-> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (6fadf8b verified)
-> 다음 작업: 사용자 첫 실 상품 등록 (PLANT 6 탭 → "네이버 직접 등록 (API)" → autoRunVisual 자동 흐름 약 10-15초). 옵션 1/3은 등록 후 paper-cut 추가 hardening 또는 신규 sprint 진입 시 검토.
+> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (6646a31 verified)
+> 다음 작업: Sprint 7-M2 Phase 2-c-2 (lifestyle assets admin UI) — `/settings/lifestyle-assets` 페이지 + GET/POST/DELETE API. 사용자가 Phase 1 Claude Web 자산 드래그-드롭 + 태그 입력으로 picker 활성화. 또는 첫 실 상품 등록 (Phase 3-C autoRunVisual 검증).
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
@@ -11,6 +11,37 @@
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
 > **다음 작업**: **Sprint 7-M2 Phase 3-C-2** (PLANT /products/new 6→7 tab 확장 + 7번째 탭 "비주얼 자동화" 마운트 + savedProductId 컨텍스트 전달). 본 turn 완료: Phase 3-C-1 컴포넌트 추출 (refactor only) — `src/components/studio/` 9 신규 파일, `/studio/page.tsx` 1068→250 LOC (-77%), byte-identical markup. PLANT 통합이 import 1줄로 가능. /studio end-to-end 워크플로우 (Diagnosis → Thumbnail → Detail → Save → Naver Publish) 정상 작동, dedicated 27/27 100% 유지.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-15 PM Sprint 7-M2 Phase 2-c-1 — lifestyle-picker (30일 cooldown + ConceptTone tag matching)
+
+직전 Phase 3-C-3-h2 (3404c0a) 완료 후 사용자 "다음작업 진행" 자율 위임. ROADMAP queued sprint 중 **Phase 2-c lifestyle-picker** 진입. LifestyleAsset Prisma 모델 이미 설계됨 (DB rows=0) → picker library만 빌드하면 graceful fallback (자산 빈 상태에서 brand-color path 자동 활성화).
+
+본 turn 작업 (2 파일 +226/-1):
+
+- **`src/lib/automation/lifestyle-picker.ts`** (NEW, 148 LOC) — pure backend module:
+  - `pickLifestyleAsset(opts)` — 30일 cooldown + per-SKU 제외 + ConceptTone tag/moodTag overlap scoring
+  - `markLifestyleAssetUsed(assetId, sku)` — 별도 함수로 caller가 timing 제어 (lazy mark)
+  - Tag 매핑: tags=[persona, context, pricePosition, productType], moodTags=[colorMood, emotionalTone, photoStyle, genre]
+  - Score: overlap count, moodTags 1.5x weight (시각적 영향 큼)
+
+- **`src/app/api/thumbnail/[sku]/route.ts`** (+55/-1) — route-layer 통합:
+  - Picker 호출은 *route에서* 수행 → thumbnail-generator pure 보존
+  - `body.lifestyleBackdropUrl` 우선 (디자이너 manual override 보존)
+  - Picker 실패 non-fatal (console.warn + brand-color fallback)
+  - Lazy mark: outputs에 lifestyle variant 존재 시에만 markUsed
+  - Response field 추가: `lifestyleAssetId` (picker null 시 null)
+
+검증:
+- npx tsc --noEmit 0 errors ✅
+- npm run build OK (route 크기 변경 0) ✅
+- production smoke (rows=0 graceful fallback): outputs=4, lifestyleAssetId=None, lifestyle variant 47KB brand-color ✅
+
+Phase 2-c-2 (다음): asset seeding admin UI — `/settings/lifestyle-assets` 페이지 + GET/POST/DELETE API. 사용자가 Phase 1 Claude Web 세션에서 생성한 PNG/JPG 드래그-드롭 + 태그 입력 → 즉시 picker 활성화.
+
+Commit: `6646a31` feat(automation): Phase 2-c-1 — lifestyle-picker (30-day cooldown + ConceptTone tag matching)
+Production deploy 검증: `scripts/verify-vercel-deploy.sh --wait` exit 0, prod is on 6646a31 ✅
 
 ---
 

@@ -1,3 +1,95 @@
+## 2026-05-15 PM Sprint 7-M2 Phase 2-c-1 — lifestyle-picker (30일 cooldown + ConceptTone tag matching) ✅
+
+### 본 세션 성격
+
+직전 Phase 3-C-3-h2 (3404c0a) 완료 후 사용자 "다음작업 진행" 자율 위임. ROADMAP queued sprint 중 **Phase 2-c (lifestyle-picker)** 진입. LifestyleAsset Prisma 모델은 이미 정의되어 있고 DB rows=0 — picker library만 빌드하면 graceful fallback이라 안전한 진입점.
+
+### 본 세션 산출물 (1 commit, 2 파일 +226/-1)
+
+| 파일 | 변경 | 역할 |
+|---|---|---|
+| `src/lib/automation/lifestyle-picker.ts` | NEW (148 LOC) | `pickLifestyleAsset` + `markLifestyleAssetUsed` — 30일 cooldown + per-SKU 제외 + ConceptTone tag/moodTag overlap scoring |
+| `src/app/api/thumbnail/[sku]/route.ts` | +55/-1 | picker import + body.lifestyleBackdropUrl 미지정 시 picker 호출 + 성공 시 lazy mark |
+
+### Picker 설계
+
+**Inputs**:
+- `conceptTone` (Diagnosis 결과의 8축)
+- `productCategory` (loose match)
+- `sku` (per-SKU usedBySkus 추적)
+- `cooldownDays` (default 30, v3.1 FINAL spec)
+
+**Output**: `{ assetId, storageUrl, width, height, source, matchedTags, matchedMoodTags, matchScore } | null`
+
+**Logic**:
+1. Cooldown: `lastUsedAt IS NULL OR < cutoff`
+2. Per-SKU 제외: `sku NOT IN usedBySkus`
+3. Relevance OR: `tags overlap | moodTags overlap | category exact`
+4. Order by `lastUsedAt asc` (NULL first) + `createdAt desc`
+5. Score by overlap count (mood 1.5x weight — 시각적 영향 큼)
+
+**Tag 매핑** (ConceptTone → query tags):
+- `tags`: `[persona, context, pricePosition, productType]`
+- `moodTags`: `[colorMood, emotionalTone, photoStyle, genre]`
+
+### Route 통합 (정합성 우선)
+
+- Picker는 *route layer*에서 호출 → thumbnail-generator pure 보존 (DB 의존성 0)
+- `body.lifestyleBackdropUrl` 우선 (디자이너 manual override 보존)
+- Picker 실패는 **non-fatal** — `console.warn` + brand-color fallback (DB hiccup으로 전체 thumbnail render 차단 안 함)
+- **Lazy mark**: 생성 성공 + outputs에 lifestyle variant 존재 시에만 `markLifestyleAssetUsed` — Phase 3-C-3-h2의 partial-failure contract와 정합 (lifestyle만 실패해도 asset 보존)
+- 신규 response field: `lifestyleAssetId` (picker null 시 null)
+
+### Production smoke (LifestyleAsset rows=0 — graceful fallback)
+
+```
+outputs: 4
+errors: []
+lifestyleAssetId: None              ← picker returned null
+skeletonId: S6
+elapsedMs: 3287
+lifestyle variant rendered: base64_len=47796 (brand-color fallback)
+```
+
+자산 풀이 비어있어도 **기존 동작 100% 보존** — autoRunVisual 흐름 그대로 작동.
+
+### 자산 시딩 후 효과 (Phase 2-c-2 이후)
+
+자산 라이브러리에 row가 채워지면 picker 자동 활성화:
+- 같은 backdrop이 같은 상품에 재사용 안 됨 (per-SKU)
+- 같은 backdrop이 30일 안에 다른 상품에서도 안 보임 (cooldown)
+- ConceptTone tag matching으로 시각적 일관성 (warm minimal premium daily, vivid Korean kidsmom event 등)
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` OK (route 크기 변경 0) ✅
+- Production smoke graceful null fallback ✅
+- production deploy: `verify-vercel-deploy.sh --wait` exit 0, prod is on 6646a31 ✅
+
+### 적용된 작업원칙
+
+- #17 commit msg via `.commit-msg.tmp` + `git commit -F`
+- #21 STEP 0 환경 점검 통과 (HEAD 3404c0a == origin == prod)
+- #24 단일 commit + push 한 turn 안에 종료
+- #27 외부 컨트랙트 보존 — API response 추가 필드만 (`lifestyleAssetId`)
+- #28 Vercel = source of truth ✅
+- #32 push 전 TSC + npm run build ✅
+- #36 push 후 verify-vercel-deploy.sh --wait → exit 0, 6646a31 ✅
+- #38 production runtime never calls external image APIs (picker은 DB only)
+- #40 Designer Sense 보존 — body override가 picker auto보다 우선
+
+### 다음 = Phase 2-c-2 (asset seeding admin UI)
+
+Library는 ready, 자산만 채우면 작동. Phase 2-c-2:
+- `/settings/lifestyle-assets` 신규 페이지 (TOOLS 섹션)
+- API: GET (list) + POST (upload to Supabase Storage + DB row) + DELETE
+- 사용자가 Phase 1 Claude Web 세션에서 생성한 PNG/JPG를 드래그-드롭 + 태그 입력 → 즉시 사용 가능
+
+대안 — CLI seed 스크립트 (`scripts/seed-lifestyle-assets.ts` + JSON manifest)는 더 작은 scope이지만 long-term UX는 admin UI 우위.
+
+---
+
 ## 2026-05-15 PM Sprint 7-M2 Phase 3-C-3-h2 — thumbnail empty-outputs를 5xx로 surface ✅
 
 ### 본 세션 성격
