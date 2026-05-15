@@ -286,16 +286,43 @@ function MinQuantityWarningBanner({ minQuantity }: { minQuantity: number }) {
   );
 }
 
-// Sprint 7-M2 Phase 3-C-2 — Mounts the same Studio cards used in /studio
-// inside PLANT's 7th tab. Defined at module level so the hook isn't
+// Sprint 7-M2 Phase 3-C-2 / 3-C-3 — Mounts the same Studio cards used in
+// /studio inside PLANT's 7th tab. Defined at module level so the hook isn't
 // re-created on every PLANT render. Receives the saved DB id (gates the
-// whole tab) and the optional Naver product id (gates publish-assets).
-function PlantVisualInner({ productId, naverProductId }: { productId: string; naverProductId: string | null }) {
+// whole tab), the optional Naver product id (gates publish-assets), and
+// an `autorun` flag — when true, the sequence (diagnose → thumb → save
+// → publish) fires once on mount per productId. Sequence status is shown
+// inline above the cards so users see autorun progress in real time.
+function PlantVisualInner({
+  productId, naverProductId, autorun,
+}: {
+  productId: string;
+  naverProductId: string | null;
+  autorun: boolean;
+}) {
   const actions = useStudioActions(productId);
   const hasNaverId = !!naverProductId;
   const canPublish = actions.hasSavedAsset && hasNaverId && !actions.publishBusy;
+  // Track which productId already triggered autorun so prop/state changes
+  // don't re-fire the sequence (idempotent per productId).
+  const autorunRanRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!autorun || !productId) return;
+    if (autorunRanRef.current === productId) return;
+    autorunRanRef.current = productId;
+    void actions.runFullSequence({ hasNaverId });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autorun, productId, hasNaverId]);
+
   return (
     <div className="space-y-3">
+      {(actions.sequenceBusy || actions.sequenceStages.length > 0 || actions.sequenceError) && (
+        <SequenceStatusBanner
+          busy={actions.sequenceBusy}
+          stages={actions.sequenceStages}
+          error={actions.sequenceError}
+        />
+      )}
       <DiagnosisCard
         diagnosis={actions.diagnosis}
         busy={actions.diagBusy}
@@ -332,6 +359,59 @@ function PlantVisualInner({ productId, naverProductId }: { productId: string; na
         hasSavedAsset={actions.hasSavedAsset}
         hasNaverId={hasNaverId}
       />
+    </div>
+  );
+}
+
+// Phase 3-C-3 — banner shown above the 4 cards when an autorun sequence
+// is active, has stages completed, or surfaced an error.
+function SequenceStatusBanner({
+  busy, stages, error,
+}: {
+  busy: boolean;
+  stages: string[];
+  error: string | null;
+}) {
+  const stageLabel: Record<string, string> = {
+    diagnose: studioStrings.plantTab.autorunStageDiagnose,
+    thumbnail: studioStrings.plantTab.autorunStageThumbnail,
+    detail: studioStrings.plantTab.autorunStageDetail,
+    save: studioStrings.plantTab.autorunStageSave,
+    publish: studioStrings.plantTab.autorunStagePublish,
+  };
+  const tone = error
+    ? { bg: '#FEF2F2', border: '#FCA5A5', text: '#991B1B' }
+    : busy
+      ? { bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' }
+      : { bg: '#F0FDF4', border: '#BBF7D0', text: '#15803D' };
+  return (
+    <div style={{
+      padding: '10px 14px',
+      background: tone.bg,
+      border: `1px solid ${tone.border}`,
+      borderRadius: 12,
+      fontSize: 12,
+      color: tone.text,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      flexWrap: 'wrap',
+    }}>
+      <span style={{ fontWeight: 800 }}>
+        {error
+          ? `${studioStrings.plantTab.autorunFailed} ${error}`
+          : busy
+            ? studioStrings.plantTab.autorunRunning
+            : studioStrings.plantTab.autorunDone}
+      </span>
+      {stages.map((s) => (
+        <span key={s} style={{
+          background: '#FFFFFF', border: `1px solid ${tone.border}`,
+          padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700,
+        }}>
+          {stageLabel[s] ?? s} ✓
+        </span>
+      ))}
     </div>
   );
 }
@@ -435,6 +515,9 @@ function NewProductPageInner() {
   // savedProductId unlocks the visual tab; savedNaverProductId enables publish.
   const [savedProductId, setSavedProductId] = useState<string | null>(null);
   const [savedNaverProductId, setSavedNaverProductId] = useState<string | null>(null);
+  // Sprint 7-M2 Phase 3-C-3 — opt-in autorun: when true, registering on Naver
+  // immediately switches to the visual tab and runs the full sequence.
+  const [autoRunVisual, setAutoRunVisual] = useState(true);
 
   // Quick-add / edit modals for platform and supplier
   const PLATFORM_CODES_VALID = ['DMM', 'DMK', 'OWN', 'ETC'] as const;
@@ -856,6 +939,11 @@ function NewProductPageInner() {
       .then(d => {
         if (!d.success || !d.product) return;
         const p = d.product;
+        // Phase 3-C-3: edit-mode entry already has a saved product → unlock
+        // the visual tab immediately so dashboard golden-window deep-links
+        // (?edit=ID&focus=visual) land on a working tab.
+        setSavedProductId(p.id);
+        setSavedNaverProductId(p.naverProductId ?? null);
         if (p.name)          setProductName(p.name);
         if (p.salePrice)     setPrice(String(p.salePrice));
         if (p.supplierPrice) setSupplierPrice(String(p.supplierPrice ?? 0));
@@ -1221,6 +1309,11 @@ function NewProductPageInner() {
         setNaverResult({ ok: true, message: naverData.message });
         // Phase 3-C-2: capture naverProductId for publish-assets enablement.
         if (naverData.naverProductId) setSavedNaverProductId(String(naverData.naverProductId));
+        // Phase 3-C-3: opt-in autorun — jump to visual tab so PlantVisualInner
+        // mounts and runFullSequence fires once on mount.
+        if (autoRunVisual) {
+          setActiveTab('visual');
+        }
         setSuccess(true);
         setTimeout(() => setSuccess(false), 5000);
       } else {
@@ -3071,13 +3164,39 @@ const handleGenerate = async () => {
                   </p>
                 </div>
               ) : (
-                <PlantVisualInner productId={savedProductId} naverProductId={savedNaverProductId} />
+                <PlantVisualInner productId={savedProductId} naverProductId={savedNaverProductId} autorun={autoRunVisual} />
               )}
             </div>
             </>)}
 
 {/* 하단 버튼 */}
             <div className="pt-4 border-t border-gray-200 space-y-3">
+              {/* Sprint 7-M2 Phase 3-C-3 — autorun toggle */}
+              <label
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '8px 12px',
+                  background: autoRunVisual ? '#FFF5F7' : '#FAFAFA',
+                  border: `1px solid ${autoRunVisual ? '#FFB3CE' : '#E5E5E5'}`,
+                  borderRadius: 10,
+                  fontSize: 12, color: '#525252',
+                  cursor: 'pointer',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={autoRunVisual}
+                  onChange={(e) => setAutoRunVisual(e.target.checked)}
+                  style={{ accentColor: '#e62310', width: 16, height: 16 }}
+                />
+                <span style={{ fontWeight: 800, color: '#1A1A1A' }}>
+                  {studioStrings.plantTab.autoRunLabel}
+                </span>
+                <span style={{ fontSize: 11, color: '#7A6873' }}>
+                  · {studioStrings.plantTab.autoRunHint}
+                </span>
+              </label>
               <button
                 onClick={handleNaverDirect}
                 disabled={naverLoading}

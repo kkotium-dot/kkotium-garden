@@ -3,12 +3,15 @@
 // Sprint 7-M2 Phase 3-C-1 — Studio action state + fetch handlers extracted
 // from src/app/studio/page.tsx as a reusable hook.
 //
-// PLANT (Phase 3-C-2) will mount the same studio cards inside its 7th tab
-// and call this hook with the saved product id, getting identical behavior.
+// Sprint 7-M2 Phase 3-C-3 — handlers now return their result objects
+// (or null on failure) so runFullSequence can chain them by passing fresh
+// data through optional override parameters, sidestepping the React
+// closure problem (state updates aren't visible until the next render).
 //
-// Returns 11 state fields + 5 async handlers + 2 derived booleans. The
-// hook resets all state when `productId` changes so switching products
-// doesn't leak stale results.
+// PLANT (Phase 3-C-2/3) mounts the same studio cards inside its 7th tab
+// and calls this hook with the saved product id, getting identical
+// behavior. PLANT also calls runFullSequence on mount when the user opted
+// into "register-then-autorun".
 //
 // Notes:
 //   - `canPublish` is *not* returned because it depends on the caller's
@@ -16,6 +19,9 @@
 //       canPublish = hooks.hasSavedAsset && hasNaverId && !hooks.publishBusy
 //   - Handlers are no-op when productId is null (defensive against
 //     mid-render product changes).
+//   - Existing `onRun: () => void` props in the cards still accept the
+//     handlers since `() => Promise<X>` is assignable to `() => void`
+//     (the caller ignores the return).
 
 import { useEffect, useState } from 'react';
 import type {
@@ -27,6 +33,22 @@ import type {
   ThumbVariant,
   SkeletonIdLiteral,
 } from './types';
+
+export interface RunSaveOverrides {
+  thumbnails?: ThumbnailResult | null;
+  mainVariant?: ThumbVariant;
+  detail?: DetailResult | null;
+}
+
+export interface RunFullSequenceOptions {
+  hasNaverId?: boolean;
+  withDetail?: boolean;
+}
+
+export interface RunFullSequenceResult {
+  stages: string[];
+  error?: string;
+}
 
 export interface UseStudioActionsResult {
   // Diagnosis
@@ -56,12 +78,17 @@ export interface UseStudioActionsResult {
   // Derived
   canSave: boolean;
   hasSavedAsset: boolean;
-  // Handlers
-  runDiagnose: () => Promise<void>;
-  runThumbnail: () => Promise<void>;
-  runDetail: () => Promise<void>;
-  runSave: () => Promise<void>;
-  runPublish: () => Promise<void>;
+  // Sequence
+  sequenceBusy: boolean;
+  sequenceStages: string[];
+  sequenceError: string | null;
+  // Handlers — return their result so callers can chain (Phase 3-C-3)
+  runDiagnose: () => Promise<DiagnosisResult | null>;
+  runThumbnail: () => Promise<ThumbnailResult | null>;
+  runDetail: () => Promise<DetailResult | null>;
+  runSave: (overrides?: RunSaveOverrides) => Promise<SaveResult | null>;
+  runPublish: (saveOverride?: SaveResult | null) => Promise<PublishResult | null>;
+  runFullSequence: (opts?: RunFullSequenceOptions) => Promise<RunFullSequenceResult>;
 }
 
 export function useStudioActions(productId: string | null): UseStudioActionsResult {
@@ -92,6 +119,11 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
   const [publishBusy, setPublishBusy] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
 
+  // ── Sequence (Phase 3-C-3 autorun) ─────────────────────────────────────
+  const [sequenceBusy, setSequenceBusy] = useState(false);
+  const [sequenceStages, setSequenceStages] = useState<string[]>([]);
+  const [sequenceError, setSequenceError] = useState<string | null>(null);
+
   // ── Reset all state when productId changes ─────────────────────────────
   useEffect(() => {
     setDiagnosis(null);
@@ -105,12 +137,14 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
     setSaveError(null);
     setPublish(null);
     setPublishError(null);
+    setSequenceStages([]);
+    setSequenceError(null);
   }, [productId]);
 
   // ── Handlers ───────────────────────────────────────────────────────────
 
-  async function runDiagnose() {
-    if (!productId) return;
+  async function runDiagnose(): Promise<DiagnosisResult | null> {
+    if (!productId) return null;
     setDiagBusy(true);
     setDiagError(null);
     try {
@@ -121,16 +155,19 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      setDiagnosis(json as DiagnosisResult);
+      const result = json as DiagnosisResult;
+      setDiagnosis(result);
+      return result;
     } catch (err) {
       setDiagError(err instanceof Error ? err.message : String(err));
+      return null;
     } finally {
       setDiagBusy(false);
     }
   }
 
-  async function runThumbnail() {
-    if (!productId) return;
+  async function runThumbnail(): Promise<ThumbnailResult | null> {
+    if (!productId) return null;
     setThumbBusy(true);
     setThumbError(null);
     try {
@@ -141,16 +178,19 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      setThumbnails(json as ThumbnailResult);
+      const result = json as ThumbnailResult;
+      setThumbnails(result);
+      return result;
     } catch (err) {
       setThumbError(err instanceof Error ? err.message : String(err));
+      return null;
     } finally {
       setThumbBusy(false);
     }
   }
 
-  async function runDetail() {
-    if (!productId) return;
+  async function runDetail(): Promise<DetailResult | null> {
+    if (!productId) return null;
     setDetailBusy(true);
     setDetailError(null);
     try {
@@ -163,30 +203,39 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
       });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      setDetail(json as DetailResult);
+      const result = json as DetailResult;
+      setDetail(result);
+      return result;
     } catch (err) {
       setDetailError(err instanceof Error ? err.message : String(err));
+      return null;
     } finally {
       setDetailBusy(false);
     }
   }
 
-  async function runSave() {
-    if (!productId) return;
+  async function runSave(overrides?: RunSaveOverrides): Promise<SaveResult | null> {
+    if (!productId) return null;
     setSaveBusy(true);
     setSaveError(null);
     try {
+      // Phase 3-C-3: prefer overrides (fresh data from sequence) over state
+      // to avoid the React closure stale-read problem.
+      const thumbsToUse = overrides?.thumbnails !== undefined ? overrides.thumbnails : thumbnails;
+      const detailToUse = overrides?.detail !== undefined ? overrides.detail : detail;
+      const variantToUse = overrides?.mainVariant ?? mainVariant;
+
       const body: Record<string, string> = {};
-      if (thumbnails) {
-        const mainOutput = thumbnails.outputs.find((o) => o.variant === mainVariant);
+      if (thumbsToUse) {
+        const mainOutput = thumbsToUse.outputs.find((o) => o.variant === variantToUse);
         if (mainOutput) {
           body.thumbBase64 = mainOutput.base64;
-          body.thumbVariant = mainVariant;
+          body.thumbVariant = variantToUse;
         }
       }
-      if (detail) {
-        body.detailBase64 = detail.detailBase64;
-        body.skeletonId = detail.skeletonId;
+      if (detailToUse) {
+        body.detailBase64 = detailToUse.detailBase64;
+        body.skeletonId = detailToUse.skeletonId;
       }
       const res = await fetch(`/api/products/${productId}/save-assets`, {
         method: 'POST',
@@ -195,22 +244,27 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
       });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      setSave(json as SaveResult);
+      const result = json as SaveResult;
+      setSave(result);
+      return result;
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : String(err));
+      return null;
     } finally {
       setSaveBusy(false);
     }
   }
 
-  async function runPublish() {
-    if (!productId || !save) return;
+  async function runPublish(saveOverride?: SaveResult | null): Promise<PublishResult | null> {
+    if (!productId) return null;
+    const saveToUse = saveOverride !== undefined ? saveOverride : save;
+    if (!saveToUse) return null;
     setPublishBusy(true);
     setPublishError(null);
     try {
       const body: Record<string, string> = {};
-      if (save.thumbUrl) body.thumbUrl = save.thumbUrl;
-      if (save.detailUrl) body.detailUrl = save.detailUrl;
+      if (saveToUse.thumbUrl) body.thumbUrl = saveToUse.thumbUrl;
+      if (saveToUse.detailUrl) body.detailUrl = saveToUse.detailUrl;
       const res = await fetch(`/api/products/${productId}/publish-assets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -218,11 +272,72 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
       });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      setPublish(json as PublishResult);
+      const result = json as PublishResult;
+      setPublish(result);
+      return result;
     } catch (err) {
       setPublishError(err instanceof Error ? err.message : String(err));
+      return null;
     } finally {
       setPublishBusy(false);
+    }
+  }
+
+  // ── Sequence (Phase 3-C-3 autorun) ─────────────────────────────────────
+  // Chains diagnose → thumbnail → save → publish using returned values
+  // (not state reads, which would be stale due to React closure capture).
+  // detail is opt-in (heavy + customizable) — default off to keep autorun fast.
+  async function runFullSequence(opts?: RunFullSequenceOptions): Promise<RunFullSequenceResult> {
+    if (!productId) return { stages: [], error: 'no productId' };
+    setSequenceBusy(true);
+    setSequenceStages([]);
+    setSequenceError(null);
+    const stages: string[] = [];
+    const finish = (error?: string): RunFullSequenceResult => {
+      setSequenceStages(stages);
+      if (error) setSequenceError(error);
+      setSequenceBusy(false);
+      return { stages, error };
+    };
+    try {
+      // Stage 1: Diagnose
+      const diag = await runDiagnose();
+      if (!diag) return finish('diagnose failed');
+      stages.push('diagnose');
+      setSequenceStages([...stages]);
+
+      // Stage 2: Thumbnail
+      const thumb = await runThumbnail();
+      if (!thumb) return finish('thumbnail failed');
+      stages.push('thumbnail');
+      setSequenceStages([...stages]);
+
+      // Stage 3 (optional): Detail
+      let detailResult: DetailResult | null = null;
+      if (opts?.withDetail) {
+        detailResult = await runDetail();
+        if (!detailResult) return finish('detail failed');
+        stages.push('detail');
+        setSequenceStages([...stages]);
+      }
+
+      // Stage 4: Save (uses fresh thumb + optional detail via overrides)
+      const saved = await runSave({ thumbnails: thumb, detail: detailResult });
+      if (!saved) return finish('save failed');
+      stages.push('save');
+      setSequenceStages([...stages]);
+
+      // Stage 5 (conditional): Publish — only when caller confirms naver id
+      if (opts?.hasNaverId) {
+        const pub = await runPublish(saved);
+        if (!pub) return finish('publish failed');
+        stages.push('publish');
+        setSequenceStages([...stages]);
+      }
+
+      return finish();
+    } catch (err) {
+      return finish(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -237,6 +352,7 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
     save, saveBusy, saveError,
     publish, publishBusy, publishError,
     canSave, hasSavedAsset,
-    runDiagnose, runThumbnail, runDetail, runSave, runPublish,
+    sequenceBusy, sequenceStages, sequenceError,
+    runDiagnose, runThumbnail, runDetail, runSave, runPublish, runFullSequence,
   };
 }

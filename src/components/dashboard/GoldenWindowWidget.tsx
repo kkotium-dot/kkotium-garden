@@ -84,7 +84,9 @@ function GoldenRow({ row }: { row: GoldenWindowRow }) {
     ? `${row.productName.slice(0, 26)}…`
     : row.productName;
 
-  const href = row.productId ? `/products/new?edit=${row.productId}` : '/products';
+  // Phase 3-C-3: deep-link to PLANT visual tab so users can run content
+  // automation directly from the golden-window widget click.
+  const href = row.productId ? `/products/new?edit=${row.productId}&focus=visual` : '/products';
 
   return (
     <Link href={href} style={{ textDecoration: 'none', display: 'block' }} title={row.message}>
