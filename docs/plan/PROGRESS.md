@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-15 (Sprint 7-M2 Phase 3-C-3-h — Cloudinary fetch 우회 hardening + production smoke 4/4 통과, 첫 실 상품 등록 준비 완료)
+> 최종 업데이트: 2026-05-15 PM (Sprint 7-M2 Phase 3-C-3-h2 — thumbnail empty-outputs을 5xx로 surface, 첫 실 상품 등록 시도 전 안전망 강화)
 > 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
-> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (c789e36 verified)
+> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (6fadf8b verified)
 > 다음 작업: 사용자 첫 실 상품 등록 (PLANT 6 탭 → "네이버 직접 등록 (API)" → autoRunVisual 자동 흐름 약 10-15초). 옵션 1/3은 등록 후 paper-cut 추가 hardening 또는 신규 sprint 진입 시 검토.
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅

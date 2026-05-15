@@ -1,3 +1,49 @@
+## 2026-05-15 PM Sprint 7-M2 Phase 3-C-3-h2 — thumbnail empty-outputs를 5xx로 surface ✅
+
+### 본 세션 성격
+
+직전 Phase 3-C-3-h (c789e36) Cloudinary 우회 fix + 12f91f0 docs 직후 사용자 "이어서 진행". *동일 paper-cut의 구조적 후속*: thumbnail-generator의 silent-fail 패턴 자체를 수정해서 향후 image pipeline 회귀 시 정확한 layer에서 명확한 에러로 surface. 첫 실 상품 등록 시도 *전에* 추가 안전망.
+
+### 본 세션 산출물 (1 commit, 2 파일 +26)
+
+| 파일 | 변경 | 역할 |
+|---|---|---|
+| `src/lib/automation/thumbnail-generator.ts` | +19/-3 | `ThumbnailVariantError` 신규 + result에 `errors[]` 노출 + `outputs.length === 0 && variants.length > 0` 시 throw (route catch가 500 변환) |
+| `src/app/api/thumbnail/[sku]/route.ts` | +5/-1 | response payload에 `errors` 필드 추가 (partial-failure 가시화) |
+
+### 변경 의도
+
+Phase 3-C-3-h (오전)에서 발견한 Cloudinary 401은 모든 variant가 실패했음에도 HTTP 200 + `outputs:[]` 반환 → autoRunVisual sequence가 그 다음 단계에서 "save failed" 같은 *misleading* 에러로 종결됐음. 본 phase로:
+
+1. **전부 실패 케이스**: 5xx + structured detail (per-variant error message 모두 합쳐서 throw)
+2. **부분 성공 케이스**: 200 + outputs[] + errors[] (기존 동작 보존, 가시화 추가)
+
+이로써 SequenceStatusBanner red banner가 *진짜 root cause*("all 4 thumbnail variants failed (clean: ...)")를 즉시 surface. autoRunVisual chain 디버깅 시간 단축.
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` OK (route 크기 변경 0) ✅
+- production smoke (happy path): outputs=4, errors=[], skeletonId=S6, 3.0s ✅
+- production deploy: `verify-vercel-deploy.sh --wait` exit 0, prod is on 6fadf8b ✅
+
+### 적용된 작업원칙
+
+- #17 commit msg via `.commit-msg.tmp` + `git commit -F` (auto-mode classifier가 chained commit 차단 → 분리된 step으로 진행)
+- #21 STEP 0 환경 점검 통과 (HEAD 12f91f0 == origin == prod)
+- #24 단일 commit + push 한 turn 안에 종료
+- #27 외부 컨트랙트 보존 — outputs[] field 동일, errors[]는 *additive*
+- #28 Vercel = source of truth ✅
+- #32 push 전 TSC + npm run build 의무 통과 ✅
+- #36 push 후 verify-vercel-deploy.sh --wait → exit 0, 6fadf8b ✅
+- #38 production runtime never calls external image APIs (h2도 동일)
+
+### 다음 = 사용자 첫 실 상품 등록 (변동 없음)
+
+Phase 3-C-3-h2는 *방어 layer 강화*. ROADMAP active 메시지 (Phase 3-C-3-h ACTIVE)는 그대로 유효 — 사용자가 PLANT에서 등록 클릭하면 자동 흐름 + 더 명확한 에러 surface 보장.
+
+---
+
 ## 2026-05-15 Sprint 7-M2 Phase 3-C-3-h — production smoke + Cloudinary fetch 우회 hardening ✅
 
 ### 본 세션 성격
