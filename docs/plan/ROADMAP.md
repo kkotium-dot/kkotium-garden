@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-15 Sprint 7-M2 Phase 3-C-3 — register-then-autorun + sequence + golden-window deep-link (1daded2, production verified)
-> **HEAD**: 1daded2 (origin/main, production verified) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-15 PM Phase 3-C-3-h — Cloudinary 우회 hardening + production smoke 4/4 통과 (c789e36, production verified)
+> **HEAD**: c789e36 (origin/main, production verified) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
@@ -14,6 +14,66 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
+## 다음 새 채팅 시작 메시지 — 2026-05-15 PM (Phase 3-C-3-h hardening 완료, 첫 실 상품 등록 대기) ⭐ ACTIVE
+
+본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
+
+```
+꽃틔움 가든 개발 이어서 진행합니다. docs/plan/PROGRESS.md, ROADMAP.md,
+SESSION_LOG.md, SPRINT_PLAN.md, PRINCIPLES_LEARNED.md를 모두 읽고
+docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md 정독 후
+현재 상태를 파악한 후 브리핑해주세요.
+
+직전 작업 = Sprint 7-M2 Phase 3-C-3 + 3-C-3-h 완료 (production 검증):
+- Phase 3-C-3 (1daded2) — register-then-autorun + sequence chaining +
+  golden-window deep-link
+- Phase 3-C-3-h (c789e36) — Cloudinary fetch 차단 paper-cut 발견 →
+  Sharp 직접 resize로 수정 (3 파일 +17/-14)
+- production smoke 4 stages 모두 200 (diagnose 0.7s + thumbnail 4.8s +
+  generate-detail 5.2s + save-assets 1.7s)
+- TSC 0, build OK, sentinel 0, dict 99+178+105 통과
+- production deploy: c789e36 verified ✅
+
+본 세션 진입 작업 = 사용자 첫 실 상품 등록 결과 확인 + 다음 분기
+
+STEP 0 — 환경 점검 (작업원칙 #21)
+  직전 commit이 main 머지/배포됐는지 verify-vercel-deploy.sh로 확인.
+
+STEP 1 — 사용자 첫 실 상품 등록 결과 청취:
+
+  케이스 A — 등록 + autoRunVisual 자동 흐름 성공:
+    - SequenceStatusBanner green "비주얼 자동화 완료" 확인
+    - 스마트스토어에서 thumbnail/detail 노출 확인
+    - 7일 골든윈도우 카운트다운 위젯 작동 확인
+    - 다음: Phase 2-c (lifestyle-picker) 또는 신규 sprint 진입
+
+  케이스 B — 등록 도중 paper-cut 발견:
+    - 사용자가 발견한 증상 청취 (Banner red? UI freeze?
+      특정 카드 disabled? Naver 등록 자체 실패?)
+    - Vercel runtime logs로 root cause 진단
+    - 즉시 hotfix → re-deploy → 재시도
+
+  케이스 C — 등록 자체 미진행:
+    - 사용자 일정/우선순위에 따라 Phase 2-c (lifestyle-picker)
+      또는 Sprint 8 자동발주 진입
+
+진입 전 확인:
+- 5 plan MD 정독 + SMART_ASSET_WORKFLOW 정독
+- 직전 commit (c789e36) main 도달 + production 200 확인
+- SESSION_LOG.md ~1246줄 추정 (T1 1500 미달, 안전)
+- 실 도매꾹 상품 (cmp3afb450001gng5468w0qpc, 도어벨)에 이미 Diagnosis +
+  thumb + detail Supabase URLs 발행됨 — 사용자가 본 상품 등록 시
+  publish-assets만 추가 호출되어 빠른 갱신 가능
+
+다음 = 케이스에 따라 분기
+
+작업원칙 절대 준수 — 평소와 동일. main 직접 push 정책 차단 시 fast-forward
+merge 사용자 위임.
+```
+
+
+---
+
 ## 다음 새 채팅 시작 메시지 — 2026-05-15 (Sprint 7-M2 Phase 2-c — lifestyle-picker 30일 cooldown) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
