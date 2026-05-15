@@ -1,3 +1,130 @@
+## 2026-05-15 PM Sprint 7-M2 Phase 2-c-2 — lifestyle assets admin UI (CRUD + Sidebar entry) ✅
+
+### 본 세션 성격
+
+직전 Phase 2-c-1 (6646a31 + fc8a62e docs) 완료 후 사용자 "다음작업 진행" 자율 위임. **Phase 2-c trio의 두 번째 단계** — picker library는 ready지만 자산 풀 비어있어 무용지물. 본 phase로 사용자가 Phase 1 Claude Web 세션에서 생성한 PNG/JPG/WebP를 admin UI로 등록하면 picker가 즉시 활성화되는 *실제 사용 시작점*.
+
+### 본 세션 산출물 (1 commit, 7 파일 +714/-6)
+
+| 파일 | 변경 | 역할 |
+|---|---|---|
+| `src/lib/storage/automation-storage.ts` | +74 | `uploadLifestyleAsset` + `deleteLifestyleAsset` 헬퍼 (product-assets/lifestyle/{id}.{ext} prefix) |
+| `src/app/api/lifestyle-assets/route.ts` | NEW (165 LOC) | GET (list) + POST (multipart upload + Sharp metadata + DB insert + rollback) |
+| `src/app/api/lifestyle-assets/[id]/route.ts` | NEW (60 LOC) | DELETE (storage cleanup + DB row 제거) |
+| `src/lib/i18n/lifestyle-assets-strings.ko.json` | NEW (46 strings) | page / stats / upload / list / errors |
+| `src/app/settings/lifestyle-assets/page.tsx` | NEW (305 LOC) | 2-col layout: 좌 upload form 380px + 우 asset 카드 grid (auto-fill 280px min) |
+| `src/components/layout/Sidebar.tsx` | +5/-2 | TOOLS 섹션에 "라이프 자산" entry + Images icon |
+| `scripts/verify-korean-dict.py` | +1 | DEFAULTS에 lifestyle-assets-strings.ko.json 추가 |
+
+### Storage 패턴
+
+같은 `product-assets` bucket 사용 + path prefix로 분리:
+```
+product-assets/
+  {productId}/         ← 자동화 산출물 (썸네일/상세, Phase 3-A)
+    thumb-{variant}-{ts}.png
+    detail-{skeleton}-{ts}.png
+  lifestyle/           ← 라이프스타일 자산 풀 (본 phase)
+    {assetId}.{ext}
+```
+
+장점: 단일 bucket = 단일 RLS + lifecycle policy. Path prefix가 audit log 깔끔.
+
+### API 흐름
+
+**POST /api/lifestyle-assets** (multipart/form-data):
+1. Parse formData (file + category + tags + moodTags + source + licenseUrl)
+2. File 검증: 10MiB 이하, image/png|jpeg|webp만 허용
+3. Sharp metadata로 width/height 측정 (실패 시 400)
+4. cuid 사전 할당 (`la-{uuid24}`) — storage path와 DB primary key 1:1
+5. Supabase Storage upload
+6. Prisma INSERT (실패 시 storage object best-effort rollback)
+7. Return created row (201)
+
+**DELETE /api/lifestyle-assets/[id]**:
+1. publicUrl에서 storage path 추출 (deterministic parser)
+2. Storage delete (best-effort, 실패해도 진행)
+3. DB row 제거
+
+### 페이지 디자인
+
+- **Stats chips** (총 / 사용 가능 / cooldown 중) — 한눈에 현황 파악
+- **Upload form** (좌, 380px): file picker + 6 fields + busy/success/error 상태 표시
+- **Asset grid** (우, auto-fill 280px+): 16:9 thumbnail (next/image unoptimized for Supabase URLs) + category badge + cooldown 상태 (green "사용 가능" / orange "cooldown 중") + tags / moodTags / source / dimensions / lastUsed / usedBySkus count + delete 버튼 (window.confirm guard)
+- **Empty state**: 핑크 카드 + "첫 자산을 업로드하면 picker가 즉시 활성화됩니다" 안내
+
+### Sidebar 통합
+
+- TOOLS 섹션 6번째 entry: `라이프 자산` → `/settings/lifestyle-assets`
+- 신규 lucide `Images` icon import + `'images'` iconKey case
+- 기존 5 entries 들여쓰기 정렬 위해 whitespace 조정 (실 기능 변경 0)
+
+### Production smoke
+
+- `GET /api/lifestyle-assets` → HTTP 200, `{ assets: [] }` (DB rows=0) ✅
+- `/settings/lifestyle-assets` → HTTP 200 (페이지 정상 빌드 + 렌더) ✅
+
+### Phase 2-c trio 완결 회고
+
+| Sub-phase | Commit | LOC | 역할 |
+|---|---|---|---|
+| 2-c-1 | 6646a31 | +226/-1 | picker library + route 통합 + lazy mark |
+| 2-c-2 | a0cdb05 | +714/-6 | admin UI + CRUD API + Sidebar entry |
+| 2-c-3 | 미정 | n/a | (선택) 벌크 import + 태그 추천 + 디자이너 큐레이션 정책 |
+
+본 trio로 *lifestyle 변형의 시각적 다양성*이 무한 확장 가능한 상태:
+- 사용자가 Phase 1 Claude Web 세션에서 Adobe Firefly로 brand-aligned backdrop 100건 생성
+- admin UI로 일괄 업로드 (각 ~30초)
+- 다음 thumbnail 호출부터 picker가 ConceptTone 매칭 + 30일 cooldown 자동 적용
+- 같은 backdrop이 같은 상품에 안 보임 (per-SKU) + 30일 cycle 보장 (cooldown)
+- 결과: lifestyle 썸네일이 매번 신선해 보임, 매출 회복
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors ✅
+- `npm run build` OK:
+  - `/api/lifestyle-assets` ƒ Dynamic
+  - `/api/lifestyle-assets/[id]` ƒ Dynamic
+  - `/settings/lifestyle-assets` ○ Static 5.28 kB
+- `python3 scripts/verify-korean-dict.py`: 99+178+105+46 strings, 0 typo ✅
+- sentinel grep clean (5 신규/수정 파일) ✅
+- production smoke API + 페이지 모두 200 ✅
+- production deploy: `verify-vercel-deploy.sh --wait` exit 0, prod is on a0cdb05 ✅
+
+### 적용된 작업원칙
+
+- #17 commit msg via `.commit-msg.tmp` + `git commit -F`
+- #21 STEP 0 사전 점검 통과
+- #24 단일 commit + push 한 turn 안에 종료 (atomic feature delivery)
+- #26 IA: 신규 TOOLS entry가 기존 `/settings/*` 패턴 따름
+- #27 외부 컨트랙트: 신규 endpoints만, 기존 동작 0 변경
+- #28 Vercel = source of truth ✅
+- #29 (a~c) 한글 처리 — i18n 100% 분리, 코드 inline 한글 0건
+- #29 (b) MD 갱신은 다음 commit에서 Write 패턴
+- #32 push 전 TSC + npm run build ✅
+- #35 신규 46 strings 모두 dict 파일에 추가 + 검증 (inline fallback 0)
+- #36 push 후 verify-vercel-deploy.sh --wait → exit 0, a0cdb05 ✅
+- #38 production runtime never calls external image APIs (Sharp metadata는 local, Supabase Storage는 정적 자산)
+- #40 Designer Sense — tags가 사용자 정의 (auto-derive 안 함). 디자이너가 "이 backdrop은 어떤 ConceptTone permutation에 매칭"을 직접 결정
+
+### 다음 = 사용자 첫 실 상품 등록 + lifestyle 자산 시딩 (병행)
+
+본 세션으로 *Phase 2-c trio 완결*. 다음 자연스러운 단계 (병행 가능):
+
+**A. 첫 실 상품 등록** (ROADMAP active 메시지 그대로): PLANT 6 탭 → "네이버 직접 등록" → autoRunVisual 자동 흐름 검증
+
+**B. lifestyle 자산 시딩**: Phase 1 Claude Web 세션에서 Adobe Firefly로 brand-aligned backdrop 생성 → admin UI 업로드. 첫 자산 1건만 있어도 picker가 lifestyle 변형의 backdrop으로 즉시 사용 시작
+
+A와 B는 *독립적*이라 사용자가 어느 것부터 해도 무방. 권고: A 먼저 (autoRunVisual 흐름 검증) → B (brand 시각 향상).
+
+### 파생 옵션 (대안)
+
+- **Sprint 7-M3** — 운영 메트릭 대시보드 (autorun 성공률 + golden window conversion + lifestyle picker hit rate)
+- **Phase 2-c-3** — admin UI 강화 (벌크 zip 업로드 + EXIF 기반 자동 태그 추천 + 디자이너 큐레이션 정책)
+- **Sprint 8** — 자동발주 (Private API 28권한 보유, 매출 상승 후 보류 트랙)
+
+---
+
 ## 2026-05-15 PM Sprint 7-M2 Phase 2-c-1 — lifestyle-picker (30일 cooldown + ConceptTone tag matching) ✅
 
 ### 본 세션 성격

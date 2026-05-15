@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-15 PM Phase 2-c-1 — lifestyle-picker (30일 cooldown) + route 통합 (6646a31, production verified)
-> **HEAD**: 6646a31 (origin/main, production verified) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-15 PM Phase 2-c-2 — lifestyle assets admin UI + Phase 2-c trio 완결 (a0cdb05, production verified)
+> **HEAD**: a0cdb05 (origin/main, production verified) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)

@@ -1,9 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-15 PM (Sprint 7-M2 Phase 2-c-1 — lifestyle-picker (30일 cooldown + ConceptTone tag matching) library + route 통합, asset seeding은 Phase 2-c-2 admin UI 대기)
+> 최종 업데이트: 2026-05-15 PM (Sprint 7-M2 Phase 2-c-2 — lifestyle assets admin UI (CRUD + Sidebar entry), Phase 2-c trio 완결)
 > 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
-> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (6646a31 verified)
-> 다음 작업: Sprint 7-M2 Phase 2-c-2 (lifestyle assets admin UI) — `/settings/lifestyle-assets` 페이지 + GET/POST/DELETE API. 사용자가 Phase 1 Claude Web 자산 드래그-드롭 + 태그 입력으로 picker 활성화. 또는 첫 실 상품 등록 (Phase 3-C autoRunVisual 검증).
+> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (a0cdb05 verified)
+> 다음 작업: 병행 가능 — A) 첫 실 상품 등록 (autoRunVisual 검증), B) lifestyle 자산 시딩 (admin UI에서 Phase 1 Claude Web Firefly 결과물 업로드). 또는 Sprint 7-M3 (운영 메트릭) / Phase 2-c-3 (벌크 import) / Sprint 8 (자동발주).
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
@@ -11,6 +11,41 @@
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
 > **다음 작업**: **Sprint 7-M2 Phase 3-C-2** (PLANT /products/new 6→7 tab 확장 + 7번째 탭 "비주얼 자동화" 마운트 + savedProductId 컨텍스트 전달). 본 turn 완료: Phase 3-C-1 컴포넌트 추출 (refactor only) — `src/components/studio/` 9 신규 파일, `/studio/page.tsx` 1068→250 LOC (-77%), byte-identical markup. PLANT 통합이 import 1줄로 가능. /studio end-to-end 워크플로우 (Diagnosis → Thumbnail → Detail → Save → Naver Publish) 정상 작동, dedicated 27/27 100% 유지.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-15 PM Sprint 7-M2 Phase 2-c-2 — lifestyle assets admin UI (CRUD + Sidebar entry)
+
+직전 Phase 2-c-1 (6646a31 + fc8a62e docs) 완료 후 사용자 "다음작업 진행" 자율 위임. **Phase 2-c trio 완결** — picker library (2-c-1) + admin UI (본 phase) → 사용자가 Phase 1 Claude Web Firefly export 등을 즉시 등록 가능.
+
+본 turn 작업 (7 파일 +714/-6):
+
+- **`src/lib/storage/automation-storage.ts`** (+74) — `uploadLifestyleAsset` + `deleteLifestyleAsset` 헬퍼. 같은 `product-assets` bucket + `lifestyle/{assetId}.{ext}` prefix
+- **`src/app/api/lifestyle-assets/route.ts`** (NEW, 165 LOC) — GET (list 200) + POST (multipart upload + Sharp metadata + DB insert + rollback on DB failure)
+- **`src/app/api/lifestyle-assets/[id]/route.ts`** (NEW, 60 LOC) — DELETE (storage cleanup best-effort + DB row 제거)
+- **`src/lib/i18n/lifestyle-assets-strings.ko.json`** (NEW, 46 strings) — page/stats/upload/list/errors
+- **`src/app/settings/lifestyle-assets/page.tsx`** (NEW, 305 LOC) — 2-col layout (좌 upload form 380px + 우 16:9 카드 grid 280px+), stats chips, cooldown 상태 표시, delete with confirm guard
+- **`src/components/layout/Sidebar.tsx`** (+5/-2) — TOOLS 섹션 6번째 entry "라이프 자산" + Images icon
+- **`scripts/verify-korean-dict.py`** (+1) — DEFAULTS에 lifestyle-assets-strings.ko.json 추가
+
+검증:
+- npx tsc --noEmit 0 errors ✅
+- npm run build OK (`/api/lifestyle-assets` × 2 dynamic + `/settings/lifestyle-assets` static 5.28 kB) ✅
+- dict 99+178+105+46 strings, 0 typo ✅
+- sentinel grep 0건 ✅
+- production smoke: GET /api/lifestyle-assets 200 (assets:[]) + /settings/lifestyle-assets 200 ✅
+
+Phase 2-c trio 완결 회고:
+- 2-c-1 (6646a31) — picker library + route 통합
+- 2-c-2 (a0cdb05) — admin UI + CRUD API
+- 2-c-3 (미정) — (선택) 벌크 import + 태그 추천
+
+다음 (병행 가능):
+- **A. 첫 실 상품 등록** (autoRunVisual 검증) — ROADMAP active 그대로
+- **B. lifestyle 자산 시딩** (Phase 1 Claude Web Firefly → admin UI 업로드) — 첫 자산 1건만 있어도 picker 활성화
+
+Commit: `a0cdb05` feat(automation): Phase 2-c-2 — lifestyle assets admin UI (CRUD + Sidebar entry)
+Production deploy 검증: `scripts/verify-vercel-deploy.sh --wait` exit 0, prod is on a0cdb05 ✅
 
 ---
 
