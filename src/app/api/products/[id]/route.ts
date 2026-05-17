@@ -158,6 +158,7 @@ export async function GET(
       include: {
         supplier: true,
         user: { select: { id: true, name: true, email: true } },
+        diagnosis: true,
       },
     });
     if (!product) {

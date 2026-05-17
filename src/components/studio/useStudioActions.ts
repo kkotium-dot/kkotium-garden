@@ -124,7 +124,7 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
   const [sequenceStages, setSequenceStages] = useState<string[]>([]);
   const [sequenceError, setSequenceError] = useState<string | null>(null);
 
-  // ── Reset all state when productId changes ─────────────────────────────
+  // ── Reset all state on productId change, then hydrate from DB ──────────
   useEffect(() => {
     setDiagnosis(null);
     setDiagError(null);
@@ -139,6 +139,32 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
     setPublishError(null);
     setSequenceStages([]);
     setSequenceError(null);
+
+    if (!productId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/products/${productId}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data?.product) return;
+
+        const dbDiagnosis = data.product.diagnosis;
+        if (dbDiagnosis) {
+          setDiagnosis(dbDiagnosis as DiagnosisResult);
+          if (dbDiagnosis.skeletonId) {
+            setOverrideSkeletonId(dbDiagnosis.skeletonId);
+          }
+        }
+      } catch (err) {
+        console.error('[useStudioActions hydration] failed:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [productId]);
 
   // ── Handlers ───────────────────────────────────────────────────────────
