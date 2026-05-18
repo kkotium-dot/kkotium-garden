@@ -28,6 +28,24 @@ function getDepth3List(d1: string, d2: string): string[] {
 function getDepth4List(d1: string, d2: string, d3: string): string[] {
   return Array.from(new Set(NAVER_CATEGORIES_FULL.filter(c => c.d1 === d1 && c.d2 === d2 && c.d3 === d3).map(c => c.d4).filter(Boolean))).sort();
 }
+// PC-B-2 P15: keyword-based option group name derivation. Conservative
+// 8-rule starter list — productName matches one rule -> use that label.
+// Returns '옵션' as fallback (matches the previous hardcoded behaviour).
+// Future PC-D may replace this with a crawler-supplied optionGroupName
+// field or a category-keyed dictionary.
+function deriveOptionGroupName(productName: string): string {
+  const n = productName;
+  if (/디퓨[저져]|향초|캔들|방향제|아로마/.test(n)) return '향';
+  if (/원피스|블라우스|티셔츠|셔츠|치마|스커트|바지|레깅스|점퍼|재킷|코트|니트/.test(n)) return '사이즈/색상';
+  if (/운동화|구두|샌들|슬리퍼|부츠|로퍼/.test(n)) return '사이즈';
+  if (/가방|백팩|토트백|크로스백|숄더백|에코백/.test(n)) return '색상';
+  if (/베개|이불|쿠션|침대|매트리스|침구/.test(n)) return '사이즈/색상';
+  if (/머그|텀블러|보온병|물병|와인잔/.test(n)) return '용량/색상';
+  if (/마스크팩|크림|로션|에센스|세럼|선크림/.test(n)) return '용량';
+  if (/액자|포스터|월데코/.test(n)) return '사이즈';
+  return '옵션';
+}
+
 function getCategoryId(d1: string, d2: string, d3: string, d4: string): string {
   // PC-A hotfix RC1: when caller provides no d4, accept any d4 (3-depth fallback)
   // instead of requiring an empty-d4 entry. Many d3 levels (~70%) only have
@@ -842,7 +860,10 @@ function NewProductPageInner() {
         console.info('[prefill] options', { raw: rawCount, clean: cleanOpts.length, values: cleanOpts });
         if (cleanOpts.length > 0) {
           setOptionType('SINGLE');
-          setOptionNames(['옵션']);
+          // PC-B-2 P15: derive a more specific group name from productName
+          // (e.g. '향' for diffusers, '사이즈/색상' for clothing). Falls back
+          // to '옵션' when no keyword rule matches — same as previous behaviour.
+          setOptionNames([deriveOptionGroupName(data.productName ?? '')]);
           // Set the comma-separated input (used by the text input field)
           setOptionValueInputs([cleanOpts.join(',')]);
           // Also directly populate optionRows so the table shows immediately
@@ -981,6 +1002,26 @@ function NewProductPageInner() {
               shipFee: data.crawlShipFee ?? undefined,
               canMerge: data.crawlCanMerge ?? undefined,
             });
+            // PC-B-2 P17: supplier-not-found fallback — derive shipping basics
+            // from crawl data so the shipping tab is not blank. Uses the same
+            // rule the matched-template branch uses (free at 25k+, conditional
+            // at 10k+, paid otherwise).
+            const fee = Number(data.crawlShipFee) || 0;
+            const sale = Number(data.salePrice) || 0;
+            if (fee === 0) {
+              setDeliveryFeeType('무료');
+              setBasicDeliveryFee('0');
+            } else if (sale >= 25000) {
+              setDeliveryFeeType('무료');
+              setBasicDeliveryFee('0');
+            } else if (sale >= 10000) {
+              setDeliveryFeeType('조건부무료');
+              setBasicDeliveryFee(String(fee));
+              setConditionalFreeAmount('30000');
+            } else {
+              setDeliveryFeeType('유료');
+              setBasicDeliveryFee(String(fee));
+            }
           }
         })
         .catch(() => { /* non-critical — ignore */ });
