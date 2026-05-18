@@ -29,10 +29,22 @@ function getDepth4List(d1: string, d2: string, d3: string): string[] {
   return Array.from(new Set(NAVER_CATEGORIES_FULL.filter(c => c.d1 === d1 && c.d2 === d2 && c.d3 === d3).map(c => c.d4).filter(Boolean))).sort();
 }
 function getCategoryId(d1: string, d2: string, d3: string, d4: string): string {
-  const match = NAVER_CATEGORIES_FULL.find(c =>
-    c.d1 === d1 && c.d2 === d2 && c.d3 === d3 && (d4 ? c.d4 === d4 : !c.d4)
+  // PC-A hotfix RC1: when caller provides no d4, accept any d4 (3-depth fallback)
+  // instead of requiring an empty-d4 entry. Many d3 levels (~70%) only have
+  // d4-filled siblings, so the previous strict logic silently returned '' for
+  // valid 3-depth triples — which made prefill autofill mis-classify them as
+  // taxonomy mismatch.
+  if (d4) {
+    const exact = NAVER_CATEGORIES_FULL.find(c =>
+      c.d1 === d1 && c.d2 === d2 && c.d3 === d3 && c.d4 === d4
+    );
+    if (exact) return exact.code;
+    // Fall through to 3-depth match if exact 4-depth missed.
+  }
+  const loose = NAVER_CATEGORIES_FULL.find(c =>
+    c.d1 === d1 && c.d2 === d2 && c.d3 === d3
   );
-  return match?.code ?? '';
+  return loose?.code ?? '';
 }
 interface CategorySearchResult {
   categoryId: string; depth1: string; depth2: string; depth3: string; depth4: string;
@@ -962,6 +974,11 @@ function NewProductPageInner() {
 
   // PC-A P1: when prefill taxonomy mismatches, ask /api/category/suggest to
   // map the productName to a valid Naver category triple.
+  // PC-A hotfix RC2: do NOT depend on `crawlCatStatus.kind` — the inner
+  // setCrawlCatStatus('autofilling') would mutate the dep, trigger cleanup,
+  // and cancel the in-flight fetch before setD1/D2/D3 could run. Depending
+  // on productName only means the effect runs once per prefill, completes,
+  // and the inner status transitions do not re-trigger it.
   useEffect(() => {
     if (crawlCatStatus.kind !== 'mismatch') return;
     if (!productName.trim()) return;
@@ -975,13 +992,32 @@ function NewProductPageInner() {
       .then(r => r.json())
       .then(data => {
         if (cancelled) return;
-        const top = data?.suggestions?.[0];
-        if (data?.success && top?.d1 && top?.d2 && top?.d3) {
-          setD1(top.d1); setD2(top.d2); setD3(top.d3);
-          if (top.d4) setD4(top.d4);
-          setCrawlCatStatus({ kind: 'autofilled', d1: top.d1, d2: top.d2, d3: top.d3 });
+        const suggestions: Array<{ d1?: string; d2?: string; d3?: string; d4?: string }> =
+          Array.isArray(data?.suggestions) ? data.suggestions : [];
+        // PC-A hotfix: validate suggest results against NAVER_CATEGORIES_FULL.
+        // The /api/category/suggest fallback rules contain hardcoded strings
+        // (e.g. '홈인테리어소품') that may not appear in the actual category
+        // dataset — committing such strings to state would leave the combobox
+        // visibly empty ("선택"). Pick the first suggestion that resolves
+        // to a non-empty getCategoryId; otherwise report failure.
+        const validated = suggestions.find((s) =>
+          s.d1 && s.d2 && s.d3 && !!getCategoryId(s.d1, s.d2, s.d3, s.d4 ?? '')
+        );
+        if (data?.success && validated && validated.d1 && validated.d2 && validated.d3) {
+          setD1(validated.d1); setD2(validated.d2); setD3(validated.d3);
+          if (validated.d4) setD4(validated.d4);
+          setCrawlCatStatus({
+            kind: 'autofilled',
+            d1: validated.d1, d2: validated.d2, d3: validated.d3,
+          });
         } else {
-          setCrawlCatStatus({ kind: 'failed', reason: data?.error ?? 'no_suggestion' });
+          const top = suggestions[0];
+          const reason = !data?.success
+            ? (data?.error ?? 'suggest_failed')
+            : !top
+              ? 'no_suggestion'
+              : `invalid_triple:${top.d1}>${top.d2}>${top.d3}`;
+          setCrawlCatStatus({ kind: 'failed', reason });
         }
       })
       .catch(err => {
@@ -990,7 +1026,7 @@ function NewProductPageInner() {
       });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [crawlCatStatus.kind, productName]);
+  }, [productName]);
 
   // Load existing product for editing (?edit=productId)
   useEffect(() => {
