@@ -1,8 +1,8 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-15 PM (Sprint 7-M2 Phase 2-c-2 — lifestyle assets admin UI (CRUD + Sidebar entry), Phase 2-c trio 완결)
-> 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합)
+> 최종 업데이트: 2026-05-18 (Sprint 7-PC 진입 — paper-cut #1 48b50fa baseline, pre-sprint cleanup)
+> 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합) + Sprint 7-PC paper-cut batch
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
-> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (a0cdb05 verified)
+> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (48b50fa baseline)
 > 다음 작업: 병행 가능 — A) 첫 실 상품 등록 (autoRunVisual 검증), B) lifestyle 자산 시딩 (admin UI에서 Phase 1 Claude Web Firefly 결과물 업로드). 또는 Sprint 7-M3 (운영 메트릭) / Phase 2-c-3 (벌크 import) / Sprint 8 (자동발주).
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
@@ -11,6 +11,21 @@
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
 > **다음 작업**: **Sprint 7-M2 Phase 3-C-2** (PLANT /products/new 6→7 tab 확장 + 7번째 탭 "비주얼 자동화" 마운트 + savedProductId 컨텍스트 전달). 본 turn 완료: Phase 3-C-1 컴포넌트 추출 (refactor only) — `src/components/studio/` 9 신규 파일, `/studio/page.tsx` 1068→250 LOC (-77%), byte-identical markup. PLANT 통합이 import 1줄로 가능. /studio end-to-end 워크플로우 (Diagnosis → Thumbnail → Detail → Save → Naver Publish) 정상 작동, dedicated 27/27 100% 유지.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-17 paper-cut #1 — Studio hydration order fix
+
+### 발견 + 수정
+- 직전 채팅에서 Studio 페이지 hydration mismatch 1건 발견 → commit 48b50fa로 수정
+- 영향 영역: /studio 최초 마운트 시 server/client state 불일치
+- 검증: production verified ✅
+
+### 단정
+- 본 paper-cut은 Sprint 7-PC와 무관한 직전 hotfix
+- Sprint 7-PC 진입 baseline = 48b50fa
+
+Commit: 48b50fa
 
 ---
 

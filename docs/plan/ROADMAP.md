@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-15 PM Phase 2-c-2 — lifestyle assets admin UI + Phase 2-c trio 완결 (a0cdb05, production verified)
-> **HEAD**: a0cdb05 (origin/main, production verified) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-18 Sprint 7-PC 진입 — pre-sprint cleanup (7차 SESSION_LOG split + paper-cut #1 entry, baseline 48b50fa)
+> **HEAD**: 48b50fa (origin/main, paper-cut #1 — Studio hydration order fix) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
@@ -14,7 +14,47 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-15 PM (Phase 3-C-3-h hardening 완료, 첫 실 상품 등록 대기) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-18 Sprint 7-PC-A (paper-cut batch, handleNaverDirect 4-gate + P1/P2) ⭐ ACTIVE
+
+본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장. **이중 트랙 핑퐁 운영** (Vercel-Runtime Track ↔ Web-Verify Track).
+
+```
+Sprint 7-PC (Paper-Cut Batch) — Vercel-Runtime Track / Web-Verify Track 핑퐁
+계속 진행. docs/plan/PROGRESS.md, ROADMAP.md, SESSION_LOG.md, PRINCIPLES_LEARNED.md,
+SPRINT_PLAN.md 정독 후 현재 상태 브리핑.
+
+직전 작업 = Sprint 7-PC pre-sprint cleanup:
+- 7차 SESSION_LOG.md archival split — 9 entries → archive/SESSION_LOG_2026-05-14.md
+  (2026-05-13 Phase 2-b-1 ~ 2026-05-14 Phase 3-C-2)
+- SESSION_LOG.md slim to 5 most recent entries (CLAUDE.md "직전 5세션" 정합)
+- PROGRESS.md + ROADMAP.md paper-cut #1 (48b50fa Studio hydration order fix) entry 추가
+- Supplier DB bornscent INSERT 완료 (cm62770f54a42a46a4ae4c53d) — Web-Verify Track이
+  Supabase MCP로 직접 실행. P2 70% 해소
+
+Sprint 7-PC 본격 진입 = 3 sub-sprint 핑퐁:
+- PC-A: handleNaverDirect 4-gate validation + P1 카테고리 prefill autofill +
+        P2 supplier "저장하고 적용" 흐름 — commit 후 Web-Verify Chrome MCP 재검증
+- PC-B: prefill autofill 확장 P14-P19 (옵션 14종 silent truncation /
+        옵션명-값 / additionalImages / 배송 / SEO / 혜택) — commit 후 재검증
+- PC-C: AI fallback Groq Migration P13-A/B/C/D/E (5 endpoint) —
+        userMemories 2026-05-15 정합 = Groq → Gemini 2.0-flash → Anthropic
+        Sonnet 3단만. Perplexity + xAI DEPRECATED. commit 후 smoke 검증
+
+검증 좌표 (Chrome MCP 재검증용 디퓨저 prefill URL):
+https://kkotium-garden.vercel.app/products/new?prefill=eyJwcm9kdWN0...
+(verbatim URL은 Web-Verify Track이 보유)
+
+작업원칙 절대 준수 — #17/#21/#24/#29/#31/#32/#34/#36/#38. push 직후
+scripts/verify-vercel-deploy.sh --wait → exit 0 의무.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-15 PM (Phase 3-C-3-h hardening 완료, 첫 실 상품 등록 대기)~~ ✅ COMPLETED → paper-cut #1 발견 (Case B 분기, 48b50fa) → Sprint 7-PC 진입
+
+> Case B 시나리오 발화 — 사용자 첫 실 상품 등록 시도 중 paper-cut #1 (Studio hydration order) 발견 → 48b50fa로 hotfix → Web-Verify Track이 추가 22 paper-cut 인벤토리 작성 → Sprint 7-PC 진입.
+
+## 다음 새 채팅 시작 메시지 — 2026-05-15 PM (Phase 3-C-3-h hardening 완료, 첫 실 상품 등록 대기) (보관용)
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장.
 
