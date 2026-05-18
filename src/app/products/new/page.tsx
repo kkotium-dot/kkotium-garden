@@ -8,6 +8,7 @@ import {
   Package, Image as ImageIcon, Search, Gift, Layers, AlertTriangle, Info, ShieldAlert,
   Palette,
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { checkProductName, getGradeColor, getSeverityColor, type NameQualityResult } from '@/lib/product-name-checker';
 import {
   NAVER_CATEGORIES_FULL,
@@ -553,6 +554,18 @@ function NewProductPageInner() {
     shipFee?: number;
     canMerge?: boolean;
   } | null>(null);
+  // PC-A P1: category prefill autofill status — surface taxonomy mismatch
+  // between domeggook ("생활/건강 > 홈인테리어소품 > 방향제/디퓨저") and
+  // NAVER_CATEGORIES_FULL ("가구/인테리어 > 인테리어소품 > 아로마/캔들용품 > 아로마방향제/디퓨저").
+  // When mismatch detected, fall back to /api/category/suggest by productName.
+  const [crawlCatStatus, setCrawlCatStatus] = useState<
+    | { kind: 'idle' }
+    | { kind: 'matched'; d1: string; d2: string; d3: string; d4?: string }
+    | { kind: 'mismatch'; rawD1: string; rawD2: string; rawD3: string }
+    | { kind: 'autofilling' }
+    | { kind: 'autofilled'; d1: string; d2: string; d3: string }
+    | { kind: 'failed'; reason: string }
+  >({ kind: 'idle' });
   // Minimum order quantity from crawler prefill. 1 = no restriction.
   // Values >= 2 trigger a consignment-risk warning banner.
   const [crawlMinQuantity, setCrawlMinQuantity] = useState<number>(1);
@@ -773,11 +786,28 @@ function NewProductPageInner() {
         currentUrl.searchParams.set('crawlUrl', encodeURIComponent(data.crawlSourceUrl));
         window.history.replaceState(null, '', currentUrl.toString());
       }
-      // Auto-fill category from crawler suggestion
+      // Auto-fill category from crawler suggestion.
+      // PC-A P1: domeggook and Naver use different taxonomies. Validate before
+      // committing to state; if mismatch, request /api/category/suggest below.
       if (data.catD1 && data.catD2 && data.catD3) {
-        setD1(data.catD1); setD2(data.catD2); setD3(data.catD3);
-        if (data.catD4) setD4(data.catD4);
-        setCatTab('drill');
+        const probeCode = getCategoryId(data.catD1, data.catD2, data.catD3, data.catD4 ?? '');
+        if (probeCode) {
+          setD1(data.catD1); setD2(data.catD2); setD3(data.catD3);
+          if (data.catD4) setD4(data.catD4);
+          setCatTab('drill');
+          setCrawlCatStatus({
+            kind: 'matched',
+            d1: data.catD1, d2: data.catD2, d3: data.catD3,
+            d4: data.catD4 || undefined,
+          });
+        } else {
+          // Taxonomy mismatch — defer to AI suggest via secondary effect below.
+          setCatTab('drill');
+          setCrawlCatStatus({
+            kind: 'mismatch',
+            rawD1: data.catD1, rawD2: data.catD2, rawD3: data.catD3,
+          });
+        }
       }
       // Auto-fill options from crawler — convert to SINGLE type with visible rows
       if (Array.isArray(data.options) && data.options.length > 0) {
@@ -929,6 +959,38 @@ function NewProductPageInner() {
     } catch { /* ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // PC-A P1: when prefill taxonomy mismatches, ask /api/category/suggest to
+  // map the productName to a valid Naver category triple.
+  useEffect(() => {
+    if (crawlCatStatus.kind !== 'mismatch') return;
+    if (!productName.trim()) return;
+    let cancelled = false;
+    setCrawlCatStatus({ kind: 'autofilling' });
+    fetch('/api/category/suggest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productName: productName.trim() }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return;
+        const top = data?.suggestions?.[0];
+        if (data?.success && top?.d1 && top?.d2 && top?.d3) {
+          setD1(top.d1); setD2(top.d2); setD3(top.d3);
+          if (top.d4) setD4(top.d4);
+          setCrawlCatStatus({ kind: 'autofilled', d1: top.d1, d2: top.d2, d3: top.d3 });
+        } else {
+          setCrawlCatStatus({ kind: 'failed', reason: data?.error ?? 'no_suggestion' });
+        }
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setCrawlCatStatus({ kind: 'failed', reason: err instanceof Error ? err.message : 'network' });
+      });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [crawlCatStatus.kind, productName]);
 
   // Load existing product for editing (?edit=productId)
   useEffect(() => {
@@ -1258,11 +1320,30 @@ function NewProductPageInner() {
   const handleNaverDirect = async () => {
     setNaverResult(null);
     setError('');
+
+    // PC-A 4-gate validation (Sprint 7-PC-A) — block on missing prerequisites
+    // before touching DB or Naver API. Toast for each failure surface, plus a
+    // final confirm dialog so the user verifies the registration is intentional.
     const catId = getCategoryId(d1, d2, d3, d4);
-    if (!productName.trim()) { setError('상품명을 입력해주세요'); return; }
-    if (!catId)               { setError('카테고리를 선택해주세요'); return; }
-    if (!price)               { setError('판매가를 입력해주세요'); return; }
-    if (!mainImage.trim())    { setError('대표 이미지를 등록해주세요'); return; }
+    const missing: string[] = [];
+    if (!productName.trim())                                       missing.push('상품명');
+    if (!catId)                                                    missing.push('카테고리 (대→중→소분류 모두)');
+    if (!price || Number(price) <= 0)                              missing.push('판매가');
+    if (!selectedSupplierId)                                       missing.push('공급사');
+    if (optionType !== 'NONE' && optionRows.length === 0)          missing.push('옵션 그룹화');
+    if (!mainImage.trim())                                         missing.push('대표 이미지');
+
+    if (missing.length > 0) {
+      const msg = `다음 항목을 먼저 채워주세요:\n• ${missing.join('\n• ')}`;
+      toast.error(msg, { duration: 5000 });
+      setError(missing.length === 1 ? `${missing[0]}을(를) 입력해주세요` : `${missing.length}개 항목이 비어있습니다`);
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      const ok = window.confirm(`네이버에 "${productName.trim()}" 상품을 직접 등록할게요. 진행할까요?`);
+      if (!ok) return;
+    }
 
     setNaverLoading(true);
     try {
@@ -1716,6 +1797,56 @@ const handleGenerate = async () => {
               <p style={{ fontSize: 13, fontWeight: 700, color: '#e62310', margin: 0 }}>크롤러에서 데이터가 자동 입력됐습니다</p>
               <p style={{ fontSize: 12, color: '#888', margin: 0 }}>카테고리 선택 후 나머지 항목을 확인하고 엑셀을 다운로드하세요</p>
             </div>
+          </div>
+        )}
+        {/* PC-A P1: surface category prefill autofill status. Banner shown only
+            when crawler prefill produced a non-matching taxonomy or AI fallback
+            ran; matched + idle states stay silent to keep the page calm. */}
+        {(crawlCatStatus.kind === 'mismatch' || crawlCatStatus.kind === 'autofilling' || crawlCatStatus.kind === 'autofilled' || crawlCatStatus.kind === 'failed') && (
+          <div style={{
+            marginBottom: 16, padding: '10px 14px', borderRadius: 12,
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: crawlCatStatus.kind === 'autofilled' ? '#F0FDF4' : crawlCatStatus.kind === 'failed' ? '#FEF2F2' : '#FEF7ED',
+            border: `1.5px solid ${crawlCatStatus.kind === 'autofilled' ? '#86EFAC' : crawlCatStatus.kind === 'failed' ? '#FCA5A5' : '#FDBA74'}`,
+          }}>
+            {crawlCatStatus.kind === 'autofilling' ? (
+              <Info size={14} style={{ color: '#C2410C', flexShrink: 0 }} />
+            ) : crawlCatStatus.kind === 'autofilled' ? (
+              <CheckCircle size={14} style={{ color: '#16A34A', flexShrink: 0 }} />
+            ) : crawlCatStatus.kind === 'failed' ? (
+              <AlertTriangle size={14} style={{ color: '#B91C1C', flexShrink: 0 }} />
+            ) : (
+              <Info size={14} style={{ color: '#C2410C', flexShrink: 0 }} />
+            )}
+            <div style={{ fontSize: 12, lineHeight: 1.4, color: '#1F2937' }}>
+              {crawlCatStatus.kind === 'mismatch' && (
+                <>
+                  <strong>도매꾹 카테고리({crawlCatStatus.rawD1} &gt; {crawlCatStatus.rawD2} &gt; {crawlCatStatus.rawD3})가 네이버 카테고리와 일치하지 않습니다.</strong>
+                  &nbsp;상품명으로 자동 매핑을 시도합니다…
+                </>
+              )}
+              {crawlCatStatus.kind === 'autofilling' && (
+                <>상품명으로 네이버 카테고리 자동 매핑 중…</>
+              )}
+              {crawlCatStatus.kind === 'autofilled' && (
+                <>
+                  <strong>네이버 카테고리 자동 매핑 완료:</strong>&nbsp;
+                  {crawlCatStatus.d1} &gt; {crawlCatStatus.d2} &gt; {crawlCatStatus.d3}
+                </>
+              )}
+              {crawlCatStatus.kind === 'failed' && (
+                <>
+                  <strong>자동 매핑 실패:</strong>&nbsp;{crawlCatStatus.reason}. 카테고리를 직접 선택해주세요.
+                </>
+              )}
+            </div>
+            <button
+              onClick={() => setCrawlCatStatus({ kind: 'idle' })}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', marginLeft: 'auto', padding: 4, flexShrink: 0 }}
+              aria-label="닫기"
+            >
+              ×
+            </button>
           </div>
         )}
         {/* Sprint 6-A UI Phase 3 — minq>=2 consignment risk banner. */}
