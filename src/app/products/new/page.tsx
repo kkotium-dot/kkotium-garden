@@ -578,6 +578,10 @@ function NewProductPageInner() {
     | { kind: 'autofilled'; d1: string; d2: string; d3: string }
     | { kind: 'failed'; reason: string }
   >({ kind: 'idle' });
+  // PC-B-1 P18: capture crawler's domeggook category code so the suggest API
+  // can hit the dome_code cache (suggest endpoint L209-218) for an
+  // already-mapped NAVER triple. Cache miss falls through to AI/fallback path.
+  const [crawlCatCode, setCrawlCatCode] = useState<string>('');
   // Minimum order quantity from crawler prefill. 1 = no restriction.
   // Values >= 2 trigger a consignment-risk warning banner.
   const [crawlMinQuantity, setCrawlMinQuantity] = useState<number>(1);
@@ -798,6 +802,12 @@ function NewProductPageInner() {
         currentUrl.searchParams.set('crawlUrl', encodeURIComponent(data.crawlSourceUrl));
         window.history.replaceState(null, '', currentUrl.toString());
       }
+      // PC-B-1 P18: capture the domeggook category code path so the suggest
+      // API can hit the dome_code cache for an already-mapped NAVER triple.
+      if (typeof data.crawlCategoryCode === 'string' && data.crawlCategoryCode.trim()) {
+        setCrawlCatCode(data.crawlCategoryCode.trim());
+      }
+
       // Auto-fill category from crawler suggestion.
       // PC-A P1: domeggook and Naver use different taxonomies. Validate before
       // committing to state; if mismatch, request /api/category/suggest below.
@@ -821,9 +831,15 @@ function NewProductPageInner() {
           });
         }
       }
-      // Auto-fill options from crawler — convert to SINGLE type with visible rows
+      // Auto-fill options from crawler — convert to SINGLE type with visible rows.
+      // PC-B-1 P14 observability: log raw + filtered counts so any drift between
+      // prefill payload and state can be diagnosed from the console (no in-app
+      // truncation found at code-review time, but logging is cheap).
       if (Array.isArray(data.options) && data.options.length > 0) {
+        const rawCount = data.options.length;
         const cleanOpts = (data.options as string[]).filter((o: string) => typeof o === 'string' && o.trim().length > 0);
+        // eslint-disable-next-line no-console
+        console.info('[prefill] options', { raw: rawCount, clean: cleanOpts.length, values: cleanOpts });
         if (cleanOpts.length > 0) {
           setOptionType('SINGLE');
           setOptionNames(['옵션']);
@@ -984,10 +1000,15 @@ function NewProductPageInner() {
     if (!productName.trim()) return;
     let cancelled = false;
     setCrawlCatStatus({ kind: 'autofilling' });
+    // PC-B-1 P18: pass domeCategoryCode so the suggest endpoint can hit its
+    // dome_code cache (route.ts L209-218) before falling through to AI/fallback.
     fetch('/api/category/suggest', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productName: productName.trim() }),
+      body: JSON.stringify({
+        productName: productName.trim(),
+        domeCategoryCode: crawlCatCode || undefined,
+      }),
     })
       .then(r => r.json())
       .then(data => {
@@ -1026,7 +1047,7 @@ function NewProductPageInner() {
       });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productName]);
+  }, [productName, crawlCatCode]);
 
   // Load existing product for editing (?edit=productId)
   useEffect(() => {
@@ -2591,7 +2612,9 @@ const handleGenerate = async () => {
                           </button>
                         )}
                       </div>
-                      <div className="border border-gray-200 rounded-xl overflow-hidden">
+                      {/* PC-B-1 P14: cap visible height at ~10 rows; rows beyond
+                          scroll inside the table instead of pushing the page. */}
+                      <div className="border border-gray-200 rounded-xl overflow-y-auto" style={{ maxHeight: optionRows.length > 10 ? 480 : 'none' }}>
                         {optionType === 'COMBINATION' ? (() => {
                           // COMBINATION table: each optionName gets its own column
                           // row.value format: 'val1/val2/val3' -> split by '/'
