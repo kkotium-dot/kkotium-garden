@@ -428,4 +428,28 @@ Vercel 런타임은 정적 자산과 안전한 서버 연산만 수행한다.
 
 ---
 
+## 작업원칙 #41 — 두 환경 핑퐁 프로토콜 (2026-05-19 명문화)
+
+**배경**: Sprint 7-PC paper-cut batch에서 두 환경 (🖥 Desktop ↔ 💻 Code) 핑퐁 운영 패턴이 자연 발생. 본 패턴을 영구 작업원칙으로 등재. 본문 + ledger는 `docs/plan/TASK_BRIDGE.md`에 보관.
+
+**규칙 7가지**:
+
+(a) **역할 상호 배타** — Desktop은 planning + verify, Code는 build + ship. 두 환경 overlap 0. TASK_BRIDGE.md §1 표 참조.
+
+(b) **5-step 표준 hand-off** — 모든 hand-off는 TASK_BRIDGE.md §2 형식 (FROM / TO / BASELINE / SCOPE / VERIFICATION / FALLBACK).
+
+(c) **TASK_BRIDGE §3 ACTIVE 갱신 의무** — 매 hand-off 직후 갱신. SESSION_LOG와 *역할 분리* (TASK_BRIDGE = 실시간, SESSION_LOG = 회고).
+
+(d) **단일 commit 단위** — 변경 50 LOC 이하 권고. 단일 sub-phase 단일 commit.
+
+(e) **push 직후 검증 의무** — `scripts/verify-vercel-deploy.sh --wait` exit 0 + Vercel `list_deployments` HEAD 일치 확인.
+
+(f) **Cross-track 검증 4-source** — 가능한 한 git + Vercel + Supabase + Chrome 4 source 모두 cross-check. 단일 source 단정 금지.
+
+(g) **한계 정직 보고** — Desktop은 MD edit 불가 / Code는 Chrome MCP 불가. 각자의 한계는 §1 표 그대로. *못 하는 작업 우회 시도 금지*, 다른 환경에게 hand-off.
+
+근거: Sprint 7-PC 5 commits (48b50fa → 91a1eef → 9ae0673 → 742ce91 → 5a3b8c2 → 29b7c49) 모두 본 패턴으로 진행. 인간 paste-mediator 없이 두 Claude 환경이 자동 sync 가능 (사용자가 사용자 메시지로 hash만 전달하면 됨).
+
+---
+
 ---

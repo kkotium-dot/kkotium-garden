@@ -1,3 +1,80 @@
+## 2026-05-19 Sprint 7-PC-B 완주 (5 paper-cuts) + TASK_BRIDGE.md hand-off layer 도입 ✅
+
+### 본 세션 성격
+
+Sprint 7-PC-A → PC-B-2 5 commits 완주 + Desktop ↔ Code 핑퐁 패턴 작업원칙 #41 명문화 + 신규 `docs/plan/TASK_BRIDGE.md` ledger 도입. 본 Code 환경은 build + ship 전담, Desktop이 Chrome MCP / Supabase MCP로 cross-track 검증. 사용자가 paste-mediator 부담 없이 두 환경 자동 sync 가능한 구조 완성.
+
+### Sprint 7-PC 5 commits 회고 (모두 Desktop↔Code 핑퐁)
+
+| Phase | Commit | Code 측 작업 | Desktop 측 검증 |
+|---|---|---|---|
+| pre-sprint cleanup | `91a1eef` | SESSION_LOG 7차 split + paper-cut #1 entry | git + Vercel cross-check |
+| PC-A v1 | `9ae0673` | handleNaverDirect 6-check + P1 prefill banner | Chrome MCP 디퓨저 prefill smoke → race 회귀 발견 |
+| PC-A hotfix | `742ce91` | RC1 3-depth fallback + RC2 useEffect race + suggest 검증 가드 | Chrome MCP 재검증 → 3-fix 통과 ✅ |
+| PC-B-1 | `5a3b8c2` | P18 dome_code passthrough + P14 defensive (scroll + console.info) | Chrome MCP → P18 작동 + P14 truncation 회귀 0 확정 |
+| PC-B-2 | `29b7c49` | P15 옵션명 keyword rule (8 카테고리) + P17 supplier-notfound 배송 fallback | Chrome MCP → 디퓨저 '향' 자동 표시 |
+
+해소 paper-cut: P1, P2, P14, P15, P18 (5건). 잔여: P16, P17(실 검증), P19, P20, P13-A~E (PC-C scope).
+
+### 작업원칙 #41 — 두 환경 핑퐁 프로토콜 (2026-05-19 명문화)
+
+5 commits 모두 본 패턴으로 진행됐기에 영구 작업원칙 등재.
+
+규칙 7가지:
+- (a) 역할 상호 배타 — Desktop = planning + verify, Code = build + ship
+- (b) 5-step 표준 hand-off (FROM/TO/BASELINE/SCOPE/VERIFICATION/FALLBACK)
+- (c) TASK_BRIDGE §3 ACTIVE 갱신 의무
+- (d) 단일 commit 단위 (50 LOC 이하 권고)
+- (e) push 직후 verify-vercel-deploy.sh --wait 의무
+- (f) Cross-track 검증 4-source (git + Vercel + Supabase + Chrome)
+- (g) 한계 정직 보고 — Desktop은 MD edit 불가 / Code는 Chrome MCP 불가
+
+### 신규 파일 — docs/plan/TASK_BRIDGE.md (~190 줄)
+
+10 sections (§0~§9):
+- §0 7-step 시스템 (작업원칙 #41 본문)
+- §1 두 환경 역할 표 (영구 참조)
+- §2 5-step 표준 hand-off 형식
+- §3 ACTIVE HAND-OFF ⭐ (매 hand-off 갱신)
+- §4 STANDING DECISIONS (사용자 영구 위임 6건: SD-01~SD-06)
+- §5 OPEN PAPER-CUTS (22-PC 인벤토리, 진행 완료 5 + 대기 9)
+- §6 PENDING USER ACTIONS (4건: 디퓨저 seed / P20 / P16 scope / 첫 실 상품)
+- §7 ARCHIVED HAND-OFFS (완료 hand-off 누적)
+- §8 작업원칙 #41 본문 (PRINCIPLES_LEARNED와 dual entry)
+- §9 컨텍스트 끊김 방지 (Recovery Drill 4-step)
+
+### 본 commit 변경 파일
+
+| 파일 | 변경 | 역할 |
+|---|---|---|
+| `docs/plan/TASK_BRIDGE.md` | NEW (~190 줄) | hand-off ledger 본체 |
+| `docs/plan/PRINCIPLES_LEARNED.md` | +20/-2 | 작업원칙 #41 추가 |
+| `CLAUDE.md` | +5/-3 | STEP 1 4번째 정독 + 핵심 파일 경로 + 작업원칙 인덱스 갱신 |
+| `docs/plan/PROGRESS.md` | 헤더 + 본 entry | 최종 업데이트 + 5 commits 회고 |
+| `docs/plan/ROADMAP.md` | 헤더 + active 메시지 교체 | PC-B-3 진입 대기 메시지 |
+| `docs/plan/SESSION_LOG.md` | 본 entry 추가 | 회고 |
+
+### 검증
+
+- TSC 0 errors (MD/문서 only, code 변경 0) ✅
+- npm run build OK (baseline 29b7c49 동일) ✅
+- 한글 sentinel grep 0 typos ✅
+- 작업원칙 적용: #17, #21, #29, #31, #32, #36, #41 (본 commit이 #41의 첫 적용 사례)
+
+### 다음 = 사용자 결정 후 진입
+
+PENDING USER ACTIONS (TASK_BRIDGE §6):
+1. 디퓨저 dome_code seed — "Yes 진행" 신호 시 Desktop이 5분 이내 Supabase INSERT + Chrome 검증
+2. P20 supplier seller ID 확인 (도매꾹 마이페이지)
+3. P16 scope 결정 (PC-B-3 포함 or PC-D 분리)
+4. dome_code seed 후 첫 실 상품 등록 (autoRunVisual end-to-end)
+
+PC-B-3 진입은 사용자 결정 (특히 P16) 후 — P19 혜택 prefill + P16 (포함 시) crawler 측 추가 이미지 추출.
+
+Commit: 본 commit hash로 갱신 예정
+
+---
+
 ## 2026-05-18 Sprint 7-PC pre-sprint cleanup — 7차 SESSION_LOG split + paper-cut #1 entry ✅
 
 ### 본 세션 성격

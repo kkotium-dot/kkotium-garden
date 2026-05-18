@@ -1,8 +1,9 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-18 (Sprint 7-PC 진입 — paper-cut #1 48b50fa baseline, pre-sprint cleanup)
-> 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격 + Claude 디자인 통합) + Sprint 7-PC paper-cut batch
+> 최종 업데이트: 2026-05-19 (Sprint 7-PC-B 진행 + TASK_BRIDGE.md hand-off layer 도입, 작업원칙 #41)
+> 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격) + Sprint 7-PC paper-cut batch + Desktop↔Code 핑퐁 (작업원칙 #41)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
-> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (48b50fa baseline)
+> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (29b7c49 verified, PC-B-2 통과)
+> **신규 진입점**: `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off ledger. §3 ACTIVE / §4 STANDING / §6 PENDING 매 세션 정독 의무
 > 다음 작업: 병행 가능 — A) 첫 실 상품 등록 (autoRunVisual 검증), B) lifestyle 자산 시딩 (admin UI에서 Phase 1 Claude Web Firefly 결과물 업로드). 또는 Sprint 7-M3 (운영 메트릭) / Phase 2-c-3 (벌크 import) / Sprint 8 (자동발주).
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
@@ -11,6 +12,62 @@
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
 > **다음 작업**: **Sprint 7-M2 Phase 3-C-2** (PLANT /products/new 6→7 tab 확장 + 7번째 탭 "비주얼 자동화" 마운트 + savedProductId 컨텍스트 전달). 본 turn 완료: Phase 3-C-1 컴포넌트 추출 (refactor only) — `src/components/studio/` 9 신규 파일, `/studio/page.tsx` 1068→250 LOC (-77%), byte-identical markup. PLANT 통합이 import 1줄로 가능. /studio end-to-end 워크플로우 (Diagnosis → Thumbnail → Detail → Save → Naver Publish) 정상 작동, dedicated 27/27 100% 유지.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-19 Sprint 7-PC-B + TASK_BRIDGE.md hand-off layer 도입 (작업원칙 #41)
+
+### 진행 현황 — Sprint 7-PC 5 commits 완결
+
+PC-A → PC-B-2까지 완주, 22-paper-cut 중 5건 해소:
+
+| Phase | Commit | scope |
+|---|---|---|
+| pre-sprint cleanup | `91a1eef` | SESSION_LOG 7차 split + paper-cut #1 entry |
+| PC-A v1 | `9ae0673` | handleNaverDirect 6-check + P1 prefill banner |
+| PC-A hotfix | `742ce91` | RC1 3-depth fallback + RC2 useEffect race + suggest 검증 |
+| PC-B-1 | `5a3b8c2` | P18 dome_code passthrough + P14 defensive (truncation 회귀 0 확정) |
+| PC-B-2 | `29b7c49` | P15 옵션명 keyword rule + P17 supplier-notfound 배송 fallback |
+
+해소 paper-cut: P1, P2, P14, P15, P18. 잔여: P16(crawler), P17(실 검증), P19, P20, P13-A~E (PC-C scope).
+
+### TASK_BRIDGE.md hand-off layer 도입
+
+5 commits 모두 Desktop ↔ Code 핑퐁으로 진행됐음 — 본 패턴을 작업원칙 #41로 명문화 + `docs/plan/TASK_BRIDGE.md` 신규 ledger 도입.
+
+| 측면 | 🖥 Desktop | 💻 Code |
+|---|---|---|
+| 강점 | Supabase / Vercel / Chrome / image-search MCP | Filesystem(write) / Bash / Git / TSC |
+| 주특기 | 리서치 · 검증 · paste-ready 본문 | 코드 작성 · MD 실 적용 · git push |
+| 할 수 없는 것 | MD edit · git commit | Chrome / Supabase / Vercel MCP 직접 호출 |
+
+5-step 표준 hand-off (FROM/TO/BASELINE/SCOPE/VERIFICATION/FALLBACK), §3 ACTIVE 매 hand-off 갱신 의무.
+
+### 변경 파일
+
+- `docs/plan/TASK_BRIDGE.md` — NEW (~190 줄)
+- `docs/plan/PRINCIPLES_LEARNED.md` — 작업원칙 #41 추가 (#26~#40 → #26~#41)
+- `CLAUDE.md` — STEP 1 4번째 정독 항목 추가 + 핵심 파일 경로 갱신 + 작업원칙 빠른 인덱스 #37~#41 갱신
+- `docs/plan/PROGRESS.md` — 본 entry (헤더 + 신규 섹션)
+- `docs/plan/ROADMAP.md` — 헤더 갱신
+- `docs/plan/SESSION_LOG.md` — 본 entry 신규
+
+### 검증
+
+- TSC 0 errors (MD/문서 only, code 변경 0) ✅
+- npm run build OK (baseline 29b7c49 동일) ✅
+- 한글 sentinel grep 0 typos ✅
+- 작업원칙 적용: #17, #21, #29, #31, #32, #36, #41
+
+### 다음
+
+- PENDING USER ACTIONS (TASK_BRIDGE §6):
+  - 디퓨저 dome_code seed 진행 의사 — Desktop이 5분 이내 Supabase INSERT + Chrome 검증
+  - P20 supplier seller ID 확인 (이현마켓 / gseller2022)
+  - P16 scope 결정 (PC-B-3 포함 or PC-D 분리)
+- 사용자 결정 후 PC-B-3 진입 (P19 + P16 결정)
+
+Commit: 본 commit hash로 갱신 예정
 
 ---
 

@@ -1,7 +1,8 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-18 Sprint 7-PC 진입 — pre-sprint cleanup (7차 SESSION_LOG split + paper-cut #1 entry, baseline 48b50fa)
-> **HEAD**: 48b50fa (origin/main, paper-cut #1 — Studio hydration order fix) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-19 Sprint 7-PC-B 진행 + TASK_BRIDGE.md hand-off layer 도입 (작업원칙 #41)
+> **HEAD**: 29b7c49 (origin/main, Sprint 7-PC-B-2 통과) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **신규 ledger**: `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off, §3 ACTIVE / §4 STANDING / §6 PENDING 매 세션 정독 의무
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
 > **Private API**: 28개 전체 권한 발급 ✅ (Sprint 8 자동발주 = 매출 상승 후 보류 트랙)
@@ -14,7 +15,46 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-18 Sprint 7-PC-A (paper-cut batch, handleNaverDirect 4-gate + P1/P2) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-19 Sprint 7-PC-B-3 진입 대기 (사용자 결정 후) ⭐ ACTIVE
+
+본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. **이중 트랙 핑퐁 운영** (작업원칙 #41) 정합.
+
+```
+Sprint 7-PC-B-3 진입 대기. docs/plan/PROGRESS.md, ROADMAP.md, SESSION_LOG.md,
+TASK_BRIDGE.md (§3 ACTIVE / §4 STANDING / §6 PENDING), PRINCIPLES_LEARNED.md
+(#41 두 환경 핑퐁) 정독 후 현재 상태 브리핑.
+
+직전 작업 = Sprint 7-PC-B 완주 (5건 paper-cut 해소) + TASK_BRIDGE.md 도입:
+- PC-A hotfix 742ce91 (RC1+RC2+suggest 검증)
+- PC-B-1 5a3b8c2 (P18 dome_code passthrough + P14 defensive)
+- PC-B-2 29b7c49 (P15 옵션명 keyword rule + P17 supplier-notfound 배송 fallback)
+- 작업원칙 #41 명문화 (Desktop↔Code 핑퐁 프로토콜) + TASK_BRIDGE.md ledger 신설
+
+PENDING USER ACTIONS (TASK_BRIDGE §6):
+- 디퓨저 dome_code seed — Desktop이 Supabase MCP로 5분 이내 실행
+- P20 supplier seller ID 확인 (이현마켓 / gseller2022 도매꾹 마이페이지에서)
+- P16 scope 결정 (additionalImages crawler 수정을 PC-B-3 포함 or PC-D 분리)
+
+PC-B-3 진입 시 (사용자 결정 후):
+- P19 혜택 prefill — store-settings benefit default load → prefill effect 적용
+- P16 (PC-B 포함 결정 시) crawler 측 추가 이미지 추출 추가
+
+작업원칙 #41 (두 환경 핑퐁) 적용:
+- 본 Code 환경은 build + ship 전담
+- Desktop이 Chrome MCP / Supabase MCP로 검증
+- 각 sub-commit hash 보고 → Desktop 자동 cross-track 검증
+
+작업원칙 절대 준수 — #17/#21/#24/#29/#31/#32/#34/#36/#41. push 직후
+scripts/verify-vercel-deploy.sh --wait → exit 0 의무.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-18 Sprint 7-PC-A (paper-cut batch, handleNaverDirect 4-gate + P1/P2)~~ ✅ COMPLETED → PC-A/B 모두 통과, PC-B-3 대기
+
+> Sprint 7-PC-A (4-gate + P1) + 7-PC-B-1 (P18 passthrough + P14) + 7-PC-B-2 (P15 + P17) 모두 완료. 5 paper-cut 해소. 작업원칙 #41 명문화 + TASK_BRIDGE.md 도입.
+
+## 다음 새 채팅 시작 메시지 — 2026-05-18 Sprint 7-PC-A (보관용)
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. *컨텍스트 보호*를 위해 새 세션 권장. **이중 트랙 핑퐁 운영** (Vercel-Runtime Track ↔ Web-Verify Track).
 

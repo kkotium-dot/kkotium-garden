@@ -1,7 +1,7 @@
 # 꽃틔움 가든 (Kkotium Garden) — Claude Code Context
 
 > 이 파일은 Claude Code가 세션 시작 시 자동으로 읽는 영구 컨텍스트입니다.
-> 실시간 진행 상태는 항상 `docs/plan/PROGRESS.md` / `ROADMAP.md` / `SESSION_LOG.md`를 정독해서 확인하세요.
+> 실시간 진행 상태는 항상 `docs/plan/PROGRESS.md` / `ROADMAP.md` / `SESSION_LOG.md` / **`TASK_BRIDGE.md`** (2026-05-19 도입)를 정독해서 확인하세요.
 
 ---
 
@@ -38,12 +38,13 @@ cd /Users/jyekkot/Desktop/kkotium-garden && \
 1. `docs/plan/PROGRESS.md` — 슬림 상태 스냅샷 + 인덱스 (202줄, 2026-05-12 분할 후 진입점)
 2. `docs/plan/ROADMAP.md` — Sprint 계획 + 다음 새 채팅 시작 메시지 영역
 3. `docs/plan/SESSION_LOG.md` — 직전 5세션 상세 기록
-4. (필요시 spot-read) — 작업 성격에 따라:
-   - `docs/plan/PRINCIPLES_LEARNED.md` — 작업원칙 #26~#36 학습된 패턴
+4. `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off ledger (2026-05-19 도입, 작업원칙 #41). §3 ACTIVE + §4 STANDING + §6 PENDING 의무 정독
+5. (필요시 spot-read) — 작업 성격에 따라:
+   - `docs/plan/PRINCIPLES_LEARNED.md` — 작업원칙 #26~#41 학습된 패턴
    - `docs/plan/PRINCIPLES_CODE.md` — 작업원칙 #1~#25 절대 작업 원칙
    - `docs/plan/SPRINT_PLAN.md` — Sprint 6/6.5/6-D/7/8/9+ 계획
    - `docs/plan/REFERENCES.md` — 핵심 파일 경로 / 알려진 이슈 / SEO / 기술 패턴
-5. (선택) `docs/research/` 하위 — 진행 중 Sprint에 관련된 리서치 보고서
+6. (선택) `docs/research/` 하위 — 진행 중 Sprint에 관련된 리서치 보고서
 
 **Archive는 정독 대상 아님**: `docs/plan/archive/` 폴더는 분기/월별로 동결된 누적 기록입니다. `grep`으로 검색이 필요할 때만 참조하세요.
 
@@ -200,8 +201,9 @@ grep -nE "혁섭|쿠드|식타|릴고|헌서|위젝|스칵|쿠두" docs/plan/*.m
 - `docs/plan/PROGRESS.md` — 슬림 상태 + 인덱스 (분할 이후 진입점)
 - `docs/plan/ROADMAP.md` — Sprint 계획 + 새 채팅 시작 메시지
 - `docs/plan/SESSION_LOG.md` — 직전 5세션 상세 기록
+- `docs/plan/TASK_BRIDGE.md` — **Desktop ↔ Code 실시간 hand-off ledger** (2026-05-19 도입, 작업원칙 #41)
 - `docs/plan/PRINCIPLES_CODE.md` — 작업원칙 #1~#25 (코드/UI/세션/보고)
-- `docs/plan/PRINCIPLES_LEARNED.md` — 작업원칙 #26~#36 (학습된 패턴)
+- `docs/plan/PRINCIPLES_LEARNED.md` — 작업원칙 #26~#41 (학습된 패턴 + 두 환경 핑퐁)
 - `docs/plan/SPRINT_PLAN.md` — Sprint 6/6.5/6-D/7/8/9+
 - `docs/plan/REFERENCES.md` — 파일 경로 / 알려진 이슈 / SEO / 기술 패턴
 - `docs/plan/archive/` (동결, 검색용)
@@ -250,7 +252,7 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 
 ---
 
-## 7. 작업원칙 빠른 인덱스 (#1~#25 → PRINCIPLES_CODE.md / #26~#36 → PRINCIPLES_LEARNED.md)
+## 7. 작업원칙 빠른 인덱스 (#1~#25 → PRINCIPLES_CODE.md / #26~#41 → PRINCIPLES_LEARNED.md)
 
 - **#17** — commit message는 `.commit-msg.tmp` + `git commit -F`
 - **#21** — 사전 점검 의무 (HEAD/status/stash/wc)
@@ -264,6 +266,9 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 - **#34** — 명백한 오류 파일 발견 시 사용자 알림 의무
 - **#35** — 한글 사전 분리 패턴
 - **#36** — Vercel deploy 검증 의무화 (push 후 `scripts/verify-vercel-deploy.sh --wait` 실행, webhook 끊김 자동 감지)
+- **#37·#38** — Production runtime 외부 image API 호출 0 (정적 자산 + Sharp only)
+- **#39·#40** — CTI Inference entry point + Designer Sense sacred resource
+- **#41** — 두 환경 핑퐁 프로토콜 (Desktop ↔ Code hand-off, 2026-05-19 도입, TASK_BRIDGE.md ledger)
 
 ---
 
