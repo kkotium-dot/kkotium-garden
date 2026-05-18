@@ -71,38 +71,31 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-19 본 hand-off layer 도입 시점
+**Last update**: 2026-05-19 PM dome_code seed 진입
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 🖥 Desktop |
-| **TO** | 💻 Code |
-| **BASELINE** | `29b7c49` (Sprint 7-PC-B-2 통과, Vercel READY) |
-| **NEXT SCOPE** | Sprint 7-PC-B-3 (P19 혜택 prefill + P16 추가이미지 결정) — 단 사용자 결정 후 |
-| **PENDING BLOCKER** | 디퓨저 dome_code seed (사용자 진행 의사 확인 후 Desktop이 Supabase MCP 직접) |
+| **FROM** | 💻 Code (직전 docs commit `61d88f6`) |
+| **TO** | 💻 Code (본 commit, self hand-off) |
+| **BASELINE** | `61d88f6` (TASK_BRIDGE.md 도입 commit) |
+| **NEXT SCOPE** | dome_code seed (디퓨저) + P21·P22 등재 + §3·§5·§6 stale 갱신 (본 hand-off 자체) |
+| **PENDING BLOCKER** | 없음 (Desktop Chrome MCP evidence 완료, NAVER grep 본 commit에서) |
 
-### 본 세션 (2026-05-19) 진행 흐름
+### 본 hand-off 진행 흐름 (2026-05-19 PM)
 
 ```
-Desktop: PC-A hotfix 742ce91 검증 통과 → PC-B-1 paste 메시지 전달
+사용자: dome_code seed 진행 의사 확인 + 옵션 3 권고 채택
 ↓
-Code: PC-B-1 5a3b8c2 push → hash 보고
+Desktop: Chrome MCP로 도매꾹 4-depth 카테고리 evidence 채집
+↓ (P21·P22 발견)
+Desktop: paste-ready 메시지 작성 (4-task) → Code 전달
 ↓
-Desktop: 5a3b8c2 cross-track 검증 통과 → PC-B-2 paste 메시지
+Code: 본 commit (NAVER grep + seed script + P21·P22 등재 + §3·§5·§6 갱신)
 ↓
-Code: PC-B-2 29b7c49 push → hash 보고
+Code: push + hash 보고
 ↓
-Desktop: 29b7c49 cross-track 검증 통과 (현재)
-↓
-사용자: 핑퐁 프로토콜 명문화 요청 → 본 hand-off layer 도입
-↓
-Desktop: TASK_BRIDGE.md / 기존 MD 갱신 paste-ready 본문 작성
-↓
-Code: TASK_BRIDGE.md 작성 + 기존 MD edit + 단일 commit (다음)
-↓
-Desktop: 디퓨저 dome_code seed (Supabase MCP) + Chrome MCP 검증 (사용자 결정 후)
-↓
-Code: PC-B-3 진입 (사용자 결정 후)
+Desktop: 4-source cross-track 검증 (git + Vercel + Supabase + Chrome)
+→ 통과 시 §7 ARCHIVED에 본 commit 등재
 ```
 
 ---
@@ -130,7 +123,7 @@ Code: PC-B-3 진입 (사용자 결정 후)
 | P2 | 공급사 매핑 (bornscent) | 비-commit (Supabase INSERT) | ✅ 70% 해소, 자동 매칭 작동 |
 | P14 | 옵션 14종 silent truncation | `5a3b8c2` (PC-B-1 defensive) | ✅ 회귀 0 확정 — 14종 모두 input.value로 정상 렌더링 |
 | P15 | 옵션 그룹명 매핑 | `29b7c49` (PC-B-2) | ✅ 디퓨저 → '향' 자동 적용 |
-| P18 | dome_code passthrough infra | `5a3b8c2` (PC-B-1) | ✅ infra 완료 — cache hit 효과는 P13-D seed 후 발현 |
+| P18 | dome_code passthrough infra | `5a3b8c2` (PC-B-1) + seed (본 commit) | ✅ infra + seed 완료 (dome_code 디퓨저 INSERT) — cache hit 활성화 |
 
 ### 진행 중 / 대기
 
@@ -145,6 +138,8 @@ Code: PC-B-3 진입 (사용자 결정 후)
 | P13-C | keywords Groq migration | PC-C |
 | P13-D | **category/suggest** Groq migration + FALLBACK_RULES 정정 + dome_code 자동 seed flow | PC-C (디퓨저 본질 fix) |
 | P13-E | aeo-generate Groq migration | PC-C |
+| P21 | crawler catD2 정규화 — 도매꾹 실제 "인테리어소품" → prefill "홈인테리어소품" 오염 (MEDIUM) | PC-D |
+| P22 | crawler productNo 만료 갱신 — 도매꾹이 새 ID로 재등록 시 우리 DB stale 404 (LOW-MEDIUM) | PC-D 또는 Sprint 6-A 회귀 |
 
 ---
 
@@ -152,10 +147,10 @@ Code: PC-B-3 진입 (사용자 결정 후)
 
 | 항목 | 내용 | 트리거 |
 |---|---|---|
-| 디퓨저 dome_code seed 진행 의사 | "Yes 진행" 신호 시 Desktop이 5분 이내 Supabase INSERT + Chrome 검증 | 본 응답 끝 |
 | P20 supplier seller ID 확인 | 도매꾹 마이페이지에서 이현마켓 / gseller2022 실제 seller ID 확인 | 사용자 시간 |
 | P16 scope 결정 | additionalImages crawler 수정을 PC-B-3 포함 or PC-D 분리 | 사용자 판단 |
-| 첫 실 상품 NAVER 등록 | dome_code seed 후 디퓨저 → autoRunVisual end-to-end 검증 | dome_code seed 직후 |
+| 첫 실 상품 NAVER 등록 | dome_code seed 완료 ✅ → 디퓨저 prefill → autoRunVisual end-to-end 검증 | Desktop Chrome 검증 통과 직후 |
+| P21·P22 fix scope 결정 | crawler 정규화 + productNo 만료 갱신 fix 진입 시점 결정 | 사용자 판단 |
 
 ---
 

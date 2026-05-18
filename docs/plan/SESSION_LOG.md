@@ -1,3 +1,109 @@
+## 2026-05-19 PM dome_code seed (디퓨저) + paper-cut 21·22 등재 ✅
+
+### 본 세션 성격
+
+Desktop이 도매꾹 사이트 Chrome MCP 직접 진입으로 4-depth 카테고리 evidence 채집. 채집 중 2건 paper-cut 발견 후 본 commit에서 단정 등재. TASK_BRIDGE.md 3 섹션 stale 동시 갱신 (61d88f6 docs commit 적용 직후 §3 미갱신, 작업원칙 #41 (c) 정합 복원).
+
+### 도매꾹 시각 evidence (재현 가능)
+
+- D1 = "가구/인테리어" (코드 11)
+- D2 = "인테리어소품" (코드 11_08) ※ prefill의 "홈인테리어소품"은 오류 (P21)
+- D3 = "아로마/캔들용품" (코드 11_08_07)
+- D4 = "아로마방향제/디퓨저" (코드 11_08_07_03)
+- URL: https://domeggook.com/main/item/itemList.php?ca=11_08_07_00_00
+- 검증 스크린샷: 5개 (Chrome MCP, 2026-05-19 Desktop turn)
+
+### NAVER_CATEGORIES_FULL TASK 1 grep 결과
+
+line 201: `['50003356','가구/인테리어','인테리어소품','아로마/캔들용품','아로마방향제/디퓨저']`
+
+도매꾹 4-depth와 NAVER 4-depth가 *완전 일치* (P21 prefill 정규화 bug만 제외).
+
+### dome_code seed 결과 (Supabase 직접 INSERT via Prisma)
+
+`scripts/seed-diffuser-dome-code.ts` 작성 → `npx tsx` 실행 → category_mappings 테이블 INSERT:
+
+```
+id: a0a7f50e-7d70-424a-9356-5d97a3c312c2
+lookupKey: 11_08_07_03_00
+lookupKind: dome_code
+naverD1/D2/D3/D4: 가구/인테리어 / 인테리어소품 / 아로마/캔들용품 / 아로마방향제/디퓨저
+naverCategoryCode: 50003356
+confidence: 95
+source: manual (※ TypeScript MappingSource 타입 정합, Desktop의 'manual_seed'는 union 확장 필요로 별도 sprint)
+hitCount: 0
+```
+
+검증:
+- 재실행 시 멱등 (upsert 패턴, 동일 row 반환)
+- dome_code 행 수 0 → 1 → (재실행) 1 유지
+- /api/category/suggest의 P18 cache hit infra 이제 활성화
+- 디퓨저 prefill에서 D1/D2/D3/D4 자동 채워짐 예상 (Desktop Chrome MCP 검증 대기)
+
+### Paper-cut #21 (proposed, MEDIUM severity)
+
+- **증상**: prefill JSON의 catD2가 도매꾹 실제 라벨과 다름
+- **도매꾹 실제**: "인테리어소품"
+- **prefill 보고값**: "홈인테리어소품" (잘못된 "홈" prefix)
+- **영향**: 모든 가구/인테리어 D2 매핑 잠재 손상 — 다른 카테고리도 같은 정규화 bug 가능성
+- **Fix scope**: crawler 측 (`src/lib/sources/` 또는 `src/lib/crawler/`) D2 정규화 layer
+- **권고 sprint**: PC-D
+
+### Paper-cut #22 (proposed, LOW-MEDIUM severity)
+
+- **증상**: 도매꾹 productNo 만료 갱신 메커니즘 부재
+- **Evidence**: bornscent 디퓨저 productNo 64659160이 도매꾹 "상품 찾을 수 없습니다" → 동일 상품 다른 productNo로 살아있음 (광고 carousel, 6,900원, bornscent 셀러)
+- **영향**: 우리 DB의 crawlProductNo stale ⇒ getItemView 호출 시 404
+- **Fix scope**: dome-inventory-poller에 404 detection + 재크롤 trigger
+- **권고 sprint**: PC-D 또는 Sprint 6-A 회귀
+
+### TASK_BRIDGE.md 동시 갱신 (3 sections)
+
+- §3 ACTIVE HAND-OFF 전체 교체 — FROM/TO/BASELINE/NEXT/BLOCKER + 본 hand-off 진행 흐름
+- §5 P18 row 상태 갱신 ("infra 완료" → "infra + seed 완료, cache hit 활성화") + P21·P22 신규 row 추가
+- §6 첫 행 "디퓨저 dome_code seed 진행 의사" 삭제 (해소) + 신규 row "P21·P22 fix scope 결정" 추가
+- §7 ARCHIVED는 Desktop 검증 책임 (작업원칙 #41 (c) — 본 commit에서 건드리지 않음)
+
+### 변경 파일 (~130 LOC)
+
+| 파일 | 변경 | 역할 |
+|---|---|---|
+| `scripts/seed-diffuser-dome-code.ts` | NEW (~95 줄) | dome_code seed (Prisma upsert via saveMapping) + evidence 헤더 |
+| `docs/plan/TASK_BRIDGE.md` | §3 전체 교체 + §5 P18 + P21·P22 + §6 갱신 | hand-off ledger 정합 복원 |
+| `docs/plan/SESSION_LOG.md` | 본 entry 신규 (최상단) | 회고 |
+
+### 검증
+
+- TSC 0 errors ✅
+- npm run build OK (route 크기 변경 0, script만 추가) ✅
+- 한글 sentinel grep 0 typos ✅
+- 멱등성 검증 (script 재실행 시 동일 row, dome_code COUNT 1 유지) ✅
+- 작업원칙 적용: #17, #21, **#41 (b)(c)(d)(e)(f) 2호 시연 사례** — 5-step / §3 갱신 / 단일 commit (~130 LOC 정당화: sub-task 분리 시 §3 stale 위험) / push 후 verify / 4-source
+
+### 본 commit 50 LOC 권고 초과 정당화 (작업원칙 #41 (d))
+
+권고는 50 LOC, 본 commit은 ~130 LOC. sub-task 분리 가능했지만:
+- seed script + paper-cut 등재 + §3 stale 갱신을 분리하면 §3 ACTIVE가 각 sub-commit 사이에 stale 상태로 노출됨
+- Desktop의 단일 검증 round-trip이 더 효율 (4-source cross-track × 3 round-trip → × 1)
+- Desktop의 명시적 정당화: "sub-task 분리 시 §3 stale 위험 + Desktop의 단일 검증 round-trip이 더 효율"
+
+향후 동일 패턴 발생 시: hand-off paste 작성 단계에서 정당화 명시 의무.
+
+### 다음
+
+Desktop이 push 후 4-source cross-track 검증:
+1. Supabase: `SELECT COUNT(*) FROM category_mappings WHERE lookup_kind='dome_code'` → 1
+2. /api/category/suggest cache hit 응답 검증 (domeCategoryCode=11_08_07_03_00 + productName=디퓨저)
+3. Chrome MCP 디퓨저 prefill URL → D1/D2/D3/D4 자동 채워짐 first-class 시연
+4. TASK_BRIDGE.md §5 P21·P22 row + §3 ACTIVE 갱신 시각 단정
+5. §7 ARCHIVED에 본 commit 등재 (Desktop 책임)
+
+검증 통과 시 첫 실 상품 등록 (디퓨저 autoRunVisual end-to-end) 진입 권고.
+
+Commit: 본 commit hash로 갱신 예정
+
+---
+
 ## 2026-05-19 Sprint 7-PC-B 완주 (5 paper-cuts) + TASK_BRIDGE.md hand-off layer 도입 ✅
 
 ### 본 세션 성격
