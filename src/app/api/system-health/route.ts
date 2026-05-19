@@ -38,14 +38,14 @@ interface HealthSummary {
 // the API response is the user-visible source of truth (Phase 1 has no
 // translation pivot; matches the existing automation-strings.ko.json copy).
 const DISPLAY_MAP: Record<string, { displayName: string; iconKey: string }> = {
-  'inventory-poll':           { displayName: '도매꾹 재고 폴링',     iconKey: 'Package' },
-  'good-service-track':       { displayName: '굿서비스 점수 추적',   iconKey: 'Activity' },
-  'discord-kkotti-recommend': { displayName: 'Discord 꼬띠 추천',   iconKey: 'Sparkles' },
-  'discord-stock-alert':      { displayName: 'Discord 재고 알림',   iconKey: 'Bell' },
-  'discord-kkotti-score':     { displayName: 'Discord 점수 급락',   iconKey: 'Flame' },
-  'discord-ops-report':       { displayName: 'Discord 운영 리포트', iconKey: 'Tag' },
-  'cron-daily':               { displayName: '일일 cron',           iconKey: 'Clock' },
-  'cron-weekly':              { displayName: '주간 cron',           iconKey: 'Clock' },
+  'inventory-poll':           { displayName: '도매꾹 재고 자동 확인', iconKey: 'Package' },
+  'good-service-track':       { displayName: '굿서비스 점수 모니터링', iconKey: 'Activity' },
+  'discord-kkotti-recommend': { displayName: '디스코드 꼬띠 추천 알림', iconKey: 'Sparkles' },
+  'discord-stock-alert':      { displayName: '디스코드 재고 알림',   iconKey: 'Bell' },
+  'discord-kkotti-score':     { displayName: '디스코드 점수 급락 알림', iconKey: 'Flame' },
+  'discord-ops-report':       { displayName: '디스코드 운영 리포트', iconKey: 'Tag' },
+  'cron-daily':               { displayName: '매일 자동 작업',       iconKey: 'Clock' },
+  'cron-weekly':              { displayName: '매주 자동 작업',       iconKey: 'Clock' },
 };
 
 // Interval hours used to project nextRunAt. 0 = event-driven (no projection).
@@ -109,7 +109,7 @@ export async function GET() {
           status = 'success';
           lastMessage = '데이터랩 트렌드 캐시 갱신';
         } else {
-          lastMessage = '일일 cron 첫 실행 대기';
+          lastMessage = '매일 자동 작업 첫 실행 대기';
         }
         break;
       case 'cron-weekly':
@@ -118,19 +118,19 @@ export async function GET() {
           status = 'success';
           lastMessage = '도매꾹 카테고리 트리 갱신';
         } else {
-          lastMessage = '주간 cron 첫 실행 대기';
+          lastMessage = '매주 자동 작업 첫 실행 대기';
         }
         break;
       case 'good-service-track':
-        // Proxy: weekly cron is the carrier. Mark active when weekly cron ran
+        // Proxy: weekly job is the carrier. Mark active when weekly job ran
         // recently, pending otherwise. Sprint 8-IA Phase 2 wires a dedicated
         // goodService log table.
         lastRunAt = lastDomeCat?.refreshedAt ?? null;
         if (lastRunAt) {
           status = 'success';
-          lastMessage = '주간 cron 동승 가동';
+          lastMessage = '매주 자동 작업과 함께 가동';
         } else {
-          lastMessage = '주간 cron 첫 실행 대기';
+          lastMessage = '매주 자동 작업 첫 실행 대기';
         }
         break;
       case 'discord-kkotti-recommend':
@@ -140,10 +140,10 @@ export async function GET() {
         const envOk = discordEnv[a.id];
         if (envOk) {
           status = 'success';
-          lastMessage = 'Webhook 설정 완료';
+          lastMessage = '디스코드 채널 연결 완료';
         } else {
           status = 'pending';
-          lastMessage = 'Discord webhook 환경변수 미설정';
+          lastMessage = '디스코드 채널 미연결';
         }
         break;
       }
