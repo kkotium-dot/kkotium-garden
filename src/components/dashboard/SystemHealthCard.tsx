@@ -41,16 +41,19 @@ const ICON_BY_KEY: Record<string, LucideIcon> = {
 };
 
 const STATUS_PALETTE: Record<HealthStatus, { border: string; text: string; label: string; bg: string }> = {
-  success: { border: '#1D9E75', text: '#0F6E56', label: '정상',  bg: '#ECFDF5' },
-  warning: { border: '#EF9F27', text: '#854F0B', label: '지연',  bg: '#FFFBEB' },
-  failed:  { border: '#E24B4A', text: '#A32D2D', label: '실패',  bg: '#FEF2F2' },
-  pending: { border: '#B4B2A9', text: '#444441', label: '대기',  bg: '#F5F5F4' },
+  success: { border: '#1D9E75', text: '#0F6E56', label: '정상',       bg: '#ECFDF5' },
+  warning: { border: '#EF9F27', text: '#854F0B', label: '실행 지연',  bg: '#FFFBEB' },
+  failed:  { border: '#E24B4A', text: '#A32D2D', label: '실패',       bg: '#FEF2F2' },
+  pending: { border: '#B4B2A9', text: '#444441', label: '대기',       bg: '#F5F5F4' },
 };
 
+// NEW badge expires 30 days after Sprint 8-IA Phase 1 launch (2026-05-20 KST).
+const NEW_BADGE_EXPIRES_AT = new Date('2026-06-19T00:00:00+09:00').getTime();
+
 function formatRelative(iso: string | null): string {
-  if (!iso) return '미실행';
+  if (!iso) return '아직 실행 전';
   const t = new Date(iso).getTime();
-  if (!Number.isFinite(t)) return '미실행';
+  if (!Number.isFinite(t)) return '아직 실행 전';
   const diffSec = Math.max(0, Math.round((Date.now() - t) / 1000));
   if (diffSec < 60) return `${diffSec}초 전`;
   const diffMin = Math.round(diffSec / 60);
@@ -62,7 +65,7 @@ function formatRelative(iso: string | null): string {
 }
 
 function formatNext(iso: string | null): string {
-  if (!iso) return '이벤트 시 실행';
+  if (!iso) return '신호 도착 시 실행';
   const t = new Date(iso).getTime();
   if (!Number.isFinite(t)) return '예정 없음';
   const diffMin = Math.round((t - Date.now()) / 60_000);
@@ -127,6 +130,22 @@ export function SystemHealthCard() {
       >
         <Activity size={16} style={{ color: '#E8001F' }} />
         <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>시스템 상태</p>
+        {Date.now() < NEW_BADGE_EXPIRES_AT && (
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              color: '#BE185D',
+              background: '#FDF2F8',
+              border: '1px solid #FBCFE8',
+              padding: '2px 8px',
+              borderRadius: 999,
+              letterSpacing: '0.04em',
+            }}
+          >
+            NEW
+          </span>
+        )}
         {data && (
           <span
             style={{
@@ -283,7 +302,7 @@ export function SystemHealthCard() {
         }}
       >
         <span style={{ fontSize: 11, fontWeight: 700, color: '#A3A3A3' }}>
-          Sprint 8-IA Phase 1
+          자동화 관리
         </span>
         <Link
           href="/admin/automation"
@@ -298,7 +317,7 @@ export function SystemHealthCard() {
             gap: 4,
           }}
         >
-          자동화 관제 열기
+          전체 자동화 보기
           <ArrowRight size={12} />
         </Link>
       </div>

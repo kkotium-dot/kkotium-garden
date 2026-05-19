@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "자동화 관제",
-    "subtitle": "모든 cron + 자동 트리거 + 알림 발송 상태를 한 곳에서",
+    "subtitle": "모든 자동 작업 + 자동 트리거 + 알림 발송 상태를 한 곳에서",
     "lastSync": "마지막 동기화",
     "refresh": "새로고침"
   },
@@ -10,26 +10,26 @@
     "pending": "대기",
     "hold": "보류",
     "preparing": "준비",
-    "discordConfigured": "Discord 채널",
+    "discordConfigured": "디스코드 채널",
     "discordOf": "/"
   },
   "group": {
     "inventory": "재고",
     "trust": "신뢰도",
     "notification": "알림 발송",
-    "cron": "기존 cron"
+    "cron": "자동 작업"
   },
   "groupHint": {
     "inventory": "도매꾹 재고 변동을 자동 감지하고 알림",
     "trust": "굿서비스 + 톡톡 응답 자동 모니터링",
-    "notification": "Discord 5채널 + 알림톡 발송",
-    "cron": "기존 일일 / 주간 리포트"
+    "notification": "디스코드 5채널 + 알림톡 발송",
+    "cron": "매일 / 매주 자동 리포트"
   },
   "frequency": {
     "daily": "매일",
-    "weekly": "주간",
+    "weekly": "매주",
     "hourly": "매시간",
-    "on-event": "이벤트",
+    "on-event": "신호 도착 시",
     "on-register": "등록 시",
     "on-order": "주문 시",
     "manual": "수동"
@@ -47,9 +47,9 @@
     "preparing": "Sprint 9+ 진입 시"
   },
   "row": {
-    "neverRun": "미실행",
+    "neverRun": "아직 실행 전",
     "lastRun": "마지막",
-    "noSchedule": "이벤트 발생 시",
+    "noSchedule": "신호 도착 시 실행",
     "code": "코드",
     "phase": "단계",
     "detail": "상세"
@@ -63,23 +63,23 @@
     "group": "이 그룹의 자동화가 아직 없습니다."
   },
   "name": {
-    "inventoryPoll": "도매꾹 재고 폴링",
-    "goodServiceTrack": "굿서비스 점수 추적",
-    "discordKkottiRecommend": "Discord 꼬띠 오늘 추천",
-    "discordStockAlert": "Discord 재고 알림",
-    "discordKkottiScore": "Discord 꼬띠 점수 급락",
-    "discordOpsReport": "Discord 운영 리포트",
-    "cronDaily": "일일 리포트 cron",
-    "cronWeekly": "주간 리포트 cron"
+    "inventoryPoll": "도매꾹 재고 자동 확인",
+    "goodServiceTrack": "굿서비스 점수 모니터링",
+    "discordKkottiRecommend": "디스코드 꼬띠 추천 알림",
+    "discordStockAlert": "디스코드 재고 알림",
+    "discordKkottiScore": "디스코드 점수 급락 알림",
+    "discordOpsReport": "디스코드 운영 리포트",
+    "cronDaily": "매일 자동 작업",
+    "cronWeekly": "매주 자동 작업"
   },
   "description": {
-    "inventoryPoll": "Vercel cron으로 도매꾹 OpenAPI v4.5 getInventory를 호출해 등록 상품의 재고를 폴링합니다. 변동 감지 시 동적 임계값으로 yellow / orange / red 알림 생성 + Discord 발송.",
-    "goodServiceTrack": "주간 굿서비스 점수 추적 + 임계 진입 시 알림. 2025.12.2 개편 기준 800만원 + 굿서비스 이중 평가.",
-    "discordKkottiRecommend": "매일 08:00 KST 꼬띠 4모드 추천 Discord 발송 (현재 핫 / 선행 매수 / 니치 / 꽃틔움 맞춤).",
-    "discordStockAlert": "재고 부족 알림을 Discord에 발송 (orange / red 레벨만).",
-    "discordKkottiScore": "꿀통지수 20pt 이상 급락 시 Discord 알림.",
-    "discordOpsReport": "매주 월요일 08:00 KST 운영 리포트 Discord 발송.",
-    "cronDaily": "매일 23:00 KST 일일 리포트 cron — Discord 운영 리포트 채널 발송.",
-    "cronWeekly": "매주 월요일 00:00 KST 주간 리포트 cron — 굿서비스 + 매출 요약."
+    "inventoryPoll": "매 6시간마다 도매꾹 재고를 자동으로 확인합니다. 변동 감지 시 동적 임계값으로 노란색 / 주황색 / 빨간색 알림 생성 + 디스코드 발송.",
+    "goodServiceTrack": "주간 굿서비스 점수 모니터링 + 임계 진입 시 알림. 2025.12.2 개편 기준 800만원 + 굿서비스 이중 평가.",
+    "discordKkottiRecommend": "매일 08:00 KST 꼬띠 4모드 추천 디스코드 발송 (현재 핫 / 선행 매수 / 니치 / 꽃틔움 맞춤).",
+    "discordStockAlert": "재고 부족 알림을 디스코드에 발송 (주황색 / 빨간색 레벨만).",
+    "discordKkottiScore": "꿀통지수 20pt 이상 급락 시 디스코드 알림.",
+    "discordOpsReport": "매주 월요일 08:00 KST 운영 리포트 디스코드 발송.",
+    "cronDaily": "매일 23:00 KST 일일 리포트 자동 발송 — 디스코드 운영 리포트 채널.",
+    "cronWeekly": "매주 월요일 00:00 KST 주간 리포트 자동 발송 — 굿서비스 + 매출 요약."
   }
 }
