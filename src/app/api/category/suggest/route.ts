@@ -1,22 +1,21 @@
 // src/app/api/category/suggest/route.ts
-// Category suggestion: Gemini AI (no category context in prompt) -> DB validation -> fallback rules
+// Category suggestion: Groq AI (no category context in prompt) -> DB validation -> fallback rules
 // Strategy: Ask AI to reason from product name alone, then validate against actual DB
+// AI provider: Groq llama-3.3-70b-versatile (Sprint 7-PC-D 2026-05-19)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 import { getCachedMapping, saveMapping, nameHashKey } from '@/lib/dome-category-cache';
 import { validatePageCategory } from '@/lib/naver/category-page-validator';
+import { callGroq } from '@/lib/ai/groq';
 
-// ── AI: Gemini without full category list in prompt ───────────────────────────
-// Keeping prompt small (< 500 tokens) so Gemini has room to respond
+// ── AI: Groq with compact prompt (no full category list) ──────────────────────
+// Keeping prompt small (< 500 tokens) so AI has room to respond
 
 export const dynamic = 'force-dynamic';
-async function suggestWithGemini(
+async function suggestWithGroq(
   productName: string
 ): Promise<Array<{ d1: string; d2: string; d3: string }>> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not set');
-
   // Compact prompt — no giant category list, just key correction rules
   const prompt = `You are a Naver SmartStore SEO expert. Given a Korean product name, output the top 3 Naver shopping category paths (d1 > d2 > d3).
 
@@ -35,36 +34,18 @@ CRITICAL RULES (verified against actual Naver DB):
 Respond ONLY with raw JSON array (no markdown):
 [{"d1":"...","d2":"...","d3":"..."},{"d1":"...","d2":"...","d3":"..."},{"d1":"...","d2":"...","d3":"..."}]`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: 'Output ONLY a raw JSON array. First character must be [. Last must be ].' }],
-      },
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
-    }),
-  });
+  const text = await callGroq(
+    prompt,
+    'Output ONLY a raw JSON array. First character must be [. Last must be ]. No markdown, no explanation.',
+  );
 
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text().then(t => t.slice(0, 100))}`);
-  const data = await res.json();
-
-  const finishReason = data.candidates?.[0]?.finishReason;
-  if (finishReason === 'MAX_TOKENS') {
-    throw new Error('Gemini response truncated (MAX_TOKENS) — falling back');
-  }
-
-  const parts: { text?: string; thought?: boolean }[] = data.candidates?.[0]?.content?.parts ?? [];
-  const text = parts.filter(p => !p.thought).map(p => p.text ?? '').join('').trim();
-  if (!text) throw new Error(`Gemini empty response (finishReason: ${finishReason})`);
+  if (!text.trim()) throw new Error('Groq empty response');
 
   // Strip markdown fences if present
-  const clean = text.replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
+  const clean = text.replace(/^```(?:json)?\s*/, '').replace(/\s*```\s*$/, '').trim();
   const startIdx = clean.indexOf('[');
-  const endIdx   = clean.lastIndexOf(']');
-  if (startIdx === -1 || endIdx === -1) throw new Error(`No JSON array in: ${clean.slice(0,80)}`);
+  const endIdx = clean.lastIndexOf(']');
+  if (startIdx === -1 || endIdx === -1) throw new Error(`No JSON array in: ${clean.slice(0, 80)}`);
 
   const parsed: Array<{ d1: string; d2: string; d3: string }> = JSON.parse(clean.slice(startIdx, endIdx + 1));
   return parsed.slice(0, 3);
@@ -234,7 +215,7 @@ export async function POST(request: NextRequest) {
     let usedAI = false;
 
     try {
-      const aiResults = await suggestWithGemini(name);
+      const aiResults = await suggestWithGroq(name);
       usedAI = true;
       for (const s of aiResults) {
         const validated = validateSuggestion(s.d1, s.d2, s.d3);

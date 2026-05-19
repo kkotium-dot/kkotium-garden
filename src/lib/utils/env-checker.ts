@@ -1,42 +1,48 @@
 // 환경 변수 확인 유틸리티
+// AI provider chain (Sprint 7-PC-D 2026-05-19):
+//   Primary: Groq llama-3.3-70b-versatile (3 keys round-robin)
+//   Last-resort: Anthropic Claude Sonnet
 
 interface EnvCheckResult {
   DATABASE_URL: boolean;
-  PERPLEXITY_API_KEY: boolean;
-  PERPLEXITY_API_KEY_FORMAT: boolean;
+  GROQ_API_KEY: boolean;
+  GROQ_KEYS_COUNT: number;
+  ANTHROPIC_API_KEY: boolean;
   allValid: boolean;
 }
 
 export function checkEnvironment(): EnvCheckResult {
-  const checks = {
+  const groqKeys = [
+    process.env.GROQ_API_KEY,
+    process.env.GROQ_API_KEY_2,
+    process.env.GROQ_API_KEY_3,
+  ].filter(Boolean);
+
+  const checks: EnvCheckResult = {
     DATABASE_URL: !!process.env.DATABASE_URL,
-    PERPLEXITY_API_KEY: !!process.env.PERPLEXITY_API_KEY,
-    PERPLEXITY_API_KEY_FORMAT: process.env.PERPLEXITY_API_KEY?.startsWith('pplx-') || false,
+    GROQ_API_KEY: groqKeys.length > 0,
+    GROQ_KEYS_COUNT: groqKeys.length,
+    ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
     allValid: false,
   };
 
-  checks.allValid = checks.DATABASE_URL && checks.PERPLEXITY_API_KEY && checks.PERPLEXITY_API_KEY_FORMAT;
+  // allValid: DB + at least one AI provider (Groq primary OR Anthropic last-resort)
+  checks.allValid = checks.DATABASE_URL && (checks.GROQ_API_KEY || checks.ANTHROPIC_API_KEY);
 
   if (typeof window === 'undefined') {
-    // 서버 사이드에서만 로그 출력
+    // Server-side log only
     console.log('\n=== 환경 변수 체크 ===');
     console.log('DATABASE_URL:', checks.DATABASE_URL ? '✅ 설정됨' : '❌ 없음');
-    console.log('PERPLEXITY_API_KEY:', checks.PERPLEXITY_API_KEY ? '✅ 설정됨' : '❌ 없음');
-    console.log('API 키 형식:', checks.PERPLEXITY_API_KEY_FORMAT ? '✅ 올바름 (pplx-)' : '❌ 잘못됨');
+    console.log(`GROQ_API_KEY: ${checks.GROQ_API_KEY ? `✅ ${checks.GROQ_KEYS_COUNT}개 키` : '❌ 없음'}`);
+    console.log('ANTHROPIC_API_KEY:', checks.ANTHROPIC_API_KEY ? '✅ 설정됨 (last-resort)' : '⚠️ 없음 (Groq fallback 불가)');
     console.log('전체 상태:', checks.allValid ? '✅ 모두 정상' : '❌ 문제 있음');
 
-    if (!checks.PERPLEXITY_API_KEY) {
-      console.error('\n⚠️ PERPLEXITY_API_KEY가 설정되지 않았습니다!');
+    if (!checks.GROQ_API_KEY) {
+      console.error('\n⚠️ GROQ_API_KEY가 설정되지 않았습니다 (무료 14,400회/일).');
       console.log('해결 방법:');
       console.log('1. .env.local 파일 열기');
-      console.log('2. PERPLEXITY_API_KEY="pplx-여기에API키" 추가');
+      console.log('2. GROQ_API_KEY="gsk_..." 추가 (최대 _2, _3까지 3개)');
       console.log('3. 서버 재시작 (npm run dev)\n');
-    }
-
-    if (!checks.PERPLEXITY_API_KEY_FORMAT && checks.PERPLEXITY_API_KEY) {
-      console.error('\n⚠️ API 키 형식이 올바르지 않습니다!');
-      console.log('올바른 형식: pplx-xxxxxxxxxxxxxxxxxxxx');
-      console.log('현재 값:', process.env.PERPLEXITY_API_KEY?.substring(0, 10) + '...\n');
     }
 
     if (!checks.DATABASE_URL) {
@@ -57,9 +63,8 @@ export function getEnvStatus(): string {
 
   const errors: string[] = [];
   if (!checks.DATABASE_URL) errors.push('DATABASE_URL 누락');
-  if (!checks.PERPLEXITY_API_KEY) errors.push('PERPLEXITY_API_KEY 누락');
-  if (checks.PERPLEXITY_API_KEY && !checks.PERPLEXITY_API_KEY_FORMAT) {
-    errors.push('PERPLEXITY_API_KEY 형식 오류');
+  if (!checks.GROQ_API_KEY && !checks.ANTHROPIC_API_KEY) {
+    errors.push('AI API 키 누락 (GROQ_API_KEY 또는 ANTHROPIC_API_KEY 필요)');
   }
 
   return `환경 변수 오류: ${errors.join(', ')}`;

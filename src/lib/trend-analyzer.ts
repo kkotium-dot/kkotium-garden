@@ -1,16 +1,16 @@
 // src/lib/trend-analyzer.ts
-// A-8: Naver DataLab Shopping Insight API (primary) + Perplexity (fallback)
+// A-8: Naver DataLab Shopping Insight API (primary)
 // DataLab API: free, requires NAVER_CLIENT_ID + NAVER_CLIENT_SECRET_OPEN (separate from Commerce API)
 // Endpoint: https://openapi.naver.com/v1/datalab/shopping/categories
-// Falls back to Perplexity sonar-pro if DataLab key not configured
+// 2026-05-19 Sprint 7-PC-D: Perplexity fallback removed (Pro plan expired, dead code).
+// Cron continues silently without trend data; keyword volume re-ranking still works.
 
-const PERPLEXITY_URL  = 'https://api.perplexity.ai/chat/completions';
-const DATALAB_URL     = 'https://openapi.naver.com/v1/datalab/shopping/categories';
+const DATALAB_URL = 'https://openapi.naver.com/v1/datalab/shopping/categories';
 
 export interface TrendResult {
   trendKeywords:   string[];
   trendCategories: string[];
-  source: 'datalab' | 'perplexity' | 'fallback';
+  source: 'datalab' | 'fallback';
 }
 
 export interface TrendMatchResult {
@@ -124,59 +124,14 @@ async function fetchDataLabTrends(): Promise<TrendResult | null> {
   }
 }
 
-// ── Perplexity fallback (unchanged from original) ─────────────────────────
-async function fetchPerplexityTrends(): Promise<TrendResult> {
-  const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) return { trendKeywords: [], trendCategories: [], source: 'fallback' };
-
-  const today = new Date().toLocaleDateString('ko-KR', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  });
-
-  const prompt = `${today} 기준 네이버 쇼핑에서 인기 급상승 키워드와 카테고리 TOP 5를 알려주세요.
-JSON 형식으로만 답해주세요. 다른 설명 없이:
-{"trendKeywords":["키워드1","키워드2","키워드3","키워드4","키워드5"],"trendCategories":["카테고리1","카테고리2","카테고리3"]}`;
-
-  try {
-    const res = await fetch(PERPLEXITY_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'sonar-pro',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 200,
-        temperature: 0.3,
-      }),
-    });
-
-    if (!res.ok) return { trendKeywords: [], trendCategories: [], source: 'fallback' };
-
-    const data  = await res.json();
-    const text  = data.choices?.[0]?.message?.content?.trim() ?? '';
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-
-    return {
-      trendKeywords:   Array.isArray(parsed.trendKeywords)   ? parsed.trendKeywords.slice(0, 5)   : [],
-      trendCategories: Array.isArray(parsed.trendCategories) ? parsed.trendCategories.slice(0, 3) : [],
-      source: 'perplexity',
-    };
-  } catch {
-    return { trendKeywords: [], trendCategories: [], source: 'fallback' };
-  }
-}
-
-// ── A-8: Main export — DataLab first, Perplexity fallback ─────────────────
+// ── A-8: Main export — DataLab primary, silent fallback ───────────────────
 export async function fetchNaverTrends(): Promise<TrendResult> {
-  // Try DataLab first (free, reliable)
+  // Try DataLab (free, reliable, primary source)
   const datalab = await fetchDataLabTrends();
   if (datalab && datalab.trendKeywords.length > 0) return datalab;
 
-  // Silent fallback — Perplexity removed (Pro plan required)
-  // Cron continues without trend data; keyword volume re-ranking still works
+  // Silent fallback — Perplexity fallback removed in Sprint 7-PC-D (2026-05-19).
+  // Cron continues without trend data; keyword volume re-ranking still works.
   return { trendKeywords: [], trendCategories: [], source: 'fallback' };
 }
 

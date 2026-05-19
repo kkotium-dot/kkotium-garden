@@ -1,11 +1,12 @@
 // src/app/api/products/[id]/aeo-generate/route.ts
 // C-2: AEO (Answer Engine Optimization) Q&A + FAQ auto-generator
 // Generates structured Q&A pairs optimized for Naver AI Briefing
-// Uses Gemini round-robin > Groq fallback > static fallback
+// AI provider (Sprint 7-PC-D 2026-05-19): Groq llama-3.3-70b-versatile (3 keys round-robin)
 // Stores result in product.aeo_content JSONB column
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { callGroq, GROQ_MODEL } from '@/lib/ai/groq';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,74 +76,26 @@ Rules for Q&A (product-specific, AEO optimized):
 
 Rules for FAQ (common purchase questions):
 - Shipping/delivery timeline
-- Return/exchange policy  
+- Return/exchange policy
 - Gift wrapping availability
 - Size guide or measurement
 - Care instructions
 - Include concrete numbers (days, amounts) where possible`;
 }
 
-// ── AI provider calls ────────────────────────────────────────────────────────
-
-async function callGeminiAEO(prompt: string): Promise<AEOContent> {
-  const keys = [
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_API_KEY_2,
-    process.env.GEMINI_API_KEY_3,
-  ].filter(Boolean) as string[];
-
-  if (keys.length === 0) throw new Error('GEMINI_NOT_CONFIGURED');
-
-  let lastErr = '';
-  for (const key of keys) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: 'Output ONLY raw JSON. First char must be {, last must be }. No markdown.' }] },
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 2048, responseMimeType: 'application/json' },
-        }),
-      });
-      if (!res.ok) throw new Error(`Gemini ${res.status}`);
-      const data = await res.json();
-      const parts: { text?: string; thought?: boolean }[] = data.candidates?.[0]?.content?.parts ?? [];
-      const text = parts.filter(p => !p.thought).map(p => p.text ?? '').join('').trim();
-      const parsed = parseJsonSafe(text);
-      return { ...parsed, generatedAt: new Date().toISOString(), provider: 'gemini-2.0-flash' };
-    } catch (e) {
-      lastErr = e instanceof Error ? e.message : String(e);
-      if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('403')) continue;
-      throw e;
-    }
-  }
-  throw new Error(`Gemini all keys failed: ${lastErr}`);
-}
+// ── AI provider call ─────────────────────────────────────────────────────────
 
 async function callGroqAEO(prompt: string): Promise<AEOContent> {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error('GROQ_NOT_CONFIGURED');
-
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
-      messages: [
-        { role: 'system', content: 'Output ONLY raw JSON. First char must be {, last must be }. No markdown.' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.4,
-      max_tokens: 2048,
-    }),
-  });
-  if (!res.ok) throw new Error(`Groq ${res.status}`);
-  const data = await res.json();
-  const text = data.choices?.[0]?.message?.content ?? '';
+  const text = await callGroq(
+    prompt,
+    'Output ONLY raw JSON. First char must be {, last must be }. No markdown.',
+  );
   const parsed = parseJsonSafe(text);
-  return { ...parsed, generatedAt: new Date().toISOString(), provider: 'groq-llama3' };
+  return {
+    ...parsed,
+    generatedAt: new Date().toISOString(),
+    provider: `groq-${GROQ_MODEL}`,
+  };
 }
 
 function parseJsonSafe(text: string): { qna: QAPair[]; faq: QAPair[] } {
@@ -188,19 +141,15 @@ export async function POST(
 
     const prompt = buildAEOPrompt(product);
 
-    // Try Gemini first, then Groq
+    // Groq (3 keys round-robin, free tier)
     let result: AEOContent;
     try {
-      result = await callGeminiAEO(prompt);
-    } catch {
-      try {
-        result = await callGroqAEO(prompt);
-      } catch (e2) {
-        return NextResponse.json({
-          success: false,
-          error: e2 instanceof Error ? e2.message : 'All AI providers failed',
-        }, { status: 503 });
-      }
+      result = await callGroqAEO(prompt);
+    } catch (e) {
+      return NextResponse.json({
+        success: false,
+        error: 'AI 서비스 일시 응답 없음. 잠시 후 다시 시도해주세요.',
+      }, { status: 503 });
     }
 
     // Save to DB

@@ -472,6 +472,12 @@ Vercel 런타임은 정적 자산과 안전한 서버 연산만 수행한다.
   ```
 - 잔존 사용처 모두 단일 commit으로 정합화 또는 paper-cut 등재
 
+**메타-단정 사례 (2026-05-19 PM 후속, Sprint 7-PC-D)**:
+- PC-C `2276ed7`에서 5 endpoint Groq 정합 완료 후에도 잔존 6 endpoint *4일간 코드 0건 변경* 상태로 운영
+- 사용자가 "PERPLEXITY 만료 → 사용 안 함" 명시한 후 일괄 제거 (Sprint 7-PC-D)
+- 학습: "DEPRECATED 상태" + paper-cut 등재만으로는 부족 — *4일 갭 사이 사용자 노출 위험 잔존*
+- 강화: 사용자 직접 결정으로 DEPRECATED → REMOVED 격상 시 *24h 내 전면 제거 의무*
+
 ---
 
 ## 작업원칙 #43 — 시크릿/API 키 포함 코드의 backup 패턴 절대 금지 (2026-05-19 명문화)

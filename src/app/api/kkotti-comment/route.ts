@@ -1,17 +1,16 @@
 // src/app/api/kkotti-comment/route.ts
-// Kkotti AI comment generator — Gemini 2.0 Flash with Perplexity fallback
+// Kkotti AI comment generator — Groq llama-3.3-70b-versatile primary
+// AI provider (Sprint 7-PC-D 2026-05-19): Groq → static fallback
 // POST { products: ProductSummary[], context: string }
-// Returns { comment: string, source: 'gemini' | 'perplexity' | 'fallback' }
+// Returns { comment: string, source: 'groq' | 'fallback' }
 
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeCompetition } from '@/lib/naver/shopping-search';
 import { buildPersonaBlock } from '@/lib/kkotti-vocab';
+import { callGroq } from '@/lib/ai/groq';
 
 
 export const dynamic = 'force-dynamic';
-const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-const PERPLEXITY_URL = 'https://api.perplexity.ai/chat/completions';
 
 // ── 24-hour in-memory cache ───────────────────────────────────────────────────
 interface CacheEntry { comment: string; source: string; ts: number }
@@ -61,8 +60,7 @@ interface ProductSummary {
 // ── Kkotti persona ────────────────────────────────────────────────────────────
 // Sourced from src/lib/kkotti-vocab.ts (workflow redesign Part A1a, 2026-05-03).
 // buildPersonaBlock() centralizes the persona definition so vocab pools and
-// signature catchphrases ("빵야~", "까꿍") stay synchronized with the
-// dashboard KkottiBriefingWidget.
+// signature catchphrases stay synchronized with the dashboard KkottiBriefingWidget.
 const KKOTTI_PERSONA = buildPersonaBlock();
 
 // ── Static fallbacks (last resort) ───────────────────────────────────────────
@@ -129,47 +127,11 @@ function buildPrompt(context: string, products: ProductSummary[], marketData?: s
   return `${KKOTTI_PERSONA}\n\n${contextPrompts[context] ?? contextPrompts.daily}`;
 }
 
-// ── Gemini call ───────────────────────────────────────────────────────────────
-async function callGemini(prompt: string, apiKey: string): Promise<string | null> {
+// ── Groq call ─────────────────────────────────────────────────────────────────
+async function callGroqKkotti(prompt: string): Promise<string | null> {
   try {
-    const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.85, maxOutputTokens: 150, topP: 0.9 },
-      }),
-    });
-    if (res.status === 429 || !res.ok) return null;
-    const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().slice(0, 120) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-// ── Perplexity fallback call ──────────────────────────────────────────────────
-async function callPerplexity(prompt: string, apiKey: string): Promise<string | null> {
-  try {
-    const res = await fetch(PERPLEXITY_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'sonar-pro',
-        messages: [
-          { role: 'system', content: KKOTTI_PERSONA },
-          { role: 'user',   content: prompt },
-        ],
-        max_tokens: 150,
-        temperature: 0.8,
-      }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim().slice(0, 120) ?? null;
+    const text = await callGroq(prompt, KKOTTI_PERSONA);
+    return text.trim().slice(0, 120);
   } catch {
     return null;
   }
@@ -195,8 +157,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Cache check
-    const cacheKey   = getCacheKey(context, products as ProductSummary[]);
-    const cached     = getCache(cacheKey);
+    const cacheKey = getCacheKey(context, products as ProductSummary[]);
+    const cached = getCache(cacheKey);
     if (cached) {
       return NextResponse.json({ success: true, comment: cached.comment, source: `${cached.source}:cached` });
     }
@@ -212,29 +174,26 @@ export async function POST(request: NextRequest) {
       }
     } catch { /* non-critical */ }
 
-    const prompt        = buildPrompt(context, products as ProductSummary[], marketData || undefined);
-    const geminiKey     = process.env.GEMINI_API_KEY;
-    const perplexityKey = process.env.PERPLEXITY_API_KEY;
+    const prompt = buildPrompt(context, products as ProductSummary[], marketData || undefined);
+    const hasGroqKey = !!(
+      process.env.GROQ_API_KEY ||
+      process.env.GROQ_API_KEY_2 ||
+      process.env.GROQ_API_KEY_3
+    );
 
     let comment: string | null = null;
-    let source  = 'fallback';
+    let source = 'fallback';
 
-    // 1. Try Gemini
-    if (geminiKey) {
-      comment = await callGemini(prompt, geminiKey);
-      if (comment) source = 'gemini';
+    // Groq primary (3 keys round-robin)
+    if (hasGroqKey) {
+      comment = await callGroqKkotti(prompt);
+      if (comment) source = 'groq';
     }
 
-    // 2. Gemini failed / rate-limited → try Perplexity
-    if (!comment && perplexityKey) {
-      comment = await callPerplexity(prompt, perplexityKey);
-      if (comment) source = 'perplexity';
-    }
-
-    // 3. Both failed → static fallback
+    // Groq failed → static fallback
     if (!comment) {
       comment = getFallback(context);
-      source  = 'fallback';
+      source = 'fallback';
     }
 
     // Cache the result (even fallbacks — prevents hammering APIs)

@@ -1,10 +1,18 @@
 // src/app/api/naver-seo/ai-generate/route.ts
 // AI SEO generator — 3 style modes: orthodox / emotional / niche
-// Provider priority: Gemini (free) > Anthropic > Perplexity
+// Provider priority (Sprint 7-PC-D 2026-05-19):
+//   1. Groq llama-3.3-70b-versatile (3 keys round-robin, free 43,200/day)
+//   2. Anthropic Claude Sonnet (last-resort, cost-capped)
+//
+// DEPRECATED chains (removed in this commit):
+//   - Perplexity sonar-pro (Pro plan expired 2026-05)
+//   - Google Gemini 2.0 Flash (revoked due to backup file exposure)
+//   - xAI Grok (cost-capped, not in primary stack)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { analyzeCompetition, type CompetitionAnalysis } from '@/lib/naver/shopping-search';
+import { callGroq, GROQ_MODEL } from '@/lib/ai/groq';
 
 // ─── Style mode type ──────────────────────────────────────────────────────────
 
@@ -67,50 +75,8 @@ Rules:
 
 // ─── AI provider calls ────────────────────────────────────────────────────────
 
-// Single key call
-async function callGeminiWithKey(productName: string, style: SeoStyle, apiKey: string, market?: CompetitionAnalysis | null): Promise<Record<string, string>> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: 'Output ONLY raw JSON. First char must be {, last must be }. No markdown.' }] },
-      contents: [{ parts: [{ text: buildPrompt(productName, style) }] }],
-      generationConfig: { temperature: style === 'emotional' ? 0.7 : 0.2, maxOutputTokens: 2048, responseMimeType: 'application/json' },
-    }),
-  });
-  if (!res.ok) throw new Error(`Gemini ${res.status}`);
-  const data = await res.json();
-  const parts: { text?: string; thought?: boolean }[] = data.candidates?.[0]?.content?.parts ?? [];
-  const text = parts.filter(p => !p.thought).map(p => p.text ?? '').join('').trim();
-  return parseJsonSafe(text);
-}
-
-// Round-robin across all available Gemini keys
-async function callGemini(productName: string, style: SeoStyle): Promise<Record<string, string>> {
-  const keys = [
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_API_KEY_2,
-    process.env.GEMINI_API_KEY_3,
-  ].filter(Boolean) as string[];
-  if (keys.length === 0) throw new Error('GEMINI_API_KEY not set');
-  let lastErr = '';
-  for (const key of keys) {
-    try {
-      return await callGeminiWithKey(productName, style, key);
-    } catch (e) {
-      lastErr = e instanceof Error ? e.message : String(e);
-      if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('403')) {
-        console.warn(`[ai-generate] Gemini key ${key.slice(-6)} quota/403, trying next`);
-        continue;
-      }
-      throw e;
-    }
-  }
-  throw new Error(`Gemini: 모든 키 quota 초과 (${lastErr.slice(0,60)})`);
-}
-
-async function callAnthropic(productName: string, style: SeoStyle): Promise<Record<string, string>> {
+// Anthropic Claude Sonnet — last-resort fallback
+async function callAnthropic(productName: string, style: SeoStyle, market?: CompetitionAnalysis | null): Promise<Record<string, string>> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -119,98 +85,12 @@ async function callAnthropic(productName: string, style: SeoStyle): Promise<Reco
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514', max_tokens: 1000,
       system: '네이버 SEO 전문가. 순수 JSON만 반환. 마크다운 금지.',
-      messages: [{ role: 'user', content: buildPrompt(productName, style) }],
+      messages: [{ role: 'user', content: buildPrompt(productName, style, market) }],
     }),
   });
   if (!res.ok) throw new Error(`Anthropic ${res.status}`);
   const data = await res.json();
   return parseJsonSafe(data.content?.[0]?.text ?? '');
-}
-
-async function callGroqWithKey(productName: string, style: SeoStyle, apiKey: string, market?: CompetitionAnalysis | null): Promise<Record<string, string>> {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
-      messages: [
-        { role: 'system', content: 'Output ONLY raw JSON. First char must be {, last must be }. No markdown.' },
-        { role: 'user', content: buildPrompt(productName, style, market) },
-      ],
-      temperature: style === 'emotional' ? 0.7 : 0.2,
-      max_tokens: 1024,
-    }),
-  });
-  if (!res.ok) throw new Error(`Groq ${res.status}`);
-  const data = await res.json();
-  return parseJsonSafe(data.choices?.[0]?.message?.content ?? '');
-}
-
-// Round-robin across all Groq keys
-async function callGroq(productName: string, style: SeoStyle, market?: CompetitionAnalysis | null): Promise<Record<string, string>> {
-  const keys = [
-    process.env.GROQ_API_KEY,
-    process.env.GROQ_API_KEY_2,
-    process.env.GROQ_API_KEY_3,
-  ].filter(Boolean) as string[];
-  if (keys.length === 0) throw new Error('GROQ_API_KEY not set');
-  let lastErr = '';
-  for (const key of keys) {
-    try {
-      return await callGroqWithKey(productName, style, key, market);
-    } catch (e) {
-      lastErr = e instanceof Error ? e.message : String(e);
-      // Retry on rate/quota AND auth errors — a single revoked key shouldn't kill the whole chain
-      if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('rate') || lastErr.includes('401') || lastErr.includes('403')) {
-        console.warn(`[ai-generate] Groq key ...${key.slice(-6)} failed (${lastErr.slice(0, 30)}), trying next`);
-        continue;
-      }
-      throw e;
-    }
-  }
-  throw new Error(`Groq: all keys rate limited (${lastErr.slice(0,60)})`);
-}
-
-
-async function callXai(productName: string, style: SeoStyle, market?: CompetitionAnalysis | null): Promise<Record<string, string>> {
-  const apiKey = process.env.XAI_API_KEY;
-  if (!apiKey) throw new Error('XAI_API_KEY not set');
-  const res = await fetch('https://api.x.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'grok-3-mini-fast',
-      messages: [
-        { role: 'system', content: 'Output ONLY raw JSON. First char must be {, last must be }. No markdown.' },
-        { role: 'user', content: buildPrompt(productName, style, market) },
-      ],
-      temperature: style === 'emotional' ? 0.7 : 0.2,
-      max_tokens: 1024,
-    }),
-  });
-  if (!res.ok) throw new Error(`xAI ${res.status}`);
-  const data = await res.json();
-  return parseJsonSafe(data.choices?.[0]?.message?.content ?? '');
-}
-
-async function callPerplexity(productName: string, style: SeoStyle): Promise<Record<string, string>> {
-  const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) throw new Error('PERPLEXITY_API_KEY not set');
-  const res = await fetch('https://api.perplexity.ai/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'sonar-pro',
-      messages: [
-        { role: 'system', content: '네이버 SEO 전문가. 순수 JSON만 반환.' },
-        { role: 'user', content: buildPrompt(productName, style) },
-      ],
-      temperature: 0.2, max_tokens: 1000,
-    }),
-  });
-  if (!res.ok) throw new Error(`Perplexity ${res.status}`);
-  const data = await res.json();
-  return parseJsonSafe(data.choices?.[0]?.message?.content ?? '');
 }
 
 function parseJsonSafe(text: string): Record<string, string> {
@@ -226,34 +106,28 @@ async function generateSEO(
   style: SeoStyle = 'orthodox',
   market?: CompetitionAnalysis | null
 ): Promise<{ data: Record<string, string>; provider: string; market?: CompetitionAnalysis | null }> {
-  // Priority: Groq (free, stable, multi-key) -> Gemini -> Anthropic -> Perplexity
+  // Priority: Groq (free, 3 keys round-robin) → Anthropic Sonnet (last-resort)
 
-  // 1. Groq first — free, fast, stable (up to 3 keys round-robin)
+  // 1. Groq first — free, fast, stable
   const hasGroqKey = !!(process.env.GROQ_API_KEY || process.env.GROQ_API_KEY_2 || process.env.GROQ_API_KEY_3);
   if (hasGroqKey) {
-    try { return { data: await callGroq(productName, style, market), provider: 'groq-llama3', market }; }
-    catch (e) { console.warn('[ai-generate] All Groq keys failed, trying xAI:', e instanceof Error ? e.message.slice(0,60) : e); }
+    try {
+      const text = await callGroq(
+        buildPrompt(productName, style, market),
+        'Output ONLY raw JSON. First char must be {, last must be }. No markdown.',
+      );
+      return { data: parseJsonSafe(text), provider: `groq-${GROQ_MODEL}`, market };
+    } catch (e) {
+      console.warn('[ai-generate] All Groq keys failed, trying Anthropic:', e instanceof Error ? e.message.slice(0, 60) : e);
+    }
   }
 
-  // 2. Gemini (free tier, up to 3 keys)
-  const hasGeminiKey = !!(process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2 || process.env.GEMINI_API_KEY_3);
-  if (hasGeminiKey) {
-    try { return { data: await callGemini(productName, style), provider: 'gemini-2.0-flash', market }; }
-    catch (e) { console.warn('[ai-generate] All Gemini keys failed, trying Anthropic:', e instanceof Error ? e.message.slice(0,60) : e); }
-  }
-
-  // 4. Anthropic fallback
+  // 2. Anthropic last-resort
   if (process.env.ANTHROPIC_API_KEY) {
-    try { return { data: await callAnthropic(productName, style), provider: 'claude-sonnet', market }; }
-    catch (e) { console.warn('[ai-generate] Anthropic failed, trying Perplexity:', e instanceof Error ? e.message.slice(0,60) : e); }
+    return { data: await callAnthropic(productName, style, market), provider: 'claude-sonnet', market };
   }
 
-  // 5. Perplexity last resort
-  if (process.env.PERPLEXITY_API_KEY) {
-    return { data: await callPerplexity(productName, style), provider: 'perplexity-sonar', market };
-  }
-
-  throw new Error('AI API 키가 모두 실패했습니다. GROQ_API_KEY를 확인해주세요.');
+  throw new Error('AI 서비스 일시 응답 없음 (Groq + Anthropic 모두 실패). 잠시 후 다시 시도해주세요.');
 }
 
 // ─── POST: single product ─────────────────────────────────────────────────────

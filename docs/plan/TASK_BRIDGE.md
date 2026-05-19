@@ -71,34 +71,38 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-19 PM PC-C-archive 진입
+**Last update**: 2026-05-19 PM Sprint 7-PC-D 진입
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (직전 PC-C-hotfix `f9119a0`) |
+| **FROM** | 💻 Code (직전 PC-C-archive `0b941a6`) |
 | **TO** | 💻 Code (본 commit, self hand-off) |
-| **BASELINE** | `f9119a0` (PC-C-hotfix 완료) |
-| **NEXT SCOPE** | PC-C-archive (P35 provider stale + P36 .backup 60건 + .gitignore + #43 강화) |
-| **PENDING BLOCKER** | 없음 |
-| **AFTER** | 사용자 첫 실 상품 등록 (도매매 단건 크롤링 + 풀 워크플로우) |
+| **BASELINE** | `0b941a6` (PC-C-archive 완료) |
+| **NEXT SCOPE** | PC-D (Perplexity 잔존 6 endpoint 완전 제거 + Gemini AEO 마이그레이션) |
+| **PENDING BLOCKER** | 없음 (사용자 명시 결정: PERPLEXITY 만료, 사용 안 함) |
+| **AFTER** | 사용자 첫 실 상품 등록 (도매매 단건 크롤링, 디퓨저 외 다른 카테고리 검증) |
 
-### 본 hand-off 진행 흐름 (2026-05-19 PM, PC-C-archive)
+### 본 hand-off 진행 흐름 (2026-05-19 PM, Sprint 7-PC-D)
 
 ```
-PC-C-hotfix `f9119a0` push 후 Desktop 5-source 검증
+PC-C-archive `0b941a6` push 후 Desktop 3-source 검증
 ↓
-Desktop: provider 응답 "groq-llama-3.1-8b-instant" stale 단정 (P35)
+사용자 명시: "PERPLEXITY_API_KEY 만료 → 사용 안 함. 차단 문구 0건."
 ↓
-Desktop: Filesystem search 60건 .backup 잔존 단정 (P36)
+Desktop: 잔존 Perplexity/Gemini 7 endpoint 단정 (P25/P26/P27/P28/P29/P30 + aeo)
 ↓
-Desktop: paste-ready 메시지 (4-task: provider fix + 60 rm + .gitignore + bridge)
-↓
-Code: 본 commit (GROQ_MODEL 상수 export + 60 .backup rm + .gitignore + #43)
+Code: 본 commit (Perplexity + Gemini active 호출 0건, 6 endpoint 마이그레이션)
+  - P30 category/suggest: Gemini → Groq
+  - P27 naver-seo/ai-generate: Perplexity + xAI + Gemini 삭제, Groq + Anthropic
+  - P29 aeo-generate: Gemini → Groq (3 keys round-robin)
+  - P28 kkotti-comment: Perplexity + Gemini 삭제, Groq + 정적 fallback
+  - P25 trend-analyzer: fetchPerplexityTrends dead code 삭제
+  - P26 env-checker: PERPLEXITY → GROQ/ANTHROPIC 전면 재작성
+  - .env.example: PERPLEXITY/GEMINI DEPRECATED 흔적 0
 ↓
 Code: push + hash 보고
 ↓
-Desktop: 3-source cross-track 검증 (production curl + filesystem + MD)
-→ 통과 시 §7 ARCHIVED 등재 + 사용자 첫 실 상품 등록 진입 권고
+Desktop: 검증 + 사용자 첫 실 상품 등록 진입 권고
 ```
 
 ---
@@ -155,8 +159,17 @@ Desktop: 3-source cross-track 검증 (production curl + filesystem + MD)
 | P32 | lib/upload-readiness-filler Gemini 잔존 | PC-D |
 | **P33** | **lib/gemini.ts.bak 보안 위반 (백업파일 노출) — 17개 일괄 처리** | **`f9119a0` (PC-C-hotfix) ✅ 완료** |
 | P34 | Gemini 재진입 시점 (예약) | Sprint 8 (월 매출 100만+) |
-| **P35** | **provider 응답 문자열 stale (route.ts hardcoded 8b)** — GROQ_MODEL 상수 참조로 fix | **본 commit (PC-C-archive) ✅ 완료** |
-| **P36** | **.backup 패턴 60건 git 추적 + .gitignore 누락** (작업원칙 #43 메타-단정 사례) | **본 commit (PC-C-archive) ✅ 완료** |
+| **P35** | **provider 응답 문자열 stale (route.ts hardcoded 8b)** — GROQ_MODEL 상수 참조로 fix | **`0b941a6` (PC-C-archive) ✅ 완료** |
+| **P36** | **.backup 패턴 60건 git 추적 + .gitignore 누락** (작업원칙 #43 메타-단정 사례) | **`0b941a6` (PC-C-archive) ✅ 완료** |
+| **P25** | **lib/trend-analyzer.ts Perplexity dead code 삭제** | **본 commit (PC-D) ✅ 완료** |
+| **P26** | **lib/utils/env-checker.ts PERPLEXITY 검사 → GROQ/ANTHROPIC** | **본 commit (PC-D) ✅ 완료** |
+| **P27** | **/api/naver-seo/ai-generate Perplexity + xAI + Gemini 삭제** | **본 commit (PC-D) ✅ 완료** |
+| **P28** | **/api/kkotti-comment Perplexity + Gemini 삭제, Groq primary** | **본 commit (PC-D) ✅ 완료** |
+| **P29** | **/api/products/[id]/aeo-generate Gemini → Groq** | **본 commit (PC-D) ✅ 완료** |
+| **P30** | **/api/category/suggest Gemini → Groq** | **본 commit (PC-D) ✅ 완료** |
+| P31 | lib/review-sentiment-analyzer.ts — 단정 결과: 이미 Groq primary (헤더 정합 갱신만 권고) | scope 외 (이미 정합) |
+| P32 | lib/upload-readiness-filler.ts — 단정 결과: 이미 Groq primary (헤더 정합 갱신만 권고) | scope 외 (이미 정합) |
+| #3 | handleNaverDirect silent fail (2026-05-17 발견) | `742ce91` (PC-A) ✅ 해소 단정 — 사용자 첫 실 상품 등록 시 검증 의무 |
 
 ---
 
@@ -190,6 +203,12 @@ Desktop: 3-source cross-track 검증 (production curl + filesystem + MD)
   - 한국어 정합 100% / P24 결함 완전 해소
   - 추가 단정: provider 문자열 stale → P35 후속 fix
   - 추가 단정: .backup 60건 잔존 → P36 후속 fix (메타-단정 사례)
+- ✅ Sprint 7-PC-C-archive `0b941a6` ← Desktop 3-source 검증 통과
+  (P35 GROQ_MODEL 상수 export + P36 60 .backup rm + .gitignore +6 patterns
+  + #43 메타-단정 강화, 65 files +52/-18741 LOC, Vercel READY)
+  - Production smoke: provider="groq-llama-3.3-70b-versatile" 정합 확정
+  - productNames/hooks 3/3 unique, 한국어 자연어 100%
+  - 누적 정리: .bak 17 + .backup 60 = 77 보안 위반 파일 해제
 
 ---
 
