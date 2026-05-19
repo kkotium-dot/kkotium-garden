@@ -1,3 +1,90 @@
+## 2026-05-20 Sprint 8-IA Phase 1 완료 (Code turn, 코드 2 신규 + 1 수정 + docs)
+
+### 본 세션 성격
+
+새 채팅 1 진입. Sprint 8-IA Phase 1 (Task 1-5) Code 측 build + ship 본 turn. baseline `db72408` (Task 1-3 sidebar demote + admin move + registry 31→8 적용 완료 상태) 에서 Task 4 (SystemHealthCard + /api/system-health) 작성 + Task 5 (production smoke 검증) + docs 갱신.
+
+세션 진입 시 working tree 가 `feature/sprint-7-m2-smart-asset-workflow` 브랜치 (Sprint 7-M2 Step 1+2 2 commits ahead) 에 있었음. handoff 명시 (`Branch: main`) 따라 `git checkout main` 후 db72408 baseline 기준 작업 진행. Sprint 7-M2 feature branch 는 origin 에 보존됨 (별도 trace, 후속 작업).
+
+### Code 변경 (1 commit, +517 LOC)
+
+- **`src/app/api/system-health/route.ts`** (신규, +189 LOC)
+  - 8 registry × 4 신호 (InventorySnapshot.polledAt / CategoryTrendCache.refreshedAt / DomeCategory.refreshedAt / Discord webhook env) → HealthItem[] 변환
+  - status 4종: success / warning / failed / pending
+  - stale factor 1.5 (interval × 1.5 초과 시 success → warning 자동 강등)
+  - DISPLAY_MAP 으로 한글 displayName + Lucide iconKey 매핑
+  - 한글 type literal 0건 (#3-3 정합), 영어 주석 (#3-1 정합), prisma singleton 사용 (#3-2 정합)
+
+- **`src/components/dashboard/SystemHealthCard.tsx`** (신규, +293 LOC)
+  - 'use client' / 60s setInterval polling + window focus revalidate
+  - 8 mini cards 반응형 grid (`minmax(180px, 1fr)`)
+  - status 별 좌측 3px border 색상 + status pill + lastRunAt 상대시간 + nextRunAt 표시
+  - Lucide React 아이콘만 사용 (Activity / Package / Sparkles / Bell / Flame / Tag / Clock / ArrowRight / Loader2 / AlertCircle)
+  - 이모지 0건, 한글 사용자 노출 텍스트 (정상 / 지연 / 실패 / 대기 / 미실행 / 분 전 / 시간 후 등) 본 컴포넌트 inline 유지
+
+- **`src/app/dashboard/page.tsx`** (수정, +20 / -15)
+  - import 추가: `SystemHealthCard`
+  - Section 3 가든 헬스 grid 위로 SystemHealthCard 마운트 (기존 3-카드 grid 보존)
+  - CollapsibleSection 변경 0 — 기존 변형 (celebrator) 유지
+
+**Commit hash**: `12495cf`
+
+### Hand-off 정합 보정 단정
+
+| 항목 | handoff 가정 | 실 단정 |
+|---|---|---|
+| DB 테이블 | `AutomationLog (type / status / message / createdAt)` | 부재 — InventorySnapshot / CategoryTrendCache / DomeCategory / discord env 만 사용 |
+| Registry 8 ID | inventory-poll / price-watch / supplier-status / honey-pot-discovery / kkotti-ai-recommend / auto-order / image-pipeline / discord-notify | inventory-poll / good-service-track / discord-kkotti-recommend / discord-stock-alert / discord-kkotti-score / discord-ops-report / cron-daily / cron-weekly |
+| Branch | main HEAD = db72408 | 진입 시 feature/sprint-7-m2-smart-asset-workflow (HEAD=84bdfdf). `git checkout main` 후 db72408 baseline 보존 |
+| Section | "Section 5 알림 배너 직후" | 실 dashboard Section 1-5 이미 존재 (Section 5 = collapsed 더보기) — Section 3 가든 헬스 상단으로 의미 정합 best fit |
+
+handoff STEP A 명시 "registry 가 source of truth" 정합 — 실제 registry 8 entry 그대로 사용.
+
+### 검증 (V1~V6)
+
+| 항목 | 결과 |
+|---|---|
+| TSC | 0 errors ✅ |
+| build | exit 0 ✅ |
+| V1 사이드바 demote | ✅ Task 1-3 (db72408) 에 적용됨 |
+| V2 `/admin/automation` 200 | ✅ |
+| V3 registry 8 카드 | ✅ `/api/automation/registry` total=8, 모두 active |
+| V4 Section 3 SystemHealthCard | ✅ `/dashboard` 200 + 컴포넌트 마운트 |
+| V5 `/api/system-health` 200 + 8 items | ✅ summary={healthy:4, total:8}, items.length=8, 한글 displayName 정합 |
+| V6 console 0 errors / 0 깨짐 | ⚠️ Code 환경 브라우저 미가용 — Desktop Chrome MCP 검증 의무 |
+
+**Production evidence** (`/api/system-health`):
+- inventory-poll: pending (첫 폴 대기)
+- cron-daily: warning (lastRunAt 42시간 전, stale factor 적용)
+- 4 discord-*: success (webhook env 모두 설정됨)
+- good-service-track / cron-weekly: pending (DomeCategory 미수확)
+→ 4/8 정상 = 실 가동 상태 정확 반영 (#46 (d) 통과)
+
+### Vercel 검증
+
+- `git push origin main` → 12495cf push 성공
+- `scripts/verify-vercel-deploy.sh --wait` → exit 0, production = 12495cf READY (state=REGISTERED) ✅
+- `curl -sI https://kkotium-garden.vercel.app/dashboard` → 200 ✅
+- `curl -sI https://kkotium-garden.vercel.app/admin/automation` → 200 ✅
+- `curl -sI https://kkotium-garden.vercel.app/api/system-health` → 200 ✅
+
+### MD 갱신
+
+- `docs/plan/PROGRESS.md` 헤더 갱신 + 본 entry prepend
+- `docs/plan/TASK_BRIDGE.md` §3 ACTIVE 갱신 (Phase 1 완료 → Phase 2 진입 대기) + §7 ARCHIVED 등재 (db72408 + 12495cf)
+- `docs/plan/SESSION_LOG.md` 본 entry prepend
+- SESSION_LOG 현재 1085줄 (1500 임계 미달) → #31 분할 불필요
+
+### 적용 작업원칙
+
+#17 (commit-msg.tmp) · #21 (사전 점검) · #24 (한 turn 분할 완료) · #29 (한글 처리) · #31 (1500 임계 점검) · #32 (TSC ≠ build) · #36 (verify-vercel-deploy.sh --wait) · #41 (두 환경 핑퐁 ledger 갱신) · #46 (거짓 라벨 금지 — pending/warning/success 실 신호 기반, hardcoded 정상 0건)
+
+### 다음
+
+새 채팅 2 진입 = Sprint 8-IA Phase 2 (Task 6-12, 4.5일). 단 본 turn 의 V6 미단정 → Desktop Chrome MCP 통합 검증 통과 후 진입.
+
+---
+
 ## 2026-05-19 PM Sprint 8-IA 진입 결정 + IA 재설계 (Desktop turn, docs only)
 
 ### 본 세션 성격

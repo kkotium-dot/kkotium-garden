@@ -1,11 +1,11 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-19 PM (Sprint 8-IA 진입 결정 + IA 재설계 + 작업원칙 #46 신설, Turn 2 완료)
-> 활성 계획: Sprint 8-IA Phase 1 (자동화 관제 강등 + registry 26→8 + 대시보드 Section 5) → Phase 2 (대시보드 통합 + 빌더 흡수 + lifestyle 가시화 + 통일성)
+> 최종 업데이트: 2026-05-20 Sprint 8-IA Phase 1 완료 (Code turn: Task 4 SystemHealthCard + /api/system-health 신설, Phase 1 5 Task 전 종결)
+> 활성 계획: Sprint 8-IA Phase 2 (Section 1 Hero / Section 2 Inbox 통합 / 빌더 흡수 / lifestyle 가시화 / 통일성, 4.5일) — 새 채팅 2 진입 대기
 > 보류 계획: Smart Asset Workflow v3.1 FINAL 후속 (Phase 2-c-3 / Sprint 7-M3) / Sprint 8 자동발주 (Private API 28권한 보유, 매출 상승 트리거)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
-> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (86fdd10 verified, Sprint 7-PC-D 완료)
-> **신규 진입점**: `docs/plan/TASK_BRIDGE.md` §3 ACTIVE = Sprint 8-IA Phase 1 진입 대기. §4 STANDING / §6 PENDING 매 세션 정독 의무. 작업원칙 #46 (거짓 라벨 금지) 신설
-> 다음 작업: 새 채팅 1 진입 = Sprint 8-IA Phase 1 (Task 1-5, 1.5일). ROADMAP.md "다음 새 채팅 시작 메시지" ⭐ ACTIVE 정독 후 paste-ready 메시지로 새 채팅 진입.
+> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (12495cf verified, Sprint 8-IA Phase 1 완료)
+> **신규 진입점**: `docs/plan/TASK_BRIDGE.md` §3 ACTIVE = Sprint 8-IA Phase 2 진입 대기. §4 STANDING / §6 PENDING 매 세션 정독 의무. 작업원칙 #46 (거짓 라벨 금지) 적용 중
+> 다음 작업: 새 채팅 2 진입 = Sprint 8-IA Phase 2 (Task 6-12, 4.5일). ROADMAP.md "다음 새 채팅 시작 메시지" ⭐ ACTIVE 정독 후 paste-ready 메시지로 새 채팅 진입.
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
@@ -13,6 +13,64 @@
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
 > **다음 작업**: **Sprint 7-M2 Phase 3-C-2** (PLANT /products/new 6→7 tab 확장 + 7번째 탭 "비주얼 자동화" 마운트 + savedProductId 컨텍스트 전달). 본 turn 완료: Phase 3-C-1 컴포넌트 추출 (refactor only) — `src/components/studio/` 9 신규 파일, `/studio/page.tsx` 1068→250 LOC (-77%), byte-identical markup. PLANT 통합이 import 1줄로 가능. /studio end-to-end 워크플로우 (Diagnosis → Thumbnail → Detail → Save → Naver Publish) 정상 작동, dedicated 27/27 100% 유지.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-20 Sprint 8-IA Phase 1 완료 (Code turn, 코드 2 신규 + 1 수정 + docs)
+
+### 본 turn 성격
+
+새 채팅 1 진입. Sprint 8-IA Phase 1 (Task 1-5) 본 Code 측 build + ship. Task 1·2·3 은 직전 commit `db72408` 에 적용 완료된 상태로 hand-off 수신 → 본 turn 은 **Task 4 (SystemHealthCard + /api/system-health)** 작성 + **Task 5 (production smoke 검증)** + docs 갱신.
+
+### 코드 변경 (1 commit, +517 LOC)
+
+| 파일 | 변경 | LOC |
+|---|---|---|
+| `src/app/api/system-health/route.ts` | 신규 — 8 registry × 4 신호 (InventorySnapshot.polledAt / CategoryTrendCache.refreshedAt / DomeCategory.refreshedAt / Discord env) → HealthItem[] 변환. stale factor 1.5 적용 | +189 |
+| `src/components/dashboard/SystemHealthCard.tsx` | 신규 — 'use client' 카드. 60s polling + window focus revalidate. status 4종(success/warning/failed/pending) 색상 매핑. Lucide 아이콘만 사용 | +293 |
+| `src/app/dashboard/page.tsx` | Section 3 가든 헬스 상단에 `<SystemHealthCard />` 마운트 (기존 3-카드 grid 위) | +20 / -15 |
+
+**Commit**: `12495cf` `feat(dashboard): Sprint 8-IA Phase 1 Task 4 — SystemHealthCard + /api/system-health`
+
+### Hand-off 정합 보정
+
+- **DB schema 단정**: handoff 명세는 `AutomationLog` 테이블 전제였으나 schema 실 조사 결과 해당 테이블 부재 → 실제 가용 시그널 (InventorySnapshot / CategoryTrendCache / DomeCategory / Discord env) 만 사용. *작업원칙 #46 (d) 그대로 — fetch 결과 기반만, hardcoded 정상 금지.*
+- **Registry ID 단정**: handoff 예시 (price-watch, supplier-status, honey-pot-discovery, kkotti-ai-recommend, auto-order, image-pipeline, discord-notify) 와 실 registry 다름. 실 registry 가 source of truth → 실제 8 entry (inventory-poll / good-service-track / discord-kkotti-recommend / discord-stock-alert / discord-kkotti-score / discord-ops-report / cron-daily / cron-weekly) 그대로 매핑.
+- **Branch 단정**: 세션 진입 시 `feature/sprint-7-m2-smart-asset-workflow` 에 있었음 (2 commits ahead with Sprint 7-M2 Step 1+2). Handoff 명시 (`Branch: main`) 따라 `git checkout main` 후 db72408 baseline 기준 작업. Sprint 7-M2 feature branch 는 origin 에 보존 — 별도 작업으로 진행 예정.
+- **Section 단정**: handoff 의 "Section 5 신설" 은 실 dashboard 구조 (Section 1-5 이미 사용 중, Section 5 = collapsed 더보기) 와 불일치 → 의미 정합 best fit = Section 3 가든 헬스 *상단* 에 마운트 (3-카드 grid 위). 기존 IA 보존.
+
+### 검증 (V1~V6)
+
+| 항목 | 결과 |
+|---|---|
+| V1 (사이드바 demote) | ✅ Task 1-3 직전 commit `db72408` 에 적용됨 (registry route + sidebar manifest 갱신). 본 turn baseline 정합. |
+| V2 (`/admin/automation` 200) | ✅ HTTP 200 |
+| V3 (registry 8 카드) | ✅ `/api/automation/registry` total=8, 모두 status=active |
+| V4 (Section 3 SystemHealthCard) | ✅ `/dashboard` HTTP 200 + `SystemHealthCard` mount (client-rendered) |
+| V5 (`/api/system-health` 200 + 8 items) | ✅ HTTP 200, summary={healthy: 4, total: 8}, items.length=8, 한글 displayName 그대로 |
+| V6 (Console 0 errors / 0 깨짐) | ⚠️ 본 환경에서 브라우저 세션 미가용 (curl HTML structure 까지만 단정). Desktop Chrome MCP 검증 의무 — TASK_BRIDGE §3 ACTIVE 의 검증 신호로 이관. |
+
+**Production 응답 evidence** (`/api/system-health`):
+- inventory-poll: status=pending, 첫 폴 대기
+- cron-daily: status=warning, lastRunAt 42시간 전 (stale factor 1.5×24 초과)
+- 4 discord-*: status=success (webhook env 모두 설정됨)
+- good-service-track / cron-weekly: status=pending (DomeCategory 미수확)
+→ summary 4/8 정상 = 실 가동 상태 정확 반영 (#46 (d) 통과).
+
+### 빌드 / Vercel 검증
+
+- `npx tsc --noEmit` → 0 errors ✅
+- `npm run build` → exit 0 ✅
+- `git push origin main` → 12495cf push 성공 ✅
+- `scripts/verify-vercel-deploy.sh --wait` → exit 0 (production READY = 12495cf) ✅
+
+### 적용 작업원칙
+
+#17 (commit-msg.tmp + git commit -F) · #21 (사전 점검 HEAD/status) · #24 (한 turn 분할 완료) · #29 (한글 처리) · #31 (MD 1500줄 임계 — SESSION_LOG 920줄, 분할 불필요) · #32 (TSC ≠ Production 빌드) · #36 (verify-vercel-deploy.sh --wait) · #41 (두 환경 핑퐁 ledger) · #46 (거짓 라벨 금지 — pending/warning/success 실 신호 기반)
+
+### 다음 = 새 채팅 2 진입 (Sprint 8-IA Phase 2)
+
+Task 6-12, 4.5일 추정. Section 1 Hero 행동필요도 알고리즘 → Section 2 Inbox 6 위젯 흡수 → Section 3-4 KPI/Pipeline 재구성 → 빌더 흡수 (블록 6종 → S1~S12 인라인 편집) → lifestyle 가시화 → 통일성 (디자인 토큰).
 
 ---
 

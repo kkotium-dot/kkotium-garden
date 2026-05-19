@@ -71,18 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-19 PM Sprint 8-IA Phase 1 진입 대기 (자동화 관제 강등 + 대시보드 Section 5)
+**Last update**: 2026-05-20 Sprint 8-IA Phase 1 완료 → Phase 2 진입 대기 (Code → Desktop 검증)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 🖥 Desktop (자동화 관제 진단 + IA 재설계 단정) |
-| **TO** | 💻 Code (다음 새 채팅 = Sprint 8-IA Phase 1) |
-| **BASELINE** | `86fdd10` (Sprint 7-PC-D 완료, Vercel READY) |
-| **NEXT SCOPE** | Sprint 8-IA Phase 1 — 자동화 관제 강등 + registry 26→8 축소 + 대시보드 Section 5 카드 신설 |
-| **PENDING BLOCKER** | 없음 (사용자 Q1·Q2·Q3 권장안 모두 승인 2026-05-19) |
-| **AFTER** | Phase 2 (Section 1-4 통합 + 빌더 흡수) — 별도 채팅, Phase 1 검증 통과 후 진입 |
+| **FROM** | 💻 Code (Phase 1 Task 4 SystemHealthCard + /api/system-health build + ship) |
+| **TO** | 🖥 Desktop (Chrome MCP 통합 검증 + Phase 2 paste-ready 본문 작성) |
+| **BASELINE** | `12495cf` (Sprint 8-IA Phase 1 완료, Vercel READY) |
+| **NEXT SCOPE** | Phase 1 검증 V1~V6 (Desktop Chrome MCP — V6 console 0 errors 확정 의무) → 통과 시 Phase 2 진입 (Task 6-12, 4.5일) |
+| **PENDING BLOCKER** | V6 (브라우저 console 0 errors / 0 깨짐) 본 Code turn 환경 한계로 미단정. Desktop Chrome MCP 의무 |
+| **AFTER** | Phase 2 (Section 1-4 통합 + 빌더 흡수 + lifestyle 가시화 + 통일성) — 별도 채팅, V1~V6 통과 후 진입 |
 
-### 본 hand-off 진행 흐름 (2026-05-19 PM, Sprint 8-IA Phase 1)
+### 본 hand-off 진행 흐름 (2026-05-19 → 2026-05-20, Sprint 8-IA Phase 1 완료 까지)
 
 ```
 Desktop Chrome MCP로 /automation 직접 시각 점검
@@ -90,23 +90,18 @@ Desktop Chrome MCP로 /automation 직접 시각 점검
 진단: 17/26 = 65% 가짜 라벨 (실 cron 가동 3건만)
 ↓
 사용자에게 개선안 v2 5가지 제안 → Q1·Q2·Q3 권장안 모두 승인
-  - Q1: 자동화 관제 강등 (사이드바 제거, /admin/automation 이동)
-  - Q2: registry 26→8 entry 축소
-  - Q3: 새 채팅 2개 분할 (Phase 1 + Phase 2)
 ↓
-Desktop: md 6건 paste-ready 작성 (Turn 1: TASK_BRIDGE + PRINCIPLES + SPRINT_PLAN)
+Desktop: md 6건 paste-ready 분할 작성 (Turn 1 + Turn 2)
 ↓
-Code: md commit + push (3건)
+Code (db72408): Task 1·2·3 build + ship — sidebar demote / admin move / registry 31→8
 ↓
-Desktop: md 6건 paste-ready 작성 (Turn 2: PROGRESS + ROADMAP + SESSION_LOG)
+Code (12495cf): Task 4 build + ship — SystemHealthCard + /api/system-health 신설 (본 turn)
+  - TSC 0 / build 0 / Vercel READY 확정 ✅
+  - V1~V5 단정 / V6 (브라우저 console) 환경 한계로 미단정
 ↓
-Code: md commit + push (3건 추가)
+Desktop 다음 turn: Chrome MCP로 V1~V6 통합 검증 + Phase 2 paste-ready 본문 작성
 ↓
-새 채팅 1 진입: Sprint 8-IA Phase 1 코드 작업 (5 tasks)
-↓
-Desktop: Chrome MCP 통합 검증 + §3 ACTIVE 갱신 + §7 ARCHIVED 등재
-↓
-새 채팅 2 진입: Sprint 8-IA Phase 2 (Section 1-4 통합 + 빌더 흡수)
+새 채팅 2 진입: Sprint 8-IA Phase 2 (Task 6-12)
 ```
 
 ### 본 hand-off 핵심 단정
@@ -238,6 +233,19 @@ Desktop: Chrome MCP 통합 검증 + §3 ACTIVE 갱신 + §7 ARCHIVED 등재
   - 17/26 가짜 라벨 발견 + 빌더↔renderer 충돌 + lifestyle 연결 부재 진단
   - 사용자 Q1·Q2·Q3 권장안 모두 승인 → 새 채팅 2개 분할 결정
   - md 6건 paste-ready 분할 작성 (Turn 1 + Turn 2)
+
+### 2026-05-20
+
+- ✅ Sprint 8-IA Phase 1 Task 1-3 `db72408` (Code turn) ← sidebar demote + admin move + registry 31→8
+  - registry 8 entry 확정 (inventory-poll / good-service-track / discord-* 4 / cron-daily / cron-weekly)
+  - /automation → /admin/automation 라우트 이동 + sidebar 항목 제거
+  - 작업원칙 #46 (a)~(e) 5 규칙 적용 (실 가동 단정만 등재)
+- ✅ Sprint 8-IA Phase 1 Task 4 `12495cf` (Code turn) ← SystemHealthCard + /api/system-health 신설
+  - 신규 API: 8 registry × 4 신호 (InventorySnapshot / CategoryTrendCache / DomeCategory / Discord env) → HealthItem[]
+  - 신규 컴포넌트: SystemHealthCard.tsx (60s polling + window focus revalidate)
+  - Dashboard Section 3 가든 헬스 상단에 마운트 (기존 IA 보존)
+  - TSC 0 / build 0 / Vercel READY (12495cf) / production /api/system-health 200 + items=8 ✅
+  - V1~V5 단정 / V6 (브라우저 console) Desktop Chrome MCP 검증 의무 — TASK_BRIDGE §3 ACTIVE 신호로 이관
 
 ---
 
