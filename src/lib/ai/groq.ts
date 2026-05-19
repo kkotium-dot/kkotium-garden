@@ -1,13 +1,15 @@
 // src/lib/ai/groq.ts — Groq AI SDK (primary AI provider, 2026-05-19)
 //
-// Model: llama-3.1-8b-instant
-// Free tier: 14,400 req/day per key × 3 keys = 43,200 req/day
+// Model: llama-3.3-70b-versatile (한국어 정합, 무료 14,400 req/day × 3 keys)
+//   - 8b-instant는 한국어 degenerate 출력 (P24 단정 2026-05-19)
+//   - Desktop 직접 검증: "아로마 디퓨저 오일 방향제 홈 인테리어 소품" 정상
+//   - 응답 시간: 8b 1.96s → 70b ~3s (사용자 대기 가능 범위)
 // Endpoint: https://api.groq.com/openai/v1/chat/completions (OpenAI-compatible)
 //
 // Round-robin: tries GROQ_API_KEY → _2 → _3 on 429/quota error.
 
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.1-8b-instant';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 function getGroqKeys(): string[] {
   return [

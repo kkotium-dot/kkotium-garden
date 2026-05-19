@@ -71,31 +71,33 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-19 PM dome_code seed 진입
+**Last update**: 2026-05-19 PM PC-C-hotfix 진입
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (직전 docs commit `61d88f6`) |
+| **FROM** | 💻 Code (직전 PC-C `2276ed7`) |
 | **TO** | 💻 Code (본 commit, self hand-off) |
-| **BASELINE** | `61d88f6` (TASK_BRIDGE.md 도입 commit) |
-| **NEXT SCOPE** | dome_code seed (디퓨저) + P21·P22 등재 + §3·§5·§6 stale 갱신 (본 hand-off 자체) |
-| **PENDING BLOCKER** | 없음 (Desktop Chrome MCP evidence 완료, NAVER grep 본 commit에서) |
+| **BASELINE** | `2276ed7` (Sprint 7-PC-C 완료) |
+| **NEXT SCOPE** | PC-C-hotfix (70b + .bak 17개 삭제 + #42~#45 명문화 + paper-cut 11건) |
+| **PENDING BLOCKER** | 없음 (사용자 결정 완료) |
 
-### 본 hand-off 진행 흐름 (2026-05-19 PM)
+### 본 hand-off 진행 흐름 (2026-05-19 PM, PC-C-hotfix)
 
 ```
-사용자: dome_code seed 진행 의사 확인 + 옵션 3 권고 채택
+PC-C `2276ed7` push 후 production smoke
 ↓
-Desktop: Chrome MCP로 도매꾹 4-depth 카테고리 evidence 채집
-↓ (P21·P22 발견)
-Desktop: paste-ready 메시지 작성 (4-task) → Code 전달
+Desktop: productNames "촛소시우에 촛소시우에" degenerate 발견
+↓ (P24 + P33 단정)
+Desktop: 70b 직접 호출 검증 + .bak 17개 보안 위반 단정
 ↓
-Code: 본 commit (NAVER grep + seed script + P21·P22 등재 + §3·§5·§6 갱신)
+Desktop: paste-ready 메시지 (4-task: 70b + .bak rm + #42~#45 + paper-cut)
+↓
+Code: 본 commit (Groq 70b + 17개 .bak rm + #42~#45 명문화 + TASK_BRIDGE 갱신)
 ↓
 Code: push + hash 보고
 ↓
-Desktop: 4-source cross-track 검증 (git + Vercel + Supabase + Chrome)
-→ 통과 시 §7 ARCHIVED에 본 commit 등재
+Desktop: 5-source cross-track 검증 (git + Vercel + Supabase + Chrome + MD)
+→ 통과 시 §7 ARCHIVED에 본 commit 등재 + 첫 실 상품 등록 진입 권고
 ```
 
 ---
@@ -115,7 +117,7 @@ Desktop: 4-source cross-track 검증 (git + Vercel + Supabase + Chrome)
 
 ## §5 OPEN PAPER-CUTS (Sprint 7-PC 22-PC 인벤토리)
 
-### 진행 완료 (5건)
+### 진행 완료 (11건)
 
 | ID | 영역 | Commit | 상태 |
 |---|---|---|---|
@@ -123,23 +125,35 @@ Desktop: 4-source cross-track 검증 (git + Vercel + Supabase + Chrome)
 | P2 | 공급사 매핑 (bornscent) | 비-commit (Supabase INSERT) | ✅ 70% 해소, 자동 매칭 작동 |
 | P14 | 옵션 14종 silent truncation | `5a3b8c2` (PC-B-1 defensive) | ✅ 회귀 0 확정 — 14종 모두 input.value로 정상 렌더링 |
 | P15 | 옵션 그룹명 매핑 | `29b7c49` (PC-B-2) | ✅ 디퓨저 → '향' 자동 적용 |
-| P18 | dome_code passthrough infra | `5a3b8c2` (PC-B-1) + seed (본 commit) | ✅ infra + seed 완료 (dome_code 디퓨저 INSERT) — cache hit 활성화 |
+| P18 | dome_code passthrough infra | `5a3b8c2` (PC-B-1) + `5fa8560` (seed) | ✅ infra + seed 완료 — cache hit 활성화 |
+| P13-A | seo-workflow Groq migration | `2276ed7` (PC-C) | ✅ 완료 (PC-C) |
+| P13-B | description + perplexity Groq migration | `2276ed7` (PC-C) | ✅ 완료 (PC-C) |
+| P13-C | keywords Groq migration | `2276ed7` (PC-C) | ✅ 완료 (PC-C) |
+| P13-E | aeo-generate Groq migration | `2276ed7` (PC-C) | ✅ 완료 (PC-C) |
+| P23 | AI chain memory 정합 위반 (시스템 정합성 CRITICAL) | `2276ed7` (PC-C) | ✅ 완료 — Groq primary chain 코드 적용 |
+| P13-D | category/suggest Groq migration → **P30로 분리** | PC-D 권고 | → P30 분리 (잔존 사용처) |
 
 ### 진행 중 / 대기
 
-| ID | 영역 | 권고 commit |
+| ID | 영역 | 권고 sprint |
 |---|---|---|
 | P17 | supplier-notfound 시 배송 fallback | `29b7c49` (PC-B-2, infra 완료) — notfound 케이스 prefill URL로 실 검증 대기 |
 | P19 | 혜택 prefill | PC-B-3 (P16 결정 후) |
 | P16 | additionalImages 0건 (crawler 측) | PC-B-3 또는 PC-D 분리 (사용자 결정) |
 | P20 | 기존 supplier 2건 (이현마켓, gseller2022) `domeggook_seller_id` NULL backfill | 사용자가 도매꾹 마이페이지에서 실제 seller ID 확인 후 Desktop이 Supabase MCP UPDATE |
-| P13-A | seo-workflow Groq migration | PC-C |
-| P13-B | description + perplexity Groq migration | PC-C |
-| P13-C | keywords Groq migration | PC-C |
-| P13-D | **category/suggest** Groq migration + FALLBACK_RULES 정정 + dome_code 자동 seed flow | PC-C (디퓨저 본질 fix) |
-| P13-E | aeo-generate Groq migration | PC-C |
 | P21 | crawler catD2 정규화 — 도매꾹 실제 "인테리어소품" → prefill "홈인테리어소품" 오염 (MEDIUM) | PC-D |
-| P22 | crawler productNo 만료 갱신 — 도매꾹이 새 ID로 재등록 시 우리 DB stale 404 (LOW-MEDIUM) | PC-D 또는 Sprint 6-A 회귀 |
+| P22 | crawler productNo 만료 갱신 — 도매꾹이 새 ID로 재등재 시 우리 DB stale 404 (LOW-MEDIUM) | PC-D 또는 Sprint 6-A 회귀 |
+| **P24** | **Groq 모델 한국어 정합 (8b→70b hotfix)** — `2276ed7` smoke 후 productNames degenerate 발견 | **본 commit (PC-C-hotfix)** |
+| P25 | lib/trend-analyzer.ts Perplexity 잔존 | PC-D |
+| P26 | lib/utils/env-checker.ts Perplexity 잔존 | PC-D |
+| P27 | /api/naver-seo/ai-generate Perplexity 잔존 | PC-D |
+| P28 | /api/kkotti-comment Perplexity 잔존 | PC-D |
+| P29 | /api/aeo-generate Gemini 잔존 | PC-D |
+| P30 | /api/category/suggest Gemini 잔존 (구 P13-D scope) | PC-D |
+| P31 | lib/review-sentiment-analyzer Gemini 잔존 | PC-D |
+| P32 | lib/upload-readiness-filler Gemini 잔존 | PC-D |
+| **P33** | **lib/gemini.ts.bak 보안 위반 (백업파일 노출) — 17개 일괄 처리** | **본 commit (PC-C-hotfix)** |
+| P34 | Gemini 재진입 시점 (예약) | Sprint 8 (월 매출 100만+) |
 
 ---
 
@@ -163,6 +177,9 @@ Desktop: 4-source cross-track 검증 (git + Vercel + Supabase + Chrome)
 - ✅ PC-A 742ce91 (3-fix 통과) ← Desktop 검증
 - ✅ PC-B-1 5a3b8c2 (P18 passthrough + P14 defensive) ← Desktop 검증
 - ✅ PC-B-2 29b7c49 (P15 옵션 그룹명 + P17 배송 fallback) ← Desktop 검증
+- ✅ dome_code seed 5fa8560 (디퓨저 dome_code INSERT + P21·P22 등재) ← Desktop 검증
+- ✅ Sprint 7-PC-C 전면 종료 `2276ed7` ← Desktop 5-source 검증 통과
+  (Groq migration 5 endpoint, +240/-305 LOC, build OK + Vercel READY)
 
 ---
 

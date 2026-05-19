@@ -252,7 +252,9 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 
 ---
 
-## 7. 작업원칙 빠른 인덱스 (#1~#25 → PRINCIPLES_CODE.md / #26~#41 → PRINCIPLES_LEARNED.md)
+## 7. 작업원칙 빠른 인덱스 (#1~#25 → PRINCIPLES_CODE.md / #26~#45 → PRINCIPLES_LEARNED.md)
+
+> ★ **AI 인프라 변경 시 #42~#45 반드시 정독** — 2026-05-19 명문화, Sprint 7-PC-C 사고 재발 방지.
 
 - **#17** — commit message는 `.commit-msg.tmp` + `git commit -F`
 - **#21** — 사전 점검 의무 (HEAD/status/stash/wc)
@@ -269,6 +271,10 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 - **#37·#38** — Production runtime 외부 image API 호출 0 (정적 자산 + Sharp only)
 - **#39·#40** — CTI Inference entry point + Designer Sense sacred resource
 - **#41** — 두 환경 핑퐁 프로토콜 (Desktop ↔ Code hand-off, 2026-05-19 도입, TASK_BRIDGE.md ledger)
+- **#42** ★ — AI policy 변경 시 코드 마이그레이션 동시 commit 의무 (PC-C 사고 재발 방지)
+- **#43** ★ — 시크릿/API 키 포함 코드의 backup 패턴 절대 금지 (.bak/.old/.tmp 0건 정합, GEMINI revoke 사고 재발 방지)
+- **#44** ★ — 에러 메시지는 코드 상태 변경 시 동시 갱신 의무 (stale fact 노출 방지)
+- **#45** ★ — Production smoke는 출력 품질까지 단정 의무 (HTTP 200 + 구조 + 내용 fact-check 3-tier)
 
 ---
 

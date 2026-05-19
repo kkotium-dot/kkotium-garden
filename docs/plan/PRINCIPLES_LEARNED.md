@@ -452,4 +452,100 @@ Vercel 런타임은 정적 자산과 안전한 서버 연산만 수행한다.
 
 ---
 
+## 작업원칙 #42 — AI policy 변경 시 코드 마이그레이션 동시 commit 의무 (2026-05-19 명문화)
+
+**배경**:
+2026-05-15 v3.1 FINAL에서 "Groq primary" 결정 후 memory + PROGRESS.md는
+갱신됐으나 코드의 5개 endpoint가 Perplexity 호출 잔존 상태로 약 5일 운영.
+사용자가 황금 키워드 사냥 위젯 빨간 에러 박스 발견 후에야 단정.
+
+**규칙**:
+- AI provider/모델 정책 변경 결정 시 *동일 commit 안에 모든 endpoint 마이그레이션 포함*
+- PROGRESS.md + memory 단정 직후 → 코드 grep으로 사용처 모두 확인 → 동일 commit
+- "다음 sprint로 미룬다"는 결정은 *반드시 paper-cut 인벤토리에 명시 등재*
+- 미등재 + 미마이그레이션 상태 0건 정합 의무
+
+**검증 패턴**:
+- AI policy 변경 commit 직후:
+  ```bash
+  grep -rn "Perplexity\|Gemini\|Groq\|Anthropic\|openai" src/ --include="*.ts"
+  ```
+- 잔존 사용처 모두 단일 commit으로 정합화 또는 paper-cut 등재
+
+---
+
+## 작업원칙 #43 — 시크릿/API 키 포함 코드의 backup 패턴 절대 금지 (2026-05-19 명문화)
+
+**배경**:
+src/lib/gemini.ts.bak 파일 잔존이 GEMINI_API_KEY 노출 → revoke 사고 원인.
+`.bak` 패턴은 git tracking + 원격 push로 영구 공개 위험.
+PC-C-hotfix 시점 git-tracked .bak/.old 파일 17개 일괄 삭제.
+
+**규칙**:
+- 시크릿/키 호출 코드의 `.bak`, `.old`, `.tmp` 파일 *코드베이스 0건 정합*
+- 코드 변경 시 backup 필요 시 git stash 또는 별도 브랜치 사용 (commit 0건)
+- .gitignore에 `*.bak`, `*.old`, `*.tmp.[a-z]*` 패턴 추가 의무
+- 신규 키 발급 *전*에 backup 파일 0건 검증 의무
+
+**검증 패턴**:
+- 매 commit 전:
+  ```bash
+  find . -name "*.bak" -not -path "./node_modules/*" \
+    -not -path "./.next/*" -not -path "./.git/*" \
+    -not -path "./.claude/worktrees/*"
+  ```
+- 0건 정합 시에만 push 허용
+- git ls-files | grep -E "\.bak$|\.old$" 결과 0건 의무
+
+---
+
+## 작업원칙 #44 — 에러 메시지는 코드 상태 변경 시 동시 갱신 의무 (2026-05-19 명문화)
+
+**배경**:
+/api/ai/seo-workflow line 423의 "Perplexity API 크레딧이 부족합니다.
+GEMINI_API_KEY를 .env.local에 추가하면 무료로 사용 가능합니다." 메시지가
+AI chain 변경 후에도 stale하게 남아 사용자에게 fact 오류 안내.
+
+**규칙**:
+- AI provider/모델/키 정책 변경 시 *모든 에러 메시지 grep + 정합 갱신 의무*
+- 에러 메시지에 *환경변수명 직접 노출 금지* (예: "GEMINI_API_KEY 추가")
+  → 일반화된 안내로 교체
+- 권고 메시지 패턴:
+  "AI 서비스 일시 응답 없음 (제공자 모두 실패). 잠시 후 재시도해주세요."
+- 사용자 노출 메시지는 fact-check 후에만 production 배포 허용
+
+**검증 패턴**:
+- AI 관련 commit 시:
+  ```bash
+  grep -rn "API_KEY\|.env.local" src/ --include="*.ts"
+  ```
+  → 사용자 노출 메시지 0건 정합
+- 에러 메시지 변경 시 동일 commit에 사용자 노출 단정 (Chrome MCP smoke 권고)
+
+---
+
+## 작업원칙 #45 — Production smoke는 출력 품질까지 단정 의무 (2026-05-19 명문화)
+
+**배경**:
+2276ed7 commit에서 HTTP 200 + provider 정합 + qualityScore 75 통과했으나
+실제 productNames 텍스트 "촛소시우에 촛소시우에 촛소시우에" 반복 출력.
+구조 검증만으로 user-facing 결함 단정 불가. llama-3.1-8b-instant 한국어
+한계 → llama-3.3-70b-versatile hotfix 진행 (P24).
+
+**규칙**:
+- AI/생성 API endpoint 변경 commit 직후 Desktop이 *실제 응답 텍스트 시각 단정*
+- HTTP 200 + 응답 JSON 구조 정합 + *내용 fact-check* 3-tier 검증
+- 텍스트 응답 검증 항목:
+  - (a) degenerate 출력 (동일 토큰 3회+ 반복) 0건
+  - (b) 다양성 (3개 variant 모두 동일) 0건
+  - (c) 언어 정합 (한국어 요청 → 한국어 응답) 100%
+- 결함 발견 시 hotfix paper-cut 즉시 등재 + 24h 내 fix
+
+**검증 패턴**:
+- Desktop이 curl로 production 응답 fetch
+- 응답 JSON의 자연어 필드 (name, text, description) 시각 단정
+- 결함 패턴 발견 시 작업원칙 #21 정합 (근본 원인 추적)
+
+---
+
 ---

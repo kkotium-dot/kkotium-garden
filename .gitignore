@@ -60,3 +60,10 @@ tsconfig.tsbuildinfo
 
 # Claude Code worktrees (added 2026-05-11 — keep CLAUDE.md tracked, ignore worktree dirs only)
 .claude/worktrees/
+
+# Backup file patterns (added 2026-05-19 — work principle #43 정합)
+# Reason: src/lib/gemini.ts.bak 잔존이 GEMINI_API_KEY revoke 사고 원인.
+# .bak/.old/.tmp 파일은 시크릿/키 노출 위험 → 영구 ignore.
+*.bak
+*.old
+*.tmp.[a-z]*
