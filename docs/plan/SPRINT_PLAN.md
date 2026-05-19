@@ -6,6 +6,150 @@
 
 ---
 
+---
+
+## Sprint 8-IA — IA 재설계 (자동화 관제 강등 + 대시보드 통합 + 빌더 흡수)
+
+**기간 목표**: 2 채팅 세션 분할 진행 (Phase 1 + Phase 2)
+**진입 결정**: 2026-05-19 Desktop이 Chrome MCP로 /automation + /studio + /settings/lifestyle-assets + /products/new 4 화면 시각 점검 결과 17/26 가짜 라벨 발견 → 사용자 Q1·Q2·Q3 권장안 모두 승인
+**근거**: 작업원칙 #46 (거짓 라벨 금지) 직접 발화 사례 + 디자이너 감각 발휘 시간 보호 (작업원칙 #40)
+
+### Phase 1 — 자동화 관제 강등 + Section 5 카드 신설 (새 채팅 1, 1.5일)
+
+#### Task 1: 사이드바 "자동화 관제" 항목 제거 (5분)
+**파일**: `src/components/layout/Sidebar.tsx`
+**변경**: OPS 섹션에서 "자동화 관제" entry 1줄 삭제
+**검증**: `grep -n "자동화 관제" src/components/layout/Sidebar.tsx` → 0 매칭
+
+#### Task 2: /automation → /admin/automation 이동 (30분)
+**파일 이동**: `src/app/automation/page.tsx` → `src/app/admin/automation/page.tsx`
+**페이지 헤더 갱신**: 회색 배지 "관리자 영역 — 일상 사용 X" 추가
+**라우팅**:
+- `/automation` 직접 진입 → `next.config.js` redirects로 `/admin/automation` 또는 404
+- 관리자 직접 URL 입력 시만 진입
+
+#### Task 3: automation-registry 26→8 entry 축소 (30분)
+**파일**: `src/lib/automation-registry.ts` (현재 383 LOC)
+**유지할 8 entry** (실 가동만):
+1. 도매꾹 재고 폴링 (6-A) — daily cron
+2. 굿서비스 추적 — weekly cron
+3. 일일 리포트 (KKOTTI) — 00:00 cron
+4. 주간 리포트 — Sun 09:00 cron
+5. Discord ORDERS — per-event
+6. Discord STOCK_ALERT — per-event
+7. Discord KKOTTI_RECOMMEND — per-event
+8. Discord DAILY/WEEKLY — per-event
+
+**제거할 18 entry**:
+- 가격 2건 (Sprint 6-B 진입 시 등재)
+- 경쟁+공급사 2건 (Sprint 6-C 진입 시 등재)
+- SEO+노출 4건 (P0-B/C, P1-A/C 진입 시 등재)
+- 알림톡 2건 (매출 50건+ 도달 시 등재)
+- Sprint 8 자동발주 3건 (사용자 결정 트리거 시 등재)
+- Sprint 9 P3 2건 (매출 600만+ 도달 시 등재)
+- Naver OOS 자동 (옵트인 모달 사용, registry 노출 불필요)
+- 톡톡 응답 모니터 (hourly cron 작성 전, 보류)
+- 마진 자동 재계산 (Sprint 6-B 흡수)
+
+**검증**: registry entry count = 8, 4 pill summary = `[정상 8] [대기 0] [오류 0] [보른 0]`
+
+#### Task 4: 대시보드 Section 5 "정원 점검" 카드 신설 (1일)
+**파일**:
+- `src/components/dashboard/SystemHealthCard.tsx` (신규, ~150 LOC)
+- `src/app/dashboard/page.tsx` (Section 5 위치 추가)
+- `src/lib/i18n/system-health-strings.ko.json` (신규, ~10 strings)
+
+**카드 명세**:
+- 타이틀: "정원 점검" + 상태 배지 (정상 / 오류 / 점검 필요)
+- 본문 3줄:
+  - 자동 실행 작업: 8개
+  - 마지막 cron: N분 전
+  - 지난 7일 Discord 발송: N건
+- 하단 링크: "자동화 상세 보기 →" → `/admin/automation`
+
+**데이터 fetch**:
+- GET `/api/automation/registry` → 8 entry 상태
+- 5분 polling
+
+#### Task 5: 브라우저 통합 검증 + commit + push (30분)
+**검증 시나리오**:
+1. 사이드바 OPS 섹션에서 "자동화 관제" 사라짐
+2. `/automation` 직접 진입 → redirect 또는 404 작동
+3. `/admin/automation` 진입 → 8 entry 모두 정상 + 가짜 라벨 0건
+4. `/dashboard` 최하단 Section 5 카드 표시 + 상세 보기 링크 작동
+
+### Phase 2 — 대시보드 Section 1-4 통합 + 빌더 흡수 + 통일성 (새 채팅 2, 4.5일)
+
+#### Task 6: Section 1 Hero 진화 (1일)
+**파일**: `src/components/dashboard/KkottiBriefingWidget.tsx` 진화 또는 신규 HeroAction.tsx
+**알고리즘**: 행동필요도 = (매출잠재 × 시간임박 × 행동난이도) DESC LIMIT 1
+**Hero 후보 5종**:
+- 골든윈도우 D+5/6 임박
+- 가격 변동 빨강 임팩트
+- 효자 상품 광고 추천
+- 굿서비스 임계 경고
+- 페르소나 인사 (디폴트)
+
+#### Task 7: Section 2 Inbox 통합 (1일)
+**파일**: `src/components/dashboard/ActionInbox.tsx` (신규)
+**흡수 위젯**: LowStockAlertWidget + UploadReadinessWidget + ReviewGrowthWidget + ConfirmationReminderWidget
+**정렬**: 빨강 → 주황 → 노랑 + 동일 레벨 안 매출잠재 DESC
+**한 행 구조**: 상품 + 알림 + 1-3 액션 버튼
+
+#### Task 8: Section 3-4 KPI/Pipeline 카드 (0.5일)
+**파일**: `src/components/dashboard/PerformanceGrid.tsx` (신규)
+**Section 3 카드**: 오늘 매출 / 효자 상품 TOP 5 / 굿서비스 점수
+**Section 4 카드**: 등록 준비 / 꼬띠 4모드 추천 / 좀비 부활 후보
+
+#### Task 9: /studio ↔ PLANT 7th 탭 목적 명확화 + 상호 링크 (0.5일)
+**파일**:
+- `src/app/studio/page.tsx` 상단에 목적 문구: "기존 상품 재가공 — 어제까지 등록한 상품의 콘텐츠 보강"
+- `src/app/products/new/page.tsx` PLANT 7th 탭 상단: "신규 등록 자동화 — 등록 직후 콘텐츠 완성 + 7일 골든윈도우 활용"
+- 각 페이지에 다른 진입점 링크 추가
+
+#### Task 10: 상세페이지 빌더 흡수 (2일, 가장 큰 변화)
+**제거 대상**:
+- 블록 6종 자유 조합 UI (홍보문구/이미지/텍스트/Q&A/사양 테이블/구분선)
+- `src/app/products/new/page.tsx`의 빌더 영역 (~500 LOC 추정)
+
+**흡수 path**:
+- Q&A 블록 → S6/S11 골격의 FAQ 섹션에서 흡수
+- 사양 테이블 → S4/S7/S12의 specTable/specifications 섹션 (이미 27 dedicated 존재)
+- SEO 훅문구 → Diagnosis 결과 metadata로 이동
+- 텍스트/이미지/구분선 → S1~S12 골격 내부 섹션 텍스트 인라인 편집만 허용
+
+**교체 UI** (PLANT 이미지 탭 또는 SEO 탭):
+- "[상세페이지 자동화]" 카드 1개 (블록 빌더 위치)
+- 버튼: "비주얼 자동화로 이동" → 7th 탭 점프
+- 버튼: "이미 자동화 했어요? 보기" → `/studio?product=ID`
+
+**디자이너 감각 발휘 지점**:
+- 골격 선택 (12개 중 1) — 감각 결정
+- 메인 썸네일 선택 (4 변형 중 1) — 감각 결정
+- 섹션별 텍스트 인라인 편집 — 감각 결정
+- 블록 추가/배치/크기 조정 — 반복 노동, 시스템 처리
+
+#### Task 11: lifestyle-picker 연결 가시화 (1일)
+**파일**:
+- `src/components/studio/ThumbnailCard.tsx` — lifestyle 변형 카드에 backdrop 메타 표시
+  - 사용된 backdrop 미니뷰
+  - 매칭된 ConceptTone tags ([warm] [intimate] [premium] Pill)
+  - "다른 자산으로 →" → 라이프 자산 라이브러리 매칭 자산 4건 추천
+- `src/app/settings/lifestyle-assets/page.tsx` — 자산 카드에 메타 추가
+  - 사용 N건
+  - 매칭 가능 상품 N건 (ConceptTone overlap)
+
+#### Task 12: 시각적 통일성 (1일)
+**파일**:
+- `src/components/ui/Card.tsx` (신규 또는 통합)
+- `src/components/ui/Pill.tsx` (신규)
+- `src/components/ui/PrimaryButton.tsx` (StudioCardShell에서 분리)
+- 라이프 자산 페이지 카드 → 온실 아틀리에 톤 매칭
+- 공통 디자인 토큰: border-radius 16 / shadow / spacing 24
+
+---
+
+
 ## Sprint 6 재구성 (2026-05-07) — Open API ROI Top 5 우선 + Private API 신청 진행
 
 본 세션(2026-05-07) 도매꾹 Private API 리서치 결과로 Sprint 6 우선순위 *완전 재구성*. 직전 인계의 P0-A → P0-B → P0-C → P0-D → S-2 순서를 폐기하고, **Open API ROI Top 5 묶음**으로 변경. 옛 Sprint 6 계획(아래 "Sprint 6/7/8 계획 (2026-05-08 신규)" 섹션)은 *deprecated*, 본 섹션이 우선.
