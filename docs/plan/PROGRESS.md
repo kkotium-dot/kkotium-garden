@@ -1,10 +1,11 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-19 (Sprint 7-PC-B 진행 + TASK_BRIDGE.md hand-off layer 도입, 작업원칙 #41)
-> 활성 계획: Smart Asset Workflow v3.1 FINAL (CTI + 12 골격) + Sprint 7-PC paper-cut batch + Desktop↔Code 핑퐁 (작업원칙 #41)
+> 최종 업데이트: 2026-05-19 PM (Sprint 8-IA 진입 결정 + IA 재설계 + 작업원칙 #46 신설, Turn 2 완료)
+> 활성 계획: Sprint 8-IA Phase 1 (자동화 관제 강등 + registry 26→8 + 대시보드 Section 5) → Phase 2 (대시보드 통합 + 빌더 흡수 + lifestyle 가시화 + 통일성)
+> 보류 계획: Smart Asset Workflow v3.1 FINAL 후속 (Phase 2-c-3 / Sprint 7-M3) / Sprint 8 자동발주 (Private API 28권한 보유, 매출 상승 트리거)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
-> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (29b7c49 verified, PC-B-2 통과)
-> **신규 진입점**: `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off ledger. §3 ACTIVE / §4 STANDING / §6 PENDING 매 세션 정독 의무
-> 다음 작업: 병행 가능 — A) 첫 실 상품 등록 (autoRunVisual 검증), B) lifestyle 자산 시딩 (admin UI에서 Phase 1 Claude Web Firefly 결과물 업로드). 또는 Sprint 7-M3 (운영 메트릭) / Phase 2-c-3 (벌크 import) / Sprint 8 (자동발주).
+> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (86fdd10 verified, Sprint 7-PC-D 완료)
+> **신규 진입점**: `docs/plan/TASK_BRIDGE.md` §3 ACTIVE = Sprint 8-IA Phase 1 진입 대기. §4 STANDING / §6 PENDING 매 세션 정독 의무. 작업원칙 #46 (거짓 라벨 금지) 신설
+> 다음 작업: 새 채팅 1 진입 = Sprint 8-IA Phase 1 (Task 1-5, 1.5일). ROADMAP.md "다음 새 채팅 시작 메시지" ⭐ ACTIVE 정독 후 paste-ready 메시지로 새 채팅 진입.
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
 > **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
@@ -12,6 +13,73 @@
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
 > **다음 작업**: **Sprint 7-M2 Phase 3-C-2** (PLANT /products/new 6→7 tab 확장 + 7번째 탭 "비주얼 자동화" 마운트 + savedProductId 컨텍스트 전달). 본 turn 완료: Phase 3-C-1 컴포넌트 추출 (refactor only) — `src/components/studio/` 9 신규 파일, `/studio/page.tsx` 1068→250 LOC (-77%), byte-identical markup. PLANT 통합이 import 1줄로 가능. /studio end-to-end 워크플로우 (Diagnosis → Thumbnail → Detail → Save → Naver Publish) 정상 작동, dedicated 27/27 100% 유지.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-19 PM Sprint 8-IA 진입 결정 + IA 재설계 (Desktop turn, docs only)
+
+### 본 turn 성격
+
+Desktop이 Chrome MCP로 /automation + /studio + /settings/lifestyle-assets + /products/new 4 화면 시각 점검 → 자동화 관제 페이지의 *17/26 = 65% 가짜 라벨 발견* + 빌더↔renderer 충돌 + lifestyle 연결 부재 진단. 사용자 Q1·Q2·Q3 권장안 모두 승인 → Sprint 8-IA 신설 + Phase 1/2 분할 + 작업원칙 #46 명문화. 본 turn은 docs only, 코드 변경 0건.
+
+### 진단 핵심 (작업원칙 #46 직접 발화 사례)
+
+자동화 관제 페이지가 "정상 17"으로 표시 → 실 cron 가동은 3건뿐 (재고폴링 + 일배치 + 주배치). 14개는 Sprint 6-B/6-C/Sprint 8/9 미작성 작업 라벨만 사전 배치. 파워셀러 시각으로 *작동하지 않는 기능이 정상으로 표시되는 것이 가장 큰 신뢰 리스크*.
+
+근본 원인: registry를 *모니터링 도구*가 아닌 *미래 작업 등록 지점*으로 사용. 결과적으로 미구현을 정상으로 위장. 작업원칙 #46으로 영구 차단:
+
+| 규칙 | 강제 |
+|---|---|
+| (a) registry 등재 = 실 가동 단정 후만 | 코드 + 1회 실 실행 + 메트릭 endpoint 3 조건 통과 |
+| (b) 미가동 작업은 SPRINT_PLAN.md / ROADMAP.md만 | registry/UI 진입 금지 |
+| (c) 사용자 UI에서 "준비"/"대기"/"보류" 금지 | 관리자 영역(`/admin/*`)에서만 허용 |
+| (d) 상태 라벨은 fetch 결과 기반만 | hardcoded "정상" 금지 |
+| (e) 신규 자동화 commit = registry entry 동시 commit | 분리 시 gap 동안 가짜 라벨 |
+
+### Sprint 8-IA 신설 (2 채팅 분할)
+
+**Phase 1 (새 채팅 1, 1.5일) — 자동화 관제 강등 + 대시보드 Section 5**:
+- Task 1: 사이드바 "자동화 관제" 항목 제거 (5분)
+- Task 2: /automation → /admin/automation 이동 + 관리자 배지 (30분)
+- Task 3: automation-registry 26→8 entry 축소 (30분)
+- Task 4: 대시보드 Section 5 "정원 점검" 카드 신설 (1일)
+- Task 5: 브라우저 통합 검증 + commit + push (30분)
+
+**Phase 2 (새 채팅 2, 4.5일) — 통합 + 빌더 흡수**:
+- Task 6: Section 1 Hero 진화 (행동필요도 알고리즘)
+- Task 7: Section 2 Inbox 통합 (6 위젯 흡수)
+- Task 8: Section 3-4 KPI/Pipeline 카드
+- Task 9: /studio ↔ PLANT 7th 탭 목적 명확화
+- Task 10: 상세페이지 빌더 흡수 (블록 6종 → S1~S12 골격 내 인라인 편집)
+- Task 11: lifestyle-picker 연결 가시화 (자산 카드 + 변형 메타)
+- Task 12: 시각적 통일성 (공통 디자인 토큰)
+
+### Turn 1 (직전, 본 turn baseline)
+
+Hash `1a96d2a` (origin/main 정합). 3 commit 적용:
+- `049bf7e` TASK_BRIDGE.md §3/§4/§5/§7 갱신
+- `af6097b` PRINCIPLES_LEARNED.md #46 신설
+- `1a96d2a` SPRINT_PLAN.md Sprint 8-IA 신설 (Phase 1 + Phase 2)
+
+### Turn 2 (본 turn, docs only 3 commit)
+
+- PROGRESS.md (헤더 갱신 + 본 entry prepend) ← 본 commit
+- ROADMAP.md (헤더 갱신 + ACTIVE handoff 교체)
+- SESSION_LOG.md (본 entry prepend)
+
+### 검증
+
+- TSC 변경 0 (docs only) ✅
+- npm run build 영향 0 (baseline 86fdd10 동일) ✅
+- 한글 sentinel grep 0 typos ✅
+- Vercel production 200 ✅ (turn 2는 docs only, deploy 영향 0)
+- 작업원칙 적용: #17, #21, #29, #31, #35, #36, #41, #46
+
+### 다음 = 새 채팅 1 진입 (Sprint 8-IA Phase 1)
+
+ROADMAP.md "다음 새 채팅 시작 메시지" ⭐ ACTIVE에 paste-ready 메시지 작성됨. 사용자가 새 채팅 첫 입력으로 paste → 5 Task 순차 진행 → Phase 1 검증 통과 후 새 채팅 2 (Phase 2) 진입.
+
+Commit: 본 commit hash로 갱신 예정
 
 ---
 
