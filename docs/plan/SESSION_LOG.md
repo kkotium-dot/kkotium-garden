@@ -1,3 +1,113 @@
+## 2026-05-19 PM Sprint 8-IA 진입 결정 + IA 재설계 (Desktop turn, docs only)
+
+### 본 세션 성격
+
+Desktop이 Chrome MCP로 production UI 4 화면 (/automation + /studio + /settings/lifestyle-assets + /products/new) 시각 점검을 통해 자동화 관제 페이지의 *17/26 = 65% 가짜 라벨* 등을 발견. 사용자 Q1·Q2·Q3 권장안 모두 승인 후 Desktop이 paste-ready 본문 작성 → Code 측이 docs 6건 분할 적용 (Turn 1 = TASK_BRIDGE + PRINCIPLES + SPRINT_PLAN, Turn 2 = PROGRESS + ROADMAP + SESSION_LOG). 본 turn은 turn 2 = docs only, 코드 변경 0건.
+
+### Desktop 진단 (Chrome MCP evidence)
+
+**1) 자동화 관제 페이지 (가장 큰 사고)**:
+- 정상 라벨 17건 표시 / 실 cron 가동 *3건만* (재고폴링 + 일배치 + 주배치)
+- 14개는 Sprint 6-B / 6-C / Sprint 8 / 9 미작성 작업 라벨만 사전 배치
+- 파워셀러 시각: 작동하지 않는 기능이 정상으로 표시되는 게 *가장 큰 운영 리스크* (사용자 신뢰 깨짐)
+
+**2) 빌더 ↔ renderer 충돌**:
+- 상세페이지 빌더 (블록 6종: 홍보문구/이미지/텍스트/Q&A/사양 테이블/구분선)
+- 27 dedicated section renderer (S1~S12 + 11 공유 슬롯)
+- 두 시스템이 *공존*하는 상태 → 사용자 혼란 + 어느 path가 정통인지 모호
+
+**3) lifestyle-picker 가시화 부재**:
+- 시스템은 완벽 (30일 cooldown + ConceptTone 매칭 + admin UI CRUD)
+- 사용자 화면에서 작동이 안 보임 → 자산 카드에 사용 상품 수 + lifestyle 변형에 backdrop 메타 표시 필요
+
+**4) 시각적 통일성 부재**:
+- 라이프 자산 페이지 ↔ 온실 아틀리에 ↔ PLANT 디자인 토큰 불일치
+- border-radius / shadow / spacing 각 페이지마다 다름
+
+### 사용자 의사결정 (Q1·Q2·Q3 모두 권장안 채택)
+
+**Q1**: 자동화 관제 페이지를 사이드바에서 강등하고 관리자 영역으로 이동할 것인가?
+→ Yes (사이드바 제거 + /admin/automation 이동)
+
+**Q2**: registry 26 entry를 8 entry로 축소할 것인가? (미가동 작업 라벨 제거)
+→ Yes (실 가동 단정된 8개만 유지)
+
+**Q3**: 새 채팅 1개에 12 Task 모두 vs 2개 분할 (Phase 1 + Phase 2)?
+→ 2개 분할 (Phase 1 검증 통과 후 Phase 2 진입)
+
+### Sprint 8-IA 신설 (12 Task)
+
+**Phase 1 (새 채팅 1, 1.5일)** — 자동화 관제 강등 + Section 5:
+- Task 1: 사이드바 "자동화 관제" 항목 제거 (5분)
+- Task 2: /automation → /admin/automation 이동 (30분)
+- Task 3: automation-registry 26→8 entry 축소 (30분)
+- Task 4: 대시보드 Section 5 "정원 점검" 카드 신설 (1일)
+- Task 5: 브라우저 통합 검증 + commit + push (30분)
+
+**Phase 2 (새 채팅 2, 4.5일)** — 통합 + 빌더 흡수:
+- Task 6: Section 1 Hero 진화 (행동필요도 알고리즘)
+- Task 7: Section 2 Inbox 통합 (6 위젯 흡수)
+- Task 8: Section 3-4 KPI/Pipeline 카드
+- Task 9: /studio ↔ PLANT 7th 탭 목적 명확화
+- Task 10: 상세페이지 빌더 흡수 (블록 6종 → S1~S12 골격 내 인라인 편집)
+- Task 11: lifestyle-picker 연결 가시화
+- Task 12: 시각적 통일성 (공통 디자인 토큰)
+
+### 작업원칙 #46 신설 — 거짓 라벨 금지
+
+본 사고가 *원칙 #46의 직접 발화 사례*. 5 규칙 강제:
+
+(a) registry 등재 = 실 가동 단정 후만 (코드 + 1회 실행 + 메트릭 endpoint 3 조건)
+(b) 미가동 작업은 SPRINT_PLAN.md / ROADMAP.md만 — registry/UI 진입 금지
+(c) 사용자 UI에서 "준비"/"대기"/"보류" 금지 — `/admin/*`에서만 허용
+(d) 상태 라벨은 fetch 결과 기반만 — hardcoded "정상" 금지
+(e) 신규 자동화 commit = registry entry 동시 commit
+
+본 원칙 적용으로 sprint 진입 시점부터 가짜 라벨 *영구 차단*.
+
+### Turn 1 (직전 turn baseline) — 3 commit
+
+| commit | 변경 |
+|---|---|
+| `049bf7e` | TASK_BRIDGE.md §3 ACTIVE 갱신 + §4 SD-07 추가 + §5 P37-P40 추가 + §7 hand-off 등재 |
+| `af6097b` | PRINCIPLES_LEARNED.md #46 신설 |
+| `1a96d2a` | SPRINT_PLAN.md Sprint 8-IA Phase 1 + Phase 2 신설 (12 Task) |
+
+### Turn 2 (본 turn) — 3 commit
+
+| commit | 변경 |
+|---|---|
+| pending | PROGRESS.md 헤더 갱신 + Sprint 8-IA 진입 entry prepend |
+| pending | ROADMAP.md 헤더 갱신 + ACTIVE handoff 교체 (Phase 1 paste-ready 메시지) |
+| pending | SESSION_LOG.md 본 entry prepend |
+
+### 변경 파일 (Turn 1 + Turn 2 합산)
+
+- `docs/plan/TASK_BRIDGE.md` — §3/§4/§5/§7 갱신
+- `docs/plan/PRINCIPLES_LEARNED.md` — 작업원칙 #46 추가 (#26~#46)
+- `docs/plan/SPRINT_PLAN.md` — Sprint 8-IA Phase 1 + Phase 2 신설
+- `docs/plan/PROGRESS.md` — 헤더 + 신규 entry
+- `docs/plan/ROADMAP.md` — 헤더 + ACTIVE handoff 교체
+- `docs/plan/SESSION_LOG.md` — 본 entry
+
+### 검증
+
+- TSC 영향 0 (docs only) ✅
+- npm run build 영향 0 (baseline 86fdd10 = Sprint 7-PC-D 완료 상태 동일) ✅
+- 한글 sentinel grep 0 typos ✅
+- Vercel production 200 (docs only, deploy 영향 0) ✅
+- 적용 작업원칙: #17, #21, #29, #31, #35, #36, #41, #46
+
+### 다음
+
+- 새 채팅 1 진입 = Sprint 8-IA Phase 1 (Task 1-5, Code 측 build + ship)
+- Desktop이 Chrome MCP로 통합 검증 + §3 ACTIVE 갱신
+- Phase 1 검증 통과 후 → 새 채팅 2 진입 = Phase 2 (Task 6-12)
+
+Commit: 본 turn 3 commit hash로 갱신 예정
+
+---
+
 ## 2026-05-19 PM dome_code seed (디퓨저) + paper-cut 21·22 등재 ✅
 
 ### 본 세션 성격
