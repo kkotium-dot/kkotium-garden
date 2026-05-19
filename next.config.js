@@ -50,6 +50,14 @@ const nextConfig = {
       fallback: [],
     };
   },
+
+  async redirects() {
+    return [
+      // Sprint 8-IA Phase 1: /automation demoted to /admin/automation (admin only).
+      // Per #46 (false-label ban) — registry shows real-cron only.
+      { source: '/automation', destination: '/admin/automation', permanent: true },
+    ];
+  },
 };
 
 module.exports = nextConfig;

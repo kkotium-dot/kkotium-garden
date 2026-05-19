@@ -55,12 +55,6 @@ function getFrequencyLabel(frequency: string): string {
   return freq[frequency] ?? frequency;
 }
 
-function getActivationLabel(cond: string | undefined): string {
-  if (!cond) return '';
-  const activation = strings.activation as Record<string, string>;
-  return activation[cond] ?? cond;
-}
-
 export default function AutomationRow({ data }: { data: AutomationRowData }) {
   const [expanded, setExpanded] = useState(false);
   const Chevron = expanded ? ChevronDown : ChevronRight;
@@ -114,7 +108,7 @@ export default function AutomationRow({ data }: { data: AutomationRowData }) {
           </div>
           {data.activationCondition && data.status !== 'active' && (
             <p style={{ fontSize: 11, color: '#B0A0A8', margin: '3px 0 0' }}>
-              {getActivationLabel(data.activationCondition)}
+              {data.activationCondition}
             </p>
           )}
         </div>

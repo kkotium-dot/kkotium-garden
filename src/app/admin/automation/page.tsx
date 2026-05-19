@@ -29,8 +29,6 @@ interface RegistryResponse {
   };
   context: {
     last30DaysOrders: number;
-    alimtalkThreshold: number;
-    solapiConfigured: boolean;
     discordConfiguredCount: number;
     discordTotalCount: number;
     generatedAt: string;
@@ -133,14 +131,9 @@ export default function AutomationPage() {
   const { automations, summary, context } = data;
   const groupedRows: Record<AutomationGroupId, AutomationRowData[]> = {
     inventory:    [],
-    price:        [],
-    competition:  [],
-    seo:          [],
     trust:        [],
     notification: [],
     cron:         [],
-    private:      [],
-    p3:           [],
   };
   for (const row of automations) {
     const g = row.group as AutomationGroupId;
@@ -172,9 +165,27 @@ export default function AutomationPage() {
             <Workflow size={22} style={{ color: '#e62310' }} strokeWidth={2.4} />
           </div>
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>
-              {strings.page.title}
-            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <h1 style={{ fontSize: 24, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>
+                {strings.page.title}
+              </h1>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '2px 8px',
+                  background: '#f3f4f6',
+                  border: '1px solid #d1d5db',
+                  borderRadius: 6,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: '#6b7280',
+                  letterSpacing: '0.02em',
+                }}
+              >
+                관리자 영역 — 일상 사용 X
+              </span>
+            </div>
             <p style={{ fontSize: 12, color: '#B0A0A8', margin: '3px 0 0' }}>
               {strings.page.subtitle}
             </p>
@@ -250,7 +261,7 @@ export default function AutomationPage() {
           <b style={{ color: '#1A1A1A' }}>{strings.summary.discordConfigured}</b>: {context.discordConfiguredCount}{strings.summary.discordOf}{context.discordTotalCount}
         </span>
         <span>
-          <b style={{ color: '#1A1A1A' }}>{strings.summary.alimtalkContext}</b>: {context.last30DaysOrders}{strings.summary.alimtalkOrders} ({strings.summary.alimtalkThreshold} {context.alimtalkThreshold}{strings.summary.alimtalkOrders})
+          <b style={{ color: '#1A1A1A' }}>30일 주문</b>: {context.last30DaysOrders}건
         </span>
       </div>
 

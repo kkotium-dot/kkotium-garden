@@ -83,7 +83,6 @@ const NAV: { label: string; items: NavItem[] }[] = [
     label: 'OPS',
     items: [
       { href: '/ops/insert-card', label: '인서트 카드', iconKey: 'creditcard' },
-      { href: '/automation',      label: '자동화 관제', iconKey: 'workflow' },
     ],
   },
   {
