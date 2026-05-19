@@ -71,33 +71,34 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-19 PM PC-C-hotfix 진입
+**Last update**: 2026-05-19 PM PC-C-archive 진입
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (직전 PC-C `2276ed7`) |
+| **FROM** | 💻 Code (직전 PC-C-hotfix `f9119a0`) |
 | **TO** | 💻 Code (본 commit, self hand-off) |
-| **BASELINE** | `2276ed7` (Sprint 7-PC-C 완료) |
-| **NEXT SCOPE** | PC-C-hotfix (70b + .bak 17개 삭제 + #42~#45 명문화 + paper-cut 11건) |
-| **PENDING BLOCKER** | 없음 (사용자 결정 완료) |
+| **BASELINE** | `f9119a0` (PC-C-hotfix 완료) |
+| **NEXT SCOPE** | PC-C-archive (P35 provider stale + P36 .backup 60건 + .gitignore + #43 강화) |
+| **PENDING BLOCKER** | 없음 |
+| **AFTER** | 사용자 첫 실 상품 등록 (도매매 단건 크롤링 + 풀 워크플로우) |
 
-### 본 hand-off 진행 흐름 (2026-05-19 PM, PC-C-hotfix)
+### 본 hand-off 진행 흐름 (2026-05-19 PM, PC-C-archive)
 
 ```
-PC-C `2276ed7` push 후 production smoke
+PC-C-hotfix `f9119a0` push 후 Desktop 5-source 검증
 ↓
-Desktop: productNames "촛소시우에 촛소시우에" degenerate 발견
-↓ (P24 + P33 단정)
-Desktop: 70b 직접 호출 검증 + .bak 17개 보안 위반 단정
+Desktop: provider 응답 "groq-llama-3.1-8b-instant" stale 단정 (P35)
 ↓
-Desktop: paste-ready 메시지 (4-task: 70b + .bak rm + #42~#45 + paper-cut)
+Desktop: Filesystem search 60건 .backup 잔존 단정 (P36)
 ↓
-Code: 본 commit (Groq 70b + 17개 .bak rm + #42~#45 명문화 + TASK_BRIDGE 갱신)
+Desktop: paste-ready 메시지 (4-task: provider fix + 60 rm + .gitignore + bridge)
+↓
+Code: 본 commit (GROQ_MODEL 상수 export + 60 .backup rm + .gitignore + #43)
 ↓
 Code: push + hash 보고
 ↓
-Desktop: 5-source cross-track 검증 (git + Vercel + Supabase + Chrome + MD)
-→ 통과 시 §7 ARCHIVED에 본 commit 등재 + 첫 실 상품 등록 진입 권고
+Desktop: 3-source cross-track 검증 (production curl + filesystem + MD)
+→ 통과 시 §7 ARCHIVED 등재 + 사용자 첫 실 상품 등록 진입 권고
 ```
 
 ---
@@ -152,8 +153,10 @@ Desktop: 5-source cross-track 검증 (git + Vercel + Supabase + Chrome + MD)
 | P30 | /api/category/suggest Gemini 잔존 (구 P13-D scope) | PC-D |
 | P31 | lib/review-sentiment-analyzer Gemini 잔존 | PC-D |
 | P32 | lib/upload-readiness-filler Gemini 잔존 | PC-D |
-| **P33** | **lib/gemini.ts.bak 보안 위반 (백업파일 노출) — 17개 일괄 처리** | **본 commit (PC-C-hotfix)** |
+| **P33** | **lib/gemini.ts.bak 보안 위반 (백업파일 노출) — 17개 일괄 처리** | **`f9119a0` (PC-C-hotfix) ✅ 완료** |
 | P34 | Gemini 재진입 시점 (예약) | Sprint 8 (월 매출 100만+) |
+| **P35** | **provider 응답 문자열 stale (route.ts hardcoded 8b)** — GROQ_MODEL 상수 참조로 fix | **본 commit (PC-C-archive) ✅ 완료** |
+| **P36** | **.backup 패턴 60건 git 추적 + .gitignore 누락** (작업원칙 #43 메타-단정 사례) | **본 commit (PC-C-archive) ✅ 완료** |
 
 ---
 
@@ -180,6 +183,13 @@ Desktop: 5-source cross-track 검증 (git + Vercel + Supabase + Chrome + MD)
 - ✅ dome_code seed 5fa8560 (디퓨저 dome_code INSERT + P21·P22 등재) ← Desktop 검증
 - ✅ Sprint 7-PC-C 전면 종료 `2276ed7` ← Desktop 5-source 검증 통과
   (Groq migration 5 endpoint, +240/-305 LOC, build OK + Vercel READY)
+- ✅ Sprint 7-PC-C-hotfix `f9119a0` ← Desktop 5-source 검증 통과
+  (70b 교체 + 17 .bak rm + #42~#45 명문화 + paper-cut 11건, 22 files
+  +154/-3625 LOC, Vercel READY)
+  - Verification: HTTP 200 / 2.14s / productNames 다양성 3/3 unique
+  - 한국어 정합 100% / P24 결함 완전 해소
+  - 추가 단정: provider 문자열 stale → P35 후속 fix
+  - 추가 단정: .backup 60건 잔존 → P36 후속 fix (메타-단정 사례)
 
 ---
 

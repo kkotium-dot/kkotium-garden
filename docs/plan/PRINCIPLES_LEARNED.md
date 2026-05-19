@@ -497,6 +497,23 @@ PC-C-hotfix 시점 git-tracked .bak/.old 파일 17개 일괄 삭제.
 - 0건 정합 시에만 push 허용
 - git ls-files | grep -E "\.bak$|\.old$" 결과 0건 의무
 
+**검증 패턴 (2026-05-19 PM 강화 — 메타-단정 사례)**:
+
+단일 패턴 grep은 *다른 패턴 누락을 보장하지 않는다*. 직전 `.bak` 일괄 삭제 후에도 `.backup` 60건이 추가 잔존 (Desktop search_files 단정). 따라서 멀티 패턴 union grep 의무:
+
+```bash
+find . \( -name "*.bak" -o -name "*.backup*" -o -name "*.BROKEN*" \
+          -o -name "*.old" -o -name "*.v[0-9]*" \) -type f \
+  -not -path "./node_modules/*" \
+  -not -path "./.next/*" \
+  -not -path "./.git/*" \
+  -not -path "./.claude/worktrees/*"
+```
+
+- 0건 정합 시에만 push 허용
+- `.gitignore`의 backup section 정기 검토 권고 (월 1회)
+- 메타-단정 사례 (2026-05-19 PM): 룰 등재만으로는 부족 → 등재된 룰이 *그 자체로 검증되어야* 권위 정합. PC-C-hotfix `f9119a0`에서 `.bak` 17개 삭제 후 PC-C-archive에서 `.backup` 60건 추가 발견 — 단일 패턴 grep 한계 노출
+
 ---
 
 ## 작업원칙 #44 — 에러 메시지는 코드 상태 변경 시 동시 갱신 의무 (2026-05-19 명문화)

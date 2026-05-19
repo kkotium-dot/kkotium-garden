@@ -8,7 +8,7 @@
 //   - Google Gemini 2.0 Flash (revoked due to backup file exposure 2026-05-19)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { callGroq } from '@/lib/ai/groq';
+import { callGroq, GROQ_MODEL } from '@/lib/ai/groq';
 
 
 export const dynamic = 'force-dynamic';
@@ -373,7 +373,8 @@ export async function POST(request: NextRequest) {
           prompt,
           'You are a Naver Shopping SEO expert. CRITICAL RULE: Output ONLY a raw JSON object. The very first character MUST be { and the very last MUST be }. Zero explanation, zero markdown, zero prefix text before or after the JSON.',
         );
-        provider = 'groq-llama-3.1-8b-instant';
+        // provider string references GROQ_MODEL constant — 작업원칙 #44 정합 (메타-단정)
+        provider = `groq-${GROQ_MODEL}`;
       } catch (groqErr: unknown) {
         const msg = groqErr instanceof Error ? groqErr.message : String(groqErr);
         console.warn('[seo-workflow] Groq failed, trying Anthropic fallback:', msg.slice(0, 80));

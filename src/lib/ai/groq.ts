@@ -9,7 +9,7 @@
 // Round-robin: tries GROQ_API_KEY → _2 → _3 on 429/quota error.
 
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+export const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 function getGroqKeys(): string[] {
   return [
