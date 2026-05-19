@@ -71,39 +71,58 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-19 PM Sprint 7-PC-D 진입
+**Last update**: 2026-05-19 PM Sprint 8-IA Phase 1 진입 대기 (자동화 관제 강등 + 대시보드 Section 5)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (직전 PC-C-archive `0b941a6`) |
-| **TO** | 💻 Code (본 commit, self hand-off) |
-| **BASELINE** | `0b941a6` (PC-C-archive 완료) |
-| **NEXT SCOPE** | PC-D (Perplexity 잔존 6 endpoint 완전 제거 + Gemini AEO 마이그레이션) |
-| **PENDING BLOCKER** | 없음 (사용자 명시 결정: PERPLEXITY 만료, 사용 안 함) |
-| **AFTER** | 사용자 첫 실 상품 등록 (도매매 단건 크롤링, 디퓨저 외 다른 카테고리 검증) |
+| **FROM** | 🖥 Desktop (자동화 관제 진단 + IA 재설계 단정) |
+| **TO** | 💻 Code (다음 새 채팅 = Sprint 8-IA Phase 1) |
+| **BASELINE** | `86fdd10` (Sprint 7-PC-D 완료, Vercel READY) |
+| **NEXT SCOPE** | Sprint 8-IA Phase 1 — 자동화 관제 강등 + registry 26→8 축소 + 대시보드 Section 5 카드 신설 |
+| **PENDING BLOCKER** | 없음 (사용자 Q1·Q2·Q3 권장안 모두 승인 2026-05-19) |
+| **AFTER** | Phase 2 (Section 1-4 통합 + 빌더 흡수) — 별도 채팅, Phase 1 검증 통과 후 진입 |
 
-### 본 hand-off 진행 흐름 (2026-05-19 PM, Sprint 7-PC-D)
+### 본 hand-off 진행 흐름 (2026-05-19 PM, Sprint 8-IA Phase 1)
 
 ```
-PC-C-archive `0b941a6` push 후 Desktop 3-source 검증
+Desktop Chrome MCP로 /automation 직접 시각 점검
 ↓
-사용자 명시: "PERPLEXITY_API_KEY 만료 → 사용 안 함. 차단 문구 0건."
+진단: 17/26 = 65% 가짜 라벨 (실 cron 가동 3건만)
 ↓
-Desktop: 잔존 Perplexity/Gemini 7 endpoint 단정 (P25/P26/P27/P28/P29/P30 + aeo)
+사용자에게 개선안 v2 5가지 제안 → Q1·Q2·Q3 권장안 모두 승인
+  - Q1: 자동화 관제 강등 (사이드바 제거, /admin/automation 이동)
+  - Q2: registry 26→8 entry 축소
+  - Q3: 새 채팅 2개 분할 (Phase 1 + Phase 2)
 ↓
-Code: 본 commit (Perplexity + Gemini active 호출 0건, 6 endpoint 마이그레이션)
-  - P30 category/suggest: Gemini → Groq
-  - P27 naver-seo/ai-generate: Perplexity + xAI + Gemini 삭제, Groq + Anthropic
-  - P29 aeo-generate: Gemini → Groq (3 keys round-robin)
-  - P28 kkotti-comment: Perplexity + Gemini 삭제, Groq + 정적 fallback
-  - P25 trend-analyzer: fetchPerplexityTrends dead code 삭제
-  - P26 env-checker: PERPLEXITY → GROQ/ANTHROPIC 전면 재작성
-  - .env.example: PERPLEXITY/GEMINI DEPRECATED 흔적 0
+Desktop: md 6건 paste-ready 작성 (Turn 1: TASK_BRIDGE + PRINCIPLES + SPRINT_PLAN)
 ↓
-Code: push + hash 보고
+Code: md commit + push (3건)
 ↓
-Desktop: 검증 + 사용자 첫 실 상품 등록 진입 권고
+Desktop: md 6건 paste-ready 작성 (Turn 2: PROGRESS + ROADMAP + SESSION_LOG)
+↓
+Code: md commit + push (3건 추가)
+↓
+새 채팅 1 진입: Sprint 8-IA Phase 1 코드 작업 (5 tasks)
+↓
+Desktop: Chrome MCP 통합 검증 + §3 ACTIVE 갱신 + §7 ARCHIVED 등재
+↓
+새 채팅 2 진입: Sprint 8-IA Phase 2 (Section 1-4 통합 + 빌더 흡수)
 ```
+
+### 본 hand-off 핵심 단정
+
+1. **자동화 관제 페이지 = 껍데기 + 거짓 라벨**:
+   - 정상 17건 표시 / 실 cron 가동 3건만 (재고폴링 + 일배치 + 주배치)
+   - 14개는 Sprint 6-B/6-C/Sprint 8/9 미작성 작업 라벨만 깔아둠
+   - 파워셀러 시각: 사용자 신뢰 깨짐 + 사이드바 노이즈 + 대시보드와 분리
+2. **빌더 흡수 결정 → Phase 2로 분리**:
+   - 상세페이지 빌더 (블록 6종) ↔ 27 dedicated section renderer (S1~S12) 충돌
+   - 빌더 제거 대신 *흡수* (FAQ → S6/S11 / 사양 테이블 → S4/S7/S12 / SEO 훅 → Diagnosis metadata)
+   - 가장 큰 변화라 Phase 1 검증 후 신중 진입
+3. **lifestyle-picker 연결 가시화 → Phase 2**:
+   - 시스템은 완벽 (30일 cooldown + ConceptTone 매칭)
+   - 사용자 화면에서 작동이 안 보임 → 자산 카드에 사용 상품 수 + lifestyle 변형에 backdrop 메타 표시
+
 
 ---
 
@@ -117,6 +136,7 @@ Desktop: 검증 + 사용자 첫 실 상품 등록 진입 권고
 | SD-04 | main 직접 push (1인 개발, 브랜치 없음) | 작업원칙 #4 |
 | SD-05 | Vercel production = source of truth (dev 가정 production 아키텍처 금지) | 작업원칙 #28 |
 | SD-06 | 사용자 닉네임 답변 본문 직접 입력 금지 (사용자 메시지 인용 / 코드 변수 / write_file MD만 허용) | 작업원칙 #29 e++ |
+| SD-07 | 자동화 *모니터링* UI는 *대시보드 Section 5 카드*가 primary 진입점 — `/admin/automation`은 관리자 전용 fallback. registry는 *실 가동 작업만* 등재 (미구현 작업 사전 라벨 금지) | 사용자 Q1·Q2 결정 2026-05-19 |
 
 ---
 
@@ -170,6 +190,10 @@ Desktop: 검증 + 사용자 첫 실 상품 등록 진입 권고
 | P31 | lib/review-sentiment-analyzer.ts — 단정 결과: 이미 Groq primary (헤더 정합 갱신만 권고) | scope 외 (이미 정합) |
 | P32 | lib/upload-readiness-filler.ts — 단정 결과: 이미 Groq primary (헤더 정합 갱신만 권고) | scope 외 (이미 정합) |
 | #3 | handleNaverDirect silent fail (2026-05-17 발견) | `742ce91` (PC-A) ✅ 해소 단정 — 사용자 첫 실 상품 등록 시 검증 의무 |
+| **P37** | **자동화 관제 가짜 라벨 (17/26 미가동 작업)** — Sprint 8-IA Phase 1로 해소 | **Phase 1 ✅ 해소 예정** |
+| **P38** | **상세페이지 빌더 ↔ 27 dedicated renderer 충돌** — Phase 2 흡수 결정 | Sprint 8-IA Phase 2 |
+| **P39** | **lifestyle-picker 연결 가시화 부재** — picker 작동이 사용자 화면에서 안 보임 | Sprint 8-IA Phase 2 |
+| **P40** | **시각적 통일성 부재** — 라이프 자산 페이지 ↔ 온실 아틀리에 ↔ PLANT 디자인 토큰 불일치 | Sprint 8-IA Phase 2 |
 
 ---
 
@@ -209,6 +233,11 @@ Desktop: 검증 + 사용자 첫 실 상품 등록 진입 권고
   - Production smoke: provider="groq-llama-3.3-70b-versatile" 정합 확정
   - productNames/hooks 3/3 unique, 한국어 자연어 100%
   - 누적 정리: .bak 17 + .backup 60 = 77 보안 위반 파일 해제
+- ✅ Sprint 8-IA 진입 결정 (Desktop turn) ← 자동화 관제 진단 + IA 재설계 단정
+  - Chrome MCP로 /automation + /studio + /settings/lifestyle-assets + /products/new 4 화면 시각 점검
+  - 17/26 가짜 라벨 발견 + 빌더↔renderer 충돌 + lifestyle 연결 부재 진단
+  - 사용자 Q1·Q2·Q3 권장안 모두 승인 → 새 채팅 2개 분할 결정
+  - md 6건 paste-ready 분할 작성 (Turn 1 + Turn 2)
 
 ---
 
