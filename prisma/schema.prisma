@@ -738,6 +738,18 @@ model DesignerJamQueue {
   @@map("designer_jam_queue")
 }
 
+model CategoryMetadataCache {
+  id                   String   @id @default(cuid())
+  naverCode            String   @unique @map("naver_code")
+  monthlySearchVolume  Int      @default(0) @map("monthly_search_volume")
+  competitionLevel     Float    @default(0.5) @map("competition_level")
+  avgPrice             Int      @default(0) @map("avg_price")
+  updatedAt            DateTime @default(now()) @map("updated_at")
+
+  @@index([updatedAt(sort: Desc)], map: "idx_category_metadata_cache_updated_at")
+  @@map("category_metadata_cache")
+}
+
 model AssetLibrary {
   id         String    @id @default(cuid())
   assetType  String    @map("asset_type") @db.VarChar(40)

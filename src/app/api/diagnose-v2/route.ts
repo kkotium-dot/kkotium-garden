@@ -1,17 +1,18 @@
-// Sprint 7-M2 Smart Asset Workflow v3.1 FINAL — POST /api/diagnose-v2
+// Sprint 7-M2 Step 2 — POST /api/diagnose-v2
 //
-// 9-axis CTI diagnosis scaffold writing to the new DiagnosisResult model.
-// Step 1 = scaffold: c4SourcePoverty is computed from real product signals
-// (imageCount + description length); c1-c3 + t1-t5 are placeholder pseudo-random
-// in a stable per-product band. Step 2 will replace the placeholders with real
-// scoring backed by PlayMCP category match, DataLab trends, and Naver SEO API.
+// Real 9-axis CTI diagnosis writing to DiagnosisResult. Replaces the Step 1
+// scaffold with deterministic, signal-driven scoring backed by the
+// category_metadata_cache (PlayMCP runtime adapter).
 //
 // Coexists with /api/diagnose (Sprint 7-Diag MVP, writes to Diagnosis model).
-// DO NOT remove the v1 route until v2 reaches parity.
+// DO NOT remove the v1 route until v2 reaches parity — Step 4 owns that call.
 
 import { NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { computeAllAxes, giftKeywordCount, emotionalKeywordCount } from '@/lib/diagnosis/score-engine';
+import type { AxisScores } from '@/lib/diagnosis/score-engine';
+import { getCategoryMetadata } from '@/lib/diagnosis/playmcp-adapter';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,18 +24,6 @@ type SkeletonId =
 
 interface DiagnoseBody {
   productId?: string;
-}
-
-interface AxisScores {
-  c1Category: number;
-  c2PriceTier: number;
-  c3RevenuePotential: number;
-  c4SourcePoverty: number;
-  t1ToneScore: number;
-  t2Seasonality: number;
-  t3GiftScore: number;
-  t4Competition: number;
-  t5BrandIdentity: number;
 }
 
 const AXIS_WEIGHTS: Record<keyof AxisScores, number> = {
@@ -56,66 +45,12 @@ function jsonError(message: string, status: number, detail?: unknown) {
   );
 }
 
-// Deterministic pseudo-random in [0, 1) seeded by a string. Replaces unseeded
-// Math.random for stable scaffold scoring per product id.
-function seededFloat(seed: string, salt: string): number {
-  let h = 2166136261;
-  const input = `${seed}::${salt}`;
-  for (let i = 0; i < input.length; i++) {
-    h ^= input.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  // Mix and fold to [0,1)
-  const folded = ((h >>> 0) % 1_000_000) / 1_000_000;
-  return folded;
-}
-
-// Source poverty is the one real signal in Step 1: how starved we are of source
-// material from the supplier. Higher = more poverty = more lift required from
-// our pipeline (master image generation, copy synthesis, etc.).
-function computeSourcePoverty(args: {
-  imageCount: number;
-  descriptionLength: number;
-}): number {
-  const { imageCount, descriptionLength } = args;
-  // Image starvation: 0 images = 1.0 poverty, 10+ images = 0.0 poverty
-  const imageStarvation = Math.max(0, Math.min(1, 1 - imageCount / 10));
-  // Description starvation: 0 chars = 1.0 poverty, 2000+ chars = 0.0 poverty
-  const descStarvation = Math.max(0, Math.min(1, 1 - descriptionLength / 2000));
-  // 60% image, 40% description — image starvation hurts more for visual SKUs
-  return Math.min(1, imageStarvation * 0.6 + descStarvation * 0.4);
-}
-
-function pickSkeleton(args: {
-  category: string | null;
-  naverCategoryCode: string | null;
-  productName: string;
-}): SkeletonId {
-  const { category, naverCategoryCode, productName } = args;
-  // Drop placeholder category sentinel — historical rows used 'uncategorized' as
-  // a literal value that collides with English keyword regex (e.g. 'cat' substring).
-  const safeCategory = category && category !== 'uncategorized' ? category : '';
-  const haystack = `${safeCategory} ${productName}`.toLowerCase();
-
-  // Keyword sniff — Korean tokens are dominant; English fragments use word
-  // boundaries to avoid false positives like 'cat' inside 'uncategorized'.
-  if (/(\bflower\b|\bplant\b)|꽃|화분|식물/.test(haystack)) return 'S1';
-  if (/(\bfood\b|\bdessert\b)|식품|디저트|간식/.test(haystack)) return 'S2';
-  if (/(\bclothes\b|\bwear\b|\bapparel\b)|의류|티셔츠|바지|원피스/.test(haystack)) return 'S6';
-  if (/(\bbaby\b|\bkid\b|\bchildcare\b)|출산|육아|아기/.test(haystack)) return 'S14';
-  if (/(\bhomewear\b|\bpajama\b|\bloungewear\b)|홈웨어|잠옷|실내복/.test(haystack)) return 'S13';
-  if (/(\bhealth\b|\bbeauty\b|\bcosmetic\b)|건강|뷰티|화장품/.test(haystack)) return 'S7';
-  if (/(\bpet\b|\bdog\b|\bcat\b)|반려|강아지|고양이/.test(haystack)) return 'S10';
-  if (/(\belectronics\b|\bappliance\b)|가전|전자/.test(haystack)) return 'S9';
-  if (/(\bseasonal\b|\bchristmas\b|\bevent\b)|시즌|이벤트|크리스마스/.test(haystack)) return 'S11';
-  if (/(\bcustom\b|\bmade\b)|커스텀|맞춤/.test(haystack)) return 'S12';
-  if (/(\bpremium\b|\bluxury\b|\bgift\b)|선물|프리미엄|고급/.test(haystack)) return 'S5';
-
-  // Naver category code prefix hints
-  if (naverCategoryCode && naverCategoryCode.startsWith('5000')) return 'S3';
-  if (safeCategory && /^11_/.test(safeCategory)) return 'S3';
-
-  return 'S3';
+function computeTotalScore(axes: AxisScores): number {
+  let sum = 0;
+  (Object.keys(AXIS_WEIGHTS) as Array<keyof AxisScores>).forEach((k) => {
+    sum += axes[k] * AXIS_WEIGHTS[k];
+  });
+  return Math.max(0, Math.min(1, sum));
 }
 
 function pickGrade(totalScore: number): Grade {
@@ -125,32 +60,87 @@ function pickGrade(totalScore: number): Grade {
   return 'L4';
 }
 
-function computeAxes(args: {
-  productId: string;
-  imageCount: number;
-  descriptionLength: number;
-}): AxisScores {
-  const { productId, imageCount, descriptionLength } = args;
-  const c4 = computeSourcePoverty({ imageCount, descriptionLength });
-  return {
-    c1Category: seededFloat(productId, 'c1'),
-    c2PriceTier: seededFloat(productId, 'c2'),
-    c3RevenuePotential: seededFloat(productId, 'c3'),
-    c4SourcePoverty: c4,
-    t1ToneScore: seededFloat(productId, 't1'),
-    t2Seasonality: seededFloat(productId, 't2'),
-    t3GiftScore: seededFloat(productId, 't3'),
-    t4Competition: seededFloat(productId, 't4'),
-    t5BrandIdentity: seededFloat(productId, 't5'),
-  };
-}
+// Upgraded picker — uses naverCategoryCode prefix as the strongest hint, then
+// gift / emotional / niche signals to disambiguate between archetypes.
+function pickSkeleton(args: {
+  category: string | null;
+  naverCategoryCode: string | null;
+  productName: string;
+  description: string | null;
+  giftHits: number;
+  emotionalHits: number;
+}): { id: SkeletonId; reason: string } {
+  const { category, naverCategoryCode, productName, description, giftHits, emotionalHits } = args;
+  const safeCategory = category && category !== 'uncategorized' ? category : '';
+  const haystack = `${safeCategory} ${productName} ${description ?? ''}`.toLowerCase();
+  const code = naverCategoryCode ?? '';
 
-function computeTotalScore(axes: AxisScores): number {
-  let sum = 0;
-  (Object.keys(AXIS_WEIGHTS) as Array<keyof AxisScores>).forEach((k) => {
-    sum += axes[k] * AXIS_WEIGHTS[k];
-  });
-  return Math.max(0, Math.min(1, sum));
+  // Apparel branch (Naver fashion top-level code 50000167/50000xxx fashion).
+  const isApparel = /(\bclothes\b|\bwear\b|\bapparel\b)|의류|티셔츠|바지|원피스|상의|하의/.test(haystack)
+    || code.startsWith('50000167');
+  if (isApparel) {
+    if (giftHits >= 1) return { id: 'S14', reason: 'apparel + gift signals -> care/safety' };
+    if (emotionalHits >= 1) return { id: 'S13', reason: 'apparel + emotional tone -> comfort homewear' };
+    return { id: 'S6', reason: 'apparel default' };
+  }
+
+  // Childcare / baby branch — overrides any premium gift bias.
+  if (/(\bbaby\b|\bkid\b|\bchildcare\b)|출산|육아|아기|유아|영유아/.test(haystack)
+      || code.startsWith('50000003') || code.startsWith('50000201')) {
+    return { id: 'S14', reason: 'baby/childcare keywords -> care/safety' };
+  }
+
+  // Flower / plant.
+  if (/(\bflower\b|\bplant\b)|꽃|화분|식물/.test(haystack)) {
+    return { id: 'S1', reason: 'flower/plant keywords' };
+  }
+
+  // Food / dessert.
+  if (/(\bfood\b|\bdessert\b)|식품|디저트|간식|과자/.test(haystack)) {
+    return { id: 'S2', reason: 'food/dessert keywords' };
+  }
+
+  // Pet.
+  if (/(\bpet\b|\bdog\b|\bcat\b)|반려|강아지|고양이/.test(haystack)) {
+    return { id: 'S10', reason: 'pet keywords' };
+  }
+
+  // Health / beauty.
+  if (/(\bhealth\b|\bbeauty\b|\bcosmetic\b)|건강|뷰티|화장품|스킨케어/.test(haystack)) {
+    return { id: 'S7', reason: 'health/beauty keywords' };
+  }
+
+  // Electronics.
+  if (/(\belectronics\b|\bappliance\b)|가전|전자|이어폰|블루투스/.test(haystack)) {
+    return { id: 'S9', reason: 'electronics keywords' };
+  }
+
+  // Seasonal / event.
+  if (/(\bseasonal\b|\bchristmas\b|\bevent\b)|시즌|이벤트|크리스마스|할로윈/.test(haystack)) {
+    return { id: 'S11', reason: 'seasonal/event keywords' };
+  }
+
+  // Custom-made.
+  if (/(\bcustom\b)|커스텀|맞춤|주문제작/.test(haystack)) {
+    return { id: 'S12', reason: 'custom-made keywords' };
+  }
+
+  // Interior decor (Naver code 11_08_22_xx_xx) — emotional living archetype wins
+  // over premium-gift even when 선물 keyword is present. Per handoff: category
+  // beats gift-keyword strength here because the buyer is shopping for a room,
+  // not a recipient.
+  if (/^11_08_22/.test(code) || /인테리어|소품|데코|장식/.test(haystack)) {
+    return { id: 'S3', reason: 'interior decor / emotional living (category beats gift signals)' };
+  }
+
+  // Strong gift signals — premium gift archetype.
+  if (giftHits >= 2) return { id: 'S5', reason: 'multiple gift keywords -> premium gift' };
+
+  // Naver category code prefix hints — fashion ranges, living ranges.
+  if (code.startsWith('5000')) return { id: 'S3', reason: 'naver code 50000xx fallback -> emotional living' };
+  if (/^11_/.test(code)) return { id: 'S3', reason: 'naver code 11_xx fallback -> emotional living' };
+
+  return { id: 'S3', reason: 'global default' };
 }
 
 export async function POST(req: Request) {
@@ -174,8 +164,15 @@ export async function POST(req: Request) {
       naverCategoryCode: true,
       supplierPrice: true,
       salePrice: true,
+      margin: true,
       imageCount: true,
       description: true,
+      supplier: {
+        select: {
+          platformCode: true,
+          name: true,
+        },
+      },
     },
   });
 
@@ -183,23 +180,47 @@ export async function POST(req: Request) {
     return jsonError('product not found', 404, { productId: body.productId });
   }
 
-  const descriptionLength = (product.description ?? '').length;
+  const meta = await getCategoryMetadata(product.naverCategoryCode);
+  const currentMonth = new Date().getMonth() + 1;
 
-  const axes = computeAxes({
-    productId: product.id,
-    imageCount: product.imageCount ?? 0,
-    descriptionLength,
+  const productInputs = {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    category: product.category,
+    naverCategoryCode: product.naverCategoryCode,
+    supplierPrice: product.supplierPrice,
+    salePrice: product.salePrice,
+    margin: product.margin,
+    imageCount: product.imageCount,
+  };
+  const supplierInputs = {
+    platformCode: product.supplier.platformCode,
+    name: product.supplier.name,
+  };
+
+  const axes = computeAllAxes({
+    product: productInputs,
+    supplier: supplierInputs,
+    meta,
+    currentMonth,
   });
   const totalScore = computeTotalScore(axes);
   const recommendedGrade = pickGrade(totalScore);
-  const recommendedSkeleton = pickSkeleton({
+
+  const giftHits = giftKeywordCount(productInputs);
+  const emotionalHits = emotionalKeywordCount(productInputs);
+  const skeleton = pickSkeleton({
     category: product.category,
     naverCategoryCode: product.naverCategoryCode ?? null,
     productName: product.name,
+    description: product.description,
+    giftHits,
+    emotionalHits,
   });
 
   const reasoning = {
-    method: 'scaffold-step-1',
+    method: 'real-step-2',
     weightedAxes: Object.fromEntries(
       (Object.keys(axes) as Array<keyof AxisScores>).map((k) => [
         k,
@@ -207,10 +228,22 @@ export async function POST(req: Request) {
       ]),
     ),
     sourceSignals: {
-      imageCount: product.imageCount ?? 0,
-      descriptionLength,
+      imageCount: product.imageCount,
+      descriptionLength: (product.description ?? '').length,
+      giftHits,
+      emotionalHits,
+      currentMonth,
     },
-    skeletonReason: 'keyword-sniff + category-prefix fallback to S3',
+    categoryMetadata: {
+      source: meta.source,
+      monthlySearchVolume: meta.monthlySearchVolume,
+      competitionLevel: meta.competitionLevel,
+      avgPrice: meta.avgPrice,
+    },
+    supplier: {
+      platformCode: product.supplier.platformCode,
+    },
+    skeletonReason: skeleton.reason,
   };
 
   await prisma.diagnosisResult.upsert({
@@ -228,7 +261,7 @@ export async function POST(req: Request) {
       t5BrandIdentity: axes.t5BrandIdentity,
       totalScore,
       recommendedGrade,
-      recommendedSkeleton,
+      recommendedSkeleton: skeleton.id,
       reasoning: reasoning as Prisma.InputJsonValue,
     },
     update: {
@@ -243,7 +276,7 @@ export async function POST(req: Request) {
       t5BrandIdentity: axes.t5BrandIdentity,
       totalScore,
       recommendedGrade,
-      recommendedSkeleton,
+      recommendedSkeleton: skeleton.id,
       reasoning: reasoning as Prisma.InputJsonValue,
       diagnosedAt: new Date(),
     },
@@ -251,7 +284,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     grade: recommendedGrade,
-    skeleton: recommendedSkeleton,
+    skeleton: skeleton.id,
     score: totalScore,
     reasoning,
   });
