@@ -1,10 +1,14 @@
 // POST /api/ai/seo-workflow
-// D1 SEO workflow — AI provider priority:
-//   1. Google Gemini 2.5 Flash  (GEMINI_API_KEY)   — free tier
-//   2. Anthropic Claude Sonnet  (ANTHROPIC_API_KEY) — fallback
-//   3. Perplexity sonar-pro     (PERPLEXITY_API_KEY)— last resort
+// D1 SEO workflow — AI provider priority (2026-05-19, Sprint 7-PC-C):
+//   1. Groq llama-3.1-8b-instant  (3 keys round-robin, free 43,200/day)
+//   2. Anthropic Claude Sonnet   (ANTHROPIC_API_KEY) — last resort, cost-capped
+//
+// DEPRECATED chain (removed in this commit):
+//   - Perplexity sonar-pro (Pro plan expired 2026-05)
+//   - Google Gemini 2.0 Flash (revoked due to backup file exposure 2026-05-19)
 
 import { NextRequest, NextResponse } from 'next/server';
+import { callGroq } from '@/lib/ai/groq';
 
 
 export const dynamic = 'force-dynamic';
@@ -304,79 +308,7 @@ function normalize(raw: string, fallbackPath: string): Omit<SEOWorkflowResponse,
   return { category, keywords, productNames, tags, hooks };
 }
 
-// Gemini 2.0 Flash — round-robin across up to 3 API keys to maximize free quota
-async function callGeminiWithKey(prompt: string, apiKey: string): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{
-          text: 'You are a Naver Shopping SEO expert. CRITICAL RULE: Output ONLY a raw JSON object. The very first character MUST be { and the very last MUST be }. Zero explanation, zero markdown, zero prefix text before or after the JSON.',
-        }],
-      },
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 4096,
-        responseMimeType: 'application/json',
-      },
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    if (res.status === 429) throw new Error('Gemini API 할당량 초과. 잠시 후 다시 시도해주세요.');
-    throw new Error(`Gemini API ${res.status}: ${err.slice(0, 200)}`);
-  }
-
-  const data = await res.json();
-  const candidate = data.candidates?.[0];
-  const parts: { text?: string; thought?: boolean }[] = candidate?.content?.parts ?? [];
-
-  // Filter out thinking parts (thought:true) — gemini-2.5-flash may include them
-  const text = parts
-    .filter(p => !p.thought)
-    .map(p => p.text ?? '')
-    .join('');
-
-  if (!text.trim()) {
-    const finishReason = candidate?.finishReason ?? 'unknown';
-    throw new Error(`Gemini API 빈 응답 (finishReason: ${finishReason})`);
-  }
-  return text;
-}
-
-// Try all available Gemini keys in sequence — stops at first success
-async function callGemini(prompt: string): Promise<string> {
-  const keys = [
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_API_KEY_2,
-    process.env.GEMINI_API_KEY_3,
-  ].filter(Boolean) as string[];
-
-  if (keys.length === 0) throw new Error('GEMINI_API_KEY not set');
-
-  let lastErr = '';
-  for (const key of keys) {
-    try {
-      return await callGeminiWithKey(prompt, key);
-    } catch (e) {
-      lastErr = e instanceof Error ? e.message : String(e);
-      // 429 quota or 403 permission — try next key
-      if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('403')) {
-        console.warn(`[seo-workflow] Gemini key ${key.slice(-6)} quota/403, trying next key`);
-        continue;
-      }
-      // Other errors (400, network) — don't bother rotating
-      throw e;
-    }
-  }
-  throw new Error(`Gemini: 모든 키 quota 초과. 내일 오전 9시(UTC 자정) 리셋됩니다. (${lastErr.slice(0,60)})`);
-}
-
-// Anthropic Claude Sonnet fallback
+// Anthropic Claude Sonnet — last-resort fallback when Groq fails
 async function callAnthropic(prompt: string, apiKey: string): Promise<string> {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -402,34 +334,6 @@ async function callAnthropic(prompt: string, apiKey: string): Promise<string> {
   return data.content?.[0]?.text ?? '';
 }
 
-// Perplexity sonar-pro — last resort
-async function callPerplexity(prompt: string, apiKey: string): Promise<string> {
-  const res = await fetch('https://api.perplexity.ai/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'sonar-pro',
-      messages: [
-        { role: 'system', content: '네이버 쇼핑 SEO 전문가. 반드시 순수 JSON만 반환. 마크다운 금지.' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.3,
-      max_tokens: 1500,
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    if (res.status === 401 || res.status === 429) {
-      throw new Error('Perplexity API 크레딧이 부족합니다. GEMINI_API_KEY를 .env.local에 추가하면 무료로 사용 가능합니다.');
-    }
-    throw new Error(`Perplexity API ${res.status}: ${err.slice(0, 200)}`);
-  }
-
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? '';
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body: SEOWorkflowRequest = await request.json();
@@ -441,14 +345,17 @@ export async function POST(request: NextRequest) {
     // Category is optional — without it, AI infers from product name only (lower quality)
     // qualityScore will be lower (60 vs 75+), prompting user to add category later
 
-    // Check at least one AI key exists
-    const anthropicKey  = process.env.ANTHROPIC_API_KEY;
-    const perplexityKey = process.env.PERPLEXITY_API_KEY;
-    const hasGeminiKey  = !!(process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2 || process.env.GEMINI_API_KEY_3);
+    // Check at least one AI key exists (Groq primary, Anthropic last-resort)
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    const hasGroqKey = !!(
+      process.env.GROQ_API_KEY ||
+      process.env.GROQ_API_KEY_2 ||
+      process.env.GROQ_API_KEY_3
+    );
 
-    if (!hasGeminiKey && !anthropicKey && !perplexityKey) {
+    if (!hasGroqKey && !anthropicKey) {
       return NextResponse.json(
-        { success: false, error: 'AI API 키가 없습니다. GEMINI_API_KEY를 .env.local에 추가하세요 (무료).' },
+        { success: false, error: 'AI API 키 미설정. GROQ_API_KEY를 .env.local에 추가해주세요 (무료, 14,400회/일).' },
         { status: 500 }
       );
     }
@@ -459,26 +366,26 @@ export async function POST(request: NextRequest) {
     let content = '';
     let provider = '';
 
-    // Priority: Gemini (free, up to 3 keys) > Anthropic > Perplexity
-    if (hasGeminiKey) {
+    // Priority: Groq (free, 3 keys round-robin) > Anthropic (last-resort)
+    if (hasGroqKey) {
       try {
-        content = await callGemini(prompt);
-        provider = 'gemini-2.0-flash';
-      } catch (geminiErr: unknown) {
-        const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
-        console.warn('[seo-workflow] All Gemini keys failed, trying fallback:', msg.slice(0, 80));
-        // Fall through to next provider
+        content = await callGroq(
+          prompt,
+          'You are a Naver Shopping SEO expert. CRITICAL RULE: Output ONLY a raw JSON object. The very first character MUST be { and the very last MUST be }. Zero explanation, zero markdown, zero prefix text before or after the JSON.',
+        );
+        provider = 'groq-llama-3.1-8b-instant';
+      } catch (groqErr: unknown) {
+        const msg = groqErr instanceof Error ? groqErr.message : String(groqErr);
+        console.warn('[seo-workflow] Groq failed, trying Anthropic fallback:', msg.slice(0, 80));
+        // Fall through to Anthropic
       }
     }
 
     if (!content && anthropicKey) {
       content = await callAnthropic(prompt, anthropicKey);
       provider = 'claude-sonnet';
-    } else if (!content && perplexityKey) {
-      content = await callPerplexity(prompt, perplexityKey);
-      provider = 'perplexity-sonar';
     } else if (!content) {
-      throw new Error('모든 AI 공급자 실패. API 키를 확인해주세요.');
+      throw new Error('AI 서비스 일시 응답 없음 (Groq + Anthropic 모두 실패). 잠시 후 다시 시도해주세요.');
     }
 
     const normalized = normalize(content, categoryPath ?? '카테고리 AI 자동 추론');

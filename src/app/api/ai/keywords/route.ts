@@ -1,4 +1,8 @@
+// POST /api/ai/keywords — Naver SEO keyword generator (Sprint 7-PC-C, 2026-05-19)
+// AI provider: Groq llama-3.1-8b-instant (3 keys round-robin, free 43,200/day)
+
 import { NextRequest, NextResponse } from 'next/server';
+import { callGroq } from '@/lib/ai/groq';
 
 
 export const dynamic = 'force-dynamic';
@@ -8,24 +12,27 @@ export async function POST(request: NextRequest) {
     const { productName, category, description } = body;
 
     if (!productName) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        error: '상품명이 필요합니다.' 
+        error: '상품명이 필요합니다.'
       }, { status: 400 });
     }
 
-    const apiKey = process.env.PERPLEXITY_API_KEY;
+    const hasGroqKey = !!(
+      process.env.GROQ_API_KEY ||
+      process.env.GROQ_API_KEY_2 ||
+      process.env.GROQ_API_KEY_3
+    );
 
-    if (!apiKey) {
-      return NextResponse.json({ 
+    if (!hasGroqKey) {
+      return NextResponse.json({
         success: false,
-        error: 'API 키가 설정되지 않았습니다.',
-        message: '.env.local에 PERPLEXITY_API_KEY를 추가해주세요.'
+        error: 'AI API 키 미설정. GROQ_API_KEY를 .env.local에 추가해주세요 (무료, 14,400회/일).',
       }, { status: 500 });
     }
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🤖 Perplexity AI 키워드 생성 시작 (sonar-pro)');
+    console.log('🤖 Groq AI 키워드 생성 시작 (llama-3.1-8b-instant)');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('상품명:', productName);
     console.log('카테고리:', category || '없음');
@@ -50,36 +57,10 @@ ${description ? '설명: ' + description : ''}
 
 JSON만 응답하세요:`;
 
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'sonar-pro',  // ✅ 2026년 최신 모델
-        messages: [
-          { 
-            role: 'system', 
-            content: '당신은 네이버 쇼핑 SEO 전문가입니다. 실시간 검색 트렌드를 반영하여 키워드를 추천합니다. JSON만 응답하세요.' 
-          },
-          { 
-            role: 'user', 
-            content: prompt 
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 500,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error('Perplexity API 오류: ' + response.status + ' - ' + errorText);
-    }
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
+    const content = await callGroq(
+      prompt,
+      '당신은 네이버 쇼핑 SEO 전문가입니다. JSON만 응답하세요.',
+    );
 
     // JSON 파싱 (마크다운 코드블록 제거)
     let jsonText = content.trim();
@@ -104,7 +85,7 @@ JSON만 응답하세요:`;
   } catch (error: any) {
     console.error('❌ 키워드 생성 실패:', error);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
       error: error.message || '키워드 생성 중 오류가 발생했습니다.'
     }, { status: 500 });
