@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "seed:naver": "tsx prisma/seed-naver-master.ts"
+    "seed:naver": "tsx prisma/seed-naver-master.ts",
+    "seed:smart-asset": "tsx prisma/seed-smart-asset.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

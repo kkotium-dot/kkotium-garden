@@ -34,27 +34,27 @@ model Platform {
 }
 
 model Supplier {
-  id                String            @id @default(cuid())
-  name              String
-  code              String            @unique
-  abbr              String            @unique @db.VarChar(4)
-  platformId        String?
-  platformCode      String            @default("ETC") @db.VarChar(10)
-  platformUrl       String?
-  contact           String?
-  address           String?
-  description       String?
-  domeggookSellerId          String?           @map("domeggook_seller_id") @db.VarChar(100)
-  defaultShippingTemplateId  String?           @map("default_shipping_template_id")
-  defaultMargin              Int               @default(30)
-  active                     Boolean           @default(true)
-  createdAt                  DateTime          @default(now())
-  updatedAt                  DateTime          @updatedAt
-  products                   Product[]
-  platform                   Platform?         @relation(fields: [platformId], references: [id])
-  shippingTemplates          ShippingTemplate[]
-  defaultShippingTemplate    ShippingTemplate? @relation("SupplierDefaultShipping", fields: [defaultShippingTemplateId], references: [id])
-  stockProfiles              SupplierStockProfile[]
+  id                        String                 @id @default(cuid())
+  name                      String
+  code                      String                 @unique
+  abbr                      String                 @unique @db.VarChar(4)
+  platformId                String?
+  platformCode              String                 @default("ETC") @db.VarChar(10)
+  platformUrl               String?
+  contact                   String?
+  address                   String?
+  description               String?
+  domeggookSellerId         String?                @map("domeggook_seller_id") @db.VarChar(100)
+  defaultShippingTemplateId String?                @map("default_shipping_template_id")
+  defaultMargin             Int                    @default(30)
+  active                    Boolean                @default(true)
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+  products                  Product[]
+  platform                  Platform?              @relation(fields: [platformId], references: [id])
+  shippingTemplates         ShippingTemplate[]
+  defaultShippingTemplate   ShippingTemplate?      @relation("SupplierDefaultShipping", fields: [defaultShippingTemplateId], references: [id])
+  stockProfiles             SupplierStockProfile[]
 
   @@index([platformCode])
   @@index([platformId])
@@ -62,7 +62,7 @@ model Supplier {
 }
 
 model Product {
-  id                      String            @id @default(cuid())
+  id                      String               @id @default(cuid())
   naver_title             String?
   naver_keywords          String?
   naver_description       String?
@@ -77,15 +77,15 @@ model Product {
   naver_warranty          String?
   naver_certification     String?
   naver_tax_type          String?
-  naver_gift_wrapping     Boolean           @default(false)
+  naver_gift_wrapping     Boolean              @default(false)
   naver_as_info           String?
   naver_delivery_info     String?
   naver_exchange_info     String?
   naver_refund_info       String?
   naver_min_order         String?
   naver_max_order         String?
-  naver_adult_only        Boolean           @default(false)
-  naver_parallel_import   Boolean           @default(false)
+  naver_adult_only        Boolean              @default(false)
+  naver_parallel_import   Boolean              @default(false)
   naver_custom_option_1   String?
   naver_custom_option_2   String?
   naver_custom_option_3   String?
@@ -93,32 +93,32 @@ model Product {
   seo_title               String?
   seo_keywords            String?
   seo_description         String?
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
   additionalImages        Json?
   aiGeneratedDesc         String?
   aiGeneratedTags         Json?
   aiGeneratedTitle        String?
   aiScore                 Int?
-  asInfo                  String            @default("평일 10:00~18:00")
-  asPhone                 String            @default("고객센터 문의")
+  asInfo                  String               @default("평일 10:00~18:00")
+  asPhone                 String               @default("고객센터 문의")
   barcode                 String?
-  brand                   String            @default("꽃틔움")
+  brand                   String               @default("꽃틔움")
   category                String?
-  courierCode             String            @default("CJGLS")
+  courierCode             String               @default("CJGLS")
   description             String?
-  exchangeShippingFee     Int               @default(6000)
-  freeShippingMinPrice    Int               @default(30000)
+  exchangeShippingFee     Int                  @default(6000)
+  freeShippingMinPrice    Int                  @default(30000)
   freeShippingThreshold   Int?
-  shippingFee             Int               @default(3000)
-  shippingMethod          String            @default("택배배송")
-  shippingPayType         String            @default("선결제")
-  shippingStrategy        String            @default("무료배송")
-  shippingType            String            @default("일반배송")
-  returnShippingFee       Int               @default(3000)
-  supplierReturnFee       Int               @default(0)
-  supplierShippingFee     Int               @default(3000)
-  hasOptions              Boolean           @default(false)
+  shippingFee             Int                  @default(3000)
+  shippingMethod          String               @default("택배배송")
+  shippingPayType         String               @default("선결제")
+  shippingStrategy        String               @default("무료배송")
+  shippingType            String               @default("일반배송")
+  returnShippingFee       Int                  @default(3000)
+  supplierReturnFee       Int                  @default(0)
+  supplierShippingFee     Int                  @default(3000)
+  hasOptions              Boolean              @default(false)
   optionName              String?
   optionType              String?
   optionValues            Json?
@@ -129,43 +129,43 @@ model Product {
   keywords                Json?
   lastSaleDate            DateTime?
   mainImage               String?
-  images                  String[]          @default([])
-  imageAltTexts           String[]          @default([])
-  imageCount              Int               @default(0)
-  manufacturer            String            @default("도매매 공급사")
+  images                  String[]             @default([])
+  imageAltTexts           String[]             @default([])
+  imageCount              Int                  @default(0)
+  manufacturer            String               @default("도매매 공급사")
   margin                  Float
-  minorPurchase           String            @default("Y")
+  minorPurchase           String               @default("Y")
   name                    String
-  naverCategoryCode       String            @default("50003307")
+  naverCategoryCode       String               @default("50003307")
   naverProductId          String?
-  originCode              String            @default("0001")
+  originCode              String               @default("0001")
   productInfoManufacturer String?
   productInfoModel        String?
   productInfoName         String?
-  productStatus           String            @default("신상품")
-  salesCount              Int               @default(0)
+  productStatus           String               @default("신상품")
+  salesCount              Int                  @default(0)
   salePrice               Int
   sellerCode              String?
   seoTitle                String?
-  sku                     String            @unique
-  status                  String            @default("DRAFT")
+  sku                     String               @unique
+  status                  String               @default("DRAFT")
   supplierPrice           Int
   tags                    Json?
   targetKeywords          Json?
-  taxType                 String            @default("과세")
+  taxType                 String               @default("과세")
   vendorCode              String?
   supplierId              String
   userId                  String
-  sellerProductCode       String?           @unique
-  seller_product_code     String?           @unique @db.VarChar(100)
-  supplier_product_code   String?           @db.VarChar(100)
+  sellerProductCode       String?              @unique
+  seller_product_code     String?              @unique @db.VarChar(100)
+  supplier_product_code   String?              @db.VarChar(100)
   category_id             String?
   origin_id               String?
-  importer_name           String?           @db.VarChar(100)
-  instant_discount        Decimal?          @db.Decimal(10, 2)
-  shipping_method         String?           @default("parcel") @db.VarChar(50)
-  shipping_fee_type       String?           @default("paid") @db.VarChar(50)
-  carrier_code            String?           @db.VarChar(50)
+  importer_name           String?              @db.VarChar(100)
+  instant_discount        Decimal?             @db.Decimal(10, 2)
+  shipping_method         String?              @default("parcel") @db.VarChar(50)
+  shipping_fee_type       String?              @default("paid") @db.VarChar(50)
+  carrier_code            String?              @db.VarChar(50)
   shipping_template_id    String?
   main_image_url          String?
   detail_image_url        String?
@@ -173,19 +173,23 @@ model Product {
   aeo_generated_at        DateTime?
   seo_hook_text           String?
   golden_keyword_score    Int?
-  return_care_enabled     Boolean           @default(false) @map("return_care_enabled")
+  return_care_enabled     Boolean              @default(false) @map("return_care_enabled")
   orderItems              OrderItem[]
-  supplier                Supplier          @relation(fields: [supplierId], references: [id])
-  user                    User              @relation(fields: [userId], references: [id])
-  naver_categories        NaverCategory?    @relation(fields: [category_id], references: [id], onUpdate: NoAction, map: "fk_products_category")
-  origin_codes            OriginCode?       @relation(fields: [origin_id], references: [id], onUpdate: NoAction, map: "fk_products_origin")
-  shipping_templates      ShippingTemplate? @relation(fields: [shipping_template_id], references: [id], onUpdate: NoAction, map: "fk_products_shipping_template")
+  supplier                Supplier             @relation(fields: [supplierId], references: [id])
+  user                    User                 @relation(fields: [userId], references: [id])
+  naver_categories        NaverCategory?       @relation(fields: [category_id], references: [id], onUpdate: NoAction, map: "fk_products_category")
+  origin_codes            OriginCode?          @relation(fields: [origin_id], references: [id], onUpdate: NoAction, map: "fk_products_origin")
+  shipping_templates      ShippingTemplate?    @relation(fields: [shipping_template_id], references: [id], onUpdate: NoAction, map: "fk_products_shipping_template")
   product_options         product_options?
   inventorySnapshots      InventorySnapshot[]
   lowStockAlerts          LowStockAlert[]
   priceMovementAlerts     PriceMovementAlert[]
   competitorSnapshots     CompetitorSnapshot[]
   diagnosis               Diagnosis?
+  diagnosisResult         DiagnosisResult?
+  sellerOverrides         SellerOverride[]
+  seoPenetrationLogs      SEOPenetrationLog[]
+  designerJamQueue        DesignerJamQueue?
 
   @@index([supplierId])
   @@index([userId])
@@ -276,29 +280,29 @@ model OriginCode {
 }
 
 model ShippingTemplate {
-  id              String     @id @default(cuid())
-  name            String
-  code            String     @unique
-  platformCode    String?    @map("platform_code")
-  supplierCode    String?    @map("supplier_code")
-  supplierId      String?    @map("supplier_id")
-  isPrimary       Boolean    @default(false) @map("is_primary")
-  courierCode     String     @default("CJGLS") @map("courier_code")
-  shippingType    Int        @default(1) @map("shipping_type")
-  shippingFee     Int        @default(3000) @map("shipping_fee")
-  freeThreshold   Int?       @map("free_threshold")
-  returnFee       Int        @default(6000) @map("return_fee")
-  exchangeFee     Int        @default(6000) @map("exchange_fee")
-  jejuFee         Int        @default(5000) @map("jeju_fee")
-  islandFee       Int        @default(5000) @map("island_fee")
-  naverTemplateNo String?    @map("naver_template_no")
-  bundleKey       String?    @map("bundle_key")
-  memo            String?
-  active          Boolean    @default(true)
-  createdAt       DateTime   @default(now()) @map("created_at")
-  updatedAt       DateTime   @updatedAt @map("updated_at")
-  Product         Product[]
-  supplier        Supplier?  @relation(fields: [supplierId], references: [id])
+  id                  String     @id @default(cuid())
+  name                String
+  code                String     @unique
+  platformCode        String?    @map("platform_code")
+  supplierCode        String?    @map("supplier_code")
+  supplierId          String?    @map("supplier_id")
+  isPrimary           Boolean    @default(false) @map("is_primary")
+  courierCode         String     @default("CJGLS") @map("courier_code")
+  shippingType        Int        @default(1) @map("shipping_type")
+  shippingFee         Int        @default(3000) @map("shipping_fee")
+  freeThreshold       Int?       @map("free_threshold")
+  returnFee           Int        @default(6000) @map("return_fee")
+  exchangeFee         Int        @default(6000) @map("exchange_fee")
+  jejuFee             Int        @default(5000) @map("jeju_fee")
+  islandFee           Int        @default(5000) @map("island_fee")
+  naverTemplateNo     String?    @map("naver_template_no")
+  bundleKey           String?    @map("bundle_key")
+  memo                String?
+  active              Boolean    @default(true)
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
+  Product             Product[]
+  supplier            Supplier?  @relation(fields: [supplierId], references: [id])
   defaultForSuppliers Supplier[] @relation("SupplierDefaultShipping")
 
   @@index([supplierId], map: "idx_shipping_templates_supplier")
@@ -367,13 +371,13 @@ model product_options {
 
 // Product event log — records state changes for Discord triggers and timeline UI
 model ProductEvent {
-  id         String   @id @default(cuid())
-  productId  String   @map("product_id")
-  type       String   @db.VarChar(50)  // OOS | PRICE_CHANGE | SCORE_DROP | STATUS_CHANGE
-  oldValue   String?  @map("old_value")
-  newValue   String?  @map("new_value")
-  note       String?
-  createdAt  DateTime @default(now()) @map("created_at")
+  id        String   @id @default(cuid())
+  productId String   @map("product_id")
+  type      String   @db.VarChar(50) // OOS | PRICE_CHANGE | SCORE_DROP | STATUS_CHANGE
+  oldValue  String?  @map("old_value")
+  newValue  String?  @map("new_value")
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([productId], map: "idx_product_events_product")
   @@index([type], map: "idx_product_events_type")
@@ -388,9 +392,9 @@ model CrawlLog {
   supplierPrice  Int      @default(0) @map("supplier_price")
   images         Json     @default("[]")
   options        Json     @default("[]")
-  status         String   @default("success")   // success | error
+  status         String   @default("success") // success | error
   errorMsg       String?  @map("error_msg")
-  source         String   @default("single")    // single | bulk
+  source         String   @default("single") // single | bulk
   sellerNick     String?  @map("seller_nick")
   sellerId       String?  @map("seller_id")
   sellerRank     Int?     @map("seller_rank")
@@ -401,7 +405,7 @@ model CrawlLog {
   canMerge       Boolean? @map("can_merge")
   // Sourcing status: SOURCED → PENDING → REGISTERED
   sourcingStatus String   @default("SOURCED") @map("sourcing_status")
-  productId      String?  @map("product_id")   // linked after registration
+  productId      String?  @map("product_id") // linked after registration
   crawledAt      DateTime @default(now()) @map("crawled_at")
 
   @@index([crawledAt(sort: Desc)])
@@ -423,7 +427,7 @@ model InventorySnapshot {
   productNo     String   @map("product_no") @db.VarChar(20)
   qty           Int      @default(0)
   status        String?  @db.VarChar(50)
-  minq          Int      @default(1)        // minimum order quantity (>1 means warning for solo seller)
+  minq          Int      @default(1) // minimum order quantity (>1 means warning for solo seller)
   supplierPrice Int?     @map("supplier_price") // Sprint 6-B: domeggook price.supply captured on same poll. null when not parsed yet.
   isDraft       Boolean  @default(false) @map("is_draft")
   polledAt      DateTime @default(now()) @map("polled_at")
@@ -442,14 +446,14 @@ model InventorySnapshot {
 // to D+1/3/7 evaluation. trend_score and volume_score both 0..100; market_level
 // is the cosmetic bucket ('hot' / 'normal' / 'cold').
 model CategoryTrendCache {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cacheKey     String   @unique @map("cache_key") @db.VarChar(120)
-  trendScore   Int      @default(0) @map("trend_score")
-  volumeScore  Int      @default(0) @map("volume_score")
-  marketLevel  String   @default("normal") @map("market_level") @db.VarChar(10)
-  dataSource   String   @map("data_source") @db.VarChar(20)
-  refreshedAt  DateTime @default(now()) @map("refreshed_at")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cacheKey    String   @unique @map("cache_key") @db.VarChar(120)
+  trendScore  Int      @default(0) @map("trend_score")
+  volumeScore Int      @default(0) @map("volume_score")
+  marketLevel String   @default("normal") @map("market_level") @db.VarChar(10)
+  dataSource  String   @map("data_source") @db.VarChar(20)
+  refreshedAt DateTime @default(now()) @map("refreshed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   @@index([refreshedAt(sort: Desc)], map: "idx_category_trend_cache_refreshed")
   @@map("category_trend_cache")
@@ -496,20 +500,20 @@ model CategoryMapping {
 // from domeggook getItemList search. Stored as aggregates (median/min/max + count)
 // instead of raw seller list to keep volume bounded.
 model CompetitorSnapshot {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  productId       String    @map("product_id")
-  productNo       String    @map("product_no") @db.VarChar(20)
-  searchKeyword   String    @map("search_keyword") @db.VarChar(200)
-  competitorCount Int       @map("competitor_count")
-  minPrice        Int?      @map("min_price")
-  maxPrice        Int?      @map("max_price")
-  medianPrice     Int?      @map("median_price")
-  ourRank         Int?      @map("our_rank")
-  ourPrice        Int?      @map("our_price")
-  errorNote       String?   @map("error_note") @db.VarChar(200)
-  polledAt        DateTime  @default(now()) @map("polled_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId       String   @map("product_id")
+  productNo       String   @map("product_no") @db.VarChar(20)
+  searchKeyword   String   @map("search_keyword") @db.VarChar(200)
+  competitorCount Int      @map("competitor_count")
+  minPrice        Int?     @map("min_price")
+  maxPrice        Int?     @map("max_price")
+  medianPrice     Int?     @map("median_price")
+  ourRank         Int?     @map("our_rank")
+  ourPrice        Int?     @map("our_price")
+  errorNote       String?  @map("error_note") @db.VarChar(200)
+  polledAt        DateTime @default(now()) @map("polled_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId], map: "idx_competitor_snapshots_product")
   @@index([polledAt(sort: Desc)], map: "idx_competitor_snapshots_polled")
@@ -521,19 +525,19 @@ model CompetitorSnapshot {
 // level: 'yellow' (>=5%), 'orange' (>=10%), 'red' (>=15%) — absolute |delta|.
 // direction: 'up' (price increased — margin risk) | 'down' (price decreased — opportunity).
 model PriceMovementAlert {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  productId       String    @map("product_id")
-  level           String    @db.VarChar(10)
-  direction       String    @db.VarChar(10)
-  baselinePrice   Int       @map("baseline_price")   // 7-day rolling baseline before this snapshot
-  currentPrice    Int       @map("current_price")    // snapshot's supplierPrice that triggered
-  deltaPct        Float     @map("delta_pct")        // signed percentage delta from baseline
-  reason          String?   @db.VarChar(100)
-  triggeredAt     DateTime  @default(now()) @map("triggered_at")
-  resolvedAt      DateTime? @map("resolved_at")
-  resolutionNote  String?   @map("resolution_note") @db.VarChar(200)
-  createdAt       DateTime  @default(now()) @map("created_at")
-  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId      String    @map("product_id")
+  level          String    @db.VarChar(10)
+  direction      String    @db.VarChar(10)
+  baselinePrice  Int       @map("baseline_price") // 7-day rolling baseline before this snapshot
+  currentPrice   Int       @map("current_price") // snapshot's supplierPrice that triggered
+  deltaPct       Float     @map("delta_pct") // signed percentage delta from baseline
+  reason         String?   @db.VarChar(100)
+  triggeredAt    DateTime  @default(now()) @map("triggered_at")
+  resolvedAt     DateTime? @map("resolved_at")
+  resolutionNote String?   @map("resolution_note") @db.VarChar(200)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId], map: "idx_price_movement_alerts_product")
   @@index([triggeredAt(sort: Desc)], map: "idx_price_movement_alerts_triggered")
@@ -543,17 +547,17 @@ model PriceMovementAlert {
 // Multi-level alert tracking. Triggered when stock crosses dynamic thresholds.
 // level: 'yellow' (caution, dashboard widget only) | 'orange' (warning, Discord) | 'red' (critical, Discord + immediate)
 model LowStockAlert {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  productId       String    @map("product_id")
-  level           String    @db.VarChar(10)
-  threshold       Int                                  // computed dynamic threshold at trigger time
-  currentQty      Int       @map("current_qty")
-  statusReason    String?   @map("status_reason") @db.VarChar(100)
-  triggeredAt     DateTime  @default(now()) @map("triggered_at")
-  resolvedAt      DateTime? @map("resolved_at")
-  resolutionNote  String?   @map("resolution_note") @db.VarChar(200)
-  createdAt       DateTime  @default(now()) @map("created_at")
-  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId      String    @map("product_id")
+  level          String    @db.VarChar(10)
+  threshold      Int // computed dynamic threshold at trigger time
+  currentQty     Int       @map("current_qty")
+  statusReason   String?   @map("status_reason") @db.VarChar(100)
+  triggeredAt    DateTime  @default(now()) @map("triggered_at")
+  resolvedAt     DateTime? @map("resolved_at")
+  resolutionNote String?   @map("resolution_note") @db.VarChar(200)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId], map: "idx_low_stock_alerts_product")
   @@index([triggeredAt(sort: Desc)], map: "idx_low_stock_alerts_triggered")
@@ -564,17 +568,17 @@ model LowStockAlert {
 // Used to derive dynamic thresholds: yellow = D*7, orange = D*3, red = D*1.
 // Trustworthy = false when 7+ days of zero variation detected (stale supplier).
 model SupplierStockProfile {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  productNo           String    @unique @map("product_no") @db.VarChar(20)
-  supplierId          String?   @map("supplier_id")
-  avgDailyDepletion   Float     @default(0) @map("avg_daily_depletion")
-  sampleCount         Int       @default(0) @map("sample_count")
-  isTrustworthy       Boolean   @default(true) @map("is_trustworthy")
-  lastNoChangeDays    Int       @default(0) @map("last_no_change_days")
-  computedAt          DateTime  @default(now()) @map("computed_at")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-  supplier            Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productNo         String    @unique @map("product_no") @db.VarChar(20)
+  supplierId        String?   @map("supplier_id")
+  avgDailyDepletion Float     @default(0) @map("avg_daily_depletion")
+  sampleCount       Int       @default(0) @map("sample_count")
+  isTrustworthy     Boolean   @default(true) @map("is_trustworthy")
+  lastNoChangeDays  Int       @default(0) @map("last_no_change_days")
+  computedAt        DateTime  @default(now()) @map("computed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  supplier          Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@index([productNo], map: "idx_supplier_stock_profiles_product_no")
   @@index([supplierId], map: "idx_supplier_stock_profiles_supplier")
@@ -582,18 +586,18 @@ model SupplierStockProfile {
 }
 
 model Diagnosis {
-  id                  String   @id @default(cuid())
-  productId           String   @unique
+  id        String @id @default(cuid())
+  productId String @unique
 
-  qualityScore        Float
-  qualitySignals      Json
-  visionComment       String?
+  qualityScore   Float
+  qualitySignals Json
+  visionComment  String?
 
-  competitionScore    Float
-  competitionSamples  Json     @default("[]")
+  competitionScore   Float
+  competitionSamples Json  @default("[]")
 
-  roiScore            Float
-  roiBreakdown        Json     @default("{}")
+  roiScore     Float
+  roiBreakdown Json  @default("{}")
 
   conceptTone         Json
   skeletonId          String
@@ -603,9 +607,9 @@ model Diagnosis {
   confidenceLevel     String
   recommendedSections String[] @default([])
 
-  diagnosedAt         DateTime @default(now())
+  diagnosedAt DateTime @default(now())
 
-  product             Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([grade])
   @@index([skeletonId])
@@ -629,4 +633,123 @@ model LifestyleAsset {
   @@index([category])
   @@index([tags])
   @@index([moodTags])
+}
+
+// ============================================================================
+// Sprint 7-M2: Smart Asset Workflow v3.1 — 9-axis CTI diagnosis,
+// 14 skeleton templates, 12 building blocks, seller override + designer jam,
+// SEO penetration log, central asset library.
+// ============================================================================
+
+model DiagnosisResult {
+  id        String  @id @default(cuid())
+  productId String  @unique @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  c1Category         Float @map("c1_category")
+  c2PriceTier        Float @map("c2_price_tier")
+  c3RevenuePotential Float @map("c3_revenue_potential")
+  c4SourcePoverty    Float @map("c4_source_poverty")
+  t1ToneScore        Float @map("t1_tone_score")
+  t2Seasonality      Float @map("t2_seasonality")
+  t3GiftScore        Float @map("t3_gift_score")
+  t4Competition      Float @map("t4_competition")
+  t5BrandIdentity    Float @map("t5_brand_identity")
+
+  totalScore          Float  @map("total_score")
+  recommendedGrade    String @map("recommended_grade") @db.VarChar(4)
+  recommendedSkeleton String @map("recommended_skeleton") @db.VarChar(8)
+  reasoning           Json
+
+  diagnosedAt DateTime @default(now()) @map("diagnosed_at")
+
+  @@index([recommendedGrade], map: "idx_diagnosis_result_grade")
+  @@index([recommendedSkeleton], map: "idx_diagnosis_result_skeleton")
+  @@map("diagnosis_results")
+}
+
+model SkeletonTemplate {
+  id               String   @id @db.VarChar(8)
+  displayName      String   @map("display_name")
+  categoryHint     String   @map("category_hint")
+  buildingBlockIds Json     @map("building_block_ids")
+  sectionCount     Int      @map("section_count")
+  estimatedMinutes Int      @map("estimated_minutes")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("skeleton_templates")
+}
+
+model BuildingBlock {
+  id               String   @id @db.VarChar(8)
+  displayName      String   @map("display_name")
+  visualRole       String   @map("visual_role")
+  seoTargetSurface String   @map("seo_target_surface")
+  description      String
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("building_blocks")
+}
+
+model SellerOverride {
+  id        String  @id @default(cuid())
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  fromGrade    String   @map("from_grade") @db.VarChar(4)
+  toGrade      String   @map("to_grade") @db.VarChar(4)
+  reasonTag    String   @map("reason_tag") @db.VarChar(40)
+  reasonNote   String?  @map("reason_note")
+  overriddenAt DateTime @default(now()) @map("overridden_at")
+
+  @@index([productId], map: "idx_seller_override_product")
+  @@index([reasonTag], map: "idx_seller_override_reason")
+  @@map("seller_overrides")
+}
+
+model SEOPenetrationLog {
+  id        String  @id @default(cuid())
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  surface     String   @db.VarChar(40)
+  keyword     String   @db.VarChar(120)
+  keywordRank Int      @map("keyword_rank")
+  insertedAt  DateTime @default(now()) @map("inserted_at")
+
+  @@index([productId], map: "idx_seo_penetration_product")
+  @@index([surface], map: "idx_seo_penetration_surface")
+  @@map("seo_penetration_logs")
+}
+
+model DesignerJamQueue {
+  id        String  @id @default(cuid())
+  productId String  @unique @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  intuitionTag String    @map("intuition_tag") @db.VarChar(40)
+  note         String?
+  status       String    @default("queued") @db.VarChar(20)
+  addedAt      DateTime  @default(now()) @map("added_at")
+  completedAt  DateTime? @map("completed_at")
+
+  @@index([status], map: "idx_designer_jam_status")
+  @@map("designer_jam_queue")
+}
+
+model AssetLibrary {
+  id         String    @id @default(cuid())
+  assetType  String    @map("asset_type") @db.VarChar(40)
+  category   String?
+  storageUrl String    @map("storage_url")
+  cdnUrl     String?   @map("cdn_url")
+  metadata   Json
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+  usageCount Int       @default(0) @map("usage_count")
+
+  @@index([assetType], map: "idx_asset_library_type")
+  @@index([category], map: "idx_asset_library_category")
+  @@map("asset_library")
 }
