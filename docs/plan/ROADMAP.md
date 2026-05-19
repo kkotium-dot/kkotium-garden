@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-19 Sprint 7-PC-B 진행 + TASK_BRIDGE.md hand-off layer 도입 (작업원칙 #41)
-> **HEAD**: 29b7c49 (origin/main, Sprint 7-PC-B-2 통과) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-19 PM Sprint 8-IA 진입 결정 + IA 재설계 (Turn 2 완료, docs only)
+> **HEAD**: 1a96d2a (origin/main, Turn 1 적용 완료, Turn 2 진행 중) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **신규 ledger**: `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off, §3 ACTIVE / §4 STANDING / §6 PENDING 매 세션 정독 의무
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
@@ -15,7 +15,120 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-19 Sprint 7-PC-B-3 진입 대기 (사용자 결정 후) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-19 PM Sprint 8-IA Phase 1 진입 (자동화 관제 강등 + Section 5) ⭐ ACTIVE
+
+본 메시지를 새 채팅 1의 첫 입력으로 사용하세요. **이중 트랙 핑퐁 운영** (작업원칙 #41) 정합.
+
+```
+꽃틔움 가든 — Sprint 8-IA Phase 1 진입.
+
+[STEP 0 — 사전 정독 의무]
+docs/plan/PROGRESS.md (헤더 + Sprint 8-IA 진입 entry) →
+docs/plan/ROADMAP.md (본 ACTIVE 메시지) →
+docs/plan/SESSION_LOG.md (직전 entry) →
+docs/plan/TASK_BRIDGE.md (§3 ACTIVE / §4 STANDING / §6 PENDING) →
+docs/plan/SPRINT_PLAN.md (Sprint 8-IA Phase 1 Task 1-5 명세) →
+docs/plan/PRINCIPLES_LEARNED.md (#41 핑퐁 + #46 거짓 라벨 금지)
+정독 후 현재 상태 브리핑.
+
+[STEP 0 — 환경 점검]
+git rev-parse HEAD origin/main && \
+  git status --short && \
+  git stash list && \
+  wc -l docs/plan/*.md && \
+  curl -sIo /dev/null -w "Vercel HTTP: %{http_code}\n" \
+    https://kkotium-garden.vercel.app/dashboard && \
+  scripts/verify-vercel-deploy.sh --wait
+
+[Sprint 8-IA 진입 배경]
+2026-05-19 PM Desktop이 Chrome MCP로 /automation + /studio +
+/settings/lifestyle-assets + /products/new 4 화면 시각 점검 결과:
+- 자동화 관제 17/26 = 65% 가짜 라벨 (실 cron 가동 3건만)
+- 빌더↔27 dedicated renderer 충돌
+- lifestyle-picker 작동이 사용자 화면에서 안 보임
+- 시각적 통일성 부재 (라이프 자산 ↔ 온실 아틀리에 ↔ PLANT)
+
+사용자 Q1·Q2·Q3 권장안 모두 승인 → Sprint 8-IA 신설 + Phase 1/2 분할.
+작업원칙 #46 (거짓 라벨 금지) 직접 발화 사례로 등재 완료.
+
+[Phase 1 작업 범위 — 1.5일, 5 Task]
+
+Task 1 (5분) — 사이드바 "자동화 관제" 제거
+  파일: src/components/layout/Sidebar.tsx
+  변경: OPS 섹션에서 "자동화 관제" entry 1줄 삭제
+  검증: grep -n "자동화 관제" → 0 매칭
+
+Task 2 (30분) — /automation → /admin/automation 이동
+  파일 이동: src/app/automation/page.tsx
+          → src/app/admin/automation/page.tsx
+  페이지 헤더 갱신: 회색 배지 "관리자 영역 — 일상 사용 X" 추가
+  라우팅: next.config.js redirects로 /automation → /admin/automation
+  관리자 직접 URL 입력 시만 진입
+
+Task 3 (30분) — automation-registry 26→8 entry 축소
+  파일: src/lib/automation-registry.ts (현재 383 LOC)
+  유지 8 entry (실 가동만):
+    1. 도매꾹 재고 폴링 (6-A) — daily cron
+    2. 굿서비스 추적 — weekly cron
+    3. 일일 리포트 (KKOTTI) — 00:00 cron
+    4. 주간 리포트 — Sun 09:00 cron
+    5. Discord ORDERS — per-event
+    6. Discord STOCK_ALERT — per-event
+    7. Discord KKOTTI_RECOMMEND — per-event
+    8. Discord DAILY/WEEKLY — per-event
+  제거 18 entry (Sprint 6-B/6-C/8/9 미작성 작업 라벨 등)
+  검증: registry entry count = 8
+       4 pill summary = [정상 8] [대기 0] [오류 0] [보류 0]
+
+Task 4 (1일) — 대시보드 Section 5 "정원 점검" 카드 신설
+  신규 파일:
+    - src/components/dashboard/SystemHealthCard.tsx (~150 LOC)
+    - src/lib/i18n/system-health-strings.ko.json (~10 strings)
+  수정 파일:
+    - src/app/dashboard/page.tsx (Section 5 위치 추가)
+  카드 명세:
+    - 타이틀: "정원 점검" + 상태 배지 (정상 / 오류 / 점검 필요)
+    - 본문 3줄:
+      • 자동 실행 작업: 8개
+      • 마지막 cron: N분 전
+      • 지난 7일 Discord 발송: N건
+    - 하단 링크: "자동화 상세 보기 →" → /admin/automation
+  데이터 fetch: GET /api/automation/registry → 8 entry 상태, 5분 polling
+
+Task 5 (30분) — 브라우저 통합 검증 + commit + push
+  검증 시나리오:
+    1. 사이드바 OPS 섹션에서 "자동화 관제" 사라짐
+    2. /automation 직접 진입 → redirect 또는 404 작동
+    3. /admin/automation 진입 → 8 entry 모두 정상 + 가짜 라벨 0건
+    4. /dashboard 최하단 Section 5 카드 표시 + 상세 보기 링크 작동
+
+[작업원칙 적용]
+- #17 commit msg via .commit-msg.tmp + git commit -F
+- #21 STEP 0 사전 점검 의무 통과
+- #29 (e++) 사용자 닉네임 답변 본문 직접 입력 금지
+- #31 (e) idempotent 가드 (스크립트 재실행 안전)
+- #32 push 전 TSC + npm run build 둘 다 0 errors
+- #35 한글 사전 분리 패턴 (system-health-strings.ko.json)
+- #36 push 후 scripts/verify-vercel-deploy.sh --wait → exit 0 의무
+- #41 두 환경 핑퐁 — Code 측이 build + ship, Desktop이 검증
+- #46 registry 등재 = 실 가동 단정 후만 (본 sprint 직접 적용)
+
+[Phase 1 검증 통과 후]
+- TASK_BRIDGE.md §3 ACTIVE 갱신 (Phase 1 완료 + Phase 2 대기)
+- §7 ARCHIVED에 Phase 1 hand-off 등재
+- 새 채팅 2 진입 = Sprint 8-IA Phase 2 (Task 6-12, 4.5일)
+
+작업원칙 절대 준수 — main 직접 push 정책. push 직후
+scripts/verify-vercel-deploy.sh --wait → exit 0 의무.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-19 Sprint 7-PC-B-3 진입 대기~~ ✅ SUPERSEDED → Sprint 8-IA로 흐름 전환
+
+> 2026-05-19 PM Desktop 진단 결과로 PC-B-3 (P19 혜택 prefill + P16 crawler) 진입 *전*에 IA 재설계 필요로 단정 → Sprint 8-IA로 sprint 분기. PC-B-3는 Sprint 8-IA Phase 2 완료 후 재진입 권고.
+
+## 다음 새 채팅 시작 메시지 — 2026-05-19 Sprint 7-PC-B-3 진입 대기 (보관용)
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. **이중 트랙 핑퐁 운영** (작업원칙 #41) 정합.
 
