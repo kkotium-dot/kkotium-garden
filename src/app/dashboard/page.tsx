@@ -60,6 +60,7 @@ import CollapsibleSection from '@/components/dashboard/layout/CollapsibleSection
 import TopProductsCard from '@/components/dashboard/cards/TopProductsCard';
 import HealthCombinedCard from '@/components/dashboard/cards/HealthCombinedCard';
 import ZombieReactivationCard from '@/components/dashboard/cards/ZombieReactivationCard';
+import { SystemHealthCard } from '@/components/dashboard/SystemHealthCard';
 import {
   useProductsList,
   useDashboardStats,
@@ -521,21 +522,25 @@ export default function DashboardPage() {
           3 카드: 오늘 매출 / 효자 상품 TOP 5 / 굿서비스·리뷰 합쳐서
           ════════════════════════════════════════════════════════════════════ */}
       <CollapsibleSection section="health" variant="celebrator">
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: 14,
-          }}
-        >
-          <TodayCard
-            orderCount={stats?.todayOrderCount ?? 0}
-            revenue={stats?.todayRevenue ?? 0}
-            paidAmount={stats?.todayPaidAmount ?? 0}
-            loading={statsLoading}
-          />
-          <TopProductsCard />
-          <HealthCombinedCard />
+        <div className="space-y-4">
+          {/* Sprint 8-IA Phase 1 Task 4 — slim 8-automation system health card. */}
+          <SystemHealthCard />
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: 14,
+            }}
+          >
+            <TodayCard
+              orderCount={stats?.todayOrderCount ?? 0}
+              revenue={stats?.todayRevenue ?? 0}
+              paidAmount={stats?.todayPaidAmount ?? 0}
+              loading={statsLoading}
+            />
+            <TopProductsCard />
+            <HealthCombinedCard />
+          </div>
         </div>
       </CollapsibleSection>
 
