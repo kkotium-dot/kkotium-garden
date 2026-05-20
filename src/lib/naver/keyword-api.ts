@@ -101,7 +101,7 @@ export async function fetchKeywordStats(keywords: string[]): Promise<KeywordStat
       let competition: KeywordStat['competition'] = 'unknown';
       if (rawComp === '높음' || rawComp === 'high')   competition = 'high';
       else if (rawComp === '중간' || rawComp === 'mid') competition = 'mid';
-      else if (rawComp === '낙음' || rawComp === '저' || rawComp === 'low') competition = 'low';
+      else if (rawComp === '낮음' || rawComp === '저' || rawComp === 'low') competition = 'low';
       return {
         keyword:       r.relKeyword,
         pcMonthly:     pc,

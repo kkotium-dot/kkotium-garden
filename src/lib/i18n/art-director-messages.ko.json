@@ -1,0 +1,39 @@
+{
+  "$comment": "Sprint 7-M2 5-B — Seller-friendly Korean labels for the AI art director. Loaded by /api/art-director/prompt. No Korean string literals in TS source (workflow principle #29).",
+  "statuses": {
+    "auto_bloomed": {
+      "label": "알아서 폈어요",
+      "tooltip": "상품에 딱 맞는 프롬프트를 준비했어요. 복사해서 Firefly에 붙여넣기만 하면 돼요."
+    },
+    "lets_refine": {
+      "label": "같이 다듬을까요",
+      "tooltip": "초안은 준비했어요. 한 번 보시고 톤을 더해주시면 완성도가 올라가요."
+    },
+    "needs_your_magic": {
+      "label": "당신의 손길 대기 중",
+      "tooltip": "이 상품은 대표님의 감각이 필요해요. 어설픈 추측보다 직접 디렉팅하시는 게 좋겠어요."
+    }
+  },
+  "roles": {
+    "ace": {
+      "label": "에이스 후보",
+      "tooltip": "수요는 큰데 경쟁이 적은 기회 상품이에요. 디자인에 손길을 더할수록 좋아요."
+    },
+    "trend": {
+      "label": "트렌드 파도",
+      "tooltip": "지금 막 올라오는 키워드예요. 속도를 우선하고 빠르게 등록해 보세요."
+    },
+    "niche": {
+      "label": "틈새 매력",
+      "tooltip": "수요는 작지만 충성 고객이 있어요. 차별화 포인트를 살려주세요."
+    },
+    "battleground": {
+      "label": "격전지",
+      "tooltip": "경쟁이 치열한 키워드예요. 디자인 차별화가 안 되면 묻혀요. 셀러 감각이 빛날 차례."
+    },
+    "standard": {
+      "label": "기본",
+      "tooltip": "특별한 신호는 없어요. 자동화 그대로 진행하세요."
+    }
+  }
+}

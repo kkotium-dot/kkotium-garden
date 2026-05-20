@@ -652,3 +652,52 @@ model DarkPatternLintLog {
   @@index([createdAt])
   @@map("dark_pattern_lint_logs")
 }
+
+// Sprint 7-M2 5-B — Strategic role signal cache (6h TTL).
+// Schema target — actual table is created by Senior via Supabase MCP.
+model StrategySignal {
+  id              String   @id @default(cuid())
+  productId       String?  @map("product_id")
+  query           String
+  searchVolume    Int      @default(0) @map("search_volume")
+  productCount    Int      @default(0) @map("product_count")
+  trendSlope      Float    @default(0) @map("trend_slope")
+  honeyScore      Int      @default(0) @map("honey_score")
+  competitionIdx  String   @default("unknown") @map("competition_idx")
+  role            String
+  opportunityIndex Float   @default(0) @map("opportunity_index")
+  reasons         Json?
+  refreshedAt     DateTime @default(now()) @map("refreshed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([query])
+  @@index([role])
+  @@index([refreshedAt])
+  @@map("strategy_signals")
+}
+
+// Sprint 7-M2 5-B — Art director prompt asset library.
+// Schema target — actual table is created by Senior via Supabase MCP.
+model ArtDirectorPrompt {
+  id              String   @id @default(cuid())
+  productId       String?  @map("product_id")
+  categoryHint    String   @map("category_hint")
+  conceptAxes     Json     @map("concept_axes")
+  prompt          String
+  negativePrompt  String?  @map("negative_prompt")
+  aspectRatio     String   @default("1:1") @map("aspect_ratio")
+  imageInformed   Boolean  @default(false) @map("image_informed")
+  status          String
+  role            String?
+  sellerUsed      Boolean  @default(false) @map("seller_used")
+  sellerRating    Int?     @map("seller_rating")
+  resultImageUrl  String?  @map("result_image_url")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([categoryHint])
+  @@index([status])
+  @@index([sellerRating])
+  @@map("art_director_prompts")
+}
