@@ -1,0 +1,80 @@
+{
+  "$comment": "Seller-friendly Korean messages for dark-pattern lint rules. Used by getSellerFriendlyMessage() in dark-pattern-lint.ts. Sources: KFTC 2025-02-14 enforcement decree + 2025-10-24 consumer-protection guideline update. Workflow principle #29: Korean strings live in i18n/json, not in TS literals.",
+  "rules": {
+    "recurring_payment_disclosure_missing": {
+      "severity": "low",
+      "message": "정기결제·구독 옵션이 감지됐어요. 갱신/증액/해지 안내 UI가 누락되면 과태료 위험이 있어요.",
+      "autoFix": "inject_renewal_consent_ui"
+    },
+    "total_cost_not_shown_in_first_fold": {
+      "severity": "high",
+      "message": "첫 화면에 총 결제 예상액(배송비·옵션비 포함)이 보이지 않아요. 안 하면 과태료 위험! 자동으로 배지를 넣었어요.",
+      "autoFix": "inject_total_cost_badge_in_first_fold"
+    },
+    "shipping_fee_hidden": {
+      "severity": "high",
+      "message": "배송비가 첫 화면에 안 보여요. '배송비' 또는 '무료배송' 문구를 첫 화면에 표시해야 해요.",
+      "autoFix": "inject_shipping_fee_in_first_fold"
+    },
+    "option_extra_revealed_too_late": {
+      "severity": "high",
+      "message": "옵션 추가금이 선택 직전에야 표시돼요. 옵션 목록에서 미리 추가금을 보여주도록 자동 수정했어요.",
+      "autoFix": "show_option_extra_in_listing"
+    },
+    "option_auto_selected_with_extra_cost": {
+      "severity": "high",
+      "message": "추가 비용이 있는 옵션이 자동 체크 상태예요. 자동으로 해제했어요.",
+      "autoFix": "unselect_paid_options_by_default"
+    },
+    "cancel_refund_button_missing": {
+      "severity": "high",
+      "message": "취소·반품 안내 버튼이 보이지 않아요. CTA 영역에 추가해야 과태료 위험을 막을 수 있어요.",
+      "autoFix": "inject_cancel_refund_button"
+    },
+    "cancel_button_visually_suppressed": {
+      "severity": "high",
+      "message": "취소·반품 안내 버튼이 구매 버튼에 비해 너무 작아요. 시각 비중을 자동으로 균등화했어요.",
+      "autoFix": "normalize_button_visual_weight"
+    },
+    "cancel_button_hidden_in_footer": {
+      "severity": "high",
+      "message": "취소·반품 안내 버튼이 화면 맨 아래에 묻혀 있어요. 구매 버튼 근처로 자동 이동했어요.",
+      "autoFix": "move_cancel_button_near_buy"
+    },
+    "withdrawal_too_deep": {
+      "severity": "medium",
+      "message": "회원탈퇴 경로가 너무 깊어요. 3클릭 안에 도달할 수 있도록 자동 단축했어요.",
+      "autoFix": "flatten_cancellation_path"
+    },
+    "refund_info_inaccessible": {
+      "severity": "medium",
+      "message": "환불 안내가 상품 페이지에서 한 번에 접근되지 않아요. 1클릭 링크를 자동 추가했어요.",
+      "autoFix": "add_refund_link_on_product"
+    },
+    "notification_repeated_in_session": {
+      "severity": "medium",
+      "message": "같은 종류 알림이 한 세션 안에서 반복돼요. 자동으로 큐잉했어요.",
+      "autoFix": "throttle_notification"
+    },
+    "notification_daily_limit_exceeded": {
+      "severity": "high",
+      "message": "동일 알림이 24시간 안에 3회를 넘었어요. 반복간섭 규제 위반 위험이 있어 자동으로 큐잉했어요.",
+      "autoFix": "throttle_notification"
+    },
+    "copy_scarcity_pattern": {
+      "severity": "medium",
+      "message": "카피에 인위적 한정·마감 표현이 감지됐어요. 근거 없는 한정 표현은 위반 위험이 있어 자동으로 다듬었어요.",
+      "autoFix": "rewrite_copy"
+    },
+    "copy_anchor_discount": {
+      "severity": "medium",
+      "message": "카피에 근거 없는 '원래 가격/할인%' 표현이 있어요. 자동으로 제거했어요.",
+      "autoFix": "rewrite_copy"
+    },
+    "copy_superlative_claim": {
+      "severity": "medium",
+      "message": "카피에 '최저가/1위/독점' 같은 검증 어려운 표현이 있어요. 자동으로 제거했어요.",
+      "autoFix": "rewrite_copy"
+    }
+  }
+}

@@ -630,3 +630,22 @@ model LifestyleAsset {
   @@index([tags])
   @@index([moodTags])
 }
+
+model DarkPatternLintLog {
+  id            String   @id @default(cuid())
+  productId     String?  @map("product_id")
+  blockId       String?  @map("block_id")
+  rule          String
+  severity      String
+  autoFixed     Boolean  @default(false) @map("auto_fixed")
+  autoFix       String?  @map("auto_fix")
+  sellerMessage String   @map("seller_message")
+  context       Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([rule])
+  @@index([severity])
+  @@index([createdAt])
+  @@map("dark_pattern_lint_logs")
+}

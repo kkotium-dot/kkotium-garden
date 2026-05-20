@@ -23,6 +23,10 @@
 //   - 별점 / 리뷰 인용 with no source
 
 import type { SkeletonSpec } from './layout-skeletons';
+import {
+  checkCopyText,
+  type LintViolation,
+} from '@/lib/compliance/dark-pattern-lint';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,6 +54,9 @@ export interface CopyResult {
   filtered: boolean;
   /** Bytes of input prompt + tokens (rough). Useful for cost telemetry. */
   promptCharsApprox: number;
+  /** Sprint 7-M3 lint engine violations on the final text (post-filter).
+   *  Callers can persist these to dark_pattern_lint_logs. */
+  lintViolations: LintViolation[];
 }
 
 // ---------------------------------------------------------------------------
@@ -215,15 +222,21 @@ export async function generateCopy(req: CopyRequest): Promise<CopyResult> {
   const key = pickGroqKey();
   const prompt = buildPrompt(req);
 
+  const finalize = (
+    text: string,
+    source: 'groq' | 'fallback',
+    filtered: boolean,
+  ): CopyResult => ({
+    text,
+    source,
+    filtered,
+    promptCharsApprox: prompt.length,
+    lintViolations: checkCopyText(text).violations,
+  });
+
   // Path 1: no Groq key -> deterministic fallback.
   if (!key) {
-    const fb = fallbackCopy(req);
-    return {
-      text: fb,
-      source: 'fallback',
-      filtered: false,
-      promptCharsApprox: prompt.length,
-    };
+    return finalize(fallbackCopy(req), 'fallback', false);
   }
 
   // Path 2: Groq call -> filter. Retry once if dark-pattern matched.
@@ -232,12 +245,7 @@ export async function generateCopy(req: CopyRequest): Promise<CopyResult> {
   if (raw) {
     const f = filterDarkPatterns(raw);
     if (!f.filtered && f.text.length > 0) {
-      return {
-        text: f.text.slice(0, limit),
-        source: 'groq',
-        filtered: false,
-        promptCharsApprox: prompt.length,
-      };
+      return finalize(f.text.slice(0, limit), 'groq', false);
     }
     // First filter fired — retry with a tighter constraint.
     filteredEverHit = true;
@@ -249,22 +257,15 @@ export async function generateCopy(req: CopyRequest): Promise<CopyResult> {
     if (raw) {
       const f2 = filterDarkPatterns(raw);
       if (f2.text.length > 0) {
-        return {
-          text: f2.text.slice(0, limit),
-          source: 'groq',
-          filtered: f2.filtered || filteredEverHit,
-          promptCharsApprox: prompt.length,
-        };
+        return finalize(
+          f2.text.slice(0, limit),
+          'groq',
+          f2.filtered || filteredEverHit,
+        );
       }
     }
   }
 
   // Path 3: Groq failed or returned empty -> deterministic fallback.
-  const fb = fallbackCopy(req);
-  return {
-    text: fb,
-    source: 'fallback',
-    filtered: filteredEverHit,
-    promptCharsApprox: prompt.length,
-  };
+  return finalize(fallbackCopy(req), 'fallback', filteredEverHit);
 }
