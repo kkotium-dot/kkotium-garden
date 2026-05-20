@@ -173,6 +173,12 @@ export async function POST(req: NextRequest) {
       category: true,
       mainImage: true,
       shippingFee: true,
+      optionValues: true,
+      naver_material: true,
+      naver_size: true,
+      naver_color: true,
+      naver_weight: true,
+      naver_origin: true,
     },
   });
 
@@ -182,6 +188,45 @@ export async function POST(req: NextRequest) {
       { status: 404 },
     );
   }
+
+  // ---- B06 ground-truth assembly ------------------------------------------
+  // Pull confirmed specs from two sources:
+  //   1. crawl_logs.options[] (raw wholesale option strings — parsed by
+  //      spec-extractor.ts for dictionary tokens like 정사각/직사각/화이트)
+  //   2. Product.naver_* fields (seller-confirmed via Naver Commerce form)
+  //
+  // Both are passed to the composer as crawledOptions / knownSpecs; the
+  // composer then merges and B06's prompt is forbidden from inventing values.
+  const crawlLog = await prisma.crawlLog.findFirst({
+    where: { productId: product.id },
+    orderBy: { crawledAt: 'desc' },
+    select: { options: true, categoryName: true },
+  });
+
+  const crawledOptions: Array<{ name: string; addPrice?: number }> = (() => {
+    const raw = crawlLog?.options;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((o): o is { name: string; addPrice?: number } => {
+        return typeof o === 'object' && o !== null && 'name' in o && typeof (o as { name: unknown }).name === 'string';
+      })
+      .map((o) => ({ name: o.name, addPrice: o.addPrice }));
+  })();
+
+  // Product.optionValues is JsonValue — be defensive (Prisma JSON contract).
+  const productOptionStrings: string[] = Array.isArray(product.optionValues)
+    ? product.optionValues.filter((v): v is string => typeof v === 'string')
+    : [];
+  const productOptionsAsCrawled = productOptionStrings.map((name) => ({ name, addPrice: 0 }));
+
+  const combinedOptions = [...crawledOptions, ...productOptionsAsCrawled];
+
+  const sellerConfirmedSpecs: Record<string, string> = {};
+  if (product.naver_material) sellerConfirmedSpecs['소재'] = product.naver_material;
+  if (product.naver_size) sellerConfirmedSpecs['크기'] = product.naver_size;
+  if (product.naver_color) sellerConfirmedSpecs['색상'] = product.naver_color;
+  if (product.naver_weight) sellerConfirmedSpecs['무게'] = product.naver_weight;
+  if (product.naver_origin) sellerConfirmedSpecs['원산지'] = product.naver_origin;
 
   // ---- Stage 1: P-Filter pre-flight ---------------------------------------
   let pFilterSummary: PFilterSummary | null = null;
@@ -240,6 +285,10 @@ export async function POST(req: NextRequest) {
       brand: product.brand,
       shippingFee: product.shippingFee,
       firstFoldText: '',
+      crawledOptions: combinedOptions,
+      crawledCategory: crawlLog?.categoryName ?? undefined,
+      knownSpecs:
+        Object.keys(sellerConfirmedSpecs).length > 0 ? sellerConfirmedSpecs : undefined,
     });
   } catch (err) {
     console.error('[l2] text section composition failed:', err);

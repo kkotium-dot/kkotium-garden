@@ -30,6 +30,10 @@ import {
   type ProductInput,
 } from '@/lib/compliance/dark-pattern-lint';
 import { pickGroqKey, callGroq } from './groq-client';
+import {
+  parseSpecsFromOptions,
+  type CrawledOption,
+} from './spec-extractor';
 import fallbackMessages from '@/lib/i18n/section-composer-fallbacks.ko.json';
 
 // ---------------------------------------------------------------------------
@@ -63,6 +67,21 @@ export interface ProductData {
   /** Plain text of the first-fold above-the-fold block. Used for lint
    *  context (rule 2). Pass '' when unknown. */
   firstFoldText?: string;
+
+  // ── B06 hallucination guard (Sprint 7-M2 Step 5-B) ────────────────────────
+
+  /** Raw crawl options array (name + optional addPrice). The B06 composer
+   *  parses these via spec-extractor.ts to derive confirmed specs — values
+   *  are only used when literal tokens match the dictionary, never guessed. */
+  crawledOptions?: ReadonlyArray<CrawledOption>;
+  /** Original crawl category label, e.g. "기타장식용품". Used as a fallback
+   *  category hint when `category` is missing or "uncategorized". */
+  crawledCategory?: string;
+  /** Pre-confirmed specs keyed by Korean label, e.g. { 형태: "정사각/직사각" }.
+   *  Anything passed here is treated as ground truth and survives into the
+   *  prompt verbatim. Values from `crawledOptions` parsing are merged into
+   *  this map at the composer entry point — callers can pre-seed it. */
+  knownSpecs?: Readonly<Record<string, string>>;
 }
 
 export interface TextVariant {
@@ -131,10 +150,46 @@ function promptB02(tone: Tone, length: Length, p: ProductData): string {
   ].join('\n\n');
 }
 
+// Sentinel value the model must emit when a spec is not in knownSpecs.
+// Keeps the unknown axis visible to the seller (so they know to fill it in)
+// without inviting hallucination of a plausible-but-fake number.
+const UNKNOWN_SPEC_PLACEHOLDER = '상세문의';
+
+function buildKnownSpecsBlock(p: ProductData): {
+  block: string;
+  knownLabels: string[];
+} {
+  const known = p.knownSpecs ?? {};
+  const entries = Object.entries(known);
+  if (entries.length === 0) {
+    return {
+      block: 'Known specs (verbatim ground truth): (none — no confirmed specs available)',
+      knownLabels: [],
+    };
+  }
+  const lines = entries.map(([label, value]) => `  - ${label}: ${value}`);
+  return {
+    block: ['Known specs (verbatim ground truth — copy these exactly):', ...lines].join('\n'),
+    knownLabels: entries.map(([label]) => label),
+  };
+}
+
 function promptB06(tone: Tone, length: Length, p: ProductData): string {
+  const { block, knownLabels } = buildKnownSpecsBlock(p);
+  const knownLabelList = knownLabels.length > 0 ? knownLabels.join(', ') : '(none)';
   return [
     commonHeader(tone, length, p),
-    'Task: Write the "Spec table" section (B06). Output exactly 4 to 6 lines, each in the format "라벨: 값". Examples of labels: 소재, 크기, 색상, 무게, 원산지, 보관 방법. Do not invent numeric specs that were not provided — write "정보 없음" instead.',
+    block,
+    [
+      'Task: Write the "Spec table" section (B06). Output 4 to 6 lines, each in the format "라벨: 값".',
+      '',
+      'HARD RULES — violation is failure:',
+      `1. ONLY use the known specs listed above. Confirmed labels: ${knownLabelList}.`,
+      `2. For any standard label NOT in the known list (소재, 크기, 색상, 무게, 원산지, 보관 방법, 구성, 형태), write "${UNKNOWN_SPEC_PLACEHOLDER}" as the value.`,
+      '3. NEVER infer or guess material, size, color, weight, or any other spec from the product name, category, or brand.',
+      `4. NEVER write specific numbers, dimensions, or materials unless they appear in the known specs verbatim. If you cannot copy the value from the known list, write "${UNKNOWN_SPEC_PLACEHOLDER}".`,
+      '5. No marketing prose. Each line is "<라벨>: <값>" only.',
+    ].join('\n'),
   ].join('\n\n');
 }
 
@@ -188,17 +243,58 @@ function applyTokens(template: string, p: ProductData): string {
     .replaceAll('{brand}', p.brand ?? FALLBACK.B06.brandPlaceholder);
 }
 
+/** B06 fallback that respects knownSpecs — when present, emit confirmed rows
+ *  followed by "상세문의" rows for standard labels. When absent, emit pure
+ *  "상세문의" rows (no hallucinated values). */
+function fallbackB06(p: ProductData): string {
+  const known = p.knownSpecs ?? {};
+  const knownEntries = Object.entries(known);
+  const standardLabels = ['소재', '크기', '색상', '무게', '원산지', '보관 방법'];
+  const knownLabelSet = new Set(knownEntries.map(([k]) => k));
+
+  const lines: string[] = [];
+  for (const [label, value] of knownEntries) {
+    lines.push(`${label}: ${value}`);
+  }
+  for (const label of standardLabels) {
+    if (knownLabelSet.has(label)) continue;
+    if (lines.length >= 6) break;
+    lines.push(`${label}: ${UNKNOWN_SPEC_PLACEHOLDER}`);
+  }
+  return lines.join('\n');
+}
+
 function fallbackFor(blockId: TextBlockId, _tone: Tone, length: Length, p: ProductData): string {
   switch (blockId) {
     case 'B02':
       return applyTokens(length === 'short' ? FALLBACK.B02.short : FALLBACK.B02.long, p);
     case 'B06':
-      return FALLBACK.B06.lines.map((line) => applyTokens(line, p)).join('\n');
+      return fallbackB06(p);
     case 'B07':
       return applyTokens(length === 'short' ? FALLBACK.B07.short : FALLBACK.B07.long, p);
     case 'B09':
       return FALLBACK.B09.lines.join('\n');
   }
+}
+
+/** Pre-process ProductData before B06 composition: parse crawledOptions into
+ *  confirmed specs and merge them into knownSpecs. Caller-supplied knownSpecs
+ *  take precedence over parsed values (caller wins on conflict). */
+function enrichB06Specs(p: ProductData): ProductData {
+  if (!p.crawledOptions || p.crawledOptions.length === 0) return p;
+  const parsed = parseSpecsFromOptions(p.crawledOptions);
+  if (parsed.matchCount === 0) return p;
+  const merged: Record<string, string> = {};
+  for (const row of parsed.labeledRows) {
+    merged[row.label] = row.value;
+  }
+  // Caller-supplied knownSpecs win.
+  if (p.knownSpecs) {
+    for (const [label, value] of Object.entries(p.knownSpecs)) {
+      merged[label] = value;
+    }
+  }
+  return { ...p, knownSpecs: merged };
 }
 
 // ---------------------------------------------------------------------------
@@ -320,12 +416,16 @@ async function composeBlock(
   blockId: TextBlockId,
   p: ProductData,
 ): Promise<SectionResult> {
+  // B06 alone needs the spec enrichment pre-step. Other blocks ignore
+  // crawledOptions/knownSpecs entirely.
+  const productData = blockId === 'B06' ? enrichB06Specs(p) : p;
+
   const variants: TextVariant[] = [];
   // Sequential — workflow principle #38 and design doc §10 note 2.
   for (let i = 0; i < TEXT_VARIANT_AXES.length; i += 1) {
     const { tone, length } = TEXT_VARIANT_AXES[i];
     // eslint-disable-next-line no-await-in-loop
-    const v = await generateOneVariant(blockId, tone, length, p, i);
+    const v = await generateOneVariant(blockId, tone, length, productData, i);
     variants.push(v);
   }
   const highSeverityCount = variants.reduce(
