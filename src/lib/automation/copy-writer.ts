@@ -27,6 +27,7 @@ import {
   checkCopyText,
   type LintViolation,
 } from '@/lib/compliance/dark-pattern-lint';
+import { pickGroqKey, callGroq } from './groq-client';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -159,16 +160,6 @@ function fallbackCopy(req: CopyRequest): string {
 // Groq call
 // ---------------------------------------------------------------------------
 
-function pickGroqKey(): string | null {
-  const keys = [
-    process.env.GROQ_API_KEY,
-    process.env.GROQ_API_KEY_2,
-    process.env.GROQ_API_KEY_3,
-  ].filter((k): k is string => typeof k === 'string' && k.length > 0);
-  if (keys.length === 0) return null;
-  return keys[Math.floor(Math.random() * keys.length)];
-}
-
 function buildPrompt(req: CopyRequest, hardening: string = ''): string {
   const skeleton = req.skeleton;
   const ctx = [
@@ -191,26 +182,6 @@ function buildPrompt(req: CopyRequest, hardening: string = ''): string {
     `Context:\n${ctx}`,
     'Respond with the Korean string only, no quotes, no markdown, no explanation.',
   ].filter(Boolean).join('\n\n');
-}
-
-async function callGroq(prompt: string, key: string): Promise<string | null> {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 60,
-      temperature: 0.3,
-    }),
-  });
-  if (!res.ok) return null;
-  const data: { choices?: { message?: { content?: string } }[] } = await res.json();
-  const text = data.choices?.[0]?.message?.content;
-  return typeof text === 'string' ? text.trim() : null;
 }
 
 // ---------------------------------------------------------------------------

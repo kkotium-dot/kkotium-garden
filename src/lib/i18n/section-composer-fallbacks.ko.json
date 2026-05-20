@@ -1,0 +1,33 @@
+{
+  "$comment": "Sprint 7-M2 Step 5-A — Deterministic Korean fallback templates for section-composer.ts. Only fire when no GROQ_API_KEY is set or all retries fail. Tokens of the form {productName} / {brand} are substituted at runtime.",
+  "B02": {
+    "short": "{productName}, 일상에서 자주 마주치는 불편을 자연스럽게 줄여드려요.",
+    "long": "{productName}을(를) 쓰면서 가장 좋았던 건, 매일 반복되던 작은 불편을 자연스럽게 줄여준다는 점이에요. 처음 사용할 때부터 손에 익는 구성이라 따로 익숙해질 시간이 필요하지 않아요."
+  },
+  "B06": {
+    "lines": [
+      "소재: 정보 없음",
+      "크기: 정보 없음",
+      "색상: 정보 없음",
+      "무게: 정보 없음",
+      "원산지: {brand}"
+    ],
+    "brandPlaceholder": "정보 없음"
+  },
+  "B07": {
+    "short": "{productName}을(를) 평일 아침 식탁 위에서 가볍게 사용해 보세요.",
+    "long": "{productName}을(를) 평일 아침 식탁 위에서 가볍게 꺼내 쓰는 모습이 잘 어울려요. 주말에는 가족 모임 자리에서 함께 쓰기에도 부담이 없는 구성이에요."
+  },
+  "B09": {
+    "lines": [
+      "Q. 배송은 얼마나 걸리나요?",
+      "A. 영업일 기준 2~3일 내 출고됩니다.",
+      "",
+      "Q. 교환·반품은 가능한가요?",
+      "A. 수령일로부터 7일 청약철회가 가능합니다. 단순 변심 반품 배송비는 고객 부담입니다.",
+      "",
+      "Q. 사용·보관 시 주의할 점은요?",
+      "A. 직사광선과 고온 다습한 곳을 피해 보관해 주세요."
+    ]
+  }
+}
