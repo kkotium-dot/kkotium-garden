@@ -1,5 +1,7 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-20 Sprint 8-IA Phase 1 완료 (Code turn: Task 4 SystemHealthCard + /api/system-health 신설, Phase 1 5 Task 전 종결)
+> 최종 업데이트: 2026-05-21 v3.2 통합 마스터 플랜 채택 + 다크패턴 lint 모듈 설계 완료 (시니어 직접 turn, docs 2건 신규)
+> **v3.2 신규 채택 (2026-05-21)**: P-Filter 전처리 모듈 + 다크패턴 lint + 단일 캔버스 인라인 마법사 + 4등급 한글 라벨(기본 자동화/검토 후 자동화/디자이너 손길 필요/완전 수동). 참고: `docs/research/KKOTIUM_GARDEN_V3_2_MASTER_PLAN_2026_05.md` (commit 795fdf8) + `docs/research/DARK_PATTERN_LINT_MODULE_DESIGN.md` (본 commit)
+> **신규 우선순위 (시니어 권장)**: ① Sprint 7-M3 Pre-Step 5 (다크패턴 lint, 0.5일, 법적 의무 최우선) → ② Sprint 8-PF (P-Filter 전처리, 2일) → ③ Sprint 9-Sec (RLS + anon key 점검, 1.5일) → ④ Sprint 7-M2 Step 5 (L2 자동화, P-Filter 통합 재설계, 2일) → ⑤ Sprint 10-WIZ (단일 캔버스 마법사 MVP, 5일)
 > 활성 계획: Sprint 8-IA Phase 2 (Section 1 Hero / Section 2 Inbox 통합 / 빌더 흡수 / lifestyle 가시화 / 통일성, 4.5일) — 새 채팅 2 진입 대기
 > 보류 계획: Smart Asset Workflow v3.1 FINAL 후속 (Phase 2-c-3 / Sprint 7-M3) / Sprint 8 자동발주 (Private API 28권한 보유, 매출 상승 트리거)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
