@@ -30,9 +30,11 @@
 import { NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { assessImageQuality, type ImageQualityResult } from '@/lib/diagnosis/image-quality';
+import { type ImageQualityResult } from '@/lib/diagnosis/image-quality';
 import { inferConceptTone } from '@/lib/diagnosis/concept-tone-inference';
 import { gradeProduct } from '@/lib/diagnosis/grading';
+import { runPFilter } from '@/lib/diagnosis/p-filter';
+import type { PFilterResult } from '@/lib/diagnosis/p-filter-types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -176,6 +178,7 @@ async function persistDiagnosis(
     grade: string;
     confidenceLevel: string;
     recommendedSections: string[];
+    pFilterGrade: string | null;
   },
 ): Promise<string | null> {
   try {
@@ -191,6 +194,7 @@ async function persistDiagnosis(
       grade: result.grade,
       confidenceLevel: result.confidenceLevel,
       recommendedSections: result.recommendedSections,
+      pFilterGrade: result.pFilterGrade,
     };
     await prisma.diagnosis.upsert({
       where: { productId },
@@ -201,6 +205,23 @@ async function persistDiagnosis(
   } catch (err) {
     return err instanceof Error ? err.message : String(err);
   }
+}
+
+/** Build the qualitySignals payload — embeds both the original 4-axis signals
+ *  (preserved for CTI/grading compatibility) and the new P-Filter signals. */
+function buildQualitySignals(pFilter: PFilterResult) {
+  return {
+    ...pFilter.imageQuality.qualitySignals,
+    pFilter: {
+      grade: pFilter.grade,
+      gradeLabel: pFilter.gradeLabel,
+      passed: pFilter.passed,
+      requiresSellerReview: pFilter.requiresSellerReview,
+      autoFixSuggestions: pFilter.autoFixSuggestions,
+      signals: pFilter.signals,
+      elapsedMs: pFilter.elapsedMs,
+    },
+  };
 }
 
 export async function POST(req: Request) {
@@ -214,13 +235,35 @@ export async function POST(req: Request) {
   const resolved = await resolveInputs(body);
   if (resolved instanceof NextResponse) return resolved;
 
-  let imageQuality: ImageQualityResult;
+  let pFilter: PFilterResult;
   try {
-    imageQuality = await assessImageQuality(resolved.imageUrl);
+    pFilter = await runPFilter(resolved.imageUrl);
   } catch (err) {
     return jsonError('image quality assessment failed', 422, {
       detail: err instanceof Error ? err.message : String(err),
     });
+  }
+  const imageQuality: ImageQualityResult = pFilter.imageQuality;
+
+  // L4: image is unusable — return early with the P-Filter verdict and skip
+  // CTI/grading so the seller is routed straight to "reshoot" UX.
+  if (pFilter.grade === 'L4') {
+    const earlyResult = {
+      qualityScore: imageQuality.qualityScore,
+      qualitySignals: buildQualitySignals(pFilter),
+      pFilterGrade: pFilter.grade,
+      pFilterGradeLabel: pFilter.gradeLabel,
+      pFilterAutoFixSuggestions: pFilter.autoFixSuggestions,
+      pFilterSignals: pFilter.signals,
+      pFilterElapsedMs: pFilter.elapsedMs,
+      grade: 'L4',
+      confidenceLevel: 'low',
+      recommendedSections: [] as string[],
+      rationale: ['p-filter:L4 — image quality insufficient for automation'],
+      diagnosedAt: new Date().toISOString(),
+      stoppedAt: 'p-filter',
+    };
+    return NextResponse.json({ ...earlyResult, persisted: false });
   }
 
   const cti = inferConceptTone({
@@ -251,9 +294,11 @@ export async function POST(req: Request) {
     },
   });
 
+  const qualitySignalsPayload = buildQualitySignals(pFilter);
+
   const result = {
     qualityScore: imageQuality.qualityScore,
-    qualitySignals: imageQuality.qualitySignals,
+    qualitySignals: qualitySignalsPayload,
     competitionScore,
     roiScore: grading.roiScore,
     roiBreakdown: grading.roiBreakdown,
@@ -266,6 +311,11 @@ export async function POST(req: Request) {
     rationale: grading.rationale,
     signals: cti.signals,
     rawStats: imageQuality.rawStats,
+    pFilterGrade: pFilter.grade,
+    pFilterGradeLabel: pFilter.gradeLabel,
+    pFilterAutoFixSuggestions: pFilter.autoFixSuggestions,
+    pFilterSignals: pFilter.signals,
+    pFilterElapsedMs: pFilter.elapsedMs,
     diagnosedAt: new Date().toISOString(),
   };
 
@@ -283,6 +333,7 @@ export async function POST(req: Request) {
       grade: result.grade,
       confidenceLevel: result.confidenceLevel,
       recommendedSections: result.recommendedSections,
+      pFilterGrade: result.pFilterGrade,
     });
     if (persistError) {
       return NextResponse.json(

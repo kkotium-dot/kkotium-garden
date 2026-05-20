@@ -72,3 +72,6 @@ tsconfig.tsbuildinfo
 *.old
 *.tmp.[a-z]*
 *.v[0-9]*
+
+# Tesseract.js OCR runtime artifacts (Sprint 8-PF) — downloaded on first call
+*.traineddata
