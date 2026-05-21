@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
         aspectRatio: prompt.aspectRatio,
         imageInformed: prompt.derivedFrom.imageInformed,
         status: statusResult.status,
-        role: roleClassification.role,
+        strategicRole: roleClassification.role,
       },
       select: { id: true },
     });
@@ -173,15 +173,14 @@ export async function POST(req: NextRequest) {
     await prisma.strategySignal.create({
       data: {
         productId: product.id,
-        query: product.name,
+        signalKey: product.name,
         searchVolume: signalResult.signals.searchVolume,
         productCount: signalResult.signals.productCount,
         trendSlope: signalResult.signals.trendSlope,
         honeyScore: signalResult.signals.honeyScore,
         competitionIdx: signalResult.signals.competitionIdx,
-        role: roleClassification.role,
+        strategicRole: roleClassification.role,
         opportunityIndex: roleClassification.opportunityIndex,
-        reasons: roleClassification.reasons,
       },
     });
   } catch (err) {

@@ -654,31 +654,35 @@ model DarkPatternLintLog {
 }
 
 // Sprint 7-M2 5-B — Strategic role signal cache (6h TTL).
-// Schema target — actual table is created by Senior via Supabase MCP.
+// Schema synced from live Supabase columns (Senior MCP created the table
+// with `signal_key`, `strategic_role`, `computed_at`, plus identity_* cols).
 model StrategySignal {
-  id              String   @id @default(cuid())
-  productId       String?  @map("product_id")
-  query           String
-  searchVolume    Int      @default(0) @map("search_volume")
-  productCount    Int      @default(0) @map("product_count")
-  trendSlope      Float    @default(0) @map("trend_slope")
-  honeyScore      Int      @default(0) @map("honey_score")
-  competitionIdx  String   @default("unknown") @map("competition_idx")
-  role            String
-  opportunityIndex Float   @default(0) @map("opportunity_index")
-  reasons         Json?
-  refreshedAt     DateTime @default(now()) @map("refreshed_at")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id                String   @id @default(cuid())
+  productId         String?  @map("product_id")
+  signalKey         String   @map("signal_key") @db.VarChar
+  searchVolume      Int      @default(0) @map("search_volume")
+  productCount      Int      @default(0) @map("product_count")
+  opportunityIndex  Float    @default(0) @map("opportunity_index")
+  trendSlope        Float    @default(0) @map("trend_slope")
+  competitionIdx    String   @default("unknown") @map("competition_idx") @db.VarChar
+  honeyScore        Int      @default(0) @map("honey_score")
+  strategicRole     String   @map("strategic_role") @db.VarChar
+  computedAt        DateTime @default(now()) @map("computed_at")
+  identityKeywords  Json?    @map("identity_keywords")
+  modifierKeywords  Json?    @map("modifier_keywords")
+  primaryIdentity   String?  @map("primary_identity") @db.VarChar
+  uniqueSellers     Int?     @map("unique_sellers")
 
   @@index([productId])
-  @@index([query])
-  @@index([role])
-  @@index([refreshedAt])
+  @@index([signalKey])
+  @@index([strategicRole])
+  @@index([computedAt])
   @@map("strategy_signals")
 }
 
 // Sprint 7-M2 5-B — Art director prompt asset library.
-// Schema target — actual table is created by Senior via Supabase MCP.
+// Schema synced from live Supabase columns (Senior MCP created the table
+// with `strategic_role` instead of plain `role`).
 model ArtDirectorPrompt {
   id              String   @id @default(cuid())
   productId       String?  @map("product_id")
@@ -686,10 +690,10 @@ model ArtDirectorPrompt {
   conceptAxes     Json     @map("concept_axes")
   prompt          String
   negativePrompt  String?  @map("negative_prompt")
-  aspectRatio     String   @default("1:1") @map("aspect_ratio")
+  aspectRatio     String   @default("1:1") @map("aspect_ratio") @db.VarChar
   imageInformed   Boolean  @default(false) @map("image_informed")
-  status          String
-  role            String?
+  status          String   @db.VarChar
+  strategicRole   String?  @map("strategic_role") @db.VarChar
   sellerUsed      Boolean  @default(false) @map("seller_used")
   sellerRating    Int?     @map("seller_rating")
   resultImageUrl  String?  @map("result_image_url")

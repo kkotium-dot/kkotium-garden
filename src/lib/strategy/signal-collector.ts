@@ -30,6 +30,10 @@ import type {
   CompetitionIdx,
   StrategySignals,
 } from './role-engine';
+import {
+  extractIdentity,
+  type IdentityExtractionResult,
+} from './identity-extractor';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,6 +46,15 @@ export interface CollectStrategySignalsInput {
    *  trend slope — without it, trendSlope falls back to 0 and the role
    *  engine downgrades to opportunity-index-only classification. */
   naverCategoryCode?: string | null;
+  /** Leaf category of THIS product (category4). Enables Phase-1 identity
+   *  extraction — the collector replaces `query` with the extracted primary
+   *  identity before fetching keyword / shopping signals, eliminating the
+   *  "long product name vs short identity" mismatch the role engine cared
+   *  about. When omitted, identity extraction is skipped. */
+  myLeafCategory?: string | null;
+  /** Pass false to acknowledge a category3 fallback (caller knows leaf is
+   *  inexact). Defaults to true. */
+  myLeafIsExact?: boolean;
 }
 
 export interface SignalSourceStatus {
@@ -58,6 +71,15 @@ export interface CollectStrategySignalsResult {
   elapsedMs: number;
   /** First error per source, useful for ops dashboards. */
   errors: Partial<Record<keyof SignalSourceStatus, string>>;
+  /** Identity extraction result when `myLeafCategory` was provided. The
+   *  collector switched its market-judgment query to `identity.primaryIdentity`
+   *  before fetching the four numeric signals — keep this for telemetry. */
+  identity?: IdentityExtractionResult;
+  /** The query string actually used after identity replacement (equals
+   *  `identity.primaryIdentity` when identity was extracted, otherwise the
+   *  raw input query). Useful for debugging "why did the role classification
+   *  use THAT keyword?". */
+  effectiveQuery: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -220,11 +242,28 @@ export async function collectStrategySignals(
 ): Promise<CollectStrategySignalsResult> {
   const startedAt = Date.now();
 
+  // ---- Identity extraction (Phase 1) — if leaf category provided ---------
+  // Replaces the raw product-name query with the extracted primary identity
+  // so the role engine classifies on the true market (e.g. "달항아리 도어벨"
+  // not the full marketing-noise title).
+  let identity: IdentityExtractionResult | undefined;
+  let effectiveQuery = input.query;
+  if (typeof input.myLeafCategory === 'string' && input.myLeafCategory.length > 0) {
+    identity = await extractIdentity({
+      productName: input.query,
+      myLeafCategory: input.myLeafCategory,
+      myLeafIsExact: input.myLeafIsExact,
+    });
+    if (identity.primaryIdentity && identity.primaryIdentity.length > 0) {
+      effectiveQuery = identity.primaryIdentity;
+    }
+  }
+
   const [kw, pc, tr, hs] = await Promise.all([
-    collectKeywordStats(input.query),
-    collectProductCount(input.query),
-    collectTrendSlope(input.query, input.naverCategoryCode ?? null),
-    collectHoneyScore(input.query),
+    collectKeywordStats(effectiveQuery),
+    collectProductCount(effectiveQuery),
+    collectTrendSlope(effectiveQuery, input.naverCategoryCode ?? null),
+    collectHoneyScore(effectiveQuery),
   ]);
 
   const signals: StrategySignals = {
@@ -252,6 +291,8 @@ export async function collectStrategySignals(
     signals,
     status,
     errors,
+    identity,
+    effectiveQuery,
     elapsedMs: Date.now() - startedAt,
   };
 }
