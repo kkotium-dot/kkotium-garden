@@ -699,9 +699,31 @@ model ArtDirectorPrompt {
   resultImageUrl  String?  @map("result_image_url")
   createdAt       DateTime @default(now()) @map("created_at")
 
+  // Senior MCP added 2026-05-22 — model/intent/lineage/metrics expansion.
+  model               String?   @default("firefly-image-5") @db.VarChar
+  modelVersion        String?   @map("model_version") @db.VarChar
+  intentTag           String?   @map("intent_tag") @db.VarChar
+  modelSpecificPrompt String?   @map("model_specific_prompt")
+  seed                BigInt?
+  resolution          String?   @default("2K") @db.VarChar
+  referenceImageIds   Json?     @default("[]") @map("reference_image_ids")
+  legalFlags          Json?     @default("{\"textInImage\": false, \"synthidPresent\": false, \"realProductPhotoUsed\": true, \"containsVirtualPerson\": false, \"contentCredentialsPresent\": false}") @map("legal_flags")
+  businessMetrics     Json?     @default("{}") @map("business_metrics")
+  metricsRefreshedAt  DateTime? @map("metrics_refreshed_at") @db.Timestamptz
+  parentPromptId      String?   @map("parent_prompt_id")
+  deprecated          Boolean?  @default(false)
+  deprecationReason   String?   @map("deprecation_reason")
+  updatedAt           DateTime? @default(now()) @map("updated_at") @db.Timestamptz
+
+  parent   ArtDirectorPrompt?  @relation("PromptLineage", fields: [parentPromptId], references: [id], onDelete: SetNull)
+  children ArtDirectorPrompt[] @relation("PromptLineage")
+
   @@index([productId])
   @@index([categoryHint])
   @@index([status])
   @@index([sellerRating])
+  @@index([intentTag, categoryHint], map: "idx_adp_intent_category")
+  @@index([model], map: "idx_adp_model")
+  @@index([deprecated], map: "idx_adp_deprecated")
   @@map("art_director_prompts")
 }
