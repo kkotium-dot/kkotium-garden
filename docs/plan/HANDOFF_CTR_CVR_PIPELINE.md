@@ -18,6 +18,23 @@ business_metrics 컬럼은 어제 빈 그릇으로 생성됨.
 
 ---
 
+## ★ STEP 5 검증 결과 (2026-05-22, Code audit 완료) — 설계 확정
+
+3-tier 검증 결과 (코드 audit + 웹 문서 + 인접 데이터원):
+- **CVR (주문·매출) = 자동 회수 가능 (확실)** — getOrders 엔드포인트 기구현
+- **CTR (노출·클릭) = 커머스 API 불가** — 쇼핑파트너센터 웹 UI 전용, 공개 REST 없음
+
+**시니어 결정: 옵션 A 기본 + B 선택적, C 폐기**
+- A (CVR 자동화): 즉시 채택. 1인 셀러에게 CTR보다 CVR이 본질.
+- B (CSV 수동 업로드): 파워셀러 단계에서 필요 시 추가. 지금은 보류.
+- C (검색광고 키워드 CTR 추정): **폐기**. 상품 단위 매핑 부정확 →
+  잘못된 프롬프트 승격 위험. 부정확한 데이터는 없느니만 못함.
+
+→ 이 파이프라인은 **CVR-only 자동화**로 구현. CTR 관련 필드는 null 유지
+  + dataSource로 출처 명시. 정직성 원칙 (HANDOFF 원안 유지).
+
+---
+
 ## 1. CRITICAL — 네이버 API 제약 (확실 vs 검증필요 구분)
 
 기존 src/lib/naver/api-client.ts 분석 결과:
@@ -58,46 +75,64 @@ src/app/api/cron/metrics-sync/route.ts (기존 inventory-sync 패턴 복제)
 - Vercel cron: 일 1회 (새벽) 권장 — 통계는 일단위 충분
 - vercel.json에 schedule 추가
 
-### 2-2. 회수 로직 (src/lib/metrics/metrics-collector.ts 신규)
+### 2-2. 회수 로직 (src/lib/metrics/metrics-collector.ts 신규) — CVR-only 확정판
 ```
 1. art_director_prompts에서 result_image_url IS NOT NULL
-   AND seller_used = true AND product_id IS NOT NULL 행 조회
-   (= 실제 사용된 프롬프트만)
-2. 각 product_id의 naverProductId로 네이버 통계 조회
-   (Product 테이블에 naverProductId 컬럼 이미 존재 — 확인됨)
-3. 30일 window: impressions, clicks, 주문건수, 매출
-4. ctr30d = clicks / impressions (impressions 확보 시)
-   cvr30d = orders / clicks (or orders / impressions)
+   AND seller_used = true AND product_id IS NOT NULL
+   AND deprecated = false 행 조회 (= 실제 사용된 활성 프롬프트만)
+2. 각 product_id로 Product.naverProductId 조회 (FK 조인)
+3. getOrders({ lastChangedFrom: 30일전 KST ISO, lastChangedTo: now, pageSize: 300 })
+   - 기존 api-client.ts getOrders 재사용 (검증된 엔드포인트)
+   - 응답 파싱: data.data.contents[] (getTodayOrderSummary 패턴 그대로)
+   - 페이지네이션: contents가 pageSize(300) 꽉 차면 pageNum++ 반복
+4. 각 order에서 productId 추출 → naverProductId 매칭 → 상품별 집계:
+   - orders30d = 매칭 주문 건수
+   - revenueAttribution30d = sum(totalPaymentAmount ?? paymentAmount)
 5. business_metrics JSON 갱신 + metrics_refreshed_at = now()
+   - impressions30d / clicks30d / ctr30d / conversionRate30d = null (CTR 불가)
+   - dataSource = 'naver-commerce-api'
 ```
 
-### 2-3. business_metrics JSON 구조 (어제 DB 기본값과 일치)
+> ⚠️ 주문 응답의 productId 필드 경로는 실제 응답 확인 필요
+>   (productOrder.productId vs productId vs originProductNo).
+>   첫 실행 시 1건 덤프해서 정확한 path 확정 후 매핑 (헛코드 금지).
+> ⚠️ naverProductId(채널상품) vs originProductNo(원상품) 구분 주의.
+>   Product 테이블의 naverProductId가 주문 응답의 어느 필드와 맞는지 검증.
+
+### 2-3. business_metrics JSON 구조 (CVR-only 확정판)
 ```json
 {
-  "listingId": "네이버상품ID",
-  "impressions30d": 0,
-  "clicks30d": 0,
-  "ctr30d": 0.0,
-  "conversionRate30d": 0.0,
+  "listingId": "Product.naverProductId",
+  "impressions30d": null,
+  "clicks30d": null,
+  "ctr30d": null,
+  "orders30d": 0,
   "revenueAttribution30d": 0,
-  "dataSource": "naver-commerce-api | manual | estimated",
+  "conversionRate30d": null,
+  "dataSource": "naver-commerce-api",
   "windowStart": "ISO date",
   "windowEnd": "ISO date"
 }
 ```
-> dataSource 필드로 "자동/수동/추정" 출처 명시 (정직성 + 신뢰도 추적)
+> - CTR 계열(impressions/clicks/ctr/conversionRate)은 null 고정 (커머스 API 불가).
+>   나중에 CSV 업로드(옵션 B) 도입 시 manual로 채우고 dataSource 갱신.
+> - orders30d / revenueAttribution30d만 자동. dataSource로 출처 추적.
+> - 정직 원칙: 없는 데이터를 0으로 위장하지 말 것. null = "측정 안 됨", 0 = "측정했고 없음".
 
 ---
 
 ## 3. 강화학습 큐레이션 (회수 후)
 
-src/lib/art-director/prompt-curator.ts (신규)
+src/lib/art-director/prompt-curator.ts (신규) — CVR 기준 확정판
 - 같은 intent_tag + category_hint 그룹 내에서
-  ctr30d 또는 cvr30d 상위 20% 프롬프트 식별
-- 상위: internal_score 자동 가산 (or "promoted" 플래그)
-- 하위 20% + 충분한 노출(impressions > 임계): deprecated = true
-  + deprecation_reason = "low CTR/CVR over 30d"
+  **revenueAttribution30d (또는 orders30d) 상위 20%** 프롬프트 식별
+  (CTR 불가하므로 매출/주문이 유일한 성과 지표)
+- 상위: seller_rating 자동 가산 (or strategic_role = 'promoted')
+- 하위 20% + 충분한 사용량(orders30d 집계 대상이 된 지 30일+): deprecated = true
+  + deprecation_reason = 'low revenue over 30d'
 - 월 1회 실행 (cron 또는 수동 트리거)
+- ⚠️ 표본 부족 가드: 그룹 내 프롬프트가 5개 미만이거나 총 주문이 미미하면
+  큐레이션 보류 (성급한 deprecate 방지). 1인 셀러 초기엔 데이터가 적음.
 
 > 이 큐레이터가 "프롬프트가 스스로 진화하는" 엔진.
 >   모델 교체돼도 intent별 승자 프롬프트 데이터는 누적 = moat.
