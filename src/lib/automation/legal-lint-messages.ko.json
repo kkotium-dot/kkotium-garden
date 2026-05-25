@@ -1,0 +1,39 @@
+{
+  "$comment": "Seller-facing Korean messages for legal-lint (표시광고법 §3 + image gate-5). Workflow principle #29: Korean strings live in JSON, not TS literals.",
+  "textRules": {
+    "superlative": {
+      "severity": "high",
+      "message": "최상급 표현(최고/1위/유일/단 하나 등)이 감지됐어요. 객관적 근거를 첨부하지 않으면 표시광고법 제3조 위반 위험이 있어요."
+    },
+    "medical_efficacy": {
+      "severity": "high",
+      "message": "의학·기능성 표현(체온/치료/항균 등)이 감지됐어요. 임상·시험 실증 자료가 없으면 사용할 수 없어요."
+    },
+    "absoluteness": {
+      "severity": "medium",
+      "message": "절대성 표현(100%/완벽/영구 등)은 표시광고법상 단정적 표현으로 분류돼요. 조건부 문구로 바꿔주세요."
+    },
+    "comparative_assertion": {
+      "severity": "medium",
+      "message": "타 제품을 단정적으로 대체한다는 비교 표현이 감지됐어요. 비교 광고 가이드라인 위반 가능성이 있어요."
+    }
+  },
+  "imageGates": {
+    "real_product_mismatch": {
+      "severity": "high",
+      "message": "실물 상품 사진이 사용되지 않았어요. AI 생성 이미지로만 구성된 상세컷은 표시광고법상 실물 일치 의무 위반이에요."
+    },
+    "virtual_person_label_required": {
+      "severity": "high",
+      "message": "가상 인물이 포함된 이미지에는 'AI 생성 인물' 라벨이 의무예요. 라벨이 표시됐는지 확인해주세요."
+    },
+    "abusive_text_in_image": {
+      "severity": "medium",
+      "message": "이미지에 직접 텍스트가 합성됐어요. 어뷰징(이미지 내 키워드 도배)으로 분류될 수 있으니 카피는 별도 텍스트 영역으로 빼주세요."
+    },
+    "ai_metadata_missing": {
+      "severity": "medium",
+      "message": "AI 생성 이미지에 SynthID 또는 Content Credentials 메타데이터가 없어요. 생성 도구 설정을 확인해주세요."
+    }
+  }
+}
