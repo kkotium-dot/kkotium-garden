@@ -108,7 +108,7 @@ function RankedList({ summary }: { summary: ParetoSummary }) {
         gap: 6,
       }}
     >
-      {summary.topFive.map((p) => (
+      {(Array.isArray(summary.topFive) ? summary.topFive : []).map((p) => (
         <div
           key={p.productId}
           style={{
@@ -158,7 +158,7 @@ function RankedList({ summary }: { summary: ParetoSummary }) {
         </div>
       ))}
       <p style={{ margin: '4px 0 0', fontSize: 10, color: '#a16207', lineHeight: 1.4 }}>
-        상위 {summary.paretoSlice.length}개가 매출 {Math.round(summary.paretoShare * 100)}% 차지 — 광고 우선 집중 추천
+        상위 {Array.isArray(summary.paretoSlice) ? summary.paretoSlice.length : 0}개가 매출 {Math.round((summary.paretoShare ?? 0) * 100)}% 차지 — 광고 우선 집중 추천
       </p>
     </div>
   );

@@ -616,9 +616,9 @@ export default function ConfirmationReminderWidget() {
             </div>
           </div>
 
-          {/* Order list */}
+          {/* Order list — defensive against partial response shapes. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {data.orders.map((order) => (
+            {(Array.isArray(data.orders) ? data.orders : []).map((order) => (
               <OrderRow
                 key={order.productOrderId}
                 order={order}

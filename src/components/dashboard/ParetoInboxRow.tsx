@@ -28,17 +28,22 @@ export default function ParetoInboxRow() {
 
   if (isLoading) return <StateRow text={strings.loading} muted />;
   if (error)     return <StateRow text={strings.error} muted />;
-  if (!data || data.topFive.length === 0) return <EmptyRow />;
+  // Defensive: API may return error envelope { success:false, error } instead
+  // of ParetoSummary — `data` is truthy but topFive/paretoSlice are missing.
+  // 0-product / DB-error states must not crash the widget.
+  const topFive = Array.isArray(data?.topFive) ? data!.topFive : [];
+  const paretoSlice = Array.isArray(data?.paretoSlice) ? data!.paretoSlice : [];
+  if (!data || topFive.length === 0) return <EmptyRow />;
 
-  const sharePct = Math.round(data.paretoShare * 100);
-  const top1 = data.topFive[0];
-  const top1Pct = Math.round(top1.share * 100);
+  const sharePct = Math.round((data.paretoShare ?? 0) * 100);
+  const top1 = topFive[0];
+  const top1Pct = Math.round((top1?.share ?? 0) * 100);
 
   return (
     <Link
       href="/products"
       style={{ textDecoration: 'none', display: 'block' }}
-      title={`${strings.title} — ${top1.productName} ${top1Pct}% ${strings.share}`}
+      title={`${strings.title} — ${top1?.productName ?? ''} ${top1Pct}% ${strings.share}`}
     >
       <div
         style={{
@@ -61,8 +66,8 @@ export default function ParetoInboxRow() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 12, fontWeight: 800, color: '#854D0E' }}>
-              {strings.labelTop} {data.paretoSlice.length}{strings.labelOf}
-              {data.paretoSlice.length > 0 ? Math.ceil(data.paretoSlice.length / 0.2) : 0}
+              {strings.labelTop} {paretoSlice.length}{strings.labelOf}
+              {paretoSlice.length > 0 ? Math.ceil(paretoSlice.length / 0.2) : 0}
             </span>
             <span
               style={{
@@ -80,7 +85,7 @@ export default function ParetoInboxRow() {
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}
           >
-            #1 {top1.productName} · {top1Pct}%
+            #1 {top1?.productName ?? ''} · {top1Pct}%
           </p>
         </div>
         <span

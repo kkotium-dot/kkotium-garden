@@ -244,13 +244,14 @@ export default function CompetitionMonitorWidget() {
           </div>
         )}
 
-        {data && data.products.length === 0 && (
+        {/* Defensive: API may return error envelope without `products`. */}
+        {data && Array.isArray(data.products) && data.products.length === 0 && (
           <div style={{ textAlign: 'center', padding: 20, color: '#aaa', fontSize: 13 }}>
             {'\uBAA8\uB2C8\uD130\uB9C1\uD560 \uC0C1\uD488\uC774 \uC5C6\uC2B5\uB2C8\uB2E4'}
           </div>
         )}
 
-        {data && data.products.length > 0 && (
+        {data && Array.isArray(data.products) && data.products.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {data.products.map(p => {
               const isExpanded = expanded === p.productId;

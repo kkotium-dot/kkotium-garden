@@ -195,7 +195,8 @@ export function SystemHealthCard() {
           </div>
         )}
 
-        {data && (
+        {/* Defensive: /api/system-health may return error envelope without items. */}
+        {data && Array.isArray(data.items) && (
           <div
             style={{
               display: 'grid',
