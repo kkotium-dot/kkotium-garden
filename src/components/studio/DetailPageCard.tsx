@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/studio/DetailPageCard.tsx
 //
 // Sprint 7-M2 Phase 3-C-1 — Detail page composite (step 3) card extracted

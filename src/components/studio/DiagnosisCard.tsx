@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/studio/DiagnosisCard.tsx
 //
 // Sprint 7-M2 Phase 3-C-1 — Diagnosis (step 1) card extracted from

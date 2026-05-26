@@ -1,19 +1,19 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-21 v3.2 통합 마스터 플랜 채택 + 다크패턴 lint 모듈 설계 완료 (시니어 직접 turn, docs 2건 신규)
+> 최종 업데이트: 2026-05-26 DB P1000 복구 + Studio 클릭 버그(B-1) 수정 + B-2 빈 outputs guard (Code turn, 6 컴포넌트 + 1 hook + docs 4건)
 > **v3.2 신규 채택 (2026-05-21)**: P-Filter 전처리 모듈 + 다크패턴 lint + 단일 캔버스 인라인 마법사 + 4등급 한글 라벨(기본 자동화/검토 후 자동화/디자이너 손길 필요/완전 수동). 참고: `docs/research/KKOTIUM_GARDEN_V3_2_MASTER_PLAN_2026_05.md` (commit 795fdf8) + `docs/research/DARK_PATTERN_LINT_MODULE_DESIGN.md` (본 commit)
 > **신규 우선순위 (시니어 권장)**: ① Sprint 7-M3 Pre-Step 5 (다크패턴 lint, 0.5일, 법적 의무 최우선) → ② Sprint 8-PF (P-Filter 전처리, 2일) → ③ Sprint 9-Sec (RLS + anon key 점검, 1.5일) → ④ Sprint 7-M2 Step 5 (L2 자동화, P-Filter 통합 재설계, 2일) → ⑤ Sprint 10-WIZ (단일 캔버스 마법사 MVP, 5일)
 > 활성 계획: Sprint 8-IA Phase 2 (Section 1 Hero / Section 2 Inbox 통합 / 빌더 흡수 / lifestyle 가시화 / 통일성, 4.5일) — 새 채팅 2 진입 대기
 > 보류 계획: Smart Asset Workflow v3.1 FINAL 후속 (Phase 2-c-3 / Sprint 7-M3) / Sprint 8 자동발주 (Private API 28권한 보유, 매출 상승 트리거)
 > 폐기 계획: Sprint X (Gemini 제거 + 5섹션 일괄 템플릿, 2026-05-11 채택 후 익일 폐기)
-> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (12495cf verified, Sprint 8-IA Phase 1 완료)
+> TSC: 0 errors | npm run build OK | Production: https://kkotium-garden.vercel.app (✅ 2026-05-26 복구 완료). **DB P1000 복구**: 이전 Supabase 비번 리셋이 실제 미저장이었음 (Vercel ENV는 정상) → 동일값 재리셋으로 /api/products 200 복구 (재배포 불필요). **B-1 Studio 클릭 버그 수정**: Phase 3-C-1 6 컴포넌트 `'use client'` 누락 → 본 commit으로 추가. B-2 빈 outputs silent fail guard 동시 적용.
 > **신규 진입점**: `docs/plan/TASK_BRIDGE.md` §3 ACTIVE = Sprint 8-IA Phase 2 진입 대기. §4 STANDING / §6 PENDING 매 세션 정독 의무. 작업원칙 #46 (거짓 라벨 금지) 적용 중
 > 다음 작업: 새 채팅 2 진입 = Sprint 8-IA Phase 2 (Task 6-12, 4.5일). ROADMAP.md "다음 새 채팅 시작 메시지" ⭐ ACTIVE 정독 후 paste-ready 메시지로 새 채팅 진입.
 
 > **시각 검증 (Production smoke + Functional + 브라우저 E2E — Sprint 7 P1 단계)**: production smoke 모든 endpoint 200 ✅ / P1-A `/api/category/suggest`: 레깅스→`applied:"agreed"` dominantShare=1.0, 인테리어 소품→`applied:"synthesized"` dominantShare=0.8 ✅ / P1-C `/api/tags/verify`: 레깅스/요가복/면팬티 verified, garbage→weak (threshold fix 후) ✅ / **브라우저 E2E (Claude Preview)**: P1-B NameRulesPanel 3 시나리오 모두 정확 발화 (금기어 5개+중복 가을×3 critical red / 특수문자 4종 warning yellow / 정상 → 패널 미노출) ✅ + P1-A 카테고리 자동 추천 버튼 → 패션의류>여성언더웨어/잠옷>잠옷/홈웨어 자동 입력 ✅ + P1-C TagVerificationPanel 3개 태그 입력 → "SEO 유효 2 / 약함 1 / 미등재 0" 정확 분류 ✅
-> **상품 상태**: 0개 (DRAFT 모두 삭제 완료, 본격 소싱 직전 깨끗한 상태) / **꿀통 꽃수레**: 0개 (사용자 첫 실 상품 등록 대기) / **Platform**: DMM 도매매 + OWC 오너클랜 2개
+> **상품 상태**: 1개 DRAFT (달항아리 도어벨 cmp3afb450001gng5468w0qpc, 이현마켓/DMM. B-3 카테고리/판매가 보정 대기) / **꿀통 꽃수레**: 0개 / **Platform**: DMM 도매매 + OWC 오너클랜 2개
 > **단계 진행도**: Phase A·B·C·D ✅ | Phase E (E-7/E-1/E-3/E-8) ✅ | Phase E+ Sprint 1~5 ✅ | 워크플로우 재설계 Sprint A1a~A3-4a ✅ | Z-1·Z-2·Z-3a·Z-3b·Z-3d ✅ | 6-Pre 1·2·3 ✅ | 6.5 SourceAdapter PoC ✅ | 6-D 1-5단계 + production active ✅ | 6-A/6-B/6-C/6-E ✅ | Session E-2 Phase 1~5 ✅ | Sprint 7 P0 (P0-A 옵션 정확도 + P0-B 골든윈도우 + P0-C 효자상품 + DataLab market context) ✅ | **Sprint 7 P1 (P1-A 카테고리 1페이지 + P1-B 금기어 + P1-C 태그사전) ✅ + 브라우저 E2E 시각 검증 완료 ✅**
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
-> **다음 작업**: **Sprint 7-M2 Phase 3-C-2** (PLANT /products/new 6→7 tab 확장 + 7번째 탭 "비주얼 자동화" 마운트 + savedProductId 컨텍스트 전달). 본 turn 완료: Phase 3-C-1 컴포넌트 추출 (refactor only) — `src/components/studio/` 9 신규 파일, `/studio/page.tsx` 1068→250 LOC (-77%), byte-identical markup. PLANT 통합이 import 1줄로 가능. /studio end-to-end 워크플로우 (Diagnosis → Thumbnail → Detail → Save → Naver Publish) 정상 작동, dedicated 27/27 100% 유지.
+> **다음 작업**: Desktop Chrome MCP로 B-1 수정 실클릭 재검증 → 통과 시 B-3 (달항아리 도어벨 데이터 보정) → Sprint 7-M2 Phase 3-C-2 (PLANT /products/new 6→7 tab 확장 + savedProductId 컨텍스트 전달). 본 turn (Code): 6 컴포넌트 `'use client'` 추가 + useStudioActions.runThumbnail 빈 outputs guard. tsc 0 + build 0. 상세 근거: `docs/handoff/HANDOFF_studio_click_bug.md`.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---

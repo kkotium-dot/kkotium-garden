@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/studio/StudioCardShell.tsx
 //
 // Sprint 7-M2 Phase 3-C-1 — Shared presentational primitives for the

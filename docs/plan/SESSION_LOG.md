@@ -1,3 +1,66 @@
+## 2026-05-26 DB P1000 복구 + Studio 클릭 버그(B-1) 수정 (Code turn, 6 컴포넌트 + 1 hook + docs 4건)
+
+### 본 세션 성격
+
+Desktop 측 전수 검증(Chrome MCP + Supabase MCP + Vercel MCP)으로 두 건의 production 장애 근본원인 확정 후 Code 측 build + ship turn. `docs/handoff/HANDOFF_studio_click_bug.md` paste-ready 인계 수신 → 즉시 수정 → tsc/build 검증 → docs 4건 갱신 → 단일 commit + push.
+
+### 두 건의 production 복구
+
+| # | 항목 | 근본원인 | 복구 주체 | 검증 |
+|---|---|---|---|---|
+| DB | P1000 Authentication failed (전 API 500) | 이전 Supabase DB 비번 리셋이 실제 미저장 (Vercel ENV 값/스코프/형식/재배포 모두 정상이었음) | Desktop (Supabase MCP 직접 쿼리 + 빈 커밋 재배포 검증으로 캐싱 아님 확정 → 동일값 재리셋) | /api/products 200 + 상품 1개 노출 (달항아리 도어벨) |
+| B-1 | /studio 모든 버튼 클릭 무반응 (썸네일/진단/저장 등 onClick/onChange 미바인딩) | Phase 3-C-1 리팩토링(/studio/page.tsx → 6 카드 컴포넌트 분리) 시 `'use client'` 지시자 미이전. page.tsx에는 있으나 하위 카드엔 없어 React hydration 안 됨 | Desktop 진단 + Code 수정 | 본 turn 적용, Desktop Chrome MCP 실클릭 재검증 대기 |
+
+### Code 변경 (1 commit)
+
+| 파일 | 변경 | LOC |
+|---|---|---|
+| `src/components/studio/StudioCardShell.tsx` | `'use client';` 추가 (PrimaryButton/SecondaryButton 본체) | +2 |
+| `src/components/studio/DiagnosisCard.tsx` | `'use client';` 추가 (onClick) | +2 |
+| `src/components/studio/ThumbnailCard.tsx` | `'use client';` 추가 (onClick × 2, onSelectMain) | +2 |
+| `src/components/studio/DetailPageCard.tsx` | `'use client';` 추가 (onClick, select onChange) | +2 |
+| `src/components/studio/ActionsCard.tsx` | `'use client';` 추가 (onSave/onPublish onClick) | +2 |
+| `src/components/studio/ProductListPane.tsx` | `'use client';` 추가 (onSelect onClick) | +2 |
+| `src/components/studio/useStudioActions.ts` | runThumbnail: outputs 비거나 전 variant base64 부재 시 `thumbError` 발화 (B-2 #46 silent fail 가드) | +7 |
+
+### 진단 증거 (Desktop turn)
+
+- 실 마우스 클릭: API 호출 0건 + busy 미표시 (핸들러 미바인딩)
+- JS `element.click()`: POST /api/thumbnail 200 + outputs[].base64 + copy.hook (S6/75) → 핸들러 자체는 정상
+- elementFromPoint(버튼중심) === 버튼 자신 → 오버레이 아님
+- 진단 STEP1 표시 정상 (서버 렌더) → 정적 markup은 OK, 클라이언트 이벤트만 죽음 → 'use client' 누락 정확히 일치
+
+### 검증
+
+| 항목 | 결과 |
+|---|---|
+| tsc --noEmit | ✅ 0 errors |
+| npm run build | ✅ 0 errors (next 14 정적 빌드 통과, /studio 3.74 kB) |
+| 6 파일 첫 줄 grep | ✅ 전 파일 `'use client';` 확정 |
+| 한글 sentinel grep (혁섭\|쿠드\|식타\|릴고\|헌서\|위젝\|스칵\|쿠두) | ✅ 0건 |
+| Production smoke | Desktop Chrome MCP 재검증 의무 (TASK_BRIDGE §3 ACTIVE 신호) |
+
+### Docs 갱신 (4건)
+
+- `docs/handoff/HANDOFF_studio_click_bug.md`: 상태 🔴 OPEN → 🟡 IN-VERIFY. 검증 타임라인 + 변경 이력에 본 turn entry 추가. git 추적 신규 등록 (folder previously untracked)
+- `docs/plan/TASK_BRIDGE.md`: §3 ACTIVE 이전 entry (대시보드 런타임 ERROR) 종결 → 신규 ACTIVE (B-1 수정 → Desktop 재검증). §5 OPEN PAPER-CUTS에 B-1/B-2/B-3 등재. §7 ARCHIVED 2026-05-26 섹션 신설.
+- `docs/plan/PROGRESS.md`: 헤더 4줄 갱신 (최종 업데이트 / TSC/Production / 상품 상태 / 다음 작업)
+- `docs/plan/SESSION_LOG.md`: 본 entry prepend
+
+### 작업원칙 준수
+
+#17 (commit msg HEREDOC) / #21 (사전 점검) / #22 (TSC ≠ runtime, build ≠ click) / #28 (Vercel source of truth) / #29 (한글 처리) / #31 (MD 임계 모니터링) / #32 (TSC + build 양립) / #36 (push 직후 verify-vercel-deploy.sh --wait) / #41 (5-step hand-off) / #46 (a)~(e) (거짓 라벨 금지 — B-2 빈 outputs guard로 적용)
+
+### 다음 turn (Desktop)
+
+1. STEP 0 점검 (HEAD = 본 commit / Vercel READY)
+2. Chrome MCP로 `/studio?product=cmp3afb450001gng5468w0qpc` 진입
+3. 진단/썸네일/상세 버튼 실 마우스 클릭 → busy 표시 + 렌더 확인
+4. 통과 시 HANDOFF doc 헤더 `[CLOSED 2026-05-26]` + §7 ARCHIVED 이전
+5. B-3 (달항아리 도어벨 데이터 보정) 또는 Sprint 7-M2 Phase 3-C-2 진입
+
+---
+
 ## 2026-05-20 Sprint 8-IA Phase 1 완료 (Code turn, 코드 2 신규 + 1 수정 + docs)
 
 ### 본 세션 성격

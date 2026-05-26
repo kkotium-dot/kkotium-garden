@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/studio/ActionsCard.tsx
 //
 // Sprint 7-M2 Phase 3-C-1 — Save + Publish actions (step 4) card extracted

@@ -205,6 +205,12 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
       const result = json as ThumbnailResult;
+      const outputs = Array.isArray(result.outputs) ? result.outputs : [];
+      const hasUsableVariant = outputs.some((o) => typeof o?.base64 === 'string' && o.base64.length > 0);
+      if (!hasUsableVariant) {
+        setThumbnails(null);
+        throw new Error('이미지 품질이 낮아 자동 생성을 보류했습니다 — 디자이너 손길 필요');
+      }
       setThumbnails(result);
       return result;
     } catch (err) {

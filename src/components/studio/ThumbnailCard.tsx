@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/studio/ThumbnailCard.tsx
 //
 // Sprint 7-M2 Phase 3-C-1 — Thumbnail variants (step 2) card extracted

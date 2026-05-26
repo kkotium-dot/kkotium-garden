@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/studio/ProductListPane.tsx
 //
 // Sprint 7-M2 Phase 3-C-1 — Left product list pane extracted from

@@ -71,53 +71,35 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-20 Sprint 8-IA Phase 1 완료 → Phase 2 진입 대기 (Code → Desktop 검증)
+**Last update**: 2026-05-26 (Code turn) — DB P1000 복구 + Studio 클릭 버그(B-1) 수정 + B-2 빈 outputs guard 적용. 다음 = Desktop Chrome MCP 실클릭 재검증.
+
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop Chrome MCP 실클릭 재검증 (B-1 수정 확인)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (Phase 1 Task 4 SystemHealthCard + /api/system-health build + ship) |
-| **TO** | 🖥 Desktop (Chrome MCP 통합 검증 + Phase 2 paste-ready 본문 작성) |
-| **BASELINE** | `12495cf` (Sprint 8-IA Phase 1 완료, Vercel READY) |
-| **NEXT SCOPE** | Phase 1 검증 V1~V6 (Desktop Chrome MCP — V6 console 0 errors 확정 의무) → 통과 시 Phase 2 진입 (Task 6-12, 4.5일) |
-| **PENDING BLOCKER** | V6 (브라우저 console 0 errors / 0 깨짐) 본 Code turn 환경 한계로 미단정. Desktop Chrome MCP 의무 |
-| **AFTER** | Phase 2 (Section 1-4 통합 + 빌더 흡수 + lifestyle 가시화 + 통일성) — 별도 채팅, V1~V6 통과 후 진입 |
+| **FROM** | 💻 Code (6 컴포넌트 'use client' + B-2 빈 outputs guard build + ship) |
+| **TO** | 🖥 Desktop (Chrome MCP 실클릭 재검증 → 통과 시 HANDOFF CLOSED + 첫 실상품 보정/등록 진입) |
+| **BASELINE** | 본 커밋 (push 직후 hash 보고) |
+| **NEXT SCOPE** | Desktop이 production /studio?product=cmp3afb450001gng5468w0qpc 진입 → 진단/썸네일/상세 버튼 실 마우스 클릭으로 busy 표시 + 렌더까지 동작 확인. 통과 시: 달항아리 도어벨(category=uncategorized, 순마진 6.4%) 카테고리 매핑 + 판매가 재산정 (B-3) |
+| **PENDING** | (없음) DB 인증 복구됨, 빌드 0, tsc 0. 검증만 남음 |
 
-### 본 hand-off 진행 흐름 (2026-05-19 → 2026-05-20, Sprint 8-IA Phase 1 완료 까지)
+### 본 세션 (2026-05-26) 복구·수정 요약
 
-```
-Desktop Chrome MCP로 /automation 직접 시각 점검
-↓
-진단: 17/26 = 65% 가짜 라벨 (실 cron 가동 3건만)
-↓
-사용자에게 개선안 v2 5가지 제안 → Q1·Q2·Q3 권장안 모두 승인
-↓
-Desktop: md 6건 paste-ready 분할 작성 (Turn 1 + Turn 2)
-↓
-Code (db72408): Task 1·2·3 build + ship — sidebar demote / admin move / registry 31→8
-↓
-Code (12495cf): Task 4 build + ship — SystemHealthCard + /api/system-health 신설 (본 turn)
-  - TSC 0 / build 0 / Vercel READY 확정 ✅
-  - V1~V5 단정 / V6 (브라우저 console) 환경 한계로 미단정
-↓
-Desktop 다음 turn: Chrome MCP로 V1~V6 통합 검증 + Phase 2 paste-ready 본문 작성
-↓
-새 채팅 2 진입: Sprint 8-IA Phase 2 (Task 6-12)
-```
+| # | 항목 | 근본원인 | 복구/수정 |
+|---|---|---|---|
+| DB | P1000 Authentication failed | Supabase 이전 비번 리셋이 실제 미저장 (Vercel ENV는 정상이었음) | DB 비번 동일값 재리셋 → /api/products 200, 상품 1개 노출 (Desktop turn) |
+| B-1 | /studio 모든 버튼 클릭 무반응 | Phase 3-C-1 리팩토링 시 `src/components/studio/` 6 카드 컴포넌트에 `'use client'` 누락 (page.tsx 만 보유) | 6 컴포넌트 첫 줄 `'use client';` 추가 (StudioCardShell / Diagnosis / Thumbnail / DetailPage / Actions / ProductListPane) |
+| B-2 | runThumbnail 빈 outputs 침묵 실패 (#46 위반 소지) | `setThumbnails(result)` 가 outputs 비어도 성공 처리 | `useStudioActions.ts` runThumbnail: outputs 비거나 전 variant base64 부재 시 `thumbError` 발화 ("이미지 품질이 낮아 자동 생성을 보류했습니다 — 디자이너 손길 필요") |
 
-### 본 hand-off 핵심 단정
+### 다음 세션 첫 행동 (Desktop)
 
-1. **자동화 관제 페이지 = 껍데기 + 거짓 라벨**:
-   - 정상 17건 표시 / 실 cron 가동 3건만 (재고폴링 + 일배치 + 주배치)
-   - 14개는 Sprint 6-B/6-C/Sprint 8/9 미작성 작업 라벨만 깔아둠
-   - 파워셀러 시각: 사용자 신뢰 깨짐 + 사이드바 노이즈 + 대시보드와 분리
-2. **빌더 흡수 결정 → Phase 2로 분리**:
-   - 상세페이지 빌더 (블록 6종) ↔ 27 dedicated section renderer (S1~S12) 충돌
-   - 빌더 제거 대신 *흡수* (FAQ → S6/S11 / 사양 테이블 → S4/S7/S12 / SEO 훅 → Diagnosis metadata)
-   - 가장 큰 변화라 Phase 1 검증 후 신중 진입
-3. **lifestyle-picker 연결 가시화 → Phase 2**:
-   - 시스템은 완벽 (30일 cooldown + ConceptTone 매칭)
-   - 사용자 화면에서 작동이 안 보임 → 자산 카드에 사용 상품 수 + lifestyle 변형에 backdrop 메타 표시
+1. STEP 0 점검 (HEAD = 본 commit, Vercel READY)
+2. Chrome MCP로 production `/studio?product=cmp3afb450001gng5468w0qpc` 진입
+3. 진단 버튼 → busy → 렌더, 썸네일 버튼 → busy → 4 variant 또는 thumbError 명시 확인
+4. 통과 시 `docs/handoff/HANDOFF_studio_click_bug.md` 헤더 → `[CLOSED 2026-05-26]` 표기 + §7 ARCHIVED 등재
+5. 첫 상품 보정 (B-3) 진입: `/products/new?edit=cmp3afb450001gng5468w0qpc` 에서 카테고리 매핑 + 판매가 재산정
 
+> 상세 근거: `docs/handoff/HANDOFF_studio_click_bug.md`
 
 ---
 
@@ -189,6 +171,9 @@ Desktop 다음 turn: Chrome MCP로 V1~V6 통합 검증 + Phase 2 paste-ready 본
 | **P38** | **상세페이지 빌더 ↔ 27 dedicated renderer 충돌** — Phase 2 흡수 결정 | Sprint 8-IA Phase 2 |
 | **P39** | **lifestyle-picker 연결 가시화 부재** — picker 작동이 사용자 화면에서 안 보임 | Sprint 8-IA Phase 2 |
 | **P40** | **시각적 통일성 부재** — 라이프 자산 페이지 ↔ 온실 아틀리에 ↔ PLANT 디자인 토큰 불일치 | Sprint 8-IA Phase 2 |
+| **B-1** | **온실 아틀리에 클릭 무반응** — Phase 3-C-1 6 컴포넌트 `'use client'` 누락 | 본 commit ✅ 완료 (Desktop 재검증 대기) |
+| **B-2** | **runThumbnail 빈 outputs 침묵 실패** (#46 위반 소지) | 본 commit ✅ 완료 |
+| **B-3** | **달항아리 도어벨 데이터 보정** (category=uncategorized, 순마진 6.4%) | B-1/B-2 검증 통과 후 |
 
 ---
 
@@ -246,6 +231,14 @@ Desktop 다음 turn: Chrome MCP로 V1~V6 통합 검증 + Phase 2 paste-ready 본
   - Dashboard Section 3 가든 헬스 상단에 마운트 (기존 IA 보존)
   - TSC 0 / build 0 / Vercel READY (12495cf) / production /api/system-health 200 + items=8 ✅
   - V1~V5 단정 / V6 (브라우저 console) Desktop Chrome MCP 검증 의무 — TASK_BRIDGE §3 ACTIVE 신호로 이관
+
+### 2026-05-26
+
+- 🟡 IN-VERIFY: Studio 클릭 버그 수정 (Code turn) ← 6 컴포넌트 `'use client'` + B-2 빈 outputs guard
+  - 진단 출처: Desktop Chrome MCP + Supabase MCP + Vercel MCP 전수 검증 (실 클릭 0 API 호출 / JS .click() 200 / 백엔드 정상)
+  - Code 측 build + ship: tsc 0 + build 0 / Vercel push 대기
+  - 상세 근거: `docs/handoff/HANDOFF_studio_click_bug.md` (HANDOFF doc git 추적 신규 등록)
+  - Desktop 실클릭 재검증 통과 시 §3 ACTIVE 이전 + HANDOFF doc CLOSED 처리
 
 ---
 
