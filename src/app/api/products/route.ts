@@ -270,10 +270,36 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT: 상품 수정
+// B-5: Product 모델에 없는 필드 (예: stock — 재고는 InventorySnapshot 시계열로 분리)
+// 가 spread 로 흘러 들어가면 Prisma "Unknown arg" 500 발생. 화이트리스트 + 안전 변환.
+const REJECT_KEYS = new Set([
+  'stock',         // 재고는 별도 모델 (InventorySnapshot)
+  'createdAt',     // @default(now()) — 갱신 금지
+  'updatedAt',     // @updatedAt — Prisma 자동
+  'supplier',      // relation accessor
+  'user',          // relation accessor
+  'orderItems',    // relation accessor
+  'naver_categories',
+  'origin_codes',
+  'shipping_templates',
+  'product_options',
+  'inventorySnapshots',
+  'lowStockAlerts',
+  'priceMovementAlerts',
+  'competitorSnapshots',
+  'diagnosis',
+]);
+
+function coerceInt(value: unknown, fallback = 0): number {
+  if (value === null || value === undefined || value === '') return fallback;
+  const n = typeof value === 'number' ? value : parseInt(String(value), 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 export async function PUT(request: NextRequest) {
   try {
     const data = await request.json();
-    const { id, ...updateData } = data;
+    const { id, ...rawUpdate } = data;
 
     if (!id) {
       return NextResponse.json(
@@ -282,9 +308,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Strip unknown / read-only / relation fields before forwarding to Prisma.
+    const updateData: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(rawUpdate)) {
+      if (REJECT_KEYS.has(key)) continue;
+      updateData[key] = value;
+    }
+
     // ⭐ Status 대문자로 정규화
-    if (updateData.status) {
-      updateData.status = updateData.status.toUpperCase();
+    if (typeof updateData.status === 'string') {
+      updateData.status = (updateData.status as string).toUpperCase();
     }
 
     // ⭐ aiScore null 방지
@@ -292,19 +325,18 @@ export async function PUT(request: NextRequest) {
       updateData.aiScore = 0;
     }
 
+    // Numeric coercion only when caller actually sent the field (PATCH-style).
+    if ('salePrice' in updateData)     updateData.salePrice     = coerceInt(updateData.salePrice);
+    if ('supplierPrice' in updateData) updateData.supplierPrice = coerceInt(updateData.supplierPrice);
+    if ('shippingFee' in updateData)   updateData.shippingFee   = coerceInt(updateData.shippingFee);
+
     // Capture previous score BEFORE update for drop detection
     const prevData = await prisma.product.findUnique({ where: { id }, select: { aiScore: true } });
     const previousScore = prevData?.aiScore ?? null;
 
     const product = await prisma.product.update({
       where: { id },
-      data: {
-        ...updateData,
-        salePrice: parseFloat(updateData.salePrice) || 0,
-        supplierPrice: parseFloat(updateData.supplierPrice) || 0,
-        stock: parseInt(updateData.stock) || 0,
-        shippingFee: parseFloat(updateData.shippingFee) || 0,
-      },
+      data: updateData as Parameters<typeof prisma.product.update>[0]['data'],
     });
 
     // Fire-and-forget score drop check
