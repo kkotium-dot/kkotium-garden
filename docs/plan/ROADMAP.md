@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-19 PM Sprint 8-IA 진입 결정 + IA 재설계 (Turn 2 완료, docs only)
-> **HEAD**: 1a96d2a (origin/main, Turn 1 적용 완료, Turn 2 진행 중) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-27 B-7~B-10 부수버그 정리 turn (Code) — 명화송풍구 등록 완주 흐름으로 전환
+> **HEAD**: aec508b (origin/main, B-4 504 수정 적용) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **신규 ledger**: `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off, §3 ACTIVE / §4 STANDING / §6 PENDING 매 세션 정독 의무
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
@@ -15,7 +15,55 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-27 B-4 진단 504 수정 → Desktop 재검증 → 명화송풍구 등록 완주 ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-27 명화송풍구 썸네일/상세/등록 완주 (Desktop) ⭐ ACTIVE
+
+본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. 이중 트랙 핑퐁 (작업원칙 #41) 정합.
+
+```
+꽃틔움 가든 Desktop. 명화송풍구 썸네일/상세 생성 -> 저장 -> 네이버 등록 완주 turn.
+docs/handoff/HANDOFF_premium_image_boost.md 정독 후 진행.
+
+[선행 상태 — 검증 완료]
+- 진단 L2 "검토 후 자동화" 도달 (production persist=true 영속화 확인)
+- 대표이미지: 화보 4종 진열컷 1000x1000 (Cloudinary, 선명도 351.8 ok)
+- margin 50.69(B-7 깨진값) -> 2.03 교정 완료 (ROI 정상화)
+- skeletonId S6 (명화 감성 트랙: hero/story/styledShot/spec/cta)
+- Code 측 부수버그 B-5~B-10 별도 commit 진행 중 (본 turn 차단 아님)
+
+[이번 turn 목표]
+썸네일 4변형 생성 -> 상세 5섹션 생성 -> Supabase 저장 -> 네이버 카테고리
+(50003356) + 원산지(200037) 매핑 -> 등록 완주. 그 후 하트클립 동일 흐름.
+
+[작업 순서]
+1. /studio?product=cmpnooli40001f0gveaxr8iim 진입 (Chrome MCP 실클릭)
+2. 썸네일 4변형 생성 (clean/price/badge/lifestyle) -> 메인 선택
+3. 상세 5섹션 생성 (S6 골격) -> 미리보기 확인
+4. 저장 (save-assets) -> Supabase public URL 발급
+5. 네이버 등록 (카테고리 50003356 / 원산지 200037 정확 매핑)
+6. 완주 후 -> 하트클립(65322570) 동일 흐름 (소싱 데이터 crawl_logs 존재)
+
+[STEP 0 — 환경 점검]
+git rev-parse HEAD origin/main && git status --short && \
+  curl -sIo /dev/null -w "Vercel HTTP: %{http_code}\n" \
+    https://kkotium-garden.vercel.app/dashboard && \
+  scripts/verify-vercel-deploy.sh
+
+[통과 시]
+- docs/handoff/HANDOFF_premium_image_boost.md 헤더 → [CLOSED 2026-05-27]
+  + TASK_BRIDGE §7 ARCHIVED
+
+[실패 시]
+- Vercel 런타임 로그 정확한 스택 trace 확보 → 핸드오프 §4·§5 가설 재조정
+  → Code 재진입 (B-7 회피 수동 교정 path 또는 grading 임계 조정)
+
+작업원칙 절대 준수 — main 직접 push, Production smoke 3-tier(#45) 의무.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-27 B-4 진단 504 수정 → Desktop 재검증 → 명화송풍구 등록 완주~~ ✅ SUPERSEDED → 2026-05-27 본 ACTIVE (명화송풍구 등록 완주)
+
+## 다음 새 채팅 시작 메시지 — 2026-05-27 B-4 진단 504 수정 → Desktop 재검증 → 명화송풍구 등록 완주 (보관용)
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. 이중 트랙 핑퐁 (작업원칙 #41) 정합.
 

@@ -1,3 +1,53 @@
+## 2026-05-27 Desktop 명화송풍구 이미지 보강 + margin 교정 (Desktop turn, 코드 변경 0)
+
+### 본 turn 성격
+
+2026-05-27 Code turn(B-4 진단 504 복구) 직후 Desktop 재검증 + 첫 프리미엄 상품(명화송풍구 cmpnooli40001f0gveaxr8iim) 등록 완주 turn. B-4 수정이 production에서 정상 작동함을 3회 재진단으로 확인하면서, 동시에 등록을 막던 두 개의 진짜 원인(이미지 저해상도 + margin 깨진값)을 근본 해결. 코드 변경 0건, Supabase 직접 UPDATE 2건(mainImage + margin)으로 우회 처리.
+
+### 핵심 성과 3건
+
+1. **이미지 보강 (L4 -> L2)**: 330px -> 화보 4종 진열컷 1000x1000. 도매꾹 getItemView(no=65322245)의 desc.contents 화보(1000x18291)에서 4종 향 진열컷을 정사각 크롭 + 흰배경 패딩 -> Cloudinary signed upload. 선명도(Laplacian variance) 99.6(severe) -> 351.8(ok), 4.6배 개선.
+2. **진단 엔진 신뢰도 검증 (좋은/나쁜 이미지 정확 구분)**: 3회 재진단으로 P-Filter가 이미지 품질에 정직하게 반응함을 입증. 330px(L4) -> 760px 업스케일(L3) -> 화보컷(L2). 6신호 중 5개(해상도/블러/화이트밸런스/배경/객체비율)가 정상으로 전환됨을 정확 감지.
+3. **margin 근본 오류 해결 (B-7 발현)**: 최종 L4의 진짜 범인은 이미지가 아니라 margin 50.69(깨진값). grading.ts의 `if (margin >= 5) return 'L4'` 규칙에 걸려 이미지가 아무리 좋아도 L4 강제됐음. margin = salePrice/supplierPrice = 29000/14300 = 2.03 교정 -> 최종 L2 도달.
+
+### 재진단 추적 (production, 검증된 데이터)
+
+| 신호 | 330px | 760px 업스케일 | 화보 4종컷 |
+|---|---|---|---|
+| 해상도 | 330 부족 | 760 충분 | 1000 충분 |
+| 블러 | 212 | 99.6 severe | 351.8 ok |
+| 화이트밸런스 | warm cast | warm cast | 정상 0.008 |
+| 배경 | 복잡 | 복잡 | 균일 |
+| 객체비율 | 1.0 잘림 | 1.0 잘림 | 0.3 적절 |
+| P-Filter | L4 | L3 | L2 |
+| 최종 등급 | L4 | L4 | **L2** |
+
+### 더블체크 (시뮬레이션-실측 일치)
+
+margin 교정 전, grading.ts 로직을 Python으로 재현해 사전 시뮬레이션: margin 2.03 -> 최종 L2 예측. production 실측 결과 L2 일치 + ROI breakdown(margin 2.03 / adCostEstimate 0.5 / roiScore -0.5) 모두 예측대로. persist=true로 Diagnosis row 영속화 확인(grade=L2, p_filter_grade=L2, skeletonId=S6).
+
+### 신규 발견 버그 (Code 후속)
+
+- **B-9**: 진단 응답 rationale 필드가 문자열이 글자단위로 쪼개져 배열로 반환(표시 버그, 진단 로직 자체는 정상).
+- **B-10**: qualityScore(47.6)와 P-Filter 등급(L2) 미세 불일치. quality<60이라 L2 정식조건 미달, 디폴트 안전망으로 L2. 등록 차단 사유 아님.
+
+### 검증
+
+- production /api/diagnose 3회 호출 모두 200 (B-4 수정으로 504 없음, 각 ~11초)
+- Supabase 직접 UPDATE 2건 RETURNING으로 반영 확인
+- Cloudinary 업로드 후 공개 URL fetch 검증(1000x1000)
+- DB JOIN으로 Product.mainImage(Cloudinary) + margin(2.03) + Diagnosis(L2/S6) 영속화 최종 확인
+
+### 환경 이슈 (정직 보고)
+
+- Supabase Storage REST 직접 업로드는 새 Secret 키(sb_secret_ 형식)가 JWT가 아니라 curl Bearer 헤더로 거부됨(403 Invalid Compact JWS). -> Cloudinary signed upload로 우회(이미지 CDN이라 대표이미지 호스팅에 더 적합).
+
+### 다음 작업
+
+Desktop 새 채팅: /studio 썸네일 4변형 -> 상세 5섹션(S6) -> 저장 -> 네이버 등록(카테고리 50003356/원산지 200037) 완주 -> 하트클립(65322570) 동일 흐름. 썸네일/상세는 Sharp 합성으로 무거워 세션 분할 의무(#26). 상세 근거: docs/handoff/HANDOFF_premium_image_boost.md. Code 측 B-5~B-10 별도 커밋.
+
+---
+
 ## 2026-05-27 B-4 진단 API 504 근본 복구 (Code turn, 5 파일 + docs 4건)
 
 ### 본 turn 성격

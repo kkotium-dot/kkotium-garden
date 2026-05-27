@@ -71,17 +71,29 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-27 (Code turn) — B-4 진단 API 504 근본 복구 (maxDuration=60 + fetch timeout + tesseract worker timeout + grading NaN guard + CTI/grading try/catch). 다음 = Desktop Chrome MCP로 명화송풍구 진단 재검증 → 등록 완주.
+**Last update**: 2026-05-27 (Desktop turn) — 명화송풍구 이미지 보강(L4->L2) + margin 교정(B-7 50.69->2.03) 완료. 진단 L2 도달 + 영속화 확인. 다음 = Desktop 새 채팅에서 썸네일/상세/저장/네이버 등록 완주.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop Chrome MCP 명화송풍구 진단 재검증 (B-4 수정 확인)
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop 명화송풍구 썸네일/상세/등록 완주 (진단 L2 도달)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (B-4 가드 4종 build + ship) |
-| **TO** | 🖥 Desktop (Chrome MCP `/studio?product=cmpnooli40001f0gveaxr8iim` 진입 → 진단 버튼 → 504 없이 골격/등급/신뢰도/품질 정상 반환 확인) |
-| **BASELINE** | 본 커밋 (push 직후 hash 보고) |
-| **NEXT SCOPE** | (1) 명화송풍구 진단 재검증 → L1~L2 = 프리미엄 직진, L3 이하 = 이미지 보강. (2) 썸네일/상세/저장/카테고리·원산지 매핑/등록 완주. (3) ③ 하트클립 동일 흐름. (4) B-4 통과 후 Code 측에서 부수버그 B-5~B-8 별도 커밋 |
-| **PENDING** | Desktop 검증 통과 시 HANDOFF_diagnose_timeout.md 헤더 `[CLOSED 2026-05-27]` + §7 ARCHIVED |
+| **FROM** | 🖥 Desktop (이미지 보강 + margin 교정 + 3회 재진단 L2 검증) |
+| **TO** | 🖥 Desktop 새 채팅 (썸네일/상세는 Sharp 합성으로 무거움 — 세션 분할 의무) |
+| **BASELINE** | 코드 변경 0 (Supabase 직접 UPDATE: mainImage Cloudinary 교체 + margin 2.03). Vercel HEAD 불변 |
+| **NEXT SCOPE** | (1) /studio?product=cmpnooli40001f0gveaxr8iim 썸네일 4변형 생성 -> 메인 선택. (2) 상세 5섹션(S6) 생성 -> 저장. (3) 네이버 카테고리 50003356 + 원산지 200037 매핑 -> 등록 완주. (4) 하트클립(65322570) 동일 흐름. (5) Code 측 B-5~B-10 별도 커밋 |
+| **PENDING** | 등록 완주 시 HANDOFF_premium_image_boost.md 헤더 `[CLOSED]` + §7 ARCHIVED. Code 측 B-7(margin 자동계산) + B-8(화보 자동수집) 근본 수정 |
+
+### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
+
+| # | 작업 | 방법 | 결과 |
+|---|---|---|---|
+| 1 | 고해상도 원본 확보 | getItemView no=65322245 -> thumb.original(760) + desc.contents 화보 추출 | 화보 detail 1000x18291 확보 |
+| 2 | 대표이미지 교체 (1차) | 760px -> Supabase 직접 UPDATE (B-5 우회) | L4 유지 (760은 업스케일본, 블러 severe) |
+| 3 | 화보 4종컷 추출 | detail 화보 y=1300~1660 정사각 크롭 + 흰배경 패딩 -> Cloudinary signed upload | 1000x1000, 선명도 351.8 ok (760의 4.6배) |
+| 4 | 대표이미지 교체 (2차) | Cloudinary URL -> Supabase 직접 UPDATE | P-Filter L2 도달, 그러나 최종 L4 (margin 범인) |
+| 5 | margin 교정 (B-7 발현) | grading.ts `margin>=5 -> L4` 규칙 적발. 50.69 -> 2.03 (salePrice/supplierPrice) | **최종 L2 도달**, persist=true 영속화 |
+
+시뮬레이션-실측 일치 검증: grading 로직 재현으로 margin 2.03 = L2 사전 예측 -> production 실측 L2 일치 (더블체크 통과).
 
 ### 본 세션 (2026-05-27 Code) B-4 진단 504 근본 복구 요약
 

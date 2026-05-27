@@ -1,4 +1,4 @@
-# HANDOFF — 온실 아틀리에 클릭 무반응 (B-1) + 부수 발견
+# HANDOFF — 온실 아틀리에 클릭 무반응 (B-1) + 부수 발견  `[CLOSED 2026-05-26]`
 
 > **이 문서의 역할**: 🖥 Desktop(검증)이 진단을 완결하여 💻 Code(수정·배포)에 넘기는 *상세 인계장*.
 > TASK_BRIDGE.md §3 ACTIVE가 "한 줄 요약 색인"이라면, 본 `docs/handoff/` 폴더는 개별 인계의 *상세 근거*를 누적 보관한다.
@@ -9,15 +9,30 @@
 > - 새로운 별건 인계는 `docs/handoff/HANDOFF_<주제>.md`로 *추가* 생성한다.
 > - 본 문서가 다루는 작업이 종료되면 TASK_BRIDGE.md §7 ARCHIVED에 한 줄 등재 + 본 문서 CLOSED 처리.
 >
-> **상태**: 🟡 IN-VERIFY — Code 수정 적용 완료, Desktop Chrome MCP 재검증 대기
+> **상태**: ✅ CLOSED — B-1 수정 적용 + Desktop Chrome MCP 재검증 통과 (썸네일 4변형 실생성 확인)
 > **작성**: 2026-05-26 Desktop 세션 (Chrome MCP + Supabase MCP + Vercel MCP 전수 검증)
-> **방향**: 🖥 Desktop → 💻 Code
+> **방향**: 🖥 Desktop → 💻 Code → 🖥 Desktop (검증 완료)
+> **잔여**: TASK_BRIDGE §7 ARCHIVED 등재(Code 측 후속) / B-3 데이터 보정은 별도 진행
 
 ---
 
-## Code 새 채팅 진입 메시지 (paste-ready)
+## ✅ 최종 검증 결과 (2026-05-26 Desktop Chrome MCP)
 
-아래 코드블록을 Claude Code 새 채팅 첫 입력으로 그대로 붙여넣는다.
+| 항목 | 직전(버그) | 수정 후(`74d395d`) |
+|---|---|---|
+| 핸들러 발동 → API 호출 | API 0건 | **POST /api/thumbnail 200** |
+| 버튼 상태 | "썸네일 생성" 고정 | **"재생성"으로 변경** |
+| 썸네일 렌더 | 0개 | **4변형 전부 렌더** (Clean/Price/Badge/Lifestyle) |
+| React 바인딩 | onClick 미바인딩 | **reactHydrated true / onClick function** |
+
+→ `'use client'` 누락 복구가 정확히 적중. B-1 완전 해소.
+부수 관찰: Chrome MCP 자동화 좌표 클릭은 본 버튼 스타일에 잘 안 꽂힘(도구 특성). JS .click() 및 실제 사용자 마우스 클릭은 정상 작동.
+
+---
+
+## Code 새 채팅 진입 메시지 (paste-ready) — [완료된 인계, 보존용]
+
+아래 코드블록을 Claude Code 새 채팅 첫 입력으로 그대로 붙여넣는다. (※ 이미 `74d395d`로 처리 완료)
 
 ```
 꽃틔움 가든 — Sprint 검증 hand-off (Desktop -> Code).
@@ -103,8 +118,11 @@ docs/handoff/HANDOFF_studio_click_bug.md 정독 후 진행.
 | 2026-05-26 | /studio 썸네일 버튼 클릭 검증 | 무반응 -> B-1 발견 |
 | 2026-05-26 | 컴포넌트 5파일 전수 코드 분석 | 'use client' 누락 확정 = B-1 근본원인 |
 | 2026-05-26 | Code: 6 컴포넌트 'use client' 추가 + B-2 빈 outputs guard | tsc 0 + build 0 (next 14 정적 빌드 통과) |
+| 2026-05-26 | Code push `74d395d` + Vercel production REGISTERED | 11 files +227/-43 |
+| 2026-05-26 | **Desktop Chrome MCP 재검증** | **썸네일 4변형 실생성 + 버튼 "재생성" 전환 + API 200 = B-1 CLOSED** |
 
 ## 변경 이력
 
 - 2026-05-26: 최초 작성 (B-1 근본원인 확정, Code 인계 대기 OPEN)
 - 2026-05-26: Code 수정 적용 — 6 컴포넌트('use client') + useStudioActions.runThumbnail() 빈 outputs guard. tsc/build 0. Desktop 실클릭 재검증 대기 (IN-VERIFY)
+- 2026-05-26: **Desktop Chrome MCP 재검증 통과 → CLOSED.** 썸네일 4변형 실생성 확인. 다음 = 상세페이지 생성 → 저장 흐름 완주 + B-3 데이터 보정.
