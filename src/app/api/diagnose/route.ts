@@ -54,6 +54,8 @@ interface DiagnoseBody {
   optionName?: string | null;
   categoryAveragePrice?: number | null;
   competitionScore?: number | null;
+  /** Optional explicit margin multiplier override (salePrice/supplierPrice). */
+  margin?: number | null;
   persist?: boolean;
 }
 
@@ -130,9 +132,11 @@ async function resolveInputs(body: DiagnoseBody): Promise<ResolvedInputs | NextR
         optionCount = 0;
       }
     }
-    if (typeof product.margin === 'number' && product.margin > 0) {
-      margin = product.margin;
-    }
+    // B-7: DB `margin` is stored as percentage (e.g., 50.69 for ROI 50.69%).
+    // grading.ts expects a multiplier of supplier price (>=5 marks L4 catalog hero).
+    // Mixing the two caused L4 forcing on healthy products (명화송풍구 2026-05-27).
+    // We deliberately ignore product.margin here and always re-derive a multiplier
+    // from the live prices below.
     if (typeof product.salesCount === 'number' && product.salesCount > 0) {
       salesCount = product.salesCount;
     }
@@ -145,8 +149,12 @@ async function resolveInputs(body: DiagnoseBody): Promise<ResolvedInputs | NextR
     return jsonError('imageUrl required (or productId with main image)', 400);
   }
 
-  // Final margin derivation: prefer body override, then DB margin, then computed
-  if (margin === 1 && salePrice && supplierPrice && supplierPrice > 0) {
+  // Final margin derivation: always compute multiplier from prices when both
+  // are available. Falls back to body-supplied multiplier override; otherwise 1
+  // (no-op for grading, won't trigger the >=5 L4 rule).
+  if (typeof body.margin === 'number' && body.margin > 0) {
+    margin = body.margin;
+  } else if (salePrice && supplierPrice && supplierPrice > 0) {
     margin = salePrice / supplierPrice;
   }
 

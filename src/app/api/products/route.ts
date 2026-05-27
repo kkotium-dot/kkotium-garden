@@ -8,6 +8,7 @@ import { PrismaClient } from '@prisma/client';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { sendDiscord, buildScoreDropEmbed } from '@/lib/discord';
 import { prisma } from '@/lib/prisma';
+import { KKOTIUM_DEFAULTS } from '@/lib/naver/codes';
 
 // Fire-and-forget: check honey score drop after product update
 
@@ -228,14 +229,14 @@ export async function POST(request: NextRequest) {
         name: String(data.name || ''),
         sku: String(data.sku || ''),
         category: String(data.category || 'uncategorized'),
-        naverCategoryCode: String(data.naverCategoryCode || '50003307'),
+        naverCategoryCode: String(data.naverCategoryCode || KKOTIUM_DEFAULTS.categoryCode),
         salePrice,
         supplierPrice,
         margin,
         status: normalizedStatus,
         brand: String(data.brand || '꽃틔움'),
         manufacturer: String(data.manufacturer || '도매매 공급사'),
-        originCode: String(data.originCode || '0200037'),
+        originCode: String(data.originCode || KKOTIUM_DEFAULTS.originCode),
         shippingFee: Math.round(parseFloat(String(data.shippingFee)) || 3000),
         images: Array.isArray(data.images) ? data.images : [],
         imageAltTexts: Array.isArray(data.imageAltTexts) ? data.imageAltTexts : [],
