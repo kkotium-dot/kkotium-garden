@@ -1,3 +1,47 @@
+## 2026-05-27 PM B-12 네이버 등록 라우트 근본 재작성 + B-11 저장배관 DB UPDATE (Code turn)
+
+### 본 turn 성격
+
+직전 Desktop turn(이미지 보강 + margin 교정 + B-11 우회 완주, 본 SESSION_LOG 직전 entry)에서 명화송풍구 등록 직전 발견된 B-12(register 라우트 구조결함)를 Code 환경에서 근본 수정. B-11 저장배관의 진짜 누락분(Product URL 컬럼 DB UPDATE)도 동시 처리. 코드 2 파일, TSC 0 + build OK. 실 네이버 발행은 비가역이므로 본 turn 범위 외 — 대표 승인 후 별도 turn.
+
+### 코드 변경 (2 파일 +186/-50)
+
+| 파일 | 변경 |
+|---|---|
+| `src/app/api/naver/register/route.ts` | **전면 재작성** — categoryMap 폐기 / `product.naverCategoryCode` 직접 사용 / `naverRequest` OAuth2 위임 / detailContent에 `<img src="${detail_image_url}">` 포함 / API 실패 시 status mutation + 가짜 ID 주입 0(`PENDING_`/`ERROR_`/`MOCK_` 3건 제거) / prisma singleton / 422 게이트 3종(categoryCode/mainImage/salePrice) |
+| `src/app/api/products/[id]/save-assets/route.ts` | Storage 업로드 성공 후 `prisma.product.update`로 `main_image_url` / `detail_image_url` 자동 기록. 한쪽만 성공해도 해당 컬럼만 update(spread guard). DB update 실패는 errors 배열 누적되되 응답 200 보존 |
+
+### B-12 4-함정 동시 해소
+
+1. **카테고리 폐기 fallback**: `categoryMap[product.category]`에 없으면 의류(`50000006`) silent fallback -> 방향제→의류 오등록 발생 가능. 본 fix: `product.naverCategoryCode` 직접 사용, 빈 값이면 422 차단.
+2. **거짓 라벨(#46)**: API 실패해도 `status='registered'` + 가짜 `PENDING_${ts}` ID 주입 3곳. 본 fix: 실패는 실패로 502 + status/naverProductId 미변경. 가짜 ID 패턴 grep 0건.
+3. **상세 본문 미포함**: `detailContent = product.description`만 사용 -> Desktop이 살려둔 186KB 상세 PNG가 네이버에 안 보임. 본 fix: `buildDetailContent`가 `<img src="${detail_image_url}">` 삽입.
+4. **인증 방식 의심**: 구 검색 API 헤더(`X-Naver-Client-Id`) 직접 사용 -> Commerce API는 OAuth2 + bcrypt 전자서명 필요. 본 fix: `naverRequest` 위임 (proxy/direct 양쪽 자동 분기).
+
+### B-11 §3-2 단정 (코드 변경 0)
+
+`useStudioActions.runSave`(line 268-271)는 `detail` state 존재 시 `detailBase64 + skeletonId`를 페이로드에 이미 동봉함. 실제 누락은 (a) `runFullSequence` autorun이 detail 카드를 *opt-in*으로 skip(Phase 3-C-3 의도적 결정), (b) manual 흐름에서 사용자가 detail 카드 실행 전에 save를 누른 경우. 본 turn은 autorun 의미 변경 보류, 라우트 측 DB UPDATE(§3-1)만 적용.
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors
+- `npm run build` exit 0 (`/api/naver/register` + `/api/products/[id]/save-assets` 모두 ƒ Dynamic 유지)
+- sentinel grep 0 hits
+- `categoryMap` / `PENDING_` / `ERROR_` / `MOCK_` references 0 (수정 후)
+- 코드 inline 한글 주석 0건 (영어 주석만)
+
+### 적용 작업원칙
+
+#17 · #21 · #24 · #29 · #32 · #36 · #41 · #45 · #46
+
+### 다음 = Desktop 등록 완주 turn (대표 승인 후)
+
+ROADMAP.md "다음 새 채팅 시작 메시지" ⭐ ACTIVE 정독 -> 명화송풍구(cmpnooli40001f0gveaxr8iim) 본 commit 라우트로 등록 -> production 응답 + DB row + 스마트스토어 노출 3중 검증.
+
+Commit: 본 commit hash로 갱신 예정
+
+---
+
 ## 2026-05-27 Desktop 명화송풍구 이미지 보강 + margin 교정 (Desktop turn, 코드 변경 0)
 
 ### 본 turn 성격

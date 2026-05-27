@@ -1,5 +1,7 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-27 명화송풍구 이미지 보강(330px->화보 4종컷 1000px) + margin 교정(B-7 50.69->2.03) -> 진단 L4->L2 도달 (Desktop turn, 코드 변경 0 / Supabase 직접 UPDATE 2건). **현재 상태**: 명화송풍구 등록 직전 (썸네일/상세/저장/네이버등록 대기 — Desktop 새 채팅).
+> 최종 업데이트: 2026-05-27 **B-12 네이버 등록 라우트 근본 재작성 + B-11 저장배관 DB UPDATE 완료** (Code turn, 2 파일 +186/-50). categoryMap(의류 7종) 폐기 -> `product.naverCategoryCode` 직접 사용. X-Naver-Client-Id 헤더 인증 -> `naverRequest` OAuth2(bcrypt 전자서명) 위임. API 실패 시 status='registered' + PENDING_/ERROR_/MOCK_ 거짓 라벨 3건 모두 제거(#46). detailContent에 `product.detail_image_url` `<img>` 삽입. save-assets 200 후 Product `main_image_url`/`detail_image_url` prisma UPDATE 추가. TSC 0 + build OK. **현재 상태**: 명화송풍구 등록 라우트 재검증 + 실 발행은 대표 승인 후 별도 turn.
+> 2026-05-27 명화송풍구 **B-11 저장배관 우회 완주** (상세 PNG 186KB Storage 업로드 + Product main/detail_image_url DB 기록, DB 3중 검증 통과 — Desktop turn, 코드변경 0). **B-12 (치명) 발견 -> 본 commit으로 근본 해소**.
+> 2026-05-27 명화송풍구 이미지 보강(330px->화보 4종컷 1000px) + margin 교정(B-7 50.69->2.03) -> 진단 L4->L2 도달 (Desktop turn, 코드 변경 0 / Supabase 직접 UPDATE 2건).
 > 2026-05-27 B-4 진단 API 504 근본 복구 (Code turn, 5 파일 + docs 4건). Desktop 검증 완료 — production 진단 200/정상.
 > 2026-05-26 DB P1000 복구 + Studio 클릭 버그(B-1) 수정 + B-2 빈 outputs guard (Code turn, 6 컴포넌트 + 1 hook + docs 4건)
 > **v3.2 신규 채택 (2026-05-21)**: P-Filter 전처리 모듈 + 다크패턴 lint + 단일 캔버스 인라인 마법사 + 4등급 한글 라벨(기본 자동화/검토 후 자동화/디자이너 손길 필요/완전 수동). 참고: `docs/research/KKOTIUM_GARDEN_V3_2_MASTER_PLAN_2026_05.md` (commit 795fdf8) + `docs/research/DARK_PATTERN_LINT_MODULE_DESIGN.md` (본 commit)
@@ -17,6 +19,68 @@
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
 > **다음 작업**: Desktop Chrome MCP로 B-1 수정 실클릭 재검증 → 통과 시 B-3 (달항아리 도어벨 데이터 보정) → Sprint 7-M2 Phase 3-C-2 (PLANT /products/new 6→7 tab 확장 + savedProductId 컨텍스트 전달). 본 turn (Code): 6 컴포넌트 `'use client'` 추가 + useStudioActions.runThumbnail 빈 outputs guard. tsc 0 + build 0. 상세 근거: `docs/handoff/HANDOFF_studio_click_bug.md`.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-27 PM B-12 네이버 등록 라우트 근본 재작성 + B-11 저장배관 DB UPDATE (Code turn)
+
+### 본 turn 성격
+
+2026-05-27 Desktop turn(이미지 보강 + margin 교정 + B-11 우회 완주)에서 명화송풍구 등록 직전 발견된 B-12(register 라우트 구조결함)를 Code 환경에서 근본 수정. B-11 저장배관의 진짜 누락분(Product URL 컬럼 DB UPDATE)도 동시 처리. 코드 2 파일 +186/-50, TSC 0 + build OK. 실 네이버 발행은 비가역이므로 본 turn 범위 외 — 대표 승인 후 별도 turn에서 Desktop이 등록 완주.
+
+### B-12 4-함정 동시 해소 (`src/app/api/naver/register/route.ts` 전면 재작성)
+
+| # | 함정 | 이전 | 수정 후 |
+|---|---|---|---|
+| 1 | 카테고리 | `categoryMap` 하드코딩 7종(의류 위주). 매칭 실패 시 `50000006`(의류) silent fallback | `product.naverCategoryCode` 직접 사용. 빈 값/공백이면 422 차단(의류 fallback 폐기) |
+| 2 | 거짓 라벨(#46) | API 실패해도 `status='registered'` + `PENDING_`/`ERROR_`/`MOCK_` 가짜 naverProductId 3곳 주입 | 실패는 실패: 502 반환 + status/naverProductId 미변경. 성공 시에만 mutate |
+| 3 | 상세 본문 | `detailContent = product.description \|\| product.name` (텍스트만) | `buildDetailContent`로 `hookPhrase + <img src="${detail_image_url}"> + description` 조합 — Desktop이 B-11로 살려둔 186KB 상세 PNG가 본문에 포함됨 |
+| 4 | 인증 | `X-Naver-Client-Id`/`X-Naver-Client-Secret` 직접 헤더 (구 검색 API 방식) | `naverRequest('POST', '/v2/products', payload)` 위임 — Commerce API용 OAuth2 client_credentials + bcrypt 전자서명 + Bearer 토큰. proxy mode/direct mode 양쪽 자동 분기. 다른 가동 라우트(`/api/naver/sync`, `/api/cron/inventory-sync` 등) 동일 경로 |
+
+### B-12 추가 단정 (스코프 외 함정 차단)
+
+- Supabase client 의존성 제거 -> `prisma` singleton 통일 (#3-2)
+- `salePrice <= 0` 게이트 추가 (Gate 3)
+- `mainImage` 게이트 추가 (Gate 2)
+- `originCode` 빈 값 fallback `0200037`(중국 7자리) 유지. `naver_origin` 텍스트는 있으면 `content` 동봉
+- Commerce API v2 정합: `leafCategoryId` + `images.representativeImage` + `deliveryFee.deliveryFeeType: 'PAID' | 'FREE'`(`'CHARGE'` 폐기) + `originAreaInfo` shape
+
+### B-11 저장배관 진짜 누락분 (`src/app/api/products/[id]/save-assets/route.ts`)
+
+Desktop turn에서 "B-11 우회 완주"는 *Storage 업로드는 됐지만 Product 테이블 URL 컬럼은 페이지내 fetch + Supabase 직접 UPDATE로 우회 기록*한 상태. 본 commit으로 라우트 자체가 Storage 업로드 200 직후 `prisma.product.update({ main_image_url, detail_image_url })`를 자동 수행하도록 추가. 한쪽만 성공해도 해당 컬럼만 갱신(spread guard). DB update 실패는 errors 배열에 누적되되 응답 status 200 보존(부분 성공 정합).
+
+§3-2(studio 프론트 detailBase64 전송) 단정: 코드 정독 결과 `useStudioActions.runSave`는 이미 `detail` state 존재 시 `detailBase64 + skeletonId`를 페이로드에 동봉함(line 268-271). 실제 누락은 `runFullSequence` autorun 경로에서 detail 카드를 *opt-in으로 skip*하는 설계(Phase 3-C-3 의도적 결정, heavy Sharp 5000~7000px 합성)와 manual 흐름에서 사용자가 detail 카드를 클릭하기 전에 save를 누를 때 발생. **본 turn은 autorun 의미 변경을 별도 결정 사항으로 보류**하고, B-11 §3-1(라우트 측 DB UPDATE)만 적용 -> 사용자가 detail 카드를 명시적으로 실행한 후 save를 누르면 DB URL이 자동 기록됨.
+
+### 검증
+
+| 항목 | 결과 |
+|---|---|
+| `npx tsc --noEmit` | 0 errors ✅ |
+| `npm run build` | exit 0 / `/api/naver/register` ƒ Dynamic 유지 / `/api/products/[id]/save-assets` ƒ Dynamic 유지 ✅ |
+| 한글 typo sentinel grep | 0 hits ✅ |
+| 한글 inline 주석 | 0건 (영어 주석만, #3-1 정합) ✅ |
+| Prisma singleton | `import { prisma } from '@/lib/prisma'` 양쪽 사용 (`new PrismaClient()` 0건) ✅ |
+| `categoryMap` 잔존 | 0 references (grep 0) ✅ |
+| `PENDING_`/`ERROR_`/`MOCK_` 가짜 ID 주입 | 0 references ✅ |
+
+### 보류(의도적) — 실 네이버 발행
+
+본 turn은 **코드 수정 + 빌드 + Vercel 배포까지만**. 실제 명화송풍구를 네이버 스마트스토어에 발행하는 호출(`POST /api/naver/register`)은 비가역(스토어에 노출 + 광고비 발생)이므로 대표 승인 후 별도 Desktop turn에서:
+1. /products?id=cmpnooli40001f0gveaxr8iim 진입
+2. (선택) 썸네일/상세 보강 — main_image_url + detail_image_url 모두 살아있음으로 skip 가능
+3. "네이버 직접 등록" 클릭 -> 본 commit의 새 라우트 호출
+4. 응답 `success: true` + `naverProductId` 실제 값 검증 (PENDING_/ERROR_/MOCK_ 패턴 0)
+5. 스마트스토어 실 노출 + DB row `naverProductId IS NOT NULL` cross-check
+
+### 적용 작업원칙
+
+#17 (commit-msg.tmp via `git commit -F`) · #21 (사전 점검 HEAD/status/stash) · #24 (한 turn 분할 완료) · #29 (한글 처리 — 코드 inline 한글 0) · #32 (TSC + npm build 양쪽 검증) · #36 (push 후 verify-vercel-deploy.sh --wait) · #41 (TASK_BRIDGE §3 ACTIVE 갱신) · #45 (3-tier 검증: 빌드 + 라우트 등록 + sentinel) · #46 (거짓 라벨 금지 — 본 turn 직접 해소 사례)
+
+### 다음 = Desktop 등록 완주 turn
+
+대표 승인 후 새 Desktop 채팅 진입 -> ROADMAP.md "다음 새 채팅 시작 메시지" ⭐ ACTIVE 정독 -> 명화송풍구 + 하트클립 순차 발행.
+
+Commit: 본 commit hash로 갱신 예정
 
 ---
 

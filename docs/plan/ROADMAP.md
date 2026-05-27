@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-27 B-7~B-10 부수버그 정리 turn (Code) — 명화송풍구 등록 완주 흐름으로 전환
-> **HEAD**: aec508b (origin/main, B-4 504 수정 적용) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-27 PM B-12 네이버 등록 라우트 근본 재작성 + B-11 저장배관 DB UPDATE (Code turn, 2 파일) — 명화송풍구 등록 라우트 정합. 실 발행은 대표 승인 후 별도 turn.
+> **HEAD**: 본 commit (origin/main, B-12 + B-11 fix 적용) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **신규 ledger**: `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off, §3 ACTIVE / §4 STANDING / §6 PENDING 매 세션 정독 의무
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
@@ -15,7 +15,7 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-27 명화송풍구 썸네일/상세/등록 완주 (Desktop) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-27 명화송풍구 등록 완주 (Desktop, B-12 fix 완료 후) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. 이중 트랙 핑퐁 (작업원칙 #41) 정합.
 
@@ -28,7 +28,9 @@ docs/handoff/HANDOFF_premium_image_boost.md 정독 후 진행.
 - 대표이미지: 화보 4종 진열컷 1000x1000 (Cloudinary, 선명도 351.8 ok)
 - margin 50.69(B-7 깨진값) -> 2.03 교정 완료 (ROI 정상화)
 - skeletonId S6 (명화 감성 트랙: hero/story/styledShot/spec/cta)
-- Code 측 부수버그 B-5~B-10 별도 commit 진행 중 (본 turn 차단 아님)
+- Code 측 부수버그 B-5~B-10 완료 (production 5601e91)
+- **B-12 네이버 등록 라우트 근본 재작성 완료** (본 commit) — categoryMap 폐기 + OAuth2 위임 + 거짓 라벨 0 + detail_image_url 본문 포함
+- **B-11 저장배관 DB UPDATE 완료** (본 commit) — save-assets 200 후 Product URL 컬럼 자동 기록
 
 [이번 turn 목표]
 썸네일 4변형 생성 -> 상세 5섹션 생성 -> Supabase 저장 -> 네이버 카테고리

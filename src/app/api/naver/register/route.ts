@@ -1,232 +1,221 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+// src/app/api/naver/register/route.ts
+//
+// B-12 root rewrite (2026-05-27):
+//   - Drop the hardcoded `categoryMap` (apparel-7) — use `Product.naverCategoryCode`
+//     verbatim. Empty/whitespace blocks registration (no silent fallback).
+//   - Drop X-Naver-Client-Id/Secret direct header auth (that is the legacy
+//     "search" API surface). Commerce API requires OAuth2 client_credentials
+//     with bcrypt-signed `client_secret_sign`. Delegate to `naverRequest`
+//     (`src/lib/naver/api-client.ts`) which already implements both the
+//     proxy and direct OAuth2 paths used by every other working route.
+//   - Drop PENDING_/ERROR_/MOCK_ fake naverProductId injection. Commerce API
+//     failure leaves Product.status untouched and surfaces the real reason
+//     to the caller (#46 — false-label ban).
+//   - Build detailContent so `product.detail_image_url` is rendered inside
+//     the body (same `<img>` pattern as `src/lib/naver/product-builder.ts:
+//     buildDetailContent` and `src/app/api/naver/excel/route.ts`).
+//   - Prisma singleton; no `new PrismaClient()` and no Supabase client.
 
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { naverRequest } from '@/lib/naver/api-client';
 
 export const dynamic = 'force-dynamic';
-const categoryMap: Record<string, string> = {
-  '': '50000006',
-  '의류': '50000006',
-  '여성의류': '50000007',
-  '남성의류': '50000008',
-  '원피스': '50000165',
-  '블라우스': '50000167',
-  '바지': '50000170',
-};
+export const runtime = 'nodejs';
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+interface DetailParts {
+  name: string;
+  description: string | null;
+  hookPhrase: string | null;
+  detail_image_url: string | null;
+}
+
+function buildDetailContent(p: DetailParts): string {
+  const parts: string[] = [];
+
+  if (p.hookPhrase) {
+    parts.push(
+      `<div style="text-align:center;padding:20px 0;font-size:16px;color:#333;">${escapeHtml(p.hookPhrase)}</div>`,
+    );
+  }
+  if (p.detail_image_url) {
+    parts.push(
+      `<div style="text-align:center;"><img src="${escapeHtml(p.detail_image_url)}" style="max-width:860px;width:100%;" alt="${escapeHtml(p.name)}" /></div>`,
+    );
+  }
+  if (p.description) {
+    parts.push(
+      `<div style="padding:20px;font-size:14px;line-height:1.8;color:#555;">${escapeHtml(p.description).replace(/\n/g, '<br/>')}</div>`,
+    );
+  }
+  if (parts.length === 0) {
+    parts.push(
+      `<div style="text-align:center;padding:40px;font-size:14px;color:#888;">${escapeHtml(p.name)}</div>`,
+    );
+  }
+  return parts.join('\n');
+}
+
+function fail(message: string, status: number, detail?: unknown) {
+  return NextResponse.json(
+    { success: false, error: message, ...(detail !== undefined ? { detail } : {}) },
+    { status },
+  );
+}
 
 export async function POST(request: NextRequest) {
+  let productId: string | undefined;
   try {
-    console.log('\n' + '='.repeat(80));
-    console.log('🚀 네이버 상품 등록 API 호출');
-    console.log('='.repeat(80));
-
-    const { productId } = await request.json();
-
+    const body = await request.json().catch(() => ({}));
+    productId = typeof body?.productId === 'string' ? body.productId.trim() : undefined;
     if (!productId) {
-      console.error('❌ 상품 ID 누락');
-      return NextResponse.json(
-        { success: false, error: '상품 ID가 필요합니다.' },
-        { status: 400 }
+      return fail('productId required', 400);
+    }
+
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) {
+      return fail('product not found', 404, { productId });
+    }
+
+    // ── Gate 1: verified naver category (#46 — no silent apparel fallback) ──
+    const naverCategoryCode = (product.naverCategoryCode ?? '').trim();
+    if (!naverCategoryCode) {
+      return fail(
+        'naverCategoryCode is empty — register blocked. set a verified leaf category on Product first.',
+        422,
+        { productId, currentCategory: product.category ?? null },
       );
     }
 
-    console.log('🔍 상품 조회:', productId);
-
-    const supabase = createClient();
-    const { data, error: fetchError } = await supabase
-      .from('Product')
-      .select('*')
-      .eq('id', productId)
-      .single();
-
-    if (fetchError || !data) {
-      console.error('❌ 상품 조회 실패:', fetchError?.message || '상품 없음');
-      console.error('   Product ID:', productId);
-      return NextResponse.json(
-        { success: false, error: '상품을 찾을 수 없습니다.' },
-        { status: 404 }
-      );
+    // ── Gate 2: representative image ─────────────────────────────────────────
+    if (!product.mainImage) {
+      return fail('mainImage required — register blocked.', 422, { productId });
     }
 
-    const product = data;
+    // ── Gate 3: pricing sanity ───────────────────────────────────────────────
+    if (!product.salePrice || product.salePrice <= 0) {
+      return fail('salePrice must be > 0', 422, { productId, salePrice: product.salePrice });
+    }
 
-    console.log('✅ 상품 조회 성공:', product.name);
-    console.log('   현재 상태:', product.status);
+    // ── Build payload (Commerce API v2 shape) ────────────────────────────────
+    const originAreaCode = (product.originCode ?? '').trim() || '0200037';
 
-    const naverCategoryId = categoryMap[product.category || ''] || categoryMap[''];
+    const detailContent = buildDetailContent({
+      name: product.name,
+      description: product.description,
+      hookPhrase: product.hookPhrase,
+      detail_image_url: product.detail_image_url,
+    });
 
-    const naverProduct = {
+    const shippingFee = product.shippingFee ?? 0;
+
+    const payload = {
       originProduct: {
-        statusType: 'SALE',
-        saleType: 'NEW',
-        name: product.name,
-        detailContent: product.description || product.name,
-        images: product.mainImage ? [{ url: product.mainImage }] : [],
+        statusType: 'SALE' as const,
+        saleType: 'NEW' as const,
+        leafCategoryId: naverCategoryCode,
+        name: product.name.slice(0, 100),
+        detailContent,
+        images: {
+          representativeImage: { url: product.mainImage },
+        },
         salePrice: product.salePrice,
         stockQuantity: 999,
         deliveryInfo: {
-          deliveryType: 'DELIVERY',
-          deliveryAttributeType: 'NORMAL',
-          deliveryCompany: 'CJ대한통운',
+          deliveryType: 'DELIVERY' as const,
+          deliveryAttributeType: 'NORMAL' as const,
+          deliveryCompany: product.courierCode || 'CJGLS',
           deliveryBundleGroupUsable: true,
           deliveryFee: {
-            deliveryFeeType: product.shippingFee > 0 ? 'CHARGE' : 'FREE',
-            baseFee: product.shippingFee || 0,
-            freeConditionalAmount: 50000,
+            deliveryFeeType: shippingFee > 0 ? ('PAID' as const) : ('FREE' as const),
+            baseFee: shippingFee,
           },
           claimDeliveryInfo: {
-            returnDeliveryCompanyPriorityType: 'PRIMARY',
-            returnDeliveryFee: 3000,
-            exchangeDeliveryFee: 6000,
+            returnDeliveryFee: product.returnShippingFee ?? 3000,
+            exchangeDeliveryFee: product.exchangeShippingFee ?? 6000,
           },
         },
         detailAttribute: {
-          afterServiceInfo: '상품 수령 후 7일 이내 반품 가능',
-          originAreaInfo: '국내',
-          sellerCodeInfo: product.sku,
+          originAreaInfo: {
+            originAreaCode,
+            ...(product.naver_origin ? { content: product.naver_origin } : {}),
+          },
+          afterServiceInfo: {
+            afterServiceTelephoneNumber: product.asPhone ?? '010-0000-0000',
+            afterServiceGuideContent: product.asInfo ?? '10:00~18:00',
+          },
+          ...(product.sku
+            ? { sellerCodeInfo: { sellerManagementCode: product.sku } }
+            : {}),
         },
-        categoryId: naverCategoryId,
-        saleStartDate: new Date().toISOString(),
-        saleEndDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      }
+      },
+      smartstoreChannelProduct: {
+        naverShoppingRegistration: true,
+        channelProductDisplayStatusType: 'ON' as const,
+      },
     };
 
-    const naverApiUrl = 'https://api.commerce.naver.com/external/v1/products/origin-products';
-    const clientId = process.env.NAVER_CLIENT_ID;
-    const clientSecret = process.env.NAVER_CLIENT_SECRET;
-
-    // 1) 시뮬레이션 모드 (API 키 없음)
-    if (!clientId || !clientSecret) {
-      console.warn('⚠️ 네이버 API 키 없음 - 시뮬레이션 모드');
-
-      const mockNaverProductId = `MOCK_${Date.now()}`;
-
-      const { error: updateError } = await supabase
-        .from('Product')
-        .update({
-          status: 'registered',
-          updatedAt: new Date().toISOString(),
-        })
-        .eq('id', productId);
-
-      if (updateError) {
-        console.error('❌ 상태 업데이트 실패:', updateError.message);
-        return NextResponse.json(
-          { success: false, error: '상태 업데이트 실패: ' + updateError.message },
-          { status: 500 }
-        );
-      }
-
-      console.log('✅ 시뮬레이션 등록 완료');
-      console.log('   상품 ID:', productId);
-      console.log('   Mock 네이버 ID:', mockNaverProductId);
-      console.log('   상태 변경:', product.status, '→ registered');
-      console.log('='.repeat(80) + '\n');
-
-      return NextResponse.json({
-        success: true,
-        naverProductId: mockNaverProductId,
-        message: '시뮬레이션 모드: 네이버 API 키를 설정하세요.',
-      });
-    }
-
-    // 2) 실제 네이버 API 호출
-    console.log('🌐 네이버 API 호출 시작...');
-    console.log('📤 요청 URL:', naverApiUrl);
-    console.log('📤 요청 데이터:', JSON.stringify(naverProduct, null, 2));
-
+    // ── Call Commerce API via OAuth2 helper ──────────────────────────────────
+    let naverResponse: any;
     try {
-      const naverResponse = await fetch(naverApiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Naver-Client-Id': clientId,
-          'X-Naver-Client-Secret': clientSecret,
-        },
-        body: JSON.stringify(naverProduct),
-      });
-
-      const naverData = await naverResponse.json();
-
-      if (!naverResponse.ok) {
-        console.error('❌ 네이버 API 실패:', naverData);
-        console.error('   HTTP 상태:', naverResponse.status);
-        console.error('   응답 본문:', JSON.stringify(naverData, null, 2));
-        
-        // ⚠️ API 실패해도 상태는 'registered'로 변경 (임시)
-        const mockNaverProductId = `PENDING_${Date.now()}`;
-        
-        await supabase
-          .from('Product')
-          .update({
-            status: 'registered',
-            updatedAt: new Date().toISOString(),
-          })
-          .eq('id', productId);
-
-        return NextResponse.json({
-          success: false,
-          error: `네이버 API 오류: ${naverData.message || '알 수 없는 오류'}`,
-          naverProductId: mockNaverProductId,
-          message: '네이버 API 오류가 발생했지만 상태는 저장되었습니다. 네이버 센터에서 수동 등록이 필요합니다.',
-        });
-      }
-
-      const naverProductId = naverData.originProduct?.id;
-
-      console.log('✅ 네이버 등록 성공:', naverProductId);
-
-      await supabase
-        .from('Product')
-        .update({
-          status: 'registered',
-          updatedAt: new Date().toISOString(),
-        })
-        .eq('id', productId);
-
-      console.log('='.repeat(80) + '\n');
-
-      return NextResponse.json({
-        success: true,
-        naverProductId,
-        message: '네이버 스마트스토어에 등록되었습니다.',
-      });
-
-    } catch (apiError: any) {
-      console.error('❌ 네이버 API 호출 예외:', apiError.message);
-      
-      // ⚠️ API 실패해도 상태는 'registered'로 변경 (임시)
-      const mockNaverProductId = `ERROR_${Date.now()}`;
-      
-      await supabase
-        .from('Product')
-        .update({
-          status: 'registered',
-          updatedAt: new Date().toISOString(),
-        })
-        .eq('id', productId);
-
-      return NextResponse.json({
-        success: false,
-        error: apiError.message,
-        naverProductId: mockNaverProductId,
-        message: 'API 연결 실패. 네이버 센터에서 수동 등록이 필요합니다.',
+      naverResponse = await naverRequest<any>('POST', '/v2/products', payload);
+    } catch (err: any) {
+      const msg = err?.message ?? String(err);
+      console.error('[naver/register] commerce api call failed:', msg);
+      // Failure is failure. No status mutation, no fake productId (#46).
+      return fail('naver commerce api failed', 502, {
+        productId,
+        message: msg,
       });
     }
 
-  } catch (error: any) {
-    console.error('\n' + '='.repeat(80));
-    console.error('❌ 네이버 등록 예외 발생');
-    console.error('='.repeat(80));
-    console.error('에러 메시지:', error.message);
-    console.error('에러 스택:', error.stack);
-    console.error('='.repeat(80) + '\n');
+    const naverProductId = String(
+      naverResponse?.productNo
+        ?? naverResponse?.originProductNo
+        ?? naverResponse?.id
+        ?? '',
+    ).trim();
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || '네이버 등록 중 오류가 발생했습니다.',
+    if (!naverProductId) {
+      console.error(
+        '[naver/register] commerce api returned 2xx but no productNo/originProductNo/id',
+        naverResponse,
+      );
+      return fail('naver api response missing productNo/originProductNo/id', 502, {
+        productId,
+        naverResponse,
+      });
+    }
+
+    // ── Success: only now mutate Product state ───────────────────────────────
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        status: 'registered',
+        naverProductId,
       },
-      { status: 500 }
+    });
+
+    return NextResponse.json({
+      success: true,
+      naverProductId,
+      message: 'naver smartstore registered',
+    });
+  } catch (error: any) {
+    const msg = error?.message ?? 'unknown error';
+    console.error('[naver/register] exception:', msg, error?.stack);
+    return NextResponse.json(
+      { success: false, error: msg, ...(productId ? { productId } : {}) },
+      { status: 500 },
     );
   }
 }

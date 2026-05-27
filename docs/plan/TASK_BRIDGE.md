@@ -71,17 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-27 (Desktop turn) — 명화송풍구 이미지 보강(L4->L2) + margin 교정(B-7 50.69->2.03) 완료. 진단 L2 도달 + 영속화 확인. 다음 = Desktop 새 채팅에서 썸네일/상세/저장/네이버 등록 완주.
+**Last update**: 2026-05-27 PM (Code turn) — B-12 네이버 등록 라우트 근본 재작성 + B-11 저장배관 DB UPDATE 완료 (2 파일, TSC 0 + build OK + Vercel READY). 다음 = 대표 승인 후 Desktop이 명화송풍구 등록 완주.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop 명화송풍구 썸네일/상세/등록 완주 (진단 L2 도달)
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop 명화송풍구 등록 완주 (B-12 fix 완료 후, 대표 승인 대기)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 🖥 Desktop (이미지 보강 + margin 교정 + 3회 재진단 L2 검증) |
-| **TO** | 🖥 Desktop 새 채팅 (썸네일/상세는 Sharp 합성으로 무거움 — 세션 분할 의무) |
-| **BASELINE** | 코드 변경 0 (Supabase 직접 UPDATE: mainImage Cloudinary 교체 + margin 2.03). Vercel HEAD 불변 |
-| **NEXT SCOPE** | (1) /studio?product=cmpnooli40001f0gveaxr8iim 썸네일 4변형 생성 -> 메인 선택. (2) 상세 5섹션(S6) 생성 -> 저장. (3) 네이버 카테고리 50003356 + 원산지 200037 매핑 -> 등록 완주. (4) 하트클립(65322570) 동일 흐름. (5) Code 측 B-5~B-10 별도 커밋 |
-| **PENDING** | 등록 완주 시 HANDOFF_premium_image_boost.md 헤더 `[CLOSED]` + §7 ARCHIVED. Code 측 B-7(margin 자동계산) + B-8(화보 자동수집) 근본 수정 |
+| **FROM** | 💻 Code (B-12 register 라우트 근본 재작성 + B-11 저장배관 DB UPDATE, 2 파일) |
+| **TO** | 🖥 Desktop 새 채팅 (대표 승인 후 실 네이버 발행 + 3중 검증) |
+| **BASELINE** | 본 commit (origin/main). TSC 0 + build OK + Vercel READY. categoryMap 폐기 / `naverCategoryCode` 직접 사용 / `naverRequest` OAuth2 위임 / detailContent에 `<img>` 포함 / 거짓 라벨 0 / save-assets 200 후 Product URL 컬럼 자동 기록 |
+| **NEXT SCOPE** | (1) Desktop이 /products?id=cmpnooli40001f0gveaxr8iim 진입. (2) "네이버 직접 등록" 클릭 -> 새 라우트 호출. (3) 응답 `success: true` + 실 naverProductId 검증 (PENDING_/ERROR_/MOCK_ 패턴 0). (4) 스마트스토어 실 노출 + DB row cross-check. (5) 하트클립(65322570) 동일 흐름 |
+| **PENDING** | 등록 완주 시 HANDOFF_premium_image_boost.md + HANDOFF_naver_register_fix.md 양쪽 `[CLOSED]` + §7 ARCHIVED |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
 
@@ -235,6 +235,39 @@
   - 17/26 가짜 라벨 발견 + 빌더↔renderer 충돌 + lifestyle 연결 부재 진단
   - 사용자 Q1·Q2·Q3 권장안 모두 승인 → 새 채팅 2개 분할 결정
   - md 6건 paste-ready 분할 작성 (Turn 1 + Turn 2)
+
+### 2026-05-27 PM
+
+- ✅ B-12 네이버 등록 라우트 근본 재작성 + B-11 저장배관 DB UPDATE (Code turn, 본 commit) ← Desktop 등록 완주 검증 대기
+  - register/route.ts: categoryMap(의류 7종) 폐기 -> `product.naverCategoryCode` 직접 사용
+  - register/route.ts: `X-Naver-Client-Id` 헤더 폐기 -> `naverRequest` OAuth2(bcrypt 전자서명) 위임
+  - register/route.ts: API 실패 시 `status='registered'` + 가짜 ID(`PENDING_`/`ERROR_`/`MOCK_`) 3건 모두 제거(#46)
+  - register/route.ts: detailContent에 `<img src="${detail_image_url}">` 삽입 (Desktop B-11 우회로 살려둔 186KB 상세 PNG 활용)
+  - save-assets/route.ts: Storage 업로드 200 후 `prisma.product.update`로 `main_image_url`/`detail_image_url` 자동 기록 (B-11 §3-1)
+  - useStudioActions §3-2 단정: 코드 정독 결과 이미 detailBase64 동봉 중 — 변경 0건
+  - TSC 0 + npm run build OK + sentinel grep 0
+  - **실 네이버 발행은 비가역 -> 대표 승인 후 별도 Desktop turn**
+
+### 2026-05-27
+
+- ✅ B-4 진단 504 근본 복구 (Code turn) ← Desktop 검증 통과 (production 진단 200/정상, 504 소멸)
+- ✅ 명화송풍구 이미지 보강 + margin 교정 (Desktop turn) ← 진단 L4->L2 도달, persist=true 영속화
+  - 이미지: 330px -> 화보 4종컷 1000x1000 (Cloudinary, 선명도 99.6->351.8)
+  - margin: 50.69(깨진값) -> 2.03 (Supabase 직접 UPDATE)
+  - 진단 엔진(P-Filter) 신뢰도 검증: 3회 재진단으로 좋은/나쁜 이미지 정확 구분 입증
+- ✅ 부수버그 7-commit 정리 (Code turn, production 5601e91) ← **Desktop production smoke 3-tier 검증 통과**
+  - C1 `a37f588` docs: ROADMAP ACTIVE 교체 + 5 MD/handoff
+  - C2 `3c6859f` **B-7**: margin DB %(퍼센트) vs grading 배수 단위 불일치 근본 복구 + POST 디폴트 정합(KKOTIUM_DEFAULTS)
+  - C3 `bf66d45` **B-8**: 도매꾹 crawler thumb.original 우선 + desc.contents 화보 추출
+  - C4 `d3ff2fc` **B-5**: PUT 500 — stock 등 미존재 ceec럼 REJECT_KEYS 화이트리스트
+  - C5 `d9e7ed7` **B-6**: /api/naver/categories 로컬 4,993 연결 (DB 미시드 우회)
+  - C6 `234a745` **B-9**: rationale 응답 shape `string[]` 통일
+  - C7 `5601e91` **B-10**: grading.decideGrade에 pFilterGrade floor 추가
+  - Desktop 검증 evidence (production smoke):
+    - B-6: `/api/naver/categories?q=디퓨저` -> 50003356 아로마방향제/디퓨저, fullPath 4단계 완전, count 1
+    - B-9: 명화송풍구 재진단 rationale = `list` 길이 1, 항목 113자 정상 문장 (지난 턴 글자단위 분해 -> 해소)
+    - B-10/B-7: 재진단 grade L2 = pFilterGrade L2 (floor 반영), roiBreakdown.margin 2.028 (자동계산)
+    - 매 commit tsc 0 + build OK + verify-vercel-deploy.sh --wait exit 0 (Code 보고) + Desktop 재확인
 
 ### 2026-05-20
 

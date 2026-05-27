@@ -123,6 +123,25 @@ export async function POST(
     }
   }
 
+  // B-11 (2026-05-27): persist resulting public URLs on the Product row so
+  // downstream consumers (especially POST /api/naver/register, which embeds
+  // detail_image_url into the Commerce API detailContent) can read them from
+  // the canonical DB column instead of relying on in-memory client state.
+  // Update only the columns that actually got a fresh URL this call.
+  if (thumbResult || detailResult) {
+    try {
+      await prisma.product.update({
+        where: { id: productId },
+        data: {
+          ...(thumbResult ? { main_image_url: thumbResult.publicUrl } : {}),
+          ...(detailResult ? { detail_image_url: detailResult.publicUrl } : {}),
+        },
+      });
+    } catch (err) {
+      errors.push({ kind: 'db', message: `product update failed: ${String(err)}` });
+    }
+  }
+
   const status = errors.length > 0 && !thumbResult && !detailResult ? 500 : 200;
   return NextResponse.json(
     {
