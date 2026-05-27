@@ -38,6 +38,10 @@ import type { PFilterResult } from '@/lib/diagnosis/p-filter-types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// B-4: full pipeline (P-Filter + CTI + grading + DB upsert) can exceed the
+// default 10s Hobby timeout on non-L4 images. Raise to 60s and rely on per-
+// stage guards (fetch timeout, OCR worker timeout) to fail fast on hangs.
+export const maxDuration = 60;
 
 interface DiagnoseBody {
   productId?: string;
@@ -266,33 +270,47 @@ export async function POST(req: Request) {
     return NextResponse.json({ ...earlyResult, persisted: false });
   }
 
-  const cti = inferConceptTone({
-    productName: resolved.productName,
-    category: resolved.category,
-    salePrice: resolved.salePrice,
-    categoryAveragePrice: body.categoryAveragePrice ?? null,
-    optionCount: resolved.optionCount,
-    optionName: resolved.optionName,
-    colorMood: imageQuality.colorMood,
-    photoStyle: imageQuality.photoStyle,
-  });
+  let cti: ReturnType<typeof inferConceptTone>;
+  try {
+    cti = inferConceptTone({
+      productName: resolved.productName,
+      category: resolved.category,
+      salePrice: resolved.salePrice,
+      categoryAveragePrice: body.categoryAveragePrice ?? null,
+      optionCount: resolved.optionCount,
+      optionName: resolved.optionName,
+      colorMood: imageQuality.colorMood,
+      photoStyle: imageQuality.photoStyle,
+    });
+  } catch (err) {
+    return jsonError('concept-tone inference failed', 422, {
+      detail: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   const competitionScore =
     typeof body.competitionScore === 'number' && body.competitionScore >= 0 && body.competitionScore <= 2
       ? body.competitionScore
       : 1.0;
 
-  const grading = gradeProduct({
-    qualityScore: imageQuality.qualityScore,
-    competitionScore,
-    conceptTone: cti.conceptTone,
-    skeletonId: cti.skeletonId,
-    inferenceConfidence: cti.inferenceConfidence,
-    roi: {
-      margin: resolved.margin,
-      salesCount: resolved.salesCount,
-    },
-  });
+  let grading: ReturnType<typeof gradeProduct>;
+  try {
+    grading = gradeProduct({
+      qualityScore: imageQuality.qualityScore,
+      competitionScore,
+      conceptTone: cti.conceptTone,
+      skeletonId: cti.skeletonId,
+      inferenceConfidence: cti.inferenceConfidence,
+      roi: {
+        margin: resolved.margin,
+        salesCount: resolved.salesCount,
+      },
+    });
+  } catch (err) {
+    return jsonError('grading failed', 422, {
+      detail: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   const qualitySignalsPayload = buildQualitySignals(pFilter);
 

@@ -21,14 +21,33 @@ const BAND_RATIO = 0.15;
 const MIN_TEXT_LENGTH = 3;
 const MIN_CONFIDENCE = 55;
 
+// B-4: tesseract's `createWorker` downloads ~30MB of language data on first
+// cold start and can stall indefinitely on Vercel serverless if the CDN is
+// slow or blocked. Cap worker bootstrap so the whole diagnose pipeline can
+// fail open (no watermark signal) instead of hanging the request.
+const WORKER_INIT_TIMEOUT_MS = 8_000;
+
 let workerPromise: Promise<Worker> | null = null;
 
 async function getWorker(): Promise<Worker> {
   if (!workerPromise) {
     workerPromise = (async () => {
-      const w = await createWorker(['kor', 'eng']);
+      const w = await Promise.race<Worker>([
+        createWorker(['kor', 'eng']),
+        new Promise<Worker>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('worker-init-timeout')),
+            WORKER_INIT_TIMEOUT_MS,
+          ),
+        ),
+      ]);
       return w;
-    })();
+    })().catch((err) => {
+      // Reset the cached promise so a subsequent request can retry instead of
+      // permanently inheriting a rejected worker.
+      workerPromise = null;
+      throw err;
+    });
   }
   return workerPromise;
 }
@@ -101,7 +120,15 @@ export async function detectWatermark(
     .png()
     .toBuffer();
 
-  const worker = await getWorker();
+  // Fail open if worker bootstrap times out or errors — watermark detection
+  // is advisory, never blocking. Returning no regions keeps the pipeline
+  // moving toward CTI/grading.
+  let worker: Worker;
+  try {
+    worker = await getWorker();
+  } catch {
+    return { detected: false, regions: [] };
+  }
   const timeoutMs = options.timeoutMs ?? 2500;
 
   const runBand = async (band: 'top' | 'bottom', data: Buffer): Promise<WatermarkRegionResult | null> => {

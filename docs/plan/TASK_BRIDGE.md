@@ -71,35 +71,40 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-26 (Code turn) — DB P1000 복구 + Studio 클릭 버그(B-1) 수정 + B-2 빈 outputs guard 적용. 다음 = Desktop Chrome MCP 실클릭 재검증.
+**Last update**: 2026-05-27 (Code turn) — B-4 진단 API 504 근본 복구 (maxDuration=60 + fetch timeout + tesseract worker timeout + grading NaN guard + CTI/grading try/catch). 다음 = Desktop Chrome MCP로 명화송풍구 진단 재검증 → 등록 완주.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop Chrome MCP 실클릭 재검증 (B-1 수정 확인)
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop Chrome MCP 명화송풍구 진단 재검증 (B-4 수정 확인)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (6 컴포넌트 'use client' + B-2 빈 outputs guard build + ship) |
-| **TO** | 🖥 Desktop (Chrome MCP 실클릭 재검증 → 통과 시 HANDOFF CLOSED + 첫 실상품 보정/등록 진입) |
+| **FROM** | 💻 Code (B-4 가드 4종 build + ship) |
+| **TO** | 🖥 Desktop (Chrome MCP `/studio?product=cmpnooli40001f0gveaxr8iim` 진입 → 진단 버튼 → 504 없이 골격/등급/신뢰도/품질 정상 반환 확인) |
 | **BASELINE** | 본 커밋 (push 직후 hash 보고) |
-| **NEXT SCOPE** | Desktop이 production /studio?product=cmp3afb450001gng5468w0qpc 진입 → 진단/썸네일/상세 버튼 실 마우스 클릭으로 busy 표시 + 렌더까지 동작 확인. 통과 시: 달항아리 도어벨(category=uncategorized, 순마진 6.4%) 카테고리 매핑 + 판매가 재산정 (B-3) |
-| **PENDING** | (없음) DB 인증 복구됨, 빌드 0, tsc 0. 검증만 남음 |
+| **NEXT SCOPE** | (1) 명화송풍구 진단 재검증 → L1~L2 = 프리미엄 직진, L3 이하 = 이미지 보강. (2) 썸네일/상세/저장/카테고리·원산지 매핑/등록 완주. (3) ③ 하트클립 동일 흐름. (4) B-4 통과 후 Code 측에서 부수버그 B-5~B-8 별도 커밋 |
+| **PENDING** | Desktop 검증 통과 시 HANDOFF_diagnose_timeout.md 헤더 `[CLOSED 2026-05-27]` + §7 ARCHIVED |
 
-### 본 세션 (2026-05-26) 복구·수정 요약
+### 본 세션 (2026-05-27 Code) B-4 진단 504 근본 복구 요약
 
-| # | 항목 | 근본원인 | 복구/수정 |
+| # | 가드 | 변경 파일 | 근거 |
 |---|---|---|---|
-| DB | P1000 Authentication failed | Supabase 이전 비번 리셋이 실제 미저장 (Vercel ENV는 정상이었음) | DB 비번 동일값 재리셋 → /api/products 200, 상품 1개 노출 (Desktop turn) |
-| B-1 | /studio 모든 버튼 클릭 무반응 | Phase 3-C-1 리팩토링 시 `src/components/studio/` 6 카드 컴포넌트에 `'use client'` 누락 (page.tsx 만 보유) | 6 컴포넌트 첫 줄 `'use client';` 추가 (StudioCardShell / Diagnosis / Thumbnail / DetailPage / Actions / ProductListPane) |
-| B-2 | runThumbnail 빈 outputs 침묵 실패 (#46 위반 소지) | `setThumbnails(result)` 가 outputs 비어도 성공 처리 | `useStudioActions.ts` runThumbnail: outputs 비거나 전 variant base64 부재 시 `thumbError` 발화 ("이미지 품질이 낮아 자동 생성을 보류했습니다 — 디자이너 손길 필요") |
+| 1 | `export const maxDuration = 60` | `src/app/api/diagnose/route.ts` | 비-L4 풀 파이프라인 (P-Filter + watermark + CTI + grading + DB upsert)이 기본 10s Hobby 타임아웃 초과 가능. 다른 라우트 선례(`/api/crawler/bulk`, `/api/cron/inventory-sync`) 동일 |
+| 2 | resolveBuffer fetch에 AbortController 15s timeout | `src/lib/diagnosis/image-quality.ts`, `src/lib/diagnosis/p-filter.ts` | bare `fetch()`는 기본 timeout 없음 → 도매꾹 CDN stall 시 함수 전체 hang. AbortError 명시 메시지로 변환 |
+| 3 | tesseract `getWorker()` 8s init timeout + 실패 시 graceful fail | `src/lib/diagnosis/p-filter-watermark.ts` | createWorker 첫 호출 시 ~30MB 언어팩 다운로드, serverless cold start에서 stall 가능. 실패 시 캐시 promise reset + `{detected: false}` 반환으로 워터마크 무력화하되 파이프라인은 진행 |
+| 4 | grading.ts `gradeProduct`에 NaN/Infinity 가드 (safeClamp) + 잘못된 skeletonId fallback | `src/lib/diagnosis/grading.ts` | 기존엔 범위 외 입력에 throw → uncaught exception 가능. 이제 clamp + S2 fallback으로 부드럽게 처리 |
+| 5 | route.ts에서 CTI / gradeProduct 호출을 try/catch로 감싸 422 반환 | `src/app/api/diagnose/route.ts` | inferConceptTone (productName 빈 값) / gradeProduct가 throw해도 uncaught exception 없이 구조화된 에러 반환 |
+
+가설 #1 정정: 핸드오프의 "inferConceptTone 외부 AI 호출" 가설은 틀림. 해당 함수는 순수 동기 규칙 기반(외부 호출 없음). 실 범인은 (a) maxDuration 미설정, (b) bare fetch / tesseract worker의 무한 대기 가능성, (c) CTI/grading 호출이 try/catch 미보호.
 
 ### 다음 세션 첫 행동 (Desktop)
 
 1. STEP 0 점검 (HEAD = 본 commit, Vercel READY)
-2. Chrome MCP로 production `/studio?product=cmp3afb450001gng5468w0qpc` 진입
-3. 진단 버튼 → busy → 렌더, 썸네일 버튼 → busy → 4 variant 또는 thumbError 명시 확인
-4. 통과 시 `docs/handoff/HANDOFF_studio_click_bug.md` 헤더 → `[CLOSED 2026-05-26]` 표기 + §7 ARCHIVED 등재
-5. 첫 상품 보정 (B-3) 진입: `/products/new?edit=cmp3afb450001gng5468w0qpc` 에서 카테고리 매핑 + 판매가 재산정
+2. Chrome MCP로 production `/studio?product=cmpnooli40001f0gveaxr8iim` 진입
+3. "AI 진단 실행" 버튼 → 504 없이 결과 카드 표시 (등급/골격/신뢰도/품질) 확인
+4. 통과 시 `docs/handoff/HANDOFF_diagnose_timeout.md` 헤더 → `[CLOSED 2026-05-27]` + §7 ARCHIVED
+5. L등급 분기로 등록 흐름 진행 (썸네일/상세/저장/카테고리·원산지/등록)
+6. 통과 보고 후 Code 측이 부수버그 B-5~B-8 별도 커밋 진입
 
-> 상세 근거: `docs/handoff/HANDOFF_studio_click_bug.md`
+> 상세 근거: `docs/handoff/HANDOFF_diagnose_timeout.md`
 
 ---
 

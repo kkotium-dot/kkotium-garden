@@ -141,35 +141,43 @@ function decideConfidenceLevel(inferenceConfidence: number): ConfidenceLevel {
 // Public entry
 // ---------------------------------------------------------------------------
 
+// B-4: clamp pathological inputs instead of throwing. Upstream sources (Sharp
+// stats, Naver competition score) can legitimately produce NaN on edge images
+// or empty market segments; failing the whole diagnose request for that is
+// worse than degrading to a safe default.
+function safeClamp(value: number, min: number, max: number, fallback: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, value));
+}
+
 export function gradeProduct(input: GradingInput): GradingResult {
-  if (input.qualityScore < 0 || input.qualityScore > 100) {
-    throw new Error(`grading: qualityScore out of range (${input.qualityScore})`);
-  }
-  if (input.competitionScore < 0 || input.competitionScore > 2) {
-    throw new Error(`grading: competitionScore out of range (${input.competitionScore})`);
-  }
+  const qualityScore = safeClamp(input.qualityScore, 0, 100, 0);
+  const competitionScore = safeClamp(input.competitionScore, 0, 2, 1);
 
   const roi = computeRoiScore(input.roi);
-  const margin = input.roi.margin ?? 0;
-  const grade = decideGrade(input.qualityScore, input.competitionScore, roi.score, margin);
-  const confidenceLevel = decideConfidenceLevel(input.inferenceConfidence);
-  const recommendedSections = SKELETON_SECTIONS[input.skeletonId];
+  const margin = Number.isFinite(input.roi.margin ?? NaN) ? (input.roi.margin as number) : 0;
+  const roiScore = Number.isFinite(roi.score) ? roi.score : 0;
+  const grade = decideGrade(qualityScore, competitionScore, roiScore, margin);
+  const confidenceLevel = decideConfidenceLevel(
+    Number.isFinite(input.inferenceConfidence) ? input.inferenceConfidence : 0,
+  );
+  const recommendedSections = SKELETON_SECTIONS[input.skeletonId] ?? SKELETON_SECTIONS.S2;
 
   const rationale =
-    `${grade} (quality ${input.qualityScore.toFixed(1)} / competition ` +
-    `${input.competitionScore.toFixed(2)} / roi ${roi.score.toFixed(2)} / margin ${margin}) ` +
+    `${grade} (quality ${qualityScore.toFixed(1)} / competition ` +
+    `${competitionScore.toFixed(2)} / roi ${roiScore.toFixed(2)} / margin ${margin}) ` +
     `-> skeleton ${input.skeletonId} (${input.conceptTone.persona}+${input.conceptTone.context}` +
     `+${input.conceptTone.pricePosition})`;
 
   return {
     grade,
     confidenceLevel,
-    roiScore: Math.round(roi.score * 1000) / 1000,
+    roiScore: Math.round(roiScore * 1000) / 1000,
     roiBreakdown: {
-      margin: input.roi.margin ?? null,
-      salesCount: input.roi.salesCount ?? null,
-      velocityProxy: Math.round(roi.velocityProxy * 1000) / 1000,
-      adCostEstimate: Math.round(roi.adCostEstimate * 1000) / 1000,
+      margin: Number.isFinite(input.roi.margin ?? NaN) ? (input.roi.margin as number) : null,
+      salesCount: Number.isFinite(input.roi.salesCount ?? NaN) ? (input.roi.salesCount as number) : null,
+      velocityProxy: Math.round((Number.isFinite(roi.velocityProxy) ? roi.velocityProxy : 0) * 1000) / 1000,
+      adCostEstimate: Math.round((Number.isFinite(roi.adCostEstimate) ? roi.adCostEstimate : 0) * 1000) / 1000,
       source: roi.source,
     },
     recommendedSections,

@@ -77,17 +77,33 @@ const CENTER_GRID_RATIO = 6 / 8; // central 6/8 of width/height = subject zone
  * Note: caller is responsible for trusting the URL; this module performs
  * no allowlist check. The diagnose API should validate origin first.
  */
+// B-4: bare fetch() has no default timeout and could hang the entire diagnose
+// pipeline if the supplier CDN stalls. 15s abort covers slow-but-recoverable
+// transfers while staying well under the route's 60s maxDuration.
+const FETCH_TIMEOUT_MS = 15_000;
+
 async function resolveBuffer(input: Buffer | string): Promise<Buffer> {
   if (Buffer.isBuffer(input)) return input;
   if (typeof input !== 'string') {
     throw new Error('image-quality: input must be Buffer or URL string');
   }
-  const res = await fetch(input);
-  if (!res.ok) {
-    throw new Error(`image-quality: fetch ${input} failed with ${res.status}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(input, { signal: controller.signal });
+    if (!res.ok) {
+      throw new Error(`image-quality: fetch ${input} failed with ${res.status}`);
+    }
+    const arr = await res.arrayBuffer();
+    return Buffer.from(arr);
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`image-quality: fetch ${input} timed out after ${FETCH_TIMEOUT_MS}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  const arr = await res.arrayBuffer();
-  return Buffer.from(arr);
 }
 
 function clamp(value: number, min = 0, max = 100): number {

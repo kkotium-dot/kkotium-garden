@@ -15,7 +15,48 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-19 PM Sprint 8-IA Phase 1 진입 (자동화 관제 강등 + Section 5) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-27 B-4 진단 504 수정 → Desktop 재검증 → 명화송풍구 등록 완주 ⭐ ACTIVE
+
+본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. 이중 트랙 핑퐁 (작업원칙 #41) 정합.
+
+```
+꽃틔움 가든 — B-4 push 직후 Desktop 재검증 turn.
+
+[STEP 0 — 사전 정독 의무]
+docs/plan/PROGRESS.md (헤더 + 2026-05-27 entry) →
+docs/plan/ROADMAP.md (본 ACTIVE 메시지) →
+docs/plan/SESSION_LOG.md (2026-05-27 entry) →
+docs/plan/TASK_BRIDGE.md (§3 ACTIVE / §4 STANDING / §6 PENDING) →
+docs/handoff/HANDOFF_diagnose_timeout.md (B-4 인계장 — Code 수정 완료 상태)
+
+[STEP 0 — 환경 점검]
+git rev-parse HEAD origin/main && git status --short && \
+  curl -sIo /dev/null -w "Vercel HTTP: %{http_code}\n" \
+    https://kkotium-garden.vercel.app/dashboard && \
+  scripts/verify-vercel-deploy.sh --wait
+
+[Desktop 검증 시나리오]
+1. Chrome MCP로 production /studio?product=cmpnooli40001f0gveaxr8iim 진입
+2. "AI 진단 실행" 버튼 → 504 없이 결과 카드 표시 (등급 / 골격 / 신뢰도 / 품질)
+3. L1~L2 = 프리미엄 직진, L3 이하 = 이미지 보강 분기 진행
+4. 썸네일 → 상세 → 저장 → 네이버 카테고리(50003356) + 원산지(200037) 매핑 → 등록
+5. ③ 하트클립 동일 흐름 등록
+
+[통과 시]
+- docs/handoff/HANDOFF_diagnose_timeout.md 헤더 → [CLOSED 2026-05-27] + TASK_BRIDGE §7 ARCHIVED
+- Code 측 진입 = 부수버그 B-5~B-8 별도 커밋 (PUT stock 500 / categories count:0 / 기본값 오류 / 760 원본)
+
+[실패 시]
+- Vercel 런타임 로그 정확한 스택 trace 확보 → 핸드오프 §4 가설 재조정 → Code 재진입
+
+작업원칙 절대 준수 — main 직접 push, 검증은 production endpoint 기준.
+```
+
+
+---
+## ~~다음 새 채팅 시작 메시지 — 2026-05-19 PM Sprint 8-IA Phase 1 진입 (자동화 관제 강등 + Section 5)~~ ✅ SUPERSEDED → 2026-05-27 B-4 진단 504 흐름으로 전환 (명화송풍구 등록 blocker 우선)
+
+## 다음 새 채팅 시작 메시지 — 2026-05-19 PM Sprint 8-IA Phase 1 진입 (자동화 관제 강등 + Section 5) (보관용)
 
 본 메시지를 새 채팅 1의 첫 입력으로 사용하세요. **이중 트랙 핑퐁 운영** (작업원칙 #41) 정합.
 

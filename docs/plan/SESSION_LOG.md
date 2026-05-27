@@ -1,3 +1,36 @@
+## 2026-05-27 B-4 진단 API 504 근본 복구 (Code turn, 5 파일 + docs 4건)
+
+### 본 turn 성격
+
+2026-05-27 Desktop turn에서 첫 실상품(명화송풍구 cmpnooli40001f0gveaxr8iim) 등록 시도 중 발견된 최우선 blocker B-4를 Code 측에서 근본 수정. Desktop 핸드오프(`docs/handoff/HANDOFF_diagnose_timeout.md`)의 가설 #1(외부 AI 호출 timeout 부재)을 코드 정독으로 정정 — `inferConceptTone`은 외부 호출 없는 순수 규칙 기반 함수임을 확인. 실 범인은 (a) `/api/diagnose` route의 `maxDuration` 미설정, (b) `resolveBuffer`의 bare `fetch()` (timeout 없음), (c) tesseract `getWorker()` 무한 대기 가능성, (d) CTI/grading 호출이 try/catch 미보호.
+
+### 가드 4종 적용
+
+| # | 변경 | 파일 |
+|---|---|---|
+| 1 | `export const maxDuration = 60` 추가 | `src/app/api/diagnose/route.ts` |
+| 2 | resolveBuffer에 AbortController 15s timeout (양쪽) | `src/lib/diagnosis/image-quality.ts`, `src/lib/diagnosis/p-filter.ts` |
+| 3 | `getWorker()` 8s init timeout + 실패 시 promise reset + `detectWatermark` graceful fail | `src/lib/diagnosis/p-filter-watermark.ts` |
+| 4 | `gradeProduct`에 safeClamp + NaN/Infinity 가드 + skeletonId S2 fallback + `confidenceLevel` 안전 처리 | `src/lib/diagnosis/grading.ts` |
+| 5 | route.ts에서 `inferConceptTone` / `gradeProduct` 호출을 try/catch로 감싸 422 반환 | `src/app/api/diagnose/route.ts` |
+
+### 환경 이슈 (본 세션)
+
+- 로컬 node 25.4.0이 homebrew simdjson ABI mismatch (`libsimdjson.29` 미발견, 실제는 `.33`만 존재)로 tsc/build/dev 모두 실행 불가 → 사용자가 직접 `brew reinstall node` 실행 → 복구 후 검증 진행
+
+### 부수버그 (B-4 푸시 후 별도 커밋 대기)
+
+- B-5: PUT /api/products stock 필드 → Prisma 500
+- B-6: /api/naver/categories count:0 (4,993 데이터 연결 끊김)
+- B-7: 상품 생성 POST 기본값 오류 (originCode `'0200037'` 앞 0 오타, naverCategoryCode `'50003307'` 임의값)
+- B-8: 소싱 시 330px만 저장 (760 original 미사용)
+
+### 다음 작업
+
+Desktop이 Chrome MCP로 `/studio?product=cmpnooli40001f0gveaxr8iim` 진단 재검증 → 504 없이 결과 카드 정상 표시 확인 → 등록 흐름 완주(명화송풍구 + ③ 하트클립) → Code 측이 B-5~B-8 별도 커밋.
+
+---
+
 ## 2026-05-26 DB P1000 복구 + Studio 클릭 버그(B-1) 수정 (Code turn, 6 컴포넌트 + 1 hook + docs 4건)
 
 ### 본 세션 성격

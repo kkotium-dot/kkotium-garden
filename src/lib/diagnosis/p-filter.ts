@@ -82,17 +82,33 @@ function autoFix(key: string): string {
 // Buffer helper (mirrors image-quality.ts, kept private to avoid coupling)
 // ---------------------------------------------------------------------------
 
+// B-4: same fetch timeout policy as image-quality.ts. Keep local rather than
+// shared to avoid a cyclical import; 15s abort is well under the 60s route
+// budget and bounds CDN hangs.
+const FETCH_TIMEOUT_MS = 15_000;
+
 async function resolveBuffer(input: Buffer | string): Promise<Buffer> {
   if (Buffer.isBuffer(input)) return input;
   if (typeof input !== 'string') {
     throw new Error('p-filter: input must be Buffer or URL string');
   }
-  const res = await fetch(input);
-  if (!res.ok) {
-    throw new Error(`p-filter: fetch ${input} failed with ${res.status}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(input, { signal: controller.signal });
+    if (!res.ok) {
+      throw new Error(`p-filter: fetch ${input} failed with ${res.status}`);
+    }
+    const arr = await res.arrayBuffer();
+    return Buffer.from(arr);
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`p-filter: fetch ${input} timed out after ${FETCH_TIMEOUT_MS}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  const arr = await res.arrayBuffer();
-  return Buffer.from(arr);
 }
 
 // ---------------------------------------------------------------------------
