@@ -1,11 +1,24 @@
 // src/app/api/naver/categories/route.ts
 // P0-1: Naver category search API (4,993 categories)
+//
+// B-6: read from local NAVER_CATEGORIES_FULL (canonical 4,993 entries per
+// CLAUDE.md §3-3). The previous DB-backed path returned count:0 because the
+// `NaverCategory` table was never seeded — yet local data has been the source
+// of truth all along (the auto-generated module from category XLS).
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-
+import {
+  NAVER_CATEGORIES_FULL,
+  type NaverCategoryEntry,
+} from '@/lib/naver/naver-categories-full';
 
 export const dynamic = 'force-dynamic';
+
+function compareByPath(a: NaverCategoryEntry, b: NaverCategoryEntry): number {
+  return a.fullPath.localeCompare(b.fullPath, 'ko');
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -14,45 +27,23 @@ export async function GET(request: NextRequest) {
     const depth2 = searchParams.get('depth2');
     const depth3 = searchParams.get('depth3');
 
-    let categories;
+    let categories: NaverCategoryEntry[];
 
     if (query) {
-      // Search by full path
-      categories = await prisma.naverCategory.findMany({
-        where: {
-          fullPath: {
-            contains: query,
-            mode: 'insensitive'
-          }
-        },
-        take: 50,
-        orderBy: {
-          fullPath: 'asc'
-        }
-      });
+      const needle = query.toLowerCase();
+      categories = NAVER_CATEGORIES_FULL
+        .filter((c) => c.fullPath.toLowerCase().includes(needle))
+        .sort(compareByPath)
+        .slice(0, 50);
     } else if (depth1 || depth2 || depth3) {
-      // Filter by depth levels
-      const where: any = {};
-      if (depth1) where.depth1 = depth1;
-      if (depth2) where.depth2 = depth2;
-      if (depth3) where.depth3 = depth3;
-
-      categories = await prisma.naverCategory.findMany({
-        where,
-        orderBy: [
-          { depth1: 'asc' },
-          { depth2: 'asc' },
-          { depth3: 'asc' },
-          { depth4: 'asc' }
-        ]
-      });
+      categories = NAVER_CATEGORIES_FULL.filter((c) => {
+        if (depth1 && c.d1 !== depth1) return false;
+        if (depth2 && c.d2 !== depth2) return false;
+        if (depth3 && c.d3 !== depth3) return false;
+        return true;
+      }).sort(compareByPath);
     } else {
-      // Return all categories (for initial load)
-      categories = await prisma.naverCategory.findMany({
-        orderBy: {
-          fullPath: 'asc'
-        }
-      });
+      categories = [...NAVER_CATEGORIES_FULL].sort(compareByPath);
     }
 
     return NextResponse.json({
