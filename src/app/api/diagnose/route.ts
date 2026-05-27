@@ -334,7 +334,10 @@ export async function POST(req: Request) {
     grade: grading.grade,
     confidenceLevel: grading.confidenceLevel,
     recommendedSections: grading.recommendedSections,
-    rationale: grading.rationale,
+    // B-9: response contract is always string[] (L4 early path already returns
+    // an array). Wrapping a single-string rationale here keeps consumers from
+    // accidentally iterating it as chars via [...rationale] / Array.from.
+    rationale: [grading.rationale],
     signals: cti.signals,
     rawStats: imageQuality.rawStats,
     pFilterGrade: pFilter.grade,
