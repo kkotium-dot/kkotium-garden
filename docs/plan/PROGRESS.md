@@ -1,5 +1,6 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-27 **B-12 네이버 등록 라우트 근본 재작성 + B-11 저장배관 DB UPDATE 완료** (Code turn, 2 파일 +186/-50). categoryMap(의류 7종) 폐기 -> `product.naverCategoryCode` 직접 사용. X-Naver-Client-Id 헤더 인증 -> `naverRequest` OAuth2(bcrypt 전자서명) 위임. API 실패 시 status='registered' + PENDING_/ERROR_/MOCK_ 거짓 라벨 3건 모두 제거(#46). detailContent에 `product.detail_image_url` `<img>` 삽입. save-assets 200 후 Product `main_image_url`/`detail_image_url` prisma UPDATE 추가. TSC 0 + build OK. **현재 상태**: 명화송풍구 등록 라우트 재검증 + 실 발행은 대표 승인 후 별도 turn.
+> 최종 업데이트: 2026-05-27 PM **B-13 PLANT 비주얼탭 액션블록 스코프 정합** (Code turn, 1 파일 +3/-3). `autoRunVisual` 체크박스 + 네이버 직접 등록 버튼 + 엑셀 다운로드 버튼 블록이 `activeTab==='visual'` 조건문 *밖*에 있어 7개 탭 전부에서 노출되던 회귀 해소. visual 탭 종료 `</>)}` 위치를 하단 버튼 `</div>` 뒤로 이동 -> 등록 액션이 마지막 단계(비주얼 자동화 탭)에서만 노출되도록 의도된 동선 회복. 작업원칙 #44 stale fact 직접 해소 사례(PROGRESS.md 2026-05-15 Phase 3-C-3 entry의 "체크박스 위치: 페이지 하단(공통) -> 네이버 직접 등록 버튼 바로 위에만"이 코드 실제와 불일치였음).
+> 2026-05-27 PM **B-12 네이버 등록 라우트 근본 재작성 + B-11 저장배관 DB UPDATE** (Code turn, 2 파일 +186/-50, commit f244a48). categoryMap 폐기 + naverRequest OAuth2 위임 + 거짓 라벨 0 + detail_image_url 본문 포함 + save-assets DB UPDATE 추가.
 > 2026-05-27 명화송풍구 **B-11 저장배관 우회 완주** (상세 PNG 186KB Storage 업로드 + Product main/detail_image_url DB 기록, DB 3중 검증 통과 — Desktop turn, 코드변경 0). **B-12 (치명) 발견 -> 본 commit으로 근본 해소**.
 > 2026-05-27 명화송풍구 이미지 보강(330px->화보 4종컷 1000px) + margin 교정(B-7 50.69->2.03) -> 진단 L4->L2 도달 (Desktop turn, 코드 변경 0 / Supabase 직접 UPDATE 2건).
 > 2026-05-27 B-4 진단 API 504 근본 복구 (Code turn, 5 파일 + docs 4건). Desktop 검증 완료 — production 진단 200/정상.
@@ -19,6 +20,64 @@
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
 > **다음 작업**: Desktop Chrome MCP로 B-1 수정 실클릭 재검증 → 통과 시 B-3 (달항아리 도어벨 데이터 보정) → Sprint 7-M2 Phase 3-C-2 (PLANT /products/new 6→7 tab 확장 + savedProductId 컨텍스트 전달). 본 turn (Code): 6 컴포넌트 `'use client'` 추가 + useStudioActions.runThumbnail 빈 outputs guard. tsc 0 + build 0. 상세 근거: `docs/handoff/HANDOFF_studio_click_bug.md`.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-27 PM B-13 PLANT 비주얼탭 액션블록 스코프 정합 (Code turn, 1 파일 +3/-3)
+
+### 본 turn 성격
+
+Desktop이 Chrome MCP + Filesystem read로 실측한 정정 진단(`docs/handoff/HANDOFF_atelier_routing_plant_checkbox_2026-05-27.md`) 수신 후 단일 결함 해소. 5-19 진단의 작업1(`/atelier` 404)·작업2(7번째 탭)는 *실 코드에 이미 반영 완료*로 폐기 단정 — 남은 결함은 단 1건(체크박스+하단 버튼 블록이 visual 탭 조건문 *밖*에 위치 -> 7탭 전부 노출).
+
+### 코드 변경 (1 파일 +3/-3)
+
+`src/app/products/new/page.tsx` — 2 edit:
+
+| Edit | 위치 | 변경 |
+|---|---|---|
+| 1 | line 3401 | visual 탭 종료 `</>)}` *제거* + 하단 버튼 시작 주석을 영어로 (`{/* Action block — registration step (visual tab only) */}`) 격상. 들여쓰기 0 -> 12-space 정합 |
+| 2 | line 3447 (하단 버튼 `</div>` 직후) | visual 탭 종료 `</>)}` *삽입*. tab content end (`</div>{/* tab content end */}`) + 좌측 끝 div 정합 유지 |
+
+결과: 액션블록(autoRunVisual 체크박스 + 네이버 직접 등록 버튼 + 엑셀 다운로드 버튼) 전체가 `activeTab === 'visual'` 조건 안으로 흡수. 등록 액션은 *마지막 단계(비주얼 자동화 탭)에서만* 노출.
+
+### Desktop 실측 진단 정정 (작업원칙 #44 stale fact 직접 사례)
+
+| 원래 5-19 지시 | 실측 결과 | 본 turn 판정 |
+|---|---|---|
+| 작업1 `/atelier` 404 -> Sidebar link 교체 | Sidebar.tsx line 159 이미 `'/studio'` 연결. `/atelier` 링크는 코드에 *존재하지 않음*. production 404는 URL 직접입력 시에만 발생, 메뉴 클릭은 정상 | **폐기 — 수정 불필요** |
+| 작업2-a 7번째 "비주얼 자동화" 탭 정합 | activeTab 타입에 'visual' 포함(line 454), 7번째 패널 존재(line 3386), savedProductId 가드 작동 | **이미 완료** |
+| 작업2-b 체크박스 visual 탭만 노출 | 블록이 조건문 *밖*(line 3403~3447), 7탭 전부 노출 (production 실측 확인) | **본 commit으로 해소** |
+
+PROGRESS.md 2026-05-15 Phase 3-C-3 entry의 "체크박스 위치: 페이지 하단(공통) -> 네이버 직접 등록 버튼 바로 위에만" 기록이 코드 실제와 불일치였던 상태(작업원칙 #44 stale fact). 본 commit으로 코드를 문서 의도에 맞게 정렬.
+
+### 작업2 (선택, 대표 결정 보류)
+
+`/atelier -> /studio` 방어적 redirect 추가는 대표 결정 사항이라 본 turn 범위 외. 메뉴 동선 정상이므로 필수 아님 (북마크/외부 링크 대비 시 next.config.js redirects() 권장).
+
+### 검증
+
+| 항목 | 결과 |
+|---|---|
+| `npx tsc --noEmit` | 0 errors ✅ |
+| `npm run build` | exit 0, `/products/new` 64.2 kB (변경 0, JSX 블록 이동) ✅ |
+| 한글 typo sentinel grep | 0 hits ✅ |
+| SD-01 아랍어 footer 정합 | 조사/수정 0건 (영구 보존) ✅ |
+
+### Desktop 재검증 신호 (push 후)
+
+1. production `/products/new` 진입 -> [기본]/[옵션]/[이미지]/[배송]/[SEO]/[혜택] 6탭에서 **체크박스 미노출** 확인
+2. [비주얼 자동화] 탭(임시저장 후 unlock)에서만 **체크박스 + 2개 버튼 노출** 확인
+3. (선택) /atelier 직접입력 -> 사용자 결정에 따라 redirect 추가 시 301 확인
+
+### 적용 작업원칙
+
+#17 (commit-msg.tmp via git commit -F) · #21 (사전 점검) · #24 (한 turn 분할 완료) · #29 (한글 처리, JSX 블록 이동이라 신규 한글 0) · #32 (TSC + build 양쪽) · #36 (push 후 verify-vercel-deploy.sh --wait) · #41 (TASK_BRIDGE §3 ACTIVE 갱신) · **#44 (stale fact 직접 해소 사례)** · #46 (거짓 진행 보고 금지)
+
+### 다음 = Desktop 재검증 turn
+
+본 commit production 반영 후 Desktop이 Chrome MCP로 6탭 체크박스 미노출 + visual 탭만 노출 재검증. 통과 시 핸드오프 §7 ARCHIVED 이전.
+
+Commit: 본 commit hash로 갱신 예정
 
 ---
 

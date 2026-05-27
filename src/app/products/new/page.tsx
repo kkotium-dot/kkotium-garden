@@ -3398,9 +3398,8 @@ const handleGenerate = async () => {
                 <PlantVisualInner productId={savedProductId} naverProductId={savedNaverProductId} autorun={autoRunVisual} />
               )}
             </div>
-            </>)}
 
-{/* 하단 버튼 */}
+            {/* Action block — registration step (visual tab only) */}
             <div className="pt-4 border-t border-gray-200 space-y-3">
               {/* Sprint 7-M2 Phase 3-C-3 — autorun toggle */}
               <label
@@ -3445,6 +3444,7 @@ const handleGenerate = async () => {
                 네이버 엑셀 다운로드
               </button>
             </div>
+            </>)}
 
             </div>{/* tab content end */}
           </div>{/* 좌측 끝 */}

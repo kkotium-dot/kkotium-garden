@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-27 PM B-12 네이버 등록 라우트 근본 재작성 + B-11 저장배관 DB UPDATE (Code turn, 2 파일) — 명화송풍구 등록 라우트 정합. 실 발행은 대표 승인 후 별도 turn.
-> **HEAD**: 본 commit (origin/main, B-12 + B-11 fix 적용) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-27 PM B-13 PLANT 비주얼탭 액션블록 스코프 정합 (Code turn, 1 파일 +3/-3) — `autoRunVisual` 체크박스 + 네이버 직접 등록/엑셀 다운로드 버튼이 7탭 전부 노출되던 회귀 해소. 직전 B-12 + B-11 fix는 commit f244a48에 적용 완료.
+> **HEAD**: 본 commit (origin/main, B-13 fix 적용) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **신규 ledger**: `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off, §3 ACTIVE / §4 STANDING / §6 PENDING 매 세션 정독 의무
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)

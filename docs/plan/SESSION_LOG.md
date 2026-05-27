@@ -1,3 +1,42 @@
+## 2026-05-27 PM B-13 PLANT 비주얼탭 액션블록 스코프 정합 (Code turn, 1 파일)
+
+### 본 turn 성격
+
+직전 commit f244a48(B-12 register + B-11 save-assets) 직후 Desktop이 Chrome+Filesystem 실측으로 5-19 진단 정정 결과 hand-off (`docs/handoff/HANDOFF_atelier_routing_plant_checkbox_2026-05-27.md`). 단일 결함 1-commit 처리. 작업1(/atelier 404)·작업2(7번째 탭)는 코드 이미 반영 완료로 폐기 단정.
+
+### 코드 변경 (1 파일 +3/-3)
+
+`src/app/products/new/page.tsx` 2 edit. visual 탭 종료 `</>)}` 위치를 line 3401 -> 하단 버튼 `</div>` 직후(line 3447 다음)로 이동. autoRunVisual 체크박스 + 네이버 직접 등록 버튼 + 엑셀 다운로드 버튼 블록 전체가 `activeTab === 'visual'` 조건 안으로 흡수. 들여쓰기 정합 + 하단 버튼 시작 주석은 영어로 격상(`{/* Action block — registration step (visual tab only) */}`).
+
+### Desktop 실측 진단 정정 핵심
+
+- 작업1(/atelier 404): Sidebar.tsx line 159 이미 '/studio' 연결. /atelier 링크는 코드에 *존재하지 않음*. production 404는 URL 직접입력 시에만 발생. → **수정 불필요(폐기)**
+- 작업2-a(7번째 탭): activeTab 'visual' + savedProductId 잠금 이미 완료
+- **작업2-b(체크박스 visual 탭 노출 정합)**: 본 commit으로 해소
+
+### 작업원칙 #44 stale fact 직접 사례
+
+PROGRESS.md 2026-05-15 Phase 3-C-3 entry가 "체크박스 위치: 페이지 하단(공통) -> 네이버 직접 등록 버튼 바로 위에만"으로 기록돼 있었으나 *실제 코드는 전 탭 공통 하단*. 본 commit으로 코드를 문서 의도에 맞게 정렬 -> stale fact 해소.
+
+### 검증
+
+- `npx tsc --noEmit` 0 errors
+- `npm run build` exit 0, `/products/new` 64.2 kB (변경 0)
+- 한글 typo sentinel grep 0 hits
+- SD-01 아랍어 footer 조사/수정 0건 (영구 보존)
+
+### 적용 작업원칙
+
+#17 · #21 · #24 · #29 · #32 · #36 · #41 · **#44 (직접 해소 사례)** · #46
+
+### 다음 = Desktop 재검증 turn
+
+production `/products/new` 6탭 체크박스 미노출 + visual 탭만 노출 재검증 후 핸드오프 §7 ARCHIVED.
+
+Commit: 본 commit hash로 갱신 예정
+
+---
+
 ## 2026-05-27 PM B-12 네이버 등록 라우트 근본 재작성 + B-11 저장배관 DB UPDATE (Code turn)
 
 ### 본 turn 성격

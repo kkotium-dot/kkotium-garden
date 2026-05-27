@@ -71,17 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-27 PM (Code turn) — B-12 네이버 등록 라우트 근본 재작성 + B-11 저장배관 DB UPDATE 완료 (2 파일, TSC 0 + build OK + Vercel READY). 다음 = 대표 승인 후 Desktop이 명화송풍구 등록 완주.
+**Last update**: 2026-05-27 PM (Code turn, +Δ) — B-13 PLANT 비주얼탭 액션블록 스코프 정합 완료 (1 파일 +3/-3, TSC 0 + build OK). 직전 B-12 + B-11(commit f244a48) 위에 누적. 다음 = Desktop 재검증(6탭 미노출 + visual 탭 노출) 후 대표 승인하에 명화송풍구 등록 완주.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop 명화송풍구 등록 완주 (B-12 fix 완료 후, 대표 승인 대기)
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop B-13 재검증 + 명화송풍구 등록 완주 (B-12 + B-13 fix 완료, 대표 승인 대기)
 
 | 항목 | 값 |
 |---|---|
 | **FROM** | 💻 Code (B-12 register 라우트 근본 재작성 + B-11 저장배관 DB UPDATE, 2 파일) |
 | **TO** | 🖥 Desktop 새 채팅 (대표 승인 후 실 네이버 발행 + 3중 검증) |
 | **BASELINE** | 본 commit (origin/main). TSC 0 + build OK + Vercel READY. categoryMap 폐기 / `naverCategoryCode` 직접 사용 / `naverRequest` OAuth2 위임 / detailContent에 `<img>` 포함 / 거짓 라벨 0 / save-assets 200 후 Product URL 컬럼 자동 기록 |
-| **NEXT SCOPE** | (1) Desktop이 /products?id=cmpnooli40001f0gveaxr8iim 진입. (2) "네이버 직접 등록" 클릭 -> 새 라우트 호출. (3) 응답 `success: true` + 실 naverProductId 검증 (PENDING_/ERROR_/MOCK_ 패턴 0). (4) 스마트스토어 실 노출 + DB row cross-check. (5) 하트클립(65322570) 동일 흐름 |
-| **PENDING** | 등록 완주 시 HANDOFF_premium_image_boost.md + HANDOFF_naver_register_fix.md 양쪽 `[CLOSED]` + §7 ARCHIVED |
+| **NEXT SCOPE** | (1) Desktop이 production `/products/new` 6탭에서 체크박스 미노출 + visual 탭만 노출 Chrome MCP 재검증 (B-13). (2) /products?id=cmpnooli40001f0gveaxr8iim 진입 + "네이버 직접 등록" 클릭 -> B-12 라우트 호출. (3) 응답 `success: true` + 실 naverProductId 검증 (PENDING_/ERROR_/MOCK_ 패턴 0). (4) 스마트스토어 실 노출 + DB row cross-check. (5) 하트클립(65322570) 동일 흐름 |
+| **PENDING** | 등록 완주 시 HANDOFF_premium_image_boost.md + HANDOFF_naver_register_fix.md + HANDOFF_atelier_routing_plant_checkbox_2026-05-27.md 셋 모두 `[CLOSED]` + §7 ARCHIVED. (본 commit으로 atelier_routing handoff는 이미 [CLOSED] 처리됨 — Desktop 재검증만 대기) |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
 
@@ -235,6 +235,16 @@
   - 17/26 가짜 라벨 발견 + 빌더↔renderer 충돌 + lifestyle 연결 부재 진단
   - 사용자 Q1·Q2·Q3 권장안 모두 승인 → 새 채팅 2개 분할 결정
   - md 6건 paste-ready 분할 작성 (Turn 1 + Turn 2)
+
+### 2026-05-27 PM (B-13)
+
+- 🟡 IN-VERIFY: B-13 PLANT 비주얼탭 액션블록 스코프 정합 (Code turn, 본 commit) ← Desktop 6탭 미노출 + visual 탭 노출 재검증 대기
+  - page.tsx 2 edit: visual 탭 종료 `</>)}` 위치를 line 3401 -> 하단 버튼 `</div>` 직후로 이동
+  - 결과: autoRunVisual 체크박스 + 네이버 직접 등록 + 엑셀 다운로드 버튼 블록 전체가 `activeTab === 'visual'` 조건 안
+  - 작업1(/atelier 404)·작업2-a(7번째 탭): 코드 이미 반영 완료로 폐기 단정 (Desktop 실측 정정판 hand-off)
+  - 작업원칙 #44 stale fact 직접 해소 사례 (PROGRESS.md 2026-05-15 Phase 3-C-3 entry의 "체크박스 위치"가 코드 실제와 불일치였음)
+  - TSC 0 + npm run build OK (/products/new 64.2 kB 변경 0) + sentinel 0
+  - 핸드오프 `HANDOFF_atelier_routing_plant_checkbox_2026-05-27.md` 본 commit으로 [CLOSED]
 
 ### 2026-05-27 PM
 
