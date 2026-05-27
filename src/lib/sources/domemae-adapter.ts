@@ -166,6 +166,60 @@ async function getApiKey(): Promise<string | null> {
 }
 
 // ----------------------------------------------------------------------------
+// B-8: gallery image extraction from desc.contents
+// ----------------------------------------------------------------------------
+
+const IMG_SRC_RE = /<img[^>]+src\s*=\s*["']([^"']+)["']/gi;
+const ABSOLUTE_HTTP_RE = /^https?:\/\//i;
+// Reject thumbnail-sized variants (Naver _stt_330, _stt_500, etc.) and tiny GIFs.
+const THUMB_TAG_RE = /_stt_\d{1,3}\b|_thumb\b|\.gif(\?|$)/i;
+
+function extractGalleryImages(html: string): string[] {
+  if (!html) return [];
+  const urls: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = IMG_SRC_RE.exec(html)) !== null) {
+    const src = match[1]?.trim();
+    if (!src || !ABSOLUTE_HTTP_RE.test(src)) continue;
+    if (THUMB_TAG_RE.test(src)) continue;
+    urls.push(src);
+  }
+  return urls;
+}
+
+function dedupeImages(urls: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const u of urls) {
+    if (!u) continue;
+    if (seen.has(u)) continue;
+    seen.add(u);
+    out.push(u);
+  }
+  return out;
+}
+
+function stripHtmlToText(html: string): string {
+  if (!html) return '';
+  const text = html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return text.length > 2000 ? text.slice(0, 2000) : text;
+}
+
+// ----------------------------------------------------------------------------
 // Adapter implementation
 // ----------------------------------------------------------------------------
 
@@ -254,6 +308,7 @@ export class DomemaeAdapter implements SourceAdapter {
       detail?: { country?: string; manufacturer?: string };
       category?: { current?: { name?: string; code?: string } };
       channel?: { supply?: boolean };
+      desc?: { contents?: string };
     };
 
     const name = item.basis?.title?.replace(/\s+/g, ' ').trim() ?? '';
@@ -269,9 +324,13 @@ export class DomemaeAdapter implements SourceAdapter {
     const sellerId = String(item.seller?.id ?? '');
     const sellerRank = item.seller?.rank ?? 0;
     const options = parseOptions(item.selectOpt);
+    // B-8: prefer thumb.original (highest source resolution, typically ≥760px).
+    // largePng/large are auto-derived smaller crops (often _stt_330 variants).
     const thumbUrl =
-      item.thumb?.largePng ?? item.thumb?.large ?? item.thumb?.original ?? '';
-    const images = thumbUrl ? [thumbUrl] : [];
+      item.thumb?.original ?? item.thumb?.largePng ?? item.thumb?.large ?? '';
+    const descContents = item.desc?.contents ?? '';
+    const galleryImages = extractGalleryImages(descContents);
+    const images = dedupeImages([thumbUrl, ...galleryImages]);
     const country = item.detail?.country ?? '';
     const categoryName = item.category?.current?.name ?? '';
     const categoryCode = item.category?.current?.code ?? '';
@@ -285,7 +344,7 @@ export class DomemaeAdapter implements SourceAdapter {
       supplierPrice,
       images,
       options,
-      description: '', // not provided by getItemView ver 4.5
+      description: stripHtmlToText(descContents),
       sourceUrl: `https://domeme.domeggook.com/s/${productNo}`,
       inventory,
       shipFee,
