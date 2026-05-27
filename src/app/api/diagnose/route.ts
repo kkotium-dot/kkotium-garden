@@ -313,6 +313,10 @@ export async function POST(req: Request) {
         margin: resolved.margin,
         salesCount: resolved.salesCount,
       },
+      // B-10: feed the P-Filter pre-verdict so borderline qualityScore values
+      // that already cleared the pre-filter (L1/L2) land in an explicit L2
+      // branch rather than the default-safety-net fallback.
+      pFilterGrade: pFilter.grade,
     });
   } catch (err) {
     return jsonError('grading failed', 422, {

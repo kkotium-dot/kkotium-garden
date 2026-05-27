@@ -42,6 +42,13 @@ export interface GradingInput {
   skeletonId: SkeletonId;
   inferenceConfidence: number;
   roi: RoiInputs;
+  /**
+   * B-10: P-Filter pre-verdict on raw image health. When the pre-filter has
+   * already cleared the photo (L1/L2), grading honors that as a floor so
+   * borderline-but-clean photos (e.g. qualityScore 47.6 / 명화송풍구) land in
+   * the explicit L2 path instead of the default-safety-net branch.
+   */
+  pFilterGrade?: Grade | null;
 }
 
 export interface GradingResult {
@@ -117,6 +124,7 @@ function decideGrade(
   competitionScore: number,
   roiScore: number,
   margin: number,
+  pFilterGrade: Grade | null,
 ): Grade {
   // L4 Custom — either bad image OR a high-margin hero worth full-manual care
   if (qualityScore < 40) return 'L4';
@@ -127,6 +135,12 @@ function decideGrade(
   if (qualityScore >= 60 && competitionScore < 0.8) return 'L2';
   // L1 Light — fast lane for non-ROI items with usable images
   if (qualityScore >= 80 && roiScore < 0) return 'L1';
+  // B-10: P-Filter L1/L2 floor — the pre-filter has already verified the
+  // photo is automation-ready (uniform background, object ratio, white-balance,
+  // watermark check). Honor that signal rather than dropping to the unlabeled
+  // default branch, which made qualityScore=47.6 / pFilter=L2 land in L2 only
+  // by accident.
+  if (pFilterGrade === 'L1' || pFilterGrade === 'L2') return 'L2';
   // Default safety net: send to L2 (workhorse track) when nothing clearly fits
   return 'L2';
 }
@@ -157,7 +171,13 @@ export function gradeProduct(input: GradingInput): GradingResult {
   const roi = computeRoiScore(input.roi);
   const margin = Number.isFinite(input.roi.margin ?? NaN) ? (input.roi.margin as number) : 0;
   const roiScore = Number.isFinite(roi.score) ? roi.score : 0;
-  const grade = decideGrade(qualityScore, competitionScore, roiScore, margin);
+  const grade = decideGrade(
+    qualityScore,
+    competitionScore,
+    roiScore,
+    margin,
+    input.pFilterGrade ?? null,
+  );
   const confidenceLevel = decideConfidenceLevel(
     Number.isFinite(input.inferenceConfidence) ? input.inferenceConfidence : 0,
   );
