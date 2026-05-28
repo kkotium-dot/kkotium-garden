@@ -71,17 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Desktop turn, 코드 0) — Track B G8 production 실측: 썸네일 4변형 거의 동일 출력 = 누끼/배경 생성 부재(근본). 동반 회귀 3건(진단 CDN 500 / studio URL prefill skip / [object Object] 에러). 확정 방향: Source Priority Resolver(A 자동 + B 오버라이드). 다음: Code Phase G8-FIX -> G8-ENGINE.
+**Last update**: 2026-05-28 (Code turn, push 2c7da13) — Phase G8-FIX 3건 [코드 완료]. (1) 진단 도매꾹 CDN 500 -> image-fetch-headers.ts host조건부 Referer/UA 공유헬퍼로 해소(production POST /api/diagnose 200 + CDN760 실분석 실증). (2) [object Object] -> useStudioActions responseError/toMessage 정규화. (3) ?product= URL prefill skip -> 함수형 setSelectedId 수정. TSC0/build0/verify-vercel exit0. 다음: Desktop 새 채팅 production UI 재검증 -> 통과 시 G8-ENGINE.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Code G8 이미지 엔진 근본 재설계 (Phase G8-FIX 먼저)
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop G8-FIX production UI 재검증
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 🖥 Desktop (G8 진단 완료, 코드 0) |
-| **TO** | 💻 Code (Phase G8-FIX -> Phase G8-ENGINE) |
-| **BASELINE** | fef5c84 (origin/main, Vercel READY, production 200 실측) |
-| **NEXT SCOPE** | **Phase G8-FIX(P0/P1)**: 1.diagnose/route.ts imageUrl fetch를 thumbnail-generator fetchImageBuffer 경로와 정렬(도매꾹 CDN 500 해소) 2.studio 에러 직렬화 정규화([object Object] 제거) 3.studio/page.tsx ?product= URL prefill skip 수정. **Phase G8-ENGINE(별도 sprint)**: asset-source-resolver + nukki-adapter(Adobe Express) + backdrop-adapter(Nano Banana) 신규 -> thumbnail-generator 리팩터 -> studio/PLANT B 수동 오버라이드 입력 + 소스 뱃지 -> lifestyle backdropUrl 경로 연결 -> 저화질 입력 가드. 상세: docs/handoff/HANDOFF_g8_studio_asset_engine_2026-05-28.md |
-| **PENDING** | B-3 달항아리 카테고리/originCode 오염 보정(naverCategoryCode=11_08_22_00_00 도매꾹형식 + 0200037 + uncategorized) / P20 supplier seller ID / G6 winner3333 배송템플릿 미등록(Track A 발행 직전 실등록) / G8 save-assets 배관은 정상 확인(base64->Storage->DB UPDATE, #26 무관) |
+| **FROM** | 💻 Code (Phase G8-FIX 3건 코드 완료, push 2c7da13) |
+| **TO** | 🖥 Desktop 새 채팅 (production UI 재검증) |
+| **BASELINE** | 2c7da13 (origin/main, Vercel READY, production 200 실측, verify-vercel exit 0) |
+| **NEXT SCOPE** | **Desktop 재검증 3건**: (1) /studio?product=cmpp62yje00015xup5h8pgwx0 진입 -> 아이스트레이 선택 보존(달항아리로 안 튕김) 육안 확인. (2) 진단 클릭 -> 200 + 진단 카드 정상(이전 CDN 500 해소, Code가 persist:false로 production 200 실증). (3) 진단/썸네일/상세 강제 실패 시 에러가 의미 있는 문자열([object Object] 0). 3건 통과 시 G8-FIX [CLOSED] 후 **Phase G8-ENGINE**(asset-source-resolver + 누끼/배경 어댑터, 별도 sprint) 진입. 상세: docs/handoff/HANDOFF_g8_studio_asset_engine_2026-05-28.md |
+| **PENDING** | B-3 달항아리 카테고리/originCode 오염 보정(naverCategoryCode=11_08_22_00_00 도매꾹형식 + 0200037 + uncategorized) / P20 supplier seller ID / G6 winner3333 배송템플릿 미등록(Track A 발행 직전 실등록) / G8-ENGINE 누끼/배경 생성 부재(4변형 차별화) = 근본 재설계 별도 sprint |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
 

@@ -1,5 +1,16 @@
 > **분할 메모 (2026-05-28, #31 여덟 번째 분할)**: 2026-05-15 ~ 2026-05-19 PM 이전 entry 9건은 `docs/plan/archive/SESSION_LOG_2026-05-19.md`로 동결. 본 파일은 직전 5세션(2026-05-20 ~ 2026-05-28) 라이브 유지.
 
+## 2026-05-28 Track B G8-FIX 회귀 3건 수리 (Code turn, push 2c7da13)
+
+- baseline fef5c84. 작은 commit 3건 + docs 2건.
+- Fix 1 (9aea547) 진단 CDN 500: 신규 src/lib/image-fetch-headers.ts (host 조건부 Referer/UA, domeggook만, Supabase/Cloudinary엔 빈 객체) -> p-filter/image-quality/sharp-composite 동일 헬퍼 사용. production POST /api/diagnose {persist:false} 200 + CDN760 실분석(resolution 760x760, blur 205.8, WB cool 0.132 산출) 실증.
+- 실측 정정: 핸드오프의 "diagnose를 fetchImageBuffer Referer 경로와 정렬" 전제는 부정확. 셋 다 bare fetch였고 Referer/UA가 어디에도 없었음 -> 공유 헬퍼로 진짜 정렬.
+- Fix 2 (4d18170) [object Object]: useStudioActions responseError(json,status) + toMessage(err) 헬퍼 -> throw 5곳/catch 6곳 정규화. 카드 3종은 훅 error 문자열 표면화이므로 동시 해소.
+- Fix 3 (2c7da13) ?product= prefill skip: studio/page.tsx setSelectedId 함수형 갱신(prev ?? list[0].id) -> URL prefill을 stale closure가 클로버하지 않음.
+- 검증: 각 단계 TSC 0 / build 0. push 후 verify-vercel-deploy.sh --wait exit 0 (production 2c7da13). /studio /dashboard 200.
+- 비가역 0(persist:false로 Diagnosis row 미기록, 네이버 미발행). SD-01 무접촉.
+- 다음: Desktop 새 채팅 production UI 재검증(prefill 보존/진단 정상/에러 명확) -> 통과 시 Phase G8-ENGINE.
+
 ## 2026-05-28 Track B G8 이미지 엔진 근본 진단 (Desktop turn, 코드 0)
 
 - 표본 아이스트레이(cmpp62yje00015xup5h8pgwx0) /studio 정주행 검증.
