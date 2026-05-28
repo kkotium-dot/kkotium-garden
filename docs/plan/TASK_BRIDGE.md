@@ -71,18 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Code turn, push 597f3ee) — Phase G8-ENGINE-Q1 **아트디렉션 품질 격상 [코드 완료]** (5 SCOPE 중 4 완료, item4 Pretendard 별도). thumbnail-art-direction.ts pickArtDirection(conceptTone)->팔레트(실제 ColorMood enum warm/calm/vivid/mono, 기본 warm)+보조축 모듈레이션. sharp-composite 프리미엄 프리미티브(스윕/스포트/접지2겹/반사/엣지비네팅) + generator buildProductScene 4 renderer 공통화(단색fill 폐기). clean 텍스트0(대표이미지 정책). route artDirection echo. production smoke: 4변형 200 + clean copy{} + colorMood=warm 팔레트 정합 + 모듈레이션(scale0.9 minimal/type1.15 senior) + 회귀0. TSC0/build0/verify-vercel exit0. item4 Pretendard 미완료(폰트 에셋 부재+육안검증불가, #46 정직 플래그). 다음: Desktop E2E 육안 + 누끼 적재.
+**Last update**: 2026-05-28 (Code turn, push 7b0b3ab) — Phase G8-ENGINE-Q2 **카피/폰트 품질 [코드 완료]** (item 1·2 production 픽셀 검증). item1 categoryBadge 오염 필터: copy-writer generateCopy가 categoryBadge 슬롯에서 Groq 자유 합성을 폐기하고 category leaf 세그먼트 결정론적 추출(deriveCategoryBadge) — "생활/건강 > 주방용품 > 보관/밀폐용기" -> "밀폐용기"(깨끗한 실단어, 이전 Groq 비문 "일용보관함"/"보관함용기" 제거). item2 Pretendard 번들: Vercel Linux Sharp/librsvg 한글 폰트 부재로 SVG 텍스트가 두부(box)/미표시였던 결함을 fonts/Pretendard-{Regular,Bold}.otf + font-setup.ts(FONTCONFIG_FILE /tmp conf) + next.config outputFileTracingIncludes로 수정. production POST /api/thumbnail/<아이스트레이> 픽셀 재확인: badge "밀폐용기" 흰 글리프 정상 + lifestyle 캡션 "일상생활에 편리한 64구 아이스틀 얼음보관함" 실 한글(이전 두부 대비). TSC0/build0/verify-vercel exit0(7b0b3ab). 비가역 0. P0 누끼 미적재(Storage product-assets/<id>/ 빈 폴더 확인 -> assetSource.cutout=fallback, 4변형이 원본 라이프스타일 사진 letterbox) — cutout PNG 바이트 소스 미확정(대표 mainImage가 손+과일 라이프스타일 합성 사진이라 자동 누끼 부적합) -> scripts/upload-cutout.js 준비 완료, Desktop Adobe 재컷 or studio manualCutoutUrl 대기.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop G8-ENGINE-Q1 E2E 육안 재검증 + 누끼 적재
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop G8-ENGINE-Q2 4변형 before/after 육안 + P0 누끼 적재
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (Phase G8-ENGINE-Q1 item 1·2·3·5 코드 완료, push 597f3ee) |
-| **TO** | 🖥 Desktop 새 채팅 (프리미엄 렌더러 E2E 육안 + 누끼/배경 Storage 적재) |
-| **BASELINE** | 597f3ee (origin/main, Vercel READY, production smoke 통과) |
-| **NEXT SCOPE** | **Desktop 검증+운영**: (1) /studio 또는 PLANT 아이스트레이(cmpp62yje00015xup5h8pgwx0) 썸네일 생성 -> 4변형이 프리미엄(사이클로라마 스윕+접지+반사+스포트) + warm 팔레트(#D6965A) + clean 무텍스트로 격상됐는지 육안. response.artDirection.colorMood=warm 확인. (2) Adobe 누끼 PNG를 Storage product-assets/cmpp62yje00015xup5h8pgwx0/cutout.png 적재 -> assetSource.cutout=auto-cache 전환 + 4변형 차별화 극대화 육안 + save-assets DB main/detail_image_url 기록. (3) 통과 시 G8-ENGINE-Q1 [CLOSED] -> Track A(명화송풍구 B-12 발행) 대표 승인 후 별도 채팅. 상세: docs/handoff/THUMBNAIL_ART_DIRECTION_SYSTEM_2026-05-28.md |
-| **PENDING (item4 Pretendard)** | 썸네일 SVG 텍스트의 Pretendard 실폰트 번들 — 폰트 바이너리(otf/woff) 에셋 확보 -> repo fonts/ + Vercel fontconfig(FONTCONFIG_PATH) 설정 -> Sharp/librsvg 인식 -> 글리프 육안 검증. 현재는 font-family Pretendard 우선 스택 + 시스템 폴백. 별도 검증 단계(#46: 에셋·육안 없이 완료 단정 불가) |
-| **PENDING** | Real Win(Firefly 웹 라이프스타일 씬->Storage backdrop-{skeletonId}.png 적재, 천장 트랙, lifestyle 변형이 실사 씬) / B-3 달항아리 / P20 supplier seller ID / G6 winner3333 배송템플릿 / Storage POC 잔존(product-images/poc/icetray-cmpp62yje-poc.jpg) |
+| **FROM** | Code (G8-ENGINE-Q2 item 1·2 코드 완료 + production 픽셀 검증, push 7b0b3ab) |
+| **TO** | Desktop 새 채팅 (4변형 before/after 육안 재검증 + 누끼 cutout.png 적재) |
+| **BASELINE** | 7b0b3ab (origin/main, Vercel READY, production 픽셀 검증 통과) |
+| **NEXT SCOPE** | (1) production POST /api/thumbnail/<아이스트레이> 4변형 육안: badge 카피 비문 0(밀폐용기) + 한글 텍스트 실 Pretendard 글리프(두부 0) 확인. (2) P0 누끼 적재: cutout PNG 바이트 확보 경로 결정 — (a)Desktop Adobe로 깨끗한 제품 프레임 재컷 -> 로컬 PNG -> Code가 `node scripts/upload-cutout.js <id> <path>`로 product-assets/<id>/cutout.png 적재, (b)hosted 누끼 URL을 studio manualCutoutUrl 칸에 붙여넣어 source=manual 즉시 프리뷰. 적재 후 assetSource.cutout=auto-cache(or manual) 전환 + 4변형이 누끼 기반(letterbox 0)으로 차별화 육안. (3) 통과 시 Real Win(Firefly 라이프스타일 씬 backdrop). 상세: docs/handoff/KKOTIUM_ASSET_ENGINE_2026-05-28.md |
+| **PENDING** | Real Win Firefly backdrop / B-3 달항아리 / P20 supplier seller ID / Storage POC 잔존(product-images/poc/icetray-cmpp62yje-poc.jpg) |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
 
