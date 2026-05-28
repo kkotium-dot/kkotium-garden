@@ -1,3 +1,43 @@
+## 2026-05-28 Track B G2 d3 [CLOSED] + G7 빈 SKU unique fix (Code turn, P0)
+
+### 본 turn 성격
+
+Desktop이 e1c6fd6 production 실측으로 G2 d3 재검증을 통과시켜 G2 핸드오프 2건을 [CLOSED]한 뒤, G7 88필드 DRAFT 정주행에서 격리한 P0 회귀(빈 SKU unique 충돌)를 Code가 1-commit 수정.
+
+### G2 d3 재검증 결과 (Desktop, [CLOSED])
+
+e1c6fd6 실측: suggest API 유령 triple(그릇장/컵보드) 소멸 (d3="" 정규화, usedAI:true 재계산), 화면 d1/d2 자동입력 (생활/건강>주방용품) + partial 배너 + invalid_triple 소멸, 소분류 수동선택 -> 카테고리코드 50005257 chip, 준비도 38->52%. HANDOFF_g2_suggest_d3_mismatch + HANDOFF_g2_category_prefill_skip 2건 [CLOSED].
+
+### G7 회귀 근본 원인
+
+`src/app/api/products/route.ts` POST가 `sku: String(data.sku || '')`로 빈 SKU를 빈 문자열 '' 저장. sku 컬럼은 unique이고 ''도 단일 값이라 2번째 SKU 미입력 상품 INSERT가 'Unique constraint failed on (sku)' 500. 기존 명화송풍구(cmpnooli40001f0gveaxr8iim) sku='' 1건이 '' slot 점유. SKU 미입력 상품 2번째부터 저장 100% 실패(P0). POST /api/naver/excel는 200(엑셀 엔진 정상). 비가역 0(probe 저장도 500 = DB 무변경).
+
+### 코드 변경 (3 파일 +87/-31, commit 1aa5969)
+
+- Fix A: `src/lib/sku-engine.ts` 신설 — 공통 collision-safe SKU 엔진(buildFallbackSku + generateUniqueSku). 빈 productNo면 KKT-YYMMDD-RAND fallback, 충돌 시 suffix 증분 -> 반환값 항상 non-empty + unique. `generate-sku/route.ts`는 이 엔진에 위임(DRY).
+- Fix A: `products/route.ts` POST가 빈 SKU 시 generateUniqueSku로 자동발급(supplier_product_code/productNo 기반).
+- Fix C: create payload에 taxType/description/keywords/tags/shipping_template_id 추가(폼이 보내나 누락되던 DRAFT 88필드 gap). options/sellerCode/hasOptions 등은 이 POST body가 아닌 excel productData로 흐르므로 이 경로의 gap 아님.
+- Fix B(위임): 명화송풍구 빈 SKU backfill은 1-row UPDATE SQL을 Desktop이 Supabase MCP로 실행(report 제공).
+
+### 검증
+
+- npx tsc --noEmit 0 errors
+- npm run build exit 0
+- 구조적 보장: generateUniqueSku 반환값 항상 non-empty + DB unique -> SKU 미입력 상품 N건도 충돌 0 (라이브 2건 테스트는 원격 공유 DB 오염 회피 위해 Desktop G7 재검증에 위임, #46)
+- 한글 typo sentinel grep 0 hits (코드 파일)
+- git push 1aa5969 -> verify-vercel-deploy.sh exit 0 (production on 1aa5969)
+- SD-01 영구 보존
+
+### 적용 작업원칙
+
+#17 · #21 · #24 · #28 · #29 · #32 · #36 · #41 · #45 · #46
+
+### 다음
+
+G7 핸드오프 OPEN 유지. Desktop이 36904429로 G7 재검증(DRAFT 저장 200 + sku 자동생성 + Supabase 88필드 매핑) + Fix B backfill SQL 실행 -> G8(이미지) -> E1~E3(엑셀 88칸).
+
+---
+
 ## 2026-05-28 G2 suggest d3 유령 triple 자체검증 수정 (Code turn, Track B 재검증 후속, P1)
 
 ### 본 turn 성격

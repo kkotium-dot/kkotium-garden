@@ -1,7 +1,7 @@
 # HANDOFF — G2 suggest API가 d1/d2와 정합하지 않는 d3 추천 (유령 카테고리 조합 / 소분류 자동완주 불가)
 
 > **작성**: 2026-05-28 Desktop turn (Track B G2/G5 재검증 중 발견 — fix 9415169 production 실측)
-> **상태**: OPEN — Claude Code 처리 대기 (P1, 카테고리 소분류 SEO 직결 / Track A 발행 전 필수)
+> **상태**: [CLOSED 2026-05-28 Desktop] — e1c6fd6 production 재검증 통과: suggest 유령 triple(그릇장/컵보드) 소멸 (d3="" 정규화, usedAI:true 재계산) + 화면 d1/d2 자동입력 (생활/건강>주방용품) + partial 배너 + invalid_triple 소멸 + 소분류 수동선택 -> 카테고리코드 50005257 chip + 준비도 38->52%.
 > **베이스라인**: HEAD `9415169` (origin/main, Vercel READY)
 > **발견 경로**: Track B G2 재검증 — 도매매 36904429(아이스트레이) 등록 시작 -> 카테고리 자동추천 -> d1/d2 정확, d3 미완주
 > **관계**: `HANDOFF_g2_category_prefill_skip_2026-05-28.md`의 후속. 그 핸드오프의 silent skip(자동호출 미발화)은 9415169로 **해소 확인됨**. 본 핸드오프는 그 너머에서 새로 격리된 *별개 층위*의 데이터 결함이다.

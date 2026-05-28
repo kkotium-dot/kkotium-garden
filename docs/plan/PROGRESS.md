@@ -1,4 +1,5 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
+> 2026-05-28 **Track B G2 d3 재검증 통과 + G7 SKU unique 회귀 fix** (G2 = Desktop 검증 [CLOSED] / G7 = Code fix commit 1aa5969). G2: e1c6fd6 production 실측 — suggest API 유령 triple(그릇장/컵보드) 소멸(d3="" 정규화, usedAI:true 재계산) + 화면 d1/d2 자동입력(생활/건강>주방용품) + partial 배너 + 소분류 수동선택 -> 카테고리코드 50005257 chip + 준비도 38->52%. G2 핸드오프 2건 [CLOSED]. G7: POST /api/products 500 = Unique constraint (sku) — 빈 문자열 sku 충돌(명화송풍구 sku="" 1건 점유) -> SKU 미입력 상품 2번째부터 저장 100% 실패(P0). Code fix(1aa5969): 공통 SKU 엔진(src/lib/sku-engine.ts) 빈 SKU 자동발급 + create payload 5필드(taxType/description/keywords/tags/shipping_template_id) 영속화 확장 + Fix B 명화송풍구 빈 SKU backfill SQL은 Desktop MCP 위임. POST /api/naver/excel는 200(엑셀 엔진 정상). 비가역 0. stale 정정: PROGRESS "8개 DRAFT" -> 실제 production 2건(명화송풍구 + 달항아리, 달항아리는 naverCategoryCode 11_08_22_00_00 도매꾹 형식 = G2 fix 이전 오염, B-3 보정 대기). TSC 0 / build 0 / verify-vercel exit 0.
 > 2026-05-28 **G2 suggest d3 유령 triple 자체검증 수정 (Track B 재검증 후속)** (Code turn, 2 파일 +122/-23, commit e1c6fd6). Desktop 재검증: G5 [CLOSED] 자동 판매가 13,900원/순마진 +15.5%, G2 silent skip 해소 확인. 그러나 suggest의 pageValidation override 경로가 dominant d1/d2(생활/건강>주방용품)에 타 분류 d3(그릇장/컵보드 = 가구/인테리어>주방가구 하위)를 붙여 유령 triple 생성 -> getCategoryId NULL -> d3 누락 + name_hash 캐시 박제. Fix A selfValidateSuggestions(트리 strict 검증, 무효 d3는 blank하고 d1/d2 신뢰) + Fix B 캐시 read sanitize/write gate(full-valid triple만 저장) + Fix C 클라이언트 partial status로 d1/d2 자동입력. TSC 0 / build 0 / verify-vercel exit 0. G2 핸드오프 2건 OPEN 유지 — Desktop d3 재검증 대기.
 > 2026-05-28 **Track B prefill 회귀 2건 수정 (G2 카테고리 silent skip + G5 적자가격)** (Code turn, 4 파일 +73/-2, commit 9415169). G2: 도매꾹 얕은 카테고리 depth(catD1만/0개) 상품이 prefill useEffect의 full-triple 가드를 통과 못해 카테고리 3칸 텅 빔 + suggest 미트리거 -> productName 있으면 synthetic mismatch set으로 기존 suggest 경로 재사용(getCategoryId는 RC1 3-depth fallback 보유). G5: prefill 자동 판매가 supplierPrice*1.3 단순 마크업이 네이버 수수료/배송비 미반영해 순마진 음수(적자) -> calcPrefillSalePrice(수수료 5.5% + 목표 순마진 15% + 배송부담) 교체(crawl/page.tsx 등록시작 2곳) + 판매가 칸 아래 꼬띠 추천가 라벨 추가(i18n 분리 #35). TSC 0 / build 0 / verify-vercel exit 0. G2/G5 핸드오프 OPEN 유지 — Desktop 36904429 재검증 대기.
 > 2026-05-28 **crawl_logs INSERT await 누락 dangling promise 수정 (G1 Tier-2 회귀)** (Code turn, 2 파일 +8/-5, commit 6f8e9f8). desc.contents fix(d2f5d6e) 후 36904429 크롤은 200이나 crawl_logs row 0건. INSERT가 await 없는 fire-and-forget(`prisma.$executeRaw...catch`) -> 응답 반환 직후 serverless freeze로 promise 미완료 폐기 = 소싱 보관함 동선 단절 P1. domemae/route.ts 단건 + stream/route.ts bulk(성공/에러) 3개 INSERT 모두 await 추가(.catch 유지 -> 블로킹 0). TSC 0 / build 0 / verify-vercel exit 0. 핸드오프 OPEN 유지 — Desktop 동일 36904429로 G1 Tier-2(DB row) 재검증 대기.
@@ -1185,7 +1186,7 @@ Commit: `a29e8c5` feat(automation): add 12 layout skeletons (Sprint 7-Skel)
 
 | 항목 | 현황 |
 |------|------|
-| 전체 상품 | 8개 (모두 DRAFT) |
+| 전체 상품 | 2개 (모두 DRAFT — 명화송풍구 + 달항아리) |
 | 네이버 Commerce API | ok=true ✅ |
 | 네이버 검색광고 API | ✅ (CUSTOMER_ID: 3755315) |
 | 네이버 DataLab API | ✅ ID: F7Hga62gDOYxZ3KRtLTL |

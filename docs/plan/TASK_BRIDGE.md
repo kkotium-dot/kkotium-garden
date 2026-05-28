@@ -71,17 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Code turn, 2 파일 +122/-23, commit e1c6fd6) — G2 suggest d3 유령 triple 자체검증 수정. Desktop 재검증(9415169): G5 [CLOSED] 자동 판매가 13,900원/순마진 +15.5%, G2 silent skip 해소 확인, 그러나 suggest가 dominant d1/d2(생활/건강>주방용품)에 타 분류의 d3(그릇장/컵보드, 실제 가구/인테리어>주방가구 하위)를 붙인 유령 triple 신규 격리 -> 본 commit으로 selfValidateSuggestions(트리 strict 검증) + 캐시 read sanitize/write gate + 클라이언트 partial 자동입력 추가. TSC 0 / build 0 / verify-vercel exit 0. G2 핸드오프 2건 OPEN 유지 — Desktop 36904429로 d3 재검증 대기. (이전: desc.contents d2f5d6e + crawl_logs await 6f8e9f8 — 유효 유지)
+**Last update**: 2026-05-28 (Code turn, 3 파일 +87/-31, commit 1aa5969) — G7 빈 SKU unique 충돌 P0 fix 완료. Desktop G2 d3 재검증 [CLOSED] 통과(e1c6fd6) 후 G7에서 POST /api/products 500(Unique constraint sku) 격리 -> Fix A 공통 SKU 엔진(src/lib/sku-engine.ts) 자동발급 + Fix C create payload 5필드(taxType/description/keywords/tags/shipping_template_id) 영속화 확장. Fix B 명화송풍구 빈 SKU backfill SQL은 Desktop MCP 실행 위임. TSC 0 / build 0 / verify-vercel exit 0. 다음: Desktop 새 채팅 G7 재검증(DRAFT 저장 200 + 88필드 매핑) -> G8 -> E1~E3.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop B-13/B-13a 재검증 + 명화송풍구 등록 완주 (B-12 + B-13 + B-13a fix 완료, 대표 승인 대기)
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop G7 재검증 + G8/E1~E3 정주행 (Code G7 SKU fix 완료)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (B-12 register 라우트 근본 재작성 + B-11 저장배관 DB UPDATE, 2 파일) |
-| **TO** | 🖥 Desktop 새 채팅 (대표 승인 후 실 네이버 발행 + 3중 검증) |
-| **BASELINE** | 본 commit (origin/main). TSC 0 + build OK + Vercel READY. categoryMap 폐기 / `naverCategoryCode` 직접 사용 / `naverRequest` OAuth2 위임 / detailContent에 `<img>` 포함 / 거짓 라벨 0 / save-assets 200 후 Product URL 컬럼 자동 기록 |
-| **NEXT SCOPE** | (1) Desktop이 production `/products/new` 7탭 순회로 상단 헤더 등록 버튼 미노출 + visual 탭 하단 인스턴스 보존 Chrome MCP 재검증 (B-13 + B-13a). (2) /products?id=cmpnooli40001f0gveaxr8iim 진입 + "네이버 직접 등록" 클릭 -> B-12 라우트 호출. (3) 응답 `success: true` + 실 naverProductId 검증. (4) 스마트스토어 실 노출 + DB row cross-check. (5) 하트클립(65322570) 동일 흐름 |
-| **PENDING** | 등록 완주 시 HANDOFF_premium_image_boost.md + HANDOFF_naver_register_fix.md + HANDOFF_atelier_routing_plant_checkbox_2026-05-27.md + HANDOFF_plant_header_duplicate_buttons_2026-05-27.md 4건 모두 `[CLOSED]` + §7 ARCHIVED. (본 commit으로 plant_header_duplicate handoff는 [CLOSED] 처리됨 — Desktop 재검증만 대기) |
+| **FROM** | 💻 Code (G7 SKU unique fix 1aa5969 — 빈 SKU 자동발급 엔진 + create payload 확장) |
+| **TO** | 🖥 Desktop 새 채팅 (36904429 G7 재검증 -> G8 -> E1~E3) |
+| **BASELINE** | 1aa5969 (origin/main, Vercel READY). TSC 0 / build OK. 빈 SKU 자동발급(sku-engine) + create payload taxType/description/keywords/tags/shipping_template_id 영속화 |
+| **NEXT SCOPE** | (1) Desktop 36904429 등록시작 -> 네이버 엑셀 다운로드 -> POST /api/products 200 + DRAFT row 생성 + sku 자동생성 non-empty 단정. (2) Supabase DRAFT 88필드 매핑 검증(naverCategoryCode=50005257 / salePrice=13900 / originCode / sku / 배송). (3) Fix B 명화송풍구 빈 SKU backfill SQL 실행(report 참조). (4) G8 이미지 -> E1~E3 엑셀 88칸 |
+| **PENDING** | B-3 달항아리 카테고리 오염 보정 / P20 supplier seller ID backfill / G6 winner3333 배송템플릿 미등록 |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
 
@@ -156,6 +156,7 @@
 
 | ID | 영역 | 권고 sprint |
 |---|---|---|
+| **G7-SKU** | 빈 SKU unique 충돌 -> SKU 미입력 상품 2번째부터 저장 500 (P0) | `1aa5969` Fix A 자동발급 엔진 + Fix C payload 확장 ✅ — Fix B 명화송풍구 빈 SKU backfill SQL + Desktop G7 재검증 대기 |
 | P17 | supplier-notfound 시 배송 fallback | `29b7c49` (PC-B-2, infra 완료) — notfound 케이스 prefill URL로 실 검증 대기 |
 | P19 | 혜택 prefill | PC-B-3 (P16 결정 후) |
 | P16 | additionalImages 0건 (crawler 측) | PC-B-3 또는 PC-D 분리 (사용자 결정) |

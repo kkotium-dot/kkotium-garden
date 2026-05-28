@@ -1,8 +1,8 @@
 # HANDOFF — G2 prefill 카테고리 자동매핑 silent skip (얕은 catDepth 회귀)
 
 > **작성**: 2026-05-28 Desktop turn (Track B G2~G8 정주행 검증 중 발견)
-> **상태**: OPEN — Claude Code 1-commit 처리 대기 (P1, 자동화 가치 훼손)
-> **베이스라인**: HEAD `6f8e9f8` (origin/main, Vercel READY)
+> **상태**: [CLOSED 2026-05-28 Desktop] — silent skip(자동호출 미발화)은 9415169로 해소, d3 불정합(유령 triple)은 e1c6fd6로 해소. e1c6fd6 production 재검증에서 G2 전체 통과(d1/d2 자동 + 소분류 수동선택 -> 카테고리코드 50005257). 후속 HANDOFF_g2_suggest_d3_mismatch_2026-05-28.md 도 [CLOSED].
+> **베이스라인**: HEAD `9415169` (origin/main, Vercel READY) — 원 silent skip fix 반영본
 > **발견 경로**: Track B G2 게이트 — 도매매 36904429(아이스트레이) 등록 시작 -> prefill -> 카테고리 3칸 empty
 
 ---
