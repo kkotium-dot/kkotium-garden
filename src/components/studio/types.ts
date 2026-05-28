@@ -68,6 +68,8 @@ export interface ThumbnailResult {
   outputs: ThumbnailOutput[];
   /** G8-ENGINE: where the cutout + backdrop came from (UI source badge). */
   assetSource?: { cutout: AssetSourceLiteral; backdrop: AssetSourceLiteral };
+  /** G8-ENGINE: non-blocking low-res warning when source <=760px long side. */
+  lowResolution?: { width: number; height: number; threshold: number } | null;
 }
 
 export interface DetailResult {

@@ -263,6 +263,8 @@ export async function POST(
         cutout: resolved.cutoutSource,
         backdrop: backdropSource,
       },
+      // G8-ENGINE: non-blocking low-resolution warning (<=760px long side).
+      lowResolution: result.lowResolution ?? null,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown error';

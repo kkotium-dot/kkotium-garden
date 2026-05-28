@@ -111,6 +111,16 @@ export function ThumbnailCard({
           {strings.thumbnail.error} {error}
         </div>
       )}
+      {thumbnails?.lowResolution && (
+        <div style={{
+          padding: 10, marginBottom: 12, background: '#FFFBEB',
+          border: '1px solid #FDE68A', borderRadius: 8,
+          color: '#92400E', fontSize: 12, fontWeight: 600,
+        }}>
+          {strings.thumbnail.lowResWarning}
+          {' '}({thumbnails.lowResolution.width}×{thumbnails.lowResolution.height})
+        </div>
+      )}
       {thumbnails && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
           {THUMB_VARIANTS.map((v) => {

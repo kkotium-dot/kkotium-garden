@@ -104,6 +104,12 @@ export interface ThumbnailGenerationResult {
   errors: ThumbnailVariantError[];
   /** Total wall-clock milliseconds spent across all variants. */
   elapsedMs: number;
+  /** Present when the product source resolution is at or below the low-res
+   *  threshold (<=760px long side). Non-blocking warning — aligns with the
+   *  diagnose L4 "reshoot / upscale" UX so the seller knows the cutout/source
+   *  is below ideal print/thumbnail quality. Undefined when the source is
+   *  large enough or the probe failed. */
+  lowResolution?: { width: number; height: number; threshold: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -113,6 +119,10 @@ export interface ThumbnailGenerationResult {
 const CANVAS: CanvasSize = { width: 1080, height: 1080 };
 const PRODUCT_SLOT: CanvasSize = { width: 780, height: 780 };
 const PRODUCT_OFFSET = { x: 150, y: 90 };
+
+/** Long-side pixel threshold at/below which the product source is flagged as
+ *  low resolution (warning only). Mirrors the diagnose upscale guidance. */
+const LOWRES_WARN_PX = 760;
 
 /** Some skeletons fit some variants better than others. The variant matrix
  *  always returns all four buffers; this map is exposed as metadata so
@@ -412,6 +422,25 @@ export async function generateThumbnails(
   const skeletonId = req.overrideSkeletonId ?? match.skeletonId;
   const spec = getSkeleton(skeletonId);
 
+  // Low-resolution guard: probe the product source once and flag when its long
+  // side is at/below the threshold. Non-fatal — a probe failure leaves the flag
+  // undefined and the per-variant renderers surface their own fetch errors.
+  let lowResolution: ThumbnailGenerationResult['lowResolution'];
+  try {
+    const probeBuffer = await fetchImageBuffer(productPreviewUrl(req));
+    const meta = await sharp(probeBuffer).metadata();
+    const longSide = Math.max(meta.width ?? 0, meta.height ?? 0);
+    if (longSide > 0 && longSide <= LOWRES_WARN_PX) {
+      lowResolution = {
+        width: meta.width ?? 0,
+        height: meta.height ?? 0,
+        threshold: LOWRES_WARN_PX,
+      };
+    }
+  } catch {
+    // probe failure is non-fatal
+  }
+
   const variants: ThumbnailVariant[] = req.variants ?? ['clean', 'price', 'badge', 'lifestyle'];
   const outputs: ThumbnailOutput[] = [];
   const errors: ThumbnailVariantError[] = [];
@@ -449,5 +478,6 @@ export async function generateThumbnails(
     outputs,
     errors,
     elapsedMs: Date.now() - start,
+    lowResolution,
   };
 }

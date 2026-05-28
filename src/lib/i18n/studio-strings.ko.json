@@ -77,7 +77,8 @@
       "manual": "수동",
       "auto-cache": "자동 캐시",
       "fallback": "원본 폴백"
-    }
+    },
+    "lowResWarning": "원본 해상도가 낮아요 (760px 이하) — 고해상도 재촬영 또는 업스케일을 권장해요."
   },
   "detail": {
     "title": "5섹션 상세페이지",
