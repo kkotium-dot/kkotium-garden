@@ -28,6 +28,11 @@ import {
   pickLifestyleAsset,
   markLifestyleAssetUsed,
 } from '@/lib/automation/lifestyle-picker';
+import { matchSkeleton } from '@/lib/automation/skeleton-matcher';
+import {
+  resolveAssetSources,
+  type AssetSource,
+} from '@/lib/automation/asset-source-resolver';
 import type {
   ConceptTone,
   SkeletonId,
@@ -43,8 +48,15 @@ interface ThumbnailBody {
   overrideSkeletonId?: SkeletonId;
   /** Subset of variants to render. Defaults to all four. */
   variants?: ThumbnailVariant[];
-  /** Optional lifestyle backdrop URL for the lifestyle variant. */
+  /** Optional lifestyle backdrop URL for the lifestyle variant (legacy alias
+   *  of manualBackdropUrl). */
   lifestyleBackdropUrl?: string;
+  /** G8-ENGINE B-layer override: designer-supplied transparent product cutout
+   *  PNG URL. Highest priority cutout source. */
+  manualCutoutUrl?: string;
+  /** G8-ENGINE B-layer override: designer-supplied lifestyle backdrop URL.
+   *  Highest priority backdrop source. */
+  manualBackdropUrl?: string;
   /** Optional override of the source image URL. */
   sourceImageUrl?: string;
   /** Optional highlight phrase to feed copy-writer. */
@@ -148,14 +160,27 @@ export async function POST(
     );
   }
 
-  // Phase 2-c-1 (2026-05-15): pick a lifestyle backdrop asset matching the
-  // product's ConceptTone (30-day cooldown + per-SKU exclusion). When no
-  // eligible asset exists (empty library or all assets in cooldown), the
-  // picker returns null and the lifestyle variant falls back to the
-  // existing brand-color backdrop path inside thumbnail-generator. The
-  // body override (designer manual pick) takes precedence over auto-pick.
+  // G8-ENGINE: resolve the skeleton id deterministically (same logic the
+  // generator uses) so the backdrop cache key (backdrop-{skeletonId}.png)
+  // matches the skeleton the generator will render with. matchSkeleton is a
+  // pure function, so this never diverges from generateThumbnails.
+  const skeletonId: SkeletonId = body.overrideSkeletonId ?? matchSkeleton(conceptTone).skeletonId;
+
+  // G8-ENGINE Source Priority Resolver: cutout (manual > Storage cache) and
+  // backdrop (manual > Storage cache). The legacy lifestyleBackdropUrl body
+  // field is accepted as a manual backdrop alias.
+  const resolved = await resolveAssetSources({
+    productId: product.id,
+    skeletonId,
+    manualCutoutUrl: body.manualCutoutUrl,
+    manualBackdropUrl: body.manualBackdropUrl ?? body.lifestyleBackdropUrl,
+  });
+
+  // Backdrop fallback chain: resolver (manual/cache) > curated lifestyle
+  // library picker (Phase 2-c-1) > brand-color (inside generator).
   let pickedLifestyleAssetId: string | null = null;
-  let lifestyleBackdropUrl = body.lifestyleBackdropUrl;
+  let lifestyleBackdropUrl: string | undefined = resolved.backdropUrl ?? undefined;
+  let backdropSource: AssetSource = resolved.backdropSource;
   if (!lifestyleBackdropUrl) {
     try {
       const picked = await pickLifestyleAsset({
@@ -166,6 +191,8 @@ export async function POST(
       if (picked) {
         pickedLifestyleAssetId = picked.assetId;
         lifestyleBackdropUrl = picked.storageUrl;
+        // Curated-library pick is an automatic cached source for badge purposes.
+        backdropSource = 'auto-cache';
       }
     } catch (err) {
       // Picker failure is non-fatal — log and continue with brand-color
@@ -184,6 +211,7 @@ export async function POST(
     highlight: body.highlight,
     conceptTone,
     sourceImageUrl,
+    cutoutUrl: resolved.cutoutUrl,
     lifestyleBackdropUrl,
     overrideSkeletonId: body.overrideSkeletonId,
     variants: body.variants,
@@ -229,6 +257,12 @@ export async function POST(
       // Phase 2-c-1: surface which lifestyle asset was used (or null when
       // the brand-color fallback was taken) for debugging + UI hinting.
       lifestyleAssetId: pickedLifestyleAssetId,
+      // G8-ENGINE: surface where the cutout + backdrop came from so the UI
+      // can render a source badge (manual / auto-cache / fallback).
+      assetSource: {
+        cutout: resolved.cutoutSource,
+        backdrop: backdropSource,
+      },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown error';

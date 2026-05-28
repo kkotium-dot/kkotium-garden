@@ -60,6 +60,13 @@ export interface ThumbnailRequest {
   conceptTone: ConceptTone;
   /** Source product image URL. Required. */
   sourceImageUrl: string;
+  /** Optional transparent product cutout PNG (background removed). When present
+   *  every variant composites this over its background so the original square
+   *  product backdrop no longer leaks through — the core G8-ENGINE fix for the
+   *  "4 variants look identical" defect. When omitted, renderers fall back to
+   *  fitImage(sourceImageUrl) (source='fallback'). Resolved upstream by
+   *  asset-source-resolver (manual > Storage cache). */
+  cutoutUrl?: string | null;
   /** Optional lifestyle backdrop URL for the lifestyle variant. When omitted,
    *  the lifestyle variant falls back to a soft brand-color backdrop. */
   lifestyleBackdropUrl?: string;
@@ -126,6 +133,35 @@ export const VARIANT_HINTS: Record<SkeletonId, ThumbnailVariant> = {
 };
 
 // ---------------------------------------------------------------------------
+// Product layer loader
+// ---------------------------------------------------------------------------
+
+/** Resolve the product image buffer and fit it into `slot`. When a transparent
+ *  cutout is available, the product is padded with transparency so the variant
+ *  background shows through cleanly; otherwise the raw source image is
+ *  letterboxed with the variant background color (legacy fallback path). */
+async function loadProductFitted(
+  req: ThumbnailRequest,
+  slot: CanvasSize,
+  variantBg: string,
+): Promise<Buffer> {
+  const cutout = req.cutoutUrl ? req.cutoutUrl.trim() : '';
+  const url = cutout || req.sourceImageUrl;
+  const buffer = await fetchImageBuffer(url);
+  // Transparent pad for cutouts so the canvas/backdrop is visible around the
+  // product; otherwise pad with the variant background to letterbox the photo.
+  const fitBg = cutout ? '#FFFFFF00' : variantBg;
+  return fitImage(buffer, slot, fitBg);
+}
+
+/** The URL actually used as the product source (cutout when present). Recorded
+ *  in the output for informational/debug purposes. */
+function productPreviewUrl(req: ThumbnailRequest): string {
+  const cutout = req.cutoutUrl ? req.cutoutUrl.trim() : '';
+  return cutout || req.sourceImageUrl;
+}
+
+// ---------------------------------------------------------------------------
 // Variant renderers
 // ---------------------------------------------------------------------------
 
@@ -133,11 +169,10 @@ async function renderClean(
   spec: SkeletonSpec,
   req: ThumbnailRequest,
 ): Promise<ThumbnailOutput> {
-  const previewUrl = req.sourceImageUrl;
-  const productBuffer = await fetchImageBuffer(previewUrl);
+  const previewUrl = productPreviewUrl(req);
 
   const canvas = await createCanvas(CANVAS, '#FFFFFF');
-  const productFitted = await fitImage(productBuffer, PRODUCT_SLOT, '#FFFFFF');
+  const productFitted = await loadProductFitted(req, PRODUCT_SLOT, '#FFFFFF');
 
   const productLayer = await overlayOnto(canvas, [
     await offsetLayer(productFitted, PRODUCT_OFFSET, CANVAS),
@@ -184,12 +219,11 @@ async function renderPrice(
   spec: SkeletonSpec,
   req: ThumbnailRequest,
 ): Promise<ThumbnailOutput> {
-  const previewUrl = req.sourceImageUrl;
-  const productBuffer = await fetchImageBuffer(previewUrl);
+  const previewUrl = productPreviewUrl(req);
 
   const canvas = await createCanvas(CANVAS, spec.colorTokens.secondary);
-  const productFitted = await fitImage(
-    productBuffer,
+  const productFitted = await loadProductFitted(
+    req,
     PRODUCT_SLOT,
     spec.colorTokens.secondary,
   );
@@ -234,11 +268,10 @@ async function renderBadge(
   spec: SkeletonSpec,
   req: ThumbnailRequest,
 ): Promise<ThumbnailOutput> {
-  const previewUrl = req.sourceImageUrl;
-  const productBuffer = await fetchImageBuffer(previewUrl);
+  const previewUrl = productPreviewUrl(req);
 
   const canvas = await createCanvas(CANVAS, '#FFFFFF');
-  const productFitted = await fitImage(productBuffer, PRODUCT_SLOT, '#FFFFFF');
+  const productFitted = await loadProductFitted(req, PRODUCT_SLOT, '#FFFFFF');
 
   const productLayer = await overlayOnto(canvas, [
     await offsetLayer(productFitted, PRODUCT_OFFSET, CANVAS),
@@ -280,8 +313,7 @@ async function renderLifestyle(
   spec: SkeletonSpec,
   req: ThumbnailRequest,
 ): Promise<ThumbnailOutput> {
-  const productPreviewUrl = req.sourceImageUrl;
-  const productBuffer = await fetchImageBuffer(productPreviewUrl);
+  const previewUrl = productPreviewUrl(req);
 
   const backdropUrl = req.lifestyleBackdropUrl;
   const backdropBuffer = backdropUrl
@@ -297,7 +329,7 @@ async function renderLifestyle(
   // Smaller product slot for lifestyle layouts (leaves more room for bg).
   const lifestyleProductSlot: CanvasSize = { width: 580, height: 580 };
   const lifestyleProductOffset = { x: 250, y: 200 };
-  const productFitted = await fitImage(productBuffer, lifestyleProductSlot, '#FFFFFF00');
+  const productFitted = await loadProductFitted(req, lifestyleProductSlot, '#FFFFFF00');
 
   const withProduct = await overlayOnto(canvas, [
     await offsetLayer(productFitted, lifestyleProductOffset, CANVAS),
@@ -330,7 +362,7 @@ async function renderLifestyle(
     variant: 'lifestyle',
     buffer,
     copy: { lifestyleCaption: caption.text },
-    cloudinaryPreviewUrl: productPreviewUrl,
+    cloudinaryPreviewUrl: previewUrl,
     size: CANVAS,
   };
 }
