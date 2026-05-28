@@ -71,18 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Desktop turn, 코드 0) — G8-ENGINE 엔진 [코드 완료 5a169c7] 후 **썸네일 디자인 품질 진단 + 아트디렉션 시스템 설계**. 대표 지적: 썸네일 퀄리티 부족. 근본 2건: (1)렌더러 크래프트 부재(단색fill+공중부양+기본폰트) (2)팔레트가 conceptTone 무시. 실측: 아이스트레이 Diagnosis.conceptTone.colorMood=warm인데 임의 쿨톤은 불일치 -> 데이터 기반 warm 팔레트가 정합 육안 확인. 프리미엄 크래프트(사이클로라마 스윈+접지그림자 2겹+반사+스포트+위계) 데모로 천장 증명. 스펙: docs/handoff/THUMBNAIL_ART_DIRECTION_SYSTEM_2026-05-28.md. 다음: Code Phase G8-ENGINE-Q1(conceptTone 팔레트 결정기 + 프리미엄 렌더러).
+**Last update**: 2026-05-28 (Code turn, push 597f3ee) — Phase G8-ENGINE-Q1 **아트디렉션 품질 격상 [코드 완료]** (5 SCOPE 중 4 완료, item4 Pretendard 별도). thumbnail-art-direction.ts pickArtDirection(conceptTone)->팔레트(실제 ColorMood enum warm/calm/vivid/mono, 기본 warm)+보조축 모듈레이션. sharp-composite 프리미엄 프리미티브(스윕/스포트/접지2겹/반사/엣지비네팅) + generator buildProductScene 4 renderer 공통화(단색fill 폐기). clean 텍스트0(대표이미지 정책). route artDirection echo. production smoke: 4변형 200 + clean copy{} + colorMood=warm 팔레트 정합 + 모듈레이션(scale0.9 minimal/type1.15 senior) + 회귀0. TSC0/build0/verify-vercel exit0. item4 Pretendard 미완료(폰트 에셋 부재+육안검증불가, #46 정직 플래그). 다음: Desktop E2E 육안 + 누끼 적재.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Code Phase G8-ENGINE-Q1 (썸네일 아트디렉션 품질 격상)
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop G8-ENGINE-Q1 E2E 육안 재검증 + 누끼 적재
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 🖥 Desktop (디자인 품질 진단 + conceptTone 팔레트 시스템 설계 + 프리미엄 데모 증명) |
-| **TO** | 💻 Code (Phase G8-ENGINE-Q1 프리미엄 렌더러 구현) |
-| **BASELINE** | eb72b9e (origin/main, Vercel READY, G8-ENGINE 엔진 [코드 완료]) |
-| **NEXT SCOPE** | **Quick Win(의존성 순서)**: 1.src/lib/automation/thumbnail-art-direction.ts 신규 pickArtDirection(conceptTone)->팔레트(WARM/COOL/VIVID/PASTEL colorMood 트리거)+보조축(pricePosition/emotionalTone/persona/genre) 2.thumbnail-generator.ts 4 renderer 공통 크래프트 리팩터(사이클로라마 스윈[단색fill 폐기]+소프트스포트+접지 2겹+바닥반사+타이포위계) 3.route가 Diagnosis.conceptTone 조회->pickArtDirection->generator 전달 4.Pretendard 폰트 번들 5.clean 변형 텍스트 0 게이트(네이버 대표이미지 정책). **팔레트=conceptTone 파생(직관 아님) / 외부이미지API 런타임 0(#38)**. 상세: docs/handoff/THUMBNAIL_ART_DIRECTION_SYSTEM_2026-05-28.md |
-| **병행 PENDING (Desktop)** | G8-ENGINE 엔진 E2E 검증 — 아이스트레이 Adobe 누끼 PNG를 Storage product-assets/cmpp62yje00015xup5h8pgwx0/cutout.png 적재 -> assetSource.cutout=auto-cache 전환 + 4변형 차별화 육안 + save-assets DB 기록 단정(Q1 프리미엄 렌더러 적용 후 하면 더 정확) |
-| **PENDING** | Real Win(Firefly 웹 라이프스타일 씬->Storage backdrop 적재, 천장 트랙) / B-3 달항아리 / P20 supplier seller ID / G6 winner3333 배송템플릿 / Storage POC 잔존(product-images/poc/icetray-cmpp62yje-poc.jpg) |
+| **FROM** | 💻 Code (Phase G8-ENGINE-Q1 item 1·2·3·5 코드 완료, push 597f3ee) |
+| **TO** | 🖥 Desktop 새 채팅 (프리미엄 렌더러 E2E 육안 + 누끼/배경 Storage 적재) |
+| **BASELINE** | 597f3ee (origin/main, Vercel READY, production smoke 통과) |
+| **NEXT SCOPE** | **Desktop 검증+운영**: (1) /studio 또는 PLANT 아이스트레이(cmpp62yje00015xup5h8pgwx0) 썸네일 생성 -> 4변형이 프리미엄(사이클로라마 스윕+접지+반사+스포트) + warm 팔레트(#D6965A) + clean 무텍스트로 격상됐는지 육안. response.artDirection.colorMood=warm 확인. (2) Adobe 누끼 PNG를 Storage product-assets/cmpp62yje00015xup5h8pgwx0/cutout.png 적재 -> assetSource.cutout=auto-cache 전환 + 4변형 차별화 극대화 육안 + save-assets DB main/detail_image_url 기록. (3) 통과 시 G8-ENGINE-Q1 [CLOSED] -> Track A(명화송풍구 B-12 발행) 대표 승인 후 별도 채팅. 상세: docs/handoff/THUMBNAIL_ART_DIRECTION_SYSTEM_2026-05-28.md |
+| **PENDING (item4 Pretendard)** | 썸네일 SVG 텍스트의 Pretendard 실폰트 번들 — 폰트 바이너리(otf/woff) 에셋 확보 -> repo fonts/ + Vercel fontconfig(FONTCONFIG_PATH) 설정 -> Sharp/librsvg 인식 -> 글리프 육안 검증. 현재는 font-family Pretendard 우선 스택 + 시스템 폴백. 별도 검증 단계(#46: 에셋·육안 없이 완료 단정 불가) |
+| **PENDING** | Real Win(Firefly 웹 라이프스타일 씬->Storage backdrop-{skeletonId}.png 적재, 천장 트랙, lifestyle 변형이 실사 씬) / B-3 달항아리 / P20 supplier seller ID / G6 winner3333 배송템플릿 / Storage POC 잔존(product-images/poc/icetray-cmpp62yje-poc.jpg) |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
 

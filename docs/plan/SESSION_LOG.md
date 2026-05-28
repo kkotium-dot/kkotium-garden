@@ -1,5 +1,16 @@
 > **분할 메모 (2026-05-28, #31 여덟 번째 분할)**: 2026-05-15 ~ 2026-05-19 PM 이전 entry 9건은 `docs/plan/archive/SESSION_LOG_2026-05-19.md`로 동결. 본 파일은 직전 5세션(2026-05-20 ~ 2026-05-28) 라이브 유지.
 
+## 2026-05-28 Track B G8-ENGINE-Q1 썸네일 아트디렉션 품질 격상 (Code turn, push 597f3ee)
+
+- baseline eb72b9e. SCOPE 5개 중 4개 코드 완료(item4 Pretendard 별도 위임). docs 2건 + 코드 commit 3건.
+- item1 (1ea8dab 동봉) thumbnail-art-direction.ts: pickArtDirection(conceptTone) -> {palette(topRgb/floorRgb/accent/spotlight), productScale, typeScale, spotlightStrength, vignette, horizon}. 팔레트는 실제 ColorMood enum(warm/calm/vivid/mono)에 키잉, 기본 warm. 보조축은 실제 enum으로 정정: pricePosition budget(스포트+0.08)/premium(저채도 desaturate+여백+vignette), emotionalTone friendly(소프트 cap)/professional·trust(vignette+집중)/sensory, persona senior(typeScale x1.15), genre minimal(productScale x0.9). 핸드오프의 luxury/pastel/elegant는 실제 타입에 없어 미사용(#46 정정).
+- item2+5 (1ea8dab) sharp-composite: renderSweep/renderRadialGlow/renderEllipseShadow/makeReflection/applyEdgeVignette 신규. thumbnail-generator buildProductScene: 스윕(or lifestyle backdrop)+스포트(스윕만)+접지 2겹(캐스트 blur22+컨택트 blur8)+바닥 반사(flip+alpha fade)+제품. clean=텍스트/워터마크 0. price/badge=accent pill/chip(typeScale). lifestyle=backdrop 우선+헤드라인. 미사용 PRODUCT_SLOT/OFFSET 제거.
+- item3 (597f3ee) route: 이미 Diagnosis.conceptTone 조회->req 전달, generator가 pickArtDirection 파생. 응답에 artDirection echo(colorMood/palette/scale/spot/vignette) 추가.
+- production smoke 실측: POST /api/thumbnail/cmpp62yje00015xup5h8pgwx0 {} -> 200, 4변형(clean 114300/price 117996/badge 116984/lifestyle 106072 base64) errors:[]. clean copy={} (텍스트0 정책 준수). artDirection.colorMood=warm, palette accent #D6965A(warm 정합), productScale 0.9(minimal), typeScale 1.15(senior), spotlight 0.42(friendly cap), vignette false. assetSource{cutout:fallback,backdrop:fallback} + lowResolution{760,760,760} 회귀 0.
+- item4 Pretendard 폰트 번들 미완료(정직 플래그): 폰트 바이너리 에셋이 repo/네트워크에 없고, Vercel Sharp(librsvg) fontconfig 설치는 별도 인프라 작업이며, curl로 글리프 폰트 육안 검증 불가 -> #46상 "완료" 단정 불가. 현 SVG font-family는 Pretendard 우선 스택 유지(환경 미설치 시 시스템 폴백). 별도 검증 단계로 위임.
+- 비가역 0(Supabase 미적재, 네이버 미발행). SD-01 무접촉.
+- 다음: Desktop E2E 육안 재검증(프리미엄 크래프트 + warm 팔레트 + clean 텍스트0) + 누끼 Storage 적재로 차별화 극대화 -> Real Win(Firefly 씬 backdrop 적재).
+
 ## 2026-05-28 Track B G8-ENGINE 이미지 엔진 구축 (Code turn, push 5a169c7)
 
 - baseline 08795bb. 5개 SCOPE 전부 코드 완료 + production smoke 통과.
