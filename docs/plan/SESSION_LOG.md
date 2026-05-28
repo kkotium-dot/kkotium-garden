@@ -1,3 +1,46 @@
+## 2026-05-28 Track B G7 [CLOSED] + E1~E3 [CLOSED] (userId FK fix 재검증 통과, Desktop turn, 코드 변경 0)
+
+### 본 turn 성격
+
+Desktop이 baseline 17143f0 production에서 G7(userId FK fix) + E1~E3(엑셀 88칸)을 실측 재검증하여 통과 단정. Code는 docs only 반영(코드 변경 0). 비가역 0.
+
+### G7 재검증 (production 실측, 17143f0)
+
+- 36904429(아이스트레이) 등록시작 -> 네이버 엑셀 다운로드 -> POST /api/products **200** (이전 500에서 해소)
+- 새 DRAFT row cmpp62yje00015xup5h8pgwx0 88필드 정합: sku=KKT-1779953038280(자동생성) / status=DRAFT(ACTIVE 교정) / userId=cmmklnrcs0000im0q5trp9qkr(실제값, 'default' 교정) / supplierId 실제 / naverCategoryCode=50005257 / salePrice=13900 / margin=42.59 / originCode=200037
+- userId/supplierId FK 검증 fix(17143f0) + SKU 자동발급(1aa5969) 실효 확정
+
+### E1~E3 재검증 (다운로드 엑셀)
+
+- naver_KKT-1779953038280_2026-05-28.xlsx = 93컬럼 양식, 41 핵심칸 정확: 판매자코드 / 카테고리코드(50005257) / 상품명 / 판매가(13900) / 옵션값 4종 / 원산지(200037) / 배송 CJGLS 조건부무료 / 고시템플릿(2976841) / 리뷰포인트 / 구매평노출
+- 빈 칸은 선택항목(단위가격/추가상품/상세설명/제조일자 등) = 정상
+
+### originCode 오진 최종 정정
+
+- DB 3 row 대조: 정상 row(아이스트레이/명화송풍구) = 200037(6자리), 오염 row(달항아리 category=uncategorized) = 0200037(7자리)
+- 단정: 200037(6자리)이 정상값(naver-origin-codes.ts 정합), 0200037(7자리)이 오염값. Code 무변경 판단 확정. 별도 핸드오프 불필요.
+
+### 핸드오프 CLOSED
+
+- HANDOFF_g7_userid_fk_violation_2026-05-28.md -> [CLOSED 2026-05-28 Desktop]
+- HANDOFF_g7_sku_empty_unique_2026-05-28.md -> [CLOSED] (Code 이전 turn 확인)
+- 동 turn 누적 CLOSED 마킹 반영: crawler_desc_contents_type / crawl_logs_insert_await / g5_prefill_deficit_price / plant_header_duplicate_buttons
+
+### stale fact 정정 (#44)
+
+- PROGRESS "8개 DRAFT" -> 실제 3건(명화송풍구 / 달항아리 / 아이스트레이 신규). D-1 헤더에 반영
+
+### 다음
+
+- G8 이미지 파이프라인(/studio 또는 PLANT 비주얼탭, 아이스트레이 DRAFT 표본, Sharp 5000~7000px #26 주의) 새 채팅
+- 통과 시 Track A 명화송풍구 B-12 발행(대표 승인 후 별도 채팅)
+
+### 적용 작업원칙
+
+#29 · #31 · #41 · #44 · #45 · #46
+
+---
+
 ## 2026-05-28 G7 userId 'default' Foreign Key 위반 fix (Code turn, SKU fix 후속, P0)
 
 ### 본 turn 성격

@@ -1,7 +1,7 @@
 # HANDOFF — 크롤러 desc.contents 빈 객체 TypeError 근본 수정 (G1 회귀)
 
 > **작성**: 2026-05-28 Desktop turn (Track B G1 정주행 검증 중 발견)
-> **상태**: OPEN — Claude Code 1-commit 처리 대기 (P0, 광범위 회귀)
+> **상태**: [CLOSED 2026-05-28 Desktop] — 동일 36904429 G1 재검증 통과(크롤 200 + name/supplierPrice 7980/options 4/images 1 완전). desc.contents {} 타입가드 fix d2f5d6e 실효 확정.
 > **베이스라인**: HEAD `016631c` (origin/main, Vercel READY)
 > **발견 경로**: Track B G1 게이트 — 신규 도매매 상품 36904429(아이스트레이) 크롤링 시 HTTP 500
 

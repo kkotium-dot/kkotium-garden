@@ -1,18 +1,38 @@
 # HANDOFF — PLANT 페이지 상단 헤더 중복 등록 버튼 정합 (B-13 후속) [CLOSED 2026-05-27 PM]
 
 > **작성**: 2026-05-27 PM Desktop turn (b6ce4bb 검증 중 발견)
-> **상태**: ✅ CLOSED — 2026-05-27 PM Code turn 본 commit으로 옵션 A(단순 제거) 적용 완료.
-> **후속**: Desktop이 production 7탭 순회 재검증 후 §7 ARCHIVED.
+> **상태**: ✅ CLOSED + Desktop VERIFIED — 2026-05-27 PM Code commit `016631c`로 옵션 A(단순 제거) 적용 + Desktop Chrome MCP 7탭 순회 실측 통과.
+> **후속**: §7 ARCHIVED 이전 준비 완료. B-12 명화송풍구 등록 완주 turn 진입 가능.
 > **선행 상태**: B-13 commit `b6ce4bb` 적용 후, 하단 체크박스+버튼 블록은 visual 탭에 정상 흡수됨
 
-## ✅ CLOSED 결과
+## ✅ CLOSED 결과 (Code + Desktop)
 
+### Code 측 (commit 016631c)
 - `src/app/products/new/page.tsx` line 1792-1805 14줄 `<div style={{ display: 'flex', gap: 8 }}>...</div>` 블록 삭제 (handleNaverDirect 버튼 + handleGenerate 버튼 헤더 인스턴스)
 - 핸들러 grep 카운트: handleNaverDirect 3->2, handleGenerate 4->3 (line 817 비-functional 주석 포함)
 - functional call site: 양쪽 visual 탭 1곳만 잔존
 - TSC 0 + npm run build OK (`/products/new` 64.2 -> 63.9 kB)
 - 부모 `flex items-center gap-2` div + 진행률 dots + 완료 배지 정합 보존
 - 작업원칙 #45 (실측 evidence 기반 fix) 직접 사례
+
+### Desktop 재검증 (2026-05-27 PM, Chrome MCP 7탭 순회)
+
+production `/products/new` 7탭 내비게이션 + register계열 버튼 DOM 양을 단정. 결과 전부 정합:
+
+| 탭 | 등록 버튼 총수 | header(top<300) | bottom(top>=300) | 체크박스 | 판정 |
+|---|---|---|---|---|---|
+| [기본정보] (default) | 0 | 0 | 0 | 미노출 | ✅ |
+| [옵션] | 0 | 0 | 0 | 미노출 | ✅ |
+| [이미지] | 0 | 0 | 0 | 미노출 | ✅ |
+| [배송] | 0 | 0 | 0 | 미노출 | ✅ |
+| [SEO] | 0 | 0 | 0 | 미노출 | ✅ |
+| [혜택] | 0 | 0 | 0 | 미노출 | ✅ |
+| [비주얼 자동화] | 2 | **0** | **2** (top=502, top=560) | 노출 ✅ | ✅ |
+
+- 헤더 dup 완전 소거 단정: 7개 탭 모두 top<300 영역 등록 버튼 0건
+- visual 탭 정합 보존: 체크박스 `등록 후 비주얼 자동 생성` 노출 + 2개 버튼(top=502/560) + 저장 프롬프트 정상
+- b6ce4bb 효과(체크박스 visual 흡수) 그대로 보존 — 회귀 0건
+- 작업원칙 #41 (두 환경 핑퐁) + #45 (production smoke 정답) 직접 세트 통과 사례
 
 
 ---

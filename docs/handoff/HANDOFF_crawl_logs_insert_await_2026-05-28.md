@@ -1,7 +1,7 @@
 # HANDOFF — crawl_logs INSERT await 누락 dangling promise 수정 (G1 Tier-2 회귀)
 
 > **작성**: 2026-05-28 Desktop turn (Track B G1 재개 — DB 3중 검증 Tier-2 중 발견)
-> **상태**: OPEN — Claude Code 1-commit 처리 대기 (P1, 소싱 보관함 동선 단절)
+> **상태**: [CLOSED 2026-05-28 Desktop] — 동일 36904429 G1 Tier-2 재검증 통과(crawl_logs row 1건 생성 + 응답↔DB 전필드 일치, crawled_at 04:12:56). fix 6f8e9f8 실효 확정.
 > **베이스라인**: HEAD `d2f5d6e` (origin/main, Vercel READY — desc.contents fix 직후)
 > **선행**: desc.contents {} fix(d2f5d6e)로 G1 크롤 응답은 200 정상. 그 직후 Tier-2(DB 행) 검증에서 발견.
 

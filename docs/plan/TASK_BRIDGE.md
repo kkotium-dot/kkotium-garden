@@ -71,17 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Code turn, 2 파일 +30/-7, commit 17143f0) — G7 userId 'default' Foreign Key 위반 P0 fix 완료. SKU fix(1aa5969) 검증 통과 후 UI가 userId='default'(가짜 ID)를 보내 Product_userId_fkey 위반 -> DRAFT 저장 100% 500 격리 -> Fix A route.ts가 userId/supplierId를 findUnique 실재 검증 후 findFirst fallback + Fix B page.tsx userId 미전송 + status DRAFT. originCode '0200037' 전제는 데이터셋(중국=200037)과 모순되는 오진이라 무변경. TSC 0 / build 0 / verify-vercel exit 0. g7_sku_empty_unique [CLOSED]. 다음: Desktop 새 채팅 G7 재검증(DRAFT 저장 200 + 88필드 매핑) -> G8 -> E1~E3.
+**Last update**: 2026-05-28 (Desktop turn, 코드 0) — Track B G7 [CLOSED] + E1~E3 [CLOSED] 재검증 통과(17143f0 실측, POST 200 + DRAFT 88필드 정합 + 엑셀 41칸). 다음: G8 이미지 파이프라인 새 채팅.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop G7 재검증 + G8/E1~E3 정주행 (Code G7 userId FK fix 완료)
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop G8 이미지 파이프라인 검증 (G2~G7 + E1~E3 전수 통과)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (G7 userId/supplierId FK 검증 fix 17143f0 — 'default' 거부 + findFirst fallback) |
-| **TO** | 🖥 Desktop 새 채팅 (36904429 G7 재검증 -> G8 -> E1~E3) |
-| **BASELINE** | 17143f0 (origin/main, Vercel READY). TSC 0 / build OK. userId/supplierId 실재 검증 후 fallback + handleGenerate userId 미전송 + status DRAFT. (SKU 자동발급 1aa5969 누적) |
-| **NEXT SCOPE** | (1) Desktop 36904429 등록시작 -> 네이버 엑셀 다운로드 -> POST /api/products 200 + DRAFT row 생성 단정(userId 실제값 / status=DRAFT / sku 자동생성). (2) Supabase 88필드 매핑 검증(naverCategoryCode=50005257 / salePrice=13900 / originCode=200037 / 배송). (3) G8 이미지(Sharp #26) -> E1~E3 엑셀 88칸 |
-| **PENDING** | B-3 달항아리 카테고리 오염 보정 / P20 supplier seller ID backfill / G6 winner3333 배송템플릿 미등록 |
+| **FROM** | 🖥 Desktop (G7 [CLOSED] + E1~E3 [CLOSED]) |
+| **TO** | 🖥 Desktop 새 채팅 (G8 이미지 파이프라인) |
+| **BASELINE** | 17143f0 (origin/main, Vercel READY) |
+| **NEXT SCOPE** | G8 = /studio 또는 PLANT 비주얼 탭에서 아이스트레이(cmpp62yje00015xup5h8pgwx0) 진단->썸네일->상세->save 파이프라인 검증. Sharp 5000~7000px 무거운 합성 #26 행 위험 시 즉시 보고. 통과 시 Track A(명화송풍구 B-12 발행) 대표 승인 후 별도 채팅 |
+| **PENDING** | B-3 달항아리 카테고리/originCode 오염 보정(naverCategoryCode=11_08_22_00_00 도매꾹형식 + 0200037 + uncategorized) / P20 supplier seller ID / G6 winner3333 배송템플릿 미등록(Track A 발행 직전 실등록) |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
 
@@ -157,7 +157,7 @@
 | ID | 영역 | 권고 sprint |
 |---|---|---|
 | **G7-SKU** | 빈 SKU unique 충돌 -> SKU 미입력 상품 2번째부터 저장 500 (P0) | `1aa5969` Fix A 자동발급 엔진 + Fix C payload 확장 + Fix B backfill ✅ **[CLOSED 2026-05-28 Desktop]** (probe 자동 SKU 확인) |
-| **G7-userId** | userId='default' 가짜 ID -> Product_userId_fkey 위반 -> DRAFT 저장 100% 500 (P0) | `17143f0` Fix A findUnique 검증+fallback + Fix B userId 미전송/status DRAFT ✅ — Desktop G7 재검증 대기 |
+| **G7-userId** | **userId="default" FK 위반 -> DRAFT 저장 500 (P0)** | **17143f0 [CLOSED 2026-05-28] — Desktop POST 200 재검증 통과** |
 | P17 | supplier-notfound 시 배송 fallback | `29b7c49` (PC-B-2, infra 완료) — notfound 케이스 prefill URL로 실 검증 대기 |
 | P19 | 혜택 prefill | PC-B-3 (P16 결정 후) |
 | P16 | additionalImages 0건 (crawler 측) | PC-B-3 또는 PC-D 분리 (사용자 결정) |

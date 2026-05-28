@@ -1,8 +1,8 @@
 # HANDOFF — G5 prefill 자동 판매가가 순마진 음수 상품 생성 (적자가격 설계결함)
 
 > **작성**: 2026-05-28 Desktop turn (Track B G5 정주행 검증 중 발견)
-> **상태**: OPEN — Claude Code 처리 대기 (P1, 셀러 손실 직결 / 설계 개선)
-> **베이스라인**: HEAD `6f8e9f8` (origin/main, Vercel READY)
+> **상태**: [CLOSED 2026-05-28 Desktop] — fix 9415169 production 재검증 통과. 36904429 등록 시작 -> 새 prefill salePrice 10,374 -> **13,900원** (순마진율 **+15.5%** 실측, 핸드오프 예측치 13,811 일치). calcPrefillSalePrice 실효 확정. 꼬띠 추천가 흑자가 자동주입 동작 확인.
+> **베이스라인**: HEAD `9415169` (origin/main, Vercel READY) — fix 반영본
 > **발견 경로**: Track B G4/G5 게이트 — 36904429 prefill 자동 판매가 -> 꼬띠 D등급/순마진 음수
 
 ---

@@ -1,7 +1,7 @@
 # HANDOFF — G7 userId="default" Foreign Key 위반 + status/originCode 정합 (DRAFT 저장 500, SKU fix 후 잔존 P0)
 
 > **작성**: 2026-05-28 Desktop turn (G7 재검증 — SKU fix 1aa5969 검증 중 발견)
-> **상태**: OPEN — Claude Code 처리 대기 (P0, PLANT 저장 경로 전면 차단)
+> **상태**: [CLOSED 2026-05-28 Desktop] — 17143f0 production 재검증 통과(POST /api/products 200 + DRAFT row cmpp62yje00015xup5h8pgwx0 88필드 정합 + 다운로드 엑셀 93컬럼 41칸 정확). userId/supplierId FK 검증 fix 실효 확정. originCode 200037(6자리) 정상 = Code 무변경 판단 확정(0200037 7자리가 오염값).
 > **베이스라인**: HEAD `1aa5969` (origin/main, Vercel READY — SKU fix 적용본)
 > **선행 [CLOSED]**: HANDOFF_g7_sku_empty_unique (Fix A 검증 통과 — probe에 KKT-260528-E0XLYA 자동부여 확인 / Fix B 명화송풍구 sku backfill 완료 / 빈 SKU 0건)
 > **발견 경로**: 36904429 등록시작 -> 엑셀 다운로드 -> POST /api/products 여전히 500. fetch 가로채기로 UI 페이로드 포착 + 동일 페이로드 재현으로 근본원인 단정.
