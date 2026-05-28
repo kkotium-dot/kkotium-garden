@@ -265,6 +265,17 @@ export async function POST(
       },
       // G8-ENGINE: non-blocking low-resolution warning (<=760px long side).
       lowResolution: result.lowResolution ?? null,
+      // G8-ENGINE-Q1: conceptTone-derived art direction (palette + craft) used
+      // for all variants. Surfaced so the UI / Desktop can confirm the palette
+      // matches the diagnosis colorMood (data-driven, not designer intuition).
+      artDirection: {
+        colorMood: conceptTone.colorMood,
+        palette: result.artDirection.palette,
+        productScale: result.artDirection.productScale,
+        typeScale: result.artDirection.typeScale,
+        spotlightStrength: result.artDirection.spotlightStrength,
+        vignette: result.artDirection.vignette,
+      },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown error';
