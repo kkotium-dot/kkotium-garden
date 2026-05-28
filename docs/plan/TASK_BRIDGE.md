@@ -71,16 +71,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Code turn, 3 파일 +87/-31, commit 1aa5969) — G7 빈 SKU unique 충돌 P0 fix 완료. Desktop G2 d3 재검증 [CLOSED] 통과(e1c6fd6) 후 G7에서 POST /api/products 500(Unique constraint sku) 격리 -> Fix A 공통 SKU 엔진(src/lib/sku-engine.ts) 자동발급 + Fix C create payload 5필드(taxType/description/keywords/tags/shipping_template_id) 영속화 확장. Fix B 명화송풍구 빈 SKU backfill SQL은 Desktop MCP 실행 위임. TSC 0 / build 0 / verify-vercel exit 0. 다음: Desktop 새 채팅 G7 재검증(DRAFT 저장 200 + 88필드 매핑) -> G8 -> E1~E3.
+**Last update**: 2026-05-28 (Code turn, 2 파일 +30/-7, commit 17143f0) — G7 userId 'default' Foreign Key 위반 P0 fix 완료. SKU fix(1aa5969) 검증 통과 후 UI가 userId='default'(가짜 ID)를 보내 Product_userId_fkey 위반 -> DRAFT 저장 100% 500 격리 -> Fix A route.ts가 userId/supplierId를 findUnique 실재 검증 후 findFirst fallback + Fix B page.tsx userId 미전송 + status DRAFT. originCode '0200037' 전제는 데이터셋(중국=200037)과 모순되는 오진이라 무변경. TSC 0 / build 0 / verify-vercel exit 0. g7_sku_empty_unique [CLOSED]. 다음: Desktop 새 채팅 G7 재검증(DRAFT 저장 200 + 88필드 매핑) -> G8 -> E1~E3.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop G7 재검증 + G8/E1~E3 정주행 (Code G7 SKU fix 완료)
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop G7 재검증 + G8/E1~E3 정주행 (Code G7 userId FK fix 완료)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (G7 SKU unique fix 1aa5969 — 빈 SKU 자동발급 엔진 + create payload 확장) |
+| **FROM** | 💻 Code (G7 userId/supplierId FK 검증 fix 17143f0 — 'default' 거부 + findFirst fallback) |
 | **TO** | 🖥 Desktop 새 채팅 (36904429 G7 재검증 -> G8 -> E1~E3) |
-| **BASELINE** | 1aa5969 (origin/main, Vercel READY). TSC 0 / build OK. 빈 SKU 자동발급(sku-engine) + create payload taxType/description/keywords/tags/shipping_template_id 영속화 |
-| **NEXT SCOPE** | (1) Desktop 36904429 등록시작 -> 네이버 엑셀 다운로드 -> POST /api/products 200 + DRAFT row 생성 + sku 자동생성 non-empty 단정. (2) Supabase DRAFT 88필드 매핑 검증(naverCategoryCode=50005257 / salePrice=13900 / originCode / sku / 배송). (3) Fix B 명화송풍구 빈 SKU backfill SQL 실행(report 참조). (4) G8 이미지 -> E1~E3 엑셀 88칸 |
+| **BASELINE** | 17143f0 (origin/main, Vercel READY). TSC 0 / build OK. userId/supplierId 실재 검증 후 fallback + handleGenerate userId 미전송 + status DRAFT. (SKU 자동발급 1aa5969 누적) |
+| **NEXT SCOPE** | (1) Desktop 36904429 등록시작 -> 네이버 엑셀 다운로드 -> POST /api/products 200 + DRAFT row 생성 단정(userId 실제값 / status=DRAFT / sku 자동생성). (2) Supabase 88필드 매핑 검증(naverCategoryCode=50005257 / salePrice=13900 / originCode=200037 / 배송). (3) G8 이미지(Sharp #26) -> E1~E3 엑셀 88칸 |
 | **PENDING** | B-3 달항아리 카테고리 오염 보정 / P20 supplier seller ID backfill / G6 winner3333 배송템플릿 미등록 |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
@@ -156,7 +156,8 @@
 
 | ID | 영역 | 권고 sprint |
 |---|---|---|
-| **G7-SKU** | 빈 SKU unique 충돌 -> SKU 미입력 상품 2번째부터 저장 500 (P0) | `1aa5969` Fix A 자동발급 엔진 + Fix C payload 확장 ✅ — Fix B 명화송풍구 빈 SKU backfill SQL + Desktop G7 재검증 대기 |
+| **G7-SKU** | 빈 SKU unique 충돌 -> SKU 미입력 상품 2번째부터 저장 500 (P0) | `1aa5969` Fix A 자동발급 엔진 + Fix C payload 확장 + Fix B backfill ✅ **[CLOSED 2026-05-28 Desktop]** (probe 자동 SKU 확인) |
+| **G7-userId** | userId='default' 가짜 ID -> Product_userId_fkey 위반 -> DRAFT 저장 100% 500 (P0) | `17143f0` Fix A findUnique 검증+fallback + Fix B userId 미전송/status DRAFT ✅ — Desktop G7 재검증 대기 |
 | P17 | supplier-notfound 시 배송 fallback | `29b7c49` (PC-B-2, infra 완료) — notfound 케이스 prefill URL로 실 검증 대기 |
 | P19 | 혜택 prefill | PC-B-3 (P16 결정 후) |
 | P16 | additionalImages 0건 (crawler 측) | PC-B-3 또는 PC-D 분리 (사용자 결정) |

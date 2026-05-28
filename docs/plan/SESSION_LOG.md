@@ -1,3 +1,38 @@
+## 2026-05-28 G7 userId 'default' Foreign Key 위반 fix (Code turn, SKU fix 후속, P0)
+
+### 본 turn 성격
+
+Desktop이 SKU fix(1aa5969)를 production 검증(probe 자동 SKU KKT-260528-E0XLYA 확인)한 뒤, 엑셀 다운로드 DRAFT 저장이 여전히 500인 잔존 P0(userId FK 위반)를 Code가 1-commit 수정. SKU 핸드오프는 [CLOSED].
+
+### 근본 원인
+
+UI(`products/new/page.tsx` handleGenerate)가 userId에 리터럴 'default'(DB에 없는 가짜 ID)를 전송. `route.ts` POST의 userId resolve가 빈 값일 때만 findFirst fallback하고 'default' 같은 truthy 무효 문자열은 그대로 통과 -> `prisma.product.create` Product_userId_fkey 위반 -> 엑셀 다운로드 저장 100% 500. probe(userId 미전송)는 200이라 fallback이 빈 값만 처리함을 대조 단정.
+
+### 코드 변경 (2 파일 +30/-7, commit 17143f0)
+
+- Fix A (`route.ts` POST): userId/supplierId를 findUnique로 실재 검증 후 미존재('default' 포함)면 findFirst fallback. supplierId도 동일 패턴(Fix C 점검 통합).
+- Fix B (`page.tsx` handleGenerate): userId='default' 하드코딩 제거(미전송 -> route가 실제 유저 매핑) + status ACTIVE->DRAFT(엑셀 다운로드는 임시저장 동선).
+- originCode: 핸드오프 §2-2(b)의 '0200037 7자리 정상' 전제는 프로젝트 데이터셋(`naver-origin-codes.ts` line 332 중국=200037 6자리)과 모순되는 오진. 0200037로 바꾸면 `ORIGIN_CODES.find` 매칭이 깨져 UI 원산지 라벨 손실 -> 무변경(현 200037이 정상). 거짓 주석 미도입(#44/#46).
+
+### 검증
+
+- npx tsc --noEmit 0 errors
+- npm run build exit 0
+- 구조적 보장: userId='default' -> findUnique null -> findFirst 실제 user id -> FK 위반 불가(supplierId 동일). 라이브 200 재현은 원격 공유 DB 오염 회피 위해 Desktop G7 재검증에 위임(#46)
+- 한글 typo sentinel grep 0 hits (코드 파일)
+- git push 17143f0 -> verify-vercel-deploy.sh exit 0 (production on 17143f0)
+- SD-01 영구 보존
+
+### 적용 작업원칙
+
+#17 · #21 · #24 · #28 · #29 · #32 · #36 · #41 · #44 · #45 · #46
+
+### 다음
+
+g7_userid_fk 핸드오프 OPEN 유지. Desktop이 36904429로 G7 재검증(POST /api/products 200 + DRAFT row + userId 실제값 + status=DRAFT + Supabase 88필드 매핑) -> 통과 시 [CLOSED] -> G8(이미지) -> E1~E3(엑셀 88칸).
+
+---
+
 ## 2026-05-28 Track B G2 d3 [CLOSED] + G7 빈 SKU unique fix (Code turn, P0)
 
 ### 본 turn 성격

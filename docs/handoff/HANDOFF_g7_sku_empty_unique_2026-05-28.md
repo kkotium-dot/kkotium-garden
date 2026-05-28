@@ -1,7 +1,7 @@
 # HANDOFF — G7 빈 SKU unique 제약 충돌로 DRAFT 저장 500 (SKU 미입력 상품 2번째부터 영구 저장 불가)
 
 > **작성**: 2026-05-28 Desktop turn (Track B G2 d3 재검증 통과 후 G7 정주행 중 발견)
-> **상태**: OPEN — Claude Code 처리 대기 (P0, 모든 SKU 미입력 상품 저장 차단 — 운영 치명)
+> **상태**: [CLOSED 2026-05-28 Desktop] — Fix A(1aa5969) production 검증 통과: probe에 KKT-260528-E0XLYA 자동부여 + Fix B 명화송풍구 sku backfill(DMM-DIRECT-65322245) 완료, 빈 SKU 0건. SKU 아래 잔존하던 userId FK 결함은 HANDOFF_g7_userid_fk_violation_2026-05-28.md로 분리 -> 17143f0 fix.
 > **베이스라인**: HEAD `e1c6fd6` (origin/main, Vercel READY)
 > **발견 경로**: G7 88필드 DRAFT 검증 — 아이스트레이(36904429) "네이버 엑셀 다운로드" 클릭 시 POST /api/products 500
 > **대표 결정 (2026-05-28)**: Fix A = SKU 자동생성 방식 확정 (null 허용 아님)
