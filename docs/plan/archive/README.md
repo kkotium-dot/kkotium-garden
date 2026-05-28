@@ -62,6 +62,18 @@ SESSION_LOG.md (라이브, 직전 5세션 + 본 세션)
 |------|----------|------|
 | `SESSION_LOG_2026-05-13-PM.md` | 2026-05-13 PM | 5 entries (Phase 2-a · Phase 1 · Sprint 7-M1 · Sprint 7-Skel · Sprint 7-Diag MVP) — Phase 3 (UI mount) 진입 직전 SESSION_LOG.md 947줄 T1 권고 도달, 사용자 명시 트리거 분할 |
 
+### 2026-05-18 — 일곱 번째 분할 (Sprint 7-PC pre-sprint cleanup 중)
+
+| 파일 | 분할 일시 | 내용 |
+|------|----------|------|
+| `SESSION_LOG_2026-05-14.md` | 2026-05-18 | 2026-05-13 Phase 2-b-1 ~ 2026-05-14 Phase 3-C-2 entries 9건 (감각/신뢰/이벤트/B2B 트랙 dedicated 렌더러 + ko.json migration + Studio 추출 + 온실 아틀리에 UI mount + PLANT 7번째 탭 통합) — frozen |
+
+### 2026-05-28 — 여덟 번째 분할 (Track B G7 [CLOSED] 직후 T2 1554줄 초과)
+
+| 파일 | 분할 일시 | 내용 |
+|------|----------|------|
+| `SESSION_LOG_2026-05-19.md` | 2026-05-28 | 2026-05-15 ~ 2026-05-19 PM entries 9건 (Sprint 7-M2 Phase 3-C-3 + 3-C-3-h/h2 + 2-c-1/2-c-2 lifestyle-picker/admin UI + 7-PC pre-cleanup + 7-PC-B 완주 + dome_code seed + 8-IA 진입 결정/IA 재설계) — SESSION_LOG.md 1554줄 T2 초과, 사용자 명시 트리거 분할 |
+
 **포함 기간**:
 - `SESSION_LOG_2026-05.md`: 2026-05-06 ~ 2026-05-08 (6~14세션, SESSION_LOG.md 1628줄로 1500 임계 초과)
 - `ROADMAP_2026-05.md`: 2026-05-07 ~ 2026-05-12 (ROADMAP.md 1351줄로 T1 1000 초과 후 Session C-1 분할)
