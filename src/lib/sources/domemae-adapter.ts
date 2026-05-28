@@ -175,7 +175,7 @@ const ABSOLUTE_HTTP_RE = /^https?:\/\//i;
 const THUMB_TAG_RE = /_stt_\d{1,3}\b|_thumb\b|\.gif(\?|$)/i;
 
 function extractGalleryImages(html: string): string[] {
-  if (!html) return [];
+  if (!html || typeof html !== 'string') return [];
   const urls: string[] = [];
   let match: RegExpExecArray | null;
   while ((match = IMG_SRC_RE.exec(html)) !== null) {
@@ -200,7 +200,7 @@ function dedupeImages(urls: string[]): string[] {
 }
 
 function stripHtmlToText(html: string): string {
-  if (!html) return '';
+  if (!html || typeof html !== 'string') return '';
   const text = html
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
@@ -311,7 +311,7 @@ export class DomemaeAdapter implements SourceAdapter {
       desc?: { contents?: string };
     };
 
-    const name = item.basis?.title?.replace(/\s+/g, ' ').trim() ?? '';
+    const name = String(item.basis?.title ?? '').replace(/\s+/g, ' ').trim();
     const supplierPrice = parseSupplyPrice(item.price?.supply);
     const inventory = item.qty?.inventory ?? 0;
     const shipFee = parseShipFee(item.deli);
@@ -328,7 +328,10 @@ export class DomemaeAdapter implements SourceAdapter {
     // largePng/large are auto-derived smaller crops (often _stt_330 variants).
     const thumbUrl =
       item.thumb?.original ?? item.thumb?.largePng ?? item.thumb?.large ?? '';
-    const descContents = item.desc?.contents ?? '';
+    // Domeggook serializes an empty detail body as an empty object {} rather
+    // than '', so a nullish guard is insufficient. Coerce non-string to ''.
+    const descContents =
+      typeof item.desc?.contents === 'string' ? item.desc.contents : '';
     const galleryImages = extractGalleryImages(descContents);
     const images = dedupeImages([thumbUrl, ...galleryImages]);
     const country = item.detail?.country ?? '';
