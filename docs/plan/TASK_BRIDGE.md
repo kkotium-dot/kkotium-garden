@@ -71,17 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Desktop turn, 코드 0) — Phase G8-ENGINE **디자인 라인 실증 완료**(08795bb, 실 MCP 호출). 확정 동선 6단계 전수 viability 통과: 도매꾹 Referer 다운로드->Adobe CC 청크업로드->image_remove_background 누끼(투명체+손 보존, rembg 우위)->asset_search GenAIAsset 경로정상->Pillow+Noto CJK 합성->4변형 차별화 육안증명(G8 진단의 '4변형 거의 동일' 해소). 아키텍처 확정 2건: (a)Adobe Express MCP는 외부 누끼 PNG 합성 불가->합성엔진=서버 Sharp 유지 (b)image_remove_background는 Adobe CC presignedAssetUrl만(공개URL 거부). 실측 정정: /mnt/user-data/uploads 읽기전용->/home/claude 스크래치. 비가역 0(Supabase 미저장, 네이버 미발행). 다음: Code Phase G8-ENGINE(엔진 구축).
+**Last update**: 2026-05-28 (Code turn, push 5a169c7) — Phase G8-ENGINE **엔진 구축 [코드 완료]**. 5개 SCOPE 전부: (1)asset-source-resolver.ts 신규(manual>auto-cache(Storage)>fallback) (2)thumbnail-generator 4변형 cutout/backdrop 소비(없으면 fitImage fallback) (3)studio/PLANT B 수동 누끼/배경 입력+소스뱃지 (4)route resolver 배선+backdrop 우선순위+assetSource 응답 (5)저화질 760px 가드. production smoke: POST /api/thumbnail/<아이스트레이> 200 + 4변형 + assetSource{cutout:fallback,backdrop:fallback}(캐시 미적재 정상) + lowResolution 760. TSC0/build0/verify-vercel exit0. 비가역 0. 다음: Desktop이 Adobe 누끼->Storage 적재 -> E2E 재검증.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Code Phase G8-ENGINE (이미지 엔진 구축)
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop G8-ENGINE 누끼 적재 + production E2E 재검증
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 🖥 Desktop (G8-ENGINE 디자인 라인 실증 [CLOSED] — 6단계 실 MCP 통과) |
-| **TO** | 💻 Code (Phase G8-ENGINE 엔진 구축) |
-| **BASELINE** | 08795bb (origin/main, Vercel READY) |
-| **NEXT SCOPE** | **Phase G8-ENGINE(의존성 순서)**: 1.asset-source-resolver.ts 신규(소스 우선순위 manual>auto-cache>fallback, 캐시키 product-assets/{id}/cutout.png + /backdrop-{skeletonId}.png) 2.thumbnail-generator.ts 4 renderer가 resolver cutoutUrl/backdropUrl 소비(cutout 없으면 fitImage fallback) 3.studio/PLANT B 수동 업로드 칸(누끼/배경 URL)+소스 뱃지 4.lifestyle backdropUrl 경로 연결 5.저화질 가드(760px 이하). **합성엔진=서버 Sharp 유지 확정 / 누끼=Adobe presignedAssetUrl만->Storage 캐시 소비 / 외부 이미지 API 런타임 호출 0(#38)**. 상세: docs/handoff/HANDOFF_g8_engine_design_line_proven_2026-05-28.md + HANDOFF_g8_studio_asset_engine_2026-05-28.md |
-| **PENDING** | B-3 달항아리 카테고리/originCode 오염 보정(naverCategoryCode=11_08_22_00_00 + 0200037 + uncategorized) / P20 supplier seller ID / G6 winner3333 배송템플릿 미등록 / Supabase Secret 키 회전(나중 점검) / Storage POC 잔존(product-images/poc/icetray-cmpp62yje-poc.jpg) / 누끼·배경 Storage 적재 운영(엔진 완성 후 Desktop) |
+| **FROM** | 💻 Code (Phase G8-ENGINE 5 SCOPE 코드 완료, push 5a169c7) |
+| **TO** | 🖥 Desktop 새 채팅 (누끼/배경 Storage 적재 + E2E 재검증) |
+| **BASELINE** | 5a169c7 (origin/main, Vercel READY, production smoke 통과) |
+| **NEXT SCOPE** | **Desktop 운영+검증**: (1) 아이스트레이(cmpp62yje00015xup5h8pgwx0) Adobe 누끼 PNG(실증 동선 1~3단계 산출물)를 Supabase Storage 버킷 product-assets 경로 cmpp62yje00015xup5h8pgwx0/cutout.png 로 적재(service role). 선택: backdrop-{skeletonId=S1}.png 도 적재. (2) /studio 또는 PLANT에서 썸네일 생성 -> assetSource.cutout 이 auto-cache 로 바뀌고 4변형이 누끼 기반으로 **명백히 차별화**되는지 육안 확인(이전 'fallback'+'거의 동일'에서 해소). 또는 수동 입력칸에 누끼 URL 직접 붙여 manual 경로 확인. (3) save-assets -> Supabase product 행 main_image_url/detail_image_url 기록 단정. 통과 시 G8-ENGINE [CLOSED] -> Track A(명화송풍구 B-12 발행) 대표 승인 후 별도 채팅. 상세: docs/handoff/HANDOFF_g8_engine_design_line_proven_2026-05-28.md |
+| **PENDING** | B-3 달항아리 카테고리/originCode 오염 보정 / P20 supplier seller ID / G6 winner3333 배송템플릿 미등록 / Supabase Secret 키 회전(나중 점검) / Storage POC 잔존(product-images/poc/icetray-cmpp62yje-poc.jpg) / 누끼·배경 Storage 적재 운영(본 ACTIVE) |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
 

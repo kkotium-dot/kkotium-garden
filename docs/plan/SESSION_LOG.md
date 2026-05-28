@@ -1,5 +1,16 @@
 > **분할 메모 (2026-05-28, #31 여덟 번째 분할)**: 2026-05-15 ~ 2026-05-19 PM 이전 entry 9건은 `docs/plan/archive/SESSION_LOG_2026-05-19.md`로 동결. 본 파일은 직전 5세션(2026-05-20 ~ 2026-05-28) 라이브 유지.
 
+## 2026-05-28 Track B G8-ENGINE 이미지 엔진 구축 (Code turn, push 5a169c7)
+
+- baseline 08795bb. 5개 SCOPE 전부 코드 완료 + production smoke 통과.
+- item1 (9f5b6a4) asset-source-resolver.ts 신규: resolveAssetSources -> {cutoutUrl, backdropUrl, cutoutSource, backdropSource}, 우선순위 manual>auto-cache(Storage)>fallback. automation-storage.ts findCachedAsset(productId, fileName) graceful(오류/미존재->null).
+- item2+4 (b6eed29) thumbnail-generator: ThumbnailRequest.cutoutUrl 추가, loadProductFitted 공유 로더(cutout 투명패딩 합성/없으면 fitImage fallback) 4 renderer 적용. route: matchSkeleton로 skeletonId 결정(생성기와 동일 순수로직) -> resolveAssetSources 배선 -> req.cutoutUrl 주입, backdrop 우선순위 manual>Storage캐시>lifestyle-picker>브랜드색, 응답 assetSource{cutout,backdrop}.
+- item3 (4063a0f) studio/PLANT 공용 useStudioActions에 manualCutoutUrl/manualBackdropUrl 상태+setter(productId 변경 시 리셋), runThumbnail이 비어있지 않을 때만 body 전달. ThumbnailCard 누끼/배경 URL 입력 2칸(옵셔널 props->PLANT 비파손) + assetSource 소스 뱃지. types.ts AssetSourceLiteral. studio + products/new 양 페이지 props 전달.
+- item5 (5a169c7) 저화질 가드: 생성 전 제품 소스 1회 probe, 긴 변 <=760px이면 lowResolution 플래그(non-fatal). route 응답 + ThumbnailCard 경고 배너.
+- production smoke 실측: /studio /products/new 200. POST /api/thumbnail/cmpp62yje00015xup5h8pgwx0 {} -> 200, skeletonId S1, 4변형(clean 136984 / price 132012 / badge 135568 / lifestyle 89692 base64) errors:[]. assetSource{cutout:fallback,backdrop:fallback}(Storage 누끼 미적재라 정확히 fallback, fitImage 폴백 동작 = 회귀 0). lowResolution{760,760,760} 가드 발동.
+- 비가역 0(Supabase 미적재, 네이버 미발행). SD-01 무접촉.
+- 다음: Desktop이 Adobe 누끼 PNG를 Storage product-assets/{id}/cutout.png 적재 -> production E2E(4변형 차별화 육안 + save-assets DB) 재검증.
+
 ## 2026-05-28 Track B G8-ENGINE 디자인 라인 실증 (Desktop turn, 코드 0)
 
 - baseline 08795bb. 확정 동선 6단계 실 MCP 호출 전수 검증. 표본 아이스트레이(cmpp62yje00015xup5h8pgwx0).
