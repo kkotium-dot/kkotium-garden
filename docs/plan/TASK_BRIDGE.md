@@ -71,7 +71,7 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Code turn, 1 파일 +7/-4, commit d2f5d6e) — 크롤러 desc.contents 빈 객체 {} TypeError 근본 수정 (Track B G1 P0 회귀). 도매꾹 getItemView가 상세 본문 없을 때 desc.contents를 빈 객체로 직렬화 -> nullish 가드 통과 -> stripHtmlToText({}).replace 폭발. Fix A 타입가드 + Fix B 헬퍼 가드 + Fix C title String 강제. TSC 0 / build 0 / verify-vercel exit 0. 핸드오프 OPEN 유지 — Desktop 동일 36904429로 G1 재검증 대기. (이전 ACTIVE: B-13a 헤더 중복 버튼 제거 — 유효 유지)
+**Last update**: 2026-05-28 (Code turn, 2 파일 +8/-5, commit 6f8e9f8) — crawl_logs INSERT await 누락 dangling promise 수정 (Track B G1 Tier-2 P1 회귀). desc.contents fix(d2f5d6e) 후 36904429 크롤은 200이나 crawl_logs row 0건 — INSERT가 await 없는 fire-and-forget이라 serverless freeze로 promise 폐기. domemae 단건 + stream bulk(성공/에러) 3개 INSERT 모두 await 추가(.catch 유지). TSC 0 / build 0 / verify-vercel exit 0. 핸드오프 OPEN 유지 — Desktop 동일 36904429로 G1 Tier-2(DB row) 재검증 대기. (이전: desc.contents fix d2f5d6e + B-13a 헤더 버튼 — 유효 유지)
 
 ## ⭐ ACTIVE — 다음 세션 진입점: Desktop B-13/B-13a 재검증 + 명화송풍구 등록 완주 (B-12 + B-13 + B-13a fix 완료, 대표 승인 대기)
 

@@ -259,4 +259,8 @@ Desktop 진단 → Code build (b6ce4bb) → verify-vercel-deploy
 
 Track B G1 정주행 중 36904429(아이스트레이) 크롤링 HTTP 500 (`e.replace is not a function`) 발견 -> Code 1-commit 근본 수정 완료. 도매꾹이 상세 본문 없을 때 `desc.contents`를 빈 객체 `{}`로 직렬화 -> nullish 가드 통과 -> `stripHtmlToText({}).replace` TypeError. `src/lib/sources/domemae-adapter.ts` Fix A(추출 타입가드)+B(헬퍼 가드)+C(title String 강제). TSC 0 / build 0 / verify-vercel exit 0. 상세: `docs/handoff/HANDOFF_crawler_desc_contents_type_2026-05-28.md` (OPEN — Desktop 재검증 후 CLOSED). Desktop은 동일 36904429로 G1부터 재개.
 
+### 7-2. [PROCESSED] crawl_logs INSERT await 누락 dangling promise 수정 (2026-05-28, commit 6f8e9f8)
+
+desc.contents fix(d2f5d6e) 후 G1 재개 DB Tier-2 검증에서 36904429 크롤 200이나 crawl_logs row 0건 발견 -> Code 1-commit 수정. INSERT가 await 없는 fire-and-forget이라 응답 반환 후 serverless freeze로 promise 폐기. `domemae/route.ts` 단건 + `stream/route.ts` bulk(성공/에러) 3개 INSERT 모두 `await` 추가(.catch 유지 -> 블로킹 0). TSC 0 / build 0 / verify-vercel exit 0. 상세: `docs/handoff/HANDOFF_crawl_logs_insert_await_2026-05-28.md` (OPEN — Desktop Tier-2 재검증 후 CLOSED).
+
 Track B 진행 중 추가 Code 인계 발견 시 본 섹션에 paste-ready 작성.

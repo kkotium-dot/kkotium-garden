@@ -1,3 +1,43 @@
+## 2026-05-28 crawl_logs INSERT await 누락 dangling promise 수정 (Code turn, G1 Tier-2 회귀 P1)
+
+### 본 turn 성격
+
+desc.contents {} fix(d2f5d6e) 직후 Track B G1 재개 DB 3중 검증 Tier-2에서 Desktop이 발견한 P1 회귀 1-commit 근본 수정. 36904429 크롤 응답은 200 정상이나 crawl_logs에 row 0건.
+
+### 근본 원인
+
+`src/app/api/crawler/domemae/route.ts`의 crawl_logs INSERT가 `prisma.$executeRaw...catch(...)` fire-and-forget(await 없음). 직후 `NextResponse.json` 즉시 반환 -> Vercel serverless 인스턴스 freeze -> await 되지 않은 INSERT promise가 완료 전 폐기(dangling). `[crawl-log-insert]` 에러 로그 0건이 증거(에러가 아니라 미실행). 기존 3건 INSERT는 race 우연 성공. 로컬 dev는 프로세스 생존으로 항상 완료되어 미발현 — production serverless 특유 회귀.
+
+### 코드 변경 (2 파일 +8/-5)
+
+`grep -rn 'prisma.$executeRaw' src/app/api/crawler/`로 동일 패턴 일괄 점검 후:
+- `domemae/route.ts`: 단건 소싱 스냅샷 INSERT에 `await` 추가.
+- `stream/route.ts`: bulk 성공 INSERT + 에러 INSERT 2개 (둘 다 `Promise.allSettled` 내부, 마지막 배치가 `controller.close()` 전 미완료 위험) `await` 추가.
+- stock-check/route.ts:220 + logs/route.ts는 이미 await 처리 — 변경 없음.
+- 세 곳 모두 `.catch` 유지 -> INSERT 실패해도 응답 블로킹 0, await는 promise 완료만 보장.
+
+### 검증
+
+- npx tsc --noEmit 0 errors
+- npm run build exit 0
+- 한글 typo sentinel grep 0 hits (코드 파일)
+- git push 6f8e9f8 -> verify-vercel-deploy.sh exit 0 (production on 6f8e9f8)
+- SD-01 영구 보존
+
+### 영향 범위
+
+단건 크롤(/crawl, AlternativeProductPanel, DomemaeCrawler) + bulk 크롤의 소싱 보관함 기록 간헐/완전 누락 -> 해소. 크롤 -> 소싱 보관함 -> 씨앗심기(PLANT) 파이프라인 신뢰성 복구.
+
+### 적용 작업원칙
+
+#17 · #21 · #24 · #28 · #29 · #32 · #36 · #41 · #45 · #46
+
+### 다음
+
+핸드오프 OPEN 유지. Desktop이 동일 36904429로 G1 Tier-2(crawl_logs row 1건 생성 단정) -> Tier-3(응답 <-> DB row 필드 일치) -> G2~G8 정주행.
+
+---
+
 ## 2026-05-28 크롤러 desc.contents 빈 객체 TypeError 근본 수정 (Code turn, G1 회귀 P0)
 
 ### 본 turn 성격
