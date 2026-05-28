@@ -151,6 +151,28 @@ Code 인계 사항 발견 시 paste-ready 작성.
 
 ---
 
+## 4-0. Track B 정주행 결과 (2026-05-28 Desktop turn — G1~G5 검증 완료, prepend)
+
+> 검증 대상 = 도매매 36904429(아이스트레이). 실제 운영 동선(`/crawl` 등록 시작 -> prefill -> `/products/new`)으로 검증. 비가역 작업 0.
+
+| 게이트 | 결과 | 근거 (production 실측) |
+|---|---|---|
+| G1 크롤 데이터 | PASS (이전 turn) | crawl_logs row 실재 + 전필드 일치 |
+| **G2 카테고리 자동추천** | **FAIL — 회귀** | prefill catD1만 옴 -> 진입 가드 미충족 -> 자동매핑 silent skip. suggest API/수동 버튼은 정상(주방용품 매핑, 의류 둔갑 0). `HANDOFF_g2_category_prefill_skip_2026-05-28.md` |
+| G3 SKU 자동생성 | PASS | DMM-LHMK-36904429 생성 + /api/products/generate-sku 200 available:true + UI "사용 가능" (3-tier) |
+| G4 꼬띠점수 | PASS | 꿀통지수 D등급/17점/순마진 -11.3% 정확 표시 |
+| **G5 마진계산** | PASS (+ 설계결함 발견) | MarginCalculator 정상(깨진값 0=B-7 회귀 없음). 단 prefill 자동 판매가 10,374원이 순마진 -11.3% 적자가격. `HANDOFF_g5_prefill_deficit_price_2026-05-28.md` |
+| G6 배송템플릿 | 데이터 공백(회귀 아님) | winner3333(아이템위너) 미등록 -> 자동매핑 NOT_FOUND. Track A 발행 직전 실등록 권장 |
+| G7 88필드->DRAFT | 미검증 (다음 채팅) | 카테고리 수동완성 후 진행 |
+| G8 이미지 파이프라인 | 미검증 (다음 채팅) | Sharp 무거운 합성 #26 주의 |
+| E1~E3 엑셀 88칸 | 미검증 (다음 채팅) | handleGenerate 경로 |
+
+**본 turn 산출물**: Code 인계 2건(G2 회귀 + G5 적자가격) handoff 작성, 비가역 작업 0. G1 통과로 두 크롤러 핸드오프(desc.contents / crawl_logs await) [CLOSED] 처리.
+
+**다음 동선**: Code가 G2+G5 fix -> Desktop 새 채팅에서 36904429로 G2/G5 재검증 -> 카테고리 자동입력 + 순마진 양수 확인 -> G7~G8 + E1~E3 정주행 계속 -> 통과 시 Track A 발행 별도 채팅.
+
+---
+
 ## 4. 작업유의사항 (대표가 늘 강조하시는 사항) — 상시 체크리스트
 
 ### 4-A. 거짓 진행 보고 금지 (작업원칙 #46) — 최상위
@@ -262,5 +284,9 @@ Track B G1 정주행 중 36904429(아이스트레이) 크롤링 HTTP 500 (`e.rep
 ### 7-2. [PROCESSED] crawl_logs INSERT await 누락 dangling promise 수정 (2026-05-28, commit 6f8e9f8)
 
 desc.contents fix(d2f5d6e) 후 G1 재개 DB Tier-2 검증에서 36904429 크롤 200이나 crawl_logs row 0건 발견 -> Code 1-commit 수정. INSERT가 await 없는 fire-and-forget이라 응답 반환 후 serverless freeze로 promise 폐기. `domemae/route.ts` 단건 + `stream/route.ts` bulk(성공/에러) 3개 INSERT 모두 `await` 추가(.catch 유지 -> 블로킹 0). TSC 0 / build 0 / verify-vercel exit 0. 상세: `docs/handoff/HANDOFF_crawl_logs_insert_await_2026-05-28.md` (OPEN — Desktop Tier-2 재검증 후 CLOSED).
+
+### 7-3. [PROCESSED] Track B prefill 회귀 2건 — G2 카테고리 silent skip + G5 적자가격 (2026-05-28, commit 9415169)
+
+G2~G8 정주행 중 36904429 prefill에서 (1) 카테고리 3칸 텅 빔 (2) 자동 판매가 순마진 음수 발견 -> Code 1-commit 수정. G2: 도매꾹 얕은 카테고리 depth 상품이 prefill full-triple 가드를 못 통과해 suggest 미트리거 -> `products/new/page.tsx`에 productName 기반 synthetic mismatch else-if 추가(기존 suggest 경로 재사용). G5: supplierPrice*1.3 적자 마크업 -> `naver-margin-advisor.ts` `calcPrefillSalePrice`(수수료 5.5% + 순마진 15% + 배송부담) 교체(crawl/page.tsx 등록시작 2곳) + 판매가 칸 아래 꼬띠 추천가 라벨(i18n 분리). TSC 0 / build 0 / verify-vercel exit 0. 상세: `docs/handoff/HANDOFF_g2_category_prefill_skip_2026-05-28.md` + `docs/handoff/HANDOFF_g5_prefill_deficit_price_2026-05-28.md` (둘 다 OPEN — Desktop 재검증 후 CLOSED).
 
 Track B 진행 중 추가 Code 인계 발견 시 본 섹션에 paste-ready 작성.

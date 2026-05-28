@@ -71,7 +71,7 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Code turn, 2 파일 +8/-5, commit 6f8e9f8) — crawl_logs INSERT await 누락 dangling promise 수정 (Track B G1 Tier-2 P1 회귀). desc.contents fix(d2f5d6e) 후 36904429 크롤은 200이나 crawl_logs row 0건 — INSERT가 await 없는 fire-and-forget이라 serverless freeze로 promise 폐기. domemae 단건 + stream bulk(성공/에러) 3개 INSERT 모두 await 추가(.catch 유지). TSC 0 / build 0 / verify-vercel exit 0. 핸드오프 OPEN 유지 — Desktop 동일 36904429로 G1 Tier-2(DB row) 재검증 대기. (이전: desc.contents fix d2f5d6e + B-13a 헤더 버튼 — 유효 유지)
+**Last update**: 2026-05-28 (Code turn, 4 파일 +73/-2, commit 9415169) — Track B prefill 회귀 2건 수정 (G2 카테고리 silent skip + G5 적자가격, P1). G2: 얕은 카테고리 depth 상품이 prefill full-triple 가드 미통과 -> 카테고리 텅 빔 -> productName 기반 synthetic mismatch로 suggest 경로 재사용. G5: supplierPrice*1.3 적자 마크업 -> calcPrefillSalePrice(수수료 5.5%+순마진 15%+배송부담) 교체 + 추천가 라벨(i18n). TSC 0 / build 0 / verify-vercel exit 0. G2/G5 핸드오프 OPEN 유지 — Desktop 36904429 재검증 대기. (이전: desc.contents d2f5d6e + crawl_logs await 6f8e9f8 — 모두 유효 유지)
 
 ## ⭐ ACTIVE — 다음 세션 진입점: Desktop B-13/B-13a 재검증 + 명화송풍구 등록 완주 (B-12 + B-13 + B-13a fix 완료, 대표 승인 대기)
 

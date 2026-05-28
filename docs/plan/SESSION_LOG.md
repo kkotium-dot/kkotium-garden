@@ -1,3 +1,48 @@
+## 2026-05-28 Track B prefill 회귀 2건 수정 (Code turn, G2 카테고리 silent skip + G5 적자가격, P1)
+
+### 본 turn 성격
+
+Track B G2~G8 정주행 검증 중 Desktop이 발견한 prefill 파이프라인(크롤 -> 등록 시작 -> 폼 자동입력) 회귀 2건을 1-commit으로 묶어 수정. 둘 다 36904429(아이스트레이) 재현.
+
+### 회귀 #1 — G2 카테고리 자동매핑 silent skip
+
+근본 원인: `src/app/products/new/page.tsx` 첫 prefill useEffect의 진입 가드 `if (catD1 && catD2 && catD3)`가 도매꾹 얕은 depth(36904429는 catD1만) 상품에서 미충족 -> mismatch 상태 자체가 안 됨 -> 2차 useEffect(mismatch -> /api/category/suggest 자동호출)도 미트리거 -> 카테고리 3칸 텅 빔. suggest API 자체는 정상(주방용품 정확매핑, 의류 둔갑 0).
+
+수정: full-triple 블록 뒤에 `else if (data.productName)` 추가. 얕은 depth/0개여도 productName 있으면 synthetic mismatch를 set해 기존 2차 useEffect의 suggest 자동호출 경로를 재사용. crawlCatCode(도매꾹 코드)는 위에서 이미 set되어 dome_code 캐시 우선 적용. Fix B(d3 완주 보장)는 `getCategoryId`가 이미 RC1 3-depth fallback을 보유(d4 없으면 d1/d2/d3 loose 매칭)하여 재확인만 — 추가 변경 불필요.
+
+### 회귀 #2 — G5 prefill 적자가격
+
+근본 원인: `src/app/crawl/page.tsx` 등록 시작 핸들러 2곳(line 1671/1841)이 `salePrice = Math.ceil(supplier_price * 1.3)` 단순 마크업 사용. 7,980*1.3 ≈ 10,374원, 네이버 수수료 5.5% + 배송비 3,000 미반영 -> 순마진 -11.3% 적자상품 자동 생성. 꼬띠 D등급 경고는 정상(=발견 경로).
+
+수정 Fix A-core: `src/lib/naver-margin-advisor.ts`에 `calcPrefillSalePrice(supplierPrice, shipFee)` 헬퍼 추가 (NAVER_FEE_RATE 0.055 + TARGET_NET_MARGIN 0.15 + shipBurden 기본 3000, 100원 단위 올림). 예: (7980+3000)/0.795 ≈ 13,811 -> 13,900원(순마진 ~15.5%). crawl/page.tsx 등록 시작 2곳을 이 헬퍼로 교체. 사용자 조정 마진율 기반 bulkSalePrice(대량탭)는 별개라 미변경.
+
+수정 Fix B-transparency: `src/app/products/new/page.tsx` 기본정보 탭 판매가 Field 하단에 "꼬띠 추천가 (순마진 15%): N원" 라벨 + 안내 문구 추가. 한글 문구는 `src/lib/i18n/products-new-strings.ko.json` 분리(#35), JSX 인라인 금지. crawlShipFee state(기본 3000) 신설 + prefill 시 set. 기존 MarketPriceHint 칩 그대로 유지.
+
+### 코드 변경 (4 파일 +73/-2)
+
+- `src/app/products/new/page.tsx`: G2 else-if 분기 + crawlShipFee state + 추천가 라벨 렌더 + import 2건.
+- `src/app/crawl/page.tsx`: calcPrefillSalePrice import + 등록 시작 2곳 교체.
+- `src/lib/naver-margin-advisor.ts`: calcPrefillSalePrice export 추가.
+- `src/lib/i18n/products-new-strings.ko.json`: 신규 (추천가 라벨 + 안내).
+
+### 검증
+
+- npx tsc --noEmit 0 errors
+- npm run build exit 0
+- 한글 typo sentinel grep 0 hits (코드 파일)
+- git push 9415169 -> verify-vercel-deploy.sh exit 0 (production on 9415169)
+- SD-01 영구 보존
+
+### 적용 작업원칙
+
+#17 · #21 · #24 · #28 · #29 · #32 · #35 · #36 · #41 · #45 · #46
+
+### 다음
+
+G2/G5 핸드오프 OPEN 유지. Desktop이 동일 36904429로 (1) /crawl 등록시작 -> 카테고리 3칸 자동입력(주방용품, 의류 둔갑 0) (2) 판매가 흑자가 자동입력 + 순마진 양수 + 추천가 라벨 노출 단정 -> 통과 시 [CLOSED] + G7(DRAFT 88필드)~G8~E1~E3 정주행.
+
+---
+
 ## 2026-05-28 crawl_logs INSERT await 누락 dangling promise 수정 (Code turn, G1 Tier-2 회귀 P1)
 
 ### 본 turn 성격
