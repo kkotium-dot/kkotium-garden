@@ -27,7 +27,6 @@ import { generateCopy } from './copy-writer';
 // workflow principle #38 (production runtime = no external image API calls
 // that can disappear or rate-limit silently).
 import {
-  createCanvas,
   fetchImageBuffer,
   fitImage,
   renderTextOverlay,
@@ -35,11 +34,17 @@ import {
   overlayOnto,
   applyBottomVignette,
   exportJpeg,
+  renderSweep,
+  renderRadialGlow,
+  renderEllipseShadow,
+  makeReflection,
+  applyEdgeVignette,
   type CanvasSize,
 } from './sharp-composite';
 import type { ConceptTone, SkeletonId } from '../diagnosis/concept-tone-inference';
 import type { SkeletonSpec } from './layout-skeletons';
 import { getSkeleton } from './layout-skeletons';
+import { pickArtDirection, type ArtDirection } from './thumbnail-art-direction';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -110,6 +115,9 @@ export interface ThumbnailGenerationResult {
    *  is below ideal print/thumbnail quality. Undefined when the source is
    *  large enough or the probe failed. */
   lowResolution?: { width: number; height: number; threshold: number };
+  /** G8-ENGINE-Q1: the conceptTone-derived art direction used for all variants
+   *  (palette + craft params). Surfaced for debugging / UI hinting. */
+  artDirection: ArtDirection;
 }
 
 // ---------------------------------------------------------------------------
@@ -117,8 +125,6 @@ export interface ThumbnailGenerationResult {
 // ---------------------------------------------------------------------------
 
 const CANVAS: CanvasSize = { width: 1080, height: 1080 };
-const PRODUCT_SLOT: CanvasSize = { width: 780, height: 780 };
-const PRODUCT_OFFSET = { x: 150, y: 90 };
 
 /** Long-side pixel threshold at/below which the product source is flagged as
  *  low resolution (warning only). Mirrors the diagnose upscale guidance. */
@@ -172,55 +178,94 @@ function productPreviewUrl(req: ThumbnailRequest): string {
 }
 
 // ---------------------------------------------------------------------------
+// Premium scene builder (G8-ENGINE-Q1)
+// ---------------------------------------------------------------------------
+
+/** Base product footprint (px) before the art-direction productScale. */
+const SCENE_SLOT = 720;
+
+function rgbToHex(rgb: [number, number, number]): string {
+  const h = (c: number) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0');
+  return `#${h(rgb[0])}${h(rgb[1])}${h(rgb[2])}`;
+}
+
+/** Compose the shared premium product scene used by every variant: a cyclorama
+ *  sweep (or supplied lifestyle backdrop) + soft spotlight + two-layer ground
+ *  shadow + floor reflection + the product, all driven by the art direction.
+ *  Variants add their own text overlays on top of the returned scene. */
+async function buildProductScene(
+  req: ThumbnailRequest,
+  art: ArtDirection,
+  baseOverride?: Buffer | null,
+): Promise<Buffer> {
+  const scaled = Math.round(SCENE_SLOT * art.productScale);
+  const slot: CanvasSize = { width: scaled, height: scaled };
+  // Always pad transparent here: the product sits over the sweep/backdrop so
+  // any letterbox must be see-through (cutouts already are).
+  const productFitted = await loadProductFitted(req, slot, '#FFFFFF00');
+
+  const left = Math.round((CANVAS.width - scaled) / 2);
+  const horizonPx = Math.round(CANVAS.height * art.horizon);
+  const top = Math.round(horizonPx - scaled * 0.82);
+
+  // Base layer: a supplied lifestyle backdrop wins; otherwise the sweep.
+  const base = baseOverride
+    ? await fitImage(baseOverride, CANVAS, rgbToHex(art.palette.floorRgb))
+    : await renderSweep(CANVAS, art.palette.topRgb, art.palette.floorRgb, art.horizon);
+
+  const layers: Buffer[] = [];
+  // Spotlight only on the studio sweep — a photographic backdrop carries its
+  // own lighting and a glow would wash it out.
+  if (!baseOverride) {
+    layers.push(
+      renderRadialGlow(
+        CANVAS,
+        CANVAS.width / 2,
+        top + scaled * 0.42,
+        scaled * 0.62,
+        art.palette.spotlight,
+        art.spotlightStrength,
+      ),
+    );
+  }
+  // Ground: wide soft cast shadow + tight dark contact shadow (kills float).
+  layers.push(
+    await renderEllipseShadow(CANVAS, CANVAS.width / 2, horizonPx + scaled * 0.02, scaled * 0.34, scaled * 0.06, 0.2, 22),
+  );
+  layers.push(
+    await renderEllipseShadow(CANVAS, CANVAS.width / 2, horizonPx + scaled * 0.01, scaled * 0.22, scaled * 0.028, 0.3, 8),
+  );
+  // Floor reflection directly below the product.
+  const reflection = await makeReflection(productFitted, 0.2);
+  layers.push(await offsetLayer(reflection, { x: left, y: top + scaled }, CANVAS));
+  // Product on top.
+  layers.push(await offsetLayer(productFitted, { x: left, y: top }, CANVAS));
+
+  let scene = await overlayOnto(base, layers);
+  if (art.vignette) {
+    scene = await applyEdgeVignette(scene, CANVAS, 0.16);
+  }
+  return scene;
+}
+
+// ---------------------------------------------------------------------------
 // Variant renderers
 // ---------------------------------------------------------------------------
 
 async function renderClean(
-  spec: SkeletonSpec,
+  _spec: SkeletonSpec,
   req: ThumbnailRequest,
+  art: ArtDirection,
 ): Promise<ThumbnailOutput> {
-  const previewUrl = productPreviewUrl(req);
-
-  const canvas = await createCanvas(CANVAS, '#FFFFFF');
-  const productFitted = await loadProductFitted(req, PRODUCT_SLOT, '#FFFFFF');
-
-  const productLayer = await overlayOnto(canvas, [
-    await offsetLayer(productFitted, PRODUCT_OFFSET, CANVAS),
-  ]);
-
-  const hookCopy = await generateCopy({
-    slot: 'hook',
-    skeleton: spec,
-    productName: req.productName,
-    category: req.category,
-    highlight: req.highlight,
-  });
-
-  const titleLayer = await renderTextOverlay(CANVAS, {
-    text: hookCopy.text,
-    x: 60,
-    y: 970,
-    fontSizePx: 56,
-    color: spec.colorTokens.accent,
-    maxWidth: 960,
-    fontWeight: 700,
-  });
-
-  // Skeleton accent stripe along the bottom edge.
-  const stripeLayer = Buffer.from(
-    `<svg width="${CANVAS.width}" height="${CANVAS.height}" xmlns="http://www.w3.org/2000/svg">` +
-    `<rect x="0" y="${CANVAS.height - 6}" width="${CANVAS.width}" height="6" fill="${spec.colorTokens.primary}" />` +
-    '</svg>',
-  );
-
-  const composed = await overlayOnto(productLayer, [titleLayer, stripeLayer]);
-  const buffer = await exportJpeg(composed);
+  // clean = 네이버 대표이미지 후보 -> text/watermark 0. Premium studio scene only.
+  const scene = await buildProductScene(req, art);
+  const buffer = await exportJpeg(scene);
 
   return {
     variant: 'clean',
     buffer,
-    copy: { hook: hookCopy.text },
-    cloudinaryPreviewUrl: previewUrl,
+    copy: {},
+    cloudinaryPreviewUrl: productPreviewUrl(req),
     size: CANVAS,
   };
 }
@@ -228,19 +273,9 @@ async function renderClean(
 async function renderPrice(
   spec: SkeletonSpec,
   req: ThumbnailRequest,
+  art: ArtDirection,
 ): Promise<ThumbnailOutput> {
-  const previewUrl = productPreviewUrl(req);
-
-  const canvas = await createCanvas(CANVAS, spec.colorTokens.secondary);
-  const productFitted = await loadProductFitted(
-    req,
-    PRODUCT_SLOT,
-    spec.colorTokens.secondary,
-  );
-
-  const productLayer = await overlayOnto(canvas, [
-    await offsetLayer(productFitted, PRODUCT_OFFSET, CANVAS),
-  ]);
+  const scene = await buildProductScene(req, art);
 
   const priceCopy = await generateCopy({
     slot: 'priceBadge',
@@ -254,22 +289,22 @@ async function renderPrice(
     label: priceCopy.text,
     x: 60,
     y: 60,
-    fillColor: spec.colorTokens.primary,
+    fillColor: art.palette.accent,
     textColor: '#FFFFFF',
-    fontSizePx: 44,
+    fontSizePx: Math.round(44 * art.typeScale),
     paddingXPx: 32,
     paddingYPx: 18,
     radius: 16,
   });
 
-  const composed = await overlayOnto(productLayer, [priceBadge]);
+  const composed = await overlayOnto(scene, [priceBadge]);
   const buffer = await exportJpeg(composed);
 
   return {
     variant: 'price',
     buffer,
     copy: { priceBadge: priceCopy.text },
-    cloudinaryPreviewUrl: previewUrl,
+    cloudinaryPreviewUrl: productPreviewUrl(req),
     size: CANVAS,
   };
 }
@@ -277,15 +312,9 @@ async function renderPrice(
 async function renderBadge(
   spec: SkeletonSpec,
   req: ThumbnailRequest,
+  art: ArtDirection,
 ): Promise<ThumbnailOutput> {
-  const previewUrl = productPreviewUrl(req);
-
-  const canvas = await createCanvas(CANVAS, '#FFFFFF');
-  const productFitted = await loadProductFitted(req, PRODUCT_SLOT, '#FFFFFF');
-
-  const productLayer = await overlayOnto(canvas, [
-    await offsetLayer(productFitted, PRODUCT_OFFSET, CANVAS),
-  ]);
+  const scene = await buildProductScene(req, art);
 
   const badgeCopy = await generateCopy({
     slot: 'categoryBadge',
@@ -299,22 +328,22 @@ async function renderBadge(
     label: badgeCopy.text,
     x: 60,
     y: 920,
-    fillColor: spec.colorTokens.accent,
+    fillColor: art.palette.accent,
     textColor: '#FFFFFF',
-    fontSizePx: 40,
+    fontSizePx: Math.round(40 * art.typeScale),
     paddingXPx: 28,
     paddingYPx: 14,
     radius: 14,
   });
 
-  const composed = await overlayOnto(productLayer, [badge]);
+  const composed = await overlayOnto(scene, [badge]);
   const buffer = await exportJpeg(composed);
 
   return {
     variant: 'badge',
     buffer,
     copy: { categoryBadge: badgeCopy.text },
-    cloudinaryPreviewUrl: previewUrl,
+    cloudinaryPreviewUrl: productPreviewUrl(req),
     size: CANVAS,
   };
 }
@@ -322,30 +351,20 @@ async function renderBadge(
 async function renderLifestyle(
   spec: SkeletonSpec,
   req: ThumbnailRequest,
+  art: ArtDirection,
 ): Promise<ThumbnailOutput> {
-  const previewUrl = productPreviewUrl(req);
-
+  // Lifestyle backdrop (Storage scene) wins as the scene base; otherwise the
+  // product scene falls back to the palette sweep. The product still gets the
+  // ground shadow + reflection craft for a grounded studio look.
   const backdropUrl = req.lifestyleBackdropUrl;
   const backdropBuffer = backdropUrl
     ? await fetchImageBuffer(backdropUrl).catch(() => null)
     : null;
 
-  // Lifestyle backdrop fills the canvas. If unavailable, fall back to the
-  // skeleton's secondary brand color.
-  const canvas = backdropBuffer
-    ? await fitImage(backdropBuffer, CANVAS, spec.colorTokens.secondary)
-    : await createCanvas(CANVAS, spec.colorTokens.secondary);
+  const scene = await buildProductScene(req, art, backdropBuffer);
 
-  // Smaller product slot for lifestyle layouts (leaves more room for bg).
-  const lifestyleProductSlot: CanvasSize = { width: 580, height: 580 };
-  const lifestyleProductOffset = { x: 250, y: 200 };
-  const productFitted = await loadProductFitted(req, lifestyleProductSlot, '#FFFFFF00');
-
-  const withProduct = await overlayOnto(canvas, [
-    await offsetLayer(productFitted, lifestyleProductOffset, CANVAS),
-  ]);
-
-  const vignetted = await applyBottomVignette(withProduct, CANVAS, 0.5);
+  // Darken the bottom so the white headline reads against any backdrop.
+  const vignetted = await applyBottomVignette(scene, CANVAS, 0.5);
 
   const caption = await generateCopy({
     slot: 'lifestyleCaption',
@@ -359,7 +378,7 @@ async function renderLifestyle(
     text: caption.text,
     x: 60,
     y: 1000,
-    fontSizePx: 38,
+    fontSizePx: Math.round(38 * art.typeScale),
     color: '#FFFFFF',
     maxWidth: 960,
     fontWeight: 600,
@@ -372,7 +391,7 @@ async function renderLifestyle(
     variant: 'lifestyle',
     buffer,
     copy: { lifestyleCaption: caption.text },
-    cloudinaryPreviewUrl: previewUrl,
+    cloudinaryPreviewUrl: productPreviewUrl(req),
     size: CANVAS,
   };
 }
@@ -407,7 +426,10 @@ async function offsetLayer(
 // Public entry
 // ---------------------------------------------------------------------------
 
-const RENDERERS: Record<ThumbnailVariant, (s: SkeletonSpec, r: ThumbnailRequest) => Promise<ThumbnailOutput>> = {
+const RENDERERS: Record<
+  ThumbnailVariant,
+  (s: SkeletonSpec, r: ThumbnailRequest, art: ArtDirection) => Promise<ThumbnailOutput>
+> = {
   clean:     renderClean,
   price:     renderPrice,
   badge:     renderBadge,
@@ -421,6 +443,10 @@ export async function generateThumbnails(
   const match = matchSkeleton(req.conceptTone);
   const skeletonId = req.overrideSkeletonId ?? match.skeletonId;
   const spec = getSkeleton(skeletonId);
+
+  // G8-ENGINE-Q1: derive palette + craft params from the diagnosis ConceptTone
+  // (data-driven, not designer intuition). All variants share one direction.
+  const art = pickArtDirection(req.conceptTone);
 
   // Low-resolution guard: probe the product source once and flag when its long
   // side is at/below the threshold. Non-fatal — a probe failure leaves the flag
@@ -449,7 +475,7 @@ export async function generateThumbnails(
   // others. Each renderer fetches its own image so they don't share state.
   for (const v of variants) {
     try {
-      const out = await RENDERERS[v](spec, req);
+      const out = await RENDERERS[v](spec, req, art);
       outputs.push(out);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -479,5 +505,6 @@ export async function generateThumbnails(
     errors,
     elapsedMs: Date.now() - start,
     lowResolution,
+    artDirection: art,
   };
 }

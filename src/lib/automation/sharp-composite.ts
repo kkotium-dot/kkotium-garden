@@ -226,6 +226,131 @@ export async function applyBottomVignette(
   return overlayOnto(base, [Buffer.from(svg)]);
 }
 
+// ---------------------------------------------------------------------------
+// G8-ENGINE-Q1 — premium craft primitives (cyclorama sweep / spotlight /
+// ground shadow / floor reflection / edge vignette)
+// ---------------------------------------------------------------------------
+
+function rgbCss(rgb: [number, number, number]): string {
+  return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+}
+
+/** Rasterize a seamless cyclorama "sweep" — a wall color fading into a floor
+ *  color with a soft seam around the horizon (no hard line). Replaces the flat
+ *  single-color fill so products read with depth instead of pasted-on. */
+export async function renderSweep(
+  size: CanvasSize,
+  topRgb: [number, number, number],
+  floorRgb: [number, number, number],
+  horizon: number = 0.62,
+): Promise<Buffer> {
+  const top = rgbCss(topRgb);
+  const floor = rgbCss(floorRgb);
+  const seamStart = Math.max(0, (horizon - 0.14) * 100);
+  const seamEnd = Math.min(100, (horizon + 0.06) * 100);
+  const svg = `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="sweep" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${top}" />
+        <stop offset="${seamStart}%" stop-color="${top}" />
+        <stop offset="${seamEnd}%" stop-color="${floor}" />
+        <stop offset="100%" stop-color="${floor}" />
+      </linearGradient>
+    </defs>
+    <rect width="${size.width}" height="${size.height}" fill="url(#sweep)" />
+  </svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+/** Soft radial spotlight glow centered behind the product. Returned as an SVG
+ *  overlay buffer (composited directly). */
+export function renderRadialGlow(
+  size: CanvasSize,
+  cx: number,
+  cy: number,
+  radius: number,
+  color: string = '#FFFFFF',
+  strength: number = 0.4,
+): Buffer {
+  const mid = Math.max(0, strength * 0.4);
+  const svg = `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="glow" cx="${cx}" cy="${cy}" r="${radius}" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${color}" stop-opacity="${strength}" />
+        <stop offset="60%" stop-color="${color}" stop-opacity="${mid}" />
+        <stop offset="100%" stop-color="${color}" stop-opacity="0" />
+      </radialGradient>
+    </defs>
+    <rect width="${size.width}" height="${size.height}" fill="url(#glow)" />
+  </svg>`;
+  return Buffer.from(svg);
+}
+
+/** Rasterize a single blurred dark ellipse used as a ground shadow. Call twice
+ *  (wide soft cast + tight dark contact) to ground the product with weight. */
+export async function renderEllipseShadow(
+  size: CanvasSize,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  opacity: number,
+  blurSigma: number,
+): Promise<Buffer> {
+  const svg = `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="black" fill-opacity="${opacity}" />
+  </svg>`;
+  return sharp(Buffer.from(svg)).blur(Math.max(0.3, blurSigma)).png().toBuffer();
+}
+
+/** Build a faded vertical mirror of a product buffer for a studio floor
+ *  reflection. Flips the product and applies a top-to-bottom alpha fade with
+ *  `maxAlpha` at the contact edge fading to 0. Output matches the input size. */
+export async function makeReflection(
+  productBuffer: Buffer,
+  maxAlpha: number = 0.2,
+): Promise<Buffer> {
+  const meta = await sharp(productBuffer).metadata();
+  const w = meta.width ?? 0;
+  const h = meta.height ?? 0;
+  if (w === 0 || h === 0) return productBuffer;
+  // .flip() mirrors vertically (top<->bottom) so the contact edge stays on top.
+  const flipped = await sharp(productBuffer).flip().png().toBuffer();
+  const mask = `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="white" stop-opacity="${maxAlpha}" />
+        <stop offset="50%" stop-color="white" stop-opacity="0" />
+        <stop offset="100%" stop-color="white" stop-opacity="0" />
+      </linearGradient>
+    </defs>
+    <rect width="${w}" height="${h}" fill="url(#fade)" />
+  </svg>`;
+  return sharp(flipped)
+    .composite([{ input: Buffer.from(mask), blend: 'dest-in' }])
+    .png()
+    .toBuffer();
+}
+
+/** Apply a subtle radial edge vignette (darker corners) for premium drama. */
+export async function applyEdgeVignette(
+  base: Buffer,
+  size: CanvasSize,
+  opacity: number = 0.16,
+): Promise<Buffer> {
+  const r = Math.round(Math.max(size.width, size.height) * 0.72);
+  const svg = `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="edge" cx="${size.width / 2}" cy="${size.height / 2}" r="${r}" gradientUnits="userSpaceOnUse">
+        <stop offset="55%" stop-color="black" stop-opacity="0" />
+        <stop offset="100%" stop-color="black" stop-opacity="${opacity}" />
+      </radialGradient>
+    </defs>
+    <rect width="${size.width}" height="${size.height}" fill="url(#edge)" />
+  </svg>`;
+  return overlayOnto(base, [Buffer.from(svg)]);
+}
+
 /** Export the final composite as a JPEG for transport efficiency. */
 export async function exportJpeg(
   buffer: Buffer,
