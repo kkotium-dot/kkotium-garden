@@ -9,6 +9,7 @@ import { calcHoneyScore } from '@/lib/honey-score';
 import { sendDiscord, buildScoreDropEmbed } from '@/lib/discord';
 import { prisma } from '@/lib/prisma';
 import { KKOTIUM_DEFAULTS } from '@/lib/naver/codes';
+import { generateUniqueSku } from '@/lib/sku-engine';
 
 // Fire-and-forget: check honey score drop after product update
 
@@ -224,10 +225,24 @@ export async function POST(request: NextRequest) {
         ? parseFloat(((salePrice - supplierPrice) / salePrice * 100).toFixed(2))
         : 0;
 
+    // G7 SKU fix: the sku column is unique, and an empty string '' counts as a
+    // single value -> the 2nd SKU-less product would hit a unique-constraint 500.
+    // When no SKU is supplied, auto-issue a collision-safe one via the shared
+    // engine instead of persisting ''.
+    const rawSku = data.sku ? String(data.sku).trim() : '';
+    const resolvedSku = rawSku
+      ? rawSku
+      : await generateUniqueSku({
+          supplierId,
+          supplierProductNo: String(
+            data.supplier_product_code ?? data.productNo ?? '',
+          ).trim(),
+        });
+
     const product = await prisma.product.create({
       data: {
         name: String(data.name || ''),
-        sku: String(data.sku || ''),
+        sku: resolvedSku,
         category: String(data.category || 'uncategorized'),
         naverCategoryCode: String(data.naverCategoryCode || KKOTIUM_DEFAULTS.categoryCode),
         salePrice,
@@ -253,6 +268,16 @@ export async function POST(request: NextRequest) {
         instant_discount: data.instant_discount != null ? data.instant_discount : null,
         importer_name: data.importer_name ? String(data.importer_name) : null,
         return_care_enabled: data.return_care_enabled === true,
+        // G7 Fix C: persist fields the register form actually sends but the
+        // create previously dropped (DRAFT 88-field persistence gap). These all
+        // map to real Product columns; arrays/null guarded to avoid Prisma 500.
+        taxType: data.taxType ? String(data.taxType) : undefined,
+        description: data.description ? String(data.description) : null,
+        keywords: Array.isArray(data.keywords) ? data.keywords : undefined,
+        tags: Array.isArray(data.tags) ? data.tags : undefined,
+        shipping_template_id: data.shipping_template_id
+          ? String(data.shipping_template_id)
+          : null,
         supplierId,
         userId,
       },
