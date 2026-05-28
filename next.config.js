@@ -2,6 +2,17 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Trace the bundled Pretendard OTF into the serverless functions that
+  // rasterize SVG text via Sharp/librsvg, so fontconfig can find Korean glyphs
+  // at runtime (otherwise Korean renders as tofu on Vercel Linux). Keyed by the
+  // app-router route paths that composite text overlays.
+  experimental: {
+    outputFileTracingIncludes: {
+      '/api/thumbnail/[sku]': ['./fonts/**/*'],
+      '/api/products/[id]/generate-detail': ['./fonts/**/*'],
+    },
+  },
+
   images: {
     unoptimized: true,
     domains: ['localhost', 'kkotium.com'],

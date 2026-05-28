@@ -9,16 +9,23 @@
 // Design notes
 //   - Sharp runs in Node runtime only. Any API route consuming this must
 //     export `runtime = 'nodejs'`.
-//   - All overlays use raw SVG strings, sent through Sharp.composite(). No
-//     fonts are loaded from disk — Pretendard is embedded via web-safe
-//     CSS fallback (`-apple-system, sans-serif`) so the build never breaks
-//     on a missing font file. Designer-grade typography lands in Sprint
-//     7-M2 with a Pretendard webfont injection step.
+//   - All overlays use raw SVG strings, sent through Sharp.composite(). Korean
+//     typography uses the bundled Pretendard OTF (/fonts), registered with
+//     fontconfig via font-setup.ts so librsvg resolves "Pretendard" at runtime.
+//     Without it, Korean glyphs drop to tofu on Vercel Linux (no system CJK
+//     font). The font-family stack keeps -apple-system/sans-serif fallbacks
+//     for local dev where Pretendard may be system-installed.
 //   - SVG text is escaped via xmlEscape() to prevent injection from
 //     untrusted product names.
 
 import sharp from 'sharp';
 import { buildImageFetchHeaders } from '@/lib/image-fetch-headers';
+import { ensureFontsRegistered } from './font-setup';
+
+// Point fontconfig at the bundled Pretendard before any SVG-with-text render.
+// Runs once at import — earlier than any renderer call, which is required
+// because fontconfig latches its config file at first glyph match.
+ensureFontsRegistered();
 
 // ---------------------------------------------------------------------------
 // Types
@@ -155,7 +162,7 @@ export async function renderTextOverlay(
     : '';
   const svg = `<svg width="${canvas.width}" height="${canvas.height}" xmlns="http://www.w3.org/2000/svg">
     <style>
-      .t { font-family: -apple-system, "Pretendard", BlinkMacSystemFont, sans-serif;
+      .t { font-family: "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
            font-size: ${opts.fontSizePx}px;
            font-weight: ${weight};
            fill: ${opts.color}; }
@@ -181,7 +188,7 @@ export async function renderBadgeOverlay(
   const badgeHeight = fontSize + padY * 2;
   const svg = `<svg width="${canvas.width}" height="${canvas.height}" xmlns="http://www.w3.org/2000/svg">
     <style>
-      .b { font-family: -apple-system, "Pretendard", BlinkMacSystemFont, sans-serif;
+      .b { font-family: "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
            font-size: ${fontSize}px;
            font-weight: 700;
            fill: ${opts.textColor}; }
