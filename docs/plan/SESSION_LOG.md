@@ -1,3 +1,40 @@
+## 2026-05-28 G2 suggest d3 유령 triple 자체검증 수정 (Code turn, Track B 재검증 후속, P1)
+
+### 본 turn 성격
+
+Desktop이 prefill fix(9415169)를 production 재검증하던 중 격리한 별개 층위의 데이터 결함 1-commit 수정. G2 silent skip(자동호출 미발화)은 9415169로 해소 확인됐고, 그 너머에서 suggest API가 트리에 실재하지 않는 카테고리 조합(유령 triple)을 반환하는 결함이 새로 드러남.
+
+### 근본 원인
+
+`src/app/api/category/suggest/route.ts`의 pageValidation override 경로(Case A)가 page-1 dominant d1/d2(생활/건강>주방용품)에 `suggestions[0].d3`를 그대로 붙임. matchingD3(같은 d1/d2 하위 suggestion)가 없으면 fallback `suggestions[0].d3`가 전혀 다른 분류의 d3(그릇장/컵보드 = 가구/인테리어>주방가구 하위, code 50001317)를 가져와 네이버에 실재하지 않는 세 칸 조합 생성. 클라이언트 `getCategoryId`가 정당히 NULL 반환 -> d3 누락. 그 유령 triple이 `top`으로 name_hash 캐시에 박제되어 동일 오답 반복(usedAI:false, cacheHit:name_hash).
+
+### 코드 변경 (2 파일 +122/-23)
+
+Fix A (`suggest/route.ts`): `resolveCategoryId`(클라이언트 getCategoryId 미러, fuzzy 없음) + `isValidD1D2` + `selfValidateSuggestions` 헬퍼 추가. 최종 suggestions를 트리로 strict 검증 — 유효 full triple은 유지, 무효 d3+유효 d1/d2는 d3 blank(d1/d2 신뢰), d1/d2도 무효면 drop. 대체 d3 자동선택 없음(보수안 1차).
+
+Fix B (`suggest/route.ts`): 캐시 read 시 동일 검증으로 sanitize(박제된 유령 triple을 즉석 복구, d1/d2도 무효면 miss로 재계산). 캐시 write는 full-valid triple만 저장 (d1/d2-only는 미저장 -> 향후 개선 run이 올바른 d3 해결 여지 보존).
+
+Fix C (`products/new/page.tsx`): 2차 useEffect가 d3=""(서버 blank) 케이스에서 d1/d2를 자동 set + 신규 `partial` status. 배너 "대분류/중분류 자동 입력됨 — 소분류만 선택해주세요" 노출. all-empty 'failed' 대신 부분 자동입력 보장.
+
+### 검증
+
+- npx tsc --noEmit 0 errors
+- npm run build exit 0
+- selfValidateSuggestions로 응답 triple은 항상 getCategoryId non-null 또는 d3="" 보장(구조적 불변식)
+- 한글 typo sentinel grep 0 hits (코드 파일)
+- git push e1c6fd6 -> verify-vercel-deploy.sh exit 0 (production on e1c6fd6)
+- SD-01 영구 보존
+
+### 적용 작업원칙
+
+#17 · #21 · #24 · #28 · #29 · #32 · #36 · #41 · #45 · #46
+
+### 다음
+
+G2 핸드오프 2건(suggest_d3_mismatch + category_prefill_skip) OPEN 유지. Desktop이 동일 36904429로 d3 재검증(카테고리 d1/d2 자동 + d3 유효값/빈칸, suggest triple 정합, 그릇장 50001317 유일 단정) -> 통과 시 [CLOSED] + G7(DRAFT 88필드)~G8~E1~E3 정주행.
+
+---
+
 ## 2026-05-28 Track B prefill 회귀 2건 수정 (Code turn, G2 카테고리 silent skip + G5 적자가격, P1)
 
 ### 본 turn 성격

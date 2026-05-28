@@ -71,7 +71,7 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Code turn, 4 파일 +73/-2, commit 9415169) — Track B prefill 회귀 2건 수정 (G2 카테고리 silent skip + G5 적자가격, P1). G2: 얕은 카테고리 depth 상품이 prefill full-triple 가드 미통과 -> 카테고리 텅 빔 -> productName 기반 synthetic mismatch로 suggest 경로 재사용. G5: supplierPrice*1.3 적자 마크업 -> calcPrefillSalePrice(수수료 5.5%+순마진 15%+배송부담) 교체 + 추천가 라벨(i18n). TSC 0 / build 0 / verify-vercel exit 0. G2/G5 핸드오프 OPEN 유지 — Desktop 36904429 재검증 대기. (이전: desc.contents d2f5d6e + crawl_logs await 6f8e9f8 — 모두 유효 유지)
+**Last update**: 2026-05-28 (Code turn, 2 파일 +122/-23, commit e1c6fd6) — G2 suggest d3 유령 triple 자체검증 수정. Desktop 재검증(9415169): G5 [CLOSED] 자동 판매가 13,900원/순마진 +15.5%, G2 silent skip 해소 확인, 그러나 suggest가 dominant d1/d2(생활/건강>주방용품)에 타 분류의 d3(그릇장/컵보드, 실제 가구/인테리어>주방가구 하위)를 붙인 유령 triple 신규 격리 -> 본 commit으로 selfValidateSuggestions(트리 strict 검증) + 캐시 read sanitize/write gate + 클라이언트 partial 자동입력 추가. TSC 0 / build 0 / verify-vercel exit 0. G2 핸드오프 2건 OPEN 유지 — Desktop 36904429로 d3 재검증 대기. (이전: desc.contents d2f5d6e + crawl_logs await 6f8e9f8 — 유효 유지)
 
 ## ⭐ ACTIVE — 다음 세션 진입점: Desktop B-13/B-13a 재검증 + 명화송풍구 등록 완주 (B-12 + B-13 + B-13a fix 완료, 대표 승인 대기)
 

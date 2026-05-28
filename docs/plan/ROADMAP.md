@@ -1,6 +1,6 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-27 PM B-13a PLANT 페이지 상단 헤더 중복 등록 버튼 제거 (Code turn, 1 파일 -14줄, B-13 직속 후속) — Chrome MCP 재검증 중 발견한 헤더 dup(line 1793-1804) 해소. 등록 액션은 visual 탭에서만 노출 보장.
+> **최종 업데이트**: 2026-05-28 Track B G2 suggest d3 유령 triple 자체검증 수정 (Code turn, 2 파일 +122/-23, commit e1c6fd6) — suggest pageValidation override가 만든 트리 부재 카테고리 조합을 selfValidateSuggestions로 차단 + 캐시 sanitize/gate + 클라이언트 partial 자동입력.
 > **HEAD**: 본 commit (origin/main, B-13a fix 적용) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **신규 ledger**: `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off, §3 ACTIVE / §4 STANDING / §6 PENDING 매 세션 정독 의무
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
@@ -15,7 +15,41 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-27 명화송풍구 등록 완주 (Desktop, B-12 fix 완료 후) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-28 Track B G2 d3 재검증 -> G7~G8 + E1~E3 정주행 (Desktop, suggest d3 fix 완료 후) ⭐ ACTIVE
+
+본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. 이중 트랙 핑퐁 (작업원칙 #41) 정합.
+
+```
+꽃틔움 가든 Desktop. Track B 정주행 — 36904429(아이스트레이) G2 d3 재검증 후 G7~E3.
+docs/handoff/HANDOFF_g2_suggest_d3_mismatch_2026-05-28.md 정독 후 진행.
+
+[선행 상태 — Code fix 완료 (origin/main e1c6fd6, Vercel READY)]
+- G1 desc.contents {} TypeError 근본 수정 (d2f5d6e)
+- G1 crawl_logs INSERT await 누락 수정 (6f8e9f8)
+- G2 silent skip + G5 적자가격 수정 (9415169) — G5 자동가 13,900원/순마진 +15.5%
+- G2 suggest d3 유령 triple 자체검증 (e1c6fd6) — 본 turn 재검증 대상
+
+[이번 turn 목표 — G2 d3 재검증 -> 정주행]
+1. /crawl -> 36904429 "등록 시작" -> /products/new?prefill=...
+2. 카테고리: d1/d2(생활/건강>주방용품) 자동 입력 + d3 유효값 또는 명시적 빈칸
+   (invalid_triple 배너 소멸, 'partial' 배너 "소분류만 선택" 확인)
+3. POST /api/category/suggest (아이스트레이) -> getCategoryId(응답 triple) non-null 또는 d3="" 단정
+4. GET /api/naver/categories?q=그릇장 -> 50001317 (가구/인테리어>주방가구) 유일 단정
+5. 통과 시 G2 핸드오프 2건 [CLOSED] + TASK_BRIDGE §7 ARCHIVED
+6. G7(DRAFT 88필드 3중검증) -> G8(이미지) -> E1~E3(엑셀 88칸) 정주행
+
+[STEP 0 — 환경 점검]
+git rev-parse HEAD origin/main && git status --short && \
+  curl -sIo /dev/null -w "Vercel HTTP: %{http_code}\n" \
+    https://kkotium-garden.vercel.app/crawl && \
+  scripts/verify-vercel-deploy.sh
+
+작업원칙 절대 준수 — main 직접 push, Production smoke 3-tier(#45) 의무. SD-01 아랍어 footer 영구 보존.
+```
+
+---
+
+## ~~다음 새 채팅 시작 메시지 — 2026-05-27 명화송풍구 등록 완주 (Desktop, B-12 fix 완료 후)~~ ✅ SUPERSEDED -> 2026-05-28 Track B G2 d3 재검증 정주행 (위 ACTIVE)
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. 이중 트랙 핑퐁 (작업원칙 #41) 정합.
 
