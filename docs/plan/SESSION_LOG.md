@@ -1,3 +1,42 @@
+## 2026-05-28 크롤러 desc.contents 빈 객체 TypeError 근본 수정 (Code turn, G1 회귀 P0)
+
+### 본 turn 성격
+
+Track B G1 게이트 정주행 중 Desktop이 발견한 P0 광범위 회귀 1-commit 근본 수정. 신규 도매매 상품 36904429(아이스트레이) 크롤링 시 `e.replace is not a function` HTTP 500. 도매꾹 raw 직접 검증으로 근본 원인 단정.
+
+### 근본 원인
+
+도매꾹 getItemView om=json은 상세 HTML 본문이 비어 있을 때 `desc.contents`를 빈 문자열이 아닌 빈 객체 `{}`로 직렬화 (XML->JSON 빈 노드). `const descContents = item.desc?.contents ?? ''`에서 `{}`는 nullish가 아니라 통과 -> `stripHtmlToText({})` -> `({}).replace(...)` -> TypeError. 명화송풍구(65322245)는 화보 HTML이 풍부해 string이었기에 미발현.
+
+### 코드 변경 (1 파일 +7/-4)
+
+`src/lib/sources/domemae-adapter.ts`:
+- Fix A (근본): `descContents` 추출을 `typeof item.desc?.contents === 'string' ? ... : ''`로 타입 가드. `{}`/number/null 모두 `''`로 정규화.
+- Fix B (방어 심층): `extractGalleryImages` + `stripHtmlToText` 두 헬퍼에 `typeof html !== 'string'` 가드 추가.
+- Fix C (예방): `name` 추출을 `String(item.basis?.title ?? '').replace(...)`로 강제.
+
+### 검증
+
+- npx tsc --noEmit 0 errors
+- npm run build exit 0
+- 한글 typo sentinel grep 0 hits (코드 파일)
+- git push d2f5d6e -> verify-vercel-deploy.sh exit 0 (production on d2f5d6e)
+- SD-01 영구 보존
+
+### 영향 범위
+
+상세 HTML 없는 모든 도매꾹 상품(저가 생활용품·위탁판매 흔함) 크롤링 100% 실패 -> 해소. 36904429 = `desc.contents == {}` 회귀 골든 픽스처로 보존.
+
+### 적용 작업원칙
+
+#17 · #21 · #24 · #29 · #32 · #36 · #41 · #45 · #46
+
+### 다음
+
+핸드오프 OPEN 유지. Desktop이 동일 36904429로 G1부터 재개 (200 + name/supplierPrice/images/options 단정 -> G2~G8 정주행).
+
+---
+
 ## 2026-05-27 PM B-13a PLANT 헤더 중복 등록 버튼 제거 (Code turn, B-13 직속 후속)
 
 ### 본 turn 성격

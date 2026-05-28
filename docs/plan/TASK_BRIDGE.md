@@ -71,7 +71,7 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-27 PM (Code turn, +ΔΔ) — B-13a PLANT 페이지 상단 헤더 중복 등록 버튼 제거 (1 파일 -14줄, TSC 0 + build OK). B-13 직속 후속. 누적: B-11 + B-12(f244a48) + B-13(b6ce4bb) + B-13a(본 commit). 다음 = Desktop 재검증(7탭 순회 + visual 탭 노출) 후 대표 승인하에 명화송풍구 등록 완주.
+**Last update**: 2026-05-28 (Code turn, 1 파일 +7/-4, commit d2f5d6e) — 크롤러 desc.contents 빈 객체 {} TypeError 근본 수정 (Track B G1 P0 회귀). 도매꾹 getItemView가 상세 본문 없을 때 desc.contents를 빈 객체로 직렬화 -> nullish 가드 통과 -> stripHtmlToText({}).replace 폭발. Fix A 타입가드 + Fix B 헬퍼 가드 + Fix C title String 강제. TSC 0 / build 0 / verify-vercel exit 0. 핸드오프 OPEN 유지 — Desktop 동일 36904429로 G1 재검증 대기. (이전 ACTIVE: B-13a 헤더 중복 버튼 제거 — 유효 유지)
 
 ## ⭐ ACTIVE — 다음 세션 진입점: Desktop B-13/B-13a 재검증 + 명화송풍구 등록 완주 (B-12 + B-13 + B-13a fix 완료, 대표 승인 대기)
 
