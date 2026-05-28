@@ -54,6 +54,11 @@ export interface ThumbnailOutput {
   copy?: Record<string, string>;
 }
 
+/** Where the resolver sourced the cutout / backdrop. Mirrors AssetSource in
+ *  src/lib/automation/asset-source-resolver.ts (kept as a string union here so
+ *  client code never imports the server-only resolver module). */
+export type AssetSourceLiteral = 'manual' | 'auto-cache' | 'fallback';
+
 export interface ThumbnailResult {
   productId: string;
   skeletonId: string;
@@ -61,6 +66,8 @@ export interface ThumbnailResult {
   matchAmbiguous: boolean;
   elapsedMs: number;
   outputs: ThumbnailOutput[];
+  /** G8-ENGINE: where the cutout + backdrop came from (UI source badge). */
+  assetSource?: { cutout: AssetSourceLiteral; backdrop: AssetSourceLiteral };
 }
 
 export interface DetailResult {

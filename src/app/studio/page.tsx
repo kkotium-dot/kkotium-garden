@@ -207,6 +207,10 @@ function StudioInner() {
               onRun={actions.runThumbnail}
               mainVariant={actions.mainVariant}
               onSelectMain={actions.setMainVariant}
+              manualCutoutUrl={actions.manualCutoutUrl}
+              onManualCutoutChange={actions.setManualCutoutUrl}
+              manualBackdropUrl={actions.manualBackdropUrl}
+              onManualBackdropChange={actions.setManualBackdropUrl}
             />
             <DetailPageCard
               detail={actions.detail}

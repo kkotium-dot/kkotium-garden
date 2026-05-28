@@ -5,13 +5,29 @@
 // Sprint 7-M2 Phase 3-C-1 — Thumbnail variants (step 2) card extracted
 // from src/app/studio/page.tsx. Markup byte-identical to the original.
 
+import type { CSSProperties } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import { Card, PrimaryButton } from './StudioCardShell';
 import { THUMB_VARIANTS, type ThumbnailResult, type ThumbVariant } from './types';
 
+// Optional manual-override field — empty string means "no override".
+const inputStyle: CSSProperties = {
+  width: '100%', padding: '7px 10px', fontSize: 12,
+  border: '1.5px solid #FFD6E6', borderRadius: 8, color: '#1A1A1A',
+  background: '#fff', boxSizing: 'border-box',
+};
+
+function sourceLabel(source?: string): string {
+  if (source === 'manual') return strings.thumbnail.source.manual;
+  if (source === 'auto-cache') return strings.thumbnail.source['auto-cache'];
+  return strings.thumbnail.source.fallback;
+}
+
 export function ThumbnailCard({
   thumbnails, busy, error, onRun, mainVariant, onSelectMain,
+  manualCutoutUrl = '', onManualCutoutChange,
+  manualBackdropUrl = '', onManualBackdropChange,
 }: {
   thumbnails: ThumbnailResult | null;
   busy: boolean;
@@ -19,6 +35,10 @@ export function ThumbnailCard({
   onRun: () => void;
   mainVariant: ThumbVariant;
   onSelectMain: (v: ThumbVariant) => void;
+  manualCutoutUrl?: string;
+  onManualCutoutChange?: (s: string) => void;
+  manualBackdropUrl?: string;
+  onManualBackdropChange?: (s: string) => void;
 }) {
   return (
     <Card
@@ -29,6 +49,42 @@ export function ThumbnailCard({
       totalSteps={4}
       done={thumbnails != null}
     >
+      {/* G8-ENGINE B-layer: designer source overrides (optional) */}
+      {(onManualCutoutChange || onManualBackdropChange) && (
+        <div style={{
+          marginBottom: 12, padding: 12, background: '#FFF7FB',
+          border: '1px solid #FFE0EC', borderRadius: 10,
+        }}>
+          <p style={{ fontSize: 12, fontWeight: 800, color: '#1A1A1A', margin: '0 0 8px' }}>
+            {strings.thumbnail.manualTitle}
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <label style={{ fontSize: 11, color: '#7A6873', fontWeight: 700 }}>
+              {strings.thumbnail.manualCutoutLabel}
+              <input
+                type="url"
+                value={manualCutoutUrl}
+                onChange={(e) => onManualCutoutChange?.(e.target.value)}
+                placeholder="https://…/cutout.png"
+                style={{ ...inputStyle, marginTop: 4 }}
+              />
+            </label>
+            <label style={{ fontSize: 11, color: '#7A6873', fontWeight: 700 }}>
+              {strings.thumbnail.manualBackdropLabel}
+              <input
+                type="url"
+                value={manualBackdropUrl}
+                onChange={(e) => onManualBackdropChange?.(e.target.value)}
+                placeholder="https://…/backdrop.png"
+                style={{ ...inputStyle, marginTop: 4 }}
+              />
+            </label>
+          </div>
+          <p style={{ fontSize: 11, color: '#B0A0A8', margin: '8px 0 0' }}>
+            {strings.thumbnail.manualHint}
+          </p>
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <PrimaryButton
           onClick={onRun}
@@ -39,6 +95,12 @@ export function ThumbnailCard({
         </PrimaryButton>
         {!thumbnails && !busy && !error && (
           <span style={{ fontSize: 12, color: '#7A6873' }}>{strings.thumbnail.notRun}</span>
+        )}
+        {thumbnails?.assetSource && (
+          <span style={{ fontSize: 11, color: '#7A6873' }}>
+            {strings.thumbnail.sourceLabel}: {sourceLabel(thumbnails.assetSource.cutout)}
+            {' · '}{sourceLabel(thumbnails.assetSource.backdrop)}
+          </span>
         )}
       </div>
       {error && (

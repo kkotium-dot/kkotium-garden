@@ -89,6 +89,11 @@ export interface UseStudioActionsResult {
   thumbError: string | null;
   mainVariant: ThumbVariant;
   setMainVariant: (v: ThumbVariant) => void;
+  // G8-ENGINE B-layer manual source overrides (designer veto)
+  manualCutoutUrl: string;
+  setManualCutoutUrl: (s: string) => void;
+  manualBackdropUrl: string;
+  setManualBackdropUrl: (s: string) => void;
   // Detail
   detail: DetailResult | null;
   detailBusy: boolean;
@@ -130,6 +135,9 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
   const [thumbBusy, setThumbBusy] = useState(false);
   const [thumbError, setThumbError] = useState<string | null>(null);
   const [mainVariant, setMainVariant] = useState<ThumbVariant>('clean');
+  // G8-ENGINE: designer-supplied cutout / backdrop override URLs (B layer).
+  const [manualCutoutUrl, setManualCutoutUrl] = useState('');
+  const [manualBackdropUrl, setManualBackdropUrl] = useState('');
 
   // ── Detail page ────────────────────────────────────────────────────────
   const [detail, setDetail] = useState<DetailResult | null>(null);
@@ -158,6 +166,8 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
     setDiagError(null);
     setThumbnails(null);
     setThumbError(null);
+    setManualCutoutUrl('');
+    setManualBackdropUrl('');
     setDetail(null);
     setDetailError(null);
     setOverrideSkeletonId('');
@@ -225,10 +235,13 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
     setThumbBusy(true);
     setThumbError(null);
     try {
+      const thumbBody: Record<string, string> = {};
+      if (manualCutoutUrl.trim()) thumbBody.manualCutoutUrl = manualCutoutUrl.trim();
+      if (manualBackdropUrl.trim()) thumbBody.manualBackdropUrl = manualBackdropUrl.trim();
       const res = await fetch(`/api/thumbnail/${productId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify(thumbBody),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(responseError(json, res.status));
@@ -408,6 +421,7 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
   return {
     diagnosis, diagBusy, diagError,
     thumbnails, thumbBusy, thumbError, mainVariant, setMainVariant,
+    manualCutoutUrl, setManualCutoutUrl, manualBackdropUrl, setManualBackdropUrl,
     detail, detailBusy, detailError, overrideSkeletonId, setOverrideSkeletonId,
     save, saveBusy, saveError,
     publish, publishBusy, publishError,

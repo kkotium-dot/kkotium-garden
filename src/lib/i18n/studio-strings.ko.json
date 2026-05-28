@@ -67,7 +67,17 @@
       "badge": "Badge (카테고리)",
       "lifestyle": "Lifestyle (라이프스타일)"
     },
-    "error": "썸네일 생성 실패:"
+    "error": "썸네일 생성 실패:",
+    "manualTitle": "디자이너 소스 오버라이드 (선택)",
+    "manualCutoutLabel": "누끼 PNG URL",
+    "manualBackdropLabel": "배경 이미지 URL",
+    "manualHint": "비워두면 자동 캐시 또는 원본 폴백을 사용해요.",
+    "sourceLabel": "소스",
+    "source": {
+      "manual": "수동",
+      "auto-cache": "자동 캐시",
+      "fallback": "원본 폴백"
+    }
   },
   "detail": {
     "title": "5섹션 상세페이지",
