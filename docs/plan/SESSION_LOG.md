@@ -1,5 +1,18 @@
 > **분할 메모 (2026-05-28, #31 여덟 번째 분할)**: 2026-05-15 ~ 2026-05-19 PM 이전 entry 9건은 `docs/plan/archive/SESSION_LOG_2026-05-19.md`로 동결. 본 파일은 직전 5세션(2026-05-20 ~ 2026-05-28) 라이브 유지.
 
+## 2026-05-28 Track B G8 이미지 엔진 근본 진단 (Desktop turn, 코드 0)
+
+- 표본 아이스트레이(cmpp62yje00015xup5h8pgwx0) /studio 정주행 검증.
+- before 단정: main_image_url=null, detail_image_url=null, status=DRAFT, mainImage=도매꾹 CDN760.
+- 발견 1: 진단 500 — 도매꾹 CDN 직접 fetch 차단(P-Filter). 같은 원본으로 썸네일 생성은 성공(fetch 경로 차이).
+- 발견 2: 썸네일 4변형 거의 동일 — thumbnail-generator.ts 누끼/배경 부재(Cloudinary 401 우회 고착). 차이가 텍스트 오버레이뿐.
+- 발견 3: studio ?product= URL prefill skip — 목록 최신순 첫항목(달항아리) 덮어씀. 수동 클릭(ref)은 정상.
+- 발견 4: [object Object] 에러 직렬화 결함(#46 인접).
+- save-assets 라우트 해부: base64->Storage->DB UPDATE, 무거운 합성 없음(#26 무관) 확인.
+- 확정 방향: Source Priority Resolver(A 자동 엔진 + B 수동 오버라이드 통합).
+- 비가역 0(더미 저장 안 함). SD-01 아랍어 footer 보존 확인(studio 하단 노출 유지).
+- 다음: Code Phase G8-FIX -> Phase G8-ENGINE.
+
 ## 2026-05-28 Track B G7 [CLOSED] + E1~E3 [CLOSED] (userId FK fix 재검증 통과, Desktop turn, 코드 변경 0)
 
 ### 본 turn 성격

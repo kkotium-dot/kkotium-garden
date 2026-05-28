@@ -71,17 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Desktop turn, 코드 0) — Track B G7 [CLOSED] + E1~E3 [CLOSED] 재검증 통과(17143f0 실측, POST 200 + DRAFT 88필드 정합 + 엑셀 41칸). 다음: G8 이미지 파이프라인 새 채팅.
+**Last update**: 2026-05-28 (Desktop turn, 코드 0) — Track B G8 production 실측: 썸네일 4변형 거의 동일 출력 = 누끼/배경 생성 부재(근본). 동반 회귀 3건(진단 CDN 500 / studio URL prefill skip / [object Object] 에러). 확정 방향: Source Priority Resolver(A 자동 + B 오버라이드). 다음: Code Phase G8-FIX -> G8-ENGINE.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop G8 이미지 파이프라인 검증 (G2~G7 + E1~E3 전수 통과)
+## ⭐ ACTIVE — 다음 세션 진입점: Code G8 이미지 엔진 근본 재설계 (Phase G8-FIX 먼저)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 🖥 Desktop (G7 [CLOSED] + E1~E3 [CLOSED]) |
-| **TO** | 🖥 Desktop 새 채팅 (G8 이미지 파이프라인) |
-| **BASELINE** | 17143f0 (origin/main, Vercel READY) |
-| **NEXT SCOPE** | G8 = /studio 또는 PLANT 비주얼 탭에서 아이스트레이(cmpp62yje00015xup5h8pgwx0) 진단->썸네일->상세->save 파이프라인 검증. Sharp 5000~7000px 무거운 합성 #26 행 위험 시 즉시 보고. 통과 시 Track A(명화송풍구 B-12 발행) 대표 승인 후 별도 채팅 |
-| **PENDING** | B-3 달항아리 카테고리/originCode 오염 보정(naverCategoryCode=11_08_22_00_00 도매꾹형식 + 0200037 + uncategorized) / P20 supplier seller ID / G6 winner3333 배송템플릿 미등록(Track A 발행 직전 실등록) |
+| **FROM** | 🖥 Desktop (G8 진단 완료, 코드 0) |
+| **TO** | 💻 Code (Phase G8-FIX -> Phase G8-ENGINE) |
+| **BASELINE** | fef5c84 (origin/main, Vercel READY, production 200 실측) |
+| **NEXT SCOPE** | **Phase G8-FIX(P0/P1)**: 1.diagnose/route.ts imageUrl fetch를 thumbnail-generator fetchImageBuffer 경로와 정렬(도매꾹 CDN 500 해소) 2.studio 에러 직렬화 정규화([object Object] 제거) 3.studio/page.tsx ?product= URL prefill skip 수정. **Phase G8-ENGINE(별도 sprint)**: asset-source-resolver + nukki-adapter(Adobe Express) + backdrop-adapter(Nano Banana) 신규 -> thumbnail-generator 리팩터 -> studio/PLANT B 수동 오버라이드 입력 + 소스 뱃지 -> lifestyle backdropUrl 경로 연결 -> 저화질 입력 가드. 상세: docs/handoff/HANDOFF_g8_studio_asset_engine_2026-05-28.md |
+| **PENDING** | B-3 달항아리 카테고리/originCode 오염 보정(naverCategoryCode=11_08_22_00_00 도매꾹형식 + 0200037 + uncategorized) / P20 supplier seller ID / G6 winner3333 배송템플릿 미등록(Track A 발행 직전 실등록) / G8 save-assets 배관은 정상 확인(base64->Storage->DB UPDATE, #26 무관) |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
 
