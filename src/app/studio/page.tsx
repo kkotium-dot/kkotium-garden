@@ -60,8 +60,11 @@ function StudioInner() {
           naverProductId: p.naverProductId ?? null,
         }));
         setProducts(list);
-        // Auto-select first product if URL didn't specify and list non-empty
-        if (!selectedId && list.length > 0) setSelectedId(list[0].id);
+        // Auto-select the most recent product only when nothing is already
+        // selected. Functional update reads the live state (prev) instead of
+        // the stale `selectedId` closure captured at mount — otherwise a
+        // ?product= prefill (initialProductId) gets clobbered by list[0].
+        if (list.length > 0) setSelectedId((prev) => prev ?? list[0].id);
       } catch (err) {
         setProductsError(err instanceof Error ? err.message : String(err));
       } finally {
