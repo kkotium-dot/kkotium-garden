@@ -89,6 +89,34 @@ export async function uploadAutomationAsset(
 }
 
 /**
+ * Resolve the public URL of a fixed-name cached asset under `{productId}/`,
+ * or null when it does not exist. Used by the asset-source-resolver to find
+ * designer-deposited cutout / backdrop overrides (e.g. `cutout.png`,
+ * `backdrop-S5.png`) without a DB round-trip. Never throws — a Storage error
+ * resolves to null so callers degrade to the fallback source path.
+ */
+export async function findCachedAsset(
+  productId: string,
+  fileName: string,
+): Promise<string | null> {
+  try {
+    const supabase = getServerClient();
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .list(productId, { limit: 100, search: fileName });
+    if (error || !data) return null;
+    const hit = data.find((f) => f.name === fileName);
+    if (!hit) return null;
+    const { data: urlData } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(`${productId}/${fileName}`);
+    return urlData.publicUrl;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Delete an asset by storage path. Useful when regenerating to clean up
  * stale uploads before issuing a new one.
  */
