@@ -34,6 +34,34 @@ import type {
   SkeletonIdLiteral,
 } from './types';
 
+// Coerce a JSON error body's `error` field — which a route may send as an
+// object, not a string — into a throwable message. Passing an object straight
+// to new Error() yields error.message === "[object Object]" (#46 adjacent).
+function responseError(json: { error?: unknown } | null, status: number): string {
+  const e = json?.error;
+  if (typeof e === 'string' && e.length > 0) return e;
+  if (e != null) {
+    try {
+      return JSON.stringify(e);
+    } catch {
+      // non-serializable; fall through to status
+    }
+  }
+  return `HTTP ${status}`;
+}
+
+// Coerce an arbitrary thrown value into a human-readable string. String({})
+// would otherwise surface the opaque "[object Object]" label to the seller.
+function toMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
 export interface RunSaveOverrides {
   thumbnails?: ThumbnailResult | null;
   mainVariant?: ThumbVariant;
@@ -180,12 +208,12 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
         body: JSON.stringify({ productId, persist: true }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      if (!res.ok) throw new Error(responseError(json, res.status));
       const result = json as DiagnosisResult;
       setDiagnosis(result);
       return result;
     } catch (err) {
-      setDiagError(err instanceof Error ? err.message : String(err));
+      setDiagError(toMessage(err));
       return null;
     } finally {
       setDiagBusy(false);
@@ -203,7 +231,7 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
         body: JSON.stringify({}),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      if (!res.ok) throw new Error(responseError(json, res.status));
       const result = json as ThumbnailResult;
       const outputs = Array.isArray(result.outputs) ? result.outputs : [];
       const hasUsableVariant = outputs.some((o) => typeof o?.base64 === 'string' && o.base64.length > 0);
@@ -214,7 +242,7 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
       setThumbnails(result);
       return result;
     } catch (err) {
-      setThumbError(err instanceof Error ? err.message : String(err));
+      setThumbError(toMessage(err));
       return null;
     } finally {
       setThumbBusy(false);
@@ -234,12 +262,12 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
         body: JSON.stringify(body),
       });
       const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      if (!res.ok || !json.ok) throw new Error(responseError(json, res.status));
       const result = json as DetailResult;
       setDetail(result);
       return result;
     } catch (err) {
-      setDetailError(err instanceof Error ? err.message : String(err));
+      setDetailError(toMessage(err));
       return null;
     } finally {
       setDetailBusy(false);
@@ -275,12 +303,12 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
         body: JSON.stringify(body),
       });
       const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      if (!res.ok || !json.ok) throw new Error(responseError(json, res.status));
       const result = json as SaveResult;
       setSave(result);
       return result;
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : String(err));
+      setSaveError(toMessage(err));
       return null;
     } finally {
       setSaveBusy(false);
@@ -303,12 +331,12 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
         body: JSON.stringify(body),
       });
       const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      if (!res.ok || !json.ok) throw new Error(responseError(json, res.status));
       const result = json as PublishResult;
       setPublish(result);
       return result;
     } catch (err) {
-      setPublishError(err instanceof Error ? err.message : String(err));
+      setPublishError(toMessage(err));
       return null;
     } finally {
       setPublishBusy(false);
@@ -369,7 +397,7 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
 
       return finish();
     } catch (err) {
-      return finish(err instanceof Error ? err.message : String(err));
+      return finish(toMessage(err));
     }
   }
 
