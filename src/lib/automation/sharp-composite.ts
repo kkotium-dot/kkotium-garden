@@ -18,6 +18,7 @@
 //     untrusted product names.
 
 import sharp from 'sharp';
+import { buildImageFetchHeaders } from '@/lib/image-fetch-headers';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -108,9 +109,10 @@ export async function createCanvas(
 
 /** Fetch a remote image into a Sharp-compatible Buffer. Caller is responsible
  *  for trusting the URL host (we don't do SSRF screening here — Cloudinary
- *  fetch URLs already pass through Cloudinary's domain allow-list). */
+ *  fetch URLs already pass through Cloudinary's domain allow-list). Hotlink-
+ *  protected supplier CDNs (domeggook) require browser UA + Referer headers. */
 export async function fetchImageBuffer(imageUrl: string): Promise<Buffer> {
-  const res = await fetch(imageUrl);
+  const res = await fetch(imageUrl, { headers: buildImageFetchHeaders(imageUrl) });
   if (!res.ok) {
     throw new Error(`fetchImageBuffer: ${res.status} ${res.statusText} for ${imageUrl}`);
   }

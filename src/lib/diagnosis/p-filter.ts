@@ -26,6 +26,7 @@ import {
   type ImageQualityResult,
 } from './image-quality';
 import { detectWatermark } from './p-filter-watermark';
+import { buildImageFetchHeaders } from '@/lib/image-fetch-headers';
 import sellerMessages from '@/lib/i18n/p-filter-messages.ko.json';
 import type {
   PFilterGrade,
@@ -95,7 +96,10 @@ async function resolveBuffer(input: Buffer | string): Promise<Buffer> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(input, { signal: controller.signal });
+    const res = await fetch(input, {
+      signal: controller.signal,
+      headers: buildImageFetchHeaders(input),
+    });
     if (!res.ok) {
       throw new Error(`p-filter: fetch ${input} failed with ${res.status}`);
     }

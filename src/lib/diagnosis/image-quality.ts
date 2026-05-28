@@ -23,6 +23,7 @@
 //   - Power drill 18V     -> expect colorMood=mono,  photoStyle=white
 
 import sharp from 'sharp';
+import { buildImageFetchHeaders } from '@/lib/image-fetch-headers';
 
 export interface ImageQualitySignals {
   /** 0-100. Higher = larger resolution + acceptable aspect ratio. */
@@ -90,7 +91,10 @@ async function resolveBuffer(input: Buffer | string): Promise<Buffer> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(input, { signal: controller.signal });
+    const res = await fetch(input, {
+      signal: controller.signal,
+      headers: buildImageFetchHeaders(input),
+    });
     if (!res.ok) {
       throw new Error(`image-quality: fetch ${input} failed with ${res.status}`);
     }
