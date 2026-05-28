@@ -1,5 +1,18 @@
 > **분할 메모 (2026-05-28, #31 여덟 번째 분할)**: 2026-05-15 ~ 2026-05-19 PM 이전 entry 9건은 `docs/plan/archive/SESSION_LOG_2026-05-19.md`로 동결. 본 파일은 직전 5세션(2026-05-20 ~ 2026-05-28) 라이브 유지.
 
+## 2026-05-28 Track B G8-ENGINE 디자인 라인 실증 (Desktop turn, 코드 0)
+
+- baseline 08795bb. 확정 동선 6단계 실 MCP 호출 전수 검증. 표본 아이스트레이(cmpp62yje00015xup5h8pgwx0).
+- 1단계 다운로드: 도매꾹 CDN760 원본 Referer=domeggook.com 헤더로 hotlink 우회 -> /home/claude 다운로드 760x760 http 200.
+- 2단계 Adobe CC 업로드: asset_initialize_file_upload(path 상대경로) -> 청크 PUT 200(106196 bytes) -> asset_finalize_file_upload -> presignedAssetUrl 획득. egress enabled 환경 정합.
+- 3단계 누끼: image_remove_background(presignedAssetUrl) success:true 투명 PNG 760x760. 투명 플라스틱 경계 깔끔 + 초록 뚜껑 + 손 보존 + 주변 소품 제거. rembg 대비 품질 우위 육안 확인.
+- 4단계 GenAIAsset: asset_search(GenAIAsset) totalHits:0 (경로 정상, 대표 Firefly 웹 생성물 현재 0건).
+- 5/6단계 합성: 컨테이너 Pillow + Noto Sans CJK로 4변형(clean 무텍스트=대표이미지 후보 / price 가격pill / badge 카테고리리본 / lifestyle 웜그라데이션+그림자+한글헤더). 브랜드 프리셋(Red #E62310 / Pink #FFCCEA). 배경/구성/소구점 명백히 차별화 -> G8 진단의 "4변형 거의 동일" 결함 해소 증명.
+- 아키텍처 발견: (1) Adobe Express MCP는 외부 누끼 PNG 템플릿 합성 불가 -> production 합성엔진은 서버 Sharp 유지가 정답. (2) image_remove_background는 Adobe CC presignedAssetUrl만 허용(도매꾹 CDN/Supabase public URL 거부). -> Phase G8-ENGINE = nukki-adapter(Adobe 누끼->Storage 캐시) + backdrop-source + Sharp 합성기 통합 확정.
+- 실측 정정: /mnt/user-data/uploads 읽기전용 -> /home/claude 스크래치 사용(다음 세션 기본).
+- 비가역 0(Supabase 미저장, 네이버 미발행, 데모는 컨테이너에만). SD-01 무접촉.
+- 다음: Code Phase G8-ENGINE.
+
 ## 2026-05-28 Track B G8-FIX 회귀 3건 수리 (Code turn, push 2c7da13)
 
 - baseline fef5c84. 작은 commit 3건 + docs 2건.
