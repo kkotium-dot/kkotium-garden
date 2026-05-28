@@ -1711,14 +1711,19 @@ const handleGenerate = async () => {
               ? Math.round(((Number(price) - Number(supplierPrice)) / Number(price)) * 100)
               : 0,
             supplierId: selectedSupplierId || undefined,
-            userId: 'default',
+            // Do NOT send a userId here — the literal "default" is not a real DB
+            // id and caused a Product_userId_fkey violation. Omitting it lets the
+            // API resolve the actual user via findFirst fallback.
             naverCategoryCode: categoryId || undefined,
             category: [d1, d2, d3, d4].filter(Boolean).join(' > ') || 'uncategorized',
             brand,
+            // originCode '200037' (China import) is the canonical value in
+            // naver-origin-codes.ts; keep as-is (no zero-padding — '0200037'
+            // does not exist in the dataset and would break the origin lookup).
             originCode,
             taxType,
-            // Set ACTIVE on save — Excel download = intent to upload to Naver
-            status: 'ACTIVE',
+            // Excel download is a DRAFT (temp-save) flow, not a Naver publish.
+            status: 'DRAFT',
             keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
             tags: seoTags.length > 0 ? seoTags : undefined,
             mainImage: mainImage || undefined,

@@ -197,15 +197,33 @@ export async function POST(request: NextRequest) {
 
     const normalizedStatus = (data.status ?? 'DRAFT').toUpperCase();
 
-    // Resolve supplierId: fallback to first supplier in DB
-    let supplierId: string = data.supplierId || '';
+    // Resolve supplierId: verify the supplied id actually exists, otherwise
+    // fall back to the first supplier in DB. A non-empty but invalid id (e.g.
+    // a sentinel string or a stale id) would otherwise trigger an FK violation.
+    let supplierId = '';
+    if (data.supplierId && data.supplierId !== 'default') {
+      const exists = await prisma.supplier.findUnique({
+        where: { id: String(data.supplierId) },
+        select: { id: true },
+      });
+      if (exists) supplierId = exists.id;
+    }
     if (!supplierId) {
       const defaultSupplier = await prisma.supplier.findFirst();
       supplierId = defaultSupplier?.id ?? '';
     }
 
-    // Resolve userId: fallback to first user in DB
-    let userId: string = data.userId || '';
+    // Resolve userId: same verify-then-fallback. The register form historically
+    // sent the literal "default" (not a real DB id), which is truthy and slipped
+    // past the old `!userId` guard -> Product_userId_fkey violation.
+    let userId = '';
+    if (data.userId && data.userId !== 'default') {
+      const exists = await prisma.user.findUnique({
+        where: { id: String(data.userId) },
+        select: { id: true },
+      });
+      if (exists) userId = exists.id;
+    }
     if (!userId) {
       const defaultUser = await prisma.user.findFirst();
       userId = defaultUser?.id ?? '';
