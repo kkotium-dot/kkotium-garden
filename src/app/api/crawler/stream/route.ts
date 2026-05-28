@@ -149,8 +149,9 @@ export async function GET(request: NextRequest): Promise<Response> {
             try {
               const result = await crawlOne(productNo, apiKey, url);
               send({ type: 'result', ...result });
-              // Save to crawl_logs
-              prisma.$executeRaw`
+              // Save to crawl_logs. await guarantees the INSERT completes before
+              // the serverless instance freezes; .catch keeps it non-blocking.
+              await prisma.$executeRaw`
                 INSERT INTO crawl_logs (
                   id, url, name, supplier_price, images, options, status, source,
                   seller_nick, seller_id, seller_rank, category_name, category_code,
@@ -170,7 +171,7 @@ export async function GET(request: NextRequest): Promise<Response> {
               `.catch((e) => console.error('[crawl-log-insert]', e));
             } catch (e: unknown) {
               send({ type: 'result', url, status: 'error', error: e instanceof Error ? e.message : '오류' });
-              prisma.$executeRaw`INSERT INTO crawl_logs (id, url, name, supplier_price, images, options, status, source, error_msg) VALUES (gen_random_uuid(), ${url}, '', 0, '[]'::jsonb, '[]'::jsonb, 'error', 'bulk', ${String(e)})`.catch((er) => console.error('[crawl-log-insert-err]', er));
+              await prisma.$executeRaw`INSERT INTO crawl_logs (id, url, name, supplier_price, images, options, status, source, error_msg) VALUES (gen_random_uuid(), ${url}, '', 0, '[]'::jsonb, '[]'::jsonb, 'error', 'bulk', ${String(e)})`.catch((er) => console.error('[crawl-log-insert-err]', er));
             }
             done++;
           }

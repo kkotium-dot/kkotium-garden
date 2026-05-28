@@ -90,8 +90,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         `seller=${detail.sellerId}(${detail.sellerNick}) | stock=${detail.inventory}`,
     );
 
-    // Persist sourcing snapshot (preserve original behavior including non-blocking insert)
-    prisma.$executeRaw`
+    // Persist sourcing snapshot. await ensures the INSERT completes before the
+    // serverless instance freezes on response return; .catch keeps it non-blocking
+    // (a failed INSERT is swallowed and never breaks the crawl response).
+    await prisma.$executeRaw`
       INSERT INTO crawl_logs (
         id, url, name, supplier_price, images, options, status, source,
         seller_nick, seller_id, seller_rank, category_name, category_code,
