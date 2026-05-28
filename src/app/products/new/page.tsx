@@ -596,6 +596,9 @@ function NewProductPageInner() {
     | { kind: 'mismatch'; rawD1: string; rawD2: string; rawD3: string }
     | { kind: 'autofilling' }
     | { kind: 'autofilled'; d1: string; d2: string; d3: string }
+    // G2 d3-mismatch fix: suggest resolved d1/d2 but no valid d3 (ghost triple
+    // blanked server-side) -> auto-fill d1/d2, user picks the subcategory.
+    | { kind: 'partial'; d1: string; d2: string }
     | { kind: 'failed'; reason: string }
   >({ kind: 'idle' });
   // PC-B-1 P18: capture crawler's domeggook category code so the suggest API
@@ -1095,13 +1098,26 @@ function NewProductPageInner() {
             d1: validated.d1, d2: validated.d2, d3: validated.d3,
           });
         } else {
-          const top = suggestions[0];
-          const reason = !data?.success
-            ? (data?.error ?? 'suggest_failed')
-            : !top
-              ? 'no_suggestion'
-              : `invalid_triple:${top.d1}>${top.d2}>${top.d3}`;
-          setCrawlCatStatus({ kind: 'failed', reason });
+          // G2 Fix C: no fully valid triple, but the server may have returned a
+          // d1/d2-only suggestion (d3 blanked because it was a ghost). Auto-fill
+          // the major/middle category so the seller only picks the subcategory,
+          // instead of leaving all three boxes empty.
+          const partial = suggestions.find((s) =>
+            s.d1 && s.d2 &&
+            NAVER_CATEGORIES_FULL.some((c) => c.d1 === s.d1 && c.d2 === s.d2)
+          );
+          if (data?.success && partial) {
+            setD1(partial.d1); setD2(partial.d2); setD3(''); setD4('');
+            setCrawlCatStatus({ kind: 'partial', d1: partial.d1, d2: partial.d2 });
+          } else {
+            const top = suggestions[0];
+            const reason = !data?.success
+              ? (data?.error ?? 'suggest_failed')
+              : !top
+                ? 'no_suggestion'
+                : `invalid_triple:${top.d1}>${top.d2}>${top.d3}`;
+            setCrawlCatStatus({ kind: 'failed', reason });
+          }
         }
       })
       .catch(err => {
@@ -1908,7 +1924,7 @@ const handleGenerate = async () => {
         {/* PC-A P1: surface category prefill autofill status. Banner shown only
             when crawler prefill produced a non-matching taxonomy or AI fallback
             ran; matched + idle states stay silent to keep the page calm. */}
-        {(crawlCatStatus.kind === 'mismatch' || crawlCatStatus.kind === 'autofilling' || crawlCatStatus.kind === 'autofilled' || crawlCatStatus.kind === 'failed') && (
+        {(crawlCatStatus.kind === 'mismatch' || crawlCatStatus.kind === 'autofilling' || crawlCatStatus.kind === 'autofilled' || crawlCatStatus.kind === 'partial' || crawlCatStatus.kind === 'failed') && (
           <div style={{
             marginBottom: 16, padding: '10px 14px', borderRadius: 12,
             display: 'flex', alignItems: 'center', gap: 10,
@@ -1938,6 +1954,13 @@ const handleGenerate = async () => {
                 <>
                   <strong>네이버 카테고리 자동 매핑 완료:</strong>&nbsp;
                   {crawlCatStatus.d1} &gt; {crawlCatStatus.d2} &gt; {crawlCatStatus.d3}
+                </>
+              )}
+              {crawlCatStatus.kind === 'partial' && (
+                <>
+                  <strong>대분류/중분류 자동 입력됨:</strong>&nbsp;
+                  {crawlCatStatus.d1} &gt; {crawlCatStatus.d2}
+                  &nbsp;— 소분류만 선택해주세요.
                 </>
               )}
               {crawlCatStatus.kind === 'failed' && (

@@ -174,6 +174,60 @@ function validateSuggestion(
   return null;
 }
 
+// ── G2 d3-mismatch self-validation ────────────────────────────────────────────
+// Strict tree resolution mirroring the client getCategoryId (NO fuzzy matching).
+// Returns the category code for a real triple, or '' when the triple does not
+// exist in NAVER_CATEGORIES_FULL.
+function resolveCategoryId(d1: string, d2: string, d3: string, d4?: string): string {
+  if (d4) {
+    const exact = NAVER_CATEGORIES_FULL.find(
+      (c) => c.d1 === d1 && c.d2 === d2 && c.d3 === d3 && c.d4 === d4,
+    );
+    if (exact) return exact.code;
+  }
+  const loose = NAVER_CATEGORIES_FULL.find(
+    (c) => c.d1 === d1 && c.d2 === d2 && c.d3 === d3,
+  );
+  return loose?.code ?? '';
+}
+
+// True when d1+d2 exists in the tree (2-depth validity).
+function isValidD1D2(d1: string, d2: string): boolean {
+  return NAVER_CATEGORIES_FULL.some((c) => c.d1 === d1 && c.d2 === d2);
+}
+
+// Self-validate every final suggestion against the local tree. The
+// page-validation override path can glue a dominant d1/d2 onto a d3 that only
+// exists under a DIFFERENT d1/d2 (ghost triple — e.g.
+// 생활/건강>주방용품>그릇장/컵보드, where 그릇장/컵보드 only lives under
+// 가구/인테리어>주방가구). Such ghosts make the client getCategoryId return
+// null, leaving the category empty. Resolution per suggestion:
+//   - valid full triple        -> keep as-is
+//   - invalid d3, valid d1/d2  -> blank d3/d4 (trust d1/d2 for partial autofill)
+//   - invalid d1/d2            -> drop the suggestion
+// Conservative 1st pass: never auto-pick a replacement d3 (mis-classification
+// risk); d3 auto-completion is a separate, owner-approved decision.
+function selfValidateSuggestions(
+  list: Array<{ d1: string; d2: string; d3: string; d4?: string }>,
+): Array<{ d1: string; d2: string; d3: string; d4?: string }> {
+  const out: Array<{ d1: string; d2: string; d3: string; d4?: string }> = [];
+  const seen = new Set<string>();
+  for (const s of list) {
+    let next: { d1: string; d2: string; d3: string; d4?: string } | null = null;
+    if (resolveCategoryId(s.d1, s.d2, s.d3, s.d4)) {
+      next = s;
+    } else if (isValidD1D2(s.d1, s.d2)) {
+      next = { d1: s.d1, d2: s.d2, d3: '', d4: undefined };
+    }
+    if (!next) continue;
+    const key = `${next.d1}|${next.d2}|${next.d3}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(next);
+  }
+  return out;
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   try {
@@ -190,24 +244,38 @@ export async function POST(request: NextRequest) {
     if (domeCategoryCode) {
       const hit = await getCachedMapping('dome_code', domeCategoryCode);
       if (hit) {
-        return NextResponse.json({
-          success: true,
-          suggestions: [{ d1: hit.d1, d2: hit.d2, d3: hit.d3, d4: hit.d4 ?? undefined }],
-          usedAI: false,
-          cacheHit: 'dome_code',
-        });
+        // G2 Fix B: sanitize cached triple before returning. A previously
+        // poisoned ghost triple gets its bad d3 blanked (d1/d2 kept) instead of
+        // re-serving the invalid combination. If even d1/d2 is invalid the
+        // entry is unusable -> fall through to recompute.
+        const sanitized = selfValidateSuggestions([
+          { d1: hit.d1, d2: hit.d2, d3: hit.d3, d4: hit.d4 ?? undefined },
+        ]);
+        if (sanitized.length > 0) {
+          return NextResponse.json({
+            success: true,
+            suggestions: sanitized,
+            usedAI: false,
+            cacheHit: 'dome_code',
+          });
+        }
       }
     }
     const nameKey = nameHashKey(name);
     if (nameKey) {
       const hit = await getCachedMapping('name_hash', nameKey);
       if (hit) {
-        return NextResponse.json({
-          success: true,
-          suggestions: [{ d1: hit.d1, d2: hit.d2, d3: hit.d3, d4: hit.d4 ?? undefined }],
-          usedAI: false,
-          cacheHit: 'name_hash',
-        });
+        const sanitized = selfValidateSuggestions([
+          { d1: hit.d1, d2: hit.d2, d3: hit.d3, d4: hit.d4 ?? undefined },
+        ]);
+        if (sanitized.length > 0) {
+          return NextResponse.json({
+            success: true,
+            suggestions: sanitized,
+            usedAI: false,
+            cacheHit: 'name_hash',
+          });
+        }
       }
     }
 
@@ -293,9 +361,17 @@ export async function POST(request: NextRequest) {
       console.warn('[category/suggest] page validation failed:', String(e).slice(0, 120));
     }
 
-    // Sprint 6-E: write top suggestion to cache (best-effort, don't block response)
+    // G2 Fix A: self-validate the final suggestions against the local tree
+    // (the page-validation override above may have produced a ghost triple).
+    suggestions = selfValidateSuggestions(suggestions);
+
+    // Sprint 6-E: write top suggestion to cache (best-effort, don't block response).
+    // G2 Fix B: only persist a FULLY valid triple. A blanked-d3 (d1/d2-only)
+    // result is intentionally NOT cached so a future improved run can still
+    // resolve the correct d3 instead of locking in the partial mapping.
     const top = suggestions[0];
-    if (top && nameKey) {
+    const topIsFullyValid = !!(top && top.d3 && resolveCategoryId(top.d1, top.d2, top.d3, top.d4));
+    if (top && topIsFullyValid && nameKey) {
       saveMapping({
         kind: 'name_hash',
         key: nameKey,
@@ -307,7 +383,7 @@ export async function POST(request: NextRequest) {
         source,
       }).catch((e) => console.warn('[category/suggest] cache write failed:', String(e).slice(0, 120)));
     }
-    if (top && domeCategoryCode) {
+    if (top && topIsFullyValid && domeCategoryCode) {
       saveMapping({
         kind: 'dome_code',
         key: domeCategoryCode,
