@@ -150,10 +150,34 @@ function fallbackCopy(req: CopyRequest): string {
       }
       return tokens[0]?.slice(0, SLOT_LIMITS.priceBadge) ?? '';
     case 'categoryBadge':
-      return (req.category ?? tokens[0] ?? '').slice(0, SLOT_LIMITS.categoryBadge);
+      return deriveCategoryBadge(req);
     case 'lifestyleCaption':
       return tokens.slice(0, 6).join(' ').slice(0, SLOT_LIMITS.lifestyleCaption);
   }
+}
+
+/**
+ * Deterministic category badge: take the most specific (leaf) segment of a
+ * category path and use it verbatim. The leaf of "생활/건강>주방용품" is
+ * "주방용품". This deliberately bypasses Groq — the LLM was free-synthesizing
+ * this slot and produced broken Korean compounds (observed: "일용보관함"), a
+ * non-word that reads as machine-translated junk and undermines brand
+ * authority. A category label needs faithful extraction, not generation.
+ * Falls back to the first product-name token when no category is supplied.
+ */
+function deriveCategoryBadge(req: CopyRequest): string {
+  const raw = (req.category ?? '').trim();
+  if (raw) {
+    const leaf =
+      raw
+        .split(/[>/]/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .pop() ?? raw;
+    return leaf.slice(0, SLOT_LIMITS.categoryBadge);
+  }
+  const token = req.productName.split(/\s+/)[0] ?? '';
+  return token.slice(0, SLOT_LIMITS.categoryBadge);
 }
 
 // ---------------------------------------------------------------------------
@@ -190,6 +214,23 @@ function buildPrompt(req: CopyRequest, hardening: string = ''): string {
 
 export async function generateCopy(req: CopyRequest): Promise<CopyResult> {
   const limit = SLOT_LIMITS[req.slot];
+
+  // categoryBadge is extracted deterministically from the category leaf, never
+  // synthesized by Groq. The LLM invented broken compounds for this slot
+  // (observed: "일용보관함") that the dark-pattern filter cannot catch because
+  // they are grammatically malformed rather than non-compliant. Faithful
+  // extraction removes the hallucination vector entirely.
+  if (req.slot === 'categoryBadge') {
+    const text = deriveCategoryBadge(req).slice(0, limit);
+    return {
+      text,
+      source: 'fallback',
+      filtered: false,
+      promptCharsApprox: 0,
+      lintViolations: checkCopyText(text).violations,
+    };
+  }
+
   const key = pickGroqKey();
   const prompt = buildPrompt(req);
 
