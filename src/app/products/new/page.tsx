@@ -101,6 +101,8 @@ import {
   useStudioActions,
 } from '@/components/studio';
 import studioStrings from '@/lib/i18n/studio-strings.ko.json';
+import productsNewStrings from '@/lib/i18n/products-new-strings.ko.json';
+import { calcPrefillSalePrice } from '@/lib/naver-margin-advisor';
 
 interface Platform { id: string; name: string; code: string; }
 interface Supplier {
@@ -600,6 +602,9 @@ function NewProductPageInner() {
   // can hit the dome_code cache (suggest endpoint L209-218) for an
   // already-mapped NAVER triple. Cache miss falls through to AI/fallback path.
   const [crawlCatCode, setCrawlCatCode] = useState<string>('');
+  // Crawled shipping fee (seller burden). Used to compute the kkotti
+  // recommended sale price hint. Defaults to 3000 when not provided by prefill.
+  const [crawlShipFee, setCrawlShipFee] = useState<number>(3000);
   // Minimum order quantity from crawler prefill. 1 = no restriction.
   // Values >= 2 trigger a consignment-risk warning banner.
   const [crawlMinQuantity, setCrawlMinQuantity] = useState<number>(1);
@@ -825,6 +830,10 @@ function NewProductPageInner() {
       if (typeof data.crawlCategoryCode === 'string' && data.crawlCategoryCode.trim()) {
         setCrawlCatCode(data.crawlCategoryCode.trim());
       }
+      // Capture the crawled shipping fee for the kkotti recommended-price hint.
+      if (typeof data.crawlShipFee === 'number' && data.crawlShipFee >= 0) {
+        setCrawlShipFee(data.crawlShipFee);
+      }
 
       // Auto-fill category from crawler suggestion.
       // PC-A P1: domeggook and Naver use different taxonomies. Validate before
@@ -848,6 +857,19 @@ function NewProductPageInner() {
             rawD1: data.catD1, rawD2: data.catD2, rawD3: data.catD3,
           });
         }
+      } else if (data.productName) {
+        // G2 fix: domeggook often sends a shallow category depth (e.g. only
+        // catD1, or none) for low-priced/consignment items. The full-triple
+        // guard above would then skip silently, so no mismatch state is set and
+        // the suggest effect below never fires -> empty category fields.
+        // Set a synthetic mismatch so the existing productName-based suggest
+        // path (secondary useEffect, keyed on kind === 'mismatch' + productName)
+        // runs. crawlCatCode is already captured above for dome_code cache hits.
+        setCatTab('drill');
+        setCrawlCatStatus({
+          kind: 'mismatch',
+          rawD1: data.catD1 ?? '', rawD2: data.catD2 ?? '', rawD3: data.catD3 ?? '',
+        });
       }
       // Auto-fill options from crawler — convert to SINGLE type with visible rows.
       // PC-B-1 P14 observability: log raw + filtered counts so any drift between
@@ -2335,6 +2357,23 @@ const handleGenerate = async () => {
               <div className="grid grid-cols-2 gap-3">
                 <Field label="판매가" required>
                   <input className={inp} type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0" min={0} />
+                  {/* G5: kkotti recommended sale price hint (net-margin transparency). */}
+                  {Number(supplierPrice) > 0 && (() => {
+                    const recommended = calcPrefillSalePrice(Number(supplierPrice), crawlShipFee);
+                    return (
+                      <div className="mt-1.5 space-y-0.5">
+                        <p className="text-xs font-semibold text-rose-600">
+                          {productsNewStrings.priceHint.recommendedLabel.replace(
+                            '{price}',
+                            recommended.toLocaleString(),
+                          )}
+                        </p>
+                        <p className="text-[11px] leading-snug text-stone-400">
+                          {productsNewStrings.priceHint.recommendedNote}
+                        </p>
+                      </div>
+                    );
+                  })()}
                   {/* C-12: Market price comparison chip */}
                   <MarketPriceHint productName={productName} myPrice={Number(price) || 0} />
                 </Field>

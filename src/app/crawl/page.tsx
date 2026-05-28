@@ -13,6 +13,7 @@ import {
 import { calcHoneyScore, calcSourcingScore } from '@/lib/honey-score';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 import { getNaverFeeRateByD1, NAVER_DEFAULT_FEE_RATE } from '@/lib/naver-fee-rates-2026';
+import { calcPrefillSalePrice } from '@/lib/naver-margin-advisor';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface CrawledOption {
@@ -1668,7 +1669,7 @@ function CrawlPageInner() {
                   const prefill = {
                     productName: san(first.name||''),
                     supplierPrice: first.supplier_price,
-                    salePrice: Math.ceil(first.supplier_price * 1.3),
+                    salePrice: calcPrefillSalePrice(first.supplier_price, first.ship_fee),
                     mainImage: (imgs[0] as string) || '',
                     additionalImgs: imgs.slice(1).join('|'),
                     options: opts.map((o: unknown) => san(typeof o === 'string' ? o : (o as {name:string}).name || '')).filter(Boolean),
@@ -1838,7 +1839,7 @@ function CrawlPageInner() {
                               const prefill = {
                                 productName: san(log.name||''),
                                 supplierPrice: log.supplier_price,
-                                salePrice: Math.ceil(log.supplier_price * 1.3),
+                                salePrice: calcPrefillSalePrice(log.supplier_price, log.ship_fee),
                                 mainImage: (logImgs[0] as string) || '',
                                 additionalImgs: logImgs.slice(1).join('|'),
                                 options: logOpts.map((o: unknown) => san(typeof o === 'string' ? o : (o as {name:string}).name || '')).filter(Boolean),

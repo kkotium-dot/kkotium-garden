@@ -321,6 +321,28 @@ export function calcRecommendedPrice(
   return Math.ceil((supplierPrice + shippingFee) / denominator / 100) * 100; // round to 100
 }
 
+// Prefill sale price used when a crawled product is first sent to the register
+// form, before category-specific advice is available. Replaces the legacy
+// supplierPrice * 1.3 markup, which ignored the Naver fee and shipping burden
+// and therefore auto-seeded deficit (negative net margin) prices.
+// Uses a flat 5.5% Naver fee and a 15% target net margin, absorbing the crawled
+// shipping fee as a fixed burden (defaults to 3000) so free-shipping conversion
+// stays conservative (no under-estimation). Rounds up to the nearest 100 won.
+const PREFILL_NAVER_FEE_RATE = 0.055;
+const PREFILL_TARGET_NET_MARGIN = 0.15;
+
+export function calcPrefillSalePrice(
+  supplierPrice: number,
+  shipFee?: number | null,
+): number {
+  const sp = Number(supplierPrice) || 0;
+  if (sp <= 0) return 0;
+  const shipBurden = typeof shipFee === 'number' && shipFee >= 0 ? shipFee : 3000;
+  const denominator = 1 - PREFILL_NAVER_FEE_RATE - PREFILL_TARGET_NET_MARGIN;
+  const raw = (sp + shipBurden) / denominator;
+  return Math.ceil(raw / 100) * 100;
+}
+
 // Calculate actual net margin
 export function calcNetMargin(
   supplierPrice: number,

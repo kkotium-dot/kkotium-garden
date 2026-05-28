@@ -1,0 +1,9 @@
+{
+  "_meta": {
+    "description": "상품 등록 폼 (/products/new) Korean strings. G5 fix 2026-05-28: kkotti recommended sale price hint under the sale price field (net margin transparency). Use {price} placeholder for the won-formatted recommended price."
+  },
+  "priceHint": {
+    "recommendedLabel": "꼬띠 추천가 (순마진 15%): {price}원",
+    "recommendedNote": "도매가 + 배송비 + 네이버 수수료를 반영한 흑자 보장가예요. 자유롭게 수정하면 꿀통지수가 실시간으로 다시 계산돼요."
+  }
+}
