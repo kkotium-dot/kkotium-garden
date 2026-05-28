@@ -1789,20 +1789,6 @@ const handleGenerate = async () => {
                 {progressDone}/{progressItems.length} 완료
               </span>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={handleNaverDirect} disabled={naverLoading} style={{ display: 'flex', alignItems: 'center', gap: 6, background: naverLoading ? '#aaa' : '#e62310', color: '#fff', padding: '8px 16px', borderRadius: 12, fontSize: 13, fontWeight: 900, border: 'none', cursor: naverLoading ? 'not-allowed' : 'pointer' }}>
-                {naverLoading ? (
-                  <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="12" cy="12" r="10" strokeOpacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
-                ) : (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                )}
-                {naverLoading ? '등록 중...' : '네이버 직접 등록'}
-              </button>
-              <button onClick={handleGenerate} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#03C75A', color: '#fff', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 900, border: 'none', cursor: 'pointer' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                네이버 엑셀 다운로드
-              </button>
-            </div>
           </div>
         </div>
       </div>

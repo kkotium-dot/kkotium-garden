@@ -1,3 +1,42 @@
+## 2026-05-27 PM B-13a PLANT 헤더 중복 등록 버튼 제거 (Code turn, B-13 직속 후속)
+
+### 본 turn 성격
+
+직전 commit b6ce4bb(B-13 visual 탭 액션블록 스코프 정합) production 재검증 중 Desktop Chrome MCP가 발견한 잔존 회귀 1건 1-commit 해소. 5-19 진단이 하단 액션블록만 식별하고 페이지 상단 헤더의 동일 버튼 인스턴스를 놓친 cascade miss.
+
+### 코드 변경 (1 파일 -14줄)
+
+`src/app/products/new/page.tsx` line 1792-1805 `<div style={{ display: 'flex', gap: 8 }}>...</div>` 14줄 단순 삭제. handleNaverDirect 버튼 + handleGenerate 버튼(헤더 인스턴스) 제거. 부모 `flex items-center gap-2` div + 진행률 dots + 완료 배지 보존.
+
+### 회귀 차단
+
+- handleNaverDirect grep count: 3 -> 2 (def + visual)
+- handleGenerate grep count: 4 -> 3 (def + visual + line 817 비-functional 주석)
+- functional call site: 양쪽 visual 탭 1곳만
+
+### Desktop 실측 evidence
+
+pre-state: totalRegisterButtons=2 (HEADER zone top=115px), [기본]/[옵션] 양쪽 노출 확인. post-state 목표: visual 탭 외 0, visual 탭 진입 시 1.
+
+### 검증
+
+- npx tsc --noEmit 0 errors
+- npm run build exit 0 (/products/new 64.2 -> 63.9 kB)
+- 한글 typo sentinel grep 0 hits
+- SD-01 영구 보존
+
+### 적용 작업원칙
+
+#17 · #21 · #24 · #29 · #32 · #36 · #41 · #45 · #46
+
+### 다음 = Desktop 재검증 turn
+
+7탭 순회로 헤더 등록 버튼 미노출 + visual 탭 하단 인스턴스 보존 확인. 통과 시 핸드오프 §7 ARCHIVED.
+
+Commit: 본 commit hash로 갱신 예정
+
+---
+
 ## 2026-05-27 PM B-13 PLANT 비주얼탭 액션블록 스코프 정합 (Code turn, 1 파일)
 
 ### 본 turn 성격

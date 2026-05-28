@@ -1,5 +1,6 @@
 # KKOTIUM GARDEN — 프로젝트 진행 현황
-> 최종 업데이트: 2026-05-27 PM **B-13 PLANT 비주얼탭 액션블록 스코프 정합** (Code turn, 1 파일 +3/-3). `autoRunVisual` 체크박스 + 네이버 직접 등록 버튼 + 엑셀 다운로드 버튼 블록이 `activeTab==='visual'` 조건문 *밖*에 있어 7개 탭 전부에서 노출되던 회귀 해소. visual 탭 종료 `</>)}` 위치를 하단 버튼 `</div>` 뒤로 이동 -> 등록 액션이 마지막 단계(비주얼 자동화 탭)에서만 노출되도록 의도된 동선 회복. 작업원칙 #44 stale fact 직접 해소 사례(PROGRESS.md 2026-05-15 Phase 3-C-3 entry의 "체크박스 위치: 페이지 하단(공통) -> 네이버 직접 등록 버튼 바로 위에만"이 코드 실제와 불일치였음).
+> 최종 업데이트: 2026-05-27 PM **B-13a PLANT 페이지 상단 헤더 중복 등록 버튼 제거** (Code turn, 1 파일 -14줄, B-13 직속 후속). page.tsx line 1792-1805에 "네이버 직접 등록" + "네이버 엑셀 다운로드" 버튼이 페이지 상단 헤더(진행률 옆)에 *별도 인스턴스*로 존재해 7개 탭 전부에서 노출되던 회귀 해소. visual 탭 안 인스턴스(line 3431+3442)만 유지 -> 등록 액션은 비주얼 자동화 탭(마지막 단계)에서만 노출 보장. Chrome MCP 실측 evidence: pre-state totalRegisterButtons=2 (header+bottom), post-state 목표=1 (visual 탭에서만). 핸들러 grep 카운트: handleNaverDirect 3->2, handleGenerate 4->3(line 817 주석 1건 비-functional 포함). 5-19 진단이 하단 블록만 식별하고 헤더 dup을 놓친 *cascade miss*를 b6ce4bb 재검증 중 발견.
+> 2026-05-27 PM **B-13 PLANT 비주얼탭 액션블록 스코프 정합** (Code turn, 1 파일 +3/-3, commit b6ce4bb). visual 탭 종료 `</>)}` 위치를 line 3401 -> 하단 버튼 `</div>` 직후로 이동. autoRunVisual 체크박스 + 등록/엑셀 버튼이 7탭 전부 노출되던 회귀 해소.
 > 2026-05-27 PM **B-12 네이버 등록 라우트 근본 재작성 + B-11 저장배관 DB UPDATE** (Code turn, 2 파일 +186/-50, commit f244a48). categoryMap 폐기 + naverRequest OAuth2 위임 + 거짓 라벨 0 + detail_image_url 본문 포함 + save-assets DB UPDATE 추가.
 > 2026-05-27 명화송풍구 **B-11 저장배관 우회 완주** (상세 PNG 186KB Storage 업로드 + Product main/detail_image_url DB 기록, DB 3중 검증 통과 — Desktop turn, 코드변경 0). **B-12 (치명) 발견 -> 본 commit으로 근본 해소**.
 > 2026-05-27 명화송풍구 이미지 보강(330px->화보 4종컷 1000px) + margin 교정(B-7 50.69->2.03) -> 진단 L4->L2 도달 (Desktop turn, 코드 변경 0 / Supabase 직접 UPDATE 2건).
@@ -20,6 +21,70 @@
 > **Private API 발급 완료**: 28개 전체 권한 발급 ✅ (구매용 6 + 판매용 13 + 공통 3 + 기타 6) — Sprint 8 자동발주는 매출 상승 + 운영 흐름에 따라 진입 (보류 트랙)
 > **다음 작업**: Desktop Chrome MCP로 B-1 수정 실클릭 재검증 → 통과 시 B-3 (달항아리 도어벨 데이터 보정) → Sprint 7-M2 Phase 3-C-2 (PLANT /products/new 6→7 tab 확장 + savedProductId 컨텍스트 전달). 본 turn (Code): 6 컴포넌트 `'use client'` 추가 + useStudioActions.runThumbnail 빈 outputs guard. tsc 0 + build 0. 상세 근거: `docs/handoff/HANDOFF_studio_click_bug.md`.
 > **참고 문서**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` (v3.1 영구 참조), `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (v2.0 이력 참조), `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
+
+---
+
+## 2026-05-27 PM B-13a PLANT 페이지 상단 헤더 중복 등록 버튼 제거 (Code turn, B-13 직속 후속)
+
+### 본 turn 성격
+
+B-13 commit b6ce4bb production 재검증 중 Desktop Chrome MCP가 발견한 *잔존 회귀 1건* 1-commit 해소. 5-19 진단이 하단 액션블록만 식별하고 페이지 상단 헤더의 동일 버튼 인스턴스(line 1793-1804)를 놓친 cascade miss. b6ce4bb 하단 정합 직후 production 실측에서 식별 -> 본 commit으로 영구 차단.
+
+### 코드 변경 (1 파일 -14줄)
+
+`src/app/products/new/page.tsx` line 1792-1805 14줄 `<div style={{ display: 'flex', gap: 8 }}>...</div>` 블록 단순 삭제. 내부에 `handleNaverDirect` 버튼 + `handleGenerate` 버튼 2개(헤더 인스턴스). 부모 `flex items-center gap-2` div(line 1771)는 유지 — 진행률 dots + "N/M 완료" 배지는 그대로 보존.
+
+### 핸들러 카운트 검증 (회귀 차단)
+
+| 핸들러 | pre-state | post-state | 위치 |
+|---|---|---|---|
+| `handleNaverDirect` | 3 (def + header + visual) | **2** (def + visual) | line 1418 (def) + line 3417 (visual onClick) |
+| `handleGenerate` | 4 (def + header + visual + comment) | **3** (def + visual + comment) | line 1508 (def) + line 3428 (visual onClick) + line 817 (주석) |
+
+핸들러 functional call site: 양쪽 모두 visual 탭 1곳만 잔존. 헤더 인스턴스 완전 제거.
+
+### Desktop Chrome MCP 실측 evidence (pre-state)
+
+```json
+{
+  "totalRegisterButtons": 2,
+  "instances": [
+    { "text": "네이버 직접 등록", "top": 115, "zone": "HEADER (top)" },
+    { "text": "네이버 엑셀 다운로드", "top": 115, "zone": "HEADER (top)" }
+  ],
+  "verdict": "DUPLICATE confirmed: header + bottom"
+}
+```
+
+[기본] 탭 / [옵션] 탭 양쪽에서 동일 top=115px 위치 노출 확인. post-state 목표: production에서 totalRegisterButtons=0 (visual 탭 외) / =1 (visual 탭 진입 시 하단만).
+
+### 라벨 차이 단정
+
+| 위치 | 직접 등록 라벨 | 엑셀 라벨 |
+|---|---|---|
+| Header (제거) | `네이버 직접 등록` | `네이버 엑셀 다운로드` |
+| Visual tab (잔존) | `네이버 직접 등록 (API)` | `네이버 엑셀 다운로드` |
+
+핸들러는 양쪽 동일(`handleNaverDirect` / `handleGenerate`). 두 인스턴스가 동일 동작을 트리거했으므로 헤더 인스턴스 제거는 *동작 손실 0*.
+
+### 검증
+
+| 항목 | 결과 |
+|---|---|
+| `npx tsc --noEmit` | 0 errors ✅ |
+| `npm run build` | exit 0, `/products/new` 64.2 -> 63.9 kB (-0.3 kB, 14줄 제거 반영) ✅ |
+| 한글 typo sentinel grep | 0 hits ✅ |
+| SD-01 아랍어 footer 정합 | 조사/수정 0건 (영구 보존) ✅ |
+
+### 적용 작업원칙
+
+#17 · #21 · #24 · #29 (삭제 only, 신규 한글 0) · #32 · #36 · #41 · #45 (실측 evidence 기반) · #46
+
+### 다음 = Desktop 재검증 turn
+
+production `/products/new` 7탭 순회 -> 상단 헤더에 등록/엑셀 버튼 미노출 확인. [비주얼 자동화] 탭(저장 후)에서만 하단 체크박스 + 2개 버튼 노출 유지(B-13 정합 보존) 확인. 통과 시 HANDOFF_plant_header_duplicate_buttons §7 ARCHIVED.
+
+Commit: 본 commit hash로 갱신 예정
 
 ---
 

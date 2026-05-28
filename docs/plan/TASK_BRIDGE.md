@@ -71,17 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-27 PM (Code turn, +Δ) — B-13 PLANT 비주얼탭 액션블록 스코프 정합 완료 (1 파일 +3/-3, TSC 0 + build OK). 직전 B-12 + B-11(commit f244a48) 위에 누적. 다음 = Desktop 재검증(6탭 미노출 + visual 탭 노출) 후 대표 승인하에 명화송풍구 등록 완주.
+**Last update**: 2026-05-27 PM (Code turn, +ΔΔ) — B-13a PLANT 페이지 상단 헤더 중복 등록 버튼 제거 (1 파일 -14줄, TSC 0 + build OK). B-13 직속 후속. 누적: B-11 + B-12(f244a48) + B-13(b6ce4bb) + B-13a(본 commit). 다음 = Desktop 재검증(7탭 순회 + visual 탭 노출) 후 대표 승인하에 명화송풍구 등록 완주.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop B-13 재검증 + 명화송풍구 등록 완주 (B-12 + B-13 fix 완료, 대표 승인 대기)
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop B-13/B-13a 재검증 + 명화송풍구 등록 완주 (B-12 + B-13 + B-13a fix 완료, 대표 승인 대기)
 
 | 항목 | 값 |
 |---|---|
 | **FROM** | 💻 Code (B-12 register 라우트 근본 재작성 + B-11 저장배관 DB UPDATE, 2 파일) |
 | **TO** | 🖥 Desktop 새 채팅 (대표 승인 후 실 네이버 발행 + 3중 검증) |
 | **BASELINE** | 본 commit (origin/main). TSC 0 + build OK + Vercel READY. categoryMap 폐기 / `naverCategoryCode` 직접 사용 / `naverRequest` OAuth2 위임 / detailContent에 `<img>` 포함 / 거짓 라벨 0 / save-assets 200 후 Product URL 컬럼 자동 기록 |
-| **NEXT SCOPE** | (1) Desktop이 production `/products/new` 6탭에서 체크박스 미노출 + visual 탭만 노출 Chrome MCP 재검증 (B-13). (2) /products?id=cmpnooli40001f0gveaxr8iim 진입 + "네이버 직접 등록" 클릭 -> B-12 라우트 호출. (3) 응답 `success: true` + 실 naverProductId 검증 (PENDING_/ERROR_/MOCK_ 패턴 0). (4) 스마트스토어 실 노출 + DB row cross-check. (5) 하트클립(65322570) 동일 흐름 |
-| **PENDING** | 등록 완주 시 HANDOFF_premium_image_boost.md + HANDOFF_naver_register_fix.md + HANDOFF_atelier_routing_plant_checkbox_2026-05-27.md 셋 모두 `[CLOSED]` + §7 ARCHIVED. (본 commit으로 atelier_routing handoff는 이미 [CLOSED] 처리됨 — Desktop 재검증만 대기) |
+| **NEXT SCOPE** | (1) Desktop이 production `/products/new` 7탭 순회로 상단 헤더 등록 버튼 미노출 + visual 탭 하단 인스턴스 보존 Chrome MCP 재검증 (B-13 + B-13a). (2) /products?id=cmpnooli40001f0gveaxr8iim 진입 + "네이버 직접 등록" 클릭 -> B-12 라우트 호출. (3) 응답 `success: true` + 실 naverProductId 검증. (4) 스마트스토어 실 노출 + DB row cross-check. (5) 하트클립(65322570) 동일 흐름 |
+| **PENDING** | 등록 완주 시 HANDOFF_premium_image_boost.md + HANDOFF_naver_register_fix.md + HANDOFF_atelier_routing_plant_checkbox_2026-05-27.md + HANDOFF_plant_header_duplicate_buttons_2026-05-27.md 4건 모두 `[CLOSED]` + §7 ARCHIVED. (본 commit으로 plant_header_duplicate handoff는 [CLOSED] 처리됨 — Desktop 재검증만 대기) |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
 
@@ -235,6 +235,17 @@
   - 17/26 가짜 라벨 발견 + 빌더↔renderer 충돌 + lifestyle 연결 부재 진단
   - 사용자 Q1·Q2·Q3 권장안 모두 승인 → 새 채팅 2개 분할 결정
   - md 6건 paste-ready 분할 작성 (Turn 1 + Turn 2)
+
+### 2026-05-27 PM (B-13a)
+
+- 🟡 IN-VERIFY: B-13a PLANT 페이지 상단 헤더 중복 등록 버튼 제거 (Code turn, 본 commit) ← Desktop 7탭 순회 재검증 대기
+  - page.tsx line 1792-1805 14줄 `<div>` 블록 삭제 (handleNaverDirect 버튼 + handleGenerate 버튼 헤더 인스턴스)
+  - 핸들러 카운트: handleNaverDirect 3->2, handleGenerate 4->3 (line 817 비-functional 주석 포함)
+  - functional call site: 양쪽 visual 탭 1곳만 잔존
+  - Desktop Chrome MCP 실측 evidence: pre-state totalRegisterButtons=2 (HEADER zone top=115px)
+  - TSC 0 + build OK (/products/new 64.2 -> 63.9 kB)
+  - 핸드오프 HANDOFF_plant_header_duplicate_buttons_2026-05-27.md 본 commit으로 [CLOSED]
+  - 5-19 진단의 cascade miss 사례 — 하단 블록만 식별하고 헤더 dup 누락. b6ce4bb 재검증으로 발견
 
 ### 2026-05-27 PM (B-13)
 
