@@ -71,17 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Code turn, push 5a169c7) — Phase G8-ENGINE **엔진 구축 [코드 완료]**. 5개 SCOPE 전부: (1)asset-source-resolver.ts 신규(manual>auto-cache(Storage)>fallback) (2)thumbnail-generator 4변형 cutout/backdrop 소비(없으면 fitImage fallback) (3)studio/PLANT B 수동 누끼/배경 입력+소스뱃지 (4)route resolver 배선+backdrop 우선순위+assetSource 응답 (5)저화질 760px 가드. production smoke: POST /api/thumbnail/<아이스트레이> 200 + 4변형 + assetSource{cutout:fallback,backdrop:fallback}(캐시 미적재 정상) + lowResolution 760. TSC0/build0/verify-vercel exit0. 비가역 0. 다음: Desktop이 Adobe 누끼->Storage 적재 -> E2E 재검증.
+**Last update**: 2026-05-28 (Desktop turn, 코드 0) — G8-ENGINE 엔진 [코드 완료 5a169c7] 후 **썸네일 디자인 품질 진단 + 아트디렉션 시스템 설계**. 대표 지적: 썸네일 퀄리티 부족. 근본 2건: (1)렌더러 크래프트 부재(단색fill+공중부양+기본폰트) (2)팔레트가 conceptTone 무시. 실측: 아이스트레이 Diagnosis.conceptTone.colorMood=warm인데 임의 쿨톤은 불일치 -> 데이터 기반 warm 팔레트가 정합 육안 확인. 프리미엄 크래프트(사이클로라마 스윈+접지그림자 2겹+반사+스포트+위계) 데모로 천장 증명. 스펙: docs/handoff/THUMBNAIL_ART_DIRECTION_SYSTEM_2026-05-28.md. 다음: Code Phase G8-ENGINE-Q1(conceptTone 팔레트 결정기 + 프리미엄 렌더러).
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop G8-ENGINE 누끼 적재 + production E2E 재검증
+## ⭐ ACTIVE — 다음 세션 진입점: Code Phase G8-ENGINE-Q1 (썸네일 아트디렉션 품질 격상)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (Phase G8-ENGINE 5 SCOPE 코드 완료, push 5a169c7) |
-| **TO** | 🖥 Desktop 새 채팅 (누끼/배경 Storage 적재 + E2E 재검증) |
-| **BASELINE** | 5a169c7 (origin/main, Vercel READY, production smoke 통과) |
-| **NEXT SCOPE** | **Desktop 운영+검증**: (1) 아이스트레이(cmpp62yje00015xup5h8pgwx0) Adobe 누끼 PNG(실증 동선 1~3단계 산출물)를 Supabase Storage 버킷 product-assets 경로 cmpp62yje00015xup5h8pgwx0/cutout.png 로 적재(service role). 선택: backdrop-{skeletonId=S1}.png 도 적재. (2) /studio 또는 PLANT에서 썸네일 생성 -> assetSource.cutout 이 auto-cache 로 바뀌고 4변형이 누끼 기반으로 **명백히 차별화**되는지 육안 확인(이전 'fallback'+'거의 동일'에서 해소). 또는 수동 입력칸에 누끼 URL 직접 붙여 manual 경로 확인. (3) save-assets -> Supabase product 행 main_image_url/detail_image_url 기록 단정. 통과 시 G8-ENGINE [CLOSED] -> Track A(명화송풍구 B-12 발행) 대표 승인 후 별도 채팅. 상세: docs/handoff/HANDOFF_g8_engine_design_line_proven_2026-05-28.md |
-| **PENDING** | B-3 달항아리 카테고리/originCode 오염 보정 / P20 supplier seller ID / G6 winner3333 배송템플릿 미등록 / Supabase Secret 키 회전(나중 점검) / Storage POC 잔존(product-images/poc/icetray-cmpp62yje-poc.jpg) / 누끼·배경 Storage 적재 운영(본 ACTIVE) |
+| **FROM** | 🖥 Desktop (디자인 품질 진단 + conceptTone 팔레트 시스템 설계 + 프리미엄 데모 증명) |
+| **TO** | 💻 Code (Phase G8-ENGINE-Q1 프리미엄 렌더러 구현) |
+| **BASELINE** | eb72b9e (origin/main, Vercel READY, G8-ENGINE 엔진 [코드 완료]) |
+| **NEXT SCOPE** | **Quick Win(의존성 순서)**: 1.src/lib/automation/thumbnail-art-direction.ts 신규 pickArtDirection(conceptTone)->팔레트(WARM/COOL/VIVID/PASTEL colorMood 트리거)+보조축(pricePosition/emotionalTone/persona/genre) 2.thumbnail-generator.ts 4 renderer 공통 크래프트 리팩터(사이클로라마 스윈[단색fill 폐기]+소프트스포트+접지 2겹+바닥반사+타이포위계) 3.route가 Diagnosis.conceptTone 조회->pickArtDirection->generator 전달 4.Pretendard 폰트 번들 5.clean 변형 텍스트 0 게이트(네이버 대표이미지 정책). **팔레트=conceptTone 파생(직관 아님) / 외부이미지API 런타임 0(#38)**. 상세: docs/handoff/THUMBNAIL_ART_DIRECTION_SYSTEM_2026-05-28.md |
+| **병행 PENDING (Desktop)** | G8-ENGINE 엔진 E2E 검증 — 아이스트레이 Adobe 누끼 PNG를 Storage product-assets/cmpp62yje00015xup5h8pgwx0/cutout.png 적재 -> assetSource.cutout=auto-cache 전환 + 4변형 차별화 육안 + save-assets DB 기록 단정(Q1 프리미엄 렌더러 적용 후 하면 더 정확) |
+| **PENDING** | Real Win(Firefly 웹 라이프스타일 씬->Storage backdrop 적재, 천장 트랙) / B-3 달항아리 / P20 supplier seller ID / G6 winner3333 배송템플릿 / Storage POC 잔존(product-images/poc/icetray-cmpp62yje-poc.jpg) |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
 
