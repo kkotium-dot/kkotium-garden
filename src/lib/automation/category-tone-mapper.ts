@@ -54,6 +54,10 @@ export type BaseTone =
   | 'kinfolk'
   | 'korean-traditional'
   | 'foreign-cinematic'
+  // G8-ENGINE-Q4: warm natural-light fragrance read (Adobe workflow research §3).
+  // Replaces the dark-cinematic read for automotive-fragrance — impressionist
+  // labels + Korean diffuser mood (Jo Malone / Diptyque) are sunlit, not dark.
+  | 'foreign-cinematic-sunlit'
   | 'pastel-friendly';
 
 // Human faces are hard-prohibited system-wide (research §3-D, §9): there is no
@@ -69,8 +73,11 @@ export interface ToneDirective {
   colorMood: ConceptTone['colorMood'];
   modelPolicy: ModelPolicy;
   /** When true, a premium pricePosition should pull toward a darker/dressier
-   *  read (e.g. automotive fragrance — Jo Malone-like cinematic dark). */
+   *  read. Now false for automotive fragrance (Q4 sunlit retune). */
   darkPremium: boolean;
+  /** G8-ENGINE-Q4: prefer a warm natural-light scene (sunlit wood desk / café
+   *  window) over studio/dark. Drives the foreign-cinematic-sunlit palette. */
+  naturalLight: boolean;
 }
 
 export interface MapCategoryToToneOptions {
@@ -150,6 +157,8 @@ interface GroupRow {
   defaultMood: ConceptTone['colorMood'];
   modelPolicy: ModelPolicy;
   darkPremium: boolean;
+  /** Defaults to false when omitted in a row. */
+  naturalLight?: boolean;
 }
 
 const GROUP_ROWS: Record<CategoryGroup, GroupRow> = {
@@ -157,8 +166,8 @@ const GROUP_ROWS: Record<CategoryGroup, GroupRow> = {
   kitchen: { trustSignal: 'hygiene', baseTone: 'modern-minimal', defaultMood: 'warm', modelPolicy: 'hand-only', darkPremium: false },
   // 홈리빙/인테리어 — 공간 연출·여백 / 킨포크 (premium=한국형) / calm-mono / 무
   homeliving: { trustSignal: 'spatial', baseTone: 'kinfolk', premiumBaseTone: 'korean-traditional', defaultMood: 'calm', modelPolicy: 'no-human', darkPremium: false },
-  // 차량/디퓨저 — 고급·향의 무드 / 외국 감성 다크 시네마틱 / vivid-mono / 무
-  'automotive-fragrance': { trustSignal: 'fragrance', baseTone: 'foreign-cinematic', defaultMood: 'mono', modelPolicy: 'no-human', darkPremium: true },
+  // 차량/디퓨저 — 향의 무드 / 자연광 햇살(인상주의 라벨 정합, Q4 톤 전환) / warm / 무
+  'automotive-fragrance': { trustSignal: 'fragrance', baseTone: 'foreign-cinematic-sunlit', defaultMood: 'warm', modelPolicy: 'no-human', darkPremium: false, naturalLight: true },
   // 뷰티 — 질감·제형·임상 / 킨포크+클린 화이트 / calm-warm / 손·피부
   beauty: { trustSignal: 'quality', baseTone: 'kinfolk', defaultMood: 'calm', modelPolicy: 'hand-only', darkPremium: false },
   // 패션 — 핏·코디·무드 / 킨포크 에디토리얼 / vivid-warm / AI는 무인(실모델 외주)
@@ -207,5 +216,6 @@ export function mapCategoryToTone(
     colorMood,
     modelPolicy: row.modelPolicy,
     darkPremium: row.darkPremium,
+    naturalLight: row.naturalLight ?? false,
   };
 }

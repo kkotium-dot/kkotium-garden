@@ -63,6 +63,9 @@ model Supplier {
 
 model Product {
   id                      String            @id @default(cuid())
+  // G8-ENGINE-Q4: pre-publish legal approval override (e.g. master_pd_verified
+  // for operator-confirmed public-domain artwork). Consumed by asset-legal-gate.
+  legalApproval           String?
   naver_title             String?
   naver_keywords          String?
   naver_description       String?

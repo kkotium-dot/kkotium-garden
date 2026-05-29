@@ -30,6 +30,8 @@ import {
 } from '@/lib/automation/lifestyle-picker';
 import { matchSkeleton } from '@/lib/automation/skeleton-matcher';
 import { runLegalGate } from '@/lib/automation/asset-legal-gate';
+import { planAdobeWorkflow } from '@/lib/automation/adobe-tool-router';
+import { planCutoutWorkflow } from '@/lib/automation/cutout-strategy';
 import {
   resolveAssetSources,
   type AssetSource,
@@ -114,6 +116,7 @@ export async function POST(
       name: true,
       category: true,
       naverCategoryCode: true,
+      legalApproval: true,
       salePrice: true,
       images: true,
       mainImage: true,
@@ -240,15 +243,29 @@ export async function POST(
       }
     }
 
-    // G8-ENGINE-Q3: pre-publish legal gate (research §3, §9). Evaluated for the
-    // strictest variant (clean = 네이버 대표이미지). Pure keyword/heuristic, no
-    // external API (#38). A 명화 keyword BLOCKS pending operator approval.
+    // G8-ENGINE-Q4: Adobe tool/model plan per rendered variant + cutout strategy
+    // from the product's asset state (research §6-E / §1-A). Pure planners, no IO.
+    const toneDirective = result.artDirection.toneDirective;
+    const adobeWorkflow = result.outputs.map((o) => planAdobeWorkflow(o.variant, toneDirective));
+    const cutoutStrategy = planCutoutWorkflow({
+      mainImage: product.mainImage,
+      images: product.images,
+    });
+
+    // G8-ENGINE-Q3+Q4: pre-publish legal gate (research §3, §9, §4). Evaluated
+    // for the strictest variant (clean = 네이버 대표이미지). Pure keyword/heuristic,
+    // no external API (#38). A 명화 keyword BLOCKS unless legalApproval=
+    // master_pd_verified; a partner model on a final cut BLOCKS; a domeggook
+    // source raises an advisory warning.
+    const cleanModel = planAdobeWorkflow('clean', toneDirective).model ?? null;
     const legalGate = await runLegalGate({
       productName: product.name,
       category: product.category,
       variant: 'clean',
-      // self-use today; provider mode flips disclosure duty on (research §3-A-1).
       isBusinessProvider: false,
+      legalApproval: product.legalApproval,
+      sourceImageUrl,
+      model: cleanModel,
     });
 
     return NextResponse.json({
@@ -299,6 +316,11 @@ export async function POST(
       toneDirective: result.artDirection.toneDirective,
       // G8-ENGINE-Q3: pre-publish legal gate result (passed + blocks/warnings).
       legalGate,
+      // G8-ENGINE-Q4: Adobe workflow plan per variant + cutout strategy + the
+      // product's recorded legal approval (null when none).
+      adobeWorkflow,
+      cutoutStrategy,
+      legalApproval: product.legalApproval ?? null,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown error';

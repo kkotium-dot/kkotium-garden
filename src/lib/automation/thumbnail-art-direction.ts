@@ -171,6 +171,20 @@ function applyBaseTone(
     return { palette: { ...DARK_PALETTE }, vignette: true, spotlightBoost: 0.12 };
   }
   switch (baseTone) {
+    case 'foreign-cinematic-sunlit':
+      // Q4 fragrance retune (Adobe workflow research §3): warm natural-light
+      // wood-desk / café-window read, NOT dark cinematic. Impressionist label +
+      // Korean diffuser mood (Jo Malone / Diptyque) = sunlit warmth.
+      return {
+        palette: {
+          topRgb: mixRgbToward(palette.topRgb, [240, 230, 214], 0.5),
+          floorRgb: mixRgbToward(palette.floorRgb, [250, 243, 231], 0.4),
+          accent: '#B07B4F',
+          spotlight: '#FFF7EA',
+        },
+        vignette: true,
+        spotlightBoost: 0.06,
+      };
     case 'korean-traditional':
       return {
         palette: {

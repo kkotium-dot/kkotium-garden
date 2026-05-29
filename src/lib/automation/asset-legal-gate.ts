@@ -25,6 +25,7 @@
 // no face member), so the generation path never introduces a face.
 
 import type { ThumbnailVariant } from './thumbnail-generator';
+import type { FireflyModel } from './adobe-tool-router';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,11 +34,20 @@ import type { ThumbnailVariant } from './thumbnail-generator';
 export type LegalBlock =
   | { type: 'masterpiece-copyright'; keyword: string }
   | { type: 'realistic-person'; keyword: string }
-  | { type: 'face-detected'; confidence: number };
+  | { type: 'face-detected'; confidence: number }
+  // G8-ENGINE-Q4 (research §2-D / §10, handoff §2-E): a partner (non-Adobe)
+  // model is not IP-indemnified, so it cannot be the FINAL commercial cut
+  // (clean / badge). Blocks pending a Firefly-native re-render.
+  | { type: 'partner-model-final-commercial'; model: FireflyModel; requiresFireflyNativeRegeneration: true };
 
 export type LegalWarning =
   | { type: 'excessive-retouching'; diff: number }
-  | { type: 'ai-disclosure-needed'; reason: string };
+  | { type: 'ai-disclosure-needed'; reason: string }
+  // G8-ENGINE-Q4 (research §4): a domeggook-sourced visual may be a protected
+  // 이미지(연출)컷. Our pipeline only borrows the product cutout + regenerates
+  // the background, which mitigates the derivative risk — so this is advisory
+  // (verify 도매꾹 "이미지 사용여부"), not a hard block.
+  | { type: 'domeggook-source-derivative'; sourceUrl: string; requiresOriginalApproval: true };
 
 export interface LegalGateResult {
   passed: boolean;
@@ -55,7 +65,29 @@ export interface LegalGateInput {
   /** True only when the app is offered to external sellers as a SaaS — flips
    *  the AI 기본법 / 표시광고법 disclosure duty on. Self-use stays false. */
   isBusinessProvider?: boolean;
+  // ── G8-ENGINE-Q4 ──────────────────────────────────────────────────────
+  /** Product.legalApproval override. 'master_pd_verified' waives the
+   *  masterpiece-copyright block (operator confirmed public-domain artwork,
+   *  e.g. Van Gogh d.1890 / Monet d.1926 — author +70yr). */
+  legalApproval?: string | null;
+  /** Source image URL — flags a domeggook-derived advisory warning. */
+  sourceImageUrl?: string | null;
+  /** Model proposed for this variant — partner models cannot be the final
+   *  commercial cut (clean / badge). */
+  model?: FireflyModel | null;
 }
+
+/** Partner (non-Adobe-indemnified) models. Firefly-native models are indemnified. */
+const PARTNER_MODELS: ReadonlyArray<FireflyModel> = [
+  'gemini-3-nano-banana-pro',
+  'gemini-3-1-nano-banana-2',
+  'gemini-2-5-nano-banana',
+  'imagen',
+  'gpt-image-2',
+];
+
+const MASTER_PD_APPROVAL = 'master_pd_verified';
+const DOMEGGOOK_HOST_RE = /domeggook|domeme/i;
 
 // ---------------------------------------------------------------------------
 // Keyword rules (Korean matching tokens — workrule #35 carve-out)
@@ -84,22 +116,49 @@ function firstMatch(haystack: string, tokens: string[]): string | null {
 /**
  * Evaluate the pre-publish legal gate for one product/variant. Pure + sync-safe
  * (returns a Promise to keep the signature stable for a future detector). A
- * masterpiece keyword BLOCKS (operator approval required); the gate never
- * auto-approves a 명화 product. passed === (blocks.length === 0).
+ * masterpiece keyword BLOCKS unless the product carries a master_pd_verified
+ * legalApproval (operator-confirmed public-domain artwork). A partner model on
+ * a final commercial cut also BLOCKS. passed === (blocks.length === 0).
  */
 export async function runLegalGate(input: LegalGateInput): Promise<LegalGateResult> {
   const haystack = `${input.productName} ${input.category ?? ''}`;
   const blocks: LegalBlock[] = [];
   const warnings: LegalWarning[] = [];
 
+  // masterpiece keyword blocks UNLESS the operator has recorded a public-domain
+  // approval (master_pd_verified) on the product (research §9-3, handoff §2-E).
   const masterpiece = firstMatch(haystack, MASTERPIECE_TOKENS);
-  if (masterpiece) {
+  if (masterpiece && input.legalApproval !== MASTER_PD_APPROVAL) {
     blocks.push({ type: 'masterpiece-copyright', keyword: masterpiece });
   }
 
   const person = firstMatch(haystack, PERSON_TOKENS);
   if (person) {
     blocks.push({ type: 'realistic-person', keyword: person });
+  }
+
+  // A partner model cannot be the FINAL commercial cut (clean / badge): not
+  // Adobe-indemnified. Blocks pending a Firefly-native re-render (handoff §4-A).
+  if (
+    input.model &&
+    PARTNER_MODELS.includes(input.model) &&
+    (input.variant === 'clean' || input.variant === 'badge')
+  ) {
+    blocks.push({
+      type: 'partner-model-final-commercial',
+      model: input.model,
+      requiresFireflyNativeRegeneration: true,
+    });
+  }
+
+  // A domeggook source may be a protected 연출컷. We only borrow the product
+  // cutout + regenerate the background, so this is advisory (research §4-D).
+  if (input.sourceImageUrl && DOMEGGOOK_HOST_RE.test(input.sourceImageUrl)) {
+    warnings.push({
+      type: 'domeggook-source-derivative',
+      sourceUrl: input.sourceImageUrl,
+      requiresOriginalApproval: true,
+    });
   }
 
   // AI disclosure duty switches on only when we provide the tool to others.
