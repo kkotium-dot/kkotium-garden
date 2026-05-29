@@ -57,8 +57,10 @@ export interface ThumbnailRequest {
   productName: string;
   /** Sale price in KRW. Required for the price variant; ignored otherwise. */
   salePrice?: number;
-  /** Free-text category, used by badge + copy prompts. Optional. */
+  /** Free-text category, used by badge + copy prompts + tone mapping. Optional. */
   category?: string;
+  /** Naver numeric category code — secondary hint for category-tone-mapper. */
+  naverCategoryCode?: string | null;
   /** Short context phrase like "4종 세트". Optional. */
   highlight?: string;
   /** ConceptTone (output of CTI). Required. */
@@ -444,9 +446,14 @@ export async function generateThumbnails(
   const skeletonId = req.overrideSkeletonId ?? match.skeletonId;
   const spec = getSkeleton(skeletonId);
 
-  // G8-ENGINE-Q1: derive palette + craft params from the diagnosis ConceptTone
-  // (data-driven, not designer intuition). All variants share one direction.
-  const art = pickArtDirection(req.conceptTone);
+  // G8-ENGINE-Q3: 2-step art direction — category trust signal (step 1) then
+  // persona/price modulation (step 2). Data-driven, not designer intuition.
+  // All variants share one direction.
+  const art = pickArtDirection(req.conceptTone, {
+    category: req.category,
+    naverCategoryCode: req.naverCategoryCode,
+    productName: req.productName,
+  });
 
   // Low-resolution guard: probe the product source once and flag when its long
   // side is at/below the threshold. Non-fatal — a probe failure leaves the flag

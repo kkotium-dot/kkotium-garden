@@ -29,6 +29,7 @@ import {
   markLifestyleAssetUsed,
 } from '@/lib/automation/lifestyle-picker';
 import { matchSkeleton } from '@/lib/automation/skeleton-matcher';
+import { runLegalGate } from '@/lib/automation/asset-legal-gate';
 import {
   resolveAssetSources,
   type AssetSource,
@@ -112,6 +113,7 @@ export async function POST(
       sku: true,
       name: true,
       category: true,
+      naverCategoryCode: true,
       salePrice: true,
       images: true,
       mainImage: true,
@@ -208,6 +210,7 @@ export async function POST(
     salePrice:
       typeof product.salePrice === 'number' ? product.salePrice : undefined,
     category: product.category ?? undefined,
+    naverCategoryCode: product.naverCategoryCode,
     highlight: body.highlight,
     conceptTone,
     sourceImageUrl,
@@ -236,6 +239,17 @@ export async function POST(
         }
       }
     }
+
+    // G8-ENGINE-Q3: pre-publish legal gate (research §3, §9). Evaluated for the
+    // strictest variant (clean = 네이버 대표이미지). Pure keyword/heuristic, no
+    // external API (#38). A 명화 keyword BLOCKS pending operator approval.
+    const legalGate = await runLegalGate({
+      productName: product.name,
+      category: product.category,
+      variant: 'clean',
+      // self-use today; provider mode flips disclosure duty on (research §3-A-1).
+      isBusinessProvider: false,
+    });
 
     return NextResponse.json({
       productId: product.id,
@@ -275,7 +289,16 @@ export async function POST(
         typeScale: result.artDirection.typeScale,
         spotlightStrength: result.artDirection.spotlightStrength,
         vignette: result.artDirection.vignette,
+        // G8-ENGINE-Q3: senior accessibility directives (research §5-C).
+        contrastMin: result.artDirection.contrastMin,
+        textColor: result.artDirection.textColor,
       },
+      // G8-ENGINE-Q3: step-1 categorical tone directive (research §8). Lets
+      // Desktop/UI confirm the category-driven tone decision (trust signal,
+      // base tone, model policy) independently of the rendered pixels.
+      toneDirective: result.artDirection.toneDirective,
+      // G8-ENGINE-Q3: pre-publish legal gate result (passed + blocks/warnings).
+      legalGate,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown error';

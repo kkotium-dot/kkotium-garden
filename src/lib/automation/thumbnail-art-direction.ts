@@ -1,18 +1,29 @@
 // src/lib/automation/thumbnail-art-direction.ts
 //
-// Sprint 7-M2 Phase G8-ENGINE-Q1 — conceptTone -> art direction resolver.
+// Sprint 7-M2 Phase G8-ENGINE-Q3 — 2-step art direction resolver.
 //
-// Spec: docs/handoff/THUMBNAIL_ART_DIRECTION_SYSTEM_2026-05-28.md
+// Spec: docs/research/KKOTIUM_ART_DIRECTION_RESEARCH_2026-05-29.md (authority)
+//       + docs/handoff/HANDOFF_g8_engine_q3_2026-05-29.md (§2-D)
 //
-// The palette + craft parameters of a thumbnail are *derived from the
-// diagnosis* (ConceptTone), not from designer intuition. This keeps tone
-// aligned with the product identity (e.g. a warm kitchen product never gets a
-// cold palette). Designer intuition is reserved for the craft recipe (shadows,
-// reflection, spotlight) which lives in the generator.
+// Q1 was a 1-step resolver (conceptTone -> palette). Q3 makes it 2-step:
+//   step 1: mapCategoryToTone(conceptTone, category) -> ToneDirective
+//           (the category's trust signal decides the base tone — research §8)
+//   step 2: applyPersonaModulation(toneDirective, conceptTone) -> ArtDirection
+//           (persona x pricePosition modulate craft + accessibility)
+//
+// The palette + craft parameters stay *derived from data* (diagnosis +
+// category), not designer intuition. Designer intuition is reserved for the
+// craft recipe (shadows, reflection, spotlight) in the generator.
 //
 // Pure module: no IO, no external image API. Safe to unit-test.
 
 import type { ConceptTone } from '../diagnosis/concept-tone-inference';
+import {
+  mapCategoryToTone,
+  type ToneDirective,
+  type BaseTone,
+  type MapCategoryToToneOptions,
+} from './category-tone-mapper';
 
 /** RGB triple, 0..255 per channel. */
 export type Rgb = [number, number, number];
@@ -40,6 +51,15 @@ export interface ArtDirection {
   vignette: boolean;
   /** Horizon position (0..1) where the cyclorama wall meets the floor. */
   horizon: number;
+  // ── G8-ENGINE-Q3 additions ────────────────────────────────────────────
+  /** Step-1 categorical directive (research §8). Surfaced in the API response
+   *  so Desktop / UI can confirm the category-driven tone decision. */
+  toneDirective: ToneDirective;
+  /** WCAG contrast target for overlaid text. 4.5 default, 7.0 for senior. */
+  contrastMin: number;
+  /** Enforced ink color for dark-on-light text. '#111111' for senior (no gray),
+   *  otherwise the standard near-black. */
+  textColor: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,29 +117,136 @@ function desaturate(rgb: Rgb, amount: number): Rgb {
 // Resolver
 // ---------------------------------------------------------------------------
 
-const DEFAULT_DIRECTION: Omit<ArtDirection, 'palette'> = {
+const DEFAULT_DIRECTION: Omit<ArtDirection, 'palette' | 'toneDirective'> = {
   productScale: 1.0,
   typeScale: 1.0,
   spotlightStrength: 0.42,
   vignette: false,
   horizon: 0.62,
+  contrastMin: 4.5,
+  textColor: '#1C1917',
 };
 
+/** Cinematic dark cyclorama for foreign-cinematic / darkPremium categories
+ *  (research §4-D — Jo Malone-like premium fragrance read). */
+const DARK_PALETTE: ArtPalette = {
+  topRgb: [26, 25, 28],
+  floorRgb: [16, 15, 17],
+  accent: '#C9A24B',
+  spotlight: '#FFF6E2',
+};
+
+function mixRgbToward(rgb: Rgb, target: Rgb, amount: number): Rgb {
+  const m = (a: number, b: number) => Math.round(a + (b - a) * amount);
+  return [m(rgb[0], target[0]), m(rgb[1], target[1]), m(rgb[2], target[2])];
+}
+
+function hexToRgb(hex: string): Rgb {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const n = parseInt(full, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function hexFromRgb(rgb: Rgb): string {
+  const c = (v: number) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  return `#${c(rgb[0])}${c(rgb[1])}${c(rgb[2])}`;
+}
+
+/** Darken a hex toward ink by `amount` (0..1) — lifts white-on-accent contrast
+ *  for the senior persona so the badge text clears WCAG AAA. */
+function darkenHex(hex: string, amount: number): string {
+  return hexFromRgb(mixRgbToward(hexToRgb(hex), [17, 17, 17], amount));
+}
+
+/** Apply the categorical baseTone to a colorMood palette. modern-minimal keeps
+ *  the bright studio palette; the others shift toward their signature read. */
+function applyBaseTone(
+  palette: ArtPalette,
+  baseTone: BaseTone,
+  darkPremium: boolean,
+  premium: boolean,
+): { palette: ArtPalette; vignette: boolean; spotlightBoost: number } {
+  if (baseTone === 'foreign-cinematic' || (darkPremium && premium)) {
+    return { palette: { ...DARK_PALETTE }, vignette: true, spotlightBoost: 0.12 };
+  }
+  switch (baseTone) {
+    case 'korean-traditional':
+      return {
+        palette: {
+          topRgb: mixRgbToward(palette.topRgb, [232, 225, 213], 0.6),
+          floorRgb: mixRgbToward(palette.floorRgb, [244, 239, 230], 0.5),
+          accent: '#8A7B66',
+          spotlight: '#FBF7EE',
+        },
+        vignette: true,
+        spotlightBoost: 0,
+      };
+    case 'kinfolk':
+      return {
+        palette: {
+          ...palette,
+          topRgb: mixRgbToward(palette.topRgb, [236, 230, 220], 0.4),
+          floorRgb: mixRgbToward(palette.floorRgb, [248, 244, 237], 0.3),
+        },
+        vignette: false,
+        spotlightBoost: 0,
+      };
+    case 'pastel-friendly':
+      return {
+        palette: {
+          ...palette,
+          floorRgb: mixRgbToward(palette.floorRgb, [255, 252, 250], 0.5),
+          accent: '#E68AA6',
+        },
+        vignette: false,
+        spotlightBoost: 0.04,
+      };
+    case 'modern-minimal':
+    default:
+      return { palette, vignette: false, spotlightBoost: 0 };
+  }
+}
+
 /**
- * Resolve the art direction (palette + craft parameters) from the diagnosis
- * ConceptTone. When no ConceptTone is available (diagnose not run) the WARM
- * preset is used as the safest general-purpose fallback.
+ * Step 1 + 2 entry. Resolves the art direction from the diagnosis ConceptTone
+ * and the product category. When no ConceptTone is available (diagnose not run)
+ * the mapper falls back to the WARM general preset.
  */
-export function pickArtDirection(conceptTone?: ConceptTone | null): ArtDirection {
-  // Base palette from colorMood (default warm).
-  const mood = conceptTone?.colorMood;
-  let palette: ArtPalette = mood && PALETTES[mood] ? PALETTES[mood] : PALETTES.warm;
+export function pickArtDirection(
+  conceptTone?: ConceptTone | null,
+  opts: MapCategoryToToneOptions = {},
+): ArtDirection {
+  const toneDirective = mapCategoryToTone(conceptTone, opts);
+  return applyPersonaModulation(toneDirective, conceptTone);
+}
+
+/**
+ * Step 2 — apply persona x pricePosition x emotionalTone x genre modulation
+ * onto the categorical ToneDirective, producing the final ArtDirection.
+ */
+export function applyPersonaModulation(
+  toneDirective: ToneDirective,
+  conceptTone?: ConceptTone | null,
+): ArtDirection {
+  const mood = toneDirective.colorMood;
+  let palette: ArtPalette = PALETTES[mood] ?? PALETTES.warm;
 
   let productScale = DEFAULT_DIRECTION.productScale;
   let typeScale = DEFAULT_DIRECTION.typeScale;
   let spotlightStrength = DEFAULT_DIRECTION.spotlightStrength;
   let vignette = DEFAULT_DIRECTION.vignette;
+  let contrastMin = DEFAULT_DIRECTION.contrastMin;
+  let textColor = DEFAULT_DIRECTION.textColor;
   const horizon = DEFAULT_DIRECTION.horizon;
+
+  const premium = conceptTone?.pricePosition === 'premium';
+
+  // Step 2a — categorical baseTone shifts the palette + craft.
+  const toned = applyBaseTone(palette, toneDirective.baseTone, toneDirective.darkPremium, premium);
+  palette = toned.palette;
+  vignette = toned.vignette || vignette;
+  spotlightStrength += toned.spotlightBoost;
 
   if (conceptTone) {
     // pricePosition — budget reads bright + close; premium reads restrained.
@@ -137,7 +264,7 @@ export function pickArtDirection(conceptTone?: ConceptTone | null): ArtDirection
 
     // emotionalTone — friendly = soft, professional/trust = focused drama.
     if (conceptTone.emotionalTone === 'friendly') {
-      spotlightStrength = Math.min(spotlightStrength, 0.42);
+      spotlightStrength = Math.min(spotlightStrength, 0.5);
     } else if (
       conceptTone.emotionalTone === 'professional' ||
       conceptTone.emotionalTone === 'trust'
@@ -148,9 +275,13 @@ export function pickArtDirection(conceptTone?: ConceptTone | null): ArtDirection
       spotlightStrength += 0.05;
     }
 
-    // persona — senior gets larger, higher-contrast type.
+    // persona — senior gets larger, higher-contrast type + ink + darker accent
+    // (research §5-C: Pretendard 18pt+, 7:1 contrast, no gray text).
     if (conceptTone.persona === 'senior') {
-      typeScale *= 1.15;
+      typeScale = Math.max(typeScale, 1.30);
+      contrastMin = 7.0;
+      textColor = '#111111';
+      palette = { ...palette, accent: darkenHex(palette.accent, 0.28) };
     }
 
     // genre — minimal favors negative space (smaller product).
@@ -162,9 +293,12 @@ export function pickArtDirection(conceptTone?: ConceptTone | null): ArtDirection
   return {
     palette,
     productScale: clamp(productScale, 0.7, 1.15),
-    typeScale: clamp(typeScale, 0.85, 1.3),
+    typeScale: clamp(typeScale, 0.85, 1.35),
     spotlightStrength: clamp(spotlightStrength, 0, 0.7),
     vignette,
     horizon,
+    toneDirective,
+    contrastMin,
+    textColor,
   };
 }
