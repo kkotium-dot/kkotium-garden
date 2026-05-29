@@ -71,17 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-28 (Code turn, push 7b0b3ab) — Phase G8-ENGINE-Q2 **카피/폰트 품질 [코드 완료]** (item 1·2 production 픽셀 검증). item1 categoryBadge 오염 필터: copy-writer generateCopy가 categoryBadge 슬롯에서 Groq 자유 합성을 폐기하고 category leaf 세그먼트 결정론적 추출(deriveCategoryBadge) — "생활/건강 > 주방용품 > 보관/밀폐용기" -> "밀폐용기"(깨끗한 실단어, 이전 Groq 비문 "일용보관함"/"보관함용기" 제거). item2 Pretendard 번들: Vercel Linux Sharp/librsvg 한글 폰트 부재로 SVG 텍스트가 두부(box)/미표시였던 결함을 fonts/Pretendard-{Regular,Bold}.otf + font-setup.ts(FONTCONFIG_FILE /tmp conf) + next.config outputFileTracingIncludes로 수정. production POST /api/thumbnail/<아이스트레이> 픽셀 재확인: badge "밀폐용기" 흰 글리프 정상 + lifestyle 캡션 "일상생활에 편리한 64구 아이스틀 얼음보관함" 실 한글(이전 두부 대비). TSC0/build0/verify-vercel exit0(7b0b3ab). 비가역 0. P0 누끼 미적재(Storage product-assets/<id>/ 빈 폴더 확인 -> assetSource.cutout=fallback, 4변형이 원본 라이프스타일 사진 letterbox) — cutout PNG 바이트 소스 미확정(대표 mainImage가 손+과일 라이프스타일 합성 사진이라 자동 누끼 부적합) -> scripts/upload-cutout.js 준비 완료, Desktop Adobe 재컷 or studio manualCutoutUrl 대기.
+**Last update**: 2026-05-29 (Code turn, push df2aec6) — Phase G8-ENGINE-Q3 **한국 시장 정합 아트디렉션 시스템 [코드 완료]** (item 1-6, 리서치 KKOTIUM_ART_DIRECTION_RESEARCH_2026-05-29.md 정합). (1) category-tone-mapper.ts 신규: conceptTone + category -> ToneDirective(categoryGroup/trustSignal/baseTone/colorMood/modelPolicy/darkPremium), 리서치 §8 9종 매핑. 얼굴은 타입에 face 멤버 부재(하드 금지). 강한 한국형 상품명(달항아리/자개)은 카테고리보다 우선. (2) asset-legal-gate.ts 신규: 발행 전 4-Point 게이트(순수, 외부 API 0). 명화/실존인물 키워드 block, AI 고지(자체사용 면제) warning. 얼굴 픽셀검출+ΔE는 정밀화 별도 sprint로 정직 명시(#46). (3) thumbnail-art-direction 2-step 리팩터: mapCategoryToTone -> applyPersonaModulation. baseTone 팔레트 변조(cinematic 다크/한지 muted/pastel). senior 강화 typeScale 1.30 + contrastMin 7.0 + textColor INK + accent 고대비 darken. (4) route: naverCategoryCode 전달 + 응답 toneDirective/legalGate 노출. (5) scripts/upload-backdrop.js 신규. (6) art_director_prompts 12종 seed(status=g8q3-seed, 멱등). production POST /api/thumbnail/<아이스트레이> 실측: toneDirective(kitchen/hygiene/modern-minimal/warm/hand-only) + legalGate.passed=true + senior(typeScale 1.3/contrastMin 7/textColor #111111/accent #9f7146) 노출 확인. 단위 3종 리서치 §11 정합(명화송풍구 foreign-cinematic 다크 + legalGate passed=false 명화 block / 달항아리 korean-traditional 한지). TSC0/build0/verify-vercel exit0(df2aec6). 비가역 0.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop G8-ENGINE-Q2 4변형 before/after 육안 + P0 누끼 적재
+## ⭐ ACTIVE — 다음 세션 진입점: Desktop G8-ENGINE-Q3 Firefly backdrop 적재 + 3종 before/after
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | Code (G8-ENGINE-Q2 item 1·2 코드 완료 + production 픽셀 검증, push 7b0b3ab) |
-| **TO** | Desktop 새 채팅 (4변형 before/after 육안 재검증 + 누끼 cutout.png 적재) |
-| **BASELINE** | 7b0b3ab (origin/main, Vercel READY, production 픽셀 검증 통과) |
-| **NEXT SCOPE** | (1) production POST /api/thumbnail/<아이스트레이> 4변형 육안: badge 카피 비문 0(밀폐용기) + 한글 텍스트 실 Pretendard 글리프(두부 0) 확인. (2) P0 누끼 적재: cutout PNG 바이트 확보 경로 결정 — (a)Desktop Adobe로 깨끗한 제품 프레임 재컷 -> 로컬 PNG -> Code가 `node scripts/upload-cutout.js <id> <path>`로 product-assets/<id>/cutout.png 적재, (b)hosted 누끼 URL을 studio manualCutoutUrl 칸에 붙여넣어 source=manual 즉시 프리뷰. 적재 후 assetSource.cutout=auto-cache(or manual) 전환 + 4변형이 누끼 기반(letterbox 0)으로 차별화 육안. (3) 통과 시 Real Win(Firefly 라이프스타일 씬 backdrop). 상세: docs/handoff/KKOTIUM_ASSET_ENGINE_2026-05-28.md |
-| **PENDING** | Real Win Firefly backdrop / B-3 달항아리 / P20 supplier seller ID / Storage POC 잔존(product-images/poc/icetray-cmpp62yje-poc.jpg) |
+| **FROM** | Code (G8-ENGINE-Q3 item 1-6 코드 완료 + production 검증, push df2aec6) |
+| **TO** | Desktop 새 채팅 (Firefly backdrop 적재 + 3종 종합 4변형 before/after 육안) |
+| **BASELINE** | df2aec6 (origin/main, Vercel READY, production toneDirective/legalGate 노출 확인) |
+| **NEXT SCOPE** | (a) Firefly_D를 `node scripts/upload-backdrop.js cmpp62yje00015xup5h8pgwx0 S1 ~/Downloads/Firefly_D.jpg`로 아이스트레이 적재 -> assetSource.backdrop=auto-cache 전환 + lifestyle 변형 실사 씬 육안. (b) 명화송풍구: 도매꾹 실제 명화 작가 사후 70년 검증 -> 통과 시 Firefly 생성+적재. (production legalGate가 명화 키워드 block -> 대표 승인 게이트로 작동). (c) 달항아리: korean-traditional Firefly 생성+적재. (d) 3종 4변형 before/after 육안 -> 통과 시 G8-ENGINE-Q3 [CLOSED]. 상세: docs/handoff/HANDOFF_g8_engine_q3_2026-05-29.md |
+| **PENDING** | P0 누끼 cutout(Desktop Adobe 재컷 -> upload-cutout.js) / Real Win Firefly backdrop / B-3 달항아리 데이터 보정 / 명화송풍구 발행 / Claude MCP 워크플로 별도 트랙(CLAUDE_MCP_DESIGN_WORKFLOW_2026-05-29.md: ClaudeDesignCTA/cutout-suitability/asset-status polling) |
 
 ### 본 세션 (2026-05-27 Desktop) 명화송풍구 이미지 보강 + margin 교정 요약
 
