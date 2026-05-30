@@ -94,3 +94,62 @@ export async function deleteBackdropServer(
     throw new Error(`deleteBackdropServer failed: ${error.message}`);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Phase 3 — staging area for async VLM gate.
+//
+// The asset-source-resolver only ever scans `{productId}/backdrop-*.png`, so
+// a bucket-root prefix like `_staging/` is invisible to the live thumbnail
+// renderer. A job's normalized PNG sits in staging while the VLM runs (out of
+// the request lifecycle), then either gets moved to the fixed path (pass) or
+// deleted (reject).
+// ---------------------------------------------------------------------------
+
+const STAGING_PREFIX = '_staging';
+
+/** Per-job staging object path. jobId is a cuid (alphanumeric, path-safe). */
+export function stagingStoragePath(jobId: string): string {
+  const safe = jobId.replace(/[^a-zA-Z0-9-]/g, '') || 'unknown';
+  return `${STAGING_PREFIX}/${safe}.png`;
+}
+
+export async function uploadStagedPng(
+  jobId: string,
+  buffer: Buffer,
+): Promise<UploadBackdropResult> {
+  const supabase = getServerClient();
+  const path = stagingStoragePath(jobId);
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, buffer, {
+      contentType: 'image/png',
+      upsert: true,
+      // Short cache: staging objects are ephemeral.
+      cacheControl: '60',
+    });
+  if (error) {
+    throw new Error(`uploadStagedPng failed: ${error.message}`);
+  }
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return { path, publicUrl: data.publicUrl };
+}
+
+export async function downloadStagedPng(jobId: string): Promise<Buffer | null> {
+  const supabase = getServerClient();
+  const path = stagingStoragePath(jobId);
+  const { data, error } = await supabase.storage.from(BUCKET).download(path);
+  if (error || !data) return null;
+  const arrayBuffer = await data.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+export async function deleteStagedPng(jobId: string): Promise<void> {
+  const supabase = getServerClient();
+  const path = stagingStoragePath(jobId);
+  const { error } = await supabase.storage.from(BUCKET).remove([path]);
+  if (error) {
+    // Best-effort: a missing staging object is not an error worth surfacing.
+    // eslint-disable-next-line no-console
+    console.warn('[upload-backdrop-server] staging delete warning:', error.message);
+  }
+}

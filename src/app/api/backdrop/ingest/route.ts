@@ -1,28 +1,38 @@
 // src/app/api/backdrop/ingest/route.ts
 //
-// Track B Phase 1 — POST /api/backdrop/ingest (2026-05-30).
+// Track B Phase 1/2/3 — POST /api/backdrop/ingest (2026-05-30).
 //
-// Authority: docs/research/FIREFLY_AUTOMATION_RESEARCH_2026-05-30.md §6 (steps
-// d-f). Closes the unmanned-adoption spine:
+// Authority: docs/research/FIREFLY_AUTOMATION_RESEARCH_2026-05-30.md §6 + §7.
 //
-//   pending -> { sourceUrl | base64 } -> normalize PNG -> Storage upload
-//           -> status='uploaded' + storage_path
-//           -> findCachedAsset auto-cache probe
-//           -> status='done' (hit) or status='review' (miss)
+// Two paths via the `asyncGate` body flag:
 //
-// Phase 1 deliberately skips the 'generating' and 'classifying' transitions
-// (handled by future workers in Phase 2/3). Errors at any step set
-// status='review' with an explanatory error so a human can inspect the row.
+//   • SYNC (default — single-item fallback path):
+//       pending -> { sourceUrl | base64 } -> normalize PNG -> VLM gate
+//                -> upload (only when passed) -> auto-cache probe
+//                -> done | review
+//   • ASYNC (Phase 3 — worker-batchable, 60s timeout avoidance):
+//       pending -> { sourceUrl | base64 } -> normalize PNG -> stage upload
+//                -> status='classifying' -> return.
+//       A separate POST /api/backdrop/classify run then completes the job.
 //
-// Workrule #38: no external generation API is called — only a stored asset
-// fetch + a server-side Storage write.
+// Errors at any step transition the row to status='review' via the shared
+// backdrop-job-state helper, which also fires an OPS_REPORT Discord alert so
+// fail-closed jobs never pile up silently.
+//
+// Workrule #38: no external image-GENERATION API is called — only a vision
+// classifier (research §7) at the gate + server-side Storage writes.
 
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { prisma } from '@/lib/prisma';
-import { uploadBackdropServer } from '@/lib/storage/upload-backdrop-server';
+import {
+  uploadBackdropServer,
+  uploadStagedPng,
+  stagingStoragePath,
+} from '@/lib/storage/upload-backdrop-server';
 import { findCachedAsset } from '@/lib/storage/automation-storage';
 import { classifyBackdrop, type VlmGateVerdict } from '@/lib/automation/backdrop-vlm-gate';
+import { markReview, type ReviewStage } from '@/lib/automation/backdrop-job-state';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -33,6 +43,9 @@ interface IngestBody {
   sourceUrl?: string;
   /** Base64-encoded image bytes (any sharp-supported format). */
   base64?: string;
+  /** Phase 3: defer the VLM gate + upload to a separate /api/backdrop/classify
+   *  call (worker-batchable). Default false = single-item sync fallback. */
+  asyncGate?: boolean;
 }
 
 async function loadSourceBuffer(body: IngestBody): Promise<Buffer> {
@@ -47,10 +60,17 @@ async function loadSourceBuffer(body: IngestBody): Promise<Buffer> {
   throw new Error('either sourceUrl or base64 is required');
 }
 
-async function markReview(jobId: string, reason: string): Promise<void> {
-  await prisma.backdropJob.update({
-    where: { id: jobId },
-    data: { status: 'review', error: reason, updatedAt: new Date() },
+async function markReviewLocal(
+  job: { id: string; productId: string; skeletonId: string },
+  reason: string,
+  stage: ReviewStage,
+): Promise<void> {
+  await markReview({
+    jobId: job.id,
+    productId: job.productId,
+    skeletonId: job.skeletonId,
+    reason,
+    stage,
   });
 }
 
@@ -78,7 +98,7 @@ export async function POST(req: Request) {
     src = await loadSourceBuffer(body);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await markReview(jobId, `fetch failed: ${msg}`);
+    await markReviewLocal(job, `fetch failed: ${msg}`, 'fetch');
     return NextResponse.json({ error: 'source load failed', detail: msg }, { status: 400 });
   }
 
@@ -90,8 +110,44 @@ export async function POST(req: Request) {
     pngBuf = await sharp(src).png({ compressionLevel: 9 }).toBuffer();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await markReview(jobId, `decode failed: ${msg}`);
+    await markReviewLocal(job, `decode failed: ${msg}`, 'decode');
     return NextResponse.json({ error: 'decode failed', detail: msg }, { status: 400 });
+  }
+
+  // 2a. Phase 3 — asyncGate branch. Stage the PNG, transition to
+  // status='classifying', and let /api/backdrop/classify finish the job. This
+  // avoids the 60s function ceiling when a worker batches many jobs and lets
+  // the heavy VLM call happen out-of-band.
+  if (body.asyncGate) {
+    let staged: { path: string; publicUrl: string };
+    try {
+      staged = await uploadStagedPng(jobId, pngBuf);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await markReviewLocal(job, `staging upload failed: ${msg}`, 'upload');
+      return NextResponse.json({ error: 'staging upload failed', detail: msg }, { status: 500 });
+    }
+    await prisma.backdropJob.update({
+      where: { id: jobId },
+      data: {
+        status: 'classifying',
+        storagePath: staged.path,
+        outputUrl: staged.publicUrl,
+        error: null,
+        updatedAt: new Date(),
+      },
+    });
+    return NextResponse.json({
+      jobId,
+      status: 'classifying',
+      productId: job.productId,
+      skeletonId: job.skeletonId,
+      stagingPath: stagingStoragePath(jobId),
+      uploaded: false,
+      sourceFormat: meta.format ?? null,
+      width: meta.width ?? null,
+      height: meta.height ?? null,
+    });
   }
 
   // 2b. Phase 2 — zero-shot VLM gate (research §7). Bad plates (product /
@@ -103,11 +159,11 @@ export async function POST(req: Request) {
   } catch (err) {
     // classifyBackdrop is fail-closed by design, but defend the route anyway.
     const msg = err instanceof Error ? err.message : String(err);
-    await markReview(jobId, `vlm gate threw: ${msg}`);
+    await markReviewLocal(job, `vlm gate threw: ${msg}`, 'vlm-error');
     return NextResponse.json({ error: 'vlm gate failed', detail: msg }, { status: 500 });
   }
   if (!gate.passed) {
-    await markReview(jobId, `vlm reject: ${gate.reasons.join(',')}`);
+    await markReviewLocal(job, `vlm reject: ${gate.reasons.join(',')}`, 'vlm-reject');
     return NextResponse.json({
       jobId,
       status: 'review',
@@ -127,7 +183,7 @@ export async function POST(req: Request) {
     uploaded = await uploadBackdropServer(job.productId, job.skeletonId, pngBuf);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await markReview(jobId, `upload failed: ${msg}`);
+    await markReviewLocal(job, `upload failed: ${msg}`, 'upload');
     return NextResponse.json({ error: 'upload failed', detail: msg }, { status: 500 });
   }
 
@@ -146,15 +202,17 @@ export async function POST(req: Request) {
   // 5. P1-6 auto-cache probe — exactly the call asset-source-resolver uses, so a
   // positive hit guarantees the next thumbnail render flips to auto-cache.
   const cached = await findCachedAsset(job.productId, `backdrop-${job.skeletonId}.png`);
-  const finalStatus = cached !== null ? 'done' : 'review';
-  await prisma.backdropJob.update({
-    where: { id: jobId },
-    data: {
-      status: finalStatus,
-      error: cached !== null ? null : 'auto-cache probe missed after upload',
-      updatedAt: new Date(),
-    },
-  });
+  let finalStatus: 'done' | 'review';
+  if (cached !== null) {
+    await prisma.backdropJob.update({
+      where: { id: jobId },
+      data: { status: 'done', error: null, updatedAt: new Date() },
+    });
+    finalStatus = 'done';
+  } else {
+    await markReviewLocal(job, 'auto-cache probe missed after upload', 'auto-cache-miss');
+    finalStatus = 'review';
+  }
 
   return NextResponse.json({
     jobId,
