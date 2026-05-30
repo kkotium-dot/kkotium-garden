@@ -708,3 +708,25 @@ model ArtDirectorPrompt {
   @@index([sellerRating])
   @@map("art_director_prompts")
 }
+
+// Phase 1 unmanned backdrop adoption spine (2026-05-30): holds Firefly
+// request specs and tracks the ingest+verify lifecycle. status enum is
+// enforced by a DB CHECK constraint: pending|generating|classifying|
+// uploaded|done|review.
+model BackdropJob {
+  id              String   @id @default(cuid())
+  productId       String   @map("product_id")
+  skeletonId      String   @map("skeleton_id")
+  baseTone        String   @map("base_tone")
+  fireflyRequest  Json     @map("firefly_request")
+  status          String   @default("pending")
+  outputUrl       String?  @map("output_url")
+  storagePath     String?  @map("storage_path")
+  error           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @map("updated_at")
+
+  @@index([productId])
+  @@index([status])
+  @@map("backdrop_jobs")
+}
