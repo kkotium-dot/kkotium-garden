@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-28 Track B Phase G8-ENGINE 디자인 라인 실증 완료 (Desktop turn, 코드 0, baseline 08795bb) — 확정 동선 6단계 실 MCP 호출 전수 통과(도매꾹 다운로드->Adobe CC 업로드->누끼->GenAIAsset->합성->4변형 차별화). 아키텍처 확정: 합성엔진=서버 Sharp 유지 / 누끼=Adobe presignedAssetUrl만. 다음: Code Phase G8-ENGINE.
-> **HEAD**: 08795bb (origin/main, Vercel READY) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-30 Track B **달항아리 단품 복구 [CLOSED]** (qualityScore 37.3→55.7, grade L4→L2, pFilterGrade null→L1, skeletonId=S6 안정, korean-traditional 톤, 발행 가능선 도달). Desktop 4소스 교차검증 통과(Product/storage.objects/Diagnosis + 비가역 0 = Code 보고 100% 정합, 거짓라벨 0 #46). 정정: crawl_logs stt_330=썸네일 변형, 실제 thumb 760×760. 다음 real-win = 달항아리 backdrop 적재(lifestyle=gemini-3-1-nano-banana-2/creator-liable, no-human 한지 배경 → Firefly 웹 1장 → upload-backdrop.js S6). 아이스트레이는 crawl_logs 출처 부재 → 도매매 URL 대기. baseline c0d7b12 유지(데이터+Storage만, prisma db pull 390+/296- reformat은 별도 chore commit).
+> **HEAD**: c0d7b12 (origin/main, Vercel READY) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **신규 ledger**: `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off, §3 ACTIVE / §4 STANDING / §6 PENDING 매 세션 정독 의무
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)
@@ -15,37 +15,35 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-28 Track B Phase G8-ENGINE 이미지 엔진 구축 (Code) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-05-30 Track B G8-ENGINE 명화송풍구 배경 적재 + auto-cache 검증 (Code) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. 이중 트랙 핑퐁 (작업원칙 #41) 정합.
+전제: 대표님이 Firefly로 ~/Downloads/myeonghwa_backdrop_S6.jpg 생성 완료 후 진입.
 
 ```
-꽃틔움 가든 Code. Track B Phase G8-ENGINE 이미지 엔진 구축.
+꽃틔움 가든 Code. Track B G8-ENGINE 명화송풍구 배경 적재 + auto-cache 전환 검증.
 [STEP 0] CLAUDE.md 자동 + PROGRESS.md 헤더 + TASK_BRIDGE §3 ACTIVE +
-  docs/handoff/HANDOFF_g8_engine_design_line_proven_2026-05-28.md +
-  docs/handoff/HANDOFF_g8_studio_asset_engine_2026-05-28.md 정독.
-[베이스라인] 08795bb (origin/main, Vercel READY).
-[실증 단정 — Desktop이 실 MCP로 검증 완료] 확정 동선 6단계 전부 viability 통과.
-  핵심: 합성엔진=서버 Sharp 유지 / 누끼=Adobe presignedAssetUrl만(공개URL 거부) ->
-  누끼 PNG는 Storage 캐시로 소비 / 배경=Express템플릿·Firefly웹·브랜드색 캐시.
-[SCOPE Phase G8-ENGINE] (의존성 순서):
-  1. src/lib/automation/asset-source-resolver.ts 신규 — productId/variant +
-     {manualCutoutUrl?, manualBackdropUrl?} -> {cutoutUrl, backdropUrl, source}.
-     소스 우선순위: manual > auto-cache(Storage) > (배경만)brand-color fallback.
-     캐시키: product-assets/{id}/cutout.png, /backdrop-{skeletonId}.png.
-  2. thumbnail-generator.ts 4 renderer(clean/price/badge/lifestyle)가 resolver의
-     cutoutUrl/backdropUrl 소비. cutout 없으면 현 fitImage(source='fallback') 유지.
-  3. studio/PLANT UI에 B 수동 업로드 칸(누끼 URL/배경 URL) + 소스 뱃지(manual/auto-cache/fallback).
-  4. lifestyle backdropUrl 전달 경로 연결(선행 핸드오프 1-B 미연결분).
-  5. 저화질 입력 가드(760px 이하 경고) -> 진단 L4 UX 정합.
-  각 단계 TSC 0 + build 0 + verify-vercel-deploy.sh --wait exit 0 후 보고.
-[절대준수] 한글 literal(\uXXXX 금지) / 이모지 금지(Lucide만) / 영어 주석 /
-  한글 리터럴 타입 금지(영어 상수 분리) / heredoc 금지(#26) / 거짓 라벨 금지(#46) /
-  new PrismaClient 금지(src/lib/prisma 싱글톤) / 신규 Gemini·Perplexity 금지 /
-  외부 이미지 API 런타임 호출 0(#38, Storage 캐시만) / Production=Vercel only /
-  SD-01 아랍어 footer 보존 / 비가역 0(네이버 실발행 금지, DRAFT까지만).
-[Phase G8-ENGINE 통과 후] Desktop 새 채팅에서 production E2E 재검증
-  (표본 진단 -> 4변형 육안 차별화 -> save-assets -> DB main/detail_image_url 기록) ->
+  docs/handoff/HANDOFF_g8_myeonghwa_backdrop_load_2026-05-30.md 정독.
+[베이스라인] f6ce373 (origin/main, Vercel READY). git status 확인.
+  코드 변경 없음 — 이번 turn은 Storage 적재 + production 검증 운영 turn (커밋은 docs만).
+[실측 단정 — Desktop production 호출로 확정] 명화송풍구 cmpnooli40001f0gveaxr8iim:
+  skeletonId=S6(matchScore 62.5 비모호) / baseTone=foreign-cinematic-sunlit /
+  assetSource.backdrop=fallback(미적재) / cutoutStrategy.source=product-additional /
+  legalGate clean(master_pd 우회). art_director_prompts adp_myeonghwa_lifestyle_s6_001
+  (seed 760042026) 시드 완료.
+[SCOPE — 운영 적재 + 검증]:
+  1. node scripts/upload-backdrop.js cmpnooli40001f0gveaxr8iim S6 ~/Downloads/myeonghwa_backdrop_S6.jpg
+     -> UPLOAD_STATUS=200 + PUBLIC_URL=.../product-assets/cmpnooli40001f0gveaxr8iim/backdrop-S6.png 확인
+  2. curl -s -X POST https://kkotium-garden.vercel.app/api/thumbnail/cmpnooli40001f0gveaxr8iim
+     -H 'Content-Type: application/json' -d '{}'
+     -> assetSource.backdrop이 fallback에서 auto-cache로 전환 + skeletonId 여전히 S6 단정
+  3. (선택) 누끼도: node scripts/upload-cutout.js cmpnooli40001f0gveaxr8iim ~/Downloads/myeonghwa_cutout.png
+     -> assetSource.cutout=auto-cache
+  4. lifestyle 변형 outputs[3] 배경 육안 변화 보고(브랜드색 -> Firefly 씬). Desktop Chrome 재검증으로 인계.
+[절대준수] heredoc 금지(#26) / 거짓 라벨 금지(#46 — 위 검증 게이트 전부 충족해야 [CLOSED]) /
+  외부 이미지 API 런타임 호출 0(#38) / Production=Vercel only / SD-01 아랍어 footer 보존 /
+  비가역 0(네이버 실발행 금지, DRAFT 유지). upload 스크립트는 Code 전용(.env.local service role).
+[검증 통과 후] Desktop 새 채팅에서 4변형 육안 차별화 재확인 ->
   통과 시 Track A(명화송풍구 B-12 발행) 대표 승인 후 별도 채팅.
 ```
 

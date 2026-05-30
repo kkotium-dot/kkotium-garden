@@ -1,5 +1,68 @@
 > **분할 메모 (2026-05-28, #31 여덟 번째 분할)**: 2026-05-15 ~ 2026-05-19 PM 이전 entry 9건은 `docs/plan/archive/SESSION_LOG_2026-05-19.md`로 동결. 본 파일은 직전 5세션(2026-05-20 ~ 2026-05-28) 라이브 유지.
 
+## 2026-05-30 Track B — 달항아리 단품 복구 [CLOSED] (Code 적재 + Desktop 4소스 교차검증)
+
+- M1~M4: getItemDetail(63860451) 재크롤(화보 0, thumb 760×760) → 1000 패딩(원본 픽셀 보존 #46) → Storage 적재 + Product UPDATE → 3-pass 진단.
+- 실측: grade L4→L2(qualityScore 37.3→55.7 +18.4), pFilterGrade null→L1, skeletonId S6 안정, legalGate passed, DRAFT 보존.
+- Desktop 교차검증: Product/storage.objects/Diagnosis 3소스 + 비가역 0 = Code 보고 100% 정합. 거짓라벨 0(#46).
+- 정정: crawl_logs stt_330=썸네일 변형, 실제 thumb 760×760(직전 "330px 저해상" 부분 오류 정정).
+- baseline c0d7b12 유지(데이터+Storage만, prisma db pull diff 390+/296-는 순수 reformat=의미변경 0 → 별도 chore commit 위임).
+
+## 2026-05-30 Track B Phase 3 운영 경화(B 분기) 교차검증 [CLOSED] (Desktop turn, 코드 0)
+
+- 목적: Code Phase 3 운영 경화(게이트 비동기 분리 + review 큐 Discord 알림)를 Desktop 검증 트랙(#41/#45) raw 교차검증. 보고 헤더 불신, 실측 우선(#46).
+- **A/B 분기 결정 = B**: .env.local에 ADOBE_CLIENT_ID/SECRET 부재 → item 3(firefly-generate.ts) **정직 보류(#46)**, 운영 경화(item 1·2)만 진행. A 분기(완전 무인 생성)는 Vercel ENV에 ADOBE 키 추가 + 영업 견적 후 별도 sprint.
+- **Phase 3 운영 경화 (Code push c0d7b12) — 교차검증 통과**:
+  1. backdrop-job-state.ts(신규) raw read: **markReview SSOT** — status=review DB write + OPS_REPORT Discord 알림 원자적. ReviewStage 라벨(fetch/decode/upload/vlm-reject/vlm-error/classify-missing-stage/auto-cache-miss). **fire-and-forget**(webhook 실패가 요청 절대 차단 안 함), DB·alert 독립 try/catch.
+  2. classify 라우트(신규) raw read: **409 가드**(classifying 아니면 거부) → staged 다운로드 → VLM → pass:고정경로 적재+staged 삭제+auto-cache probe→done / fail:staged 삭제+review.
+  3. ingest async 분기 raw read: asyncGate=true→스테이지 적재(_staging/{jobId}.png = resolver 스캔 경로 외 → backdrop 오염 0)+status=classifying / default false→**기존 sync 100% 호환**. markReview 일원화(양 라우트 5+호출 공통 helper+stage 라벨).
+  4. DB backdrop_jobs Supabase 실조회: classifying/review/done 전부 0 — Code 테스트 완전 원상복구(비가역 0).
+  5. production POST /api/backdrop/classify → 400 'jobId is required'(라우트 등록 확인).
+  - Code 통합검증 재확인: Discord OPS_REPORT 도달성(sendDiscord 204) + ASYNC NEGATIVE(asyncGate→classifying→classify→review/거부) + ASYNC POSITIVE(→done/autoCacheHit) + 409 guard + CLEANUP.
+- 해소된 설계 경계 2건(이전 turn 지적): [1] 게이트 비동기 분리 → classify 라우트로 60초 타임아웃 회피 ✅ [2] fail-closed 무음 정지 → OPS_REPORT 알림으로 가시화 ✅.
+- 비가역 0(네이버 미발행, DRAFT). SD-01 무접촉. #38 유지(생성 없음, 분류만). service-role 서버전용. Prisma 싱글톤. MCP 행 0회.
+- **다음 = Phase 3 분기 A 게이트 = Adobe 영업 견적**: 견적 확보 시 firefly-generate.ts(OAuth S2S 23h 캐시 + generate-async + statusUrl 폴링) → 워커가 status=pending→generating 픽업→generate→presigned→classify 재사용. 즉시 잔무: 아이스트레이 backdrop(S1) real-win 1건(Code 실파일 enqueue→ingest).
+
+## 2026-05-30 Track B Phase 1+2 무인 적재 spine + VLM 게이트 교차검증 [CLOSED] (Desktop turn, 코드 0)
+
+- 목적: Firefly 마지막 수작업(배경 생성) 무인화 요구에 대한 심층 리서치 후, Code가 구축한 Phase 1 spine + Phase 2 VLM 게이트를 Desktop 검증 트랙(#41/#45)으로 raw 교차검증. 보고 헤더 불신, 실측 우선(#46).
+- **아키텍처 결정 (리서치 docs/research/FIREFLY_AUTOMATION_RESEARCH_2026-05-30.md)**: "Firefly 생성까지 브라우저 무인 자동화" = Adobe 약관상 스크립트 자동화 금지 + 단일 계정 정지 리스크로 **반려**. 소비자 구독은 API 권한 없음(Firefly Services API=엔터프라이즈 50석/3년/월$1,000+). 채택=생성은 사람 1클릭, 그 이후 다운로드·VLM 판별·service-role 적재·auto-cache 검증 전구간 무인.
+- **Phase 1 무인 적재 spine (Code push 5346635) — 6/6 교차검증 통과**:
+  1. 신규 코드 4파일 raw read: backdrop-prompt-builder.ts(순수함수 IO 0, negativePrompt 'people,humans,product,text,watermark', stableSeed FNV 결정론), upload-backdrop-server.ts(service-role 서버전용 + skeletonId 새니타이즈 경로탈출 차단 + upsert 멱등), enqueue/ingest route(Prisma 싱글톤, #38 생성API 0).
+  2. DB backdrop_jobs Supabase 실조회: 11컴럼(id/product_id/skeleton_id/base_tone/firefly_request jsonb/status/output_url/storage_path/error/created_at/updated_at).
+  3. 인덱스 2(product_id/status) + status CHECK 6-state(pending|generating|classifying|uploaded|done|review).
+  4. production POST /api/backdrop/enqueue -> 400 'productId is required'(라우트 등록 확인), /api/backdrop/ingest -> 400 'jobId is required'.
+  5. Code 통합테스트 재확인(샘플 PNG -> enqueue -> ingest -> thumbnail auto-cache 전환 -> Storage/DB 정리).
+  6. 불변식: service-role 클라이언트 import 0, findCachedAsset resolver 동일 함수.
+  - 발견(설계 경계): enqueue는 conceptTone(diagnose 선행) 없으면 400 — 숨은 사람 개입 지점. Phase 2 체이닝으로 해소.
+- **Phase 2 VLM 게이트 + diagnose 체이닝 (Code push 0d188f0) — 5/5 교차검증 통과**:
+  1. backdrop-vlm-gate.ts raw read: Groq Llama 4 Scout(meta-llama/llama-4-scout-17b-16e-instruct) 멀티모달 + response_format json_object + temperature 0 + 4-axis AND(is_empty && !person && !product && !text). **fail-closed**(키없음/네트워크/파싱실패 전부 review). 1KB 미만 cheap 프리필터. pickGroqKey 라운드로빈 재사용(Gemini/Perplexity 0, AI chain 정합).
+  2. ingest 수정 raw read: sharp 정규화 직후 classifyBackdrop 게이트 삽입 -> !passed면 적재 스킵 + status=review + uploaded:false(Storage 무오염).
+  3. diagnose 체이닝 raw read: autoEnqueueBackdrop 옵트인 + persist 성공 후 backdrop_jobs 자동 생성, **non-fatal**(실패해도 diagnose 200, backdropJobId/backdropEnqueueError 분리). 갓 추론한 conceptTone 재사용으로 400 경계 해소.
+  4. DB backdrop_jobs Supabase 실조회: live/review/done 전부 0 — Code 테스트 완전 원상복구(비가역 0 입증).
+  - Code 통합검증 재확인: NEGATIVE(아이스트레이 합성사진 손+제품 -> passed:false 정확 거부) + POSITIVE(명화송풍구 sunlit backdrop -> passed:true/done) + CHAINING(diagnose -> backdropJobId) + CLEANUP.
+- 짚은 설계 경계 2건(Phase 3 필수): [1] 게이트 비동기 분리(classifying status 실사용 — 현 ingest는 동기 done 직행, 60초 타임아웃 리스크) [2] review 큐 모니터링(fail-closed 무음 정지 방지 — Discord 알림).
+- 비가역 0(네이버 미발행, DRAFT). SD-01 무접촉. #38 유지(생성=spine 외부). MCP 행 0회.
+- 즉시 운영 잔무: 아이스트레이 backdrop(S1, icetray_backdrop_S1.png 1024x1024 대표 생성 완료, 채팅 업로드됨) real-win 1건 — Code 세션에서 실파일 enqueue->ingest.
+- 다음: Phase 3 분기 결정(Adobe Firefly Services API 영업 견적) — A(확보)=generate-async 워커 무인생성 승급 / B(미확보)=운영 경화만(게이트 비동기+review 알림).
+
+## 2026-05-30 Track B G8 명화송풍구 backdrop 적재 + 라우터 모델 격상 교차검증 [CLOSED] (Desktop turn, 코드 0)
+
+- 목적: Code가 보고한 [1] 라우터 격상(commit 4e3c543) + [2] backdrop 적재를 Desktop 검증 트랙(#41/#45)으로 raw 교차검증. API 200 보고 불신, 실측 우선(#46).
+- 브라우저 MCP 자동화 실증(이번 세션 Desktop): Firefly 웹 직접 조작 -> 파트너 모델 드롭다운에서 Firefly Image 5 -> Gemini 3 Nano Banana Pro 격상 -> sunlit oak desk 배경 생성(동일 프롬프트 3회 A/B, Pro 모델 최종 채택) -> ~/Downloads 다운로드. art_director_prompts adp_myeonghwa_lifestyle_s6_001 model=gemini/gemini-3-nano-banana-pro/seed 760042026 lineage 기록.
+- 검증 6/6 전수 실측 통과:
+  1. 라우터 코드(adobe-tool-router.ts) raw read: foreign-cinematic-sunlit -> gemini-3-nano-banana-pro/creator-liable, foreign-cinematic/modern-minimal firefly-image-5 회귀 0, clean/badge/price 면책 불변.
+  2. production POST /api/thumbnail/cmpnooli4: adobeWorkflow.lifestyle.model=gemini-3-nano-banana-pro/creator-liable, clean/badge=firefly-image-5/adobe-indemnified.
+  3. assetSource.backdrop fallback -> auto-cache 전환.
+  4. skeletonId=S6 / baseTone=foreign-cinematic-sunlit / legalGate.passed=true(master_pd 우회).
+  5. Storage 객체 DB 실재: product-assets/cmpnooli40001f0gveaxr8iim/backdrop-S6.png 1,137,425 bytes(1.08MB)/image／png/1024², 적재 시각 2026-05-30 03:26 UTC.
+  6. lifestyle 픽셀 육안(Chrome): 4변형 중 lifestyle만 따뜻한 우드 책상+창가 햇살 보케(Nano Banana Pro 씬) + 명화송풍구 4세트 합성 + 한글 캐션 Pretendard 정상. 나머지 3변형 흰배경(브랜드색 cyclorama 폐기).
+- 정정 기록(#46): Code 보고 matchScore 75 vs Desktop production 실측 62.5 — 결론(S6) 동일, 실측값이 진실.
+- 아키텍처 원칙: 앱은 이미지 생성 안 함(추천 spec만) — 런타임 외부 이미지 API 호출 0(#38) 유지, GEMINI 키 추가 없음. 생성은 오프라인 브라우저/MCP, 결과물만 Storage 적재->엔진 소비.
+- 비가역 0(DRAFT, 네이버 미발행). SD-01 무접촉. 명화송풍구 cutout은 아직 fallback(누끼 미적재, 선택).
+- iterm/Chrome MCP 4분 행 1회 발생(#26 패턴, 세션 후반) -> 재시도 없이 경량 probe 후 재개, 정상 복구.
+- 다음: 아이스트레이/달항아리도 동일 파이프라인(production 실호출로 skeletonId 실측 -> Firefly／Nano Banana 배경 -> 적재) 확장. 또는 명화송풍구 cutout 적재로 차별화 극대화.
+
 ## 2026-05-28 Track B G8-ENGINE-Q1 썸네일 아트디렉션 품질 격상 (Code turn, push 597f3ee)
 
 - baseline eb72b9e. SCOPE 5개 중 4개 코드 완료(item4 Pretendard 별도 위임). docs 2건 + 코드 commit 3건.

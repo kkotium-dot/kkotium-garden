@@ -73,7 +73,35 @@
 
 **Last update**: 2026-05-29 (Code turn, push f6ce373) — Phase G8-ENGINE-Q4 **Adobe Workflow SOP 시스템화 + 누끼·합성 파이프라인 [코드 완료]** (item 1-11, 리서치 KKOTIUM_ADOBE_WORKFLOW_RESEARCH_2026-05-29.md 정합). 신규 4모듈은 Workflow 서브에이전트 병렬 작성, 상호의존·DB·배포는 메인 루프 통합. (1) DB Product.legalApproval 컬럼(멱등 raw ALTER — production은 db push 관리라 migrate deploy 부적합 확인). (2) 명화송풍구 master_pd_verified seed(반 고흐 1890/모네 1926 PD). (3) category-tone-mapper: foreign-cinematic-sunlit baseTone + naturalLight, fragrance 다크->햇살 전환. (4) adobe-tool-router.ts: 변형xToneDirective -> AdobeToolPlan(clean/badge=Firefly 네이티브 면책, lifestyle 한국전통=Nano Banana+재생성 요구). (5) cutout-strategy.ts: 도매꾹 stt_330/저해상 -> manual-upload 강제. (6) composition-reference.ts: Firefly Composition Reference 계획(결정론 seed). (7) brand-kit-spec.ts: KKOTIUM_BRAND_KIT. (8) asset-legal-gate 확장: partner-model-final-commercial block + domeggook advisory warning + master_pd_verified 우회. (9) art_director_prompts: dark #4 deprecated + sunlit 5종 seed(g8q4-seed). (10) cutout-quality-check.js(1000/4MB/투명도). (11) route adobeWorkflow/cutoutStrategy/legalApproval 노출. production 검증: 아이스트레이(legalApproval null, passed=true + domeggook advisory warning, cutoutStrategy=manual-upload 760px 감지, adobeWorkflow firefly-image-5 면책) + 명화송풍구(master_pd_verified -> 명화 block 우회 passed=true, baseTone foreign-cinematic-sunlit/naturalLight true). TSC0/build0/verify-vercel exit0(f6ce373). 외부 이미지 API 런타임 0(#38). 비가역 0.
 
-## ⭐ ACTIVE — 다음 세션 진입점: Desktop G8-ENGINE-Q4 Firefly 적재 + 누끼 합성 + 3종 검증
+## ⭐ ACTIVE — 다음 세션 진입점: 파이프라인 확장(아이스트레이·달항아리) 또는 명화송풍구 cutout 적재 (2026-05-30 Desktop 갱신)
+
+> **선행 [CLOSED]**: 명화송풍구 S6 backdrop 적재 + 라우터 모델 격상(commit 4e3c543)이 6/6 게이트 Desktop 실측 교차검증 통과(SESSION_LOG 2026-05-30). assetSource.backdrop=auto-cache 전환 + lifestyle 픽셀 Nano Banana Pro 씬 발현 육안 확인. matchScore 정정: production 실측 62.5(Code 보고 75 상이).
+>
+> **⭐ 아키텍처 결정 (2026-05-30, 리서치 docs/research/FIREFLY_AUTOMATION_RESEARCH_2026-05-30.md)**: "Firefly 생성까지 브라우저 무인 자동화"는 Adobe 약관상 스크립트 자동화 금지 + 단일 계정 정지 리스크로 **반려**. 소비자 구독은 API 권한 없음(Firefly Services API=엔터프라이즈 50석/3년/월$1,000+). **채택 방향 = 무인 적재 spine**: 생성=사람 1클릭, 그 이후 다운로드·VLM 빈배경판 판별·service-role 적재·auto-cache 검증을 앱/워커가 무인화. Code Phase 1 진입점 = 하단 별도 핸드오프 블록. **즉시 운영 잔무**: 아이스트레이 배경(icetray_backdrop_S1.png 1024x1024, 대표 생성 완료)은 채팅으로 업로드됨 — 두 파일시스템 분리로 이번 세션 적재 보류, Phase 1 spine 또는 Code 세션(로컬 ~/Downloads 저장 후 upload-backdrop.js)으로 이월.
+
+| 항목 | 값 |
+|---|---|
+| **FROM** | 🖥 Desktop (G8 backdrop 적재 + 라우터 격상 6/6 교차검증 [CLOSED], 2026-05-30) |
+| **TO** | 다음 새 채팅 (Desktop 메인 — 브라우저 MCP로 생성·적재, Code는 적재 명령만) |
+| **BASELINE** | 4e3c543 (origin/main, Vercel READY — 라우터 격상 반영). 코드 변경 0 운영 turn 기본 |
+| **NEXT SCOPE** | 달항아리 단품 복구 [CLOSED](L2 도달, 발행 가능선). 다음 real-win = 달항아리 backdrop 적재 (lifestyle=nano-banana creator-liable → no-human 빈 한지 배경 강제, Firefly 웹 생성 1장 → upload-backdrop.js S6). 아이스트레이는 crawl_logs 출처 부재 → 대표 도매매 URL 대기. | 
+| **PENDING** | 명화송풍구 cutout 소스 확보(추가이미지/고해상 단품 부재 — 선행 필요) / 명화송풍구 B-12 네이버 발행(대표 승인 후) / B-3 달항아리 카테고리·originCode 오염 / Claude MCP 워크플로 트랙 / Q5(Custom Models·Bulk Create) |
+
+### [CLOSED 2026-05-30] 명화송풍구 S6 backdrop 적재 — 아래 SUPERSEDED 블록이 당초 계획, 6/6 검증 통과로 종결
+
+## ~~⭐ ACTIVE~~ [SUPERSEDED 2026-05-30] 이전 ACTIVE — 대표 Firefly 배경 1장 → Code S6 적재 + auto-cache 검증
+
+> **정정 메모 (production 실측)**: 아래 구 적재표는 명화송풍구를 S1/S4/S2로 추정했으나, POST /api/thumbnail/cmpnooli4 실호출 결과 실제 매칭은 **S6**(matchScore 62.5 비모호). 아이스트레이/달항아리도 적재 전 production 실호출로 skeletonId 실측 필수(추정 금지).
+
+| 항목 | 값 |
+|---|---|
+| **FROM** | 🖥 Desktop (적재 사양 확정 + production 실측 + art_director_prompts 시드, 2026-05-30, 코드 0) |
+| **TO** | (a) 🧑 대표 Firefly 배경 1장 생성 → (b) 💻 Code Storage 적재 + production 검증 |
+| **BASELINE** | f6ce373 (origin/main, Vercel READY). 이번 turn 코드 변경 0 — 운영 적재 turn (커밋은 docs만) |
+| **NEXT SCOPE** | 명화송풍구 cmpnooli40001f0gveaxr8iim **1건 real-win** (“10건”은 현 DB 미존재 — DRAFT 3건만 존재, 과장 금지). skeletonId=**S6** / baseTone=foreign-cinematic-sunlit / assetSource.backdrop=fallback(미적재) / legalGate clean(master_pd 우회). art_director_prompts adp_myeonghwa_lifestyle_s6_001(seed 760042026) 시드 완료. 대표님: Firefly Image 5 lifestyle 배경 1장 → ~/Downloads/myeonghwa_backdrop_S6.jpg. Code: `node scripts/upload-backdrop.js cmpnooli40001f0gveaxr8iim S6 ~/Downloads/myeonghwa_backdrop_S6.jpg` → POST /api/thumbnail/cmpnooli4 재호출로 assetSource.backdrop fallback→auto-cache 단정. 상세: docs/handoff/HANDOFF_g8_myeonghwa_backdrop_load_2026-05-30.md |
+| **PENDING** | Q4 적재표 재산출(아이스트레이/달항아리 production 실호출 후 적재) / 명화송풍구 누끼 적재(선택, upload-cutout.js) / Real Win / B-3 달항아리 데이터 / 명화송풍구 B-12 발행 / Claude MCP 워크플로 트랙 / Q5(Custom Models·Bulk Create) |
+
+### [SUPERSEDED 2026-05-30] 이전 ACTIVE — Desktop G8-ENGINE-Q4 Firefly 적재 + 누끼 합성 + 3종 검증
 
 | 항목 | 값 |
 |---|---|
