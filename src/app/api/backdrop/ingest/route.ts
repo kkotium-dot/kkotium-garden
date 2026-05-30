@@ -22,6 +22,7 @@ import sharp from 'sharp';
 import { prisma } from '@/lib/prisma';
 import { uploadBackdropServer } from '@/lib/storage/upload-backdrop-server';
 import { findCachedAsset } from '@/lib/storage/automation-storage';
+import { classifyBackdrop, type VlmGateVerdict } from '@/lib/automation/backdrop-vlm-gate';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -93,6 +94,33 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'decode failed', detail: msg }, { status: 400 });
   }
 
+  // 2b. Phase 2 — zero-shot VLM gate (research §7). Bad plates (product /
+  // person / text / non-empty) are routed to human review BEFORE any Storage
+  // write so the resolver cache never serves polluted backdrops.
+  let gate: VlmGateVerdict;
+  try {
+    gate = await classifyBackdrop(pngBuf);
+  } catch (err) {
+    // classifyBackdrop is fail-closed by design, but defend the route anyway.
+    const msg = err instanceof Error ? err.message : String(err);
+    await markReview(jobId, `vlm gate threw: ${msg}`);
+    return NextResponse.json({ error: 'vlm gate failed', detail: msg }, { status: 500 });
+  }
+  if (!gate.passed) {
+    await markReview(jobId, `vlm reject: ${gate.reasons.join(',')}`);
+    return NextResponse.json({
+      jobId,
+      status: 'review',
+      productId: job.productId,
+      skeletonId: job.skeletonId,
+      gate,
+      uploaded: false,
+      sourceFormat: meta.format ?? null,
+      width: meta.width ?? null,
+      height: meta.height ?? null,
+    });
+  }
+
   // 3. upload to the fixed resolver cache path (upsert).
   let uploaded: { path: string; publicUrl: string };
   try {
@@ -136,6 +164,8 @@ export async function POST(req: Request) {
     storagePath: uploaded.path,
     publicUrl: uploaded.publicUrl,
     autoCacheHit: cached !== null,
+    gate,
+    uploaded: true,
     sourceFormat: meta.format ?? null,
     width: meta.width ?? null,
     height: meta.height ?? null,

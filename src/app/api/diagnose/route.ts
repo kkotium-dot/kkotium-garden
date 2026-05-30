@@ -35,6 +35,9 @@ import { inferConceptTone } from '@/lib/diagnosis/concept-tone-inference';
 import { gradeProduct } from '@/lib/diagnosis/grading';
 import { runPFilter } from '@/lib/diagnosis/p-filter';
 import type { PFilterResult } from '@/lib/diagnosis/p-filter-types';
+import { mapCategoryToTone } from '@/lib/automation/category-tone-mapper';
+import { planAdobeWorkflow } from '@/lib/automation/adobe-tool-router';
+import { buildBackdropPrompt } from '@/lib/automation/backdrop-prompt-builder';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -57,6 +60,11 @@ interface DiagnoseBody {
   /** Optional explicit margin multiplier override (salePrice/supplierPrice). */
   margin?: number | null;
   persist?: boolean;
+  /** Track B Phase 2 chaining: when true (and persist succeeds on a non-L4
+   *  product), atomically enqueue a backdrop_jobs row using the freshly
+   *  inferred ConceptTone, returning backdropJobId in the response. Avoids
+   *  the /api/backdrop/enqueue 400 boundary where the row isn't in DB yet. */
+  autoEnqueueBackdrop?: boolean;
 }
 
 interface ResolvedInputs {
@@ -374,7 +382,48 @@ export async function POST(req: Request) {
         { status: 200 },
       );
     }
-    return NextResponse.json({ ...result, persisted: true });
+
+    // Phase 2 — chained backdrop enqueue (avoids the /api/backdrop/enqueue 400
+    // boundary by reusing the just-inferred ConceptTone instead of re-reading
+    // the row). Failures are non-fatal: diagnose still returns 200, and the
+    // operator can call /api/backdrop/enqueue manually.
+    let backdropJobId: string | null = null;
+    let backdropEnqueueError: string | null = null;
+    if (body.autoEnqueueBackdrop) {
+      try {
+        const toneDirective = mapCategoryToTone(cti.conceptTone, {
+          category: resolved.category ?? undefined,
+          productName: resolved.productName,
+        });
+        const plan = planAdobeWorkflow('lifestyle', toneDirective);
+        const fireflyRequest = buildBackdropPrompt({
+          productId: resolved.productId,
+          skeletonId: cti.skeletonId,
+          baseTone: toneDirective.baseTone,
+          model: plan.model ?? 'firefly-image-5',
+        });
+        const job = await prisma.backdropJob.create({
+          data: {
+            productId: resolved.productId,
+            skeletonId: cti.skeletonId,
+            baseTone: toneDirective.baseTone,
+            fireflyRequest: fireflyRequest as unknown as Prisma.InputJsonValue,
+            status: 'pending',
+          },
+          select: { id: true },
+        });
+        backdropJobId = job.id;
+      } catch (err) {
+        backdropEnqueueError = err instanceof Error ? err.message : String(err);
+      }
+    }
+
+    return NextResponse.json({
+      ...result,
+      persisted: true,
+      backdropJobId,
+      backdropEnqueueError,
+    });
   }
 
   return NextResponse.json({ ...result, persisted: false });
