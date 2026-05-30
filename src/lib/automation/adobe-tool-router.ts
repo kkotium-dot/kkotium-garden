@@ -59,8 +59,19 @@ function pickLifestyleModel(
         rationale:
           'Partner model leads for Korean aesthetic accuracy (Firefly hanbok-to-kimono weakness); final commercial cut requires a Firefly-native re-render.',
       };
-    case 'foreign-cinematic':
     case 'foreign-cinematic-sunlit':
+      // Desktop MCP A/B (2026-05-30): Nano Banana Pro clearly beats Firefly on
+      // natural-light fragrance backdrops. Backdrop is a composited intermediate
+      // asset (no IP-bearing subject), so partner-model creator-liability is an
+      // acceptable trade for the aesthetic lift. clean/badge main cuts stay
+      // Firefly-indemnified (unchanged).
+      return {
+        model: 'gemini-3-nano-banana-pro',
+        commercialSafety: 'creator-liable',
+        rationale:
+          'Nano Banana Pro leads on natural-light fragrance backdrops (Desktop MCP A/B 2026-05-30); backdrop is an IP-free composited intermediate, so aesthetics prioritized. Main cuts (clean/badge) remain Firefly-indemnified.',
+      };
+    case 'foreign-cinematic':
     case 'modern-minimal':
       return {
         model: 'firefly-image-5',
