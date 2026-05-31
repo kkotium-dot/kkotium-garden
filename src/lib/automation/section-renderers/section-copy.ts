@@ -15,7 +15,7 @@
 
 import type { SkeletonSpec } from '../layout-skeletons';
 import { filterDarkPatterns } from '../copy-writer';
-import type { SectionRenderContext } from './types';
+import type { SectionRenderContext, GroundedFacts } from './types';
 import { STRINGS, buildSpecRows } from './strings';
 
 // ---------------------------------------------------------------------------
@@ -406,10 +406,88 @@ export interface SpecRowsCopy {
   rows: SpecRow[];
 }
 
+/** Category leaf extractor (mirrors deriveCategoryBadge in copy-writer.ts). */
+function leafOf(category: string | undefined): string | null {
+  const raw = (category ?? '').trim();
+  if (!raw) return null;
+  const leaf = raw
+    .split(/[>/]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .pop();
+  return leaf || null;
+}
+
+/**
+ * Deterministic spec rows derived ONLY from verified facts (#46). When
+ * `groundedFacts` is supplied to the context, this path is used INSTEAD of
+ * the Groq prompt — eliminating the hallucination vector entirely. Rows that
+ * have no verified ground truth (소재 / 크기 / 무게 / 인증) are NEVER produced
+ * here, because there is no honest value to fill them with.
+ */
+export function buildSpecRowsFromFacts(opts: {
+  facts: GroundedFacts;
+  highlight?: string;
+  category?: string;
+}): SpecRow[] {
+  const rows: SpecRow[] = [];
+  const facts = opts.facts;
+
+  // 구성 — options preferred, else highlight, else 본품 1점.
+  const compositionValue =
+    facts.optionCount && facts.optionCount > 1 && facts.optionName
+      ? `${facts.optionName} ${facts.optionCount}종 中 선택`
+      : opts.highlight ?? STRINGS.common.singleItem;
+  rows.push({ label: STRINGS.spec.labels.composition, value: compositionValue.slice(0, 24) });
+
+  // 카테고리 — leaf preferred (avoids long path).
+  const categoryValue =
+    facts.categoryLeaf ?? leafOf(opts.category) ?? STRINGS.common.categoryFallback;
+  rows.push({ label: STRINGS.spec.labels.category, value: categoryValue.slice(0, 24) });
+
+  // 원산지 — verified country or placeholder. Never invents.
+  rows.push({
+    label: STRINGS.spec.labels.origin,
+    value: (facts.originCountry ?? STRINGS.common.detailsReference).slice(0, 24),
+  });
+
+  // 제조사/유통 — verified distributor label or placeholder.
+  rows.push({
+    label: STRINGS.spec.labels.manufacturer,
+    value: (facts.distributorLabel ?? STRINGS.common.detailsReference).slice(0, 24),
+  });
+
+  // A/S — constant safe channel.
+  rows.push({
+    label: STRINGS.spec.labels.support,
+    value: STRINGS.spec.values.supportChannel.slice(0, 24),
+  });
+
+  return rows;
+}
+
 export async function generateSpecRows(
   spec: SkeletonSpec,
   ctx: SectionRenderContext,
 ): Promise<CopyResult<SpecRowsCopy>> {
+  // #46 anti-hallucination short-circuit: when verified facts are present,
+  // build the spec deterministically and skip Groq entirely. The previous
+  // Groq path fabricated material/dimension/cert claims because the prompt
+  // had zero ground truth to anchor on. Deterministic rows from facts only.
+  if (ctx.groundedFacts) {
+    return {
+      value: {
+        rows: buildSpecRowsFromFacts({
+          facts: ctx.groundedFacts,
+          highlight: ctx.highlight,
+          category: ctx.category,
+        }),
+      },
+      source: 'fallback',
+      filtered: false,
+    };
+  }
+
   const fallback: SpecRowsCopy = {
     rows: buildSpecRows({ highlight: ctx.highlight, category: ctx.category }),
   };
@@ -466,15 +544,76 @@ export interface StoryCopy {
   attribution: string;
 }
 
+// Scent / fragrance vocabulary that MUST NOT appear in non-fragrance category
+// stories (#46 anti-hallucination). Detected post-generation; if any token
+// matches and the product is not in the automotive-fragrance category group,
+// the Groq output is rejected and the deterministic template is used.
+const SCENT_VOCAB = ['향', '향기', '향수', '디퓨저', '아로마', 'scent', 'fragrance', 'perfume', 'aroma'];
+
+/** Category-group → focus guidance for the story prompt. Drives vocabulary so
+ *  a tradition-gift product's story talks about 격/이야기/공간, not 향. */
+function storyFocusFor(group?: string): string {
+  switch (group) {
+    case 'tradition-gift':
+      return 'Focus on craft heritage, gift occasions (집들이, 개업, 액막이, 결혼), Korean aesthetic restraint. NEVER mention scent, fragrance, or 향.';
+    case 'automotive-fragrance':
+      return 'Focus on fragrance mood, sensory atmosphere, premium scent character.';
+    case 'kitchen':
+      return 'Focus on daily-use practicality, hygiene, kitchen scenario. NEVER mention scent or 향.';
+    case 'kids':
+      return 'Focus on safety, friendliness, child-appropriate use. NEVER mention scent or 향.';
+    case 'beauty':
+      return 'Focus on texture, formulation, ritual. Scent OK if the product is a fragrance variant.';
+    case 'food':
+      return 'Focus on freshness, taste cues, seasonal context.';
+    case 'digital':
+      return 'Focus on spec quality, precision, modern build. NEVER mention scent or 향.';
+    case 'fashion':
+      return 'Focus on styling, fit, mood. NEVER mention scent or 향 unless the product is a perfumed item.';
+    case 'homeliving':
+      return 'Focus on space styling, daily rhythm, calm. NEVER mention scent or 향 unless the product is a fragrance.';
+    default:
+      return 'Focus on craft, intended use scenario. NEVER mention scent or 향 unless the category is fragrance.';
+  }
+}
+
+/** Category-group → deterministic fallback paragraph. Used when Groq is
+ *  unavailable OR when Groq output is rejected (e.g. scent leak). */
+function deterministicStoryFor(group: string | undefined, productHead: string): string {
+  switch (group) {
+    case 'tradition-gift':
+      return `${productHead}은 한국적 미감을 담은 인테리어 소품입니다. 집들이, 개업, 결혼 등 의미 있는 자리에 어울리는 단정한 디자인을 지향합니다.`;
+    case 'kitchen':
+      return `${productHead}은 일상 주방의 손에 익는 도구를 지향합니다. 깔끔한 형태와 위생적인 마감으로 매일 쓰기 편안합니다.`;
+    case 'automotive-fragrance':
+      return `${productHead}은 차량과 공간을 위한 향의 무드를 다듬은 제품입니다. 차분한 일상 속에서 부드러운 잔향을 남기도록 구성했습니다.`;
+    case 'kids':
+      return `${productHead}은 아이가 안전하게 사용할 수 있도록 둥글고 단단한 마감을 지향합니다. 부모가 안심할 수 있는 친근한 일상 도구입니다.`;
+    default:
+      return `${productHead}${STRINGS.story.paragraphSuffix}`;
+  }
+}
+
+function containsScentVocab(text: string): boolean {
+  const lc = text.toLowerCase();
+  return SCENT_VOCAB.some((w) => lc.includes(w.toLowerCase()));
+}
+
 export async function generateStoryParagraph(
   spec: SkeletonSpec,
   ctx: SectionRenderContext,
 ): Promise<CopyResult<StoryCopy>> {
   const productHead = ctx.productName.split(/\s+/)[0] ?? STRINGS.common.theProduct;
+  const group = ctx.groundedFacts?.toneCategoryGroup;
+  const fallbackParagraph = deterministicStoryFor(group, productHead);
   const fallback: StoryCopy = {
-    paragraph: `${productHead}${STRINGS.story.paragraphSuffix}`,
+    paragraph: fallbackParagraph,
     attribution: ctx.brandName ?? STRINGS.common.brandDefault,
   };
+
+  // Category guidance + scent vocabulary ban for non-fragrance items.
+  const focus = storyFocusFor(group);
+  const allowScent = group === 'automotive-fragrance';
 
   const prompt = [
     `Write a Korean brand story paragraph for the "story" section of a Naver detail page.`,
@@ -482,9 +621,11 @@ export async function generateStoryParagraph(
     `Tone: ${spec.copyGlobalTone}.`,
     `Product: ${ctx.productName}`,
     ctx.brandName ? `Brand: ${ctx.brandName}` : '',
+    group ? `CategoryGroup: ${group}` : '',
+    `Focus: ${focus}`,
     `Return JSON exactly: {"paragraph":"...", "attribution":"..."}.`,
     `paragraph: 3 to 4 Korean sentences, total under 200 characters, editorial restrained tone, no exaggeration, no emoji, no scarcity.`,
-    `Focus on craft, material origin, intended use scenario — do not make health, performance, or origin claims that need verification.`,
+    `do not make health, performance, or origin claims that need verification.`,
     `attribution: short Korean line under 20 characters (brand name or design year).`,
     `Respond with JSON only.`,
   ].filter(Boolean).join('\n');
@@ -501,6 +642,12 @@ export async function generateStoryParagraph(
     const a = typeof parsed.attribution === 'string' ? parsed.attribution : '';
     const pf = filterDarkPatterns(p);
     const af = filterDarkPatterns(a);
+
+    // #46 post-filter: scent vocabulary in non-fragrance category -> reject.
+    if (!allowScent && containsScentVocab(pf.text)) {
+      return { value: fallback, source: 'fallback', filtered: true };
+    }
+
     return {
       value: {
         paragraph: pf.text.slice(0, 200) || fallback.paragraph,

@@ -27,6 +27,25 @@ export interface SectionRenderContext {
   highlight?: string;
   /** Optional brand or store name for hero badging. */
   brandName?: string;
+  /** Verified-from-DB facts used to ground spec/story copy generators.
+   *  When present, generators MUST treat these as the only allowed source of
+   *  factual claims; unverified rows must use a placeholder or be omitted.
+   *  This is the #46 anti-hallucination plumbing (2026-05-31). */
+  groundedFacts?: GroundedFacts;
+}
+
+/** Verified facts read from Product + crawl_logs + tone mapping. Every field
+ *  is optional — the generators MUST treat absence as "unknown" and fall back
+ *  to a deterministic placeholder, NEVER to a fabricated value. */
+export interface GroundedFacts {
+  optionCount?: number;
+  optionName?: string;
+  optionValues?: string[];
+  originCountry?: string | null;
+  distributorLabel?: string;
+  categoryLeaf?: string;
+  toneCategoryGroup?: string;
+  toneBase?: string;
 }
 
 export interface SectionRenderResult {

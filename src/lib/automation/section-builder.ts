@@ -49,6 +49,10 @@ export interface DetailPageRequest {
   conceptTone?: ConceptTone;
   /** Designer 1-click swap to a specific skeleton. */
   overrideSkeletonId?: SkeletonId;
+  /** Verified facts (Product + crawl_logs + tone). Threaded into every
+   *  section renderer to ground spec/story copy and prevent hallucination.
+   *  Optional for backward compat — when omitted, fallback templates remain. */
+  groundedFacts?: import('./section-renderers/types').GroundedFacts;
 }
 
 export interface DetailPageResult {
@@ -172,6 +176,7 @@ export async function buildDetailPage(
     lifestyleAssetUrl: req.lifestyleAssetUrl,
     highlight: req.highlight,
     brandName: req.brandName,
+    groundedFacts: req.groundedFacts,
   };
 
   // Render sequentially so failures are isolated and we get deterministic

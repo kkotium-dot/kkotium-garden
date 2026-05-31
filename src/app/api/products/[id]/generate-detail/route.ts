@@ -23,6 +23,26 @@ import type {
   ConceptTone,
   SkeletonId,
 } from '@/lib/diagnosis/concept-tone-inference';
+import { mapCategoryToTone } from '@/lib/automation/category-tone-mapper';
+import { NAVER_ORIGIN_CODES } from '@/lib/naver/naver-origin-codes';
+import type { GroundedFacts } from '@/lib/automation/section-renderers/types';
+
+function leafOf(category: string | null | undefined): string | null {
+  const raw = (category ?? '').trim();
+  if (!raw) return null;
+  const leaf = raw.split(/[>/]/).map((s) => s.trim()).filter(Boolean).pop();
+  return leaf || null;
+}
+
+function resolveOriginCountry(code: string | null | undefined): string | null {
+  if (!code) return null;
+  // strip leading zeros (e.g. "0200037" -> "200037") before lookup.
+  const normalized = code.replace(/^0+/, '') || code;
+  const found = NAVER_ORIGIN_CODES.find((o) => o.code === normalized);
+  return found?.name ?? null;
+}
+
+const DISTRIBUTOR_LABEL = '유통 꽃틔움';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,7 +82,7 @@ export async function POST(
     return jsonError('invalid JSON body', 400, String(err));
   }
 
-  // Fetch product
+  // Fetch product — includes facts needed for the grounded spec/story path.
   const product = await prisma.product.findUnique({
     where: { id: productId },
     select: {
@@ -72,6 +92,13 @@ export async function POST(
       category: true,
       brand: true,
       supplierPrice: true,
+      // grounding fields (#46) — drive deterministic spec rows + story tone.
+      originCode: true,
+      naverCategoryCode: true,
+      hasOptions: true,
+      optionName: true,
+      optionValues: true,
+      options: true,
     },
   });
   if (!product) {
@@ -103,6 +130,28 @@ export async function POST(
   // stores supplierPrice; salePrice is derived elsewhere (margin builder).
   // For now we pass supplierPrice into both supplierPrice and salePrice
   // slots since renderers only use them for KFTC disclosure context.
+  // Build grounded facts from DB + tone mapping. These are the ONLY values
+  // the spec/story generators are allowed to treat as ground truth (#46).
+  const toneDirective = mapCategoryToTone(conceptTone, {
+    category: product.category ?? undefined,
+    naverCategoryCode: product.naverCategoryCode,
+    productName: product.name,
+  });
+  const optionValuesArr = Array.isArray(product.optionValues)
+    ? (product.optionValues as unknown[]).filter((v): v is string => typeof v === 'string')
+    : [];
+  const optionsLen = Array.isArray(product.options) ? product.options.length : 0;
+  const groundedFacts: GroundedFacts = {
+    optionCount: optionsLen > 0 ? optionsLen : (optionValuesArr.length > 0 ? optionValuesArr.length : undefined),
+    optionName: product.optionName ?? undefined,
+    optionValues: optionValuesArr.length > 0 ? optionValuesArr : undefined,
+    originCountry: resolveOriginCountry(product.originCode),
+    distributorLabel: DISTRIBUTOR_LABEL,
+    categoryLeaf: leafOf(product.category) ?? undefined,
+    toneCategoryGroup: toneDirective.categoryGroup,
+    toneBase: toneDirective.baseTone,
+  };
+
   try {
     const result = await buildDetailPage({
       productName: product.name,
@@ -114,6 +163,7 @@ export async function POST(
       brandName: body.brandName ?? product.brand,
       conceptTone,
       overrideSkeletonId: body.overrideSkeletonId,
+      groundedFacts,
     });
 
     return NextResponse.json({
@@ -133,6 +183,7 @@ export async function POST(
       detailWidth: result.skeleton.width,
       detailHeight: result.skeleton.totalHeight,
       elapsedMs: result.elapsedMs,
+      groundedFacts,
     });
   } catch (err) {
     return jsonError('detail generation failed', 500, String(err));
