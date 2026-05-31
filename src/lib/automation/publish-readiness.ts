@@ -55,6 +55,20 @@ export interface FieldChecks {
   margin: boolean;
 }
 
+/** 상품정보제공고시 (Naver Smart Store legal disclosure) required payload.
+ *  Non-NULL check ONLY — content authenticity is checked elsewhere. The list
+ *  matches what Naver's commerce API enforces as required for non-식품 카테고리
+ *  (origin / manufacturer / A.S responsibility + 거래조건 3종 + 과세구분). */
+export interface NaverPayloadChecks {
+  naver_origin: boolean;
+  naver_manufacturer: boolean;
+  naver_as_info: boolean;
+  naver_tax_type: boolean;
+  naver_delivery_info: boolean;
+  naver_exchange_info: boolean;
+  naver_refund_info: boolean;
+}
+
 export interface PublishReadinessInput {
   productId: string;
   status: string;
@@ -80,6 +94,14 @@ export interface PublishReadinessInput {
   margin: number | null;
   legalApproval: string | null;
   toneDirective: ToneDirective;
+  // ── Naver disclosure payload (commerce API required, 상품정보제공고시) ──
+  naver_origin: string | null;
+  naver_manufacturer: string | null;
+  naver_as_info: string | null;
+  naver_tax_type: string | null;
+  naver_delivery_info: string | null;
+  naver_exchange_info: string | null;
+  naver_refund_info: string | null;
 }
 
 export interface PublishReadinessResult {
@@ -90,6 +112,9 @@ export interface PublishReadinessResult {
   fieldsAllSet: boolean;
   authentic: boolean;
   authenticityViolations: AuthenticityViolation[];
+  naverPayload: NaverPayloadChecks;
+  naverPayloadComplete: boolean;
+  naverPayloadMissing: string[];
   publishReady: boolean;
 }
 
@@ -242,12 +267,34 @@ function checkAuthenticity(input: PublishReadinessInput): AuthenticityViolation[
 // Public entry
 // ---------------------------------------------------------------------------
 
+function evaluateNaverPayload(input: PublishReadinessInput): NaverPayloadChecks {
+  return {
+    naver_origin: isNonEmptyString(input.naver_origin),
+    naver_manufacturer: isNonEmptyString(input.naver_manufacturer),
+    naver_as_info: isNonEmptyString(input.naver_as_info),
+    naver_tax_type: isNonEmptyString(input.naver_tax_type),
+    naver_delivery_info: isNonEmptyString(input.naver_delivery_info),
+    naver_exchange_info: isNonEmptyString(input.naver_exchange_info),
+    naver_refund_info: isNonEmptyString(input.naver_refund_info),
+  };
+}
+
 export function evaluatePublishReadiness(input: PublishReadinessInput): PublishReadinessResult {
   const fields = evaluateFields(input);
   const fieldsAllSet = Object.values(fields).every(Boolean);
   const authenticityViolations = checkAuthenticity(input);
   const authentic = authenticityViolations.length === 0;
-  const publishReady = fieldsAllSet && authentic && input.status === 'DRAFT' && input.naverProductId === null;
+  const naverPayload = evaluateNaverPayload(input);
+  const naverPayloadMissing = Object.entries(naverPayload)
+    .filter(([, v]) => !v)
+    .map(([k]) => k);
+  const naverPayloadComplete = naverPayloadMissing.length === 0;
+  const publishReady =
+    fieldsAllSet &&
+    authentic &&
+    naverPayloadComplete &&
+    input.status === 'DRAFT' &&
+    input.naverProductId === null;
 
   return {
     productId: input.productId,
@@ -257,6 +304,9 @@ export function evaluatePublishReadiness(input: PublishReadinessInput): PublishR
     fieldsAllSet,
     authentic,
     authenticityViolations,
+    naverPayload,
+    naverPayloadComplete,
+    naverPayloadMissing,
     publishReady,
   };
 }

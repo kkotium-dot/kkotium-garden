@@ -60,6 +60,14 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       legalApproval: true,
       name: true,
       category: true,
+      // Naver disclosure payload (상품정보제공고시) — required for publish.
+      naver_origin: true,
+      naver_manufacturer: true,
+      naver_as_info: true,
+      naver_tax_type: true,
+      naver_delivery_info: true,
+      naver_exchange_info: true,
+      naver_refund_info: true,
     },
   });
   if (!product) return jsonError('product not found', 404, { productId });
@@ -103,6 +111,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     margin: product.margin,
     legalApproval: product.legalApproval,
     toneDirective,
+    naver_origin: product.naver_origin,
+    naver_manufacturer: product.naver_manufacturer,
+    naver_as_info: product.naver_as_info,
+    naver_tax_type: product.naver_tax_type,
+    naver_delivery_info: product.naver_delivery_info,
+    naver_exchange_info: product.naver_exchange_info,
+    naver_refund_info: product.naver_refund_info,
   };
 
   const result = evaluatePublishReadiness(input);
