@@ -31,7 +31,10 @@ function leafOf(category: string | null | undefined): string | null {
   const raw = (category ?? '').trim();
   if (!raw) return null;
   const leaf = raw.split(/[>/]/).map((s) => s.trim()).filter(Boolean).pop();
-  return leaf || null;
+  if (!leaf) return null;
+  // Sentinel placeholder values that should fall through to a real source.
+  if (leaf.toLowerCase() === 'uncategorized' || leaf === '-' || leaf === '_') return null;
+  return leaf;
 }
 
 function resolveOriginCountry(code: string | null | undefined): string | null {
@@ -132,6 +135,24 @@ export async function POST(
   // slots since renderers only use them for KFTC disclosure context.
   // Build grounded facts from DB + tone mapping. These are the ONLY values
   // the spec/story generators are allowed to treat as ground truth (#46).
+  // categoryLeaf preference: Product.category (after sentinel filter) ->
+  // most recent crawl_logs.category_name -> null (template falls back to
+  // generic "일반" placeholder). NEVER fabricate a category name.
+  let categoryLeaf = leafOf(product.category);
+  if (!categoryLeaf) {
+    try {
+      const rows: { category_name: string | null }[] = await prisma.$queryRawUnsafe(
+        `SELECT category_name FROM crawl_logs WHERE product_id = $1 AND status = 'success' ORDER BY id DESC LIMIT 1`,
+        productId,
+      );
+      const fromCrawl = rows[0]?.category_name?.trim();
+      if (fromCrawl) categoryLeaf = fromCrawl;
+    } catch {
+      // crawl_logs absent / unreadable -> leave null; the renderer will use
+      // STRINGS.common.categoryFallback. No fabrication.
+    }
+  }
+
   const toneDirective = mapCategoryToTone(conceptTone, {
     category: product.category ?? undefined,
     naverCategoryCode: product.naverCategoryCode,
@@ -147,7 +168,7 @@ export async function POST(
     optionValues: optionValuesArr.length > 0 ? optionValuesArr : undefined,
     originCountry: resolveOriginCountry(product.originCode),
     distributorLabel: DISTRIBUTOR_LABEL,
-    categoryLeaf: leafOf(product.category) ?? undefined,
+    categoryLeaf: categoryLeaf ?? undefined,
     toneCategoryGroup: toneDirective.categoryGroup,
     toneBase: toneDirective.baseTone,
   };

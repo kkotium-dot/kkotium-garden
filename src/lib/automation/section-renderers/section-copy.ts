@@ -406,7 +406,10 @@ export interface SpecRowsCopy {
   rows: SpecRow[];
 }
 
-/** Category leaf extractor (mirrors deriveCategoryBadge in copy-writer.ts). */
+/** Category leaf extractor (mirrors deriveCategoryBadge in copy-writer.ts).
+ *  Treats sentinel placeholder values ("uncategorized", literal "-") as null
+ *  so the spec table falls through to the deterministic category fallback
+ *  rather than printing the placeholder string. */
 function leafOf(category: string | undefined): string | null {
   const raw = (category ?? '').trim();
   if (!raw) return null;
@@ -415,7 +418,9 @@ function leafOf(category: string | undefined): string | null {
     .map((s) => s.trim())
     .filter(Boolean)
     .pop();
-  return leaf || null;
+  if (!leaf) return null;
+  if (leaf.toLowerCase() === 'uncategorized' || leaf === '-' || leaf === '_') return null;
+  return leaf;
 }
 
 /**
@@ -434,9 +439,10 @@ export function buildSpecRowsFromFacts(opts: {
   const facts = opts.facts;
 
   // 구성 — options preferred, else highlight, else 본품 1점.
+  // Use Korean 중 (not the Chinese ideograph 中) for glyph-safe Pretendard.
   const compositionValue =
     facts.optionCount && facts.optionCount > 1 && facts.optionName
-      ? `${facts.optionName} ${facts.optionCount}종 中 선택`
+      ? `${facts.optionName} ${facts.optionCount}종 중 선택`
       : opts.highlight ?? STRINGS.common.singleItem;
   rows.push({ label: STRINGS.spec.labels.composition, value: compositionValue.slice(0, 24) });
 
