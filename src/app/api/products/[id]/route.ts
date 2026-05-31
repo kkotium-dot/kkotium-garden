@@ -215,12 +215,14 @@ export async function PUT(
       naver_custom_option_1, naver_custom_option_2, naver_custom_option_3, naver_meta_tags,
     } = body;
 
-    let margin = 0;
+    // Margin is computed ONLY when both prices arrive in the body — otherwise
+    // we must NOT touch it (a naver_*-only PUT must not zero margin).
+    let computedMargin: number | undefined;
     if (supplierPrice && salePrice) {
       const platformFee = Math.round(parseInt(salePrice) * 0.058);
       const totalCost   = parseInt(supplierPrice) + parseInt(shippingFee || 0);
       const profit      = parseInt(salePrice) - totalCost - platformFee;
-      margin = Math.round((profit / parseInt(salePrice)) * 100);
+      computedMargin = Math.round((profit / parseInt(salePrice)) * 100);
     }
 
     const product = await prisma.product.update({
@@ -230,9 +232,15 @@ export async function PUT(
         supplierPrice: supplierPrice ? parseInt(supplierPrice) : undefined,
         salePrice:     salePrice     ? parseInt(salePrice)     : undefined,
         shippingFee:   shippingFee   ? parseInt(shippingFee)   : undefined,
-        margin, keywords: keywords || undefined, description: description || undefined,
-        mainImage: mainImage || undefined, images: images || [],
-        hasOptions: hasOptions || false, options: options || undefined, status: status || undefined,
+        // Skip margin when prices were not provided — preserves existing value.
+        margin: computedMargin, keywords: keywords || undefined, description: description || undefined,
+        // images/hasOptions/options use `?? undefined` so an unrelated PUT
+        // (e.g. naver_*-only payload) leaves them intact instead of wiping
+        // to []/false (2026-05-31 regression hardening).
+        mainImage: mainImage || undefined,
+        images: images ?? undefined,
+        hasOptions: hasOptions ?? undefined,
+        options: options || undefined, status: status || undefined,
         naver_title: naver_title ?? undefined, naver_keywords: naver_keywords ?? undefined,
         naver_description: naver_description ?? undefined, naver_brand: naver_brand ?? undefined,
         naver_manufacturer: naver_manufacturer ?? undefined, naver_origin: naver_origin ?? undefined,
