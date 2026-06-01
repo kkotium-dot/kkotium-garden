@@ -588,6 +588,25 @@ async function generateSEO(
       }
     }
   }
+
+  // ── seo_title final-consistency sync (Lane 1-D, 2026-06-01) ────────────
+  // Previous behavior synced seo_title only on transform events (prefix
+  // inject / length fill). When neither fired (e.g. niche style emitting
+  // a ≥ TARGET_MIN title), seo_title stayed at the AI's much-shorter raw
+  // value, leaving a 12-char seo_title beside a 37-char naver_title. The
+  // intent-weighted lead in naver_title is the highest-conversion text we
+  // have; seo_title should reflect it whenever it adds slot value.
+  //
+  // Honesty (#46): no fabrication. We only adopt the value already chosen
+  // for naver_title (which itself is honest by Lane 1-B/C construction).
+  // Runs regardless of volumesAvailable so the AI fallback path also wins
+  // the consistency guarantee.
+  if (aiData.naver_title) {
+    const curSeo = (aiData.seo_title ?? '').trim();
+    if (curSeo.length < aiData.naver_title.length) {
+      aiData.seo_title = aiData.naver_title;
+    }
+  }
   const finalTitleLength = aiData.naver_title ? aiData.naver_title.length : null;
 
   return {
@@ -654,17 +673,19 @@ export async function POST(request: NextRequest) {
       await prisma.product.update({
         where: { id: productId },
         data: {
-          // Update main product name with AI-optimized title
-          name: aiResponse.naver_title || undefined,
-          // Update keywords JSON array (used by honey score + readiness)
+          // Lane 1-D (2026-06-01): Product.name is the immutable source-of-truth
+          // identity captured at crawl time. SEO-optimized text lands in
+          // naver_title / seo_title / aiGeneratedTitle ONLY. Overwriting
+          // Product.name caused cumulative pollution across re-runs (each
+          // re-run's keyword stuffing fed the next call's input) and
+          // corrupted downstream identity-keyword extraction (Kkotti score).
           keywords: keywordsArray.length > 0 ? keywordsArray : undefined,
-          // SEO-specific naver fields
           seo_title: aiResponse.seo_title || aiResponse.naver_title,
           seo_description: aiResponse.seo_description || (aiResponse.naver_description ?? '').substring(0, 160),
           naver_title: aiResponse.naver_title,
           naver_keywords: aiResponse.naver_keywords,
           naver_description: aiResponse.naver_description,
-          // Record AI optimization timestamp
+          // Record AI optimization timestamp on the dedicated history field.
           aiGeneratedTitle: aiResponse.naver_title,
           updatedAt: new Date(),
         },
@@ -712,7 +733,7 @@ export async function PUT(request: NextRequest) {
         await prisma.product.update({
           where: { id: product.id },
           data: {
-            name: aiResponse.naver_title || undefined,
+            // Lane 1-D (2026-06-01): Product.name preserved (see POST handler).
             keywords: keywordsArray.length > 0 ? keywordsArray : undefined,
             seo_title: aiResponse.seo_title || aiResponse.naver_title,
             seo_description: aiResponse.seo_description || (aiResponse.naver_description ?? '').substring(0, 160),
