@@ -28,6 +28,7 @@ import {
   type LintViolation,
 } from '@/lib/compliance/dark-pattern-lint';
 import { pickGroqKey, callGroq } from './groq-client';
+import { pickLeafFromCategory, firstNameToken } from './category-leaf';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -166,18 +167,14 @@ function fallbackCopy(req: CopyRequest): string {
  * Falls back to the first product-name token when no category is supplied.
  */
 function deriveCategoryBadge(req: CopyRequest): string {
-  const raw = (req.category ?? '').trim();
-  if (raw) {
-    const leaf =
-      raw
-        .split(/[>/]/)
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .pop() ?? raw;
-    return leaf.slice(0, SLOT_LIMITS.categoryBadge);
-  }
-  const token = req.productName.split(/\s+/)[0] ?? '';
-  return token.slice(0, SLOT_LIMITS.categoryBadge);
+  // SSOT (2026-06-01): the leaf + sentinel filter logic lives in
+  // category-leaf.ts so the thumbnail badge and the detail spec always agree.
+  // The thumbnail route now pre-resolves the category via resolveCategoryLeaf
+  // (including a crawl_logs fallback when needed), so by the time req.category
+  // arrives here it should already be a real label — but we still apply the
+  // sentinel-aware extractor defensively for callers that bypass the route.
+  const leaf = pickLeafFromCategory(req.category) ?? firstNameToken(req.productName);
+  return leaf.slice(0, SLOT_LIMITS.categoryBadge);
 }
 
 // ---------------------------------------------------------------------------

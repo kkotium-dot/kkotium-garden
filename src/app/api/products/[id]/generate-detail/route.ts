@@ -26,16 +26,7 @@ import type {
 import { mapCategoryToTone } from '@/lib/automation/category-tone-mapper';
 import { NAVER_ORIGIN_CODES } from '@/lib/naver/naver-origin-codes';
 import type { GroundedFacts } from '@/lib/automation/section-renderers/types';
-
-function leafOf(category: string | null | undefined): string | null {
-  const raw = (category ?? '').trim();
-  if (!raw) return null;
-  const leaf = raw.split(/[>/]/).map((s) => s.trim()).filter(Boolean).pop();
-  if (!leaf) return null;
-  // Sentinel placeholder values that should fall through to a real source.
-  if (leaf.toLowerCase() === 'uncategorized' || leaf === '-' || leaf === '_') return null;
-  return leaf;
-}
+import { resolveCategoryLeaf } from '@/lib/automation/category-leaf';
 
 function resolveOriginCountry(code: string | null | undefined): string | null {
   if (!code) return null;
@@ -135,23 +126,14 @@ export async function POST(
   // slots since renderers only use them for KFTC disclosure context.
   // Build grounded facts from DB + tone mapping. These are the ONLY values
   // the spec/story generators are allowed to treat as ground truth (#46).
-  // categoryLeaf preference: Product.category (after sentinel filter) ->
-  // most recent crawl_logs.category_name -> null (template falls back to
-  // generic "일반" placeholder). NEVER fabricate a category name.
-  let categoryLeaf = leafOf(product.category);
-  if (!categoryLeaf) {
-    try {
-      const rows: { category_name: string | null }[] = await prisma.$queryRawUnsafe(
-        `SELECT category_name FROM crawl_logs WHERE product_id = $1 AND status = 'success' ORDER BY id DESC LIMIT 1`,
-        productId,
-      );
-      const fromCrawl = rows[0]?.category_name?.trim();
-      if (fromCrawl) categoryLeaf = fromCrawl;
-    } catch {
-      // crawl_logs absent / unreadable -> leave null; the renderer will use
-      // STRINGS.common.categoryFallback. No fabrication.
-    }
-  }
+  // SSOT (2026-06-01): the previous inline leaf + crawl_logs fallback has been
+  // moved to category-leaf.resolveCategoryLeaf so the thumbnail badge and the
+  // detail spec always render the same label. Never fabricates a category.
+  const categoryLeaf = await resolveCategoryLeaf({
+    productId,
+    category: product.category,
+    productName: product.name,
+  });
 
   const toneDirective = mapCategoryToTone(conceptTone, {
     category: product.category ?? undefined,
@@ -168,7 +150,7 @@ export async function POST(
     optionValues: optionValuesArr.length > 0 ? optionValuesArr : undefined,
     originCountry: resolveOriginCountry(product.originCode),
     distributorLabel: DISTRIBUTOR_LABEL,
-    categoryLeaf: categoryLeaf ?? undefined,
+    categoryLeaf: categoryLeaf || undefined,
     toneCategoryGroup: toneDirective.categoryGroup,
     toneBase: toneDirective.baseTone,
   };

@@ -17,6 +17,7 @@ import type { SkeletonSpec } from '../layout-skeletons';
 import { filterDarkPatterns } from '../copy-writer';
 import type { SectionRenderContext, GroundedFacts } from './types';
 import { STRINGS, buildSpecRows } from './strings';
+import { pickLeafFromCategory } from '../category-leaf';
 
 // ---------------------------------------------------------------------------
 // Groq plumbing (mirrors copy-writer.ts — kept local so this module has no
@@ -406,22 +407,8 @@ export interface SpecRowsCopy {
   rows: SpecRow[];
 }
 
-/** Category leaf extractor (mirrors deriveCategoryBadge in copy-writer.ts).
- *  Treats sentinel placeholder values ("uncategorized", literal "-") as null
- *  so the spec table falls through to the deterministic category fallback
- *  rather than printing the placeholder string. */
-function leafOf(category: string | undefined): string | null {
-  const raw = (category ?? '').trim();
-  if (!raw) return null;
-  const leaf = raw
-    .split(/[>/]/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .pop();
-  if (!leaf) return null;
-  if (leaf.toLowerCase() === 'uncategorized' || leaf === '-' || leaf === '_') return null;
-  return leaf;
-}
+// 2026-06-01: leafOf moved to category-leaf.ts as the SSOT for thumbnail badge
+// and detail spec to surface the same label. See pickLeafFromCategory.
 
 /**
  * Deterministic spec rows derived ONLY from verified facts (#46). When
@@ -448,7 +435,7 @@ export function buildSpecRowsFromFacts(opts: {
 
   // 카테고리 — leaf preferred (avoids long path).
   const categoryValue =
-    facts.categoryLeaf ?? leafOf(opts.category) ?? STRINGS.common.categoryFallback;
+    facts.categoryLeaf ?? pickLeafFromCategory(opts.category) ?? STRINGS.common.categoryFallback;
   rows.push({ label: STRINGS.spec.labels.category, value: categoryValue.slice(0, 24) });
 
   // 원산지 — verified country or placeholder. Never invents.

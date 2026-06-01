@@ -32,6 +32,7 @@ import { matchSkeleton } from '@/lib/automation/skeleton-matcher';
 import { runLegalGate } from '@/lib/automation/asset-legal-gate';
 import { planAdobeWorkflow } from '@/lib/automation/adobe-tool-router';
 import { planCutoutWorkflow } from '@/lib/automation/cutout-strategy';
+import { resolveCategoryLeaf } from '@/lib/automation/category-leaf';
 import {
   resolveAssetSources,
   type AssetSource,
@@ -208,11 +209,22 @@ export async function POST(
     }
   }
 
+  // SSOT (2026-06-01): pre-resolve the category leaf so the badge variant
+  // shows the same label as the detail spec. Without this, Product.category
+  // = "uncategorized" sentinel leaked into the badge while detail correctly
+  // fell through to crawl_logs (Desktop 2026-05-31 verdict on 달항아리). See
+  // src/lib/automation/category-leaf.ts.
+  const categoryLeaf = await resolveCategoryLeaf({
+    productId: product.id,
+    category: product.category,
+    productName: product.name,
+  });
+
   const req: ThumbnailRequest = {
     productName: product.name,
     salePrice:
       typeof product.salePrice === 'number' ? product.salePrice : undefined,
-    category: product.category ?? undefined,
+    category: categoryLeaf || product.category || undefined,
     naverCategoryCode: product.naverCategoryCode,
     highlight: body.highlight,
     conceptTone,
