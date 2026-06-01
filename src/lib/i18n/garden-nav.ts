@@ -21,10 +21,18 @@ export interface GardenNavSection {
   items: GardenNavItem[];
 }
 
+export interface MobileTabItem {
+  key: string;
+  href: string;
+  ko: string;
+  icon: string;
+}
+
 export interface GardenNavDict {
   brand: { primary: string; secondary: string };
   sections: GardenNavSection[];
   mascot: { ko: string; en: string; note: string };
+  mobileTabs: { items: MobileTabItem[]; more: string };
 }
 
 const dict = raw as unknown as GardenNavDict;
@@ -33,4 +41,5 @@ export const gardenNav: GardenNavDict = {
   brand: dict.brand,
   sections: dict.sections,
   mascot: dict.mascot,
+  mobileTabs: dict.mobileTabs,
 };

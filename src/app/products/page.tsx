@@ -1272,8 +1272,8 @@ function ProductsPageInner() {
           </div>
         )}
 
-        {/* Table */}
-        <div style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 18, overflow: 'hidden' }}>
+        {/* Phase 2-MOBILE-1c: desktop table (lg+) — unchanged behaviour. */}
+        <div className="hidden lg:block" style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 18, overflow: 'hidden' }}>
           <TableHeader />
           {loading ? (
             <div className="py-16 text-center">
@@ -1298,6 +1298,215 @@ function ProductsPageInner() {
               <span>{filtered.length}개 표시</span>
               <ExcelExportButton mode="filter" filters={{ status: undefined }} buttonText="전체 엑셀 다운로드"
                 buttonClassName="flex items-center gap-1 text-gray-500 hover:text-gray-700 transition" />
+            </div>
+          )}
+        </div>
+
+        {/* Phase 2-MOBILE-1c: mobile card stack (<lg). Reuses `filtered` and
+            the same action handlers (toggleStatus / deleteProduct / Link to
+            edit + studio). Cards keep the four canonical actions per row with
+            44x44px touch targets. Group view collapses to a flat stack on
+            mobile to keep the gesture surface predictable; rare enough that
+            losing the grouping UI on small screens is acceptable. */}
+        <div className="lg:hidden">
+          {loading ? (
+            <div className="py-12 text-center" style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 16 }}>
+              <RefreshCw size={20} className="animate-spin mx-auto mb-2" style={{ color: '#FFB3CE' }} />
+              <p className="text-sm" style={{ color: '#B0A0A8' }}>불러오는 중...</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-12 text-center" style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 16 }}>
+              <Package size={28} className="mx-auto mb-2" style={{ color: '#F8DCE5' }} />
+              <p className="text-sm" style={{ color: '#B0A0A8' }}>표시할 상품이 없습니다</p>
+              {tab !== 'all' && <button onClick={() => setTab('all')} className="mt-2 text-xs underline" style={{ color: '#e62310' }}>전체 보기</button>}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {filtered.map((p) => {
+                const isSel = selected.has(p.id);
+                const honey = p._hs;
+                const seo = Math.max(0, Math.min(100, p._hs?.seoScore ?? 0));
+                const seoColor = seo >= 75 ? '#16a34a' : seo >= 45 ? '#D97706' : '#e62310';
+                return (
+                  <article
+                    key={p.id}
+                    style={{
+                      background: '#fff',
+                      border: isSel ? '1.5px solid #e62310' : '1.5px solid #F8DCE5',
+                      borderRadius: 14,
+                      padding: 12,
+                      wordBreak: 'keep-all',
+                      boxShadow: isSel ? '0 2px 8px rgba(230,35,16,0.10)' : '0 1px 2px rgba(230,35,16,0.04)',
+                    }}
+                  >
+                    {/* Header — checkbox + thumbnail + name + sku */}
+                    <header style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      <input
+                        type="checkbox"
+                        checked={isSel}
+                        onChange={() => toggleSelect(p.id)}
+                        className="w-5 h-5 rounded border-gray-300 text-[#E8001F] focus:ring-[#E8001F]/30 shrink-0"
+                        style={{ marginTop: 2 }}
+                      />
+                      {p.mainImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={p.mainImage}
+                          alt=""
+                          width={56}
+                          height={56}
+                          style={{ width: 56, height: 56, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: 56, height: 56, borderRadius: 10,
+                          background: '#FFF0F5', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        }}>
+                          <Package size={22} style={{ color: '#FFB3CE' }} />
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <Link
+                          href={`/products/new?edit=${p.id}`}
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 800,
+                            color: '#1A1A1A',
+                            textDecoration: 'none',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          {p.name}
+                        </Link>
+                        {p.sku && (
+                          <p style={{
+                            fontSize: 11, color: '#888', margin: '4px 0 0',
+                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            {p.sku}
+                          </p>
+                        )}
+                      </div>
+                    </header>
+
+                    {/* Body — price / margin / SEO bar */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A' }}>
+                        {Number(p.salePrice ?? 0).toLocaleString()}원
+                      </span>
+                      {typeof honey?.netMarginRate === 'number' && (
+                        <span
+                          style={{
+                            fontSize: 11, fontWeight: 700,
+                            padding: '2px 8px', borderRadius: 99,
+                            background: honey.netMarginRate < 5 ? '#fef2f2' : '#F0FDF4',
+                            color: honey.netMarginRate < 5 ? '#dc2626' : '#15803d',
+                            border: honey.netMarginRate < 5 ? '1px solid #fecaca' : '1px solid #86efac',
+                          }}
+                        >
+                          마진 {honey.netMarginRate.toFixed(1)}%
+                        </span>
+                      )}
+                      <span
+                        style={{
+                          fontSize: 10, fontWeight: 700,
+                          padding: '2px 7px', borderRadius: 99,
+                          background: p.status === 'ACTIVE' ? '#dcfce7' : p.status === 'OUT_OF_STOCK' ? '#fee2e2' : '#f3f4f6',
+                          color: p.status === 'ACTIVE' ? '#15803d' : p.status === 'OUT_OF_STOCK' ? '#b91c1c' : '#6b7280',
+                        }}
+                      >
+                        {p.status === 'ACTIVE' ? '판매중' : p.status === 'OUT_OF_STOCK' ? '품절' : 'DRAFT'}
+                      </span>
+                    </div>
+
+                    {/* SEO bar */}
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#888', marginBottom: 3 }}>
+                        <span>SEO 점수</span>
+                        <span style={{ fontWeight: 800, color: seoColor }}>{seo}/100</span>
+                      </div>
+                      <div style={{ height: 5, background: '#FFF0F5', borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', width: `${seo}%`,
+                          background: seoColor,
+                          borderRadius: 99,
+                          transition: 'width 0.2s',
+                        }} />
+                      </div>
+                    </div>
+
+                    {/* Actions — 44px touch targets */}
+                    <div style={{ display: 'flex', gap: 6, marginTop: 10, borderTop: '1px solid #F8DCE5', paddingTop: 10 }}>
+                      <button
+                        onClick={(e) => toggleStatus(e, p)}
+                        aria-label="상태 변경"
+                        style={{
+                          flex: 1, minHeight: 44, minWidth: 44,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                          background: '#FFF8FA', border: '1.5px solid #F8DCE5',
+                          color: p.status === 'ACTIVE' ? '#16a34a' : p.status === 'OUT_OF_STOCK' ? '#e62310' : '#888',
+                          borderRadius: 10, cursor: 'pointer',
+                          fontSize: 11, fontWeight: 700,
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/>
+                        </svg>
+                        <span>상태</span>
+                      </button>
+                      <Link
+                        href={`/products/new?edit=${p.id}`}
+                        aria-label="수정"
+                        style={{
+                          flex: 1, minHeight: 44, minWidth: 44,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                          background: '#EFF6FF', border: '1.5px solid #BFDBFE',
+                          color: '#2563EB', borderRadius: 10, textDecoration: 'none',
+                          fontSize: 11, fontWeight: 700,
+                        }}
+                      >
+                        <Edit2 size={14} />
+                        <span>수정</span>
+                      </Link>
+                      <Link
+                        href={`/studio?product=${p.id}`}
+                        aria-label="온실 아틀리에"
+                        style={{
+                          flex: 1, minHeight: 44, minWidth: 44,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                          background: '#FFF0F5', border: '1.5px solid #FFB3CE',
+                          color: '#e62310', borderRadius: 10, textDecoration: 'none',
+                          fontSize: 11, fontWeight: 700,
+                        }}
+                      >
+                        <Palette size={14} />
+                        <span>온실</span>
+                      </Link>
+                      <button
+                        onClick={() => deleteProduct(p.id)}
+                        aria-label="삭제"
+                        style={{
+                          minHeight: 44, minWidth: 44,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: '#fff', border: '1.5px solid #fecaca',
+                          color: '#dc2626', borderRadius: 10, cursor: 'pointer',
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+              <div className="text-xs text-center" style={{ color: '#B0A0A8', marginTop: 4 }}>
+                {filtered.length}개 표시
+              </div>
             </div>
           )}
         </div>

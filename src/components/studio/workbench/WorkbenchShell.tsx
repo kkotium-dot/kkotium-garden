@@ -1,16 +1,12 @@
-// WorkbenchShell — Phase 2-B-1 layout-only 3-column container for the
-// 온실 아틀리에 workbench. Replaces the prior 4-card vertical stack with the
-// canonical creative-tool layout (left list / center canvas / right controls)
-// per UIUX_INTEGRATED_DESIGN_SYSTEM §6 (P0 아틀리에 "작업벤치").
+// WorkbenchShell — Phase 2-B-1 + 2-MOBILE-1: 3-column container for the
+// 온실 아틀리에 workbench (lg+), single-column stack on mobile (<lg).
 //
-// This is a pure layout shell. The 4 step components (Diagnosis / Thumbnail /
-// Detail / Actions) and the product list pane are still owned by the page
-// and passed in as render slots — their logic is unchanged.
+// Per UIUX_INTEGRATED_DESIGN_SYSTEM §6 + MOBILE_NAMING_FIREFLY 주제1:
+//   - lg+ (≥1024px): left list (280-320) / center canvas / right controls (320-360)
+//   - md (768-1023): same 3-col but the right rail can wrap below
+//   - <md: single column — list above, canvas, controls below
 //
-// Responsive guard:
-//   - min-width 1180 so 3 columns never collapse
-//   - center column uses minmax(0, 1fr) to prevent horizontal overflow
-//   - body inherits word-break: keep-all from globals.css for Korean
+// All section logic stays with the page; this file only arranges slots.
 
 import { ReactNode } from "react";
 
@@ -33,43 +29,33 @@ export default function WorkbenchShell({
 }: WorkbenchShellProps) {
   return (
     <div
+      className="lg:min-w-[1180px]"
       style={{
-        minWidth: 1180,
         minHeight: "calc(100vh - 60px)",
         background: "var(--color-bg)",
         wordBreak: "keep-all",
       }}
     >
       {header && (
-        <div
-          style={{
-            padding: "16px 20px 0",
-            background: "transparent",
-          }}
-        >
-          {header}
-        </div>
+        <div className="px-4 pt-4 lg:px-5 lg:pt-4">{header}</div>
       )}
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(280px, 320px) minmax(0, 1fr) minmax(320px, 360px)",
-          gap: "var(--space-4)",
-          padding: "16px 20px 32px",
-          alignItems: "stretch",
-          minHeight: "calc(100vh - 60px)",
-        }}
+        className={[
+          // 1-col mobile, 3-col lg+. lg uses fixed left/right widths so the
+          // center canvas absorbs all extra horizontal space.
+          "grid gap-4 px-4 pb-8 pt-4 lg:px-5 lg:pb-8 lg:pt-4",
+          "grid-cols-1 lg:grid-cols-[minmax(280px,320px)_minmax(0,1fr)_minmax(320px,360px)]",
+          "items-stretch",
+        ].join(" ")}
+        style={{ minHeight: "calc(100vh - 60px)" }}
       >
         <aside
+          className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto"
           style={{
             background: "var(--color-surface)",
             border: "1px solid var(--color-border)",
             borderRadius: "var(--radius-card)",
             padding: 14,
-            overflowY: "auto",
-            maxHeight: "calc(100vh - 120px)",
-            position: "sticky",
-            top: 16,
           }}
         >
           {list}
@@ -85,16 +71,13 @@ export default function WorkbenchShell({
           {canvas}
         </section>
         <aside
+          className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto"
           style={{
             minWidth: 0,
             display: "flex",
             flexDirection: "column",
             gap: "var(--space-4)",
-            position: "sticky",
-            top: 16,
             alignSelf: "flex-start",
-            maxHeight: "calc(100vh - 120px)",
-            overflowY: "auto",
           }}
         >
           {controls}

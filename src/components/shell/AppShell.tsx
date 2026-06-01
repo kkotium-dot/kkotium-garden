@@ -45,6 +45,9 @@ export default function AppShell({
       style={{
         display: "flex",
         minHeight: "100vh",
+        // Phase 2-MOBILE-1: --shell-min-w is overridden to 0 under lg via
+        // globals.css media query, so AppShell collapses gracefully on
+        // narrow screens. Desktop still gets 1180.
         minWidth: "var(--shell-min-w)",
         background: "var(--color-bg)",
         color: "var(--color-text)",

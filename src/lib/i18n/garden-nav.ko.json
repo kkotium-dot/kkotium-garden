@@ -162,6 +162,16 @@
     "en": "Kkotti",
     "note": "Tulip mascot — do not substitute the user nickname here. Per docs/research/GARDEN_CONCEPT_ANALYSIS_2026-06.md section 1."
   },
+  "mobileTabs": {
+    "_meta": "Phase 2-MOBILE-1 — 하단 고정 4탭(가든홈/화단/씨앗심기/온실). 44px 터치 타겟. 권위: MOBILE_NAMING_FIREFLY 주제1.",
+    "items": [
+      { "key": "dashboard", "href": "/dashboard", "ko": "가든 홈", "icon": "fountain" },
+      { "key": "products", "href": "/products", "ko": "화단", "icon": "shoppingbag" },
+      { "key": "sow", "href": "/products/new", "ko": "씨앗 심기", "icon": "packageplus" },
+      { "key": "studio", "href": "/studio", "ko": "온실", "icon": "palette" }
+    ],
+    "more": "더보기"
+  },
   "concept_pending": {
     "_comment": "Not implemented routes — kept for future Claude Design alignment. Do not generate route stubs.",
     "shipping_dachshund": { "ko": "닥스훈트 배송", "en": "Shipping" },

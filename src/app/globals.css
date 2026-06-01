@@ -257,6 +257,17 @@ div[class*="bg-gray-50"] {
 /* ─── Body word-break — Korean readability (brief: keep-all 전역 상속) ── */
 body { word-break: keep-all; }
 
+/* ─── Phase 2-MOBILE-1: horizontal scroll guard at the document level ── */
+html, body { overflow-x: hidden; max-width: 100vw; }
+
+/* The v6 --shell-min-w token still defaults to 1180 for AppShell/WorkbenchShell
+   on desktop. Mobile (≤1023px) overrides to 0 so the shell can collapse to
+   a single column. Components that rely on var(--shell-min-w) inherit the
+   override automatically. */
+@media (max-width: 1023.98px) {
+  :root { --shell-min-w: 0px; }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    v6 Utility classes — opt-in, additive
 ═══════════════════════════════════════════════════════════════ */

@@ -1,12 +1,22 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
+import MobileTabBar from "@/components/layout/MobileTabBar";
 import ToastProvider from "@/components/providers/ToastProvider";
 
 export const metadata: Metadata = {
   title: "꽃티움가든 - 상품 관리 시스템",
   description: "네이버 스마트스토어 상품 관리 및 AI 최적화 시스템",
+};
+
+// Phase 2-MOBILE-1: enable mobile viewport so the layout follows the device
+// width instead of defaulting to a desktop fallback. maximumScale=5 keeps
+// the page zoom-friendly per WCAG 1.4.4.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
@@ -30,12 +40,19 @@ export default function RootLayout({
       >
         <ToastProvider />
 
+        {/* Phase 2-MOBILE-1: Sidebar hidden under lg (≤1023px), MobileTabBar
+            shown instead. Desktop layout unchanged. */}
         <div style={{ display: 'flex', minHeight: '100vh' }}>
-          <Sidebar />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div className="hidden lg:flex">
+            <Sidebar />
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
             <Header />
-            <main style={{ flex: 1, overflowY: 'auto', background: 'transparent', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '24px 32px', paddingBottom: 32, flex: 1 }}>
+            <main style={{ flex: 1, overflowY: 'auto', background: 'transparent', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              <div
+                className="px-4 lg:px-8 pt-6 pb-20 lg:pb-8"
+                style={{ flex: 1, minWidth: 0 }}
+              >
                 {children}
               </div>
               {/* ── Appreciation footer — always at true bottom regardless of content height ── */}
@@ -68,6 +85,8 @@ export default function RootLayout({
             </main>
           </div>
         </div>
+        {/* Phase 2-MOBILE-1: fixed bottom tab bar — only renders under lg. */}
+        <MobileTabBar />
       </body>
     </html>
   );
