@@ -12,6 +12,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { analyzeCompetition, type CompetitionAnalysis } from '@/lib/naver/shopping-search';
+import {
+  fetchKeywordVolumes,
+  normalizeKeyword,
+  type VolumeRow,
+} from '@/lib/naver/searchad-volume';
 import { callGroq, GROQ_MODEL } from '@/lib/ai/groq';
 
 // ─── Style mode type ──────────────────────────────────────────────────────────
@@ -19,9 +24,62 @@ import { callGroq, GROQ_MODEL } from '@/lib/ai/groq';
 export const dynamic = 'force-dynamic';
 type SeoStyle = 'orthodox' | 'emotional' | 'niche';
 
+// ─── Search volume helpers (Lane 1, 2026-06-01) ───────────────────────────────
+
+/** Build the candidate keyword pool that gets SearchAd-priced BEFORE the AI
+ *  call. We seed the pool with the full product name and its space-split
+ *  tokens (>= 2 chars). The pool is capped at 10 so we never blow the
+ *  rate-limit budget (2 SearchAd batches max). */
+function extractCandidateKeywords(productName: string): string[] {
+  const cleaned = (productName ?? '')
+    .replace(/[,\.\(\)\[\]\/]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return [];
+  const tokens = cleaned.split(' ').filter((t) => t.length >= 2);
+  const pool: string[] = [];
+  const seen = new Set<string>();
+  for (const k of [cleaned, ...tokens]) {
+    const n = normalizeKeyword(k);
+    if (seen.has(n)) continue;
+    seen.add(n);
+    pool.push(k);
+    if (pool.length >= 10) break;
+  }
+  return pool;
+}
+
+/** Render the measured search-volume rows as an additional prompt section.
+ *  Sorted by descending total volume so the AI sees the highest-impact
+ *  keywords first. Workrule #46: never fabricate counts — only print what
+ *  SearchAd returned. */
+function renderVolumeContext(rows: VolumeRow[]): string {
+  if (rows.length === 0) return '';
+  const sorted = [...rows].sort(
+    (a, b) => b.totalMonthlyQc - a.totalMonthlyQc,
+  );
+  const lines = sorted
+    .slice(0, 10)
+    .map(
+      (r) =>
+        `- "${r.keyword}": PC ${r.monthlyPcQc.toLocaleString('en-US')} + Mobile ${r.monthlyMobileQc.toLocaleString('en-US')} = ${r.totalMonthlyQc.toLocaleString('en-US')}/mo, comp ${r.compIdx ?? 'unknown'}`,
+    )
+    .join('\n');
+  return `\n[SEARCH VOLUME DATA — Naver SearchAd /keywordstool, measured monthly counts]
+${lines}
+- The HIGHEST-volume keyword MUST appear within the first 15 characters of naver_title.
+- naver_keywords MUST be ordered by descending measured volume — high-volume first.
+- Do NOT invent or guess volume figures for unmeasured keywords (workrule #46).\n`;
+}
+
 // ─── Prompt builders ──────────────────────────────────────────────────────────
 
-function buildPrompt(productName: string, style: SeoStyle, market?: CompetitionAnalysis | null): string {
+function buildPrompt(
+  productName: string,
+  style: SeoStyle,
+  market?: CompetitionAnalysis | null,
+  volumes?: VolumeRow[] | null,
+): string {
   const marketContext = market
     ? `\n[MARKET DATA — use this to optimize keywords and pricing strategy]
 Competitors: ${market.totalResults.toLocaleString()} results (${market.competitionLevel})
@@ -30,7 +88,10 @@ Top sellers: ${market.topSellers.slice(0, 3).join(', ')}
 - If HIGH/VERY_HIGH competition: use long-tail keywords, niche attributes
 - If LOW/MEDIUM: use broad high-volume keywords\n`
     : '';
-  const base = `Product name: ${productName}${marketContext}
+  const volumeContext = volumes && volumes.length > 0
+    ? renderVolumeContext(volumes)
+    : '';
+  const base = `Product name: ${productName}${marketContext}${volumeContext}
 Respond ONLY with a raw JSON object. No markdown, no explanation, no preamble. First char must be {.
 
 {
@@ -76,7 +137,12 @@ Rules:
 // ─── AI provider calls ────────────────────────────────────────────────────────
 
 // Anthropic Claude Sonnet — last-resort fallback
-async function callAnthropic(productName: string, style: SeoStyle, market?: CompetitionAnalysis | null): Promise<Record<string, string>> {
+async function callAnthropic(
+  productName: string,
+  style: SeoStyle,
+  market?: CompetitionAnalysis | null,
+  volumes?: VolumeRow[] | null,
+): Promise<Record<string, string>> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -84,8 +150,8 @@ async function callAnthropic(productName: string, style: SeoStyle, market?: Comp
     headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514', max_tokens: 1000,
-      system: '네이버 SEO 전문가. 순수 JSON만 반환. 마크다운 금지.',
-      messages: [{ role: 'user', content: buildPrompt(productName, style, market) }],
+      system: 'Naver SEO expert. Return raw JSON only, no markdown.',
+      messages: [{ role: 'user', content: buildPrompt(productName, style, market, volumes) }],
     }),
   });
   if (!res.ok) throw new Error(`Anthropic ${res.status}`);
@@ -101,33 +167,150 @@ function parseJsonSafe(text: string): Record<string, string> {
   return JSON.parse(t);
 }
 
+/** Volume-signal telemetry returned to the caller — lets the verification
+ *  step distinguish "SearchAd produced N rows and we reordered" from "no
+ *  signal, AI order preserved". */
+export interface VolumeSignal {
+  available: boolean;
+  preFetchRows: number;
+  totalKnownRows: number;
+  reorderedKeywords: boolean;
+}
+
 async function generateSEO(
   productName: string,
   style: SeoStyle = 'orthodox',
-  market?: CompetitionAnalysis | null
-): Promise<{ data: Record<string, string>; provider: string; market?: CompetitionAnalysis | null }> {
-  // Priority: Groq (free, 3 keys round-robin) → Anthropic Sonnet (last-resort)
+  market?: CompetitionAnalysis | null,
+): Promise<{
+  data: Record<string, string>;
+  provider: string;
+  market?: CompetitionAnalysis | null;
+  volumeSignal: VolumeSignal;
+}> {
+  // ── Pre-AI SearchAd query ──────────────────────────────────────────────
+  // Seed candidates from the product name (full + tokens). null result from
+  // fetchKeywordVolumes means "no signal" — the AI prompt drops the section
+  // and we skip the post-sort. This is the additive-fallback contract:
+  // existing market signal still flows to the prompt regardless.
+  const volumeMap = new Map<string, VolumeRow>();
+  let volumesAvailable = false;
+  let preFetchRows = 0;
+  try {
+    const candidates = extractCandidateKeywords(productName);
+    if (candidates.length > 0) {
+      const pre = await fetchKeywordVolumes(candidates);
+      if (pre !== null) {
+        volumesAvailable = true;
+        preFetchRows = pre.length;
+        for (const r of pre) volumeMap.set(normalizeKeyword(r.keyword), r);
+      }
+    }
+  } catch (e) {
+    console.warn(
+      '[ai-generate] SearchAd pre-fetch failed:',
+      e instanceof Error ? e.message : String(e),
+    );
+  }
+  const preVolumeRows = [...volumeMap.values()];
 
-  // 1. Groq first — free, fast, stable
-  const hasGroqKey = !!(process.env.GROQ_API_KEY || process.env.GROQ_API_KEY_2 || process.env.GROQ_API_KEY_3);
+  // ── AI call (Groq primary → Anthropic last-resort) ─────────────────────
+  let aiData: Record<string, string> | null = null;
+  let provider = '';
+
+  const hasGroqKey = !!(
+    process.env.GROQ_API_KEY ||
+    process.env.GROQ_API_KEY_2 ||
+    process.env.GROQ_API_KEY_3
+  );
   if (hasGroqKey) {
     try {
       const text = await callGroq(
-        buildPrompt(productName, style, market),
+        buildPrompt(productName, style, market, preVolumeRows),
         'Output ONLY raw JSON. First char must be {, last must be }. No markdown.',
       );
-      return { data: parseJsonSafe(text), provider: `groq-${GROQ_MODEL}`, market };
+      aiData = parseJsonSafe(text);
+      provider = `groq-${GROQ_MODEL}`;
     } catch (e) {
-      console.warn('[ai-generate] All Groq keys failed, trying Anthropic:', e instanceof Error ? e.message.slice(0, 60) : e);
+      console.warn(
+        '[ai-generate] All Groq keys failed, trying Anthropic:',
+        e instanceof Error ? e.message.slice(0, 60) : e,
+      );
     }
   }
 
-  // 2. Anthropic last-resort
-  if (process.env.ANTHROPIC_API_KEY) {
-    return { data: await callAnthropic(productName, style, market), provider: 'claude-sonnet', market };
+  if (!aiData && process.env.ANTHROPIC_API_KEY) {
+    aiData = await callAnthropic(productName, style, market, preVolumeRows);
+    provider = 'claude-sonnet';
   }
 
-  throw new Error('AI 서비스 일시 응답 없음 (Groq + Anthropic 모두 실패). 잠시 후 다시 시도해주세요.');
+  if (!aiData) {
+    throw new Error(
+      'AI 서비스 일시 응답 없음 (Groq + Anthropic 모두 실패). 잠시 후 다시 시도해주세요.',
+    );
+  }
+
+  // ── Post-AI reorder by measured volume ─────────────────────────────────
+  // For every keyword the AI produced that we have NOT yet measured, do a
+  // top-up SearchAd query so the sort has data for it. AI keywords with no
+  // measurement sink to the bottom of the list (preserved, not dropped) —
+  // this respects the additive policy while still surfacing the real signal.
+  let reorderedKeywords = false;
+  if (volumesAvailable) {
+    const rawCsv = aiData.naver_keywords ?? '';
+    const aiKw = rawCsv
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean);
+
+    const unknown = aiKw.filter((k) => !volumeMap.has(normalizeKeyword(k)));
+    if (unknown.length > 0) {
+      try {
+        const more = await fetchKeywordVolumes(unknown);
+        if (more) {
+          for (const r of more) {
+            volumeMap.set(normalizeKeyword(r.keyword), r);
+          }
+        }
+      } catch (e) {
+        console.warn(
+          '[ai-generate] SearchAd post-fetch failed:',
+          e instanceof Error ? e.message : String(e),
+        );
+      }
+    }
+
+    if (aiKw.length > 0) {
+      const annotated = aiKw.map((k) => {
+        const row = volumeMap.get(normalizeKeyword(k));
+        return { kw: k, vol: row ? row.totalMonthlyQc : null };
+      });
+      annotated.sort((a, b) => {
+        // Measured-volume keywords first, descending; unmeasured keep
+        // original relative order at the tail.
+        if (a.vol !== null && b.vol !== null) return b.vol - a.vol;
+        if (a.vol !== null) return -1;
+        if (b.vol !== null) return 1;
+        return 0;
+      });
+      const sortedCsv = annotated.map((x) => x.kw).join(', ');
+      if (sortedCsv !== rawCsv) {
+        aiData.naver_keywords = sortedCsv;
+        reorderedKeywords = true;
+      }
+    }
+  }
+
+  return {
+    data: aiData,
+    provider,
+    market,
+    volumeSignal: {
+      available: volumesAvailable,
+      preFetchRows,
+      totalKnownRows: volumeMap.size,
+      reorderedKeywords,
+    },
+  };
 }
 
 // ─── POST: single product ─────────────────────────────────────────────────────
@@ -160,7 +343,7 @@ export async function POST(request: NextRequest) {
       }
     } catch { /* non-critical — proceed without market data */ }
 
-    const { data: aiResponse, provider } = await generateSEO(resolvedName, style as SeoStyle, market);
+    const { data: aiResponse, provider, volumeSignal } = await generateSEO(resolvedName, style as SeoStyle, market);
 
     if (productId && productId !== 'temp') {
       // Parse keywords from comma-separated string to JSON array
@@ -192,6 +375,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true, provider, style, data: aiResponse,
       ...(market ? { market: { competition: market.competitionLevel, avgPrice: market.avgPrice, totalResults: market.totalResults } } : {}),
+      volumeSignal,
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : '알 수 없는 오류';
