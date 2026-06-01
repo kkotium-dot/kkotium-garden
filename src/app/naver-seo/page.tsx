@@ -3,13 +3,14 @@
 // P2-2: category check, attribute score, inline AI accordion (3 styles), 2026 score weights
 // Accepts ?ids=id1,id2 from Garden Warehouse bulk float menu
 
-import { useState, Suspense } from 'react';
+import { useState, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import NaverSeoProductTable from '@/components/naver-seo/NaverSeoProductTable';
 import BulkEditModal, { BulkEditData } from '@/components/naver-seo/BulkEditModal';
 import AiProgressModal from '@/components/naver-seo/AiProgressModal';
 import { SeoEditDrawer } from '@/components/naver-seo/edit-drawer';
+import { seoDrawerCopy } from '@/lib/i18n/seo-drawer';
 import { RefreshCw, Search, Download } from 'lucide-react';
 import { useNaverSeoProducts, type NaverSeoProductApiItem as Product } from '@/lib/hooks/useDashboardData';
 
@@ -40,6 +41,28 @@ function NaverSeoInner() {
   // `window.location.href = /products/new?edit=`. Drawer hosts a deep-link
   // back to the full editor for advanced flows.
   const [drawerProductId, setDrawerProductId] = useState<string | null>(null);
+
+  // Phase 2-A-3d: parent-side dirty guard. The drawer lifts its isDirty
+  // state via onDirtyChange so this ref always reflects unsaved edits.
+  // Row clicks consult this ref before committing a switch / toggle-close,
+  // closing the loss-of-edits hole described in 2-A-3 commit. Close paths
+  // (X/ESC/backdrop/footer Close) stay inside the drawer's handleCloseGuarded
+  // so the two responsibilities don't overlap (no double confirm).
+  const drawerDirtyRef = useRef(false);
+
+  const handleRowProductClick = useCallback((id: string) => {
+    setDrawerProductId(prev => {
+      const next = prev === id ? null : id;
+      if (drawerDirtyRef.current) {
+        const msg = next === null
+          ? seoDrawerCopy.dirty.confirmDiscard
+          : seoDrawerCopy.dirty.confirmSwitch;
+        // window.confirm is synchronous; cancelling keeps the current id.
+        if (!window.confirm(msg)) return prev;
+      }
+      return next;
+    });
+  }, []);
 
   // SWR-backed products fetch (A3-3a) — replaces useState/useEffect/fetchProducts trio.
   // SWR auto-refetches when filter/searchQuery/presetIds change (key-as-dependency contract),
@@ -288,11 +311,13 @@ function NaverSeoInner() {
       ) : (
         <NaverSeoProductTable
           products={products}
-          /* Phase 2-A-1b drawer toggle policy:
+          /* Phase 2-A-1b drawer toggle policy + 2-A-3d dirty guard:
              - Different row → switch drawer to that product (stay open)
-             - Same row re-click → close (mirrors inline accordion collapse)
-             - Explicit close also via drawer X button / backdrop click */
-          onProductClick={id => setDrawerProductId(prev => prev === id ? null : id)}
+             - Same row re-click → toggle-close
+             - If the drawer has unsaved edits, ask first; cancelling keeps
+               the current id. Drawer's own close-path guard handles the
+               X / ESC / backdrop / footer Close routes — no overlap. */
+          onProductClick={handleRowProductClick}
           selectedIds={selectedIds}
           onSelectChange={setSelectedIds}
           onAiGenerate={handleAiGenerate}
@@ -325,6 +350,7 @@ function NaverSeoInner() {
         }
         onClose={() => setDrawerProductId(null)}
         onSaved={fetchProducts}
+        onDirtyChange={dirty => { drawerDirtyRef.current = dirty; }}
       />
 
       {showBulkEditModal && (

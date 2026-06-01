@@ -60,6 +60,11 @@ export interface SeoEditDrawerProps {
   /** Override soft/hard thresholds (default 50/100). */
   softLimit?: number;
   hardLimit?: number;
+  /** Phase 2-A-3d — lifted state so the page can guard row clicks before
+   *  the parent commits a product switch. Fires on every isDirty change
+   *  (also on mount with the initial value). The drawer keeps its own
+   *  close-path guard for X / ESC / backdrop / footer Close. */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 interface DraftState {
@@ -123,6 +128,7 @@ export default function SeoEditDrawer({
   onSaved,
   softLimit = 50,
   hardLimit = 100,
+  onDirtyChange,
 }: SeoEditDrawerProps) {
   const c = seoDrawerCopy;
   const [draft, setDraft] = useState<DraftState>(EMPTY);
@@ -155,18 +161,13 @@ export default function SeoEditDrawer({
     );
   }, [draft]);
 
-  // Reset draft + clear cached volume when target product changes. If the
-  // user had unsaved edits, surface a toast so the loss is visible
-  // (preventing the switch outright would require parent-level state).
+  // Reset draft + clear cached volume when target product changes. As of
+  // Phase 2-A-3d the parent (naver-seo/page.tsx) is the source of truth for
+  // dirty-guarded switches via onDirtyChange + dirtyRef + window.confirm in
+  // its row-click handler; this effect simply syncs to whatever the parent
+  // committed. Note: prevProductIdRef is retained for any future per-switch
+  // side effects without re-introducing the duplicate-confirm path.
   useEffect(() => {
-    const wasDirty = isDirty;
-    const switching = prevProductIdRef.current !== null && prevProductIdRef.current !== product?.id;
-    if (switching && wasDirty) {
-      // Best-effort: parent already committed the switch; we surface the
-      // loss instead of silently discarding. The full prevention path lives
-      // in Phase 2-A-3d follow-up at the page level.
-      toast.error(seoDrawerCopy.dirty.confirmSwitch.split("\n")[0], { duration: 2200 });
-    }
     const next = toDraft(product);
     originalRef.current = next;
     setDraft(next);
@@ -176,6 +177,12 @@ export default function SeoEditDrawer({
     prevProductIdRef.current = product?.id ?? null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id]);
+
+  // Phase 2-A-3d: report isDirty to the parent on every change (incl. mount
+  // with the initial false value) so its row-click guard reads a fresh ref.
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   // Derive the fetchable keyword list from the current draft.
   const sourceKeywords = useMemo(
