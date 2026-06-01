@@ -5,17 +5,23 @@
 // Sprint 7-M2 Phase 3-C-1 — Thumbnail variants (step 2) card extracted
 // from src/app/studio/page.tsx. Markup byte-identical to the original.
 
+import { useEffect, useState } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import { Card, PrimaryButton } from './StudioCardShell';
 import { THUMB_VARIANTS, type ThumbnailResult, type ThumbVariant } from './types';
-import { AssetDropZone } from './workbench';
+import { AssetDropZone, FireflyPromptBuilder, AiQueueStepper } from './workbench';
 
 // Phase 2-B-2: the raw URL text inputs for cutout / backdrop overrides are
 // now wrapped inside <AssetDropZone>, which adds a 5-state drag-and-drop
 // experience that uploads to /api/upload (Supabase Storage). The text input
 // fallback is still part of the drop zone, so legacy "paste a URL" flows
 // keep working. Card logic / props surface unchanged.
+//
+// Phase 2-B-3: AiQueueStepper(4단계) + FireflyPromptBuilder(6요소 합성
+// 프롬프트 + 복사 + 외부 링크 + 모델 안내)를 디자이너 소스 패널에 추가.
+// promptCopied는 ThumbnailCard 로컬 상태, 상품 전환 시 useEffect로 리셋.
+// 런타임 외부 이미지 생성 0(#38) — 프롬프트만, 생성은 셀러가 Firefly 웹에서.
 
 function sourceLabel(source?: string): string {
   if (source === 'manual') return strings.thumbnail.source.manual;
@@ -27,6 +33,7 @@ export function ThumbnailCard({
   thumbnails, busy, error, onRun, mainVariant, onSelectMain,
   manualCutoutUrl = '', onManualCutoutChange,
   manualBackdropUrl = '', onManualBackdropChange,
+  productName, category,
 }: {
   thumbnails: ThumbnailResult | null;
   busy: boolean;
@@ -38,7 +45,19 @@ export function ThumbnailCard({
   onManualCutoutChange?: (s: string) => void;
   manualBackdropUrl?: string;
   onManualBackdropChange?: (s: string) => void;
+  /** Phase 2-B-3 — feeds the Firefly prompt builder. Optional so PLANT
+   *  (7th-tab path) keeps compiling without passing these. */
+  productName?: string;
+  category?: string | null;
 }) {
+  // Phase 2-B-3: stepper derived state. promptCopied is local — resets
+  // when the seller switches product (productName prop change).
+  const [promptCopied, setPromptCopied] = useState(false);
+  useEffect(() => {
+    setPromptCopied(false);
+  }, [productName]);
+  const hasUploadedAsset = Boolean(manualCutoutUrl) || Boolean(manualBackdropUrl);
+  const hasThumbnails = thumbnails != null && thumbnails.outputs.length > 0;
   return (
     <Card
       title={strings.thumbnail.title}
@@ -48,18 +67,36 @@ export function ThumbnailCard({
       totalSteps={4}
       done={thumbnails != null}
     >
-      {/* G8-ENGINE B-layer designer source overrides — Phase 2-B-2 promotes
-          the raw URL inputs to 5-state drop zones (drag/click upload to
-          Supabase Storage via /api/upload). Plain URL paste still works
-          inside each zone's fallback text input. */}
+      {/* G8-ENGINE B-layer designer source overrides — Phase 2-B-2/3 layout:
+          stepper (4단계) + Firefly prompt builder (6요소) + drop zones with
+          5-state DnD. All composable; no runtime external image generation. */}
       {(onManualCutoutChange || onManualBackdropChange) && (
         <div style={{
           marginBottom: 12, padding: 12, background: '#FFF7FB',
           border: '1px solid #FFE0EC', borderRadius: 10,
+          display: 'flex', flexDirection: 'column', gap: 12,
         }}>
-          <p style={{ fontSize: 12, fontWeight: 800, color: '#1A1A1A', margin: '0 0 8px' }}>
+          <p style={{ fontSize: 12, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>
             {strings.thumbnail.manualTitle}
           </p>
+
+          {/* Phase 2-B-3 — 4-stage stepper for the HITL Firefly workflow */}
+          <AiQueueStepper
+            promptReady={true}
+            promptCopied={promptCopied}
+            hasUploadedAsset={hasUploadedAsset}
+            hasThumbnails={hasThumbnails}
+          />
+
+          {/* Phase 2-B-3 — Firefly composite prompt builder (6 elements +
+              copy + Firefly link + model guidance). */}
+          <FireflyPromptBuilder
+            productName={productName}
+            category={category ?? undefined}
+            onPromptCopied={() => setPromptCopied(true)}
+          />
+
+          {/* Phase 2-B-2 — designer source drop zones (5-state DnD + URL fallback) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {onManualCutoutChange && (
               <AssetDropZone
@@ -80,7 +117,7 @@ export function ThumbnailCard({
               />
             )}
           </div>
-          <p style={{ fontSize: 11, color: '#B0A0A8', margin: '8px 0 0' }}>
+          <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>
             {strings.thumbnail.manualHint}
           </p>
         </div>

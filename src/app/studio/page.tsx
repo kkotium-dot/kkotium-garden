@@ -209,6 +209,8 @@ function StudioInner() {
           onManualCutoutChange={actions.setManualCutoutUrl}
           manualBackdropUrl={actions.manualBackdropUrl}
           onManualBackdropChange={actions.setManualBackdropUrl}
+          productName={selectedProduct?.name}
+          category={selectedProduct?.category}
         />
       }
       detail={

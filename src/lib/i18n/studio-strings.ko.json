@@ -178,6 +178,48 @@
       "urlPlaceholder": "또는 https://... URL 직접 붙여넣기",
       "hintCutout": "투명 배경 PNG 권장 — Supabase product-images 버킷에 저장됩니다.",
       "hintBackdrop": "JPG/PNG/WebP 모두 가능 — Supabase product-images 버킷에 저장됩니다."
+    },
+    "firefly": {
+      "_meta": "Phase 2-B-3 — Firefly 합성 프롬프트 빌더 (6요소). 런타임 외부 이미지 생성 0 — 프롬프트만 작성, 생성은 셀러가 Firefly 웹에서.",
+      "title": "Firefly 합성 프롬프트",
+      "elementsBadge": "6요소",
+      "elements": {
+        "light": "1. 광원 방향",
+        "temperature": "2. 색온도",
+        "contactShadow": "3. 접지 그림자",
+        "castShadow": "4. 캐스트 그림자",
+        "grounding": "5. 접지감 (떠보임 금지)",
+        "perspective": "6. 원근 + 반사"
+      },
+      "faceFreeNote": "★얼굴 없는 인체 일부 전략 — 프롬프트에 얼굴 생성 금지 문구 포함됨 (손/부분 토르소만, IP 안전).",
+      "copyBtn": "프롬프트 복사",
+      "copiedBtn": "복사 완료",
+      "copyError": "복사 실패",
+      "openFireflyBtn": "Firefly에서 만들기",
+      "categoryHint": "카테고리",
+      "modelGuideTitle": "Firefly 웹에서 모델 선택 — 전 모델 자유 사용",
+      "modelFirefly": "Firefly Image 5",
+      "modelFireflyDesc": "제품 합성·사실 조명·IP 안전. 기본 권장.",
+      "modelGemini": "Gemini (Nano Banana 2/Pro)",
+      "modelGeminiDesc": "빠른 변형·대화형. Pro는 유리/반사/복잡 조명 우수.",
+      "modelFlux": "FLUX",
+      "modelFluxDesc": "이미지 내 텍스트·일관성 강점.",
+      "modelFreeChoice": "크레딧 무관 전 모델 자유 사용. 빠른 모델로 구도 탐색 → 최종 고품질 렌더 권장."
+    },
+    "stepper": {
+      "_meta": "Phase 2-B-3 — AI 생성 워크플로우 4단계 진행바. 사람 1클릭 HITL.",
+      "title": "AI 생성 큐",
+      "stagePrompt": "프롬프트",
+      "stageGenerate": "Firefly 생성",
+      "stageUpload": "결과 업로드",
+      "stageCanvas": "캔버스 반영",
+      "hintPrompt": "6요소 프롬프트 자동 작성 + 복사",
+      "hintGenerate": "Firefly 웹에서 모델 선택 → 생성",
+      "hintUpload": "결과 PNG를 아래 드롭존에 끌어놓기",
+      "hintCanvas": "썸네일 생성 후 캔버스에 4변형 자동 표시",
+      "tagComplete": "완료",
+      "tagActive": "진행",
+      "tagPending": "대기"
     }
   }
 }

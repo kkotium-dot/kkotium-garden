@@ -71,21 +71,62 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
-**Last update**: 2026-05-29 (Code turn, push f6ce373) — Phase G8-ENGINE-Q4 **Adobe Workflow SOP 시스템화 + 누끼·합성 파이프라인 [코드 완료]** (item 1-11, 리서치 KKOTIUM_ADOBE_WORKFLOW_RESEARCH_2026-05-29.md 정합). 신규 4모듈은 Workflow 서브에이전트 병렬 작성, 상호의존·DB·배포는 메인 루프 통합. (1) DB Product.legalApproval 컬럼(멱등 raw ALTER — production은 db push 관리라 migrate deploy 부적합 확인). (2) 명화송풍구 master_pd_verified seed(반 고흐 1890/모네 1926 PD). (3) category-tone-mapper: foreign-cinematic-sunlit baseTone + naturalLight, fragrance 다크->햇살 전환. (4) adobe-tool-router.ts: 변형xToneDirective -> AdobeToolPlan(clean/badge=Firefly 네이티브 면책, lifestyle 한국전통=Nano Banana+재생성 요구). (5) cutout-strategy.ts: 도매꾹 stt_330/저해상 -> manual-upload 강제. (6) composition-reference.ts: Firefly Composition Reference 계획(결정론 seed). (7) brand-kit-spec.ts: KKOTIUM_BRAND_KIT. (8) asset-legal-gate 확장: partner-model-final-commercial block + domeggook advisory warning + master_pd_verified 우회. (9) art_director_prompts: dark #4 deprecated + sunlit 5종 seed(g8q4-seed). (10) cutout-quality-check.js(1000/4MB/투명도). (11) route adobeWorkflow/cutoutStrategy/legalApproval 노출. production 검증: 아이스트레이(legalApproval null, passed=true + domeggook advisory warning, cutoutStrategy=manual-upload 760px 감지, adobeWorkflow firefly-image-5 면책) + 명화송풍구(master_pd_verified -> 명화 block 우회 passed=true, baseTone foreign-cinematic-sunlit/naturalLight true). TSC0/build0/verify-vercel exit0(f6ce373). 외부 이미지 API 런타임 0(#38). 비가역 0.
+**Last update**: 2026-06-01 (Desktop turn) — **UI/UX 통합재설계 Sprint 진행 중**. G8-ENGINE 이미지 파이프라인은 [보류 누적]으로 이관, 현재 메인 트랙 = 앱 전체 UI/UX 재설계(레트로 팝 가든 판타지 디자인 시스템).
 
-## ⭐ ACTIVE — 다음 세션 진입점: 파이프라인 확장(아이스트레이·달항아리) 또는 명화송풍구 cutout 적재 (2026-05-30 Desktop 갱신)
+### 진행 완료 (Desktop 전수 Chrome MCP 검증)
+| Phase | 내용 | Commit |
+|---|---|---|
+| 1 | v6 토큰(Retro Pop Garden Fantasy) + 공통 셸 | 94de20e |
+| 2-A-1 | SEO 편집 드로어 + 길이 게이지 + 중복 경고 | 03290ca |
+| 2-A-1b | 드로어 wiring 복구 | 192264e |
+| 2-A-2 | 키워드 검색량·경쟁강도 막대 | a973bcd |
+| 2-A-3 | 발행 게이트 + 이미지 가이드 + UI 단일화 + 오타(꼬띠) | a791d0a |
+| 2-A-3d | 미저장 draft 페이지레벨 전환 가드 | 76cd8b1 |
+| 2-B-1 | 아틀리에 3분할 작업벤치 셸 | 0936a59 |
+| 2-B-2 | 캔버스 4변형 그리드 + 드래그앤드롭 5상태 | 754d5c6 |
 
-> **선행 [CLOSED]**: 명화송풍구 S6 backdrop 적재 + 라우터 모델 격상(commit 4e3c543)이 6/6 게이트 Desktop 실측 교차검증 통과(SESSION_LOG 2026-05-30). assetSource.backdrop=auto-cache 전환 + lifestyle 픽셀 Nano Banana Pro 씬 발현 육안 확인. matchScore 정정: production 실측 62.5(Code 보고 75 상이).
+### ⭐ NEXT (다음 진입점 — 4트랙, 각자 새 채팅에서 분할 진행)
+| 트랙 | 내용 | 우선 | 권위 문서 |
+|---|---|---|---|
+| 2-B-3 | 아틀리에 AI 큐 stepper + Firefly 합성 프롬프트 빌더(6요소) + 모델 선택 안내 + 외부 링크 | 진행중 | MOBILE_NAMING_FIREFLY 주제3 |
+| 2-MOBILE-1 | viewport 1180 해제 + 하단 탭바 + 상품목록 카드 스택 + 터치 44px | P0 | MOBILE_NAMING_FIREFLY 주제1 |
+| 2-MOBILE-2 | 아틀리에 3분할 모바일(캔버스+탭+바텀시트) + SEO 드로어 전체화면 모달 | P1 | 주제1 |
+| 2-NAMING | S6/L2/30-40s/friendly 명칭 직관화 + 용어집 | P1 | 주제2 |
+
+| 항목 | 값 |
+|---|---|
+| **FROM** | 🖥 Desktop (2-B-2 전수 검증 [CLOSED] + 모바일/명칭/Firefly 리서치 완료, 2026-06-01) |
+| **TO** | 다음 새 채팅 (트랙별 분할 — Code build, Desktop verify) |
+| **BASELINE** | 754d5c6 (origin/main, Vercel READY) |
+| **NEXT SCOPE** | 위 4트랙 중 택1 진행. 권고 순서: 2-B-3(진행중 마무리) → 2-MOBILE-1(P0 사용성) → 2-NAMING → 2-MOBILE-2 |
+| **PENDING** | [신규] G8-ENGINE 이미지 파이프라인(아이스트레이/달항아리 backdrop 적재) — UI/UX Sprint 후 재개 / 달항아리 네이버 발행(대표 승인) / 명화송풍구 cutout 적재 / 기존 PENDING 누적 |
+
+### 권위 문서 (UI/UX Sprint, 정독 우선순위)
+1. docs/research/GARDEN_DESIGN_BRIEF_2026-06.md (★레트로 팝 무드)
+2. docs/research/GARDEN_CONCEPT_ANALYSIS_2026-06.md (정원 매핑·꼬띠 튤립·채팅 교훈)
+3. docs/research/UIUX_INTEGRATED_DESIGN_SYSTEM_2026-06.md (디자인 시스템·로드맵)
+4. docs/research/MOBILE_NAMING_FIREFLY_2026-06.md (모바일·명칭·Firefly 합성)
+5. docs/handoff/UIUX_PROGRESS_HANDOFF_2026-06-01.md (진행 보드·중단 복구)
+
+---
+
+### [SUPERSEDED 2026-06-01 by UI/UX Sprint] 이전 ACTIVE — G8-ENGINE Q4 파이프라인 (보존, 향후 재개 진입점)
+
+**Last update**: 2026-05-29 (Code turn, push f6ce373) — Phase G8-ENGINE-Q4 Adobe Workflow SOP 시스템화 + 누끼·합성 파이프라인 [코드 완료]. 상세 11항목 commit f6ce373 본문 참조. production 검증: 아이스트레이/명화송풍구 통과. TSC0/build0/verify-vercel exit0. 외부 이미지 API 런타임 0(#38). 비가역 0.
+
+#### 다음 세션 진입점 (UI/UX Sprint 종료 후 재개) — 2026-05-30 Desktop 갱신
+
+> **선행 [CLOSED]**: 명화송풍구 S6 backdrop 적재 + 라우터 모델 격상(commit 4e3c543)이 6/6 게이트 Desktop 실측 교차검증 통과. assetSource.backdrop=auto-cache 전환 + lifestyle 픽셀 Nano Banana Pro 씬 발현 육안 확인.
 >
-> **⭐ 아키텍처 결정 (2026-05-30, 리서치 docs/research/FIREFLY_AUTOMATION_RESEARCH_2026-05-30.md)**: "Firefly 생성까지 브라우저 무인 자동화"는 Adobe 약관상 스크립트 자동화 금지 + 단일 계정 정지 리스크로 **반려**. 소비자 구독은 API 권한 없음(Firefly Services API=엔터프라이즈 50석/3년/월$1,000+). **채택 방향 = 무인 적재 spine**: 생성=사람 1클릭, 그 이후 다운로드·VLM 빈배경판 판별·service-role 적재·auto-cache 검증을 앱/워커가 무인화. Code Phase 1 진입점 = 하단 별도 핸드오프 블록. **즉시 운영 잔무**: 아이스트레이 배경(icetray_backdrop_S1.png 1024x1024, 대표 생성 완료)은 채팅으로 업로드됨 — 두 파일시스템 분리로 이번 세션 적재 보류, Phase 1 spine 또는 Code 세션(로컬 ~/Downloads 저장 후 upload-backdrop.js)으로 이월.
+> **⭐ 아키텍처 결정 (2026-05-30, 리서치 docs/research/FIREFLY_AUTOMATION_RESEARCH_2026-05-30.md)**: Firefly 무인 자동화 반려. 채택 = 무인 적재 spine(생성=사람 1클릭, 이후 다운로드·VLM·service-role 적재·auto-cache 검증 무인화).
 
 | 항목 | 값 |
 |---|---|
 | **FROM** | 🖥 Desktop (G8 backdrop 적재 + 라우터 격상 6/6 교차검증 [CLOSED], 2026-05-30) |
-| **TO** | 다음 새 채팅 (Desktop 메인 — 브라우저 MCP로 생성·적재, Code는 적재 명령만) |
-| **BASELINE** | 4e3c543 (origin/main, Vercel READY — 라우터 격상 반영). 코드 변경 0 운영 turn 기본 |
-| **NEXT SCOPE** | Lane 1 자동SEO [CLOSED]. 다음 = Lane 2(Adobe 이미지 생성 파이프라인) 설계 OR 달항아리 발행(대표 승인). 달항아리 전축 GREEN: 디자인3종+상세진위+네이버고시+badge SSOT+SEO자동값+정체성보존. |
-| **PENDING** | 명화송풍구 cutout 소스 확보(추가이미지/고해상 단품 부재 — 선행 필요) / 명화송풍구 B-12 네이버 발행(대표 승인 후) / B-3 달항아리 카테고리·originCode 오염 / Claude MCP 워크플로 트랙 / Q5(Custom Models·Bulk Create) |
+| **TO** | 향후 새 채팅 (UI/UX Sprint 종료 후) |
+| **BASELINE** | 4e3c543 (G8-ENGINE 시점) |
+| **NEXT SCOPE** | Lane 2(Adobe 이미지 생성 파이프라인) 설계 OR 달항아리 발행(대표 승인) |
+| **PENDING** | 명화송풍구 cutout 소스 확보 / B-12 네이버 발행(대표 승인 후) / B-3 달항아리 카테고리·originCode 오염 / Claude MCP 워크플로 트랙 / Q5(Custom Models·Bulk Create) |
 
 ### [CLOSED 2026-05-30] 명화송풍구 S6 backdrop 적재 — 아래 SUPERSEDED 블록이 당초 계획, 6/6 검증 통과로 종결
 
@@ -154,11 +195,12 @@
 |---|---|---|
 | SD-01 | Studio (/studio) footer 아랍어 텍스트 **영구 보존** — paper-cut 인벤토리 영구 제외, 수정/삭제/조사/문서화/source 추적 금지 | 사용자 의도적 개인 감사 메시지, 2026-05-18 |
 | SD-02 | bornscent supplier DB INSERT 완료 (id `cm62770f54a42a46a4ae4c53d`, code `DMM-BRNSC`) — P2 자동 매칭 OK | Desktop이 Supabase MCP 직접 INSERT, 2026-05-18 |
-| SD-03 | AI fallback chain = Groq (primary, 2 working keys) → Gemini 2.0-flash (3 keys round-robin) → Anthropic Sonnet (last-resort). Perplexity + xAI DEPRECATED | PROGRESS.md 2026-05-15 v3.1 FINAL 정합 |
+| SD-03 | AI fallback chain = Groq (primary, 2 working keys) → Anthropic Sonnet (last-resort). Gemini API는 키 커밋 노출 사고로 revoke 상태 — 키 보안 해결 시 재사용 가능(모델 금지 아님). Firefly 웹 UI의 모델 선택(Gemini/Nano Banana/FLUX 등)은 키와 무관, 전 모델 자유 사용. Perplexity + xAI DEPRECATED. (2026-06-01 정정) | PROGRESS.md 2026-05-15 v3.1 FINAL + 2026-06-01 Desktop 정정 |
 | SD-04 | main 직접 push (1인 개발, 브랜치 없음) | 작업원칙 #4 |
 | SD-05 | Vercel production = source of truth (dev 가정 production 아키텍처 금지) | 작업원칙 #28 |
 | SD-06 | 사용자 닉네임 답변 본문 직접 입력 금지 (사용자 메시지 인용 / 코드 변수 / write_file MD만 허용) | 작업원칙 #29 e++ |
 | SD-07 | 자동화 *모니터링* UI는 *대시보드 Section 5 카드*가 primary 진입점 — `/admin/automation`은 관리자 전용 fallback. registry는 *실 가동 작업만* 등재 (미구현 작업 사전 라벨 금지) | 사용자 Q1·Q2 결정 2026-05-19 |
+| SD-08 | 꼬띠 = 튤립 마스코트(다람쥐 아님), 공식 안내자. 닥스훈트 배송·좀비소(좀비 보관소) = 컨셉 후보 미실현(라우트 미생성, i18n 주석만). 정원 그린 보조색 공식 추가. 2-Zone(감성=대시보드 풀 / 작업=SEO·아틀리에 절제, 무채색화 금지). | 2026-06-01 Desktop GARDEN_CONCEPT_ANALYSIS 정합 |
 
 ---
 
