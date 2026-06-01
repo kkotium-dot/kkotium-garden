@@ -142,18 +142,42 @@
     "fallbackNote": "fallback 사용 ({n}/{total} 섹션)"
   },
   "workbench": {
-    "_meta": "Phase 2-B-1 — 3분할 작업벤치 (좌 목록 / 중앙 캔버스 / 우 4탭). 권위: UIUX_INTEGRATED_DESIGN_SYSTEM §6.",
+    "_meta": "Phase 2-B-1·2 — 3분할 작업벤치 + 캔버스 결과/드롭존. 권위: UIUX_INTEGRATED_DESIGN_SYSTEM §6.",
     "canvas": {
       "title": "캔버스",
-      "previewBadge": "미리보기",
+      "previewBadge": "원본 미리보기",
+      "previewAfterBadge": "AI 가공 결과",
       "emptyState": "좌측에서 상품을 선택하면 메인 이미지가 여기 표시됩니다.",
-      "phaseNote": "Phase 2-B-2: 썸네일 4변형 + 누끼 + 배경 결과 + 드래그앤드롭 5상태로 확장 예정."
+      "beforeFromOriginal": "원본 이미지 없음 — 도매꾹 mainImage 미설정",
+      "beforeOriginalNote": "원본 비교 모드 — 우상단 토글로 가공 결과 보기",
+      "toggleAfter": "가공 보기",
+      "toggleBefore": "원본 비교",
+      "cutoutSlot": "누끼 (디자이너 소스)",
+      "backdropSlot": "배경 (디자이너 소스)",
+      "designerBadge": "수동",
+      "phaseNote": "Phase 2-B-3: 우측 AI 큐 stepper + 프롬프트 복사 + 외부 생성 도구 링크 예정."
     },
     "tabs": {
       "diagnosis": "진단",
       "thumbnail": "썸네일",
       "detail": "상세",
       "actions": "저장·발행"
+    },
+    "dropzone": {
+      "_meta": "Phase 2-B-2 — 디자이너 소스 업로드 드롭존. /api/upload 재활용 + Supabase Storage. 런타임 외부 이미지 생성 0.",
+      "stateIdle": "대기",
+      "stateDragging": "놓으세요",
+      "stateUploading": "업로드 중",
+      "stateComplete": "완료",
+      "stateError": "오류",
+      "idleMsg": "파일을 드래그하거나 클릭해서 선택",
+      "draggingMsg": "여기에 놓으면 업로드가 시작됩니다",
+      "uploadingMsg": "Supabase Storage로 업로드 중...",
+      "completeMsg": "업로드 완료 — URL이 아래 입력란에 반영되었습니다",
+      "errorMsg": "업로드 실패 — 다시 시도하거나 URL을 직접 붙여넣으세요",
+      "urlPlaceholder": "또는 https://... URL 직접 붙여넣기",
+      "hintCutout": "투명 배경 PNG 권장 — Supabase product-images 버킷에 저장됩니다.",
+      "hintBackdrop": "JPG/PNG/WebP 모두 가능 — Supabase product-images 버킷에 저장됩니다."
     }
   }
 }

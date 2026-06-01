@@ -179,6 +179,11 @@ function StudioInner() {
     <WorkbenchCanvas
       mainImage={selectedProduct?.mainImage ?? null}
       productName={selectedProduct?.name}
+      thumbnails={actions.thumbnails}
+      mainVariant={actions.mainVariant}
+      onSelectMain={actions.setMainVariant}
+      cutoutUrl={actions.manualCutoutUrl || undefined}
+      backdropUrl={actions.manualBackdropUrl || undefined}
     />
   );
 

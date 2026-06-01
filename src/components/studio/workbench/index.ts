@@ -8,3 +8,6 @@ export type { WorkbenchCanvasProps } from "./WorkbenchCanvas";
 
 export { default as WorkbenchTabs } from "./WorkbenchTabs";
 export type { WorkbenchTabsProps, WorkbenchTabKey } from "./WorkbenchTabs";
+
+export { default as AssetDropZone } from "./AssetDropZone";
+export type { AssetDropZoneProps, AssetDropZoneState } from "./AssetDropZone";

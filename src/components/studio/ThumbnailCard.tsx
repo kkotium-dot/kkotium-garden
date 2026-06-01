@@ -5,18 +5,17 @@
 // Sprint 7-M2 Phase 3-C-1 — Thumbnail variants (step 2) card extracted
 // from src/app/studio/page.tsx. Markup byte-identical to the original.
 
-import type { CSSProperties } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import { Card, PrimaryButton } from './StudioCardShell';
 import { THUMB_VARIANTS, type ThumbnailResult, type ThumbVariant } from './types';
+import { AssetDropZone } from './workbench';
 
-// Optional manual-override field — empty string means "no override".
-const inputStyle: CSSProperties = {
-  width: '100%', padding: '7px 10px', fontSize: 12,
-  border: '1.5px solid #FFD6E6', borderRadius: 8, color: '#1A1A1A',
-  background: '#fff', boxSizing: 'border-box',
-};
+// Phase 2-B-2: the raw URL text inputs for cutout / backdrop overrides are
+// now wrapped inside <AssetDropZone>, which adds a 5-state drag-and-drop
+// experience that uploads to /api/upload (Supabase Storage). The text input
+// fallback is still part of the drop zone, so legacy "paste a URL" flows
+// keep working. Card logic / props surface unchanged.
 
 function sourceLabel(source?: string): string {
   if (source === 'manual') return strings.thumbnail.source.manual;
@@ -49,7 +48,10 @@ export function ThumbnailCard({
       totalSteps={4}
       done={thumbnails != null}
     >
-      {/* G8-ENGINE B-layer: designer source overrides (optional) */}
+      {/* G8-ENGINE B-layer designer source overrides — Phase 2-B-2 promotes
+          the raw URL inputs to 5-state drop zones (drag/click upload to
+          Supabase Storage via /api/upload). Plain URL paste still works
+          inside each zone's fallback text input. */}
       {(onManualCutoutChange || onManualBackdropChange) && (
         <div style={{
           marginBottom: 12, padding: 12, background: '#FFF7FB',
@@ -58,27 +60,25 @@ export function ThumbnailCard({
           <p style={{ fontSize: 12, fontWeight: 800, color: '#1A1A1A', margin: '0 0 8px' }}>
             {strings.thumbnail.manualTitle}
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <label style={{ fontSize: 11, color: '#7A6873', fontWeight: 700 }}>
-              {strings.thumbnail.manualCutoutLabel}
-              <input
-                type="url"
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {onManualCutoutChange && (
+              <AssetDropZone
+                label={strings.thumbnail.manualCutoutLabel}
                 value={manualCutoutUrl}
-                onChange={(e) => onManualCutoutChange?.(e.target.value)}
-                placeholder="https://…/cutout.png"
-                style={{ ...inputStyle, marginTop: 4 }}
+                onChange={onManualCutoutChange}
+                accept="image/png,image/webp"
+                hint={strings.workbench.dropzone.hintCutout}
               />
-            </label>
-            <label style={{ fontSize: 11, color: '#7A6873', fontWeight: 700 }}>
-              {strings.thumbnail.manualBackdropLabel}
-              <input
-                type="url"
+            )}
+            {onManualBackdropChange && (
+              <AssetDropZone
+                label={strings.thumbnail.manualBackdropLabel}
                 value={manualBackdropUrl}
-                onChange={(e) => onManualBackdropChange?.(e.target.value)}
-                placeholder="https://…/backdrop.png"
-                style={{ ...inputStyle, marginTop: 4 }}
+                onChange={onManualBackdropChange}
+                accept="image/png,image/jpeg,image/webp"
+                hint={strings.workbench.dropzone.hintBackdrop}
               />
-            </label>
+            )}
           </div>
           <p style={{ fontSize: 11, color: '#B0A0A8', margin: '8px 0 0' }}>
             {strings.thumbnail.manualHint}
