@@ -49,6 +49,15 @@ const INTENT_SUFFIX = '선물';
 
 const POOL_CAP = 15;
 
+// Lane 1-C (2026-06-01) — naver_title length-fill targets.
+//   Naver hard cap: 50 chars. We fill UP TO TARGET_MAX (45 — 5-char safety
+//   margin) WHEN current length is below TARGET_MIN (35). The fill draws
+//   from finalScored (measured pool) in intent-weighted order, skipping
+//   any keyword whose tokens already appear in the title (anti-stuffing).
+const TITLE_TARGET_MIN_LENGTH = 35;
+const TITLE_TARGET_MAX_LENGTH = 45;
+const TITLE_HARD_CAP = 50;
+
 function intentMultiplier(kw: string): number {
   const k = kw.replace(/\s+/g, '');
   for (const t of INTENT_TOKENS) {
@@ -60,6 +69,29 @@ function intentMultiplier(kw: string): number {
 
 function scoreKeyword(volume: number, kw: string): number {
   return volume * intentMultiplier(kw);
+}
+
+/** Token-aware "is this keyword already in the title" check, used by the
+ *  Lane 1-C length-fill loop. Returns true when:
+ *    - the candidate is a substring of the title (already present), OR
+ *    - any whitespace-separated title token (>= 2 chars) is a substring of
+ *      the candidate (the candidate would re-introduce an existing word as
+ *      part of a longer phrase — keyword-stuffing pattern).
+ *  Comparison is whitespace-stripped + lowercased per normalizeKeyword. */
+function titleAlreadyHas(title: string, kw: string): boolean {
+  const titleNorm = normalizeKeyword(title);
+  const kwNorm = normalizeKeyword(kw);
+  if (!kwNorm) return true;
+  if (titleNorm.includes(kwNorm)) return true;
+  const tokens = title
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 2);
+  for (const t of tokens) {
+    const tn = normalizeKeyword(t);
+    if (tn && kwNorm.includes(tn)) return true;
+  }
+  return false;
 }
 
 interface CandidateBundle {
@@ -303,6 +335,12 @@ export interface VolumeSignal {
   sortApplied: boolean;
   keywordsChanged: boolean;
   titlePrefixInjected: boolean;
+  /** Lane 1-C (2026-06-01): did the length-fill loop append measured
+   *  keywords to naver_title because the AI emitted a sub-TARGET_MIN title? */
+  titleLengthFilled: boolean;
+  /** Final length of naver_title after every Lane 1-B/C transformation —
+   *  intent-prefix, sort, and length-fill. Null when AI omitted the field. */
+  finalTitleLength: number | null;
   topIntentKeyword: string | null;
 }
 
@@ -390,6 +428,7 @@ async function generateSEO(
   let sortApplied = false;
   let keywordsChanged = false;
   let titlePrefixInjected = false;
+  let titleLengthFilled = false;
   let topIntentKeyword: string | null = null;
 
   if (volumesAvailable) {
@@ -505,7 +544,51 @@ async function generateSEO(
         titlePrefixInjected = true;
       }
     }
+
+    // ── Length-fill (Lane 1-C, 2026-06-01) ──
+    // The AI emits sub-spec titles (18–23 chars observed) even under the
+    // 25–35 prompt directive, leaving SEO slots empty. Append measured
+    // pool keywords in intent-weighted order until we reach TARGET_MAX.
+    //
+    // Honesty constraints (workrule #46):
+    //   - Only finalScored entries are eligible (totalMonthlyQc > 0).
+    //   - Deboosted generic keywords (intent multiplier < 1.0) are not
+    //     fill-eligible — we deboosted them for a reason; placing them in
+    //     the title would undo the entire intent-weighting effort.
+    //   - Anti-stuffing dedupe via titleAlreadyHas (token-aware).
+    //   - Soft target TITLE_TARGET_MAX_LENGTH; HARD cap TITLE_HARD_CAP.
+    if (
+      aiData.naver_title &&
+      finalScored.length > 0 &&
+      aiData.naver_title.length < TITLE_TARGET_MIN_LENGTH
+    ) {
+      let working = aiData.naver_title;
+      for (const { kw } of finalScored) {
+        if (working.length >= TITLE_TARGET_MAX_LENGTH) break;
+        if (intentMultiplier(kw) < 1.0) continue; // deboosted: skip
+        if (titleAlreadyHas(working, kw)) continue;
+        const candidate = `${working} ${kw}`;
+        if (candidate.length > TITLE_TARGET_MAX_LENGTH) continue; // try shorter
+        working = candidate;
+        titleLengthFilled = true;
+      }
+      if (titleLengthFilled) {
+        // Defensive hard-cap (TITLE_HARD_CAP is the upper bound — we will
+        // never exceed it because TARGET_MAX < HARD_CAP, but cap anyway).
+        if (working.length > TITLE_HARD_CAP) {
+          working = working.slice(0, TITLE_HARD_CAP).replace(/\s+\S*$/, '').trim();
+        }
+        aiData.naver_title = working;
+        // Mirror into seo_title — matches the existing prefix-injection
+        // mirror pattern. The seo_title slot accepts up to 70 chars but
+        // the same intent-weighted lead is the highest-conversion text.
+        if (aiData.seo_title) {
+          aiData.seo_title = working;
+        }
+      }
+    }
   }
+  const finalTitleLength = aiData.naver_title ? aiData.naver_title.length : null;
 
   return {
     data: aiData,
@@ -522,6 +605,8 @@ async function generateSEO(
       sortApplied,
       keywordsChanged,
       titlePrefixInjected,
+      titleLengthFilled,
+      finalTitleLength,
       topIntentKeyword,
     },
   };
