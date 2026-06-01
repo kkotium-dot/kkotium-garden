@@ -317,6 +317,8 @@ function NaverSeoInner() {
                   naver_description: p.naver_description,
                   seoScore: p.seoScore,
                   mainImage: p.mainImage,
+                  imageCount: p.imageCount,
+                  imageScore: p.seoDetail?.imageScore,
                 };
               })()
             : null

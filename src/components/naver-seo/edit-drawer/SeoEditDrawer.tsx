@@ -15,13 +15,19 @@
 //     12h server cache). Debounced 800ms on keyword edit. Click a keyword
 //     row to append it to naver_title.
 //
-// Phase 2-A-3 will add the publish-readiness gate + image execution guide.
+// Phase 2-A-3 added:
+//   - PublishGate fed by GET /api/products/:id/publish-readiness (existing
+//     endpoint reused). 4-axis checklist + completeness ring + image guide.
+//     Publish PopButton opens a *confirmation* modal only — no Naver API
+//     call from the drawer (★비가역 0 / #46).
+//   - Unsaved-draft protection: header dirty badge + confirm on close +
+//     best-effort warning when the parent switches product underneath us.
 //
 // Save uses the existing PATCH /api/products/:id endpoint. Product.name
 // (한국 상품명) is intentionally left untouched per Lane 1-D rule.
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { X, ExternalLink, Save, Loader2 } from "lucide-react";
+import { X, ExternalLink, Save, Loader2, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { PopButton, ScallopCard, StickerBadge } from "@/components/shell";
@@ -30,6 +36,7 @@ import type { KeywordStat } from "@/lib/naver/keyword-api";
 import TitleLengthGauge from "./TitleLengthGauge";
 import DuplicateKeywordWarning from "./DuplicateKeywordWarning";
 import KeywordVolumeChart from "./KeywordVolumeChart";
+import PublishGate from "./PublishGate";
 
 export interface SeoEditDrawerProduct {
   id: string;
@@ -39,6 +46,9 @@ export interface SeoEditDrawerProduct {
   naver_description: string | null;
   seoScore?: number;
   mainImage?: string | null;
+  /** Phase 2-A-3 image guide inputs. Optional so legacy callers compile. */
+  imageCount?: number;
+  imageScore?: number;
 }
 
 export interface SeoEditDrawerProps {
@@ -127,12 +137,44 @@ export default function SeoEditDrawer({
   const [volumeError, setVolumeError] = useState<string | null>(null);
   const lastKeyRef = useRef<string>("");
 
-  // Reset draft + clear cached volume when target product changes.
+  // Phase 2-A-3: snapshot original so we can detect unsaved edits.
+  const originalRef = useRef<DraftState>(EMPTY);
+  const prevProductIdRef = useRef<string | null>(null);
+
+  // Phase 2-A-3: bump on save success so PublishGate re-fetches readiness.
+  const [gateRefreshKey, setGateRefreshKey] = useState(0);
+
+  // Phase 2-A-3: confirm modal state (publish intent — not a real API call).
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+
+  const isDirty = useMemo(() => {
+    return (
+      draft.naver_title !== originalRef.current.naver_title ||
+      draft.naver_keywords !== originalRef.current.naver_keywords ||
+      draft.naver_description !== originalRef.current.naver_description
+    );
+  }, [draft]);
+
+  // Reset draft + clear cached volume when target product changes. If the
+  // user had unsaved edits, surface a toast so the loss is visible
+  // (preventing the switch outright would require parent-level state).
   useEffect(() => {
-    setDraft(toDraft(product));
+    const wasDirty = isDirty;
+    const switching = prevProductIdRef.current !== null && prevProductIdRef.current !== product?.id;
+    if (switching && wasDirty) {
+      // Best-effort: parent already committed the switch; we surface the
+      // loss instead of silently discarding. The full prevention path lives
+      // in Phase 2-A-3d follow-up at the page level.
+      toast.error(seoDrawerCopy.dirty.confirmSwitch.split("\n")[0], { duration: 2200 });
+    }
+    const next = toDraft(product);
+    originalRef.current = next;
+    setDraft(next);
     setVolumeStats(null);
     setVolumeError(null);
     lastKeyRef.current = "";
+    prevProductIdRef.current = product?.id ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id]);
 
   // Derive the fetchable keyword list from the current draft.
@@ -207,15 +249,26 @@ export default function SeoEditDrawer({
     [draft.naver_title],
   );
 
-  // ESC closes drawer.
+  // Close with dirty-guard. If the draft has unsaved edits we ask before
+  // discarding; the guard is also reused by the X / footer Close / backdrop.
+  const handleCloseGuarded = useCallback(() => {
+    if (saving) return;
+    if (isDirty) {
+      const ok = window.confirm(seoDrawerCopy.dirty.confirmDiscard);
+      if (!ok) return;
+    }
+    onClose();
+  }, [saving, isDirty, onClose]);
+
+  // ESC closes drawer (with dirty-guard).
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !saving) onClose();
+      if (e.key === "Escape") handleCloseGuarded();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, saving]);
+  }, [open, handleCloseGuarded]);
 
   const handleSave = useCallback(async () => {
     if (!product) return;
@@ -236,9 +289,14 @@ export default function SeoEditDrawer({
       if (!res.ok || json?.success === false) {
         throw new Error(json?.error ?? `HTTP ${res.status}`);
       }
+      // Sync original snapshot so isDirty resets without closing the drawer.
+      originalRef.current = { ...draft };
+      setGateRefreshKey((k) => k + 1);
       toast.success(c.drawer.saved);
       onSaved?.();
-      onClose();
+      // Phase 2-A-3: keep the drawer open after save so the seller can verify
+      // the publish gate refresh; previous behaviour auto-closed which hid
+      // the readiness state change.
     } catch (err) {
       toast.dismiss(t);
       toast.error(`${c.drawer.saveFailed} — ${err instanceof Error ? err.message : "unknown"}`);
@@ -264,7 +322,7 @@ export default function SeoEditDrawer({
         backdropFilter: "blur(2px)",
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget && !saving) onClose();
+        if (e.target === e.currentTarget) handleCloseGuarded();
       }}
     >
       <aside
@@ -330,6 +388,12 @@ export default function SeoEditDrawer({
                   SEO {product.seoScore}
                 </StickerBadge>
               )}
+              {isDirty && (
+                <StickerBadge tone="red" size="sm">
+                  <AlertTriangle size={10} strokeWidth={3} />
+                  {c.dirty.badge}
+                </StickerBadge>
+              )}
               <Link
                 href={`/products/new?edit=${product.id}`}
                 style={{
@@ -349,10 +413,12 @@ export default function SeoEditDrawer({
           </div>
           {/* Phase 2-A-1b: explicit close PopButton in header. Row clicks
               switch the drawer rather than close it, so this is now the
-              primary close affordance alongside the footer Close button. */}
+              primary close affordance alongside the footer Close button.
+              Phase 2-A-3d: routed through handleCloseGuarded which asks
+              before discarding unsaved edits. */}
           <PopButton
             variant="secondary"
-            onClick={onClose}
+            onClick={handleCloseGuarded}
             disabled={saving}
             type="button"
             leftIcon={<X size={14} />}
@@ -507,6 +573,17 @@ export default function SeoEditDrawer({
             inTitleSet={inTitleSet}
           />
 
+          {/* Phase 2-A-3 — publish-readiness gate + image execution guide.
+              Mount only when we have a product id (drawer guards above
+              ensure that). Refresh on every successful save via gateRefreshKey. */}
+          <PublishGate
+            productId={product.id}
+            imageCount={product.imageCount}
+            imageScore={product.imageScore}
+            refreshKey={gateRefreshKey}
+            onPublishIntent={() => setShowPublishConfirm(true)}
+          />
+
           {/* naver_description */}
           <ScallopCard style={{ padding: 18 }}>
             <label
@@ -573,7 +650,7 @@ export default function SeoEditDrawer({
           <div style={{ display: "flex", gap: 10 }}>
             <PopButton
               variant="secondary"
-              onClick={onClose}
+              onClick={handleCloseGuarded}
               disabled={saving}
               type="button"
             >
@@ -604,6 +681,74 @@ export default function SeoEditDrawer({
           }
         `}</style>
       </aside>
+
+      {/* Phase 2-A-3: publish confirmation modal — explicitly NOT calling
+          the Naver commerce API (★비가역 0). It's a hard stop the seller
+          acknowledges before the real publish flow is wired in a later
+          turn under direct approval. */}
+      {showPublishConfirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9100,
+            background: "rgba(26,26,26,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowPublishConfirm(false);
+          }}
+        >
+          <div
+            className="gp-card"
+            style={{
+              maxWidth: 420,
+              width: "100%",
+              padding: 22,
+              background: "var(--color-surface)",
+              borderRadius: 14,
+              boxShadow: "0 18px 40px rgba(230,35,16,0.18)",
+            }}
+          >
+            <p
+              className="gp-label-serif-italic"
+              style={{ margin: 0, fontSize: 11, color: "var(--gp-red-500)" }}
+            >
+              naver publish · confirm
+            </p>
+            <h3 className="gp-h3" style={{ margin: "2px 0 10px" }}>
+              {c.publish.confirmTitle}
+            </h3>
+            <p
+              className="gp-body"
+              style={{ margin: "0 0 16px", color: "var(--gp-ink-700)", wordBreak: "keep-all" }}
+            >
+              {c.publish.confirmBody}
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <PopButton
+                variant="secondary"
+                type="button"
+                onClick={() => setShowPublishConfirm(false)}
+              >
+                {c.publish.confirmCancel}
+              </PopButton>
+              <PopButton
+                variant="primary"
+                type="button"
+                onClick={() => setShowPublishConfirm(false)}
+              >
+                {c.publish.confirmAck}
+              </PopButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

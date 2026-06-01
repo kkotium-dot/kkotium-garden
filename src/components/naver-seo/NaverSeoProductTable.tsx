@@ -643,7 +643,7 @@ function SeoEditPanel({
     <div style={{ paddingTop: 12 }}>
       {/* AI style buttons */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <p style={lbl({ marginBottom: 0 })}>꼼띄 AI 최적화 — 스타일 선택</p>
+            <p style={lbl({ marginBottom: 0 })}>꼬띠 AI 최적화 — 스타일 선택</p>
             <button
               onClick={async () => {
                 try {
@@ -878,12 +878,13 @@ export default function NaverSeoProductTable({
   };
   const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id);
 
-  // Phase 2-A-1b: row click must also notify the page so the SEO edit drawer
-  // can open. Previously onProductClick was destructured but never called,
-  // leaving the drawer wiring dead. Inline accordion behavior (toggleExpand)
-  // is preserved so the existing inline AI / edit affordances keep working.
+  // Phase 2-A-3: row click now opens the SeoEditDrawer only — the inline
+  // accordion path (toggleExpand) is left intact in code but no longer
+  // triggered automatically, since users were getting confused by two
+  // simultaneous edit UIs and two keyword visualisations. The drawer is the
+  // canonical edit path. Inline AI 3-style buttons / review analysis stay in
+  // the codebase for a future explicit affordance (e.g. row-end chevron).
   const handleRowActivate = (id: string) => {
-    toggleExpand(id);
     onProductClick?.(id);
   };
 

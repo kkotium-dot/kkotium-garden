@@ -1,5 +1,5 @@
 {
-  "$schema": "Korean copy for the SEO edit drawer (Phase 2-A-1 + 2-A-2). All user-facing strings live here (rule #35).",
+  "$schema": "Korean copy for the SEO edit drawer (Phase 2-A-1 + 2-A-2 + 2-A-3). All user-facing strings live here (rule #35).",
   "drawer": {
     "title": "씨앗 심기 — 실시간 SEO 편집",
     "subtitle": "타이핑하는 순간 게이지가 움직입니다",
@@ -11,6 +11,11 @@
     "openExternal": "전체 편집기에서 열기",
     "originalName": "원본 상품명 (Product.name)",
     "originalNameNote": "보존 — Lane 1-D 정합으로 발행 단계에서만 naver_title이 노출됩니다."
+  },
+  "dirty": {
+    "badge": "미저장",
+    "confirmDiscard": "저장하지 않은 변경 사항이 있습니다.\n그대로 닫으시겠습니까?",
+    "confirmSwitch": "저장하지 않은 변경 사항이 있습니다.\n다른 상품으로 전환하면 변경 사항이 사라집니다."
   },
   "title": {
     "label": "네이버 발행 상품명 (naver_title)",
@@ -59,7 +64,37 @@
       "caution": "주의"
     }
   },
+  "publish": {
+    "title": "발행 준비도 게이트",
+    "loading": "발행 준비도 확인 중...",
+    "error": "발행 준비도 확인 실패",
+    "summaryReady": "발행 준비 완료",
+    "summaryReadyHint": "모든 게이트 통과 — 발행 버튼이 활성화되었습니다.",
+    "summaryBlocked": "발행 차단",
+    "summaryBlockedHint": "아래 미통과 항목을 보완하면 발행 버튼이 열립니다.",
+    "axisFields": "상품 필드 (19개)",
+    "axisAuthentic": "진위성 검증",
+    "axisPayload": "상품정보제공고시 (7개)",
+    "axisStatus": "등록 상태",
+    "statusDraftReady": "DRAFT — 발행 가능",
+    "statusAlreadyPublished": "이미 발행됨 (재발행 차단)",
+    "publishBtn": "네이버 발행 확인",
+    "publishBtnBlocked": "게이트 통과 후 활성",
+    "publishCaveat": "★비가역 0 — 본 버튼은 발행 확인 모달까지만 표시합니다. 실제 네이버 API 호출은 대표 직접 승인 후 별도 turn에서 진행합니다.",
+    "confirmTitle": "네이버 발행 — 확인",
+    "confirmBody": "모든 게이트를 통과했습니다. 실제 발행은 비가역 작업이므로, 별도 대표 승인 turn에서 진행됩니다.",
+    "confirmAck": "이해했습니다",
+    "confirmCancel": "취소"
+  },
+  "imageGuide": {
+    "title": "이미지 실행 가이드",
+    "unit": "장",
+    "complete": "권장 장수 도달 — 이미지 점수 최대치 가능",
+    "prescriptionPrefix": "더 올리면 SEO 점수",
+    "prescriptionSuffix": "점 더 받을 수 있어요",
+    "note": "휴리스틱 — 실제 점수는 도매꾹 이미지 품질·해상도·구도에 따라 달라질 수 있습니다."
+  },
   "footer": {
-    "phaseNote": "Phase 2-A-1·2: 글자수 게이지 + 중복 경고 + 검색량 차트. 발행 게이트는 다음 단계."
+    "phaseNote": "Phase 2-A-1·2·3: 게이지 + 중복경고 + 검색량 + 발행 게이트 + 이미지 가이드 활성."
   }
 }

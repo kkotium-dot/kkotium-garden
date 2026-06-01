@@ -39,6 +39,11 @@ export interface SeoDrawerCopy {
     label: string;
     placeholder: string;
   };
+  dirty: {
+    badge: string;
+    confirmDiscard: string;
+    confirmSwitch: string;
+  };
   volume: {
     title: string;
     subtitle: string;
@@ -61,6 +66,36 @@ export interface SeoDrawerCopy {
       normal: string;
       caution: string;
     };
+  };
+  publish: {
+    title: string;
+    loading: string;
+    error: string;
+    summaryReady: string;
+    summaryReadyHint: string;
+    summaryBlocked: string;
+    summaryBlockedHint: string;
+    axisFields: string;
+    axisAuthentic: string;
+    axisPayload: string;
+    axisStatus: string;
+    statusDraftReady: string;
+    statusAlreadyPublished: string;
+    publishBtn: string;
+    publishBtnBlocked: string;
+    publishCaveat: string;
+    confirmTitle: string;
+    confirmBody: string;
+    confirmAck: string;
+    confirmCancel: string;
+  };
+  imageGuide: {
+    title: string;
+    unit: string;
+    complete: string;
+    prescriptionPrefix: string;
+    prescriptionSuffix: string;
+    note: string;
   };
   footer: {
     phaseNote: string;

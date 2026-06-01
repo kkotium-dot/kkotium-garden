@@ -11,3 +11,9 @@ export type { DuplicateKeywordWarningProps } from "./DuplicateKeywordWarning";
 
 export { default as KeywordVolumeChart } from "./KeywordVolumeChart";
 export type { KeywordVolumeChartProps } from "./KeywordVolumeChart";
+
+export { default as PublishGate } from "./PublishGate";
+export type { PublishGateProps } from "./PublishGate";
+
+export { default as ImageGuide } from "./ImageGuide";
+export type { ImageGuideProps } from "./ImageGuide";
