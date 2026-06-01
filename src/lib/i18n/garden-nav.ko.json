@@ -1,0 +1,174 @@
+{
+  "$schema": "Garden nav labels — Korean primary, English italic-serif sublabel. Maps to actual working routes (mirrors src/components/layout/Sidebar.tsx NAV constant). New shell components import from here; do not inline Korean strings (rule #35).",
+  "brand": {
+    "primary": "KKOTIUM",
+    "secondary": "GARDEN"
+  },
+  "sections": [
+    {
+      "key": "garden",
+      "label": "GARDEN",
+      "items": [
+        {
+          "key": "dashboard",
+          "href": "/dashboard",
+          "ko": "가든 홈",
+          "en": "Garden",
+          "icon": "fountain"
+        }
+      ]
+    },
+    {
+      "key": "hunt",
+      "label": "HUNT",
+      "items": [
+        {
+          "key": "crawl",
+          "href": "/crawl",
+          "ko": "꿀통 꽃나들이",
+          "en": "Foraging",
+          "icon": "layers",
+          "badgeKey": "sourcing"
+        }
+      ]
+    },
+    {
+      "key": "plant",
+      "label": "PLANT",
+      "items": [
+        {
+          "key": "sow",
+          "href": "/products/new",
+          "ko": "씨앗 심기",
+          "en": "Sow Seeds",
+          "icon": "packageplus"
+        }
+      ]
+    },
+    {
+      "key": "tend",
+      "label": "TEND",
+      "items": [
+        {
+          "key": "products",
+          "href": "/products",
+          "ko": "정원 창고",
+          "en": "Products",
+          "icon": "shoppingbag",
+          "badgeKey": "draft"
+        },
+        {
+          "key": "naver-seo",
+          "href": "/naver-seo",
+          "ko": "검색 조련사",
+          "en": "Keywords",
+          "icon": "search"
+        },
+        {
+          "key": "reactivation",
+          "href": "/products/reactivation",
+          "ko": "좀비 부활소",
+          "en": "Revive",
+          "icon": "refreshcw",
+          "badgeKey": "zombie"
+        },
+        {
+          "key": "studio",
+          "href": "/studio",
+          "ko": "온실 아틀리에",
+          "en": "Atelier",
+          "icon": "palette"
+        }
+      ]
+    },
+    {
+      "key": "orders",
+      "label": "ORDERS",
+      "items": [
+        {
+          "key": "orders",
+          "href": "/orders",
+          "ko": "주문 관리",
+          "en": "Orders",
+          "icon": "shoppingcart",
+          "badgeKey": "orders"
+        }
+      ]
+    },
+    {
+      "key": "ops",
+      "label": "OPS",
+      "items": [
+        {
+          "key": "insert-card",
+          "href": "/ops/insert-card",
+          "ko": "인서트 카드",
+          "en": "Insert Card",
+          "icon": "creditcard"
+        }
+      ]
+    },
+    {
+      "key": "tools",
+      "label": "TOOLS",
+      "items": [
+        {
+          "key": "suppliers",
+          "href": "/settings/suppliers",
+          "ko": "거래처 명단",
+          "en": "Suppliers",
+          "icon": "store"
+        },
+        {
+          "key": "shipping",
+          "href": "/settings/shipping",
+          "ko": "배송 레시피",
+          "en": "Shipping",
+          "icon": "truck"
+        },
+        {
+          "key": "supplier-login",
+          "href": "/settings/supplier-login",
+          "ko": "공급사 열쇠방",
+          "en": "Vendor Keys",
+          "icon": "keyround"
+        },
+        {
+          "key": "kakao",
+          "href": "/settings/kakao",
+          "ko": "카카오 채널",
+          "en": "Kakao",
+          "icon": "messagecircle"
+        },
+        {
+          "key": "naver",
+          "href": "/naver-settings",
+          "ko": "네이버 기본값",
+          "en": "Naver",
+          "icon": "filetext"
+        },
+        {
+          "key": "lifestyle",
+          "href": "/settings/lifestyle-assets",
+          "ko": "라이프 자산",
+          "en": "Lifestyle",
+          "icon": "images"
+        }
+      ]
+    }
+  ],
+  "mascot": {
+    "ko": "꼬띠",
+    "en": "Kkotti",
+    "note": "Tulip mascot — do not substitute the user nickname here. Per docs/research/GARDEN_CONCEPT_ANALYSIS_2026-06.md section 1."
+  },
+  "concept_pending": {
+    "_comment": "Not implemented routes — kept for future Claude Design alignment. Do not generate route stubs.",
+    "shipping_dachshund": { "ko": "닥스훈트 배송", "en": "Shipping" },
+    "zombie_storage": { "ko": "좀비소", "en": "Returns" },
+    "mushroom_reviews": { "ko": "버섯밭", "en": "Reviews" },
+    "greenhouse_stock": { "ko": "온실", "en": "Stock" },
+    "mailbox_inquiries": { "ko": "우편함", "en": "Inquiries" },
+    "journal": { "ko": "가든 일지", "en": "Journal" }
+  }
+}

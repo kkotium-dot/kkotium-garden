@@ -151,3 +151,213 @@ div[class*="bg-gray-50"] {
 .border-stone-200 { border-color: #F8DCE5 !important; }
 .placeholder-stone-300::placeholder { color: #999 !important; }
 .text-stone-800 { color: #1A1A1A !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   KKOTIUM Design System v6 — Retro Pop Garden Fantasy
+   ★ Additive layer. v5 tokens above remain intact for legacy screens.
+   Mood source: docs/research/GARDEN_DESIGN_BRIEF_2026-06.md
+   Use v6 tokens for new components under src/components/shell/.
+═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Tier 1: Primitives ─────────────────────────────────────── */
+  /* Cream / ivory — base canvas (brief: #FAF8F3) */
+  --gp-cream-50:    #FAF8F3;
+  --gp-cream-100:   #F5F1E8;
+  --gp-cream-200:   #ECE5D3;
+
+  /* Brand red — action / critical only (10% accent) */
+  --gp-red-500:     #E62310;
+  --gp-red-600:     #C41A0B;
+  --gp-red-50:      #FFF0EF;
+  --gp-red-100:     #FFD6D3;
+
+  /* Pop pink — pastel for surfaces and badges (brief: #FFCCEA / #FFE0EC) */
+  --gp-pink-50:     #FFF5F8;
+  --gp-pink-100:    #FFE0EC;
+  --gp-pink-200:    #FFCCEA;
+  --gp-pink-300:    #FFB3CE;
+  --gp-pink-400:    #FF6B8A;
+
+  /* Garden green — secondary accent for success / nav-active alt */
+  --gp-green-50:    #E8F5E6;
+  --gp-green-100:   #B5E0AC;
+  --gp-green-500:   #4CAF50;
+  --gp-green-700:   #2E7D32;
+
+  /* Ink neutrals — text only, never as background */
+  --gp-ink-900:     #1A1A1A;
+  --gp-ink-700:     #3A3A3A;
+  --gp-ink-500:     #6B6B6B;
+  --gp-ink-300:     #A8A8A8;
+  --gp-ink-100:     #E5E5E5;
+
+  /* ─── Tier 2: Semantic ───────────────────────────────────────── */
+  --color-bg:               var(--gp-cream-50);
+  --color-surface:          #FFFFFF;
+  --color-surface-subtle:   var(--gp-pink-50);
+  --color-surface-accent:   var(--gp-pink-100);
+  --color-accent:           var(--gp-red-500);
+  --color-accent-strong:    var(--gp-red-600);
+  --color-success:          var(--gp-green-500);
+  --color-warning:          #F59E0B;
+  --color-danger:           var(--gp-red-500);
+  --color-text:             var(--gp-ink-900);
+  --color-text-muted:       var(--gp-ink-500);
+  --color-text-on-accent:   #FFFFFF;
+  --color-border:           var(--gp-pink-100);
+  --color-border-strong:    var(--gp-pink-200);
+
+  /* ─── Spacing — 8px rhythm ───────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ─── Radius ─────────────────────────────────────────────────── */
+  --radius-card:   12px;
+  --radius-button: 10px;
+  --radius-badge:  999px;
+  --radius-pill:   24px;
+
+  /* ─── Tier 3: Component ──────────────────────────────────────── */
+  --card-bg:        var(--color-surface);
+  --card-border:    1px solid var(--color-border);
+  --card-radius:    var(--radius-card);
+  --card-padding:   var(--space-6);
+  --card-shadow:    0 1px 2px rgba(230, 35, 16, 0.04),
+                    0 2px 8px rgba(230, 35, 16, 0.06);
+
+  --btn-primary-bg:     var(--color-accent);
+  --btn-primary-fg:     var(--color-text-on-accent);
+  --btn-primary-radius: var(--radius-button);
+  --btn-primary-shadow: 0 1px 0 rgba(0, 0, 0, 0.08),
+                        0 2px 6px rgba(230, 35, 16, 0.18);
+
+  --badge-bg:      var(--gp-pink-100);
+  --badge-fg:      var(--gp-red-500);
+  --badge-border:  1.5px solid var(--gp-pink-200);
+
+  /* Sticker effect — micro-shadow + thick pop border (brief: 평면 플랫 아님) */
+  --sticker-border: 1.5px solid var(--gp-pink-200);
+  --sticker-shadow: 0 1px 0 rgba(0, 0, 0, 0.06),
+                    0 2px 3px rgba(230, 35, 16, 0.10),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  /* Shell — sidebar + grid */
+  --shell-sidebar-w:    256px;
+  --shell-min-w:        1180px;
+  --shell-content-pad:  var(--space-6) var(--space-8);
+}
+
+/* ─── Body word-break — Korean readability (brief: keep-all 전역 상속) ── */
+body { word-break: keep-all; }
+
+/* ═══════════════════════════════════════════════════════════════
+   v6 Utility classes — opt-in, additive
+═══════════════════════════════════════════════════════════════ */
+
+/* Card variants */
+.gp-card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  padding: var(--card-padding);
+  box-shadow: var(--card-shadow);
+}
+
+/* Scallop top edge — radial-gradient mask, pure CSS */
+.gp-scallop-top {
+  --gp-scallop-r: 9px;
+  --gp-scallop-period: 18px;
+  -webkit-mask:
+    radial-gradient(circle var(--gp-scallop-r) at center top,
+                    transparent var(--gp-scallop-r),
+                    #000 calc(var(--gp-scallop-r) + 0.5px))
+                    top / var(--gp-scallop-period) calc(var(--gp-scallop-r) + 1px) repeat-x,
+    linear-gradient(#000 0 0) bottom / 100% calc(100% - var(--gp-scallop-r)) no-repeat;
+          mask:
+    radial-gradient(circle var(--gp-scallop-r) at center top,
+                    transparent var(--gp-scallop-r),
+                    #000 calc(var(--gp-scallop-r) + 0.5px))
+                    top / var(--gp-scallop-period) calc(var(--gp-scallop-r) + 1px) repeat-x,
+    linear-gradient(#000 0 0) bottom / 100% calc(100% - var(--gp-scallop-r)) no-repeat;
+}
+
+/* Scallop divider — thin scalloped horizontal rule */
+.gp-scallop-divider {
+  height: 8px;
+  background: var(--color-border-strong);
+  -webkit-mask: radial-gradient(circle 4px at 4px 4px, transparent 4px, #000 5px) 0 0 / 8px 8px;
+          mask: radial-gradient(circle 4px at 4px 4px, transparent 4px, #000 5px) 0 0 / 8px 8px;
+  opacity: 0.7;
+}
+
+/* Sticker badge — analog retro feel */
+.gp-sticker {
+  border: var(--sticker-border);
+  box-shadow: var(--sticker-shadow);
+  background: var(--color-surface);
+}
+
+/* Pop primary button */
+.gp-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 20px;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  border-radius: var(--btn-primary-radius);
+  box-shadow: var(--btn-primary-shadow);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+.gp-btn-primary:hover {
+  background: var(--color-accent-strong);
+  transform: translateY(-1px);
+}
+.gp-btn-primary:active { transform: translateY(0); }
+
+/* Pop secondary button — pink surface */
+.gp-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 20px;
+  background: var(--gp-pink-100);
+  color: var(--gp-red-500);
+  font-weight: 700;
+  font-size: 14px;
+  border: 1.5px solid var(--gp-pink-200);
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.gp-btn-secondary:hover {
+  background: var(--gp-pink-200);
+  border-color: var(--gp-pink-300);
+}
+
+/* Italic serif label — English sublabel under Korean nav (brief: 감각적 타이포) */
+.gp-label-serif-italic {
+  font-family: 'Times New Roman', 'Georgia', serif;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* Typography scale */
+.gp-display   { font-size: 32px; font-weight: 800; line-height: 1.2; }
+.gp-h1        { font-size: 24px; font-weight: 700; line-height: 1.3; }
+.gp-h2        { font-size: 20px; font-weight: 700; line-height: 1.35; }
+.gp-h3        { font-size: 16px; font-weight: 600; line-height: 1.4; }
+.gp-body      { font-size: 14px; font-weight: 400; line-height: 1.5; }
+.gp-caption   { font-size: 12px; font-weight: 500; line-height: 1.45; color: var(--color-text-muted); }
