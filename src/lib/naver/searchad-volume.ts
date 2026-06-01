@@ -85,9 +85,12 @@ async function fetchBatch(hintKeywords: string[]): Promise<VolumeRow[] | null> {
   const customer = process.env.NAVER_SEARCHAD_CUSTOMER_ID;
   if (!apiKey || !secret || !customer) return null;
 
+  // SearchAd /keywordstool empirically rejects long multi-word hints with
+  // HTTP 400. Strip commas, collapse internal whitespace, and drop hints
+  // outside [2, 15] chars. Cap to 5 (SearchAd batch limit).
   const cleaned = hintKeywords
-    .map((k) => k.replace(/,/g, ' ').trim())
-    .filter((k) => k.length > 0)
+    .map((k) => k.replace(/,/g, ' ').replace(/\s+/g, '').trim())
+    .filter((k) => k.length >= 2 && k.length <= 15)
     .slice(0, 5);
   if (cleaned.length === 0) return [];
 
@@ -110,8 +113,14 @@ async function fetchBatch(hintKeywords: string[]): Promise<VolumeRow[] | null> {
   });
 
   if (!res.ok) {
+    let body = '';
+    try {
+      body = (await res.text()).slice(0, 200);
+    } catch {
+      body = '(no body)';
+    }
     console.warn(
-      `[searchad-volume] HTTP ${res.status} for batch [${cleaned.join(',')}]`,
+      `[searchad-volume] HTTP ${res.status} for batch [${cleaned.join(',')}] body=${body}`,
     );
     return null;
   }

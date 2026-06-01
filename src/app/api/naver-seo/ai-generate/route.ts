@@ -27,19 +27,23 @@ type SeoStyle = 'orthodox' | 'emotional' | 'niche';
 // ─── Search volume helpers (Lane 1, 2026-06-01) ───────────────────────────────
 
 /** Build the candidate keyword pool that gets SearchAd-priced BEFORE the AI
- *  call. We seed the pool with the full product name and its space-split
- *  tokens (>= 2 chars). The pool is capped at 10 so we never blow the
- *  rate-limit budget (2 SearchAd batches max). */
+ *  call. SearchAd's /keywordstool empirically rejects multi-word hints
+ *  containing internal spaces with HTTP 400 — so we use SPACE-SPLIT TOKENS
+ *  only (>= 2 chars, <= 15 chars). The pool is capped at 10 so we never
+ *  exceed two SearchAd batches. */
 function extractCandidateKeywords(productName: string): string[] {
   const cleaned = (productName ?? '')
     .replace(/[,\.\(\)\[\]\/]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   if (!cleaned) return [];
-  const tokens = cleaned.split(' ').filter((t) => t.length >= 2);
+  const tokens = cleaned
+    .split(' ')
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 2 && t.length <= 15);
   const pool: string[] = [];
   const seen = new Set<string>();
-  for (const k of [cleaned, ...tokens]) {
+  for (const k of tokens) {
     const n = normalizeKeyword(k);
     if (seen.has(n)) continue;
     seen.add(n);
