@@ -24,56 +24,168 @@ import { callGroq, GROQ_MODEL } from '@/lib/ai/groq';
 export const dynamic = 'force-dynamic';
 type SeoStyle = 'orthodox' | 'emotional' | 'niche';
 
-// ─── Search volume helpers (Lane 1, 2026-06-01) ───────────────────────────────
+// ─── Search volume helpers (Lane 1-B, 2026-06-01) ─────────────────────────────
+//
+// Intent weighting (purchase intent > raw absolute volume):
+//   - Contains any INTENT_TOKEN  → ×2.0  (gift/occasion = high conversion)
+//   - Exactly a GENERIC_TOKEN    → ×0.3  (broad-match deboost)
+//   - Otherwise                  → ×1.0
+//
+// Single whitelist source — kept intentionally short (workrule "단순화 우선",
+// 2026-06-01 user spec). Tuning is an explicit follow-up turn, not silent
+// expansion here.
+
+const INTENT_TOKENS = new Set<string>([
+  '선물', '집들이', '개업', '이사', '결혼', '신혼', '돌잔치', '환갑', '백일',
+]);
+const GENERIC_TOKENS = new Set<string>([
+  '인테리어', '디자인', '장식', '소품', '제품', '상품', '아이템',
+]);
+
+/** Occasions that take "+ 선물" intent-suffix expansion in n-gram generation.
+ *  Subset of INTENT_TOKENS — purchase-intent suffixes only. */
+const INTENT_OCCASIONS = ['집들이', '개업', '이사', '결혼', '신혼'] as const;
+const INTENT_SUFFIX = '선물';
+
+const POOL_CAP = 15;
+
+function intentMultiplier(kw: string): number {
+  const k = kw.replace(/\s+/g, '');
+  for (const t of INTENT_TOKENS) {
+    if (k.includes(t)) return 2.0;
+  }
+  if (GENERIC_TOKENS.has(k)) return 0.3;
+  return 1.0;
+}
+
+function scoreKeyword(volume: number, kw: string): number {
+  return volume * intentMultiplier(kw);
+}
+
+interface CandidateBundle {
+  pool: string[];
+  tokenCount: number;
+  intentComboCount: number;
+  ngramCount: number;
+}
 
 /** Build the candidate keyword pool that gets SearchAd-priced BEFORE the AI
- *  call. SearchAd's /keywordstool empirically rejects multi-word hints
- *  containing internal spaces with HTTP 400 — so we use SPACE-SPLIT TOKENS
- *  only (>= 2 chars, <= 15 chars). The pool is capped at 10 so we never
- *  exceed two SearchAd batches. */
-function extractCandidateKeywords(productName: string): string[] {
+ *  call. Three priority tiers (added in order, deduped, capped at POOL_CAP):
+ *
+ *   1. SPACE-SPLIT TOKENS of the productName (length [2, 15])
+ *   2. INTENT-SUFFIX COMBOS — occasion + "선물" (e.g. "집들이선물") when the
+ *      occasion appears anywhere in the productName.
+ *   3. ADJACENT 2-GRAMS — concatenated without space (e.g. "달항아리도어벨").
+ *
+ *  SearchAd's /keywordstool rejects multi-word hints, so all candidates are
+ *  whitespace-free and <= 15 chars. Adjacent 2-grams that are nonsense get
+ *  filtered server-side by exact-match (workrule #46 — no fabricated rows).
+ */
+function extractCandidates(productName: string): CandidateBundle {
   const cleaned = (productName ?? '')
     .replace(/[,\.\(\)\[\]\/]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  if (!cleaned) return [];
+  if (!cleaned) {
+    return { pool: [], tokenCount: 0, intentComboCount: 0, ngramCount: 0 };
+  }
+
   const tokens = cleaned
     .split(' ')
     .map((t) => t.trim())
     .filter((t) => t.length >= 2 && t.length <= 15);
+
+  // Tier 2: intent-suffix combinations (occasion + 선물).
+  const text = cleaned.replace(/\s+/g, '');
+  const intentCombos: string[] = [];
+  for (const occ of INTENT_OCCASIONS) {
+    if (text.includes(occ)) {
+      const combo = occ + INTENT_SUFFIX;
+      if (combo.length >= 2 && combo.length <= 15) {
+        intentCombos.push(combo);
+      }
+    }
+  }
+
+  // Tier 3: adjacent 2-grams (concatenated, no space).
+  const ngrams: string[] = [];
+  for (let i = 0; i + 1 < tokens.length; i++) {
+    const cat = (tokens[i] + tokens[i + 1]).replace(/\s+/g, '');
+    if (cat.length >= 2 && cat.length <= 15) ngrams.push(cat);
+  }
+
   const pool: string[] = [];
   const seen = new Set<string>();
-  for (const k of tokens) {
+  let tokenCount = 0;
+  let intentComboCount = 0;
+  let ngramCount = 0;
+  const push = (k: string, kind: 'token' | 'combo' | 'ngram'): boolean => {
     const n = normalizeKeyword(k);
-    if (seen.has(n)) continue;
+    if (seen.has(n)) return false;
+    if (pool.length >= POOL_CAP) return false;
     seen.add(n);
     pool.push(k);
-    if (pool.length >= 10) break;
-  }
-  return pool;
+    if (kind === 'token') tokenCount++;
+    else if (kind === 'combo') intentComboCount++;
+    else ngramCount++;
+    return true;
+  };
+
+  for (const k of tokens) push(k, 'token');
+  for (const k of intentCombos) push(k, 'combo');
+  for (const k of ngrams) push(k, 'ngram');
+
+  return { pool, tokenCount, intentComboCount, ngramCount };
 }
 
 /** Render the measured search-volume rows as an additional prompt section.
- *  Sorted by descending total volume so the AI sees the highest-impact
- *  keywords first. Workrule #46: never fabricate counts — only print what
- *  SearchAd returned. */
-function renderVolumeContext(rows: VolumeRow[]): string {
-  if (rows.length === 0) return '';
-  const sorted = [...rows].sort(
-    (a, b) => b.totalMonthlyQc - a.totalMonthlyQc,
-  );
-  const lines = sorted
-    .slice(0, 10)
+ *  Sorted by descending intent-weighted score so the AI sees the highest-
+ *  conversion keywords first. Workrule #46: never fabricate counts — only
+ *  print what SearchAd returned. Returns the top intent keyword separately
+ *  so the caller can use it for title-prefix validation. */
+function renderVolumeContext(
+  rows: VolumeRow[],
+): { ctx: string; topIntentKw: string | null } {
+  if (rows.length === 0) return { ctx: '', topIntentKw: null };
+
+  const scored = [...rows]
+    .map((r) => ({
+      row: r,
+      score: scoreKeyword(r.totalMonthlyQc, r.keyword),
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  const topIntentKw = scored[0]?.row.keyword ?? null;
+  const top3Lines = scored
+    .slice(0, 3)
     .map(
-      (r) =>
-        `- "${r.keyword}": PC ${r.monthlyPcQc.toLocaleString('en-US')} + Mobile ${r.monthlyMobileQc.toLocaleString('en-US')} = ${r.totalMonthlyQc.toLocaleString('en-US')}/mo, comp ${r.compIdx ?? 'unknown'}`,
+      ({ row, score }, i) =>
+        `${i + 1}. "${row.keyword}" — score ${Math.round(score).toLocaleString('en-US')} (vol ${row.totalMonthlyQc.toLocaleString('en-US')}/mo × intent ${intentMultiplier(row.keyword).toFixed(1)}, comp ${row.compIdx ?? 'unknown'})`,
     )
     .join('\n');
-  return `\n[SEARCH VOLUME DATA — Naver SearchAd /keywordstool, measured monthly counts]
-${lines}
-- The HIGHEST-volume keyword MUST appear within the first 15 characters of naver_title.
-- naver_keywords MUST be ordered by descending measured volume — high-volume first.
-- Do NOT invent or guess volume figures for unmeasured keywords (workrule #46).\n`;
+  const allLines = scored
+    .slice(0, 12)
+    .map(
+      ({ row }) =>
+        `- "${row.keyword}": ${row.totalMonthlyQc.toLocaleString('en-US')}/mo (PC ${row.monthlyPcQc} + Mobile ${row.monthlyMobileQc}), comp ${row.compIdx ?? 'unknown'}, intent×${intentMultiplier(row.keyword).toFixed(1)}`,
+    )
+    .join('\n');
+
+  const ctx = `\n[INTENT-WEIGHTED TOP-3 (volume × purchase-intent; 선물/집들이/이사/개업/결혼/신혼 boost ×2, 인테리어/디자인/장식 deboost ×0.3)]
+${top3Lines}
+
+CRITICAL naver_title CONSTRAINT:
+- naver_title MUST BEGIN with "${topIntentKw}" — the #1 intent-weighted keyword.
+- The first 15 characters of naver_title MUST contain "${topIntentKw}".
+- Do NOT lead naver_title with generic words (인테리어 / 디자인 / 장식 / 소품).
+
+[ALL MEASURED VOLUMES — Naver SearchAd /keywordstool]
+${allLines}
+
+naver_keywords ordering — descending intent-weighted score (same order as TOP-3 above).
+Workrule #46: never fabricate volume figures for unmeasured keywords.\n`;
+
+  return { ctx, topIntentKw };
 }
 
 // ─── Prompt builders ──────────────────────────────────────────────────────────
@@ -93,7 +205,7 @@ Top sellers: ${market.topSellers.slice(0, 3).join(', ')}
 - If LOW/MEDIUM: use broad high-volume keywords\n`
     : '';
   const volumeContext = volumes && volumes.length > 0
-    ? renderVolumeContext(volumes)
+    ? renderVolumeContext(volumes).ctx
     : '';
   const base = `Product name: ${productName}${marketContext}${volumeContext}
 Respond ONLY with a raw JSON object. No markdown, no explanation, no preamble. First char must be {.
@@ -171,14 +283,38 @@ function parseJsonSafe(text: string): Record<string, string> {
   return JSON.parse(t);
 }
 
-/** Volume-signal telemetry returned to the caller — lets the verification
- *  step distinguish "SearchAd produced N rows and we reordered" from "no
- *  signal, AI order preserved". */
+/** Volume-signal telemetry — Lane 1-B distinguishes:
+ *   - sortApplied      : did the post-AI sort routine actually run?
+ *   - keywordsChanged  : does the final naver_keywords CSV differ from
+ *                        the raw AI output (whitespace-normalized)?
+ *   - titlePrefixInjected : did we have to prepend a top-intent keyword
+ *                        because the AI ignored the prompt constraint?
+ *  The previous single `reorderedKeywords` flag conflated these — it
+ *  returned false whenever the AI's order coincidentally matched ours,
+ *  which user verification on 2026-06-01 surfaced as a misleading signal. */
 export interface VolumeSignal {
   available: boolean;
+  candidateCount: number;
+  candidateTokens: number;
+  candidateIntentCombos: number;
+  candidateNgrams: number;
   preFetchRows: number;
   totalKnownRows: number;
-  reorderedKeywords: boolean;
+  sortApplied: boolean;
+  keywordsChanged: boolean;
+  titlePrefixInjected: boolean;
+  topIntentKeyword: string | null;
+}
+
+/** Normalize a CSV-of-keywords for *equality comparison only* — collapses
+ *  whitespace and surrounding-comma spacing so "a,b,c" and "a, b, c" are
+ *  considered equal. Used to decide whether keywordsChanged is true. */
+function normalizeCsvForCompare(csv: string): string {
+  return csv
+    .split(',')
+    .map((k) => k.trim())
+    .filter(Boolean)
+    .join('|');
 }
 
 async function generateSEO(
@@ -191,29 +327,26 @@ async function generateSEO(
   market?: CompetitionAnalysis | null;
   volumeSignal: VolumeSignal;
 }> {
-  // ── Pre-AI SearchAd query ──────────────────────────────────────────────
-  // Seed candidates from the product name (full + tokens). null result from
-  // fetchKeywordVolumes means "no signal" — the AI prompt drops the section
-  // and we skip the post-sort. This is the additive-fallback contract:
-  // existing market signal still flows to the prompt regardless.
+  // ── Pre-AI: build candidate pool (tokens + intent combos + n-grams) ────
+  const bundle = extractCandidates(productName);
+
   const volumeMap = new Map<string, VolumeRow>();
   let volumesAvailable = false;
   let preFetchRows = 0;
-  try {
-    const candidates = extractCandidateKeywords(productName);
-    if (candidates.length > 0) {
-      const pre = await fetchKeywordVolumes(candidates);
+  if (bundle.pool.length > 0) {
+    try {
+      const pre = await fetchKeywordVolumes(bundle.pool);
       if (pre !== null) {
         volumesAvailable = true;
         preFetchRows = pre.length;
         for (const r of pre) volumeMap.set(normalizeKeyword(r.keyword), r);
       }
+    } catch (e) {
+      console.warn(
+        '[ai-generate] SearchAd pre-fetch failed:',
+        e instanceof Error ? e.message : String(e),
+      );
     }
-  } catch (e) {
-    console.warn(
-      '[ai-generate] SearchAd pre-fetch failed:',
-      e instanceof Error ? e.message : String(e),
-    );
   }
   const preVolumeRows = [...volumeMap.values()];
 
@@ -253,19 +386,22 @@ async function generateSEO(
     );
   }
 
-  // ── Post-AI reorder by measured volume ─────────────────────────────────
-  // For every keyword the AI produced that we have NOT yet measured, do a
-  // top-up SearchAd query so the sort has data for it. AI keywords with no
-  // measurement sink to the bottom of the list (preserved, not dropped) —
-  // this respects the additive policy while still surfacing the real signal.
-  let reorderedKeywords = false;
+  // ── Post-AI: intent-weighted sort + title-prefix validation ────────────
+  let sortApplied = false;
+  let keywordsChanged = false;
+  let titlePrefixInjected = false;
+  let topIntentKeyword: string | null = null;
+
   if (volumesAvailable) {
-    const rawCsv = aiData.naver_keywords ?? '';
+    sortApplied = true;
+    const rawCsv = (aiData.naver_keywords ?? '').trim();
     const aiKw = rawCsv
       .split(',')
       .map((k) => k.trim())
       .filter(Boolean);
 
+    // Top up volumeMap with any AI keywords we have not yet measured. We
+    // never invent volumes for the missing ones — they get score 0 and sink.
     const unknown = aiKw.filter((k) => !volumeMap.has(normalizeKeyword(k)));
     if (unknown.length > 0) {
       try {
@@ -283,23 +419,90 @@ async function generateSEO(
       }
     }
 
-    if (aiKw.length > 0) {
-      const annotated = aiKw.map((k) => {
-        const row = volumeMap.get(normalizeKeyword(k));
-        return { kw: k, vol: row ? row.totalMonthlyQc : null };
+    // Combine AI keywords with measured pool keywords, score each, sort by
+    // intent-weighted score descending, dedupe, cap at 8.
+    type Annotated = {
+      kw: string;
+      score: number;
+      measured: boolean;
+      fromAi: boolean;
+    };
+    const annotated: Annotated[] = [];
+    const annoSeen = new Set<string>();
+
+    for (const k of aiKw) {
+      const n = normalizeKeyword(k);
+      if (annoSeen.has(n)) continue;
+      annoSeen.add(n);
+      const row = volumeMap.get(n);
+      annotated.push({
+        kw: k,
+        score: row ? scoreKeyword(row.totalMonthlyQc, k) : 0,
+        measured: !!row,
+        fromAi: true,
       });
-      annotated.sort((a, b) => {
-        // Measured-volume keywords first, descending; unmeasured keep
-        // original relative order at the tail.
-        if (a.vol !== null && b.vol !== null) return b.vol - a.vol;
-        if (a.vol !== null) return -1;
-        if (b.vol !== null) return 1;
-        return 0;
+    }
+    // Augment with any measured pool keywords (n-grams / intent combos) the
+    // AI omitted but that scored above zero. These are real signal the AI
+    // missed; surfacing them is the whole point of the Lane 1-B refresh.
+    for (const r of volumeMap.values()) {
+      const n = normalizeKeyword(r.keyword);
+      if (annoSeen.has(n)) continue;
+      if (r.totalMonthlyQc <= 0) continue;
+      annoSeen.add(n);
+      annotated.push({
+        kw: r.keyword,
+        score: scoreKeyword(r.totalMonthlyQc, r.keyword),
+        measured: true,
+        fromAi: false,
       });
-      const sortedCsv = annotated.map((x) => x.kw).join(', ');
-      if (sortedCsv !== rawCsv) {
-        aiData.naver_keywords = sortedCsv;
-        reorderedKeywords = true;
+    }
+
+    annotated.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      // Stable tie-break: AI keywords ahead of augmented ones at equal score.
+      if (a.fromAi !== b.fromAi) return a.fromAi ? -1 : 1;
+      return 0;
+    });
+
+    const top = annotated.slice(0, 8);
+    const sortedCsv = top.map((x) => x.kw).join(', ');
+    if (sortedCsv.length > 0) {
+      aiData.naver_keywords = sortedCsv;
+      keywordsChanged =
+        normalizeCsvForCompare(sortedCsv) !== normalizeCsvForCompare(rawCsv);
+    }
+
+    // ── Title-prefix validation ──
+    // Recompute the top intent keyword from the FINAL volumeMap (post top-up).
+    // If the AI's naver_title does not contain it in the first 20 chars,
+    // prepend deterministically — the prompt constraint is non-negotiable.
+    const finalScored = [...volumeMap.values()]
+      .filter((r) => r.totalMonthlyQc > 0)
+      .map((r) => ({
+        kw: r.keyword,
+        score: scoreKeyword(r.totalMonthlyQc, r.keyword),
+      }))
+      .sort((a, b) => b.score - a.score);
+    topIntentKeyword = finalScored[0]?.kw ?? null;
+
+    if (topIntentKeyword && aiData.naver_title) {
+      const titleHead = normalizeKeyword(aiData.naver_title.slice(0, 20));
+      const intentNorm = normalizeKeyword(topIntentKeyword);
+      if (intentNorm && !titleHead.includes(intentNorm)) {
+        const prepended = `${topIntentKeyword} ${aiData.naver_title}`.slice(
+          0,
+          50,
+        );
+        aiData.naver_title = prepended;
+        // Mirror the change into seo_title when it shared the AI's lead.
+        if (
+          aiData.seo_title &&
+          !normalizeKeyword(aiData.seo_title.slice(0, 20)).includes(intentNorm)
+        ) {
+          aiData.seo_title = prepended;
+        }
+        titlePrefixInjected = true;
       }
     }
   }
@@ -310,9 +513,16 @@ async function generateSEO(
     market,
     volumeSignal: {
       available: volumesAvailable,
+      candidateCount: bundle.pool.length,
+      candidateTokens: bundle.tokenCount,
+      candidateIntentCombos: bundle.intentComboCount,
+      candidateNgrams: bundle.ngramCount,
       preFetchRows,
       totalKnownRows: volumeMap.size,
-      reorderedKeywords,
+      sortApplied,
+      keywordsChanged,
+      titlePrefixInjected,
+      topIntentKeyword,
     },
   };
 }
