@@ -878,6 +878,15 @@ export default function NaverSeoProductTable({
   };
   const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id);
 
+  // Phase 2-A-1b: row click must also notify the page so the SEO edit drawer
+  // can open. Previously onProductClick was destructured but never called,
+  // leaving the drawer wiring dead. Inline accordion behavior (toggleExpand)
+  // is preserved so the existing inline AI / edit affordances keep working.
+  const handleRowActivate = (id: string) => {
+    toggleExpand(id);
+    onProductClick?.(id);
+  };
+
   const handleAiGenerate = async (productId: string, style: 'orthodox' | 'emotional' | 'niche') => {
     if (!onAiGenerate) return;
     await onAiGenerate(productId, style);
@@ -938,7 +947,7 @@ export default function NaverSeoProductTable({
             >
               <div className="grid items-center gap-3 px-4 py-3 cursor-pointer"
                 style={{ gridTemplateColumns: COL }}
-                onClick={() => toggleExpand(product.id)}>
+                onClick={() => handleRowActivate(product.id)}>
 
                 {/* Checkbox */}
                 <div onClick={e => e.stopPropagation()}>

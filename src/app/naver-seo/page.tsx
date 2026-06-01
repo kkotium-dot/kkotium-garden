@@ -288,7 +288,11 @@ function NaverSeoInner() {
       ) : (
         <NaverSeoProductTable
           products={products}
-          onProductClick={id => setDrawerProductId(id)}
+          /* Phase 2-A-1b drawer toggle policy:
+             - Different row → switch drawer to that product (stay open)
+             - Same row re-click → close (mirrors inline accordion collapse)
+             - Explicit close also via drawer X button / backdrop click */
+          onProductClick={id => setDrawerProductId(prev => prev === id ? null : id)}
           selectedIds={selectedIds}
           onSelectChange={setSelectedIds}
           onAiGenerate={handleAiGenerate}

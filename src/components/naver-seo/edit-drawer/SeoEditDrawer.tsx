@@ -224,26 +224,18 @@ export default function SeoEditDrawer({
               </Link>
             </div>
           </div>
-          <button
-            type="button"
+          {/* Phase 2-A-1b: explicit close PopButton in header. Row clicks
+              switch the drawer rather than close it, so this is now the
+              primary close affordance alongside the footer Close button. */}
+          <PopButton
+            variant="secondary"
             onClick={onClose}
             disabled={saving}
-            aria-label={c.drawer.close}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              border: "1.5px solid var(--gp-pink-200)",
-              background: "var(--gp-pink-50)",
-              cursor: saving ? "not-allowed" : "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
+            type="button"
+            leftIcon={<X size={14} />}
           >
-            <X size={18} color="var(--gp-red-500)" />
-          </button>
+            {c.drawer.close}
+          </PopButton>
         </header>
 
         {/* Body */}
