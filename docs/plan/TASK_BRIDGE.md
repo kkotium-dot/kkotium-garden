@@ -84,7 +84,7 @@
 | **FROM** | 🖥 Desktop (G8 backdrop 적재 + 라우터 격상 6/6 교차검증 [CLOSED], 2026-05-30) |
 | **TO** | 다음 새 채팅 (Desktop 메인 — 브라우저 MCP로 생성·적재, Code는 적재 명령만) |
 | **BASELINE** | 4e3c543 (origin/main, Vercel READY — 라우터 격상 반영). 코드 변경 0 운영 turn 기본 |
-| **NEXT SCOPE** | 달항아리 상세 환각제거 [CLOSED](authentic=true). 단 발행 차단: naver_* 17필드 NULL. 다음 = 네이버 상품정보제공고시 충진(groundedFacts 사실만) + publish-readiness에 naverPayloadComplete 축 추가. 발행은 정보 충진+게이트 통과+대표 승인 후. 아이스트레이 도매매 URL 대기. | 
+| **NEXT SCOPE** | Lane 1 자동SEO [CLOSED]. 다음 = Lane 2(Adobe 이미지 생성 파이프라인) 설계 OR 달항아리 발행(대표 승인). 달항아리 전축 GREEN: 디자인3종+상세진위+네이버고시+badge SSOT+SEO자동값+정체성보존. |
 | **PENDING** | 명화송풍구 cutout 소스 확보(추가이미지/고해상 단품 부재 — 선행 필요) / 명화송풍구 B-12 네이버 발행(대표 승인 후) / B-3 달항아리 카테고리·originCode 오염 / Claude MCP 워크플로 트랙 / Q5(Custom Models·Bulk Create) |
 
 ### [CLOSED 2026-05-30] 명화송풍구 S6 backdrop 적재 — 아래 SUPERSEDED 블록이 당초 계획, 6/6 검증 통과로 종결

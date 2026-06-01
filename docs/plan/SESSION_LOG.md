@@ -1,5 +1,16 @@
 > **분할 메모 (2026-05-28, #31 여덟 번째 분할)**: 2026-05-15 ~ 2026-05-19 PM 이전 entry 9건은 `docs/plan/archive/SESSION_LOG_2026-05-19.md`로 동결. 본 파일은 직전 5세션(2026-05-20 ~ 2026-05-28) 라이브 유지.
 
+## 2026-06-01 Lane 1 자동 SEO 파이프라인 [CLOSED] (B+C+D, Desktop 5소스 검증)
+
+- 1-B (commit 4297486): SearchAd /keywordstool 검색량 신호 주입 + 의도가중(선물/집들이/이사/개업/결혼/신혼 ×2.0, 인테리어/디자인/장식 ×0.3) + n-gram 복합어(intent-suffix 집들이선물·이사선물·결혼선물·신혼선물 + 인접 2-gram 달항아리도어벨). VolumeSignal 시맨틱 분리 (sortApplied/keywordsChanged/titlePrefixInjected/topIntentKeyword).
+- 1-C (commit 6446853): naver_title length-fill — finalScored 측정 풀에서 35-45자(TARGET_MIN/MAX)까지 충진, deboosted generic skip, titleAlreadyHas 토큰 anti-stuffing, 50자 HARD_CAP. 3-style 실측: orthodox 18→36자 / emotional 21→40자 / niche 23→37자(이미 임계 이상, fill 미발동 정상). titleLengthFilled + finalTitleLength 시그널.
+- 1-D (commits 6535e0c + 0712b9a): Product.name overwrite 제거(POST line 658 / PUT line 715) — 원본 정체성 보존, 재실행 오염 차단. seoTitle dual-column 발견(schema에 seo_title snake + seoTitle camel 동시 존재, publish-readiness는 seoTitle 검사) → 라우트 양쪽 동시 갱신. seo_title 최종 일관성(volumesAvailable 무관 mirror).
+- Desktop 5소스 검증(production 6535e0c→0712b9a 2회 ai-generate 실 productId 호출): Product.name 41자 원본 불변 ✓ / naver_title 36자 갱신 ✓ / seo_title=seoTitle 36자 일관 ✓ / DRAFT·naverProductId=null ✓ / publish-readiness 4축 true 유지 ✓. Code 보고 100% 정합.
+- ROADMAP 분할 (commit 8e60a0a, #31 임계 해소): 2119줄 → 288줄. archive/ROADMAP_2026-05_part2.md 1842줄 신규 (SUPERSEDED 24+건 + 직전 인계 + Session E 디테일). 한글 sentinel grep 실제 오타 0.
+- 신규 기술부채 등록 (TECH_DEBT.md): DEBT-01 SEO 필드 이중계열(title 4중 / keywords 4중 / desc 2중, 현재 라우트 mirror 동작 정상, 발행 후 수술 권고). DEBT-02 prisma name 필드 다모델 중복.
+- 비가역 0(DRAFT 유지, 네이버 미발행). SD-01 무접촉. 런타임 외부 이미지 0(#38). 거짓 라벨 0(#46). Prisma 싱글톤. heredoc 0(#26). 한글 코드 리터럴 0(영어 코멘트만).
+- 다음 = Lane 2(Adobe 이미지 생성 파이프라인) 설계 OR 달항아리 발행(대표 승인). 달항아리 전축 GREEN: 디자인3종+상세진위+네이버고시+badge SSOT+SEO자동값+정체성보존.
+
 ## 2026-05-31 Track B — 상세 환각제거+진위게이트 [CLOSED] + 네이버정보 NULL 발견 (Desktop 6소스 검증)
 
 - 환각제거(66f742a/650c477): groundedFacts 구조로 generateSpecRows/Story 결정론화. spec 허위 5건
