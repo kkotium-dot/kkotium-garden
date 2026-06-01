@@ -680,7 +680,13 @@ export async function POST(request: NextRequest) {
           // re-run's keyword stuffing fed the next call's input) and
           // corrupted downstream identity-keyword extraction (Kkotti score).
           keywords: keywordsArray.length > 0 ? keywordsArray : undefined,
+          // Lane 1-D dual-column mirror (2026-06-01): the schema currently has
+          // BOTH seo_title (snake, line 93) and seoTitle (camel, line 149),
+          // and publish-readiness reads seoTitle. Until the schema dedupe
+          // turn lands we mirror both — otherwise running ai-generate updates
+          // the snake column while readiness keeps showing stale camel data.
           seo_title: aiResponse.seo_title || aiResponse.naver_title,
+          seoTitle: aiResponse.seo_title || aiResponse.naver_title,
           seo_description: aiResponse.seo_description || (aiResponse.naver_description ?? '').substring(0, 160),
           naver_title: aiResponse.naver_title,
           naver_keywords: aiResponse.naver_keywords,
@@ -733,9 +739,11 @@ export async function PUT(request: NextRequest) {
         await prisma.product.update({
           where: { id: product.id },
           data: {
-            // Lane 1-D (2026-06-01): Product.name preserved (see POST handler).
+            // Lane 1-D (2026-06-01): Product.name preserved + dual-column
+            // seo_title/seoTitle mirror (see POST handler comments).
             keywords: keywordsArray.length > 0 ? keywordsArray : undefined,
             seo_title: aiResponse.seo_title || aiResponse.naver_title,
+            seoTitle: aiResponse.seo_title || aiResponse.naver_title,
             seo_description: aiResponse.seo_description || (aiResponse.naver_description ?? '').substring(0, 160),
             naver_title: aiResponse.naver_title,
             naver_keywords: aiResponse.naver_keywords,
