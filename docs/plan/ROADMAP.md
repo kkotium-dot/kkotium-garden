@@ -1,7 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
-> **최종 업데이트**: 2026-05-30 Track B **달항아리 단품 복구 [CLOSED]** (qualityScore 37.3→55.7, grade L4→L2, pFilterGrade null→L1, skeletonId=S6 안정, korean-traditional 톤, 발행 가능선 도달). Desktop 4소스 교차검증 통과(Product/storage.objects/Diagnosis + 비가역 0 = Code 보고 100% 정합, 거짓라벨 0 #46). 정정: crawl_logs stt_330=썸네일 변형, 실제 thumb 760×760. 다음 real-win = 달항아리 backdrop 적재(lifestyle=gemini-3-1-nano-banana-2/creator-liable, no-human 한지 배경 → Firefly 웹 1장 → upload-backdrop.js S6). 아이스트레이는 crawl_logs 출처 부재 → 도매매 URL 대기. baseline c0d7b12 유지(데이터+Storage만, prisma db pull 390+/296- reformat은 별도 chore commit).
-> **HEAD**: c0d7b12 (origin/main, Vercel READY) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-05-31 Track B **달항아리 상세 환각제거+진위게이트 [CLOSED]** (commit 66f742a/650c477, groundedFacts 구조로 generateSpecRows/Story 결정론화, spec 허위 5건 행 삭제 + story 향어휘 제거, publish-readiness 진위게이트 신규). Desktop 6소스 교차검증 통과(Vercel+detail PNG+publish-readiness+DB+Storage+비가역0 = Code 보고 100% 정합). ★ 신규 발견(발행 차단): naver_* 페이로드 17필드 전부 NULL → publishReady=true 또 거짓신호. 대표 지시 "정보까지 제대로 적용돼야 발행" = 상품정보제공고시 충진이 발행 선결. 다음 = 네이버 정보 충진(groundedFacts 재사용, 허위 0) + 게이트 naverPayloadComplete 축 추가. 아이스트레이는 crawl_logs 출처 부재 → 도매매 URL 대기.
+> **HEAD**: 650c477 (origin/main, Vercel READY) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **신규 ledger**: `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off, §3 ACTIVE / §4 STANDING / §6 PENDING 매 세션 정독 의무
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)

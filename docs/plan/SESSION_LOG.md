@@ -1,5 +1,16 @@
 > **분할 메모 (2026-05-28, #31 여덟 번째 분할)**: 2026-05-15 ~ 2026-05-19 PM 이전 entry 9건은 `docs/plan/archive/SESSION_LOG_2026-05-19.md`로 동결. 본 파일은 직전 5세션(2026-05-20 ~ 2026-05-28) 라이브 유지.
 
+## 2026-05-31 Track B — 상세 환각제거+진위게이트 [CLOSED] + 네이버정보 NULL 발견 (Desktop 6소스 검증)
+
+- 환각제거(66f742a/650c477): groundedFacts 구조로 generateSpecRows/Story 결정론화. spec 허위 5건
+  (유리/금속·크기·무게·세계인증·세계적브랜드) 행 삭제, story 향어휘 제거. publish-readiness 진위게이트 신규.
+- Desktop 6소스 교차검증: Vercel(650c477 READY) + 새 detail PNG 픽셀(spec 결정론 중국/형태/꽃틔움, 향0)
+  + GET publish-readiness(authentic=true) + DB + Storage + 비가역0. Code 보고 100% 정합.
+- ★ 신규 발견(발행 차단): naver_* 페이로드 17필드 전부 NULL(material/origin/manufacturer/as_info/tax_type 등).
+  authentic 게이트는 PNG만 검사, 네이버 전송정보 미검사 → publishReady=true 또 거짓신호.
+  대표 지시 "정보까지 제대로 적용돼야 발행" → 상품정보제공고시 충진이 발행 선결로 확정.
+- 다음: 네이버 정보 충진(groundedFacts 재사용, 허위0) + 게이트 naverPayloadComplete 축 추가.
+
 ## 2026-05-30 Track B — 달항아리 단품 복구 [CLOSED] (Code 적재 + Desktop 4소스 교차검증)
 
 - M1~M4: getItemDetail(63860451) 재크롤(화보 0, thumb 760×760) → 1000 패딩(원본 픽셀 보존 #46) → Storage 적재 + Product UPDATE → 3-pass 진단.

@@ -623,3 +623,18 @@ grep -c "id: '" src/lib/automation-registry.ts
 **파생 학습**: "registry는 *미래 작업의 등록 지점*이 아니라 *현재 가동의 보고 화면*". 등록 지점 역할은 `SPRINT_PLAN.md`가 담당. 두 역할을 한 파일에 합치면 *시점 충돌* 발생 → 본 사고가 그 직접 사례.
 
 ---
+
+## 작업원칙 — publishReady 라벨의 검사축 명시 의무 (#46 확장, 2026-05-31 학습)
+
+**사고**: 달항아리 상세 환각제거 cycle 후 `publishReady=true`로 라벨이 떴으나, 네이버로 실제 전송되는 naver_* 페이로드 17필드가 전부 NULL이었음. authentic 게이트는 detail PNG 콘텐츠만 검사하고 네이버 전송정보는 미검사 → 발행 불가 상태에서 "발행가능" 거짓신호.
+
+**교훈**: **publishReady 라벨은 검사 축을 명시해야 한다. authentic(PNG) ≠ naverPayloadComplete(전송정보).** 발행 게이트는 네이버로 실제 가는 페이로드를 검증해야 하며, 자산 미리보기 검증만으로 "발행가능" 라벨을 붙이는 것은 #46(거짓 라벨 금지)의 확장 위반.
+
+**시스템 강제**:
+- `evaluatePublishReadiness`의 publishReady는 다축 AND: `fieldsAllSet && authentic && naverPayloadComplete && status=DRAFT && naverProductId=null`.
+- 각 축은 응답에 독립 노출 (publishReady만 보지 말고 어느 축이 false인지 확인).
+- 신규 게이트 축 추가 시 라벨 라이브 의미가 변함 — 회귀 0 + 전 상품 영향 신경.
+
+**파생 학습**: 단일 boolean 신호는 *축의 합성*이지 단일 진실이 아니다. 라벨이 true일 때 어느 축 통과로 true인지 추적 가능해야 한다. 단축 추가 시 기존 true가 false로 강등되는 것은 *의도된 강등*(거짓신호 차단).
+
+---
