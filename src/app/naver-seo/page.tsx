@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import NaverSeoProductTable from '@/components/naver-seo/NaverSeoProductTable';
 import BulkEditModal, { BulkEditData } from '@/components/naver-seo/BulkEditModal';
 import AiProgressModal from '@/components/naver-seo/AiProgressModal';
+import { SeoEditDrawer } from '@/components/naver-seo/edit-drawer';
 import { RefreshCw, Search, Download } from 'lucide-react';
 import { useNaverSeoProducts, type NaverSeoProductApiItem as Product } from '@/lib/hooks/useDashboardData';
 
@@ -35,6 +36,10 @@ function NaverSeoInner() {
   const [showBulkEditModal, setShowBulkEditModal]   = useState(false);
   const [showProgressModal, setShowProgressModal]   = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, currentProduct: '' });
+  // Phase 2-A-1: in-place edit drawer state. Replaces the legacy ejection
+  // `window.location.href = /products/new?edit=`. Drawer hosts a deep-link
+  // back to the full editor for advanced flows.
+  const [drawerProductId, setDrawerProductId] = useState<string | null>(null);
 
   // SWR-backed products fetch (A3-3a) — replaces useState/useEffect/fetchProducts trio.
   // SWR auto-refetches when filter/searchQuery/presetIds change (key-as-dependency contract),
@@ -272,7 +277,7 @@ function NaverSeoInner() {
       </div>
 
       <p style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
-        {products.length}개 상품{selectedIds.length > 0 ? ` · ${selectedIds.length}개 선택됨` : ''} · 행을 클릭하면 AI 최적화 패널이 열립니다
+        {products.length}개 상품{selectedIds.length > 0 ? ` · ${selectedIds.length}개 선택됨` : ''} · 행을 클릭하면 실시간 편집 드로어가 열립니다
       </p>
 
       {loading ? (
@@ -283,13 +288,38 @@ function NaverSeoInner() {
       ) : (
         <NaverSeoProductTable
           products={products}
-          onProductClick={id => window.location.href = `/products/new?edit=${id}`}
+          onProductClick={id => setDrawerProductId(id)}
           selectedIds={selectedIds}
           onSelectChange={setSelectedIds}
           onAiGenerate={handleAiGenerate}
           onRefresh={fetchProducts}
         />
       )}
+
+      {/* Phase 2-A-1 — live SEO edit drawer. Find product by id from already
+          fetched list so we don't re-issue an API call on every row click. */}
+      <SeoEditDrawer
+        open={drawerProductId !== null}
+        product={
+          drawerProductId
+            ? (() => {
+                const p = products.find(pp => pp.id === drawerProductId);
+                if (!p) return null;
+                return {
+                  id: p.id,
+                  name: p.name,
+                  naver_title: p.naver_title,
+                  naver_keywords: p.naver_keywords,
+                  naver_description: p.naver_description,
+                  seoScore: p.seoScore,
+                  mainImage: p.mainImage,
+                };
+              })()
+            : null
+        }
+        onClose={() => setDrawerProductId(null)}
+        onSaved={fetchProducts}
+      />
 
       {showBulkEditModal && (
         <BulkEditModal

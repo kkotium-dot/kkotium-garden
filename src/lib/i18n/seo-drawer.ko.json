@@ -1,0 +1,42 @@
+{
+  "$schema": "Korean copy for the Phase 2-A-1 SEO edit drawer. All user-facing strings live here (rule #35).",
+  "drawer": {
+    "title": "씨앗 심기 — 실시간 SEO 편집",
+    "subtitle": "타이핑하는 순간 게이지가 움직입니다",
+    "close": "닫기",
+    "save": "저장",
+    "saving": "저장 중...",
+    "saved": "저장 완료",
+    "saveFailed": "저장 실패",
+    "openExternal": "전체 편집기에서 열기",
+    "originalName": "원본 상품명 (Product.name)",
+    "originalNameNote": "보존 — Lane 1-D 정합으로 발행 단계에서만 naver_title이 노출됩니다."
+  },
+  "title": {
+    "label": "네이버 발행 상품명 (naver_title)",
+    "placeholder": "예: 무드등 침실 LED 캠핑 분위기 조명 USB 충전식",
+    "helpRecommendedUnder": "50자 이내 권장",
+    "helpRange": "50–100자 — 점수 감점 구간",
+    "helpOver": "100자 초과 — 노출 차단 위험",
+    "countSuffix": "자"
+  },
+  "duplicate": {
+    "warningBadge": "단어 반복",
+    "warningPrefix": "동일 단어가",
+    "warningSuffix": "회 반복 — 네이버 SEO 페널티 위험",
+    "highlightedWord": "반복 단어",
+    "ok": "단어 반복 없음"
+  },
+  "keywords": {
+    "label": "네이버 키워드 (naver_keywords)",
+    "placeholder": "쉼표로 구분 — 예: 무드등, 침실조명, LED",
+    "help": "태그 사전 등재 검증은 Phase 2-A-2(Lane 1 SearchAd 재활용)에서 추가됩니다."
+  },
+  "description": {
+    "label": "네이버 짧은 설명 (naver_description)",
+    "placeholder": "200자 이내 — 상품의 핵심 가치 한 줄"
+  },
+  "footer": {
+    "phaseNote": "Phase 2-A-1: 글자수 게이지 + 중복 경고만 활성. 검색량·경쟁강도·발행 게이트는 다음 단계."
+  }
+}
