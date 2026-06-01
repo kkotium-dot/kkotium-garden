@@ -1,5 +1,5 @@
 {
-  "$schema": "Korean copy for the Phase 2-A-1 SEO edit drawer. All user-facing strings live here (rule #35).",
+  "$schema": "Korean copy for the SEO edit drawer (Phase 2-A-1 + 2-A-2). All user-facing strings live here (rule #35).",
   "drawer": {
     "title": "씨앗 심기 — 실시간 SEO 편집",
     "subtitle": "타이핑하는 순간 게이지가 움직입니다",
@@ -30,13 +30,36 @@
   "keywords": {
     "label": "네이버 키워드 (naver_keywords)",
     "placeholder": "쉼표로 구분 — 예: 무드등, 침실조명, LED",
-    "help": "태그 사전 등재 검증은 Phase 2-A-2(Lane 1 SearchAd 재활용)에서 추가됩니다."
+    "help": "최대 5개 키워드의 월간 검색량을 아래 차트로 표시합니다."
   },
   "description": {
     "label": "네이버 짧은 설명 (naver_description)",
     "placeholder": "200자 이내 — 상품의 핵심 가치 한 줄"
   },
+  "volume": {
+    "title": "키워드 검색량·경쟁강도",
+    "subtitle": "Naver SearchAd · 12시간 캐시",
+    "empty": "키워드를 입력하면 검색량이 표시됩니다",
+    "loading": "검색량 조회 중...",
+    "errorCredentials": "Naver SearchAd API 키 미설정",
+    "errorGeneric": "검색량 조회 실패",
+    "competitionLow": "저",
+    "competitionMid": "중",
+    "competitionHigh": "고",
+    "competitionUnknown": "?",
+    "monthlyLabel": "회/월",
+    "pickToInsert": "클릭하면 상품명에 추가",
+    "alreadyInTitle": "이미 상품명에 포함됨",
+    "insertedToast": "상품명에 추가됨",
+    "caveat": "낮은 경쟁강도가 판매를 보장하지 않습니다 — 포털 전체 검색 기반 데이터이며 쇼핑 의도와 차이가 있을 수 있습니다.",
+    "goldenGrade": {
+      "premium": "최적",
+      "good": "좋음",
+      "normal": "보통",
+      "caution": "주의"
+    }
+  },
   "footer": {
-    "phaseNote": "Phase 2-A-1: 글자수 게이지 + 중복 경고만 활성. 검색량·경쟁강도·발행 게이트는 다음 단계."
+    "phaseNote": "Phase 2-A-1·2: 글자수 게이지 + 중복 경고 + 검색량 차트. 발행 게이트는 다음 단계."
   }
 }

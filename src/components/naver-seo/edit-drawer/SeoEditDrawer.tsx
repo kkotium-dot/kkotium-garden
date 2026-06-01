@@ -10,20 +10,26 @@
 //   - keywords (naver_keywords) free-form CSV input
 //   - short description (naver_description)
 //
-// Phase 2-A-2 will add the search-volume + competition bars (Lane 1
-// SearchAd reuse). Phase 2-A-3 will add the publish-readiness gate.
+// Phase 2-A-2 added:
+//   - KeywordVolumeChart fed by /api/naver/keyword-stats (existing endpoint,
+//     12h server cache). Debounced 800ms on keyword edit. Click a keyword
+//     row to append it to naver_title.
+//
+// Phase 2-A-3 will add the publish-readiness gate + image execution guide.
 //
 // Save uses the existing PATCH /api/products/:id endpoint. Product.name
 // (한국 상품명) is intentionally left untouched per Lane 1-D rule.
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { X, ExternalLink, Save, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { PopButton, ScallopCard, StickerBadge } from "@/components/shell";
 import { seoDrawerCopy } from "@/lib/i18n/seo-drawer";
+import type { KeywordStat } from "@/lib/naver/keyword-api";
 import TitleLengthGauge from "./TitleLengthGauge";
 import DuplicateKeywordWarning from "./DuplicateKeywordWarning";
+import KeywordVolumeChart from "./KeywordVolumeChart";
 
 export interface SeoEditDrawerProduct {
   id: string;
@@ -58,6 +64,39 @@ const EMPTY: DraftState = {
   naver_description: "",
 };
 
+// Phase 2-A-2: derive up to 5 keywords from CSV input + product fallback.
+// Source priority:
+//   1. draft.naver_keywords (user edit)
+//   2. (no fallback to product.keywords[] here — we only have what the
+//      caller passes through props; the SeoEditDrawerProduct shape exposes
+//      only naver_keywords which already reflects the persisted value).
+function extractKeywordsForVolume(csv: string): string[] {
+  return csv
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean)
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .slice(0, 5);
+}
+
+// Tokenise the current title so KeywordVolumeChart can disable already-
+// inserted keyword rows (case-insensitive substring match).
+function tokensInTitle(title: string): Set<string> {
+  const out = new Set<string>();
+  for (const t of title.toLowerCase().split(/\s+/)) {
+    const clean = t.replace(/[\p{P}\p{S}]+/gu, "");
+    if (clean.length >= 1) out.add(clean);
+  }
+  return out;
+}
+
+// Case-insensitive substring presence test against the raw title — used
+// for click-to-insert "already present" detection (more accurate than
+// the tokenised set when the keyword is multi-word).
+function titleContains(title: string, keyword: string): boolean {
+  return title.toLowerCase().includes(keyword.toLowerCase());
+}
+
 function toDraft(p: SeoEditDrawerProduct | null): DraftState {
   if (!p) return EMPTY;
   return {
@@ -79,10 +118,94 @@ export default function SeoEditDrawer({
   const [draft, setDraft] = useState<DraftState>(EMPTY);
   const [saving, setSaving] = useState(false);
 
-  // Reset draft when target product changes.
+  // Phase 2-A-2: keyword volume cache + fetch state. Keyed by the comma-
+  // sorted keyword set so re-renders with the same 5 keywords skip the
+  // network round-trip. Server already has a 12h cache layer; this is the
+  // client-side echo to avoid loop fetches while the user types.
+  const [volumeStats, setVolumeStats] = useState<KeywordStat[] | null>(null);
+  const [volumeLoading, setVolumeLoading] = useState(false);
+  const [volumeError, setVolumeError] = useState<string | null>(null);
+  const lastKeyRef = useRef<string>("");
+
+  // Reset draft + clear cached volume when target product changes.
   useEffect(() => {
     setDraft(toDraft(product));
+    setVolumeStats(null);
+    setVolumeError(null);
+    lastKeyRef.current = "";
   }, [product?.id]);
+
+  // Derive the fetchable keyword list from the current draft.
+  const sourceKeywords = useMemo(
+    () => extractKeywordsForVolume(draft.naver_keywords),
+    [draft.naver_keywords],
+  );
+
+  // Debounced fetch from /api/naver/keyword-stats. 800ms after last edit.
+  useEffect(() => {
+    if (!open) return;
+    if (sourceKeywords.length === 0) {
+      setVolumeStats(null);
+      setVolumeError(null);
+      setVolumeLoading(false);
+      lastKeyRef.current = "";
+      return;
+    }
+    const sortedKey = [...sourceKeywords]
+      .map((k) => k.toLowerCase())
+      .sort()
+      .join(",");
+    if (sortedKey === lastKeyRef.current) return; // same set, skip
+    let cancelled = false;
+    const handle = setTimeout(async () => {
+      setVolumeLoading(true);
+      setVolumeError(null);
+      try {
+        const res = await fetch(
+          `/api/naver/keyword-stats?keywords=${encodeURIComponent(
+            sourceKeywords.join(","),
+          )}`,
+        );
+        const json = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!res.ok || json?.success === false) {
+          setVolumeError(json?.error ?? `HTTP ${res.status}`);
+          setVolumeStats(null);
+        } else {
+          setVolumeStats(json.keywords ?? []);
+          lastKeyRef.current = sortedKey;
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setVolumeError(err instanceof Error ? err.message : "network");
+        setVolumeStats(null);
+      } finally {
+        if (!cancelled) setVolumeLoading(false);
+      }
+    }, 800);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [open, sourceKeywords]);
+
+  // Click-to-insert: append keyword to naver_title if not already present.
+  const handleKeywordPick = useCallback(
+    (keyword: string) => {
+      setDraft((d) => {
+        if (titleContains(d.naver_title, keyword)) return d;
+        const sep = d.naver_title.length > 0 && !d.naver_title.endsWith(" ") ? " " : "";
+        return { ...d, naver_title: `${d.naver_title}${sep}${keyword}` };
+      });
+      toast.success(c.volume.insertedToast, { duration: 1500 });
+    },
+    [c.volume.insertedToast],
+  );
+
+  const inTitleSet = useMemo(
+    () => tokensInTitle(draft.naver_title),
+    [draft.naver_title],
+  );
 
   // ESC closes drawer.
   useEffect(() => {
@@ -373,6 +496,16 @@ export default function SeoEditDrawer({
               {c.keywords.help}
             </p>
           </ScallopCard>
+
+          {/* Phase 2-A-2 — keyword volume + competition bars (Lane 1 reuse) */}
+          <KeywordVolumeChart
+            sourceKeywords={sourceKeywords}
+            stats={volumeStats}
+            loading={volumeLoading}
+            error={volumeError}
+            onKeywordPick={handleKeywordPick}
+            inTitleSet={inTitleSet}
+          />
 
           {/* naver_description */}
           <ScallopCard style={{ padding: 18 }}>
