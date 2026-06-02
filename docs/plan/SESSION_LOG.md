@@ -1,3 +1,16 @@
+## 2026-06-02 UI/UX 2-MOBILE-3 [코드 완료] 모바일 폴리시 4건 + P1~P3 설계 (Code turn)
+
+Desktop 검증 turn(2026-06-02) — UI/UX 출하 코드검증(WorkbenchShell) + 2-NAMING 툴팁 코드 확정 + 모바일 회귀 4건 진단(대표 휴대폰 스크린샷 + products/page.tsx 전문 + WorkbenchShell 교차) + P1~P3 설계. 코드 0 → Code 2-MOBILE-3 인계.
+
+본 Code turn (baseline 0ebcd56):
+- M1 src/components/layout/Header.tsx: 메인 행 px-5 gap-4 → px-3 lg:px-5 gap-2 lg:gap-4 + overflow-x-clip / 검색 div mx-5 → mx-2 lg:mx-5 + min-w-0 / 꽃티움 라벨 span에 hidden sm:inline. 데스크톱 sm+ 라벨 보존.
+- M2 src/app/products/page.tsx 탭 컨테이너: overflow-hidden shrink-0 → overflow-x-auto w-full lg:w-auto lg:overflow-hidden shrink-0. 탭 button whitespace-nowrap 기존 유지.
+- M3 src/app/products/page.tsx Toolbar 부모: flex items-center gap-3 flex-wrap → flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3 lg:flex-wrap / 검색 div: min-w-[180px] max-w-xs → w-full lg:min-w-[180px] lg:max-w-xs.
+- M4 src/app/products/page.tsx BulkFloatMenu: fixed bottom-6 → fixed bottom-[84px] lg:bottom-6 (MobileTabBar 60px + safe-area 위) / inline minWidth:520 제거 → className lg:min-w-[520px] + style maxWidth:'calc(100vw - 24px)' / 내부 버튼 행 overflow-x-auto 추가. JSX 코멘트가 return( 직후 위치하여 TS1005 발생 → JS 주석으로 이동 (return 위) 단발 hotfix.
+- 문서: docs/handoff/HANDOFF_mobile_polish_p1p3_2026-06-02.md 신규(P1 골든윈도우 가드 / P2 발행 관제탑 신호등 / P3 SEO 4중컬럼 수술, 실행순서 P0발행→P1→M병행→P2→P3). TASK_BRIDGE §3 ACTIVE NEXT 갱신(P0 달항아리 발행). PROGRESS/ROADMAP 헤더 동기화(stale 650c477 → 본 commit).
+
+검증: TSC 0 / npm run build 0 / Vercel verify exit 0 / production /products HTTP 200 / 출하 chunk 단정 (flex-col gap-2 lg:flex-row · overflow-x-auto w-full lg:w-auto · bottom-[84px] lg:bottom-6 · lg:min-w-[520px] · calc(100vw - 24px)) / 한글 sentinel 0. 비가역 0 / 외부이미지 0(#38) / SD-01 footer 미접촉.
+
 > **분할 메모 (2026-05-28, #31 여덟 번째 분할)**: 2026-05-15 ~ 2026-05-19 PM 이전 entry 9건은 `docs/plan/archive/SESSION_LOG_2026-05-19.md`로 동결. 본 파일은 직전 5세션(2026-05-20 ~ 2026-05-28) 라이브 유지.
 
 ## 2026-06-01 Lane 1 자동 SEO 파이프라인 [CLOSED] (B+C+D, Desktop 5소스 검증)

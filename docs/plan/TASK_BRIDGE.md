@@ -85,17 +85,18 @@
 | 2-B-1 | 아틀리에 3분할 작업벤치 셸 | 0936a59 |
 | 2-B-2 | 캔버스 4변형 그리드 + 드래그앤드롭 5상태 | 754d5c6 |
 | 2-NAMING | DiagnosisCard S6/L2/persona/tone 한글 라벨 + 척도 + 툴팁 + 용어집 | 878d8fc |
-| 2-MOBILE-2 | 아틀리에 모바일 캔버스 주화면 + 컨트롤 바텀시트(peek/expand) + SEO 드로어 모바일 전체화면 모달 | ★본 commit |
+| 2-MOBILE-2 | 아틀리에 모바일 캔버스 주화면 + 컨트롤 바텀시트(peek/expand) + SEO 드로어 모바일 전체화면 모달 | 0ebcd56 |
+| 2-MOBILE-3 | 모바일 컨트롤 오버플로 4건(M1 헤더·M2 탭·M3 검색·M4 BulkFloatMenu) + P1~P3 설계 문서 | ★본 commit |
 
-### ⭐ NEXT — UI/UX Sprint 대단원 종료 → 보류 재개 검토
+### ⭐ NEXT — 🖥 Desktop P0 달항아리 발행 실측 (naver_* 17필드 충진 선결)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (2-MOBILE-2 [코드 완료], 본 commit, 2026-06-02) — UI/UX Sprint 대단원 종료 |
-| **TO** | 🖥 Desktop 새 채팅 (production 모바일 육안 검증 — 대표 휴대폰: 아틀리에 캔버스 주화면 + 바텀시트 peek/expand 토글 + SEO 드로어 전체화면) |
-| **BASELINE** | 본 commit (origin/main, Vercel READY 예정) — 직전 878d8fc |
-| **NEXT SCOPE** | 보류 누적 재개 검토 — G8-ENGINE 파이프라인 / 달항아리 발행(대표 승인) / Firefly 합성 실전 / Lane 2 BackdropCard |
-| **PENDING** | 2-MOBILE-1·2·NAMING 모바일·툴팁 실기기 육안(대표 휴대폰) / Firefly 프롬프트 복사 실동작 / G8-ENGINE 재개 / 달항아리 발행(대표 승인) / 명화송풍구 cutout 적재 / 기존 PENDING 누적 |
+| **FROM** | 💻 Code (2-MOBILE-3 [코드 완료] + P1~P3 설계 문서, 본 commit, 2026-06-02) |
+| **TO** | 🖥 Desktop 새 채팅 — **P0 달항아리 발행 실측** (naver_* 17필드 충진 선결, publishReady=true 진위게이트 통과 검증) |
+| **BASELINE** | 본 commit (origin/main, Vercel READY 예정) — 직전 0ebcd56 |
+| **NEXT SCOPE** | P0 달항아리 발행 → P1 골든윈도우 가드 → (M 모바일 검증 병행) → P2 관제탑 → P3 SEO수술(발행 후). 권위: `docs/handoff/HANDOFF_mobile_polish_p1p3_2026-06-02.md` |
+| **PENDING** | 2-MOBILE-1·2·3·NAMING 모바일·툴팁·오버플로 실기기 육안(대표 휴대폰) / Firefly 프롬프트 복사 실동작 / G8-ENGINE 재개 / 명화송풍구 cutout 적재 / DEBT-01 SEO 4중컬럼(P3 발행 후) / 기존 PENDING 누적 |
 
 ### 권위 문서 (UI/UX Sprint, 정독 우선순위)
 1. docs/research/GARDEN_DESIGN_BRIEF_2026-06.md (★레트로 팝 무드)

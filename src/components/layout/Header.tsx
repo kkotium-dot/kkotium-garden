@@ -15,7 +15,9 @@ export default function Header() {
       style={{ background: '#ffffff' }}
     >
       {/* ── Main header row ── */}
-      <div className="h-[56px] flex items-center w-full px-5 gap-4">
+      {/* Phase 2-MOBILE-3 M1: shrink horizontal padding + gap on mobile so
+          the right-side user button never overflows on ~390px screens. */}
+      <div className="h-[56px] flex items-center w-full px-3 lg:px-5 gap-2 lg:gap-4 overflow-x-clip">
 
         {/* ── Logo ── */}
         <Link
@@ -51,7 +53,9 @@ export default function Header() {
         </Link>
 
         {/* ── Search ── */}
-        <div className="flex-1 max-w-[380px] mx-5">
+        {/* Phase 2-MOBILE-3 M1: tighter mobile margins + min-w-0 to let the
+            flex item shrink below its content. Desktop margin unchanged. */}
+        <div className="flex-1 max-w-[380px] mx-2 lg:mx-5 min-w-0">
           <div className="relative">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#D4B0BC' }} />
             <input
@@ -77,7 +81,10 @@ export default function Header() {
             <div style={{ width: 26, height: 26, background: '#e62310', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <User size={13} className="text-white" strokeWidth={2.5} />
             </div>
-            <span>꽃티움</span>
+            {/* Phase 2-MOBILE-3 M1: hide user label on mobile to prevent
+                horizontal overflow; avatar circle still acts as the click
+                target. Desktop unchanged. */}
+            <span className="hidden sm:inline">꽃티움</span>
           </button>
         </div>
       </div>

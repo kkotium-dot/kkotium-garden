@@ -631,11 +631,15 @@ function BulkFloatMenu({
     { value: 'DRAFT',         label: '임시저장',     color: '#aaa' },
   ];
 
+  // Phase 2-MOBILE-3 M4: dock above MobileTabBar on mobile (60px tab bar +
+  // safe-area) so the float menu doesn't collide; cap horizontal size to the
+  // viewport so it never overflows; inner button row scrolls when 5 actions
+  // exceed the cap. Desktop floats at bottom-6 with min-w 520.
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-xl"
-      style={{ background: '#1A1A1A', border: '1.5px solid #333', minWidth: 520 }}>
+    <div className="fixed bottom-[84px] lg:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-xl lg:min-w-[520px]"
+      style={{ background: '#1A1A1A', border: '1.5px solid #333', maxWidth: 'calc(100vw - 24px)' }}>
       <span className="text-sm font-bold text-white mr-2">{selectedIds.length}개 선택</span>
-      <div className="flex-1 flex items-center gap-2">
+      <div className="flex-1 flex items-center gap-2 overflow-x-auto">
         <Link href={`/naver-seo?ids=${selectedIds.join(',')}`}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition"
           style={{ background: '#e62310', color: '#fff' }}>
@@ -1205,8 +1209,11 @@ function ProductsPageInner() {
         </div>
 
         {/* Toolbar */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex rounded-xl overflow-hidden shrink-0" style={{ background: '#fff', border: '1.5px solid #F8DCE5' }}>
+        {/* Phase 2-MOBILE-3 M2/M3: mobile stacks toolbar vertically so the
+            6-tab pill and search input get full width each; tab pill scrolls
+            horizontally on overflow. Desktop (lg+) wraps as before. */}
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3 lg:flex-wrap">
+          <div className="flex rounded-xl overflow-x-auto w-full lg:w-auto lg:overflow-hidden shrink-0" style={{ background: '#fff', border: '1.5px solid #F8DCE5' }}>
             {(Object.keys(TAB_CONFIG) as TabKey[]).map(k => (
               <button key={k} onClick={() => { setTab(k); setSelected(new Set()); }}
                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors whitespace-nowrap"
@@ -1224,7 +1231,8 @@ function ProductsPageInner() {
             ))}
           </div>
 
-          <div className="relative min-w-[180px] max-w-xs">
+          {/* Phase 2-MOBILE-3 M3: full-width on mobile, fixed cap on desktop. */}
+          <div className="relative w-full lg:min-w-[180px] lg:max-w-xs">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#D4B0BC' }} />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="상품명, 상품코드(SKU) 검색"
               className="w-full pl-8 pr-4 py-2 text-sm rounded-xl transition"
