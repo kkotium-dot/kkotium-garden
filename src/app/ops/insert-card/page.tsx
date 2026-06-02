@@ -42,7 +42,9 @@ export default function InsertCardPage() {
   const [loading, setLoading] = useState(true);
 
   // Card content
-  const [storeName, setStoreName] = useState('꽃틔움 가든');
+  // 2026-06-02 — 고객 동봉 카드 인쇄용 스토어명 기본값. '꽃틔움'(스토어명),
+  // 앱 이름 '꽃틔움 가든' 아님. 입력란에서 수동 수정 가능.
+  const [storeName, setStoreName] = useState('꽃틔움');
   const [productName, setProductName] = useState('');
   const [reviewReward, setReviewReward] = useState(1000);
   const [mainMessage, setMainMessage] = useState('소중한 한 송이를 선택해주셔서 감사합니다');

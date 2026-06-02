@@ -179,6 +179,7 @@ export async function POST(request: NextRequest) {
     // injected into detailContent. Nullable — render-empty when unset.
     const noticeSettings = await prisma.storeSettings.findFirst({
       select: {
+        storeName: true,
         noticeTopImageUrl: true,
         noticeTopText: true,
         noticeBottomImageUrl: true,
@@ -191,11 +192,14 @@ export async function POST(request: NextRequest) {
       bottomImageUrl: noticeSettings?.noticeBottomImageUrl ?? null,
       bottomText:     noticeSettings?.noticeBottomText     ?? null,
     };
+    // 2026-06-02 — 스토어명 SoT. store_settings.store_name = '꽃틔움'(고객 노출).
+    // 빈 값이면 builder가 '꽃틔움' 코드 기본값 사용. 앱 이름 '꽃틔움 가든' 아님.
+    const storeName = (noticeSettings?.storeName ?? '').trim() || '꽃틔움';
 
     // 7-pre. dryRun preview — build with Supabase URLs (no Naver upload). The
     // real register path below uploads to Naver first, then rebuilds.
     if (dryRun) {
-    const payload = buildNaverProductPayload(product, deliveryInfo, undefined, noticeAssets);
+    const payload = buildNaverProductPayload(product, deliveryInfo, undefined, noticeAssets, storeName);
       const dc = payload.originProduct.detailContent;
       const pin = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
       return NextResponse.json({
@@ -318,7 +322,7 @@ export async function POST(request: NextRequest) {
     const naverImageUrls = naverGallery.length > 0
       ? { representative: naverGallery[0], optional: naverGallery.slice(1) }
       : undefined;
-    const payload = buildNaverProductPayload(productForBuild, deliveryInfo, naverImageUrls, noticeAssets);
+    const payload = buildNaverProductPayload(productForBuild, deliveryInfo, naverImageUrls, noticeAssets, storeName);
 
     // 8. Register on Naver Commerce API
     let result: any;

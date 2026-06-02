@@ -272,9 +272,17 @@ export function normalizeNaverPhone(raw: string | null | undefined): string {
  */
 const PRODUCT_INFO_STANDARD_REFERENCE = '상품상세참조';
 
+// 2026-06-02 — 스토어명 정정. '꽃틔움 가든' = 앱 이름(내부용), '꽃틔움' =
+// 스토어명(고객/네이버 노출용). 고객 노출 fallback은 반드시 스토어명 사용.
+// SoT = store_settings.store_name (register route가 storeName 인자로 주입).
+// DB 값 없을 때만 이 코드 기본값.
+const DEFAULT_STORE_NAME = '꽃틔움';
+
 export function buildProductInfoProvidedNoticeEtc(
   product: LocalProduct,
+  storeName: string = DEFAULT_STORE_NAME,
 ): NaverProductInfoProvidedNotice {
+  const store = (storeName || '').trim() || DEFAULT_STORE_NAME;
   // SoT 우선순위: productInfo* (대표 명시 입력) > naver_title/manufacturer > name > placeholder
   const fallbackName = product.productInfoName
     ?? product.naver_title
@@ -286,7 +294,7 @@ export function buildProductInfoProvidedNoticeEtc(
     ?? PRODUCT_INFO_STANDARD_REFERENCE;
   const fallbackManufacturer = product.productInfoManufacturer
     ?? product.naver_manufacturer
-    ?? '꽃틔움 가든 협력업체';
+    ?? store;
 
   return {
     productInfoProvidedNoticeType: 'ETC',
@@ -699,7 +707,9 @@ export function buildNaverProductPayload(
   deliveryInfo: NaverDeliveryInfo,
   imageUrls?: { representative: string; optional?: string[] },
   noticeAssets: NoticeAssets = {},
+  storeName: string = DEFAULT_STORE_NAME,
 ): NaverProductPayloadV2 {
+  const store = (storeName || '').trim() || DEFAULT_STORE_NAME;
   // Use naver CDN URLs if available, fallback to Supabase URLs
   const representativeUrl = imageUrls?.representative ?? product.mainImage ?? '';
   const additionalImgs: string[] = imageUrls?.optional
@@ -717,11 +727,11 @@ export function buildNaverProductPayload(
 
   // 2026-06-02 fix — 수입품 importer 항상 충진 (originAreaInfo.importer NotEmpty
   // 400 "수입사 항목을 입력해 주세요" 영구 차단). importer_name 누락 시 폴백:
-  // naver_manufacturer > '꽃틔움 가든'. 국산(isImport=false)은 importer 미포함
+  // naver_manufacturer > 스토어명. 국산(isImport=false)은 importer 미포함
   // (네이버는 국산에 수입사 입력 금지). 허위 0 #46 — 위탁 셀러 본인이 수입 책임
-  // 주체이므로 자사명 충진이 정당.
+  // 주체이므로 자사(스토어)명 충진이 정당. 스토어명 = '꽃틔움'(앱 이름 '꽃틔움 가든' 아님).
   const importerName = isImport
-    ? String(product.importer_name ?? product.naver_manufacturer ?? '꽃틔움 가든').slice(0, 100)
+    ? String(product.importer_name ?? product.naver_manufacturer ?? store).slice(0, 100)
     : '';
 
   // 2026-06-02 P0 fix — leafCategoryId resolution.
@@ -737,7 +747,7 @@ export function buildNaverProductPayload(
 
   // 2026-06-02 P0 — productInfoProvidedNotice (정보고시) ETC 인라인.
   // RESEARCH §1: 템플릿 코드 참조 방식 미지원(공식). 매 상품 인라인이 유일.
-  const productInfoProvidedNotice = buildProductInfoProvidedNoticeEtc(product);
+  const productInfoProvidedNotice = buildProductInfoProvidedNoticeEtc(product, store);
 
   const payload: NaverProductPayloadV2 = {
     originProduct: {
