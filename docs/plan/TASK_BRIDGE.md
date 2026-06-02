@@ -71,6 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-02 P0 발행 — register 400 invalidInputs 2건 정확 fix (Code → Desktop, push e384447)
+
+| 항목 | 상태 |
+|---|---|
+| Desktop 시도 결과 (18:15) | POST register HTTP 400, invalidInputs 2건: returnDeliveryCompanyPriorityType NotValidEnum + minorPurchasable NotNull. 정보고시/카테고리/주소/이름/이미지 전부 PASS. |
+| Fix 1 단정 | 'CHARGE'는 v2 enum 아님. GitHub Discussion #241 코드 샘플로 'PRIMARY' 단정. NaverClaimDeliveryInfo 타입 + buildDeliveryInfo 교정. |
+| Fix 2 단정 | minorPurchasable: boolean 필수. 상수 true (미성년자 구매 가능 default). NaverProductPayloadV2 + buildNaverProductPayload 추가. |
+| dryRun production 단정 | returnDeliveryCompanyPriorityType=PRIMARY + minorPurchasable=true 충진. 2건 PASS. |
+| TSC/build/verify | 0 / OK / exit 0. 비가역 0 (register 호출 0건). |
+| 다음 (Desktop) | (1) GET /api/naver/addressbooks로 회선 생존 단정 (★회선 불안정성 대비) → (2) 대표 명시 승인 → (3) POST register 실호출. 통과 시 발행 완주. |
+
+
 ### 2026-06-02 P0 회선 수정 출하 + ECONNRESET 원인 정정 (Code → Desktop, push 22c43bb)
 
 | 항목 | 상태 |
