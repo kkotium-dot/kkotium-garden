@@ -22,7 +22,9 @@ export interface NaverDeliveryFee {
 }
 
 export interface NaverClaimDeliveryInfo {
-  returnDeliveryCompanyPriorityType?: 'CHARGE';
+  // 2026-06-02 fix — 'CHARGE'는 v2 enum 아님 (NotValidEnum 400 발생).
+  // GitHub Discussion #241 코드 샘플 정합: PRIMARY (대표/1순위) 사용.
+  returnDeliveryCompanyPriorityType?: 'PRIMARY' | 'SECONDARY';
   returnDeliveryFee: number;
   exchangeDeliveryFee: number;
   shippingAddressId: number;
@@ -116,6 +118,9 @@ export interface NaverProductPayloadV2 {
         afterServiceGuideContent: string;
       };
       productInfoProvidedNotice?: NaverProductInfoProvidedNotice;
+      // 2026-06-02 fix — NotNull 400 (네이버 invalidInputs 단정).
+      // 미성년자 구매 가능 여부. 성인용품 외 전 상품 기본 true.
+      minorPurchasable?: boolean;
       purchaseQuantityInfo?: {
         minPurchaseQuantity?: number;
         maxPurchaseQuantityPerId?: number;
@@ -352,7 +357,7 @@ export function buildDeliveryInfo(
     deliveryBundleGroupId: null,
     deliveryFee,
     claimDeliveryInfo: {
-      returnDeliveryCompanyPriorityType: 'CHARGE',
+      returnDeliveryCompanyPriorityType: 'PRIMARY',
       returnDeliveryFee: template.returnFee,
       exchangeDeliveryFee: template.exchangeFee,
       shippingAddressId: addresses.releaseAddressId,
@@ -720,6 +725,9 @@ export function buildNaverProductPayload(
           afterServiceGuideContent: product.asInfo ?? '평일 10:00~18:00 응대, 주말·공휴일 휴무',
         },
         productInfoProvidedNotice,
+        // 2026-06-02 — 미성년자 구매 가능(default true). 성인전용 상품 전용 흐름이
+        // 별도 도입될 때까지 전 상품 기본 허용. NotNull 400 사고 재방지(#46).
+        minorPurchasable: true,
         taxType: (product.naver_tax_type === 'DUTYFREE' ? 'DUTYFREE' : 'TAX') as 'TAX' | 'DUTYFREE',
         ...(product.sellerProductCode ? {
           sellerCodeInfo: {

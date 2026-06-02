@@ -182,6 +182,7 @@ export async function POST(request: NextRequest) {
           originAreaInfo: payload.originProduct.detailAttribute?.originAreaInfo,
           afterServiceInfo: payload.originProduct.detailAttribute?.afterServiceInfo,
           taxType: payload.originProduct.detailAttribute?.taxType,
+          minorPurchasable: payload.originProduct.detailAttribute?.minorPurchasable,
           optionCombinationCount:
             payload.originProduct.detailAttribute?.optionInfo?.optionCombinations?.length ?? 0,
           detailContentLength: dc.length,
