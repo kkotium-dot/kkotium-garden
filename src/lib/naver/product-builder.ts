@@ -125,7 +125,8 @@ export interface LocalProduct {
   aeo_content?: any; // JSONB: { qna: [{q,a}], faq: [{q,a}] }
   keywords?: unknown; // JSON array
   tags?: unknown; // JSON array
-  category?: string | null; // naver category code
+  category?: string | null; // legacy free-text label (often "uncategorized") — DO NOT send to Naver
+  naverCategoryCode?: string | null; // canonical Naver leaf category (8-digit numeric) — SoT for leafCategoryId
   originCode?: string | null;
   importer_name?: string | null;
   brand?: string | null;
@@ -433,8 +434,13 @@ export function validateForRegistration(
   if (!product.name || product.name.trim().length < 5) {
     errors.push('Product name is required (min 5 chars)');
   }
-  if (!product.category || product.category === '50003307') {
-    errors.push('Valid Naver category must be selected');
+  // 2026-06-02: gate the canonical 8-digit numeric naverCategoryCode, NOT the
+  // legacy `category` label (which is often "uncategorized" — sending that to
+  // Naver as leafCategoryId triggers HTTP 400, see direct register attempt at
+  // 06:10:22 KST on 2026-06-02).
+  const naverCat = (product.naverCategoryCode ?? '').trim();
+  if (!naverCat || !/^\d{6,10}$/.test(naverCat)) {
+    errors.push(`Valid Naver leaf category code required (got "${naverCat || ''}" — needs 8-digit numeric, e.g. 50000963)`);
   }
   if (!product.mainImage) {
     errors.push('Representative image is required');
@@ -446,8 +452,8 @@ export function validateForRegistration(
     errors.push('Naver address IDs not synced (run addressbook sync first)');
   }
 
-  // C-8 attribute completeness check
-  const d1Name = product.category ? getD1CategoryName(product.category) : '';
+  // C-8 attribute completeness check — resolve d1 from the canonical Naver leaf code
+  const d1Name = naverCat ? getD1CategoryName(naverCat) : '';
   const attrData: ProductAttributeData = {
     brand: product.brand || product.naver_brand,
     originCode: product.originCode,
@@ -463,7 +469,7 @@ export function validateForRegistration(
 
   // Upload readiness check
   const readinessInput: ReadinessInput = {
-    naverCategoryCode: product.category,
+    naverCategoryCode: naverCat || product.category || undefined,
     keywords: Array.isArray(product.keywords) ? product.keywords as string[] : [],
     tags: Array.isArray(product.tags) ? product.tags as string[] : [],
     name: product.name,
@@ -517,11 +523,22 @@ export function buildNaverProductPayload(
   const originCode = product.originCode ?? '0200037'; // default: China
   const isImport = Number(originCode) >= 200000;
 
+  // 2026-06-02 P0 fix — leafCategoryId resolution.
+  // The legacy `product.category` column carries the human-readable label
+  // (often "uncategorized") and MUST NOT be sent to Naver — Commerce API v2
+  // requires the 8-digit numeric leaf code from `naverCategoryCode`.
+  const rawCategory = (product.naverCategoryCode ?? '').trim();
+  // Reject obviously-wrong shapes (dome-ggook underscore form like "11_08_22_00_00",
+  // the literal "uncategorized", empty string) — fall through to a safe placeholder
+  // that the upstream guard already blocks.
+  const looksLikeNaverLeaf = /^\d{6,10}$/.test(rawCategory);
+  const leafCategoryId = looksLikeNaverLeaf ? rawCategory : '';
+
   const payload: NaverProductPayloadV2 = {
     originProduct: {
       statusType: 'SALE',
       saleType: 'NEW',
-      leafCategoryId: product.category ?? '50003307',
+      leafCategoryId,
       name: product.name.slice(0, 100), // Naver max 100 chars
       detailContent: buildDetailContent(product),
       images: {

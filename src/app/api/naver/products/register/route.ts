@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { naverRequest } from '@/lib/naver/api-client';
+import { naverRequest, NaverApiError } from '@/lib/naver/api-client';
 import {
   buildNaverProductPayload,
   buildDeliveryInfo,
@@ -42,9 +42,10 @@ async function getAddressIds(): Promise<AddressIds | null> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { productId, forceRegister } = body as {
+    const { productId, forceRegister, dryRun } = body as {
       productId: string;
       forceRegister?: boolean;
+      dryRun?: boolean;
     };
 
     if (!productId) {
@@ -141,8 +142,63 @@ export async function POST(request: NextRequest) {
     // and copies them to its own CDN (shop1.phinf.naver.net) automatically
     const payload = buildNaverProductPayload(product, deliveryInfo);
 
+    // 7-a. dryRun — echo payload (and a shallow shape preview) without calling
+    // Naver. Lets the operator inspect what would be sent before committing the
+    // irreversible POST. No DB writes happen on dryRun.
+    if (dryRun) {
+      return NextResponse.json({
+        success: true,
+        dryRun: true,
+        validation,
+        payloadPreview: {
+          leafCategoryId: payload.originProduct.leafCategoryId,
+          name: payload.originProduct.name,
+          salePrice: payload.originProduct.salePrice,
+          stockQuantity: payload.originProduct.stockQuantity,
+          statusType: payload.originProduct.statusType,
+          representativeImage: payload.originProduct.images.representativeImage.url,
+          optionalImageCount: payload.originProduct.images.optionalImages?.length ?? 0,
+          deliveryCompany: payload.originProduct.deliveryInfo.deliveryCompany,
+          claimDeliveryInfo: payload.originProduct.deliveryInfo.claimDeliveryInfo,
+          originAreaInfo: payload.originProduct.detailAttribute?.originAreaInfo,
+          afterServiceInfo: payload.originProduct.detailAttribute?.afterServiceInfo,
+          taxType: payload.originProduct.detailAttribute?.taxType,
+          optionCombinationCount:
+            payload.originProduct.detailAttribute?.optionInfo?.optionCombinations?.length ?? 0,
+          detailContentLength: payload.originProduct.detailContent.length,
+          missingFields: {
+            // Surface common 400 culprits at a glance
+            leafCategoryIdEmpty: !payload.originProduct.leafCategoryId,
+            productInfoProvidedNotice: 'NOT IMPLEMENTED IN BUILDER',
+          },
+        },
+        payload,
+      });
+    }
+
     // 8. Register on Naver Commerce API
-    const result = await naverRequest<any>('POST', '/v2/products', payload);
+    let result: any;
+    try {
+      result = await naverRequest<any>('POST', '/v2/products', payload);
+    } catch (registerErr: unknown) {
+      // NaverApiError carries the structured diagnostic (kind/status/bodyHead/
+      // gwTraceId). Surface it verbatim so the operator can read Naver's
+      // rejection reason without grepping Vercel runtime logs.
+      if (registerErr instanceof NaverApiError) {
+        return NextResponse.json({
+          success: false,
+          error: registerErr.message,
+          diagnostic: registerErr.diagnostic,
+          payloadPreview: {
+            leafCategoryId: payload.originProduct.leafCategoryId,
+            name: payload.originProduct.name,
+            salePrice: payload.originProduct.salePrice,
+            representativeImage: payload.originProduct.images.representativeImage.url,
+          },
+        }, { status: 502 });
+      }
+      throw registerErr;
+    }
     const naverProductId = String(
       result?.productNo ?? result?.originProductNo ?? result?.id ?? ''
     );
