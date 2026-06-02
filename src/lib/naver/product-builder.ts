@@ -65,6 +65,29 @@ export interface NaverOptionInfo {
   useStockManagement?: boolean;
 }
 
+// 2026-06-02 P0 — productInfoProvidedNotice (상품정보제공고시)
+// RESEARCH §1/§2: ETC 유형 8필드 + customerServicePhoneNumber 권장.
+// 자식 객체명은 productInfoProvidedNoticeType과 정확히 일치 필수
+// (type=ETC → 자식 etc만 / type=WEAR → 자식 wear만).
+export interface NaverProductInfoEtc {
+  returnCostReason: string;
+  noRefundReason: string;
+  qualityAssuranceStandard: string;
+  compensationProcedure: string;
+  troubleShootingContents: string;
+  itemName: string;
+  modelName: string;
+  manufacturer: string;
+  afterServiceDirector?: string;
+  customerServicePhoneNumber?: string;
+}
+
+export interface NaverProductInfoProvidedNotice {
+  productInfoProvidedNoticeType: 'ETC' | 'WEAR' | 'SHOES' | 'FURNITURE' | string;
+  etc?: NaverProductInfoEtc;
+  // 다른 유형(wear/furniture/...) 추가 시 동일 패턴으로 확장.
+}
+
 export interface NaverProductPayloadV2 {
   originProduct: {
     statusType: 'SALE' | 'WAIT' | 'SUSPENSION';
@@ -92,6 +115,7 @@ export interface NaverProductPayloadV2 {
         afterServiceTelephoneNumber: string;
         afterServiceGuideContent: string;
       };
+      productInfoProvidedNotice?: NaverProductInfoProvidedNotice;
       purchaseQuantityInfo?: {
         minPurchaseQuantity?: number;
         maxPurchaseQuantityPerId?: number;
@@ -107,6 +131,15 @@ export interface NaverProductPayloadV2 {
     naverShoppingRegistration: boolean;
     channelProductDisplayStatusType: 'ON' | 'OFF';
   };
+}
+
+// 2026-06-02 — common notice slots (store-wide top/bottom image + text)
+// injected into detailContent. Sourced from StoreSettings; nullable.
+export interface NoticeAssets {
+  topImageUrl?: string | null;
+  topText?: string | null;
+  bottomImageUrl?: string | null;
+  bottomText?: string | null;
 }
 
 // ─── Local DB product type (matches Prisma Product model) ────────────────────
@@ -127,6 +160,14 @@ export interface LocalProduct {
   tags?: unknown; // JSON array
   category?: string | null; // legacy free-text label (often "uncategorized") — DO NOT send to Naver
   naverCategoryCode?: string | null; // canonical Naver leaf category (8-digit numeric) — SoT for leafCategoryId
+  // 2026-06-02 P0 — SEO-first product name: naver_title > seoTitle > name
+  naver_title?: string | null;
+  seoTitle?: string | null;
+  // 2026-06-02 — productInfoProvidedNotice candidates (ETC fallback to placeholders)
+  naver_manufacturer?: string | null;
+  productInfoName?: string | null;
+  productInfoManufacturer?: string | null;
+  productInfoModel?: string | null;
   originCode?: string | null;
   importer_name?: string | null;
   brand?: string | null;
@@ -174,6 +215,84 @@ export interface ShippingTemplateData {
 export interface AddressIds {
   releaseAddressId: number;
   returnAddressId: number;
+}
+
+// ─── 2026-06-02 P0 — phone normalizer + productInfoProvidedNotice ETC builder ─
+
+/**
+ * Naver Commerce v2 requires phone numbers in dashed numeric form
+ * (e.g. "010-3227-4805", "02-1234-5678", "1588-1234"). When the source
+ * field carries a free-text placeholder ("고객센터 문의" etc.), fall back to
+ * the registered representative phone — the same number used on the
+ * RELEASE/REFUND addressbook entries.
+ */
+const NAVER_FALLBACK_PHONE = '010-3227-4805';
+const PHONE_PATTERN = /^\d{2,4}-\d{3,4}-\d{4}$/;
+
+export function normalizeNaverPhone(raw: string | null | undefined): string {
+  if (!raw) return NAVER_FALLBACK_PHONE;
+  const trimmed = String(raw).trim();
+  if (PHONE_PATTERN.test(trimmed)) return trimmed;
+  // Also accept space-or-no-separator forms by reducing to digits and re-formatting
+  // common Korean shapes (10/11-digit mobile, 9/10-digit landline).
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('010')) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10 && digits.startsWith('02')) {
+    return `${digits.slice(0, 2)}-${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 8 && /^(1577|1588|1600|1644|1666|1670|1688)/.test(digits)) {
+    return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  }
+  return NAVER_FALLBACK_PHONE;
+}
+
+/**
+ * Build productInfoProvidedNotice (상품정보제공고시) for ETC category.
+ * RESEARCH §1·§2: 자식 객체명은 productInfoProvidedNoticeType과 정확 일치 필수.
+ * 위탁배송 표준문구 "상품상세참조" 허용. 단 itemName/modelName/manufacturer/
+ * customerServicePhoneNumber는 실제값 권장.
+ */
+const PRODUCT_INFO_STANDARD_REFERENCE = '상품상세참조';
+
+export function buildProductInfoProvidedNoticeEtc(
+  product: LocalProduct,
+): NaverProductInfoProvidedNotice {
+  // SoT 우선순위: productInfo* (대표 명시 입력) > naver_title/manufacturer > name > placeholder
+  const fallbackName = product.productInfoName
+    ?? product.naver_title
+    ?? product.name
+    ?? PRODUCT_INFO_STANDARD_REFERENCE;
+  const fallbackModel = product.productInfoModel
+    ?? product.naver_title
+    ?? product.name
+    ?? PRODUCT_INFO_STANDARD_REFERENCE;
+  const fallbackManufacturer = product.productInfoManufacturer
+    ?? product.naver_manufacturer
+    ?? '꽃틔움 가든 협력업체';
+
+  return {
+    productInfoProvidedNoticeType: 'ETC',
+    etc: {
+      returnCostReason:          PRODUCT_INFO_STANDARD_REFERENCE,
+      noRefundReason:            PRODUCT_INFO_STANDARD_REFERENCE,
+      qualityAssuranceStandard:  PRODUCT_INFO_STANDARD_REFERENCE,
+      compensationProcedure:     PRODUCT_INFO_STANDARD_REFERENCE,
+      troubleShootingContents:   PRODUCT_INFO_STANDARD_REFERENCE,
+      itemName:                  String(fallbackName).slice(0, 100),
+      modelName:                 String(fallbackModel).slice(0, 100),
+      manufacturer:              String(fallbackManufacturer).slice(0, 100),
+      customerServicePhoneNumber: normalizeNaverPhone(product.asPhone),
+    },
+  };
+}
+
+/** Pick the SEO-first product name: naver_title > seoTitle > name. */
+export function pickProductName(product: LocalProduct): string {
+  const candidates = [product.naver_title, product.seoTitle, product.name];
+  const picked = candidates.find(v => typeof v === 'string' && v.trim().length > 0);
+  return String(picked ?? '').slice(0, 100);
 }
 
 // ─── Courier code mapping (app code → Naver API code) ────────────────────────
@@ -324,9 +443,29 @@ export function buildOptionInfo(
   return undefined;
 }
 
-/** Build detail content HTML from product description + hook phrase */
-export function buildDetailContent(product: LocalProduct): string {
+/**
+ * Build detail content HTML from product description + hook phrase, with
+ * optional store-wide common notice slots prepended/appended.
+ * Order: [topImage][topText] → hookPhrase → detail_image_url → description → AEO → [bottomText][bottomImage]
+ * Slots are rendered ONLY when the URL/text is non-empty — empty slots emit nothing.
+ */
+export function buildDetailContent(
+  product: LocalProduct,
+  notice: NoticeAssets = {},
+): string {
   const parts: string[] = [];
+
+  // 2026-06-02 — common top slot (image then text, so the image visually leads)
+  if (notice.topImageUrl) {
+    parts.push(
+      `<div style="text-align:center;"><img src="${escapeHtml(notice.topImageUrl)}" style="max-width:860px;width:100%;" alt="공지" /></div>`,
+    );
+  }
+  if (notice.topText) {
+    parts.push(
+      `<div style="padding:16px 20px;font-size:13px;line-height:1.7;color:#555;background:#fafbfc;">${escapeHtml(notice.topText).replace(/\n/g, '<br/>')}</div>`,
+    );
+  }
 
   if (product.hookPhrase) {
     parts.push(`<div style="text-align:center;padding:20px 0;font-size:16px;color:#333;">${escapeHtml(product.hookPhrase)}</div>`);
@@ -344,6 +483,18 @@ export function buildDetailContent(product: LocalProduct): string {
   const aeoHtml = buildAEOSection(product.aeo_content);
   if (aeoHtml) {
     parts.push(aeoHtml);
+  }
+
+  // 2026-06-02 — common bottom slot (text then image, so the footer image closes)
+  if (notice.bottomText) {
+    parts.push(
+      `<div style="padding:16px 20px;font-size:13px;line-height:1.7;color:#555;background:#fafbfc;">${escapeHtml(notice.bottomText).replace(/\n/g, '<br/>')}</div>`,
+    );
+  }
+  if (notice.bottomImageUrl) {
+    parts.push(
+      `<div style="text-align:center;"><img src="${escapeHtml(notice.bottomImageUrl)}" style="max-width:860px;width:100%;" alt="안내" /></div>`,
+    );
   }
 
   if (parts.length === 0) {
@@ -507,6 +658,7 @@ export function buildNaverProductPayload(
   product: LocalProduct,
   deliveryInfo: NaverDeliveryInfo,
   imageUrls?: { representative: string; optional?: string[] },
+  noticeAssets: NoticeAssets = {},
 ): NaverProductPayloadV2 {
   // Use naver CDN URLs if available, fallback to Supabase URLs
   const representativeUrl = imageUrls?.representative ?? product.mainImage ?? '';
@@ -534,13 +686,17 @@ export function buildNaverProductPayload(
   const looksLikeNaverLeaf = /^\d{6,10}$/.test(rawCategory);
   const leafCategoryId = looksLikeNaverLeaf ? rawCategory : '';
 
+  // 2026-06-02 P0 — productInfoProvidedNotice (정보고시) ETC 인라인.
+  // RESEARCH §1: 템플릿 코드 참조 방식 미지원(공식). 매 상품 인라인이 유일.
+  const productInfoProvidedNotice = buildProductInfoProvidedNoticeEtc(product);
+
   const payload: NaverProductPayloadV2 = {
     originProduct: {
       statusType: 'SALE',
       saleType: 'NEW',
       leafCategoryId,
-      name: product.name.slice(0, 100), // Naver max 100 chars
-      detailContent: buildDetailContent(product),
+      name: pickProductName(product), // SEO-first: naver_title > seoTitle > name
+      detailContent: buildDetailContent(product, noticeAssets),
       images: {
         representativeImage: { url: representativeUrl },
         ...(optionalImages.length > 0 ? { optionalImages } : {}),
@@ -557,9 +713,13 @@ export function buildNaverProductPayload(
           ...(product.naver_origin ? { content: product.naver_origin } : {}),
         },
         afterServiceInfo: {
-          afterServiceTelephoneNumber: product.asPhone ?? '010-0000-0000',
-          afterServiceGuideContent: product.asInfo ?? '10:00~18:00',
+          // RESEARCH §4: dashed numeric ("010-XXXX-XXXX"). Text placeholders such
+          // as "고객센터 문의" are rejected by Naver v2 — normalize with fallback
+          // to the registered representative phone (= addressbook number).
+          afterServiceTelephoneNumber: normalizeNaverPhone(product.asPhone),
+          afterServiceGuideContent: product.asInfo ?? '평일 10:00~18:00 응대, 주말·공휴일 휴무',
         },
+        productInfoProvidedNotice,
         taxType: (product.naver_tax_type === 'DUTYFREE' ? 'DUTYFREE' : 'TAX') as 'TAX' | 'DUTYFREE',
         ...(product.sellerProductCode ? {
           sellerCodeInfo: {

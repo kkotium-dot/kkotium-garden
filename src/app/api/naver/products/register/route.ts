@@ -137,15 +137,34 @@ export async function POST(request: NextRequest) {
       ? buildDeliveryInfo(shippingTemplate, addresses)
       : buildDeliveryInfoFromProduct(product, addresses);
 
+    // 6-b. Load common notice slots (store-wide top/bottom image + text)
+    // injected into detailContent. Nullable — render-empty when unset.
+    const noticeSettings = await prisma.storeSettings.findFirst({
+      select: {
+        noticeTopImageUrl: true,
+        noticeTopText: true,
+        noticeBottomImageUrl: true,
+        noticeBottomText: true,
+      },
+    });
+    const noticeAssets = {
+      topImageUrl:    noticeSettings?.noticeTopImageUrl    ?? null,
+      topText:        noticeSettings?.noticeTopText        ?? null,
+      bottomImageUrl: noticeSettings?.noticeBottomImageUrl ?? null,
+      bottomText:     noticeSettings?.noticeBottomText     ?? null,
+    };
+
     // 7. Build full payload
     // Image URLs: use Supabase URLs directly — Naver API accepts external URLs
     // and copies them to its own CDN (shop1.phinf.naver.net) automatically
-    const payload = buildNaverProductPayload(product, deliveryInfo);
+    const payload = buildNaverProductPayload(product, deliveryInfo, undefined, noticeAssets);
 
     // 7-a. dryRun — echo payload (and a shallow shape preview) without calling
     // Naver. Lets the operator inspect what would be sent before committing the
     // irreversible POST. No DB writes happen on dryRun.
     if (dryRun) {
+      const dc = payload.originProduct.detailContent;
+      const pin = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
       return NextResponse.json({
         success: true,
         dryRun: true,
@@ -165,11 +184,29 @@ export async function POST(request: NextRequest) {
           taxType: payload.originProduct.detailAttribute?.taxType,
           optionCombinationCount:
             payload.originProduct.detailAttribute?.optionInfo?.optionCombinations?.length ?? 0,
-          detailContentLength: payload.originProduct.detailContent.length,
+          detailContentLength: dc.length,
+          productInfoProvidedNotice: {
+            type: pin?.productInfoProvidedNoticeType ?? null,
+            etcKeys: pin?.etc ? Object.keys(pin.etc) : [],
+            etcSample: pin?.etc ? {
+              itemName: pin.etc.itemName,
+              modelName: pin.etc.modelName,
+              manufacturer: pin.etc.manufacturer,
+              customerServicePhoneNumber: pin.etc.customerServicePhoneNumber,
+            } : null,
+          },
+          noticeSlots: {
+            topImageUrlPresent:    !!noticeAssets.topImageUrl,
+            topTextPresent:        !!noticeAssets.topText,
+            bottomImageUrlPresent: !!noticeAssets.bottomImageUrl,
+            bottomTextPresent:     !!noticeAssets.bottomText,
+            topImageUrl:           noticeAssets.topImageUrl,
+            bottomImageUrl:        noticeAssets.bottomImageUrl,
+          },
           missingFields: {
             // Surface common 400 culprits at a glance
             leafCategoryIdEmpty: !payload.originProduct.leafCategoryId,
-            productInfoProvidedNotice: 'NOT IMPLEMENTED IN BUILDER',
+            productInfoProvidedNoticeMissing: !pin,
           },
         },
         payload,

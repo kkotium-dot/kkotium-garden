@@ -351,6 +351,11 @@ model StoreSettings {
   releaseAddressId      String?   @map("release_address_id") @db.VarChar(40)
   returnAddressId       String?   @map("return_address_id") @db.VarChar(40)
   addressbookSyncedAt   DateTime? @map("addressbook_synced_at") @db.Timestamp(6)
+  // 2026-06-02 P0 — 공통 콘텐츠 슬롯 4칸 (상품 detailContent 상단·하단 공지)
+  noticeTopImageUrl     String?   @map("notice_top_image_url")    @db.VarChar(500)
+  noticeTopText         String?   @map("notice_top_text")
+  noticeBottomImageUrl  String?   @map("notice_bottom_image_url") @db.VarChar(500)
+  noticeBottomText      String?   @map("notice_bottom_text")
   updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("store_settings")
