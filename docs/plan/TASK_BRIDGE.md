@@ -71,6 +71,20 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-02 P0 발행 — 네이버 이미지 업로드 파이프라인 (Code → Desktop, push a062bfb)
+
+| 항목 | 상태 |
+|---|---|
+| 진단 (#46) | register 400 "올바른 이미지 파일이 아닙니다". 외부 Supabase URL 직접 전송이 원인. 네이버는 업로드 API의 shop-phinf URL만 허용 (RESEARCH §1). |
+| ★proxy 멀티파트 진단 (요보고) | home-proxy.mjs는 JSON만 처리 → 멀티파트 패스스루 불가. action 'uploadImages' 신설 (proxy가 등록 IP에서 직접 fetch+업로드). |
+| 작업1 | api-client.ts uploadImagesToNaver + sniffImageMime (proxy 위임 / direct 멀티파트). |
+| home-proxy.mjs | action 'uploadImages' 추가 — imageUrls fetch → MIME sniff → FormData → 네이버 업로드. |
+| 작업2 | register route 7-img: 업로드 → 네이버 URL payload 주입 + detail_image_url 치환 + 잘못된 주석 삭제 + 실패 시 502. |
+| dryRun 단정 | imagesToUpload.mainImage(JPEG)+detailImage(PNG) 노출. 실 업로드는 발행 시. |
+| TSC/build/verify | 0 / OK / node --check OK / exit 0. 비가역 0. |
+| ★다음 (운영 2건) | (1) 대표 home computer git pull + home-proxy **재시작** (action 'uploadImages' 적용 — 안 하면 400). (2) GET addressbooks 회선 확인 → 대표 승인 → 실 register → 발행 완주. |
+
+
 ### 2026-06-02 P0 발행 — register 400 invalidInputs 2건 정확 fix (Code → Desktop, push e384447)
 
 | 항목 | 상태 |
