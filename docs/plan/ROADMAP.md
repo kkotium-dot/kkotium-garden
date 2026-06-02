@@ -2,8 +2,8 @@
 
 > 2026-06-02 **UI/UX 2-MOBILE-3 [코드 완료]** (baseline 0ebcd56). 모바일 컨트롤 오버플로 4건(M1 헤더·M2 탭·M3 검색·M4 BulkFloatMenu) lg: 분기 격리로 데스크톱 회귀 0. P1~P3 설계 핸드오프 신규. 다음 = P0 달항아리 발행(naver_* 17필드 충진 선결).
 
-> **최종 업데이트**: 2026-05-31 Track B **달항아리 상세 환각제거+진위게이트 [CLOSED]** (commit 66f742a/650c477, groundedFacts 구조로 generateSpecRows/Story 결정론화, spec 허위 5건 행 삭제 + story 향어휘 제거, publish-readiness 진위게이트 신규). Desktop 6소스 교차검증 통과(Vercel+detail PNG+publish-readiness+DB+Storage+비가역0 = Code 보고 100% 정합). ★ 신규 발견(발행 차단): naver_* 페이로드 17필드 전부 NULL → publishReady=true 또 거짓신호. 대표 지시 "정보까지 제대로 적용돼야 발행" = 상품정보제공고시 충진이 발행 선결. 다음 = 네이버 정보 충진(groundedFacts 재사용, 허위 0) + 게이트 naverPayloadComplete 축 추가. 아이스트레이는 crawl_logs 출처 부재 → 도매매 URL 대기.
-> **HEAD**: 본 commit (origin/main, Vercel READY) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
+> **최종 업데이트**: 2026-06-02 **달항아리 publishReady=true 실측 확정** (Desktop turn, 코드 0, baseline bd286ac). production /api/products/.../publish-readiness 4축(fieldsAllSet/authentic/naverPayloadComplete/publishReady) 전부 true. ★ stale 정정 (#44): 이전 "naver_* 17필드 NULL → publishReady 거짓신호" 무효 — 90% 충진 완료, 게이트 정합 통과 (거짓신호 아님). ★ 카테고리 코드 단정 (Code turn 2026-06-02): DB값 `11_08_22_00_00`은 도매꾹 형식 → 정확한 Naver 코드 `50000963`(가구/인테리어 > 인테리어소품 > 도어벨)로 교정 필수. 발행 동선: Desktop Supabase UPDATE → 대표 명시 승인 → register. 비가역 0(register 호출 0건, DRAFT 유지). 아이스트레이는 crawl_logs 출처 부재 → 도매매 URL 대기.
+> **HEAD**: bd286ac (origin/main, Vercel READY) | **TSC**: 0 errors | **빌드**: OK | **배포**: https://kkotium-garden.vercel.app
 > **신규 ledger**: `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off, §3 ACTIVE / §4 STANDING / §6 PENDING 매 세션 정독 의무
 > **v3.1 영구 참조**: `docs/research/SMART_ASSET_WORKFLOW_V3_1_FINAL_2026_05.md` — 다음 세션부터 *반드시 정독 의무*
 > **v2.0 이력 참조**: `docs/research/KKOTIUM_V2_ARCHITECTURE_2026_05.md` (Sprint X 폐기 후 일부 원칙은 작업원칙 #37·#38에서 유지)

@@ -86,16 +86,16 @@
 | 2-B-2 | 캔버스 4변형 그리드 + 드래그앤드롭 5상태 | 754d5c6 |
 | 2-NAMING | DiagnosisCard S6/L2/persona/tone 한글 라벨 + 척도 + 툴팁 + 용어집 | 878d8fc |
 | 2-MOBILE-2 | 아틀리에 모바일 캔버스 주화면 + 컨트롤 바텀시트(peek/expand) + SEO 드로어 모바일 전체화면 모달 | 0ebcd56 |
-| 2-MOBILE-3 | 모바일 컨트롤 오버플로 4건(M1 헤더·M2 탭·M3 검색·M4 BulkFloatMenu) + P1~P3 설계 문서 | ★본 commit |
+| 2-MOBILE-3 | 모바일 컨트롤 오버플로 4건(M1 헤더·M2 탭·M3 검색·M4 BulkFloatMenu) + P1~P3 설계 문서 | bd286ac |
 
-### ⭐ NEXT — 🖥 Desktop P0 달항아리 발행 실측 (naver_* 17필드 충진 선결)
+### ⭐ NEXT — 🖥 Desktop P0 달항아리 발행 (카테고리 코드 11_08_22_00_00 → 50000963 교정 후 대표 승인)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (2-MOBILE-3 [코드 완료] + P1~P3 설계 문서, 본 commit, 2026-06-02) |
-| **TO** | 🖥 Desktop 새 채팅 — **P0 달항아리 발행 실측** (naver_* 17필드 충진 선결, publishReady=true 진위게이트 통과 검증) |
-| **BASELINE** | 본 commit (origin/main, Vercel READY 예정) — 직전 0ebcd56 |
-| **NEXT SCOPE** | P0 달항아리 발행 → P1 골든윈도우 가드 → (M 모바일 검증 병행) → P2 관제탑 → P3 SEO수술(발행 후). 권위: `docs/handoff/HANDOFF_mobile_polish_p1p3_2026-06-02.md` |
+| **FROM** | 💻 Code (P0 달항아리 카테고리 코드 단정 + MD 동기화 [docs only], baseline bd286ac, 2026-06-02) |
+| **TO** | 🖥 Desktop 새 채팅 — **달항아리 카테고리 코드 Supabase UPDATE + 대표 승인 후 register** (publishReady=true 4축 실측 확정) |
+| **BASELINE** | bd286ac (origin/main, Vercel READY 실측 확정) |
+| **NEXT SCOPE** | 🖥 Desktop Supabase UPDATE: 달항아리 `naverCategoryCode` `11_08_22_00_00`(도매꾹) → `50000963`(Naver 인테리어소품>도어벨) → 대표 명시 승인 → register. publishReady=true 4축 게이트 통과 (Desktop 실측 확정). 권위: `docs/handoff/HANDOFF_moonjar_publish_ready_2026-06-02.md` |
 | **PENDING** | 2-MOBILE-1·2·3·NAMING 모바일·툴팁·오버플로 실기기 육안(대표 휴대폰) / Firefly 프롬프트 복사 실동작 / G8-ENGINE 재개 / 명화송풍구 cutout 적재 / DEBT-01 SEO 4중컬럼(P3 발행 후) / 기존 PENDING 누적 |
 
 ### 권위 문서 (UI/UX Sprint, 정독 우선순위)
@@ -259,7 +259,7 @@
 | **P40** | **시각적 통일성 부재** — 라이프 자산 페이지 ↔ 온실 아틀리에 ↔ PLANT 디자인 토큰 불일치 | Sprint 8-IA Phase 2 |
 | **B-1** | **온실 아틀리에 클릭 무반응** — Phase 3-C-1 6 컴포넌트 `'use client'` 누락 | 본 commit ✅ 완료 (Desktop 재검증 대기) |
 | **B-2** | **runThumbnail 빈 outputs 침묵 실패** (#46 위반 소지) | 본 commit ✅ 완료 |
-| **B-3** | **달항아리 도어벨 데이터 보정** (category=uncategorized, 순마진 6.4%) | B-1/B-2 검증 통과 후 |
+| **B-3** | **달항아리 도어벨 데이터 보정** (카테고리 코드 11_08_22_00_00 도매꾹 형식 → Naver `50000963` 교정 필요. 마진 정상 27200/20900) | Desktop Supabase UPDATE 위임 |
 
 ---
 
