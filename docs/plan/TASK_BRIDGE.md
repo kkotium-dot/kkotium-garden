@@ -87,17 +87,17 @@
 | 2-NAMING | DiagnosisCard S6/L2/persona/tone 한글 라벨 + 척도 + 툴팁 + 용어집 | 878d8fc |
 | 2-MOBILE-2 | 아틀리에 모바일 캔버스 주화면 + 컨트롤 바텀시트(peek/expand) + SEO 드로어 모바일 전체화면 모달 | 0ebcd56 |
 | 2-MOBILE-3 | 모바일 컨트롤 오버플로 4건(M1 헤더·M2 탭·M3 검색·M4 BulkFloatMenu) + P1~P3 설계 문서 | bd286ac |
-| P0-excel-gaps | 네이버 엑셀 88칸 매핑 누락 5건 수술(F1 옵션·F2 제조사·F3 상품명·F4 배송비·F5 정보고시) + builder fee guard | ★본 commit |
+| P0-excel-gaps | 네이버 엑셀 88칸 매핑: F1·F2·F3·F5 4건 [CLOSED] + F4 [정상동작 확정](템플릿 SoT 정합) | 0873b6a |
 
-### ⭐ NEXT — 🖥 Desktop production 엑셀 재호출 + 정보고시 productInfo* 충진 → 대표 승인 후 register
+### ⭐ NEXT — 🖥 Desktop (선택) productInfoModel 충진 → 대표 승인 후 register (엑셀 경로 발행 안전)
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (P0 엑셀 88칸 매핑 5건 수술 + builder fee guard + DEBT-04 등록, 본 commit, 2026-06-02) |
-| **TO** | 🖥 Desktop 새 채팅 — (a) production POST /api/naver/excel {"productIds":["cmp3afb450001gng5468w0qpc"]} 재호출 + openpyxl로 5건 충진 육안 단정 (b) productInfo* 3필드 groundedFacts 충진 (c) 대표 명시 승인 후 register |
-| **BASELINE** | 본 commit (origin/main, Vercel READY 예정) — 직전 5e72798 |
-| **NEXT SCOPE** | 엑셀 5건 충진 단정 + productInfo* 충진 + 대표 명시 승인 후 register. publishReady=true 4축 게이트 통과 + 카테고리 50000963 (이전 turn 교정 완료). 권위: `docs/handoff/HANDOFF_naver_excel_mapping_gaps_2026-06-02.md` + `docs/handoff/HANDOFF_moonjar_publish_ready_2026-06-02.md` |
-| **PENDING** | Desktop production 엑셀 5건 충진 육안 + productInfo* 충진 / 달항아리 register 대표 승인 / 2-MOBILE-1·2·3·NAMING 모바일·툴팁·오버플로 실기기 육안(대표 휴대폰) / Firefly 프롬프트 복사 실동작 / G8-ENGINE 재개 / 명화송풍구 cutout 적재 / DEBT-01 SEO 4중컬럼(P3 발행 후) / DEBT-04 엑셀 buildDataRow 매핑 가드(신규 NaverProductData 필드 추가 시 route.ts 동시 갱신) / 기존 PENDING 누적 |
+| **FROM** | 💻 Code (P0 엑셀 5건 검증 완료 + F4 오진단 정정 [docs only], 본 commit, 2026-06-02) |
+| **TO** | 🖥 Desktop 새 채팅 — (a) [선택] productInfoModel 충진 (도어벨류 "해당없음" 관행) (b) 대표 명시 승인 후 register. 엑셀 경로 발행 안전 단정 (Desktop 독립검증 2026-06-02 통과) |
+| **BASELINE** | 본 commit (origin/main, Vercel READY 예정) — 직전 0873b6a (엑셀 5건 수술) |
+| **NEXT SCOPE** | (선택) productInfoModel 충진 + 대표 명시 승인 → register. publishReady=true 4축 + 카테고리 50000963 + 엑셀 F1/F2/F3/F5 통과 + F4 정상동작 확정 → 기술적 발행 차단 0. 권위: `docs/handoff/HANDOFF_excel_5fix_verify_f4_correction_2026-06-02.md` + `HANDOFF_naver_excel_mapping_gaps_2026-06-02.md` + `HANDOFF_moonjar_publish_ready_2026-06-02.md` |
+| **PENDING** | (선택) productInfoModel 충진 / 달항아리 register 대표 승인 / 2-MOBILE-1·2·3·NAMING 모바일·툴팁·오버플로 실기기 육안(대표 휴대폰) / Firefly 프롬프트 복사 실동작 / G8-ENGINE 재개 / 명화송풍구 cutout 적재 / DEBT-01 SEO 4중컬럼(P3 발행 후) / DEBT-04 엑셀 buildDataRow 예방 가드(신규 NaverProductData 필드 추가 시 route.ts 동시 갱신) / 기존 PENDING 누적 |
 
 ### 권위 문서 (UI/UX Sprint, 정독 우선순위)
 1. docs/research/GARDEN_DESIGN_BRIEF_2026-06.md (★레트로 팝 무드)
