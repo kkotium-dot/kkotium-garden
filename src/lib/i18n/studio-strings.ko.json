@@ -226,6 +226,14 @@
       "tagComplete": "완료",
       "tagActive": "진행",
       "tagPending": "대기"
+    },
+    "mobile": {
+      "_meta": "Phase 2-MOBILE-2 — 아틀리에 모바일 심화. 캔버스 주화면 + 상단 목록 스트립 + 하단 바텀시트(컨트롤 4탭).",
+      "listStripLabel": "상품 선택",
+      "sheetHandleAria": "컨트롤 시트 핸들",
+      "sheetExpand": "컨트롤 펼치기",
+      "sheetCollapse": "컨트롤 접기",
+      "sheetPeekHint": "탭을 눌러 컨트롤 펼치기"
     }
   }
 }

@@ -134,6 +134,21 @@ export default function SeoEditDrawer({
   const [draft, setDraft] = useState<DraftState>(EMPTY);
   const [saving, setSaving] = useState(false);
 
+  // Phase 2-MOBILE-2: switch to full-screen modal on <lg viewports. NN/g
+  // — bottom sheets are designed for ephemeral context and degrade for the
+  // long, multi-section SEO edit flow. SSR-safe: default false, set after
+  // mount (component only renders when open=true, both interactive). Resync
+  // on resize so the layout adapts mid-session (e.g. orientation change).
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(max-width: 1023px)");
+    const apply = () => setIsMobile(mql.matches);
+    apply();
+    mql.addEventListener("change", apply);
+    return () => mql.removeEventListener("change", apply);
+  }, []);
+
   // Phase 2-A-2: keyword volume cache + fetch state. Keyed by the comma-
   // sorted keyword set so re-renders with the same 5 keywords skip the
   // network round-trip. Server already has a 12h cache layer; this is the
@@ -324,7 +339,7 @@ export default function SeoEditDrawer({
         inset: 0,
         zIndex: 9000,
         display: "flex",
-        justifyContent: "flex-end",
+        justifyContent: isMobile ? "center" : "flex-end",
         background: "rgba(26, 26, 26, 0.35)",
         backdropFilter: "blur(2px)",
       }}
@@ -334,14 +349,16 @@ export default function SeoEditDrawer({
     >
       <aside
         style={{
-          width: "min(560px, 92vw)",
+          width: isMobile ? "100vw" : "min(560px, 92vw)",
           height: "100vh",
           background: "var(--color-bg)",
-          borderLeft: "1px solid var(--color-border-strong)",
-          boxShadow: "-12px 0 24px rgba(230, 35, 16, 0.08)",
+          borderLeft: isMobile ? "none" : "1px solid var(--color-border-strong)",
+          boxShadow: isMobile ? "none" : "-12px 0 24px rgba(230, 35, 16, 0.08)",
           display: "flex",
           flexDirection: "column",
-          animation: "gpSlideIn 0.18s ease-out",
+          animation: isMobile
+            ? "gpSlideUp 0.20s ease-out"
+            : "gpSlideIn 0.18s ease-out",
         }}
       >
         {/* Header */}
@@ -683,6 +700,16 @@ export default function SeoEditDrawer({
             }
             to {
               transform: translateX(0);
+              opacity: 1;
+            }
+          }
+          @keyframes gpSlideUp {
+            from {
+              transform: translateY(24px);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
               opacity: 1;
             }
           }
