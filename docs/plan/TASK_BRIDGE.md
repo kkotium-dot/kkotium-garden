@@ -71,6 +71,19 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-02 P0 회선 수정 출하 + ECONNRESET 원인 정정 (Code → Desktop, push 22c43bb)
+
+| 항목 | 상태 |
+|---|---|
+| 출하 (회선 수정) | api-client.ts fetchNoKeepAlive: Connection: close + keepalive:false + ECONNRESET 자동 백오프 재시도 200/400ms 최대 3회. 4개 fetch path 전수 적용. cause 진단 보강 (syscall/address/port/errno/attempts). |
+| 검증 통과 (코드) | TSC 0 / build 0 / verify-vercel exit 0. Vercel logs에서 retry-backoff [NAVER_DIAG] 발화 확인 = 자동 재시도 정상 작동. |
+| 검증 실패 (회선) | 본 turn GET addressbooks 2회 호출 모두 502 attempts=3 NETWORK_RESET. dashboard/stats도 동일. **GET까지 영구 차단 중** — 이전 가정 'GET 정상' stale fact 정정 (#46). |
+| 단정 (사실) | client-side fix만으로 해결 불가. server-side(proxy 또는 그 너머)에서 매번 RST 발생. attempts=3 모두 실패 = 일시 사고 아님. |
+| 추정 (단정 못 함) | ① Tailscale Funnel proxy 자체 다운(home computer 측) / ② proxy → naver 회선 차단 / ③ NAVER_PROXY_URL 환경변수 변경. |
+| 다음 (대표 권한) | home computer Tailscale Funnel proxy 상태 점검 + 재가동. 정상 회복 후 GET /api/naver/addressbooks 단정 → register 재시도. |
+| 비가역 0 | Code register 호출 0건. DRAFT 유지. |
+
+
 ### 2026-06-02 P0 발행 1단계 완주 — 정보고시·AS·name·공통슬롯 통합 (Code → Desktop, push 734f25d)
 
 | 항목 | 상태 |

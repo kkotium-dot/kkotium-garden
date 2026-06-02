@@ -259,3 +259,23 @@ buildProductInfoProvidedNoticeEtc는 모든 상품에 ETC 유형을 강제. RESE
 ### SOURCE
 
 Code 2026-06-02 P0 발행 1단계 turn — RESEARCH_naver_productinfo_notice_api §3 4단계 권고.
+
+## DEBT-09 — Tailscale Funnel proxy 헬스체크 동선 부재
+
+**Status**: OPEN (2026-06-02 등록, P0 발행 회선 수정 turn 중 발견)
+**Severity**: high (proxy 다운 = 모든 네이버 호출 영구 실패 = 발행 0)
+**Owner**: 발행 통과 후 별도 turn (또는 Sprint 6 인프라 운영)
+
+### 부채 명세
+
+Vercel production → Tailscale Funnel proxy(home computer) → 네이버 Commerce API 회선 구조 (api-client.ts Mode 1). proxy 자체가 다운/재시작/회선 끊김 시 모든 네이버 호출이 ECONNRESET으로 영구 실패. 본 turn 시점 검증에서 GET /api/naver/addressbooks + GET /api/dashboard/stats 모두 502 attempts=3 NETWORK_RESET 단정 → proxy 측 장애 강하게 의심. 그러나 Code 측에서 proxy 헬스체크 동선 0 — 대표가 home computer 직접 확인할 때까지 진단 멈춤.
+
+### 수술 권고 동선
+
+- GET /api/naver/proxy-health 라우트 신설 — proxy URL에 단순 ping 요청 (네이버 API 호출 0) → proxy 응답 시간/상태 단정
+- 또는 Vercel cron(/api/cron/proxy-health, 5분 간격)으로 백그라운드 ping + 다운 감지 시 Discord webhook 알림
+- 대표가 home computer 점검 안 해도 자동 감지/통보 가능
+
+### SOURCE
+
+Code 2026-06-02 P0 발행 회선 수정 turn — api-client.ts fetchNoKeepAlive 출하 후 사후 검증에서 GET까지 ECONNRESET 발견.
