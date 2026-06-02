@@ -71,6 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-02 수입품 importer 자동 충진 — originAreaInfo NotEmpty 400 차단 (Code → Desktop, push 3137914)
+
+| 항목 | 상태 |
+|---|---|
+| 단정 (#46) | 중국산(isImport) + importer_name=null → importer 누락 → 400 "수입사 항목 입력". 달항아리·명화 방향제 동일. |
+| Fix | 수입품 importer 항상 충진. 폴백 importer_name > naver_manufacturer > '꽃틔움 가든'. 국산은 미포함. |
+| dryRun 단정 | 명화 방향제(중국산, 두 필드 null) → importer='꽃틔움 가든' 충진. |
+| TSC/build/verify | 0 / OK / exit 0. 비가역 0. |
+| 다음 (Desktop) | 명화 방향제(NORMAL)로 dryRun 재단정 → 회선 확인 → 대표 승인 → register 첫 발행. 달항아리 ORDER_MADE 파킹. |
+
+
 ### 2026-06-02 배송 분기 — 공급사 합배송 자동 분기 + ORDER_MADE 가드 (Code → Desktop, push 799dea7)
 
 | 항목 | 상태 |
