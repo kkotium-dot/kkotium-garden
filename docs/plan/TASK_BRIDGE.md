@@ -71,6 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-02 P0 발행 선결 — 위탁배송 주소 기능 신설 + 진단 로깅 (Code → Desktop, baseline ac13be7)
+
+| 항목 | 상태 |
+|---|---|
+| 발행 블로커 | StoreSettings.releaseAddressId/returnAddressId 정식 컬럼 부재 + 네이버 호출 fetch failed 원인 미확정 |
+| Code 출하 | schema 3컬럼 신설 + Supabase ALTER 적용 + addressbooks/products·register/batch-register 정식 컬럼 read + api-client.ts NaverApiError·NaverFailKind 7분류 로깅 |
+| 위험 격리 (#34) | 미커밋 schema diff의 legalApproval 삭제(#39) → stash@{0}로 격리 |
+| 진단 운영 동선 | Desktop 대표 환경에서 (1) 판매자센터 → 판매자정보 → 배송정보 → 주소록 등록 (2) GET /api/naver/addressbooks (3) diagnostics 분기: IP_NOT_ALLOWED → Vercel Static IPs / RATE_LIMIT → backoff / NETWORK_RESET → keep-alive 점검 / success → 자동수거 예외처리 1:1 |
+| 다음 단계 | 진단 결과 보고 → 분기별 후속 결정 → 대표 명시 승인 → 달항아리 register |
+| 비가역 0 | 네이버 register 호출 0건. DRAFT 유지. |
+
+
 **Last update**: 2026-06-01 (Desktop turn) — **UI/UX 통합재설계 Sprint 진행 중**. G8-ENGINE 이미지 파이프라인은 [보류 누적]으로 이관, 현재 메인 트랙 = 앱 전체 UI/UX 재설계(레트로 팝 가든 판타지 디자인 시스템).
 
 ### 진행 완료 (Desktop 전수 Chrome MCP 검증)

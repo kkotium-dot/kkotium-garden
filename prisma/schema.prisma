@@ -348,6 +348,9 @@ model StoreSettings {
   kakaoSenderPhone      String   @default("") @map("kakao_sender_phone") @db.VarChar(20)
   // E-13C: Insert card 4-slot color palette (HEX codes)
   insertCardPalette     Json     @default("{\"slot1\":{\"name\":\"Pink\",\"hex\":\"#FF6B8A\"},\"slot2\":{\"name\":\"Red\",\"hex\":\"#E62310\"},\"slot3\":{\"name\":\"Beige\",\"hex\":\"#A37B4B\"},\"slot4\":{\"name\":\"Blush\",\"hex\":\"#D4537E\"}}") @map("insert_card_palette")
+  releaseAddressId      String?   @map("release_address_id") @db.VarChar(40)
+  returnAddressId       String?   @map("return_address_id") @db.VarChar(40)
+  addressbookSyncedAt   DateTime? @map("addressbook_synced_at") @db.Timestamp(6)
   updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("store_settings")

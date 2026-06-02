@@ -59,16 +59,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Store settings for shipping address IDs
-    const storeSettings = await prisma.$queryRaw<Array<{ key: string; value: string }>>`
-      SELECT key, value FROM store_settings WHERE key IN ('shipping_address_id', 'return_address_id')
-    `.catch(() => []);
-    const settingsMap: Record<string, string> = {};
-    for (const s of storeSettings) {
-      settingsMap[s.key] = s.value;
+    // 2026-06-02 P0 (DEBT-06 fix): read addressBookNo from dedicated columns.
+    // Previous raw-SQL `SELECT key, value FROM store_settings` assumed a
+    // non-existent key/value table and silently returned 0 → broken payloads.
+    const settings = await prisma.storeSettings.findFirst({
+      select: { releaseAddressId: true, returnAddressId: true },
+    });
+    const shippingAddressId = settings?.releaseAddressId ? Number(settings.releaseAddressId) : 0;
+    const returnAddressId   = settings?.returnAddressId  ? Number(settings.returnAddressId)  : 0;
+
+    if (!dryRun && (!shippingAddressId || !returnAddressId)) {
+      return NextResponse.json({
+        success: false,
+        error:
+          '네이버 출고지/반품지 주소록이 캐시되지 않아 배치 발행할 수 없습니다. ' +
+          'GET /api/naver/addressbooks 를 먼저 호출해주세요.',
+        action: 'SYNC_ADDRESSBOOK',
+        endpoint: 'GET /api/naver/addressbooks',
+      }, { status: 400 });
     }
-    const shippingAddressId = parseInt(settingsMap['shipping_address_id'] ?? '0');
-    const returnAddressId = parseInt(settingsMap['return_address_id'] ?? '0');
 
     // Process each product
     const results: Array<{

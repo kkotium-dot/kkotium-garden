@@ -30,6 +30,78 @@ function getProxyConfig() {
   };
 }
 
+// ── Diagnostic classifier (P0 fetch-failed root-cause) ────────────────────
+// RESEARCH §4 분기: GW.IP_NOT_ALLOWED / ECONNRESET / ETIMEDOUT / 429 / 약관차단
+export type NaverFailKind =
+  | 'IP_NOT_ALLOWED'      // HTTP 403 + GW.IP_NOT_ALLOWED — Vercel 유동 IP 차단 (Static IP 또는 프록시 필요)
+  | 'RATE_LIMIT'          // HTTP 429 — 1~2초 backoff 후 재호출
+  | 'NETWORK_RESET'       // ECONNRESET / UND_ERR_SOCKET — keep-alive 닫힌 소켓 재사용
+  | 'NETWORK_TIMEOUT'     // ETIMEDOUT
+  | 'DNS_FAIL'            // EAI_AGAIN / ENOTFOUND
+  | 'HTTP_ERROR'          // 4xx/5xx (분류 불명)
+  | 'AUTH_FAIL'           // 토큰 발급 실패
+  | 'UNKNOWN';
+
+interface NaverDiagnostic {
+  kind: NaverFailKind;
+  status?: number;
+  errCode?: string;          // undici cause.code (ECONNRESET 등)
+  gwTraceId?: string;        // GNCP-GW-Trace-ID
+  rateLimitReplenishRate?: string;
+  rateLimitBurstCapacity?: string;
+  bodyHead?: string;         // first 300 chars
+  durationMs?: number;
+  method?: string;
+  path?: string;
+}
+
+function classifyFetchFailure(
+  cause: unknown,
+): { kind: NaverFailKind; errCode?: string } {
+  const c = cause as { code?: string; errno?: string; message?: string } | null | undefined;
+  const code = c?.code ?? c?.errno;
+  if (!code) return { kind: 'UNKNOWN' };
+  if (code === 'ECONNRESET' || code === 'UND_ERR_SOCKET') return { kind: 'NETWORK_RESET', errCode: code };
+  if (code === 'ETIMEDOUT' || code === 'UND_ERR_CONNECT_TIMEOUT') return { kind: 'NETWORK_TIMEOUT', errCode: code };
+  if (code === 'EAI_AGAIN' || code === 'ENOTFOUND') return { kind: 'DNS_FAIL', errCode: code };
+  return { kind: 'UNKNOWN', errCode: code };
+}
+
+function classifyHttpStatus(status: number, bodyHead: string): NaverFailKind {
+  if (status === 429) return 'RATE_LIMIT';
+  if (status === 403 && /GW\.IP_NOT_ALLOWED/i.test(bodyHead)) return 'IP_NOT_ALLOWED';
+  if (status >= 400) return 'HTTP_ERROR';
+  return 'UNKNOWN';
+}
+
+function logNaverDiagnostic(diag: NaverDiagnostic): void {
+  // Single-line structured log — easy to grep in Vercel runtime logs.
+  console.error(
+    `[NAVER_DIAG] kind=${diag.kind}` +
+    (diag.status !== undefined ? ` status=${diag.status}` : '') +
+    (diag.errCode ? ` errCode=${diag.errCode}` : '') +
+    (diag.gwTraceId ? ` traceId=${diag.gwTraceId}` : '') +
+    (diag.rateLimitReplenishRate ? ` rateLimit=${diag.rateLimitReplenishRate}/${diag.rateLimitBurstCapacity ?? '?'}` : '') +
+    (diag.durationMs !== undefined ? ` ms=${diag.durationMs}` : '') +
+    (diag.method ? ` ${diag.method}` : '') +
+    (diag.path ? ` ${diag.path}` : '') +
+    (diag.bodyHead ? ` body=${JSON.stringify(diag.bodyHead.slice(0, 300))}` : '')
+  );
+}
+
+/**
+ * Structured Naver API error. Throwers attach `.diagnostic` so route handlers
+ * can return a precise 4xx without re-parsing the message.
+ */
+export class NaverApiError extends Error {
+  diagnostic: NaverDiagnostic;
+  constructor(message: string, diagnostic: NaverDiagnostic) {
+    super(message);
+    this.name = 'NaverApiError';
+    this.diagnostic = diagnostic;
+  }
+}
+
 // ── Token cache (in-memory, refreshed when expired) ──────────────────────
 let _cachedToken: string | null = null;
 let _tokenExpiry = 0;
@@ -44,27 +116,57 @@ async function getAccessToken(): Promise<string> {
 
   // [Mode 1] Proxy mode: route token request through proxy (which has registered IP)
   if (proxy.url) {
-    const res = await fetch(proxy.url, {
-      method: 'POST',
-      headers: {
-        'Content-Type':   'application/json',
-        'x-proxy-secret': proxy.secret,
-      },
-      body: JSON.stringify({ action: 'token' }),
-    });
+    const t0 = Date.now();
+    let res: Response;
+    try {
+      res = await fetch(proxy.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type':   'application/json',
+          'x-proxy-secret': proxy.secret,
+        },
+        body: JSON.stringify({ action: 'token' }),
+      });
+    } catch (e: unknown) {
+      const cls = classifyFetchFailure((e as { cause?: unknown }).cause);
+      const diag: NaverDiagnostic = {
+        kind: cls.kind === 'UNKNOWN' ? 'AUTH_FAIL' : cls.kind,
+        errCode: cls.errCode,
+        method: 'POST',
+        path: '[proxy]/token',
+        durationMs: Date.now() - t0,
+      };
+      logNaverDiagnostic(diag);
+      throw new NaverApiError(`Naver OAuth via proxy 실패: fetch failed (${cls.errCode ?? 'unknown'})`, diag);
+    }
 
     const text = await res.text();
+    const gwTraceId = res.headers.get('GNCP-GW-Trace-ID') ?? res.headers.get('x-gncp-gw-trace-id') ?? undefined;
     if (!res.ok) {
-      throw new Error(
-        `Naver OAuth via proxy 실패: HTTP ${res.status} - ${text.slice(0, 300)}`
-      );
+      const diag: NaverDiagnostic = {
+        kind: classifyHttpStatus(res.status, text),
+        status: res.status,
+        gwTraceId,
+        bodyHead: text,
+        durationMs: Date.now() - t0,
+        method: 'POST',
+        path: '[proxy]/token',
+      };
+      logNaverDiagnostic(diag);
+      throw new NaverApiError(`Naver OAuth via proxy 실패: HTTP ${res.status}`, diag);
     }
 
     let data: { access_token?: string; expires_in?: number };
-    try { data = JSON.parse(text); } catch { throw new Error(`Proxy OAuth response not JSON: ${text.slice(0, 200)}`); }
+    try { data = JSON.parse(text); } catch {
+      const diag: NaverDiagnostic = { kind: 'AUTH_FAIL', bodyHead: text, status: res.status, gwTraceId };
+      logNaverDiagnostic(diag);
+      throw new NaverApiError('Proxy OAuth response not JSON', diag);
+    }
 
     if (!data.access_token) {
-      throw new Error(`Proxy OAuth response missing access_token: ${text.slice(0, 200)}`);
+      const diag: NaverDiagnostic = { kind: 'AUTH_FAIL', bodyHead: text, status: res.status, gwTraceId };
+      logNaverDiagnostic(diag);
+      throw new NaverApiError('Proxy OAuth response missing access_token', diag);
     }
 
     _cachedToken = data.access_token;
@@ -77,9 +179,11 @@ async function getAccessToken(): Promise<string> {
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    throw new Error(
+    const diag: NaverDiagnostic = { kind: 'AUTH_FAIL' };
+    throw new NaverApiError(
       'NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 환경변수가 설정되지 않았습니다. ' +
-      '.env.local 파일에 추가하거나 NAVER_PROXY_URL 사용을 검토하세요.'
+      '.env.local 파일에 추가하거나 NAVER_PROXY_URL 사용을 검토하세요.',
+      diag,
     );
   }
 
@@ -88,24 +192,50 @@ async function getAccessToken(): Promise<string> {
   const hashed    = await bcrypt.hash(`${clientId}_${timestamp}`, clientSecret);
   const signature = Buffer.from(hashed).toString('base64');
 
-  const res = await fetch(AUTH_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id:          clientId,
-      timestamp,
-      client_secret_sign: signature,
-      grant_type:         'client_credentials',
-      type:               'SELF',
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Naver OAuth 실패: ${res.status} - ${err}`);
+  const t0 = Date.now();
+  let res: Response;
+  try {
+    res = await fetch(AUTH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id:          clientId,
+        timestamp,
+        client_secret_sign: signature,
+        grant_type:         'client_credentials',
+        type:               'SELF',
+      }),
+    });
+  } catch (e: unknown) {
+    const cls = classifyFetchFailure((e as { cause?: unknown }).cause);
+    const diag: NaverDiagnostic = {
+      kind: cls.kind === 'UNKNOWN' ? 'AUTH_FAIL' : cls.kind,
+      errCode: cls.errCode,
+      method: 'POST',
+      path: '/external/v1/oauth2/token',
+      durationMs: Date.now() - t0,
+    };
+    logNaverDiagnostic(diag);
+    throw new NaverApiError(`Naver OAuth 실패: fetch failed (${cls.errCode ?? 'unknown'})`, diag);
   }
 
-  const data = await res.json();
+  const text = await res.text();
+  const gwTraceId = res.headers.get('GNCP-GW-Trace-ID') ?? res.headers.get('x-gncp-gw-trace-id') ?? undefined;
+  if (!res.ok) {
+    const diag: NaverDiagnostic = {
+      kind: classifyHttpStatus(res.status, text),
+      status: res.status,
+      gwTraceId,
+      bodyHead: text,
+      durationMs: Date.now() - t0,
+      method: 'POST',
+      path: '/external/v1/oauth2/token',
+    };
+    logNaverDiagnostic(diag);
+    throw new NaverApiError(`Naver OAuth 실패: HTTP ${res.status}`, diag);
+  }
+
+  const data = JSON.parse(text);
   _cachedToken = data.access_token as string;
   _tokenExpiry = Date.now() + (data.expires_in ?? 3600) * 1000;
 
@@ -119,25 +249,55 @@ export async function naverRequest<T = any>(
   body?: unknown,
 ): Promise<T> {
   const proxy = getProxyConfig();
+  const t0 = Date.now();
 
   // [Mode 1] Proxy mode: just POST {path, method, body} - proxy handles token
   if (proxy.url) {
-    const res = await fetch(proxy.url, {
-      method: 'POST',
-      headers: {
-        'Content-Type':   'application/json',
-        'x-proxy-secret': proxy.secret,
-      },
-      body: JSON.stringify({ path, method, body }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(proxy.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type':   'application/json',
+          'x-proxy-secret': proxy.secret,
+        },
+        body: JSON.stringify({ path, method, body }),
+      });
+    } catch (e: unknown) {
+      const cls = classifyFetchFailure((e as { cause?: unknown }).cause);
+      const diag: NaverDiagnostic = {
+        kind: cls.kind,
+        errCode: cls.errCode,
+        method, path: `[proxy]${path}`,
+        durationMs: Date.now() - t0,
+      };
+      logNaverDiagnostic(diag);
+      throw new NaverApiError(
+        `Naver API ${method} ${path} 실패 (proxy): fetch failed (${cls.errCode ?? 'unknown'})`,
+        diag,
+      );
+    }
 
     const text = await res.text();
+    const gwTraceId = res.headers.get('GNCP-GW-Trace-ID') ?? res.headers.get('x-gncp-gw-trace-id') ?? undefined;
     let json: any;
     try { json = JSON.parse(text); } catch { json = { raw: text }; }
 
     if (!res.ok) {
-      throw new Error(
-        `Naver API ${method} ${path} 실패 (proxy): HTTP ${res.status} - ${JSON.stringify(json)}`
+      const diag: NaverDiagnostic = {
+        kind: classifyHttpStatus(res.status, text),
+        status: res.status,
+        gwTraceId,
+        rateLimitReplenishRate: res.headers.get('GNCP-GW-RateLimit-Replenish-Rate') ?? undefined,
+        rateLimitBurstCapacity: res.headers.get('GNCP-GW-RateLimit-Burst-Capacity') ?? undefined,
+        bodyHead: text,
+        durationMs: Date.now() - t0,
+        method, path: `[proxy]${path}`,
+      };
+      logNaverDiagnostic(diag);
+      throw new NaverApiError(
+        `Naver API ${method} ${path} 실패 (proxy): HTTP ${res.status}`,
+        diag,
       );
     }
     return json as T;
@@ -146,22 +306,51 @@ export async function naverRequest<T = any>(
   // [Mode 2] Direct mode: get token + fetch directly
   const token = await getAccessToken();
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type':  'application/json;charset=UTF-8',
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type':  'application/json;charset=UTF-8',
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+  } catch (e: unknown) {
+    const cls = classifyFetchFailure((e as { cause?: unknown }).cause);
+    const diag: NaverDiagnostic = {
+      kind: cls.kind,
+      errCode: cls.errCode,
+      method, path,
+      durationMs: Date.now() - t0,
+    };
+    logNaverDiagnostic(diag);
+    throw new NaverApiError(
+      `Naver API ${method} ${path} 실패: fetch failed (${cls.errCode ?? 'unknown'})`,
+      diag,
+    );
+  }
 
   const text = await res.text();
+  const gwTraceId = res.headers.get('GNCP-GW-Trace-ID') ?? res.headers.get('x-gncp-gw-trace-id') ?? undefined;
   let json: any;
   try { json = JSON.parse(text); } catch { json = { raw: text }; }
 
   if (!res.ok) {
-    throw new Error(
-      `Naver API ${method} ${path} 실패: HTTP ${res.status} - ${JSON.stringify(json)}`
+    const diag: NaverDiagnostic = {
+      kind: classifyHttpStatus(res.status, text),
+      status: res.status,
+      gwTraceId,
+      rateLimitReplenishRate: res.headers.get('GNCP-GW-RateLimit-Replenish-Rate') ?? undefined,
+      rateLimitBurstCapacity: res.headers.get('GNCP-GW-RateLimit-Burst-Capacity') ?? undefined,
+      bodyHead: text,
+      durationMs: Date.now() - t0,
+      method, path,
+    };
+    logNaverDiagnostic(diag);
+    throw new NaverApiError(
+      `Naver API ${method} ${path} 실패: HTTP ${res.status}`,
+      diag,
     );
   }
 

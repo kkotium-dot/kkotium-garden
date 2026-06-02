@@ -18,20 +18,20 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-// ── Get cached address IDs from StoreSettings ────────────────────────────────
+// ── Get cached address IDs from StoreSettings dedicated columns ──────────────
+// 2026-06-02 P0: migrated from asGuide JSON cache → releaseAddressId / returnAddressId
+// columns (see RESEARCH §3 — dropship single representative pair pattern).
 
 async function getAddressIds(): Promise<AddressIds | null> {
   try {
-    const settings = await prisma.storeSettings.findFirst();
-    if (!settings?.asGuide) return null;
-    const cached = JSON.parse(settings.asGuide);
-    if (cached.releaseAddressId && cached.returnAddressId) {
-      return {
-        releaseAddressId: Number(cached.releaseAddressId),
-        returnAddressId: Number(cached.returnAddressId),
-      };
-    }
-    return null;
+    const settings = await prisma.storeSettings.findFirst({
+      select: { releaseAddressId: true, returnAddressId: true },
+    });
+    if (!settings?.releaseAddressId || !settings?.returnAddressId) return null;
+    const release = Number(settings.releaseAddressId);
+    const ret     = Number(settings.returnAddressId);
+    if (!Number.isFinite(release) || !Number.isFinite(ret) || release <= 0 || ret <= 0) return null;
+    return { releaseAddressId: release, returnAddressId: ret };
   } catch {
     return null;
   }
@@ -121,7 +121,13 @@ export async function POST(request: NextRequest) {
     if (!addresses) {
       return NextResponse.json({
         success: false,
-        error: 'Naver address IDs not available. Sync addressbook first: GET /api/naver/addressbooks',
+        error:
+          '네이버 출고지/반품지 주소록이 캐시되지 않아 발행할 수 없습니다. ' +
+          '1) 판매자센터 → 판매자정보 → 배송정보 → 주소록에서 RELEASE / REFUND_OR_EXCHANGE 주소를 등록한 뒤 ' +
+          '2) GET /api/naver/addressbooks 를 호출해 StoreSettings.releaseAddressId / returnAddressId 를 채워주세요. ' +
+          '(RESEARCH §3 — 위탁배송 단일 대표주소 모델)',
+        action: 'SYNC_ADDRESSBOOK',
+        endpoint: 'GET /api/naver/addressbooks',
       }, { status: 400 });
     }
 

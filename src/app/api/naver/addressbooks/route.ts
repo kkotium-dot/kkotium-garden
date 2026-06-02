@@ -1,102 +1,125 @@
 // src/app/api/naver/addressbooks/route.ts
-// A-3: Naver SmartStore addressbook sync
+// A-3 (2026-06-02 P0): Naver SmartStore addressbook sync — dedicated columns.
 // Endpoint: GET /external/v1/seller/addressbooks-for-page
-// Fetches RELEASE (pickup) and REFUND_OR_EXCHANGE (return) addresses
-// Note: releaseAddressId / returnAddressId stored as JSON in StoreSettings memo field
-// until schema migration adds dedicated columns
+// Fetches RELEASE (출고지) + REFUND_OR_EXCHANGE (반품·교환지), caches addressBookNo
+// into StoreSettings.releaseAddressId / returnAddressId. Per RESEARCH §1 the
+// dropship seller pattern is a single representative pair — no per-product addresses.
+//
+// Diagnostic-first design (작업원칙 #46):
+//   • On naverRequest failure, surface NaverApiError.diagnostic verbatim so the
+//     operator can read GW.IP_NOT_ALLOWED / ECONNRESET / 429 directly without
+//     re-parsing Vercel logs.
+//   • Sync columns only when at least one default address resolves — never
+//     silently overwrite with nulls.
 
 import { NextResponse } from 'next/server';
-import { naverRequest } from '@/lib/naver/api-client';
+import { naverRequest, NaverApiError } from '@/lib/naver/api-client';
 import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
 interface AddressEntry {
-  addressNo: number;
-  addressName: string;
-  addressType: string;
-  name: string;
-  tel: string;
-  address: string;
+  addressBookNo?: number;
+  addressNo?: number;          // legacy field name fallback
+  addressName?: string;
+  addressType?: string;
+  name?: string;
+  tel?: string;
+  baseAddress?: string;
+  address?: string;            // legacy
   detailAddress?: string;
-  zipCode: string;
-  isDefault: boolean;
+  zipCode?: string;
+  isDefault?: boolean;
 }
 
 interface AddressbookPage {
-  content: AddressEntry[];
-  totalCount: number;
+  content?: AddressEntry[];
+  addressBooks?: AddressEntry[];   // RESEARCH §3 documented response shape
+  totalCount?: number;
 }
 
-/** GET /api/naver/addressbooks — fetch and return pickup + return addresses */
+function pickAddressNo(a: AddressEntry): string | null {
+  const v = a.addressBookNo ?? a.addressNo;
+  return v ? String(v) : null;
+}
+
+function pickContent(page: AddressbookPage): AddressEntry[] {
+  return page.addressBooks ?? page.content ?? [];
+}
+
+function diagnosticFromError(e: unknown) {
+  if (e instanceof NaverApiError) return e.diagnostic;
+  return { kind: 'UNKNOWN' as const, bodyHead: e instanceof Error ? e.message : String(e) };
+}
+
+/** GET /api/naver/addressbooks — fetch pickup + return addresses, cache addressBookNo */
 export async function GET() {
   try {
-    // Fetch both address types in parallel
     const [releaseResult, returnResult] = await Promise.allSettled([
       naverRequest<AddressbookPage>('GET', '/v1/seller/addressbooks-for-page?addressType=RELEASE&size=20'),
       naverRequest<AddressbookPage>('GET', '/v1/seller/addressbooks-for-page?addressType=REFUND_OR_EXCHANGE&size=20'),
     ]);
 
-    const releaseAddresses: AddressEntry[] = releaseResult.status === 'fulfilled'
-      ? (releaseResult.value?.content ?? [])
-      : [];
-    const returnAddresses: AddressEntry[] = returnResult.status === 'fulfilled'
-      ? (returnResult.value?.content ?? [])
-      : [];
+    const releaseAddresses: AddressEntry[] =
+      releaseResult.status === 'fulfilled' ? pickContent(releaseResult.value) : [];
+    const returnAddresses: AddressEntry[] =
+      returnResult.status === 'fulfilled' ? pickContent(returnResult.value) : [];
 
-    const releaseError = releaseResult.status === 'rejected' ? String(releaseResult.reason) : null;
-    const returnError  = returnResult.status  === 'rejected' ? String(returnResult.reason)  : null;
+    const releaseDiag = releaseResult.status === 'rejected' ? diagnosticFromError(releaseResult.reason) : null;
+    const returnDiag  = returnResult.status  === 'rejected' ? diagnosticFromError(returnResult.reason)  : null;
 
-    // Pick defaults (isDefault flag or first entry)
+    // RESEARCH §1: single representative pair — pick default flag, else first entry.
     const defaultRelease = releaseAddresses.find(a => a.isDefault) ?? releaseAddresses[0] ?? null;
     const defaultReturn  = returnAddresses.find(a => a.isDefault)  ?? returnAddresses[0]  ?? null;
 
-    // Store address IDs in StoreSettings using Prisma's known fields
-    // We use asGuide field to cache address IDs as JSON until schema migration
-    if (defaultRelease || defaultReturn) {
+    const releaseAddressId = defaultRelease ? pickAddressNo(defaultRelease) : null;
+    const returnAddressId  = defaultReturn  ? pickAddressNo(defaultReturn)  : null;
+
+    // Persist to dedicated columns. Skip entirely if both calls failed — never
+    // wipe a previously good cache when the gateway is temporarily down.
+    if (releaseAddressId || returnAddressId) {
       try {
         const settings = await prisma.storeSettings.findFirst();
-        const addressCache = JSON.stringify({
-          releaseAddressId: defaultRelease ? String(defaultRelease.addressNo) : null,
-          returnAddressId:  defaultReturn  ? String(defaultReturn.addressNo)  : null,
-          syncedAt: new Date().toISOString(),
-        });
+        const data = {
+          // Only overwrite columns we actually resolved — preserve the other
+          // side if only one call succeeded.
+          ...(releaseAddressId ? { releaseAddressId } : {}),
+          ...(returnAddressId  ? { returnAddressId  } : {}),
+          addressbookSyncedAt: new Date(),
+        };
         if (settings) {
-          // Append to memo — use asGuide to store address cache JSON
           await prisma.storeSettings.update({
             where: { id: settings.id },
-            data:  { asGuide: addressCache },
+            data,
           });
         } else {
           await prisma.storeSettings.create({
-            data: { id: 'default', asGuide: addressCache },
+            data: { id: 'default', ...data },
           });
         }
-      } catch {
-        // Non-critical — continue even if settings update fails
+      } catch (persistErr) {
+        console.error('[addressbooks] persist failed:', persistErr instanceof Error ? persistErr.message : persistErr);
+        // Non-fatal — return resolved IDs anyway so the caller can retry.
       }
     }
 
+    const allFailed = !releaseAddressId && !returnAddressId && (releaseDiag || returnDiag);
+
     return NextResponse.json({
-      success: true,
+      success: !allFailed,
       releaseAddresses,
       returnAddresses,
-      defaults: {
-        release: defaultRelease,
-        return:  defaultReturn,
+      defaults: { release: defaultRelease, return: defaultReturn },
+      synced: { releaseAddressId, returnAddressId },
+      diagnostics: {
+        release: releaseDiag,
+        return:  returnDiag,
       },
-      synced: {
-        releaseAddressId: defaultRelease ? String(defaultRelease.addressNo) : null,
-        returnAddressId:  defaultReturn  ? String(defaultReturn.addressNo)  : null,
-      },
-      errors: {
-        release: releaseError,
-        return:  returnError,
-      },
-    });
+    }, { status: allFailed ? 502 : 200 });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Addressbook sync error:', msg);
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+    const diag = diagnosticFromError(error);
+    const msg  = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[addressbooks] fatal:', msg);
+    return NextResponse.json({ success: false, error: msg, diagnostic: diag }, { status: 500 });
   }
 }
