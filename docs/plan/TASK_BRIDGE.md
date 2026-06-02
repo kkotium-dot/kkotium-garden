@@ -71,6 +71,19 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-02 배송 분기 — 공급사 합배송 자동 분기 + ORDER_MADE 가드 (Code → Desktop, push 799dea7)
+
+| 항목 | 상태 |
+|---|---|
+| 원칙 (대표 확정) | 묶음배송 여부 = 공급사·상품별 속성. deliveryBundleGroupId 와 deliveryFeeByArea 양립 불가 (RESEARCH §1). |
+| 작업1 schema 동기화 | Supplier 4컬럼(bundleCapable/naverBundleGroupId/island·jejuExtraFee) + Product shippingAttribute. Supabase ALTER 선행, drift 0 확인. |
+| 작업2 분기 로직 | buildDeliveryInfo: bundleCapable=true & group ID 유효 → groupId 전송+feeByArea 제거 / 그 외 → feeByArea 전송+groupId 제거. |
+| 작업3 route | Supplier 조회 → bundleInfo 전달 + dryRun deliveryBranch 노출. |
+| 작업4 가드 | ORDER_MADE 상품 실 register 409 차단 (dryRun 통과). |
+| dryRun 단정 | 달항아리(bundleCapable=true, group ID=null) → useBundle=false → feeByArea + mutuallyExclusiveOk=true. |
+| 다음 (Desktop) | 표준 위탁 상품(NORMAL, bundleCapable=false)으로 첫 발행 검증. 달항아리 ORDER_MADE 파킹. 이현마켓 합배송은 판매자센터 묶음그룹 생성 → group ID 입력 후. |
+
+
 ### 2026-06-02 P0 발행 — 네이버 이미지 업로드 파이프라인 (Code → Desktop, push a062bfb)
 
 | 항목 | 상태 |
