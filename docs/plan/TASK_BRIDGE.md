@@ -87,16 +87,17 @@
 | 2-NAMING | DiagnosisCard S6/L2/persona/tone 한글 라벨 + 척도 + 툴팁 + 용어집 | 878d8fc |
 | 2-MOBILE-2 | 아틀리에 모바일 캔버스 주화면 + 컨트롤 바텀시트(peek/expand) + SEO 드로어 모바일 전체화면 모달 | 0ebcd56 |
 | 2-MOBILE-3 | 모바일 컨트롤 오버플로 4건(M1 헤더·M2 탭·M3 검색·M4 BulkFloatMenu) + P1~P3 설계 문서 | bd286ac |
+| P0-excel-gaps | 네이버 엑셀 88칸 매핑 누락 5건 수술(F1 옵션·F2 제조사·F3 상품명·F4 배송비·F5 정보고시) + builder fee guard | ★본 commit |
 
-### ⭐ NEXT — 🖥 Desktop P0 달항아리 발행 (카테고리 코드 11_08_22_00_00 → 50000963 교정 후 대표 승인)
+### ⭐ NEXT — 🖥 Desktop production 엑셀 재호출 + 정보고시 productInfo* 충진 → 대표 승인 후 register
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 💻 Code (P0 달항아리 카테고리 코드 단정 + MD 동기화 [docs only], baseline bd286ac, 2026-06-02) |
-| **TO** | 🖥 Desktop 새 채팅 — **달항아리 카테고리 코드 Supabase UPDATE + 대표 승인 후 register** (publishReady=true 4축 실측 확정) |
-| **BASELINE** | bd286ac (origin/main, Vercel READY 실측 확정) |
-| **NEXT SCOPE** | 🖥 Desktop Supabase UPDATE: 달항아리 `naverCategoryCode` `11_08_22_00_00`(도매꾹) → `50000963`(Naver 인테리어소품>도어벨) → 대표 명시 승인 → register. publishReady=true 4축 게이트 통과 (Desktop 실측 확정). 권위: `docs/handoff/HANDOFF_moonjar_publish_ready_2026-06-02.md` |
-| **PENDING** | 2-MOBILE-1·2·3·NAMING 모바일·툴팁·오버플로 실기기 육안(대표 휴대폰) / Firefly 프롬프트 복사 실동작 / G8-ENGINE 재개 / 명화송풍구 cutout 적재 / DEBT-01 SEO 4중컬럼(P3 발행 후) / 기존 PENDING 누적 |
+| **FROM** | 💻 Code (P0 엑셀 88칸 매핑 5건 수술 + builder fee guard + DEBT-04 등록, 본 commit, 2026-06-02) |
+| **TO** | 🖥 Desktop 새 채팅 — (a) production POST /api/naver/excel {"productIds":["cmp3afb450001gng5468w0qpc"]} 재호출 + openpyxl로 5건 충진 육안 단정 (b) productInfo* 3필드 groundedFacts 충진 (c) 대표 명시 승인 후 register |
+| **BASELINE** | 본 commit (origin/main, Vercel READY 예정) — 직전 5e72798 |
+| **NEXT SCOPE** | 엑셀 5건 충진 단정 + productInfo* 충진 + 대표 명시 승인 후 register. publishReady=true 4축 게이트 통과 + 카테고리 50000963 (이전 turn 교정 완료). 권위: `docs/handoff/HANDOFF_naver_excel_mapping_gaps_2026-06-02.md` + `docs/handoff/HANDOFF_moonjar_publish_ready_2026-06-02.md` |
+| **PENDING** | Desktop production 엑셀 5건 충진 육안 + productInfo* 충진 / 달항아리 register 대표 승인 / 2-MOBILE-1·2·3·NAMING 모바일·툴팁·오버플로 실기기 육안(대표 휴대폰) / Firefly 프롬프트 복사 실동작 / G8-ENGINE 재개 / 명화송풍구 cutout 적재 / DEBT-01 SEO 4중컬럼(P3 발행 후) / DEBT-04 엑셀 buildDataRow 매핑 가드(신규 NaverProductData 필드 추가 시 route.ts 동시 갱신) / 기존 PENDING 누적 |
 
 ### 권위 문서 (UI/UX Sprint, 정독 우선순위)
 1. docs/research/GARDEN_DESIGN_BRIEF_2026-06.md (★레트로 팝 무드)

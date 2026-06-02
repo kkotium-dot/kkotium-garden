@@ -131,8 +131,12 @@ function buildDataRow(p: NaverProductData, d: SupplierDefaults): (string | numbe
     p.intervalBased3Qty  ?? '',                    // 44
     p.intervalBased3Fee  ?? '',                    // 45
     p.intervalBasedAddFee ?? '',                   // 46
-    hasTemplate ? '' : (p.returnFee   ?? d.returnFee),   // 47
-    hasTemplate ? '' : (p.exchangeFee ?? d.exchangeFee), // 48
+    // 2026-06-02 F4: emit explicit fee whenever route provides one (template
+    // override or text-parsed fallback). Only fall back to KKOTIUM_DEFAULTS
+    // when neither route value nor template is present — Naver bulk upload
+    // honours per-row override alongside a template code.
+    p.returnFee   ?? (hasTemplate ? '' : d.returnFee),   // 47
+    p.exchangeFee ?? (hasTemplate ? '' : d.exchangeFee), // 48
     p.regionalDeliveryFee ?? '',                   // 49
     p.installationFee     ?? 'N',                  // 50
     // ── 상품정보제공고시 (51~55) ─────────────────────────────────────────
