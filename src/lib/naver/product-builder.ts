@@ -715,6 +715,15 @@ export function buildNaverProductPayload(
   const originCode = product.originCode ?? '0200037'; // default: China
   const isImport = Number(originCode) >= 200000;
 
+  // 2026-06-02 fix — 수입품 importer 항상 충진 (originAreaInfo.importer NotEmpty
+  // 400 "수입사 항목을 입력해 주세요" 영구 차단). importer_name 누락 시 폴백:
+  // naver_manufacturer > '꽃틔움 가든'. 국산(isImport=false)은 importer 미포함
+  // (네이버는 국산에 수입사 입력 금지). 허위 0 #46 — 위탁 셀러 본인이 수입 책임
+  // 주체이므로 자사명 충진이 정당.
+  const importerName = isImport
+    ? String(product.importer_name ?? product.naver_manufacturer ?? '꽃틔움 가든').slice(0, 100)
+    : '';
+
   // 2026-06-02 P0 fix — leafCategoryId resolution.
   // The legacy `product.category` column carries the human-readable label
   // (often "uncategorized") and MUST NOT be sent to Naver — Commerce API v2
@@ -749,7 +758,7 @@ export function buildNaverProductPayload(
         ...(optionInfo ? { optionInfo } : {}),
         originAreaInfo: {
           originAreaCode: originCode,
-          ...(isImport && product.importer_name ? { importer: product.importer_name } : {}),
+          ...(isImport ? { importer: importerName } : {}),
           ...(product.naver_origin ? { content: product.naver_origin } : {}),
         },
         afterServiceInfo: {
