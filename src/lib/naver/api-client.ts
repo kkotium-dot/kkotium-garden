@@ -459,6 +459,161 @@ export async function naverRequest<T = any>(
   return json as T;
 }
 
+// ── 2026-06-02 P0 — 네이버 이미지 업로드 (외부 URL 직접 사용 불가) ──────────
+// RESEARCH §1: representativeImage.url은 반드시 "상품 이미지 다건 등록 API"
+// (POST /external/v1/product-images/upload) 를 통해 반환된 shop-phinf URL만
+// 허용. Supabase/S3 public URL 직접 전송 → 400 "올바른 이미지 파일이 아닙니다".
+//
+// proxy 모드 제약 (home-proxy.mjs 정독 결과): 기존 relay는 body를 JSON으로만
+// 파싱/전송 → 멀티파트 패스스루 불가. 따라서 proxy에 전용 action 'uploadImages'
+// 를 추가 (proxy가 등록 IP에서 직접 Supabase fetch + 네이버 멀티파트 업로드).
+// → home-proxy.mjs 동반 수정 필수 (대표가 git pull + proxy 재시작해야 적용).
+
+/** Sniff real image MIME from magic bytes (확장자 신뢰 금지 — RESEARCH §3). */
+export function sniffImageMime(bytes: Uint8Array, fallback = 'image/jpeg'): string {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
+  if (bytes.length >= 3 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return 'image/gif';
+  if (bytes.length >= 2 && bytes[0] === 0x42 && bytes[1] === 0x4d) return 'image/bmp';
+  return fallback;
+}
+
+function mimeToExt(mime: string): string {
+  switch (mime) {
+    case 'image/png': return 'png';
+    case 'image/gif': return 'gif';
+    case 'image/bmp': return 'bmp';
+    default:          return 'jpg';
+  }
+}
+
+/**
+ * Upload images to Naver and return shop-phinf URLs (same order as input).
+ * - proxy mode: delegate to home-proxy `action: 'uploadImages'` (multipart can't
+ *   traverse the JSON relay; the proxy fetches Supabase bytes + uploads itself).
+ * - direct mode: build multipart/form-data with field name "imageFiles" and
+ *   per-part real MIME, POST to /external/v1/product-images/upload.
+ * Naver limit: ≤10 files, <10MB total, account-level concurrency 1 (sequential).
+ */
+export async function uploadImagesToNaver(imageUrls: string[]): Promise<string[]> {
+  const urls = imageUrls.filter(Boolean);
+  if (urls.length === 0) return [];
+  if (urls.length > 10) {
+    throw new NaverApiError('이미지는 1회 최대 10개까지 업로드 가능합니다.', { kind: 'HTTP_ERROR' });
+  }
+
+  const proxy = getProxyConfig();
+  const t0 = Date.now();
+
+  // [Mode 1] Proxy mode: delegate the whole upload to the home proxy.
+  if (proxy.url) {
+    let res: Response;
+    let attempts = 1;
+    try {
+      const r = await fetchNoKeepAlive(proxy.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type':   'application/json',
+          'x-proxy-secret': proxy.secret,
+        },
+        body: JSON.stringify({ action: 'uploadImages', imageUrls: urls }),
+      }, 'POST [proxy] uploadImages');
+      res = r.res;
+      attempts = r.attempts;
+    } catch (e: unknown) {
+      const cls = classifyFetchFailure((e as { cause?: unknown }).cause);
+      const diag: NaverDiagnostic = {
+        kind: cls.kind, errCode: cls.errCode,
+        errno: cls.errno, syscall: cls.syscall, address: cls.address, port: cls.port,
+        attempts: extractAttempts(e) ?? FETCH_MAX_ATTEMPTS,
+        method: 'POST', path: '[proxy] uploadImages', durationMs: Date.now() - t0,
+      };
+      logNaverDiagnostic(diag);
+      throw new NaverApiError(`이미지 업로드 실패 (proxy): fetch failed (${cls.errCode ?? 'unknown'})`, diag);
+    }
+
+    const text = await res.text();
+    let json: any;
+    try { json = JSON.parse(text); } catch { json = { raw: text }; }
+    if (!res.ok) {
+      const diag: NaverDiagnostic = {
+        kind: classifyHttpStatus(res.status, text), status: res.status, attempts,
+        bodyHead: text, durationMs: Date.now() - t0,
+        method: 'POST', path: '[proxy] uploadImages',
+      };
+      logNaverDiagnostic(diag);
+      throw new NaverApiError(
+        `이미지 업로드 실패 (proxy): HTTP ${res.status} — ${text.slice(0, 200)}`, diag,
+      );
+    }
+    // proxy returns Naver's pass-through { images: [{ url }] } or { error }.
+    const out: string[] = Array.isArray(json?.images)
+      ? json.images.map((i: any) => i?.url).filter(Boolean)
+      : [];
+    if (out.length === 0) {
+      const diag: NaverDiagnostic = { kind: 'HTTP_ERROR', bodyHead: text, method: 'POST', path: '[proxy] uploadImages' };
+      logNaverDiagnostic(diag);
+      throw new NaverApiError(`이미지 업로드 응답에 URL 없음 (proxy): ${text.slice(0, 200)}`, diag);
+    }
+    return out;
+  }
+
+  // [Mode 2] Direct mode: build multipart locally + POST from current IP.
+  const token = await getAccessToken();
+  const form = new FormData();
+  for (const url of urls) {
+    const r = await fetch(url);
+    if (!r.ok) {
+      throw new NaverApiError(`이미지 원본 fetch 실패: ${url} (HTTP ${r.status})`, { kind: 'HTTP_ERROR', status: r.status });
+    }
+    const buf = new Uint8Array(await r.arrayBuffer());
+    const mime = sniffImageMime(buf, r.headers.get('content-type') ?? 'image/jpeg');
+    const blob = new Blob([buf], { type: mime });
+    form.append('imageFiles', blob, `image.${mimeToExt(mime)}`);
+  }
+
+  let res: Response;
+  try {
+    // NOTE: do NOT set Content-Type manually — fetch derives the multipart
+    // boundary from the FormData body (RESEARCH §Details).
+    res = await fetch(`${BASE_URL}/v1/product-images/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Connection': 'close' },
+      body: form,
+      keepalive: false,
+    });
+  } catch (e: unknown) {
+    const cls = classifyFetchFailure((e as { cause?: unknown }).cause);
+    const diag: NaverDiagnostic = {
+      kind: cls.kind, errCode: cls.errCode, syscall: cls.syscall, address: cls.address, port: cls.port,
+      method: 'POST', path: '/v1/product-images/upload', durationMs: Date.now() - t0,
+    };
+    logNaverDiagnostic(diag);
+    throw new NaverApiError(`이미지 업로드 실패: fetch failed (${cls.errCode ?? 'unknown'})`, diag);
+  }
+
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { json = { raw: text }; }
+  if (!res.ok) {
+    const diag: NaverDiagnostic = {
+      kind: classifyHttpStatus(res.status, text), status: res.status,
+      gwTraceId: res.headers.get('GNCP-GW-Trace-ID') ?? undefined,
+      bodyHead: text, durationMs: Date.now() - t0,
+      method: 'POST', path: '/v1/product-images/upload',
+    };
+    logNaverDiagnostic(diag);
+    throw new NaverApiError(`이미지 업로드 실패: HTTP ${res.status} — ${text.slice(0, 200)}`, diag);
+  }
+  const out: string[] = Array.isArray(json?.images)
+    ? json.images.map((i: any) => i?.url).filter(Boolean)
+    : [];
+  if (out.length === 0) {
+    throw new NaverApiError(`이미지 업로드 응답에 URL 없음: ${text.slice(0, 200)}`, { kind: 'HTTP_ERROR', bodyHead: text });
+  }
+  return out;
+}
+
 // ── Connectivity check (call before any real request) ────────────────────
 export async function checkNaverConnection(): Promise<{
   ok: boolean;

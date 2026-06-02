@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { naverRequest, NaverApiError } from '@/lib/naver/api-client';
+import { naverRequest, NaverApiError, uploadImagesToNaver } from '@/lib/naver/api-client';
 import {
   buildNaverProductPayload,
   buildDeliveryInfo,
@@ -154,15 +154,10 @@ export async function POST(request: NextRequest) {
       bottomText:     noticeSettings?.noticeBottomText     ?? null,
     };
 
-    // 7. Build full payload
-    // Image URLs: use Supabase URLs directly — Naver API accepts external URLs
-    // and copies them to its own CDN (shop1.phinf.naver.net) automatically
-    const payload = buildNaverProductPayload(product, deliveryInfo, undefined, noticeAssets);
-
-    // 7-a. dryRun — echo payload (and a shallow shape preview) without calling
-    // Naver. Lets the operator inspect what would be sent before committing the
-    // irreversible POST. No DB writes happen on dryRun.
+    // 7-pre. dryRun preview — build with Supabase URLs (no Naver upload). The
+    // real register path below uploads to Naver first, then rebuilds.
     if (dryRun) {
+    const payload = buildNaverProductPayload(product, deliveryInfo, undefined, noticeAssets);
       const dc = payload.originProduct.detailContent;
       const pin = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
       return NextResponse.json({
@@ -209,10 +204,73 @@ export async function POST(request: NextRequest) {
             leafCategoryIdEmpty: !payload.originProduct.leafCategoryId,
             productInfoProvidedNoticeMissing: !pin,
           },
+          imagesToUpload: {
+            // Real register will upload these to Naver first (Supabase URLs here).
+            mainImage: product.mainImage ?? null,
+            detailImage: product.detail_image_url ?? null,
+            additionalCount: Array.isArray(product.additionalImages)
+              ? (product.additionalImages as unknown[]).length : 0,
+            note: 'dryRun shows Supabase URLs — real register replaces with shop-phinf URLs after upload',
+          },
         },
         payload,
       });
     }
+
+    // 7-img. Upload product images to Naver FIRST (RESEARCH §1 — external URLs
+    // are rejected; representativeImage.url must be a shop-phinf URL returned by
+    // the image-upload API). Build the Supabase→Naver map, then rebuild payload.
+    const supaMain = product.mainImage ?? '';
+    const supaAdditional: string[] = Array.isArray(product.additionalImages)
+      ? (product.additionalImages as unknown[]).filter((u): u is string => typeof u === 'string' && !!u)
+      : [];
+    const supaDetail = product.detail_image_url ?? '';
+
+    // Order: [main, ...additional]. Detail image uploaded separately so we can
+    // swap its <img> src inside detailContent without polluting optionalImages.
+    const galleryUrls = [supaMain, ...supaAdditional].filter(Boolean);
+    let naverGallery: string[] = [];
+    let naverDetail: string | null = null;
+    try {
+      if (galleryUrls.length > 0) {
+        naverGallery = await uploadImagesToNaver(galleryUrls);
+      }
+      if (supaDetail) {
+        const [d] = await uploadImagesToNaver([supaDetail]);
+        naverDetail = d ?? null;
+      }
+    } catch (uploadErr: unknown) {
+      const isNaver = uploadErr instanceof NaverApiError;
+      return NextResponse.json({
+        success: false,
+        error: '네이버 이미지 업로드 실패 — 발행 중단 (DRAFT 유지)',
+        stage: 'IMAGE_UPLOAD',
+        detail: isNaver ? uploadErr.message : String(uploadErr),
+        diagnostic: isNaver ? uploadErr.diagnostic : undefined,
+        attempted: { gallery: galleryUrls, detail: supaDetail || null },
+      }, { status: 502 });
+    }
+
+    if (galleryUrls.length > 0 && naverGallery.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: '네이버 이미지 업로드가 URL을 반환하지 않음 — 발행 중단',
+        stage: 'IMAGE_UPLOAD',
+      }, { status: 502 });
+    }
+
+    // Replace detail_image_url with the Naver URL so buildDetailContent emits a
+    // shop-phinf <img> src (external URL → InvalidImageUrl 400, RESEARCH §4).
+    const productForBuild: typeof product = {
+      ...product,
+      detail_image_url: naverDetail ?? product.detail_image_url,
+    };
+
+    // 7. Build full payload with Naver shop-phinf URLs.
+    const naverImageUrls = naverGallery.length > 0
+      ? { representative: naverGallery[0], optional: naverGallery.slice(1) }
+      : undefined;
+    const payload = buildNaverProductPayload(productForBuild, deliveryInfo, naverImageUrls, noticeAssets);
 
     // 8. Register on Naver Commerce API
     let result: any;

@@ -207,6 +207,57 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // [Action] Upload images to Naver (multipart) — 2026-06-02 P0.
+    // The JSON relay below can't pass multipart through, so the proxy itself
+    // fetches the Supabase bytes and uploads them from the registered home IP.
+    // Body: { action: 'uploadImages', imageUrls: ['https://...supabase.../main.jpg', ...] }
+    // Response: pass-through Naver { images: [{ url }] } (shop-phinf URLs).
+    if (payload.action === 'uploadImages') {
+      const imageUrls = Array.isArray(payload.imageUrls) ? payload.imageUrls.filter(Boolean) : [];
+      if (imageUrls.length === 0) {
+        jsonResponse(res, 400, { error: 'imageUrls required (non-empty array)' });
+        return;
+      }
+      if (imageUrls.length > 10) {
+        jsonResponse(res, 400, { error: 'Naver allows at most 10 images per upload' });
+        return;
+      }
+
+      const { token } = await getNaverToken();
+      const form = new FormData();
+      for (const url of imageUrls) {
+        const r = await fetch(url);
+        if (!r.ok) {
+          jsonResponse(res, 502, { error: `source image fetch failed: ${url} (HTTP ${r.status})` });
+          return;
+        }
+        const bytes = new Uint8Array(await r.arrayBuffer());
+        // Sniff real MIME from magic bytes — extension is not trusted (Naver
+        // rejects PhotoInfraUpload.extension on mismatch).
+        let mime = r.headers.get('content-type') || 'image/jpeg';
+        let ext  = 'jpg';
+        if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) { mime = 'image/jpeg'; ext = 'jpg'; }
+        else if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) { mime = 'image/png'; ext = 'png'; }
+        else if (bytes.length >= 3 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) { mime = 'image/gif'; ext = 'gif'; }
+        else if (bytes.length >= 2 && bytes[0] === 0x42 && bytes[1] === 0x4d) { mime = 'image/bmp'; ext = 'bmp'; }
+        const blob = new Blob([bytes], { type: mime });
+        form.append('imageFiles', blob, `image.${ext}`);
+      }
+
+      // Do NOT set Content-Type — fetch derives the multipart boundary from form.
+      const upRes = await fetch(`${NAVER_BASE}/v1/product-images/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: form,
+      });
+      const upText = await upRes.text();
+      let upData;
+      try { upData = JSON.parse(upText); } catch { upData = { raw: upText }; }
+      console.log(`[${reqId}] uploadImages(${imageUrls.length}) -> ${upRes.status} (${Date.now() - startTime}ms)`);
+      jsonResponse(res, upRes.status, upData);
+      return;
+    }
+
     // [Default] Naver API relay
     const naverPath = payload.path ?? '';
     const method    = (payload.method ?? 'GET').toUpperCase();
