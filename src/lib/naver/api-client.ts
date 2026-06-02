@@ -46,6 +46,10 @@ interface NaverDiagnostic {
   kind: NaverFailKind;
   status?: number;
   errCode?: string;          // undici cause.code (ECONNRESET 등)
+  errno?: string;            // numeric/string errno
+  syscall?: string;          // 'read' / 'write' — write에서 RST면 keep-alive 재사용 사고
+  address?: string;          // remote IP (proxy)
+  port?: number;             // remote port
   gwTraceId?: string;        // GNCP-GW-Trace-ID
   rateLimitReplenishRate?: string;
   rateLimitBurstCapacity?: string;
@@ -53,18 +57,27 @@ interface NaverDiagnostic {
   durationMs?: number;
   method?: string;
   path?: string;
+  attempts?: number;         // 자동 재시도 횟수 (1 = 첫 시도 실패)
 }
 
 function classifyFetchFailure(
   cause: unknown,
-): { kind: NaverFailKind; errCode?: string } {
-  const c = cause as { code?: string; errno?: string; message?: string } | null | undefined;
-  const code = c?.code ?? c?.errno;
-  if (!code) return { kind: 'UNKNOWN' };
-  if (code === 'ECONNRESET' || code === 'UND_ERR_SOCKET') return { kind: 'NETWORK_RESET', errCode: code };
-  if (code === 'ETIMEDOUT' || code === 'UND_ERR_CONNECT_TIMEOUT') return { kind: 'NETWORK_TIMEOUT', errCode: code };
-  if (code === 'EAI_AGAIN' || code === 'ENOTFOUND') return { kind: 'DNS_FAIL', errCode: code };
-  return { kind: 'UNKNOWN', errCode: code };
+): { kind: NaverFailKind; errCode?: string; errno?: string; syscall?: string; address?: string; port?: number } {
+  const c = cause as {
+    code?: string; errno?: string | number; syscall?: string;
+    address?: string; port?: number; message?: string;
+  } | null | undefined;
+  const code  = c?.code ?? (typeof c?.errno === 'string' ? c.errno : undefined);
+  const errno = typeof c?.errno === 'number' ? String(c.errno) : (typeof c?.errno === 'string' ? c.errno : undefined);
+  const syscall = c?.syscall;
+  const address = c?.address;
+  const port    = c?.port;
+  const base = { errCode: code, errno, syscall, address, port };
+  if (!code) return { kind: 'UNKNOWN', ...base };
+  if (code === 'ECONNRESET' || code === 'UND_ERR_SOCKET') return { kind: 'NETWORK_RESET', ...base };
+  if (code === 'ETIMEDOUT' || code === 'UND_ERR_CONNECT_TIMEOUT') return { kind: 'NETWORK_TIMEOUT', ...base };
+  if (code === 'EAI_AGAIN' || code === 'ENOTFOUND') return { kind: 'DNS_FAIL', ...base };
+  return { kind: 'UNKNOWN', ...base };
 }
 
 function classifyHttpStatus(status: number, bodyHead: string): NaverFailKind {
@@ -80,6 +93,10 @@ function logNaverDiagnostic(diag: NaverDiagnostic): void {
     `[NAVER_DIAG] kind=${diag.kind}` +
     (diag.status !== undefined ? ` status=${diag.status}` : '') +
     (diag.errCode ? ` errCode=${diag.errCode}` : '') +
+    (diag.errno ? ` errno=${diag.errno}` : '') +
+    (diag.syscall ? ` syscall=${diag.syscall}` : '') +
+    (diag.address ? ` addr=${diag.address}${diag.port ? ':'+diag.port : ''}` : '') +
+    (diag.attempts !== undefined ? ` attempts=${diag.attempts}` : '') +
     (diag.gwTraceId ? ` traceId=${diag.gwTraceId}` : '') +
     (diag.rateLimitReplenishRate ? ` rateLimit=${diag.rateLimitReplenishRate}/${diag.rateLimitBurstCapacity ?? '?'}` : '') +
     (diag.durationMs !== undefined ? ` ms=${diag.durationMs}` : '') +
@@ -87,6 +104,67 @@ function logNaverDiagnostic(diag: NaverDiagnostic): void {
     (diag.path ? ` ${diag.path}` : '') +
     (diag.bodyHead ? ` body=${JSON.stringify(diag.bodyHead.slice(0, 300))}` : '')
   );
+}
+
+// ── 2026-06-02 P0 — keep-alive 닫힌 소켓 재사용 회선 수정 ──────────────────
+// Desktop register 2회 시도 모두 ECONNRESET (durationMs 66/67ms, 거의 동일 =
+// 재현 패턴). 같은 Tailscale proxy에서 GET addressbooks는 정상이지만 POST
+// /v2/products만 끊김 → idle keep-alive socket 재사용 후 write 즉시 RST 받는
+// 전형 패턴 (RESEARCH §4).
+//
+// 처방:
+//   (1) Connection: close 헤더 + keepalive:false — 매 요청 새 연결 (proxy idle
+//       timeout 회피).
+//   (2) ECONNRESET / UND_ERR_SOCKET 감지 시 백오프 자동 재시도 (200/400/600ms,
+//       최대 3회). 다른 종류 에러는 즉시 throw (무한 루프 방지).
+//   (3) 매 시도마다 attempt 횟수를 [NAVER_DIAG] 로그에 기록.
+const FETCH_MAX_ATTEMPTS = 3;
+
+async function fetchNoKeepAlive(
+  url: string,
+  init: RequestInit,
+  label: string,
+): Promise<{ res: Response; attempts: number }> {
+  // Force Connection: close — proxy/origin이 응답 후 즉시 FIN하도록.
+  const headers = new Headers(init.headers ?? {});
+  if (!headers.has('Connection')) headers.set('Connection', 'close');
+  const safeInit: RequestInit = { ...init, headers, keepalive: false };
+
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= FETCH_MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(url, safeInit);
+      if (attempt > 1) {
+        // Surface that the retry actually rescued the request.
+        console.warn(`[NAVER_DIAG] retry-success attempt=${attempt} ${label}`);
+      }
+      return { res, attempts: attempt };
+    } catch (e: unknown) {
+      lastErr = e;
+      const cls = classifyFetchFailure((e as { cause?: unknown }).cause);
+      // 재시도 대상: keep-alive 닫힌 소켓 재사용 (ECONNRESET / UND_ERR_SOCKET) 만.
+      // 그 외(타임아웃/DNS/인증)는 즉시 throw — 재시도해도 같은 결과.
+      const retriable = cls.kind === 'NETWORK_RESET';
+      if (!retriable || attempt >= FETCH_MAX_ATTEMPTS) {
+        // Attach attempt count onto cause for downstream logging.
+        (e as { _naverAttempts?: number })._naverAttempts = attempt;
+        throw e;
+      }
+      const backoff = 200 * attempt;   // 200ms, 400ms (3차 시도 직전)
+      console.warn(
+        `[NAVER_DIAG] retry-backoff attempt=${attempt}/${FETCH_MAX_ATTEMPTS} ` +
+        `errCode=${cls.errCode ?? '?'} syscall=${cls.syscall ?? '?'} ${label} backoff=${backoff}ms`,
+      );
+      await new Promise(r => setTimeout(r, backoff));
+    }
+  }
+  // Defensive — shouldn't reach here.
+  throw lastErr ?? new Error('fetchNoKeepAlive: exhausted without throw');
+}
+
+function extractAttempts(e: unknown): number | undefined {
+  const n = (e as { _naverAttempts?: number } | null | undefined)?._naverAttempts;
+  return typeof n === 'number' ? n : undefined;
 }
 
 /**
@@ -118,20 +196,25 @@ async function getAccessToken(): Promise<string> {
   if (proxy.url) {
     const t0 = Date.now();
     let res: Response;
+    let attempts = 1;
     try {
-      res = await fetch(proxy.url, {
+      const r = await fetchNoKeepAlive(proxy.url, {
         method: 'POST',
         headers: {
           'Content-Type':   'application/json',
           'x-proxy-secret': proxy.secret,
         },
         body: JSON.stringify({ action: 'token' }),
-      });
+      }, 'POST [proxy]/token');
+      res = r.res;
+      attempts = r.attempts;
     } catch (e: unknown) {
       const cls = classifyFetchFailure((e as { cause?: unknown }).cause);
       const diag: NaverDiagnostic = {
         kind: cls.kind === 'UNKNOWN' ? 'AUTH_FAIL' : cls.kind,
         errCode: cls.errCode,
+        errno: cls.errno, syscall: cls.syscall, address: cls.address, port: cls.port,
+        attempts: extractAttempts(e) ?? FETCH_MAX_ATTEMPTS,
         method: 'POST',
         path: '[proxy]/token',
         durationMs: Date.now() - t0,
@@ -147,6 +230,7 @@ async function getAccessToken(): Promise<string> {
         kind: classifyHttpStatus(res.status, text),
         status: res.status,
         gwTraceId,
+        attempts,
         bodyHead: text,
         durationMs: Date.now() - t0,
         method: 'POST',
@@ -194,8 +278,9 @@ async function getAccessToken(): Promise<string> {
 
   const t0 = Date.now();
   let res: Response;
+  let attempts = 1;
   try {
-    res = await fetch(AUTH_URL, {
+    const r = await fetchNoKeepAlive(AUTH_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -205,12 +290,16 @@ async function getAccessToken(): Promise<string> {
         grant_type:         'client_credentials',
         type:               'SELF',
       }),
-    });
+    }, 'POST /external/v1/oauth2/token');
+    res = r.res;
+    attempts = r.attempts;
   } catch (e: unknown) {
     const cls = classifyFetchFailure((e as { cause?: unknown }).cause);
     const diag: NaverDiagnostic = {
       kind: cls.kind === 'UNKNOWN' ? 'AUTH_FAIL' : cls.kind,
       errCode: cls.errCode,
+      errno: cls.errno, syscall: cls.syscall, address: cls.address, port: cls.port,
+      attempts: extractAttempts(e) ?? FETCH_MAX_ATTEMPTS,
       method: 'POST',
       path: '/external/v1/oauth2/token',
       durationMs: Date.now() - t0,
@@ -226,6 +315,7 @@ async function getAccessToken(): Promise<string> {
       kind: classifyHttpStatus(res.status, text),
       status: res.status,
       gwTraceId,
+      attempts,
       bodyHead: text,
       durationMs: Date.now() - t0,
       method: 'POST',
@@ -254,20 +344,25 @@ export async function naverRequest<T = any>(
   // [Mode 1] Proxy mode: just POST {path, method, body} - proxy handles token
   if (proxy.url) {
     let res: Response;
+    let attempts = 1;
     try {
-      res = await fetch(proxy.url, {
+      const r = await fetchNoKeepAlive(proxy.url, {
         method: 'POST',
         headers: {
           'Content-Type':   'application/json',
           'x-proxy-secret': proxy.secret,
         },
         body: JSON.stringify({ path, method, body }),
-      });
+      }, `${method} [proxy]${path}`);
+      res = r.res;
+      attempts = r.attempts;
     } catch (e: unknown) {
       const cls = classifyFetchFailure((e as { cause?: unknown }).cause);
       const diag: NaverDiagnostic = {
         kind: cls.kind,
         errCode: cls.errCode,
+        errno: cls.errno, syscall: cls.syscall, address: cls.address, port: cls.port,
+        attempts: extractAttempts(e) ?? FETCH_MAX_ATTEMPTS,
         method, path: `[proxy]${path}`,
         durationMs: Date.now() - t0,
       };
@@ -288,6 +383,7 @@ export async function naverRequest<T = any>(
         kind: classifyHttpStatus(res.status, text),
         status: res.status,
         gwTraceId,
+        attempts,
         rateLimitReplenishRate: res.headers.get('GNCP-GW-RateLimit-Replenish-Rate') ?? undefined,
         rateLimitBurstCapacity: res.headers.get('GNCP-GW-RateLimit-Burst-Capacity') ?? undefined,
         bodyHead: text,
@@ -307,20 +403,25 @@ export async function naverRequest<T = any>(
   const token = await getAccessToken();
 
   let res: Response;
+  let attempts = 1;
   try {
-    res = await fetch(`${BASE_URL}${path}`, {
+    const r = await fetchNoKeepAlive(`${BASE_URL}${path}`, {
       method,
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type':  'application/json;charset=UTF-8',
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
-    });
+    }, `${method} ${path}`);
+    res = r.res;
+    attempts = r.attempts;
   } catch (e: unknown) {
     const cls = classifyFetchFailure((e as { cause?: unknown }).cause);
     const diag: NaverDiagnostic = {
       kind: cls.kind,
       errCode: cls.errCode,
+      errno: cls.errno, syscall: cls.syscall, address: cls.address, port: cls.port,
+      attempts: extractAttempts(e) ?? FETCH_MAX_ATTEMPTS,
       method, path,
       durationMs: Date.now() - t0,
     };
@@ -341,6 +442,7 @@ export async function naverRequest<T = any>(
       kind: classifyHttpStatus(res.status, text),
       status: res.status,
       gwTraceId,
+      attempts,
       rateLimitReplenishRate: res.headers.get('GNCP-GW-RateLimit-Replenish-Rate') ?? undefined,
       rateLimitBurstCapacity: res.headers.get('GNCP-GW-RateLimit-Burst-Capacity') ?? undefined,
       bodyHead: text,
