@@ -1,5 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
+> 2026-06-02 **P0 달항아리 register 400 사유 1순위 확정** (baseline 2fdbd32 → push 57dce53). [product-builder.ts:524] leafCategoryId가 product.category(="uncategorized") 사용 → 400. naverCategoryCode(="50000963") 우선 + 8자리 numeric 정규식 가드 fix. dryRun + NaverApiError.diagnostic 응답 노출 출하. 다음 = Desktop 대표 명시 승인 후 실 register 재호출. 또 400이면 응답 diagnostic.bodyHead로 정확 사유 즉시 read. 비가역 0(DRAFT 유지, register 호출 0건, dryRun은 네이버 호출 0).
+
 > 2026-06-02 **P0 발행 선결 — 위탁배송 주소 기능 신설 + 진단 로깅** (baseline ac13be7). StoreSettings releaseAddressId/returnAddressId/addressbookSyncedAt 정식 컬럼 신설(Supabase ALTER 적용) + addressbooks/products/register/batch-register 정식 컬럼 read 마이그레이션 + api-client.ts NaverApiError·NaverFailKind 7분류 진단 로깅. asGuide JSON cache 폐기. 미커밋 위험 변경(legalApproval 삭제, #39) stash 격리. 다음 = Desktop 대표 환경에서 판매자센터 주소록 등록 → GET /api/naver/addressbooks 호출 → diagnostics 분기 판정 → (IP_NOT_ALLOWED 시 Vercel Static IPs 결정 / success 시 자동수거 예외처리 → 대표 승인 → 발행).
 
 > 2026-06-02 **UI/UX 2-MOBILE-3 [코드 완료]** (baseline 0ebcd56). 모바일 컨트롤 오버플로 4건(M1 헤더·M2 탭·M3 검색·M4 BulkFloatMenu) lg: 분기 격리로 데스크톱 회귀 0. P1~P3 설계 핸드오프 신규. 다음 = P0 달항아리 발행(naver_* 17필드 충진 선결).

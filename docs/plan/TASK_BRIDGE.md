@@ -71,6 +71,20 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-02 P0 달항아리 register 400 1순위 사유 확정 + dryRun (Code → Desktop, push 57dce53)
+
+| 항목 | 상태 |
+|---|---|
+| Desktop 시도 결과 | 2026-06-02 06:10:22 KST POST /v2/products HTTP 400, [NAVER_DIAG] kind=HTTP_ERROR. Vercel MCP 로그 truncate로 본문 미확보. |
+| Code 단정 | DB Product.category="uncategorized" + builder가 그 컬럼을 leafCategoryId로 전송 → 네이버 400 (1순위, 거의 확정). |
+| Fix 출하 | product-builder leafCategoryId resolution을 naverCategoryCode(="50000963") 우선 + 8자리 numeric 가드. register route에 dryRun(payload echo, 네이버 호출 0) + NaverApiError catch → diagnostic 응답 노출. |
+| dryRun 단정 | leafCategoryId=50000963 / shippingAddressId=106914714 / returnAddressId=106914715 / validation A/A 통과. |
+| 2순위 의심 | productInfoProvidedNotice 미구현 (가구/인테리어 정보고시 필수 가능). |
+| 3순위 의심 | afterServiceTelephoneNumber="고객센터 문의" 텍스트 (전화번호 형식 요구 가능). |
+| 다음 (Desktop) | 대표 명시 승인 → POST /api/naver/products/register {productId:cmp3afb450001gng5468w0qpc} 재호출. 또 400 시 응답 JSON의 diagnostic.bodyHead 그대로 보고 → Code가 정확 fix. |
+| 비가역 0 | 네이버 register 호출 0건, DRAFT 유지. dryRun은 네이버 호출 0. |
+
+
 ### 2026-06-02 P0 발행 선결 — 위탁배송 주소 기능 신설 + 진단 로깅 (Code → Desktop, baseline ac13be7)
 
 | 항목 | 상태 |
