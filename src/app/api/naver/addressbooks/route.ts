@@ -68,9 +68,20 @@ export async function GET() {
     const releaseDiag = releaseResult.status === 'rejected' ? diagnosticFromError(releaseResult.reason) : null;
     const returnDiag  = returnResult.status  === 'rejected' ? diagnosticFromError(returnResult.reason)  : null;
 
-    // RESEARCH §1: single representative pair — pick default flag, else first entry.
-    const defaultRelease = releaseAddresses.find(a => a.isDefault) ?? releaseAddresses[0] ?? null;
-    const defaultReturn  = returnAddresses.find(a => a.isDefault)  ?? returnAddresses[0]  ?? null;
+    // 2026-06-02 hotfix — production 호출 결과 정정:
+    //   네이버가 ?addressType= query를 무시하고 RELEASE/REFUND_OR_EXCHANGE/GENERAL을
+    //   섞어 반환 + 응답에 isDefault 필드 부재 → 기존 `find(a => a.isDefault) ?? [0]`
+    //   로직이 항상 첫 항목(RELEASE)을 픽 → 반품지가 출고지 No로 잘못 캐시되는 사고
+    //   발생. 반드시 addressType 정확 매칭으로 후처리 필터 적용 (RESEARCH §3).
+    const pickRelease = (list: AddressEntry[]) =>
+      list.find(a => a.addressType === 'RELEASE' && a.isDefault) ??
+      list.find(a => a.addressType === 'RELEASE') ?? null;
+    const pickReturn = (list: AddressEntry[]) =>
+      list.find(a => a.addressType === 'REFUND_OR_EXCHANGE' && a.isDefault) ??
+      list.find(a => a.addressType === 'REFUND_OR_EXCHANGE') ?? null;
+
+    const defaultRelease = pickRelease(releaseAddresses);
+    const defaultReturn  = pickReturn(returnAddresses);
 
     const releaseAddressId = defaultRelease ? pickAddressNo(defaultRelease) : null;
     const returnAddressId  = defaultReturn  ? pickAddressNo(defaultReturn)  : null;
