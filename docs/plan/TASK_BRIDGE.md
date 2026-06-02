@@ -71,6 +71,21 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-02 P0 발행 1단계 완주 — 정보고시·AS·name·공통슬롯 통합 (Code → Desktop, push 734f25d)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 정정 (#46) | API v2 정보고시 템플릿 ID(2976841) 참조 **미지원** — payload 삽입 금지. ETC 인라인 유일 (RESEARCH §1). |
+| 작업1 정보고시 ETC | buildProductInfoProvidedNoticeEtc 헬퍼 + payload 통합. type=ETC + 자식 etc 8필수 "상품상세참조" + 실제값 4종 (itemName/modelName/manufacturer/customerServicePhoneNumber). |
+| 작업2 AS 전화 형식화 | normalizeNaverPhone (정규식 + dash 자동포맷 + fallback 010-3227-4805 주소록번호). DB UPDATE 0, 가드만. |
+| 작업3 name SEO 우선 | pickProductName: naver_title > seoTitle > name 100자 slice. |
+| 작업4 공통슬롯 4칸 | StoreSettings 4컬럼 신설 + Supabase ALTER + buildDetailContent 슬롯 통합 + register route inject. |
+| #34 보고 | docs/research/assets/ 디렉토리 부재 → 이미지 2파일 working tree 0건. schema/코드는 완비, 실 이미지 업로드는 사용자 파일 제공 후 후속 turn. |
+| dryRun production 단정 | leafCategoryId=50000963 + name=naver_title + AS=010-3227-4805 + ETC.etc 9키 + noticeSlots 전부 미설정. validation A/A 85/84. **4건 전수 PASS**. |
+| TSC/build/verify | 0 / OK / exit 0. 비가역 0 (register 호출 0건, DRAFT 유지). |
+| 다음 (Desktop) | 대표 명시 승인 → POST /api/naver/products/register {productId:cmp3afb450001gng5468w0qpc}. 통과 시 발행 완료 / 400 시 응답 invalidInputs[].name/message 그대로 보고 → Code 정밀 fix. |
+
+
 ### 2026-06-02 P0 달항아리 register 400 1순위 사유 확정 + dryRun (Code → Desktop, push 57dce53)
 
 | 항목 | 상태 |

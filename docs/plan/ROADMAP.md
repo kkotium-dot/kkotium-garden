@@ -1,5 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
+> 2026-06-02 **P0 발행 1단계 완주 — 정보고시 ETC + AS 형식화 + name SEO 우선 + 공통슬롯 4칸** (baseline 1664758 → push 734f25d). RESEARCH §1 정정 (#46): API v2 정보고시 템플릿 ID 참조 미지원, ETC 인라인 유일. product-builder buildProductInfoProvidedNoticeEtc + normalizeNaverPhone + pickProductName + NoticeAssets 4슬롯 + StoreSettings 4컬럼 신설 + Supabase ALTER. dryRun production 단정 4건 전수 PASS. DEBT-07/08 신규. #34 이미지 부재 보고 (assets/ 디렉토리 0건 — 후속 turn 업로드). 다음 = Desktop 대표 명시 승인 → 실 register. 또 400/502 시 invalidInputs[].name/message로 정확 사유 read.
+
 > 2026-06-02 **P0 달항아리 register 400 사유 1순위 확정** (baseline 2fdbd32 → push 57dce53). [product-builder.ts:524] leafCategoryId가 product.category(="uncategorized") 사용 → 400. naverCategoryCode(="50000963") 우선 + 8자리 numeric 정규식 가드 fix. dryRun + NaverApiError.diagnostic 응답 노출 출하. 다음 = Desktop 대표 명시 승인 후 실 register 재호출. 또 400이면 응답 diagnostic.bodyHead로 정확 사유 즉시 read. 비가역 0(DRAFT 유지, register 호출 0건, dryRun은 네이버 호출 0).
 
 > 2026-06-02 **P0 발행 선결 — 위탁배송 주소 기능 신설 + 진단 로깅** (baseline ac13be7). StoreSettings releaseAddressId/returnAddressId/addressbookSyncedAt 정식 컬럼 신설(Supabase ALTER 적용) + addressbooks/products/register/batch-register 정식 컬럼 read 마이그레이션 + api-client.ts NaverApiError·NaverFailKind 7분류 진단 로깅. asGuide JSON cache 폐기. 미커밋 위험 변경(legalApproval 삭제, #39) stash 격리. 다음 = Desktop 대표 환경에서 판매자센터 주소록 등록 → GET /api/naver/addressbooks 호출 → diagnostics 분기 판정 → (IP_NOT_ALLOWED 시 Vercel Static IPs 결정 / success 시 자동수거 예외처리 → 대표 승인 → 발행).

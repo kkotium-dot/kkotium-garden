@@ -217,3 +217,45 @@ DEBT-05 정식 컬럼 신설과 동시에 batch-register를 `prisma.storeSetting
 ### SOURCE
 
 Code 2026-06-02 P0 발행 선결 turn — DEBT-05 마이그레이션 중 batch-register 경로 정독에서 발견.
+
+## DEBT-07 — 공통 콘텐츠 슬롯 4칸 셀프편집 UI 부재 (2단계)
+
+**Status**: OPEN (2026-06-02 등록, 1단계 schema+코드만 출하)
+**Severity**: low (현 슬롯 nullable로 미설정 시 영향 0)
+**Owner**: 발행 통과 후 별도 turn
+
+### 부채 명세
+
+StoreSettings에 noticeTopImageUrl/noticeTopText/noticeBottomImageUrl/noticeBottomText 4컬럼 신설했고 buildDetailContent가 값 있을 때 자동 렌더하나, 앱에서 값 수정 UI 부재. 대표가 이미지 교체/텍스트 변경 시 DB 직접 UPDATE 또는 개발자 호출 필요.
+
+### 2단계 설계 (별도 turn)
+
+- /settings/common-notice 페이지: 4슬롯 미리보기 + 이미지 드래그업로드 + 텍스트 textarea + 저장 버튼
+- 이미지 업로드 = supabase product-assets/common/notice-top.jpg / notice-bottom.jpg upsert (고정 경로)
+- 저장 = StoreSettings 4컬럼 UPDATE
+- 변경 즉시 전 상품 detailContent 갱신 (대표 직접 교체 가능, 개발자 호출 0)
+
+### SOURCE
+
+Code 2026-06-02 P0 발행 1단계 turn — HANDOFF_common_image_slot_publish_payload §3 설계.
+
+---
+
+## DEBT-08 — 카테고리별 정보고시 유형 자동검증 ("상품군 단건 조회" API)
+
+**Status**: OPEN (2026-06-02 등록, 현재 ETC 하드코딩으로 동작)
+**Severity**: medium (ETC가 가구/인테리어 50000963에 적합하나 다른 카테고리에선 부적합 가능)
+**Owner**: 발행 통과 + 다른 카테고리 상품 등록 시도 시 turn
+
+### 부채 명세
+
+buildProductInfoProvidedNoticeEtc는 모든 상품에 ETC 유형을 강제. RESEARCH §3에 의하면 v2.23.0(2024-02-07) "상품정보제공고시 상품군 단건 조회" API가 categoryId 기준으로 필수 유형/필드 스키마 반환. 가구·의류·식품 등 다른 카테고리 등록 시 ETC가 적합하지 않을 수 있고, 네이버가 강제하는 유형으로 자동 매핑 필요.
+
+### 수술 권고 시점
+
+- **발행 1건 통과 후** — ETC 적합성이 입증된 다음에 다른 카테고리(의류/식품) 상품 등록 시도 시
+- 권고: NaverProductInfoProvidedNotice 빌더를 categoryId 기반 dispatch로 확장 (ETC/WEAR/FURNITURE/FOOD 각각 헬퍼) + "상품군 단건 조회" API 호출로 필수필드 사전 검증
+
+### SOURCE
+
+Code 2026-06-02 P0 발행 1단계 turn — RESEARCH_naver_productinfo_notice_api §3 4단계 권고.
