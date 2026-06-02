@@ -96,20 +96,25 @@ export function Card({
 // ── Pill ──────────────────────────────────────────────────────────────────
 
 export function Pill({
-  label, value, palette,
+  label, value, palette, tooltip,
 }: {
   label: string;
   value: string;
   palette?: Palette;
+  tooltip?: string;
 }) {
   const p = palette ?? { bg: '#fff0f5', color: '#e62310', border: '#FFB3CE' };
   return (
-    <div style={{
-      display: 'inline-flex', flexDirection: 'column',
-      padding: '6px 12px', background: p.bg,
-      border: `1px solid ${p.border}`, borderRadius: 10,
-      minWidth: 64,
-    }}>
+    <div
+      title={tooltip}
+      style={{
+        display: 'inline-flex', flexDirection: 'column',
+        padding: '6px 12px', background: p.bg,
+        border: `1px solid ${p.border}`, borderRadius: 10,
+        minWidth: 64,
+        cursor: tooltip ? 'help' : undefined,
+      }}
+    >
       <span style={{ fontSize: 10, fontWeight: 700, color: p.color, opacity: 0.7 }}>{label}</span>
       <span style={{ fontSize: 14, fontWeight: 900, color: p.color, marginTop: 2 }}>{value}</span>
     </div>

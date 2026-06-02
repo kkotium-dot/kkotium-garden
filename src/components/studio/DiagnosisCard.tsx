@@ -7,6 +7,13 @@
 
 import { Sparkles, AlertTriangle } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
+import {
+  formatSkeletonId,
+  formatGrade,
+  formatPersona,
+  formatEmotionalTone,
+  formatScoreOutOf100,
+} from '@/lib/i18n/diagnosis-labels';
 import { Card, Pill, PrimaryButton, pickGradePalette } from './StudioCardShell';
 import type { DiagnosisResult } from './types';
 
@@ -51,12 +58,41 @@ export function DiagnosisCard({
       )}
       {diagnosis && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          <Pill label={strings.diagnosis.skeleton} value={diagnosis.skeletonId} />
-          <Pill label={strings.diagnosis.grade} value={diagnosis.grade} palette={gradePalette} />
-          <Pill label={strings.diagnosis.confidence} value={`${diagnosis.inferenceConfidence.toFixed(0)}`} />
-          <Pill label={strings.diagnosis.qualityScore} value={`${diagnosis.qualityScore.toFixed(0)}`} />
-          {diagnosis.conceptTone.persona && <Pill label={strings.diagnosis.concept} value={String(diagnosis.conceptTone.persona ?? '-')} />}
-          {diagnosis.conceptTone.emotionalTone && <Pill label={strings.diagnosis.tone} value={String(diagnosis.conceptTone.emotionalTone ?? '-')} />}
+          <Pill
+            label={strings.diagnosis.skeleton}
+            value={formatSkeletonId(diagnosis.skeletonId)}
+            tooltip={strings.diagnosis.skeletonTip}
+          />
+          <Pill
+            label={strings.diagnosis.grade}
+            value={formatGrade(diagnosis.grade)}
+            palette={gradePalette}
+            tooltip={strings.diagnosis.gradeTip}
+          />
+          <Pill
+            label={strings.diagnosis.confidence}
+            value={formatScoreOutOf100(diagnosis.inferenceConfidence)}
+            tooltip={strings.diagnosis.confidenceTip}
+          />
+          <Pill
+            label={strings.diagnosis.qualityScore}
+            value={formatScoreOutOf100(diagnosis.qualityScore)}
+            tooltip={strings.diagnosis.qualityScoreTip}
+          />
+          {diagnosis.conceptTone.persona && (
+            <Pill
+              label={strings.diagnosis.concept}
+              value={formatPersona(String(diagnosis.conceptTone.persona))}
+              tooltip={strings.diagnosis.conceptTip}
+            />
+          )}
+          {diagnosis.conceptTone.emotionalTone && (
+            <Pill
+              label={strings.diagnosis.tone}
+              value={formatEmotionalTone(String(diagnosis.conceptTone.emotionalTone))}
+              tooltip={strings.diagnosis.toneTip}
+            />
+          )}
         </div>
       )}
     </Card>

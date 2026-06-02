@@ -84,22 +84,20 @@
 | 2-A-3d | 미저장 draft 페이지레벨 전환 가드 | 76cd8b1 |
 | 2-B-1 | 아틀리에 3분할 작업벤치 셸 | 0936a59 |
 | 2-B-2 | 캔버스 4변형 그리드 + 드래그앤드롭 5상태 | 754d5c6 |
+| 2-NAMING | DiagnosisCard S6/L2/persona/tone 한글 라벨 + 척도 + 툴팁 + 용어집 | ★본 commit |
 
-### ⭐ NEXT (다음 진입점 — 4트랙, 각자 새 채팅에서 분할 진행)
+### ⭐ NEXT (다음 진입점 — 모바일 심화 트랙)
 | 트랙 | 내용 | 우선 | 권위 문서 |
 |---|---|---|---|
-| 2-B-3 | 아틀리에 AI 큐 stepper + Firefly 합성 프롬프트 빌더(6요소) + 모델 선택 안내 + 외부 링크 | 진행중 | MOBILE_NAMING_FIREFLY 주제3 |
-| 2-MOBILE-1 | viewport 1180 해제 + 하단 탭바 + 상품목록 카드 스택 + 터치 44px | P0 | MOBILE_NAMING_FIREFLY 주제1 |
-| 2-MOBILE-2 | 아틀리에 3분할 모바일(캔버스+탭+바텀시트) + SEO 드로어 전체화면 모달 | P1 | 주제1 |
-| 2-NAMING | S6/L2/30-40s/friendly 명칭 직관화 + 용어집 | P1 | 주제2 |
+| 2-MOBILE-2 | 아틀리에 3분할 모바일(캔버스+탭+바텀시트) + SEO 드로어 전체화면 모달 | P1 | MOBILE_NAMING_FIREFLY 주제1 |
 
 | 항목 | 값 |
 |---|---|
-| **FROM** | 🖥 Desktop (2-B-2 전수 검증 [CLOSED] + 모바일/명칭/Firefly 리서치 완료, 2026-06-01) |
-| **TO** | 다음 새 채팅 (트랙별 분할 — Code build, Desktop verify) |
-| **BASELINE** | 754d5c6 (origin/main, Vercel READY) |
-| **NEXT SCOPE** | 위 4트랙 중 택1 진행. 권고 순서: 2-B-3(진행중 마무리) → 2-MOBILE-1(P0 사용성) → 2-NAMING → 2-MOBILE-2 |
-| **PENDING** | [신규] G8-ENGINE 이미지 파이프라인(아이스트레이/달항아리 backdrop 적재) — UI/UX Sprint 후 재개 / 달항아리 네이버 발행(대표 승인) / 명화송풍구 cutout 적재 / 기존 PENDING 누적 |
+| **FROM** | 💻 Code (2-NAMING [코드 완료], 본 commit, 2026-06-02) |
+| **TO** | 🖥 Desktop 새 채팅 (production 진단 패널 한글 라벨 + 툴팁 육안 검증) |
+| **BASELINE** | 본 commit (origin/main, Vercel READY 예정) — 직전 e0d5b25 |
+| **NEXT SCOPE** | 2-MOBILE-2 — 아틀리에 3분할 모바일(캔버스+탭+바텀시트) + SEO 드로어 전체화면 모달 |
+| **PENDING** | 2-MOBILE-1 모바일 실기기 육안(대표 휴대폰) / Firefly 프롬프트 복사 실동작 / G8-ENGINE 재개 / 달항아리 발행(대표 승인) / 명화송풍구 cutout 적재 / 기존 PENDING 누적 |
 
 ### 권위 문서 (UI/UX Sprint, 정독 우선순위)
 1. docs/research/GARDEN_DESIGN_BRIEF_2026-06.md (★레트로 팝 무드)

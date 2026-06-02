@@ -7,6 +7,7 @@
 
 import { FileImage } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
+import { formatSkeletonId } from '@/lib/i18n/diagnosis-labels';
 import { Card, Pill, PrimaryButton } from './StudioCardShell';
 import { SKELETON_IDS, type DetailResult, type SkeletonIdLiteral } from './types';
 
@@ -68,7 +69,11 @@ export function DetailPageCard({
       {detail && (
         <>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-            <Pill label={strings.diagnosis.skeleton} value={detail.skeletonId} />
+            <Pill
+              label={strings.diagnosis.skeleton}
+              value={formatSkeletonId(detail.skeletonId)}
+              tooltip={strings.diagnosis.skeletonTip}
+            />
             <Pill
               label={strings.detail.matchScore.replace('{score}', '')}
               value={`${detail.matchScore.toFixed(0)}`}
