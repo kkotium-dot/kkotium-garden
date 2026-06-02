@@ -48,6 +48,11 @@ model Supplier {
   defaultShippingTemplateId  String?           @map("default_shipping_template_id")
   defaultMargin              Int               @default(30)
   active                     Boolean           @default(true)
+  // 2026-06-02 — 공급사별 합배송 속성 (Desktop이 Supabase ALTER 선행, Code는 동기화만)
+  bundleCapable              Boolean           @default(false) @map("bundle_capable")
+  naverBundleGroupId         String?           @map("naver_bundle_group_id") @db.VarChar(40)
+  islandExtraFee             Int?              @map("island_extra_fee")
+  jejuExtraFee               Int?              @map("jeju_extra_fee")
   createdAt                  DateTime          @default(now())
   updatedAt                  DateTime          @updatedAt
   products                   Product[]
@@ -66,6 +71,9 @@ model Product {
   // G8-ENGINE-Q4: pre-publish legal approval override (e.g. master_pd_verified
   // for operator-confirmed public-domain artwork). Consumed by asset-legal-gate.
   legalApproval           String?
+  // 2026-06-02 — 배송 처리 분기 속성. 'NORMAL' = 표준 위탁 / 'ORDER_MADE' = 주문제작
+  // (표준 발행 파이프라인에서 분리). Desktop이 Supabase ALTER 선행.
+  shippingAttribute       String            @default("NORMAL") @map("shipping_attribute") @db.VarChar(20)
   naver_title             String?
   naver_keywords          String?
   naver_description       String?

@@ -222,6 +222,17 @@ export interface AddressIds {
   returnAddressId: number;
 }
 
+// 2026-06-02 — 공급사별 합배송 속성. buildDeliveryInfo가 이 값으로 분기:
+//   bundleCapable=true + naverBundleGroupId → deliveryBundleGroupId 전송 +
+//     deliveryFeeByArea 제거 (네이버 양립불가 — RESEARCH §1).
+//   bundleCapable=false → deliveryFeeByArea 전송 + deliveryBundleGroupId 제거.
+export interface SupplierBundleInfo {
+  bundleCapable: boolean;
+  naverBundleGroupId?: string | null;
+  jejuExtraFee?: number | null;
+  islandExtraFee?: number | null;
+}
+
 // ─── 2026-06-02 P0 — phone normalizer + productInfoProvidedNotice ETC builder ─
 
 /**
@@ -318,10 +329,18 @@ const COURIER_MAP: Record<string, string> = {
 
 // ─── Builder functions ──────────────────────────────────────────────────────
 
-/** Build deliveryInfo JSON from ShippingTemplate + address IDs */
+/**
+ * Build deliveryInfo JSON from ShippingTemplate + address IDs.
+ * 2026-06-02 — supplier bundle 분기 (RESEARCH §B). deliveryBundleGroupId 와
+ * deliveryFeeByArea 는 네이버에서 양립 불가:
+ *   bundleCapable=true + naverBundleGroupId → deliveryBundleGroupId 전송,
+ *     deliveryFeeByArea 미전송 (권역비는 판매자센터 묶음그룹에 위임).
+ *   그 외 → deliveryFeeByArea 전송, deliveryBundleGroupId 미전송.
+ */
 export function buildDeliveryInfo(
   template: ShippingTemplateData,
-  addresses: AddressIds
+  addresses: AddressIds,
+  bundle?: SupplierBundleInfo,
 ): NaverDeliveryInfo {
   const feeType: NaverDeliveryFee['deliveryFeeType'] =
     template.shippingType === 0 ? 'FREE' :
@@ -340,21 +359,17 @@ export function buildDeliveryInfo(
     deliveryFee.freeConditionalAmount = template.freeThreshold;
   }
 
-  // Jeju / island area surcharge
-  if (template.jejuFee > 0 || template.islandFee > 0) {
-    deliveryFee.deliveryFeeByArea = {
-      deliveryAreaType: 'AREA_3',
-      area2extraFee: template.jejuFee,
-      area3extraFee: template.islandFee,
-    };
-  }
+  // Bundle branch: a valid numeric group id makes this a bundle-capable product.
+  const groupId = bundle?.bundleCapable && bundle.naverBundleGroupId
+    ? Number(bundle.naverBundleGroupId)
+    : NaN;
+  const useBundle = Number.isFinite(groupId) && groupId > 0;
 
-  return {
+  const info: NaverDeliveryInfo = {
     deliveryType: 'DELIVERY',
     deliveryAttributeType: 'NORMAL',
     deliveryCompany: COURIER_MAP[template.courierCode] ?? 'CJGLS',
-    deliveryBundleGroupUsable: true,
-    deliveryBundleGroupId: null,
+    deliveryBundleGroupUsable: useBundle,
     deliveryFee,
     claimDeliveryInfo: {
       returnDeliveryCompanyPriorityType: 'PRIMARY',
@@ -364,12 +379,32 @@ export function buildDeliveryInfo(
       returnAddressId: addresses.returnAddressId,
     },
   };
+
+  if (useBundle) {
+    // Bundle group carries the area surcharge — never send deliveryFeeByArea here.
+    info.deliveryBundleGroupId = groupId;
+  } else {
+    // Non-bundle: send per-product area surcharge. Supplier override > template
+    // value > legacy default. Only emit when a positive surcharge exists.
+    const jeju   = bundle?.jejuExtraFee   ?? template.jejuFee;
+    const island = bundle?.islandExtraFee ?? template.islandFee;
+    if ((jeju ?? 0) > 0 || (island ?? 0) > 0) {
+      deliveryFee.deliveryFeeByArea = {
+        deliveryAreaType: 'AREA_3',
+        area2extraFee: jeju ?? 0,
+        area3extraFee: island ?? 0,
+      };
+    }
+  }
+
+  return info;
 }
 
 /** Build deliveryInfo from Product fields (when no shipping template) */
 export function buildDeliveryInfoFromProduct(
   product: LocalProduct,
-  addresses: AddressIds
+  addresses: AddressIds,
+  bundle?: SupplierBundleInfo,
 ): NaverDeliveryInfo {
   const fee = product.shippingFee ?? 3000;
   const threshold = product.freeShippingThreshold ?? product.freeShippingMinPrice ?? 30000;
@@ -385,7 +420,7 @@ export function buildDeliveryInfoFromProduct(
     exchangeFee: product.exchangeShippingFee ?? 6000,
     jejuFee: 5000,
     islandFee: 5000,
-  }, addresses);
+  }, addresses, bundle);
 }
 
 /** Build SEO info from product tags/keywords */

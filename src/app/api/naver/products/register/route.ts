@@ -14,6 +14,7 @@ import {
   type LocalProduct,
   type ShippingTemplateData,
   type AddressIds,
+  type SupplierBundleInfo,
 } from '@/lib/naver/product-builder';
 
 export const dynamic = 'force-dynamic';
@@ -72,6 +73,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 1-b. ORDER_MADE guard — 주문제작 상품은 표준 위탁 배송 파이프라인에서 분리.
+    // 전용 배송설계(제작기간/입금확인 발송 등)는 후속 turn. dryRun은 통과시켜
+    // payload 점검은 허용하되, 실 register는 차단 (오발행 방지).
+    if (dbProduct.shippingAttribute === 'ORDER_MADE' && !dryRun && !forceRegister) {
+      return NextResponse.json({
+        success: false,
+        error:
+          '주문제작(ORDER_MADE) 상품은 표준 위탁 발행 파이프라인 대상이 아닙니다. ' +
+          '전용 배송 설계(제작 기간 안내, 입금 확인 후 발송 등) 적용 후 발행하세요.',
+        stage: 'ORDER_MADE_GUARD',
+        shippingAttribute: dbProduct.shippingAttribute,
+      }, { status: 409 });
+    }
+
     // 2. Load shipping template if linked
     let shippingTemplate: ShippingTemplateData | null = null;
     if (dbProduct.shipping_template_id) {
@@ -88,6 +103,28 @@ export async function POST(request: NextRequest) {
           exchangeFee: tmpl.exchangeFee,
           jejuFee: tmpl.jejuFee,
           islandFee: tmpl.islandFee,
+        };
+      }
+    }
+
+    // 2-b. Load supplier bundle attributes (합배송 분기용).
+    let bundleInfo: SupplierBundleInfo | undefined;
+    if (dbProduct.supplierId) {
+      const supplier = await prisma.supplier.findUnique({
+        where: { id: dbProduct.supplierId },
+        select: {
+          bundleCapable: true,
+          naverBundleGroupId: true,
+          jejuExtraFee: true,
+          islandExtraFee: true,
+        },
+      });
+      if (supplier) {
+        bundleInfo = {
+          bundleCapable: supplier.bundleCapable,
+          naverBundleGroupId: supplier.naverBundleGroupId,
+          jejuExtraFee: supplier.jejuExtraFee,
+          islandExtraFee: supplier.islandExtraFee,
         };
       }
     }
@@ -132,10 +169,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // 6. Build delivery info (from template or product fields)
+    // 6. Build delivery info (from template or product fields) with supplier
+    // bundle branch (deliveryBundleGroupId vs deliveryFeeByArea — RESEARCH §B).
     const deliveryInfo = shippingTemplate
-      ? buildDeliveryInfo(shippingTemplate, addresses)
-      : buildDeliveryInfoFromProduct(product, addresses);
+      ? buildDeliveryInfo(shippingTemplate, addresses, bundleInfo)
+      : buildDeliveryInfoFromProduct(product, addresses, bundleInfo);
 
     // 6-b. Load common notice slots (store-wide top/bottom image + text)
     // injected into detailContent. Nullable — render-empty when unset.
@@ -173,6 +211,16 @@ export async function POST(request: NextRequest) {
           representativeImage: payload.originProduct.images.representativeImage.url,
           optionalImageCount: payload.originProduct.images.optionalImages?.length ?? 0,
           deliveryCompany: payload.originProduct.deliveryInfo.deliveryCompany,
+          deliveryBranch: {
+            // Supplier bundle 분기 결과 — RESEARCH §B 양립불가 검증.
+            bundleCapable: bundleInfo?.bundleCapable ?? false,
+            deliveryBundleGroupUsable: payload.originProduct.deliveryInfo.deliveryBundleGroupUsable,
+            deliveryBundleGroupId: payload.originProduct.deliveryInfo.deliveryBundleGroupId ?? null,
+            deliveryFeeByArea: payload.originProduct.deliveryInfo.deliveryFee.deliveryFeeByArea ?? null,
+            mutuallyExclusiveOk:
+              !(payload.originProduct.deliveryInfo.deliveryBundleGroupId
+                && payload.originProduct.deliveryInfo.deliveryFee.deliveryFeeByArea),
+          },
           claimDeliveryInfo: payload.originProduct.deliveryInfo.claimDeliveryInfo,
           originAreaInfo: payload.originProduct.detailAttribute?.originAreaInfo,
           afterServiceInfo: payload.originProduct.detailAttribute?.afterServiceInfo,
