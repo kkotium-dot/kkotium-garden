@@ -71,6 +71,19 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-02 발행 데이터 스토어명 정정 — 앱 이름 → 스토어명 SoT (Code → Desktop, push 803a69a)
+
+| 항목 | 상태 |
+|---|---|
+| 원칙 (대표 확정) | '꽃틔움 가든'=앱 이름(내부), '꽃틔움'=스토어명(고객 노출). Desktop store_settings.store_name='꽃틔움' 교정 완료. |
+| 작업1·2 fallback | importer + 정보고시 manufacturer fallback을 앱 이름 → 스토어명. |
+| 작업3 SoT 연동 | DEFAULT_STORE_NAME 상수 + storeName 인자 + register route store_name 주입. DB 한 곳 SoT. |
+| 작업4 잔존 점검 | 앱 이름(UI/주석/마스코트) 유지. insert-card 기본값 1건 정정. |
+| dryRun 단정 | 명화 방향제 importer='꽃틔움' + manufacturer='꽃틔움' + payload 앱 이름 잔존 0건. |
+| TSC/build/verify | 0 / OK / exit 0. 비가역 0. |
+| 다음 (Desktop) | 명화 방향제 dryRun 재단정 → 회선 확인 → 대표 승인 → register 첫 발행. 달항아리 ORDER_MADE 파킹. |
+
+
 ### 2026-06-02 수입품 importer 자동 충진 — originAreaInfo NotEmpty 400 차단 (Code → Desktop, push 3137914)
 
 | 항목 | 상태 |
