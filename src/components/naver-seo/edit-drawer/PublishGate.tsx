@@ -49,7 +49,7 @@ const FIELD_LABELS_KO: Record<string, string> = {
   optionName: "옵션명",
   hasOptions: "옵션 사용",
   options: "옵션 데이터",
-  shipping_template_id: "배송 템플릿",
+  shipping: "배송 설정",
   carrier_code: "택배사 코드",
   sku: "SKU",
   brand: "브랜드",

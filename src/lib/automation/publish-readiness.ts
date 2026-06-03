@@ -46,7 +46,10 @@ export interface FieldChecks {
   optionName: boolean;
   hasOptions: boolean;
   options: boolean;
-  shipping_template_id: boolean;
+  // 2026-06-03 — 배송 설정 (템플릿 OR product 배송필드). 발행 로직은 템플릿이
+  // 없으면 buildDeliveryInfoFromProduct(courierCode + shippingFee)로 발행하므로
+  // 게이트도 정합. 기존 shipping_template_id 단독 필수를 대체.
+  shipping: boolean;
   carrier_code: boolean;
   sku: boolean;
   brand: boolean;
@@ -54,6 +57,21 @@ export interface FieldChecks {
   originCode: boolean;
   margin: boolean;
 }
+
+// 2026-06-03 — 2계층 분리. HARD = 실제 네이버 발행 성공의 최소 조건. 나머지는
+// SEO 권장(미충족이어도 발행 자체는 가능하나 첫 발행 전 채움 권장). publishReady는
+// 작업5 단정("SEO 채운 뒤 publishReady=true")을 위해 두 계층 모두 요구한다.
+const HARD_FIELD_KEYS: ReadonlyArray<keyof FieldChecks> = [
+  'main_image_url',
+  'detail_image_url',
+  'naverCategoryCode',
+  'originCode',
+  'carrier_code',
+  'shipping',
+  'optionName',
+  'options',
+  'hasOptions',
+];
 
 /** 상품정보제공고시 (Naver Smart Store legal disclosure) required payload.
  *  Non-NULL check ONLY — content authenticity is checked elsewhere.
@@ -97,6 +115,10 @@ export interface PublishReadinessInput {
   options: unknown;
   shipping_template_id: string | null;
   carrier_code: string | null;
+  // 2026-06-03 — 발행 로직(buildDeliveryInfoFromProduct)이 쓰는 배송 필드.
+  // 게이트-발행 로직 정합용. courierCode 는 기본값 'CJGLS' 가 있어 항상 존재.
+  courierCode: string | null;
+  shippingFee: number | null;
   sku: string | null;
   brand: string | null;
   naverCategoryCode: string | null;
@@ -120,6 +142,12 @@ export interface PublishReadinessResult {
   naverProductId: string | null;
   fields: FieldChecks;
   fieldsAllSet: boolean;
+  // 2026-06-03 — 2계층 진단 (작업4). hardComplete = 발행 필수 최소 조건 충족,
+  // seoComplete = SEO 권장 필드 충족. publishReady 는 둘 다 요구(작업5 정합).
+  hardComplete: boolean;
+  seoComplete: boolean;
+  hardFieldsMissing: string[];
+  seoFieldsMissing: string[];
   authentic: boolean;
   authenticityViolations: AuthenticityViolation[];
   naverPayload: NaverPayloadChecks;
@@ -164,6 +192,20 @@ function isNonEmptyString(v: unknown): boolean {
 }
 
 function evaluateFields(input: PublishReadinessInput): FieldChecks {
+  // 작업1 — 배송사: 레거시 carrier_code 또는 발행 로직이 쓰는 courierCode 중
+  // 하나만 있으면 통과 (필드 매핑 불일치 정정).
+  const carrierOk = isNonEmptyString(input.carrier_code) || isNonEmptyString(input.courierCode);
+
+  // 작업2 — 배송 설정: 템플릿이 있거나, 배송사 + 배송비가 설정되어 있으면 통과.
+  // shippingFee >= 0 이면 무료배송(0)·유료배송(>0) 모두 발행 가능한 상태.
+  const shippingOk =
+    isNonEmptyString(input.shipping_template_id) ||
+    (carrierOk && typeof input.shippingFee === 'number' && input.shippingFee >= 0);
+
+  // 작업3 — 옵션: 단일 상품(hasOptions !== true)은 옵션 검사 면제. 옵션 상품만
+  // optionName/options 실값 요구.
+  const hasOpts = input.hasOptions === true;
+
   return {
     seoTitle: isNonEmptyString(input.seoTitle),
     naver_title: isNonEmptyString(input.naver_title),
@@ -174,11 +216,12 @@ function evaluateFields(input: PublishReadinessInput): FieldChecks {
     golden_keyword_score: typeof input.golden_keyword_score === 'number',
     detail_image_url: isNonEmptyString(input.detail_image_url),
     main_image_url: isNonEmptyString(input.main_image_url),
-    optionName: isNonEmptyString(input.optionName),
-    hasOptions: input.hasOptions === true,
-    options: isNonEmptyArray(input.options),
-    shipping_template_id: isNonEmptyString(input.shipping_template_id),
-    carrier_code: isNonEmptyString(input.carrier_code),
+    optionName: hasOpts ? isNonEmptyString(input.optionName) : true,
+    options: hasOpts ? isNonEmptyArray(input.options) : true,
+    // 옵션 사용 여부 자체는 게이트 대상 아님(단일·옵션 모두 정상). 항상 통과.
+    hasOptions: true,
+    shipping: shippingOk,
+    carrier_code: carrierOk,
     sku: isNonEmptyString(input.sku),
     brand: isNonEmptyString(input.brand),
     naverCategoryCode: isNonEmptyString(input.naverCategoryCode),
@@ -295,6 +338,18 @@ function evaluateNaverPayload(input: PublishReadinessInput): NaverPayloadChecks 
 export function evaluatePublishReadiness(input: PublishReadinessInput): PublishReadinessResult {
   const fields = evaluateFields(input);
   const fieldsAllSet = Object.values(fields).every(Boolean);
+
+  // 작업4 — 2계층 진단. HARD = 발행 필수 최소 조건, SEO = 나머지 권장 필드.
+  const hardSet = new Set<string>(HARD_FIELD_KEYS as ReadonlyArray<string>);
+  const hardFieldsMissing = (Object.entries(fields) as [keyof FieldChecks, boolean][])
+    .filter(([k, v]) => hardSet.has(k) && !v)
+    .map(([k]) => k);
+  const seoFieldsMissing = (Object.entries(fields) as [keyof FieldChecks, boolean][])
+    .filter(([k, v]) => !hardSet.has(k) && !v)
+    .map(([k]) => k);
+  const hardComplete = hardFieldsMissing.length === 0;
+  const seoComplete = seoFieldsMissing.length === 0;
+
   const authenticityViolations = checkAuthenticity(input);
   const authentic = authenticityViolations.length === 0;
   const naverPayload = evaluateNaverPayload(input);
@@ -302,6 +357,9 @@ export function evaluatePublishReadiness(input: PublishReadinessInput): PublishR
     .filter(([, v]) => !v)
     .map(([k]) => k);
   const naverPayloadComplete = naverPayloadMissing.length === 0;
+  // publishReady 는 HARD + SEO 모두 요구(= fieldsAllSet). 작업5 단정 정합:
+  // SEO 채운 뒤에 비로소 true. hardComplete 는 진단용으로 별도 노출(발행 가능
+  // 최소 조건 충족 여부)하되 publishReady 차단 기준은 fieldsAllSet 유지.
   const publishReady =
     fieldsAllSet &&
     authentic &&
@@ -315,6 +373,10 @@ export function evaluatePublishReadiness(input: PublishReadinessInput): PublishR
     naverProductId: input.naverProductId,
     fields,
     fieldsAllSet,
+    hardComplete,
+    seoComplete,
+    hardFieldsMissing,
+    seoFieldsMissing,
     authentic,
     authenticityViolations,
     naverPayload,
