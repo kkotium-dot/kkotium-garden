@@ -1,3 +1,43 @@
+## 2026-06-03 크롤 옵션 변환 누락 수정 (crawl_logs → Product/product_options) [코드 완료] (Code turn)
+
+권위: docs/handoff/HANDOFF_crawl_option_mapping_fix_2026-06-03.md. baseline 4c52141. 작업 전 grep으로 변환 라우트 특정 선행.
+
+근본 원인 (Desktop DB 실측 확정 — 추측 아님): 명화 디퓨저(65322245) crawl_logs.options = 향 3종 [{레몬유칼립,9999,0},{에이프릴 후레쉬,9999,0},{블랙체리,9999,0}] 정상 저장. 그러나 Product.hasOptions=false / options=null / product_options 행 부재. 동적로딩·크롤실패 아님 — **승격(crawl_logs→Product) 변환 단계 options 매핑 누락**. 모든 옵션이 crawl_logs에 살아있어 재크롤 없이 복구 가능.
+
+변환 라우트 grep 특정: crawl/batch-register/route.ts(crawlLog.findMany → product.create, 옵션 0 처리). product_options는 코드 어디서도 write 안 됨(register/route.ts·product-builder.ts는 read만, 명화는 Desktop 수동 INSERT). 단건 prefill 경로(crawl/page.tsx→products/new)는 client에서 옵션값 이름만 전달 + POST /api/products 옵션 미저장.
+
+본 Code turn:
+- **Fix1 공유 매퍼** src/lib/sources/crawl-option-mapper.ts(신규): mapCrawlOptions(raw, axisName?) → {productFields, productOptions} | null. productFields=Product 컬럼(hasOptions=true/optionName=축/optionType='COMBINATION'/optionValues=[names]/options=[{optionName1,optionValue1,stockQuantity,price}]). productOptions=product_options 행(option_type='COMBINATION'/option_names=[축]/option_rows=[{values:[name],stock,price,status:'ON_SALE'}]). 기본 축이름 DEFAULT_OPTION_AXIS='옵션'(도매매 selectOpt는 옵션값만, 그룹명 미제공 → 날조 금지 #46). normalizeCrawlOptions(raw jsonb 가드, name 없는 행 drop, qty 결측 999/addPrice 결측 0). 두 소비처 실측 대조: publish-readiness.ts(hasOptions→optionName non-empty + options non-empty array) + product-builder.ts buildOptionInfo(option_rows {values,stock,price}, status!=='SOLD_OUT'→usable) — 형식 정합 확인.
+- **Fix2 변환 배선** crawl/batch-register/route.ts: mapCrawlOptions(item.options) → product.create에 ...mapped.productFields 스프레드 + mapped 있으면 product_options.create. product.create + product_options.create + crawlLog.update를 prisma.$transaction(interactive)으로 원자화(생성 id 참조 + 게이트/발행 페이로드 불일치 방지). 옵션 없으면 hasOptions=false 유지(단일 상품 §2-C).
+- **Fix3 backfill** scripts/backfill-options-from-crawl.ts(신규, tsx 실행): crawl_logs(productId 링크) 스캔 → mapCrawlOptions 결과 있고 Product.hasOptions=false & product_options 없음 → Product.update + product_options.upsert(트랜잭션). dry-run 기본 + --apply 필요 + --limit. dedup: product_options 존재 OR hasOptions=true면 skip(+upsert 병행) = 명화 디퓨저 중복 INSERT 이중 차단. .env.local 수동 파싱 + new PrismaClient(기존 seed.js 패턴, 일회성 CLI). **prod mutate라 #41상 Desktop이 --apply 실행, Code는 dry-run도 미실행(register/mutate 금지)**.
+- 스코프 명시(silent cap 방지): 단건 prefill 경로는 이미 client에서 qty/addPrice 소실 + POST /api/products 옵션 미저장이라 이번 변환 매핑 범위 밖(별도 turn 후보). 단 그 경로 상품도 crawl_logs.productId 링크 시 backfill로 복구됨.
+
+검증: TSC 0 / npm run build 0(전 라우트 통과). 비가역 0(네이버 register·POST mutate·backfill 실행 0건). 새 npm 의존성 0. Prisma: src/ 매퍼는 순수함수(클라이언트 미사용), 스크립트만 CLI new PrismaClient. 한글 코드 리터럴: 데이터 기본값 '옵션' 1건(brand '꽃틔움'/manufacturer '도매매 공급사'와 동일 패턴 = 타입리터럴 아님, §3-1 무위반). SD-01 미접촉.
+
+다음 = (Desktop) 신규 옵션 상품 크롤 → batch-register 승격 → Product.hasOptions=true + product_options 행 생성 + dryRun payloadPreview.optionCombinationCount>0 3-tier 재검증 → backfill dry-run 검토 후 --apply(명화 중복 0 확인).
+
+## 2026-06-03 디자인 프리셋 시스템 코드화 + 빌더 흡수/제거 [코드 완료] (Code turn)
+
+권위: docs/handoff/HANDOFF_MASTER_design_preset_builder_2026-06-03.md §3 + docs/design/{KKOTIUM_DESIGN_SYSTEM, CONCEPT_PRESET_SYSTEM, DETAIL_PAGE_PLAYBOOK}.md. baseline 4c52141. 작업 전 grep 현 상태 직독 선행(#41).
+
+본 Code turn:
+- **(1) DetailPageBuilder 흡수/제거**: src/components/products/DetailPageBuilder.tsx(구 6블록 빌더 E-1, 4월) 삭제. products/new/page.tsx: import(line 93) + detailBlocks state(line 505) + image탭 빌더 JSX(2916-2929) 제거. description 페이로드 체인 2곳(저장 POST + 발행 데이터) `detailBlocks.length>0 ? blocksToHtml(...) : detailImageUrl ? <img> : description` → `detailImageUrl ? <img> : (description||undefined)`로 단순화. detailBlocks 기본값이 빈 배열이라 실 데이터 흐름 손실 0.
+- **흡수 확인(손실 방지 직독)**: Specs(사양 테이블)는 studio section-renderers(specTable.ts/spec.ts/specifications.ts)에 완전 존재 → 이전 불필요, 그대로 제거. Q&A는 빌더에 aeoContent={null}로 전달되던 dead-wire(자동 import 미배선) + 수동 HTML Q&A는 '상세 설명(텍스트)' 필드(HTML 허용, line 2944)로 작성 가능 → 하드 손실 0. SEO 훅문구(seoHook)는 빌더 외부 독립 필드라 무영향.
+- image 탭 빌더 자리 → '상세페이지 자동화' 안내 카드(Palette/Layers Lucide 아이콘, setActiveTab('visual') 점프, 점선 핑크 박스)로 교체. 잔존 참조 grep 0건.
+- **(2) 프리셋 시스템 코드화** (CONCEPT_PRESET_SYSTEM.md 구현, Phase A + B 착수):
+  - src/lib/design/concept-presets.ts: ConceptPreset(aroma/gift/tradition/kitchen/pet) + PresetIntensity(l1/l2/l3) 타입 + PRESET_DEFINITIONS 5종(6요소: defaultIntensity/fontPairing/density/imageStyle/copyTone/layoutVariation + 참조 팔레트 hex) + 타입가드/normalize + recommendPreset(CategoryFamily → preset+intensity stub, 전체 4993 트리 매핑은 후속). 영어 상수만(#29 한글 리터럴 금지).
+  - src/lib/design/section-variants.ts: 7섹션 DETAIL_SECTION_IDS(hook/value/spec/usage/trust/cta/notice, DETAIL_PAGE_PLAYBOOK §2 고정 순서) + 무의존 cva 스타일 defineVariants 팩토리(class-variance-authority 미설치 → 점진전략 §6-D 따라 자체 구현, 추후 cva 교체 무손실) + detailRootVariants/detailSectionVariants(intensity×emphasis 2축, Tailwind 임의값 클래스가 --preset-* 토큰 참조) + resolveDetailLayout(preset, intensity) → data-attrs + 섹션별 className(순서 불변, emphasis만 가변).
+  - src/lib/i18n/concept-presets.ko.json: 프리셋/강도/섹션 한글 표시 라벨(렌더 레이어 전용).
+  - src/app/globals.css: [data-preset="aroma|gift|tradition|kitchen|pet"] --preset-* 토큰 레이어 추가. ★ 전역 --color-* 셸 테마와 **격리**(SEO 직교 원칙 §7 — 프리셋은 상세 body만 제어, 앱 셸 미변경). :root 기본값=kitchen. 팔레트 hex는 PRESET_DEFINITIONS와 동기(상호 cross-reference 주석).
+- **(3) Prisma**: Product 모델에 concept_preset(VARCHAR20 @default 'kitchen')/preset_intensity(VARCHAR10 @default 'l1')/preset_overrides(Json?) 추가(snake_case @map, return_care_enabled 패턴 동일). prisma/migrations/20260603_add_concept_preset/migration.sql 신규(멱등 ADD COLUMN IF NOT EXISTS, public."Product" 정확 테이블명). npx prisma generate 로컬 통과(DB 미접촉).
+- SEO 가드: product-name-checker.ts 등 기존 검증기와 자연 분리 유지(프리셋 모듈은 SEO 미터치 = 직교). 신규 린터 미생성(과잉엔지니어링 금지 §6-D).
+
+검증: TSC 0 / npm run build 0(/products/new 53kB 정상 빌드, 전 라우트 통과). 비가역 0(네이버 register/POST mutate 호출 0건). 새 npm 의존성 0(cva 자체 구현). SD-01 footer 미접촉. 한글 코드 리터럴 0(영어 상수 + i18n 분리). Prisma 싱글톤 무영향.
+
+★ 순서 제약(Desktop 인계): schema.prisma의 신규 3컬럼이 Vercel 배포되면 production Supabase에 컬럼 부재 시 Product 전 쿼리(findMany 등)가 'column does not exist'로 깨짐. 따라서 **Desktop이 migration 20260603_add_concept_preset를 Supabase apply_migration으로 선행 적용**한 뒤에 push/배포해야 안전(작업원칙 #41 + schema line 75 기존 'Desktop ALTER 선행' 패턴). 본 turn은 commit/push 보류 — 대표/Desktop 결정 대기.
+
+다음 = (Desktop) Supabase ALTER 적용 → push 안전 확인 → 채팅 A(명화 디퓨저 aroma L3 상세페이지 첫 레퍼런스, aroma 프리셋 실증) 진행 → 패턴 확정 후 7섹션 DOM 컴포넌트/이미지 렌더러 프리셋 배선(Phase B 잔여).
+
 ## 2026-06-02 UI/UX 2-MOBILE-3 [코드 완료] 모바일 폴리시 4건 + P1~P3 설계 (Code turn)
 
 Desktop 검증 turn(2026-06-02) — UI/UX 출하 코드검증(WorkbenchShell) + 2-NAMING 툴팁 코드 확정 + 모바일 회귀 4건 진단(대표 휴대폰 스크린샷 + products/page.tsx 전문 + WorkbenchShell 교차) + P1~P3 설계. 코드 0 → Code 2-MOBILE-3 인계.

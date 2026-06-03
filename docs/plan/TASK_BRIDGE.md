@@ -71,6 +71,34 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-03 크롤 옵션 변환 누락 수정 (Code → Desktop, 미push, baseline 4c52141)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | HANDOFF_crawl_option_mapping_fix_2026-06-03.md. register·POST mutate·backfill 실행 금지 준수(호출 0). |
+| 근본 원인 | (Desktop DB 실측) crawl_logs.options 정상 저장, Product/product_options 누락 = 승격 변환 단계 매핑 누락. 재크롤 불필요. |
+| Fix1 매퍼 | src/lib/sources/crawl-option-mapper.ts 신규. crawl_logs.options → Product 컬럼(게이트) + product_options 행(발행). 축이름 기본 '옵션'(selectOpt 그룹명 미제공). 두 소비처(publish-readiness + buildOptionInfo) 형식 대조 정합. |
+| Fix2 변환 | crawl/batch-register/route.ts: 매퍼 배선 + product.create 옵션필드 + product_options.create를 $transaction 원자화. 옵션 없으면 hasOptions=false 유지. |
+| Fix3 backfill | scripts/backfill-options-from-crawl.ts 신규(tsx). dry-run 기본 + --apply. product_options/hasOptions 존재 시 skip = 명화 디퓨저 중복 차단. **prod mutate → Desktop 실행**. |
+| 스코프 | 단건 prefill 경로(products/new POST)는 옵션 미저장 = 범위 밖(별도 turn). 단 productId 링크 시 backfill로 복구. |
+| 검증 | TSC 0 / build 0 / 비가역 0(register·mutate·backfill 실행 0) / 새 의존성 0. |
+| 다음 (Desktop) | (1) 신규 옵션 상품 크롤 → batch-register 승격 → hasOptions=true + product_options 행 + dryRun optionCombinationCount>0 3-tier. (2) backfill dry-run 검토 → --apply → 명화 중복 0. |
+
+
+### 2026-06-03 디자인 프리셋 코드화 + DetailPageBuilder 흡수/제거 (Code → Desktop, 미push, baseline 4c52141)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | HANDOFF_MASTER_design_preset_builder_2026-06-03.md §3 + CONCEPT_PRESET_SYSTEM.md. register·POST mutate 금지 준수(호출 0). |
+| (1) 빌더 제거 | DetailPageBuilder.tsx 삭제 + products/new import/state/JSX 제거 + description 페이로드 체인 2곳 단순화(detailBlocks 분기 제거). 잔존 참조 grep 0. |
+| 흡수 확인 | Specs → studio section-renderers(specTable/spec/specifications) 완전 존재(이전 불필요). Q&A → aeoContent={null} dead-wire + '상세 설명(텍스트)' HTML 필드로 보존. 손실 0. image탭 → '상세페이지 자동화' 안내 카드(visual 점프). |
+| (2) 프리셋 코드화 | src/lib/design/concept-presets.ts(5프리셋×6요소) + section-variants.ts(7섹션 무의존 CVA, defineVariants) + i18n/concept-presets.ko.json + globals.css [data-preset] --preset-* 토큰(전역 --color-* 격리 = §7 직교). |
+| (3) Prisma | Product concept_preset(def 'kitchen')/preset_intensity(def 'l1')/preset_overrides(jsonb) + migration 20260603_add_concept_preset/migration.sql(멱등, public."Product"). prisma generate 로컬 OK. |
+| 검증 | TSC 0 / build 0(/products/new 53kB) / 비가역 0 / 새 npm 의존성 0 / SD-01 미접촉 / 한글 코드 리터럴 0. |
+| ★ 순서 제약 | schema 신규 3컬럼이 배포되면 production DB 컬럼 부재 시 Product 쿼리 깨짐. **Desktop이 migration 20260603 Supabase apply_migration 선행** 후 push 안전. SQL+순서는 docs/handoff/HANDOFF_concept_preset_migration_2026-06-03.md(prisma/migrations는 gitignore라 이 문서가 SQL 단일소스). 본 turn commit/push 보류. |
+| 다음 (Desktop) | (1) Supabase ALTER 적용(migration 20260603) → drift 0 확인 → (2) push/배포 안전 확인 → (3) 채팅 A(명화 디퓨저 aroma L3 상세페이지 첫 레퍼런스)로 프리셋 실증. |
+
+
 ### 2026-06-02 발행 데이터 스토어명 정정 — 앱 이름 → 스토어명 SoT (Code → Desktop, push 803a69a)
 
 | 항목 | 상태 |

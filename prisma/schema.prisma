@@ -185,6 +185,13 @@ model Product {
   seo_hook_text           String?
   golden_keyword_score    Int?
   return_care_enabled     Boolean           @default(false) @map("return_care_enabled")
+  // 2026-06-03 — Concept preset system (docs/design/CONCEPT_PRESET_SYSTEM.md §6-A).
+  // Detail-page concept layer; orthogonal to SEO columns (spec §7). Literals are
+  // defined in src/lib/design/concept-presets.ts. Desktop applies the Supabase
+  // ALTER (migration 20260603_add_concept_preset) before this schema reflects it.
+  concept_preset          String            @default("kitchen") @map("concept_preset") @db.VarChar(20)
+  preset_intensity        String            @default("l1") @map("preset_intensity") @db.VarChar(10)
+  preset_overrides        Json?             @map("preset_overrides")
   orderItems              OrderItem[]
   supplier                Supplier          @relation(fields: [supplierId], references: [id])
   user                    User              @relation(fields: [userId], references: [id])

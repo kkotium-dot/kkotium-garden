@@ -1,0 +1,26 @@
+{
+  "_meta": {
+    "description": "컨셉 프리셋 시스템 한글 표시 문자열. 코드 로직은 src/lib/design/concept-presets.ts의 영어 리터럴을 사용하고, 이 파일은 렌더 레이어 라벨만 제공 (CLAUDE.md §3-1). 권위 명세: docs/design/CONCEPT_PRESET_SYSTEM.md"
+  },
+  "preset": {
+    "aroma": { "label": "향·아로마", "note": "감성 내러티브 · 연출컷 · 강한 변주" },
+    "gift": { "label": "선물·기프트", "note": "설렘·따뜻함 · 언박싱 · 강한 변주" },
+    "tradition": { "label": "전통·공예", "note": "정서·이야기 · 한지 질감 · 강한 변주" },
+    "kitchen": { "label": "주방·생활", "note": "기능 불릿·명료 · 누끼/스펙컷 · 절제" },
+    "pet": { "label": "반려", "note": "신뢰·친근 · 라이프스타일컷 · 중간 변주" }
+  },
+  "intensity": {
+    "l1": "1단계 (절제)",
+    "l2": "2단계 (중간)",
+    "l3": "3단계 (강한 변주)"
+  },
+  "section": {
+    "hook": "후킹",
+    "value": "가치 제안",
+    "spec": "상세 스펙",
+    "usage": "사용법 / 활용",
+    "trust": "신뢰 요소",
+    "cta": "구매 유도 (CTA)",
+    "notice": "공통 안내"
+  }
+}

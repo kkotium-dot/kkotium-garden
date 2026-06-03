@@ -90,7 +90,6 @@ import NaverSEOWorkflow from '@/components/ai/NaverSEOWorkflow';
 import HoneyScorePanel from '@/components/products/HoneyScorePanel';
 import AlternativeProductPanel from '@/components/products/AlternativeProductPanel';
 import ImageUploadDropzone from '@/components/products/ImageUploadDropzone';
-import DetailPageBuilder, { type DetailBlock, blocksToHtml } from '@/components/products/DetailPageBuilder';
 import { PlatformPicker, SupplierPicker } from '@/components/ui/PlatformSupplierPicker';
 import MarginAdvisorPanel from '@/components/products/MarginAdvisorPanel';
 import { calcUploadReadiness, getReadinessColor, READINESS_GRADE_STYLE } from '@/lib/upload-readiness';
@@ -503,7 +502,6 @@ function NewProductPageInner() {
   const [mainImage, setMainImage]     = useState('');
   const [additionalImages, setAdditionalImages] = useState('');
   const [detailImageUrl, setDetailImageUrl] = useState('');
-  const [detailBlocks, setDetailBlocks] = useState<DetailBlock[]>([]);
   const [seoHook, setSeoHook]         = useState('');
   const [description, setDescription] = useState('');
   // D1: golden keywords from AI SEO workflow — stored in DB via keywords JSON column
@@ -1502,7 +1500,7 @@ function NewProductPageInner() {
           brand, originCode, taxType,
           status: 'DRAFT',
           mainImage,
-          description: detailBlocks.length > 0 ? blocksToHtml(detailBlocks, productName) : detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
+          description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
           detail_image_url: detailImageUrl || undefined,
           keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
           tags: seoTags.length > 0 ? seoTags : undefined,
@@ -1650,7 +1648,7 @@ const handleGenerate = async () => {
       mainImage: mainImage || '',
       additionalImages: additionalImages || '',
       // Content
-      description: detailBlocks.length > 0 ? blocksToHtml(detailBlocks, productName) : detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
+      description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
       detail_image_url: detailImageUrl || undefined,
       // ① 기본 — product info
       productStatus: '신상품',
@@ -2913,19 +2911,38 @@ const handleGenerate = async () => {
                 onChange={setDetailImageUrl}
               />
 
-              {/* E-1: Detail page builder */}
-              <div style={{ marginTop: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                  <Search size={14} style={{ color: '#FF6B8A' }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>상세페이지 빌더</span>
-                  <span style={{ fontSize: 11, color: '#9ca3af' }}>블록 조합으로 상세페이지 구성</span>
+              {/* Detail page automation guide — the legacy manual block builder
+                  was absorbed by the studio skeleton system (visual tab). Specs /
+                  spec-table sections live in the studio renderers; Q&A HTML can
+                  still be authored in the "상세 설명 (텍스트)" field below. */}
+              <div
+                style={{
+                  marginTop: 16, padding: 16, borderRadius: 12,
+                  border: '1.5px dashed var(--gp-pink-300, #FFB3CE)',
+                  background: 'var(--gp-pink-50, #FFF5F8)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <Palette size={15} style={{ color: '#FF6B8A' }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>상세페이지 자동화</span>
                 </div>
-                <DetailPageBuilder
-                  blocks={detailBlocks}
-                  onChange={setDetailBlocks}
-                  productName={productName}
-                  aeoContent={null}
-                />
+                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, marginBottom: 10 }}>
+                  수동 블록 조합 대신 비주얼 자동화 탭에서 진단 → 골격 매칭 → 7섹션 상세페이지를
+                  자동 생성합니다. 사양표·섹션 구성은 골격 시스템에 포함되어 있어요.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('visual')}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '7px 14px', borderRadius: 8,
+                    border: '1px solid #FF6B8A', background: '#fff',
+                    fontSize: 12, fontWeight: 600, color: '#FF6B8A', cursor: 'pointer',
+                  }}
+                >
+                  <Layers size={13} />
+                  비주얼 자동화로 이동
+                </button>
               </div>
               <Field label="SEO 훅문구" hint="네이버 쇼핑 검색 결과 홍보문구 · 최대 100자">
                 <div className="relative">
