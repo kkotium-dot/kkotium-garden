@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { mapCrawlOptions } from '@/lib/sources/crawl-option-mapper';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,32 +69,56 @@ export async function POST(req: NextRequest) {
         const shippingFee = Number(item.shipFee ?? item.ship_fee ?? 3000);
         const sku         = generateSku(name, i);
 
-        const product = await prisma.product.create({
-          data: {
-            name,
-            sku,
-            category:          'uncategorized',
-            naverCategoryCode: sanitize(item.categoryCode ?? item.category_code) || '50003307',
-            salePrice,
-            supplierPrice,
-            margin,
-            status:            'DRAFT',
-            brand:             '꽃틔움',
-            manufacturer:      '도매매 공급사',
-            originCode:        '0200037',
-            shippingFee,
-            images:            imgs,
-            mainImage,
-            aiScore:           0,
-            supplierId:        defaultSupplier.id,
-            userId:            defaultUser.id,
-          },
-        });
+        // Map crawled options onto BOTH stores (root-cause fix: the promotion
+        // step previously dropped crawl_logs.options entirely). Null ⇒ no usable
+        // options ⇒ keep hasOptions=false and write no product_options row.
+        const mapped = mapCrawlOptions(item.options);
 
-        // Link crawl_log to created product and mark as REGISTERED
-        await (prisma as any).crawlLog.update({
-          where: { id: item.id },
-          data:  { sourcingStatus: 'REGISTERED', productId: product.id },
+        // Create the product + (when present) its product_options row atomically
+        // so the publish gate (Product.options) and the register payload
+        // (product_options) never diverge.
+        const product = await prisma.$transaction(async (tx) => {
+          const created = await tx.product.create({
+            data: {
+              name,
+              sku,
+              category:          'uncategorized',
+              naverCategoryCode: sanitize(item.categoryCode ?? item.category_code) || '50003307',
+              salePrice,
+              supplierPrice,
+              margin,
+              status:            'DRAFT',
+              brand:             '꽃틔움',
+              manufacturer:      '도매매 공급사',
+              originCode:        '0200037',
+              shippingFee,
+              images:            imgs,
+              mainImage,
+              aiScore:           0,
+              supplierId:        defaultSupplier.id,
+              userId:            defaultUser.id,
+              ...(mapped ? mapped.productFields : {}),
+            },
+          });
+
+          if (mapped) {
+            await tx.product_options.create({
+              data: {
+                product_id:   created.id,
+                option_type:  mapped.productOptions.option_type,
+                option_names: mapped.productOptions.option_names,
+                option_rows:  mapped.productOptions.option_rows,
+              },
+            });
+          }
+
+          // Link crawl_log to created product and mark as REGISTERED
+          await (tx as any).crawlLog.update({
+            where: { id: item.id },
+            data:  { sourcingStatus: 'REGISTERED', productId: created.id },
+          });
+
+          return created;
         });
 
         created.push(product.id);
