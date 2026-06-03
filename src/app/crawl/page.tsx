@@ -353,7 +353,14 @@ function CrawlPageInner() {
         mainImage: sResult.images?.[0] || '',
         additionalImgs: (sResult.images?.slice(1) || []).join('|'),
         description: sanitize(sResult.description || ''),
-        options: (sResult.options || []).map(o => sanitize(typeof o === 'string' ? o : o.name)).filter(Boolean),
+        // Carry qty/addPrice (not just the value name) so the register form can
+        // persist them to BOTH option stores. Names-only prefill silently dropped
+        // stock and surcharge (HANDOFF_crawl_option_mapping_fix_2026-06-03.md).
+        options: (sResult.options || [])
+          .map(o => typeof o === 'string'
+            ? { name: sanitize(o), qty: 999, addPrice: 0 }
+            : { name: sanitize(o.name), qty: o.qty ?? 999, addPrice: o.addPrice ?? 0 })
+          .filter(o => o.name),
         ...(suggestedCat ? { catD1: suggestedCat.d1, catD2: suggestedCat.d2, catD3: suggestedCat.d3 } : {}),
         // Supplier auto-mapping fields
         crawlSellerId:   sResult.sellerId   ?? null,

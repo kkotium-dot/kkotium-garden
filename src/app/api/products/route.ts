@@ -10,6 +10,7 @@ import { sendDiscord, buildScoreDropEmbed } from '@/lib/discord';
 import { prisma } from '@/lib/prisma';
 import { KKOTIUM_DEFAULTS } from '@/lib/naver/codes';
 import { generateUniqueSku } from '@/lib/sku-engine';
+import { mapCrawlOptions } from '@/lib/sources/crawl-option-mapper';
 
 // Fire-and-forget: check honey score drop after product update
 
@@ -257,48 +258,82 @@ export async function POST(request: NextRequest) {
           ).trim(),
         });
 
-    const product = await prisma.product.create({
-      data: {
-        name: String(data.name || ''),
-        sku: resolvedSku,
-        category: String(data.category || 'uncategorized'),
-        naverCategoryCode: String(data.naverCategoryCode || KKOTIUM_DEFAULTS.categoryCode),
-        salePrice,
-        supplierPrice,
-        margin,
-        status: normalizedStatus,
-        brand: String(data.brand || '꽃틔움'),
-        manufacturer: String(data.manufacturer || '도매매 공급사'),
-        originCode: String(data.originCode || KKOTIUM_DEFAULTS.originCode),
-        shippingFee: Math.round(parseFloat(String(data.shippingFee)) || 3000),
-        images: Array.isArray(data.images) ? data.images : [],
-        imageAltTexts: Array.isArray(data.imageAltTexts) ? data.imageAltTexts : [],
-        mainImage: data.mainImage ? String(data.mainImage) : null,
-        aiScore: data.aiScore ?? 0,
-        naver_title: data.naver_title ? String(data.naver_title) : null,
-        naver_description: data.naver_description ? String(data.naver_description) : null,
-        naver_brand: data.naver_brand ? String(data.naver_brand) : null,
-        naver_manufacturer: data.naver_manufacturer ? String(data.naver_manufacturer) : null,
-        naver_origin: data.naver_origin ? String(data.naver_origin) : null,
-        naver_keywords: data.naver_keywords ? String(data.naver_keywords) : null,
-        seller_product_code: data.seller_product_code ? String(data.seller_product_code) : null,
-        supplier_product_code: data.supplier_product_code ? String(data.supplier_product_code) : null,
-        instant_discount: data.instant_discount != null ? data.instant_discount : null,
-        importer_name: data.importer_name ? String(data.importer_name) : null,
-        return_care_enabled: data.return_care_enabled === true,
-        // G7 Fix C: persist fields the register form actually sends but the
-        // create previously dropped (DRAFT 88-field persistence gap). These all
-        // map to real Product columns; arrays/null guarded to avoid Prisma 500.
-        taxType: data.taxType ? String(data.taxType) : undefined,
-        description: data.description ? String(data.description) : null,
-        keywords: Array.isArray(data.keywords) ? data.keywords : undefined,
-        tags: Array.isArray(data.tags) ? data.tags : undefined,
-        shipping_template_id: data.shipping_template_id
-          ? String(data.shipping_template_id)
-          : null,
-        supplierId,
-        userId,
-      },
+    // Map any supplied options (single-axis crawl prefill: array of
+    // { name, qty, addPrice }) onto BOTH option stores. Root-cause fix
+    // (HANDOFF_crawl_option_mapping_fix_2026-06-03.md): the single-item prefill
+    // path created products with no option columns AND no product_options row,
+    // so option products shipped with options lost. mapCrawlOptions returns null
+    // when there are no usable options ⇒ hasOptions stays false (single product
+    // path unchanged). Mirrors the batch-register promotion path exactly.
+    const optionAxis =
+      typeof data.optionName === 'string' && data.optionName.trim()
+        ? data.optionName.trim()
+        : undefined;
+    const mapped = Array.isArray(data.options) && data.options.length > 0
+      ? mapCrawlOptions(data.options, optionAxis)
+      : null;
+
+    // Create the product + (when present) its product_options row atomically so
+    // the publish gate (Product.options/optionName/hasOptions) and the register
+    // payload (product_options → buildOptionInfo) never diverge.
+    const product = await prisma.$transaction(async (tx) => {
+      const created = await tx.product.create({
+        data: {
+          name: String(data.name || ''),
+          sku: resolvedSku,
+          category: String(data.category || 'uncategorized'),
+          naverCategoryCode: String(data.naverCategoryCode || KKOTIUM_DEFAULTS.categoryCode),
+          salePrice,
+          supplierPrice,
+          margin,
+          status: normalizedStatus,
+          brand: String(data.brand || '꽃틔움'),
+          manufacturer: String(data.manufacturer || '도매매 공급사'),
+          originCode: String(data.originCode || KKOTIUM_DEFAULTS.originCode),
+          shippingFee: Math.round(parseFloat(String(data.shippingFee)) || 3000),
+          images: Array.isArray(data.images) ? data.images : [],
+          imageAltTexts: Array.isArray(data.imageAltTexts) ? data.imageAltTexts : [],
+          mainImage: data.mainImage ? String(data.mainImage) : null,
+          aiScore: data.aiScore ?? 0,
+          naver_title: data.naver_title ? String(data.naver_title) : null,
+          naver_description: data.naver_description ? String(data.naver_description) : null,
+          naver_brand: data.naver_brand ? String(data.naver_brand) : null,
+          naver_manufacturer: data.naver_manufacturer ? String(data.naver_manufacturer) : null,
+          naver_origin: data.naver_origin ? String(data.naver_origin) : null,
+          naver_keywords: data.naver_keywords ? String(data.naver_keywords) : null,
+          seller_product_code: data.seller_product_code ? String(data.seller_product_code) : null,
+          supplier_product_code: data.supplier_product_code ? String(data.supplier_product_code) : null,
+          instant_discount: data.instant_discount != null ? data.instant_discount : null,
+          importer_name: data.importer_name ? String(data.importer_name) : null,
+          return_care_enabled: data.return_care_enabled === true,
+          // G7 Fix C: persist fields the register form actually sends but the
+          // create previously dropped (DRAFT 88-field persistence gap). These all
+          // map to real Product columns; arrays/null guarded to avoid Prisma 500.
+          taxType: data.taxType ? String(data.taxType) : undefined,
+          description: data.description ? String(data.description) : null,
+          keywords: Array.isArray(data.keywords) ? data.keywords : undefined,
+          tags: Array.isArray(data.tags) ? data.tags : undefined,
+          shipping_template_id: data.shipping_template_id
+            ? String(data.shipping_template_id)
+            : null,
+          supplierId,
+          userId,
+          ...(mapped ? mapped.productFields : {}),
+        },
+      });
+
+      if (mapped) {
+        await tx.product_options.create({
+          data: {
+            product_id:   created.id,
+            option_type:  mapped.productOptions.option_type,
+            option_names: mapped.productOptions.option_names,
+            option_rows:  mapped.productOptions.option_rows,
+          },
+        });
+      }
+
+      return created;
     });
 
     return NextResponse.json({ success: true, product });

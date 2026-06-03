@@ -882,7 +882,19 @@ function NewProductPageInner() {
       // truncation found at code-review time, but logging is cheap).
       if (Array.isArray(data.options) && data.options.length > 0) {
         const rawCount = data.options.length;
-        const cleanOpts = (data.options as string[]).filter((o: string) => typeof o === 'string' && o.trim().length > 0);
+        // Prefill options may be plain strings (legacy callers) or
+        // { name, qty, addPrice } objects (crawl prefill now carries stock +
+        // surcharge so they survive to save — see HANDOFF_crawl_option_mapping_fix).
+        type RawOpt = string | { name?: string; qty?: number; addPrice?: number };
+        const cleanOpts = (data.options as RawOpt[])
+          .map((o: RawOpt) => typeof o === 'string'
+            ? { name: o.trim(), qty: 999, addPrice: 0 }
+            : {
+                name: (o?.name ?? '').trim(),
+                qty: Number.isFinite(o?.qty as number) ? Number(o!.qty) : 999,
+                addPrice: Number.isFinite(o?.addPrice as number) ? Number(o!.addPrice) : 0,
+              })
+          .filter((o) => o.name.length > 0);
         // eslint-disable-next-line no-console
         console.info('[prefill] options', { raw: rawCount, clean: cleanOpts.length, values: cleanOpts });
         if (cleanOpts.length > 0) {
@@ -892,14 +904,15 @@ function NewProductPageInner() {
           // to '옵션' when no keyword rule matches — same as previous behaviour.
           setOptionNames([deriveOptionGroupName(data.productName ?? '')]);
           // Set the comma-separated input (used by the text input field)
-          setOptionValueInputs([cleanOpts.join(',')]);
+          setOptionValueInputs([cleanOpts.map((o) => o.name).join(',')]);
           // Also directly populate optionRows so the table shows immediately
-          // This bypasses the need to click "옵션목록으로 적용"
-          setOptionRows(cleanOpts.map((opt: string) => ({
+          // This bypasses the need to click "옵션목록으로 적용". Preserve crawled
+          // stock (qty) and surcharge (addPrice) instead of hardcoding defaults.
+          setOptionRows(cleanOpts.map((o) => ({
             id: uuidv4(),
-            value: opt.trim(),
-            price: '0',
-            stock: '100',
+            value: o.name,
+            price: String(o.addPrice),
+            stock: String(o.qty),
             status: 'ON' as const,
           })));
         }
@@ -1454,6 +1467,30 @@ function NewProductPageInner() {
     : seoResult.score >= 60 ? 'from-yellow-50 to-amber-50 border-yellow-200'
     : 'from-red-50 to-pink-50 border-red-200';
 
+  // Build a single-axis option payload for POST /api/products. The server reuses
+  // crawl-option-mapper to persist BOTH option stores (Product columns +
+  // product_options row), so the publish gate and the register payload stay in
+  // sync. Only the single-group SINGLE/COMBINATION case maps cleanly onto the
+  // one-axis store (the crawl-prefill scenario); multi-group / DIRECT / NONE
+  // return null and the server keeps hasOptions=false (unchanged behaviour).
+  const buildOptionsPayload = ():
+    | { optionName: string; options: Array<{ name: string; qty: number; addPrice: number }> }
+    | null => {
+    if (optionType !== 'SINGLE' && optionType !== 'COMBINATION') return null;
+    const validNames = optionNames.filter(n => n.trim());
+    if (validNames.length !== 1) return null;
+    const rows = optionRows.filter(r => !r.value.startsWith('__price_') && r.value.trim());
+    if (rows.length === 0) return null;
+    return {
+      optionName: validNames[0].trim(),
+      options: rows.map(r => ({
+        name: r.value.trim(),
+        qty: parseInt(r.stock, 10) || 0,
+        addPrice: parseInt(r.price, 10) || 0,
+      })),
+    };
+  };
+
   // Naver direct registration via API (Phase D-1)
   const handleNaverDirect = async () => {
     setNaverResult(null);
@@ -1505,6 +1542,9 @@ function NewProductPageInner() {
           keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
           tags: seoTags.length > 0 ? seoTags : undefined,
           asPhone, asGuide,
+          // Persist options to BOTH stores (crawl-option-mapper) so the Naver
+          // register below sees a populated product_options row.
+          ...(buildOptionsPayload() ?? {}),
         }),
       });
       const saveData = await saveRes.json();
@@ -1732,6 +1772,9 @@ const handleGenerate = async () => {
             description: description || undefined,
             shipping_template_id: selectedTemplateId || undefined,
             return_care_enabled: returnCareEnabled,
+            // Persist options to BOTH stores (crawl-option-mapper) so the DRAFT
+            // saved alongside the Excel download carries its options end-to-end.
+            ...(buildOptionsPayload() ?? {}),
           }),
         }).catch(() => null),
       ]);
