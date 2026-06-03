@@ -219,3 +219,122 @@ export async function fetchKeywordVolumes(
   }
   return out;
 }
+
+// ─── Scope A (2026-06-03): seed-based related-keyword harvest ──────────────────
+
+/** Same shape as VolumeRow — a related keyword harvested from the
+ *  /keywordstool response WITHOUT the exact-match filter that
+ *  fetchKeywordVolumes applies. Kept as a distinct name so call sites read
+ *  intentionally ("these are expansion candidates, not echoes of my input"). */
+export type RelatedKeywordRow = VolumeRow;
+
+/** Default cap applied after descending-volume sort. SearchAd can return up
+ *  to ~1,200 rows for one seed; 120 keeps the highest-volume head without
+ *  flooding the downstream scorer/prompt. */
+const RELATED_DEFAULT_CAP = 120;
+
+/**
+ * Seed-based related-keyword expansion — the keyword-expansion engine's
+ * primary source (Scope A).
+ *
+ * Unlike fetchKeywordVolumes (which keeps ONLY exact matches against its
+ * input), this calls /keywordstool with up to 5 seed hints and returns the
+ * FULL keywordList: every related keyword SearchAd suggests, each priced with
+ * its measured monthly volume + competition. One seed surfaces market
+ * keywords that never appear in the product name (e.g. "차량용방향제" →
+ * "차량용디퓨저", "송풍구디퓨저"). Same auth/signature/request as fetchBatch;
+ * the only difference is the dropped exact-match filter.
+ *
+ * Honest by construction (#46): only rows SearchAd actually returned; "< 10"
+ * preserved as 5; null on env-missing or hard failure so the caller falls
+ * back to its existing path. No fabricated keywords or counts.
+ *
+ * @param seeds   up to 5 seed keywords (SearchAd hintKeywords limit)
+ * @param opts.maxRows  cap after descending-volume sort (default 120)
+ * @returns null on env-missing/hard-fail, [] on empty/no-seed, rows on success
+ */
+export async function fetchRelatedKeywords(
+  seeds: string[],
+  opts?: { maxRows?: number },
+): Promise<RelatedKeywordRow[] | null> {
+  const apiKey = process.env.NAVER_SEARCHAD_API_KEY;
+  const secret = process.env.NAVER_SEARCHAD_SECRET_KEY;
+  const customer = process.env.NAVER_SEARCHAD_CUSTOMER_ID;
+  if (!apiKey || !secret || !customer) return null;
+
+  // Reuse fetchBatch's hint-cleaning contract: strip commas, collapse
+  // whitespace, keep [2, 15] chars, cap to 5 (SearchAd hintKeywords limit).
+  const cleaned = seeds
+    .map((k) => k.replace(/,/g, ' ').replace(/\s+/g, '').trim())
+    .filter((k) => k.length >= 2 && k.length <= 15)
+    .slice(0, 5);
+  if (cleaned.length === 0) return [];
+
+  const params = new URLSearchParams({
+    hintKeywords: cleaned.join(','),
+    showDetail: '1',
+  });
+
+  const timestamp = String(Date.now());
+  const signature = signRequest(timestamp, 'GET', KEYWORDSTOOL_URI, secret);
+
+  let res: Response;
+  try {
+    res = await fetch(`${SEARCHAD_BASE}${KEYWORDSTOOL_URI}?${params}`, {
+      method: 'GET',
+      headers: {
+        'X-Timestamp': timestamp,
+        'X-API-KEY': apiKey,
+        'X-Customer': customer,
+        'X-Signature': signature,
+      },
+    });
+  } catch (e) {
+    console.warn(
+      '[searchad-volume] related fetch error:',
+      e instanceof Error ? e.message : String(e),
+    );
+    return null;
+  }
+
+  if (!res.ok) {
+    let body = '';
+    try {
+      body = (await res.text()).slice(0, 200);
+    } catch {
+      body = '(no body)';
+    }
+    console.warn(
+      `[searchad-volume] related HTTP ${res.status} for seeds [${cleaned.join(',')}] body=${body}`,
+    );
+    return null;
+  }
+
+  const data = (await res.json()) as { keywordList?: unknown };
+  const list = Array.isArray(data?.keywordList) ? data.keywordList : [];
+
+  // NO exact-match filter — harvest every related keyword. Dedupe by
+  // normalized keyword (relKeyword may repeat across the response).
+  const seen = new Set<string>();
+  const rows: RelatedKeywordRow[] = [];
+  for (const row of list as Record<string, unknown>[]) {
+    const rel = typeof row?.relKeyword === 'string' ? row.relKeyword : '';
+    if (!rel) continue;
+    const n = normalizeKeyword(rel);
+    if (!n || seen.has(n)) continue;
+    seen.add(n);
+    const pc = parseCount(row.monthlyPcQcCnt);
+    const mb = parseCount(row.monthlyMobileQcCnt);
+    rows.push({
+      keyword: rel,
+      monthlyPcQc: pc,
+      monthlyMobileQc: mb,
+      totalMonthlyQc: pc + mb,
+      compIdx: mapComp(row.compIdx),
+    });
+  }
+
+  rows.sort((a, b) => b.totalMonthlyQc - a.totalMonthlyQc);
+  const cap = opts?.maxRows ?? RELATED_DEFAULT_CAP;
+  return cap > 0 ? rows.slice(0, cap) : rows;
+}

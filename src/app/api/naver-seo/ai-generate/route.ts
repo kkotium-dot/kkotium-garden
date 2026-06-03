@@ -14,6 +14,7 @@ import { prisma } from '@/lib/prisma';
 import { analyzeCompetition, type CompetitionAnalysis } from '@/lib/naver/shopping-search';
 import {
   fetchKeywordVolumes,
+  fetchRelatedKeywords,
   normalizeKeyword,
   type VolumeRow,
 } from '@/lib/naver/searchad-volume';
@@ -168,6 +169,31 @@ function extractCandidates(productName: string): CandidateBundle {
   for (const k of ngrams) push(k, 'ngram');
 
   return { pool, tokenCount, intentComboCount, ngramCount };
+}
+
+/** Scope A (2026-06-03): pick up to 3 seed keywords for related-keyword
+ *  harvesting. Seeds are the distinctive nouns of the product name — drawn
+ *  from the bundle's productName tokens (the first `tokenCount` pool entries,
+ *  which are pushed before combos/n-grams), skipping GENERIC_TOKENS so we
+ *  seed on "달항아리" rather than "인테리어". SearchAd expands each seed into
+ *  hundreds of market keywords, so 1–3 well-chosen seeds is plenty.
+ *
+ *  Fallback: if every token is generic, seed on the first token anyway —
+ *  harvesting on a broad term still beats harvesting nothing. */
+function extractSeeds(bundle: CandidateBundle): string[] {
+  const tokens = bundle.pool.slice(0, bundle.tokenCount);
+  const seeds: string[] = [];
+  const seen = new Set<string>();
+  for (const t of tokens) {
+    const n = normalizeKeyword(t);
+    if (!n || seen.has(n)) continue;
+    if (GENERIC_TOKENS.has(t.replace(/\s+/g, ''))) continue;
+    seen.add(n);
+    seeds.push(t);
+    if (seeds.length >= 3) break;
+  }
+  if (seeds.length === 0 && tokens.length > 0) seeds.push(tokens[0]);
+  return seeds;
 }
 
 /** Render the measured search-volume rows as an additional prompt section.
@@ -331,6 +357,9 @@ export interface VolumeSignal {
   candidateIntentCombos: number;
   candidateNgrams: number;
   preFetchRows: number;
+  /** Scope A (2026-06-03): number of related keywords harvested from the
+   *  seed-based /keywordstool expansion (0 when env-missing or no seed). */
+  relatedFetched: number;
   totalKnownRows: number;
   sortApplied: boolean;
   keywordsChanged: boolean;
@@ -371,6 +400,7 @@ async function generateSEO(
   const volumeMap = new Map<string, VolumeRow>();
   let volumesAvailable = false;
   let preFetchRows = 0;
+  let relatedFetched = 0;
   if (bundle.pool.length > 0) {
     try {
       const pre = await fetchKeywordVolumes(bundle.pool);
@@ -382,6 +412,33 @@ async function generateSEO(
     } catch (e) {
       console.warn(
         '[ai-generate] SearchAd pre-fetch failed:',
+        e instanceof Error ? e.message : String(e),
+      );
+    }
+  }
+
+  // ── Scope A (2026-06-03): seed-based related-keyword expansion ─────────
+  // Harvest the related keywords SearchAd returns for the product's
+  // distinctive seed nouns — real market keywords absent from the product
+  // name — and merge them into the volume map. This is the keyword-expansion
+  // engine: one seed turns ~15 product-name candidates into 100+ priced
+  // market keywords. Graceful: null/empty leaves the existing path intact
+  // (no extra API call cost beyond this single seed request).
+  const seeds = extractSeeds(bundle);
+  if (seeds.length > 0) {
+    try {
+      const related = await fetchRelatedKeywords(seeds);
+      if (related && related.length > 0) {
+        volumesAvailable = true;
+        relatedFetched = related.length;
+        for (const r of related) {
+          const n = normalizeKeyword(r.keyword);
+          if (!volumeMap.has(n)) volumeMap.set(n, r);
+        }
+      }
+    } catch (e) {
+      console.warn(
+        '[ai-generate] SearchAd related-keyword fetch failed:',
         e instanceof Error ? e.message : String(e),
       );
     }
@@ -463,6 +520,7 @@ async function generateSEO(
     type Annotated = {
       kw: string;
       score: number;
+      volume: number;
       measured: boolean;
       fromAi: boolean;
     };
@@ -477,6 +535,7 @@ async function generateSEO(
       annotated.push({
         kw: k,
         score: row ? scoreKeyword(row.totalMonthlyQc, k) : 0,
+        volume: row?.totalMonthlyQc ?? 0,
         measured: !!row,
         fromAi: true,
       });
@@ -492,6 +551,7 @@ async function generateSEO(
       annotated.push({
         kw: r.keyword,
         score: scoreKeyword(r.totalMonthlyQc, r.keyword),
+        volume: r.totalMonthlyQc,
         measured: true,
         fromAi: false,
       });
@@ -504,7 +564,19 @@ async function generateSEO(
       return 0;
     });
 
-    const top = annotated.slice(0, 8);
+    // ── A-3 search-volume validation gate (LLM hallucination guard) ──
+    // Discard keywords with no measured monthly volume — these are either AI
+    // inventions SearchAd never priced, or measured-but-dead terms. If the
+    // gate would empty the list (every candidate unmeasured — e.g. SearchAd
+    // returned only echoes and the AI produced no measurable keyword), fall
+    // back to the ungated list so naver_keywords is never empty (#46: prefer
+    // the AI's honest guess over a blank field). When ANY measured keyword
+    // survives, the measured pool's top entries naturally replace dead AI
+    // output ("LLM 원본 전멸 시 측정 풀 상위로 대체").
+    const measuredCandidates = annotated.filter((a) => a.volume > 0);
+    const gated = measuredCandidates.length > 0 ? measuredCandidates : annotated;
+
+    const top = gated.slice(0, 8);
     const sortedCsv = top.map((x) => x.kw).join(', ');
     if (sortedCsv.length > 0) {
       aiData.naver_keywords = sortedCsv;
@@ -620,6 +692,7 @@ async function generateSEO(
       candidateIntentCombos: bundle.intentComboCount,
       candidateNgrams: bundle.ngramCount,
       preFetchRows,
+      relatedFetched,
       totalKnownRows: volumeMap.size,
       sortApplied,
       keywordsChanged,
