@@ -56,14 +56,24 @@ export interface FieldChecks {
 }
 
 /** 상품정보제공고시 (Naver Smart Store legal disclosure) required payload.
- *  Non-NULL check ONLY — content authenticity is checked elsewhere. The list
- *  matches what Naver's commerce API enforces as required for non-식품 카테고리
- *  (origin / manufacturer / A.S responsibility + 거래조건 3종 + 과세구분). */
+ *  Non-NULL check ONLY — content authenticity is checked elsewhere.
+ *
+ *  Two tiers (2026-06-03 design 정정):
+ *   - HARD legal requirements: naver_origin / naver_manufacturer / naver_as_info
+ *     / naver_tax_type. These are the actual values the commerce API enforces
+ *     per-product and they must carry real content.
+ *   - delivery / exchange / refund guidance: now handled as fixed detail-page
+ *     images (상세페이지 상단/하단 공통 이미지 슬롯), NOT as standalone text
+ *     fields. The DB columns hold the standard 위탁 문구 "상품상세참조", which is
+ *     a legitimate, non-placeholder value here — so a non-NULL pass is correct
+ *     and intended (it points the buyer to the detail page imagery). */
 export interface NaverPayloadChecks {
+  // ── HARD legal requirements (must be real values) ──
   naver_origin: boolean;
   naver_manufacturer: boolean;
   naver_as_info: boolean;
   naver_tax_type: boolean;
+  // ── detail-page-image-backed (satisfied by "상품상세참조") ──
   naver_delivery_info: boolean;
   naver_exchange_info: boolean;
   naver_refund_info: boolean;
@@ -269,10 +279,13 @@ function checkAuthenticity(input: PublishReadinessInput): AuthenticityViolation[
 
 function evaluateNaverPayload(input: PublishReadinessInput): NaverPayloadChecks {
   return {
+    // HARD legal requirements — real values enforced per-product by the API.
     naver_origin: isNonEmptyString(input.naver_origin),
     naver_manufacturer: isNonEmptyString(input.naver_manufacturer),
     naver_as_info: isNonEmptyString(input.naver_as_info),
     naver_tax_type: isNonEmptyString(input.naver_tax_type),
+    // Detail-page-image-backed: "상품상세참조" is the intended, accepted value
+    // (the actual 배송/교환/반품 안내 lives in the 상단/하단 공통 이미지 슬롯).
     naver_delivery_info: isNonEmptyString(input.naver_delivery_info),
     naver_exchange_info: isNonEmptyString(input.naver_exchange_info),
     naver_refund_info: isNonEmptyString(input.naver_refund_info),

@@ -19,6 +19,18 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+// 2026-06-03 — Code-default fallback for the store-wide common notice slots
+// (상세페이지 상단/하단 공지 이미지). Points to the FIXED public path the
+// common-asset uploader writes (scripts/upload-common-notice-assets.js, 작업1):
+//   product-assets/common/notice-top.jpg / notice-bottom.jpg
+// Kept null until the assets are actually uploaded — flip to the deterministic
+// public URL in the SAME change that runs the uploader, so neither the dryRun
+// preview nor a real register ever claims a 404 asset is "present" (#46 허위 0).
+// store_settings.notice_top_image_url / notice_bottom_image_url take precedence;
+// these are only the fallback when the DB columns are null.
+const DEFAULT_NOTICE_TOP_IMAGE_URL: string | null = null;
+const DEFAULT_NOTICE_BOTTOM_IMAGE_URL: string | null = null;
+
 // ── Get cached address IDs from StoreSettings dedicated columns ──────────────
 // 2026-06-02 P0: migrated from asGuide JSON cache → releaseAddressId / returnAddressId
 // columns (see RESEARCH §3 — dropship single representative pair pattern).
@@ -186,10 +198,12 @@ export async function POST(request: NextRequest) {
         noticeBottomText: true,
       },
     });
+    // DB URL ?? code-default constant (작업2). The constants stay null until the
+    // common assets are uploaded (작업1) — see DEFAULT_NOTICE_* above.
     const noticeAssets = {
-      topImageUrl:    noticeSettings?.noticeTopImageUrl    ?? null,
+      topImageUrl:    noticeSettings?.noticeTopImageUrl    ?? DEFAULT_NOTICE_TOP_IMAGE_URL,
       topText:        noticeSettings?.noticeTopText        ?? null,
-      bottomImageUrl: noticeSettings?.noticeBottomImageUrl ?? null,
+      bottomImageUrl: noticeSettings?.noticeBottomImageUrl ?? DEFAULT_NOTICE_BOTTOM_IMAGE_URL,
       bottomText:     noticeSettings?.noticeBottomText     ?? null,
     };
     // 2026-06-02 — 스토어명 SoT. store_settings.store_name = '꽃틔움'(고객 노출).
@@ -318,11 +332,51 @@ export async function POST(request: NextRequest) {
       detail_image_url: naverDetail ?? product.detail_image_url,
     };
 
+    // 7-img-notice. DEBT-07 — the common notice slot images (상단/하단 공지) are
+    // emitted as <img> inside detailContent too, so they MUST also be Naver-hosted.
+    // A Supabase URL there triggers the same InvalidImageUrl 400 as a product
+    // image. Upload any present notice image and swap to its shop-phinf URL,
+    // preserving order [top, bottom].
+    let noticeForBuild = noticeAssets;
+    const noticeUploadUrls = [noticeAssets.topImageUrl, noticeAssets.bottomImageUrl]
+      .filter((u): u is string => typeof u === 'string' && !!u);
+    if (noticeUploadUrls.length > 0) {
+      let noticeNaver: string[] = [];
+      try {
+        noticeNaver = await uploadImagesToNaver(noticeUploadUrls);
+      } catch (uploadErr: unknown) {
+        const isNaver = uploadErr instanceof NaverApiError;
+        return NextResponse.json({
+          success: false,
+          error: '공통 공지 이미지 네이버 업로드 실패 — 발행 중단 (DRAFT 유지)',
+          stage: 'NOTICE_IMAGE_UPLOAD',
+          detail: isNaver ? uploadErr.message : String(uploadErr),
+          diagnostic: isNaver ? uploadErr.diagnostic : undefined,
+          attempted: { notice: noticeUploadUrls },
+        }, { status: 502 });
+      }
+      if (noticeNaver.length < noticeUploadUrls.length) {
+        return NextResponse.json({
+          success: false,
+          error: '공통 공지 이미지 업로드가 일부 URL을 반환하지 않음 — 발행 중단',
+          stage: 'NOTICE_IMAGE_UPLOAD',
+        }, { status: 502 });
+      }
+      // Re-map by presence/order: consume an uploaded URL only for a slot that
+      // actually had a source image.
+      let idx = 0;
+      noticeForBuild = {
+        ...noticeAssets,
+        topImageUrl:    noticeAssets.topImageUrl    ? (noticeNaver[idx++] ?? noticeAssets.topImageUrl)    : noticeAssets.topImageUrl,
+        bottomImageUrl: noticeAssets.bottomImageUrl ? (noticeNaver[idx++] ?? noticeAssets.bottomImageUrl) : noticeAssets.bottomImageUrl,
+      };
+    }
+
     // 7. Build full payload with Naver shop-phinf URLs.
     const naverImageUrls = naverGallery.length > 0
       ? { representative: naverGallery[0], optional: naverGallery.slice(1) }
       : undefined;
-    const payload = buildNaverProductPayload(productForBuild, deliveryInfo, naverImageUrls, noticeAssets, storeName);
+    const payload = buildNaverProductPayload(productForBuild, deliveryInfo, naverImageUrls, noticeForBuild, storeName);
 
     // 8. Register on Naver Commerce API
     let result: any;
