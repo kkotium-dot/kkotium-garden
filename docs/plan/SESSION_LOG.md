@@ -1,3 +1,33 @@
+## 2026-06-04 (19) 발행 관제탑 STEP A·B 구현 (Code turn)
+
+baseline 64fe565, feature/publish-control-tower(신규, main 미접촉 — 대표 승인). 권위: HANDOFF_publish_control_tower_2026-06-04.md + STEP_A/STEP_B Desktop 완성코드.
+
+**STEP A — 일괄 판정 API + 공통함수 추출 (515e82f)**: src/lib/automation/load-publish-readiness.ts 신설. loadAndEvaluateProducts(ids[]) = Product findMany 1회 + Diagnosis findMany(productId IN) 1회→Map(N+1 가드) → buildInput→evaluatePublishReadiness 단일 소스. listDraftProductIds(limit)=DRAFT·naverProductId null 최신순. 단건 route(/api/products/[id]/publish-readiness) 를 공통함수 호출로 리팩터 — 응답 {ok,...result} 형태 불변. 회귀 리스크 점검: 구 route는 diagnosis row 존재 시 conceptTone=null 전달, 신 route는 undefined 전달 → mapCategoryToTone(conceptTone: ...|null|undefined) 가 ?.·?? 로 null/undefined 동일 처리 확인 → tone 경로 회귀 0. 신규 일괄 route /api/products/publish-readiness(GET ?status=DRAFT&limit=50, MAX 100): 신호등 필드 + 마진/판매가/매입가 display extras. PRODUCT_SELECT main_image_url 중복 키 1개로 정리 + Prisma.ProductGetPayload 타입으로 교체(satisfies Prisma.ProductSelect). schema 확인: margin Float / salePrice Int / supplierPrice Int 실재.
+
+**STEP B — PublishControlTowerWidget 신호등 카드 + 용어사전 (aa31ad4)**: src/lib/i18n/control-tower-strings.ko.json 신설 (발행 필드 23종 + 진정성 위반 6종 한글 전수 매핑, 코드값 노출 0). PublishControlTowerWidget.tsx 신설: useSWR(swr ^2.4.1 확인) 일괄 API 소비, resolveSignal green(publishReady)/yellow(hardComplete·!publishReady)/red(!hardComplete). 카드=썸네일+상품명+신호등 칩+한글 체크리스트(missing 배열→용어사전 dedup), 마진<25% 경고칩(UI 경고만, 차단 아님). 이모지 0(Lucide CheckCircle2/AlertTriangle/XCircle) / 한글 하드코딩 0(전부 strings.*). 마운트는 STEP C(이번 세션 미포함).
+
+검증: 각 STEP tsc 0 / npm run build OK(exit 0) / 엔진 git diff 0 / 이모지·코드 Korean 0 / 비가역 0(register/POST/DB mutate 0, 발행 미접촉). 두 독립 커밋 + push(origin/feature/publish-control-tower). STEP C·D는 Desktop 머지 후 새 채팅(중복작업 방지). production(64fe565) 미갱신 — feature 브랜치라 production 매칭 검증 N/A(의도된 상태, Desktop 머지 시 교체).
+
+---
+
+## 2026-06-04 (18) ★ 발행 관제탑 설계 확정 + 두 대수술 production 머지 검증 (Desktop turn)
+
+코드 0, production HEAD 64fe565. 이번 Desktop 세션 3대 성과.
+
+**(1) 빌더 하이브리드 대수술 main 머지 검증(a6ea482)**: emotional-bg 적응형 스크림 코드 정독 + bash+PIL 실측(명화 배경 luma 0.779 → 0.40 선택 / 가상 야간 0.30 → 0.60 선택, 분기 양쪽 정상). HTML 직렬화기 #46 copy 무변형 + htmlEscape 인젝션 방어 확인. 단색 경로 회귀 0(buildDetailPage else 분기 = stackVertically 동일 호출, 달항아리 바이트 동등) 코드 레벨 증명.
+
+**(2) UI 한글화 main 머지 검증(64fe565)**: /portfolio production 직접 호출 → **404 실측**(가짜 John 포트폴리오 완전 제거 확인, 대표 제보 해결). page.tsx redirect /dashboard(router.replace, push→replace 개선) + 용어사전 23값 의미훼손 0 + #47 인물정책 문구 교체(코드-문구 일치) 정독 확인. 잔여: workbench.firefly 영어 모델명=고유명사 유지 정상, _meta 개발용어=화면밖 무관, 로딩화면 bg-gray-900 다크 잔재=발행무관 메모.
+
+**(3) ★ 발행 관제탑 설계도 신설**: docs/handoff/HANDOFF_publish_control_tower_2026-06-04.md. 기존 엔진(src/lib/automation/publish-readiness.ts + /api/products/[id]/publish-readiness) 정독 — 단순 필드 검사가 아니라 HARD+SEO 2계층 + #46 진정성(과장·가짜 인증·향기불일치) + 상품정보고시 4축 완성. 관제탑=엔진 결과를 대표가 보는 신호등 화면(GREEN publishReady / YELLOW hardComplete만 / RED hard 미충족). 대시보드 카드 배치(대표 승인). STEP A(일괄 판정 API, 단건 route와 공통함수 공유) → B(PublishControlTowerWidget) → C(대시보드 통합) → D(Chrome MCP 브라우저 실측).
+
+**(4) 발행준비 게이트 두 상품 실측**(Supabase execute_sql): 명화 디퓨저(cmpnooli40001f0gveaxr8iim) publishReady 양호·마진 50.7% / 달항아리 도어벨(cmp3afb450001gng5468w0qpc) 마진 23% 가격재검토 권고. 둘 다 DRAFT 미발행. 첫 발행은 명화 우선 권장.
+
+**★ 컨텍스트 한계 판단**: 이번 세션이 빌더+한글화 2대 작업으로 포화 → 관제탑 구현은 새 채팅 위임(대표 요청: 중복작업 방지). 설계도+5 MD 핑퐁 정리까지 이번 세션에서 완결.
+
+비가역 0(코드/DB mutate 0, 발행 미접촉). SD-01 미접촉. **다음 (새 채팅 Desktop→Code)**: HANDOFF_publish_control_tower 정독 → STEP A~D 구현 → 브라우저 실측 통과 → P0 발행(명화 우선, 대표 명시 승인).
+
+---
+
 ## 2026-06-04 (17) UI 한글화 STEP5 점검 + UI 한글화 전 완료 (Code turn)
 
 baseline 69ccbf7, feature/ui-ko-cleanup. 권위: HANDOFF_ui_ko_cleanup §3 순서 5 + §B.
