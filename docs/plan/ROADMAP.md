@@ -1,5 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
+> 2026-06-04 **빌더 STEP3 — HTML 직렬화기 신설** (feature/detail-builder-hybrid, main 미접촉). detail-html-serializer.ts + generate-detail detailHtml 필드(PNG 보존). copy 무변형(#46), 860px 인라인. 회귀 0. **다음=STEP4 가독성+Studio UI → STEP5 커넥터/캐시**.
+
 > 2026-06-04 **빌더 STEP2 마감 — 스크림 0.40 + 다크 적응형** (feature/detail-builder-hybrid, main 미접촉). MOOD_SCRIM_ALPHA 0.40, 적응형(어두운 배경 0.60 자동 상향). 회귀 0. **다음=STEP3 HTML 직렬화기 → STEP4 가독성+Studio UI → STEP5 커넥터/캐시**.
 
 > 2026-06-04 **빌더 STEP2-확산(2) — emotional 6개 무드 전환 + 접지그림자** (Code turn, feature/detail-builder-hybrid, main 미접촉). emotional-bg.ts 공통 헬퍼(무드 cover-fit+가독성 스크림, 접지그림자) + 6개 렌더러 1줄 스왑. informational 19개 무변경. 회귀 0(단색 경로 createCanvas 동일). **다음=Desktop 감성 무드 검증 → STEP3(HTML)~5(커넥터/캐시)**.

@@ -1,3 +1,21 @@
+## 2026-06-04 (11) 빌더 STEP3 — HTML 출력 경로 신설 (Code turn)
+
+baseline 09e5ff1, feature/detail-builder-hybrid. 권위: HANDOFF STEP3(하이브리드 절반, 가산식·저위험).
+
+**(1) detail-html-serializer.ts 신설**: serializeDetailHtml(input) — buildDetailPage 결과의 섹션 메타(sectionId+copy+role)를 의미적 HTML 블록으로 직렬화. heading-like 키(headline/title/question/hook, subtitle 제외)는 <h2>, 나머지는 <p>. 섹션 wrapper 배경은 role 기반(emotional=#FAF7F2 웜 틴트 / informational=#FFFFFF). 선두에 lifestyleAssetUrl + heroImageUrl 이미지 블록(Supabase 영구 URL을 img src, max-width 100%). 외곽 컨테이너 860px + Pretendard + word-break:keep-all + 큰 본문 폰트(모바일 가독). htmlEscape 자체 구현(& < > " ').
+
+**(2) #46 grounding**: 직렬화기는 copy를 변형하지 않고 escape+마크업만. role은 배경 톤에만 영향, 콘텐츠 무관.
+
+**(3) generate-detail 배선**: 응답에 detailHtml 필드 추가(serializeDetailHtml(result.sections+product.mainImage+body.lifestyleAssetUrl)). detailBase64(PNG)는 그대로 보존 = 병렬 출력(대체 아님). 응답 sections에 role도 노출. 기존 PNG 소비자(저장/발행) 회귀 0.
+
+**(4) 하이브리드 분담(주석 명문화)**: image(PNG) 모드 = 감성 비주얼 자체가 상품일 때 / html 모드 = 스마트에디터 호환·편집 필요 시. 출력 선택은 호출 측(Studio UI STEP4 / 대량등록 파이프).
+
+**(5) 검증**: tsc 0 / build ✓ Compiled successfully / sentinel 0 / Korean 0. 비가역 0(PNG/HTML 생성만, register/POST/DB mutate 0, 발행 미접촉 DRAFT). main a585635 불변.
+
+**다음**: STEP4(sectionRole 가독성 정교화 — 적응형 스크림은 STEP2 마감서 완료 / DetailPageCard UI: 이미지·HTML 토글 + 무드배경 입력) → STEP5(커넥터 규칙 + 캐시 점검).
+
+---
+
 ## 2026-06-04 (10) 빌더 STEP2 마감 — 스크림 0.40 + 다크 배경 적응형 안전장치 (Code turn)
 
 baseline 60c5408, feature/detail-builder-hybrid. 권위: HANDOFF STEP2-확산 마감(2-1 스크림 하향 + 2-2 다크 안전장치).

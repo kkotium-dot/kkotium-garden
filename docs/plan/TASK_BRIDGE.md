@@ -71,6 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (11) 빌더 STEP3 — HTML 출력 경로 신설 (FROM Code, feature/detail-builder-hybrid, baseline 09e5ff1)
+
+| 항목 | 상태 |
+|---|---|
+| detail-html-serializer.ts | 섹션 copy+role → 860px 인라인 HTML(h2/p). emotional 웜틴트/informational 흰배경. 이미지=Supabase URL img src. |
+| generate-detail | 응답 detailHtml 필드 추가(detailBase64 PNG 병렬 보존). sections에 role 노출. |
+| #46 | 직렬화기 copy 무변형, escape+마크업만. |
+| 회귀 0 | 기존 PNG 소비자 무영향(신규 필드 가산). |
+| 검증 | TSC 0/build ✓/sentinel 0/Korean 0. 비가역 0. main 불변. |
+| 다음 | STEP4 Studio UI(이미지/HTML 토글) → STEP5 커넥터/캐시. |
+
+
 ### 2026-06-04 (10) 빌더 STEP2 마감 — 스크림 0.40 + 다크 적응형 (FROM Code, feature/detail-builder-hybrid, baseline 60c5408)
 
 | 항목 | 상태 |
