@@ -1,3 +1,66 @@
+## 2026-06-04 (17) UI 한글화 STEP5 점검 + UI 한글화 전 완료 (Code turn)
+
+baseline 69ccbf7, feature/ui-ko-cleanup. 권위: HANDOFF_ui_ko_cleanup §3 순서 5 + §B.
+
+**(1) STEP5 crawl/orders 실측 점검**: src/app/crawl/page.tsx, orders/page.tsx, orders/[id]/page.tsx 전수 grep — 사용자 노출 영어 JSX 라벨 0, 이모지(유니코드 emoji 블록) 0. 유일한 영어 매치는 crawl/page.tsx:695 placeholder="https://domeme.domeggook.com/..."(도매꾹 입력 예시 URL=정상, 번역 대상 아님). → **actionable 항목 0, 코드 변경 없음**. 없는 작업을 만들어내지 않음(#46 정직). 핸드오프 §B "crawl/orders 점진 한글화"는 이미 한글 완료 상태로 확인.
+
+**(2) ★ UI 한글화 STEP1~5 전 완료(브랜치 feature/ui-ko-cleanup)**:
+- STEP1(c724693): studio-strings 용어 사전 23값 치환 + faceFreeNote #47 교체.
+- STEP2+3(3ceef0b): root redirect /portfolio→/dashboard + 로딩문구 i18n + portfolio 가짜 템플릿 삭제.
+- STEP4(69ccbf7): /upload 중복 아님 확정 → 한글화 + 이모지 4종 Lucide 교체 + upload-strings.ko.json.
+- STEP5(본 커밋): crawl/orders 점검 — actionable 0.
+전 STEP 공통: 한글 하드코딩 0(전부 i18n, #35) / 이모지 0(Lucide) / sentinel 0 / tsc 0 / build ✓ / 비가역 0(발행·DB mutate 0). main a6ea482 내내 불변.
+
+**다음 (Desktop)**: (1) production(머지 후 SHA)에서 온실 아틀리에·첫 진입(/→/dashboard)·/upload 노출 문구 육안 점검 (2) 브랜치 main 머지 결정 (3) 이후 발행 관제탑(publish-readiness 신호등 대시보드)을 본 용어 사전 위에 신설.
+
+---
+
+## 2026-06-04 (16) UI 한글화 STEP4 — /upload 한글화 + 이모지 제거 (Code turn)
+
+baseline 3ceef0b, feature/ui-ko-cleanup. 권위: HANDOFF_ui_ko_cleanup §A(/upload) + 작업4.
+
+**(1) 중복 여부 확인(핸드오프 선결 조건)**: /upload는 fetch('/api/upload/excel') = 엑셀 파일로 상품 대량 등록. studio 워크벤치 dropzone은 /api/upload 재활용 디자이너 이미지 소스(누끼/배경)를 Supabase에 업로드. → 기능 성격 완전 별개(상품 데이터 일괄 등록 vs 이미지 자산 업로드). **중복 아님 → 통합/삭제 아니라 살림 + 한글화** 결정.
+
+**(2) 이모지 제거(코드원칙)**: 📋(양식)→ClipboardList, 📁(파일)→FolderOpen, ⏳(진행)→Loader2(animate-spin), 🚀(시작)→UploadCloud. 전부 lucide-react. JSX 이모지 0.
+
+**(3) i18n 분리(#35)**: 기존 하드코딩 한글(제목·양식 안내·라벨·alert 4종)을 신규 upload-strings.ko.json으로 분리. page.tsx 한글 하드코딩 0(전부 strings 경유). 제목 "Excel 대량 업로드"→"엑셀 대량 업로드". alertSuccess는 {n} placeholder + replace. 기능/엔드포인트(/api/upload/excel) 무변경.
+
+**(4) 검증**: emoji grep 0 / page.tsx 한글 0 / tsc 0 / build ✓ Compiled successfully / sentinel 0. 비가역 0(발행·DB mutate 0, 엑셀 라우트 로직 무변경). main a6ea482 불변.
+
+**다음**: STEP5(crawl/orders 등 잔여 사용자 노출 영어 라벨 점진 한글화 — 핸드오프상 "별도 커밋 가능", 범위 산정 후 진행).
+
+---
+
+## 2026-06-04 (15) UI 한글화 STEP2+3 — root redirect 교정 + portfolio 템플릿 삭제 (Code turn)
+
+baseline c724693, feature/ui-ko-cleanup. 권위: HANDOFF_ui_ko_cleanup §A(템플릿 잔재) + §3 순서 2·3.
+
+**(1) STEP2 root redirect 교정(src/app/page.tsx)**: 첫 진입점이 /portfolio로 redirect + "Loading Portfolio..." 영어였음. → router.replace('/dashboard')로 교정(push 대신 replace=히스토리 미오염). 로딩문구는 신규 home-strings.ko.json("loading":"대시보드로 이동 중…") 경유(#35 한글 하드코딩 금지 준수 — 단일 splash 문구도 i18n 패턴 유지).
+
+**(2) STEP3 portfolio 삭제**: src/app/portfolio/page.tsx = "John의 파이썬 포트폴리오" 가짜 템플릿(19.5KB, 앱과 무관). 삭제 전 grep "portfolio" 전수(src .ts/.tsx) → 외부 link/import 참조 0 확인(유일 참조였던 page.tsx redirect는 (1)서 제거됨). git rm 실행.
+
+**(3) 원자 커밋 판단**: STEP2(redirect)와 STEP3(삭제)를 분리 커밋하면 중간 상태에서 / 라우트가 깨질(혹은 orphan) 위험 → 하나의 원자 "portfolio 제거" 커밋으로 통합. 안전 우선.
+
+**(4) 검증**: git rm 직후 tsc가 .next/types/app/portfolio/page.ts 잔재(생성 타입 스텁)로 TS2307 발생 → npm run build로 .next/types 재생성 시 portfolio 타입 제거됨 → 재실행 tsc 0 확인(스테일 캐시 아티팩트, 실 오류 아님). build ✓ Compiled successfully(/ redirect 라우트 정상). sentinel 0 / page.tsx 한글 하드코딩 0(i18n) / 이모지 0. 비가역 0(발행·DB mutate 0). main a6ea482 불변.
+
+**다음**: STEP4(/upload — studio 워크벤치 dropzone과 기능 중복 여부 확인 → 중복이면 통합/삭제, 살릴 거면 한글화) → STEP5(crawl/orders 잔여 영어 라벨 점진 한글화).
+
+---
+
+## 2026-06-04 (14) UI 한글화 STEP1 — studio-strings 용어 사전 + #47 인물정책 문구 교체 (Code turn)
+
+baseline a6ea482(빌더 머지 후), feature/ui-ko-cleanup 신규 브랜치. 권위: HANDOFF_ui_ko_cleanup §1 용어 사전 + §2 #47 교체.
+
+**(1) 용어 사전 치환(§1, 23개 값)**: studio-strings.ko.json 값만 교체(JSON 키 전부 불변 → 컴포넌트 소비자 무영향=회귀 0). 골격/skeleton→페이지 구성(detail.subtitle/skeletonOverride), 에셋 저장·Supabase Storage→이미지 저장(actions.title/saveButton/filters.saved), public URL→공유 링크(actions.saved/publishHintNeedSave), Clean/Price/Badge/Lifestyle→깔끔형/가격강조형/뱃지형/감성형(thumbnail.subtitle/variants), 누끼 PNG→배경 제거 이미지(thumbnail.manualCutoutLabel/canvas.cutoutSlot), 폴백·fallback→기본(source.fallback/manualHint/kftc.fallbackNote), matchScore→적합도 점수, "ms 소요"→처리 시간, dropzone Supabase 노출문구 3건→이미지 저장소.
+
+**(2) #47 인물정책 문구 교체(§2)**: workbench.firefly.faceFreeNote 구값 "★얼굴 없는 인체 일부 전략 — 손/부분 토르소만"(폐기된 #47 이전 정책)을 "★인물 정책 — 익명 일반 모델 허용, 특정 실존인물·유명인 생성 금지(IP·초상권 안전). 프롬프트 자동 가드 포함"으로 교체. 코드(category-tone-mapper/backdrop-vlm-gate)는 이미 #47 정합 완료, UI 문자열만 잔존했던 stale fact 해소(#44 동형).
+
+**(3) 검증**: 렌더 값 잔재 grep(에셋/골격/public URL/폴백/fallback 사용/얼굴 없는 인체)=0(_meta 내부 주석 제외). JSON valid. tsc 0 / build ✓ Compiled successfully / sentinel 0 / 코드 한글 하드코딩 0(전부 i18n 경유, #35) / 이모지 0. 비가역 0(문구만, 발행·DB mutate 0). main a6ea482 불변.
+
+**다음**: STEP2(src/app/page.tsx redirect /portfolio→/dashboard + 로딩문구 한글) → STEP3(portfolio 참조 grep 0 확인 후 삭제 + build redirect 검증) → STEP4(/upload 중복 확인→한글화/통합) → STEP5(crawl/orders 잔여 영어 라벨).
+
+---
+
 ## 2026-06-04 (13) 빌더 STEP5 — 커넥터 운영 규칙 + 캐시 점검 / 하이브리드 대수술 완료 (Code turn)
 
 baseline 0e619f8, feature/detail-builder-hybrid. 권위: HANDOFF STEP5(독립) + TOOL_ECOSYSTEM_MANUAL.
