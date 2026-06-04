@@ -71,6 +71,19 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (9) 빌더 STEP2-확산(2) — emotional 6개 무드 전환 + 접지그림자 (FROM Code, feature/detail-builder-hybrid, baseline 9c31052)
+
+| 항목 | 상태 |
+|---|---|
+| emotional-bg.ts 헬퍼 | resolveEmotionalBackdrop(무드=cover-fit+흰 스크림 0.62, 단색=createCanvas 그대로) + groundShadowLayer(블러 타원 0.18). |
+| emotional 6개 전환 | seasonalHook/story/styledShot/problem/solution/philosophy createCanvas→헬퍼 1줄 스왑. 전경 무변경(대비 보존). hero 접지그림자 추가. usage 미접촉(이미 무드). |
+| informational 19개 | 무변경(verify-only) — 불투명 유지=가독성 사수, 무드 비침 0. |
+| 회귀 0 | 단색 경로=createCanvas(size,bg) 동일(헬퍼 else). hero 단색 접지그림자 미적용. |
+| 검증 | TSC 0/build ✓/sentinel 0/Korean 0. 비가역 0(PNG만, 발행 미접촉 DRAFT). main 불변. |
+| 튜닝 노브 | 무드 강도 = MOOD_SCRIM_ALPHA(현 0.62). 낮추면 사진 더 노출. |
+| 다음 (Desktop) | 명화 재합성 검증(감성 무드+접지그림자+정보 가독성+달항아리 단색 회귀 0) → STEP3~5 승인. |
+
+
 ### 2026-06-04 (8) 빌더 STEP2-확산 (1)표본 — sectionRole + hero 앵커링 근본해결 (FROM Code, feature/detail-builder-hybrid, baseline 4ef6102)
 
 | 항목 | 상태 |

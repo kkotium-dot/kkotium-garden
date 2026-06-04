@@ -6,7 +6,6 @@
 
 import sharp from 'sharp';
 import {
-  createCanvas,
   fetchImageBuffer,
   fitImage,
   renderTextOverlay,
@@ -14,6 +13,7 @@ import {
 } from '../sharp-composite';
 import { urlGalleryThumb } from '../cloudinary-pipeline';
 import { generateStoryParagraph } from './section-copy';
+import { resolveEmotionalBackdrop } from './emotional-bg';
 import type { SectionRenderer } from './types';
 import { resolveBgColor, CANONICAL_WIDTH } from './types';
 
@@ -50,7 +50,7 @@ export const storyRenderer: SectionRenderer = async (spec, section, ctx) => {
   const bg = resolveBgColor(spec, section.bgColorToken);
   const size = { width: CANONICAL_WIDTH, height: section.height };
 
-  const canvas = await createCanvas(size, bg);
+  const { canvas } = await resolveEmotionalBackdrop(ctx, size, bg);
 
   // Optional signature image — small strip on the right side.
   let withImage: Buffer = canvas;

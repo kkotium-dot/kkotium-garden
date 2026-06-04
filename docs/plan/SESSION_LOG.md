@@ -1,3 +1,21 @@
+## 2026-06-04 (9) 빌더 STEP2-확산(2) — emotional 그룹 6개 무드배경 전환 + 접지그림자 (Code turn)
+
+baseline 9c31052, feature/detail-builder-hybrid. 권위: HANDOFF STEP2-확산(2) "나머지 렌더러 차등 전환" 분류표.
+
+**(1) emotional-bg.ts 공통 헬퍼 신설**: (a) resolveEmotionalBackdrop(ctx,size,bg) — 무드 모드(ctx.lifestyleAssetUrl 존재)면 cover-fit 사진 위에 흰 가독성 스크림(MOOD_SCRIM_ALPHA=0.62) 합성한 "무드 틴트 wash" base 반환, 아니면 createCanvas(size,bg) 그대로(=회귀 0). ★ 설계 의도: 텍스트 대비 반드시 확보(HANDOFF 하드 요구) — text-heavy 섹션의 기존 dark-on-light 텍스트/카드를 그대로 두고 base만 밝은 무드 wash로 바꿔 대비 보존. usage.ts식 흰 텍스트-온-포토 bespoke 재작업의 대비 붕괴 위험 회피. (b) groundShadowLayer(size,{centerX,baseY,width}) — 작은 타원 SVG를 sharp.blur(12)로 부드럽게 → 전체 size 투명 레이어에 누끼 base 위치 배치(rgba 0,0,0,0.18). SVG filter 의존 없이 안정.
+
+**(2) emotional 6개 전환(1줄 스왑)**: seasonalHook/story/styledShot/problem/solution/philosophy — `const canvas = await createCanvas(size,bg)` → `const { canvas } = await resolveEmotionalBackdrop(ctx,size,bg)`. 미사용된 createCanvas import 제거. 전경 레이어(카드/텍스트/색)는 전부 무변경 → 스크림 wash 위에서 가독성 보존. hero(완료)는 무드 모드에 접지그림자만 추가(본품 base=tableLineY에 그림자). usage(이미 무드+applyBottomVignette 처리됨)는 미접촉.
+
+**(3) informational 19개 무변경(verify-only)**: spec/specTable/specifications/cta/shipping/warranty/comparison/clinical/corePerformance/technology/benefits/options/optionIntro/eventDetails/reviews/package/product/detail/material — 손대지 않음 = 불투명 createCanvas(size,bg) 유지 = 가독성 사수 + 무드 비침 0. (detail.ts가 lifestyleAssetUrl을 grid 전경 이미지로 쓰는 건 기존 동작, 배경 bleed 아님 → 무변경.)
+
+**(4) 검증**: tsc 0(미사용 import 제거 후 undefined 참조 0) / build ✓ Compiled successfully / sentinel 0 / 코드 Korean 0. 회귀 가드(구조적): 6개 렌더러 no-lifestyle = resolveEmotionalBackdrop else 분기 = createCanvas(size,bg) 동일 호출 + 전경 무변경 → 단색 경로 바이트 동등. hero 단색 접지그림자 미적용. 비가역 0(generate-detail PNG만, register/POST/DB mutate 0, 발행 미접촉 DRAFT). main a585635 불변.
+
+**(5) 범위/게이트**: STEP2-확산(2) emotional 그룹만. STEP3(HTML 직렬화기)/4(가독성 정교화+Studio UI)/5(커넥터 규칙+캐시 점검)는 Desktop 감성 그룹 시각 검증 회신 후.
+
+**다음 (Desktop)**: 명화 디퓨저 재합성 시각 검증 — (a) 감성 섹션 무드 노출(스크림 톤) (b) hero 접지그림자(스티커 느낌 해소) (c) spec 등 정보 섹션 가독성 (d) 달항아리 단색 회귀 0. 무드 강도 조정 원하면 MOOD_SCRIM_ALPHA(현 0.62) 하향. 승인 시 STEP3~5.
+
+---
+
 ## 2026-06-04 (8) 빌더 STEP2-확산 (1)표본 — sectionRole 도입 + hero 본품 앵커링 근본해결 (Code turn)
 
 baseline 4ef6102, feature/detail-builder-hybrid. 권위: HANDOFF STEP2-확산 "섹션 역할별 차등 투명화". ★ 단순 전체 투명화 금지(표본 검수 결과: spec zebra 행/cta 흰 카드를 통째 투명화하면 정보 텍스트가 무드 사진과 겹쳐 가독성 붕괴).

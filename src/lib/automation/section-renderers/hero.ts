@@ -34,6 +34,7 @@ import {
 // fetch source URL directly. Sharp fitImage handles resize + bg below.
 import sharp from 'sharp';
 import { generateHeroCopy } from './section-copy';
+import { groundShadowLayer } from './emotional-bg';
 import type { SectionRenderer } from './types';
 import { resolveBgColor, CANONICAL_WIDTH } from './types';
 
@@ -98,7 +99,6 @@ export const heroRenderer: SectionRenderer = async (spec, section, ctx) => {
   try {
     const buf = await fetchImageBuffer(ctx.sourceImageUrl);
     const centerX = Math.round((size.width - 560) / 2);
-    let placed: Buffer;
     if (usedLifestyle) {
       // STEP 2-spread root-cause anchoring: a tall cutout (e.g. 253x776) fills
       // its fit box, so bottom-gravity alone moved nothing. Instead place the
@@ -116,13 +116,20 @@ export const heroRenderer: SectionRenderer = async (spec, section, ctx) => {
         })
         .png()
         .toBuffer();
-      placed = await offsetLayer(fitted, { x: centerX, y: tableLineY - productBoxH }, size);
+      const placed = await offsetLayer(fitted, { x: centerX, y: tableLineY - productBoxH }, size);
+      // Ground shadow under the cutout base so it sits on the table, not pasted.
+      const shadow = await groundShadowLayer(size, {
+        centerX: Math.round(size.width / 2),
+        baseY: tableLineY,
+        width: 380,
+      });
+      withImage = await overlayOnto(canvas, [shadow, placed]);
     } else {
       // Solid path — unchanged (byte-identical to the prior behavior).
       const fitted = await fitImage(buf, { width: 560, height: imageBlockHeight - 40 }, bg);
-      placed = await offsetLayer(fitted, { x: centerX, y: 40 }, size);
+      const placed = await offsetLayer(fitted, { x: centerX, y: 40 }, size);
+      withImage = await overlayOnto(canvas, [placed]);
     }
-    withImage = await overlayOnto(canvas, [placed]);
   } catch {
     // Keep `withImage = canvas` — hero degrades to text-only.
   }

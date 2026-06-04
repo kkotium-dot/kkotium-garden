@@ -7,7 +7,6 @@
 
 import sharp from 'sharp';
 import {
-  createCanvas,
   fetchImageBuffer,
   fitImage,
   renderTextOverlay,
@@ -15,6 +14,7 @@ import {
 } from '../sharp-composite';
 import { urlGalleryThumb } from '../cloudinary-pipeline';
 import { generateStyledShotCopy } from './section-copy';
+import { resolveEmotionalBackdrop } from './emotional-bg';
 import type { SectionRenderer } from './types';
 import { resolveBgColor, CANONICAL_WIDTH } from './types';
 
@@ -40,7 +40,7 @@ export const styledShotRenderer: SectionRenderer = async (spec, section, ctx) =>
   const bg = resolveBgColor(spec, section.bgColorToken);
   const size = { width: CANONICAL_WIDTH, height: section.height };
 
-  const canvas = await createCanvas(size, bg);
+  const { canvas } = await resolveEmotionalBackdrop(ctx, size, bg);
 
   const copy = await generateStyledShotCopy(spec, ctx);
 
