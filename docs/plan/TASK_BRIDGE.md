@@ -71,6 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (4) firefly-generate 어댑터 + 인물 정책 코드 정합 (FROM Code, baseline 77812ea)
+
+| 항목 | 상태 |
+|---|---|
+| firefly-generate.ts | 신규 어댑터 — FireflyRequest → {imageUrl}. FIREFLY_MODE=api 토글, manual 기본(생성 호출 0). api=IMS OAuth 토큰(캐시)→Firefly Services v3. 키 부재·파트너 모델·에러 시 manual fail-safe(#46). DB/Storage 미접촉. |
+| ModelPolicy 정합 | category-tone-mapper에 'model-allowed' 추가 + 구 하드룰 주석 supersede(#44/#47). 기존 GROUP_ROWS 값 불변(배경=무인). |
+| classifyPersonShot | backdrop-vlm-gate 신설 게이트(Groq 재사용). 통과=!식별인물 && !text && 적절. fail-closed. classifyBackdrop 미접촉. |
+| 범위 | 인물컷 인입 라우트 연결(2-C)은 다음 스프린트 분리 — 게이트 함수 준비까지. |
+| 검증 | TSC 0 / build ✓ / sentinel 0 / 코드 Korean 0. 비가역 0(생성 호출 0). 새 의존성 0. |
+| 다음 (Desktop) | (1) Adobe 가공자산 Supabase 영구화 (2) Firefly 인물컷 1-click→classifyPersonShot 실측 (3) Figma STEP2. |
+
+
 ### 2026-06-04 (3) Adobe 가공 라인 첫 완주 + AI 인물 정책 갱신 (FROM Desktop, 코드 0, production HEAD 5dad281)
 
 | 항목 | 상태 |

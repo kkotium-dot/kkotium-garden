@@ -203,3 +203,167 @@ export async function classifyBackdrop(pngBuffer: Buffer): Promise<VlmGateVerdic
     raw,
   };
 }
+
+// ===========================================================================
+// Person-shot gate (work-principle #47, 2026-06-04) — SEPARATE from the empty-
+// backdrop gate above. The backdrop gate rejects any person (unmanned stages);
+// this gate governs lifestyle CONCEPT shots that may legitimately include an
+// anonymous model. classifyBackdrop above is intentionally left untouched.
+//
+// Pass = anonymous person OK; only an identifiable real individual / celebrity,
+// embedded text/logo, or inappropriate depiction (e.g. minors) rejects.
+// Same Groq Llama 4 Scout vision model, same fail-closed posture.
+//
+// Route wiring for person-shot ingest is deferred to a later sprint (handoff
+// 2-C) — this provides the gate function only.
+// ===========================================================================
+
+export interface PersonShotVerdict {
+  /** Allowed? Requires: !has_identifiable_person && !has_text && is_appropriate. */
+  passed: boolean;
+  /** A specific real / recognizable individual or celebrity (= reject reason). */
+  has_identifiable_person: boolean;
+  /** Readable text, logo, or watermark (= reject reason). */
+  has_text: boolean;
+  /** Suitable as a commercial product shot (false blocks e.g. minor-inappropriate). */
+  is_appropriate: boolean;
+  /** Failure reasons populated when passed === false. */
+  reasons: string[];
+  /** Vision model identifier used for this call. */
+  model: string;
+  /** Raw model output (for debugging / future review UI). */
+  raw: string | null;
+}
+
+const PERSON_SYSTEM_PROMPT = [
+  'You are a strict content classifier for commercial product-photography',
+  'lifestyle shots that may include people.',
+  'Output ONLY a valid JSON object with these three boolean fields:',
+  '{"has_identifiable_person": <bool>, "has_text": <bool>, "is_appropriate": <bool>}.',
+  '- has_identifiable_person = true ONLY if a specific, real, recognizable',
+  '  individual or celebrity (an identifiable real-person likeness) appears.',
+  '  An anonymous / generic model whose face is not a real identifiable person',
+  '  is false.',
+  '- has_text = true if any readable text, logo, watermark, or signage appears.',
+  '- is_appropriate = true if the image is suitable as a commercial product shot;',
+  '  false for sexual content, inappropriate depiction of minors, or otherwise',
+  '  unsuitable depictions.',
+  'No prose. No markdown. JSON object only.',
+].join(' ');
+
+async function callGroqVisionPerson(base64Png: string, key: string): Promise<string | null> {
+  const dataUrl = `data:image/png;base64,${base64Png}`;
+  const userContent: VisionContentPart[] = [
+    { type: 'text', text: 'Classify this lifestyle concept image. Reply with the JSON object only.' },
+    { type: 'image_url', image_url: { url: dataUrl } },
+  ];
+  const body = {
+    model: VISION_MODEL,
+    response_format: { type: 'json_object' },
+    max_tokens: 200,
+    temperature: 0,
+    messages: [
+      { role: 'system', content: PERSON_SYSTEM_PROMPT },
+      { role: 'user', content: userContent },
+    ],
+  };
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    return null;
+  }
+  const data: unknown = await res.json();
+  const choices = (data as { choices?: { message?: { content?: unknown } }[] }).choices;
+  const text = choices?.[0]?.message?.content;
+  return typeof text === 'string' ? text : null;
+}
+
+interface RawPersonJson {
+  has_identifiable_person?: unknown;
+  has_text?: unknown;
+  is_appropriate?: unknown;
+}
+
+function parsePersonVerdict(
+  raw: string | null,
+): Pick<PersonShotVerdict, 'has_identifiable_person' | 'has_text' | 'is_appropriate'> | null {
+  if (!raw) return null;
+  const match = raw.match(/\{[\s\S]*\}/);
+  const text = match ? match[0] : raw;
+  let json: RawPersonJson;
+  try {
+    json = JSON.parse(text) as RawPersonJson;
+  } catch {
+    return null;
+  }
+  return {
+    has_identifiable_person: asBool(json.has_identifiable_person),
+    has_text: asBool(json.has_text),
+    // Default is_appropriate to false when absent (fail-closed on a missing field).
+    is_appropriate: asBool(json.is_appropriate),
+  };
+}
+
+function rejectPerson(reason: string, model = 'pre-filter'): PersonShotVerdict {
+  return {
+    passed: false,
+    has_identifiable_person: false,
+    has_text: false,
+    is_appropriate: false,
+    reasons: [reason],
+    model,
+    raw: null,
+  };
+}
+
+/**
+ * Classify a normalized PNG buffer for person-shot suitability (#47). Always
+ * resolves — a thrown / unparseable result becomes a closed (rejected) verdict so
+ * an identifiable likeness or unsuitable image never slips through silently.
+ */
+export async function classifyPersonShot(pngBuffer: Buffer): Promise<PersonShotVerdict> {
+  if (pngBuffer.length < MIN_PAYLOAD_BYTES) {
+    return rejectPerson('tiny payload (<1KB) — unlikely to be a real image');
+  }
+  const key = pickGroqKey();
+  if (!key) {
+    return rejectPerson('no Groq vision key configured', VISION_MODEL);
+  }
+  const base64 = pngBuffer.toString('base64');
+
+  let raw: string | null;
+  try {
+    raw = await callGroqVisionPerson(base64, key);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return rejectPerson(`vision call error: ${msg}`, VISION_MODEL);
+  }
+  const verdict = parsePersonVerdict(raw);
+  if (!verdict) {
+    return {
+      passed: false,
+      has_identifiable_person: false,
+      has_text: false,
+      is_appropriate: false,
+      reasons: ['could not parse strict JSON verdict from model output'],
+      model: VISION_MODEL,
+      raw,
+    };
+  }
+
+  const reasons: string[] = [];
+  if (verdict.has_identifiable_person) reasons.push('has_identifiable_person');
+  if (verdict.has_text) reasons.push('has_text');
+  if (!verdict.is_appropriate) reasons.push('not_appropriate');
+
+  return {
+    passed: reasons.length === 0,
+    ...verdict,
+    reasons,
+    model: VISION_MODEL,
+    raw,
+  };
+}

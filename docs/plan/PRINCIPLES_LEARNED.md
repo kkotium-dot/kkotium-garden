@@ -393,6 +393,8 @@ Vercel 런타임은 정적 자산과 안전한 서버 연산만 수행한다.
 
 근거: Gemini API 키 자동 폐기 사고(2026-04-11, 04-29 등 다회 발생) 이후 채택.
 
+**예외(2026-06-04 명문화)**: `src/lib/automation/firefly-generate.ts`의 **api 모드**는 #38의 예외 — 대표가 의도한 명시적 자동화 트랙이다. 단 기본값이 manual이라 키 부재 환경(현재)에서는 네트워크 생성 호출 0으로 #38과 충돌 0이며, api 모드는 엔터프라이즈 Firefly Services 키가 주입된 의도된 운영 환경에서만 활성. 키 부재/파트너 모델 시 manual로 fail-safe 강등(#46 허위 성공 0).
+
 ## 작업원칙 #39 — CTI Inference is the Entry Point
 
 모든 상세페이지 자동화는 CTI(Concept-Tone Inference) 8축 추론에서 시작한다.

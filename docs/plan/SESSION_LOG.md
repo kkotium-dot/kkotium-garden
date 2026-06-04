@@ -1,3 +1,21 @@
+## 2026-06-04 (4) firefly-generate 어댑터 + 인물 정책 코드 정합 (Code turn)
+
+baseline 77812ea (Vercel READY). 권위: docs/handoff/HANDOFF_firefly_generate_adapter_2026-06-04.md.
+
+**(1) firefly-generate.ts 어댑터 신설**: enqueue가 만든 FireflyRequest를 받아 이미지 1장을 생성하고 {imageUrl}을 반환하는 단일 진입점. FIREFLY_MODE=api 토글, 미설정/기타 → manual 기본. manual 모드는 네트워크 생성 호출 0(대표 1-click용 스펙 그대로 반환). api 모드는 Adobe IMS OAuth Server-to-Server 토큰(모듈 스코프 캐시, 만료 60초 전 갱신) → Firefly Services v3 /images/generate. 키 부재·파트너 모델(gemini/imagen/gpt-image-2)·토큰/생성 에러 시 manual로 fail-safe 강등(note 명시, #46 허위 성공 0). DB/Storage 미접촉(생성만, 적재는 기존 ingest).
+
+**(2) 인물 정책 코드 정합(#44 stale-fact, #47 준수)**: 문서(#47/PLAYBOOK §5)에는 반영됐으나 실행 코드에 구 하드룰 잔존 → 정합. category-tone-mapper.ts ModelPolicy 타입에 'model-allowed' 멤버 추가 + "human faces hard-prohibited system-wide" 주석을 #47 준수 문구로 supersede. ★ 기존 GROUP_ROWS modelPolicy 값은 변경 0(배경 무대는 무인이 정답, 'model-allowed'는 인물 컨셉컷 전용 신규 옵션).
+
+**(3) classifyPersonShot 게이트 신설**: backdrop-vlm-gate.ts에 별도 게이트 함수 추가(같은 Groq Llama 4 Scout 재사용). 통과=!has_identifiable_person && !has_text && is_appropriate(익명 인물 OK = #47, 특정 실존인물/유명인·로고·미성년 부적절만 reject). fail-closed(에러/파싱불가 → reject) 유지. ★ 기존 classifyBackdrop 미접촉(배경 게이트는 그대로).
+
+**(4) 범위 명시(폭주 방지)**: 인물컷 인입 라우트 연결(2-C)은 다음 스프린트로 분리 — 본 turn은 게이트 함수 준비까지.
+
+**검증**: npx tsc --noEmit 0 errors(ModelPolicy union 확장 후 exhaustiveness 통과) / npm run build ✓ Compiled successfully / sentinel grep 0건 / 코드 Korean 0(주석 전부 영어). 비가역 0(firefly-generate 기본 manual → 생성 네트워크 호출 0, register/POST mutate 0). 새 의존성 0(fetch만, OAuth 토큰 수동 관리).
+
+**다음 (Desktop)**: (1) Adobe 가공자산 3종 Supabase product-assets 업로드(만료 전) (2) 대표 Firefly 인물 컨셉컷 1-click 생성 → classifyPersonShot 게이트 실측 검증 (3) Figma 한도 리셋 후 값 눈대조 + STEP2 7섹션 컴포넌트.
+
+---
+
 ## 2026-06-04 (3) Adobe 가공 라인 첫 완주 + AI 인물 정책 갱신 + Firefly v2 (Desktop turn)
 
 production HEAD 5dad281 (Vercel READY, 코드 0).

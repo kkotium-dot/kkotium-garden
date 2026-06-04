@@ -1,5 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
+> 2026-06-04 **firefly-generate 어댑터 + 인물 정책 코드 정합** (Code turn, baseline 77812ea). firefly-generate.ts 신설(manual 기본/api 토글, 키 부재·파트너 모델 fail-safe 강등). ModelPolicy 'model-allowed' 추가 + classifyPersonShot 게이트 신설(classifyBackdrop 미접촉). TSC 0/build OK/비가역 0. **다음=Adobe 가공자산 Supabase 영구화 + Firefly 인물컷 classifyPersonShot 실측 + Figma STEP2(한도 리셋 후)**.
+
 > 2026-06-04 **Adobe 가공 라인 첫 완주 + AI 인물 허용 정책 + Firefly v2** (Desktop turn, 코드 0, production HEAD 5dad281). 명화 디퓨저 가공 5단계 SOP 입증(누끼→focus 추출→1000x1000 대표→860 배경). AI 인물 정책 갱신: 익명 모델 허용/특정 실존인물 금지(구 "얼굴 없는 인체 일부" 대체, #47). Firefly 컨셉컷 v2 문서 신규. **다음=Adobe 가공자산 3종 Supabase product-assets 업로드 + Figma STEP2 7섹션 컴포넌트(한도 리셋 후)**.
 
 > 2026-06-04 **S4 2단계 Figma 마스터 STEP1 완료 — Variables 69개** (Desktop turn, 코드 0, production HEAD 7a640b6). Figma 파일 8yuNcO8J9Pitt7glfr49Uw + Variables 69개(Brand Core 3/Concept Preset 60/Intensity 6) WEB 코드신택스 주입. starter 모드 제약(컬렉션당 1모드) → 프리셋을 변수 이름 그룹으로 보정. 설계도(docs/design/FIGMA_MASTER_BLUEPRINT_2026-06-04.md)+README Desktop 직접 저장. **다음=Figma 값 최종 눈대조 + STEP2 7섹션 컴포넌트 빌드(호출 한도 리셋 후 새 채팅)**.

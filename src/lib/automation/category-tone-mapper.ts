@@ -60,10 +60,13 @@ export type BaseTone =
   | 'foreign-cinematic-sunlit'
   | 'pastel-friendly';
 
-// Human faces are hard-prohibited system-wide (research §3-D, §9): there is no
-// 'face-allowed' member by design. A future external-SaaS offering would add a
-// disclosure module, not a face option.
-export type ModelPolicy = 'no-human' | 'hand-only' | 'silhouette';
+// Person policy (work-principle #47, 2026-06-04): anonymous human models are
+// allowed where the concept benefits; identifiable real individuals / celebrities
+// remain prohibited. Backgrounds stay no-human. This supersedes the prior
+// "human faces are hard-prohibited system-wide" rule. 'model-allowed' is the new
+// member used ONLY by the person-shot concept track — existing background
+// GROUP_ROWS values below are intentionally left unchanged (unmanned backdrops).
+export type ModelPolicy = 'no-human' | 'hand-only' | 'silhouette' | 'model-allowed';
 
 export interface ToneDirective {
   categoryGroup: CategoryGroup;
