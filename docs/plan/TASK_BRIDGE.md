@@ -71,6 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (21) 발행 관제탑 STEP E — main 머지 + production 반영 완료 (FROM Code, production HEAD e915b0a)
+
+| 항목 | 상태 |
+|---|---|
+| 머지 (e915b0a) | feature/publish-control-tower(STEP A·B·C) → main --no-ff 머지 + push origin main. 11 files. |
+| Desktop STEP D | preview(34edf7) /dashboard 6/6 실측 통과(관제탑·신호등 2/0/1·마진칩·체크리스트 14 한글·색대비·모바일 390px·SD-01). |
+| Vercel 검증 | verify-vercel-deploy.sh --wait exit 0 — production e915b0a 갱신 확인. |
+| production fact-check (#45) | /dashboard 200 + 일괄 API 3건: 명화 50.7% GREEN무경고/달항아리 23.2% GREEN+칩/아이스트레이 42.6% RED. computeMarginPct 정합 실증. |
+| 엔진/비가역 | publish-readiness.ts 미접촉. 발행 API 호출 0(이미지 변환 별건), DB mutate 0. |
+| ★ 다음 (Desktop→분리 트랙) | P0 첫 상품 발행: 명화 이미지 변환 선결 → 관제탑 GREEN 재확인 → 대표 명시 승인 → 신중 발행(비가역). 명화 우선(마진 50.7%). 발행 관제탑 A~E 완료. |
+
 ### 2026-06-04 (20) 발행 관제탑 STEP C 완료 (FROM Code, feature/publish-control-tower, baseline af38158)
 
 | 항목 | 상태 |

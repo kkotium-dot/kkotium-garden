@@ -1,3 +1,17 @@
+## 2026-06-04 (21) 발행 관제탑 STEP E — main 머지 + production 반영 (Code turn)
+
+baseline: feature/publish-control-tower 69640bc(STEP C), main 64fe565. 권위: STEP E 지시 + Desktop STEP D 실측 보고.
+
+**Desktop STEP D 실측 통과(머지 근거)**: preview(34edf7) /dashboard 6/6 전수 — (1)관제탑 SECTION 2 최상단 노출 (2)신호등 발행가능 2·보완 0·불가 1 정답지 일치 (3)명화 마진칩 없음·달항아리 마진 23% 경고칩 (4)체크리스트 14항목 전부 한글(코드값 노출 0) (5)색대비+Lucide 아이콘 병기 (6)모바일 390px 오버플로 0. SD-01 아랍어 푸터 보존.
+
+**머지**: git checkout main → git merge --no-ff feature/publish-control-tower(e915b0a, repo 컨벤션=merge commit) → git push origin main. 11 files(코드 6: 2 routes·page.tsx·widget·load-publish-readiness·i18n json + docs 5). 엔진 publish-readiness.ts 변경파일 목록 부재 = 미접촉 재확인.
+
+**Vercel 검증(#36)**: verify-vercel-deploy.sh --wait exit 0 — production e915b0a 갱신 확인(github-deployments path). **production fact-check(#45)**: /dashboard HTTP 200 + 일괄 API(/api/products/publish-readiness?status=DRAFT) 3건 — 명화(sale 29000/sup 14300=50.7%) ready=true GREEN 무경고 / 달항아리(27200/20900=23.2%) ready=true GREEN+마진칩 / 아이스트레이(13900/7980=42.6%) ready=false RED. 가격기반 computeMarginPct 정합 실증.
+
+비가역 0: 발행 API 호출 0(이미지 변환 미완=별건), DB mutate 0. 5 MD §3 갱신. **다음**: P0 첫 상품 발행 트랙 분리(이미지 변환 선결 → 명화 우선, 대표 명시 승인). 발행 관제탑 전 STEP(A~E) 완료.
+
+---
+
 ## 2026-06-04 (20) 발행 관제탑 STEP C 대시보드 마운트 + 마진 정합 (Code turn)
 
 baseline af38158, feature/publish-control-tower. 권위: HANDOFF §2 STEP C + STEP_C(v2) Desktop 문서.

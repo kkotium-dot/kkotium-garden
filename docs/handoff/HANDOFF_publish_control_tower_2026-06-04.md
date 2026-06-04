@@ -13,7 +13,9 @@
 - **STEP A ✅ (515e82f)** — 일괄 판정 API + 공통함수(load-publish-readiness.ts). 단건 route 공유·회귀 0. N+1 가드.
 - **STEP B ✅ (aa31ad4)** — PublishControlTowerWidget.tsx + control-tower-strings.ko.json(필드23+위반6). 이모지 0/한글하드 0.
 - **STEP C ✅ (50ee308)** — dashboard/page.tsx SECTION 2 최상단 마운트(가산식) + computeMarginPct(가격기반 마진율, margin 컬럼 단위 혼재 회피). DB mutate 0.
-- **STEP D ⏳** — Desktop preview 브라우저 실측(명화/달항아리/아이스트레이 신호등 + 마진칩 + 한글 체크리스트). 통과 시 main 머지 → P0 발행.
+- **STEP D ✅** — Desktop preview(34edf7) /dashboard 6/6 실측 통과(관제탑·신호등 2/0/1·마진칩·체크리스트 14 한글·색대비·모바일 390px·SD-01).
+- **STEP E ✅ (e915b0a)** — main --no-ff 머지 + push + Vercel verify exit 0. production fact-check: /dashboard 200 + API 정답지 일치. 발행 관제탑 A~E 완료.
+- **다음** — P0 첫 상품 발행 트랙 분리(명화 이미지 변환 선결 → GREEN 재확인 → 대표 승인 → 신중 발행).
 - 엔진(publish-readiness.ts) 미접촉(git diff 0). 비가역 0. TSC 0/build OK.
 
 ---
