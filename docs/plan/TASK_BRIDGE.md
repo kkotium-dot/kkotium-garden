@@ -71,6 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (2) S4 2단계 Figma 마스터 STEP1 완료 (FROM Desktop, 코드 0, production HEAD 7a640b6)
+
+| 항목 | 상태 |
+|---|---|
+| Figma 마스터 | 파일 8yuNcO8J9Pitt7glfr49Uw(꽃틔움 KKOTIUM — Concept Preset Master). Variables 69개 = Brand Core 3 / Concept Preset 60 / Intensity 6. 전 변수 WEB 코드신택스 주입(코드 [data-preset] 1:1). |
+| starter 모드 제약 보정 | starter=컬렉션당 모드 1개 → 원안 "프리셋=모드 5개" 불가. 프리셋을 변수 이름 그룹(preset/aroma/* 등)으로 표현해 단일 소스 추적 유지. |
+| Desktop 직접 저장 | docs/design/FIGMA_MASTER_BLUEPRINT_2026-06-04.md(신규 15KB) + README 보관표 갱신(신규 + 누락 3건). sentinel grep 0건. |
+| 바뀐 점 | 비가역 0(코드/DB mutate 0). SD-01 미접촉. docs only. |
+| 다음 (Desktop, 한도 리셋 후) | 새 채팅 (1) Figma 값 최종 눈대조(aroma/surface=#F3EFE7, aroma/accent=#76864C 등) (2) STEP2 7섹션 컴포넌트 빌드(호출 묶음). |
+
+
 ### 2026-06-04 B+C 배포 검증 + Supabase 적용 + aroma 프리셋 + 하이브리드 원칙 (Desktop 완결, production HEAD 6f02330)
 
 | 항목 | 상태 |
@@ -78,7 +89,7 @@
 | 배포 검증 | 채팅 B(5ea926e) + C(0f6d3be) + 추가 누락분(6f02330, 단건 prefill 옵션 유실 수정) 3커밋 모두 Vercel READY 실측. runtime logs 전수 200 → 신규 3컬럼 회귀 0. 코드 라인 직독 버그 0. |
 | Supabase 적용 | apply_migration 20260603_add_concept_preset 실행 → information_schema drift 0 확정. 역순 배포 사고 해소. |
 | aroma 적용 | 명화 디퓨저(cmpnooli40001f0gveaxr8iim) concept_preset='aroma'/preset_intensity='l3' UPDATE 완료(DRAFT, 비가역 아님). |
-| ★ 영구 디자인 원칙 | 상품 디자인 = 한 방향 금지, 여러 컨셉 하이브리드로 감도 제고. 명화 디퓨저 = A(모네 배경) + C(정물 오브제) 3겹 레이어 v2 확정. |
+| ★ 영구 디자인 원칙 (일반화 금지 주의) | **원칙(영구)**: 상품 디자인 = 한 방향 금지, 여러 컨셉을 하이브리드로 어우러지게 해 감도 제고. **상품별 조합은 매번 다르게 잡는다.** / **명화 디퓨저 전용(일반화 금지)**: A(모네 수련 무드 배경) + C(정물 꽃 오브제 전경) 3겹 레이어 v2 = 이 상품 한 건의 시안 기록일 뿐. 'A+C 조합'을 전체 상세페이지 고정 템플릿으로 일반화하지 말 것. |
 | S4 전략(대표 승인) | Figma 마스터 + concept-presets.ts 토큰↔Figma Variables 동기화. 1단계 v2 HTML 빠른 런칭, 2단계 Figma 마스터 구축. Canva는 단발성 보조. |
 | Firefly 카드 | docs/handoff/HANDOFF_S2_firefly_myeonghwa_aroma_2026-06-03.md (히어로 A+C + 향 3종 EN 프롬프트, 대표 1-click 생성용). |
 | 이번 채팅 잔여(Code 위임) | backfill dry-run — Desktop 로컬 터미널 미가용. `npx tsx scripts/backfill-options-from-crawl.ts`(dry-run) 검토 후 명화 중복 0 확인 → --apply. + batch-register category:'uncategorized' 하드코딩 정리 후보. |

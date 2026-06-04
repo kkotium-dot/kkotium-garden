@@ -15,6 +15,10 @@
 | 파일 | 버전 | 작성일 | 요약 |
 |---|---|---|---|
 | `MASTER_UX_BLUEPRINT.md` | v1 | 2026-05-06 | 1인 셀러 ERP/백오피스 관점 화면 설계서. Part 1~9 + 부록 A~C. 진단 5대 페인포인트 + 설계 원칙 7개 + IA 진단/권장 + 핵심 화면 8개 + 사용자 여정 4개 + 자동화 매트릭스 + 신규 화면 3개 + 디자인 우선순위 + UX 개선 10선 |
+| `CONCEPT_PRESET_SYSTEM.md` | v1 | 2026-06-03 | 하이브리드 컨셉 프리셋 엔진 명세. 고정 코어 vs 가변 레이어 경계, 3단계 강도(L1~L3), 5프리셋(aroma/gift/tradition/kitchen/pet) 6요소 정의, SEO 직교 원칙, 앱 구현 명세 |
+| `DETAIL_PAGE_PLAYBOOK.md` | v1 | 2026-06 | 상세페이지 제작 SOP. 7섹션 고정 순서(hook/value/spec/usage/trust/cta/notice) |
+| `KKOTIUM_DESIGN_SYSTEM.md` | v1 | 2026-06 | 브랜드 코어 토큰(시그니처 레드/핑크, Pretendard) |
+| `FIGMA_MASTER_BLUEPRINT_2026-06-04.md` | v1 | 2026-06-04 | Figma 마스터 + concept-presets.ts 토큰↔Figma Variables 동기화 설계도(S4 2단계 빌드 명세). STEP 1 빌드 완료(Variables 69개) 실측 반영 + STEP 2 7섹션 컴포넌트 명세 + 양방향 동기화 운영 규칙 |
 
 ## 사용 패턴
 
@@ -32,6 +36,11 @@
 1. 블루프린트 Part 4의 *5요소 (JTBD / 정보 계층 / CTA / 자동화 / 효율 패턴)* 그대로 적용
 2. 신규 화면이 기존 8개 화면과의 deep-link 연결 명시
 3. 사용자 여정 4개에 새 화면이 어떻게 끼어드는지 추가 검증
+
+### Figma 마스터 작업 시
+1. `FIGMA_MASTER_BLUEPRINT_2026-06-04.md` 정독 — §2 변수 구조 + §5 빌드 코드
+2. concept-presets.ts / globals.css 가 코드 단일 소스(권위), Figma는 미러
+3. 토큰 변경 시 §7 양방향 동기화 운영 규칙 준수
 
 ## 새 문서 추가 가이드
 

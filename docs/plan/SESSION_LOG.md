@@ -1,3 +1,19 @@
+## 2026-06-04 (2) S4 2단계 Figma 마스터 STEP1 완료 — Variables 69개 + 설계도 저장 (Desktop turn)
+
+production HEAD 7a640b6 (Vercel READY, 코드 0). 직전 S4-2단계 설계 turn 후속 = Figma 실제 빌드.
+
+**(1) Figma 마스터 파일 생성**: 8yuNcO8J9Pitt7glfr49Uw(꽃틔움 KKOTIUM — Concept Preset Master). Variables 69개 빌드 — Brand Core 3 + Concept Preset 60 + Intensity 6. 전 변수에 WEB 코드신택스 주입해 코드 [data-preset] 토큰과 1:1 대응.
+
+**(2) starter 모드 제약 보정**: Figma starter 플랜은 컬렉션당 모드 1개 제한 → 원안의 "프리셋=모드 5개" 방식 불가. 프리셋을 모드가 아니라 변수 이름 그룹(preset/aroma/surface 등)으로 표현하는 보정안 채택. 코드 정합·단일 소스 추적 유지.
+
+**(3) Code 블로커 Desktop 직접 해소**: 직전 turn Code가 "설계도 MD 본문 부재"로 task1 블로킹 보고 → Desktop이 Filesystem write_file로 docs/design/FIGMA_MASTER_BLUEPRINT_2026-06-04.md(신규) + README 보관표(신규 + 기존 누락 3건) 직접 저장. Code는 본 turn에서 sentinel grep 0건 검증 + 5 MD 핑퐁 + 커밋만 담당.
+
+**(4) 호출 한도 이월**: Figma 값 최종 눈대조 + STEP2 7섹션 컴포넌트 빌드는 이번 turn 호출 한도로 다음 세션 이월.
+
+**다음 (Desktop, 한도 리셋 후)**: 새 채팅 (1) Figma 값 최종 눈대조(aroma/surface=#F3EFE7, aroma/accent=#76864C 등) (2) STEP2 7섹션 컴포넌트 빌드(호출 묶음 처리).
+
+---
+
 ## 2026-06-04 B+C 배포 검증 + Supabase 적용 + aroma 프리셋 + 하이브리드 디자인 원칙 확정 (Desktop turn, 코드 0)
 
 production HEAD 6f02330. 이번 turn = 이전 두 Code 세션(채팅 B 프리셋 + 채팅 C 크롤옵션) 산출물 검증 + 배포 완결 + 디자인 하이브리드 진행 + MD 핑퍼 정리. 코드 변경 0건, Supabase UPDATE 2건(컬럼 적용 + aroma 적용).
