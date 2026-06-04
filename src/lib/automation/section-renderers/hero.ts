@@ -99,10 +99,14 @@ export const heroRenderer: SectionRenderer = async (spec, section, ctx) => {
     const buf = await fetchImageBuffer(ctx.sourceImageUrl);
     // On a mood background, letterbox the cutout transparently so the photo
     // shows through; on the solid path keep the original bg-filled fit.
+    // 1-D improvement 1 (bottom anchoring): in mood mode, gravitate the cutout to the
+    // BOTTOM of its box so its base sits on the backdrop's table line (~0.62h)
+    // instead of floating centered. Solid path keeps the original centered fit.
     const fitted = usedLifestyle
       ? await sharp(buf)
           .resize(560, imageBlockHeight - 40, {
             fit: 'contain',
+            position: 'bottom',
             background: { r: 0, g: 0, b: 0, alpha: 0 },
           })
           .png()
@@ -151,13 +155,24 @@ export const heroRenderer: SectionRenderer = async (spec, section, ctx) => {
   // Readability guard: a semi-transparent white panel behind the text block so
   // the dark title/subtitle stays legible over a mood photo. Only on the
   // lifestyle path — the solid path adds no extra layer (regression guard).
-  const readabilityPanel = usedLifestyle
-    ? Buffer.from(
-        `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">` +
-          `<rect x="40" y="${textBlockTop + 10}" width="${size.width - 80}" height="${Math.max(0, size.height - (textBlockTop + 10) - 20)}" rx="20" ry="20" fill="rgba(255,255,255,0.72)" />` +
-          '</svg>',
-      )
-    : null;
+  // 1-D improvement 2 (panel fade): the panel's top edge fades transparent->white so it
+  // connects up toward the product instead of showing a hard rectangle edge.
+  // The 50px safe gap above the panel is preserved (panel top unchanged).
+  let readabilityPanel: Buffer | null = null;
+  if (usedLifestyle) {
+    const panelTop = textBlockTop + 10;
+    const panelH = Math.max(0, size.height - panelTop - 20);
+    readabilityPanel = Buffer.from(
+      `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">` +
+        '<defs><linearGradient id="panelFade" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="#FFFFFF" stop-opacity="0" />' +
+        '<stop offset="0.22" stop-color="#FFFFFF" stop-opacity="0.72" />' +
+        '<stop offset="1" stop-color="#FFFFFF" stop-opacity="0.72" />' +
+        '</linearGradient></defs>' +
+        `<rect x="40" y="${panelTop}" width="${size.width - 80}" height="${panelH}" rx="20" ry="20" fill="url(#panelFade)" />` +
+        '</svg>',
+    );
+  }
 
   const layers: Buffer[] = [];
   if (readabilityPanel) layers.push(readabilityPanel);

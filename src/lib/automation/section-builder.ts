@@ -20,6 +20,7 @@
 //     [id]/generate-detail in Phase 3).
 
 import sharp from 'sharp';
+import { fetchImageBuffer } from './sharp-composite';
 import { matchSkeleton } from './skeleton-matcher';
 import { getSkeleton, type SkeletonSpec } from './layout-skeletons';
 import { getSectionRenderer, hasDedicatedRenderer } from './section-renderers';
@@ -136,6 +137,67 @@ async function stackVertically(
   return { buffer, offsets };
 }
 
+// Continuous-canvas assembler (STEP 2 / task 1): lay a single global background
+// across the full 860 × totalHeight canvas FIRST, then composite each section
+// on top — the foundation for a "flowing page" once section renderers go
+// transparent (the 30-renderer spread, deferred to a later step after visual
+// verification). `backgroundBuffer`, when supplied, must already be sized to
+// width × totalHeight (cover-fit mood photo). When omitted, the base is the same
+// white fill stackVertically uses.
+//
+// ★ Regression note: section renderers today paint their own opaque full-height
+// backgrounds and tile the canvas contiguously (no gaps), so with opaque
+// sections the composited pixels equal stackVertically regardless of the global
+// background. composeContinuous is therefore safe to wire now; the global mood
+// photo only becomes visible as renderers are converted to transparent later.
+async function composeContinuous(
+  layers: SectionRenderResult[],
+  width: number,
+  totalHeight: number,
+  backgroundBuffer?: Buffer,
+): Promise<{ buffer: Buffer; offsets: number[] }> {
+  if (layers.length === 0) {
+    const empty = await sharp({
+      create: { width, height: Math.max(totalHeight, 1), channels: 4, background: '#FFFFFF' },
+    })
+      .png()
+      .toBuffer();
+    return { buffer: empty, offsets: [] };
+  }
+
+  const offsets: number[] = [];
+  let cursor = 0;
+  const composites = layers.map((l) => {
+    const off = cursor;
+    offsets.push(off);
+    cursor += l.height;
+    return { input: l.buffer, top: off, left: 0 };
+  });
+
+  // Base = the global mood photo if provided, else the same white fill as
+  // stackVertically. A provided buffer is assumed already width × totalHeight.
+  const base = backgroundBuffer
+    ? sharp(backgroundBuffer)
+    : sharp({
+        create: { width, height: totalHeight, channels: 4, background: '#FFFFFF' },
+      });
+
+  const buffer = await base.composite(composites).png().toBuffer();
+  return { buffer, offsets };
+}
+
+/** Cover-fit a mood photo to the full continuous canvas (fills, crops overflow). */
+async function coverFitCanvas(
+  imageBuffer: Buffer,
+  width: number,
+  totalHeight: number,
+): Promise<Buffer> {
+  return sharp(imageBuffer)
+    .resize(width, totalHeight, { fit: 'cover', position: 'centre' })
+    .png()
+    .toBuffer();
+}
+
 // ---------------------------------------------------------------------------
 // Public entry
 // ---------------------------------------------------------------------------
@@ -187,11 +249,34 @@ export async function buildDetailPage(
     renderResults.push(r);
   }
 
-  const { buffer, offsets } = await stackVertically(
-    renderResults,
-    spec.width,
-    spec.totalHeight,
-  );
+  // Assembly: when a mood asset is supplied, use the continuous-canvas path
+  // (global background pre-composite). Otherwise keep the exact stackVertically
+  // path — byte-identical to the prior behavior (regression guard for P0).
+  let buffer: Buffer;
+  let offsets: number[];
+  if (req.lifestyleAssetUrl) {
+    let bgBuf: Buffer | undefined;
+    try {
+      const fetched = await fetchImageBuffer(req.lifestyleAssetUrl);
+      bgBuf = await coverFitCanvas(fetched, spec.width, spec.totalHeight);
+    } catch {
+      // Fetch failed — fall back to no global background (white base), which
+      // makes composeContinuous equivalent to stackVertically.
+      bgBuf = undefined;
+    }
+    ({ buffer, offsets } = await composeContinuous(
+      renderResults,
+      spec.width,
+      spec.totalHeight,
+      bgBuf,
+    ));
+  } else {
+    ({ buffer, offsets } = await stackVertically(
+      renderResults,
+      spec.width,
+      spec.totalHeight,
+    ));
+  }
 
   const sectionsMeta = renderResults.map((r, i) => ({
     sectionId: r.sectionId,

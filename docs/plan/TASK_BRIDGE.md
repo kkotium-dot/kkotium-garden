@@ -71,6 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (7) 빌더 하이브리드 STEP2 — 연속 캔버스 foundation + hero 1-D (FROM Code, feature/detail-builder-hybrid, baseline bf09837)
+
+| 항목 | 상태 |
+|---|---|
+| composeContinuous | section-builder 신설 — 전역 배경 선합성 후 섹션 적층. stackVertically 보존. lifestyleAssetUrl 있으면 무드bg, 없으면 stackVertically(회귀 0). |
+| hero 1-D 개선1 | 무드 모드 본품 바닥 앵커링(position:'bottom', 테이블면 안착). 단색 경로 중앙 유지. |
+| hero 1-D 개선2 | 가독성 패널 상단 페이드 그라데이션(본품 연결). 50px 안전간격·패널 top 불변. |
+| ★ 확산 보류 | 30개 렌더러 투명 전환은 최고 위험 → hero 시각 검증 후. 현재 불투명 섹션이라 전역 무드bg는 hero 외 가려짐. |
+| 검증 | TSC 0/build ✓/sentinel 0/Korean 0. 비가역 0(PNG만, 발행 미접촉 DRAFT). main 불변. |
+| 다음 (Desktop) | 명화 재합성 시각 검증(바닥 앵커링+패널 페이드) + 달항아리 단색 회귀 0 → 확산+STEP3~5 승인. |
+
+
 ### 2026-06-04 (6) 상세 빌더 하이브리드 STEP1 — hero 무드배경 합성 (FROM Code, feature/detail-builder-hybrid, baseline a585635)
 
 | 항목 | 상태 |

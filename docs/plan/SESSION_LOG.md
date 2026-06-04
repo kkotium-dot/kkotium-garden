@@ -1,3 +1,21 @@
+## 2026-06-04 (7) 빌더 하이브리드 STEP2 — 연속 캔버스 foundation + hero 1-D 미세개선 (Code turn)
+
+baseline bf09837, feature/detail-builder-hybrid. 권위: HANDOFF_detail_builder_hybrid 작업1(연속 캔버스화) + 1-D(STEP1 실물검증 도출 미세개선 2건).
+
+**(1) composeContinuous 신설(section-builder.ts)**: 전체 캔버스(860 x totalHeight)에 전역 배경을 먼저 깔고(backgroundBuffer 있으면 무드 photo, 없으면 기존 흰색) 섹션을 그 위에 적층하는 연속 페이지 어셈블러. stackVertically 보존(기존 함수 유지). buildDetailPage 배선: lifestyleAssetUrl 있으면 fetch→coverFitCanvas(width,totalHeight)→composeContinuous, fetch 실패 시 bg undefined로 폴백(=흰색 base=stackVertically 동등). lifestyleAssetUrl 없으면 stackVertically 그대로 호출.
+
+**(2) ★ 회귀 가드 + 확산 보류**: 섹션 렌더러는 현재 각자 불투명 전체배경을 칠하고 캔버스를 빈틈없이 타일링 → 불투명 섹션이면 전역 배경과 무관하게 합성 픽셀이 stackVertically와 동일. 따라서 composeContinuous 배선은 지금 안전(무드 photo는 hero 자체 합성 외엔 가려짐). 30개 렌더러를 투명 배경으로 전환하는 "확산"은 최고 위험이라 hero 시각 검증 후로 보류(handoff 진행규칙 §128).
+
+**(3) hero 1-D 미세개선 2건(usedLifestyle 게이트)**: (개선1 바닥 앵커링) 무드 모드에서 본품 누끼 fit을 position:'bottom'으로 — 박스 하단에 안착시켜 배경 테이블면(~0.62h)에 "놓인" 사실감. 단색 경로는 기존 중앙 fitImage 유지. (개선2 패널 페이드) 가독성 패널 fill을 단색 rgba에서 세로 linearGradient(상단 offset 0 alpha 0 → 0.22 에서 0.72 도달)로 — 상단 가장자리가 본품 쪽으로 자연 연결. 패널 top(textBlockTop+10)·50px 안전간격 불변. 단색 경로 패널 null 유지.
+
+**(4) 검증**: tsc 0 / build ✓ Compiled successfully / sentinel 0 / 코드 Korean 0(작성 중 코드 주석 "작업1/개선1/개선2" 3건 검출→영어 교정). 비가역 0(generate-detail PNG 생성만, register/POST/DB mutate 0, 발행 미접촉 DRAFT). main a585635 불변.
+
+**(5) 범위/게이트**: STEP2 = composeContinuous foundation + hero 1-D만. 30 렌더러 확산 + STEP3(HTML 직렬화기)/4(sectionRole+UI)/5(커넥터+캐시)는 Desktop hero 시각 검증 회신 후 진행(handoff 진행규칙 준수).
+
+**다음 (Desktop)**: 명화 디퓨저 재합성 시각 검증 — 본품 바닥 앵커링(테이블면 안착) + 패널 상단 페이드 연결 확인. 단색 경로(달항아리) 회귀 0 확인. 승인 시 Code 확산+STEP3~5 진행.
+
+---
+
 ## 2026-06-04 (6) 상세페이지 빌더 하이브리드 대수술 STEP1 — hero.ts 무드배경 합성 (Code turn)
 
 baseline a585635, feature/detail-builder-hybrid 브랜치(대수술이라 main 직접 수정 회피). 권위: docs/handoff/HANDOFF_detail_builder_hybrid_2026-06-04.md 작업2(단계별 순서상 첫 작업).
