@@ -1,0 +1,75 @@
+{
+  "title": "발행 관제탑",
+  "subtitle": "오늘 발행 가능한 상품을 신호등으로 한눈에",
+  "refresh": "새로고침",
+  "signal": {
+    "green": "발행 준비 완료",
+    "yellow": "보완 필요",
+    "red": "발행 불가"
+  },
+  "signalHint": {
+    "green": "지금 발행할 수 있어요",
+    "yellow": "발행은 가능하지만 채우면 더 좋아요",
+    "red": "필수 항목을 채워야 발행할 수 있어요"
+  },
+  "summary": {
+    "green": "발행 가능",
+    "yellow": "보완 필요",
+    "red": "발행 불가",
+    "total": "전체"
+  },
+  "checklist": {
+    "missingTitle": "채워야 할 항목",
+    "okTitle": "모든 항목 준비 완료",
+    "marginWarn": "마진 {pct}% — 가격 재검토 권장"
+  },
+  "field": {
+    "main_image_url": "대표 이미지",
+    "detail_image_url": "상세 페이지 이미지",
+    "naverCategoryCode": "네이버 카테고리",
+    "originCode": "원산지",
+    "carrier_code": "배송 설정",
+    "shipping": "배송 설정",
+    "optionName": "옵션",
+    "options": "옵션",
+    "hasOptions": "옵션",
+    "seoTitle": "상품명(SEO)",
+    "naver_title": "상품명(SEO)",
+    "naver_keywords": "검색 키워드",
+    "keywords": "검색 키워드",
+    "targetKeywords": "검색 키워드",
+    "naver_description": "상품 설명",
+    "golden_keyword_score": "골든키워드 점수",
+    "sku": "상품코드(SKU)",
+    "brand": "브랜드",
+    "margin": "마진",
+    "naver_origin": "원산지 고시",
+    "naver_manufacturer": "제조사 고시",
+    "naver_as_info": "AS 안내 고시",
+    "naver_tax_type": "과세 유형 고시",
+    "naver_delivery_info": "배송 안내",
+    "naver_exchange_info": "교환 안내",
+    "naver_refund_info": "반품 안내"
+  },
+  "violation": {
+    "superlative-claim": "과장 표현",
+    "scent-mismatch": "향기 표현 불일치",
+    "fabricated-brand": "근거 없는 브랜드 주장",
+    "unverified-cert": "미검증 인증 주장",
+    "unverified-material": "미검증 소재 주장",
+    "placeholder-missing": "상세 이미지 누락"
+  },
+  "empty": {
+    "title": "발행 대기 상품이 없어요",
+    "hint": "씨앗 심기에서 상품을 등록하면 여기에 신호등으로 표시됩니다"
+  },
+  "error": {
+    "title": "발행 준비 상태를 불러오지 못했어요",
+    "retry": "다시 시도"
+  },
+  "loading": "발행 준비 상태 확인 중",
+  "cta": {
+    "fixSeo": "검색 조련사에서 보완",
+    "openStudio": "온실 아틀리에 열기"
+  }
+}
