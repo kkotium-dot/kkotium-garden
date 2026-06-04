@@ -19,9 +19,18 @@ import sharp from 'sharp';
 import { createCanvas, fetchImageBuffer } from '../sharp-composite';
 import type { SectionRenderContext } from './types';
 
-/** White scrim opacity over the mood photo. 0 = full photo, 1 = solid white.
- *  Conservative default guarantees legibility; tunable on Desktop feedback. */
-export const MOOD_SCRIM_ALPHA = 0.62;
+/** White scrim opacity over a BRIGHT mood photo. 0 = full photo, 1 = solid
+ *  white. 0.40 (Desktop-verified) keeps dark-on-light text legible while the
+ *  mood reads through. This is the primary tuning knob for bright backdrops. */
+export const MOOD_SCRIM_ALPHA = 0.40;
+
+/** Stronger scrim auto-applied over a DARK mood photo so dark-on-light text
+ *  keeps contrast (a dark backdrop + 0.40 white would wash out black text). */
+export const MOOD_SCRIM_ALPHA_DARK = 0.60;
+
+/** Luminance threshold (0..1) below which a backdrop is treated as "dark" and
+ *  gets the stronger scrim. Computed from the cover buffer's channel means. */
+const DARK_BACKDROP_LUMA = 0.5;
 
 export interface EmotionalBackdrop {
   /** The section base buffer (mood-tinted wash, or the solid color fallback). */
@@ -49,9 +58,22 @@ export async function resolveEmotionalBackdrop(
       .resize(size.width, size.height, { fit: 'cover', position: 'centre' })
       .png()
       .toBuffer();
+    // Adaptive scrim: measure the backdrop's mean luminance and use a stronger
+    // white scrim over dark photos so dark-on-light text never loses contrast.
+    let alpha = MOOD_SCRIM_ALPHA;
+    try {
+      const stats = await sharp(cover).stats();
+      const [r, g, b] = stats.channels;
+      if (r && g && b) {
+        const luma = (0.299 * r.mean + 0.587 * g.mean + 0.114 * b.mean) / 255;
+        alpha = luma < DARK_BACKDROP_LUMA ? MOOD_SCRIM_ALPHA_DARK : MOOD_SCRIM_ALPHA;
+      }
+    } catch {
+      // Stats failure → keep the conservative bright-backdrop default.
+    }
     const scrim = Buffer.from(
       `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">` +
-        `<rect width="${size.width}" height="${size.height}" fill="rgba(255,255,255,${MOOD_SCRIM_ALPHA})" />` +
+        `<rect width="${size.width}" height="${size.height}" fill="rgba(255,255,255,${alpha})" />` +
         '</svg>',
     );
     const canvas = await sharp(cover)

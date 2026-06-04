@@ -71,6 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (10) 빌더 STEP2 마감 — 스크림 0.40 + 다크 적응형 (FROM Code, feature/detail-builder-hybrid, baseline 60c5408)
+
+| 항목 | 상태 |
+|---|---|
+| 스크림 하향 | MOOD_SCRIM_ALPHA 0.62→0.40(대표 확정, Desktop 실물 검증). |
+| 다크 적응형 | sharp.stats 평균 휘도 → luma<0.5면 0.60 자동 상향, 아니면 0.40. 무드 모드만. STEP4 미룬 항목 본 turn 완료. |
+| 회귀 0 | no-lifestyle createCanvas 분기 불변. |
+| 검증 | TSC 0/build ✓/sentinel 0/Korean 0. 비가역 0. main 불변. |
+| 다음 | Code STEP3~5 연속. Desktop은 전 STEP 후 명화 0.40 재확인 + 머지 전 최종 회귀. |
+
+
 ### 2026-06-04 (9) 빌더 STEP2-확산(2) — emotional 6개 무드 전환 + 접지그림자 (FROM Code, feature/detail-builder-hybrid, baseline 9c31052)
 
 | 항목 | 상태 |

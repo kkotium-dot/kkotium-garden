@@ -1,3 +1,17 @@
+## 2026-06-04 (10) 빌더 STEP2 마감 — 스크림 0.40 + 다크 배경 적응형 안전장치 (Code turn)
+
+baseline 60c5408, feature/detail-builder-hybrid. 권위: HANDOFF STEP2-확산 마감(2-1 스크림 하향 + 2-2 다크 안전장치).
+
+**(1) 스크림 0.62→0.40**: emotional-bg.ts MOOD_SCRIM_ALPHA. Desktop 실물 비교 검증 — 0.62는 명화(밝은 햇살) 배경서 무드 거의 소실(연한 베이지화), 0.40에서 세이지 헤드라인·흰 카드 본문 가독 유지하며 무드 회복. 대표 확정.
+
+**(2) 다크 배경 적응형 안전장치(2-2 (a) 채택)**: 0.40은 밝은 배경 기준 — 어두운 무드 배경(야간/딥톤)에선 흰 스크림 0.40으로 dark-on-light 텍스트 대비 깨질 위험. 해결: cover 버퍼를 sharp.stats()로 채널 평균 측정 → luma=(0.299R+0.587G+0.114B)/255, luma<0.5(DARK_BACKDROP_LUMA)면 MOOD_SCRIM_ALPHA_DARK=0.60으로 자동 상향, 아니면 0.40. stats 예외 시 0.40 폴백. 무드 모드에서만(단색 경로 불변). ★ 일정 판단: 간단·견고하여 STEP4로 미루지 않고 지금 처리(STEP4 "미룬 적응형 스크림"은 본 turn에서 완료).
+
+**(3) 검증**: tsc 0 / build ✓ Compiled successfully / sentinel 0 / Korean 0. 회귀 0(no-lifestyle createCanvas 분기 불변). 비가역 0(PNG만, 발행 미접촉 DRAFT). main a585635 불변.
+
+**다음**: STEP3(detail-html-serializer 신설 + generate-detail detailHtml 필드) → STEP4(가독성 정교화 + DetailPageCard UI) → STEP5(커넥터 규칙 + 캐시 점검). Desktop은 전 STEP 완료 후 명화 0.40 재확인 + 머지 전 최종 회귀.
+
+---
+
 ## 2026-06-04 (9) 빌더 STEP2-확산(2) — emotional 그룹 6개 무드배경 전환 + 접지그림자 (Code turn)
 
 baseline 9c31052, feature/detail-builder-hybrid. 권위: HANDOFF STEP2-확산(2) "나머지 렌더러 차등 전환" 분류표.

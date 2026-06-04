@@ -1,7 +1,7 @@
 # HANDOFF — 씨앗심기 상세페이지 빌더 하이브리드 대수술 (통합 설계도)
 
 > 작성: 2026-06-04 (Desktop) | Target Session: code-cli | Branch: feature/detail-builder-hybrid
-> baseline: production HEAD a585635 / 브랜치 HEAD 9c31052 (STEP 2-확산 표본 완료)
+> baseline: production HEAD a585635 / 브랜치 HEAD 60c5408 (STEP 2-확산 emotional 그룹 완료)
 > 권위 문서: 본 설계도 + docs/research/TOOL_ECOSYSTEM_MANUAL_2026-06-04.md + 실측 코드
 > 성격: 대수술(렌더 엔진 + 출력단 + UI). 단계 분할 필수. 비가역 0(발행 미접촉 유지).
 > ★ 대원칙: P0(달항아리·명화 디퓨저 발행)을 망치지 않는다. 기존 PNG 경로는 회귀 없이 보존하고, 개선은 가산식으로.
@@ -21,42 +21,36 @@
 
 - ✅ STEP 1 (hero 무드배경 합성): bf09837. 검증 통과.
 - ✅ STEP 2-foundation (composeContinuous + sectionRole 인프라): 4ef6102.
-- ✅ STEP 2-확산 표본 (hero 테이블 앵커링 근본수정 + spec 불투명 유지): 9c31052.
-  - 앵커링: 본품 base를 tableLineY(min(0.52h, panelTop-50))에 안착. Desktop 실물 검증 통과
-    (디퓨저가 테이블에 놓임, 패널 간격 126px 안전). 단색 경로 회귀 0.
-  - sectionRole(emotional/informational) 메타 도입 완료.
-- ⏸ STEP 2-확산 (2)나머지 + STEP 3/4/5: 본 문서 하단 지시대로.
+- ✅ STEP 2-확산 표본 (hero 테이블 앵커링 + spec 불투명): 9c31052. 실물 검증 통과.
+- ✅ STEP 2-확산 emotional 그룹 (emotional-bg 헬퍼 + 6개 1줄 스왑 + 접지그림자): 60c5408.
+  - Desktop 실물 검증: 스크림 0.62는 무드 과소(연한 배경화) → 0.40이 가독성 유지하며 무드 회복 확인.
+  - 대표 확정: **MOOD_SCRIM_ALPHA 0.62 → 0.40**.
+- ⏸ 스크림 조정 + STEP 3/4/5: 본 문서 하단 지시대로.
 
 ---
 
-## ★ STEP 2-확산 (2) — 나머지 렌더러 차등 전환 (Desktop 코드 분류 확정)
+## ★ STEP 2-확산 마감 — 스크림 값 조정 + 다크 배경 안전장치
 
-### 분류표 (실제 렌더러 콘텐츠 기준 — 의심 시 informational 안전측)
-**emotional (무드 배경 노출 + 가독성 가드):**
-  hero(완료) / usage(★이미 lifestyleAssetUrl+비네팅 처리됨 — 패턴 참조) / seasonalHook / story
-  (에디토리얼 문단+서명컷) / styledShot(라이프스타일 3컷) / problem / solution / philosophy
+### 2-1. 스크림 기본값 하향 (대표 확정)
+- emotional-bg.ts `MOOD_SCRIM_ALPHA = 0.62` → **0.40**. 1줄.
+- 근거: 명화(밝은 햇살) 배경에서 0.62는 무드가 거의 소실(연한 베이지화). 0.40에서 세이지 헤드라인·흰
+  카드 본문 모두 가독 유지하며 무드 회복(Desktop 실물 비교 검증).
 
-**informational (기존 불투명 유지 — 가독성 사수, 무드 비침 금지):**
-  spec(완료) / specTable / specifications / cta / shipping / warranty / comparison / clinical /
-  corePerformance / technology / benefits / options / optionIntro / eventDetails / reviews / package /
-  product / detail / material(질감 매크로 — 정보측)
+### 2-2. ★ 다크 배경 안전장치 (선제 위험 차단 — 중요)
+- 0.40은 **밝은 무드 배경 기준**이다. 향후 어두운 무드 배경(예: 야간/딥톤 컨셉)을 쓰는 상품은 흰 스크림
+  0.40으로는 dark-on-light 텍스트 대비가 깨질 수 있다(검은 글씨가 어두운 배경 위에 �뜸).
+- 해결(택1, Code 판단 — 간단한 쪽 우선):
+  (a) **적응형 스크림**: cover 버퍼의 평균 밝기를 sharp stats로 측정 → 밝으면 0.40, 어두우면 0.55~0.62로
+      자동 상향(밝기 임계 1개). 가장 견고.
+  (b) 차선: emotional 섹션은 흰 스크림 대신 **하단 그라데이션 스크림**(텍스트 영역만 흰 wash)로 — 단,
+      problem/philosophy는 텍스트가 상·중단이라 (a)가 안전.
+- ★ 본 안전장치는 무드 모드에서만. no-lifestyle 단색 경로 불변(회귀 0).
+- 적용 시점: 지금(2-1과 함께) 또는 STEP 4 가독성 정교화. 단 **명화 발행 전 어두운 배경 상품을 쓸 일이
+  없으면** STEP 4로 미뤄도 무방(현재 P0는 밝은 배경) — Code가 일정 보고 시 명시.
 
-### 전환 규칙
-- emotional: 무드 모드(ctx.lifestyleAssetUrl 존재)서 createCanvas 불투명 → 무드 배경 노출 구조로.
-  usage.ts의 검증된 패턴(fitImage 배경 + applyBottomVignette 가독성) 재사용. 텍스트 대비 반드시 확보.
-- informational: **변경 없음**(현행 불투명이 곧 정보 처리). 손대지 말 것 = 가독성 사수 + 회귀 0.
-- ★ 회귀 가드: 모든 전환은 무드 모드에서만. no-lifestyle 단색 경로 = 전 렌더러 createCanvas(size,bg)
-  그대로 → 달항아리 등 발행물 바이트 불변. 매 그룹 커밋마다 확인.
-
-### 접지 그림자 (대표 승인 — emotional 공통 옵션)
-- 본품 누끼가 테이블에 "스티커처럼 붙은" 느낌 해소용. 누끼 base 아래에 옅은 타원 drop-shadow 1겹
-  (예: 반투명 검정 타원 blur). hero부터 적용, emotional 공통 헬퍼로 추출 권장.
-- ★ 발행 차단 아님(미세 사실감). 단색 경로 미적용(회귀 0). 과하지 않게(opacity~0.18, blur).
-
-### 진행 순서
-- emotional 그룹 먼저 전환(usage 패턴 확장 + 접지그림자) → tsc/build → 그룹 커밋.
-- informational은 무변경 확인만(혹시 무드 비침 생기면 차단). → 그룹 커밋.
-- 각 커밋 회귀 가드(no-lifestyle 불변).
+### 2-3. 검증
+- 스크림 변경 후 tsc/build, 명화 재합성은 Desktop이 검증(0.40 적정 확인).
+- 단색 경로 회귀 0 재확인.
 
 ---
 
@@ -66,11 +60,14 @@
   Supabase 영구 URL을 img src로(이미지 주소 업로드/대량등록 호환).
 - generate-detail 응답에 detailHtml 필드 **추가**(detailBase64 보존). 출력 선택은 호출 측 결정.
 - copy의 #46 grounding 동일 적용(직렬화기는 copy 변형 금지, 마크업만). 기존 PNG 소비자 회귀 0.
+- ★ HTML 경로의 이미지: emotional 무드 배경/접지그림자는 PNG 합성 산물이라 HTML에선 재현 불가 →
+  HTML 모드는 "정보 전달 우선"(텍스트+제품 이미지 블록), 무드 비주얼은 이미지(PNG) 모드 강점으로 분리.
+  이 분담을 직렬화기 주석에 명시(하이브리드 철학: 감성=이미지, 호환=HTML).
 
 ## STEP 4 — 정보 섹션 가독성 가드 정교화 + Studio UI [가산식]
-- 렌더 측: sectionRole 차등 정교화(정보 섹션 대비 확보, 패널 페이드 일관 적용).
+- 렌더 측: sectionRole 차등 정교화 + (미뤘다면) 2-2 적응형 스크림 여기서.
 - Studio UI(DetailPageCard.tsx): (a) 이미지/HTML 출력 토글 (b) lifestyleAssetUrl(무드배경) 입력/선택
-  (c) 미리보기를 "연속 페이지"로 인지되게 개선. UI 초안은 Claude Design → Figma 정밀화(매뉴얼 §1).
+  (c) 미리보기를 "연속 페이지"로 인지되게 개선. UI 초안 Claude Design → Figma 정밀화(매뉴얼 §1).
 
 ## STEP 5 — 매뉴얼 기반 커넥터 운영 규칙 + 캐시 점검 [독립]
 - PRINCIPLES_LEARNED 명문화: AEM/Marketing Agent MCP 미사용 / 생성=Firefly수동·가공=AdobeMCP·합성=빌더
@@ -88,11 +85,9 @@
 - STEP/그룹별 commit 분리(.commit-msg.tmp + git commit -F, #17). 5 MD 핑퐁.
 
 ## 회신 게이트 (Desktop 검증)
-- STEP 2-확산 (2) emotional 그룹 전환 후 → Desktop 시각 검증(명화 디퓨저 재합성: 감성 섹션 무드 노출 +
-  접지 그림자 + 정보 섹션 가독성 + 단색 회귀 0).
-- 전 STEP 완료 후 → main 머지 전 Desktop 최종 회귀 검증(달항아리 단색 경로 불변).
+- 스크림 0.40 적용 후 → Desktop 명화 재합성 최종 확인(이번 turn에서 Desktop가 0.40 검증 완료 시 생략 가능).
+- STEP 3~5는 가산식·저위험 → 연속 진행 가능. 전 STEP 완료 후 → main 머지 전 Desktop 최종 회귀 검증.
 
 ## 다음 (Desktop)
-- STEP 2-확산 (2) 후 명화 디퓨저 재합성 시각 검증.
-- 전 STEP 완료 → main 머지 전 최종 회귀 검증 → 머지 → P0 발행 재개.
+- 전 STEP 완료 → main 머지 전 최종 회귀 검증(달항아리 단색 불변) → 머지 → P0 발행 재개.
 - Figma STEP2(7섹션 컴포넌트)는 이 빌더 구조와 정합 — 빌더 연속캔버스 = Figma 도면의 코드 구현체.
