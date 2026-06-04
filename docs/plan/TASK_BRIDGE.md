@@ -71,6 +71,41 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (20) 발행 관제탑 STEP C 완료 (FROM Code, feature/publish-control-tower, baseline af38158)
+
+| 항목 | 상태 |
+|---|---|
+| STEP C (50ee308) | dashboard/page.tsx SECTION 2 최상단 마운트(가산식, 기존 위젯 보존) + computeMarginPct(salePrice/supplierPrice 직접 계산, margin 컬럼 단위 혼재 회피). |
+| margin DB | ★ 미교정. 명화 2.03=진단등급용 배수(의도값, grading.ts margin>=5→L4). Supabase mutate 0. |
+| 마진칩 정합 | 명화 51%(무경고)/달항아리 23%(경고칩)/아이스트레이 43%(무경고). publishReady 불변. |
+| 검증 | git diff 2개 파일만 / 엔진 diff 0 / TSC 0 / build OK / 이모지 0 / 비가역 0(DB mutate 0). |
+| push | origin/feature/publish-control-tower. main 미접촉(머지 금지). production 64fe565 미갱신=의도. |
+| ★ 다음 (Desktop) | preview에서 STEP D 브라우저 실측(명화 GREEN·달항아리 GREEN+마진칩·아이스트레이 RED·한글 체크리스트·접근성·모바일 폭) → 통과 시 main 머지 → P0 발행(명화 우선, 대표 승인). |
+
+### 2026-06-04 (19) 발행 관제탑 STEP A·B 구현 완료 (FROM Code, feature/publish-control-tower, baseline 64fe565)
+
+| 항목 | 상태 |
+|---|---|
+| STEP A (515e82f) | 일괄 판정 API + 공통함수. load-publish-readiness.ts(loadAndEvaluateProducts+listDraftProductIds, N+1 가드) + 단건 route 리팩터(응답 불변·회귀 0) + 신규 /api/products/publish-readiness. |
+| STEP B (aa31ad4) | control-tower-strings.ko.json(필드23+위반6) + PublishControlTowerWidget.tsx(useSWR, green/yellow/red 3색, 마진경고칩, 이모지 0/한글하드 0). |
+| 엔진 미접촉 | publish-readiness.ts git diff 0. 비가역 0(조회만, mutate 0, 발행 미접촉). |
+| 검증 | TSC 0 / npm run build OK(exit 0) / 이모지·코드 Korean 0. mapCategoryToTone null/undefined 동일처리 확인(tone 회귀 0). |
+| push | origin/feature/publish-control-tower (main 미접촉). production 64fe565 미갱신=의도된(feature 브랜치). |
+| ★ 다음 (Desktop) | 머지 검증 → STEP C(대시보드 page.tsx <PublishControlTowerWidget /> 마운트, 가산식) + STEP D(Chrome MCP production/dashboard 실측: 명화 신호·달항아리 마진경고·한글 체크리스트·접근성·모바일). 이후 P0 발행(명화 우선, 대표 승인). |
+
+### 2026-06-04 (18) ★ 발행 관제탑 설계 확정 + 두 대수술 production 머지 검증 (FROM Desktop, 코드 0, production HEAD 64fe565)
+
+| 항목 | 상태 |
+|---|---|
+| 빌더 머지 검증 | a6ea482 — emotional-bg 적응형 스크림(bash+PIL: 명화 luma 0.779→0.40 / 가상야간 0.30→0.60) + HTML 직렬화기(#46+htmlEscape) + 단색 경로 회귀 0(buildDetailPage else=stackVertically) 정독 증명. |
+| 한글화 머지 검증 | 64fe565 — **/portfolio production 직접 호출 404 실측**(가짜 John 제거 확인) + redirect /dashboard(push→replace) + 용어사전 23값 의미훼손 0 + #47 문구 교체 정독. |
+| ★ 발행 관제탑 설계도 | docs/handoff/HANDOFF_publish_control_tower_2026-06-04.md 신설. 기존 publish-readiness.ts 엔진(수정금지) 정독 완료. 관제탑=신호등 UI(GREEN publishReady/YELLOW hardComplete만/RED hard 미충족). 대시보드 카드(대표 승인). |
+| 발행준비 실측 | 명화(cmpnooli4) publishReady 양호 마진 50.7% / 달항아리(cmp3afb45) 마진 23% 가격재검토 권고. 둘 다 DRAFT 미발행. |
+| ★ 컨텍스트 한계 | 이번 세션 빌더+한글화 2대 작업으로 포화 → 관제탑 구현은 **새 채팅 위임**(중복작업 방지). |
+| 비가역 0 | 코드/DB mutate 0, 발행 미접촉. SD-01 미접촉. |
+| ★ 다음 (새 채팅 Desktop→Code) | HANDOFF_publish_control_tower 정독 → STEP A(일괄 판정 API, 단건 route와 공통함수 공유=중복금지) → B(PublishControlTowerWidget, missing 배열 용어사전 한글변환) → C(대시보드 통합) → D(Chrome MCP 브라우저 실측, 안되면 대표 스크린샷). 구현 후 P0 발행(명화 우선, 대표 명시 승인). |
+
+
 ### 2026-06-04 (17) UI 한글화 STEP5 점검 + ★ STEP1~5 전 완료 (FROM Code, feature/ui-ko-cleanup, baseline 69ccbf7)
 
 | 항목 | 상태 |
@@ -606,7 +641,7 @@
 | **P40** | **시각적 통일성 부재** — 라이프 자산 페이지 ↔ 온실 아틀리에 ↔ PLANT 디자인 토큰 불일치 | Sprint 8-IA Phase 2 |
 | **B-1** | **온실 아틀리에 클릭 무반응** — Phase 3-C-1 6 컴포넌트 `'use client'` 누락 | 본 commit ✅ 완료 (Desktop 재검증 대기) |
 | **B-2** | **runThumbnail 빈 outputs 침묵 실패** (#46 위반 소지) | 본 commit ✅ 완료 |
-| **B-3** | **달항아리 도어벨 데이터 보정** (카테고리 코드 11_08_22_00_00 도매꾹 형식 → Naver `50000963` 교정 필요. 마진 정상 27200/20900) | Desktop Supabase UPDATE 위임 |
+| **B-3** | **달항아리 도어벨 데이터 보정** | ✅ [CLOSED 2026-06-02] 카테고리 50000963 교정 완료. 마진 27200/20900(23%). 단 마진 얕아 발행 전 가격 재검토 권고(첫 발행은 명화 50.7% 우선) |
 
 ---
 
