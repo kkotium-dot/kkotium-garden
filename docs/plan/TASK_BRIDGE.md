@@ -71,6 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (20) 발행 관제탑 STEP C 완료 (FROM Code, feature/publish-control-tower, baseline af38158)
+
+| 항목 | 상태 |
+|---|---|
+| STEP C (50ee308) | dashboard/page.tsx SECTION 2 최상단 마운트(가산식, 기존 위젯 보존) + computeMarginPct(salePrice/supplierPrice 직접 계산, margin 컬럼 단위 혼재 회피). |
+| margin DB | ★ 미교정. 명화 2.03=진단등급용 배수(의도값, grading.ts margin>=5→L4). Supabase mutate 0. |
+| 마진칩 정합 | 명화 51%(무경고)/달항아리 23%(경고칩)/아이스트레이 43%(무경고). publishReady 불변. |
+| 검증 | git diff 2개 파일만 / 엔진 diff 0 / TSC 0 / build OK / 이모지 0 / 비가역 0(DB mutate 0). |
+| push | origin/feature/publish-control-tower. main 미접촉(머지 금지). production 64fe565 미갱신=의도. |
+| ★ 다음 (Desktop) | preview에서 STEP D 브라우저 실측(명화 GREEN·달항아리 GREEN+마진칩·아이스트레이 RED·한글 체크리스트·접근성·모바일 폭) → 통과 시 main 머지 → P0 발행(명화 우선, 대표 승인). |
+
 ### 2026-06-04 (19) 발행 관제탑 STEP A·B 구현 완료 (FROM Code, feature/publish-control-tower, baseline 64fe565)
 
 | 항목 | 상태 |

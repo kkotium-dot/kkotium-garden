@@ -1,4 +1,5 @@
 # KKOTIUM GARDEN — ROADMAP
+> 2026-06-04 **발행 관제탑 STEP C 완료** (Code turn, feature/publish-control-tower, main 미접촉). 대시보드 SECTION 2 최상단 마운트(가산식) + 마진 표시 가격기반 정합(margin 컬럼 단위 혼재 회피, DB 미교정). 커밋 50ee308. **다음=Desktop STEP D 브라우저 실측 → main 머지 → P0 발행**.
 > 2026-06-04 **발행 관제탑 STEP A·B 구현 완료** (Code turn, feature/publish-control-tower, main 미접촉). STEP A 일괄 판정 API+공통함수(515e82f, 단건 route 공유·회귀 0) + STEP B 신호등 카드 위젯(aa31ad4, 용어사전 한글변환). 엔진 미접촉·비가역 0·TSC 0/build OK. **다음=Desktop 머지 검증 → STEP C(대시보드 마운트)·D(브라우저 실측)**.
 
 > 2026-06-04 **★ 발행 관제탑 설계 확정 + 빌더·한글화 두 대수술 production 머지 검증 완료** (Desktop turn, 코드 0, production HEAD 64fe565). 빌더 하이브리드(a6ea482) + UI 한글화(64fe565) 둘 다 main 머지·production 실측 검증 통과(/portfolio 404 직접 확인, 가짜 John 제거). 발행 관제탑 설계도 신설(HANDOFF_publish_control_tower_2026-06-04.md) — 기존 publish-readiness.ts 엔진 위에 신호등 UI만 씌움. **★ 컨텍스트 한계로 관제탑 구현은 새 채팅 위임**(중복작업 방지).

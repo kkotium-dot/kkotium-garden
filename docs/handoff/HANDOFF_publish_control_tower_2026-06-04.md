@@ -12,7 +12,8 @@
 
 - **STEP A ✅ (515e82f)** — 일괄 판정 API + 공통함수(load-publish-readiness.ts). 단건 route 공유·회귀 0. N+1 가드.
 - **STEP B ✅ (aa31ad4)** — PublishControlTowerWidget.tsx + control-tower-strings.ko.json(필드23+위반6). 이모지 0/한글하드 0.
-- **STEP C ⏳ / STEP D ⏳** — Desktop 머지 후 새 채팅(대시보드 마운트 + Chrome 실측). 중복작업 방지.
+- **STEP C ✅ (50ee308)** — dashboard/page.tsx SECTION 2 최상단 마운트(가산식) + computeMarginPct(가격기반 마진율, margin 컬럼 단위 혼재 회피). DB mutate 0.
+- **STEP D ⏳** — Desktop preview 브라우저 실측(명화/달항아리/아이스트레이 신호등 + 마진칩 + 한글 체크리스트). 통과 시 main 머지 → P0 발행.
 - 엔진(publish-readiness.ts) 미접촉(git diff 0). 비가역 0. TSC 0/build OK.
 
 ---

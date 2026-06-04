@@ -1,3 +1,17 @@
+## 2026-06-04 (20) 발행 관제탑 STEP C 대시보드 마운트 + 마진 정합 (Code turn)
+
+baseline af38158, feature/publish-control-tower. 권위: HANDOFF §2 STEP C + STEP_C(v2) Desktop 문서.
+
+**C-1 마운트**: src/app/dashboard/page.tsx — PublishControlTowerWidget import 1줄 + SECTION 2(받은편지함, CollapsibleSection inbox) 최상단 LowStockAlertWidget 위에 마운트(가산식). 기존 위젯(LowStock/ConfirmationReminder/DailyPlan 등) 전부 보존 grep 확인.
+
+**C-2 마진 표시 정합**: PublishControlTowerWidget.tsx — computeMarginPct(salePrice, supplierPrice) 헬퍼 추가. margin DB 컬럼이 상품별 단위 혼재(명화 배수 2.03 / 달항아리·아이스트레이 퍼센트 23.16·42.59)라 신뢰 불가 → 가격으로 직접 마진율 계산. ProductCard의 marginPct 산출부를 컬럼값 Math.round(item.margin) → computeMarginPct(item.salePrice, item.supplierPrice)로 교체. 결과: 명화 51%(무경고)/달항아리 23%(경고칩)/아이스트레이 43%(무경고). publishReady 로직 무관(엔진 margin>0만 요구) → 발행 판정 불변, 표시칩만 정합.
+
+★ margin DB 교정 금지 준수: 명화 2.03은 오염 아님 — 진단 등급 엔진(grading.ts margin>=5→L4)이 배수를 요구해 2026-05-27 의도적으로 맞춘 값. 되돌리면 가짜 L4 재파손. Supabase mutate 0.
+
+검증: git diff 정확히 2개 파일(dashboard/page.tsx +3줄, PublishControlTowerWidget.tsx 헬퍼+교체). 엔진 git diff 0. TSC 0 / npm run build exit 0 / 이모지 0 / 비가역 0(DB mutate 0, 발행 미접촉). 커밋 50ee308 + push. main 머지 금지(Desktop이 preview STEP D 실측 통과 후 결정).
+
+---
+
 ## 2026-06-04 (19) 발행 관제탑 STEP A·B 구현 (Code turn)
 
 baseline 64fe565, feature/publish-control-tower(신규, main 미접촉 — 대표 승인). 권위: HANDOFF_publish_control_tower_2026-06-04.md + STEP_A/STEP_B Desktop 완성코드.
