@@ -310,3 +310,32 @@ scripts/preserve-myeonghwa-assets.mjs가 upload 시 `cacheControl: '31536000'`(1
 ★ 프로덕션 스토리지 mutation → Code 미실행, Desktop 위임(#41). 기능 영향 0이라 발행 차단 아님.
 
 **SOURCE**: Code 2026-06-04 빌더 하이브리드 STEP5 캐시 점검 turn (no-cache 실측 확인).
+
+## DEBT-12 — 발행 게이트 이미지 형식 사각지대 (Supabase URL 거짓 초록)
+
+**Status**: OPEN (2026-06-04 등록, 발행 관제탑 STEP A~E 완료 후 Desktop production 라이브 실측 발견)
+**Severity**: high (게이트 GREEN이지만 네이버 register 시 이미지 거부로 발행 실패 가능. 단 P0 첫 발행 전이라 현재 사용자 영향 0)
+**Owner**: P0 발행 트랙 (HANDOFF_publish_track_2026-06-04.md §1·§2)
+
+### 부채 명세
+
+src/lib/automation/publish-readiness.ts 의 이미지 검사가 "값 존재 + https:// 시작"까지만 본다:
+- main_image_url / detail_image_url: isNonEmptyString 만 통과 조건.
+- placeholder-missing 진정성 검사: detail_image_url.startsWith('https://') 여부만 확인.
+
+Supabase 공개 URL(https://doxfizicftgtqktmtftf.supabase.co/...)도 멀쩡한 https 문자열이라 전부 GREEN 통과한다. 그러나 네이버 커머스 API는 Supabase URL을 거부 — POST /external/v1/product-images/upload 로 먼저 업로드 후 반환된 shop-phinf.pstatic.net URL만 발행 페이로드에 써야 한다. 게이트는 "재료 존재"까지만 책임지고 "네이버 규격 형식"은 검사 범위 밖 = 거짓 초록.
+명화 실측: main_image_url/detail_image_url 둘 다 supabase.co → 관제탑 GREEN인데 발행 시 이미지 변환 필요.
+
+### 해결책 (HANDOFF_publish_track §1 하이브리드 — DB UPDATE 아님, 발행 route 수술)
+
+단순 url.includes('shop-phinf') 한 줄 차단은 명화를 RED로 바꿔 셀러 멘탈모델을 파손한다(하수). 레이어 분리:
+1. **L1 표시 게이트(위젯)**: 자산 존재 = GREEN 유지 + "발행 시 이미지 자동 변환" 배지. 셀러는 창작 끝났다 안심.
+2. **L2 발행 전처리(route)**: shop-phinf 도메인 아니면 uploadImagesToNaver 호출 → shop-phinf URL 페이로드 주입 + Product 컬럼 되쓰기(멱등, 2회차 스킵).
+3. **L3 안전핀**: 변환 실패 시 하드 스톱 + 정직 에러("이미지 변환 실패, 발행 중단"). 가짜 "등록 완료" 금지(#46).
+
+### 수술 시 위험
+
+- L2가 발행 route(register 경로)에 들어가므로 회귀 주의 — dryRun 우선 검증. 비가역 트랙이라 대표 명시 승인 게이트 필수.
+- publish-readiness.ts 엔진에 형식 검사를 직접 넣으면 명화/달항아리 신호등 색이 바뀌므로 L1 배지 우선(차단 금지).
+
+**SOURCE**: Desktop 2026-06-04 발행 관제탑 STEP A~E 완료 후 production 라이브 API 실측 (명화 naverPayloadComplete:true·publishReady:true인데 이미지가 Supabase URL = 거짓 초록 발견).

@@ -1,3 +1,17 @@
+## 2026-06-04 (22) 발행 관제탑 STEP D·E 검증 완결 + DEBT-12 등재 (Code turn)
+
+baseline cb5151d (HEAD==origin/main, production READY). docs only — 코드/DB mutate 0. 권위: wrapup 지시 + HANDOFF_publish_track_2026-06-04.md.
+
+**STEP D 검증(Desktop 실측)**: preview(34edf7) /dashboard 6/6 전수 통과 — 관제탑 SECTION 2 최상단 노출 / 신호등 발행가능 2·보완 0·불가 1 정답지 일치 / 명화 마진칩 없음·달항아리 마진 23% 경고칩 / 체크리스트 14항목 전부 한글(코드값 노출 0) / 색대비+Lucide 아이콘 병기 / 모바일 390px 오버플로 0 / SD-01 아랍어 푸터 보존.
+
+**STEP E 머지 교차검증**: Vercel e915b0a(머지)·cb5151d(docs) 둘 다 verify-vercel-deploy.sh --wait exit 0 READY. production 라이브 API #45 실측: /api/products/publish-readiness 3건 — 명화(29000/14300=50.7%) GREEN 무경고 / 달항아리(27200/20900=23.2%) GREEN+마진칩 / 아이스트레이(13900/7980=42.6%) RED. computeMarginPct 가격기반 정합 실증. 엔진 publish-readiness.ts 미접촉 재확인. **발행 관제탑 STEP A~E 완전 종료.**
+
+**DEBT-12 등재(게이트 사각지대)**: publish-readiness.ts 이미지 검사가 isNonEmptyString + https:// 시작 여부까지만 봐서 Supabase 공개 URL을 GREEN 통과 → 네이버 커머스 API는 shop-phinf.pstatic.net URL만 수용(POST /external/v1/product-images/upload 선행 필수) → 거짓 초록. 명화 main/detail_image_url 둘 다 supabase.co. 해결책=HANDOFF_publish_track §1 하이브리드(L1 위젯 배지 GREEN 유지+자동변환 안내 / L2 발행 route Supabase→shop-phinf 자동 업로드+DB 멱등 되쓰기 / L3 변환 실패 시 하드 스톱+정직 에러 #46). DB UPDATE 아님, 발행 route 수술.
+
+**산출물**: TECH_DEBT.md DEBT-12 + docs/handoff/HANDOFF_publish_track_2026-06-04.md(Desktop 산출 verbatim cp, 113줄). 비가역 0(발행 API 호출 0, DB mutate 0). **다음**: P0 첫 발행 트랙 분리 — STEP P-1(네이버 이미지 업로드 어댑터)~P-4(발행 직전 실측+대표 승인), 명화 우선.
+
+---
+
 ## 2026-06-04 (21) 발행 관제탑 STEP E — main 머지 + production 반영 (Code turn)
 
 baseline: feature/publish-control-tower 69640bc(STEP C), main 64fe565. 권위: STEP E 지시 + Desktop STEP D 실측 보고.

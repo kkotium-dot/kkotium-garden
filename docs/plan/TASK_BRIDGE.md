@@ -71,6 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (22) 발행 관제탑 STEP D·E 검증 완결 + DEBT-12 등재 (FROM Code, production HEAD cb5151d, docs only)
+
+| 항목 | 상태 |
+|---|---|
+| STEP D (Desktop 실측) | preview(34edf7) /dashboard 6/6 통과: 관제탑 노출·신호등 2/0/1·마진칩·체크리스트 14 한글·색대비·모바일 390px·SD-01 보존. |
+| STEP E 교차검증 | Vercel e915b0a/cb5151d READY(verify exit 0) + production API #45 실측: 명화 GREEN/달항아리 GREEN+칩/아이스트레이 RED. 엔진 미접촉. |
+| 발행 관제탑 | ★ STEP A~E 완전 종료. |
+| DEBT-12 등재 | 발행 게이트 이미지 형식 사각지대 — publish-readiness가 Supabase URL을 https 문자열로 GREEN 통과(네이버는 shop-phinf만 수용)=거짓 초록. 해결=HANDOFF_publish_track §1 하이브리드(L1/L2/L3). |
+| 산출물 | TECH_DEBT.md DEBT-12 + HANDOFF_publish_track_2026-06-04.md(verbatim). docs only, 코드/DB mutate 0. |
+| ★ 다음 (분리 트랙) | P0 첫 발행: STEP P-1(네이버 이미지 업로드 어댑터)·P-2(발행 route L2 전처리)·P-3(L1 위젯 배지)·P-4(발행 직전 실측+대표 명시 승인). 명화 우선(50.7%), 비가역 하드룰. |
+
 ### 2026-06-04 (21) 발행 관제탑 STEP E — main 머지 + production 반영 완료 (FROM Code, production HEAD e915b0a)
 
 | 항목 | 상태 |
