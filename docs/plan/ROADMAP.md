@@ -1,5 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
+> 2026-06-04 **UI 한글화 STEP5 점검 + STEP1~5 전 완료** (feature/ui-ko-cleanup, main 미접촉). crawl/orders 영어 라벨·이모지 0 실측(actionable 0). UI 한글화 전 단계 완료. **다음=Desktop production 문구 육안 점검 → 머지 → 발행 관제탑 신설**.
+
 > 2026-06-04 **UI 한글화 STEP4 — /upload 한글화 + 이모지 제거** (feature/ui-ko-cleanup, main 미접촉). /upload(엑셀 대량등록)는 워크벤치 dropzone과 별개=중복 아님 → 살림. upload-strings.ko.json i18n + 이모지→Lucide. **다음=STEP5 crawl/orders 잔여 영어 라벨(점진)**.
 
 > 2026-06-04 **UI 한글화 STEP2+3 — root redirect + portfolio 삭제** (feature/ui-ko-cleanup, main 미접촉). page.tsx /portfolio→/dashboard + 로딩문구 i18n. portfolio 가짜 템플릿 삭제(외부 참조 0). build / redirect 검증. **다음=STEP4 /upload 중복 확인 → STEP5 crawl/orders**.

@@ -1,3 +1,20 @@
+## 2026-06-04 (17) UI 한글화 STEP5 점검 + UI 한글화 전 완료 (Code turn)
+
+baseline 69ccbf7, feature/ui-ko-cleanup. 권위: HANDOFF_ui_ko_cleanup §3 순서 5 + §B.
+
+**(1) STEP5 crawl/orders 실측 점검**: src/app/crawl/page.tsx, orders/page.tsx, orders/[id]/page.tsx 전수 grep — 사용자 노출 영어 JSX 라벨 0, 이모지(유니코드 emoji 블록) 0. 유일한 영어 매치는 crawl/page.tsx:695 placeholder="https://domeme.domeggook.com/..."(도매꾹 입력 예시 URL=정상, 번역 대상 아님). → **actionable 항목 0, 코드 변경 없음**. 없는 작업을 만들어내지 않음(#46 정직). 핸드오프 §B "crawl/orders 점진 한글화"는 이미 한글 완료 상태로 확인.
+
+**(2) ★ UI 한글화 STEP1~5 전 완료(브랜치 feature/ui-ko-cleanup)**:
+- STEP1(c724693): studio-strings 용어 사전 23값 치환 + faceFreeNote #47 교체.
+- STEP2+3(3ceef0b): root redirect /portfolio→/dashboard + 로딩문구 i18n + portfolio 가짜 템플릿 삭제.
+- STEP4(69ccbf7): /upload 중복 아님 확정 → 한글화 + 이모지 4종 Lucide 교체 + upload-strings.ko.json.
+- STEP5(본 커밋): crawl/orders 점검 — actionable 0.
+전 STEP 공통: 한글 하드코딩 0(전부 i18n, #35) / 이모지 0(Lucide) / sentinel 0 / tsc 0 / build ✓ / 비가역 0(발행·DB mutate 0). main a6ea482 내내 불변.
+
+**다음 (Desktop)**: (1) production(머지 후 SHA)에서 온실 아틀리에·첫 진입(/→/dashboard)·/upload 노출 문구 육안 점검 (2) 브랜치 main 머지 결정 (3) 이후 발행 관제탑(publish-readiness 신호등 대시보드)을 본 용어 사전 위에 신설.
+
+---
+
 ## 2026-06-04 (16) UI 한글화 STEP4 — /upload 한글화 + 이모지 제거 (Code turn)
 
 baseline 3ceef0b, feature/ui-ko-cleanup. 권위: HANDOFF_ui_ko_cleanup §A(/upload) + 작업4.

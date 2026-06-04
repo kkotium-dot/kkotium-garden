@@ -71,6 +71,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (17) UI 한글화 STEP5 점검 + ★ STEP1~5 전 완료 (FROM Code, feature/ui-ko-cleanup, baseline 69ccbf7)
+
+| 항목 | 상태 |
+|---|---|
+| STEP5 crawl/orders | 실측 점검 — 영어 라벨 0/이모지 0(유일 매치=도매꾹 URL placeholder=정상). actionable 0, 코드 변경 없음(#46). |
+| ★ STEP1~5 완료 | 용어사전+#47 / redirect+portfolio 삭제 / upload 한글화·이모지 / crawl·orders 점검. 한글 하드코딩 0·이모지 0·sentinel 0·tsc 0·build ✓·비가역 0. |
+| 브랜치 | feature/ui-ko-cleanup (커밋 c724693→69ccbf7→본). main a6ea482 불변. push 완료. |
+| ★ 다음 (Desktop) | (1) production 문구 육안 점검(아틀리에/첫 화면/upload) (2) 브랜치 머지 결정 (3) 발행 관제탑 신설. |
+
+
 ### 2026-06-04 (16) UI 한글화 STEP4 — /upload 한글화 + 이모지 제거 (FROM Code, feature/ui-ko-cleanup, baseline 3ceef0b)
 
 | 항목 | 상태 |
