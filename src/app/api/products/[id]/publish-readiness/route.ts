@@ -1,22 +1,11 @@
 // src/app/api/products/[id]/publish-readiness/route.ts
 //
-// 2026-05-31 — Publish-readiness gate endpoint.
-//
-// Returns fields(non-NULL) AND authenticity(content) verdicts. Replaces the
-// raw "publish_ready_19_of_19" SQL snapshot which only tested non-NULL — a
-// #46 violation that let AI-fabricated values pass the gate. The structural
-// authenticity check now flags superlatives, scent-vocab mismatch on non-
-// fragrance products, unverified certification or material claims, and
-// fabricated brand-authority language.
+// 2026-05-31 — Publish-readiness gate endpoint (single product).
+// 2026-06-04 — Refactored to share loadAndEvaluateProducts with the batch
+//   endpoint (/api/products/publish-readiness). Response shape unchanged.
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import {
-  evaluatePublishReadiness,
-  type PublishReadinessInput,
-} from '@/lib/automation/publish-readiness';
-import { mapCategoryToTone } from '@/lib/automation/category-tone-mapper';
-import type { ConceptTone } from '@/lib/diagnosis/concept-tone-inference';
+import { loadAndEvaluateProducts } from '@/lib/automation/load-publish-readiness';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,98 +21,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const productId = params.id;
   if (!productId) return jsonError('product id required', 400);
 
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    select: {
-      id: true,
-      status: true,
-      naverProductId: true,
-      seoTitle: true,
-      naver_title: true,
-      naver_keywords: true,
-      naver_description: true,
-      keywords: true,
-      targetKeywords: true,
-      golden_keyword_score: true,
-      detail_image_url: true,
-      main_image_url: true,
-      optionName: true,
-      hasOptions: true,
-      options: true,
-      shipping_template_id: true,
-      carrier_code: true,
-      courierCode: true,
-      shippingFee: true,
-      sku: true,
-      brand: true,
-      naverCategoryCode: true,
-      originCode: true,
-      margin: true,
-      legalApproval: true,
-      name: true,
-      category: true,
-      // Naver disclosure payload (상품정보제공고시) — required for publish.
-      naver_origin: true,
-      naver_manufacturer: true,
-      naver_as_info: true,
-      naver_tax_type: true,
-      naver_delivery_info: true,
-      naver_exchange_info: true,
-      naver_refund_info: true,
-    },
-  });
-  if (!product) return jsonError('product not found', 404, { productId });
+  const loaded = await loadAndEvaluateProducts([productId]);
+  if (loaded.length === 0) return jsonError('product not found', 404, { productId });
 
-  // Pull conceptTone for accurate category-group classification.
-  let conceptTone: ConceptTone | undefined;
-  const diag = await prisma.diagnosis.findUnique({
-    where: { productId },
-    select: { conceptTone: true },
-  });
-  if (diag) conceptTone = diag.conceptTone as unknown as ConceptTone;
-
-  const toneDirective = mapCategoryToTone(conceptTone, {
-    category: product.category ?? undefined,
-    naverCategoryCode: product.naverCategoryCode,
-    productName: product.name,
-  });
-
-  const input: PublishReadinessInput = {
-    productId: product.id,
-    status: product.status,
-    naverProductId: product.naverProductId,
-    seoTitle: product.seoTitle,
-    naver_title: product.naver_title,
-    naver_keywords: product.naver_keywords,
-    naver_description: product.naver_description,
-    keywords: product.keywords,
-    targetKeywords: product.targetKeywords,
-    golden_keyword_score: product.golden_keyword_score,
-    detail_image_url: product.detail_image_url,
-    main_image_url: product.main_image_url,
-    optionName: product.optionName,
-    hasOptions: product.hasOptions,
-    options: product.options,
-    shipping_template_id: product.shipping_template_id,
-    carrier_code: product.carrier_code,
-    courierCode: product.courierCode,
-    shippingFee: product.shippingFee,
-    sku: product.sku,
-    brand: product.brand,
-    naverCategoryCode: product.naverCategoryCode,
-    originCode: product.originCode,
-    margin: product.margin,
-    legalApproval: product.legalApproval,
-    toneDirective,
-    naver_origin: product.naver_origin,
-    naver_manufacturer: product.naver_manufacturer,
-    naver_as_info: product.naver_as_info,
-    naver_tax_type: product.naver_tax_type,
-    naver_delivery_info: product.naver_delivery_info,
-    naver_exchange_info: product.naver_exchange_info,
-    naver_refund_info: product.naver_refund_info,
-  };
-
-  const result = evaluatePublishReadiness(input);
-  return NextResponse.json({ ok: true, ...result });
+  // Response shape unchanged: { ok, ...result }. (display extras omitted here to
+  // preserve the exact prior contract; the batch endpoint exposes them.)
+  return NextResponse.json({ ok: true, ...loaded[0].result });
 }
