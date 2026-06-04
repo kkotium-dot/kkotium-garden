@@ -71,6 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (15) UI 한글화 STEP2+3 — root redirect + portfolio 삭제 (FROM Code, feature/ui-ko-cleanup, baseline c724693)
+
+| 항목 | 상태 |
+|---|---|
+| STEP2 redirect | page.tsx /portfolio→/dashboard(router.replace) + 로딩문구 home-strings.ko.json i18n(#35). |
+| STEP3 삭제 | src/app/portfolio/page.tsx 가짜 템플릿 삭제. 외부 참조 grep 0 확인 후. |
+| 원자 커밋 | redirect+삭제 통합(중간 / 라우트 깨짐 방지). |
+| 검증 | tsc 0(.next/types 잔재 build 재생성으로 해소)/build ✓/sentinel 0/한글 하드코딩 0/이모지 0. 비가역 0. main 불변. |
+| 다음 | STEP4 /upload 중복 확인 → STEP5 crawl/orders. |
+
+
 ### 2026-06-04 (14) UI 한글화 STEP1 — 용어 사전 + #47 문구 (FROM Code, feature/ui-ko-cleanup, baseline a6ea482)
 
 | 항목 | 상태 |

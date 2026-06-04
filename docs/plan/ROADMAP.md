@@ -1,5 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
+> 2026-06-04 **UI 한글화 STEP2+3 — root redirect + portfolio 삭제** (feature/ui-ko-cleanup, main 미접촉). page.tsx /portfolio→/dashboard + 로딩문구 i18n. portfolio 가짜 템플릿 삭제(외부 참조 0). build / redirect 검증. **다음=STEP4 /upload 중복 확인 → STEP5 crawl/orders**.
+
 > 2026-06-04 **UI 한글화 STEP1 — 용어 사전 + #47 문구** (feature/ui-ko-cleanup, main 미접촉). studio-strings 23값 치환(키 무변경 회귀 0) + faceFreeNote #47 교체. **다음=STEP2 / redirect → STEP3 portfolio 삭제 → STEP4 upload → STEP5 crawl/orders**.
 
 > 2026-06-04 **빌더 STEP5 — 커넥터 규칙(#48) + 캐시 점검(DEBT-11). ★ STEP1~5 전 완료** (feature/detail-builder-hybrid, main 미접촉). 도구 라우팅·파트너 모델 면책 경계 명문화 + 영구자산 no-cache 실측(Desktop 재업로드 위임). **다음=Desktop 최종 회귀 검증(달항아리 단색 불변) → main 머지 → P0 발행 재개**.

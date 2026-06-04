@@ -1,3 +1,19 @@
+## 2026-06-04 (15) UI 한글화 STEP2+3 — root redirect 교정 + portfolio 템플릿 삭제 (Code turn)
+
+baseline c724693, feature/ui-ko-cleanup. 권위: HANDOFF_ui_ko_cleanup §A(템플릿 잔재) + §3 순서 2·3.
+
+**(1) STEP2 root redirect 교정(src/app/page.tsx)**: 첫 진입점이 /portfolio로 redirect + "Loading Portfolio..." 영어였음. → router.replace('/dashboard')로 교정(push 대신 replace=히스토리 미오염). 로딩문구는 신규 home-strings.ko.json("loading":"대시보드로 이동 중…") 경유(#35 한글 하드코딩 금지 준수 — 단일 splash 문구도 i18n 패턴 유지).
+
+**(2) STEP3 portfolio 삭제**: src/app/portfolio/page.tsx = "John의 파이썬 포트폴리오" 가짜 템플릿(19.5KB, 앱과 무관). 삭제 전 grep "portfolio" 전수(src .ts/.tsx) → 외부 link/import 참조 0 확인(유일 참조였던 page.tsx redirect는 (1)서 제거됨). git rm 실행.
+
+**(3) 원자 커밋 판단**: STEP2(redirect)와 STEP3(삭제)를 분리 커밋하면 중간 상태에서 / 라우트가 깨질(혹은 orphan) 위험 → 하나의 원자 "portfolio 제거" 커밋으로 통합. 안전 우선.
+
+**(4) 검증**: git rm 직후 tsc가 .next/types/app/portfolio/page.ts 잔재(생성 타입 스텁)로 TS2307 발생 → npm run build로 .next/types 재생성 시 portfolio 타입 제거됨 → 재실행 tsc 0 확인(스테일 캐시 아티팩트, 실 오류 아님). build ✓ Compiled successfully(/ redirect 라우트 정상). sentinel 0 / page.tsx 한글 하드코딩 0(i18n) / 이모지 0. 비가역 0(발행·DB mutate 0). main a6ea482 불변.
+
+**다음**: STEP4(/upload — studio 워크벤치 dropzone과 기능 중복 여부 확인 → 중복이면 통합/삭제, 살릴 거면 한글화) → STEP5(crawl/orders 잔여 영어 라벨 점진 한글화).
+
+---
+
 ## 2026-06-04 (14) UI 한글화 STEP1 — studio-strings 용어 사전 + #47 인물정책 문구 교체 (Code turn)
 
 baseline a6ea482(빌더 머지 후), feature/ui-ko-cleanup 신규 브랜치. 권위: HANDOFF_ui_ko_cleanup §1 용어 사전 + §2 #47 교체.
