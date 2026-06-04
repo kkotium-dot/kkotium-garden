@@ -71,6 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (14) UI 한글화 STEP1 — 용어 사전 + #47 문구 (FROM Code, feature/ui-ko-cleanup, baseline a6ea482)
+
+| 항목 | 상태 |
+|---|---|
+| 브랜치 | feature/ui-ko-cleanup 신규(빌더 머지 후 a6ea482 기반). main 미접촉. |
+| 용어 사전(§1) | studio-strings.ko.json 23값 치환(키 무변경=회귀 0): 골격→페이지구성/에셋·Supabase→이미지 저장/public URL→공유 링크/Clean·Price·Badge·Lifestyle→깔끔·가격강조·뱃지·감성형/누끼→배경 제거 이미지/폴백→기본/matchScore→적합도 점수. |
+| #47 문구(§2) | faceFreeNote 구 "얼굴 없는 인체 일부"→"익명 모델 허용/특정 실존인물 금지". 코드는 이미 정합, 문자열만 교체. |
+| 검증 | TSC 0/build ✓/sentinel 0/한글 하드코딩 0(i18n)/이모지 0. 비가역 0. main 불변. |
+| 다음 | STEP2 redirect→STEP3 portfolio 삭제→STEP4 upload→STEP5 crawl/orders. Desktop은 한글화 후 production 문구 육안 점검. |
+
+
 ### 2026-06-04 (13) 빌더 STEP5 + ★ 하이브리드 대수술 STEP1~5 완료 (FROM Code, feature/detail-builder-hybrid, baseline 0e619f8)
 
 | 항목 | 상태 |

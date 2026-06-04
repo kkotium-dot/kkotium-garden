@@ -15,7 +15,7 @@
     "L2": "L2 보강",
     "L3": "L3 검수",
     "L4": "L4 디자이너",
-    "saved": "에셋 발행 완료",
+    "saved": "이미지 발행 완료",
     "empty": "조건에 맞는 상품이 없어요"
   },
   "productList": {
@@ -59,7 +59,7 @@
   },
   "thumbnail": {
     "title": "썸네일 4 변형",
-    "subtitle": "Clean / Price / Badge / Lifestyle — 1클릭 메인 선택",
+    "subtitle": "깔끔형 / 가격강조형 / 뱃지형 / 감성형 — 1클릭 메인 선택",
     "generateButton": "썸네일 생성",
     "regenerateButton": "재생성",
     "running": "썸네일 생성 중…",
@@ -68,36 +68,36 @@
     "selected": "선택됨",
     "select": "메인으로 사용",
     "variants": {
-      "clean": "Clean (흰배경)",
-      "price": "Price (가격 강조)",
-      "badge": "Badge (카테고리)",
-      "lifestyle": "Lifestyle (라이프스타일)"
+      "clean": "깔끔형 (흰 배경)",
+      "price": "가격강조형 (가격 강조)",
+      "badge": "뱃지형 (카테고리)",
+      "lifestyle": "감성형 (라이프스타일)"
     },
     "error": "썸네일 생성 실패:",
     "manualTitle": "디자이너 소스 오버라이드 (선택)",
-    "manualCutoutLabel": "누끼 PNG URL",
+    "manualCutoutLabel": "배경 제거 이미지 URL",
     "manualBackdropLabel": "배경 이미지 URL",
-    "manualHint": "비워두면 자동 캐시 또는 원본 폴백을 사용해요.",
+    "manualHint": "비워두면 자동 캐시 또는 원본 기본 이미지를 사용해요.",
     "sourceLabel": "소스",
     "source": {
       "manual": "수동",
       "auto-cache": "자동 캐시",
-      "fallback": "원본 폴백"
+      "fallback": "원본 기본"
     },
     "lowResWarning": "원본 해상도가 낮아요 (760px 이하) — 고해상도 재촬영 또는 업스케일을 권장해요."
   },
   "detail": {
     "title": "5섹션 상세페이지",
-    "subtitle": "선택된 골격에 따라 자동 합성 (1클릭 골격 교체 가능)",
+    "subtitle": "선택된 페이지 구성에 따라 자동 합성 (1클릭 구성 교체 가능)",
     "generateButton": "상세 페이지 생성",
     "regenerateButton": "재생성",
     "running": "상세 페이지 합성 중…",
     "notRun": "상세 페이지를 아직 생성하지 않았어요.",
-    "skeletonOverride": "골격 1클릭 교체",
+    "skeletonOverride": "페이지 구성 1클릭 교체",
     "skeletonAuto": "자동 추천 (Diagnosis 기준)",
     "sectionCount": "{n}개 섹션",
-    "elapsedMs": "{ms}ms 소요",
-    "matchScore": "매칭 점수 {score}",
+    "elapsedMs": "처리 시간 {ms}ms",
+    "matchScore": "적합도 점수 {score}",
     "error": "상세 페이지 생성 실패:",
     "moodBackdropLabel": "무드 배경 URL",
     "moodBackdropPlaceholder": "상세 무드 배경 이미지 주소 (선택)",
@@ -106,16 +106,16 @@
     "htmlUnavailable": "HTML 출력 없음 (재생성 필요)"
   },
   "actions": {
-    "title": "에셋 저장 + 발행",
-    "saveButton": "에셋 저장 (Supabase Storage)",
+    "title": "이미지 저장 + 발행",
+    "saveButton": "이미지 저장",
     "saving": "저장 중…",
-    "saved": "저장 완료 — public URL 발급됨",
+    "saved": "저장 완료 (공유 링크 생성)",
     "savedThumb": "썸네일 URL:",
     "savedDetail": "상세 페이지 URL:",
     "saveHint": "썸네일 또는 상세 페이지를 먼저 생성하면 저장 가능합니다",
     "publishButton": "네이버 상품 정보 갱신",
     "publishing": "갱신 중…",
-    "publishHintNeedSave": "에셋을 먼저 저장하세요 (네이버 갱신에 public URL 필요)",
+    "publishHintNeedSave": "이미지를 먼저 저장하세요 (네이버 갱신에 공유 링크 필요)",
     "publishHintNeedNaverId": "이 상품은 아직 네이버에 등록되지 않았어요. PLANT(씨앗 심기)에서 먼저 네이버 등록 후 갱신 가능",
     "publishSuccess": "네이버 상품 정보 갱신 완료 — 스마트스토어에서 확인",
     "publishError": "갱신 실패:",
@@ -150,7 +150,7 @@
   "kftc": {
     "reviewsPlaceholder": "후기 영역은 등록 후 실제 데이터로 채워집니다.",
     "clinicalCaveat": "임상 데이터 출처: 상세 페이지 참조",
-    "fallbackNote": "fallback 사용 ({n}/{total} 섹션)"
+    "fallbackNote": "기본 템플릿 적용 ({n}/{total} 섹션)"
   },
   "workbench": {
     "_meta": "Phase 2-B-1·2 — 3분할 작업벤치 + 캔버스 결과/드롭존. 권위: UIUX_INTEGRATED_DESIGN_SYSTEM §6.",
@@ -163,7 +163,7 @@
       "beforeOriginalNote": "원본 비교 모드 — 우상단 토글로 가공 결과 보기",
       "toggleAfter": "가공 보기",
       "toggleBefore": "원본 비교",
-      "cutoutSlot": "누끼 (디자이너 소스)",
+      "cutoutSlot": "배경 제거 이미지 (디자이너 소스)",
       "backdropSlot": "배경 (디자이너 소스)",
       "designerBadge": "수동",
       "phaseNote": "Phase 2-B-3: 우측 AI 큐 stepper + 프롬프트 복사 + 외부 생성 도구 링크 예정."
@@ -183,12 +183,12 @@
       "stateError": "오류",
       "idleMsg": "파일을 드래그하거나 클릭해서 선택",
       "draggingMsg": "여기에 놓으면 업로드가 시작됩니다",
-      "uploadingMsg": "Supabase Storage로 업로드 중...",
+      "uploadingMsg": "이미지 저장소로 업로드 중...",
       "completeMsg": "업로드 완료 — URL이 아래 입력란에 반영되었습니다",
       "errorMsg": "업로드 실패 — 다시 시도하거나 URL을 직접 붙여넣으세요",
       "urlPlaceholder": "또는 https://... URL 직접 붙여넣기",
-      "hintCutout": "투명 배경 PNG 권장 — Supabase product-images 버킷에 저장됩니다.",
-      "hintBackdrop": "JPG/PNG/WebP 모두 가능 — Supabase product-images 버킷에 저장됩니다."
+      "hintCutout": "투명 배경 PNG 권장 — 이미지 저장소에 저장됩니다.",
+      "hintBackdrop": "JPG/PNG/WebP 모두 가능 — 이미지 저장소에 저장됩니다."
     },
     "firefly": {
       "_meta": "Phase 2-B-3 — Firefly 합성 프롬프트 빌더 (6요소). 런타임 외부 이미지 생성 0 — 프롬프트만 작성, 생성은 셀러가 Firefly 웹에서.",
@@ -202,7 +202,7 @@
         "grounding": "5. 접지감 (떠보임 금지)",
         "perspective": "6. 원근 + 반사"
       },
-      "faceFreeNote": "★얼굴 없는 인체 일부 전략 — 프롬프트에 얼굴 생성 금지 문구 포함됨 (손/부분 토르소만, IP 안전).",
+      "faceFreeNote": "★인물 정책 — 익명 일반 모델은 허용, 특정 실존인물·유명인은 생성 금지(IP·초상권 안전). 프롬프트가 자동으로 이 가드를 포함합니다.",
       "copyBtn": "프롬프트 복사",
       "copiedBtn": "복사 완료",
       "copyError": "복사 실패",

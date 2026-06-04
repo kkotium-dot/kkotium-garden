@@ -1,3 +1,17 @@
+## 2026-06-04 (14) UI 한글화 STEP1 — studio-strings 용어 사전 + #47 인물정책 문구 교체 (Code turn)
+
+baseline a6ea482(빌더 머지 후), feature/ui-ko-cleanup 신규 브랜치. 권위: HANDOFF_ui_ko_cleanup §1 용어 사전 + §2 #47 교체.
+
+**(1) 용어 사전 치환(§1, 23개 값)**: studio-strings.ko.json 값만 교체(JSON 키 전부 불변 → 컴포넌트 소비자 무영향=회귀 0). 골격/skeleton→페이지 구성(detail.subtitle/skeletonOverride), 에셋 저장·Supabase Storage→이미지 저장(actions.title/saveButton/filters.saved), public URL→공유 링크(actions.saved/publishHintNeedSave), Clean/Price/Badge/Lifestyle→깔끔형/가격강조형/뱃지형/감성형(thumbnail.subtitle/variants), 누끼 PNG→배경 제거 이미지(thumbnail.manualCutoutLabel/canvas.cutoutSlot), 폴백·fallback→기본(source.fallback/manualHint/kftc.fallbackNote), matchScore→적합도 점수, "ms 소요"→처리 시간, dropzone Supabase 노출문구 3건→이미지 저장소.
+
+**(2) #47 인물정책 문구 교체(§2)**: workbench.firefly.faceFreeNote 구값 "★얼굴 없는 인체 일부 전략 — 손/부분 토르소만"(폐기된 #47 이전 정책)을 "★인물 정책 — 익명 일반 모델 허용, 특정 실존인물·유명인 생성 금지(IP·초상권 안전). 프롬프트 자동 가드 포함"으로 교체. 코드(category-tone-mapper/backdrop-vlm-gate)는 이미 #47 정합 완료, UI 문자열만 잔존했던 stale fact 해소(#44 동형).
+
+**(3) 검증**: 렌더 값 잔재 grep(에셋/골격/public URL/폴백/fallback 사용/얼굴 없는 인체)=0(_meta 내부 주석 제외). JSON valid. tsc 0 / build ✓ Compiled successfully / sentinel 0 / 코드 한글 하드코딩 0(전부 i18n 경유, #35) / 이모지 0. 비가역 0(문구만, 발행·DB mutate 0). main a6ea482 불변.
+
+**다음**: STEP2(src/app/page.tsx redirect /portfolio→/dashboard + 로딩문구 한글) → STEP3(portfolio 참조 grep 0 확인 후 삭제 + build redirect 검증) → STEP4(/upload 중복 확인→한글화/통합) → STEP5(crawl/orders 잔여 영어 라벨).
+
+---
+
 ## 2026-06-04 (13) 빌더 STEP5 — 커넥터 운영 규칙 + 캐시 점검 / 하이브리드 대수술 완료 (Code turn)
 
 baseline 0e619f8, feature/detail-builder-hybrid. 권위: HANDOFF STEP5(독립) + TOOL_ECOSYSTEM_MANUAL.
