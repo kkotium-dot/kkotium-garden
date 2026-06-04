@@ -71,6 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (24) imageProbe 모드 + STEP 2 L2 실증 성공 (FROM Code, production 316f1f2, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 패치 (316f1f2) | register/route.ts 가산식 imageProbe 분기(이미지만 업로드, register POST 0). 회귀 가드: 미전달 시 흐름 불변. 단일 파일 diff, 엔진·관제탑 미접촉. |
+| STEP 2 실증 | imageProbe=true → ★ allShopPhinf=true. main(Cloudinary)→shop-phinf / detail(Supabase)→shop-phinf / 공지→shop-phinf, 에러 0. Cloudinary 생존+변환 동시 입증. |
+| 이미지 진실(#45) | 발행 main=mainImage(Cloudinary 실사용) / main_image_url=Supabase(미사용 레거시) / detail=Supabase. 'main=Supabase'(HANDOFF_publish_track §1)는 틀린 컬럼. |
+| 3축 검증 | 회선 200 + dryRun canRegister=true + L2 allShopPhinf=true = **발행 준비 완료**. |
+| 비가역 | register/POST 0, DB mutate 0. imageProbe는 이미지만 업로드(상품 미연결). |
+| ★ 다음 (Desktop) | 대표 명시 승인 → 실 register(POST, dryRun 없이, 비가역). 명화 우선. 발행 후 naverProductId 확인 + P-3 L1 위젯 배지 후속. |
+
 ### 2026-06-04 (23) P0 첫 발행 회선 + L2 검증 (FROM Code, production 17e0ee2, 검증 전용·비가역 0)
 
 | 항목 | 상태 |

@@ -1,3 +1,17 @@
+## 2026-06-04 (24) imageProbe 검증 모드 추가 + STEP 2 L2 이미지 변환 실증 (Code turn)
+
+baseline production e2353d4 → 316f1f2. 권위: HANDOFF_imageProbe_mode_2026-06-04.md. 비가역 0(register POST 0, DB mutate 0).
+
+**패치(register/route.ts 단일, 가산식)**: (1) body 구조분해 imageProbe?: boolean 추가. (2) payload 빌드 직후·register(8단계) 직전 imageProbe 분기 삽입 — 7-img/7-img-notice 이미지 업로드(gallery/detail/notice → shop-phinf 치환)는 실행하되 상품 register(naverRequest POST)는 호출 안 함. allShopPhinf(rep+detail+optional 전부 shop-phinf 여부) + sourceUrls/convertedUrls 반환. 회귀 가드: imageProbe 미전달 시 분기 건너뜀 → 발행/dryRun 흐름 100% 불변. TSC 0 / build OK / 이모지 0 / git diff 단일 파일 / 엔진(publish-readiness.ts)·관제탑 위젯 diff 0.
+
+**STEP 2 실증(production curl, 배포 316f1f2 success 확인 후)**: imageProbe=true → success=true, **allShopPhinf=true**, 에러 0. sourceUrls: main=Cloudinary(res.cloudinary.com/.../main-hwabo-4set.jpg) / detail=Supabase(detail-S6) / additionalCount 0. convertedUrls: representativeImage=shop-phinf / detailImageNaver=shop-phinf / 공지 상단·하단=shop-phinf. → Cloudinary main 생존(401 차단 이력에도 fetch 성공)+업로드 + Supabase detail 업로드 + 회선 + L2 코드 = 전 경로 동시 실증. 발행 시 이미지 400 불가 확정.
+
+**★ 이미지 도메인 진실 정정(#45 — Desktop DB 직독)**: 명화 이미지 3컬럼 — mainImage=Cloudinary(★발행 대표이미지 실사용, register의 supaMain=product.mainImage) / main_image_url=Supabase thumb-clean(미사용 레거시) / detail_image_url=Supabase detail-S6(상세 소스) / additionalImages=null. 직전 SESSION_LOG(23) 'main=Cloudinary'는 옳았고, 그 이전 HANDOFF_publish_track §1 'main=Supabase'는 틀린 컬럼(main_image_url) 본 것 — 본 turn에서 컬럼 3종 진실 확정.
+
+**분기 판정(핸드오프 §4)**: allShopPhinf=true → **발행 준비 완료**. 회선(STEP 1 200)·dryRun(STEP 3 canRegister=true)·L2(STEP 2 allShopPhinf=true) 3축 전부 통과. 남은 단계 = 대표 명시 승인 후 실 register(비가역). register/POST 호출 0 유지. 핸드오프 docs/handoff/ 보존(133줄). 배포 메모: verify-vercel-deploy.sh --wait가 180초 윈도우 내 미완(빌드 지연)으로 exit 1 했으나 gh api 직조회 결과 316f1f2 state=success 확인 — webhook 정상(오탐).
+
+---
+
 ## 2026-06-04 (23) P0 첫 발행 회선 + L2 이미지 변환 검증 (Code turn, 검증 전용)
 
 baseline production 17e0ee2, main(HEAD==origin/main). 권위: HANDOFF_p0_publish_line_verify_2026-06-04.md. 전부 비가역 0(register/POST 호출 0).
