@@ -1,11 +1,12 @@
 # KKOTIUM GARDEN — ROADMAP
+> 2026-06-04 **P0 첫 발행 회선/L2 검증** (Code turn, 검증 전용·비가역 0). P-1/P-2/L3 기구현 확정(신규 0). STEP 1 회선 200·STEP 3 dryRun canRegister=true(17필드+옵션3+ETC9, 경고 재질/색상). STEP 2(proxy uploadImages 실증)는 로컬 proxy 시크릿 부재로 Desktop 위임. **다음=Desktop STEP 2 실증 → 대표 명시 승인 → 실 register**.
 > 2026-06-04 **발행 관제탑 STEP E — main 머지 + production 반영 완료** (Code turn, production HEAD e915b0a). STEP A·B·C → main(e915b0a) 머지·push·Vercel verify exit 0. production /dashboard 200 + 일괄 API 정답지 일치(명화/달항아리 GREEN·아이스트레이 RED). 발행 관제탑 전 STEP 완료. **다음=P0 첫 상품 발행 트랙(이미지 변환 선결 → 명화 우선)**.
 > 2026-06-04 **발행 관제탑 STEP C 완료** (Code turn, feature/publish-control-tower, main 미접촉). 대시보드 SECTION 2 최상단 마운트(가산식) + 마진 표시 가격기반 정합(margin 컬럼 단위 혼재 회피, DB 미교정). 커밋 50ee308. **다음=Desktop STEP D 브라우저 실측 → main 머지 → P0 발행**.
 > 2026-06-04 **발행 관제탑 STEP A·B 구현 완료** (Code turn, feature/publish-control-tower, main 미접촉). STEP A 일괄 판정 API+공통함수(515e82f, 단건 route 공유·회귀 0) + STEP B 신호등 카드 위젯(aa31ad4, 용어사전 한글변환). 엔진 미접촉·비가역 0·TSC 0/build OK. **다음=Desktop 머지 검증 → STEP C(대시보드 마운트)·D(브라우저 실측)**.
 
 > 2026-06-04 **★ 발행 관제탑 설계 확정 + 빌더·한글화 두 대수술 production 머지 검증 완료** (Desktop turn, 코드 0, production HEAD 64fe565). 빌더 하이브리드(a6ea482) + UI 한글화(64fe565) 둘 다 main 머지·production 실측 검증 통과(/portfolio 404 직접 확인, 가짜 John 제거). 발행 관제탑 설계도 신설(HANDOFF_publish_control_tower_2026-06-04.md) — 기존 publish-readiness.ts 엔진 위에 신호등 UI만 씌움. **★ 컨텍스트 한계로 관제탑 구현은 새 채팅 위임**(중복작업 방지).
 >
-> ⭐ **다음 새 채팅 시작 메시지 (ACTIVE)**: "발행 관제탑 완료(main 머지 e915b0a, production 반영·verify exit 0). 다음은 P0 첫 상품 발행 트랙. 선결: 명화 디퓨저 이미지 변환(상세페이지/대표이미지) 완료 확인 → 관제탑 GREEN 재확인 → 대표 명시 승인 → 신중 발행(비가역: register/POST). 첫 상품은 명화 우선(마진 50.7%), 달항아리(23%)는 가격 재검토 후. publish-readiness.ts 엔진·관제탑 코드 미접촉 유지."
+> ⭐ **다음 새 채팅 시작 메시지 (ACTIVE)**: "P0 첫 발행 — STEP 2 L2 실증(Desktop) 잔여. P-1/P-2/L3 기구현 확정(코드 직독, 신규 구현 금지). 회선(addressbooks 200)·dryRun(canRegister=true, 17필드+옵션3+ETC9) 통과. STEP 2=proxy action:uploadImages로 명화 main 1장→shop-phinf URL 반환 확인(NAVER_PROXY_URL/PROXY_SECRET는 Vercel env/대표 home proxy에 있음, Code 로컬 부재). 통과 시 대표 명시 승인 → 실 register(비가역). 명화 우선. 하드룰: register/POST 대표 승인 없이 호출 0."
 
 > 2026-06-04 **UI 한글화 STEP5 점검 + STEP1~5 전 완료** (feature/ui-ko-cleanup, main 미접촉). crawl/orders 영어 라벨·이모지 0 실측(actionable 0). UI 한글화 전 단계 완료. **다음=Desktop production 문구 육안 점검 → 머지 → 발행 관제탑 신설**.
 

@@ -71,6 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (23) P0 첫 발행 회선 + L2 검증 (FROM Code, production 17e0ee2, 검증 전용·비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 기구현 확정 | P-1 uploadImagesToNaver(api-client.ts:498) / P-2 register L2 배선(:302·305·346 shop-phinf 치환) / L3 502+DRAFT(:312~363) / dryRun(:213~279). 신규 구현 0(중복 무효화). |
+| STEP 1 회선 | production GET /api/naver/addressbooks HTTP 200(release/return 노출, diagnostics 에러 0). GET 회선+토큰 생존. |
+| STEP 2 L2 실증 | ★ Code 실행 불가 — NAVER_PROXY_URL/PROXY_SECRET 로컬 부재(Vercel env+대표 proxy 전용). uploadImages end-to-end 미검증 → **Desktop 위임**. |
+| STEP 3 dryRun | canRegister=true, 17필드+옵션3+ETC9키, 경고 2(재질/색상 누락, 비차단). 이미지: main=Cloudinary·detail+detailContent=Supabase·shop-phinf 0(L2 미적용=dryRun 정상). |
+| 정정(#45) | 핸드오프 §1 'main=Supabase' → 실측은 main=Cloudinary. 둘 다 비-shop-phinf=L2 필요(DEBT-12 재확인). |
+| 발행 판정 | ★ GO 아님 — STEP 2(Desktop) 미검증. register/POST 호출 0. |
+| ★ 다음 (Desktop) | STEP 2 proxy action:uploadImages 실증(명화 main→shop-phinf) → 통과 시 대표 명시 승인 → 실 register(비가역, 명화 우선). |
+
 ### 2026-06-04 (22) 발행 관제탑 STEP D·E 검증 완결 + DEBT-12 등재 (FROM Code, production HEAD cb5151d, docs only)
 
 | 항목 | 상태 |

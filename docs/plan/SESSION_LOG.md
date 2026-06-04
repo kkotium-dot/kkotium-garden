@@ -1,3 +1,19 @@
+## 2026-06-04 (23) P0 첫 발행 회선 + L2 이미지 변환 검증 (Code turn, 검증 전용)
+
+baseline production 17e0ee2, main(HEAD==origin/main). 권위: HANDOFF_p0_publish_line_verify_2026-06-04.md. 전부 비가역 0(register/POST 호출 0).
+
+**기구현 확정(중복금지)**: 코드 직독으로 P-1/P-2/L3 완성 확인 — uploadImagesToNaver() (src/lib/naver/api-client.ts:498, proxy action 'uploadImages' :519, 실패 throw), register route(src/app/api/naver/products/register/route.ts) L2 배선(import :8, 갤러리 :302 / 상세 :305 / 공지 :346 uploadImagesToNaver 호출 → shop-phinf 치환), L3 안전핀(업로드 실패 catch → 502 + '발행 중단 (DRAFT 유지)' :312~363, #46), dryRun은 Supabase URL 빌드·업로드 0(:213~279). → 직전 HANDOFF_publish_track의 P-1/P-2 '구현 필요' 지시는 중복(이미 완성) — 신규 구현 0.
+
+**STEP 1 회선(production GET, 읽기전용)**: /api/naver/addressbooks HTTP 200 — keys success/releaseAddresses/returnAddresses/defaults/synced/diagnostics, diagnostics release·return None(에러 0). production→proxy→네이버 GET 회선 + 토큰 생존 실증.
+
+**STEP 2 L2 실증 — ★ Code 실행 불가(정직 보고 #46)**: NAVER_PROXY_URL / PROXY_SECRET가 로컬 .env / .env.local 어디에도 부재(grep 0). 코드는 process.env.NAVER_PROXY_URL/PROXY_SECRET 사용 = Vercel production env + 대표 home Tailscale proxy 전용. 따라서 proxy action:uploadImages end-to-end(명화 main→shop-phinf URL) 실증은 **Desktop/대표 환경 위임**(#41 역할 분리). STEP 1이 GET 회선은 입증했으나 이미지 업로드 POST 경로는 미검증.
+
+**STEP 3 dryRun(네이버 호출 0, DB mutate 0)**: success=true, validation.canRegister=true, attributeGrade C(31)/readinessGrade B(74), errors 0, warnings 2(필수속성 재질·색상 누락 — 차단 아님). payloadPreview: leafCategoryId 50003356 / name(naver_title) / salePrice 29000 / optionCombinationCount 3 / originAreaInfo(200037·중국·importer '상세페이지 참조') / afterServiceInfo(010-3227-4805) / taxType TAX / minorPurchasable / productInfoProvidedNotice type ETC + etcKeys 9(returnCostReason·noRefundReason·qualityAssuranceStandard·compensationProcedure·troubleShootingContents·itemName·modelName·manufacturer·customerServicePhoneNumber) / claimDeliveryInfo(shippingAddressId 106914714 / returnAddressId 106914715). ★ 이미지 도메인 실측 정정(#45 — 라이브 우선): representativeImage(main)=Cloudinary(res.cloudinary.com/.../main-hwabo-4set.jpg), imagesToUpload.detailImage + detailContent 3장=Supabase, shop-phinf 0건(dryRun 미업로드 정상, 실 register 시 L2 치환). 핸드오프 §1의 'main=Supabase' 전제는 일부 정정(main은 Cloudinary). 둘 다 비-shop-phinf라 L2 변환 필요 = DEBT-12 라이브 재확인.
+
+**분기 판정(핸드오프 §3)**: STEP 1 200 / STEP 2 미검증(Desktop 위임) / STEP 3 정상 → **발행 준비 단정 불가**. STEP 2(Desktop proxy uploadImages 실증) 통과가 GO 선결. 비가역 0(register/POST 0, DB mutate 0). 핸드오프 docs/handoff/ 보존. **다음**: Desktop STEP 2 실증 → 통과 시 대표 명시 승인 → 실 register(명화 우선).
+
+---
+
 ## 2026-06-04 (22) 발행 관제탑 STEP D·E 검증 완결 + DEBT-12 등재 (Code turn)
 
 baseline cb5151d (HEAD==origin/main, production READY). docs only — 코드/DB mutate 0. 권위: wrapup 지시 + HANDOFF_publish_track_2026-06-04.md.
