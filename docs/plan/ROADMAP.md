@@ -1,5 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
+> 2026-06-04 **명화 디퓨저 가공자산 3종 Supabase 영구화 완료** (Code turn, baseline 16578d0). Adobe 단축URL 만료 전 product-assets/cmpnooli40001f0gveaxr8iim/ 영구 적재(대표 1000/누끼/배경 860) + public 200 검증. PRODUCT_ID override로 PostgREST 권한 이슈 우회. 비가역 0(Storage only, DRAFT 유지). **다음=영구 URL을 상세페이지 합성/발행 자산으로 연결 + Figma STEP2(한도 리셋 후)**.
+
 > 2026-06-04 **firefly-generate 어댑터 + 인물 정책 코드 정합** (Code turn, baseline 77812ea). firefly-generate.ts 신설(manual 기본/api 토글, 키 부재·파트너 모델 fail-safe 강등). ModelPolicy 'model-allowed' 추가 + classifyPersonShot 게이트 신설(classifyBackdrop 미접촉). TSC 0/build OK/비가역 0. **다음=Adobe 가공자산 Supabase 영구화 + Firefly 인물컷 classifyPersonShot 실측 + Figma STEP2(한도 리셋 후)**.
 
 > 2026-06-04 **Adobe 가공 라인 첫 완주 + AI 인물 허용 정책 + Firefly v2** (Desktop turn, 코드 0, production HEAD 5dad281). 명화 디퓨저 가공 5단계 SOP 입증(누끼→focus 추출→1000x1000 대표→860 배경). AI 인물 정책 갱신: 익명 모델 허용/특정 실존인물 금지(구 "얼굴 없는 인체 일부" 대체, #47). Firefly 컨셉컷 v2 문서 신규. **다음=Adobe 가공자산 3종 Supabase product-assets 업로드 + Figma STEP2 7섹션 컴포넌트(한도 리셋 후)**.

@@ -1,3 +1,22 @@
+## 2026-06-04 (5) 명화 디퓨저 Adobe 가공자산 3종 Supabase 영구 적재 (Code turn)
+
+baseline 16578d0. scripts/preserve-myeonghwa-assets.mjs(Desktop 작성·검증) 로컬 실행. Adobe 단축URL 만료 전 영구화.
+
+**(1) 실행 보정**: 첫 실행이 resolveProductId(PostgREST `.from('Product')`)에서 "permission denied for schema public"로 ABORT — Prisma 관리 테이블이 REST API에 미노출(RLS/grant). 기존 turn에서 확정된 명화 디퓨저 id(cmpnooli40001f0gveaxr8iim, TASK_BRIDGE/PROGRESS aroma entry 기록)를 PRODUCT_ID env override로 전달해 DB 조회 건너뜀. Storage API(업로드/공개URL)는 PostgREST와 다른 경로라 정상 동작. 스크립트에 신뢰 경로 주석 보강(#44).
+
+**(2) 적재 결과(원자 보호)**: Phase1 = 3종 URL 전수 생존 재확인 후에만 업로드(죽은 URL 1개라도 전체 ABORT). 바이트 실측 = 대표 65787B(image/jpeg) / 누끼 195918B(image/png) / 배경 73822B(image/jpeg) — Desktop 검증치(65.8/195.9/73.8KB) 정합. Phase2 = product-assets/cmpnooli40001f0gveaxr8iim/ upsert(cacheControl 1년). Phase3 = public URL 3종 전부 http 200.
+
+**(3) 영구 URL**:
+- 대표이미지(1000x1000): https://doxfizicftgtqktmtftf.supabase.co/storage/v1/object/public/product-assets/cmpnooli40001f0gveaxr8iim/myeonghwa-main-1000.jpg
+- 본품 누끼(RGBA png): https://doxfizicftgtqktmtftf.supabase.co/storage/v1/object/public/product-assets/cmpnooli40001f0gveaxr8iim/myeonghwa-cutout.png
+- 배경 무대(860x860): https://doxfizicftgtqktmtftf.supabase.co/storage/v1/object/public/product-assets/cmpnooli40001f0gveaxr8iim/myeonghwa-backdrop-860.jpg
+
+**(4) 보안/비가역**: 마스터(서비스롤) 키는 로컬 `--env-file=.env.local`에서만 로드, 대화/로그 미노출(Gemini 키 노출 사고 재발 방지). Storage upsert만 — DB row mutate 0, Product 발행 필드 미접촉, DRAFT 유지. 완전 가역.
+
+**다음 (Desktop)**: 영구 URL 3종을 상세페이지 합성/발행 자산으로 연결(Figma STEP2 배경A+본품C 합성).
+
+---
+
 ## 2026-06-04 (4) firefly-generate 어댑터 + 인물 정책 코드 정합 (Code turn)
 
 baseline 77812ea (Vercel READY). 권위: docs/handoff/HANDOFF_firefly_generate_adapter_2026-06-04.md.

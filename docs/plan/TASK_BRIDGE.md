@@ -71,6 +71,19 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (5) 명화 디퓨저 가공자산 3종 Supabase 영구화 완료 (FROM Code, baseline 16578d0)
+
+| 항목 | 상태 |
+|---|---|
+| 적재 | product-assets/cmpnooli40001f0gveaxr8iim/ upsert 3종 + public 200 검증. 바이트 Desktop 검증치 정합(65787/195918/73822B). |
+| 대표이미지(1000) | https://doxfizicftgtqktmtftf.supabase.co/storage/v1/object/public/product-assets/cmpnooli40001f0gveaxr8iim/myeonghwa-main-1000.jpg |
+| 본품 누끼(png) | https://doxfizicftgtqktmtftf.supabase.co/storage/v1/object/public/product-assets/cmpnooli40001f0gveaxr8iim/myeonghwa-cutout.png |
+| 배경무대(860) | https://doxfizicftgtqktmtftf.supabase.co/storage/v1/object/public/product-assets/cmpnooli40001f0gveaxr8iim/myeonghwa-backdrop-860.jpg |
+| 실행 보정 | resolveProductId(PostgREST) "permission denied for schema public" → PRODUCT_ID override 우회. Storage API 정상. 스크립트 주석 보강. |
+| 보안/비가역 | 서비스롤 키 로컬 --env-file만(대화 미노출). Storage upsert만, DB/발행 미접촉, DRAFT 유지. 가역. |
+| 다음 (Desktop) | 영구 URL 3종 → 상세페이지 합성/발행 자산 연결(Figma STEP2). |
+
+
 ### 2026-06-04 (4) firefly-generate 어댑터 + 인물 정책 코드 정합 (FROM Code, baseline 77812ea)
 
 | 항목 | 상태 |
