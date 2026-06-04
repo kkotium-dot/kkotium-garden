@@ -71,6 +71,21 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 B+C 배포 검증 + Supabase 적용 + aroma 프리셋 + 하이브리드 원칙 (Desktop 완결, production HEAD 6f02330)
+
+| 항목 | 상태 |
+|---|---|
+| 배포 검증 | 채팅 B(5ea926e) + C(0f6d3be) + 추가 누락분(6f02330, 단건 prefill 옵션 유실 수정) 3커밋 모두 Vercel READY 실측. runtime logs 전수 200 → 신규 3컬럼 회귀 0. 코드 라인 직독 버그 0. |
+| Supabase 적용 | apply_migration 20260603_add_concept_preset 실행 → information_schema drift 0 확정. 역순 배포 사고 해소. |
+| aroma 적용 | 명화 디퓨저(cmpnooli40001f0gveaxr8iim) concept_preset='aroma'/preset_intensity='l3' UPDATE 완료(DRAFT, 비가역 아님). |
+| ★ 영구 디자인 원칙 | 상품 디자인 = 한 방향 금지, 여러 컨셉 하이브리드로 감도 제고. 명화 디퓨저 = A(모네 배경) + C(정물 오브제) 3겹 레이어 v2 확정. |
+| S4 전략(대표 승인) | Figma 마스터 + concept-presets.ts 토큰↔Figma Variables 동기화. 1단계 v2 HTML 빠른 런칭, 2단계 Figma 마스터 구축. Canva는 단발성 보조. |
+| Firefly 카드 | docs/handoff/HANDOFF_S2_firefly_myeonghwa_aroma_2026-06-03.md (히어로 A+C + 향 3종 EN 프롬프트, 대표 1-click 생성용). |
+| 이번 채팅 잔여(Code 위임) | backfill dry-run — Desktop 로컬 터미널 미가용. `npx tsx scripts/backfill-options-from-crawl.ts`(dry-run) 검토 후 명화 중복 0 확인 → --apply. + batch-register category:'uncategorized' 하드코딩 정리 후보. |
+| 바뀐 점 | 비가역 0(register/POST mutate 0). SD-01 미접촉. |
+| 다음 | 새 채팅#1(Figma 마스터+토큰 동기화) / 새 채팅#2(상품관리 자동화 화면 UI/UX 설계+브라우저 E2E). 각각 독립 완결 — 한 채팅 과부하 방지. |
+
+
 ### 2026-06-03 크롤 옵션 변환 누락 수정 (Code → Desktop, 미push, baseline 4c52141)
 
 | 항목 | 상태 |

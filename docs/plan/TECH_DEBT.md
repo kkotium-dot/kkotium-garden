@@ -279,3 +279,15 @@ Vercel production → Tailscale Funnel proxy(home computer) → 네이버 Commer
 ### SOURCE
 
 Code 2026-06-02 P0 발행 회선 수정 turn — api-client.ts fetchNoKeepAlive 출하 후 사후 검증에서 GET까지 ECONNRESET 발견.
+
+---
+
+## DEBT-10 — batch-register `category:'uncategorized'` 하드코딩 (정리 후보)
+
+**Status**: OPEN (2026-06-04 등록, Desktop 후속 정리 turn 중 기록)
+**Severity**: lowest (현재 무해 — 게이트가 naverCategoryCode 별도 컬럼을 read하므로 'uncategorized' literal은 미사용)
+**Owner**: 발행 통과 후 chore turn (즉시 수술 불요)
+
+`src/app/api/crawl/batch-register/route.ts`의 `category:'uncategorized'` 하드코딩은 발행 게이트가 별도 `naverCategoryCode` 컬럼을 읽어 판정하므로 현재 동작 영향 0. 정리 시 실제 카테고리 코드로 치환 또는 필드 제거 검토. 코드 변경 0 — 정리 후보로만 등재.
+
+**SOURCE**: Code 2026-06-04 Desktop 후속 정리 turn (작업3, 코드 미접촉 기록 전용).

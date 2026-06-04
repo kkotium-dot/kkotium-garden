@@ -1,3 +1,27 @@
+## 2026-06-04 B+C 배포 검증 + Supabase 적용 + aroma 프리셋 + 하이브리드 디자인 원칙 확정 (Desktop turn, 코드 0)
+
+production HEAD 6f02330. 이번 turn = 이전 두 Code 세션(채팅 B 프리셋 + 채팅 C 크롤옵션) 산출물 검증 + 배포 완결 + 디자인 하이브리드 진행 + MD 핑퍼 정리. 코드 변경 0건, Supabase UPDATE 2건(컬럼 적용 + aroma 적용).
+
+**(1) 배포 검증 (Vercel MCP 실측)**: Code가 push한 3커밋 모두 production READY 단정 — 채팅 C(0f6d3be, 크롤옵션 매퍼+배선+backfill) + 채팅 B(5ea926e, 프리셋+빌더제거+schema 3컬럼) + 추가 누락분(6f02330, 단건 prefill 경로 POST /api/products 옵션 유실 수정 — 지난 turn 제가 '범위 밖'으로 남긴 부분을 Code가 마저 수정). production runtime logs 전수 200(notifications/dashboard/stats) → 신규 3컬럼 추가에 따른 Product 쿼리 회귀 0 실측 확정.
+
+**(2) 코드 직독 검증 (로직 버그 0)**: batch-register/route.ts — 옵션 매핑이 $transaction으로 product.create + product_options.create + crawlLog.update 원자화, 옵션 없으면 hasOptions=false 자연 유지. backfill-options-from-crawl.ts — hasOptions===true OR product_options 존재 시 skip(명화 디퓨저 중복 INSERT 이중차단) + dry-run 기본 + upsert 멱등. 관찰: batch-register category:'uncategorized' 하드코딩 잔존(게이트는 naverCategoryCode 별도 컬럼 읽어 현재 무해, 정리 후보).
+
+**(3) Supabase 프리셋 컬럼 적용**: execute_sql로 적용 전 빈 결과 확인 → apply_migration 20260603_add_concept_preset → information_schema 재조회로 concept_preset(VARCHAR20 def 'kitchen')/preset_intensity(VARCHAR10 def 'l1')/preset_overrides(jsonb) drift 0 단정. ADD COLUMN IF NOT EXISTS + default = backward-compatible(비가역 아님). 역순 배포 사고(컬럼 부재 시 Product 전 쿼리 500) 원천 차단.
+
+**(4) 명화 디퓨저 aroma 적용**: cmpnooli40001f0gveaxr8iim 현재 상태 kitchen/l1 확인 → concept_preset='aroma'/preset_intensity='l3' UPDATE RETURNING 검증. DRAFT 상태 + 디자인 표현 컬럼(발행 데이터·가격·옵션 무관)라 비가역 아님.
+
+**(5) ★ 영구 디자인 원칙(대표 확정)**: 상품 디자인은 한 방향이 아니라 여러 컨셉을 어우러지게 하이브리드로 진행해 감도 제고. 명화 디퓨저 상세페이지 = A(모네 수련 무드 배경) + C(정물 꽃 오브제 전경) 3겹 레이어링 v2 확정(myeonghwa_aroma_detail_v2_hybrid.html). 토큰 세이지 #76864C / 웜크림 #F3EFE7 / 테라코타 #B5694C가 concept-presets.ts aroma 정합.
+
+**(6) 디자인 도구 파이프라인 확정**: S2 이미지(Adobe Firefly 1-click 생성=대표 수동, 소비자 플랜 API 부재+브라우저 자동화는 ToS 위반, 생성 이후 누끼·리사이즈·합성·DB 적재는 Adobe MCP 자동) → S3 기획(Claude 아티팩트, 완료) → S4 양산(Figma 마스터 우선, Canva 보조). Firefly 핸드오프 카드 HANDOFF_S2_firefly_myeonghwa_aroma_2026-06-03.md 작성(Met CC0 모네 다운로드 + 정물 오브제·향 3종 EN 프롬프트, 공통 네거티브 no human face/text/logo, Firefly Image 5 10크레딛 indemnified).
+
+**(7) S4 전략 확정(대표 승인)**: Figma 마스터 템플릿 + concept-presets.ts 토큰↔Figma Variables 동기화로 양산 체계화. 핵심 = 코드와 디자인이 같은 토큰을 공유해 단일 소스화. 1단계(명화 디퓨저)=v2 HTML 기반 빠른 런칭, 2단계=Figma 마스터 구축(새 채팅). Canva는 시즌 이벤트·단발성 배너용.
+
+검증: 배포 3커밋 READY 실측 / runtime 200 / Supabase drift 0 / aroma UPDATE RETURNING 확인. 비가역 0(register·POST mutate 실행 0건). SD-01 미접촉. 정직 보고: web_fetch로 production API 직접 호출 불가 → Vercel runtime logs로 대체(더 신뢰도 높은 실측). backfill dry-run은 Desktop 로컬 터미널 미가용으로 Code 위임(정직 한계 고지).
+
+자동 typo 메모(다음 Code 정정 대상): TASK_BRIDGE 신규 entry의 '3커봇'→'3커밋' / '바꽈 점'→'바뀐 점' / '매경'→'배경' (edit_file 한글 변환 중 발생, 의미 전달에는 지장 없으나 sentinel 정리 권장).
+
+다음 = 새 채팅#1(Figma 마스터+토큰 동기화) / 새 채팅#2(상품관리 자동화 화면 UI/UX 설계+브라우저 E2E). 이번 채팅 잔여 backfill dry-run은 아래 Code 붙여넣기 블록.
+
 ## 2026-06-03 크롤 옵션 변환 누락 수정 (crawl_logs → Product/product_options) [코드 완료] (Code turn)
 
 권위: docs/handoff/HANDOFF_crawl_option_mapping_fix_2026-06-03.md. baseline 4c52141. 작업 전 grep으로 변환 라우트 특정 선행.
