@@ -19,6 +19,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { buildDetailPage } from '@/lib/automation/section-builder';
+import { serializeDetailHtml } from '@/lib/automation/detail-html-serializer';
 import type {
   ConceptTone,
   SkeletonId,
@@ -169,6 +170,19 @@ export async function POST(
       groundedFacts,
     });
 
+    // Parallel HTML output (STEP 3) — additive; the PNG (detailBase64) is
+    // untouched. copy is wrapped in markup only (no mutation, #46).
+    const detailHtml = serializeDetailHtml({
+      productName: product.name,
+      sections: result.sections.map((s) => ({
+        sectionId: s.sectionId,
+        copy: s.copy,
+        role: s.role,
+      })),
+      heroImageUrl: product.mainImage,
+      lifestyleAssetUrl: body.lifestyleAssetUrl,
+    });
+
     return NextResponse.json({
       ok: true,
       skeletonId: result.skeletonId,
@@ -181,8 +195,10 @@ export async function POST(
         offsetY: s.offsetY,
         copyFiltered: s.copyFiltered,
         copyKeys: Object.keys(s.copy),
+        role: s.role,
       })),
       detailBase64: result.buffer.toString('base64'),
+      detailHtml,
       detailWidth: result.skeleton.width,
       detailHeight: result.skeleton.totalHeight,
       elapsedMs: result.elapsedMs,

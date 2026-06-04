@@ -221,6 +221,8 @@ function StudioInner() {
           onRun={actions.runDetail}
           overrideSkeletonId={actions.overrideSkeletonId}
           onOverrideChange={actions.setOverrideSkeletonId}
+          lifestyleAssetUrl={actions.manualBackdropUrl}
+          onLifestyleChange={actions.setManualBackdropUrl}
         />
       }
       actions={

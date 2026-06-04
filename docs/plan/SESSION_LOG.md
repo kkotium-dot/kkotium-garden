@@ -1,3 +1,148 @@
+## 2026-06-04 (13) 빌더 STEP5 — 커넥터 운영 규칙 + 캐시 점검 / 하이브리드 대수술 완료 (Code turn)
+
+baseline 0e619f8, feature/detail-builder-hybrid. 권위: HANDOFF STEP5(독립) + TOOL_ECOSYSTEM_MANUAL.
+
+**(1) 작업원칙 #48 명문화(PRINCIPLES_LEARNED)**: 도구 생태계 라우팅 고정 — 이미지 생성=Adobe Firefly 웹 1-click(대표 수동, api 모드는 #38 예외), 가공=Adobe MCP, 합성·연속성=section-builder/composeContinuous + Figma(sharp 단순 적층 약함). AEM MCP / Adobe Marketing Agent MCP=1인 셀러 무관 미사용 명문. 파트너 모델(FLUX/Nano Banana/gemini/imagen/gpt-image)=IP 면책 없음 → 최종 판매물 금지, Firefly-native(유료 면책)만 판매물 허용. firefly-generate.ts 주석 보강(파트너 모델 api 자동 강등=발행 경로 배제 명문).
+
+**(2) 캐시 no-cache 점검(DEBT-11 등재)**: 영구 적재 3종(main/cutout/backdrop) curl -sI 실측 → preserve 스크립트가 cacheControl '31536000' 지정했으나 공개 URL 응답이 cache-control: no-cache. cacheControl 옵션 미실효(CDN/버킷 메타 미적용 의심). 매 요청 재페치 → 상세페이지 체감 속도·전환율 손해(기능 영향 0). 재업로드(객체 삭제 후 신규 업로드로 메타 재적용) 또는 Supabase 버킷 기본 cache 정책 설정 권고 — 프로덕션 스토리지 mutation이라 Code 미실행, Desktop 위임(#41). 발행 차단 아님.
+
+**(3) 검증**: tsc 0 / build ✓ Compiled successfully / sentinel 0 / 코드 Korean 0(firefly-generate 주석 영어). 비가역 0(코드 변경=주석 1곳, 로직 무변경). main a585635 불변.
+
+**★ 빌더 하이브리드 대수술 STEP1~5 전 완료(브랜치 feature/detail-builder-hybrid)**:
+- STEP1(bf09837): hero 무드배경 합성.
+- STEP2-foundation(4ef6102): composeContinuous + sectionRole 인프라.
+- STEP2-확산 표본(9c31052): hero 테이블 앵커링 근본수정 + spec 불투명.
+- STEP2-확산 emotional(60c5408): emotional-bg 헬퍼 + 6개 전환 + 접지그림자.
+- STEP2-마감(09e5ff1): 스크림 0.40 + 다크 배경 적응형.
+- STEP3(a539fea): detail-html-serializer + detailHtml 필드.
+- STEP4(0e619f8): Studio UI 이미지/HTML 토글 + 무드배경 입력.
+- STEP5(본 커밋): 커넥터 규칙 #48 + 캐시 DEBT-11.
+전 STEP 회귀 가드: no-lifestyle 단색 경로 = 전 렌더러 createCanvas(size,bg) 동일(구조적 바이트 동등). 비가역 0(발행 미접촉 DRAFT). main 내내 불변.
+
+**다음 (Desktop)**: (1) 명화 디퓨저 재합성 최종 확인(스크림 0.40 + 접지그림자 + HTML 토글) (2) ★ main 머지 전 최종 회귀 검증 — 달항아리(무드 없는) 단색 경로 출력 불변 확인 (3) 브랜치 main 머지 → P0(달항아리·명화) 발행 재개. (4) Figma STEP2 7섹션 컴포넌트는 본 빌더 연속캔버스 구조와 정합.
+
+---
+
+## 2026-06-04 (12) 빌더 STEP4 — 가독성 정교화 + Studio UI 배선 (Code turn)
+
+baseline a539fea, feature/detail-builder-hybrid. 권위: HANDOFF STEP4(가산식).
+
+**(1) 렌더 측 가독성 정교화**: 적응형 스크림(다크 배경 자동 상향)은 STEP2 마감(10)서 이미 완료 → STEP4 "미룬 적응형 스크림" 없음. informational 19개는 이미 불투명(대비 확보)이라 추가 작업 불요. 패널 페이드(hero)도 STEP2-foundation서 적용됨.
+
+**(2) Studio UI(DetailPageCard.tsx)**: (a) 이미지(PNG)/HTML 출력 토글 — FileImage/Code2 버튼, viewMode useState, HTML은 detail.detailHtml 있을 때만 활성(없으면 비활성+htmlUnavailable 툴팁). showHtml이면 dangerouslySetInnerHTML로 직렬화기 출력 미리보기(자체 escape된 마크업), 아니면 기존 PNG img. (b) 무드 배경 URL 입력 — 신규 state 추가 없이 기존 manualBackdropUrl/setManualBackdropUrl 재사용(썸네일·상세 공용 backdrop). (c) 미리보기 컨테이너 maxHeight 520→640(연속 페이지 인지 개선). 라벨 5종(moodBackdropLabel/Placeholder/outputImage/outputHtml/htmlUnavailable)을 studio-strings.ko.json에 분리(#35, JSX 한글 0).
+
+**(3) 배선**: useStudioActions.runDetail이 manualBackdropUrl.trim()을 body.lifestyleAssetUrl로 전달. studio/page.tsx가 DetailPageCard에 lifestyleAssetUrl=manualBackdropUrl + onLifestyleChange=setManualBackdropUrl 전달. types.ts DetailResult에 detailHtml?+sections role? 추가.
+
+**(4) 회귀 가드(중요)**: DetailPageCard 신규 props를 optional로 선언 → src/app/products/new/page.tsx의 두 번째 DetailPageCard 소비자(무드 입력 미전달)가 깨지지 않음(tsc 오류로 발견 후 즉시 optional 전환). 무드 입력은 onLifestyleChange 있을 때만 렌더. HTML 토글은 독립 동작.
+
+**(5) 검증**: tsc 0 / build ✓ Compiled successfully / sentinel 0 / 코드 Korean 0(라벨 i18n 분리, useStudioActions:253 기존 한글 에러문은 본 turn 무관). 비가역 0(generate-detail PNG/HTML 생성만, 발행 미접촉 DRAFT). main a585635 불변.
+
+**다음**: STEP5(커넥터 운영 규칙 PRINCIPLES_LEARNED 명문화 + 영구 적재 자산 cache-control: no-cache 점검).
+
+---
+
+## 2026-06-04 (11) 빌더 STEP3 — HTML 출력 경로 신설 (Code turn)
+
+baseline 09e5ff1, feature/detail-builder-hybrid. 권위: HANDOFF STEP3(하이브리드 절반, 가산식·저위험).
+
+**(1) detail-html-serializer.ts 신설**: serializeDetailHtml(input) — buildDetailPage 결과의 섹션 메타(sectionId+copy+role)를 의미적 HTML 블록으로 직렬화. heading-like 키(headline/title/question/hook, subtitle 제외)는 <h2>, 나머지는 <p>. 섹션 wrapper 배경은 role 기반(emotional=#FAF7F2 웜 틴트 / informational=#FFFFFF). 선두에 lifestyleAssetUrl + heroImageUrl 이미지 블록(Supabase 영구 URL을 img src, max-width 100%). 외곽 컨테이너 860px + Pretendard + word-break:keep-all + 큰 본문 폰트(모바일 가독). htmlEscape 자체 구현(& < > " ').
+
+**(2) #46 grounding**: 직렬화기는 copy를 변형하지 않고 escape+마크업만. role은 배경 톤에만 영향, 콘텐츠 무관.
+
+**(3) generate-detail 배선**: 응답에 detailHtml 필드 추가(serializeDetailHtml(result.sections+product.mainImage+body.lifestyleAssetUrl)). detailBase64(PNG)는 그대로 보존 = 병렬 출력(대체 아님). 응답 sections에 role도 노출. 기존 PNG 소비자(저장/발행) 회귀 0.
+
+**(4) 하이브리드 분담(주석 명문화)**: image(PNG) 모드 = 감성 비주얼 자체가 상품일 때 / html 모드 = 스마트에디터 호환·편집 필요 시. 출력 선택은 호출 측(Studio UI STEP4 / 대량등록 파이프).
+
+**(5) 검증**: tsc 0 / build ✓ Compiled successfully / sentinel 0 / Korean 0. 비가역 0(PNG/HTML 생성만, register/POST/DB mutate 0, 발행 미접촉 DRAFT). main a585635 불변.
+
+**다음**: STEP4(sectionRole 가독성 정교화 — 적응형 스크림은 STEP2 마감서 완료 / DetailPageCard UI: 이미지·HTML 토글 + 무드배경 입력) → STEP5(커넥터 규칙 + 캐시 점검).
+
+---
+
+## 2026-06-04 (10) 빌더 STEP2 마감 — 스크림 0.40 + 다크 배경 적응형 안전장치 (Code turn)
+
+baseline 60c5408, feature/detail-builder-hybrid. 권위: HANDOFF STEP2-확산 마감(2-1 스크림 하향 + 2-2 다크 안전장치).
+
+**(1) 스크림 0.62→0.40**: emotional-bg.ts MOOD_SCRIM_ALPHA. Desktop 실물 비교 검증 — 0.62는 명화(밝은 햇살) 배경서 무드 거의 소실(연한 베이지화), 0.40에서 세이지 헤드라인·흰 카드 본문 가독 유지하며 무드 회복. 대표 확정.
+
+**(2) 다크 배경 적응형 안전장치(2-2 (a) 채택)**: 0.40은 밝은 배경 기준 — 어두운 무드 배경(야간/딥톤)에선 흰 스크림 0.40으로 dark-on-light 텍스트 대비 깨질 위험. 해결: cover 버퍼를 sharp.stats()로 채널 평균 측정 → luma=(0.299R+0.587G+0.114B)/255, luma<0.5(DARK_BACKDROP_LUMA)면 MOOD_SCRIM_ALPHA_DARK=0.60으로 자동 상향, 아니면 0.40. stats 예외 시 0.40 폴백. 무드 모드에서만(단색 경로 불변). ★ 일정 판단: 간단·견고하여 STEP4로 미루지 않고 지금 처리(STEP4 "미룬 적응형 스크림"은 본 turn에서 완료).
+
+**(3) 검증**: tsc 0 / build ✓ Compiled successfully / sentinel 0 / Korean 0. 회귀 0(no-lifestyle createCanvas 분기 불변). 비가역 0(PNG만, 발행 미접촉 DRAFT). main a585635 불변.
+
+**다음**: STEP3(detail-html-serializer 신설 + generate-detail detailHtml 필드) → STEP4(가독성 정교화 + DetailPageCard UI) → STEP5(커넥터 규칙 + 캐시 점검). Desktop은 전 STEP 완료 후 명화 0.40 재확인 + 머지 전 최종 회귀.
+
+---
+
+## 2026-06-04 (9) 빌더 STEP2-확산(2) — emotional 그룹 6개 무드배경 전환 + 접지그림자 (Code turn)
+
+baseline 9c31052, feature/detail-builder-hybrid. 권위: HANDOFF STEP2-확산(2) "나머지 렌더러 차등 전환" 분류표.
+
+**(1) emotional-bg.ts 공통 헬퍼 신설**: (a) resolveEmotionalBackdrop(ctx,size,bg) — 무드 모드(ctx.lifestyleAssetUrl 존재)면 cover-fit 사진 위에 흰 가독성 스크림(MOOD_SCRIM_ALPHA=0.62) 합성한 "무드 틴트 wash" base 반환, 아니면 createCanvas(size,bg) 그대로(=회귀 0). ★ 설계 의도: 텍스트 대비 반드시 확보(HANDOFF 하드 요구) — text-heavy 섹션의 기존 dark-on-light 텍스트/카드를 그대로 두고 base만 밝은 무드 wash로 바꿔 대비 보존. usage.ts식 흰 텍스트-온-포토 bespoke 재작업의 대비 붕괴 위험 회피. (b) groundShadowLayer(size,{centerX,baseY,width}) — 작은 타원 SVG를 sharp.blur(12)로 부드럽게 → 전체 size 투명 레이어에 누끼 base 위치 배치(rgba 0,0,0,0.18). SVG filter 의존 없이 안정.
+
+**(2) emotional 6개 전환(1줄 스왑)**: seasonalHook/story/styledShot/problem/solution/philosophy — `const canvas = await createCanvas(size,bg)` → `const { canvas } = await resolveEmotionalBackdrop(ctx,size,bg)`. 미사용된 createCanvas import 제거. 전경 레이어(카드/텍스트/색)는 전부 무변경 → 스크림 wash 위에서 가독성 보존. hero(완료)는 무드 모드에 접지그림자만 추가(본품 base=tableLineY에 그림자). usage(이미 무드+applyBottomVignette 처리됨)는 미접촉.
+
+**(3) informational 19개 무변경(verify-only)**: spec/specTable/specifications/cta/shipping/warranty/comparison/clinical/corePerformance/technology/benefits/options/optionIntro/eventDetails/reviews/package/product/detail/material — 손대지 않음 = 불투명 createCanvas(size,bg) 유지 = 가독성 사수 + 무드 비침 0. (detail.ts가 lifestyleAssetUrl을 grid 전경 이미지로 쓰는 건 기존 동작, 배경 bleed 아님 → 무변경.)
+
+**(4) 검증**: tsc 0(미사용 import 제거 후 undefined 참조 0) / build ✓ Compiled successfully / sentinel 0 / 코드 Korean 0. 회귀 가드(구조적): 6개 렌더러 no-lifestyle = resolveEmotionalBackdrop else 분기 = createCanvas(size,bg) 동일 호출 + 전경 무변경 → 단색 경로 바이트 동등. hero 단색 접지그림자 미적용. 비가역 0(generate-detail PNG만, register/POST/DB mutate 0, 발행 미접촉 DRAFT). main a585635 불변.
+
+**(5) 범위/게이트**: STEP2-확산(2) emotional 그룹만. STEP3(HTML 직렬화기)/4(가독성 정교화+Studio UI)/5(커넥터 규칙+캐시 점검)는 Desktop 감성 그룹 시각 검증 회신 후.
+
+**다음 (Desktop)**: 명화 디퓨저 재합성 시각 검증 — (a) 감성 섹션 무드 노출(스크림 톤) (b) hero 접지그림자(스티커 느낌 해소) (c) spec 등 정보 섹션 가독성 (d) 달항아리 단색 회귀 0. 무드 강도 조정 원하면 MOOD_SCRIM_ALPHA(현 0.62) 하향. 승인 시 STEP3~5.
+
+---
+
+## 2026-06-04 (8) 빌더 STEP2-확산 (1)표본 — sectionRole 도입 + hero 본품 앵커링 근본해결 (Code turn)
+
+baseline 4ef6102, feature/detail-builder-hybrid. 권위: HANDOFF STEP2-확산 "섹션 역할별 차등 투명화". ★ 단순 전체 투명화 금지(표본 검수 결과: spec zebra 행/cta 흰 카드를 통째 투명화하면 정보 텍스트가 무드 사진과 겹쳐 가독성 붕괴).
+
+**(1) sectionRole 분류 도입(section-builder.ts)**: SectionRole = emotional | informational 타입 + EMOTIONAL_SECTION_IDS Set(hero/seasonalHook/story/philosophy/styledShot/problem/solution) + getSectionRole(id) — 미등록·모호 id는 informational(안전측, 가독성 우선)로 폴백. DetailPageResult.sections에 role 필드 추가(가산식 메타, PNG 픽셀 무관 → 회귀 0). HTML 직렬화기(STEP3)·Studio UI(STEP4)가 이 role을 읽어 분기 예정.
+
+**(2) 차등 투명화 정책(표본)**: emotional=무드 모드서 전역 무드bg 노출 / informational=불투명 배경 유지(가독성 사수, 무드bg 비침 금지). 표본 spec(informational)는 기존 createCanvas(size,bg) 불투명 그대로 — 렌더링 코드 무변경이 곧 informational 처리(가독성 보존). hero는 emotional이며 STEP1/2에서 이미 무드 표시. informational 톤 통일(연한 톤/반투명 카드)은 가독성 위험이라 STEP4 정교화로 이관.
+
+**(3) hero 본품 앵커링 근본해결(hero.ts)**: STEP2-foundation의 position:'bottom'은 명화 누끼(253×776 세로형)가 fit박스를 꽉 채워 이동 여백 0 → 무효였음(Desktop 표본 검수 확인). 근본 수정 = 무드 모드서 본품 배치를 캔버스 상단(y=40)이 아니라 배경 테이블면(tableLineY=round(size.height*0.52))에 base를 안착. productBoxH = max(120, tableLineY-60)로 상단 여백~테이블선 사이에 fit, offsetLayer y=tableLineY-productBoxH. ★ 패널 겹침 방지: tableLineY=min(0.52h, panelTop-50)로 clamp → hero 높이와 무관하게 텍스트 패널과 50px 안전간격 보장. 단색 경로는 기존 y=40 중앙 fitImage 그대로(회귀 0).
+
+**(4) 검증**: tsc 0 / build ✓ Compiled successfully(consumer 무파손 — role 신규 필드) / sentinel 0 / 코드 Korean 0. 비가역 0(generate-detail PNG 생성만, register/POST/DB mutate 0, 발행 미접촉 DRAFT). main a585635 불변. 회귀 가드(구조적): no-lifestyle hero=fitImage+y40+패널null 동일, no-lifestyle 빌더=stackVertically(role은 메타라 픽셀 무관).
+
+**(5) 범위/게이트**: STEP2-확산 (1)표본 = sectionRole 인프라 + hero 앵커링 + spec informational만. 나머지 28개 렌더러 그룹 확산 + STEP3(HTML 직렬화기)/4(가독성 정교화+Studio UI)/5(커넥터+캐시)는 Desktop 표본 시각 검증 회신 후.
+
+**다음 (Desktop)**: 명화 디퓨저 재합성 시각 검증 — (a) 본품이 배경 테이블면에 "놓인" 느낌(공중부양 해소) (b) spec 등 정보 섹션 가독성 유지 (c) 달항아리 단색 경로 회귀 0. 승인 시 Code 28 렌더러 그룹 확산 + STEP3~5.
+
+---
+
+## 2026-06-04 (7) 빌더 하이브리드 STEP2 — 연속 캔버스 foundation + hero 1-D 미세개선 (Code turn)
+
+baseline bf09837, feature/detail-builder-hybrid. 권위: HANDOFF_detail_builder_hybrid 작업1(연속 캔버스화) + 1-D(STEP1 실물검증 도출 미세개선 2건).
+
+**(1) composeContinuous 신설(section-builder.ts)**: 전체 캔버스(860 x totalHeight)에 전역 배경을 먼저 깔고(backgroundBuffer 있으면 무드 photo, 없으면 기존 흰색) 섹션을 그 위에 적층하는 연속 페이지 어셈블러. stackVertically 보존(기존 함수 유지). buildDetailPage 배선: lifestyleAssetUrl 있으면 fetch→coverFitCanvas(width,totalHeight)→composeContinuous, fetch 실패 시 bg undefined로 폴백(=흰색 base=stackVertically 동등). lifestyleAssetUrl 없으면 stackVertically 그대로 호출.
+
+**(2) ★ 회귀 가드 + 확산 보류**: 섹션 렌더러는 현재 각자 불투명 전체배경을 칠하고 캔버스를 빈틈없이 타일링 → 불투명 섹션이면 전역 배경과 무관하게 합성 픽셀이 stackVertically와 동일. 따라서 composeContinuous 배선은 지금 안전(무드 photo는 hero 자체 합성 외엔 가려짐). 30개 렌더러를 투명 배경으로 전환하는 "확산"은 최고 위험이라 hero 시각 검증 후로 보류(handoff 진행규칙 §128).
+
+**(3) hero 1-D 미세개선 2건(usedLifestyle 게이트)**: (개선1 바닥 앵커링) 무드 모드에서 본품 누끼 fit을 position:'bottom'으로 — 박스 하단에 안착시켜 배경 테이블면(~0.62h)에 "놓인" 사실감. 단색 경로는 기존 중앙 fitImage 유지. (개선2 패널 페이드) 가독성 패널 fill을 단색 rgba에서 세로 linearGradient(상단 offset 0 alpha 0 → 0.22 에서 0.72 도달)로 — 상단 가장자리가 본품 쪽으로 자연 연결. 패널 top(textBlockTop+10)·50px 안전간격 불변. 단색 경로 패널 null 유지.
+
+**(4) 검증**: tsc 0 / build ✓ Compiled successfully / sentinel 0 / 코드 Korean 0(작성 중 코드 주석 "작업1/개선1/개선2" 3건 검출→영어 교정). 비가역 0(generate-detail PNG 생성만, register/POST/DB mutate 0, 발행 미접촉 DRAFT). main a585635 불변.
+
+**(5) 범위/게이트**: STEP2 = composeContinuous foundation + hero 1-D만. 30 렌더러 확산 + STEP3(HTML 직렬화기)/4(sectionRole+UI)/5(커넥터+캐시)는 Desktop hero 시각 검증 회신 후 진행(handoff 진행규칙 준수).
+
+**다음 (Desktop)**: 명화 디퓨저 재합성 시각 검증 — 본품 바닥 앵커링(테이블면 안착) + 패널 상단 페이드 연결 확인. 단색 경로(달항아리) 회귀 0 확인. 승인 시 Code 확산+STEP3~5 진행.
+
+---
+
+## 2026-06-04 (6) 상세페이지 빌더 하이브리드 대수술 STEP1 — hero.ts 무드배경 합성 (Code turn)
+
+baseline a585635, feature/detail-builder-hybrid 브랜치(대수술이라 main 직접 수정 회피). 권위: docs/handoff/HANDOFF_detail_builder_hybrid_2026-06-04.md 작업2(단계별 순서상 첫 작업).
+
+**(1) hero.ts 무드배경 합성 3단계**: (a) 배경 — ctx.lifestyleAssetUrl 있으면 fetchImageBuffer → cover-fit(fit:'cover', position:'centre')으로 캔버스(860 x height) 전체 채움(letterbox 없음), 없으면 기존 createCanvas(size,bg) 단색. (b) 본품 — sourceImageUrl(누끼 PNG) 중앙, 무드배경일 때만 투명 letterbox(alpha 0)로 fit해 사진 비침, 단색일 때 기존 fitImage(...,bg) 동일. (c) 가독성 가드 — 무드배경일 때만 텍스트 블록 뒤 반투명 흰 라운드 패널(rgba(255,255,255,0.72)) 1겹.
+
+**(2) ★ 회귀 가드(P0 발행물 안전)**: 모든 추가는 usedLifestyle 게이트. lifestyleAssetUrl 미전달 시 — canvas=createCanvas(size,bg), 본품 fit=fitImage(buf,{560,imageBlockHeight-40},bg), readabilityPanel=null, layers=[titleLayer,(subtitle),stripe] — 연산·인자·순서 모두 기존과 동일 → 단색 경로 출력 불변. full-render 바이트 비교는 generateHeroCopy가 비결정적 AI라 불가하므로 구조적 동등으로 보장(정직 기록).
+
+**(3) 검증**: npx tsc --noEmit 0 / npm run build ✓ Compiled successfully / sentinel grep 0 / hero.ts Korean 0(주석 영어, 1차 작성 "작업2" 1건 검출→task 2 교정). 비가역 0(PNG 생성만, register/POST/DB mutate 0, 발행 미접촉 DRAFT 유지). main HEAD a585635 불변(브랜치 작업).
+
+**(4) 단계 범위**: STEP1=작업2(hero 무드배경)만. STEP2(연속 캔버스화)~STEP5(커넥터 운영 규칙)는 Desktop 시각 검증·승인 후 순차 진행.
+
+**다음 (Desktop)**: Studio에서 명화 디퓨저로 generate-detail 실행 — lifestyleAssetUrl=product-assets/cmpnooli40001f0gveaxr8iim/myeonghwa-backdrop-860.jpg, sourceImageUrl=.../myeonghwa-cutout.png → hero 무드배경 합성 결과 시각 검증(Desktop MCP). 승인 시 Code STEP2 진행.
+
+---
+
 ## 2026-06-04 (5) 명화 디퓨저 Adobe 가공자산 3종 Supabase 영구 적재 (Code turn)
 
 baseline 16578d0. scripts/preserve-myeonghwa-assets.mjs(Desktop 작성·검증) 로컬 실행. Adobe 단축URL 만료 전 영구화.

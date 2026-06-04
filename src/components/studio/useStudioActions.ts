@@ -269,6 +269,9 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
     try {
       const body: Record<string, string> = {};
       if (overrideSkeletonId) body.overrideSkeletonId = overrideSkeletonId;
+      // Reuse the product's mood backdrop (entered for thumbnails) as the
+      // detail lifestyle background — drives the emotional mood compositing.
+      if (manualBackdropUrl.trim()) body.lifestyleAssetUrl = manualBackdropUrl.trim();
       const res = await fetch(`/api/products/${productId}/generate-detail`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

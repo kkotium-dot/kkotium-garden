@@ -10,11 +10,11 @@
 // disappearing. KFTC requires time-bound campaigns to surface the window.
 
 import {
-  createCanvas,
   renderTextOverlay,
   overlayOnto,
 } from '../sharp-composite';
 import { generateSeasonalHookCopy } from './section-copy';
+import { resolveEmotionalBackdrop } from './emotional-bg';
 import type { SectionRenderer } from './types';
 import { resolveBgColor, CANONICAL_WIDTH } from './types';
 
@@ -22,7 +22,7 @@ export const seasonalHookRenderer: SectionRenderer = async (spec, section, ctx) 
   const bg = resolveBgColor(spec, section.bgColorToken);
   const size = { width: CANONICAL_WIDTH, height: section.height };
 
-  const canvas = await createCanvas(size, bg);
+  const { canvas } = await resolveEmotionalBackdrop(ctx, size, bg);
 
   const copy = await generateSeasonalHookCopy(spec, ctx);
 

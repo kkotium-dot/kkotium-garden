@@ -78,6 +78,8 @@ export interface DetailResult {
   matchScore: number;
   matchAmbiguous: boolean;
   detailBase64: string;
+  /** Parallel SmartEditor-compatible HTML output (STEP 3). May be absent. */
+  detailHtml?: string;
   detailWidth: number;
   detailHeight: number;
   elapsedMs: number;
@@ -87,6 +89,7 @@ export interface DetailResult {
     height: number;
     offsetY: number;
     copyFiltered: boolean;
+    role?: string;
   }>;
 }
 

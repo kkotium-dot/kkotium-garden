@@ -1,5 +1,21 @@
 # KKOTIUM GARDEN — ROADMAP
 
+> 2026-06-04 **빌더 STEP5 — 커넥터 규칙(#48) + 캐시 점검(DEBT-11). ★ STEP1~5 전 완료** (feature/detail-builder-hybrid, main 미접촉). 도구 라우팅·파트너 모델 면책 경계 명문화 + 영구자산 no-cache 실측(Desktop 재업로드 위임). **다음=Desktop 최종 회귀 검증(달항아리 단색 불변) → main 머지 → P0 발행 재개**.
+
+> 2026-06-04 **빌더 STEP4 — Studio UI(이미지/HTML 토글 + 무드배경 입력)** (feature/detail-builder-hybrid, main 미접촉). DetailPageCard 출력 토글 + 무드배경 URL(manualBackdropUrl 재사용). 적응형 스크림 STEP2서 선완료. optional props로 두 번째 소비자 무파손. 회귀 0. **다음=STEP5 커넥터 운영 규칙 + 캐시 점검 → 전 STEP 완료 → Desktop 최종 회귀 → 머지**.
+
+> 2026-06-04 **빌더 STEP3 — HTML 직렬화기 신설** (feature/detail-builder-hybrid, main 미접촉). detail-html-serializer.ts + generate-detail detailHtml 필드(PNG 보존). copy 무변형(#46), 860px 인라인. 회귀 0. **다음=STEP4 가독성+Studio UI → STEP5 커넥터/캐시**.
+
+> 2026-06-04 **빌더 STEP2 마감 — 스크림 0.40 + 다크 적응형** (feature/detail-builder-hybrid, main 미접촉). MOOD_SCRIM_ALPHA 0.40, 적응형(어두운 배경 0.60 자동 상향). 회귀 0. **다음=STEP3 HTML 직렬화기 → STEP4 가독성+Studio UI → STEP5 커넥터/캐시**.
+
+> 2026-06-04 **빌더 STEP2-확산(2) — emotional 6개 무드 전환 + 접지그림자** (Code turn, feature/detail-builder-hybrid, main 미접촉). emotional-bg.ts 공통 헬퍼(무드 cover-fit+가독성 스크림, 접지그림자) + 6개 렌더러 1줄 스왑. informational 19개 무변경. 회귀 0(단색 경로 createCanvas 동일). **다음=Desktop 감성 무드 검증 → STEP3(HTML)~5(커넥터/캐시)**.
+
+> 2026-06-04 **빌더 STEP2-확산 (1)표본 — sectionRole + hero 앵커링 근본해결** (Code turn, feature/detail-builder-hybrid, main 미접촉). SectionRole(emotional/informational) 도입 + 차등 투명화 정책. hero 본품 테이블면(~0.52h) 안착(50px 간격 clamp). spec informational 불투명 유지. 회귀 0. **다음=Desktop 표본 검증 → 28 렌더러 그룹 확산 → STEP3(HTML)~5(커넥터/캐시)**.
+
+> 2026-06-04 **빌더 하이브리드 STEP2 — 연속 캔버스 foundation + hero 1-D** (Code turn, feature/detail-builder-hybrid, main 미접촉). composeContinuous(전역 배경 선합성, stackVertically 보존) + hero 본품 바닥 앵커링 + 패널 페이드. 회귀 0(단색 경로 stackVertically 그대로). **다음=Desktop hero 재검증 → 30 렌더러 확산 → STEP3(HTML)~5(커넥터/캐시)**.
+
+> 2026-06-04 **상세 빌더 하이브리드 STEP1 — hero 무드배경 합성** (Code turn, feature/detail-builder-hybrid, main 미접촉). lifestyleAssetUrl cover-fit 배경 + 누끼 투명 합성 + 가독성 패널. 회귀 가드: 미전달 시 단색 경로 연산 동일. TSC 0/build ✓. **다음=Desktop 시각 검증 → STEP2 연속캔버스~STEP5(커넥터 운영 규칙)**.
+
 > 2026-06-04 **명화 디퓨저 가공자산 3종 Supabase 영구화 완료** (Code turn, baseline 16578d0). Adobe 단축URL 만료 전 product-assets/cmpnooli40001f0gveaxr8iim/ 영구 적재(대표 1000/누끼/배경 860) + public 200 검증. PRODUCT_ID override로 PostgREST 권한 이슈 우회. 비가역 0(Storage only, DRAFT 유지). **다음=영구 URL을 상세페이지 합성/발행 자산으로 연결 + Figma STEP2(한도 리셋 후)**.
 
 > 2026-06-04 **firefly-generate 어댑터 + 인물 정책 코드 정합** (Code turn, baseline 77812ea). firefly-generate.ts 신설(manual 기본/api 토글, 키 부재·파트너 모델 fail-safe 강등). ModelPolicy 'model-allowed' 추가 + classifyPersonShot 게이트 신설(classifyBackdrop 미접촉). TSC 0/build OK/비가역 0. **다음=Adobe 가공자산 Supabase 영구화 + Firefly 인물컷 classifyPersonShot 실측 + Figma STEP2(한도 리셋 후)**.

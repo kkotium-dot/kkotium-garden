@@ -14,6 +14,14 @@
 //   - Hero title at left, 56px bold, accent color
 //   - Subtitle 32px below title, 32px medium weight, secondary color
 //   - 4px brand accent stripe on the bottom edge
+//
+// 2026-06-04 (detail-builder-hybrid task 2): mood-background compositing.
+// When ctx.lifestyleAssetUrl is present, the background becomes a cover-fit mood
+// photo (A) with the product cutout (C) floated on top (transparent letterbox),
+// plus a semi-transparent white panel behind the text block for legibility.
+// ★ Regression guard (P0): when lifestyleAssetUrl is absent, every operation and
+// argument is byte-identical to the prior solid-color path — the mood additions
+// are strictly gated on `usedLifestyle`, so existing PNG output is unchanged.
 
 import {
   createCanvas,
@@ -26,6 +34,7 @@ import {
 // fetch source URL directly. Sharp fitImage handles resize + bg below.
 import sharp from 'sharp';
 import { generateHeroCopy } from './section-copy';
+import { groundShadowLayer } from './emotional-bg';
 import type { SectionRenderer } from './types';
 import { resolveBgColor, CANONICAL_WIDTH } from './types';
 
@@ -47,6 +56,18 @@ async function offsetLayer(
     .toBuffer();
 }
 
+// Cover-fit a mood photo to the full canvas (fills the frame, crops overflow —
+// no letterbox bars). Used only for the lifestyle-background path.
+async function coverFitToCanvas(
+  imageBuffer: Buffer,
+  size: { width: number; height: number },
+): Promise<Buffer> {
+  return sharp(imageBuffer)
+    .resize(size.width, size.height, { fit: 'cover', position: 'centre' })
+    .png()
+    .toBuffer();
+}
+
 export const heroRenderer: SectionRenderer = async (spec, section, ctx) => {
   const bg = resolveBgColor(spec, section.bgColorToken);
   const size = { width: CANONICAL_WIDTH, height: section.height };
@@ -55,24 +76,60 @@ export const heroRenderer: SectionRenderer = async (spec, section, ctx) => {
   const imageBlockHeight = Math.min(560, Math.round(size.height * 0.62));
   const textBlockTop = imageBlockHeight + 40;
 
-  const canvas = await createCanvas(size, bg);
+  // Background: cover-fit mood photo when a lifestyle asset is supplied, else
+  // the original solid skeleton color. The solid path is byte-identical to the
+  // prior behavior (regression guard for P0 publish assets).
+  let canvas: Buffer;
+  let usedLifestyle = false;
+  if (ctx.lifestyleAssetUrl) {
+    try {
+      const bgBuf = await fetchImageBuffer(ctx.lifestyleAssetUrl);
+      canvas = await coverFitToCanvas(bgBuf, size);
+      usedLifestyle = true;
+    } catch {
+      canvas = await createCanvas(size, bg);
+    }
+  } else {
+    canvas = await createCanvas(size, bg);
+  }
 
   // Optional product image (skip silently on fetch error — the build
   // shouldn't break the moment a single source image is missing).
   let withImage: Buffer = canvas;
   try {
     const buf = await fetchImageBuffer(ctx.sourceImageUrl);
-    const fitted = await fitImage(
-      buf,
-      { width: 560, height: imageBlockHeight - 40 },
-      bg,
-    );
-    const placed = await offsetLayer(
-      fitted,
-      { x: Math.round((size.width - 560) / 2), y: 40 },
-      size,
-    );
-    withImage = await overlayOnto(canvas, [placed]);
+    const centerX = Math.round((size.width - 560) / 2);
+    if (usedLifestyle) {
+      // STEP 2-spread root-cause anchoring: a tall cutout (e.g. 253x776) fills
+      // its fit box, so bottom-gravity alone moved nothing. Instead place the
+      // cutout so its BASE rests on the backdrop table line (~0.52h), sizing its
+      // box from the top margin down to that line. The table line is clamped so
+      // the cutout's base always stays >=50px above the text panel (no overlap).
+      const panelTop = textBlockTop + 10;
+      const tableLineY = Math.min(Math.round(size.height * 0.52), panelTop - 50);
+      const productBoxH = Math.max(120, tableLineY - 60);
+      const fitted = await sharp(buf)
+        .resize(560, productBoxH, {
+          fit: 'contain',
+          position: 'bottom',
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        })
+        .png()
+        .toBuffer();
+      const placed = await offsetLayer(fitted, { x: centerX, y: tableLineY - productBoxH }, size);
+      // Ground shadow under the cutout base so it sits on the table, not pasted.
+      const shadow = await groundShadowLayer(size, {
+        centerX: Math.round(size.width / 2),
+        baseY: tableLineY,
+        width: 380,
+      });
+      withImage = await overlayOnto(canvas, [shadow, placed]);
+    } else {
+      // Solid path — unchanged (byte-identical to the prior behavior).
+      const fitted = await fitImage(buf, { width: 560, height: imageBlockHeight - 40 }, bg);
+      const placed = await offsetLayer(fitted, { x: centerX, y: 40 }, size);
+      withImage = await overlayOnto(canvas, [placed]);
+    }
   } catch {
     // Keep `withImage = canvas` — hero degrades to text-only.
   }
@@ -107,7 +164,31 @@ export const heroRenderer: SectionRenderer = async (spec, section, ctx) => {
       '</svg>',
   );
 
-  const layers: Buffer[] = [titleLayer];
+  // Readability guard: a semi-transparent white panel behind the text block so
+  // the dark title/subtitle stays legible over a mood photo. Only on the
+  // lifestyle path — the solid path adds no extra layer (regression guard).
+  // 1-D improvement 2 (panel fade): the panel's top edge fades transparent->white so it
+  // connects up toward the product instead of showing a hard rectangle edge.
+  // The 50px safe gap above the panel is preserved (panel top unchanged).
+  let readabilityPanel: Buffer | null = null;
+  if (usedLifestyle) {
+    const panelTop = textBlockTop + 10;
+    const panelH = Math.max(0, size.height - panelTop - 20);
+    readabilityPanel = Buffer.from(
+      `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">` +
+        '<defs><linearGradient id="panelFade" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="#FFFFFF" stop-opacity="0" />' +
+        '<stop offset="0.22" stop-color="#FFFFFF" stop-opacity="0.72" />' +
+        '<stop offset="1" stop-color="#FFFFFF" stop-opacity="0.72" />' +
+        '</linearGradient></defs>' +
+        `<rect x="40" y="${panelTop}" width="${size.width - 80}" height="${panelH}" rx="20" ry="20" fill="url(#panelFade)" />` +
+        '</svg>',
+    );
+  }
+
+  const layers: Buffer[] = [];
+  if (readabilityPanel) layers.push(readabilityPanel);
+  layers.push(titleLayer);
   if (subtitleLayer) layers.push(subtitleLayer);
   layers.push(stripe);
 

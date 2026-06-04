@@ -11,7 +11,6 @@
 //   - Three benefit rows (right side), each with index circle + text
 
 import {
-  createCanvas,
   fetchImageBuffer,
   fitImage,
   renderTextOverlay,
@@ -20,6 +19,7 @@ import {
 import { urlGalleryThumb } from '../cloudinary-pipeline';
 import sharp from 'sharp';
 import { generateSolutionCopy } from './section-copy';
+import { resolveEmotionalBackdrop } from './emotional-bg';
 import type { SectionRenderer } from './types';
 import { resolveBgColor, CANONICAL_WIDTH } from './types';
 
@@ -45,7 +45,7 @@ export const solutionRenderer: SectionRenderer = async (spec, section, ctx) => {
   const bg = resolveBgColor(spec, section.bgColorToken);
   const size = { width: CANONICAL_WIDTH, height: section.height };
 
-  const canvas = await createCanvas(size, bg);
+  const { canvas } = await resolveEmotionalBackdrop(ctx, size, bg);
 
   let withImage: Buffer = canvas;
   try {

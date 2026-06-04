@@ -98,7 +98,12 @@
     "sectionCount": "{n}개 섹션",
     "elapsedMs": "{ms}ms 소요",
     "matchScore": "매칭 점수 {score}",
-    "error": "상세 페이지 생성 실패:"
+    "error": "상세 페이지 생성 실패:",
+    "moodBackdropLabel": "무드 배경 URL",
+    "moodBackdropPlaceholder": "상세 무드 배경 이미지 주소 (선택)",
+    "outputImage": "이미지(PNG)",
+    "outputHtml": "HTML",
+    "htmlUnavailable": "HTML 출력 없음 (재생성 필요)"
   },
   "actions": {
     "title": "에셋 저장 + 발행",
