@@ -1,3 +1,21 @@
+## 2026-06-04 (8) 빌더 STEP2-확산 (1)표본 — sectionRole 도입 + hero 본품 앵커링 근본해결 (Code turn)
+
+baseline 4ef6102, feature/detail-builder-hybrid. 권위: HANDOFF STEP2-확산 "섹션 역할별 차등 투명화". ★ 단순 전체 투명화 금지(표본 검수 결과: spec zebra 행/cta 흰 카드를 통째 투명화하면 정보 텍스트가 무드 사진과 겹쳐 가독성 붕괴).
+
+**(1) sectionRole 분류 도입(section-builder.ts)**: SectionRole = emotional | informational 타입 + EMOTIONAL_SECTION_IDS Set(hero/seasonalHook/story/philosophy/styledShot/problem/solution) + getSectionRole(id) — 미등록·모호 id는 informational(안전측, 가독성 우선)로 폴백. DetailPageResult.sections에 role 필드 추가(가산식 메타, PNG 픽셀 무관 → 회귀 0). HTML 직렬화기(STEP3)·Studio UI(STEP4)가 이 role을 읽어 분기 예정.
+
+**(2) 차등 투명화 정책(표본)**: emotional=무드 모드서 전역 무드bg 노출 / informational=불투명 배경 유지(가독성 사수, 무드bg 비침 금지). 표본 spec(informational)는 기존 createCanvas(size,bg) 불투명 그대로 — 렌더링 코드 무변경이 곧 informational 처리(가독성 보존). hero는 emotional이며 STEP1/2에서 이미 무드 표시. informational 톤 통일(연한 톤/반투명 카드)은 가독성 위험이라 STEP4 정교화로 이관.
+
+**(3) hero 본품 앵커링 근본해결(hero.ts)**: STEP2-foundation의 position:'bottom'은 명화 누끼(253×776 세로형)가 fit박스를 꽉 채워 이동 여백 0 → 무효였음(Desktop 표본 검수 확인). 근본 수정 = 무드 모드서 본품 배치를 캔버스 상단(y=40)이 아니라 배경 테이블면(tableLineY=round(size.height*0.52))에 base를 안착. productBoxH = max(120, tableLineY-60)로 상단 여백~테이블선 사이에 fit, offsetLayer y=tableLineY-productBoxH. ★ 패널 겹침 방지: tableLineY=min(0.52h, panelTop-50)로 clamp → hero 높이와 무관하게 텍스트 패널과 50px 안전간격 보장. 단색 경로는 기존 y=40 중앙 fitImage 그대로(회귀 0).
+
+**(4) 검증**: tsc 0 / build ✓ Compiled successfully(consumer 무파손 — role 신규 필드) / sentinel 0 / 코드 Korean 0. 비가역 0(generate-detail PNG 생성만, register/POST/DB mutate 0, 발행 미접촉 DRAFT). main a585635 불변. 회귀 가드(구조적): no-lifestyle hero=fitImage+y40+패널null 동일, no-lifestyle 빌더=stackVertically(role은 메타라 픽셀 무관).
+
+**(5) 범위/게이트**: STEP2-확산 (1)표본 = sectionRole 인프라 + hero 앵커링 + spec informational만. 나머지 28개 렌더러 그룹 확산 + STEP3(HTML 직렬화기)/4(가독성 정교화+Studio UI)/5(커넥터+캐시)는 Desktop 표본 시각 검증 회신 후.
+
+**다음 (Desktop)**: 명화 디퓨저 재합성 시각 검증 — (a) 본품이 배경 테이블면에 "놓인" 느낌(공중부양 해소) (b) spec 등 정보 섹션 가독성 유지 (c) 달항아리 단색 경로 회귀 0. 승인 시 Code 28 렌더러 그룹 확산 + STEP3~5.
+
+---
+
 ## 2026-06-04 (7) 빌더 하이브리드 STEP2 — 연속 캔버스 foundation + hero 1-D 미세개선 (Code turn)
 
 baseline bf09837, feature/detail-builder-hybrid. 권위: HANDOFF_detail_builder_hybrid 작업1(연속 캔버스화) + 1-D(STEP1 실물검증 도출 미세개선 2건).

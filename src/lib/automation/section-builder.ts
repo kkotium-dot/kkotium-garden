@@ -32,6 +32,31 @@ import type {
 import type { ConceptTone, SkeletonId } from '../diagnosis/concept-tone-inference';
 
 // ---------------------------------------------------------------------------
+// Section role (STEP 2-spread): drives differential transparency. emotional
+// sections may go transparent over a mood backdrop; informational sections keep
+// an opaque/toned background so spec/shipping/AS text stays legible (no mood
+// bleed). Default is informational — the safe side when a section is ambiguous.
+// ---------------------------------------------------------------------------
+
+export type SectionRole = 'emotional' | 'informational';
+
+const EMOTIONAL_SECTION_IDS: ReadonlySet<string> = new Set([
+  'hero',
+  'seasonalHook',
+  'story',
+  'philosophy',
+  'styledShot',
+  'problem',
+  'solution',
+]);
+
+/** Classify a section by id. Unknown / ambiguous ids fall back to the safe
+ *  'informational' (legibility-first) side. */
+export function getSectionRole(sectionId: string): SectionRole {
+  return EMOTIONAL_SECTION_IDS.has(sectionId) ? 'emotional' : 'informational';
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -73,6 +98,8 @@ export interface DetailPageResult {
     copyFiltered: boolean;
     /** Y offset from the top of the composed image. */
     offsetY: number;
+    /** emotional | informational — drives differential transparency + HTML. */
+    role: SectionRole;
   }>;
   /** Total wall-clock milliseconds. */
   elapsedMs: number;
@@ -285,6 +312,7 @@ export async function buildDetailPage(
     copy: r.copy,
     copyFiltered: r.copyFiltered,
     offsetY: offsets[i] ?? 0,
+    role: getSectionRole(r.sectionId),
   }));
 
   return {

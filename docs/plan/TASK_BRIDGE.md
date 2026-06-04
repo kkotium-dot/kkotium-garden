@@ -71,6 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (8) 빌더 STEP2-확산 (1)표본 — sectionRole + hero 앵커링 근본해결 (FROM Code, feature/detail-builder-hybrid, baseline 4ef6102)
+
+| 항목 | 상태 |
+|---|---|
+| sectionRole 도입 | section-builder SectionRole(emotional/informational) + getSectionRole. emotional=hero/seasonalHook/story/philosophy/styledShot/problem/solution, 그 외 informational(안전측). sections meta에 role 추가(가산식). |
+| 차등 투명화 정책 | emotional=무드bg 노출 / informational=불투명 유지(가독성 사수, 무드 비침 금지). ★ 단순 전체 투명화 금지. |
+| 표본 spec | informational → 기존 불투명 그대로(렌더링 무변경=가독성 보존). |
+| hero 앵커링 근본해결 | 세로 누끼 fit박스 꽉 참 → bottom-gravity 무효. 본품 base를 테이블면(~0.52h) 안착, 패널 50px 간격 clamp(min(0.52h,panelTop-50)). 단색 무변경. |
+| 검증 | TSC 0/build ✓/sentinel 0/Korean 0. 비가역 0(PNG만, 발행 미접촉 DRAFT). main 불변. |
+| 다음 (Desktop) | 명화 재합성 검증(테이블 앵커링+정보 가독성+달항아리 단색 회귀 0) → 28 렌더러 그룹 확산+STEP3~5 승인. |
+
+
 ### 2026-06-04 (7) 빌더 하이브리드 STEP2 — 연속 캔버스 foundation + hero 1-D (FROM Code, feature/detail-builder-hybrid, baseline bf09837)
 
 | 항목 | 상태 |

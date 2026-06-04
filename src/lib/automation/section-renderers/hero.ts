@@ -97,26 +97,31 @@ export const heroRenderer: SectionRenderer = async (spec, section, ctx) => {
   let withImage: Buffer = canvas;
   try {
     const buf = await fetchImageBuffer(ctx.sourceImageUrl);
-    // On a mood background, letterbox the cutout transparently so the photo
-    // shows through; on the solid path keep the original bg-filled fit.
-    // 1-D improvement 1 (bottom anchoring): in mood mode, gravitate the cutout to the
-    // BOTTOM of its box so its base sits on the backdrop's table line (~0.62h)
-    // instead of floating centered. Solid path keeps the original centered fit.
-    const fitted = usedLifestyle
-      ? await sharp(buf)
-          .resize(560, imageBlockHeight - 40, {
-            fit: 'contain',
-            position: 'bottom',
-            background: { r: 0, g: 0, b: 0, alpha: 0 },
-          })
-          .png()
-          .toBuffer()
-      : await fitImage(buf, { width: 560, height: imageBlockHeight - 40 }, bg);
-    const placed = await offsetLayer(
-      fitted,
-      { x: Math.round((size.width - 560) / 2), y: 40 },
-      size,
-    );
+    const centerX = Math.round((size.width - 560) / 2);
+    let placed: Buffer;
+    if (usedLifestyle) {
+      // STEP 2-spread root-cause anchoring: a tall cutout (e.g. 253x776) fills
+      // its fit box, so bottom-gravity alone moved nothing. Instead place the
+      // cutout so its BASE rests on the backdrop table line (~0.52h), sizing its
+      // box from the top margin down to that line. The table line is clamped so
+      // the cutout's base always stays >=50px above the text panel (no overlap).
+      const panelTop = textBlockTop + 10;
+      const tableLineY = Math.min(Math.round(size.height * 0.52), panelTop - 50);
+      const productBoxH = Math.max(120, tableLineY - 60);
+      const fitted = await sharp(buf)
+        .resize(560, productBoxH, {
+          fit: 'contain',
+          position: 'bottom',
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        })
+        .png()
+        .toBuffer();
+      placed = await offsetLayer(fitted, { x: centerX, y: tableLineY - productBoxH }, size);
+    } else {
+      // Solid path — unchanged (byte-identical to the prior behavior).
+      const fitted = await fitImage(buf, { width: 560, height: imageBlockHeight - 40 }, bg);
+      placed = await offsetLayer(fitted, { x: centerX, y: 40 }, size);
+    }
     withImage = await overlayOnto(canvas, [placed]);
   } catch {
     // Keep `withImage = canvas` — hero degrades to text-only.
