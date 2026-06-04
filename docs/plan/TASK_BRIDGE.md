@@ -71,6 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (16) UI 한글화 STEP4 — /upload 한글화 + 이모지 제거 (FROM Code, feature/ui-ko-cleanup, baseline 3ceef0b)
+
+| 항목 | 상태 |
+|---|---|
+| 중복 판정 | /upload=엑셀 대량등록(/api/upload/excel), 워크벤치 dropzone=이미지 자산 업로드 → 별개, 중복 아님. 살림+한글화. |
+| 이모지 제거 | 📋📁⏳🚀 → Lucide(ClipboardList/FolderOpen/Loader2/UploadCloud). JSX 이모지 0. |
+| i18n | upload-strings.ko.json 신설, page.tsx 한글 하드코딩 0(#35). 엑셀 라우트 무변경. |
+| 검증 | emoji 0/tsc 0/build ✓/sentinel 0. 비가역 0. main 불변. |
+| 다음 | STEP5 crawl/orders 잔여 영어 라벨(점진, 별도 커밋). |
+
+
 ### 2026-06-04 (15) UI 한글화 STEP2+3 — root redirect + portfolio 삭제 (FROM Code, feature/ui-ko-cleanup, baseline c724693)
 
 | 항목 | 상태 |

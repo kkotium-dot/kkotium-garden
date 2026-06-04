@@ -1,3 +1,19 @@
+## 2026-06-04 (16) UI 한글화 STEP4 — /upload 한글화 + 이모지 제거 (Code turn)
+
+baseline 3ceef0b, feature/ui-ko-cleanup. 권위: HANDOFF_ui_ko_cleanup §A(/upload) + 작업4.
+
+**(1) 중복 여부 확인(핸드오프 선결 조건)**: /upload는 fetch('/api/upload/excel') = 엑셀 파일로 상품 대량 등록. studio 워크벤치 dropzone은 /api/upload 재활용 디자이너 이미지 소스(누끼/배경)를 Supabase에 업로드. → 기능 성격 완전 별개(상품 데이터 일괄 등록 vs 이미지 자산 업로드). **중복 아님 → 통합/삭제 아니라 살림 + 한글화** 결정.
+
+**(2) 이모지 제거(코드원칙)**: 📋(양식)→ClipboardList, 📁(파일)→FolderOpen, ⏳(진행)→Loader2(animate-spin), 🚀(시작)→UploadCloud. 전부 lucide-react. JSX 이모지 0.
+
+**(3) i18n 분리(#35)**: 기존 하드코딩 한글(제목·양식 안내·라벨·alert 4종)을 신규 upload-strings.ko.json으로 분리. page.tsx 한글 하드코딩 0(전부 strings 경유). 제목 "Excel 대량 업로드"→"엑셀 대량 업로드". alertSuccess는 {n} placeholder + replace. 기능/엔드포인트(/api/upload/excel) 무변경.
+
+**(4) 검증**: emoji grep 0 / page.tsx 한글 0 / tsc 0 / build ✓ Compiled successfully / sentinel 0. 비가역 0(발행·DB mutate 0, 엑셀 라우트 로직 무변경). main a6ea482 불변.
+
+**다음**: STEP5(crawl/orders 등 잔여 사용자 노출 영어 라벨 점진 한글화 — 핸드오프상 "별도 커밋 가능", 범위 산정 후 진행).
+
+---
+
 ## 2026-06-04 (15) UI 한글화 STEP2+3 — root redirect 교정 + portfolio 템플릿 삭제 (Code turn)
 
 baseline c724693, feature/ui-ko-cleanup. 권위: HANDOFF_ui_ko_cleanup §A(템플릿 잔재) + §3 순서 2·3.
