@@ -62,6 +62,15 @@ function resolveSignal(item: TowerItem): Signal {
   return 'red';
 }
 
+// The margin DB column carries mixed units across products (multiplier on some,
+// percent on others — a diagnosis-grading artifact we must not "fix" in the DB).
+// Compute the display margin percent straight from price instead.
+function computeMarginPct(salePrice: number | null, supplierPrice: number | null): number | null {
+  if (typeof salePrice !== 'number' || salePrice <= 0) return null;
+  if (typeof supplierPrice !== 'number' || supplierPrice < 0) return null;
+  return Math.round(((salePrice - supplierPrice) / salePrice) * 100);
+}
+
 // Map an engine field key to a human Korean label, de-duplicated. Code keys are
 // NEVER rendered raw (HANDOFF §4).
 function fieldLabel(key: string): string {
@@ -107,7 +116,7 @@ function ProductCard({ item }: { item: TowerItem }) {
   const s = SIGNAL_STYLE[signal];
   const Icon = s.icon;
   const checklist = buildChecklist(item);
-  const marginPct = typeof item.margin === 'number' ? Math.round(item.margin) : null;
+  const marginPct = computeMarginPct(item.salePrice, item.supplierPrice);
   const showMarginWarn = marginPct !== null && marginPct < MARGIN_WARN_THRESHOLD;
 
   return (
