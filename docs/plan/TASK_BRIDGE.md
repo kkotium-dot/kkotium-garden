@@ -71,6 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (12) 빌더 STEP4 — 가독성 정교화 + Studio UI (FROM Code, feature/detail-builder-hybrid, baseline a539fea)
+
+| 항목 | 상태 |
+|---|---|
+| 가독성 정교화 | 적응형 스크림 STEP2 마감서 완료, informational 불투명 유지 → 추가 작업 불요. |
+| DetailPageCard UI | 이미지/HTML 출력 토글(HTML은 detailHtml 있을 때만) + 무드배경 URL 입력(manualBackdropUrl 재사용) + 미리보기 640. |
+| 배선 | runDetail이 manualBackdropUrl→lifestyleAssetUrl 전달. 라벨 i18n 분리(#35). |
+| 회귀 0 | 신규 props optional → products/new 두 번째 소비자 무파손. |
+| 검증 | TSC 0/build ✓/sentinel 0/Korean 0. 비가역 0. main 불변. |
+| 다음 | STEP5 커넥터 규칙+캐시 → Desktop 최종 회귀 → 머지. |
+
+
 ### 2026-06-04 (11) 빌더 STEP3 — HTML 출력 경로 신설 (FROM Code, feature/detail-builder-hybrid, baseline 09e5ff1)
 
 | 항목 | 상태 |

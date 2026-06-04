@@ -1,5 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
+> 2026-06-04 **빌더 STEP4 — Studio UI(이미지/HTML 토글 + 무드배경 입력)** (feature/detail-builder-hybrid, main 미접촉). DetailPageCard 출력 토글 + 무드배경 URL(manualBackdropUrl 재사용). 적응형 스크림 STEP2서 선완료. optional props로 두 번째 소비자 무파손. 회귀 0. **다음=STEP5 커넥터 운영 규칙 + 캐시 점검 → 전 STEP 완료 → Desktop 최종 회귀 → 머지**.
+
 > 2026-06-04 **빌더 STEP3 — HTML 직렬화기 신설** (feature/detail-builder-hybrid, main 미접촉). detail-html-serializer.ts + generate-detail detailHtml 필드(PNG 보존). copy 무변형(#46), 860px 인라인. 회귀 0. **다음=STEP4 가독성+Studio UI → STEP5 커넥터/캐시**.
 
 > 2026-06-04 **빌더 STEP2 마감 — 스크림 0.40 + 다크 적응형** (feature/detail-builder-hybrid, main 미접촉). MOOD_SCRIM_ALPHA 0.40, 적응형(어두운 배경 0.60 자동 상향). 회귀 0. **다음=STEP3 HTML 직렬화기 → STEP4 가독성+Studio UI → STEP5 커넥터/캐시**.

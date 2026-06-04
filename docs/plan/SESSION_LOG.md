@@ -1,3 +1,21 @@
+## 2026-06-04 (12) 빌더 STEP4 — 가독성 정교화 + Studio UI 배선 (Code turn)
+
+baseline a539fea, feature/detail-builder-hybrid. 권위: HANDOFF STEP4(가산식).
+
+**(1) 렌더 측 가독성 정교화**: 적응형 스크림(다크 배경 자동 상향)은 STEP2 마감(10)서 이미 완료 → STEP4 "미룬 적응형 스크림" 없음. informational 19개는 이미 불투명(대비 확보)이라 추가 작업 불요. 패널 페이드(hero)도 STEP2-foundation서 적용됨.
+
+**(2) Studio UI(DetailPageCard.tsx)**: (a) 이미지(PNG)/HTML 출력 토글 — FileImage/Code2 버튼, viewMode useState, HTML은 detail.detailHtml 있을 때만 활성(없으면 비활성+htmlUnavailable 툴팁). showHtml이면 dangerouslySetInnerHTML로 직렬화기 출력 미리보기(자체 escape된 마크업), 아니면 기존 PNG img. (b) 무드 배경 URL 입력 — 신규 state 추가 없이 기존 manualBackdropUrl/setManualBackdropUrl 재사용(썸네일·상세 공용 backdrop). (c) 미리보기 컨테이너 maxHeight 520→640(연속 페이지 인지 개선). 라벨 5종(moodBackdropLabel/Placeholder/outputImage/outputHtml/htmlUnavailable)을 studio-strings.ko.json에 분리(#35, JSX 한글 0).
+
+**(3) 배선**: useStudioActions.runDetail이 manualBackdropUrl.trim()을 body.lifestyleAssetUrl로 전달. studio/page.tsx가 DetailPageCard에 lifestyleAssetUrl=manualBackdropUrl + onLifestyleChange=setManualBackdropUrl 전달. types.ts DetailResult에 detailHtml?+sections role? 추가.
+
+**(4) 회귀 가드(중요)**: DetailPageCard 신규 props를 optional로 선언 → src/app/products/new/page.tsx의 두 번째 DetailPageCard 소비자(무드 입력 미전달)가 깨지지 않음(tsc 오류로 발견 후 즉시 optional 전환). 무드 입력은 onLifestyleChange 있을 때만 렌더. HTML 토글은 독립 동작.
+
+**(5) 검증**: tsc 0 / build ✓ Compiled successfully / sentinel 0 / 코드 Korean 0(라벨 i18n 분리, useStudioActions:253 기존 한글 에러문은 본 turn 무관). 비가역 0(generate-detail PNG/HTML 생성만, 발행 미접촉 DRAFT). main a585635 불변.
+
+**다음**: STEP5(커넥터 운영 규칙 PRINCIPLES_LEARNED 명문화 + 영구 적재 자산 cache-control: no-cache 점검).
+
+---
+
 ## 2026-06-04 (11) 빌더 STEP3 — HTML 출력 경로 신설 (Code turn)
 
 baseline 09e5ff1, feature/detail-builder-hybrid. 권위: HANDOFF STEP3(하이브리드 절반, 가산식·저위험).
