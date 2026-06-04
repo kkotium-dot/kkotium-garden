@@ -1,3 +1,19 @@
+## 2026-06-04 (6) 상세페이지 빌더 하이브리드 대수술 STEP1 — hero.ts 무드배경 합성 (Code turn)
+
+baseline a585635, feature/detail-builder-hybrid 브랜치(대수술이라 main 직접 수정 회피). 권위: docs/handoff/HANDOFF_detail_builder_hybrid_2026-06-04.md 작업2(단계별 순서상 첫 작업).
+
+**(1) hero.ts 무드배경 합성 3단계**: (a) 배경 — ctx.lifestyleAssetUrl 있으면 fetchImageBuffer → cover-fit(fit:'cover', position:'centre')으로 캔버스(860 x height) 전체 채움(letterbox 없음), 없으면 기존 createCanvas(size,bg) 단색. (b) 본품 — sourceImageUrl(누끼 PNG) 중앙, 무드배경일 때만 투명 letterbox(alpha 0)로 fit해 사진 비침, 단색일 때 기존 fitImage(...,bg) 동일. (c) 가독성 가드 — 무드배경일 때만 텍스트 블록 뒤 반투명 흰 라운드 패널(rgba(255,255,255,0.72)) 1겹.
+
+**(2) ★ 회귀 가드(P0 발행물 안전)**: 모든 추가는 usedLifestyle 게이트. lifestyleAssetUrl 미전달 시 — canvas=createCanvas(size,bg), 본품 fit=fitImage(buf,{560,imageBlockHeight-40},bg), readabilityPanel=null, layers=[titleLayer,(subtitle),stripe] — 연산·인자·순서 모두 기존과 동일 → 단색 경로 출력 불변. full-render 바이트 비교는 generateHeroCopy가 비결정적 AI라 불가하므로 구조적 동등으로 보장(정직 기록).
+
+**(3) 검증**: npx tsc --noEmit 0 / npm run build ✓ Compiled successfully / sentinel grep 0 / hero.ts Korean 0(주석 영어, 1차 작성 "작업2" 1건 검출→task 2 교정). 비가역 0(PNG 생성만, register/POST/DB mutate 0, 발행 미접촉 DRAFT 유지). main HEAD a585635 불변(브랜치 작업).
+
+**(4) 단계 범위**: STEP1=작업2(hero 무드배경)만. STEP2(연속 캔버스화)~STEP5(커넥터 운영 규칙)는 Desktop 시각 검증·승인 후 순차 진행.
+
+**다음 (Desktop)**: Studio에서 명화 디퓨저로 generate-detail 실행 — lifestyleAssetUrl=product-assets/cmpnooli40001f0gveaxr8iim/myeonghwa-backdrop-860.jpg, sourceImageUrl=.../myeonghwa-cutout.png → hero 무드배경 합성 결과 시각 검증(Desktop MCP). 승인 시 Code STEP2 진행.
+
+---
+
 ## 2026-06-04 (5) 명화 디퓨저 Adobe 가공자산 3종 Supabase 영구 적재 (Code turn)
 
 baseline 16578d0. scripts/preserve-myeonghwa-assets.mjs(Desktop 작성·검증) 로컬 실행. Adobe 단축URL 만료 전 영구화.

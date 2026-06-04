@@ -14,6 +14,14 @@
 //   - Hero title at left, 56px bold, accent color
 //   - Subtitle 32px below title, 32px medium weight, secondary color
 //   - 4px brand accent stripe on the bottom edge
+//
+// 2026-06-04 (detail-builder-hybrid task 2): mood-background compositing.
+// When ctx.lifestyleAssetUrl is present, the background becomes a cover-fit mood
+// photo (A) with the product cutout (C) floated on top (transparent letterbox),
+// plus a semi-transparent white panel behind the text block for legibility.
+// ★ Regression guard (P0): when lifestyleAssetUrl is absent, every operation and
+// argument is byte-identical to the prior solid-color path — the mood additions
+// are strictly gated on `usedLifestyle`, so existing PNG output is unchanged.
 
 import {
   createCanvas,
@@ -47,6 +55,18 @@ async function offsetLayer(
     .toBuffer();
 }
 
+// Cover-fit a mood photo to the full canvas (fills the frame, crops overflow —
+// no letterbox bars). Used only for the lifestyle-background path.
+async function coverFitToCanvas(
+  imageBuffer: Buffer,
+  size: { width: number; height: number },
+): Promise<Buffer> {
+  return sharp(imageBuffer)
+    .resize(size.width, size.height, { fit: 'cover', position: 'centre' })
+    .png()
+    .toBuffer();
+}
+
 export const heroRenderer: SectionRenderer = async (spec, section, ctx) => {
   const bg = resolveBgColor(spec, section.bgColorToken);
   const size = { width: CANONICAL_WIDTH, height: section.height };
@@ -55,18 +75,39 @@ export const heroRenderer: SectionRenderer = async (spec, section, ctx) => {
   const imageBlockHeight = Math.min(560, Math.round(size.height * 0.62));
   const textBlockTop = imageBlockHeight + 40;
 
-  const canvas = await createCanvas(size, bg);
+  // Background: cover-fit mood photo when a lifestyle asset is supplied, else
+  // the original solid skeleton color. The solid path is byte-identical to the
+  // prior behavior (regression guard for P0 publish assets).
+  let canvas: Buffer;
+  let usedLifestyle = false;
+  if (ctx.lifestyleAssetUrl) {
+    try {
+      const bgBuf = await fetchImageBuffer(ctx.lifestyleAssetUrl);
+      canvas = await coverFitToCanvas(bgBuf, size);
+      usedLifestyle = true;
+    } catch {
+      canvas = await createCanvas(size, bg);
+    }
+  } else {
+    canvas = await createCanvas(size, bg);
+  }
 
   // Optional product image (skip silently on fetch error — the build
   // shouldn't break the moment a single source image is missing).
   let withImage: Buffer = canvas;
   try {
     const buf = await fetchImageBuffer(ctx.sourceImageUrl);
-    const fitted = await fitImage(
-      buf,
-      { width: 560, height: imageBlockHeight - 40 },
-      bg,
-    );
+    // On a mood background, letterbox the cutout transparently so the photo
+    // shows through; on the solid path keep the original bg-filled fit.
+    const fitted = usedLifestyle
+      ? await sharp(buf)
+          .resize(560, imageBlockHeight - 40, {
+            fit: 'contain',
+            background: { r: 0, g: 0, b: 0, alpha: 0 },
+          })
+          .png()
+          .toBuffer()
+      : await fitImage(buf, { width: 560, height: imageBlockHeight - 40 }, bg);
     const placed = await offsetLayer(
       fitted,
       { x: Math.round((size.width - 560) / 2), y: 40 },
@@ -107,7 +148,20 @@ export const heroRenderer: SectionRenderer = async (spec, section, ctx) => {
       '</svg>',
   );
 
-  const layers: Buffer[] = [titleLayer];
+  // Readability guard: a semi-transparent white panel behind the text block so
+  // the dark title/subtitle stays legible over a mood photo. Only on the
+  // lifestyle path — the solid path adds no extra layer (regression guard).
+  const readabilityPanel = usedLifestyle
+    ? Buffer.from(
+        `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">` +
+          `<rect x="40" y="${textBlockTop + 10}" width="${size.width - 80}" height="${Math.max(0, size.height - (textBlockTop + 10) - 20)}" rx="20" ry="20" fill="rgba(255,255,255,0.72)" />` +
+          '</svg>',
+      )
+    : null;
+
+  const layers: Buffer[] = [];
+  if (readabilityPanel) layers.push(readabilityPanel);
+  layers.push(titleLayer);
   if (subtitleLayer) layers.push(subtitleLayer);
   layers.push(stripe);
 

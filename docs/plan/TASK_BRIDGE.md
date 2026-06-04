@@ -71,6 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (6) 상세 빌더 하이브리드 STEP1 — hero 무드배경 합성 (FROM Code, feature/detail-builder-hybrid, baseline a585635)
+
+| 항목 | 상태 |
+|---|---|
+| 브랜치 | feature/detail-builder-hybrid (대수술 → main 직접 수정 회피). main HEAD a585635 불변. |
+| hero.ts 무드배경 | lifestyleAssetUrl cover-fit 전체 배경(A) + 누끼(C) 투명 letterbox 중앙 + 텍스트 뒤 반투명 흰 패널 가독성 가드. |
+| ★ 회귀 가드(P0) | lifestyleAssetUrl 미전달 시 단색 경로 연산·인자·순서 기존과 동일(구조적 바이트 동등). |
+| 검증 | TSC 0 / build ✓ / sentinel 0 / Korean 0. 비가역 0(PNG 생성만, 발행 미접촉 DRAFT). |
+| 범위 | STEP1=작업2만. STEP2~5는 Desktop 시각 검증 후. |
+| 다음 (Desktop) | generate-detail 실행(lifestyleAssetUrl=myeonghwa-backdrop-860.jpg, sourceImageUrl=myeonghwa-cutout.png) → 무드배경 합성 시각 검증 → 승인 시 Code STEP2. |
+
+
 ### 2026-06-04 (5) 명화 디퓨저 가공자산 3종 Supabase 영구화 완료 (FROM Code, baseline 16578d0)
 
 | 항목 | 상태 |

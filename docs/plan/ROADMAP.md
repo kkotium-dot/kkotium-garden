@@ -1,5 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
+> 2026-06-04 **상세 빌더 하이브리드 STEP1 — hero 무드배경 합성** (Code turn, feature/detail-builder-hybrid, main 미접촉). lifestyleAssetUrl cover-fit 배경 + 누끼 투명 합성 + 가독성 패널. 회귀 가드: 미전달 시 단색 경로 연산 동일. TSC 0/build ✓. **다음=Desktop 시각 검증 → STEP2 연속캔버스~STEP5(커넥터 운영 규칙)**.
+
 > 2026-06-04 **명화 디퓨저 가공자산 3종 Supabase 영구화 완료** (Code turn, baseline 16578d0). Adobe 단축URL 만료 전 product-assets/cmpnooli40001f0gveaxr8iim/ 영구 적재(대표 1000/누끼/배경 860) + public 200 검증. PRODUCT_ID override로 PostgREST 권한 이슈 우회. 비가역 0(Storage only, DRAFT 유지). **다음=영구 URL을 상세페이지 합성/발행 자산으로 연결 + Figma STEP2(한도 리셋 후)**.
 
 > 2026-06-04 **firefly-generate 어댑터 + 인물 정책 코드 정합** (Code turn, baseline 77812ea). firefly-generate.ts 신설(manual 기본/api 토글, 키 부재·파트너 모델 fail-safe 강등). ModelPolicy 'model-allowed' 추가 + classifyPersonShot 게이트 신설(classifyBackdrop 미접촉). TSC 0/build OK/비가역 0. **다음=Adobe 가공자산 Supabase 영구화 + Firefly 인물컷 classifyPersonShot 실측 + Figma STEP2(한도 리셋 후)**.
