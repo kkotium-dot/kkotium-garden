@@ -55,10 +55,11 @@ async function getAddressIds(): Promise<AddressIds | null> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { productId, forceRegister, dryRun } = body as {
+    const { productId, forceRegister, dryRun, imageProbe } = body as {
       productId: string;
       forceRegister?: boolean;
       dryRun?: boolean;
+      imageProbe?: boolean;
     };
 
     if (!productId) {
@@ -377,6 +378,35 @@ export async function POST(request: NextRequest) {
       ? { representative: naverGallery[0], optional: naverGallery.slice(1) }
       : undefined;
     const payload = buildNaverProductPayload(productForBuild, deliveryInfo, naverImageUrls, noticeForBuild, storeName);
+
+    // 7-probe. imageProbe — L2 이미지 변환만 실증. 위 7-img/7-img-notice 업로드는
+    // 실행됨(gallery/detail/notice → shop-phinf 치환). 단 상품 register는 호출 안 함.
+    // 비가역 0: naverRequest POST 0, prisma.update 0. 이미지만 네이버에 업로드됨
+    // (상품 미연결 = 발행 하드룰 대상 아님). Cloudinary 생존 + 회선 + 코드 동시 검증.
+    if (imageProbe) {
+      const repUrl = payload.originProduct.images.representativeImage.url;
+      const optUrls = (payload.originProduct.images.optionalImages ?? []).map((i) => i.url);
+      const isShopPhinf = (u: string | undefined): boolean =>
+        !!u && u.includes('shop-phinf.pstatic.net');
+      const allShopPhinf =
+        isShopPhinf(repUrl) &&
+        (naverDetail ? isShopPhinf(naverDetail) : true) &&
+        optUrls.every(isShopPhinf);
+      return NextResponse.json({
+        success: true,
+        imageProbe: true,
+        sourceUrls: { main: supaMain, detail: supaDetail, additionalCount: supaAdditional.length },
+        convertedUrls: {
+          representativeImage: repUrl,
+          optionalImages: optUrls,
+          detailImageNaver: naverDetail,
+          noticeTop: noticeForBuild.topImageUrl,
+          noticeBottom: noticeForBuild.bottomImageUrl,
+        },
+        allShopPhinf,
+        note: '이미지 업로드만 실행 — register/POST 호출 0, DB mutate 0 (비가역 0)',
+      });
+    }
 
     // 8. Register on Naver Commerce API
     let result: any;
