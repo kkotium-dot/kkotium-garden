@@ -46,9 +46,14 @@ export interface FireflyGenResult {
 
 // ---------------------------------------------------------------------------
 // Model routing — Firefly Services natively dispatches only Adobe's own image
-// models. Partner models (gemini-*/imagen/gpt-image-2) are routing hints for
-// other surfaces and are NOT callable through Firefly Services, so in api mode
-// a partner model downgrades to manual.
+// models. Partner models (gemini-*/imagen/gpt-image-2, FLUX, Nano Banana, etc.)
+// are routing hints for other surfaces and are NOT callable through Firefly
+// Services, so in api mode a partner model downgrades to manual.
+//
+// ★ Operating rule (TOOL_ECOSYSTEM_MANUAL, work-principle #48): partner models
+// carry NO IP indemnity, so their output must NOT ship as a final sale asset.
+// Only Firefly-native models (indemnified) auto-generate here; partner requests
+// stay manual so a human keeps them out of the published product.
 // ---------------------------------------------------------------------------
 
 const FIREFLY_NATIVE_MODELS: ReadonlySet<FireflyModel> = new Set<FireflyModel>([

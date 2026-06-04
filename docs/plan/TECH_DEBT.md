@@ -291,3 +291,22 @@ Code 2026-06-02 P0 발행 회선 수정 turn — api-client.ts fetchNoKeepAlive 
 `src/app/api/crawl/batch-register/route.ts`의 `category:'uncategorized'` 하드코딩은 발행 게이트가 별도 `naverCategoryCode` 컬럼을 읽어 판정하므로 현재 동작 영향 0. 정리 시 실제 카테고리 코드로 치환 또는 필드 제거 검토. 코드 변경 0 — 정리 후보로만 등재.
 
 **SOURCE**: Code 2026-06-04 Desktop 후속 정리 turn (작업3, 코드 미접촉 기록 전용).
+
+## DEBT-11 — 영구 적재 자산 cache-control: no-cache (로딩 속도/전환율)
+
+**Status**: OPEN (2026-06-04 등록, 빌더 STEP5 점검서 실측 확인)
+**Severity**: medium (상세페이지/이미지 로딩 매 요청 재페치 → 체감 속도·전환율 손해, 기능 영향 0)
+**Owner**: Desktop(프로덕션 스토리지 mutation은 #41상 Desktop) — 재업로드 또는 버킷 정책
+
+### 부채 명세
+
+scripts/preserve-myeonghwa-assets.mjs가 upload 시 `cacheControl: '31536000'`(1년)을 지정했으나, 실측(curl -I) 결과 product-assets 공개 URL 응답 헤더가 `cache-control: no-cache`로 나옴 → cacheControl 옵션이 실효되지 않음. 명화 디퓨저 3종(main/cutout/backdrop) 모두 해당. CDN(Cloudflare) 앞단 + Supabase Storage 객체 메타데이터 cache-control 미적용 의심.
+
+### 점검/수술 권고 (Desktop)
+
+1. 원인 확인: upsert 덮어쓰기 시 메타데이터(cache-control) 미갱신 가능성 — 객체 삭제 후 신규 업로드로 cacheControl 재적용 시도.
+2. 또는 Supabase 버킷 레벨 기본 cache-control 정책 설정(대시보드/Storage 설정).
+3. 재적용 후 `curl -sI <public-url> | grep cache-control`로 `max-age=31536000` 확인.
+★ 프로덕션 스토리지 mutation → Code 미실행, Desktop 위임(#41). 기능 영향 0이라 발행 차단 아님.
+
+**SOURCE**: Code 2026-06-04 빌더 하이브리드 STEP5 캐시 점검 turn (no-cache 실측 확인).

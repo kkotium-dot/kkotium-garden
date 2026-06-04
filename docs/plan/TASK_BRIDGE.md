@@ -71,6 +71,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (13) 빌더 STEP5 + ★ 하이브리드 대수술 STEP1~5 완료 (FROM Code, feature/detail-builder-hybrid, baseline 0e619f8)
+
+| 항목 | 상태 |
+|---|---|
+| 작업원칙 #48 | 도구 라우팅(생성 Firefly 수동/가공 Adobe MCP/합성 빌더+Figma) + AEM·Marketing MCP 미사용 + 파트너 모델 면책 없음→최종판매 금지. firefly-generate 주석 보강. |
+| 캐시 DEBT-11 | 영구 자산 cache-control: no-cache 실측(cacheControl 미실효). 재업로드/버킷 정책=Desktop 위임(#41). 기능 영향 0. |
+| ★ STEP1~5 완료 | hero무드/composeContinuous/앵커링/emotional6+접지그림자/스크림0.40+다크적응형/HTML직렬화기/StudioUI토글/커넥터·캐시. 전 STEP 회귀 0(단색 경로 createCanvas 동일). |
+| 검증 | TSC 0/build ✓/sentinel 0/Korean 0. 비가역 0(발행 미접촉 DRAFT). main a585635 내내 불변. |
+| ★ 다음 (Desktop) | (1) 명화 재합성 최종 확인 (2) main 머지 전 최종 회귀(달항아리 단색 불변) (3) 머지 → P0 발행 재개. |
+
+
 ### 2026-06-04 (12) 빌더 STEP4 — 가독성 정교화 + Studio UI (FROM Code, feature/detail-builder-hybrid, baseline a539fea)
 
 | 항목 | 상태 |

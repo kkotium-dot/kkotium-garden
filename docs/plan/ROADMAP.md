@@ -1,5 +1,7 @@
 # KKOTIUM GARDEN — ROADMAP
 
+> 2026-06-04 **빌더 STEP5 — 커넥터 규칙(#48) + 캐시 점검(DEBT-11). ★ STEP1~5 전 완료** (feature/detail-builder-hybrid, main 미접촉). 도구 라우팅·파트너 모델 면책 경계 명문화 + 영구자산 no-cache 실측(Desktop 재업로드 위임). **다음=Desktop 최종 회귀 검증(달항아리 단색 불변) → main 머지 → P0 발행 재개**.
+
 > 2026-06-04 **빌더 STEP4 — Studio UI(이미지/HTML 토글 + 무드배경 입력)** (feature/detail-builder-hybrid, main 미접촉). DetailPageCard 출력 토글 + 무드배경 URL(manualBackdropUrl 재사용). 적응형 스크림 STEP2서 선완료. optional props로 두 번째 소비자 무파손. 회귀 0. **다음=STEP5 커넥터 운영 규칙 + 캐시 점검 → 전 STEP 완료 → Desktop 최종 회귀 → 머지**.
 
 > 2026-06-04 **빌더 STEP3 — HTML 직렬화기 신설** (feature/detail-builder-hybrid, main 미접촉). detail-html-serializer.ts + generate-detail detailHtml 필드(PNG 보존). copy 무변형(#46), 860px 인라인. 회귀 0. **다음=STEP4 가독성+Studio UI → STEP5 커넥터/캐시**.

@@ -652,3 +652,18 @@ grep -c "id: '" src/lib/automation-registry.ts
 **적용 의무(#44 stale fact 연동)**: 본 정책 변경 시 구 하드룰을 명시한 라이브 SOP(DETAIL_PAGE_PLAYBOOK §5)를 동시 갱신한다(본 turn 이행). 동결된 과거 리서치/핸드오프(KKOTIUM_ART_DIRECTION_RESEARCH, HANDOFF_S2 등)는 시점 기록이므로 보존하되, 본 #47이 최신 권위임을 본 ledger로 단정.
 
 **권위 문서**: docs/handoff/FIREFLY_CONCEPT_PROMPTS_v2_human_allowed_2026-06-04.md §0.
+
+## 작업원칙 #48 — 도구 생태계 라우팅 규칙 (2026-06-04 명문화, TOOL_ECOSYSTEM_MANUAL 근거)
+
+**도구 라우팅(고정)**:
+- **이미지 생성** = Adobe Firefly 웹 1-click(대표 수동) — Firefly Services api 모드는 엔터프라이즈 키 장착 시에만(작업원칙 #38 예외).
+- **가공**(누끼/리사이즈/리프레임/합성준비) = Adobe MCP 자동.
+- **합성·연속성**(상세페이지 레이아웃) = 빌더(section-builder/composeContinuous) + 디자인 도구(Figma). sharp 단순 적층은 약함 — 빌더 연속 캔버스가 담당.
+
+**미사용 명문화**:
+- **AEM MCP / Adobe Marketing Agent MCP**: 엔터프라이즈 마케팅 운영용 — 1인 솔로 셀러 무관 → 사용 안 함.
+
+**파트너 모델 면책 경계(중요)**:
+- FLUX / Nano Banana / gemini-image / imagen / gpt-image 등 **파트너(비 Firefly-native) 모델은 IP 면책 없음** → **최종 판매물(발행 자산)로 사용 금지**. Firefly-native(firefly-image-4/4-ultra/5, 유료 플랜 면책)만 판매물 허용. firefly-generate.ts는 api 모드에서 파트너 모델을 manual로 강등해 자동 발행 경로에서 배제(주석 반영).
+
+**근거**: docs/research/TOOL_ECOSYSTEM_MANUAL_2026-06-04.md + 빌더 하이브리드 대수술 STEP5.

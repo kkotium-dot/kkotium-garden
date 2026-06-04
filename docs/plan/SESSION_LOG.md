@@ -1,3 +1,28 @@
+## 2026-06-04 (13) 빌더 STEP5 — 커넥터 운영 규칙 + 캐시 점검 / 하이브리드 대수술 완료 (Code turn)
+
+baseline 0e619f8, feature/detail-builder-hybrid. 권위: HANDOFF STEP5(독립) + TOOL_ECOSYSTEM_MANUAL.
+
+**(1) 작업원칙 #48 명문화(PRINCIPLES_LEARNED)**: 도구 생태계 라우팅 고정 — 이미지 생성=Adobe Firefly 웹 1-click(대표 수동, api 모드는 #38 예외), 가공=Adobe MCP, 합성·연속성=section-builder/composeContinuous + Figma(sharp 단순 적층 약함). AEM MCP / Adobe Marketing Agent MCP=1인 셀러 무관 미사용 명문. 파트너 모델(FLUX/Nano Banana/gemini/imagen/gpt-image)=IP 면책 없음 → 최종 판매물 금지, Firefly-native(유료 면책)만 판매물 허용. firefly-generate.ts 주석 보강(파트너 모델 api 자동 강등=발행 경로 배제 명문).
+
+**(2) 캐시 no-cache 점검(DEBT-11 등재)**: 영구 적재 3종(main/cutout/backdrop) curl -sI 실측 → preserve 스크립트가 cacheControl '31536000' 지정했으나 공개 URL 응답이 cache-control: no-cache. cacheControl 옵션 미실효(CDN/버킷 메타 미적용 의심). 매 요청 재페치 → 상세페이지 체감 속도·전환율 손해(기능 영향 0). 재업로드(객체 삭제 후 신규 업로드로 메타 재적용) 또는 Supabase 버킷 기본 cache 정책 설정 권고 — 프로덕션 스토리지 mutation이라 Code 미실행, Desktop 위임(#41). 발행 차단 아님.
+
+**(3) 검증**: tsc 0 / build ✓ Compiled successfully / sentinel 0 / 코드 Korean 0(firefly-generate 주석 영어). 비가역 0(코드 변경=주석 1곳, 로직 무변경). main a585635 불변.
+
+**★ 빌더 하이브리드 대수술 STEP1~5 전 완료(브랜치 feature/detail-builder-hybrid)**:
+- STEP1(bf09837): hero 무드배경 합성.
+- STEP2-foundation(4ef6102): composeContinuous + sectionRole 인프라.
+- STEP2-확산 표본(9c31052): hero 테이블 앵커링 근본수정 + spec 불투명.
+- STEP2-확산 emotional(60c5408): emotional-bg 헬퍼 + 6개 전환 + 접지그림자.
+- STEP2-마감(09e5ff1): 스크림 0.40 + 다크 배경 적응형.
+- STEP3(a539fea): detail-html-serializer + detailHtml 필드.
+- STEP4(0e619f8): Studio UI 이미지/HTML 토글 + 무드배경 입력.
+- STEP5(본 커밋): 커넥터 규칙 #48 + 캐시 DEBT-11.
+전 STEP 회귀 가드: no-lifestyle 단색 경로 = 전 렌더러 createCanvas(size,bg) 동일(구조적 바이트 동등). 비가역 0(발행 미접촉 DRAFT). main 내내 불변.
+
+**다음 (Desktop)**: (1) 명화 디퓨저 재합성 최종 확인(스크림 0.40 + 접지그림자 + HTML 토글) (2) ★ main 머지 전 최종 회귀 검증 — 달항아리(무드 없는) 단색 경로 출력 불변 확인 (3) 브랜치 main 머지 → P0(달항아리·명화) 발행 재개. (4) Figma STEP2 7섹션 컴포넌트는 본 빌더 연속캔버스 구조와 정합.
+
+---
+
 ## 2026-06-04 (12) 빌더 STEP4 — 가독성 정교화 + Studio UI 배선 (Code turn)
 
 baseline a539fea, feature/detail-builder-hybrid. 권위: HANDOFF STEP4(가산식).
