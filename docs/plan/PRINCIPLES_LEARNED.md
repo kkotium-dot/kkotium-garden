@@ -638,3 +638,15 @@ grep -c "id: '" src/lib/automation-registry.ts
 **파생 학습**: 단일 boolean 신호는 *축의 합성*이지 단일 진실이 아니다. 라벨이 true일 때 어느 축 통과로 true인지 추적 가능해야 한다. 단축 추가 시 기존 true가 false로 강등되는 것은 *의도된 강등*(거짓신호 차단).
 
 ---
+
+## 작업원칙 #47 — AI 생성 인물 정책: 익명 모델 허용 / 특정 실존인물 금지 (2026-06-04 대표 확정)
+
+**정책 변경(대표 확정)**: 상품·컨셉상 사람이 들어가야 감도가 사는 경우 AI 생성 인물 등장을 허용한다. 단 (a) 특정 실존 모델(연예인·식별 가능 개인·유명인 얼굴) 생성 금지 = 익명 일반 모델/비식별만, (b) 미성년자 부적절 묘사 금지(상업 제품컷 맥락 유지).
+
+**대체 관계**: 구 하드룰 "얼굴 없는 인체 일부 전략"(KKOTIUM_ART_DIRECTION_RESEARCH_2026-05-29 §3-D, DETAIL_PAGE_PLAYBOOK §5)은 본 정책으로 대체된다. 법적 근거: 익명·비식별 모델은 퍼블리시티권(부정경쟁방지법 (타)목)·표시광고법(AI 가상인물 광고 표시) 리스크를 회피하므로 "식별 불가" 조건만 지키면 허용 가능.
+
+**Firefly 공통 네거티브(인물 포함 시)**: `no recognizable celebrity, no specific real person likeness, no text, no logo, no watermark, no brand marks`.
+
+**적용 의무(#44 stale fact 연동)**: 본 정책 변경 시 구 하드룰을 명시한 라이브 SOP(DETAIL_PAGE_PLAYBOOK §5)를 동시 갱신한다(본 turn 이행). 동결된 과거 리서치/핸드오프(KKOTIUM_ART_DIRECTION_RESEARCH, HANDOFF_S2 등)는 시점 기록이므로 보존하되, 본 #47이 최신 권위임을 본 ledger로 단정.
+
+**권위 문서**: docs/handoff/FIREFLY_CONCEPT_PROMPTS_v2_human_allowed_2026-06-04.md §0.

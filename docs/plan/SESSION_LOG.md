@@ -1,3 +1,21 @@
+## 2026-06-04 (3) Adobe 가공 라인 첫 완주 + AI 인물 정책 갱신 + Firefly v2 (Desktop turn)
+
+production HEAD 5dad281 (Vercel READY, 코드 0).
+
+**(1) Adobe 가공 5단계 SOP 입증**: 명화 디퓨저 정물컷으로 실측 완주. image_remove_background(본품 누끼) → image_crop_and_resize fit:extract+focus:{prompt}(본품만 정밀 추출) → fit:pad 1000x1000(네이버 대표이미지 흰배경, 홍보문구 0) → fit:reframe 860x860(상세 배경 무대). 합성(A+C 겹치기)은 Adobe 미지원 → Figma/Photoshop.
+
+**(2) 팜파스 동시인식 이슈 해결**: remove_background가 피사체 2개 이상 시 부피사체(팜파스)까지 딸려옴 → crop_and_resize fit:extract + focus 프롬프트로 본품만 추출하는 우회로 해결.
+
+**(3) ★ AI 인물 등장 허용 정책(대표 확정)**: 컨셉상 필요 시 익명 일반 모델 등장 허용. 특정 실존인물·유명인 식별 금지(익명/비식별만), 미성년자 부적절 묘사 금지. 구 하드룰 "얼굴 없는 인체 일부"는 대체. 작업원칙 #47 신설 + DETAIL_PAGE_PLAYBOOK §5 라이브 SOP 동시 갱신(#44).
+
+**(4) Firefly 컨셉컷 v2 문서**: docs/handoff/FIREFLY_CONCEPT_PROMPTS_v2_human_allowed_2026-06-04.md — 인물 포함 프롬프트 3종 + 가공 SOP. Adobe 가공 한계 정직 기록(생성 불가/합성 불가/배경교체 불가 → Firefly·Photoshop).
+
+**(5) 자산 영구화 TODO**: Adobe 가공 3종은 단축URL(세션 한정·만료) → Supabase product-assets 업로드 필요.
+
+**다음 (Desktop)**: (1) 가공자산 3종 Supabase product-assets 업로드(만료 전 영구화) (2) 대표 Firefly 인물 컨셉컷 1-click 생성 → Adobe 가공 (3) Figma 한도 리셋 후 값 눈대조 + STEP2 7섹션 컴포넌트(배경A+본품C 합성 포함).
+
+---
+
 ## 2026-06-04 (2) S4 2단계 Figma 마스터 STEP1 완료 — Variables 69개 + 설계도 저장 (Desktop turn)
 
 production HEAD 7a640b6 (Vercel READY, 코드 0). 직전 S4-2단계 설계 turn 후속 = Figma 실제 빌드.

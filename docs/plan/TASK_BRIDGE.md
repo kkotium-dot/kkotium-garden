@@ -71,6 +71,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-04 (3) Adobe 가공 라인 첫 완주 + AI 인물 정책 갱신 (FROM Desktop, 코드 0, production HEAD 5dad281)
+
+| 항목 | 상태 |
+|---|---|
+| Adobe 가공 SOP | 명화 디퓨저 5단계 입증: 누끼 → focus 추출(팜파스 제거) → 1000x1000 대표(흰배경) → 860x860 배경무대. 합성은 Adobe 미지원 → Figma/Photoshop. |
+| ★ AI 인물 정책 | 익명 일반 모델 등장 허용 / 특정 실존인물·유명인 식별 금지 / 미성년자 부적절 묘사 금지. 구 "얼굴 없는 인체 일부" 하드룰 대체. 작업원칙 #47 신설 + DETAIL_PAGE_PLAYBOOK §5 갱신(#44). |
+| Firefly v2 | docs/handoff/FIREFLY_CONCEPT_PROMPTS_v2_human_allowed_2026-06-04.md 신규 — 인물 프롬프트 3종 + 네거티브 + 가공 SOP. |
+| 자산 영구화 TODO | Adobe 가공 3종(누끼/1000/860) = 단축URL 세션 한정 → Supabase product-assets 업로드 후속. |
+| 바뀐 점 | 비가역 0(코드/DB mutate 0). SD-01 미접촉. docs only. |
+| 다음 (Desktop) | (1) 가공자산 Supabase 업로드(만료 전) (2) Firefly 인물 컨셉컷 1-click→가공 (3) Figma 한도 리셋 후 값 눈대조+STEP2(배경A+본품C 합성). |
+
+
 ### 2026-06-04 (2) S4 2단계 Figma 마스터 STEP1 완료 (FROM Desktop, 코드 0, production HEAD 7a640b6)
 
 | 항목 | 상태 |
