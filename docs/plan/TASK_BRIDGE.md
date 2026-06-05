@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-05 (28) P0 명화 첫 발행 실패 — 네이버 400 원산지 코드 거부·DB 미변경 (FROM Code, production 0996ebd, register 1회 시도·실패 mutate 0)
+
+| 항목 | 상태 |
+|---|---|
+| 작업1 docs | HANDOFF_publish_precheck + 4종 MD → 커밋 0996ebd push, verify exit 0. docs only·비가역 0. |
+| 발행 직전 3축 | 회선 200 / dryRun canRegister=true(grade C readiness 74, 경고 재질·색상 비차단) / DRAFT·naverProductId null. 전부 GREEN. |
+| ★ register 결과 | **HTTP 400 BAD_REQUEST 발행 실패**. originAreaInfo.originAreaCode 'NotValid'("원산지 상세코드 항목이 유효하지 않습니다"). naverProductId 미수신. |
+| DB 검증 | status DRAFT·naverProductId null·updatedAt 2026-06-03 불변 = 상품 미생성·부분발행 0. register 실패→502→prisma.update 미실행 설계 작동. |
+| 근본원인 | builder:725 기본값 '0200037'(선행0) vs product.originCode '200037'(:770 그대로 전달). 교정 가설 originAreaCode='0200037'. dryRun 미검출(거짓 초록 DEBT-13 후보). |
+| 가짜 라벨 | 0(#46). 이미지는 register 전 네이버 업로드 성공(shop-phinf)=상품 미연결, 발행 아님. |
+| ★ 다음 | (A) originAreaCode 포맷 교정 → dryRun+회선 재실측 → ★대표 재승인 → 재 register. (B) 재질/색상 보강 검토. 승인 전 register/POST 0. |
+
 ### 2026-06-05 (27) P0 발행 직전 실측 완료 + 발행 실행 경로 확정 (FROM Desktop→Code, production f2ea274, 비가역 0)
 
 | 항목 | 상태 |

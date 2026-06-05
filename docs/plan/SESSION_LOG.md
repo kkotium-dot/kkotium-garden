@@ -1,3 +1,21 @@
+## 2026-06-05 (28) P0 명화 첫 발행 시도 → 네이버 400 원산지 코드 거부(발행 실패·DB 미변경) (Code turn)
+
+baseline 시작 production f2ea274 → 작업1 docs 커밋·push 후 production 0996ebd(verify-vercel-deploy.sh --wait exit 0). 대표 명시 발행 GO 수신. ★ 작업2만 비가역 시도(register POST 1회) — 네이버 거부로 DB mutate 0.
+
+**(1) 작업1 docs 커밋·push(발행과 분리)**: HANDOFF_publish_precheck_2026-06-05.md + 4종 추적 MD(PROGRESS/ROADMAP/SESSION_LOG27/TASK_BRIDGE §3-27) → 커밋 0996ebd(.commit-msg.tmp #17, docs only·src/·prisma/ 0) push. verify exit 0(production 0996ebd 반영).
+
+**(2) 발행 직전 3축 재실측 GREEN**: 회선 GET /api/naver/addressbooks HTTP 200(release/return 주소록 존재) / dryRun POST success·canRegister=true(name=naver_title 35자·cat 50003356·salePrice 29000·statusType SALE·옵션 3종·missingFields 0, 경고 재질/색상 비차단 grade C readiness 74) / Supabase 직독 status DRAFT·naverProductId null. register 직전 1회 더 DRAFT·null 재확인.
+
+**(3) ★ 실 register POST 1회(경로 2, production endpoint) → 발행 실패**: HTTP 400 BAD_REQUEST. 네이버 invalidInputs verbatim: originProduct.detailAttribute.originAreaInfo.originAreaCode type 'NotValid' message '원산지 상세코드 항목이 유효하지 않습니다'. payloadPreview representativeImage=shop-phinf(register 전 이미지 업로드는 성공, L2 변환 정상). naverProductId 미수신.
+
+**(4) DB 미변경 검증(부분발행 0)**: register 실패 직후 Supabase 직독 — status DRAFT·naverProductId null·updatedAt 2026-06-03 09:18 불변. register 실패 경로(NaverApiError→502, prisma.update 미실행) 안전 설계 작동 확인. 상품 미생성. 이미지만 네이버 업로드(상품 미연결=발행 아님). 가짜 naverProductId/가짜 '등록 완료' 0(#46).
+
+**(5) 근본원인 + 신규 DEBT-13 후보**: product-builder.ts:725 originCode 기본값 '0200037'(선행0·7자리)인데 명화 product.originCode='200037'(naver-origin-codes.ts:332 '중국' 동일, 선행0 없음)을 :770 originAreaInfo.originAreaCode로 그대로 전달 → 네이버 포맷 거부. 교정 가설: originAreaCode는 '0200037'(선행0) 포맷 필요. dryRun은 네이버 미POST라 이 불일치 미검출(거짓 초록, DEBT-12 동류) → DEBT-13(발행 게이트 원산지 코드 포맷 사각지대) 등재 후보. 본 turn은 즉시 중단 — 코드 교정/재발행은 대표 결정 후 별도 turn.
+
+검증: 작업1 docs only(비가역 0). 작업2 register 1회 시도(비가역 경계=이 호출만), 네이버 거부로 DB mutate 0·상품 미생성. 이모지 0(★ 허용)/한글 sentinel 0/가짜 라벨 0(#46). **다음**: (A) originAreaCode 포맷 교정(200037→0200037 검증) → dryRun+회선 재실측 → ★대표 재승인 → 재 register. (B) 동시 재질/색상 보강 검토(현 비차단이나 가점). 승인 전 register/POST 0.
+
+---
+
 ## 2026-06-05 (27) P0 발행 직전 실측 완료 + 발행 실행 경로 확정 (Code turn)
 
 baseline production f2ea274(HEAD==origin/main, Vercel READY). 권위: docs/handoff/HANDOFF_publish_precheck_2026-06-05.md(#49 Desktop 산출 → Code 저장 위임, Filesystem MCP 행으로 Desktop write 불가). 점검 전용·비가역 0(발행 미접촉, 코드/DB mutate 0, register/POST 호출 0건).
