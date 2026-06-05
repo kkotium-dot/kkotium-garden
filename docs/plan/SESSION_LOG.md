@@ -1,3 +1,21 @@
+## 2026-06-05 (29) 원산지 코드 선행 0 절삭 근본 결함 교정 — 해외 발행 차단 해제 + 명화 dryRun 재GREEN (Code turn)
+
+baseline 시작 production 8f212fd → 작업1~3 코드 + 작업2 DB → push 63c912c(verify exit 0). ★ 비가역 경계: 작업2 DB UPDATE 1행만 가역(발행 미접촉, register POST 0). 작업1·3 코드 가역.
+
+**(0) 근본원인 확정(Desktop 공식 xls 직독)**: 네이버 원산지코드.xls 519행 — 중국 0200037·미국 0204000·일본 0200036·국산 00. 해외 7자리 497개 전부 선행 0. naver-origin-codes.ts 'Auto-generated from XLS'가 코드를 숫자처리해 선행 0 절삭(00→0·0001→1·0200037→200037·키 충돌). 명화 DB originCode=200037(오염) 직송 → register 400 'originAreaCode NotValid'. = 모든 해외 소싱 상품 발행 차단 시스템 결함. 과거 turn 28 '200037 정상'은 로컬 손상 테이블끼리 대조한 오진 → 정정.
+
+**(1) 작업1 — 로컬 원산지 테이블 근본 재생성(코드 가역)**: 원산지코드.xls(프로젝트 루트 존재, xlrd 설치 후 dtype=str 파싱) 권위로 naver-origin-codes.ts 전체 재생성 — 518건, 선행 0 보존(특수 2자리 4·시도 4자리 17·해외 7자리 497). cross-check: xls codes == origin-codes-full.ts codes(차집합 양방향 0), 중복 0. 헤더에 '선행 0 보존·숫자 변환 절대 금지' 경고(재발 방지). 추가 오염원 제거: codes.ts KKOTIUM_DEFAULTS.originCode '200037'→'0200037'(products/new·api/products 신규 상품 재오염 차단), products/new:1762 stale 주석 정정(#44, '200037 정상'→'0200037 정규'). codes.ts importer 로직 Number(code)>=200000 회귀 0(Number('0200037')=200037 유효).
+
+**(2) 작업2 — 명화 DB originCode 교정(DB 가역)**: Product cmpnooli40001f0gveaxr8iim originCode 200037→0200037 UPDATE(가드 WHERE: originCode='200037' AND DRAFT AND naverProductId null → 1행). RETURNING 확인: originCode 0200037·status DRAFT·naverProductId null·naver_origin '중국' 불변(발행 미접촉).
+
+**(3) 작업3 — 빌더 방어 가드(코드 가역)**: product-builder.ts resolveOriginAreaCode 신설 — 공식표(NAVER_ORIGIN_CODES 518) Set 대조, 존재 시 통과 / 선행 0 절삭 추정 시 복원(0+v·padStart 7/4/2) / 미해결 시 throw(빌드 거부). originAreaInfo.originAreaCode에 적용. dryRun도 buildNaverProductPayload 경유라 동일 검증 → 'dryRun 통과인데 register 400' 거짓 초록(DEBT-13) 차단. legacy /api/naver/register route(호출자 0)도 동일 가드.
+
+**(4) 작업4 — dryRun 재검증(비가역 0)**: production 63c912c 대상 — 회선 GET /api/naver/addressbooks 200, dryRun POST success·canRegister=true·grade C·readiness 74, ★ payloadPreview.originAreaInfo.originAreaCode='0200037'(선행 0 복원 확인)·importer '상세페이지 참조'·content '중국'. name=naver_title·cat 50003356·salePrice 29000·옵션 3종. ★ 여기서 중단 — 실 register는 대표 재승인 후.
+
+검증: 작업1·3 코드 TSC 0·build OK. 작업4 dryRun만(register POST 0). 비가역=작업2 DB 1행. 이모지 0(★ 허용)/한글 코드 리터럴=지역명 데이터 상수만/가짜 라벨 0(#46). **다음**: dryRun GREEN 보고 → ★대표 재승인 → 재 register(명화, 비가역) → 3중 검증. 승인 전 register/POST 0.
+
+---
+
 ## 2026-06-05 (28) P0 명화 첫 발행 시도 → 네이버 400 원산지 코드 거부(발행 실패·DB 미변경) (Code turn)
 
 baseline 시작 production f2ea274 → 작업1 docs 커밋·push 후 production 0996ebd(verify-vercel-deploy.sh --wait exit 0). 대표 명시 발행 GO 수신. ★ 작업2만 비가역 시도(register POST 1회) — 네이버 거부로 DB mutate 0.

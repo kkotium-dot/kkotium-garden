@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-05 (29) 원산지 선행 0 절삭 근본 결함 교정 — 해외 발행 차단 해제 (FROM Code, production 63c912c, DB 1행 가역·발행 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 근본원인 | 원산지코드.xls(519행) 권위: 중국 0200037·국산 00·해외 7자리 497 전부 선행 0. naver-origin-codes.ts auto-gen이 number 처리로 선행 0 절삭 → DB originCode=200037 오염 → register 400 'originAreaCode NotValid'. 모든 해외 소싱 발행 차단. |
+| 작업1 테이블 재생성 | xls 권위 dtype=str 재생성(518, 선행 0 보존, 헤더 경고). cross-check origin-codes-full 차집합 0. codes.ts default '200037'→'0200037'. products/new stale 주석 정정(#44). |
+| 작업2 DB 교정 | 명화 originCode 200037→0200037(가드 WHERE 1행). status DRAFT·naverProductId null·naver_origin '중국' 불변. |
+| 작업3 빌더 가드 | resolveOriginAreaCode(공식표 대조·선행0 복원·미해결 빌드 거부). dryRun도 검증 경유 → DEBT-13 거짓 초록 차단. legacy register route 동일. |
+| 작업4 dryRun 재검증 | originAreaCode='0200037'·canRegister=true·회선 200·grade C readiness 74. TSC 0/build OK. |
+| 가짜 라벨 | 0(#46). 발행 미접촉(register POST 0). 비가역=DB 1행만. |
+| ★ 다음 | dryRun GREEN → ★대표 재승인 → 재 register(명화, 비가역) → 응답+DB+노출 3중 검증. 승인 전 register/POST 0. |
+
 ### 2026-06-05 (28) P0 명화 첫 발행 실패 — 네이버 400 원산지 코드 거부·DB 미변경 (FROM Code, production 0996ebd, register 1회 시도·실패 mutate 0)
 
 | 항목 | 상태 |
