@@ -1,3 +1,19 @@
+## 2026-06-05 (34) 이미지 파이프라인 리서치 저장 + 개선 마스터 플랜(5트랙) 생성 + 운영 원칙 갱신 (Code turn)
+
+baseline production bd28efe(HEAD==origin==prod, Vercel 200, tracked tree clean). docs only·비가역 0(코드/DB/발행 미접촉). 권위: Desktop 산출 리서치 전문 + 명화 발행/배선 교정 실측(SESSION_LOG 32·33).
+
+**(1) 리서치 저장(작업1)**: docs/research/KKOTIUM_IMAGE_PIPELINE_RESEARCH_2026-06-05.md 전문 저장(#29b Python full-overwrite, 한글 깨짐 0). 4영역(도구 라이선스/네이버 SEO/HITL UX/MCP 오케스트레이션) + 도구 매핑표 + Recommendations + Caveats. 표의 체크마크는 이모지 0 규칙 위해 'O'로 표기.
+
+**(2) 마스터 플랜 생성(작업2)**: docs/plan/IMAGE_PIPELINE_IMPROVEMENT_MASTER_PLAN.md 신설 — 배경(명화 배선 결함+교정), 리서치 3결론, 도구 매핑표, 5트랙(T1 asset_jobs 범용화+라이선스 티어 / T2 Bria PoC / T3 3-레인 라우터 / T4 발행 검수 대시보드+시안 UI / T5 앱-Desktop-MCP 연결). 각 트랙 목표/산출물/대표개입/의존성/완료기준. 대표 개입 2지점(메인컷 선택·발행 직전 승인)만 수동.
+
+**(3) 추적 MD 동기화(작업3)**: PROGRESS 헤더 + ROADMAP 헤더(5트랙) + SESSION_LOG(34) + TASK_BRIDGE §3(34). 명화 첫 발행 SUCCESS + 배선 교정 완료 현황 반영.
+
+**(4) CLAUDE.md 운영 원칙 추가(작업4)**: §3-6 '이미지/발행 자산 규칙' 신설 — (a) 라이선스 안전(메인컷=Firefly 수동/Bria 무배상만, SD류 무배상 미제공 금지) (b) 브라우저 자동화 금지(Adobe/Canva/Figma 웹UI 스크립트 우회 금지=계정정지 리스크) (c) 네이버 대표이미지 규정(2024-10-28: 가격/홍보문구/옵션 라인업컷/소품 금지, 대표=단일 본품 누끼) (d) 디자인 가공본 필수(공급사 원본 직송 금지) (e) 자산 이름 규약(cutout.png/backdrop-{skeletonId}.png 고정, myeonghwa-* 접두어 금지, upload-cutout.js 사용).
+
+검증: git diff = docs only(src/·prisma/ 0). 비가역 0. 이모지 0(★ 허용)/한글 sentinel 0/가짜 라벨 0(#46). **다음**: T1 asset_jobs 범용화(backdrop_jobs→asset_jobs 일반화+라이선스 티어 스키마) — 대표 승인 게이트. + 잔여: 명화 네이버 이미지 수정(비가역, 대표 승인) / 수동 소싱 product_id 배선 갭 / 명화 재질·색상 보강.
+
+---
+
 ## 2026-06-05 (33) 명화 이미지 배선 결함 교정(Storage 자산 정렬) + 소싱 추적성 복원 (Code turn)
 
 baseline production 6698fb0(HEAD==origin==prod, Vercel 200). 코드 변경 0(git status clean·TSC 0). 가역: Storage 자산 정렬(backdrop 덮어쓰기는 prev 백업) + DB crawl_logs 1행. 네이버 발행상품 미접촉. 권위: Desktop 라이브 view + Code Storage(storage.objects) 직독.

@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-05 (34) 이미지 파이프라인 리서치 + 개선 마스터 플랜(5트랙) + 운영 원칙 (FROM Code, production bd28efe, docs only·비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 리서치 저장 | docs/research/KKOTIUM_IMAGE_PIPELINE_RESEARCH_2026-06-05.md 전문(#29b). Firefly 비현실적→Bria+Sharp 하이브리드, 네이버 2024-10-28 규정, asset_jobs+3-레인+검수 대시보드. |
+| 마스터 플랜 | docs/plan/IMAGE_PIPELINE_IMPROVEMENT_MASTER_PLAN.md 5트랙(T1~T5) + 대표 개입 2지점(메인컷 선택·발행 직전 승인). |
+| CLAUDE.md §3-6 | 라이선스 안전·브라우저 자동화 금지·네이버 대표이미지 규정·디자인 가공본 필수·자산 이름 규약. |
+| 현황 | 명화 첫 발행 SUCCESS(13564133057 ACTIVE)·이미지 배선 교정 완료(cutout auto-cache, Desktop 육안 GREEN). |
+| 가짜 라벨 | 0(#46). docs only·비가역 0. |
+| ★ 다음 (Target Session: t1-asset-jobs-generalize) | T1 asset_jobs 범용화 — backdrop_jobs→asset_jobs 일반화 + 라이선스 티어 스키마. 선행조건: 마스터 플랜 §4 T1 설계 대표 승인 + 고정 자산명 규약 유지(asset-source-resolver 호환 불변). |
+
 ### 2026-06-05 (33) 명화 이미지 배선 결함 교정(Storage 자산 정렬) + 소싱 추적성 (FROM Code, production 6698fb0, 코드 변경 0·가역·네이버 미접촉)
 
 | 항목 | 상태 |
