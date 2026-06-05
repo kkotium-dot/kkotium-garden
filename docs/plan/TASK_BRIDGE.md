@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-05 (31) 엑셀 옵션 소스 불일치 근본 결함 교정 + 옵션 5칸 채워짐 실증 (FROM Code, production 17dd50f, 발행 미접촉·비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 근본원인 | /api/naver/excel buildOptionFields가 레거시 Product.options만 읽음. 명화 옵션(향 3종)은 product_options(API 발행 소스)에 저장 → 엑셀 옵션 5칸 빈값. 엑셀↔API 소스 불일치. |
+| 작업1 소스 정합 | excel/route.ts Prisma include에 product_options 추가 + buildFromProductOptions 우선 소스. 레거시 fallback 유지(회귀 0). API buildOptionInfo와 동일 소스. |
+| 작업2 형식 변환 | 단일축 조합형: optionValues 콤마·optionPrices·optionStocks per value. 다축 newline 그룹(검증 명세). dedup+빈값 제거. |
+| 작업3 재검증(Code openpyxl) | 옵션형태 조합형·옵션명 향·옵션값 '레몬유칼립,에이프릴 후레쉬,블랙체리'·옵션가 '0,0,0'·재고 '999,999,999'. 회귀 0(원산지 0200037·카테고리·판매가·이미지·상세 불변). TSC 0/build OK. |
+| 가짜 라벨 | 0(#46). 엑셀 생성만(register POST 0·DB mutate 0). 비가역 0. |
+| ★ 다음 | Desktop 엑셀 재검증 + API 3차 발행 — ★대표 재승인 후 실 register(비가역) → 3중 검증. 승인 전 register/POST 0. |
+
 ### 2026-06-05 (30) register 400 2차(sellerTags 제한어 + 옵션 중복) 근본 교정 + dryRun 재GREEN (FROM Code, production f82e525, 발행 미접촉·비가역 0)
 
 | 항목 | 상태 |

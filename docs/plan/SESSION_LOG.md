@@ -1,3 +1,19 @@
+## 2026-06-05 (31) 엑셀 옵션 소스 불일치 근본 결함 교정 + 옵션 5칸 채워짐 실증 (Code turn)
+
+baseline production 1c87fc0 → 코드 교정 push 17dd50f(verify exit 0). 발행 미접촉·비가역 0(register POST 0, DB mutate 0). 권위: Desktop 엑셀 실물 파싱 + Code openpyxl 직접 재실측.
+
+**(0) 근본원인**: 명화 실물 엑셀(/api/naver/excel, 93칸) 파싱 — 원산지 0200037·상품명·카테고리 50003356·판매가 29000·재고 999·대표이미지(Cloudinary)·상세설명(Supabase)·브랜드/제조사/A/S/배송 전부 정상, ★ 옵션 5칸(옵션형태·옵션명·옵션값·옵션가·옵션재고) 전부 빈값. excel/route.ts buildOptionFields(p.optionType,p.optionName,p.options)가 Product 레거시 컬럼을 읽으나 명화 옵션(향 3종)은 product_options 테이블(API 발행 product-builder buildOptionInfo가 읽는 곳)에 저장됨 → 엑셀 엔진이 product_options 미독으로 옵션 누락. 엑셀↔API 발행 옵션 소스 불일치(crawl-option-mapper가 product_options엔 넣고 Product 컬럼 매핑 누락한 계열).
+
+**(1) 작업1 — 엑셀 옵션 소스 정합(excel/route.ts)**: Prisma include에 product_options 추가(기존 supplier/shipping_templates만). buildOptionFields를 product_options 우선 소스로 교정 — buildFromProductOptions(po) 신설, 레거시 Product.options는 buildFromLegacy fallback. ★ API 발행과 동일 데이터 소스(product_options)를 읽게 해 두 경로 정합.
+
+**(2) 작업2 — 엑셀 옵션 형식 변환(naverExcelJS 88칸 명세)**: product_options → 네이버 5칸. 단일축 조합형(향): optionType '조합형'·optionNames '향'·optionValues '레몬유칼립,에이프릴 후레쉬,블랙체리'(콤마)·optionPrices '0,0,0'·optionStocks '999,999,999'. 다축(>=2): 각 축 distinct 값 newline 그룹 구분, 가격/재고 first-group-only(excel-generator.ts:61~69 검증 명세). dedup + 빈 값 제거(API buildOptionInfo와 동일 방어).
+
+**(3) 작업3 — 재검증(Code openpyxl 직접, #45 출력 단정)**: production 17dd50f /api/naver/excel 명화 실물 재생성(HTTP 200, 9838B, 93칸) → openpyxl 파싱: 옵션형태 '조합형'·옵션명 '향'·옵션값 '레몬유칼립,에이프릴 후레쉬,블랙체리'·옵션가 '0,0,0'·옵션 재고수량 '999,999,999'(전부 채워짐). 회귀 0: 상품명·카테고리 50003356·판매가 29000·재고 999·원산지 0200037(선행0)·대표이미지 Cloudinary·상세설명 Supabase img 불변.
+
+검증: TSC 0/build OK. 엑셀 생성만(register POST 0·DB mutate 0). 비가역 0. 이모지 0(★ 허용)/한글 데이터 상수 허용/가짜 라벨 0(#46). 회귀 가드: 옵션 없는 단일상품은 5칸 빈값 유지(레거시 fallback {} 반환). **다음**: Desktop 엑셀 재검증(옵션 채워짐 교차확인) + API 3차 발행 — ★대표 재승인 후 실 register(비가역) → 3중 검증. 승인 전 register/POST 0.
+
+---
+
 ## 2026-06-05 (30) register 400 2차 원인(sellerTags 제한어 + 옵션 조합 중복) 근본 교정 + dryRun 재GREEN (Code turn)
 
 baseline production 0f604ed → 코드 교정 push f82e525(verify exit 0). 발행 미접촉·비가역 0(register POST 0, DB mutate 0). 권위: Desktop 라이브 실측(production register 400 응답 invalidInputs verbatim).
