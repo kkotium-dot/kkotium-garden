@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-05 (26) Claude Design 슬롯 편입 + AEM 정정 + P0 발행 3축 GREEN 재확인 (FROM Desktop→Code, production 2f5d1e0, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| #48 보강 — Claude Design 슬롯 | 신규 슬롯=캔버스 시각화(Claude Design 류)/Canva → 내부 시안·발행 GO 카드·둘째 상품 hero 시안·단발 배너 전용. 판매 발행물 아님(IP 면책 불요). 판매 자산은 Firefly-native+Figma 양산만(면책 경계 불변). |
+| #48 보강 — AEM 정정(#44) | '사용 안 함'→'연결 유지(2026-06-05 대표 재연결)·현재 1인 셀러 미해당·향후 멀티채널 확장 시 활용'. Adobe Marketing Agent MCP 동일. |
+| P0 발행 3축 GREEN | 회선 200 · L2 allShopPhinf=true · dryRun canRegister=true. Desktop 직독 재확인. 발행 준비 완료. |
+| 명화 페이로드 | 29000/14300(50.7%)·cat 50003356·title 35자·origin 200037(중국)·DRAFT·naverProductId null. |
+| 보존 | HANDOFF_claude_design_slot_aem_2026-06-05.md git add(#49 write_file). docs only, 코드/DB mutate 0. |
+| ★ 다음 (Desktop 새 채팅) | (A) P0 명화 첫 발행 — 발행 직전 실측 + ★대표 명시 승인 후 실 register(비가역). register/POST 승인 없이 호출 0. (B) 둘째 상품 hero 시안 캔버스 슬롯 첫 활용(발행 후). |
+
 ### 2026-06-04 (25) 작업원칙 #49 등재 + P0 발행 트랙 인계 반영 (FROM Desktop→Code, production f689625, 비가역 0)
 
 | 항목 | 상태 |

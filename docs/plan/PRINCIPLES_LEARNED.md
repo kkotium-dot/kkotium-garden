@@ -659,14 +659,15 @@ grep -c "id: '" src/lib/automation-registry.ts
 - **이미지 생성** = Adobe Firefly 웹 1-click(대표 수동) — Firefly Services api 모드는 엔터프라이즈 키 장착 시에만(작업원칙 #38 예외).
 - **가공**(누끼/리사이즈/리프레임/합성준비) = Adobe MCP 자동.
 - **합성·연속성**(상세페이지 레이아웃) = 빌더(section-builder/composeContinuous) + 디자인 도구(Figma). sharp 단순 적층은 약함 — 빌더 연속 캔버스가 담당.
+- **시안·의사결정·배너**(내부용, 2026-06-05 추가) = 캔버스 시각화(Claude Design 류) / Canva — 발행 GO/NO-GO 의사결정 카드·둘째 상품 hero 시안 탐색·단발 이벤트 배너. **판매 발행물 아님** → IP 면책 불요. 판매 자산은 여전히 Firefly-native 생성 + Figma 양산만(면책 경계 불변).
 
-**미사용 명문화**:
-- **AEM MCP / Adobe Marketing Agent MCP**: 엔터프라이즈 마케팅 운영용 — 1인 솔로 셀러 무관 → 사용 안 함.
+**연결 상태 명문화(2026-06-05 갱신, #44 stale-fact)**:
+- **AEM MCP**: 연결 유지(2026-06-05 대표 재연결), 단 현재 1인 셀러 워크플로우 미해당 — 향후 멀티채널 확장(자사몰 등) 시 활용. **Adobe Marketing Agent MCP**: 동일(연결 유지·현재 미해당). 억지 편입 금지(정직 평가 #46) — 엔터프라이즈 CMS/마케팅 운영 도구로 현재 1인 셀러 호출 표면 없음.
 
 **파트너 모델 면책 경계(중요)**:
 - FLUX / Nano Banana / gemini-image / imagen / gpt-image 등 **파트너(비 Firefly-native) 모델은 IP 면책 없음** → **최종 판매물(발행 자산)로 사용 금지**. Firefly-native(firefly-image-4/4-ultra/5, 유료 플랜 면책)만 판매물 허용. firefly-generate.ts는 api 모드에서 파트너 모델을 manual로 강등해 자동 발행 경로에서 배제(주석 반영).
 
-**근거**: docs/research/TOOL_ECOSYSTEM_MANUAL_2026-06-04.md + 빌더 하이브리드 대수술 STEP5.
+**근거**: docs/research/TOOL_ECOSYSTEM_MANUAL_2026-06-04.md + 빌더 하이브리드 대수술 STEP5. 2026-06-05 보강(Claude Design 슬롯 편입·AEM 재연결 정정): docs/handoff/HANDOFF_claude_design_slot_aem_2026-06-05.md.
 
 ---
 

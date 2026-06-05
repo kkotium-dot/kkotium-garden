@@ -1,3 +1,19 @@
+## 2026-06-05 (26) Claude Design 슬롯 편입 + AEM 재연결 정정 + P0 발행 3축 GREEN 재확인 (Code turn)
+
+baseline production 2f5d1e0(HEAD==origin/main, Vercel READY). 권위: docs/handoff/HANDOFF_claude_design_slot_aem_2026-06-05.md(#49 Desktop write_file 작성분). docs only·비가역 0(발행 미접촉, 코드/DB mutate 0).
+
+**(1) #48 보강 — Claude Design 슬롯 편입(§1)**: PRINCIPLES_LEARNED.md #48 도구 라우팅에 신규 슬롯 추가 — 시안·의사결정·배너(내부용)=캔버스 시각화(Claude Design 류)/Canva. 발행 GO/NO-GO 의사결정 카드·둘째 상품 hero 시안 탐색·단발 이벤트 배너 전용. 판매 발행물 아님 → IP 면책 불요. 판매 자산은 여전히 Firefly-native 생성 + Figma 양산만(면책 경계 불변). 정직 범위(#46): 'Claude Design' 제품 자체는 세션 직접 구동 불가이나 같은 역할(캔버스 시각화/Canva MCP/Adobe MCP)이 세션에 생존 → 캔버스 기반 시각 산출을 파이프라인 정식 슬롯으로 승격.
+
+**(2) #48 보강 — AEM 재연결 정정(§2, #44 stale-fact)**: 기존 'AEM MCP / Adobe Marketing Agent MCP: 엔터프라이즈 마케팅 운영용 — 1인 솔로 셀러 무관 → 사용 안 함' → 'AEM MCP: 연결 유지(2026-06-05 대표 재연결), 단 현재 1인 셀러 워크플로우 미해당 — 향후 멀티채널 확장(자사몰 등) 시 활용. Adobe Marketing Agent MCP: 동일(연결 유지·현재 미해당)'. 대표가 만료 연결 재연결 → 코드 상태와 문구 정합. 억지 편입 금지(정직 평가 #46): AEM은 엔터프라이즈 CMS 운영 도구로 현재 1인 셀러 호출 표면 없음.
+
+**(3) P0 발행 3축 GREEN 재확인(라이브, Desktop 직독)**: 직전 turn(316f1f2/f689625) 확정 3축 그대로 유효 — 1축 회선 GET 200(/api/naver/addressbooks 토큰 생존) / 2축 L2 imageProbe allShopPhinf=true(대표 Cloudinary·상세 Supabase·공지 전부 shop-phinf) / 3축 dryRun canRegister=true(17필드+옵션 향3종 COMBINATION+ETC 9키, 경고 2 재질·색상 비차단). 명화 페이로드: salePrice 29000/supplierPrice 14300(실마진 50.7%)/naverCategoryCode 50003356/naver_title 35자/originCode 200037(중국)/status DRAFT·naverProductId null. 하드룰 불변: 네이버 register/POST는 대표 명시 승인 없이 호출 0.
+
+**(4) 5종 MD 갱신**: PRINCIPLES_LEARNED(#48 보강) + PROGRESS 헤더 + ROADMAP 헤더 + SESSION_LOG(26) + TASK_BRIDGE §3(26). **보존**: HANDOFF_claude_design_slot_aem_2026-06-05.md git add(#49 Desktop write_file 작성분).
+
+검증: git diff = docs only(src/·prisma/ 변경 0). 코드/DB mutate 0. 비가역 0(발행 미접촉). 이모지 0(MD 관례 ★ 허용)/사용자노출 한글 sentinel 0. **다음**: Desktop 새 채팅 — (A) P0 명화 첫 발행(발행 직전 실측 DRAFT·dryRun·회선 → ★대표 명시 승인 → 실 register, 비가역) / (B) 둘째 상품 hero 시안 캔버스 슬롯 첫 본격 활용(발행 후).
+
+---
+
 ## 2026-06-04 (25) 작업원칙 #49 등재 + P0 발행 트랙 인계 반영 (Code turn)
 
 baseline production f689625(HEAD==origin/main). 권위: docs/handoff/HANDOFF_principle49_publish_handoff_2026-06-04.md §3. docs only·비가역 0(발행 미접촉).

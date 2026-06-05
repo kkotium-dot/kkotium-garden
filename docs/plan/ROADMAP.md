@@ -1,4 +1,5 @@
 # KKOTIUM GARDEN — ROADMAP
+> 2026-06-05 **Claude Design 슬롯 편입 + AEM 정정 + P0 3축 GREEN 재확인** (Code turn, baseline 2f5d1e0, docs only·비가역 0). #48 보강: 캔버스 시각화(Claude Design 류)/Canva 신규 슬롯=내부 시안·발행 GO 카드·둘째 상품 hero 시안·단발 배너 전용(판매물 아님, 면책 경계 불변). AEM 정정: '사용 안 함'→'연결 유지(대표 재연결)·현재 미해당·향후 멀티채널 확장 시'(Marketing Agent 동일). P0 3축 GREEN 유지(회선 200·L2·dryRun). **다음=Desktop 새 채팅 P0 명화 발행(대표 명시 승인 게이트).**
 > 2026-06-04 **작업원칙 #49 등재 + P0 발행 인계** (Code turn, f689625, docs only·비가역 0). #49(Desktop 핸드오프 write_file 직접 / Code git 보존) PRINCIPLES_LEARNED+TASK_BRIDGE 등재. P0 3축 GREEN 유지(회선·L2·dryRun). _DESKTOP_WRITE_TEST 제거. **다음=Desktop 새 채팅 P0 명화 발행(대표 명시 승인 게이트)**.
 > 2026-06-04 **imageProbe 모드 + STEP 2 L2 실증 성공** (Code turn, 316f1f2, 비가역 0). register route imageProbe 분기(이미지만 업로드). allShopPhinf=true(Cloudinary main+Supabase detail+공지→shop-phinf). 이미지 도메인 정정(#45): 발행 main=Cloudinary. **다음=대표 명시 승인 → 실 register(명화 우선)**.
 > 2026-06-04 **P0 첫 발행 회선/L2 검증** (Code turn, 검증 전용·비가역 0). P-1/P-2/L3 기구현 확정(신규 0). STEP 1 회선 200·STEP 3 dryRun canRegister=true(17필드+옵션3+ETC9, 경고 재질/색상). STEP 2(proxy uploadImages 실증)는 로컬 proxy 시크릿 부재로 Desktop 위임. **다음=Desktop STEP 2 실증 → 대표 명시 승인 → 실 register**.
