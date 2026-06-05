@@ -1,3 +1,19 @@
+## 2026-06-05 (32) ★ P0 명화 첫 발행 SUCCESS 기록 + Code 독립 3중 재검증 (Code turn)
+
+baseline production 0d8793e(HEAD==origin==prod, Vercel 200). docs only·본 turn 비가역 0(발행은 직전 Desktop turn에 완료, 본 turn은 기록·검증만). 권위: Desktop register 실측 + Code Supabase 직독 독립 재검증.
+
+**(0) 발행 SUCCESS(Desktop register, 3차 시도)**: POST /api/naver/products/register(경로 2, production curl, dryRun 없음) → HTTP 200·success=true·naverProductId 13564133057. 1차(원산지 400)·2차(태그 제한어+옵션 중복 400) 교정 후 3차 성공.
+
+**(1) Code 독립 3중 재검증(#45 가짜 라벨 0 #46)**: (a) Product 행 직독 — status ACTIVE(DRAFT→ACTIVE 전이)·naverProductId 13564133057·originCode 0200037·updatedAt 2026-06-05 09:54:37. (b) product_events 직독 — type NAVER_REGISTERED·old_value DRAFT·new_value 13564133057·created_at 09:54:37.265 → register route 성공 경로(prisma.update + event create) 실행 확정. (c) 스토어프론트 smartstore.naver.com/kkotium/products/13564133057 — Desktop 발행 시점 403/24B, Code 재확인 429/23585B(bot/rate-block, 둘 다 404 아님 = 상품 실재 방증, 정직: 봇차단으로 본문 미파싱이라 노출은 간접 확인).
+
+**(2) 발행 차단 4대 결함 교정 완료(누적)**: (1) 원산지 코드 선행 0 절삭 → 0200037 재생성+가드(turn 29) (2) sellerTags 제한어 필터(turn 30) (3) optionCombinations 규격 정합 optionName1~4=값·dedup(turn 30) (4) 엑셀 옵션 소스 정합 product_options 우선(turn 31). 4축 모두 production 실증 후 발행 성공.
+
+**(3) 엑셀 일괄등록 백업경로 검증(Desktop 독립)**: /api/naver/excel 명화 옵션 5칸 — 옵션형태 조합형·옵션명 향·옵션값 '레몬유칼립,에이프릴 후레쉬,블랙체리'·옵션가 '0,0,0'·옵션 재고수량 '999,999,999' 채워짐, 88칸 회귀 0(turn 31 Code openpyxl 실측과 일치). API 발행 실패 시 백업경로 가용 확인.
+
+검증: git diff = docs only(src/·prisma/ 0). 본 turn 비가역 0(발행은 직전 완료, 기록만·register/POST 0). 이모지 0(★ 허용)/사용자노출 한글 sentinel 0/가짜 라벨 0(#46, DB 직독으로 SUCCESS 단정). **다음**: (A) 둘째 상품(달항아리/아이스트레이) 발행 — 동일 엔진(4대 결함 교정 완료)이라 막힘 적을 것. (B) 명화 재질/색상 발행후 수정 API 보강(A안, 신상품 가점 24~48h 내). (C) imageCount 0 → additionalImages 집계 후속.
+
+---
+
 ## 2026-06-05 (31) 엑셀 옵션 소스 불일치 근본 결함 교정 + 옵션 5칸 채워짐 실증 (Code turn)
 
 baseline production 1c87fc0 → 코드 교정 push 17dd50f(verify exit 0). 발행 미접촉·비가역 0(register POST 0, DB mutate 0). 권위: Desktop 엑셀 실물 파싱 + Code openpyxl 직접 재실측.

@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-05 (32) ★ P0 명화 첫 발행 SUCCESS — naverProductId 13564133057, ACTIVE (FROM Desktop register → Code 기록·독립 검증, production 0d8793e, 본 turn 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 발행 SUCCESS | register HTTP 200·success=true·naverProductId 13564133057(3차 시도, production curl). |
+| Code 독립 3중 검증(#45) | (1) Product ACTIVE·naverProductId 13564133057·updatedAt 09:54:37 (2) product_events NAVER_REGISTERED DRAFT→13564133057 09:54:37 (3) 스토어프론트 non-404(Desktop 403·Code 429, bot-block=실재). |
+| 발행 차단 4대 결함 | 전부 교정 완료: 원산지 0200037 / sellerTags 제한어 / 옵션 조합 중복 / 엑셀 옵션 소스. |
+| 엑셀 백업경로 | 옵션 5칸(조합형/향/레몬유칼립,에이프릴 후레쉬,블랙체리/0,0,0/999,999,999) 채워짐·회귀 0(Desktop+Code 실측 일치). |
+| 가짜 라벨 | 0(#46). SUCCESS는 Code DB 직독으로 단정. 본 turn docs only·발행 미접촉. |
+| ★ 다음 | (A) 둘째 상품(달항아리/아이스트레이) 발행 — 동일 엔진, 막힘 적을 것. (B) 명화 재질/색상 발행후 보강(A안). (C) additionalImages 집계 후속. |
+
 ### 2026-06-05 (31) 엑셀 옵션 소스 불일치 근본 결함 교정 + 옵션 5칸 채워짐 실증 (FROM Code, production 17dd50f, 발행 미접촉·비가역 0)
 
 | 항목 | 상태 |
