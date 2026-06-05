@@ -667,3 +667,19 @@ grep -c "id: '" src/lib/automation-registry.ts
 - FLUX / Nano Banana / gemini-image / imagen / gpt-image 등 **파트너(비 Firefly-native) 모델은 IP 면책 없음** → **최종 판매물(발행 자산)로 사용 금지**. Firefly-native(firefly-image-4/4-ultra/5, 유료 플랜 면책)만 판매물 허용. firefly-generate.ts는 api 모드에서 파트너 모델을 manual로 강등해 자동 발행 경로에서 배제(주석 반영).
 
 **근거**: docs/research/TOOL_ECOSYSTEM_MANUAL_2026-06-04.md + 빌더 하이브리드 대수술 STEP5.
+
+---
+
+## 작업원칙 #49 — Desktop 핸드오프 직접 write 인계 (2026-06-04 명문화, 손품 제거)
+
+**배경**: 기존 핑퐁은 Desktop이 핸드오프 작성 → 대표가 다운로드 → Claude Code에 업로드(첨부)하는 사이클로, 매 핑퐁마다 대표 수작업 발생.
+
+**실증(2026-06-04 Desktop)**: Filesystem:write_file로 docs/handoff/에 한글 핸드오프 직접 작성 → read 재검증 결과 한글·특수문자(·, ★, →)·따옴표 깨짐 0 확인. 다운/업로드 사이클 불필요 입증.
+
+**규칙**: Desktop → Code 인계 시, Desktop은 핸드오프 MD를 docs/handoff/에 Filesystem:write_file로 직접 작성한다. 대표는 Code에 "docs/handoff/{파일명} 정독" 한 줄만 전달(다운/업로드 0).
+- **적용 범위**: 핸드오프/인계 문서(일회성). Desktop write_file = 전체 작성(overwrite)이라 안전.
+- **제약(불변)**: 큰 추적 MD 5종(PROGRESS/ROADMAP/SESSION_LOG/TASK_BRIDGE/CLAUDE) 및 PRINCIPLES_LEARNED 등 누적형 한글 MD의 부분 편집은 여전히 Code의 Python full-overwrite(#29b 불변 — Desktop이 큰 파일 전체 덮어쓰면 기존 내용 유실 위험).
+- **git**: Desktop write 파일은 git 미추적 → Code가 작업 turn에 git add/commit으로 보존.
+- **역할 분담**: Desktop=핸드오프 직접 쓰기 / Code=큰 추적 MD 반영 + git 보존.
+
+**근거**: docs/handoff/HANDOFF_principle49_publish_handoff_2026-06-04.md §0.

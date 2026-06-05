@@ -29,7 +29,8 @@
 | **MCP 강점** | Supabase / Vercel / Chrome / Filesystem(read) / image-search / web | Filesystem(write) / Bash / Git / TSC / Playwright |
 | **주특기** | 리서치 · 아키텍처 · 오류 진단 · 외부 자료 대조 · 검증 smoke · paste-ready 본문 작성 | 코드 작성 · 테스트 · 패키지 · git · 로컬 서버 · MD 실 적용 |
 | **할 수 있는 것** | Supabase `execute_sql`/`apply_migration` · Vercel deploy 조회 · Chrome E2E · 코드 read · *제안 본문* 작성 | 모든 파일 *생성/편집* · `tsc --noEmit` · `npm run build` · `git push` · MD 파일 *실제 적용* |
-| **할 수 없는 것** | MD/코드 파일 *생성/편집* · git commit · 패키지 설치 | Supabase/Vercel/Chrome/image-search MCP 직접 호출 |
+| **할 수 없는 것** | 코드 파일 *생성/편집* · 큰 추적 MD 부분편집 · git commit · 패키지 설치 (★ 단 핸드오프 MD는 #49로 write_file 직접 작성 허용) | Supabase/Vercel/Chrome/image-search MCP 직접 호출 |
+| **핸드오프 인계 (#49)** | docs/handoff/ MD를 Filesystem:write_file로 직접 작성(다운/업로드 0) | 작성된 핸드오프 git add/commit 보존 + 큰 추적 MD Python full-overwrite 반영 |
 | **세션 시작 트리거** | "꽃틔움 가든 Desktop 진입 + TASK_BRIDGE §3 정독" | CLAUDE.md 자동 + 4 MD 정독 |
 | **세션 종료 의무** | §3 ACTIVE 갱신 + 사용자에게 paste-ready 메시지 전달 | 동일 + git push + `verify-vercel-deploy.sh --wait` |
 
@@ -70,6 +71,17 @@
 ---
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
+
+### 2026-06-04 (25) 작업원칙 #49 등재 + P0 발행 트랙 인계 반영 (FROM Desktop→Code, production f689625, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 작업원칙 #49 등재 | PRINCIPLES_LEARNED.md + §1 표(핸드오프 인계 행) + §8 본문 반영. Desktop 핸드오프 write_file 직접 작성 / Code git 보존·큰 MD Python 반영. |
+| Desktop 교차검증(#45) | imageProbe production f689625 READY 재확인(Code 보고 일치). 명화 DRAFT·naverProductId null. |
+| P0 발행 3축 GREEN | 회선 200 · L2 allShopPhinf=true · dryRun canRegister=true. 발행 준비 완료. |
+| 디자인 파이프라인 | 빌더(a6ea482)·명화 풀세트·도구 라우팅(#48) 완성. Figma 양산 STEP2는 발행 후 둘째 상품. |
+| 정리 | _DESKTOP_WRITE_TEST_2026-06-04.md(실증용 임시) 제거. 핸드오프 docs/handoff/ 보존. |
+| ★ 다음 (Desktop 새 채팅) | P0 명화 첫 발행 — HANDOFF_principle49_publish_handoff §4 문구. 발행 직전 실측(DRAFT·dryRun·회선) + ★대표 명시 승인 후 실 register(비가역). register/POST 승인 없이 호출 0. |
 
 ### 2026-06-04 (24) imageProbe 모드 + STEP 2 L2 실증 성공 (FROM Code, production 316f1f2, 비가역 0)
 
@@ -843,6 +855,12 @@
 (f) **Cross-track 검증 4-source** — 가능한 한 git + Vercel + Supabase + Chrome 4 source 모두 cross-check. 단일 source 단정 금지.
 
 (g) **한계 정직 보고** — Desktop은 MD edit 불가 / Code는 Chrome MCP 불가. 각자의 한계는 §1 표 그대로. *못 하는 작업 우회 시도 금지*, 다른 환경에게 hand-off.
+
+---
+
+### 작업원칙 #49 — Desktop 핸드오프 직접 write (2026-06-04 명문화)
+
+본 원칙은 PRINCIPLES_LEARNED.md에 정식 등재. 요지: Desktop은 인계 핸드오프 MD를 docs/handoff/에 Filesystem:write_file로 직접 작성(대표 다운/업로드 0), Code는 git add/commit 보존 + 큰 추적 MD(5종/PRINCIPLES)는 Python full-overwrite로 반영(#29b 불변). 핸드오프=Desktop 직접 쓰기 / 누적 MD=Code 반영.
 
 ---
 

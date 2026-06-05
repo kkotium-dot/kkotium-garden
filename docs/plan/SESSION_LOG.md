@@ -1,3 +1,19 @@
+## 2026-06-04 (25) 작업원칙 #49 등재 + P0 발행 트랙 인계 반영 (Code turn)
+
+baseline production f689625(HEAD==origin/main). 권위: docs/handoff/HANDOFF_principle49_publish_handoff_2026-06-04.md §3. docs only·비가역 0(발행 미접촉).
+
+**작업원칙 #49 등재(§3-1)**: PRINCIPLES_LEARNED.md에 #49 본문 추가 — Desktop → Code 인계 시 핸드오프 MD를 docs/handoff/에 Filesystem:write_file로 직접 작성(대표 다운/업로드 0), Code가 git add/commit 보존. 제약(불변): 큰 추적 MD 5종 + PRINCIPLES 등 누적형 부분편집은 여전히 Code Python full-overwrite(#29b). 실증 근거: Desktop이 한글 핸드오프 write_file 후 read 재검증 — 한글·특수문자(·★→)·따옴표 깨짐 0.
+
+**TASK_BRIDGE 반영(§3-2)**: §1 역할표 '할 수 없는 것' Desktop 셀 정정(핸드오프 MD는 #49 예외로 write 허용) + '핸드오프 인계 (#49)' 행 신설. §8에 #49 참조 블록(§9 앞) 추가. 큰 추적 MD/코드 부분편집은 Code 전담 유지 — #49와 #29b 모순 0(핸드오프=일회성 overwrite만 Desktop 허용).
+
+**5종 MD 헤더/§3 갱신(§3-3)**: PROGRESS 헤더 + ROADMAP 헤더 + SESSION_LOG(25) + TASK_BRIDGE §3(25) + PRINCIPLES_LEARNED(#49). Desktop 세션 내용 기록: imageProbe production f689625 Vercel MCP 교차검증 READY(Code 보고 #45 일치), P0 3축 GREEN(회선 200·L2 allShopPhinf=true·dryRun canRegister=true) 발행 준비 완료, 디자인 파이프라인 현황(빌더·명화 풀세트·#48 라우팅 완성 / Figma 양산 STEP2는 발행 후 둘째 상품 / Claude Design 미활용). ★ CLAUDE.md quick-index는 미접촉 — 기존 인덱스가 #45까지만(#46~#48 누락 기존 상태)이라 #49 단독 추가는 부정합, 인덱스 backfill은 별도 소작업으로 분리(사용자 보고).
+
+**정리(§3-4)**: docs/handoff/_DESKTOP_WRITE_TEST_2026-06-04.md(실증용 임시, 159B, 미추적) rm 제거. **보존(§3-5)**: HANDOFF_principle49_publish_handoff_2026-06-04.md는 Desktop이 write_file로 직접 작성한 상태(#49 첫 적용) → Code가 git add 보존.
+
+검증: git diff = docs/plan 5개 + handoff 1개(신규 추적). 코드/DB mutate 0. 이모지(MD 관례 ⭐★ 허용) / 사용자노출 오타·sentinel 0. **다음**: Desktop 새 채팅 P0 명화 첫 발행 — 발행 직전 실측(DRAFT·dryRun·회선 재확인) + ★대표 명시 승인 후에만 실 register(비가역). register/POST 호출 0 유지.
+
+---
+
 ## 2026-06-04 (24) imageProbe 검증 모드 추가 + STEP 2 L2 이미지 변환 실증 (Code turn)
 
 baseline production e2353d4 → 316f1f2. 권위: HANDOFF_imageProbe_mode_2026-06-04.md. 비가역 0(register POST 0, DB mutate 0).
