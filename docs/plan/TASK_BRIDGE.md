@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-05 (33) 명화 이미지 배선 결함 교정(Storage 자산 정렬) + 소싱 추적성 (FROM Code, production 6698fb0, 코드 변경 0·가역·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 근본원인 | 엔진은 cutout.png 고정 이름 조회, Storage엔 myeonghwa-cutout.png(임시 업로드)만 → cutout fallback=공급사 원본 합성. backdrop-S6.png는 이미 존재·작동(핸드오프 부분 정정). |
+| 작업1 자산 정렬 | myeonghwa-cutout.png→cutout.png 배포 + 기존 backdrop-S6.png 백업(backdrop-S6-prev-firefly.png) 후 큐레이트 backdrop(jpg→png)→backdrop-S6.png. scripts/upload-cutout.js. |
+| 작업2 정정(#46) | save-assets는 thumb/detail 출력만 저장(cutout/backdrop 미관여)=핸드오프 오조준. 정식 도구 upload-cutout.js 이미 엔진 이름 사용 → 코드 결함 0, 근본=배포 시 스크립트 사용. |
+| 작업3 검증 | assetSource cutout fallback→auto-cache·backdrop auto-cache(thumbnail 재생성). 육안 교차검증 Desktop 위임. |
+| 작업4 추적성 | crawl_logs 0b21ac95 product_id→명화 링크(1행). 근본: batch-register 자동 배선 O, 수동 경로 미배선 갭=후속. |
+| ★ 정직 | 네이버 발행상품(13564133057) 대표/상세는 아직 공급사 원본 — Storage/엔진만 교정, 네이버 반영은 별도 turn. 가짜 라벨 0. |
+| ★ 다음 | (A) Desktop 썸네일/상세 육안 검증 (B) 네이버 상품 이미지 수정(대표 승인·비가역) (C) 수동 소싱 product_id 배선 갭 교정. |
+
 ### 2026-06-05 (32) ★ P0 명화 첫 발행 SUCCESS — naverProductId 13564133057, ACTIVE (FROM Desktop register → Code 기록·독립 검증, production 0d8793e, 본 turn 비가역 0)
 
 | 항목 | 상태 |

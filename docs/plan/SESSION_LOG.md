@@ -1,3 +1,21 @@
+## 2026-06-05 (33) 명화 이미지 배선 결함 교정(Storage 자산 정렬) + 소싱 추적성 복원 (Code turn)
+
+baseline production 6698fb0(HEAD==origin==prod, Vercel 200). 코드 변경 0(git status clean·TSC 0). 가역: Storage 자산 정렬(backdrop 덮어쓰기는 prev 백업) + DB crawl_logs 1행. 네이버 발행상품 미접촉. 권위: Desktop 라이브 view + Code Storage(storage.objects) 직독.
+
+**(0) 근본원인(Storage 직독 정정)**: 명화 발행 이미지가 디자인 미적용 — 대표=공급사 원본 4세트 진열컷, 상세=빈 미완성본. asset-source-resolver는 고정 이름 cutout.png/backdrop-{skeletonId}.png을 findCachedAsset(exact name)로 조회. Storage 실측: cutout.png 부재(myeonghwa-cutout.png 196KB만 존재, Desktop 임시 업로드) → cutout fallback=fitImage(공급사 원본). ★ 핸드오프 부분 정정: backdrop-S6.png 1.14MB는 이미 존재·auto-cache 작동(2026-05-30) → 배경은 정상, cutout만 결함. 재료 품질 우수(Desktop view).
+
+**(1) 작업1 — 자산 파일명 규칙 정렬(scripts/upload-cutout.js)**: (a) myeonghwa-cutout.png→cutout.png 배포(PNG, upload 200). (b) 기존 backdrop-S6.png→backdrop-S6-prev-firefly.png 백업(가역 보존). (c) 큐레이트 myeonghwa-backdrop-860.jpg(JPG)→sharp png 변환(660KB)→backdrop-S6.png 업그레이드(핸드오프 명시, 백업으로 가역). upload-cutout.js의 non-PNG 거부 가드 때문에 jpg는 선변환 필요.
+
+**(2) 작업2 정정(#46 오조준 보고)**: 핸드오프는 save-assets가 Adobe cutout/backdrop을 저장한다 가정했으나 실측 — save-assets/route.ts는 thumb-{variant}/detail-{skeletonId} 출력물만 저장(cutout/backdrop 입력 미관여). cutout/backdrop 정식 배포 도구는 scripts/upload-cutout.js(이미 엔진 고정 이름 cutout.png/backdrop-{skeletonId}.png 사용). myeonghwa-* 파일은 이 스크립트를 우회한 Desktop 임시 업로드가 원인 → 코드 결함 0, 근본 교정=배포 시 upload-cutout.js 사용(프로세스 규율). save-assets 코드 변경 불필요(억지 수정 금지 #46).
+
+**(3) 작업3 — 재검증**: production POST /api/thumbnail/{id} {overrideSkeletonId:S6} → assetSource {cutout:'auto-cache', backdrop:'auto-cache'}. cutout이 fallback→auto-cache 전환 확정 = 엔진이 깔끔한 누끼를 합성(공급사 원본 아님). ★ 결과 이미지 육안 교차검증은 Desktop view 위임(Code는 이미지 시각 판정 불가, assetSource 플립이 배선 정상화 신호).
+
+**(4) 작업4 — 소싱 추적성 배선**: crawl_logs(id 0b21ac95, url domeme.domeggook.com/s/65322245, product_id null)→명화 Product.id UPDATE(1행, RETURNING 확인). 근본 점검: batch-register/route.ts:117이 productId=created.id 자동 배선(배치 경로). 명화 null은 수동 경로(단건 crawl→products/new)가 crawl_log id 미전달한 갭 → 후속 turn 대상.
+
+검증: 코드 변경 0(TSC 0). 비가역 경계 — Storage 자산(가역: prev 백업)·crawl_logs 1행(가역). 네이버 register/상품수정 API 호출 0(비가역 보류). 이모지 0(★ 허용)/가짜 라벨 0(#46). ★ 정직: 네이버 발행상품(13564133057) 대표/상세 이미지는 아직 공급사 원본 — 본 turn은 Storage/썸네일 엔진 교정까지, 네이버 반영은 별도. **다음**: (A) Desktop 썸네일/상세 재생성 육안 검증. (B) 네이버 상품 이미지 수정 API(대표 승인 후, 비가역) → 명화 '제대로 등록' 완성. (C) 수동 소싱 경로 crawl_logs.product_id 자동 배선 갭 교정.
+
+---
+
 ## 2026-06-05 (32) ★ P0 명화 첫 발행 SUCCESS 기록 + Code 독립 3중 재검증 (Code turn)
 
 baseline production 0d8793e(HEAD==origin==prod, Vercel 200). docs only·본 turn 비가역 0(발행은 직전 Desktop turn에 완료, 본 turn은 기록·검증만). 권위: Desktop register 실측 + Code Supabase 직독 독립 재검증.
