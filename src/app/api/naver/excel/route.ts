@@ -24,12 +24,76 @@ import type { NaverProductData } from '@/lib/excel/naverExcel.types';
 //   optionValues: comma within group, '\n' between groups
 //   optionPrices: comma-separated, first group only (one per first-group value)
 //   optionStocks: comma-separated, first group only
+type OptionFields = Pick<NaverProductData, 'optionType' | 'optionNames' | 'optionValues' | 'optionPrices' | 'optionStocks'>;
+
+// ── Primary source: product_options table ────────────────────────────────────
+// This is the SAME source the API publish path reads (product-builder
+// buildOptionInfo). The Excel engine previously read only the legacy Product
+// columns (optionType/optionName/options), so a product whose options live in
+// product_options (e.g. crawl-option-mapper output) produced 5 empty option
+// cells while the API publish had full options — two divergent sources. Reading
+// product_options first restores parity.
+type ProductOptionsRel = {
+  option_type?: string | null;
+  option_names?: unknown;
+  option_rows?: unknown;
+} | null | undefined;
+type ProductOptionsRow = { values?: unknown; value1?: unknown; value2?: unknown; stock?: unknown; price?: unknown; status?: unknown };
+
+function buildFromProductOptions(po: ProductOptionsRel): OptionFields | null {
+  if (!po) return null;
+  const rows = Array.isArray(po.option_rows) ? (po.option_rows as ProductOptionsRow[]) : [];
+  const names = Array.isArray(po.option_names) ? (po.option_names as unknown[]).map((n) => String(n).trim()).filter(Boolean) : [];
+  if (rows.length === 0 || names.length === 0) return null;
+
+  const type = po.option_type === 'SINGLE' ? '단독형' : '조합형';
+  const valOf = (row: ProductOptionsRow, i: number): string =>
+    String((Array.isArray(row.values) ? row.values[i] : undefined) ?? (i === 0 ? row.value1 : row.value2) ?? '').trim();
+
+  if (names.length === 1) {
+    // Single axis (e.g. 향). One cell per value: comma-separated, deduped.
+    const seen = new Set<string>();
+    const vals: string[] = []; const prices: string[] = []; const stocks: string[] = [];
+    for (const row of rows) {
+      const v = valOf(row, 0).replace(/,/g, '');
+      if (!v || seen.has(v)) continue;
+      seen.add(v);
+      vals.push(v);
+      prices.push(String(typeof row.price === 'number' ? row.price : Number(row.price) || 0));
+      stocks.push(String(typeof row.stock === 'number' ? row.stock : Number(row.stock) || 999));
+    }
+    if (vals.length === 0) return null;
+    return { optionType: type, optionNames: names[0], optionValues: vals.join(','), optionPrices: prices.join(','), optionStocks: stocks.join(',') };
+  }
+
+  // Multi-axis (>=2): distinct values per axis, '\n' between groups (Naver spec).
+  // Prices/stocks are first-group-only per the verified Excel spec
+  // (excel-generator.ts:61~69) — per-combination stock is not expressible here.
+  const axes: string[][] = names.slice(0, 4).map(() => []);
+  const seens = names.slice(0, 4).map(() => new Set<string>());
+  for (const row of rows) {
+    names.slice(0, 4).forEach((_, ai) => {
+      const v = valOf(row, ai).replace(/,/g, '');
+      if (v && !seens[ai].has(v)) { seens[ai].add(v); axes[ai].push(v); }
+    });
+  }
+  if (axes[0].length === 0) return null;
+  return {
+    optionType: type,
+    optionNames: names.slice(0, axes.length).join('\n'),
+    optionValues: axes.map((a) => a.join(',')).join('\n'),
+    optionPrices: axes[0].map(() => '0').join(','),
+    optionStocks: axes[0].map(() => '999').join(','),
+  };
+}
+
+// ── Fallback: legacy Product.options column ───────────────────────────────────
 type OptionEntry = { name?: string; qty?: number; addPrice?: number };
-function buildOptionFields(
+function buildFromLegacy(
   optionType: string | null | undefined,
   optionName: string | null | undefined,
   options: unknown,
-): Pick<NaverProductData, 'optionType' | 'optionNames' | 'optionValues' | 'optionPrices' | 'optionStocks'> {
+): OptionFields {
   if (!Array.isArray(options) || options.length === 0) return {};
   const entries = (options as OptionEntry[]).filter((o) => o && typeof o.name === 'string' && o.name.trim());
   if (entries.length === 0) return {};
@@ -39,13 +103,17 @@ function buildOptionFields(
   const stocks = entries.map((o) => String(typeof o.qty === 'number' ? o.qty : 0)).join(',');
   // Default to '조합형' since per-option qty/addPrice are tracked. Allow DB literal override.
   const type = (optionType && ['조합형', '단독형', '직접입력형'].includes(optionType)) ? optionType : '조합형';
-  return {
-    optionType: type,
-    optionNames: groupName,
-    optionValues: values,
-    optionPrices: prices,
-    optionStocks: stocks,
-  };
+  return { optionType: type, optionNames: groupName, optionValues: values, optionPrices: prices, optionStocks: stocks };
+}
+
+// product_options (API publish source) first; legacy Product columns as fallback.
+function buildOptionFields(
+  productOptions: ProductOptionsRel,
+  legacyType: string | null | undefined,
+  legacyName: string | null | undefined,
+  legacyOptions: unknown,
+): OptionFields {
+  return buildFromProductOptions(productOptions) ?? buildFromLegacy(legacyType, legacyName, legacyOptions);
 }
 
 // ── F4 numeric fee extraction from free-text naver_refund_info / naver_exchange_info ──
@@ -91,6 +159,10 @@ export async function POST(request: NextRequest) {
       include: {
         supplier: { select: { name: true } },
         shipping_templates: { select: { naverTemplateNo: true, shippingFee: true, returnFee: true, exchangeFee: true, courierCode: true, shippingType: true } },
+        // product_options = SAME option source the API publish path reads.
+        // Without this include the Excel engine fell back to legacy Product
+        // columns and emitted empty option cells (parity bug).
+        product_options: true,
       },
     });
 
@@ -120,8 +192,9 @@ export async function POST(request: NextRequest) {
         return t;
       })(),
       stock:                Number(p.stock) || 999,
-      // F1: options[] -> 5 option fields (조합형 default). DB→Naver transform.
-      ...buildOptionFields(p.optionType, p.optionName, p.options),
+      // F1: 5 option fields. product_options (API publish source) first, legacy
+      // Product columns as fallback — keeps Excel and API publish in parity.
+      ...buildOptionFields(p.product_options, p.optionType, p.optionName, p.options),
       mainImage:            p.mainImage ?? '',
       additionalImages:     Array.isArray(p.additionalImages)
         ? p.additionalImages.join('\n')
