@@ -81,11 +81,18 @@ export interface NaverSeoInfo {
   metaDescription?: string;
 }
 
+// Naver Commerce API v2 optionCombinations item. CRITICAL: optionName1..4 are
+// the option VALUES per axis (e.g. '레몬유칼립'), NOT the axis name. The axis
+// names live ONLY in optionCombinationGroupNames.optionGroupName1..4. A prior
+// shape put the axis name ('향') in optionName1 for every row and the value in a
+// non-existent 'optionValue1' field → Naver saw 3 identical optionName1='향' and
+// rejected with 400 Duplicated "중복된 조합형 옵션이 있습니다 (향)".
+// Source: github.com/commerce-api-naver/commerce-api discussion #241.
 export interface NaverOptionItem {
   optionName1: string;
-  optionValue1: string;
   optionName2?: string;
-  optionValue2?: string;
+  optionName3?: string;
+  optionName4?: string;
   stockQuantity: number;
   price: number;
   sellerManagerCode?: string;
@@ -464,20 +471,44 @@ export function buildDeliveryInfoFromProduct(
   }, addresses, bundle);
 }
 
-/** Build SEO info from product tags/keywords */
+// Naver sellerTags restricted words. Naver rejects a register with 400
+// Restricted.sellerTags "태그 항목에 등록불가 단어(...) 포함" when a sellerTag
+// matches a blocked term (category generic names, "~용" generics, etc.). The
+// FULL list is private (Naver does not publish it), so this set accumulates the
+// EXACT terms surfaced by real register invalidInputs — append new ones here as
+// they appear (#46: observed facts only, no speculative hardcoding). Matching is
+// EXACT (trimmed equality), not substring: '디퓨저' is blocked but '차량용디퓨저'
+// is allowed, so a substring filter would wrongly drop a valid tag.
+// First observed 2026-06-05 (명화 차량용 방향제 register 400).
+const RESTRICTED_SELLER_TAGS: ReadonlySet<string> = new Set([
+  '차량용방향제',
+  '디퓨저',
+  '차량방향제',
+  '자동차방향제',
+]);
+
+/** Build SEO info from product tags/keywords. Restricted words are stripped from
+ *  sellerTags ONLY — the same word stays allowed in name/keywords (which Naver
+ *  does not restrict the same way), so those are never touched here. */
 export function buildSeoInfo(product: LocalProduct): NaverSeoInfo | undefined {
   const tags: string[] = Array.isArray(product.tags) ? product.tags as string[] : [];
   const keywords: string[] = Array.isArray(product.keywords) ? product.keywords as string[] : [];
 
-  // Naver sellerTags: max 10 tags, each max 20 chars
-  const allTags = [...new Set([...tags, ...keywords])].slice(0, 10);
-  if (allTags.length === 0) return undefined;
+  // Naver sellerTags: max 10 tags, each max 20 chars. Drop restricted words.
+  const allTags = [...new Set([...tags, ...keywords])]
+    .filter(t => !RESTRICTED_SELLER_TAGS.has(String(t).trim()))
+    .slice(0, 10);
 
-  return {
-    sellerTags: allTags.map(t => ({ text: String(t).slice(0, 20) })),
+  const seo: NaverSeoInfo = {
     pageTitle: product.name.slice(0, 60),
     metaDescription: (product.hookPhrase || product.description || '').slice(0, 160),
   };
+  // Omit sellerTags entirely when nothing survives — an empty/invalid tag array
+  // would itself trip Naver validation. seoInfo without sellerTags is valid.
+  if (allTags.length > 0) {
+    seo.sellerTags = allTags.map(t => ({ text: String(t).slice(0, 20) }));
+  }
+  return seo;
 }
 
 /** Build option info from product_options */
@@ -492,23 +523,38 @@ export function buildOptionInfo(
   const names = Array.isArray(options.option_names) ? options.option_names as string[] : [];
 
   if (options.option_type === 'COMBINATION' && names.length >= 1) {
-    const combinations: NaverOptionItem[] = rows.map((row: any) => {
+    const rawCombinations: NaverOptionItem[] = rows.map((row: any) => {
+      // optionName1/2 carry the VALUES per axis (axis names go in
+      // optionCombinationGroupNames). value1 = the value for axis 1 ('향').
+      const value1 = String(row.values?.[0] ?? row.value1 ?? '').trim();
       const item: NaverOptionItem = {
-        optionName1: names[0] ?? '',
-        optionValue1: row.values?.[0] ?? row.value1 ?? '',
+        optionName1: value1,
         stockQuantity: Number(row.stock ?? row.stockQuantity ?? 999),
         price: Number(row.price ?? row.optionPrice ?? 0),
         usable: row.status !== 'SOLD_OUT',
       };
-      if (names[1] && (row.values?.[1] || row.value2)) {
-        item.optionName2 = names[1];
-        item.optionValue2 = row.values?.[1] ?? row.value2 ?? '';
+      const value2 = row.values?.[1] ?? row.value2;
+      if (names[1] && value2) {
+        item.optionName2 = String(value2).trim();
       }
       if (row.managementCode || row.sellerManagerCode) {
         item.sellerManagerCode = row.managementCode ?? row.sellerManagerCode;
       }
       return item;
     });
+
+    // Defensive dedup — Naver rejects duplicate combinations (same value tuple)
+    // with 400 Duplicated. Drop any item whose (optionName1, optionName2) tuple
+    // was already seen, and drop empty-value rows that would collapse together.
+    const seen = new Set<string>();
+    const combinations = rawCombinations.filter((c) => {
+      if (!c.optionName1) return false;
+      const key = `${c.optionName1} ${c.optionName2 ?? ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    if (combinations.length === 0) return undefined;
 
     return {
       optionCombinationSortType: 'CREATE',

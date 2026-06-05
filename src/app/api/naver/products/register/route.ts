@@ -247,6 +247,17 @@ export async function POST(request: NextRequest) {
           minorPurchasable: payload.originProduct.detailAttribute?.minorPurchasable,
           optionCombinationCount:
             payload.originProduct.detailAttribute?.optionInfo?.optionCombinations?.length ?? 0,
+          // DEBT-13 visibility — surface the exact values Naver rejected before
+          // (restricted sellerTags / duplicate option combinations) so the
+          // operator can fact-check the build, since dryRun cannot POST to Naver.
+          sellerTags:
+            payload.originProduct.detailAttribute?.seoInfo?.sellerTags?.map(t => t.text) ?? [],
+          optionCombinationGroupNames:
+            payload.originProduct.detailAttribute?.optionInfo?.optionCombinationGroupNames ?? null,
+          optionCombinationValues:
+            payload.originProduct.detailAttribute?.optionInfo?.optionCombinations?.map(
+              c => [c.optionName1, c.optionName2].filter(Boolean).join(' / ')
+            ) ?? [],
           detailContentLength: dc.length,
           productInfoProvidedNotice: {
             type: pin?.productInfoProvidedNoticeType ?? null,
