@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-05 (30) register 400 2차(sellerTags 제한어 + 옵션 중복) 근본 교정 + dryRun 재GREEN (FROM Code, production f82e525, 발행 미접촉·비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 근본원인(2차 400) | invalidInputs 2: sellerTags Restricted(차량용방향제·디퓨저·차량방향제·자동차방향제) + optionCombinations Duplicated(향). DB 결백(값 distinct·keywords에 제한어), 결함은 빌더. dryRun 미검출(DEBT-13). |
+| 작업1 sellerTags | RESTRICTED_SELLER_TAGS(관측 4단어, exact match — '차량용디퓨저' 보존) 필터, 0개면 생략. name/keywords 미접촉. 목록 누적 구조(#46). |
+| 작업2 옵션 규격 | optionName1~4=각 축의 값(축명은 optionCombinationGroupNames에만, commerce-api #241). optionValue1/2 제거 + dedup 가드. 기존: optionName1='향' 3행 동일이 중복 원인. |
+| 작업3 dryRun 가시화 | preview에 sellerTags/optionValues 노출(DEBT-13 완화). |
+| 작업4 dryRun 재검증 | sellerTags [에어컨냄새제거·차량용디퓨저·명화](제한어 0)·옵션 3 distinct·originAreaCode 0200037·canRegister=true·회선 200. TSC 0/build OK. |
+| ★ 정직 | dryRun GREEN ≠ 발행 성공(네이버 미POST·3차 숨은 invalidInput 가능). 가짜 라벨 0(#46). 발행 미접촉. |
+| ★ 다음 | Desktop 재검증(dryRun+실 register 위임) → ★대표 재승인 → 발행 → 3중 검증. 승인 전 register/POST 0. |
+
 ### 2026-06-05 (29) 원산지 선행 0 절삭 근본 결함 교정 — 해외 발행 차단 해제 (FROM Code, production 63c912c, DB 1행 가역·발행 미접촉)
 
 | 항목 | 상태 |

@@ -1,3 +1,21 @@
+## 2026-06-05 (30) register 400 2차 원인(sellerTags 제한어 + 옵션 조합 중복) 근본 교정 + dryRun 재GREEN (Code turn)
+
+baseline production 0f604ed → 코드 교정 push f82e525(verify exit 0). 발행 미접촉·비가역 0(register POST 0, DB mutate 0). 권위: Desktop 라이브 실측(production register 400 응답 invalidInputs verbatim).
+
+**(0) 근본원인(2차 register 400, 1차 원산지 교정은 통과)**: invalidInputs 2건 — (1) detailAttribute.seoInfo.sellerTags Restricted '태그 항목에 등록불가 단어(차량용방향제,디퓨저,차량방향제,자동차방향제) 포함' (2) detailAttribute.optionInfo.optionCombinations Duplicated '중복된 조합형 옵션이 있습니다 (향)'. DB 직독 결백: product_options 향 3종 값 distinct(레몬유칼립/에이프릴 후레쉬/블랙체리)·중복 0, keywords에 제한어 4개 포함. 결함은 빌더. dryRun 둘 다 미검출(거짓 초록, DEBT-13 계열 — 네이버 실 POST에서만 노출).
+
+**(1) 작업1 — sellerTags 제한어 필터(buildSeoInfo)**: RESTRICTED_SELLER_TAGS 상수(관측된 4단어: 차량용방향제·디퓨저·차량방향제·자동차방향제) 신설. ★ exact match(trim 동등) — substring 금지(네이버가 '차량용디퓨저'는 허용했으므로 '디퓨저' substring 필터 시 정상 태그 오제거). 필터 후 0개면 sellerTags 필드 생략(seoInfo는 pageTitle/meta 유지, 빈 태그 배열 자체가 검증 실패 유발 방지). name/keywords 미접촉(동일 단어 허용). 정직 한계(#46): 제한어 전체 목록 네이버 비공개 → 주석에 'invalidInputs 누적 구조' 명문화.
+
+**(2) 작업2 — optionCombinations 규격 교정(buildOptionInfo + NaverOptionItem)**: 공식 스키마 권위 확인(commerce-api #241 + WebSearch): optionCombinations[n].optionName1~4 = 각 축의 '값', 축 이름은 optionCombinationGroupNames.optionGroupName1~4에만. 기존 결함 — optionName1에 축이름('향')을 3행 동일 주입 + 존재하지 않는 optionValue1에 값 주입 → 네이버가 optionName1='향' 3행을 중복 판정. 교정: NaverOptionItem에서 optionValue1/2 제거·optionName2~4 추가, optionName1=값1·optionName2=값2. dedup 가드(optionName1+2 tuple Set, 빈 값 행 제거) 추가. optionCombinationGroupNames(축명)는 기존대로 정상.
+
+**(3) 작업3 — dryRun 가시화(DEBT-13 완화)**: register route dryRun payloadPreview에 sellerTags(최종)·optionCombinationGroupNames·optionCombinationValues 노출. dryRun이 네이버 미POST라 못 잡는 한계는 남으나, 빌드 결과를 operator가 fact-check 가능(거짓 초록 축소).
+
+**(4) 작업4 — dryRun 재검증(비가역 0)**: production f82e525 — 회선 200, dryRun canRegister=true, ★ sellerTags ['에어컨냄새제거','차량용디퓨저','명화'](제한어 4개 전부 제거·'차량용디퓨저' 정상 보존), optionGroupName1='향', optionValues ['레몬유칼립','에이프릴 후레쉬','블랙체리'](3 distinct·중복 0), originAreaCode 0200037 유지. ★ 여기서 중단 — 실 register는 대표 재승인 후.
+
+검증: TSC 0/build OK. dryRun만(register POST 0·DB mutate 0). 비가역 0. 이모지 0(★ 허용)/제한어 상수=영어 변수명+한글 값 데이터/가짜 라벨 0(#46). ★ 정직: dryRun GREEN ≠ 발행 성공 — 네이버 미POST라 3차 숨은 invalidInput 가능성 잔존, 실 register가 최종 진실. **다음**: Desktop 재검증(dryRun + 실 register 위임) → ★대표 재승인 → 발행 → 3중 검증. 승인 전 register/POST 0.
+
+---
+
 ## 2026-06-05 (29) 원산지 코드 선행 0 절삭 근본 결함 교정 — 해외 발행 차단 해제 + 명화 dryRun 재GREEN (Code turn)
 
 baseline 시작 production 8f212fd → 작업1~3 코드 + 작업2 DB → push 63c912c(verify exit 0). ★ 비가역 경계: 작업2 DB UPDATE 1행만 가역(발행 미접촉, register POST 0). 작업1·3 코드 가역.
