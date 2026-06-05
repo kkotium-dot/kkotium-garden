@@ -6,6 +6,39 @@
 import { calcAttributeCompleteness, type ProductAttributeData } from '../category-attributes';
 import { calcUploadReadiness, type ReadinessInput } from '../upload-readiness';
 import { NAVER_CATEGORIES_FULL } from './naver-categories-full';
+import { NAVER_ORIGIN_CODES } from './naver-origin-codes';
+
+// ─── Origin area code guard (2026-06-05) ─────────────────────────────────────
+// Naver register rejects any originAreaCode not present in the official table
+// with 400 "원산지 상세코드 항목이 유효하지 않습니다". The official codes carry a
+// meaningful leading zero (00 국산 / 0001 강원도 / 0200037 중국). A prior dataset
+// regen stripped those zeros (number-cast), polluting product.originCode and
+// blocking every overseas-sourced publish. dryRun could not catch it because it
+// never POSTs to Naver (DEBT-13 false-green). This guard validates against the
+// authoritative table at build time — so BOTH dryRun and real register fail
+// loudly on a bad code — and restores a stripped leading zero when possible.
+const OFFICIAL_ORIGIN_CODES: ReadonlySet<string> = new Set(
+  NAVER_ORIGIN_CODES.map((o) => o.code),
+);
+
+export function resolveOriginAreaCode(raw: string | null | undefined): string {
+  const v = (raw ?? '').trim();
+  if (!v) {
+    throw new Error(
+      'originAreaCode 가 비어 있습니다 — 원산지 코드를 지정한 뒤 발행하세요 (원산지코드.xls 518건 기준).',
+    );
+  }
+  if (OFFICIAL_ORIGIN_CODES.has(v)) return v;
+  // Attempt to restore a stripped leading zero (e.g. 200037 -> 0200037,
+  // 1 -> 0001, 0 -> 00). Only accept a candidate that exists in the table.
+  for (const cand of [`0${v}`, v.padStart(7, '0'), v.padStart(4, '0'), v.padStart(2, '0')]) {
+    if (OFFICIAL_ORIGIN_CODES.has(cand)) return cand;
+  }
+  throw new Error(
+    `originAreaCode '${v}' 가 네이버 공식 원산지 코드표(원산지코드.xls 518건)에 없습니다. ` +
+      '선행 0 절삭(숫자 변환) 오염일 가능성이 높습니다 — 공식 코드(예: 중국 0200037)로 교정하세요.',
+  );
+}
 
 // ─── Naver API type definitions ──────────────────────────────────────────────
 
@@ -721,8 +754,10 @@ export function buildNaverProductPayload(
   const seoInfo = buildSeoInfo(product);
   const optionInfo = buildOptionInfo(product.product_options);
 
-  // Origin area info
-  const originCode = product.originCode ?? '0200037'; // default: China
+  // Origin area info — validate/normalize against the official table (throws on
+  // an unknown code so dryRun AND real register both fail loudly, never silently
+  // shipping an invalid code that Naver rejects with 400). Default: China.
+  const originCode = resolveOriginAreaCode(product.originCode ?? '0200037');
   const isImport = Number(originCode) >= 200000;
 
   // 2026-06-02 fix — 수입품 importer 항상 충진 (originAreaInfo.importer NotEmpty

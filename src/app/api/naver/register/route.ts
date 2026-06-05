@@ -19,6 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { naverRequest } from '@/lib/naver/api-client';
+import { resolveOriginAreaCode } from '@/lib/naver/product-builder';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -107,7 +108,9 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Build payload (Commerce API v2 shape) ────────────────────────────────
-    const originAreaCode = (product.originCode ?? '').trim() || '0200037';
+    // Validate/normalize against the official origin table (restores a stripped
+    // leading zero, throws on an unknown code) — same guard as product-builder.
+    const originAreaCode = resolveOriginAreaCode((product.originCode ?? '').trim() || '0200037');
 
     const detailContent = buildDetailContent({
       name: product.name,

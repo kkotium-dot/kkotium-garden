@@ -88,7 +88,10 @@ export const SHIPPING_PAY_TYPES = [
 
 // ─── 기본 설정값 (꽃틔움 기본) ────────────────────────────────
 export const KKOTIUM_DEFAULTS = {
-  originCode:           '200037',  // China (import)
+  // 2026-06-05 — MUST keep the leading zero. '0200037' is the canonical Naver
+  // origin area code for 중국 (see 원산지코드.xls). The earlier '200037' had its
+  // leading zero stripped and caused register 400 'originAreaCode NotValid'.
+  originCode:           '0200037', // China (import)
   categoryCode:         '50004716', // 꽃다발
   courierCode:          'CJGLS',    // CJ대한통운
   shippingFeeType:      '조건부무료',

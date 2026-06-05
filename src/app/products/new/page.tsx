@@ -1759,9 +1759,10 @@ const handleGenerate = async () => {
             naverCategoryCode: categoryId || undefined,
             category: [d1, d2, d3, d4].filter(Boolean).join(' > ') || 'uncategorized',
             brand,
-            // originCode '200037' (China import) is the canonical value in
-            // naver-origin-codes.ts; keep as-is (no zero-padding — '0200037'
-            // does not exist in the dataset and would break the origin lookup).
+            // 2026-06-05 corrected — the canonical Naver origin area code keeps
+            // its leading zero ('0200037' China). The dataset was regenerated
+            // from 원산지코드.xls with codes parsed as strings; the old stripped
+            // form '200037' is what triggered register 400 'originAreaCode NotValid'.
             originCode,
             taxType,
             // Excel download is a DRAFT (temp-save) flow, not a Naver publish.
