@@ -79,24 +79,40 @@ export async function GET(req: NextRequest) {
 
       let suspendedCount = 0;
       const suspendedList: string[] = [];
+      // Auto-suspend performs a LIVE Naver mutation (PUT) + local OOS write. It
+      // is OFF by default and only runs when NAVER_AUTOSUSPEND_ENABLED=true, so
+      // fixing the read endpoint below cannot silently re-activate suspensions —
+      // operator opt-in is required. While disabled the cron still reads stock
+      // correctly and surfaces candidates in `wouldSuspend` (no mutation).
+      const autoSuspendEnabled = process.env.NAVER_AUTOSUSPEND_ENABLED === 'true';
+      const wouldSuspend: string[] = [];
 
       for (const p of naverProducts) {
         try {
+          // The stored naverProductId is the originProductNo (verified 2026-06-06
+          // via the inspect probe). channel-products 404s on an origin number, so
+          // read stock/status from origin-products instead.
           const raw = await naverRequest(
             'GET',
-            `/v1/products/channel-products/${p.naverProductId}`
+            `/v2/products/origin-products/${p.naverProductId}`
           ) as Record<string, unknown>;
 
-          const origin = (raw?.originProduct ?? {}) as Record<string, unknown>;
+          const origin = (raw?.originProduct ?? raw ?? {}) as Record<string, unknown>;
           const stock  = Number(origin.stockQuantity ?? 999);
-          const status = String((raw?.channelProduct as Record<string, unknown>)?.channelProductDisplayStatusType ?? origin.statusType ?? '');
+          const status = String(origin.statusType ?? '');
 
           // If Naver stock is 0 and not already suspended
           if (stock === 0 && status !== 'SUSPENSION' && status !== 'CLOSE') {
-            // Call Naver API to suspend product
+            if (!autoSuspendEnabled) {
+              // Read-only candidate — surfaced for review, no mutation.
+              wouldSuspend.push(p.name);
+              continue;
+            }
+            // Suspend on Naver. §3-7 full-replace: merge the full origin and
+            // override only statusType (v2 origin-products endpoint).
             await naverRequest(
               'PUT',
-              `/v1/products/origin-products/${p.naverProductId}`,
+              `/v2/products/origin-products/${p.naverProductId}`,
               { originProduct: { ...origin, statusType: 'SUSPENSION' } }
             ).catch(() => null); // non-fatal if update fails
 
@@ -114,7 +130,13 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      results.autoSuspend = { checked: naverProducts.length, suspended: suspendedCount, items: suspendedList };
+      results.autoSuspend = {
+        checked: naverProducts.length,
+        suspended: suspendedCount,
+        items: suspendedList,
+        enabled: autoSuspendEnabled,
+        wouldSuspend: autoSuspendEnabled ? [] : wouldSuspend,
+      };
 
       // Discord alert if any suspended
       if (suspendedCount > 0) {

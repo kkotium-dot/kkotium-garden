@@ -34,21 +34,21 @@ export async function GET() {
 
     for (const p of products) {
       try {
-        // Naver Commerce API: GET channel product by naverProductId
+        // The stored naverProductId is the originProductNo (verified 2026-06-06
+        // via the inspect probe: origin-products GET 200, channel-products GET
+        // 404). Read status from origin-products so this lookup doesn't 404.
         const raw = await naverRequest(
           'GET',
-          `/v1/products/channel-products/${p.naverProductId}`
+          `/v2/products/origin-products/${p.naverProductId}`
         ) as Record<string, unknown>;
 
-        const channelProduct = (raw?.channelProduct ?? raw) as Record<string, unknown>;
-        const originProduct  = (raw?.originProduct  ?? {}) as Record<string, unknown>;
+        const originProduct = (raw?.originProduct ?? raw ?? {}) as Record<string, unknown>;
 
-        const naverStatusType    = String(channelProduct?.channelProductDisplayStatusType ?? originProduct?.statusType ?? 'UNKNOWN');
+        const naverStatusType    = String(originProduct?.statusType ?? 'UNKNOWN');
         const naverStatusLabel   = NAVER_STATUS_LABEL[naverStatusType] ?? naverStatusType;
 
-        // Detect mismatch: local says ACTIVE but naver says not SALE/ON
-        const naverIsActive = ['SALE', 'ON_SALE'].includes(naverStatusType) ||
-          String(channelProduct?.channelProductDisplayStatusType ?? '').toUpperCase() === 'ON';
+        // Detect mismatch: local says ACTIVE but naver says not SALE.
+        const naverIsActive = ['SALE', 'ON_SALE'].includes(naverStatusType);
         const localIsActive = p.status === 'ACTIVE';
         const mismatch      = localIsActive !== naverIsActive;
 
