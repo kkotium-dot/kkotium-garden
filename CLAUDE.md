@@ -139,6 +139,14 @@ cd /Users/jyekkot/Desktop/kkotium-garden && \
 - **발행 이미지는 반드시 디자인 가공본**(누끼 + 자체 배경 합성). 공급사 원본 직송 금지(중복이미지·타사 브랜드 노출·가격비교 묶임·저품질 패널티).
 - **자산 저장 이름 규약**: 엔진(asset-source-resolver)은 고정 이름 `cutout.png` / `backdrop-{skeletonId}.png`으로 자산을 조회. 저장 시 반드시 이 규약 준수(`myeonghwa-*` 같은 임의 접두어 금지). 정식 배포는 `scripts/upload-cutout.js` 스크립트 사용. 배선 결함(이름 불일치) 시 cutout이 fallback=공급사 원본으로 degrade되어 디자인 미적용 발행이 됨.
 
+
+### 3-7. 네이버 v2 상품 수정 = 전체 페이로드 교체 필수 (2026-06-06 명문화)
+
+- **PUT `/v2/products/origin-products/{no}`는 FULL REPLACE** — 요청 body에서 누락된 필드는 네이버 상품에서 **제거**됨 (commerce-api discussion #1650). 따라서 부분 PUT(`{originProduct:{stockQuantity}}` 등) 절대 금지 → 상품명/가격/이미지/옵션/원산지/상세가 통째로 소실.
+- **재고 수정도 예외 아님**: `updateStock`/`setProductOutOfStock`/`bulkUpdateStock`은 GET-merge 경로 사용 — `GET origin-products/{no}`로 현재 전체 상태 read → stockQuantity만 덮어쓰기 → 전체 payload PUT. (2026-06-06 `api-client.ts` 교정 완료. 이전엔 재고만 보내는 부분 PUT이라 listing 전파괴 위험이었음.)
+- **신규 발행 외 모든 수정 경로는** DB 재구성(`buildNaverProductPayload`, register/update 라우트) 또는 GET-merge(재고 전용) 중 하나로 **반드시 전체 payload**를 구성할 것. 부분 PUT 코드를 추가하지 말 것.
+- **비가역 가드**: 실 PUT은 `confirm:true && !dryRun`에서만. 라이브러리 함수(`updateStock` 등)는 `{dryRun:true}` 옵션으로 GET-merge 결과만 미리보기 가능(PUT 미실행).
+
 ---
 
 ## 4. 작업 흐름 절대 규칙

@@ -730,41 +730,216 @@ export async function getTodayOrderSummary(): Promise<{
 }
 
 // ── Inventory APIs ────────────────────────────────────────────────────────
+//
+// ★ CRITICAL — Naver v2 PUT /v2/products/origin-products/{no} is a FULL REPLACE
+//   (commerce-api discussion #1650): fields omitted from the request body are
+//   REMOVED from the live product. A naive partial PUT of just
+//   `{ originProduct: { stockQuantity } }` therefore wipes name / salePrice /
+//   images / options / origin / detailContent — the entire listing degrades.
+//
+//   Safe pattern (this module, 2026-06-06): read the CURRENT full Naver state
+//   via GET, override ONLY stockQuantity, then PUT the merged full payload. This
+//   preserves every existing field (including any Naver-side manual edits) and
+//   never re-uploads images. It is strictly safer than rebuilding from the DB
+//   (which would clobber Naver-side state with possibly-stale local values and
+//   force an image re-upload on every stock change).
+//
+//   Trade-off vs DB rebuild (buildNaverProductPayload, used by register/update
+//   routes): GET-merge depends on Naver echoing a PUT-compatible originProduct
+//   shape. If a read-only field in the GET body is rejected by PUT, the update
+//   errors out (no mutation) rather than corrupting data — a safe failure mode.
 
-/** Update stock quantity for a product */
+export interface StockUpdateResult {
+  productNo: string;
+  previousStock: number | null;   // stock read back from Naver (null if absent)
+  newStock: number;
+  applied: boolean;               // true only when a real PUT was sent
+  dryRun: boolean;
+  preservedFieldCount: number;    // originProduct top-level keys carried through
+}
+
+/**
+ * Update stock quantity for a product WITHOUT dropping any other field.
+ *
+ * Reads the current full product from Naver (GET), overrides only
+ * stockQuantity, and PUTs the merged full payload back. Never sends a partial
+ * payload — see the module note above for why that would corrupt the listing.
+ *
+ * @param opts.dryRun  When true, performs the GET + merge and returns the
+ *                     would-be result WITHOUT the PUT (no mutation). Used to
+ *                     verify the merge before any irreversible write.
+ */
 export async function updateStock(
   productNo: string,
-  stockQuantity: number
-): Promise<void> {
-  await naverRequest('PUT', `/v2/products/origin-products/${productNo}`, {
-    originProduct: { stockQuantity },
-  });
+  stockQuantity: number,
+  opts: { dryRun?: boolean } = {},
+): Promise<StockUpdateResult> {
+  if (!productNo) {
+    throw new NaverApiError(
+      '재고 수정 불가 — productNo(naverProductId)가 비어 있습니다 (미등록 상품).',
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+  if (!Number.isFinite(stockQuantity) || stockQuantity < 0) {
+    throw new NaverApiError(
+      `재고 수정 불가 — stockQuantity 값이 올바르지 않습니다 (${stockQuantity}).`,
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+
+  // 1. Read current full Naver state — never blind partial-PUT.
+  const current = await getProduct(productNo);
+  const originProduct = current?.originProduct;
+  if (!originProduct || typeof originProduct !== 'object') {
+    throw new NaverApiError(
+      `재고 수정 중단 — GET origin-products/${productNo} 응답에 originProduct가 없어 ` +
+      '전체 페이로드를 보존할 수 없습니다 (부분 PUT 금지).',
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+
+  const previousStock =
+    typeof originProduct.stockQuantity === 'number' ? originProduct.stockQuantity : null;
+
+  // 2. Merge: preserve EVERY existing field, override only stockQuantity.
+  const mergedOrigin = { ...originProduct, stockQuantity };
+  const payload: Record<string, unknown> = { originProduct: mergedOrigin };
+  // Carry channel-product blocks back unchanged so the PUT stays a true superset.
+  if (current.smartstoreChannelProduct) payload.smartstoreChannelProduct = current.smartstoreChannelProduct;
+
+  const result: StockUpdateResult = {
+    productNo,
+    previousStock,
+    newStock: stockQuantity,
+    applied: false,
+    dryRun: opts.dryRun === true,
+    preservedFieldCount: Object.keys(mergedOrigin).length,
+  };
+
+  // 3. dryRun stops before the irreversible PUT.
+  if (opts.dryRun) return result;
+
+  // 4. Full-payload PUT — full replace that preserves all fields.
+  await naverRequest('PUT', `/v2/products/origin-products/${productNo}`, payload);
+  result.applied = true;
+  return result;
 }
 
 /**
  * Force a product to OUTOFSTOCK in Naver Commerce by setting stockQuantity=0.
  * Naver flips statusType to OUTOFSTOCK automatically when stock reaches zero,
  * which is the seller-controllable path (statusType itself is read-only).
- * Throws on any Commerce API error so the caller can decide whether to
- * surface a partial-success message.
+ * Routes through the safe GET-merge updateStock so the rest of the listing is
+ * preserved. Throws on any Commerce API error so the caller can decide whether
+ * to surface a partial-success message.
  */
-export async function setProductOutOfStock(productNo: string): Promise<void> {
-  await updateStock(productNo, 0);
+export async function setProductOutOfStock(
+  productNo: string,
+  opts: { dryRun?: boolean } = {},
+): Promise<StockUpdateResult> {
+  return updateStock(productNo, 0, opts);
 }
 
 /** Bulk inventory update for multiple products */
 export async function bulkUpdateStock(
-  items: Array<{ productNo: string; stockQuantity: number }>
-): Promise<{ success: string[]; failed: Array<{ productNo: string; error: string }> }> {
-  const results = { success: [] as string[], failed: [] as any[] };
-  // Naver doesn't have bulk stock update — run sequentially with error isolation
+  items: Array<{ productNo: string; stockQuantity: number }>,
+  opts: { dryRun?: boolean } = {},
+): Promise<{
+  success: string[];
+  skipped: Array<{ productNo: string; reason: string }>;
+  failed: Array<{ productNo: string; error: string }>;
+}> {
+  const results = {
+    success: [] as string[],
+    skipped: [] as Array<{ productNo: string; reason: string }>,
+    failed: [] as Array<{ productNo: string; error: string }>,
+  };
+  // Naver has no bulk stock endpoint — run sequentially with error isolation.
+  // Each item still goes through the safe GET-merge path (full-payload PUT).
   for (const item of items) {
+    if (!item.productNo) {
+      // Unregistered product — skip rather than blind-PUT.
+      results.skipped.push({ productNo: item.productNo, reason: 'no naverProductId' });
+      continue;
+    }
     try {
-      await updateStock(item.productNo, item.stockQuantity);
+      await updateStock(item.productNo, item.stockQuantity, opts);
       results.success.push(item.productNo);
     } catch (e: any) {
-      results.failed.push({ productNo: item.productNo, error: e.message });
+      results.failed.push({ productNo: item.productNo, error: e?.message ?? String(e) });
     }
   }
   return results;
+}
+
+// ── Bidirectional sync integrity (T2.5 seed) ──────────────────────────────
+// There is no reverse pull (Naver -> app) today, so the app DB and the live
+// Naver listing can silently drift. This helper reads the current Naver state
+// and diffs the commonly-drifting fields against what the app expects, so a
+// caller can detect drift BEFORE an update/stock PUT overwrites it. Read-only:
+// it never mutates Naver. Full reverse-sync (persisting Naver -> DB) is a
+// follow-up track; this is the minimal diff primitive that track builds on.
+
+export interface NaverFieldDiff {
+  field: string;
+  naver: unknown;   // value currently on Naver
+  app: unknown;     // value the app expected
+}
+
+export interface NaverProductDiffResult {
+  productNo: string;
+  inSync: boolean;
+  diffs: NaverFieldDiff[];
+  naverSnapshot: {
+    name: string | null;
+    salePrice: number | null;
+    stockQuantity: number | null;
+    statusType: string | null;
+    representativeImageUrl: string | null;
+  };
+}
+
+/**
+ * Diff the live Naver product against app-side expected values. Only the
+ * fields actually provided in `appExpected` are compared. Read-only (GET).
+ */
+export async function diffNaverProduct(
+  productNo: string,
+  appExpected: Partial<{
+    name: string;
+    salePrice: number;
+    stockQuantity: number;
+    statusType: string;
+    representativeImageUrl: string;
+  }>,
+): Promise<NaverProductDiffResult> {
+  if (!productNo) {
+    throw new NaverApiError('diffNaverProduct 불가 — productNo가 비어 있습니다.', { kind: 'HTTP_ERROR' });
+  }
+  const current = await getProduct(productNo);
+  const op = current?.originProduct ?? {};
+  const repImg: string | null =
+    op?.images?.representativeImage?.url ??
+    op?.images?.representativeImageUrl ??
+    null;
+
+  const naverSnapshot = {
+    name:            typeof op.name === 'string' ? op.name : null,
+    salePrice:       typeof op.salePrice === 'number' ? op.salePrice : null,
+    stockQuantity:   typeof op.stockQuantity === 'number' ? op.stockQuantity : null,
+    statusType:      typeof op.statusType === 'string' ? op.statusType : null,
+    representativeImageUrl: repImg,
+  };
+
+  const diffs: NaverFieldDiff[] = [];
+  const cmp = (field: string, naver: unknown, app: unknown) => {
+    if (app !== undefined && naver !== app) diffs.push({ field, naver, app });
+  };
+  cmp('name',                   naverSnapshot.name,                   appExpected.name);
+  cmp('salePrice',              naverSnapshot.salePrice,              appExpected.salePrice);
+  cmp('stockQuantity',          naverSnapshot.stockQuantity,          appExpected.stockQuantity);
+  cmp('statusType',             naverSnapshot.statusType,             appExpected.statusType);
+  cmp('representativeImageUrl', naverSnapshot.representativeImageUrl, appExpected.representativeImageUrl);
+
+  return { productNo, inSync: diffs.length === 0, diffs, naverSnapshot };
 }
