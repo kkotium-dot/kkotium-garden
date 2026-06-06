@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-05 (35) 네이버 상품 수정 라우트 신설(PUT origin-products) + update dryRun 검증 (FROM Code, production 70b4edc, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 작업1 수정 라우트 | src/app/api/naver/products/update/route.ts. PUT /v2/products/origin-products/{no}. 전체 페이로드 교체(공식 #1650). buildNaverProductPayload 재사용. 실 PUT은 confirm===true만(기본 dryRun-safe). 이미지 shop-phinf 선행. naverProductId 없으면 409. |
+| 작업2 대표이미지 점검 | mainImage=Cloudinary 공급사 원본(빌더가 읽는 값). main_image_url=Supabase 썸네일(빌더 미독). → 교정 반영하려면 mainImage 승격 선결. 본 turn 점검만(mutate 0). |
+| 작업3 dryRun | mode UPDATE·canRegister true·originAreaCode 0200037·sellerTags 제한어 0·옵션 3 distinct·PUT 0. representativeImage 아직 공급사 원본(mainImage 미승격 실증). |
+| 가짜 라벨 | 0(#46). dryRun GREEN ≠ 이미지 반영 완료. 비가역 0(confirm 미전달). TSC 0/build OK. |
+| ★ 다음 | (A) Desktop update dryRun 교차검증 (B) 명화 mainImage 승격(clean 썸네일 재생성→저장→셋, 가역) (C) 대표 승인→update confirm:true 실 PUT(비가역)→3중 검증 (D) updateStock 부분 PUT 위험 별도 점검. |
+
 ### 2026-06-05 (34) 이미지 파이프라인 리서치 + 개선 마스터 플랜(5트랙) + 운영 원칙 (FROM Code, production bd28efe, docs only·비가역 0)
 
 | 항목 | 상태 |

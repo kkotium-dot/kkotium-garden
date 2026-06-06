@@ -1,3 +1,19 @@
+## 2026-06-05 (35) 네이버 상품 수정 API 라우트 신설(PUT origin-products) + update dryRun 검증 (Code turn)
+
+baseline production b6b5b19 → 라우트 신설 push 70b4edc(verify exit 0). 비가역 0(dryRun까지만, confirm 미전달 = PUT 0, DB mutate 0). 권위: 공식 commerce-api 스키마(#1650) + production dryRun 실측.
+
+**(0) 배경**: 명화(13564133057 ACTIVE) 발행 성공했으나 대표이미지가 공급사 원본(디자인 미적용). 이미지 배선 교정 완료(SESSION_LOG 33, cutout auto-cache). 교정 이미지를 네이버 발행 상품에 반영할 상품 수정 라우트가 앱에 없음(register는 신규 전용) = 모든 상품 공통 기능 필요.
+
+**(1) 작업1 — 상품 수정 라우트 신설**: src/app/api/naver/products/update/route.ts. POST {productId, dryRun?, confirm?, fields?}. 엔드포인트 PUT /v2/products/origin-products/{originProductNo}(api-client updateProduct와 동일). ★ 공식 확인(commerce-api #1650 + WebSearch): Naver v2 수정은 전체 페이로드 교체 — 요청에 없는 필드는 제거됨 → 부분 PUT 금지. 따라서 buildNaverProductPayload로 DB 전체 재구성 후 PUT(register 빌더 100% 재사용, 원산지 가드/태그 필터/옵션 규격 교정 전부 상속). 안전장치: 실 PUT은 confirm===true && dryRun!==true 일 때만 — bare 호출/dryRun:true는 절대 mutate 안 함. 이미지 변경 시 register 7-img와 동일하게 uploadImagesToNaver(외부 URL→shop-phinf) 선행 후 재빌드. naverProductId 없으면 409(NOT_REGISTERED). 성공 시 product_events NAVER_UPDATED 로깅.
+
+**(2) 작업2 — 대표이미지 소스 점검(mutate 0)**: DB 직독 — mainImage=Cloudinary 공급사 원본(main-hwabo-4set.jpg, 빌더가 representativeUrl로 사용), main_image_url=Supabase product-assets(save-assets 썸네일 출력, ★ 빌더 미독), detail_image_url=Supabase. 즉 buildNaverProductPayload는 product.mainImage만 읽으므로 교정 clean 썸네일 반영하려면 mainImage 승격 필요. 경로: clean 썸네일 재생성(cutout auto-cache 반영) → save-assets/Storage → Product.mainImage 셋. 본 turn은 점검만(비가역 보류).
+
+**(3) 작업3 — production update dryRun 검증**: POST /api/naver/products/update {productId, fields:[image]} (confirm 미전달) → HTTP 200 success·dryRun:true·mode UPDATE·endpoint PUT origin-products/13564133057·canRegister true·grade C. 페이로드 정합: name=naver_title·originAreaCode 0200037·sellerTags ['에어컨냄새제거','차량용디퓨저','명화'](제한어 0)·옵션 3 distinct. ★ representativeImage=Cloudinary 공급사 원본(mainImage 미승격 노출) → 작업2 선결조건 실증. dryRun:true 명시 호출도 200(PUT 0). 안전장치 작동 확인.
+
+검증: TSC 0/build OK(라우트 /api/naver/products/update 매니페스트 등록). 비가역 0(confirm 미전달, PUT 0·DB mutate 0). 이모지 0(★ 허용)/가짜 라벨 0(#46 — dryRun GREEN ≠ 이미지 반영 완료, mainImage 승격 선결 명시). **다음**: (A) Desktop update dryRun 교차검증. (B) 명화 mainImage 승격(clean 썸네일 재생성→저장→셋) — 비가역 아님(가역 DB). (C) 대표 승인 → update confirm:true 실 PUT(비가역) → 3중 검증. (D) updateStock 부분 PUT 잠재 위험(전체 페이로드 원칙 위배 — 누락 필드 제거 가능) 별도 점검.
+
+---
+
 ## 2026-06-05 (34) 이미지 파이프라인 리서치 저장 + 개선 마스터 플랜(5트랙) 생성 + 운영 원칙 갱신 (Code turn)
 
 baseline production bd28efe(HEAD==origin==prod, Vercel 200, tracked tree clean). docs only·비가역 0(코드/DB/발행 미접촉). 권위: Desktop 산출 리서치 전문 + 명화 발행/배선 교정 실측(SESSION_LOG 32·33).
