@@ -72,6 +72,19 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-06 (38) GET-merge updateStock 배포 + inspect statusType 거짓초록 교정 + sync/cron 엔드포인트 오용 교정 (FROM Code, production e3ab753, 실 PUT/OOS 0)
+
+| 항목 | 상태 |
+|---|---|
+| 게이트 해제 | 직전 inspect 실측(13564133057=originProductNo·shape 호환 VALID)으로 GET-merge 배포 게이트 해제됨. |
+| 작업1 GET-merge 배포 | api-client.ts GET-merge(updateStock/setProductOutOfStock/bulkUpdateStock 전부 getProduct→stockQuantity override→전체 PUT) + CLAUDE.md §3-7 커밋 5f68d47. 실 PUT/OOS 0(코드만, mark-oos alsoNaver는 best-effort catch라 안전). |
+| 작업2 statusType 거짓초록 | inspect 인라인 drift가 name·salePrice만 비교 → SUSPENSION을 inSync:true 오판. App status→네이버 statusType 매핑(ACTIVE→SALE 등) 추가 후 statusType drift 포함. 커밋 c6d00de. ★ diffNaverProduct는 이미 statusType 비교 보유 — 실제 누락은 inspect 인라인이었음(#46 정직). production 실증: 명화 drift inSync:false·diffs=[statusType naver:SUSPENSION app:SALE]. |
+| 작업3 엔드포인트 오용 | sync/route.ts:40 + cron/daily:87이 origin 번호에 channel-products(404 위험) → 양쪽 `/v2/products/origin-products/{id}`로 교정(statusType/stock을 originProduct에서 read). cron 자동중지(LIVE PUT)는 NAVER_AUTOSUSPEND_ENABLED env 게이트(기본 off)로 감싸 read 교정이 mutate 재활성 안 하도록 — off면 wouldSuspend 후보만 노출(비가역 0), on이면 §3-7 v2 PUT. 커밋 e3ab753. |
+| 검증 | tsc 0·build OK·이모지 0·실 PUT/OOS 0·가짜 라벨 0(#46). push e6ffc5f→e3ab753. verify 180s timeout이나 gh api로 production e3ab753 state=success 확인(슬로우 빌드, #36 webhook 정상). 명화 DB-mode inspect 실증 GREEN. |
+| ★ 부수 확정 | 명화 statusType=SUSPENSION(판매중지)·앱 ACTIVE = 실 drift 확정 → SUSPENSION 해제 트랙 필요(대표 결정). |
+| ★ 다음 | (A) Desktop GET-merge dryRun 교차검증 (B) 명화 SUSPENSION→SALE 해제(updateStock GET-merge 또는 update confirm, 비가역, 대표 승인) (C) 명화 이미지 반영 트랙 (D) NAVER_AUTOSUSPEND_ENABLED 활성 여부 대표 결정 (E) `* 2.*` 중복본 정리(#34). |
+
+
 ### 2026-06-06 (37) 읽기전용 inspect 라우트 신설 + 명화 번호종류 실측 확정 — 13564133057=originProductNo (FROM Code, production cb15dfb, 비가역 0·GET only)
 
 | 항목 | 상태 |

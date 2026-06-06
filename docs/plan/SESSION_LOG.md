@@ -1,3 +1,21 @@
+## 2026-06-06 (38) GET-merge updateStock 배포 + inspect statusType 거짓초록 교정 + sync/cron 엔드포인트 오용 교정 (Code turn)
+
+production e6ffc5f → 3 커밋 push e3ab753. 실 PUT/OOS 0(코드 배포만, 자동중지 기본 off). tsc 0/build OK.
+
+**(0) 게이트**: 직전 inspect 실측(13564133057=originProductNo·GET originProduct shape=PUT body 호환 VALID)으로 GET-merge updateStock 배포 게이트 해제됨.
+
+**(1) 작업1 — GET-merge 배포**: uncommitted 번들(api-client.ts GET-merge + CLAUDE.md §3-7) 커밋 5f68d47. updateStock/setProductOutOfStock/bulkUpdateStock 전부 getProduct로 현재 전체 originProduct read→stockQuantity만 override→전체 payload PUT(부분 PUT 위험 제거). dryRun 옵션+diffNaverProduct 포함. 실 PUT/OOS 0 — 코드만 배포, 유일 라이브 호출처 mark-oos(alsoNaver 옵트인)는 best-effort catch라 GET-merge 실패해도 안전 degrade.
+
+**(2) 작업2 — inspect statusType 거짓초록 교정**: inspect 라우트 인라인 drift가 name·salePrice만 비교 → 명화처럼 네이버 statusType=SUSPENSION인 상품을 inSync:true로 오판(거짓초록). App Product.status→네이버 statusType 매핑(ACTIVE→SALE, OUT_OF_STOCK→OUTOFSTOCK, INACTIVE→SUSPENSION) 추가, statusType drift 시 diffs 포함(DRAFT/미매핑 스킵). 커밋 c6d00de. ★ 정직(#46): diffNaverProduct 헬퍼는 이미 statusType를 비교함(line 941) — 실제 누락은 inspect 인라인 drift였으므로 그쪽 교정. production 실증(DB-mode inspect 명화): localStatus=ACTIVE·naver statusType=SUSPENSION·drift inSync:false·diffs=[{statusType naver:SUSPENSION app:SALE}]. 거짓초록 제거 확인.
+
+**(3) 작업3 — sync/cron 엔드포인트 오용 교정**: sync/route.ts:40 + cron/daily/route.ts:87이 origin 번호(naverProductId)에 `/v1/products/channel-products/{id}` 호출 → origin 번호면 404(sync는 API_ERROR, cron 자동중지는 dead path). 양쪽 GET을 `/v2/products/origin-products/{id}`로 교정, statusType/stock을 originProduct에서 직접 read. ★ cron 자동중지는 LIVE PUT(statusType=SUSPENSION)을 수행 → endpoint 교정으로 재활성 위험 → NAVER_AUTOSUSPEND_ENABLED env 게이트 신설(기본 off): off면 cron이 stock 정상 read하되 mutate 0·중지후보를 results.wouldSuspend로만 노출(비가역 0), on이면 §3-7 full-replace v2 PUT 수행. 자동중지 실가동은 대표 명시 opt-in. 커밋 e3ab753.
+
+**(4) 검증**: tsc 0·build exit 0·이모지 0(★ 주석 마커만)·실 PUT/OOS 0·가짜 라벨 0(#46). push e6ffc5f→e3ab753(3 커밋). verify-vercel-deploy 180s timeout — 그러나 gh api로 production deployment e3ab753 state=success 확인(3 라우트+lib 변경 풀빌드 슬로우, webhook 정상 #36). prod /dashboard 200·명화 DB-mode inspect GREEN.
+
+**(5) 미해결/위임**: (a) 명화 statusType=SUSPENSION·앱 ACTIVE 실 drift 확정 → SUSPENSION 해제 트랙(대표 승인, 비가역). (b) NAVER_AUTOSUSPEND_ENABLED 활성 여부 대표 결정. (c) Desktop GET-merge dryRun 교차검증. (d) 명화 이미지 반영(update confirm:true, 비가역). (e) `* 2.*` macOS 중복본 untracked(#34) 정리 결정.
+
+---
+
 ## 2026-06-06 (37) 읽기전용 inspect 라우트 신설 + 명화 상품번호 종류 실측 확정 (Code turn)
 
 production 1b69cd3 → inspect 라우트 push cb15dfb(verify exit 0, github-deployments). 비가역 0(GET only, mutate 0). tsc 0/build OK.

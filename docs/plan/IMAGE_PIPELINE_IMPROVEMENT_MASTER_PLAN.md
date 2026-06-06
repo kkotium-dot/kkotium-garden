@@ -62,6 +62,7 @@ Code 교정 완료(SESSION_LOG 33): `scripts/upload-cutout.js`로 cutout.png 배
 - 의존성: 없음(선행 가능). 1차 교정은 이미 main 반영.
 - 완료 기준: 재고/수정 PUT이 네이버 측 변경분을 보존 + drift 자동 감지 + 1상품 역방향 동기화 실증.
 - 실측 확정(2026-06-06, production cb15dfb inspect 라우트): 명화 13564133057=**originProductNo**(origin-products GET 200·channel-products GET 404) → PUT /origin-products/{id} 정타·번호 교정 불필요. GET originProduct top-keys=PUT body 동일 shape → GET-merge 전제 VALID. 읽기전용 `GET /api/naver/products/[productId]/inspect`(numberKind 판정+drift)가 T2.5 진단 1차 도구로 배포됨.
+- 배포 확정(2026-06-06, production e3ab753): GET-merge updateStock(부분 PUT 위험 제거) 배포 + inspect statusType 거짓초록 교정(명화 SUSPENSION≠SALE drift 정상 검출) + sync/cron의 channel-products 엔드포인트 오용→/v2/origin-products 교정(cron 자동중지는 NAVER_AUTOSUSPEND_ENABLED 게이트 기본 off). 명화 실 drift 확정: 네이버 SUSPENSION·앱 ACTIVE → SUSPENSION 해제 트랙(대표 승인) 필요.
 
 ### T3 — 3-레인 라우터 + 도구 자동 선택
 - 목표: 작업 유형별 라이선스 안전성 기반 라우터(green/amber/red)로 도구 자동 선택·디스패치.
