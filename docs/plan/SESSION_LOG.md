@@ -1,3 +1,41 @@
+## 2026-06-06 (37) 읽기전용 inspect 라우트 신설 + 명화 상품번호 종류 실측 확정 (Code turn)
+
+production 1b69cd3 → inspect 라우트 push cb15dfb(verify exit 0, github-deployments). 비가역 0(GET only, mutate 0). tsc 0/build OK.
+
+**(0) 배경**: GET-merge updateStock 배포 전 Desktop 검증서가 미확정 2건 제기 — (1) 저장된 naverProductId(명화=13564133057)가 originProductNo인지 channelProductNo인지 불명(register가 result.productNo??originProductNo로 저장 + smartstore URL이 13564133057로 작동 → 채널번호 정황, #611). 채널번호면 update/updateStock의 PUT /origin-products/{id} 오발 위험. (2) 네이버 GET origin-products 응답이 PUT origin-products body와 호환 shape인지(GET-merge 전제). 둘 다 읽기전용 GET 실측 필요.
+
+**(1) 작업1 — 읽기전용 inspect 라우트**: `GET /api/naver/products/[productId]/inspect` 신설, mutate 절대 0(GET only). 동작: origin-products/{no} + channel-products/{no} 양 엔드포인트 동시 probe(naverRequest 캡처, NaverApiError.diagnostic.status로 404 vs 기타 구분) → numberKind(ORIGIN/CHANNEL/BOTH/UNKNOWN) 분류 + resolvedOriginProductNo 역추적 + storedIsCorrectPutTarget/putTargetWarning(PUT 오발 가시화) + originProductSummary/originProductRaw(Desktop PUT body 육안 비교) + app-네이버 drift(name/salePrice) 인라인 계산. `?probe=<rawNo>`로 DB 없이 raw 번호 직접 검증. 배포 결합 분리: naverRequest/NaverApiError(HEAD 기존)만 import → 단독 커밋/배포 가능. diffNaverProduct 재사용은 의도적 제외(그 헬퍼는 uncommitted GET-merge 동반 파일이라 import하면 미검증 GET-merge가 함께 배포됨 → 더 강한 제약 우선, drift는 fetched body에서 인라인 계산으로 대체·추가 GET 0).
+
+**(2) 실측 (production read-only probe 13564133057)**: numberKind=ORIGIN 확정. origin-products GET=200·channel-products GET=404 → 13564133057=originProductNo. storedIsCorrectPutTarget=true·putTargetWarning=null. Desktop '채널번호 정황' 가설 반증 — register의 productNo??originProductNo가 결과적으로 origin 번호를 저장했고 PUT /origin-products/13564133057이 정타. → 작업2(번호 정합 가드) 불필요(스킵, #46 실측 기반).
+
+**(3) shape 호환 확정**: GET originProduct top-level keys = name·salePrice·stockQuantity(2997)·statusType·leafCategoryId·images·detailContent·detailAttribute·deliveryInfo·customerBenefit·saleType — PUT origin-products body와 동일 구조, stockQuantity 존재 → GET-merge 전제 VALID. updateStock GET-merge가 이 상품에 안전+정타.
+
+**(4) 부수 발견**: (a) 명화 statusType=SUSPENSION(판매중지)인데 앱 status=ACTIVE = drift(대표 확인 요). (b) 기존 sync/route.ts:40·cron/daily/route.ts:87이 origin 번호(naverProductId)에 `/v1/products/channel-products/{id}` 엔드포인트 사용 → 명화처럼 channel 404나면 API_ERROR 경로(상태 동기화 오작동 가능). 별도 점검 대상.
+
+**(5) 검증**: tsc 0·build exit 0(Compiled successfully·inspect 라우트 ƒ 등록)·이모지 0·비가역 0(GET only)·가짜 라벨 0(#46). 커밋 cb15dfb 단일 파일(201 insertions) push·verify-vercel-deploy --wait exit 0(production cb15dfb). 스모크: bogus id→404 JSON(라우트 live)·probe 13564133057→numberKind ORIGIN.
+
+**(6) 미해결/위임**: (a) 정합 확정 → GET-merge api-client.ts 배포 승인 대기(현 uncommitted, mark-oos 라이브경로 안전화 — 대표 go 후 별도 commit/push). (b) 명화 SUSPENSION→SALE 전환 여부 대표 결정. (c) sync/cron channel-products 오용 점검. (d) `* 2.*` macOS 중복본 untracked(#34) 정리 결정.
+
+---
+
+## 2026-06-06 (36) updateStock 부분 PUT 위험 안전화 — GET-merge 전체 페이로드 교체 + 양방향 동기화 T2.5 트랙 (Code turn)
+
+baseline production 1b69cd3 → updateStock 안전화. 비가역 0(실 PUT 0, 대표 승인 전 재고 변경 금지). TSC 0/build OK.
+
+**(0) 배경**: Desktop 코드 직독으로 확정 — `api-client.ts updateStock`이 `{originProduct:{stockQuantity}}` 부분 PUT 사용. 네이버 v2 PUT은 전체 페이로드 교체(누락 필드 제거, commerce-api #1650)이므로 재고만 보내면 상품명/가격/이미지/옵션/원산지/상세가 통째로 제거될 위험. setProductOutOfStock·bulkUpdateStock도 동일 updateStock 의존 → 재고 기능 전체 동일 위험. (직전 세션 35의 ★다음 (D) 항목이 이 점검을 예약.)
+
+**(1) 작업1 — 호출처 전수조사(긴급도 판정)**: 전 repo grep. 라이브 호출처 단 1개 = `src/app/api/alerts/[id]/mark-oos/route.ts:95` setProductOutOfStock(UI 품절버튼, `alsoNaver=true` 옵트인 경로, 기본 false). → 라이브 사용(긴급). bulkUpdateStock=호출처 0(미사용). 폴러 `dome-inventory-poller.ts updateStockProfile`은 이름만 유사한 로컬 DB 함수(SupplierStockProfile upsert)일 뿐 api-client updateStock 미import — 네이버 push 안 함(재고 cron은 안전). 정직 보고(#46).
+
+**(2) 작업2 — GET-merge 안전화**: updateStock을 GET-merge로 교체 — `getProduct(productNo)`로 현재 네이버 전체 originProduct read → stockQuantity만 override → 전체 payload PUT(필드 보존). DB 재구성 방식 대비 채택 이유: 이미지 재업로드 불필요·DB 관계 의존 0·네이버 측 수동 변경분 보존. trade-off: GET이 PUT-호환 shape를 echo한다는 가정 — 읽기전용 필드 거부 시 update가 에러로 끝남(데이터 손상 아닌 안전 실패). `{dryRun:true}` 옵션 = GET-merge 결과만 반환(PUT 미실행, 비가역 검증용). productNo 빈 값/음수 stock = throw. setProductOutOfStock·bulkUpdateStock 동일 경로 통일, bulkUpdateStock은 productNo 없는 항목 skip 버킷 분리. mark-oos는 best-effort catch 구조라 GET-merge 실패해도 안전 degrade(naverFlipped=false).
+
+**(3) 작업3 — 양방향 동기화 정합성(T2.5 씨앗)**: 역방향 풀(네이버→앱 GET) 부재로 DB-네이버 drift 위험. `diffNaverProduct(productNo, appExpected)` 읽기전용 헬퍼 추가 — name/salePrice/stockQuantity/statusType/representativeImageUrl 필드 비교. 마스터 플랜에 T2.5 "네이버 양방향 동기화 정합성" 트랙 신설(1차 GET-merge 교정 완료 기록 + 후속 drift 게이트/역방향 잡/대시보드). CLAUDE.md §3-7 "네이버 v2 상품 수정 = 전체 페이로드 교체 필수(재고 포함)" 원칙 등재.
+
+**(4) 검증**: 오프라인 merge 시뮬레이션 — 구 부분PUT은 8필드(name/price/images/options/origin/detail/status/category) 소실, 신 merge는 9필드 전체 보존 + stock 50→0만 변경 실증. TSC 0·build exit 0(Compiled successfully)·이모지 0(★=형제 update/route.ts·CLAUDE.md 선례 주석 마커)·Korean type-literal 0·가짜 라벨 0(#46)·실 PUT 0.
+
+**(5) 미해결/위임**: (a) working tree에 macOS 중복본 다수 untracked(`* 2.ts`/`* 2.md`/`* 2.json` + docs/handoff·research 신규 MD) — #34로 대표 결정 위임, 본 turn 미접촉. (b) 실 OOS/재고 변경은 대표 승인 후. (c) Desktop 교차검증(GET-merge 로직 + diffNaverProduct) 후 명화 이미지 반영 트랙 재개.
+
+---
+
 ## 2026-06-05 (35) 네이버 상품 수정 API 라우트 신설(PUT origin-products) + update dryRun 검증 (Code turn)
 
 baseline production b6b5b19 → 라우트 신설 push 70b4edc(verify exit 0). 비가역 0(dryRun까지만, confirm 미전달 = PUT 0, DB mutate 0). 권위: 공식 commerce-api 스키마(#1650) + production dryRun 실측.

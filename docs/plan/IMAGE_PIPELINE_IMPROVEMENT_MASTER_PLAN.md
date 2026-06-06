@@ -54,6 +54,15 @@ Code 교정 완료(SESSION_LOG 33): `scripts/upload-cutout.js`로 cutout.png 배
 - 의존성: T1(asset_jobs). 키/예산 설정.
 - 완료 기준: 1개 상품 end-to-end(원본→Bria 누끼→Storage cutout.png→썸네일 auto-cache) 실증 + 비용 실측 보고.
 
+### T2.5 — 네이버 양방향 동기화 정합성 (2026-06-06 신설)
+- 배경: 네이버 v2 PUT은 전체 페이로드 교체(누락 필드 제거)인데, 역방향 풀(GET→DB)이 없어 앱 DB와 네이버 listing이 silently drift. 재고/수정 PUT이 stale DB 값으로 네이버 측 변경분을 덮어쓸 위험.
+- 1차 교정(완료, 2026-06-06): `updateStock`/`setProductOutOfStock`/`bulkUpdateStock`을 **GET-merge**로 안전화 — 현재 네이버 전체 상태 GET → stockQuantity만 override → 전체 PUT(필드 보존). 부분 PUT 제거. `diffNaverProduct(productNo, appExpected)` 읽기전용 diff 헬퍼 추가(T2.5 씨앗).
+- 산출물(후속): (a) 수정/재고 PUT 전 GET→DB diff 게이트(drift 감지 시 경고/차단), (b) 역방향 동기화 잡(네이버 GET→DB 반영, status/price/stock), (c) drift 대시보드 위젯.
+- 대표 개입 지점: drift 충돌 시 어느 쪽을 정본으로 할지 승인.
+- 의존성: 없음(선행 가능). 1차 교정은 이미 main 반영.
+- 완료 기준: 재고/수정 PUT이 네이버 측 변경분을 보존 + drift 자동 감지 + 1상품 역방향 동기화 실증.
+- 실측 확정(2026-06-06, production cb15dfb inspect 라우트): 명화 13564133057=**originProductNo**(origin-products GET 200·channel-products GET 404) → PUT /origin-products/{id} 정타·번호 교정 불필요. GET originProduct top-keys=PUT body 동일 shape → GET-merge 전제 VALID. 읽기전용 `GET /api/naver/products/[productId]/inspect`(numberKind 판정+drift)가 T2.5 진단 1차 도구로 배포됨.
+
 ### T3 — 3-레인 라우터 + 도구 자동 선택
 - 목표: 작업 유형별 라이선스 안전성 기반 라우터(green/amber/red)로 도구 자동 선택·디스패치.
 - 산출물: 라우터 모듈(작업유형→1순위/폴백 도구 매핑 + 레인 판정) + 승인 게이트 큐(red/amber는 reviewer_decision 대기).

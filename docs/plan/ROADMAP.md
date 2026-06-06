@@ -18,7 +18,7 @@
 
 > 2026-06-04 **★ 발행 관제탑 설계 확정 + 빌더·한글화 두 대수술 production 머지 검증 완료** (Desktop turn, 코드 0, production HEAD 64fe565). 빌더 하이브리드(a6ea482) + UI 한글화(64fe565) 둘 다 main 머지·production 실측 검증 통과(/portfolio 404 직접 확인, 가짜 John 제거). 발행 관제탑 설계도 신설(HANDOFF_publish_control_tower_2026-06-04.md) — 기존 publish-readiness.ts 엔진 위에 신호등 UI만 씌움. **★ 컨텍스트 한계로 관제탑 구현은 새 채팅 위임**(중복작업 방지).
 >
-> ⭐ **다음 새 채팅 시작 메시지 (ACTIVE)**: "P0 명화 첫 발행 — 모든 검증 통과. 회선 200·dryRun canRegister=true·imageProbe allShopPhinf=true(L2 이미지 변환 실증 완료). 발행 대표이미지=mainImage(Cloudinary, 생존 확인)·detail=Supabase 모두 shop-phinf 변환 확인. 남은 단계 = ★대표 명시 승인 후 실 register(POST /api/naver/products/register, dryRun 없이) — 비가역. 승인 전 호출 0. 발행 후 naverProductId 확인 + DEBT-12 L1 위젯 배지(P-3) 후속."
+> ⭐ **다음 새 채팅 시작 메시지 (ACTIVE)**: "읽기전용 inspect 라우트 신설+명화 번호종류 실측 완료(2026-06-06, production cb15dfb). GET /api/naver/products/[productId]/inspect — origin/channel 양 probe로 numberKind 판정. ★실측: 13564133057=originProductNo 확정(origin GET 200·channel GET 404, storedIsCorrectPutTarget=true) → '채널번호' 가설 반증, PUT /origin-products/13564133057 정타. GET originProduct shape=PUT body 동일 → GET-merge 전제 VALID. 즉 GET-merge updateStock(직전 세션, 현 uncommitted api-client.ts)은 안전+정타 확정 = 배포 가능 상태. ★남은 단계: (1) **GET-merge api-client.ts 배포 승인**(대표 go → commit+push, mark-oos 라이브경로 안전화) (2) 명화 statusType=SUSPENSION(판매중지)인데 앱 ACTIVE — 전환 여부 대표 결정 (3) 기존 sync/route.ts·cron/daily가 origin 번호에 channel-products 엔드포인트 오용(404) 점검 (4) 명화 이미지 반영(update confirm:true, 비가역, mainImage 승격 선결). 의심파일(#34): `* 2.*` macOS 중복본 untracked 정리 대기."
 
 > 2026-06-04 **UI 한글화 STEP5 점검 + STEP1~5 전 완료** (feature/ui-ko-cleanup, main 미접촉). crawl/orders 영어 라벨·이모지 0 실측(actionable 0). UI 한글화 전 단계 완료. **다음=Desktop production 문구 육안 점검 → 머지 → 발행 관제탑 신설**.
 
