@@ -1,3 +1,31 @@
+## 2026-06-06 (40) Phase 2 제품교체(B안) 루프 앱 내장 (Code turn)
+
+production 20e137f → 4 코드커밋(d059acd 스키마/상태머신, 870fd19 Sharp, f4ae170 매트릭스, e0090b3 swap UI). 비가역 0(네이버 미접촉, DB만). tsc 0/build OK.
+
+권위: KKOTIUM_PRODUCT_SWAP_LOOP_DESIGN_2026-06-06.md §1/§6/§7/§8 + HANDOFF_phase2_product_swap_app_2026-06-06.md. 방향: A안(제품 AI 재생성) 폐기 → B안(실제 제품 누끼 고정 + 배경만 AI + 합성 + 빛정합) 확정.
+
+**[한 것]**
+- 작업1 — 스키마 확장(prisma/schema.prisma, 추가 전용·회귀 0): AssetJob에 concept_combo_id(nullable) + references 관계. AssetReference 신규(job_id FK cascade, asset_kind: product_cutout/mood_bg/brand_kit/generated_candidate, asset_urn). job_type 6종·status 4종은 String이라 값은 DB CHECK에서만 확장(마이그레이션 박제 docs/handoff/MIGRATION_phase2_product_swap_2026-06-06.sql, Phase1 이후 incremental ALTER).
+- 작업2 — 상태머신(asset-job-state.ts): JobStatus에 awaiting_human/human_done/review/rejected 추가. 전이표 확장(in_progress→awaiting_human→human_done→in_progress / in_progress→review→done|rejected / rejected→ready 사람 재시도 루프, retry 예산 비적용). 낙관적잠금·전이로그 패턴 계승.
+- 작업3 — 워크플로우: /api/products/[id]/swap-pipeline(GET 6단계 상태+references, POST 단계 전이·상품 소유 검증·P2021 가드, DB만). UI /products/[id]/swap + ProductSwapPipeline(컨셉카드 우드/화이트/차량 + 대표=흰배경 정책 칩 + 6단계 타임라인 + awaiting_human CTA·Firefly/Express 딥링크·체크리스트·완료표시 + review before/after 슬라이더·승인/거부). SWR 8초 폴링(Realtime 후속).
+- 작업4 — 관제탑 매트릭스: trackStatus에 awaiting_human, overall에 attention(막힘 다음 핀). human_done/review→in_progress, rejected→pending. 위젯 Hand 아이콘+보라 스타일+strings.
+- 작업5 — Sharp naver-normalize.ts: normalizeRepresentative(흰배경 1:1 1300px sRGB q80 mozjpeg) / normalizeDetail(860px ≤5000 분할). ★ 대표 흰배경 가드 2중(assertRepresentativeAssetKind 메타 + assertWhiteBackground 4모서리 luma≥232/chroma≤26) → 라이프스타일 합성컷 대표 라우팅 throw.
+- 작업6 — 5종 MD + 작업원칙 #51(B안)/#52(브라우저 반자동 detect→deliver→resume)/#53(도구 적재적소) 신설.
+
+**[결정]**
+- status 확장 방식: 기존 awaiting_approval 재사용+sub-state 대신 신규 1급 status(awaiting_human 등) 추가 — swap UI가 상태별 CTA를 직접 분기하므로 1급이 명확.
+- 코드 주석 영어화·에러문구 영어화로 한글 리터럴 0(사용자 문구는 swap-strings.ko.json/control-tower JSON). naver-normalize 정책 에러도 영어.
+- before/after 슬라이더는 outputRefs/references에서 URL 방어적 추출, 없으면 'noImage' 표시(#46 가짜 0).
+
+**[현재 상태]**
+- 코드 4커밋(push 대기). Phase 1/2 DB는 Supabase 미생성 → swap-pipeline·matrix 모두 migrationPending degrade. tsc 0/build OK/이모지 0/한글 리터럴 0/비가역 0.
+
+**[다음 할 일]**
+- push hash → Desktop: (1) Supabase apply_migration(Phase1 SQL 먼저 → Phase2 SQL) drift 0 (2) Chrome swap UI 실측(타임라인·awaiting_human CTA·전후 슬라이더·승인/거부) (3) 명화 B안 end-to-end(고해상 제품 누끼 확보→Firefly 무드배경→Photoshop 합성+Harmonize→Express 마감→Sharp 규격화→검수). 기존 cutout 253x776 저해상=테스트용만.
+- 유의: 명화 SUSPENSION은 대표 의도(미완성 노출 방지)—결함 아님, AUTOSUSPEND off. `* 2.*` 중복본 미접촉(#34).
+
+---
+
 ## 2026-06-06 (39) Phase 1 누락 방지 골격 — asset_jobs 상태머신 + 관제탑 매트릭스 (Code turn)
 
 production ed1c826 → 2 코드커밋(a55976b 스키마/lib, e9a6c95 UI). 비가역 0(네이버 미접촉, 신규 테이블만). tsc 0/build OK.

@@ -72,6 +72,21 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-06 (40) Phase 2 제품교체(B안) 루프 앱 내장 — 스키마 확장 + 상태머신 + 워크플로우 UI + Sharp 규격화 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | KKOTIUM_PRODUCT_SWAP_LOOP_DESIGN_2026-06-06.md §1/§6/§7/§8 + HANDOFF_phase2_product_swap_app. B안=실제 누끼 고정+배경만 AI. |
+| 작업1 스키마 | AssetJob에 concept_combo_id + AssetReference(조인) 추가. job_type 6종(product_cutout/mood_bg_generate/product_composite/harmonize/express_finalize/naver_normalize) + status 4종(awaiting_human/human_done/review/rejected)은 DB CHECK 확장. 마이그레이션 박제 docs/handoff/MIGRATION_phase2_product_swap_2026-06-06.sql(Phase1 이후 incremental ALTER). 커밋 d059acd. |
+| 작업2 상태머신 | asset-job-state.ts 전이표 확장: in_progress→awaiting_human→human_done→in_progress, in_progress→review→done|rejected, rejected→ready(사람 재시도). 낙관적잠금/전이로그 패턴 계승. d059acd. |
+| 작업3 워크플로우 | /api/products/[id]/swap-pipeline(읽기 6단계+쓰기 전이, DB만·P2021 가드) + /products/[id]/swap UI(컨셉카드+단계 타임라인+awaiting_human CTA·Firefly/Express 딥링크·체크리스트+before/after 슬라이더·승인/거부). SWR 8초 폴링. 커밋 e0090b3. |
+| 작업4 관제탑 | 매트릭스에 awaiting_human(attention) 추가 → 막힘 다음 핀. human_done/review→in_progress, rejected→pending. 커밋 f4ae170. |
+| 작업5 Sharp | src/lib/images/naver-normalize.ts: 대표(1:1 1300px 흰배경 q80) / 상세(860px 분할). ★ 대표 흰배경 가드(assetKind + 4모서리 luma/chroma) — 라이프스타일 합성컷 대표 라우팅 차단. 커밋 870fd19. |
+| 작업6 docs | 5종 MD + 작업원칙 #51(B안)/#52(브라우저 반자동)/#53(도구 적재적소) 신설. |
+| 검증 | tsc 0·build OK(swap 라우트 ƒ 등록)·이모지 0·한글 리터럴 0·비가역 0(네이버 0, DB만)·대표 흰배경 가드 동작. |
+| ★ 다음 | push hash → Desktop: (1) Supabase apply_migration(Phase1 먼저 + MIGRATION_phase2) drift 0 (2) Chrome swap UI 실측(타임라인·awaiting_human CTA·전후슬라이더) (3) 명화 B안 end-to-end(고해상 누끼 확보→Firefly 배경→합성→검수). 명화 SUSPENSION 대표 의도(결함 아님). |
+
+
 ### 2026-06-06 (39) Phase 1 누락 방지 골격 — asset_jobs 상태머신 + 관제탑 매트릭스 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
 
 | 항목 | 상태 |
