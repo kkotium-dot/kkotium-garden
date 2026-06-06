@@ -57,6 +57,7 @@ import DataLabTrendWidget from '@/components/dashboard/DataLabTrendWidget';
 import SourcingRecommendWidget from '@/components/dashboard/SourcingRecommendWidget';
 import ProductLifecycleWidget from '@/components/dashboard/ProductLifecycleWidget';
 import PublishControlTowerWidget from '@/components/dashboard/PublishControlTowerWidget';
+import ControlTowerMatrixWidget from '@/components/dashboard/ControlTowerMatrixWidget';
 import CollapsibleSection from '@/components/dashboard/layout/CollapsibleSection';
 import TopProductsCard from '@/components/dashboard/cards/TopProductsCard';
 import HealthCombinedCard from '@/components/dashboard/cards/HealthCombinedCard';
@@ -500,6 +501,9 @@ export default function DashboardPage() {
         <div className="space-y-4">
           {/* Publish Control Tower — 오늘 발행 가능한 상품 신호등 (매일 첫 화면 최상단) */}
           <PublishControlTowerWidget />
+
+          {/* Control Tower Matrix — product x track work tracking (Phase 1) */}
+          <ControlTowerMatrixWidget />
 
           {/* Active feeds */}
           <LowStockAlertWidget />

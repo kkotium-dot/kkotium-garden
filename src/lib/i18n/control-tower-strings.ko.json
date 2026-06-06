@@ -71,5 +71,54 @@
   "cta": {
     "fixSeo": "검색 조련사에서 보완",
     "openStudio": "온실 아틀리에 열기"
+  },
+  "matrix": {
+    "title": "작업 관제탑",
+    "subtitle": "상품별 작업 트랙을 신호등으로 추적해 누락을 막아요",
+    "track": {
+      "image": "이미지",
+      "publish": "발행",
+      "line": "회선",
+      "ops": "운영정합"
+    },
+    "status": {
+      "done": "완료",
+      "in_progress": "진행중",
+      "pending": "대기",
+      "blocked": "막힘",
+      "none": "미시작"
+    },
+    "overall": {
+      "risk": "위험",
+      "caution": "주의",
+      "ok": "정상",
+      "none": "미시작"
+    },
+    "header": {
+      "product": "상품",
+      "overall": "종합"
+    },
+    "wip": {
+      "label": "동시 진행",
+      "ok": "진행중 {count}건",
+      "over": "진행중 {count}건 — 동시 작업 {limit}건 초과, 하나씩 끝내요"
+    },
+    "nextAction": {
+      "publish": "다음 액션: 발행"
+    },
+    "blockedPinned": "막힘 항목을 먼저 처리하세요",
+    "empty": {
+      "title": "추적 중인 작업이 없어요",
+      "hint": "작업이 생성되면 상품별 트랙이 신호등으로 표시됩니다"
+    },
+    "migrationPending": {
+      "title": "작업 추적 준비 중",
+      "hint": "asset_jobs 테이블 마이그레이션 적용 후 표시됩니다"
+    },
+    "error": {
+      "title": "작업 관제탑을 불러오지 못했어요",
+      "retry": "다시 시도"
+    },
+    "loading": "작업 상태 확인 중"
   }
 }
