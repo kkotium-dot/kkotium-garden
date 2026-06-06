@@ -766,15 +766,20 @@ model AssetJob {
   id              String    @id @default(cuid())
   productId       String    @map("product_id")
   conceptPlanId   String?   @map("concept_plan_id")
+  // Phase 2: the specific concept combo (wood/white/car) chosen for a swap.
+  conceptComboId  String?   @map("concept_combo_id")
   // lane:    generate | process | compose | review | publish
   lane            String
-  // jobType: firefly_generate | remove_bg | color_correct | resize | vectorize
+  // jobType (Phase 1): firefly_generate | remove_bg | color_correct | resize | vectorize
   //          | figma_compose | sharp_composite | mockup | naver_image_upload | naver_publish
+  // jobType (Phase 2 product-swap B-plan): product_cutout | mood_bg_generate
+  //          | product_composite | harmonize | express_finalize | naver_normalize
   jobType         String    @map("job_type")
   // tool:    firefly | adobe_express | figma | canva | claude_design | sharp | naver_api
   tool            String
   ipSafe          Boolean   @default(false) @map("ip_safe")
-  // status:  pending | ready | in_progress | blocked | awaiting_approval | done | failed | cancelled
+  // status (Phase 1): pending | ready | in_progress | blocked | awaiting_approval | done | failed | cancelled
+  // status (Phase 2): + awaiting_human | human_done | review | rejected
   status          String    @default("pending")
   priority        Int       @default(0)
   version         Int       @default(0)
@@ -790,11 +795,29 @@ model AssetJob {
   lastAttemptedAt DateTime? @map("last_attempted_at")
 
   transitions     AssetJobTransition[]
+  references      AssetReference[]
 
   @@index([productId])
   @@index([status])
   @@index([lane])
   @@map("asset_jobs")
+}
+
+// Phase 2: reference assets a job consumes/produces (product cutout, mood bg,
+// brand kit, generated candidate). Lets the swap loop track which real-product
+// cutout and which AI background fed each composite. New table only.
+model AssetReference {
+  id        String   @id @default(cuid())
+  jobId     String   @map("job_id")
+  // assetKind: product_cutout | mood_bg | brand_kit | generated_candidate
+  assetKind String   @map("asset_kind")
+  assetUrn  String   @map("asset_urn")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  job       AssetJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@map("asset_references")
 }
 
 // Append-only transition log: who moved a job from which status to which, when.

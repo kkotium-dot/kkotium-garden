@@ -20,18 +20,27 @@ import type { AssetJob } from '@prisma/client';
 
 export type JobStatus =
   | 'pending' | 'ready' | 'in_progress' | 'blocked'
-  | 'awaiting_approval' | 'done' | 'failed' | 'cancelled';
+  | 'awaiting_approval' | 'done' | 'failed' | 'cancelled'
+  // Phase 2 product-swap loop:
+  | 'awaiting_human' | 'human_done' | 'review' | 'rejected';
 
 export type JobLane = 'generate' | 'process' | 'compose' | 'review' | 'publish';
 export type JobActor = 'system' | 'ai_agent' | 'human';
 
-// Allowed transition map (handoff §SCOPE task 2). Terminal: done, cancelled.
+// Allowed transition map (handoff §SCOPE task 2 + Phase 2 swap loop). Terminal:
+// done, cancelled. Phase 2 adds the browser-handoff + review/retry cycle:
+//   in_progress -> awaiting_human (browser step) -> human_done -> in_progress
+//   in_progress -> review -> done(approved) | rejected ; rejected -> ready (retry)
 const ALLOWED_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
   pending:           ['ready', 'cancelled'],
   ready:             ['in_progress', 'cancelled'],
-  in_progress:       ['done', 'failed', 'blocked', 'awaiting_approval'],
+  in_progress:       ['done', 'failed', 'blocked', 'awaiting_approval', 'awaiting_human', 'review'],
   blocked:           ['ready', 'cancelled'],
   awaiting_approval: ['in_progress', 'cancelled'],
+  awaiting_human:    ['human_done', 'cancelled'],
+  human_done:        ['in_progress', 'cancelled'],
+  review:            ['done', 'rejected', 'cancelled'],
+  rejected:          ['ready', 'cancelled'],   // human-driven redo loop (not retry-budget gated)
   failed:            ['ready', 'cancelled'],   // ready only while retryCount < maxRetries
   done:              [],
   cancelled:         [],
