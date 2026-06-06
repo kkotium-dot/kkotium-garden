@@ -753,3 +753,79 @@ model BackdropJob {
   @@index([status])
   @@map("backdrop_jobs")
 }
+
+// ── Phase 1: missing-work-prevention skeleton (asset_jobs state machine +
+//    transition log + published-asset provenance) ──
+// Authority: docs/research/KKOTIUM_HYBRID_PIPELINE_SYSTEM_DESIGN_2026-06-06.md §4.
+// Single source of truth for every asset-pipeline task (image gen/process/
+// compose/review/publish). String enums are enforced by DB CHECK constraints
+// (see docs/handoff/MIGRATION_phase1_asset_jobs_2026-06-06.sql) — same pattern
+// as BackdropJob. New tables only; Product/product_options untouched (no Prisma
+// relation to Product, FK kept as an indexed column like BackdropJob).
+model AssetJob {
+  id              String    @id @default(cuid())
+  productId       String    @map("product_id")
+  conceptPlanId   String?   @map("concept_plan_id")
+  // lane:    generate | process | compose | review | publish
+  lane            String
+  // jobType: firefly_generate | remove_bg | color_correct | resize | vectorize
+  //          | figma_compose | sharp_composite | mockup | naver_image_upload | naver_publish
+  jobType         String    @map("job_type")
+  // tool:    firefly | adobe_express | figma | canva | claude_design | sharp | naver_api
+  tool            String
+  ipSafe          Boolean   @default(false) @map("ip_safe")
+  // status:  pending | ready | in_progress | blocked | awaiting_approval | done | failed | cancelled
+  status          String    @default("pending")
+  priority        Int       @default(0)
+  version         Int       @default(0)
+  retryCount      Int       @default(0) @map("retry_count")
+  maxRetries      Int       @default(3) @map("max_retries")
+  inputRefs       Json?     @map("input_refs")
+  outputRefs      Json?     @map("output_refs")
+  blockedReason   String?   @map("blocked_reason")
+  assignedSession String?   @map("assigned_session")
+  heartbeatAt     DateTime? @map("heartbeat_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @default(now()) @map("updated_at")
+  lastAttemptedAt DateTime? @map("last_attempted_at")
+
+  transitions     AssetJobTransition[]
+
+  @@index([productId])
+  @@index([status])
+  @@index([lane])
+  @@map("asset_jobs")
+}
+
+// Append-only transition log: who moved a job from which status to which, when.
+model AssetJobTransition {
+  id         String   @id @default(cuid())
+  jobId      String   @map("job_id")
+  fromStatus String?  @map("from_status")
+  toStatus   String   @map("to_status")
+  event      String?
+  // actor: system | ai_agent | human
+  actor      String   @default("system")
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  job        AssetJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@map("asset_job_transitions")
+}
+
+// Published asset provenance — locks in the IP source chain of each live image.
+model PublishedAsset {
+  id            String   @id @default(cuid())
+  productId     String   @map("product_id")
+  assetUrn      String   @map("asset_urn")
+  // role: main | sub | detail
+  role          String
+  ipProvenance  Json?    @map("ip_provenance")
+  naverImageUrl String?  @map("naver_image_url")
+  publishedAt   DateTime @default(now()) @map("published_at")
+
+  @@index([productId])
+  @@map("published_assets")
+}
