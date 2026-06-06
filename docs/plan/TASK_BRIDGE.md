@@ -72,6 +72,20 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-06 (39) Phase 1 누락 방지 골격 — asset_jobs 상태머신 + 관제탑 매트릭스 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/research/KKOTIUM_HYBRID_PIPELINE_SYSTEM_DESIGN_2026-06-06.md §4/§7 + HANDOFF_phase1_asset_jobs_tracking_2026-06-06.md. |
+| 작업1 스키마 | AssetJob/AssetJobTransition/PublishedAsset 3종(prisma/schema.prisma). BackdropJob 선례: cuid id·product_id 인덱스컬럼(Prisma 관계 0 → Product 미접촉)·String enum은 DB CHECK. version 낙관적잠금·ip_safe·heartbeat. prisma generate 완료. 커밋 a55976b. |
+| 마이그레이션 | docs/handoff/MIGRATION_phase1_asset_jobs_2026-06-06.sql 박제(Prisma 패리티 DDL + CHECK). ★ Desktop이 Supabase apply_migration(name: phase1_asset_jobs_tracking) 선행 필요. prisma/migrations는 gitignore. |
+| 작업2 상태머신 | src/lib/jobs/asset-job-state.ts: transitionJob(허용전이 가드+version 낙관적잠금+전이 자동로그, failed→ready retry 가드) / claimNextJob(FOR UPDATE SKIP LOCKED) / detectZombies(heartbeat 10분). 순수 DB·네이버 미접촉. |
+| 작업3 관제탑 | /api/products/asset-jobs-matrix(읽기전용·집계) + ControlTowerMatrixWidget(상품x트랙: 이미지/발행/회선/운영정합, 막힘행 핀·WIP 카운터·누락감지 칩). ★ P2021 가드로 마이그레이션 전 push 안전(migrationPending degrade, #50). 한글은 strings JSON matrix 섹션(이모지 0·리터럴 0). 대시보드 마운트. 커밋 e9a6c95. |
+| 작업4 docs | 5종 추적 MD + PROGRESS 세션핸드오프 섹션 표준화(§7-c 에피소드). 작업원칙 #50 등재(migrationPending 역순배포 가드). |
+| 검증 | tsc 0·build OK·이모지 0·한글 리터럴 0(주석 영어/문구 JSON)·비가역 0(네이버 0, 신규 테이블만). |
+| ★ 다음 | (A) push hash 보고 → Desktop Supabase apply_migration + Chrome 관제탑 실측(막힘핀·WIP·누락칩) (B) Phase 2(ip_safe 발행 게이트 + 2단계 발행) (C) 명화 SUSPENSION 의도적(결함 아님) — 시스템 오인 금지. |
+
+
 ### 2026-06-06 (38) GET-merge updateStock 배포 + inspect statusType 거짓초록 교정 + sync/cron 엔드포인트 오용 교정 (FROM Code, production e3ab753, 실 PUT/OOS 0)
 
 | 항목 | 상태 |

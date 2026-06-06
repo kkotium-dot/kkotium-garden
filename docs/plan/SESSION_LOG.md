@@ -1,3 +1,28 @@
+## 2026-06-06 (39) Phase 1 누락 방지 골격 — asset_jobs 상태머신 + 관제탑 매트릭스 (Code turn)
+
+production ed1c826 → 2 코드커밋(a55976b 스키마/lib, e9a6c95 UI). 비가역 0(네이버 미접촉, 신규 테이블만). tsc 0/build OK.
+
+권위: docs/research/KKOTIUM_HYBRID_PIPELINE_SYSTEM_DESIGN_2026-06-06.md §4/§7 + HANDOFF_phase1_asset_jobs_tracking_2026-06-06.md.
+
+**[한 것]**
+- 작업1 — Prisma 3종(AssetJob/AssetJobTransition/PublishedAsset). BackdropJob 선례 100% 준수: cuid id, product_id는 인덱스 컬럼(Prisma 관계 0 → Product/product_options 미접촉, 회귀 0), String enum은 DB CHECK 제약. AssetJob에 ip_safe·version(낙관적잠금)·retry_count/max_retries·input/output_refs jsonb·heartbeat_at·assigned_session. prisma generate 성공. 마이그레이션 SQL을 docs/handoff/MIGRATION_phase1_asset_jobs_2026-06-06.sql에 박제(Prisma 패리티 DDL + CHECK + 인덱스 + transitions FK cascade).
+- 작업2 — src/lib/jobs/asset-job-state.ts(순수 DB·네이버 미접촉). transitionJob(허용전이표 가드 + version 낙관적잠금 updateMany WHERE version + asset_job_transitions 자동 insert, failed→ready는 retry 예산 가드). claimNextJob(SELECT FOR UPDATE SKIP LOCKED로 레인별 1건 선점 + heartbeat). detectZombies(heartbeat 10분 임계 초과 in_progress→blocked). heartbeat 헬퍼.
+- 작업3 — /api/products/asset-jobs-matrix(읽기전용): asset_jobs를 상품+레인별 집계 → 4트랙(이미지=generate/process/compose, 발행=review/publish, 회선/운영정합=Phase1 미연결 none). 트랙상태(done/in_progress/pending/blocked/none) + overall(risk/caution/ok/none) + 막힘행 최상단 정렬 + WIP 카운터 + 누락감지(이미지 done인데 발행 미시작→nextAction 칩). ControlTowerMatrixWidget(SWR+Lucide, 한글 strings JSON matrix 섹션, 이모지 0, 막힘 핀 배너·WIP 칩·다음액션 칩). 대시보드 받은편지함 PublishControlTowerWidget 직하 마운트(기존 위젯 보존).
+- 작업4 — 5종 추적 MD 갱신 + 작업원칙 #50 등재 + 본 PROGRESS 세션핸드오프 섹션 표준화.
+
+**[결정]**
+- 역순배포 안전화(#50): 매트릭스 API에 P2021(table 부재) 가드 → migrationPending degrade. 덕분에 Supabase 마이그레이션 전 push해도 production 무중단(위젯 '준비 중'). 핸드오프의 'commit 보류' 직렬대기 대신 세션 [다음]의 push-first 채택(가드로 안전).
+- enum=Prisma enum 타입 대신 String+DB CHECK(BackdropJob 선례·기존 스키마에 Prisma enum 0). 코드 주석 영어화·에러문구 영어화로 한글 리터럴 0(사용자 문구는 JSON).
+
+**[현재 상태]**
+- 코드 a55976b/e9a6c95 커밋(push 대기). DB 테이블은 Supabase 미생성 → 매트릭스 위젯은 migrationPending 표시 예정. tsc 0/build OK/이모지 0/한글 리터럴 0/비가역 0.
+
+**[다음 할 일]**
+- push hash 보고 → Desktop: (1) git HEAD+Vercel cross-check (2) Supabase apply_migration(MIGRATION_phase1 SQL) → drift 0 (3) Chrome 관제탑 매트릭스 실측(막힘핀·WIP·누락칩) (4) Phase 2 핸드오프(ip_safe 발행 게이트 + 2단계 발행 WAIT→SALE).
+- 유의: 명화 SUSPENSION은 대표 의도적(미완성 노출 방지) — 시스템 drift 오인 금지, NAVER_AUTOSUSPEND off 유지. `* 2.*` 중복본 미접촉(대표 결정 대기).
+
+---
+
 ## 2026-06-06 (38) GET-merge updateStock 배포 + inspect statusType 거짓초록 교정 + sync/cron 엔드포인트 오용 교정 (Code turn)
 
 production e6ffc5f → 3 커밋 push e3ab753. 실 PUT/OOS 0(코드 배포만, 자동중지 기본 off). tsc 0/build OK.

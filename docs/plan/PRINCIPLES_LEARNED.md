@@ -684,3 +684,14 @@ grep -c "id: '" src/lib/automation-registry.ts
 - **역할 분담**: Desktop=핸드오프 직접 쓰기 / Code=큰 추적 MD 반영 + git 보존.
 
 **근거**: docs/handoff/HANDOFF_principle49_publish_handoff_2026-06-04.md §0.
+
+
+## 작업원칙 #50 — 신규 테이블 의존 코드는 migrationPending 가드로 역순배포 안전화 (2026-06-06 학습, Phase 1 asset_jobs)
+
+**문제**: 새 DB 테이블(asset_jobs 등)을 읽는 코드를 마이그레이션 적용 전 push하면, production에서 테이블 부재(Prisma P2021)로 런타임 에러. 그러나 마이그레이션 선행(commit 보류) → push 순서는 두 환경 핑퐁(#41)에서 직렬 대기를 강제해 느림.
+
+**규칙**: 신규 테이블을 읽는 라우트는 P2021/relation-does-not-exist를 catch해 `{migrationPending:true}` 등 안전 응답으로 degrade한다. 그러면 (a) 코드 push가 마이그레이션보다 먼저여도 production 무중단(위젯은 '준비 중' 표시), (b) Desktop이 Supabase apply_migration 적용 시 자동으로 정상 표시 전환. 마이그레이션 SQL은 docs/handoff/에 박제(단일 소스, prisma/migrations는 gitignore).
+- **적용 범위**: 신규 테이블 read 경로(집계/조회 API). 신규 테이블 write 경로는 마이그레이션 선행 필수(쓰기는 degrade 불가).
+- **검증**: 가짜 초록 금지(#46) — migrationPending은 '데이터 없음'이 아니라 '준비 중'으로 명시 표시.
+
+**근거**: 본 세션 /api/products/asset-jobs-matrix가 P2021 가드로 a55976b/e9a6c95 push를 Supabase 마이그레이션보다 먼저 안전 배포.
