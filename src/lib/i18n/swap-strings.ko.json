@@ -1,0 +1,81 @@
+{
+  "title": "제품 교체 워크플로우",
+  "subtitle": "실제 제품 누끼는 고정하고 배경만 AI로 생성해 합성합니다 (B안)",
+  "concept": {
+    "title": "컨셉 조합",
+    "hint": "대표이미지는 흰배경 누끼만 사용해요. 라이프스타일 합성컷은 상세·추가 이미지에만 씁니다.",
+    "wood": "우드톤",
+    "white": "화이트",
+    "car": "차량"
+  },
+  "stage": {
+    "product_cutout": "제품 누끼",
+    "mood_bg_generate": "무드 배경 생성",
+    "product_composite": "레이어 합성",
+    "harmonize": "빛·그림자 정합",
+    "express_finalize": "마감·브랜드",
+    "naver_normalize": "네이버 규격화"
+  },
+  "stageTool": {
+    "product_cutout": "Photoshop / 자동 누끼",
+    "mood_bg_generate": "Firefly 웹 (반자동)",
+    "product_composite": "Photoshop",
+    "harmonize": "Photoshop Harmonize",
+    "express_finalize": "Adobe Express",
+    "naver_normalize": "Sharp (자동)"
+  },
+  "status": {
+    "none": "미시작",
+    "pending": "대기",
+    "ready": "준비",
+    "in_progress": "진행중",
+    "awaiting_human": "사람 대기",
+    "human_done": "사람 완료",
+    "review": "검수",
+    "rejected": "거부됨",
+    "blocked": "막힘",
+    "awaiting_approval": "승인 대기",
+    "done": "완료",
+    "failed": "실패",
+    "cancelled": "취소"
+  },
+  "human": {
+    "title": "지금 직접 하실 작업",
+    "hint": "로그인된 브라우저에서 작업하시면 AI가 이어받아요. 업로드·CAPTCHA·비가역 클릭만 직접 해주세요.",
+    "checklistTitle": "체크리스트",
+    "check1": "로그인 환경에서 진행",
+    "check2": "결과 이미지를 공유 폴더(approved/)에 저장",
+    "check3": "라벨·텍스트가 또렷한지 100% 확대 확인",
+    "markDone": "완료 표시",
+    "marking": "표시 중…"
+  },
+  "review": {
+    "title": "합성 결과 검수",
+    "before": "제품 누끼",
+    "after": "합성 결과",
+    "labelCheck": "라벨 가독성·경계가 자연스러운가요?",
+    "sliderHint": "슬라이더를 움직여 합성 전후를 비교하세요",
+    "noImage": "비교할 이미지가 아직 없어요",
+    "approve": "승인",
+    "reject": "거부 (재시도)",
+    "working": "처리 중…"
+  },
+  "guard": {
+    "repWhiteOnly": "대표이미지는 흰배경 누끼만 — 라이프스타일 합성컷은 상세·추가 전용"
+  },
+  "empty": {
+    "title": "이 상품에 등록된 교체 작업이 없어요",
+    "hint": "asset_jobs에 product_swap 단계가 등록되면 여기에 표시됩니다"
+  },
+  "migrationPending": {
+    "title": "교체 워크플로우 준비 중",
+    "hint": "asset_jobs 마이그레이션 적용 후 표시됩니다"
+  },
+  "error": {
+    "title": "워크플로우를 불러오지 못했어요",
+    "retry": "다시 시도"
+  },
+  "loading": "워크플로우 불러오는 중",
+  "ipSafe": "면책 경로",
+  "openBrowser": "브라우저에서 열기"
+}
