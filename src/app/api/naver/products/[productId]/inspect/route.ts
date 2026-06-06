@@ -29,6 +29,14 @@ import { naverRequest, NaverApiError } from '@/lib/naver/api-client';
 
 export const dynamic = 'force-dynamic';
 
+// App Product.status -> expected Naver statusType, for drift comparison.
+// DRAFT has no live counterpart (unregistered) and is intentionally absent.
+const APP_TO_NAVER_STATUS: Record<string, string> = {
+  ACTIVE:       'SALE',
+  OUT_OF_STOCK: 'OUTOFSTOCK',
+  INACTIVE:     'SUSPENSION',
+};
+
 interface ProbeResult {
   endpoint: string;
   ok: boolean;
@@ -160,17 +168,23 @@ export async function GET(
   const op = originOP ?? channelOP;
 
   // 6. Optional app<->Naver drift, computed INLINE from the already-fetched
-  //    originProduct — read-only, no extra request, and no dependency on the
-  //    still-unshipped GET-merge helpers (keeps this route deployable on its
-  //    own). Mirrors diffNaverProduct's field-compare semantics.
+  //    originProduct — read-only, no extra request. Mirrors diffNaverProduct's
+  //    field-compare semantics (that helper already covers statusType; this
+  //    inline path must include it too so a SUSPENSION listing isn't reported
+  //    as inSync:true — the false-green this route previously had).
   let drift: unknown = null;
   if (dbProduct && op) {
     const expectedName = dbProduct.naver_title ?? dbProduct.name;
-    const naverName  = typeof op.name === 'string' ? op.name : null;
-    const naverPrice = typeof op.salePrice === 'number' ? op.salePrice : null;
+    const expectedStatus = APP_TO_NAVER_STATUS[dbProduct.status] ?? null;
+    const naverName   = typeof op.name === 'string' ? op.name : null;
+    const naverPrice  = typeof op.salePrice === 'number' ? op.salePrice : null;
+    const naverStatus = typeof op.statusType === 'string' ? op.statusType : null;
     const diffs: Array<{ field: string; naver: unknown; app: unknown }> = [];
-    if (naverName !== expectedName)          diffs.push({ field: 'name', naver: naverName, app: expectedName });
-    if (naverPrice !== dbProduct.salePrice)  diffs.push({ field: 'salePrice', naver: naverPrice, app: dbProduct.salePrice });
+    if (naverName !== expectedName)         diffs.push({ field: 'name', naver: naverName, app: expectedName });
+    if (naverPrice !== dbProduct.salePrice) diffs.push({ field: 'salePrice', naver: naverPrice, app: dbProduct.salePrice });
+    // Skip status drift only when the app status has no Naver mapping (DRAFT/unknown).
+    if (expectedStatus !== null && naverStatus !== expectedStatus)
+      diffs.push({ field: 'statusType', naver: naverStatus, app: expectedStatus });
     drift = { inSync: diffs.length === 0, diffs };
   }
 
