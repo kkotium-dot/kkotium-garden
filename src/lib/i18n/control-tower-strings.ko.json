@@ -86,13 +86,15 @@
       "in_progress": "진행중",
       "pending": "대기",
       "blocked": "막힘",
-      "none": "미시작"
+      "none": "미시작",
+      "awaiting_human": "사람 대기"
     },
     "overall": {
       "risk": "위험",
       "caution": "주의",
       "ok": "정상",
-      "none": "미시작"
+      "none": "미시작",
+      "attention": "사람 작업 필요"
     },
     "header": {
       "product": "상품",

@@ -14,8 +14,8 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
-type TrackStatus = 'done' | 'in_progress' | 'pending' | 'blocked' | 'none';
-type Overall = 'risk' | 'caution' | 'ok' | 'none';
+type TrackStatus = 'done' | 'in_progress' | 'pending' | 'blocked' | 'awaiting_human' | 'none';
+type Overall = 'risk' | 'attention' | 'caution' | 'ok' | 'none';
 
 const WIP_LIMIT = 3;
 
@@ -34,20 +34,22 @@ interface JobRow { productId: string; lane: string; status: string }
 function trackStatus(statuses: string[]): TrackStatus {
   if (statuses.length === 0) return 'none';
   if (statuses.includes('blocked')) return 'blocked';
-  if (statuses.some(s => s === 'in_progress' || s === 'awaiting_approval')) return 'in_progress';
-  if (statuses.some(s => s === 'pending' || s === 'ready' || s === 'failed')) return 'pending';
+  if (statuses.includes('awaiting_human')) return 'awaiting_human';
+  if (statuses.some(s => s === 'in_progress' || s === 'awaiting_approval' || s === 'human_done' || s === 'review')) return 'in_progress';
+  if (statuses.some(s => s === 'pending' || s === 'ready' || s === 'failed' || s === 'rejected')) return 'pending';
   return 'done'; // all done/cancelled
 }
 
 function overallOf(tracks: TrackStatus[]): Overall {
   if (tracks.includes('blocked')) return 'risk';
+  if (tracks.includes('awaiting_human')) return 'attention';   // needs a human browser step
   if (tracks.includes('in_progress') || tracks.includes('pending')) return 'caution';
   if (tracks.includes('done')) return 'ok';
   return 'none';
 }
 
-// Sort key so blocked/risk rows pin to the top.
-const OVERALL_RANK: Record<Overall, number> = { risk: 0, caution: 1, ok: 2, none: 3 };
+// Sort key so blocked(risk) then awaiting_human(attention) rows pin to the top.
+const OVERALL_RANK: Record<Overall, number> = { risk: 0, attention: 1, caution: 2, ok: 3, none: 4 };
 
 export async function GET() {
   let jobs: JobRow[];

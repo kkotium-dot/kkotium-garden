@@ -10,12 +10,12 @@
 
 import useSWR from 'swr';
 import {
-  CheckCircle2, Loader2, Clock, XCircle, MinusCircle, ArrowRight, LayoutGrid, AlertTriangle,
+  CheckCircle2, Loader2, Clock, XCircle, MinusCircle, ArrowRight, LayoutGrid, AlertTriangle, Hand,
 } from 'lucide-react';
 import strings from '@/lib/i18n/control-tower-strings.ko.json';
 
-type TrackStatus = 'done' | 'in_progress' | 'pending' | 'blocked' | 'none';
-type Overall = 'risk' | 'caution' | 'ok' | 'none';
+type TrackStatus = 'done' | 'in_progress' | 'pending' | 'blocked' | 'awaiting_human' | 'none';
+type Overall = 'risk' | 'attention' | 'caution' | 'ok' | 'none';
 
 interface MatrixRow {
   productId: string;
@@ -38,18 +38,20 @@ const m = strings.matrix;
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const STATUS_STYLE: Record<TrackStatus, { bg: string; border: string; text: string; icon: React.ElementType }> = {
-  done:        { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D', icon: CheckCircle2 },
-  in_progress: { bg: '#EFF6FF', border: '#93C5FD', text: '#1D4ED8', icon: Loader2 },
-  pending:     { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207', icon: Clock },
-  blocked:     { bg: '#FFF0EF', border: '#FFD6D3', text: '#C2410C', icon: XCircle },
-  none:        { bg: '#F8FAFC', border: '#E2E8F0', text: '#94A3B8', icon: MinusCircle },
+  done:           { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D', icon: CheckCircle2 },
+  in_progress:    { bg: '#EFF6FF', border: '#93C5FD', text: '#1D4ED8', icon: Loader2 },
+  awaiting_human: { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9', icon: Hand },
+  pending:        { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207', icon: Clock },
+  blocked:        { bg: '#FFF0EF', border: '#FFD6D3', text: '#C2410C', icon: XCircle },
+  none:           { bg: '#F8FAFC', border: '#E2E8F0', text: '#94A3B8', icon: MinusCircle },
 };
 
 const OVERALL_STYLE: Record<Overall, { bg: string; border: string; text: string }> = {
-  risk:    { bg: '#FFF0EF', border: '#FFD6D3', text: '#C2410C' },
-  caution: { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' },
-  ok:      { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' },
-  none:    { bg: '#F8FAFC', border: '#E2E8F0', text: '#94A3B8' },
+  risk:      { bg: '#FFF0EF', border: '#FFD6D3', text: '#C2410C' },
+  attention: { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9' },
+  caution:   { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' },
+  ok:        { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' },
+  none:      { bg: '#F8FAFC', border: '#E2E8F0', text: '#94A3B8' },
 };
 
 const TRACK_KEYS = ['image', 'publish', 'line', 'ops'] as const;
