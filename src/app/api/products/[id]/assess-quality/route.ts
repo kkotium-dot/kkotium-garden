@@ -59,9 +59,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
   }
 
-  // Source-aware (item 3): assess the supplier REPRESENTATIVE (site thumb) and
-  // the DETAIL page separately so the strategy tier can branch by source.
-  const repUrl = body.imageUrl || product.main_image_url || product.mainImage || null;
+  // Source-aware (item 3): assess the supplier REPRESENTATIVE and the DETAIL
+  // page separately so the strategy tier can branch by source.
+  // 2026-06-07 fix (#46): the representative MUST be the field the publish
+  // builder sends as representativeImage = product.mainImage (Cloudinary), NOT
+  // main_image_url (legacy thumb-clean). Assessing the wrong image produced an
+  // untrustworthy tier. Prefer mainImage; main_image_url is a fallback only.
+  const repUrl = body.imageUrl || product.mainImage || product.main_image_url || null;
   const detailUrl = product.detail_image_url || null;
   const fallbackUrl = repUrl || detailUrl || (product.images && product.images[0]) || null;
   if (!fallbackUrl || !/^https?:\/\//i.test(fallbackUrl)) {
