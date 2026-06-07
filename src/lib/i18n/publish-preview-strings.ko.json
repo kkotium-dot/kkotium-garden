@@ -1,0 +1,67 @@
+{
+  "title": "발행 전 검수",
+  "subtitle": "이 화면에서 대표·상세 이미지와 네이버 페이로드를 최종 확인한 뒤 발행하세요",
+  "loading": "검수 정보 불러오는 중",
+  "error": {
+    "title": "검수 정보를 불러오지 못했어요",
+    "retry": "다시 시도"
+  },
+  "section": {
+    "representative": "대표 이미지",
+    "detail": "상세 이미지",
+    "payload": "네이버 페이로드 요약",
+    "readiness": "발행 준비도"
+  },
+  "checks": {
+    "resolutionOk": "1000px 이상",
+    "uniformBg": "단색 배경",
+    "textFree": "텍스트 없음",
+    "singleSubject": "단품 구도"
+  },
+  "ok": "통과",
+  "warn": "경고",
+  "warning": {
+    "text_overlay": "대표이미지에 텍스트가 감지됐어요 (네이버 2024-10-28 정책 위반 소지)",
+    "low_resolution": "대표이미지 해상도가 1000px 미만이에요",
+    "background_not_uniform": "배경이 단색이 아니에요 (대표컷은 단일 누끼 권장)",
+    "subject_not_single": "단품 구도가 아니에요 (라인업·합성컷은 추가이미지로)",
+    "representative_missing": "대표 이미지가 없어요",
+    "mostly_blank": "상세 이미지가 거의 비어 있어요 (스켈레톤/미완성)",
+    "low_quality": "상세 이미지 품질이 낮아요",
+    "detail_missing": "상세 이미지가 없어요"
+  },
+  "payload": {
+    "name": "상품명",
+    "category": "카테고리",
+    "price": "판매가",
+    "statusType": "판매상태",
+    "tags": "태그",
+    "options": "옵션",
+    "origin": "원산지",
+    "notice": "정보고시 (안전확인 신고번호)",
+    "noticeNone": "정보고시 없음"
+  },
+  "readiness": {
+    "grade": "준비도",
+    "attribute": "속성",
+    "missing": "필수 누락",
+    "errors": "발행 차단 사유",
+    "none": "없음"
+  },
+  "publish": {
+    "ready": "이 상태로 발행",
+    "confirm": "정말 발행할까요? (비가역)",
+    "confirmYes": "네, 발행합니다",
+    "cancel": "취소",
+    "publishing": "발행 중",
+    "disabledHint": "발행 조건 미충족 — 준비도 A 이상 + 이미지 경고 0이어야 발행할 수 있어요",
+    "success": "발행 완료",
+    "fail": "발행 실패",
+    "notRegisteredHint": "아직 네이버 미등록 상품이에요 — 신규 발행 경로를 사용하세요"
+  },
+  "gate": {
+    "readinessOk": "준비도 A 이상",
+    "canRegister": "필수 항목 충족",
+    "imageClean": "이미지 경고 0"
+  }
+}
