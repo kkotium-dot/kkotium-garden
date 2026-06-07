@@ -72,6 +72,15 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (44) 작업5 간편 크롭 + 작업6 BG_SWAP 연결 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 작업5 크롭 | src/lib/images/simple-crop.ts: 상세페이지 입력→1:1 크롭(사람 box OR sharp 네이티브 strategy.attention/entropy)→1000px Sharp(srgb/jpeg q85)→OCR 정책가드. ★누끼/합성 없음(간편=상세페이지 크롭). smartcrop-sharp 미설치(sharp 네이티브로 대체·런타임 의존성 0·#38). OCR=p-filter-watermark에 ocrFullFrame 추가(공유 워커 재사용·fail-open). 경고 3종: SOURCE_TOO_SMALL(long<1000)·LOW_RESOLUTION(크롭변<1000=437 화보)·TEXT_DETECTED(2024.10.28). 라우트 POST /api/products/[id]/thumb-crop(dry-run·base64 preview·maxDuration 60). 합성 실증: 2000→1000²무경고/437→LOW_RESOLUTION/box 정확. |
+| 작업6 BG_SWAP | src/lib/jobs/enqueue-mode-chain.ts enqueueModeChain(productId,mode): chainForMode 체인을 asset_jobs로 시드(멱등=기존 skip·quality_assess=done·첫 작업 ready·나머지 blocked+predecessor reason). NEW=기존 B안 swap 6단계(product_cutout..naver_normalize, mode-chains를 swap-pipeline STAGE_ORDER와 정합—express_finalize 추가)→**기존 /products/[id]/swap UI가 그대로 구동**(재사용, 미재구현). 라우트 POST /api/products/[id]/enqueue-pipeline(body.mode OR recommended_mode·P2021/P2022 가드). |
+| 검증 | tsc 0·build OK(thumb-crop·enqueue-pipeline ƒ 등록)·실 emoji 0(★→NOTE 교체)·한글 코드 0(주석 영어; 가-힣 정규식 범위는 OCR Hangul 검출 기능코드)·비가역 0(네이버 0; thumb-crop=read-only, enqueue=DB 가역 INSERT). |
+| ★ 다음 | push → Desktop: (1) thumb-crop 명화 detail(437x8000 화보) 실측 — LOW_RESOLUTION 경고·OCR·1000² preview (2) enqueue-pipeline 실상품 시드 검증(asset_jobs 행 생성·관제탑 반영·NEW면 /swap UI 구동). ★enqueue는 DB INSERT라 Desktop이 대상 상품 선택. MD분할(#31) 별도 commit 진행. 제조국 확정→SUSPENSION 해제는 대표 결정. |
+
 ### 2026-06-07 (43) 작업7 SEO 생성기 재수정 — 실제 태그 확장 엔진 (FROM Code, production push 대기, 비가역 0·DB 가역만)
 
 | 항목 | 상태 |

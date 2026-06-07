@@ -31,12 +31,16 @@ const THUMB_CROP: JobStep     = { jobType: 'thumb_crop',     lane: 'process', to
 const SEO_TEXT: JobStep       = { jobType: 'seo_text',       lane: 'review',  tool: 'claude_design', ipSafe: true };
 const SEO_IMAGE: JobStep      = { jobType: 'seo_image',      lane: 'compose', tool: 'sharp', ipSafe: true };
 
-// NEW mode reuses the Phase 2 B-plan swap pipeline (cutout-fixed, AI bg only).
+// NEW mode's bg_swap = the Phase 2 B-plan swap pipeline (cutout-fixed, AI bg
+// only). These 6 job_types ARE the swap-pipeline STAGE_ORDER, so enqueuing a NEW
+// chain drives the EXISTING /products/[id]/swap UI unchanged (task 6 = reuse, not
+// reimplement). Keep this list identical to STAGE_ORDER in swap-pipeline/route.ts.
 const BG_SWAP_CHAIN: JobStep[] = [
   { jobType: 'product_cutout',    lane: 'process',  tool: 'adobe_express', ipSafe: true },
   { jobType: 'mood_bg_generate',  lane: 'generate', tool: 'firefly',       ipSafe: true },
   { jobType: 'product_composite', lane: 'compose',  tool: 'figma',         ipSafe: true },
   { jobType: 'harmonize',         lane: 'compose',  tool: 'adobe_express', ipSafe: true },
+  { jobType: 'express_finalize',  lane: 'compose',  tool: 'adobe_express', ipSafe: true },
   { jobType: 'naver_normalize',   lane: 'process',  tool: 'sharp',         ipSafe: true },
 ];
 

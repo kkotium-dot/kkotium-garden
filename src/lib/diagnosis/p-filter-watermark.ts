@@ -52,6 +52,55 @@ async function getWorker(): Promise<Worker> {
   return workerPromise;
 }
 
+export interface FullFrameOcrResult {
+  text: string;
+  confidence: number;
+  hasText: boolean;
+}
+
+/**
+ * OCR the WHOLE (downscaled) image — used by the simple-crop policy guard to
+ * reject a representative crop that contains any text (Naver 2024-10-28). Reuses
+ * the shared worker (no second language-data download). Fails open (no text) on
+ * worker/OCR error so it never blocks the crop tool.
+ */
+export async function ocrFullFrame(
+  buffer: Buffer,
+  options: ScanOptions = {},
+): Promise<FullFrameOcrResult> {
+  if (options.enabled === false) return { text: '', confidence: 0, hasText: false };
+
+  const pre = await sharp(buffer, { failOn: 'none' })
+    .rotate()
+    .resize(1000, undefined, { fit: 'inside', withoutEnlargement: true })
+    .grayscale()
+    .normalise()
+    .png()
+    .toBuffer();
+
+  let worker: Worker;
+  try {
+    worker = await getWorker();
+  } catch {
+    return { text: '', confidence: 0, hasText: false };
+  }
+  const timeoutMs = options.timeoutMs ?? 4000;
+  try {
+    const recognition = await Promise.race([
+      worker.recognize(pre),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('ocr-timeout')), timeoutMs)),
+    ]);
+    const text = (recognition.data.text ?? '').replace(/\s+/g, ' ').trim();
+    const confidence = recognition.data.confidence ?? 0;
+    // Count only alphanumeric/Hangul glyphs so stray punctuation noise is ignored.
+    const meaningful = text.replace(/[^0-9A-Za-z가-힣]/g, '').length;
+    const hasText = meaningful >= MIN_TEXT_LENGTH && confidence >= MIN_CONFIDENCE;
+    return { text, confidence, hasText };
+  } catch {
+    return { text: '', confidence: 0, hasText: false };
+  }
+}
+
 /** Tear down the shared worker. Call once at process shutdown if needed. */
 export async function terminateWatermarkWorker(): Promise<void> {
   if (!workerPromise) return;
