@@ -196,6 +196,11 @@ export async function POST(request: NextRequest) {
             payload.originProduct.detailAttribute?.optionInfo?.optionCombinations?.map(
               c => [c.optionName1, c.optionName2].filter(Boolean).join(' / ')
             ) ?? [],
+          // productInfoProvidedNotice (legal disclosure) — surfaced so the
+          // operator can verify the safety-confirmation declaration number
+          // (HB...) inside etc.qualityAssuranceStandard before the irreversible PUT.
+          productInfoProvidedNotice:
+            payload.originProduct.detailAttribute?.productInfoProvidedNotice ?? null,
           imagesToUpload: {
             mainImage: product.mainImage ?? null,
             detailImage: product.detail_image_url ?? null,
