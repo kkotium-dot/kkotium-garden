@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (48) 이미지 전략 엔진 작업3·4·5 — T0 티어 + crop→대표 + 상세전략 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/handoff/IMAGE_SEO_STRATEGY_ENGINE_2026-06-07.md §E 3·4·5 + HANDOFF_session_2026-06-07_3_matrix_verify_cleanup.md(작업1+2 검증 통과·명화 stale job 6 cancelled→ok). |
+| 작업3 T0 티어 | quality-classifier deriveImageTier(rep,detail): T0 그대로(USE_AS_IS, >=1000·단색·텍스트0·단품 isUseAsIs)·T1 상세크롭(isDetailCroppable)·T2 보강·T3 신규. 소스별(대표 vs 상세) 분기. assess-quality가 대표(main)+상세(detail) 각각 평가→quality_reasons.imageTier/imageStrategy/sources 영속. engine ComputeContext.imageTier→image.tier(null 해소). matrix가 quality_reasons.imageTier read(가드). 위젯 TierBadge 노출. 커밋 4063dc0. |
+| 작업4 crop→대표 | thumb-crop confirm:true → 크롭 버퍼 product-assets 업로드 → mainImage+main_image_url set(빌더 필드). 품질가드(SOURCE_TOO_SMALL/LOW_RESOLUTION/TEXT_DETECTED) 차단(applied:false·blockReasons) — 437px upscale-blur·텍스트 대표 진입 방지. dryRun 기본 preview 유지. 커밋 25e126f. |
+| 작업5 상세전략 | NEW /api/products/[id]/detail-strategy(읽기전용): 상세 품질 score>=50→AS_IS else BUILD + 미충족 네이버 기준 갭(재질·색상/SEO 필드/정보고시/errors) 산출. 갭 키=nextAction 동일 키(fill_attributes/fill_seo/fill_notice/resolve_validation/build_detail) 통일→관제탑 연동. publish-readiness+validateForRegistration 재사용. 커밋 a1d8c90. |
+| 검증 | tsc 0·build OK(detail-strategy·thumb-crop·assess-quality·asset-jobs-matrix ƒ)·이모지 0·한글 코드 0(주석 영어·데이터 리터럴만)·비가역 0(네이버 0; thumb-crop confirm=DB 가역 set+Storage, detail-strategy read-only). tsx 실증 tier 4케이스(rep good→T0/weak+detail→T1/subject→T2/빈약→T3). |
+| ★ 다음 | push → Desktop 3중 단정: (1) assess-quality 명화/달항아리/아이스트레이 실행 → imageTier 산출·matrix TierBadge 노출(명화=T0 4종합성 그대로 기대) (2) thumb-crop confirm 실측 — 437px 상세 화보=blocked(applied:false)·>=1000 소스=mainImage set 후 matrix image done (3) detail-strategy 갭 목록 ↔ nextAction 정합. 통과 시 명화 정보고시 HB dryRun preview 노출(별건) → 대표 GO. |
+
 ### 2026-06-07 (47) 이미지·SEO 전략 엔진 통합 — 관제탑 SoT + nextAction (작업1+2) (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
 
 | 항목 | 상태 |
