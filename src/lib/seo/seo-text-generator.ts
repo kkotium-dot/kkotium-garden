@@ -69,6 +69,7 @@ export interface SeoTextDraft {
   productNameLength: number;
   nameFindings: RuleFinding[];      // banned/dup/special/length from detectNameRules
   tagCandidates: string[];          // ordered pool (restricted-filtered, pre-verify)
+  tags: string[];                   // FINAL selected tags — filled by the route after verifyTags
   attributes: Record<string, string>;  // English keys; UI maps to Korean
 }
 
@@ -97,21 +98,22 @@ function joinWithinLimit(tokens: string[], maxChars: number): string {
 }
 
 /**
- * Compose a product name: brand_line ordering, then collapse a repeated leading
- * morpheme. A token of length >= 4 contributes its first 3 chars as a "concept
- * prefix"; a later token with the same prefix is dropped (so two compounds that
- * begin with the same word keep it once). Also drops a token contained in a kept one.
+ * Compose a product name from the product's OWN tokens only — brand_line ordering,
+ * then collapse a repeated leading morpheme. A token of length >= 4 contributes
+ * its first 3 chars as a "concept prefix"; a later token with the same prefix is
+ * dropped (so two compounds that begin with the same word keep it once). Also
+ * drops a token contained in a kept one. NEVER pads with tag keywords (no keyword
+ * stuffing) — situational/expansion terms belong in tags, not the name.
  */
 export function composeName(
   brandLine: BrandLine,
   brandToken: string | null,
   baseTokens: string[],
-  extraTokens: string[],
   maxChars: number,
 ): string {
   const ordered = brandLine === 'GREENHOUSE'
-    ? [brandToken ?? '', ...baseTokens, ...extraTokens]
-    : [...baseTokens, ...extraTokens];
+    ? [brandToken ?? '', ...baseTokens]
+    : [...baseTokens];
 
   const seenPrefix = new Set<string>();
   const kept: string[] = [];
@@ -200,10 +202,10 @@ export function generateSeoText(input: SeoTextInput): SeoTextDraft {
 
   const roots = extractRoots(seedKeywords, input.baseName, expansion, restricted);
 
-  // Name: base tokens from the SEO title/name; backfill with situational tags.
+  // Name: the product's OWN tokens only (deduped). No tag-keyword stuffing.
   const baseTokens = tokenize(input.baseName);
   const productName = composeName(
-    brandLine, input.brandToken ?? null, baseTokens, expansion.situational, NAVER_NAME_MAX,
+    brandLine, input.brandToken ?? null, baseTokens, NAVER_NAME_MAX,
   );
   const nameRules = detectNameRules(productName);
 
@@ -227,6 +229,7 @@ export function generateSeoText(input: SeoTextInput): SeoTextDraft {
     productNameLength: productName.length,
     nameFindings: nameRules.findings,
     tagCandidates,
+    tags: [],            // FINAL tags are filled by the route after verifyTags
     attributes,
   };
 }

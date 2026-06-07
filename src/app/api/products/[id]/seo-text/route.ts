@@ -120,7 +120,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     scents: body.attrs?.scents ?? (optScents.length ? optScents : undefined),
     form: body.attrs?.form ?? null,
     volume: body.attrs?.volume ?? null,
-    origin: body.attrs?.origin ?? (product.naver_origin as string | null) ?? null,
+    // origin is DB SoT — never a body override (the DB carries the corrected
+    // country of manufacture after the Desktop originCode fix).
+    origin: (product.naver_origin as string | null) ?? null,
     seller: body.attrs?.seller ?? null,
     use: body.attrs?.use ?? null,
     material: body.attrs?.material ?? (product.naver_material as string | null) ?? null,
@@ -150,6 +152,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // Tag-dictionary unavailable → best-effort: take the pool head.
     tags = draft.tagCandidates.slice(0, MAX_TAGS);
   }
+
+  // Connect the final tags back into the draft so consumers reading draft.tags
+  // get the verified selection (not null). This was the prior over-claim bug.
+  draft.tags = tags;
 
   // Dry-run by default. confirm:true writes naver_title + tags (reversible).
   let applied = false;

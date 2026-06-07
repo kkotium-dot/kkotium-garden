@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (45) 작업7 seo-text 재수정 (2회째 결함·#45 정직) (FROM Code, production push 대기, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| ★ over-claim 원인 | 직전 smoke가 top-level `tags`(10)를 읽어 통과 보고했으나 Desktop은 `draft.tags`(null) 확인 — SeoTextDraft에 tags 필드 자체가 없었음(tagCandidates만). #45 적용 전 dry-run 실측 교훈 재확인. |
+| 결함1 draft.tags | SeoTextDraft.tags 필드 추가 + 라우트가 verifyTags 선별(verified>weak>missing, error 제외) 결과를 draft.tags에 연결. 제한어는 풀에서 이미 제외. |
+| 결함2 상품명 스터핑 | composeName에서 situational append 제거(extraTokens 파라미터 삭제). 상품명=product 자기 토큰만(형태소 dedup). situational(신차선물·운전자선물·차량인테리어)은 tags 전용. 명화 name 32자(스터핑 0·차량용 1회). |
+| 결함3 scents | body.attrs.scents(정보고시 4종, 코튼어라운드 포함) 우선 + DB option_rows.values 전체 읽기. DB 옵션 3종↔정보고시 4종 동기화는 별건(대표 결정). |
+| 결함4 origin | attributes.origin=DB SoT(naver_origin)만 — body 오버라이드 제거. Desktop이 originCode 0200037→00·naver_origin 중국→국산 교정(가역) 완료 → 라우트가 국산 반영. |
+| 검증 | tsc 0·build OK(seo-text ƒ)·이모지 0·한글 코드 0·비가역 0. 생성기 tsx 실증: name 32자·스터핑 false·차량용 1·draft.tags 라우트 연결·origin 국산·scents 4. |
+| ★ 다음 | push → Desktop dry-run 재검증: **draft.tags 10(non-null)**·상품명 스터핑 0·중복 0·origin 국산·scents(body 4). 통과 시 confirm:true 반영(가역). 안전번호 에이프릴/레몬 2종 확정 + 향 코튼어라운드 옵션 추가 = 대표 결정 → SUSPENSION 해제 PUT(비가역). |
+
 ### 2026-06-07 (44) 작업5 간편 크롭 + 작업6 BG_SWAP 연결 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
 
 | 항목 | 상태 |
