@@ -119,7 +119,18 @@
       "over": "진행중 {count}건 — 동시 작업 {limit}건 초과, 하나씩 끝내요"
     },
     "nextAction": {
-      "publish": "다음 액션: 발행"
+      "prefix": "다음 액션",
+      "add_main_image": "대표 이미지 추가",
+      "fill_attributes": "필수 속성 채우기",
+      "resolve_validation": "발행 항목 보완",
+      "prepare_image": "이미지 준비",
+      "publish": "발행하기",
+      "verify_certification": "정보고시 신고번호 검증",
+      "verify_publish": "라이브 점검 후 발행"
+    },
+    "publishDetail": {
+      "gradeLabel": "준비도 {grade} · {score}점",
+      "missingLabel": "필수 누락: {fields}"
     },
     "blockedPinned": "막힘 항목을 먼저 처리하세요",
     "empty": {

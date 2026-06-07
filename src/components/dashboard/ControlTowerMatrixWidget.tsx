@@ -16,19 +16,44 @@ import {
 } from 'lucide-react';
 import strings from '@/lib/i18n/control-tower-strings.ko.json';
 
+
 type TrackStatus = 'done' | 'in_progress' | 'pending' | 'blocked' | 'awaiting_human' | 'none';
 type Overall = 'risk' | 'attention' | 'caution' | 'ok' | 'none';
 type ProductMode = 'SIMPLE' | 'ENHANCE' | 'NEW';
 
 interface ModeInfo { recommended: ProductMode | null; score: number | null; source: 'auto' | 'operator' | null }
 
+type NextActionKey =
+  | 'add_main_image' | 'fill_attributes' | 'resolve_validation'
+  | 'prepare_image' | 'publish' | 'verify_certification' | 'verify_publish';
+
+interface NextAction {
+  key: NextActionKey;
+  severity: 'blocker' | 'action' | 'review';
+  href: string;
+  detail?: string;
+}
+
+interface PublishInfo {
+  status: TrackStatus;
+  registered: boolean;
+  canRegister: boolean;
+  readinessGrade: string;
+  readinessScore: number;
+  attributeGrade: string;
+  attributeScore: number;
+  missingRequired: string[];
+  errorCount: number;
+}
+
 interface MatrixRow {
   productId: string;
   name: string;
   tracks: { image: TrackStatus; publish: TrackStatus; line: TrackStatus; ops: TrackStatus };
+  publish: PublishInfo;
   mode: ModeInfo;
   overall: Overall;
-  nextAction: string | null;
+  nextAction: NextAction | null;
 }
 
 interface MatrixResponse {
@@ -69,6 +94,54 @@ const MODE_STYLE: Record<ProductMode, { bg: string; border: string; text: string
   ENHANCE: { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' }, // ENHANCE — amber
   NEW:     { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9' }, // NEW — purple
 };
+
+// nextAction severity → chip color (item 2). blocker red, action blue, review slate.
+const SEVERITY_STYLE: Record<NextAction['severity'], { bg: string; border: string; text: string }> = {
+  blocker: { bg: '#FFF0EF', border: '#FFD6D3', text: '#C2410C' },
+  action:  { bg: '#EFF6FF', border: '#93C5FD', text: '#1D4ED8' },
+  review:  { bg: '#F1F5F9', border: '#E2E8F0', text: '#475569' },
+};
+
+// Readiness grade → badge color (publish track SoT).
+function gradeColor(grade: string): { bg: string; border: string; text: string } {
+  if (grade === 'S' || grade === 'A') return { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' };
+  if (grade === 'B') return { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' };
+  return { bg: '#FFF0EF', border: '#FFD6D3', text: '#C2410C' }; // C/D
+}
+
+// Readiness badge — publish-readiness grade/score from validateForRegistration SoT.
+function ReadinessBadge({ publish }: { publish: PublishInfo }) {
+  const c = gradeColor(publish.readinessGrade);
+  const label = m.publishDetail.gradeLabel
+    .replace('{grade}', publish.readinessGrade)
+    .replace('{score}', String(publish.readinessScore));
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+      style={{ backgroundColor: c.bg, border: `1px solid ${c.border}`, color: c.text }}
+    >
+      {label}
+    </span>
+  );
+}
+
+// nextAction chip — 1-click link to the operator's single most-important step.
+function NextActionChip({ action }: { action: NextAction }) {
+  const s = SEVERITY_STYLE[action.severity];
+  const base = m.nextAction[action.key];
+  const label = action.detail ? `${base} (${action.detail})` : base;
+  return (
+    <a
+      href={action.href}
+      className="mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium hover:opacity-80"
+      style={{ backgroundColor: s.bg, border: `1px solid ${s.border}`, color: s.text }}
+      title={`${m.nextAction.prefix}: ${label}`}
+    >
+      <ArrowRight size={11} />
+      {label}
+    </a>
+  );
+}
 
 function StatusPill({ status }: { status: TrackStatus }) {
   const s = STATUS_STYLE[status];
@@ -275,12 +348,14 @@ export default function ControlTowerMatrixWidget() {
               return (
                 <tr key={row.productId} className="border-t border-slate-100 align-middle">
                   <td className="py-1.5 pr-2">
-                    <div className="font-medium text-slate-700">{row.name}</div>
-                    {row.nextAction === 'publish' && (
-                      <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-blue-600">
-                        <ArrowRight size={11} />
-                        {m.nextAction.publish}
-                      </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-medium text-slate-700">{row.name}</span>
+                      <ReadinessBadge publish={row.publish} />
+                    </div>
+                    {row.nextAction && (
+                      <div>
+                        <NextActionChip action={row.nextAction} />
+                      </div>
                     )}
                   </td>
                   <td className="px-2 py-1.5">
