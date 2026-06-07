@@ -21,38 +21,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { naverRequest, NaverApiError, uploadImagesToNaver } from '@/lib/naver/api-client';
-import {
-  buildNaverProductPayload,
-  buildDeliveryInfo,
-  buildDeliveryInfoFromProduct,
-  validateForRegistration,
-  type LocalProduct,
-  type ShippingTemplateData,
-  type AddressIds,
-  type SupplierBundleInfo,
-} from '@/lib/naver/product-builder';
+import { buildNaverProductPayload } from '@/lib/naver/product-builder';
+import { loadNaverUpdateContext } from '@/lib/naver/load-update-context';
 
 export const dynamic = 'force-dynamic';
-
-// Mirror of register route's notice-slot code defaults — kept null until the
-// common assets exist so neither dryRun nor a real PUT claims a 404 asset.
-const DEFAULT_NOTICE_TOP_IMAGE_URL: string | null = null;
-const DEFAULT_NOTICE_BOTTOM_IMAGE_URL: string | null = null;
-
-async function getAddressIds(): Promise<AddressIds | null> {
-  try {
-    const settings = await prisma.storeSettings.findFirst({
-      select: { releaseAddressId: true, returnAddressId: true },
-    });
-    if (!settings?.releaseAddressId || !settings?.returnAddressId) return null;
-    const release = Number(settings.releaseAddressId);
-    const ret     = Number(settings.returnAddressId);
-    if (!Number.isFinite(release) || !Number.isFinite(ret) || release <= 0 || ret <= 0) return null;
-    return { releaseAddressId: release, returnAddressId: ret };
-  } catch {
-    return null;
-  }
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,63 +44,25 @@ export async function POST(request: NextRequest) {
     // this is a safe preview.
     const isDryRun = dryRun === true || confirm !== true;
 
-    // 1. Load product with relations
-    const dbProduct = await prisma.product.findUnique({
-      where: { id: productId },
-      include: { product_options: true },
-    });
-    if (!dbProduct) {
+    // 1. Load + assemble the full update context (shared SoT with the
+    //    publish-preview screen — both build the identical payload).
+    const ctx = await loadNaverUpdateContext(productId);
+    if (!ctx) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
     }
 
     // 2. UPDATE guard — the product MUST already be registered on Naver.
-    if (!dbProduct.naverProductId) {
+    if (!ctx.dbProduct.naverProductId) {
       return NextResponse.json({
         success: false,
         error: '아직 네이버에 등록되지 않은 상품입니다 — 수정이 아니라 신규 발행(register)을 사용하세요.',
         stage: 'NOT_REGISTERED',
       }, { status: 409 });
     }
-    const naverProductId = dbProduct.naverProductId;
+    const naverProductId = ctx.dbProduct.naverProductId;
 
-    // 3. Shipping template (same as register)
-    let shippingTemplate: ShippingTemplateData | null = null;
-    if (dbProduct.shipping_template_id) {
-      const tmpl = await prisma.shippingTemplate.findUnique({ where: { id: dbProduct.shipping_template_id } });
-      if (tmpl) {
-        shippingTemplate = {
-          courierCode: tmpl.courierCode,
-          shippingType: tmpl.shippingType,
-          shippingFee: tmpl.shippingFee,
-          freeThreshold: tmpl.freeThreshold,
-          returnFee: tmpl.returnFee,
-          exchangeFee: tmpl.exchangeFee,
-          jejuFee: tmpl.jejuFee,
-          islandFee: tmpl.islandFee,
-        };
-      }
-    }
-
-    // 3-b. Supplier bundle attributes
-    let bundleInfo: SupplierBundleInfo | undefined;
-    if (dbProduct.supplierId) {
-      const supplier = await prisma.supplier.findUnique({
-        where: { id: dbProduct.supplierId },
-        select: { bundleCapable: true, naverBundleGroupId: true, jejuExtraFee: true, islandExtraFee: true },
-      });
-      if (supplier) {
-        bundleInfo = {
-          bundleCapable: supplier.bundleCapable,
-          naverBundleGroupId: supplier.naverBundleGroupId,
-          jejuExtraFee: supplier.jejuExtraFee,
-          islandExtraFee: supplier.islandExtraFee,
-        };
-      }
-    }
-
-    // 4. Addresses
-    const addresses = await getAddressIds();
-    if (!addresses) {
+    // 3. Addresses guard — a real PUT requires synced address ids.
+    if (!ctx.addresses) {
       return NextResponse.json({
         success: false,
         error: '네이버 출고지/반품지 주소록이 캐시되지 않아 수정할 수 없습니다. GET /api/naver/addressbooks 로 주소록을 동기화하세요.',
@@ -136,39 +70,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // 5. Map to LocalProduct
-    const product: LocalProduct = {
-      ...dbProduct,
-      additionalImages: dbProduct.additionalImages as unknown,
-      keywords: dbProduct.keywords as unknown,
-      tags: dbProduct.tags as unknown,
-      product_options: dbProduct.product_options ?? null,
-    };
-
-    // 6. Validate (same gate as register)
-    const validation = validateForRegistration(product, !!shippingTemplate, !!addresses);
-
-    // 7. Delivery + notice
-    const deliveryInfo = shippingTemplate
-      ? buildDeliveryInfo(shippingTemplate, addresses, bundleInfo)
-      : buildDeliveryInfoFromProduct(product, addresses, bundleInfo);
-
-    const noticeSettings = await prisma.storeSettings.findFirst({
-      select: {
-        storeName: true,
-        noticeTopImageUrl: true,
-        noticeTopText: true,
-        noticeBottomImageUrl: true,
-        noticeBottomText: true,
-      },
-    });
-    const noticeAssets = {
-      topImageUrl:    noticeSettings?.noticeTopImageUrl    ?? DEFAULT_NOTICE_TOP_IMAGE_URL,
-      topText:        noticeSettings?.noticeTopText        ?? null,
-      bottomImageUrl: noticeSettings?.noticeBottomImageUrl ?? DEFAULT_NOTICE_BOTTOM_IMAGE_URL,
-      bottomText:     noticeSettings?.noticeBottomText     ?? null,
-    };
-    const storeName = (noticeSettings?.storeName ?? '').trim() || '꽃틔움';
+    const { product, validation, deliveryInfo, noticeAssets, storeName } = ctx;
 
     // 8. dryRun preview — build with Supabase/Cloudinary URLs (no Naver upload,
     // no PUT). Mirrors register's dryRun so the operator can fact-check.
