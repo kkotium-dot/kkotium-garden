@@ -37,6 +37,24 @@ function toArray(v: unknown): string[] {
   return [];
 }
 
+// product_options.option_rows = Array<{ values: string[]; stock; price; status }>.
+// Flatten the option VALUES (e.g. scent names) — String()-ing the row object
+// itself yields "[object Object]", so pull `.values`.
+function optionValues(po: unknown): string[] {
+  const rows = Array.isArray((po as { option_rows?: unknown })?.option_rows)
+    ? ((po as { option_rows: unknown[] }).option_rows) : [];
+  const out: string[] = [];
+  for (const r of rows) {
+    const vals = Array.isArray((r as { values?: unknown })?.values)
+      ? (r as { values: unknown[] }).values : [];
+    for (const v of vals) {
+      const s = String(v).trim();
+      if (s && !out.includes(s)) out.push(s);
+    }
+  }
+  return out;
+}
+
 interface Body {
   brandLine?: string;
   brandToken?: string | null;
@@ -96,7 +114,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   ];
 
   // Attributes: body overrides win, then product-derived.
-  const optScents = toArray((product.product_options as { option_rows?: unknown } | null)?.option_rows);
+  const optScents = optionValues(product.product_options);
   const attrs: SeoSourceAttrs = {
     categoryCode: (product.naverCategoryCode as string | null) ?? null,
     scents: body.attrs?.scents ?? (optScents.length ? optScents : undefined),
