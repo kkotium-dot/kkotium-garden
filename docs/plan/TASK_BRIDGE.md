@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (49) assess 대표 소스 교정 + dryRun 정보고시 노출 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/handoff/HANDOFF_session_2026-06-07_4_image_engine_verify_source_bug.md. 작업3·4·5 검증 통과(작업4 가드 860px blocked 실증·작업5 detail-strategy 200) + 소스 버그 1건. |
+| 수정1 assess 소스 | assess-quality sources.representative를 main_image_url(레거시 thumb-clean) → mainImage(빌더 representativeImage·Cloudinary)로 교정. 평가 대상이 실 발행 대표와 일치 → tier 신뢰 회복. detail은 이미 detail_image_url 정합. body.imageUrl override 우선 유지. 커밋 3d3a3a6. |
+| 수정2 dryRun 정보고시 | update dryRun payloadPreview에 productInfoProvidedNotice 포함 → etc.qualityAssuranceStandard HB 신고번호(HB21-12-2572·HB19-12-1462) surfacing. confirm 경로 미변경. 커밋 37cefde. |
+| 검증 | tsc 0·build OK·이모지 0(★ 마커=기존 형제 라우트 선례·미접촉)·한글 코드 0(추가 라인 기준; 기존 에러문구 미접촉)·비가역 0(dryRun·DB 가역만). |
+| ★ 다음 | push → Desktop 3중 단정: (1) 명화 assess-quality 재실행 → sources.representative.url == mainImage(main-hwabo-4set) 확인·tier 재산출 (2) update dryRun → payloadPreview.productInfoProvidedNotice.etc.qualityAssuranceStandard에 HB 표시 단정 (3) HB 정확 시 대표 GO → update confirm:true PUT(비가역) → 3중 검증. |
+
 ### 2026-06-07 (48) 이미지 전략 엔진 작업3·4·5 — T0 티어 + crop→대표 + 상세전략 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
 
 | 항목 | 상태 |
