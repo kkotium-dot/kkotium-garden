@@ -93,24 +93,35 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const assessment = await assessImageQuality(buffer);
 
   // Persist. quality_reasons carries the per-metric breakdown + provenance.
-  const quality_reasons = {
+  // Deep plain-clone via JSON round-trip → guarantees a serializable value with
+  // no class instances / undefined that could trip Prisma's Json input.
+  const quality_reasons = JSON.parse(JSON.stringify({
     modeSource: 'auto',
     score: assessment.score,
     needsVlm: assessment.needsVlm,
     assessedImage: url,
     metrics: assessment.reasons,
     meta: assessment.meta,
-  };
+  }));
 
+  let storedReasonsCount = 0;
   try {
     await prisma.product.update({
       where: { id: productId },
       data: {
         quality_score: assessment.score,
         recommended_mode: assessment.recommendedMode,
-        quality_reasons: quality_reasons as unknown as Prisma.InputJsonValue,
+        quality_reasons: quality_reasons as Prisma.InputJsonValue,
       },
     });
+    // Read-back self-verify (#46): prove quality_reasons actually persisted, so
+    // the caller gets a definitive signal instead of trusting the write blindly.
+    const after = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { quality_reasons: true },
+    });
+    const stored = (after?.quality_reasons ?? null) as { metrics?: unknown[] } | null;
+    storedReasonsCount = Array.isArray(stored?.metrics) ? stored.metrics.length : 0;
   } catch (e) {
     if (isMissingColumn(e)) {
       return NextResponse.json({ success: false, migrationPending: true }, { status: 503 });
@@ -125,5 +136,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     recommendedMode: assessment.recommendedMode,
     needsVlm: assessment.needsVlm,
     reasons: assessment.reasons,
+    // Self-verify: persisted=true means the metrics array round-tripped to the DB.
+    persisted: storedReasonsCount === assessment.reasons.length,
+    storedReasonsCount,
   });
 }

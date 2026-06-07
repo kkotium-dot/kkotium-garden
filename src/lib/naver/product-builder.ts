@@ -228,6 +228,12 @@ export interface LocalProduct {
   naver_brand?: string | null;
   naver_origin?: string | null;
   naver_tax_type?: string | null;
+  // 2026-06-07 — Household-chemical-product safety-confirmation declaration
+  // number (HB...) SoT. A mandatory 정보고시 display item for safety-target
+  // household chemical products such as car air fresheners (omitting it is the
+  // likely SUSPENSION cause). The operator sets this (per-scent numbers may share
+  // one string); the ETC notice builder surfaces it only when present (no regression).
+  naver_certification?: string | null;
   // Shipping
   shippingFee?: number | null;
   courierCode?: string | null;
@@ -312,6 +318,23 @@ export function normalizeNaverPhone(raw: string | null | undefined): string {
  */
 const PRODUCT_INFO_STANDARD_REFERENCE = '상품상세참조';
 
+// 2026-06-07 — Household-chemical-product safety-confirmation number display.
+// The ETC notice has no dedicated field, so the regulatory statement is appended
+// to qualityAssuranceStandard (품질보증기준); switching to the dedicated household-
+// chemical notice type is a separate task. Applied only when a value is present
+// → zero regression for ordinary products. Returns null when no number is set.
+// The literal below is Naver-payload DATA (same inline-string pattern as
+// PRODUCT_INFO_STANDARD_REFERENCE / DEFAULT_STORE_NAME above).
+const SAFETY_DECLARATION_PREFIX = '안전기준 적합확인 신고번호';
+
+export function formatSafetyDeclaration(raw: string | null | undefined): string | null {
+  const v = (raw ?? '').trim();
+  if (!v) return null;
+  // Already prefixed by the operator → pass through; else add the standard label.
+  if (v.includes(SAFETY_DECLARATION_PREFIX)) return v;
+  return `${SAFETY_DECLARATION_PREFIX} ${v}`;
+}
+
 // 2026-06-02 — 스토어명 정정. '꽃틔움 가든' = 앱 이름(내부용), '꽃틔움' =
 // 스토어명(고객/네이버 노출용). 고객 노출 fallback은 반드시 스토어명 사용.
 // SoT = store_settings.store_name (register route가 storeName 인자로 주입).
@@ -336,12 +359,20 @@ export function buildProductInfoProvidedNoticeEtc(
     ?? product.naver_manufacturer
     ?? store;
 
+  // When a household-chemical safety number is present, append the regulatory
+  // statement to qualityAssuranceStandard (otherwise keep the standard reference
+  // text — zero regression for ordinary products).
+  const safety = formatSafetyDeclaration(product.naver_certification);
+  const qualityAssuranceStandard = safety
+    ? `${safety} (${PRODUCT_INFO_STANDARD_REFERENCE})`
+    : PRODUCT_INFO_STANDARD_REFERENCE;
+
   return {
     productInfoProvidedNoticeType: 'ETC',
     etc: {
       returnCostReason:          PRODUCT_INFO_STANDARD_REFERENCE,
       noRefundReason:            PRODUCT_INFO_STANDARD_REFERENCE,
-      qualityAssuranceStandard:  PRODUCT_INFO_STANDARD_REFERENCE,
+      qualityAssuranceStandard,
       compensationProcedure:     PRODUCT_INFO_STANDARD_REFERENCE,
       troubleShootingContents:   PRODUCT_INFO_STANDARD_REFERENCE,
       itemName:                  String(fallbackName).slice(0, 100),

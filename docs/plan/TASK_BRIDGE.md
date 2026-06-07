@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (42) Track B 결함2 + 안전기준ETC + 작업7 SEO 텍스트 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | HANDOFF_session_2026-06-07_phase3_verify_track_a_findings.md. 승인 범위=결함2+안전기준+작업7(작업5·6은 다음 turn). |
+| 결함1 마이그레이션 | MIGRATION_phase3_adaptive_mode_2026-06-07.sql 테이블명 "products"→"Product" 교정 + 규약 주석(Product=PascalCase 무@@map / asset_jobs·published_assets=snake @@map). Desktop은 이미 "Product"로 재적용 성공 — 파일/향후 규약 정합. |
+| 결함2 quality_reasons | assess-quality 영속 하드닝: JSON.parse(JSON.stringify()) 평탄화 + read-back 자기검증(after.quality_reasons.metrics 길이 → persisted/storedReasonsCount 응답). 근본은 로컬 DB 부재로 미재현(#46 정직) — Desktop 재호출로 persisted=true 단정 신호. |
+| 안전기준 ETC | product-builder.ts: LocalProduct.naver_certification(SoT) + formatSafetyDeclaration + buildProductInfoProvidedNoticeEtc가 qualityAssuranceStandard에 '안전기준 적합확인 신고번호 HB... (상품상세참조)' 병기. 값 있을 때만(일반 상품 회귀 0). ETC 전용필드 부재로 품질보증기준 병기(전용 생활화학 고시 타입 전환은 별도). 방향제 SUSPENSION 해제 선결 항목. |
+| 작업7 SEO | src/lib/seo/seo-text-generator.ts(순수·한글 리터럴 0): brand_line 템플릿(SEED=실용 우선 / GREENHOUSE=감성·롱테일 우선)·dedupeTokens(부분문자열 collapse)·50자 캡·detectNameRules 재사용. POST /api/products/[id]/seo-text(dry-run 기본·verifyTags 태그사전·confirm:true 시 naver_title/tags DB 반영=가역). 명화 초안 실증: name 48자·중복(차량용) 제거·findings 0·태그 10·속성 요약. |
+| 검증 | tsc 0·build OK(seo-text·assess-quality ƒ 등록)·실 emoji 0·한글 코드 0(주석 영어·데이터 리터럴만)·비가역 0(네이버 0, DB 가역 UPDATE만)·생성기/안전 ETC tsx 실증(가짜 라벨 0 #46). |
+| ★ 다음 | push hash → Desktop: (1) assess-quality 재호출 persisted=true + DB quality_reasons.metrics 6건 단정 (2) seo-text dry-run 명화 검수(태그사전 status) (3) ★제조국 확정→originCode 교정(가역)→naver_certification HB 입력→update dryRun(statusType SALE·회귀0)→대표 승인 SUSPENSION 해제(비가역). 작업5(간편 크롭, smartcrop-sharp)·6(BG_SWAP)·MD분할(#31) 다음 turn. |
+
 ### 2026-06-07 (41) 적응형 3모드 시스템 앱 내장 (Track B) — 작업 1~4 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
 
 | 항목 | 상태 |

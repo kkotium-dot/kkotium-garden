@@ -6,21 +6,27 @@
 --   Existing rows/queries unaffected (String-enum precedent). No Naver touch.
 -- ★ 역순배포 가드(#50): the code that READS these columns guards column-missing
 --   errors (P2021/P2022) → degrades gracefully until this migration lands.
+--
+-- ★ TABLE-NAME CONVENTION (2026-06-07 corrected — was "products" in v1, rolled
+--   back with relation does-not-exist; Desktop re-applied as "Product"):
+--     - The Product model has NO @@map → its table is "Product" (PascalCase).
+--     - asset_jobs / published_assets / asset_references use @@map → snake_case.
+--   Always baseline the real table name before writing migration DDL.
 
--- ── products: adaptive 3-mode columns (classifier output + operator override) ─
-ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "brand_line"       VARCHAR(20);
-ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "quality_score"    INTEGER;
-ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "recommended_mode" VARCHAR(20);
-ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "quality_reasons"  JSONB;
+-- ── Product: adaptive 3-mode columns (classifier output + operator override) ──
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "brand_line"       VARCHAR(20);
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "quality_score"    INTEGER;
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "recommended_mode" VARCHAR(20);
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "quality_reasons"  JSONB;
 
 -- brand_line: SEED (씨앗심기, low-involvement) | GREENHOUSE (온실아틀리에, high-involvement)
-ALTER TABLE "products" DROP CONSTRAINT IF EXISTS "products_brand_line_check";
-ALTER TABLE "products" ADD CONSTRAINT "products_brand_line_check"
+ALTER TABLE "Product" DROP CONSTRAINT IF EXISTS "Product_brand_line_check";
+ALTER TABLE "Product" ADD CONSTRAINT "Product_brand_line_check"
   CHECK ("brand_line" IS NULL OR "brand_line" IN ('SEED','GREENHOUSE'));
 
 -- recommended_mode: SIMPLE (간편, 크롭+최소SEO) | ENHANCE (보강) | NEW (주력신규, B안)
-ALTER TABLE "products" DROP CONSTRAINT IF EXISTS "products_recommended_mode_check";
-ALTER TABLE "products" ADD CONSTRAINT "products_recommended_mode_check"
+ALTER TABLE "Product" DROP CONSTRAINT IF EXISTS "Product_recommended_mode_check";
+ALTER TABLE "Product" ADD CONSTRAINT "Product_recommended_mode_check"
   CHECK ("recommended_mode" IS NULL OR "recommended_mode" IN ('SIMPLE','ENHANCE','NEW'));
 
 -- ── asset_jobs: widen job_type CHECK with the 5 adaptive-mode chain types ─────
