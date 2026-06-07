@@ -511,7 +511,7 @@ export function buildDeliveryInfoFromProduct(
 // EXACT (trimmed equality), not substring: '디퓨저' is blocked but '차량용디퓨저'
 // is allowed, so a substring filter would wrongly drop a valid tag.
 // First observed 2026-06-05 (명화 차량용 방향제 register 400).
-const RESTRICTED_SELLER_TAGS: ReadonlySet<string> = new Set([
+export const RESTRICTED_SELLER_TAGS: ReadonlySet<string> = new Set([
   '차량용방향제',
   '디퓨저',
   '차량방향제',

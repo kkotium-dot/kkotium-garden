@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (43) 작업7 SEO 생성기 재수정 — 실제 태그 확장 엔진 (FROM Code, production push 대기, 비가역 0·DB 가역만)
+
+| 항목 | 상태 |
+|---|---|
+| 근본원인 | 직전 생성기(turn 42)가 caller 입력 재배열만 → 빈 body 호출 시 tags[]·attributes{}·형태소 중복(Desktop 교차검증 '공허'). 라우트가 product 키워드 필드를 안 읽음 + 실제 확장 로직 부재. |
+| 라우트 DB-소싱 | /seo-text가 product.keywords/targetKeywords/naver_keywords/tags/product_options(option_rows=scents)/naver_material/color/origin/naverCategoryCode 실제 read → roots/attrs 구성. body 오버라이드 우선. |
+| 확장 엔진 | expandTagCandidates: roots(제한어·stopword 제거)→scents→modifier×nounRoot 복합어(product 존재 modifier 우선)→brandToken×nounRoot→synonyms→situational. RESTRICTED_SELLER_TAGS exact 필터·20자·24캡. 확장사전 src/lib/seo/tag-expansion.ko.json(데이터). |
+| 검증 선별 | verifyTags(풀)→STATUS_RANK verified0/weak1/missing2/error3 정렬→error 제외 상위 10(weak 대체). 태그사전 불가 시 풀 head 10 fallback. |
+| 상품명 dedup | composeName 형태소 collapse: len≥4 토큰의 선행 3자 형태소 1회만(차량용방향제 유지·차량용디퓨저 제거) + substring 제거 + 50자 캡. brand_line 순서. |
+| 명화 실데이터 검증 | name 50자·차량용 1회(중복0)·풀 24·제한어 0·attributes{향4·제형 액체형/보충액·용량 15/30ml·제조국·용도} 채움·findings 0. tsc 0·build OK·이모지 0·한글 코드 0(주석 영어·확장사전 JSON). |
+| ★ 다음 | push → Desktop: seo-text 명화 dry-run 재검증(태그사전 verified/weak status·최종 10·attributes 비어있지 않음·상품명 중복 0). 작업5(smartcrop 간편 크롭)·6(BG_SWAP 연결)·MD분할(#31, SESSION_LOG 1528/TASK_BRIDGE 1075+/PROGRESS 1416+) 다음 turn. |
+
 ### 2026-06-07 (42) Track B 결함2 + 안전기준ETC + 작업7 SEO 텍스트 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
 
 | 항목 | 상태 |

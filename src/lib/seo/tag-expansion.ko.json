@@ -1,0 +1,13 @@
+{
+  "_note": "Tag-expansion dictionary (Korean DATA, not UI copy). The seo-text generator combines product roots with these modifiers/synonyms to build a candidate pool; the LIVE tag dictionary (verifyTags) is the quality gate that drops nonsense. Restricted seller-tags are filtered separately. Generic place/use modifiers + diffuser-domain synonyms; extend per category over time.",
+  "stopwords": ["본품", "리필", "본품리필", "가벼운", "선물", "추천", "정품", "신상", "인기"],
+  "nounRoots": ["방향제", "디퓨저", "탈취제", "방향", "향"],
+  "modifiers": ["차량용", "송풍구", "자동차", "실내", "미니", "차량", "거치형"],
+  "situational": ["신차선물", "운전자선물", "차량인테리어", "차량용품", "집들이선물", "방향제선물", "차량탈취", "송풍구거치"],
+  "synonyms": {
+    "방향제": ["디퓨저", "탈취제"],
+    "디퓨저": ["방향제", "탈취제"],
+    "탈취제": ["방향제", "냄새제거"],
+    "향수": ["방향제", "향"]
+  }
+}
