@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (46) P3 4중컬럼 동기 + 재질/색상 필수속성 enum (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/handoff/MYEONGHWA_PUBLISH_READINESS_2026-06-07.md §1·39·40. |
+| 항목1 재질/색상 enum | category-attribute-enums.{ts,ko.json}: 재질(유리/플라스틱/세라믹/우드/…/기타)·색상(투명/화이트/…/기타) 큐레이트 enum + normalizeAttributeValue(exact→synonym→substring→기타, 자유입력 0). POST /api/products/[id]/attributes(dry-run 기본·완성도 before/after·confirm 시 naver_material/color 기록·가역). getD1CategoryName export. 실증: 50003356=가구/인테리어, BEFORE missingRequired[재질·색상]C/31(핸드오프 dryRun 일치)→유리/투명 AFTER[]A/78. |
+| ★ 정직(#46) | 빌더는 구조화 카테고리 속성을 Naver에 미전송 → missingRequired는 내부 완성도 게이트(naver_material/color null). 본 작업은 그 게이트 해소(enum 기록). 구조화 attributeId/valueId 실제 제출은 라이브 Naver 속성 스키마 조회(Desktop API)=별건. |
+| 항목2 P3 SoT | seo-text confirm 시 seoTitle←naver_title·keywords←tags·brand_line←resolved line 동기(단일 SoT). 발행 빌더 name=naver_title/sellerTags=tags 현행 유지(미접촉), 내부 비동기만 제거. |
+| 항목3 naver_certification | 대표가 에이프릴/레몬 HB 2종 확정 시 4향 신고번호 → formatSafetyDeclaration ETC surfacing(기구현, 대기). |
+| 검증 | tsc 0·build OK(attributes ƒ 등록)·이모지 0·한글 코드 0(FALLBACK='기타' 데이터 리터럴만)·비가역 0(DB 가역 UPDATE만). enum/완성도 tsx 실증. |
+| ★ 다음 | push → Desktop: (1) attributes dry-run(material:유리병·color:투명) → normalized 유리/투명·after missingRequired 0 재단정 (2) confirm:true 반영 → update dryRun missingRequired 0 확인 (3) seo-text confirm 시 4중컬럼 동기 확인 (4) 안전번호 2종 확정 → SUSPENSION 해제 대표 GO(비가역). |
+
 ### 2026-06-07 (45) 작업7 seo-text 재수정 (2회째 결함·#45 정직) (FROM Code, production push 대기, 비가역 0)
 
 | 항목 | 상태 |

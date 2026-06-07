@@ -712,7 +712,7 @@ function escapeHtml(text: string): string {
 
 // ─── D1 category name resolver ──────────────────────────────────────────────
 
-function getD1CategoryName(categoryCode: string): string {
+export function getD1CategoryName(categoryCode: string): string {
   const cat = NAVER_CATEGORIES_FULL.find(c => c.code === categoryCode);
   if (!cat) return '';
   return cat.d1 ?? '';

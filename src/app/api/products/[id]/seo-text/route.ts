@@ -157,7 +157,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   // get the verified selection (not null). This was the prior over-claim bug.
   draft.tags = tags;
 
-  // Dry-run by default. confirm:true writes naver_title + tags (reversible).
+  // Dry-run by default. confirm:true writes naver_title + tags AND syncs the P3
+  // redundant columns to a single SoT (seoTitle←naver_title, keywords←tags,
+  // brand_line←resolved line) so internal state never diverges. The publish
+  // builder still reads name=naver_title / sellerTags=tags (unchanged). Reversible.
   let applied = false;
   if (body.confirm === true) {
     try {
@@ -166,6 +169,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         data: {
           naver_title: draft.productName,
           tags: tags as unknown as Prisma.InputJsonValue,
+          seoTitle: draft.productName,                                  // P3 SoT
+          keywords: tags as unknown as Prisma.InputJsonValue,           // P3 SoT
+          brand_line: brandLine,                                        // P3 SoT
         },
       });
       applied = true;

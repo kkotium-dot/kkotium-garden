@@ -1,0 +1,22 @@
+{
+  "_note": "Curated Naver attribute display-value enums (Korean DATA, not UI copy). The INTERNAL completeness check (calcAttributeCompleteness) only needs a non-empty enum-valid value; full structured attributeId/valueId submission to Naver would need the LIVE category attribute schema (Desktop API lookup). '기타' is always an allowed fallback so normalization never produces free text. English keys (material/color) avoid Korean type literals (#3-1).",
+  "material": {
+    "allowed": ["유리", "플라스틱", "세라믹", "도자기", "스테인리스", "우드", "실리콘", "패브릭", "종이", "금속", "석고", "기타"],
+    "synonyms": {
+      "유리병": "유리", "글라스": "유리", "무광유리": "유리", "유리재질": "유리",
+      "우드클립": "우드", "원목": "우드", "나무": "우드",
+      "플라스틱재질": "플라스틱", "pp": "플라스틱", "pet": "플라스틱",
+      "도기": "도자기", "세라믹재질": "세라믹"
+    }
+  },
+  "color": {
+    "allowed": ["투명", "화이트", "블랙", "그레이", "베이지", "브라운", "핑크", "블루", "그린", "옐로우", "레드", "멀티", "기타"],
+    "synonyms": {
+      "무색": "투명", "클리어": "투명", "투명색": "투명",
+      "흰색": "화이트", "백색": "화이트", "화이트색": "화이트",
+      "검정": "블랙", "검은색": "블랙",
+      "회색": "그레이", "갈색": "브라운", "우드톤": "브라운",
+      "혼합": "멀티", "여러색": "멀티", "다색": "멀티"
+    }
+  }
+}
