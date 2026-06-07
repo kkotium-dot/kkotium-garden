@@ -787,6 +787,8 @@ model AssetJob {
   //          | product_composite | harmonize | express_finalize | naver_normalize
   // jobType (Phase 3 adaptive 3-mode chains): quality_assess | thumb_crop
   //          | seo_text | seo_image | bg_swap  (see src/lib/jobs/mode-chains.ts)
+  // jobType (Phase 4 crop/edit workflow): region_crop | text_remove
+  //          | canvas_expand | bg_clean  (see src/lib/jobs/job-type-routing.ts)
   jobType         String    @map("job_type")
   // tool:    firefly | adobe_express | figma | canva | claude_design | sharp | naver_api
   tool            String
