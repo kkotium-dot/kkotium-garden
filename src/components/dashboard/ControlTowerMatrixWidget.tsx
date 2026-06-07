@@ -8,19 +8,25 @@
 //
 // No emoji (Lucide icons). No Korean literals (control-tower-strings.ko.json, #35).
 
+import { useState } from 'react';
 import useSWR from 'swr';
 import {
   CheckCircle2, Loader2, Clock, XCircle, MinusCircle, ArrowRight, LayoutGrid, AlertTriangle, Hand,
+  ChevronDown,
 } from 'lucide-react';
 import strings from '@/lib/i18n/control-tower-strings.ko.json';
 
 type TrackStatus = 'done' | 'in_progress' | 'pending' | 'blocked' | 'awaiting_human' | 'none';
 type Overall = 'risk' | 'attention' | 'caution' | 'ok' | 'none';
+type ProductMode = 'SIMPLE' | 'ENHANCE' | 'NEW';
+
+interface ModeInfo { recommended: ProductMode | null; score: number | null; source: 'auto' | 'operator' | null }
 
 interface MatrixRow {
   productId: string;
   name: string;
   tracks: { image: TrackStatus; publish: TrackStatus; line: TrackStatus; ops: TrackStatus };
+  mode: ModeInfo;
   overall: Overall;
   nextAction: string | null;
 }
@@ -56,6 +62,14 @@ const OVERALL_STYLE: Record<Overall, { bg: string; border: string; text: string 
 
 const TRACK_KEYS = ['image', 'publish', 'line', 'ops'] as const;
 
+const MODE_ORDER: ProductMode[] = ['SIMPLE', 'ENHANCE', 'NEW'];
+
+const MODE_STYLE: Record<ProductMode, { bg: string; border: string; text: string }> = {
+  SIMPLE:  { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' }, // SIMPLE — green
+  ENHANCE: { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' }, // ENHANCE — amber
+  NEW:     { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9' }, // NEW — purple
+};
+
 function StatusPill({ status }: { status: TrackStatus }) {
   const s = STATUS_STYLE[status];
   const Icon = s.icon;
@@ -67,6 +81,88 @@ function StatusPill({ status }: { status: TrackStatus }) {
       <Icon size={12} className={status === 'in_progress' ? 'animate-spin' : ''} />
       {m.status[status]}
     </span>
+  );
+}
+
+// Adaptive 3-mode badge + 1-click change. Clicking the badge reveals the three
+// modes; picking one POSTs the operator override and refreshes the matrix.
+function ModeCell({ productId, mode, onChanged }: {
+  productId: string;
+  mode: ModeInfo;
+  onChanged: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function pick(next: ProductMode) {
+    setOpen(false);
+    if (next === mode.recommended) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/products/${productId}/mode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: next }),
+      });
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const recommended = mode.recommended;
+  const badge = recommended
+    ? MODE_STYLE[recommended]
+    : { bg: '#F8FAFC', border: '#E2E8F0', text: '#94A3B8' };
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold disabled:opacity-60"
+        style={{ backgroundColor: badge.bg, border: `1px solid ${badge.border}`, color: badge.text }}
+        title={m.mode.hint}
+      >
+        {busy
+          ? m.mode.changing
+          : recommended
+            ? m.mode[recommended]
+            : m.mode.unassessed}
+        {recommended && mode.score != null && (
+          <span className="font-normal opacity-70">
+            {m.mode.scoreLabel.replace('{score}', String(mode.score))}
+          </span>
+        )}
+        {!busy && <ChevronDown size={11} className="opacity-70" />}
+      </button>
+      {recommended && mode.source && (
+        <div className="mt-0.5 text-[10px] text-slate-400">
+          {mode.source === 'operator' ? m.mode.sourceOperator : m.mode.sourceAuto}
+        </div>
+      )}
+      {open && (
+        <div className="absolute left-0 top-full z-10 mt-1 w-24 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+          {MODE_ORDER.map((opt) => {
+            const s = MODE_STYLE[opt];
+            const active = opt === recommended;
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => pick(opt)}
+                className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-xs hover:bg-slate-50"
+                style={{ color: s.text, fontWeight: active ? 600 : 400 }}
+              >
+                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: s.border }} />
+                {m.mode[opt]}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -166,6 +262,7 @@ export default function ControlTowerMatrixWidget() {
           <thead>
             <tr className="text-slate-400">
               <th className="py-1 pr-2 font-medium">{m.header.product}</th>
+              <th className="px-2 py-1 font-medium">{m.header.mode}</th>
               {TRACK_KEYS.map((t) => (
                 <th key={t} className="px-2 py-1 font-medium">{m.track[t]}</th>
               ))}
@@ -185,6 +282,9 @@ export default function ControlTowerMatrixWidget() {
                         {m.nextAction.publish}
                       </span>
                     )}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <ModeCell productId={row.productId} mode={row.mode} onChanged={() => mutate()} />
                   </td>
                   {TRACK_KEYS.map((t) => (
                     <td key={t} className="px-2 py-1.5">

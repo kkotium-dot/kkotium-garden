@@ -98,7 +98,20 @@
     },
     "header": {
       "product": "상품",
+      "mode": "모드",
       "overall": "종합"
+    },
+    "mode": {
+      "SIMPLE": "간편",
+      "ENHANCE": "보강",
+      "NEW": "신규",
+      "unassessed": "미평가",
+      "sourceAuto": "AI 추천",
+      "sourceOperator": "직접 지정",
+      "scoreLabel": "{score}점",
+      "change": "모드 변경",
+      "changing": "변경 중",
+      "hint": "품질 점수로 추천된 작업 모드 — 클릭해 직접 바꿀 수 있어요"
     },
     "wip": {
       "label": "동시 진행",

@@ -17,6 +17,10 @@ export const dynamic = 'force-dynamic';
 type TrackStatus = 'done' | 'in_progress' | 'pending' | 'blocked' | 'awaiting_human' | 'none';
 type Overall = 'risk' | 'attention' | 'caution' | 'ok' | 'none';
 
+// Adaptive 3-mode badge (Phase 3). recommended = SIMPLE|ENHANCE|NEW (or null when
+// unassessed); source distinguishes the AI recommendation from an operator override.
+interface ModeInfo { recommended: string | null; score: number | null; source: 'auto' | 'operator' | null }
+
 const WIP_LIMIT = 3;
 
 // lane -> track. line/ops are cross-cutting signals not produced by asset_jobs
@@ -93,6 +97,31 @@ export async function GET() {
     : [];
   const nameById = new Map(products.map(p => [p.id, p.name]));
 
+  // Adaptive 3-mode badge (Phase 3). Read in a SEPARATE guarded query: if the
+  // columns aren't migrated yet (P2021/P2022) degrade to no-mode rather than
+  // breaking the whole matrix (#50 reverse-deploy guard).
+  const modeById = new Map<string, ModeInfo>();
+  if (productIds.length) {
+    try {
+      const modes = await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, recommended_mode: true, quality_score: true, quality_reasons: true },
+      });
+      for (const p of modes) {
+        const qr = (p.quality_reasons ?? null) as { modeSource?: string } | null;
+        const recommended = p.recommended_mode ?? null;
+        const source: ModeInfo['source'] =
+          qr?.modeSource === 'operator' ? 'operator' : recommended ? 'auto' : null;
+        modeById.set(p.id, { recommended, score: p.quality_score ?? null, source });
+      }
+    } catch (e: unknown) {
+      const code = (e as { code?: string })?.code;
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!(code === 'P2021' || code === 'P2022' || /does not exist|column/i.test(msg))) throw e;
+      // else: columns not migrated yet — leave modeById empty.
+    }
+  }
+
   const counts = { risk: 0, caution: 0, ok: 0, none: 0 };
   const rows = productIds.map((productId) => {
     const e = byProduct.get(productId)!;
@@ -112,6 +141,7 @@ export async function GET() {
       productId,
       name: nameById.get(productId) ?? productId,
       tracks: { image, publish, line, ops },
+      mode: modeById.get(productId) ?? { recommended: null, score: null, source: null },
       overall,
       nextAction,
     };

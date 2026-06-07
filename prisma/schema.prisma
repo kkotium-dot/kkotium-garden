@@ -192,6 +192,17 @@ model Product {
   concept_preset          String            @default("kitchen") @map("concept_preset") @db.VarChar(20)
   preset_intensity        String            @default("l1") @map("preset_intensity") @db.VarChar(10)
   preset_overrides        Json?             @map("preset_overrides")
+  // 2026-06-07 — Adaptive 3-mode system (docs/research/KKOTIUM_ADAPTIVE_SEO_IMAGE_SYSTEM_2026-06-06.md §5).
+  // The quality classifier writes quality_score(0-100) + recommended_mode; the
+  // operator can override the mode from the control tower. brand_line splits the
+  // SEO/image templates (seed = low-involvement, greenhouse = high-involvement).
+  // Index-only data columns (no Prisma relation); DB CHECK enforces the enums —
+  // same String-enum precedent as backdrop_jobs/asset_jobs. Desktop applies the
+  // Supabase migration (MIGRATION_phase3_adaptive_mode) before this reflects.
+  brand_line              String?           @map("brand_line") @db.VarChar(20)        // SEED | GREENHOUSE
+  quality_score           Int?              @map("quality_score")                     // 0-100
+  recommended_mode        String?           @map("recommended_mode") @db.VarChar(20)  // SIMPLE | ENHANCE | NEW
+  quality_reasons         Json?             @map("quality_reasons")
   orderItems              OrderItem[]
   supplier                Supplier          @relation(fields: [supplierId], references: [id])
   user                    User              @relation(fields: [userId], references: [id])
@@ -774,6 +785,8 @@ model AssetJob {
   //          | figma_compose | sharp_composite | mockup | naver_image_upload | naver_publish
   // jobType (Phase 2 product-swap B-plan): product_cutout | mood_bg_generate
   //          | product_composite | harmonize | express_finalize | naver_normalize
+  // jobType (Phase 3 adaptive 3-mode chains): quality_assess | thumb_crop
+  //          | seo_text | seo_image | bg_swap  (see src/lib/jobs/mode-chains.ts)
   jobType         String    @map("job_type")
   // tool:    firefly | adobe_express | figma | canva | claude_design | sharp | naver_api
   tool            String

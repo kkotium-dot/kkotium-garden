@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (41) 적응형 3모드 시스템 앱 내장 (Track B) — 작업 1~4 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/research/KKOTIUM_ADAPTIVE_SEO_IMAGE_SYSTEM_2026-06-06.md §1/§5 + HANDOFF_session_2026-06-06_3_simple_mode_correction(간편=상세페이지 크롭). 승인 범위=작업 1~4(비용0 최速 ROI). |
+| 작업1 스키마 | Product에 brand_line(SEED|GREENHOUSE)·quality_score(Int 0-100)·recommended_mode(SIMPLE|ENHANCE|NEW)·quality_reasons(Json) 추가. 인덱스 컬럼만·Prisma 관계 0(BackdropJob 선례)·DB CHECK. prisma generate 완료. 마이그레이션 박제 docs/handoff/MIGRATION_phase3_adaptive_mode_2026-06-07.sql(Phase1/2 이후 incremental ALTER + products CHECK). |
+| 작업2 분류기 | src/lib/images/quality-classifier.ts 정량 1차(sharp). 6지표: 해상도20·선명도(라플라시안분산)20·피사체비중20·배경단색도15·텍스트밴드휴리스틱15·1:1적합10 → 0~100 + recommendedMode + needsVlm(40~70). 임계값 export(운영 보정). VLM 2차 assessWithVlm=시그니처만(null 반환). 합성 3샘플 판별 실증: 깨끗한고해상=75(SIMPLE)/저해상흐림=31(NEW)/작은피사체=54(ENHANCE·needsVlm). |
+| 작업3 관제탑 | matrix API에 mode 필드(recommended/score/source) 별도 쿼리 + 컬럼부재 P2021/P2022 가드(#50). ControlTowerMatrixWidget 모드 컬럼+ModeCell(배지 간편/보강/신규+점수+AI추천/직접지정 + 드롭다운 1클릭 변경). POST /api/products/[id]/mode(오버라이드, quality_reasons.modeSource=operator). POST /api/products/[id]/assess-quality(저장이미지 fetch→분류기→컬럼 기록, node runtime). 한글 strings JSON(이모지 0·리터럴 0). |
+| 작업4 job_type | 마이그레이션 CHECK에 quality_assess/thumb_crop/seo_text/seo_image/bg_swap 추가(기존 16종과 공존, 소문자 컨벤션). src/lib/jobs/mode-chains.ts 모드별 체인: SIMPLE=[assess,crop,seo_text] / ENHANCE=[assess,crop,seo_image,seo_text] / NEW=[assess,B안6단계,seo_image,seo_text]. 순수 데이터+chainForMode 빌더(DB 미접촉). schema 주석 갱신. |
+| 검증 | tsc 0·build OK(/api/products/[id]/assess-quality·/mode·asset-jobs-matrix ƒ 등록)·실 emoji 0(→ 화살표만)·한글 코드 0(주석 영어·문구 JSON)·비가역 0(네이버 0, DB 신규 컬럼/CHECK만)·분류기 수치 실증(가짜 라벨 0 #46). |
+| ★ 다음 | push hash → Desktop: (1) Supabase apply_migration 순서 Phase1→Phase2→**Phase3**(MIGRATION_phase3_adaptive_mode) drift 0 (2) Chrome 관제탑 모드 배지·1클릭 변경 실측 (3) assess-quality 실상품 이미지로 점수/추천모드 검증(모드 추천 수용률 ≥70% 목표). 작업 5~7(간편=상세페이지 크롭 도구·BG_SWAP 재사용·SEO 텍스트 일괄)은 다음 turn. SESSION_LOG.md 1528줄>1500 → #31 분할 대기(별도 commit). `* 2.*` 중복본 정리 대표 결정 대기(#34). |
+
 ### 2026-06-06 (40) Phase 2 제품교체(B안) 루프 앱 내장 — 스키마 확장 + 상태머신 + 워크플로우 UI + Sharp 규격화 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
 
 | 항목 | 상태 |
