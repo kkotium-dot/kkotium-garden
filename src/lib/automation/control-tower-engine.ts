@@ -91,6 +91,9 @@ export interface ComputeContext {
   // jobs / migration pending — the engine then falls back to asset presence).
   imageJobStatuses: string[];
   publishJobStatuses: string[];
+  // Image strategy tier (T0..T3) from the persisted quality assessment
+  // (quality_reasons.imageTier). null until assess-quality has run (item 3).
+  imageTier?: ImageTier;
 }
 
 // ── asset_jobs status → track status (mirror of the prior matrix reducer) ─────
@@ -171,7 +174,7 @@ export function computeControlTowerRow(
     hasMain,
     hasDetail,
     jobStatuses: ctx.imageJobStatuses,
-    tier: null, // T0 classifier wires this in item 3
+    tier: ctx.imageTier ?? null, // from quality_reasons.imageTier (item 3)
   };
 
   const overall = overallOf([image.status, publish.status]);

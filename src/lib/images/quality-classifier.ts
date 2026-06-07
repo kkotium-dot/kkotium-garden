@@ -267,6 +267,75 @@ export async function assessImageQuality(input: Buffer): Promise<QualityAssessme
   return { score, recommendedMode, needsVlm, reasons, meta: { width: ow, height: oh } };
 }
 
+// ── Image strategy tier (handoff IMAGE_SEO_STRATEGY_ENGINE §B, item 3) ───────
+// Maps a quality assessment of the supplier REPRESENTATIVE (site thumb) and the
+// supplier DETAIL page into a cheapest-first image strategy tier:
+//   T0 USE_AS_IS  : rep is already publish-grade (>=1000px, clean bg, text-free,
+//                   single subject) — use the supplier representative as-is.
+//   T1 DETAIL_CROP: rep weak but the detail page has a croppable >=1000px subject.
+//   T2 ENHANCE    : a subject exists but needs cutout + clean background.
+//   T3 NEW        : sources too sparse — cutout + AI background (B-plan).
+// Pure: derives only from already-computed QualityAssessments. Korean-free
+// (stable English keys; UI maps to Korean).
+
+export type ImageTier = 'T0' | 'T1' | 'T2' | 'T3';
+export type ImageStrategySource = 'representative' | 'detail-crop' | 'enhance' | 'new';
+
+export interface ImageStrategy {
+  tier: ImageTier;
+  source: ImageStrategySource;
+  reasons: string[];   // stable English keys explaining the tier
+}
+
+function metricPoints(a: QualityAssessment, metric: string): number {
+  return a.reasons.find(r => r.metric === metric)?.points ?? 0;
+}
+function metricValue(a: QualityAssessment, metric: string): number {
+  return a.reasons.find(r => r.metric === metric)?.value ?? 0;
+}
+
+// Representative is "use-as-is": hi-res + clean uniform background + text-free +
+// a single well-framed subject. Thresholds mirror the per-metric point bands.
+export function isUseAsIs(a: QualityAssessment): boolean {
+  return metricValue(a, 'resolution') >= 1000   // >= 1000px long side
+    && metricPoints(a, 'background') >= 11        // ring stdev <= 20 (uniform)
+    && metricPoints(a, 'watermark') >= 11         // text-band ratio low (text-free)
+    && metricPoints(a, 'subject') >= 14;          // single subject, good occupancy
+}
+
+// Detail page carries a croppable >=1000px region with a discernible subject.
+export function isDetailCroppable(a: QualityAssessment): boolean {
+  return metricValue(a, 'resolution') >= 1000 && metricPoints(a, 'subject') >= 8;
+}
+
+/**
+ * Derive the image strategy tier from the representative and (optional) detail
+ * assessments. Cheapest-first: T0 before T1 before T2 before T3.
+ */
+export function deriveImageTier(
+  rep: QualityAssessment | null,
+  detail: QualityAssessment | null,
+): ImageStrategy {
+  const reasons: string[] = [];
+
+  if (rep && isUseAsIs(rep)) {
+    return { tier: 'T0', source: 'representative', reasons: ['rep_publish_grade'] };
+  }
+  if (rep) reasons.push('rep_below_use_as_is');
+  else reasons.push('rep_absent');
+
+  if (detail && isDetailCroppable(detail)) {
+    return { tier: 'T1', source: 'detail-crop', reasons: [...reasons, 'detail_croppable'] };
+  }
+  if (detail) reasons.push('detail_not_croppable');
+
+  if (rep && metricPoints(rep, 'subject') >= 8) {
+    return { tier: 'T2', source: 'enhance', reasons: [...reasons, 'subject_present_needs_enhance'] };
+  }
+
+  return { tier: 'T3', source: 'new', reasons: [...reasons, 'sparse_source'] };
+}
+
 // ── VLM second pass (signature only — phase 3 step 3) ───────────────────────
 export interface VlmAssessInput {
   buffer?: Buffer;

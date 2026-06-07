@@ -16,7 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { assessImageQuality } from '@/lib/images/quality-classifier';
+import { assessImageQuality, deriveImageTier, type QualityAssessment } from '@/lib/images/quality-classifier';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -59,49 +59,64 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
   }
 
-  const url =
-    body.imageUrl ||
-    product.main_image_url ||
-    product.mainImage ||
-    product.detail_image_url ||
-    (product.images && product.images[0]) ||
-    null;
-  if (!url || !/^https?:\/\//i.test(url)) {
+  // Source-aware (item 3): assess the supplier REPRESENTATIVE (site thumb) and
+  // the DETAIL page separately so the strategy tier can branch by source.
+  const repUrl = body.imageUrl || product.main_image_url || product.mainImage || null;
+  const detailUrl = product.detail_image_url || null;
+  const fallbackUrl = repUrl || detailUrl || (product.images && product.images[0]) || null;
+  if (!fallbackUrl || !/^https?:\/\//i.test(fallbackUrl)) {
     return NextResponse.json(
       { success: false, error: 'No assessable image URL (http/https) on this product' },
       { status: 422 },
     );
   }
 
-  // Fetch the stored asset → Buffer.
-  let buffer: Buffer;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      return NextResponse.json(
-        { success: false, error: `Image fetch failed (${res.status})`, url },
-        { status: 502 },
-      );
+  // Fetch + assess one stored asset → QualityAssessment (null on fetch failure).
+  async function fetchAndAssess(u: string | null): Promise<{ url: string; assessment: QualityAssessment } | null> {
+    if (!u || !/^https?:\/\//i.test(u)) return null;
+    try {
+      const res = await fetch(u);
+      if (!res.ok) return null;
+      const buf = Buffer.from(await res.arrayBuffer());
+      return { url: u, assessment: await assessImageQuality(buf) };
+    } catch {
+      return null;
     }
-    buffer = Buffer.from(await res.arrayBuffer());
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ success: false, error: `Image fetch error: ${msg}`, url }, { status: 502 });
   }
 
-  // Score it.
-  const assessment = await assessImageQuality(buffer);
+  const rep = await fetchAndAssess(repUrl);
+  // Avoid a duplicate fetch when detail === rep (some products share the URL).
+  const detail = detailUrl && detailUrl !== repUrl ? await fetchAndAssess(detailUrl) : null;
 
-  // Persist. quality_reasons carries the per-metric breakdown + provenance.
-  // Deep plain-clone via JSON round-trip → guarantees a serializable value with
-  // no class instances / undefined that could trip Prisma's Json input.
+  // Primary assessment drives the legacy score/mode (representative first).
+  const primary = rep ?? detail ?? (await fetchAndAssess(fallbackUrl));
+  if (!primary) {
+    return NextResponse.json(
+      { success: false, error: 'Image fetch failed for all candidate URLs', repUrl, detailUrl },
+      { status: 502 },
+    );
+  }
+  const assessment = primary.assessment;
+
+  // Image strategy tier (T0..T3) from the representative + detail assessments.
+  const strategy = deriveImageTier(rep?.assessment ?? null, detail?.assessment ?? null);
+
+  // Persist. quality_reasons carries the per-metric breakdown + provenance +
+  // the image strategy. Deep plain-clone via JSON round-trip → serializable.
   const quality_reasons = JSON.parse(JSON.stringify({
     modeSource: 'auto',
     score: assessment.score,
     needsVlm: assessment.needsVlm,
-    assessedImage: url,
+    assessedImage: primary.url,
     metrics: assessment.reasons,
     meta: assessment.meta,
+    // item 3 — image strategy tier + per-source scores.
+    imageTier: strategy.tier,
+    imageStrategy: strategy,
+    sources: {
+      representative: rep ? { url: rep.url, score: rep.assessment.score } : null,
+      detail: detail ? { url: detail.url, score: detail.assessment.score } : null,
+    },
   }));
 
   let storedReasonsCount = 0;
@@ -136,6 +151,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     recommendedMode: assessment.recommendedMode,
     needsVlm: assessment.needsVlm,
     reasons: assessment.reasons,
+    imageTier: strategy.tier,
+    imageStrategy: strategy,
+    sources: {
+      representative: rep ? { url: rep.url, score: rep.assessment.score } : null,
+      detail: detail ? { url: detail.url, score: detail.assessment.score } : null,
+    },
     // Self-verify: persisted=true means the metrics array round-tripped to the DB.
     persisted: storedReasonsCount === assessment.reasons.length,
     storedReasonsCount,

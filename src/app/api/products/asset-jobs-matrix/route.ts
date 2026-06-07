@@ -24,6 +24,7 @@ import {
   type ControlTowerRow,
   type Overall,
 } from '@/lib/automation/control-tower-engine';
+import type { ImageTier } from '@/lib/images/quality-classifier';
 import type { LocalProduct } from '@/lib/naver/product-builder';
 
 export const dynamic = 'force-dynamic';
@@ -106,19 +107,22 @@ export async function GET() {
     // else: asset_jobs not migrated — overlay stays empty, presence drives image track.
   }
 
-  // 3. Adaptive 3-mode badge (guarded — columns may not be migrated).
+  // 3. Adaptive 3-mode badge + image strategy tier (guarded — columns may not
+  //    be migrated). Both live on the Product row (tier inside quality_reasons).
   const modeById = new Map<string, ModeInfo>();
+  const tierById = new Map<string, ImageTier>();
   try {
     const modes = await prisma.product.findMany({
       where: { id: { in: ids } },
       select: { id: true, recommended_mode: true, quality_score: true, quality_reasons: true },
     });
     for (const p of modes) {
-      const qr = (p.quality_reasons ?? null) as { modeSource?: string } | null;
+      const qr = (p.quality_reasons ?? null) as { modeSource?: string; imageTier?: ImageTier } | null;
       const recommended = p.recommended_mode ?? null;
       const source: ModeInfo['source'] =
         qr?.modeSource === 'operator' ? 'operator' : recommended ? 'auto' : null;
       modeById.set(p.id, { recommended, score: p.quality_score ?? null, source });
+      if (qr?.imageTier) tierById.set(p.id, qr.imageTier);
     }
   } catch (e: unknown) {
     const code = (e as { code?: string })?.code;
@@ -143,6 +147,7 @@ export async function GET() {
       hasAddresses,
       imageJobStatuses: imageJobsByProduct.get(dbProduct.id) ?? [],
       publishJobStatuses: publishJobsByProduct.get(dbProduct.id) ?? [],
+      imageTier: tierById.get(dbProduct.id),
     });
     counts[row.overall]++;
 

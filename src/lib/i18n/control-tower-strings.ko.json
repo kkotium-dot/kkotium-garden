@@ -132,6 +132,13 @@
       "gradeLabel": "준비도 {grade} · {score}점",
       "missingLabel": "필수 누락: {fields}"
     },
+    "tier": {
+      "label": "이미지 전략",
+      "T0": "그대로",
+      "T1": "크롭",
+      "T2": "보강",
+      "T3": "신규"
+    },
     "blockedPinned": "막힘 항목을 먼저 처리하세요",
     "empty": {
       "title": "추적 중인 작업이 없어요",

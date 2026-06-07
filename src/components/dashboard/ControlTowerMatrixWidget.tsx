@@ -46,11 +46,21 @@ interface PublishInfo {
   errorCount: number;
 }
 
+type ImageTier = 'T0' | 'T1' | 'T2' | 'T3';
+
+interface ImageInfo {
+  status: TrackStatus;
+  hasMain: boolean;
+  hasDetail: boolean;
+  tier: ImageTier | null;
+}
+
 interface MatrixRow {
   productId: string;
   name: string;
   tracks: { image: TrackStatus; publish: TrackStatus; line: TrackStatus; ops: TrackStatus };
   publish: PublishInfo;
+  image: ImageInfo;
   mode: ModeInfo;
   overall: Overall;
   nextAction: NextAction | null;
@@ -121,6 +131,27 @@ function ReadinessBadge({ publish }: { publish: PublishInfo }) {
       style={{ backgroundColor: c.bg, border: `1px solid ${c.border}`, color: c.text }}
     >
       {label}
+    </span>
+  );
+}
+
+// Image strategy tier → badge color (item 3). T0 cheapest (green) → T3 (purple).
+const TIER_STYLE: Record<ImageTier, { bg: string; border: string; text: string }> = {
+  T0: { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' },
+  T1: { bg: '#EFF6FF', border: '#93C5FD', text: '#1D4ED8' },
+  T2: { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' },
+  T3: { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9' },
+};
+
+function TierBadge({ tier }: { tier: ImageTier }) {
+  const c = TIER_STYLE[tier];
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+      style={{ backgroundColor: c.bg, border: `1px solid ${c.border}`, color: c.text }}
+      title={m.tier.label}
+    >
+      {tier} {m.tier[tier]}
     </span>
   );
 }
@@ -351,6 +382,7 @@ export default function ControlTowerMatrixWidget() {
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium text-slate-700">{row.name}</span>
                       <ReadinessBadge publish={row.publish} />
+                      {row.image.tier && <TierBadge tier={row.image.tier} />}
                     </div>
                     {row.nextAction && (
                       <div>
