@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (50) 발행 전 검수 화면 + update 로더 SoT 추출 (FROM Code, production push 대기, 비가역 0·렌더 read-only)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/handoff/HANDOFF_session_2026-06-07_4_image_engine_verify_source_bug.md. Desktop 검수: 명화 대표(4종합성 캡션텍스트=텍스트정책 위반 소지+하단쏠림)·상세(detail-S6 스켈레톤=미완성) → 발행 전 검수 화면 필요. |
+| 로더 SoT | NEW load-update-context.ts: loadNaverUpdateContext가 payload 조립(product+options·shipping·bundle·addresses·validation·deliveryInfo·noticeAssets·storeName). update route 로딩 1~7 → 로더 호출 교체(가드·dryRun/PUT 분기 불변, 동작 보존). 프리뷰=실 PUT 페이로드 drift 0 보장. 커밋 d68c027. |
+| 검수 엔드포인트 | NEW GET /api/products/[id]/publish-preview(읽기전용·Node·maxDuration 60): 대표(빌더 mainImage) assessImageQuality+ocrFullFrame → 경고(text_overlay/low_resolution/background_not_uniform/subject_not_single) + 상세 완성도(mostly_blank<15%·low_quality<40·detail_missing) + 공유 빌더 페이로드 요약(name·태그·속성·정보고시 etc.qualityAssuranceStandard HB·origin·statusType) + canPublish=준비도 S/A AND canRegister AND imageWarnings 0. 커밋 437b40b. |
+| 검수 화면 | NEW /products/[id]/preview: 대표/상세 렌더 + 체크칩(1000px/단색/텍스트0/단품) + 경고 + 페이로드 요약 + 게이트 사유 3칩. "이 상태로 발행"은 canPublish AND 등록상품일 때만 활성 → 2단계 명시 확인 → update confirm:true(비가역). publish-preview-strings.ko.json i18n. 커밋 437b40b. |
+| 검증 | tsc 0·build OK(publish-preview ƒ·preview 페이지 4.5kB)·이모지 0·한글 코드 0(신규 파일; update route 기존 에러문구·★ 마커 verbatim 보존, 추가 라인 0)·비가역 0(렌더 read-only, 발행은 기존 PUT 경로 명시 확인 후). |
+| ★ 다음 | push → Desktop 3중 단정: (1) update dryRun 회귀 0 재확인(로더 추출 후 명화 payloadPreview == (49) 베이스라인: name·HB·origin·statusType) (2) /products/[id]/preview 명화 — 대표 text_overlay 경고·상세 mostly_blank 경고 → canPublish=false(발행 버튼 비활성) 실측 (3) 양질 상품(달항아리?)에서 canPublish=true 시 게이트 통과 확인. 명화 대표/상세 보완(풀해상 단품·상세 빌드) 후 재검수 → 대표 GO → PUT. |
+
 ### 2026-06-07 (49) assess 대표 소스 교정 + dryRun 정보고시 노출 (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
 
 | 항목 | 상태 |
