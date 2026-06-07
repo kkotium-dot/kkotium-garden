@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (47) 이미지·SEO 전략 엔진 통합 — 관제탑 SoT + nextAction (작업1+2) (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/handoff/IMAGE_SEO_STRATEGY_ENGINE_2026-06-07.md §E 작업1·2. 대표 승인 범위=기반 1+2 먼저(3·4·5는 Desktop 단정 후). |
+| 핵심 갭 | 관제탑 matrix가 asset_jobs 단독 → 등록/준비된 상품(명화 A/84, 잡 없음)이 risk/blocked/nextAction null. |
+| 작업1 SoT 엔진 | NEW src/lib/automation/control-tower-engine.ts(순수): computeControlTowerRow가 publish track=validateForRegistration 준비도(canRegister/readinessGrade·score/attributeGrade/missingRequired)=네이버 register/update dryRun과 동일 SoT, image track=asset_jobs overlay+자산 presence(누락 시 degrade). matrix route를 asset_jobs 단독→**상품 기반**(DRAFT+등록, take 100, product_options include)으로 재작성, asset_jobs는 overlay(P2021/P2022 가드, 위젯 미blank). mode 배지 기존 가드 유지. |
+| 작업2 nextAction | 결정적 사다리: !mainImage→add_main_image(blocker) / !canRegister→resolve_validation(blocker) / missingRequired(재질·색상)→fill_attributes(action·detail) / image 미완→prepare_image / 준비완→publish / 등록+cert null→verify_certification / 등록+cert→verify_publish. 각 1클릭 href(/products/[id]·/edit·/swap). |
+| UI | ControlTowerMatrixWidget: 상품셀에 준비도 배지(grade/score 색상)+nextAction 링크칩(severity 색·detail). strings JSON에 nextAction 7키·publishDetail 추가(이모지 0·리터럴 0). |
+| 검증 | tsc 0·build OK(asset-jobs-matrix ƒ)·이모지 0·한글 코드 0(주석 영어·데이터 리터럴만)·비가역 0(GET read-only, 엔진 순수). tsx 실증 6케이스: A 등록(no cert)→done/ok/verify_certification·grade B/62 / B +cert→verify_publish / C draft missing→pending/caution/fill_attributes detail '재질, 색상' / D no main→blocked/add_main_image / E ready→publish / F no addr→blocked/resolve_validation. |
+| ★ 다음 | push → Desktop 3중 단정: (1) GET /api/products/asset-jobs-matrix — 명화 row 노출·publish done·nextAction verify_certification(또는 cert 설정 시 verify_publish)·readiness grade/score 표기 (2) Chrome 관제탑 — 준비도 배지+nextAction 1클릭 링크 (3) draft 상품 missingRequired→fill_attributes 칩 확인. 통과 시 작업3(T0 분류기)·4(crop→대표 set)·5(상세 as-is) 다음 turn. |
+
 ### 2026-06-07 (46) P3 4중컬럼 동기 + 재질/색상 필수속성 enum (FROM Code, production push 대기, 비가역 0·네이버 미접촉)
 
 | 항목 | 상태 |
