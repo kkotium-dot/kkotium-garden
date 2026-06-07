@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (51) T3 크롭/편집 job_type 4종 + 도구 라우팅 (FROM Code, feature/crop-studio bc65a7a, migration LIVE·비가역 0·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/design/THUMBNAIL_CROP_EDIT_STANDARD.md §3/§5 + HANDOFF_session_2026-06-07_5_crop_edit_workflow_apply.md (T3). 대표 승인: 브랜치=feature/crop-studio 신규(SD-04 일시 예외)·진행=T3 먼저(스키마)→Desktop information_schema 검증→T1/T2/T4/T5. |
+| ★ 브랜치 모드 | 본 트랙은 **feature/crop-studio**에서 진행(SD-04 main-direct 일시 예외). Vercel production은 main에서만 배포 → 본 브랜치는 **preview 빌드**(production SHA 불일치=정상, webhook 끊김 아님). T3 검증 신호=**live Supabase 제약**(이미 25값)·Desktop information_schema. |
+| T3 마이그레이션 | apply_migration phase4_crop_edit_job_types 적용 완료. asset_jobs job_type CHECK **21→25** 확장: region_crop·text_remove·canvas_expand·bg_clean(additive, 기존 21종 verbatim 보존). 적용 전 live 제약 baseline(드리프트 0=phase3와 동일 확인) → 적용 후 pg_get_constraintdef로 25값 재검증. 박제 docs/handoff/MIGRATION_phase4_crop_edit_2026-06-07.sql. 커밋 bc65a7a. |
+| T3 도구 라우팅 | NEW src/lib/jobs/job-type-routing.ts(순수): JOB_TYPE_ROUTES 맵 — region_crop→sharp(in-app, requiresOperator=false) / text_remove·canvas_expand·bg_clean→firefly primary + adobe_express fallback(requiresOperator=true=창작 MCP 개입점). lane=process·ipSafe=true. routeForJobType()·isCropEditJobType() 헬퍼 + job_type 토큰 상수 export(매직스트링 0). prisma schema 주석 Phase 4 갱신. 아직 런타임 라우트 미배선(T1에서 소비). |
+| 검증 | tsc 0·build OK(exit 0 'Compiled successfully')·이모지 0·한글 코드 0(주석 영어·리터럴 0)·비가역 0(네이버 0; DB는 additive CHECK만, 기존 행/쿼리 무영향). |
+| ★ 다음 | push(feature/crop-studio) → Desktop 2중 단정: (1) information_schema/pg_constraint로 asset_jobs_job_type_check **25값** 단정(region_crop·text_remove·canvas_expand·bg_clean 존재·기존 21종 보존) (2) 기존 asset_jobs 행 CHECK 위반 0(additive 무회귀). 통과 시 Code가 T2(게이트 완화)→T1(크롭 스튜디오)→T4(라인 라우팅)→T5(전상품) 연속 시공. |
+
 ### 2026-06-07 (50) 발행 전 검수 화면 + update 로더 SoT 추출 (FROM Code, production push 대기, 비가역 0·렌더 read-only)
 
 | 항목 | 상태 |
