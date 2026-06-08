@@ -17,6 +17,7 @@
 
 import sharp from 'sharp';
 import { ocrFullFrame } from '../diagnosis/p-filter-watermark';
+import { CANVAS_EXPAND, TEXT_REMOVE } from '../jobs/job-type-routing';
 
 export const NAVER_THUMB_SIZE = 1000;          // px, 1:1 representative
 export const MIN_SOURCE_FOR_THUMB = 1000;      // long side floor → upscale-blur warning
@@ -24,7 +25,16 @@ export const MIN_SOURCE_FOR_THUMB = 1000;      // long side floor → upscale-bl
 export type CropStrategy = 'attention' | 'entropy';
 
 export interface CropBox { x: number; y: number; width: number; height: number; }
-export interface CropWarning { code: 'SOURCE_TOO_SMALL' | 'LOW_RESOLUTION' | 'TEXT_DETECTED'; message: string; }
+
+// severity: 'block' = must not become the representative (Naver regulatory).
+//           'warn'  = line-A flow may apply with operator awareness (T2).
+// remediation: the Phase 4 crop/edit job_type that fixes the cause, if any.
+export interface CropWarning {
+  code: 'SOURCE_TOO_SMALL' | 'LOW_RESOLUTION' | 'TEXT_DETECTED';
+  severity: 'block' | 'warn';
+  message: string;
+  remediation?: string;
+}
 
 export interface SimpleCropResult {
   buffer: Buffer;
@@ -70,7 +80,11 @@ export async function simpleCrop(
   if (Math.max(sw, sh) < MIN_SOURCE_FOR_THUMB) {
     warnings.push({
       code: 'SOURCE_TOO_SMALL',
-      message: `source long side ${Math.max(sw, sh)}px is below ${MIN_SOURCE_FOR_THUMB}px (e.g. a 437px gallery shot) — thumbnail will upscale-blur; obtain a higher-resolution detail image`,
+      // T2: resolution is a non-blocking warning — line-A flow may still apply
+      // and remediate with a 1:1 canvas expand (outpaint) to reach 1000px.
+      severity: 'warn',
+      remediation: CANVAS_EXPAND,
+      message: `source long side ${Math.max(sw, sh)}px is below ${MIN_SOURCE_FOR_THUMB}px (e.g. a 437px gallery shot) — thumbnail will upscale-blur; upscale or 1:1 canvas-expand to a higher-resolution rep`,
     });
   }
 
@@ -103,7 +117,10 @@ export async function simpleCrop(
   if (upscaled) {
     warnings.push({
       code: 'LOW_RESOLUTION',
-      message: `crop region ${cropSidePx}px is below ${NAVER_THUMB_SIZE}px — upscaled (some blur)`,
+      // T2: non-blocking — line-A flow may apply; a 1:1 canvas expand cleans it.
+      severity: 'warn',
+      remediation: CANVAS_EXPAND,
+      message: `crop region ${cropSidePx}px is below ${NAVER_THUMB_SIZE}px — upscaled (some blur); 1:1 canvas-expand for a clean ${NAVER_THUMB_SIZE}px rep`,
     });
   }
 
@@ -115,7 +132,11 @@ export async function simpleCrop(
       ocrText = ocr.text;
       warnings.push({
         code: 'TEXT_DETECTED',
-        message: `OCR detected text in the crop ("${ocr.text.slice(0, 40)}") — representative images must be text-free (Naver 2024-10-28); pick a text-free region`,
+        // Stays blocking — Naver 2024-10-28 representative-image text policy is a
+        // hard external rule; the operator line override (T4) does not relax it.
+        severity: 'block',
+        remediation: TEXT_REMOVE,
+        message: `OCR detected text in the crop ("${ocr.text.slice(0, 40)}") — representative images must be text-free (Naver 2024-10-28); pick a text-free region or run text-remove (inpaint)`,
       });
     }
   }

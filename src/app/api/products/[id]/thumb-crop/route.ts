@@ -6,11 +6,11 @@
 //          Dry-run (default): returns a base64 preview + warnings (no write).
 //          confirm:true (item 4): upload the crop and SET it as the product's
 //          representative image (mainImage + main_image_url). REVERSIBLE DB,
-//          never touches Naver. BLOCKED when the crop would degrade quality —
-//          a low-resolution source (SOURCE_TOO_SMALL / LOW_RESOLUTION, e.g. the
-//          437px gallery shot) or OCR-detected text (TEXT_DETECTED) — so an
-//          upscale-blurred or text-bearing thumbnail can never become the rep.
-//          NO cutout / NO compositing (that is ENHANCE/NEW mode).
+//          never touches Naver. T2: only severity:'block' warnings stop apply —
+//          OCR-detected text (TEXT_DETECTED, Naver 2024-10-28 regulatory). A
+//          low-resolution crop (SOURCE_TOO_SMALL / LOW_RESOLUTION) is now a
+//          non-blocking WARNING so the line-A flow may apply and remediate later
+//          with a 1:1 canvas expand. NO cutout / NO compositing (ENHANCE/NEW).
 //
 // Body: { imageUrl?, box?: {x,y,width,height}, strategy?: 'attention'|'entropy',
 //         ocr?: boolean, confirm?: boolean }
@@ -34,9 +34,6 @@ interface Body {
   ocr?: boolean;
   confirm?: boolean;
 }
-
-// Quality guards that must NOT survive into the representative image.
-const BLOCKING_WARNINGS = new Set(['SOURCE_TOO_SMALL', 'LOW_RESOLUTION', 'TEXT_DETECTED']);
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const productId = params.id;
@@ -82,11 +79,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ success: false, error: `Crop failed: ${msg}` }, { status: 500 });
   }
 
-  const blockReasons = result.warnings.filter(w => BLOCKING_WARNINGS.has(w.code));
+  // T2: severity is the source of truth (set in simple-crop). Only 'block'
+  // (TEXT_DETECTED) stops apply; resolution issues are non-blocking cautions.
+  const blockReasons = result.warnings.filter(w => w.severity === 'block');
+  const cautions = result.warnings.filter(w => w.severity === 'warn');
 
   // confirm:true — apply the crop as the representative image (item 4). Blocked
-  // when a quality guard would degrade the rep; otherwise upload + set the DB
-  // columns the publish builder reads (mainImage) plus main_image_url.
+  // only by a regulatory guard (text in the rep); a low-resolution crop applies
+  // with a caution + canvas-expand remediation hint.
   let applied = false;
   let mainImageUrl: string | null = null;
   if (body.confirm === true) {
@@ -101,7 +101,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         cropSidePx: result.cropSidePx,
         upscaled: result.upscaled,
         ocrText: result.ocrText,
-        note: 'crop not applied — quality guard (low-resolution source or detected text). Obtain a >=1000px text-free source.',
+        cautions,
+        note: 'crop not applied — text detected in the representative (Naver 2024-10-28). Pick a text-free region or run text-remove (inpaint).',
       });
     }
     try {
@@ -139,6 +140,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     upscaled: result.upscaled,
     ocrText: result.ocrText,
     warnings: result.warnings,
+    cautions,
     applied,
     mainImageUrl,
     // Base64 preview (1000x1000 JPEG). Operator reviews before any publish.
