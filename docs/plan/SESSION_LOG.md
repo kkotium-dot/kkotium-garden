@@ -1,3 +1,32 @@
+## 2026-06-07 (Crop Studio) 크롭 스튜디오 T1~T5 (Code turn)
+
+feature/crop-studio (신규 브랜치, SD-04 일시 예외·대표 승인) baseline 1d00be8 → 6 커밋(fa6efc3 docs / bc65a7a T3 / 90c4f4c T2 / cf175ac T1a / 2ee5c3e T1b / 3b6e3fc T4a / de89715 T4b / df9b6ac T5). 비가역 0(네이버 미접촉). tsc 0/build OK/이모지 0(Lucide)/한글 코드 0(주석 영어·문구 JSON).
+
+권위: docs/design/THUMBNAIL_CROP_EDIT_STANDARD.md + HANDOFF_session_2026-06-07_5_crop_edit_workflow_apply.md + MASTER_HANDOFF §6·§9. 핵심: 감지가 아니라 "올바른 컷 추출+편집"을 앱에서 실제 수행, 운영자 개입점은 발행전 검수 화면 1곳.
+
+**[한 것]**
+- T3 (bc65a7a) — asset_jobs job_type CHECK 21→25 확장(region_crop/text_remove/canvas_expand/bg_clean, additive). apply_migration phase4_crop_edit_job_types 적용·live 25값 재검증·Desktop information_schema 무회귀 확정. NEW src/lib/jobs/job-type-routing.ts(region_crop→sharp / 편집3종→firefly|adobe_express, requiresOperator 플래그=창작 MCP 개입점). MIGRATION_phase4 박제 + prisma 주석.
+- T2 (90c4f4c) — simple-crop CropWarning에 severity(block|warn)+remediation 추가(SoT). 해상도 경고(SOURCE_TOO_SMALL/LOW_RESOLUTION)=warn(canvas_expand 안내·적용 허용), TEXT_DETECTED=block(Naver 2024-10-28 대표 텍스트 규정·운영자 override 불가). thumb-crop confirm 가드를 severity===block 필터로 교체 → 라인A <1000px 하드차단 해소·cautions 노출.
+- T1a (cf175ac) — NEW POST /api/products/[id]/asset-edit-job. 운영자 박스 좌표·편집 파라미터를 asset_jobs.input_refs(jsonb) 저장, 도구는 job-type-routing 해결, region_crop=ready / 편집3종=awaiting_human(개입점). 동일타입 active job 멱등.
+- T1b (2ee5c3e) — NEW CropStudioPanel을 /products/[id]/preview 대표 이미지 섹션 직후 마운트. 소스선택(상세/대표)+영역 드래그(자연px 매핑·1:1 정사각 가이드)+자동 후보 갤러리(thumb-crop dry-run attention/entropy 택1)+지정영역 미리보기+대표로 적용(thumb-crop confirm·가역)+편집3종 버튼(글씨제거/1:1확장/배경정리→asset-edit-job 시드). i18n cropStudio 섹션.
+- T4a (3b6e3fc) — control-tower-engine: ProductLine A/B + deriveLine(NEW or score<40 or no-detail→B, else A) + resolveLine(★운영자 override 우선 — 자동판정이 덮어쓰지 않음, 명화 ENHANCE/62→A). nextAction 라인별(A=crop_pick→/preview, B=build_image→/swap). ControlTowerRow.line + matrix가 quality_reasons.line/lineSource 로드→engine 전달. publish-preview 라인 인지 게이트(text_overlay/representative_missing/detail_missing 항상 차단·라인A는 해상도/배경/단품/상세품질 caution화·라인B 엄격). tsx 9케이스 실증.
+- T4b (de89715) — NEW POST /api/products/[id]/line(quality_reasons.line+lineSource=operator 스탬프·recommended_mode 미접촉·migration-safe 503). 관제탑 라인 컬럼을 LineCell로 교체(A크롭/B빌드 배지+1클릭 A/B 토글+source 표기). nextAction crop_pick/build_image 문구. track.line 라벨 "회선"→"라인" 의미 교정.
+- T5 (df9b6ac) — 등록된 전상품의 verify_publish nextAction을 /preview로 라우팅 → 라인 인지 게이트+크롭 스튜디오+update PUT이 모두 한 화면에 모여 명화·달항아리·아이스트레이가 동일 파이프라인 수렴. 파이프라인은 이미 product-agnostic. tsx 7케이스 ladder 일관.
+
+**[결정]**
+- severity SoT는 simple-crop(경고 생성 지점)에 둠 — 라우트는 필터만. T4가 라인 인지 게이트에서 같은 모델 재사용.
+- 라인 개념을 mode와 분리(quality_reasons.line, recommended_mode 미접촉) — 라인=워크플로우 분기, mode=이미지 작업 강도.
+- 운영자 override는 resolveLine에서 auto보다 먼저 평가 — 분류기 재실행이 운영자 결정을 절대 덮어쓰지 않음(대표 명시 요구).
+
+**[검증]**
+- tsc 0(매 commit)·최종 build OK(Compiled successfully, /preview 4.5→7.81kB)·이모지 0·한글 코드 0·비가역 0.
+- tsx 16케이스: deriveLine 4 + resolveLine override 양방향 3 + nextAction 라인 라우팅·전상품 ladder 9.
+
+**[다음]**
+- push(feature/crop-studio) → Desktop: /preview 크롭 스튜디오 Chrome 실측(드래그·후보·적용·편집 시드 input_refs 좌표) + 관제탑 라인 배지/override + 라인A 명화 publish 게이트(텍스트만 차단) + feature→main 병합/PR 결정(production은 main 머지 후 배포).
+
+---
+
 ## 2026-06-06 (40) Phase 2 제품교체(B안) 루프 앱 내장 (Code turn)
 
 production 20e137f → 4 코드커밋(d059acd 스키마/상태머신, 870fd19 Sharp, f4ae170 매트릭스, e0090b3 swap UI). 비가역 0(네이버 미접촉, DB만). tsc 0/build OK.

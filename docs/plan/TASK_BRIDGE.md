@@ -72,6 +72,20 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (52) 크롭 스튜디오 T1~T5 시공 (FROM Code, feature/crop-studio df9b6ac, 비가역 0·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/design/THUMBNAIL_CROP_EDIT_STANDARD.md + HANDOFF_session_2026-06-07_5_crop_edit_workflow_apply.md + MASTER §6·§9. 대표 승인: 브랜치 feature/crop-studio·T3→T2→T1→T4→T5 순. T3는 (51)에서 완료·Desktop 25값 검증 통과(무회귀). |
+| T2 게이트 완화 | simple-crop CropWarning에 severity(block/warn)+remediation 추가(SoT). SOURCE_TOO_SMALL·LOW_RESOLUTION=warn(canvas_expand 안내·적용 허용), TEXT_DETECTED=block(Naver 2024-10-28·override 불가). thumb-crop confirm 가드를 severity===block 필터로 교체 → 라인A <1000px 적용 허용·cautions 노출. 커밋 90c4f4c. |
+| T1a 시드 엔드포인트 | NEW POST /api/products/[id]/asset-edit-job — 박스 좌표·params를 input_refs(jsonb) 저장, 도구=job-type-routing(region_crop→sharp ready / text_remove·canvas_expand·bg_clean→firefly|adobe_express awaiting_human). 동일타입 active job 멱등. 커밋 cf175ac. |
+| T1b 크롭 스튜디오 | NEW CropStudioPanel(/preview 대표섹션 직후 마운트): 소스선택(상세/대표)+영역 드래그(자연px 매핑·1:1 정사각 가이드)+자동 후보 갤러리(thumb-crop dry-run attention/entropy)+지정영역 미리보기+대표로 적용(confirm 가역)+편집3종(글씨제거/1:1확장/배경정리→asset-edit-job). i18n cropStudio. 커밋 2ee5c3e. |
+| T4a 라인 엔진 | control-tower-engine: ProductLine A/B + deriveLine(NEW/score<40/no-detail→B else A) + resolveLine(★운영자 override 우선·자동판정 미덮어씀). nextAction 라인별 crop_pick(/preview)·build_image(/swap). matrix가 quality_reasons.line/lineSource 로드→engine. publish-preview 라인 인지 게이트(text_overlay/representative_missing/detail_missing 항상 차단·라인A는 해상도/배경/단품/상세품질 caution화·라인B 엄격). tsx 9케이스(명화 ENHANCE/62→A·override 양방향). 커밋 3b6e3fc. |
+| T4b 라인 override UI | NEW POST /api/products/[id]/line(quality_reasons.line+lineSource=operator·recommended_mode 미접촉·503 가드). 관제탑 LineCell 배지(A크롭/B빌드)+1클릭 토글+source 표기. track.line 라벨 "회선"→"라인" 교정. 커밋 de89715. |
+| T5 전상품 | 등록상품 verify_publish→/preview 라우팅(라인게이트+크롭스튜디오+update PUT 동일 화면 수렴). 파이프라인 product-agnostic(matrix product-driven·라인 분류기 per-product). tsx 7케이스 ladder 일관. 커밋 df9b6ac. |
+| 검증 | 매 commit tsc 0·이모지 0(Lucide)·한글 코드 0(주석 영어·문구 JSON). 최종 build OK(Compiled successfully). 비가역 0(네이버 0; DB는 additive CHECK·INSERT·가역 UPDATE만; 크롭 apply=가역 mainImage set). tsx 16케이스 실증(라인 분류+override+ladder). |
+| ★ 다음 | push(feature/crop-studio) → Desktop 검증: (1) /preview 크롭 스튜디오 Chrome 실측(드래그 박스·자동 후보·대표 적용·편집3종 asset_jobs 시드 input_refs 좌표) (2) 관제탑 라인 배지/토글 + 명화 라인A override 후 nextAction crop_pick 확인 (3) publish-preview 라인A 명화 canPublish 게이트(텍스트만 차단·해상도 caution) (4) feature 브랜치 → main 병합/PR 결정(production 배포는 main 머지 후). |
+
 ### 2026-06-07 (51) T3 크롭/편집 job_type 4종 + 도구 라우팅 (FROM Code, feature/crop-studio bc65a7a, migration LIVE·비가역 0·네이버 미접촉)
 
 | 항목 | 상태 |
