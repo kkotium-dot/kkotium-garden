@@ -18,7 +18,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Palette, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Palette, Loader2, Image as ImageIcon, Check } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import {
   ProductListPane,
@@ -171,6 +171,18 @@ function StudioInner() {
           {' '}{strings.header.brand}: {selectedProduct.brand ?? '-'} ·
           {' '}{strings.header.price}: {fmtPrice(selectedProduct.supplierPrice)}
         </p>
+        {actions.draftSavedAt && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
+            fontSize: 10, fontWeight: 600, color: '#15803D',
+          }}>
+            <Check size={11} />
+            {strings.header.draftSaved.replace(
+              '{time}',
+              new Date(actions.draftSavedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+            )}
+          </span>
+        )}
       </div>
     </section>
   ) : null;

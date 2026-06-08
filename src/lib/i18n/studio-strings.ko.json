@@ -33,7 +33,8 @@
     "price": "공급가",
     "wonSuffix": "원",
     "noPrice": "정보 없음",
-    "noCategory": "미지정"
+    "noCategory": "미지정",
+    "draftSaved": "임시저장됨 {time}"
   },
   "diagnosis": {
     "title": "AI 진단",

@@ -70,7 +70,9 @@ export default function WorkbenchTabs({
   };
 
   return (
-    <ScallopCard style={{ padding: 0, overflow: "hidden", flex: 1 }}>
+    // overflow visible + no flex:1 so the card grows with its panel content and
+    // the right-rail aside (independent scroll) can reach the last button.
+    <ScallopCard style={{ padding: 0, overflow: "visible" }}>
       {/* Tab bar */}
       <div
         role="tablist"

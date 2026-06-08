@@ -23,7 +23,12 @@
 //     handlers since `() => Promise<X>` is assignable to `() => void`
 //     (the caller ignores the return).
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+// Workbench draft — lightweight operator inputs persisted per product so a
+// refresh / navigation does not lose in-progress work (reversible; the heavy
+// generated thumbnails/detail are intentionally NOT persisted).
+const DRAFT_PREFIX = 'kkotium:studio:draft:';
 import type {
   DiagnosisResult,
   ThumbnailResult,
@@ -115,6 +120,9 @@ export interface UseStudioActionsResult {
   sequenceBusy: boolean;
   sequenceStages: string[];
   sequenceError: string | null;
+  // Draft autosave
+  draftSavedAt: number | null;
+  clearDraft: () => void;
   // Handlers — return their result so callers can chain (Phase 3-C-3)
   runDiagnose: () => Promise<DiagnosisResult | null>;
   runThumbnail: () => Promise<ThumbnailResult | null>;
@@ -144,6 +152,10 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
   const [detailBusy, setDetailBusy] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [overrideSkeletonId, setOverrideSkeletonId] = useState<SkeletonIdLiteral | ''>('');
+
+  // Draft autosave (workbench progress survives refresh/navigation).
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+  const restoredForId = useRef<string | null>(null);
 
   // ── Save (Supabase Storage) ────────────────────────────────────────────
   const [save, setSave] = useState<SaveResult | null>(null);
@@ -177,8 +189,28 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
     setPublishError(null);
     setSequenceStages([]);
     setSequenceError(null);
+    restoredForId.current = null;
+    setDraftSavedAt(null);
 
     if (!productId) return;
+
+    // Restore the persisted draft (overlays the cleared inputs). Synchronous so
+    // the operator's in-progress inputs reappear immediately on refresh.
+    try {
+      const raw = typeof window !== 'undefined' ? window.localStorage.getItem(DRAFT_PREFIX + productId) : null;
+      if (raw) {
+        const d = JSON.parse(raw) as Partial<{
+          manualCutoutUrl: string; manualBackdropUrl: string;
+          overrideSkeletonId: SkeletonIdLiteral | ''; mainVariant: ThumbVariant; savedAt: number;
+        }>;
+        if (typeof d.manualCutoutUrl === 'string') setManualCutoutUrl(d.manualCutoutUrl);
+        if (typeof d.manualBackdropUrl === 'string') setManualBackdropUrl(d.manualBackdropUrl);
+        if (typeof d.overrideSkeletonId === 'string') setOverrideSkeletonId(d.overrideSkeletonId);
+        if (typeof d.mainVariant === 'string') setMainVariant(d.mainVariant);
+        if (typeof d.savedAt === 'number') setDraftSavedAt(d.savedAt);
+      }
+    } catch { /* corrupt draft — ignore */ }
+    restoredForId.current = productId;
 
     let cancelled = false;
     (async () => {
@@ -204,6 +236,29 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
       cancelled = true;
     };
   }, [productId]);
+
+  // ── Draft autosave (debounced) — persist the lightweight inputs ────────
+  useEffect(() => {
+    if (!productId || restoredForId.current !== productId || typeof window === 'undefined') return;
+    const t = window.setTimeout(() => {
+      try {
+        const savedAt = Date.now();
+        window.localStorage.setItem(
+          DRAFT_PREFIX + productId,
+          JSON.stringify({ manualCutoutUrl, manualBackdropUrl, overrideSkeletonId, mainVariant, savedAt }),
+        );
+        setDraftSavedAt(savedAt);
+      } catch { /* quota / private mode — best-effort */ }
+    }, 600);
+    return () => window.clearTimeout(t);
+  }, [productId, manualCutoutUrl, manualBackdropUrl, overrideSkeletonId, mainVariant]);
+
+  function clearDraft() {
+    if (productId && typeof window !== 'undefined') {
+      try { window.localStorage.removeItem(DRAFT_PREFIX + productId); } catch { /* ignore */ }
+    }
+    setDraftSavedAt(null);
+  }
 
   // ── Handlers ───────────────────────────────────────────────────────────
 
@@ -430,6 +485,7 @@ export function useStudioActions(productId: string | null): UseStudioActionsResu
     publish, publishBusy, publishError,
     canSave, hasSavedAsset,
     sequenceBusy, sequenceStages, sequenceError,
+    draftSavedAt, clearDraft,
     runDiagnose, runThumbnail, runDetail, runSave, runPublish, runFullSequence,
   };
 }

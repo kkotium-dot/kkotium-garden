@@ -89,13 +89,17 @@ export default function WorkbenchShell({
           {canvas}
         </section>
         <aside
-          className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto"
+          className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto"
           style={{
             minWidth: 0,
             display: "flex",
             flexDirection: "column",
             gap: "var(--space-4)",
             alignSelf: "flex-start",
+            // Independent scroll: contain the scroll chain and pad the bottom so
+            // the last control (publish / actions) is fully reachable.
+            overscrollBehavior: "contain",
+            paddingBottom: "24px",
           }}
         >
           {controls}
