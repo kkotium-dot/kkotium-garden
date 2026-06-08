@@ -171,6 +171,19 @@
       "live": "LIVE(라이브)",
       "db": "DB반영",
       "none": "미적용"
+    },
+    "actionQueue": {
+      "title": "개입 대기열",
+      "subtitle": "지금 무엇이·어느 상품에·왜 필요한가 (순서 강제 없음)",
+      "category": {
+        "GO_PENDING": "발행 GO 대기",
+        "AUTH": "외부 인증 필요",
+        "INPUT_DECISION": "입력·결정 대기",
+        "AUTO": "자동 진행"
+      },
+      "authImage": "창작 도구 로그인·생성 (Firefly/Express)",
+      "processing": "파이프라인 자동 진행 중",
+      "monitor": "이상 없음 — 모니터링"
     }
   }
 }

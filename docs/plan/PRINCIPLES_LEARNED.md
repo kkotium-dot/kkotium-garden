@@ -727,3 +727,12 @@ grep -c "id: '" src/lib/automation-registry.ts
 **규칙**: 신규 작업은 출시 전 범용화(상품 불문 동작) 선행. 명화 = 검증 케이스일 뿐 특수 경로 아님. 명화 전용 일회성 금지.
 - **전상품 공통 대상**: 크롭 표준(주제 완전포함+프레이밍) · 아틀리에/스튜디오 UI · 발행 파이프라인 · 이미지 전략 · 라인 엔진 · 적용 현황 인디케이터.
 - **이미 범용 확인**: T5 파이프라인 수렴 · THUMBNAIL_CROP_EDIT_STANDARD · 2026-06-07 crop-full-subject-containment · KKOTIUM_DESIGN_SYSTEM · 라인 엔진(quality_reasons.line). 권위: docs/decisions/2026-06-08-always-state-status-and-universal.md.
+
+
+## 작업원칙 #56 — 개입 자연스러움 (smooth human-in-the-loop, 2026-06-08 대표 지시)
+
+**규칙**: 대표 개입이 필요한 모든 지점은 앱이 자연스럽게 surface한다(숨김·추측 강요 금지). 권위: docs/design/OPERATOR_SYSTEM_BLUEPRINT.md §3·§4.
+- **개입 대기열(Operator Action Queue)**: 전상품을 가로지르는 단일 surface. "지금 무엇이·어느 상품에·왜 필요한가"를 카드로 노출. 4분류 = AUTO(자동 진행·초록) / INPUT_DECISION(입력·결정·앰버) / GO_PENDING(비가역 발행 GO 대기·레드) / AUTH(외부 인증·일시정지). 데이터 원천 = control-tower-engine의 nextAction+applyStatus+게이트 파생(신규 컬럼 0).
+- **순서 강제 0**: 기능은 상황에 따라 융통적으로 사용. #54(적용현황 상시=결과축)·#55(전상품 범용)와 한 쌍(개입 대기열=행동축).
+- **자동/반자동 경계**: 비가역·인증·창작 판단은 대표; 그 외 의존성 없는 기술작업은 앱/Code가 완결 후 보고.
+- **레드 스코프**: GO_PENDING(비가역 GO) + 1차 액션(메인 지정)만 레드. 보조 CTA(프롬프트 복사 등)는 뉴트럴(75/15/10).

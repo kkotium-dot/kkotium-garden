@@ -246,8 +246,10 @@ export default function FireflyPromptBuilder({
       </p>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {/* Secondary CTA (P3 policy): copy is neutral — red is reserved for the
+            primary "메인 지정" action and the irreversible publish GO only. */}
         <PopButton
-          variant="primary"
+          variant="secondary"
           type="button"
           onClick={handleCopy}
           leftIcon={copied ? <Check size={14} /> : <Clipboard size={14} />}

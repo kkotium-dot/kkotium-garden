@@ -175,6 +175,7 @@ export async function GET() {
       image: row.image,
       line: row.line,
       applyStatus: row.applyStatus,
+      actionQueue: row.actionQueue,
       mode: modeById.get(row.productId) ?? { recommended: null, score: null, source: null },
       overall: row.overall,
       nextAction: row.nextAction,

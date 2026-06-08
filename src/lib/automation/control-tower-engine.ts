@@ -95,6 +95,24 @@ export interface ApplyStatus {
   publishState: ApplyState;      // registered live / ready in DB / not ready
 }
 
+// Operator action queue (#56 — surface every intervention naturally). Derived
+// from nextAction + image/publish gates, NOT a new column. Pairs with
+// applyStatus: applyStatus = "what is done" (result axis), actionQueue = "what
+// the operator must do" (action axis). 4 categories (blueprint §3):
+//   AUTO           — app is progressing autonomously; no action needed now (green)
+//   INPUT_DECISION — operator must decide or input something (amber)
+//   GO_PENDING     — ready, awaiting the explicit irreversible publish GO (red)
+//   AUTH           — external login / CAPTCHA / creative connector (paused)
+export type ActionCategory = 'AUTO' | 'INPUT_DECISION' | 'GO_PENDING' | 'AUTH';
+export interface ActionQueueItem {
+  productId: string;
+  productName: string;
+  category: ActionCategory;
+  stage: string;          // stable English stage key (UI maps to Korean)
+  deepLink: string;       // 1-click target screen
+  detail?: string;        // optional data token (e.g. missing attributes)
+}
+
 export interface ControlTowerRow {
   productId: string;
   name: string;
@@ -102,6 +120,7 @@ export interface ControlTowerRow {
   image: ImageInfo;
   line: LineInfo;
   applyStatus: ApplyStatus;
+  actionQueue: ActionQueueItem;
   overall: Overall;
   nextAction: NextAction | null;
 }
@@ -255,8 +274,41 @@ export function computeControlTowerRow(
 
   const overall = overallOf([image.status, publish.status]);
   const nextAction = computeNextAction(product, publish, image, registered, line.value);
+  const actionQueue = computeActionQueueItem(product.id, product.name, image, nextAction);
 
-  return { productId: product.id, name: product.name, publish, image, line, applyStatus, overall, nextAction };
+  return { productId: product.id, name: product.name, publish, image, line, applyStatus, actionQueue, overall, nextAction };
+}
+
+/**
+ * Classify a product into the operator action queue (#56). Pure derivation from
+ * the image gate + nextAction — no new data. Order: a paused human/auth step
+ * wins, then autonomous in-progress work, then the publish GO, then any
+ * decision/input, else autonomous monitoring.
+ */
+export function computeActionQueueItem(
+  productId: string,
+  productName: string,
+  image: ImageInfo,
+  nextAction: NextAction | null,
+): ActionQueueItem {
+  const base = { productId, productName };
+  // AUTH — a creative connector / external login is waiting on the operator.
+  if (image.status === 'awaiting_human') {
+    return { ...base, category: 'AUTH', stage: 'auth_image', deepLink: `/products/${productId}/swap` };
+  }
+  // AUTO — the pipeline is actively running; nothing for the operator right now.
+  if (image.status === 'in_progress') {
+    return { ...base, category: 'AUTO', stage: 'processing', deepLink: `/products/${productId}` };
+  }
+  if (!nextAction) {
+    return { ...base, category: 'AUTO', stage: 'monitor', deepLink: `/products/${productId}` };
+  }
+  // GO_PENDING — ready, awaiting the explicit irreversible publish GO.
+  if (nextAction.key === 'publish' || nextAction.key === 'verify_publish') {
+    return { ...base, category: 'GO_PENDING', stage: nextAction.key, deepLink: nextAction.href, detail: nextAction.detail };
+  }
+  // INPUT_DECISION — everything else needs an operator decision or input.
+  return { ...base, category: 'INPUT_DECISION', stage: nextAction.key, deepLink: nextAction.href, detail: nextAction.detail };
 }
 
 /**

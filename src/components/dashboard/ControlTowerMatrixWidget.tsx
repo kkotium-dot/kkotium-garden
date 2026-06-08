@@ -67,6 +67,17 @@ interface ApplyStatus {
   publishState: ApplyState;
 }
 
+// Operator action queue (#56). Red only for GO_PENDING.
+type ActionCategory = 'AUTO' | 'INPUT_DECISION' | 'GO_PENDING' | 'AUTH';
+interface ActionQueueItem {
+  productId: string;
+  productName: string;
+  category: ActionCategory;
+  stage: string;
+  deepLink: string;
+  detail?: string;
+}
+
 interface MatrixRow {
   productId: string;
   name: string;
@@ -75,6 +86,7 @@ interface MatrixRow {
   image: ImageInfo;
   line: LineInfo;
   applyStatus?: ApplyStatus;
+  actionQueue?: ActionQueueItem;
   mode: ModeInfo;
   overall: Overall;
   nextAction: NextAction | null;
@@ -397,6 +409,69 @@ function ApplyStatusIndicator({ status }: { status: ApplyStatus }) {
   );
 }
 
+// Operator action queue (#56) — single cross-product surface for "what needs
+// the operator, on which product, why". Red is reserved for GO_PENDING only.
+const CATEGORY_STYLE: Record<ActionCategory, { bg: string; border: string; text: string }> = {
+  GO_PENDING:     { bg: '#FFF0EF', border: '#FFD6D3', text: '#C2410C' }, // red — irreversible GO only
+  AUTH:           { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9' }, // paused / external auth
+  INPUT_DECISION: { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' }, // amber — decide / input
+  AUTO:           { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' }, // green — autonomous
+};
+// Most urgent first (GO), then paused auth, then decisions, then autonomous.
+const CATEGORY_ORDER: ActionCategory[] = ['GO_PENDING', 'AUTH', 'INPUT_DECISION', 'AUTO'];
+
+function actionLabel(item: ActionQueueItem): string {
+  const aq = m.actionQueue;
+  if (item.category === 'AUTH') return aq.authImage;
+  if (item.category === 'AUTO') return item.stage === 'processing' ? aq.processing : aq.monitor;
+  // INPUT_DECISION / GO_PENDING reuse the nextAction one-line labels.
+  const base = (m.nextAction as Record<string, string>)[item.stage] ?? item.stage;
+  return item.detail ? `${base} (${item.detail})` : base;
+}
+
+function OperatorActionQueue({ items }: { items: ActionQueueItem[] }) {
+  const aq = m.actionQueue;
+  const sorted = [...items].sort(
+    (a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category),
+  );
+  return (
+    <div className="mb-3">
+      <div className="mb-2 flex items-center gap-1.5">
+        <Hand size={14} className="text-slate-500" />
+        <span className="text-sm font-semibold text-slate-700">{aq.title}</span>
+        <span className="text-[11px] text-slate-400">{aq.subtitle}</span>
+      </div>
+      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+        {sorted.map((item) => {
+          const s = CATEGORY_STYLE[item.category];
+          return (
+            <a
+              key={item.productId}
+              href={item.deepLink}
+              className="block rounded-lg border bg-white p-2.5 no-underline hover:opacity-90"
+              style={{ borderColor: s.border }}
+            >
+              <span
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold"
+                style={{ backgroundColor: s.bg, border: `1px solid ${s.border}`, color: s.text }}
+              >
+                {aq.category[item.category]}
+              </span>
+              <p className="mt-1 truncate text-xs font-semibold text-slate-700" title={item.productName}>
+                {item.productName}
+              </p>
+              <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-500">
+                <ArrowRight size={11} className="shrink-0" />
+                <span className="truncate">{actionLabel(item)}</span>
+              </p>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function ControlTowerMatrixWidget() {
   const { data, error, isLoading, mutate } = useSWR<MatrixResponse>(
     '/api/products/asset-jobs-matrix',
@@ -487,6 +562,10 @@ export default function ControlTowerMatrixWidget() {
           {m.blockedPinned}
         </div>
       )}
+
+      <OperatorActionQueue
+        items={rows.map((r) => r.actionQueue).filter((a): a is ActionQueueItem => Boolean(a))}
+      />
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
