@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-08 (59) 풀해상 상세 캡처(P16 해소) + 명화 main=curated 실행 + 2갈래 sourceStrategy (FROM Code, main 555466c, 비가역 0·네이버 0). ★item1·4 EXECUTED
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/design/IMAGE_DETAIL_TWO_BRANCH_SYSTEM.md. 지난 turn item1 BLOCKED(소스 부재) 해소. |
+| (1) 풀해상 캡처 ✅실행 | 근본원인 실측: getItemView desc.contents=객체(item/deli/event), 풀해상은 공급사 godohosting hotlink 보호. capture-supplier-detail.ts(desc.contents URL 추출·_stt 썸네일 제외·Referer fetch·최대면적) + POST /api/products/[id]/capture-source-detail → product-assets 업로드 → source_detail_url 컬럼(apply_migration add_source_detail_url). ★명화 실행: this_is_air_freshener_detail.jpg=**1000x18291** 캡처→Supabase 저장. |
+| (4) 명화 main=curated ✅실행 | 캡처 Supabase 소스에 thumb-crop box{147,9407,696,696}→1000²(업스케일 1.44x+언샤프)·confirm:true. dry-run: region 정확·OCR 텍스트0·LOW_RESOLUTION caution만(비차단). 적용→mainImage=product-assets/thumb-cropmain. ★production 매트릭스 실측: 명화 main=**curated**(default→전이 완료). |
+| (2) sourceStrategy 부분 ✅ | applyStatus.sourceStrategy(A=source_detail_url 확보→그대로활용 후보 / unknown). matrix hasSourceDetail + 관제탑 칩. 명화=A 실측. ★good/poor 품질 분리 평가(A/B 확정)는 후속. |
+| (3) Branch A SEO보강 ⏸ | 공급사 상세 양호 시 "그대로+SEO/ROI보강"(생성 안 함) 본격 구현은 후속 turn. Track2(27렌더러)는 Branch B 전용(명화 불필요). |
+| 검증 | tsc 0·build OK(capture-source-detail ƒ)·이모지 0·한글 코드 0·비가역 0(네이버 0; DB 가역+additive 컬럼만). production 실측 명화 main=curated·sourceStrategy=A. |
+| ★ 다음 | Desktop: (a) 명화 main=curated 매트릭스/Chrome 실측 + 새 대표컷 육안(상세 9407px 부근 제품 단품) (b) 전상품 capture-source-detail 실행(풀해상 확보) (c) 명화 detail은 Branch A=상세 그대로 활용 결정 시 source_detail_url→detail 적용 or 부분 크롭. 후속: 품질 분리 평가·Branch A SEO보강. 명화 SUSPENSION 해제는 대표 GO(비가역). |
+
 ### 2026-06-08 (58) 명화 큐레이션 마무리 — 정합 통일·상세 curated 한정·크롭 언샤프 (FROM Code, main 6bf8ddf, 비가역 0). ★item1 실행 BLOCKED(소스 부재)
 
 | 항목 | 상태 |

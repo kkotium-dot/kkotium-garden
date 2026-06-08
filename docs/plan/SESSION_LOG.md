@@ -1,3 +1,20 @@
+## 2026-06-08 풀해상 상세 캡처(P16 해소) + 명화 main=curated 실행 + 2갈래 sourceStrategy (Code turn)
+
+main 직접 a4ffb43(캡처)·555466c(sourceStrategy). 비가역 0(네이버 0). tsc 0/build OK/이모지 0/한글 코드 0. 권위: docs/design/IMAGE_DETAIL_TWO_BRANCH_SYSTEM.md. ★지난 turn item1 BLOCKED(1000x18291 소스 부재) 완전 해소.
+
+**[한 것 — EXECUTED]**
+- (1) 풀해상 공급사 상세 캡처(P16 근본 해소): 실측으로 근본원인 확정 — Domeggook getItemView desc.contents는 객체(item/deli/event/otherItem)이고 풀해상 상세는 공급사 자체 호스팅(hm5989.godohosting.com)에 hotlink 보호. 기존 크롤은 thumb.largePng(_stt_330=330x330)만 저장(P16). NEW src/lib/sources/capture-supplier-detail.ts(desc.contents stringify→이미지 URL 추출·_stt 썸네일 제외·Referer 헤더 fetch·sharp 최대면적 선택) + POST /api/products/[id]/capture-source-detail(getItemView→캡처→product-assets 업로드→source_detail_url 컬럼 set). 마이그레이션 add_source_detail_url(박제 MIGRATION_source_detail_url). ★명화 실행(productNo 65322245): this_is_air_freshener_detail.jpg=1000x18291 캡처→Supabase product-assets 저장.
+- (4) 명화 대표 v2 curated 실행: 캡처 Supabase 소스(referer 불요)에 thumb-crop box{x147,y9407,w696,h696}→1000²(업스케일 1.44x+extractSquare 언샤프 sigma1.0)·confirm:true. dry-run 검증: source 1000x18291·region 정확·cropSidePx 696·ocrText None(텍스트0)·LOW_RESOLUTION caution만(비차단). 적용 성공→mainImage=product-assets/thumb-cropmain-...png. ★production 매트릭스 실측: 명화 mainImageApplied=curated(default→전이 완료), sourceStrategy=A.
+- (2) sourceStrategy 부분: applyStatus.sourceStrategy(A=source_detail_url 확보→그대로활용 Branch A 후보 / unknown=미캡처). matrix hasSourceDetail read + 관제탑 ApplyStatusIndicator 칩(공급사상세 A). 명화=A 실측. ★good/poor 품질 분리 평가(A vs B 확정)는 후속.
+
+**[후속 (정직 #46)]**
+- (2) full: quality-classifier 공급사 상세품질·썸네일품질 분리 평가(가용성→실품질). (3) Branch A SEO/ROI 보강(상세 그대로+미달요소만 추가) 본격 구현. Track2(27렌더러 생성)=Branch B 전용(명화 불필요·별도 turn).
+
+**[다음]**
+- Desktop: (a) 명화 main=curated 매트릭스/Chrome 실측 + 새 대표컷 육안(상세 9407px 부근 단품 제품) (b) 전상품 capture-source-detail 실행(풀해상 확보·Branch A 토대) (c) 명화 상세=Branch A 그대로 활용 결정 시 source_detail_url 적용. 명화 SUSPENSION 해제는 대표 GO(비가역).
+
+---
+
 ## 2026-06-08 명화 큐레이션 마무리 — 정합·상세 curated·언샤프 (item1 실행 BLOCKED) (Code turn)
 
 main 직접 6bf8ddf. 비가역 0(네이버 0). tsc 0/build OK/이모지 0/한글 코드 0. 권위: Desktop TASK_BRIDGE 4항목. Track1 라이브 통과 확인.
