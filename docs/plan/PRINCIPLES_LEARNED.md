@@ -714,3 +714,16 @@ grep -c "id: '" src/lib/automation-registry.ts
 ## 작업원칙 #53 — 도구 적재적소 (각 프로그램 장점 최대 활용, 2026-06-06 대표 확정)
 
 **규칙**: 단계별 최적 도구로 분담한다. Firefly=생성(면책 경로) / Photoshop=정밀 누끼·레이어 합성·빛 정합(Harmonize) / Adobe Express=브랜드 마감·Bulk Create 대량변형·리사이즈 / Sharp=네이버 규격화(서버 자동) / Claude Design=시안·관제탑. 이미지 생성은 면책/크레딧 불문 최고 품질 모델(단 판매물 상업 사용권은 발행 전 확인 — 파트너 모델은 참조 외부 전송 주의, Firefly 네이티브가 명확).
+
+
+## 작업원칙 #54 — 적용 현황 항상 명시 (application status visibility, 2026-06-08 대표 상시 요구)
+
+**규칙**: 무엇이 실제 라이브인지 추정 금지(#45 실측우선). 모든 세션 보고에 "앱 적용 현황" 블록을 항상 포함하고, 상품별로 3구분 명시한다: **LIVE(production 실측) / DB-only(가역 반영) / 미적용(pending)**.
+- **시스템화(채팅 의존 탈피)**: 관제탑/스튜디오에 상품별 "적용 현황 인디케이터"(필드 4종 = attributesApplied / mainImageApplied / detailApplied / publishState)를 내장해 앱에서 상시 가시화. 컬럼 부재 가드(#50), 전상품 동작, 텍스트 잘림 0, 레드 금지(75/15/10 — LIVE 초록/DB-only 뉴트럴/미적용 점선).
+- **근거**: 과잉/누락 작업 방지(ROI). 권위: docs/decisions/2026-06-08-always-state-status-and-universal.md.
+
+## 작업원칙 #55 — 전상품 범용 (product-agnostic, 2026-06-08 대표 상시 요구)
+
+**규칙**: 신규 작업은 출시 전 범용화(상품 불문 동작) 선행. 명화 = 검증 케이스일 뿐 특수 경로 아님. 명화 전용 일회성 금지.
+- **전상품 공통 대상**: 크롭 표준(주제 완전포함+프레이밍) · 아틀리에/스튜디오 UI · 발행 파이프라인 · 이미지 전략 · 라인 엔진 · 적용 현황 인디케이터.
+- **이미 범용 확인**: T5 파이프라인 수렴 · THUMBNAIL_CROP_EDIT_STANDARD · 2026-06-07 crop-full-subject-containment · KKOTIUM_DESIGN_SYSTEM · 라인 엔진(quality_reasons.line). 권위: docs/decisions/2026-06-08-always-state-status-and-universal.md.

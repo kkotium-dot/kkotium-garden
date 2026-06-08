@@ -162,6 +162,15 @@
       "sourceOperator": "직접 지정",
       "changing": "변경 중",
       "hint": "워크플로우 라인 — A는 상세 크롭·그대로, B는 생성·빌드. 클릭해 직접 바꿀 수 있어요 (운영자 지정이 자동판정보다 우선)"
+    },
+    "applyStatus": {
+      "attributes": "속성",
+      "mainImage": "대표",
+      "detail": "상세",
+      "publish": "발행",
+      "live": "LIVE(라이브)",
+      "db": "DB반영",
+      "none": "미적용"
     }
   }
 }

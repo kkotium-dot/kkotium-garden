@@ -84,12 +84,24 @@ export interface ImageInfo {
   tier: ImageTier;
 }
 
+// Apply-status indicator (#54 — always state what is actually live). Per-field
+// tri-state: LIVE = on Naver (registered) / DB = reversibly set in DB only /
+// none = not applied. Product-agnostic (#55). NO red (UI: green/neutral/dotted).
+export type ApplyState = 'LIVE' | 'DB' | 'none';
+export interface ApplyStatus {
+  attributesApplied: ApplyState; // required category attributes complete
+  mainImageApplied: ApplyState;  // representative image present
+  detailApplied: ApplyState;     // detail image present
+  publishState: ApplyState;      // registered live / ready in DB / not ready
+}
+
 export interface ControlTowerRow {
   productId: string;
   name: string;
   publish: PublishInfo;
   image: ImageInfo;
   line: LineInfo;
+  applyStatus: ApplyStatus;
   overall: Overall;
   nextAction: NextAction | null;
 }
@@ -229,10 +241,22 @@ export function computeControlTowerRow(
   };
 
   const line = resolveLine(ctx, hasDetail);
+
+  // Apply-status (#54): a registered product's present fields ARE live on Naver;
+  // an unregistered product's present fields are DB-only (reversible). Derived
+  // from existing signals — no new columns, so no migration guard needed.
+  const tri = (present: boolean): ApplyState => (!present ? 'none' : registered ? 'LIVE' : 'DB');
+  const applyStatus: ApplyStatus = {
+    attributesApplied: tri(v.canRegister && v.missingRequired.length === 0),
+    mainImageApplied: tri(hasMain),
+    detailApplied: tri(hasDetail),
+    publishState: registered ? 'LIVE' : v.canRegister ? 'DB' : 'none',
+  };
+
   const overall = overallOf([image.status, publish.status]);
   const nextAction = computeNextAction(product, publish, image, registered, line.value);
 
-  return { productId: product.id, name: product.name, publish, image, line, overall, nextAction };
+  return { productId: product.id, name: product.name, publish, image, line, applyStatus, overall, nextAction };
 }
 
 /**

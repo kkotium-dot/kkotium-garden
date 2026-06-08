@@ -174,6 +174,7 @@ export async function GET() {
       publish: row.publish,
       image: row.image,
       line: row.line,
+      applyStatus: row.applyStatus,
       mode: modeById.get(row.productId) ?? { recommended: null, score: null, source: null },
       overall: row.overall,
       nextAction: row.nextAction,

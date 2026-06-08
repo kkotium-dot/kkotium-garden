@@ -58,6 +58,15 @@ interface ImageInfo {
   tier: ImageTier | null;
 }
 
+// Apply-status indicator (#54). Tri-state per field — NO red.
+type ApplyState = 'LIVE' | 'DB' | 'none';
+interface ApplyStatus {
+  attributesApplied: ApplyState;
+  mainImageApplied: ApplyState;
+  detailApplied: ApplyState;
+  publishState: ApplyState;
+}
+
 interface MatrixRow {
   productId: string;
   name: string;
@@ -65,6 +74,7 @@ interface MatrixRow {
   publish: PublishInfo;
   image: ImageInfo;
   line: LineInfo;
+  applyStatus?: ApplyStatus;
   mode: ModeInfo;
   overall: Overall;
   nextAction: NextAction | null;
@@ -348,6 +358,45 @@ function LineCell({ productId, line, onChanged }: {
   );
 }
 
+// Apply-status indicator (#54) — LIVE green / DB neutral / 미적용 dotted. NO red.
+const APPLY_STATE_STYLE: Record<ApplyState, { bg: string; border: string; text: string; dashed: boolean }> = {
+  LIVE: { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D', dashed: false },
+  DB:   { bg: '#F8FAFC', border: '#E2E8F0', text: '#64748B', dashed: false },
+  none: { bg: 'transparent', border: '#CBD5E1', text: '#94A3B8', dashed: true },
+};
+
+function ApplyStatusIndicator({ status }: { status: ApplyStatus }) {
+  const a = strings.matrix.applyStatus;
+  const fields: Array<[ApplyState, string]> = [
+    [status.attributesApplied, a.attributes],
+    [status.mainImageApplied, a.mainImage],
+    [status.detailApplied, a.detail],
+    [status.publishState, a.publish],
+  ];
+  const stateLabel = (s: ApplyState) => (s === 'LIVE' ? a.live : s === 'DB' ? a.db : a.none);
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+      {fields.map(([st, label], i) => {
+        const s = APPLY_STATE_STYLE[st];
+        return (
+          <span
+            key={i}
+            title={`${label}: ${stateLabel(st)}`}
+            style={{
+              display: 'inline-flex', alignItems: 'center',
+              fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 999,
+              background: s.bg, border: `1px ${s.dashed ? 'dashed' : 'solid'} ${s.border}`,
+              color: s.text, whiteSpace: 'nowrap',
+            }}
+          >
+            {label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ControlTowerMatrixWidget() {
   const { data, error, isLoading, mutate } = useSWR<MatrixResponse>(
     '/api/products/asset-jobs-matrix',
@@ -467,6 +516,7 @@ export default function ControlTowerMatrixWidget() {
                         <NextActionChip action={row.nextAction} />
                       </div>
                     )}
+                    {row.applyStatus && <ApplyStatusIndicator status={row.applyStatus} />}
                   </td>
                   <td className="px-2 py-1.5">
                     <ModeCell productId={row.productId} mode={row.mode} onChanged={() => mutate()} />
