@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-08 (60) 인제스트 재발방지 + 2갈래 실품질 + 명화 상세 Branch A (FROM Code, main f3c3784, 비가역 0). ★명화 큐레이션 完(main+detail curated)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/plan/PARALLEL_WORK_TRACKER.md #3·4·5 + IMAGE_DETAIL_TWO_BRANCH_SYSTEM.md. |
+| (1) 재발방지 ✅ | parse-dome-no.ts(도매 url 번호 파서·sharp-free) + products create가 supplier_product_code를 explicit→productNo→url(sourceUrl/url/productUrl) 파싱 폴백 → 누락 0(전상품). |
+| (2) 2갈래 실품질 ✅ | capture-source-detail가 공급사 상세 assessImageQuality→quality_reasons.sourceDetailGood(score>=50). engine deriveSourceStrategy(상세품질×썸네일 curated → A/A_EXTRACT/MIXED/B/unknown). matrix read + 관제탑 칩 4값. ★production 실측: 명화=A(상세양호+대표curated)·달항아리=B(캡처 860x2294 저점)·아이스트레이=unknown(미캡처). 가용성→실품질 전환 완료. |
+| (3) 명화 상세 Branch A ✅실행 | NEW POST adopt-source-detail(detail_image_url=source_detail_url + mostly_blank 확인 후 detailCurated 스탬프·detailBranch=A, 가역·생성 안 함). DetailPageCard "공급사 상세 그대로 적용" 버튼(sourceDetailUrl 시·생성 대안). ★명화 실행: re-capture(sourceDetailGood)→adopt→detail=**curated**(production 실측). |
+| ★명화 큐레이션 完 | main=curated(v2 크롭)·detail=curated(Branch A 공급사 상세)·sourceStrategy=A. 잔여=SUSPENSION 해제(대표 GO 비가역만). |
+| 검증 | tsc 0·build OK(adopt-source-detail ƒ)·이모지 0·한글 코드 0·비가역 0(네이버 0; DB 가역만). |
+| ★ 다음 | Desktop: (a) 명화 main+detail=curated·sourceStrategy=A 매트릭스/Chrome 실측 + 명화 상세 미리보기(공급사 1000x18291 채택본) 육안 → 대표 컨펌 (b) 아이스트레이 도매번호 operator 제공→capture (c) 명화 SUSPENSION 해제 발행 GO(비가역, 대표). 후속: Branch A SEO/ROI 보강 자동화·Branch B 27렌더러(별 turn). |
+
 ### 2026-06-08 (59) 풀해상 상세 캡처(P16 해소) + 명화 main=curated 실행 + 2갈래 sourceStrategy (FROM Code, main 555466c, 비가역 0·네이버 0). ★item1·4 EXECUTED
 
 | 항목 | 상태 |
