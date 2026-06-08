@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-08 (61) 아틀리에 2단계 — 우측 독립 스크롤 교정 + 워크벤치 임시저장 (FROM Code, main b665440, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| (1) 스크롤 ✅ | 근본원인: WorkbenchTabs ScallopCard overflow:hidden+flex:1이 탭 패널 클리핑→aside 스크롤 무력화. 교정: overflow:visible·flex:1 제거(카드 성장→aside 스크롤이 마지막 버튼 도달) + WorkbenchShell aside max-h calc(100vh-2rem)·overscroll-behavior:contain·paddingBottom 24. 전상품 우측 공통. |
+| (3) 임시저장 ✅ | useStudioActions가 경량 입력(manualCutout/Backdrop/overrideSkeleton/mainVariant)을 productId별 localStorage 디바운스(600ms) 저장+복원(restoredForId 가드). 헤더 임시저장됨 HH:MM 표시. draftSavedAt/clearDraft. 이탈/새로고침 유지·가역. |
+| (2) job 생명주기 ⏸SCOPED | 취소/재시도/단계 되돌아가 수정. 워크벤치(AiQueueStepper=로컬 HITL)는 asset_jobs 미표시 → asset_jobs 표시 통합 + cancel/retry/step-back 엔드포인트(transitionJob 래핑) 별도 turn. |
+| 검증 | tsc 0·build OK·이모지 0·한글 코드 0·비가역 0. /studio 200. 스크롤 바닥·임시저장은 Desktop Control Chrome DOM 실측 필요. |
+| ★ 다음 | Desktop Control Chrome: 우측 펼침 시 마지막 버튼 도달·새로고침 후 복원·임시저장됨 표시. 후속: job 생명주기 전용 turn. |
+
 ### 2026-06-08 (60) 인제스트 재발방지 + 2갈래 실품질 + 명화 상세 Branch A (FROM Code, main f3c3784, 비가역 0). ★명화 큐레이션 完(main+detail curated)
 
 | 항목 | 상태 |

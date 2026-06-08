@@ -1,3 +1,19 @@
+## 2026-06-08 아틀리에 2단계 — 우측 독립 스크롤 교정 + 워크벤치 임시저장 (Code turn)
+
+main 직접 b665440. 비가역 0. tsc 0/build OK/이모지 0/한글 코드 0. 권위: STUDIO_ATELIER_UX_REDESIGN + PARALLEL_WORK_TRACKER #7.
+
+**[한 것]**
+- (1) 우측 패널 독립 스크롤: 근본원인=WorkbenchTabs(컨트롤 슬롯) ScallopCard overflow:hidden+flex:1이 탭 패널 클리핑→aside overflow-y-auto 무력화. 교정: overflow:visible+flex 제거(카드 성장→aside max-h 초과→스크롤). aside max-h calc(100vh-2rem)+overscrollBehavior:contain+paddingBottom 24. 전상품.
+- (3) 임시저장: useStudioActions productId별 localStorage(kkotium:studio:draft:{id}). 경량 입력만(생성 자산 미저장). reset 효과 동기 복원(restoredForId 가드)+600ms 디바운스 저장+clearDraft. 헤더 임시저장됨 HH:MM(Check). 새로고침 유지·가역.
+
+**[SCOPED]**
+- (2) job 생명주기(취소/재시도/step-back): 워크벤치 asset_jobs 미표시 → 표시 통합+transitionJob 래핑 엔드포인트 선결. 별도 turn.
+
+**[다음]**
+- Desktop Control Chrome: 우측 펼침 시 마지막 버튼 도달·새로고침 복원. 후속: job 생명주기 전용 turn.
+
+---
+
 ## 2026-06-08 인제스트 재발방지 + 2갈래 실품질 + 명화 상세 Branch A (명화 큐레이션 完) (Code turn)
 
 main 직접 f3c3784. 비가역 0(네이버 0). tsc 0/build OK/이모지 0/한글 코드 0. 권위: PARALLEL_WORK_TRACKER #3·4·5 + IMAGE_DETAIL_TWO_BRANCH_SYSTEM.md.
