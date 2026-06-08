@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-08 (57) applyStatus 정확성 교정 + 전상품 상세페이지 적용 게이트 (FROM Code, main 74765e7, 비가역 0·네이버 0)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | Desktop TASK_BRIDGE 2건 + always-state-status 결정문 + DETAIL_PAGE_PLAYBOOK.md. 근거: 라이브 매트릭스에서 명화 applyStatus 전부 LIVE 오표기. |
+| 트랙1 정확성 (1e5f3a1) | (a) publishState=캐시된 네이버 statusType 기반(앱 status 아님): SALE만 LIVE / registered 非SALE(SUSPENSION)=publishDrift+미발행 / registered 미동기=DB. naver_status_type 컬럼 추가(apply_migration add_naver_status_type)+inspect 라우트가 실측 캐시(로컬 DB write·Naver mutate 0). (b) main/detail 3상태 ImageApplyState curated(앱 product-assets 버킷)/default(공급사 원본)/none — mainImage(빌더 필드) 기준. (c) actionQueue: GO 이전 default 대표/상세→apply_curated_main/build_detail 선행, SUSPENSION→resolve_suspension. 위젯 curated 초록·default/drift 앰버·none 점선(레드 0). tsx 7케이스. ★production 실측: 명화 main=default·detail=curated(skeleton·caveat)·publish=DB(미동기)·queue=apply_curated_main(전 LIVE 오표기 해소). |
+| 트랙2 상세 빌더 (74765e7) | 기존 detail 빌더(section-builder+detail-html-serializer+generate-detail+DetailPageCard 미리보기) 위 적용 단계 추가: NEW POST /api/products/[id]/apply-detail(미리보기 PNG→product-assets curated 업로드→detail_image_url set, 가역 DB·네이버 0). DetailPageCard "이 상세로 적용" 2단계 컨펌 게이트(productId/onApplied optional·PLANT 무파손). 적용 시 detail_image_url=product-assets→applyStatus.detail=curated 자동 전이. |
+| 검증 | tsc 0·build OK(apply-detail ƒ)·이모지 0·한글 코드 0·비가역 0(네이버 0; DB 가역+additive 컬럼만). |
+| ★ caveat(#46) | 명화 detail-S6 skeleton이 product-assets라 provenance상 'curated'로 읽힘 — 빈 스켈레톤 품질은 publish-preview mostly_blank 게이트가 별도 포착, Track2 적용이 실 curated 상세로 교체. 정확 skeleton 판별은 후속. naver_status_type는 inspect 실행 전까지 null→publish=DB(미확인). |
+| ★ 다음 | Desktop: (1) inspect 명화 실행→naver_status_type=SUSPENSION 캐시→매트릭스 publish=주의(drift) 재실측 (2) 명화 상세 generate→미리보기→"이 상세로 적용"→detail curated 전이 라이브 실측 + 대표 컨펌. 후속: detail 엔진 7섹션 플레이북 정합 강화·skeleton 판별. |
+
 ### 2026-06-08 (56) 개입 대기열(Operator Action Queue) 전상품 시스템 레이어 + #56 (FROM Code, main 415358b, 비가역 0)
 
 | 항목 | 상태 |

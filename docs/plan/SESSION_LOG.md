@@ -1,3 +1,27 @@
+## 2026-06-08 applyStatus 정확성 교정 + 전상품 상세페이지 적용 게이트 (Code turn)
+
+main 직접 1e5f3a1(트랙1)·74765e7(트랙2). 비가역 0(네이버 0). tsc 0/build OK/이모지 0/한글 코드 0. 권위: Desktop TASK_BRIDGE 2건 + always-state-status 결정문 + DETAIL_PAGE_PLAYBOOK.md.
+
+**[트랙1 — applyStatus 정확성]**
+- 근거: 라이브 매트릭스에서 명화 applyStatus 전부 LIVE 오표기(publishState=등록만으로 LIVE·main/detail=공급사원본도 LIVE).
+- publishState: 캐시된 네이버 statusType 기반(앱 status 아님). SALE만 LIVE / registered 非SALE(SUSPENSION)=publishDrift+미발행(none) / registered 미동기=DB / unregistered=canRegister?DB:none. naver_status_type VARCHAR 컬럼 추가(apply_migration add_naver_status_type, additive·박제 MIGRATION_naver_status_type) + inspect 라우트가 op.statusType 실측을 로컬 DB 캐시(Naver mutate 0·best-effort).
+- main/detail: ImageApplyState 3상태 — curated(앱 automation product-assets 버킷)/default(공급사 원본 passthrough)/none. classifyImage=/product-assets/ 정규식. mainImage(빌더 필드=PUT 송출값) 기준.
+- actionQueue: GO 이전 default 대표/상세를 apply_curated_main(→/preview)/build_detail(→/studio) INPUT_DECISION 선행 노출 + SUSPENSION drift=resolve_suspension. 위젯 ApplyStatusIndicator curated 초록·default/drift 앰버·none 점선(레드 0). tsx 7케이스 실증.
+- production 실측: 명화 main=default(Cloudinary 4set)·detail=curated(product-assets skeleton)·publish=DB(statusType 미동기)·queue=apply_curated_main. 아이스트레이 main=default·detail=none·fill_attributes. 달항아리 main=default·detail=curated·apply_curated_main. → 전 LIVE 오표기 해소.
+
+**[트랙2 — 전상품 상세페이지 적용 게이트]**
+- 기존 빌더 인프라(section-builder+detail-html-serializer+generate-detail API+DetailPageCard 미리보기 image/HTML 토글) 위에 적용 단계 추가(빌더 자체는 계승).
+- NEW POST /api/products/[id]/apply-detail: 미리보기한 detail PNG(base64)를 uploadAutomationAsset(kind:'detail')로 product-assets 업로드→detail_image_url set(가역 DB·네이버 0). base64/data-URL 디코드 가드, variant 경로 sanitize.
+- DetailPageCard "이 상세로 적용" 2단계 컨펌 게이트(productId·onApplied optional→PLANT 7th-tab 경로 무파손). 적용 시 detail_image_url=product-assets→applyStatus.detail=curated 자동 전이. 스튜디오 page에서 productId=selectedProduct.id 배선.
+
+**[caveat #46]**
+- 명화 detail-S6 skeleton이 product-assets라 provenance상 curated로 읽힘 — 빈 스켈레톤 품질은 publish-preview mostly_blank 게이트가 별도 포착, Track2 적용이 실 curated 상세로 교체. 정확 skeleton 판별은 후속. naver_status_type는 inspect 실행 전까지 null→publish=DB.
+
+**[다음]**
+- Desktop: (1) inspect 명화 실행→naver_status_type=SUSPENSION 캐시→매트릭스 publish=주의(drift) 재실측 (2) 명화 상세 generate→미리보기→"이 상세로 적용"→detail curated 전이 라이브 실측 + 대표 컨펌. 후속: detail 엔진 7섹션 플레이북 정합 강화·skeleton 정확 판별·스튜디오 헤더 applyStatus 미러.
+
+---
+
 ## 2026-06-08 개입 대기열(Operator Action Queue) 전상품 시스템 레이어 (Code turn)
 
 main 직접 415358b. 비가역 0. tsc 0/build OK/렌더 이모지 0(Lucide)/한글 코드 0. 권위: docs/design/OPERATOR_SYSTEM_BLUEPRINT.md §3·§4.
