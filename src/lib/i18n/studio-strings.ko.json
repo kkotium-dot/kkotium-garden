@@ -250,6 +250,27 @@
       "sheetExpand": "컨트롤 펼치기",
       "sheetCollapse": "컨트롤 접기",
       "sheetPeekHint": "탭을 눌러 컨트롤 펼치기"
+    },
+    "jobs": {
+      "title": "진행 작업 (생명주기)",
+      "cancel": "취소",
+      "retry": "재시도",
+      "reopen": "되돌아가 수정",
+      "error": "작업 제어 실패",
+      "status": {
+        "pending": "대기",
+        "ready": "준비",
+        "in_progress": "진행 중",
+        "blocked": "막힘",
+        "awaiting_approval": "승인 대기",
+        "awaiting_human": "사람 작업 대기",
+        "human_done": "사람 완료",
+        "review": "검수",
+        "done": "완료",
+        "failed": "실패",
+        "cancelled": "취소됨",
+        "rejected": "반려"
+      }
     }
   }
 }

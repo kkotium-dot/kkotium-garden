@@ -31,10 +31,15 @@ export type JobActor = 'system' | 'ai_agent' | 'human';
 // done, cancelled. Phase 2 adds the browser-handoff + review/retry cycle:
 //   in_progress -> awaiting_human (browser step) -> human_done -> in_progress
 //   in_progress -> review -> done(approved) | rejected ; rejected -> ready (retry)
+// Operator HITL controls (job-control endpoint) added 2026-06-08:
+//   - in_progress -> cancelled  : operator ABORT of a running job (중단).
+//   - done/cancelled -> ready   : operator STEP-BACK / reopen a finished step to
+//                                 redo it. done/cancelled are no longer hard
+//                                 terminal — but ONLY a human reopen reaches them.
 const ALLOWED_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
   pending:           ['ready', 'cancelled'],
   ready:             ['in_progress', 'cancelled'],
-  in_progress:       ['done', 'failed', 'blocked', 'awaiting_approval', 'awaiting_human', 'review'],
+  in_progress:       ['done', 'failed', 'blocked', 'awaiting_approval', 'awaiting_human', 'review', 'cancelled'],
   blocked:           ['ready', 'cancelled'],
   awaiting_approval: ['in_progress', 'cancelled'],
   awaiting_human:    ['human_done', 'cancelled'],
@@ -42,8 +47,8 @@ const ALLOWED_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
   review:            ['done', 'rejected', 'cancelled'],
   rejected:          ['ready', 'cancelled'],   // human-driven redo loop (not retry-budget gated)
   failed:            ['ready', 'cancelled'],   // ready only while retryCount < maxRetries
-  done:              [],
-  cancelled:         [],
+  done:              ['ready'],                // operator step-back / reopen
+  cancelled:         ['ready'],                // operator reopen a cancelled step
 };
 
 // Default heartbeat staleness threshold for zombie detection (10 minutes).

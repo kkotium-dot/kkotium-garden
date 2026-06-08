@@ -34,6 +34,7 @@ import {
   WorkbenchShell,
   WorkbenchCanvas,
   WorkbenchTabs,
+  JobLifecyclePanel,
 } from '@/components/studio/workbench';
 
 // ── Main inner ────────────────────────────────────────────────────────────
@@ -200,6 +201,8 @@ function StudioInner() {
   );
 
   const controlsSlot = (
+    <>
+    {selectedProduct?.id && <JobLifecyclePanel productId={selectedProduct.id} />}
     <WorkbenchTabs
       diagnosis={
         <DiagnosisCard
@@ -256,6 +259,7 @@ function StudioInner() {
         />
       }
     />
+    </>
   );
 
   return (
