@@ -33,6 +33,10 @@ interface Body {
   strategy?: CropStrategy;
   ocr?: boolean;
   confirm?: boolean;
+  // T6 full-subject containment:
+  contain?: boolean;          // auto: build a square that contains the product
+  enforceSubject?: boolean;   // box: block when the box clips the product
+  allowSubjectClip?: boolean; // operator prop-exception override
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -73,7 +77,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   let result;
   try {
-    result = await simpleCrop(input, { box: body.box, strategy: body.strategy, ocr: body.ocr });
+    result = await simpleCrop(input, {
+      box: body.box,
+      strategy: body.strategy,
+      ocr: body.ocr,
+      contain: body.contain,
+      enforceSubject: body.enforceSubject,
+      allowSubjectClip: body.allowSubjectClip,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ success: false, error: `Crop failed: ${msg}` }, { status: 500 });
@@ -91,6 +102,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   let mainImageUrl: string | null = null;
   if (body.confirm === true) {
     if (blockReasons.length > 0) {
+      const clipBlocked = blockReasons.some(w => w.code === 'SUBJECT_CLIPPED');
+      const note = clipBlocked
+        ? 'crop not applied — the product is clipped. Snap to full containment, or confirm it is only a styling prop.'
+        : 'crop not applied — text detected in the representative (Naver 2024-10-28). Pick a text-free region or run text-remove (inpaint).';
       return NextResponse.json({
         success: true,
         productId,
@@ -101,8 +116,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         cropSidePx: result.cropSidePx,
         upscaled: result.upscaled,
         ocrText: result.ocrText,
+        subjectBBox: result.subjectBBox,
+        contained: result.contained,
         cautions,
-        note: 'crop not applied — text detected in the representative (Naver 2024-10-28). Pick a text-free region or run text-remove (inpaint).',
+        note,
       });
     }
     try {
@@ -139,6 +156,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     cropSidePx: result.cropSidePx,
     upscaled: result.upscaled,
     ocrText: result.ocrText,
+    subjectBBox: result.subjectBBox,
+    contained: result.contained,
     warnings: result.warnings,
     cautions,
     applied,

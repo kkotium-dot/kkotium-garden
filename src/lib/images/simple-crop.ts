@@ -17,7 +17,9 @@
 
 import sharp from 'sharp';
 import { ocrFullFrame } from '../diagnosis/p-filter-watermark';
-import { CANVAS_EXPAND, TEXT_REMOVE } from '../jobs/job-type-routing';
+import { CANVAS_EXPAND, TEXT_REMOVE, REGION_CROP } from '../jobs/job-type-routing';
+import { detectSubjectBBox, type SubjectBBox } from './quality-classifier';
+import { containmentSquare, boxClipsSubject } from './subject-containment';
 
 export const NAVER_THUMB_SIZE = 1000;          // px, 1:1 representative
 export const MIN_SOURCE_FOR_THUMB = 1000;      // long side floor → upscale-blur warning
@@ -30,7 +32,7 @@ export interface CropBox { x: number; y: number; width: number; height: number; 
 //           'warn'  = line-A flow may apply with operator awareness (T2).
 // remediation: the Phase 4 crop/edit job_type that fixes the cause, if any.
 export interface CropWarning {
-  code: 'SOURCE_TOO_SMALL' | 'LOW_RESOLUTION' | 'TEXT_DETECTED';
+  code: 'SOURCE_TOO_SMALL' | 'LOW_RESOLUTION' | 'TEXT_DETECTED' | 'SUBJECT_CLIPPED';
   severity: 'block' | 'warn';
   message: string;
   remediation?: string;
@@ -43,6 +45,8 @@ export interface SimpleCropResult {
   cropSidePx: number;              // square side before the 1000px resize
   upscaled: boolean;               // true when the region was smaller than 1000px
   ocrText: string | null;          // text the OCR guard found (null = none)
+  subjectBBox: SubjectBBox | null; // detected product bbox (T6), null if none/not run
+  contained: boolean | null;       // whether the crop fully contains the subject (null if not checked)
   warnings: CropWarning[];
 }
 
@@ -50,6 +54,10 @@ interface SimpleCropOptions {
   box?: CropBox;                   // operator-drawn region (wins over saliency)
   strategy?: CropStrategy;         // saliency strategy when no box (default attention)
   ocr?: boolean;                   // run the OCR policy guard (default true)
+  // T6 full-subject containment:
+  contain?: boolean;               // auto path: build a square that contains the product
+  enforceSubject?: boolean;        // box path: block when the box clips the product
+  allowSubjectClip?: boolean;      // operator prop-exception (downgrades clip to a warning)
 }
 
 /** Clamp an operator box to the image bounds and square it (min side). */
@@ -60,6 +68,16 @@ function squareWithin(box: CropBox, sw: number, sh: number): CropBox {
   const maxH = sh - y;
   const side = Math.max(1, Math.min(Math.round(box.width), Math.round(box.height), maxW, maxH));
   return { x, y, width: side, height: side };
+}
+
+/** Extract a source-px square region and normalize to a 1000px sRGB JPEG. */
+async function extractSquare(input: Buffer, region: CropBox): Promise<Buffer> {
+  return sharp(input)
+    .extract({ left: region.x, top: region.y, width: region.width, height: region.height })
+    .resize(NAVER_THUMB_SIZE, NAVER_THUMB_SIZE, { fit: 'cover' })
+    .toColorspace('srgb')
+    .jpeg({ quality: 85, mozjpeg: true })
+    .toBuffer();
 }
 
 /**
@@ -88,17 +106,47 @@ export async function simpleCrop(
     });
   }
 
+  // T6: detect the product bbox when containment or box-enforcement is requested.
+  let subjectBBox: SubjectBBox | null = null;
+  if (opts.contain || opts.enforceSubject) {
+    subjectBBox = await detectSubjectBBox(input);
+  }
+
   // Determine the square region + crop it.
   let region: CropBox;
   let cropped: Buffer;
+  let contained: boolean | null = null;
   if (opts.box) {
     region = squareWithin(opts.box, sw, sh);
-    cropped = await sharp(input)
-      .extract({ left: region.x, top: region.y, width: region.width, height: region.height })
-      .resize(NAVER_THUMB_SIZE, NAVER_THUMB_SIZE, { fit: 'cover' })
-      .toColorspace('srgb')
-      .jpeg({ quality: 85, mozjpeg: true })
-      .toBuffer();
+    // T6: block an operator box that clips the product (prop-exception override).
+    if (opts.enforceSubject && subjectBBox) {
+      const clip = boxClipsSubject(region, subjectBBox);
+      contained = !clip.clips;
+      if (clip.clips) {
+        warnings.push({
+          code: 'SUBJECT_CLIPPED',
+          severity: opts.allowSubjectClip ? 'warn' : 'block',
+          remediation: REGION_CROP,
+          message: `crop clips the product on the ${clip.sides.join('/')} — keep the whole product in frame (snap to full containment), or confirm it is only a styling prop`,
+        });
+      }
+    }
+    cropped = await extractSquare(input, region);
+  } else if (opts.contain && subjectBBox) {
+    // T6 auto: minimal square that fully contains the product + >=8% padding.
+    const c = containmentSquare(subjectBBox, sw, sh);
+    region = { x: c.box.x, y: c.box.y, width: c.box.width, height: c.box.height };
+    contained = c.contained;
+    if (!c.contained) {
+      warnings.push({
+        code: 'SUBJECT_CLIPPED',
+        // Source can't fit the whole product as 1:1 — expand, never clip.
+        severity: 'warn',
+        remediation: CANVAS_EXPAND,
+        message: `source cannot fit the whole product as 1:1 (needs ~${c.expandPx}px more) — 1:1 canvas-expand instead of cropping the product`,
+      });
+    }
+    cropped = await extractSquare(input, region);
   } else {
     // Saliency 1:1 cover-crop via sharp's native strategy. The square side used
     // is the source's shorter dimension.
@@ -141,5 +189,5 @@ export async function simpleCrop(
     }
   }
 
-  return { buffer: cropped, region, source: { width: sw, height: sh }, cropSidePx, upscaled, ocrText, warnings };
+  return { buffer: cropped, region, source: { width: sw, height: sh }, cropSidePx, upscaled, ocrText, subjectBBox, contained, warnings };
 }

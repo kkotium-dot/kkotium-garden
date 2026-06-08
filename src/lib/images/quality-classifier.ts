@@ -352,3 +352,70 @@ export interface VlmAssessInput {
 export async function assessWithVlm(_input: VlmAssessInput): Promise<QualityAssessment | null> {
   return null;
 }
+
+// ── Subject bounding box (T6 crop full-subject containment) ───────────────────
+// Reuses the SAME background-ring + SUBJECT_DELTA detection as the subject
+// occupancy metric, but returns the BBOX of the subject pixels in SOURCE px.
+// Column/row projection thresholding rejects stray noise so the box hugs the
+// actual product. Returns null when no clear subject is found (near-empty frame).
+export interface SubjectBBox {
+  x: number; y: number; width: number; height: number; // source px
+  imageWidth: number; imageHeight: number;
+}
+
+const SUBJECT_BBOX_ANALYSIS = 256;          // analysis long side
+const SUBJECT_PROJECTION_FLOOR = 0.03;      // row/col is "subject" at >= 3% of the cross dimension
+
+export async function detectSubjectBBox(input: Buffer): Promise<SubjectBBox | null> {
+  const meta = await sharp(input).metadata();
+  const ow = meta.width ?? 0;
+  const oh = meta.height ?? 0;
+  if (ow < 2 || oh < 2) return null;
+
+  const scale = SUBJECT_BBOX_ANALYSIS / Math.max(ow, oh);
+  const aw = Math.max(1, Math.round(ow * scale));
+  const ah = Math.max(1, Math.round(oh * scale));
+  const rgb = await sharp(input).removeAlpha()
+    .resize(aw, ah, { fit: 'fill' })
+    .raw().toBuffer({ resolveWithObject: true });
+  const px = rgb.data;
+  const w = rgb.info.width, h = rgb.info.height, ch = rgb.info.channels;
+
+  // Background ring color (outer 7%) — same proxy as the occupancy metric.
+  const ringX = Math.max(1, Math.round(w * 0.07));
+  const ringY = Math.max(1, Math.round(h * 0.07));
+  const isRing = (x: number, y: number) => x < ringX || x >= w - ringX || y < ringY || y >= h - ringY;
+  let rSum = 0, gSum = 0, bSum = 0, ringN = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (!isRing(x, y)) continue;
+    const i = (y * w + x) * ch;
+    rSum += px[i]; gSum += px[i + 1]; bSum += px[i + 2]; ringN++;
+  }
+  const bgR = rSum / Math.max(1, ringN), bgG = gSum / Math.max(1, ringN), bgB = bSum / Math.max(1, ringN);
+
+  const colCount = new Array<number>(w).fill(0);
+  const rowCount = new Array<number>(h).fill(0);
+  let subjTotal = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * ch;
+    const dr = px[i] - bgR, dg = px[i + 1] - bgG, db = px[i + 2] - bgB;
+    if (Math.sqrt(dr * dr + dg * dg + db * db) > SUBJECT_DELTA_BBOX) { colCount[x]++; rowCount[y]++; subjTotal++; }
+  }
+  if (subjTotal < w * h * 0.01) return null; // no discernible subject
+
+  const colFloor = Math.max(2, Math.round(h * SUBJECT_PROJECTION_FLOOR));
+  const rowFloor = Math.max(2, Math.round(w * SUBJECT_PROJECTION_FLOOR));
+  let minX = -1, maxX = -1, minY = -1, maxY = -1;
+  for (let x = 0; x < w; x++) if (colCount[x] >= colFloor) { if (minX < 0) minX = x; maxX = x; }
+  for (let y = 0; y < h; y++) if (rowCount[y] >= rowFloor) { if (minY < 0) minY = y; maxY = y; }
+  if (minX < 0 || minY < 0) return null; // all below the noise floor
+
+  const sx = ow / w, sy = oh / h;
+  const x = Math.max(0, Math.floor(minX * sx));
+  const y = Math.max(0, Math.floor(minY * sy));
+  const x2 = Math.min(ow, Math.ceil((maxX + 1) * sx));
+  const y2 = Math.min(oh, Math.ceil((maxY + 1) * sy));
+  return { x, y, width: Math.max(1, x2 - x), height: Math.max(1, y2 - y), imageWidth: ow, imageHeight: oh };
+}
+
+const SUBJECT_DELTA_BBOX = 40; // mirror of SUBJECT_DELTA (occupancy metric)

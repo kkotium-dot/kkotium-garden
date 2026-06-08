@@ -17,9 +17,11 @@
 
 import { useRef, useState } from 'react';
 import {
-  Crop, Wand2, Maximize2, Eraser, Loader2, Check, AlertTriangle, ImageOff,
+  Crop, Wand2, Maximize2, Eraser, Loader2, Check, AlertTriangle, ImageOff, Frame,
 } from 'lucide-react';
 import strings from '@/lib/i18n/publish-preview-strings.ko.json';
+import { boxClipsSubject, snapBoxToSubject } from '@/lib/images/subject-containment';
+import type { SubjectBBox } from '@/lib/images/quality-classifier';
 
 const t = strings.cropStudio;
 
@@ -63,7 +65,12 @@ export default function CropStudioPanel({ productId, repUrl, detailUrl, onApplie
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: 'ok' | 'warn' | 'err'; text: string } | null>(null);
 
+  // T6 subject containment: detected product bbox (source px) + prop-exception.
+  const [subjectBBox, setSubjectBBox] = useState<SubjectBBox | null>(null);
+  const [allowClip, setAllowClip] = useState(false);
+
   const selected = candidates.find(c => c.key === selectedKey) ?? null;
+  const clip = subjectBBox && naturalBox ? boxClipsSubject(naturalBox, subjectBBox) : { clips: false, sides: [] };
 
   function resetBox() {
     setDisplayBox(null);
@@ -76,6 +83,8 @@ export default function CropStudioPanel({ productId, repUrl, detailUrl, onApplie
     setCandidates([]);
     setSelectedKey(null);
     setMessage(null);
+    setSubjectBBox(null);
+    setAllowClip(false);
     resetBox();
   }
 
@@ -145,6 +154,37 @@ export default function CropStudioPanel({ productId, repUrl, detailUrl, onApplie
     return res.json();
   }
 
+  // T6: detect the product bbox + build the full-containment candidate.
+  async function loadContainment() {
+    if (!sourceUrl) return;
+    setBusy('contain');
+    try {
+      const j = await cropRequest({ contain: true, ocr: false });
+      if (j?.subjectBBox) setSubjectBBox(j.subjectBBox as SubjectBBox);
+      if (j?.success && j.preview && j.region) {
+        const cand: Candidate = {
+          key: 'contain', label: t.candidateContain, preview: j.preview, cropSidePx: j.cropSidePx ?? 0,
+          warnings: j.warnings ?? [], cautions: j.cautions ?? [],
+          box: { x: j.region.x, y: j.region.y, width: j.region.width, height: j.region.height },
+        };
+        setCandidates(prev => [cand, ...prev.filter(c => c.key !== 'contain')]);
+        setSelectedKey('contain');
+      }
+    } catch { /* containment is best-effort */ }
+    finally { setBusy(null); }
+  }
+
+  // T6: snap the operator box to the full-containment square (1-click).
+  function snapToSubject() {
+    if (!subjectBBox || !natural || !imgRef.current) return;
+    const snap = snapBoxToSubject(subjectBBox, natural.w, natural.h);
+    setNaturalBox(snap);
+    const rect = imgRef.current.getBoundingClientRect();
+    const sx = rect.width / natural.w;
+    const sy = rect.height / natural.h;
+    setDisplayBox({ x: snap.x * sx, y: snap.y * sy, width: snap.width * sx, height: snap.height * sy });
+  }
+
   async function runAuto() {
     if (!sourceUrl) return;
     setBusy('auto'); setMessage(null);
@@ -172,7 +212,7 @@ export default function CropStudioPanel({ productId, repUrl, detailUrl, onApplie
     if (!sourceUrl || !naturalBox) return;
     setBusy('box'); setMessage(null);
     try {
-      const j = await cropRequest({ box: naturalBox });
+      const j = await cropRequest({ box: naturalBox, enforceSubject: true, allowSubjectClip: allowClip });
       if (j?.success && j.preview) {
         const cand: Candidate = {
           key: 'box', label: t.candidateBox, preview: j.preview, cropSidePx: j.cropSidePx ?? 0,
@@ -190,8 +230,17 @@ export default function CropStudioPanel({ productId, repUrl, detailUrl, onApplie
     setBusy('apply'); setMessage(null);
     try {
       const payload: Record<string, unknown> = { confirm: true };
-      if (selected.box) payload.box = selected.box;
-      else if (selected.strategy) payload.strategy = selected.strategy;
+      if (selected.box) {
+        payload.box = selected.box;
+        // Enforce containment only on the operator's manual box (decision §3);
+        // the auto containment candidate already carries the right severity.
+        if (selected.key === 'box') {
+          payload.enforceSubject = true;
+          payload.allowSubjectClip = allowClip;
+        }
+      } else if (selected.strategy) {
+        payload.strategy = selected.strategy;
+      }
       const j = await cropRequest(payload);
       if (j?.applied) {
         setMessage({ kind: 'ok', text: t.applied });
@@ -267,16 +316,28 @@ export default function CropStudioPanel({ productId, repUrl, detailUrl, onApplie
               src={sourceUrl}
               alt="crop-source"
               draggable={false}
-              onLoad={e => setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+              onLoad={e => { setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight }); loadContainment(); }}
               className="block max-h-[360px] w-auto max-w-full cursor-crosshair"
               onMouseDown={onMouseDown}
               onMouseMove={onMouseMove}
               onMouseUp={onMouseUp}
               onMouseLeave={onMouseUp}
             />
+            {/* Detected product bbox (T6) — operator keeps the whole product inside the crop */}
+            {subjectBBox && natural && (
+              <div
+                className="pointer-events-none absolute border border-dashed border-orange-400"
+                style={{
+                  left: `${(subjectBBox.x / natural.w) * 100}%`,
+                  top: `${(subjectBBox.y / natural.h) * 100}%`,
+                  width: `${(subjectBBox.width / natural.w) * 100}%`,
+                  height: `${(subjectBBox.height / natural.h) * 100}%`,
+                }}
+              />
+            )}
             {displayBox && (
               <div
-                className="pointer-events-none absolute border-2 border-blue-400/80 bg-blue-400/10"
+                className={`pointer-events-none absolute border-2 ${clip.clips ? 'border-red-500 bg-red-400/10' : 'border-blue-400/80 bg-blue-400/10'}`}
                 style={{ left: displayBox.x, top: displayBox.y, width: displayBox.width, height: displayBox.height }}
               />
             )}
@@ -287,6 +348,28 @@ export default function CropStudioPanel({ productId, repUrl, detailUrl, onApplie
               />
             )}
           </div>
+
+          {/* T6 subject-clip warning + 1-click snap + prop-exception */}
+          {clip.clips && (
+            <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2">
+              <p className="flex items-start gap-1.5 text-[11px] text-red-700">
+                <AlertTriangle size={13} className="mt-0.5 shrink-0" /> {t.clipWarn}
+              </p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={snapToSubject}
+                  className="inline-flex items-center gap-1 rounded-lg bg-orange-500 px-2.5 py-1 text-xs font-semibold text-white"
+                >
+                  <Frame size={13} /> {t.fitSubject}
+                </button>
+                <label className="inline-flex items-center gap-1 text-[11px] text-slate-600">
+                  <input type="checkbox" checked={allowClip} onChange={e => setAllowClip(e.target.checked)} />
+                  {t.propException}
+                </label>
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="mt-3 flex flex-wrap gap-1.5">
