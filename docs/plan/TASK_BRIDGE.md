@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-08 (56) 개입 대기열(Operator Action Queue) 전상품 시스템 레이어 + #56 (FROM Code, main 415358b, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/design/OPERATOR_SYSTEM_BLUEPRINT.md §3·§4 + always-state-status 결정문. 전상품 범용(#55)·적용현황 상시(#54)와 통합. main 직접. |
+| 1) 엔진 파생 | control-tower-engine computeActionQueueItem: nextAction+image 게이트 → 4분류(AUTH=awaiting_human / AUTO=in_progress·done / GO_PENDING=publish·verify_publish / INPUT_DECISION=그 외). ActionQueueItem={productId,productName,category,stage,deepLink,detail}. 신규 컬럼 0·가드 불요. ControlTowerRow.actionQueue + matrix row 노출. tsx 8케이스 실증. |
+| 2) 관제탑 위젯 | OperatorActionQueue를 관제탑 상단 마운트(테이블 위). 전상품 카드(카테고리 칩+상품명+행동 1줄+1클릭 deepLink), 순서 GO>AUTH>입력결정>자동(순서 강제 아님·우선 정렬만). 적용현황(결과축)과 좌우 한 쌍(행동축). 레드=GO_PENDING 1곳만(75/15/10). |
+| 3) 원칙 #56 | PRINCIPLES_LEARNED #56(개입 자연스러움) 등재 — 개입점 항상 surface·순서 강제 0·자동/반자동 경계·레드 스코프. |
+| 4) P3 폴리시 | FireflyPromptBuilder "프롬프트 복사" CTA primary(레드)→secondary(뉴트럴). 레드=메인지정 1차 액션+GO만. 라이브 잔존 레드 2곳 중 보조 1곳 정리. |
+| 검증 | tsc 0·build OK·렌더 이모지 0·한글 코드 0·비가역 0. production smoke: matrix actionQueue 전상품 4분류 노출. |
+| ★ 다음 | Desktop Control Chrome 라이브 실측: (1) 개입 대기열 4분류 카드·카테고리 칩 색(GO 레드 1곳) (2) deepLink 1클릭 정확 화면 (3) 레드 스코프=GO+메인지정만(복사 뉴트럴 확인). 2차(딥링크 정합 세부)·3차(Firefly/네이버 Chrome MCP 반자동 #52)는 후속 로드맵. |
+
 ### 2026-06-08 (55) 아틀리에 워크벤치 UI 재설계 1단계 + 적용현황 인디케이터 + #54/#55 (FROM Code, main 직접, 비가역 0)
 
 | 항목 | 상태 |

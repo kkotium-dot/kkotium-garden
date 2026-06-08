@@ -1,3 +1,18 @@
+## 2026-06-08 개입 대기열(Operator Action Queue) 전상품 시스템 레이어 (Code turn)
+
+main 직접 415358b. 비가역 0. tsc 0/build OK/렌더 이모지 0(Lucide)/한글 코드 0. 권위: docs/design/OPERATOR_SYSTEM_BLUEPRINT.md §3·§4.
+
+**[한 것]**
+- 1) control-tower-engine computeActionQueueItem: nextAction + image 게이트에서 4분류 파생(AUTH=awaiting_human creative/login / AUTO=in_progress·done monitor / GO_PENDING=publish·verify_publish 비가역 GO / INPUT_DECISION=그 외 결정·입력). ActionQueueItem={productId,productName,category,stage,deepLink,detail}. 신규 컬럼 0·가드 불요·product-agnostic. ControlTowerRow.actionQueue + matrix route 노출. tsx 8케이스 실증(4분류·deepLink passthrough).
+- 2) 관제탑 OperatorActionQueue 위젯(테이블 위 마운트): 전상품 카드(카테고리 칩+상품명 truncate+행동 1줄+ArrowRight 1클릭 deepLink). 정렬 GO>AUTH>입력결정>자동(우선 표시일 뿐 순서 강제 0). 적용현황 인디케이터(결과축)와 행동축 한 쌍. CATEGORY_STYLE 레드=GO_PENDING 1곳만(75/15/10), AUTH 보라·INPUT 앰버·AUTO 초록.
+- 3) PRINCIPLES_LEARNED #56(개입 자연스러움) 등재: 개입점 항상 surface·순서 강제 0·#54/#55 통합·자동반자동 경계·레드 스코프(GO+메인지정만).
+- 4) P3 폴리시: FireflyPromptBuilder "프롬프트 복사" PopButton primary(레드)→secondary(뉴트럴). 라이브 잔존 레드 2곳 중 보조 1곳 정리(메인지정 CTA만 레드 유지).
+
+**[다음]**
+- push+verify → Desktop Control Chrome 라이브 실측: 개입 대기열 4분류·카테고리 칩 색(GO 레드 1곳)·deepLink 1클릭 정확 화면·레드 스코프(복사 뉴트럴). 후속 로드맵: 2차 딥링크 정합 세부·3차 Firefly/네이버 Chrome MCP 반자동(#52 detect→deliver→resume).
+
+---
+
 ## 2026-06-08 아틀리에 워크벤치 UI 재설계 1단계 + 적용현황 인디케이터 (Code turn)
 
 main 직접(SD-04 복귀). 2 커밋(d91ad9b 트랙A 스튜디오 / 6516c4b 트랙B 인디케이터+#54/#55). 비가역 0. tsc 0/build OK/렌더 이모지 0(Lucide)/한글 코드 0. 권위: STUDIO_ATELIER_UX_REDESIGN.md + KKOTIUM_DESIGN_SYSTEM.md + 2026-06-08-always-state-status-and-universal.md.
