@@ -287,5 +287,8 @@ export function computeNextAction(
   if (!hasText(product.naver_certification)) {
     return { key: 'verify_certification', severity: 'review', href: `/products/${id}` };
   }
-  return { key: 'verify_publish', severity: 'review', href: `/products/${id}` };
+  // T5: route every registered product through the SAME pre-publish review
+  // screen (line-aware gate + crop studio + update PUT) so the whole catalog
+  // funnels through one pipeline.
+  return { key: 'verify_publish', severity: 'review', href: `/products/${id}/preview` };
 }
