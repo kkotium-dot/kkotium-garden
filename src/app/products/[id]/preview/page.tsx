@@ -15,6 +15,7 @@ import {
   CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Loader2, ShieldCheck, ImageOff,
 } from 'lucide-react';
 import strings from '@/lib/i18n/publish-preview-strings.ko.json';
+import CropStudioPanel from '@/components/products/CropStudioPanel';
 
 const t = strings;
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -204,6 +205,14 @@ export default function PublishPreviewPage({ params }: { params: { id: string } 
               </div>
             </div>
           </section>
+
+          {/* Crop studio (T1) — fix the representative right where it is reviewed */}
+          <CropStudioPanel
+            productId={productId}
+            repUrl={data.representative.url}
+            detailUrl={data.detail.url}
+            onApplied={() => mutate()}
+          />
 
           {/* Detail image */}
           <section className="rounded-xl border border-slate-200 bg-white p-4">
