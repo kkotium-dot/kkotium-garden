@@ -87,6 +87,9 @@ model Product {
   naver_care_instructions String?
   naver_warranty          String?
   naver_certification     String?
+  // Cached last-observed Naver statusType (SALE / SUSPENSION / ...) from the
+  // inspect route (live Naver read). Drives applyStatus.publishState accuracy.
+  naver_status_type       String?           @map("naver_status_type") @db.VarChar(30)
   naver_tax_type          String?
   naver_gift_wrapping     Boolean           @default(false)
   naver_as_info           String?

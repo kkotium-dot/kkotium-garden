@@ -128,7 +128,10 @@
       "verify_certification": "정보고시 신고번호 검증",
       "verify_publish": "라이브 점검 후 발행",
       "crop_pick": "크롭 스튜디오에서 컷 선택",
-      "build_image": "이미지 생성·빌드"
+      "build_image": "이미지 생성·빌드",
+      "apply_curated_main": "대표 컷 제작·적용 (크롭)",
+      "build_detail": "상세페이지 제작",
+      "resolve_suspension": "판매중지(SUSPENSION) 해제 결정"
     },
     "publishDetail": {
       "gradeLabel": "준비도 {grade} · {score}점",
@@ -168,9 +171,14 @@
       "mainImage": "대표",
       "detail": "상세",
       "publish": "발행",
-      "live": "LIVE(라이브)",
-      "db": "DB반영",
-      "none": "미적용"
+      "states": {
+        "live": "라이브 (네이버 SALE)",
+        "curated": "앱 제작 적용",
+        "db": "DB 반영 (라이브 미확인)",
+        "default": "공급사 원본 (제작 전)",
+        "drift": "주의 — 판매중지(SUSPENSION)",
+        "none": "미적용"
+      }
     },
     "actionQueue": {
       "title": "개입 대기열",

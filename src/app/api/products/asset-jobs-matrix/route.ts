@@ -162,6 +162,7 @@ export async function GET() {
       recommendedMode: recommendedModeById.get(dbProduct.id) ?? null,
       qualityScore: qualityScoreById.get(dbProduct.id) ?? null,
       lineOverride: lineOverrideById.get(dbProduct.id) ?? null,
+      naverStatusType: (dbProduct as { naver_status_type?: string | null }).naver_status_type ?? null,
     });
     counts[row.overall]++;
 

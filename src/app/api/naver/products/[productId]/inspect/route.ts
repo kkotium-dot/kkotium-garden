@@ -188,6 +188,19 @@ export async function GET(
     drift = { inSync: diffs.length === 0, diffs };
   }
 
+  // Cache the live Naver statusType so applyStatus.publishState (control tower)
+  // is honest about the listing state (SALE/SUSPENSION). Local DB write only —
+  // Naver mutate stays 0. Best-effort: a cache failure must not fail inspect.
+  const liveStatusType = op && typeof op.statusType === 'string' ? op.statusType : null;
+  if (dbProduct?.id && liveStatusType) {
+    try {
+      await prisma.product.update({
+        where: { id: dbProduct.id },
+        data: { naver_status_type: liveStatusType },
+      });
+    } catch { /* cache write is best-effort */ }
+  }
+
   return NextResponse.json({
     success: true,
     readOnly: true,

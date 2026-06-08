@@ -58,13 +58,15 @@ interface ImageInfo {
   tier: ImageTier | null;
 }
 
-// Apply-status indicator (#54). Tri-state per field — NO red.
+// Apply-status indicator (#54). NO red. Images distinguish curated vs default.
 type ApplyState = 'LIVE' | 'DB' | 'none';
+type ImageApplyState = 'none' | 'default' | 'curated';
 interface ApplyStatus {
   attributesApplied: ApplyState;
-  mainImageApplied: ApplyState;
-  detailApplied: ApplyState;
+  mainImageApplied: ImageApplyState;
+  detailApplied: ImageApplyState;
   publishState: ApplyState;
+  publishDrift?: boolean;
 }
 
 // Operator action queue (#56). Red only for GO_PENDING.
@@ -370,30 +372,38 @@ function LineCell({ productId, line, onChanged }: {
   );
 }
 
-// Apply-status indicator (#54) — LIVE green / DB neutral / 미적용 dotted. NO red.
-const APPLY_STATE_STYLE: Record<ApplyState, { bg: string; border: string; text: string; dashed: boolean }> = {
-  LIVE: { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D', dashed: false },
-  DB:   { bg: '#F8FAFC', border: '#E2E8F0', text: '#64748B', dashed: false },
-  none: { bg: 'transparent', border: '#CBD5E1', text: '#94A3B8', dashed: true },
+// Apply-status indicator (#54) — green=live/curated, neutral=db, amber=default/
+// drift(주의), dotted=미적용. NO red (75/15/10).
+type ChipTone = 'live' | 'curated' | 'db' | 'default' | 'drift' | 'none';
+const CHIP_STYLE: Record<ChipTone, { bg: string; border: string; text: string; dashed: boolean }> = {
+  live:    { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D', dashed: false },
+  curated: { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D', dashed: false },
+  db:      { bg: '#F8FAFC', border: '#E2E8F0', text: '#64748B', dashed: false },
+  default: { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207', dashed: false }, // attention, not red
+  drift:   { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207', dashed: false },
+  none:    { bg: 'transparent', border: '#CBD5E1', text: '#94A3B8', dashed: true },
 };
 
 function ApplyStatusIndicator({ status }: { status: ApplyStatus }) {
   const a = strings.matrix.applyStatus;
-  const fields: Array<[ApplyState, string]> = [
-    [status.attributesApplied, a.attributes],
-    [status.mainImageApplied, a.mainImage],
-    [status.detailApplied, a.detail],
-    [status.publishState, a.publish],
+  const st = a.states as Record<ChipTone, string>;
+  const imageTone = (s: ImageApplyState): ChipTone => (s === 'curated' ? 'curated' : s === 'default' ? 'default' : 'none');
+  const stateTone = (s: ApplyState): ChipTone => (s === 'LIVE' ? 'live' : s === 'DB' ? 'db' : 'none');
+  const publishTone: ChipTone = status.publishDrift ? 'drift' : stateTone(status.publishState);
+  const fields: Array<[ChipTone, string]> = [
+    [stateTone(status.attributesApplied), a.attributes],
+    [imageTone(status.mainImageApplied), a.mainImage],
+    [imageTone(status.detailApplied), a.detail],
+    [publishTone, a.publish],
   ];
-  const stateLabel = (s: ApplyState) => (s === 'LIVE' ? a.live : s === 'DB' ? a.db : a.none);
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
-      {fields.map(([st, label], i) => {
-        const s = APPLY_STATE_STYLE[st];
+      {fields.map(([tone, label], i) => {
+        const s = CHIP_STYLE[tone];
         return (
           <span
             key={i}
-            title={`${label}: ${stateLabel(st)}`}
+            title={`${label}: ${st[tone]}`}
             style={{
               display: 'inline-flex', alignItems: 'center',
               fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 999,

@@ -84,15 +84,30 @@ export interface ImageInfo {
   tier: ImageTier;
 }
 
-// Apply-status indicator (#54 — always state what is actually live). Per-field
-// tri-state: LIVE = on Naver (registered) / DB = reversibly set in DB only /
-// none = not applied. Product-agnostic (#55). NO red (UI: green/neutral/dotted).
+// Apply-status indicator (#54 — always state what is actually live). NO red.
+//   ApplyState (attributes/publish): LIVE / DB / none.
+//   ImageApplyState (main/detail): curated (app pipeline asset) / default
+//     (supplier-original passthrough) / none. Curated is detected by the app's
+//     automation-storage bucket (product-assets) — a supplier raw image reads
+//     'default', so applyStatus stops over-claiming a proper asset.
+//   publishState is derived from the cached Naver statusType (NOT the app
+//     status): only a confirmed SALE is LIVE; a registered non-SALE (e.g.
+//     SUSPENSION) sets publishDrift and is NOT live.
 export type ApplyState = 'LIVE' | 'DB' | 'none';
+export type ImageApplyState = 'none' | 'default' | 'curated';
 export interface ApplyStatus {
-  attributesApplied: ApplyState; // required category attributes complete
-  mainImageApplied: ApplyState;  // representative image present
-  detailApplied: ApplyState;     // detail image present
-  publishState: ApplyState;      // registered live / ready in DB / not ready
+  attributesApplied: ApplyState;
+  mainImageApplied: ImageApplyState;
+  detailApplied: ImageApplyState;
+  publishState: ApplyState;
+  publishDrift: boolean; // registered but Naver statusType != SALE (e.g. SUSPENSION)
+}
+
+// Curated = produced/applied by the app pipeline (automation-storage bucket).
+// default = a supplier-original passthrough. none = absent.
+function classifyImage(url: string | null | undefined): ImageApplyState {
+  if (!hasText(url)) return 'none';
+  return /\/product-assets\//.test(url as string) ? 'curated' : 'default';
 }
 
 // Operator action queue (#56 — surface every intervention naturally). Derived
@@ -145,6 +160,9 @@ export interface ComputeContext {
   recommendedMode?: RecommendedMode | null;
   qualityScore?: number | null;
   lineOverride?: ProductLine | null;
+  // Cached last-observed Naver statusType (SALE / SUSPENSION / ...). null until a
+  // Naver inspect has synced it — then publishState is honest about live state.
+  naverStatusType?: string | null;
 }
 
 /**
@@ -261,20 +279,35 @@ export function computeControlTowerRow(
 
   const line = resolveLine(ctx, hasDetail);
 
-  // Apply-status (#54): a registered product's present fields ARE live on Naver;
-  // an unregistered product's present fields are DB-only (reversible). Derived
-  // from existing signals — no new columns, so no migration guard needed.
+  // Apply-status (#54, 2026-06-08 accuracy): publishState from the cached Naver
+  // statusType (not the app status); images classified curated/default/none.
   const tri = (present: boolean): ApplyState => (!present ? 'none' : registered ? 'LIVE' : 'DB');
+  const naverStatus = ctx.naverStatusType ?? null;
+  let publishState: ApplyState;
+  let publishDrift = false;
+  if (registered) {
+    if (naverStatus === 'SALE') {
+      publishState = 'LIVE';
+    } else if (naverStatus) {
+      publishState = 'none';       // SUSPENSION etc. — registered but NOT live
+      publishDrift = true;
+    } else {
+      publishState = 'DB';         // registered, Naver state not yet synced
+    }
+  } else {
+    publishState = v.canRegister ? 'DB' : 'none';
+  }
   const applyStatus: ApplyStatus = {
     attributesApplied: tri(v.canRegister && v.missingRequired.length === 0),
-    mainImageApplied: tri(hasMain),
-    detailApplied: tri(hasDetail),
-    publishState: registered ? 'LIVE' : v.canRegister ? 'DB' : 'none',
+    mainImageApplied: classifyImage(product.mainImage),       // builder field (what PUT sends)
+    detailApplied: classifyImage(product.detail_image_url),
+    publishState,
+    publishDrift,
   };
 
   const overall = overallOf([image.status, publish.status]);
   const nextAction = computeNextAction(product, publish, image, registered, line.value);
-  const actionQueue = computeActionQueueItem(product.id, product.name, image, nextAction);
+  const actionQueue = computeActionQueueItem(product.id, product.name, image, nextAction, applyStatus);
 
   return { productId: product.id, name: product.name, publish, image, line, applyStatus, actionQueue, overall, nextAction };
 }
@@ -290,6 +323,7 @@ export function computeActionQueueItem(
   productName: string,
   image: ImageInfo,
   nextAction: NextAction | null,
+  applyStatus: ApplyStatus,
 ): ActionQueueItem {
   const base = { productId, productName };
   // AUTH — a creative connector / external login is waiting on the operator.
@@ -300,11 +334,23 @@ export function computeActionQueueItem(
   if (image.status === 'in_progress') {
     return { ...base, category: 'AUTO', stage: 'processing', deepLink: `/products/${productId}` };
   }
+  // A registered listing that is NOT live (SUSPENSION drift) needs a decision.
+  if (applyStatus.publishDrift) {
+    return { ...base, category: 'INPUT_DECISION', stage: 'resolve_suspension', deepLink: `/products/${productId}` };
+  }
   if (!nextAction) {
     return { ...base, category: 'AUTO', stage: 'monitor', deepLink: `/products/${productId}` };
   }
-  // GO_PENDING — ready, awaiting the explicit irreversible publish GO.
+  // Before the irreversible GO, require a CURATED representative + detail — a
+  // supplier-original passthrough is surfaced first (apply_curated_main /
+  // build_detail), so the operator never publishes a raw default asset.
   if (nextAction.key === 'publish' || nextAction.key === 'verify_publish') {
+    if (applyStatus.mainImageApplied !== 'curated') {
+      return { ...base, category: 'INPUT_DECISION', stage: 'apply_curated_main', deepLink: `/products/${productId}/preview` };
+    }
+    if (applyStatus.detailApplied !== 'curated') {
+      return { ...base, category: 'INPUT_DECISION', stage: 'build_detail', deepLink: `/studio` };
+    }
     return { ...base, category: 'GO_PENDING', stage: nextAction.key, deepLink: nextAction.href, detail: nextAction.detail };
   }
   // INPUT_DECISION — everything else needs an operator decision or input.
