@@ -1,3 +1,25 @@
+## 2026-06-08 아틀리에 워크벤치 UI 재설계 1단계 + 적용현황 인디케이터 (Code turn)
+
+main 직접(SD-04 복귀). 2 커밋(d91ad9b 트랙A 스튜디오 / 6516c4b 트랙B 인디케이터+#54/#55). 비가역 0. tsc 0/build OK/렌더 이모지 0(Lucide)/한글 코드 0. 권위: STUDIO_ATELIER_UX_REDESIGN.md + KKOTIUM_DESIGN_SYSTEM.md + 2026-06-08-always-state-status-and-universal.md.
+
+**[트랙A — 워크벤치 P1·P2·P3·P5·P6]**
+- P1 AiQueueStepper: 가로 4열 그리드(카드 54px 짓눌림·제목잘림·.gp-sticker 배지겹침·overflow=true) → 세로 스텝 리스트(Lucide CheckCircle/Loader2/Circle 상태아이콘·제목 wordBreak keep-all 잘림0·1줄 힌트·상태칩 별도 컬럼 겹침0·좌측 4px 액센트 바). 레드 0(complete 그린/active 핑크/pending 뉴트럴).
+- P3 레드 제거: FireflyPromptBuilder(헤더 라벨·Sparkles·6 번호원·faceFreeNote·copyError·modelFirefly → 핑크/뉴트럴)·WorkbenchCanvas(헤더 라벨·레드틴트 그림자 → 뉴트럴)·WorkbenchShell(시트 그림자 레드틴트 → 뉴트럴). 레드=ThumbnailCard 변형 "메인 지정" select CTA 1곳만 유지.
+- P5 FireflyPromptBuilder: 라벨/값 분리(promptValueLabel)·프롬프트 14px·영문 모노 유지·복사 버튼(기존).
+- P6/P2 ThumbnailCard: 1차(4변형 pick-main)를 상단 강조로 이동 + 2차(디자이너 소스 오버라이드=스텝퍼+프롬프트+드롭존)를 details Disclosure 기본접힘으로 + 중첩 #FFF7FB 박스 제거(단일 섹션 + borderTop divider) + 핑크 STEP 2 배지.
+- ★ 후속: P4 공유 StudioCardShell Card 스텝 배지(전 카드 영향=2단계)·2단계 전 /studio(ProductListPane·ActionsCard·DetailPageCard·DiagnosisCard) 토큰 정렬.
+
+**[트랙B — 적용현황 인디케이터 + #54/#55]**
+- control-tower-engine: ApplyStatus(attributesApplied/mainImageApplied/detailApplied/publishState) tri-state(LIVE=등록 라이브/DB=가역반영/none=미적용). 기존 신호(registered·hasMain·hasDetail·missingRequired·canRegister) 파생 → 신규 컬럼 0·마이그레이션 가드 불요·product-agnostic(#55). matrix row applyStatus 노출.
+- 관제탑 ApplyStatusIndicator: 4 칩(속성/대표/상세/발행) LIVE 초록·DB 뉴트럴·미적용 점선·레드 0(75/15/10)·title 툴팁·텍스트 잘림 0.
+- PRINCIPLES_LEARNED #54(적용현황 항상 명시)·#55(전상품 범용) Python 등재.
+- ★ 후속: 스튜디오 헤더 적용현황 미러(관제탑=시스템 기록 뷰 우선).
+
+**[다음]**
+- push + verify-vercel-deploy → Desktop Control Chrome 실측: studio 카드 scrollWidth<=clientWidth(overflow=false)·큐 제목잘림0·배지겹침0 / 레드 사용처=메인지정 CTA 1곳 / 1차 강조·2차 접힘 / 관제탑 applyStatus 인디케이터 라이브(LIVE/DB/미적용).
+
+---
+
 ## 2026-06-07 (Merge) 크롭 스튜디오 main 병합 + production 배포 (Code turn)
 
 대표 승인: feature/crop-studio(크롭 스튜디오 완성본 T1~T6) → main **fast-forward** 병합 + origin/main push → production 배포. 비가역 0.

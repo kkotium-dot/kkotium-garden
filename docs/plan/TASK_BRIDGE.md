@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-08 (55) 아틀리에 워크벤치 UI 재설계 1단계 + 적용현황 인디케이터 + #54/#55 (FROM Code, main 직접, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/design/STUDIO_ATELIER_UX_REDESIGN.md + KKOTIUM_DESIGN_SYSTEM.md + docs/decisions/2026-06-08-always-state-status-and-universal.md. 브랜치 main 직접(SD-04 복귀). |
+| 트랙A 스튜디오 (d91ad9b) | P1: AiQueueStepper 4열 그리드(54px 짓눌림·제목잘림·.gp-sticker 배지겹침) → 세로 스텝 리스트(Lucide CheckCircle/Loader/Circle·상태칩 별도 컬럼·좌측 4px 액센트·overflow 해소). P3: 워크벤치 레드 제거(스텝·번호원·헤더·레드틴트 그림자 → 핑크/뉴트럴), 레드=메인지정 CTA(변형 select)만. P5: FireflyPromptBuilder 라벨/값 분리·프롬프트 14px 모노. P6/P2: ThumbnailCard 1차(4변형 pick-main) 상단 강조 + 2차(디자이너 소스) Disclosure 기본접힘 + 중첩박스 제거(단일 섹션+divider)+핑크 STEP 2 배지. ★P4(공유 Card 스텝배지)·2단계(전 /studio)는 후속. |
+| 트랙B 인디케이터 (6516c4b) | control-tower-engine ApplyStatus 4필드(attributesApplied/mainImageApplied/detailApplied/publishState) tri-state(LIVE 등록=라이브/DB 가역반영/none 미적용)=기존 신호 파생(신규컬럼 0·전상품). matrix row applyStatus. 관제탑 ApplyStatusIndicator(LIVE 초록/DB 뉴트럴/미적용 점선·레드 0·텍스트잘림 0). PRINCIPLES_LEARNED #54(적용현황 항상 명시)·#55(전상품 범용) 등재. ★스튜디오 헤더 미러는 후속. |
+| 검증 | tsc 0·build OK(/studio 125kB)·렌더 이모지 0(Lucide)·한글 코드 0(문구 JSON)·비가역 0. 워크벤치 레드 잔존(AiQueueStepper·FireflyPromptBuilder)=0. |
+| ★ 다음 | push+verify-vercel-deploy → Desktop Control Chrome 실측: (1) studio 카드 scrollWidth<=clientWidth(overflow=false)·큐 제목잘림 0·배지겹침 0 (2) 레드 사용처=메인지정 CTA 1곳 (3) 1차 강조·2차 접힘 (4) 관제탑 applyStatus 인디케이터 라이브(LIVE/DB/미적용·레드 0). 후속: P4 Card 배지·2단계 전 /studio·스튜디오 헤더 적용현황. |
+
 ### 2026-06-07 (54) 크롭 스튜디오 main 병합 + production 배포 (FROM Code, main FF merge, 비가역 0)
 
 | 항목 | 상태 |
