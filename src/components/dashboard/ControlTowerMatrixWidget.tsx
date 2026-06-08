@@ -68,6 +68,7 @@ interface ApplyStatus {
   detailApplied: ImageApplyState;
   publishState: ApplyState;
   publishDrift?: boolean;
+  sourceStrategy?: 'A' | 'unknown';
 }
 
 // Operator action queue (#56). Red only for GO_PENDING.
@@ -416,6 +417,18 @@ function ApplyStatusIndicator({ status }: { status: ApplyStatus }) {
           </span>
         );
       })}
+      {status.sourceStrategy === 'A' && (
+        <span
+          title={a.sourceA}
+          style={{
+            display: 'inline-flex', alignItems: 'center',
+            fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 999,
+            background: '#EFF6FF', border: '1px solid #93C5FD', color: '#1D4ED8', whiteSpace: 'nowrap',
+          }}
+        >
+          {a.sourceALabel}
+        </span>
+      )}
     </div>
   );
 }

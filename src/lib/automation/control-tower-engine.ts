@@ -98,12 +98,18 @@ export interface ImageInfo {
 //     SUSPENSION) sets publishDrift and is NOT live.
 export type ApplyState = 'LIVE' | 'DB' | 'none';
 export type ImageApplyState = 'none' | 'default' | 'curated';
+// Two-branch routing (IMAGE_DETAIL_TWO_BRANCH_SYSTEM). Availability-based first
+// pass: 'A' = full-res supplier detail captured → use-as-is candidate (extract
+// thumbnail from it, no generation); 'unknown' = not captured yet (the
+// good-vs-poor quality split eval that confirms A vs B is a follow-up).
+export type SourceStrategy = 'A' | 'unknown';
 export interface ApplyStatus {
   attributesApplied: ApplyState;
   mainImageApplied: ImageApplyState;
   detailApplied: ImageApplyState;
   publishState: ApplyState;
   publishDrift: boolean; // registered but Naver statusType != SALE (e.g. SUSPENSION)
+  sourceStrategy: SourceStrategy;
 }
 
 // Curated = produced/applied by the app pipeline (automation-storage bucket).
@@ -177,6 +183,8 @@ export interface ComputeContext {
   // quality_reasons.detailCurated — true once a real (non-blank) built detail was
   // applied via apply-detail. Gates detailApplied='curated' (skeleton stays default).
   detailCurated?: boolean;
+  // source_detail_url present — full-res supplier detail captured (two-branch).
+  hasSourceDetail?: boolean;
 }
 
 /**
@@ -317,6 +325,7 @@ export function computeControlTowerRow(
     detailApplied: classifyDetail(product.detail_image_url, ctx.detailCurated ?? false),
     publishState,
     publishDrift,
+    sourceStrategy: ctx.hasSourceDetail ? 'A' : 'unknown',
   };
 
   const overall = overallOf([image.status, publish.status]);

@@ -166,6 +166,7 @@ export async function GET() {
       lineOverride: lineOverrideById.get(dbProduct.id) ?? null,
       naverStatusType: (dbProduct as { naver_status_type?: string | null }).naver_status_type ?? null,
       detailCurated: detailCuratedById.get(dbProduct.id) ?? false,
+      hasSourceDetail: !!(dbProduct as { source_detail_url?: string | null }).source_detail_url,
     });
     counts[row.overall]++;
 

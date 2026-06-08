@@ -178,7 +178,9 @@
         "default": "공급사 원본 (제작 전)",
         "drift": "주의 — 판매중지(SUSPENSION)",
         "none": "미적용"
-      }
+      },
+      "sourceALabel": "공급사상세 A",
+      "sourceA": "공급사 풀해상 상세 확보 — 그대로 활용(Branch A) 후보"
     },
     "actionQueue": {
       "title": "개입 대기열",
