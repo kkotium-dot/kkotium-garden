@@ -21,6 +21,16 @@ import {
   validateForRegistration,
   type LocalProduct,
 } from '@/lib/naver/product-builder';
+// Type-only — keeps this module pure (quality-classifier pulls in sharp at load).
+import type { RecommendedMode } from '@/lib/images/quality-classifier';
+
+// Workflow line (handoff §4). A = good assets → crop / as-is; B = low quality or
+// high commerce value → generate / build. Mirrors quality-classifier's
+// ENHANCE_THRESHOLD (40) without importing it (sharp-free).
+const LINE_ENHANCE_THRESHOLD = 40;
+export type ProductLine = 'A' | 'B';
+export type LineSource = 'auto' | 'operator';
+export interface LineInfo { value: ProductLine; source: LineSource }
 
 export type TrackStatus =
   | 'done' | 'in_progress' | 'pending' | 'blocked' | 'awaiting_human' | 'none';
@@ -39,6 +49,8 @@ export type NextActionKey =
   | 'fill_attributes'
   | 'resolve_validation'
   | 'prepare_image'
+  | 'crop_pick'      // line A image step → crop studio (pick/region crop)
+  | 'build_image'    // line B image step → swap (generate / build)
   | 'publish'
   | 'verify_certification'
   | 'verify_publish';
@@ -77,6 +89,7 @@ export interface ControlTowerRow {
   name: string;
   publish: PublishInfo;
   image: ImageInfo;
+  line: LineInfo;
   overall: Overall;
   nextAction: NextAction | null;
 }
@@ -94,6 +107,44 @@ export interface ComputeContext {
   // Image strategy tier (T0..T3) from the persisted quality assessment
   // (quality_reasons.imageTier). null until assess-quality has run (item 3).
   imageTier?: ImageTier;
+  // Line classification inputs (handoff §4). recommendedMode/qualityScore feed
+  // the auto classifier; lineOverride (quality_reasons.line when
+  // quality_reasons.lineSource==='operator') WINS over the auto result — the
+  // operator's decision is authoritative (e.g. myeonghwa score 62 → line A).
+  recommendedMode?: RecommendedMode | null;
+  qualityScore?: number | null;
+  lineOverride?: ProductLine | null;
+}
+
+/**
+ * Auto workflow line from quality signals: B (build) when the mode is NEW, the
+ * score is below the ENHANCE floor, or there is no usable detail asset;
+ * otherwise A (crop / as-is).
+ */
+export function deriveLine(o: {
+  recommendedMode: RecommendedMode | null;
+  qualityScore: number | null;
+  hasDetail: boolean;
+}): ProductLine {
+  if (o.recommendedMode === 'NEW') return 'B';
+  if (o.qualityScore != null && o.qualityScore < LINE_ENHANCE_THRESHOLD) return 'B';
+  if (!o.hasDetail) return 'B';
+  return 'A';
+}
+
+/** Resolved line — operator override wins, else the auto classification. */
+export function resolveLine(ctx: ComputeContext, hasDetail: boolean): LineInfo {
+  if (ctx.lineOverride === 'A' || ctx.lineOverride === 'B') {
+    return { value: ctx.lineOverride, source: 'operator' };
+  }
+  return {
+    value: deriveLine({
+      recommendedMode: ctx.recommendedMode ?? null,
+      qualityScore: ctx.qualityScore ?? null,
+      hasDetail,
+    }),
+    source: 'auto',
+  };
 }
 
 // ── asset_jobs status → track status (mirror of the prior matrix reducer) ─────
@@ -177,10 +228,11 @@ export function computeControlTowerRow(
     tier: ctx.imageTier ?? null, // from quality_reasons.imageTier (item 3)
   };
 
+  const line = resolveLine(ctx, hasDetail);
   const overall = overallOf([image.status, publish.status]);
-  const nextAction = computeNextAction(product, publish, image, registered);
+  const nextAction = computeNextAction(product, publish, image, registered, line.value);
 
-  return { productId: product.id, name: product.name, publish, image, overall, nextAction };
+  return { productId: product.id, name: product.name, publish, image, line, overall, nextAction };
 }
 
 /**
@@ -192,6 +244,7 @@ export function computeNextAction(
   publish: PublishInfo,
   image: ImageInfo,
   registered: boolean,
+  line: ProductLine = 'A',
 ): NextAction | null {
   const id = product.id;
 
@@ -217,9 +270,12 @@ export function computeNextAction(
         detail: publish.missingRequired.join(', '),
       };
     }
-    // 4. Image track not finished yet (detail/crop pending).
+    // 4. Image track not finished yet — route per line: A crops a good asset in
+    //    the crop studio (preview); B builds/generates via the swap pipeline.
     if (image.status !== 'done') {
-      return { key: 'prepare_image', severity: 'action', href: `/products/${id}/swap` };
+      return line === 'A'
+        ? { key: 'crop_pick', severity: 'action', href: `/products/${id}/preview` }
+        : { key: 'build_image', severity: 'action', href: `/products/${id}/swap` };
     }
     // 5. Ready — publish.
     return { key: 'publish', severity: 'action', href: `/products/${id}` };

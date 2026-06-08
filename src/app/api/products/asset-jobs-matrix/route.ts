@@ -23,8 +23,9 @@ import {
   OVERALL_RANK,
   type ControlTowerRow,
   type Overall,
+  type ProductLine,
 } from '@/lib/automation/control-tower-engine';
-import type { ImageTier } from '@/lib/images/quality-classifier';
+import type { ImageTier, RecommendedMode } from '@/lib/images/quality-classifier';
 import type { LocalProduct } from '@/lib/naver/product-builder';
 
 export const dynamic = 'force-dynamic';
@@ -111,18 +112,28 @@ export async function GET() {
   //    be migrated). Both live on the Product row (tier inside quality_reasons).
   const modeById = new Map<string, ModeInfo>();
   const tierById = new Map<string, ImageTier>();
+  const lineOverrideById = new Map<string, ProductLine>();
+  const recommendedModeById = new Map<string, RecommendedMode | null>();
+  const qualityScoreById = new Map<string, number | null>();
   try {
     const modes = await prisma.product.findMany({
       where: { id: { in: ids } },
       select: { id: true, recommended_mode: true, quality_score: true, quality_reasons: true },
     });
     for (const p of modes) {
-      const qr = (p.quality_reasons ?? null) as { modeSource?: string; imageTier?: ImageTier } | null;
+      const qr = (p.quality_reasons ?? null) as
+        { modeSource?: string; imageTier?: ImageTier; line?: string; lineSource?: string } | null;
       const recommended = p.recommended_mode ?? null;
       const source: ModeInfo['source'] =
         qr?.modeSource === 'operator' ? 'operator' : recommended ? 'auto' : null;
       modeById.set(p.id, { recommended, score: p.quality_score ?? null, source });
       if (qr?.imageTier) tierById.set(p.id, qr.imageTier);
+      recommendedModeById.set(p.id, (recommended as RecommendedMode | null) ?? null);
+      qualityScoreById.set(p.id, p.quality_score ?? null);
+      // Operator line override wins over auto classification (handoff §4).
+      if (qr?.lineSource === 'operator' && (qr.line === 'A' || qr.line === 'B')) {
+        lineOverrideById.set(p.id, qr.line);
+      }
     }
   } catch (e: unknown) {
     const code = (e as { code?: string })?.code;
@@ -148,6 +159,9 @@ export async function GET() {
       imageJobStatuses: imageJobsByProduct.get(dbProduct.id) ?? [],
       publishJobStatuses: publishJobsByProduct.get(dbProduct.id) ?? [],
       imageTier: tierById.get(dbProduct.id),
+      recommendedMode: recommendedModeById.get(dbProduct.id) ?? null,
+      qualityScore: qualityScoreById.get(dbProduct.id) ?? null,
+      lineOverride: lineOverrideById.get(dbProduct.id) ?? null,
     });
     counts[row.overall]++;
 
@@ -159,6 +173,7 @@ export async function GET() {
       tracks: { image: row.image.status, publish: row.publish.status, line: 'none' as const, ops: 'none' as const },
       publish: row.publish,
       image: row.image,
+      line: row.line,
       mode: modeById.get(row.productId) ?? { recommended: null, score: null, source: null },
       overall: row.overall,
       nextAction: row.nextAction,

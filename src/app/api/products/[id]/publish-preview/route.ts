@@ -18,10 +18,17 @@
 // ============================================================================
 
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { buildNaverProductPayload } from '@/lib/naver/product-builder';
 import { loadNaverUpdateContext } from '@/lib/naver/load-update-context';
-import { assessImageQuality, type QualityAssessment } from '@/lib/images/quality-classifier';
+import { assessImageQuality, type QualityAssessment, type RecommendedMode } from '@/lib/images/quality-classifier';
 import { ocrFullFrame } from '@/lib/diagnosis/p-filter-watermark';
+import { deriveLine, type ProductLine } from '@/lib/automation/control-tower-engine';
+
+// Always-blocking image warnings (regulatory / missing asset) — these stop
+// publish on any line. Resolution/background/subject/detail-quality block only
+// on line B (assets being built); line A treats them as cautions (T2/T4).
+const HARD_BLOCK_WARNINGS = new Set(['text_overlay', 'representative_missing', 'detail_missing']);
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -131,10 +138,33 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     detailWarnings.push('detail_missing');
   }
 
-  // ── Publish gate ─────────────────────────────────────────────────────────────
+  // ── Workflow line (operator override wins) ───────────────────────────────────
+  let recommendedMode: RecommendedMode | null = null;
+  let qualityScore: number | null = null;
+  let lineOverride: ProductLine | null = null;
+  try {
+    const m = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { recommended_mode: true, quality_score: true, quality_reasons: true },
+    });
+    if (m) {
+      recommendedMode = (m.recommended_mode as RecommendedMode | null) ?? null;
+      qualityScore = m.quality_score ?? null;
+      const qr = (m.quality_reasons ?? null) as { line?: string; lineSource?: string } | null;
+      if (qr?.lineSource === 'operator' && (qr.line === 'A' || qr.line === 'B')) lineOverride = qr.line;
+    }
+  } catch { /* adaptive-mode columns not migrated — line defaults to auto */ }
+  const lineValue: ProductLine =
+    lineOverride ?? deriveLine({ recommendedMode, qualityScore, hasDetail: !!detailBuf });
+  const lineSource = lineOverride ? 'operator' : 'auto';
+
+  // ── Publish gate (line-aware) ────────────────────────────────────────────────
   const imageWarnings = [...repWarnings, ...detailWarnings];
+  const blockingImageWarnings =
+    lineValue === 'A' ? imageWarnings.filter(w => HARD_BLOCK_WARNINGS.has(w)) : imageWarnings;
+  const imageCautions = imageWarnings.filter(w => !blockingImageWarnings.includes(w));
   const readinessOk = validation.readinessGrade === 'S' || validation.readinessGrade === 'A';
-  const canPublish = readinessOk && validation.canRegister && imageWarnings.length === 0;
+  const canPublish = readinessOk && validation.canRegister && blockingImageWarnings.length === 0;
 
   return NextResponse.json({
     success: true,
@@ -156,13 +186,16 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     repWarnings,
     detailWarnings,
     imageWarnings,
+    blockingImageWarnings,
+    imageCautions,
+    line: { value: lineValue, source: lineSource },
     summary,
     canPublish,
     // Honest gate reasons so the UI can explain a disabled publish button.
     gateReasons: {
       readinessOk,
       canRegister: validation.canRegister,
-      imageWarningCount: imageWarnings.length,
+      imageWarningCount: blockingImageWarnings.length,
     },
   });
 }
