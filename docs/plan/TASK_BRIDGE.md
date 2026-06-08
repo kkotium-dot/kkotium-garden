@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-08 (62) 아틀리에 job 생명주기 컨트롤 (FROM Code, main d08341e, 비가역 0). ★control loop production 실측
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | PARALLEL_WORK_TRACKER #8 + STUDIO_ATELIER_UX_REDESIGN. 선결(워크벤치 asset_jobs 표시) 해소. |
+| 선결 ✅ | JobLifecyclePanel을 controls 슬롯 상단 마운트(SWR 8s 폴링·jobs 0이면 미표시). 워크벤치 우측에 asset_jobs 표시 통합. |
+| (1) 컨트롤 ✅ | asset-job-state ALLOWED_TRANSITIONS 확장: in_progress->cancelled(중단)·done/cancelled->ready(운영자 step-back/reopen). NEW /api/products/[id]/jobs(GET 목록·P2021 가드 / POST {jobId,action:cancel|retry|reopen}→transitionJob 래핑·소유 가드·JobTransitionError 409). 취소/재시도/되돌아가 수정. |
+| (2) 레드 스코프 ✅ | 취소=뉴트럴(회색)·재시도/되돌아가=아웃라인. 레드 0(발행GO·메인지정만 유지). 상태칩 그린/앰버/보라/뉴트럴. |
+| ★ 실측 | production control loop: 명화 asset_jobs(10 cancelled) GET → reopen(cancelled->ready) success → cancel(ready->cancelled) success(복원). transitionJob 상태머신·전이로그 동작 확인. 비가역 0(asset_jobs DB만). |
+| 검증 | tsc 0·build OK(/jobs ƒ)·이모지 0·한글 코드 0·비가역 0(네이버 0). |
+| ★ 다음 | Desktop Control Chrome: 워크벤치 우측 진행 작업 패널·취소/재시도/되돌아가 버튼 동작·레드 스코프 실측. 명화 stale 10잡은 cancelled 복원됨(audit 전이 2행). |
+
 ### 2026-06-08 (61) 아틀리에 2단계 — 우측 독립 스크롤 교정 + 워크벤치 임시저장 (FROM Code, main b665440, 비가역 0)
 
 | 항목 | 상태 |

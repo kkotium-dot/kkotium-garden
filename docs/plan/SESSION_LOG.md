@@ -1,3 +1,21 @@
+## 2026-06-08 아틀리에 job 생명주기 컨트롤 (취소/재시도/되돌아가 수정) (Code turn)
+
+main 직접 d08341e. 비가역 0(네이버 0·asset_jobs DB만). tsc 0/build OK/이모지 0/한글 코드 0. 권위: PARALLEL_WORK_TRACKER #8 + STUDIO_ATELIER_UX_REDESIGN.
+
+**[한 것]**
+- 선결: JobLifecyclePanel(워크벤치 우측 asset_jobs 표시)을 controls 슬롯 상단 마운트. SWR 8s 폴링. jobs 0이면 미표시(방해 0). AiQueueStepper(로컬 HITL)와 별개로 실제 asset_jobs 노출.
+- 상태머신: asset-job-state ALLOWED_TRANSITIONS 확장 — in_progress->cancelled(운영자 중단/abort), done/cancelled->ready(운영자 step-back/reopen, terminal 해제는 human reopen만). 전이 가드·낙관적잠금·전이로그 계승.
+- 엔드포인트: NEW /api/products/[id]/jobs. GET=상품 asset_jobs 목록(P2021/P2022 가드→빈목록 degrade). POST {jobId,action:cancel|retry|reopen}→transitionJob(cancel→cancelled / retry→ready[failed/rejected/blocked] / reopen→ready[done/cancelled]). 소유 가드(job.productId===productId). JobTransitionError→409(NOT_ALLOWED/RETRY_EXHAUSTED/VERSION_CONFLICT).
+- UI: JobLifecyclePanel 상태칩(그린/앰버/보라/뉴트럴·레드 0) + 컨트롤. 취소=뉴트럴(회색 fill)·재시도/되돌아가=아웃라인. 레드는 발행GO·메인지정만(75/15/10). CANCELLABLE/RETRYABLE/REOPENABLE 세트가 ALLOWED_TRANSITIONS와 정합.
+
+**[production 실측 — control loop]**
+- 명화(cmpnooli4) asset_jobs 10개(전부 cancelled, 과거 stale B안) GET 확인 → reopen(aj_mh_b_cut: cancelled->ready) success → cancel(ready->cancelled) success로 복원. transitionJob 상태머신+append 전이로그 end-to-end 동작 확인. 비가역 0(asset_jobs만, 복원 완료, audit 전이 2행 잔존).
+
+**[다음]**
+- Desktop Control Chrome: 워크벤치 우측 진행 작업 패널 노출·취소/재시도/되돌아가 버튼 동작·레드 스코프(취소 뉴트럴) 실측. PARALLEL_WORK_TRACKER #8 완료.
+
+---
+
 ## 2026-06-08 아틀리에 2단계 — 우측 독립 스크롤 교정 + 워크벤치 임시저장 (Code turn)
 
 main 직접 b665440. 비가역 0. tsc 0/build OK/이모지 0/한글 코드 0. 권위: STUDIO_ATELIER_UX_REDESIGN + PARALLEL_WORK_TRACKER #7.
