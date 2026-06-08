@@ -1,3 +1,17 @@
+## 2026-06-07 (Merge) 크롭 스튜디오 main 병합 + production 배포 (Code turn)
+
+대표 승인: feature/crop-studio(크롭 스튜디오 완성본 T1~T6) → main **fast-forward** 병합 + origin/main push → production 배포. 비가역 0.
+
+**[한 것]**
+- 표준 §1 outpaint 적용 범위 보강(Desktop 지시): outpaint=고해상 소스 비율 전환용. 저해상 prominence는 타이트 크롭 + 통제된 업스케일(<=1.8x) 1순위, outpaint 후순위(저해상 확장 시 제품 축소·이음새 리스크).
+- feature/crop-studio → main FF 병합(main 1d00be8 이후 무분기) + push. T1~T6 + 권위문서 + 표준 보강 전부 production 반영.
+- push 후 verify-vercel-deploy.sh --wait → production HEAD == main 병합 SHA 확인(main 배포라 production-SHA 검사 정상 작동).
+
+**[다음]**
+- Desktop production 3중 검증: /products/[id]/preview 라이브 크롭 스튜디오(bbox 오버레이·완전포함 자동후보·수동 침범 스냅·confirm 차단·라인 인지 게이트) + 관제탑 라인 배지/override + thumb-crop contain dry-run 명화. 통과 시 명화 라인A 대표 크롭 확정 → 발행 GO(비가역, 대표 명시 승인).
+
+---
+
 ## 2026-06-07 (T6) 크롭 주제 완전포함 가드 (Code turn)
 
 feature/crop-studio 11f6287(크롭 스튜디오 완성본 → main 병합 GO 대기). 비가역 0. tsc 0/build OK/이모지 0/한글 코드 0. 권위: docs/decisions/2026-06-07-crop-full-subject-containment.md(명화 대표 B 유리병 하단 잘림 지적).

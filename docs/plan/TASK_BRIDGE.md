@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (54) 크롭 스튜디오 main 병합 + production 배포 (FROM Code, main FF merge, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | 대표 승인: feature/crop-studio 크롭 스튜디오 완성본(T1~T6) → main 병합 GO → production 배포. |
+| 병합 | feature/crop-studio → main **fast-forward** 병합(main 1d00be8 이후 무분기) + origin/main push. 본 트랙 12 commit(T1~T6 + 권위문서 + 표준 §1 outpaint 보강 + 본 ledger)이 production에 반영. |
+| 표준 §1 보강 | outpaint 적용 범위 명문화: outpaint=고해상 소스 비율 전환용. 저해상 prominence는 타이트 크롭 + 통제된 업스케일(<=1.8x) 1순위, outpaint 후순위(저해상 확장 시 제품 축소·이음새 리스크). |
+| 검증 | 병합 전 tsc 0/build OK 누적 확인. push 후 verify-vercel-deploy.sh --wait → production HEAD == main 병합 SHA(이제 main 배포라 production-SHA 검사 정상). |
+| ★ 다음 | Desktop production 3중 검증: (1) /products/[id]/preview 라이브 크롭 스튜디오(bbox 오버레이·완전포함 자동후보·수동 침범 스냅·confirm 차단·라인 게이트) (2) 관제탑 라인 배지/override (3) thumb-crop contain dry-run 명화 subjectBBox/contained. 통과 시 명화 라인A 대표 크롭 확정 → 발행 GO(비가역, 대표 명시 승인). |
+
 ### 2026-06-07 (53) T6 크롭 주제 완전포함 가드 (FROM Code, feature/crop-studio 11f6287, 비가역 0·네이버 미접촉)
 
 | 항목 | 상태 |
