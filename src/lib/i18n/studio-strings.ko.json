@@ -109,7 +109,10 @@
     "applyYes": "네, 적용",
     "applyCancel": "취소",
     "applied": "상세 이미지로 적용했어요 (가역 — 관제탑에 curated 반영)",
-    "applyFail": "적용 실패"
+    "applyFail": "적용 실패",
+    "adoptSourceButton": "공급사 상세 그대로 적용 (Branch A)",
+    "adoptSourceHint": "공급사 풀해상 상세를 그대로 상세이미지로 채택해요 (생성 안 함·가역). SEO/속성/정보고시는 별도 보강.",
+    "adopted": "공급사 상세를 적용했어요 (가역 — 관제탑에 curated 반영)"
   },
   "actions": {
     "title": "이미지 저장 + 발행",

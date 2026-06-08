@@ -179,8 +179,13 @@
         "drift": "주의 — 판매중지(SUSPENSION)",
         "none": "미적용"
       },
-      "sourceALabel": "공급사상세 A",
-      "sourceA": "공급사 풀해상 상세 확보 — 그대로 활용(Branch A) 후보"
+      "sourceA": "2갈래 라우팅 — 공급사 상세/썸네일 품질 분리 평가 결과",
+      "sourceStrategy": {
+        "A": "갈래A 상세그대로",
+        "A_EXTRACT": "갈래A+썸네일추출",
+        "MIXED": "혼합(상세생성)",
+        "B": "갈래B 크롭·생성"
+      }
     },
     "actionQueue": {
       "title": "개입 대기열",

@@ -11,6 +11,7 @@ import { prisma } from '@/lib/prisma';
 import { KKOTIUM_DEFAULTS } from '@/lib/naver/codes';
 import { generateUniqueSku } from '@/lib/sku-engine';
 import { mapCrawlOptions } from '@/lib/sources/crawl-option-mapper';
+import { parseDomeProductNo } from '@/lib/sources/parse-dome-no';
 
 // Fire-and-forget: check honey score drop after product update
 
@@ -302,7 +303,17 @@ export async function POST(request: NextRequest) {
           naver_origin: data.naver_origin ? String(data.naver_origin) : null,
           naver_keywords: data.naver_keywords ? String(data.naver_keywords) : null,
           seller_product_code: data.seller_product_code ? String(data.seller_product_code) : null,
-          supplier_product_code: data.supplier_product_code ? String(data.supplier_product_code) : null,
+          // Re-prevention (item 1): never lose supplier_product_code — fall back
+          // to the crawl productNo, then parse it from any source URL the prefill
+          // carries (the capture/backfill key for the full-res detail).
+          supplier_product_code: (() => {
+            const explicit = data.supplier_product_code ?? data.productNo;
+            if (explicit) return String(explicit).trim();
+            const parsed = parseDomeProductNo(
+              (data.sourceUrl as string) ?? (data.url as string) ?? (data.productUrl as string) ?? null,
+            );
+            return parsed;
+          })(),
           instant_discount: data.instant_discount != null ? data.instant_discount : null,
           importer_name: data.importer_name ? String(data.importer_name) : null,
           return_care_enabled: data.return_care_enabled === true,

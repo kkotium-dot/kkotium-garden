@@ -11,9 +11,15 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { uploadAutomationAsset } from '@/lib/storage/automation-storage';
 import { captureSupplierDetail } from '@/lib/sources/capture-supplier-detail';
+import { assessImageQuality } from '@/lib/images/quality-classifier';
+
+// Supplier detail quality floor — at/above this the detail is "good" (Branch A
+// candidate); below it needs build/enhance (Branch B). Two-branch split eval.
+const SOURCE_DETAIL_GOOD_SCORE = 50;
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -29,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    select: { id: true, supplier_product_code: true },
+    select: { id: true, supplier_product_code: true, quality_reasons: true },
   });
   if (!product) {
     return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
@@ -63,6 +69,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     );
   }
 
+  // Split-quality eval (item 2): score the supplier detail so the two-branch
+  // router knows if it is good (Branch A as-is) or poor (Branch B build).
+  let sourceDetailScore = 0;
+  try {
+    sourceDetailScore = (await assessImageQuality(captured.buffer)).score;
+  } catch { /* best-effort — defaults to poor */ }
+  const sourceDetailGood = sourceDetailScore >= SOURCE_DETAIL_GOOD_SCORE;
+
   let detailUrl: string;
   try {
     const uploaded = await uploadAutomationAsset({
@@ -73,9 +87,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       contentType: captured.contentType,
     });
     detailUrl = uploaded.publicUrl;
+    const prevQr = (product.quality_reasons ?? {}) as Record<string, unknown>;
+    const quality_reasons = { ...prevQr, sourceDetailGood, sourceDetailScore };
     await prisma.product.update({
       where: { id: productId },
-      data: { source_detail_url: detailUrl },
+      data: {
+        source_detail_url: detailUrl,
+        quality_reasons: quality_reasons as unknown as Prisma.InputJsonValue,
+      },
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

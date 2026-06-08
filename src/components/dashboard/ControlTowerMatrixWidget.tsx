@@ -68,7 +68,7 @@ interface ApplyStatus {
   detailApplied: ImageApplyState;
   publishState: ApplyState;
   publishDrift?: boolean;
-  sourceStrategy?: 'A' | 'unknown';
+  sourceStrategy?: 'A' | 'A_EXTRACT' | 'MIXED' | 'B' | 'unknown';
 }
 
 // Operator action queue (#56). Red only for GO_PENDING.
@@ -417,7 +417,7 @@ function ApplyStatusIndicator({ status }: { status: ApplyStatus }) {
           </span>
         );
       })}
-      {status.sourceStrategy === 'A' && (
+      {status.sourceStrategy && status.sourceStrategy !== 'unknown' && (
         <span
           title={a.sourceA}
           style={{
@@ -426,7 +426,7 @@ function ApplyStatusIndicator({ status }: { status: ApplyStatus }) {
             background: '#EFF6FF', border: '1px solid #93C5FD', color: '#1D4ED8', whiteSpace: 'nowrap',
           }}
         >
-          {a.sourceALabel}
+          {(a.sourceStrategy as Record<string, string>)[status.sourceStrategy] ?? status.sourceStrategy}
         </span>
       )}
     </div>

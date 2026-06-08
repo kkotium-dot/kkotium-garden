@@ -17,7 +17,7 @@ export function DetailPageCard({
   detail, busy, error, onRun,
   overrideSkeletonId, onOverrideChange,
   lifestyleAssetUrl, onLifestyleChange,
-  productId, onApplied,
+  productId, onApplied, sourceDetailUrl,
 }: {
   detail: DetailResult | null;
   busy: boolean;
@@ -32,6 +32,9 @@ export function DetailPageCard({
    *  optional so the PLANT (7th-tab) path keeps compiling without them. */
   productId?: string;
   onApplied?: () => void;
+  /** Branch A — captured full-res supplier detail. When present, an "adopt
+   *  as-is" path is offered (no generation). */
+  sourceDetailUrl?: string | null;
 }) {
   const [viewMode, setViewMode] = useState<'image' | 'html'>('image');
   const hasHtml = Boolean(detail?.detailHtml);
@@ -41,6 +44,27 @@ export function DetailPageCard({
   const [applyConfirm, setApplyConfirm] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applyMsg, setApplyMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Branch A — adopt the captured supplier detail as-is (no generation).
+  async function adoptSourceDetail() {
+    if (!productId) return;
+    setApplying(true);
+    setApplyMsg(null);
+    try {
+      const res = await fetch(`/api/products/${productId}/adopt-source-detail`, { method: 'POST' });
+      const j = await res.json();
+      if (res.ok && j.success) {
+        setApplyMsg({ ok: true, text: strings.detail.adopted });
+        onApplied?.();
+      } else {
+        setApplyMsg({ ok: false, text: `${strings.detail.applyFail}: ${j.error ?? res.status}` });
+      }
+    } catch (e) {
+      setApplyMsg({ ok: false, text: `${strings.detail.applyFail}: ${e instanceof Error ? e.message : String(e)}` });
+    } finally {
+      setApplying(false);
+    }
+  }
 
   async function applyDetail() {
     if (!productId || !detail) return;
@@ -112,6 +136,33 @@ export function DetailPageCard({
           <span style={{ fontSize: 12, color: '#7A6873' }}>{strings.detail.notRun}</span>
         )}
       </div>
+
+      {/* Branch A — adopt the captured full-res supplier detail as-is (no
+          generation). Shown when a source detail has been captured. */}
+      {productId && sourceDetailUrl && (
+        <div style={{ marginBottom: 12 }}>
+          <button
+            type="button"
+            disabled={applying}
+            onClick={adoptSourceDetail}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '7px 13px', borderRadius: 10, border: '1.5px solid #84A98C',
+              background: '#EAF1EC', color: '#3F5A47', fontSize: 12, fontWeight: 700,
+              cursor: applying ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {applying ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
+            {strings.detail.adoptSourceButton}
+          </button>
+          <p style={{ margin: '4px 0 0', fontSize: 11, color: '#7A6873' }}>{strings.detail.adoptSourceHint}</p>
+          {applyMsg && !detail && (
+            <p style={{ margin: '6px 0 0', fontSize: 12, fontWeight: 600, color: applyMsg.ok ? '#15803D' : '#b91c1c' }}>
+              {applyMsg.text}
+            </p>
+          )}
+        </div>
+      )}
       {onLifestyleChange && (
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#7A6873', marginBottom: 12 }}>
           {strings.detail.moodBackdropLabel}:

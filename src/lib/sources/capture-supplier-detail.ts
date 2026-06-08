@@ -32,6 +32,8 @@ export interface CapturedDetail {
   contentType: string;
 }
 
+export { parseDomeProductNo } from './parse-dome-no';
+
 /** Fetch a hotlink-protected supplier image with a Referer header. */
 export async function fetchSupplierImage(url: string): Promise<Buffer | null> {
   try {

@@ -98,11 +98,14 @@ export interface ImageInfo {
 //     SUSPENSION) sets publishDrift and is NOT live.
 export type ApplyState = 'LIVE' | 'DB' | 'none';
 export type ImageApplyState = 'none' | 'default' | 'curated';
-// Two-branch routing (IMAGE_DETAIL_TWO_BRANCH_SYSTEM). Availability-based first
-// pass: 'A' = full-res supplier detail captured → use-as-is candidate (extract
-// thumbnail from it, no generation); 'unknown' = not captured yet (the
-// good-vs-poor quality split eval that confirms A vs B is a follow-up).
-export type SourceStrategy = 'A' | 'unknown';
+// Two-branch routing (IMAGE_DETAIL_TWO_BRANCH_SYSTEM §3) from the split quality
+// eval (supplier detail good? + thumbnail good?):
+//   A         — detail good + thumb good → both as-is + SEO boost
+//   A_EXTRACT — detail good + thumb weak → detail as-is + crop thumb from it
+//   MIXED     — detail weak + thumb good → thumb as-is + build detail
+//   B         — both weak → crop + generate
+//   unknown   — supplier detail not captured yet (run capture first)
+export type SourceStrategy = 'A' | 'A_EXTRACT' | 'MIXED' | 'B' | 'unknown';
 export interface ApplyStatus {
   attributesApplied: ApplyState;
   mainImageApplied: ImageApplyState;
@@ -185,6 +188,22 @@ export interface ComputeContext {
   detailCurated?: boolean;
   // source_detail_url present — full-res supplier detail captured (two-branch).
   hasSourceDetail?: boolean;
+  // quality_reasons.sourceDetailGood — the captured supplier detail scored >= the
+  // good floor (split quality eval). Drives sourceStrategy A/B/mixed.
+  sourceDetailGood?: boolean;
+}
+
+/** Two-branch source strategy from the split quality eval (blueprint §3). */
+function deriveSourceStrategy(
+  hasSourceDetail: boolean,
+  detailGood: boolean,
+  thumbGood: boolean,
+): SourceStrategy {
+  if (!hasSourceDetail) return 'unknown';
+  if (detailGood && thumbGood) return 'A';
+  if (detailGood && !thumbGood) return 'A_EXTRACT';
+  if (!detailGood && thumbGood) return 'MIXED';
+  return 'B';
 }
 
 /**
@@ -325,7 +344,13 @@ export function computeControlTowerRow(
     detailApplied: classifyDetail(product.detail_image_url, ctx.detailCurated ?? false),
     publishState,
     publishDrift,
-    sourceStrategy: ctx.hasSourceDetail ? 'A' : 'unknown',
+    // thumb is "good" once a curated rep is applied (a default supplier thumb
+    // still needs an extract/crop).
+    sourceStrategy: deriveSourceStrategy(
+      ctx.hasSourceDetail ?? false,
+      ctx.sourceDetailGood ?? false,
+      classifyImage(product.mainImage) === 'curated',
+    ),
   };
 
   const overall = overallOf([image.status, publish.status]);

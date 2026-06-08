@@ -224,6 +224,7 @@ function StudioInner() {
           lifestyleAssetUrl={actions.manualBackdropUrl}
           onLifestyleChange={actions.setManualBackdropUrl}
           productId={selectedProduct?.id}
+          sourceDetailUrl={(selectedProduct as { source_detail_url?: string | null } | undefined)?.source_detail_url ?? null}
         />
       }
       actions={
