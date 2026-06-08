@@ -103,7 +103,13 @@
     "moodBackdropPlaceholder": "상세 무드 배경 이미지 주소 (선택)",
     "outputImage": "이미지(PNG)",
     "outputHtml": "HTML",
-    "htmlUnavailable": "HTML 출력 없음 (재생성 필요)"
+    "htmlUnavailable": "HTML 출력 없음 (재생성 필요)",
+    "applyButton": "이 상세로 적용",
+    "applyConfirm": "이 상세 이미지로 적용할까요? (가역)",
+    "applyYes": "네, 적용",
+    "applyCancel": "취소",
+    "applied": "상세 이미지로 적용했어요 (가역 — 관제탑에 curated 반영)",
+    "applyFail": "적용 실패"
   },
   "actions": {
     "title": "이미지 저장 + 발행",

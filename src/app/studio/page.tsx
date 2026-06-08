@@ -223,6 +223,7 @@ function StudioInner() {
           onOverrideChange={actions.setOverrideSkeletonId}
           lifestyleAssetUrl={actions.manualBackdropUrl}
           onLifestyleChange={actions.setManualBackdropUrl}
+          productId={selectedProduct?.id}
         />
       }
       actions={

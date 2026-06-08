@@ -7,7 +7,7 @@
 // image(PNG)/HTML output toggle for the hybrid output paths.
 
 import { useState } from 'react';
-import { FileImage, Code2 } from 'lucide-react';
+import { FileImage, Code2, Check, Loader2, ShieldCheck } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import { formatSkeletonId } from '@/lib/i18n/diagnosis-labels';
 import { Card, Pill, PrimaryButton } from './StudioCardShell';
@@ -17,6 +17,7 @@ export function DetailPageCard({
   detail, busy, error, onRun,
   overrideSkeletonId, onOverrideChange,
   lifestyleAssetUrl, onLifestyleChange,
+  productId, onApplied,
 }: {
   detail: DetailResult | null;
   busy: boolean;
@@ -27,10 +28,44 @@ export function DetailPageCard({
   /** Optional — the mood backdrop input renders only when a handler is given. */
   lifestyleAssetUrl?: string;
   onLifestyleChange?: (s: string) => void;
+  /** Track 2 — apply the built detail as detail_image_url (reversible). Both
+   *  optional so the PLANT (7th-tab) path keeps compiling without them. */
+  productId?: string;
+  onApplied?: () => void;
 }) {
   const [viewMode, setViewMode] = useState<'image' | 'html'>('image');
   const hasHtml = Boolean(detail?.detailHtml);
   const showHtml = viewMode === 'html' && hasHtml;
+
+  // Apply gate (Track 2) — confirm → upload the previewed PNG → set detail.
+  const [applyConfirm, setApplyConfirm] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [applyMsg, setApplyMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function applyDetail() {
+    if (!productId || !detail) return;
+    setApplying(true);
+    setApplyMsg(null);
+    try {
+      const res = await fetch(`/api/products/${productId}/apply-detail`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64: detail.detailBase64, skeletonId: detail.skeletonId }),
+      });
+      const j = await res.json();
+      if (res.ok && j.success) {
+        setApplyMsg({ ok: true, text: strings.detail.applied });
+        onApplied?.();
+      } else {
+        setApplyMsg({ ok: false, text: `${strings.detail.applyFail}: ${j.error ?? res.status}` });
+      }
+    } catch (e) {
+      setApplyMsg({ ok: false, text: `${strings.detail.applyFail}: ${e instanceof Error ? e.message : String(e)}` });
+    } finally {
+      setApplying(false);
+      setApplyConfirm(false);
+    }
+  }
 
   const toggleButtonStyle = (active: boolean) => ({
     display: 'flex', alignItems: 'center', gap: 4,
@@ -150,6 +185,62 @@ export function DetailPageCard({
               />
             )}
           </div>
+
+          {/* Apply gate (Track 2) — confirm to set this built detail as the
+              product's detail image (reversible; curated). */}
+          {productId && (
+            <div style={{ marginTop: 12 }}>
+              {applyMsg && (
+                <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 600, color: applyMsg.ok ? '#15803D' : '#b91c1c' }}>
+                  {applyMsg.text}
+                </p>
+              )}
+              {!applyConfirm ? (
+                <button
+                  type="button"
+                  disabled={applying}
+                  onClick={() => setApplyConfirm(true)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '8px 14px', borderRadius: 10, border: 'none',
+                    background: '#84A98C', color: '#fff', fontSize: 13, fontWeight: 700,
+                    cursor: applying ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <ShieldCheck size={15} /> {strings.detail.applyButton}
+                </button>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#3F5A47' }}>{strings.detail.applyConfirm}</span>
+                  <button
+                    type="button"
+                    disabled={applying}
+                    onClick={applyDetail}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      padding: '6px 12px', borderRadius: 8, border: 'none',
+                      background: '#3F5A47', color: '#fff', fontSize: 12, fontWeight: 700,
+                      cursor: applying ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {applying ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                    {strings.detail.applyYes}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={applying}
+                    onClick={() => setApplyConfirm(false)}
+                    style={{
+                      padding: '6px 12px', borderRadius: 8, border: '1.5px solid #E5E0E2',
+                      background: '#fff', color: '#7A6873', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    {strings.detail.applyCancel}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </Card>
