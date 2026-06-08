@@ -115,6 +115,7 @@ export async function GET() {
   const lineOverrideById = new Map<string, ProductLine>();
   const recommendedModeById = new Map<string, RecommendedMode | null>();
   const qualityScoreById = new Map<string, number | null>();
+  const detailCuratedById = new Map<string, boolean>();
   try {
     const modes = await prisma.product.findMany({
       where: { id: { in: ids } },
@@ -122,7 +123,8 @@ export async function GET() {
     });
     for (const p of modes) {
       const qr = (p.quality_reasons ?? null) as
-        { modeSource?: string; imageTier?: ImageTier; line?: string; lineSource?: string } | null;
+        { modeSource?: string; imageTier?: ImageTier; line?: string; lineSource?: string; detailCurated?: boolean } | null;
+      if (qr?.detailCurated === true) detailCuratedById.set(p.id, true);
       const recommended = p.recommended_mode ?? null;
       const source: ModeInfo['source'] =
         qr?.modeSource === 'operator' ? 'operator' : recommended ? 'auto' : null;
@@ -163,6 +165,7 @@ export async function GET() {
       qualityScore: qualityScoreById.get(dbProduct.id) ?? null,
       lineOverride: lineOverrideById.get(dbProduct.id) ?? null,
       naverStatusType: (dbProduct as { naver_status_type?: string | null }).naver_status_type ?? null,
+      detailCurated: detailCuratedById.get(dbProduct.id) ?? false,
     });
     counts[row.overall]++;
 

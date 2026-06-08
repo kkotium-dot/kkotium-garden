@@ -70,11 +70,18 @@ function squareWithin(box: CropBox, sw: number, sh: number): CropBox {
   return { x, y, width: side, height: side };
 }
 
-/** Extract a source-px square region and normalize to a 1000px sRGB JPEG. */
+/** Extract a source-px square region and normalize to a 1000px sRGB JPEG. An
+ *  upscaled region (side < 1000) gets a mild unsharp mask to recover crispness. */
 async function extractSquare(input: Buffer, region: CropBox): Promise<Buffer> {
-  return sharp(input)
+  const willUpscale = Math.min(region.width, region.height) < NAVER_THUMB_SIZE;
+  let pipe = sharp(input)
     .extract({ left: region.x, top: region.y, width: region.width, height: region.height })
-    .resize(NAVER_THUMB_SIZE, NAVER_THUMB_SIZE, { fit: 'cover' })
+    .resize(NAVER_THUMB_SIZE, NAVER_THUMB_SIZE, { fit: 'cover' });
+  if (willUpscale) {
+    // Unsharp mask — counteracts the softness from upscaling a sub-1000px crop.
+    pipe = pipe.sharpen({ sigma: 1.0, m1: 0.6, m2: 2.0 });
+  }
+  return pipe
     .toColorspace('srgb')
     .jpeg({ quality: 85, mozjpeg: true })
     .toBuffer();

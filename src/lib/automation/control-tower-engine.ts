@@ -49,8 +49,11 @@ export type NextActionKey =
   | 'fill_attributes'
   | 'resolve_validation'
   | 'prepare_image'
-  | 'crop_pick'      // line A image step → crop studio (pick/region crop)
-  | 'build_image'    // line B image step → swap (generate / build)
+  | 'crop_pick'           // line A image step → crop studio (pick/region crop)
+  | 'build_image'         // line B image step → swap (generate / build)
+  | 'apply_curated_main'  // a curated representative must be applied before GO
+  | 'build_detail'        // a curated detail page must be applied before GO
+  | 'resolve_suspension'  // registered but Naver statusType != SALE (SUSPENSION)
   | 'publish'
   | 'verify_certification'
   | 'verify_publish';
@@ -110,6 +113,14 @@ function classifyImage(url: string | null | undefined): ImageApplyState {
   return /\/product-assets\//.test(url as string) ? 'curated' : 'default';
 }
 
+// Detail is curated ONLY when a real built detail was applied (the apply-detail
+// route sets quality_reasons.detailCurated after a mostly_blank check) — a blank
+// skeleton in product-assets reads 'default', not 'curated' (#54 accuracy).
+function classifyDetail(url: string | null | undefined, curatedFlag: boolean): ImageApplyState {
+  if (!hasText(url)) return 'none';
+  return curatedFlag && /\/product-assets\//.test(url as string) ? 'curated' : 'default';
+}
+
 // Operator action queue (#56 — surface every intervention naturally). Derived
 // from nextAction + image/publish gates, NOT a new column. Pairs with
 // applyStatus: applyStatus = "what is done" (result axis), actionQueue = "what
@@ -163,6 +174,9 @@ export interface ComputeContext {
   // Cached last-observed Naver statusType (SALE / SUSPENSION / ...). null until a
   // Naver inspect has synced it — then publishState is honest about live state.
   naverStatusType?: string | null;
+  // quality_reasons.detailCurated — true once a real (non-blank) built detail was
+  // applied via apply-detail. Gates detailApplied='curated' (skeleton stays default).
+  detailCurated?: boolean;
 }
 
 /**
@@ -300,30 +314,30 @@ export function computeControlTowerRow(
   const applyStatus: ApplyStatus = {
     attributesApplied: tri(v.canRegister && v.missingRequired.length === 0),
     mainImageApplied: classifyImage(product.mainImage),       // builder field (what PUT sends)
-    detailApplied: classifyImage(product.detail_image_url),
+    detailApplied: classifyDetail(product.detail_image_url, ctx.detailCurated ?? false),
     publishState,
     publishDrift,
   };
 
   const overall = overallOf([image.status, publish.status]);
-  const nextAction = computeNextAction(product, publish, image, registered, line.value);
-  const actionQueue = computeActionQueueItem(product.id, product.name, image, nextAction, applyStatus);
+  const nextAction = computeNextAction(product, publish, image, registered, line.value, applyStatus);
+  const actionQueue = computeActionQueueItem(product.id, product.name, image, nextAction);
 
   return { productId: product.id, name: product.name, publish, image, line, applyStatus, actionQueue, overall, nextAction };
 }
 
 /**
- * Classify a product into the operator action queue (#56). Pure derivation from
- * the image gate + nextAction — no new data. Order: a paused human/auth step
- * wins, then autonomous in-progress work, then the publish GO, then any
- * decision/input, else autonomous monitoring.
+ * Categorize the (already curated-aware) nextAction into the operator action
+ * queue (#56). nextAction is the single SoT ladder — this only assigns a
+ * category so the queue and the per-row nextAction chip never disagree (the
+ * curated/drift gating lives in computeNextAction). AUTH/AUTO come from the
+ * image gate; publish/verify_publish are the only GO_PENDING keys.
  */
 export function computeActionQueueItem(
   productId: string,
   productName: string,
   image: ImageInfo,
   nextAction: NextAction | null,
-  applyStatus: ApplyStatus,
 ): ActionQueueItem {
   const base = { productId, productName };
   // AUTH — a creative connector / external login is waiting on the operator.
@@ -334,27 +348,14 @@ export function computeActionQueueItem(
   if (image.status === 'in_progress') {
     return { ...base, category: 'AUTO', stage: 'processing', deepLink: `/products/${productId}` };
   }
-  // A registered listing that is NOT live (SUSPENSION drift) needs a decision.
-  if (applyStatus.publishDrift) {
-    return { ...base, category: 'INPUT_DECISION', stage: 'resolve_suspension', deepLink: `/products/${productId}` };
-  }
   if (!nextAction) {
     return { ...base, category: 'AUTO', stage: 'monitor', deepLink: `/products/${productId}` };
   }
-  // Before the irreversible GO, require a CURATED representative + detail — a
-  // supplier-original passthrough is surfaced first (apply_curated_main /
-  // build_detail), so the operator never publishes a raw default asset.
-  if (nextAction.key === 'publish' || nextAction.key === 'verify_publish') {
-    if (applyStatus.mainImageApplied !== 'curated') {
-      return { ...base, category: 'INPUT_DECISION', stage: 'apply_curated_main', deepLink: `/products/${productId}/preview` };
-    }
-    if (applyStatus.detailApplied !== 'curated') {
-      return { ...base, category: 'INPUT_DECISION', stage: 'build_detail', deepLink: `/studio` };
-    }
-    return { ...base, category: 'GO_PENDING', stage: nextAction.key, deepLink: nextAction.href, detail: nextAction.detail };
-  }
-  // INPUT_DECISION — everything else needs an operator decision or input.
-  return { ...base, category: 'INPUT_DECISION', stage: nextAction.key, deepLink: nextAction.href, detail: nextAction.detail };
+  // GO_PENDING only when nextAction is the actual publish step (curatedGate
+  // already cleared) — otherwise it is a decision/input.
+  const category: ActionCategory =
+    nextAction.key === 'publish' || nextAction.key === 'verify_publish' ? 'GO_PENDING' : 'INPUT_DECISION';
+  return { ...base, category, stage: nextAction.key, deepLink: nextAction.href, detail: nextAction.detail };
 }
 
 /**
@@ -367,8 +368,21 @@ export function computeNextAction(
   image: ImageInfo,
   registered: boolean,
   line: ProductLine = 'A',
+  applyStatus?: ApplyStatus,
 ): NextAction | null {
   const id = product.id;
+
+  // Curated-asset gate (shared by both branches) — a default/supplier asset must
+  // be replaced by a curated one before any publish GO. Returns the step or null.
+  const curatedGate = (): NextAction | null => {
+    if (applyStatus && applyStatus.mainImageApplied !== 'curated') {
+      return { key: 'apply_curated_main', severity: 'action', href: `/products/${id}/preview` };
+    }
+    if (applyStatus && applyStatus.detailApplied !== 'curated') {
+      return { key: 'build_detail', severity: 'action', href: `/studio` };
+    }
+    return null;
+  };
 
   if (!registered) {
     // 1. Representative image missing — the builder needs product.mainImage, so
@@ -399,16 +413,22 @@ export function computeNextAction(
         ? { key: 'crop_pick', severity: 'action', href: `/products/${id}/preview` }
         : { key: 'build_image', severity: 'action', href: `/products/${id}/swap` };
     }
-    // 5. Ready — publish.
-    return { key: 'publish', severity: 'action', href: `/products/${id}` };
+    // 5. Ready — but require curated assets before the publish GO (#54 accuracy).
+    return curatedGate() ?? { key: 'publish', severity: 'action', href: `/products/${id}` };
   }
 
-  // 6. Registered (live). The remaining step is verification before any GO.
-  //    For safety-target items the safety-confirmation number (HB...) must be
-  //    verified first — surface that specifically when it's still null.
+  // 6. Registered. A SUSPENSION drift (registered but not live) is resolved first.
+  if (applyStatus?.publishDrift) {
+    return { key: 'resolve_suspension', severity: 'action', href: `/products/${id}` };
+  }
+  //    Safety-target items: the safety-confirmation number (HB...) first.
   if (!hasText(product.naver_certification)) {
     return { key: 'verify_certification', severity: 'review', href: `/products/${id}` };
   }
+  // Curated assets before re-publish GO (a registered listing can still carry a
+  // supplier-original rep — surface the curated step, not verify_publish).
+  const gate = curatedGate();
+  if (gate) return gate;
   // T5: route every registered product through the SAME pre-publish review
   // screen (line-aware gate + crop studio + update PUT) so the whole catalog
   // funnels through one pipeline.

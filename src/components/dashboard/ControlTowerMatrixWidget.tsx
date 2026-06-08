@@ -28,6 +28,7 @@ interface LineInfo { value: ProductLine; source: 'auto' | 'operator' }
 type NextActionKey =
   | 'add_main_image' | 'fill_attributes' | 'resolve_validation'
   | 'prepare_image' | 'crop_pick' | 'build_image'
+  | 'apply_curated_main' | 'build_detail' | 'resolve_suspension'
   | 'publish' | 'verify_certification' | 'verify_publish';
 
 interface NextAction {
