@@ -123,7 +123,7 @@ export default function FireflyPromptBuilder({
         <div>
           <p
             className="gp-label-serif-italic"
-            style={{ fontSize: 11, color: "var(--gp-red-500)", margin: 0 }}
+            style={{ fontSize: 11, color: "var(--gp-ink-500)", margin: 0 }}
           >
             firefly / composite prompt
           </p>
@@ -136,7 +136,7 @@ export default function FireflyPromptBuilder({
               gap: 6,
             }}
           >
-            <Sparkles size={14} color="var(--gp-red-500)" strokeWidth={2.5} />
+            <Sparkles size={14} color="var(--gp-pink-300)" strokeWidth={2.5} />
             {c.title}
           </h3>
         </div>
@@ -186,8 +186,8 @@ export default function FireflyPromptBuilder({
                 width: 16,
                 height: 16,
                 borderRadius: "50%",
-                background: "var(--gp-red-500)",
-                color: "#fff",
+                background: "var(--gp-pink-100)",
+                color: "var(--gp-ink-900)",
                 fontSize: 10,
                 fontWeight: 800,
                 display: "inline-flex",
@@ -203,17 +203,21 @@ export default function FireflyPromptBuilder({
         ))}
       </ul>
 
+      {/* Label / value separation (P5) — value is English so it is monospaced. */}
+      <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "var(--gp-ink-500)" }}>
+        {c.promptValueLabel}
+      </p>
       <div
         style={{
-          padding: "10px 12px",
+          padding: "12px 14px",
           background: "var(--color-surface)",
           border: "1px solid var(--color-border)",
           borderRadius: 10,
-          fontSize: 12,
-          lineHeight: 1.55,
-          color: "var(--gp-ink-700)",
+          fontSize: 14,
+          lineHeight: 1.6,
+          color: "var(--gp-ink-900)",
           fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-          maxHeight: 140,
+          maxHeight: 160,
           overflowY: "auto",
           marginBottom: 10,
           wordBreak: "break-word",
@@ -226,7 +230,7 @@ export default function FireflyPromptBuilder({
         style={{
           margin: "0 0 10px",
           fontSize: 11,
-          color: "var(--gp-red-600)",
+          color: "var(--gp-ink-700)",
           background: "var(--gp-pink-50)",
           border: "1px dashed var(--gp-pink-300)",
           borderRadius: 8,
@@ -279,7 +283,7 @@ export default function FireflyPromptBuilder({
       </div>
 
       {copyError && (
-        <p style={{ margin: "8px 0 0", fontSize: 11, color: "var(--gp-red-600)" }}>
+        <p style={{ margin: "8px 0 0", fontSize: 11, color: "var(--gp-ink-700)" }}>
           {c.copyError}: {copyError}
         </p>
       )}
@@ -311,7 +315,7 @@ export default function FireflyPromptBuilder({
           }}
         >
           <li>
-            <strong style={{ color: "var(--gp-red-600)" }}>{c.modelFirefly}:</strong> {c.modelFireflyDesc}
+            <strong style={{ color: "var(--gp-ink-900)" }}>{c.modelFirefly}:</strong> {c.modelFireflyDesc}
           </li>
           <li>
             <strong style={{ color: "var(--gp-green-700)" }}>{c.modelGemini}:</strong> {c.modelGeminiDesc}

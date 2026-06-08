@@ -58,6 +58,7 @@ export function ThumbnailCard({
   }, [productName]);
   const hasUploadedAsset = Boolean(manualCutoutUrl) || Boolean(manualBackdropUrl);
   const hasThumbnails = thumbnails != null && thumbnails.outputs.length > 0;
+  const hasOverride = Boolean(onManualCutoutChange || onManualBackdropChange);
   return (
     <Card
       title={strings.thumbnail.title}
@@ -67,61 +68,7 @@ export function ThumbnailCard({
       totalSteps={4}
       done={thumbnails != null}
     >
-      {/* G8-ENGINE B-layer designer source overrides — Phase 2-B-2/3 layout:
-          stepper (4단계) + Firefly prompt builder (6요소) + drop zones with
-          5-state DnD. All composable; no runtime external image generation. */}
-      {(onManualCutoutChange || onManualBackdropChange) && (
-        <div style={{
-          marginBottom: 12, padding: 12, background: '#FFF7FB',
-          border: '1px solid #FFE0EC', borderRadius: 10,
-          display: 'flex', flexDirection: 'column', gap: 12,
-        }}>
-          <p style={{ fontSize: 12, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>
-            {strings.thumbnail.manualTitle}
-          </p>
-
-          {/* Phase 2-B-3 — 4-stage stepper for the HITL Firefly workflow */}
-          <AiQueueStepper
-            promptReady={true}
-            promptCopied={promptCopied}
-            hasUploadedAsset={hasUploadedAsset}
-            hasThumbnails={hasThumbnails}
-          />
-
-          {/* Phase 2-B-3 — Firefly composite prompt builder (6 elements +
-              copy + Firefly link + model guidance). */}
-          <FireflyPromptBuilder
-            productName={productName}
-            category={category ?? undefined}
-            onPromptCopied={() => setPromptCopied(true)}
-          />
-
-          {/* Phase 2-B-2 — designer source drop zones (5-state DnD + URL fallback) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {onManualCutoutChange && (
-              <AssetDropZone
-                label={strings.thumbnail.manualCutoutLabel}
-                value={manualCutoutUrl}
-                onChange={onManualCutoutChange}
-                accept="image/png,image/webp"
-                hint={strings.workbench.dropzone.hintCutout}
-              />
-            )}
-            {onManualBackdropChange && (
-              <AssetDropZone
-                label={strings.thumbnail.manualBackdropLabel}
-                value={manualBackdropUrl}
-                onChange={onManualBackdropChange}
-                accept="image/png,image/jpeg,image/webp"
-                hint={strings.workbench.dropzone.hintBackdrop}
-              />
-            )}
-          </div>
-          <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>
-            {strings.thumbnail.manualHint}
-          </p>
-        </div>
-      )}
+      {/* ── 1차 (always primary, top): generate + 4-variant pick-main ──────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <PrimaryButton
           onClick={onRun}
@@ -207,6 +154,73 @@ export function ThumbnailCard({
             );
           })}
         </div>
+      )}
+
+      {/* ── 2차 (Disclosure, default collapsed): 디자이너 소스 오버라이드 ─────
+          AI 생성 큐 → Firefly 합성 프롬프트 → 드롭존 단일 수직 흐름. 평소 접혀
+          1차(4변형 선택)를 방해하지 않음. Single section + divider (no nested box). */}
+      {hasOverride && (
+        <details style={{ marginTop: 16, borderTop: '1px solid #E5E5E5', paddingTop: 14 }}>
+          <summary
+            style={{
+              cursor: 'pointer', listStyle: 'none', display: 'flex',
+              alignItems: 'center', gap: 8, padding: '4px 0',
+            }}
+          >
+            <span
+              style={{
+                fontSize: 10, fontWeight: 800, letterSpacing: 0.4,
+                color: '#1A1A1A', background: '#FFCCEA',
+                borderRadius: 999, padding: '2px 8px',
+              }}
+            >
+              STEP 2
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A', wordBreak: 'keep-all' }}>
+              {strings.thumbnail.manualTitle}
+            </span>
+          </summary>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+            {/* Phase 2-B-3 — 4-stage stepper for the HITL Firefly workflow */}
+            <AiQueueStepper
+              promptReady={true}
+              promptCopied={promptCopied}
+              hasUploadedAsset={hasUploadedAsset}
+              hasThumbnails={hasThumbnails}
+            />
+
+            {/* Phase 2-B-3 — Firefly composite prompt builder */}
+            <FireflyPromptBuilder
+              productName={productName}
+              category={category ?? undefined}
+              onPromptCopied={() => setPromptCopied(true)}
+            />
+
+            {/* Phase 2-B-2 — designer source drop zones (5-state DnD + URL fallback) */}
+            {onManualCutoutChange && (
+              <AssetDropZone
+                label={strings.thumbnail.manualCutoutLabel}
+                value={manualCutoutUrl}
+                onChange={onManualCutoutChange}
+                accept="image/png,image/webp"
+                hint={strings.workbench.dropzone.hintCutout}
+              />
+            )}
+            {onManualBackdropChange && (
+              <AssetDropZone
+                label={strings.thumbnail.manualBackdropLabel}
+                value={manualBackdropUrl}
+                onChange={onManualBackdropChange}
+                accept="image/png,image/jpeg,image/webp"
+                hint={strings.workbench.dropzone.hintBackdrop}
+              />
+            )}
+            <p style={{ fontSize: 11, color: '#6B6B6B', margin: 0 }}>
+              {strings.thumbnail.manualHint}
+            </p>
+          </div>
+        </details>
       )}
     </Card>
   );

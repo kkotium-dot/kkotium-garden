@@ -1,21 +1,18 @@
-// AiQueueStepper — Phase 2-B-3 visual progress bar for the
-// "사람 1클릭 HITL" Firefly composite workflow per
-// docs/research/MOBILE_NAMING_FIREFLY_2026-06.md §3.
+// AiQueueStepper — Phase 2-B-3 progress for the "사람 1클릭 HITL" Firefly
+// composite workflow (docs/research/MOBILE_NAMING_FIREFLY_2026-06.md §3).
 //
-// 4 stages:
-//   1. prompt   — auto-built prompt is ready (always done once mounted)
-//   2. generate — seller is generating in Firefly web (toggled by promptCopied)
-//   3. upload   — seller drops the generated image into the AssetDropZone
-//                 (inferred from hasUploadedAsset prop, e.g. manualCutoutUrl
-//                 or manualBackdropUrl going non-empty)
-//   4. canvas   — thumbnail pipeline has rendered the composite into the
-//                 canvas grid (inferred from hasThumbnails)
+// 2026-06-08 redesign (STUDIO_ATELIER_UX_REDESIGN P1/P3/P4): the old 4-column
+// grid crushed each card to ~54px (title truncation + status-chip overlap,
+// overflow=true). Replaced with a VERTICAL step list — each row has a Lucide
+// status icon, a non-truncating title (wrap allowed), a one-line hint, and a
+// status chip in its OWN column (zero overlap). Status color is semantic
+// (complete=green, active=pink accent, pending=neutral); NO red (red is
+// reserved for the "메인 지정" CTA only, 75/15/10).
 //
-// Pure presentation — stage state is computed from props, no internal state.
+// 4 stages: prompt → generate → upload → canvas. Pure presentation — stage
+// state is computed from props, no internal state.
 
-import { ReactNode } from "react";
-import { Clipboard, Sparkles, Upload, ImageIcon, Check } from "lucide-react";
-import { StickerBadge } from "@/components/shell";
+import { CheckCircle2, Loader2, Circle, Clipboard, Sparkles, Upload, Image as ImageIcon } from "lucide-react";
 import strings from "@/lib/i18n/studio-strings.ko.json";
 
 export interface AiQueueStepperProps {
@@ -50,8 +47,6 @@ function deriveStates({
   hasUploadedAsset,
   hasThumbnails,
 }: AiQueueStepperProps): Record<StageKey, StageState> {
-  // Walk left-to-right: each stage is complete only if its trigger fired;
-  // first non-complete stage is "active"; rest are pending.
   const completed: Record<StageKey, boolean> = {
     prompt: promptReady,
     generate: promptCopied,
@@ -76,21 +71,15 @@ function deriveStates({
   return out;
 }
 
-const STATE_TONE: Record<StageState, "green" | "red" | "ink"> = {
-  complete: "green",
-  active: "red",
-  pending: "ink",
+// Semantic accent per state — NO red. complete=green, active=pink, pending=neutral.
+const ACCENT: Record<StageState, string> = {
+  complete: "var(--gp-green-500)",
+  active: "var(--gp-pink-300)",
+  pending: "transparent",
 };
-
-const STATE_BORDER: Record<StageState, string> = {
-  complete: "1.5px solid var(--gp-green-500)",
-  active: "2px solid var(--gp-red-500)",
-  pending: "1.5px dashed var(--gp-ink-300)",
-};
-
-const STATE_BG: Record<StageState, string> = {
+const ROW_BG: Record<StageState, string> = {
   complete: "var(--gp-green-50)",
-  active: "var(--gp-pink-100)",
+  active: "var(--gp-pink-50)",
   pending: "var(--color-surface)",
 };
 
@@ -109,6 +98,7 @@ export default function AiQueueStepper(props: AiQueueStepperProps) {
     upload: c.hintUpload,
     canvas: c.hintCanvas,
   };
+  const doneCount = Object.values(states).filter((s) => s === "complete").length;
 
   return (
     <div
@@ -119,142 +109,120 @@ export default function AiQueueStepper(props: AiQueueStepperProps) {
         borderRadius: 12,
       }}
     >
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 10,
-        }}
-      >
-        <Sparkles size={13} color="var(--gp-red-500)" strokeWidth={2.5} />
-        <span style={{ fontSize: 12, fontWeight: 800, color: "var(--gp-ink-900)" }}>
-          {c.title}
-        </span>
-        <span
-          style={{
-            marginLeft: "auto",
-            fontSize: 10,
-            color: "var(--gp-ink-500)",
-          }}
-        >
-          {Object.values(states).filter((s) => s === "complete").length}/{STAGES.length}
+      <header style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <Sparkles size={13} color="var(--gp-pink-300)" strokeWidth={2.5} />
+        <span style={{ fontSize: 12, fontWeight: 800, color: "var(--gp-ink-900)" }}>{c.title}</span>
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--gp-ink-500)" }}>
+          {doneCount}/{STAGES.length}
         </span>
       </header>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${STAGES.length}, minmax(0, 1fr))`,
-          gap: 6,
-          position: "relative",
-        }}
-      >
-        {STAGES.map((s, idx) => {
-          const state = states[s.key];
-          const tone = STATE_TONE[state];
-          return (
-            <StageBox
-              key={s.key}
-              icon={<s.Icon size={14} />}
-              label={labels[s.key]}
-              hint={hints[s.key]}
-              state={state}
-              tone={tone}
-              stepNumber={idx + 1}
-            />
-          );
-        })}
-      </div>
+      <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+        {STAGES.map((s) => (
+          <StepRow
+            key={s.key}
+            state={states[s.key]}
+            label={labels[s.key]}
+            hint={hints[s.key]}
+            chip={
+              states[s.key] === "complete"
+                ? c.tagComplete
+                : states[s.key] === "active"
+                  ? c.tagActive
+                  : c.tagPending
+            }
+          />
+        ))}
+      </ol>
     </div>
   );
 }
 
-function StageBox({
-  icon,
+function StepRow({
+  state,
   label,
   hint,
-  state,
-  tone,
-  stepNumber,
+  chip,
 }: {
-  icon: ReactNode;
+  state: StageState;
   label: string;
   hint: string;
-  state: StageState;
-  tone: "green" | "red" | "ink";
-  stepNumber: number;
+  chip: string;
 }) {
-  const isComplete = state === "complete";
+  const StatusIcon = state === "complete" ? CheckCircle2 : state === "active" ? Loader2 : Circle;
+  const iconColor =
+    state === "complete"
+      ? "var(--gp-green-500)"
+      : state === "active"
+        ? "var(--gp-pink-300)"
+        : "var(--gp-ink-300)";
+  const chipColor =
+    state === "complete"
+      ? { bg: "var(--gp-green-50)", text: "var(--gp-green-700)" }
+      : state === "active"
+        ? { bg: "var(--gp-pink-100)", text: "var(--gp-ink-900)" }
+        : { bg: "var(--color-surface)", text: "var(--gp-ink-500)" };
+
   return (
-    <div
+    <li
       style={{
         position: "relative",
-        padding: "8px 8px 8px 10px",
-        border: STATE_BORDER[state],
-        background: STATE_BG[state],
-        borderRadius: 10,
         display: "flex",
-        flexDirection: "column",
-        gap: 4,
-        minHeight: 64,
+        alignItems: "flex-start",
+        gap: 10,
+        padding: "10px 12px 10px 14px",
+        background: ROW_BG[state],
+        border: "1px solid var(--color-border)",
+        borderRadius: 10,
+        overflow: "hidden",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span
+      {/* Left 4px accent bar — status by accent, not by border color. */}
+      <span
+        aria-hidden
+        style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: ACCENT[state] }}
+      />
+      <StatusIcon
+        size={18}
+        color={iconColor}
+        strokeWidth={2.4}
+        className={state === "active" ? "animate-spin" : undefined}
+        style={{ flexShrink: 0, marginTop: 1 }}
+      />
+      {/* Title + hint — own column, title wraps (no truncation). */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p
           style={{
-            width: 18,
-            height: 18,
-            borderRadius: "50%",
-            background:
-              tone === "green"
-                ? "var(--gp-green-500)"
-                : tone === "red"
-                  ? "var(--gp-red-500)"
-                  : "var(--gp-ink-300)",
-            color: "#fff",
-            fontSize: 10,
-            fontWeight: 800,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          {isComplete ? <Check size={10} strokeWidth={3} /> : stepNumber}
-        </span>
-        <span
-          style={{
-            fontSize: 11,
+            margin: 0,
+            fontSize: 13,
             fontWeight: 700,
             color: "var(--gp-ink-900)",
+            lineHeight: 1.35,
             wordBreak: "keep-all",
           }}
         >
           {label}
-        </span>
-        <span style={{ marginLeft: "auto", color: "var(--gp-ink-500)" }}>{icon}</span>
+        </p>
+        <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--gp-ink-500)", lineHeight: 1.4, wordBreak: "keep-all" }}>
+          {hint}
+        </p>
       </div>
-      <p
+      {/* Status chip — separate column, never overlaps the title. */}
+      <span
         style={{
-          margin: 0,
+          flexShrink: 0,
+          alignSelf: "center",
           fontSize: 10,
-          color: "var(--gp-ink-500)",
-          lineHeight: 1.4,
-          wordBreak: "keep-all",
+          fontWeight: 700,
+          padding: "3px 8px",
+          borderRadius: 999,
+          background: chipColor.bg,
+          color: chipColor.text,
+          whiteSpace: "nowrap",
         }}
       >
-        {hint}
-      </p>
-      <span style={{ position: "absolute", top: 4, right: 4 }}>
-        <StickerBadge tone={tone} size="sm">
-          {state === "complete"
-            ? strings.workbench.stepper.tagComplete
-            : state === "active"
-              ? strings.workbench.stepper.tagActive
-              : strings.workbench.stepper.tagPending}
-        </StickerBadge>
+        {chip}
       </span>
-    </div>
+    </li>
   );
 }
