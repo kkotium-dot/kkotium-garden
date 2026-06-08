@@ -90,6 +90,9 @@ model Product {
   // Cached last-observed Naver statusType (SALE / SUSPENSION / ...) from the
   // inspect route (live Naver read). Drives applyStatus.publishState accuracy.
   naver_status_type       String?           @map("naver_status_type") @db.VarChar(30)
+  // Captured full-res supplier detail image (app-hosted). Two-branch system —
+  // resolves the P16 crawl gap (only 330px thumbnails were captured before).
+  source_detail_url       String?           @map("source_detail_url")
   naver_tax_type          String?
   naver_gift_wrapping     Boolean           @default(false)
   naver_as_info           String?
