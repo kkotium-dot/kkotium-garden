@@ -1,3 +1,22 @@
+## 2026-06-07 (T6) 크롭 주제 완전포함 가드 (Code turn)
+
+feature/crop-studio 11f6287(크롭 스튜디오 완성본 → main 병합 GO 대기). 비가역 0. tsc 0/build OK/이모지 0/한글 코드 0. 권위: docs/decisions/2026-06-07-crop-full-subject-containment.md(명화 대표 B 유리병 하단 잘림 지적).
+
+**[한 것]**
+- quality-classifier.detectSubjectBBox — 기존 subject occupancy의 bg-ring+SUBJECT_DELTA 검출을 재사용해 제품 bbox(source px) 산출(256px 분석·행/열 projection noise floor 3%·미검출 null).
+- NEW src/lib/images/subject-containment.ts(순수·sharp 0): containmentSquare(bbox+>=8% 패딩 완전포함 최소 정사각·중앙·클램프·소스 부족 시 contained=false+expandPx) / boxClipsSubject(침범 변) / snapBoxToSubject.
+- simple-crop: contain(자동 완전포함 정사각)·enforceSubject(수동 박스 침범 차단)·allowSubjectClip(연출소품 예외) + SUBJECT_CLIPPED 경고(자동 소스부족=warn+canvas_expand / 수동 침범=block else warn). result subjectBBox/contained. thumb-crop route 옵션 전달+노출.
+- CropStudioPanel: onLoad 완전포함 자동후보+bbox 로드, 제품 bbox 주황 점선 오버레이, 수동 박스 침범 시 빨강+경고+"주제 완전포함으로 맞춤" 1클릭 스냅+연출소품 예외 체크, preview/apply enforceSubject(수동 박스만)·allowSubjectClip 전달.
+- 표준 §1 "부분 잘림 반려" 정량 규칙(>=8% 패딩·바닥/상단 잘림 0·제품 정의·소품 예외·확장 우선순위) 명문화.
+
+**[검증]**
+- tsc 0·build OK(Compiled successfully·/preview 8.85kB·sharp 클라이언트 누출 0)·이모지 0·한글 코드 0·비가역 0. tsx geometry 9케이스 PASS(완전포함·소스부족 expand·침범 변·스냅 무침범).
+
+**[다음]**
+- push → Desktop /preview Chrome 실측(bbox 오버레이·완전포함 자동후보·수동 침범 스냅·confirm 차단·소품 예외) + thumb-crop contain dry-run 명화(subjectBBox/contained) → **feature/crop-studio → main 병합 GO**(production 배포).
+
+---
+
 ## 2026-06-07 (Crop Studio) 크롭 스튜디오 T1~T5 (Code turn)
 
 feature/crop-studio (신규 브랜치, SD-04 일시 예외·대표 승인) baseline 1d00be8 → 6 커밋(fa6efc3 docs / bc65a7a T3 / 90c4f4c T2 / cf175ac T1a / 2ee5c3e T1b / 3b6e3fc T4a / de89715 T4b / df9b6ac T5). 비가역 0(네이버 미접촉). tsc 0/build OK/이모지 0(Lucide)/한글 코드 0(주석 영어·문구 JSON).

@@ -72,6 +72,19 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-07 (53) T6 크롭 주제 완전포함 가드 (FROM Code, feature/crop-studio 11f6287, 비가역 0·네이버 미접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/decisions/2026-06-07-crop-full-subject-containment.md(Desktop 기록) + 표준 §1. 트리거: 명화 대표 B 유리병 하단 잘림 운영자 지적. 본 T6로 feature/crop-studio = 크롭 스튜디오 완성본 → main 병합 GO 대기. |
+| bbox 검출 | quality-classifier.detectSubjectBBox: 기존 subject occupancy의 bg-ring+SUBJECT_DELTA 재사용해 제품 bbox(source px) 산출. 256px 분석·행/열 projection noise floor(3%)로 stray 제거. subject 미검출 시 null. |
+| 컨테인먼트 기하 | NEW src/lib/images/subject-containment.ts(순수·sharp 0): containmentSquare(bbox+>=8% 패딩 완전포함 최소 정사각·중앙·클램프·소스 부족 시 contained=false+expandPx) / boxClipsSubject(침범 변 산출) / snapBoxToSubject. tsx 9케이스 실증. |
+| simple-crop | contain(자동=완전포함 정사각)·enforceSubject(수동 박스 침범 차단)·allowSubjectClip(연출소품 예외) 옵션 추가. SUBJECT_CLIPPED 경고: 자동 소스부족=warn+canvas_expand / 수동 침범=block(allowClip 시 warn). result에 subjectBBox/contained. thumb-crop route가 옵션 전달+노출. |
+| 크롭 스튜디오 UI | onLoad 시 완전포함 자동후보+제품 bbox 로드(contain·ocr off). bbox 점선 오버레이(주황). 수동 박스 침범 시 빨강 박스+경고+"주제 완전포함으로 맞춤" 1클릭 스냅(snapBoxToSubject)+연출소품 예외 체크. preview/apply에 enforceSubject(수동 박스만)·allowSubjectClip 전달. |
+| 표준 명문화 | 표준 §1 "부분 잘림 반려"에 정량 규칙(>=8% 패딩·바닥/상단 잘림 0·제품 정의·연출소품 예외·확장 우선순위 canvas_expand>업스케일<=2x>색패드) 추가. |
+| 검증 | tsc 0·build OK(Compiled successfully·/preview 8.85kB·sharp 클라이언트 누출 0)·이모지 0(Lucide)·한글 코드 0·비가역 0. tsx geometry 9케이스 PASS. |
+| ★ 다음 | push → Desktop: (1) /preview 크롭 스튜디오 Chrome 실측 — 명화 상세에서 제품 bbox 오버레이·완전포함 자동후보(바닥 여유)·수동 박스 침범 시 빨강+스냅 1클릭·침범 confirm 차단·연출소품 예외 (2) thumb-crop contain dry-run 명화 — subjectBBox/contained/region 단정 (3) **feature/crop-studio → main 병합 GO**(production 배포). |
+
 ### 2026-06-07 (52) 크롭 스튜디오 T1~T5 시공 (FROM Code, feature/crop-studio df9b6ac, 비가역 0·네이버 미접촉)
 
 | 항목 | 상태 |
