@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-08 (58) 명화 큐레이션 마무리 — 정합 통일·상세 curated 한정·크롭 언샤프 (FROM Code, main 6bf8ddf, 비가역 0). ★item1 실행 BLOCKED(소스 부재)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | Desktop TASK_BRIDGE 4항목. Track1 라이브 통과 확인(명화 inspect→SUSPENSION 캐시→publish=none+drift·queue=resolve_suspension·main=default). |
+| (4) 정합 통일 ✅ | nextAction을 SoT 단일 사다리로 통일 — curated 게이트(default 대표/상세→apply_curated_main/build_detail)·SUSPENSION drift(resolve_suspension)를 computeNextAction에 흡수. computeActionQueueItem=key→category 매퍼로 축소. verify_publish 잔존 제거. production 실측: 3상품 nextAction.key==queue.stage 전부 일치. tsx 7케이스. |
+| (3) 상세 curated 실콘텐츠 한정 ✅ | classifyDetail = product-assets AND quality_reasons.detailCurated. apply-detail가 mostly_blank(occupancy<0.15) 검사 후 비-blank일 때만 detailCurated 스탬프. 빈 스켈레톤=default. production 실측: 명화·달항아리 detail=default(스켈레톤, 전 curated 오표기 해소). |
+| (1) 크롭 언샤프 ✅ + 실행 ❌BLOCKED | simple-crop extractSquare 업스케일(<1000) 시 언샤프(sigma 1.0) 추가·배포 완료. ★실행 불가: 핸드오프 좌표(1000x18291)의 공급사 상세 원본이 DB/crawl_logs에 부재 — product.images·crawl_logs.images 모두 domeggook _stt_330(실측 330x330 썸네일)만 보유. _stt_960/_org/base 전부 404. 330² 썸네일에 좌표 적용 시 region 1x1 garbage(dry-run 확인). #46 날조 금지 → 미실행. |
+| (2) 상세 7섹션 실콘텐츠 ⏸SCOPED | generate-detail은 skeleton+27 section-renderers 시스템(layout-skeletons+section-renderers). 실콘텐츠 7섹션(디자인토큰+공급사이미지+정보고시/속성 주입+아트갤러리 무드)은 renderer 실콘텐츠 authoring=대형 기능. 본 turn 미착수, 전용 turn 권고. apply 파이프라인(Track2)+mostly_blank 게이트는 준비됨. |
+| 검증 | tsc 0·build OK·이모지 0·한글 코드 0·비가역 0(네이버 0; DB 가역만). |
+| ★ 다음 | (a) item1: Desktop이 **1000x18291 공급사 상세 원본 URL 제공** 또는 직접 크롭 실행 또는 696² crop 본 전달 → 그러면 thumb-crop endpoint(언샤프 적용)로 1클릭 mainImage=curated. (b) item2: detail 7섹션 실콘텐츠 엔진 전용 turn. (c) 통과 시 명화 main=curated→상세 실콘텐츠 적용→대표 컨펌→update PUT(비가역). |
+
 ### 2026-06-08 (57) applyStatus 정확성 교정 + 전상품 상세페이지 적용 게이트 (FROM Code, main 74765e7, 비가역 0·네이버 0)
 
 | 항목 | 상태 |

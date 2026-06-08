@@ -1,3 +1,23 @@
+## 2026-06-08 명화 큐레이션 마무리 — 정합·상세 curated·언샤프 (item1 실행 BLOCKED) (Code turn)
+
+main 직접 6bf8ddf. 비가역 0(네이버 0). tsc 0/build OK/이모지 0/한글 코드 0. 권위: Desktop TASK_BRIDGE 4항목. Track1 라이브 통과 확인.
+
+**[한 것]**
+- (4)✅ nextAction-queue 정합 통일: curated 게이트(default 대표/상세→apply_curated_main/build_detail)·SUSPENSION drift(resolve_suspension)를 computeNextAction(SoT 사다리)에 흡수, computeActionQueueItem은 key→category 매퍼로 축소. verify_publish 잔존 제거. NextActionKey 3종 추가. production 실측: 3상품 nextAction.key==queue.stage 전부 일치. tsx 7케이스(legacy applyStatus 없을 시 verify_publish 안전).
+- (3)✅ 상세 curated 실콘텐츠 한정: classifyDetail = /product-assets/ AND quality_reasons.detailCurated. apply-detail가 assessImageQuality occupancy<0.15(mostly_blank) 검사 후 비-blank일 때만 detailCurated 스탬프(merge). 빈 스켈레톤=default. matrix detailCuratedById read. production 실측: 명화·달항아리 detail=default(스켈레톤, 전 curated 오표기 해소).
+- (1)✅ 언샤프: simple-crop extractSquare가 업스케일(region<1000) 시 sharpen({sigma:1.0,m1:0.6,m2:2.0}) 적용(1.44x 업스케일 선명도 회복)·배포.
+
+**[BLOCKED / 미착수 (#46 정직)]**
+- (1) 실행 ❌: 핸드오프 좌표(crop x147-843,y9407-10103 on 1000x18291)의 공급사 상세 원본이 reachable 데이터에 부재. product.images·crawl_logs.images 모두 domeggook `_stt_330`만(sharp 실측 330x330 썸네일·기타 변형 _stt_960/_org/base 전부 404). 330² 썸네일에 좌표 적용 시 region 1x1 garbage(production dry-run 확인). 잘못된 크롭 적용 금지(#46) → 미실행. 언샤프 capability+endpoint는 준비 완료.
+- (2) ⏸SCOPED: generate-detail은 layout-skeletons + 27 section-renderers 시스템. 실콘텐츠 7섹션(디자인토큰 75/15/10+공급사이미지+정보고시/속성 주입+아트갤러리 무드)은 renderer 실콘텐츠 authoring=대형 기능. 본 turn 미착수, 전용 turn 권고. apply 게이트(Track2)+mostly_blank 연계는 준비됨.
+
+**[다음]**
+- (a) item1: Desktop이 1000x18291 공급사 상세 원본 URL 제공/직접 크롭 실행/696² crop 본 전달 → thumb-crop endpoint(언샤프 적용)로 1클릭 mainImage=curated.
+- (b) item2: detail 7섹션 실콘텐츠 엔진 전용 turn.
+- (c) 통과 시 명화 main=curated → 상세 실콘텐츠 적용(curated) → 대표 컨펌 → update PUT(비가역).
+
+---
+
 ## 2026-06-08 applyStatus 정확성 교정 + 전상품 상세페이지 적용 게이트 (Code turn)
 
 main 직접 1e5f3a1(트랙1)·74765e7(트랙2). 비가역 0(네이버 0). tsc 0/build OK/이모지 0/한글 코드 0. 권위: Desktop TASK_BRIDGE 2건 + always-state-status 결정문 + DETAIL_PAGE_PLAYBOOK.md.
