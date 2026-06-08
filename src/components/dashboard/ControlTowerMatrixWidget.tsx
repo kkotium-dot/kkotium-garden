@@ -20,12 +20,15 @@ import strings from '@/lib/i18n/control-tower-strings.ko.json';
 type TrackStatus = 'done' | 'in_progress' | 'pending' | 'blocked' | 'awaiting_human' | 'none';
 type Overall = 'risk' | 'attention' | 'caution' | 'ok' | 'none';
 type ProductMode = 'SIMPLE' | 'ENHANCE' | 'NEW';
+type ProductLine = 'A' | 'B';
 
 interface ModeInfo { recommended: ProductMode | null; score: number | null; source: 'auto' | 'operator' | null }
+interface LineInfo { value: ProductLine; source: 'auto' | 'operator' }
 
 type NextActionKey =
   | 'add_main_image' | 'fill_attributes' | 'resolve_validation'
-  | 'prepare_image' | 'publish' | 'verify_certification' | 'verify_publish';
+  | 'prepare_image' | 'crop_pick' | 'build_image'
+  | 'publish' | 'verify_certification' | 'verify_publish';
 
 interface NextAction {
   key: NextActionKey;
@@ -61,6 +64,7 @@ interface MatrixRow {
   tracks: { image: TrackStatus; publish: TrackStatus; line: TrackStatus; ops: TrackStatus };
   publish: PublishInfo;
   image: ImageInfo;
+  line: LineInfo;
   mode: ModeInfo;
   overall: Overall;
   nextAction: NextAction | null;
@@ -103,6 +107,13 @@ const MODE_STYLE: Record<ProductMode, { bg: string; border: string; text: string
   SIMPLE:  { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' }, // SIMPLE — green
   ENHANCE: { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' }, // ENHANCE — amber
   NEW:     { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9' }, // NEW — purple
+};
+
+const LINE_ORDER: ProductLine[] = ['A', 'B'];
+
+const LINE_STYLE: Record<ProductLine, { bg: string; border: string; text: string }> = {
+  A: { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' }, // A crop/as-is — green
+  B: { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9' }, // B build — purple
 };
 
 // nextAction severity → chip color (item 2). blocker red, action blue, review slate.
@@ -270,6 +281,73 @@ function ModeCell({ productId, mode, onChanged }: {
   );
 }
 
+// Workflow line badge (A crop / B build) + 1-click operator override. The
+// operator's pick POSTs /line and wins over the auto classifier (handoff §4).
+function LineCell({ productId, line, onChanged }: {
+  productId: string;
+  line: LineInfo;
+  onChanged: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function pick(next: ProductLine) {
+    setOpen(false);
+    if (next === line.value) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/products/${productId}/line`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ line: next }),
+      });
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const badge = LINE_STYLE[line.value];
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold disabled:opacity-60"
+        style={{ backgroundColor: badge.bg, border: `1px solid ${badge.border}`, color: badge.text }}
+        title={m.line.hint}
+      >
+        {busy ? m.line.changing : m.line[line.value]}
+        {!busy && <ChevronDown size={11} className="opacity-70" />}
+      </button>
+      <div className="mt-0.5 text-[10px] text-slate-400">
+        {line.source === 'operator' ? m.line.sourceOperator : m.line.sourceAuto}
+      </div>
+      {open && (
+        <div className="absolute left-0 top-full z-10 mt-1 w-28 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+          {LINE_ORDER.map((opt) => {
+            const s = LINE_STYLE[opt];
+            const active = opt === line.value;
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => pick(opt)}
+                className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-xs hover:bg-slate-50"
+                style={{ color: s.text, fontWeight: active ? 600 : 400 }}
+              >
+                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: s.border }} />
+                {m.line[opt]}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ControlTowerMatrixWidget() {
   const { data, error, isLoading, mutate } = useSWR<MatrixResponse>(
     '/api/products/asset-jobs-matrix',
@@ -395,7 +473,9 @@ export default function ControlTowerMatrixWidget() {
                   </td>
                   {TRACK_KEYS.map((t) => (
                     <td key={t} className="px-2 py-1.5">
-                      <StatusPill status={row.tracks[t]} />
+                      {t === 'line'
+                        ? <LineCell productId={row.productId} line={row.line} onChanged={() => mutate()} />
+                        : <StatusPill status={row.tracks[t]} />}
                     </td>
                   ))}
                   <td className="px-2 py-1.5">

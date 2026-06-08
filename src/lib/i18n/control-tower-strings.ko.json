@@ -78,7 +78,7 @@
     "track": {
       "image": "이미지",
       "publish": "발행",
-      "line": "회선",
+      "line": "라인",
       "ops": "운영정합"
     },
     "status": {
@@ -126,7 +126,9 @@
       "prepare_image": "이미지 준비",
       "publish": "발행하기",
       "verify_certification": "정보고시 신고번호 검증",
-      "verify_publish": "라이브 점검 후 발행"
+      "verify_publish": "라이브 점검 후 발행",
+      "crop_pick": "크롭 스튜디오에서 컷 선택",
+      "build_image": "이미지 생성·빌드"
     },
     "publishDetail": {
       "gradeLabel": "준비도 {grade} · {score}점",
@@ -152,6 +154,14 @@
       "title": "작업 관제탑을 불러오지 못했어요",
       "retry": "다시 시도"
     },
-    "loading": "작업 상태 확인 중"
+    "loading": "작업 상태 확인 중",
+    "line": {
+      "A": "라인A 크롭",
+      "B": "라인B 빌드",
+      "sourceAuto": "자동 판정",
+      "sourceOperator": "직접 지정",
+      "changing": "변경 중",
+      "hint": "워크플로우 라인 — A는 상세 크롭·그대로, B는 생성·빌드. 클릭해 직접 바꿀 수 있어요 (운영자 지정이 자동판정보다 우선)"
+    }
   }
 }
