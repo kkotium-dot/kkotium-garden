@@ -3,11 +3,17 @@
 // Sprint 7-M2 Phase 3-A — Supabase Storage adapter for automation assets
 // (thumbnail variants + 5-section detail page composites).
 //
-// Bucket layout:
+// Bucket layout (stage-folder taxonomy — docs/plan/ASSET_FOLDER_TAXONOMY_BUILD.md):
 //   product-assets/
 //     {productId}/
-//       thumb-{variant}-{ts}.png
-//       detail-{skeletonId}-{ts}.png
+//       cutout/{variant}-{ts}.png      transparent cutouts
+//       composite/{variant}-{ts}.png   mood / new-bg composites
+//       thumb/{variant}-{ts}.png       1:1 representative candidates
+//       detail/{variant}-{ts}.png      detail-page sections
+//       archive/{variant}-{ts}.png     superseded assets
+//   Legacy flat files ({productId}/{kind}-{variant}-{ts}.png) are NOT moved
+//   (their stored URLs stay valid); listProductAssets / findCachedAsset read
+//   both the flat root and the new stage subfolders (backward-compatible).
 //
 // The bucket is separate from `product-images` (which holds user-uploaded
 // raw product photos) so:
@@ -19,6 +25,7 @@
 // Never import this from a client component.
 
 import { createClient } from '@supabase/supabase-js';
+import { STAGE_DIRS } from './asset-taxonomy';
 
 const BUCKET_NAME = 'product-assets';
 
@@ -35,7 +42,7 @@ function getServerClient() {
   });
 }
 
-export type AssetKind = 'thumb' | 'detail';
+export type AssetKind = 'thumb' | 'detail' | 'cutout' | 'composite' | 'archive';
 
 export interface UploadAssetOptions {
   productId: string;
@@ -57,14 +64,14 @@ export interface UploadAssetResult {
 
 /**
  * Upload a PNG buffer to Supabase Storage and return the public URL.
- * Path format: `{productId}/{kind}-{variant}-{ts}.png`.
+ * Path format: `{productId}/{kind}/{variant}-{ts}.png` (stage-folder taxonomy).
  */
 export async function uploadAutomationAsset(
   opts: UploadAssetOptions,
 ): Promise<UploadAssetResult> {
   const supabase = getServerClient();
   const ts = Date.now();
-  const path = `${opts.productId}/${opts.kind}-${opts.variant}-${ts}.png`;
+  const path = `${opts.productId}/${opts.kind}/${opts.variant}-${ts}.png`;
   const contentType = opts.contentType ?? 'image/png';
 
   const { error } = await supabase.storage
@@ -101,16 +108,28 @@ export async function findCachedAsset(
 ): Promise<string | null> {
   try {
     const supabase = getServerClient();
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .list(productId, { limit: 100, search: fileName });
-    if (error || !data) return null;
-    const hit = data.find((f) => f.name === fileName);
-    if (!hit) return null;
-    const { data: urlData } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(`${productId}/${fileName}`);
-    return urlData.publicUrl;
+    // Resolve fileName under one prefix, or null. Returns the public URL on hit.
+    const searchDir = async (prefix: string): Promise<string | null> => {
+      const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .list(prefix, { limit: 100, search: fileName });
+      if (error || !data) return null;
+      const hit = data.find((f) => f.name === fileName);
+      if (!hit) return null;
+      const { data: urlData } = supabase.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(`${prefix}/${fileName}`);
+      return urlData.publicUrl;
+    };
+    // Root first (designer-deposited fixed names: cutout.png, backdrop-S6.png),
+    // then the stage subfolders (backward-compatible).
+    const rootHit = await searchDir(productId);
+    if (rootHit) return rootHit;
+    for (const dir of STAGE_DIRS) {
+      const hit = await searchDir(`${productId}/${dir}`);
+      if (hit) return hit;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -132,26 +151,45 @@ export async function deleteAutomationAsset(path: string): Promise<void> {
  * List all automation assets for a given productId. Returns up to 100
  * entries sorted by createdAt descending.
  */
-export async function listProductAssets(productId: string): Promise<
-  Array<{ path: string; publicUrl: string; createdAt: string; size: number }>
-> {
+export interface ProductAssetEntry {
+  path: string;
+  publicUrl: string;
+  createdAt: string;
+  size: number;
+  /** Stage folder the asset lives in: 'root' (legacy flat) or an AssetKind. */
+  stage: string;
+}
+
+export async function listProductAssets(productId: string): Promise<ProductAssetEntry[]> {
   const supabase = getServerClient();
-  const { data, error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .list(productId, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
-  if (error) {
-    throw new Error(`automation-storage list failed: ${error.message}`);
+  const out: ProductAssetEntry[] = [];
+
+  const collect = async (prefix: string, stage: string) => {
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .list(prefix, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+    if (error || !data) return;
+    for (const f of data) {
+      // Supabase returns subfolder placeholders with a null id — skip non-files.
+      if (!f.id) continue;
+      const path = `${prefix}/${f.name}`;
+      const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
+      out.push({
+        path,
+        publicUrl: urlData.publicUrl,
+        createdAt: f.created_at ?? new Date(0).toISOString(),
+        size: f.metadata?.size ?? 0,
+        stage,
+      });
+    }
+  };
+
+  // Root = legacy flat uploads (backward-compatible), then each stage subfolder.
+  await collect(productId, 'root');
+  for (const dir of STAGE_DIRS) {
+    await collect(`${productId}/${dir}`, dir);
   }
-  return (data ?? []).map((f) => {
-    const path = `${productId}/${f.name}`;
-    const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
-    return {
-      path,
-      publicUrl: urlData.publicUrl,
-      createdAt: f.created_at ?? new Date(0).toISOString(),
-      size: f.metadata?.size ?? 0,
-    };
-  });
+  return out;
 }
 
 // ----------------------------------------------------------------------------

@@ -72,6 +72,48 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-09 (71) 자산 폴더 자동분류 검증 + Adobe CC 폴더 생성 + 누끼 3종 재작업 (FROM 🖥 Desktop, feat/composite-pipeline 39c8072, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 누끼 3종 재작업 ✅ | 1차 170px 카드컷 폐기 → 대표 실촬영 히어로컷 3장에서 image_remove_background → 투명PNG 완전포함 3종(A 들판소녀·B 차량가죽범선·C 흰배경). 투-트랙(#57): 정보형 새배경(C)·감성형 Firefly 무드(B). track1_C 새배경 합성 산출완. Firefly는 대표 파일드롭 대기(키트). |
+| C-2 검증 ✅ | apply-cutout 직독: whiteBgFinish 재사용·bg_clean done 전이·#57 sourceGuidance·OCR block 가드·비가역0 정합. |
+| FT 폴더 자동분류 ✅ | FT-코드(Code): AssetKind 2→5종·경로 {pid}/{kind}/{variant}·list 재귀(stage 필드)·findCachedAsset root우선+fallback·asset-taxonomy.ts·생산자 정합. tsc0/build/8생산자/기존 flat 미이동. FT-검증(Desktop): storage.objects 조회 → 명화13·달항아리9·아이스트레이1 전부 root_flat·하위호환 확인(단계폴더 실생성은 병합 후 신규업로드 시=C-6). FT-Adobe(Desktop, 승인): KKOTIUM_GARDEN/ 루트+6폴더 생성완(STAGE_FOLDER 미러). 중복 kkotium 6개=백업됨·삭제는 대표 Adobe 웹 직접(비가역). |
+| 인계 ✅ | NEW_CHAT_STARTER_2026-06-09_2 갱신(권위본)·ASSET_FOLDER_TAXONOMY_BUILD·#57·트래커 FT 행. |
+| 다음 | 병합 GO(권고) → C-6 실무테스트(단계폴더 실생성 포함) + 명화 Firefly 무드 + Code PROGRESS.md 갱신·C-4·C-3→C-5→C-8. 진입=NEW_CHAT_STARTER_2 §5. |
+
+### 2026-06-09 (70) 명화 누끼 산출 + Adobe 백엔드 복구 확인 + 합성 실행 인계 (FROM 🖥 Desktop, feat/composite-pipeline a28946e, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 상태 교차검증 ✅ | production(target=production READY)=e0c7f19(main). C-1/C-7는 preview 빌드만 READY·production 미반영(병합 대기). composite-pipeline a28946e(C-1+C-7, base dbbb04d). 드리프트 0·직전(69) 지점 그대로. |
+| Adobe 백엔드 복구 ✅ | adobe_mandatory_init 200·image_remove_background 정상. 직전 세션 400 블로커 해소. 단 compositing/gen-fill/prompt 배경교체는 Adobe MCP 영구 미지원(라우팅 문서) → 무드 합성=Firefly 웹UI(#52), 누끼만 MCP. |
+| 명화 누끼 산출 ✅ | 풀해상 상세(1000x18291) 밴드스캔+육안: 클린 단독샷 부재 실측(본품은 4종변형 카드에 작게·텍스트·연출배경). 본품 크롭(x222-392,y7655-8085, 170x430)→image_remove_background→투명 PNG 누끼 성공(텍스트·이웃캡 정상 제거·유리경계 깨끗). 한계(#46): 170x430 소형 → Firefly 레퍼런스로 충분, §9 대표(1000)엔 작음. 대표=가죽 확정이라 무관. 파일 대표님 다운로드 제공(myeonghwa_bottle_cutout.png). |
+| 부수 확정 | 상세 r2(환경부) 밴드 실측 안전번호 2종 = HB19-12-1462 / HB21-12-2572. SUSPENSION 해제 입력값(대표 GO 후 비가역). |
+| 인계 ✅ | docs/handoff/NEW_CHAT_STARTER_2026-06-09_2_composite_run.md 작성(다음 채팅 권위본). 트래커 rev5 갱신. |
+| 다음 | 명화 Firefly 합성(누끼 레퍼런스 드롭=대표·프롬프트 구동=Claude·다운로드=대표→apply-composite 회수) + 병합 GO(권고) + 병렬 C-2·C-4·C-3→C-5→C-8. 새 채팅 진입=NEW_CHAT_STARTER_2 §5. |
+
+### 2026-06-09 (69) C-7 검증 + extra_images 마이그레이션 적용 + 합성 인계 (FROM 🖥 Desktop, feat/composite-pipeline 65275b9, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| C-7 검증 ✅ | job-type-routing(product_composite/harmonize·isFinishingJobType)·apply-composite 라우트(in-app+Firefly 회수·추가이미지 적용·P2022 가드) read 검증. asset_jobs CHECK에 product_composite/harmonize 존재 실측 → job seed 무결함. |
+| 마이그레이션 ✅ | extra_images jsonb(기본 []·NOT NULL) Desktop apply_migration 적용·검증완(additive·가역·production 무해). C-7 confirm 경로 unblocked(P2022 degrade 해소). |
+| 인계 ✅ | docs/handoff/NEW_CHAT_STARTER_2026-06-09_composite.md 작성(다음 채팅 권위본). Firefly 탭 Chrome id 1396049947 준비됨. |
+| 병합 권고 | feat/composite-pipeline = C-1+C-7 포함. /white-bg·/apply-composite는 순수 additive(UI 미연결→production blast 0) → composite-pipeline → main 병합으로 C-1+C-7 동시 반영 권장(충돌 0, 라이브 실측 가능). 대표 OK 시 Code/터미널 병합. |
+| 다음 | 명화 합성(Firefly 브라우저 구동 → apply-composite compositeUrl 회수) + 병합 결정 + 병렬 C-2·C-4·C-3→C-5→C-8. 새 채팅 진입=NEW_CHAT_STARTER §5. |
+
+### 2026-06-09 (68) 대표이미지 규격(§9) + 합성/추가이미지 체계 확장 + C-1 검증 (FROM 🖥 Desktop, main/feat dbbb04d, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | 대표 지시: 명화 대표=가죽 확정(재변경 없음)·나머지 썸네일=레퍼런스 비율 개선·누끼는 합성 입력·누끼+합성 앱 기능·전체 체계 설계. |
+| C-1 검증 ✅ | feat/white-bg-simple 2ff4a77 3파일+CropWarning read 검증완(지난 턴). dbbb04d=docs-only(런타임 무변, #36 확인). |
+| §9 규격 박제 ✅ | REPRESENTATIVE_IMAGE_FINISHING_SYSTEM §9 — 대표이미지 전상품 규격(1:1 1000·순백·본품70~85%·텍스트0). 첨부 레퍼런스 기준. |
+| 체계 확장 ✅ | CUTOUT_CROP_FEATURE_BUILD_PLAN에 C-7(합성 apply-composite·harmonize=Branch B)·C-8(추가이미지 멀티슬롯) + 통합 적응형 흐름(상황별 융통+개입점 자연) + 붙여넣기 문구. 합성 레시피 = HANDOFF_myeonghwa_composite_recipe. |
+| 정직 메모(#46) | ⚠ Adobe 이미지 백엔드(bartlebee encode) 이번 세션 400 오류 → 누끼/합성/미리보기 직접 산출 불가. + compositing/gen-fill는 애초 Adobe MCP 미지원. 이미지 산출 경로 = 앱 파이프라인(Code) or 로그인된 Firefly 브라우저 반자동(#52). |
+| 다음 | TO 💻 Code — C-1 머지 게이트(C-6 후) / C-2·C-4·C-7 병렬 가능 / C-3→C-5→C-8 직렬. 명화 실제 합성 = 대표 로그인 Firefly 탭 오픈 시 Desktop 구동. |
+
 ### 2026-06-09 (67) 누끼+크롭 마무리 시스템 설계·인계 (FROM 🖥 Desktop, main c55248d, 비가역 0)
 
 | 항목 | 상태 |

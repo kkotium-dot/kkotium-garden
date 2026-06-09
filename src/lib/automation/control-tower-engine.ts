@@ -23,6 +23,8 @@ import {
 } from '@/lib/naver/product-builder';
 // Type-only — keeps this module pure (quality-classifier pulls in sharp at load).
 import type { RecommendedMode } from '@/lib/images/quality-classifier';
+// Pure const (seo-guard-linter transitively imports only product-name-checker).
+import { MAIN_IMAGE_POLICY_LIFESTYLE } from '@/lib/seo/seo-guard-linter';
 
 // Workflow line (handoff §4). A = good assets → crop / as-is; B = low quality or
 // high commerce value → generate / build. Mirrors quality-classifier's
@@ -191,6 +193,10 @@ export interface ComputeContext {
   // quality_reasons.sourceDetailGood — the captured supplier detail scored >= the
   // good floor (split quality eval). Drives sourceStrategy A/B/mixed.
   sourceDetailGood?: boolean;
+  // Product.main_image_policy (C-4). 'lifestyle_intended' suppresses the curated
+  // representative step (operator keeps a non-white-bg hero). null when unset /
+  // column not migrated.
+  mainImagePolicy?: string | null;
 }
 
 /** Two-branch source strategy from the split quality eval (blueprint §3). */
@@ -354,7 +360,7 @@ export function computeControlTowerRow(
   };
 
   const overall = overallOf([image.status, publish.status]);
-  const nextAction = computeNextAction(product, publish, image, registered, line.value, applyStatus);
+  const nextAction = computeNextAction(product, publish, image, registered, line.value, applyStatus, ctx.mainImagePolicy);
   const actionQueue = computeActionQueueItem(product.id, product.name, image, nextAction);
 
   return { productId: product.id, name: product.name, publish, image, line, applyStatus, actionQueue, overall, nextAction };
@@ -403,13 +409,18 @@ export function computeNextAction(
   registered: boolean,
   line: ProductLine = 'A',
   applyStatus?: ApplyStatus,
+  mainImagePolicy?: string | null,
 ): NextAction | null {
   const id = product.id;
+
+  // C-4 override: a lifestyle-intended representative is kept on purpose, so the
+  // curated-main (finish-representative) step is suppressed for this product.
+  const lifestyleRep = mainImagePolicy === MAIN_IMAGE_POLICY_LIFESTYLE;
 
   // Curated-asset gate (shared by both branches) — a default/supplier asset must
   // be replaced by a curated one before any publish GO. Returns the step or null.
   const curatedGate = (): NextAction | null => {
-    if (applyStatus && applyStatus.mainImageApplied !== 'curated') {
+    if (!lifestyleRep && applyStatus && applyStatus.mainImageApplied !== 'curated') {
       return { key: 'apply_curated_main', severity: 'action', href: `/products/${id}/preview` };
     }
     if (applyStatus && applyStatus.detailApplied !== 'curated') {

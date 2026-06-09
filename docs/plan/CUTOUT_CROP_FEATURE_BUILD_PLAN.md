@@ -19,9 +19,9 @@ C-4 (seo-guard→개입대기열) ┘                                        ↑
 ---
 
 ## C-1 · 인앱 SIMPLE 누끼 (sharp 흰배경 평탄화)  [Code]
-- [ ] `src/lib/images/bg-difficulty.ts` — 배경 난이도 0~100 + 사유. sharp 가장자리 픽셀 통계(흰/중립 비율, 색 분산). 임계값 주석 문서화.
-- [ ] `src/lib/images/white-bg.ts` — sharp 누끼·흰배경 합성·1:1 1000px. simple-crop의 OCR/해상도 가드 재사용(공유 모듈로 추출 가능).
-- [ ] `POST /api/products/[id]/white-bg` — dry-run(base64 preview + warnings) / `confirm:true`(uploadAutomationAsset → mainImage+main_image_url, 가역). thumb-crop과 형제 구조.
+- [x] `src/lib/images/bg-difficulty.ts` — 배경 난이도 0~100 + 사유. sharp 가장자리 픽셀 통계(흰/중립 비율, 색 분산). 임계값 주석 문서화.
+- [x] `src/lib/images/white-bg.ts` — sharp 누끼·흰배경 합성·1:1 1000px. simple-crop의 OCR/해상도 가드 재사용(공유 모듈로 추출 가능).
+- [x] `POST /api/products/[id]/white-bg` — dry-run(base64 preview + warnings) / `confirm:true`(uploadAutomationAsset → mainImage+main_image_url, 가역). thumb-crop과 형제 구조.
 - 검증: tsc 0 / build OK / 이모지 0 / 코드 한글 리터럴 0. 공급사 클린컷 1장으로 dry-run 200 + preview 확인.
 - 진입 문구: 본 파일 "붙여넣기 — C-1" 절.
 
@@ -102,4 +102,40 @@ C-4 (seo-guard→개입대기열) ┘                                        ↑
 설계 권한: REPRESENTATIVE_IMAGE_FINISHING_SYSTEM.md (§5) + STUDIO_ATELIER_UX_REDESIGN.md + KKOTIUM_DESIGN_SYSTEM.md.
 작업: 우측 패널 통합 카드(자동 다듬기/직접 크롭/추가이미지 보관, dry-run before→after, 적용→재가드), COMPLEX 분기 UI(sourceUrl 복사·결과 회수), 컨트롤타워 white_bg fail 뱃지·일괄 진입.
 규칙: 이모지0·Lucide 아이콘·영어주석·tsc·비가역0. 완료 시 커밋·push·체크·SHA 보고 → 데스크톱 C-6 테스트 요청.
+```
+
+---
+
+## C-7 · 합성(누끼→무드 배경) 파이프라인 = Branch B 앱 기능  [Code]
+누끼 + 무드 배경을 자연스럽게 어우러지게 합성 — 추가이미지/상세 히어로 전용(대표는 §9 흰배경).
+- bg_clean(누끼)→composite→harmonize를 asset_jobs 파이프라인으로 연결(기존 job-type-routing 확장).
+- harmonize = 색온도·그림자·접지(컨택트섀도) 정합. 레시피 = docs/handoff/HANDOFF_myeonghwa_composite_recipe_2026-06-09.md + 프리셋 tone&manner 매트릭스(ADAPTIVE_IMAGE_SEO_ENGINE).
+- 실행 엔진: 인앱 sharp 합성(단순·단색 배경) / 복잡 무드 = Firefly 브라우저 반자동(#52) 결과 회수 → POST /api/products/[id]/apply-composite(C-2 apply-cutout 형제·추가이미지 슬롯 적용, 가역).
+- 가드: harmonize 후 seo-guard 재검·추가이미지는 텍스트 허용(대표만 텍스트0).
+
+## C-8 · 추가이미지 멀티슬롯 매니저  [Code, C-3 스키마 후]
+- Product.extra_images jsonb(C-3) 위 슬롯 UI: 대표(1) + 추가(2~9) 순서·교체·삭제·재정렬.
+- 각 슬롯 소스 라벨(라이프스타일/누끼흰배경/합성무드/디테일/박스) + seo-guard 칩.
+- register/PUT payload가 네이버 대표+추가이미지로 매핑(GO 전 DB만). 비율 §9(1:1/4:5). 전상품 범용.
+
+## 통합 적응형 흐름 (상황별 융통 + 개입점 자연)
+[엔진 한 줄] 인제스트 → 품질평가 → 2갈래(A 그대로 / B 생성) → 대표 마무리(크롭·누끼·합성 적응 라우팅) → seo-guard → 개입대기열(필요 시만 자연 등장) → 적용(가역) → 발행 GO.
+- 적응 라우팅: bg-difficulty + 품질점수가 SIMPLE(인앱 즉시)·ENHANCE·COMPLEX(Firefly 개입) 자동 선택.
+- 개입점: seo-guard fail·COMPLEX·발행 GO만 개입대기열에 자연 등장(강제 순서 0).
+- 편집·생성 환경: 인앱 sharp(크롭·흰배경·단순합성) + Firefly/Express/Photoshop 브라우저 반자동(누끼·무드합성·생성) — 도구 락인 0, 컨텍스트로 최적 라우팅.
+
+## 붙여넣기 — C-7 (새 Code 채팅)
+```
+[꽃틔움 가든 / Code / Target Session: C-7 합성 파이프라인 / Branch: feat/composite-pipeline]
+권한: docs/plan/CUTOUT_CROP_FEATURE_BUILD_PLAN.md (C-7) + HANDOFF_myeonghwa_composite_recipe_2026-06-09.md + ADAPTIVE_IMAGE_SEO_ENGINE.md tone&manner.
+작업: POST /api/products/[id]/apply-composite (누끼+무드배경 합성·harmonize·naver_normalize→extra_images 슬롯 적용, 가역) + asset-edit-job composite/harmonize job타입 연결. 인앱 sharp 단순합성 + Firefly 회수 경로.
+규칙: 이모지0·영어주석·tsc·비가역0. 완료 시 커밋·push·체크·SHA 보고.
+```
+
+## 붙여넣기 — C-8 (새 Code 채팅, C-3 후)
+```
+[꽃틔움 가든 / Code / Target Session: C-8 추가이미지 멀티슬롯 / Branch: feat/extra-images-slots]
+권한: CUTOUT_CROP_FEATURE_BUILD_PLAN.md (C-8) + REPRESENTATIVE_IMAGE_FINISHING_SYSTEM §7-1·§9.
+작업: 대표(1)+추가(2~9) 슬롯 UI(순서·교체·삭제·재정렬·소스라벨·seo-guard 칩), register/PUT payload 네이버 대표+추가이미지 매핑(GO 전 DB만).
+규칙: 이모지0·Lucide·영어주석·tsc·비가역0. 완료 시 커밋·push·체크·SHA 보고.
 ```

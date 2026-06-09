@@ -32,7 +32,10 @@ export interface CropBox { x: number; y: number; width: number; height: number; 
 //           'warn'  = line-A flow may apply with operator awareness (T2).
 // remediation: the Phase 4 crop/edit job_type that fixes the cause, if any.
 export interface CropWarning {
-  code: 'SOURCE_TOO_SMALL' | 'LOW_RESOLUTION' | 'TEXT_DETECTED' | 'SUBJECT_CLIPPED';
+  // Shared representative-image guard vocabulary. BACKGROUND_NOT_WHITE is used by
+  // the white-bg finisher (src/lib/images/white-bg.ts); simple-crop never emits
+  // it. Kept on this shared type so both tools speak one warning language (§6).
+  code: 'SOURCE_TOO_SMALL' | 'LOW_RESOLUTION' | 'TEXT_DETECTED' | 'SUBJECT_CLIPPED' | 'BACKGROUND_NOT_WHITE';
   severity: 'block' | 'warn';
   message: string;
   remediation?: string;

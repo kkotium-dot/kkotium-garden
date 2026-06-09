@@ -55,11 +55,23 @@ export async function GET(
 
   const mainImageWhiteBgVerified = await checkWhiteBg(product.mainImage);
 
+  // C-4: read the representative-policy override behind a guard (the column may
+  // not be migrated yet — degrade to no override, #50).
+  let mainImagePolicy: string | null = null;
+  try {
+    const pol = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { main_image_policy: true },
+    });
+    mainImagePolicy = pol?.main_image_policy ?? null;
+  } catch { /* main_image_policy column not migrated yet */ }
+
   const seoGuard = lintSeoGuards({
     productName: product.name,
     naverCategoryCode: product.naverCategoryCode,
     mainImage: product.mainImage,
     mainImageWhiteBgVerified,
+    mainImagePolicy,
   });
 
   return NextResponse.json({ ok: true, productId, seoGuard });

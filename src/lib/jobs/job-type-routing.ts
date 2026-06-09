@@ -26,14 +26,31 @@ export const TEXT_REMOVE = 'text_remove';
 export const CANVAS_EXPAND = 'canvas_expand';
 export const BG_CLEAN = 'bg_clean';
 
+// C-7 finishing job types (composite pipeline). Both tokens already exist in the
+// asset_jobs job_type CHECK (Phase 2 swap-loop), so NO migration is needed —
+// this only adds their tool routing. product_composite = place a cutout on a
+// mood background; harmonize = match color-temp / shadow / contact-shadow.
+export const PRODUCT_COMPOSITE = 'product_composite';
+export const HARMONIZE = 'harmonize';
+
 export type CropEditJobType =
   | typeof REGION_CROP
   | typeof TEXT_REMOVE
   | typeof CANVAS_EXPAND
   | typeof BG_CLEAN;
 
+/** Crop/edit types + the C-7 composite/harmonize finishing types. */
+export type FinishingJobType =
+  | CropEditJobType
+  | typeof PRODUCT_COMPOSITE
+  | typeof HARMONIZE;
+
+const CROP_EDIT_TYPES: readonly CropEditJobType[] = [
+  REGION_CROP, TEXT_REMOVE, CANVAS_EXPAND, BG_CLEAN,
+];
+
 export interface JobTypeRoute {
-  jobType: CropEditJobType;
+  jobType: FinishingJobType;
   lane: JobLane;
   // Default tool the app recommends; the operator may switch to a fallback.
   primaryTool: string;
@@ -45,8 +62,9 @@ export interface JobTypeRoute {
   requiresOperator: boolean;
 }
 
-// region_crop -> sharp ; text_remove/canvas_expand/bg_clean -> firefly|adobe_express.
-export const JOB_TYPE_ROUTES: Record<CropEditJobType, JobTypeRoute> = {
+// region_crop -> sharp ; text_remove/canvas_expand/bg_clean -> firefly|adobe_express ;
+// product_composite/harmonize -> firefly|adobe_express (operator mood composite).
+export const JOB_TYPE_ROUTES: Record<FinishingJobType, JobTypeRoute> = {
   [REGION_CROP]: {
     jobType: REGION_CROP,
     lane: 'process',
@@ -79,14 +97,38 @@ export const JOB_TYPE_ROUTES: Record<CropEditJobType, JobTypeRoute> = {
     ipSafe: true,
     requiresOperator: true,
   },
+  [PRODUCT_COMPOSITE]: {
+    jobType: PRODUCT_COMPOSITE,
+    lane: 'process',
+    // In-app Sharp can do a simple composite; a high-fidelity mood composite is
+    // an operator-triggered Firefly/Express job (the apply-composite route runs
+    // the in-app path directly and recovers the Firefly result).
+    primaryTool: 'firefly',
+    fallbackTools: ['adobe_express', 'sharp'],
+    ipSafe: true,
+    requiresOperator: true,
+  },
+  [HARMONIZE]: {
+    jobType: HARMONIZE,
+    lane: 'process',
+    primaryTool: 'firefly',
+    fallbackTools: ['adobe_express', 'sharp'],
+    ipSafe: true,
+    requiresOperator: true,
+  },
 };
 
-/** Routing for a crop/edit job_type, or null if it is not a Phase 4 type. */
+/** Routing for a finishing job_type, or null if it has no route. */
 export function routeForJobType(jobType: string): JobTypeRoute | null {
-  return JOB_TYPE_ROUTES[jobType as CropEditJobType] ?? null;
+  return JOB_TYPE_ROUTES[jobType as FinishingJobType] ?? null;
 }
 
 /** True when the job_type is one of the 4 Phase 4 crop/edit operations. */
 export function isCropEditJobType(jobType: string): jobType is CropEditJobType {
+  return (CROP_EDIT_TYPES as readonly string[]).includes(jobType);
+}
+
+/** True when the job_type has a routing entry (crop/edit OR composite/harmonize). */
+export function isFinishingJobType(jobType: string): jobType is FinishingJobType {
   return jobType in JOB_TYPE_ROUTES;
 }

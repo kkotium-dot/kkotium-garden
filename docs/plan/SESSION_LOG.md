@@ -1,3 +1,25 @@
+## 2026-06-09 (세션2) 누끼/크롭/합성 마무리 시스템 C-1·C-7·C-2·FT·C-4 (Code turn)
+
+feat/composite-pipeline 누적 HEAD 0b7d291(프리뷰 브랜치, production main e0c7f19 미접촉). 비가역 0(네이버 0·DB 가역·기존 자산 미이동). 권위: CUTOUT_CROP_FEATURE_BUILD_PLAN + REPRESENTATIVE_IMAGE_FINISHING_SYSTEM + ASSET_FOLDER_TAXONOMY_BUILD + 작업원칙 #57.
+
+**[C-1 인앱 SIMPLE 누끼]** (2ff4a77) bg-difficulty.ts(가장자리 ring 통계→SIMPLE/COMPLEX 0~100) + white-bg.ts(flatten-white+contain 1:1 1000px·OCR/흰배경 가드 공유) + POST /white-bg(dry-run→confirm 대표 적용·가역). 정직: sharp white-flatten=ML 세그멘테이션 아님, 비흰배경=COMPLEX→Adobe.
+
+**[C-7 합성 파이프라인]** (65275b9) composite.ts(누끼+무드 sharp 단순합성·contact shadow·warm grade harmonize 근사 + Firefly 회수 normalize) + POST /apply-composite(extra_images 슬롯 append·가역·P2022 가드) + job-type-routing product_composite/harmonize(CHECK 기존값·마이그레이션 불요). 정직: 진짜 relight=Firefly 경로.
+
+**[C-2 어도비 누끼 적용 + #57]** (cdbb423) POST /apply-cutout(cutoutUrl→whiteBgFinish 재사용→흰배경 대표·bg_clean job done 전이·원본 누끼 cutout/ 추적성) + finishing-guidance.ts(#57 실촬영 히어로컷 우선·한글 라벨 JSON) + asset-edit-job 회수 안내(recoverVia).
+
+**[FT 폴더 자동분류]** (b73f526) AssetKind 2→5(cutout/composite/thumb/detail/archive) + 경로 {pid}/{kind}/{variant}-{ts} + listProductAssets/findCachedAsset 하위폴더 재귀(stage 필드·flat 우선) + asset-taxonomy.ts(STAGE_FOLDER Adobe 미러·kindForSource·safeVariant). 기존 flat 자산 미이동(URL 보존). 생산자 8곳 정합.
+
+**[C-4 seo-guard override]** (0b7d291) main_image_policy=lifestyle_intended → seo-guard white_bg fail을 info로 강등 + control-tower curatedGate가 대표 마무리 항목 억제 + POST /main-image-policy(설정/해제 가역). 매트릭스 별도 가드 쿼리(#50). 개입대기열 연결=비흰배경 대표 apply_curated_main 항목을 override로 일관 강등.
+
+**[마이그레이션 박제(Desktop apply)]** MIGRATION_c7_extra_images + MIGRATION_c4_main_image_policy(둘 다 ADD COLUMN IF NOT EXISTS·멱등·C-3 공유). job_type CHECK 불요(composite/harmonize 기존 25값).
+
+**[검증]** 전 commit tsc 0/build OK/이모지 0/코드 한글 0/비가역 0. feature 브랜치=프리뷰(production SHA 불일치 정상 #36).
+
+**[다음]** Desktop: 마이그레이션 2종 apply → 프리뷰 실측(C-1~C-4 dry-run/confirm·seo-guard override·폴더 생성·flat URL 유효) → C-3(finish-image·extra_images 슬롯)·C-5(스튜디오 카드)·C-6(브라우저). Adobe CC 폴더생성=승인 게이트.
+
+---
+
 ## 2026-06-09 프리셋 엔진 Phase A/B 검증 + 누끼/크롭 마무리 시스템 설계·인계 (Desktop turn)
 
 production runtime aa7e5b9 / HEAD c55248d. 비가역 0(네이버 0·DB read-only·문서만 작성). 권위: PARALLEL_WORK_TRACKER 6e/6h + 대표 지시(누끼+크롭 전상품 기능화).

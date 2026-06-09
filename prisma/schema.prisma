@@ -198,6 +198,18 @@ model Product {
   concept_preset          String            @default("kitchen") @map("concept_preset") @db.VarChar(20)
   preset_intensity        String            @default("l1") @map("preset_intensity") @db.VarChar(10)
   preset_overrides        Json?             @map("preset_overrides")
+  // 2026-06-09 — Representative-image finishing (C-7/C-3, REPRESENTATIVE_IMAGE_FINISHING_SYSTEM §3.3).
+  // Additional-image slot URLs (composite/mood/lifestyle subcuts; NOT the white-bg
+  // representative). DB default '[]'::jsonb. Desktop applies MIGRATION_c7_extra_images
+  // (ADD COLUMN IF NOT EXISTS) — idempotent / shared with C-3. apply-composite
+  // appends to it behind a P2022 guard so the route is safe before the migration.
+  extra_images            Json?             @map("extra_images")
+  // 2026-06-09 — C-4 representative-image policy override (REPRESENTATIVE_IMAGE_FINISHING_SYSTEM §4).
+  // 'lifestyle_intended' = the operator keeps a non-white-bg representative
+  // (e.g. myeonghwa leather): seo-guard white_bg fail downgrades to info and the
+  // action queue stops surfacing the finish-representative step. Desktop applies
+  // MIGRATION_c4_main_image_policy (ADD COLUMN IF NOT EXISTS) — shared with C-3.
+  main_image_policy       String?           @map("main_image_policy") @db.VarChar(30)
   // 2026-06-07 — Adaptive 3-mode system (docs/research/KKOTIUM_ADAPTIVE_SEO_IMAGE_SYSTEM_2026-06-06.md §5).
   // The quality classifier writes quality_score(0-100) + recommended_mode; the
   // operator can override the mode from the control tower. brand_line splits the
