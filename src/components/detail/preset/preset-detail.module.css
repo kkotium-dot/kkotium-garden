@@ -1,0 +1,365 @@
+/*
+ * preset-detail.module.css — 1:1 port of docs/design/aroma_L3_detail_reference.html.
+ *
+ * Token authority is the [data-preset]/:root layer in src/app/globals.css
+ * (Phase A). This module only carries STRUCTURE + decorative gradients, and
+ * references semantic vars only (--surface/--accent/--ink…) so swapping the
+ * root's data-preset reskins every section. Decorative gradients (hero-art,
+ * story-art) are tokenized via color-mix so non-aroma presets reskin too;
+ * scent swatches stay literal (scent identity, aroma only).
+ *
+ * Scoped under .root (the <article>) — no global element resets leak out.
+ */
+
+.root {
+  max-width: 860px;
+  margin: 0 auto;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.65;
+  overflow: hidden;
+  border-radius: 4px;
+  -webkit-font-smoothing: antialiased;
+}
+.root section { padding: var(--sp-6) var(--sp-4); }
+
+/* Intensity = vertical rhythm density (l1 compact · l2 cozy · l3 airy). */
+.root[data-intensity='l1'] section { padding: var(--sp-4) var(--sp-3); }
+.root[data-intensity='l2'] section { padding: var(--sp-5) var(--sp-4); }
+.root[data-intensity='l3'] section { padding: var(--sp-6) var(--sp-4); }
+
+@media (max-width: 640px) {
+  .root section { padding: var(--sp-5) var(--sp-3); }
+  .root[data-intensity='l1'] section { padding: var(--sp-4) var(--sp-3); }
+}
+
+.eyebrow {
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: var(--sp-2);
+}
+.center { text-align: center; }
+
+/* ── S1 hook — A background (mood) + C foreground (object) hybrid ── */
+.hero { position: relative; padding: 0; }
+.heroArt {
+  position: relative;
+  aspect-ratio: 86 / 60;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 65% 55% at 28% 32%, color-mix(in srgb, var(--accent) 50%, transparent), transparent 60%),
+    radial-gradient(ellipse 50% 45% at 70% 30%, color-mix(in srgb, var(--accent-soft) 45%, transparent), transparent 58%),
+    radial-gradient(ellipse 60% 55% at 50% 82%, color-mix(in srgb, var(--accent) 38%, transparent), transparent 62%),
+    linear-gradient(165deg, var(--surface-deep) 0%, var(--surface) 50%, var(--surface-subtle) 100%);
+  background-size: cover;
+  background-position: center;
+}
+/* [S2 BUILDUP] swap .heroArt background for the Firefly mood image (moodImage slot). */
+.heroArt::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(46deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(-42deg, rgba(58, 53, 46, 0.035) 0 2px, transparent 2px 8px);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+.heroArt::after {
+  content: '';
+  position: absolute;
+  top: 8%;
+  right: 9%;
+  width: 30%;
+  aspect-ratio: 3 / 4;
+  background:
+    radial-gradient(ellipse 45% 30% at 50% 26%, color-mix(in srgb, var(--rose-dust, var(--accent-soft)) 85%, transparent), transparent 62%),
+    radial-gradient(ellipse 38% 26% at 36% 40%, color-mix(in srgb, var(--terracotta, var(--accent)) 70%, transparent), transparent 60%),
+    radial-gradient(ellipse 40% 28% at 64% 44%, color-mix(in srgb, var(--accent-soft) 70%, transparent), transparent 60%),
+    linear-gradient(180deg, transparent 56%, color-mix(in srgb, var(--accent) 55%, transparent) 60%, color-mix(in srgb, var(--accent) 60%, black 12%) 100%);
+  border-radius: 50% 50% 8% 8% / 42% 42% 8% 8%;
+  filter: blur(0.4px);
+  opacity: 0.92;
+  pointer-events: none;
+}
+.heroArtImage { background-size: cover; background-position: center; }
+.heroArtImage::after { display: none; }
+.layerTag {
+  position: absolute;
+  z-index: 3;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 11px;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--card) 80%, transparent);
+  backdrop-filter: blur(4px);
+  padding: 5px 11px;
+  border-radius: 14px;
+}
+.tagA { top: var(--sp-3); left: var(--sp-3); }
+.tagC { bottom: var(--sp-3); right: var(--sp-3); color: var(--terracotta, var(--accent)); }
+.heroProduct {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 34%;
+  max-width: 220px;
+  aspect-ratio: 3 / 4;
+  margin-bottom: -1px;
+  background: linear-gradient(180deg, var(--card) 0%, var(--surface-deep) 100%);
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -10px 44px rgba(58, 53, 46, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.4;
+  overflow: hidden;
+}
+.heroProduct img { width: 100%; height: 100%; object-fit: contain; }
+.heroCopy { padding: var(--sp-5) var(--sp-4) var(--sp-4); text-align: center; }
+.heroCopy h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(26px, 5.2vw, 38px);
+  line-height: 1.35;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.heroCopy h1 em { font-style: italic; color: var(--accent); }
+.heroSub { margin-top: var(--sp-2); font-size: 15px; color: var(--ink-soft); }
+.heroTrust { margin-top: var(--sp-3); display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.chip {
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+
+/* ── S2 value ── */
+.values { background: var(--card); }
+.vh { text-align: center; max-width: 560px; margin: 0 auto var(--sp-5); }
+.vh h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(22px, 4vw, 28px);
+  line-height: 1.4;
+  color: var(--ink);
+}
+.valueGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+@media (max-width: 640px) { .valueGrid { grid-template-columns: 1fr; gap: var(--sp-2); } }
+.valueCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: var(--sp-4) var(--sp-3);
+  text-align: center;
+}
+.valueIcon { width: 44px; height: 44px; margin: 0 auto var(--sp-2); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+.valueIcon svg { width: 100%; height: 100%; stroke: currentColor; fill: none; stroke-width: 1.4; }
+.valueNum { font-family: var(--font-display); font-style: italic; font-size: 13px; color: var(--accent-soft); margin-bottom: var(--sp-1); display: block; }
+.valueCard h3 { font-size: 17px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+.valueCard p { font-size: 14px; color: var(--ink-soft); line-height: 1.6; }
+
+/* ── S3 scents + spec ── */
+.scents { background: var(--surface); }
+.sh { text-align: center; margin-bottom: var(--sp-5); }
+.sh h2 { font-family: var(--font-display); font-weight: 500; font-size: clamp(22px, 4vw, 28px); color: var(--ink); }
+.scent { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); align-items: center; margin-bottom: var(--sp-5); }
+.scent:nth-child(even) .scentVisual { order: 2; }
+@media (max-width: 640px) {
+  .scent { grid-template-columns: 1fr; gap: var(--sp-2); }
+  .scent:nth-child(even) .scentVisual { order: 0; }
+}
+.scentVisual {
+  aspect-ratio: 4 / 5;
+  border-radius: var(--r-img);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--sp-2);
+}
+.scentVisual span {
+  position: relative;
+  z-index: 2;
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  padding: 3px 9px;
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.vLemon { background: linear-gradient(155deg, #E6E9CE, #C9D49B 55%, #B8C77E); }
+.vApril { background: linear-gradient(155deg, #F1E7DF, #E7CBD8 50%, #D8B8C8); }
+.vCherry { background: linear-gradient(155deg, #E9D7C8, #C98A6E 55%, #9E4B3C); }
+/* [S2 BUILDUP] swap each .scentVisual for a per-scent Firefly mood shot. */
+.scentVisual::after {
+  content: '';
+  position: absolute;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 46%;
+  aspect-ratio: 1 / 1.2;
+  opacity: 0.85;
+  pointer-events: none;
+  border-radius: 50% 50% 12% 12% / 44% 44% 12% 12%;
+  background:
+    radial-gradient(ellipse 50% 34% at 50% 30%, rgba(255, 255, 255, 0.55), transparent 60%),
+    radial-gradient(ellipse 44% 30% at 40% 50%, rgba(58, 53, 46, 0.12), transparent 60%);
+}
+.scentText .scentName { font-family: var(--font-display); font-weight: 500; font-size: 21px; color: var(--ink); display: flex; align-items: baseline; gap: 10px; }
+.scentText .scentEn { font-size: 12px; color: var(--accent); letter-spacing: 0.1em; font-family: var(--font-body); }
+.scentLine { font-family: var(--font-display); font-style: italic; font-size: 17px; color: var(--terracotta, var(--accent)); margin: var(--sp-1) 0 var(--sp-2); line-height: 1.5; }
+.scentDesc { font-size: 14px; color: var(--ink-soft); line-height: 1.7; }
+.specCard { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--sp-4); margin-top: var(--sp-2); }
+.specCard h3 { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: var(--sp-3); letter-spacing: 0.04em; }
+.specRow { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.specRow:last-child { border-bottom: none; }
+.specRow dt { color: var(--ink-soft); }
+.specRow dd { color: var(--ink); font-weight: 500; text-align: right; }
+
+/* ── S4 usage ── */
+.usage { background: var(--surface-deep); }
+.uh { text-align: center; margin-bottom: var(--sp-5); }
+.uh h2 { font-family: var(--font-display); font-weight: 500; font-size: clamp(22px, 4vw, 28px); color: var(--ink); }
+.stepGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+@media (max-width: 640px) { .stepGrid { grid-template-columns: 1fr; } }
+.step { background: var(--surface); border-radius: var(--r-card); padding: var(--sp-4) var(--sp-3); text-align: center; }
+.stepNo {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto var(--sp-2);
+  border: 1.4px solid var(--accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--accent);
+  font-size: 16px;
+}
+.step h4 { font-size: 16px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+.step p { font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; }
+
+/* ── S5 story + trust ── */
+.story { background: var(--card); }
+.storyWrap { max-width: 620px; margin: 0 auto; text-align: center; }
+.storyArt {
+  aspect-ratio: 16 / 9;
+  border-radius: var(--r-img);
+  margin-bottom: var(--sp-4);
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 28% 38%, color-mix(in srgb, var(--accent) 50%, transparent), transparent 56%),
+    radial-gradient(ellipse at 76% 64%, color-mix(in srgb, var(--terracotta, var(--accent)) 34%, transparent), transparent 56%),
+    linear-gradient(150deg, var(--surface-deep), var(--surface-subtle));
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: var(--sp-2);
+}
+.storyArtImage { background-size: cover; background-position: center; }
+/* [S2 BUILDUP] swap .storyArt for the Met CC0 public-domain artwork. */
+.caption {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  padding: 5px 11px;
+  border-radius: 12px;
+}
+.story h2 { font-family: var(--font-display); font-weight: 500; font-size: clamp(21px, 4vw, 26px); color: var(--ink); margin-bottom: var(--sp-2); }
+.story p { font-size: 15px; color: var(--ink-soft); line-height: 1.85; }
+.sign { margin-top: var(--sp-3); font-family: var(--font-display); font-style: italic; font-size: 14px; color: var(--accent); }
+.trustBadges { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); max-width: 620px; margin: var(--sp-4) auto 0; }
+@media (max-width: 640px) { .trustBadges { grid-template-columns: 1fr; } }
+.tb { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--sp-3); text-align: center; }
+.tb .k { font-size: 12px; letter-spacing: 0.12em; color: var(--accent); font-weight: 600; }
+.tb .v { font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 6px; }
+.reviewSlot { max-width: 620px; margin: var(--sp-4) auto 0; border: 1px dashed var(--line); border-radius: var(--r-card); padding: var(--sp-3); text-align: center; }
+.reviewSlot .eyebrow { margin-bottom: 6px; }
+.reviewSlot p { font-size: 13px; color: var(--ink-soft); line-height: 1.6; }
+
+/* ── S6 cta ── */
+.cta { background: var(--surface); text-align: center; }
+.cta h2 { font-family: var(--font-display); font-weight: 500; font-size: clamp(24px, 5vw, 32px); color: var(--ink); line-height: 1.4; margin-bottom: var(--sp-2); }
+.cta p { font-size: 15px; color: var(--ink-soft); margin-bottom: var(--sp-4); }
+.ctaPrice { margin-bottom: var(--sp-3); }
+.ctaPrice .won { font-size: 30px; font-weight: 700; color: var(--ink); font-family: var(--font-body); }
+.ctaPrice .ship { font-size: 13px; color: var(--accent); margin-top: 4px; }
+.ctaBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 90%;
+  max-width: 420px;
+  min-height: 56px;
+  background: var(--brand-red);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-btn);
+  font-size: 17px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 6px 22px rgba(230, 35, 16, 0.28);
+}
+.ctaBtn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(230, 35, 16, 0.34); }
+.ctaBtn svg { width: 19px; height: 19px; stroke: #fff; fill: none; stroke-width: 1.8; }
+.ctaReassure { margin-top: var(--sp-2); font-size: 12px; color: var(--ink-soft); }
+
+/* ── S7 notice + brand ── */
+.notice { background: var(--surface-deep); }
+.noticeGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+@media (max-width: 640px) { .noticeGrid { grid-template-columns: 1fr; } }
+.noticeCard { background: var(--card); border-radius: var(--r-card); padding: var(--sp-3); }
+.noticeCard h4 { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: var(--sp-1); display: flex; align-items: center; gap: 7px; }
+.noticeCard h4 svg { width: 17px; height: 17px; stroke: var(--accent); fill: none; stroke-width: 1.5; }
+.noticeCard p { font-size: 13px; color: var(--ink-soft); line-height: 1.65; }
+.noticeSlot { margin-top: var(--sp-4); border: 1px dashed var(--line); border-radius: var(--r-card); padding: var(--sp-3); text-align: center; font-size: 12px; color: var(--ink-soft); }
+.brandbar { background: var(--surface); padding: var(--sp-4); text-align: center; border-top: 1px solid var(--line); }
+.brandbar .mark { font-family: var(--font-display); font-size: 15px; color: var(--ink); letter-spacing: 0.04em; }
+.brandbar .mark b { color: var(--brand-red); font-weight: 600; }
+.brandbar .tip { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+
+/* ── mobile sticky CTA bar (mobile only, prevents conversion leak) ── */
+.stickyBuy { display: none; }
+@media (max-width: 640px) {
+  .stickyBuy {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    padding: 10px 16px;
+    box-shadow: 0 -4px 20px rgba(58, 53, 46, 0.14);
+  }
+  .stickyBuy .p { font-weight: 700; color: var(--ink); font-size: 16px; font-family: var(--font-body); }
+  .stickyBuy button { margin-left: auto; background: var(--brand-red); color: #fff; border: none; border-radius: 10px; min-height: 46px; padding: 0 24px; font-size: 15px; font-weight: 600; font-family: var(--font-body); }
+  .root { padding-bottom: 68px; }
+  /* body readability 16px+ (playbook §3) */
+  .valueCard p, .scentDesc, .step p, .noticeCard p, .story p { font-size: 16px; line-height: 1.7; }
+}

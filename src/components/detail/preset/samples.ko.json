@@ -1,0 +1,215 @@
+[
+  {
+    "id": "myeonghwa",
+    "label": "명화 차량용 디퓨저",
+    "preset": "aroma",
+    "intensity": "l3",
+    "content": {
+      "eyebrow": "Art in Everyday",
+      "headlineLead": "달리는 길 위에서,",
+      "headlineEm": "한 점의 그림",
+      "headlineTail": "을 두르다",
+      "heroSub": "명화를 입힌 차량용 디퓨저 — 시야에 그림, 공기에 향",
+      "heroChips": ["국산 (대한민국)", "자가검사 적합", "향 3종 무료 선택"],
+      "heroProductLabel": "디퓨저 제품컷",
+      "tagA": "배경 — A. 모네 수련 무드 (Firefly)",
+      "tagC": "오브제 — C. 정물 꽃 한 점 (Firefly)",
+      "valueEyebrow": "Why this one",
+      "valueTitle": "운전석을 작은 갤러리로 바꾸는 세 가지 이유",
+      "values": [
+        { "num": "No.1", "title": "시야에 머무는 한 점", "body": "송풍구에 거는 순간, 명화 한 폭이 운전석 시선에 들어옵니다. 차 안 인테리어가 달라집니다.", "icon": "frame" },
+        { "num": "No.2", "title": "은은하게, 길게", "body": "주행 중 바람을 타고 천천히 퍼지는 향. 좁은 차 안을 과하지 않게 채웁니다.", "icon": "wind" },
+        { "num": "No.3", "title": "향을 고르는 즐거움", "body": "세 가지 향 중 그날의 기분으로. 추가금 없이 원하는 노트를 선택합니다.", "icon": "sparkles" }
+      ],
+      "specEyebrow": "Three Notes",
+      "specTitle": "그날의 장면을 고르세요",
+      "scents": [
+        { "name": "레몬 유칼립투스", "en": "LEMON EUCALYPTUS", "line": "\"창문 연 아침, 정원의 풀잎\"", "desc": "상큼한 시트러스 위로 청량한 유칼립투스가 번지는 향. 막 깨어난 정원의 공기처럼 머리를 맑게 틔웁니다.", "swatch": "lemon", "visualNote": "A 인상주의 + C 정물 — 정원의 아침" },
+        { "name": "에이프릴 후레쉬", "en": "APRIL FRESH", "line": "\"비 갠 뒤 꽃에 스민 햇빛\"", "desc": "부드러운 플로럴에 깨끗한 머스크가 받쳐주는 향. 봄비 그친 오후의 보송한 공기를 닮았습니다.", "swatch": "april", "visualNote": "A 인상주의 + C 정물 — 비 갠 꽃밭" },
+        { "name": "블랙 체리", "en": "BLACK CHERRY", "line": "\"늦은 오후, 잘 익은 체리 한 입\"", "desc": "달큰한 체리에 은은한 우디 노트가 더해진 향. 해 질 녘 과수원의 깊고 포근한 단내를 그렸습니다.", "swatch": "cherry", "visualNote": "A 인상주의 + C 정물 — 늦은 오후 과수원" }
+      ],
+      "specHeader": "제품 사양",
+      "specRows": [
+        { "label": "타입", "value": "차량 송풍구 거치형 디퓨저" },
+        { "label": "향 선택", "value": "레몬유칼립투스 · 에이프릴후레쉬 · 블랙체리" },
+        { "label": "발향 방식", "value": "송풍구 바람을 이용한 자연 확산" },
+        { "label": "제조국", "value": "대한민국" },
+        { "label": "자가검사번호", "value": "HB21-12-2572 / HB19-12-1462" },
+        { "label": "구성", "value": "디퓨저 본체 1 · 향 카트리지 (택1)" },
+        { "label": "상세", "value": "크기·무게·소재는 상세 이미지 참조" }
+      ],
+      "usageEyebrow": "How to use",
+      "usageTitle": "세 걸음이면 충분합니다",
+      "steps": [
+        { "no": "1", "title": "고르기", "body": "그날의 기분에 맞는 향 카트리지를 본체에 끼웁니다." },
+        { "no": "2", "title": "걸기", "body": "송풍구 날개에 클립을 가볍게 끼워 고정합니다." },
+        { "no": "3", "title": "달리기", "body": "바람을 타고 향이 퍼집니다. 세기는 송풍 조절로." }
+      ],
+      "storyArtCaption": "Claude Monet, Water Lilies, 1906 · The Met Open Access (Public Domain)",
+      "storyTitle": "그림은 미술관에만 있지 않습니다",
+      "storyBody": "명화는 본래 일상 가까이에서 사람의 마음을 어루만지던 것이었습니다. 손에 닿지 않던 한 점의 그림을, 매일 오르는 운전석으로 옮겨 왔습니다. 향이 퍼지는 동안, 잠깐의 이동이 작은 감상이 됩니다.",
+      "storySign": "— 골라주는 안목, 꽃틔움",
+      "trustBadges": [
+        { "k": "제조국", "v": "대한민국 (국산)" },
+        { "k": "성분", "v": "유해성분 기준 적합" },
+        { "k": "자가검사", "v": "HB21-12-2572 / HB19-12-1462" }
+      ],
+      "reviewSlotEyebrow": "Photo Reviews",
+      "reviewSlotBody": "고객 포토리뷰 연동 슬롯 — 구매 후기·평점 자동 노출 영역.",
+      "ctaTitle": "오늘의 한 점을 내 차에 들이세요",
+      "ctaSub": "향은 추가금 없이 자유롭게 선택할 수 있습니다.",
+      "priceText": "29,000원",
+      "shipText": "무료배송",
+      "ctaButton": "장바구니에 담기",
+      "ctaReassure": "국산 · 자가검사 적합 · 수령 후 7일 이내 교환 안내",
+      "noticeCards": [
+        { "title": "배송 안내", "body": "주문 확인 후 영업일 기준 순차 출고됩니다. 도서산간은 일정이 더 소요될 수 있습니다.", "icon": "delivery" },
+        { "title": "교환 · 반품", "body": "수령 후 7일 이내 신청 가능합니다. 향 카트리지 개봉 시 위생상 교환·반품이 제한됩니다.", "icon": "exchange" },
+        { "title": "고객 안내", "body": "상품 문의는 스토어 톡톡으로 남겨주세요. 빠르게 안내해 드리겠습니다.", "icon": "support" }
+      ],
+      "noticeSlotLabel": "공통 안내 이미지 슬롯 (store_settings · 상·하단 4칸) 연동 영역",
+      "brandMarkLead": "꽃틔움",
+      "brandMarkTail": "KKOTIUM",
+      "brandTip": "흔한 것을 감각적으로 — 골라주는 안목",
+      "stickyPrice": "29,000원 · 무료배송",
+      "stickyButton": "구매하기"
+    }
+  },
+  {
+    "id": "dalhangari",
+    "label": "달항아리 도어벨",
+    "preset": "tradition",
+    "intensity": "l3",
+    "content": {
+      "eyebrow": "Korean Craft",
+      "headlineLead": "문 앞에서 울리는,",
+      "headlineEm": "달항아리",
+      "headlineTail": " 한 점의 울림",
+      "heroSub": "한국적 여백을 담은 도어벨 — 손님을 맞는 첫 인사",
+      "heroChips": ["국산 (대한민국)", "수공 마감", "현관·매장 겸용"],
+      "heroProductLabel": "달항아리 도어벨",
+      "tagA": "배경 — A. 한지·먹 번짐 무드",
+      "tagC": "오브제 — C. 단청 문양 포인트",
+      "valueEyebrow": "Why this one",
+      "valueTitle": "현관을 한 폭의 여백으로 바꾸는 세 가지 이유",
+      "values": [
+        { "num": "No.1", "title": "여백이 주는 품격", "body": "군더더기 없는 달항아리 실루엣이 현관에 한국적 여백을 들입니다.", "icon": "palette" },
+        { "num": "No.2", "title": "맑게 울리는 소리", "body": "문이 열릴 때마다 은은하고 맑은 소리로 손님을 맞이합니다.", "icon": "sparkles" },
+        { "num": "No.3", "title": "손끝의 수공 마감", "body": "기계로 찍어내지 않은, 손으로 다듬은 마감의 온기를 담았습니다.", "icon": "heart" }
+      ],
+      "specEyebrow": "Details",
+      "specTitle": "고요함을 담은 물건",
+      "specHeader": "제품 사양",
+      "specRows": [
+        { "label": "타입", "value": "현관 거치형 도어벨" },
+        { "label": "소재", "value": "세라믹 · 금속 종" },
+        { "label": "마감", "value": "수공 유약 마감" },
+        { "label": "제조국", "value": "대한민국" },
+        { "label": "구성", "value": "도어벨 본체 1 · 고정 부속" },
+        { "label": "상세", "value": "크기·무게는 상세 이미지 참조" }
+      ],
+      "usageEyebrow": "How to use",
+      "usageTitle": "세 걸음이면 충분합니다",
+      "steps": [
+        { "no": "1", "title": "걸기", "body": "현관문 안쪽 손잡이 위에 부속으로 가볍게 고정합니다." },
+        { "no": "2", "title": "맞추기", "body": "문이 여닫힐 때 종이 자연스럽게 울리도록 높이를 맞춥니다." },
+        { "no": "3", "title": "맞이하기", "body": "문이 열릴 때마다 맑은 소리가 손님을 맞이합니다." }
+      ],
+      "storyArtCaption": "달항아리 — 조선 백자의 여백 (Public Domain 모티프)",
+      "storyTitle": "비움이 곧 채움입니다",
+      "storyBody": "달항아리는 무엇도 그려 넣지 않은 비움으로 가장 넉넉한 인상을 남깁니다. 그 여백의 미를 현관 한 켠으로 옮겨, 오가는 걸음마다 잠깐의 고요를 더했습니다.",
+      "storySign": "— 골라주는 안목, 꽃틔움",
+      "trustBadges": [
+        { "k": "제조국", "v": "대한민국 (국산)" },
+        { "k": "마감", "v": "수공 유약 마감" },
+        { "k": "구성", "v": "본체 · 고정 부속" }
+      ],
+      "reviewSlotEyebrow": "Photo Reviews",
+      "reviewSlotBody": "고객 포토리뷰 연동 슬롯 — 구매 후기·평점 자동 노출 영역.",
+      "ctaTitle": "고요한 인사를 현관에 들이세요",
+      "ctaSub": "오래 두고 쓰는 한 점의 공예입니다.",
+      "priceText": "32,000원",
+      "shipText": "무료배송",
+      "ctaButton": "장바구니에 담기",
+      "ctaReassure": "국산 · 수공 마감 · 수령 후 7일 이내 교환 안내",
+      "noticeCards": [
+        { "title": "배송 안내", "body": "주문 확인 후 영업일 기준 순차 출고됩니다. 도서산간은 일정이 더 소요될 수 있습니다.", "icon": "delivery" },
+        { "title": "교환 · 반품", "body": "수령 후 7일 이내 신청 가능합니다. 파손 위험이 있어 포장재를 보관해 주세요.", "icon": "exchange" },
+        { "title": "고객 안내", "body": "상품 문의는 스토어 톡톡으로 남겨주세요. 빠르게 안내해 드리겠습니다.", "icon": "support" }
+      ],
+      "noticeSlotLabel": "공통 안내 이미지 슬롯 (store_settings · 상·하단 4칸) 연동 영역",
+      "brandMarkLead": "꽃틔움",
+      "brandMarkTail": "KKOTIUM",
+      "brandTip": "흔한 것을 감각적으로 — 골라주는 안목",
+      "stickyPrice": "32,000원 · 무료배송",
+      "stickyButton": "구매하기"
+    }
+  },
+  {
+    "id": "icetray",
+    "label": "64구 아이스트레이",
+    "preset": "kitchen",
+    "intensity": "l1",
+    "content": {
+      "eyebrow": "Clean & Practical",
+      "headlineLead": "한 번에 64구,",
+      "headlineEm": "깔끔하게",
+      "headlineTail": " 얼리다",
+      "heroSub": "64구 실리콘 아이스트레이 — 위생적이고 분리도 쉽게",
+      "heroChips": ["64구 대용량", "실리콘 분리 쉬움", "뚜껑 포함"],
+      "heroProductLabel": "아이스트레이",
+      "valueEyebrow": "Why this one",
+      "valueTitle": "주방을 더 깔끔하게 만드는 세 가지 이유",
+      "values": [
+        { "num": "No.1", "title": "한 번에 64구", "body": "넉넉한 64구로 한 번에 충분한 얼음을 얼립니다.", "icon": "snowflake" },
+        { "num": "No.2", "title": "쉽게 톡, 분리", "body": "말랑한 실리콘 바닥을 밀면 얼음이 깔끔하게 빠집니다.", "icon": "droplet" },
+        { "num": "No.3", "title": "뚜껑으로 위생적", "body": "전용 뚜껑이 냉동실 냄새와 서리를 막아줍니다.", "icon": "shield-check" }
+      ],
+      "specEyebrow": "Details",
+      "specTitle": "주방 필수템의 기본기",
+      "specHeader": "제품 사양",
+      "specRows": [
+        { "label": "타입", "value": "64구 실리콘 아이스트레이" },
+        { "label": "소재", "value": "식품용 실리콘 · PP 뚜껑" },
+        { "label": "구성", "value": "트레이 1 · 뚜껑 1" },
+        { "label": "세척", "value": "분리 세척 · 식기세척기 사용 가능" },
+        { "label": "제조국", "value": "상세 이미지 참조" },
+        { "label": "상세", "value": "크기·용량은 상세 이미지 참조" }
+      ],
+      "usageEyebrow": "How to use",
+      "usageTitle": "세 걸음이면 충분합니다",
+      "steps": [
+        { "no": "1", "title": "채우기", "body": "트레이 칸에 물을 칸 높이까지 채웁니다." },
+        { "no": "2", "title": "얼리기", "body": "뚜껑을 덮어 평평한 냉동실에 보관합니다." },
+        { "no": "3", "title": "분리하기", "body": "바닥을 밀어 얼음을 톡 분리합니다." }
+      ],
+      "storyTitle": "매일 쓰는 물건일수록 기본이 중요합니다",
+      "storyBody": "자주 쓰는 주방 도구일수록 위생과 편의가 핵심입니다. 분리가 쉽고 세척이 간편하도록, 매일의 사용을 먼저 생각했습니다.",
+      "storySign": "— 골라주는 안목, 꽃틔움",
+      "trustBadges": [
+        { "k": "소재", "v": "식품용 실리콘" },
+        { "k": "구성", "v": "트레이 · 뚜껑" },
+        { "k": "세척", "v": "식기세척기 가능" }
+      ],
+      "reviewSlotEyebrow": "Photo Reviews",
+      "reviewSlotBody": "고객 포토리뷰 연동 슬롯 — 구매 후기·평점 자동 노출 영역.",
+      "ctaTitle": "깔끔한 얼음, 지금 시작하세요",
+      "ctaSub": "주방 필수템, 하나면 충분합니다.",
+      "priceText": "9,900원",
+      "shipText": "무료배송",
+      "ctaButton": "장바구니에 담기",
+      "ctaReassure": "식품용 실리콘 · 수령 후 7일 이내 교환 안내",
+      "noticeCards": [
+        { "title": "배송 안내", "body": "주문 확인 후 영업일 기준 순차 출고됩니다. 도서산간은 일정이 더 소요될 수 있습니다.", "icon": "delivery" },
+        { "title": "교환 · 반품", "body": "수령 후 7일 이내 신청 가능합니다. 사용·세척 후에는 교환·반품이 제한됩니다.", "icon": "exchange" },
+        { "title": "고객 안내", "body": "상품 문의는 스토어 톡톡으로 남겨주세요. 빠르게 안내해 드리겠습니다.", "icon": "support" }
+      ],
+      "noticeSlotLabel": "공통 안내 이미지 슬롯 (store_settings · 상·하단 4칸) 연동 영역",
+      "brandMarkLead": "꽃틔움",
+      "brandMarkTail": "KKOTIUM",
+      "brandTip": "흔한 것을 감각적으로 — 골라주는 안목",
+      "stickyPrice": "9,900원 · 무료배송",
+      "stickyButton": "구매하기"
+    }
+  }
+]
