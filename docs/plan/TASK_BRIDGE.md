@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-09 (66) 6g 잔존 브랜드 오타 flag 3곳 전부 처리 (FROM Code, main aa7e5b9, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | PARALLEL_WORK_TRACKER 6g + 대표 승인(전부 진행). 커밋 aa7e5b9. |
+| 처리 ✅ | export/naver(CSV 브랜드 칼럼)·naver-defaults(KKOTIUM_DISPLAY brand/manufacturer/importer + 카카오채널 5곳) 오타 교정·구조 보존('(협력사)'·'@'·kkotium-supplier 영문 슬러그 유지). layout.rtf(.rtf 잔존본·참조 0) git rm(#34, 이력 보존). |
+| 안전 | 정답=신뢰소스(layout.tsx) 추출 + 코드포인트 토큰 치환(수기 0). 1차 정규식 greedy 오훼손은 커밋 전 HEAD 복원으로 차단(미반영). 전역 브랜드 오타/변종 0(grep). |
+| ★ 별도 결정 | naver-defaults 제조사/수입사 '(협력사)' 표기 vs MEMORY 정책(없으면 기본 브랜드)은 미변경 — 정책 결정 시 별건. |
+| 검증 | tsc 0·build OK·전역 오타/변종 0·비가역 0. production aa7e5b9. ★프리셋 엔진 Phase A/B 전 commit + 브랜드 정합 완료. |
+
 ### 2026-06-09 (65) 프리셋 엔진 B-2 SEO 린터 + B-3 generate-detail 소비 + site title/brand 오타 교정 (FROM Code, main 9f90faf, 비가역 0)
 
 | 항목 | 상태 |
