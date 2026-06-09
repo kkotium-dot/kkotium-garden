@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-09 (68) 대표이미지 규격(§9) + 합성/추가이미지 체계 확장 + C-1 검증 (FROM 🖥 Desktop, main/feat dbbb04d, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | 대표 지시: 명화 대표=가죽 확정(재변경 없음)·나머지 썸네일=레퍼런스 비율 개선·누끼는 합성 입력·누끼+합성 앱 기능·전체 체계 설계. |
+| C-1 검증 ✅ | feat/white-bg-simple 2ff4a77 3파일+CropWarning read 검증완(지난 턴). dbbb04d=docs-only(런타임 무변, #36 확인). |
+| §9 규격 박제 ✅ | REPRESENTATIVE_IMAGE_FINISHING_SYSTEM §9 — 대표이미지 전상품 규격(1:1 1000·순백·본품70~85%·텍스트0). 첨부 레퍼런스 기준. |
+| 체계 확장 ✅ | CUTOUT_CROP_FEATURE_BUILD_PLAN에 C-7(합성 apply-composite·harmonize=Branch B)·C-8(추가이미지 멀티슬롯) + 통합 적응형 흐름(상황별 융통+개입점 자연) + 붙여넣기 문구. 합성 레시피 = HANDOFF_myeonghwa_composite_recipe. |
+| 정직 메모(#46) | ⚠ Adobe 이미지 백엔드(bartlebee encode) 이번 세션 400 오류 → 누끼/합성/미리보기 직접 산출 불가. + compositing/gen-fill는 애초 Adobe MCP 미지원. 이미지 산출 경로 = 앱 파이프라인(Code) or 로그인된 Firefly 브라우저 반자동(#52). |
+| 다음 | TO 💻 Code — C-1 머지 게이트(C-6 후) / C-2·C-4·C-7 병렬 가능 / C-3→C-5→C-8 직렬. 명화 실제 합성 = 대표 로그인 Firefly 탭 오픈 시 Desktop 구동. |
+
 ### 2026-06-09 (67) 누끼+크롭 마무리 시스템 설계·인계 (FROM 🖥 Desktop, main c55248d, 비가역 0)
 
 | 항목 | 상태 |
