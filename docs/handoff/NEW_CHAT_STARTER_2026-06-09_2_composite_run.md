@@ -1,67 +1,63 @@
-# 다음 채팅 인계 — 명화 무드 합성 실행 + 병합 (2026-06-09 세션2 마감)
+# 다음 채팅 인계 — 폴더 자동분류 후속 + 명화 합성 + 병합 (2026-06-09 세션2 마감)
 
-이 문서 = 새 채팅 붙여넣기 진입 권위본. 정독 순서: 본 문서 -> PARALLEL_WORK_TRACKER.md -> TASK_BRIDGE §3 -> HANDOFF_myeonghwa_composite_recipe_2026-06-09.md(§3 프롬프트) -> CUTOUT_CROP_FEATURE_BUILD_PLAN.md.
+이 문서 = 새 채팅 붙여넣기 진입 권위본. 정독 순서: 본 문서 -> PARALLEL_WORK_TRACKER.md -> TASK_BRIDGE §3 -> ASSET_FOLDER_TAXONOMY_BUILD.md -> HANDOFF_myeonghwa_composite_recipe(§3/§4) -> PRINCIPLES_LEARNED #57.
 
-## 1. 이번 세션(2) 실측·산출 (검증 완료, 추측 0)
+## 1. 이번 세션(2) 완료 (실측·구현·검증, 추측 0)
 
-### 1-1. 상태 교차검증 (#45)
-- production(target=production, READY) = `e0c7f19` (main). 즉 **C-1/C-7 코드는 아직 production 미반영** — 문서/셋업 커밋만 라이브.
-- `feat/composite-pipeline` = `a28946e` (C-1+C-7 포함, base=dbbb04d). Vercel **preview 빌드 READY** = 코드 정상 빌드 확인.
-- `feat/white-bg-simple` = `dbbb04d` (C-1 단독, composite-pipeline에 흡수).
-- 드리프트 0. 직전 세션(69) 종료 지점 그대로 이어받음.
+### 1-1. 명화 누끼 재작업 (대표 반려 -> 재작업 완료)
+- 1차 170px 카드컷 = 평면·잘림 -> **폐기**.
+- 대표 업로드 실촬영 히어로컷 3장 -> image_remove_background -> **투명 PNG 3종 완전포함 산출**: A(들판소녀)·B(차량가죽 범선·올리브)·C(흰배경 들판마을).
+- 투-트랙 합성 확정(#57): 정보형=새배경(C)·감성형=Firefly 무드(B).
+- track1_C 새배경 합성(우드+린넨+식물그림자·접지섀도) 산출완(앱 sharp).
+- Firefly 무드(트랙2): 탭 SPA 렌더 미완 -> 대표 파일드롭 후 Claude 구동(키트=Firefly_무드합성_실행키트.md).
 
-### 1-2. Adobe 백엔드 복구 확인 (직전 400 블로커 해소)
-- `adobe_mandatory_init` 200. `image_remove_background` **정상 작동** 확인.
-- 단, 라우팅 문서 재확인: photo compositing / prompt 배경교체 / generative fill = **Adobe MCP 미지원**(영구). 누끼·아웃페인팅만 가능.
-- 결론: 누끼는 MCP로 가능 / **무드 합성 자체는 Firefly 웹 UI(브라우저 #52)** = 직전 세션 구조와 동일(정상).
+### 1-2. C-2 코드 검증 (Code push, Desktop 실측 통과)
+- HEAD `1c3095c` -> 폴더작업 후 `39c8072`. apply-cutout: whiteBgFinish 재사용·bg_clean done 전이·#57 sourceGuidance·OCR block 가드·비가역 0. 정합 확인.
 
-### 1-3. 명화 누끼 산출 (이번 세션 실제 완료)
-- 풀해상 상세(`source_detail_url`, 1000x18291) 밴드 스캔 + 육안 검증 결과: **클린 단독 본품샷 부재**가 실측 사실. 본품은 항상 4종 변형 카드에 작게·텍스트·연출배경과 함께 등장(레시피 §4 경고와 일치).
-- 그 중 본품(정사각 유리병 + 우드 볼캡 + 명화 라벨)을 최적 크롭(full 좌표 x222-392, y7655-8085, 170x430) -> Adobe `image_remove_background` -> **투명 PNG 누끼 성공**(텍스트·이웃캡 정상 제거, 유리 경계 깨끗).
-- 한계(정직): 누끼 170x430(소형). **Firefly 합성 레퍼런스로는 충분**(Firefly가 고해상 재생성), **§9 대표(1000px) 단독으론 작음**. 대표는 가죽 확정이라 무관 — 누끼는 추가이미지 합성 입력 전용.
-- 산출 파일(대표님 다운로드 제공됨): `myeonghwa_bottle_cutout.png`(투명), `..._preview.png`(흰배경 미리보기), `..._source_crop.png`(소스 크롭).
+### 1-3. 자산 폴더 자동분류 (FT) 구현·검증
+- **FT-코드 (Code, HEAD `39c8072`)**: AssetKind 2->5종(cutout/composite/thumb/detail/archive)·경로 `{pid}/{kind}/{variant}-{ts}`·listProductAssets 재귀(root+5단계, stage 필드, placeholder 스킵)·findCachedAsset root우선+하위폴더 fallback·asset-taxonomy.ts(STAGE_FOLDER/kindForSource/safeVariant)·apply-cutout(원본 누끼 cutout/ 저장)·apply-composite(kind composite). 검증: tsc0/build OK/8생산자 컴파일/이모지0/한글0/비가역0/기존 flat 미이동.
+- **FT-검증 (Desktop, Storage 실측)**: storage.objects 조회 -> 명화 13·달항아리 9·아이스트레이 1 전부 root_flat, 단계 하위폴더 아직 0(정상, 신규 코드 production 미배포). 하위호환 보장 확인(기존 23 flat URL 무손상). ★단계폴더 실생성 확인은 **병합 후 신규 업로드 발생 시**(C-6 실무 테스트와 합쳐짐) -- Claude가 서버 service key 미보유로 직접 트리거 불가(정직 #46), 대표 스튜디오 실행 or 브라우저 구동 필요.
+- **FT-Adobe (Desktop, 승인받음)**: Adobe CC `KKOTIUM_GARDEN/` 루트 + 6폴더(00_inbox·01_cutout·02_composite·03_thumbnail·04_detail·99_archive) 생성완. 앱 STAGE_FOLDER와 1:1 미러.
+  - 중복 kkotium~(5) 6개: 내용 Supabase/산출물로 백업됨. **삭제는 비가역 -> 대표가 Adobe 웹에서 직접** 권장(Claude 임의 삭제 안 함). 앞으로 Adobe 업로드는 00_inbox로 고정 -> 재발 0.
 
-### 1-4. 부수 확정 — 명화 안전번호 2종 (SUSPENSION 해제 관련)
-- 풀해상 상세 r2(환경부 안전확인) 밴드에서 실측: **HB19-12-1462 / HB21-12-2572**.
-- SUSPENSION 근본원인(필수속성 재질/색상 + 안전기준 신고번호 ETC)의 신고번호 입력값으로 사용 가능. (입력·PUT은 대표 GO 후 비가역.)
+## 2. 미반영(병합 대기) -- 핵심
+- production(target=production READY) = `e0c7f19`(main). **feat/composite-pipeline(`39c8072`, C-1+C-7+C-2+FT)는 preview 빌드만 READY·production 미반영.**
+- 병합해야: /white-bg·/apply-cutout·/apply-composite production 동작 + 단계폴더 실생성(신규 업로드) + 명화 합성 회수 + C-6 실무 테스트.
 
-## 2. 명화 DB 실측 (cmpnooli40001f0gveaxr8iim)
-- 대표 mainImage = curated thumb-crop(가죽, 확정) / detail = Branch A 공급사 그대로 / source_detail_url = 1000x18291 확보.
-- supplier_product_code = 65322245 / naver_status_type = SUSPENSION(drift 정확) / **extra_images = [] (합성 결과 들어갈 슬롯 비어있음)**.
+## 3. 다음 작업 (우선순위·새 채팅 분할)
+1. **[대표 GO] 병합** `feat/composite-pipeline -> main` (additive·blast 0). 명령 §6.
+2. **[Desktop, 병합 후] C-6 실무 테스트** = 명화 누끼/합성 실제 적용 1회 -> 단계폴더(`{pid}/cutout/`·`composite/`) 실생성 확인 + 기존 URL 유효 + 3상품 동작 (FT-검증 마무리와 합침).
+3. **[대표 개입] 명화 Firefly 무드(트랙2)**: 누끼 B/C 드롭 -> 키트 프롬프트 -> Claude 후보선택·폴링 -> apply-composite 회수.
+4. **[Code 병렬] PROGRESS.md 갱신**(이번 세션 줄 추가, Python 전체덮어쓰기 #29b) + C-4(seo-guard->개입대기열)·C-3->C-5->C-8(#57 반영).
+5. **[후속] 명화 SUSPENSION 해제**: 안전번호 HB19-12-1462/HB21-12-2572 + 재질/색상 -> update PUT. 대표 GO 후 비가역(#46).
+6. **[후속] 아이스트레이**: 도매번호 operator 제공 -> 풀해상 캡처 unblock.
 
-## 3. 다음 작업 (우선순위)
-1. **명화 Firefly 무드 합성 (브라우저 반자동 #52)** — Firefly 탭(Chrome **1396049947**, 로그인·생성홈 확인됨)에서:
-   - 대표님: 누끼 PNG(`myeonghwa_bottle_cutout.png`)를 Firefly 레퍼런스 칸에 드롭(업로드는 대표 — #52).
-   - Claude: `/generate/image` 또는 보드에서 레시피 §3 영문 프롬프트 입력 -> 생성·후보 선택·폴링 구동. (credit 소모 generate 클릭·다운로드는 대표.)
-   - 회수: 결과 URL -> `POST /api/products/[id]/apply-composite { compositeUrl }`(recovery 모드) -> extra_images 슬롯 적용(추가이미지·가역). ★ 단 apply-composite는 production 미배포 -> **병합 선행 필요**(아래 4).
-2. **병합 (권고)** — `feat/composite-pipeline -> main`. 두 라우트(/white-bg·/apply-composite)는 순수 additive·UI 미연결 -> production blast 0. 병합해야 apply-composite·white-bg를 production에서 실측 + 합성 회수 가능. 터미널 1줄(아래 6).
-3. **병렬 Code 청크** — C-2(어도비 누끼 적용)·C-4(가드->대기열) 병렬 / C-3->C-5->C-8 직렬. 진입 문구 = CUTOUT_CROP_FEATURE_BUILD_PLAN.md.
+## 4. 유의사항 (하드 룰 -- 대표 상시 강조)
+- 비가역 0: 네이버 PUT/발행·Adobe 폴더 삭제는 대표 "GO" 전 절대 미실행(#46). 누끼·합성·DB·폴더생성·병합은 전부 가역.
+- 전상품 범용(#55): 명화는 검증 1호. 폴더 자동분류·#57도 전상품 영구구조.
+- 한글 편집 = 직접 타이핑(유니코드 이스케이프 금지). 한글 대용량 MD(PROGRESS/SESSION_LOG) = Code Python 전체덮어쓰기(#29b).
+- 실측 우선(#45): Code 보고는 production/DB/Storage 직접 교차검증.
+- 이미지: 누끼=Adobe MCP(복구됨)·새배경=앱 sharp·무드합성=Firefly 웹UI(브라우저 #52). compositing/gen-bg는 Adobe MCP 영구 미지원.
+- 도구 분담(#41): Desktop=MCP검증·DB·Storage·브라우저·문서·핸드오프 / Code=파일편집·git·빌드·마이그레이션. 사용자=붙여넣기 중재. git push=동기화.
+- 크레덴셜·파일업로드(Firefly)·다운로드·비가역 클릭 = 대표 담당(#52 + 안전 규칙).
 
-## 4. 유의사항 (하드 룰)
-- 비가역 0: 네이버 PUT/발행은 대표 "GO" 전 절대 미실행(#46). 누끼·합성·DB·병합은 전부 가역.
-- 전상품 범용(#55): 명화는 검증 1호 사례. 단건 아닌 체계.
-- 한글 편집 = 직접 타이핑(유니코드 이스케이프 금지).
-- 실측 우선(#45): Code 보고는 production/DB 직접 교차검증, 화면은 reload 후 신뢰.
-- 이미지 산출: 누끼 = Adobe MCP(복구됨) / 무드 합성 = Firefly 웹 UI(브라우저) — MCP는 compositing 영구 미지원.
-- 크레덴셜(Supabase secret 등)·파일 업로드(Firefly)·다운로드·비가역 클릭 = 대표 담당(#52 + 안전 규칙).
-
-## 5. 붙여넣기 — 다음 채팅(Desktop, 명화 합성 실행)
+## 5. 붙여넣기 -- 다음 채팅 (Desktop, 병합 후 C-6)
 ```
-[꽃틔움 가든 / Desktop 세션 / 이어서: 명화 Firefly 합성 실행 + 병합]
-정독: docs/handoff/NEW_CHAT_STARTER_2026-06-09_2_composite_run.md -> PARALLEL_WORK_TRACKER -> TASK_BRIDGE §3.
-1) Firefly 탭(1396049947) 생성홈 확인 -> 누끼 PNG(myeonghwa_bottle_cutout) 레퍼런스 드롭(대표) -> 레시피 §3 프롬프트로 /generate/image 구동 -> 후보 선택 -> 결과 URL을 apply-composite로 extra_images 적용.
-2) 병합 GO 시 feat/composite-pipeline -> main(터미널 1줄) -> production /white-bg·/apply-composite 라이브 실측.
-3) 병렬 Code 청크 C-2·C-4·C-3->C-5->C-8 진입 문구는 CUTOUT_CROP_FEATURE_BUILD_PLAN.md.
-규칙: 비가역0·한글 직접입력·실측우선·전상품 범용. 리서치 도구 미사용(앱 작업).
+[꽃틔움 가든 / Desktop / 이어서: 병합 후 C-6 실무 테스트 + 폴더 단계생성 검증 + 명화 합성]
+정독: docs/handoff/NEW_CHAT_STARTER_2026-06-09_2_composite_run.md -> PARALLEL_WORK_TRACKER -> TASK_BRIDGE §3 -> ASSET_FOLDER_TAXONOMY_BUILD.
+1) 병합 GO 시 production HEAD SHA + READY 교차검증.
+2) 스튜디오에서 명화 누끼/합성 실제 적용 1회 -> Supabase storage.objects 조회로 {pid}/cutout/·composite/ 단계폴더 실생성 + 기존 flat URL 유효 확인(FT-검증 마무리).
+3) Firefly 무드(트랙2): 누끼 드롭(대표) -> 키트 프롬프트 구동 -> apply-composite 회수.
+규칙: 비가역0·한글 직접입력·실측우선·전상품 범용. 앱 작업이라 리서치 도구 미사용.
 ```
 
-## 6. 터미널 명령 (대표 실행 — Claude git 불가)
+## 6. 터미널 명령 (대표 실행 -- Claude git 불가)
+### 병합 (C-1+C-7+C-2+FT production 반영)
+```
+cd /Users/jyekkot/Desktop/kkotium-garden && git checkout main && git merge feat/composite-pipeline --no-ff -m "merge: C-1 누끼 + C-7 합성 + C-2 어도비누끼적용 + FT 폴더자동분류 (additive·blast 0)" && git push
+```
 ### 문서 push (이번 세션 핸드오프 보존)
 ```
-cd /Users/jyekkot/Desktop/kkotium-garden && git add docs/ && git commit -m "docs(#41): 명화 누끼 산출 + Adobe 백엔드 복구 확인 + 합성 실행 인계 (70)" && git push
+cd /Users/jyekkot/Desktop/kkotium-garden && git add docs/ && git commit -m "docs(#41): 폴더 자동분류 검증 + Adobe CC 폴더 생성 + 세션2 마감 인계 (71)" && git push
 ```
-### 병합 GO 시 (C-1+C-7 production 반영)
-```
-cd /Users/jyekkot/Desktop/kkotium-garden && git checkout main && git merge feat/composite-pipeline --no-ff -m "merge: C-1 인앱 누끼 + C-7 합성 파이프라인 (additive·blast 0)" && git push
-```
-> 병합 후 Vercel production 자동 배포 -> Desktop이 HEAD SHA + READY 교차검증 -> /white-bg·/apply-composite 라이브 smoke(C-6).
+> 병합 후 Vercel production 자동 배포 -> Desktop HEAD SHA + READY 교차검증 -> C-6 실무 테스트(단계폴더 실생성 포함).

@@ -34,7 +34,7 @@
 | C-1 | 인앱 SIMPLE 누끼(sharp 흰배경 평탄화) + /white-bg 라우트 | ✅ DONE (feat/white-bg-simple 2ff4a77) · Desktop 코드검증완 · ⏸ production 미반영(병합대기) | bg-difficulty/white-bg/route 3파일+CropWarning 확장 read — 로직 정합·공유가드·BACKGROUND_NOT_WHITE 정직플래그(#46)·가역. composite-pipeline에 흡수됨. 라이브 smoke=머지 후 C-6 |
 | C-2 | 어도비 누끼 적용 executor /apply-cutout | ✅ DONE (feat/composite-pipeline cdbb423, tsc0/build) | cutoutUrl→흰배경 합성·가드·적용, bg_clean done 전이. 병렬 가능 |
 | C-3 | finish-image 단일 라우터 + 스키마(extra_images·main_image_policy) | ☐ Code(C-1·C-2 후) | 난이도 분기·이전대표 추가이미지 보관 |
-| C-4 | seo-guard→개입대기열 연결 + override 강등 | ☐ Code(병렬) | finish_representative 항목·deepLink·lifestyle_intended info 강등 |
+| C-4 | seo-guard→개입대기열 연결 + override 강등 | ✅ DONE (feat/composite-pipeline 0b7d291, tsc0/build)(병렬) | finish_representative 항목·deepLink·lifestyle_intended info 강등 |
 | C-5 | 스튜디오 '대표이미지 마무리' 통합 카드 + 컨트롤타워 배치 | ☐ Code(C-3·C-4 후) | 자동다듬기/크롭/추가이미지, dry-run before→after, 재가드 |
 | C-6 | 브라우저 실무 테스트(3상품 전 흐름) | ☐ 데스크톱(C-5 후, 병합 후) | 무오류 확인 후 다음 본작업 |
 | F-규격 | 대표이미지 규격 표준(§9) 박제 | ✅ DONE(데스크톱) | 첨부 레퍼런스(흰배경 본품샷)→ 1:1 1000·순백·본품 70~85%·텍스트0·OCR0. 전상품 적용. REPRESENTATIVE_IMAGE_FINISHING §9 |
@@ -49,8 +49,8 @@
 |---|---|---|---|
 | FT-설계 | 폴더 택소노미 설계 + 스펙 작성 | ✅ DONE(데스크톱) | 단계우선 추천 확정: cutout/composite/thumb/detail/archive. 현 automation-storage 실측(thumb|detail 2종, 단계=variant에만) → 개선 설계 문서화 |
 | FT-코드 | AssetKind 단계확장 + 경로 {pid}/{kind}/{variant} + list 재귀(하위호환) + asset-taxonomy.ts + 생산자 정합 | ✅ DONE (feat/composite-pipeline b73f526, tsc0/build/§5) | 하위호환 필수(기존 flat URL 보존). grep 전수. §5 체크리스트 |
-| FT-검증 | 신규업로드 단계폴더 생성·기존 URL 유효·전상품 동작 | ☐ Desktop(FT-코드 후) | Storage 실측 |
-| FT-Adobe | Adobe CC 입구 정리(KKOTIUM_GARDEN 루트 + 중복 kkotium 6개 통합) | ⏸ 승인 게이트 | asset_create_folders 승인 필요("No approval received" 실측). 이관·삭제=비가역·대표 확인. Adobe=작업장, 진짜 분류=Supabase |
+| FT-검증 | 신규업로드 단계폴더 생성·기존 URL 유효·전상품 동작 | 🟡 부분(하위호환 확인완) · 단계폴더 실생성=병합후 C-6 | storage.objects 조회: 명화13·달항아리9·아이스트레이1 전부 root_flat(기존 23 무손상). 단계폴더는 신규업로드 발생 시 생성(병합→스튜디오 적용 1회→실측). Claude service key 미보유로 직접 트리거 불가(정직) → 대표 실행 or 브라우저 구동 |
+| FT-Adobe | Adobe CC 입구 정리(KKOTIUM_GARDEN 루트 + 중복 kkotium 6개 통합) | ✅ 루트·6폴더 생성완(승인받음) · 중복삭제=대표 | KKOTIUM_GARDEN/00_inbox·01_cutout·02_composite·03_thumbnail·04_detail·99_archive 생성완(STAGE_FOLDER 1:1 미러). 중복 kkotium~(5) 6개=내용 Supabase/산출물 백업됨 → 삭제는 비가역이라 대표 Adobe 웹 직접 권장. 앞으로 업로드=00_inbox 고정→재발 0 |
 
 ## 앱 적용 현황 (명화 · 실측 2026-06-09 세션2)
 - production(target=production) = `e0c7f19`(main). C-1/C-7 코드는 **preview 빌드만 READY · production 미반영**(병합 대기).

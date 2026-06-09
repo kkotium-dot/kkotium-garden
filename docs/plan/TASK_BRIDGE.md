@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-09 (71) 자산 폴더 자동분류 검증 + Adobe CC 폴더 생성 + 누끼 3종 재작업 (FROM 🖥 Desktop, feat/composite-pipeline 39c8072, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 누끼 3종 재작업 ✅ | 1차 170px 카드컷 폐기 → 대표 실촬영 히어로컷 3장에서 image_remove_background → 투명PNG 완전포함 3종(A 들판소녀·B 차량가죽범선·C 흰배경). 투-트랙(#57): 정보형 새배경(C)·감성형 Firefly 무드(B). track1_C 새배경 합성 산출완. Firefly는 대표 파일드롭 대기(키트). |
+| C-2 검증 ✅ | apply-cutout 직독: whiteBgFinish 재사용·bg_clean done 전이·#57 sourceGuidance·OCR block 가드·비가역0 정합. |
+| FT 폴더 자동분류 ✅ | FT-코드(Code): AssetKind 2→5종·경로 {pid}/{kind}/{variant}·list 재귀(stage 필드)·findCachedAsset root우선+fallback·asset-taxonomy.ts·생산자 정합. tsc0/build/8생산자/기존 flat 미이동. FT-검증(Desktop): storage.objects 조회 → 명화13·달항아리9·아이스트레이1 전부 root_flat·하위호환 확인(단계폴더 실생성은 병합 후 신규업로드 시=C-6). FT-Adobe(Desktop, 승인): KKOTIUM_GARDEN/ 루트+6폴더 생성완(STAGE_FOLDER 미러). 중복 kkotium 6개=백업됨·삭제는 대표 Adobe 웹 직접(비가역). |
+| 인계 ✅ | NEW_CHAT_STARTER_2026-06-09_2 갱신(권위본)·ASSET_FOLDER_TAXONOMY_BUILD·#57·트래커 FT 행. |
+| 다음 | 병합 GO(권고) → C-6 실무테스트(단계폴더 실생성 포함) + 명화 Firefly 무드 + Code PROGRESS.md 갱신·C-4·C-3→C-5→C-8. 진입=NEW_CHAT_STARTER_2 §5. |
+
 ### 2026-06-09 (70) 명화 누끼 산출 + Adobe 백엔드 복구 확인 + 합성 실행 인계 (FROM 🖥 Desktop, feat/composite-pipeline a28946e, 비가역 0)
 
 | 항목 | 상태 |
