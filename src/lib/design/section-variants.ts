@@ -6,7 +6,8 @@
 // `[data-preset]` token layer in src/app/globals.css (set `data-preset` +
 // `data-intensity` on the detail <article> root). These variants only resolve
 // the STRUCTURAL axes — whitespace density (by intensity) and section emphasis
-// — into Tailwind classes that reference the --preset-* tokens.
+// — into Tailwind classes that reference the [data-preset] semantic tokens
+// (--surface / --surface-subtle / --ink … per ADAPTIVE_IMAGE_SEO_ENGINE §7.2).
 //
 // A tiny, dependency-free `cva`-style factory is used instead of the
 // `class-variance-authority` package: with <=5 presets the manual path is
@@ -59,10 +60,10 @@ function defineVariants<V extends VariantShape>(config: VariantConfig<V>) {
 // ── Detail root variant (article wrapper) ────────────────────────────────────
 //
 // Density maps from intensity: l1=compact, l2=cozy, l3=airy. Tailwind
-// arbitrary-value classes reference the --preset-* runtime tokens.
+// arbitrary-value classes reference the [data-preset] runtime tokens.
 
 export const detailRootVariants = defineVariants({
-  base: 'mx-auto w-full max-w-[860px] bg-[var(--preset-surface)] text-[var(--preset-text)]',
+  base: 'mx-auto w-full max-w-[860px] bg-[var(--surface)] text-[var(--ink)]',
   variants: {
     intensity: {
       l1: 'space-y-6',
@@ -87,8 +88,8 @@ export const detailSectionVariants = defineVariants({
     },
     emphasis: {
       flat: '',
-      card: 'rounded-2xl bg-[var(--preset-surface-subtle)] px-6',
-      hero: 'rounded-3xl bg-[var(--preset-surface-subtle)] text-center',
+      card: 'rounded-2xl bg-[var(--surface-subtle)] px-6',
+      hero: 'rounded-3xl bg-[var(--surface-subtle)] text-center',
     },
   },
   defaultVariants: { intensity: 'l1', emphasis: 'flat' },

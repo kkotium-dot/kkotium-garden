@@ -29,6 +29,9 @@ export default function RootLayout({
       <head>
         <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        {/* Noto Serif KR = concept-preset display font (--font-display). Used by
+            the detail-page preset renderer only; body stays Pretendard. */}
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600&display=swap" rel="stylesheet" />
       </head>
       <body
         className="font-pretendard antialiased"

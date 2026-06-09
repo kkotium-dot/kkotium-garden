@@ -67,13 +67,25 @@ export interface ConceptPresetDefinition {
   copyTone: CopyTone;
   /** Level 3 only: section order / hero format may vary. */
   layoutVariation: boolean;
-  /** Reference palette — mirrors globals.css [data-preset] --preset-* tokens. */
+  /**
+   * Reference palette — mirrors globals.css [data-preset] semantic tokens
+   * (ADAPTIVE_IMAGE_SEO_ENGINE.md §7.2, values verbatim). For non-CSS contexts
+   * (preview swatches, server-side image renderers); the runtime authority for
+   * the cascade is still the [data-preset] layer in globals.css.
+   */
   palette: {
     surface: string;
     surfaceSubtle: string;
+    surfaceDeep: string;
     accent: string;
-    text: string;
-    textMuted: string;
+    accentSoft: string;
+    ink: string;
+    inkSoft: string;
+    line: string;
+    card: string;
+    /** aroma-only object tokens; other presets fall back to accent/accentSoft. */
+    terracotta?: string;
+    roseDust?: string;
   };
 }
 
@@ -88,8 +100,10 @@ export const PRESET_DEFINITIONS: Record<ConceptPreset, ConceptPresetDefinition> 
     copyTone: 'narrative',
     layoutVariation: true,
     palette: {
-      surface: '#F3EFE7', surfaceSubtle: '#FAF7F0',
-      accent: '#76864C', text: '#3A352E', textMuted: '#7A7468',
+      surface: '#F3EFE7', surfaceSubtle: '#FAF7F0', surfaceDeep: '#E9E2D4',
+      accent: '#76864C', accentSoft: '#A4A879',
+      ink: '#3A352E', inkSoft: '#7A7468', line: '#DAD2C2', card: '#FBF9F4',
+      terracotta: '#B5694C', roseDust: '#C98AA2',
     },
   },
   gift: {
@@ -101,8 +115,9 @@ export const PRESET_DEFINITIONS: Record<ConceptPreset, ConceptPresetDefinition> 
     copyTone: 'warm',
     layoutVariation: true,
     palette: {
-      surface: '#FDF4EC', surfaceSubtle: '#FFFAF4',
-      accent: '#C9912F', text: '#3B3127', textMuted: '#86796A',
+      surface: '#FBF3EE', surfaceSubtle: '#FFFBF7', surfaceDeep: '#F3E2D6',
+      accent: '#C98A3E', accentSoft: '#E3B98C',
+      ink: '#3A2E28', inkSoft: '#7A6A60', line: '#EAD9CC', card: '#FFFBF7',
     },
   },
   tradition: {
@@ -114,8 +129,9 @@ export const PRESET_DEFINITIONS: Record<ConceptPreset, ConceptPresetDefinition> 
     copyTone: 'heritage',
     layoutVariation: true,
     palette: {
-      surface: '#F4ECE0', surfaceSubtle: '#FBF6EE',
-      accent: '#9B2D30', text: '#1C1C1C', textMuted: '#6F645A',
+      surface: '#F4ECE0', surfaceSubtle: '#FAF4EA', surfaceDeep: '#E7D9C4',
+      accent: '#9B2D30', accentSoft: '#C28A5E',
+      ink: '#1C1C1C', inkSoft: '#5A5247', line: '#D8C9B2', card: '#FBF6EC',
     },
   },
   // Lifestyle / pet → moderate variation (Level 2).
@@ -128,8 +144,9 @@ export const PRESET_DEFINITIONS: Record<ConceptPreset, ConceptPresetDefinition> 
     copyTone: 'friendly',
     layoutVariation: false,
     palette: {
-      surface: '#FBF3EC', surfaceSubtle: '#FFF8F3',
-      accent: '#E08A4B', text: '#2C2620', textMuted: '#7E7468',
+      surface: '#FBF6EF', surfaceSubtle: '#FFFCF7', surfaceDeep: '#F0E6D8',
+      accent: '#C77A4A', accentSoft: '#E0A877',
+      ink: '#34302A', inkSoft: '#6E665C', line: '#E4D8C8', card: '#FEFBF6',
     },
   },
   // Practical consumables → restrained variation (Level 1).
@@ -142,8 +159,9 @@ export const PRESET_DEFINITIONS: Record<ConceptPreset, ConceptPresetDefinition> 
     copyTone: 'functional',
     layoutVariation: false,
     palette: {
-      surface: '#FFFFFF', surfaceSubtle: '#F2F7FB',
-      accent: '#2F6FB0', text: '#1A1A1A', textMuted: '#5C6770',
+      surface: '#FFFFFF', surfaceSubtle: '#F6F9FC', surfaceDeep: '#EEF3F8',
+      accent: '#2F6FB0', accentSoft: '#7FA8D0',
+      ink: '#1A1A1A', inkSoft: '#5B6470', line: '#E2E8EF', card: '#FFFFFF',
     },
   },
 };

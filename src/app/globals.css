@@ -269,69 +269,66 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Concept preset token layer — docs/design/CONCEPT_PRESET_SYSTEM.md §6-B
+   Concept preset token layer
+   — docs/design/CONCEPT_PRESET_SYSTEM.md §6-B
+   — docs/design/ADAPTIVE_IMAGE_SEO_ENGINE.md §7.2 (token values verbatim)
+   — 1:1 source: docs/design/aroma_L3_detail_reference.html
    ───────────────────────────────────────────────────────────────
-   ORTHOGONAL to the global --color-* shell theme above: these --preset-*
-   tokens scope ONLY to the detail-page <article data-preset data-intensity>
-   so a product concept never re-themes the app shell (spec §7). The brand
-   core (signature red/pink, Pretendard body) stays fixed.
-   Palette values mirror PRESET_DEFINITIONS in src/lib/design/concept-presets.ts
-   — keep the two in sync.
+   Two layers:
+   (1) :root FIXED CORE — brand red/pink, Pretendard body + Noto Serif KR
+       display, 8px spacing scale, radii, shadow. New namespace (--brand-*,
+       --font-*, --sp-*, --r-*, --shadow); no collision with the app shell
+       tokens (--kk-*, --space-*, --radius-*, --color-*). Never per-preset.
+   (2) [data-preset="…"] VARIABLE — semantic mood tokens (--surface, --accent,
+       --ink, --card, --line …). Defined under [data-preset] selectors ONLY,
+       never on bare :root, because the app shell already owns :root{--surface}
+       — scoping to the detail <article data-preset data-intensity> SUBTREE
+       keeps the shell un-themed (SEO/brand orthogonality, spec §7).
+   Component code never knows hex — it reads semantic vars only. Values mirror
+   PRESET_DEFINITIONS in src/lib/design/concept-presets.ts (keep in sync).
+   --terracotta / --rose-dust exist on aroma only; other presets fall back via
+   var(--terracotta, var(--accent)) at the call site (D2/§7.2).
 ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Defaults = 'kitchen' preset (DEFAULT_PRESET). Body font stays brand core. */
-  --preset-surface:         #FFFFFF;
-  --preset-surface-subtle:  #F2F7FB;
-  --preset-accent:          #2F6FB0;
-  --preset-text:            #1A1A1A;
-  --preset-text-muted:      #5C6770;
-  --preset-heading-font:    inherit;
+  --brand-red:    #E62310;                          /* CTA only, ~10% */
+  --brand-pink:   #FFCCEA;                           /* point / badge, ~15% */
+  --font-body:    "Pretendard", -apple-system, sans-serif;
+  --font-display: "Noto Serif KR", serif;
+  --sp-1: 8px; --sp-2: 16px; --sp-3: 24px; --sp-4: 40px; --sp-5: 64px; --sp-6: 96px;
+  --r-card: 16px; --r-btn: 12px; --r-img: 14px;
+  --shadow: 0 4px 20px rgba(58, 53, 46, 0.07);
 }
 
 [data-preset="aroma"] {
-  --preset-surface:         #F3EFE7;
-  --preset-surface-subtle:  #FAF7F0;
-  --preset-accent:          #76864C;
-  --preset-text:            #3A352E;
-  --preset-text-muted:      #7A7468;
-  --preset-heading-font:    'Noto Serif KR', 'Nanum Myeongjo', serif;
-}
-
-[data-preset="gift"] {
-  --preset-surface:         #FDF4EC;
-  --preset-surface-subtle:  #FFFAF4;
-  --preset-accent:          #C9912F;
-  --preset-text:            #3B3127;
-  --preset-text-muted:      #86796A;
-  --preset-heading-font:    'Noto Serif KR', 'Nanum Myeongjo', serif;
+  --surface: #F3EFE7; --surface-subtle: #FAF7F0; --surface-deep: #E9E2D4;
+  --accent: #76864C; --accent-soft: #A4A879;
+  --terracotta: #B5694C; --rose-dust: #C98AA2;
+  --ink: #3A352E; --ink-soft: #7A7468; --line: #DAD2C2; --card: #FBF9F4;
 }
 
 [data-preset="tradition"] {
-  --preset-surface:         #F4ECE0;
-  --preset-surface-subtle:  #FBF6EE;
-  --preset-accent:          #9B2D30;
-  --preset-text:            #1C1C1C;
-  --preset-text-muted:      #6F645A;
-  --preset-heading-font:    'Noto Serif KR', 'Nanum Myeongjo', serif;
-}
-
-[data-preset="pet"] {
-  --preset-surface:         #FBF3EC;
-  --preset-surface-subtle:  #FFF8F3;
-  --preset-accent:          #E08A4B;
-  --preset-text:            #2C2620;
-  --preset-text-muted:      #7E7468;
-  --preset-heading-font:    inherit;
+  --surface: #F4ECE0; --surface-subtle: #FAF4EA; --surface-deep: #E7D9C4;
+  --accent: #9B2D30; --accent-soft: #C28A5E;
+  --ink: #1C1C1C; --ink-soft: #5A5247; --line: #D8C9B2; --card: #FBF6EC;
 }
 
 [data-preset="kitchen"] {
-  --preset-surface:         #FFFFFF;
-  --preset-surface-subtle:  #F2F7FB;
-  --preset-accent:          #2F6FB0;
-  --preset-text:            #1A1A1A;
-  --preset-text-muted:      #5C6770;
-  --preset-heading-font:    inherit;
+  --surface: #FFFFFF; --surface-subtle: #F6F9FC; --surface-deep: #EEF3F8;
+  --accent: #2F6FB0; --accent-soft: #7FA8D0;
+  --ink: #1A1A1A; --ink-soft: #5B6470; --line: #E2E8EF; --card: #FFFFFF;
+}
+
+[data-preset="gift"] {
+  --surface: #FBF3EE; --surface-subtle: #FFFBF7; --surface-deep: #F3E2D6;
+  --accent: #C98A3E; --accent-soft: #E3B98C;
+  --ink: #3A2E28; --ink-soft: #7A6A60; --line: #EAD9CC; --card: #FFFBF7;
+}
+
+[data-preset="pet"] {
+  --surface: #FBF6EF; --surface-subtle: #FFFCF7; --surface-deep: #F0E6D8;
+  --accent: #C77A4A; --accent-soft: #E0A877;
+  --ink: #34302A; --ink-soft: #6E665C; --line: #E4D8C8; --card: #FEFBF6;
 }
 
 /* ═══════════════════════════════════════════════════════════════
