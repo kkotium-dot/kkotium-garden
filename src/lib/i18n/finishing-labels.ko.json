@@ -1,0 +1,10 @@
+{
+  "_note": "Korean labels for the representative-image finishing UI (C-2 / C-5 / C-8). Code references the keys; the UI renders the Korean (CLAUDE.md §3-1). Authority: 작업원칙 #57.",
+  "preferRealHeroCut": "누끼·합성 소스는 실촬영 히어로컷 우선 (작은 카드컷·텍스트 섞인 컷·저해상 썸네일 금지, 작업원칙 #57)",
+  "recover": {
+    "bg_clean": "어도비 누끼 결과를 apply-cutout으로 회수",
+    "product_composite": "Firefly 합성 결과를 apply-composite로 회수",
+    "text_remove": "어도비 글자 제거 결과를 회수",
+    "canvas_expand": "어도비 1:1 확장 결과를 회수"
+  }
+}

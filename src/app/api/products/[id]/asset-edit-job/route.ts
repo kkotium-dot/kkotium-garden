@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { routeForJobType, isFinishingJobType } from '@/lib/jobs/job-type-routing';
+import { recoverRouteFor, REAL_HERO_CUT_GUIDANCE } from '@/lib/images/finishing-guidance';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -60,6 +61,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
   }
 
+  // Operator-driven jobs (bg_clean / composite) are completed by recovering the
+  // Adobe/Firefly result into the app via a dedicated route (#57 source rule).
+  const recoverVia = recoverRouteFor(productId, jobType);
+  const recoverLabelKey = recoverVia ? `recover.${jobType}` : null;
+
   const route = routeForJobType(jobType)!; // non-null: isFinishingJobType passed.
   const allowedTools = [route.primaryTool, ...route.fallbackTools];
   const tool = body.tool && allowedTools.includes(body.tool) ? body.tool : route.primaryTool;
@@ -75,6 +81,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (existing) {
     return NextResponse.json({
       success: true, reused: true, jobId: existing.id, jobType, tool: existing.tool, status: existing.status,
+      sourceUrl: body.sourceUrl, recoverVia, recoverLabelKey, sourceGuidance: REAL_HERO_CUT_GUIDANCE,
     });
   }
 
@@ -114,5 +121,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     status: job.status,
     fallbackTools: route.fallbackTools,
     requiresOperator: route.requiresOperator,
+    sourceUrl: body.sourceUrl,
+    recoverVia,
+    recoverLabelKey,
+    sourceGuidance: REAL_HERO_CUT_GUIDANCE,
   });
 }
