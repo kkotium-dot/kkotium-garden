@@ -19,7 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { routeForJobType, isCropEditJobType } from '@/lib/jobs/job-type-routing';
+import { routeForJobType, isFinishingJobType } from '@/lib/jobs/job-type-routing';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -45,9 +45,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try { body = await req.json(); } catch { /* empty body → 400 below */ }
 
   const jobType = body.jobType ?? '';
-  if (!isCropEditJobType(jobType)) {
+  if (!isFinishingJobType(jobType)) {
     return NextResponse.json(
-      { success: false, error: 'jobType must be one of region_crop, text_remove, canvas_expand, bg_clean' },
+      { success: false, error: 'jobType must be one of region_crop, text_remove, canvas_expand, bg_clean, product_composite, harmonize' },
       { status: 400 },
     );
   }
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
   }
 
-  const route = routeForJobType(jobType)!; // non-null: isCropEditJobType passed.
+  const route = routeForJobType(jobType)!; // non-null: isFinishingJobType passed.
   const allowedTools = [route.primaryTool, ...route.fallbackTools];
   const tool = body.tool && allowedTools.includes(body.tool) ? body.tool : route.primaryTool;
 
