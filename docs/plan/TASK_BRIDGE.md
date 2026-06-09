@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-09 (67) 누끼+크롭 마무리 시스템 설계·인계 (FROM 🖥 Desktop, main c55248d, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | 대표 지시: 누끼+크롭을 전상품 앱 기능으로(#55). 명화 대표=가죽 유지(override 1호). |
+| 설계서 ✅ | docs/design/REPRESENTATIVE_IMAGE_FINISHING_SYSTEM.md 신규 — 적응형 라우터(SIMPLE 인앱 sharp / COMPLEX 어도비 개입) + seo-guard 연동 + 추가이미지 슬롯 + override 정책. |
+| 빌드플랜 ✅ | docs/plan/CUTOUT_CROP_FEATURE_BUILD_PLAN.md 신규 — C-1~C-6 청크(각 = 새 채팅 1개), 의존 그래프, 청크별 붙여넣기 진입 문구 포함. |
+| 코드 실측 ✅ | thumb-crop=완성(크롭) / asset-edit-job bg_clean=seed만·executor 없음 / job-type-routing 4타입 / seo-guard fail 감지되나 개입대기열 미연결. |
+| 트래커 ✅ | PARALLEL_WORK_TRACKER 6h(가죽 유지 결정)·누끼/크롭 시스템 섹션(C-1~C-6) 등재. |
+| 정직 메모(#46) | 이번 세션 Adobe 이미지 도구는 deferred(tool_search 필요)·bash/스토리지 업로드 없음 → 생성물 영구호스팅·DB 적용 불가 → 적용부는 앱(Code) 담당이 올바른 구조. "첨부했던 썸네일 크롭 후보"는 본 컨텍스트에 없음(요약 유실) → 필요 시 구현 채팅에서 재첨부 요청. |
+| 다음 | TO 💻 Code — C-1(인앱 SIMPLE 누끼) ∥ C-2(어도비 적용) ∥ C-4(가드→대기열) 병렬 가능. 각 청크 새 채팅. 구현·push 후 Desktop이 SHA(#36)+엔드포인트(#45) 검증 → C-3 → C-5 → C-6(브라우저 테스트=Desktop). |
+
 ### 2026-06-09 (66) 6g 잔존 브랜드 오타 flag 3곳 전부 처리 (FROM Code, main aa7e5b9, 비가역 0)
 
 | 항목 | 상태 |

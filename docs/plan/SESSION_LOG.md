@@ -1,3 +1,27 @@
+## 2026-06-09 프리셋 엔진 Phase A/B 검증 + 누끼/크롭 마무리 시스템 설계·인계 (Desktop turn)
+
+production runtime aa7e5b9 / HEAD c55248d. 비가역 0(네이버 0·DB read-only·문서만 작성). 권위: PARALLEL_WORK_TRACKER 6e/6h + 대표 지시(누끼+크롭 전상품 기능화).
+
+**[검증 — 프리셋 엔진 #45]**
+- Vercel: runtime aa7e5b9 / HEAD c55248d 전부 READY(#36).
+- B-2 seo-guard(명화): orthogonalToPreset true / product_name_50 warn(22/50 grade S) / main_image_white_bg **fail**(가죽 크롭 비흰배경 정직 검출) / category_accuracy pass(50003356).
+- B-3 generate(명화 presetOnly): preset aroma/l3 · recommendedPreset aroma · matchesRecommendation true · 7섹션 content(scents3·specRows5·values3) · slots null · locked[logo,signature_color,price_cta,seo_fields] · groundedFacts true.
+- title: reload 후 "꽃틔움 가든" 정상(이전 "꽃티움가든"은 배포 전 stale 탭, #44 오탐 회피).
+
+**[설계·인계 — 누끼/크롭 마무리]**
+- 코드 실측: thumb-crop=완성(크롭) / asset-edit-job bg_clean=seed만·executor 없음(누끼 갭) / seo-guard fail 개입대기열 미연결.
+- 신규 문서: docs/design/REPRESENTATIVE_IMAGE_FINISHING_SYSTEM.md(적응형 라우터·seo-guard 연동·추가이미지·override) + docs/plan/CUTOUT_CROP_FEATURE_BUILD_PLAN.md(C-1~C-6 청크·각 새 채팅·진입문구).
+- 대표 결정 반영: 명화 대표=가죽 유지(override 1호). seo-guard white_bg=차단 아닌 권고.
+- 트래커/TASK_BRIDGE(67) 갱신. 이스케이프 글자깨짐 자가교정(직접 입력 원칙 재확인).
+
+**[정직 메모 #46]**
+- 이번 세션 Adobe 이미지 도구 deferred + bash/스토리지 업로드 없음 → 누끼 생성물 영구호스팅·DB 적용 불가 → 적용부는 앱(Code)이 올바른 구조로 설계. "첨부했던 썸네일 크롭 후보"는 요약 유실로 본 컨텍스트에 없음 → 구현 채팅에서 재첨부 요청 예정.
+
+**[다음]**
+- Code C-1 ∥ C-2 ∥ C-4 병렬(각 새 채팅) → Desktop 검증 → C-3 → C-5 → C-6(브라우저 테스트=Desktop).
+
+---
+
 ## 2026-06-08 아틀리에 job 생명주기 컨트롤 (취소/재시도/되돌아가 수정) (Code turn)
 
 main 직접 d08341e. 비가역 0(네이버 0·asset_jobs DB만). tsc 0/build OK/이모지 0/한글 코드 0. 권위: PARALLEL_WORK_TRACKER #8 + STUDIO_ATELIER_UX_REDESIGN.

@@ -14,8 +14,9 @@
 | 6b | **상세 1차 틀 (aroma L3 정식 레퍼런스)** | ✅ 개선완 (주석버그·모바일16px·리뷰슬롯·sticky CTA + §7.2 전프리셋 토큰) | 대표 컨펌 → S2/S4 빌드업(Firefly/Met CC0 → Canva/Figma 860px) |
 | 6c | (폐기) 브랜드-프론트 시안들(TEST_branchB / 1차틀_productID) | 폐기 | aroma_L3_detail_reference가 정식 대체 |
 | 6d | **적응형 이미지·SEO·ROI 카피 엔진 문서화** | ✅ DONE(docs/design/ADAPTIVE_IMAGE_SEO_ENGINE.md) | — |
-| 6e | **프리셋 시스템 앱 구현 (Phase A/B)** | 진행중 — A·B-1 ✅검증완 / B-2·B-3 GO | A(0b969f3)·B-1(6e6aad1) 배포·B-1 시각 QA 완전종료(3종 재스킨 §7.2·강도밀도 l1 40/24↔l3 96/40·모바일 sticky/16px). 다음: B-2 SEO 린터 → B-3 generate-detail 소비 |
-| 6g | **앱 전역 title 오타 교정** | ☐ Code | 앱 title이 "꽃티움가든"으로 오기 → "꽃틔움 가든"으로 교정(브랜드명 오타, 브라우저 탭·SEO 노출). 잔존 "꽃티움" grep 일괄 점검 |
+| 6e | **프리셋 시스템 앱 구현 (Phase A/B)** | ✅ DONE·실측완 (A·B-1·B-2·B-3) | 전부 배포·라이브검증. B-2 seo-guard(orthogonal true·이름 warn/S·카테고리 pass·대표 white-bg fail)·B-3 generate(aroma/l3·추천일치·7섹션 scents3/specRows5/values3·grounded·슬롯/잠금 정확) |
+| 6g | **앱 전역 title + 브랜드 오타 교정** | ✅ DONE·검증완 | title="꽃틔움 가든" 정상(reload 후 실측). 브랜드 오타 8곳/7파일 교정(eef3ce1·9f90faf·aa7e5b9) + layout.rtf 제거 |
+| 6h | **명화 대표이미지 정책 결정(가죽 유지)** | 결정완 — override 1호 사례 | 대표님 결정: 가죽 라이프스타일컷 대표 유지(전환율 우선). seo-guard white_bg fail은 차단 아닌 권고 → main_image_policy=lifestyle_intended로 info 강등 예정(C-4). 누끼는 명화 단건이 아니라 전상품 기능으로 분리(아래 누끼/크롭 시스템) |
 | 6f | **전상품 프리셋 배정 정합** | ✅ DONE·실측 | 명화=aroma/L3 · 달항아리=tradition/L3(기본값에서 교정) · 아이스트레이=kitchen/L1. item3 컬럼 존재 교차검증 완 |
 | 7 | 아틀리에 2단계 — 우측 스크롤 교정 | ✅ DONE·검증완(max-h 1005·overscroll contain·클립0·바닥도달) | — |
 | 8 | 아틀리에 2단계 — job 생명주기(취소/재시도/되돌아가) | ✅ DONE·검증완(reopen→cancel 루프 200) | — |
@@ -25,7 +26,19 @@
 | 12 | 명화 발행(SUSPENSION→큐레이션 완료, 발행 GO) | ⏸ GO 대기(비가역 #46) | 대표 "GO" 시 PUT |
 | 13 | Branch A SEO/ROI 보강 자동화 | ☐ 후속 | Code(공급사 상세 + 미달요소 보강) |
 
-## 앱 적용 현황 (명화 · 실측, d08341e LIVE)
+## 누끼 + 크롭 마무리 시스템 (신규, 2026-06-09)
+권한 = docs/design/REPRESENTATIVE_IMAGE_FINISHING_SYSTEM.md · 빌드 = docs/plan/CUTOUT_CROP_FEATURE_BUILD_PLAN.md. 각 청크 = 새 채팅 1개.
+| ID | 작업 | 상태 | 비고 |
+|---|---|---|---|
+| F-진단 | 코드 실측(크롭 완성·누끼 갭) | ✅ DONE(데스크톱) | thumb-crop=완성 / bg_clean=seed만·executor 없음 / seo-guard fail 미연결 |
+| C-1 | 인앱 SIMPLE 누끼(sharp 흰배경 평탄화) + /white-bg 라우트 | ☐ Code | bg-difficulty.ts·white-bg.ts·dry-run→confirm 적용(가역). 병렬 가능 |
+| C-2 | 어도비 누끼 적용 executor /apply-cutout | ☐ Code | cutoutUrl→흰배경 합성·가드·적용, bg_clean done 전이. 병렬 가능 |
+| C-3 | finish-image 단일 라우터 + 스키마(extra_images·main_image_policy) | ☐ Code(C-1·C-2 후) | 난이도 분기·이전대표 추가이미지 보관 |
+| C-4 | seo-guard→개입대기열 연결 + override 강등 | ☐ Code(병렬) | finish_representative 항목·deepLink·lifestyle_intended info 강등 |
+| C-5 | 스튜디오 '대표이미지 마무리' 통합 카드 + 컨트롤타워 배치 | ☐ Code(C-3·C-4 후) | 자동다듬기/크롭/추가이미지, dry-run before→after, 재가드 |
+| C-6 | 브라우저 실무 테스트(3상품 전 흐름) | ☐ 데스크톱(C-5 후) | 무오류 확인 후 다음 본작업 |
+
+## 앱 적용 현황 (명화 · 실측, runtime aa7e5b9 / HEAD c55248d LIVE)
 - 대표 = curated(v2 동일) ✅ / 상세 = curated(Branch A 공급사 그대로) ✅ / 2갈래 = A / 발행 = SUSPENSION(drift 정확)
 - 전상품 시스템 + 아틀리에 2단계(스크롤·임시저장·job 생명주기) = LIVE
 - 상세 "앱 생성본" 테스트 = 경로 B 제작완(컨펌 대기) / 경로 A(엔진) Code 착수
