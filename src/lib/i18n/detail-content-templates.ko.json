@@ -1,0 +1,77 @@
+{
+  "_note": "Neutral, grounded starting copy for the preset detail engine (B-3). Korean lives here, not in code (CLAUDE.md §3-1). The operator refines via customization slots; the ROI copy engine (ADAPTIVE §3) will specialize tone per preset later. No superlatives / fabricated claims (#46).",
+  "presetEyebrow": {
+    "aroma": "Art in Everyday",
+    "tradition": "Korean Craft",
+    "kitchen": "Clean & Practical",
+    "gift": "A Little Gift",
+    "pet": "For Your Companion"
+  },
+  "labels": {
+    "valueEyebrow": "Why this one",
+    "specEyebrow": "Details",
+    "usageEyebrow": "How to use",
+    "reviewEyebrow": "Photo Reviews"
+  },
+  "heroSub": "꽃틔움이 골라 담은 {subject}",
+  "fixed": {
+    "heroProductLabel": "대표 이미지",
+    "valueTitle": "이 상품을 고른 이유",
+    "specTitle": "제품 정보",
+    "specHeader": "제품 사양",
+    "usageTitle": "사용 방법",
+    "storyTitle": "골라주는 안목으로 담았습니다",
+    "storyBody": "흔한 물건도 어떻게 고르고 다듬느냐에 따라 일상의 결이 달라집니다. 꽃틔움은 구성과 정보를 분명히 안내하고, 보기 좋게 정리해 전해드립니다.",
+    "storySign": "— 골라주는 안목, 꽃틔움",
+    "reviewBody": "고객 포토리뷰 연동 슬롯 — 구매 후기·평점 자동 노출 영역.",
+    "ctaTitle": "지금 장바구니에 담아보세요",
+    "ctaSub": "구성과 옵션을 확인하고 선택하세요.",
+    "priceFallback": "가격은 옵션에서 확인",
+    "shipText": "무료배송",
+    "ctaButton": "장바구니에 담기",
+    "ctaReassureSuffix": "수령 후 7일 이내 교환 안내",
+    "noticeSlotLabel": "공통 안내 이미지 슬롯 (store_settings · 상·하단 4칸) 연동 영역",
+    "brandMarkLead": "꽃틔움",
+    "brandMarkTail": "KKOTIUM",
+    "brandTip": "흔한 것을 감각적으로 — 골라주는 안목",
+    "stickyButton": "구매하기"
+  },
+  "specRowLabels": {
+    "category": "분류",
+    "origin": "제조국",
+    "distributor": "유통",
+    "detail": "상세"
+  },
+  "specRowDetailValue": "크기·구성은 상세 이미지 참조",
+  "trustLabels": {
+    "origin": "제조국",
+    "distributor": "유통",
+    "composition": "구성"
+  },
+  "trustFallback": {
+    "origin": "상세 이미지 참조",
+    "compositionSingle": "단일 구성",
+    "compositionMulti": "{count}종 옵션"
+  },
+  "domesticOriginName": "대한민국",
+  "chips": {
+    "domestic": "국산 (대한민국)",
+    "optionCount": "옵션 {count}종"
+  },
+  "values": [
+    { "title": "꼼꼼히 고른 구성", "body": "필요한 구성을 빠짐없이 챙겼습니다. 받아보고 바로 쓸 수 있습니다." },
+    { "title": "분명한 정보 안내", "body": "제조국과 구성을 숨김없이 안내합니다. 믿고 고르실 수 있습니다." },
+    { "title": "보기 좋은 정리", "body": "상세 정보를 한눈에 보기 좋게 정리했습니다." }
+  ],
+  "steps": [
+    { "title": "확인하기", "body": "구성과 옵션을 확인합니다." },
+    { "title": "선택하기", "body": "원하는 옵션을 선택해 장바구니에 담습니다." },
+    { "title": "받아보기", "body": "안전하게 포장해 보내드립니다." }
+  ],
+  "scentDescFallback": "향 상세는 상세 이미지를 참조해 주세요.",
+  "noticeCards": [
+    { "title": "배송 안내", "body": "주문 확인 후 영업일 기준 순차 출고됩니다. 도서산간은 일정이 더 소요될 수 있습니다.", "icon": "delivery" },
+    { "title": "교환 · 반품", "body": "수령 후 7일 이내 신청 가능합니다. 단순 변심 시 왕복 배송비가 발생할 수 있습니다.", "icon": "exchange" },
+    { "title": "고객 안내", "body": "상품 문의는 스토어 톡톡으로 남겨주세요. 빠르게 안내해 드리겠습니다.", "icon": "support" }
+  ]
+}

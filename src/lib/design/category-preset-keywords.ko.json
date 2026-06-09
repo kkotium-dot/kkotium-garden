@@ -1,0 +1,8 @@
+{
+  "_note": "Coarse keyword hints for categoryToFamily (B-3 fallback recommendation only). Korean match tokens live here, not in code (CLAUDE.md §3-1). Intentionally small — the exhaustive 4,993-row mapping is out of scope (CONCEPT §6-D 과잉엔지니어링 금지).",
+  "fragrance": ["디퓨저", "방향제", "향", "아로마", "캔들", "프래그런스", "룸스프레이"],
+  "craft": ["도어벨", "공예", "한지", "도자", "도자기", "전통", "달항아리", "수공", "민화", "공방"],
+  "kitchen": ["주방", "아이스트레이", "트레이", "실리콘", "조리", "그릇", "주방용품", "위생", "수납", "밀폐"],
+  "pet": ["반려", "펫", "강아지", "고양이", "애견", "애묘"],
+  "gift": ["선물", "기프트", "답례", "축하"]
+}

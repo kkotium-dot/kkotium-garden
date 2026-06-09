@@ -28,6 +28,14 @@ import { mapCategoryToTone } from '@/lib/automation/category-tone-mapper';
 import { NAVER_ORIGIN_CODES } from '@/lib/naver/naver-origin-codes';
 import type { GroundedFacts } from '@/lib/automation/section-renderers/types';
 import { resolveCategoryLeaf } from '@/lib/automation/category-leaf';
+// Phase B-3 — concept-preset engine consumption (additive; PNG path preserved).
+import {
+  normalizePreset, normalizeIntensity, recommendPreset,
+} from '@/lib/design/concept-presets';
+import { categoryToFamily } from '@/lib/design/category-preset-map';
+import { buildPresetDetailContent } from '@/lib/detail/build-preset-content';
+import { lintSeoGuards } from '@/lib/seo/seo-guard-linter';
+import type { PresetOverrides } from '@/components/detail/preset';
 
 function resolveOriginCountry(code: string | null | undefined): string | null {
   if (!code) return null;
@@ -51,6 +59,12 @@ interface GenerateDetailBody {
   brandName?: string;
   /** Optional highlight phrase ("4종 세트", "한정", etc). */
   highlight?: string;
+  /**
+   * Phase B-3: return ONLY the preset engine output (presetLayout + seoGuard)
+   * without the legacy PNG/skeleton path. Works for any product (no Diagnosis
+   * row required) — used by the preset preview / verification surface.
+   */
+  presetOnly?: boolean;
 }
 
 function jsonError(message: string, status: number, detail?: unknown) {
@@ -58,6 +72,19 @@ function jsonError(message: string, status: number, detail?: unknown) {
     { ok: false, error: message, detail: detail ?? null },
     { status },
   );
+}
+
+/** Parse Product.preset_overrides JSONB into the typed slot object (snake/camel). */
+function parsePresetOverrides(raw: unknown): PresetOverrides {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const o = raw as Record<string, unknown>;
+  const out: PresetOverrides = {};
+  if (typeof o.accent === 'string') out.accent = o.accent;
+  if (typeof o.hero_copy === 'string') out.heroCopy = o.hero_copy;
+  if (typeof o.heroCopy === 'string') out.heroCopy = o.heroCopy;
+  if (typeof o.mood_image === 'string') out.moodImage = o.mood_image;
+  if (typeof o.moodImage === 'string') out.moodImage = o.moodImage;
+  return out;
 }
 
 export async function POST(
@@ -94,19 +121,20 @@ export async function POST(
       optionName: true,
       optionValues: true,
       options: true,
+      // Phase B-3 — concept-preset columns (migration 20260603, additive).
+      concept_preset: true,
+      preset_intensity: true,
+      preset_overrides: true,
     },
   });
   if (!product) {
     return jsonError('product not found', 404, { productId });
   }
-  if (!product.mainImage) {
-    return jsonError('product mainImage missing', 422, { productId });
-  }
 
-  // Fetch latest Diagnosis (for ConceptTone). Skip when overrideSkeletonId
-  // is provided — buildDetailPage will use the override directly.
+  // Fetch latest Diagnosis (for ConceptTone). Skip when overrideSkeletonId or
+  // presetOnly is set — the preset engine path is diagnosis-independent.
   let conceptTone: ConceptTone | undefined;
-  if (!body.overrideSkeletonId) {
+  if (!body.overrideSkeletonId && !body.presetOnly) {
     const diag = await prisma.diagnosis.findUnique({
       where: { productId },
       select: { conceptTone: true, skeletonId: true },
@@ -156,6 +184,55 @@ export async function POST(
     toneBase: toneDirective.baseTone,
   };
 
+  // --- Phase B-3: concept-preset engine (additive, diagnosis-independent) ---
+  // Resolve the preset from the operator-assigned columns; surface the
+  // category-based recommendation alongside so drift is visible. Assemble the
+  // grounded 7-section content, expose the customization slots, and ALWAYS run
+  // the preset-independent SEO guard linter (CONCEPT §7 orthogonality).
+  const preset = normalizePreset(product.concept_preset);
+  const intensity = normalizeIntensity(product.preset_intensity);
+  const overrides = parsePresetOverrides(product.preset_overrides);
+  const presetContent = buildPresetDetailContent({
+    preset, intensity, productName: product.name, groundedFacts,
+  });
+  const recommended = recommendPreset(
+    categoryToFamily({
+      productName: product.name,
+      categoryLeaf,
+      naverCategoryCode: product.naverCategoryCode,
+    }),
+  );
+  const seoGuard = lintSeoGuards({
+    productName: product.name,
+    naverCategoryCode: product.naverCategoryCode,
+    mainImage: product.mainImage,
+  });
+  const presetLayout = {
+    preset,
+    intensity,
+    recommendedPreset: recommended.preset,
+    recommendedIntensity: recommended.intensity,
+    matchesRecommendation: preset === recommended.preset,
+    content: presetContent,
+    overrides,
+    slots: {
+      accent: overrides.accent ?? null,
+      heroCopy: overrides.heroCopy ?? null,
+      moodImage: overrides.moodImage ?? null,
+    },
+    locked: ['logo', 'signature_color', 'price_cta', 'seo_fields'],
+  };
+
+  // presetOnly: engine output for ANY product (no diagnosis, no PNG).
+  if (body.presetOnly) {
+    return NextResponse.json({ ok: true, presetOnly: true, presetLayout, seoGuard, groundedFacts });
+  }
+
+  // The legacy PNG path requires the representative image.
+  if (!product.mainImage) {
+    return jsonError('product mainImage missing', 422, { productId });
+  }
+
   try {
     const result = await buildDetailPage({
       productName: product.name,
@@ -203,6 +280,8 @@ export async function POST(
       detailHeight: result.skeleton.totalHeight,
       elapsedMs: result.elapsedMs,
       groundedFacts,
+      presetLayout,
+      seoGuard,
     });
   } catch (err) {
     return jsonError('detail generation failed', 500, String(err));
