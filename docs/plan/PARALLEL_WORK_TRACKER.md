@@ -43,6 +43,15 @@
 | C-8 | 추가이미지 멀티슬롯 매니저 | ☐ Code(C-3 후) | 대표(1)+추가(2~9) 순서·교체·소스라벨·네이버 매핑. 첨부 레퍼런스 비율 적용 |
 | 병합 | feat/composite-pipeline → main (C-1+C-7 production 반영) | ⏸ 대표 GO 대기(권고함) | additive·UI 미연결→blast 0·충돌 0. 병합해야 /white-bg·/apply-composite production 실측 + 명화 합성 회수 가능. 명령=NEW_CHAT_STARTER_2026-06-09_2 §6 |
 
+## 이미지 자산 폴더 자동분류 시스템 (신규, 2026-06-09 세션2)
+대표 지시: 생성물(누끼/합성/썬네일/상세) 단계별 자동분류·반자동업로드 · 전상품 영구구조. 권한/빌드 = docs/plan/ASSET_FOLDER_TAXONOMY_BUILD.md.
+| ID | 작업 | 상태 | 비고 |
+|---|---|---|---|
+| FT-설계 | 폴더 택소노미 설계 + 스펙 작성 | ✅ DONE(데스크톱) | 단계우선 추천 확정: cutout/composite/thumb/detail/archive. 현 automation-storage 실측(thumb|detail 2종, 단계=variant에만) → 개선 설계 문서화 |
+| FT-코드 | AssetKind 단계확장 + 경로 {pid}/{kind}/{variant} + list 재귀(하위호환) + asset-taxonomy.ts + 생산자 정합 | ✅ DONE (feat/composite-pipeline b73f526, tsc0/build/§5) | 하위호환 필수(기존 flat URL 보존). grep 전수. §5 체크리스트 |
+| FT-검증 | 신규업로드 단계폴더 생성·기존 URL 유효·전상품 동작 | ☐ Desktop(FT-코드 후) | Storage 실측 |
+| FT-Adobe | Adobe CC 입구 정리(KKOTIUM_GARDEN 루트 + 중복 kkotium 6개 통합) | ⏸ 승인 게이트 | asset_create_folders 승인 필요("No approval received" 실측). 이관·삭제=비가역·대표 확인. Adobe=작업장, 진짜 분류=Supabase |
+
 ## 앱 적용 현황 (명화 · 실측 2026-06-09 세션2)
 - production(target=production) = `e0c7f19`(main). C-1/C-7 코드는 **preview 빌드만 READY · production 미반영**(병합 대기).
 - 대표 = curated(가죽 v2) ✅ / 상세 = curated(Branch A 공급사 그대로) ✅ / 2갈래 = A / 발행 = SUSPENSION(drift 정확) / extra_images = [] (합성 슬롯 비어있음)
