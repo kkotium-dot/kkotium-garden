@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-09 (64) 적응형 프리셋 엔진 Phase B-1 — 7섹션 React 렌더러 (FROM Code, main 6e6aad1, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | BUILD_PLAN commit B-1 + aroma_L3_detail_reference.html 1:1. 승인: 레퍼런스 React 렌더러 신설. |
+| (1) 렌더러 ✅ | DetailPresetArticle(순수 presentational·hooks 0 → renderToStaticMarkup(B-3)+클라 미리보기 공용). 7섹션(hook/value/spec+scents/usage/trust/cta/notice+brandbar+sticky-buy) 1:1. 100% props-driven(컴포넌트 한글 0)·인라인 SVG→Lucide(이모지 0). |
+| (2) CSS 모듈 ✅ | preset-detail.module.css .root 스코프. semantic 토큰만 참조→data-preset 교체=전섹션 재스킨. hero/story 장식 color-mix 토큰화(타프리셋 재스킨)·terracotta/rose-dust var(--…, var(--accent)) fallback. scent 스와치 리터럴(향 정체성·aroma). intensity=패딩 밀도(l1/l2/l3). 모바일 16px·sticky-buy. |
+| (3) 슬롯/타입 ✅ | types.ts DetailContent(7섹션)+PresetOverrides(accent/heroCopy/moodImage=개입점 CONCEPT §5). samples.ko.json 3종 fixture(명화 aroma/L3·달항아리 tradition/L3·아이스트레이 kitchen/L1, 한글 데이터 분리). |
+| (4) 검증 페이지 ✅ | /studio/preset-preview(상품 선택+preset/intensity 토글 재스킨 실측, 코드 한글 0). |
+| 검증 | tsc 0·build OK(/studio/preset-preview 10.3kB)·이모지 0·코드 한글 리터럴 0(주석 영어)·sentinel 0·비가역 0(네이버 0·DB 0·렌더 read-only). |
+| ★ 다음 | Desktop Control Chrome /studio/preset-preview 라이브: (1) 명화 aroma/L3·달항아리 tradition/L3·아이스트레이 kitchen/L1 3종 렌더 (2) preset 토글로 동일 콘텐츠 재스킨(surface/accent/ink 전환) (3) intensity 밀도·모바일 sticky-buy. 후속=B-2(SEO 린터)→B-3(generate-detail 소비). |
+
 ### 2026-06-09 (63) 적응형 프리셋 엔진 Phase A — 토큰 정합 (FROM Code, main 0b969f3, 비가역 0). ★production 0b969f3 검증
 
 | 항목 | 상태 |
