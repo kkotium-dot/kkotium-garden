@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { whiteBgFinish } from '@/lib/images/white-bg';
 import { uploadAutomationAsset } from '@/lib/storage/automation-storage';
+import { safeVariant } from '@/lib/storage/asset-taxonomy';
 import { transitionJob, type JobStatus } from '@/lib/jobs/asset-job-state';
 import { BG_CLEAN } from '@/lib/jobs/job-type-routing';
 import { REAL_HERO_CUT_GUIDANCE } from '@/lib/images/finishing-guidance';
@@ -30,6 +31,7 @@ export const maxDuration = 60;
 
 interface Body {
   cutoutUrl?: string;
+  sourceLabel?: string; // e.g. 'whitefront' / 'carleather' — labels the cutout/ stage variant
   ocr?: boolean;
   trim?: boolean;
   margin?: number;
@@ -122,6 +124,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   let applied = false;
   let mainImageUrl: string | null = null;
+  let cutoutSourceUrl: string | null = null;
   let bgCleanJob: Awaited<ReturnType<typeof completeBgCleanJob>> = null;
 
   if (body.confirm === true) {
@@ -148,6 +151,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const msg = e instanceof Error ? e.message : String(e);
       return NextResponse.json({ success: false, error: `Apply failed: ${msg}`, stage: 'APPLY' }, { status: 502 });
     }
+    // Traceability: keep the raw transparent cutout in the cutout/ stage (taxonomy
+    // §2-4: raw cutout vs the applied white-bg thumb). Best-effort, non-fatal.
+    try {
+      const raw = await uploadAutomationAsset({
+        productId, kind: 'cutout', variant: safeVariant(body.sourceLabel, 'source'),
+        buffer: input, contentType: 'image/png',
+      });
+      cutoutSourceUrl = raw.publicUrl;
+    } catch { /* raw cutout archival is best-effort */ }
     // Advance the bg_clean job (best-effort, non-fatal).
     try { bgCleanJob = await completeBgCleanJob(productId); } catch { bgCleanJob = null; }
   }
@@ -165,6 +177,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     cautions,
     applied,
     mainImageUrl,
+    cutoutSourceUrl,
     bgCleanJob,
     sourceGuidance: REAL_HERO_CUT_GUIDANCE,
     // Base64 preview (1000x1000 JPEG). Operator reviews before any publish.

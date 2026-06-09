@@ -24,6 +24,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { compositeMood, normalizeExtraImage, type ExtraFormat } from '@/lib/images/composite';
 import { uploadAutomationAsset } from '@/lib/storage/automation-storage';
+import { safeVariant } from '@/lib/storage/asset-taxonomy';
 import { PRODUCT_COMPOSITE } from '@/lib/jobs/job-type-routing';
 
 export const dynamic = 'force-dynamic';
@@ -121,10 +122,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (body.confirm === true) {
     try {
+      // Stage taxonomy: the composite scene goes to the composite/ folder, keyed
+      // by its mood label (ASSET_FOLDER_TAXONOMY_BUILD §2-4).
       const uploaded = await uploadAutomationAsset({
         productId,
-        kind: 'detail',
-        variant: 'composite',
+        kind: 'composite',
+        variant: safeVariant(body.slotLabel, 'mood'),
         buffer: outBuffer,
         contentType: 'image/jpeg',
       });
