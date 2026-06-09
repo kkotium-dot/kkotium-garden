@@ -17,7 +17,11 @@
 
 import { checkProductName } from '@/lib/product-name-checker';
 
-export type SeoCheckStatus = 'pass' | 'warn' | 'fail' | 'manual';
+export type SeoCheckStatus = 'pass' | 'warn' | 'fail' | 'manual' | 'info';
+
+/** main_image_policy value (C-4): the operator keeps a non-white-bg representative
+ *  on purpose (e.g. a lifestyle/leather hero). Downgrades the white-bg guard. */
+export const MAIN_IMAGE_POLICY_LIFESTYLE = 'lifestyle_intended';
 
 export type SeoCheckId =
   | 'product_name_50'
@@ -50,6 +54,8 @@ export interface SeoGuardInput {
    * not checked -> reported as 'manual' (no fabrication, #46).
    */
   mainImageWhiteBgVerified?: boolean | null;
+  /** Product.main_image_policy (C-4). 'lifestyle_intended' downgrades white-bg. */
+  mainImagePolicy?: string | null;
 }
 
 const NAVER_LEAF_CODE = /^\d{8}$/;
@@ -75,6 +81,15 @@ function lintProductName(input: SeoGuardInput): SeoCheck {
 function lintMainImageWhiteBg(input: SeoGuardInput): SeoCheck {
   if (!input.mainImage) {
     return { id: 'main_image_white_bg', status: 'fail', detail: 'representative image missing' };
+  }
+  // C-4 override: a deliberate lifestyle representative downgrades the guard to
+  // 'info' (acknowledged, non-blocking) so the operator is not re-alerted.
+  if (input.mainImagePolicy === MAIN_IMAGE_POLICY_LIFESTYLE) {
+    return {
+      id: 'main_image_white_bg',
+      status: 'info',
+      detail: 'lifestyle representative kept by operator (main_image_policy=lifestyle_intended)',
+    };
   }
   if (input.mainImageWhiteBgVerified === true) {
     return { id: 'main_image_white_bg', status: 'pass', detail: 'representative background verified white/neutral' };

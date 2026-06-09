@@ -117,6 +117,7 @@ export async function GET() {
   const qualityScoreById = new Map<string, number | null>();
   const detailCuratedById = new Map<string, boolean>();
   const sourceDetailGoodById = new Map<string, boolean>();
+  const mainImagePolicyById = new Map<string, string>();
   try {
     const modes = await prisma.product.findMany({
       where: { id: { in: ids } },
@@ -146,6 +147,23 @@ export async function GET() {
     // else: columns not migrated — leave modeById empty.
   }
 
+  // C-4 main_image_policy — separate guarded query so its (possibly unmigrated)
+  // column never breaks the working modes query above (#50 reverse-deploy safe).
+  try {
+    const policies = await prisma.product.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, main_image_policy: true },
+    });
+    for (const p of policies) {
+      if (p.main_image_policy) mainImagePolicyById.set(p.id, p.main_image_policy);
+    }
+  } catch (e: unknown) {
+    const code = (e as { code?: string })?.code;
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!(code === 'P2021' || code === 'P2022' || /does not exist|column/i.test(msg))) throw e;
+    // else: main_image_policy not migrated — no overrides applied.
+  }
+
   // 4. Compute each row via the SoT engine.
   const counts: Record<Overall, number> = { risk: 0, attention: 0, caution: 0, ok: 0, none: 0 };
   const rows = products.map((dbProduct) => {
@@ -170,6 +188,7 @@ export async function GET() {
       detailCurated: detailCuratedById.get(dbProduct.id) ?? false,
       hasSourceDetail: !!(dbProduct as { source_detail_url?: string | null }).source_detail_url,
       sourceDetailGood: sourceDetailGoodById.get(dbProduct.id) ?? false,
+      mainImagePolicy: mainImagePolicyById.get(dbProduct.id) ?? null,
     });
     counts[row.overall]++;
 
