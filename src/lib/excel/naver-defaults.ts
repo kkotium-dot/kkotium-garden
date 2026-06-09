@@ -19,7 +19,7 @@ export const KKOTIUM_DEFAULTS: SupplierDefaults = {
   noticeTemplateCode: '2976841',
   asPhone: '010-3227-4805',
   asGuide:
-    '[평일] 10:00~18:00\n전화상담이 어려운 경우 카카오채널 \'@꽃티움\'으로 문의 주시면 빠른 답변 드리겠습니다',
+    '[평일] 10:00~18:00\n전화상담이 어려운 경우 카카오채널 \'@꽃틔움\'으로 문의 주시면 빠른 답변 드리겠습니다',
   discountValue: 30,
   discountUnit: '%',
   textReviewPoint: 50,
@@ -34,14 +34,14 @@ export const KKOTIUM_DEFAULTS: SupplierDefaults = {
 
 // Localised display strings kept separate
 export const KKOTIUM_DISPLAY = {
-  brand: '꽃티움(협력사)',
-  manufacturer: '꽃티움(협력사)',
-  importer: '꽃티움(협력사)',
+  brand: '꽃틔움(협력사)',
+  manufacturer: '꽃틔움(협력사)',
+  importer: '꽃틔움(협력사)',
   deliveryMethod: '택배, 소포, 등기',
   deliveryFeeType: '유료',
   deliveryPayType: '선결제',
   asGuide:
-    '[평일] 오전 10:00~오후 18:00\n전화상담이 어려운 경우 카카오채널 \'@꽃티움\'으로 문의 주세요',
+    '[평일] 오전 10:00~오후 18:00\n전화상담이 어려운 경우 카카오채널 \'@꽃틔움\'으로 문의 주세요',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

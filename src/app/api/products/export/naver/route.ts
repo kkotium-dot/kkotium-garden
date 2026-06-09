@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       p.sku,
       100, // 기본 재고
       `"${p.category || '꽃'}"`,
-      '"꽃티움"',
+      '"꽃틔움"',
       p.supplierPrice,
       `${p.margin.toFixed(2)}%`,
       `"${Array.isArray(p.keywords) ? (p.keywords as string[]).join(',') : ''}"`,
