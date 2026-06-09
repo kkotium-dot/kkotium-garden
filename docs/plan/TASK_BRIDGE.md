@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-09 (69) C-7 검증 + extra_images 마이그레이션 적용 + 합성 인계 (FROM 🖥 Desktop, feat/composite-pipeline 65275b9, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| C-7 검증 ✅ | job-type-routing(product_composite/harmonize·isFinishingJobType)·apply-composite 라우트(in-app+Firefly 회수·추가이미지 적용·P2022 가드) read 검증. asset_jobs CHECK에 product_composite/harmonize 존재 실측 → job seed 무결함. |
+| 마이그레이션 ✅ | extra_images jsonb(기본 []·NOT NULL) Desktop apply_migration 적용·검증완(additive·가역·production 무해). C-7 confirm 경로 unblocked(P2022 degrade 해소). |
+| 인계 ✅ | docs/handoff/NEW_CHAT_STARTER_2026-06-09_composite.md 작성(다음 채팅 권위본). Firefly 탭 Chrome id 1396049947 준비됨. |
+| 병합 권고 | feat/composite-pipeline = C-1+C-7 포함. /white-bg·/apply-composite는 순수 additive(UI 미연결→production blast 0) → composite-pipeline → main 병합으로 C-1+C-7 동시 반영 권장(충돌 0, 라이브 실측 가능). 대표 OK 시 Code/터미널 병합. |
+| 다음 | 명화 합성(Firefly 브라우저 구동 → apply-composite compositeUrl 회수) + 병합 결정 + 병렬 C-2·C-4·C-3→C-5→C-8. 새 채팅 진입=NEW_CHAT_STARTER §5. |
+
 ### 2026-06-09 (68) 대표이미지 규격(§9) + 합성/추가이미지 체계 확장 + C-1 검증 (FROM 🖥 Desktop, main/feat dbbb04d, 비가역 0)
 
 | 항목 | 상태 |

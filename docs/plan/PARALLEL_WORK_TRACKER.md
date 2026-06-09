@@ -39,7 +39,7 @@
 | C-6 | 브라우저 실무 테스트(3상품 전 흐름) | ☐ 데스크톱(C-5 후) | 무오류 확인 후 다음 본작업 |
 | F-규격 | 대표이미지 규격 표준(§9) 박제 | ✅ DONE(데스크톱) | 첨부 레퍼런스(흰배경 본품샷)→ 1:1 1000·순백·본품 70~85%·텍스트0·OCR0. 전상품 적용. REPRESENTATIVE_IMAGE_FINISHING §9 |
 | F-합성 | 명화 무드 합성 레시피(추가이미지/상세 히어로) | ☐ 실행 대기(브라우저 반자동 #52) | Adobe MCP는 compositing/gen-fill 미지원(#46) → Firefly 브라우저 반자동 or Photoshop. 레시피 docs/handoff/HANDOFF_myeonghwa_composite_recipe_2026-06-09.md. 대표=흰배경(§9)과 별도 |
-| C-7 | 합성 파이프라인(누끼→무드) = Branch B 앱 기능 | ✅ DONE (feat/composite-pipeline 65275b9, tsc0/build) | apply-composite executor(harmonize·추가이미지 적용, 가역) + 인앱 sharp 단순합성/Firefly 회수. 붙여넣기 명세 빌드플랜 |
+| C-7 | 합성 파이프라인(누끼→무드) = Branch B 앱 기능 | ✅ DONE (feat/composite-pipeline 65275b9) · Desktop 검증완+마이그레이션 적용 | apply-composite executor(harmonize·추가이미지 적용, 가역). 검증: 라우팅·CHECK제약(product_composite/harmonize 존재)·P2022 가드 정합. extra_images jsonb(기본 []·NOT NULL) Desktop 적용완 → confirm 끝까지 동작 |
 | C-8 | 추가이미지 멀티슬롯 매니저 | ☐ Code(C-3 후) | 대표(1)+추가(2~9) 순서·교체·소스라벨·네이버 매핑. 첨부 레퍼런스 비율 적용 |
 
 ## 앱 적용 현황 (명화 · 실측, runtime aa7e5b9 / HEAD c55248d LIVE)
@@ -52,3 +52,5 @@
 - DB 백필/캡처/적용/생명주기 전이 = 가역 → Desktop 직접 실행(#41).
 - 명화 대표 = 가죽 라이프스타일 확정(대표님, 재변경 없음). 누끼·합성은 추가이미지·전상품 기능으로.
 - ⚠ Adobe 이미지 백엔드(bartlebee encode) 2026-06-09 세션에서 400 오류 — 누끼/편집/미리보기 불가. 이미지 산출은 앱 파이프라인(Code) or Firefly 브라우저 반자동으로.
+- extra_images jsonb 마이그레이션 2026-06-09 Desktop 적용완(additive·가역·production 무해). C-7 confirm 경로 unblocked.
+- Firefly 탭 준비됨(Chrome id 1396049947) + Adobe Express(1396049445) — 다음 채팅에서 명화 합성 브라우저 구동.
