@@ -14,7 +14,8 @@
 | 6b | **상세 1차 틀 (aroma L3 정식 레퍼런스)** | ✅ 개선완 (주석버그·모바일16px·리뷰슬롯·sticky CTA + §7.2 전프리셋 토큰) | 대표 컨펌 → S2/S4 빌드업(Firefly/Met CC0 → Canva/Figma 860px) |
 | 6c | (폐기) 브랜드-프론트 시안들(TEST_branchB / 1차틀_productID) | 폐기 | aroma_L3_detail_reference가 정식 대체 |
 | 6d | **적응형 이미지·SEO·ROI 카피 엔진 문서화** | ✅ DONE(docs/design/ADAPTIVE_IMAGE_SEO_ENGINE.md) | — |
-| 6e | **프리셋 시스템 앱 구현 (Phase A/B)** | ☐ Code · **GO(commit A→B-3 순차)** | A:globals.css :root+[data-preset]5종(§7.2) · B-1:7섹션 React 렌더러(레퍼런스 1:1) · B-2:SEO 린터 · B-3:generate-detail 소비(기존 PNG additive 보존). 빌드플랜=docs/plan/ADAPTIVE_PRESET_ENGINE_BUILD_PLAN.md |
+| 6e | **프리셋 시스템 앱 구현 (Phase A/B)** | 진행중 — A·B-1 ✅검증완 / B-2·B-3 GO | A(0b969f3)·B-1(6e6aad1) 배포·B-1 시각 QA 완전종료(3종 재스킨 §7.2·강도밀도 l1 40/24↔l3 96/40·모바일 sticky/16px). 다음: B-2 SEO 린터 → B-3 generate-detail 소비 |
+| 6g | **앱 전역 title 오타 교정** | ☐ Code | 앱 title이 "꽃티움가든"으로 오기 → "꽃틔움 가든"으로 교정(브랜드명 오타, 브라우저 탭·SEO 노출). 잔존 "꽃티움" grep 일괄 점검 |
 | 6f | **전상품 프리셋 배정 정합** | ✅ DONE·실측 | 명화=aroma/L3 · 달항아리=tradition/L3(기본값에서 교정) · 아이스트레이=kitchen/L1. item3 컬럼 존재 교차검증 완 |
 | 7 | 아틀리에 2단계 — 우측 스크롤 교정 | ✅ DONE·검증완(max-h 1005·overscroll contain·클립0·바닥도달) | — |
 | 8 | 아틀리에 2단계 — job 생명주기(취소/재시도/되돌아가) | ✅ DONE·검증완(reopen→cancel 루프 200) | — |

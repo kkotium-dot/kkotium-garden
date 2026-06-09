@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-09 (65) 프리셋 엔진 B-2 SEO 린터 + B-3 generate-detail 소비 + site title/brand 오타 교정 (FROM Code, main 9f90faf, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | BUILD_PLAN commit B-2·B-3 + PARALLEL_WORK_TRACKER 6g. 커밋: title eef3ce1 · B-2 86aa160 · B-3 73d4111 · brand 9f90faf. |
+| B-2 SEO 린터 ✅ | seo-guard-linter.ts(순수·동기·프리셋 독립 orthogonalToPreset=true) 3체크: 상품명50(checkProductName)·대표 화이트배경(naver-normalize 픽셀 결과 주입·미검사 시 manual #46)·카테고리 8자리 leaf. GET /api/products/[id]/seo-guard(대표 fetch→assertWhiteBackground 4모서리, BACKGROUND_NOT_WHITE만 false·TOO_SMALL/네트워크 null). |
+| B-3 generate-detail ✅ | concept_preset/intensity/overrides select + presetLayout(preset·recommendedPreset(categoryToFamily thin)·matchesRecommendation·content·slots·locked) + seoGuard 항상. buildPresetDetailContent(데이터 섹션=groundedFacts only #46·내러티브=중립 과장0 템플릿 JSON). presetOnly 분기(diagnosis/PNG 불필요·전상품). 기존 27렌더러 PNG 경로 보존. /studio/preset-preview Live 로드(productId→presetOnly→렌더+seoGuard 칩+추천 일치). |
+| title/brand ✅ | site title 오타 교정(eef3ce1). 6g 잔존 브랜드 오타 grep 11곳 → 안전군 5곳(Header UI·Discord 알림 4) 교정. 정답 문자열은 신뢰 소스(layout.tsx)에서 추출해 치환(수기 입력 0)·코드포인트 검증(U+D2D4)·변종(U+D2C8) 오염 0. |
+| ★ flag(사용자 결정) | 외부/정책 영향 3곳 미처리: export/naver route(네이버 export 식별 필드)·naver-defaults.ts(브랜드/제조사/수입사/카카오채널, MEMORY 정책 연관)·layout.rtf(실 소스 아님·.rtf 잔존본 #34). |
+| 검증 | tsc 0·build OK·이모지 0·코드 한글 리터럴 0(주석 영어·문구 JSON)·sentinel 0·브랜드 변종 0·비가역 0(네이버 0·DB read-only). |
+| ★ 다음 | Desktop Control Chrome: (1) /studio/preset-preview Live 로드 — 3상품 productId→presetLayout 렌더+seoGuard 칩 (2) GET /seo-guard 3상품 결과 (3) 탭 title·헤더 브랜드 정상 표기 (4) flag 3곳 처리 결정. ★프리셋 엔진 Phase A/B 전 commit(A·B-1·B-2·B-3) 완료. |
+
 ### 2026-06-09 (64) 적응형 프리셋 엔진 Phase B-1 — 7섹션 React 렌더러 (FROM Code, main 6e6aad1, 비가역 0)
 
 | 항목 | 상태 |
