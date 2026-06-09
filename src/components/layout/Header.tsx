@@ -84,7 +84,7 @@ export default function Header() {
             {/* Phase 2-MOBILE-3 M1: hide user label on mobile to prevent
                 horizontal overflow; avatar circle still acts as the click
                 target. Desktop unchanged. */}
-            <span className="hidden sm:inline">꽃티움</span>
+            <span className="hidden sm:inline">꽃틔움</span>
           </button>
         </div>
       </div>

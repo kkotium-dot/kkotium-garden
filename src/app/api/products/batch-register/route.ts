@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
             inline: false,
           })),
         ],
-        footer: { text: '꽃티움 가든 · 배치 등록' },
+        footer: { text: '꽃틔움 가든 · 배치 등록' },
         timestamp: new Date().toISOString(),
       }]).catch(() => null);
     }

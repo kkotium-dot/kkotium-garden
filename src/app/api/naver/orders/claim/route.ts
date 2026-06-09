@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
         reason ? { name: '사유', value: reason, inline: false } : null,
         rejectReason ? { name: '거부 사유', value: rejectReason, inline: false } : null,
       ].filter(Boolean) as Record<string, unknown>[],
-      footer: { text: '꽃티움 가든 · 클레임 처리' },
+      footer: { text: '꽃틔움 가든 · 클레임 처리' },
       timestamp: new Date().toISOString(),
     }]).catch(() => null);
 

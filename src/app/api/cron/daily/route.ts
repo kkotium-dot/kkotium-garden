@@ -514,7 +514,7 @@ export async function GET(req: NextRequest) {
               value: o.productName ?? '',
               inline: true,
             })),
-            footer: { text: '꽃티움 가든 · 자동 발주' },
+            footer: { text: '꽃틔움 가든 · 자동 발주' },
             timestamp: new Date().toISOString(),
           }]).catch(() => null);
         } catch (confirmErr) {
