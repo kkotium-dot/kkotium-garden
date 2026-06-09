@@ -6,7 +6,7 @@ import MobileTabBar from "@/components/layout/MobileTabBar";
 import ToastProvider from "@/components/providers/ToastProvider";
 
 export const metadata: Metadata = {
-  title: "꽃티움가든 - 상품 관리 시스템",
+  title: "꽃틔움 가든 - 상품 관리 시스템",
   description: "네이버 스마트스토어 상품 관리 및 AI 최적화 시스템",
 };
 
