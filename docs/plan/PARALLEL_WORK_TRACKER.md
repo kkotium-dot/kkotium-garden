@@ -31,7 +31,7 @@
 | ID | 작업 | 상태 | 비고 |
 |---|---|---|---|
 | F-진단 | 코드 실측(크롭 완성·누끼 갭) | ✅ DONE(데스크톱) | thumb-crop=완성 / bg_clean=seed만·executor 없음 / seo-guard fail 미연결 |
-| C-1 | 인앱 SIMPLE 누끼(sharp 흰배경 평탄화) + /white-bg 라우트 | ☐ Code | bg-difficulty.ts·white-bg.ts·dry-run→confirm 적용(가역). 병렬 가능 |
+| C-1 | 인앱 SIMPLE 누끼(sharp 흰배경 평탄화) + /white-bg 라우트 | ✅ DONE (feat/white-bg-simple 2ff4a77, tsc0/build) | bg-difficulty.ts·white-bg.ts·dry-run→confirm 적용(가역). 병렬 가능 |
 | C-2 | 어도비 누끼 적용 executor /apply-cutout | ☐ Code | cutoutUrl→흰배경 합성·가드·적용, bg_clean done 전이. 병렬 가능 |
 | C-3 | finish-image 단일 라우터 + 스키마(extra_images·main_image_policy) | ☐ Code(C-1·C-2 후) | 난이도 분기·이전대표 추가이미지 보관 |
 | C-4 | seo-guard→개입대기열 연결 + override 강등 | ☐ Code(병렬) | finish_representative 항목·deepLink·lifestyle_intended info 강등 |

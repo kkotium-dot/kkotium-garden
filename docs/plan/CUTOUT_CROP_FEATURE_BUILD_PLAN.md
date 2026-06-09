@@ -19,9 +19,9 @@ C-4 (seo-guard→개입대기열) ┘                                        ↑
 ---
 
 ## C-1 · 인앱 SIMPLE 누끼 (sharp 흰배경 평탄화)  [Code]
-- [ ] `src/lib/images/bg-difficulty.ts` — 배경 난이도 0~100 + 사유. sharp 가장자리 픽셀 통계(흰/중립 비율, 색 분산). 임계값 주석 문서화.
-- [ ] `src/lib/images/white-bg.ts` — sharp 누끼·흰배경 합성·1:1 1000px. simple-crop의 OCR/해상도 가드 재사용(공유 모듈로 추출 가능).
-- [ ] `POST /api/products/[id]/white-bg` — dry-run(base64 preview + warnings) / `confirm:true`(uploadAutomationAsset → mainImage+main_image_url, 가역). thumb-crop과 형제 구조.
+- [x] `src/lib/images/bg-difficulty.ts` — 배경 난이도 0~100 + 사유. sharp 가장자리 픽셀 통계(흰/중립 비율, 색 분산). 임계값 주석 문서화.
+- [x] `src/lib/images/white-bg.ts` — sharp 누끼·흰배경 합성·1:1 1000px. simple-crop의 OCR/해상도 가드 재사용(공유 모듈로 추출 가능).
+- [x] `POST /api/products/[id]/white-bg` — dry-run(base64 preview + warnings) / `confirm:true`(uploadAutomationAsset → mainImage+main_image_url, 가역). thumb-crop과 형제 구조.
 - 검증: tsc 0 / build OK / 이모지 0 / 코드 한글 리터럴 0. 공급사 클린컷 1장으로 dry-run 200 + preview 확인.
 - 진입 문구: 본 파일 "붙여넣기 — C-1" 절.
 
