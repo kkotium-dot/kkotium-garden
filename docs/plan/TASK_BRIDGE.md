@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-09 (63) 적응형 프리셋 엔진 Phase A — 토큰 정합 (FROM Code, main 0b969f3, 비가역 0). ★production 0b969f3 검증
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/plan/ADAPTIVE_PRESET_ENGINE_BUILD_PLAN.md commit A + ADAPTIVE §7.2. 선행 docs 커밋 5df7ba6(BUILD_PLAN·ADAPTIVE §7.1/7.2·aroma L3 레퍼런스·트래커 rev4). |
+| 전제 ✅ | item3 Supabase 컬럼 실재(Desktop 확인)·신규 SQL 0. 전상품 프리셋 배정(명화 aroma/L3·달항아리 tradition/L3·아이스트레이 kitchen/L1). blast radius 0(엔진 미연결 grep 실측). |
+| (1) globals.css ✅ | 구 --preset-* 6토큰 → :root 고정 코어(--brand-red/pink·--font-body·--font-display Noto Serif KR·--sp-1~6·--r-*·--shadow, 충돌 0) + [data-preset] 5종 semantic(§7.2 verbatim: surface/surface-subtle/surface-deep/accent/accent-soft/ink/ink-soft/line/card, aroma만 terracotta/rose-dust). bare :root 금지=셸 --surface 비파괴, [data-preset] 스코프 한정. |
+| (2) 폰트/리네임 ✅ | layout.tsx Noto Serif KR webfont 추가. section-variants --preset-surface→--surface·--preset-text→--ink. concept-presets palette §7.2 리치셋(text→ink·gift/pet 색 교정·surfaceDeep/accentSoft/line/card 추가). |
+| 검증 | tsc 0·build OK·잔여 --preset- 0·accent 5종 globals↔concept-presets 3-way 일치·코드 한글 리터럴 0(신규)·비가역 0. verify-vercel-deploy: production 0b969f3 OK. |
+| ★ 다음 | commit B-1(7섹션 React 렌더러 레퍼런스 1:1). A는 렌더 소비처 없어 단독 시각검증 제한적 → B-1서 명화 aroma/L3·달항아리 tradition/L3·아이스트레이 kitchen/L1 재스킨 Control Chrome 실측. |
+
 ### 2026-06-08 (62) 아틀리에 job 생명주기 컨트롤 (FROM Code, main d08341e, 비가역 0). ★control loop production 실측
 
 | 항목 | 상태 |
