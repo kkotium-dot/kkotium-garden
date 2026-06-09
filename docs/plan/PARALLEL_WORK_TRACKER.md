@@ -31,12 +31,14 @@
 | ID | 작업 | 상태 | 비고 |
 |---|---|---|---|
 | F-진단 | 코드 실측(크롭 완성·누끼 갭) | ✅ DONE(데스크톱) | thumb-crop=완성 / bg_clean=seed만·executor 없음 / seo-guard fail 미연결 |
-| C-1 | 인앱 SIMPLE 누끼(sharp 흰배경 평탄화) + /white-bg 라우트 | ✅ DONE (feat/white-bg-simple 2ff4a77, tsc0/build) | bg-difficulty.ts·white-bg.ts·dry-run→confirm 적용(가역). 병렬 가능 |
+| C-1 | 인앱 SIMPLE 누끼(sharp 흰배경 평탄화) + /white-bg 라우트 | ✅ DONE (feat/white-bg-simple 2ff4a77) · Desktop 코드검증완 | bg-difficulty/white-bg/route 3파일+CropWarning 확장 read — 로직 정합·공유가드·BACKGROUND_NOT_WHITE 정직플래그(#46)·가역. 라이브 smoke=머지 후 C-6 |
 | C-2 | 어도비 누끼 적용 executor /apply-cutout | ☐ Code | cutoutUrl→흰배경 합성·가드·적용, bg_clean done 전이. 병렬 가능 |
 | C-3 | finish-image 단일 라우터 + 스키마(extra_images·main_image_policy) | ☐ Code(C-1·C-2 후) | 난이도 분기·이전대표 추가이미지 보관 |
 | C-4 | seo-guard→개입대기열 연결 + override 강등 | ☐ Code(병렬) | finish_representative 항목·deepLink·lifestyle_intended info 강등 |
 | C-5 | 스튜디오 '대표이미지 마무리' 통합 카드 + 컨트롤타워 배치 | ☐ Code(C-3·C-4 후) | 자동다듬기/크롭/추가이미지, dry-run before→after, 재가드 |
 | C-6 | 브라우저 실무 테스트(3상품 전 흐름) | ☐ 데스크톱(C-5 후) | 무오류 확인 후 다음 본작업 |
+| F-규격 | 대표이미지 규격 표준(§9) 박제 | ✅ DONE(데스크톱) | 첨부 레퍼런스(흰배경 본품샷)→ 1:1 1000·순백·본품 70~85%·텍스트0·OCR0. 전상품 적용. REPRESENTATIVE_IMAGE_FINISHING §9 |
+| F-합성 | 명화 무드 합성 레시피(추가이미지/상세 히어) | ☐ 실행 대기(브라우저 반자동 #52) | Adobe MCP는 compositing/gen-fill 미지원(#46) → Firefly 브라우저 반자동 or Photoshop. 레시피 docs/handoff/HANDOFF_myeonghwa_composite_recipe_2026-06-09.md. 대표=흰배경(§9)과 별도 |
 
 ## 앱 적용 현황 (명화 · 실측, runtime aa7e5b9 / HEAD c55248d LIVE)
 - 대표 = curated(v2 동일) ✅ / 상세 = curated(Branch A 공급사 그대로) ✅ / 2갈래 = A / 발행 = SUSPENSION(drift 정확)
