@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-08 (rev4)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-09 (rev5)
 
 > 대표 상시 지시: 요청 개선사항·병행작업 항상 누락 없이 추적. 매 세션 갱신. Desktop 상시 유지. #54·#55·#56 준수.
 
@@ -23,7 +23,7 @@
 | 9 | 아틀리에 2단계 — P4 공유카드 배지·전 /studio 토큰정렬·헤더 applyStatus 미러 | ☐ 후속 | Code |
 | 10 | 개입대기열 2차(deepLink 정합)·3차(외부인증 Chrome MCP 반자동 #52) | ☐ 후속 | Code |
 | 11 | applyStatus 정확성 · nextAction↔큐 정합 | ✅ DONE·검증완 | — |
-| 12 | 명화 발행(SUSPENSION→큐레이션 완료, 발행 GO) | ⏸ GO 대기(비가역 #46) | 대표 "GO" 시 PUT |
+| 12 | 명화 발행(SUSPENSION→큐레이션 완료, 발행 GO) | ⏸ GO 대기(비가역 #46) | 대표 "GO" 시 PUT. 안전번호 2종 실측 확보: HB19-12-1462 / HB21-12-2572(상세 r2) |
 | 13 | Branch A SEO/ROI 보강 자동화 | ☐ 후속 | Code(공급사 상세 + 미달요소 보강) |
 
 ## 누끼 + 크롭 마무리 시스템 (신규, 2026-06-09)
@@ -31,26 +31,29 @@
 | ID | 작업 | 상태 | 비고 |
 |---|---|---|---|
 | F-진단 | 코드 실측(크롭 완성·누끼 갭) | ✅ DONE(데스크톱) | thumb-crop=완성 / bg_clean=seed만·executor 없음 / seo-guard fail 미연결 |
-| C-1 | 인앱 SIMPLE 누끼(sharp 흰배경 평탄화) + /white-bg 라우트 | ✅ DONE (feat/white-bg-simple 2ff4a77) · Desktop 코드검증완 | bg-difficulty/white-bg/route 3파일+CropWarning 확장 read — 로직 정합·공유가드·BACKGROUND_NOT_WHITE 정직플래그(#46)·가역. 라이브 smoke=머지 후 C-6 |
+| C-1 | 인앱 SIMPLE 누끼(sharp 흰배경 평탄화) + /white-bg 라우트 | ✅ DONE (feat/white-bg-simple 2ff4a77) · Desktop 코드검증완 · ⏸ production 미반영(병합대기) | bg-difficulty/white-bg/route 3파일+CropWarning 확장 read — 로직 정합·공유가드·BACKGROUND_NOT_WHITE 정직플래그(#46)·가역. composite-pipeline에 흡수됨. 라이브 smoke=머지 후 C-6 |
 | C-2 | 어도비 누끼 적용 executor /apply-cutout | ☐ Code | cutoutUrl→흰배경 합성·가드·적용, bg_clean done 전이. 병렬 가능 |
 | C-3 | finish-image 단일 라우터 + 스키마(extra_images·main_image_policy) | ☐ Code(C-1·C-2 후) | 난이도 분기·이전대표 추가이미지 보관 |
 | C-4 | seo-guard→개입대기열 연결 + override 강등 | ☐ Code(병렬) | finish_representative 항목·deepLink·lifestyle_intended info 강등 |
 | C-5 | 스튜디오 '대표이미지 마무리' 통합 카드 + 컨트롤타워 배치 | ☐ Code(C-3·C-4 후) | 자동다듬기/크롭/추가이미지, dry-run before→after, 재가드 |
-| C-6 | 브라우저 실무 테스트(3상품 전 흐름) | ☐ 데스크톱(C-5 후) | 무오류 확인 후 다음 본작업 |
+| C-6 | 브라우저 실무 테스트(3상품 전 흐름) | ☐ 데스크톱(C-5 후, 병합 후) | 무오류 확인 후 다음 본작업 |
 | F-규격 | 대표이미지 규격 표준(§9) 박제 | ✅ DONE(데스크톱) | 첨부 레퍼런스(흰배경 본품샷)→ 1:1 1000·순백·본품 70~85%·텍스트0·OCR0. 전상품 적용. REPRESENTATIVE_IMAGE_FINISHING §9 |
-| F-합성 | 명화 무드 합성 레시피(추가이미지/상세 히어로) | ☐ 실행 대기(브라우저 반자동 #52) | Adobe MCP는 compositing/gen-fill 미지원(#46) → Firefly 브라우저 반자동 or Photoshop. 레시피 docs/handoff/HANDOFF_myeonghwa_composite_recipe_2026-06-09.md. 대표=흰배경(§9)과 별도 |
-| C-7 | 합성 파이프라인(누끼→무드) = Branch B 앱 기능 | ✅ DONE (feat/composite-pipeline 65275b9) · Desktop 검증완+마이그레이션 적용 | apply-composite executor(harmonize·추가이미지 적용, 가역). 검증: 라우팅·CHECK제약(product_composite/harmonize 존재)·P2022 가드 정합. extra_images jsonb(기본 []·NOT NULL) Desktop 적용완 → confirm 끝까지 동작 |
+| F-합성 | 명화 무드 합성(추가이미지/상세 히어로) | 🟢 누끼 3종 재작업완 + 새배경 합성(트랙1)완 · Firefly 무드(트랙2) 탭구동 대기(#52) | ★세션2 재작업: 1차 170px 카드컷 폐기 → 대표 올린 실촬영 히어로컷 3종(들판소녀 A·차량가죽범선 B·흰배경들판마을 C)에서 image_remove_background→투명PNG 완전포함 산출. 투-트랙 전략 확정(#57): 정보형 새배경(C)·감성형 Firefly 무드(B). track1_C 새배경 합성(우드+린넷+식물그림자·접지섬자) 산출완. Firefly는 탭 SPA 렌더 미완→대표 파일드롭 후 Claude 구동(키트=Firefly_무드합성_실행키트.md). 레시피=HANDOFF_myeonghwa_composite_recipe §3/§4 |
+| C-7 | 합성 파이프라인(누끼→무드) = Branch B 앱 기능 | ✅ DONE (feat/composite-pipeline a28946e) · Desktop 검증완+마이그레이션 적용 · ⏸ production 미반영(병합대기) | apply-composite executor(harmonize·추가이미지 적용, 가역). 검증: 라우팅·CHECK제약(product_composite/harmonize 존재)·P2022 가드 정합. extra_images jsonb(기본 []·NOT NULL) Desktop 적용완 → confirm 끝까지 동작. Vercel preview READY(빌드 정상) |
 | C-8 | 추가이미지 멀티슬롯 매니저 | ☐ Code(C-3 후) | 대표(1)+추가(2~9) 순서·교체·소스라벨·네이버 매핑. 첨부 레퍼런스 비율 적용 |
+| 병합 | feat/composite-pipeline → main (C-1+C-7 production 반영) | ⏸ 대표 GO 대기(권고함) | additive·UI 미연결→blast 0·충돌 0. 병합해야 /white-bg·/apply-composite production 실측 + 명화 합성 회수 가능. 명령=NEW_CHAT_STARTER_2026-06-09_2 §6 |
 
-## 앱 적용 현황 (명화 · 실측, runtime aa7e5b9 / HEAD c55248d LIVE)
-- 대표 = curated(v2 동일) ✅ / 상세 = curated(Branch A 공급사 그대로) ✅ / 2갈래 = A / 발행 = SUSPENSION(drift 정확)
+## 앱 적용 현황 (명화 · 실측 2026-06-09 세션2)
+- production(target=production) = `e0c7f19`(main). C-1/C-7 코드는 **preview 빌드만 READY · production 미반영**(병합 대기).
+- 대표 = curated(가죽 v2) ✅ / 상세 = curated(Branch A 공급사 그대로) ✅ / 2갈래 = A / 발행 = SUSPENSION(drift 정확) / extra_images = [] (합성 슬롯 비어있음)
+- 명화 본품 누끼 = 산출완(투명 PNG, Firefly 합성 입력 대기) / 무드 합성본 = 미생성(Firefly 실행 대기)
 - 전상품 시스템 + 아틀리에 2단계(스크롤·임시저장·job 생명주기) = LIVE
-- 상세 "앱 생성본" 테스트 = 경로 B 제작완(컨펌 대기) / 경로 A(엔진) Code 착수
+- 안전번호 2종 = 실측 확보(HB19-12-1462 / HB21-12-2572) — SUSPENSION 해제 입력값(대표 GO 후 비가역)
 
 ## 운영 메모
 - 비가역(네이버 PUT) = 대표 "GO" 전 절대 미실행(#46). 현재까지 전부 가역.
 - DB 백필/캡처/적용/생명주기 전이 = 가역 → Desktop 직접 실행(#41).
 - 명화 대표 = 가죽 라이프스타일 확정(대표님, 재변경 없음). 누끼·합성은 추가이미지·전상품 기능으로.
-- ⚠ Adobe 이미지 백엔드(bartlebee encode) 2026-06-09 세션에서 400 오류 — 누끼/편집/미리보기 불가. 이미지 산출은 앱 파이프라인(Code) or Firefly 브라우저 반자동으로.
+- ✅ Adobe 이미지 백엔드 **2026-06-09 세션2에서 복구 확인**(image_remove_background 200·누끼 정상). 단 photo compositing / generative fill / prompt 배경교체는 **Adobe MCP 영구 미지원**(라우팅 문서) → 무드 합성 자체는 Firefly 웹 UI(브라우저 #52). 누끼만 MCP 가능.
 - extra_images jsonb 마이그레이션 2026-06-09 Desktop 적용완(additive·가역·production 무해). C-7 confirm 경로 unblocked.
-- Firefly 탭 준비됨(Chrome id 1396049947) + Adobe Express(1396049445) — 다음 채팅에서 명화 합성 브라우저 구동.
+- Firefly 탭 준비됨(Chrome id 1396049947, 로그인·생성홈 확인) + Adobe Express(1396049445) — 명화 합성 브라우저 구동 대기. 업로드/다운로드/credit 클릭 = 대표 담당(#52).

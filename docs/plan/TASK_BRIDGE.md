@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-09 (70) 명화 누끼 산출 + Adobe 백엔드 복구 확인 + 합성 실행 인계 (FROM 🖥 Desktop, feat/composite-pipeline a28946e, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 상태 교차검증 ✅ | production(target=production READY)=e0c7f19(main). C-1/C-7는 preview 빌드만 READY·production 미반영(병합 대기). composite-pipeline a28946e(C-1+C-7, base dbbb04d). 드리프트 0·직전(69) 지점 그대로. |
+| Adobe 백엔드 복구 ✅ | adobe_mandatory_init 200·image_remove_background 정상. 직전 세션 400 블로커 해소. 단 compositing/gen-fill/prompt 배경교체는 Adobe MCP 영구 미지원(라우팅 문서) → 무드 합성=Firefly 웹UI(#52), 누끼만 MCP. |
+| 명화 누끼 산출 ✅ | 풀해상 상세(1000x18291) 밴드스캔+육안: 클린 단독샷 부재 실측(본품은 4종변형 카드에 작게·텍스트·연출배경). 본품 크롭(x222-392,y7655-8085, 170x430)→image_remove_background→투명 PNG 누끼 성공(텍스트·이웃캡 정상 제거·유리경계 깨끗). 한계(#46): 170x430 소형 → Firefly 레퍼런스로 충분, §9 대표(1000)엔 작음. 대표=가죽 확정이라 무관. 파일 대표님 다운로드 제공(myeonghwa_bottle_cutout.png). |
+| 부수 확정 | 상세 r2(환경부) 밴드 실측 안전번호 2종 = HB19-12-1462 / HB21-12-2572. SUSPENSION 해제 입력값(대표 GO 후 비가역). |
+| 인계 ✅ | docs/handoff/NEW_CHAT_STARTER_2026-06-09_2_composite_run.md 작성(다음 채팅 권위본). 트래커 rev5 갱신. |
+| 다음 | 명화 Firefly 합성(누끼 레퍼런스 드롭=대표·프롬프트 구동=Claude·다운로드=대표→apply-composite 회수) + 병합 GO(권고) + 병렬 C-2·C-4·C-3→C-5→C-8. 새 채팅 진입=NEW_CHAT_STARTER_2 §5. |
+
 ### 2026-06-09 (69) C-7 검증 + extra_images 마이그레이션 적용 + 합성 인계 (FROM 🖥 Desktop, feat/composite-pipeline 65275b9, 비가역 0)
 
 | 항목 | 상태 |
