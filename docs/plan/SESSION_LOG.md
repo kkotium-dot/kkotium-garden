@@ -16,6 +16,8 @@ production 982f856 READY(병합 C-1+C-7+C-2+FT 반영). 비가역 0(네이버·A
 
 **[발행 비행전 점검 + 업로드 확장자 교정]** 발행 비행전 점검(publish-preview): canPublish=true·payload statusType=SALE·HB 안전번호 2종 포함(GREEN). 단 라이브 inspect 대조로 ★대표 확인 필수 2건 발견(전체교체 PUT이라 발행 전 필수) — (1)원산지 라이브 네이버=중국산(0200037) vs payload=국산(00): 미검증 국산발행은 허위표시 리스크(대외무역법/관세법) (2)옵션 라이브 3종 vs payload 4종(코튼어라운드 실판매 확인). SUSPENSION 유력원인=안전기준 신고 부재 → payload HB로 해소. C-6 코드 오류체크: 단계폴더 경로 정합·블로커 없음. + uploadAutomationAsset 확장자 .png 하드코딩 latent finding(C등급) → 본 turn 교정: path 확장자를 contentType에서 파생(image/jpeg→jpg·image/png→png·그외 png). apply-composite/white-bg/apply-cutout/thumb-crop이 image/jpeg를 .png 경로로 저장하던 mismatch 해소. 기존 URL 무영향(신규 업로드만).
 
+**[ENGINE §9 표준 박제 + 파이프라인 배선 검증 + 코튼어라운드 결정]** Desktop 편집 git 보존: ADAPTIVE_IMAGE_SEO_ENGINE.md §9 신규(통합 자산 파이프라인+저장경로 전상품 표준 — product-assets/{pid}/{cutout|composite|thumb|detail|archive}, 단계->폴더->개입점 매핑, §9-D 상품 단건 설계 금지·컨셉조합만 상품별 결정) + DETAIL_PAGE_PLAYBOOK §1 저장경로 교차참조. 검증(오류체크·직독): detail/ 적재 어댑터 end-to-end 배선 확정 — useStudioActions.runDetail->generate-detail(렌더+detailBase64 반환, 저장 안 함)->runSave->POST save-assets->uploadAutomationAsset({kind:'detail', variant:skeletonId})->{pid}/detail/{skeletonId}-{ts}.png. 즉 실제 writer는 save-assets(generate-detail은 렌더러·헤더 주석 명시). detail/ 현재 0건은 FT 폴더택소노미 배포 후 save-assets 호출 0회 때문(세션3 storage 실측과 정합) -> §9-A '정의·배선 완료, 가동은 랜딩 시' 문구 정확·미배선 아님. C-5/C-8 배선 추가 불요(물리적 detail/ 생성은 C-5 스튜디오 저장흐름·C-6 검증서 자연 발생). 코튼어라운드 옵션=품절처리(재고0)·상세페이지 포함 결정(세션3) -> 명화 발행 payload 옵션 4종 vs 라이브 3종 정합(4번째=코튼어라운드=품절).
+
 **[다음]** Desktop+대표: C-6 단계폴더 실생성 + 명화 Firefly 무드(트랙2, 누끼 B 드롭→키트 구동→apply-composite 회수). Code: C-3→C-5→C-8(#57, finish-image 단일 라우터·스튜디오 통합 카드·추가이미지 멀티슬롯). 후속 대표 GO: 명화 SUSPENSION 해제 update PUT(선결 해소됨·안전번호 HB 2종·비가역).
 
 ---

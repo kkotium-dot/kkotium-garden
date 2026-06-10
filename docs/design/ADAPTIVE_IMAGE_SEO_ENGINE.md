@@ -151,3 +151,46 @@ preset_overrides  jsonb                    -- {accent, hero_copy, mood_image}
 ## 8. 다음
 - Code: Phase A(globals.css 코어/프리셋4) + Phase B(Supabase 컬럼·7섹션 CVA·SEO 린터·generate-detail 소비). 레퍼런스=aroma_L3_detail_reference.html.
 - Desktop: S2 Firefly 배경/향연출 + Met CC0 모네 원작 → S4 Canva/Figma 860px 양산(빌드업).
+
+---
+
+## 9. 통합 자산 파이프라인 + 저장경로 표준 (전상품·항상 적용)
+> 누끼·합성·썸네일·상세가 **상품 불문 항상** 거치는 단일 자산 흐름과 저장 위치를 못박는다. 다시 설계하지 않는다.
+> 코드 진실: `src/lib/storage/asset-taxonomy.ts`(STAGE_DIRS) + `automation-storage.ts`(uploadAutomationAsset). 권위: `docs/plan/ASSET_FOLDER_TAXONOMY_BUILD.md` + 작업원칙 #57.
+
+### 9-A. 저장경로 표준 (불변 — 통자 저장 금지)
+모든 가공 자산은 단계(stage) 폴더에 적재한다.
+```
+product-assets/{productId}/
+  cutout/     <- 누끼 (배경 제거 결과, 투명 PNG)
+  composite/  <- 합성 (무드배경+제품 / 라이프스타일 / 규격화 대표후보)
+  thumb/      <- 썸네일 (대표 후보 = 1:1 화이트배경·본품만, SEO 가드 대상)
+  detail/     <- 상세 섹션 (7섹션 이미지 조각, 860px)
+  archive/    <- 폐기/대체본 (이전 대표·구버전 — 삭제 아닌 이동, 가역성 보존)
+```
+- 파일명: `{kind}/{variant}-{ts}.{ext}` (ext=contentType 파생, #063b361 교정 — jpeg는 .jpg).
+- 어도비 CC 워크스페이스 미러(STAGE_FOLDER): 01_cutout / 02_composite / 03_thumbnail / 04_detail / 99_archive.
+- 활성 writer 현황(실측): cutout·composite·thumb = apply-cutout/apply-composite/thumb-crop로 **확정 가동**. detail = generate-detail(Branch B), archive = 라이프사이클(대표 교체 시 이동)로 **정의·배선 완료, 가동은 해당 기능 랜딩 시**.
+
+### 9-B. 단계 -> 폴더 -> 개입점 (자연스러운 핑퐁)
+| # | 단계 | 입력->출력 | 저장 | 자동 | 운영자 개입(자연 발생) |
+|---|---|---|---|---|---|
+| 1 | 소스 확보 | 공급사 상세/상품샷 | (원본) | 캡처 | 도매번호·로그인 |
+| 2 | 누끼 | 소스->투명PNG | cutout/ | sharp(Simple)/Adobe | 어려운 배경 시 Adobe 선택 |
+| 3 | 합성·규격화 | 누끼+무드배경 | composite/ | Firefly/Express | 모델선택·프롬프트·생성 클릭 |
+| 4 | 썸네일(대표후보) | 합성/상품샷->1:1 crop | thumb/ | 크롭 라우터 | 대표 채택 승인 |
+| 5 | 상세 섹션 | 7섹션 조립->860px | detail/ | generate-detail | 시안 디렉팅·승인 |
+| 6 | 검수 | seo-guard + publish-preview | (DB) | 린터 | 게이트 확인 |
+| 7 | 발행 | 네이버 PUT | (네이버) | - | **대표 GO (비가역 #46)** |
+| 대체 | 폐기·교체 | 이전본 이동 | archive/ | 라이프사이클 | - |
+
+원칙: 개입점은 막는 벽이 아니라 **자연스러운 손길**(승인·선택·디렉팅)이다. 비가역(발행 PUT·영구삭제·권한변경)만 대표 GO 필수, 나머지는 가역이라 선진행 가능(#46).
+
+### 9-C. 이미지 도구 환경에서의 이어가기 (세션 연속성)
+이미지 편집·생성 도구가 붙은 세션(Adobe/Canva 커넥터·이미지 실행 ON 데스크톱)에서는 끊김 없이 잇는다:
+**가죽컷(또는 누끼) 규격화 -> 대표/상세 적용 -> 검수(seo-guard·preview) -> 발행 GO 대기.**
+도구 없는 세션이면 같은 흐름을 지시·검증·문서로 준비해 두고, 도구 세션에서 실행만 잇도록 핸드오프(#41 핑퐁).
+
+### 9-D. 전체 체계 — 상품 단건 설계 금지
+- 본 파이프라인·저장경로·개입점은 **전상품 동일**(#55). 명화는 검증 1호일 뿐 특수경로 아님.
+- 단 **컨셉 조합은 상품별 개별 결정**: aroma의 모네 배경+정물 같은 특정 레이어 조합을 타 상품에 복제 금지(명화 전용·일반화 금지, 영구원칙). 프리셋(무드)은 공유, 구체 조합은 상품 정체성으로 결정(§4).

@@ -25,6 +25,8 @@
 
 **도구 선택 기준**: 정교한 컴포넌트·반복 양산 → Figma / 빠른 템플릿·즉시 수정 → Canva / 아이디어·구성 검증 → Claude Design.
 
+**산출물 저장경로(전상품 표준)**: 모든 단계 산출물은 `product-assets/{productId}/{cutout|composite|thumb|detail|archive}/`에 적재. 통자 저장 금지. 상세·개입점·라이프사이클은 `ADAPTIVE_IMAGE_SEO_ENGINE.md §9`가 권위(코드 진실 `asset-taxonomy.ts`).
+
 ---
 
 ## 2. 7섹션 구성 공식 (전환율 검증된 순서 — 모든 상품 공통)
