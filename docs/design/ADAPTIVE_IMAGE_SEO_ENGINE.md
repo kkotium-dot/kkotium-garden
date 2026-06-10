@@ -170,7 +170,7 @@ product-assets/{productId}/
 ```
 - 파일명: `{kind}/{variant}-{ts}.{ext}` (ext=contentType 파생, #063b361 교정 — jpeg는 .jpg).
 - 어도비 CC 워크스페이스 미러(STAGE_FOLDER): 01_cutout / 02_composite / 03_thumbnail / 04_detail / 99_archive.
-- 활성 writer 현황(실측): cutout·composite·thumb = apply-cutout/apply-composite/thumb-crop로 **확정 가동**. detail = generate-detail(Branch B), archive = 라이프사이클(대표 교체 시 이동)로 **정의·배선 완료, 가동은 해당 기능 랜딩 시**.
+- 활성 writer 현황(실측): cutout·composite·thumb = apply-cutout/apply-composite/thumb-crop로 **확정 가동**. detail = generate-detail(렌더·저장안함) -> **save-assets가 실 writer**(kind='detail'), archive = 라이프사이클(대표 교체 시 이동). detail은 **end-to-end 배선 완료**(실측: useStudioActions runDetail->runSave->save-assets), 가동은 스튜디오 저장 흐름 랜딩 시.
 
 ### 9-B. 단계 -> 폴더 -> 개입점 (자연스러운 핑퐁)
 | # | 단계 | 입력->출력 | 저장 | 자동 | 운영자 개입(자연 발생) |
