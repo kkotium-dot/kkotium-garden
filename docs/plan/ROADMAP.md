@@ -19,7 +19,7 @@
 
 > 2026-06-04 **★ 발행 관제탑 설계 확정 + 빌더·한글화 두 대수술 production 머지 검증 완료** (Desktop turn, 코드 0, production HEAD 64fe565). 빌더 하이브리드(a6ea482) + UI 한글화(64fe565) 둘 다 main 머지·production 실측 검증 통과(/portfolio 404 직접 확인, 가짜 John 제거). 발행 관제탑 설계도 신설(HANDOFF_publish_control_tower_2026-06-04.md) — 기존 publish-readiness.ts 엔진 위에 신호등 UI만 씌움. **★ 컨텍스트 한계로 관제탑 구현은 새 채팅 위임**(중복작업 방지).
 >
-> ⭐ **다음 새 채팅 시작 메시지 (ACTIVE)**: "Phase 2 제품교체(B안) 루프 앱 내장 완료(2026-06-06, 코드 d059acd/870fd19/f4ae170/e0090b3 push). B안=실제 제품 누끼 고정+배경만 AI(A안 재생성 폐기). asset_jobs 스키마 확장(concept_combo_id·AssetReference + job_type 6종/status 4종 awaiting_human 등 DB CHECK) + 상태머신 전이 확장(awaiting_human→human_done→in_progress, review→done|rejected, rejected→ready) + 제품교체 워크플로우(/api/products/[id]/swap-pipeline + /products/[id]/swap UI: 컨셉카드·단계 타임라인·awaiting_human 딥링크 CTA·before/after 슬라이더·승인/거부) + 관제탑 awaiting_human 핀 + Sharp naver-normalize(대표 흰배경 1:1 1300px 가드 / 상세 860px). 작업원칙 #51(B안)/#52(브라우저 반자동)/#53(도구 적재적소). P2021 가드로 마이그레이션 전 무중단. tsc 0/build OK/이모지 0/한글 리터럴 0/비가역 0. ★남은 단계(Desktop 선): (1) **Supabase apply_migration 2건**(MIGRATION_phase1_asset_jobs → MIGRATION_phase2_product_swap, 순서 준수) drift 0 (2) Chrome swap UI 실측(타임라인·awaiting_human CTA·전후 슬라이더) (3) 명화 B안 end-to-end(고해상 제품 누끼 확보→Firefly 무드배경→Photoshop 합성+Harmonize→Express 마감→Sharp 규격화→검수). 병행 잔여: 명화 SUSPENSION(대표 의도—결함 아님)/회선 고정IP/`* 2.*` 정리(#34)."
+> ⭐ **다음 새 채팅 시작 메시지 (SUPERSEDED 2026-06-10)**: "Phase 2 제품교체(B안) 루프 앱 내장 완료(2026-06-06, 코드 d059acd/870fd19/f4ae170/e0090b3 push). B안=실제 제품 누끼 고정+배경만 AI(A안 재생성 폐기). asset_jobs 스키마 확장(concept_combo_id·AssetReference + job_type 6종/status 4종 awaiting_human 등 DB CHECK) + 상태머신 전이 확장(awaiting_human→human_done→in_progress, review→done|rejected, rejected→ready) + 제품교체 워크플로우(/api/products/[id]/swap-pipeline + /products/[id]/swap UI: 컨셉카드·단계 타임라인·awaiting_human 딥링크 CTA·before/after 슬라이더·승인/거부) + 관제탑 awaiting_human 핀 + Sharp naver-normalize(대표 흰배경 1:1 1300px 가드 / 상세 860px). 작업원칙 #51(B안)/#52(브라우저 반자동)/#53(도구 적재적소). P2021 가드로 마이그레이션 전 무중단. tsc 0/build OK/이모지 0/한글 리터럴 0/비가역 0. ★남은 단계(Desktop 선): (1) **Supabase apply_migration 2건**(MIGRATION_phase1_asset_jobs → MIGRATION_phase2_product_swap, 순서 준수) drift 0 (2) Chrome swap UI 실측(타임라인·awaiting_human CTA·전후 슬라이더) (3) 명화 B안 end-to-end(고해상 제품 누끼 확보→Firefly 무드배경→Photoshop 합성+Harmonize→Express 마감→Sharp 규격화→검수). 병행 잔여: 명화 SUSPENSION(대표 의도—결함 아님)/회선 고정IP/`* 2.*` 정리(#34)."
 
 > 2026-06-04 **UI 한글화 STEP5 점검 + STEP1~5 전 완료** (feature/ui-ko-cleanup, main 미접촉). crawl/orders 영어 라벨·이모지 0 실측(actionable 0). UI 한글화 전 단계 완료. **다음=Desktop production 문구 육안 점검 → 머지 → 발행 관제탑 신설**.
 
@@ -79,37 +79,24 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-05-30 Track B G8-ENGINE 명화송풍구 배경 적재 + auto-cache 검증 (Code) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-06-10 C-6 단계폴더 실생성 + 명화 Firefly 무드 (Desktop) ⭐ ACTIVE
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. 이중 트랙 핑퐁 (작업원칙 #41) 정합.
-전제: 대표님이 Firefly로 ~/Downloads/myeonghwa_backdrop_S6.jpg 생성 완료 후 진입.
+권위본 정독: docs/handoff/NEW_CHAT_STARTER_2026-06-10_C6_studio_run.md -> PARALLEL_WORK_TRACKER(rev6) -> TASK_BRIDGE §3(72).
+전제: 병합(C-1+C-7+C-2+FT) production 982f856 READY 확정. C-4 라이브 검증 완료(seo-guard fail->info). 명화 SUSPENSION 선결(재질/색상) 내부 게이트 해소.
 
 ```
-꽃틔움 가든 Code. Track B G8-ENGINE 명화송풍구 배경 적재 + auto-cache 전환 검증.
-[STEP 0] CLAUDE.md 자동 + PROGRESS.md 헤더 + TASK_BRIDGE §3 ACTIVE +
-  docs/handoff/HANDOFF_g8_myeonghwa_backdrop_load_2026-05-30.md 정독.
-[베이스라인] f6ce373 (origin/main, Vercel READY). git status 확인.
-  코드 변경 없음 — 이번 turn은 Storage 적재 + production 검증 운영 turn (커밋은 docs만).
-[실측 단정 — Desktop production 호출로 확정] 명화송풍구 cmpnooli40001f0gveaxr8iim:
-  skeletonId=S6(matchScore 62.5 비모호) / baseTone=foreign-cinematic-sunlit /
-  assetSource.backdrop=fallback(미적재) / cutoutStrategy.source=product-additional /
-  legalGate clean(master_pd 우회). art_director_prompts adp_myeonghwa_lifestyle_s6_001
-  (seed 760042026) 시드 완료.
-[SCOPE — 운영 적재 + 검증]:
-  1. node scripts/upload-backdrop.js cmpnooli40001f0gveaxr8iim S6 ~/Downloads/myeonghwa_backdrop_S6.jpg
-     -> UPLOAD_STATUS=200 + PUBLIC_URL=.../product-assets/cmpnooli40001f0gveaxr8iim/backdrop-S6.png 확인
-  2. curl -s -X POST https://kkotium-garden.vercel.app/api/thumbnail/cmpnooli40001f0gveaxr8iim
-     -H 'Content-Type: application/json' -d '{}'
-     -> assetSource.backdrop이 fallback에서 auto-cache로 전환 + skeletonId 여전히 S6 단정
-  3. (선택) 누끼도: node scripts/upload-cutout.js cmpnooli40001f0gveaxr8iim ~/Downloads/myeonghwa_cutout.png
-     -> assetSource.cutout=auto-cache
-  4. lifestyle 변형 outputs[3] 배경 육안 변화 보고(브랜드색 -> Firefly 씬). Desktop Chrome 재검증으로 인계.
-[절대준수] heredoc 금지(#26) / 거짓 라벨 금지(#46 — 위 검증 게이트 전부 충족해야 [CLOSED]) /
-  외부 이미지 API 런타임 호출 0(#38) / Production=Vercel only / SD-01 아랍어 footer 보존 /
-  비가역 0(네이버 실발행 금지, DRAFT 유지). upload 스크립트는 Code 전용(.env.local service role).
-[검증 통과 후] Desktop 새 채팅에서 4변형 육안 차별화 재확인 ->
-  통과 시 Track A(명화송풍구 B-12 발행) 대표 승인 후 별도 채팅.
+[꽃틔움 가든 / Desktop / 이어서: C-6 단계폴더 실생성 + 명화 Firefly 무드 + SUSPENSION 해제 준비]
+정독: docs/handoff/NEW_CHAT_STARTER_2026-06-10_C6_studio_run.md -> PARALLEL_WORK_TRACKER -> TASK_BRIDGE §3.
+1) production HEAD SHA + READY 재확인(드리프트 점검).
+2) 대표가 스튜디오에서 명화 누끼/합성 적용 1회(또는 Chrome 반자동) -> storage.objects로 {pid}/cutout/·composite/ 단계폴더 실생성 + 기존 flat URL 유효 확인.
+3) Firefly 무드(트랙2): 누끼 B 드롭(대표) -> 키트 프롬프트 구동 -> apply-composite 회수.
+4) (대표 GO 시) 명화 SUSPENSION 해제 update PUT — 선결(재질/색상) 해소됨·안전번호 HB 2종 확보. 비가역.
+규칙: 비가역0·한글 직접입력·실측우선·전상품 범용. 앱 작업이라 리서치 도구 미사용.
 ```
+
+[병행 Code 트랙] C-3 -> C-5 -> C-8(#57) — finish-image 단일 라우터·스튜디오 통합 카드·추가이미지 멀티슬롯. 진입문구=docs/plan/CUTOUT_CROP_FEATURE_BUILD_PLAN.md.
+[절대준수] 비가역 0(네이버 PUT/발행·Adobe 폴더삭제는 대표 GO 전 0)·한글 직접입력·실측우선(#45)·Production=Vercel only·전상품 범용(#55).
 
 ---
 

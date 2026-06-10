@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-10 (72) 병합 production READY 확인 + C-4 라이브 검증(seo-guard info 강등) + SUSPENSION 선결 해소 확인 (FROM 🖥 Desktop, main 982f856, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 병합 production READY ✅ | Vercel list_deployments 실측: dpl_FXyEE7V56gjJEjQXsE3kT5LmLnXQ = state READY·target production·SHA 982f856(ref main, merge C-1+C-7+C-2+FT). 세션2 종료 시 BUILDING이던 병합이 READY 확정. /white-bg·/apply-cutout·/apply-composite 라이브. "production 미반영" 블로커 해소. |
+| C-4 라이브 검증 ✅ | 스키마 실측: main_image_policy(varchar)·extra_images(jsonb [] NOT NULL) production DB 반영. 명화 main_image_policy=lifestyle_intended 설정(가역 DB write=POST 라우트 컬럼-only 효과 직독 확인, 대표 영구결정 6h라 유지). GET /seo-guard production before/after: main_image_white_bg fail->info·seoGuard.ok false->true. 엔진 직독: 명화 nextAction=resolve_suspension(Step6 publishDrift 우선)·apply_curated_main 삼중 소거(SUSPENSION+curated+lifestyleRep). 대조군 달항아리 mainImageApplied=default→apply_curated_main 노출(정상). |
+| SUSPENSION 선결 해소 ✅ | 명화 실측: naver_material=유리·naver_color=투명 채워짐·missingRequired=[]·readinessGrade S/94·attributeGrade A/78. SUSPENSION 근본원인(재질/색상 누락) 내부 게이트 해소. 남은 것=네이버 update PUT(statusType->SALE·안전번호 HB 2종). 대표 GO 후 비가역(#46). |
+| 단계폴더 baseline ✅ | storage.objects 재실측: 명화13·달항아리9·아이스트레이1 전부 root_flat·단계 0. 병합 production됐으나 배포 후 신규 업로드 0건이라 미생성(정상). C-6=스튜디오 적용 1회로 단계폴더 실생성 검증(대표 실행 or Chrome 반자동·Claude 앱 POST 불가). |
+| 인계 ✅ | NEW_CHAT_STARTER_2026-06-10_C6_studio_run.md 작성(권위본)·트래커 rev6 갱신. |
+| 다음 | [Desktop+대표] C-6 단계폴더 실생성 + 명화 Firefly 무드(트랙2). [Code] PROGRESS/SESSION_LOG 세션3(#29b)·C-3→C-5→C-8. [후속 대표 GO] 명화 SUSPENSION 해제 update PUT(선결 해소됨, 비가역). 진입=NEW_CHAT_STARTER_2026-06-10 §5. |
+
 ### 2026-06-09 (71) 자산 폴더 자동분류 검증 + Adobe CC 폴더 생성 + 누끼 3종 재작업 (FROM 🖥 Desktop, feat/composite-pipeline 39c8072, 비가역 0)
 
 | 항목 | 상태 |

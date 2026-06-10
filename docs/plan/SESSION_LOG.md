@@ -1,3 +1,23 @@
+## 2026-06-10 (세션3) 병합 production READY 확정 + C-4 라이브 검증 + SUSPENSION 선결 해소 (Code/Desktop turn)
+
+production 982f856 READY(병합 C-1+C-7+C-2+FT 반영). 비가역 0(네이버·Adobe 무접촉·main_image_policy 가역 DB set). 권위: NEW_CHAT_STARTER_2026-06-10_C6_studio_run + PARALLEL_WORK_TRACKER rev6 + TASK_BRIDGE §3(72).
+
+**[병합 production READY 확정]** 세션2 종료 시 BUILDING이던 병합 빌드가 READY 확정 — Vercel list_deployments 실측 dpl_FXyEE7V56gjJEjQXsE3kT5LmLnXQ = state READY·target production·SHA 982f856(ref main "merge: C-1+C-7+C-2+FT 폴더자동분류"). C-1(누끼)/C-7(합성)/C-2(어도비 누끼 적용)/FT(폴더 자동분류) 라우트가 production 동작. "production 미반영" 블로커 해소.
+
+**[C-4 대표이미지 정책 라이브 검증]** 스키마 실측: main_image_policy(varchar·nullable)·extra_images(jsonb·기본 []·NOT NULL) 둘 다 production DB 반영. 명화 main_image_policy=lifestyle_intended 설정(가역 DB write, POST /main-image-policy 컬럼-only 효과 라우트 직독 확인, 대표 영구결정 6h 가죽 대표라 유지·해제 아님). GET /api/products/[id]/seo-guard production before/after: 정책 전 main_image_white_bg=fail·seoGuard.ok=false → 정책 후 main_image_white_bg=info("operator가 의도적으로 유지한 라이프스타일 대표")·seoGuard.ok=true. C-4 강등 정상 동작.
+
+**[매트릭스 인과 엔진 직독 확정]** 명화 nextAction=resolve_suspension(apply_curated_main 아님) — computeNextAction Step6에서 publishDrift=true(SUSPENSION)가 curatedGate보다 먼저 매치 + 명화 mainImageApplied=curated·lifestyleRep=true로 apply_curated_main 삼중 소거. 정책의 apply_curated_main 소거 로직(!lifestyleRep && main!=='curated')은 엔진에 정상 존재하나 명화는 SUSPENSION+curated에 가려 직접 관찰 안 됨. 대조군 달항아리 mainImageApplied=default → nextAction=apply_curated_main 노출(정상).
+
+**[SUSPENSION 선결조건 해소 확인]** 명화 실측: naver_material=유리·naver_color=투명 이미 채워짐·missingRequired=[]·readinessGrade S/score 94·attributeGrade A/78. SUSPENSION 근본원인(필수속성 재질/색상 누락)은 내부 게이트에서 해소 완료. 남은 것=네이버 측 실제 해제(update PUT·statusType→SALE). 안전번호 2종(HB19-12-1462 / HB21-12-2572) 입력값 확보. 대표 GO 후 비가역(#46).
+
+**[자산 폴더 단계생성 baseline 재확인]** storage.objects 실측: 명화13·달항아리9·아이스트레이1 전부 root_flat·단계 하위폴더 0. FT 코드 production 반영됐으나 배포 후 신규 업로드 0건이라 단계폴더 미생성(정상·예상대로). 기존 flat URL 무손상. C-6=스튜디오 적용 1회로 단계폴더 실생성 검증(대표 실행 or Chrome 반자동, Claude 앱 POST 불가).
+
+**[인계]** NEW_CHAT_STARTER_2026-06-10_C6_studio_run.md 권위본 작성 + PARALLEL_WORK_TRACKER rev6 + TASK_BRIDGE §3(72) 갱신(Desktop). 본 turn=Code가 PROGRESS/SESSION_LOG 세션3 기록 + docs git 보존(#41 핑퐁).
+
+**[다음]** Desktop+대표: C-6 단계폴더 실생성 + 명화 Firefly 무드(트랙2, 누끼 B 드롭→키트 구동→apply-composite 회수). Code: C-3→C-5→C-8(#57, finish-image 단일 라우터·스튜디오 통합 카드·추가이미지 멀티슬롯). 후속 대표 GO: 명화 SUSPENSION 해제 update PUT(선결 해소됨·안전번호 HB 2종·비가역).
+
+---
+
 ## 2026-06-09 (세션2) 누끼/크롭/합성 마무리 시스템 C-1·C-7·C-2·FT·C-4 (Code turn)
 
 feat/composite-pipeline 누적 HEAD 0b7d291(프리뷰 브랜치, production main e0c7f19 미접촉). 비가역 0(네이버 0·DB 가역·기존 자산 미이동). 권위: CUTOUT_CROP_FEATURE_BUILD_PLAN + REPRESENTATIVE_IMAGE_FINISHING_SYSTEM + ASSET_FOLDER_TAXONOMY_BUILD + 작업원칙 #57.
