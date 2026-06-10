@@ -14,6 +14,8 @@ production 982f856 READY(병합 C-1+C-7+C-2+FT 반영). 비가역 0(네이버·A
 
 **[인계]** NEW_CHAT_STARTER_2026-06-10_C6_studio_run.md 권위본 작성 + PARALLEL_WORK_TRACKER rev6 + TASK_BRIDGE §3(72) 갱신(Desktop). 본 turn=Code가 PROGRESS/SESSION_LOG 세션3 기록 + docs git 보존(#41 핑퐁).
 
+**[발행 비행전 점검 + 업로드 확장자 교정]** 발행 비행전 점검(publish-preview): canPublish=true·payload statusType=SALE·HB 안전번호 2종 포함(GREEN). 단 라이브 inspect 대조로 ★대표 확인 필수 2건 발견(전체교체 PUT이라 발행 전 필수) — (1)원산지 라이브 네이버=중국산(0200037) vs payload=국산(00): 미검증 국산발행은 허위표시 리스크(대외무역법/관세법) (2)옵션 라이브 3종 vs payload 4종(코튼어라운드 실판매 확인). SUSPENSION 유력원인=안전기준 신고 부재 → payload HB로 해소. C-6 코드 오류체크: 단계폴더 경로 정합·블로커 없음. + uploadAutomationAsset 확장자 .png 하드코딩 latent finding(C등급) → 본 turn 교정: path 확장자를 contentType에서 파생(image/jpeg→jpg·image/png→png·그외 png). apply-composite/white-bg/apply-cutout/thumb-crop이 image/jpeg를 .png 경로로 저장하던 mismatch 해소. 기존 URL 무영향(신규 업로드만).
+
 **[다음]** Desktop+대표: C-6 단계폴더 실생성 + 명화 Firefly 무드(트랙2, 누끼 B 드롭→키트 구동→apply-composite 회수). Code: C-3→C-5→C-8(#57, finish-image 단일 라우터·스튜디오 통합 카드·추가이미지 멀티슬롯). 후속 대표 GO: 명화 SUSPENSION 해제 update PUT(선결 해소됨·안전번호 HB 2종·비가역).
 
 ---

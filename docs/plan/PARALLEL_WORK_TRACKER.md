@@ -23,7 +23,7 @@
 | 9 | 아틀리에 2단계 — P4 공유카드 배지·전 /studio 토큰정렬·헤더 applyStatus 미러 | ☐ 후속 | Code |
 | 10 | 개입대기열 2차(deepLink 정합)·3차(외부인증 Chrome MCP 반자동 #52) | ☐ 후속 | Code |
 | 11 | applyStatus 정확성 · nextAction↔큐 정합 | ✅ DONE·검증완 | — |
-| 12 | 명화 발행(SUSPENSION→큐레이션 완료, 발행 GO) | ⏸ GO 대기(비가역 #46) | 대표 "GO" 시 PUT. 안전번호 2종 실측 확보: HB19-12-1462 / HB21-12-2572(상세 r2) |
+| 12 | 명화 발행(SUSPENSION→큐레이션 완료, 발행 GO) | ⏸ GO 대기(비가역 #46)·발행 비행전 점검완(세션3) | publish-preview canPublish=true·payload statusType=SALE·HB 안전번호 2종 포함. ★대표 확인 필수 2건(전체교체 PUT·inspect 실측): (1)원산지 라이브 네이버=중국산(0200037) vs payload=국산(00) → 미검증 국산발행=허위표시 리스크(대외무역법/관세법) (2)옵션 라이브 3종 vs payload 4종(코튼어라운드 실판매 확인). SUSPENSION 유력원인=안전기준 신고 부재→payload HB로 해소. HB19-12-1462 / HB21-12-2572 |
 | 13 | Branch A SEO/ROI 보강 자동화 | ☐ 후속 | Code(공급사 상세 + 미달요소 보강) |
 
 ## 누끼 + 크롭 마무리 시스템 (신규, 2026-06-09)

@@ -62,17 +62,29 @@ export interface UploadAssetResult {
   uploadedAt: string;
 }
 
+// Map a content type to the file extension used in the storage path so the
+// stored object name matches its MIME body (avoids a `.png` path on a JPEG).
+function extFromContentType(contentType: string): string {
+  if (contentType === 'image/jpeg') return 'jpg';
+  if (contentType === 'image/png') return 'png';
+  return 'png';
+}
+
 /**
- * Upload a PNG buffer to Supabase Storage and return the public URL.
- * Path format: `{productId}/{kind}/{variant}-{ts}.png` (stage-folder taxonomy).
+ * Upload an image buffer to Supabase Storage and return the public URL.
+ * Path format: `{productId}/{kind}/{variant}-{ts}.{ext}` (stage-folder taxonomy),
+ * where {ext} is derived from the content type so the stored object name
+ * matches its MIME body (a JPEG no longer lands on a `.png` path). Existing
+ * uploads are untouched; only new objects use the derived extension.
  */
 export async function uploadAutomationAsset(
   opts: UploadAssetOptions,
 ): Promise<UploadAssetResult> {
   const supabase = getServerClient();
   const ts = Date.now();
-  const path = `${opts.productId}/${opts.kind}/${opts.variant}-${ts}.png`;
   const contentType = opts.contentType ?? 'image/png';
+  const ext = extFromContentType(contentType);
+  const path = `${opts.productId}/${opts.kind}/${opts.variant}-${ts}.${ext}`;
 
   const { error } = await supabase.storage
     .from(BUCKET_NAME)
