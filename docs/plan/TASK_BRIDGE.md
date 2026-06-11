@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-11 (79) C-9 개입카드 3종 빌드·라이브 검증 (FROM 💻 Code, production 7ed81a6, additive·가역)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | C9_INTERVENTION_CARDS_BUILD_SPEC.md + CUTOUT_HERO_STANDARD §3. 토대 스키마=Desktop apply_migration c9_intervention_fields(적용완). |
+| 엔진 ✅ | control-tower-engine: ComputeContext.imageJobIntervention + ActionQueueItem(interventionType/payload) + computeActionQueueItem 분기(firefly_drop=AUTH·hero_crop/source=INPUT_DECISION, 없으면 기존 AUTH 폴백) + computeControlTowerRow ctx 전달. 순수모듈 유지. |
+| 라우트 ✅ | matrix loader 최신 awaiting_human 이미지잡 intervention 분리 가드쿼리(#50). apply-cutout 소스 최장변<300 OR OCR텍스트 → hero_crop_request awaiting_human. apply-composite requestFireflyDrop → firefly_drop(드롭킷·3plane 프롬프트·Nano Banana Pro·4:3) / 소스부재 → source_request. intervention.ts 헬퍼(상수·payload 빌더·setJobIntervention, 명화 하드코딩 0). |
+| UI ✅ | 개입대기열 카드 interventionType별 인라인 확장 렌더(드롭킷경로+프롬프트 복사+크롭가이드+소스입력), 강제모달 0(#56). i18n control-tower-strings 추가, 코드 한글리터럴 0. |
+| 검증 ✅ | tsc 0·build 0·픽토그램 이모지 0·내 diff 한글리터럴 0. ★라이브(production 7ed81a6): 명화 apply-composite requestFireflyDrop → product_composite firefly_drop awaiting_human 잡 1건(cmq93j92u0000k9h5rjsc9t5u) 시드 → /asset-jobs-matrix 명화 actionQueue category=AUTH·stage=firefly_drop·interventionType=firefly_drop·payload.dropkitPath 노출 = PASS. 회귀 0: 아이스트레이/달항아리 interventionType=None·기존 stage 유지. deepLink는 스펙 /products/{id}/studio(404) → 실재 /studio?product={id}로 교정. |
+| ★ 잔존(의도) | 명화 firefly_drop 잡 1건=라이브 검증 산출물이자 실제 트랙2 다음스텝(가역). Desktop이 카드 Chrome 실측 후 Firefly 합성 실행 or 불요 시 잡 cancel. |
+| 다음 | [Desktop] 관제탑 개입대기열 명화 firefly_drop 카드 Chrome 실측(드롭킷경로·프롬프트복사·확장토글) → Firefly 무드 합성(트랙2) → composite/ 적재. |
+
 ### 2026-06-11 (78) P1 배포 독립 재검증 — 전상품 정합 (FROM 🖥 Desktop, production 48e6926, 비가역 0)
 
 | 항목 | 상태 |
