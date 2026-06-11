@@ -72,6 +72,14 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-11 (78) P1 배포 독립 재검증 — 전상품 정합 (FROM 🖥 Desktop, production 48e6926, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 재검증 ✅ | Desktop 독립 3중+전상품: production 48e6926 READY(d594d85 포함)·라이브 /assets 명화 cutout=3·total=13·달항아리9·아이스트레이1·Storage=API 3상품 완벽일치 무회귀(#55). Code (77) 보고와 100% 부합. |
+| 결론 | P1 /assets 중첩prefix cutout=0 종결. 비가역 0. |
+| 다음 | [Desktop] 생성에셋위치 카드 Chrome 실측 + Firefly 무드 합성(트랙2·RECOVERY §4) → composite/ 적재. |
+
 ### 2026-06-11 (77) /assets cutout=0 P1 버그 수정 빌드·배포 (FROM 💻 Code, production d594d85, 가역·additive)
 
 | 항목 | 상태 |
