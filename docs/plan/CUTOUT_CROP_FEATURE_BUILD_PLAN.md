@@ -32,9 +32,9 @@ C-4 (seo-guard→개입대기열) ┘                                        ↑
 - 진입 문구: "붙여넣기 — C-2" 절.
 
 ## C-3 · finish-image 단일 라우터 + 스키마  [Code, C-1·C-2 후]
-- [ ] `POST /api/products/[id]/finish-image` — bg-difficulty 판정 → SIMPLE이면 white-bg, COMPLEX면 bg_clean seed 반환. UI는 이 라우트 하나만 호출.
-- [ ] 마이그레이션: `Product.extra_images jsonb DEFAULT '[]'` + `Product.main_image_policy text NULL`(`lifestyle_intended` 등). Supabase migration 파일 `docs/design/MIGRATION_finishing_*.sql`.
-- [ ] 이전 대표 → extra_images 이동 옵션(`keepAsExtra:true`).
+- [x] `POST /api/products/[id]/finish-image` — bg-difficulty 판정 → SIMPLE이면 white-bg, COMPLEX면 bg_clean seed 반환. UI는 이 라우트 하나만 호출.
+- [x] 마이그레이션: `Product.extra_images jsonb DEFAULT '[]'` + `Product.main_image_policy text NULL`(`lifestyle_intended` 등). Supabase migration 파일 `docs/design/MIGRATION_finishing_*.sql`.
+- [x] 이전 대표 → extra_images 이동 옵션(`keepAsExtra:true`).
 - 검증: tsc 0 / build OK / 마이그레이션 적용 확인(데스크톱 실측). 3상품 finish-image dry-run 분기 정확.
 - 진입 문구: "붙여넣기 — C-3" 절.
 

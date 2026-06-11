@@ -34,7 +34,7 @@
 | F-진단 | 코드 실측(크롭 완성·누끼 갭) | ✅ DONE(데스크톱) | thumb-crop=완성 / bg_clean=seed만·executor 없음 / seo-guard fail 미연결 |
 | C-1 | 인앱 SIMPLE 누끼(sharp 흰배경 평탄화) + /white-bg 라우트 | ✅ DONE (feat/white-bg-simple 2ff4a77) · Desktop 코드검증완 · ⏸ production 미반영(병합대기) | bg-difficulty/white-bg/route 3파일+CropWarning 확장 read — 로직 정합·공유가드·BACKGROUND_NOT_WHITE 정직플래그(#46)·가역. composite-pipeline에 흡수됨. 라이브 smoke=머지 후 C-6 |
 | C-2 | 어도비 누끼 적용 executor /apply-cutout | ✅ DONE (feat/composite-pipeline cdbb423, tsc0/build) | cutoutUrl→흰배경 합성·가드·적용, bg_clean done 전이. 병렬 가능 |
-| C-3 | finish-image 단일 라우터 + 스키마(extra_images·main_image_policy) | ☐ Code(C-1·C-2 후) | 난이도 분기·이전대표 추가이미지 보관 |
+| C-3 | finish-image 단일 라우터 + 스키마(extra_images·main_image_policy) | ✅ DONE (feat/finish-image-router, tsc0/build) · ⏸ production 미반영(병합대기) | 난이도 분기 dispatch(SIMPLE→인앱 white-bg·COMPLEX→bg_clean seed+apply-cutout 안내). main_image_policy=lifestyle_intended 소비(대표 비덮어쓰기→white-bg 결과 extra_images park·policyHeld)·keepAsExtra 이전대표 extra_images 보관. 스키마는 C-4/C-7 마이그레이션 완료분 소비만. 기존 라우트 회귀0(additive 신규 1파일·route.ts) |
 | C-4 | seo-guard→개입대기열 연결 + override 강등 | ✅ DONE·라이브검증완(세션3) | lifestyle_intended info 강등 production 엔드포인트 before/after 실측(fail->info·ok false->true). 매트릭스 인과 직독 확정 |
 | C-5 | 스튜디오 '대표이미지 마무리' 통합 카드 + 컨트롤타워 배치 | ☐ Code(C-3·C-4 후) | 자동다듬기/크롭/추가이미지, dry-run before→after, 재가드 |
 | C-6 | 브라우저 실무 테스트(3상품 전 흐름) | ☐ 데스크톱(C-5 후, 병합 후) | 무오류 확인 후 다음 본작업 |
