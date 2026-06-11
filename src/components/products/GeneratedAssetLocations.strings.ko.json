@@ -1,0 +1,23 @@
+{
+  "title": "생성 에셋 위치",
+  "subtitle": "상품별·스테이지별 저장 위치 (캐논: Supabase Storage)",
+  "totalPrefix": "총",
+  "countUnit": "개",
+  "loading": "에셋 위치 불러오는 중...",
+  "error": "에셋 위치를 불러오지 못했습니다",
+  "emptyAll": "아직 생성된 에셋이 없습니다",
+  "notApplied": "미적용",
+  "copyPath": "경로 복사",
+  "copied": "복사됨",
+  "openFile": "원본 열기",
+  "adobePrefix": "Adobe CC",
+  "stage": {
+    "source": { "label": "원본 (생성 raw)", "desc": "Firefly 생성 합성 전 배경/소재" },
+    "cutout": { "label": "누끼", "desc": "배경 제거 투명 컷" },
+    "composite": { "label": "합성", "desc": "무드 배경 + 제품 누끼 합성" },
+    "thumb": { "label": "썸네일·대표", "desc": "1:1 대표 후보" },
+    "detail": { "label": "상세", "desc": "상세페이지 860px 섹션" },
+    "archive": { "label": "보관", "desc": "교체·폐기 후보 백업" },
+    "root": { "label": "루트 (레거시)", "desc": "스테이지 분류 전 평면 업로드" }
+  }
+}

@@ -45,6 +45,11 @@ write-parser.js
 # Local working assets (personal Excel templates, originals)
 작업용 엑셀 기본포멧/
 
+# Local image staging — canon is Supabase Storage product-assets/{pid}/{stage}/
+# (docs/playbook/IMAGE_SEO_PIPELINE_PLAYBOOK.md §2). Raw downloads stay local
+# only; the myeonghwa hero reference file is kept on disk, untracked.
+assets/generated/
+
 # TypeScript build cache (regenerated on every build)
 tsconfig.tsbuildinfo
 

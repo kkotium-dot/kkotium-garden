@@ -3,9 +3,11 @@
 // Sprint 7-M2 Phase 3-A — Supabase Storage adapter for automation assets
 // (thumbnail variants + 5-section detail page composites).
 //
-// Bucket layout (stage-folder taxonomy — docs/plan/ASSET_FOLDER_TAXONOMY_BUILD.md):
+// Bucket layout (stage-folder taxonomy — docs/plan/ASSET_FOLDER_TAXONOMY_BUILD.md
+// + docs/playbook/IMAGE_SEO_PIPELINE_PLAYBOOK.md §2):
 //   product-assets/
 //     {productId}/
+//       source/{variant}-{ts}.png      Firefly-generated raw (pre-composite bg/material)
 //       cutout/{variant}-{ts}.png      transparent cutouts
 //       composite/{variant}-{ts}.png   mood / new-bg composites
 //       thumb/{variant}-{ts}.png       1:1 representative candidates
@@ -42,7 +44,7 @@ function getServerClient() {
   });
 }
 
-export type AssetKind = 'thumb' | 'detail' | 'cutout' | 'composite' | 'archive';
+export type AssetKind = 'source' | 'thumb' | 'detail' | 'cutout' | 'composite' | 'archive';
 
 export interface UploadAssetOptions {
   productId: string;

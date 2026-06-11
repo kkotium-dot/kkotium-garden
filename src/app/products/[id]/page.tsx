@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Sparkles, Package, Loader2, CheckCircle } from 'lucide-react';
+import GeneratedAssetLocations from '@/components/products/GeneratedAssetLocations';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -157,6 +158,11 @@ export default function ProductDetailPage() {
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* Generated asset storage locations (read-only, per stage) */}
+      <div className="mt-6">
+        <GeneratedAssetLocations productId={product.id} />
       </div>
     </div>
   );

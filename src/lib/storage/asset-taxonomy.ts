@@ -15,6 +15,7 @@ import type { AssetKind } from './automation-storage';
 
 /** kind -> mirrored Adobe CC folder name (numbered workspace, 1:1 with stages). */
 export const STAGE_FOLDER: Record<AssetKind, string> = {
+  source: '00_source',
   cutout: '01_cutout',
   composite: '02_composite',
   thumb: '03_thumbnail',
@@ -22,9 +23,10 @@ export const STAGE_FOLDER: Record<AssetKind, string> = {
   archive: '99_archive',
 };
 
-/** The stage subfolders under {productId}/ (also used by listProductAssets). */
+/** The stage subfolders under {productId}/ (also used by listProductAssets).
+ *  Ordered by pipeline stage: source -> cutout -> composite -> thumb -> detail -> archive. */
 export const STAGE_DIRS: readonly AssetKind[] = [
-  'cutout', 'composite', 'thumb', 'detail', 'archive',
+  'source', 'cutout', 'composite', 'thumb', 'detail', 'archive',
 ];
 
 // Source-label -> stage rules (first match wins). Lets a recovery route classify
