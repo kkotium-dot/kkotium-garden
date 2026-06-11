@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-11 (76) 명화 진짜 누끼 v2 3종 {pid}/cutout/ 영구화 (FROM 💻 Code, 가역·additive, #59)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | RECOVERY §3-1 + 대표 제공 실사 히어로크롭 v2 (Desktop hand-off). |
+| #58 검증 ✅ | 3종 육안 확정 = 실상품 디스이즈 차량 클립형: A=리필 드롭병+명화라벨 클립병 세트(330x326)·B=항구범선 라벨+올리브 가지(512x560)·C=들판 라벨 단품 정면(371x460). 전부 RGBA 투명 PNG·파일명=실치수 일치. 리드목업 아님. |
+| 업로드 ✅ | Storage API POST(x-upsert·image/png) 3건 success → product-assets/cmpnooli40001f0gveaxr8iim/cutout/. public URL 3건 HTTP 200·Content-Type image/png·바이트 로컬 정합(B 507,979 / A 164,853 / C 212,752). |
+| 효과 | /api/products/[id]/assets cutout 단계 0→3건(생성에셋위치 카드 반영). 엔진 고정명 cutout.png 교체는 별건(대표컷 재선정 후). 비가역 0(업로드=가역 additive·네이버 0). |
+| 다음 | [Desktop] Firefly 무드 합성(트랙2)·mainImage 재선정(RECOVERY §4) → composite/ 적재. |
+
 ### 2026-06-11 (75) storage-visibility 미커밋 작업분 검증 + main 직접 커밋 (FROM 💻 Code, 비가역 0·코드 additive)
 
 | 항목 | 상태 |
