@@ -1,73 +1,152 @@
-# 적응형 3-Plane 하이브리드 합성 엔진 (Adaptive Composite Engine) — 전상품 합성 표준
+# 적응형 합성 엔진 v8 — 참조 드롭 하모나이즈 (Adaptive Composite Engine) · 전상품 합성 표준
 
-작성 2026-06-11 · Claude Code(합성·#41 핑퐁) · **권위문서(전상품 합성 표준)** · ★대표 컨펌 대기. verbatim 정합(2026-06-11): 원칙6·워크플로7·무드 라이브러리8·명화 정정 3무드.
-근거(grounded): `REPRESENTATIVE_IMAGE_FINISHING_SYSTEM.md`(§2 설계원칙·§3 적응형 라우터·§9 대표규격) + 작업원칙 `#52`(브라우저 반자동)·`#53`(도구 적재적소)·`#55`(전상품)·`#57`(누끼=실촬영 히어로컷·투-트랙)·`#58`(제품정체 우선)·`#59`(산출물 영구화)·`#61`(합성표준) + `HANDOFF_2026-06-10_cutout-fix-firefly-recipe.md`(§3 3-plane)·`HANDOFF_myeonghwa_composite_recipe_2026-06-09.md` + 대표 지시(2026-06-11: 실질적 비율·현실감 우선). 구현 = C-3/C-7/C-9/C-5.
-
----
-
-## 0. 한 줄 / 왜 이 문서
-
-공급사 본품을 **상품의 실제 비율·형태에 충실하게**, **스튜디오 촬영처럼 현실감 있게** 무드 장면에 합성하는 전상품 재사용 표준. 기존 `REP_FINISHING`(대표 마무리)·`#57`(누끼/투-트랙)·`2026-06-10`(3-plane 레시피)을 한 엔진으로 통합·명문화한다. 명화 디퓨저 = 검증 1호(#55).
-
-핵심 교훈(왜 정정): 명화 #2(9T0) 합성본은 **형태오류(클립)·과대**로 폐기 — 소형 본품을 대형으로 렌더해 비율이 깨지고 라벨(핵심가치)이 뭉개졌다. 본 엔진은 그 재발을 **상품진실 앵커 + 스케일·각도 정합**으로 차단한다.
+작성 2026-06-11 · v8 전면 개정 2026-06-12 · Claude Code(합성·#41 핑퐁) · **권위문서(전상품 합성 표준)**
+근거(grounded): `docs/handoff/HANDOFF_image_workflow_v8_referencedrop_2026-06-12.md`(0~9장 verbatim) + `REPRESENTATIVE_IMAGE_FINISHING_SYSTEM.md`(§2 설계원칙·§9 대표규격) + 작업원칙 `#46`(비가역 가드)·`#52`(브라우저 반자동: 참조 드롭 = 운영자)·`#53`(도구 적재적소)·`#55`(전상품)·`#56`(개입 자연 노출)·`#57`(누끼=실촬영 히어로컷)·`#58`(제품정체 우선)·`#59`(산출물 영구화)·`#61`(합성표준). 구현 = C-3/C-7/C-9/C-5.
+대상: 전상품 범용. 명화 디퓨저(cmpnooli40001f0gveaxr8iim)는 **검증 케이스일 뿐 특별 경로 아님**(#55).
 
 ---
 
-## 1. 6원칙 (합성 표준)
+## 0. 아키텍처 전환 (v7 → v8): 왜 바꾸나
 
-1. **상품진실 앵커 (Product-Truth Anchor)** — 모든 합성·렌더는 상품의 **실측 비율·크기·형태·정체**에 고정. 제품 정체는 공급사 실상세로 육안 확정(#58), 임의 가정 금지. 상품별 `상품현실시트`(§5)가 앵커. (#61, 대표 2026-06-11)
-2. **3-Plane 리얼리즘 (3-Plane Realism)** — 후경(페인터리 디포커스)/중경(원목·표면 + 접지)/전경(본품 주인공 + 라벨 + 키라이트 + 접지그림자). 스튜디오 촬영 같은 사실적 빛·재질. Pillow 기계 겹침 폐기. (§2, 2026-06-10 §3)
-3. **스케일·각도 정합 (Scale & Angle)** — 본품 크기·시점·원근이 장면과 **물리적으로 일치**. 과대·축소·왜곡·잘림 금지. 프레임 점유율은 상품현실시트 가이드(대표 70~85% / 무드 히어로 ~50~55%). (대표 2026-06-11 "실질적 비율", 9T0 형태오류 재발 차단)
-4. **컨셉 구동 다양 무드 ≥2 (Concept-driven Multi-mood)** — 상품 본질/컨셉에서 무드를 도출해 **최소 2개**(예: 사용맥락 + 스튜디오 정물, 또는 전환형 + 정보형). 무드 라이브러리(§6)에서 셀렉터로 선택. (#57 투-트랙)
-5. **컨셉 배경 (Concept Background)** — 배경 톤·소품은 상품 컨셉·라벨과 **호응**(예: 인상주의 명화 라벨 → 따뜻 우드+린넷·세이지). 차갑거나 화려한 충돌 배경 금지. (#57)
-6. **하이브리드 (Hybrid 생성/코드)** — 자연 무드 합성 = Firefly 생성(Nano Banana Pro). 결정적 변환(크롭·리사이즈·틴트·harmonize·접지·normalize) = 코드(sharp). 난이도로 SIMPLE(인앱)/COMPLEX(Adobe) 적응 라우팅. 전상품 범용(#55)·비가역0(#46). (#53)
-
----
-
-## 2. 3-Plane 합성 모델
-
-| Plane | 내용 | 도구 |
+| 항목 | v7 (폐기된 1차 경로) | v8 (확정 1차 경로) |
 |---|---|---|
-| 후경 (back) | 페인터리/풍경 디포커스, 라벨 톤과 호응(따뜻 우드+린넷·세이지). | Firefly 생성 |
-| 중경 (mid) | 원목 상판·표면·접지면. 본품 바닥-표면 접촉(컨택트 섀도)로 떠 보이지 않게. | Firefly 생성 |
-| 전경 (front) | **본품(주인공) + 라벨 선명 + 키라이트(상단 좌측) + 드롭/접지 그림자**. 비율·각도는 상품현실시트 앵커. | 레퍼런스 누끼 충실 |
+| 배경 | Firefly가 "빈 플레이트" 생성 | 동일(필요 시) — 단 **제품 합성엔 미사용** |
+| 합성 | 앱이 누끼를 PIL/sharp로 "붙여넣기" | **Firefly 참조 슬롯에 누끼 드롭 → 모델이 장면에 녹임** |
+| 빛·그림자·반사 | 코드로 근사(붙인 티 남) | **모델이 장면 광원에 맞춰 자동 매칭(자연스러움)** |
+| 모델 | (없음) | **Gemini 3.1 (Nano Banana 2)** = 피사체 보존 합성 |
 
-- 모델: **Nano Banana Pro**(제품 사실성·레퍼런스 충실 최강), 대안 FLUX (Firefly web 무료). 비율: 히어로 4:3, 썸네일용 1:1 각 1회. 레퍼런스 업로드 = 본품 누끼. 프롬프트는 **장면+스케일** 기술, 레퍼런스가 **형태** 운반. (2026-06-10 §3)
+근거: PIL 붙여넣기는 빛/반사가 장면과 불일치해 "점점 어색"해진다. Nano Banana 2는 피사체를 보존하면서 장면 광원·접지그림자·반사를 매칭해 자연 합성한다(실측 우선 #45 — 대표 판정이 권위). 제품 형태 변형 리스크는 **삭제가 아니라 가드로 관리**한다(3·4·5장).
+
+**결정론 합성(PIL/sharp)은 삭제되지 않는다 = 하모나이즈 실패 시 안전망**(형태 100% 보존). 1차=하모나이즈, 폴백=결정론. 하이브리드.
 
 ---
 
-## 3. 앱 통합 (C-3 / C-7 / C-9 / C-5)
+## 1. 전상품 이미지 워크플로우 (표준 파이프라인)
+
+```
+STEP 0  무드 도출 : 상품 컨셉(카테고리·소재·태그·USP·톤앤매너) -> AI 무드 후보 6종 자동 제안
+STEP 1  무드 픽   : 운영자가 그리드에서 2~3 픽                         [개입]
+STEP 2  누끼 드롭 : 실사 단품 히어로컷 누끼를 Firefly 참조 슬롯에 드래그   [개입: 드래그 1회]
+STEP 3  하모나이즈: 앱이 장면+배치 프롬프트 주입 -> 생성 -> 후보 2~4 회수  (Claude 운전)
+STEP 4  형태 가드 : 출력 제품영역 vs 누끼 대조 -> 변형 시 플래그/재생성/폴백
+STEP 5  편집 루프 : 거의 좋은데 한 끗 아쉬운 컷 선택 -> 편집뷰 -> 결함만 외과 수정 [개입: 픽+승인]
+STEP 6  적재·픽   : extra_images append(가역) -> 운영자 최종 픽           [개입: 최종 픽]
+```
+
+핵심: 개입은 강제 순서가 아니다. 필요할 때 자연스럽게 떠오르는 표면(Operator Action Queue, #56)으로 노출한다(8장).
+
+---
+
+## 2. 누끼 소스 규칙 (#57 강화)
+
+- 누끼 = **실사 단품 히어로컷만.** 공급사 상세페이지 라인아트/그래픽 목업 누끼 금지(가드: OCR/엣지 그래픽 감지 -> 차단).
+- 정면 기하 필요(차량 송풍구 등) = 정면 단품컷. 프리미엄 3D 무드(정물·갤러리) = 각도 실사컷.
+- 명화 검증 자산: cutout_C(정면 단품, 차량), cutout_B(3D 각도, 정물/갤러리/디테일) — 둘 다 실사 확인됨.
+- 산출 즉시 양쪽 적재(#59). 자산 저장 이름 규약(`cutout.png` 고정, CLAUDE.md §3-6) 준수 — 임의 접두어 금지.
+
+---
+
+## 3. 참조 슬롯 운용 (형태 보존 핵심)
+
+- 모델 = **Gemini 3.1 (Nano Banana 2)** 고정(피사체 보존).
+- 참조 모드 = "피사체/이 이미지 사용" 우선. **구도 전용 모드 지양**(재드로잉 유발).
+- 프롬프트 명시: "참조 제품을 형태·라벨·캡 변형 없이 그대로 두고 장면에 합성. 장면 광원을 제품에 매칭, 접지그림자·반사 추가, 슬랫/주변 사물 대비 작고 사실적인 스케일."
+- **슬롯 위생: 생성 전 참조 슬롯 자동 클리어** + 생성 후 "의도한 누끼만 사용됐는지" 확인(잔존 참조 오염 차단 — 과거 변형 원인).
+
+---
+
+## 4. 형태-정합 가드 (신규)
+
+- 출력 컷의 제품 영역을 누끼와 대조(라벨 텍스트/병 실루엣 매칭 스코어).
+- 임계 미달(변형) -> ① 재생성, ② 프롬프트에 "do not redraw" 강조, ③ 반복 실패 시 **결정론 합성(PIL/sharp) 폴백**.
+- 결정론 합성 = 안전망(형태 100% 보존). 하이브리드 구조의 폴백 레그.
+
+### 4-1. 결정론 폴백 스펙 (sharp, 형태 보존)
+
+하모나이즈 형태 실패 시 자동 진입. 누끼를 변형 없이 배경 위에 합성:
+
+```
+resize        : 상품현실시트 프레임 점유율 가이드에 맞춰 누끼 스케일(과대 금지)
+warm tint     : 8~10% (장면 광원 톤 근사)
+drop shadow   : alpha 0.30~0.40, blur w/24, offset (w/18, w/12)
+contact shadow: ellipse, alpha ~95, blur w/6 (바닥-표면 접지, 떠 보임 방지)
+```
+
+`w` = 누끼 폭(px) 기준 상대값. 결정론 폴백은 형태가 100% 보존되므로 형태 가드(4장) 재검 면제, 단 스케일·접지 점검은 유지.
+
+---
+
+## 5. 편집 루프 (대표 의도 명문화)
+
+- 정의: 거의 완성인데 한 끗 아쉬운 컷을 **선택 -> 편집뷰(`?view=edit`)** 로 넘겨 **결함 부위만** 자연스럽게 수정.
+- **70%+ 완성 컷은 재생성 금지.** 부분 편집(채우기/제거/디테일조절)으로 외과 처치.
+- 예: 끈 오부착 제거, 마개 정리, 접지그림자 보강.
+
+---
+
+## 6. 컷 세트 규칙
+
+- 1 누끼 -> 4컷 기본 / 6컷 확장. 전 컷 동일 제품 정합.
+- 표준 4컷: ① 클린/스튜디오(라벨 가독, 대표급) ② 라이프스타일 A(사용맥락·스케일) ③ 라이프스타일 B(정물·전환) ④ 디테일/스케일.
+- 무드는 상품 컨셉에서 **동적 도출**(고정 템플릿 금지). 한국 SEO/ROI 배경 우선(국내 차종 톤·주거 무드).
+
+---
+
+## 7. 하모나이즈 품질 체크리스트 (전 컷 공통)
+
+- [ ] 제품 형태·라벨·캡 = 누끼와 동일(변형 0)
+- [ ] 스케일 = 배경 사물과 사실적 비례(미니어처·부풀림 금지)
+- [ ] 빛 = 장면 광원 방향 일치, 접지그림자 존재, 반사 자연
+- [ ] 배경 구조 = 물리적으로 가능(불가능 구조 배제)
+- [ ] 부속 정합 = 용도별 정확(송풍구 = 클립, 백미러 = 끈+비드)
+- [ ] 무드 = 컨셉 톤앤매너 일치, 배경 사물 실재화
+
+---
+
+## 8. 운영자 개입 맵 (#56 — 자연 노출, 강제순서 아님)
+
+1. 무드 픽 (후보 6 -> 2~3)
+2. 누끼 드롭 (Firefly 참조 — 드래그 1회)
+3. 최종 컷 픽
+4. 편집 루프 승인 (결함 수정 확인)
+5. 발행 GO (비가역 #46)
+
+전부 Operator Action Queue("개입 대기열")에 **product-agnostic 카드**로 노출(권위: `OPERATOR_SYSTEM_BLUEPRINT.md`).
+
+---
+
+## 9. Firefly 주입기 기술 사양 (Claude 운전부)
+
+- 생성뷰 `firefly.adobe.com/generate/image` / 편집뷰 `?view=edit`. shadow-DOM 재귀 탐침.
+- 모델 = Gemini 3.1 (Nano Banana 2).
+- 생성버튼 = `sp-button` / `role=button` "생성"(네이티브 button 매처 불충분 — 둘 다 포함).
+- 프롬프트 = 첫 textarea(placeholder fallback), 네이티브 value setter + input/change dispatch.
+- **참조 드롭 = 운영자 수행**(file input 보안상 JS 주입 불가, #52). Claude는 프롬프트·생성·폴링·선별·편집 운전.
+- 회수 = sleep 55~65s -> Adobe GenAIAsset createDate desc -> get_presigned_urls(acp) -> inline_preview 판정.
+- 적재 = `apply-composite`/`compose-plate` -> extra_images append(가역).
+
+---
+
+## 10. 앱 통합 (C-3 / C-7 / C-9 / C-5)
 
 | 청크 | 역할 | 상태 |
 |---|---|---|
-| **C-3** `finish-image` | 대표 마무리 단일 라우터: bg-difficulty → SIMPLE 인앱 white-bg / COMPLEX bg_clean seed + apply-cutout 안내. main_image_policy 소비(lifestyle 대표 자기평가 시 dispatch:none·허위 seed 차단)·keepAsExtra. | ✅ 빌드 (feat/finish-image-router, preview READY·병합대기) |
-| **C-7** `apply-composite` | 무드 합성 executor: 누끼+무드(Firefly 회수 or 인앱 sharp) → harmonize/normalize → extra_images 슬롯(가역). | ✅ 라이브 |
-| **C-9** 개입카드 | `source_request`(누끼 소스 부재)·`hero_crop_request`(소스 과소/텍스트)·`firefly_drop`(무드 합성 드롭킷·3-plane 프롬프트). | ✅ 라이브 |
-| **C-5** 스튜디오 마무리 카드 | C-3+C-7+C-9 착지점: 대표 SIMPLE/COMPLEX + 무드/추가 + 개입카드, dry-run before/after·재가드. | ☐ C-3 병합 후 |
+| **C-3** `finish-image` | 대표 마무리 단일 라우터: bg-difficulty -> SIMPLE 인앱 white-bg / COMPLEX bg_clean seed + apply-cutout 안내. main_image_policy 소비·keepAsExtra. | 라이브(a089b12) |
+| **C-7** `apply-composite` | 무드 합성 executor: 누끼+무드(Firefly 회수 or 폴백 sharp) -> harmonize/normalize -> extra_images 슬롯(가역). | 라이브 |
+| **C-9** 개입카드 | `source_request`(누끼 소스 부재)·`hero_crop_request`(소스 과소/텍스트)·`firefly_drop`(무드 합성 드롭킷). | 라이브 |
+| **C-5** 이미지 스튜디오 | 무드보드 + 누끼 드롭 존 + 하모나이즈 큐 + 형태 가드 + 편집 루프 + 4~6컷 빌더. v8 워크플로우 앱 이식. | 세션 2 |
 
-엔진 한 줄: 인제스트 → 상품현실시트 → 누끼 → 대표 마무리(finish-image) → ≥2 무드(apply-composite·Firefly) → seo-guard 재검 → 개입대기열(필요분만 자연 등장) → 적용(가역) → 발행 GO(비가역).
-
----
-
-## 4. 상품별 워크플로 7단계 (= 신규상품 합성 표준 프로세스)
-
-1. **상품현실시트 작성** — 제품정체 육안 확정(#58) + 실측 비율·용량·형태·소재·라벨/핵심셀링(§5).
-2. **누끼 소스 확보** — 공급사 실촬영 단품 히어로컷(완전포함)에서 `image_remove_background` → 투명 PNG. 작은 카드컷·텍스트컷·저해상 금지(#57). 산출 즉시 양쪽 적재(#59).
-3. **대표 마무리** — `finish-image`(C-3) bg-difficulty 판정 → SIMPLE 인앱 white-bg / COMPLEX Adobe cutout → 흰배경 §9 규격(1:1 1000, 본품 70~85%, 텍스트 0).
-4. **무드 설계** — 컨셉에서 무드 ≥2 도출(§6 라이브러리 셀렉터). 사용맥락 + 스튜디오 정물.
-5. **합성 생성** — Firefly Nano Banana Pro 3-plane(레퍼런스=누끼, 스케일·각도 정합, **과대금지**). harmonize·접지그림자·normalize 등 결정적 변환은 코드(sharp).
-6. **적재·적용** — `composite/` 적재(#59) → `apply-composite`(C-7) → extra_images 슬롯(가역). seo-guard 재검 → 개입대기열 자연 호출(C-9).
-7. **검수·발행** — 브라우저 실측(C-6) → 대표 GO → 네이버 발행(비가역 #46).
+엔진 한 줄: 인제스트 -> 상품현실시트 -> 누끼 -> 무드 도출/픽 -> **참조 드롭 -> 하모나이즈** -> 형태 가드 -> (실패 시 결정론 폴백) -> 편집 루프 -> extra_images 적재(가역) -> 발행 GO(비가역 #46).
 
 ---
 
-## 5. 상품현실시트 템플릿 (Product Reality Sheet)
+## 11. 상품현실시트 템플릿 (Product Reality Sheet)
 
 > 합성 전 필수. 과대·왜곡 차단의 앵커. 전상품 1장씩.
 
 | 필드 | 값(예: 명화) |
 |---|---|
-| 상품ID / 상품명 | cmpnooli4… / 명화 디퓨저 |
+| 상품ID / 상품명 | cmpnooli4... / 명화 디퓨저 |
 | 제품정체 (육안 확정 #58) | 인상주의 명화 라벨 차량용 디퓨저(걸이형 사용가능) |
 | 형태 (form-factor) | 걸이형 차량 송풍구 디퓨저 |
 | 실측 치수 W×H×D | (실측 입력, mm) |
@@ -75,14 +154,14 @@
 | 소재 / 마감 | 본체 + 명화 라벨 |
 | 라벨·핵심 셀링포인트 | 인상주의 명화 라벨(또렷이 = 핵심가치) |
 | 사용 맥락 | 차량 송풍구 걸이 / 홈 / 데스크 |
-| 프레임 점유율 가이드 | 대표 70~85%(§9) · 무드 히어로 ~50~55% |
+| 프레임 점유율 가이드 | 대표 70~85%(§9 대표규격) · 무드 히어로 ~50~55% |
 | 금지 | 과대·잘림·텍스트대표·평면 기계겹침 |
 
 ---
 
-## 6. 무드 라이브러리 8 + 셀렉터
+## 12. 무드 라이브러리 8 + 셀렉터
 
-전상품 재사용 무드 8종. 컨셉/카테고리/라벨 톤으로 **≥2 선택**(원칙4).
+전상품 재사용 무드 8종. STEP 0 무드 후보 6종은 이 라이브러리에서 컨셉/카테고리/라벨 톤으로 동적 셀렉트한다.
 
 | # | 무드 | 톤·광원 | 적합 |
 |---|---|---|---|
@@ -92,45 +171,64 @@
 | 4 | **Bright-airy** | 밝고 화사·미니멀 화이트·하이키 | 정보형 추가이미지·기본 연출 |
 | 5 | **Botanical** | 식물·자연광·그린·은은한 잎그림자 | 자연·아로마·플로럴 라벨 |
 | 6 | **Vintage** | 웜그레인·레트로·필름톤 | 클래식·아트·명화 라벨 호응 |
-| 7 | **Studio** | 중립 스튜디오 정물·소프트박스 | 상품 자체 스튜디오컷(대표 2026-06-11) |
+| 7 | **Studio** | 중립 스튜디오 정물·소프트박스 | 상품 자체 스튜디오컷(대표급) |
 | 8 | **Seasonal** | 계절·시즌(봄꽃/여름청량/가을웜/겨울딥) | 시즌 프로모·기획전 |
 
-**셀렉터 규칙**: (a) 라벨/본질 톤과 호응(원칙5) → 1차 무드. (b) 역할 분담(#57) → 전환형(감성, 예: Golden/Dark-luxury) 1 + 정보형(명료, 예: Bright-airy/Studio) 1. (c) 카테고리 기본값 위에 상품 컨셉으로 미세조정. 최소 2개, 과대금지·스케일 정합 공통.
+**셀렉터 규칙**: (a) 라벨/본질 톤과 호응 -> 1차 무드. (b) 역할 분담(#57) -> 전환형(감성, 예: Golden/Dark-luxury) 1 + 정보형(명료, 예: Bright-airy/Studio) 1. (c) 카테고리 기본값 위에 상품 컨셉으로 미세조정. 최소 2개, 과대금지·스케일 정합 공통. 한국 SEO/ROI 배경 우선.
 
 ---
 
-## 7. 명화 정정 프롬프트 — 3무드 (걸이형 15ml · 과대금지)
+## 13. 명화 검증 프롬프트 — 3무드 (걸이형 15ml · 참조 드롭 · 과대금지)
 
-★ **누끼 caveat (#44/#45/#46/#58)**: 레퍼런스 누끼가 **실제 본체 형태·비율과 일치**해야 한다. `2026-06-10` 핸드오프는 기존 `cutout.png`를 reed(유리병+우드캡+리드스틱) 형상으로 육안 기록했고, 본 정정(걸이형 15ml 소형)과 형상이 다르다. 합성 전 **대표 재확인 누끼(실제 걸이형 본체·실비율)** 를 레퍼런스로 사용할 것 — 불일치 시 재누끼/재촬영(그렇지 않으면 프롬프트가 걸이형이어도 산출물에 reed가 남음).
+**누끼 caveat (#44/#45/#46/#58)**: 참조 누끼가 **실제 본체 형태·비율과 일치**해야 한다. 합성 전 대표 재확인 누끼(실제 걸이형 본체·실비율)를 참조로 사용할 것 — 불일치 시 재누끼/재촬영(그렇지 않으면 프롬프트가 걸이형이어도 산출물에 reed가 남음).
 
-공통 규칙: 본품을 **실측 15ml 소형 비율 그대로**(do not enlarge), 명화 라벨을 선명한 주인공으로, 자연 접지그림자, 포토리얼, no text/no watermark. 레퍼런스 누끼가 형태를 운반. 무드 3종 = Golden A(전환·감성) / Fresh B(청량·정보) / Dark-luxury C(프리미엄).
+공통 규칙: 참조 제품을 **실측 15ml 소형 비율 그대로**(do not enlarge, do not redraw), 명화 라벨을 선명한 주인공으로, 자연 접지그림자, 포토리얼, no text/no watermark. **참조 슬롯이 형태를 운반**(프롬프트는 장면·스케일만 기술). 무드 3종 = Golden A(전환·감성) / Fresh B(청량·정보) / Dark-luxury C(프리미엄).
 
 **무드 A — Golden (골든 홈/사용맥락):**
 ```
-Photorealistic product shot of the exact compact 15ml car fragrance diffuser from the reference image, kept at its true small size (do not enlarge), hanging/clipped on a modern car air vent or resting on a warm light-oak surface; impressionist oil-painting label clearly visible and in sharp focus as the hero; soft golden afternoon side-light from the left, long soft shadow to the right, gentle realistic contact shadow; cream and warm-wood background; shallow DOF; warm editorial grade; no text, no watermark. 4:3 and 1:1.
+Using the exact product from the reference image without altering its shape, label,
+or cap, place it into a photorealistic scene: the compact 15ml car fragrance diffuser
+kept at its true small size (do not enlarge, do not redraw), hanging/clipped on a modern
+car air vent or resting on a warm light-oak surface; impressionist oil-painting label
+clearly visible and in sharp focus as the hero; match the scene light to the product,
+soft golden afternoon side-light from the left, long soft shadow to the right, gentle
+realistic contact shadow; cream and warm-wood background; shallow DOF; warm editorial
+grade; no text, no watermark. 4:3 and 1:1.
 ```
 
 **무드 B — Fresh (청량/정보형):**
 ```
-Clean photorealistic studio shot of the exact compact 15ml car fragrance diffuser from the reference image at its true real-world scale (not enlarged), on a bright airy white surface with soft cool daylight; the impressionist painting label crisp and dominant as the hero; minimal fresh background with subtle sage-green accent; gentle contact shadow; high clarity; no text, no watermark. 1:1 and 4:3.
+Using the exact product from the reference image without altering its shape or label,
+place it into a clean photorealistic studio scene: the compact 15ml car fragrance diffuser
+at its true real-world scale (not enlarged, not redrawn), on a bright airy white surface
+with soft cool daylight; the impressionist painting label crisp and dominant as the hero;
+match scene lighting to the product, add a gentle contact shadow; minimal fresh background
+with subtle sage-green accent; high clarity; no text, no watermark. 1:1 and 4:3.
 ```
 
 **무드 C — Dark-luxury (프리미엄):**
 ```
-Premium photorealistic still-life of the exact compact 15ml car fragrance diffuser from the reference image at its true small scale (not enlarged), on a dark matte surface with a soft directional spotlight; deep elegant low-key background; the impressionist painting label glowing in sharp focus as the hero; refined contact shadow and faint reflection; shallow DOF; luxury editorial grade; no text, no watermark. 4:3 and 1:1.
+Using the exact product from the reference image without altering its shape, label, or cap,
+place it into a premium photorealistic still-life: the compact 15ml car fragrance diffuser
+at its true small scale (not enlarged, not redrawn), on a dark matte surface with a soft
+directional spotlight; deep elegant low-key background; the impressionist painting label
+glowing in sharp focus as the hero; match scene light to the product, refined contact shadow
+and faint reflection; shallow DOF; luxury editorial grade; no text, no watermark. 4:3 and 1:1.
 ```
 
-산출물 용도: 추가이미지(2~9)·상세 히어로. 대표(1)는 별도 흰배경 §9. (REP_FINISHING §9, composite recipe §6)
+산출물 용도: 추가이미지(2~9)·상세 히어로. 대표(1)는 별도 흰배경 §9 규격(REP_FINISHING §9).
 
 ---
 
-## 8. 도구 분담 · 비가역 가드
+## 14. 도구 분담 · 비가역 가드
 
-- 누끼 = Adobe MCP `image_remove_background`(복구됨). 자연 무드 합성 = Firefly 웹UI 브라우저 반자동(#52, 파일드롭·생성클릭=대표). 결정적 변환 = 앱 sharp. compositing/gen-bg는 Adobe MCP 영구 미지원(#53). 산출물 영구화(#59).
+- 누끼 = Adobe MCP `image_remove_background`. **자연 무드 합성 = Firefly 웹UI 참조 드롭 + 하모나이즈**(브라우저 반자동 #52, 파일드롭·생성클릭 = 운영자). 결정적 폴백 = 앱 sharp(4-1). compositing/gen-bg는 Adobe MCP 영구 미지원(#53). 산출물 영구화(#59).
 - 비가역 0(#46): 네이버 PUT·발행·Adobe 폴더삭제는 **대표 GO 전 0**. 모든 합성 적용은 가역(DB extra_images 교체·이전 자산 스토리지 보존).
 
 ---
 
 ## 변경 이력
-- 2026-06-11 (v2) — Desktop verbatim 정합(Code): 원칙6(상품진실앵커·3-Plane·스케일각도·컨셉구동 다양무드≥2·컨셉배경·하이브리드)·무드 라이브러리8+셀렉터·명화 정정 3무드(Golden A/Fresh B/Dark-luxury C). 근거 #58/#59 추가 반영.
-- 2026-06-11 (v1) — 신규 작성(저장소 권위문서 합성·대표 리뷰). 전상품 합성 표준 단일화.
+
+- 2026-06-12 (v8) — 전면 개정: **참조 드롭 하모나이즈**(Firefly 참조 슬롯 누끼 드롭 -> Nano Banana 2 하모나이즈)를 1차 경로로 확정, PIL/sharp 붙여넣기를 결정론 폴백으로 강등. 형태-정합 가드(4장)·편집 루프(5장)·Firefly 주입기 사양(9장) 신규. 결정론 폴백 sharp 스펙(4-1) 명문화. 근거 = `HANDOFF_image_workflow_v8_referencedrop_2026-06-12.md` 0~9장 verbatim.
+- 2026-06-11 (v2) — Desktop verbatim 정합: 6원칙·무드 라이브러리8+셀렉터·명화 정정 3무드.
+- 2026-06-11 (v1) — 신규 작성(저장소 권위문서 합성). 전상품 합성 표준 단일화.
