@@ -151,10 +151,34 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ success: false, error: `Background assess failed: ${msg}` }, { status: 500 });
   }
 
+  // The lifestyle-intended policy (C-4) is hoisted above the COMPLEX branch so a
+  // COMPLEX representative the operator deliberately keeps does not seed a cutout
+  // card. usingOwnRep is true when no explicit imageUrl was passed (we assessed
+  // the product's current representative, not an operator-supplied candidate).
+  const policyLifestyle = product.main_image_policy === MAIN_IMAGE_POLICY_LIFESTYLE;
+  const usingOwnRep = !body.imageUrl;
+
   // ── COMPLEX dispatch: in-app white-flatten cannot remove an opaque/colored
   //    background. Route to the Adobe cutout (C-2 /apply-cutout) and seed the
   //    bg_clean job so the operator queue surfaces it. No write to the product. ──
   if (bgDifficulty.mode === 'COMPLEX') {
+    // Policy guard (#46): a lifestyle-intended representative is COMPLEX by design
+    // (e.g. myeonghwa leather). When we are looking at that very representative
+    // (usingOwnRep), seeding a cutout card would be a false intervention. Skip it.
+    // An explicit imageUrl (operator-supplied candidate) still seeds normally.
+    if (policyLifestyle && usingOwnRep) {
+      return NextResponse.json({
+        success: true,
+        productId,
+        mode: 'COMPLEX',
+        dispatch: 'none',
+        applied: false,
+        policyHeld: true,
+        sourceUrl: url,
+        bgDifficulty,
+        note: 'lifestyle main intentionally kept — no cutout needed',
+      });
+    }
     const bgCleanJobId = await seedBgCleanAwaiting(productId);
     return NextResponse.json({
       success: true,
@@ -183,7 +207,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const blockReasons = result.warnings.filter(w => w.severity === 'block');
   const cautions = result.warnings.filter(w => w.severity === 'warn');
-  const policyLifestyle = product.main_image_policy === MAIN_IMAGE_POLICY_LIFESTYLE;
+  // policyLifestyle is hoisted above the COMPLEX branch (still in scope here).
 
   let applied = false;
   let policyHeld = false;
