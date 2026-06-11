@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-11 (rev11 · 합성엔진 권위문서 + C-3 preview READY 반영)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-11 (rev12 · C-3 병합·production 라이브)
 
 > 대표 상시 지시: 요청 개선사항·병행작업 항상 누락 없이 추적. 매 세션 갱신. Desktop 상시 유지. #54·#55·#56 준수.
 
@@ -34,9 +34,9 @@
 | F-진단 | 코드 실측(크롭 완성·누끼 갭) | ✅ DONE(데스크톱) | thumb-crop=완성 / bg_clean=seed만·executor 없음 / seo-guard fail 미연결 |
 | C-1 | 인앱 SIMPLE 누끼(sharp 흰배경 평탄화) + /white-bg 라우트 | ✅ DONE (feat/white-bg-simple 2ff4a77) · Desktop 코드검증완 · ⏸ production 미반영(병합대기) | bg-difficulty/white-bg/route 3파일+CropWarning 확장 read — 로직 정합·공유가드·BACKGROUND_NOT_WHITE 정직플래그(#46)·가역. composite-pipeline에 흡수됨. 라이브 smoke=머지 후 C-6 |
 | C-2 | 어도비 누끼 적용 executor /apply-cutout | ✅ DONE (feat/composite-pipeline cdbb423, tsc0/build) | cutoutUrl→흰배경 합성·가드·적용, bg_clean done 전이. 병렬 가능 |
-| C-3 | finish-image 단일 라우터 + 스키마(extra_images·main_image_policy) | ✅ 빌드 DONE (feat/finish-image-router eaa6a65, tsc0/build) · 🟢 Vercel preview READY · ⏸ 병합대기 | 난이도 분기 dispatch(SIMPLE→인앱 white-bg·COMPLEX→bg_clean seed+apply-cutout 안내)·main_image_policy lifestyle_intended 소비(대표 비덮어쓰기→extra_images park)·keepAsExtra 이전대표 보관. 스키마=C-4/C-7 마이그레이션 완료분 소비만. 회귀0(신규 1파일). 대표 병합 GO → C-5 |
+| C-3 | finish-image 단일 라우터 + 스키마(extra_images·main_image_policy) | ✅ DONE·병합완·production 라이브 (main a089b12 READY) | 난이도 분기 dispatch(SIMPLE→인앱 white-bg·COMPLEX→bg_clean seed+apply-cutout 안내)·main_image_policy lifestyle_intended 소비(COMPLEX+lifestyle+자기대표=dispatch:none·policyHeld·허위 seed 차단 #46)·keepAsExtra 이전대표 보관. 스키마=C-4/C-7 마이그레이션 소비만. 회귀0. Desktop dry-run 재검증 기대: 명화(가죽)=dispatch:none·policyHeld:true |
 | C-4 | seo-guard→개입대기열 연결 + override 강등 | ✅ DONE·라이브검증완(세션3) | lifestyle_intended info 강등 production 엔드포인트 before/after 실측(fail->info·ok false->true). 매트릭스 인과 직독 확정 |
-| C-5 | 스튜디오 '대표이미지 마무리' 통합 카드 + 컨트롤타워 배치 | ☐ Code(C-3·C-4 후) | 자동다듬기/크롭/추가이미지, dry-run before→after, 재가드 |
+| C-5 | 스튜디오 '대표이미지 마무리' 통합 카드 + 컨트롤타워 배치 | ☐ Code — C-3 병합완·착수 가능 | finish-image(대표 SIMPLE/COMPLEX)+apply-composite(무드/추가)+C-9 카드 착지점 통합. dry-run before→after·재가드. 권위=ADAPTIVE_COMPOSITE_ENGINE.md |
 | C-6 | 브라우저 실무 테스트(3상품 전 흐름) | ☐ 데스크톱(C-5 후, 병합 후) | 무오류 확인 후 다음 본작업 |
 | F-규격 | 대표이미지 규격 표준(§9) 박제 | ✅ DONE(데스크톱) | 첨부 레퍼런스(흰배경 본품샷)→ 1:1 1000·순백·본품 70~85%·텍스트0·OCR0. 전상품 적용. REPRESENTATIVE_IMAGE_FINISHING §9 |
 | F-합성 | 명화 무드 합성(추가이미지/상세 히어로) | 🟡 #2(9T0) 합성본 폐기(형태오류·클립·과대) → 정정프롬프트 발행 + 엔진화(ADAPTIVE_COMPOSITE_ENGINE.md) · Firefly 트랙2 실비율 누끼 대기(#52) | 폐기 사유=소형 본품(걸이형 15ml)을 대형 렌더 → 라벨 뭉갬·비율 깨짐. 정정=상품진실 앵커(#61)·실측 비율·≥2무드(걸이형 사용맥락+스튜디오 정물). ★누끼진실성: 2026-06-10 reed 육안기록과 정정(걸이형) 불일치 → 실비율 누끼 재확인 후 합성. 명화 정정 2무드 프롬프트=ADAPTIVE_COMPOSITE_ENGINE §6 |
