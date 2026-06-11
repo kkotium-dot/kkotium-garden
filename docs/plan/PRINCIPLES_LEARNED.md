@@ -748,6 +748,18 @@ grep -c "id: '" src/lib/automation-registry.ts
 - **앱 적용**: C-7 apply-composite(extra_images 슬롯)·C-8 멀티슬롯 매니저에 본 표준 반영. 합성 소스 선택 UI에 '실촬영 히어로컷' 우선 표기. 권위: HANDOFF_myeonghwa_composite_recipe §4.
 
 
+## 작업원칙 #58 — 제품 정체 우선 검증 (2026-06-11 학습, 명화 리드목업 사고)
+
+**규칙**: 이미지 작업(누끼·합성·상세) 전 **공급사 실상세(detail-source)로 진짜 제품을 먼저 육안 확정**하고 MD에 제품정체 1줄 박제. Supabase/생성폴더의 기존 이미지를 제품으로 가정 금지(AI목업 혼입 함정 — 명화 리드목업 사고). 전상품 영구구조(#55). 권위 = docs/playbook/CUTOUT_HERO_STANDARD.md·HANDOFF_2026-06-10_PRODUCT-IDENTITY-RECOVERY.md.
+
+## 작업원칙 #59 — 산출물 영구화 (2026-06-11 학습, 끊김 방지)
+
+**규칙**: 누끼/합성/실소스 산출 즉시 ①프로젝트 `assets/generated/{pid}/cutout|composite/` ②Supabase `{pid}/cutout|composite/` **양쪽 적재**. Claude 환경/다운로드만으로 두면 유실(세션 끊김 원인). MCP는 Storage 업로드 불가 → Supabase 적재는 Code 1스텝. 전상품(#55).
+
+## 작업원칙 #60 — 세션 진입 시 HEAD 대조 후 pull (2026-06-11 제안, EOD 드리프트 방지)
+
+**규칙**: 새 세션 진입 시 **Vercel production HEAD vs 로컬 HEAD를 먼저 대조** — 다르면 편집 전 `git pull`. (EOD 핸드오프가 production보다 뒤처진 사례를 #45가 적발 → 본 원칙으로 사전 차단.) STEP 0 환경 점검(verify-vercel-deploy)과 정합.
+
 ## 작업원칙 #61 — 합성 표준: 상품진실 앵커 + 3-Plane 리얼리즘 + ≥2무드 (2026-06-11 대표 확정)
 
 **규칙**: 본품 무드 합성은 상품의 **실측 비율·형태에 충실**하게(과대·왜곡·잘림 금지 = "상품진실 앵커"), 스튜디오 촬영처럼 **현실감 있게**(3-plane 후경/중경/전경·접지그림자·키라이트), **상품마다 ≥2 무드**(사용맥락 + 스튜디오 정물). 전상품 합성 표준(#55). 권위 = docs/design/ADAPTIVE_COMPOSITE_ENGINE.md.
@@ -755,4 +767,4 @@ grep -c "id: '" src/lib/automation-registry.ts
 - **누끼 진실성**: 레퍼런스 누끼가 실제 본체 형태·비율과 일치(불일치 시 재누끼). 명화 #2(9T0) 폐기 = 형태오류(클립)·과대 → 본 원칙으로 차단.
 - **생성=Firefly·결정적변환=코드**: 자연 합성은 Firefly Nano Banana Pro(3-plane), harmonize/normalize/접지는 sharp. Pillow 기계겹침 폐기. (#52·#53·#57 재확인)
 - **앱 적용**: finish-image(C-3)·apply-composite(C-7)·개입카드(C-9)·스튜디오 마무리 카드(C-5)가 본 표준 소비.
-- 비고: 작업원칙 #58~#60은 핸드오프/TASK_BRIDGE에 기록됨(정식 등재 보류) — 번호 정합은 대표 확인 시 백필.
+- 번호 정합: #58(제품정체 우선)·#59(산출물 영구화)·#60(세션 HEAD 대조) 정식 등재 완료(갭 해소).
