@@ -12,7 +12,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import {
   CheckCircle2, Loader2, Clock, XCircle, MinusCircle, ArrowRight, LayoutGrid, AlertTriangle, Hand,
-  ChevronDown,
+  ChevronDown, Copy, Check,
 } from 'lucide-react';
 import strings from '@/lib/i18n/control-tower-strings.ko.json';
 
@@ -80,6 +80,26 @@ interface ActionQueueItem {
   stage: string;
   deepLink: string;
   detail?: string;
+  // C-9 precise intervention (asset_jobs.intervention_type/payload).
+  interventionType?: string;
+  payload?: unknown;
+}
+
+// C-9 payload shapes (pass-through from src/lib/jobs/intervention.ts).
+interface FireflyDropPayload {
+  dropkitPath?: string;
+  promptTrack1?: string;
+  promptTrack2?: string;
+  model?: string;
+  ratio?: string;
+}
+interface HeroCropPayload {
+  minEdge?: number;
+  longestEdge?: number;
+  textDetected?: boolean;
+}
+interface SourceRequestPayload {
+  supplierUrl?: string | null;
 }
 
 interface MatrixRow {
@@ -444,13 +464,163 @@ const CATEGORY_STYLE: Record<ActionCategory, { bg: string; border: string; text:
 // Most urgent first (GO), then paused auth, then decisions, then autonomous.
 const CATEGORY_ORDER: ActionCategory[] = ['GO_PENDING', 'AUTH', 'INPUT_DECISION', 'AUTO'];
 
+// C-9 intervention label map (stable type key → Korean one-liner). Falls back
+// to the generic category labels when the item carries no intervention.
+const IV = m.intervention as {
+  expand: string; collapse: string; copy: string; copied: string;
+  firefly_drop: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string };
+  hero_crop_request: { label: string; lead: string; minEdge: string; longestEdge: string; textFlag: string };
+  source_request: { label: string; lead: string; url: string };
+};
+
+function interventionLabel(type: string | undefined): string | null {
+  if (type === 'firefly_drop') return IV.firefly_drop.label;
+  if (type === 'hero_crop_request') return IV.hero_crop_request.label;
+  if (type === 'source_request') return IV.source_request.label;
+  return null;
+}
+
 function actionLabel(item: ActionQueueItem): string {
   const aq = m.actionQueue;
+  // C-9 — a precise intervention names itself; prefer it over the generic label.
+  const iv = interventionLabel(item.interventionType);
+  if (iv) return iv;
   if (item.category === 'AUTH') return aq.authImage;
   if (item.category === 'AUTO') return item.stage === 'processing' ? aq.processing : aq.monitor;
   // INPUT_DECISION / GO_PENDING reuse the nextAction one-line labels.
   const base = (m.nextAction as Record<string, string>)[item.stage] ?? item.stage;
   return item.detail ? `${base} (${item.detail})` : base;
+}
+
+// Inline copy-to-clipboard button (no forced modal — #56).
+function CopyText({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        navigator.clipboard?.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        }).catch(() => { /* insecure context — ignore */ });
+      }}
+      className="inline-flex items-center gap-1 rounded border border-slate-200 px-1.5 py-0.5 text-[10px] text-slate-500 hover:bg-slate-50"
+    >
+      {copied ? <Check size={10} className="text-green-600" /> : <Copy size={10} />}
+      {copied ? IV.copied : IV.copy}
+    </button>
+  );
+}
+
+// C-9 intervention detail — rendered inline (expandable, never a forced modal).
+function InterventionDetail({ type, payload }: { type: string; payload: unknown }) {
+  const p = (payload ?? {}) as FireflyDropPayload & HeroCropPayload & SourceRequestPayload;
+  if (type === 'firefly_drop') {
+    return (
+      <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
+        <p className="text-slate-500">{IV.firefly_drop.lead}</p>
+        {p.dropkitPath && (
+          <div className="flex items-center gap-1.5">
+            <span className="shrink-0 text-slate-400">{IV.firefly_drop.dropkit}:</span>
+            <code className="truncate rounded bg-slate-50 px-1 py-0.5 text-[10px] text-slate-600">{p.dropkitPath}</code>
+            <CopyText text={p.dropkitPath} />
+          </div>
+        )}
+        {p.promptTrack1 && (
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-slate-400">{IV.firefly_drop.prompt1}</span>
+              <CopyText text={p.promptTrack1} />
+            </div>
+            <p className="mt-0.5 rounded bg-slate-50 px-1.5 py-1 text-[10px] leading-snug text-slate-600">{p.promptTrack1}</p>
+          </div>
+        )}
+        {p.promptTrack2 && (
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-slate-400">{IV.firefly_drop.prompt2}</span>
+              <CopyText text={p.promptTrack2} />
+            </div>
+            <p className="mt-0.5 rounded bg-slate-50 px-1.5 py-1 text-[10px] leading-snug text-slate-600">{p.promptTrack2}</p>
+          </div>
+        )}
+        <div className="flex gap-3 text-[10px] text-slate-400">
+          {p.model && <span>{IV.firefly_drop.model}: {p.model}</span>}
+          {p.ratio && <span>{IV.firefly_drop.ratio}: {p.ratio}</span>}
+        </div>
+      </div>
+    );
+  }
+  if (type === 'hero_crop_request') {
+    return (
+      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
+        <p className="text-slate-500">{IV.hero_crop_request.lead}</p>
+        <div className="flex gap-3 text-[10px] text-slate-400">
+          {p.minEdge != null && <span>{IV.hero_crop_request.minEdge}: {p.minEdge}</span>}
+          {p.longestEdge != null && <span>{IV.hero_crop_request.longestEdge}: {p.longestEdge}</span>}
+        </div>
+        {p.textDetected && <p className="text-[10px] text-amber-600">{IV.hero_crop_request.textFlag}</p>}
+      </div>
+    );
+  }
+  if (type === 'source_request') {
+    return (
+      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
+        <p className="text-slate-500">{IV.source_request.lead}</p>
+        {p.supplierUrl && (
+          <div className="flex items-center gap-1.5">
+            <span className="shrink-0 text-slate-400">{IV.source_request.url}:</span>
+            <code className="truncate rounded bg-slate-50 px-1 py-0.5 text-[10px] text-slate-600">{p.supplierUrl}</code>
+          </div>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
+
+function ActionQueueCard({ item }: { item: ActionQueueItem }) {
+  const [open, setOpen] = useState(false);
+  const s = CATEGORY_STYLE[item.category];
+  const hasIntervention = Boolean(item.interventionType);
+  return (
+    <div className="block rounded-lg border bg-white p-2.5" style={{ borderColor: s.border }}>
+      <a href={item.deepLink} className="block no-underline hover:opacity-90">
+        <span
+          className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold"
+          style={{ backgroundColor: s.bg, border: `1px solid ${s.border}`, color: s.text }}
+        >
+          {aqCategory(item.category)}
+        </span>
+        <p className="mt-1 truncate text-xs font-semibold text-slate-700" title={item.productName}>
+          {item.productName}
+        </p>
+        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-500">
+          <ArrowRight size={11} className="shrink-0" />
+          <span className="truncate">{actionLabel(item)}</span>
+        </p>
+      </a>
+      {hasIntervention && (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-slate-400 hover:text-slate-600"
+          >
+            <ChevronDown size={10} className={open ? 'rotate-180 transition' : 'transition'} />
+            {open ? IV.collapse : IV.expand}
+          </button>
+          {open && <InterventionDetail type={item.interventionType as string} payload={item.payload} />}
+        </>
+      )}
+    </div>
+  );
+}
+
+function aqCategory(c: ActionCategory): string {
+  return m.actionQueue.category[c];
 }
 
 function OperatorActionQueue({ items }: { items: ActionQueueItem[] }) {
@@ -466,31 +636,9 @@ function OperatorActionQueue({ items }: { items: ActionQueueItem[] }) {
         <span className="text-[11px] text-slate-400">{aq.subtitle}</span>
       </div>
       <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
-        {sorted.map((item) => {
-          const s = CATEGORY_STYLE[item.category];
-          return (
-            <a
-              key={item.productId}
-              href={item.deepLink}
-              className="block rounded-lg border bg-white p-2.5 no-underline hover:opacity-90"
-              style={{ borderColor: s.border }}
-            >
-              <span
-                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold"
-                style={{ backgroundColor: s.bg, border: `1px solid ${s.border}`, color: s.text }}
-              >
-                {aq.category[item.category]}
-              </span>
-              <p className="mt-1 truncate text-xs font-semibold text-slate-700" title={item.productName}>
-                {item.productName}
-              </p>
-              <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-500">
-                <ArrowRight size={11} className="shrink-0" />
-                <span className="truncate">{actionLabel(item)}</span>
-              </p>
-            </a>
-          );
-        })}
+        {sorted.map((item) => (
+          <ActionQueueCard key={item.productId} item={item} />
+        ))}
       </div>
     </div>
   );

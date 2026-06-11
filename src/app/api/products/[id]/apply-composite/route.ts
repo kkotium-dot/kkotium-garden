@@ -23,9 +23,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { compositeMood, normalizeExtraImage, type ExtraFormat } from '@/lib/images/composite';
-import { uploadAutomationAsset } from '@/lib/storage/automation-storage';
+import { uploadAutomationAsset, listProductAssets } from '@/lib/storage/automation-storage';
 import { safeVariant } from '@/lib/storage/asset-taxonomy';
-import { PRODUCT_COMPOSITE } from '@/lib/jobs/job-type-routing';
+import { BG_CLEAN, PRODUCT_COMPOSITE } from '@/lib/jobs/job-type-routing';
+import {
+  setJobIntervention,
+  buildFireflyDropPayload,
+  buildSourceRequestPayload,
+  INTERVENTION_FIREFLY_DROP,
+  INTERVENTION_SOURCE_REQUEST,
+} from '@/lib/jobs/intervention';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -42,6 +49,11 @@ interface Body {
   warmth?: number;
   slotLabel?: string;
   confirm?: boolean;
+  // C-9: request the Firefly-drop intervention card instead of executing a
+  // composite now (the operator has not produced a Firefly result yet). Seeds a
+  // product_composite job to awaiting_human + firefly_drop, or source_request
+  // when no cutout source exists. Additive — ignored by existing callers.
+  requestFireflyDrop?: boolean;
 }
 
 async function fetchBuffer(url: string): Promise<{ buf?: Buffer; status: number }> {
@@ -63,6 +75,39 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const product = await prisma.product.findUnique({ where: { id: productId }, select: { id: true } });
   if (!product) {
     return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
+  }
+
+  // C-9 firefly-drop entry: surface the precise drop card (dropkit path +
+  // 3-plane prompts) so the operator runs Firefly in-app instead of an
+  // out-of-band handoff. When no cutout source exists yet → source_request.
+  // Purely additive: callers passing cutoutUrl/compositeUrl never reach here.
+  if (body.requestFireflyDrop === true) {
+    let hasCutout = false;
+    try {
+      const assets = await listProductAssets(productId);
+      hasCutout = assets.some(a => a.stage === 'cutout');
+    } catch { /* listing is best-effort — default to firefly_drop */ hasCutout = true; }
+
+    if (!hasCutout) {
+      const seeded = await setJobIntervention({
+        productId, jobType: BG_CLEAN, type: INTERVENTION_SOURCE_REQUEST,
+        payload: buildSourceRequestPayload({ productId }), tool: 'sharp',
+      });
+      return NextResponse.json({
+        success: true, productId, applied: false, interventionRequired: true,
+        interventionType: INTERVENTION_SOURCE_REQUEST, interventionJobId: seeded?.jobId ?? null,
+        reason: 'no_cutout_source',
+      });
+    }
+    const seeded = await setJobIntervention({
+      productId, jobType: PRODUCT_COMPOSITE, type: INTERVENTION_FIREFLY_DROP,
+      payload: buildFireflyDropPayload(productId), tool: 'firefly',
+    });
+    return NextResponse.json({
+      success: true, productId, applied: false, interventionRequired: true,
+      interventionType: INTERVENTION_FIREFLY_DROP, interventionJobId: seeded?.jobId ?? null,
+      payload: buildFireflyDropPayload(productId),
+    });
   }
 
   const format: ExtraFormat = body.format === '4x5' ? '4x5' : '1x1';

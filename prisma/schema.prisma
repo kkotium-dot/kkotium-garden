@@ -820,6 +820,11 @@ model AssetJob {
   maxRetries      Int       @default(3) @map("max_retries")
   inputRefs       Json?     @map("input_refs")
   outputRefs      Json?     @map("output_refs")
+  // C-9 operator intervention cards (migration c9_intervention_fields, 2026-06-11).
+  //   interventionType: source_request | hero_crop_request | firefly_drop (null = none)
+  //   interventionPayload: dropkit path / prompt / crop guide / source url
+  interventionType    String? @map("intervention_type")
+  interventionPayload Json?   @map("intervention_payload")
   blockedReason   String?   @map("blocked_reason")
   assignedSession String?   @map("assigned_session")
   heartbeatAt     DateTime? @map("heartbeat_at")

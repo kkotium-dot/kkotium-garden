@@ -164,6 +164,35 @@ export async function GET() {
     // else: main_image_policy not migrated — no overrides applied.
   }
 
+  // C-9 intervention overlay (separate guarded query so the possibly-unmigrated
+  // intervention columns never break the job-status overlay above, #50). The
+  // latest awaiting_human IMAGE-track job per product names the precise card.
+  const interventionById = new Map<string, { type: string; payload?: unknown }>();
+  const IMAGE_LANES = ['generate', 'process', 'compose'];
+  try {
+    const ijobs = await prisma.assetJob.findMany({
+      where: {
+        productId: { in: ids },
+        status: 'awaiting_human',
+        lane: { in: IMAGE_LANES },
+        interventionType: { not: null },
+      },
+      select: { productId: true, interventionType: true, interventionPayload: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    for (const j of ijobs) {
+      // First per product wins (desc → latest).
+      if (!interventionById.has(j.productId) && j.interventionType) {
+        interventionById.set(j.productId, { type: j.interventionType, payload: j.interventionPayload ?? undefined });
+      }
+    }
+  } catch (e: unknown) {
+    const code = (e as { code?: string })?.code;
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!(code === 'P2021' || code === 'P2022' || /does not exist|column/i.test(msg))) throw e;
+    // else: intervention columns not migrated — generic AUTH card stands (no regression).
+  }
+
   // 4. Compute each row via the SoT engine.
   const counts: Record<Overall, number> = { risk: 0, attention: 0, caution: 0, ok: 0, none: 0 };
   const rows = products.map((dbProduct) => {
@@ -189,6 +218,7 @@ export async function GET() {
       hasSourceDetail: !!(dbProduct as { source_detail_url?: string | null }).source_detail_url,
       sourceDetailGood: sourceDetailGoodById.get(dbProduct.id) ?? false,
       mainImagePolicy: mainImagePolicyById.get(dbProduct.id) ?? null,
+      imageJobIntervention: interventionById.get(dbProduct.id) ?? null,
     });
     counts[row.overall]++;
 

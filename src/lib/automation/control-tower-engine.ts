@@ -148,6 +148,11 @@ export interface ActionQueueItem {
   stage: string;          // stable English stage key (UI maps to Korean)
   deepLink: string;       // 1-click target screen
   detail?: string;        // optional data token (e.g. missing attributes)
+  // C-9 precise intervention (asset_jobs.intervention_type/payload). Both
+  // optional — present only when the active image job carries an intervention,
+  // so existing consumers/callers are unaffected (hero_crop/source/firefly).
+  interventionType?: string;
+  payload?: unknown;      // pass-through for the card (dropkit path/prompt/guide)
 }
 
 export interface ControlTowerRow {
@@ -197,7 +202,18 @@ export interface ComputeContext {
   // representative step (operator keeps a non-white-bg hero). null when unset /
   // column not migrated.
   mainImagePolicy?: string | null;
+  // C-9: the active image-track job's intervention (asset_jobs.intervention_type
+  // / intervention_payload), null when none. The route loads the latest
+  // awaiting_human image job and passes it so the queue renders a precise card
+  // (firefly_drop / hero_crop_request / source_request) instead of generic AUTH.
+  imageJobIntervention?: { type: string; payload?: unknown } | null;
 }
+
+// C-9 intervention type keys (mirror src/lib/jobs/intervention.ts — duplicated
+// as plain strings to keep this module dependency-free / pure).
+const IV_SOURCE_REQUEST = 'source_request';
+const IV_HERO_CROP_REQUEST = 'hero_crop_request';
+const IV_FIREFLY_DROP = 'firefly_drop';
 
 /** Two-branch source strategy from the split quality eval (blueprint §3). */
 function deriveSourceStrategy(
@@ -361,7 +377,7 @@ export function computeControlTowerRow(
 
   const overall = overallOf([image.status, publish.status]);
   const nextAction = computeNextAction(product, publish, image, registered, line.value, applyStatus, ctx.mainImagePolicy);
-  const actionQueue = computeActionQueueItem(product.id, product.name, image, nextAction);
+  const actionQueue = computeActionQueueItem(product.id, product.name, image, nextAction, ctx.imageJobIntervention ?? null);
 
   return { productId: product.id, name: product.name, publish, image, line, applyStatus, actionQueue, overall, nextAction };
 }
@@ -378,8 +394,26 @@ export function computeActionQueueItem(
   productName: string,
   image: ImageInfo,
   nextAction: NextAction | null,
+  intervention?: { type: string; payload?: unknown } | null,
 ): ActionQueueItem {
   const base = { productId, productName };
+  // C-9 — a precise image-track intervention. When the awaiting_human job names
+  // WHICH intervention, render the precise card (drop / crop / source) instead
+  // of the generic AUTH card. firefly_drop is a paused creative-tool handoff
+  // (AUTH); hero_crop / source need an operator input/decision (INPUT_DECISION).
+  if (image.status === 'awaiting_human' && intervention) {
+    const iv = { interventionType: intervention.type, payload: intervention.payload };
+    if (intervention.type === IV_FIREFLY_DROP) {
+      return { ...base, category: 'AUTH', stage: IV_FIREFLY_DROP, deepLink: `/studio?product=${productId}`, ...iv };
+    }
+    if (intervention.type === IV_HERO_CROP_REQUEST) {
+      return { ...base, category: 'INPUT_DECISION', stage: IV_HERO_CROP_REQUEST, deepLink: `/studio?product=${productId}`, ...iv };
+    }
+    if (intervention.type === IV_SOURCE_REQUEST) {
+      return { ...base, category: 'INPUT_DECISION', stage: IV_SOURCE_REQUEST, deepLink: `/products/${productId}`, ...iv };
+    }
+    // Unknown intervention type — fall through to the generic AUTH card below.
+  }
   // AUTH — a creative connector / external login is waiting on the operator.
   if (image.status === 'awaiting_human') {
     return { ...base, category: 'AUTH', stage: 'auth_image', deepLink: `/products/${productId}/swap` };

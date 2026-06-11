@@ -24,6 +24,12 @@ import { safeVariant } from '@/lib/storage/asset-taxonomy';
 import { transitionJob, type JobStatus } from '@/lib/jobs/asset-job-state';
 import { BG_CLEAN } from '@/lib/jobs/job-type-routing';
 import { REAL_HERO_CUT_GUIDANCE } from '@/lib/images/finishing-guidance';
+import {
+  setJobIntervention,
+  buildHeroCropPayload,
+  INTERVENTION_HERO_CROP_REQUEST,
+  HERO_MIN_EDGE,
+} from '@/lib/jobs/intervention';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -121,6 +127,40 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const blockReasons = result.warnings.filter(w => w.severity === 'block');
   const cautions = result.warnings.filter(w => w.severity === 'warn');
+
+  // C-9 hero-crop gate (CUTOUT_HERO_STANDARD §3): when the cutout source is too
+  // small to upscale cleanly (longest edge < 300px) OR carries text (OCR), the
+  // source is not a usable hero — request a fresh crop instead of finishing a
+  // degraded representative. Seeds the bg_clean job to awaiting_human +
+  // hero_crop_request so the operator gets a precise card. Additive: a good
+  // source is untouched (regression 0).
+  const longestEdge = Math.max(result.source.width, result.source.height);
+  const textDetected = typeof result.ocrText === 'string' && result.ocrText.trim().length > 0;
+  const lowQualitySource = (longestEdge > 0 && longestEdge < HERO_MIN_EDGE) || textDetected;
+  if (lowQualitySource) {
+    const seeded = await setJobIntervention({
+      productId,
+      jobType: BG_CLEAN,
+      type: INTERVENTION_HERO_CROP_REQUEST,
+      payload: buildHeroCropPayload({ longestEdge, textDetected }),
+      tool: 'adobe_express',
+    });
+    return NextResponse.json({
+      success: true,
+      productId,
+      applied: false,
+      interventionRequired: true,
+      interventionType: INTERVENTION_HERO_CROP_REQUEST,
+      interventionJobId: seeded?.jobId ?? null,
+      reason: textDetected ? 'text_in_source' : 'source_too_small',
+      longestEdge,
+      minEdge: HERO_MIN_EDGE,
+      ocrText: result.ocrText,
+      sourceGuidance: REAL_HERO_CUT_GUIDANCE,
+      // Preview still returned so the operator can see why it was rejected.
+      preview: `data:image/jpeg;base64,${result.buffer.toString('base64')}`,
+    });
+  }
 
   let applied = false;
   let mainImageUrl: string | null = null;

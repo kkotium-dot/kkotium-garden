@@ -199,6 +199,33 @@
       "authImage": "창작 도구 로그인·생성 (Firefly/Express)",
       "processing": "파이프라인 자동 진행 중",
       "monitor": "이상 없음 — 모니터링"
+    },
+    "intervention": {
+      "expand": "개입 상세 보기",
+      "collapse": "접기",
+      "copy": "복사",
+      "copied": "복사됨",
+      "firefly_drop": {
+        "label": "Firefly 무드 합성 드롭",
+        "lead": "아래 누끼를 Firefly에 드롭하고 프롬프트로 생성하세요 (모델·비율 권장값 적용).",
+        "dropkit": "드롭킷 경로",
+        "prompt1": "트랙1 프롬프트 (정보형)",
+        "prompt2": "트랙2 프롬프트 (감성형)",
+        "model": "모델",
+        "ratio": "비율"
+      },
+      "hero_crop_request": {
+        "label": "히어로 크롭 요청",
+        "lead": "누끼용 히어로컷을 잘라 올려주세요 — 본품 완전포함·실사·텍스트 없음.",
+        "minEdge": "최소 변(px)",
+        "longestEdge": "현재 최장변(px)",
+        "textFlag": "텍스트 검출됨 — 글자 없는 컷 필요"
+      },
+      "source_request": {
+        "label": "상세 원본 필요",
+        "lead": "상세 원본(공급사)이 없어요. 상세 URL 또는 파일을 제공해주세요.",
+        "url": "상세 원본 URL"
+      }
     }
   }
 }
