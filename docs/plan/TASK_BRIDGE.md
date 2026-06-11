@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-11 (77) /assets cutout=0 P1 버그 수정 빌드·배포 (FROM 💻 Code, production d594d85, 가역·additive)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | Desktop 진단·수정(automation-storage.ts listProductAssets.collect). 직전 (76)서 cutout 3건 업로드했으나 /assets가 cutout=0 노출하던 P1. |
+| 근본원인 | Supabase Storage list()에 sortBy:{column:'created_at'}를 중첩 prefix({pid}/cutout)에 주면 빈 배열 반환(이 프로젝트 storage 버전 quirk) → root는 통과·중첩 스테이지 0건. 게다가 'if(error||!data) return'이 에러를 묵살해 한 세션 내내 은폐. |
+| 수정 ✅ | sortBy {column:'name', order:'asc'}로 교체(name 정렬은 안정적) + error를 console.error 로깅 후 return(묵살 제거). diff 직독 명세 일치. |
+| 검증 ✅ | npx tsc 0 · npm run build exit 0(Compiled successfully). push d594d85 · verify-vercel-deploy OK · gh deploy status success. ★라이브 재검증: GET /assets → {source:0, cutout:3, composite:0, thumb:0, detail:0, archive:0, root:10} — cutout=3 통과(0 아님). |
+| 다음 | [Desktop] 생성에셋위치 카드 Chrome 실측(cutout 3컷 썸네일) + Firefly 무드 합성(트랙2·RECOVERY §4) → composite/ 적재. |
+
 ### 2026-06-11 (76) 명화 진짜 누끼 v2 3종 {pid}/cutout/ 영구화 (FROM 💻 Code, 가역·additive, #59)
 
 | 항목 | 상태 |
