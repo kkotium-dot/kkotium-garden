@@ -72,6 +72,28 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-11 (75) storage-visibility 미커밋 작업분 검증 + main 직접 커밋 (FROM 💻 Code, 비가역 0·코드 additive)
+
+| 항목 | 상태 |
+|---|---|
+| 진단 확인 ✅ | feat/asset-storage-visibility 작업분은 커밋 이력 0 — 전부 working tree(M 5 + untracked 9). 브랜치는 main과 동일 SHA(5e2cce2)의 빈 껍데기 → 대표 지시대로 main 직접 커밋·브랜치 삭제. |
+| 코드 직독 ✅ | NEW GET /api/products/[id]/assets(읽기전용·listProductAssets 래핑·스테이지별 그룹+legacy root·mutation 0) + GeneratedAssetLocations 카드(상품 상세 마운트·한글 .strings.ko.json 분리 #35·Lucide만·이모지 0). AssetKind 'source' 단계 additive 확장(asset-taxonomy 00_source·automation-storage 타입/주석). .gitignore assets/generated/ 제외(캐논=Supabase #59). |
+| 검증 ✅ | npx tsc --noEmit 0 errors · npm run build exit 0(/api/products/[id]/assets ƒ 등록). 비가역 0(네이버 0·DB 0·읽기전용). |
+| 커밋 | main 직접 2건 분리(src+.gitignore=feat / docs=RECOVERY·플레이북·핸드오프·TASK_BRIDGE (74)(75)) + feat/asset-storage-visibility 브랜치 삭제 + push. SHA·Vercel READY는 push 후 hand-off 메시지로 회신(#36·#45). |
+| 다음 | Desktop 교차검증(production SHA + /products/[id] 생성에셋위치 카드 Chrome 실측) → RECOVERY §5(진짜 누끼 재추출→{pid}/cutout/ 업로드). |
+
+### 2026-06-11 (74) 명화 리드목업 3건 Supabase 삭제 실행 (FROM 💻 Code, 대표 GO 확인, 비가역 1건 실행·검증 통과)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | HANDOFF_2026-06-10_PRODUCT-IDENTITY-RECOVERY.md §2(폐기 대상)·§6-1(붙여넣기 문구) + 세션 내 대표 GO 확인. 직전 cutout-fix 핸드오프의 "정확한 제품" 기록은 RECOVERY §8이 명시 대체(리드디퓨저 전제 오류). |
+| 사전점검 ✅ | 3/3 실재 + 육안 확정(#45/#58): cutout.png=myeonghwa-cutout.png SHA256 동일(253x776 RGBA)·myeonghwa-main-1000.jpg 1000² — 전부 리드디퓨저 AI목업(실상품=디스이즈 차량 클립형 아님). DB 참조 0건: Product.mainImage=thumb-cropmain-1780913225888·detail_image_url=detail-source-1780914984379(둘 다 보존군). 유일 참조 asset_jobs aj_mh_gen_001=cancelled(과거 메타·무해). |
+| 백업 ✅ | ~/Desktop/kkotium-asset-backup/2026-06-11-myeonghwa-reed-mockup/ 3건 다운로드·사이즈/SHA256 대조 일치(레포 외부=working tree 무오염). |
+| 삭제 실행 ✅ | Storage API DELETE 3건 success(GO 후). 재조회 검증: 폴더 잔존 10건=보존군 전부 무사(detail-source 2·thumb 4·backdrop 2·detail-S6 1·myeonghwa-backdrop-860)·삭제대상 잔존 0건. |
+| 영향(의도됨) | 엔진 고정명 cutout.png 조회 → 진짜 누끼 재추출·{pid}/cutout/ 업로드 전까지 공급사 fallback. 잘못된 목업 누끼 사용 차단이 목적이라 RECOVERY 플랜 정합. |
+| ★ flag(#34) | myeonghwa-backdrop-860.jpg가 삭제된 목업과 동일 배치(06-04 05:43) 업로드분 — 목업 연관 의심. 삭제 지시 3건에 미포함이라 보존, Desktop 육안확인 후 대표 결정 위임. |
+| 다음 | RECOVERY §5 순서 유지 — [Desktop] 진짜 누끼 재추출(detail-source y7580~8210) → [Code] {pid}/cutout/ 영구 업로드. [별건] storage-visibility 머지 paste(§6-2) 대기. |
+
 ### 2026-06-10 (72) 병합 production READY 확인 + C-4 라이브 검증(seo-guard info 강등) + SUSPENSION 선결 해소 확인 (FROM 🖥 Desktop, main 982f856, 비가역 0)
 
 | 항목 | 상태 |
