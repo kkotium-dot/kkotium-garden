@@ -179,10 +179,24 @@ export async function listProductAssets(productId: string): Promise<ProductAsset
   const out: ProductAssetEntry[] = [];
 
   const collect = async (prefix: string, stage: string) => {
+    // NOTE: do NOT pass sortBy:{column:'created_at'} here. Supabase Storage
+    // list() reliably sorts only by 'name'; specifying 'created_at' on a
+    // NESTED prefix ({pid}/cutout) returns an empty array in this project's
+    // storage version, silently dropping real files (root happened to pass,
+    // nested stages came back 0 — see /assets cutout=0 bug 2026-06-11).
+    // Sort by name asc (stable) and let callers order by createdAt if needed.
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
-      .list(prefix, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
-    if (error || !data) return;
+      .list(prefix, { limit: 100, sortBy: { column: 'name', order: 'asc' } });
+    // Surface the error instead of swallowing it: a silent return here is what
+    // masked the nested-prefix failure for a full session.
+    if (error) {
+      console.error(
+        `[listProductAssets] list('${prefix}') failed: ${error.message}`,
+      );
+      return;
+    }
+    if (!data) return;
     for (const f of data) {
       // Supabase returns subfolder placeholders with a null id — skip non-files.
       if (!f.id) continue;
