@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-11 (80) C-9 DONE·라이브 확정 전파 + 잔여 MD 정합 (FROM 💻 Code, production 6bbc2a4, 비가역 0·docs only)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | NEW_CHAT_STARTER_2026-06-11_C9DONE + PARALLEL_WORK_TRACKER rev10. (79) C-9 빌드·라이브 검증의 문서 전파 turn. |
+| MD 정합 ✅ | PROGRESS·SESSION_LOG 2026-06-11 세션4 회고(C-9 DONE·라이브 7ed81a6→6bbc2a4·Desktop 3중+전상품·P1 무회귀·트래커 rev10). PARALLEL_WORK_TRACKER 앱 적용 현황 production HEAD 982f856→6bbc2a4 + C-9 라이브 한 줄. (Code Python #29b 전체덮어쓰기·한글 손상 0). |
+| 한글 손상 ✅ | grep FFFD+sentinel 0(intentional 패턴 정의 제외). NEW_CHAT_STARTER "전상품" 정상(이미 클린·재확인). |
+| 검증 ✅ | docs only·코드 미접촉·비가역 0. 트래커 C-9 DONE 행은 Desktop rev10에 기록완(중복 아님). |
+| 다음 | [Desktop] Firefly 트랙2(명화 무드 합성·대표 파일드롭). [Code] 다음 빌드 = C-3(finish-image 통합 라우터) 또는 C-5(스튜디오 마무리 카드) — 대표 순서결정 1건. |
+
 ### 2026-06-11 (79) C-9 개입카드 3종 빌드·라이브 검증 (FROM 💻 Code, production 7ed81a6, additive·가역)
 
 | 항목 | 상태 |

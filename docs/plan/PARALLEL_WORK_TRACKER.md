@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-11 (rev9)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-11 (rev10 · C-9 DONE 반영)
 
 > 대표 상시 지시: 요청 개선사항·병행작업 항상 누락 없이 추적. 매 세션 갱신. Desktop 상시 유지. #54·#55·#56 준수.
 
@@ -42,6 +42,7 @@
 | F-합성 | 명화 무드 합성(추가이미지/상세 히어로) | 🟢 누끼 3종 재작업완 + 새배경 합성(트랙1)완 · Firefly 무드(트랙2) 탭구동 대기(#52) | ★세션2 재작업: 1차 170px 카드컷 폐기 → 대표 올린 실촬영 히어로컷 3종(들판소녀 A·차량가죽범선 B·흰배경들판마을 C)에서 image_remove_background→투명PNG 완전포함 산출. 투-트랙 전략 확정(#57): 정보형 새배경(C)·감성형 Firefly 무드(B). track1_C 새배경 합성(우드+린넷+식물그림자·접지섬자) 산출완. Firefly는 탭 SPA 렌더 미완→대표 파일드롭 후 Claude 구동(키트=Firefly_무드합성_실행키트.md). 레시피=HANDOFF_myeonghwa_composite_recipe §3/§4 |
 | C-7 | 합성 파이프라인(누끼→무드) = Branch B 앱 기능 | ✅ DONE (feat/composite-pipeline a28946e) · Desktop 검증완+마이그레이션 적용 · ⏸ production 미반영(병합대기) | apply-composite executor(harmonize·추가이미지 적용, 가역). 검증: 라우팅·CHECK제약(product_composite/harmonize 존재)·P2022 가드 정합. extra_images jsonb(기본 []·NOT NULL) Desktop 적용완 → confirm 끝까지 동작. Vercel preview READY(빌드 정상) |
 | C-8 | 추가이미지 멀티슬롯 매니저 | ☐ Code(C-3 후) | 대표(1)+추가(2~9) 순서·교체·소스라벨·네이버 매핑. 첨부 레퍼런스 비율 적용 |
+| C-9 | 개입카드 3종(source_request·hero_crop_request·firefly_drop) — Operator Action Queue 정밀화 | ✅ DONE·라이브검증완 (2026-06-11) | feat(c9) 7ed81a6 → main 6bbc2a4 READY. control-tower-engine intervention 분기(firefly_drop=AUTH·hero_crop/source=INPUT_DECISION)·없으면 기존 AUTH 폴백(no regression). src/lib/jobs/intervention.ts 헬퍼·apply-cutout/apply-composite 잡 세팅·큐 카드 인라인 렌더(강제모달 0 #56). asset_jobs.intervention_type(text)·intervention_payload(jsonb) 스키마 검증완. 전상품 하드코딩 0(#55). Desktop 3중 교차검증 통과 |
 | 병합 | feat/composite-pipeline → main (C-1+C-7+C-2+FT production 반영) | ✅ DONE — production 982f856 READY(세션3 실측) | 대표 병합 실행 완료. /white-bg·/apply-cutout·/apply-composite 라이브. Vercel list_deployments로 READY+SHA 교차검증 |
 
 ## 이미지 자산 폴더 자동분류 시스템 (신규, 2026-06-09 세션2)
@@ -55,8 +56,9 @@
 
 | FT-표준 | 통합 자산 파이프라인+저장경로 전상품 표준 박제 (ENGINE §9) + detail/ 배선 검증 | ✅ DONE (Desktop §9 신규·Code 직독검증·git 보존) | ENGINE §9-A 저장경로 불변(통자저장 금지)·9-B 단계->폴더->개입점·9-D 상품 단건설계 금지. 검증: detail/ 어댑터 end-to-end 배선 확정(runDetail->generate-detail 렌더+base64->runSave->save-assets uploadAutomationAsset kind='detail'->{pid}/detail/). writer=save-assets(generate-detail은 렌더러). detail/ 0건=FT 배포후 save 0회(§9-A '가동은 랜딩 시' 정합·미배선 아님). PLAYBOOK §1 교차참조 |
 
-## 앱 적용 현황 (명화 · 실측 2026-06-10 세션3)
-- production(target=production) = `982f856`(main) **READY 확정** — 병합(C-1+C-7+C-2+FT) production 반영 완료. /white-bg·/apply-cutout·/apply-composite 라이브.
+## 앱 적용 현황 (명화 · 실측 2026-06-11 세션4)
+- production(target=production) = `6bbc2a4`(main) **READY 확정** — 병합(C-1+C-7+C-2+FT) + P1 /assets 수정(d594d85) + C-9 개입카드(7ed81a6) 누적 반영. /white-bg·/apply-cutout·/apply-composite 라이브.
+- C-9 개입카드 3종 라이브 ✅(2026-06-11): firefly_drop=AUTH·hero_crop/source=INPUT_DECISION·없으면 기존 AUTH 폴백(no regression). 명화 firefly_drop awaiting_human 잡 1건 시드·/asset-jobs-matrix actionQueue 노출 PASS·아이스트레이/달항아리 interventionType=None 무회귀.
 - 대표 = curated(가죽 v2)·main_image_policy=lifestyle_intended ✅ / 상세 = curated(Branch A 공급사 그대로) ✅ / 2갈래 = A / 발행 = SUSPENSION(drift 정확) / extra_images = [] (합성 슬롯 비어있음)
 - C-4 라이브 검증 ✅: seo-guard main_image_white_bg = fail->info(정책 후)·seoGuard.ok false->true. 매트릭스 nextAction=resolve_suspension(apply_curated_main 정상 소거).
 - 필수속성 ✅: naver_material=유리·naver_color=투명 채워짐·missingRequired=[]. SUSPENSION 내부 게이트 해소(남은 것=네이버 update PUT, 대표 GO 비가역).

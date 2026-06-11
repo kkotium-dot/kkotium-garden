@@ -1,3 +1,19 @@
+## 2026-06-11 (세션4) C-9 개입카드 3종 DONE·라이브 확정 + 잔여 MD 정합 (Code turn)
+
+production 6bbc2a4 READY. 비가역 0(docs only·네이버/Adobe 무접촉). 권위: NEW_CHAT_STARTER_2026-06-11_C9DONE + PARALLEL_WORK_TRACKER rev10 + TASK_BRIDGE §3(79/80).
+
+**[C-9 개입카드 DONE·라이브]** feat(c9) 7ed81a6 → main 6bbc2a4 READY. 개입카드 3종(source_request·hero_crop_request·firefly_drop)으로 Operator Action Queue 정밀화. control-tower-engine intervention 분기(firefly_drop=AUTH / hero_crop·source=INPUT_DECISION / 없으면 기존 AUTH 폴백=no regression). src/lib/jobs/intervention.ts 헬퍼(상수·payload 빌더·setJobIntervention, 명화 하드코딩 0 #55). apply-cutout(소스 최장변<300 OR OCR텍스트→hero_crop_request)·apply-composite(requestFireflyDrop→firefly_drop 드롭킷·3plane 프롬프트·Nano Banana Pro 4:3 / 소스부재→source_request) 잡 세팅. 큐 카드 interventionType별 인라인 확장 렌더(강제모달 0 #56). i18n control-tower-strings 추가(코드 한글리터럴 0). asset_jobs.intervention_type(text)·intervention_payload(jsonb) 둘 다 nullable 스키마 검증완.
+
+**[Desktop 3중 교차검증 통과]** production 6bbc2a4 = P1 수정(d594d85) + C-9(7ed81a6) 누적 반영. 라이브 검증: 명화 apply-composite requestFireflyDrop → product_composite firefly_drop awaiting_human 잡 1건 시드 → /asset-jobs-matrix 명화 actionQueue category=AUTH·stage=firefly_drop·payload.dropkitPath 노출 PASS. 회귀 0: 아이스트레이/달항아리 interventionType=None·기존 stage 유지. deepLink /products/{id}/studio(404) → /studio?product={id} 교정.
+
+**[P1 무회귀 재확인]** /assets 중첩prefix cutout=0 P1(d594d85·48e6926) 종결 상태 재확인 — 명화 cutout=3·total13·달항아리9·아이스트레이1·API=Storage 완벽일치(전상품 #55). sortBy created_at→name + 에러 로깅 수정 무회귀.
+
+**[잔여 MD 정합]** 본 turn(Code Python #29b): PROGRESS·SESSION_LOG 2026-06-11 세션4 회고 + PARALLEL_WORK_TRACKER 앱 적용 현황 production HEAD 982f856→6bbc2a4 갱신 + C-9 라이브 한 줄 + TASK_BRIDGE §3 ACTIVE (80) 갱신. 트래커 C-9 DONE 행은 Desktop이 rev10에 이미 기록. 한글 손상 grep 0(NEW_CHAT_STARTER "전상품" 정상·sentinel 클린).
+
+**[다음]** Desktop+대표: Firefly 트랙2(명화 무드 합성·대표 파일드롭→키트 구동→apply-composite 회수). Code: 다음 빌드 C-3(finish-image 통합 라우터·난이도 분기·이전대표 archive 보관) 또는 C-5(스튜디오 '대표이미지 마무리' 카드·C-9 firefly_drop/hero_crop 착지점) — 대표 순서결정 1건. 후속 대표 GO: 명화 SUSPENSION 해제 update PUT(비가역 #46).
+
+---
+
 ## 2026-06-10 (세션3) 병합 production READY 확정 + C-4 라이브 검증 + SUSPENSION 선결 해소 (Code/Desktop turn)
 
 production 982f856 READY(병합 C-1+C-7+C-2+FT 반영). 비가역 0(네이버·Adobe 무접촉·main_image_policy 가역 DB set). 권위: NEW_CHAT_STARTER_2026-06-10_C6_studio_run + PARALLEL_WORK_TRACKER rev6 + TASK_BRIDGE §3(72).
