@@ -1,3 +1,21 @@
+## 2026-06-11 (세션5) 적응형 3-Plane 합성 엔진 권위문서 신규 + 합성표준 MD 정합 (Code turn)
+
+main 0892f44. 비가역 0(docs only·네이버/Adobe 무접촉). 권위: 본 turn이 신규 작성한 docs/design/ADAPTIVE_COMPOSITE_ENGINE.md = 전상품 합성 표준(대표 리뷰 대기). 근거 = REPRESENTATIVE_IMAGE_FINISHING_SYSTEM §2/§3/§9 + #52/#53/#55/#57 + HANDOFF_2026-06-10 3-plane + 대표 2026-06-11 지시.
+
+**[엔진 권위문서 신규]** docs/design/ADAPTIVE_COMPOSITE_ENGINE.md. 6원칙: (1)상품진실 앵커(실측 비율·형태 고정·과대금지) (2)현실감 우선(스튜디오 포토리얼·Pillow 기계겹침 폐기) (3)3-plane 장면(후경/중경/전경) (4)≥2무드(사용맥락+스튜디오 정물) (5)대표(흰배경§9 text0) vs 추가/상세(무드·text허용) 분리 (6)적응 라우팅·전상품·비가역0. + 3-plane 모델(Nano Banana Pro·4:3/1:1) + 앱통합(C-3 finish-image·C-7 apply-composite·C-9 개입카드·C-5 예정) + 워크플로7(현실시트→누끼→대표마무리→무드설계→생성→적재·적용→검수·발행) + 상품현실시트 템플릿 + 명화 정정 2무드 프롬프트.
+
+**[명화 정체 정정]** 대표 2026-06-11: 걸이형 차량 송풍구 디퓨저(걸이형 사용가능)·15ml·상세는 상품 자체 스튜디오컷도 가능. 핵심=실질적 비율·현실감. #2(9T0) 합성본 폐기 사유=형태오류(클립)·과대(소형을 대형 렌더). ★누끼진실성 caveat(#44/#45/#46): 2026-06-10 핸드오프는 기존 cutout.png를 reed 형상으로 육안 기록 → 본 정정(걸이형 소형)과 불일치. 합성 전 실비율 누끼 재확인 필요(불일치 시 재누끼). 본 doc·report에 명시.
+
+**[작업원칙 #61 추가]** 상품진실 앵커 + 3-plane 리얼리즘 + ≥2무드 = 전상품 합성표준(#55). 상품현실시트·누끼진실성·생성(Firefly)/결정적변환(코드) 분담. #52·#53·#57 재확인. ★번호: 파일 내 max #57 → #61 직행(브리프 지정). #58~#60은 핸드오프/TASK_BRIDGE 기록·정식 등재 보류(대표 확인 시 백필) — report에 플래그.
+
+**[MD 정합]** PROGRESS·SESSION_LOG 세션5 회고 + PARALLEL_WORK_TRACKER rev11(F-합성 9T0 폐기·엔진화 / F-엔진 행 신규 / C-3 preview READY·병합대기) + ROADMAP 병행 Code 트랙 갱신 + TASK_BRIDGE §3(81) + PLAYBOOK 신규상품 합성 체크리스트 + CLAUDE.md §3-6 권위 링크. Python 전체덮어쓰기(#29b)·한글 손상 grep 0.
+
+**[stash z3c 보고]** stash@{0} z3c-misdirected-changes-needs-redo = /products/sourced 폐기 리다이렉트 리팩터(edit/upload 백링크 마이그레이션, 3파일 −250줄). ROADMAP Z-3c'(꽃졔 Y/N 승인 필요)와 동일 건. 이미지 파이프라인과 무관·live 라우트 접촉 → 보류 권고, 재작업/폐기 대표 결정 대기(#34).
+
+**[다음]** 대표: C-3(feat/finish-image-router·preview READY) 병합 GO → Code C-5 스튜디오 마무리 카드 착수. Desktop+대표: Firefly 트랙2(명화 정정 2무드·실비율 누끼 재확인). 후속 대표 GO: 명화 SUSPENSION 해제 update PUT(비가역 #46).
+
+---
+
 ## 2026-06-11 (세션4) C-9 개입카드 3종 DONE·라이브 확정 + 잔여 MD 정합 (Code turn)
 
 production 6bbc2a4 READY. 비가역 0(docs only·네이버/Adobe 무접촉). 권위: NEW_CHAT_STARTER_2026-06-11_C9DONE + PARALLEL_WORK_TRACKER rev10 + TASK_BRIDGE §3(79/80).

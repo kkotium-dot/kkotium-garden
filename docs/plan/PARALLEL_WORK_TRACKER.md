@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-11 (rev10 · C-9 DONE 반영)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-11 (rev11 · 합성엔진 권위문서 + C-3 preview READY 반영)
 
 > 대표 상시 지시: 요청 개선사항·병행작업 항상 누락 없이 추적. 매 세션 갱신. Desktop 상시 유지. #54·#55·#56 준수.
 
@@ -34,15 +34,16 @@
 | F-진단 | 코드 실측(크롭 완성·누끼 갭) | ✅ DONE(데스크톱) | thumb-crop=완성 / bg_clean=seed만·executor 없음 / seo-guard fail 미연결 |
 | C-1 | 인앱 SIMPLE 누끼(sharp 흰배경 평탄화) + /white-bg 라우트 | ✅ DONE (feat/white-bg-simple 2ff4a77) · Desktop 코드검증완 · ⏸ production 미반영(병합대기) | bg-difficulty/white-bg/route 3파일+CropWarning 확장 read — 로직 정합·공유가드·BACKGROUND_NOT_WHITE 정직플래그(#46)·가역. composite-pipeline에 흡수됨. 라이브 smoke=머지 후 C-6 |
 | C-2 | 어도비 누끼 적용 executor /apply-cutout | ✅ DONE (feat/composite-pipeline cdbb423, tsc0/build) | cutoutUrl→흰배경 합성·가드·적용, bg_clean done 전이. 병렬 가능 |
-| C-3 | finish-image 단일 라우터 + 스키마(extra_images·main_image_policy) | ☐ Code(C-1·C-2 후) | 난이도 분기·이전대표 추가이미지 보관 |
+| C-3 | finish-image 단일 라우터 + 스키마(extra_images·main_image_policy) | ✅ 빌드 DONE (feat/finish-image-router eaa6a65, tsc0/build) · 🟢 Vercel preview READY · ⏸ 병합대기 | 난이도 분기 dispatch(SIMPLE→인앱 white-bg·COMPLEX→bg_clean seed+apply-cutout 안내)·main_image_policy lifestyle_intended 소비(대표 비덮어쓰기→extra_images park)·keepAsExtra 이전대표 보관. 스키마=C-4/C-7 마이그레이션 완료분 소비만. 회귀0(신규 1파일). 대표 병합 GO → C-5 |
 | C-4 | seo-guard→개입대기열 연결 + override 강등 | ✅ DONE·라이브검증완(세션3) | lifestyle_intended info 강등 production 엔드포인트 before/after 실측(fail->info·ok false->true). 매트릭스 인과 직독 확정 |
 | C-5 | 스튜디오 '대표이미지 마무리' 통합 카드 + 컨트롤타워 배치 | ☐ Code(C-3·C-4 후) | 자동다듬기/크롭/추가이미지, dry-run before→after, 재가드 |
 | C-6 | 브라우저 실무 테스트(3상품 전 흐름) | ☐ 데스크톱(C-5 후, 병합 후) | 무오류 확인 후 다음 본작업 |
 | F-규격 | 대표이미지 규격 표준(§9) 박제 | ✅ DONE(데스크톱) | 첨부 레퍼런스(흰배경 본품샷)→ 1:1 1000·순백·본품 70~85%·텍스트0·OCR0. 전상품 적용. REPRESENTATIVE_IMAGE_FINISHING §9 |
-| F-합성 | 명화 무드 합성(추가이미지/상세 히어로) | 🟢 누끼 3종 재작업완 + 새배경 합성(트랙1)완 · Firefly 무드(트랙2) 탭구동 대기(#52) | ★세션2 재작업: 1차 170px 카드컷 폐기 → 대표 올린 실촬영 히어로컷 3종(들판소녀 A·차량가죽범선 B·흰배경들판마을 C)에서 image_remove_background→투명PNG 완전포함 산출. 투-트랙 전략 확정(#57): 정보형 새배경(C)·감성형 Firefly 무드(B). track1_C 새배경 합성(우드+린넷+식물그림자·접지섬자) 산출완. Firefly는 탭 SPA 렌더 미완→대표 파일드롭 후 Claude 구동(키트=Firefly_무드합성_실행키트.md). 레시피=HANDOFF_myeonghwa_composite_recipe §3/§4 |
+| F-합성 | 명화 무드 합성(추가이미지/상세 히어로) | 🟡 #2(9T0) 합성본 폐기(형태오류·클립·과대) → 정정프롬프트 발행 + 엔진화(ADAPTIVE_COMPOSITE_ENGINE.md) · Firefly 트랙2 실비율 누끼 대기(#52) | 폐기 사유=소형 본품(걸이형 15ml)을 대형 렌더 → 라벨 뭉갬·비율 깨짐. 정정=상품진실 앵커(#61)·실측 비율·≥2무드(걸이형 사용맥락+스튜디오 정물). ★누끼진실성: 2026-06-10 reed 육안기록과 정정(걸이형) 불일치 → 실비율 누끼 재확인 후 합성. 명화 정정 2무드 프롬프트=ADAPTIVE_COMPOSITE_ENGINE §6 |
 | C-7 | 합성 파이프라인(누끼→무드) = Branch B 앱 기능 | ✅ DONE (feat/composite-pipeline a28946e) · Desktop 검증완+마이그레이션 적용 · ⏸ production 미반영(병합대기) | apply-composite executor(harmonize·추가이미지 적용, 가역). 검증: 라우팅·CHECK제약(product_composite/harmonize 존재)·P2022 가드 정합. extra_images jsonb(기본 []·NOT NULL) Desktop 적용완 → confirm 끝까지 동작. Vercel preview READY(빌드 정상) |
 | C-8 | 추가이미지 멀티슬롯 매니저 | ☐ Code(C-3 후) | 대표(1)+추가(2~9) 순서·교체·소스라벨·네이버 매핑. 첨부 레퍼런스 비율 적용 |
 | C-9 | 개입카드 3종(source_request·hero_crop_request·firefly_drop) — Operator Action Queue 정밀화 | ✅ DONE·라이브검증완 (2026-06-11) | feat(c9) 7ed81a6 → main 6bbc2a4 READY. control-tower-engine intervention 분기(firefly_drop=AUTH·hero_crop/source=INPUT_DECISION)·없으면 기존 AUTH 폴백(no regression). src/lib/jobs/intervention.ts 헬퍼·apply-cutout/apply-composite 잡 세팅·큐 카드 인라인 렌더(강제모달 0 #56). asset_jobs.intervention_type(text)·intervention_payload(jsonb) 스키마 검증완. 전상품 하드코딩 0(#55). Desktop 3중 교차검증 통과 |
+| F-엔진 | 적응형 3-Plane 합성 엔진 권위문서 | 🟢 신규 docs/design/ADAPTIVE_COMPOSITE_ENGINE.md (Code 합성·대표 리뷰 대기) | 6원칙·3-plane 모델·앱통합(C-3/C-7/C-9/C-5)·워크플로7·상품현실시트 템플릿·명화 정정 2무드. 전상품 합성 표준 단일화(#61·#55). REP_FINISHING §2/§9 + #52/#53/#57 + 2026-06-10 3-plane grounded |
 | 병합 | feat/composite-pipeline → main (C-1+C-7+C-2+FT production 반영) | ✅ DONE — production 982f856 READY(세션3 실측) | 대표 병합 실행 완료. /white-bg·/apply-cutout·/apply-composite 라이브. Vercel list_deployments로 READY+SHA 교차검증 |
 
 ## 이미지 자산 폴더 자동분류 시스템 (신규, 2026-06-09 세션2)

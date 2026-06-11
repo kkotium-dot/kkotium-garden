@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-11 (81) 적응형 합성 엔진 권위문서 신규 + 합성표준 MD 정합 (FROM 💻 Code, main, 비가역 0·docs only)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | 신규 docs/design/ADAPTIVE_COMPOSITE_ENGINE.md = 전상품 합성 표준(저장소 권위문서 합성·대표 리뷰 대기). 근거 REP_FINISHING §2/§9·#52/#53/#55/#57·2026-06-10 3-plane·대표 2026-06-11. |
+| 엔진 doc ✅ | 6원칙(상품진실 앵커·현실감·3-plane·≥2무드·대표vs추가 분리·적응라우팅)·3-plane 모델·앱통합(C-3/C-7/C-9/C-5)·워크플로7·상품현실시트 템플릿·명화 정정 2무드(걸이형15ml·과대금지). |
+| 명화 정체 ✅ | 대표 2026-06-11: 걸이형 15ml·상품 스튜디오컷 가능·핵심=실질적 비율·현실감. ★누끼진실성 caveat: 2026-06-10 reed 육안기록과 불일치 → 합성 전 실비율 누끼 재확인(불일치 시 재누끼). #44/#45/#46. |
+| 원칙 #61 ✅ | 상품진실 앵커+3-plane+≥2무드=전상품 합성표준. ★#58~#60 미등재(핸드오프/TASK_BRIDGE 기록)·#61 직행 = 대표 번호 정합 확인 필요(플래그). |
+| MD 정합 ✅ | PROGRESS·SESSION_LOG·트래커 rev11(F-합성 9T0 폐기·엔진화/F-엔진 신규/C-3 preview READY·병합대기)·ROADMAP·PLAYBOOK 체크리스트·CLAUDE.md 링크. Python #29b·손상 0. |
+| stash z3c | /products/sourced 폐기 리다이렉트 리팩터(needs-redo·ROADMAP Z-3c'). 보류 권고·재작업/폐기 대표 결정(#34). |
+| 다음 | [대표] C-3(feat/finish-image-router·preview READY) 병합 GO → [Code] C-5 스튜디오 마무리 카드. [Desktop+대표] Firefly 트랙2(명화 정정 2무드·실비율 누끼). |
+
 ### 2026-06-11 (80) C-9 DONE·라이브 확정 전파 + 잔여 MD 정합 (FROM 💻 Code, production 6bbc2a4, 비가역 0·docs only)
 
 | 항목 | 상태 |

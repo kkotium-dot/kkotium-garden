@@ -18,6 +18,20 @@
 
 ---
 
+## 신규상품 합성 체크리스트 (전상품 표준 — 권위 docs/design/ADAPTIVE_COMPOSITE_ENGINE.md)
+
+> 상품 1개 등록 시 합성 표준 7단계. 권위 = ADAPTIVE_COMPOSITE_ENGINE.md(6원칙·상품현실시트·명화 정정 2무드). 작업원칙 #61.
+
+- [ ] 1. **상품현실시트** 작성 — 실측 비율·용량·형태·소재·라벨/핵심셀링(과대 차단 앵커).
+- [ ] 2. **누끼 소스** = 공급사 실촬영 단품 히어로컷(완전포함) → image_remove_background → 투명 PNG. 실비율 일치 확인(#57·누끼진실성).
+- [ ] 3. **대표 마무리** = finish-image(C-3) bg-difficulty → SIMPLE 인앱 white-bg / COMPLEX Adobe cutout → 흰배경 §9(1:1 1000·본품 70~85%·텍스트0).
+- [ ] 4. **무드 설계** = ≥2(사용맥락 + 스튜디오 정물). 상품현실시트 비율 앵커·카테고리 톤.
+- [ ] 5. **합성 생성** = Firefly Nano Banana Pro 3-plane(레퍼런스=누끼·과대금지). harmonize/접지/normalize는 코드(sharp).
+- [ ] 6. **적재·적용** = composite/ → apply-composite(C-7) → extra_images(가역) + seo-guard 재검 + 개입대기열(C-9).
+- [ ] 7. **검수·발행** = 브라우저 실측(C-6) → 대표 GO → 네이버 발행(비가역 #46).
+
+---
+
 ## 1. 적응형 전략 엔진 — 상품별 컨셉을 어떻게 결정하는가
 
 > "고정 템플릿 일반화 금지." 각 상품의 컨셉 조합은 **개별 결정**한다. 아래는 *결정 프레임*이지 정답표가 아니다.

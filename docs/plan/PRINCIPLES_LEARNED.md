@@ -746,3 +746,13 @@ grep -c "id: '" src/lib/automation-registry.ts
 - **배경 톤 = 라벨과 호응**: 인상주의 자연·풍경 라벨 → 따뜻한 우드+린넷+은은한 식물그림자. 차갑거나 화려한 배경 금지(라벨 충돌).
 - **도구**: 누끼=Adobe MCP image_remove_background(복구됨) / 새배경=앱 sharp 즉시 / 포토리얼 무드=Firefly 웹UI 브라우저(#52, 파일드롭·생성클릭=대표). compositing/gen-bg는 Adobe MCP 영구 미지원.
 - **앱 적용**: C-7 apply-composite(extra_images 슬롯)·C-8 멀티슬롯 매니저에 본 표준 반영. 합성 소스 선택 UI에 '실촬영 히어로컷' 우선 표기. 권위: HANDOFF_myeonghwa_composite_recipe §4.
+
+
+## 작업원칙 #61 — 합성 표준: 상품진실 앵커 + 3-Plane 리얼리즘 + ≥2무드 (2026-06-11 대표 확정)
+
+**규칙**: 본품 무드 합성은 상품의 **실측 비율·형태에 충실**하게(과대·왜곡·잘림 금지 = "상품진실 앵커"), 스튜디오 촬영처럼 **현실감 있게**(3-plane 후경/중경/전경·접지그림자·키라이트), **상품마다 ≥2 무드**(사용맥락 + 스튜디오 정물). 전상품 합성 표준(#55). 권위 = docs/design/ADAPTIVE_COMPOSITE_ENGINE.md.
+- **상품현실시트**: 합성 전 상품별 실측 비율/용량/형태/소재/핵심셀링 시트 작성(과대 차단 앵커).
+- **누끼 진실성**: 레퍼런스 누끼가 실제 본체 형태·비율과 일치(불일치 시 재누끼). 명화 #2(9T0) 폐기 = 형태오류(클립)·과대 → 본 원칙으로 차단.
+- **생성=Firefly·결정적변환=코드**: 자연 합성은 Firefly Nano Banana Pro(3-plane), harmonize/normalize/접지는 sharp. Pillow 기계겹침 폐기. (#52·#53·#57 재확인)
+- **앱 적용**: finish-image(C-3)·apply-composite(C-7)·개입카드(C-9)·스튜디오 마무리 카드(C-5)가 본 표준 소비.
+- 비고: 작업원칙 #58~#60은 핸드오프/TASK_BRIDGE에 기록됨(정식 등재 보류) — 번호 정합은 대표 확인 시 백필.

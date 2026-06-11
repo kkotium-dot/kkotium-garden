@@ -95,7 +95,7 @@
 규칙: 비가역0·한글 직접입력·실측우선·전상품 범용. 앱 작업이라 리서치 도구 미사용.
 ```
 
-[병행 Code 트랙] C-3 -> C-5 -> C-8(#57) — finish-image 단일 라우터·스튜디오 통합 카드·추가이미지 멀티슬롯. 진입문구=docs/plan/CUTOUT_CROP_FEATURE_BUILD_PLAN.md.
+[병행 Code 트랙] C-3 ✅ 빌드(feat/finish-image-router·preview READY·병합대기) → C-5(스튜디오 마무리 카드, C-3 병합 후) → C-8(#57). 합성 표준=docs/design/ADAPTIVE_COMPOSITE_ENGINE.md(신규 권위·대표 리뷰). 진입문구=docs/plan/CUTOUT_CROP_FEATURE_BUILD_PLAN.md.
 [절대준수] 비가역 0(네이버 PUT/발행·Adobe 폴더삭제는 대표 GO 전 0)·한글 직접입력·실측우선(#45)·Production=Vercel only·전상품 범용(#55).
 
 ---
