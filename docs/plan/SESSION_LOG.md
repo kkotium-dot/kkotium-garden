@@ -1,3 +1,13 @@
+## 2026-06-12 (세션6-b) /assets composite=0 production probe + listProductAssets trailing-slash 자가치유 (Code turn)
+
+**[배포]** main 4e4e8b5 push(비가역 0·additive·debug-gated·네이버 무접촉). Vercel production 자동 배포.
+**[진단 토대]** Desktop 5단 격리(#66): storage.objects SQL 전컬럼·storage.search/search_v2/list_objects_with_delimiter service_role 직접·storage-api REST 실키 body8종·배포소스 GitHub raw diff·storage-js2.91.1 정확버전 collect() 복제 = 전 계층 무혐의. 로컬 service key로 배포본 실행=composite9·production만 0 → 남은 단일 미통제 변수=Vercel 런타임.
+**[probe]** 신규 GET /api/debug/storage-probe/[id]?token=CRON_SECRET(force-dynamic·nodejs): env(keyPrefix/keyLen/present)·storage-js list 3종(composite no-slash/slash·cutout no-slash)·storage-api REST list를 1호출로 노출. 근본원인 확정 후 삭제(임시). ★spec 경로 /api/_debug/는 App Router private folder(언더스코어 접두=라우팅 제외)라 토큰 무관 무조건 404 → /api/debug/로 교정(#34·빌드 트리 등재 확인).
+**[하드닝]** automation-storage.ts listProductAssets.collect() trailing-slash 자가치유(#67): no-slash 0행 시 `prefix/` 1회 재시도해 trailing-slash 결과 채택(SQL상 신뢰형). 0행일 때만 동작=정상 비-제로 결과 불변. list류 버그면 영구 자동복구.
+**[검증]** tsc 0·build 0(probe 라우트 트리 등재)·이모지0·한글리터럴0·prisma 싱글톤 무관(서버라우트).
+**[MD]** PROGRESS·SESSION_LOG·TASK_BRIDGE(83)·ROADMAP·PARALLEL_WORK_TRACKER rev14 + PRINCIPLES_LEARNED #66~#69 + CLAUDE.md 작업원칙 인덱스 #66~#69 미러(#69). Python #29b·손상 grep 0.
+**[다음]** Desktop probe 호출→§5 판정트리(env키 drift→운영자 Vercel env 재설정 / no-slash list버그→§3 하드닝으로 종결)→/assets composite=9 LIVE 확인→probe 라우트 삭제 커밋.
+
 ## 2026-06-12 (세션6) 이미지 스튜디오 + 충실도 카드 + 적재 v2 → main 병합·production LIVE (Code turn)
 
 **[병합·배포]** feat/image-studio(715f564 C-5 / dbb9fe7 fidelity / fa9ad01 asset-v2) → main FF `015cc3f..fa9ad01` push. Vercel production READY 검증(dpl_AK4omPEX·target=production·SHA fa9ad01·verify-deploy exit0). smoke /dashboard·/studio·/assets 200·taxonomy v2 스테이지 라이브.

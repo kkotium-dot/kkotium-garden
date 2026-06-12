@@ -784,3 +784,19 @@ grep -c "id: '" src/lib/automation-registry.ts
 ## 작업원칙 #65 — Firefly 수동 드롭은 임시·Firefly Bridge 수렴 (2026-06-12 방향)
 
 **규칙**: 현행 Firefly 참조 슬롯 수동 드롭(#52)은 과도기. 목표 = Firefly Bridge가 reference/ 스테이지 자동로드 + 생성 자동구동, 운영자 개입은 "당선작 픽(최종 선별)"으로 수렴. 전자동화 전까지 수동 드롭 유지하되 reference/ 적재·STAGE_NAMING로 자동화 준비.
+
+## 작업원칙 #66 — 스토리지 list 진단 5단 격리 (2026-06-12 학습, /assets composite=0 근본원인)
+
+**규칙**: `/assets` 등 스토리지 표시 이상 시 추측으로 production env/키를 먼저 건드리지 않고 5단 격리한다 — (a) storage.objects 데이터 SQL 전컬럼 비교, (b) storage.search/search_v2/list_objects_with_delimiter를 service_role로 직접, (c) storage-api REST를 실제 키·body 변형으로, (d) 배포소스 GitHub raw diff, (e) 배포 클라이언트(storage-js) 정확버전 설치 후 collect() 복제. 각 계층을 무혐의/혐의로 분리한 뒤 단일 미통제 변수(런타임)를 계측(probe)으로 확정. #45(출력 fact-check)·#63(가짜보고 금지) 연속.
+
+## 작업원칙 #67 — storage list trailing-slash 자가치유 (2026-06-12, 전상품 방어)
+
+**규칙**: nested prefix `.list()`가 비-빈 폴더에 0행을 반환할 수 있음(클라이언트/키/런타임 조합 특이). no-slash 0행 → trailing-slash 1회 재시도 = 전상품 표준 방어(자산 무음 누락 0). 0행일 때만 동작하므로 정상결과 불변(automation-storage.ts listProductAssets.collect). 권위 HANDOFF_2026-06-12_composite-rootcause-probe.
+
+## 작업원칙 #68 — production env 정합 게이트 (2026-06-12)
+
+**규칙**: 로컬 .env와 Vercel env의 키 drift가 "코드·DB는 정상인데 production만 이상"의 원인이 될 수 있음. 신형 sb_secret_ 키 마이그레이션 시 Vercel env 동기화 필수. 진단 시 probe로 env.keyPrefix/keyLen을 노출해 drift를 직접 판정(추측 금지).
+
+## 작업원칙 #69 — 인계 in-chat 박제 · 누락0 연속성 (2026-06-12 대표 확정)
+
+**규칙**: 모든 작업 종료 시 인계 메시지를 채팅 응답 본문에 누락 없이 정리한다(파일에만 두지 않음). 포함: Target Session·Branch·다음 1액션·검증절차·코드패치 위치·세션요약. 운영자=paste-mediator → 채팅에서 바로 복사·착수 가능해야 함. CLAUDE.md 작업원칙 섹션 + PRINCIPLES_LEARNED 양쪽 박제.

@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-12 (83) /assets composite=0 probe 배포 + trailing-slash 자가치유 (FROM 💻 Code, main 4e4e8b5, 비가역 0·additive·debug-gated)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | HANDOFF_2026-06-12_composite-rootcause-probe.md. Desktop 5단 격리(#66) 전 계층 무혐의·로컬 service key=composite9·prod만 0 → 런타임 단일변수. |
+| probe ✅ | GET /api/debug/storage-probe/[id]?token=CRON_SECRET(force-dynamic·nodejs): env keyPrefix/keyLen·storage-js list 3종·REST list 1호출 노출. ★spec /api/_debug/는 App Router private folder(언더스코어=라우팅제외)=무조건404 → /api/debug/ 교정(#34·빌드트리 등재 확인). 확정 후 삭제(임시). |
+| 하드닝 ✅ | automation-storage collect() trailing-slash 자가치유(#67): no-slash 0행→`prefix/` 재시도. 0행일 때만=정상결과 불변·list버그 영구복구. |
+| 검증 ✅ | tsc0·build0·이모지0·한글리터럴0. push 4e4e8b5. |
+| 다음 | [Desktop] probe 호출→§5 판정(env키 drift→운영자 Vercel env 1액션 / list버그→하드닝 종결)→/assets composite=9 LIVE→probe 삭제 커밋. |
+
 ### 2026-06-12 (82) 이미지 스튜디오+충실도카드+적재v2 main 병합·production LIVE (FROM 💻 Code, main fa9ad01, 비가역 0)
 
 | 항목 | 상태 |

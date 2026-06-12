@@ -294,6 +294,10 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 - **#43** ★ — 시크릿/API 키 포함 코드의 backup 패턴 절대 금지 (.bak/.old/.tmp 0건 정합, GEMINI revoke 사고 재발 방지)
 - **#44** ★ — 에러 메시지는 코드 상태 변경 시 동시 갱신 의무 (stale fact 노출 방지)
 - **#45** ★ — Production smoke는 출력 품질까지 단정 의무 (HTTP 200 + 구조 + 내용 fact-check 3-tier)
+- **#66** — 스토리지 list 진단 5단 격리 (storage.objects→search 3종→REST→raw diff→storage-js 복제, 추측 env 금지)
+- **#67** — storage list trailing-slash 자가치유 (no-slash 0행→trailing-slash 재시도, 전상품)
+- **#68** — production env 정합 게이트 (로컬 .env ↔ Vercel env 키 drift = prod만 이상)
+- **#69** — 인계 in-chat 박제 (채팅 본문에 Target/Branch/다음1액션/검증/패치위치/요약 누락0)
 
 ---
 
