@@ -208,21 +208,43 @@ export async function listProductAssets(productId: string): Promise<ProductAsset
     // storage version, silently dropping real files (root happened to pass,
     // nested stages came back 0 — see /assets cutout=0 bug 2026-06-11).
     // Sort by name asc (stable) and let callers order by createdAt if needed.
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .list(prefix, { limit: 100, sortBy: { column: 'name', order: 'asc' } });
+    const listOnce = (p: string) =>
+      supabase.storage
+        .from(BUCKET_NAME)
+        .list(p, { limit: 100, sortBy: { column: 'name', order: 'asc' } });
+
+    const first = await listOnce(prefix);
     // Surface the error instead of swallowing it: a silent return here is what
     // masked the nested-prefix failure for a full session.
-    if (error) {
+    if (first.error) {
       console.error(
-        `[listProductAssets] list('${prefix}') failed: ${error.message}`,
+        `[listProductAssets] list('${prefix}') failed: ${first.error.message}`,
       );
       return;
     }
-    if (!data) return;
-    for (const f of data) {
-      // Supabase returns subfolder placeholders with a null id — skip non-files.
-      if (!f.id) continue;
+    // Supabase returns subfolder placeholders with a null id — skip non-files.
+    let rows = (first.data ?? []).filter((f) => f.id);
+
+    // Defensive retry: some storage-api/client/key combinations return only a
+    // folder placeholder (or an empty page) for a NON-empty nested prefix when
+    // the prefix lacks a trailing slash. The trailing-slash form is the proven-
+    // reliable shape (verified against storage.search / search_v2 /
+    // list_objects_with_delimiter). Only fires when the first pass found 0 real
+    // files, so it never changes correct results — it just heals silent drops.
+    if (rows.length === 0) {
+      const retry = await listOnce(`${prefix}/`);
+      if (!retry.error && retry.data) {
+        const retryRows = retry.data.filter((f) => f.id);
+        if (retryRows.length > 0) {
+          console.warn(
+            `[listProductAssets] '${prefix}' returned 0 but '${prefix}/' returned ${retryRows.length}; using trailing-slash result`,
+          );
+          rows = retryRows;
+        }
+      }
+    }
+
+    for (const f of rows) {
       const path = `${prefix}/${f.name}`;
       const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
       out.push({
