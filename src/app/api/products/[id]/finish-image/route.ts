@@ -230,7 +230,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     let uploadedUrl: string;
     try {
       const uploaded = await uploadAutomationAsset({
-        productId, kind: 'thumb', variant: 'whitebg', buffer: result.buffer, contentType: 'image/jpeg',
+        productId, kind: 'thumbnail', variant: 'whitebg', buffer: result.buffer, contentType: 'image/jpeg',
       });
       uploadedUrl = uploaded.publicUrl;
     } catch (e) {

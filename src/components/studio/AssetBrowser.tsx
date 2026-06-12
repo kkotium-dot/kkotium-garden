@@ -42,7 +42,7 @@ import { broadcastProductMutated } from '@/lib/events/product-mutated';
 
 // Pipeline-ordered stages an operator may upload into (mirrors STAGE_DIRS;
 // kept local so this client component never imports the server storage module).
-const UPLOAD_STAGES = ['source', 'cutout', 'composite', 'thumb', 'detail', 'archive'] as const;
+const UPLOAD_STAGES = ['source', 'cutout', 'plate', 'reference', 'composite', 'thumbnail', 'detail', 'archive'] as const;
 
 // Supabase project ref derived from the public URL (no hardcoded ref / secret).
 const SUPABASE_REF: string | null = (() => {

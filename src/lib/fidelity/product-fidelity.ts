@@ -16,9 +16,18 @@
 // malformed value yields null so callers degrade gracefully (no fabrication).
 // ============================================================================
 
+// Physics-correctness clause injected whenever a mount mechanic is declared —
+// stops a generator from inventing impossible clip/vent geometry (item 7).
+export const MOUNT_PHYSICS_CLAUSE =
+  'vent structure physically correct, no impossible geometry, all background objects realistic-consistent';
+
 export interface ProductFidelity {
   /** Form-factor / mount, e.g. 'hanging_car_vent'. */
   mountType: string | null;
+  /** How the product physically attaches/sits, e.g. 'spring clip on neck
+   *  clamps one vent slat, bottle hangs in front straight down, cap+sticks up'.
+   *  Injected into the prompt with the physics-correctness clause. */
+  mountMechanic: string | null;
   /** Parts that must be present and recognizable in any render. */
   components: string[];
   /** Decor/context that is allowed in a scene. */
@@ -47,14 +56,16 @@ export function parseFidelity(raw: unknown): ProductFidelity | null {
   const o = raw as Record<string, unknown>;
   const promptInject = typeof o.promptInject === 'string' ? o.promptInject.trim() : '';
   const mountType = typeof o.mountType === 'string' ? o.mountType : null;
+  const mountMechanic = typeof o.mountMechanic === 'string' ? o.mountMechanic.trim() || null : null;
   const components = asStringArray(o.components);
   const decorForbidden = asStringArray(o.decorForbidden);
   // Require at least one meaningful field, else treat as no card.
-  if (!promptInject && !mountType && components.length === 0 && decorForbidden.length === 0) {
+  if (!promptInject && !mountType && !mountMechanic && components.length === 0 && decorForbidden.length === 0) {
     return null;
   }
   return {
     mountType,
+    mountMechanic,
     components,
     decorAllowed: asStringArray(o.decorAllowed),
     decorForbidden,
@@ -87,7 +98,11 @@ export function buildFidelityInjection(f: ProductFidelity | null): FidelityInjec
   if (!f) return { prepend: '', negativeClause: '', negativeTokens: [] };
   const negativeTokens = f.decorForbidden.map(humanizeToken).filter(Boolean);
   const negativeClause = negativeTokens.length > 0 ? `Avoid: ${negativeTokens.join(', ')}.` : '';
-  return { prepend: f.promptInject, negativeClause, negativeTokens };
+  // Prepend = promptInject + (mount mechanic + physics-correctness clause when a
+  // mount mechanic is declared), so the render gets the attach geometry right.
+  const mountClause = f.mountMechanic ? `${f.mountMechanic}. ${MOUNT_PHYSICS_CLAUSE}.` : '';
+  const prepend = [f.promptInject, mountClause].map((s) => s.trim()).filter(Boolean).join(' ');
+  return { prepend, negativeClause, negativeTokens };
 }
 
 /**
@@ -107,6 +122,8 @@ export function applyFidelityToPrompt(base: string, f: ProductFidelity | null): 
 export interface FidelityChecklistPayload {
   productId: string;
   mountType: string | null;
+  /** How the product attaches — shown in the mount-physics check. */
+  mountMechanic: string | null;
   /** Components the operator must confirm are present & recognizable. */
   components: string[];
   /** Decor the operator must confirm is ABSENT. */
@@ -114,6 +131,14 @@ export interface FidelityChecklistPayload {
   /** Always-on checks (true-scale, label sharpness) — i18n keys on the UI. */
   staticChecks: string[];
   sourceRef: string | null;
+}
+
+export interface MountCheckPayload {
+  productId: string;
+  mountType: string | null;
+  mountMechanic: string | null;
+  /** Mount-physics checks the operator confirms before locking the slot. */
+  mountChecks: string[];
 }
 
 /**
@@ -128,9 +153,28 @@ export function buildFidelityChecklistPayload(
   return {
     productId,
     mountType: f.mountType,
+    mountMechanic: f.mountMechanic,
     components: f.components,
     forbidden: f.decorForbidden,
     staticChecks: ['true_scale', 'label_sharp', 'no_added_text'],
     sourceRef: f.sourceRef,
+  };
+}
+
+/**
+ * Build the mount-check payload (#56, item 8) — the operator confirms the
+ * clip/slat physics is correct before locking the image slot. Returns null
+ * when the product declares no mount mechanic (no card to show).
+ */
+export function buildMountCheckPayload(
+  productId: string,
+  f: ProductFidelity,
+): MountCheckPayload | null {
+  if (!f.mountMechanic) return null;
+  return {
+    productId,
+    mountType: f.mountType,
+    mountMechanic: f.mountMechanic,
+    mountChecks: ['clip_slat_physics', 'vent_geometry', 'hang_direction', 'background_consistent'],
   };
 }

@@ -179,7 +179,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
     try {
       const uploaded = await uploadAutomationAsset({
-        productId, kind: 'thumb', variant: 'cutout', buffer: result.buffer, contentType: 'image/jpeg',
+        productId, kind: 'thumbnail', variant: 'cutout', buffer: result.buffer, contentType: 'image/jpeg',
       });
       mainImageUrl = uploaded.publicUrl;
       await prisma.product.update({

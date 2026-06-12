@@ -245,9 +245,17 @@ and faint reflection; shallow DOF; luxury editorial grade; no text, no watermark
 - **정면 슬롯**: 살짝 각도(10-15도) 허용, **큰 회전 금지**, 라벨 가독 유지(라벨=핵심가치, §11).
 - **라이프×매크로 페어링**: 추가이미지 세트는 사용맥락(라이프스타일) 컷 + 제품 디테일(매크로) 컷을 페어로 구성(전환형+정보형, §12 셀렉터·#57).
 
+
+### 15-4. 적재 taxonomy v2 + 네이밍 컨벤션 (앱)
+- 스테이지 8종: source / cutout / **plate** / **reference** / composite / thumbnail / detail / archive (thumb는 레거시 읽기 별칭·기존 URL 보존). plate=배경 플레이트/턴테이블, reference=Firefly 참조 슬롯 드롭.
+- 네이밍 STAGE_NAMING: variant = `<angle>_<mood>_<slot>_<context>` (토큰 vocab 고정·무드=§12 8종). 반자동 인테이크가 파일명에서 토큰 추론→정규리네임→AssetRegistry(stage/angle/mood/slot/context/w/h/sourceTag) 인덱스 적재. 스토리지=진실원천, Registry=쿼리 보조.
+- 마운트 메커닉(Product.fidelity.mountMechanic)은 프롬프트에 물리정합 clause와 함께 주입(§15-2) + 슬롯 확정 시 mount_check 검수.
+
 ---
 
 ## 변경 이력
+
+- 2026-06-12 (v8.2) — 적재 taxonomy v2(+plate +reference·thumb->thumbnail 레거시별칭)·STAGE_NAMING 토큰 vocab·AssetRegistry 인덱스·반자동 인테이크 + 마운트 메커닉(mountMechanic) 물리정합 주입·mount_check 슬롯검수(§15-2/15-4). desktop-filer·기존파일 reorg = asset-hygiene 세션.
 
 - 2026-06-12 (v8.1) — 충실도 카드(Product.fidelity) 앱 연동 §15 신규: promptInject prepend + decorForbidden 네거티브 주입, fidelity_check 발행 게이트(#56). 충실도 네거티브 가드(메탈릭잎 금지·우드스틱/클립 보존)·슬롯 각도(정면 10-15도 허용·큰 회전 금지)·라이프×매크로 페어링 확정. 7장(real-plate 2-ref·1플레이트=1샷·각도→슬롯) 유지.
 

@@ -215,6 +215,7 @@ const IV_SOURCE_REQUEST = 'source_request';
 const IV_HERO_CROP_REQUEST = 'hero_crop_request';
 const IV_FIREFLY_DROP = 'firefly_drop';
 const IV_FIDELITY_CHECK = 'fidelity_check';
+const IV_MOUNT_CHECK = 'mount_check';
 
 /** Two-branch source strategy from the split quality eval (blueprint §3). */
 function deriveSourceStrategy(
@@ -417,6 +418,11 @@ export function computeActionQueueItem(
       // Pre-publish gate: operator compares confirmed images vs the fidelity
       // card. A decision (pass / re-do), so INPUT_DECISION; lands in the studio.
       return { ...base, category: 'INPUT_DECISION', stage: IV_FIDELITY_CHECK, deepLink: `/studio?product=${productId}`, ...iv };
+    }
+    if (intervention.type === IV_MOUNT_CHECK) {
+      // Mount-physics check before slot lock — operator verifies clip/slat
+      // geometry. A decision, so INPUT_DECISION; lands in the studio.
+      return { ...base, category: 'INPUT_DECISION', stage: IV_MOUNT_CHECK, deepLink: `/studio?product=${productId}`, ...iv };
     }
     // Unknown intervention type — fall through to the generic AUTH card below.
   }

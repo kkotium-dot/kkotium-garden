@@ -14,6 +14,9 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import sharp from 'sharp';
+import { Prisma } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import {
   uploadAutomationAsset,
   type AssetKind,
@@ -23,6 +26,7 @@ import {
   kindForSource,
   safeVariant,
 } from '@/lib/storage/asset-taxonomy';
+import { parseAssetTokens, buildAssetVariant, type AssetTokens } from '@/lib/storage/asset-naming';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -97,10 +101,32 @@ export async function POST(
   }
 
   const { baseName } = extFor(contentType, file.name);
-  const variant = safeVariant(baseName, 'upload');
+
+  // Token inference (angle/mood/slot/context) from the filename + caller-provided
+  // overrides. The normalized variant is the controlled-token slug; if nothing
+  // resolves, fall back to a sanitized filename slug.
+  const inferredTokens = parseAssetTokens(file.name);
+  const tokens: AssetTokens = {
+    angle: (form.get('angle')?.toString().trim() as AssetTokens['angle']) || inferredTokens.angle,
+    mood: (form.get('mood')?.toString().trim() as AssetTokens['mood']) || inferredTokens.mood,
+    slot: (form.get('slot')?.toString().trim() as AssetTokens['slot']) || inferredTokens.slot,
+    context: (form.get('context')?.toString().trim() as AssetTokens['context']) || inferredTokens.context,
+  };
+  const variant = buildAssetVariant(tokens, safeVariant(baseName, 'upload'));
+  const sourceTag = (form.get('sourceTag') ?? 'manual_upload').toString().trim() || 'manual_upload';
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    // Read intrinsic dimensions (best-effort — never fails the upload).
+    let width: number | null = null;
+    let height: number | null = null;
+    try {
+      const meta = await sharp(buffer).metadata();
+      width = meta.width ?? null;
+      height = meta.height ?? null;
+    } catch { /* non-image metadata read — leave dims null */ }
+
     const uploaded = await uploadAutomationAsset({
       productId,
       kind: stage,
@@ -108,11 +134,48 @@ export async function POST(
       buffer,
       contentType,
     });
+
+    // Registry insert (item C4) — idempotent on path, guarded for the
+    // pre-migration window so the upload still succeeds if the table is absent.
+    let registered = false;
+    try {
+      await prisma.assetRegistry.create({
+        data: {
+          productId,
+          stage,
+          angle: tokens.angle ?? null,
+          mood: tokens.mood ?? null,
+          slot: tokens.slot ?? null,
+          context: tokens.context ?? null,
+          fileName: uploaded.path.slice(uploaded.path.lastIndexOf('/') + 1),
+          path: uploaded.path,
+          width,
+          height,
+          sourceTag,
+        },
+      });
+      registered = true;
+    } catch (e) {
+      // P2021/P2022 = table/column not migrated; P2002 = unique path already
+      // registered. None are fatal to the upload itself.
+      if (
+        !(e instanceof Prisma.PrismaClientKnownRequestError &&
+          (e.code === 'P2021' || e.code === 'P2022' || e.code === 'P2002'))
+      ) {
+        throw e;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       productId,
       stage,
       recommendedStage,
+      tokens,
+      variant,
+      width,
+      height,
+      registered,
       path: uploaded.path,
       publicUrl: uploaded.publicUrl,
       uploadedAt: uploaded.uploadedAt,

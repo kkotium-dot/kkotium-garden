@@ -114,7 +114,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     try {
       const uploaded = await uploadAutomationAsset({
         productId,
-        kind: 'thumb',
+        kind: 'thumbnail',
         variant: 'whitebg',
         buffer: result.buffer,
         contentType: 'image/jpeg',

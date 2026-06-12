@@ -27,7 +27,7 @@
 // Never import this from a client component.
 
 import { createClient } from '@supabase/supabase-js';
-import { STAGE_DIRS } from './asset-taxonomy';
+import { STAGE_DIRS, LEGACY_STAGE_DIRS } from './asset-taxonomy';
 
 const BUCKET_NAME = 'product-assets';
 
@@ -44,7 +44,10 @@ function getServerClient() {
   });
 }
 
-export type AssetKind = 'source' | 'thumb' | 'detail' | 'cutout' | 'composite' | 'archive';
+// v2 taxonomy (2026-06-12): + plate, + reference, thumb -> thumbnail. The legacy
+// 'thumb' folder is still READ (LEGACY_STAGE_DIRS) but no longer a writable kind.
+export type AssetKind =
+  | 'source' | 'cutout' | 'plate' | 'reference' | 'composite' | 'thumbnail' | 'detail' | 'archive';
 
 export interface UploadAssetOptions {
   productId: string;
@@ -139,7 +142,7 @@ export async function findCachedAsset(
     // then the stage subfolders (backward-compatible).
     const rootHit = await searchDir(productId);
     if (rootHit) return rootHit;
-    for (const dir of STAGE_DIRS) {
+    for (const dir of [...STAGE_DIRS, ...LEGACY_STAGE_DIRS]) {
       const hit = await searchDir(`${productId}/${dir}`);
       if (hit) return hit;
     }
@@ -232,9 +235,13 @@ export async function listProductAssets(productId: string): Promise<ProductAsset
     }
   };
 
-  // Root = legacy flat uploads (backward-compatible), then each stage subfolder.
+  // Root = legacy flat uploads (backward-compatible), then each stage subfolder,
+  // then legacy stage folders (e.g. pre-v2 'thumb') so old URLs still surface.
   await collect(productId, 'root');
   for (const dir of STAGE_DIRS) {
+    await collect(`${productId}/${dir}`, dir);
+  }
+  for (const dir of LEGACY_STAGE_DIRS) {
     await collect(`${productId}/${dir}`, dir);
   }
   return out;

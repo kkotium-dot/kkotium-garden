@@ -88,18 +88,18 @@ export async function POST(
   if (body.thumbBase64) {
     const buf = decodeBase64(body.thumbBase64);
     if (!buf) {
-      errors.push({ kind: 'thumb', message: 'base64 decode failed' });
+      errors.push({ kind: 'thumbnail', message: 'base64 decode failed' });
     } else {
       try {
         const r = await uploadAutomationAsset({
           productId,
-          kind: 'thumb',
+          kind: 'thumbnail',
           variant: thumbVariant || 'main',
           buffer: buf,
         });
         thumbResult = { publicUrl: r.publicUrl, path: r.path };
       } catch (err) {
-        errors.push({ kind: 'thumb', message: String(err) });
+        errors.push({ kind: 'thumbnail', message: String(err) });
       }
     }
   }

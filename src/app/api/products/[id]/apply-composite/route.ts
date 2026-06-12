@@ -30,8 +30,10 @@ import {
   setJobIntervention,
   buildFireflyDropPayload,
   buildSourceRequestPayload,
+  buildMountCheckPayload,
   INTERVENTION_FIREFLY_DROP,
   INTERVENTION_SOURCE_REQUEST,
+  INTERVENTION_MOUNT_CHECK,
 } from '@/lib/jobs/intervention';
 import { parseFidelity, type ProductFidelity } from '@/lib/fidelity/product-fidelity';
 
@@ -238,6 +240,23 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       });
       jobId = j.id;
     } catch { /* audit seed is best-effort */ }
+
+    // Mount-physics check (item 8): the composite just locked an image into a
+    // slot. If the product declares a mount mechanic, seed a mount_check card so
+    // the operator verifies the clip/slat geometry before publish. Best-effort;
+    // matchInterventionType so it never hijacks a firefly_drop on the same job.
+    if (applied) {
+      try {
+        const fidelity = await loadFidelity(productId);
+        const mountPayload = fidelity ? buildMountCheckPayload(productId, fidelity) : null;
+        if (mountPayload) {
+          await setJobIntervention({
+            productId, jobType: PRODUCT_COMPOSITE, type: INTERVENTION_MOUNT_CHECK,
+            payload: mountPayload, tool: 'review', matchInterventionType: true,
+          });
+        }
+      } catch { /* mount-check seed is best-effort */ }
+    }
   }
 
   return NextResponse.json({

@@ -883,6 +883,31 @@ model AssetJobTransition {
   @@map("asset_job_transitions")
 }
 
+// 2026-06-12 — Asset Registry v2 (asset loading taxonomy v2). A queryable index
+// of stored assets, populated by the semi-automatic intake (upload route) with
+// the inferred stage + controlled tokens (angle/mood/slot/context) and the
+// normalized storage path. Supplementary to Supabase Storage (which stays the
+// source of truth for listing); enables angle/slot/mood queries the storage API
+// cannot. Additive table — consumers guard P2021/P2022 (reverse-deploy-safe).
+model AssetRegistry {
+  id        String   @id @default(cuid())
+  productId String   @map("product_id")
+  stage     String
+  angle     String?
+  mood      String?
+  slot      String?
+  context   String?
+  fileName  String   @map("file_name")
+  path      String   @unique
+  width     Int?
+  height    Int?
+  sourceTag String?  @map("source_tag")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([productId, stage])
+  @@map("asset_registry")
+}
+
 // Published asset provenance — locks in the IP source chain of each live image.
 model PublishedAsset {
   id            String   @id @default(cuid())

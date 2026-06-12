@@ -17,7 +17,7 @@ import {
   type AssetKind,
   type ProductAssetEntry,
 } from '@/lib/storage/automation-storage';
-import { STAGE_DIRS, STAGE_FOLDER } from '@/lib/storage/asset-taxonomy';
+import { STAGE_DIRS, STAGE_FOLDER, LEGACY_STAGE_DIRS } from '@/lib/storage/asset-taxonomy';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -86,6 +86,21 @@ export async function GET(
         files,
       };
     });
+
+    // Legacy stage folders (e.g. pre-v2 'thumb') — append only when present so
+    // their stored URLs stay visible without polluting the canonical stage list.
+    for (const legacy of LEGACY_STAGE_DIRS) {
+      const legacyEntries = byStage.get(legacy);
+      if (legacyEntries && legacyEntries.length > 0) {
+        stages.push({
+          stage: legacy,
+          adobeFolder: null,
+          storagePath: `${BUCKET_NAME}/${id}/${legacy}/`,
+          count: legacyEntries.length,
+          files: legacyEntries.map(toStageFile),
+        });
+      }
+    }
 
     const rootEntries = byStage.get('root');
     if (rootEntries && rootEntries.length > 0) {

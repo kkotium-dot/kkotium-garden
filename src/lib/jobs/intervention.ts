@@ -18,8 +18,10 @@ import { BG_CLEAN, PRODUCT_COMPOSITE } from '@/lib/jobs/job-type-routing';
 import {
   applyFidelityToPrompt,
   buildFidelityChecklistPayload,
+  buildMountCheckPayload,
   type ProductFidelity,
   type FidelityChecklistPayload,
+  type MountCheckPayload,
 } from '@/lib/fidelity/product-fidelity';
 
 export const INTERVENTION_SOURCE_REQUEST = 'source_request';
@@ -28,14 +30,18 @@ export const INTERVENTION_FIREFLY_DROP = 'firefly_drop';
 // Pre-publish fidelity-check gate (#56): the operator compares the confirmed
 // representative / additional images against the product's fidelity card.
 export const INTERVENTION_FIDELITY_CHECK = 'fidelity_check';
+// Mount-physics check (#56, item 8): clip/slat geometry OK before slot lock.
+export const INTERVENTION_MOUNT_CHECK = 'mount_check';
 
 export type InterventionType =
   | typeof INTERVENTION_SOURCE_REQUEST
   | typeof INTERVENTION_HERO_CROP_REQUEST
   | typeof INTERVENTION_FIREFLY_DROP
-  | typeof INTERVENTION_FIDELITY_CHECK;
+  | typeof INTERVENTION_FIDELITY_CHECK
+  | typeof INTERVENTION_MOUNT_CHECK;
 
-export type { FidelityChecklistPayload };
+export { buildMountCheckPayload };
+export type { FidelityChecklistPayload, MountCheckPayload };
 
 // A hero cutout source whose longest edge is below this is too small to upscale
 // cleanly — request a fresh crop instead (CUTOUT_HERO_STANDARD §3 trigger).

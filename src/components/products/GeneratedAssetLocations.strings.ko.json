@@ -12,12 +12,45 @@
   "openFile": "원본 열기",
   "adobePrefix": "Adobe CC",
   "stage": {
-    "source": { "label": "원본 (생성 raw)", "desc": "Firefly 생성 합성 전 배경/소재" },
-    "cutout": { "label": "누끼", "desc": "배경 제거 투명 컷" },
-    "composite": { "label": "합성", "desc": "무드 배경 + 제품 누끼 합성" },
-    "thumb": { "label": "썸네일·대표", "desc": "1:1 대표 후보" },
-    "detail": { "label": "상세", "desc": "상세페이지 860px 섹션" },
-    "archive": { "label": "보관", "desc": "교체·폐기 후보 백업" },
-    "root": { "label": "루트 (레거시)", "desc": "스테이지 분류 전 평면 업로드" }
+    "source": {
+      "label": "원본 (생성 raw)",
+      "desc": "Firefly 생성 합성 전 배경/소재"
+    },
+    "cutout": {
+      "label": "누끼",
+      "desc": "배경 제거 투명 컷"
+    },
+    "composite": {
+      "label": "합성",
+      "desc": "무드 배경 + 제품 누끼 합성"
+    },
+    "thumb": {
+      "label": "썸네일(레거시)",
+      "desc": "v2 이전 thumb 폴더"
+    },
+    "detail": {
+      "label": "상세",
+      "desc": "상세페이지 860px 섹션"
+    },
+    "archive": {
+      "label": "보관",
+      "desc": "교체·폐기 후보 백업"
+    },
+    "root": {
+      "label": "루트 (레거시)",
+      "desc": "스테이지 분류 전 평면 업로드"
+    },
+    "plate": {
+      "label": "플레이트",
+      "desc": "배경 플레이트·턴테이블 클린컷"
+    },
+    "reference": {
+      "label": "레퍼런스",
+      "desc": "Firefly 참조 슬롯 드롭용"
+    },
+    "thumbnail": {
+      "label": "썸네일·대표",
+      "desc": "1:1 대표 후보"
+    }
   }
 }
