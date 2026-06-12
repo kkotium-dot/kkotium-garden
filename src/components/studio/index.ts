@@ -33,3 +33,4 @@ export { ThumbnailCard } from './ThumbnailCard';
 export { DetailPageCard } from './DetailPageCard';
 export { ActionsCard } from './ActionsCard';
 export { ProductListPane } from './ProductListPane';
+export { default as AssetBrowser, type AssetBrowserProps } from './AssetBrowser';

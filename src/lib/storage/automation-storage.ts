@@ -150,6 +150,26 @@ export async function findCachedAsset(
 }
 
 /**
+ * Move an asset to a new path within the same bucket and return its new public
+ * URL. Reversible (the operator can move it back); nothing is deleted. Used by
+ * the asset-browser archive action to relocate a superseded asset into
+ * `{productId}/archive/` AFTER the caller has de-referenced it from the DB
+ * (mainImage / extra_images), so no stored URL is left dangling.
+ */
+export async function moveAutomationAsset(
+  fromPath: string,
+  toPath: string,
+): Promise<{ path: string; publicUrl: string }> {
+  const supabase = getServerClient();
+  const { error } = await supabase.storage.from(BUCKET_NAME).move(fromPath, toPath);
+  if (error) {
+    throw new Error(`automation-storage move failed: ${error.message}`);
+  }
+  const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(toPath);
+  return { path: toPath, publicUrl: urlData.publicUrl };
+}
+
+/**
  * Delete an asset by storage path. Useful when regenerating to clean up
  * stale uploads before issuing a new one.
  */

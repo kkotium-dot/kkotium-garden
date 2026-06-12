@@ -26,6 +26,7 @@ import {
   ThumbnailCard,
   DetailPageCard,
   ActionsCard,
+  AssetBrowser,
   useStudioActions,
   fmtPrice,
   type ProductRow,
@@ -258,6 +259,7 @@ function StudioInner() {
           hasNaverId={hasNaverId}
         />
       }
+      assets={<AssetBrowser productId={selectedProduct?.id ?? null} />}
     />
     </>
   );

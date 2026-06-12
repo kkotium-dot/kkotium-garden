@@ -1,0 +1,53 @@
+{
+  "title": "에셋 브라우저",
+  "subtitle": "상품별·스테이지별 자산 관리 (캐논: Supabase Storage). 대표/추가/아카이브·직접 업로드·폴더 바로가기.",
+  "totalPrefix": "총",
+  "countUnit": "개",
+  "loading": "에셋 불러오는 중...",
+  "error": "에셋을 불러오지 못했습니다",
+  "emptyAll": "아직 생성된 에셋이 없습니다",
+  "notApplied": "미적용",
+  "selectProduct": "상품을 선택하면 에셋이 표시됩니다",
+  "refresh": "새로고침",
+  "openFile": "원본 열기",
+  "adobePrefix": "Adobe CC",
+  "upload": {
+    "heading": "직접 업로드",
+    "pick": "파일 선택",
+    "drop": "여기에 파일을 드롭하거나 클릭해 선택",
+    "stageLabel": "스테이지",
+    "autoStage": "자동추천",
+    "recommended": "추천",
+    "uploading": "업로드 중...",
+    "done": "업로드 완료",
+    "failed": "업로드 실패",
+    "notImage": "이미지 파일만 업로드할 수 있습니다"
+  },
+  "shortcut": {
+    "supabase": "Supabase 폴더 열기",
+    "copyPath": "경로 복사",
+    "copied": "복사됨"
+  },
+  "action": {
+    "setMain": "대표지정",
+    "addExtra": "추가이미지",
+    "archive": "아카이브",
+    "currentMain": "현재 대표",
+    "inExtra": "추가됨",
+    "setMainDone": "대표로 지정했습니다",
+    "addExtraDone": "추가이미지로 담았습니다",
+    "archiveDone": "아카이브로 이동했습니다",
+    "archiveMainBlocked": "대표컷은 아카이브할 수 없습니다. 다른 컷을 대표로 지정한 뒤 다시 시도하세요.",
+    "confirmArchive": "이 자산을 archive/ 로 이동할까요? (되돌리기 가능, 삭제 아님)",
+    "working": "처리 중..."
+  },
+  "stage": {
+    "source": { "label": "원본 (생성 raw)", "desc": "Firefly 생성 합성 전 배경/소재" },
+    "cutout": { "label": "누끼", "desc": "배경 제거 투명 컷" },
+    "composite": { "label": "합성", "desc": "무드 배경 + 제품 누끼 합성" },
+    "thumb": { "label": "썸네일·대표", "desc": "1:1 대표 후보" },
+    "detail": { "label": "상세", "desc": "상세페이지 860px 섹션" },
+    "archive": { "label": "보관", "desc": "교체·폐기 후보 백업" },
+    "root": { "label": "루트 (레거시)", "desc": "스테이지 분류 전 평면 업로드" }
+  }
+}

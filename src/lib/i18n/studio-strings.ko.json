@@ -182,7 +182,8 @@
       "diagnosis": "진단",
       "thumbnail": "썸네일",
       "detail": "상세",
-      "actions": "저장·발행"
+      "actions": "저장·발행",
+      "assets": "에셋"
     },
     "dropzone": {
       "_meta": "Phase 2-B-2 — 디자이너 소스 업로드 드롭존. /api/upload 재활용 + Supabase Storage. 런타임 외부 이미지 생성 0.",

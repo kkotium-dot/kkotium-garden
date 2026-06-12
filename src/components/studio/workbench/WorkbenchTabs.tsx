@@ -7,17 +7,20 @@
 "use client";
 
 import { ReactNode, useState } from "react";
-import { Activity, Layers, ScrollText, Send } from "lucide-react";
+import { Activity, Layers, ScrollText, Send, FolderOpen } from "lucide-react";
 import { ScallopCard } from "@/components/shell";
 import strings from "@/lib/i18n/studio-strings.ko.json";
 
-export type WorkbenchTabKey = "diagnosis" | "thumbnail" | "detail" | "actions";
+export type WorkbenchTabKey = "diagnosis" | "thumbnail" | "detail" | "actions" | "assets";
 
 export interface WorkbenchTabsProps {
   diagnosis: ReactNode;
   thumbnail: ReactNode;
   detail: ReactNode;
   actions: ReactNode;
+  /** Optional 5th tab (asset browser). Only rendered when provided, so other
+   *  callers (e.g. PLANT) keep the original 4-tab layout. */
+  assets?: ReactNode;
   /** Optional initial tab — defaults to 'diagnosis'. */
   defaultTab?: WorkbenchTabKey;
   /** External control: when set, becomes a controlled component. */
@@ -32,15 +35,15 @@ const TAB_ICONS: Record<WorkbenchTabKey, typeof Activity> = {
   thumbnail: Layers,
   detail: ScrollText,
   actions: Send,
+  assets: FolderOpen,
 };
-
-const TAB_ORDER: WorkbenchTabKey[] = ["diagnosis", "thumbnail", "detail", "actions"];
 
 export default function WorkbenchTabs({
   diagnosis,
   thumbnail,
   detail,
   actions,
+  assets,
   defaultTab = "diagnosis",
   activeTab,
   onTabChange,
@@ -55,11 +58,22 @@ export default function WorkbenchTabs({
     onTabChange?.(next);
   };
 
+  // The 'assets' tab is appended only when its content is provided, so existing
+  // 4-tab callers are unaffected.
+  const tabOrder: WorkbenchTabKey[] = [
+    "diagnosis",
+    "thumbnail",
+    "detail",
+    "actions",
+    ...(assets != null ? (["assets"] as WorkbenchTabKey[]) : []),
+  ];
+
   const tabLabel: Record<WorkbenchTabKey, string> = {
     diagnosis: c.diagnosis,
     thumbnail: c.thumbnail,
     detail: c.detail,
     actions: c.actions,
+    assets: c.assets,
   };
 
   const contents: Record<WorkbenchTabKey, ReactNode> = {
@@ -67,6 +81,7 @@ export default function WorkbenchTabs({
     thumbnail,
     detail,
     actions,
+    assets,
   };
 
   return (
@@ -78,12 +93,12 @@ export default function WorkbenchTabs({
         role="tablist"
         style={{
           display: "grid",
-          gridTemplateColumns: `repeat(${TAB_ORDER.length}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${tabOrder.length}, minmax(0, 1fr))`,
           background: "var(--gp-pink-50)",
           borderBottom: "1px solid var(--color-border)",
         }}
       >
-        {TAB_ORDER.map((key) => {
+        {tabOrder.map((key) => {
           const Icon = TAB_ICONS[key];
           const active = tab === key;
           return (
@@ -137,7 +152,7 @@ export default function WorkbenchTabs({
 
       {/* Tab panels — all mounted to preserve state, only active is visible */}
       <div style={{ padding: 14 }}>
-        {TAB_ORDER.map((key) => (
+        {tabOrder.map((key) => (
           <div
             key={key}
             role="tabpanel"
