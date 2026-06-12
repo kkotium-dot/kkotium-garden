@@ -1,3 +1,11 @@
+## 2026-06-12 (세션6) 이미지 스튜디오 + 충실도 카드 + 적재 v2 → main 병합·production LIVE (Code turn)
+
+**[병합·배포]** feat/image-studio(715f564 C-5 / dbb9fe7 fidelity / fa9ad01 asset-v2) → main FF `015cc3f..fa9ad01` push. Vercel production READY 검증(dpl_AK4omPEX·target=production·SHA fa9ad01·verify-deploy exit0). smoke /dashboard·/studio·/assets 200·taxonomy v2 스테이지 라이브.
+**[DB LIVE]** 마이그레이션 3건: add_product_fidelity_column / add_asset_registry / add_product_asset_objects_fn(읽기전용·service_role grant). 명화 fidelity 완성 seed: mountType·components·decorAllowed·decorForbidden·mountMechanic("spring clip on neck clamps one vent slat…")·scents 4향(Cotton Around · Black Cherry · April Fresh · Lemon Eucalyptus)·promptInject·sourceRef.
+**[기능]** C-5 자산브라우저(stage 그리드+대표/추가/아카이브+직접업로드+Supabase 딥링크)·적재 taxonomy v2(8스테이지)·STAGE_NAMING 토큰·AssetRegistry 반자동 인테이크·충실도 프롬프트 주입(promptInject prepend+decorForbidden 네거티브+마운트 물리정합)·fidelity_check/mount_check 게이트·refetch broadcast(#62).
+**[미해결·정직(#63)]** production /assets composite 9개 미표시 — prod런타임 Supabase Storage list() 중첩prefix 빈응답(사전존재·내 병합 무관, 로컬 순차 composite=9 입증·저영향 표시갭). RPC 결정적 수정 승인 후 착수했으나 신형 sb_secret_ 키 롤 public USAGE 부재(42501) 차단 → 대표 결정 대기. 가짜보고 0(#63).
+**[MD 정합]** PROGRESS·SESSION_LOG 세션6 + PARALLEL_WORK_TRACKER rev13(앱적용 3계층) + ROADMAP/TASK_BRIDGE(82) P0→P3 + PRINCIPLES_LEARNED #62~#65 + CLAUDE §3-6 scents + ENGINE §11 4향·v8.3 + PRODUCT_REGISTRATION 자동생성(#64) + 신규 핸드오프. Python #29b·한글손상 grep 0.
+
 ## 2026-06-11 (세션5) 적응형 3-Plane 합성 엔진 권위문서 신규 + 합성표준 MD 정합 (Code turn)
 
 main 0892f44. 비가역 0(docs only·네이버/Adobe 무접촉). 권위: 본 turn이 신규 작성한 docs/design/ADAPTIVE_COMPOSITE_ENGINE.md = 전상품 합성 표준(대표 리뷰 대기). 근거 = REPRESENTATIVE_IMAGE_FINISHING_SYSTEM §2/§3/§9 + #52/#53/#55/#57 + HANDOFF_2026-06-10 3-plane + 대표 2026-06-11 지시.

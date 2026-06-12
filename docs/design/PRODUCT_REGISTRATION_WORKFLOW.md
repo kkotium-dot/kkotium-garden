@@ -16,7 +16,7 @@
 
 ```
 STEP 1  인제스트     : 공급사 원본 크롤링 -> DB 적재(원본 보존)
-STEP 2  제품정체 확정 : 공급사 실상세 육안 확정(#58) -> 상품현실시트 작성
+STEP 2  제품정체 확정 : 공급사 실상세 육안 확정(#58) -> 상품현실시트 + 충실도카드 자동생성(#64)
 STEP 3  원산지 흡수   : 공급사 원산지 표기 -> 원산지코드 룩업(국산 디폴트 금지, 2장)
 STEP 4  옵션·재고 정합: 옵션 트리 + 옵션별 재고 일치 검증(3장)
 STEP 5  고시·규격     : 상품고시정보 + 고시 사이즈 -> 스케일 앵커(4장)
@@ -25,6 +25,8 @@ STEP 7  검수·발행     : 페이로드 전체 재구성 검증 -> 대표 GO -
 ```
 
 미확인 필드가 하나라도 있으면 STEP 7 진입 금지 -> **보류 큐**로 빠진다.
+
+**충실도 카드 자동생성 (#64)**: STEP 2에서 공급사 권위 원본(실상세)으로부터 Product.fidelity를 자동생성한다 — 향(scents)·부속(components)·마운트(mountType/mountMechanic)·금지데코(decorForbidden)·promptInject·sourceRef. 카드는 이미지 프롬프트 주입(promptInject prepend + decorForbidden 네거티브 + 마운트 물리정합)과 발행 게이트(fidelity_check·mount_check, #56)의 권위. 권위 ADAPTIVE_COMPOSITE_ENGINE.md §11·§15.
 
 ---
 
@@ -96,5 +98,7 @@ STEP 3~5에서 확정 불가한 필드는 발행을 막고 Operator Action Queue
 ---
 
 ## 변경 이력
+
+- 2026-06-12 — STEP 2 충실도카드 자동생성(#64) 명문화 + 발행 게이트(fidelity_check·mount_check) 연결.
 
 - 2026-06-12 (v1) — 신규 작성. 원산지(공급사 권위->룩업, 국산 디폴트 금지)·옵션 재고 정합·고시 사이즈 스케일 앵커·v8 이미지 스테이지·보류 큐 게이트 단일화. 근거 = HANDOFF v8 + CLAUDE.md §3-3/§3-6/§3-7.

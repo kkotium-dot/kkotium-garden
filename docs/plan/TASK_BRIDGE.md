@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-12 (82) 이미지 스튜디오+충실도카드+적재v2 main 병합·production LIVE (FROM 💻 Code, main fa9ad01, 비가역 0)
+
+| 항목 | 상태 |
+|---|---|
+| 병합·배포 ✅ | feat/image-studio(715f564/dbb9fe7/fa9ad01) → main FF·Vercel production READY(dpl_AK4omPEX·target=production·verify exit0·smoke 200). |
+| DB LIVE ✅ | Product.fidelity 컬럼+명화 카드 완성(scents 4향·mountMechanic) / asset_registry / product_asset_objects 함수. |
+| 기능 ✅ | C-5 자산브라우저·taxonomy v2(8스테이지)·STAGE_NAMING·AssetRegistry 인테이크·fidelity_check/mount_check 게이트·충실도 프롬프트 주입·refetch #62. |
+| ★미해결 | /assets composite 9개 미표시(prod Storage list() 빈응답·사전존재·저영향). RPC 수정 승인 후 신형 sb_secret_ 키 롤 public USAGE 부재(42501) 차단 → 스키마 usage grant 대표 결정 대기. 가짜보고0(#63). |
+| 다음 | [Desktop] P0 실사용 검증(#63). [대표] /assets RPC 권한 결정. [Code] asset-hygiene·origin-integrity 별도세션. |
+
 ### 2026-06-11 (81) 적응형 합성 엔진 권위문서 신규 + 합성표준 MD 정합 (FROM 💻 Code, main, 비가역 0·docs only)
 
 | 항목 | 상태 |

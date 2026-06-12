@@ -768,3 +768,19 @@ grep -c "id: '" src/lib/automation-registry.ts
 - **생성=Firefly·결정적변환=코드**: 자연 합성은 Firefly Nano Banana Pro(3-plane), harmonize/normalize/접지는 sharp. Pillow 기계겹침 폐기. (#52·#53·#57 재확인)
 - **앱 적용**: finish-image(C-3)·apply-composite(C-7)·개입카드(C-9)·스튜디오 마무리 카드(C-5)가 본 표준 소비.
 - 번호 정합: #58(제품정체 우선)·#59(산출물 영구화)·#60(세션 HEAD 대조) 정식 등재 완료(갭 해소).
+
+## 작업원칙 #62 — 교차뷰 리페치 브로드캐스트 (2026-06-12, SWR/plain-fetch 환경)
+
+**규칙**: 한 뷰가 상품 이미지 상태(대표/추가/아카이브)를 바꾸면 같은 상품을 띄운 타 뷰(스튜디오 헤더·캔버스·상세)가 즉시 리페치해야 한다. 앱은 React Query 부재(SWR/plain-fetch) → 라이브러리 무관 window CustomEvent(`kkotium:product-mutated`) 브로드캐스트로 구현(src/lib/events/product-mutated.ts). 액션 측 broadcast → 구독 측 refetch. SSR 안전(window 가드).
+
+## 작업원칙 #63 — 실사용 브라우저 테스트 통과 후 다음 작업·가짜보고 절대 금지 (2026-06-12 대표 확정)
+
+**규칙**: 기능 "완료"는 실사용 브라우저 테스트 통과가 조건. Desktop이 preview 인증벽(Vercel Deployment Protection)으로 검증 불가 시 → (a) 병합 후 production에서 테스트 또는 (b) 대표 점검 요청. **절대 가짜보고 금지** — 미검증을 "검증완"으로, 미표시를 "표시"로 기록 금지. 발견된 미해결(예: /assets composite 미표시)은 그대로 노출. #44(stale fact 갱신)·#45(출력 fact-check) 강화.
+
+## 작업원칙 #64 — 등록 시 공급사 권위원본에서 fidelity card 자동생성 (2026-06-12 대표 확정)
+
+**규칙**: 모든 상품은 등록 시 공급사 권위 원본(실상세·#58)에서 충실도 카드(Product.fidelity)를 자동생성한다 — 향(scents)·부속(components)·마운트(mountType/mountMechanic)·금지데코(decorForbidden)·promptInject. 카드는 이미지 프롬프트 주입 + 발행 게이트(fidelity_check/mount_check)의 권위. 권위 PRODUCT_REGISTRATION_WORKFLOW.md·ADAPTIVE_COMPOSITE_ENGINE.md §11. 전상품(#55).
+
+## 작업원칙 #65 — Firefly 수동 드롭은 임시·Firefly Bridge 수렴 (2026-06-12 방향)
+
+**규칙**: 현행 Firefly 참조 슬롯 수동 드롭(#52)은 과도기. 목표 = Firefly Bridge가 reference/ 스테이지 자동로드 + 생성 자동구동, 운영자 개입은 "당선작 픽(최종 선별)"으로 수렴. 전자동화 전까지 수동 드롭 유지하되 reference/ 적재·STAGE_NAMING로 자동화 준비.

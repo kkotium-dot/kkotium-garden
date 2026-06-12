@@ -1,6 +1,13 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-11 (rev12 · C-3 병합·production 라이브)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-12 (rev13 · image-studio 병합·production LIVE)
 
 > 대표 상시 지시: 요청 개선사항·병행작업 항상 누락 없이 추적. 매 세션 갱신. Desktop 상시 유지. #54·#55·#56 준수.
+
+## 앱 적용 현황 (2026-06-12 세션6 · image-studio 병합·production LIVE)
+3계층 상태:
+- **DB LIVE** (production Supabase 반영완): Product.fidelity 컬럼 + 명화 카드 완성(scents 4향·mountMechanic 포함) / asset_registry 테이블 / product_asset_objects 함수(service_role).
+- **production code LIVE** (main fa9ad01·Vercel READY): C-5 자산브라우저·적재 taxonomy v2(8스테이지)·STAGE_NAMING·AssetRegistry 인테이크·fidelity_check/mount_check 게이트·충실도 프롬프트 주입·refetch #62. **단 Desktop 실사용 검증 대기(#63)** — 병합완료지만 브라우저 통과 전.
+- **별도 세션 미착수**: asset-hygiene/main(desktop-filer·기존파일 reorg·고아탐지) · origin-integrity.
+- ★미해결: /assets composite 9개 미표시(prod Storage list() 빈응답·저영향) — RPC 수정 신형키 롤 권한(42501) 차단·대표 결정 대기.
 
 ## 상태 (실측 기준)
 | # | 항목 | 상태 | 다음 |

@@ -1,4 +1,5 @@
 # KKOTIUM GARDEN — ROADMAP
+> 2026-06-12 (세션6) **이미지 스튜디오+충실도카드+적재v2 production LIVE (fa9ad01)** (Code turn, 비가역 0). feat/image-studio 3커밋 main FF 병합·Vercel production READY. DB LIVE(fidelity 완성·scents 4향·asset_registry). 게이트 fidelity_check/mount_check. ★미해결=/assets composite 미표시(RPC 수정 신형키 권한 차단·대표 결정 대기). **다음=P0 Desktop 실사용검증(#63)→P1 명화 발행→P2 타상품.**
 > 2026-06-08 **★ 운영 시스템 레이어 — 개입 대기열(Operator Action Queue) + 적용현황 인디케이터 전상품 착수** (Code turn, main 415358b, 비가역 0). 권위 docs/design/OPERATOR_SYSTEM_BLUEPRINT.md(9단계 파이프라인 + 개입점 4유형 + 휴먼인더루프 오케스트레이션). 1차 완료: control-tower-engine actionQueue 파생(nextAction+게이트→AUTO/INPUT_DECISION/GO_PENDING/AUTH, 신규 컬럼 0) + 관제탑 상단 개입 대기열 위젯(전상품·1클릭 deepLink·레드=GO만) + 적용현황 인디케이터(#54)와 행동축/결과축 한 쌍. 원칙 #54(적용현황 상시)·#55(전상품 범용)·#56(개입 자연스러움). **시스템 레이어 후속: 2차 딥링크 정합(큐 카드→정확 작업 화면/탭) · 3차 외부 인증 Chrome MCP 반자동(#52 Firefly/네이버 CAPTCHA·로그인만 대표) · 스튜디오 헤더 적용현황 미러 · 아틀리에 재설계 2단계(전 /studio 토큰 정렬·공유 Card P4).**
 > 2026-06-05 **네이버 상품 수정 라우트 신설(PUT origin-products, dryRun-default-safe) + dryRun 검증** (Code turn, 70b4edc, 비가역 0). register 빌더 재사용 전체 페이로드 PUT, 실 수정은 confirm:true 명시. dryRun GREEN(canRegister true·페이로드 정합). ★ 발견: mainImage가 공급사 원본 → 교정 누끼 반영 전 mainImage 승격 선결. **다음=mainImage 승격→대표 승인→실 PUT(비가역)**.
 > 2026-06-05 **이미지 파이프라인 리서치 + 개선 마스터 플랜(5트랙 T1~T5) + 운영 원칙(CLAUDE.md §3-6)** (Code turn, bd28efe, docs only·비가역 0). T1 asset_jobs 범용화+라이선스 티어 / T2 Bria PoC 통합 / T3 3-레인 라우터+도구 자동선택 / T4 발행 검수 대시보드+시안 선택 UI / T5 앱-Desktop-MCP 연결+발행 워크플로우 앱 통합. 권위: docs/plan/IMAGE_PIPELINE_IMPROVEMENT_MASTER_PLAN.md. **다음=T1 착수(대표 승인 게이트)**.
@@ -79,7 +80,27 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-06-10 C-6 단계폴더 실생성 + 명화 Firefly 무드 (Desktop) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-06-12 P0 실사용 검증 (Desktop) ⭐ ACTIVE
+
+권위본 정독: docs/handoff/NEW_CHAT_STARTER_2026-06-12_image_studio_live.md -> PARALLEL_WORK_TRACKER(rev13) -> TASK_BRIDGE §3(82).
+전제: feat/image-studio main fa9ad01 production LIVE·READY. DB fidelity 완성(scents 4향). 순서 P0병합완료→P1실사용테스트→P2이미지→P3타상품.
+
+```
+[꽃틔움 가든 / Desktop / P0 실사용 검증: image-studio production fa9ad01]
+production HEAD fa9ad01 READY 확인 후 /studio·/dashboard 실사용:
+1) 관제탑 fidelity_check·mount_check 카드 인라인 렌더(강제모달0·#56) — 액션 시드 후 노출.
+2) 에셋탭 업로드→자동분류·정규리네임→asset_registry insert(execute_sql 확인).
+3) set_main/add_extra 후 헤더·캔버스 대표이미지 즉시 갱신(#62).
+4) firefly_drop 페이로드 promptInject+"Avoid:"+마운트 물리정합 주입 확인.
+5) ★/assets composite 9개 표시 여부(미해결 이슈 재확인).
+규칙: 비가역0·실측우선·가짜보고0(#63).
+```
+
+[병행] Code: asset-hygiene·origin-integrity 별도세션. /assets composite RPC 수정 = 신형키 스키마 usage grant 대표 결정 후.
+
+---
+
+## (SUPERSEDED 2026-06-12) 다음 새 채팅 시작 메시지 — 2026-06-10 C-6 단계폴더 실생성 + 명화 Firefly 무드 (Desktop)
 
 본 메시지를 다음 새 채팅의 첫 입력으로 사용하세요. 이중 트랙 핑퐁 (작업원칙 #41) 정합.
 권위본 정독: docs/handoff/NEW_CHAT_STARTER_2026-06-10_C6_studio_run.md -> PARALLEL_WORK_TRACKER(rev6) -> TASK_BRIDGE §3(72).
