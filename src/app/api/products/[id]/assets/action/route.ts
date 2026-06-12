@@ -25,6 +25,41 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { moveAutomationAsset } from '@/lib/storage/automation-storage';
+import { parseFidelity } from '@/lib/fidelity/product-fidelity';
+import { PRODUCT_COMPOSITE } from '@/lib/jobs/job-type-routing';
+import {
+  setJobIntervention,
+  buildFidelityCheckPayload,
+  INTERVENTION_FIDELITY_CHECK,
+} from '@/lib/jobs/intervention';
+
+/**
+ * Pre-publish fidelity-check gate (#56): when the operator finalizes the
+ * representative / additional images (set_main / add_extra), seed a
+ * fidelity_check card IF the product carries a fidelity card. Idempotent
+ * (setJobIntervention reuses the latest open image-track job) and best-effort
+ * (never fails the action). Products without a fidelity card get no gate.
+ */
+async function seedFidelityGate(productId: string): Promise<string | null> {
+  try {
+    const row = await prisma.product.findUnique({ where: { id: productId }, select: { fidelity: true } });
+    const f = parseFidelity(row?.fidelity);
+    if (!f) return null;
+    const seeded = await setJobIntervention({
+      productId,
+      jobType: PRODUCT_COMPOSITE,
+      type: INTERVENTION_FIDELITY_CHECK,
+      payload: buildFidelityCheckPayload(productId, f),
+      tool: 'review',
+      // Never hijack an open firefly_drop job (same jobType) — reuse only an
+      // existing fidelity_check job, else create a fresh one.
+      matchInterventionType: true,
+    });
+    return seeded?.jobId ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -146,6 +181,7 @@ export async function POST(
       }
     }
     await prisma.product.update({ where: { id: productId }, data: { mainImage: publicUrl } });
+    const fidelityGateJobId = await seedFidelityGate(productId);
     return NextResponse.json({
       success: true,
       productId,
@@ -153,6 +189,7 @@ export async function POST(
       mainImage: publicUrl,
       parkedPreviousMain: parked,
       extrasPending,
+      fidelityGateJobId,
     });
   }
 
@@ -168,7 +205,8 @@ export async function POST(
         where: { id: productId },
         data: { extra_images: extras as unknown as Prisma.InputJsonValue },
       });
-      return NextResponse.json({ success: true, productId, action, count: extras.length });
+      const fidelityGateJobId = await seedFidelityGate(productId);
+      return NextResponse.json({ success: true, productId, action, count: extras.length, fidelityGateJobId });
     } catch (e) {
       if (isPrismaColumnMissing(e)) {
         return NextResponse.json({ success: false, action, extrasPending: true, error: 'extra_images 컬럼 미마이그레이션' }, { status: 409 });

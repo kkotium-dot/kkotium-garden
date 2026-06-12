@@ -227,7 +227,29 @@ and faint reflection; shallow DOF; luxury editorial grade; no text, no watermark
 
 ---
 
+## 15. 충실도 네거티브 가드 + 슬롯 각도 (v8.1 확정)
+
+> §11 상품현실시트의 운영 결속. 충실도 카드(Product.fidelity)와 앱 파이프라인 연동 + 슬롯 각도/페어링 규칙. 전상품.
+
+### 15-1. 충실도 카드 연동 (앱)
+- 저장: `Product.fidelity` jsonb = { mountType, components[], decorAllowed[], decorForbidden[], scents[], promptInject, sourceRef }.
+- 프롬프트 주입: 이미지 프롬프트 빌더(firefly_drop 페이로드)가 `promptInject`를 **prepend**하고 `decorForbidden`을 **"Avoid: ..." 네거티브**로 주입한다. 카드 부재 시 무주입(무회귀).
+- 발행 게이트(#56): 대표/추가 이미지 확정(set_main/add_extra) 시 `fidelity_check` 개입카드가 Operator Action Queue(INPUT_DECISION)에 시드 → 운영자가 확정 이미지와 카드(구성요소 존재·금지데코 부재·실스케일·라벨 가독)를 실물대조한 뒤 발행(비가역 #46).
+
+### 15-2. 충실도 네거티브 가드 (확정)
+- **금지 예(명화)**: 메탈릭 잎(metallic leaves)·과대 렌더·추가 리드(extra reeds)·임의 텍스트·평면 기계 겹침. → decorForbidden 네거티브로 차단.
+- **보존 필수**: 우드스틱(wood stick)·클립 체결 등 본품 구성요소는 누끼/합성에서 **가시·온전**해야 한다(components). 클립 체결부는 사용맥락 컷에서 **체결 상태가 보이도록** 연출.
+
+### 15-3. 슬롯 각도 + 페어링
+- **1플레이트=1샷 · 1누끼=1각도(swap)**: 한 각도 누끼는 한 슬롯에만. 각도→슬롯 매핑 고정.
+- **정면 슬롯**: 살짝 각도(10-15도) 허용, **큰 회전 금지**, 라벨 가독 유지(라벨=핵심가치, §11).
+- **라이프×매크로 페어링**: 추가이미지 세트는 사용맥락(라이프스타일) 컷 + 제품 디테일(매크로) 컷을 페어로 구성(전환형+정보형, §12 셀렉터·#57).
+
+---
+
 ## 변경 이력
+
+- 2026-06-12 (v8.1) — 충실도 카드(Product.fidelity) 앱 연동 §15 신규: promptInject prepend + decorForbidden 네거티브 주입, fidelity_check 발행 게이트(#56). 충실도 네거티브 가드(메탈릭잎 금지·우드스틱/클립 보존)·슬롯 각도(정면 10-15도 허용·큰 회전 금지)·라이프×매크로 페어링 확정. 7장(real-plate 2-ref·1플레이트=1샷·각도→슬롯) 유지.
 
 - 2026-06-12 (v8) — 전면 개정: **참조 드롭 하모나이즈**(Firefly 참조 슬롯 누끼 드롭 -> Nano Banana 2 하모나이즈)를 1차 경로로 확정, PIL/sharp 붙여넣기를 결정론 폴백으로 강등. 형태-정합 가드(4장)·편집 루프(5장)·Firefly 주입기 사양(9장) 신규. 결정론 폴백 sharp 스펙(4-1) 명문화. 근거 = `HANDOFF_image_workflow_v8_referencedrop_2026-06-12.md` 0~9장 verbatim.
 - 2026-06-11 (v2) — Desktop verbatim 정합: 6원칙·무드 라이브러리8+셀렉터·명화 정정 3무드.

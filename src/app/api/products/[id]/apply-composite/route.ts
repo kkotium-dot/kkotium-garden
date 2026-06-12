@@ -33,6 +33,18 @@ import {
   INTERVENTION_FIREFLY_DROP,
   INTERVENTION_SOURCE_REQUEST,
 } from '@/lib/jobs/intervention';
+import { parseFidelity, type ProductFidelity } from '@/lib/fidelity/product-fidelity';
+
+/** Load a product's fidelity card, guarded for the pre-migration window
+ *  (P2022/P2021 → null so the firefly prompt simply omits the injection). */
+async function loadFidelity(productId: string): Promise<ProductFidelity | null> {
+  try {
+    const row = await prisma.product.findUnique({ where: { id: productId }, select: { fidelity: true } });
+    return parseFidelity(row?.fidelity);
+  } catch {
+    return null;
+  }
+}
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -99,14 +111,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         reason: 'no_cutout_source',
       });
     }
+    // Fidelity-aware firefly prompt: promptInject prepend + decorForbidden
+    // negatives (item 3). Loaded once, reused for the seed and the response.
+    const fidelity = await loadFidelity(productId);
+    const fireflyPayload = buildFireflyDropPayload(productId, fidelity);
     const seeded = await setJobIntervention({
       productId, jobType: PRODUCT_COMPOSITE, type: INTERVENTION_FIREFLY_DROP,
-      payload: buildFireflyDropPayload(productId), tool: 'firefly',
+      payload: fireflyPayload, tool: 'firefly',
     });
     return NextResponse.json({
       success: true, productId, applied: false, interventionRequired: true,
       interventionType: INTERVENTION_FIREFLY_DROP, interventionJobId: seeded?.jobId ?? null,
-      payload: buildFireflyDropPayload(productId),
+      fidelityApplied: fidelity != null,
+      payload: fireflyPayload,
     });
   }
 

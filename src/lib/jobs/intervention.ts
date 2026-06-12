@@ -15,15 +15,27 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { BG_CLEAN, PRODUCT_COMPOSITE } from '@/lib/jobs/job-type-routing';
+import {
+  applyFidelityToPrompt,
+  buildFidelityChecklistPayload,
+  type ProductFidelity,
+  type FidelityChecklistPayload,
+} from '@/lib/fidelity/product-fidelity';
 
 export const INTERVENTION_SOURCE_REQUEST = 'source_request';
 export const INTERVENTION_HERO_CROP_REQUEST = 'hero_crop_request';
 export const INTERVENTION_FIREFLY_DROP = 'firefly_drop';
+// Pre-publish fidelity-check gate (#56): the operator compares the confirmed
+// representative / additional images against the product's fidelity card.
+export const INTERVENTION_FIDELITY_CHECK = 'fidelity_check';
 
 export type InterventionType =
   | typeof INTERVENTION_SOURCE_REQUEST
   | typeof INTERVENTION_HERO_CROP_REQUEST
-  | typeof INTERVENTION_FIREFLY_DROP;
+  | typeof INTERVENTION_FIREFLY_DROP
+  | typeof INTERVENTION_FIDELITY_CHECK;
+
+export type { FidelityChecklistPayload };
 
 // A hero cutout source whose longest edge is below this is too small to upscale
 // cleanly — request a fresh crop instead (CUTOUT_HERO_STANDARD §3 trigger).
@@ -52,17 +64,42 @@ export interface SourceRequestPayload {
   productId: string;
 }
 
-/** Firefly drop payload — dropkit path + product-agnostic 3-plane prompt scaffolds. */
-export function buildFireflyDropPayload(productId: string): FireflyDropPayload {
+/**
+ * Firefly drop payload — dropkit path + 3-plane prompt scaffolds. When a
+ * fidelity card is supplied, its promptInject is prepended and decorForbidden
+ * is appended as an "Avoid: ..." negative clause to BOTH tracks, so the
+ * operator's Firefly prompt carries the reality anchor (true scale, label hero,
+ * banned decor). Still product-agnostic — the fidelity is passed in, never
+ * hardcoded (#55).
+ */
+export function buildFireflyDropPayload(
+  productId: string,
+  fidelity?: ProductFidelity | null,
+): FireflyDropPayload {
+  const track1Base =
+    'Track 1 (info): clean studio still-life of the product on a warm wood and linen surface, soft daylight, gentle contact shadow, photorealistic, no text, no watermark.';
+  const track2Base =
+    'Track 2 (mood): premium lifestyle scene with the product as the hero in its real use context, softly blurred backdrop, warm editorial grade, shallow depth of field, photorealistic, no text, no watermark.';
   return {
     dropkitPath: `assets/generated/${productId}/cutout/`,
-    promptTrack1:
-      'Track 1 (info): clean studio still-life of the product on a warm wood and linen surface, soft daylight, gentle contact shadow, photorealistic, no text, no watermark.',
-    promptTrack2:
-      'Track 2 (mood): premium lifestyle scene with the product as the hero in its real use context, softly blurred backdrop, warm editorial grade, shallow depth of field, photorealistic, no text, no watermark.',
+    promptTrack1: applyFidelityToPrompt(track1Base, fidelity ?? null),
+    promptTrack2: applyFidelityToPrompt(track2Base, fidelity ?? null),
     model: FIREFLY_MODEL,
     ratio: FIREFLY_RATIO,
   };
+}
+
+/**
+ * Fidelity-check payload (#56) — built from the product's fidelity card. Seeded
+ * onto an awaiting_human image-track job when the operator finalizes the
+ * representative / additional images, so the Operator Action Queue surfaces a
+ * "compare against the fidelity card" gate before the irreversible publish.
+ */
+export function buildFidelityCheckPayload(
+  productId: string,
+  fidelity: ProductFidelity,
+): FidelityChecklistPayload {
+  return buildFidelityChecklistPayload(productId, fidelity);
 }
 
 /** Hero-crop request payload — the source was too small or carried text. */
@@ -103,6 +140,10 @@ export async function setJobIntervention(opts: {
   type: InterventionType;
   payload: unknown;
   tool?: string;
+  /** When true, reuse an open job ONLY if it already carries THIS intervention
+   *  type — so distinct interventions sharing a jobType (e.g. firefly_drop and
+   *  fidelity_check both on product_composite) never clobber each other. */
+  matchInterventionType?: boolean;
 }): Promise<{ jobId: string; created: boolean } | null> {
   try {
     const data = {
@@ -111,7 +152,12 @@ export async function setJobIntervention(opts: {
       interventionPayload: (opts.payload ?? Prisma.JsonNull) as Prisma.InputJsonValue,
     };
     const existing = await prisma.assetJob.findFirst({
-      where: { productId: opts.productId, jobType: opts.jobType, status: { in: OPEN_STATUSES } },
+      where: {
+        productId: opts.productId,
+        jobType: opts.jobType,
+        status: { in: OPEN_STATUSES },
+        ...(opts.matchInterventionType ? { interventionType: opts.type } : {}),
+      },
       orderBy: { createdAt: 'desc' },
       select: { id: true },
     });

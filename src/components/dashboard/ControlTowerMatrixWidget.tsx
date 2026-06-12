@@ -101,6 +101,13 @@ interface HeroCropPayload {
 interface SourceRequestPayload {
   supplierUrl?: string | null;
 }
+interface FidelityCheckPayload {
+  mountType?: string | null;
+  components?: string[];
+  forbidden?: string[];
+  staticChecks?: string[];
+  sourceRef?: string | null;
+}
 
 interface MatrixRow {
   productId: string;
@@ -471,12 +478,14 @@ const IV = m.intervention as {
   firefly_drop: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string };
   hero_crop_request: { label: string; lead: string; minEdge: string; longestEdge: string; textFlag: string };
   source_request: { label: string; lead: string; url: string };
+  fidelity_check: { label: string; lead: string; components: string; forbidden: string; checks: string; mount: string; source: string };
 };
 
 function interventionLabel(type: string | undefined): string | null {
   if (type === 'firefly_drop') return IV.firefly_drop.label;
   if (type === 'hero_crop_request') return IV.hero_crop_request.label;
   if (type === 'source_request') return IV.source_request.label;
+  if (type === 'fidelity_check') return IV.fidelity_check.label;
   return null;
 }
 
@@ -516,7 +525,7 @@ function CopyText({ text }: { text: string }) {
 
 // C-9 intervention detail — rendered inline (expandable, never a forced modal).
 function InterventionDetail({ type, payload }: { type: string; payload: unknown }) {
-  const p = (payload ?? {}) as FireflyDropPayload & HeroCropPayload & SourceRequestPayload;
+  const p = (payload ?? {}) as FireflyDropPayload & HeroCropPayload & SourceRequestPayload & FidelityCheckPayload;
   if (type === 'firefly_drop') {
     return (
       <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
@@ -574,6 +583,44 @@ function InterventionDetail({ type, payload }: { type: string; payload: unknown 
             <span className="shrink-0 text-slate-400">{IV.source_request.url}:</span>
             <code className="truncate rounded bg-slate-50 px-1 py-0.5 text-[10px] text-slate-600">{p.supplierUrl}</code>
           </div>
+        )}
+      </div>
+    );
+  }
+  if (type === 'fidelity_check') {
+    return (
+      <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
+        <p className="text-slate-500">{IV.fidelity_check.lead}</p>
+        {p.mountType && (
+          <div className="flex items-center gap-1.5">
+            <span className="shrink-0 text-slate-400">{IV.fidelity_check.mount}:</span>
+            <code className="rounded bg-slate-50 px-1 py-0.5 text-[10px] text-slate-600">{p.mountType}</code>
+          </div>
+        )}
+        {p.components && p.components.length > 0 && (
+          <div>
+            <span className="text-slate-400">{IV.fidelity_check.components}:</span>
+            <div className="mt-0.5 flex flex-wrap gap-1">
+              {p.components.map((c) => (
+                <span key={c} className="rounded bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-600">{c}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {p.forbidden && p.forbidden.length > 0 && (
+          <div>
+            <span className="text-rose-400">{IV.fidelity_check.forbidden}:</span>
+            <div className="mt-0.5 flex flex-wrap gap-1">
+              {p.forbidden.map((c) => (
+                <span key={c} className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] text-rose-600">{c}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {p.staticChecks && p.staticChecks.length > 0 && (
+          <p className="text-[10px] text-slate-400">
+            {IV.fidelity_check.checks}: {p.staticChecks.join(', ')}
+          </p>
         )}
       </div>
     );

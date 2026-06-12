@@ -16,8 +16,9 @@
 // stack to 3-column workbench. PLANT 7th-tab path (uses the same hook +
 // individual cards) is unaffected.
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { onProductMutated } from '@/lib/events/product-mutated';
 import { Palette, Loader2, Image as ImageIcon, Check } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import {
@@ -51,38 +52,43 @@ function StudioInner() {
   const [productsError, setProductsError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(initialProductId);
 
-  // Fetch product list on mount
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch('/api/products?sortBy=createdAt&sortOrder=desc', { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        const list: ProductRow[] = (json.products ?? json ?? []).map((p: ProductRow) => ({
-          id: p.id, name: p.name,
-          mainImage: p.mainImage ?? null,
-          category: p.category ?? null,
-          brand: p.brand ?? null,
-          supplierPrice: p.supplierPrice ?? null,
-          aiScore: p.aiScore ?? null,
-          status: p.status,
-          naverProductId: p.naverProductId ?? null,
-        }));
-        setProducts(list);
-        // Auto-select the most recent product only when nothing is already
-        // selected. Functional update reads the live state (prev) instead of
-        // the stale `selectedId` closure captured at mount — otherwise a
-        // ?product= prefill (initialProductId) gets clobbered by list[0].
-        if (list.length > 0) setSelectedId((prev) => prev ?? list[0].id);
-      } catch (err) {
-        setProductsError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setProductsLoading(false);
-      }
-    };
-    fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Fetch the product list. Reused on mount and on a product-mutation broadcast
+  // (#62) so the header/canvas mainImage refreshes after an asset-browser action.
+  const loadProducts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/products?sortBy=createdAt&sortOrder=desc', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const list: ProductRow[] = (json.products ?? json ?? []).map((p: ProductRow) => ({
+        id: p.id, name: p.name,
+        mainImage: p.mainImage ?? null,
+        category: p.category ?? null,
+        brand: p.brand ?? null,
+        supplierPrice: p.supplierPrice ?? null,
+        aiScore: p.aiScore ?? null,
+        status: p.status,
+        naverProductId: p.naverProductId ?? null,
+      }));
+      setProducts(list);
+      // Auto-select the most recent product only when nothing is already
+      // selected. Functional update reads the live state (prev) instead of
+      // the stale `selectedId` closure captured at mount — otherwise a
+      // ?product= prefill (initialProductId) gets clobbered by list[0].
+      if (list.length > 0) setSelectedId((prev) => prev ?? list[0].id);
+    } catch (err) {
+      setProductsError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setProductsLoading(false);
+    }
   }, []);
+
+  // Fetch on mount.
+  useEffect(() => {
+    void loadProducts();
+  }, [loadProducts]);
+
+  // #62 — refetch when a sibling view (asset browser) mutates a product.
+  useEffect(() => onProductMutated(() => void loadProducts()), [loadProducts]);
 
   const selectedProduct = useMemo(
     () => products.find((p) => p.id === selectedId) ?? null,

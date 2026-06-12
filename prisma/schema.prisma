@@ -210,6 +210,13 @@ model Product {
   // action queue stops surfacing the finish-representative step. Desktop applies
   // MIGRATION_c4_main_image_policy (ADD COLUMN IF NOT EXISTS) — shared with C-3.
   main_image_policy       String?           @map("main_image_policy") @db.VarChar(30)
+  // 2026-06-12 — Product Fidelity Card (docs/design/ADAPTIVE_COMPOSITE_ENGINE.md §11).
+  // Per-product reality anchor consumed by the image-prompt builder (promptInject
+  // prepend + decorForbidden negatives) and the pre-publish fidelity-check gate
+  // (#56). Shape = ProductFidelity (src/lib/fidelity/product-fidelity.ts). Desktop/
+  // Code applies MIGRATION_fidelity (ADD COLUMN IF NOT EXISTS) — idempotent;
+  // consumers guard P2022/P2021 so routes are safe before the migration lands.
+  fidelity                Json?             @map("fidelity")
   // 2026-06-07 — Adaptive 3-mode system (docs/research/KKOTIUM_ADAPTIVE_SEO_IMAGE_SYSTEM_2026-06-06.md §5).
   // The quality classifier writes quality_score(0-100) + recommended_mode; the
   // operator can override the mode from the control tower. brand_line splits the

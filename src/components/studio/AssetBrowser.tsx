@@ -38,6 +38,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import strings from './AssetBrowser.strings.ko.json';
+import { broadcastProductMutated } from '@/lib/events/product-mutated';
 
 // Pipeline-ordered stages an operator may upload into (mirrors STAGE_DIRS;
 // kept local so this client component never imports the server storage module).
@@ -262,6 +263,9 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
                 ? strings.action.addExtraDone
                 : strings.action.archiveDone;
           flash('ok', doneMsg);
+          // #62 — set_main / add_extra / archive change the product's image
+          // state; broadcast so sibling views (studio header/canvas) refetch.
+          broadcastProductMutated(productId, action);
           await load();
         } else {
           flash('err', res.error || strings.error);
