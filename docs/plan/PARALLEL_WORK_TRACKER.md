@@ -1,4 +1,12 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev17 · Firefly 5컷 완주 + 모드 가드 #77·세션7-c)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev18 · april/cotton v2 재생성 + 모드가드 정정 + Gemini 그라운딩·세션7-d)
+
+## rev18 세션7-d (2026-06-13 Desktop) — 5컷 시각확인 + 모드가드 정정 + 그라운딩 채택 + april/cotton v2
+- ✅ **5컷 시각판정**(운영자): hero/lemon/blackcherry 양호, april/cotton AI 이질감 → 재작업.
+- ✅ **모드가드 갭 발견·정정(#77)**: 원본 가드가 라이브 편집상태서 ambiguous 반환(genBtn ^생성$ 앵커 불일치+편집신호 미포착). 철학 정정: view=edit 자체는 안전, 마스크/선택영역/참조잠금 활성만 ABORT. 검증판 kkAssertGenerateMode 박제.
+- ✅ **Gemini 구글검색 그라운딩 채택**: 구조 사실감(차량 통풍구) 향상·경계 #75(제품=실사누끼). 토글 DOM 미노출(플라이아웃 추정).
+- ✅ **april/cotton v2 재생성**: 업그레이드 프롬프트(3-layer·물리적무게·네거티브·광학) → composite/lifestyle-1781353115792(2.79MB)·1781353155107(2.83MB) 적재·SQL 3-tier. 교훈: 클린컴포저 자동화미작동·view=edit가 검증환경.
+- ⏳ **다음**: [운영자] april/cotton v2 시각확인 / [Desktop] 통과 시 누끼합성+하모나이즈·미흡 시 그라운딩 ON 재생성 / [Code] #77 정정 가드철학(마스크만 ABORT) 반영.
+- ⏳ **병렬**: 명화 상세 v3 + 참고링크→상세 자동개선 프레임워크(일반화 보류). 신규문서 docs/playbook/FIREFLY_GROUNDING_AND_QUALITY_UPGRADE_2026-06-13.md.
 
 ## rev17 세션7-c (2026-06-13 Desktop) — Firefly 5컷 end-to-end 완주 + 모드 가드 #77
 - ✅ **5컷 적재 완주**: hero+4향(lemon/april/cotton/blackcherry) 전부 POST 200 → Supabase {pid}/composite/ 적재. SQL storage.objects 3-tier 검증(바이트 일치: 1755276/2136970/2054605/1835270/2302151).

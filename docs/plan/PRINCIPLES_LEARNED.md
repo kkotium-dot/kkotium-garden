@@ -805,6 +805,42 @@ grep -c "id: '" src/lib/automation-registry.ts
 
 **규칙**: Firefly programmatic 프롬프트 주입은 shadow-walk 노드 포착 + native 프로토타입 setter+InputEvent면 유지됨(stuck 실측). 구#74의 '폐기'는 단순 el.value= 방식 한정. blob 결과는 fetch->arrayBuffer로 추출 가능(image/png 검증). 구체: Firefly SPA는 353 Shadow DOM 호스트로 캡슐화되어 top-level querySelector는 0이지만 shadow root 재귀 관통으로 textarea·생성·다운로드 버튼·결과 이미지(4컷 1376x768) 전부 포착. native setter+InputEvent 주입은 React/Spectrum 내부 상태에 반영되어 값 유지(stuck:true). 결과 blob은 fetch->arrayBuffer->base64로 바이트 추출(2.45MB·시그니처 89504e47 유효). 적재 catch-basin = POST /api/products/[id]/ingest-firefly(base64->uploadAutomationAsset->{pid}/{stage}/ + asset_registry 인테이크, 비가역 0·네이버 무접촉, 전상품). 개입카드 firefly_drop->firefly_auto 확장(탭 열림 감지 시 '자동 생성 가능' 표시·강제모달 0 #56). 생성 트리거·폴링은 Desktop 1컷 실측서 확정(크레딧 소비). 근거 docs/playbook/FIREFLY_AUTOMATION_PLAYBOOK_2026-06-13.md. 보완 #75(Scene-first 3-Layer 합성 표준).
 
-## 작업원칙 #77 — Firefly 모드 가드: 생성(generate) vs 편집(edit) 사전검증 (2026-06-13 실측, 전상품)
+## 작업원칙 #77 (정정판) — Firefly 모드 가드: view=edit 워크스페이스는 안전, ACTIVE 마스크/선택영역/참조잠금만 ABORT (2026-06-13 정정, 전상품)
 
-**규칙**: Firefly view=edit는 생성·편집 겸용. 편집도구 버튼 존재≠편집모드(상시노출, 오탐). 진짜 edit신호=referenceLoaded>0 | 활성마스크 | 버튼라벨 편집/적용. generate 확정=referenceLoaded==0 && 마스크없음 && 버튼라벨 생성/Generate. 생성 전 kkAssertGenerateMode() 사전검증 ABORT + 사후 perceptual hash(minHamming<10=오염). 단건·5컷 루프 매 iteration의 kkSetPrompt 직전 호출, mode!=='generate'면 그 컷 건너뛰고 failed{key,reason:'not-generate-mode',signals} 기록 + 운영자 알림(절대 편집 상태에서 생성 트리거 금지). 앱 연동: firefly_auto 개입카드 payload.generateModeConfirmed 게이트(미확인=검증대기 표기·강제모달 0 #56·전상품 #55). 전거 docs/playbook/FIREFLY_AUTOMATION_PLAYBOOK_2026-06-13.md §8.
+**규칙(정정)**: `view=edit` 편집 워크스페이스 자체는 위험이 아니다. 마스크가 없고 전체 캔버스가 생성 타겟이면 `생성` 클릭은 새 풀생성으로 작동(허용). 진짜 위험 = **ACTIVE MASK / 선택영역 / 참조 잠금(부분 인페인)** 활성일 때만. 따라서 가드는 `edit-locked-ABORT`(maskActive || refLoaded>0)만 중단하고, `generate`·`generate-in-edit-OK`(편집 워크스페이스 진입했으나 마스크 없음=풀생성 안전)는 진행한다. ※ 1차판(세션7-c, '편집도구 버튼 존재=편집모드') 오탐 정정 — 편집도구 버튼(새로 편집·마크업·디테일 조절·업스케일)·대형 단일 표시이미지는 편집 워크스페이스 신호일 뿐 ABORT 사유 아님(상시노출 오탐). 실측 근거: 5컷 배치 maskActive=false + perceptual hash minHamming 19/64(전부 distinct)=정상 풀생성, 시각 확인도 5컷 전부 프롬프트 일치 별개 씬. 통합 규칙: 단건·5컷 루프 매 iteration `kkSetPrompt` 직전 `kkAssertGenerateMode()` 호출 → `edit-locked-ABORT`(마스크/선택영역/참조잠금)만 중단+개입알림, `generate`·`generate-in-edit-OK`는 진행. 사후 perceptual hash(minHamming<10=오염) 보강 유지. 앱 연동(기박제, 중복 금지): firefly_auto 개입카드 payload.generateModeConfirmed 게이트(미확인=검증대기·강제모달 0 #56·전상품 #55). 전거 docs/playbook/FIREFLY_GROUNDING_AND_QUALITY_UPGRADE_2026-06-13.md §1.2~1.4 (PLAYBOOK §8.3 supersede).
+
+**검증판 kkAssertGenerateMode (§1.3 그대로 인용)**:
+```js
+function kkAssertGenerateMode(){
+  const seen=new Set();
+  let genBtn=false, newEditBtn=false, markupTools=0, refLoaded=0, maskActive=false, dom=null;
+  (function w(root,d){ if(!root||d>14)return; let ns; try{ns=root.querySelectorAll('*');}catch(e){return;}
+    ns.forEach(el=>{ if(seen.has(el))return; seen.add(el);
+      const tag=el.tagName?el.tagName.toLowerCase():'';
+      const lab=((el.innerText||'')+' '+((el.getAttribute&&el.getAttribute('aria-label'))||'')).trim();
+      const cls=(typeof el.className==='string'?el.className:'')||'';
+      if((tag==='button'||(el.getAttribute&&el.getAttribute('role')==='button'))&&(el.offsetWidth||el.offsetHeight)){
+        if(/생성|generate/i.test(lab)) genBtn=true;                          // FIX: no ^$ anchor
+        if(/새로 편집|new edit/i.test(lab)) newEditBtn=true;
+        if(/마크업|markup|디테일 조절|detail adjust|업스케일|upscale/i.test(lab)) markupTools++;
+      }
+      if(tag==='img'&&el.naturalWidth>200&&(el.offsetWidth||el.offsetHeight)){
+        const r=el.getBoundingClientRect();
+        if(!dom||r.width*r.height>dom.dw*dom.dh) dom={dw:Math.round(r.width),dh:Math.round(r.height)};
+        if(/reference|참조|composition|구도|base/i.test(cls+lab)) refLoaded++;
+      }
+      if(/mask|마스크|선택 영역|brush|브러시|selection/i.test(cls+lab)&&(el.offsetWidth||el.offsetHeight)) maskActive=true;
+      if(el.shadowRoot) w(el.shadowRoot,d+1);
+    });
+  })(document,0);
+  const dominantOpen = !!(dom && dom.dw>=500);
+  // SAFE to generate even in edit workspace IF no mask/region/reference lock:
+  const partialEditLock = maskActive || refLoaded>0;
+  const editSession = newEditBtn || (dominantOpen && markupTools>=2);
+  const mode = partialEditLock ? 'edit-locked-ABORT'
+             : genBtn ? (editSession ? 'generate-in-edit-OK' : 'generate')
+             : 'ambiguous';
+  return { mode, genBtn, newEditBtn, markupTools, dominantOpen, refLoaded, maskActive };
+}
+```
+- 실측 검증: 라이브 편집상태에서 newEditBtn=true·markupTools=3·dominantOpen=true·maskActive=false → generate-in-edit-OK(풀생성 안전). 마스크 활성 시 edit-locked-ABORT.
