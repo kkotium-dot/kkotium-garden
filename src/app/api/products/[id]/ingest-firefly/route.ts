@@ -9,6 +9,11 @@
 // public URL. This is the single "Firefly result -> folder" drain so the 5-cut
 // loop (§4) can confirm each cut landed (200 + public URL) before the next.
 //
+// CORS: the browser driver fetch()es this from the firefly.adobe.com origin, so
+// every response (and the OPTIONS preflight) carries Access-Control headers
+// scoped to *.adobe.com (default firefly.adobe.com). Additive — same-origin
+// callers are unaffected.
+//
 // JSON body:
 //   { stage: AssetKind, filename: string, base64: string, contentType?: string }
 //   stage     — 'composite' | 'source' | 'detail' | 'cutout' | ... (AssetKind).
@@ -46,6 +51,20 @@ export const maxDuration = 60;
 
 const MAX_BYTES = 15 * 1024 * 1024; // 15 MB guard — Firefly cuts are well under this.
 
+// Allow the Firefly browser-driver origin (any *.adobe.com), defaulting to
+// firefly.adobe.com when the origin is absent or unrecognized. Vary: Origin so
+// caches don't serve one origin's ACAO to another.
+function corsHeaders(origin: string | null) {
+  const allow = origin && /(^https:\/\/[a-z0-9.-]*\.adobe\.com$)|(^https:\/\/firefly\.adobe\.com$)/.test(origin)
+    ? origin : 'https://firefly.adobe.com';
+  return {
+    'Access-Control-Allow-Origin': allow,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Vary': 'Origin',
+  };
+}
+
 interface Body {
   stage?: string;
   filename?: string;
@@ -65,8 +84,15 @@ function stripDataUrl(raw: string): string {
   return raw;
 }
 
+// Preflight — the browser driver issues an OPTIONS before the cross-origin POST.
+export async function OPTIONS(req: Request) {
+  return new Response(null, { status: 204, headers: corsHeaders(req.headers.get('origin')) });
+}
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const { id: productId } = params;
+  // CORS headers merged into EVERY response below (cross-origin firefly fetch).
+  const cors = corsHeaders(req.headers.get('origin'));
 
   let body: Body = {};
   try {
@@ -74,31 +100,31 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   } catch {
     return NextResponse.json(
       { success: false, error: 'JSON body required (stage, filename, base64)' },
-      { status: 400 },
+      { status: 400, headers: cors },
     );
   }
 
   // Owning product must exist (no cross-product writes).
   const product = await prisma.product.findUnique({ where: { id: productId }, select: { id: true } });
   if (!product) {
-    return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
+    return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404, headers: cors });
   }
 
   const filename = (body.filename ?? '').toString().trim();
   if (!filename) {
-    return NextResponse.json({ success: false, error: 'filename is required' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'filename is required' }, { status: 400, headers: cors });
   }
 
   const rawBase64 = (body.base64 ?? '').toString();
   if (!rawBase64) {
-    return NextResponse.json({ success: false, error: 'base64 (image data) is required' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'base64 (image data) is required' }, { status: 400, headers: cors });
   }
 
   const contentType = (body.contentType ?? 'image/png').toString().trim() || 'image/png';
   if (!contentType.startsWith('image/')) {
     return NextResponse.json(
       { success: false, error: `only image/* contentType is allowed (got: ${contentType})` },
-      { status: 415 },
+      { status: 415, headers: cors },
     );
   }
 
@@ -107,15 +133,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try {
     buffer = Buffer.from(stripDataUrl(rawBase64), 'base64');
   } catch {
-    return NextResponse.json({ success: false, error: 'base64 decode failed' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'base64 decode failed' }, { status: 400, headers: cors });
   }
   if (buffer.length === 0) {
-    return NextResponse.json({ success: false, error: 'base64 decoded to empty bytes' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'base64 decoded to empty bytes' }, { status: 400, headers: cors });
   }
   if (buffer.length > MAX_BYTES) {
     return NextResponse.json(
       { success: false, error: `file too large (max ${MAX_BYTES / (1024 * 1024)}MB)` },
-      { status: 413 },
+      { status: 413, headers: cors },
     );
   }
 
@@ -126,7 +152,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   let stage: AssetKind;
   if (stageRaw) {
     if (!isAssetKind(stageRaw)) {
-      return NextResponse.json({ success: false, error: `invalid stage value: ${stageRaw}` }, { status: 400 });
+      return NextResponse.json({ success: false, error: `invalid stage value: ${stageRaw}` }, { status: 400, headers: cors });
     }
     stage = stageRaw;
   } else {
@@ -202,9 +228,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       path: uploaded.path,
       publicUrl: uploaded.publicUrl,
       uploadedAt: uploaded.uploadedAt,
-    });
+    }, { headers: cors });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: msg, stage: 'UPLOAD' }, { status: 502 });
+    return NextResponse.json({ success: false, error: msg, stage: 'UPLOAD' }, { status: 502, headers: cors });
   }
 }
