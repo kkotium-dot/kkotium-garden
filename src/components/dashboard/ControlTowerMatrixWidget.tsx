@@ -482,6 +482,7 @@ const CATEGORY_ORDER: ActionCategory[] = ['GO_PENDING', 'AUTH', 'INPUT_DECISION'
 const IV = m.intervention as {
   expand: string; collapse: string; copy: string; copied: string;
   firefly_drop: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string };
+  firefly_auto: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string };
   hero_crop_request: { label: string; lead: string; minEdge: string; longestEdge: string; textFlag: string };
   source_request: { label: string; lead: string; url: string };
   fidelity_check: { label: string; lead: string; components: string; forbidden: string; checks: string; mount: string; source: string };
@@ -490,6 +491,7 @@ const IV = m.intervention as {
 
 function interventionLabel(type: string | undefined): string | null {
   if (type === 'firefly_drop') return IV.firefly_drop.label;
+  if (type === 'firefly_auto') return IV.firefly_auto.label;
   if (type === 'hero_crop_request') return IV.hero_crop_request.label;
   if (type === 'source_request') return IV.source_request.label;
   if (type === 'fidelity_check') return IV.fidelity_check.label;
@@ -534,13 +536,16 @@ function CopyText({ text }: { text: string }) {
 // C-9 intervention detail — rendered inline (expandable, never a forced modal).
 function InterventionDetail({ type, payload }: { type: string; payload: unknown }) {
   const p = (payload ?? {}) as FireflyDropPayload & HeroCropPayload & SourceRequestPayload & FidelityCheckPayload & MountCheckPayload;
-  if (type === 'firefly_drop') {
+  if (type === 'firefly_drop' || type === 'firefly_auto') {
+    // Same dropkit/prompt payload; firefly_auto only swaps the labels (the tab
+    // is open so the result is drained automatically via the ingest endpoint).
+    const t = type === 'firefly_auto' ? IV.firefly_auto : IV.firefly_drop;
     return (
       <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
-        <p className="text-slate-500">{IV.firefly_drop.lead}</p>
+        <p className="text-slate-500">{t.lead}</p>
         {p.dropkitPath && (
           <div className="flex items-center gap-1.5">
-            <span className="shrink-0 text-slate-400">{IV.firefly_drop.dropkit}:</span>
+            <span className="shrink-0 text-slate-400">{t.dropkit}:</span>
             <code className="truncate rounded bg-slate-50 px-1 py-0.5 text-[10px] text-slate-600">{p.dropkitPath}</code>
             <CopyText text={p.dropkitPath} />
           </div>
@@ -548,7 +553,7 @@ function InterventionDetail({ type, payload }: { type: string; payload: unknown 
         {p.promptTrack1 && (
           <div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-slate-400">{IV.firefly_drop.prompt1}</span>
+              <span className="text-slate-400">{t.prompt1}</span>
               <CopyText text={p.promptTrack1} />
             </div>
             <p className="mt-0.5 rounded bg-slate-50 px-1.5 py-1 text-[10px] leading-snug text-slate-600">{p.promptTrack1}</p>
@@ -557,15 +562,15 @@ function InterventionDetail({ type, payload }: { type: string; payload: unknown 
         {p.promptTrack2 && (
           <div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-slate-400">{IV.firefly_drop.prompt2}</span>
+              <span className="text-slate-400">{t.prompt2}</span>
               <CopyText text={p.promptTrack2} />
             </div>
             <p className="mt-0.5 rounded bg-slate-50 px-1.5 py-1 text-[10px] leading-snug text-slate-600">{p.promptTrack2}</p>
           </div>
         )}
         <div className="flex gap-3 text-[10px] text-slate-400">
-          {p.model && <span>{IV.firefly_drop.model}: {p.model}</span>}
-          {p.ratio && <span>{IV.firefly_drop.ratio}: {p.ratio}</span>}
+          {p.model && <span>{t.model}: {p.model}</span>}
+          {p.ratio && <span>{t.ratio}: {p.ratio}</span>}
         </div>
       </div>
     );

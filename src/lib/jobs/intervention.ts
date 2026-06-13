@@ -27,6 +27,11 @@ import {
 export const INTERVENTION_SOURCE_REQUEST = 'source_request';
 export const INTERVENTION_HERO_CROP_REQUEST = 'hero_crop_request';
 export const INTERVENTION_FIREFLY_DROP = 'firefly_drop';
+// firefly_auto — same dropkit/prompt payload as firefly_drop, but signals that
+// the operator's Firefly tab is detected open so the cuts can be generated +
+// drained automatically (FIREFLY_AUTOMATION_PLAYBOOK §3, ingest catch-basin).
+// Renders as an informational "auto generate available" card — never a forced modal (#56).
+export const INTERVENTION_FIREFLY_AUTO = 'firefly_auto';
 // Pre-publish fidelity-check gate (#56): the operator compares the confirmed
 // representative / additional images against the product's fidelity card.
 export const INTERVENTION_FIDELITY_CHECK = 'fidelity_check';
@@ -37,6 +42,7 @@ export type InterventionType =
   | typeof INTERVENTION_SOURCE_REQUEST
   | typeof INTERVENTION_HERO_CROP_REQUEST
   | typeof INTERVENTION_FIREFLY_DROP
+  | typeof INTERVENTION_FIREFLY_AUTO
   | typeof INTERVENTION_FIDELITY_CHECK
   | typeof INTERVENTION_MOUNT_CHECK;
 

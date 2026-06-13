@@ -800,3 +800,7 @@ grep -c "id: '" src/lib/automation-registry.ts
 ## 작업원칙 #69 — 인계 in-chat 박제 · 누락0 연속성 (2026-06-12 대표 확정)
 
 **규칙**: 모든 작업 종료 시 인계 메시지를 채팅 응답 본문에 누락 없이 정리한다(파일에만 두지 않음). 포함: Target Session·Branch·다음 1액션·검증절차·코드패치 위치·세션요약. 운영자=paste-mediator → 채팅에서 바로 복사·착수 가능해야 함. CLAUDE.md 작업원칙 섹션 + PRINCIPLES_LEARNED 양쪽 박제.
+
+## 작업원칙 #74 — Firefly programmatic 프롬프트 주입 유지 가능 (SUPERSEDE, 2026-06-13 실측)
+
+**규칙**: Firefly programmatic 프롬프트 주입은 shadow-walk 노드 포착 + native 프로토타입 setter+InputEvent면 유지됨(stuck 실측). 구#74의 '폐기'는 단순 el.value= 방식 한정. blob 결과는 fetch->arrayBuffer로 추출 가능(image/png 검증). 구체: Firefly SPA는 353 Shadow DOM 호스트로 캡슐화되어 top-level querySelector는 0이지만 shadow root 재귀 관통으로 textarea·생성·다운로드 버튼·결과 이미지(4컷 1376x768) 전부 포착. native setter+InputEvent 주입은 React/Spectrum 내부 상태에 반영되어 값 유지(stuck:true). 결과 blob은 fetch->arrayBuffer->base64로 바이트 추출(2.45MB·시그니처 89504e47 유효). 적재 catch-basin = POST /api/products/[id]/ingest-firefly(base64->uploadAutomationAsset->{pid}/{stage}/ + asset_registry 인테이크, 비가역 0·네이버 무접촉, 전상품). 개입카드 firefly_drop->firefly_auto 확장(탭 열림 감지 시 '자동 생성 가능' 표시·강제모달 0 #56). 생성 트리거·폴링은 Desktop 1컷 실측서 확정(크레딧 소비). 근거 docs/playbook/FIREFLY_AUTOMATION_PLAYBOOK_2026-06-13.md. 보완 #75(Scene-first 3-Layer 합성 표준).

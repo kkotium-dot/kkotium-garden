@@ -32,6 +32,7 @@ import {
   buildSourceRequestPayload,
   buildMountCheckPayload,
   INTERVENTION_FIREFLY_DROP,
+  INTERVENTION_FIREFLY_AUTO,
   INTERVENTION_SOURCE_REQUEST,
   INTERVENTION_MOUNT_CHECK,
 } from '@/lib/jobs/intervention';
@@ -68,6 +69,10 @@ interface Body {
   // product_composite job to awaiting_human + firefly_drop, or source_request
   // when no cutout source exists. Additive — ignored by existing callers.
   requestFireflyDrop?: boolean;
+  // The browser driver detected the operator's Firefly tab is open, so the cuts
+  // can be generated + drained automatically (ingest catch-basin). Surfaces a
+  // firefly_auto card instead of firefly_drop. Additive — defaults to a drop.
+  fireflyTabOpen?: boolean;
 }
 
 async function fetchBuffer(url: string): Promise<{ buf?: Buffer; status: number }> {
@@ -117,13 +122,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // negatives (item 3). Loaded once, reused for the seed and the response.
     const fidelity = await loadFidelity(productId);
     const fireflyPayload = buildFireflyDropPayload(productId, fidelity);
+    // firefly_auto when the tab is open (auto generate + ingest drain); otherwise
+    // the manual firefly_drop handoff. Same payload (dropkit + prompts).
+    const ivType = body.fireflyTabOpen === true ? INTERVENTION_FIREFLY_AUTO : INTERVENTION_FIREFLY_DROP;
     const seeded = await setJobIntervention({
-      productId, jobType: PRODUCT_COMPOSITE, type: INTERVENTION_FIREFLY_DROP,
+      productId, jobType: PRODUCT_COMPOSITE, type: ivType,
       payload: fireflyPayload, tool: 'firefly',
     });
     return NextResponse.json({
       success: true, productId, applied: false, interventionRequired: true,
-      interventionType: INTERVENTION_FIREFLY_DROP, interventionJobId: seeded?.jobId ?? null,
+      interventionType: ivType, interventionJobId: seeded?.jobId ?? null,
       fidelityApplied: fidelity != null,
       payload: fireflyPayload,
     });

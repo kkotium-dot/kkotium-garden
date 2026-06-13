@@ -1,4 +1,12 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-12 (rev15 · composite=0 P0 종결·3-tier LIVE 검증·세션6-c)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev16 · 리서치 박제 + Firefly 자동화 돌파구 실측·세션7)
+
+## rev16 세션7 (2026-06-13 Desktop) — 리서치 박제 + Firefly 근사완전자동 실측
+- ✅ **리서치 박제**: docs/research/REFERENCE_DETAIL_TEARDOWN_ascent_2026-06-13.md (a-scent 17장 시각해부 + 경쟁사 교차 + 네이버 SEO/CRO + 명화 17섹션 재설계 + 4향 노트·페어링 + 샷리스트9). 한글 무결성 검증완(sentinel 0).
+- ✅ **Firefly 자동화 돌파구(#74 SUPERSEDE)**: 브라우저 실측으로 (a)shadow-walk 353호스트 관통 textarea·생성·다운로드 포착 (b)native setter+InputEvent 프롬프트 주입 유지(stuck:true) (c)blob 결과→fetch arrayBuffer 추출(2.45MB PNG 유효) 전부 확인. 구#74(programmatic 주입 폐기)는 단순 .value= 방식 한정 → 정정방식이면 자동화 성립. 권위문서 docs/playbook/FIREFLY_AUTOMATION_PLAYBOOK_2026-06-13.md.
+- ⏳ **다음 1액션**: [Code] POST /api/products/[id]/ingest-firefly (base64→uploadAutomationAsset→{pid}/{stage}/) 빌드 = Firefly 적재 catch-basin. 이게 생성 루프보다 먼저(두 번 측정 한 번 자른다). 완성 후 [Desktop] 1컷 end-to-end 실측(생성 트리거·폴링 확정) → 5컷 일괄 루프.
+- 미실행(정직#46): 생성 버튼 click·폴링은 크레딧 소비 회피로 이번 세션 미실행 → ingest 엔드포인트 완성 후 1컷서 확정.
+
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 이전 헤더 (rev15 · composite=0 P0 종결·3-tier LIVE 검증·세션6-c)
 
 > 대표 상시 지시: 요청 개선사항·병행작업 항상 누락 없이 추적. 매 세션 갱신. Desktop 상시 유지. #54·#55·#56 준수.
 

@@ -214,6 +214,7 @@ export interface ComputeContext {
 const IV_SOURCE_REQUEST = 'source_request';
 const IV_HERO_CROP_REQUEST = 'hero_crop_request';
 const IV_FIREFLY_DROP = 'firefly_drop';
+const IV_FIREFLY_AUTO = 'firefly_auto';
 const IV_FIDELITY_CHECK = 'fidelity_check';
 const IV_MOUNT_CHECK = 'mount_check';
 
@@ -407,6 +408,12 @@ export function computeActionQueueItem(
     const iv = { interventionType: intervention.type, payload: intervention.payload };
     if (intervention.type === IV_FIREFLY_DROP) {
       return { ...base, category: 'AUTH', stage: IV_FIREFLY_DROP, deepLink: `/studio?product=${productId}`, ...iv };
+    }
+    if (intervention.type === IV_FIREFLY_AUTO) {
+      // Firefly tab detected open — cuts can be generated + drained via the
+      // ingest catch-basin. Same creative-tool handoff family as firefly_drop
+      // (AUTH), just flagged auto-capable; lands in the studio.
+      return { ...base, category: 'AUTH', stage: IV_FIREFLY_AUTO, deepLink: `/studio?product=${productId}`, ...iv };
     }
     if (intervention.type === IV_HERO_CROP_REQUEST) {
       return { ...base, category: 'INPUT_DECISION', stage: IV_HERO_CROP_REQUEST, deepLink: `/studio?product=${productId}`, ...iv };
