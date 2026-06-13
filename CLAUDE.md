@@ -299,6 +299,7 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 - **#68** — production env 정합 게이트 (로컬 .env ↔ Vercel env 키 drift = prod만 이상)
 - **#69** — 인계 in-chat 박제 (채팅 본문에 Target/Branch/다음1액션/검증/패치위치/요약 누락0)
 - **#74** — Firefly programmatic 프롬프트 주입 유지 가능 (SUPERSEDE — shadow-walk 노드 포착 + native setter+InputEvent면 stuck, 구#74 폐기는 el.value= 한정, blob→arrayBuffer 추출; 적재 catch-basin POST /ingest-firefly + firefly_auto 카드)
+- **#77** — Firefly 모드 가드: generate vs edit 사전검증 (편집버튼 존재≠편집모드 오탐; edit신호=referenceLoaded>0|마스크|버튼라벨 편집, generate확정=ref0&&마스크없음&&라벨 생성; kkAssertGenerateMode() ABORT + 사후 perceptual hash minHamming<10=오염; firefly_auto generateModeConfirmed 게이트, 전거 playbook §8)
 
 ---
 

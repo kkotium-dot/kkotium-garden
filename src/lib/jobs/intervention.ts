@@ -64,6 +64,12 @@ export interface FireflyDropPayload {
   promptTrack2: string;
   model: string;
   ratio: string;
+  // firefly_auto only (#77, playbook §8): the browser driver ran
+  // kkAssertGenerateMode() and confirmed the canvas is in GENERATE mode (not
+  // edit) before triggering. Undefined/false → the queue shows a pending-
+  // verification gate so the operator does not ingest an edit-mode contaminated
+  // cut. Optional + additive — firefly_drop never sets it.
+  generateModeConfirmed?: boolean;
 }
 export interface HeroCropPayload {
   guide: string;       // i18n key for the crop guidance text

@@ -92,6 +92,7 @@ interface FireflyDropPayload {
   promptTrack2?: string;
   model?: string;
   ratio?: string;
+  generateModeConfirmed?: boolean; // firefly_auto generate-mode gate (#77)
 }
 interface HeroCropPayload {
   minEdge?: number;
@@ -482,7 +483,7 @@ const CATEGORY_ORDER: ActionCategory[] = ['GO_PENDING', 'AUTH', 'INPUT_DECISION'
 const IV = m.intervention as {
   expand: string; collapse: string; copy: string; copied: string;
   firefly_drop: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string };
-  firefly_auto: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string };
+  firefly_auto: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string; generateMode: string; confirmed: string; pending: string };
   hero_crop_request: { label: string; lead: string; minEdge: string; longestEdge: string; textFlag: string };
   source_request: { label: string; lead: string; url: string };
   fidelity_check: { label: string; lead: string; components: string; forbidden: string; checks: string; mount: string; source: string };
@@ -572,6 +573,18 @@ function InterventionDetail({ type, payload }: { type: string; payload: unknown 
           {p.model && <span>{t.model}: {p.model}</span>}
           {p.ratio && <span>{t.ratio}: {p.ratio}</span>}
         </div>
+        {type === 'firefly_auto' && (
+          // Generate-mode gate (#77) — one-line checklist label + state.
+          <div className="flex items-center gap-1.5 text-[10px]">
+            {p.generateModeConfirmed
+              ? <Check size={10} className="text-green-600" />
+              : <Clock size={10} className="text-amber-500" />}
+            <span className="text-slate-500">{IV.firefly_auto.generateMode}</span>
+            <span className={p.generateModeConfirmed ? 'text-green-600' : 'text-amber-600'}>
+              {p.generateModeConfirmed ? IV.firefly_auto.confirmed : IV.firefly_auto.pending}
+            </span>
+          </div>
+        )}
       </div>
     );
   }

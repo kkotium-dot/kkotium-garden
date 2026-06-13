@@ -73,6 +73,10 @@ interface Body {
   // can be generated + drained automatically (ingest catch-basin). Surfaces a
   // firefly_auto card instead of firefly_drop. Additive — defaults to a drop.
   fireflyTabOpen?: boolean;
+  // #77 generate-mode gate: the driver ran kkAssertGenerateMode() and confirmed
+  // GENERATE (not edit) mode. Stored on the firefly_auto payload so the queue
+  // clears its pending-verification state. Additive — undefined → unconfirmed.
+  generateModeConfirmed?: boolean;
 }
 
 async function fetchBuffer(url: string): Promise<{ buf?: Buffer; status: number }> {
@@ -121,10 +125,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // Fidelity-aware firefly prompt: promptInject prepend + decorForbidden
     // negatives (item 3). Loaded once, reused for the seed and the response.
     const fidelity = await loadFidelity(productId);
-    const fireflyPayload = buildFireflyDropPayload(productId, fidelity);
+    const baseFireflyPayload = buildFireflyDropPayload(productId, fidelity);
     // firefly_auto when the tab is open (auto generate + ingest drain); otherwise
-    // the manual firefly_drop handoff. Same payload (dropkit + prompts).
+    // the manual firefly_drop handoff. Same payload (dropkit + prompts). For
+    // firefly_auto, carry the #77 generate-mode confirmation through.
     const ivType = body.fireflyTabOpen === true ? INTERVENTION_FIREFLY_AUTO : INTERVENTION_FIREFLY_DROP;
+    const fireflyPayload = ivType === INTERVENTION_FIREFLY_AUTO
+      ? { ...baseFireflyPayload, generateModeConfirmed: body.generateModeConfirmed === true }
+      : baseFireflyPayload;
     const seeded = await setJobIntervention({
       productId, jobType: PRODUCT_COMPOSITE, type: ivType,
       payload: fireflyPayload, tool: 'firefly',

@@ -221,7 +221,10 @@
         "prompt1": "트랙1 프롬프트 (정보형)",
         "prompt2": "트랙2 프롬프트 (감성형)",
         "model": "모델",
-        "ratio": "비율"
+        "ratio": "비율",
+        "generateMode": "생성 모드 확인",
+        "confirmed": "확인됨",
+        "pending": "검증대기"
       },
       "hero_crop_request": {
         "label": "히어로 크롭 요청",

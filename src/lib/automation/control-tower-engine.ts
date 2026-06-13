@@ -153,6 +153,10 @@ export interface ActionQueueItem {
   // so existing consumers/callers are unaffected (hero_crop/source/firefly).
   interventionType?: string;
   payload?: unknown;      // pass-through for the card (dropkit path/prompt/guide)
+  // firefly_auto generate-mode gate (#77). false/undefined → the card shows a
+  // pending-verification state (the driver has not confirmed GENERATE mode via
+  // kkAssertGenerateMode). Only set on a firefly_auto item; additive.
+  generateModeConfirmed?: boolean;
 }
 
 export interface ControlTowerRow {
@@ -412,8 +416,11 @@ export function computeActionQueueItem(
     if (intervention.type === IV_FIREFLY_AUTO) {
       // Firefly tab detected open — cuts can be generated + drained via the
       // ingest catch-basin. Same creative-tool handoff family as firefly_drop
-      // (AUTH), just flagged auto-capable; lands in the studio.
-      return { ...base, category: 'AUTH', stage: IV_FIREFLY_AUTO, deepLink: `/studio?product=${productId}`, ...iv };
+      // (AUTH), just flagged auto-capable; lands in the studio. The generate-mode
+      // gate (#77) is surfaced from the payload so the card shows a pending-
+      // verification state until the driver confirms GENERATE (not edit) mode.
+      const gmc = (intervention.payload as { generateModeConfirmed?: boolean } | null)?.generateModeConfirmed === true;
+      return { ...base, category: 'AUTH', stage: IV_FIREFLY_AUTO, deepLink: `/studio?product=${productId}`, ...iv, generateModeConfirmed: gmc };
     }
     if (intervention.type === IV_HERO_CROP_REQUEST) {
       return { ...base, category: 'INPUT_DECISION', stage: IV_HERO_CROP_REQUEST, deepLink: `/studio?product=${productId}`, ...iv };

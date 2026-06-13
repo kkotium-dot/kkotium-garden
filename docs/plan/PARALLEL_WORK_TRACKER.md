@@ -1,4 +1,11 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev16 · 리서치 박제 + Firefly 자동화 돌파구 실측·세션7)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev17 · Firefly 5컷 완주 + 모드 가드 #77·세션7-c)
+
+## rev17 세션7-c (2026-06-13 Desktop) — Firefly 5컷 end-to-end 완주 + 모드 가드 #77
+- ✅ **5컷 적재 완주**: hero+4향(lemon/april/cotton/blackcherry) 전부 POST 200 → Supabase {pid}/composite/ 적재. SQL storage.objects 3-tier 검증(바이트 일치: 1755276/2136970/2054605/1835270/2302151).
+- ✅ **CORS 게이트 해소**: Code 63fbcb6(OPTIONS+ACAO) production 확인 → cross-origin POST 통과.
+- ✅ **모드 가드 #77 박제**(운영자 편집모드 우려 근본대응): editTools 버튼 존재≠편집모드(view=edit 상시노출), 진짜 신호=referenceLoaded/마스크/버튼라벨. perceptual hash minHamming 19/64 → 5컷 정상 생성 확정(손상0). playbook §8(kkAssertGenerateMode·사전 ABORT·사후 hash·firefly_auto generateModeConfirmed 게이트). 전상품 공통.
+- ⏳ **다음**: [Code] #77 PRINCIPLES_LEARNED+CLAUDE.md 박제 + firefly_auto generateModeConfirmed 게이트(additive) / [Desktop] Sharp 누끼합성(Layer C)→Nano Banana 하모나이즈→썸네일·상세 활용.
+- ⏳ **병렬**: 명화 상세 v3 재설계(docs/design/myeonghwa_detail_v3.html — a-scent 17섹션 매핑·4향 노트카드).
 
 ## rev16 세션7 (2026-06-13 Desktop) — 리서치 박제 + Firefly 근사완전자동 실측
 - ✅ **리서치 박제**: docs/research/REFERENCE_DETAIL_TEARDOWN_ascent_2026-06-13.md (a-scent 17장 시각해부 + 경쟁사 교차 + 네이버 SEO/CRO + 명화 17섹션 재설계 + 4향 노트·페어링 + 샷리스트9). 한글 무결성 검증완(sentinel 0).
