@@ -1,3 +1,12 @@
+## 2026-06-12 (세션6-c) /assets composite=0 P0 종결 — Desktop 3-tier LIVE 검증 + probe 라우트 삭제 (Code turn)
+
+**[P0 종결]** Desktop이 composite=0 P0를 3-tier 전부 통과시켜 종결 검증(production 619dbff READY). (1) GET /assets composite=9(x-vercel-cache MISS·fresh) (2) SQL storage.objects composite 9건 1:1 (3) /studio 에셋탭 고유 composite 9썸네일 LIVE 렌더(naturalWidth>0).
+**[근본원인 확정]** §5 판정트리 2행 = no-slash list버그(런타임 특이) 확정. env키 drift 배제(1행 무혐의·cutout=3 상시 정상). §3 trailing-slash 자가치유(#67)로 영구복구·전상품.
+**[probe 삭제]** 임시 진단 라우트 src/app/api/debug/storage-probe 삭제 커밋(역할 종료·자가치유는 automation-storage.ts 영구 잔존).
+**[검증]** tsc 0·build 0·이모지0·한글리터럴0·네이버 무접촉·비가역 0.
+**[MD]** PROGRESS·SESSION_LOG·TASK_BRIDGE(84)·ROADMAP(P0 DONE)·PARALLEL_WORK_TRACKER rev15 + PRINCIPLES_LEARNED #67 라이브검증 비고 + 신규 핸드오프(HANDOFF_2026-06-12_composite-VERIFIED-desktop). Python #29b·손상 grep 0.
+**[다음]** 명화 publish GO 대기(#46·비가역) 또는 P1 실사용 E2E.
+
 ## 2026-06-12 (세션6-b) /assets composite=0 production probe + listProductAssets trailing-slash 자가치유 (Code turn)
 
 **[배포]** main 4e4e8b5 push(비가역 0·additive·debug-gated·네이버 무접촉). Vercel production 자동 배포.

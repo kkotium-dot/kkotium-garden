@@ -791,7 +791,7 @@ grep -c "id: '" src/lib/automation-registry.ts
 
 ## 작업원칙 #67 — storage list trailing-slash 자가치유 (2026-06-12, 전상품 방어)
 
-**규칙**: nested prefix `.list()`가 비-빈 폴더에 0행을 반환할 수 있음(클라이언트/키/런타임 조합 특이). no-slash 0행 → trailing-slash 1회 재시도 = 전상품 표준 방어(자산 무음 누락 0). 0행일 때만 동작하므로 정상결과 불변(automation-storage.ts listProductAssets.collect). 권위 HANDOFF_2026-06-12_composite-rootcause-probe.
+**규칙**: nested prefix `.list()`가 비-빈 폴더에 0행을 반환할 수 있음(클라이언트/키/런타임 조합 특이). no-slash 0행 → trailing-slash 1회 재시도 = 전상품 표준 방어(자산 무음 누락 0). 0행일 때만 동작하므로 정상결과 불변(automation-storage.ts listProductAssets.collect). 권위 HANDOFF_2026-06-12_composite-rootcause-probe. 라이브 검증완 2026-06-12(세션6-c) — composite 0→9 3-tier(/assets x-vercel-cache MISS·SQL storage.objects 1:1·/studio 에셋탭 9썸네일 naturalWidth>0). 근본원인=no-slash list버그 확정·자가치유 영구복구.
 
 ## 작업원칙 #68 — production env 정합 게이트 (2026-06-12)
 

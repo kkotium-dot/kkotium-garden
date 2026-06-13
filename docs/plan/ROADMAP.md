@@ -1,4 +1,5 @@
 # KKOTIUM GARDEN — ROADMAP
+> 2026-06-12 (세션6-c) **/assets composite=0 P0 DONE — Desktop 3-tier LIVE 검증 + probe 삭제** (Code turn, production 619dbff READY, 비가역 0·네이버 무접촉). 3-tier 전부 통과(/assets composite=9 MISS·SQL 9 1:1·/studio 에셋탭 9썸네일 LIVE naturalWidth>0). 근본원인=§5 2행 no-slash list버그 확정(env키 drift 배제)·§3 자가치유(#67) 영구복구. probe 라우트 삭제. **다음=명화 publish GO 대기(#46) 또는 P1 실사용 E2E.**
 > 2026-06-12 (세션6-b) **/assets composite=0 production probe + trailing-slash 자가치유 배포** (Code turn, main 4e4e8b5, 비가역 0·additive·debug-gated·네이버 무접촉). Desktop 5단 격리(#66) 전 계층 무혐의·로컬키 composite9·prod만0=런타임 단일변수. 토큰게이트 probe GET /api/debug/storage-probe/[id](spec /api/_debug/는 private folder 404→/api/debug/ 교정) + collect() trailing-slash 자가치유(#67). 원칙 #66~#69. **다음=Desktop probe 판정→(env키 drift면 운영자 1액션 / list버그면 하드닝 종결)→composite=9 LIVE→probe 삭제. 이후 P1 명화 4컷 하모나이즈·발행→P2 달항아리·아이스트레이.**
 > 2026-06-12 (세션6) **이미지 스튜디오+충실도카드+적재v2 production LIVE (fa9ad01)** (Code turn, 비가역 0). feat/image-studio 3커밋 main FF 병합·Vercel production READY. DB LIVE(fidelity 완성·scents 4향·asset_registry). 게이트 fidelity_check/mount_check. ★미해결=/assets composite 미표시(RPC 수정 신형키 권한 차단·대표 결정 대기). **다음=P0 Desktop 실사용검증(#63)→P1 명화 발행→P2 타상품.**
 > 2026-06-08 **★ 운영 시스템 레이어 — 개입 대기열(Operator Action Queue) + 적용현황 인디케이터 전상품 착수** (Code turn, main 415358b, 비가역 0). 권위 docs/design/OPERATOR_SYSTEM_BLUEPRINT.md(9단계 파이프라인 + 개입점 4유형 + 휴먼인더루프 오케스트레이션). 1차 완료: control-tower-engine actionQueue 파생(nextAction+게이트→AUTO/INPUT_DECISION/GO_PENDING/AUTH, 신규 컬럼 0) + 관제탑 상단 개입 대기열 위젯(전상품·1클릭 deepLink·레드=GO만) + 적용현황 인디케이터(#54)와 행동축/결과축 한 쌍. 원칙 #54(적용현황 상시)·#55(전상품 범용)·#56(개입 자연스러움). **시스템 레이어 후속: 2차 딥링크 정합(큐 카드→정확 작업 화면/탭) · 3차 외부 인증 Chrome MCP 반자동(#52 Firefly/네이버 CAPTCHA·로그인만 대표) · 스튜디오 헤더 적용현황 미러 · 아틀리에 재설계 2단계(전 /studio 토큰 정렬·공유 Card P4).**
@@ -93,7 +94,7 @@ production HEAD fa9ad01 READY 확인 후 /studio·/dashboard 실사용:
 2) 에셋탭 업로드→자동분류·정규리네임→asset_registry insert(execute_sql 확인).
 3) set_main/add_extra 후 헤더·캔버스 대표이미지 즉시 갱신(#62).
 4) firefly_drop 페이로드 promptInject+"Avoid:"+마운트 물리정합 주입 확인.
-5) ★/assets composite 9개 표시 여부(미해결 이슈 재확인).
+5) ✅ /assets composite 9개 표시 = P0 DONE·LIVE 검증완(세션6-c·3-tier: /assets MISS·SQL 1:1·/studio 썸네일 LIVE). 미해결 해소.
 규칙: 비가역0·실측우선·가짜보고0(#63).
 ```
 

@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-12 (84) /assets composite=0 P0 종결 — Desktop 3-tier LIVE 검증 + probe 삭제 (FROM 💻 Code, production 619dbff, 비가역 0·네이버 무접촉)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | HANDOFF_2026-06-12_composite-VERIFIED-desktop.md. (83) probe+하드닝 배포 → Desktop 검증 종결 turn. |
+| P0 종결 ✅ | Desktop 3-tier 전부 통과: (1) /assets composite=9(x-vercel-cache MISS·fresh) (2) SQL storage.objects 9건 1:1 (3) /studio 에셋탭 고유 composite 9썸네일 LIVE 렌더(naturalWidth>0). cutout=3 무회귀. |
+| 근본원인 ✅ | §5 2행 no-slash list버그 확정(env키 drift 배제·cutout=3 상시정상)·§3 trailing-slash 자가치유(#67) 영구복구. |
+| probe 삭제 ✅ | src/app/api/debug/storage-probe 삭제 커밋(임시 진단 역할 종료). tsc0·build0. |
+| 다음 | [대표] 명화 publish GO(#46·비가역). [Desktop] P1 실사용 E2E. [Code] asset-hygiene·origin-integrity 별도세션. |
+
 ### 2026-06-12 (83) /assets composite=0 probe 배포 + trailing-slash 자가치유 (FROM 💻 Code, main 4e4e8b5, 비가역 0·additive·debug-gated)
 
 | 항목 | 상태 |
