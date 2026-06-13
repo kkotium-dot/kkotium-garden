@@ -70,6 +70,18 @@ export interface FireflyDropPayload {
   // verification gate so the operator does not ingest an edit-mode contaminated
   // cut. Optional + additive — firefly_drop never sets it.
   generateModeConfirmed?: boolean;
+  // firefly_auto only (#77, SCENT_MOOD_BACKGROUND_SYSTEM §2-3): the browser
+  // driver verified the four Firefly generation settings before triggering, so
+  // a cut is not silently degraded (auto-ratio / 1K / grounding-off / stale
+  // reference lock). Each flag true = that setting matches the per-purpose
+  // convention. Absent/partial → the queue shows a pending-verification gate.
+  // Optional + additive — firefly_drop never sets it.
+  settingsVerified?: {
+    ratio: boolean;       // 16:9 lifestyle / 1:1 thumb / 3:4 detail
+    resolution: boolean;  // 2K+ premium cut
+    grounding: boolean;   // Google grounding on for structure-real scenes
+    reference: boolean;   // reference lock intentionally managed (not stale)
+  };
 }
 export interface HeroCropPayload {
   guide: string;       // i18n key for the crop guidance text

@@ -157,6 +157,11 @@ export interface ActionQueueItem {
   // pending-verification state (the driver has not confirmed GENERATE mode via
   // kkAssertGenerateMode). Only set on a firefly_auto item; additive.
   generateModeConfirmed?: boolean;
+  // firefly_auto generation-settings gate (#77, SCENT_MOOD_BACKGROUND_SYSTEM
+  // §2-3). true only when all four settings (ratio/resolution/grounding/
+  // reference) are verified; false/undefined → pending. Only set on a
+  // firefly_auto item; additive.
+  settingsVerified?: boolean;
 }
 
 export interface ControlTowerRow {
@@ -419,8 +424,15 @@ export function computeActionQueueItem(
       // (AUTH), just flagged auto-capable; lands in the studio. The generate-mode
       // gate (#77) is surfaced from the payload so the card shows a pending-
       // verification state until the driver confirms GENERATE (not edit) mode.
-      const gmc = (intervention.payload as { generateModeConfirmed?: boolean } | null)?.generateModeConfirmed === true;
-      return { ...base, category: 'AUTH', stage: IV_FIREFLY_AUTO, deepLink: `/studio?product=${productId}`, ...iv, generateModeConfirmed: gmc };
+      const ap = intervention.payload as {
+        generateModeConfirmed?: boolean;
+        settingsVerified?: { ratio?: boolean; resolution?: boolean; grounding?: boolean; reference?: boolean };
+      } | null;
+      const gmc = ap?.generateModeConfirmed === true;
+      const sv = ap?.settingsVerified;
+      // Summary boolean: all four generation settings verified.
+      const settingsVerified = !!sv && sv.ratio === true && sv.resolution === true && sv.grounding === true && sv.reference === true;
+      return { ...base, category: 'AUTH', stage: IV_FIREFLY_AUTO, deepLink: `/studio?product=${productId}`, ...iv, generateModeConfirmed: gmc, settingsVerified };
     }
     if (intervention.type === IV_HERO_CROP_REQUEST) {
       return { ...base, category: 'INPUT_DECISION', stage: IV_HERO_CROP_REQUEST, deepLink: `/studio?product=${productId}`, ...iv };

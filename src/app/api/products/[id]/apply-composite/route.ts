@@ -77,6 +77,10 @@ interface Body {
   // GENERATE (not edit) mode. Stored on the firefly_auto payload so the queue
   // clears its pending-verification state. Additive — undefined → unconfirmed.
   generateModeConfirmed?: boolean;
+  // #77 (SCENT_MOOD §2-3) generation-settings sub-check: the driver verified the
+  // four Firefly settings (ratio/resolution/grounding/reference). Stored on the
+  // firefly_auto payload so the queue clears its settings gate. Additive.
+  settingsVerified?: { ratio?: boolean; resolution?: boolean; grounding?: boolean; reference?: boolean };
 }
 
 async function fetchBuffer(url: string): Promise<{ buf?: Buffer; status: number }> {
@@ -131,7 +135,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // firefly_auto, carry the #77 generate-mode confirmation through.
     const ivType = body.fireflyTabOpen === true ? INTERVENTION_FIREFLY_AUTO : INTERVENTION_FIREFLY_DROP;
     const fireflyPayload = ivType === INTERVENTION_FIREFLY_AUTO
-      ? { ...baseFireflyPayload, generateModeConfirmed: body.generateModeConfirmed === true }
+      ? {
+          ...baseFireflyPayload,
+          generateModeConfirmed: body.generateModeConfirmed === true,
+          settingsVerified: {
+            ratio: body.settingsVerified?.ratio === true,
+            resolution: body.settingsVerified?.resolution === true,
+            grounding: body.settingsVerified?.grounding === true,
+            reference: body.settingsVerified?.reference === true,
+          },
+        }
       : baseFireflyPayload;
     const seeded = await setJobIntervention({
       productId, jobType: PRODUCT_COMPOSITE, type: ivType,

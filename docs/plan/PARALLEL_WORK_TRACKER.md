@@ -1,4 +1,11 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev18 · april/cotton v2 재생성 + 모드가드 정정 + Gemini 그라운딩·세션7-d)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev19 · Scent→Mood 컨셉 재설계 + 생성설정 가드 + april/cotton v3·세션7-e)
+
+## rev19 세션7-e (2026-06-13 Desktop) — 그라운딩 ON 시도 + 생성설정 진단 + Scent→Mood 재설계 + april/cotton v3
+- ✅ **캡처 진단**: Firefly 생성바 미설정(비율 자동·해상도 1K·그라운딩 OFF·참조 잠금) — 운영자 지적 정확.
+- ✅ **근본진단**: cotton 린넨같음 = 프롬프트가 사물(linen stack) 묘사 탓·april=잡초밭. 컨셉이 향 무드가 아니라 사물이었음.
+- ✅ **전상품 시스템화**: docs/design/SCENT_MOOD_BACKGROUND_SYSTEM.md — 규칙A(배경=가치/감각 무드)·규칙B(생성설정 체크리스트)·앱 개입점(firefly_auto settingsVerified).
+- ✅ **april_v3/cotton_v3 Scent→Mood 재생성**: composite/lifestyle-1781357077702(2.88MB)·1781357121767(3.10MB) 적재·SQL 3-tier. 그라운딩 sp-switch checked set.
+- ⏳ **다음**: [운영자] v3 시각확인 / [Desktop] 통과 시 누끼합성·미흡 시 16:9+2K+그라운딩 확정 재생성 / [Code] firefly_auto settingsVerified 서브체크 박제.
 
 ## rev18 세션7-d (2026-06-13 Desktop) — 5컷 시각확인 + 모드가드 정정 + 그라운딩 채택 + april/cotton v2
 - ✅ **5컷 시각판정**(운영자): hero/lemon/blackcherry 양호, april/cotton AI 이질감 → 재작업.

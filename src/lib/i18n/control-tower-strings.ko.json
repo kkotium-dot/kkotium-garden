@@ -224,7 +224,12 @@
         "ratio": "비율",
         "generateMode": "생성 모드 확인",
         "confirmed": "확인됨",
-        "pending": "검증대기"
+        "pending": "검증대기",
+        "settingsCheck": "생성 설정 확인",
+        "partial": "일부확인",
+        "resolution": "해상도",
+        "grounding": "그라운딩",
+        "reference": "참조"
       },
       "hero_crop_request": {
         "label": "히어로 크롭 요청",

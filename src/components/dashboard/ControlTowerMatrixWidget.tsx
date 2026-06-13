@@ -93,6 +93,8 @@ interface FireflyDropPayload {
   model?: string;
   ratio?: string;
   generateModeConfirmed?: boolean; // firefly_auto generate-mode gate (#77)
+  // firefly_auto generation-settings sub-check (#77, SCENT_MOOD §2-3).
+  settingsVerified?: { ratio?: boolean; resolution?: boolean; grounding?: boolean; reference?: boolean };
 }
 interface HeroCropPayload {
   minEdge?: number;
@@ -483,7 +485,7 @@ const CATEGORY_ORDER: ActionCategory[] = ['GO_PENDING', 'AUTH', 'INPUT_DECISION'
 const IV = m.intervention as {
   expand: string; collapse: string; copy: string; copied: string;
   firefly_drop: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string };
-  firefly_auto: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string; generateMode: string; confirmed: string; pending: string };
+  firefly_auto: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string; generateMode: string; confirmed: string; pending: string; settingsCheck: string; partial: string; resolution: string; grounding: string; reference: string };
   hero_crop_request: { label: string; lead: string; minEdge: string; longestEdge: string; textFlag: string };
   source_request: { label: string; lead: string; url: string };
   fidelity_check: { label: string; lead: string; components: string; forbidden: string; checks: string; mount: string; source: string };
@@ -585,6 +587,30 @@ function InterventionDetail({ type, payload }: { type: string; payload: unknown 
             </span>
           </div>
         )}
+        {type === 'firefly_auto' && (() => {
+          // Generation-settings sub-check (#77, SCENT_MOOD §2-3) — one line.
+          // Color-coded sub-labels (green=verified, slate=pending); no symbols.
+          const sv = p.settingsVerified ?? {};
+          const flags: Array<[string, boolean]> = [
+            [IV.firefly_auto.ratio, sv.ratio === true],
+            [IV.firefly_auto.resolution, sv.resolution === true],
+            [IV.firefly_auto.grounding, sv.grounding === true],
+            [IV.firefly_auto.reference, sv.reference === true],
+          ];
+          const okCount = flags.filter(([, v]) => v).length;
+          const allOk = okCount === 4;
+          const stateWord = allOk ? IV.firefly_auto.confirmed : okCount > 0 ? IV.firefly_auto.partial : IV.firefly_auto.pending;
+          return (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px]">
+              {allOk ? <Check size={10} className="text-green-600" /> : <Clock size={10} className="text-amber-500" />}
+              <span className="text-slate-500">{IV.firefly_auto.settingsCheck}</span>
+              <span className={allOk ? 'text-green-600' : 'text-amber-600'}>{stateWord} ({okCount}/4)</span>
+              {flags.map(([label, v]) => (
+                <span key={label} className={v ? 'text-green-600' : 'text-slate-400'}>{label}</span>
+              ))}
+            </div>
+          );
+        })()}
       </div>
     );
   }
