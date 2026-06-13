@@ -801,6 +801,10 @@ grep -c "id: '" src/lib/automation-registry.ts
 
 **규칙**: 모든 작업 종료 시 인계 메시지를 채팅 응답 본문에 누락 없이 정리한다(파일에만 두지 않음). 포함: Target Session·Branch·다음 1액션·검증절차·코드패치 위치·세션요약. 운영자=paste-mediator → 채팅에서 바로 복사·착수 가능해야 함. CLAUDE.md 작업원칙 섹션 + PRINCIPLES_LEARNED 양쪽 박제.
 
+## 작업원칙 #71 — 진짜 예술은 진짜로 (Authenticity Realism Lane) (2026-06-13 세션7-g, 전상품)
+
+**규칙**: 모든 자산 슬롯은 사실성 레인으로 태깅한다. **AUTHENTIC-ART**(제품 라벨·브랜드 스토리 S5) = 퍼블릭도메인 실제 작품만(실제 명화 reproduction·진짜 모네). **PHOTOREAL**(히어로·라이프스타일·향 씬·합성·썸네일·추가이미지) = 실사 카메라 촬영 품질, AI 유화/회화/페인터리 마감 전면 금지. 명화 컨셉은 라벨(실제)+S5 스토리(실제 모네)가 짊어지고, 향 씬·히어로·합성을 AI 유화로 칠하면 컨셉이 사는 게 아니라 AI 이질감만 생겨 신뢰가 깎인다. 비명화 상품은 AUTHENTIC-ART 레인이 비어도 PHOTOREAL 룰(회화 마감 금지)을 보편 적용(#55). 앱 개입점 = 사실성 레인 가드(asset 슬롯 realism_lane('authentic_art'|'photoreal') 파생 + PHOTOREAL 슬롯 회화마감 경고, 기존 fidelity_check/main_image_white_bg 가드 동형·강제모달 0 #56). 전거 docs/playbook/SCENT_MOOD_4SCENE_GRADE_2026-06-13.md §0·§7, docs/design/SCENT_MOOD_BACKGROUND_SYSTEM.md, 스펙 docs/design/REALISM_LANE_GUARD_SPEC_2026-06-13.md.
+
 ## 작업원칙 #74 — Firefly programmatic 프롬프트 주입 유지 가능 (SUPERSEDE, 2026-06-13 실측)
 
 **규칙**: Firefly programmatic 프롬프트 주입은 shadow-walk 노드 포착 + native 프로토타입 setter+InputEvent면 유지됨(stuck 실측). 구#74의 '폐기'는 단순 el.value= 방식 한정. blob 결과는 fetch->arrayBuffer로 추출 가능(image/png 검증). 구체: Firefly SPA는 353 Shadow DOM 호스트로 캡슐화되어 top-level querySelector는 0이지만 shadow root 재귀 관통으로 textarea·생성·다운로드 버튼·결과 이미지(4컷 1376x768) 전부 포착. native setter+InputEvent 주입은 React/Spectrum 내부 상태에 반영되어 값 유지(stuck:true). 결과 blob은 fetch->arrayBuffer->base64로 바이트 추출(2.45MB·시그니처 89504e47 유효). 적재 catch-basin = POST /api/products/[id]/ingest-firefly(base64->uploadAutomationAsset->{pid}/{stage}/ + asset_registry 인테이크, 비가역 0·네이버 무접촉, 전상품). 개입카드 firefly_drop->firefly_auto 확장(탭 열림 감지 시 '자동 생성 가능' 표시·강제모달 0 #56). 생성 트리거·폴링은 Desktop 1컷 실측서 확정(크레딧 소비). 근거 docs/playbook/FIREFLY_AUTOMATION_PLAYBOOK_2026-06-13.md. 보완 #75(Scene-first 3-Layer 합성 표준).

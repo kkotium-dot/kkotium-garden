@@ -1,5 +1,12 @@
 # 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev19 · Scent→Mood 컨셉 재설계 + 생성설정 가드 + april/cotton v3·세션7-e)
 
+## rev20 세션7-g-Code (2026-06-13 Code) — #71 사실성 레인 박제 + 향씬 실사정정 + realism_lane 스펙
+- ✅ **#71 박제**: '진짜 예술은 진짜로(Authenticity Realism Lane)' — PRINCIPLES_LEARNED.md(#69↔#74 사이) + CLAUDE.md §7. AUTHENTIC-ART(라벨·S5)=퍼블릭도메인 실제 작품만, PHOTOREAL(히어로·향씬·합성·썸네일·추가)=실사 카메라·AI 회화 금지, 비명화 보편(#55).
+- ✅ **HTML 실사정정**: myeonghwa_detail_v2.html .scent-visual 4향 → '실사 정물 — [장면]', 히어로 tag-a → '실사 프리미엄 환경(벽면 실제 모네 액자·퍼블릭도메인)'. Python 경유.
+- ✅ **realism_lane 가드 스펙**: docs/design/REALISM_LANE_GUARD_SPEC_2026-06-13.md(코드 별도 턴) — 슬롯 realism_lane 파생 + PHOTOREAL 회화마감 경고(#56 동형·강제모달 0)·AUTHENTIC-ART 퍼블릭도메인 게이트.
+- ✅ **검증**: tsc0·build0·이모지0·한글리터럴0·sentinel clean·네이버 무접촉·외부 image API 0.
+- ⏳ **다음**: [Code] realism_lane 가드 구현 턴. [Desktop] 4컷 실사 생성→팔레트 정합→누끼합성.
+
 ## rev19 세션7-e (2026-06-13 Desktop) — 그라운딩 ON 시도 + 생성설정 진단 + Scent→Mood 재설계 + april/cotton v3
 - ✅ **캡처 진단**: Firefly 생성바 미설정(비율 자동·해상도 1K·그라운딩 OFF·참조 잠금) — 운영자 지적 정확.
 - ✅ **근본진단**: cotton 린넨같음 = 프롬프트가 사물(linen stack) 묘사 탓·april=잡초밭. 컨셉이 향 무드가 아니라 사물이었음.

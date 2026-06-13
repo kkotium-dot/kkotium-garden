@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+
+### 2026-06-13 (85) #71 사실성 레인 박제 + 향씬 실사정정 + realism_lane 스펙 (FROM Desktop 세션7-g rev2 / TO Code)
+
+| 항목 | 상태 |
+|---|---|
+| 권위 | docs/playbook/SCENT_MOOD_4SCENE_GRADE_2026-06-13.md(rev2 Desktop 박제완) + docs/design/SCENT_MOOD_BACKGROUND_SYSTEM.md |
+| #71 박제 ✅ | '진짜 예술은 진짜로(Authenticity Realism Lane)' PRINCIPLES_LEARNED.md(#69↔#74 사이) + CLAUDE.md §7. AUTHENTIC-ART(라벨·S5)=퍼블릭도메인 실제만, PHOTOREAL=실사·AI회화 금지, 비명화 보편(#55) |
+| HTML 실사정정 ✅ | myeonghwa_detail_v2.html .scent-visual 4향 '실사 정물 — [장면]', 히어로 tag-a 실사 프리미엄 환경(벽면 실제 모네 액자·퍼블릭도메인) |
+| realism_lane 스펙 ✅ | docs/design/REALISM_LANE_GUARD_SPEC_2026-06-13.md(코드 별도 턴): 슬롯 realism_lane 파생 + PHOTOREAL 회화마감 경고(#56 동형·강제모달 0)·AUTHENTIC-ART 퍼블릭도메인 게이트 |
+| 검증 ✅ | tsc0·build0·이모지0·신규 한글리터럴0·prisma 싱글톤·sentinel clean·네이버 무접촉. push READY |
+| 다음 | [Code] realism_lane 가드 구현 턴(파생+경고 위젯). [Desktop] 4컷 실사 생성→팔레트 정합→누끼합성 |
+
 ### 2026-06-12 (84) /assets composite=0 P0 종결 — Desktop 3-tier LIVE 검증 + probe 삭제 (FROM 💻 Code, production 619dbff, 비가역 0·네이버 무접촉)
 
 | 항목 | 상태 |
