@@ -36,9 +36,13 @@ import {
   Plus,
   Archive,
   RefreshCw,
+  Download,
 } from 'lucide-react';
 import strings from './AssetBrowser.strings.ko.json';
 import { broadcastProductMutated } from '@/lib/events/product-mutated';
+// kindForSource is a pure classifier (asset-taxonomy only `import type`s the
+// server storage module, which the bundler erases) — safe in a client bundle.
+import { kindForSource } from '@/lib/storage/asset-taxonomy';
 
 // Pipeline-ordered stages an operator may upload into (mirrors STAGE_DIRS;
 // kept local so this client component never imports the server storage module).
@@ -160,15 +164,26 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
   const [busyPath, setBusyPath] = useState<string | null>(null);
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
 
-  // Upload state
-  const [uploadStage, setUploadStage] = useState<string>(''); // '' = auto-recommend
+  // Upload state. A picked file enters a `pending` confirm step that shows the
+  // kindForSource-inferred stage as a chip; the operator confirms or overrides
+  // the target subfolder before the file is stored (semi-auto, authority §3).
   const [uploading, setUploading] = useState(false);
+  const [pending, setPending] = useState<{ file: File; recommended: string; chosen: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const flash = useCallback((kind: 'ok' | 'err', msg: string) => {
     setToast({ kind, msg });
     setTimeout(() => setToast(null), 2600);
   }, []);
+
+  const onPickFile = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) {
+      flash('err', strings.upload.notImage);
+      return;
+    }
+    const recommended = kindForSource(file.name);
+    setPending({ file, recommended, chosen: recommended });
+  }, [flash]);
 
   const load = useCallback(async () => {
     if (!productId) return;
@@ -205,8 +220,11 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
   }, [productId, load]);
 
   // ── Upload ────────────────────────────────────────────────────────────────
+  // Stores the pending file into the operator-confirmed stage subfolder. The
+  // explicit stage is always sent (the chip already showed the inference), so
+  // there is no server-side re-guessing once the operator has confirmed.
   const doUpload = useCallback(
-    async (file: File) => {
+    async (file: File, stage: string) => {
       if (!productId) return;
       if (!file.type.startsWith('image/')) {
         flash('err', strings.upload.notImage);
@@ -216,13 +234,15 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
       try {
         const form = new FormData();
         form.append('file', file);
-        if (uploadStage) form.append('stage', uploadStage);
+        if (stage) form.append('stage', stage);
         const res = await fetch(`/api/products/${productId}/assets/upload`, {
           method: 'POST',
           body: form,
         }).then((r) => r.json());
         if (res.success) {
-          flash('ok', `${strings.upload.done} (${stageLabel(res.stage)})`);
+          const ratioNote = res.normalized?.applied ? ` · ${strings.upload.ratioFixed}` : '';
+          flash('ok', `${strings.upload.done} (${stageLabel(res.stage)})${ratioNote}`);
+          setPending(null);
           await load();
         } else {
           flash('err', res.error || strings.upload.failed);
@@ -234,7 +254,7 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     },
-    [productId, uploadStage, flash, load],
+    [productId, flash, load],
   );
 
   // ── Actions (set_main / add_extra / archive) ───────────────────────────────
@@ -295,6 +315,16 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
               {strings.countUnit}
             </span>
           )}
+          {productId && total > 0 && (
+            <a
+              href={`/api/products/${productId}/assets/export`}
+              title={strings.exportZip}
+              className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-pink-600"
+            >
+              <Download className="w-3.5 h-3.5" />
+              {strings.exportZip}
+            </a>
+          )}
           {productId && (
             <button
               type="button"
@@ -329,47 +359,87 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
 
       {productId && (
         <>
-          {/* Direct upload (lane 1 SEMI-AUTO) */}
+          {/* Direct upload (lane 1 SEMI-AUTO) — pick file -> inferred stage chip
+              -> operator confirm/override -> store into the exact subfolder. */}
           <div className="mb-4 border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
                 <Upload className="w-4 h-4 text-pink-500" />
                 {strings.upload.heading}
               </span>
-              <label className="flex items-center gap-1.5 text-xs text-gray-600">
-                {strings.upload.stageLabel}
-                <select
-                  value={uploadStage}
-                  onChange={(e) => setUploadStage(e.target.value)}
-                  className="text-xs border border-gray-300 rounded px-1.5 py-1 bg-white"
-                >
-                  <option value="">{strings.upload.autoStage}</option>
-                  {UPLOAD_STAGES.map((s) => (
-                    <option key={s} value={s}>
-                      {stageLabel(s)}
-                    </option>
-                  ))}
-                </select>
-              </label>
             </div>
-            <button
-              type="button"
-              disabled={uploading}
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-pink-600 hover:border-pink-300 border border-gray-200 rounded-md py-3 bg-white transition disabled:opacity-60"
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {strings.upload.uploading}
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  {strings.upload.drop}
-                </>
-              )}
-            </button>
+
+            {!pending ? (
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-pink-600 hover:border-pink-300 border border-gray-200 rounded-md py-3 bg-white transition disabled:opacity-60"
+              >
+                <Plus className="w-4 h-4" />
+                {strings.upload.drop}
+              </button>
+            ) : (
+              <div className="rounded-md border border-pink-200 bg-white p-3">
+                <p className="text-xs text-gray-500 truncate" title={pending.file.name}>
+                  {pending.file.name}
+                </p>
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-gray-600">{strings.upload.inferred}</span>
+                  <span className="inline-flex items-center rounded-full bg-pink-50 text-pink-700 text-xs font-semibold px-2 py-0.5">
+                    {stageLabel(pending.recommended)}
+                  </span>
+                  <label className="flex items-center gap-1.5 text-xs text-gray-600 ml-auto">
+                    {strings.upload.stageLabel}
+                    <select
+                      value={pending.chosen}
+                      onChange={(e) =>
+                        setPending((p) => (p ? { ...p, chosen: e.target.value } : p))
+                      }
+                      className="text-xs border border-gray-300 rounded px-1.5 py-1 bg-white"
+                    >
+                      {UPLOAD_STAGES.map((s) => (
+                        <option key={s} value={s}>
+                          {stageLabel(s)}
+                          {s === pending.recommended ? ` (${strings.upload.recommended})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => void doUpload(pending.file, pending.chosen)}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-pink-600 hover:bg-pink-700 rounded-md py-2 transition disabled:opacity-60"
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {strings.upload.uploading}
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        {strings.upload.confirm}
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => {
+                      setPending(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="inline-flex items-center justify-center text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-md px-3 py-2 transition disabled:opacity-60"
+                  >
+                    {strings.upload.cancel}
+                  </button>
+                </div>
+              </div>
+            )}
             <input
               ref={fileInputRef}
               type="file"
@@ -377,7 +447,7 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
-                if (f) void doUpload(f);
+                if (f) onPickFile(f);
               }}
             />
           </div>

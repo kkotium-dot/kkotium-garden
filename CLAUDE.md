@@ -300,6 +300,7 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 - **#69** — 인계 in-chat 박제 (채팅 본문에 Target/Branch/다음1액션/검증/패치위치/요약 누락0)
 - **#71** — 진짜 예술은 진짜로(사실성 레인). AUTHENTIC-ART(라벨·S5 스토리)=퍼블릭도메인 실제 작품만, PHOTOREAL(히어로·라이프스타일·향씬·합성·썸네일·추가)=실사 카메라 품질·AI 유화/회화 마감 전면금지. 비명화도 PHOTOREAL 룰 보편적용(#55). 앱=realism_lane 가드(전거 SCENT_MOOD_4SCENE_GRADE §0·§7, 스펙 REALISM_LANE_GUARD_SPEC_2026-06-13)
 - **#74** — Firefly programmatic 프롬프트 주입 유지 가능 (SUPERSEDE — shadow-walk 노드 포착 + native setter+InputEvent면 stuck, 구#74 폐기는 el.value= 한정, blob→arrayBuffer 추출; 적재 catch-basin POST /ingest-firefly + firefly_auto 카드)
+- **#72** — 자동재시도 타이머 절대 금지 (setTimeout/setInterval 생성 자동발사 = 크레딧소모 + 쿨다운 무한리셋, Firefly 차단 실제원인). 생성=단발 수동. 레이트리밋은 요청0+시간경과만 해제(두드리면 악화). 보강3: 편집모드 비율컨트롤 부재→파이프라인 Sharp 정규화(향씬4:5·대표1:1, conformToSlotRatio, /assets/upload·/ingest-firefly 양경로) · 레거시백필=시스템개선(kindForSource 분류·COPY→DB→검증→retire·멱등·move-then-update금지) · 비상품(common·lifestyle) 백필제외. 전거 docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md
 - **#77** (정정판) — Firefly 모드 가드: view=edit 워크스페이스 자체는 안전(풀생성 허용), ACTIVE 마스크/선택영역/참조잠금(부분 인페인)일 때만 edit-locked-ABORT. 편집도구 버튼(새로 편집·마크업·디테일조절·업스케일)·대형 표시이미지는 워크스페이스 신호일 뿐 ABORT 아님(1차판 '버튼=편집모드' 오탐 정정). kkAssertGenerateMode() → edit-locked-ABORT(maskActive||refLoaded>0)만 중단, generate·generate-in-edit-OK 진행 + 사후 perceptual hash minHamming<10=오염. firefly_auto generateModeConfirmed 게이트(기박제). 전거 docs/playbook/FIREFLY_GROUNDING_AND_QUALITY_UPGRADE_2026-06-13.md §1.2~1.4
 
 ---

@@ -44,6 +44,8 @@ import {
   safeVariant,
 } from '@/lib/storage/asset-taxonomy';
 import { parseAssetTokens, buildAssetVariant, type AssetTokens } from '@/lib/storage/asset-naming';
+import { ratioSlotForStage } from '@/lib/config/image-slot-matrix';
+import { conformToSlotRatio } from '@/lib/images/slot-ratio';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -70,6 +72,9 @@ interface Body {
   filename?: string;
   base64?: string;
   contentType?: string;
+  /** Set false to skip slot-ratio normalization (default ON for composite /
+   *  thumbnail). */
+  normalize?: boolean;
 }
 
 function isAssetKind(v: string): v is AssetKind {
@@ -168,7 +173,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const tokens: AssetTokens = parseAssetTokens(filename);
   const variant = buildAssetVariant(tokens, safeVariant(baseName, 'firefly'));
 
+  const normalizeOff = body.normalize === false;
+
   try {
+    let uploadContentType = contentType;
     // Intrinsic dimensions (best-effort — never fails the ingest).
     let width: number | null = null;
     let height: number | null = null;
@@ -178,12 +186,31 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       height = meta.height ?? null;
     } catch { /* non-image / unreadable metadata — leave dims null */ }
 
+    // Pipeline-time slot-ratio defense (authority §1/§2): conform off-ratio
+    // Firefly output to the slot ratio (composite -> 4:5, thumbnail -> 1:1)
+    // before storage. Conformant inputs pass through unchanged.
+    const ratioSlot = ratioSlotForStage(stage);
+    let normalized: { applied: boolean; fromRatio: number | null; toRatio: number } | null = null;
+    if (ratioSlot && ratioSlot.targetRatio && !normalizeOff) {
+      try {
+        const r = await conformToSlotRatio(buffer, ratioSlot.targetRatio, {
+          policy: ratioSlot.normalize,
+          contentType,
+        });
+        buffer = r.buffer;
+        uploadContentType = r.contentType;
+        if (r.width) width = r.width;
+        if (r.height) height = r.height;
+        normalized = { applied: r.changed, fromRatio: r.fromRatio, toRatio: r.toRatio };
+      } catch { /* normalization is best-effort — store the original on failure */ }
+    }
+
     const uploaded = await uploadAutomationAsset({
       productId,
       kind: stage,
       variant,
       buffer,
-      contentType,
+      contentType: uploadContentType,
     });
 
     // Registry intake — idempotent on path (P2002 guarded), guarded for the
@@ -224,6 +251,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       variant,
       width,
       height,
+      normalized,
       registered,
       path: uploaded.path,
       publicUrl: uploaded.publicUrl,

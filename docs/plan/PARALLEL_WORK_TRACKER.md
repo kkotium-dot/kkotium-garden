@@ -1,5 +1,13 @@
 # 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev19 · Scent→Mood 컨셉 재설계 + 생성설정 가드 + april/cotton v3·세션7-e)
 
+## rev21 세션7-h-Code (2026-06-14 Code) — 적응형 이미지 엔진 + 폴더 백필 시스템
+- ✅ **분류기 결함 A·B 수정**: kindForSource backdrop→plate(GO결정#2)·archive 선행(GO결정#3). 전상품·미래파일.
+- ✅ **task2 비율 2층방어**: config/image-slot-matrix.ts + images/slot-ratio.ts(conformToSlotRatio). /assets/upload·/ingest-firefly 양경로 — composite4:5·thumbnail1:1·2%게이트·옵트아웃.
+- ✅ **task3·4·5**: 설정 config화 / AssetBrowser 추론칩+오버라이드 / download-naming + ZIP 내보내기(/assets/export·zip-store STORE).
+- ✅ **task1 백필 dry-run**: backfill-legacy-assets.ts 20건/3상품(Desktop 스펙 일치). 이중게이트·멱등·COPY→DB→검증→retire. **운영자 GO 대기·미실행**.
+- ✅ **검증**: tsc0·build0·이모지0·한글리터럴0·비가역0·네이버 무접촉. #72 박제.
+- ⏳ **다음**: [운영자] dry-run 검토→GO→`--go --confirm`. [Code] 실행·검증.
+
 ## rev20 세션7-g-Code (2026-06-13 Code) — #71 사실성 레인 박제 + 향씬 실사정정 + realism_lane 스펙
 - ✅ **#71 박제**: '진짜 예술은 진짜로(Authenticity Realism Lane)' — PRINCIPLES_LEARNED.md(#69↔#74 사이) + CLAUDE.md §7. AUTHENTIC-ART(라벨·S5)=퍼블릭도메인 실제 작품만, PHOTOREAL(히어로·향씬·합성·썸네일·추가)=실사 카메라·AI 회화 금지, 비명화 보편(#55).
 - ✅ **HTML 실사정정**: myeonghwa_detail_v2.html .scent-visual 4향 → '실사 정물 — [장면]', 히어로 tag-a → '실사 프리미엄 환경(벽면 실제 모네 액자·퍼블릭도메인)'. Python 경유.

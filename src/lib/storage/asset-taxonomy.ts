@@ -40,12 +40,23 @@ export const LEGACY_STAGE_DIRS: readonly string[] = ['thumb'];
 
 // Source-label -> stage rules (first match wins). Lets a recovery route classify
 // an asset automatically from its source/variant label.
+//
+// Order matters (first match wins). Two corrections from the 2026-06-14 backfill
+// audit (authority ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §7,
+// operator GO decisions A/B):
+//   A) 'backdrop' is added to the plate rule. A backdrop (the asset-source-
+//      resolver loads backdrop-{skeletonId}.png as a COMPOSITE INPUT background)
+//      is semantically a clean background plate, not a finished composite.
+//   B) The archive rule is moved AHEAD of composite/detail/thumbnail so a
+//      retire marker wins over a content marker: 'composite-old.png' classifies
+//      as archive (retire intent), not composite (content). cutout / reference /
+//      plate stay ahead of archive (a live working asset keeps its stage).
 const SOURCE_KIND_RULES: ReadonlyArray<{ test: RegExp; kind: AssetKind }> = [
   { test: /cutout|whitefront|nukki|transparent|remove[_-]?bg|knockout/i, kind: 'cutout' },
   { test: /reference|ref[_-]?slot|ref[_-]?drop|refcut/i, kind: 'reference' },
-  { test: /plate|backplate|back[_-]?plate|turntable|clean[_-]?plate/i, kind: 'plate' },
-  { test: /composite|mood|newbg|new[_-]?bg|firefly|lifestyle|scene|carleather/i, kind: 'composite' },
+  { test: /plate|backplate|back[_-]?plate|backdrop|turntable|clean[_-]?plate/i, kind: 'plate' },
   { test: /archive|old|prev|backup|reject|deprecated/i, kind: 'archive' },
+  { test: /composite|mood|newbg|new[_-]?bg|firefly|lifestyle|scene|carleather/i, kind: 'composite' },
   { test: /detail|section|hero|notice|story/i, kind: 'detail' },
   { test: /thumb|thumbnail|crop|whitebg|white[_-]?bg|represent|main/i, kind: 'thumbnail' },
 ];

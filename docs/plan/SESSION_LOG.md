@@ -1,3 +1,17 @@
+## 2026-06-14 (세션7-h-Code) 적응형 이미지 엔진 + 폴더 자동분류 백필 시스템
+
+**[권위]** docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §7 박제(이번 턴 dry-run 결과·결함 A/B·GO결정 3건).
+**[분류기 결함 수정]** asset-taxonomy.ts kindForSource — (A) plate 규칙에 backdrop 토큰 추가(GO결정#2=plate) (B) archive 규칙을 composite/detail/thumbnail 앞으로 선행(GO결정#3). 전상품·미래파일.
+**[task2 비율 2층방어]** 신규 config/image-slot-matrix.ts(§2 영문 상수) + images/slot-ratio.ts(conformToSlotRatio). /assets/upload + /ingest-firefly 양 경로 보강 — composite=4:5 cover·thumbnail=1:1 contain-white·2% 허용오차 게이트·normalize=false 옵트아웃.
+**[task3 설정 config화]** 슬롯별 surface/model/googleSearch/targetRatio 상수화 + ratioSlotForStage 매핑.
+**[task4 반자동 업로드 UI]** AssetBrowser — 파일 선택 시 kindForSource 추론 stage 칩 표시 + 운영자 오버라이드 확인 → 정확 서브폴더 적재.
+**[task5 데스크톱]** download-naming.ts(YYYYMMDD-HHmm__slug__stage__variant) + 상품별 ZIP 내보내기 GET /api/products/[id]/assets/export(의존성0 STORE zip-store.ts·{stage}/{file} 구조).
+**[task1 백필 dry-run]** scripts/backfill-legacy-assets.ts — dry-run 20건/3상품(cmp3afb9·cmpnooli10·cmpp62yje1, common/lifestyle 제외) Desktop 스펙 일치. COPY→DB→검증→retire 순서·멱등·이중게이트(--go --confirm). **운영자 GO 대기, 본 턴 미실행.**
+**[고정이름 안전]** cutout.png→cutout/·backdrop-S*→plate/ 이동해도 findCachedAsset 서브폴더 순회로 해소(resolver 무영향) 검증.
+**[검증]** tsc0·build0(3 라우트 등록)·이모지0·한글리터럴0·prisma 싱글톤·네이버 무접촉·비가역0.
+**[#72 박제]** 자동재시도 타이머 금지 + 편집모드 비율컨트롤 부재→파이프라인 정규화 + 레거시백필=시스템개선 + 비상품 네임스페이스 제외.
+**[다음]** [운영자] 백필 dry-run 검토 → GO 시 `npx tsx scripts/backfill-legacy-assets.ts --go --confirm`. [Code] GO 후 실행·검증.
+
 ## 2026-06-13 (세션7-g-Code) #71 사실성 레인 박제 + 향씬 실사정정 + realism_lane 스펙
 
 **[#71 박제]** 신규 원칙 '진짜 예술은 진짜로 (Authenticity Realism Lane)' — PRINCIPLES_LEARNED.md(#69↔#74 사이 삽입) + CLAUDE.md §7 index. AUTHENTIC-ART(라벨·S5 모네)=퍼블릭도메인 실제 작품만, PHOTOREAL(히어로·라이프스타일·향씬·합성·썸네일·추가)=실사 카메라 품질·AI 회화 마감 전면금지, 비명화도 PHOTOREAL 보편적용(#55).

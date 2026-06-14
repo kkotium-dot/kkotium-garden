@@ -848,3 +848,15 @@ function kkAssertGenerateMode(){
 }
 ```
 - 실측 검증: 라이브 편집상태에서 newEditBtn=true·markupTools=3·dominantOpen=true·maskActive=false → generate-in-edit-OK(풀생성 안전). 마스크 활성 시 edit-locked-ABORT.
+
+## 작업원칙 #72 — 자동재시도 타이머 절대 금지 (2026-06-14 세션7-h 학습)
+
+- setTimeout/setInterval로 생성을 자동발사하지 않는다. 크레딧 소모 + 레이트리밋 쿨다운 무한 리셋 = Firefly 차단의 실제 원인.
+- 생성은 항상 단발 수동 트리거. 레이트리밋("사용 문제/나중에 다시 시도")은 요청 0 + 실제 시간 경과만이 해제(두드리면 쿨다운 리셋되어 악화). 크레딧 정상이어도 발생(횟수 기반 단기 throttle).
+- 전거: docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §6.
+
+## 작업원칙 (이미지 엔진 보강 3종) — 2026-06-14 세션7-h
+
+- **(a) 편집모드 비율컨트롤 부재 → 파이프라인 정규화로 해결**: Gemini/Nano Banana 편집모드엔 종횡비 UI가 없다(DOM 실측 ratioControls=[]). 생성단계 통제는 약함 → Sharp 슬롯비율 정규화(conformToSlotRatio, 향씬 4:5·대표 1:1)가 본질적 2층 방어. 적재/사용 전 강제, 적재 경로 둘 다(/assets/upload·/ingest-firefly) 보강. 2% 허용오차 게이트(순응 자산은 무재인코딩 통과).
+- **(b) 레거시 백필 = 시스템 개선(단건 버그 수습 아님)**: 발견 오류는 단건 수습이 아니라 전상품 확장. 평면 레거시 자산은 kindForSource로 분류 후 {pid}/{kind}/ 이동(COPY→DB갱신→검증→retire). move-then-update 절대 금지(라이브 URL 중간 404 방지)·멱등(서브폴더 소속 스킵)·이중게이트(--go --confirm).
+- **(c) 비상품 네임스페이스 제외**: common/·lifestyle/ = 안정 URL·비상품 → 백필·재분류 영구 제외. 스코프 게이트 = Product 테이블 멤버십.

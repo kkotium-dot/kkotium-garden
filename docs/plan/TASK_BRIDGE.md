@@ -73,6 +73,12 @@
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
 
+### 2026-06-14 (86) 적응형 이미지 엔진 + 폴더 백필 시스템 (FROM 💻 Code, main, 비가역 0·additive·백필 dry-run만)
+- **What**: 분류기 결함 A·B 수정(backdrop→plate·archive 선행) + 슬롯비율 정규화 2층방어(config/image-slot-matrix·images/slot-ratio, /assets/upload·/ingest-firefly) + 설정 config화 + 반자동 업로드 stage칩·오버라이드(AssetBrowser) + 상품별 ZIP 내보내기(/assets/export·zip-store) + 레거시 백필 스크립트.
+- **백필 PENDING (운영자 GO)**: `npx tsx scripts/backfill-legacy-assets.ts` dry-run = 20건/3상품(cmp3afb9·cmpnooli10·cmpp62yje1). GO 시 `--go --confirm`. COPY→DB갱신→검증→retire·멱등. common/lifestyle 제외.
+- **검증**: tsc0·build0·비가역0. 권위 docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §7.
+- **다음 1액션**: [운영자] dry-run 검토·GO. [Code] GO 후 백필 실행·storage/DB 검증.
+
 ### 2026-06-13 (85) #71 사실성 레인 박제 + 향씬 실사정정 + realism_lane 스펙 (FROM Desktop 세션7-g rev2 / TO Code)
 
 | 항목 | 상태 |

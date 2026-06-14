@@ -27,6 +27,8 @@ import {
   safeVariant,
 } from '@/lib/storage/asset-taxonomy';
 import { parseAssetTokens, buildAssetVariant, type AssetTokens } from '@/lib/storage/asset-naming';
+import { ratioSlotForStage } from '@/lib/config/image-slot-matrix';
+import { conformToSlotRatio } from '@/lib/images/slot-ratio';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -115,8 +117,14 @@ export async function POST(
   const variant = buildAssetVariant(tokens, safeVariant(baseName, 'upload'));
   const sourceTag = (form.get('sourceTag') ?? 'manual_upload').toString().trim() || 'manual_upload';
 
+  // Slot-ratio normalization opt-out (default ON for the ratio-controlled
+  // stages: composite -> 4:5, thumbnail -> 1:1). `normalize=false` stores the
+  // raw upload untouched.
+  const normalizeOff = ((form.get('normalize') ?? '').toString().trim().toLowerCase() === 'false');
+
   try {
-    const buffer = Buffer.from(await file.arrayBuffer());
+    let buffer: Buffer = Buffer.from(await file.arrayBuffer());
+    let uploadContentType = contentType;
 
     // Read intrinsic dimensions (best-effort — never fails the upload).
     let width: number | null = null;
@@ -127,12 +135,31 @@ export async function POST(
       height = meta.height ?? null;
     } catch { /* non-image metadata read — leave dims null */ }
 
+    // Pipeline-time slot-ratio defense (authority §1/§2): conform off-ratio
+    // assets to the slot ratio before storage. Conformant inputs pass through
+    // unchanged. Skipped for stages without a deterministic slot ratio.
+    const ratioSlot = ratioSlotForStage(stage);
+    let normalized: { applied: boolean; fromRatio: number | null; toRatio: number } | null = null;
+    if (ratioSlot && ratioSlot.targetRatio && !normalizeOff) {
+      try {
+        const r = await conformToSlotRatio(buffer, ratioSlot.targetRatio, {
+          policy: ratioSlot.normalize,
+          contentType,
+        });
+        buffer = r.buffer;
+        uploadContentType = r.contentType;
+        if (r.width) width = r.width;
+        if (r.height) height = r.height;
+        normalized = { applied: r.changed, fromRatio: r.fromRatio, toRatio: r.toRatio };
+      } catch { /* normalization is best-effort — store the original on failure */ }
+    }
+
     const uploaded = await uploadAutomationAsset({
       productId,
       kind: stage,
       variant,
       buffer,
-      contentType,
+      contentType: uploadContentType,
     });
 
     // Registry insert (item C4) — idempotent on path, guarded for the
@@ -175,6 +202,7 @@ export async function POST(
       variant,
       width,
       height,
+      normalized,
       registered,
       path: uploaded.path,
       publicUrl: uploaded.publicUrl,
