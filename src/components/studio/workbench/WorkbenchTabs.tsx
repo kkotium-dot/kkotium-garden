@@ -1,27 +1,42 @@
-// WorkbenchTabs — Phase 2-B-1 right-rail container that reorganises the four
-// existing Studio action cards (Diagnosis / Thumbnail / Detail / Actions)
-// into a tabbed layout instead of a vertical stack. Card logic is owned by
-// the caller — this is pure layout. Tab content stays mounted so each
-// card's internal state (busy / error / etc.) survives tab switches.
+// WorkbenchTabs — right-rail tabbed container for the Studio action cards.
+//
+// Two layouts:
+//   - DEFAULT (grouped=false/undefined): the original 4/5-tab layout
+//     (Diagnosis / Thumbnail / Detail / Actions [+ Assets]). Unchanged — any
+//     caller that does not opt in keeps the legacy behavior (regression 0).
+//   - GROUPED (grouped=true): the registration-journey IA (authority §8 / task2)
+//     collapses the five cards into THREE journey tabs:
+//        1) 상품 분석   = diagnosis
+//        2) 이미지      = thumbnail + detail + assets, stacked as 3 sub-areas
+//        3) 발행        = actions
+//     Card logic is owned by the caller — this is pure layout, so the existing
+//     card components move into sub-areas with their state and behavior intact.
+//
+// Tab content stays mounted (display toggle) so each card's internal state
+// survives tab switches.
 
 "use client";
 
 import { ReactNode, useState } from "react";
-import { Activity, Layers, ScrollText, Send, FolderOpen } from "lucide-react";
+import { Activity, Layers, ScrollText, Send, FolderOpen, ImageIcon } from "lucide-react";
 import { ScallopCard } from "@/components/shell";
 import strings from "@/lib/i18n/studio-strings.ko.json";
 
-export type WorkbenchTabKey = "diagnosis" | "thumbnail" | "detail" | "actions" | "assets";
+export type WorkbenchTabKey =
+  | "diagnosis" | "thumbnail" | "detail" | "actions" | "assets" // legacy 5-tab
+  | "analyze" | "image" | "publish"; // grouped 3-tab
 
 export interface WorkbenchTabsProps {
   diagnosis: ReactNode;
   thumbnail: ReactNode;
   detail: ReactNode;
   actions: ReactNode;
-  /** Optional 5th tab (asset browser). Only rendered when provided, so other
-   *  callers (e.g. PLANT) keep the original 4-tab layout. */
+  /** Optional asset browser. In the default layout it becomes a 5th tab; in the
+   *  grouped layout it becomes the third sub-area of the 이미지 tab. */
   assets?: ReactNode;
-  /** Optional initial tab — defaults to 'diagnosis'. */
+  /** Opt in to the 3-tab registration-journey IA (task2). */
+  grouped?: boolean;
+  /** Optional initial tab — defaults to the first tab of the active layout. */
   defaultTab?: WorkbenchTabKey;
   /** External control: when set, becomes a controlled component. */
   activeTab?: WorkbenchTabKey;
@@ -36,7 +51,32 @@ const TAB_ICONS: Record<WorkbenchTabKey, typeof Activity> = {
   detail: ScrollText,
   actions: Send,
   assets: FolderOpen,
+  analyze: Activity,
+  image: ImageIcon,
+  publish: Send,
 };
+
+// A labeled sub-area inside the grouped 이미지 tab.
+function SubArea({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <h3
+        style={{
+          margin: 0,
+          fontSize: 12,
+          fontWeight: 800,
+          color: "var(--gp-ink-700)",
+          letterSpacing: "0.01em",
+          paddingBottom: 6,
+          borderBottom: "1px solid var(--color-border)",
+        }}
+      >
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
 
 export default function WorkbenchTabs({
   diagnosis,
@@ -44,13 +84,26 @@ export default function WorkbenchTabs({
   detail,
   actions,
   assets,
-  defaultTab = "diagnosis",
+  grouped = false,
+  defaultTab,
   activeTab,
   onTabChange,
   badges,
 }: WorkbenchTabsProps) {
   const c = strings.workbench.tabs;
-  const [internalTab, setInternalTab] = useState<WorkbenchTabKey>(defaultTab);
+  const c3 = strings.workbench.tabs3;
+
+  const tabOrder: WorkbenchTabKey[] = grouped
+    ? ["analyze", "image", "publish"]
+    : [
+        "diagnosis",
+        "thumbnail",
+        "detail",
+        "actions",
+        ...(assets != null ? (["assets"] as WorkbenchTabKey[]) : []),
+      ];
+
+  const [internalTab, setInternalTab] = useState<WorkbenchTabKey>(defaultTab ?? tabOrder[0]);
   const tab = activeTab ?? internalTab;
 
   const handleSelect = (next: WorkbenchTabKey) => {
@@ -58,31 +111,29 @@ export default function WorkbenchTabs({
     onTabChange?.(next);
   };
 
-  // The 'assets' tab is appended only when its content is provided, so existing
-  // 4-tab callers are unaffected.
-  const tabOrder: WorkbenchTabKey[] = [
-    "diagnosis",
-    "thumbnail",
-    "detail",
-    "actions",
-    ...(assets != null ? (["assets"] as WorkbenchTabKey[]) : []),
-  ];
-
-  const tabLabel: Record<WorkbenchTabKey, string> = {
+  const tabLabel: Partial<Record<WorkbenchTabKey, string>> = {
     diagnosis: c.diagnosis,
     thumbnail: c.thumbnail,
     detail: c.detail,
     actions: c.actions,
     assets: c.assets,
+    analyze: c3.analyze,
+    image: c3.image,
+    publish: c3.publish,
   };
 
-  const contents: Record<WorkbenchTabKey, ReactNode> = {
-    diagnosis,
-    thumbnail,
-    detail,
-    actions,
-    assets,
-  };
+  // The grouped 이미지 tab stacks the three image cards as labeled sub-areas.
+  const imagePanel = (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+      <SubArea title={c3.imageMain}>{thumbnail}</SubArea>
+      <SubArea title={c3.imageDetail}>{detail}</SubArea>
+      {assets != null && <SubArea title={c3.imageAssets}>{assets}</SubArea>}
+    </div>
+  );
+
+  const contents: Partial<Record<WorkbenchTabKey, ReactNode>> = grouped
+    ? { analyze: diagnosis, image: imagePanel, publish: actions }
+    : { diagnosis, thumbnail, detail, actions, assets };
 
   return (
     // overflow visible + no flex:1 so the card grows with its panel content and

@@ -272,6 +272,14 @@
         "cancelled": "취소됨",
         "rejected": "반려"
       }
+    },
+    "tabs3": {
+      "analyze": "상품 분석",
+      "image": "이미지",
+      "publish": "발행",
+      "imageMain": "대표·썸네일",
+      "imageDetail": "상세 페이지",
+      "imageAssets": "자산 정리"
     }
   }
 }

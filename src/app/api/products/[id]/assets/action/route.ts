@@ -24,7 +24,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { moveAutomationAsset } from '@/lib/storage/automation-storage';
+import { moveAutomationAsset, deleteAutomationAsset } from '@/lib/storage/automation-storage';
 import { parseFidelity } from '@/lib/fidelity/product-fidelity';
 import { PRODUCT_COMPOSITE } from '@/lib/jobs/job-type-routing';
 import {
@@ -64,16 +64,18 @@ async function seedFidelityGate(productId: string): Promise<string | null> {
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-type AssetAction = 'set_main' | 'add_extra' | 'archive';
+type AssetAction = 'set_main' | 'add_extra' | 'archive' | 'delete';
 
 interface ActionBody {
   action?: AssetAction;
-  /** Canonical storage path ({productId}/{stage}/{file}) — required for archive. */
+  /** Canonical storage path ({productId}/{stage}/{file}) — required for archive/delete. */
   path?: string;
   /** Public URL of the target asset. */
   publicUrl?: string;
   /** Optional human label kept on the extra_images entry. */
   label?: string;
+  /** Irreversible delete second-gate confirmation (#46). */
+  confirm?: boolean;
 }
 
 interface ExtraEntry {
@@ -124,7 +126,7 @@ export async function POST(
 
   const action = body.action;
   const publicUrl = (body.publicUrl ?? '').trim();
-  if (action !== 'set_main' && action !== 'add_extra' && action !== 'archive') {
+  if (action !== 'set_main' && action !== 'add_extra' && action !== 'archive' && action !== 'delete') {
     return NextResponse.json(
       { success: false, error: `잘못된 action: ${String(action)}` },
       { status: 400 },
@@ -212,6 +214,72 @@ export async function POST(
         return NextResponse.json({ success: false, action, extrasPending: true, error: 'extra_images 컬럼 미마이그레이션' }, { status: 409 });
       }
       throw e;
+    }
+  }
+
+  // ── delete (IRREVERSIBLE) ──────────────────────────────────────────────────
+  // Permanently remove the storage object + its registry row. Second-gate
+  // (confirm:true) required (#46). Blocked for the current main; any extra_images
+  // reference is de-referenced first so nothing dangles. This is the only asset
+  // action that destroys data — used to clear test / rejected uploads in-app
+  // (SQL-level deletes are blocked by RLS 42501).
+  if (action === 'delete') {
+    const srcPath = (body.path ?? '').trim();
+    if (!srcPath) {
+      return NextResponse.json({ success: false, error: 'delete에는 path가 필요합니다' }, { status: 400 });
+    }
+    if (!body.confirm) {
+      return NextResponse.json(
+        { success: false, error: '삭제는 확인(confirm)이 필요합니다 (되돌릴 수 없습니다)', needsConfirm: true },
+        { status: 409 },
+      );
+    }
+    if (current.mainImage === publicUrl) {
+      return NextResponse.json(
+        { success: false, error: '대표컷은 삭제할 수 없습니다. 다른 컷을 대표로 지정한 뒤 다시 시도하세요.' },
+        { status: 409 },
+      );
+    }
+    // De-reference from extra_images BEFORE deleting the object (so a failed
+    // delete never leaves the DB pointing at a removed URL).
+    let delDereferenced = false;
+    let delExtrasPending = false;
+    try {
+      const extras = readExtras(current.extra_images);
+      const kept = extras.filter((e) => e.url !== publicUrl);
+      if (kept.length !== extras.length) {
+        await prisma.product.update({
+          where: { id: productId },
+          data: { extra_images: kept as unknown as Prisma.InputJsonValue },
+        });
+        delDereferenced = true;
+      }
+    } catch (e) {
+      if (isPrismaColumnMissing(e)) delExtrasPending = true;
+      else throw e;
+    }
+    // Remove the registry row too (best-effort: table may be unmigrated).
+    try {
+      await prisma.assetRegistry.deleteMany({ where: { productId, path: srcPath } });
+    } catch (e) {
+      if (!isPrismaColumnMissing(e)) throw e;
+    }
+    try {
+      await deleteAutomationAsset(srcPath);
+      return NextResponse.json({
+        success: true,
+        productId,
+        action,
+        deleted: srcPath,
+        dereferenced: delDereferenced,
+        extrasPending: delExtrasPending,
+      });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      return NextResponse.json(
+        { success: false, action, error: `삭제 실패: ${msg}`, dereferenced: delDereferenced },
+        { status: 502 },
+      );
     }
   }
 

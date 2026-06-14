@@ -1,19 +1,19 @@
 {
   "title": "생성 에셋 위치",
-  "subtitle": "상품별·스테이지별 저장 위치 (캐논: Supabase Storage)",
+  "subtitle": "상품별·단계별 저장 위치 (저장소: Supabase Storage)",
   "totalPrefix": "총",
   "countUnit": "개",
   "loading": "에셋 위치 불러오는 중...",
   "error": "에셋 위치를 불러오지 못했습니다",
   "emptyAll": "아직 생성된 에셋이 없습니다",
   "notApplied": "미적용",
-  "copyPath": "경로 복사",
+  "copyPath": "폴더 경로 복사",
   "copied": "복사됨",
   "openFile": "원본 열기",
   "adobePrefix": "Adobe CC",
   "stage": {
     "source": {
-      "label": "원본 (생성 raw)",
+      "label": "원본",
       "desc": "Firefly 생성 합성 전 배경/소재"
     },
     "cutout": {
@@ -25,7 +25,7 @@
       "desc": "무드 배경 + 제품 누끼 합성"
     },
     "thumb": {
-      "label": "썸네일(레거시)",
+      "label": "썸네일(이전)",
       "desc": "v2 이전 thumb 폴더"
     },
     "detail": {
@@ -37,15 +37,15 @@
       "desc": "교체·폐기 후보 백업"
     },
     "root": {
-      "label": "루트 (레거시)",
-      "desc": "스테이지 분류 전 평면 업로드"
+      "label": "루트 (이전 방식)",
+      "desc": "단계 분류 전 평면 업로드"
     },
     "plate": {
-      "label": "플레이트",
-      "desc": "배경 플레이트·턴테이블 클린컷"
+      "label": "배경판",
+      "desc": "배경판·턴테이블 클린컷"
     },
     "reference": {
-      "label": "레퍼런스",
+      "label": "참고 이미지",
       "desc": "Firefly 참조 슬롯 드롭용"
     },
     "thumbnail": {

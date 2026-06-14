@@ -23,9 +23,9 @@ import {
 } from '@/lib/storage/automation-storage';
 import {
   STAGE_DIRS,
-  kindForSource,
   safeVariant,
 } from '@/lib/storage/asset-taxonomy';
+import { classifyAsset } from '@/lib/storage/asset-classify';
 import { parseAssetTokens, buildAssetVariant, type AssetTokens } from '@/lib/storage/asset-naming';
 import { ratioSlotForStage } from '@/lib/config/image-slot-matrix';
 import { conformToSlotRatio } from '@/lib/images/slot-ratio';
@@ -85,9 +85,31 @@ export async function POST(
     );
   }
 
-  // Stage: explicit (validated) or inferred from the filename. recommendedStage
-  // is always returned so the UI can show what the auto-classifier picked.
-  const recommendedStage = kindForSource(file.name);
+  // Read the upload bytes + intrinsic metadata up-front so the stage can be
+  // classified CONTENT-AWARE (authority §8), not filename-only.
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(await file.arrayBuffer());
+  } catch {
+    return NextResponse.json({ success: false, error: '파일을 읽지 못했습니다' }, { status: 400 });
+  }
+  let width: number | null = null;
+  let height: number | null = null;
+  let hasAlpha: boolean | null = null;
+  let channels: number | null = null;
+  try {
+    const meta = await sharp(buffer).metadata();
+    width = meta.width ?? null;
+    height = meta.height ?? null;
+    hasAlpha = meta.hasAlpha ?? null;
+    channels = meta.channels ?? null;
+  } catch { /* non-image metadata read — leave signals null */ }
+
+  // Content-aware recommendation: filename hint + pixel signals (alpha / aspect
+  // ratio / resolution). recommendedStage + confidence + qualityFlags are always
+  // returned so the UI chip can show the inference and any quality warning.
+  const classification = classifyAsset({ fileName: file.name, width, height, hasAlpha, channels });
+  const recommendedStage = classification.stage;
   const stageRaw = (form.get('stage') ?? '').toString().trim();
   let stage: AssetKind;
   if (stageRaw) {
@@ -123,17 +145,8 @@ export async function POST(
   const normalizeOff = ((form.get('normalize') ?? '').toString().trim().toLowerCase() === 'false');
 
   try {
-    let buffer: Buffer = Buffer.from(await file.arrayBuffer());
+    let outBuffer: Buffer = buffer;
     let uploadContentType = contentType;
-
-    // Read intrinsic dimensions (best-effort — never fails the upload).
-    let width: number | null = null;
-    let height: number | null = null;
-    try {
-      const meta = await sharp(buffer).metadata();
-      width = meta.width ?? null;
-      height = meta.height ?? null;
-    } catch { /* non-image metadata read — leave dims null */ }
 
     // Pipeline-time slot-ratio defense (authority §1/§2): conform off-ratio
     // assets to the slot ratio before storage. Conformant inputs pass through
@@ -142,11 +155,11 @@ export async function POST(
     let normalized: { applied: boolean; fromRatio: number | null; toRatio: number } | null = null;
     if (ratioSlot && ratioSlot.targetRatio && !normalizeOff) {
       try {
-        const r = await conformToSlotRatio(buffer, ratioSlot.targetRatio, {
+        const r = await conformToSlotRatio(outBuffer, ratioSlot.targetRatio, {
           policy: ratioSlot.normalize,
           contentType,
         });
-        buffer = r.buffer;
+        outBuffer = r.buffer;
         uploadContentType = r.contentType;
         if (r.width) width = r.width;
         if (r.height) height = r.height;
@@ -158,7 +171,7 @@ export async function POST(
       productId,
       kind: stage,
       variant,
-      buffer,
+      buffer: outBuffer,
       contentType: uploadContentType,
     });
 
@@ -198,6 +211,11 @@ export async function POST(
       productId,
       stage,
       recommendedStage,
+      confidence: classification.confidence,
+      qualityFlags: classification.qualityFlags,
+      conflict: classification.conflict,
+      nameStage: classification.nameStage,
+      contentStage: classification.contentStage,
       tokens,
       variant,
       width,

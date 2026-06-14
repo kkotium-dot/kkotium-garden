@@ -40,9 +40,9 @@ import {
 } from '@/lib/storage/automation-storage';
 import {
   STAGE_DIRS,
-  kindForSource,
   safeVariant,
 } from '@/lib/storage/asset-taxonomy';
+import { classifyAsset } from '@/lib/storage/asset-classify';
 import { parseAssetTokens, buildAssetVariant, type AssetTokens } from '@/lib/storage/asset-naming';
 import { ratioSlotForStage } from '@/lib/config/image-slot-matrix';
 import { conformToSlotRatio } from '@/lib/images/slot-ratio';
@@ -150,9 +150,23 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     );
   }
 
-  // Stage: explicit (validated) or inferred from the filename. recommendedStage
-  // is always returned so the caller can see what the auto-classifier picked.
-  const recommendedStage = kindForSource(filename);
+  // Intrinsic metadata up-front so the stage is classified content-aware
+  // (authority §8), not filename-only.
+  let width: number | null = null;
+  let height: number | null = null;
+  let hasAlpha: boolean | null = null;
+  let channels: number | null = null;
+  try {
+    const meta = await sharp(buffer).metadata();
+    width = meta.width ?? null;
+    height = meta.height ?? null;
+    hasAlpha = meta.hasAlpha ?? null;
+    channels = meta.channels ?? null;
+  } catch { /* non-image / unreadable metadata — leave signals null */ }
+
+  // Content-aware recommendation (filename hint + pixel signals).
+  const classification = classifyAsset({ fileName: filename, width, height, hasAlpha, channels });
+  const recommendedStage = classification.stage;
   const stageRaw = (body.stage ?? '').toString().trim();
   let stage: AssetKind;
   if (stageRaw) {
@@ -177,14 +191,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   try {
     let uploadContentType = contentType;
-    // Intrinsic dimensions (best-effort — never fails the ingest).
-    let width: number | null = null;
-    let height: number | null = null;
-    try {
-      const meta = await sharp(buffer).metadata();
-      width = meta.width ?? null;
-      height = meta.height ?? null;
-    } catch { /* non-image / unreadable metadata — leave dims null */ }
 
     // Pipeline-time slot-ratio defense (authority §1/§2): conform off-ratio
     // Firefly output to the slot ratio (composite -> 4:5, thumbnail -> 1:1)
@@ -247,6 +253,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       productId,
       stage,
       recommendedStage,
+      confidence: classification.confidence,
+      qualityFlags: classification.qualityFlags,
+      conflict: classification.conflict,
+      nameStage: classification.nameStage,
+      contentStage: classification.contentStage,
       tokens,
       variant,
       width,

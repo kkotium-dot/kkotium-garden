@@ -211,6 +211,7 @@ function StudioInner() {
     <>
     {selectedProduct?.id && <JobLifecyclePanel productId={selectedProduct.id} />}
     <WorkbenchTabs
+      grouped
       diagnosis={
         <DiagnosisCard
           diagnosis={actions.diagnosis}

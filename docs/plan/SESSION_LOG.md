@@ -1,3 +1,15 @@
+## 2026-06-14 (세션7-i-Code) 내용인식 분류 + IA 3탭 + 한글화 + 인앱삭제
+
+**[권위]** docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §8 박제.
+**[Desktop 검증완(전턴)]** task4 추론칩+오버라이드 PASS / task2 정규화 PASS(1376×768→614×768=4:5) / task5 ZIP PASS / 토큰추론 PASS.
+**[task1 내용인식 분류]** asset-classify.ts(classifyAsset) + kindHintForSource(힌트/디폴트 분리). 신호 alpha→cutout·1:1→thumbnail·4:5→composite·h:w≥2.5→detail·긴변<800px→저해상. 일치=고확신/충돌=둘다표시. /assets/upload·/ingest-firefly 메타(alpha/channels) 추가 → confidence+qualityFlags+conflict 응답. 신규 preflight POST /assets/classify(무적재). AssetBrowser 칩에 확신도·품질경고·충돌 표시.
+**[task2 IA 5탭→3탭]** WorkbenchTabs grouped 모드(상품분석/이미지[대표·썸네일+상세+자산정리]/발행). opt-in·미전달 시 기존 폴백·카드 로직 보존·패널 상시 마운트. studio/page.tsx grouped 적용.
+**[task3 한글화]** AssetBrowser+GeneratedAssetLocations 음차 표면화: 단계·배경판·참고 이미지·자동 분류·이 단계로 올리기·폴더 경로 복사·원본·이전 방식. ko.json 음차 sweep 0. firefly_generate=기완료('Firefly 생성').
+**[task4 인앱 삭제]** /assets/action delete(deleteAutomationAsset)·2단계 확인게이트(confirm:true·비가역#46)·assetRegistry 행 제거·대표 차단·추가 de-ref. AssetBrowser Trash2 버튼.
+**[task5 #73 박제]** UI 기본전제 3종(직관우선·과밀금지/한글우선 라벨/작업여정 정합) PRINCIPLES_LEARNED+CLAUDE.md.
+**[검증]** tsc0·build0(신규 /assets/classify 라우트 등록)·이모지0·UI한글/코드영어·prisma 싱글톤·네이버 무접촉·비가역0.
+**[다음]** [Desktop] 3탭 IA + 내용인식 칩 + 인앱삭제 브라우저 검증. [Code] 후속.
+
 ## 2026-06-14 (세션7-h-Code) 적응형 이미지 엔진 + 폴더 자동분류 백필 시스템
 
 **[권위]** docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §7 박제(이번 턴 dry-run 결과·결함 A/B·GO결정 3건).

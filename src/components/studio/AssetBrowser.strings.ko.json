@@ -1,6 +1,6 @@
 {
   "title": "에셋 브라우저",
-  "subtitle": "상품별·스테이지별 자산 관리 (캐논: Supabase Storage). 대표/추가/아카이브·직접 업로드·폴더 바로가기.",
+  "subtitle": "상품별·단계별 자산 관리 (저장소: Supabase Storage). 대표/추가/보관·직접 업로드·폴더 바로가기.",
   "totalPrefix": "총",
   "countUnit": "개",
   "loading": "에셋 불러오는 중...",
@@ -16,13 +16,24 @@
     "heading": "직접 업로드",
     "pick": "파일 선택",
     "drop": "여기에 파일을 드롭하거나 클릭해 선택",
-    "stageLabel": "스테이지",
+    "stageLabel": "단계",
     "autoStage": "자동추천",
     "recommended": "추천",
-    "inferred": "추론된 스테이지",
-    "confirm": "이 스테이지로 적재",
+    "inferred": "자동 분류",
+    "confirm": "이 단계로 올리기",
     "cancel": "취소",
     "ratioFixed": "슬롯 비율 정규화됨",
+    "classifying": "내용 분석 중...",
+    "confidence": {
+      "high": "확신 높음",
+      "medium": "확신 보통",
+      "low": "확신 낮음"
+    },
+    "conflictPrefix": "이름과 내용 신호 충돌:",
+    "byName": "이름",
+    "byContent": "내용",
+    "conflictUrge": "단계를 확인해 주세요",
+    "qualityLowRes": "저해상도 이미지입니다 (긴 변 800px 이상 권장)",
     "uploading": "업로드 중...",
     "done": "업로드 완료",
     "failed": "업로드 실패",
@@ -30,7 +41,7 @@
   },
   "shortcut": {
     "supabase": "Supabase 폴더 열기",
-    "copyPath": "경로 복사",
+    "copyPath": "폴더 경로 복사",
     "copied": "복사됨"
   },
   "action": {
@@ -44,11 +55,16 @@
     "archiveDone": "아카이브로 이동했습니다",
     "archiveMainBlocked": "대표컷은 아카이브할 수 없습니다. 다른 컷을 대표로 지정한 뒤 다시 시도하세요.",
     "confirmArchive": "이 자산을 archive/ 로 이동할까요? (되돌리기 가능, 삭제 아님)",
+    "delete": "삭제",
+    "deleteDone": "영구 삭제했습니다",
+    "deleteMainBlocked": "대표컷은 삭제할 수 없습니다. 다른 컷을 대표로 지정한 뒤 다시 시도하세요.",
+    "confirmDelete1": "이 자산을 영구 삭제할까요? (스토리지에서 제거됩니다)",
+    "confirmDelete2": "되돌릴 수 없습니다. 정말 삭제할까요?",
     "working": "처리 중..."
   },
   "stage": {
     "source": {
-      "label": "원본 (생성 raw)",
+      "label": "원본",
       "desc": "Firefly 생성 합성 전 배경/소재"
     },
     "cutout": {
@@ -60,7 +76,7 @@
       "desc": "무드 배경 + 제품 누끼 합성"
     },
     "thumb": {
-      "label": "썸네일(레거시)",
+      "label": "썸네일(이전)",
       "desc": "v2 이전 thumb 폴더"
     },
     "detail": {
@@ -72,15 +88,15 @@
       "desc": "교체·폐기 후보 백업"
     },
     "root": {
-      "label": "루트 (레거시)",
-      "desc": "스테이지 분류 전 평면 업로드"
+      "label": "루트 (이전 방식)",
+      "desc": "단계 분류 전 평면 업로드"
     },
     "plate": {
-      "label": "플레이트",
-      "desc": "배경 플레이트·턴테이블 클린컷"
+      "label": "배경판",
+      "desc": "배경판·턴테이블 클린컷"
     },
     "reference": {
-      "label": "레퍼런스",
+      "label": "참고 이미지",
       "desc": "Firefly 참조 슬롯 드롭용"
     },
     "thumbnail": {

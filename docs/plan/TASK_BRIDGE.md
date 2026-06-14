@@ -73,6 +73,12 @@
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
 
+### 2026-06-14 (87) 내용인식 분류 + IA 3탭 + 한글화 + 인앱삭제 (FROM 💻 Code, main, 비가역 0·additive)
+- **What**: 내용인식 스테이지 분류(classifyAsset·파일명+Sharp 메타신호·confidence/qualityFlags/conflict·preflight /assets/classify) + 워크벤치 IA 5탭→3탭(grouped·회귀0) + 한글화(음차 표면화) + 인앱 삭제(/assets/action delete·2단계 게이트·비가역#46).
+- **Desktop 검증완(전턴)**: task2 정규화·task4 칩·task5 ZIP·토큰추론 전부 PASS.
+- **검증**: tsc0·build0·비가역0. 권위 §8 박제.
+- **다음 1액션**: [Desktop] 3탭 IA + 내용인식 칩 + 인앱삭제 브라우저 검증.
+
 ### 2026-06-14 (86) 적응형 이미지 엔진 + 폴더 백필 시스템 (FROM 💻 Code, main, 비가역 0·additive·백필 dry-run만)
 - **What**: 분류기 결함 A·B 수정(backdrop→plate·archive 선행) + 슬롯비율 정규화 2층방어(config/image-slot-matrix·images/slot-ratio, /assets/upload·/ingest-firefly) + 설정 config화 + 반자동 업로드 stage칩·오버라이드(AssetBrowser) + 상품별 ZIP 내보내기(/assets/export·zip-store) + 레거시 백필 스크립트.
 - **백필 PENDING (운영자 GO)**: `npx tsx scripts/backfill-legacy-assets.ts` dry-run = 20건/3상품(cmp3afb9·cmpnooli10·cmpp62yje1). GO 시 `--go --confirm`. COPY→DB갱신→검증→retire·멱등. common/lifestyle 제외.

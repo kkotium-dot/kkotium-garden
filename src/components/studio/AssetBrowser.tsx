@@ -37,6 +37,7 @@ import {
   Archive,
   RefreshCw,
   Download,
+  Trash2,
 } from 'lucide-react';
 import strings from './AssetBrowser.strings.ko.json';
 import { broadcastProductMutated } from '@/lib/events/product-mutated';
@@ -152,6 +153,20 @@ function extraUrlSet(extra: unknown): Set<string> {
   return s;
 }
 
+type Confidence = 'high' | 'medium' | 'low';
+
+interface PendingUpload {
+  file: File;
+  recommended: string;
+  chosen: string;
+  classifying?: boolean;
+  confidence?: Confidence;
+  qualityFlags?: string[];
+  conflict?: boolean;
+  nameStage?: string | null;
+  contentStage?: string | null;
+}
+
 export interface AssetBrowserProps {
   productId: string | null;
 }
@@ -168,7 +183,7 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
   // kindForSource-inferred stage as a chip; the operator confirms or overrides
   // the target subfolder before the file is stored (semi-auto, authority §3).
   const [uploading, setUploading] = useState(false);
-  const [pending, setPending] = useState<{ file: File; recommended: string; chosen: string } | null>(null);
+  const [pending, setPending] = useState<PendingUpload | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const flash = useCallback((kind: 'ok' | 'err', msg: string) => {
@@ -176,14 +191,46 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
     setTimeout(() => setToast(null), 2600);
   }, []);
 
-  const onPickFile = useCallback((file: File) => {
-    if (!file.type.startsWith('image/')) {
-      flash('err', strings.upload.notImage);
-      return;
-    }
-    const recommended = kindForSource(file.name);
-    setPending({ file, recommended, chosen: recommended });
-  }, [flash]);
+  // Pick -> optimistic filename inference -> content-aware preflight classify
+  // (alpha / ratio / resolution) -> chip shows confidence + quality + conflict.
+  const onPickFile = useCallback(
+    async (file: File) => {
+      if (!file.type.startsWith('image/')) {
+        flash('err', strings.upload.notImage);
+        return;
+      }
+      const recommended = kindForSource(file.name);
+      setPending({ file, recommended, chosen: recommended, classifying: !!productId });
+      if (!productId) return;
+      try {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await fetch(`/api/products/${productId}/assets/classify`, {
+          method: 'POST',
+          body: form,
+        }).then((r) => r.json());
+        setPending((p) => {
+          if (!p || p.file !== file) return p; // a newer pick superseded this one
+          if (!res.success) return { ...p, classifying: false };
+          return {
+            ...p,
+            recommended: res.recommendedStage,
+            // only adopt the server pick if the operator has not overridden yet
+            chosen: p.chosen === p.recommended ? res.recommendedStage : p.chosen,
+            confidence: res.confidence,
+            qualityFlags: Array.isArray(res.qualityFlags) ? res.qualityFlags : [],
+            conflict: !!res.conflict,
+            nameStage: res.nameStage ?? null,
+            contentStage: res.contentStage ?? null,
+            classifying: false,
+          };
+        });
+      } catch {
+        setPending((p) => (p && p.file === file ? { ...p, classifying: false } : p));
+      }
+    },
+    [flash, productId],
+  );
 
   const load = useCallback(async () => {
     if (!productId) return;
@@ -259,7 +306,7 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
 
   // ── Actions (set_main / add_extra / archive) ───────────────────────────────
   const doAction = useCallback(
-    async (action: 'set_main' | 'add_extra' | 'archive', file: StageFile) => {
+    async (action: 'set_main' | 'add_extra' | 'archive' | 'delete', file: StageFile) => {
       if (!productId) return;
       if (action === 'archive') {
         if (img.mainImage === file.publicUrl) {
@@ -268,12 +315,26 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
         }
         if (!window.confirm(strings.action.confirmArchive)) return;
       }
+      if (action === 'delete') {
+        if (img.mainImage === file.publicUrl) {
+          flash('err', strings.action.deleteMainBlocked);
+          return;
+        }
+        // Two-step gate (irreversible) — both must be accepted.
+        if (!window.confirm(strings.action.confirmDelete1)) return;
+        if (!window.confirm(strings.action.confirmDelete2)) return;
+      }
       setBusyPath(file.path);
       try {
         const res = await fetch(`/api/products/${productId}/assets/action`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, path: file.path, publicUrl: file.publicUrl }),
+          body: JSON.stringify({
+            action,
+            path: file.path,
+            publicUrl: file.publicUrl,
+            ...(action === 'delete' ? { confirm: true } : {}),
+          }),
         }).then((r) => r.json());
         if (res.success) {
           const doneMsg =
@@ -281,7 +342,9 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
               ? strings.action.setMainDone
               : action === 'add_extra'
                 ? strings.action.addExtraDone
-                : strings.action.archiveDone;
+                : action === 'delete'
+                  ? strings.action.deleteDone
+                  : strings.action.archiveDone;
           flash('ok', doneMsg);
           // #62 — set_main / add_extra / archive change the product's image
           // state; broadcast so sibling views (studio header/canvas) refetch.
@@ -389,6 +452,26 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
                   <span className="inline-flex items-center rounded-full bg-pink-50 text-pink-700 text-xs font-semibold px-2 py-0.5">
                     {stageLabel(pending.recommended)}
                   </span>
+                  {pending.classifying ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      {strings.upload.classifying}
+                    </span>
+                  ) : (
+                    pending.confidence && (
+                      <span
+                        className={`inline-flex items-center rounded-full text-xs font-medium px-2 py-0.5 ${
+                          pending.confidence === 'high'
+                            ? 'bg-green-50 text-green-700'
+                            : pending.confidence === 'medium'
+                              ? 'bg-amber-50 text-amber-700'
+                              : 'bg-red-50 text-red-700'
+                        }`}
+                      >
+                        {strings.upload.confidence[pending.confidence]}
+                      </span>
+                    )
+                  )}
                   <label className="flex items-center gap-1.5 text-xs text-gray-600 ml-auto">
                     {strings.upload.stageLabel}
                     <select
@@ -407,6 +490,25 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
                     </select>
                   </label>
                 </div>
+
+                {/* Conflict: filename hint disagrees with the pixel signal */}
+                {pending.conflict && pending.nameStage && pending.contentStage && (
+                  <div className="mt-2 flex items-start gap-1.5 text-xs text-amber-700 bg-amber-50 rounded px-2 py-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span>
+                      {strings.upload.conflictPrefix} {strings.upload.byName}={stageLabel(pending.nameStage)} ·{' '}
+                      {strings.upload.byContent}={stageLabel(pending.contentStage)} — {strings.upload.conflictUrge}
+                    </span>
+                  </div>
+                )}
+
+                {/* Quality warnings */}
+                {pending.qualityFlags?.includes('low_resolution') && (
+                  <div className="mt-2 flex items-start gap-1.5 text-xs text-red-700 bg-red-50 rounded px-2 py-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span>{strings.upload.qualityLowRes}</span>
+                  </div>
+                )}
                 <div className="mt-3 flex items-center gap-2">
                   <button
                     type="button"
@@ -506,7 +608,7 @@ function StageRow({
   productId: string;
   img: ProductImageState;
   busyPath: string | null;
-  onAction: (action: 'set_main' | 'add_extra' | 'archive', file: StageFile) => void;
+  onAction: (action: 'set_main' | 'add_extra' | 'archive' | 'delete', file: StageFile) => void;
 }) {
   const applied = group.count > 0;
   const folderUrl = supabaseFolderUrl(productId, group.stage);
@@ -586,7 +688,7 @@ function AssetTile({
   isMain: boolean;
   inExtra: boolean;
   busy: boolean;
-  onAction: (action: 'set_main' | 'add_extra' | 'archive', file: StageFile) => void;
+  onAction: (action: 'set_main' | 'add_extra' | 'archive' | 'delete', file: StageFile) => void;
 }) {
   const isImage = IMAGE_EXT.test(file.name);
   return (
@@ -654,6 +756,15 @@ function AssetTile({
           className="flex-1 inline-flex items-center justify-center rounded border border-gray-200 py-1 text-gray-500 hover:text-amber-600 hover:border-amber-300 transition disabled:opacity-40"
         >
           <Archive className="w-3 h-3" />
+        </button>
+        <button
+          type="button"
+          disabled={busy || isMain}
+          onClick={() => onAction('delete', file)}
+          title={strings.action.delete}
+          className="flex-1 inline-flex items-center justify-center rounded border border-gray-200 py-1 text-gray-500 hover:text-red-600 hover:border-red-300 transition disabled:opacity-40"
+        >
+          <Trash2 className="w-3 h-3" />
         </button>
       </div>
     </div>

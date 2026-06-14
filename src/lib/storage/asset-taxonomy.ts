@@ -61,13 +61,21 @@ const SOURCE_KIND_RULES: ReadonlyArray<{ test: RegExp; kind: AssetKind }> = [
   { test: /thumb|thumbnail|crop|whitebg|white[_-]?bg|represent|main/i, kind: 'thumbnail' },
 ];
 
-/** Infer the stage AssetKind from a free-form source label (default 'thumbnail'). */
-export function kindForSource(source: string): AssetKind {
+/** Infer the stage AssetKind from a free-form source label, or null when the
+ *  label carries NO recognizable hint (lets a content-aware classifier decide
+ *  rather than defaulting). */
+export function kindHintForSource(source: string): AssetKind | null {
   const s = source ?? '';
   for (const r of SOURCE_KIND_RULES) {
     if (r.test.test(s)) return r.kind;
   }
-  return 'thumbnail'; // representative-candidate is the safe default
+  return null;
+}
+
+/** Infer the stage AssetKind from a free-form source label (default 'thumbnail'
+ *  when no hint matches). */
+export function kindForSource(source: string): AssetKind {
+  return kindHintForSource(source) ?? 'thumbnail'; // representative-candidate is the safe default
 }
 
 /** Adobe CC mirror folder name for a kind. */

@@ -136,3 +136,27 @@
 - **편집모드 비율컨트롤 부재 → 파이프라인 정규화로 해결** (생성단계 통제 약함 = 2층이 본질, §1).
 - **레거시 백필 = 시스템 개선** (단건 버그 수습 아님, 발견 오류는 전상품 확장, §3).
 - **비상품 네임스페이스 제외** (common/lifestyle = 안정 URL, 백필·재분류 대상 아님).
+
+---
+
+## 8. 세션7-i 박제 (2026-06-14 Code) — 내용인식 분류 + IA 3탭 + 한글화 + 인앱삭제
+
+### 8.1 브라우저 검증 (Desktop 실측 · #45)
+- task4 추론칩+오버라이드+명시확인 PASS / task2 정규화 PASS(1376×768→614×768=4:5) / task5 ZIP PASS / 토큰추론 PASS. 테스트파일 운영자 대시보드 삭제 완료.
+
+### 8.2 내용 인식 스테이지 분류 (전상품·근본개선)
+- 현(파일명 정규식only)→개선(파일명 힌트 + Sharp 메타신호 결합). 신호: 알파→cutout / 1:1→thumbnail / 세로4:5→composite / h:w≥2.5→detail / 긴변<800px→저해상 품질플래그.
+- 결정: 일치=고확신 / 이름XOR내용=보통 / 충돌=둘다표시+확인유도(낮음) / 무신호=thumbnail 폴백 (이전 무조건 thumbnail 개선 = 이름 무힌트 시 내용신호로).
+- 구현: classifyAsset(asset-classify.ts) 순수함수 + kindHintForSource(힌트/디폴트 분리). /assets/upload·/ingest-firefly가 메타(alpha/channels) 추가 읽기 → recommendedStage + confidence + qualityFlags + conflict 응답(additive). 신규 preflight POST /assets/classify(무적재) → 칩이 업로드 전 확신도·품질·충돌 표시.
+
+### 8.3 워크벤치 IA 5탭→3탭 (등록 여정順)
+- 1 상품 분석 / 2 이미지(대표·썸네일 + 상세 페이지 + 자산 정리 = 3하위영역) / 3 발행. WorkbenchTabs grouped 모드(opt-in) — 미전달 시 기존 4/5탭 폴백(회귀0). 카드 로직 보존(순수 레이아웃·패널 상시 마운트로 상태 보존).
+
+### 8.4 한글화 (음차 적발·표면)
+- 단계(←스테이지)·배경판(←플레이트)·참고 이미지(←레퍼런스)·자동 분류(←추론된 스테이지)·이 단계로 올리기(←이 스테이지로 적재)·폴더 경로 복사(←경로 복사)·원본(←원본(생성 raw))·이전 방식(←레거시). 유지: 누끼·합성·SEO·AI·ZIP·Firefly. firefly_generate=이미 'Firefly 생성'(완료)·step1/step2 2단계 메시지=리터럴 부재(이미 한글/코드내부). ko.json 음차 sweep 0.
+
+### 8.5 인앱 삭제 (에셋 브라우저)
+- /assets/action에 delete 추가(deleteAutomationAsset 경유) — 2단계 확인게이트(비가역 #46, confirm:true)·assetRegistry 행 동시제거·대표 참조 시 차단·추가이미지 참조 시 de-ref. 테스트/반려 자산 인앱 정리(SQL 직접삭제 RLS 42501 차단 우회).
+
+### 8.6 신규 영구원칙 3종 (#73 · 모든 UI작업 기본전제)
+- 직관우선·과밀금지 / 한글우선 라벨(코드영어·표면한글) / 작업여정 정합(IA=사용자 여정順).

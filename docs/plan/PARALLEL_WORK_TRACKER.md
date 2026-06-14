@@ -1,5 +1,14 @@
 # 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev19 · Scent→Mood 컨셉 재설계 + 생성설정 가드 + april/cotton v3·세션7-e)
 
+## rev22 세션7-i-Code (2026-06-14 Code) — 내용인식 분류 + IA 3탭 + 한글화 + 인앱삭제
+- ✅ **task1 내용인식 분류**: classifyAsset(asset-classify.ts) 파일명 힌트 + Sharp 메타(alpha/비율/해상도). /assets/upload·/ingest-firefly confidence+qualityFlags+conflict. preflight /assets/classify. 칩 표시.
+- ✅ **task2 IA 5→3탭**: WorkbenchTabs grouped(상품분석/이미지/발행). opt-in·폴백·회귀0.
+- ✅ **task3 한글화**: 단계/배경판/참고 이미지/자동 분류/이 단계로 올리기/폴더 경로 복사/원본/이전 방식. ko.json 음차 0.
+- ✅ **task4 인앱 삭제**: /assets/action delete·2단계 게이트·비가역#46·registry 제거·대표 차단·추가 de-ref.
+- ✅ **task5 #73 박제** + Desktop 브라우저 검증(task2/4/5) 결과 반영.
+- ✅ **검증**: tsc0·build0·이모지0·UI한글/코드영어·비가역0·네이버 무접촉.
+- ⏳ **다음**: [Desktop] 3탭·내용인식 칩·인앱삭제 브라우저 검증.
+
 ## rev21 세션7-h-Code (2026-06-14 Code) — 적응형 이미지 엔진 + 폴더 백필 시스템
 - ✅ **분류기 결함 A·B 수정**: kindForSource backdrop→plate(GO결정#2)·archive 선행(GO결정#3). 전상품·미래파일.
 - ✅ **task2 비율 2층방어**: config/image-slot-matrix.ts + images/slot-ratio.ts(conformToSlotRatio). /assets/upload·/ingest-firefly 양경로 — composite4:5·thumbnail1:1·2%게이트·옵트아웃.
