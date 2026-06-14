@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { listProductAssets } from '@/lib/storage/automation-storage';
+import { listProductAssets, type ProductAssetEntry } from '@/lib/storage/automation-storage';
 import { ZipStore } from '@/lib/storage/zip-store';
 import { buildDownloadName, parseStoredFileName, slugify, stampToken } from '@/lib/storage/download-naming';
 
@@ -46,7 +46,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const slug = slugify(product.name, productId.slice(0, 8));
 
-  let assets;
+  let assets: ProductAssetEntry[];
   try {
     assets = await listProductAssets(productId);
   } catch (e) {
@@ -68,7 +68,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     batch.forEach((a, j) => {
       const buf = buffers[j];
       if (!buf) return;
-      const { variant, ext } = parseStoredFileName(a.name);
+      // ProductAssetEntry carries the full `path` ({pid}/{stage}/{file}); derive
+      // the bare filename for the variant/ext parse.
+      const baseName = a.path.slice(a.path.lastIndexOf('/') + 1);
+      const { variant, ext } = parseStoredFileName(baseName);
       const createdMs = Date.parse(a.createdAt);
       const date = Number.isFinite(createdMs) && createdMs > 0 ? new Date(createdMs) : new Date();
       const entryName = `${a.stage}/${buildDownloadName({ date, slug, stage: a.stage, variant, ext })}`;
