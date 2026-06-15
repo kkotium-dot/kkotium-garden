@@ -1,6 +1,15 @@
 ## 2026-06-14 (세션7-i-Code) 내용인식 분류 + IA 3탭 + 한글화 + 인앱삭제
 ## 2026-06-15 (세션7-i-fix-Code) 분류기 누끼 신호 교정(알파≠투명) + 삭제 모달 UX
 ## 2026-06-15 (세션7-i-fix2-Code) 백필 dangling 정정 — DB ref EXHAUSTIVE 전환 + taxonomy archive 선행
+## 2026-06-15 (세션7-i-fix3-Code) /assets STALE 캐시 근본수정 — Storage 리스트 라이브화
+
+**[권위]** docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §8.10 + PRINCIPLES_LEARNED #80.
+**[Desktop 실앱테스트 적발]** /api/products/[id]/assets 전상품 STALE — studio 자산 브라우저가 죽은 depth-2 URL(404) 렌더·현 canonical 누락. 명화 /assets total 22(pre-backfill snapshot: composite 9·root depth-2 10) vs 실제 storage 41(composite 18·depth-2 0). 배포로도 미소거(Vercel Data Cache는 deploy 비종속).
+**[근본원인]** route는 force-dynamic이나 그것만으론 supabase-js 내부 fetch를 no-store화 못함. getServerClient(automation-storage) list 결과가 Next Data Cache 잔류 → cross-deploy stale. unstable_cache는 전무.
+**[수정·전상품·근본]** getServerClient에 global.fetch로 cache:'no-store' 주입 → 모든 Storage/REST read 라이브(out-of-band 백필/remap 변동 즉시 반영). 방어층 /assets route fetchCache='force-no-store'+revalidate=0. 클라(AssetBrowser)는 이미 cache:'no-store'(회귀0).
+**[검증]** listProductAssets 라이브 = 명화 41(depth-2 0·cutout3·plate3·composite18·thumbnail4·detail3·archive10) / 아이스트레이 2(detail1·archive1·depth-2 0) / cmp3afb 18(depth-2 0). tsc0·build0·이모지0·prisma 싱글톤·additive·비가역0·네이버 무접촉.
+**[다음]** [Desktop] /assets no-store 재검증·studio 렌더 depth-2 0 확인→Firefly 4컷.
+
 
 **[권위]** docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §8.9 + PRINCIPLES_LEARNED #79.
 **[Desktop #45 적발]** 직전 백필 'dangling 0' 부정확 — to_jsonb 전수스캔서 Product.quality_reasons(jsonb·cmpnooli4)에 구 depth-2 URL `/.../detail-S6-1779884981263.png`(404) 잔존. 근본원인=updateDbRefs+사전감사가 하드코딩 컬럼리스트 사용→jsonb 누락.

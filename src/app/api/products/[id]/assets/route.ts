@@ -20,6 +20,12 @@ import {
 import { STAGE_DIRS, STAGE_FOLDER, LEGACY_STAGE_DIRS } from '@/lib/storage/asset-taxonomy';
 
 export const dynamic = 'force-dynamic';
+// Defense-in-depth against a stale storage listing: force-dynamic alone left a
+// cached Supabase fetch persisting across deploys (2026-06-15 Desktop #45). The
+// root fix is the no-store Supabase client (automation-storage); these make the
+// route itself uncacheable so no layer can serve a pre-backfill snapshot.
+export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 export const runtime = 'nodejs';
 
 const BUCKET_NAME = 'product-assets';

@@ -73,6 +73,11 @@
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
 
+### 2026-06-15 (90) /assets STALE 캐시 근본수정 — Storage 리스트 라이브화 (FROM 💻 Code, main, additive·비가역0)
+- **What**: Desktop 실앱테스트 적발 — /api/products/[id]/assets 전상품 STALE(studio가 죽은 depth-2 URL 404 렌더·현 canonical 누락). 명화 /assets 22(pre-backfill snapshot) vs 실제 41. 배포로도 미소거(Vercel Data Cache). 근본=getServerClient supabase list가 Next Data Cache 잔류(force-dynamic만으론 SDK fetch 미차단). 수정=global.fetch no-store 주입(전 Storage read 라이브) + route fetchCache='force-no-store'+revalidate=0. 클라 이미 no-store.
+- **검증**: listProductAssets 라이브 = 명화 41(depth-2 0·전 canonical stage)·아이스트레이 2(detail1·archive1·depth-2 0)·cmp3afb 18(depth-2 0). tsc0·build0·네이버 무접촉. 박제 §8.10 + #80.
+- **다음 1액션**: [Desktop] /assets no-store 재검증(명화 41·depth-2 0 / studio 렌더 depth-2 0) → Firefly 4컷.
+
 ### 2026-06-15 (89) 백필 dangling 정정 — DB ref 감사/치환 EXHAUSTIVE 전환 + taxonomy archive 선행 (FROM 💻 Code, main, 비가역 1·교정)
 - **What**: Desktop #45 적발 — 직전 'dangling 0' 부정확. Product.quality_reasons(jsonb·cmpnooli4)에 구 depth-2 URL 잔존(404). 근본=하드코딩 컬럼리스트가 jsonb 누락. instance 교정(정규 detail/ URL·200 확인) + class 근본수정(updateDbRefs·residualRefCount 컬럼리스트-FREE 전수스캔·중첩 jsonb 포함) + 신규 scripts/remap-depth2-refs.ts(dangling-only·dry-by-default·자가검증) + taxonomy archive 마커 plate 선행(GO#3 확장·\b word-boundary로 gold 오탐 차단).
 - **결과**: 전3상품 사후 전수스캔 잔존 depth-2 ref=0. 교정 1필드/1치환. build0·tsc0·네이버 무접촉.

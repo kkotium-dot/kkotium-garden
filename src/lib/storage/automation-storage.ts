@@ -41,6 +41,15 @@ function getServerClient() {
   }
   return createClient(url, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
+    global: {
+      // Force every Supabase Storage/REST request to bypass the Next.js Data
+      // Cache. Storage can change OUT-OF-BAND (backfill / remap scripts), and
+      // this is operator-facing low-traffic tooling, so a stale listing must
+      // never be served. Without this, a cached pre-backfill listing persisted
+      // across deploys and rendered dead depth-2 URLs (2026-06-15 Desktop #45).
+      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetch(input, { ...init, cache: 'no-store' }),
+    },
   });
 }
 

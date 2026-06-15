@@ -882,3 +882,9 @@ function kkAssertGenerateMode(){
 
 - **EXHAUSTIVE 판정**: 전체 row를 fetch해 모든 컬럼의 JSON 표현(또는 `to_jsonb(row)::text`)을 전수스캔. 변경된 컬럼만 write-back. 자가검증(잔존 ref=0)도 동일한 전수스캔으로. 대상은 Product 전컬럼 + 연관 테이블(asset_references·published_assets·asset_registry) 전부.
 - **치환 안전규칙(dangling-only)**: depth-2 원본이 storage서 사라졌고 정규 키가 존재할 때만 치환(정규 미존재=orphan은 날조 금지·보고). 캡처 후 교정·dry-by-default·멱등. #45(출력 fact-check)·#46(비가역) 연속. 'dangling 0' 같은 단정은 전수스캔으로 입증된 뒤에만.
+
+## 작업원칙 #80 — force-dynamic ≠ Data Cache 무효화; server SDK fetch는 no-store 주입 (2026-06-15 /assets STALE)
+
+라우트 `dynamic='force-dynamic'`는 렌더를 동적화할 뿐, 서버 SDK(supabase-js 등) 내부 `fetch`가 Next Data Cache에 잔류하는 것을 막지 못한다(배포로도 미소거 — Data Cache는 deploy 비종속).
+
+- **근본 차단**: out-of-band로 바뀌는 자원(스토리지 리스팅 등)을 읽는 운영자용 SDK 클라이언트에는 `global.fetch`로 `cache:'no-store'`를 주입한다. 라우트엔 `fetchCache='force-no-store'`+`revalidate=0`을 방어층으로. 'force-dynamic 걸었으니 라이브'라는 가정 금지 — 실앱서 stale 입증되면 SDK fetch 층을 의심(#45 출력 fact-check·#28 production source-of-truth 연속).

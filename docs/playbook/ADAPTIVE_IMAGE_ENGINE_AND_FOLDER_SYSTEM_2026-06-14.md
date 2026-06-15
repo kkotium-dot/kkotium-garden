@@ -177,3 +177,9 @@
 - **instance 교정**: 캡처 후 정규 URL `/.../detail/detail-S6-1779884981263.png`로 치환(storage 200 확인·구 depth-2 400). 1필드/1치환.
 - **class 근본수정(전상품)**: updateDbRefs·residualRefCount를 **컬럼리스트-FREE**로 전환 — 전체 row를 fetch해 모든 컬럼의 JSON 표현을 스캔(중첩 jsonb 포함), 변경된 컬럼만 기록. 사후 자가검증도 `to_jsonb(row)` 전수스캔으로 depth-2 ref=0 확인. 대상: Product 전컬럼 + asset_references + published_assets + asset_registry. 신규 `scripts/remap-depth2-refs.ts`(dangling-only 규칙: depth-2 원본 부재 && 정규 존재일 때만 치환·dry-by-default·자가검증). 사후 전3상품 잔존 depth-2 ref=0.
 - **taxonomy LOW(GO#3 확장)**: `backdrop-S6-prev-firefly.png`가 plate로 분류되던 문제 — archive 마커 규칙을 plate 앞으로 이동(retire 마커가 backdrop 토큰을 이김). 단 'old'가 'gold/golden' 내부서 오탐하지 않도록 archive 규칙에 word-boundary(\b) 적용(전상품·미래파일·기존 plate/composite 회귀0).
+
+### 8.10 /assets STALE 캐시 근본수정 — Storage 리스트 라이브화 (2026-06-15 Desktop 실앱테스트 #45)
+- **적발**: `/api/products/[id]/assets`가 전상품 STALE — studio 자산 브라우저가 죽은 depth-2 URL(404) 렌더·현 canonical 누락. 증거: 명화 /assets total 22(pre-backfill snapshot: composite 9·root depth-2 10) vs 실제 storage 41(composite 18·depth-2 0·전 canonical stage). 배포로도 미소거(Vercel Data Cache는 deploy 비종속·지속). vercelCache=MISS이나 함수 반환이 stale.
+- **근본원인**: route는 force-dynamic이나 그것만으론 server SDK 내부 fetch를 no-store화하지 못함. getServerClient(automation-storage)의 supabase-js list 결과가 Next Data Cache에 잔류 → cross-deploy stale. (unstable_cache는 전무 — 캐시는 fetch Data Cache 층.)
+- **수정(전상품·근본)**: getServerClient에 `global.fetch`로 `cache:'no-store'` 주입 → 모든 Storage/REST read가 라이브(out-of-band 백필/remap 변동 즉시 반영). 방어층으로 /assets route에 `fetchCache='force-no-store'`+`revalidate=0` 추가. 클라이언트(AssetBrowser)는 이미 `cache:'no-store'`(회귀 없음).
+- **검증**: listProductAssets 라이브 = 명화 total 41(depth-2 0·cutout3·plate3·composite18·thumbnail4·detail3·archive10) / 아이스트레이 2(detail1·archive1·depth-2 0) / cmp3afb 18(depth-2 0). build0·tsc0·additive·네이버 무접촉.
