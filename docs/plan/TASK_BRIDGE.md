@@ -73,6 +73,12 @@
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
 
+### 2026-06-15 (88) 분류기 누끼 신호 교정(알파≠투명) + 삭제 모달 UX (FROM 💻 Code, main, 비가역 0·additive)
+- **What**: 세션7-i Desktop 실측 BUG 수정 — cutout 신호를 `hasAlpha`(채널 존재)에서 `hasAlpha && sharp.stats().isOpaque===false`(실제 투명)로 교정. 불투명 RGBA(canvas/Firefly/디자인툴 PNG) → 누끼 신호 무시·비율 폴백. 3경로(/assets/classify·/assets/upload·/ingest-firefly) 신호 일원화 + 응답에 isOpaque·hasTransparency 추가·칩 '투명 배경' 사유. 삭제 확인 = native confirm 2단계 → 커스텀 모달(썸네일·자산명·단계·비가역·추가이미지 해제 경고).
+- **재검증(sharp 실이미지 7/7 PASS)**: 1000² 불투명PNG→thumbnail / 400×1200→detail / 900×1125→composite / 투명PNG→cutout / JPEG 3종 회귀 전부 정답.
+- **검증**: tsc0·build0·비가역0·sentinel clean. 권위 §8.7·8.8 박제 + PRINCIPLES_LEARNED #78.
+- **다음 1액션**: [Desktop] /assets/classify로 불투명PNG 재검증(정답 확인) → 다음(레거시 백필 GO 대기 / Firefly 4컷).
+
 ### 2026-06-14 (87) 내용인식 분류 + IA 3탭 + 한글화 + 인앱삭제 (FROM 💻 Code, main, 비가역 0·additive)
 - **What**: 내용인식 스테이지 분류(classifyAsset·파일명+Sharp 메타신호·confidence/qualityFlags/conflict·preflight /assets/classify) + 워크벤치 IA 5탭→3탭(grouped·회귀0) + 한글화(음차 표면화) + 인앱 삭제(/assets/action delete·2단계 게이트·비가역#46).
 - **Desktop 검증완(전턴)**: task2 정규화·task4 칩·task5 ZIP·토큰추론 전부 PASS.

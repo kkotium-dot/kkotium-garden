@@ -97,18 +97,25 @@ export async function POST(
   let height: number | null = null;
   let hasAlpha: boolean | null = null;
   let channels: number | null = null;
+  let isOpaque: boolean | null = null;
   try {
     const meta = await sharp(buffer).metadata();
     width = meta.width ?? null;
     height = meta.height ?? null;
     hasAlpha = meta.hasAlpha ?? null;
     channels = meta.channels ?? null;
+    // Real-transparency probe (see asset-classify): channel presence != cutout.
+    if (meta.hasAlpha) {
+      try { isOpaque = (await sharp(buffer).stats()).isOpaque; } catch { isOpaque = null; }
+    } else {
+      isOpaque = true;
+    }
   } catch { /* non-image metadata read — leave signals null */ }
 
-  // Content-aware recommendation: filename hint + pixel signals (alpha / aspect
-  // ratio / resolution). recommendedStage + confidence + qualityFlags are always
-  // returned so the UI chip can show the inference and any quality warning.
-  const classification = classifyAsset({ fileName: file.name, width, height, hasAlpha, channels });
+  // Content-aware recommendation: filename hint + pixel signals (real alpha /
+  // aspect ratio / resolution). recommendedStage + confidence + qualityFlags are
+  // always returned so the UI chip can show the inference and any quality warning.
+  const classification = classifyAsset({ fileName: file.name, width, height, hasAlpha, channels, isOpaque });
   const recommendedStage = classification.stage;
   const stageRaw = (form.get('stage') ?? '').toString().trim();
   let stage: AssetKind;

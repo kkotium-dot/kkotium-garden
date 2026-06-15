@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
   let height: number | null = null;
   let hasAlpha: boolean | null = null;
   let channels: number | null = null;
+  let isOpaque: boolean | null = null;
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const meta = await sharp(buffer).metadata();
@@ -47,11 +48,23 @@ export async function POST(request: NextRequest) {
     height = meta.height ?? null;
     hasAlpha = meta.hasAlpha ?? null;
     channels = meta.channels ?? null;
+    // Real-transparency probe: an alpha CHANNEL existing is not transparency
+    // (opaque RGBA from canvas / Firefly). stats().isOpaque distinguishes a true
+    // cutout from an opaque PNG. Skip the cost when there is no alpha channel.
+    if (meta.hasAlpha) {
+      try {
+        isOpaque = (await sharp(buffer).stats()).isOpaque;
+      } catch {
+        isOpaque = null; // stats unavailable — classifier falls back to ratio
+      }
+    } else {
+      isOpaque = true; // no alpha channel => opaque by definition
+    }
   } catch {
     // Unreadable image — classify on the filename alone.
   }
 
-  const c = classifyAsset({ fileName: file.name, width, height, hasAlpha, channels });
+  const c = classifyAsset({ fileName: file.name, width, height, hasAlpha, channels, isOpaque });
   return NextResponse.json({
     success: true,
     recommendedStage: c.stage,
@@ -60,8 +73,10 @@ export async function POST(request: NextRequest) {
     conflict: c.conflict,
     nameStage: c.nameStage,
     contentStage: c.contentStage,
+    hasTransparency: c.hasTransparency,
     width,
     height,
     hasAlpha,
+    isOpaque,
   });
 }

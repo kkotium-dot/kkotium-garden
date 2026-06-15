@@ -160,3 +160,14 @@
 
 ### 8.6 신규 영구원칙 3종 (#73 · 모든 UI작업 기본전제)
 - 직관우선·과밀금지 / 한글우선 라벨(코드영어·표면한글) / 작업여정 정합(IA=사용자 여정順).
+
+### 8.7 분류기 누끼 신호 교정 (세션7-i 검증 BUG · 전상품·전PNG)
+- **버그**: cutout 트리거가 `hasAlpha`(알파 채널 존재)였음. canvas/Firefly/디자인툴 PNG는 불투명이어도 RGBA(4채널) = 알파 채널 보유 → 전 PNG가 누끼로 오분류. 스모크가 '알파有·불투명 PNG' 케이스 누락 = 사각지대.
+- **Desktop 실측 증거**(같은 치수 PNG vs JPEG, /assets/classify): 1000² PNG→cutout(오)·JPEG→thumbnail(정) / 400×1200 PNG→cutout(오)·JPEG→detail(정) / 900×1125 PNG→cutout(오)·JPEG→composite(정).
+- **교정**: cutout 신호 = `hasAlpha && (await sharp(buf).stats()).isOpaque === false`(실제 투명 픽셀 존재). 불투명 RGBA → 누끼 신호 무시 · 비율 신호(thumbnail 1:1 / composite 4:5 / detail h:w≥2.5)로 폴백. `isOpaque` 미산출(null) 시 누끼 단정 금지(비율 폴백 = 안전 디폴트).
+- **신호 일원화**: 3경로(/assets/classify · /assets/upload · /ingest-firefly) 모두 `meta.hasAlpha` 일 때만 `sharp(buf).stats()` 추가 1회 호출(JPEG는 비용0). classifyAsset 시그니처에 `isOpaque` 추가 + 결과에 `hasTransparency` 노출. /assets/classify 응답에 `isOpaque`·`hasTransparency` 추가 → 칩에 '투명 배경' 사유 표시.
+- **재검증(sharp 실이미지 7/7 PASS)**: 1000² 불투명PNG→thumbnail / 400×1200 불투명PNG→detail / 900×1125 불투명PNG→composite / 투명배경PNG→cutout / JPEG 3종 회귀 전부 정답.
+- **교훈**: 콘텐츠 신호는 채널 '존재'가 아닌 실제 '상태'로 판정한다(알파 채널 ≠ 투명). 메타데이터 플래그가 의미를 단정하지 않음 = 픽셀 통계로 확증.
+
+### 8.8 삭제 확인 UX 업그레이드 (#73 직관우선·오삭제 방지)
+- 기존 익명 native confirm 2단계(대상 미표기) → 커스텀 모달: 썸네일 + 자산명 + 단계 라벨 + 용량 · '되돌릴 수 없습니다(스토리지 영구 제거)' 비가역 경고 · 추가 이미지 참조 시 '자동 해제' 안내 · 대표는 진입 전 차단. 모달 confirm만 실 삭제 트리거(비가역 #46, confirm:true 유지).

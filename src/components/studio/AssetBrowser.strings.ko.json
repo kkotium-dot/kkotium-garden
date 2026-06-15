@@ -33,6 +33,7 @@
     "byName": "이름",
     "byContent": "내용",
     "conflictUrge": "단계를 확인해 주세요",
+    "transparent": "투명 배경",
     "qualityLowRes": "저해상도 이미지입니다 (긴 변 800px 이상 권장)",
     "uploading": "업로드 중...",
     "done": "업로드 완료",
@@ -58,8 +59,12 @@
     "delete": "삭제",
     "deleteDone": "영구 삭제했습니다",
     "deleteMainBlocked": "대표컷은 삭제할 수 없습니다. 다른 컷을 대표로 지정한 뒤 다시 시도하세요.",
-    "confirmDelete1": "이 자산을 영구 삭제할까요? (스토리지에서 제거됩니다)",
-    "confirmDelete2": "되돌릴 수 없습니다. 정말 삭제할까요?",
+    "deleteModalTitle": "자산 영구 삭제",
+    "deleteModalStage": "단계",
+    "deleteModalIrreversible": "되돌릴 수 없습니다. 스토리지에서 영구 제거됩니다.",
+    "deleteModalExtraUnlink": "추가 이미지에서 자동 해제됩니다.",
+    "deleteModalConfirm": "영구 삭제",
+    "deleteModalCancel": "취소",
     "working": "처리 중..."
   },
   "stage": {

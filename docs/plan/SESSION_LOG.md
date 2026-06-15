@@ -1,4 +1,15 @@
 ## 2026-06-14 (세션7-i-Code) 내용인식 분류 + IA 3탭 + 한글화 + 인앱삭제
+## 2026-06-15 (세션7-i-fix-Code) 분류기 누끼 신호 교정(알파≠투명) + 삭제 모달 UX
+
+**[권위]** docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §8.7·8.8 박제 + PRINCIPLES_LEARNED #78.
+**[Desktop 실측 BUG(세션7-i)]** 분류기 누끼 과발화 — 같은 치수 PNG vs JPEG: 1000² PNG→cutout(오)·JPEG→thumbnail(정) / 400×1200 PNG→cutout(오)·JPEG→detail(정) / 900×1125 PNG→cutout(오)·JPEG→composite(정). 원인=cutout 신호가 hasAlpha(채널 존재). canvas/Firefly/디자인툴 PNG는 불투명이어도 RGBA→전 PNG 오분류. 스모크가 '알파有·불투명 PNG' 케이스 누락=사각지대.
+**[P0 교정]** asset-classify.ts — cutout 트리거 = hasAlpha && sharp(buf).stats().isOpaque===false(실제 투명 픽셀). 불투명 RGBA → 누끼 신호 무시·비율 폴백(thumbnail 1:1 / composite 4:5 / detail h:w≥2.5). isOpaque null(미산출) 시 누끼 단정 금지(비율 폴백=안전 디폴트). ClassifySignals에 isOpaque 추가·ClassifyResult에 hasTransparency 노출.
+**[신호 일원화]** 3경로(/assets/classify·/assets/upload·/ingest-firefly) 모두 meta.hasAlpha일 때만 sharp().stats() 1회 추가(JPEG 비용0). /assets/classify 응답에 isOpaque·hasTransparency 추가. AssetBrowser 칩에 '투명 배경' 사유 표시.
+**[재검증 sharp 실이미지 7/7 PASS]** 1000² 불투명PNG→thumbnail / 400×1200→detail / 900×1125→composite / 투명PNG→cutout / JPEG 3종 회귀 전부 정답.
+**[삭제 UX]** native confirm 2단계(대상 미표기) → 커스텀 모달(썸네일·자산명·단계 라벨·용량·비가역 경고·추가이미지 참조 시 자동 해제 안내·대표 진입 전 차단). 모달 confirm만 실 삭제(비가역#46·confirm:true 유지). #73 직관우선·오삭제 방지.
+**[검증]** tsc0·build0·이모지0·UI한글/코드영어·prisma 싱글톤·sentinel clean·네이버 무접촉·비가역0.
+**[다음]** [Desktop] /assets/classify로 불투명PNG 재검증(정답 확인) → 레거시 백필 GO 대기 / Firefly 4컷.
+
 
 **[권위]** docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §8 박제.
 **[Desktop 검증완(전턴)]** task4 추론칩+오버라이드 PASS / task2 정규화 PASS(1376×768→614×768=4:5) / task5 ZIP PASS / 토큰추론 PASS.

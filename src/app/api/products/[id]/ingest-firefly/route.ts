@@ -156,16 +156,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   let height: number | null = null;
   let hasAlpha: boolean | null = null;
   let channels: number | null = null;
+  let isOpaque: boolean | null = null;
   try {
     const meta = await sharp(buffer).metadata();
     width = meta.width ?? null;
     height = meta.height ?? null;
     hasAlpha = meta.hasAlpha ?? null;
     channels = meta.channels ?? null;
+    // Real-transparency probe (see asset-classify): channel presence != cutout.
+    // Firefly composites are RGBA-but-opaque, so this prevents mis-routing them.
+    if (meta.hasAlpha) {
+      try { isOpaque = (await sharp(buffer).stats()).isOpaque; } catch { isOpaque = null; }
+    } else {
+      isOpaque = true;
+    }
   } catch { /* non-image / unreadable metadata — leave signals null */ }
 
   // Content-aware recommendation (filename hint + pixel signals).
-  const classification = classifyAsset({ fileName: filename, width, height, hasAlpha, channels });
+  const classification = classifyAsset({ fileName: filename, width, height, hasAlpha, channels, isOpaque });
   const recommendedStage = classification.stage;
   const stageRaw = (body.stage ?? '').toString().trim();
   let stage: AssetKind;

@@ -165,6 +165,7 @@ interface PendingUpload {
   conflict?: boolean;
   nameStage?: string | null;
   contentStage?: string | null;
+  hasTransparency?: boolean;
 }
 
 export interface AssetBrowserProps {
@@ -185,6 +186,11 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
   const [uploading, setUploading] = useState(false);
   const [pending, setPending] = useState<PendingUpload | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Delete confirm (irreversible) — a custom modal showing the exact target
+  // (thumbnail + name + stage + warnings) replaces the anonymous native confirm,
+  // so an operator can never delete the wrong asset by reflex (#73 직관우선).
+  const [deleteTarget, setDeleteTarget] = useState<{ file: StageFile; stage: string } | null>(null);
 
   const flash = useCallback((kind: 'ok' | 'err', msg: string) => {
     setToast({ kind, msg });
@@ -222,6 +228,7 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
             conflict: !!res.conflict,
             nameStage: res.nameStage ?? null,
             contentStage: res.contentStage ?? null,
+            hasTransparency: !!res.hasTransparency,
             classifying: false,
           };
         });
@@ -304,26 +311,11 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
     [productId, flash, load],
   );
 
-  // ── Actions (set_main / add_extra / archive) ───────────────────────────────
-  const doAction = useCallback(
+  // Network-only action runner — the confirm gates live in doAction (archive)
+  // and the delete modal, so this performs the mutation with no extra prompts.
+  const performAction = useCallback(
     async (action: 'set_main' | 'add_extra' | 'archive' | 'delete', file: StageFile) => {
       if (!productId) return;
-      if (action === 'archive') {
-        if (img.mainImage === file.publicUrl) {
-          flash('err', strings.action.archiveMainBlocked);
-          return;
-        }
-        if (!window.confirm(strings.action.confirmArchive)) return;
-      }
-      if (action === 'delete') {
-        if (img.mainImage === file.publicUrl) {
-          flash('err', strings.action.deleteMainBlocked);
-          return;
-        }
-        // Two-step gate (irreversible) — both must be accepted.
-        if (!window.confirm(strings.action.confirmDelete1)) return;
-        if (!window.confirm(strings.action.confirmDelete2)) return;
-      }
       setBusyPath(file.path);
       try {
         const res = await fetch(`/api/products/${productId}/assets/action`, {
@@ -359,8 +351,43 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
         setBusyPath(null);
       }
     },
-    [productId, img.mainImage, flash, load],
+    [productId, flash, load],
   );
+
+  // ── Action gate (set_main / add_extra / archive / delete) ───────────────────
+  // Archive uses a single native confirm; delete opens the custom modal below.
+  const doAction = useCallback(
+    (action: 'set_main' | 'add_extra' | 'archive' | 'delete', file: StageFile, stage: string) => {
+      if (!productId) return;
+      if (action === 'archive') {
+        if (img.mainImage === file.publicUrl) {
+          flash('err', strings.action.archiveMainBlocked);
+          return;
+        }
+        if (!window.confirm(strings.action.confirmArchive)) return;
+        void performAction('archive', file);
+        return;
+      }
+      if (action === 'delete') {
+        if (img.mainImage === file.publicUrl) {
+          flash('err', strings.action.deleteMainBlocked);
+          return;
+        }
+        setDeleteTarget({ file, stage });
+        return;
+      }
+      void performAction(action, file);
+    },
+    [productId, img.mainImage, flash, performAction],
+  );
+
+  // Confirmed from the delete modal — irreversible storage removal.
+  const confirmDelete = useCallback(async () => {
+    const target = deleteTarget;
+    if (!target) return;
+    setDeleteTarget(null);
+    await performAction('delete', target.file);
+  }, [deleteTarget, performAction]);
 
   const total = data?.total ?? 0;
 
@@ -471,6 +498,13 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
                         {strings.upload.confidence[pending.confidence]}
                       </span>
                     )
+                  )}
+                  {/* Content-signal reason chip — transparency is the cutout
+                      signal; channel presence alone is not (opaque RGBA). */}
+                  {!pending.classifying && pending.hasTransparency && (
+                    <span className="inline-flex items-center rounded-full bg-sky-50 text-sky-700 text-xs font-medium px-2 py-0.5">
+                      {strings.upload.transparent}
+                    </span>
                   )}
                   <label className="flex items-center gap-1.5 text-xs text-gray-600 ml-auto">
                     {strings.upload.stageLabel}
@@ -592,6 +626,81 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
           )}
         </>
       )}
+
+      {/* Delete confirm modal — shows the exact target so an operator can never
+          delete the wrong asset by reflex. Irreversible (storage removal). */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => busyPath !== deleteTarget.file.path && setDeleteTarget(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-lg bg-white shadow-xl border border-gray-200 p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5 shrink-0" />
+              <h3 className="text-base font-semibold">{strings.action.deleteModalTitle}</h3>
+            </div>
+            <div className="mt-3 flex items-start gap-3">
+              <div className="w-20 h-20 shrink-0 rounded-md border border-gray-200 bg-gray-100 overflow-hidden flex items-center justify-center">
+                {IMAGE_EXT.test(deleteTarget.file.name) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={deleteTarget.file.publicUrl}
+                    alt={deleteTarget.file.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <FileQuestion className="w-6 h-6 text-gray-400" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-800 break-all">{deleteTarget.file.name}</p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {strings.action.deleteModalStage}: {stageLabel(deleteTarget.stage)}
+                </p>
+                <p className="text-xs text-gray-400">{formatSize(deleteTarget.file.size)}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex items-start gap-1.5 text-xs text-red-700 bg-red-50 rounded px-2 py-1.5">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>{strings.action.deleteModalIrreversible}</span>
+            </div>
+            {img.extraUrls.has(deleteTarget.file.publicUrl) && (
+              <div className="mt-2 flex items-start gap-1.5 text-xs text-amber-700 bg-amber-50 rounded px-2 py-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{strings.action.deleteModalExtraUnlink}</span>
+              </div>
+            )}
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                type="button"
+                disabled={busyPath === deleteTarget.file.path}
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 inline-flex items-center justify-center text-sm font-medium text-gray-600 border border-gray-300 rounded-md py-2 hover:bg-gray-50 transition disabled:opacity-60"
+              >
+                {strings.action.deleteModalCancel}
+              </button>
+              <button
+                type="button"
+                disabled={busyPath === deleteTarget.file.path}
+                onClick={() => void confirmDelete()}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md py-2 transition disabled:opacity-60"
+              >
+                {busyPath === deleteTarget.file.path ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                {strings.action.deleteModalConfirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -608,7 +717,7 @@ function StageRow({
   productId: string;
   img: ProductImageState;
   busyPath: string | null;
-  onAction: (action: 'set_main' | 'add_extra' | 'archive' | 'delete', file: StageFile) => void;
+  onAction: (action: 'set_main' | 'add_extra' | 'archive' | 'delete', file: StageFile, stage: string) => void;
 }) {
   const applied = group.count > 0;
   const folderUrl = supabaseFolderUrl(productId, group.stage);
@@ -664,6 +773,7 @@ function StageRow({
             <AssetTile
               key={f.path}
               file={f}
+              stage={group.stage}
               isMain={img.mainImage === f.publicUrl}
               inExtra={img.extraUrls.has(f.publicUrl)}
               busy={busyPath === f.path}
@@ -679,16 +789,18 @@ function StageRow({
 // ── Single asset tile + actions ───────────────────────────────────────────────
 function AssetTile({
   file,
+  stage,
   isMain,
   inExtra,
   busy,
   onAction,
 }: {
   file: StageFile;
+  stage: string;
   isMain: boolean;
   inExtra: boolean;
   busy: boolean;
-  onAction: (action: 'set_main' | 'add_extra' | 'archive' | 'delete', file: StageFile) => void;
+  onAction: (action: 'set_main' | 'add_extra' | 'archive' | 'delete', file: StageFile, stage: string) => void;
 }) {
   const isImage = IMAGE_EXT.test(file.name);
   return (
@@ -733,7 +845,7 @@ function AssetTile({
         <button
           type="button"
           disabled={busy || isMain}
-          onClick={() => onAction('set_main', file)}
+          onClick={() => onAction('set_main', file, stage)}
           title={strings.action.setMain}
           className="flex-1 inline-flex items-center justify-center rounded border border-gray-200 py-1 text-gray-500 hover:text-pink-600 hover:border-pink-300 transition disabled:opacity-40"
         >
@@ -742,7 +854,7 @@ function AssetTile({
         <button
           type="button"
           disabled={busy || inExtra}
-          onClick={() => onAction('add_extra', file)}
+          onClick={() => onAction('add_extra', file, stage)}
           title={strings.action.addExtra}
           className="flex-1 inline-flex items-center justify-center rounded border border-gray-200 py-1 text-gray-500 hover:text-pink-600 hover:border-pink-300 transition disabled:opacity-40"
         >
@@ -751,7 +863,7 @@ function AssetTile({
         <button
           type="button"
           disabled={busy || isMain}
-          onClick={() => onAction('archive', file)}
+          onClick={() => onAction('archive', file, stage)}
           title={strings.action.archive}
           className="flex-1 inline-flex items-center justify-center rounded border border-gray-200 py-1 text-gray-500 hover:text-amber-600 hover:border-amber-300 transition disabled:opacity-40"
         >
@@ -760,7 +872,7 @@ function AssetTile({
         <button
           type="button"
           disabled={busy || isMain}
-          onClick={() => onAction('delete', file)}
+          onClick={() => onAction('delete', file, stage)}
           title={strings.action.delete}
           className="flex-1 inline-flex items-center justify-center rounded border border-gray-200 py-1 text-gray-500 hover:text-red-600 hover:border-red-300 transition disabled:opacity-40"
         >

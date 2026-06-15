@@ -25,10 +25,17 @@ export interface ClassifySignals {
   fileName: string;
   width?: number | null;
   height?: number | null;
-  /** Sharp metadata.hasAlpha. */
+  /** Sharp metadata.hasAlpha — channel PRESENCE only, not real transparency. */
   hasAlpha?: boolean | null;
   /** Sharp metadata.channels (4 = RGBA). */
   channels?: number | null;
+  /**
+   * Sharp stats().isOpaque — true when the alpha channel is fully opaque.
+   * Canvas / Firefly / design-tool PNGs are RGBA yet opaque, so the alpha
+   * CHANNEL existing (hasAlpha) is NOT a cutout signal; only genuinely
+   * transparent pixels (isOpaque === false) are. Null when not computed.
+   */
+  isOpaque?: boolean | null;
 }
 
 export interface ClassifyResult {
@@ -43,6 +50,12 @@ export interface ClassifyResult {
   contentStage: AssetKind | null;
   /** True when name and content disagree (operator confirmation urged). */
   conflict: boolean;
+  /**
+   * True only when the image has genuinely transparent pixels (the real cutout
+   * signal). False for opaque images including opaque RGBA. Surfaced so the UI
+   * chip can show WHY 'cutout' was or was not the content signal.
+   */
+  hasTransparency: boolean;
 }
 
 // Aspect-ratio bands (width / height).
@@ -53,10 +66,23 @@ const VERTICAL_45_HI = 0.86;
 const TALL_STRIP_MAX = 0.4; // h:w >= 2.5  ->  w/h <= 0.4
 const LOW_RES_LONG_EDGE = 800; // longest edge below this is flagged low-res
 
+/**
+ * Real transparency = an alpha channel exists AND at least one pixel is actually
+ * transparent (Sharp stats().isOpaque === false). Channel presence alone is NOT
+ * transparency — opaque RGBA exports (canvas / Firefly / design tools) carry an
+ * alpha channel but no transparent pixels. When isOpaque is unknown (null), we
+ * do NOT assume a cutout — falling back to the ratio signal is the safe default.
+ */
+function hasTransparencyFromSignals(s: ClassifySignals): boolean {
+  const hasAlphaChannel = s.hasAlpha === true || s.channels === 4;
+  return hasAlphaChannel && s.isOpaque === false;
+}
+
 /** Derive a stage purely from pixel signals, or null when nothing resolves. */
 function contentStageFromSignals(s: ClassifySignals): AssetKind | null {
-  const alpha = s.hasAlpha === true || s.channels === 4;
-  if (alpha) return 'cutout'; // transparency is the strongest single signal
+  // Genuine transparency is the strongest single signal — but opaque RGBA must
+  // fall through to the ratio bands, not mis-route to 'cutout' (the bug fix).
+  if (hasTransparencyFromSignals(s)) return 'cutout';
 
   const w = s.width ?? 0;
   const h = s.height ?? 0;
@@ -109,5 +135,13 @@ export function classifyAsset(s: ClassifySignals): ClassifyResult {
     confidence = 'low';
   }
 
-  return { stage, confidence, qualityFlags, nameStage, contentStage, conflict };
+  return {
+    stage,
+    confidence,
+    qualityFlags,
+    nameStage,
+    contentStage,
+    conflict,
+    hasTransparency: hasTransparencyFromSignals(s),
+  };
 }

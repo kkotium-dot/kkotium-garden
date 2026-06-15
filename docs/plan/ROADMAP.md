@@ -87,6 +87,8 @@
 권위본 정독: docs/handoff/NEW_CHAT_STARTER_2026-06-12_image_studio_live.md -> PARALLEL_WORK_TRACKER(rev13) -> TASK_BRIDGE §3(82).
 전제: feat/image-studio main fa9ad01 production LIVE·READY. DB fidelity 완성(scents 4향). 순서 P0병합완료→P1실사용테스트→P2이미지→P3타상품.
 
+> 2026-06-15 갱신: 세션7-i Desktop 검증 BUG(분류기 누끼 과발화) 수정 완료 — cutout 신호 hasAlpha→실제 투명(isOpaque===false). 3경로 일원화·sharp 7/7 PASS. 다음=[Desktop] /assets/classify 불투명PNG 재검증→레거시 백필 GO / Firefly 4컷. 상세 TASK_BRIDGE §3(88)·SESSION_LOG 세션7-i-fix.
+
 ```
 [꽃틔움 가든 / Desktop / P0 실사용 검증: image-studio production fa9ad01]
 production HEAD fa9ad01 READY 확인 후 /studio·/dashboard 실사용:
