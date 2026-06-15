@@ -2,6 +2,16 @@
 ## 2026-06-15 (세션7-i-fix-Code) 분류기 누끼 신호 교정(알파≠투명) + 삭제 모달 UX
 ## 2026-06-15 (세션7-i-fix2-Code) 백필 dangling 정정 — DB ref EXHAUSTIVE 전환 + taxonomy archive 선행
 ## 2026-06-15 (세션7-i-fix3-Code) /assets STALE 캐시 근본수정 — Storage 리스트 라이브화
+## 2026-06-15 (세션7-i-fix4-Code) 자산 정합 점검 시스템 가드 (#81·#80 후속)
+
+**[권위]** docs/design/OPERATOR_SYSTEM_BLUEPRINT.md(개입 대기열) + 박제 §8.11 + PRINCIPLES_LEARNED #81.
+**[배경]** #80 stale-listing은 사람이 studio를 봐야 드러남 → 드리프트 상시감지·개입점화 부재의 프로젝트-전체 확장.
+**[점검 lib]** src/lib/storage/asset-integrity.ts checkProductIntegrity — listProductAssets(no-store) 기준 (a)depth-2/root 잔존 (b)DB ref dead(라이브 미존재 키=404·Product 전컬럼 중첩jsonb+asset_references+published_assets 전수스캔) (c)선택 비율(Sharp·bounded). fixProductIntegrity=루트→정규 이동·archive 백업·exhaustive depth-2 ref 리맵(dangling-only).
+**[개입점화]** intervention.ts INTERVENTION_ASSET_INTEGRITY + buildAssetIntegrityPayload + clearJobIntervention. control-tower-engine asset_integrity→INPUT_DECISION·deepLink /studio. setJobIntervention(jobType bg_clean→lane process·멱등 matchInterventionType·best-effort). tool='sharp'(asset_jobs_tool_check 적합).
+**[라우트]** GET/POST /api/products/[id]/asset-integrity(check/seed/fix·fix confirm 게이트 #46) + cron /api/cron/asset-integrity-sweep(vercel.json 0 15 * * *·CRON_SECRET). UI ControlTowerMatrixWidget asset_integrity 렌더+1클릭 교정 버튼(confirm·refresh) + ko.json 한글.
+**[검증]** 현 3상품 ok(depth-2 0·dead 0). 드리프트 round-trip(detail 파일 root 이동→depth2=1·ok=false→card seed[matrix 쿼리 awaiting_human+image lane 노출 확인]→1클릭 fix moved=1·after.ok=true→복원→card clear) PASS. tsc0·build0·이모지0·prisma 싱글톤·외부 image API 0(Sharp만)·네이버 무접촉·additive·비가역0(교정만 confirm게이트).
+**[다음]** [Desktop] 관제탑 정합 카드 확인·드리프트 주입 검증→Firefly 4컷.
+
 
 **[권위]** docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §8.10 + PRINCIPLES_LEARNED #80.
 **[Desktop 실앱테스트 적발]** /api/products/[id]/assets 전상품 STALE — studio 자산 브라우저가 죽은 depth-2 URL(404) 렌더·현 canonical 누락. 명화 /assets total 22(pre-backfill snapshot: composite 9·root depth-2 10) vs 실제 storage 41(composite 18·depth-2 0). 배포로도 미소거(Vercel Data Cache는 deploy 비종속).

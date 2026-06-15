@@ -17,6 +17,10 @@
     {
       "path": "/api/cron/inventory-sync",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/asset-integrity-sweep",
+      "schedule": "0 15 * * *"
     }
   ]
 }

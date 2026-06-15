@@ -183,3 +183,12 @@
 - **근본원인**: route는 force-dynamic이나 그것만으론 server SDK 내부 fetch를 no-store화하지 못함. getServerClient(automation-storage)의 supabase-js list 결과가 Next Data Cache에 잔류 → cross-deploy stale. (unstable_cache는 전무 — 캐시는 fetch Data Cache 층.)
 - **수정(전상품·근본)**: getServerClient에 `global.fetch`로 `cache:'no-store'` 주입 → 모든 Storage/REST read가 라이브(out-of-band 백필/remap 변동 즉시 반영). 방어층으로 /assets route에 `fetchCache='force-no-store'`+`revalidate=0` 추가. 클라이언트(AssetBrowser)는 이미 `cache:'no-store'`(회귀 없음).
 - **검증**: listProductAssets 라이브 = 명화 total 41(depth-2 0·cutout3·plate3·composite18·thumbnail4·detail3·archive10) / 아이스트레이 2(detail1·archive1·depth-2 0) / cmp3afb 18(depth-2 0). build0·tsc0·additive·네이버 무접촉.
+
+### 8.11 자산 정합 점검 시스템 가드 (#81 · #80 후속 · 전상품·개입점화)
+- **배경**: #80 stale-listing은 사람이 studio를 봐야 드러났다. 드리프트 상시감지·개입점화 부재 → 프로젝트-전체 확장.
+- **점검(라이브)**: `checkProductIntegrity`(src/lib/storage/asset-integrity.ts) — listProductAssets(no-store) 기준 상품별 (a) depth-2/root 잔존(정규화 누락) (b) DB ref dead(라이브 리스팅에 없는 product-assets 키=404, Product 전컬럼 중첩jsonb+asset_references+published_assets 전수스캔) (c) (선택 ?ratio=1) composite≠4:5·thumbnail≠1:1(Sharp 메타·bounded 16). 다운로드0(기본).
+- **개입점화**: control-tower 개입 대기열에 `asset_integrity` 카드 시드 — setJobIntervention(jobType bg_clean→lane process→image track·status awaiting_human·멱등 matchInterventionType·best-effort). 정합 OK면 clearJobIntervention(status done). category INPUT_DECISION·deepLink /studio·강제모달0(#56). 라벨 '자산 정합: 비정규 N·dead M'. tool='sharp'(asset_jobs_tool_check 적합값).
+- **1클릭 교정(#46 게이트)**: 카드 인라인 버튼 → POST /api/products/[id]/asset-integrity {action:'fix',confirm:true} → fixProductIntegrity(루트→정규 stage 이동·원본 archive 백업·exhaustive depth-2 ref 리맵 dangling-only) → 재점검·카드 갱신. confirm 모달 게이트.
+- **상시감지(cron)**: /api/cron/asset-integrity-sweep(vercel.json `0 15 * * *`=KST 자정·CRON_SECRET). 전상품 점검·시드/클리어. read-mostly(저장소 이동0·네이버0; 이동은 1클릭 교정만).
+- **검증**: 현 3상품 전부 ok(depth-2 0·dead 0). 드리프트 round-trip(detail 파일 root 이동→detect depth2=1·ok=false→card seed[matrix 쿼리 awaiting_human+image lane+interventionType 노출 확인]→1클릭 fix moved=1·after.ok=true→복원 detail1/archive1→card clear) PASS. 전상품·하드코딩0(#55)·외부 image API 0(Sharp만·#37)·네이버 무접촉·tsc0·build0.
+- **권위**: docs/design/OPERATOR_SYSTEM_BLUEPRINT.md(개입 대기열) + §8.10 연계.

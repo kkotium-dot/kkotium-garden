@@ -888,3 +888,9 @@ function kkAssertGenerateMode(){
 라우트 `dynamic='force-dynamic'`는 렌더를 동적화할 뿐, 서버 SDK(supabase-js 등) 내부 `fetch`가 Next Data Cache에 잔류하는 것을 막지 못한다(배포로도 미소거 — Data Cache는 deploy 비종속).
 
 - **근본 차단**: out-of-band로 바뀌는 자원(스토리지 리스팅 등)을 읽는 운영자용 SDK 클라이언트에는 `global.fetch`로 `cache:'no-store'`를 주입한다. 라우트엔 `fetchCache='force-no-store'`+`revalidate=0`을 방어층으로. 'force-dynamic 걸었으니 라이브'라는 가정 금지 — 실앱서 stale 입증되면 SDK fetch 층을 의심(#45 출력 fact-check·#28 production source-of-truth 연속).
+
+## 작업원칙 #81 — 드리프트는 상시감지·개입점화한다 (2026-06-15 #80 후속 시스템 가드)
+
+무결성 격차가 '사람이 화면을 봐야' 드러나면 이미 늦다(stale-listing 사고 #80). 라이브 소스 기준 자동 점검 → 이상 시 개입점으로 자연 노출한다.
+
+- **패턴**: (1) 라이브 소스(no-store 리스팅)로 상품별 무결성 점검 → (2) 이상 시 control-tower 개입 대기열 카드 시드(멱등·best-effort·강제모달0 #56), 정합 OK면 카드 클리어 → (3) 1클릭 교정(비가역은 confirm 게이트 #46·원본 archive 백업) → (4) cron 상시 스윕으로 out-of-band 변동까지 포착. 점검은 read-only/다운로드0 우선(외부 image API 0·#37). #80(stale 근본수정)의 시스템 확장.

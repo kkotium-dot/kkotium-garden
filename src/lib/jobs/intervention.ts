@@ -37,6 +37,10 @@ export const INTERVENTION_FIREFLY_AUTO = 'firefly_auto';
 export const INTERVENTION_FIDELITY_CHECK = 'fidelity_check';
 // Mount-physics check (#56, item 8): clip/slat geometry OK before slot lock.
 export const INTERVENTION_MOUNT_CHECK = 'mount_check';
+// Asset-integrity guard (#80 follow-up): the live storage listing drifted from
+// the product's DB image refs (legacy-root files un-normalized and/or a DB ref
+// points at a 404 key). Surfaces "비정규 N·dead M" with a 1-click remediation.
+export const INTERVENTION_ASSET_INTEGRITY = 'asset_integrity';
 
 export type InterventionType =
   | typeof INTERVENTION_SOURCE_REQUEST
@@ -44,7 +48,8 @@ export type InterventionType =
   | typeof INTERVENTION_FIREFLY_DROP
   | typeof INTERVENTION_FIREFLY_AUTO
   | typeof INTERVENTION_FIDELITY_CHECK
-  | typeof INTERVENTION_MOUNT_CHECK;
+  | typeof INTERVENTION_MOUNT_CHECK
+  | typeof INTERVENTION_ASSET_INTEGRITY;
 
 export { buildMountCheckPayload };
 export type { FidelityChecklistPayload, MountCheckPayload };
@@ -147,6 +152,45 @@ export function buildSourceRequestPayload(o: { productId: string; supplierUrl?: 
   return { supplierUrl: o.supplierUrl ?? null, productId: o.productId };
 }
 
+export interface AssetIntegrityPayload {
+  productId: string;
+  /** Legacy-root files needing normalization into a stage subfolder. */
+  depth2Count: number;
+  /** DB refs pointing at a key absent from the live listing (404). */
+  deadCount: number;
+  /** Of the above, how many the 1-click fix can resolve. */
+  fixableDepth2: number;
+  fixableDeadRefs: number;
+  /** (Optional) ratio non-conformance flags (composite!=4:5 / thumbnail!=1:1). */
+  ratioCount: number;
+  /** Sample file names (bounded) for the operator to recognize the drift. */
+  sampleFiles: string[];
+  checkedAt: string;
+}
+
+/** Asset-integrity payload — built from a checkProductIntegrity report shape. */
+export function buildAssetIntegrityPayload(o: {
+  productId: string;
+  depth2Count: number;
+  deadCount: number;
+  fixableDepth2: number;
+  fixableDeadRefs: number;
+  ratioCount?: number;
+  sampleFiles?: string[];
+  checkedAt: string;
+}): AssetIntegrityPayload {
+  return {
+    productId: o.productId,
+    depth2Count: o.depth2Count,
+    deadCount: o.deadCount,
+    fixableDepth2: o.fixableDepth2,
+    fixableDeadRefs: o.fixableDeadRefs,
+    ratioCount: o.ratioCount ?? 0,
+    sampleFiles: (o.sampleFiles ?? []).slice(0, 6),
+    checkedAt: o.checkedAt,
+  };
+}
+
 // Open (non-terminal) statuses — an existing such job is reused before creating.
 const OPEN_STATUSES: string[] = [
   'awaiting_human', 'human_done', 'in_progress', 'ready', 'pending', 'blocked', 'review',
@@ -209,5 +253,26 @@ export async function setJobIntervention(opts: {
     return { jobId: created.id, created: true };
   } catch {
     return null;
+  }
+}
+
+/**
+ * Resolve (close) any OPEN job carrying a given intervention type for a product
+ * by moving it to a terminal status so the control-tower queue stops rendering
+ * the card. Used when a standing check (e.g. asset_integrity) finds the product
+ * is now clean. Best-effort — returns the count cleared, or 0 on any error.
+ */
+export async function clearJobIntervention(
+  productId: string,
+  type: InterventionType,
+): Promise<number> {
+  try {
+    const res = await prisma.assetJob.updateMany({
+      where: { productId, interventionType: type, status: { in: OPEN_STATUSES } },
+      data: { status: 'done' },
+    });
+    return res.count;
+  } catch {
+    return 0;
   }
 }

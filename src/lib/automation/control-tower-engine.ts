@@ -226,6 +226,7 @@ const IV_FIREFLY_DROP = 'firefly_drop';
 const IV_FIREFLY_AUTO = 'firefly_auto';
 const IV_FIDELITY_CHECK = 'fidelity_check';
 const IV_MOUNT_CHECK = 'mount_check';
+const IV_ASSET_INTEGRITY = 'asset_integrity';
 
 /** Two-branch source strategy from the split quality eval (blueprint §3). */
 function deriveSourceStrategy(
@@ -449,6 +450,11 @@ export function computeActionQueueItem(
       // Mount-physics check before slot lock — operator verifies clip/slat
       // geometry. A decision, so INPUT_DECISION; lands in the studio.
       return { ...base, category: 'INPUT_DECISION', stage: IV_MOUNT_CHECK, deepLink: `/studio?product=${productId}`, ...iv };
+    }
+    if (intervention.type === IV_ASSET_INTEGRITY) {
+      // Storage<->DB drift (un-normalized root files / dead refs). Operator runs
+      // the 1-click remediation, so INPUT_DECISION; lands in the studio asset tab.
+      return { ...base, category: 'INPUT_DECISION', stage: IV_ASSET_INTEGRITY, deepLink: `/studio?product=${productId}`, ...iv };
     }
     // Unknown intervention type — fall through to the generic AUTH card below.
   }

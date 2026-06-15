@@ -73,6 +73,11 @@
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
 
+### 2026-06-15 (91) 자산 정합 점검 시스템 가드 (#81·#80 후속, FROM 💻 Code, main, additive·비가역0·교정만 confirm게이트)
+- **What**: 드리프트 상시감지·개입점화. checkProductIntegrity(라이브 listProductAssets 기준 depth-2/root 잔존·DB ref dead[전컬럼 중첩jsonb+asset_references+published_assets 전수]·선택 비율) → control-tower 개입 대기열 asset_integrity 카드 시드(setJobIntervention·lane process·멱등·best-effort·강제모달0 #56), 정합 OK면 clear. 1클릭 교정(POST /api/products/[id]/asset-integrity {action:fix,confirm:true}·#46 게이트 → 루트→정규 이동·archive 백업·exhaustive ref 리맵). cron /api/cron/asset-integrity-sweep(KST 자정). tool='sharp'.
+- **검증**: 현 3상품 ok(depth-2 0·dead 0). 드리프트 round-trip(이동→detect→card seed[matrix 쿼리 노출]→1클릭 fix→복원→clear) PASS. tsc0·build0·외부 image API 0(Sharp만)·네이버 무접촉. 박제 §8.11 + #81.
+- **다음 1액션**: [Desktop] /dashboard 관제탑 정합 카드 부재(3상품 OK) 확인 + 의도 드리프트 1건 주입(파일 root 이동 or seed 호출)→카드 생성·1클릭 교정·재점검 OK 확인.
+
 ### 2026-06-15 (90) /assets STALE 캐시 근본수정 — Storage 리스트 라이브화 (FROM 💻 Code, main, additive·비가역0)
 - **What**: Desktop 실앱테스트 적발 — /api/products/[id]/assets 전상품 STALE(studio가 죽은 depth-2 URL 404 렌더·현 canonical 누락). 명화 /assets 22(pre-backfill snapshot) vs 실제 41. 배포로도 미소거(Vercel Data Cache). 근본=getServerClient supabase list가 Next Data Cache 잔류(force-dynamic만으론 SDK fetch 미차단). 수정=global.fetch no-store 주입(전 Storage read 라이브) + route fetchCache='force-no-store'+revalidate=0. 클라 이미 no-store.
 - **검증**: listProductAssets 라이브 = 명화 41(depth-2 0·전 canonical stage)·아이스트레이 2(detail1·archive1·depth-2 0)·cmp3afb 18(depth-2 0). tsc0·build0·네이버 무접촉. 박제 §8.10 + #80.

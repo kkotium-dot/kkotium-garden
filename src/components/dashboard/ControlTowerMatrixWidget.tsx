@@ -12,7 +12,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import {
   CheckCircle2, Loader2, Clock, XCircle, MinusCircle, ArrowRight, LayoutGrid, AlertTriangle, Hand,
-  ChevronDown, Copy, Check,
+  ChevronDown, Copy, Check, Wrench,
 } from 'lucide-react';
 import strings from '@/lib/i18n/control-tower-strings.ko.json';
 
@@ -490,6 +490,7 @@ const IV = m.intervention as {
   source_request: { label: string; lead: string; url: string };
   fidelity_check: { label: string; lead: string; components: string; forbidden: string; checks: string; mount: string; source: string };
   mount_check: { label: string; lead: string; mechanic: string; checks: string };
+  asset_integrity: { label: string; lead: string; depth2: string; dead: string; ratio: string; samples: string; fixable: string; fix: string; fixing: string; fixConfirm: string; fixDone: string; fixFail: string; clean: string };
 };
 
 function interventionLabel(type: string | undefined): string | null {
@@ -499,6 +500,7 @@ function interventionLabel(type: string | undefined): string | null {
   if (type === 'source_request') return IV.source_request.label;
   if (type === 'fidelity_check') return IV.fidelity_check.label;
   if (type === 'mount_check') return IV.mount_check.label;
+  if (type === 'asset_integrity') return IV.asset_integrity.label;
   return null;
 }
 
@@ -536,8 +538,51 @@ function CopyText({ text }: { text: string }) {
   );
 }
 
+// 1-click asset-integrity remediation button (confirm-gated, #46). Posts to the
+// per-product route, then refreshes the matrix so the card clears on success.
+function AssetIntegrityFix({ productId, onRefresh }: { productId: string; onRefresh?: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const run = async () => {
+    if (!window.confirm(IV.asset_integrity.fixConfirm)) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/products/${productId}/asset-integrity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'fix', confirm: true }),
+      }).then((r) => r.json());
+      if (res.success) {
+        setMsg(IV.asset_integrity.fixDone);
+        setTimeout(() => onRefresh?.(), 600);
+      } else {
+        setMsg(IV.asset_integrity.fixFail);
+      }
+    } catch {
+      setMsg(IV.asset_integrity.fixFail);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="mt-1.5 flex items-center gap-2">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={run}
+        className="inline-flex items-center gap-1 rounded-md bg-rose-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+      >
+        {busy ? <Clock size={11} className="animate-spin" /> : <Wrench size={11} />}
+        {busy ? IV.asset_integrity.fixing : IV.asset_integrity.fix}
+      </button>
+      {msg && <span className="text-[10px] text-slate-500">{msg}</span>}
+    </div>
+  );
+}
+
 // C-9 intervention detail — rendered inline (expandable, never a forced modal).
-function InterventionDetail({ type, payload }: { type: string; payload: unknown }) {
+function InterventionDetail({ type, payload, productId, onRefresh }: { type: string; payload: unknown; productId?: string; onRefresh?: () => void }) {
   const p = (payload ?? {}) as FireflyDropPayload & HeroCropPayload & SourceRequestPayload & FidelityCheckPayload & MountCheckPayload;
   if (type === 'firefly_drop' || type === 'firefly_auto') {
     // Same dropkit/prompt payload; firefly_auto only swaps the labels (the tab
@@ -697,10 +742,36 @@ function InterventionDetail({ type, payload }: { type: string; payload: unknown 
       </div>
     );
   }
+  if (type === 'asset_integrity') {
+    const ai = payload as {
+      depth2Count?: number; deadCount?: number; ratioCount?: number;
+      fixableDepth2?: number; fixableDeadRefs?: number; sampleFiles?: string[];
+    } | null;
+    const t = IV.asset_integrity;
+    const depth2 = ai?.depth2Count ?? 0;
+    const dead = ai?.deadCount ?? 0;
+    const ratio = ai?.ratioCount ?? 0;
+    const fixable = (ai?.fixableDepth2 ?? 0) + (ai?.fixableDeadRefs ?? 0);
+    return (
+      <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
+        <p className="text-slate-500">{t.lead}</p>
+        <div className="flex flex-wrap gap-1.5 text-[10px]">
+          <span className={`rounded px-1.5 py-0.5 ${depth2 > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-400'}`}>{t.depth2}: {depth2}</span>
+          <span className={`rounded px-1.5 py-0.5 ${dead > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-400'}`}>{t.dead}: {dead}</span>
+          {ratio > 0 && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-700">{t.ratio}: {ratio}</span>}
+          <span className="rounded bg-slate-50 px-1.5 py-0.5 text-slate-400">{t.fixable}: {fixable}</span>
+        </div>
+        {ai?.sampleFiles && ai.sampleFiles.length > 0 && (
+          <p className="truncate text-[10px] text-slate-400">{t.samples}: {ai.sampleFiles.join(', ')}</p>
+        )}
+        {productId && fixable > 0 && <AssetIntegrityFix productId={productId} onRefresh={onRefresh} />}
+      </div>
+    );
+  }
   return null;
 }
 
-function ActionQueueCard({ item }: { item: ActionQueueItem }) {
+function ActionQueueCard({ item, onRefresh }: { item: ActionQueueItem; onRefresh?: () => void }) {
   const [open, setOpen] = useState(false);
   const s = CATEGORY_STYLE[item.category];
   const hasIntervention = Boolean(item.interventionType);
@@ -731,7 +802,7 @@ function ActionQueueCard({ item }: { item: ActionQueueItem }) {
             <ChevronDown size={10} className={open ? 'rotate-180 transition' : 'transition'} />
             {open ? IV.collapse : IV.expand}
           </button>
-          {open && <InterventionDetail type={item.interventionType as string} payload={item.payload} />}
+          {open && <InterventionDetail type={item.interventionType as string} payload={item.payload} productId={item.productId} onRefresh={onRefresh} />}
         </>
       )}
     </div>
@@ -742,7 +813,7 @@ function aqCategory(c: ActionCategory): string {
   return m.actionQueue.category[c];
 }
 
-function OperatorActionQueue({ items }: { items: ActionQueueItem[] }) {
+function OperatorActionQueue({ items, onRefresh }: { items: ActionQueueItem[]; onRefresh?: () => void }) {
   const aq = m.actionQueue;
   const sorted = [...items].sort(
     (a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category),
@@ -756,7 +827,7 @@ function OperatorActionQueue({ items }: { items: ActionQueueItem[] }) {
       </div>
       <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
         {sorted.map((item) => (
-          <ActionQueueCard key={item.productId} item={item} />
+          <ActionQueueCard key={item.productId} item={item} onRefresh={onRefresh} />
         ))}
       </div>
     </div>
@@ -856,6 +927,7 @@ export default function ControlTowerMatrixWidget() {
 
       <OperatorActionQueue
         items={rows.map((r) => r.actionQueue).filter((a): a is ActionQueueItem => Boolean(a))}
+        onRefresh={() => mutate()}
       />
 
       <div className="overflow-x-auto">
