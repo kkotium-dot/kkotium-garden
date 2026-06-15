@@ -213,6 +213,13 @@ async function execute(env: Env, plan: PlanItem[]): Promise<void> {
       if (!(await urlReachable(publicUrl(env, it.toKey)))) {
         throw new Error(`verify failed: new URL not reachable (${it.toKey})`);
       }
+      // 3.5) SELF-CHECK: no DB field may still reference the old key/URL, else
+      // retire would dangle a live reference. Skip retire (keep both copies) on
+      // a non-zero count so the operator can inspect — never blind-retire.
+      const residual = await residualRefCount(env, it);
+      if (residual > 0) {
+        throw new Error(`residual refs still point to old key (${residual}) — NOT retiring ${it.fromKey}`);
+      }
       // 4) RETIRE original.
       if (it.retire.op === 'delete') await removeObject(env, it.fromKey);
       else await moveObject(env, it.fromKey, it.retire.toKey!);
@@ -226,8 +233,14 @@ async function execute(env: Env, plan: PlanItem[]): Promise<void> {
   console.log(`\nDONE: ${ok} ok, ${failed} failed, ${plan.length} planned`);
 }
 
-// Swap old public URL -> new public URL across Product.mainImage / images /
-// extra_images and AssetRegistry. Idempotent (no-op when the old URL is absent).
+// Scalar Product string columns that may hold a single public URL. These were
+// found by the read-only ref audit (scripts/audit-legacy-refs.ts) to reference
+// legacy depth-2 keys — they MUST be re-pointed or retire would dangle them.
+const PRODUCT_URL_COLUMNS = ['main_image_url', 'detail_image_url', 'source_detail_url'] as const;
+
+// Swap old public URL -> new public URL across every Product field that can hold
+// a storage ref (mainImage / images / extra_images / the scalar *_url columns)
+// and AssetRegistry. Idempotent (no-op when the old URL is absent).
 async function updateDbRefs(env: Env, it: PlanItem): Promise<void> {
   const mod = await import('../src/lib/prisma');
   const prisma = mod.prisma;
@@ -236,7 +249,10 @@ async function updateDbRefs(env: Env, it: PlanItem): Promise<void> {
 
   const product = await prisma.product.findUnique({
     where: { id: it.pid },
-    select: { mainImage: true, images: true, extra_images: true },
+    select: {
+      mainImage: true, images: true, extra_images: true,
+      main_image_url: true, detail_image_url: true, source_detail_url: true,
+    },
   });
   if (product) {
     const data: Record<string, unknown> = {};
@@ -257,6 +273,9 @@ async function updateDbRefs(env: Env, it: PlanItem): Promise<void> {
       });
       if (touched) data.extra_images = next;
     }
+    for (const col of PRODUCT_URL_COLUMNS) {
+      if ((product as Record<string, unknown>)[col] === oldUrl) data[col] = newUrl;
+    }
     if (Object.keys(data).length > 0) {
       await prisma.product.update({ where: { id: it.pid }, data });
     }
@@ -271,6 +290,41 @@ async function updateDbRefs(env: Env, it: PlanItem): Promise<void> {
   } catch {
     // table not migrated / no row — non-fatal.
   }
+}
+
+// Pre-retire self-check: count any DB field still referencing the OLD public URL
+// (or old key for AssetRegistry). MUST be 0 before retiring the original, else
+// retire would 404 a live reference. Scans the comprehensive ref-holder set.
+async function residualRefCount(env: Env, it: PlanItem): Promise<number> {
+  const mod = await import('../src/lib/prisma');
+  const prisma = mod.prisma;
+  const oldUrl = publicUrl(env, it.fromKey);
+  let n = 0;
+
+  const product = await prisma.product.findUnique({
+    where: { id: it.pid },
+    select: {
+      mainImage: true, images: true, extra_images: true, additionalImages: true,
+      main_image_url: true, detail_image_url: true, source_detail_url: true, imageAltTexts: true,
+    },
+  });
+  if (product) {
+    if (JSON.stringify(product).includes(oldUrl)) n += 1;
+  }
+
+  // Empty today, but check for robustness/idempotency and future rows.
+  const refs = await prisma.assetReference.count({ where: { assetUrn: { contains: oldUrl } } });
+  n += refs;
+  const pub = await prisma.publishedAsset.count({
+    where: { OR: [{ assetUrn: { contains: oldUrl } }, { naverImageUrl: { contains: oldUrl } }] },
+  });
+  n += pub;
+
+  // AssetRegistry holds KEYS, not URLs — the old key must no longer be present.
+  const reg = await prisma.assetRegistry.count({ where: { path: it.fromKey } });
+  n += reg;
+
+  return n;
 }
 
 async function main(): Promise<void> {
