@@ -171,3 +171,9 @@
 
 ### 8.8 삭제 확인 UX 업그레이드 (#73 직관우선·오삭제 방지)
 - 기존 익명 native confirm 2단계(대상 미표기) → 커스텀 모달: 썸네일 + 자산명 + 단계 라벨 + 용량 · '되돌릴 수 없습니다(스토리지 영구 제거)' 비가역 경고 · 추가 이미지 참조 시 '자동 해제' 안내 · 대표는 진입 전 차단. 모달 confirm만 실 삭제 트리거(비가역 #46, confirm:true 유지).
+
+### 8.9 백필 'dangling 0' 정정 — DB ref 감사/치환 EXHAUSTIVE 전환 (2026-06-15 Desktop #45 적발)
+- **정정**: 직전 백필의 'dangling 0' 보고는 부정확. Desktop to_jsonb 전수스캔서 1건 적발 — `Product.quality_reasons`(jsonb·cmpnooli4)에 구 depth-2 URL `/.../detail-S6-1779884981263.png`(404) 잔존. 근본원인 = updateDbRefs와 사전감사가 **하드코딩 컬럼리스트**(mainImage/images/extra_images/+*_url) 사용 → jsonb 컬럼 quality_reasons 누락.
+- **instance 교정**: 캡처 후 정규 URL `/.../detail/detail-S6-1779884981263.png`로 치환(storage 200 확인·구 depth-2 400). 1필드/1치환.
+- **class 근본수정(전상품)**: updateDbRefs·residualRefCount를 **컬럼리스트-FREE**로 전환 — 전체 row를 fetch해 모든 컬럼의 JSON 표현을 스캔(중첩 jsonb 포함), 변경된 컬럼만 기록. 사후 자가검증도 `to_jsonb(row)` 전수스캔으로 depth-2 ref=0 확인. 대상: Product 전컬럼 + asset_references + published_assets + asset_registry. 신규 `scripts/remap-depth2-refs.ts`(dangling-only 규칙: depth-2 원본 부재 && 정규 존재일 때만 치환·dry-by-default·자가검증). 사후 전3상품 잔존 depth-2 ref=0.
+- **taxonomy LOW(GO#3 확장)**: `backdrop-S6-prev-firefly.png`가 plate로 분류되던 문제 — archive 마커 규칙을 plate 앞으로 이동(retire 마커가 backdrop 토큰을 이김). 단 'old'가 'gold/golden' 내부서 오탐하지 않도록 archive 규칙에 word-boundary(\b) 적용(전상품·미래파일·기존 plate/composite 회귀0).

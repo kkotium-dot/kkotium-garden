@@ -1,5 +1,15 @@
 ## 2026-06-14 (세션7-i-Code) 내용인식 분류 + IA 3탭 + 한글화 + 인앱삭제
 ## 2026-06-15 (세션7-i-fix-Code) 분류기 누끼 신호 교정(알파≠투명) + 삭제 모달 UX
+## 2026-06-15 (세션7-i-fix2-Code) 백필 dangling 정정 — DB ref EXHAUSTIVE 전환 + taxonomy archive 선행
+
+**[권위]** docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §8.9 + PRINCIPLES_LEARNED #79.
+**[Desktop #45 적발]** 직전 백필 'dangling 0' 부정확 — to_jsonb 전수스캔서 Product.quality_reasons(jsonb·cmpnooli4)에 구 depth-2 URL `/.../detail-S6-1779884981263.png`(404) 잔존. 근본원인=updateDbRefs+사전감사가 하드코딩 컬럼리스트 사용→jsonb 누락.
+**[instance 교정]** 캡처 후 정규 URL `/.../detail/detail-S6-1779884981263.png`로 치환. storage 200 확인·구 depth-2 400. 1필드/1치환.
+**[class 근본수정·전상품]** scripts/backfill-legacy-assets.ts updateDbRefs·residualRefCount를 컬럼리스트-FREE 전수스캔으로 전환(전체 row fetch·모든 컬럼 JSON 스캔·중첩 jsonb 포함·변경분만 write-back). 하드코딩 PRODUCT_URL_COLUMNS 폐기. 신규 scripts/remap-depth2-refs.ts(dangling-only: depth-2 원본 부재&&정규 존재일 때만·dry-by-default·자가검증). 사후 전3상품 잔존 depth-2 ref=0.
+**[taxonomy LOW·GO#3 확장]** asset-taxonomy.ts archive 마커 규칙을 plate 앞으로(retire 마커가 backdrop 토큰 이김). word-boundary(\b)로 'gold/golden' 내 'old' 오탐 차단. backdrop-S6-prev-firefly→archive, backdrop-gold→plate 회귀0(8케이스 PASS).
+**[검증]** tsc0·build0·이모지0·코드영어·prisma 싱글톤·sentinel clean·네이버 무접촉. 비가역=DB ref 1건 교정(캡처 후).
+**[다음]** [Desktop] to_jsonb 전수 재검증→Firefly 4컷.
+
 
 **[권위]** docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §8.7·8.8 박제 + PRINCIPLES_LEARNED #78.
 **[Desktop 실측 BUG(세션7-i)]** 분류기 누끼 과발화 — 같은 치수 PNG vs JPEG: 1000² PNG→cutout(오)·JPEG→thumbnail(정) / 400×1200 PNG→cutout(오)·JPEG→detail(정) / 900×1125 PNG→cutout(오)·JPEG→composite(정). 원인=cutout 신호가 hasAlpha(채널 존재). canvas/Firefly/디자인툴 PNG는 불투명이어도 RGBA→전 PNG 오분류. 스모크가 '알파有·불투명 PNG' 케이스 누락=사각지대.

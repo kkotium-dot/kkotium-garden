@@ -73,6 +73,11 @@
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
 
+### 2026-06-15 (89) 백필 dangling 정정 — DB ref 감사/치환 EXHAUSTIVE 전환 + taxonomy archive 선행 (FROM 💻 Code, main, 비가역 1·교정)
+- **What**: Desktop #45 적발 — 직전 'dangling 0' 부정확. Product.quality_reasons(jsonb·cmpnooli4)에 구 depth-2 URL 잔존(404). 근본=하드코딩 컬럼리스트가 jsonb 누락. instance 교정(정규 detail/ URL·200 확인) + class 근본수정(updateDbRefs·residualRefCount 컬럼리스트-FREE 전수스캔·중첩 jsonb 포함) + 신규 scripts/remap-depth2-refs.ts(dangling-only·dry-by-default·자가검증) + taxonomy archive 마커 plate 선행(GO#3 확장·\b word-boundary로 gold 오탐 차단).
+- **결과**: 전3상품 사후 전수스캔 잔존 depth-2 ref=0. 교정 1필드/1치환. build0·tsc0·네이버 무접촉.
+- **다음 1액션**: [Desktop] to_jsonb 전수 재검증(0 확인) → Firefly 4컷 / 다음 상품.
+
 ### 2026-06-15 (88) 분류기 누끼 신호 교정(알파≠투명) + 삭제 모달 UX (FROM 💻 Code, main, 비가역 0·additive)
 - **What**: 세션7-i Desktop 실측 BUG 수정 — cutout 신호를 `hasAlpha`(채널 존재)에서 `hasAlpha && sharp.stats().isOpaque===false`(실제 투명)로 교정. 불투명 RGBA(canvas/Firefly/디자인툴 PNG) → 누끼 신호 무시·비율 폴백. 3경로(/assets/classify·/assets/upload·/ingest-firefly) 신호 일원화 + 응답에 isOpaque·hasTransparency 추가·칩 '투명 배경' 사유. 삭제 확인 = native confirm 2단계 → 커스텀 모달(썸네일·자산명·단계·비가역·추가이미지 해제 경고).
 - **재검증(sharp 실이미지 7/7 PASS)**: 1000² 불투명PNG→thumbnail / 400×1200→detail / 900×1125→composite / 투명PNG→cutout / JPEG 3종 회귀 전부 정답.

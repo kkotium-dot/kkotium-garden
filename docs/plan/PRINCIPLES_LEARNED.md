@@ -875,3 +875,10 @@ function kkAssertGenerateMode(){
 
 - **알파 채널 존재 ≠ 투명**: canvas/Firefly/디자인툴 PNG는 불투명이어도 RGBA(4채널). `hasAlpha`를 cutout(누끼) 신호로 쓰면 전 PNG 오분류. 실제 투명 = `hasAlpha && sharp(buf).stats().isOpaque === false`(투명 픽셀 존재). 불투명 RGBA → 신호 무시·비율 폴백.
 - **사각지대 교훈**: 스모크가 '알파有·불투명 PNG' 케이스를 누락(PNG=JPEG 동일 치수 대조로 적발). 신호 교정 시 실이미지(sharp 생성)로 PNG/JPEG 양쪽 재검증 의무. #73(직관우선) 검증완료 — 투명 사유 칩 표시로 분류 근거 투명화. #45(출력 fact-check)·#63(가짜보고 금지) 연속.
+
+## 작업원칙 #79 — DB ref 일괄 치환/감사는 하드코딩 컬럼리스트 금지 (2026-06-15 백필 dangling 적발)
+
+스토리지 URL/키를 DB에서 일괄 치환하거나 dangling을 감사할 때, **하드코딩한 컬럼 목록을 쓰지 않는다** — jsonb·중첩 필드를 반드시 누락한다(사례: quality_reasons).
+
+- **EXHAUSTIVE 판정**: 전체 row를 fetch해 모든 컬럼의 JSON 표현(또는 `to_jsonb(row)::text`)을 전수스캔. 변경된 컬럼만 write-back. 자가검증(잔존 ref=0)도 동일한 전수스캔으로. 대상은 Product 전컬럼 + 연관 테이블(asset_references·published_assets·asset_registry) 전부.
+- **치환 안전규칙(dangling-only)**: depth-2 원본이 storage서 사라졌고 정규 키가 존재할 때만 치환(정규 미존재=orphan은 날조 금지·보고). 캡처 후 교정·dry-by-default·멱등. #45(출력 fact-check)·#46(비가역) 연속. 'dangling 0' 같은 단정은 전수스캔으로 입증된 뒤에만.

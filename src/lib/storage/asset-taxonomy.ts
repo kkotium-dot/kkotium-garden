@@ -47,15 +47,20 @@ export const LEGACY_STAGE_DIRS: readonly string[] = ['thumb'];
 //   A) 'backdrop' is added to the plate rule. A backdrop (the asset-source-
 //      resolver loads backdrop-{skeletonId}.png as a COMPOSITE INPUT background)
 //      is semantically a clean background plate, not a finished composite.
-//   B) The archive rule is moved AHEAD of composite/detail/thumbnail so a
-//      retire marker wins over a content marker: 'composite-old.png' classifies
-//      as archive (retire intent), not composite (content). cutout / reference /
-//      plate stay ahead of archive (a live working asset keeps its stage).
+//   B) The archive rule is moved AHEAD of plate/composite/detail/thumbnail so a
+//      retire marker wins over a content marker: 'composite-old.png' and
+//      'backdrop-S6-prev-firefly.png' classify as archive (retire intent), not
+//      composite/plate (content) — the 'prev'/'old' marker must not be shadowed
+//      by the 'backdrop' plate token (2026-06-15, GO#3 extended). Only cutout /
+//      reference stay ahead of archive (a live working asset keeps its stage).
 const SOURCE_KIND_RULES: ReadonlyArray<{ test: RegExp; kind: AssetKind }> = [
   { test: /cutout|whitefront|nukki|transparent|remove[_-]?bg|knockout/i, kind: 'cutout' },
   { test: /reference|ref[_-]?slot|ref[_-]?drop|refcut/i, kind: 'reference' },
+  // Word-bounded so a retire token is matched only as a delimited word — NOT as
+  // a substring (e.g. 'old' must not fire inside 'gold' / 'golden', common in
+  // plate/composite names). Required now that archive precedes plate/composite.
+  { test: /\b(?:archive|old|prev|backup|reject|deprecated)\b/i, kind: 'archive' },
   { test: /plate|backplate|back[_-]?plate|backdrop|turntable|clean[_-]?plate/i, kind: 'plate' },
-  { test: /archive|old|prev|backup|reject|deprecated/i, kind: 'archive' },
   { test: /composite|mood|newbg|new[_-]?bg|firefly|lifestyle|scene|carleather/i, kind: 'composite' },
   { test: /detail|section|hero|notice|story/i, kind: 'detail' },
   { test: /thumb|thumbnail|crop|whitebg|white[_-]?bg|represent|main/i, kind: 'thumbnail' },

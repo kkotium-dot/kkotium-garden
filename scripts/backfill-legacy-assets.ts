@@ -233,52 +233,44 @@ async function execute(env: Env, plan: PlanItem[]): Promise<void> {
   console.log(`\nDONE: ${ok} ok, ${failed} failed, ${plan.length} planned`);
 }
 
-// Scalar Product string columns that may hold a single public URL. These were
-// found by the read-only ref audit (scripts/audit-legacy-refs.ts) to reference
-// legacy depth-2 keys — they MUST be re-pointed or retire would dangle them.
-const PRODUCT_URL_COLUMNS = ['main_image_url', 'detail_image_url', 'source_detail_url'] as const;
-
-// Swap old public URL -> new public URL across every Product field that can hold
-// a storage ref (mainImage / images / extra_images / the scalar *_url columns)
-// and AssetRegistry. Idempotent (no-op when the old URL is absent).
+// EXHAUSTIVE swap of one old public URL -> new public URL across EVERY Product
+// column (including nested jsonb such as quality_reasons) — no hardcoded column
+// list (a hardcoded list missed quality_reasons and dangled it). The full row is
+// fetched, each column's JSON form is string-replaced, and only changed columns
+// are written. Idempotent (no-op when the old URL is absent). AssetRegistry holds
+// keys, re-pointed by key; asset_references / published_assets are URN-based.
 async function updateDbRefs(env: Env, it: PlanItem): Promise<void> {
   const mod = await import('../src/lib/prisma');
   const prisma = mod.prisma;
   const oldUrl = publicUrl(env, it.fromKey);
   const newUrl = publicUrl(env, it.toKey);
 
-  const product = await prisma.product.findUnique({
-    where: { id: it.pid },
-    select: {
-      mainImage: true, images: true, extra_images: true,
-      main_image_url: true, detail_image_url: true, source_detail_url: true,
-    },
-  });
+  const product = (await prisma.product.findUnique({ where: { id: it.pid } })) as Record<string, unknown> | null;
   if (product) {
     const data: Record<string, unknown> = {};
-    if (product.mainImage === oldUrl) data.mainImage = newUrl;
-    if (Array.isArray(product.images) && product.images.includes(oldUrl)) {
-      data.images = product.images.map((u: string) => (u === oldUrl ? newUrl : u));
-    }
-    const extra = product.extra_images;
-    if (Array.isArray(extra)) {
-      let touched = false;
-      const next = extra.map((e: unknown) => {
-        if (e === oldUrl) { touched = true; return newUrl; }
-        if (e && typeof e === 'object' && (e as { url?: unknown }).url === oldUrl) {
-          touched = true;
-          return { ...(e as object), url: newUrl };
-        }
-        return e;
-      });
-      if (touched) data.extra_images = next;
-    }
-    for (const col of PRODUCT_URL_COLUMNS) {
-      if ((product as Record<string, unknown>)[col] === oldUrl) data[col] = newUrl;
+    for (const [k, v] of Object.entries(product)) {
+      if (k === 'id' || v == null) continue;
+      const s = JSON.stringify(v);
+      if (!s.includes(oldUrl)) continue;
+      data[k] = JSON.parse(s.split(oldUrl).join(newUrl));
     }
     if (Object.keys(data).length > 0) {
       await prisma.product.update({ where: { id: it.pid }, data });
     }
+  }
+
+  // URN-based tables — rewrite any row that embeds the old URL (generic).
+  for (const r of await prisma.assetReference.findMany({ where: { assetUrn: { contains: oldUrl } }, select: { id: true, assetUrn: true } })) {
+    await prisma.assetReference.update({ where: { id: r.id }, data: { assetUrn: r.assetUrn.split(oldUrl).join(newUrl) } });
+  }
+  for (const a of await prisma.publishedAsset.findMany({ where: { OR: [{ assetUrn: { contains: oldUrl } }, { naverImageUrl: { contains: oldUrl } }] }, select: { id: true, assetUrn: true, naverImageUrl: true } })) {
+    await prisma.publishedAsset.update({
+      where: { id: a.id },
+      data: {
+        assetUrn: a.assetUrn ? a.assetUrn.split(oldUrl).join(newUrl) : a.assetUrn,
+        naverImageUrl: a.naverImageUrl ? a.naverImageUrl.split(oldUrl).join(newUrl) : a.naverImageUrl,
+      },
+    });
   }
 
   // AssetRegistry path is unique — re-point the row to the new key/stage.
@@ -292,37 +284,24 @@ async function updateDbRefs(env: Env, it: PlanItem): Promise<void> {
   }
 }
 
-// Pre-retire self-check: count any DB field still referencing the OLD public URL
-// (or old key for AssetRegistry). MUST be 0 before retiring the original, else
-// retire would 404 a live reference. Scans the comprehensive ref-holder set.
+// Pre-retire self-check: count ANY DB field still referencing the OLD public URL
+// (or old key for AssetRegistry), via an EXHAUSTIVE full-row scan — not a column
+// list. MUST be 0 before retiring the original, else retire would 404 a live ref.
 async function residualRefCount(env: Env, it: PlanItem): Promise<number> {
   const mod = await import('../src/lib/prisma');
   const prisma = mod.prisma;
   const oldUrl = publicUrl(env, it.fromKey);
   let n = 0;
 
-  const product = await prisma.product.findUnique({
-    where: { id: it.pid },
-    select: {
-      mainImage: true, images: true, extra_images: true, additionalImages: true,
-      main_image_url: true, detail_image_url: true, source_detail_url: true, imageAltTexts: true,
-    },
-  });
-  if (product) {
-    if (JSON.stringify(product).includes(oldUrl)) n += 1;
-  }
+  const product = await prisma.product.findUnique({ where: { id: it.pid } });
+  if (product && JSON.stringify(product).includes(oldUrl)) n += 1;
 
-  // Empty today, but check for robustness/idempotency and future rows.
-  const refs = await prisma.assetReference.count({ where: { assetUrn: { contains: oldUrl } } });
-  n += refs;
-  const pub = await prisma.publishedAsset.count({
+  n += await prisma.assetReference.count({ where: { assetUrn: { contains: oldUrl } } });
+  n += await prisma.publishedAsset.count({
     where: { OR: [{ assetUrn: { contains: oldUrl } }, { naverImageUrl: { contains: oldUrl } }] },
   });
-  n += pub;
-
   // AssetRegistry holds KEYS, not URLs — the old key must no longer be present.
-  const reg = await prisma.assetRegistry.count({ where: { path: it.fromKey } });
-  n += reg;
+  n += await prisma.assetRegistry.count({ where: { path: it.fromKey } });
 
   return n;
 }
