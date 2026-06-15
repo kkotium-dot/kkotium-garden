@@ -1,6 +1,15 @@
 # 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev19 · Scent→Mood 컨셉 재설계 + 생성설정 가드 + april/cotton v3·세션7-e)
 
 ## rev22 세션7-i-Code (2026-06-14 Code) — 내용인식 분류 + IA 3탭 + 한글화 + 인앱삭제
+## rev23 세션7-i-fix1~5-Code (2026-06-15 Code) — 누끼신호 교정·백필 종결·STALE 근본수정·정합 가드·워크플로 rev2
+- ✅ **fix1 분류기 누끼 신호(#78)**: cutout=hasAlpha→실제 투명(stats().isOpaque===false). 3경로 일원화·sharp 7/7 PASS. 삭제 모달 UX.
+- ✅ **item1 레거시 백필 종결(#79)**: 20파일/3상품 root→정규 stage 이동·원본 archive 백업·DB ref EXHAUSTIVE 전수스캔(중첩jsonb 포함, 하드코딩 컬럼리스트 폐기)·잔존 depth-2 ref=0. quality_reasons dangling 1건 적발·교정.
+- ✅ **#80 /assets STALE 근본수정**: getServerClient global.fetch no-store(전 Storage read 라이브)+route fetchCache. production 검증 명화 41·depth-2 0(stale 22 소거).
+- ✅ **#81 자산 정합 가드(시스템 신규)**: checkProductIntegrity(라이브 depth-2·dead ref·선택 비율) → control-tower asset_integrity 카드 시드/clear(멱등·best-effort·강제모달0)·1클릭 교정(confirm #46)·cron 상시 스윕. **production 검증: 3상품 전부 ok(depth-2 0·dead 0) 클린**. 드리프트 round-trip PASS.
+- ✅ **워크플로 rev2(docs)**: docs/design/PRODUCT_REGISTRATION_WORKFLOW.md — 자산폴더v2·분류/비율·realism lane·Firefly자동화·상시가드(#79/#80/#81)·작업원칙·체크리스트 codify.
+- ✅ **검증**: tsc0·build0·이모지0·prisma 싱글톤·sentinel clean·외부 image API 0(Sharp만)·네이버 무접촉·additive·비가역0(교정만 confirm). 박제 §8.7~8.11 + #78~#81.
+- ⏳ **다음(ACTIVE)**: [Desktop] item2 Firefly 4컷 생성→누끼합성 / item3 발행(네이버 v2 FULL REPLACE·#57). 관제탑 정합 카드 부재 확인 + (선택)드리프트 주입 검증.
+
 - ✅ **task1 내용인식 분류**: classifyAsset(asset-classify.ts) 파일명 힌트 + Sharp 메타(alpha/비율/해상도). /assets/upload·/ingest-firefly confidence+qualityFlags+conflict. preflight /assets/classify. 칩 표시.
 - ✅ **task2 IA 5→3탭**: WorkbenchTabs grouped(상품분석/이미지/발행). opt-in·폴백·회귀0.
 - ✅ **task3 한글화**: 단계/배경판/참고 이미지/자동 분류/이 단계로 올리기/폴더 경로 복사/원본/이전 방식. ko.json 음차 0.

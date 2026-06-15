@@ -73,6 +73,12 @@
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
 
+### 2026-06-15 (92) 워크플로 rev2 codify + 상태 정합 → item2(Firefly)·item3(발행) ACTIVE (FROM 💻 Code, main a96909c, docs·비가역0)
+- **종결 확인**: item1 레거시 백필(#79)·#80 STALE 근본수정·#81 자산 정합 가드 전부 production 검증 클린(3상품 ok·depth-2 0·dead 0). 등록 워크플로 rev2 codify(권위 PRODUCT_REGISTRATION_WORKFLOW.md).
+- **ACTIVE item2 (Firefly)**: [Desktop] 4컷 생성(realism lane·생성설정 4플래그 확인)→누끼합성(v8 참조드롭 하모나이즈)→정규 stage 적재. firefly_auto 카드 경유.
+- **ACTIVE item3 (발행)**: 충실도/실물대조/마운트/네이밍 게이트 통과 후 네이버 v2 FULL REPLACE(#57·전체 payload)·명시 GO(비가역 #46).
+- **다음 1액션**: [Desktop] /dashboard 관제탑 정합 카드 부재 확인 → Firefly 4컷 생성 시작.
+
 ### 2026-06-15 (91) 자산 정합 점검 시스템 가드 (#81·#80 후속, FROM 💻 Code, main, additive·비가역0·교정만 confirm게이트)
 - **What**: 드리프트 상시감지·개입점화. checkProductIntegrity(라이브 listProductAssets 기준 depth-2/root 잔존·DB ref dead[전컬럼 중첩jsonb+asset_references+published_assets 전수]·선택 비율) → control-tower 개입 대기열 asset_integrity 카드 시드(setJobIntervention·lane process·멱등·best-effort·강제모달0 #56), 정합 OK면 clear. 1클릭 교정(POST /api/products/[id]/asset-integrity {action:fix,confirm:true}·#46 게이트 → 루트→정규 이동·archive 백업·exhaustive ref 리맵). cron /api/cron/asset-integrity-sweep(KST 자정). tool='sharp'.
 - **검증**: 현 3상품 ok(depth-2 0·dead 0). 드리프트 round-trip(이동→detect→card seed[matrix 쿼리 노출]→1클릭 fix→복원→clear) PASS. tsc0·build0·외부 image API 0(Sharp만)·네이버 무접촉. 박제 §8.11 + #81.

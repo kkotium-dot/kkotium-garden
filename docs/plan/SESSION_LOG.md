@@ -3,6 +3,13 @@
 ## 2026-06-15 (세션7-i-fix2-Code) 백필 dangling 정정 — DB ref EXHAUSTIVE 전환 + taxonomy archive 선행
 ## 2026-06-15 (세션7-i-fix3-Code) /assets STALE 캐시 근본수정 — Storage 리스트 라이브화
 ## 2026-06-15 (세션7-i-fix4-Code) 자산 정합 점검 시스템 가드 (#81·#80 후속)
+## 2026-06-15 (세션7-i-fix5-Code) 등록 워크플로 rev2 codify + 트래커 상태 정합
+
+**[워크플로 rev2]** docs/design/PRODUCT_REGISTRATION_WORKFLOW.md v1→rev2(Desktop Filesystem 기록·Code 커밋 a96909c). 자산폴더v2·분류/비율·realism lane(#71)·Firefly자동화(#74/#77)·전상품 상시가드(#79 전수스캔·#80 라이브 리스팅·#81 정합 가드)·작업원칙 테이블·체크리스트 codify. 권위문서(전상품 등록 표준). docs only·비가역0.
+**[누적 상태 종결 정합]** (1) item1 레거시 백필 #79 종결 — 20파일/3상품·잔존 depth-2 ref=0·quality_reasons dangling 교정. (2) #80 /assets STALE 근본수정 종결 — no-store 라이브·production 명화 41·depth-2 0. (3) #81 자산 정합 가드 신규 — **production 검증 클린(3상품 ok·depth-2 0·dead 0)**·드리프트 round-trip PASS.
+**[검증]** sentinel clean·tsc/build 무관(docs). 박제 §8.7~8.11 + 작업원칙 #78~#81.
+**[다음 ACTIVE]** [Desktop] item2 Firefly 4컷 생성→누끼합성 / item3 발행(네이버 v2 FULL REPLACE). 관제탑 정합 카드 부재(3상품 OK) 확인 + (선택)드리프트 주입 검증.
+
 
 **[권위]** docs/design/OPERATOR_SYSTEM_BLUEPRINT.md(개입 대기열) + 박제 §8.11 + PRINCIPLES_LEARNED #81.
 **[배경]** #80 stale-listing은 사람이 studio를 봐야 드러남 → 드리프트 상시감지·개입점화 부재의 프로젝트-전체 확장.

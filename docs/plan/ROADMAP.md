@@ -89,6 +89,8 @@
 
 > 2026-06-15 갱신: 세션7-i Desktop 검증 BUG(분류기 누끼 과발화) 수정 완료 — cutout 신호 hasAlpha→실제 투명(isOpaque===false). 3경로 일원화·sharp 7/7 PASS. 다음=[Desktop] /assets/classify 불투명PNG 재검증→레거시 백필 GO / Firefly 4컷. 상세 TASK_BRIDGE §3(88)·SESSION_LOG 세션7-i-fix.
 
+> 2026-06-15 갱신2: 세션7-i-fix1~5 전부 종결·production 검증 클린 — 분류기 누끼신호(#78)·레거시 백필(#79)·/assets STALE 근본수정(#80)·자산 정합 가드(#81, 3상품 ok·depth-2 0·dead 0)·등록 워크플로 rev2 codify. **다음 ACTIVE = item2 Firefly 4컷 생성→누끼합성 / item3 발행(네이버 v2 FULL REPLACE·명시 GO)**. 상세 TASK_BRIDGE §3(92)·PARALLEL_WORK_TRACKER rev23.
+
 ```
 [꽃틔움 가든 / Desktop / P0 실사용 검증: image-studio production fa9ad01]
 production HEAD fa9ad01 READY 확인 후 /studio·/dashboard 실사용:
