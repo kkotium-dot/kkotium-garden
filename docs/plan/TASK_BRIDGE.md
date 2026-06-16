@@ -81,7 +81,8 @@
   - 4) category 동기화 — src/lib/naver/category-sync.ts 헬퍼(전상품·naverCategoryCode→leaf, syncProductCategory) + 명화 Product.category DB '아로마방향제/디퓨저'→'차량용방향제' 동기화.
 - **검증/게이트**: tsc0·build0·이모지0·신규한글리터럴0(키워드/문구 i18n JSON)·prisma 싱글톤·sentinel clean·테스트 11 PASS. 로컬 실증: 명화=9슬롯(scent_note 복원·lowInvolvement false)·아이스트레이=6중립(향0)·순수소모품=가드예외(여전히 단축). prod 3상품 재호출(명화 복원·아이스 중립·달항아리 50000963 중립) = push+deploy 후.
 - **패치 위치**: src/lib/engine/category-dna.ts · src/lib/engine/slot-decision-table.ts · src/lib/engine/seeds/product-signal-keywords.json · src/lib/jobs/intervention.ts · src/lib/automation/control-tower-engine.ts · src/app/api/products/asset-jobs-matrix/route.ts · src/components/dashboard/ControlTowerMatrixWidget.tsx · src/lib/i18n/control-tower-strings.ko.json · src/lib/naver/category-sync.ts.
-- **다음 1액션**: [Desktop] /studio 3상품 분석탭 실측 — 명화 9슬롯(향노트 포함)·아이스트레이 6중립(향노트 부재)·관제탑 미시드 개입카드(idle 상품에서 'category DNA 미설정') 렌더 확인. 통과 시 ICE-TRAY-DNA 종결. [결정] PUBLISH-명화·CAPTURE-METHOD(3h).
+- **VERIFIED (Desktop 2026-06-17)**: item1/3/4 PASS(명화 9복원·아이스 6중립·라벨동기화·명화 준비도 S/94) · item2 zero-masking PASS(positive 렌더=idle+미시드 상품 부재로 미관측). ICE-TRAY-DNA 종결(#88).
+- **다음 1액션**: [결정] PUBLISH-명화 · CAPTURE-METHOD(3h). [Stage 2 후속·비긴급] UNSEEDED-BACKLOG-BADGE — 저긴급 상시 배지(미시드 N·DNA 시드 권고·긴급큐 비마스킹·#55·#56), branch feat/unseeded-backlog-badge.
 
 ### 2026-06-17 (94) Image+SEO/ROI Engine Stage 1 빌드 완료 + 6축 main 머지 (FROM 💻 Code, main 8964ce7, additive·비가역0·네이버 무접촉)
 - **MERGE**: 6AXIS-MERGE GO 수행 — feat/mood-camera-system → main fast-forward(349b9db)·push·prod LIVE(6축 UI + 엔진 Stage 0). verify-vercel-deploy OK.

@@ -15,12 +15,13 @@
 | IMG-INGEST | P2 | Desktop | TODO | — | cut-1~4 → ingest-firefly ×4(scent_note 슬롯) | #80 라이브·#81 정합·composite +4 |
 | PUBLISH-명화 | P1 | 결정 | 결정대기 | 원산지·옵션 확인 | SUSPENSION 원인 실측→안전기준 payload | dryRun·readiness·대표 GO(비가역#46) |
 | CAT-CODE-명화 | P2 | Code | 완료·검증완 | — | naverCategoryCode 50003356→50014980 정정(경로A·DB only·네이버무접촉) | dnaSource db·scent_note 등장·7슬롯('리필' lowInvolvement로 problem/size_duration 드롭, 9 아님) ✅ |
-| ICE-TRAY-DNA | P2 | Code | 완료·API검증완·UI실측대기 | — | 경로B 채택 — emptyCard 중립화+미시드 개입카드+signal 가드 배치(#62·#90)·push c35d64c·prod LIVE | prod 3상품 PASS: 명화 9(scent_note)·아이스 6중립(향0)·달항아리 6중립(향0). [Desktop] /studio 관제탑 개입카드 UI 실측만 잔여 |
+| ICE-TRAY-DNA | P2 | Code | 완료·검증완 | — | 경로B 배치(#62·#90)·push c35d64c·prod LIVE·Desktop UI 검증 PASS | item1/3/4 PASS(명화 9복원·아이스 6중립·라벨동기화·명화 준비도 S/94)·item2 zero-masking PASS(positive 렌더=idle+미시드 상품 부재로 미관측→UNSEEDED-BACKLOG-BADGE 후속) ✅ |
+| UNSEEDED-BACKLOG-BADGE | P3 | Code | Stage2 백로그(후속·비긴급) | #62 | 별도 저긴급 '백로그 배지'(미시드 카테고리 N개·DNA 시드 권고) 신설 — 긴급큐 비마스킹+상시가시. branch feat/unseeded-backlog-badge | 미시드 N 집계·관제탑 상시 배지(idle 한정 아님)·전상품 #55·개입점 #56 |
 | CUT34-EVAL | — | Desktop | 검증대기 | — | cut-3/4 = scent_note 슬롯 재배치(썸네일 아님) | 슬롯 매핑 확정 |
 
 ### 파생 큐
 - 지금 큐: ENG-1 Desktop 검증(§7) · IMG-INGEST
-- 결정 대기(대표): CAPTURE-METHOD(3h) · PUBLISH-명화 2건 확인 (ICE-TRAY-DNA=경로B 배치·검증대기)
+- 결정 대기(대표): CAPTURE-METHOD(3h) · PUBLISH-명화 2건 확인 (ICE-TRAY-DNA=검증완·종결 / UNSEEDED-BACKLOG-BADGE=Stage2 백로그)
 - 검증 대기: ENG-1(브라우저 3탭) · CUT34-EVAL(슬롯 재배치)
 
 ### 변경로그
@@ -33,6 +34,7 @@
 - 2026-06-17 (조사·ICE-TRAY-DNA #62): 아이스트레이 50005257 향수슬롯 렌더 = 50014980 오상속 아님. 근본원인 = emptyCard() 기본 slotSequence(category-dna.ts:228-238)가 scent_note 포함 향수편향 → 50005257 등 미시드 전 카테고리가 scent_note 상속. dnaSource none 실측(category_dna 행=50014980 1건뿐·seed 0). 수정안: (A)50005257 전용 DNA 재시드 (B)emptyCard 기본열 중립화(scent_note 제거=전상품 #62 근본). 코드변경=승인게이트 대기.
 - 2026-06-17 (Code/#62 배치·경로B·전부 가역·additive·네이버무접촉): (1)emptyCard 중립화 — 기본열에서 scent_note/use_install/size_duration 제거→[hero,problem,solution_usp,trust,gift,cta] 6슬롯 중립폴백. (2)미시드 개입카드 — category_dna_unseeded(intervention.ts 타입+payload·control-tower idle priority 점화·strings·matrix label·matrix route dnaUnseeded 배치). (3)signal 가드 — deriveProductSignals: 리필+본품/선물이면 lowInvolvement 미발화(키워드 JSON refillTerms/commodityHard/bundleAnchor). (4)category 동기화 — src/lib/naver/category-sync.ts 헬퍼(전상품·naverCategoryCode→leaf)+명화 category DB '차량용방향제' 동기화. 검증 tsc0·build0·이모지0·신규한글리터럴0·prisma싱글톤·테스트 11 PASS·로컬실증(명화 9복원 scent_note 포함·아이스 6중립 향0·순수소모품 가드예외). PRINCIPLES_LEARNED #90 박제.
 - 2026-06-17 (Code/#62 prod 검증 PASS): push c35d64c·verify-vercel-deploy OK(production=c35d64c). /api/engine/strategy 3상품 prod 재호출 — 명화(50014980) dnaSource db·9슬롯·scent_note O / 아이스트레이(50005257) none·6중립·scent_note X / 달항아리(50000963) none·6중립·scent_note X. 데이터레인 검증완(#88), 관제탑 개입카드 UI = Desktop 브라우저 실측 잔여.
+- 2026-06-17 (Desktop/#62 UI 검증 PASS): item1/3/4 PASS(명화 9슬롯 복원·아이스트레이 6중립·라벨 동기화·명화 준비도 S/94). item2 미시드 카드 zero-masking PASS, positive 렌더는 idle+미시드 상품 부재로 미관측. ICE-TRAY-DNA 종결(#88). 후속 UNSEEDED-BACKLOG-BADGE(저긴급 상시 배지·긴급큐 비마스킹·상시가시) Stage 2 등재(branch feat/unseeded-backlog-badge·#55·#56).
 
 ---
 

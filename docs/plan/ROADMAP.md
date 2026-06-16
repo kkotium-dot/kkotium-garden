@@ -140,7 +140,7 @@ authority = docs/design/IMAGE_SEO_STRATEGY_ENGINE.md. All-product common (#55): 
 
 - **Stage 0 (DONE 2026-06-16, verify-pending)**: Prisma 6 models + additive migration + DataLab client + publish-time thumbnail policy gate. Verify: tsc0 / build0 / Supabase 6 tables / policy-gate unit test.
 - **Stage 1 (next)**: DNA card (semi-manual) + slot decision-table + assembler + Firefly/Nano-Banana integration + intervention #1~#3 UI. Verify: 명화 slot-plan + first batch.
-- **Stage 2**: immutable tuple logging + CTR/CVR back-link (Naver report / store stats) + promotion logic. Verify: rating -> promotion round-trip.
+- **Stage 2**: immutable tuple logging + CTR/CVR back-link (Naver report / store stats) + promotion logic. Verify: rating -> promotion round-trip. **+ UNSEEDED-BACKLOG-BADGE** (미시드 카테고리 N개 상시 저긴급 배지 · DNA 시드 권고 · 긴급큐 비마스킹 · #62 후속, branch feat/unseeded-backlog-badge).
 - **Stage 3**: DNA wizard + Search-Ad A/B + library UI. Verify: 2nd category with zero code.
 
 
