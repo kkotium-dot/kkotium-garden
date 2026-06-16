@@ -39,12 +39,25 @@ import {
   JobLifecyclePanel,
   MoodCameraPanel,
 } from '@/components/studio/workbench';
+import type { WorkbenchTabKey } from '@/components/studio/workbench/WorkbenchTabs';
+import {
+  CategoryDnaCard,
+  SlotFunnelBoard,
+  PrePublishGatePanel,
+  useEngineStrategy,
+} from '@/components/studio/engine';
 
 // ── Main inner ────────────────────────────────────────────────────────────
 
 function StudioInner() {
   const searchParams = useSearchParams();
   const initialProductId = searchParams.get('product');
+  // Deep-link tab (engine intervention deepLinks: ?tab=analyze|image|publish).
+  const tabParam = searchParams.get('tab');
+  const initialTab: WorkbenchTabKey | undefined =
+    tabParam === 'analyze' || tabParam === 'image' || tabParam === 'publish'
+      ? tabParam
+      : undefined;
 
   // Product list state (page-specific — the hook only knows about a single
   // selected productId, not the list)
@@ -99,6 +112,9 @@ function StudioInner() {
   // All Studio action state + handlers live in the shared hook so PLANT
   // (Phase 3-C-2) can call it with savedProductId and get the same flow.
   const actions = useStudioActions(selectedId);
+
+  // Engine Stage 1 — one fetch feeds the DNA card / slot funnel / publish gate.
+  const engine = useEngineStrategy(selectedId);
 
   // canPublish depends on the caller's view of hasNaverId, so the hook
   // leaves it to the page to compute.
@@ -213,6 +229,30 @@ function StudioInner() {
     {selectedProduct?.id && <JobLifecyclePanel productId={selectedProduct.id} />}
     <WorkbenchTabs
       grouped
+      defaultTab={initialTab}
+      dnaCard={
+        <CategoryDnaCard
+          dna={engine.data?.dna ?? null}
+          source={engine.data?.dnaSource}
+          loading={engine.loading}
+          degraded={engine.degraded}
+        />
+      }
+      slotFunnel={
+        <SlotFunnelBoard
+          slots={engine.data?.slots ?? []}
+          loading={engine.loading}
+          degraded={engine.degraded}
+        />
+      }
+      publishGate={
+        <PrePublishGatePanel
+          gate={engine.data?.gate ?? null}
+          slots={engine.data?.slots ?? []}
+          loading={engine.loading}
+          degraded={engine.degraded}
+        />
+      }
       diagnosis={
         <DiagnosisCard
           diagnosis={actions.diagnosis}

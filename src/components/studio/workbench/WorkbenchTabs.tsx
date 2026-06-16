@@ -38,6 +38,14 @@ export interface WorkbenchTabsProps {
    *  FIRST sub-area of the 이미지 tab (mood -> assemble -> generate). Ignored in
    *  the legacy layout. */
   moodCamera?: ReactNode;
+  /** Engine Stage 1 panels (session8, grouped layout only — additive). Rendered
+   *  at the TOP of their tab, above the existing cards (regression 0):
+   *    dnaCard     -> analyze tab (시장 DNA, 개입#1)
+   *    slotFunnel  -> image tab   (9슬롯 퍼널 보드)
+   *    publishGate -> publish tab (발행 전 정책 게이트) */
+  dnaCard?: ReactNode;
+  slotFunnel?: ReactNode;
+  publishGate?: ReactNode;
   /** Opt in to the 3-tab registration-journey IA (task2). */
   grouped?: boolean;
   /** Optional initial tab — defaults to the first tab of the active layout. */
@@ -89,6 +97,9 @@ export default function WorkbenchTabs({
   actions,
   assets,
   moodCamera,
+  dnaCard,
+  slotFunnel,
+  publishGate,
   grouped = false,
   defaultTab,
   activeTab,
@@ -128,8 +139,10 @@ export default function WorkbenchTabs({
   };
 
   // The grouped 이미지 tab stacks the three image cards as labeled sub-areas.
+  // The engine slot-funnel board (when supplied) sits at the very top.
   const imagePanel = (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+      {slotFunnel != null && slotFunnel}
       {moodCamera != null && <SubArea title={c3.imageMood}>{moodCamera}</SubArea>}
       <SubArea title={c3.imageMain}>{thumbnail}</SubArea>
       <SubArea title={c3.imageDetail}>{detail}</SubArea>
@@ -137,8 +150,22 @@ export default function WorkbenchTabs({
     </div>
   );
 
+  // Engine DNA card tops the analyze tab; the publish gate tops the publish tab.
+  const analyzePanel = (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+      {dnaCard != null && dnaCard}
+      {diagnosis}
+    </div>
+  );
+  const publishPanel = (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+      {publishGate != null && publishGate}
+      {actions}
+    </div>
+  );
+
   const contents: Partial<Record<WorkbenchTabKey, ReactNode>> = grouped
-    ? { analyze: diagnosis, image: imagePanel, publish: actions }
+    ? { analyze: analyzePanel, image: imagePanel, publish: publishPanel }
     : { diagnosis, thumbnail, detail, actions, assets };
 
   return (
