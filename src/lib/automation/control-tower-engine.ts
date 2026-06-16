@@ -227,6 +227,10 @@ export interface ComputeContext {
   // awaiting_human image job and passes it so the queue renders a precise card
   // (firefly_drop / hero_crop_request / source_request) instead of generic AUTH.
   imageJobIntervention?: { type: string; payload?: unknown } | null;
+  // #62 — true when the product's Naver category has NO seeded DNA card (the
+  // strategy engine falls back to the neutral universal funnel). Surfaced as an
+  // idle-priority informational nudge to seed real DNA — never masks real work.
+  dnaUnseeded?: boolean;
 }
 
 // C-9 intervention type keys (mirror src/lib/jobs/intervention.ts — duplicated
@@ -241,6 +245,8 @@ const IV_ASSET_INTEGRITY = 'asset_integrity';
 // Engine Stage 1 (additive) — DNA confirm (개입#1) + variant select (개입#2).
 const IV_DNA_CONFIRM = 'dna_confirm';
 const IV_VARIANT_SELECT = 'variant_select';
+// #62 — the category has no seeded DNA card (strategy dnaSource=none).
+const IV_CATEGORY_DNA_UNSEEDED = 'category_dna_unseeded';
 
 /** Two-branch source strategy from the split quality eval (blueprint §3). */
 function deriveSourceStrategy(
@@ -404,7 +410,15 @@ export function computeControlTowerRow(
 
   const overall = overallOf([image.status, publish.status]);
   const nextAction = computeNextAction(product, publish, image, registered, line.value, applyStatus, ctx.mainImagePolicy);
-  const actionQueue = computeActionQueueItem(product.id, product.name, image, nextAction, ctx.imageJobIntervention ?? null);
+  const actionQueue = computeActionQueueItem(
+    product.id,
+    product.name,
+    image,
+    nextAction,
+    ctx.imageJobIntervention ?? null,
+    ctx.dnaUnseeded ?? false,
+    (product as { naverCategoryCode?: string | null }).naverCategoryCode ?? '',
+  );
 
   return { productId: product.id, name: product.name, publish, image, line, applyStatus, actionQueue, overall, nextAction };
 }
@@ -422,6 +436,8 @@ export function computeActionQueueItem(
   image: ImageInfo,
   nextAction: NextAction | null,
   intervention?: { type: string; payload?: unknown } | null,
+  dnaUnseeded = false,
+  categoryCode = '',
 ): ActionQueueItem {
   const base = { productId, productName };
   // C-9 — a precise image-track intervention. When the awaiting_human job names
@@ -517,6 +533,20 @@ export function computeActionQueueItem(
     return { ...base, category: 'AUTO', stage: 'processing', deepLink: `/products/${productId}` };
   }
   if (!nextAction) {
+    // Idle product — surface the unseeded-DNA nudge HERE so it never masks real
+    // work (#62, firefly_auto-style additive informational card). Any product
+    // with a pending action keeps that action; only otherwise-idle products show
+    // the seed-DNA prompt. Otherwise the generic monitor card.
+    if (dnaUnseeded) {
+      return {
+        ...base,
+        category: 'INPUT_DECISION',
+        stage: IV_CATEGORY_DNA_UNSEEDED,
+        deepLink: `/studio?product=${productId}&tab=analyze`,
+        interventionType: IV_CATEGORY_DNA_UNSEEDED,
+        payload: { productId, categoryCode, categoryName: categoryCode },
+      };
+    }
     return { ...base, category: 'AUTO', stage: 'monitor', deepLink: `/products/${productId}` };
   }
   // GO_PENDING only when nextAction is the actual publish step (curatedGate

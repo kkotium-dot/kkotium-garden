@@ -2,5 +2,8 @@
   "sizeUncertain": ["의류", "패션", "가구", "옷", "apparel", "furniture", "size"],
   "trustSensitive": ["식품", "화장품", "유아", "아기", "건강", "food", "cosmetic", "baby", "kids"],
   "giftBiased": ["선물", "기프트", "gift", "명품", "premium"],
-  "lowInvolvement": ["소모품", "리필", "commodity", "refill"]
+  "lowInvolvement": ["소모품", "리필", "commodity", "refill"],
+  "refillTerms": ["리필", "refill"],
+  "commodityHard": ["소모품", "commodity"],
+  "bundleAnchor": ["본품"]
 }

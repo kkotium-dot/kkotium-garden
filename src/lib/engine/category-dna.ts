@@ -212,7 +212,14 @@ export async function upsertDnaCard(card: CategoryDnaCard): Promise<string> {
   return created.id;
 }
 
-/** Minimal valid card for an unseeded category — universal 9-slot default. */
+/**
+ * Minimal valid card for an unseeded category — category-NEUTRAL universal
+ * funnel (#62). The scent/use/size slots are category-specific (scent_note is a
+ * fragrance bias, use_install/size_duration are install/spec biases) and must
+ * come from a SEEDED DNA card — never from the blind fallback, or every unseeded
+ * category (e.g. an ice tray) inherits a perfume slot. So the safe default is
+ * the structural arc only; per-category slots are added by seeding real DNA.
+ */
 export function emptyCard(categoryCode: string): CategoryDnaCard {
   return {
     categoryCode,
@@ -225,17 +232,7 @@ export function emptyCard(categoryCode: string): CategoryDnaCard {
     trustSignals: [],
     thumbnailConventions: {},
     toneManner: {},
-    slotSequence: [
-      'hero',
-      'problem',
-      'solution_usp',
-      'scent_note',
-      'use_install',
-      'size_duration',
-      'trust',
-      'gift',
-      'cta',
-    ],
+    slotSequence: ['hero', 'problem', 'solution_usp', 'trust', 'gift', 'cta'],
     mandatorySlots: [],
     confidence: 0.3,
     status: 'draft',

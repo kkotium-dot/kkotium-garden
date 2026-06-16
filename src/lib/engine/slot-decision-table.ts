@@ -114,10 +114,26 @@ export function deriveProductSignals(
 ): ProductSlotSignals {
   const hay = `${categoryName ?? ''} ${productName ?? ''}`.toLowerCase();
   const has = (keys: string[]) => keys.some((k) => hay.includes(k.toLowerCase()));
+
+  const giftBiased = has(signalKeywords.giftBiased);
+
+  // Low-involvement (#62 guard): a refill that ships WITH the main item (a
+  // main+refill bundle) or a gift bundle is NOT an impulse commodity — its
+  // funnel should keep its full story/spec arc, not be shortened. So when the
+  // low-involvement signal is refill-DRIVEN (not a hard commodity term) and the
+  // product is a main+refill bundle or gift (bundleAnchor / giftBiased), do not
+  // flip lowInvolvement. This restores slots (problem/size_duration) that
+  // arc-shortening would otherwise drop.
+  const lowBase = has(signalKeywords.lowInvolvement);
+  const refillDriven = has(signalKeywords.refillTerms);
+  const hardCommodity = has(signalKeywords.commodityHard);
+  const bundledOrGift = has(signalKeywords.bundleAnchor) || giftBiased;
+  const lowInvolvement = lowBase && !(refillDriven && !hardCommodity && bundledOrGift);
+
   return {
     sizeUncertain: has(signalKeywords.sizeUncertain),
     trustSensitive: has(signalKeywords.trustSensitive),
-    giftBiased: has(signalKeywords.giftBiased),
-    lowInvolvement: has(signalKeywords.lowInvolvement),
+    giftBiased,
+    lowInvolvement,
   };
 }

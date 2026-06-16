@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-17 (95) 전상품 #62 배치 — emptyCard 중립화 + 미시드 개입카드 + signal 가드 + category 동기화 (FROM 💻 Code, main, additive·전부 가역·비가역0·네이버 무접촉)
+- **Target**: Claude Code CLI · **Branch**: main (직접) · 전부 가역·additive·네이버 무접촉.
+- **DONE (4건)**:
+  - 1) emptyCard 중립화 — category-dna.ts emptyCard() 기본 slotSequence에서 향수편향 슬롯(scent_note/use_install/size_duration) 제거 → 카테고리 중립 [hero,problem,solution_usp,trust,gift,cta]. 미시드 안전폴백.
+  - 2) 미시드 개입카드 — category_dna_unseeded(intervention.ts 타입+payload builder, control-tower-engine idle priority 점화[무회귀: 다음액션 있으면 미점화], control-tower-strings.ko.json, matrix widget IV 타입+label+detail, asset-jobs-matrix route dnaUnseeded 배치[seededCodes batch·guarded]).
+  - 3) deriveProductSignals 가드 — '리필'+본품동반/giftBiased면 lowInvolvement 미발화(키워드 JSON refillTerms/commodityHard/bundleAnchor). 순수 소모품은 가드 예외.
+  - 4) category 동기화 — src/lib/naver/category-sync.ts 헬퍼(전상품·naverCategoryCode→leaf, syncProductCategory) + 명화 Product.category DB '아로마방향제/디퓨저'→'차량용방향제' 동기화.
+- **검증/게이트**: tsc0·build0·이모지0·신규한글리터럴0(키워드/문구 i18n JSON)·prisma 싱글톤·sentinel clean·테스트 11 PASS. 로컬 실증: 명화=9슬롯(scent_note 복원·lowInvolvement false)·아이스트레이=6중립(향0)·순수소모품=가드예외(여전히 단축). prod 3상품 재호출(명화 복원·아이스 중립·달항아리 50000963 중립) = push+deploy 후.
+- **패치 위치**: src/lib/engine/category-dna.ts · src/lib/engine/slot-decision-table.ts · src/lib/engine/seeds/product-signal-keywords.json · src/lib/jobs/intervention.ts · src/lib/automation/control-tower-engine.ts · src/app/api/products/asset-jobs-matrix/route.ts · src/components/dashboard/ControlTowerMatrixWidget.tsx · src/lib/i18n/control-tower-strings.ko.json · src/lib/naver/category-sync.ts.
+- **다음 1액션**: [Desktop] /studio 3상품 분석탭 실측 — 명화 9슬롯(향노트 포함)·아이스트레이 6중립(향노트 부재)·관제탑 미시드 개입카드(idle 상품에서 'category DNA 미설정') 렌더 확인. 통과 시 ICE-TRAY-DNA 종결. [결정] PUBLISH-명화·CAPTURE-METHOD(3h).
+
 ### 2026-06-17 (94) Image+SEO/ROI Engine Stage 1 빌드 완료 + 6축 main 머지 (FROM 💻 Code, main 8964ce7, additive·비가역0·네이버 무접촉)
 - **MERGE**: 6AXIS-MERGE GO 수행 — feat/mood-camera-system → main fast-forward(349b9db)·push·prod LIVE(6축 UI + 엔진 Stage 0). verify-vercel-deploy OK.
 - **DONE (ENG-1, 2 commits)**: 26f8560 백엔드 + 8964ce7 UI.
@@ -83,8 +94,9 @@
   - 3i UI: GET /api/engine/strategy + CategoryDnaCard(분석)·SlotFunnelBoard(이미지)·PrePublishGatePanel(발행)·useEngineStrategy·tab= 딥링크·WorkbenchTabs 옵셔널 슬롯
 - **검증/게이트**: tsc0·build0·이모지0·신규한글리터럴0(월/대 i18n·키워드 JSON)·prisma 싱글톤·외부 image API 0·비가역0·sentinel clean. 테스트 11 PASS. prod: /studio 200·/api/engine/strategy 200(명화 fallback)·400(no productId).
 - **패치 위치**: src/lib/engine/* · src/app/api/engine/strategy/route.ts · src/components/studio/engine/* · src/components/studio/workbench/WorkbenchTabs.tsx · src/app/studio/page.tsx · src/lib/jobs/intervention.ts · src/lib/automation/{control-tower-engine,publish-readiness}.ts · src/components/dashboard/ControlTowerMatrixWidget.tsx
-- **FINDING (CAT-CODE-명화)**: 명화 product naverCategoryCode=50003356 ≠ DNA 시드 50014980 → 명화 현재 DNA fallback(범용 9슬롯). 정합 필요(재분류 or 50003356 DNA 시드).
-- **다음 1액션**: [Desktop] ENG-1 브라우저 실측(§7) — /studio 3탭: 분석 DNA카드 렌더·이미지 9슬롯 보드(칩·진행률·슬롯카드)·발행 게이트패널·개입 대기열 dna_confirm/variant_select. 통과 시 Stage 2(학습루프). [결정] CAT-CODE-명화·CAPTURE-METHOD(3h).
+- **RESOLVED (CAT-CODE-명화·경로A, 2026-06-17 Code)**: Product.naverCategoryCode 50003356(실내·오분류)→50014980(차량용방향제) 정정. cmpnooli40001f0gveaxr8iim·DB only·네이버무접촉. 검증 strategy 재호출 dnaSource none→db·scent_note 등장·슬롯 4→7('본품리필'→lowInvolvement로 problem/size_duration 드롭, 9 아님). payload leafCategoryId=50014980 자동(register/route.ts:128)·category 속성셋 앱 미주입(무관).
+- **NEW FINDING (ICE-TRAY-DNA·#62)**: 아이스트레이 50005257 향수슬롯 렌더 = 오상속 아님. 근본 = emptyCard() 기본열(category-dna.ts:228-238)이 scent_note 포함(향수편향) → 미시드 전 카테고리 오염. dnaSource none 실측. 결정필요: (A)전용 DNA 재시드 (B)emptyCard 중립화(scent_note 제거·전상품 근본). 코드변경=승인 대기.
+- **다음 1액션**: [Desktop] ENG-1 브라우저 실측(§7) — /studio 3탭: 분석 DNA카드 렌더·이미지 슬롯 보드(칩·진행률·슬롯카드)·발행 게이트패널·개입 대기열 dna_confirm/variant_select. 통과 시 Stage 2(학습루프). [결정] ICE-TRAY-DNA(전용시드 vs 범용폴백 중립화)·CAPTURE-METHOD(3h). (CAT-CODE-명화=종결)
 
 
 ### 2026-06-16 (93) 무드-카메라 6축 이미지 시스템 설계 + 전상품 codify (FROM 🖥 Desktop, docs only·비가역0·네이버 무접촉)

@@ -501,6 +501,7 @@ const IV = m.intervention as {
   asset_integrity: { label: string; lead: string; depth2: string; dead: string; ratio: string; samples: string; fixable: string; fix: string; fixing: string; fixConfirm: string; fixDone: string; fixFail: string; clean: string };
   dna_confirm: { label: string; lead: string; category: string; version: string; reasonStale: string; reasonNew: string };
   variant_select: { label: string; lead: string; slot: string; candidates: string; recommended: string };
+  category_dna_unseeded: { label: string; lead: string; category: string };
 };
 
 function interventionLabel(type: string | undefined): string | null {
@@ -513,6 +514,7 @@ function interventionLabel(type: string | undefined): string | null {
   if (type === 'asset_integrity') return IV.asset_integrity.label;
   if (type === 'dna_confirm') return IV.dna_confirm.label;
   if (type === 'variant_select') return IV.variant_select.label;
+  if (type === 'category_dna_unseeded') return IV.category_dna_unseeded.label;
   return null;
 }
 
@@ -802,6 +804,21 @@ function InterventionDetail({ type, payload, productId, onRefresh }: { type: str
           <p className="truncate text-[10px] text-slate-400">{t.samples}: {ai.sampleFiles.join(', ')}</p>
         )}
         {productId && fixable > 0 && <AssetIntegrityFix productId={productId} onRefresh={onRefresh} />}
+      </div>
+    );
+  }
+  if (type === 'category_dna_unseeded') {
+    const u = payload as { categoryCode?: string; categoryName?: string } | null;
+    const t = IV.category_dna_unseeded;
+    return (
+      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
+        <p className="text-slate-500">{t.lead}</p>
+        {(u?.categoryCode || u?.categoryName) && (
+          <div className="flex items-center gap-1.5">
+            <span className="shrink-0 text-slate-400">{t.category}:</span>
+            <code className="rounded bg-slate-50 px-1 py-0.5 text-[10px] text-slate-600">{u?.categoryName || u?.categoryCode}</code>
+          </div>
+        )}
       </div>
     );
   }

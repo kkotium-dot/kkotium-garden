@@ -27,6 +27,7 @@ import {
 } from '@/lib/automation/control-tower-engine';
 import type { ImageTier, RecommendedMode } from '@/lib/images/quality-classifier';
 import type { LocalProduct } from '@/lib/naver/product-builder';
+import { SEED_DNA_CARDS } from '@/lib/engine/category-dna';
 
 export const dynamic = 'force-dynamic';
 
@@ -193,6 +194,23 @@ export async function GET() {
     // else: intervention columns not migrated — generic AUTH card stands (no regression).
   }
 
+  // 3c. #62 — seeded-DNA set: a product whose Naver category has neither an
+  //     active category_dna row NOR a canonical seed falls back to the neutral
+  //     universal funnel. Guarded (table may be unmigrated) — degrade to seeds-only.
+  const seededCodes = new Set<string>(Object.keys(SEED_DNA_CARDS));
+  try {
+    const dnaRows = await prisma.categoryDna.findMany({
+      where: { status: 'active' },
+      select: { categoryCode: true },
+    });
+    for (const r of dnaRows) seededCodes.add(r.categoryCode);
+  } catch (e: unknown) {
+    const code = (e as { code?: string })?.code;
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!(code === 'P2021' || code === 'P2022' || /does not exist|relation .* does not exist|column/i.test(msg))) throw e;
+    // else: category_dna not migrated — seededCodes stays seeds-only (still safe).
+  }
+
   // 4. Compute each row via the SoT engine.
   const counts: Record<Overall, number> = { risk: 0, attention: 0, caution: 0, ok: 0, none: 0 };
   const rows = products.map((dbProduct) => {
@@ -219,6 +237,10 @@ export async function GET() {
       sourceDetailGood: sourceDetailGoodById.get(dbProduct.id) ?? false,
       mainImagePolicy: mainImagePolicyById.get(dbProduct.id) ?? null,
       imageJobIntervention: interventionById.get(dbProduct.id) ?? null,
+      dnaUnseeded: (() => {
+        const c = (dbProduct.naverCategoryCode ?? '').trim();
+        return !c || !seededCodes.has(c);
+      })(),
     });
     counts[row.overall]++;
 

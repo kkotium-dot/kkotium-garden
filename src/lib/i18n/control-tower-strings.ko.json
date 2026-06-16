@@ -292,6 +292,11 @@
         "slot": "슬롯",
         "candidates": "후보",
         "recommended": "추천"
+      },
+      "category_dna_unseeded": {
+        "label": "카테고리 DNA 미설정",
+        "lead": "이 카테고리는 시장 DNA 카드가 아직 없어 중립 기본 슬롯으로 진행됩니다. 향·사용·규격 등 카테고리 전용 슬롯을 쓰려면 DNA를 시드(확정)하세요.",
+        "category": "카테고리"
       }
     }
   }

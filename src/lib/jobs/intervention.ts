@@ -52,6 +52,13 @@ export const INTERVENTION_DNA_CONFIRM = 'dna_confirm';
 // operator picks the winning variant (1-click = rating signal). INPUT_DECISION;
 // deep-links to the image tab slot.
 export const INTERVENTION_VARIANT_SELECT = 'variant_select';
+// Engine Stage 1 (#56, #62): the product's Naver category has NO seeded DNA card
+// (strategy dnaSource=none) → the funnel falls back to the neutral universal arc.
+// An informational nudge to seed real category DNA so category-specific slots
+// (scent_note / size_duration / ...) get added. INPUT_DECISION; deep-links to the
+// analyze tab. Never a forced modal (#56); surfaced only when the product is
+// otherwise idle so it never masks urgent work (firefly_auto-style additive).
+export const INTERVENTION_CATEGORY_DNA_UNSEEDED = 'category_dna_unseeded';
 
 export type InterventionType =
   | typeof INTERVENTION_SOURCE_REQUEST
@@ -62,7 +69,8 @@ export type InterventionType =
   | typeof INTERVENTION_MOUNT_CHECK
   | typeof INTERVENTION_ASSET_INTEGRITY
   | typeof INTERVENTION_DNA_CONFIRM
-  | typeof INTERVENTION_VARIANT_SELECT;
+  | typeof INTERVENTION_VARIANT_SELECT
+  | typeof INTERVENTION_CATEGORY_DNA_UNSEEDED;
 
 export { buildMountCheckPayload };
 export type { FidelityChecklistPayload, MountCheckPayload };
@@ -229,6 +237,27 @@ export function buildVariantSelectPayload(o: {
     slotType: o.slotType,
     candidateIds: o.candidateIds,
     recommendedId: o.recommendedId,
+  };
+}
+
+export interface CategoryDnaUnseededPayload {
+  productId: string;
+  // The unseeded Naver category code (empty when the product has no code).
+  categoryCode: string;
+  // Human-readable category label for the card (code itself when unknown).
+  categoryName: string;
+}
+
+/** Unseeded-DNA payload — the category has no seeded DNA card (#62). */
+export function buildCategoryDnaUnseededPayload(o: {
+  productId: string;
+  categoryCode: string;
+  categoryName: string;
+}): CategoryDnaUnseededPayload {
+  return {
+    productId: o.productId,
+    categoryCode: o.categoryCode,
+    categoryName: o.categoryName,
   };
 }
 
