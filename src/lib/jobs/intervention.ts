@@ -43,6 +43,15 @@ export const INTERVENTION_MOUNT_CHECK = 'mount_check';
 // the product's DB image refs (legacy-root files un-normalized and/or a DB ref
 // points at a 404 key). Surfaces "비정규 N·dead M" with a 1-click remediation.
 export const INTERVENTION_ASSET_INTEGRITY = 'asset_integrity';
+// Engine Stage 1 (#56, IMAGE_SEO_STRATEGY_ENGINE §8 개입#1): the category DNA
+// card is stale or a new category is unconfirmed — the operator confirms/edits
+// the DNA (season/tone/slots) before mass generation. INPUT_DECISION; deep-links
+// to the analyze tab. Auto-confirms (AUTO) when the card is fresh.
+export const INTERVENTION_DNA_CONFIRM = 'dna_confirm';
+// Engine Stage 1 (#56, §8 개입#2): a slot's candidate gallery is full — the
+// operator picks the winning variant (1-click = rating signal). INPUT_DECISION;
+// deep-links to the image tab slot.
+export const INTERVENTION_VARIANT_SELECT = 'variant_select';
 
 export type InterventionType =
   | typeof INTERVENTION_SOURCE_REQUEST
@@ -51,7 +60,9 @@ export type InterventionType =
   | typeof INTERVENTION_FIREFLY_AUTO
   | typeof INTERVENTION_FIDELITY_CHECK
   | typeof INTERVENTION_MOUNT_CHECK
-  | typeof INTERVENTION_ASSET_INTEGRITY;
+  | typeof INTERVENTION_ASSET_INTEGRITY
+  | typeof INTERVENTION_DNA_CONFIRM
+  | typeof INTERVENTION_VARIANT_SELECT;
 
 export { buildMountCheckPayload };
 export type { FidelityChecklistPayload, MountCheckPayload };
@@ -170,6 +181,55 @@ export function buildHeroCropPayload(o: { longestEdge: number; textDetected: boo
 /** Source-request payload — the detail-source is missing for this product. */
 export function buildSourceRequestPayload(o: { productId: string; supplierUrl?: string | null }): SourceRequestPayload {
   return { supplierUrl: o.supplierUrl ?? null, productId: o.productId };
+}
+
+// Engine Stage 1 intervention payloads (#56) — minimal, product-agnostic.
+export interface DnaConfirmPayload {
+  productId: string;
+  categoryCode: string;
+  categoryName: string;
+  dnaVersion: number;
+  // Why the card needs review: stale capture vs. an unconfirmed new category.
+  reason: 'stale' | 'new_category';
+}
+export interface VariantSelectPayload {
+  productId: string;
+  slotType: string;
+  // Candidate slot-generation ids the operator chooses among.
+  candidateIds: string[];
+  recommendedId?: string;
+}
+
+/** DNA-confirm payload — the category card is stale or newly captured. */
+export function buildDnaConfirmPayload(o: {
+  productId: string;
+  categoryCode: string;
+  categoryName: string;
+  dnaVersion: number;
+  reason: 'stale' | 'new_category';
+}): DnaConfirmPayload {
+  return {
+    productId: o.productId,
+    categoryCode: o.categoryCode,
+    categoryName: o.categoryName,
+    dnaVersion: o.dnaVersion,
+    reason: o.reason,
+  };
+}
+
+/** Variant-select payload — a slot's candidate gallery is full. */
+export function buildVariantSelectPayload(o: {
+  productId: string;
+  slotType: string;
+  candidateIds: string[];
+  recommendedId?: string;
+}): VariantSelectPayload {
+  return {
+    productId: o.productId,
+    slotType: o.slotType,
+    candidateIds: o.candidateIds,
+    recommendedId: o.recommendedId,
+  };
 }
 
 export interface AssetIntegrityPayload {

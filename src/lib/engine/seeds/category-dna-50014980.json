@@ -1,0 +1,77 @@
+{
+  "categoryCode": "50014980",
+  "categoryName": "생활/건강 > 자동차용품 > 공기청정용품 > 차량용방향제",
+  "version": 1,
+  "parentDnaId": null,
+  "demographics": {
+    "ageCore": ["40", "30", "50"],
+    "ageLead": "40",
+    "ageNote": "2025-06 peak normalized 40=100, 30=81.8, 50=71.1, 60=34.8, 20=31.8, 10=1.3. Recent (2026-04~05) 50s overtaking 40s = ageing shift.",
+    "genderNote": "Female series healthy. Exact gender ratio needs same-call normalized direct API (this path is imprecise)."
+  },
+  "seasonality": {
+    "peakMonths": ["06", "07"],
+    "troughMonth": "11",
+    "recoveryMonth": "04",
+    "shape": "여름 피크형(6~7월 100/99.9 -> 11월 36.7 저점 -> 4월 62 회복)",
+    "implication": "여름 성수기 전(4~5월) 이미지·발행 준비 완료. 무더위/새차/드라이브 무드가 시즌 적합."
+  },
+  "titleConventions": {
+    "structure": "[브랜드] + [차량용/명품/고급] + [방향제/디퓨저] + [형태(송풍구)] + [향/색]",
+    "highFreqTokens": ["명품", "고급", "디퓨저", "송풍구", "차량용 방향제"],
+    "scentInTitle": ["딥체리", "블랙체리", "히노끼", "포레스트가든", "피톤치드"],
+    "giftFraming": ["새차 선물", "리본포장"],
+    "bundleFraming": ["1+1", "2개"],
+    "implication": "제품명 = 메인키워드(차량용 방향제/디퓨저) + 형태(송풍구) + 향. 명품/고급 = 프리미엄 포지셔닝 관용어."
+  },
+  "priceTiers": {
+    "budget": "11,600~14,900 (고체/리필형 다수)",
+    "midPremium": "27,900~39,900 (송풍구 오브제·가죽·메탈)",
+    "premiumElectronic": "75,000 (무선 전자 디퓨저)",
+    "note": "명화 송풍구 명품 포지션 = midPremium(~28~40k) 경쟁 밴드."
+  },
+  "materialCues": {
+    "premium": ["천연소가죽", "무광 블랙", "다크 메탈", "오브제"],
+    "implication": "프리미엄 = 가죽/무광메탈 질감. 명화 cutout(가죽 olive·단품 frontal) 정합."
+  },
+  "trustSignals": ["향 노트 명시", "명품/고급 포지셔닝", "선물 포장", "번들 가성비", "안전기준/탈취 효능"],
+  "thumbnailConventions": {
+    "source": "네이버 정책 + 카테고리 노름(경쟁 픽셀 미분석)",
+    "rule": "텍스트 프리·단일제품·1:1·>=1000px·제품 85~95% 점유. 송풍구 장착 제품 클로즈업 또는 순백 본품. 가격/명품 문구 오버레이 금지(미노출 리스크)."
+  },
+  "toneManner": {
+    "palette": "프리미엄 다크(블랙·버건디·앰버) 또는 클린 화이트",
+    "mood": "고급·감각·새차 첫인상·드라이브",
+    "casting": "30~50 운전자(자차 소유)"
+  },
+  "slotSequence": [
+    "hero",
+    "problem",
+    "solution_usp",
+    "scent_note",
+    "use_install",
+    "size_duration",
+    "trust",
+    "gift",
+    "cta"
+  ],
+  "mandatorySlots": ["scent_note", "use_install", "trust"],
+  "slotNotes": {
+    "scent_note": "이 카테고리 필수 — 향 프로파일/노트(명화 4향). cut-1~4 무드플레이트가 여기 착지.",
+    "use_install": "송풍구 클립 장착샷(형태 증명).",
+    "trust": "안전기준 신고번호·지속기간·리뷰.",
+    "gift": "선물 포장(새차 선물 수요 — 시즌 연동)."
+  },
+  "provenance": {
+    "datalab": "2025-06~2026-06 monthly",
+    "search": "search_shop top10 sim 2026-06-16",
+    "capturedBy": "Desktop session8"
+  },
+  "confidence": 0.7,
+  "limitations": [
+    "성별 절대비 미확정(직접 API)",
+    "top-500 인기검색어 미수집(웹UI 전용)",
+    "단일 시점 캡처(시즌 1주기 추적 권장)"
+  ],
+  "status": "active"
+}

@@ -277,6 +277,21 @@
         "fixDone": "교정 완료",
         "fixFail": "교정 실패",
         "clean": "정합 OK"
+      },
+      "dna_confirm": {
+        "label": "DNA 카드 확정",
+        "lead": "이 카테고리의 시장 DNA(시즌·구매층·톤·슬롯)를 확인하세요. 맞으면 확정, 다르면 수정 후 생성 진행.",
+        "category": "카테고리",
+        "version": "버전",
+        "reasonStale": "시드 갱신 필요",
+        "reasonNew": "신규 카테고리 미확정"
+      },
+      "variant_select": {
+        "label": "후보 선택",
+        "lead": "이 슬롯의 후보 중 사용할 1장을 선택하세요. 선택 = 평점 신호.",
+        "slot": "슬롯",
+        "candidates": "후보",
+        "recommended": "추천"
       }
     }
   }

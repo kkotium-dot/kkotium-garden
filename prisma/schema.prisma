@@ -1140,34 +1140,37 @@ model SlotGeneration {
 }
 
 model Rating {
-  id           String   @id @default(cuid())
+  id              String   @id @default(cuid())
   // Logical reference to slot_generation.id (decoupled — no FK, additive).
-  generationId String   @map("generation_id")
+  // Named slotGenerationId to match the SlotGeneration model it points at; the
+  // mood-camera Generation table is a different log (#62 — fix applies project-wide).
+  slotGenerationId String  @map("slot_generation_id")
   // 1..5 (or 0/1 thumb).
-  score        Int
-  ratedBy      String   @map("rated_by")
-  note         String?
-  createdAt    DateTime @default(now()) @map("created_at")
+  score           Int
+  ratedBy         String   @map("rated_by")
+  note            String?
+  createdAt       DateTime @default(now()) @map("created_at")
 
-  @@index([generationId])
+  @@index([slotGenerationId])
   @@map("rating")
 }
 
 model PerformanceMetric {
-  id           String   @id @default(cuid())
-  generationId String?  @map("generation_id")
-  productId    String?  @map("product_id")
-  slotType     String?  @map("slot_type")
+  id               String   @id @default(cuid())
+  // Logical reference to slot_generation.id (see Rating note, #62).
+  slotGenerationId String?  @map("slot_generation_id")
+  productId        String?  @map("product_id")
+  slotType         String?  @map("slot_type")
   // thumbnail_ctr|detail_cvr|time_on_page.
-  metricType   String   @map("metric_type")
-  value        Float
-  windowStart  DateTime @map("window_start")
-  windowEnd    DateTime @map("window_end")
+  metricType       String   @map("metric_type")
+  value            Float
+  windowStart      DateTime @map("window_start")
+  windowEnd        DateTime @map("window_end")
   // naver_report|store_stats|search_ad_ab.
-  source       String
-  createdAt    DateTime @default(now()) @map("created_at")
+  source           String
+  createdAt        DateTime @default(now()) @map("created_at")
 
-  @@index([generationId])
+  @@index([slotGenerationId])
   @@index([productId])
   @@map("performance_metric")
 }

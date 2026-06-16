@@ -499,6 +499,8 @@ const IV = m.intervention as {
   fidelity_check: { label: string; lead: string; components: string; forbidden: string; checks: string; mount: string; source: string };
   mount_check: { label: string; lead: string; mechanic: string; checks: string };
   asset_integrity: { label: string; lead: string; depth2: string; dead: string; ratio: string; samples: string; fixable: string; fix: string; fixing: string; fixConfirm: string; fixDone: string; fixFail: string; clean: string };
+  dna_confirm: { label: string; lead: string; category: string; version: string; reasonStale: string; reasonNew: string };
+  variant_select: { label: string; lead: string; slot: string; candidates: string; recommended: string };
 };
 
 function interventionLabel(type: string | undefined): string | null {
@@ -509,6 +511,8 @@ function interventionLabel(type: string | undefined): string | null {
   if (type === 'fidelity_check') return IV.fidelity_check.label;
   if (type === 'mount_check') return IV.mount_check.label;
   if (type === 'asset_integrity') return IV.asset_integrity.label;
+  if (type === 'dna_confirm') return IV.dna_confirm.label;
+  if (type === 'variant_select') return IV.variant_select.label;
   return null;
 }
 

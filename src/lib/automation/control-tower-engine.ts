@@ -238,6 +238,9 @@ const IV_FIREFLY_AUTO = 'firefly_auto';
 const IV_FIDELITY_CHECK = 'fidelity_check';
 const IV_MOUNT_CHECK = 'mount_check';
 const IV_ASSET_INTEGRITY = 'asset_integrity';
+// Engine Stage 1 (additive) — DNA confirm (개입#1) + variant select (개입#2).
+const IV_DNA_CONFIRM = 'dna_confirm';
+const IV_VARIANT_SELECT = 'variant_select';
 
 /** Two-branch source strategy from the split quality eval (blueprint §3). */
 function deriveSourceStrategy(
@@ -492,6 +495,16 @@ export function computeActionQueueItem(
       // Storage<->DB drift (un-normalized root files / dead refs). Operator runs
       // the 1-click remediation, so INPUT_DECISION; lands in the studio asset tab.
       return { ...base, category: 'INPUT_DECISION', stage: IV_ASSET_INTEGRITY, deepLink: `/studio?product=${productId}`, ...iv };
+    }
+    if (intervention.type === IV_DNA_CONFIRM) {
+      // Engine 개입#1 — DNA card stale / new category. Operator confirms or edits
+      // the card, so INPUT_DECISION; deep-links to the analyze tab.
+      return { ...base, category: 'INPUT_DECISION', stage: IV_DNA_CONFIRM, deepLink: `/studio?product=${productId}&tab=analyze`, ...iv };
+    }
+    if (intervention.type === IV_VARIANT_SELECT) {
+      // Engine 개입#2 — a slot's candidate gallery is full. Operator picks the
+      // winner (1-click = rating), so INPUT_DECISION; deep-links to the image tab.
+      return { ...base, category: 'INPUT_DECISION', stage: IV_VARIANT_SELECT, deepLink: `/studio?product=${productId}&tab=image`, ...iv };
     }
     // Unknown intervention type — fall through to the generic AUTH card below.
   }

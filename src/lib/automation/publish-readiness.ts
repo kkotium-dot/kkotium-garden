@@ -18,6 +18,11 @@
 // derived ToneDirective (or this can be derived inline by a route wrapper).
 
 import type { ToneDirective } from './category-tone-mapper';
+import {
+  evaluateThumbnailPolicy,
+  type ThumbnailCandidateSignals,
+  type PolicyViolation,
+} from '@/lib/naver/thumbnail-policy';
 
 export type AuthenticityViolationType =
   | 'superlative-claim'
@@ -134,6 +139,11 @@ export interface PublishReadinessInput {
   naver_delivery_info: string | null;
   naver_exchange_info: string | null;
   naver_refund_info: string | null;
+  // Representative-thumbnail policy signals (engine §8 hard gate / handoff §3g).
+  // OCR text-region count + product count + detected overlays. Optional: when
+  // null/undefined the thumbnail gate is skipped (regression 0 for callers that
+  // do not yet compute these). The detection is injected by the pipeline.
+  thumbnailSignals?: ThumbnailCandidateSignals | null;
 }
 
 export interface PublishReadinessResult {
@@ -153,6 +163,12 @@ export interface PublishReadinessResult {
   naverPayload: NaverPayloadChecks;
   naverPayloadComplete: boolean;
   naverPayloadMissing: string[];
+  // Representative-thumbnail policy gate (engine §8). thumbnailAssessed=false
+  // means no signals were supplied (gate not yet run) — pass defaults true so
+  // existing callers are unaffected.
+  thumbnailAssessed: boolean;
+  thumbnailPass: boolean;
+  thumbnailViolations: PolicyViolation[];
   publishReady: boolean;
 }
 
@@ -357,13 +373,24 @@ export function evaluatePublishReadiness(input: PublishReadinessInput): PublishR
     .filter(([, v]) => !v)
     .map(([k]) => k);
   const naverPayloadComplete = naverPayloadMissing.length === 0;
+  // Representative-thumbnail HARD gate (engine §8 / #3-6). Only assessed when the
+  // pipeline supplies signals; otherwise pass=true (regression 0). A violation
+  // (on-image text / not single product / forbidden overlay) blocks publish.
+  const thumbnailAssessed = input.thumbnailSignals != null;
+  const thumbnailResult = thumbnailAssessed
+    ? evaluateThumbnailPolicy(input.thumbnailSignals as ThumbnailCandidateSignals)
+    : null;
+  const thumbnailViolations = thumbnailResult?.violations ?? [];
+  const thumbnailPass = thumbnailResult ? thumbnailResult.pass : true;
   // publishReady 는 HARD + SEO 모두 요구(= fieldsAllSet). 작업5 단정 정합:
   // SEO 채운 뒤에 비로소 true. hardComplete 는 진단용으로 별도 노출(발행 가능
   // 최소 조건 충족 여부)하되 publishReady 차단 기준은 fieldsAllSet 유지.
+  // 썸네일 정책 위반 시 발행 차단(미노출 리스크).
   const publishReady =
     fieldsAllSet &&
     authentic &&
     naverPayloadComplete &&
+    thumbnailPass &&
     input.status === 'DRAFT' &&
     input.naverProductId === null;
 
@@ -382,6 +409,9 @@ export function evaluatePublishReadiness(input: PublishReadinessInput): PublishR
     naverPayload,
     naverPayloadComplete,
     naverPayloadMissing,
+    thumbnailAssessed,
+    thumbnailPass,
+    thumbnailViolations,
     publishReady,
   };
 }
