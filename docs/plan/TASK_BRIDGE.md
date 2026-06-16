@@ -72,6 +72,20 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-17 (94) Image+SEO/ROI Engine Stage 1 빌드 완료 + 6축 main 머지 (FROM 💻 Code, main 8964ce7, additive·비가역0·네이버 무접촉)
+- **MERGE**: 6AXIS-MERGE GO 수행 — feat/mood-camera-system → main fast-forward(349b9db)·push·prod LIVE(6축 UI + 엔진 Stage 0). verify-vercel-deploy OK.
+- **DONE (ENG-1, 2 commits)**: 26f8560 백엔드 + 8964ce7 UI.
+  - 3a 명명정렬(Rating/PerformanceMetric.generationId→slotGenerationId·schema+Supabase 마이그레이션·0행보존·#62)
+  - 3b CategoryDna 로더(src/lib/engine/category-dna.ts·card↔row·DataLab 파생) + 50014980 시드 행(active·9슬롯·필수3·conf 0.7)
+  - 3c 9슬롯 결정테이블(slot-blueprint+slot-decision-table) · 3d 전략조립기(strategy-assembler=6축 assemblePrompt 재사용·신설0) · 3e 모델라우팅
+  - 3f 개입 dna_confirm/variant_select(intervention.ts+control-tower-engine·additive·firefly_auto 패턴) + ko.json 라벨
+  - 3g 썸네일정책→publish-readiness 배선(옵셔널 thumbnailSignals·회귀0)
+  - 3i UI: GET /api/engine/strategy + CategoryDnaCard(분석)·SlotFunnelBoard(이미지)·PrePublishGatePanel(발행)·useEngineStrategy·tab= 딥링크·WorkbenchTabs 옵셔널 슬롯
+- **검증/게이트**: tsc0·build0·이모지0·신규한글리터럴0(월/대 i18n·키워드 JSON)·prisma 싱글톤·외부 image API 0·비가역0·sentinel clean. 테스트 11 PASS. prod: /studio 200·/api/engine/strategy 200(명화 fallback)·400(no productId).
+- **패치 위치**: src/lib/engine/* · src/app/api/engine/strategy/route.ts · src/components/studio/engine/* · src/components/studio/workbench/WorkbenchTabs.tsx · src/app/studio/page.tsx · src/lib/jobs/intervention.ts · src/lib/automation/{control-tower-engine,publish-readiness}.ts · src/components/dashboard/ControlTowerMatrixWidget.tsx
+- **FINDING (CAT-CODE-명화)**: 명화 product naverCategoryCode=50003356 ≠ DNA 시드 50014980 → 명화 현재 DNA fallback(범용 9슬롯). 정합 필요(재분류 or 50003356 DNA 시드).
+- **다음 1액션**: [Desktop] ENG-1 브라우저 실측(§7) — /studio 3탭: 분석 DNA카드 렌더·이미지 9슬롯 보드(칩·진행률·슬롯카드)·발행 게이트패널·개입 대기열 dna_confirm/variant_select. 통과 시 Stage 2(학습루프). [결정] CAT-CODE-명화·CAPTURE-METHOD(3h).
+
 
 ### 2026-06-16 (93) 무드-카메라 6축 이미지 시스템 설계 + 전상품 codify (FROM 🖥 Desktop, docs only·비가역0·네이버 무접촉)
 - **What**: 무드-카메라 스펙 심층리서치→전상품 공통 시스템 박제. 6축(M1 신뢰/M2 욕망/M3 명료/M4 코지/M5 발랄/M6 프리미엄)·무드별 카메라 매핑·벤치마크DNA·프롬프트 조립기(긍정형 제외)·누적학습 라이브러리·3계층 아키텍처. 근본원인 3건 규명(Sony 하드코딩·편집모드 참조오염·Nano Banana 네거티브 필드 없음).

@@ -1,3 +1,15 @@
+## 2026-06-17 (세션8-Code) Image+SEO/ROI Engine Stage 1 빌드 + 6축 main 머지
+
+**[merge]** 6AXIS-MERGE GO — feat/mood-camera-system → main fast-forward (c3962b6..349b9db)·push·prod LIVE (6축 UI + 엔진 Stage 0 백엔드). verify-vercel-deploy OK.
+**[build·backend 26f8560]** 3a 명명정렬(Rating/PerformanceMetric.generationId→slotGenerationId, schema + Supabase 마이그레이션 align_rating_perf_slot_generation_id, 0행 보존, #62). 3b src/lib/engine/category-dna.ts(card↔row de/serialize·DataLab demographics/seasonality 파생·loadActiveDnaCard/upsert) + 50014980 시드 행 적재(active·9슬롯·필수3·conf 0.7). 3c slot-blueprint+slot-decision-table(9슬롯·DNA 필수/시퀀스·속성행·저관여 단축). 3d strategy-assembler(assembleStrategy 순수 = 6축 assemblePrompt + 결정테이블 + 라우팅 재사용·신설0; persistStrategy 옵션). 3e model-routing(hero=local cutout / spec=NB Pro / problem=NB2 / 그외 Firefly). 3f intervention.ts + control-tower-engine: dna_confirm(개입#1)+variant_select(개입#2) additive(firefly_auto 패턴) + control-tower-strings.ko.json 라벨. 3g publish-readiness가 evaluateThumbnailPolicy 호출(옵셔널 thumbnailSignals·회귀0)·위반 시 publishReady 차단.
+**[build·UI 8964ce7]** GET /api/engine/strategy(단일 read·DNA+9슬롯+게이트·reverse-deploy-safe). CategoryDnaCard(분석)·SlotFunnelBoard(이미지·가로 진행률+칩+슬롯카드)·PrePublishGatePanel(발행). useEngineStrategy 훅(1 fetch→3 패널)·tab= 딥링크. WorkbenchTabs dnaCard/slotFunnel/publishGate 옵셔널 슬롯(미전달 시 무변경). studio-strings.ko.json engine 섹션.
+**[verify]** prod 8964ce7 LIVE. /studio 200·/api/engine/strategy 200(명화 productId, dnaSource=none fallback·9슬롯 정상)·no-productId 400. strategy-assembler.test.ts 11 checks PASS.
+**[gates]** tsc0·build0·이모지0·신규 한글리터럴0(월/대 i18n·매칭키워드 JSON 분리)·prisma 싱글톤·외부 image API 0·네이버 PUT 무접촉·additive·비가역0·sentinel clean.
+**[finding]** CAT-CODE-명화 — 명화 product naverCategoryCode=50003356 ≠ DNA 시드 50014980 → 명화 현재 DNA fallback(범용 9슬롯). 정합 필요(재분류 or 50003356 DNA 시드).
+**[next]** [Desktop] ENG-1 브라우저 실측(§7: 분석 DNA카드·이미지 9슬롯 보드·발행 게이트·개입 dna_confirm/variant_select) → 통과 시 Stage 2(학습루프). [결정] CAT-CODE-명화·CAPTURE-METHOD(3h)·명화 발행.
+
+---
+
 ## 2026-06-16 (세션8-Code) Image+SEO/ROI Strategy Engine Stage 0 + control tower codify
 
 **[build]** ENG-0 Stage 0 — 6 additive Prisma models (category_dna / slot_plan / prompt_version / slot_generation / rating / performance_metric) applied to Supabase; DataLab client (datalab-client.ts, 8 endpoints); publish-time thumbnail policy gate (thumbnail-policy.ts) + unit test 6/6 PASS. Engine 'Generation' -> slot_generation (collision avoid). **[codify]** control-tower LIVE BOARD atop PARALLEL_WORK_TRACKER + principles #87~#89; CLAUDE.md index. **[gates]** tsc0 / build0 / no emoji / Sharp only / Naver PUT untouched / additive / irreversible 0 / sentinel clean. **[next]** [Desktop] verify 6 tables · gate test · Vercel SHA -> Stage 1.

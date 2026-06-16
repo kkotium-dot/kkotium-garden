@@ -5,21 +5,29 @@
 
 | ID | 우선순위 | 레인 | 상태 | 의존성 | 다음 1액션 | 검증기준 |
 |---|---|---|---|---|---|---|
-| ENG-0 | P1 | Code | 검증대기 | 6축 머지 권장 | Prisma 7모델+DataLab+정책게이트 빌드 | tsc0·build0·테이블6·게이트 단위테스트 |
-| 6AXIS-MERGE | P1 | 결정 | 결정대기 | preview UI 육안 | feat/mood-camera-system main 머지 GO | production 테이블 활성·UI 정상 |
-| CAPTURE-METHOD | P2 | 결정 | 결정대기 | — | 경쟁 캡처 방식 확정(권고 B 하이브리드) | 대표 확정 |
-| IMG-INGEST | P2 | Desktop | TODO | — | cut-1~4 → ingest-firefly ×4(향노트 슬롯) | #80 라이브·#81 정합·composite +4 |
+| 6AXIS-MERGE | P1 | Code | 완료 | — | feat/mood-camera-system → main 머지·push(349b9db)·prod LIVE | production 테이블 활성·UI 정상 ✅ |
+| ENG-0 | P1 | Code | 검증완료 | — | Stage 0 Desktop 독립검증 PASS(테이블6·6축 무손상·smoke 200) | tsc0·build0·테이블6 ✅ |
+| ENG-L0-PROOF | P1 | Desktop | 완료 | — | DataLab 3종+search_shop 라이브 실증(50014980) | 데이터 형태 엔진가정 일치 ✅ |
+| DNA-SEED-50014980 | P1 | Code | 완료 | — | category_dna 시드 적재(active·9슬롯·필수3·conf 0.7) | DB 행 LIVE ✅ |
+| ENG-1-FIX-NAMING | P1 | Code | 완료 | — | Rating/PerformanceMetric generationId→slotGenerationId(#62) | schema+마이그레이션·0행보존 ✅ |
+| ENG-1 | P1 | Code | 빌드완료·검증대기 | ENG-0 | Stage 1 백엔드(3a~3g)+UI(3i) 빌드·push(8964ce7)·prod smoke OK | Desktop 브라우저 실측(§7): 3탭·개입·게이트 |
+| CAPTURE-METHOD | P2 | 결정 | 결정대기 | — | 경쟁 캡처 방식 확정(권고 B 하이브리드·3h) | 대표 확정 |
+| IMG-INGEST | P2 | Desktop | TODO | — | cut-1~4 → ingest-firefly ×4(scent_note 슬롯) | #80 라이브·#81 정합·composite +4 |
 | PUBLISH-명화 | P1 | 결정 | 결정대기 | 원산지·옵션 확인 | SUSPENSION 원인 실측→안전기준 payload | dryRun·readiness·대표 GO(비가역#46) |
-| CUT34-EVAL | — | Desktop | 검증대기 | — | cut-3/4 = 향노트 섹션 슬롯 재배치(썸네일 아님) | 슬롯 매핑 확정 |
+| CAT-CODE-명화 | P2 | 결정 | 확인필요 | — | 명화 product naverCategoryCode=50003356 vs DNA 시드 50014980 불일치 | 카테고리 정합(재분류 or 50003356 DNA 시드) |
+| CUT34-EVAL | — | Desktop | 검증대기 | — | cut-3/4 = scent_note 슬롯 재배치(썸네일 아님) | 슬롯 매핑 확정 |
 
 ### 파생 큐
-- 지금 큐: ENG-0(6축 머지 후) · IMG-INGEST
-- 결정 대기(대표): 6AXIS-MERGE · CAPTURE-METHOD · PUBLISH-명화 3건 확인
-- 검증 대기: CUT34-EVAL(슬롯 재배치)
+- 지금 큐: ENG-1 Desktop 검증(§7) · IMG-INGEST
+- 결정 대기(대표): CAPTURE-METHOD(3h) · PUBLISH-명화 · CAT-CODE-명화(50003356 vs 50014980) 3건 확인
+- 검증 대기: ENG-1(브라우저 3탭) · CUT34-EVAL(슬롯 재배치)
 
 ### 변경로그
 - 2026-06-16: 엔진 codify. IMG-앱→완료(preview), IMG-컷34→cut-3/4 생성·평가완(향노트 슬롯 판정). 관제탑 체계 신설(#87~#89).
 - 2026-06-16 (Code/ENG-0): Stage 0 build done — Prisma 6 models applied (category_dna / slot_plan / prompt_version / slot_generation / rating / performance_metric), DataLab 8 endpoints, thumbnail policy gate + unit test 6/6 PASS. Engine 'Generation' -> slot_generation (collision avoid). tsc0 / build0. ENG-0 TODO -> verified-pending (#88).
+- 2026-06-17 (Code/ENG-1): 6AXIS-MERGE GO — feat/mood-camera-system → main fast-forward·push(349b9db)·prod LIVE. Stage 1 빌드 완료(2 commits): 26f8560 백엔드 + 8964ce7 UI, push(8964ce7)·prod 검증 OK·/studio 200·engine route 200.
+- 2026-06-17 (Code/ENG-1 상세): 3a 명명정렬(slotGenerationId·마이그레이션 0행보존) · 3b CategoryDna 로더+50014980 시드(active) · 3c 9슬롯 결정테이블 · 3d 전략조립기(6축 assemblePrompt 재사용·신설0) · 3e 모델라우팅 · 3f 개입 dna_confirm/variant_select(additive) · 3g 썸네일정책→publish-readiness 배선(옵셔널·회귀0) · 3i UI(DNA카드·9슬롯 퍼널보드·발행 게이트패널·1 fetch). 테스트 11 PASS. tsc0/build0/이모지0/한글리터럴0/비가역0/네이버무접촉.
+- 2026-06-17 (발견·CAT-CODE-명화): 명화 product naverCategoryCode=50003356 ≠ DNA 시드 50014980 → 명화는 현재 DNA fallback(none·범용 9슬롯). 정합 필요(재분류 또는 50003356 DNA 시드).
 
 ---
 
