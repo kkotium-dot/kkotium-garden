@@ -1,4 +1,27 @@
 # 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev19 · Scent→Mood 컨셉 재설계 + 생성설정 가드 + april/cotton v3·세션7-e)
+---
+
+## ★ 작업 관제탑 (LIVE BOARD · 단일 권위 · 세션 시작 필독·종료 필수 갱신)
+
+| ID | 우선순위 | 레인 | 상태 | 의존성 | 다음 1액션 | 검증기준 |
+|---|---|---|---|---|---|---|
+| ENG-0 | P1 | Code | 검증대기 | 6축 머지 권장 | Prisma 7모델+DataLab+정책게이트 빌드 | tsc0·build0·테이블6·게이트 단위테스트 |
+| 6AXIS-MERGE | P1 | 결정 | 결정대기 | preview UI 육안 | feat/mood-camera-system main 머지 GO | production 테이블 활성·UI 정상 |
+| CAPTURE-METHOD | P2 | 결정 | 결정대기 | — | 경쟁 캡처 방식 확정(권고 B 하이브리드) | 대표 확정 |
+| IMG-INGEST | P2 | Desktop | TODO | — | cut-1~4 → ingest-firefly ×4(향노트 슬롯) | #80 라이브·#81 정합·composite +4 |
+| PUBLISH-명화 | P1 | 결정 | 결정대기 | 원산지·옵션 확인 | SUSPENSION 원인 실측→안전기준 payload | dryRun·readiness·대표 GO(비가역#46) |
+| CUT34-EVAL | — | Desktop | 검증대기 | — | cut-3/4 = 향노트 섹션 슬롯 재배치(썸네일 아님) | 슬롯 매핑 확정 |
+
+### 파생 큐
+- 지금 큐: ENG-0(6축 머지 후) · IMG-INGEST
+- 결정 대기(대표): 6AXIS-MERGE · CAPTURE-METHOD · PUBLISH-명화 3건 확인
+- 검증 대기: CUT34-EVAL(슬롯 재배치)
+
+### 변경로그
+- 2026-06-16: 엔진 codify. IMG-앱→완료(preview), IMG-컷34→cut-3/4 생성·평가완(향노트 슬롯 판정). 관제탑 체계 신설(#87~#89).
+- 2026-06-16 (Code/ENG-0): Stage 0 build done — Prisma 6 models applied (category_dna / slot_plan / prompt_version / slot_generation / rating / performance_metric), DataLab 8 endpoints, thumbnail policy gate + unit test 6/6 PASS. Engine 'Generation' -> slot_generation (collision avoid). tsc0 / build0. ENG-0 TODO -> verified-pending (#88).
+
+---
 
 ## rev22 세션7-i-Code (2026-06-14 Code) — 내용인식 분류 + IA 3탭 + 한글화 + 인앱삭제
 ## rev23 세션7-i-fix1~5-Code (2026-06-15 Code) — 누끼신호 교정·백필 종결·STALE 근본수정·정합 가드·워크플로 rev2
@@ -154,8 +177,8 @@
 |---|---|---|---|
 | IMG-리서치 | 무드-카메라 6축 시스템 심층리서치 | ✅ DONE | 6축(M1~M6)·카메라맵·벤치마크DNA·프롬프트 조립기·학습라이브러리·3계층 아키텍처. 근본원인 3건 규명(소니하드코딩·참조오염·네거티브필드없음) |
 | IMG-박제 | 연구결과 docs/ 박제 + 등록워크플로/플레이북/원칙 codify | ✅ DONE(2026-06-16) | RESEARCH+SYSTEM 신규 2건, PLAYBOOK §9, REGISTRATION §11+rev3, PRINCIPLES #82~#86 |
-| IMG-컷34 | 명화 cut-3(April/Canon)·cut-4(Black Cherry/Leica) 생성 | ⏸ 보류(개선 후) | 새 이미지(+) 트러스티드 클릭 경로 확보 필요(SP-ACTION-BUTTON 합성 무시). 새 6축 프롬프트로 재개. cut-1·cut-2 생성·검증·보존 완 |
-| IMG-앱 | 6축 시스템 앱 빌드(MoodAxis/CameraSpec/PromptBlock/PromptLibraryEntry/Generation 테이블·3단계 UI·Layer3 가드·firefly_auto subcheck) | ☐ Code | 상품별 코딩 0(#55). 운영 3단계 유지(무드→조립→생성). 학습=즐겨찾기/평점 수동포착 |
+| IMG-컷34 | 명화 cut-3(April/Canon)·cut-4(Black Cherry/Leica) 생성 | ✅ DONE(생성·평가완) | cut-3(April/Canon)·cut-4(Black Cherry/Leica) 생성·운영자 평가완. 판정=기술적 우수하나 무드플레이트 → 향노트 섹션 배경 슬롯 적합·썸네일/히어로 부적합(cut-4 200px 묻힘). 전략엔진으로 재배치. |
+| IMG-앱 | 6축 시스템 앱 빌드(MoodAxis/CameraSpec/PromptBlock/PromptLibraryEntry/Generation 테이블·3단계 UI·Layer3 가드·firefly_auto subcheck) | ✅ DONE(preview) | feat/mood-camera-system c1e2bd3 preview READY·Desktop 검증완(테이블5·시드 1:1)·prod DB 마이그레이션 적용완. main 머지 대기(=엔진 L2 토대). |
 | IMG-인제스트 | 4컷 → ingest-firefly ×4 → 실앱 테스트 | ☐ (cut-3/4 후) | server conformToSlotRatio 4:5 no-op·#80 라이브 /assets·#81 정합 검증 |
 
 ## 앱 적용 현황 (동기화 · 2026-06-16 세션8)

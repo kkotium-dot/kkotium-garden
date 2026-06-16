@@ -133,6 +133,16 @@ production HEAD fa9ad01 READY 확인 후 /studio·/dashboard 실사용:
 
 > 이전 SUPERSEDED 메시지·직전 인계·Session E 디테일은 `docs/plan/archive/ROADMAP_2026-05_part2.md`로 이관(2026-06-01, Lane 1-D turn). 검색용으로만 참조.
 
+## 이미지+SEO/ROI 전략 엔진 (Stage 0~3) — 2026-06-16 세션8 신규
+
+authority = docs/design/IMAGE_SEO_STRATEGY_ENGINE.md. All-product common (#55): category knowledge lives in versioned DNA-card data, no per-product branch code. 6-axis mood-camera system is absorbed as the L2 lookup (merge 6-axis to main first).
+
+- **Stage 0 (DONE 2026-06-16, verify-pending)**: Prisma 6 models + additive migration + DataLab client + publish-time thumbnail policy gate. Verify: tsc0 / build0 / Supabase 6 tables / policy-gate unit test.
+- **Stage 1 (next)**: DNA card (semi-manual) + slot decision-table + assembler + Firefly/Nano-Banana integration + intervention #1~#3 UI. Verify: 명화 slot-plan + first batch.
+- **Stage 2**: immutable tuple logging + CTR/CVR back-link (Naver report / store stats) + promotion logic. Verify: rating -> promotion round-trip.
+- **Stage 3**: DNA wizard + Search-Ad A/B + library UI. Verify: 2nd category with zero code.
+
+
 ## Sprint 6 — P0 (즉시 ROI, 매출 직접 영향)
 
 **기간 목표**: 2-3 채팅 세션 안에 P0-A·B·C 모두 완료.

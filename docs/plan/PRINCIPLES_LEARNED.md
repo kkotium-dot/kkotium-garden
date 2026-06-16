@@ -929,3 +929,14 @@ Nano Banana/Gemini는 네거티브 프롬프트 필드가 없다(HTTP 400) — "
 
 - **긍정형 작성**: "no cars"가 아니라 "empty street". 제외 = `clean composition containing only the product..., realistic photograph only` + 선언형 `no on-image text, no logos, no human figures, no illustration`. 가드 `exclusionsPresent`.
 - **모델별**: Gemini류엔 `negativePrompt` 필드 절대 전송 금지. 디퓨전/Flux 폴백에서만 네거티브 필드 사용. 전상품 프롬프트 조립기 고정 규칙.
+
+## 작업원칙 #87~#89 — 작업 관제탑 체계 (2026-06-16 세션8)
+
+### #87 단일 관제탑 (Single Control Tower)
+모든 병행 트랙은 PARALLEL_WORK_TRACKER 상단 라이브 보드 한 곳에만 산다. 보드에 없으면 존재하지 않는 작업(누락 방지). 세션 시작 = 보드 필독 → 지금 큐 top 실행. 세션 종료 = 보드 갱신(상태·다음 1액션) + 변경로그 1줄 + 핸드오프. 우선순위/스케줄 변경은 변경로그에 기록. 파생 큐(지금/결정대기/검증대기)는 보드에서 자동 도출.
+
+### #88 완료=검증 (Done Means Verified)
+코드/기능 작업은 실제 브라우저/실측 검증을 통과하기 전 "검증 대기" 상태로 둔다. 검증 없이 "완료" 라벨 금지, 검증 없이 다음 본작업 진행 금지. Code 보고만으로 완료 처리 금지(#45 결합). 실측 불가 시 거짓 보고 대신 대표에게 요청.
+
+### #89 변경 흡수 (Change Absorption)
+세션 도중 추가 요청·개선·변경은 즉시 관제탑 보드에 등재 + 우선순위 재산정 후 진행한다. 흐름 보존이 목적 — 대표가 같은 사항을 재언급하지 않아도 누락 없이 이어지게.

@@ -1027,3 +1027,147 @@ model Generation {
   @@index([entryId])
   @@map("generation")
 }
+
+// ============================================================================
+// Adaptive Image + SEO/ROI Strategy Engine — Stage 0 (2026-06-16, session8).
+// Authority: docs/design/IMAGE_SEO_STRATEGY_ENGINE.md §2. Additive only;
+// no existing table is touched. All-product common (#55) — category knowledge
+// lives in data (versioned DNA cards), not in per-product branch code.
+// NOTE: the engine spec §2 names its immutable generation-logging model
+// "Generation"; that name is already taken by the mood-camera library above,
+// so the engine model is named SlotGeneration / @@map("slot_generation") to
+// keep the migration fully additive (operator decision, 2026-06-16).
+// ============================================================================
+
+model CategoryDna {
+  id                   String   @id @default(cuid())
+  // Naver category code (local NAVER_CATEGORIES_FULL — no API call, #3-3).
+  categoryCode         String   @map("category_code")
+  categoryName         String   @map("category_name")
+  version              Int      @default(1)
+  // Inheritance (override pattern) — subcategory/brand specialization.
+  parentDnaId          String?  @map("parent_dna_id")
+  // background, angle, propsAllowed, palette, brightness.
+  thumbnailConventions Json     @map("thumbnail_conventions")
+  slotSequence         Json     @map("slot_sequence")
+  mandatorySlots       Json     @map("mandatory_slots")
+  toneManner           Json     @map("tone_manner")
+  compositionNorms     Json     @map("composition_norms")
+  // Certification types that matter (e.g. HACCP, clinical).
+  trustSignals         Json     @map("trust_signals")
+  // From DataLab: age/gender/device skew.
+  demographics         Json
+  palette              Json
+  // sources + capturedAt.
+  provenance           Json
+  confidence           Float    @default(0.5)
+  // draft|active|retired.
+  status               String   @default("draft")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@index([categoryCode])
+  @@index([parentDnaId])
+  @@map("category_dna")
+}
+
+model SlotPlan {
+  id            String   @id @default(cuid())
+  productId     String   @map("product_id")
+  categoryDnaId String?  @map("category_dna_id")
+  // [{slotType, conversionJob, contentType, mood, cameraSpecId, composition,
+  //   legibility, textPolicy, compositeFlag, groundingFlag, modelRoute, aspect}]
+  slots         Json
+  version       Int      @default(1)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@map("slot_plan")
+}
+
+model PromptVersion {
+  id               String   @id @default(cuid())
+  // global|category|slot.
+  scope            String
+  categoryCode     String?  @map("category_code")
+  slotType         String?  @map("slot_type")
+  templateText     String   @map("template_text")
+  // Declared variable slots.
+  variables        Json
+  // firefly_native|nano_banana_pro|nano_banana_2.
+  model            String
+  groundingDefault Boolean  @default(false) @map("grounding_default")
+  // free|locked.
+  seedPolicy       String   @default("free") @map("seed_policy")
+  // structureRef/styleRef descriptors.
+  refs             Json?
+  // Immutable; a new edit creates a new row pointing at the prior version.
+  version          Int
+  parentVersionId  String?  @map("parent_version_id")
+  // draft|candidate|default|retired (environment pointer, not mutation).
+  status           String   @default("draft")
+  authoredBy       String   @map("authored_by")
+  rationale        String?
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([scope])
+  @@index([categoryCode, slotType])
+  @@index([parentVersionId])
+  @@map("prompt_version")
+}
+
+// Engine spec §2 "Generation" — immutable per-slot generation tuple log.
+// Renamed to SlotGeneration to avoid the mood-camera Generation collision.
+model SlotGeneration {
+  id              String   @id @default(cuid())
+  productId       String   @map("product_id")
+  slotType        String   @map("slot_type")
+  promptVersionId String   @map("prompt_version_id")
+  resolvedPrompt  String   @map("resolved_prompt")
+  model           String
+  modelVersion    String?  @map("model_version")
+  grounding       Boolean  @default(false)
+  seed            String?
+  aspect          String?
+  refs            Json?
+  settings        Json?
+  outputUrl       String?  @map("output_url")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([promptVersionId])
+  @@map("slot_generation")
+}
+
+model Rating {
+  id           String   @id @default(cuid())
+  // Logical reference to slot_generation.id (decoupled — no FK, additive).
+  generationId String   @map("generation_id")
+  // 1..5 (or 0/1 thumb).
+  score        Int
+  ratedBy      String   @map("rated_by")
+  note         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([generationId])
+  @@map("rating")
+}
+
+model PerformanceMetric {
+  id           String   @id @default(cuid())
+  generationId String?  @map("generation_id")
+  productId    String?  @map("product_id")
+  slotType     String?  @map("slot_type")
+  // thumbnail_ctr|detail_cvr|time_on_page.
+  metricType   String   @map("metric_type")
+  value        Float
+  windowStart  DateTime @map("window_start")
+  windowEnd    DateTime @map("window_end")
+  // naver_report|store_stats|search_ad_ab.
+  source       String
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([generationId])
+  @@index([productId])
+  @@map("performance_metric")
+}

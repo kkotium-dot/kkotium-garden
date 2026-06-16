@@ -304,6 +304,10 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 - **#73** — UI 작업 기본전제 3종(전 UI작업): (a)직관우선·과밀금지 (b)한글우선 라벨(음차 금지·코드영어/표면한글·정착외래어 누끼/합성/SEO/AI/ZIP/Firefly 유지·ko.json sweep) (c)작업여정 정합(IA=상품분석→이미지→발행). 전거 docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §8
 - **#77** (정정판) — Firefly 모드 가드: view=edit 워크스페이스 자체는 안전(풀생성 허용), ACTIVE 마스크/선택영역/참조잠금(부분 인페인)일 때만 edit-locked-ABORT. 편집도구 버튼(새로 편집·마크업·디테일조절·업스케일)·대형 표시이미지는 워크스페이스 신호일 뿐 ABORT 아님(1차판 '버튼=편집모드' 오탐 정정). kkAssertGenerateMode() → edit-locked-ABORT(maskActive||refLoaded>0)만 중단, generate·generate-in-edit-OK 진행 + 사후 perceptual hash minHamming<10=오염. firefly_auto generateModeConfirmed 게이트(기박제). 전거 docs/playbook/FIREFLY_GROUNDING_AND_QUALITY_UPGRADE_2026-06-13.md §1.2~1.4
 
+- **#87** — 단일 관제탑 (Single Control Tower) — single live board = the only authority; not on the board = the task does not exist.
+- **#88** — 완료=검증 (Done Means Verified) — no "done" label before real browser/field verification (binds #45).
+- **#89** — 변경 흡수 (Change Absorption) — absorb mid-session changes into the board immediately, then re-prioritize.
+
 ---
 
 ## 8. 새 세션 첫 메시지 권장 템플릿

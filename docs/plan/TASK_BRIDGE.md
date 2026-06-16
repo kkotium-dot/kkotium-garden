@@ -79,6 +79,12 @@
 - **이미지**: cut-1(Lemon)·cut-2(Cotton) 생성·검증·Adobe 보존(오염0·4:5 1856×2304·2K). cut-3·4 보류(트러스티드 클릭 경로 확보 후 새 6축 재개).
 - **다음 1액션**: [Code] 6축 시스템 앱 빌드(MoodAxis/CameraSpec/PromptBlock/PromptLibraryEntry/Generation 테이블·3단계 UI·Layer3 가드·firefly_auto subcheck 5종) — 상품별 코딩 0(#55). [Desktop] cut-3·4 재개→ingest×4→실앱테스트. item3 명화 SUSPENSION→발행(대표 GO).
 
+### 2026-06-16 (93) Image+SEO/ROI Engine Stage 0 + control tower codify (FROM Code, feat/mood-camera-system, additive·비가역0)
+- **DONE (ENG-0 Stage 0)**: 6 Prisma models (category_dna / slot_plan / prompt_version / slot_generation / rating / performance_metric — Supabase applied), datalab-client.ts (8 endpoints), thumbnail-policy.ts gate + test 6/6. tsc0 / build0. 'Generation' -> slot_generation (collision avoid).
+- **DONE (control tower)**: LIVE BOARD atop PARALLEL_WORK_TRACKER + principles #87~#89 + CLAUDE.md index.
+- **VERIFY-PENDING (#88)**: [Desktop] confirm 6 tables · policy-gate test · Vercel READY+SHA -> then Stage 1.
+- **authority**: docs/design/IMAGE_SEO_STRATEGY_ENGINE.md (engine) · docs/research/IMAGE_SEO_STRATEGY_ENGINE_RESEARCH_2026-06-16.md (evidence).
+
 ### 2026-06-15 (92) 워크플로 rev2 codify + 상태 정합 → item2(Firefly)·item3(발행) ACTIVE (FROM 💻 Code, main a96909c, docs·비가역0)
 - **종결 확인**: item1 레거시 백필(#79)·#80 STALE 근본수정·#81 자산 정합 가드 전부 production 검증 클린(3상품 ok·depth-2 0·dead 0). 등록 워크플로 rev2 codify(권위 PRODUCT_REGISTRATION_WORKFLOW.md).
 - **ACTIVE item2 (Firefly)**: [Desktop] 4컷 생성(realism lane·생성설정 4플래그 확인)→누끼합성(v8 참조드롭 하모나이즈)→정규 stage 적재. firefly_auto 카드 경유.

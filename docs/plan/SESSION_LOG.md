@@ -1,3 +1,7 @@
+## 2026-06-16 (세션8-Code) Image+SEO/ROI Strategy Engine Stage 0 + control tower codify
+
+**[build]** ENG-0 Stage 0 — 6 additive Prisma models (category_dna / slot_plan / prompt_version / slot_generation / rating / performance_metric) applied to Supabase; DataLab client (datalab-client.ts, 8 endpoints); publish-time thumbnail policy gate (thumbnail-policy.ts) + unit test 6/6 PASS. Engine 'Generation' -> slot_generation (collision avoid). **[codify]** control-tower LIVE BOARD atop PARALLEL_WORK_TRACKER + principles #87~#89; CLAUDE.md index. **[gates]** tsc0 / build0 / no emoji / Sharp only / Naver PUT untouched / additive / irreversible 0 / sentinel clean. **[next]** [Desktop] verify 6 tables · gate test · Vercel SHA -> Stage 1.
+
 ## 2026-06-16 (세션8-Desktop) 무드-카메라 6축 이미지 시스템 설계 + 전상품 codify
 
 **[리서치]** 무드-카메라 스펙 시스템 심층리서치 완료 — 상품 무한·무드 유한(6축 M1~M6: 신뢰/욕망/명료/코지/발랄/프리미엄), 무드별 카메라/렌즈/조명 매핑·벤치마크DNA(무인양품/이솝/오늘의집/29CM/컬리/쿠팡)·프롬프트 조립기·누적학습 라이브러리·3계층 아키텍처. 근본원인 3건 규명: (1)v5 4향 전부 Sony 하드코딩→"전부 소니" (2)편집모드 생성물 자동참조→오염→"April·Cotton 유사" (3)Nano Banana 네거티브 필드 없음(HTTP 400)→"제외 안 먹힘".
