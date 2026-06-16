@@ -12,7 +12,7 @@
 | ENG-1-FIX-NAMING | P1 | Code | 완료 | — | Rating/PerformanceMetric generationId→slotGenerationId(#62) | schema+마이그레이션·0행보존 ✅ |
 | ENG-1 | P1 | Code | 빌드완료·검증대기 | ENG-0 | Stage 1 백엔드(3a~3g)+UI(3i) 빌드·push(8964ce7)·prod smoke OK | Desktop 브라우저 실측(§7): 3탭·개입·게이트 |
 | CAPTURE-METHOD | P2 | 결정 | 결정대기 | — | 경쟁 캡처 방식 확정(권고 B 하이브리드·3h) | 대표 확정 |
-| IMG-INGEST | P2 | Desktop | TODO | — | cut-1~4 → ingest-firefly ×4(scent_note 슬롯) | #80 라이브·#81 정합·composite +4 |
+| IMG-INGEST | P2 | Desktop | TODO | — | April·Black Cherry(cut-3/4) → ingest-firefly ×2(scent_note 슬롯)·Lemon 재생성/Cotton 품절후보 | #80 라이브·#81 정합·composite +2 |
 | PUBLISH-명화 | P1 | 결정 | 결정대기 | 원산지·옵션 확인 | SUSPENSION 원인 실측→안전기준 payload | dryRun·readiness·대표 GO(비가역#46) |
 | CAT-CODE-명화 | P2 | Code | 완료·검증완 | — | naverCategoryCode 50003356→50014980 정정(경로A·DB only·네이버무접촉) | dnaSource db·scent_note 등장·7슬롯('리필' lowInvolvement로 problem/size_duration 드롭, 9 아님) ✅ |
 | ICE-TRAY-DNA | P2 | Code | 완료·검증완 | — | 경로B 배치(#62·#90)·push c35d64c·prod LIVE·Desktop UI 검증 PASS | item1/3/4 PASS(명화 9복원·아이스 6중립·라벨동기화·명화 준비도 S/94)·item2 zero-masking PASS(positive 렌더=idle+미시드 상품 부재로 미관측→UNSEEDED-BACKLOG-BADGE 후속) ✅ |
@@ -35,6 +35,7 @@
 - 2026-06-17 (Code/#62 배치·경로B·전부 가역·additive·네이버무접촉): (1)emptyCard 중립화 — 기본열에서 scent_note/use_install/size_duration 제거→[hero,problem,solution_usp,trust,gift,cta] 6슬롯 중립폴백. (2)미시드 개입카드 — category_dna_unseeded(intervention.ts 타입+payload·control-tower idle priority 점화·strings·matrix label·matrix route dnaUnseeded 배치). (3)signal 가드 — deriveProductSignals: 리필+본품/선물이면 lowInvolvement 미발화(키워드 JSON refillTerms/commodityHard/bundleAnchor). (4)category 동기화 — src/lib/naver/category-sync.ts 헬퍼(전상품·naverCategoryCode→leaf)+명화 category DB '차량용방향제' 동기화. 검증 tsc0·build0·이모지0·신규한글리터럴0·prisma싱글톤·테스트 11 PASS·로컬실증(명화 9복원 scent_note 포함·아이스 6중립 향0·순수소모품 가드예외). PRINCIPLES_LEARNED #90 박제.
 - 2026-06-17 (Code/#62 prod 검증 PASS): push c35d64c·verify-vercel-deploy OK(production=c35d64c). /api/engine/strategy 3상품 prod 재호출 — 명화(50014980) dnaSource db·9슬롯·scent_note O / 아이스트레이(50005257) none·6중립·scent_note X / 달항아리(50000963) none·6중립·scent_note X. 데이터레인 검증완(#88), 관제탑 개입카드 UI = Desktop 브라우저 실측 잔여.
 - 2026-06-17 (Desktop/#62 UI 검증 PASS): item1/3/4 PASS(명화 9슬롯 복원·아이스트레이 6중립·라벨 동기화·명화 준비도 S/94). item2 미시드 카드 zero-masking PASS, positive 렌더는 idle+미시드 상품 부재로 미관측. ICE-TRAY-DNA 종결(#88). 후속 UNSEEDED-BACKLOG-BADGE(저긴급 상시 배지·긴급큐 비마스킹·상시가시) Stage 2 등재(branch feat/unseeded-backlog-badge·#55·#56).
+- 2026-06-17 (정정·docs only): IMG cut 라벨 뒤바뀜 교정 — 6축 full-res 평가완 2건 = cut-3 April Fresh(0fc97780)·cut-4 Black Cherry(062339cc)(Adobe GenAIAsset 2026-06-16 최신 2건=전부). cut-1 Lemon·cut-2 Cotton은 2026-06-13 구버전(6축 이전)만 존재·6축 미생성. IMG-컷34 행이 정확(불변). 향노트 ingest 대상=April·Black Cherry, Lemon 재생성 예정, Cotton 품절후보. PROGRESS 세션8-Desktop·트래커 IMG-INGEST/IMG-앱 블록 반영.
 
 ---
 
@@ -194,8 +195,8 @@
 | IMG-박제 | 연구결과 docs/ 박제 + 등록워크플로/플레이북/원칙 codify | ✅ DONE(2026-06-16) | RESEARCH+SYSTEM 신규 2건, PLAYBOOK §9, REGISTRATION §11+rev3, PRINCIPLES #82~#86 |
 | IMG-컷34 | 명화 cut-3(April/Canon)·cut-4(Black Cherry/Leica) 생성 | ✅ DONE(생성·평가완) | cut-3(April/Canon)·cut-4(Black Cherry/Leica) 생성·운영자 평가완. 판정=기술적 우수하나 무드플레이트 → 향노트 섹션 배경 슬롯 적합·썸네일/히어로 부적합(cut-4 200px 묻힘). 전략엔진으로 재배치. |
 | IMG-앱 | 6축 시스템 앱 빌드(MoodAxis/CameraSpec/PromptBlock/PromptLibraryEntry/Generation 테이블·3단계 UI·Layer3 가드·firefly_auto subcheck) | ✅ DONE(preview) | feat/mood-camera-system c1e2bd3 preview READY·Desktop 검증완(테이블5·시드 1:1)·prod DB 마이그레이션 적용완. main 머지 대기(=엔진 L2 토대). |
-| IMG-인제스트 | 4컷 → ingest-firefly ×4 → 실앱 테스트 | ☐ (cut-3/4 후) | server conformToSlotRatio 4:5 no-op·#80 라이브 /assets·#81 정합 검증 |
+| IMG-인제스트 | April·Black Cherry(cut-3/4) → ingest-firefly ×2 → 실앱 테스트 (Lemon 재생성 예정·Cotton 품절후보) | ☐ | server conformToSlotRatio 4:5 no-op·#80 라이브 /assets·#81 정합 검증 |
 
 ## 앱 적용 현황 (동기화 · 2026-06-16 세션8)
-- 명화 이미지: cut-1(Lemon·아침)·cut-2(Cotton·한낮) 생성·육안검증·Adobe 클라우드 보존 ✅ / cut-3(April)·cut-4(Black Cherry) 보류(개선 후 재개) ⏸. 오염 없음 확인(cut-1≠cut-2), 4:5(1856×2304)·2K.
+- 명화 이미지(정정 2026-06-17·라벨 뒤바뀜 교정): cut-3 April Fresh(0fc97780)·cut-4 Black Cherry(062339cc) = 6축·full-res 2K·평가완·향노트 배경 적합(Adobe GenAIAsset 2026-06-16 최신 2건=전부) ✅ / cut-1(Lemon)·cut-2(Cotton)=2026-06-13 구버전(6축 이전)만·6축 미생성 ⏸. 향노트 ingest 대상=April·Black Cherry, Lemon 재생성 예정, Cotton 품절후보. 4:5(1856×2304)·2K.
 - 문서 시스템: 연구+코드화 전상품 검증·관제탑 LIVE 유지(세션4 이후 무회귀). 발행 SUSPENSION/대표·상세 현황 = 상단 세션4 블록 유지(변동없음).
