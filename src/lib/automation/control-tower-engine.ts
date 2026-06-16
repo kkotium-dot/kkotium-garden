@@ -162,6 +162,17 @@ export interface ActionQueueItem {
   // reference) are verified; false/undefined → pending. Only set on a
   // firefly_auto item; additive.
   settingsVerified?: boolean;
+  // firefly_auto mood-camera guards (#84/#86, MOOD_CAMERA_SPEC_SYSTEM §4). The
+  // five subchecks passed through from the payload + a summary boolean (true only
+  // when all five pass). Only set on a firefly_auto item; additive.
+  moodGuards?: {
+    cameraVarietyApplied: boolean;
+    referenceCleared: boolean;
+    settingsVerified: boolean;
+    exclusionsPresent: boolean;
+    benchmarkDnaSet: boolean;
+  };
+  moodGuardsAllPass?: boolean;
 }
 
 export interface ControlTowerRow {
@@ -428,12 +439,38 @@ export function computeActionQueueItem(
       const ap = intervention.payload as {
         generateModeConfirmed?: boolean;
         settingsVerified?: { ratio?: boolean; resolution?: boolean; grounding?: boolean; reference?: boolean };
+        moodGuards?: {
+          cameraVarietyApplied?: boolean;
+          referenceCleared?: boolean;
+          settingsVerified?: boolean;
+          exclusionsPresent?: boolean;
+          benchmarkDnaSet?: boolean;
+        };
       } | null;
       const gmc = ap?.generateModeConfirmed === true;
       const sv = ap?.settingsVerified;
       // Summary boolean: all four generation settings verified.
       const settingsVerified = !!sv && sv.ratio === true && sv.resolution === true && sv.grounding === true && sv.reference === true;
-      return { ...base, category: 'AUTH', stage: IV_FIREFLY_AUTO, deepLink: `/studio?product=${productId}`, ...iv, generateModeConfirmed: gmc, settingsVerified };
+      // Mood-camera guards (#84/#86) — normalize each subcheck to a strict bool;
+      // summary is true only when all five pass.
+      const mg = ap?.moodGuards;
+      const moodGuards = mg
+        ? {
+            cameraVarietyApplied: mg.cameraVarietyApplied === true,
+            referenceCleared: mg.referenceCleared === true,
+            settingsVerified: mg.settingsVerified === true,
+            exclusionsPresent: mg.exclusionsPresent === true,
+            benchmarkDnaSet: mg.benchmarkDnaSet === true,
+          }
+        : undefined;
+      const moodGuardsAllPass = moodGuards
+        ? moodGuards.cameraVarietyApplied &&
+          moodGuards.referenceCleared &&
+          moodGuards.settingsVerified &&
+          moodGuards.exclusionsPresent &&
+          moodGuards.benchmarkDnaSet
+        : undefined;
+      return { ...base, category: 'AUTH', stage: IV_FIREFLY_AUTO, deepLink: `/studio?product=${productId}`, ...iv, generateModeConfirmed: gmc, settingsVerified, moodGuards, moodGuardsAllPass };
     }
     if (intervention.type === IV_HERO_CROP_REQUEST) {
       return { ...base, category: 'INPUT_DECISION', stage: IV_HERO_CROP_REQUEST, deepLink: `/studio?product=${productId}`, ...iv };

@@ -23,6 +23,8 @@ import {
   type FidelityChecklistPayload,
   type MountCheckPayload,
 } from '@/lib/fidelity/product-fidelity';
+import { evaluateGuards, type GuardInput } from '@/lib/mood/guards';
+import type { MoodGuards } from '@/lib/mood/types';
 
 export const INTERVENTION_SOURCE_REQUEST = 'source_request';
 export const INTERVENTION_HERO_CROP_REQUEST = 'hero_crop_request';
@@ -87,6 +89,12 @@ export interface FireflyDropPayload {
     grounding: boolean;   // Google grounding on for structure-real scenes
     reference: boolean;   // reference lock intentionally managed (not stale)
   };
+  // firefly_auto only (#84/#86, MOOD_CAMERA_SPEC_SYSTEM §4): the five mood-camera
+  // guards for this generation batch — camera variety (no single default),
+  // reference cleared (edit-mode contamination), settings verified, positive
+  // exclusion present, benchmark DNA set. Optional + additive — only the
+  // mood-camera generation path sets it; firefly_drop never does.
+  moodGuards?: MoodGuards;
 }
 export interface HeroCropPayload {
   guide: string;       // i18n key for the crop guidance text
@@ -122,6 +130,18 @@ export function buildFireflyDropPayload(
     model: FIREFLY_MODEL,
     ratio: FIREFLY_RATIO,
   };
+}
+
+/**
+ * Mood-camera guards (#84/#86) — compute the five subchecks for a generation
+ * batch from the assembled prompts (camera variety / exclusion / benchmark DNA)
+ * plus the two driver-confirmed runtime signals (reference cleared / settings
+ * verified). Thin pass-through to the pure evaluator in src/lib/mood/guards so
+ * the same logic backs both the unit tests and the firefly_auto card. Product-
+ * agnostic — the batch is supplied, never hardcoded (#55).
+ */
+export function buildMoodGuards(input: GuardInput): MoodGuards {
+  return evaluateGuards(input);
 }
 
 /**

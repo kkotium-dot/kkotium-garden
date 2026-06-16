@@ -37,6 +37,7 @@ import {
   WorkbenchCanvas,
   WorkbenchTabs,
   JobLifecyclePanel,
+  MoodCameraPanel,
 } from '@/components/studio/workbench';
 
 // ── Main inner ────────────────────────────────────────────────────────────
@@ -267,6 +268,12 @@ function StudioInner() {
         />
       }
       assets={<AssetBrowser productId={selectedProduct?.id ?? null} />}
+      moodCamera={
+        <MoodCameraPanel
+          productName={selectedProduct?.name}
+          category={selectedProduct?.category}
+        />
+      }
     />
     </>
   );

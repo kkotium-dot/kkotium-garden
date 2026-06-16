@@ -34,6 +34,10 @@ export interface WorkbenchTabsProps {
   /** Optional asset browser. In the default layout it becomes a 5th tab; in the
    *  grouped layout it becomes the third sub-area of the 이미지 tab. */
   assets?: ReactNode;
+  /** Optional Mood-Camera panel (session8). In the grouped layout it becomes the
+   *  FIRST sub-area of the 이미지 tab (mood -> assemble -> generate). Ignored in
+   *  the legacy layout. */
+  moodCamera?: ReactNode;
   /** Opt in to the 3-tab registration-journey IA (task2). */
   grouped?: boolean;
   /** Optional initial tab — defaults to the first tab of the active layout. */
@@ -84,6 +88,7 @@ export default function WorkbenchTabs({
   detail,
   actions,
   assets,
+  moodCamera,
   grouped = false,
   defaultTab,
   activeTab,
@@ -125,6 +130,7 @@ export default function WorkbenchTabs({
   // The grouped 이미지 tab stacks the three image cards as labeled sub-areas.
   const imagePanel = (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+      {moodCamera != null && <SubArea title={c3.imageMood}>{moodCamera}</SubArea>}
       <SubArea title={c3.imageMain}>{thumbnail}</SubArea>
       <SubArea title={c3.imageDetail}>{detail}</SubArea>
       {assets != null && <SubArea title={c3.imageAssets}>{assets}</SubArea>}

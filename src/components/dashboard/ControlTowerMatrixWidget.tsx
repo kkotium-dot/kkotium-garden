@@ -95,6 +95,14 @@ interface FireflyDropPayload {
   generateModeConfirmed?: boolean; // firefly_auto generate-mode gate (#77)
   // firefly_auto generation-settings sub-check (#77, SCENT_MOOD §2-3).
   settingsVerified?: { ratio?: boolean; resolution?: boolean; grounding?: boolean; reference?: boolean };
+  // firefly_auto mood-camera guards (#84/#86, MOOD_CAMERA_SPEC_SYSTEM §4).
+  moodGuards?: {
+    cameraVarietyApplied?: boolean;
+    referenceCleared?: boolean;
+    settingsVerified?: boolean;
+    exclusionsPresent?: boolean;
+    benchmarkDnaSet?: boolean;
+  };
 }
 interface HeroCropPayload {
   minEdge?: number;
@@ -485,7 +493,7 @@ const CATEGORY_ORDER: ActionCategory[] = ['GO_PENDING', 'AUTH', 'INPUT_DECISION'
 const IV = m.intervention as {
   expand: string; collapse: string; copy: string; copied: string;
   firefly_drop: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string };
-  firefly_auto: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string; generateMode: string; confirmed: string; pending: string; settingsCheck: string; partial: string; resolution: string; grounding: string; reference: string };
+  firefly_auto: { label: string; lead: string; dropkit: string; prompt1: string; prompt2: string; model: string; ratio: string; generateMode: string; confirmed: string; pending: string; settingsCheck: string; partial: string; resolution: string; grounding: string; reference: string; moodCheck: string; cameraVariety: string; refCleared: string; settingsOk: string; exclusions: string; benchmarkDna: string };
   hero_crop_request: { label: string; lead: string; minEdge: string; longestEdge: string; textFlag: string };
   source_request: { label: string; lead: string; url: string };
   fidelity_check: { label: string; lead: string; components: string; forbidden: string; checks: string; mount: string; source: string };
@@ -650,6 +658,31 @@ function InterventionDetail({ type, payload, productId, onRefresh }: { type: str
               {allOk ? <Check size={10} className="text-green-600" /> : <Clock size={10} className="text-amber-500" />}
               <span className="text-slate-500">{IV.firefly_auto.settingsCheck}</span>
               <span className={allOk ? 'text-green-600' : 'text-amber-600'}>{stateWord} ({okCount}/4)</span>
+              {flags.map(([label, v]) => (
+                <span key={label} className={v ? 'text-green-600' : 'text-slate-400'}>{label}</span>
+              ))}
+            </div>
+          );
+        })()}
+        {type === 'firefly_auto' && p.moodGuards && (() => {
+          // Mood-camera guards (#84/#86, MOOD_CAMERA_SPEC_SYSTEM §4) — one line,
+          // five subchecks. Same color-coded pattern as the settings check.
+          const g = p.moodGuards ?? {};
+          const flags: Array<[string, boolean]> = [
+            [IV.firefly_auto.cameraVariety, g.cameraVarietyApplied === true],
+            [IV.firefly_auto.refCleared, g.referenceCleared === true],
+            [IV.firefly_auto.settingsOk, g.settingsVerified === true],
+            [IV.firefly_auto.exclusions, g.exclusionsPresent === true],
+            [IV.firefly_auto.benchmarkDna, g.benchmarkDnaSet === true],
+          ];
+          const okCount = flags.filter(([, v]) => v).length;
+          const allOk = okCount === flags.length;
+          const stateWord = allOk ? IV.firefly_auto.confirmed : okCount > 0 ? IV.firefly_auto.partial : IV.firefly_auto.pending;
+          return (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px]">
+              {allOk ? <Check size={10} className="text-green-600" /> : <Clock size={10} className="text-amber-500" />}
+              <span className="text-slate-500">{IV.firefly_auto.moodCheck}</span>
+              <span className={allOk ? 'text-green-600' : 'text-amber-600'}>{stateWord} ({okCount}/{flags.length})</span>
               {flags.map(([label, v]) => (
                 <span key={label} className={v ? 'text-green-600' : 'text-slate-400'}>{label}</span>
               ))}

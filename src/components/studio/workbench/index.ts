@@ -22,3 +22,6 @@ export { default as AiQueueStepper } from "./AiQueueStepper";
 export type { AiQueueStepperProps } from "./AiQueueStepper";
 
 export { default as JobLifecyclePanel } from "./JobLifecyclePanel";
+
+export { default as MoodCameraPanel } from "./MoodCameraPanel";
+export type { MoodCameraPanelProps } from "./MoodCameraPanel";

@@ -922,3 +922,108 @@ model PublishedAsset {
   @@index([productId])
   @@map("published_assets")
 }
+
+// ─── Mood-Camera Spec System (2026-06-16, session8) ──────────────────────────
+// All-products image system: score 6 mood axes -> look up a camera spec ->
+// assemble an English prompt -> guards -> generate -> rating/favorite learning.
+// No per-product hardcoding (#55). Authority: docs/design/MOOD_CAMERA_SPEC_SYSTEM.md.
+// Additive tables — consumers guard P2021/P2022 (reverse-deploy-safe), mirroring
+// asset_registry. Canonical seed data lives in src/lib/mood/spec-data.ts.
+
+model MoodAxis {
+  id            String   @id @default(cuid())
+  // 'M1'..'M6' — the conversion-driven mood axis code.
+  code          String   @unique
+  nameKo        String   @map("name_ko")
+  conversionJob String   @map("conversion_job")
+  benchmarkDna  String[] @map("benchmark_dna")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  cameraSpecs    CameraSpec[]
+  promptBlocks   PromptBlock[]
+  libraryEntries PromptLibraryEntry[]
+
+  @@map("mood_axis")
+}
+
+model CameraSpec {
+  id              String   @id @default(cuid())
+  moodAxisId      String   @map("mood_axis_id")
+  cameraArchetype String   @map("camera_archetype")
+  lens            String
+  aperture        String
+  lighting        String
+  colorGrade      String   @map("color_grade")
+  realismCues     String   @map("realism_cues")
+  resolution      String
+  aspectRatio     String   @map("aspect_ratio")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  moodAxis       MoodAxis             @relation(fields: [moodAxisId], references: [id], onDelete: Cascade)
+  libraryEntries PromptLibraryEntry[]
+
+  @@index([moodAxisId])
+  @@map("camera_spec")
+}
+
+model PromptBlock {
+  id         String   @id @default(cuid())
+  // type: subject | surface | light | camera | finish | exclusion
+  type       String
+  moodAxisId String?  @map("mood_axis_id")
+  bodyEn     String   @map("body_en")
+  isFixed    Boolean  @default(false) @map("is_fixed")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  moodAxis MoodAxis? @relation(fields: [moodAxisId], references: [id], onDelete: SetNull)
+
+  @@index([moodAxisId])
+  @@index([type])
+  @@map("prompt_block")
+}
+
+model PromptLibraryEntry {
+  id                  String   @id @default(cuid())
+  moodAxisId          String   @map("mood_axis_id")
+  benchmarkDna        String?  @map("benchmark_dna")
+  assembledPrompt     String   @map("assembled_prompt")
+  cameraSpecId        String   @map("camera_spec_id")
+  productCategoryTags String[] @map("product_category_tags")
+  exampleOutputUrl    String?  @map("example_output_url")
+  // rating 1..5 (CHECK enforced at the DB level via the migration DDL).
+  rating              Int?
+  isFavorite          Boolean  @default(false) @map("is_favorite")
+  // Published entries are immutable — an edit creates version++ with parentId
+  // pointing at the prior row (instant rollback). Authority §5.
+  version             Int      @default(1)
+  parentId            String?  @map("parent_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  moodAxis    MoodAxis             @relation(fields: [moodAxisId], references: [id], onDelete: Cascade)
+  cameraSpec  CameraSpec           @relation(fields: [cameraSpecId], references: [id], onDelete: Restrict)
+  parent      PromptLibraryEntry?  @relation("EntryVersions", fields: [parentId], references: [id], onDelete: SetNull)
+  versions    PromptLibraryEntry[] @relation("EntryVersions")
+  generations Generation[]
+
+  @@index([moodAxisId])
+  @@index([cameraSpecId])
+  @@index([parentId])
+  @@map("prompt_library_entry")
+}
+
+model Generation {
+  id          String   @id @default(cuid())
+  entryId     String   @map("entry_id")
+  productName String   @map("product_name")
+  outputUrl   String?  @map("output_url")
+  model       String
+  rating      Int?
+  naverCtr    Float?   @map("naver_ctr")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  entry PromptLibraryEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@map("generation")
+}
