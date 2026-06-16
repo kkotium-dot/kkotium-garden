@@ -894,3 +894,38 @@ function kkAssertGenerateMode(){
 무결성 격차가 '사람이 화면을 봐야' 드러나면 이미 늦다(stale-listing 사고 #80). 라이브 소스 기준 자동 점검 → 이상 시 개입점으로 자연 노출한다.
 
 - **패턴**: (1) 라이브 소스(no-store 리스팅)로 상품별 무결성 점검 → (2) 이상 시 control-tower 개입 대기열 카드 시드(멱등·best-effort·강제모달0 #56), 정합 OK면 카드 클리어 → (3) 1클릭 교정(비가역은 confirm 게이트 #46·원본 archive 백업) → (4) cron 상시 스윕으로 out-of-band 변동까지 포착. 점검은 read-only/다운로드0 우선(외부 image API 0·#37). #80(stale 근본수정)의 시스템 확장.
+
+## 작업원칙 #82 — 최대 직접 자동화 (Maximize Direct Automation) (2026-06-16 세션8)
+
+진정으로 불가능하지 않은 한 Claude가 직접 실행한다 — 설정 포함. 운영자 핸드오프는 정말 불가능할 때만.
+
+- **직접 실행 우선**: 비율/해상도/토글/클릭 등 설정 표면도 실제 클릭 커넥터로 직접 처리. 운영자에게 토스 = 진짜 불가능 입증 후 최후수단. 완료 후 사후보고(허락 요청 0).
+- **날조 금지**: 직접 못 하면 거짓/추정 라벨 금지 — 솔직히 "불가능, 운영자 클릭 필요"라고 물어본다(#46 가짜라벨 금지 연속). 폴링(상태 확인)은 OK, 재생성 자동 재시도는 금지(#72 크레딧 보호).
+
+## 작업원칙 #83 — 편집모드 참조 오염은 매 컷 클리어로 차단 (2026-06-16 세션8 근본원인)
+
+Firefly 편집모드는 생성물이 자동으로 참조(0/N→1/N)에 붙어 다음 생성을 오염시킨다 — "April·Cotton이 비슷"했던 근본원인.
+
+- **가드 `referenceCleared`**: 매 컷 생성 직전 참조 0/N 확인. 직전 생성물이 참조로 잔류하면 '새 이미지(+)' 버튼으로 클리어 후 생성. 첫 생성은 자연히 0/N.
+- **전상품 시스템**: 4컷 이상 연속 생성하는 모든 상품에 적용. firefly_auto 카드 subcheck로 노출(#56 자연 개입). 상세: `docs/design/MOOD_CAMERA_SPEC_SYSTEM.md` §7.
+
+## 작업원칙 #84 — 단일 디폴트 카메라 영구 금지; 무드 6축 시스템 (2026-06-16 세션8 근본원인+리서치)
+
+v5 템플릿이 4향 전부에 Sony 1종을 하드코딩 → "전부 소니" 근본원인. 상품 무한·무드 유한(6축)으로 분류, 무드별 카메라 다르게·그레이드는 통일.
+
+- **가드 `cameraVarietyApplied`**: 배치 내 카메라 스펙이 무드별로 달라야 통과(단일 디폴트면 RED). 무드=전환 기능 기준 6축(M1 신뢰/M2 욕망/M3 명료/M4 코지/M5 발랄/M6 프리미엄), 각 축에 카메라/렌즈/조명/벤치마크DNA 매핑.
+- **전상품 시스템**: 처음 보는 상품도 무드 채점→스펙 조회→조립→생성(상품별 코딩 0). 권위 문서 `docs/design/MOOD_CAMERA_SPEC_SYSTEM.md`, 근거 `docs/research/MOOD_TO_CAMERA_SPEC_RESEARCH_2026-06-16.md`.
+
+## 작업원칙 #85 — 트러스티드 클릭 vs 합성 이벤트 구분 (2026-06-16 세션8 확증)
+
+Spectrum 컴포넌트별로 합성 JS 이벤트 수용 여부가 다르다. 잘못 가정하면 클릭이 무시된다.
+
+- **수용/거부 맵**: `SP-BUTTON`(생성)=합성 클릭 존중(JS 생성 가능). `SP-ACTION-BUTTON`(새 이미지)·`sp-picker`(비율)·`sp-switch`(grounding)=합성 무시, 실제 트러스티드 클릭만 인정 → Claude-in-Chrome `find`→ref → `computer` ref 클릭.
+- **좌표 금지**: 스크린샷은 가변 윈도우서 스케일 캡처(0.457 비균일) → DOM좌표≠스크린샷좌표. JS getBoundingClientRect 또는 ref 클릭만. 셀렉터 카탈로그: `docs/playbook/FIREFLY_AUTOMATION_PLAYBOOK_2026-06-13.md`.
+
+## 작업원칙 #86 — 제외는 긍정형 표현; Gemini 네거티브 필드 전송 금지 (2026-06-16 세션8 리서치)
+
+Nano Banana/Gemini는 네거티브 프롬프트 필드가 없다(HTTP 400) — "제외가 안 먹혔던" 근본원인.
+
+- **긍정형 작성**: "no cars"가 아니라 "empty street". 제외 = `clean composition containing only the product..., realistic photograph only` + 선언형 `no on-image text, no logos, no human figures, no illustration`. 가드 `exclusionsPresent`.
+- **모델별**: Gemini류엔 `negativePrompt` 필드 절대 전송 금지. 디퓨전/Flux 폴백에서만 네거티브 필드 사용. 전상품 프롬프트 조립기 고정 규칙.

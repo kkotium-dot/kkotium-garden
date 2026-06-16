@@ -173,3 +173,38 @@ function kkAssertGenerateMode(){
 
 ### 8.5 적용 이력
 - 2026-06-13: 5컷(hero+4향) 배치는 가드 없이 진행됐으나, 사후 perceptual hash(minHamming 19/64) + referenceLoaded 0 으로 **정상 생성 확정**. 가드는 이후 모든 Firefly 세션·전상품에 선적용.
+
+---
+
+## 9. 편집모드 운영 4대 규칙 · 컬렉터 메커니즘 (2026-06-16 세션8 확증 — 전상품 공통)
+
+> 편집모드 URL `firefly.adobe.com/generate/image?view=edit`. 4컷 이상 연속 생성 시 필수.
+
+### 9.1 편집모드 4대 규칙
+1. **참조 클리어 우선 (`referenceCleared`)**: 매 컷 생성 전 참조 0/N 확인. 생성물이 자동으로 참조(0/N→1/N)에 붙어 다음 생성을 오염 → "April·Cotton 유사"의 근본원인. 하단 히스토리 스트립 '새 이미지(+)'로 클리어. 첫 생성은 자연히 0/N.
+2. **트러스티드 클릭 구분**: `SP-BUTTON`(생성)=합성 JS 클릭 존중(JS 생성 가능). `SP-ACTION-BUTTON`(새 이미지)·`sp-picker`(비율)·`sp-switch`(grounding)=합성 무시, **실제 트러스티드 클릭만 인정**. → Claude-in-Chrome `find`→ref → `computer` ref 클릭(좌표 비의존).
+3. **재오픈 후 설정 재검증 (`settingsVerified`)**: 브라우저 재오픈 시 비율(4:5 소실→16:9/자동), grounding·2K는 잔존하나 항상 재확인. 픽커 수정은 트러스티드 클릭 필요.
+4. **좌표 클릭 금지**: 스크린샷은 가변 윈도우(관측 1115×1089/920×872/1367×899 등)에서 스케일 캡처(수직 스케 ≈0.457 비균일) → DOM좌표≠스크린샷좌표. JS getBoundingClientRect(실좌표) 또는 find+ref 클릭 사용.
+
+### 9.2 확정 셀렉터
+| 대상 | 셀렉터 / 방법 |
+|---|---|
+| 프롬프트 | 유일 visible `TEXTAREA`(shadow-DOM ≤9, `deepEls` 재귀). 네이티브 세터 주입: `Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(ta,str)` + input+change bubbles |
+| 비율 리프 | `"표준 (4:5)"` (전체 라벨, "4:5" 아님) |
+| 생성 | `SP-BUTTON` text `"생성"` (합성 pointer+mouse 시퀀스 OK, candidate-sorted bottom-most) |
+| 새 이미지(+) | `FIREFLY-IMAGE-EDITOR-HISTORY-PANEL-NEW-IMAGE-BUTTON` > `SP-ACTION-BUTTON[aria-label="새 이미지"]` (하단 우측 +, 트러스티드 필요) |
+| 완료 신호 | 참조 0/N → 1/N (생성물 자동 첨부). 4:5 결과 = 1856×2304 (naturalWidth>200, blob:firefly.adobe.com) |
+| 검증 | Adobe MCP `asset_search(entityScope=GenAIAsset)` + `asset_inline_preview`(서버 base64, 브라우저 idle 무관) |
+
+### 9.3 컬렉터 메커니즘 (2종 동일 크롬 · 탭 ID 상이 · 독립 드롭)
+- **Control Chrome** = JS전용(execute_javascript/open_url/list_tabs/get_current_tab). 실제 클릭·스크린샷 없음. 네이티브 세터 프롬프트 주입 OK.
+- **Claude in Chrome** = 실제 트러스티드 클릭+스크린샷+`javascript_tool`+`find`(a11y ref)+`computer`(ref/좌표)+browser_batch. `select_browser(deviceId)` 선행 필요(Browser 1 = `3fa67de7-395d-47fc-be9d-dbe5270831c4`). **세션 중 드롭 가능** → 운영자 재페어 후 list_connected_browsers→select_browser→tabs_context_mcp.
+- 같은 물리 Chrome이지만 컬렉터별로 탭 ID 상이(예: Firefly 탭 Claude-in-Chrome 1396051843 vs Control 1396051604).
+- `type` 액션은 긴 문자열에 30s 타임아웃 → 네이티브 세터 선호. 생성 중 렌더러 busy로 스크린샷은 idle 타임아웃 가능하나 JS 읽기는 반환.
+
+### 9.4 프롬프트 규칙 (리서치 반영)
+- **네거티브 필드 없음**: Nano Banana/Gemini는 `negativePrompt` HTTP 400. 제외는 긍정형("empty street" 식) + 선언형 `no text/logos/human/illustration`을 본문에. Gemini에 네거티브 필드 전송 금지.
+- **무드-카메라 매핑**: 단일 디폴트 카메라 금지. 6축(M1~M6)별 카메라/렌즈/조명 다르게, 그레이드는 통일. 권위: `docs/design/MOOD_CAMERA_SPEC_SYSTEM.md`.
+
+### 9.5 firefly_auto 카드 subcheck (Code 레인, additive)
+`generateModeConfirmed`(§8.4) + `referenceCleared` + `settingsVerified` + `cameraVarietyApplied` + `exclusionsPresent` + `benchmarkDnaSet`. 자연 개입(#56), 비가역 0.

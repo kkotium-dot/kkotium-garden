@@ -1,3 +1,13 @@
+## 2026-06-16 (세션8-Desktop) 무드-카메라 6축 이미지 시스템 설계 + 전상품 codify
+
+**[리서치]** 무드-카메라 스펙 시스템 심층리서치 완료 — 상품 무한·무드 유한(6축 M1~M6: 신뢰/욕망/명료/코지/발랄/프리미엄), 무드별 카메라/렌즈/조명 매핑·벤치마크DNA(무인양품/이솝/오늘의집/29CM/컬리/쿠팡)·프롬프트 조립기·누적학습 라이브러리·3계층 아키텍처. 근본원인 3건 규명: (1)v5 4향 전부 Sony 하드코딩→"전부 소니" (2)편집모드 생성물 자동참조→오염→"April·Cotton 유사" (3)Nano Banana 네거티브 필드 없음(HTTP 400)→"제외 안 먹힘".
+**[박제]** 신규 docs/research/MOOD_TO_CAMERA_SPEC_RESEARCH_2026-06-16.md + docs/design/MOOD_CAMERA_SPEC_SYSTEM.md. codify: FIREFLY_AUTOMATION_PLAYBOOK §9(편집모드 4규칙·셀렉터·트러스티드vs합성·좌표금지) + PRODUCT_REGISTRATION_WORKFLOW §11+rev3 + PRINCIPLES_LEARNED #82~#86.
+**[이미지]** cut-1(Lemon·아침)·cut-2(Cotton·한낮) 생성·육안검증·Adobe 보존(오염0, 4:5 1856×2304·2K). cut-3·4 보류(트러스티드 클릭 경로 확보 후 새 6축으로 재개).
+**[검증]** docs only·비가역0·sentinel clean. firefly_auto subcheck 5종(cameraVarietyApplied·referenceCleared·settingsVerified·exclusionsPresent·benchmarkDnaSet)=Code 레인.
+**[다음]** [Code] 6축 시스템 앱 빌드(테이블·3단계 UI·가드) / [Desktop] cut-3·4 재개→ingest×4→실앱테스트 / item3 명화 SUSPENSION→발행(대표 GO).
+
+---
+
 ## 2026-06-14 (세션7-i-Code) 내용인식 분류 + IA 3탭 + 한글화 + 인앱삭제
 ## 2026-06-15 (세션7-i-fix-Code) 분류기 누끼 신호 교정(알파≠투명) + 삭제 모달 UX
 ## 2026-06-15 (세션7-i-fix2-Code) 백필 dangling 정정 — DB ref EXHAUSTIVE 전환 + taxonomy archive 선행

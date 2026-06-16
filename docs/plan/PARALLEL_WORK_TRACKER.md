@@ -147,3 +147,17 @@
 - ✅ Adobe 이미지 백엔드 **2026-06-09 세션2에서 복구 확인**(image_remove_background 200·누끼 정상). 단 photo compositing / generative fill / prompt 배경교체는 **Adobe MCP 영구 미지원**(라우팅 문서) → 무드 합성 자체는 Firefly 웹 UI(브라우저 #52). 누끼만 MCP 가능.
 - extra_images jsonb 마이그레이션 2026-06-09 Desktop 적용완(additive·가역·production 무해). C-7 confirm 경로 unblocked.
 - Firefly 탭 준비됨(Chrome id 1396049947, 로그인·생성홈 확인) + Adobe Express(1396049445) — 명화 합성 브라우저 구동 대기. 업로드/다운로드/credit 클릭 = 대표 담당(#52).
+
+## 이미지 생성 시스템 개선 — 무드-카메라 6축 (신규, 2026-06-16 세션8)
+근거 = docs/research/MOOD_TO_CAMERA_SPEC_RESEARCH_2026-06-16.md · 권위 = docs/design/MOOD_CAMERA_SPEC_SYSTEM.md · 편집모드 = FIREFLY_AUTOMATION_PLAYBOOK §9 · 원칙 = #82~#86.
+| ID | 작업 | 상태 | 비고 |
+|---|---|---|---|
+| IMG-리서치 | 무드-카메라 6축 시스템 심층리서치 | ✅ DONE | 6축(M1~M6)·카메라맵·벤치마크DNA·프롬프트 조립기·학습라이브러리·3계층 아키텍처. 근본원인 3건 규명(소니하드코딩·참조오염·네거티브필드없음) |
+| IMG-박제 | 연구결과 docs/ 박제 + 등록워크플로/플레이북/원칙 codify | ✅ DONE(2026-06-16) | RESEARCH+SYSTEM 신규 2건, PLAYBOOK §9, REGISTRATION §11+rev3, PRINCIPLES #82~#86 |
+| IMG-컷34 | 명화 cut-3(April/Canon)·cut-4(Black Cherry/Leica) 생성 | ⏸ 보류(개선 후) | 새 이미지(+) 트러스티드 클릭 경로 확보 필요(SP-ACTION-BUTTON 합성 무시). 새 6축 프롬프트로 재개. cut-1·cut-2 생성·검증·보존 완 |
+| IMG-앱 | 6축 시스템 앱 빌드(MoodAxis/CameraSpec/PromptBlock/PromptLibraryEntry/Generation 테이블·3단계 UI·Layer3 가드·firefly_auto subcheck) | ☐ Code | 상품별 코딩 0(#55). 운영 3단계 유지(무드→조립→생성). 학습=즐겨찾기/평점 수동포착 |
+| IMG-인제스트 | 4컷 → ingest-firefly ×4 → 실앱 테스트 | ☐ (cut-3/4 후) | server conformToSlotRatio 4:5 no-op·#80 라이브 /assets·#81 정합 검증 |
+
+## 앱 적용 현황 (동기화 · 2026-06-16 세션8)
+- 명화 이미지: cut-1(Lemon·아침)·cut-2(Cotton·한낮) 생성·육안검증·Adobe 클라우드 보존 ✅ / cut-3(April)·cut-4(Black Cherry) 보류(개선 후 재개) ⏸. 오염 없음 확인(cut-1≠cut-2), 4:5(1856×2304)·2K.
+- 문서 시스템: 연구+코드화 전상품 검증·관제탑 LIVE 유지(세션4 이후 무회귀). 발행 SUSPENSION/대표·상세 현황 = 상단 세션4 블록 유지(변동없음).

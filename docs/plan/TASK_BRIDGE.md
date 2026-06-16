@@ -73,6 +73,12 @@
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
 
+### 2026-06-16 (93) 무드-카메라 6축 이미지 시스템 설계 + 전상품 codify (FROM 🖥 Desktop, docs only·비가역0·네이버 무접촉)
+- **What**: 무드-카메라 스펙 심층리서치→전상품 공통 시스템 박제. 6축(M1 신뢰/M2 욕망/M3 명료/M4 코지/M5 발랄/M6 프리미엄)·무드별 카메라 매핑·벤치마크DNA·프롬프트 조립기(긍정형 제외)·누적학습 라이브러리·3계층 아키텍처. 근본원인 3건 규명(Sony 하드코딩·편집모드 참조오염·Nano Banana 네거티브 필드 없음).
+- **박제**: 신규 docs/research/MOOD_TO_CAMERA_SPEC_RESEARCH_2026-06-16.md + docs/design/MOOD_CAMERA_SPEC_SYSTEM.md. codify FIREFLY_AUTOMATION_PLAYBOOK §9·PRODUCT_REGISTRATION_WORKFLOW §11+rev3·PRINCIPLES_LEARNED #82~#86·PARALLEL_WORK_TRACKER(IMG 5항목).
+- **이미지**: cut-1(Lemon)·cut-2(Cotton) 생성·검증·Adobe 보존(오염0·4:5 1856×2304·2K). cut-3·4 보류(트러스티드 클릭 경로 확보 후 새 6축 재개).
+- **다음 1액션**: [Code] 6축 시스템 앱 빌드(MoodAxis/CameraSpec/PromptBlock/PromptLibraryEntry/Generation 테이블·3단계 UI·Layer3 가드·firefly_auto subcheck 5종) — 상품별 코딩 0(#55). [Desktop] cut-3·4 재개→ingest×4→실앱테스트. item3 명화 SUSPENSION→발행(대표 GO).
+
 ### 2026-06-15 (92) 워크플로 rev2 codify + 상태 정합 → item2(Firefly)·item3(발행) ACTIVE (FROM 💻 Code, main a96909c, docs·비가역0)
 - **종결 확인**: item1 레거시 백필(#79)·#80 STALE 근본수정·#81 자산 정합 가드 전부 production 검증 클린(3상품 ok·depth-2 0·dead 0). 등록 워크플로 rev2 codify(권위 PRODUCT_REGISTRATION_WORKFLOW.md).
 - **ACTIVE item2 (Firefly)**: [Desktop] 4컷 생성(realism lane·생성설정 4플래그 확인)→누끼합성(v8 참조드롭 하모나이즈)→정규 stage 적재. firefly_auto 카드 경유.

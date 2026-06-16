@@ -213,8 +213,20 @@ STEP 7  검수·발행     : 페이로드 전체 재구성 -> readinessGrade -> 
 
 ---
 
+## 11. 이미지 무드-카메라 시스템 연결 (2026-06-16 rev3)
+
+STEP6 이미지 생성은 단일 디폴트 카메라가 아니라 **무드 6축 시스템**으로 처리한다(전상품 공통, 상품별 코딩 0).
+
+- **흐름**: 무드 6축 채점(M1 신뢰/M2 욕망/M3 명료/M4 코지/M5 발랄/M6 프리미엄) → Layer1 카메라 스펙 조회 → Layer2 프롬프트 조립(가변+조회+고정) → Layer3 가드 통과 → 생성 → 평점/즐겨찾기 학습.
+- **고정 규칙**: 제외는 긍정형(Gemini 네거티브 필드 없음), 매 컷 참조 클리어, 그레이드 통일, 단일 디폴트 카메라 금지.
+- **권위**: `docs/design/MOOD_CAMERA_SPEC_SYSTEM.md`. 근거: `docs/research/MOOD_TO_CAMERA_SPEC_RESEARCH_2026-06-16.md`. 편집모드 운영: `docs/playbook/FIREFLY_AUTOMATION_PLAYBOOK_2026-06-13.md` §9.
+- **firefly_auto 카드 subcheck**: cameraVarietyApplied·referenceCleared·settingsVerified·exclusionsPresent·benchmarkDnaSet 추가(#84/#83/#85/#86).
+
+---
+
 ## 변경 이력
 
+- 2026-06-16 (rev3) — STEP6 이미지에 무드-카메라 6축 시스템 연결(§11). 단일 디폴트 카메라 금지·긍정형 제외·참조 클리어·트러스티드 클릭을 전상품 가드로 codify. 권위 = MOOD_CAMERA_SPEC_SYSTEM + FIREFLY_AUTOMATION_PLAYBOOK §9 + PRINCIPLES_LEARNED #82~#86.
 - 2026-06-15 (rev2) — 자산 폴더 체계 v2(8단계)·내용인식 분류(#73/#78)·비율정규화(#72)·realism lane(#71)·Firefly 자동화(#74/#77)·대표/표시 정책(main_image_policy)을 STEP6에 codify. §8 전상품 상시 가드(라이브 리스팅 #80·정합 가드 #81·백필/전수스캔 #79·분류/비율) 신설. §9 작업 시 명심(원칙 인덱스 + 코드 컨벤션) 신설. §6 개입 대기열 카드 카탈로그 확장(fidelity_check·mount_check·firefly_auto·asset_integrity·발행 신호등). §10 신규 상품 등록 체크리스트 신설. 권위 = ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM §7~§8.11 + FIREFLY_AUTOMATION_PLAYBOOK + SCENT_MOOD_4SCENE_GRADE + OPERATOR_SYSTEM_BLUEPRINT.
 - 2026-06-12 — STEP 2 충실도카드 자동생성(#64) 명문화 + 발행 게이트(fidelity_check·mount_check) 연결.
 - 2026-06-12 (v1) — 신규 작성. 원산지(공급사 권위->룩업)·옵션 재고 정합·고시 사이즈 스케일 앵커·v8 이미지 스테이지·보류 큐 게이트 단일화.
