@@ -965,3 +965,9 @@ payload origin은 Product 실제 origin(originCode)과 **불일치 절대 금지
 
 ## 작업원칙 #97 — 전상품 검증은 시드+미시드 양쪽 (2026-06-17 세션9)
 엔진/가드 검증은 **시드된 상품 + 미시드 상품 양쪽**으로 한다. 시드: 카테고리-특화 슬롯/DNA 정상 산출. 미시드: fallback이 **우아하게 degrade**(에러 아님)되고 **카테고리-특화 슬롯을 오상속하지 않음**(ICE-TRAY-DNA 사례: emptyCard 향수편향이 미시드 전 카테고리에 scent_note 오상속 → 중립화 #62/#90). 한쪽만 보면 fallback 오염/누락을 놓친다(#93 storage+registry 양쪽 교차와 동형 — 양면 검증 원칙). REGISTRY-STORAGE-DRIFT/엔진 strategy 검증 시 3상품(명화=시드 / 달항아리·아이스=미시드) 전수 실측이 표준.
+
+## 작업원칙 #98 — 변형(variant) 바인딩 차원: 옵션 상품은 변형별 대표 컷 커버리지 의무 (2026-06-17 세션9 #62 P2)
+옵션이 있는 상품(향/색/사이즈)은 **재고 있는 각 변형에 대표 컷을 바인딩**해야 한다. 일시적 mood/slot 태그만으로는 불충분 — 변형 커버리지는 **대기열 표면화 1급 지표**다. 구현(전상품): asset_registry.variant 컬럼(향 옵션 바인딩)·computeVariantCoverage(분모=Product.options jsonb stockQuantity>0=진실원천 #96·분자=variant바인딩 LIVE composite distinct·고아제외)·INTERVENTION_VARIANT_COMPOSITE 카드(INPUT_DECISION·cron 전상품 상시·seed<100%&hasOptions·clear=100%)·ingest-firefly variant param(생성물→바인딩). **검증(2026-06-17 명화)**: active 3(레몬유칼립·에이프릴·블랙체리·코튼 stock0 제외)·covered 0·missing 3 → 카드 0/3. 바인딩 라운드트립 covered 0→1→복원. Desktop 감사 일치(바인딩 계층 filename/schema/data 3중 부재가 근본). 페어: realism_lane 가드(#71)와 묶어 변형 컷 파이프라인을 ingest 시점 사실성 게이트(후속).
+
+## 작업원칙 #99 — 브라우저 검증: element.click() 비신뢰, 풀 MouseEvent 디스패치 (2026-06-17 세션9)
+React 핸들러는 `element.click()`로 안정적으로 발화하지 않는다(no-op처럼 보여 거짓 'no bug'/'bug' 판정 위험). 브라우저 검증 시 풀 MouseEvent 시퀀스(pointerdown/mousedown/pointerup/mouseup/click·bubbles:true)를 디스패치한다. 네이티브 window.confirm은 JS를 블록 — 클릭 전 오버라이드하거나 운영자가 취소(비가역 게이트 #46 PASS 확인). 사례: per-orphan reconcile UI 아카이브 버튼 — element.click() 무발화 적발 후 풀 이벤트로 재시도 → 실제 confirm 발화 → 운영자 취소 → mutation 0(드리프트 22/1 불변). #45(직접검증)·#88(완료=검증) 결합.
