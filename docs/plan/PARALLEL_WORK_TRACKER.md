@@ -1,6 +1,51 @@
 # 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev19 · Scent→Mood 컨셉 재설계 + 생성설정 가드 + april/cotton v3·세션7-e)
 ---
 
+## ★★ LIVE WORK BOARD (2026-06-18 S9 · 현 다중병행 단계 권위 · 전거 docs/handoff/HANDOFF_2026-06-18_realism-firefly-composite-upgrade-and-workboard.md §4)
+
+> 우선순위 P0>P1>P2>P3. 상태 DONE/WIP/QUEUED/GATED. 레인 D=Desktop·C=Code·O=Operator. **Code 순서: C3→C6→(C2/C1 완료)→C5→C9→C4→(C10 완료)→C7/C8/C11(P3). C12(E7)=GO만.**
+
+### Code 레인
+| id | 작업 | P | 상태 | 의존성 | 비고 |
+|----|------|---|------|--------|------|
+| C3 | SEO 골든키워드 가드(명화 '차량용' 누락) | P1 | QUEUED(다음) | - | 독립·명화 즉시 매출효과 |
+| C6 | REALISM-CAMERA-BLOCK 전 슬롯 + Firefly-ref-composite 표준 엔진 편입 | P1 | QUEUED | - | 신규 지시·전 슬롯·합성슬롯=누끼→Firefly·C5 선행 |
+| C1 | 향 §4 v6 prose 교체(권위 v6) | P2 | ✅ DONE(84dfe88) | - | 엔진 per-scent mood 기반영 |
+| C2 | archive 유틸 → 자산정합 카드 해소 | P2 | ✅ DONE(5fe06fa) | - | 확정3건 정리·커버리지 3/3·§6 타깃 |
+| C5 | E8 v2 빌드(벤치마크→자산→graft) | P2 | QUEUED | C6 | 컨벤션 스펙트럼+정체성 오버라이드(#105)+productAestheticDna 팔레트에코(#106)+실사(#107)+프롬프트 라이브러리+검토카드+Design Readiness |
+| C9 | INFO-DEP-DESIGN-GATE(Design Readiness 레인+사전생성 풀) | P2 | QUEUED | C5 부분 | - |
+| C4 | E6 자산화 폐루프(persistStrategy+SlotGeneration↔asset) | P2 | QUEUED | - | 독립 |
+| C10 | 원칙 박제 #105/#106/#107 | P2 | ✅ DONE | - | #105(84dfe88)·#106/#107(본 커밋) |
+| C7 | firefly_auto settingsVerified 서브체크 | P3 | QUEUED | - | - |
+| C8 | 옵션 3표현 정합 | P3 | QUEUED | - | - |
+| C11 | 가드 개선: variantUnmatched→자동등록 스킵/review 스테이지 | P3 | QUEUED | - | 선택 |
+| C13 | 중복 route 2.ts 삭제 | P3 | 🔒GATED | 운영자 GO | - |
+| C12 | E7 엔진 통합(System1 폐기) | - | 🔒GATED | 명시 GO | GO 전 미착수 |
+
+### Desktop 레인
+| id | 작업 | P | 상태 | 의존성 |
+|----|------|---|------|--------|
+| D1 | 명화 thumbnail Firefly ref-composite→ingest(thumbnail 1:1) | P0 | WIP | O1 |
+| D4 | 명화 발행 사전검증(payload·인증·타이틀) | P1 | 🔒GATED | D1+C3 |
+| D3 | composite/realism 파이프라인 달항아리·아이스 확장 | P2 | QUEUED | D1 검증 |
+
+### Operator 레인
+| id | 작업 | P | 상태 |
+|----|------|---|------|
+| O1 | 명화 thumbnail Firefly ref-composite 실행(cutout_C+§1a 프롬프트+Nano Banana Pro) | P0 | pending |
+| O3 | 명화 발행 GO(비가역) | P1 | 🔒GATED(D1+C3 후) |
+| O4 | 코튼 재입고/제외 결정 | P3 | pending |
+
+### 의존성 맵
+- D1←O1 · D4/O3←D1+C3 · C5←C6 · D3←D1 · 자산정합 카드 해소←C2(완료) · C12(E7)←명시 GO.
+
+### 합성/사실성 표준 (신규·전상품 #62·권위 §1~2)
+- **합성 표준 전환(#107)**: 빈 배경판+PIL 로컬 페이스트 **폐기** → 누끼컷 첨부→Firefly 레퍼런스 합성(제품 재생성 금지·타깃별 최적 모델 Nano Banana Pro/Firefly Image 5). 로컬 PIL=폴백.
+- **REALISM-CAMERA-BLOCK(C6)**: 전 슬롯(hero/lifestyle/scene/composite)에 카메라바디+렌즈+조리개+자연광+필름그레인+true색+고마이크로콘트라스트+'photorealistic editorial'+'no CGI/3D/AI artifacts' 부착 + 상품 컨셉별 카메라.
+- **어우러짐(#106)**: 배경=productAestheticDna(상품 팔레트/무드) 에코. 컨벤션=포맷·정체성=팔레트/무드.
+
+---
+
 ## ★ 작업 관제탑 (LIVE BOARD · 단일 권위 · 세션 시작 필독·종료 필수 갱신)
 
 | ID | 우선순위 | 레인 | 상태 | 의존성 | 다음 1액션 | 검증기준 |
@@ -53,6 +98,7 @@
 
 
 ### 변경로그
+- 2026-06-18 (세션9·Code/보드정렬+#106/#107): LIVE WORK BOARD(§4) 정렬 — Code C0~C13/D/O 레인+의존성맵+순서(C3→C6→C5→C9→C4→P3·C12 GO게이트). C1(향§4 v6)·C2(archive)·C10(원칙)=DONE 반영. 합성표준 전환(#107 누끼→Firefly 레퍼런스 합성·PIL 폐기→폴백)·REALISM-CAMERA-BLOCK 전 슬롯(C6·E8v2 선행)·어우러짐(#106 배경=productAestheticDna 에코) 박제. 원칙 #106·#107 추가.
 - 2026-06-18 (세션9·Code/§4 v6+archive+E8v2설계+#105): 플레이북 §4 v6 prose 교체(재고3향 레몬 웜·에이프릴 하이키·체리 로우키·코튼 stock0 현행)·권위 v6. archive 유틸 + 확정3건 정리(april '후레쉰' typo·구 레몬·guard-test)→커버리지 4/3→3/3·카드 해소(push 5fe06fa). E8 v2 설계확정(컨벤션 스펙트럼·benchmarkDna 자산화·프롬프트 라이브러리·정체성 오버라이드 단계·검토카드·Design Readiness). 원칙 #105(컨벤션은 정체성에 복무). 백로그 INGEST-GUARD-REVIEW(선택·저우선).
 - 2026-06-18 (세션9·Code/E5 v6 mood+원칙+백로그): E5 per-scent mood(v6 레몬 M4·에이프릴 M5·체리 M6·push 0f9d665·prod variants 3향 v6 grade). 향 서사 v6 해소(Desktop 실측). variant_composite 3/3 LIVE(operator v6 3컷·april escape 가드 차단). 원칙 #102(한국우선 리서치)·#103(SEO 골든키워드)·#104(info-dependency 게이트) 박제. 백로그 INFO-DEP-DESIGN-GATE 등재.
 - 2026-06-17 (세션9·Code/E5 본체+variant 가드·#62): E5 향별 concept 주입(variant-concept.ts optionValue→영어 scene·assembler backdrop 분기 concept+PRODUCT_MARGIN_BLOCK+BACKDROP_EXCLUSION·strategy scent_note 슬롯 variants[]·SlotFunnelBoard 향별 복사). ingest variant 가드(stage=composite+variant 시 in-stock optionValues 대조→불일치 바인딩거부+variantUnmatched·근거 april '후레쉰' 오타 침묵정체). push 1a79bfe·prod 검증 명화 scent_note variants 3향·backdrop concept+margin+제품미피사체·ASCII100%. 원칙 #101(변형 바인딩 검증). v6=3/3 active(concept 피사체 v5/v6 안정·grade 서사 충돌만 미해결). E6→P2.

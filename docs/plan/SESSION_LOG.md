@@ -1,3 +1,13 @@
+## 2026-06-18 (세션9-Code) LIVE WORK BOARD 정렬 + 합성/사실성 표준 박제 (#106·#107)
+
+**[docs]** PARALLEL_WORK_TRACKER에 LIVE WORK BOARD(§4) 정렬 — Code C0~C13/Desktop/Operator 레인+의존성맵+스케줄(C3→C6→C5→C9→C4→P3·C12 E7=GO게이트). 직전 완료 C1(향§4 v6 prose)·C2(archive 유틸)·C10(원칙)=DONE 표기.
+**[전략 박제]** 합성 표준 전환(#107): 분리합성(빈배경+PIL 페이스트) 폐기 → 누끼→Firefly 레퍼런스 합성(제품 재생성 금지·Nano Banana Pro/Firefly Image 5)·로컬 PIL=폴백. REALISM-CAMERA-BLOCK 전 슬롯(hero/lifestyle/scene/composite·상품 컨셉별 카메라)=C6(E8v2 선행). 어우러짐(#106): 배경=productAestheticDna(상품 팔레트/무드) 에코·컨벤션=포맷·정체성=색/무드.
+**[codify]** 원칙 #106(어우러짐=productAestheticDna 에코)·#107(누끼→Firefly 합성·전이미지 실사카메라·PIL폴백). (#105 기박제)
+**[gates]** docs only·tsc/build 무관·이모지0·sentinel clean·비가역0.
+**[next]** [Code] C3 SEO 골든키워드 가드(다음·명화 차량용) → C6 REALISM-CAMERA-BLOCK+Firefly합성표준(엔진 편입·E8v2 선행) → C5 E8v2 → C9 → C4. [Desktop] D1 명화 thumbnail Firefly ref-composite(O1 후 ingest). [GATE] C12 E7·O3 발행·C13 route2·O4 코튼.
+
+---
+
 ## 2026-06-18 (세션9-Code) E5 v6 per-scent mood + 한국우선 리서치 codify
 
 **[feat 0f9d665]** E5 per-scent mood: VariantConcept.mood(v6 레몬 M4웜·에이프릴 M5하이키·체리 M6로우키=Desktop 실측 확정)·strategy buildVariants 변형 mood 우선. concept도 v6 정합(ripe sun-yellow lemons / white linen+florals rainy window / deep-crimson cherries dark walnut). prod variants 3향 v6 grade·margin·ASCII100%.
