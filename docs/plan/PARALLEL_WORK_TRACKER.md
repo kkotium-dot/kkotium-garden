@@ -13,7 +13,7 @@
 | ENG-1 | P1 | Code | 완료·검증완 | ENG-0 | Stage 1 백엔드(3a~3g)+UI(3i)·push(8964ce7)·prod LIVE·Desktop 3탭 브라우저 검증 PASS | 데이터+배포+API+브라우저 3탭(분석DNA·9슬롯보드·발행게이트·개입) PASS ✅ |
 | CAPTURE-METHOD | P2 | 결정 | 결정대기 | — | 경쟁 캡처 방식 확정(권고 B 하이브리드·3h) | 대표 확정 |
 | IMG-INGEST | P2 | Desktop | ✅ 검증완료 | — | April·BlackCherry web-JPEG ingested(composite·registered·publicUrl200)·AssetBrowser 3단 검증 PASS(#45·#92) / Lemon 재생성 예정·Cotton 품절후보 / 슬롯조립=Phase3 | /assets 200·composite 그룹 신규 2건·이미지탭 DOM 최신순 맨앞 ✅ |
-| PUBLISH-명화 | P1 | 결정 | 결정대기 | 원산지·옵션 확인 | SUSPENSION 원인 실측→안전기준 payload | dryRun·readiness·대표 GO(비가역#46) |
+| PUBLISH-명화 | P1 | 결정 | 결정대기 | 옵션 Cotton 상태 결정 | DB origin=중국0200037(라이브 정합·세션9 '국산' 경보=stale·#96)·ORIGIN-GATE 가드완. 옵션 DB 4 전부 ON_SALE↔의도 3(Cotton 품절 미반영=데이터 드리프트, Desktop 결정) → 안전기준 payload·대표 GO | dryRun·readiness S/94·대표 GO(비가역#46) |
 | CAT-CODE-명화 | P2 | Code | 완료·검증완 | — | naverCategoryCode 50003356→50014980 정정(경로A·DB only·네이버무접촉) | dnaSource db·scent_note 등장·7슬롯('리필' lowInvolvement로 problem/size_duration 드롭, 9 아님) ✅ |
 | ICE-TRAY-DNA | P2 | Code | 완료·검증완 | — | 경로B 배치(#62·#90)·push c35d64c·prod LIVE·Desktop UI 검증 PASS | item1/3/4 PASS(명화 9복원·아이스 6중립·라벨동기화·명화 준비도 S/94)·item2 zero-masking PASS(positive 렌더=idle+미시드 상품 부재로 미관측→UNSEEDED-BACKLOG-BADGE 후속) ✅ |
 | UNSEEDED-BACKLOG-BADGE | P3 | Code | Stage2 백로그(후속·비긴급) | #62 | 별도 저긴급 '백로그 배지'(미시드 카테고리 N개·DNA 시드 권고) 신설 — 긴급큐 비마스킹+상시가시. branch feat/unseeded-backlog-badge | 미시드 N 집계·관제탑 상시 배지(idle 한정 아님)·전상품 #55·개입점 #56 |
@@ -21,14 +21,16 @@
 | DETAIL-PAGE-DESIGN-FEATURE (C) | P3 | Code | Phase3 계획(미착수) | Phase2 | 슬롯 조립·배치 = composite funnelSlot 태그 + SlotFunnelBoard 슬롯별 fill상태·배정 UI(펀널 plan↔asset 연결). ★Phase3 선결: /api/products/{id}/assets가 AssetRegistry 메타(variant·sourceTag·funnelSlot) 미join→슬롯배정 파일명 의존, 착수 시 join 노출 포함. branch feat/funnel-slot-fill | 계획된 다운스트림(신규 갭 아님)·전상품 #55·개입점 #56 |
 | COMPOSITE-CLEANUP | P3 | Code | 백로그(권장·가역) | — | composite 20건 중 구 lifestyle/폐기 AI합성 archive 이관(잔존 선별=operator 확인·가역). Phase3 슬롯픽 UX 전 권장 | 이관 후 composite=현행 자산만 |
 | REGISTRY-STORAGE-DRIFT | P3 | Code | 탐지 완료·검증완(reconcile=후속) | — | checkProductIntegrity.registryDrift 확장(#93·#94)·push b40a711·prod LIVE. storage-only/registry-only/undefined-stage 교차탐지. advisory(ok 게이트 불변·스턱카드0). 고아 reconcile=운영자 결정(등록vs아카이브)=COMPOSITE-CLEANUP/저긴급 배지 후속 | prod 실측 PASS: 명화 registryOnly=1(botanical)·storageOnly9·undefined0 / 달항9 / 아이스1 = 전상품 드리프트 확인 ✅ |
+| ORIGIN-TRUTH-GATE | P1 | Code | 완료·검증완 | — | validateForRegistration origin 진실 HARD GATE(미상/무효 BLOCK·치유 WARN)+옵션 정합 가드+silent 중국폴백 제거·push 440ef92(#95·전상품) | prod smoke 명화 canRegister=true·S/94 무회귀·아이스 200037 heal WARNING·payload origin=DB 반영 ✅ |
 | CUT34-EVAL | — | Desktop | 검증대기 | — | cut-3/4 = scent_note 슬롯 재배치(썸네일 아님) | 슬롯 매핑 확정 |
 
 ### 파생 큐
-- 지금 큐: [결정 대기] NEXT-TRACK(Phase3 슬롯조립 vs Lemon재생성 vs 정합성패스 우선) · PUBLISH-명화 2건 확인. (ENG-1=검증완·종결 / REGISTRY-STORAGE-DRIFT 탐지=검증완)
+- 지금 큐: [Code 진행] P2 reconcile 개입카드(명화 composite stale 18+botanical) → P3 Phase3 슬롯조립. [결정 대기] PUBLISH-명화 옵션 Cotton 상태(데이터 드리프트). (ENG-1·REGISTRY-STORAGE-DRIFT·ORIGIN-TRUTH-GATE=검증완)
 - 결정 대기(대표): CAPTURE-METHOD(3h) · PUBLISH-명화 2건 확인 (ICE-TRAY-DNA=검증완·종결 / UNSEEDED-BACKLOG-BADGE=Stage2 백로그)
 - 검증 대기: ENG-1(브라우저 3탭) · CUT34-EVAL(슬롯 재배치)
 
 ### 변경로그
+- 2026-06-17 (세션9·Code/ORIGIN-TRUTH-GATE·#95): 원산지 진실 게이트(전상품) — validateForRegistration에 origin HARD BLOCK(미상/무효·추측금지) + 치유 WARNING + 옵션 정합 가드. buildNaverProductPayload/register route의 silent 중국폴백 '0200037' 제거(빈 origin loud throw). push 440ef92·verify OK·prod smoke 명화 canRegister=true·S/94 무회귀. Desktop #45 반영: DB origin=중국0200037 라이브 정합 → '국산/4' 경보=stale(#96 코드 의심 전 DB 실측). 옵션 DB 4 전부 ON_SALE(Cotton 품절 미반영=데이터 드리프트). product_options=relation·발행경로 include 확인(소실 버그 없음). 원칙 #95·#96·#97 박제.
 - 2026-06-17 (세션9·Code/REGISTRY-STORAGE-DRIFT): 핸드오프 2건 git 보존(ba09a28·#49). checkProductIntegrity에 registry 교차 차원 확장(#93·#94)+listProductStageFolders. push b40a711·verify-deploy OK·prod API smoke registryDrift LIVE. 검증 3-tier(로컬 데이터레인·tsc0/build0/test PASS·prod API): 명화 registryOnly=1(botanical 파일부재 정확)·storageOnly composite9(핸드오프 ground-truth 정밀일치)·undefinedStages0(plate=STAGE_DIRS v2 내, #94 우려 코드레벨 기해소 교차검증) / 달항아리9 / 아이스1 = 전상품 드리프트 thesis 확인. ok=true 전건(advisory·스턱카드0). ENG-1 검증완 반영(핸드오프 §5). 원칙 #93·#94 박제.
 - 2026-06-16: 엔진 codify. IMG-앱→완료(preview), IMG-컷34→cut-3/4 생성·평가완(향노트 슬롯 판정). 관제탑 체계 신설(#87~#89).
 - 2026-06-16 (Code/ENG-0): Stage 0 build done — Prisma 6 models applied (category_dna / slot_plan / prompt_version / slot_generation / rating / performance_metric), DataLab 8 endpoints, thumbnail policy gate + unit test 6/6 PASS. Engine 'Generation' -> slot_generation (collision avoid). tsc0 / build0. ENG-0 TODO -> verified-pending (#88).

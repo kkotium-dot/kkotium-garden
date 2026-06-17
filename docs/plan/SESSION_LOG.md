@@ -1,3 +1,15 @@
+## 2026-06-17 (세션9-Code) 원산지 진실 게이트 + 옵션 정합 가드 (#95)
+
+**[배경·Desktop #45]** 명화 DB origin=중국(0200037)·옵션 라이브 정합 → 세션9 "payload 국산/4" 경보 = stale(#96 코드 의심 전 DB 실측). 진짜 root-cause = payload-builder silent 폴백.
+**[build·feat 440ef92]** ORIGIN-TRUTH-GATE(전상품·전 발행경로 공유). (1) validateForRegistration origin HARD GATE — originCode 미상/무효 발행 BLOCK(추측 금지·관제탑 publish track 자동 개입 #56)·선행0 절삭 치유 WARNING. (2) 옵션 정합 가드 — DB option_rows vs payload combinations 불일치 WARNING(미로드 skip·오탐0). (3) buildNaverProductPayload/register route: silent 중국폴백 `?? '0200037'` 제거 → resolveOriginAreaCode 빈 origin loud throw(근본 메커니즘=폴백이 empty-throw 가드 무력화).
+**[verify·3-tier]** (1)로컬 validate 3상품: 명화/달항아리 0200037 PASS·canRegister·payload origin=DB 반영 / 아이스 200037 auto-heal WARNING. (2)tsc0·build0·test PASS. (3)prod smoke 명화 publish-preview canRegister=true·readiness S/94·errors[] 무회귀. product_options=relation·발행경로(load-update-context·products/register) include 확인 → 옵션 소실 버그 없음(오탐 해소).
+**[finding]** 명화 option_rows DB=4 전부 ON_SALE ↔ 의도 라이브 3(Cotton 품절 미반영) = 데이터 드리프트(빌더는 DB 충실 반영·코드버그 아님). PUBLISH-명화 시 Cotton SOLD_OUT 처리 or 행 제거 = 대표 데이터 결정. 아이스 originCode=200037 선행0 절삭 오염(치유되나 DB값 손상=정규값 저장 권고).
+**[gates]** tsc0·build0·이모지0·신규 한글리터럴0(영어 에러·기존 컨벤션)·prisma 싱글톤·네이버 무접촉·additive·비가역0.
+**[codify]** PRINCIPLES_LEARNED #95(원산지 진실성)·#96(진실원천 Product 필드·산출 이상 시 값 먼저 실측)·#97(시드+미시드 양쪽 검증). LIVE BOARD ORIGIN-TRUTH-GATE 등재·PUBLISH-명화 경보 정정. TASK_BRIDGE §3(97).
+**[next]** [Code] P2 reconcile 개입카드(명화 composite stale 18+botanical) → P3 Phase3. [결정·대표] PUBLISH-명화 Cotton 상태+비가역 GO #46.
+
+---
+
 ## 2026-06-17 (세션9-Code) REGISTRY↔STORAGE 드리프트 탐지 차원 + 세션8 핸드오프 보존
 
 **[preserve ba09a28]** 세션8 Desktop 핸드오프 2건 git 보존(#49·#41) — HANDOFF_2026-06-17_engine-stage1-verify(ENG-1 데이터+배포+API 독립검증 PASS) + HANDOFF_2026-06-17_prod-verify-registry-storage-drift(prod 검증 전건 PASS + 신규 REGISTRY↔STORAGE 드리프트 발견·#62 승격).

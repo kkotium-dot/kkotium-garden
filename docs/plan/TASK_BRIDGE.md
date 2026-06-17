@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-17 (97) 원산지 진실 게이트 + 옵션 정합 가드 (FROM 💻 Code, main 440ef92, additive·비가역0·네이버 무접촉)
+- **Target**: Claude Code CLI · **Branch**: main · additive·전 발행경로 공유·네이버 무접촉·비가역0.
+- **배경(Desktop #45 반영)**: 명화 DB origin=중국(0200037)·옵션 라이브 정합 → 세션9 "payload 국산/4" 경보 = stale(#96). 진짜 root-cause = payload-builder의 silent 폴백 `resolveOriginAreaCode(originCode ?? '0200037')` — origin 미상 시 중국 추측, validateForRegistration에 origin 검사 전무.
+- **DONE (ORIGIN-TRUTH-GATE·#95·전상품)**: 
+  - validateForRegistration origin HARD GATE — originCode 미상/무효 시 발행 BLOCK(추측 금지·관제탑 publish track 자동 개입 #56), 선행0 절삭 치유 시 WARNING.
+  - validateForRegistration 옵션 정합 가드 — DB option_rows vs payload combinations 불일치 WARNING(미로드 경로 skip·오탐0).
+  - buildNaverProductPayload + register route: silent 중국폴백 '0200037' 제거 → 빈 origin loud throw(last-line defense).
+- **검증 (3-tier·#88)**: (1)로컬 validate 3상품(명화/달항아리 PASS·canRegister·payload origin=DB / 아이스 200037 heal WARNING) (2)tsc0·build0·test PASS·이모지0·신규한글리터럴0(영어 에러) (3)prod smoke 명화 publish-preview canRegister=true·readiness S/94·errors[] 무회귀. product_options=relation·발행경로 include 확인(옵션 소실 버그 없음).
+- **패치 위치**: src/lib/naver/product-builder.ts(validateForRegistration·buildNaverProductPayload) · src/app/api/naver/register/route.ts. 원칙 #95·#96·#97.
+- **다음 1액션**: [Code 진행] P2 reconcile 개입카드(명화 composite stale 18+botanical registry-only → 운영자 등록vs아카이브·전상품·가역·#56) → P3 Phase3 슬롯조립. [결정·대표] PUBLISH-명화 옵션 Cotton 상태(DB 4 ON_SALE↔의도 3=데이터 드리프트, SOLD_OUT 처리 or 행 제거) + 비가역 GO #46. [Desktop] product-builder 정독 root-cause 핀포인트 인계 시 본 작업과 대조(이미 origin silent 폴백 = 핵심).
+
+
 ### 2026-06-17 (96) REGISTRY↔STORAGE 드리프트 탐지 차원 + 핸드오프 보존 (FROM 💻 Code, main b40a711, additive·비가역0·네이버 무접촉)
 - **Target**: Claude Code CLI · **Branch**: main (직접) · additive·read-only 탐지·네이버 무접촉·비가역0.
 - **선행 보존**: 세션8 Desktop 핸드오프 2건 git 보존(ba09a28·#49) — engine-stage1-verify·prod-verify-registry-storage-drift.

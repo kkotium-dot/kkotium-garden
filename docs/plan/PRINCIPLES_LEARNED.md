@@ -956,3 +956,12 @@ ingest(적재) 검증은 3단으로 단정한다: (1) /assets 200 → (2) compos
 
 ## 작업원칙 #94 — 스테이지 택소노미는 storage 실측으로 주기 점검 (2026-06-17 세션9)
 스테이지 택소노미는 storage 직속 폴더 실측(listProductStageFolders — `{pid}/` 직속 폴더 열거)으로 주기 점검한다. listProductAssets는 STAGE_DIRS만 순회하므로 택소노미에 없는 폴더는 invisible(silent drop) — 진짜 undefined stage는 별도 폴더 열거로만 탐지된다. **단 본 세션 교차검증(#45·#88)**: 핸드오프가 우려한 `plate`는 이미 STAGE_DIRS v2(2026-06-12)에 존재 → undefined 아님. production 실측 undefinedStages=0(전 3상품). 보고를 맹신하지 않고 코드 상수로 교차검증한 결과 — 핸드오프 #94 우려는 코드 레벨 기해소 확인. (가드는 미래 surprise용으로 유지.)
+
+## 작업원칙 #95 — 원산지 진실성: 추측 발행 절대 금지·불일치 HARD BLOCK (2026-06-17 세션9 전상품 #62)
+payload origin은 Product 실제 origin(originCode)과 **불일치 절대 금지**. 국산(00)이든 중국(0200037)이든 **디폴트 폴백 금지** — origin 미상 시 추측하지 말고 **발행 HARD BLOCK**. 허위 원산지 = 대외무역법/관세법 법적 리스크. 구현(전상품·전 발행경로 공유): validateForRegistration에 origin 진실 게이트 — originCode 미상/무효 시 errors(canRegister=false → 관제탑 publish track 자동 개입점화 #56), 선행 0 절삭 치유 시 warning(DB 정규값 저장 권고). buildNaverProductPayload/register route의 silent 중국 폴백 `?? '0200037'` 제거 → resolveOriginAreaCode가 빈 origin에 loud throw(last-line defense). **근본 메커니즘**: 구코드 `resolveOriginAreaCode(originCode ?? '0200037')`의 `?? '0200037'`이 빈 값을 중국으로 먼저 치환해 resolveOriginAreaCode의 empty-throw 가드를 무력화 = silent 추측. **검증(production 실측)**: 명화/달항아리 0200037 PASS·canRegister 무회귀(S/94)·payload 0200037(DB 반영) / 아이스 200037 auto-heal WARNING. 옵션도 정합 가드(DB option_rows vs payload combinations 불일치 시 warning, 미로드 경로 skip=오탐0). ★"payload 국산/4" 류 경보는 코드 의심 전 DB 실측 선행(#96 동형).
+
+## 작업원칙 #96 — 엔진/발행 진실원천은 Product 정규 필드, 산출 이상 시 값 먼저 실측 (2026-06-17 세션9)
+엔진 카테고리 진실원천 = Product.naverCategoryCode(라벨 product.category 아님·#62 CAT-CODE 정합). 발행 원산지 진실원천 = Product.originCode. **산출/표시 이상 시 코드(빌더/엔진) 의심 전에 DB 값을 먼저 실측**한다. 사례: 세션9 "payload 국산(00)" 경보 → DB 실측 결과 originCode=0200037(중국, 정확) = 경보는 stale 스냅샷, 코드 결함 아님. "옵션 4 vs 3" → DB option_rows=4 전부 ON_SALE(Cotton 품절 의도 미반영=데이터 드리프트, 빌더는 DB 충실 반영). #45(보고 비신뢰·직접검증)·#88(완료=검증) 결합 — 추측 전 그라운드 truth 실측.
+
+## 작업원칙 #97 — 전상품 검증은 시드+미시드 양쪽 (2026-06-17 세션9)
+엔진/가드 검증은 **시드된 상품 + 미시드 상품 양쪽**으로 한다. 시드: 카테고리-특화 슬롯/DNA 정상 산출. 미시드: fallback이 **우아하게 degrade**(에러 아님)되고 **카테고리-특화 슬롯을 오상속하지 않음**(ICE-TRAY-DNA 사례: emptyCard 향수편향이 미시드 전 카테고리에 scent_note 오상속 → 중립화 #62/#90). 한쪽만 보면 fallback 오염/누락을 놓친다(#93 storage+registry 양쪽 교차와 동형 — 양면 검증 원칙). REGISTRY-STORAGE-DRIFT/엔진 strategy 검증 시 3상품(명화=시드 / 달항아리·아이스=미시드) 전수 실측이 표준.
