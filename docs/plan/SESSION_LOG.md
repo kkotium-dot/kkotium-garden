@@ -1,3 +1,11 @@
+## 2026-06-17 (세션9-Code) 프롬프트 결함 A(팔레트 디폴트)+B(병 모호성) 전상품 수정
+
+**[fix ef44fe2·#62·E5 선행]** A=palette 빈값 시 'in natural' 폴백 제거: MoodAxisData.palette(영문 6무드) 추가·assembler 폴백을 axis.palette로·referenceAesthetic 빈값 시 'in {x}' 절 drop(빈 fragment 필터). B=병 모호성('breathing room ... for a small bottle'이 모델로 병 그리게 함·Path C 위반·2026-06-17 생성본 확인)→'clean empty negative space ... reserved for later product compositing, no bottle, no container, no product, no diffuser in frame'(positive·#86). 적용: 플레이북 §4 4향+구도 + spec-data PRODUCT_MARGIN_BLOCK 신설(canonical backdrop/scent용). 엔진 assemblePrompt는 bottle 미보유(제품=subject).
+**[verify·prod]** 명화 strategy 9슬롯 'in natural' 0건·mood palette 정상(M6 'deep muted tones with refined contrast'). repo 'for a small bottle' 잔존0(주석 제외). tsc0·build0·test PASS(prompt-assembler 갱신)·이모지0·신규한글리터럴0·additive·비가역0.
+**[next]** [Code] E5 향별 concept 주입(변형별 subject 템플릿·PRODUCT_MARGIN_BLOCK scent 슬롯 배선)·E6 assetization 폐루프·P2(firefly_auto 서브체크·옵션 3표현 정합). [GATE] E7 엔진통합=대표/Desktop 명시 GO. [Desktop] E3 슬롯보드 브라우저 검증(#88).
+
+---
+
 ## 2026-06-17 (세션9-Code) 엔진 프롬프트 last-mile E1·E2·E3·E4
 
 **[배경·Desktop 감사]** engine-prompt-gap: 6축 엔진이 resolvedPrompt 조립하나 마지막 1마일 끊김(resolution 미주입·한글 subject 누수·benchmarkDna 미주입·슬롯보드 280자만). 두 프롬프트 엔진 미병합. 권위 docs/handoff/HANDOFF_2026-06-17_engine-prompt-gap-verdict-and-consolidation-plan.md.
