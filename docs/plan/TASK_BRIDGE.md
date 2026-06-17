@@ -72,6 +72,15 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-17 (101) variant_composite 개입카드 — 옵션 변형별 대표 컷 커버리지 (FROM 💻 Code, main 0b6db66, additive·비가역0·네이버 무접촉)
+- **Target**: Claude Code CLI · Desktop 감사(명화 3향 0/3·바인딩 전무) 스펙 구현. registry_drift 패턴 동형.
+- **DONE (5계층)**: (1)데이터 asset_registry.variant 컬럼(Supabase 마이그 add_asset_registry_variant·additive·비가역0)+Prisma+idx. (2)computeVariantCoverage(variant-coverage.ts) — 분모=Product.options jsonb stockQuantity>0(진실원천·#96)·분자=variant바인딩 LIVE composite distinct(고아제외)·missing=차집합. (3)카드 INTERVENTION_VARIANT_COMPOSITE·control-tower INPUT_DECISION·이미지탭 딥링크·label「변형별 대표 컷(N/M)」·seed<100%&hasOptions·clear=100%·cron 전상품 상시. (4)ingest-firefly variant param(생성물→asset_registry.variant 바인딩)+적재 후 syncVariantCompositeCard. (5)widget 라벨+상세칩.
+- **검증 (prod 통합·라운드트립)**: 명화 active=[레몬유칼립·에이프릴·블랙체리](3·코튼 stock0 제외)·covered0·missing3·reconciled false→카드 seed→matrix actionQueue INPUT_DECISION·deepLink tab=image. 바인딩 시뮬 covered 0→1(0.33)→복원0. 달항/아이스 hasOptions=false=카드없음. tsc0·build0·test PASS·이모지0·신규한글리터럴0·prisma 싱글톤·Sharp-only·네이버 무접촉.
+- **패치 위치**: prisma/schema.prisma · src/lib/storage/variant-coverage.ts · src/lib/jobs/intervention.ts · src/lib/automation/control-tower-engine.ts · src/app/api/products/[id]/{asset-integrity,ingest-firefly}/route.ts · src/app/api/cron/asset-integrity-sweep/route.ts · src/components/dashboard/ControlTowerMatrixWidget.tsx · src/lib/i18n/control-tower-strings.ko.json.
+- **부수 발견(전상품 일관성)**: 옵션 3표현 드리프트 — optionValues(3)·options jsonb(4·코튼stock0)·product_options 테이블(4 ON_SALE). variant_composite 분모=options jsonb stock>0=3 확정. 3표현 정합 reconcile=별도 과제(데이터 드리프트 동근원, PUBLISH-명화 Cotton 결정과 연결).
+- **다음 1액션**: [Desktop] variant_composite + reconcile UI 카드 브라우저 렌더 검증(#88) + 명화 3향 컷 생성→ingest variant 바인딩→카드 clear 확인. [Code] 옵션 3표현 reconcile / P3 Phase3 슬롯조립. [결정·대표] PUBLISH-명화 Cotton(3표현 드리프트 동근원)+GO #46.
+
+
 ### 2026-06-17 (100) REGISTRY↔STORAGE per-orphan reconcile UI — 카드 actionable 완결 (FROM 💻 Code, main f2f97ce, additive·비가역0)
 - **DONE**: registry_drift 카드를 actionable로 완성(#56 루프). RegistryDriftReconcile(ControlTowerMatrixWidget 인라인) — '고아 검토·정리' 버튼→GET drift 로드→storage-only 고아(등록/아카이브 per-row+벌크)·registry-only 고아(정리 per-row+벌크)→POST reconcile(action:reconcile·confirm·#46)→after 갱신+onRefresh(reconciled 시 카드 자동 clear). 아카이브=window.confirm. ko.json registry_drift 13키 추가.
 - **검증**: tsc0·build0·이모지0·신규한글리터럴0. 데이터레인 prod 검증완(reconcile route 라운드트립·GET shape: storageOnly 22 {path,stage}·registryOnly botanical {path}·컴포넌트 소비가능). UI 버튼 인터랙션=Desktop 브라우저(#88).

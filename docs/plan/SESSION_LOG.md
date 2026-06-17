@@ -1,3 +1,13 @@
+## 2026-06-17 (세션9-Code) variant_composite 개입카드 — 옵션 변형별 대표 컷 커버리지
+
+**[feat 0b6db66·#62 P2]** Desktop 감사(명화 3향 커버리지 0/3·바인딩 계층 전무) 스펙 구현(registry_drift 패턴 동형). 5계층: (1)asset_registry.variant 컬럼(Supabase 마이그 add_asset_registry_variant·additive·비가역0)+Prisma+idx. (2)computeVariantCoverage(variant-coverage.ts) 분모=Product.options jsonb stockQuantity>0(진실원천·#96, product_options 테이블 stale 4 아님·코튼 stock0 제외=3)·분자=variant바인딩 LIVE composite distinct(고아제외). (3)INTERVENTION_VARIANT_COMPOSITE 카드(control-tower INPUT_DECISION·이미지탭 딥링크·label N/M·cron 전상품 상시·seed<100%&hasOptions·clear=100%). (4)ingest-firefly variant param(생성물→asset_registry.variant 바인딩)+적재 후 syncVariantCompositeCard. (5)widget 라벨+상세칩.
+**[verify·prod 통합]** 명화 active=[레몬유칼립·에이프릴·블랙체리]·covered0·missing3→카드 seed→asset-jobs-matrix actionQueue INPUT_DECISION·deepLink tab=image. 라운드트립 바인딩 covered 0→1(0.33)→복원0. 달항/아이스 hasOptions=false=카드없음.
+**[finding]** 옵션 3표현 드리프트(optionValues3·options jsonb4 코튼stock0·product_options 테이블4 ON_SALE). variant_composite 분모=options stock>0=3 확정. 3표현 정합 reconcile=별도(PUBLISH-명화 Cotton 결정 동근원).
+**[gates]** tsc0·build0·test PASS·이모지0·신규 한글리터럴0(ko.json)·prisma 싱글톤·Sharp-only·외부 image API 0·네이버 무접촉·additive·비가역0.
+**[next]** [Desktop] variant_composite+reconcile 카드 브라우저 검증(#88)+명화 3향 컷 생성→ingest 바인딩→clear. [Code] 옵션 3표현 reconcile / P3 Phase3. [결정·대표] PUBLISH-명화 Cotton+GO.
+
+---
+
 ## 2026-06-17 (세션9-Code) REGISTRY↔STORAGE per-orphan reconcile UI — 카드 actionable 완결
 
 **[feat f2f97ce]** registry_drift 카드 actionable 완성(#56 개입 루프). RegistryDriftReconcile(ControlTowerMatrixWidget 카드 인라인·AssetIntegrityFix 패턴 일관) — '고아 검토·정리'→GET drift→storage-only 고아(등록/아카이브 per-row+벌크)·registry-only 고아(정리 per-row+벌크)→POST reconcile(confirm #46)→after 갱신+onRefresh(reconciled 시 카드 자동 clear). 아카이브 window.confirm. ko.json registry_drift 13키.
