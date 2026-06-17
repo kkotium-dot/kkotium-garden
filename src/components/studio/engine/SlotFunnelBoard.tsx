@@ -8,7 +8,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Image as ImageIcon, Cpu, Crop, Anchor, Layers, FileText } from 'lucide-react';
+import { Image as ImageIcon, Cpu, Crop, Anchor, Layers, FileText, Monitor, Settings, Copy, Check } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import type { EngineSlotView } from './useEngineStrategy';
 
@@ -101,6 +101,7 @@ export default function SlotFunnelBoard({ slots, loading, degraded }: SlotFunnel
           <Meta icon={<Crop size={12} />} label={c.aspect} value={activeSlot.aspect} />
           <Meta icon={<Anchor size={12} />} label={c.grounding} value={activeSlot.grounding ? c.groundingOn : c.groundingOff} />
           <Meta icon={<ImageIcon size={12} />} label={c.lane} value={activeSlot.realismLane === 'photoreal' ? c.lanePhoto : c.laneArt} />
+          {activeSlot.resolution && <Meta icon={<Monitor size={12} />} label={c.resolution} value={activeSlot.resolution} />}
         </div>
 
         {activeSlot.textPolicy === 'text_free' && (
@@ -121,15 +122,58 @@ export default function SlotFunnelBoard({ slots, loading, degraded }: SlotFunnel
         )}
 
         <div>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: 'var(--gp-ink-700)' }}>
-            <FileText size={11} /> {c.prompt}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: 'var(--gp-ink-700)' }}>
+              <FileText size={11} /> {c.prompt}
+            </span>
+            <PromptCopyButton text={activeSlot.resolvedPrompt ?? activeSlot.promptPreview} />
+          </div>
           <p style={{ margin: '3px 0 0', fontSize: 11, lineHeight: 1.5, color: 'var(--gp-ink-700)', fontFamily: 'var(--font-mono, monospace)', whiteSpace: 'pre-wrap' }}>
-            {activeSlot.promptPreview}
+            {activeSlot.resolvedPrompt ?? activeSlot.promptPreview}
           </p>
+        </div>
+
+        <div style={{ marginTop: 8, padding: 8, borderRadius: 8, background: 'var(--gp-pink-50)', border: '1px solid var(--color-border)' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: 'var(--gp-ink-700)' }}>
+            <Settings size={11} /> {c.settingsCard}
+          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+            <SettingChip label={c.model} value={activeSlot.modelRoute} />
+            <SettingChip label={c.grounding} value={activeSlot.grounding ? c.groundingOn : c.groundingOff} />
+            <SettingChip label={c.aspect} value={activeSlot.aspect} />
+            {activeSlot.resolution && <SettingChip label={c.resolution} value={activeSlot.resolution} />}
+          </div>
+          <p style={{ margin: '4px 0 0', fontSize: 9, color: 'var(--gp-ink-500)' }}>{c.settingsHint}</p>
         </div>
       </div>
     </Shell>
+  );
+}
+
+// E3 (#62) — one-click copy of the full resolved prompt (the natural #56
+// intervention: operator copies the engine prompt rather than hand-writing).
+function PromptCopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard blocked — no-op */ }
+  };
+  return (
+    <button type="button" onClick={copy}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 6, border: '1px solid var(--color-border)', background: copied ? '#F0FDF4' : 'var(--color-surface)', color: copied ? '#15803D' : 'var(--gp-ink-700)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+      {copied ? <Check size={11} /> : <Copy size={11} />}{copied ? c.copied : c.copyPrompt}
+    </button>
+  );
+}
+
+function SettingChip({ label, value }: { label: string; value: string }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 6, background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontSize: 10, color: 'var(--gp-ink-700)' }}>
+      <span style={{ color: 'var(--gp-ink-500)' }}>{label}</span><strong>{value}</strong>
+    </span>
   );
 }
 

@@ -31,13 +31,22 @@ export function assemblePrompt(input: AssembleInput): AssembledPrompt {
   // Subject -> Surface -> Light (all carried in the subject template).
   const subject = fillSubject(axis.subjectTemplate, product, palette);
 
-  // Lens / Camera (Layer 1 lookup) — never a single baked default (#84).
+  // Lens / Camera (Layer 1 lookup) — never a single baked default (#84). E1:
+  // resolution is now spliced in (was encoded in the spec but never reaching the
+  // prompt — the resolution knob was lost at the last mile).
   const c = axis.camera;
-  const cameraClause = `shot on a ${c.cameraArchetype} with a ${c.lens} at ${c.aperture}, ${c.realismCues}`;
+  const cameraClause =
+    `shot on a ${c.cameraArchetype} with a ${c.lens} at ${c.aperture}, ${c.realismCues}, ${c.resolution} resolution`;
 
-  // Finish: fixed common grade + positive exclusion.
+  // E4: reference-aesthetic clause — the English "selling tone" the mood's
+  // benchmarks embody (benchmarkDna itself is Korean display tags, never
+  // injected). Delivers reference-driven tone with no competitor crawl.
+  const referenceClause = `in ${axis.referenceAesthetic}`;
+
+  // Finish: subject -> reference aesthetic -> camera -> fixed grade -> exclusion.
   const prompt = [
     `${subject},`,
+    `${referenceClause},`,
     `${cameraClause}.`,
     `${FIXED_GRADE_BLOCK}.`,
     EXCLUSION_BLOCK,

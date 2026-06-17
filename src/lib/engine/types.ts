@@ -154,6 +154,9 @@ export interface AssembledSlotStrategy {
   benchmarkDna: string[];
   // The camera spec key the mood resolved to (for variety auditing, #84).
   cameraKey: string;
+  // Target generation resolution (2K/4K) from the camera spec — surfaced for the
+  // E3 recommended-settings card so the operator matches Firefly to the spec.
+  resolution: string;
 }
 
 export interface AssembledStrategy {

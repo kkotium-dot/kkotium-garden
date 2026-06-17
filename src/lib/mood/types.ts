@@ -28,6 +28,11 @@ export interface MoodAxisData {
   nameKo: string;
   conversionJob: string;
   benchmarkDna: string[];
+  // English reference-aesthetic clause (#62 E4). benchmarkDna is Korean display
+  // tags (never injected into the English prompt); this is the English aesthetic
+  // those benchmarks embody, spliced into the prompt to deliver the "selling
+  // tone" without a competitor crawl. All-products (#55).
+  referenceAesthetic: string;
   // Subject + surface + light only (camera clause is appended by the assembler
   // from the camera spec, so a single default camera can never be baked in #84).
   subjectTemplate: string;

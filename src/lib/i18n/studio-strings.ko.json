@@ -375,7 +375,12 @@
         "trust": "신뢰·증거",
         "gift": "기프트",
         "cta": "CTA·브랜드"
-      }
+      },
+      "resolution": "해상도",
+      "copyPrompt": "프롬프트 복사",
+      "copied": "복사됨",
+      "settingsCard": "추천 생성 설정",
+      "settingsHint": "Firefly를 이 설정에 맞추세요"
     },
     "gate": {
       "title": "발행 전 정책 게이트",

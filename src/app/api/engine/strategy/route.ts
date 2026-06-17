@@ -19,6 +19,7 @@ import { assembleStrategy } from '@/lib/engine/strategy-assembler';
 import { deriveProductSignals } from '@/lib/engine/slot-decision-table';
 import { loadAndEvaluateProducts } from '@/lib/automation/load-publish-readiness';
 import { evaluateOriginTruth } from '@/lib/naver/product-builder';
+import { englishSubjectFor } from '@/lib/engine/category-subject';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +50,9 @@ export async function GET(req: NextRequest) {
     const signals = deriveProductSignals(product.category, product.name);
     const { strategy, plan } = assembleStrategy({
       productId,
-      productSubject: product.name,
+      // E2 (#62): English subject noun by category — never the Korean SEO title
+      // (which used to leak into the English image prompt).
+      productSubject: englishSubjectFor(categoryCode),
       card,
       signals,
     });
@@ -72,6 +75,11 @@ export async function GET(req: NextRequest) {
         textPolicy: p?.textPolicy ?? 'text_allowed',
         sectionIds: p?.sectionIds ?? [],
         promptPreview: s.resolvedPrompt.slice(0, 280),
+        // E3 (#62): the FULL resolved prompt + spec settings so the board can
+        // surface a copy-prompt + recommended-Firefly-settings card (the operator
+        // copies the engine prompt instead of hand-writing one).
+        resolvedPrompt: s.resolvedPrompt,
+        resolution: s.resolution,
         cameraKey: s.cameraKey,
       };
     });

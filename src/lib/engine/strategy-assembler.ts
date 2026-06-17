@@ -77,6 +77,7 @@ export function assembleStrategy(input: AssembleStrategyInput): {
       resolvedPrompt: assembled.prompt,
       benchmarkDna: assembled.benchmarkDna,
       cameraKey: cameraSpecKey(assembled.camera),
+      resolution: assembled.camera.resolution,
     };
   });
 

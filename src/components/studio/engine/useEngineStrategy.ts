@@ -20,6 +20,9 @@ export interface EngineSlotView {
   textPolicy: string;
   sectionIds: string[];
   promptPreview: string;
+  // E3 (#62) — full prompt + resolution for the copy-prompt + settings card.
+  resolvedPrompt?: string;
+  resolution?: string;
   cameraKey: string;
 }
 
