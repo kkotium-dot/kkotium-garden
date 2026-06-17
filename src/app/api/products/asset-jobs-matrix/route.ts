@@ -168,7 +168,9 @@ export async function GET() {
   // C-9 intervention overlay (separate guarded query so the possibly-unmigrated
   // intervention columns never break the job-status overlay above, #50). The
   // latest awaiting_human IMAGE-track job per product names the precise card.
-  const interventionById = new Map<string, { type: string; payload?: unknown }>();
+  // ALL active interventions per product (#62 — never mask one card with another,
+  // #56). De-duplicated by type (one card per type; latest payload wins via desc).
+  const interventionsById = new Map<string, Array<{ type: string; payload?: unknown }>>();
   const IMAGE_LANES = ['generate', 'process', 'compose'];
   try {
     const ijobs = await prisma.assetJob.findMany({
@@ -182,10 +184,11 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
     for (const j of ijobs) {
-      // First per product wins (desc → latest).
-      if (!interventionById.has(j.productId) && j.interventionType) {
-        interventionById.set(j.productId, { type: j.interventionType, payload: j.interventionPayload ?? undefined });
-      }
+      if (!j.interventionType) continue;
+      const arr = interventionsById.get(j.productId) ?? [];
+      if (arr.some((x) => x.type === j.interventionType)) continue; // one card per type
+      arr.push({ type: j.interventionType, payload: j.interventionPayload ?? undefined });
+      interventionsById.set(j.productId, arr);
     }
   } catch (e: unknown) {
     const code = (e as { code?: string })?.code;
@@ -236,7 +239,8 @@ export async function GET() {
       hasSourceDetail: !!(dbProduct as { source_detail_url?: string | null }).source_detail_url,
       sourceDetailGood: sourceDetailGoodById.get(dbProduct.id) ?? false,
       mainImagePolicy: mainImagePolicyById.get(dbProduct.id) ?? null,
-      imageJobIntervention: interventionById.get(dbProduct.id) ?? null,
+      imageJobIntervention: interventionsById.get(dbProduct.id)?.[0] ?? null,
+      imageJobInterventionsExtra: interventionsById.get(dbProduct.id)?.slice(1) ?? [],
       dnaUnseeded: (() => {
         const c = (dbProduct.naverCategoryCode ?? '').trim();
         return !c || !seededCodes.has(c);

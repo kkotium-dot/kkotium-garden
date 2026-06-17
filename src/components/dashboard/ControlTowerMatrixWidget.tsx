@@ -135,6 +135,8 @@ interface MatrixRow {
   line: LineInfo;
   applyStatus?: ApplyStatus;
   actionQueue?: ActionQueueItem;
+  // #62 — additional intervention cards (never mask one with another, #56).
+  extraQueue?: ActionQueueItem[];
   mode: ModeInfo;
   overall: Overall;
   nextAction: NextAction | null;
@@ -1048,7 +1050,7 @@ function OperatorActionQueue({ items, onRefresh }: { items: ActionQueueItem[]; o
       </div>
       <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
         {sorted.map((item) => (
-          <ActionQueueCard key={item.productId} item={item} onRefresh={onRefresh} />
+          <ActionQueueCard key={`${item.productId}-${item.interventionType ?? item.stage}`} item={item} onRefresh={onRefresh} />
         ))}
       </div>
     </div>
@@ -1147,7 +1149,9 @@ export default function ControlTowerMatrixWidget() {
       )}
 
       <OperatorActionQueue
-        items={rows.map((r) => r.actionQueue).filter((a): a is ActionQueueItem => Boolean(a))}
+        items={rows
+          .flatMap((r) => [r.actionQueue, ...(r.extraQueue ?? [])])
+          .filter((a): a is ActionQueueItem => Boolean(a))}
         onRefresh={() => mutate()}
       />
 

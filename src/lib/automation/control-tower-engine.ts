@@ -183,6 +183,10 @@ export interface ControlTowerRow {
   line: LineInfo;
   applyStatus: ApplyStatus;
   actionQueue: ActionQueueItem;
+  // #62 — additional intervention cards for this product (one per extra active
+  // intervention). The queue renders actionQueue + extraQueue so no card is
+  // masked (#56). Empty for the common single-intervention case.
+  extraQueue: ActionQueueItem[];
   overall: Overall;
   nextAction: NextAction | null;
 }
@@ -227,6 +231,11 @@ export interface ComputeContext {
   // awaiting_human image job and passes it so the queue renders a precise card
   // (firefly_drop / hero_crop_request / source_request) instead of generic AUTH.
   imageJobIntervention?: { type: string; payload?: unknown } | null;
+  // #62 — ADDITIONAL active image-track interventions beyond the primary above.
+  // A product can have several awaiting_human cards at once (e.g. registry_drift
+  // + variant_composite). The queue must surface EVERY one — never let one card
+  // mask another (#56). These become extraQueue items. Empty/omitted = none.
+  imageJobInterventionsExtra?: Array<{ type: string; payload?: unknown }>;
   // #62 — true when the product's Naver category has NO seeded DNA card (the
   // strategy engine falls back to the neutral universal funnel). Surfaced as an
   // idle-priority informational nudge to seed real DNA — never masks real work.
@@ -414,6 +423,7 @@ export function computeControlTowerRow(
 
   const overall = overallOf([image.status, publish.status]);
   const nextAction = computeNextAction(product, publish, image, registered, line.value, applyStatus, ctx.mainImagePolicy);
+  const naverCategoryCode = (product as { naverCategoryCode?: string | null }).naverCategoryCode ?? '';
   const actionQueue = computeActionQueueItem(
     product.id,
     product.name,
@@ -421,10 +431,19 @@ export function computeControlTowerRow(
     nextAction,
     ctx.imageJobIntervention ?? null,
     ctx.dnaUnseeded ?? false,
-    (product as { naverCategoryCode?: string | null }).naverCategoryCode ?? '',
+    naverCategoryCode,
   );
 
-  return { productId: product.id, name: product.name, publish, image, line, applyStatus, actionQueue, overall, nextAction };
+  // #62 — every additional active intervention becomes its own card so none is
+  // masked (#56). Build each via the same path (intervention branch), then keep
+  // only those that resolved to a precise intervention card.
+  const extraQueue = (ctx.imageJobInterventionsExtra ?? [])
+    .map((iv) =>
+      computeActionQueueItem(product.id, product.name, image, nextAction, iv, false, naverCategoryCode),
+    )
+    .filter((it) => !!it.interventionType);
+
+  return { productId: product.id, name: product.name, publish, image, line, applyStatus, actionQueue, extraQueue, overall, nextAction };
 }
 
 /**
