@@ -971,3 +971,6 @@ payload origin은 Product 실제 origin(originCode)과 **불일치 절대 금지
 
 ## 작업원칙 #99 — 브라우저 검증: element.click() 비신뢰, 풀 MouseEvent 디스패치 (2026-06-17 세션9)
 React 핸들러는 `element.click()`로 안정적으로 발화하지 않는다(no-op처럼 보여 거짓 'no bug'/'bug' 판정 위험). 브라우저 검증 시 풀 MouseEvent 시퀀스(pointerdown/mousedown/pointerup/mouseup/click·bubbles:true)를 디스패치한다. 네이티브 window.confirm은 JS를 블록 — 클릭 전 오버라이드하거나 운영자가 취소(비가역 게이트 #46 PASS 확인). 사례: per-orphan reconcile UI 아카이브 버튼 — element.click() 무발화 적발 후 풀 이벤트로 재시도 → 실제 confirm 발화 → 운영자 취소 → mutation 0(드리프트 22/1 불변). #45(직접검증)·#88(완료=검증) 결합.
+
+## 작업원칙 #100 — 개입 대기열은 상품당 다중 카드 비마스킹 (2026-06-17 세션9 P0·#56)
+개입 대기열은 상품당 활성 개입을 **전부** 노출한다(스택 또는 "+N" 어포던스) — 상품당 1카드만 렌더하면 후순위 개입이 가려져 숨은 개입점(#56 위반)이 된다. 사례: 명화 registry_drift + variant_composite 2개 동시 awaiting_human인데 대기열은 variant 1개만 렌더(자산 정합 전체 부재). 근본 = route가 상품당 첫 잡만 보관(interventionById) + ControlTowerRow.actionQueue 단수 + widget map(상품당 1). 수정 = route 전체 수집(타입별 dedup·primary+extra) → ControlTowerRow.extraQueue → widget flatMap(actionQueue+extraQueue)·key=productId+type. ★응답 매핑(필드 명시 선택)에도 extraQueue 추가 필수(엔진 구성만으론 미전달). 비회귀: clear된 카드 비노출(awaiting_human만)·idle 비마스킹(#90 동형)·단일 개입 무변경. #90(저긴급 상시·긴급큐 비마스킹)과 동형 — 둘 다 "숨기지 말 것" 원칙.

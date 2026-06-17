@@ -72,6 +72,14 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-17 (102) 개입 대기열 큐 마스킹 수정 — 상품당 다중 카드 스택 (FROM 💻 Code, main a91156d, additive·비가역0·P0)
+- **Target**: Claude Code CLI · Desktop P0 적발(명화 2개 awaiting_human인데 대기열 1개만·자산 정합 마스킹).
+- **DONE**: 근본=상품당 1카드 노출(route interventionById 첫잡만 + ControlTowerRow.actionQueue 단수 + widget map 1). 수정 2커밋(389fecb+a91156d): route asset-jobs-matrix 전체 개입 수집(interventionsById·타입별 dedup·primary[0]+extra[1:]) → ComputeContext.imageJobInterventionsExtra + ControlTowerRow.extraQueue(computeProductRow이 extra별 precise 카드 생성) → widget flatMap(actionQueue+extraQueue)·key=productId+type(충돌방지) → ★응답 매핑에 extraQueue 추가(엔진 구성만으론 미전달, 1차 누락 보강).
+- **검증 (prod)**: 명화 2카드[variant_composite+registry_drift] 동시·아이스[fill_attributes]/달항[apply_curated_main] 단일 무변경(비회귀). asset_jobs 실측 2건(compose+process). tsc0·build0·이모지0·additive·비가역0·네이버 무접촉. 스택 시각렌더=Desktop(#88).
+- **패치 위치**: src/app/api/products/asset-jobs-matrix/route.ts · src/lib/automation/control-tower-engine.ts · src/components/dashboard/ControlTowerMatrixWidget.tsx. 원칙 #100.
+- **다음 1액션**: [Desktop] 명화 2카드 동시 렌더 브라우저 검증(#88). [Code] Phase3 / 옵션 3표현 reconcile / realism_lane ingest 게이트. [결정·대표] PUBLISH-명화 thumbnail+Cotton+GO.
+
+
 ### 2026-06-17 (101) variant_composite 개입카드 — 옵션 변형별 대표 컷 커버리지 (FROM 💻 Code, main 0b6db66, additive·비가역0·네이버 무접촉)
 - **Target**: Claude Code CLI · Desktop 감사(명화 3향 0/3·바인딩 전무) 스펙 구현. registry_drift 패턴 동형.
 - **DONE (5계층)**: (1)데이터 asset_registry.variant 컬럼(Supabase 마이그 add_asset_registry_variant·additive·비가역0)+Prisma+idx. (2)computeVariantCoverage(variant-coverage.ts) — 분모=Product.options jsonb stockQuantity>0(진실원천·#96)·분자=variant바인딩 LIVE composite distinct(고아제외)·missing=차집합. (3)카드 INTERVENTION_VARIANT_COMPOSITE·control-tower INPUT_DECISION·이미지탭 딥링크·label「변형별 대표 컷(N/M)」·seed<100%&hasOptions·clear=100%·cron 전상품 상시. (4)ingest-firefly variant param(생성물→asset_registry.variant 바인딩)+적재 후 syncVariantCompositeCard. (5)widget 라벨+상세칩.

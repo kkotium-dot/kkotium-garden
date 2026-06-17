@@ -1,3 +1,12 @@
+## 2026-06-17 (세션9-Code) 개입 대기열 큐 마스킹 수정 (P0·#56)
+
+**[fix 389fecb+a91156d]** Desktop P0 적발 — 명화 registry_drift+variant_composite 2개 awaiting_human인데 대기열 variant 1개만(자산 정합 마스킹·숨은 개입점). 근본=상품당 1카드(route interventionById 첫잡만·ControlTowerRow.actionQueue 단수·widget map). 수정: route 전체수집(interventionsById·타입dedup·primary+extra)·ComputeContext.imageJobInterventionsExtra·ControlTowerRow.extraQueue(computeProductRow extra별 precise 카드)·widget flatMap·key=pid+type·응답매핑 extraQueue 추가(1차 누락 보강).
+**[verify·prod]** 명화 2카드[variant_composite+registry_drift]·아이스/달항 단일 무변경(비회귀). asset_jobs 2건 실측. tsc0·build0·이모지0·비가역0.
+**[codify]** 원칙 #100(상품당 다중 카드 비마스킹·#90 동형).
+**[next]** [Desktop] 2카드 동시 렌더 검증(#88). [Code] Phase3/3표현 reconcile/realism 게이트. [결정] PUBLISH-명화.
+
+---
+
 ## 2026-06-17 (세션9-Code) variant_composite 개입카드 — 옵션 변형별 대표 컷 커버리지
 
 **[feat 0b6db66·#62 P2]** Desktop 감사(명화 3향 커버리지 0/3·바인딩 계층 전무) 스펙 구현(registry_drift 패턴 동형). 5계층: (1)asset_registry.variant 컬럼(Supabase 마이그 add_asset_registry_variant·additive·비가역0)+Prisma+idx. (2)computeVariantCoverage(variant-coverage.ts) 분모=Product.options jsonb stockQuantity>0(진실원천·#96, product_options 테이블 stale 4 아님·코튼 stock0 제외=3)·분자=variant바인딩 LIVE composite distinct(고아제외). (3)INTERVENTION_VARIANT_COMPOSITE 카드(control-tower INPUT_DECISION·이미지탭 딥링크·label N/M·cron 전상품 상시·seed<100%&hasOptions·clear=100%). (4)ingest-firefly variant param(생성물→asset_registry.variant 바인딩)+적재 후 syncVariantCompositeCard. (5)widget 라벨+상세칩.
