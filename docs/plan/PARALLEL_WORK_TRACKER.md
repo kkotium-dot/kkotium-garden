@@ -23,6 +23,7 @@
 | REGISTRY-STORAGE-DRIFT | P3 | Code | 완료·검증완(전상품 시스템 완결) | — | 탐지(#93)+reconcile 백엔드+개입카드+per-orphan 결정 UI(카드 인라인 등록/아카이브/정리·벌크)·push f2f97ce | 데이터레인 prod 검증완(라운드트립·GET shape·matrix INPUT_DECISION)·UI 인터랙션=Desktop / 전상품 #62 완결 ✅ |
 | VARIANT-COMPOSITE | P3 | Code | 완료·검증완(UI 렌더=Desktop) | — | asset_registry.variant 컬럼(마이그)+computeVariantCoverage(분모=options stock>0·#96)+variant_composite 카드(INPUT_DECISION·cron 상시)+ingest-firefly variant 바인딩·push 0b6db66 | prod 통합 PASS: 명화 active3·covered0·missing[3향]·matrix INPUT_DECISION·라운드트립(seed/바인딩 0→1→복원) ✅ |
 | ORIGIN-TRUTH-GATE | P1 | Code | 완료·검증완(UI 표면화) | — | origin HARD GATE+옵션 가드+silent 폴백 제거(440ef92)+발행패널 원산지 행(evaluateOriginTruth·9d2e7f4·#56)+아이스 200037→0200037 정규화 | prod smoke 명화/아이스 gate.originTruth=pass·0200037·canRegister S/94 무회귀 ✅ |
+| SEO-GOLDEN-KEYWORD-GUARD | P1 | Code | ✅ | 신규 — 상품명/태그를 datalab 검색량으로 검증 → 카테고리 1위 검색어 누락 시 '상품명 키워드 검증' 개입카드. 명화 즉시해당(차량용=검색1위어 누락·송풍구=니치 사용중). additive·비가역0·네이버 무접촉 | 미착수(백로그·E5/E6/E8과 병행 가능) |
 | CUT34-EVAL | — | Desktop | 검증대기 | — | cut-3/4 = scent_note 슬롯 재배치(썸네일 아님) | 슬롯 매핑 확정 |
 
 ### 파생 큐
@@ -42,14 +43,15 @@
 | E5 | P1 | Code | ✅ | per-scent/product concept input(변형별 subject) + 프롬프트 결함 A(팔레트 디폴트)·B(병 모호성) | 결함 A·B 완료·검증완 / 향별 concept 주입=다음 |
 | E6 | P1 | Code | ✅ | assetization 폐루프(persistStrategy·PromptVersion·SlotGeneration↔asset 링크) | 미착수 |
 | E7 | P1 | Code | ✅ | 엔진 통합(ConceptTone/role→signals·단일 프롬프트 권위·System1 retire) ★비가역=구조PR 전 Desktop/대표 확인 | 미착수(확인 게이트) |
-| E8 | P2 | Code | ✅ | 벤치마크 비전 리서치 — benchmarkDna(category-dna.ts/MoodAxisData)를 경쟁사 썸네일·상세 추출 디스크립터로 채움(팔레트·표면·조명·소품·구도·톤). 썸네일+상세 양쪽 주입. 개입=큐 '벤치마크 리서치 검토' 카드(선택·#56). additive·비가역0·E7과 별개이나 6축 권위 정합 | 미착수(E5/E6 후) |
+| E8 v2 | P2 | Code | ✅ | 벤치마크 비전 리서치(한국 우선) — 소스 티어 T1 NaverSearch(search_shop/image)→T2 datalab→T3 Pinterest/Google(무드만). NaverSearch MCP=Tier1 수집 어댑터 래핑. benchmarkDna 확장(sourcePriority+commerceConvention[명품/다크오브제/선물/가격밴드]+trendKeywords). 반영 3군데(썸네일 컨벤션/상세·향배경 무드/상품명·태그 SEO). 개입=큐 '벤치마크 리서치 검토' 카드 | 미착수(E5/E6 후) |
 | E9 | P2 | Code | ✅ | 프롬프트 성능학습(CTR/CVR per PromptVersion→auto-promote) | 미착수 |
 
-> E8 상세(2026-06-17 백로그): 수집·추출 패스 = 경쟁사 썸네일/상세 리서치 → 6항목(팔레트·표면·조명·소품·구도·톤) 추출 → benchmarkDna 충진(현 한글 브랜드태그=display → 추출 디스크립터로 승격). 썸네일+상세 프롬프트 양쪽 주입. 개입점=대시보드 큐 '벤치마크 리서치 검토' 카드(선택·비강제 #56). E7(엔진통합)과 별개 트랙이나 6축 단일권위와 정합 유지.
+> E8 v2 상세(2026-06-17 백로그·한국 우선): 소스 우선순위 티어 = T1 NaverSearch(search_shop/image, 한국 커머스 실측) → T2 datalab(트렌드/검색량) → T3 Pinterest/Google(무드 보조만). NaverSearch MCP을 Tier-1 수집 어댑터로 래핑. benchmarkDna 확장 필드 = sourcePriority + commerceConvention(명품/다크오브제/선물/가격밴드) + trendKeywords(현 한글 브랜드태그 display → 추출 디스크립터+컨벤션으로 승격). 반영 3군데: 썸네일(컨벤션)·상세/향배경(무드+오늘의집류)·상품명/태그(SEO). 개입점=대시보드 큐 '벤치마크 리서치 검토' 카드(선택·비강제 #56). E7과 별개 트랙·6축 단일권위 정합.
 > ⚠️ 향 서사 v5↔v6 충돌(2026-06-17 미해결): 현 플레이북 §4(병수정 완료본)=v5(레몬 이른아침·쿨 / 코튼 한낮 하이키 / 에이프릴 비갠오후 디퓨즈 / 체리 골든아워 웜). v6 노트=레몬 완숙·웜 / 에이프릴 하이키 / 블랙체리 로우키. 3단어 요약만으론 4프롬프트 충실 재작성 불가(#46) → v6 전체 프롬프트 텍스트 확보 후 §4 갱신. "for a small bottle" 전면 제거는 확인 완료(주석 1건만 잔존).
 
 
 ### 변경로그
+- 2026-06-17 (세션9·백로그/E8 v2+SEO 가드): E8→E8 v2(한국 우선 소스티어 T1 NaverSearch→T2 datalab→T3 Pinterest/Google·NaverSearch MCP Tier1 어댑터·benchmarkDna 확장 sourcePriority/commerceConvention/trendKeywords·반영 3군데 썸네일/상세향배경/상품명태그). 신규 SEO-GOLDEN-KEYWORD-GUARD(P1·전상품·datalab 검색량 검증→1위어 누락 시 '상품명 키워드 검증' 카드·명화 즉시해당 차량용누락/송풍구니치·additive·비가역0·네이버무접촉). 둘 다 미착수 백로그. 향 서사 v5/v6 충돌은 미해결 유지(v6 전체텍스트 대기).
 - 2026-06-17 (세션9·Code/프롬프트 결함 A·B·#62): E5 선행 2결함. A=palette 빈값 'in natural' 폴백 제거(MoodAxisData.palette 영문 6무드+assembler axis.palette 폴백+referenceAesthetic 빈값 절 drop). B=병 모호성('for a small bottle'→'no bottle, no container... reserved for later product compositing' positive·#86)·플레이북 §4 4향+구도+spec-data PRODUCT_MARGIN_BLOCK 신설. push ef44fe2. prod 검증 명화 9슬롯 'in natural' 0건·mood palette 정상. repo 'for a small bottle' 잔존0. test 갱신. 향별 concept 주입(E5 본체)·E6·P2=다음.
 - 2026-06-17 (세션9·Code/ENGINE-PROMPT E1-E4·#62): Desktop engine-prompt-gap 감사 반영. E1 resolution→prompt·E2 한글 subject 누수제거(category-subject 영어맵)·E3 슬롯보드 full prompt+복사+추천설정카드(engine/strategy 응답 full resolvedPrompt+resolution)·E4 reference-aesthetic 영어절 주입(benchmarkDna display 유지). push 8eadbbb. prod 검증: 명화 슬롯 full prompt 695자·4K·ASCII100%(영어 subject 'car air-vent fragrance diffuser')·aesthetic절. E5-E9 로드맵 등재(E7 비가역=구조PR 전 확인). E3 UI 렌더=Desktop #88.
 - 2026-06-17 (세션9·Code/QUEUE-MASKING-FIX·P0·#56): Desktop 적발 — 명화 registry_drift+variant_composite 2개 awaiting_human인데 대기열 variant 1개만 렌더(자산 정합 마스킹). 근본=상품당 1카드(route interventionById 첫잡만·ControlTowerRow.actionQueue 단수·widget map). 수정=route 전체수집(타입dedup·primary+extra)·ControlTowerRow.extraQueue·widget flatMap·key=pid+type·응답매핑 extraQueue 추가(2커밋 a91156d). prod 검증 PASS: 명화 2카드[variant_composite+registry_drift]·아이스/달항 단일 무변경. 원칙 #100 박제(#90 동형 비마스킹).
