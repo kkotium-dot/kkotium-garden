@@ -249,6 +249,8 @@ const IV_VARIANT_SELECT = 'variant_select';
 const IV_CATEGORY_DNA_UNSEEDED = 'category_dna_unseeded';
 // #62 P2 — REGISTRY<->STORAGE drift (orphans). Operator register-vs-archive.
 const IV_REGISTRY_DRIFT = 'registry_drift';
+// #62 P2 — variant<->composite coverage. Operator generates missing variant cuts.
+const IV_VARIANT_COMPOSITE = 'variant_composite';
 
 /** Two-branch source strategy from the split quality eval (blueprint §3). */
 function deriveSourceStrategy(
@@ -518,6 +520,12 @@ export function computeActionQueueItem(
       // REGISTRY<->STORAGE drift (orphans). Operator decides register-vs-archive
       // per orphan (reconcile), so INPUT_DECISION; lands in the studio asset tab.
       return { ...base, category: 'INPUT_DECISION', stage: IV_REGISTRY_DRIFT, deepLink: `/studio?product=${productId}&tab=image`, ...iv };
+    }
+    if (intervention.type === IV_VARIANT_COMPOSITE) {
+      // VARIANT<->COMPOSITE coverage — an in-stock variant lacks a bound cut. The
+      // operator generates the missing cuts (image work), so INPUT_DECISION;
+      // deep-links to the image tab.
+      return { ...base, category: 'INPUT_DECISION', stage: IV_VARIANT_COMPOSITE, deepLink: `/studio?product=${productId}&tab=image`, ...iv };
     }
     if (intervention.type === IV_DNA_CONFIRM) {
       // Engine 개입#1 — DNA card stale / new category. Operator confirms or edits

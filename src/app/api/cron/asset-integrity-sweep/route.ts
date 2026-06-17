@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkProductIntegrity } from '@/lib/storage/asset-integrity';
+import { syncVariantCompositeCard } from '@/lib/storage/variant-coverage';
 import {
   setJobIntervention,
   clearJobIntervention,
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
   let cleared = 0;
   const drift: Array<{ productId: string; depth2: number; dead: number }> = [];
   const registryDrift: Array<{ productId: string; storageOnly: number; registryOnly: number }> = [];
+  const variantGap: Array<{ productId: string; missing: number; active: number }> = [];
 
   for (const p of products) {
     try {
@@ -108,6 +110,14 @@ export async function GET(request: NextRequest) {
         });
         if (r) seeded += 1;
       }
+
+      // Card 3 — variant_composite (in-stock variants missing a bound cut, #62
+      // P2). Independent: only option products with < 100% coverage seed.
+      const cov = await syncVariantCompositeCard(p.id);
+      if (!cov.reconciled) {
+        variantGap.push({ productId: p.id, missing: cov.missing.length, active: cov.active.length });
+        seeded += 1;
+      }
     } catch {
       // best-effort per product — one bad product never aborts the sweep
     }
@@ -122,5 +132,7 @@ export async function GET(request: NextRequest) {
     drift,
     registryDriftProducts: registryDrift.length,
     registryDrift,
+    variantGapProducts: variantGap.length,
+    variantGap,
   });
 }

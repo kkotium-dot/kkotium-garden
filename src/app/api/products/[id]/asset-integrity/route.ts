@@ -28,6 +28,7 @@ import {
   INTERVENTION_REGISTRY_DRIFT,
 } from '@/lib/jobs/intervention';
 import { BG_CLEAN } from '@/lib/jobs/job-type-routing';
+import { syncVariantCompositeCard } from '@/lib/storage/variant-coverage';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -126,7 +127,9 @@ export async function POST(
     if (action === 'seed') {
       const report = await checkProductIntegrity(params.id, { includeRatio: !!body.ratio });
       const carded = await syncCard(report);
-      return NextResponse.json({ success: true, report, carded });
+      // Re-evaluate the variant_composite card too (option products, #62 P2).
+      const coverage = await syncVariantCompositeCard(params.id).catch(() => null);
+      return NextResponse.json({ success: true, report, carded, coverage });
     }
     if (action === 'fix') {
       if (!body.confirm) {

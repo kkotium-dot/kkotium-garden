@@ -902,9 +902,13 @@ model AssetRegistry {
   width     Int?
   height    Int?
   sourceTag String?  @map("source_tag")
+  /// Option-variant binding (scent/color/size) for variant_composite coverage
+  /// (#62). NULL = non-variant asset.
+  variant   String?
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([productId, stage])
+  @@index([productId, variant])
   @@map("asset_registry")
 }
 

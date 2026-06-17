@@ -63,6 +63,10 @@ export const INTERVENTION_CATEGORY_DNA_UNSEEDED = 'category_dna_unseeded';
 // (depth2/deadRef auto-fix): this is an operator register-vs-archive DECISION per
 // orphan. Non-blocking advisory card.
 export const INTERVENTION_REGISTRY_DRIFT = 'registry_drift';
+// VARIANT <-> COMPOSITE coverage (#62 P2). An option product is missing a bound
+// representative composite for one or more in-stock variants. Operator generates
+// the missing variant cuts. Non-blocking advisory card.
+export const INTERVENTION_VARIANT_COMPOSITE = 'variant_composite';
 
 export type InterventionType =
   | typeof INTERVENTION_SOURCE_REQUEST
@@ -75,7 +79,8 @@ export type InterventionType =
   | typeof INTERVENTION_DNA_CONFIRM
   | typeof INTERVENTION_VARIANT_SELECT
   | typeof INTERVENTION_CATEGORY_DNA_UNSEEDED
-  | typeof INTERVENTION_REGISTRY_DRIFT;
+  | typeof INTERVENTION_REGISTRY_DRIFT
+  | typeof INTERVENTION_VARIANT_COMPOSITE;
 
 export { buildMountCheckPayload };
 export type { FidelityChecklistPayload, MountCheckPayload };
@@ -333,6 +338,38 @@ export function buildRegistryDriftPayload(o: {
     registryOnlyCount: o.registryOnlyCount,
     undefinedStages: (o.undefinedStages ?? []).slice(0, 8),
     sampleFiles: (o.sampleFiles ?? []).slice(0, 6),
+    checkedAt: o.checkedAt,
+  };
+}
+
+export interface VariantCompositePayload {
+  productId: string;
+  /** In-stock variant values (denominator). */
+  active: string[];
+  /** Active variants with a bound, live composite. */
+  covered: string[];
+  /** Active variants still missing a bound composite. */
+  missing: string[];
+  /** covered / active, in [0,1]. */
+  ratio: number;
+  checkedAt: string;
+}
+
+/** Variant-composite payload — built from a computeVariantCoverage result. */
+export function buildVariantCompositePayload(o: {
+  productId: string;
+  active: string[];
+  covered: string[];
+  missing: string[];
+  ratio: number;
+  checkedAt: string;
+}): VariantCompositePayload {
+  return {
+    productId: o.productId,
+    active: o.active.slice(0, 24),
+    covered: o.covered.slice(0, 24),
+    missing: o.missing.slice(0, 24),
+    ratio: o.ratio,
     checkedAt: o.checkedAt,
   };
 }

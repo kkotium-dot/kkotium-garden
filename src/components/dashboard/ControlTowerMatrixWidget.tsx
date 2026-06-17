@@ -507,6 +507,7 @@ const IV = m.intervention as {
     review: string; register: string; archive: string; clear: string; registerAll: string; archiveAll: string; clearAll: string;
     working: string; done: string; fail: string; confirmArchive: string; none: string; storageGroup: string; registryGroup: string;
   };
+  variant_composite: { label: string; lead: string; coverage: string; missing: string; covered: string; hint: string };
 };
 
 function interventionLabel(type: string | undefined): string | null {
@@ -521,6 +522,7 @@ function interventionLabel(type: string | undefined): string | null {
   if (type === 'variant_select') return IV.variant_select.label;
   if (type === 'category_dna_unseeded') return IV.category_dna_unseeded.label;
   if (type === 'registry_drift') return IV.registry_drift.label;
+  if (type === 'variant_composite') return IV.variant_composite.label;
   return null;
 }
 
@@ -528,7 +530,14 @@ function actionLabel(item: ActionQueueItem): string {
   const aq = m.actionQueue;
   // C-9 — a precise intervention names itself; prefer it over the generic label.
   const iv = interventionLabel(item.interventionType);
-  if (iv) return iv;
+  if (iv) {
+    // variant_composite carries a coverage count: "변형별 대표 컷 (N/M)".
+    if (item.interventionType === 'variant_composite') {
+      const vc = item.payload as { active?: string[]; covered?: string[] } | undefined;
+      if (vc?.active) return `${iv} (${(vc.covered ?? []).length}/${vc.active.length})`;
+    }
+    return iv;
+  }
   if (item.category === 'AUTH') return aq.authImage;
   if (item.category === 'AUTO') return item.stage === 'processing' ? aq.processing : aq.monitor;
   // INPUT_DECISION / GO_PENDING reuse the nextAction one-line labels.
@@ -958,6 +967,25 @@ function InterventionDetail({ type, payload, productId, onRefresh }: { type: str
         {productId
           ? <RegistryDriftReconcile productId={productId} onRefresh={onRefresh} />
           : <p className="text-[10px] text-slate-400">{t.hint}</p>}
+      </div>
+    );
+  }
+  if (type === 'variant_composite') {
+    const vc = payload as { active?: string[]; covered?: string[]; missing?: string[]; ratio?: number } | null;
+    const t = IV.variant_composite;
+    const active = vc?.active ?? [];
+    const covered = vc?.covered ?? [];
+    const missing = vc?.missing ?? [];
+    return (
+      <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
+        <p className="text-slate-500">{t.lead}</p>
+        <div className="flex flex-wrap gap-1.5 text-[10px]">
+          <span className={`rounded px-1.5 py-0.5 ${missing.length > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>{t.coverage}: {covered.length}/{active.length}</span>
+        </div>
+        {missing.length > 0 && (
+          <p className="text-[10px] text-slate-500">{t.missing}: {missing.join(', ')}</p>
+        )}
+        <p className="text-[10px] text-slate-400">{t.hint}</p>
       </div>
     );
   }

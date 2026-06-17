@@ -46,6 +46,7 @@ import { classifyAsset } from '@/lib/storage/asset-classify';
 import { parseAssetTokens, buildAssetVariant, type AssetTokens } from '@/lib/storage/asset-naming';
 import { ratioSlotForStage } from '@/lib/config/image-slot-matrix';
 import { conformToSlotRatio } from '@/lib/images/slot-ratio';
+import { syncVariantCompositeCard } from '@/lib/storage/variant-coverage';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -75,6 +76,10 @@ interface Body {
   /** Set false to skip slot-ratio normalization (default ON for composite /
    *  thumbnail). */
   normalize?: boolean;
+  /** Option-variant binding (#62 P2) — the in-stock option value (e.g. a scent
+   *  name) this asset represents. Persisted to asset_registry.variant and drives
+   *  variant_composite coverage. Omit/null for non-variant assets. */
+  variant?: string;
 }
 
 function isAssetKind(v: string): v is AssetKind {
@@ -194,6 +199,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const baseName = dot > 0 ? filename.slice(0, dot) : filename;
   const tokens: AssetTokens = parseAssetTokens(filename);
   const variant = buildAssetVariant(tokens, safeVariant(baseName, 'firefly'));
+  // Option-variant binding (#62 P2) — distinct from the storage-path slug above.
+  const optionVariant = (body.variant ?? '').toString().trim() || null;
 
   const normalizeOff = body.normalize === false;
 
@@ -244,9 +251,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           width,
           height,
           sourceTag: 'firefly_auto',
+          variant: optionVariant,
         },
       });
       registered = true;
+      // A variant-bound composite changes coverage — re-sync the card so it
+      // clears once every in-stock variant is covered (#62 P2). Best-effort.
+      if (optionVariant && stage === 'composite') {
+        await syncVariantCompositeCard(productId).catch(() => null);
+      }
     } catch (e) {
       if (
         !(e instanceof Prisma.PrismaClientKnownRequestError &&
