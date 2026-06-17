@@ -42,8 +42,12 @@
 | E5 | P1 | Code | ✅ | per-scent/product concept input(변형별 subject) + 프롬프트 결함 A(팔레트 디폴트)·B(병 모호성) | 결함 A·B 완료·검증완 / 향별 concept 주입=다음 |
 | E6 | P1 | Code | ✅ | assetization 폐루프(persistStrategy·PromptVersion·SlotGeneration↔asset 링크) | 미착수 |
 | E7 | P1 | Code | ✅ | 엔진 통합(ConceptTone/role→signals·단일 프롬프트 권위·System1 retire) ★비가역=구조PR 전 Desktop/대표 확인 | 미착수(확인 게이트) |
-| E8 | P2 | Code | ✅ | 경쟁 썸네일 teardown→DNA thumbnailConventions 갱신 | 미착수 |
+| E8 | P2 | Code | ✅ | 벤치마크 비전 리서치 — benchmarkDna(category-dna.ts/MoodAxisData)를 경쟁사 썸네일·상세 추출 디스크립터로 채움(팔레트·표면·조명·소품·구도·톤). 썸네일+상세 양쪽 주입. 개입=큐 '벤치마크 리서치 검토' 카드(선택·#56). additive·비가역0·E7과 별개이나 6축 권위 정합 | 미착수(E5/E6 후) |
 | E9 | P2 | Code | ✅ | 프롬프트 성능학습(CTR/CVR per PromptVersion→auto-promote) | 미착수 |
+
+> E8 상세(2026-06-17 백로그): 수집·추출 패스 = 경쟁사 썸네일/상세 리서치 → 6항목(팔레트·표면·조명·소품·구도·톤) 추출 → benchmarkDna 충진(현 한글 브랜드태그=display → 추출 디스크립터로 승격). 썸네일+상세 프롬프트 양쪽 주입. 개입점=대시보드 큐 '벤치마크 리서치 검토' 카드(선택·비강제 #56). E7(엔진통합)과 별개 트랙이나 6축 단일권위와 정합 유지.
+> ⚠️ 향 서사 v5↔v6 충돌(2026-06-17 미해결): 현 플레이북 §4(병수정 완료본)=v5(레몬 이른아침·쿨 / 코튼 한낮 하이키 / 에이프릴 비갠오후 디퓨즈 / 체리 골든아워 웜). v6 노트=레몬 완숙·웜 / 에이프릴 하이키 / 블랙체리 로우키. 3단어 요약만으론 4프롬프트 충실 재작성 불가(#46) → v6 전체 프롬프트 텍스트 확보 후 §4 갱신. "for a small bottle" 전면 제거는 확인 완료(주석 1건만 잔존).
+
 
 ### 변경로그
 - 2026-06-17 (세션9·Code/프롬프트 결함 A·B·#62): E5 선행 2결함. A=palette 빈값 'in natural' 폴백 제거(MoodAxisData.palette 영문 6무드+assembler axis.palette 폴백+referenceAesthetic 빈값 절 drop). B=병 모호성('for a small bottle'→'no bottle, no container... reserved for later product compositing' positive·#86)·플레이북 §4 4향+구도+spec-data PRODUCT_MARGIN_BLOCK 신설. push ef44fe2. prod 검증 명화 9슬롯 'in natural' 0건·mood palette 정상. repo 'for a small bottle' 잔존0. test 갱신. 향별 concept 주입(E5 본체)·E6·P2=다음.
