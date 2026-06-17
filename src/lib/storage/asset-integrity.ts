@@ -366,3 +366,76 @@ export async function fixProductIntegrity(productId: string): Promise<IntegrityF
   const report = await checkProductIntegrity(productId);
   return { productId, moved, remappedFields, remappedRefs, after: report };
 }
+
+// ----------------------------------------------------------------------------
+// REGISTRY <-> STORAGE reconcile (#62 P2). Unlike fixProductIntegrity (which
+// auto-remediates depth2/deadRefs), drift reconcile is an OPERATOR DECISION per
+// orphan: a storage-only file is either a keeper (register it) or stale (archive
+// it); a registry-only row points at a gone file (clear it). The caller supplies
+// the decisions; this only acts on paths that are STILL confirmed orphans on the
+// live listing (never fabricates). register = additive (reversible by clear),
+// archive = move (reversible), clear = delete a stale row. Idempotent.
+// ----------------------------------------------------------------------------
+
+export interface ReconcileDecisions {
+  /** storage-only paths to register into asset_registry (keepers). */
+  register?: string[];
+  /** storage-only paths to retire into {pid}/archive/ (stale). */
+  archive?: string[];
+  /** registry-only paths whose stale row should be deleted (file is gone). */
+  clearRegistry?: string[];
+}
+
+export interface ReconcileResult {
+  productId: string;
+  registered: number;
+  archived: number;
+  cleared: number;
+  after: AssetIntegrityReport;
+}
+
+export async function reconcileRegistryDrift(
+  productId: string,
+  decisions: ReconcileDecisions,
+): Promise<ReconcileResult> {
+  // Re-check live so we only act on paths that are genuinely orphans right now.
+  const report = await checkProductIntegrity(productId);
+  const storageOnly = new Set(report.registryDrift.storageOnly.map((o) => o.path));
+  const registryOnly = new Set(report.registryDrift.registryOnly.map((o) => o.path));
+
+  let registered = 0;
+  let archived = 0;
+  let cleared = 0;
+
+  // register — insert an asset_registry row inferred from the canonical path
+  // ({pid}/{stage}/{file}). Idempotent: skip if a row for this path exists.
+  for (const path of decisions.register ?? []) {
+    if (!storageOnly.has(path)) continue;
+    const parts = path.split('/');
+    if (parts[0] !== productId || parts.length < 3) continue;
+    const stage = parts[1];
+    const fileName = parts[parts.length - 1];
+    const exists = await prisma.assetRegistry.findUnique({ where: { path } }).catch(() => null);
+    if (exists) continue;
+    await prisma.assetRegistry.create({ data: { productId, stage, fileName, path } });
+    registered += 1;
+  }
+
+  // archive — retire a stale storage-only file into archive/ (reversible move).
+  for (const path of decisions.archive ?? []) {
+    if (!storageOnly.has(path)) continue;
+    const fileName = path.slice(path.lastIndexOf('/') + 1);
+    await moveAutomationAsset(path, `${productId}/archive/${fileName}`);
+    archived += 1;
+  }
+
+  // clearRegistry — delete a registry row whose physical file is gone.
+  for (const path of decisions.clearRegistry ?? []) {
+    if (!registryOnly.has(path)) continue;
+    const res = await prisma.assetRegistry.deleteMany({ where: { productId, path } });
+    cleared += res.count;
+  }
+
+  const after = await checkProductIntegrity(productId);
+  return { productId, registered, archived, cleared, after };
+}

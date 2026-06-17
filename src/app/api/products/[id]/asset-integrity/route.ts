@@ -12,7 +12,13 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { checkProductIntegrity, fixProductIntegrity, type AssetIntegrityReport } from '@/lib/storage/asset-integrity';
+import {
+  checkProductIntegrity,
+  fixProductIntegrity,
+  reconcileRegistryDrift,
+  type AssetIntegrityReport,
+  type ReconcileDecisions,
+} from '@/lib/storage/asset-integrity';
 import {
   setJobIntervention,
   clearJobIntervention,
@@ -73,7 +79,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  let body: { action?: string; confirm?: boolean; ratio?: boolean } = {};
+  let body: { action?: string; confirm?: boolean; ratio?: boolean; decisions?: ReconcileDecisions } = {};
   try {
     body = await request.json();
   } catch {
@@ -95,6 +101,17 @@ export async function POST(
         );
       }
       const result = await fixProductIntegrity(params.id);
+      const carded = await syncCard(result.after);
+      return NextResponse.json({ success: true, result, carded });
+    }
+    if (action === 'reconcile') {
+      if (!body.confirm) {
+        return NextResponse.json(
+          { success: false, error: 'reconcile는 confirm:true가 필요합니다' },
+          { status: 400 },
+        );
+      }
+      const result = await reconcileRegistryDrift(params.id, body.decisions ?? {});
       const carded = await syncCard(result.after);
       return NextResponse.json({ success: true, result, carded });
     }
