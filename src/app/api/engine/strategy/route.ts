@@ -71,14 +71,15 @@ export async function GET(req: NextRequest) {
     const buildVariants = (slotType: string, mood: MoodCode) => {
       if (slotType !== 'scent_note' || activeVariants.length === 0) return undefined;
       return activeVariants.map((ov) => {
-        const concept = variantConceptFor(ov)?.concept;
+        const vc = variantConceptFor(ov);
+        // v6: a variant may carry its own grade (mood); else use the slot mood.
         const assembled = assemblePrompt({
-          moodCode: mood,
+          moodCode: vc?.mood ?? mood,
           product: subject,
-          concept,
+          concept: vc?.concept,
           reserveProductMargin: true,
         });
-        return { optionValue: ov, concept: concept ?? null, resolvedPrompt: assembled.prompt };
+        return { optionValue: ov, concept: vc?.concept ?? null, resolvedPrompt: assembled.prompt };
       });
     };
 

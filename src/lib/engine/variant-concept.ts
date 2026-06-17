@@ -13,18 +13,29 @@
 // prompt text — the concept value itself is English (never injected as Korean).
 // ============================================================================
 
+import type { MoodCode } from '@/lib/mood/types';
+
 export interface VariantConcept {
-  /** English scene subject (no product, no time-of-day — mood supplies grade). */
+  /** English scene subject (no product — the mood supplies the grade). */
   concept: string;
+  /** Optional per-variant mood override (#62 E5 / v6). v6 confirmed each scent
+   *  carries a DIFFERENT grade (Lemon warm-ripe / April airy high-key / Cherry
+   *  moody low-key), so the variant picks its own mood instead of the slot's
+   *  single mood. Tunable. Omitted = use the slot mood. */
+  mood?: MoodCode;
 }
 
+// v6 scent grade mapping (2026-06-18 operator-confirmed): Lemon ripe-warm golden
+// morning (M4 warm amber), April airy high-key (M5 bright daylight), Black Cherry
+// moody low-key dusk (M6 chiaroscuro). The concept is the scene subject (stable);
+// the mood now carries the v6 per-scent grade.
 const VARIANT_CONCEPTS: Record<string, VariantConcept> = {
-  '레몬유칼립': { concept: 'fresh lemons and eucalyptus sprigs on a pale stone ledge with dewdrops and soft natural mist' },
-  '에이프릴 후레쉬': { concept: 'soft pastel spring blossoms with clean water droplets on the petals on a misty surface' },
-  '블랙체리': { concept: 'ripe dark cherries with subtle woody branches on a rustic surface' },
+  '레몬유칼립': { concept: 'ripe sun-yellow lemons and eucalyptus sprigs on a pale travertine ledge with dewdrops', mood: 'M4' },
+  '에이프릴 후레쉬': { concept: 'crisp white linen with soft white and blue spring florals by a bright rainy window', mood: 'M5' },
+  '블랙체리': { concept: 'ripe deep-crimson cherries with subtle woody branches on dark walnut wood', mood: 'M6' },
   // Cotton is stock 0 (excluded from active coverage) but mapped for completeness.
-  '코튼어라운드': { concept: 'crisp folded white linen and cotton fabric on a sunlit wooden surface near a bright window' },
-  '코튼 어라운드': { concept: 'crisp folded white linen and cotton fabric on a sunlit wooden surface near a bright window' },
+  '코튼어라운드': { concept: 'crisp folded white linen and cotton fabric on a sunlit wooden surface near a bright window', mood: 'M5' },
+  '코튼 어라운드': { concept: 'crisp folded white linen and cotton fabric on a sunlit wooden surface near a bright window', mood: 'M5' },
 };
 
 /** Scene concept for a variant option value, or null when none is configured. */
