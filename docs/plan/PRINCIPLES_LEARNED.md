@@ -947,3 +947,6 @@ Nano Banana/Gemini는 네거티브 프롬프트 필드가 없다(HTTP 400) — "
 ## 작업원칙 #91 — Vercel 서버리스 본문 한계 < full-res base64; 적재 기본 = web-JPEG (2026-06-17 IMG-INGEST 실측)
 Vercel 서버리스 함수 본문 한계(~4.5MB) < full-res Firefly base64(~7MB) → ingest-firefly의 15MB 가드는 도달 불가(그 전에 HTTP 413). 상세페이지 용도는 web-JPEG(1456px·~330KB)로 충분 — full-res 2K 마스터가 꼭 필요할 때만 Supabase signed-URL 직업로드(서버 본문 우회) 검토. 즉 적재 기본 포맷 = web-JPEG, 2K 마스터 = 예외적 signed-URL. 전상품 #55. 실측: April(composite/fresh-1781657005726.jpg)·Black Cherry(composite/dark_luxury-1781657008705.jpg) web-JPEG 1456×1807 ingest 성공·registered·publicUrl 200.
 
+## 작업원칙 #92 — ingest 검증 3단 레시피 (전상품·#55, 2026-06-17)
+ingest(적재) 검증은 3단으로 단정한다: (1) /assets 200 → (2) composite 그룹에 신규 파일 존재 → (3) 이미지 탭 DOM 렌더(최신순 맨앞). 검증경로 = 상품선택 → 이미지탭. 어느 상품이든 동일(전상품 공통 레시피). #45(출력 품질까지 단정)·#88(완료=검증) 결합 — HTTP 200·registered만으로 완료 금지, DOM 렌더까지 확인.
+

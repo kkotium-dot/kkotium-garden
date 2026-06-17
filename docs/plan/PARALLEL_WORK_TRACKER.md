@@ -12,17 +12,18 @@
 | ENG-1-FIX-NAMING | P1 | Code | 완료 | — | Rating/PerformanceMetric generationId→slotGenerationId(#62) | schema+마이그레이션·0행보존 ✅ |
 | ENG-1 | P1 | Code | 빌드완료·검증대기 | ENG-0 | Stage 1 백엔드(3a~3g)+UI(3i) 빌드·push(8964ce7)·prod smoke OK | Desktop 브라우저 실측(§7): 3탭·개입·게이트 |
 | CAPTURE-METHOD | P2 | 결정 | 결정대기 | — | 경쟁 캡처 방식 확정(권고 B 하이브리드·3h) | 대표 확정 |
-| IMG-INGEST | P2 | Desktop | 진행중 | — | April·BlackCherry web-JPEG ingested(composite·registered·publicUrl200) / full-res Vercel차단·web충분(#91) / Lemon 재생성 예정·Cotton 품절후보 / 슬롯조립=Phase3 | 검증=AssetBrowser(다음 턴)·composite +2 |
+| IMG-INGEST | P2 | Desktop | ✅ 검증완료 | — | April·BlackCherry web-JPEG ingested(composite·registered·publicUrl200)·AssetBrowser 3단 검증 PASS(#45·#92) / Lemon 재생성 예정·Cotton 품절후보 / 슬롯조립=Phase3 | /assets 200·composite 그룹 신규 2건·이미지탭 DOM 최신순 맨앞 ✅ |
 | PUBLISH-명화 | P1 | 결정 | 결정대기 | 원산지·옵션 확인 | SUSPENSION 원인 실측→안전기준 payload | dryRun·readiness·대표 GO(비가역#46) |
 | CAT-CODE-명화 | P2 | Code | 완료·검증완 | — | naverCategoryCode 50003356→50014980 정정(경로A·DB only·네이버무접촉) | dnaSource db·scent_note 등장·7슬롯('리필' lowInvolvement로 problem/size_duration 드롭, 9 아님) ✅ |
 | ICE-TRAY-DNA | P2 | Code | 완료·검증완 | — | 경로B 배치(#62·#90)·push c35d64c·prod LIVE·Desktop UI 검증 PASS | item1/3/4 PASS(명화 9복원·아이스 6중립·라벨동기화·명화 준비도 S/94)·item2 zero-masking PASS(positive 렌더=idle+미시드 상품 부재로 미관측→UNSEEDED-BACKLOG-BADGE 후속) ✅ |
 | UNSEEDED-BACKLOG-BADGE | P3 | Code | Stage2 백로그(후속·비긴급) | #62 | 별도 저긴급 '백로그 배지'(미시드 카테고리 N개·DNA 시드 권고) 신설 — 긴급큐 비마스킹+상시가시. branch feat/unseeded-backlog-badge | 미시드 N 집계·관제탑 상시 배지(idle 한정 아님)·전상품 #55·개입점 #56 |
 | INGEST-BODY-LIMIT (B) | P4 | Code | 백로그(해결됨·저우선) | — | web-JPEG로 해결(#91). 마스터 보존 요구 발생 시에만 Supabase signed-URL 직업로드 | 현재 불필요 |
-| DETAIL-PAGE-DESIGN-FEATURE (C) | P3 | Code | Phase3 계획(미착수) | Phase2 | 슬롯 조립·배치 = composite funnelSlot 태그 + SlotFunnelBoard 슬롯별 fill상태·배정 UI(펀널 plan↔asset 연결). branch feat/funnel-slot-fill | 계획된 다운스트림(신규 갭 아님)·전상품 #55·개입점 #56 |
+| DETAIL-PAGE-DESIGN-FEATURE (C) | P3 | Code | Phase3 계획(미착수) | Phase2 | 슬롯 조립·배치 = composite funnelSlot 태그 + SlotFunnelBoard 슬롯별 fill상태·배정 UI(펀널 plan↔asset 연결). ★Phase3 선결: /api/products/{id}/assets가 AssetRegistry 메타(variant·sourceTag·funnelSlot) 미join→슬롯배정 파일명 의존, 착수 시 join 노출 포함. branch feat/funnel-slot-fill | 계획된 다운스트림(신규 갭 아님)·전상품 #55·개입점 #56 |
+| COMPOSITE-CLEANUP | P3 | Code | 백로그(권장·가역) | — | composite 20건 중 구 lifestyle/폐기 AI합성 archive 이관(잔존 선별=operator 확인·가역). Phase3 슬롯픽 UX 전 권장 | 이관 후 composite=현행 자산만 |
 | CUT34-EVAL | — | Desktop | 검증대기 | — | cut-3/4 = scent_note 슬롯 재배치(썸네일 아님) | 슬롯 매핑 확정 |
 
 ### 파생 큐
-- 지금 큐: ENG-1 Desktop 검증(§7) · IMG-INGEST
+- 지금 큐: ENG-1 Desktop 검증(§7) (IMG-INGEST=검증완·종결)
 - 결정 대기(대표): CAPTURE-METHOD(3h) · PUBLISH-명화 2건 확인 (ICE-TRAY-DNA=검증완·종결 / UNSEEDED-BACKLOG-BADGE=Stage2 백로그)
 - 검증 대기: ENG-1(브라우저 3탭) · CUT34-EVAL(슬롯 재배치)
 
@@ -39,6 +40,7 @@
 - 2026-06-17 (Desktop/#62 UI 검증 PASS): item1/3/4 PASS(명화 9슬롯 복원·아이스트레이 6중립·라벨 동기화·명화 준비도 S/94). item2 미시드 카드 zero-masking PASS, positive 렌더는 idle+미시드 상품 부재로 미관측. ICE-TRAY-DNA 종결(#88). 후속 UNSEEDED-BACKLOG-BADGE(저긴급 상시 배지·긴급큐 비마스킹·상시가시) Stage 2 등재(branch feat/unseeded-backlog-badge·#55·#56).
 - 2026-06-17 (정정·docs only): IMG cut 라벨 뒤바뀜 교정 — 6축 full-res 평가완 2건 = cut-3 April Fresh(0fc97780)·cut-4 Black Cherry(062339cc)(Adobe GenAIAsset 2026-06-16 최신 2건=전부). cut-1 Lemon·cut-2 Cotton은 2026-06-13 구버전(6축 이전)만 존재·6축 미생성. IMG-컷34 행이 정확(불변). 향노트 ingest 대상=April·Black Cherry, Lemon 재생성 예정, Cotton 품절후보. PROGRESS 세션8-Desktop·트래커 IMG-INGEST/IMG-앱 블록 반영.
 - 2026-06-17 (IMG-INGEST 진행·docs): April(composite/fresh-1781657005726.jpg)·Black Cherry(composite/dark_luxury-1781657008705.jpg) web-JPEG 1456×1807 ingest 성공·registered·publicUrl 200(독립검증). full-res Vercel 413→web-JPEG 폴백(원칙 #91). 검증=AssetBrowser 다음 턴. 단계 명문화(ROADMAP): 이미지=Phase2·슬롯조립=Phase3(계획·다운스트림·신규 갭 아님). 백로그 (A)UNSEEDED-BACKLOG-BADGE·(B)INGEST-BODY-LIMIT(web로 해결·저우선)·(C)DETAIL-PAGE-DESIGN-FEATURE(Phase3·branch feat/funnel-slot-fill) 등재.
+- 2026-06-17 (IMG-INGEST 검증완료·#45·#92): AssetBrowser 3단 PASS — /assets 200·composite 그룹 신규 2건(April·Black Cherry)·이미지 탭 DOM 최신순 맨앞. 검증경로=상품선택→이미지탭(전상품 레시피·신규 #92). IMG-INGEST 종결. 백로그 (C) 스펙 보강(AssetRegistry 메타 variant/sourceTag/funnelSlot join=Phase3 선결)·신규 COMPOSITE-CLEANUP(P3·구 lifestyle/폐기합성 archive 이관 권장·가역).
 
 ---
 
@@ -198,7 +200,7 @@
 | IMG-박제 | 연구결과 docs/ 박제 + 등록워크플로/플레이북/원칙 codify | ✅ DONE(2026-06-16) | RESEARCH+SYSTEM 신규 2건, PLAYBOOK §9, REGISTRATION §11+rev3, PRINCIPLES #82~#86 |
 | IMG-컷34 | 명화 cut-3(April/Canon)·cut-4(Black Cherry/Leica) 생성 | ✅ DONE(생성·평가완) | cut-3(April/Canon)·cut-4(Black Cherry/Leica) 생성·운영자 평가완. 판정=기술적 우수하나 무드플레이트 → 향노트 섹션 배경 슬롯 적합·썸네일/히어로 부적합(cut-4 200px 묻힘). 전략엔진으로 재배치. |
 | IMG-앱 | 6축 시스템 앱 빌드(MoodAxis/CameraSpec/PromptBlock/PromptLibraryEntry/Generation 테이블·3단계 UI·Layer3 가드·firefly_auto subcheck) | ✅ DONE(preview) | feat/mood-camera-system c1e2bd3 preview READY·Desktop 검증완(테이블5·시드 1:1)·prod DB 마이그레이션 적용완. main 머지 대기(=엔진 L2 토대). |
-| IMG-인제스트 | April·Black Cherry web-JPEG ingested(composite·registered·publicUrl200)·full-res Vercel차단→web폴백(#91)·Lemon 재생성/Cotton 품절후보 | 🟢 검증대기(AssetBrowser 다음턴) | server conformToSlotRatio 4:5 no-op·#80 /assets·#81 정합 |
+| IMG-인제스트 | April·Black Cherry web-JPEG ingested(composite·registered·publicUrl200)·full-res Vercel차단→web폴백(#91)·Lemon 재생성/Cotton 품절후보 | 🟢 LIVE(검증완료·AssetBrowser 3단 PASS·#92) | server conformToSlotRatio 4:5 no-op·#80 /assets·#81 정합 |
 
 ## 앱 적용 현황 (동기화 · 2026-06-16 세션8)
 - 명화 이미지(정정 2026-06-17·라벨 뒤바뀜 교정): cut-3 April Fresh(0fc97780)·cut-4 Black Cherry(062339cc) = 6축·full-res 2K·평가완·향노트 배경 적합(Adobe GenAIAsset 2026-06-16 최신 2건=전부) ✅ / cut-1(Lemon)·cut-2(Cotton)=2026-06-13 구버전(6축 이전)만·6축 미생성 ⏸. 향노트 ingest 대상=April·Black Cherry, Lemon 재생성 예정, Cotton 품절후보. 4:5(1856×2304)·2K.
