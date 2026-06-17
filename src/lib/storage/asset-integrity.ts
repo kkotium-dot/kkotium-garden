@@ -20,11 +20,12 @@
 import { prisma } from '@/lib/prisma';
 import {
   listProductAssets,
+  listProductStageFolders,
   moveAutomationAsset,
   deleteAutomationAsset,
   type ProductAssetEntry,
 } from './automation-storage';
-import { kindForSource } from './asset-taxonomy';
+import { kindForSource, STAGE_DIRS, LEGACY_STAGE_DIRS } from './asset-taxonomy';
 import { RATIO_SCENT_SCENE, RATIO_REPRESENTATIVE, ratioValue } from '@/lib/config/image-slot-matrix';
 
 const IMG_EXT = '(?:png|jpe?g|webp|gif|avif)';
@@ -47,6 +48,33 @@ export interface RatioFlag {
   expected: string;
 }
 
+export interface OrphanRef {
+  path: string;
+  stage: string;
+}
+
+/**
+ * REGISTRY <-> STORAGE drift (#62 / #93 / #94). The #80 guard cross-checks
+ * storage vs DB image refs; this cross-checks the live storage listing against
+ * the asset_registry index. A single side never reveals an orphan:
+ *   - storageOnly:   a live file (non-root, non-archive) with NO registry row.
+ *                    Pre-registry-era assets (before 2026-06-13) are all here.
+ *   - registryOnly:  a registry row whose file is gone from the live listing.
+ *   - undefinedStages: physical stage folders absent from the taxonomy.
+ * Advisory only — does NOT gate `ok` (the #80 1-click fix can't resolve these;
+ * orphan reconcile is an operator decision = register-vs-archive, COMPOSITE-
+ * CLEANUP). Product-agnostic (#55), listing + DB only (no image downloads).
+ */
+export interface RegistryDrift {
+  storageOnly: OrphanRef[];
+  registryOnly: OrphanRef[];
+  undefinedStages: string[];
+  storageOnlyCount: number;
+  registryOnlyCount: number;
+  /** True when storage and the registry fully agree. */
+  reconciled: boolean;
+}
+
 export interface AssetIntegrityReport {
   productId: string;
   total: number;
@@ -55,11 +83,60 @@ export interface AssetIntegrityReport {
   depth2Files: string[];
   deadRefs: DeadRef[];
   ratioFlags: RatioFlag[];
+  /** REGISTRY <-> STORAGE drift (advisory — does NOT gate `ok`). */
+  registryDrift: RegistryDrift;
   /** True when there is nothing to remediate (depth2 == 0 && deadRefs == 0). */
   ok: boolean;
   /** What the 1-click fix can resolve: root files to move + dead refs to remap. */
   fixableDepth2: number;
   fixableDeadRefs: number;
+}
+
+/** Cross-check the live storage listing against the asset_registry index. */
+async function computeRegistryDrift(
+  productId: string,
+  entries: ProductAssetEntry[],
+  livePaths: Set<string>,
+): Promise<RegistryDrift> {
+  let registryRows: { path: string; stage: string }[] = [];
+  try {
+    registryRows = await prisma.assetRegistry.findMany({
+      where: { productId },
+      select: { path: true, stage: true },
+    });
+  } catch {
+    // table unmigrated — non-fatal (drift simply reports storage side only).
+  }
+  const registryPaths = new Set(registryRows.map((r) => r.path));
+
+  // storage-only: a live file that is NOT a legacy-root file (depth2 signal
+  // owns those) and NOT an archive backup (backups are intentionally
+  // unregistered), with no matching registry row.
+  const storageOnly: OrphanRef[] = entries
+    .filter((e) => e.stage !== 'root' && e.stage !== 'archive' && !registryPaths.has(e.path))
+    .map((e) => ({ path: e.path, stage: e.stage }));
+
+  // registry-only: a registry row whose physical file is gone.
+  const registryOnly: OrphanRef[] = registryRows
+    .filter((r) => !livePaths.has(r.path))
+    .map((r) => ({ path: r.path, stage: r.stage }));
+
+  // undefined stages: physical subfolders absent from the taxonomy. plate /
+  // reference are already in STAGE_DIRS (v2), so a real surprise is needed to
+  // flag here — invisible to listProductAssets otherwise.
+  const known = new Set<string>([...STAGE_DIRS, ...LEGACY_STAGE_DIRS, 'root']);
+  const folders = await listProductStageFolders(productId).catch(() => []);
+  const undefinedStages = folders.filter((f) => !known.has(f));
+
+  return {
+    storageOnly,
+    registryOnly,
+    undefinedStages,
+    storageOnlyCount: storageOnly.length,
+    registryOnlyCount: registryOnly.length,
+    reconciled:
+      storageOnly.length === 0 && registryOnly.length === 0 && undefinedStages.length === 0,
+  };
 }
 
 /** Extract the storage key (after `/product-assets/`) from a public URL, or null. */
@@ -179,6 +256,8 @@ export async function checkProductIntegrity(
     }
   }
 
+  const registryDrift = await computeRegistryDrift(productId, entries, livePaths);
+
   const fixableDeadRefs = deadRefs.filter((d) => d.fixable).length;
   return {
     productId,
@@ -187,6 +266,7 @@ export async function checkProductIntegrity(
     depth2Files,
     deadRefs,
     ratioFlags,
+    registryDrift,
     ok: rootEntries.length === 0 && deadRefs.length === 0,
     fixableDepth2: rootEntries.length,
     fixableDeadRefs,

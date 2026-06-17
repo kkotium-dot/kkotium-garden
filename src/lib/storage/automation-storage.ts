@@ -278,6 +278,24 @@ export async function listProductAssets(productId: string): Promise<ProductAsset
   return out;
 }
 
+/**
+ * Enumerate the immediate subfolder names under `{productId}/` in storage.
+ *
+ * listProductAssets only scans stages it KNOWS (STAGE_DIRS + legacy), so a stage
+ * folder that is physically present but absent from the taxonomy (e.g. a future
+ * `plate`-style surprise) is invisible to it. The integrity guard uses this to
+ * detect such undefined stages (#94). Supabase returns subfolder placeholders
+ * with a null id; real root files carry a non-null id and are excluded here.
+ */
+export async function listProductStageFolders(productId: string): Promise<string[]> {
+  const supabase = getServerClient();
+  const { data, error } = await supabase.storage
+    .from(BUCKET_NAME)
+    .list(productId, { limit: 100, sortBy: { column: 'name', order: 'asc' } });
+  if (error || !data) return [];
+  return data.filter((f) => !f.id).map((f) => f.name);
+}
+
 // ----------------------------------------------------------------------------
 // Sprint 7-M2 Phase 2-c-2 — Lifestyle backdrop library helpers
 //
