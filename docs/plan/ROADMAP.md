@@ -1,5 +1,12 @@
 # KKOTIUM GARDEN — ROADMAP
 > 2026-06-17 (세션8) **Image+SEO/ROI Engine Stage 1 빌드 + 6축 main 머지·prod LIVE** (Code turn, 비가역0·네이버 무접촉). 6축+엔진 Stage0 머지(349b9db) → Stage 1 백엔드(3a~3g)+UI(3i) 빌드(8964ce7). DNA 로드+50014980 시드·9슬롯 결정테이블·전략조립기(6축 재사용)·개입 2종·썸네일 게이트·3탭 UI. tsc0/build0/테스트11. **다음=[Desktop] ENG-1 실측 → Stage 2(학습루프: 평점→승격·CTR/CVR) / [결정] 명화 카테고리 정합·캡처방식·발행.**
+
+## 단계(Phase) 정의 — 재작업 방지 명문화 (2026-06-17)
+> 이미지 작업은 **Phase 2**이며, 슬롯 조립(상세페이지 디자인 기능) 미구현은 **정상(Phase 3 예정)**입니다.
+
+- **Phase 1 — 상세페이지 골격 = 아티팩트 틀 (완료)**: 스켈레톤/섹션 시스템. 9슬롯이 view로 매핑되는 토대.
+- **Phase 2 — 온실 아틀리에 = 이미지 파이프라인 테스트·개선 (현재)**: 향 컷 생성(6축)·ingest·합성·적재. 의존성 = Phase 1 골격.
+- **Phase 3 — 상세페이지 디자인 기능 = 슬롯 조립·배치 (계획·다운스트림)**: 펀널 plan ↔ asset 연결, composite funnelSlot 태그, SlotFunnelBoard 슬롯별 fill상태·배정 UI. 의존성 = Phase 2 자산. branch feat/funnel-slot-fill(미착수). ※ "신규 갭" 아님 — 계획된 다운스트림. 전상품 #55·개입점 #56.
 > 2026-06-16 (세션8) **무드-카메라 6축 이미지 생성 시스템 설계 + 전상품 codify** (Desktop turn, docs only·비가역 0·네이버 무접촉). 심층리서치→전상품 공통 시스템(6축 M1~M6 신뢰/욕망/명료/코지/발랄/프리미엄·무드별 카메라 매핑·벤치마크DNA·프롬프트 조립기·누적학습 라이브러리·3계층 아키텍처). 근본원인 3건 규명(Sony 하드코딩·편집모드 참조오염·Nano Banana 네거티브 필드 없음). 박제: 신규 RESEARCH+SYSTEM 2종 + PLAYBOOK §9·REGISTRATION §11+rev3·PRINCIPLES #82~#86·TRACKER IMG 5항목. cut-1·cut-2 생성·검증·보존, cut-3·4 보류. **다음=[Code] 6축 시스템 앱 빌드(테이블·3단계 UI·Layer3 가드) / [Desktop] cut-3·4 재개→ingest×4→실앱테스트 / item3 명화 SUSPENSION→발행(대표 GO).**
 > 2026-06-12 (세션6-c) **/assets composite=0 P0 DONE — Desktop 3-tier LIVE 검증 + probe 삭제** (Code turn, production 619dbff READY, 비가역 0·네이버 무접촉). 3-tier 전부 통과(/assets composite=9 MISS·SQL 9 1:1·/studio 에셋탭 9썸네일 LIVE naturalWidth>0). 근본원인=§5 2행 no-slash list버그 확정(env키 drift 배제)·§3 자가치유(#67) 영구복구. probe 라우트 삭제. **다음=명화 publish GO 대기(#46) 또는 P1 실사용 E2E.**
 > 2026-06-12 (세션6-b) **/assets composite=0 production probe + trailing-slash 자가치유 배포** (Code turn, main 4e4e8b5, 비가역 0·additive·debug-gated·네이버 무접촉). Desktop 5단 격리(#66) 전 계층 무혐의·로컬키 composite9·prod만0=런타임 단일변수. 토큰게이트 probe GET /api/debug/storage-probe/[id](spec /api/_debug/는 private folder 404→/api/debug/ 교정) + collect() trailing-slash 자가치유(#67). 원칙 #66~#69. **다음=Desktop probe 판정→(env키 drift면 운영자 1액션 / list버그면 하드닝 종결)→composite=9 LIVE→probe 삭제. 이후 P1 명화 4컷 하모나이즈·발행→P2 달항아리·아이스트레이.**

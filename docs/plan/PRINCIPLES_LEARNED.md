@@ -944,3 +944,6 @@ Nano Banana/Gemini는 네거티브 프롬프트 필드가 없다(HTTP 400) — "
 ## 작업원칙 #90 — 폴백 기본값은 카테고리 중립 + 신호 오발화 가드 (2026-06-17 세션8 #62 배치)
 미시드 카테고리의 안전 폴백(emptyCard)은 절대 특정 카테고리 편향을 담지 않는다. 향수 baseline(scent_note/use_install/size_duration)이 기본 슬롯열에 박혀 있어 비향수 전 카테고리(아이스트레이 등)가 향 슬롯을 오상속한 사고 재발 방지. 폴백 = 구조 슬롯만(hero·problem·solution_usp·trust·gift·cta), 카테고리 전용 슬롯은 실 DNA 시드로만 추가. 미시드는 control-tower 'category_dna_unseeded' 개입카드(INPUT_DECISION·idle priority·강제모달0·#56)로 가시화하되, 실작업을 마스킹하지 않게 idle(다음액션 없음)에서만 점화. 신호 휴리스틱(deriveProductSignals)도 오발화 가드: '리필'이 본품동반(bundleAnchor) 또는 giftBiased면 lowInvolvement 미발화 — 본품+리필 번들/선물은 충동소모품이 아니므로 펀들 단축(problem/size_duration 드롭) 금지. 단, 순수 소모품(commodityHard)은 가드 예외(여전히 단축). 매칭 키워드는 JSON(product-signal-keywords.json), 코드 한글 리터럴 0.
 
+## 작업원칙 #91 — Vercel 서버리스 본문 한계 < full-res base64; 적재 기본 = web-JPEG (2026-06-17 IMG-INGEST 실측)
+Vercel 서버리스 함수 본문 한계(~4.5MB) < full-res Firefly base64(~7MB) → ingest-firefly의 15MB 가드는 도달 불가(그 전에 HTTP 413). 상세페이지 용도는 web-JPEG(1456px·~330KB)로 충분 — full-res 2K 마스터가 꼭 필요할 때만 Supabase signed-URL 직업로드(서버 본문 우회) 검토. 즉 적재 기본 포맷 = web-JPEG, 2K 마스터 = 예외적 signed-URL. 전상품 #55. 실측: April(composite/fresh-1781657005726.jpg)·Black Cherry(composite/dark_luxury-1781657008705.jpg) web-JPEG 1456×1807 ingest 성공·registered·publicUrl 200.
+
