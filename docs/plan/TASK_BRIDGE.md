@@ -72,6 +72,19 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-17 (96) REGISTRY↔STORAGE 드리프트 탐지 차원 + 핸드오프 보존 (FROM 💻 Code, main b40a711, additive·비가역0·네이버 무접촉)
+- **Target**: Claude Code CLI · **Branch**: main (직접) · additive·read-only 탐지·네이버 무접촉·비가역0.
+- **선행 보존**: 세션8 Desktop 핸드오프 2건 git 보존(ba09a28·#49) — engine-stage1-verify·prod-verify-registry-storage-drift.
+- **DONE (REGISTRY-STORAGE-DRIFT 탐지)**: 기존 #80/#81 자산 정합 가드(storage vs DB ref)에 asset_registry 교차 차원 확장(#93). 
+  - listProductStageFolders(automation-storage): `{pid}/` 직속 폴더 열거 — STAGE_DIRS 외 폴더 invisible 문제 해소(#94, undefined-stage 탐지).
+  - checkProductIntegrity.registryDrift(asset-integrity): storageOnly(미등록 물리)·registryOnly(파일부재 등록)·undefinedStages. **advisory — ok 게이트 불변(스턱 카드 0·#56)**. 고아 reconcile=운영자 결정(등록 vs 아카이브)=COMPOSITE-CLEANUP/저긴급 배지 후속.
+  - scripts/verify-registry-drift.ts: 전상품 데이터레인 검증 아티팩트.
+- **검증/게이트 (3-tier·#88)**: (1)로컬 데이터레인(tsx·production Supabase) (2)tsc0·build0·test PASS·이모지0·한글리터럴0·외부 image API 0·네이버 무접촉 (3)prod API smoke registryDrift LIVE. **실측**: 명화 registryOnly=1(botanical-1781410335495.png 파일부재 정확)·storageOnly composite=9(핸드오프 ground-truth 정밀일치)·undefinedStages=0(plate=STAGE_DIRS v2 내·#94 우려 코드레벨 기해소) / 달항아리 storageOnly=9 / 아이스 storageOnly=1 = 전상품 드리프트 thesis 확인. ok=true 전건.
+- **패치 위치**: src/lib/storage/asset-integrity.ts · src/lib/storage/automation-storage.ts · scripts/verify-registry-drift.ts. 원칙 #93·#94.
+- **ENG-1 검증완 반영**: 핸드오프 §5 — ENG-1 "빌드완료·검증대기"→"완료·검증완(3탭 브라우저 PASS)". CAT-CODE-명화 종결.
+- **다음 1액션**: [결정·대표] NEXT-TRACK 택1 — (a)Phase 3 슬롯조립(Code·feat/funnel-slot-fill·전제=registry 메타 join) (b)Lemon 6축 재생성(Desktop/Firefly)+Cotton 품절후보 결정 (c)정합성/태깅 정리 우선. [결정·대표] PUBLISH-명화 2건 확인(원산지 중국산 vs payload 국산·옵션 3 vs 4·비가역 GO #46). [후속·Code 비긴급] REGISTRY-STORAGE-DRIFT 저긴급 배지(UNSEEDED-BACKLOG-BADGE 동일계열·#56) + 고아 reconcile 개입(등록vs아카이브).
+
+
 ### 2026-06-17 (95) 전상품 #62 배치 — emptyCard 중립화 + 미시드 개입카드 + signal 가드 + category 동기화 (FROM 💻 Code, main, additive·전부 가역·비가역0·네이버 무접촉)
 - **Target**: Claude Code CLI · **Branch**: main (직접) · 전부 가역·additive·네이버 무접촉.
 - **DONE (4건)**:

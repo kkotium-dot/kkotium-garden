@@ -1,3 +1,14 @@
+## 2026-06-17 (세션9-Code) REGISTRY↔STORAGE 드리프트 탐지 차원 + 세션8 핸드오프 보존
+
+**[preserve ba09a28]** 세션8 Desktop 핸드오프 2건 git 보존(#49·#41) — HANDOFF_2026-06-17_engine-stage1-verify(ENG-1 데이터+배포+API 독립검증 PASS) + HANDOFF_2026-06-17_prod-verify-registry-storage-drift(prod 검증 전건 PASS + 신규 REGISTRY↔STORAGE 드리프트 발견·#62 승격).
+**[build·feat b40a711]** 기존 #80/#81 자산 정합 가드(storage vs DB ref) 위에 asset_registry 교차 차원 확장(#93). (1) listProductStageFolders(automation-storage) — `{pid}/` 직속 폴더 열거로 STAGE_DIRS 외 invisible 폴더 탐지(#94 undefined-stage). (2) checkProductIntegrity.registryDrift(asset-integrity) — storageOnly(미등록 물리)·registryOnly(파일부재 등록)·undefinedStages. advisory(ok 게이트 불변·스턱카드0·#56). 고아 reconcile=운영자 결정(등록vs아카이브)=COMPOSITE-CLEANUP 후속. (3) scripts/verify-registry-drift.ts 데이터레인 검증 아티팩트.
+**[verify·3-tier #88]** (1)로컬 데이터레인(tsx·production Supabase) (2)tsc0·build0·test PASS (3)prod API smoke registryDrift LIVE(verify-vercel-deploy OK·b40a711). 실측: 명화 registryOnly=1(botanical-1781410335495.png 파일부재 — 핸드오프 'orphan-in-registry 의심' 정확)·storageOnly composite=9(핸드오프 20 storage−11 registered 정밀일치)·undefinedStages=0(plate=STAGE_DIRS v2 내, 핸드오프 #94 우려 코드레벨 기해소 교차검증·#45) / 달항아리 storageOnly=9 / 아이스 storageOnly=1 = 전상품 드리프트 thesis 확인.
+**[gates]** tsc0·build0·이모지0·신규 한글리터럴0·prisma 싱글톤·외부 image API 0(Sharp/listing/DB only·#37)·네이버 무접촉·additive·비가역0·sentinel clean.
+**[codify]** PRINCIPLES_LEARNED #93(storage+registry 양쪽 교차)·#94(택소노미 storage 실측 점검) 박제. LIVE BOARD: ENG-1 검증완 반영·REGISTRY-STORAGE-DRIFT 등재·변경로그. TASK_BRIDGE §3(96). 
+**[next]** [결정·대표] NEXT-TRACK 택1(Phase3 슬롯조립 / Lemon 재생성 / 정합성·태깅 정리) · PUBLISH-명화 2건 확인(비가역 GO #46). [후속·Code 비긴급] 드리프트 저긴급 배지(UNSEEDED-BACKLOG-BADGE 동일계열) + 고아 reconcile 개입.
+
+---
+
 ## 2026-06-17 (세션8-Code) Image+SEO/ROI Engine Stage 1 빌드 + 6축 main 머지
 
 **[merge]** 6AXIS-MERGE GO — feat/mood-camera-system → main fast-forward (c3962b6..349b9db)·push·prod LIVE (6축 UI + 엔진 Stage 0 백엔드). verify-vercel-deploy OK.

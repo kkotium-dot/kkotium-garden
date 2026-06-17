@@ -950,3 +950,9 @@ Vercel 서버리스 함수 본문 한계(~4.5MB) < full-res Firefly base64(~7MB)
 ## 작업원칙 #92 — ingest 검증 3단 레시피 (전상품·#55, 2026-06-17)
 ingest(적재) 검증은 3단으로 단정한다: (1) /assets 200 → (2) composite 그룹에 신규 파일 존재 → (3) 이미지 탭 DOM 렌더(최신순 맨앞). 검증경로 = 상품선택 → 이미지탭. 어느 상품이든 동일(전상품 공통 레시피). #45(출력 품질까지 단정)·#88(완료=검증) 결합 — HTTP 200·registered만으로 완료 금지, DOM 렌더까지 확인.
 
+
+## 작업원칙 #93 — 자산 검증은 storage 물리 + registry DB 양쪽 교차 (2026-06-17 세션9 #62 승격)
+자산 정합 검증은 storage 물리 파일과 asset_registry 인덱스를 **양쪽 교차**로 본다. 한쪽만 보면 고아를 놓친다: storage-only(미등록 물리 — 레지스트리 도입 2026-06-13 이전 자산은 전부 여기)·registry-only(파일 부재 등록). 단건 발견 시 전상품 정합성 패스로 승격(#62 적용). 구현: checkProductIntegrity.registryDrift(asset-integrity.ts) — 기존 #80/#81(storage vs DB ref) 위에 registry 차원 가산. **검증(2026-06-17 production 실측)**: 명화 registryOnly=1(botanical-1781410335495.png 파일 부재)·storageOnly composite=9 / 달항아리 storageOnly=9 / 아이스 storageOnly=1 = 3상품 전부 드리프트 = 전상품 공통(단건 아님). advisory — ok 게이트 불변(스턱 카드 0·#56). 고아 reconcile = 운영자 결정(등록 vs 아카이브)=COMPOSITE-CLEANUP 후속.
+
+## 작업원칙 #94 — 스테이지 택소노미는 storage 실측으로 주기 점검 (2026-06-17 세션9)
+스테이지 택소노미는 storage 직속 폴더 실측(listProductStageFolders — `{pid}/` 직속 폴더 열거)으로 주기 점검한다. listProductAssets는 STAGE_DIRS만 순회하므로 택소노미에 없는 폴더는 invisible(silent drop) — 진짜 undefined stage는 별도 폴더 열거로만 탐지된다. **단 본 세션 교차검증(#45·#88)**: 핸드오프가 우려한 `plate`는 이미 STAGE_DIRS v2(2026-06-12)에 존재 → undefined 아님. production 실측 undefinedStages=0(전 3상품). 보고를 맹신하지 않고 코드 상수로 교차검증한 결과 — 핸드오프 #94 우려는 코드 레벨 기해소 확인. (가드는 미래 surprise용으로 유지.)
