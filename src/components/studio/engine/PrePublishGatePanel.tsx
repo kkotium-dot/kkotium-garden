@@ -8,7 +8,7 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { ShieldCheck, ShieldAlert, ScanLine, ListChecks, Send, CheckCircle2, XCircle, MinusCircle } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ScanLine, ListChecks, Send, CheckCircle2, XCircle, MinusCircle, Globe } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import type { EngineGateView, EngineSlotView } from './useEngineStrategy';
 
@@ -71,6 +71,13 @@ export default function PrePublishGatePanel({ gate, slots, loading, degraded }: 
   const slotState: GateState = requiredSlots.length > 0 ? 'pass' : 'pending';
   const slotDetail = <span>{requiredSlots.length} {c.pass} / {slots.length}</span>;
 
+  // Origin-truth gate (#95) — legal-risk hard gate. heal = pending(warn).
+  const ot = gate.originTruth;
+  const originState: GateState = !ot ? 'na' : ot.state === 'pass' ? 'pass' : ot.state === 'heal' ? 'pending' : 'block';
+  const originDetail = ot && ot.state !== 'pass'
+    ? <span>{ot.state === 'heal' ? c.originHeal : ot.message}{ot.code ? ` (${ot.code})` : ''}</span>
+    : ot?.code ? <span>{ot.code}</span> : undefined;
+
   // Readiness gate.
   const readyState: GateState = gate.publishReady ? 'pass' : 'block';
   const readyDetailParts: ReactNode[] = [];
@@ -91,6 +98,10 @@ export default function PrePublishGatePanel({ gate, slots, loading, degraded }: 
       <GateRow
         icon={thumbState === 'block' ? <ShieldAlert size={14} color="#C2410C" /> : <ScanLine size={14} />}
         title={c.thumbPolicy} hint={c.thumbPolicyHint} state={thumbState} detail={thumbDetail}
+      />
+      <GateRow
+        icon={originState === 'block' ? <ShieldAlert size={14} color="#C2410C" /> : <Globe size={14} />}
+        title={c.origin} hint={c.originHint} state={originState} detail={originDetail}
       />
       <GateRow icon={<ShieldCheck size={14} />} title={c.fidelity} state={fidelityState} />
       <GateRow icon={<ListChecks size={14} />} title={c.slotFill} state={slotState} detail={slotDetail} />

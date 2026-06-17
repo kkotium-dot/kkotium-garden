@@ -18,6 +18,7 @@ import { loadActiveDnaCard } from '@/lib/engine/category-dna';
 import { assembleStrategy } from '@/lib/engine/strategy-assembler';
 import { deriveProductSignals } from '@/lib/engine/slot-decision-table';
 import { loadAndEvaluateProducts } from '@/lib/automation/load-publish-readiness';
+import { evaluateOriginTruth } from '@/lib/naver/product-builder';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
   try {
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      select: { id: true, name: true, category: true, naverCategoryCode: true },
+      select: { id: true, name: true, category: true, naverCategoryCode: true, originCode: true },
     });
     if (!product) {
       return NextResponse.json({ error: 'product_not_found' }, { status: 404 });
@@ -97,6 +98,13 @@ export async function GET(req: NextRequest) {
           thumbnailViolations: r.thumbnailViolations,
           status: r.status,
           naverProductId: r.naverProductId,
+          // Origin-truth row (#95/#56) — surfaces the publish HARD GATE in the
+          // panel: pass / heal(warn) / block, with the validateForRegistration
+          // message inline. Product-agnostic (#55).
+          originTruth: (() => {
+            const v = evaluateOriginTruth(product.originCode);
+            return { state: v.state, code: v.code, message: v.message };
+          })(),
         };
       }
     } catch (e) {

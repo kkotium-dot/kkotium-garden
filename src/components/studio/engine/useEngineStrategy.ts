@@ -55,6 +55,8 @@ export interface EngineGateView {
   thumbnailViolations: Array<{ code?: string; reason?: string } & Record<string, unknown>>;
   status: string;
   naverProductId: string | null;
+  // Origin-truth gate (#95) — pass / heal(warn) / block, with inline message.
+  originTruth?: { state: 'pass' | 'heal' | 'block'; code: string | null; message: string | null };
 }
 
 export interface EngineStrategyResponse {

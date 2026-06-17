@@ -21,6 +21,45 @@ const OFFICIAL_ORIGIN_CODES: ReadonlySet<string> = new Set(
   NAVER_ORIGIN_CODES.map((o) => o.code),
 );
 
+// Origin-truth verdict (#95). Single source of truth for the origin gate, reused
+// by validateForRegistration (publish HARD BLOCK) and the strategy gate panel
+// (UI surfacing, #56). 'pass' = explicit + canonical; 'heal' = resolvable but a
+// stripped leading zero needs persisting (warn); 'block' = missing/unknown
+// (refuse to guess — a guessed origin = false labelling = legal risk).
+export type OriginTruthState = 'pass' | 'heal' | 'block';
+export interface OriginTruthVerdict {
+  state: OriginTruthState;
+  code: string | null;
+  raw: string | null;
+  message: string | null;
+}
+
+export function evaluateOriginTruth(originCode: string | null | undefined): OriginTruthVerdict {
+  const raw = (originCode ?? '').trim();
+  if (!raw) {
+    return {
+      state: 'block',
+      code: null,
+      raw: null,
+      message: 'Origin code (originCode) is required — refusing to guess origin (false origin = legal risk)',
+    };
+  }
+  try {
+    const code = resolveOriginAreaCode(raw);
+    if (code !== raw) {
+      return {
+        state: 'heal',
+        code,
+        raw,
+        message: `Origin code "${raw}" auto-healed to "${code}" — persist the canonical value (stripped leading zero)`,
+      };
+    }
+    return { state: 'pass', code, raw, message: null };
+  } catch (e) {
+    return { state: 'block', code: null, raw, message: `Origin code invalid: ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
+
 export function resolveOriginAreaCode(raw: string | null | undefined): string {
   const v = (raw ?? '').trim();
   if (!v) {
@@ -802,21 +841,13 @@ export function validateForRegistration(
   // Origin MUST be explicitly set and resolvable to an official code. We never
   // silently guess (the builder used to fall back to China '0200037' — a guessed
   // origin = false country-of-origin labelling = legal risk under 대외무역법/
-  // 관세법). resolveOriginAreaCode restores a stripped leading zero and throws on
-  // empty/unknown; surface that as a HARD BLOCK, and WARN when the stored value
-  // had to be healed (a dirty DB value to persist canonically).
-  const rawOrigin = (product.originCode ?? '').trim();
-  if (!rawOrigin) {
-    errors.push('Origin code (originCode) is required — refusing to guess origin (false origin = legal risk)');
-  } else {
-    try {
-      const resolvedOrigin = resolveOriginAreaCode(rawOrigin);
-      if (resolvedOrigin !== rawOrigin) {
-        warnings.push(`Origin code "${rawOrigin}" auto-healed to "${resolvedOrigin}" — persist the canonical value (stripped leading zero)`);
-      }
-    } catch (e) {
-      errors.push(`Origin code invalid: ${e instanceof Error ? e.message : String(e)}`);
-    }
+  // 관세법). Single source of truth = evaluateOriginTruth (also drives the gate
+  // panel #56): block = missing/unknown, heal = warn (dirty value to persist).
+  const originVerdict = evaluateOriginTruth(product.originCode);
+  if (originVerdict.state === 'block' && originVerdict.message) {
+    errors.push(originVerdict.message);
+  } else if (originVerdict.state === 'heal' && originVerdict.message) {
+    warnings.push(originVerdict.message);
   }
 
   // ── Option integrity guard (#95) ─────────────────────────────────────────
