@@ -109,8 +109,10 @@ export async function POST(request: NextRequest) {
 
     // ── Build payload (Commerce API v2 shape) ────────────────────────────────
     // Validate/normalize against the official origin table (restores a stripped
-    // leading zero, throws on an unknown code) — same guard as product-builder.
-    const originAreaCode = resolveOriginAreaCode((product.originCode ?? '').trim() || '0200037');
+    // leading zero, throws on empty/unknown) — same guard as product-builder.
+    // NO silent China default (#95): a guessed origin = false labelling = legal
+    // risk. Empty origin must fail loudly, not ship as China.
+    const originAreaCode = resolveOriginAreaCode((product.originCode ?? '').trim());
 
     const detailContent = buildDetailContent({
       name: product.name,

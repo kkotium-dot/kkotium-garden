@@ -798,6 +798,44 @@ export function validateForRegistration(
     warnings.push(`Upload readiness is C grade (${readiness.score}%) — consider improving: ${readiness.failed.slice(0, 3).map(f => f.label).join(', ')}`);
   }
 
+  // ── Origin truth gate (#95, product-agnostic #62) ────────────────────────
+  // Origin MUST be explicitly set and resolvable to an official code. We never
+  // silently guess (the builder used to fall back to China '0200037' — a guessed
+  // origin = false country-of-origin labelling = legal risk under 대외무역법/
+  // 관세법). resolveOriginAreaCode restores a stripped leading zero and throws on
+  // empty/unknown; surface that as a HARD BLOCK, and WARN when the stored value
+  // had to be healed (a dirty DB value to persist canonically).
+  const rawOrigin = (product.originCode ?? '').trim();
+  if (!rawOrigin) {
+    errors.push('Origin code (originCode) is required — refusing to guess origin (false origin = legal risk)');
+  } else {
+    try {
+      const resolvedOrigin = resolveOriginAreaCode(rawOrigin);
+      if (resolvedOrigin !== rawOrigin) {
+        warnings.push(`Origin code "${rawOrigin}" auto-healed to "${resolvedOrigin}" — persist the canonical value (stripped leading zero)`);
+      }
+    } catch (e) {
+      errors.push(`Origin code invalid: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  // ── Option integrity guard (#95) ─────────────────────────────────────────
+  // A payload built from product_options must keep every distinct non-empty row.
+  // Dedup / empty-value drops (which Naver needs but which silently shrink the
+  // lineup) are WARNED so the operator can reconcile against the intended lineup.
+  const optRows =
+    product.product_options && Array.isArray(product.product_options.option_rows)
+      ? (product.product_options.option_rows as unknown[])
+      : [];
+  if (optRows.length > 0) {
+    const builtCount = buildOptionInfo(product.product_options)?.optionCombinations?.length ?? 0;
+    if (builtCount !== optRows.length) {
+      warnings.push(
+        `Option count drift: ${optRows.length} DB rows → ${builtCount} payload combinations (dedup/empty drop) — verify the intended lineup`,
+      );
+    }
+  }
+
   return {
     canRegister: errors.length === 0,
     attributeGrade: attrResult.grade,
@@ -832,9 +870,11 @@ export function buildNaverProductPayload(
   const optionInfo = buildOptionInfo(product.product_options);
 
   // Origin area info — validate/normalize against the official table (throws on
-  // an unknown code so dryRun AND real register both fail loudly, never silently
-  // shipping an invalid code that Naver rejects with 400). Default: China.
-  const originCode = resolveOriginAreaCode(product.originCode ?? '0200037');
+  // empty OR an unknown code so dryRun AND real register both fail loudly, never
+  // silently shipping an invalid code that Naver rejects with 400). NO default
+  // (#95): a guessed origin = false labelling = legal risk. validateForRegistration
+  // gates this upstream; the throw here is the last-line defense for raw callers.
+  const originCode = resolveOriginAreaCode(product.originCode);
   const isImport = Number(originCode) >= 200000;
 
   // 2026-06-02 fix — 수입품 importer 항상 충진 (originAreaInfo.importer NotEmpty
