@@ -1,3 +1,12 @@
+## 2026-06-17 (세션9-Code) REGISTRY↔STORAGE per-orphan reconcile UI — 카드 actionable 완결
+
+**[feat f2f97ce]** registry_drift 카드 actionable 완성(#56 개입 루프). RegistryDriftReconcile(ControlTowerMatrixWidget 카드 인라인·AssetIntegrityFix 패턴 일관) — '고아 검토·정리'→GET drift→storage-only 고아(등록/아카이브 per-row+벌크)·registry-only 고아(정리 per-row+벌크)→POST reconcile(confirm #46)→after 갱신+onRefresh(reconciled 시 카드 자동 clear). 아카이브 window.confirm. ko.json registry_drift 13키.
+**[verify]** tsc0·build0·이모지0·신규 한글리터럴0(ko.json). 데이터레인 prod 검증완(reconcile route 라운드트립·GET shape storageOnly 22 {path,stage}·registryOnly botanical·컴포넌트 소비가능). UI 인터랙션=Desktop(#88).
+**[완결]** REGISTRY-STORAGE-DRIFT 전상품 시스템 4단 완결: 탐지(#93/#94)→reconcile 백엔드→개입카드→per-orphan 결정 UI.
+**[next]** [Desktop] reconcile UI 버튼 검증 + variant_composite 스펙(명화 3향 변형 composite 감사). [Code] variant_composite 카드(옵션변형별 composite 누락·registry_drift 패턴)→P3 Phase3. [결정·대표] PUBLISH-명화 Cotton+GO.
+
+---
+
 ## 2026-06-17 (세션9-Code) REGISTRY↔STORAGE 드리프트 개입카드 — 관제탑 시드/렌더
 
 **[feat 78f8a90]** reconcile 백엔드에 운영자 결정 카드 표면화(#62 P2·#56). INTERVENTION_REGISTRY_DRIFT 타입+RegistryDriftPayload(intervention.ts)·control-tower-engine registry_drift→INPUT_DECISION(이미지탭 딥링크)·asset-integrity route+cron sweep 2카드 독립 시드(asset_integrity=ok 게이트 / registry_drift=reconciled 게이트, cron ok 상품도 평가=전상품 상시)·ControlTowerMatrixWidget 라벨+상세칩(미등록/인덱스고아/미정의단계·예시·힌트)·ko.json.

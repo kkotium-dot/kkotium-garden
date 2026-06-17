@@ -72,6 +72,14 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-17 (100) REGISTRY↔STORAGE per-orphan reconcile UI — 카드 actionable 완결 (FROM 💻 Code, main f2f97ce, additive·비가역0)
+- **DONE**: registry_drift 카드를 actionable로 완성(#56 루프). RegistryDriftReconcile(ControlTowerMatrixWidget 인라인) — '고아 검토·정리' 버튼→GET drift 로드→storage-only 고아(등록/아카이브 per-row+벌크)·registry-only 고아(정리 per-row+벌크)→POST reconcile(action:reconcile·confirm·#46)→after 갱신+onRefresh(reconciled 시 카드 자동 clear). 아카이브=window.confirm. ko.json registry_drift 13키 추가.
+- **검증**: tsc0·build0·이모지0·신규한글리터럴0. 데이터레인 prod 검증완(reconcile route 라운드트립·GET shape: storageOnly 22 {path,stage}·registryOnly botanical {path}·컴포넌트 소비가능). UI 버튼 인터랙션=Desktop 브라우저(#88).
+- **패치 위치**: src/components/dashboard/ControlTowerMatrixWidget.tsx · src/lib/i18n/control-tower-strings.ko.json.
+- **REGISTRY-STORAGE-DRIFT 전상품 시스템 완결**: 탐지(#93/#94)→reconcile 백엔드→개입카드→per-orphan 결정 UI 4단.
+- **다음 1액션**: [Desktop] reconcile UI 버튼 인터랙션 검증(/dashboard 명화 카드 '고아 검토·정리'→등록/아카이브/정리→카드 clear·#88) + variant_composite 스펙(명화 3향 변형 composite 누락 감사 후 인계). [Code] variant_composite 개입카드(checkProductIntegrity에 옵션변형별 composite 누락 추가·registry_drift 패턴·전상품) → P3 Phase3 슬롯조립. [결정·대표] PUBLISH-명화 Cotton 옵션+GO #46.
+
+
 ### 2026-06-17 (99) REGISTRY↔STORAGE 드리프트 개입카드 — 관제탑 시드/렌더 (FROM 💻 Code, main 78f8a90, additive·비가역0·네이버 무접촉)
 - **Target**: Claude Code CLI · **Branch**: main · additive·#56 비강제·네이버 무접촉·비가역0. Desktop 원산지 행 검증 PASS 수신 후 P2 카드 착수.
 - **DONE (registry_drift 개입카드·#62 P2)**: reconcile 백엔드(952ed61)에 운영자 결정 표면화.
