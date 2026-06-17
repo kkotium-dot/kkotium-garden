@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-17 (98) 발행패널 원산지 행 + 아이스 정규화 + reconcile 백엔드 (FROM 💻 Code, main 952ed61, additive·비가역0·네이버 무접촉)
+- **Target**: Claude Code CLI · **Branch**: main · 전부 가역·additive·네이버 무접촉. Desktop ORIGIN-GATE 전경로 검증 PASS 수신 후 P2 착수.
+- **DONE (a) 발행패널 원산지 진실성 행(#95·#56 갭 해소)**: origin 판정을 evaluateOriginTruth 헬퍼로 추출(product-builder) → validateForRegistration(발행 BLOCK)과 strategy 게이트(UI) 단일 진실원천 공유. EngineGateView.originTruth + PrePublishGatePanel 원산지 행(통과/치유경고/차단·인라인). ko.json origin/originHint/originHeal. prod smoke 명화/아이스 gate.originTruth=pass·0200037.
+- **DONE (b) 아이스 originCode 정규화**: 200037→0200037 + naver_origin '중국'(코드 정합·가역·#95 치유 영속). 검증 heal→pass.
+- **DONE (P2) reconcileRegistryDrift 백엔드(#62)**: register(asset_registry insert·additive·멱등)·archive(파일 archive/ 이동·가역)·clearRegistry(stale 행 삭제). 라이브 재확인 고아만 처리. route POST 'reconcile'(confirm 게이트). prod 라운드트립 PASS(register 22→21·멱등0·복원22·파일무접촉)·route smoke no-op LIVE.
+- **검증/게이트**: tsc0·build0·test PASS·이모지0·신규한글리터럴0(ko.json)·prisma 싱글톤·Sharp-only·네이버 무접촉·비가역0(confirm 게이트).
+- **패치 위치**: src/lib/naver/product-builder.ts(evaluateOriginTruth) · src/app/api/engine/strategy/route.ts · src/components/studio/engine/{useEngineStrategy,PrePublishGatePanel}.tsx · src/lib/i18n/studio-strings.ko.json · src/lib/storage/asset-integrity.ts(reconcileRegistryDrift) · src/app/api/products/[id]/asset-integrity/route.ts.
+- **다음 1액션**: [Code] reconcile 개입카드 UI(운영자 등록vs아카이브 결정·드리프트 카드 시드·control-tower 배선·브라우저 결합) → P3 Phase3 슬롯조립. [Desktop] 발행패널 원산지 행 브라우저 시각검증(명화 통과 렌더) + Lemon 6축 재생성. [결정·대표] PUBLISH-명화 Cotton 옵션(데이터 드리프트)+비가역 GO #46.
+
+
 ### 2026-06-17 (97) 원산지 진실 게이트 + 옵션 정합 가드 (FROM 💻 Code, main 440ef92, additive·비가역0·네이버 무접촉)
 - **Target**: Claude Code CLI · **Branch**: main · additive·전 발행경로 공유·네이버 무접촉·비가역0.
 - **배경(Desktop #45 반영)**: 명화 DB origin=중국(0200037)·옵션 라이브 정합 → 세션9 "payload 국산/4" 경보 = stale(#96). 진짜 root-cause = payload-builder의 silent 폴백 `resolveOriginAreaCode(originCode ?? '0200037')` — origin 미상 시 중국 추측, validateForRegistration에 origin 검사 전무.
@@ -136,33 +146,6 @@
 - **DONE (control tower)**: LIVE BOARD atop PARALLEL_WORK_TRACKER + principles #87~#89 + CLAUDE.md index.
 - **VERIFY-PENDING (#88)**: [Desktop] confirm 6 tables · policy-gate test · Vercel READY+SHA -> then Stage 1.
 - **authority**: docs/design/IMAGE_SEO_STRATEGY_ENGINE.md (engine) · docs/research/IMAGE_SEO_STRATEGY_ENGINE_RESEARCH_2026-06-16.md (evidence).
-
-### 2026-06-15 (92) 워크플로 rev2 codify + 상태 정합 → item2(Firefly)·item3(발행) ACTIVE (FROM 💻 Code, main a96909c, docs·비가역0)
-- **종결 확인**: item1 레거시 백필(#79)·#80 STALE 근본수정·#81 자산 정합 가드 전부 production 검증 클린(3상품 ok·depth-2 0·dead 0). 등록 워크플로 rev2 codify(권위 PRODUCT_REGISTRATION_WORKFLOW.md).
-- **ACTIVE item2 (Firefly)**: [Desktop] 4컷 생성(realism lane·생성설정 4플래그 확인)→누끼합성(v8 참조드롭 하모나이즈)→정규 stage 적재. firefly_auto 카드 경유.
-- **ACTIVE item3 (발행)**: 충실도/실물대조/마운트/네이밍 게이트 통과 후 네이버 v2 FULL REPLACE(#57·전체 payload)·명시 GO(비가역 #46).
-- **다음 1액션**: [Desktop] /dashboard 관제탑 정합 카드 부재 확인 → Firefly 4컷 생성 시작.
-
-### 2026-06-15 (91) 자산 정합 점검 시스템 가드 (#81·#80 후속, FROM 💻 Code, main, additive·비가역0·교정만 confirm게이트)
-- **What**: 드리프트 상시감지·개입점화. checkProductIntegrity(라이브 listProductAssets 기준 depth-2/root 잔존·DB ref dead[전컬럼 중첩jsonb+asset_references+published_assets 전수]·선택 비율) → control-tower 개입 대기열 asset_integrity 카드 시드(setJobIntervention·lane process·멱등·best-effort·강제모달0 #56), 정합 OK면 clear. 1클릭 교정(POST /api/products/[id]/asset-integrity {action:fix,confirm:true}·#46 게이트 → 루트→정규 이동·archive 백업·exhaustive ref 리맵). cron /api/cron/asset-integrity-sweep(KST 자정). tool='sharp'.
-- **검증**: 현 3상품 ok(depth-2 0·dead 0). 드리프트 round-trip(이동→detect→card seed[matrix 쿼리 노출]→1클릭 fix→복원→clear) PASS. tsc0·build0·외부 image API 0(Sharp만)·네이버 무접촉. 박제 §8.11 + #81.
-- **다음 1액션**: [Desktop] /dashboard 관제탑 정합 카드 부재(3상품 OK) 확인 + 의도 드리프트 1건 주입(파일 root 이동 or seed 호출)→카드 생성·1클릭 교정·재점검 OK 확인.
-
-### 2026-06-15 (90) /assets STALE 캐시 근본수정 — Storage 리스트 라이브화 (FROM 💻 Code, main, additive·비가역0)
-- **What**: Desktop 실앱테스트 적발 — /api/products/[id]/assets 전상품 STALE(studio가 죽은 depth-2 URL 404 렌더·현 canonical 누락). 명화 /assets 22(pre-backfill snapshot) vs 실제 41. 배포로도 미소거(Vercel Data Cache). 근본=getServerClient supabase list가 Next Data Cache 잔류(force-dynamic만으론 SDK fetch 미차단). 수정=global.fetch no-store 주입(전 Storage read 라이브) + route fetchCache='force-no-store'+revalidate=0. 클라 이미 no-store.
-- **검증**: listProductAssets 라이브 = 명화 41(depth-2 0·전 canonical stage)·아이스트레이 2(detail1·archive1·depth-2 0)·cmp3afb 18(depth-2 0). tsc0·build0·네이버 무접촉. 박제 §8.10 + #80.
-- **다음 1액션**: [Desktop] /assets no-store 재검증(명화 41·depth-2 0 / studio 렌더 depth-2 0) → Firefly 4컷.
-
-### 2026-06-15 (89) 백필 dangling 정정 — DB ref 감사/치환 EXHAUSTIVE 전환 + taxonomy archive 선행 (FROM 💻 Code, main, 비가역 1·교정)
-- **What**: Desktop #45 적발 — 직전 'dangling 0' 부정확. Product.quality_reasons(jsonb·cmpnooli4)에 구 depth-2 URL 잔존(404). 근본=하드코딩 컬럼리스트가 jsonb 누락. instance 교정(정규 detail/ URL·200 확인) + class 근본수정(updateDbRefs·residualRefCount 컬럼리스트-FREE 전수스캔·중첩 jsonb 포함) + 신규 scripts/remap-depth2-refs.ts(dangling-only·dry-by-default·자가검증) + taxonomy archive 마커 plate 선행(GO#3 확장·\b word-boundary로 gold 오탐 차단).
-- **결과**: 전3상품 사후 전수스캔 잔존 depth-2 ref=0. 교정 1필드/1치환. build0·tsc0·네이버 무접촉.
-- **다음 1액션**: [Desktop] to_jsonb 전수 재검증(0 확인) → Firefly 4컷 / 다음 상품.
-
-### 2026-06-15 (88) 분류기 누끼 신호 교정(알파≠투명) + 삭제 모달 UX (FROM 💻 Code, main, 비가역 0·additive)
-- **What**: 세션7-i Desktop 실측 BUG 수정 — cutout 신호를 `hasAlpha`(채널 존재)에서 `hasAlpha && sharp.stats().isOpaque===false`(실제 투명)로 교정. 불투명 RGBA(canvas/Firefly/디자인툴 PNG) → 누끼 신호 무시·비율 폴백. 3경로(/assets/classify·/assets/upload·/ingest-firefly) 신호 일원화 + 응답에 isOpaque·hasTransparency 추가·칩 '투명 배경' 사유. 삭제 확인 = native confirm 2단계 → 커스텀 모달(썸네일·자산명·단계·비가역·추가이미지 해제 경고).
-- **재검증(sharp 실이미지 7/7 PASS)**: 1000² 불투명PNG→thumbnail / 400×1200→detail / 900×1125→composite / 투명PNG→cutout / JPEG 3종 회귀 전부 정답.
-- **검증**: tsc0·build0·비가역0·sentinel clean. 권위 §8.7·8.8 박제 + PRINCIPLES_LEARNED #78.
-- **다음 1액션**: [Desktop] /assets/classify로 불투명PNG 재검증(정답 확인) → 다음(레거시 백필 GO 대기 / Firefly 4컷).
 
 ### 2026-06-14 (87) 내용인식 분류 + IA 3탭 + 한글화 + 인앱삭제 (FROM 💻 Code, main, 비가역 0·additive)
 - **What**: 내용인식 스테이지 분류(classifyAsset·파일명+Sharp 메타신호·confidence/qualityFlags/conflict·preflight /assets/classify) + 워크벤치 IA 5탭→3탭(grouped·회귀0) + 한글화(음차 표면화) + 인앱 삭제(/assets/action delete·2단계 게이트·비가역#46).
@@ -838,6 +821,36 @@
 ---
 
 ## §7 ARCHIVED HAND-OFFS (완료된 hand-off 누적)
+
+<!-- archived 2026-06-17 세션9: 검증완료된 §3 entries 88~92 이동 (T1 1000 트림·#31) -->
+
+### 2026-06-15 (92) 워크플로 rev2 codify + 상태 정합 → item2(Firefly)·item3(발행) ACTIVE (FROM 💻 Code, main a96909c, docs·비가역0)
+- **종결 확인**: item1 레거시 백필(#79)·#80 STALE 근본수정·#81 자산 정합 가드 전부 production 검증 클린(3상품 ok·depth-2 0·dead 0). 등록 워크플로 rev2 codify(권위 PRODUCT_REGISTRATION_WORKFLOW.md).
+- **ACTIVE item2 (Firefly)**: [Desktop] 4컷 생성(realism lane·생성설정 4플래그 확인)→누끼합성(v8 참조드롭 하모나이즈)→정규 stage 적재. firefly_auto 카드 경유.
+- **ACTIVE item3 (발행)**: 충실도/실물대조/마운트/네이밍 게이트 통과 후 네이버 v2 FULL REPLACE(#57·전체 payload)·명시 GO(비가역 #46).
+- **다음 1액션**: [Desktop] /dashboard 관제탑 정합 카드 부재 확인 → Firefly 4컷 생성 시작.
+
+### 2026-06-15 (91) 자산 정합 점검 시스템 가드 (#81·#80 후속, FROM 💻 Code, main, additive·비가역0·교정만 confirm게이트)
+- **What**: 드리프트 상시감지·개입점화. checkProductIntegrity(라이브 listProductAssets 기준 depth-2/root 잔존·DB ref dead[전컬럼 중첩jsonb+asset_references+published_assets 전수]·선택 비율) → control-tower 개입 대기열 asset_integrity 카드 시드(setJobIntervention·lane process·멱등·best-effort·강제모달0 #56), 정합 OK면 clear. 1클릭 교정(POST /api/products/[id]/asset-integrity {action:fix,confirm:true}·#46 게이트 → 루트→정규 이동·archive 백업·exhaustive ref 리맵). cron /api/cron/asset-integrity-sweep(KST 자정). tool='sharp'.
+- **검증**: 현 3상품 ok(depth-2 0·dead 0). 드리프트 round-trip(이동→detect→card seed[matrix 쿼리 노출]→1클릭 fix→복원→clear) PASS. tsc0·build0·외부 image API 0(Sharp만)·네이버 무접촉. 박제 §8.11 + #81.
+- **다음 1액션**: [Desktop] /dashboard 관제탑 정합 카드 부재(3상품 OK) 확인 + 의도 드리프트 1건 주입(파일 root 이동 or seed 호출)→카드 생성·1클릭 교정·재점검 OK 확인.
+
+### 2026-06-15 (90) /assets STALE 캐시 근본수정 — Storage 리스트 라이브화 (FROM 💻 Code, main, additive·비가역0)
+- **What**: Desktop 실앱테스트 적발 — /api/products/[id]/assets 전상품 STALE(studio가 죽은 depth-2 URL 404 렌더·현 canonical 누락). 명화 /assets 22(pre-backfill snapshot) vs 실제 41. 배포로도 미소거(Vercel Data Cache). 근본=getServerClient supabase list가 Next Data Cache 잔류(force-dynamic만으론 SDK fetch 미차단). 수정=global.fetch no-store 주입(전 Storage read 라이브) + route fetchCache='force-no-store'+revalidate=0. 클라 이미 no-store.
+- **검증**: listProductAssets 라이브 = 명화 41(depth-2 0·전 canonical stage)·아이스트레이 2(detail1·archive1·depth-2 0)·cmp3afb 18(depth-2 0). tsc0·build0·네이버 무접촉. 박제 §8.10 + #80.
+- **다음 1액션**: [Desktop] /assets no-store 재검증(명화 41·depth-2 0 / studio 렌더 depth-2 0) → Firefly 4컷.
+
+### 2026-06-15 (89) 백필 dangling 정정 — DB ref 감사/치환 EXHAUSTIVE 전환 + taxonomy archive 선행 (FROM 💻 Code, main, 비가역 1·교정)
+- **What**: Desktop #45 적발 — 직전 'dangling 0' 부정확. Product.quality_reasons(jsonb·cmpnooli4)에 구 depth-2 URL 잔존(404). 근본=하드코딩 컬럼리스트가 jsonb 누락. instance 교정(정규 detail/ URL·200 확인) + class 근본수정(updateDbRefs·residualRefCount 컬럼리스트-FREE 전수스캔·중첩 jsonb 포함) + 신규 scripts/remap-depth2-refs.ts(dangling-only·dry-by-default·자가검증) + taxonomy archive 마커 plate 선행(GO#3 확장·\b word-boundary로 gold 오탐 차단).
+- **결과**: 전3상품 사후 전수스캔 잔존 depth-2 ref=0. 교정 1필드/1치환. build0·tsc0·네이버 무접촉.
+- **다음 1액션**: [Desktop] to_jsonb 전수 재검증(0 확인) → Firefly 4컷 / 다음 상품.
+
+### 2026-06-15 (88) 분류기 누끼 신호 교정(알파≠투명) + 삭제 모달 UX (FROM 💻 Code, main, 비가역 0·additive)
+- **What**: 세션7-i Desktop 실측 BUG 수정 — cutout 신호를 `hasAlpha`(채널 존재)에서 `hasAlpha && sharp.stats().isOpaque===false`(실제 투명)로 교정. 불투명 RGBA(canvas/Firefly/디자인툴 PNG) → 누끼 신호 무시·비율 폴백. 3경로(/assets/classify·/assets/upload·/ingest-firefly) 신호 일원화 + 응답에 isOpaque·hasTransparency 추가·칩 '투명 배경' 사유. 삭제 확인 = native confirm 2단계 → 커스텀 모달(썸네일·자산명·단계·비가역·추가이미지 해제 경고).
+- **재검증(sharp 실이미지 7/7 PASS)**: 1000² 불투명PNG→thumbnail / 400×1200→detail / 900×1125→composite / 투명PNG→cutout / JPEG 3종 회귀 전부 정답.
+- **검증**: tsc0·build0·비가역0·sentinel clean. 권위 §8.7·8.8 박제 + PRINCIPLES_LEARNED #78.
+- **다음 1액션**: [Desktop] /assets/classify로 불투명PNG 재검증(정답 확인) → 다음(레거시 백필 GO 대기 / Firefly 4컷).
+
 
 > 30개 도달 시 `docs/plan/archive/TASK_BRIDGE_YYYY-MM.md` 분할.
 

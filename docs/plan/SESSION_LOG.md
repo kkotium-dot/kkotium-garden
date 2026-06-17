@@ -1,3 +1,14 @@
+## 2026-06-17 (세션9-Code) 발행패널 원산지 행 + 아이스 정규화 + reconcile 백엔드
+
+**[a·feat 9d2e7f4]** 발행패널 원산지 진실성 행 — 세션9 origin HARD GATE의 #56 갭(PrePublishGatePanel 미표면화) 해소. origin 판정을 evaluateOriginTruth 헬퍼로 추출(product-builder) → validateForRegistration(발행 BLOCK)·strategy 게이트(UI) 단일 진실원천. EngineGateView.originTruth + PrePublishGatePanel 원산지 행(통과/치유경고/차단·인라인 메시지)·ko.json origin/originHint/originHeal. prod smoke 명화/아이스 gate.originTruth=pass·0200037.
+**[b·DB·가역]** 아이스 originCode 200037→0200037 정규 저장 + naver_origin '중국'(코드 정합·추측 아님·#95 치유 영속). 검증 heal→pass(prod gate.originTruth 확인).
+**[P2·feat 952ed61]** reconcileRegistryDrift 백엔드 — 드리프트 운영자 결정 reconcile. register(asset_registry insert·additive·멱등)·archive(파일 archive/ 이동·가역)·clearRegistry(stale 행 삭제). 라이브 재확인 고아만 처리(조작 금지). route POST 'reconcile'(confirm 게이트·#46). prod 라운드트립 PASS(명화 register 22→21·멱등 재등록0·행삭제 복원22·파일무접촉)·route smoke no-op LIVE.
+**[gates]** tsc0·build0·test PASS·이모지0·신규 한글리터럴0(ko.json·영어 에러)·prisma 싱글톤·Sharp-only·외부 image API 0·네이버 무접촉·additive·비가역0(confirm 게이트).
+**[codify]** LIVE BOARD ORIGIN-TRUTH-GATE(UI)·REGISTRY-STORAGE-DRIFT(reconcile 백엔드) 갱신. TASK_BRIDGE §3(98)+88~92 §7 archive(트림). Desktop origin-gate 검증 핸드오프 보존.
+**[next]** [Code] reconcile 개입카드 UI(운영자 등록vs아카이브·브라우저 결합) → P3 Phase3. [Desktop] 발행패널 원산지 행 시각검증 + Lemon 6축 재생성. [결정·대표] PUBLISH-명화 Cotton 옵션+비가역 GO #46.
+
+---
+
 ## 2026-06-17 (세션9-Code) 원산지 진실 게이트 + 옵션 정합 가드 (#95)
 
 **[배경·Desktop #45]** 명화 DB origin=중국(0200037)·옵션 라이브 정합 → 세션9 "payload 국산/4" 경보 = stale(#96 코드 의심 전 DB 실측). 진짜 root-cause = payload-builder silent 폴백.
