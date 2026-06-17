@@ -247,6 +247,8 @@ const IV_DNA_CONFIRM = 'dna_confirm';
 const IV_VARIANT_SELECT = 'variant_select';
 // #62 — the category has no seeded DNA card (strategy dnaSource=none).
 const IV_CATEGORY_DNA_UNSEEDED = 'category_dna_unseeded';
+// #62 P2 — REGISTRY<->STORAGE drift (orphans). Operator register-vs-archive.
+const IV_REGISTRY_DRIFT = 'registry_drift';
 
 /** Two-branch source strategy from the split quality eval (blueprint §3). */
 function deriveSourceStrategy(
@@ -511,6 +513,11 @@ export function computeActionQueueItem(
       // Storage<->DB drift (un-normalized root files / dead refs). Operator runs
       // the 1-click remediation, so INPUT_DECISION; lands in the studio asset tab.
       return { ...base, category: 'INPUT_DECISION', stage: IV_ASSET_INTEGRITY, deepLink: `/studio?product=${productId}`, ...iv };
+    }
+    if (intervention.type === IV_REGISTRY_DRIFT) {
+      // REGISTRY<->STORAGE drift (orphans). Operator decides register-vs-archive
+      // per orphan (reconcile), so INPUT_DECISION; lands in the studio asset tab.
+      return { ...base, category: 'INPUT_DECISION', stage: IV_REGISTRY_DRIFT, deepLink: `/studio?product=${productId}&tab=image`, ...iv };
     }
     if (intervention.type === IV_DNA_CONFIRM) {
       // Engine 개입#1 — DNA card stale / new category. Operator confirms or edits

@@ -23,7 +23,9 @@ import {
   setJobIntervention,
   clearJobIntervention,
   buildAssetIntegrityPayload,
+  buildRegistryDriftPayload,
   INTERVENTION_ASSET_INTEGRITY,
+  INTERVENTION_REGISTRY_DRIFT,
 } from '@/lib/jobs/intervention';
 import { BG_CLEAN } from '@/lib/jobs/job-type-routing';
 
@@ -32,31 +34,64 @@ export const fetchCache = 'force-no-store';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-// Seed an asset_integrity card when the product has drift, or clear it when the
-// product is clean. Returns whether a card is now present. Best-effort.
+// Seed/clear two independent cards from one report (best-effort, idempotent):
+//   - asset_integrity: depth2 / dead refs (gated on `ok`) — 1-click auto-fix.
+//   - registry_drift:  REGISTRY<->STORAGE orphans (gated on registryDrift.
+//     reconciled) — operator register-vs-archive decision (#62 P2). Advisory:
+//     does NOT block publish; just surfaces in the queue (#56).
+// Returns whether any card is now present.
 async function syncCard(report: AssetIntegrityReport): Promise<boolean> {
+  const now = new Date().toISOString();
+
+  // asset_integrity (existing) — depth2 / dead refs.
   if (report.ok) {
     await clearJobIntervention(report.productId, INTERVENTION_ASSET_INTEGRITY);
-    return false;
-  }
-  await setJobIntervention({
-    productId: report.productId,
-    jobType: BG_CLEAN,
-    type: INTERVENTION_ASSET_INTEGRITY,
-    payload: buildAssetIntegrityPayload({
+  } else {
+    await setJobIntervention({
       productId: report.productId,
-      depth2Count: report.depth2Count,
-      deadCount: report.deadRefs.length,
-      fixableDepth2: report.fixableDepth2,
-      fixableDeadRefs: report.fixableDeadRefs,
-      ratioCount: report.ratioFlags.length,
-      sampleFiles: [...report.depth2Files, ...report.deadRefs.map((d) => d.key.split('/').pop() ?? d.key)],
-      checkedAt: new Date().toISOString(),
-    }),
-    tool: 'sharp',
-    matchInterventionType: true,
-  });
-  return true;
+      jobType: BG_CLEAN,
+      type: INTERVENTION_ASSET_INTEGRITY,
+      payload: buildAssetIntegrityPayload({
+        productId: report.productId,
+        depth2Count: report.depth2Count,
+        deadCount: report.deadRefs.length,
+        fixableDepth2: report.fixableDepth2,
+        fixableDeadRefs: report.fixableDeadRefs,
+        ratioCount: report.ratioFlags.length,
+        sampleFiles: [...report.depth2Files, ...report.deadRefs.map((d) => d.key.split('/').pop() ?? d.key)],
+        checkedAt: now,
+      }),
+      tool: 'sharp',
+      matchInterventionType: true,
+    });
+  }
+
+  // registry_drift (#62 P2) — storage/registry orphans.
+  const drift = report.registryDrift;
+  if (drift.reconciled) {
+    await clearJobIntervention(report.productId, INTERVENTION_REGISTRY_DRIFT);
+  } else {
+    await setJobIntervention({
+      productId: report.productId,
+      jobType: BG_CLEAN,
+      type: INTERVENTION_REGISTRY_DRIFT,
+      payload: buildRegistryDriftPayload({
+        productId: report.productId,
+        storageOnlyCount: drift.storageOnlyCount,
+        registryOnlyCount: drift.registryOnlyCount,
+        undefinedStages: drift.undefinedStages,
+        sampleFiles: [
+          ...drift.storageOnly.map((o) => o.path.split('/').pop() ?? o.path),
+          ...drift.registryOnly.map((o) => o.path.split('/').pop() ?? o.path),
+        ],
+        checkedAt: now,
+      }),
+      tool: 'sharp',
+      matchInterventionType: true,
+    });
+  }
+
+  return !report.ok || !drift.reconciled;
 }
 
 export async function GET(

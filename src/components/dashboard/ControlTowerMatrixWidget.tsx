@@ -502,6 +502,7 @@ const IV = m.intervention as {
   dna_confirm: { label: string; lead: string; category: string; version: string; reasonStale: string; reasonNew: string };
   variant_select: { label: string; lead: string; slot: string; candidates: string; recommended: string };
   category_dna_unseeded: { label: string; lead: string; category: string };
+  registry_drift: { label: string; lead: string; storageOnly: string; registryOnly: string; undefinedStages: string; samples: string; hint: string };
 };
 
 function interventionLabel(type: string | undefined): string | null {
@@ -515,6 +516,7 @@ function interventionLabel(type: string | undefined): string | null {
   if (type === 'dna_confirm') return IV.dna_confirm.label;
   if (type === 'variant_select') return IV.variant_select.label;
   if (type === 'category_dna_unseeded') return IV.category_dna_unseeded.label;
+  if (type === 'registry_drift') return IV.registry_drift.label;
   return null;
 }
 
@@ -819,6 +821,30 @@ function InterventionDetail({ type, payload, productId, onRefresh }: { type: str
             <code className="rounded bg-slate-50 px-1 py-0.5 text-[10px] text-slate-600">{u?.categoryName || u?.categoryCode}</code>
           </div>
         )}
+      </div>
+    );
+  }
+  if (type === 'registry_drift') {
+    const rd = payload as {
+      storageOnlyCount?: number; registryOnlyCount?: number;
+      undefinedStages?: string[]; sampleFiles?: string[];
+    } | null;
+    const t = IV.registry_drift;
+    const storageOnly = rd?.storageOnlyCount ?? 0;
+    const registryOnly = rd?.registryOnlyCount ?? 0;
+    const undef = rd?.undefinedStages ?? [];
+    return (
+      <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
+        <p className="text-slate-500">{t.lead}</p>
+        <div className="flex flex-wrap gap-1.5 text-[10px]">
+          <span className={`rounded px-1.5 py-0.5 ${storageOnly > 0 ? 'bg-amber-50 text-amber-700' : 'bg-slate-50 text-slate-400'}`}>{t.storageOnly}: {storageOnly}</span>
+          <span className={`rounded px-1.5 py-0.5 ${registryOnly > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-400'}`}>{t.registryOnly}: {registryOnly}</span>
+          {undef.length > 0 && <span className="rounded bg-rose-50 px-1.5 py-0.5 text-rose-600">{t.undefinedStages}: {undef.join(', ')}</span>}
+        </div>
+        {rd?.sampleFiles && rd.sampleFiles.length > 0 && (
+          <p className="truncate text-[10px] text-slate-400">{t.samples}: {rd.sampleFiles.join(', ')}</p>
+        )}
+        <p className="text-[10px] text-slate-400">{t.hint}</p>
       </div>
     );
   }

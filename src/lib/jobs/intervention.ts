@@ -59,6 +59,10 @@ export const INTERVENTION_VARIANT_SELECT = 'variant_select';
 // analyze tab. Never a forced modal (#56); surfaced only when the product is
 // otherwise idle so it never masks urgent work (firefly_auto-style additive).
 export const INTERVENTION_CATEGORY_DNA_UNSEEDED = 'category_dna_unseeded';
+// REGISTRY <-> STORAGE drift reconcile (#62 P2). Distinct from asset_integrity
+// (depth2/deadRef auto-fix): this is an operator register-vs-archive DECISION per
+// orphan. Non-blocking advisory card.
+export const INTERVENTION_REGISTRY_DRIFT = 'registry_drift';
 
 export type InterventionType =
   | typeof INTERVENTION_SOURCE_REQUEST
@@ -70,7 +74,8 @@ export type InterventionType =
   | typeof INTERVENTION_ASSET_INTEGRITY
   | typeof INTERVENTION_DNA_CONFIRM
   | typeof INTERVENTION_VARIANT_SELECT
-  | typeof INTERVENTION_CATEGORY_DNA_UNSEEDED;
+  | typeof INTERVENTION_CATEGORY_DNA_UNSEEDED
+  | typeof INTERVENTION_REGISTRY_DRIFT;
 
 export { buildMountCheckPayload };
 export type { FidelityChecklistPayload, MountCheckPayload };
@@ -295,6 +300,38 @@ export function buildAssetIntegrityPayload(o: {
     fixableDepth2: o.fixableDepth2,
     fixableDeadRefs: o.fixableDeadRefs,
     ratioCount: o.ratioCount ?? 0,
+    sampleFiles: (o.sampleFiles ?? []).slice(0, 6),
+    checkedAt: o.checkedAt,
+  };
+}
+
+export interface RegistryDriftPayload {
+  productId: string;
+  /** Live storage files absent from asset_registry (keeper-or-archive decision). */
+  storageOnlyCount: number;
+  /** Registry rows whose physical file is gone (clear decision). */
+  registryOnlyCount: number;
+  /** Physical stage folders absent from the taxonomy. */
+  undefinedStages: string[];
+  /** Sample orphan file names (bounded) for the operator to recognize the drift. */
+  sampleFiles: string[];
+  checkedAt: string;
+}
+
+/** Registry-drift payload — built from a checkProductIntegrity registryDrift. */
+export function buildRegistryDriftPayload(o: {
+  productId: string;
+  storageOnlyCount: number;
+  registryOnlyCount: number;
+  undefinedStages?: string[];
+  sampleFiles?: string[];
+  checkedAt: string;
+}): RegistryDriftPayload {
+  return {
+    productId: o.productId,
+    storageOnlyCount: o.storageOnlyCount,
+    registryOnlyCount: o.registryOnlyCount,
+    undefinedStages: (o.undefinedStages ?? []).slice(0, 8),
     sampleFiles: (o.sampleFiles ?? []).slice(0, 6),
     checkedAt: o.checkedAt,
   };
