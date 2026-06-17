@@ -24,6 +24,7 @@
 | VARIANT-COMPOSITE | P3 | Code | 완료·검증완(UI 렌더=Desktop) | — | asset_registry.variant 컬럼(마이그)+computeVariantCoverage(분모=options stock>0·#96)+variant_composite 카드(INPUT_DECISION·cron 상시)+ingest-firefly variant 바인딩·push 0b6db66 | prod 통합 PASS: 명화 active3·covered0·missing[3향]·matrix INPUT_DECISION·라운드트립(seed/바인딩 0→1→복원) ✅ |
 | ORIGIN-TRUTH-GATE | P1 | Code | 완료·검증완(UI 표면화) | — | origin HARD GATE+옵션 가드+silent 폴백 제거(440ef92)+발행패널 원산지 행(evaluateOriginTruth·9d2e7f4·#56)+아이스 200037→0200037 정규화 | prod smoke 명화/아이스 gate.originTruth=pass·0200037·canRegister S/94 무회귀 ✅ |
 | SEO-GOLDEN-KEYWORD-GUARD | P1 | Code | ✅ | 신규 — 상품명/태그를 datalab 검색량으로 검증 → 카테고리 1위 검색어 누락 시 '상품명 키워드 검증' 개입카드. 명화 즉시해당(차량용=검색1위어 누락·송풍구=니치 사용중). additive·비가역0·네이버 무접촉 | 미착수(백로그·E5/E6/E8과 병행 가능) |
+| INFO-DEP-DESIGN-GATE | P2 | Code | ✅ | 신규 — info-dependency 디자인 게이트(#104): engine slot/strategy infoDependency 메타 + 온실아틀리에 Design Readiness 레인(info-free 항상생성→사전생성 자산풀 / info-bound 소싱 충진 시 자동활성·#56) + 양방향 바인딩(무드배경↔변형/썸네일·ingest variant 일반화) | 미착수(백로그) |
 | CUT34-EVAL | — | Desktop | 검증대기 | — | cut-3/4 = scent_note 슬롯 재배치(썸네일 아님) | 슬롯 매핑 확정 |
 
 ### 파생 큐
@@ -47,10 +48,11 @@
 | E9 | P2 | Code | ✅ | 프롬프트 성능학습(CTR/CVR per PromptVersion→auto-promote) | 미착수 |
 
 > E8 v2 상세(2026-06-17 백로그·한국 우선): 소스 우선순위 티어 = T1 NaverSearch(search_shop/image, 한국 커머스 실측) → T2 datalab(트렌드/검색량) → T3 Pinterest/Google(무드 보조만). NaverSearch MCP을 Tier-1 수집 어댑터로 래핑. benchmarkDna 확장 필드 = sourcePriority + commerceConvention(명품/다크오브제/선물/가격밴드) + trendKeywords(현 한글 브랜드태그 display → 추출 디스크립터+컨벤션으로 승격). 반영 3군데: 썸네일(컨벤션)·상세/향배경(무드+오늘의집류)·상품명/태그(SEO). 개입점=대시보드 큐 '벤치마크 리서치 검토' 카드(선택·비강제 #56). E7과 별개 트랙·6축 단일권위 정합.
-> 향 서사 v6=3/3(active 3향·코튼 stock0 제외): E5 backdrop은 향 concept 피사체(레몬+유칼립/블라썸/체리=v5/v6 안정)+mood grade로 조립되어 v5/v6 grade 충돌과 무관하게 동작. ⚠️ 미해결 잔여: 플레이북 §4 grade 서사 v5↔v6(레몬 쿨↔완숙웜 / 에이프릴 디퓨즈↔하이키 / 체리 골든↔로우키) — v6 전체 프롬프트 텍스트 확보 후 §4 갱신(#46 추측금지). "for a small bottle" 전면 제거 확인.
+> 향 서사 v6 해소(2026-06-18 Desktop 실측): v6=레몬 완숙·웜(M4) / 에이프릴 airy 하이키(M5) / 블랙체리 moody 로우키(M6) 확정. E5 variant-concept에 per-scent mood 반영(엔진이 v6-정확 backdrop 생성). v6 향 3컷 operator 생성·ingest 완료=variant_composite 3/3(card auto-dismiss). 플레이북 §4(v5 narrative)는 legacy 참조(엔진 per-scent mood가 forward 권위). "for a small bottle" 전면 제거 확인. april escape(후레쉰 U+C270 vs 후레쉬 U+C26C) ingest 가드로 차단.
 
 
 ### 변경로그
+- 2026-06-18 (세션9·Code/E5 v6 mood+원칙+백로그): E5 per-scent mood(v6 레몬 M4·에이프릴 M5·체리 M6·push 0f9d665·prod variants 3향 v6 grade). 향 서사 v6 해소(Desktop 실측). variant_composite 3/3 LIVE(operator v6 3컷·april escape 가드 차단). 원칙 #102(한국우선 리서치)·#103(SEO 골든키워드)·#104(info-dependency 게이트) 박제. 백로그 INFO-DEP-DESIGN-GATE 등재.
 - 2026-06-17 (세션9·Code/E5 본체+variant 가드·#62): E5 향별 concept 주입(variant-concept.ts optionValue→영어 scene·assembler backdrop 분기 concept+PRODUCT_MARGIN_BLOCK+BACKDROP_EXCLUSION·strategy scent_note 슬롯 variants[]·SlotFunnelBoard 향별 복사). ingest variant 가드(stage=composite+variant 시 in-stock optionValues 대조→불일치 바인딩거부+variantUnmatched·근거 april '후레쉰' 오타 침묵정체). push 1a79bfe·prod 검증 명화 scent_note variants 3향·backdrop concept+margin+제품미피사체·ASCII100%. 원칙 #101(변형 바인딩 검증). v6=3/3 active(concept 피사체 v5/v6 안정·grade 서사 충돌만 미해결). E6→P2.
 - 2026-06-17 (세션9·백로그/E8 v2+SEO 가드): E8→E8 v2(한국 우선 소스티어 T1 NaverSearch→T2 datalab→T3 Pinterest/Google·NaverSearch MCP Tier1 어댑터·benchmarkDna 확장 sourcePriority/commerceConvention/trendKeywords·반영 3군데 썸네일/상세향배경/상품명태그). 신규 SEO-GOLDEN-KEYWORD-GUARD(P1·전상품·datalab 검색량 검증→1위어 누락 시 '상품명 키워드 검증' 카드·명화 즉시해당 차량용누락/송풍구니치·additive·비가역0·네이버무접촉). 둘 다 미착수 백로그. 향 서사 v5/v6 충돌은 미해결 유지(v6 전체텍스트 대기).
 - 2026-06-17 (세션9·Code/프롬프트 결함 A·B·#62): E5 선행 2결함. A=palette 빈값 'in natural' 폴백 제거(MoodAxisData.palette 영문 6무드+assembler axis.palette 폴백+referenceAesthetic 빈값 절 drop). B=병 모호성('for a small bottle'→'no bottle, no container... reserved for later product compositing' positive·#86)·플레이북 §4 4향+구도+spec-data PRODUCT_MARGIN_BLOCK 신설. push ef44fe2. prod 검증 명화 9슬롯 'in natural' 0건·mood palette 정상. repo 'for a small bottle' 잔존0. test 갱신. 향별 concept 주입(E5 본체)·E6·P2=다음.

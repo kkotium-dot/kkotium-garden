@@ -1,3 +1,12 @@
+## 2026-06-18 (세션9-Code) E5 v6 per-scent mood + 한국우선 리서치 codify
+
+**[feat 0f9d665]** E5 per-scent mood: VariantConcept.mood(v6 레몬 M4웜·에이프릴 M5하이키·체리 M6로우키=Desktop 실측 확정)·strategy buildVariants 변형 mood 우선. concept도 v6 정합(ripe sun-yellow lemons / white linen+florals rainy window / deep-crimson cherries dark walnut). prod variants 3향 v6 grade·margin·ASCII100%.
+**[검증·Desktop 핸드오프]** v6 향 3/3 operator 생성·ingest 완료(variant_composite card auto-dismiss). april escape(후레쉰 U+C270 vs 후레쉬 U+C26C) 버그=내 ingest variant 가드(#101)가 정확히 차단하는 클래스. v6 서사 충돌 해소.
+**[codify]** 원칙 #102(한국우선 리서치 2축)·#103(SEO 골든키워드 가드)·#104(info-dependency 디자인게이트+사전생성 자산풀). 백로그 INFO-DEP-DESIGN-GATE. 보드 v6 해소·variant 3/3 LIVE.
+**[next]** [Code] SEO 골든키워드 가드(명화 차량용 누락 즉시)·E6 자산화루프·옵션 3표현 정합. [Desktop] E3/E5 슬롯보드 검증(#88)·defect A micro-check. [결정·대표] PUBLISH-명화·E7.
+
+---
+
 ## 2026-06-17 (세션9-Code) 프롬프트 결함 A(팔레트 디폴트)+B(병 모호성) 전상품 수정
 
 **[fix ef44fe2·#62·E5 선행]** A=palette 빈값 시 'in natural' 폴백 제거: MoodAxisData.palette(영문 6무드) 추가·assembler 폴백을 axis.palette로·referenceAesthetic 빈값 시 'in {x}' 절 drop(빈 fragment 필터). B=병 모호성('breathing room ... for a small bottle'이 모델로 병 그리게 함·Path C 위반·2026-06-17 생성본 확인)→'clean empty negative space ... reserved for later product compositing, no bottle, no container, no product, no diffuser in frame'(positive·#86). 적용: 플레이북 §4 4향+구도 + spec-data PRODUCT_MARGIN_BLOCK 신설(canonical backdrop/scent용). 엔진 assemblePrompt는 bottle 미보유(제품=subject).
