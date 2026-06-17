@@ -259,6 +259,7 @@ export async function GET() {
       line: row.line,
       applyStatus: row.applyStatus,
       actionQueue: row.actionQueue,
+      extraQueue: row.extraQueue,
       mode: modeById.get(row.productId) ?? { recommended: null, score: null, source: null },
       overall: row.overall,
       nextAction: row.nextAction,
