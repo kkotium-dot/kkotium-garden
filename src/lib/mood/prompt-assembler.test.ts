@@ -44,10 +44,13 @@ check('exclusion is positive, no negativePrompt field', () => {
 });
 
 // 3) Defaults applied when product/palette missing (no per-product crash #55).
+// Defect A (#62): an empty palette falls back to the MOOD'S English palette
+// descriptor, never the bare "natural" default that dropped per-variant palette.
 check('defaults applied for empty inputs', () => {
   const a = assemblePrompt({ moodCode: 'M1', product: '' });
   assert.ok(a.prompt.includes('product'), 'falls back to generic product noun');
-  assert.ok(a.prompt.includes('natural'), 'falls back to natural palette');
+  assert.ok(a.prompt.includes(MOOD_AXES.M1.palette), 'falls back to the mood palette, not "natural"');
+  assert.ok(!a.prompt.includes('in natural'), 'never emits the bare "in natural" default');
 });
 
 // 4) Camera-variety guard: a full 6-mood batch passes; a single-default batch

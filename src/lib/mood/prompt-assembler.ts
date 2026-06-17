@@ -26,7 +26,9 @@ function fillSubject(template: string, product: string, palette: string): string
 export function assemblePrompt(input: AssembleInput): AssembledPrompt {
   const axis = selectMoodAxis(input.moodCode);
   const product = (input.product || '').trim() || 'product';
-  const palette = (input.palette || '').trim() || 'natural';
+  // E5 defect A: fall back to the mood's English palette descriptor — never the
+  // bare "natural" default (which dropped every per-variant palette).
+  const palette = (input.palette || '').trim() || axis.palette || 'neutral tones';
 
   // Subject -> Surface -> Light (all carried in the subject template).
   const subject = fillSubject(axis.subjectTemplate, product, palette);
@@ -40,17 +42,23 @@ export function assemblePrompt(input: AssembleInput): AssembledPrompt {
 
   // E4: reference-aesthetic clause — the English "selling tone" the mood's
   // benchmarks embody (benchmarkDna itself is Korean display tags, never
-  // injected). Delivers reference-driven tone with no competitor crawl.
-  const referenceClause = `in ${axis.referenceAesthetic}`;
+  // injected). Delivers reference-driven tone with no competitor crawl. Defect A:
+  // when empty, DROP the clause entirely (never emit a bare "in " token).
+  const refAesthetic = (axis.referenceAesthetic || '').trim();
+  const referenceClause = refAesthetic ? `in ${refAesthetic},` : '';
 
   // Finish: subject -> reference aesthetic -> camera -> fixed grade -> exclusion.
+  // Empty fragments (e.g. dropped reference clause) are filtered out so no stray
+  // separators survive.
   const prompt = [
     `${subject},`,
-    `${referenceClause},`,
+    referenceClause,
     `${cameraClause}.`,
     `${FIXED_GRADE_BLOCK}.`,
     EXCLUSION_BLOCK,
-  ].join(' ');
+  ]
+    .filter((frag) => frag.trim().length > 0)
+    .join(' ');
 
   return {
     moodCode: input.moodCode,

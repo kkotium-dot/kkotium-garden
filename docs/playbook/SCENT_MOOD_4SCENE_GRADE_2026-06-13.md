@@ -49,7 +49,7 @@ AI 회화/유화 마감은 전 자산에서 금지. 예술성(명화)은 **실�
 - 마감: photorealistic still-life photograph, natural light (NO painting / illustration / painterly)
 - 그레이드: filmic color grade, fine photographic grain, matte finish, no oversaturation
 - depth: shallow depth of field, gentle bokeh
-- 구도: 상단중앙 breathing room(병 합성 자리) · 하단 정물 안착 · 하드 차량 엣지 금지
+- 구도: 상단중앙 빈 여백(추후 제품 합성 자리·병/용기/제품 그리지 말 것) · 하단 정물 안착 · 하드 차량 엣지 금지
 - camera standard: Sony A7 / 50mm f/1.8 (4컷 고정)
 - negatives 공통: no people, no text, no logos, no painting, no illustration, no painterly effect
 - negative COTTON 전용: NO flowers (직전 실패=참조로 april 꽃 유입)
@@ -60,22 +60,22 @@ AI 회화/유화 마감은 전 자산에서 금지. 예술성(명화)은 **실�
 
 ### LEMON EUCALYPTUS — 정원의 아침
 ```
-A photorealistic still-life photograph of fresh lemons and eucalyptus sprigs on a pale stone ledge in an early-morning garden, dewdrops catching the first cool sunlight, soft natural mist, palette of light yellow-green and olive, crisp clean morning air, natural light, shallow depth of field with gentle bokeh, fine photographic grain, clean neutral-cool color grade, matte finish, clean breathing room in the upper-center for a small bottle, vertical composition, shot on Sony A7 50mm f/1.8, bright cool morning light. No people, no text, no logos, no painting, no illustration, no painterly effect.
+A photorealistic still-life photograph of fresh lemons and eucalyptus sprigs on a pale stone ledge in an early-morning garden, dewdrops catching the first cool sunlight, soft natural mist, palette of light yellow-green and olive, crisp clean morning air, natural light, shallow depth of field with gentle bokeh, fine photographic grain, clean neutral-cool color grade, matte finish, clean empty negative space in the upper-center reserved for later product compositing, no bottle, no container, no product, no diffuser in frame, vertical composition, shot on Sony A7 50mm f/1.8, bright cool morning light. No people, no text, no logos, no painting, no illustration, no painterly effect.
 ```
 
 ### COTTON AROUND — 볕에 마른 면(린넨)
 ```
-A photorealistic still-life photograph of crisp folded white linen and cotton fabric on a sunlit wooden surface near a bright window, soft warm midday sunlight, gentle natural fabric shadows, palette of warm cream beige and tan, clean fresh-laundry feeling, natural light, shallow depth of field, fine photographic grain, clean bright color grade, matte finish, clean breathing room in the upper-center for a small bottle, vertical composition, shot on Sony A7 50mm f/1.8, bright high-key midday light. No flowers, no people, no text, no logos, no painting, no illustration, no painterly effect.
+A photorealistic still-life photograph of crisp folded white linen and cotton fabric on a sunlit wooden surface near a bright window, soft warm midday sunlight, gentle natural fabric shadows, palette of warm cream beige and tan, clean fresh-laundry feeling, natural light, shallow depth of field, fine photographic grain, clean bright color grade, matte finish, clean empty negative space in the upper-center reserved for later product compositing, no bottle, no container, no product, no diffuser in frame, vertical composition, shot on Sony A7 50mm f/1.8, bright high-key midday light. No flowers, no people, no text, no logos, no painting, no illustration, no painterly effect.
 ```
 
 ### APRIL FRESH — 비 갠 꽃밭
 ```
-A photorealistic still-life photograph of soft pastel spring blossoms with clean water droplets on the petals on a misty surface just after rain has cleared, diffused clearing afternoon light, palette of cream and soft rose-mauve, fresh dewy after-rain air, natural light, shallow depth of field with gentle bokeh, fine photographic grain, clean neutral color grade, matte finish, clean breathing room in the upper-center for a small bottle, vertical composition, shot on Sony A7 50mm f/1.8, soft afternoon light. No people, no text, no logos, no painting, no illustration, no painterly effect.
+A photorealistic still-life photograph of soft pastel spring blossoms with clean water droplets on the petals on a misty surface just after rain has cleared, diffused clearing afternoon light, palette of cream and soft rose-mauve, fresh dewy after-rain air, natural light, shallow depth of field with gentle bokeh, fine photographic grain, clean neutral color grade, matte finish, clean empty negative space in the upper-center reserved for later product compositing, no bottle, no container, no product, no diffuser in frame, vertical composition, shot on Sony A7 50mm f/1.8, soft afternoon light. No people, no text, no logos, no painting, no illustration, no painterly effect.
 ```
 
 ### BLACK CHERRY — 늦은 오후 과수원
 ```
-A photorealistic still-life photograph of ripe dark cherries with subtle woody branches on a rustic surface in an orchard at golden hour, warm low dusk sunlight, deep cozy atmosphere, palette of warm beige terracotta and deep wine-red, sweet ripe richness, natural light, shallow depth of field with warm bokeh, fine photographic grain, warm golden color grade, matte finish, clean breathing room in the upper-center for a small bottle, vertical composition, shot on Sony A7 50mm f/1.8, golden-hour low warm light. No people, no text, no logos, no painting, no illustration, no painterly effect.
+A photorealistic still-life photograph of ripe dark cherries with subtle woody branches on a rustic surface in an orchard at golden hour, warm low dusk sunlight, deep cozy atmosphere, palette of warm beige terracotta and deep wine-red, sweet ripe richness, natural light, shallow depth of field with warm bokeh, fine photographic grain, warm golden color grade, matte finish, clean empty negative space in the upper-center reserved for later product compositing, no bottle, no container, no product, no diffuser in frame, vertical composition, shot on Sony A7 50mm f/1.8, golden-hour low warm light. No people, no text, no logos, no painting, no illustration, no painterly effect.
 ```
 
 ---

@@ -33,6 +33,10 @@ export interface MoodAxisData {
   // those benchmarks embody, spliced into the prompt to deliver the "selling
   // tone" without a competitor crawl. All-products (#55).
   referenceAesthetic: string;
+  // English fallback palette descriptor (#62 E5 defect A). Used to fill the
+  // [palette] slot when the product/variant carries no ASCII palette — so the
+  // prompt never degrades to the bare "natural" default.
+  palette: string;
   // Subject + surface + light only (camera clause is appended by the assembler
   // from the camera spec, so a single default camera can never be baked in #84).
   subjectTemplate: string;

@@ -23,6 +23,17 @@ export const EXCLUSION_BLOCK =
   'plain uncluttered background, realistic photograph only. ' +
   'no on-image text, no logos, no human figures, no illustration or painting.';
 
+// Product-margin reservation (#62 defect B). For BACKDROP / scent-scene slots
+// that composite the real product in LATER: the previous phrasing "breathing
+// room ... for a small bottle" made the model DRAW a bottle (Path C violation,
+// confirmed in a 2026-06-17 generation), erasing the compositing space. This is
+// the canonical safe phrasing — positive exclusion only, NO negativePrompt field
+// (#86). Use it for backdrop/scent paths; NOT for hero/thumbnail where the
+// product IS the subject.
+export const PRODUCT_MARGIN_BLOCK =
+  'clean empty negative space in the upper area reserved for later product ' +
+  'compositing, no bottle, no container, no product, no diffuser in frame';
+
 // The six axes with their camera specs and subject templates. Korean only in
 // nameKo / conversionJob / benchmarkDna (display); all prompt fragments English.
 export const MOOD_AXES: Record<MoodCode, MoodAxisData> = {
@@ -32,6 +43,7 @@ export const MOOD_AXES: Record<MoodCode, MoodAxisData> = {
     conversionJob: '안전·청결·순함',
     benchmarkDna: ['무인양품', '이솝'],
     referenceAesthetic: 'the clean, minimal, trustworthy premium-retail aesthetic',
+    palette: 'soft neutral whites and cool greys',
     subjectTemplate:
       'A [product] in soft [palette] tones on a smooth white seamless surface, ' +
       'lit by a single large softbox creating near-shadowless even light',
@@ -52,6 +64,7 @@ export const MOOD_AXES: Record<MoodCode, MoodAxisData> = {
     conversionJob: '우리 집이 이렇게',
     benchmarkDna: ['오늘의집', '29CM'],
     referenceAesthetic: 'an aspirational, editorial, design-forward lifestyle aesthetic',
+    palette: 'warm sunlit neutrals and soft wood tones',
     subjectTemplate:
       'A [product] styled in a sunlit modern home corner with subtle props, ' +
       'soft window daylight from camera left with warm ambient glow, editorial lifestyle mood',
@@ -72,6 +85,7 @@ export const MOOD_AXES: Record<MoodCode, MoodAxisData> = {
     conversionJob: '정확히 보임·빠름',
     benchmarkDna: ['컬리', '쿠팡'],
     referenceAesthetic: 'a crisp, accurate, information-first commerce aesthetic',
+    palette: 'clean true whites and crisp neutrals',
     subjectTemplate:
       'A [product] in [palette] centered on a pure white background, ' +
       'even multi-source shadowless lighting, true accurate color, e-commerce catalog clarity',
@@ -92,6 +106,7 @@ export const MOOD_AXES: Record<MoodCode, MoodAxisData> = {
     conversionJob: '포근·위안·사람냄새',
     benchmarkDna: ['29CM', '오늘의집'],
     referenceAesthetic: 'a warm, cozy, homely curated-living aesthetic',
+    palette: 'warm amber, caramel and soft wood tones',
     subjectTemplate:
       'A [product] in [palette] tones on a warm wooden surface in cozy domestic light, ' +
       'warm side window light with long soft shadows, amber matte tone',
@@ -112,6 +127,7 @@ export const MOOD_AXES: Record<MoodCode, MoodAxisData> = {
     conversionJob: '명랑·선물하기 좋음',
     benchmarkDna: ['밝은 라이프스타일'],
     referenceAesthetic: 'a bright, playful, vibrant gift-ready lifestyle aesthetic',
+    palette: 'bright cheerful pastels',
     subjectTemplate:
       'A [product] in cheerful [palette] on a bright pastel surface, cheerful even daylight',
     camera: {
@@ -131,6 +147,7 @@ export const MOOD_AXES: Record<MoodCode, MoodAxisData> = {
     conversionJob: '고급·값어치',
     benchmarkDna: ['이솝', '29CM'],
     referenceAesthetic: 'a refined, luxurious, premium-boutique craft aesthetic',
+    palette: 'deep muted tones with refined contrast',
     subjectTemplate:
       'A [product] in [palette] on a deep muted backdrop, ' +
       'directional chiaroscuro lighting with controlled contrast, premium craft mood',
