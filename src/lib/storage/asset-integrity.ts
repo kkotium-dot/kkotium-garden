@@ -377,6 +377,43 @@ export async function fixProductIntegrity(productId: string): Promise<IntegrityF
 // archive = move (reversible), clear = delete a stale row. Idempotent.
 // ----------------------------------------------------------------------------
 
+/**
+ * Archive specific REGISTERED assets by registry id (#62 cleanup util). Moves
+ * each asset's storage file into {pid}/archive/ and flips its registry row to
+ * stage='archive' (path updated). Ordered (move -> DB) and idempotent (a row
+ * already at stage='archive' is skipped). Reversible; gate callers on confirm
+ * (#46). Used to retire wrong-variant / superseded / test composites so the
+ * asset-integrity + variant cards clear. Product-scoped (never crosses products).
+ */
+export async function archiveAssets(
+  productId: string,
+  registryIds: string[],
+): Promise<{ archived: number; skipped: Array<{ id: string; reason: string }> }> {
+  let archived = 0;
+  const skipped: Array<{ id: string; reason: string }> = [];
+  for (const id of registryIds) {
+    const row = await prisma.assetRegistry.findUnique({ where: { id } }).catch(() => null);
+    if (!row || row.productId !== productId) {
+      skipped.push({ id, reason: 'not found for product' });
+      continue;
+    }
+    if (row.stage === 'archive') {
+      skipped.push({ id, reason: 'already archived' });
+      continue;
+    }
+    const fileName = row.path.slice(row.path.lastIndexOf('/') + 1);
+    const toPath = `${productId}/archive/${fileName}`;
+    if (row.path !== toPath) {
+      await moveAutomationAsset(row.path, toPath).catch(async () => {
+        // Source already gone (a prior partial run) — proceed to flip the row.
+      });
+    }
+    await prisma.assetRegistry.update({ where: { id }, data: { stage: 'archive', path: toPath } });
+    archived += 1;
+  }
+  return { archived, skipped };
+}
+
 export interface ReconcileDecisions {
   /** storage-only paths to register into asset_registry (keepers). */
   register?: string[];

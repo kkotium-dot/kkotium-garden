@@ -16,6 +16,7 @@ import {
   checkProductIntegrity,
   fixProductIntegrity,
   reconcileRegistryDrift,
+  archiveAssets,
   type AssetIntegrityReport,
   type ReconcileDecisions,
 } from '@/lib/storage/asset-integrity';
@@ -115,7 +116,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  let body: { action?: string; confirm?: boolean; ratio?: boolean; decisions?: ReconcileDecisions } = {};
+  let body: { action?: string; confirm?: boolean; ratio?: boolean; decisions?: ReconcileDecisions; registryIds?: string[] } = {};
   try {
     body = await request.json();
   } catch {
@@ -152,6 +153,19 @@ export async function POST(
       const result = await reconcileRegistryDrift(params.id, body.decisions ?? {});
       const carded = await syncCard(result.after);
       return NextResponse.json({ success: true, result, carded });
+    }
+    if (action === 'archive') {
+      if (!body.confirm) {
+        return NextResponse.json(
+          { success: false, error: 'archive는 confirm:true가 필요합니다' },
+          { status: 400 },
+        );
+      }
+      const result = await archiveAssets(params.id, body.registryIds ?? []);
+      const report = await checkProductIntegrity(params.id);
+      const carded = await syncCard(report);
+      const coverage = await syncVariantCompositeCard(params.id).catch(() => null);
+      return NextResponse.json({ success: true, result, carded, coverage });
     }
     return NextResponse.json({ success: false, error: `알 수 없는 action: ${action}` }, { status: 400 });
   } catch (e: unknown) {
