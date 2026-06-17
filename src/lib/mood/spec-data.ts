@@ -34,6 +34,14 @@ export const PRODUCT_MARGIN_BLOCK =
   'clean empty negative space in the upper area reserved for later product ' +
   'compositing, no bottle, no container, no product, no diffuser in frame';
 
+// Backdrop-scene exclusion (#62 E5). Like EXCLUSION_BLOCK but WITHOUT the
+// "containing only the product" clause — a scent backdrop has no product in
+// frame (it is composited in later). Keeps the "realistic photograph only"
+// marker the exclusionsPresent guard checks. Positive only (#86).
+export const BACKDROP_EXCLUSION_BLOCK =
+  'clean composition, plain uncluttered background, realistic photograph only. ' +
+  'no on-image text, no logos, no human figures, no illustration or painting.';
+
 // The six axes with their camera specs and subject templates. Korean only in
 // nameKo / conversionJob / benchmarkDna (display); all prompt fragments English.
 export const MOOD_AXES: Record<MoodCode, MoodAxisData> = {

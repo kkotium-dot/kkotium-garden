@@ -49,6 +49,13 @@ export interface AssembleInput {
   product: string;     // subject noun (e.g. "ceramic diffuser")
   palette?: string;    // palette descriptor (e.g. "warm beige")
   categoryTags?: string[];
+  // E5 (#62): per-variant scene concept (e.g. "fresh lemons and eucalyptus").
+  // When set with reserveProductMargin, the prompt becomes a product-free
+  // backdrop scene (the product is composited in later).
+  concept?: string;
+  // E5 (#62): reserve empty space for later product compositing and drop the
+  // product from the scene (backdrop / scent-note slots).
+  reserveProductMargin?: boolean;
 }
 
 export interface AssembledPrompt {

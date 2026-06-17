@@ -20,6 +20,10 @@ import { deriveProductSignals } from '@/lib/engine/slot-decision-table';
 import { loadAndEvaluateProducts } from '@/lib/automation/load-publish-readiness';
 import { evaluateOriginTruth } from '@/lib/naver/product-builder';
 import { englishSubjectFor } from '@/lib/engine/category-subject';
+import { getActiveVariants } from '@/lib/storage/variant-coverage';
+import { variantConceptFor } from '@/lib/engine/variant-concept';
+import { assemblePrompt } from '@/lib/mood/prompt-assembler';
+import type { MoodCode } from '@/lib/mood/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,9 +63,29 @@ export async function GET(req: NextRequest) {
 
     // Per-slot view: merge plan (job + lane + sections) with the assembled
     // strategy (model + grounding + prompt). Truncate the prompt for the board.
+    // E5 (#62): per-variant scene concepts for the variant-bearing slot
+    // (scent_note). Each in-stock option value gets its own product-free backdrop
+    // prompt (concept + mood grade + reserved compositing margin).
+    const activeVariants = await getActiveVariants(productId).catch(() => [] as string[]);
+    const subject = englishSubjectFor(categoryCode);
+    const buildVariants = (slotType: string, mood: MoodCode) => {
+      if (slotType !== 'scent_note' || activeVariants.length === 0) return undefined;
+      return activeVariants.map((ov) => {
+        const concept = variantConceptFor(ov)?.concept;
+        const assembled = assemblePrompt({
+          moodCode: mood,
+          product: subject,
+          concept,
+          reserveProductMargin: true,
+        });
+        return { optionValue: ov, concept: concept ?? null, resolvedPrompt: assembled.prompt };
+      });
+    };
+
     const planByType = new Map(plan.map((p) => [p.slotType, p]));
     const slots = strategy.slots.map((s) => {
       const p = planByType.get(s.slotType);
+      const variants = buildVariants(s.slotType, s.mood);
       return {
         slotType: s.slotType,
         required: s.required,
@@ -81,6 +105,9 @@ export async function GET(req: NextRequest) {
         resolvedPrompt: s.resolvedPrompt,
         resolution: s.resolution,
         cameraKey: s.cameraKey,
+        // E5 (#62): per-variant backdrop prompts (scent_note only). undefined for
+        // non-variant slots / single-product (no behavior change for those).
+        ...(variants ? { variants } : {}),
       };
     });
 

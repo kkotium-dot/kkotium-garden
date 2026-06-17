@@ -380,7 +380,8 @@
       "copyPrompt": "프롬프트 복사",
       "copied": "복사됨",
       "settingsCard": "추천 생성 설정",
-      "settingsHint": "Firefly를 이 설정에 맞추세요"
+      "settingsHint": "Firefly를 이 설정에 맞추세요",
+      "variants": "향별 대표 컷 프롬프트"
     },
     "gate": {
       "title": "발행 전 정책 게이트",

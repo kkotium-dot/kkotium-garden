@@ -60,6 +60,19 @@ function activeVariantsFromOptions(options: unknown): string[] {
   return out;
 }
 
+/**
+ * In-stock variant option values for a product (Product.options, stock>0). Light
+ * (no storage listing) — used by the ingest variant guard and per-scent slot
+ * expansion. Empty for products without in-stock options.
+ */
+export async function getActiveVariants(productId: string): Promise<string[]> {
+  const product = (await prisma.product.findUnique({
+    where: { id: productId },
+    select: { options: true },
+  })) as { options: unknown } | null;
+  return activeVariantsFromOptions(product?.options);
+}
+
 export async function computeVariantCoverage(productId: string): Promise<VariantCoverage> {
   const product = (await prisma.product.findUnique({
     where: { id: productId },

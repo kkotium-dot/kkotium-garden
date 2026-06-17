@@ -145,6 +145,27 @@ export default function SlotFunnelBoard({ slots, loading, degraded }: SlotFunnel
           </div>
           <p style={{ margin: '4px 0 0', fontSize: 9, color: 'var(--gp-ink-500)' }}>{c.settingsHint}</p>
         </div>
+
+        {activeSlot.variants && activeSlot.variants.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: 'var(--gp-ink-700)' }}>
+              <Layers size={11} /> {c.variants} ({activeSlot.variants.length})
+            </span>
+            <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {activeSlot.variants.map((v) => (
+                <div key={v.optionValue} style={{ padding: 6, borderRadius: 6, background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <strong style={{ fontSize: 11, color: 'var(--gp-ink-900)' }}>{v.optionValue}</strong>
+                    <PromptCopyButton text={v.resolvedPrompt} />
+                  </div>
+                  <p style={{ margin: '3px 0 0', fontSize: 10, lineHeight: 1.45, color: 'var(--gp-ink-500)', fontFamily: 'var(--font-mono, monospace)', whiteSpace: 'pre-wrap' }}>
+                    {v.resolvedPrompt}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </Shell>
   );

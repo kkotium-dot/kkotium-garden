@@ -8,7 +8,7 @@
 //   usesNegativePromptField: false as a literal guard.
 
 import { selectMoodAxis } from './decision-table';
-import { EXCLUSION_BLOCK, FIXED_GRADE_BLOCK } from './spec-data';
+import { EXCLUSION_BLOCK, FIXED_GRADE_BLOCK, BACKDROP_EXCLUSION_BLOCK, PRODUCT_MARGIN_BLOCK } from './spec-data';
 import type { AssembledPrompt, AssembleInput } from './types';
 
 /** Fill [product] / [palette] placeholders in a subject template. */
@@ -30,8 +30,13 @@ export function assemblePrompt(input: AssembleInput): AssembledPrompt {
   // bare "natural" default (which dropped every per-variant palette).
   const palette = (input.palette || '').trim() || axis.palette || 'neutral tones';
 
-  // Subject -> Surface -> Light (all carried in the subject template).
-  const subject = fillSubject(axis.subjectTemplate, product, palette);
+  // E5 (#62): a per-variant backdrop scene — the concept IS the subject and the
+  // product is reserved as empty compositing space (not drawn). Otherwise the
+  // standard product-as-subject template.
+  const backdrop = !!input.reserveProductMargin && !!(input.concept || '').trim();
+  const subject = backdrop
+    ? `A photorealistic still-life scene of ${(input.concept || '').trim()} in ${palette} tones`
+    : fillSubject(axis.subjectTemplate, product, palette);
 
   // Lens / Camera (Layer 1 lookup) — never a single baked default (#84). E1:
   // resolution is now spliced in (was encoded in the spec but never reaching the
@@ -49,13 +54,15 @@ export function assemblePrompt(input: AssembleInput): AssembledPrompt {
 
   // Finish: subject -> reference aesthetic -> camera -> fixed grade -> exclusion.
   // Empty fragments (e.g. dropped reference clause) are filtered out so no stray
-  // separators survive.
+  // separators survive. Backdrop slots reserve product margin and use the
+  // product-free exclusion (#62 E5).
   const prompt = [
     `${subject},`,
     referenceClause,
     `${cameraClause}.`,
     `${FIXED_GRADE_BLOCK}.`,
-    EXCLUSION_BLOCK,
+    backdrop ? `${PRODUCT_MARGIN_BLOCK}.` : '',
+    backdrop ? BACKDROP_EXCLUSION_BLOCK : EXCLUSION_BLOCK,
   ]
     .filter((frag) => frag.trim().length > 0)
     .join(' ');

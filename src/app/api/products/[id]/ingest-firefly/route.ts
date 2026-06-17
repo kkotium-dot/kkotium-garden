@@ -46,7 +46,7 @@ import { classifyAsset } from '@/lib/storage/asset-classify';
 import { parseAssetTokens, buildAssetVariant, type AssetTokens } from '@/lib/storage/asset-naming';
 import { ratioSlotForStage } from '@/lib/config/image-slot-matrix';
 import { conformToSlotRatio } from '@/lib/images/slot-ratio';
-import { syncVariantCompositeCard } from '@/lib/storage/variant-coverage';
+import { syncVariantCompositeCard, getActiveVariants } from '@/lib/storage/variant-coverage';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -200,7 +200,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const tokens: AssetTokens = parseAssetTokens(filename);
   const variant = buildAssetVariant(tokens, safeVariant(baseName, 'firefly'));
   // Option-variant binding (#62 P2) — distinct from the storage-path slug above.
-  const optionVariant = (body.variant ?? '').toString().trim() || null;
+  const requestedVariant = (body.variant ?? '').toString().trim() || null;
+  // E5 ingest guard (#62): a composite variant binding MUST match an in-stock
+  // option value. A typo (e.g. "후레쉰" vs "후레쉬") used to register silently and
+  // never count toward coverage — leaving a variant permanently uncovered. We
+  // refuse to BIND an unmatched variant (the file still ingests, but variant=null
+  // so coverage stays truthful) and surface variantUnmatched + the valid options.
+  let optionVariant: string | null = requestedVariant;
+  let variantUnmatched = false;
+  let validVariants: string[] = [];
+  if (requestedVariant && stage === 'composite') {
+    validVariants = await getActiveVariants(productId).catch(() => [] as string[]);
+    if (validVariants.length > 0 && !validVariants.includes(requestedVariant)) {
+      variantUnmatched = true;
+      optionVariant = null; // do not bind a non-existent variant
+    }
+  }
 
   const normalizeOff = body.normalize === false;
 
@@ -281,6 +296,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       contentStage: classification.contentStage,
       tokens,
       variant,
+      // E5 ingest guard (#62): the bound option variant (null when unmatched), the
+      // unmatched flag, and the valid in-stock options so a typo surfaces instead
+      // of silently registering an uncovered variant.
+      optionVariant,
+      requestedVariant,
+      variantUnmatched,
+      ...(variantUnmatched ? { validVariants } : {}),
       width,
       height,
       normalized,

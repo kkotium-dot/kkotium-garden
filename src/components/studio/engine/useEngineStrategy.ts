@@ -24,6 +24,8 @@ export interface EngineSlotView {
   resolvedPrompt?: string;
   resolution?: string;
   cameraKey: string;
+  // E5 (#62) — per-variant backdrop prompts (scent_note slot only).
+  variants?: Array<{ optionValue: string; concept: string | null; resolvedPrompt: string }>;
 }
 
 export interface EngineDnaView {
