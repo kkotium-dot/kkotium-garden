@@ -502,7 +502,11 @@ const IV = m.intervention as {
   dna_confirm: { label: string; lead: string; category: string; version: string; reasonStale: string; reasonNew: string };
   variant_select: { label: string; lead: string; slot: string; candidates: string; recommended: string };
   category_dna_unseeded: { label: string; lead: string; category: string };
-  registry_drift: { label: string; lead: string; storageOnly: string; registryOnly: string; undefinedStages: string; samples: string; hint: string };
+  registry_drift: {
+    label: string; lead: string; storageOnly: string; registryOnly: string; undefinedStages: string; samples: string; hint: string;
+    review: string; register: string; archive: string; clear: string; registerAll: string; archiveAll: string; clearAll: string;
+    working: string; done: string; fail: string; confirmArchive: string; none: string; storageGroup: string; registryGroup: string;
+  };
 };
 
 function interventionLabel(type: string | undefined): string | null {
@@ -593,6 +597,113 @@ function AssetIntegrityFix({ productId, onRefresh }: { productId: string; onRefr
         {busy ? IV.asset_integrity.fixing : IV.asset_integrity.fix}
       </button>
       {msg && <span className="text-[10px] text-slate-500">{msg}</span>}
+    </div>
+  );
+}
+
+// REGISTRY<->STORAGE per-orphan reconcile (#62 P2). Loads the full drift on
+// demand, then lets the operator decide register-vs-archive per storage-only
+// orphan (or clear a registry-only orphan). Posts to the reconcile route
+// (confirm-gated, #46), then refreshes so the card clears once reconciled.
+function RegistryDriftReconcile({ productId, onRefresh }: { productId: string; onRefresh?: () => void }) {
+  const t = IV.registry_drift;
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [storageOnly, setStorageOnly] = useState<string[]>([]);
+  const [registryOnly, setRegistryOnly] = useState<string[]>([]);
+
+  const load = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      const res = await fetch(`/api/products/${productId}/asset-integrity`).then((r) => r.json());
+      const d = res?.report?.registryDrift;
+      setStorageOnly((d?.storageOnly ?? []).map((o: { path: string }) => o.path));
+      setRegistryOnly((d?.registryOnly ?? []).map((o: { path: string }) => o.path));
+      setOpen(true);
+    } catch { setMsg(t.fail); } finally { setBusy(false); }
+  };
+
+  const reconcile = async (decisions: { register?: string[]; archive?: string[]; clearRegistry?: string[] }, confirmArchive = false) => {
+    if (confirmArchive && !window.confirm(t.confirmArchive)) return;
+    setBusy(true); setMsg(null);
+    try {
+      const res = await fetch(`/api/products/${productId}/asset-integrity`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reconcile', confirm: true, decisions }),
+      }).then((r) => r.json());
+      if (res.success) {
+        const d = res?.result?.after?.registryDrift;
+        setStorageOnly((d?.storageOnly ?? []).map((o: { path: string }) => o.path));
+        setRegistryOnly((d?.registryOnly ?? []).map((o: { path: string }) => o.path));
+        setMsg(t.done);
+        setTimeout(() => onRefresh?.(), 600);
+      } else { setMsg(t.fail); }
+    } catch { setMsg(t.fail); } finally { setBusy(false); }
+  };
+
+  const base = (p: string) => p.split('/').pop() ?? p;
+
+  if (!open) {
+    return (
+      <button type="button" disabled={busy} onClick={load}
+        className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-slate-700 px-2 py-1 text-[11px] font-semibold text-white hover:bg-slate-800 disabled:opacity-60">
+        {busy ? <Clock size={11} className="animate-spin" /> : <Wrench size={11} />}{t.review}
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-1.5 space-y-2">
+      {storageOnly.length === 0 && registryOnly.length === 0 && <p className="text-[10px] text-slate-400">{t.none}</p>}
+
+      {storageOnly.length > 0 && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-semibold text-slate-500">{t.storageGroup} ({storageOnly.length})</span>
+            <div className="flex gap-1">
+              <button type="button" disabled={busy} onClick={() => reconcile({ register: storageOnly })}
+                className="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">{t.registerAll}</button>
+              <button type="button" disabled={busy} onClick={() => reconcile({ archive: storageOnly }, true)}
+                className="rounded bg-amber-600 px-1.5 py-0.5 text-[10px] font-semibold text-white hover:bg-amber-700 disabled:opacity-60">{t.archiveAll}</button>
+            </div>
+          </div>
+          <ul className="max-h-40 space-y-0.5 overflow-y-auto">
+            {storageOnly.map((p) => (
+              <li key={p} className="flex items-center justify-between gap-2 rounded bg-slate-50 px-1.5 py-0.5">
+                <code className="truncate text-[10px] text-slate-600">{base(p)}</code>
+                <div className="flex shrink-0 gap-1">
+                  <button type="button" disabled={busy} onClick={() => reconcile({ register: [p] })}
+                    className="rounded px-1 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-60">{t.register}</button>
+                  <button type="button" disabled={busy} onClick={() => reconcile({ archive: [p] }, true)}
+                    className="rounded px-1 py-0.5 text-[10px] font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-60">{t.archive}</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {registryOnly.length > 0 && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-semibold text-slate-500">{t.registryGroup} ({registryOnly.length})</span>
+            <button type="button" disabled={busy} onClick={() => reconcile({ clearRegistry: registryOnly })}
+              className="rounded bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white hover:bg-rose-700 disabled:opacity-60">{t.clearAll}</button>
+          </div>
+          <ul className="max-h-32 space-y-0.5 overflow-y-auto">
+            {registryOnly.map((p) => (
+              <li key={p} className="flex items-center justify-between gap-2 rounded bg-slate-50 px-1.5 py-0.5">
+                <code className="truncate text-[10px] text-slate-600">{base(p)}</code>
+                <button type="button" disabled={busy} onClick={() => reconcile({ clearRegistry: [p] })}
+                  className="rounded px-1 py-0.5 text-[10px] font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60">{t.clear}</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {(busy || msg) && <span className="text-[10px] text-slate-500">{busy ? t.working : msg}</span>}
     </div>
   );
 }
@@ -844,7 +955,9 @@ function InterventionDetail({ type, payload, productId, onRefresh }: { type: str
         {rd?.sampleFiles && rd.sampleFiles.length > 0 && (
           <p className="truncate text-[10px] text-slate-400">{t.samples}: {rd.sampleFiles.join(', ')}</p>
         )}
-        <p className="text-[10px] text-slate-400">{t.hint}</p>
+        {productId
+          ? <RegistryDriftReconcile productId={productId} onRefresh={onRefresh} />
+          : <p className="text-[10px] text-slate-400">{t.hint}</p>}
       </div>
     );
   }
