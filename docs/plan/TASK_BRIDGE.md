@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-17 (103) 엔진 프롬프트 last-mile E1·E2·E3·E4 (FROM 💻 Code, main 8eadbbb, additive·비가역0·네이버 무접촉)
+- **Target**: Claude Code CLI · 권위 docs/handoff/HANDOFF_2026-06-17_engine-prompt-gap-verdict-and-consolidation-plan.md. 전상품(#55/#62). queue-masking과 의존성 0(병렬).
+- **진단(Desktop)**: 6축 엔진 resolvedPrompt 조립하나 마지막 1마일 끊김 — resolution 미주입·한글 subject 누수·benchmarkDna 미주입·슬롯보드 280자 프리뷰만. 두 프롬프트 엔진(System1/System2) 미병합.
+- **DONE (P0 4건·additive)**: E1 resolution→assemblePrompt cameraClause(2K/4K 도달). E2 category-subject.ts(naverCategoryCode→영어 subject·전상품·fallback 'product')→strategy route product.name(한글) 교체. E3 engine/strategy 응답 full resolvedPrompt+resolution + SlotFunnelBoard 전체프롬프트+1클릭복사+추천설정카드(모델/그라운딩/비율/해상도·#56 운영자 복사). E4 MoodAxisData.referenceAesthetic(영어 6무드)+프롬프트 주입(benchmarkDna 한글 display 유지).
+- **검증 (prod)**: 명화 strategy 9슬롯·slot0 full resolvedPrompt 695자(>280)·resolution 4K·ASCII100%(subject 'car air-vent fragrance diffuser'·한글누수0)·aesthetic절. tsc0·build0·test PASS(prompt/strategy/thumbnail)·이모지0·신규한글리터럴0. E3 UI 렌더(복사+설정카드)=Desktop 브라우저(#88).
+- **패치 위치**: src/lib/mood/{types,spec-data,prompt-assembler}.ts · src/lib/engine/{types,strategy-assembler,category-subject}.ts · src/app/api/engine/strategy/route.ts · src/components/studio/engine/{useEngineStrategy,SlotFunnelBoard}.tsx · src/lib/i18n/studio-strings.ko.json.
+- **PENDING (로드맵)**: E5 per-scent concept input(P1)·E6 assetization 폐루프(P1)·E7 엔진통합(P1·★비가역=구조PR 전 Desktop/대표 확인)·E8 경쟁 teardown(P2)·E9 프롬프트 성능학습(P2).
+- **다음 1액션**: [Desktop] E3 슬롯보드 브라우저 렌더 검증(/studio 이미지탭·전체프롬프트+복사 동작+설정카드·#88). [Code] E5/E6 착수(additive) · E7 구조 PR은 확인 후. [결정·대표] E7 단일 프롬프트 권위 통합 GO.
+
+
 ### 2026-06-17 (102) 개입 대기열 큐 마스킹 수정 — 상품당 다중 카드 스택 (FROM 💻 Code, main a91156d, additive·비가역0·P0)
 - **Target**: Claude Code CLI · Desktop P0 적발(명화 2개 awaiting_human인데 대기열 1개만·자산 정합 마스킹).
 - **DONE**: 근본=상품당 1카드 노출(route interventionById 첫잡만 + ControlTowerRow.actionQueue 단수 + widget map 1). 수정 2커밋(389fecb+a91156d): route asset-jobs-matrix 전체 개입 수집(interventionsById·타입별 dedup·primary[0]+extra[1:]) → ComputeContext.imageJobInterventionsExtra + ControlTowerRow.extraQueue(computeProductRow이 extra별 precise 카드 생성) → widget flatMap(actionQueue+extraQueue)·key=productId+type(충돌방지) → ★응답 매핑에 extraQueue 추가(엔진 구성만으론 미전달, 1차 누락 보강).

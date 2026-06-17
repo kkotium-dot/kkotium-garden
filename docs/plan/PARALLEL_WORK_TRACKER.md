@@ -30,7 +30,23 @@
 - 결정 대기(대표): CAPTURE-METHOD(3h) · PUBLISH-명화 2건 확인 (ICE-TRAY-DNA=검증완·종결 / UNSEEDED-BACKLOG-BADGE=Stage2 백로그)
 - 검증 대기: ENG-1(브라우저 3탭) · CUT34-EVAL(슬롯 재배치)
 
+### 엔진 프롬프트 last-mile (E1-E9 · 전상품 #62 · 권위 docs/handoff/HANDOFF_2026-06-17_engine-prompt-gap-verdict-and-consolidation-plan.md)
+> 진단(Desktop #45): 6축 엔진이 resolvedPrompt 조립하나 마지막 1마일 끊김 — 두 프롬프트 엔진(System1 art-director / System2 6축) 미병합·엔진 값이 이미지에 미도달.
+
+| ID | 우선 | 레인 | 전상품 | 작업 | 상태 |
+|---|---|---|---|---|---|
+| E1 | P0 | Code | ✅ | resolution→prompt(cameraClause 2K/4K 도달) | 완료·검증완(prod 4K) |
+| E2 | P0 | Code | ✅ | productSubject 한글누수 제거(category-subject 영어맵) | 완료·검증완(prod ASCII100%) |
+| E3 | P0 | Code | ✅ | SlotFunnelBoard full prompt+복사+추천설정카드 | 완료(데이터 검증완)·UI렌더=Desktop#88 |
+| E4 | P0 | Code | ✅ | reference-aesthetic 영어절 주입(benchmarkDna는 display 유지) | 완료·검증완(prod aesthetic절) |
+| E5 | P1 | Code | ✅ | per-scent/product concept input(변형별 subject 템플릿) | 미착수 |
+| E6 | P1 | Code | ✅ | assetization 폐루프(persistStrategy·PromptVersion·SlotGeneration↔asset 링크) | 미착수 |
+| E7 | P1 | Code | ✅ | 엔진 통합(ConceptTone/role→signals·단일 프롬프트 권위·System1 retire) ★비가역=구조PR 전 Desktop/대표 확인 | 미착수(확인 게이트) |
+| E8 | P2 | Code | ✅ | 경쟁 썸네일 teardown→DNA thumbnailConventions 갱신 | 미착수 |
+| E9 | P2 | Code | ✅ | 프롬프트 성능학습(CTR/CVR per PromptVersion→auto-promote) | 미착수 |
+
 ### 변경로그
+- 2026-06-17 (세션9·Code/ENGINE-PROMPT E1-E4·#62): Desktop engine-prompt-gap 감사 반영. E1 resolution→prompt·E2 한글 subject 누수제거(category-subject 영어맵)·E3 슬롯보드 full prompt+복사+추천설정카드(engine/strategy 응답 full resolvedPrompt+resolution)·E4 reference-aesthetic 영어절 주입(benchmarkDna display 유지). push 8eadbbb. prod 검증: 명화 슬롯 full prompt 695자·4K·ASCII100%(영어 subject 'car air-vent fragrance diffuser')·aesthetic절. E5-E9 로드맵 등재(E7 비가역=구조PR 전 확인). E3 UI 렌더=Desktop #88.
 - 2026-06-17 (세션9·Code/QUEUE-MASKING-FIX·P0·#56): Desktop 적발 — 명화 registry_drift+variant_composite 2개 awaiting_human인데 대기열 variant 1개만 렌더(자산 정합 마스킹). 근본=상품당 1카드(route interventionById 첫잡만·ControlTowerRow.actionQueue 단수·widget map). 수정=route 전체수집(타입dedup·primary+extra)·ControlTowerRow.extraQueue·widget flatMap·key=pid+type·응답매핑 extraQueue 추가(2커밋 a91156d). prod 검증 PASS: 명화 2카드[variant_composite+registry_drift]·아이스/달항 단일 무변경. 원칙 #100 박제(#90 동형 비마스킹).
 - 2026-06-17 (세션9·Code/VARIANT-COMPOSITE·#62 P2): Desktop 감사(명화 3향 커버리지 0/3·바인딩 계층 전무) 스펙 구현. asset_registry.variant 컬럼(Supabase 마이그 add_asset_registry_variant·additive)+Prisma. computeVariantCoverage(분모=Product.options jsonb stockQuantity>0=진실원천·#96, product_options 테이블 stale 4 아님·코튼 stock0 제외=active3)+syncVariantCompositeCard. INTERVENTION_VARIANT_COMPOSITE 카드(control-tower INPUT_DECISION·이미지탭 딥링크·label N/M·cron 전상품 상시). ingest-firefly variant param(생성물→향 바인딩)+적재 후 재동기화. widget 라벨+상세. push 0b6db66. prod 통합 PASS(명화 active3·covered0·missing[3향]·matrix·라운드트립 바인딩 0→1→복원). 옵션 3표현 드리프트 reconcile=별도 과제(동근원).
 - 2026-06-17 (세션9·Code/per-orphan reconcile UI): registry_drift 카드 actionable 완성(#56 루프). RegistryDriftReconcile(카드 인라인) — '고아 검토·정리'→GET drift→storage-only(등록/아카이브 per-row+벌크)·registry-only(정리 per-row+벌크)→POST reconcile(confirm)→reconciled 시 카드 자동 clear. ko.json 13키. push f2f97ce. prod GET shape 검증(storageOnly 22·{path,stage}·registryOnly botanical·컴포넌트 소비가능). 데이터레인 검증완·UI 인터랙션=Desktop. REGISTRY-STORAGE-DRIFT 전상품 시스템(탐지·reconcile·카드·결정UI) 완결.

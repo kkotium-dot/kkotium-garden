@@ -1,3 +1,13 @@
+## 2026-06-17 (세션9-Code) 엔진 프롬프트 last-mile E1·E2·E3·E4
+
+**[배경·Desktop 감사]** engine-prompt-gap: 6축 엔진이 resolvedPrompt 조립하나 마지막 1마일 끊김(resolution 미주입·한글 subject 누수·benchmarkDna 미주입·슬롯보드 280자만). 두 프롬프트 엔진 미병합. 권위 docs/handoff/HANDOFF_2026-06-17_engine-prompt-gap-verdict-and-consolidation-plan.md.
+**[feat 8eadbbb·전상품 #62·additive]** E1 resolution→assemblePrompt cameraClause(2K/4K). E2 category-subject.ts(naverCategoryCode→영어 subject·fallback 'product')→strategy route 한글 product.name 교체. E3 engine/strategy 응답 full resolvedPrompt+resolution + SlotFunnelBoard 전체프롬프트+1클릭복사+추천설정카드(#56). E4 MoodAxisData.referenceAesthetic 영어 6무드+주입(benchmarkDna 한글 display 유지).
+**[verify·prod]** 명화 strategy 9슬롯·slot0 full prompt 695자·4K·ASCII100%(subject 'car air-vent fragrance diffuser')·aesthetic절. tsc0·build0·test PASS·이모지0·신규한글리터럴0.
+**[pending]** E5 per-scent concept(P1)·E6 assetization 폐루프(P1)·E7 엔진통합(P1·비가역=구조PR 전 확인)·E8 경쟁 teardown(P2)·E9 성능학습(P2).
+**[next]** [Desktop] E3 슬롯보드 브라우저 렌더 검증(#88). [Code] E5/E6. [결정·대표] E7 통합 GO.
+
+---
+
 ## 2026-06-17 (세션9-Code) 개입 대기열 큐 마스킹 수정 (P0·#56)
 
 **[fix 389fecb+a91156d]** Desktop P0 적발 — 명화 registry_drift+variant_composite 2개 awaiting_human인데 대기열 variant 1개만(자산 정합 마스킹·숨은 개입점). 근본=상품당 1카드(route interventionById 첫잡만·ControlTowerRow.actionQueue 단수·widget map). 수정: route 전체수집(interventionsById·타입dedup·primary+extra)·ComputeContext.imageJobInterventionsExtra·ControlTowerRow.extraQueue(computeProductRow extra별 precise 카드)·widget flatMap·key=pid+type·응답매핑 extraQueue 추가(1차 누락 보강).
