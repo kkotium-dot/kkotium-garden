@@ -72,6 +72,18 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-06-17 (99) REGISTRY↔STORAGE 드리프트 개입카드 — 관제탑 시드/렌더 (FROM 💻 Code, main 78f8a90, additive·비가역0·네이버 무접촉)
+- **Target**: Claude Code CLI · **Branch**: main · additive·#56 비강제·네이버 무접촉·비가역0. Desktop 원산지 행 검증 PASS 수신 후 P2 카드 착수.
+- **DONE (registry_drift 개입카드·#62 P2)**: reconcile 백엔드(952ed61)에 운영자 결정 표면화.
+  - INTERVENTION_REGISTRY_DRIFT 타입 + RegistryDriftPayload + buildRegistryDriftPayload(intervention.ts).
+  - control-tower-engine: registry_drift → INPUT_DECISION·이미지탭 딥링크.
+  - asset-integrity route syncCard + cron sweep: asset_integrity(ok 게이트)와 독립 registry_drift 카드(reconciled 게이트). cron은 ok 상품도 드리프트 평가(전상품 상시·ok early-continue 제거).
+  - ControlTowerMatrixWidget: 라벨+상세(미등록/인덱스고아/미정의단계 칩·예시·힌트). ko.json matrix.intervention.registry_drift.
+- **검증 (prod 통합)**: 명화 POST seed→carded=true→asset-jobs-matrix actionQueue에 registry_drift 카드(category=INPUT_DECISION·stage=registry_drift·deepLink=/studio?...&tab=image) 표면화 확인. 카드 라운드트립(seed awaiting_human·payload.storageOnly22·samples6 / 멱등 1유지 / clear 0복원). tsc0·build0·test PASS·이모지0·신규한글리터럴0(ko.json)·prisma 싱글톤·Sharp-only·네이버 무접촉.
+- **패치 위치**: src/lib/jobs/intervention.ts · src/lib/automation/control-tower-engine.ts · src/app/api/products/[id]/asset-integrity/route.ts · src/app/api/cron/asset-integrity-sweep/route.ts · src/components/dashboard/ControlTowerMatrixWidget.tsx · src/lib/i18n/control-tower-strings.ko.json.
+- **다음 1액션**: [Desktop] registry_drift 카드 브라우저 렌더 검증(/dashboard 관제탑·명화 카드 라벨/칩/딥링크·#88) + 결정플로우. [Code] per-orphan 등록vs아카이브 결정 UI(자산탭 — 고아 리스트·register/archive 버튼→reconcile route) → P3 Phase3 슬롯조립. [결정·대표] PUBLISH-명화 Cotton 옵션+GO #46.
+
+
 ### 2026-06-17 (98) 발행패널 원산지 행 + 아이스 정규화 + reconcile 백엔드 (FROM 💻 Code, main 952ed61, additive·비가역0·네이버 무접촉)
 - **Target**: Claude Code CLI · **Branch**: main · 전부 가역·additive·네이버 무접촉. Desktop ORIGIN-GATE 전경로 검증 PASS 수신 후 P2 착수.
 - **DONE (a) 발행패널 원산지 진실성 행(#95·#56 갭 해소)**: origin 판정을 evaluateOriginTruth 헬퍼로 추출(product-builder) → validateForRegistration(발행 BLOCK)과 strategy 게이트(UI) 단일 진실원천 공유. EngineGateView.originTruth + PrePublishGatePanel 원산지 행(통과/치유경고/차단·인라인). ko.json origin/originHint/originHeal. prod smoke 명화/아이스 gate.originTruth=pass·0200037.

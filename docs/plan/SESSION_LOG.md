@@ -1,3 +1,12 @@
+## 2026-06-17 (세션9-Code) REGISTRY↔STORAGE 드리프트 개입카드 — 관제탑 시드/렌더
+
+**[feat 78f8a90]** reconcile 백엔드에 운영자 결정 카드 표면화(#62 P2·#56). INTERVENTION_REGISTRY_DRIFT 타입+RegistryDriftPayload(intervention.ts)·control-tower-engine registry_drift→INPUT_DECISION(이미지탭 딥링크)·asset-integrity route+cron sweep 2카드 독립 시드(asset_integrity=ok 게이트 / registry_drift=reconciled 게이트, cron ok 상품도 평가=전상품 상시)·ControlTowerMatrixWidget 라벨+상세칩(미등록/인덱스고아/미정의단계·예시·힌트)·ko.json.
+**[verify·prod 통합]** 명화 POST seed→carded=true→asset-jobs-matrix actionQueue registry_drift 카드(category=INPUT_DECISION·stage=registry_drift·deepLink /studio?...&tab=image) 표면화 확인. 카드 라운드트립(seed awaiting_human·payload.storageOnly22·samples6 / 멱등 1유지 / clear 0복원).
+**[gates]** tsc0·build0·test PASS·이모지0·신규 한글리터럴0(ko.json·영어 에러)·prisma 싱글톤·Sharp-only·외부 image API 0·네이버 무접촉·additive·비가역0.
+**[next]** [Desktop] registry_drift 카드 브라우저 렌더 검증(#88)+결정플로우. [Code] per-orphan 등록vs아카이브 결정 UI(자산탭)→P3 Phase3. [결정·대표] PUBLISH-명화 Cotton+GO #46.
+
+---
+
 ## 2026-06-17 (세션9-Code) 발행패널 원산지 행 + 아이스 정규화 + reconcile 백엔드
 
 **[a·feat 9d2e7f4]** 발행패널 원산지 진실성 행 — 세션9 origin HARD GATE의 #56 갭(PrePublishGatePanel 미표면화) 해소. origin 판정을 evaluateOriginTruth 헬퍼로 추출(product-builder) → validateForRegistration(발행 BLOCK)·strategy 게이트(UI) 단일 진실원천. EngineGateView.originTruth + PrePublishGatePanel 원산지 행(통과/치유경고/차단·인라인 메시지)·ko.json origin/originHint/originHeal. prod smoke 명화/아이스 gate.originTruth=pass·0200037.
