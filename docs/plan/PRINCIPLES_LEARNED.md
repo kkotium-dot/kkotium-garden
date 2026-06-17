@@ -974,3 +974,6 @@ React 핸들러는 `element.click()`로 안정적으로 발화하지 않는다(n
 
 ## 작업원칙 #100 — 개입 대기열은 상품당 다중 카드 비마스킹 (2026-06-17 세션9 P0·#56)
 개입 대기열은 상품당 활성 개입을 **전부** 노출한다(스택 또는 "+N" 어포던스) — 상품당 1카드만 렌더하면 후순위 개입이 가려져 숨은 개입점(#56 위반)이 된다. 사례: 명화 registry_drift + variant_composite 2개 동시 awaiting_human인데 대기열은 variant 1개만 렌더(자산 정합 전체 부재). 근본 = route가 상품당 첫 잡만 보관(interventionById) + ControlTowerRow.actionQueue 단수 + widget map(상품당 1). 수정 = route 전체 수집(타입별 dedup·primary+extra) → ControlTowerRow.extraQueue → widget flatMap(actionQueue+extraQueue)·key=productId+type. ★응답 매핑(필드 명시 선택)에도 extraQueue 추가 필수(엔진 구성만으론 미전달). 비회귀: clear된 카드 비노출(awaiting_human만)·idle 비마스킹(#90 동형)·단일 개입 무변경. #90(저긴급 상시·긴급큐 비마스킹)과 동형 — 둘 다 "숨기지 말 것" 원칙.
+
+## 작업원칙 #101 — 변형 바인딩은 in-stock 진실원천과 대조 검증 (2026-06-17 세션9 #62·E5)
+생성물의 변형(variant/scent/color) 바인딩은 적재 시 상품 in-stock optionValues(Product.options stock>0=진실원천 #96)와 **대조 검증**한다. 불일치(오타 포함) 시 바인딩 거부(variant=null·파일은 적재)+응답 variantUnmatched:true+validVariants 노출 — 침묵 등록 금지. 사례(april escape): april '후레쉰'(후레쉬 오타)이 registered=True로 적재됐으나 어떤 변형과도 불일치 → 해당 향이 영구 coverage 미달인데 2/3 침묵 정체(아무 경고 없음). 가드: ingest-firefly stage=composite+variant 시 getActiveVariants 대조. 전상품(#55). #88(완료=검증)·#98(변형 커버리지)와 결합 — 바인딩 진실성이 커버리지 진실성의 선결.
