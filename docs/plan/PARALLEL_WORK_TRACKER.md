@@ -8,7 +8,7 @@
 ### Code 레인
 | id | 작업 | P | 상태 | 의존성 | 비고 |
 |----|------|---|------|--------|------|
-| C3 | SEO 골든키워드 가드(명화 '차량용' 누락) | P1 | ✅ DONE(본 커밋) | - | targetKeywords 상품명 포함 가드→fields.golden_keyword_in_title→seoComplete/fieldsAllSet·gate goldenKeywordsMissing 노출·targetKeywords 없으면 fail-open(#55)·검증=Desktop 게이트 재독 |
+| C3 | SEO 골든키워드 가드(targetKeywords 상품명 포함) | P1 | ✅ DONE·LIVE 검증 | - | targetKeywords 상품명 포함 가드→fields.golden_keyword_in_title→seoComplete/fieldsAllSet·gate goldenKeywordsMissing 노출·없으면 fail-open(#55). LIVE(fdcad92): 명화 골든키워드 3종[차량용방향제·디퓨저·에어컨냄새제거] 모두 상품명 포함→missing=[]·'차량용 누락' 전제=stale 해소. 검색량 검증 가드(#103)=별도 C-아이템 백로그 |
 | C14 | ingest stage/variant 파서 가드(명시 stage 우선·제품레벨 variant=null·거짓 conflict 억제) | P1 | ✅ DONE(본 커밋) | - | 신규 #108·전상품 #62·additive·C3와 묶음·explicitStage/contentMismatch/variantIgnoredForStage 노출·기존 thumbnail 레코드 variant 정규화=Desktop bash 확인 |
 | C6 | REALISM-CAMERA-BLOCK 전 슬롯 + Firefly-ref-composite 표준 엔진 편입 | P1 | QUEUED | - | 신규 지시·전 슬롯·합성슬롯=누끼→Firefly·C5 선행 |
 | C1 | 향 §4 v6 prose 교체(권위 v6) | P2 | ✅ DONE(84dfe88) | - | 엔진 per-scent mood 기반영 |
@@ -27,18 +27,18 @@
 | id | 작업 | P | 상태 | 의존성 |
 |----|------|---|------|--------|
 | D1 | 명화 thumbnail Firefly ref-composite→ingest(thumbnail 1:1) | P0 | ✅ DONE | O1 |
-| D4 | 명화 발행 사전검증(payload·인증·타이틀) | P1 | 🔒GATED | 대표이미지평가(thumbnailAssessed)+상태정합(ACTIVE↔판매중지)+차량용(C3 landed) |
+| D4 | 명화 발행 사전검증(payload·인증·타이틀) | P1 | 🔒GATED | 대표이미지평가(thumbnailAssessed)+상태정합(ACTIVE↔판매중지) ※차량용=stale 해소(이미 상품명 포함·C3 LIVE) |
 | D3 | composite/realism 파이프라인 달항아리·아이스 확장 | P2 | QUEUED | D1 검증 |
 
 ### Operator 레인
 | id | 작업 | P | 상태 |
 |----|------|---|------|
 | O1 | 명화 thumbnail Firefly ref-composite 실행(cutout_C+§1a 프롬프트+Nano Banana Pro) | P0 | pending |
-| O3 | 명화 발행 GO(비가역) | P1 | 🔒GATED(D1+C3 후) |
+| O3 | 명화 발행 GO(비가역) | P1 | 🔒GATED(대표이미지평가+상태정합 후·C3 LIVE·D1 DONE) |
 | O4 | 코튼 재입고/제외 결정 | P3 | pending |
 
 ### 의존성 맵
-- D1(✅)←O1 · D4/O3←대표이미지평가+상태정합+C3(✅landed) · C5←C6 · D3←D1 · C14(✅)=독립 guard family · 자산정합 카드 해소←C2(완료) · C12(E7)←명시 GO.
+- D1(✅)←O1 · D4/O3←대표이미지평가+상태정합(C3 ✅LIVE·차량용 stale 해소) · C5←C6 · D3←D1 · C14(✅)=독립 guard family · 자산정합 카드 해소←C2(완료) · C12(E7)←명시 GO.
 
 ### 합성/사실성 표준 (신규·전상품 #62·권위 §1~2)
 - **합성 표준 전환(#107)**: 빈 배경판+PIL 로컬 페이스트 **폐기** → 누끼컷 첨부→Firefly 레퍼런스 합성(제품 재생성 금지·타깃별 최적 모델 Nano Banana Pro/Firefly Image 5). 로컬 PIL=폴백.
@@ -99,6 +99,7 @@
 
 
 ### 변경로그
+- 2026-06-18 (세션9·Code/C3 LIVE 검증): prod fdcad92 strategy gate 실측 — 명화 goldenKeywords=[차량용방향제·디퓨저·에어컨냄새제거]·goldenKeywordsMissing=[]·seoComplete=true. 핸드오프 '차량용 누락' 전제=**stale**(차량용방향제 compound가 이미 상품명 포함, 단독 '차량용' 토큰도 substring상 포함). 운영자 결정: C3=커버리지 가드로 확정·검색량 검증 가드(#103)=별도 C-아이템 백로그. D4/O3 발행 잔여=대표이미지평가+상태정합 2건으로 정정.
 - 2026-06-18 (세션9·Code/C3+C14 묶음·#108): C3 골든키워드 상품명 포함 가드(publish-readiness `goldenKeywordsMissingFromTitle`→`fields.golden_keyword_in_title`→seoComplete/fieldsAllSet·strategy gate `goldenKeywords`/`goldenKeywordsMissing`/`goldenKeywordComplete` 노출·targetKeywords 비었으면 fail-open #55) + C14 ingest 파서 가드(명시 stage 우선→거짓 conflict 억제·`explicitStage`/`contentMismatch`·제품레벨 stage variant=null·`variantIgnoredForStage`). D1=DONE·D4=GATED(대표이미지평가+상태정합+차량용) 보드 동기화. 원칙 #108 박제. tsc0/build0/이모지0/신규한글리터럴0/비가역0/네이버 무접촉.
 - 2026-06-18 (세션9·Code/보드정렬+#106/#107): LIVE WORK BOARD(§4) 정렬 — Code C0~C13/D/O 레인+의존성맵+순서(C3→C6→C5→C9→C4→P3·C12 GO게이트). C1(향§4 v6)·C2(archive)·C10(원칙)=DONE 반영. 합성표준 전환(#107 누끼→Firefly 레퍼런스 합성·PIL 폐기→폴백)·REALISM-CAMERA-BLOCK 전 슬롯(C6·E8v2 선행)·어우러짐(#106 배경=productAestheticDna 에코) 박제. 원칙 #106·#107 추가.
 - 2026-06-18 (세션9·Code/§4 v6+archive+E8v2설계+#105): 플레이북 §4 v6 prose 교체(재고3향 레몬 웜·에이프릴 하이키·체리 로우키·코튼 stock0 현행)·권위 v6. archive 유틸 + 확정3건 정리(april '후레쉰' typo·구 레몬·guard-test)→커버리지 4/3→3/3·카드 해소(push 5fe06fa). E8 v2 설계확정(컨벤션 스펙트럼·benchmarkDna 자산화·프롬프트 라이브러리·정체성 오버라이드 단계·검토카드·Design Readiness). 원칙 #105(컨벤션은 정체성에 복무). 백로그 INGEST-GUARD-REVIEW(선택·저우선).
