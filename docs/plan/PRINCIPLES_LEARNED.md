@@ -1004,3 +1004,22 @@ ingest(catch-basin) 적재 시 **명시 `stage`/`variant` 파라미터가 파일
 
 ## 작업원칙 #109 — publishReady=첫발행 게이트·기등록 상품은 재개/업데이트 별도 경로 (2026-06-20 세션9 C19 e2e)
 `evaluatePublishReadiness`의 `publishReady = … && status==='DRAFT' && naverProductId===null` 는 **신규 DRAFT 첫 발행 전용 게이트**다. 이미 네이버에 등록된 상품(naverProductId 보유·판매중지/판매중)은 publishReady가 **구조적으로 영원히 false**이며 이는 정상 — 첫발행이 아니라 **재개/업데이트** 상황이기 때문. 기등록 상품 변경은 별도 경로: (a) 콘텐츠 수정 = `POST /api/naver/products/update`(PUT origin-products 전체교체·confirm 게이트·#3-7) — 존재함, (b) 판매재개(SUSPENSION→SALE)도 동일 update route가 커버 — buildNaverProductPayload가 originProduct.statusType='SALE'를 항상 emit(product-builder.ts:937)하므로 full-replace PUT가 판매중지를 해제한다(prod dryRun 실증: payloadPreview.statusType=SALE·네이버 무접촉). api-client의 'statusType read-only' 주석은 OUTOFSTOCK(재고 파생)에만 해당하고 SALE/SUSPENSION/CLOSE는 PUT 페이로드로 설정 가능. ★정정(#44): 직전 D5의 'read-only→전용 엔드포인트/수동' 보고는 오류, 본 실증으로 정정·D6 불필요. 추가로 **thumbnailAssessed는 publishReady 공식의 입력이 아니다**(공식엔 thumbnailPass만·미평가 시 기본 true); thumbnailAssessed는 게이트 readout/품질 표식일 뿐. **교훈(#45 강화): e2e 왕복(POST 플립/DELETE 원복)이 sub-flag 개별 독해보다 게이트의 진짜 구조를 드러낸다** — '유일 미충족=thumbnailAssessed' 가설이 e2e로 'publishReady=첫발행 전용·thumbnailAssessed=공식 밖'으로 정정됨.
+
+## 작업원칙 #113 — 판매재개 = update route의 full-replace PUT(statusType='SALE')·D6 CLOSED (2026-06-21 세션9 D5 정정)
+기등록 상품의 판매재개(SUSPENSION→SALE)는 신규 라우트가 아니라 기존 `POST /api/naver/products/update {confirm:true}`가 그대로 수행한다 — buildNaverProductPayload가 `originProduct.statusType='SALE'`를 항상 emit(`product-builder.ts:937`)하므로 v2 full-replace PUT가 판매중지를 해제한다. prod dryRun 실증(payloadPreview.statusType=SALE·네이버 무접촉). **D6(전용 판매상태 변경 라우트)=CLOSED·불필요.** 명화 재개 동선: 씨앗심기 백필→가격/마진 확정→re-dryRun→대표 GO→update confirm:true(비가역 #46).
+
+## 작업원칙 #114 — statusType 가변성: SALE/SUSPENSION/CLOSE는 PUT로 설정 가능, OUTOFSTOCK만 read-only (2026-06-21 세션9)
+네이버 v2 `originProduct.statusType`의 SALE/SUSPENSION/CLOSE는 상품 PUT 페이로드로 **직접 설정 가능**하다. OUTOFSTOCK만 재고 파생(stockQuantity=0→자동 전환)이라 직접 설정 불가(read-only). api-client setProductOutOfStock 주석의 'statusType read-only'는 OUTOFSTOCK 한정 의미였고 이를 전체 statusType로 오독하면 안 된다(주석 정정 완료).
+
+## 작업원칙 #115 — 문서 회귀 방지 + 검증 규율: 정정 사실은 전 사본 동시 정합·grep 거짓음성 경계 (2026-06-21 세션9)
+직전 턴에 박제한 사실이 정정되면 **모든 사본(PRINCIPLES_LEARNED + PARALLEL_WORK_TRACKER §4 + 소스 문서)을 동시 정합**해야 한다 — 한 곳만 고치면 문서 회귀(stale fact 잔존)가 생긴다. 검증 규율: grep 거짓음성(예: product-builder.ts statusType 미매치)에 속지 말고 **직접 읽기(sed/Read)+런타임 실증(dryRun)**으로 확정(#45/#88 강화). D5 사례: grep 거짓음성+api-client 주석 오독→오보고→직접읽기+dryRun으로 정정.
+
+## 작업원칙 #116 — 통합 노력 레인: 단순/디테일이 최상위 축이며 공급사 A/B를 흡수 (2026-06-21 세션9 rev2)
+노력 레인 **단순(=실 발행 경로)/디테일(=Firefly 3-plane 프리미엄 테스트)**이 최상위 축이며, 공급사 자산품질 A/B 라우팅(IMAGE_DETAIL_TWO_BRANCH_SYSTEM: A=양호 재사용/B=빈약 크롭·생성)을 **별도 축이 아니라 레인 내부 서브라우팅으로 흡수**한다. 실 발행은 단순 레인 사용 — 라이브 상품의 단순·스테일 대표이미지는 버그가 아니라 단순 레인이 의도대로 동작한 결과(개선 범위=단순 레인 대표 흰배경 마감). 디테일 레인은 검증된 뒤에만 발행에 공급. 전상품(#55·#62).
+
+## 작업원칙 #117 — 씨앗심기 선행: 소싱 시드가 디자인보다 먼저 (2026-06-21 세션9 rev2)
+씨앗심기(SEO/ROI 소싱 시드·크롤 기반)는 온실 아틀리에 디자인보다 **반드시 선행**한다. 가격/마진 검증은 소싱 정보에 게이트되며, 디자인-전-소싱은 가격을 검증 불가로 만든다. 올바른 순서: 크롤링→씨앗심기(소싱 채움)→(공급사 제공정보+소싱)→온실 아틀리에(디자인·STEP6). 앱은 design-ran-before-sourcing를 `sourcing_incomplete` 개입 카드로 표시. 명화가 이를 위반(STEP6로 점프→가격 BLOCKED).
+
+## 작업원칙 #118 — 재입고 미정/일시품절 옵션은 품절 유지(은닉 제외 금지) (2026-06-21 세션9 rev2)
+재입고 미정·일시품절 옵션은 **품절(stock 0, 옵션+상세에 노출) 유지**하고 은닉/임의 제외하지 않는다. 운영자 명시 지시에서만 제거. (명화 코튼어라운드 = 품절 유지.)
+

@@ -26,6 +26,7 @@
 | C18 | composite 모델 실제 재라우팅(NB Pro 우선)+테스트 갱신 | P3 | QUEUED | C6 | C6 후속·scent_note=firefly 테스트 의도적 갱신 동반 |
 | C20 | C6 폴리시: 프롬프트 'tones tones' 중복어 제거 | P3 | ✅ DONE(본 커밋) | C6 | paletteToneClause 가드(palette가 tones로 끝나면 미중복)·테스트 +1 |
 | C21 | SEO 검색량 검증 골든키워드 가드(#103·C3 심화) | P3 | QUEUED | - | searchad/datalab 볼륨 기반 고볼륨 헤드텀 발굴·C3 커버리지 가드 심화 |
+| C22 | 통합 레인(단순/디테일 ⊇ A/B) 상태 + sourcing_incomplete 카드 앱 노출(#116/#117) | P2 | QUEUED | - | 워크플로 docs 형식화 완료(§1-A)·앱 surfacing 후속 |
 | C7 | firefly_auto settingsVerified 서브체크 | P3 | QUEUED | - | - |
 | C8 | 옵션 3표현 정합 | P3 | QUEUED | - | - |
 | C11 | 가드 개선: variantUnmatched→자동등록 스킵/review 스테이지 | P3 | QUEUED | - | 선택 |
@@ -111,6 +112,7 @@
 
 
 ### 변경로그
+- 2026-06-21 (세션9·Code/P0 D5 문서정합 + P1 워크플로 형식화·#113~#118): **P0** D5 문서회귀 종결 — PRINCIPLES #113(재개=update route statusType='SALE'·**D6 CLOSED**)·#114(statusType 가변성·OUTOFSTOCK만 read-only)·#115(문서회귀 방지+검증규율) 박제 + MYEONGHWA doc 국산→중국산(0200037) 정정. **P1** PRODUCT_REGISTRATION_WORKFLOW §1-A 신설(통합 노력 레인 단순/디테일 ⊇ 공급사 A/B + 씨앗심기 선행 게이트 + STEP10 디자인 커넥터) + §6 `sourcing_incomplete` 카드 + PRINCIPLES #116/#117/#118. 신규 앱 노출=C22. 큐=C15(MCP)→C16→C5→C9→C4.
 - 2026-06-21 (세션9·Code/C19b UI): 대표이미지 평가 카드 UI(#56) — PrePublishGatePanel에 ThumbAssessControl(미평가→승인 POST·평가됨→재평가 DELETE) + useEngineStrategy refetch 추가 + studio publish탭 배선(productId/onAssessed) + i18n 5키(thumbAssessCta 등). 라우트(/thumbnail-assess)는 Desktop e2e PASS·마이그 적용됨. tsc0/build0/이모지0/신규 한글리터럴0. 브라우저 클릭 검증 권장(Desktop). 다음=C15(MCP 단발턴)→C16→C5.
 - 2026-06-21 (세션9·Code/D5 정정 #44): D5 직전 보고 오류 정정 — 판매재개는 전용 엔드포인트/수동이 아니라 **기존 update route가 커버**. buildNaverProductPayload가 statusType='SALE' 항상 emit(product-builder.ts:937)→full-replace PUT가 판매중지 해제. prod dryRun 실증(payloadPreview.statusType=SALE·네이버 무접촉). 'statusType read-only'(api-client)는 OUTOFSTOCK 전용(주석 정정). **D6 불필요**. 교훈: grep 거짓음성에 속지 말 것·sed/직접읽기+dryRun 실증으로 확정(#45/#88). 명화 재개=update confirm:true(운영자 GO·비가역).
 - 2026-06-20 (세션9·Code/C19 e2e+D5+C20·#109): Desktop이 c19 마이그 적용·e2e(POST플립/DELETE원복) PASS·핫픽스 회귀복구 전상품 PASS → C19=DONE. ★구조발견 박제(#109): publishReady=첫발행 게이트(DRAFT+naverProductId null)·기등록=재개/업데이트 별도 경로·thumbnailAssessed≠게이트입력. D5 보고: update route(PUT 전체교체) 존재·판매재개 전용 엔드포인트 미구현(statusType read-only). C20: 'tones tones' 중복 제거(paletteToneClause). 다음=C19b(UI)→C15→C16→C5.

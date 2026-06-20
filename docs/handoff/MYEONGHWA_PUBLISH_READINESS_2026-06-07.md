@@ -10,7 +10,7 @@
 ## 상세페이지 근거 → 반영 완료 (전부 가역 DB)
 | 항목 | 값 | 근거 |
 |---|---|---|
-| 제조국 | 국산 (originCode 00) | 품명표 제조국 대한민국 |
+| 제조국 | 중국산 (originCode 0200037) | 운영자 확정(2026-06-21·memory #17) — 구 '국산(00)' 정정(#44/#113) |
 | 재질 | 유리 | 전 제품컷 유리병 (enum exact) |
 | 색상 | 투명 | 투명 유리 용기 (enum exact) |
 | 향 | 4종(레몬유칼립·에이프릴 후레쉬·블랙체리·코튼어라운드) | 헤더·향정보 4종 → 옵션 추가 완료 |
@@ -26,7 +26,7 @@
 1. (Code) dryRun preview에 정보고시 노출 → (Desktop) HB 표시 단정.
 2. (대표) 최종 GO.
 3. (Desktop) update confirm:true → PUT(비가역) → statusType SALE 전환.
-4. (Desktop) inspect 3중 검증: statusType SALE·정보고시 HB·origin 국산·옵션 4종.
+4. (Desktop) inspect 3중 검증: statusType SALE·정보고시 HB·origin 중국산(0200037)·옵션 4종.
 
 ## 비고
 - 빌더는 구조화 카테고리 속성을 네이버 미전송(Code 확인) → 재질/색상은 내부 완성도 게이트. 단 productInfoProvidedNotice(정보고시)는 전송 대상 → HB 표시가 실 발행 핵심.
