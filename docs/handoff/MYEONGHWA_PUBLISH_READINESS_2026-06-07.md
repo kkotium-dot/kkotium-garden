@@ -2,10 +2,17 @@
 
 > Naver update dryRun 단정 + 상세페이지 전 정보 반영 완료. naverProductId 13564133057.
 
-## 발행 준비도 = ALL GREEN
+## 발행 준비도 — 2축 분리 (#117)
+> ★ 드리프트 정정(2026-06-21): 구 "ALL GREEN"은 **속성 준비도**만 가리켰음. 소싱·가격 준비도는 별개 축이며 씨앗심기 백필 대기 상태(발행 차단).
+
+**속성 준비도 = GREEN**
 - readinessGrade **A / 84** · attributeGrade **A / 78**
 - errors [] · warnings [] · **missingRequired []**
-- statusType **SALE** (PUT 시 판매중지 해제)
+- statusType **SALE** (PUT 시 판매중지 해제·#113/#114)
+
+**소싱·가격 준비도 = 씨앗심기 백필 대기 (#117·BLOCKED)**
+- 판매가/마진은 씨앗심기(SEO/ROI 소싱 시드·원가) 백필 후에만 확정 — 현재 미충족.
+- 디자인-전-소싱(STEP6 점프) 위반 → `sourcing_incomplete`. STEP0(발행 시퀀스)에서 해소.
 
 ## 상세페이지 근거 → 반영 완료 (전부 가역 DB)
 | 항목 | 값 | 근거 |
@@ -23,6 +30,7 @@
 - → Code: update dryRun payloadPreview에 productInfoProvidedNotice(qualityAssuranceStandard 등) 포함 → Desktop이 HB 표시 재단정 → 그 후 대표 GO.
 
 ## 발행 시퀀스 (남은 단계)
+0. **(STEP0·선결) 씨앗심기 소싱 백필** — 크롤(도매매) → 원가/마진 입력 → **판매가/마진 확정**(#117). 미충족 시 이하 단계 진입 금지(`sourcing_incomplete`).
 1. (Code) dryRun preview에 정보고시 노출 → (Desktop) HB 표시 단정.
 2. (대표) 최종 GO.
 3. (Desktop) update confirm:true → PUT(비가역) → statusType SALE 전환.
