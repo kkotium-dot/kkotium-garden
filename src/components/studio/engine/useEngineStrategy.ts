@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface EngineSlotView {
   slotType: string;
@@ -78,6 +78,9 @@ export interface UseEngineStrategy {
   loading: boolean;
   degraded: boolean;
   error: string | null;
+  // C19b: re-run the strategy fetch (e.g. after an operator thumbnail assessment
+  // flips the gate) so the panel reflects the new state without a full reload.
+  refetch: () => void;
 }
 
 export function useEngineStrategy(productId: string | null): UseEngineStrategy {
@@ -85,6 +88,7 @@ export function useEngineStrategy(productId: string | null): UseEngineStrategy {
   const [loading, setLoading] = useState(false);
   const [degraded, setDegraded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!productId) {
@@ -122,7 +126,9 @@ export function useEngineStrategy(productId: string | null): UseEngineStrategy {
     return () => {
       cancelled = true;
     };
-  }, [productId]);
+  }, [productId, reloadKey]);
 
-  return { data, loading, degraded, error };
+  const refetch = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  return { data, loading, degraded, error, refetch };
 }

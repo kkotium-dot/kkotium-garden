@@ -3,7 +3,7 @@
 
 ## ★★ LIVE WORK BOARD (2026-06-18 S9 · 현 다중병행 단계 권위 · 전거 docs/handoff/HANDOFF_2026-06-18_realism-firefly-composite-upgrade-and-workboard.md §4)
 
-> 우선순위 P0>P1>P2>P3. 상태 DONE/WIP/QUEUED/GATED. 레인 D=Desktop·C=Code·O=Operator. **Code 순서: (C3+C14 ✅)→(C6 ✅)→(C19 ✅ e2e)→C19b(UI)→C15→C16→C5→C9→C4→(C10 완료)→C17/C18/C21/C7/C8/C11(P3). C12(E7)=GO만.**
+> 우선순위 P0>P1>P2>P3. 상태 DONE/WIP/QUEUED/GATED. 레인 D=Desktop·C=Code·O=Operator. **Code 순서: (C3+C14 ✅)→(C6 ✅)→(C19 ✅)→(C19b ✅ 코드)→C15→C16→C5→C9→C4→(C10 완료)→C17/C18/C21/C7/C8/C11(P3). C12(E7)=GO만.**
 
 ### Code 레인
 | id | 작업 | P | 상태 | 의존성 | 비고 |
@@ -13,7 +13,7 @@
 | C6 | REALISM-CAMERA-BLOCK 전 슬롯 + Firefly-ref-composite 표준 엔진 편입 | P1 | ✅ DONE(본 커밋·코어) | - | REALISM_CAMERA_BLOCK 전 슬롯 prompt 주입+realismBlockPresent 가드·REFERENCE_COMPOSITE_BLOCK(변형 씬 reserveProductMargin→referenceComposite 전환·빈공간/PIL=폴백)·slots.composite{firefly_reference·recommendedModel·local_paste} strategy API 노출·테스트 mood10/engine12. concept별 카메라=C17·모델 실제 재라우팅=C18(후속) |
 | C19 | 명화 발행 게이트 thumbnailAssessed 플립(대표이미지 평가·#56) | P1 | ✅ DONE(e2e·Desktop 검증) | - | 백엔드+마이그(c19) 적용·e2e POST플립/DELETE원복 PASS·핫픽스 회귀복구 전상품 PASS·네이버 무접촉. UI=C19b. ★구조발견: publishReady=첫발행 전용(#109) |
 | D5 | 기등록 상품(naverProductId·판매중지) 재개/업데이트 메커니즘 보고 | P1 | ✅ 보고완료(정정 #44) | - | update route(`/api/naver/products/update`·PUT 전체교체·confirm)가 콘텐츠 수정 **+ 판매재개**까지 커버: 빌더 statusType='SALE' emit(product-builder.ts:937)·prod dryRun 실증(payloadPreview.statusType=SALE). 'statusType read-only'=OUTOFSTOCK 전용. **D6 불필요**. 명화 재개=update confirm:true(운영자 GO·#46·네이버 접촉) |
-| C19b | 대표이미지 평가 UI 카드(PrePublishGatePanel 승인 버튼 + 관제탑 노출) | P1 | QUEUED | C19 마이그 | 마이그 적용 후 라이브 검증 |
+| C19b | 대표이미지 평가 UI 카드(PrePublishGatePanel 승인 버튼·#56) | P1 | ✅ DONE(코드·빌드)·브라우저 검증 권장 | - | PrePublishGatePanel ThumbAssessControl(승인 POST/재평가 DELETE)+useEngineStrategy refetch+studio 배선+i18n 5키. 라우트 e2e=Desktop PASS. /studio publish탭 클릭 검증 권장. 관제탑 큐 카드=옵션 후속 |
 | C1 | 향 §4 v6 prose 교체(권위 v6) | P2 | ✅ DONE(84dfe88) | - | 엔진 per-scent mood 기반영 |
 | C2 | archive 유틸 → 자산정합 카드 해소 | P2 | ✅ DONE(5fe06fa) | - | 확정3건 정리·커버리지 3/3·§6 타깃 |
 | C5 | E8 v2 빌드(벤치마크→자산→graft) | P2 | QUEUED | C6 | 컨벤션 스펙트럼+정체성 오버라이드(#105)+productAestheticDna 팔레트에코(#106)+실사(#107)+프롬프트 라이브러리+검토카드+Design Readiness |
@@ -111,6 +111,7 @@
 
 
 ### 변경로그
+- 2026-06-21 (세션9·Code/C19b UI): 대표이미지 평가 카드 UI(#56) — PrePublishGatePanel에 ThumbAssessControl(미평가→승인 POST·평가됨→재평가 DELETE) + useEngineStrategy refetch 추가 + studio publish탭 배선(productId/onAssessed) + i18n 5키(thumbAssessCta 등). 라우트(/thumbnail-assess)는 Desktop e2e PASS·마이그 적용됨. tsc0/build0/이모지0/신규 한글리터럴0. 브라우저 클릭 검증 권장(Desktop). 다음=C15(MCP 단발턴)→C16→C5.
 - 2026-06-21 (세션9·Code/D5 정정 #44): D5 직전 보고 오류 정정 — 판매재개는 전용 엔드포인트/수동이 아니라 **기존 update route가 커버**. buildNaverProductPayload가 statusType='SALE' 항상 emit(product-builder.ts:937)→full-replace PUT가 판매중지 해제. prod dryRun 실증(payloadPreview.statusType=SALE·네이버 무접촉). 'statusType read-only'(api-client)는 OUTOFSTOCK 전용(주석 정정). **D6 불필요**. 교훈: grep 거짓음성에 속지 말 것·sed/직접읽기+dryRun 실증으로 확정(#45/#88). 명화 재개=update confirm:true(운영자 GO·비가역).
 - 2026-06-20 (세션9·Code/C19 e2e+D5+C20·#109): Desktop이 c19 마이그 적용·e2e(POST플립/DELETE원복) PASS·핫픽스 회귀복구 전상품 PASS → C19=DONE. ★구조발견 박제(#109): publishReady=첫발행 게이트(DRAFT+naverProductId null)·기등록=재개/업데이트 별도 경로·thumbnailAssessed≠게이트입력. D5 보고: update route(PUT 전체교체) 존재·판매재개 전용 엔드포인트 미구현(statusType read-only). C20: 'tones tones' 중복 제거(paletteToneClause). 다음=C19b(UI)→C15→C16→C5.
 - 2026-06-18 (세션9·Code/C19 핫픽스): C19 배포(9c44c2f) 후 strategy gate=null 회귀(전 상품) 발견·즉시 복구(20bca96). 원인=평가 read의 $queryRaw가 미마이그 컬럼에서 Prisma **P2010**(raw query failed·Postgres 42703 래핑)을 던졌고 가드가 P2022만 봐서 재던짐→strategy 내부 catch가 스왈로우→gate=null. 교훈: **순수 보강 read는 best-effort(전 에러 스왈로우→안전 기본값)**, raw 미마이그 컬럼=P2010(≠P2022). LIVE 복구 검증: gate present·thumbnailAssessed=false·seoComplete/goldenKeywordComplete=true·originTruth=pass.

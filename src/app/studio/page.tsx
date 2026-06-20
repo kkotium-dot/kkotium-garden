@@ -251,6 +251,8 @@ function StudioInner() {
           slots={engine.data?.slots ?? []}
           loading={engine.loading}
           degraded={engine.degraded}
+          productId={selectedId}
+          onAssessed={engine.refetch}
         />
       }
       diagnosis={

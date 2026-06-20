@@ -7,7 +7,7 @@
 
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { ShieldCheck, ShieldAlert, ScanLine, ListChecks, Send, CheckCircle2, XCircle, MinusCircle, Globe } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import type { EngineGateView, EngineSlotView } from './useEngineStrategy';
@@ -31,7 +31,7 @@ function stateChip(state: GateState) {
   );
 }
 
-function GateRow({ icon, title, hint, state, detail }: { icon: ReactNode; title: string; hint?: string; state: GateState; detail?: ReactNode }) {
+function GateRow({ icon, title, hint, state, detail, action }: { icon: ReactNode; title: string; hint?: string; state: GateState; detail?: ReactNode; action?: ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -40,6 +40,52 @@ function GateRow({ icon, title, hint, state, detail }: { icon: ReactNode; title:
       </div>
       {hint && <span style={{ fontSize: 10, color: 'var(--gp-ink-500)' }}>{hint}</span>}
       {detail && <div style={{ fontSize: 11, color: 'var(--gp-ink-700)' }}>{detail}</div>}
+      {action && <div style={{ marginTop: 2 }}>{action}</div>}
+    </div>
+  );
+}
+
+// C19b (#56): operator attestation control for the representative image. When the
+// thumbnail is not yet assessed, the operator approves it here (POST), flipping
+// the gate; once assessed, a small re-assess link clears it (DELETE). Both refetch.
+function ThumbAssessControl({ productId, assessed, onAssessed }: { productId: string; assessed: boolean; onAssessed?: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function call(method: 'POST' | 'DELETE') {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/products/${productId}/thumbnail-assess`, { method });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setErr(j?.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      onAssessed?.();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (assessed) {
+    return (
+      <button type="button" disabled={busy} onClick={() => call('DELETE')}
+        style={{ fontSize: 10, fontWeight: 700, color: 'var(--gp-ink-500)', background: 'none', border: 'none', padding: 0, cursor: busy ? 'default' : 'pointer', textDecoration: 'underline' }}>
+        {busy ? c.thumbAssessing : c.thumbAssessClear}
+      </button>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <button type="button" disabled={busy} onClick={() => call('POST')}
+        style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 800, color: '#fff', background: 'var(--gp-red-500)', border: 'none', borderRadius: 8, padding: '5px 10px', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+        <CheckCircle2 size={12} />{busy ? c.thumbAssessing : c.thumbAssessCta}
+      </button>
+      <span style={{ fontSize: 10, color: 'var(--gp-ink-500)' }}>{c.thumbAssessHint}</span>
+      {err && <span style={{ fontSize: 10, color: '#C2410C' }}>{c.thumbAssessError}: {err}</span>}
     </div>
   );
 }
@@ -49,9 +95,13 @@ export interface PrePublishGatePanelProps {
   slots: EngineSlotView[];
   loading?: boolean;
   degraded?: boolean;
+  // C19b (#56): product id + refetch enable the inline representative-image
+  // assessment control. Omitted → the panel stays read-only (back-compat).
+  productId?: string | null;
+  onAssessed?: () => void;
 }
 
-export default function PrePublishGatePanel({ gate, slots, loading, degraded }: PrePublishGatePanelProps) {
+export default function PrePublishGatePanel({ gate, slots, loading, degraded, productId, onAssessed }: PrePublishGatePanelProps) {
   if (degraded) return <Shell><p style={muted}>{strings.engine.dna.degraded}</p></Shell>;
   if (loading) return <Shell><p style={muted}>{c.loading}</p></Shell>;
   if (!gate) return <Shell><p style={muted}>{c.empty}</p></Shell>;
@@ -98,6 +148,7 @@ export default function PrePublishGatePanel({ gate, slots, loading, degraded }: 
       <GateRow
         icon={thumbState === 'block' ? <ShieldAlert size={14} color="#C2410C" /> : <ScanLine size={14} />}
         title={c.thumbPolicy} hint={c.thumbPolicyHint} state={thumbState} detail={thumbDetail}
+        action={productId ? <ThumbAssessControl productId={productId} assessed={gate.thumbnailAssessed} onAssessed={onAssessed} /> : undefined}
       />
       <GateRow
         icon={originState === 'block' ? <ShieldAlert size={14} color="#C2410C" /> : <Globe size={14} />}
