@@ -78,6 +78,17 @@ export function assembleStrategy(input: AssembleStrategyInput): {
       benchmarkDna: assembled.benchmarkDna,
       cameraKey: cameraSpecKey(assembled.camera),
       resolution: assembled.camera.resolution,
+      // C6 (#107): composite slots produce via the reference-composite standard —
+      // attach the cutout, the recommended model places the real product (no
+      // redraw); local paste is fallback. Non-composite slots (hero cutout) = null.
+      composite: entry.compositeFlag
+        ? {
+            method: 'firefly_reference',
+            referenceRequired: true,
+            recommendedModel: route.model,
+            fallback: 'local_paste',
+          }
+        : null,
     };
   });
 

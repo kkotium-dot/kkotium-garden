@@ -77,7 +77,9 @@ export async function GET(req: NextRequest) {
           moodCode: vc?.mood ?? mood,
           product: subject,
           concept: vc?.concept,
-          reserveProductMargin: true,
+          // C6 (#107): reference-composite is the standard — the variant scene is
+          // built AROUND the attached product cutout (no redraw), not empty space.
+          referenceComposite: true,
         });
         return { optionValue: ov, concept: vc?.concept ?? null, resolvedPrompt: assembled.prompt };
       });
@@ -106,6 +108,11 @@ export async function GET(req: NextRequest) {
         resolvedPrompt: s.resolvedPrompt,
         resolution: s.resolution,
         cameraKey: s.cameraKey,
+        // C6 (#107): composite-method descriptor (firefly_reference + recommended
+        // model) for composite slots — surfaces the cutout->Firefly reference
+        // composite + model recommendation to the board / Desktop verify. null for
+        // non-composite (hero cutout) slots.
+        composite: s.composite,
         // E5 (#62): per-variant backdrop prompts (scent_note only). undefined for
         // non-variant slots / single-product (no behavior change for those).
         ...(variants ? { variants } : {}),

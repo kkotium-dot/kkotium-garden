@@ -42,6 +42,28 @@ export const BACKDROP_EXCLUSION_BLOCK =
   'clean composition, plain uncluttered background, realistic photograph only. ' +
   'no on-image text, no logos, no human figures, no illustration or painting.';
 
+// REALISM-CAMERA-BLOCK (C6, #107/#62) — appended to EVERY slot prompt so all
+// images read as real-camera editorial photography (AI dissonance 0 = premium
+// trust; amateur AI fakeness = worst-grade). Positive prose only — no
+// negativePrompt field (#86); complements FIXED_GRADE_BLOCK. The marker phrase
+// "photorealistic editorial product photography" is what the realismBlockPresent
+// guard checks. Authority docs/design/ADAPTIVE_COMPOSITE_ENGINE.md §2 (REALISM).
+export const REALISM_CAMERA_BLOCK =
+  'true-to-life color, high microcontrast, captured on a real camera with natural ' +
+  'light, photorealistic editorial product photography, no CGI, no 3D-render ' +
+  'look, no AI artifacts';
+
+// REFERENCE-COMPOSITE-BLOCK (C6, #107) — the #107 standard for composite slots:
+// the product cutout is attached as a REFERENCE image and the model places that
+// EXACT product into the scene (never redrawing its form/label/glass/caps),
+// instead of reserving empty space for a later local paste (PRODUCT_MARGIN_BLOCK,
+// now the explicit fallback). Positive prose only (#86). Authority
+// docs/design/ADAPTIVE_COMPOSITE_ENGINE.md §3 (reference slot operation).
+export const REFERENCE_COMPOSITE_BLOCK =
+  'place the attached product exactly as provided, preserving its form, label, ' +
+  'glass and caps without redrawing or altering them; match the scene light to ' +
+  'the product and add a natural contact shadow and soft reflection';
+
 // The six axes with their camera specs and subject templates. Korean only in
 // nameKo / conversionJob / benchmarkDna (display); all prompt fragments English.
 export const MOOD_AXES: Record<MoodCode, MoodAxisData> = {

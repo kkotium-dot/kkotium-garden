@@ -132,6 +132,7 @@ export default function MoodCameraPanel({ productName, category }: MoodCameraPan
     [t.guardSettingsVerified, guards.settingsVerified],
     [t.guardExclusionsPresent, guards.exclusionsPresent],
     [t.guardBenchmarkDnaSet, guards.benchmarkDnaSet],
+    [t.guardRealismBlock, guards.realismBlockPresent],
   ];
 
   return (

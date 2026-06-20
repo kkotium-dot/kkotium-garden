@@ -157,6 +157,19 @@ export interface AssembledSlotStrategy {
   // Target generation resolution (2K/4K) from the camera spec — surfaced for the
   // E3 recommended-settings card so the operator matches Firefly to the spec.
   resolution: string;
+  // C6 (#107): composite-method descriptor for composite slots (compositeFlag).
+  // method='firefly_reference' = attach the product cutout as a reference and let
+  // the recommended model place the REAL product (no redraw); local PIL/sharp
+  // paste is the fallback only. null for non-composite slots (e.g. hero cutout).
+  composite: SlotCompositeMethod | null;
+}
+
+// C6 (#107): how a composite slot is produced — the reference-composite standard.
+export interface SlotCompositeMethod {
+  method: 'firefly_reference';
+  referenceRequired: true;
+  recommendedModel: ModelRoute;
+  fallback: 'local_paste';
 }
 
 export interface AssembledStrategy {

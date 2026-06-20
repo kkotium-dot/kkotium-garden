@@ -13,6 +13,10 @@ import type { AssembledPrompt, MoodGuards } from './types';
 // exclusion (not a negativePrompt field) made it into the prompt (#86).
 const EXCLUSION_MARKER = 'realistic photograph only';
 
+// C6 (#107): REALISM-CAMERA-BLOCK marker — its presence proves every cut carries
+// the real-camera editorial realism directive (AI dissonance 0).
+const REALISM_MARKER = 'photorealistic editorial product photography';
+
 export interface GuardInput {
   // The assembled prompts for this generation batch (1..N cuts).
   batch: AssembledPrompt[];
@@ -39,12 +43,16 @@ export function evaluateGuards(input: GuardInput): MoodGuards {
 
   const benchmarkDnaSet = batch.length > 0 && batch.every((b) => b.benchmarkDna.length > 0);
 
+  // C6 (#107): every cut must carry the REALISM-CAMERA-BLOCK directive.
+  const realismBlockPresent = batch.length > 0 && batch.every((b) => b.prompt.includes(REALISM_MARKER));
+
   return {
     cameraVarietyApplied,
     referenceCleared: input.referenceCleared === true,
     settingsVerified: input.settingsVerified === true,
     exclusionsPresent,
     benchmarkDnaSet,
+    realismBlockPresent,
   };
 }
 
@@ -55,6 +63,7 @@ export function allGuardsPass(g: MoodGuards): boolean {
     g.referenceCleared &&
     g.settingsVerified &&
     g.exclusionsPresent &&
-    g.benchmarkDnaSet
+    g.benchmarkDnaSet &&
+    g.realismBlockPresent
   );
 }

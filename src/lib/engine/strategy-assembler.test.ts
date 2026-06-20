@@ -131,5 +131,30 @@ check('assemble: scent_note (mandatory) is a Firefly composite slot', () => {
   assert.equal(scent.realismLane, 'photoreal');
 });
 
+// C6 (#107): composite slots carry the reference-composite descriptor + model
+// recommendation; the hero (local cutout) carries none. Every slot prompt also
+// carries the REALISM-CAMERA-BLOCK directive.
+check('assemble: C6 reference-composite descriptor + realism block', () => {
+  const { strategy } = assembleStrategy({
+    productId: 'test-prod',
+    productSubject: 'leather car air-freshener',
+    card,
+  });
+  const hero = strategy.slots.find((s) => s.slotType === 'hero')!;
+  assert.equal(hero.composite, null, 'hero (local cutout) has no composite descriptor');
+  const scent = strategy.slots.find((s) => s.slotType === 'scent_note')!;
+  assert.ok(scent.composite, 'composite slot carries a descriptor');
+  assert.equal(scent.composite!.method, 'firefly_reference');
+  assert.equal(scent.composite!.referenceRequired, true);
+  assert.equal(scent.composite!.fallback, 'local_paste');
+  assert.equal(scent.composite!.recommendedModel, scent.modelRoute);
+  for (const s of strategy.slots) {
+    assert.ok(
+      s.resolvedPrompt.includes('photorealistic editorial product photography'),
+      `${s.slotType} carries the REALISM-CAMERA-BLOCK`,
+    );
+  }
+});
+
 // eslint-disable-next-line no-console
 console.log(`\nengine strategy-assembler: ${passed} checks passed`);

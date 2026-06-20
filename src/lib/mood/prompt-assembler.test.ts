@@ -8,7 +8,15 @@
 import assert from 'node:assert/strict';
 import { assemblePrompt } from './prompt-assembler';
 import { evaluateGuards } from './guards';
-import { MOOD_AXES, MOOD_CODES, EXCLUSION_BLOCK, FIXED_GRADE_BLOCK } from './spec-data';
+import {
+  MOOD_AXES,
+  MOOD_CODES,
+  EXCLUSION_BLOCK,
+  FIXED_GRADE_BLOCK,
+  REALISM_CAMERA_BLOCK,
+  REFERENCE_COMPOSITE_BLOCK,
+  PRODUCT_MARGIN_BLOCK,
+} from './spec-data';
 import type { AssembledPrompt } from './types';
 
 let passed = 0;
@@ -29,8 +37,27 @@ for (const code of MOOD_CODES) {
     assert.ok(a.prompt.includes(MOOD_AXES[code].camera.lens), 'mood-specific lens present');
     assert.ok(a.prompt.includes('unified collection grade'), 'fixed grade appended');
     assert.ok(a.prompt.includes('realistic photograph only'), 'positive exclusion appended');
+    // C6 (#107): REALISM-CAMERA-BLOCK on every slot prompt.
+    assert.ok(a.prompt.includes(REALISM_CAMERA_BLOCK), 'realism-camera block appended');
   });
 }
+
+// C6 (#107): reference-composite mode places the ATTACHED product (no redraw) and
+// must NOT reserve empty space (the old margin path). Positive prose only.
+check('reference-composite places attached product, no empty margin', () => {
+  const a = assemblePrompt({
+    moodCode: 'M2',
+    product: 'leather car diffuser',
+    concept: 'fresh lemons and eucalyptus',
+    referenceComposite: true,
+  });
+  assert.ok(a.prompt.includes('the attached product'), 'scene built around attached product');
+  assert.ok(a.prompt.includes(REFERENCE_COMPOSITE_BLOCK), 'reference-composite instruction present');
+  assert.ok(a.prompt.includes(REALISM_CAMERA_BLOCK), 'realism block still present');
+  assert.ok(!a.prompt.includes(PRODUCT_MARGIN_BLOCK), 'no empty-margin reservation in reference mode');
+  assert.equal(a.usesNegativePromptField, false);
+  assert.ok(!/negative\s*prompt/i.test(a.prompt), 'no negative-prompt mention');
+});
 
 // 2) Exclusion is positive prose; the assembled object never carries a
 //    negativePrompt field, and the literal guard flag is false (#86).
@@ -62,6 +89,7 @@ check('camera variety guard', () => {
   const varied = evaluateGuards({ batch, referenceCleared: true, settingsVerified: true });
   assert.equal(varied.cameraVarietyApplied, true, '6-mood batch is varied');
   assert.equal(varied.exclusionsPresent, true);
+  assert.equal(varied.realismBlockPresent, true, 'C6: realism block on every cut');
   assert.equal(varied.benchmarkDnaSet, true);
   assert.equal(varied.referenceCleared, true);
   assert.equal(varied.settingsVerified, true);

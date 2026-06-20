@@ -8,7 +8,14 @@
 //   usesNegativePromptField: false as a literal guard.
 
 import { selectMoodAxis } from './decision-table';
-import { EXCLUSION_BLOCK, FIXED_GRADE_BLOCK, BACKDROP_EXCLUSION_BLOCK, PRODUCT_MARGIN_BLOCK } from './spec-data';
+import {
+  EXCLUSION_BLOCK,
+  FIXED_GRADE_BLOCK,
+  BACKDROP_EXCLUSION_BLOCK,
+  PRODUCT_MARGIN_BLOCK,
+  REALISM_CAMERA_BLOCK,
+  REFERENCE_COMPOSITE_BLOCK,
+} from './spec-data';
 import type { AssembledPrompt, AssembleInput } from './types';
 
 /** Fill [product] / [palette] placeholders in a subject template. */
@@ -30,12 +37,20 @@ export function assemblePrompt(input: AssembleInput): AssembledPrompt {
   // bare "natural" default (which dropped every per-variant palette).
   const palette = (input.palette || '').trim() || axis.palette || 'neutral tones';
 
+  const conceptText = (input.concept || '').trim();
+  // C6 (#107): reference-composite is the PRIMARY composite mode — the attached
+  // product cutout is placed by the model (form/label/caps preserved). It takes
+  // precedence over the empty-space margin path (reserveProductMargin), which is
+  // now the explicit local-paste FALLBACK. Both require a concept scene.
+  const referenceComposite = !!input.referenceComposite && !!conceptText;
   // E5 (#62): a per-variant backdrop scene — the concept IS the subject and the
-  // product is reserved as empty compositing space (not drawn). Otherwise the
-  // standard product-as-subject template.
-  const backdrop = !!input.reserveProductMargin && !!(input.concept || '').trim();
-  const subject = backdrop
-    ? `A photorealistic still-life scene of ${(input.concept || '').trim()} in ${palette} tones`
+  // product is reserved as empty compositing space (not drawn). Only when NOT in
+  // reference-composite mode.
+  const backdrop = !referenceComposite && !!input.reserveProductMargin && !!conceptText;
+  const subject = referenceComposite
+    ? `A photorealistic still-life scene of the attached product placed in ${conceptText}, in ${palette} tones`
+    : backdrop
+    ? `A photorealistic still-life scene of ${conceptText} in ${palette} tones`
     : fillSubject(axis.subjectTemplate, product, palette);
 
   // Lens / Camera (Layer 1 lookup) — never a single baked default (#84). E1:
@@ -56,13 +71,19 @@ export function assemblePrompt(input: AssembleInput): AssembledPrompt {
   // Empty fragments (e.g. dropped reference clause) are filtered out so no stray
   // separators survive. Backdrop slots reserve product margin and use the
   // product-free exclusion (#62 E5).
+  // C6 (#107): REALISM-CAMERA-BLOCK on EVERY slot prompt. Reference-composite
+  // slots add the "place the attached product exactly" instruction and use the
+  // product-free backdrop exclusion (the product is placed from the reference, not
+  // reserved as empty space).
   const prompt = [
     `${subject},`,
     referenceClause,
     `${cameraClause}.`,
     `${FIXED_GRADE_BLOCK}.`,
+    `${REALISM_CAMERA_BLOCK}.`,
+    referenceComposite ? `${REFERENCE_COMPOSITE_BLOCK}.` : '',
     backdrop ? `${PRODUCT_MARGIN_BLOCK}.` : '',
-    backdrop ? BACKDROP_EXCLUSION_BLOCK : EXCLUSION_BLOCK,
+    referenceComposite || backdrop ? BACKDROP_EXCLUSION_BLOCK : EXCLUSION_BLOCK,
   ]
     .filter((frag) => frag.trim().length > 0)
     .join(' ');

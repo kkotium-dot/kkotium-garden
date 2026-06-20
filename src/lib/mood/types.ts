@@ -54,8 +54,15 @@ export interface AssembleInput {
   // backdrop scene (the product is composited in later).
   concept?: string;
   // E5 (#62): reserve empty space for later product compositing and drop the
-  // product from the scene (backdrop / scent-note slots).
+  // product from the scene (backdrop / scent-note slots). C6 (#107): this is now
+  // the explicit local-paste FALLBACK — prefer referenceComposite below.
   reserveProductMargin?: boolean;
+  // C6 (#107): reference-composite mode (the #107 standard). The product cutout is
+  // attached as a reference image and the model places the REAL product into the
+  // scene (form/label/caps preserved, never redrawn). Takes precedence over
+  // reserveProductMargin: the prompt builds the scene AROUND the attached product
+  // instead of reserving empty space. Requires a concept to activate.
+  referenceComposite?: boolean;
 }
 
 export interface AssembledPrompt {
@@ -76,4 +83,5 @@ export interface MoodGuards {
   settingsVerified: boolean;     // ratio / resolution / grounding match the spec
   exclusionsPresent: boolean;    // positive exclusion block present in the prompt
   benchmarkDnaSet: boolean;      // mood axis carries benchmark DNA
+  realismBlockPresent: boolean;  // C6 (#107): REALISM-CAMERA-BLOCK present in every cut
 }

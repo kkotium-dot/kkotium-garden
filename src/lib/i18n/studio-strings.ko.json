@@ -306,6 +306,7 @@
       "guardSettingsVerified": "설정 정합",
       "guardExclusionsPresent": "제외 포함",
       "guardBenchmarkDnaSet": "벤치마크 DNA",
+      "guardRealismBlock": "실사 카메라 블록",
       "guardPass": "통과",
       "guardPending": "대기",
       "varietyNote": "여러 무드를 함께 생성하면 카메라가 무드별로 달라집니다 (단일 디폴트 금지).",
