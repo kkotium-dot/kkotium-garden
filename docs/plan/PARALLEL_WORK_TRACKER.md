@@ -3,7 +3,7 @@
 
 ## ★★ LIVE WORK BOARD (2026-06-18 S9 · 현 다중병행 단계 권위 · 전거 docs/handoff/HANDOFF_2026-06-18_realism-firefly-composite-upgrade-and-workboard.md §4)
 
-> 우선순위 P0>P1>P2>P3. 상태 DONE/WIP/QUEUED/GATED. 레인 D=Desktop·C=Code·O=Operator. **Code 순서: (C3+C14 ✅)→(C6 ✅)→C5→C9→C4→(C10 완료)→C7/C8/C11(P3)·C15/C16(병행 위임). C12(E7)=GO만.**
+> 우선순위 P0>P1>P2>P3. 상태 DONE/WIP/QUEUED/GATED. 레인 D=Desktop·C=Code·O=Operator. **Code 순서: (C3+C14 ✅)→(C6 ✅)→C19→C15→C16→C5→C9→C4→(C10 완료)→C17/C18/C20/C21/C7/C8/C11(P3). C12(E7)=GO만.**
 
 ### Code 레인
 | id | 작업 | P | 상태 | 의존성 | 비고 |
@@ -11,16 +11,19 @@
 | C3 | SEO 골든키워드 가드(targetKeywords 상품명 포함) | P1 | ✅ DONE·LIVE 검증 | - | targetKeywords 상품명 포함 가드→fields.golden_keyword_in_title→seoComplete/fieldsAllSet·gate goldenKeywordsMissing 노출·없으면 fail-open(#55). LIVE(fdcad92): 명화 골든키워드 3종[차량용방향제·디퓨저·에어컨냄새제거] 모두 상품명 포함→missing=[]·'차량용 누락' 전제=stale 해소. 검색량 검증 가드(#103)=별도 C-아이템 백로그 |
 | C14 | ingest stage/variant 파서 가드(명시 stage 우선·제품레벨 variant=null·거짓 conflict 억제) | P1 | ✅ DONE(본 커밋) | - | 신규 #108·전상품 #62·additive·C3와 묶음·explicitStage/contentMismatch/variantIgnoredForStage 노출·기존 thumbnail 레코드 variant 정규화=Desktop bash 확인 |
 | C6 | REALISM-CAMERA-BLOCK 전 슬롯 + Firefly-ref-composite 표준 엔진 편입 | P1 | ✅ DONE(본 커밋·코어) | - | REALISM_CAMERA_BLOCK 전 슬롯 prompt 주입+realismBlockPresent 가드·REFERENCE_COMPOSITE_BLOCK(변형 씬 reserveProductMargin→referenceComposite 전환·빈공간/PIL=폴백)·slots.composite{firefly_reference·recommendedModel·local_paste} strategy API 노출·테스트 mood10/engine12. concept별 카메라=C17·모델 실제 재라우팅=C18(후속) |
+| C19 | 명화 발행 게이트 thumbnailAssessed 플립(대표이미지 평가·#56) | P1 | QUEUED(다음) | - | 매출·thumbnailPass와 별개(사람승인)·플립 메커니즘 확인→운영자액션 보고 or 평가카드 구축 |
 | C1 | 향 §4 v6 prose 교체(권위 v6) | P2 | ✅ DONE(84dfe88) | - | 엔진 per-scent mood 기반영 |
 | C2 | archive 유틸 → 자산정합 카드 해소 | P2 | ✅ DONE(5fe06fa) | - | 확정3건 정리·커버리지 3/3·§6 타깃 |
 | C5 | E8 v2 빌드(벤치마크→자산→graft) | P2 | QUEUED | C6 | 컨벤션 스펙트럼+정체성 오버라이드(#105)+productAestheticDna 팔레트에코(#106)+실사(#107)+프롬프트 라이브러리+검토카드+Design Readiness |
 | C9 | INFO-DEP-DESIGN-GATE(Design Readiness 레인+사전생성 풀) | P2 | QUEUED | C5 부분 | - |
 | C4 | E6 자산화 폐루프(persistStrategy+SlotGeneration↔asset) | P2 | QUEUED | - | 독립 |
 | C10 | 원칙 박제 #105/#106/#107 | P2 | ✅ DONE | - | #105(84dfe88)·#106/#107(본 커밋) |
-| C15 | 테스트 자산 정리(Desktop live test-ingest 잔여 물리삭제)+detail/ 클린 재확인 | P2 | QUEUED | - | Desktop 위임(물리삭제 불가)·storage/registry 실측=Supabase-MCP 단독턴(#26 FS-write 분리) |
+| C15 | 테스트 자산 정리: cmqmbemz600002fp2tiraeu6w `detail/hero-1781957364462.png` Storage API 삭제+detail/ 재확인 | P2 | QUEUED(C19 후) | - | Desktop 위임·Storage API delete·MCP 단발턴(#26 FS-write 분리) |
 | C16 | archive 유틸 stage 확장(composite 전용→전 stage 범용) | P2 | QUEUED | - | Desktop 시스템발견·additive |
 | C17 | concept별 카메라 매핑(premium 정물 100mm f/4·라이프스타일 35mm·매크로 100mm) | P3 | QUEUED | C6 | C6 후속·MoodCode→camera concept 오버라이드 |
 | C18 | composite 모델 실제 재라우팅(NB Pro 우선)+테스트 갱신 | P3 | QUEUED | C6 | C6 후속·scent_note=firefly 테스트 의도적 갱신 동반 |
+| C20 | C6 폴리시: 프롬프트 'tones tones' 중복어 제거 | P3 | QUEUED | C6 | 경미·prose 정리 |
+| C21 | SEO 검색량 검증 골든키워드 가드(#103·C3 심화) | P3 | QUEUED | - | searchad/datalab 볼륨 기반 고볼륨 헤드텀 발굴·C3 커버리지 가드 심화 |
 | C7 | firefly_auto settingsVerified 서브체크 | P3 | QUEUED | - | - |
 | C8 | 옵션 3표현 정합 | P3 | QUEUED | - | - |
 | C11 | 가드 개선: variantUnmatched→자동등록 스킵/review 스테이지 | P3 | QUEUED | - | 선택 |
@@ -103,6 +106,7 @@
 
 
 ### 변경로그
+- 2026-06-18 (세션9·Code/큐 재배열 #89): Desktop C6 검증 PASS(전 슬롯 firefly_reference+모델추천·REALISM·보호문 강함·empty-margin 제거·gate 회귀0). 큐 재배열 C19→C15→C16→C5→C9→C4→P3. 신규: C19(명화 thumbnailAssessed 플립·P1 매출)·C15 타깃 명시(cmqmbemz…/detail/hero-1781957364462.png)·C20(C6 폴리시 tones 중복)·C21(#103 검색량 가드 백로그).
 - 2026-06-18 (세션9·Code/C6 코어): REALISM-CAMERA-BLOCK 전 슬롯 + Firefly-ref-composite 표준 엔진 편입(코어). spec-data `REALISM_CAMERA_BLOCK`(전 슬롯 prompt 주입)·`REFERENCE_COMPOSITE_BLOCK`(변형 씬을 reference-composite로 전환=빈공간 reserveProductMargin/PIL은 명시적 폴백)·guards `realismBlockPresent`·engine `slots.composite{method:firefly_reference·recommendedModel·fallback:local_paste}`·strategy API 노출·MoodCameraPanel 가드행+ko 라벨. 테스트 mood 10/engine 12 PASS·tsc0·build0·신규 한글리터럴0. 운영자 결정: concept별 카메라(C17)·composite 모델 실제 재라우팅(C18)=후속 C-아이템. 다음 Code=C5.
 - 2026-06-18 (세션9·Code/변경흡수 #89): Desktop self-handoff 흡수 — C3/C14 라이브 PASS·썸네일 variant=null 확정(C14(c) 종결). 신규 Code 위임 2건 추가: C15(테스트 자산 물리삭제+detail/ 재확인·storage=Supabase-MCP 단독턴)·C16(archive 유틸 stage 범용 확장). 신규 유의사항: 라이브 test-ingest=정리부담→비영속 검증 선호(자산 생성 최소화). 다음 Code=C6.
 - 2026-06-18 (세션9·Code/C3 LIVE 검증): prod fdcad92 strategy gate 실측 — 명화 goldenKeywords=[차량용방향제·디퓨저·에어컨냄새제거]·goldenKeywordsMissing=[]·seoComplete=true. 핸드오프 '차량용 누락' 전제=**stale**(차량용방향제 compound가 이미 상품명 포함, 단독 '차량용' 토큰도 substring상 포함). 운영자 결정: C3=커버리지 가드로 확정·검색량 검증 가드(#103)=별도 C-아이템 백로그. D4/O3 발행 잔여=대표이미지평가+상태정합 2건으로 정정.
