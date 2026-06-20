@@ -828,7 +828,11 @@ export async function updateStock(
 /**
  * Force a product to OUTOFSTOCK in Naver Commerce by setting stockQuantity=0.
  * Naver flips statusType to OUTOFSTOCK automatically when stock reaches zero,
- * which is the seller-controllable path (statusType itself is read-only).
+ * which is the seller-controllable path for OUTOFSTOCK (that value is
+ * stock-derived and not directly settable). NOTE: SALE / SUSPENSION / CLOSE ARE
+ * settable directly via the product PUT payload (originProduct.statusType) — the
+ * update route's full-replace PUT emits statusType='SALE', which releases a
+ * 판매중지(SUSPENSION). Only OUTOFSTOCK is read-only here.
  * Routes through the safe GET-merge updateStock so the rest of the listing is
  * preserved. Throws on any Commerce API error so the caller can decide whether
  * to surface a partial-success message.

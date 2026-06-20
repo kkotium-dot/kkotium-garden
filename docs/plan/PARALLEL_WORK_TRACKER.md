@@ -12,7 +12,7 @@
 | C14 | ingest stage/variant 파서 가드(명시 stage 우선·제품레벨 variant=null·거짓 conflict 억제) | P1 | ✅ DONE(본 커밋) | - | 신규 #108·전상품 #62·additive·C3와 묶음·explicitStage/contentMismatch/variantIgnoredForStage 노출·기존 thumbnail 레코드 variant 정규화=Desktop bash 확인 |
 | C6 | REALISM-CAMERA-BLOCK 전 슬롯 + Firefly-ref-composite 표준 엔진 편입 | P1 | ✅ DONE(본 커밋·코어) | - | REALISM_CAMERA_BLOCK 전 슬롯 prompt 주입+realismBlockPresent 가드·REFERENCE_COMPOSITE_BLOCK(변형 씬 reserveProductMargin→referenceComposite 전환·빈공간/PIL=폴백)·slots.composite{firefly_reference·recommendedModel·local_paste} strategy API 노출·테스트 mood10/engine12. concept별 카메라=C17·모델 실제 재라우팅=C18(후속) |
 | C19 | 명화 발행 게이트 thumbnailAssessed 플립(대표이미지 평가·#56) | P1 | ✅ DONE(e2e·Desktop 검증) | - | 백엔드+마이그(c19) 적용·e2e POST플립/DELETE원복 PASS·핫픽스 회귀복구 전상품 PASS·네이버 무접촉. UI=C19b. ★구조발견: publishReady=첫발행 전용(#109) |
-| D5 | 기등록 상품(naverProductId·판매중지) 재개/업데이트 메커니즘 보고 | P1 | ✅ 보고완료 | - | 업데이트=`/api/naver/products/update`(PUT 전체교체·confirm 게이트) 존재. 판매재개(SUSPENSION→SALE)=전용 status-change 엔드포인트 미구현·statusType read-only→네이버 판매자센터 수동 or 신규 라우트(D6 후보) |
+| D5 | 기등록 상품(naverProductId·판매중지) 재개/업데이트 메커니즘 보고 | P1 | ✅ 보고완료(정정 #44) | - | update route(`/api/naver/products/update`·PUT 전체교체·confirm)가 콘텐츠 수정 **+ 판매재개**까지 커버: 빌더 statusType='SALE' emit(product-builder.ts:937)·prod dryRun 실증(payloadPreview.statusType=SALE). 'statusType read-only'=OUTOFSTOCK 전용. **D6 불필요**. 명화 재개=update confirm:true(운영자 GO·#46·네이버 접촉) |
 | C19b | 대표이미지 평가 UI 카드(PrePublishGatePanel 승인 버튼 + 관제탑 노출) | P1 | QUEUED | C19 마이그 | 마이그 적용 후 라이브 검증 |
 | C1 | 향 §4 v6 prose 교체(권위 v6) | P2 | ✅ DONE(84dfe88) | - | 엔진 per-scent mood 기반영 |
 | C2 | archive 유틸 → 자산정합 카드 해소 | P2 | ✅ DONE(5fe06fa) | - | 확정3건 정리·커버리지 3/3·§6 타깃 |
@@ -50,7 +50,7 @@
 - D1(✅)←O1 · D4/O3←대표이미지평가+상태정합(C3 ✅LIVE·차량용 stale 해소) · C5←C6 · D3←D1 · C14(✅)=독립 guard family · 자산정합 카드 해소←C2(완료) · C12(E7)←명시 GO.
 
 ### 게이트 의미 (중요·#109)
-- **publishReady = 첫발행 게이트**(status DRAFT + naverProductId null). 기등록 상품(명화 등)은 구조적으로 publishReady=false가 **정상** → 재개/업데이트 별도 경로(update route=콘텐츠 PUT·판매재개=전용 엔드포인트 미구현/네이버 수동). **thumbnailAssessed는 publishReady 입력 아님**(thumbnailPass만·기본 true). e2e가 sub-flag 독해보다 구조를 드러냄(#45).
+- **publishReady = 첫발행 게이트**(status DRAFT + naverProductId null). 기등록 상품(명화 등)은 구조적으로 publishReady=false가 **정상** → 재개/업데이트 별도 경로(update route=full-replace PUT — 콘텐츠 최신화 + statusType='SALE'로 판매중지 해제까지 커버·confirm:true·비가역 #46·D6 불필요). **thumbnailAssessed는 publishReady 입력 아님**(thumbnailPass만·기본 true). e2e가 sub-flag 독해보다 구조를 드러냄(#45).
 
 ### 합성/사실성 표준 (신규·전상품 #62·권위 §1~2)
 - **합성 표준 전환(#107)**: 빈 배경판+PIL 로컬 페이스트 **폐기** → 누끼컷 첨부→Firefly 레퍼런스 합성(제품 재생성 금지·타깃별 최적 모델 Nano Banana Pro/Firefly Image 5). 로컬 PIL=폴백.
@@ -111,6 +111,7 @@
 
 
 ### 변경로그
+- 2026-06-21 (세션9·Code/D5 정정 #44): D5 직전 보고 오류 정정 — 판매재개는 전용 엔드포인트/수동이 아니라 **기존 update route가 커버**. buildNaverProductPayload가 statusType='SALE' 항상 emit(product-builder.ts:937)→full-replace PUT가 판매중지 해제. prod dryRun 실증(payloadPreview.statusType=SALE·네이버 무접촉). 'statusType read-only'(api-client)는 OUTOFSTOCK 전용(주석 정정). **D6 불필요**. 교훈: grep 거짓음성에 속지 말 것·sed/직접읽기+dryRun 실증으로 확정(#45/#88). 명화 재개=update confirm:true(운영자 GO·비가역).
 - 2026-06-20 (세션9·Code/C19 e2e+D5+C20·#109): Desktop이 c19 마이그 적용·e2e(POST플립/DELETE원복) PASS·핫픽스 회귀복구 전상품 PASS → C19=DONE. ★구조발견 박제(#109): publishReady=첫발행 게이트(DRAFT+naverProductId null)·기등록=재개/업데이트 별도 경로·thumbnailAssessed≠게이트입력. D5 보고: update route(PUT 전체교체) 존재·판매재개 전용 엔드포인트 미구현(statusType read-only). C20: 'tones tones' 중복 제거(paletteToneClause). 다음=C19b(UI)→C15→C16→C5.
 - 2026-06-18 (세션9·Code/C19 핫픽스): C19 배포(9c44c2f) 후 strategy gate=null 회귀(전 상품) 발견·즉시 복구(20bca96). 원인=평가 read의 $queryRaw가 미마이그 컬럼에서 Prisma **P2010**(raw query failed·Postgres 42703 래핑)을 던졌고 가드가 P2022만 봐서 재던짐→strategy 내부 catch가 스왈로우→gate=null. 교훈: **순수 보강 read는 best-effort(전 에러 스왈로우→안전 기본값)**, raw 미마이그 컬럼=P2010(≠P2022). LIVE 복구 검증: gate present·thumbnailAssessed=false·seoComplete/goldenKeywordComplete=true·originTruth=pass.
 - 2026-06-18 (세션9·Code/C19 백엔드): 조사 결과 thumbnailAssessed 플립 경로 0(buildInput이 thumbnailSignals 미주입=구조적 항상 false)→#56 평가 메커니즘 구축. 백엔드(가드 raw SQL·schema.prisma 무변경=배포순서 무제약): `thumbnail-assessment.ts`(ATTESTED_PASS_SIGNALS·readThumbnailAssessments/set/clear)·load-publish-readiness 주입(평가 시 thumbnailAssessed/Pass 플립)·POST/DELETE `/api/products/[id]/thumbnail-assess`(가드·가역·네이버 무접촉)·`MIGRATION_c19_thumbnail_assess` SQL. 운영자 결정: additive 컬럼+마이그(별도 Supabase-MCP 단발턴 #26)·UI=C19b. tsc0/build0. 다음=[MCP] c19 마이그 적용→C19b.
