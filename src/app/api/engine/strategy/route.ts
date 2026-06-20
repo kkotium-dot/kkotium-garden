@@ -125,6 +125,11 @@ export async function GET(req: NextRequest) {
           seoComplete: r.seoComplete,
           hardFieldsMissing: r.hardFieldsMissing,
           seoFieldsMissing: r.seoFieldsMissing,
+          // C3 (#62): golden-keyword-in-title gap surfaced to the publish panel
+          // and Desktop bash verify (e.g. goldenKeywordsMissing: ["차량용"]).
+          goldenKeywords: r.goldenKeywords,
+          goldenKeywordsMissing: r.goldenKeywordsMissing,
+          goldenKeywordComplete: r.goldenKeywordComplete,
           authentic: r.authentic,
           authenticityViolations: r.authenticityViolations,
           naverPayloadComplete: r.naverPayloadComplete,

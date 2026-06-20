@@ -40,6 +40,7 @@
     "targetKeywords": "검색 키워드",
     "naver_description": "상품 설명",
     "golden_keyword_score": "골든키워드 점수",
+    "golden_keyword_in_title": "골든키워드 상품명 포함",
     "sku": "상품코드(SKU)",
     "brand": "브랜드",
     "margin": "마진",

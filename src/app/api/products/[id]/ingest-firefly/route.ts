@@ -190,6 +190,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   } else {
     stage = recommendedStage;
   }
+  // C14 (#108): an explicit `stage` param is AUTHORITATIVE. It overrides the
+  // filename-token inference (kindHintForSource), so a name-vs-content
+  // disagreement reported by the classifier is NOT a real conflict here — the
+  // operator already declared the stage. We track this to suppress the false
+  // `conflict` flag in the response below (a descriptive filename like
+  // "thumbnail-firefly-composite-…" must not raise conflict when stage:'thumbnail'
+  // was passed explicitly).
+  const explicitStage = stageRaw.length > 0;
 
   // Variant: controlled tokens (angle/mood/slot/context) inferred from the
   // filename, falling back to a sanitized basename slug. The stored extension is
@@ -201,20 +209,34 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const variant = buildAssetVariant(tokens, safeVariant(baseName, 'firefly'));
   // Option-variant binding (#62 P2) — distinct from the storage-path slug above.
   const requestedVariant = (body.variant ?? '').toString().trim() || null;
+  // C14 (#108): an option variant belongs ONLY to a VARIANT-BEARING stage (the
+  // per-option scene slot = composite). Product-level stages (thumbnail / hero /
+  // source / detail / …) are one-per-product and must NEVER carry an option
+  // variant — a descriptive filename or a stray `variant` param must not
+  // manufacture a phantom binding that pollutes variant_composite coverage. For
+  // those stages optionVariant is forced null regardless of input.
+  const stageIsVariantBearing = stage === 'composite';
   // E5 ingest guard (#62): a composite variant binding MUST match an in-stock
   // option value. A typo (e.g. "후레쉰" vs "후레쉬") used to register silently and
   // never count toward coverage — leaving a variant permanently uncovered. We
   // refuse to BIND an unmatched variant (the file still ingests, but variant=null
   // so coverage stays truthful) and surface variantUnmatched + the valid options.
-  let optionVariant: string | null = requestedVariant;
+  let optionVariant: string | null = null;
   let variantUnmatched = false;
+  // C14: a variant was supplied for a product-level (non-variant-bearing) stage
+  // and was therefore ignored rather than bound — surfaced for caller correction.
+  let variantIgnoredForStage = false;
   let validVariants: string[] = [];
-  if (requestedVariant && stage === 'composite') {
+  if (requestedVariant && stageIsVariantBearing) {
     validVariants = await getActiveVariants(productId).catch(() => [] as string[]);
     if (validVariants.length > 0 && !validVariants.includes(requestedVariant)) {
       variantUnmatched = true;
       optionVariant = null; // do not bind a non-existent variant
+    } else {
+      optionVariant = requestedVariant; // matched, or no variant list to disprove
     }
+  } else if (requestedVariant) {
+    variantIgnoredForStage = true; // product-level stage — never bind a variant
   }
 
   const normalizeOff = body.normalize === false;
@@ -291,7 +313,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       recommendedStage,
       confidence: classification.confidence,
       qualityFlags: classification.qualityFlags,
-      conflict: classification.conflict,
+      // C14 (#108): an explicit `stage` param is authoritative, so a filename-vs-
+      // content disagreement is NOT a conflict — only report one when the stage
+      // was inferred. `contentMismatch` is the non-blocking advisory that the
+      // pixel signal differs from the explicit stage (info only).
+      conflict: explicitStage ? false : classification.conflict,
+      explicitStage,
+      contentMismatch:
+        explicitStage &&
+        classification.contentStage != null &&
+        classification.contentStage !== stage,
       nameStage: classification.nameStage,
       contentStage: classification.contentStage,
       tokens,
@@ -302,6 +333,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       optionVariant,
       requestedVariant,
       variantUnmatched,
+      // C14 (#108): true when a variant was supplied for a product-level stage
+      // (thumbnail/hero/…) and ignored rather than bound (variant stays null).
+      variantIgnoredForStage,
       ...(variantUnmatched ? { validVariants } : {}),
       width,
       height,

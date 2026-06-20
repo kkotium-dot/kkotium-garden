@@ -44,6 +44,7 @@ const FIELD_LABELS_KO: Record<string, string> = {
   keywords: "키워드 배열",
   targetKeywords: "타겟 키워드",
   golden_keyword_score: "골든 점수",
+  golden_keyword_in_title: "골든키워드 상품명 포함",
   detail_image_url: "상세 이미지",
   main_image_url: "대표 이미지",
   optionName: "옵션명",

@@ -307,6 +307,7 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 - **#87** — 단일 관제탑 (Single Control Tower) — single live board = the only authority; not on the board = the task does not exist.
 - **#88** — 완료=검증 (Done Means Verified) — no "done" label before real browser/field verification (binds #45).
 - **#89** — 변경 흡수 (Change Absorption) — absorb mid-session changes into the board immediately, then re-prioritize.
+- **#108** — INGEST 추론 종속성: 명시 stage/variant 파라미터 ⊳ 파일명 토큰. 거짓 conflict 억제(explicitStage)·제품레벨 stage variant=null(전상품 #62·C14).
 
 ---
 

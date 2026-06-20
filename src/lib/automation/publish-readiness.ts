@@ -46,6 +46,9 @@ export interface FieldChecks {
   keywords: boolean;
   targetKeywords: boolean;
   golden_keyword_score: boolean;
+  // C3 (#62): every curated golden keyword (targetKeywords) is present in the
+  // product TITLE. True when none are designated (fail-open). Non-hard (SEO) field.
+  golden_keyword_in_title: boolean;
   detail_image_url: boolean;
   main_image_url: boolean;
   optionName: boolean;
@@ -158,6 +161,13 @@ export interface PublishReadinessResult {
   seoComplete: boolean;
   hardFieldsMissing: string[];
   seoFieldsMissing: string[];
+  // C3 (#62) golden-keyword-in-title guard. goldenKeywords = curated targets;
+  // goldenKeywordsMissing = the ones absent from the title (drives the
+  // golden_keyword_in_title field check and surfaces the exact omission, e.g.
+  // "차량용"). goldenKeywordComplete is its boolean (true when none curated).
+  goldenKeywords: string[];
+  goldenKeywordsMissing: string[];
+  goldenKeywordComplete: boolean;
   authentic: boolean;
   authenticityViolations: AuthenticityViolation[];
   naverPayload: NaverPayloadChecks;
@@ -207,6 +217,43 @@ function isNonEmptyString(v: unknown): boolean {
   return typeof v === 'string' && v.trim().length > 0;
 }
 
+// ---------------------------------------------------------------------------
+// Golden-keyword-in-title guard (C3, #62, product-agnostic)
+// ---------------------------------------------------------------------------
+// A product's curated `targetKeywords` are its high-value SEO "golden" keywords.
+// Naver ranks primarily on the product TITLE, so each designated golden keyword
+// must appear in the title (naver_title, falling back to seoTitle). A golden
+// keyword that is curated yet absent from the title is a ranking gap — e.g. a
+// 차량용 diffuser whose title omits "차량용" never surfaces for the highest-intent
+// search. This used to pass silently because no such check existed; the gate's
+// seoComplete was true by omission.
+//
+// Fail-open: when no golden keywords are curated (empty targetKeywords) there is
+// nothing to enforce, so the guard passes — products without curated targets are
+// unaffected (regression 0, #55 product-agnostic).
+
+function toKeywordArray(v: unknown): string[] {
+  return Array.isArray(v)
+    ? v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0).map((x) => x.trim())
+    : [];
+}
+
+// Whitespace-insensitive, case-folded match: "차량용 디퓨저" and "차량용디퓨저" both
+// contain the golden keyword "차량용".
+function normalizeForKeywordMatch(s: string): string {
+  return s.replace(/\s+/g, '').toLowerCase();
+}
+
+/** Golden keywords (curated targetKeywords) absent from the product title. */
+export function goldenKeywordsMissingFromTitle(input: PublishReadinessInput): string[] {
+  const golden = toKeywordArray(input.targetKeywords);
+  if (golden.length === 0) return [];
+  const titleRaw = (isNonEmptyString(input.naver_title) ? input.naver_title : input.seoTitle) ?? '';
+  const title = normalizeForKeywordMatch(titleRaw);
+  if (!title) return golden; // title empty but golden keywords exist → all missing
+  return golden.filter((kw) => !title.includes(normalizeForKeywordMatch(kw)));
+}
+
 function evaluateFields(input: PublishReadinessInput): FieldChecks {
   // 작업1 — 배송사: 레거시 carrier_code 또는 발행 로직이 쓰는 courierCode 중
   // 하나만 있으면 통과 (필드 매핑 불일치 정정).
@@ -230,6 +277,9 @@ function evaluateFields(input: PublishReadinessInput): FieldChecks {
     keywords: isNonEmptyArray(input.keywords),
     targetKeywords: isNonEmptyArray(input.targetKeywords),
     golden_keyword_score: typeof input.golden_keyword_score === 'number',
+    // C3 (#62): curated golden keywords must appear in the title. Fail-open when
+    // none are curated (no targetKeywords) so other products are unaffected.
+    golden_keyword_in_title: goldenKeywordsMissingFromTitle(input).length === 0,
     detail_image_url: isNonEmptyString(input.detail_image_url),
     main_image_url: isNonEmptyString(input.main_image_url),
     optionName: hasOpts ? isNonEmptyString(input.optionName) : true,
@@ -366,6 +416,13 @@ export function evaluatePublishReadiness(input: PublishReadinessInput): PublishR
   const hardComplete = hardFieldsMissing.length === 0;
   const seoComplete = seoFieldsMissing.length === 0;
 
+  // C3 (#62): golden-keyword-in-title detail. The boolean already flows through
+  // fields.golden_keyword_in_title → seoFieldsMissing → seoComplete; here we
+  // surface the exact missing keyword(s) for the panel and the strategy gate.
+  const goldenKeywords = toKeywordArray(input.targetKeywords);
+  const goldenKeywordsMissing = goldenKeywordsMissingFromTitle(input);
+  const goldenKeywordComplete = goldenKeywordsMissing.length === 0;
+
   const authenticityViolations = checkAuthenticity(input);
   const authentic = authenticityViolations.length === 0;
   const naverPayload = evaluateNaverPayload(input);
@@ -404,6 +461,9 @@ export function evaluatePublishReadiness(input: PublishReadinessInput): PublishR
     seoComplete,
     hardFieldsMissing,
     seoFieldsMissing,
+    goldenKeywords,
+    goldenKeywordsMissing,
+    goldenKeywordComplete,
     authentic,
     authenticityViolations,
     naverPayload,
