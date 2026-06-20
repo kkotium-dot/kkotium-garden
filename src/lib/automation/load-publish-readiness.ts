@@ -21,6 +21,11 @@ import {
 } from './publish-readiness';
 import { mapCategoryToTone } from './category-tone-mapper';
 import type { ConceptTone } from '@/lib/diagnosis/concept-tone-inference';
+import {
+  readThumbnailAssessments,
+  ATTESTED_PASS_SIGNALS,
+  type ThumbnailAssessment,
+} from './thumbnail-assessment';
 
 // The Product columns publish-readiness needs. Kept in one place so the single
 // and batch routes select identically (no drift).
@@ -83,6 +88,7 @@ type ProductRow = Prisma.ProductGetPayload<{ select: typeof PRODUCT_SELECT }>;
 function buildInput(
   product: ProductRow,
   conceptTone: ConceptTone | undefined,
+  assessment: ThumbnailAssessment | undefined,
 ): PublishReadinessInput {
   const toneDirective = mapCategoryToTone(conceptTone, {
     category: product.category ?? undefined,
@@ -124,6 +130,10 @@ function buildInput(
     naver_delivery_info: product.naver_delivery_info,
     naver_exchange_info: product.naver_exchange_info,
     naver_refund_info: product.naver_refund_info,
+    // C19 (#56): an operator-attested representative supplies the policy signals,
+    // flipping thumbnailAssessed -> true (and thumbnailPass via the attested-pass
+    // values). Unassessed -> undefined -> gate stays "not assessed" (regression 0).
+    thumbnailSignals: assessment ? ATTESTED_PASS_SIGNALS : null,
   };
 }
 
@@ -157,11 +167,16 @@ export async function loadAndEvaluateProducts(
   const byId = new Map<string, ProductRow>();
   for (const p of products) byId.set(p.id, p);
 
+  // C19 (#56): one guarded read of operator thumbnail assessments (raw SQL — a
+  // not-yet-migrated column yields an empty map, so the gate is unchanged
+  // pre-migration). Drives thumbnailAssessed/thumbnailPass per product.
+  const assessments = await readThumbnailAssessments(productIds);
+
   const out: PublishReadinessLoaded[] = [];
   for (const id of productIds) {
     const product = byId.get(id);
     if (!product) continue; // missing id — skip (caller decides 404 vs partial)
-    const input = buildInput(product, toneByProduct.get(id));
+    const input = buildInput(product, toneByProduct.get(id), assessments.get(id));
     const result = evaluatePublishReadiness(input);
     out.push({
       result,
