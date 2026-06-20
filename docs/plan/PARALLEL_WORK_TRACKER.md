@@ -21,7 +21,7 @@
 | C4 | E6 자산화 폐루프(persistStrategy+SlotGeneration↔asset) | P2 | QUEUED | - | 독립 |
 | C10 | 원칙 박제 #105/#106/#107 | P2 | ✅ DONE | - | #105(84dfe88)·#106/#107(본 커밋) |
 | C15 | 테스트 자산 정리: cmqmbemz600002fp2tiraeu6w `detail/hero-1781957364462.png` Storage API 삭제+detail/ 재확인 | P2 | QUEUED(C19 후) | - | Desktop 위임·Storage API delete·MCP 단발턴(#26 FS-write 분리) |
-| C16 | archive 유틸 stage 확장(composite 전용→전 stage 범용) | P2 | 🔎 조사완료·premise 불성립(코드변경 불필요) | - | 실측: archiveAssets(id)·reconcileRegistryDrift(path)·assets-action archive(path)·fixProductIntegrity **전부 이미 stage-범용**, archive action이 일반 integrity카드+composite카드 모두 재동기. composite 한정=ratio가드(composite/thumbnail 정당)·variant-coverage(도메인 정당)뿐. Desktop 관측 구체 갭 확인 요 or CLOSE. 후보 enhancement=product-level 슈퍼시드 자동아카이브 surfacing(옵션) |
+| C16 | archive 유틸 stage 확장(composite 전용→전 stage 범용) | P2 | 🔒 GATED(Desktop 개선안 의견 대기) | Desktop | 실측: archive 유틸 **이미 stage-범용**(premise 불성립·코드변경0·#46). 운영자 결정: Desktop 개선안 의견 수신 후 진행. 후보 enhancement=product-level(thumbnail/hero/detail) 슈퍼시드 자동아카이브 surfacing |
 | C17 | concept별 카메라 매핑(premium 정물 100mm f/4·라이프스타일 35mm·매크로 100mm) | P3 | QUEUED | C6 | C6 후속·MoodCode→camera concept 오버라이드 |
 | C18 | composite 모델 실제 재라우팅(NB Pro 우선)+테스트 갱신 | P3 | QUEUED | C6 | C6 후속·scent_note=firefly 테스트 의도적 갱신 동반 |
 | C20 | C6 폴리시: 프롬프트 'tones tones' 중복어 제거 | P3 | ✅ DONE(본 커밋) | C6 | paletteToneClause 가드(palette가 tones로 끝나면 미중복)·테스트 +1 |
