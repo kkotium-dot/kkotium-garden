@@ -25,6 +25,12 @@ function fillSubject(template: string, product: string, palette: string): string
     .split('[palette]').join(palette);
 }
 
+// C20: several mood palettes already end with "tones" (e.g. "soft wood tones").
+// Compose the scene palette clause without the "... tones tones" duplicate.
+function paletteToneClause(palette: string): string {
+  return /tones?$/i.test(palette.trim()) ? palette : `${palette} tones`;
+}
+
 /**
  * Assemble the full English prompt for one mood + product. Variable knobs
  * (product, palette) are the only product-specific inputs; everything else is
@@ -48,9 +54,9 @@ export function assemblePrompt(input: AssembleInput): AssembledPrompt {
   // reference-composite mode.
   const backdrop = !referenceComposite && !!input.reserveProductMargin && !!conceptText;
   const subject = referenceComposite
-    ? `A photorealistic still-life scene of the attached product placed in ${conceptText}, in ${palette} tones`
+    ? `A photorealistic still-life scene of the attached product placed in ${conceptText}, in ${paletteToneClause(palette)}`
     : backdrop
-    ? `A photorealistic still-life scene of ${conceptText} in ${palette} tones`
+    ? `A photorealistic still-life scene of ${conceptText} in ${paletteToneClause(palette)}`
     : fillSubject(axis.subjectTemplate, product, palette);
 
   // Lens / Camera (Layer 1 lookup) — never a single baked default (#84). E1:

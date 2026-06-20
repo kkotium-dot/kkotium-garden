@@ -57,6 +57,8 @@ check('reference-composite places attached product, no empty margin', () => {
   assert.ok(!a.prompt.includes(PRODUCT_MARGIN_BLOCK), 'no empty-margin reservation in reference mode');
   assert.equal(a.usesNegativePromptField, false);
   assert.ok(!/negative\s*prompt/i.test(a.prompt), 'no negative-prompt mention');
+  // C20: M2 palette already ends with "tones" — the scene clause must not double it.
+  assert.ok(!/tones tones/i.test(a.prompt), 'no duplicate "tones tones"');
 });
 
 // 2) Exclusion is positive prose; the assembled object never carries a

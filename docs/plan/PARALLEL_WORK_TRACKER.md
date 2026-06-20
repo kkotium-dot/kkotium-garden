@@ -3,7 +3,7 @@
 
 ## ★★ LIVE WORK BOARD (2026-06-18 S9 · 현 다중병행 단계 권위 · 전거 docs/handoff/HANDOFF_2026-06-18_realism-firefly-composite-upgrade-and-workboard.md §4)
 
-> 우선순위 P0>P1>P2>P3. 상태 DONE/WIP/QUEUED/GATED. 레인 D=Desktop·C=Code·O=Operator. **Code 순서: (C3+C14 ✅)→(C6 ✅)→C19 코드✅→[c19 마이그=Supabase-MCP 단발턴]→C19b(UI)→C15→C16→C5→C9→C4→(C10 완료)→C17/C18/C20/C21/C7/C8/C11(P3). C12(E7)=GO만.**
+> 우선순위 P0>P1>P2>P3. 상태 DONE/WIP/QUEUED/GATED. 레인 D=Desktop·C=Code·O=Operator. **Code 순서: (C3+C14 ✅)→(C6 ✅)→(C19 ✅ e2e)→C19b(UI)→C15→C16→C5→C9→C4→(C10 완료)→C17/C18/C21/C7/C8/C11(P3). C12(E7)=GO만.**
 
 ### Code 레인
 | id | 작업 | P | 상태 | 의존성 | 비고 |
@@ -11,7 +11,8 @@
 | C3 | SEO 골든키워드 가드(targetKeywords 상품명 포함) | P1 | ✅ DONE·LIVE 검증 | - | targetKeywords 상품명 포함 가드→fields.golden_keyword_in_title→seoComplete/fieldsAllSet·gate goldenKeywordsMissing 노출·없으면 fail-open(#55). LIVE(fdcad92): 명화 골든키워드 3종[차량용방향제·디퓨저·에어컨냄새제거] 모두 상품명 포함→missing=[]·'차량용 누락' 전제=stale 해소. 검색량 검증 가드(#103)=별도 C-아이템 백로그 |
 | C14 | ingest stage/variant 파서 가드(명시 stage 우선·제품레벨 variant=null·거짓 conflict 억제) | P1 | ✅ DONE(본 커밋) | - | 신규 #108·전상품 #62·additive·C3와 묶음·explicitStage/contentMismatch/variantIgnoredForStage 노출·기존 thumbnail 레코드 variant 정규화=Desktop bash 확인 |
 | C6 | REALISM-CAMERA-BLOCK 전 슬롯 + Firefly-ref-composite 표준 엔진 편입 | P1 | ✅ DONE(본 커밋·코어) | - | REALISM_CAMERA_BLOCK 전 슬롯 prompt 주입+realismBlockPresent 가드·REFERENCE_COMPOSITE_BLOCK(변형 씬 reserveProductMargin→referenceComposite 전환·빈공간/PIL=폴백)·slots.composite{firefly_reference·recommendedModel·local_paste} strategy API 노출·테스트 mood10/engine12. concept별 카메라=C17·모델 실제 재라우팅=C18(후속) |
-| C19 | 명화 발행 게이트 thumbnailAssessed 플립(대표이미지 평가·#56) | P1 | 🟡 코드 DONE(본 커밋)·마이그/UI 잔여 | - | 조사: 플립 경로 0(buildInput thumbnailSignals 미주입=구조적 항상 false)→구축. 백엔드(가드 raw SQL·schema 무변경): thumbnail-assessment.ts(attested-pass 신호·read/set/clear)·load-publish-readiness 주입·POST/DELETE /thumbnail-assess·MIGRATION_c19 SQL. 적용=Supabase-MCP 단발턴(#26)·UI=C19b |
+| C19 | 명화 발행 게이트 thumbnailAssessed 플립(대표이미지 평가·#56) | P1 | ✅ DONE(e2e·Desktop 검증) | - | 백엔드+마이그(c19) 적용·e2e POST플립/DELETE원복 PASS·핫픽스 회귀복구 전상품 PASS·네이버 무접촉. UI=C19b. ★구조발견: publishReady=첫발행 전용(#109) |
+| D5 | 기등록 상품(naverProductId·판매중지) 재개/업데이트 메커니즘 보고 | P1 | ✅ 보고완료 | - | 업데이트=`/api/naver/products/update`(PUT 전체교체·confirm 게이트) 존재. 판매재개(SUSPENSION→SALE)=전용 status-change 엔드포인트 미구현·statusType read-only→네이버 판매자센터 수동 or 신규 라우트(D6 후보) |
 | C19b | 대표이미지 평가 UI 카드(PrePublishGatePanel 승인 버튼 + 관제탑 노출) | P1 | QUEUED | C19 마이그 | 마이그 적용 후 라이브 검증 |
 | C1 | 향 §4 v6 prose 교체(권위 v6) | P2 | ✅ DONE(84dfe88) | - | 엔진 per-scent mood 기반영 |
 | C2 | archive 유틸 → 자산정합 카드 해소 | P2 | ✅ DONE(5fe06fa) | - | 확정3건 정리·커버리지 3/3·§6 타깃 |
@@ -23,7 +24,7 @@
 | C16 | archive 유틸 stage 확장(composite 전용→전 stage 범용) | P2 | QUEUED | - | Desktop 시스템발견·additive |
 | C17 | concept별 카메라 매핑(premium 정물 100mm f/4·라이프스타일 35mm·매크로 100mm) | P3 | QUEUED | C6 | C6 후속·MoodCode→camera concept 오버라이드 |
 | C18 | composite 모델 실제 재라우팅(NB Pro 우선)+테스트 갱신 | P3 | QUEUED | C6 | C6 후속·scent_note=firefly 테스트 의도적 갱신 동반 |
-| C20 | C6 폴리시: 프롬프트 'tones tones' 중복어 제거 | P3 | QUEUED | C6 | 경미·prose 정리 |
+| C20 | C6 폴리시: 프롬프트 'tones tones' 중복어 제거 | P3 | ✅ DONE(본 커밋) | C6 | paletteToneClause 가드(palette가 tones로 끝나면 미중복)·테스트 +1 |
 | C21 | SEO 검색량 검증 골든키워드 가드(#103·C3 심화) | P3 | QUEUED | - | searchad/datalab 볼륨 기반 고볼륨 헤드텀 발굴·C3 커버리지 가드 심화 |
 | C7 | firefly_auto settingsVerified 서브체크 | P3 | QUEUED | - | - |
 | C8 | 옵션 3표현 정합 | P3 | QUEUED | - | - |
@@ -47,6 +48,9 @@
 
 ### 의존성 맵
 - D1(✅)←O1 · D4/O3←대표이미지평가+상태정합(C3 ✅LIVE·차량용 stale 해소) · C5←C6 · D3←D1 · C14(✅)=독립 guard family · 자산정합 카드 해소←C2(완료) · C12(E7)←명시 GO.
+
+### 게이트 의미 (중요·#109)
+- **publishReady = 첫발행 게이트**(status DRAFT + naverProductId null). 기등록 상품(명화 등)은 구조적으로 publishReady=false가 **정상** → 재개/업데이트 별도 경로(update route=콘텐츠 PUT·판매재개=전용 엔드포인트 미구현/네이버 수동). **thumbnailAssessed는 publishReady 입력 아님**(thumbnailPass만·기본 true). e2e가 sub-flag 독해보다 구조를 드러냄(#45).
 
 ### 합성/사실성 표준 (신규·전상품 #62·권위 §1~2)
 - **합성 표준 전환(#107)**: 빈 배경판+PIL 로컬 페이스트 **폐기** → 누끼컷 첨부→Firefly 레퍼런스 합성(제품 재생성 금지·타깃별 최적 모델 Nano Banana Pro/Firefly Image 5). 로컬 PIL=폴백.
@@ -107,6 +111,7 @@
 
 
 ### 변경로그
+- 2026-06-20 (세션9·Code/C19 e2e+D5+C20·#109): Desktop이 c19 마이그 적용·e2e(POST플립/DELETE원복) PASS·핫픽스 회귀복구 전상품 PASS → C19=DONE. ★구조발견 박제(#109): publishReady=첫발행 게이트(DRAFT+naverProductId null)·기등록=재개/업데이트 별도 경로·thumbnailAssessed≠게이트입력. D5 보고: update route(PUT 전체교체) 존재·판매재개 전용 엔드포인트 미구현(statusType read-only). C20: 'tones tones' 중복 제거(paletteToneClause). 다음=C19b(UI)→C15→C16→C5.
 - 2026-06-18 (세션9·Code/C19 핫픽스): C19 배포(9c44c2f) 후 strategy gate=null 회귀(전 상품) 발견·즉시 복구(20bca96). 원인=평가 read의 $queryRaw가 미마이그 컬럼에서 Prisma **P2010**(raw query failed·Postgres 42703 래핑)을 던졌고 가드가 P2022만 봐서 재던짐→strategy 내부 catch가 스왈로우→gate=null. 교훈: **순수 보강 read는 best-effort(전 에러 스왈로우→안전 기본값)**, raw 미마이그 컬럼=P2010(≠P2022). LIVE 복구 검증: gate present·thumbnailAssessed=false·seoComplete/goldenKeywordComplete=true·originTruth=pass.
 - 2026-06-18 (세션9·Code/C19 백엔드): 조사 결과 thumbnailAssessed 플립 경로 0(buildInput이 thumbnailSignals 미주입=구조적 항상 false)→#56 평가 메커니즘 구축. 백엔드(가드 raw SQL·schema.prisma 무변경=배포순서 무제약): `thumbnail-assessment.ts`(ATTESTED_PASS_SIGNALS·readThumbnailAssessments/set/clear)·load-publish-readiness 주입(평가 시 thumbnailAssessed/Pass 플립)·POST/DELETE `/api/products/[id]/thumbnail-assess`(가드·가역·네이버 무접촉)·`MIGRATION_c19_thumbnail_assess` SQL. 운영자 결정: additive 컬럼+마이그(별도 Supabase-MCP 단발턴 #26)·UI=C19b. tsc0/build0. 다음=[MCP] c19 마이그 적용→C19b.
 - 2026-06-18 (세션9·Code/큐 재배열 #89): Desktop C6 검증 PASS(전 슬롯 firefly_reference+모델추천·REALISM·보호문 강함·empty-margin 제거·gate 회귀0). 큐 재배열 C19→C15→C16→C5→C9→C4→P3. 신규: C19(명화 thumbnailAssessed 플립·P1 매출)·C15 타깃 명시(cmqmbemz…/detail/hero-1781957364462.png)·C20(C6 폴리시 tones 중복)·C21(#103 검색량 가드 백로그).
