@@ -39,10 +39,12 @@ export interface ThumbnailAssessment {
 
 function isMissingColumn(e: unknown): boolean {
   if (e instanceof Prisma.PrismaClientKnownRequestError) {
-    return e.code === 'P2021' || e.code === 'P2022';
+    // P2021/P2022 = table/column unknown to the client; P2010 = raw query failed
+    // (the $queryRaw / $executeRaw path wraps the Postgres 42703 here).
+    if (e.code === 'P2021' || e.code === 'P2022' || e.code === 'P2010') return true;
   }
   const msg = e instanceof Error ? e.message : String(e);
-  return /column .* does not exist|relation .* does not exist/i.test(msg);
+  return /does not exist/i.test(msg);
 }
 
 /**
@@ -69,9 +71,13 @@ export async function readThumbnailAssessments(
         out.set(r.id, { assessedAt: r.thumbnail_assessed_at, assessedBy: r.thumbnail_assessed_by });
       }
     }
-  } catch (e) {
-    if (!isMissingColumn(e)) throw e;
-    // column not migrated yet — treat all as unassessed (no regression).
+  } catch {
+    // BEST-EFFORT: this is a pure enhancement read. A failure for ANY reason
+    // (column not migrated yet = Postgres 42703 wrapped as Prisma P2010, or a
+    // transient DB error) must NEVER break publish-readiness — default to "none
+    // assessed" (empty map). Returning here keeps the gate's pre-migration
+    // behavior with zero regression.
+    return out;
   }
   return out;
 }
