@@ -3,7 +3,7 @@
 
 ## ★★ LIVE WORK BOARD (2026-06-18 S9 · 현 다중병행 단계 권위 · 전거 docs/handoff/HANDOFF_2026-06-18_realism-firefly-composite-upgrade-and-workboard.md §4)
 
-> 우선순위 P0>P1>P2>P3. 상태 DONE/WIP/QUEUED/GATED. 레인 D=Desktop·C=Code·O=Operator. **Code 순서: (C3+C14 ✅)→(C6 ✅)→(C19 ✅)→(C19b ✅ 코드)→C15→C16→C5→C9→C4→(C10 완료)→C17/C18/C21/C7/C8/C11(P3). C12(E7)=GO만.**
+> 우선순위 P0>P1>P2>P3. 상태 DONE/WIP/QUEUED/GATED. 레인 D=Desktop·C=Code·O=Operator. **Code 순서: (C3+C14 ✅)→(C6 ✅)→(C19 ✅)→(C19b ✅ prod-verified)→C15→(C16 CLOSED)→C5(GO·스코핑중)→C9→C4→(C10 완료)→C17/C18/C21/C7/C8/C11/C23(P3/P2). C12(E7)=GO만.**
 
 ### Code 레인
 | id | 작업 | P | 상태 | 의존성 | 비고 |
@@ -13,7 +13,7 @@
 | C6 | REALISM-CAMERA-BLOCK 전 슬롯 + Firefly-ref-composite 표준 엔진 편입 | P1 | ✅ DONE(본 커밋·코어) | - | REALISM_CAMERA_BLOCK 전 슬롯 prompt 주입+realismBlockPresent 가드·REFERENCE_COMPOSITE_BLOCK(변형 씬 reserveProductMargin→referenceComposite 전환·빈공간/PIL=폴백)·slots.composite{firefly_reference·recommendedModel·local_paste} strategy API 노출·테스트 mood10/engine12. concept별 카메라=C17·모델 실제 재라우팅=C18(후속) |
 | C19 | 명화 발행 게이트 thumbnailAssessed 플립(대표이미지 평가·#56) | P1 | ✅ DONE(e2e·Desktop 검증) | - | 백엔드+마이그(c19) 적용·e2e POST플립/DELETE원복 PASS·핫픽스 회귀복구 전상품 PASS·네이버 무접촉. UI=C19b. ★구조발견: publishReady=첫발행 전용(#109) |
 | D5 | 기등록 상품(naverProductId·판매중지) 재개/업데이트 메커니즘 보고 | P1 | ✅ 보고완료(정정 #44) | - | update route(`/api/naver/products/update`·PUT 전체교체·confirm)가 콘텐츠 수정 **+ 판매재개**까지 커버: 빌더 statusType='SALE' emit(product-builder.ts:937)·prod dryRun 실증(payloadPreview.statusType=SALE). 'statusType read-only'=OUTOFSTOCK 전용. **D6 불필요**. 명화 재개=update confirm:true(운영자 GO·#46·네이버 접촉) |
-| C19b | 대표이미지 평가 UI 카드(PrePublishGatePanel 승인 버튼·#56) | P1 | ✅ DONE(코드·빌드)·브라우저 검증 권장 | - | PrePublishGatePanel ThumbAssessControl(승인 POST/재평가 DELETE)+useEngineStrategy refetch+studio 배선+i18n 5키. 라우트 e2e=Desktop PASS. /studio publish탭 클릭 검증 권장. 관제탑 큐 카드=옵션 후속 |
+| C19b | 대표이미지 평가 UI 카드(PrePublishGatePanel 승인 버튼·#56) | P1 | ✅ DONE·prod 라이브 e2e 검증(하드리프레시) | - | PrePublishGatePanel ThumbAssessControl(승인 POST/재평가 DELETE)+useEngineStrategy refetch+studio 배선+i18n 5키. **Desktop prod 라이브 e2e(하드리프레시): 평가됨(재평가)→DELETE→미평가+「대표이미지 평가·승인」(enabled) 플립·양 상태 정상 렌더.** f8bfa6a 정합(254-255)·코드변경0·근본원인 D 2회 반증·premise 불성립. 인터럽트 변이(잔여 POST→DELETE) 복원완 |
 | C1 | 향 §4 v6 prose 교체(권위 v6) | P2 | ✅ DONE(84dfe88) | - | 엔진 per-scent mood 기반영 |
 | C2 | archive 유틸 → 자산정합 카드 해소 | P2 | ✅ DONE(5fe06fa) | - | 확정3건 정리·커버리지 3/3·§6 타깃 |
 | C5 | E8 v2 빌드(벤치마크→자산→graft) | P2 | QUEUED | C6 | 컨벤션 스펙트럼+정체성 오버라이드(#105)+productAestheticDna 팔레트에코(#106)+실사(#107)+프롬프트 라이브러리+검토카드+Design Readiness |
@@ -21,12 +21,13 @@
 | C4 | E6 자산화 폐루프(persistStrategy+SlotGeneration↔asset) | P2 | QUEUED | - | 독립 |
 | C10 | 원칙 박제 #105/#106/#107 | P2 | ✅ DONE | - | #105(84dfe88)·#106/#107(본 커밋) |
 | C15 | 테스트 자산 정리: cmqmbemz600002fp2tiraeu6w `detail/hero-1781957364462.png` Storage API 삭제+detail/ 재확인 | P2 | QUEUED(C19 후) | - | Desktop 위임·Storage API delete·MCP 단발턴(#26 FS-write 분리) |
-| C16 | archive 유틸 stage 확장(composite 전용→전 stage 범용) | P2 | 🔒 GATED(Desktop 개선안 의견 대기) | Desktop | 실측: archive 유틸 **이미 stage-범용**(premise 불성립·코드변경0·#46). 운영자 결정: Desktop 개선안 의견 수신 후 진행. 후보 enhancement=product-level(thumbnail/hero/detail) 슈퍼시드 자동아카이브 surfacing |
+| C16 | archive 유틸 stage 확장(composite 전용→전 stage 범용) | P2 | ✅ CLOSED(premise 무효·코드0) | - | 실측: archive 유틸 **이미 stage-범용**(archiveAssets·reconcileRegistryDrift·assets/action archive·fixProductIntegrity 전부 stage-범용·composite 한정은 ratio가드/variant-coverage 도메인뿐). premise(composite 전용) 불성립→코드변경0(#46). 후보 enhancement은 C23으로 분리 |
 | C17 | concept별 카메라 매핑(premium 정물 100mm f/4·라이프스타일 35mm·매크로 100mm) | P3 | QUEUED | C6 | C6 후속·MoodCode→camera concept 오버라이드 |
 | C18 | composite 모델 실제 재라우팅(NB Pro 우선)+테스트 갱신 | P3 | QUEUED | C6 | C6 후속·scent_note=firefly 테스트 의도적 갱신 동반 |
 | C20 | C6 폴리시: 프롬프트 'tones tones' 중복어 제거 | P3 | ✅ DONE(본 커밋) | C6 | paletteToneClause 가드(palette가 tones로 끝나면 미중복)·테스트 +1 |
 | C21 | SEO 검색량 검증 골든키워드 가드(#103·C3 심화) | P3 | QUEUED | - | searchad/datalab 볼륨 기반 고볼륨 헤드텀 발굴·C3 커버리지 가드 심화 |
 | C22 | 통합 레인(단순/디테일 ⊇ A/B) 상태 + sourcing_incomplete 카드 앱 노출(#116/#117) | P2 | QUEUED | - | 워크플로 docs 형식화 완료(§1-A)·앱 surfacing 후속 |
+| C23 | supersede→archive 개입카드(슈퍼시드 자산 자동아카이브 surfacing) | P2 | QUEUED | - | C16에서 분리. product-level(thumbnail/hero/detail) 신버전 확정 시 구버전 자동 아카이브 후보를 개입카드로 표면화(#56·운영자 결정·가역). registry_drift/variant_composite 카드 패턴 동형 |
 | C7 | firefly_auto settingsVerified 서브체크 | P3 | QUEUED | - | - |
 | C8 | 옵션 3표현 정합 | P3 | QUEUED | - | - |
 | C11 | 가드 개선: variantUnmatched→자동등록 스킵/review 스테이지 | P3 | QUEUED | - | 선택 |
@@ -112,6 +113,7 @@
 
 
 ### 변경로그
+- 2026-06-21 (세션9·Code/C19b prod-verified + C16 CLOSE + C23 분리): **C19b=DONE** — Desktop prod 라이브 e2e(하드리프레시) 검증: 명화 평가됨(재평가 버튼) 관측→DELETE→미평가+「대표이미지 평가·승인」(enabled) 플립·양 상태 정상 렌더. f8bfa6a(254-255) 이미 정합·코드변경0·근본원인 D 2회 반증·premise 불성립. 인터럽트된 e2e 변이(명화 잔여 POST→DELETE) 복원 추적완. **C16=CLOSED**(archive 유틸 이미 stage-범용·premise 무효·코드0·#46). 후보 enhancement은 **C23**(supersede→archive 개입카드·P2)로 분리 신설. 원칙 #119 박제(하드리프레시 검증·인터럽트 cleanup 추적·정적 probe=point-in-time·코드done↔prod-verified 컬럼분리). 다음 Code=C5(E8 v2·스코핑→설계 fork 보고→GO 후 빌드).
 - 2026-06-21 (세션9·Code/C16 조사): archive 유틸 stage-범용 여부 실측 — archiveAssets(registryId·any stage)·reconcileRegistryDrift(path)·assets/action archive(path)·fixProductIntegrity **전부 이미 stage-범용**이고 archive action이 일반 integrity카드+variant_composite카드를 모두 재동기. composite 한정 코드는 ratio가드(composite/thumbnail만 비율규칙 보유·정당)와 variant-coverage(변형↔composite 도메인 바인딩·정당)뿐. **C16 premise(composite 전용) 코드상 불성립 → 코드변경 0(#46 날조 금지).** Desktop이 관측한 구체 한계 확인 대기(또는 CLOSE). 옵션 enhancement: product-level(thumbnail/hero/detail) 슈퍼시드 자동아카이브 surfacing.
 - 2026-06-21 (세션9·Code/P0 D5 문서정합 + P1 워크플로 형식화·#113~#118): **P0** D5 문서회귀 종결 — PRINCIPLES #113(재개=update route statusType='SALE'·**D6 CLOSED**)·#114(statusType 가변성·OUTOFSTOCK만 read-only)·#115(문서회귀 방지+검증규율) 박제 + MYEONGHWA doc 국산→중국산(0200037) 정정. **P1** PRODUCT_REGISTRATION_WORKFLOW §1-A 신설(통합 노력 레인 단순/디테일 ⊇ 공급사 A/B + 씨앗심기 선행 게이트 + STEP10 디자인 커넥터) + §6 `sourcing_incomplete` 카드 + PRINCIPLES #116/#117/#118. 신규 앱 노출=C22. 큐=C15(MCP)→C16→C5→C9→C4.
 - 2026-06-21 (세션9·Code/C19b UI): 대표이미지 평가 카드 UI(#56) — PrePublishGatePanel에 ThumbAssessControl(미평가→승인 POST·평가됨→재평가 DELETE) + useEngineStrategy refetch 추가 + studio publish탭 배선(productId/onAssessed) + i18n 5키(thumbAssessCta 등). 라우트(/thumbnail-assess)는 Desktop e2e PASS·마이그 적용됨. tsc0/build0/이모지0/신규 한글리터럴0. 브라우저 클릭 검증 권장(Desktop). 다음=C15(MCP 단발턴)→C16→C5.
