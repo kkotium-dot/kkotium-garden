@@ -1030,3 +1030,21 @@ ingest(catch-basin) 적재 시 **명시 `stage`/`variant` 파라미터가 파일
 
 ## 작업원칙 #120 — MCP는 물리 Storage 변이 불가, 물리 변이는 Code service-role SDK/앱 API 전담 (2026-06-21 세션9 C15·#59 일반화)
 MCP(Supabase MCP 포함)는 DB SQL 읽기/쓰기는 가능하나 **물리 Storage 객체 변이(업로드·삭제·이동·복사)는 일체 불가**하다(#59 일반화). 따라서 자산 물리 정리/이관/삭제는 **Code service-role SDK(@supabase/supabase-js·SUPABASE_SERVICE_ROLE_KEY) 또는 앱 API**가 전담한다. 역할 분담: 진단/참조스캔(#79)·registry DB 갱신 = MCP execute_sql 가능 / 물리 객체 move·remove = Code SDK(moveAutomationAsset/deleteAutomationAsset). **가역 우선(C23·#46 정신)**: 물리삭제는 복구 불가이므로 stray/슈퍼시드 정리는 하드삭제 대신 `{pid}/archive/`로 move(가역)+registry stage→archive를 기본으로 한다(하드삭제는 명시 지시 시에만). 선행 필수: #79 전수 참조스캔(::text 캐스트로 중첩jsonb 포함·하드코딩 컬럼리스트 폐기·레포 grep 병행) 0참조 확인 후에만 변이. 사례: 명화 detail/hero-1781957364462.png(slot=hero@stage=detail 불일치 firefly_auto stray) — 12테이블 0참조 확인 → 가역 아카이브(detail→archive)·registry 정합·복원경로 보존. #88(완료=검증)·#119(b)(검증 부작용 추적)와 결합.
+
+## 작업원칙 #121 — Adobe MCP는 생성형 합성·배경교체 불가, 3-plane 생성합성은 Firefly 브라우저 자동화 전담 (2026-06-23 세션9 · Desktop 산출·검증됨)
+Adobe MCP(Express/Photoshop 계열 도구)는 누끼·크롭·보정·리사이즈 등 결정론적 편집은 가능하나 **생성형 합성(프롬프트 기반 배경 생성·배경 교체)은 불가**하다. 따라서 3-plane 생성합성(피사체 보존 + 무드 배경 생성·하모나이즈)은 **Firefly 브라우저 자동화가 전담**한다(#74·#77·shadow-walk + native setter + InputEvent). 역할 분리: Adobe MCP=결정론 편집 레인 / Firefly 자동화=생성 합성 레인. #61(3-plane 합성표준)·#107(누끼→Firefly 레퍼런스 합성·PIL 폴백)과 정합.
+
+## 작업원칙 #122 — Supabase public URL 직접투입 + Adobe-독립 시각확증 폴백 (2026-06-23 세션9 · Desktop 산출·금세션 O1 적용·검증됨)
+Supabase public bucket URL은 `/storage/v1/object/public/{bucket}/{path}` 형식이며, URL을 수용하는 도구(뷰어·Adobe import 등)에 **직접 투입**한다. Adobe encode 400 flake(간헐 인코딩 실패)가 발생하면 **bash `curl` 다운로드 → 로컬 view로 Adobe-독립 시각확증**으로 폴백한다(도구 한 곳의 장애가 검증 자체를 막지 않게). 금세션 O1(명화 대표이미지) 승인 검증에 실제 적용·검증됨. #45(출력 품질 단정)·#88(완료=검증)의 검증 수단 다변화.
+
+## 작업원칙 #123 — 누끼-source 적격성 게이트 (2026-06-23 세션9 · Desktop 산출·검증됨)
+누끼(배경제거) 소스는 **적격성 게이트**를 통과해야 한다. 마케팅 스트립(다중 장면·텍스트 오버레이·세로 롱 이미지)은 **누끼 불가**이며, **깨끗한 단일 제품 히어로만 누끼-ready**다. 부적격 소스는 임의 누끼하지 말고 **C9 Design Readiness 카드로 전상품 surface**한다(#104·info-bound 소싱 충진 시 자동활성·#56). 아이스(트레이)가 첫 실증(cutout 부재=info-bound 누끼-선행 readiness). #78(누끼 신호=실제 투명)·#107(누끼→Firefly 합성)과 결합.
+
+## 작업원칙 #124 — 검증 순차성: 선행 검증이 후행을 게이트한다 (2026-06-23 세션9 O3)
+검증은 순차적으로 수행하며 선행 검증이 후행 단계를 게이트한다. 여러 미검증 항목을 동시에 'done'으로 주장하지 않는다(#88 보강). 사례(명화 발행): (1) O3 정보고시 자동조립 확인 → (2) 대표이미지 평가 → (3) 상태정합(ACTIVE↔판매중지) → (4) 대표 GO(비가역 #46) 순서이며, 앞 게이트 미통과 시 뒤 단계 진입 금지. 정적 API probe는 호출 시점 스냅샷이므로(#119c) 순차 게이트의 각 단계는 라이브로 단정한다. 역할 분리: #119='어떻게 검증하나'(하드리프레시·인터럽트 cleanup·시점성·done↔verified), #124='어떤 순서로 게이트하나'.
+
+## 작업원칙 #125 — 양라인 플래그십 실테스트 후 확장 (2026-06-23 세션9 양라인 결정)
+양라인(단순/디테일·#116) 파이프라인은 플래그십 상품(명화)으로 실테스트(실 발행/실 자산 e2e)를 통과한 뒤에만 타 상품으로 확장한다. 미검증 파이프라인을 다수 상품에 선행 적용하면 결함이 N배로 번진다. 사례: 명화 양라인검증(O1→O2→단순)이 P0이며, D3(달항아리·아이스 composite/realism 확장)는 명화 양라인 통과 전까지 PARKED. #116(단순/디테일 레인)·#124(검증 순차성)와 결합 — 플래그십이 먼저, 확장은 검증 후.
+
+## 작업원칙 #126 — 대표이미지 평가·승인 게이트는 product-agnostic·가역, lifestyle 라벨 텍스트는 허용 (2026-06-23 세션9 · 후보)
+대표이미지 평가·승인 게이트(C19/C19b·thumbnailAssessed)는 **product-agnostic(전상품 동형)이며 가역**하다(승인 POST ↔ 재평가 DELETE 원복). lifestyle 대표컷에서 **제품 고유 라벨 텍스트(본품에 인쇄된 브랜드/제품명)는 허용**한다 — 금지 대상은 **홍보/가격 문구·테두리(border) 오버레이** 등 합성 추가 요소뿐(네이버 대표이미지 규정 §3-6 정합). 즉 '본품에 원래 있는 텍스트'와 '마케팅 오버레이'를 구분해 게이트한다.

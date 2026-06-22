@@ -28,6 +28,7 @@
 | C21 | SEO 검색량 검증 골든키워드 가드(#103·C3 심화) | P3 | QUEUED | - | searchad/datalab 볼륨 기반 고볼륨 헤드텀 발굴·C3 커버리지 가드 심화 |
 | C22 | 통합 레인(단순/디테일 ⊇ A/B) 상태 + sourcing_incomplete 카드 앱 노출(#116/#117) | P2 | QUEUED | - | 워크플로 docs 형식화 완료(§1-A)·앱 surfacing 후속 |
 | C23 | supersede→archive 개입카드(슈퍼시드 자산 자동아카이브 surfacing) | P2 | QUEUED | - | C16에서 분리. product-level(thumbnail/hero/detail) 신버전 확정 시 구버전 자동 아카이브 후보를 개입카드로 표면화(#56·운영자 결정·가역). registry_drift/variant_composite 카드 패턴 동형 |
+| C24 | 디테일 5섹션 상세 엔진(전상품 공통·발행후) | P2 | QUEUED | - | 명화 O2 실증: 단순 상세=detail-source READY(공급사 상세·인증·변형·사용법·푸터) / 디테일 상세=detail-S6 부분골격(5섹션 합성 필요). 적응형 이미지엔진 구조화 실증·product-agnostic. 발행후 트랙(#116 디테일 레인·#125 검증후 공급)·ROADMAP Sprint8 P2-D |
 | C7 | firefly_auto settingsVerified 서브체크 | P3 | QUEUED | - | - |
 | C8 | 옵션 3표현 정합 | P3 | QUEUED | - | - |
 | C11 | 가드 개선: variantUnmatched→자동등록 스킵/review 스테이지 | P3 | QUEUED | - | 선택 |
@@ -39,7 +40,16 @@
 |----|------|---|------|--------|
 | D1 | 명화 thumbnail Firefly ref-composite→ingest(thumbnail 1:1) | P0 | ✅ DONE | O1 |
 | D4 | 명화 발행 사전검증(payload·인증·타이틀) | P1 | 🔒GATED | 대표이미지평가(thumbnailAssessed)+상태정합(ACTIVE↔판매중지) ※차량용=stale 해소(이미 상품명 포함·C3 LIVE) |
-| D3 | composite/realism 파이프라인 달항아리·아이스 확장 | P2 | QUEUED(준비도 분기) | D1 검증 | 달항=composite-ready(cutout✓plate✓·#58 육안 확증 대기) / 아이스=누끼-선행(cutout 부재). 아이스 cutout 부재=C9 Design Readiness 카드 후보 |
+| D3 | composite/realism 파이프라인 달항아리·아이스 확장 | P2 | 🔒PARKED(명화 양라인검증 후 재개·#125) | D1 검증 | 달항=composite-ready(cutout✓plate✓·#58 육안 확증 대기) / 아이스=누끼-선행(cutout 부재). 아이스 cutout 부재=C9 Design Readiness 카드 후보 |
+
+### Desktop 우선순위표 (2026-06-23 세션9 · 양라인 결정)
+> 동시 3트랙(독립 진행): (1) Desktop=명화 양라인검증(O1→O2→단순) (2) Code=C5 E8 v2(GO 대기·스코핑) (3) Operator=O1/O2 생성·평가.
+
+| 순위 | 작업 | 상태 | 비고 |
+|---|---|---|---|
+| P0 | 명화 양라인검증 O1→O2→단순(순차) | WIP | 플래그십 실테스트 — 통과 후에만 D3 확장(#125) |
+| P1 | D4 명화 발행 사전검증 | 🔒GATED | 대표이미지평가+상태정합. O3=정보고시 자동조립 확인됨(productInfo* 입력 불요·HB는 qualityAssuranceStandard) |
+| P2 | D3 composite/realism 확장(달항·아이스) | 🔒PARKED | 명화 양라인검증 후 재개(#125) |
 
 ### Operator 레인
 | id | 작업 | P | 상태 |
@@ -113,6 +123,8 @@
 
 
 ### 변경로그
+- 2026-06-23 (세션9·Code/O2 시각검증 + P2 C24 트랙 등록 + docs 체크포인트 커밋): **O2 시각검증 완료** — 명화 단순 라인 상세=detail-source **READY**(프로 공급사 상세·인증·변형·사용법·푸터 완비·#122 시각확증), 디테일 라인 상세=detail-S6 **부분골격**(5섹션 합성 필요). 명화 발행 잔여=단순 pre-PUT dryRun + 씨앗심기(#117) + 대표 GO(임박). **신규 P2 트랙 C24** '디테일 5섹션 상세 엔진(전상품 공통·발행후)'=적응형 이미지엔진 구조화 실증·product-agnostic — Code 레인 + ROADMAP Sprint8 P2-D 등록(QUEUED·#116 디테일 레인·#125 검증후 공급). **docs 체크포인트 커밋**: O1(thumbnail-assess)+O3(info-notice verify)+O2(detail readiness)+원칙 #121~126 누적 5 MD를 docs-only 단위 커밋(code change 0·비가역 0·네이버 무접촉·git 가역). tsc0.
+- 2026-06-23 (세션9·Code/O3 정보고시 검증 + 양라인 결정 박제·#124/#125): **O3 정보고시 검증 완료(코드 단정)** — PUT/POST는 `buildNaverProductPayload`가 productInfoProvidedNotice(ETC)를 **매 상품 인라인 자동조립**(product-builder.ts:933·964→detailAttribute.productInfoProvidedNotice). 조립기 `buildProductInfoProvidedNoticeEtc`(383-423) 폴백 체인: itemName=productInfoName ?? naver_title ?? name ?? '상품상세참조' / modelName=productInfoModel ?? naver_title ?? name / manufacturer=productInfoManufacturer ?? naver_manufacturer ?? 스토어명. **→ productInfoName/Manufacturer/Model 입력 필수 아님**(최상위 우선 선택적 오버라이드·null이면 폴백). HB(naver_certification)=formatSafetyDeclaration→**etc.qualityAssuranceStandard에 prepend**(404-407·전용 인증필드 부재·값 있을 때만·전상품 무회귀). **정정**: update dryRun payloadPreview는 이미 productInfoProvidedNotice 노출(update/route.ts:104-105·주석 101-103=HB를 qualityAssuranceStandard에서 검증 명시)→MYEONGHWA '미표시 추정'은 stale. **미단정(코드 불가·단정 금지)**: 폴백 placeholder + HB-in-qualityAssuranceStandard가 네이버 SUSPENSION을 실제 해제하는지(전용 생활화학 고시유형 요구 여부)=서버 수락 영역. **양라인 결정**: Desktop=명화 양라인검증(O1→O2→단순)·D3 PARKED·동시 3트랙. 원칙 #124(검증 순차성)·#125(양라인 플래그십 실테스트 후 확장) 박제. (#121~123=Desktop 전턴 콘텐츠 미수신·HOLD). 코드변경0·tsc0·docs only·비가역0·네이버 무접촉.
 - 2026-06-21 (세션9·Code/C5-1 빌드 + D3 준비도 + C15 흡수): **C5-1 DONE** — E8 v2 데이터 모델: benchmark_dna 테이블(14컬럼·category_code·source_priority·commerce_convention·trend_keywords·source_refs·status draft/approved/retired·reviewed_by/at·collected_by·version·#102/#103/#105) + Product.aesthetic_dna(#106) Supabase additive 마이그(c5_1_benchmark_dna_and_product_aesthetic_dna·IF NOT EXISTS·0행·reversible DROP) + prisma schema/generate. 검증 benchmark_cols=14·aesthetic_col=1·rows=0·tsc0·build0. 설계 A1/B1(런타임 읽기전용·#104=C9). 다음=C5-2 수집어댑터. **D3 준비도**: 달항=composite-ready(cutout✓plate✓·#58 육안확증 대기)/아이스=누끼-선행(cutout 부재)→C9 카드 후보 등재. **C15 흡수(#89)**: 페어정리 재지시는 직전 턴 bbdb235에서 가역 아카이브로 이미 완료(stage=archive·detail stray=0)·하드삭제 재실행 안 함(이미 아카이브된 자산 파괴 방지·idempotent no-op).
 - 2026-06-21 (세션9·Code/C15 정리 + Desktop 역량 확정): C15=DONE. **MCP는 물리 Storage 변이(업로드/삭제/이동/복사) 일체 불가(#59 일반화)**·물리 변이=Code service-role SDK 전담. stray 자산(cmqmbemz…·명화 detail/hero-1781957364462.png·640²·firefly_auto·slot=hero@stage=detail 불일치) #79 전수스캔 0참조(Product/LifestyleAsset/published_assets/asset_references/asset_jobs/art_director_prompts/prompt_library_entry/generation/slot_generation/daily_recommendations/backdrop_jobs ::text + 레포 grep + 타 registry행) → **C23 정신대로 가역 아카이브**(moveAutomationAsset→archive/ + registry stage detail→archive·하드삭제 아님). 검증 registry stage=archive·detail stray=0(복원=move back+stage→detail). 원칙 #120 박제. tsc0·비네이버 로컬(#46 불요).
 - 2026-06-21 (세션9·Code/C19b prod-verified + C16 CLOSE + C23 분리): **C19b=DONE** — Desktop prod 라이브 e2e(하드리프레시) 검증: 명화 평가됨(재평가 버튼) 관측→DELETE→미평가+「대표이미지 평가·승인」(enabled) 플립·양 상태 정상 렌더. f8bfa6a(254-255) 이미 정합·코드변경0·근본원인 D 2회 반증·premise 불성립. 인터럽트된 e2e 변이(명화 잔여 POST→DELETE) 복원 추적완. **C16=CLOSED**(archive 유틸 이미 stage-범용·premise 무효·코드0·#46). 후보 enhancement은 **C23**(supersede→archive 개입카드·P2)로 분리 신설. 원칙 #119 박제(하드리프레시 검증·인터럽트 cleanup 추적·정적 probe=point-in-time·코드done↔prod-verified 컬럼분리). 다음 Code=C5(E8 v2·스코핑→설계 fork 보고→GO 후 빌드).

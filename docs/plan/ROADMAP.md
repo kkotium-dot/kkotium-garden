@@ -246,6 +246,14 @@ authority = docs/design/IMAGE_SEO_STRATEGY_ENGINE.md. All-product common (#55): 
 **구현 작업**:
 - `src/components/dashboard/GoodServiceWidget.tsx` 강화 — 등급 임계값 명시 + 이중 평가 UI
 
+### P2-D. 디테일 5섹션 상세 엔진 (전상품 공통·발행후)
+
+**근거**: 명화 O2 시각검증 — 단순 라인 상세는 detail-source(프로 공급사 상세·인증·변형·사용법·푸터)로 READY이나, 디테일 라인 5섹션 상세는 detail-S6 부분골격뿐(합성 필요). 적응형 이미지엔진 구조화의 실증 지점(product-agnostic).
+
+**구현 작업**:
+- 5섹션 상세 합성 엔진 — 슬롯 골격(히어로/문제·해결/사용법/신뢰·인증/CTA 등) → 상품별 자산 충진. 단순/디테일 양라인(#116) 중 디테일 레인 공급.
+- 발행후 트랙: 단순 라인으로 선발행, 디테일은 플래그십 실테스트 검증 후 공급(#125). product-agnostic·전상품 공통. (TRACKER Code 레인 C24)
+
 ---
 
 ## Sprint 9+ (P3) — 매출 600만원+ 후

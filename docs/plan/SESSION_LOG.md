@@ -1,3 +1,36 @@
+## 2026-06-23 (세션9-Code) O2 시각검증 완료 + P2 디테일상세엔진 트랙(C24) + docs 체크포인트 커밋
+
+**[O2 시각검증 완료]** 명화 양라인 상세 자산 시각확증(#122 적용): 단순 라인 상세=detail-source **READY**(프로 공급사 상세·인증·변형·사용법·푸터 완비) / 디테일 라인 상세=detail-S6 **부분골격**(5섹션 합성 필요). → 단순 라인=발행 자산 완비, 디테일=별도 합성 트랙.
+**[명화 발행 잔여·임박]** 단순 pre-PUT dryRun + 씨앗심기(소싱·가격·#117) + 대표 GO(비가역 #46). 단순 라인 자산 측면은 준비 완료.
+**[P2 신규 트랙 C24]** '디테일 5섹션 상세 엔진(전상품 공통·발행후)' — 적응형 이미지엔진 구조화의 실증 지점·product-agnostic. ROADMAP Sprint8 P2-D + PARALLEL_WORK_TRACKER Code 레인 C24 등록(QUEUED·발행후 트랙·#116 디테일 레인·#125 검증후 공급).
+**[docs 체크포인트 커밋]** O1(thumbnail-assess done)+O3(info-notice verify)+O2(detail readiness)+원칙 #121~126 누적 5개 MD를 docs-only 단위로 커밋(code change 0·비가역 0·네이버 무접촉·git 가역).
+**[gates]** docs only·코드변경0·tsc0·이모지0·비가역0·네이버 무접촉. **다음=[Code] GO 대기 C5-2 collector·SEC-1(product_asset_objects revoke)·SEC-2(leaked-pw). [Desktop] 단순 pre-PUT dryRun→씨앗심기→명화 발행 GO.**
+
+---
+
+## 2026-06-23 (세션9-Code) O1 대표이미지 승인 완료·검증 + #121~123 HOLD 해제 + #126 박제
+
+**[O1 DONE·대표이미지 승인]** 명화 대표이미지(thumbnail) 평가·승인 완료 — thumbnail_assessed_at 세팅·C19b UI 게이트(PrePublishGatePanel ThumbAssessControl) 통과·가역 확인(승인 POST↔재평가 DELETE 원복). 발행 게이트 thumbnailAssessed 입력 충족(#109 구조: publishReady는 첫발행 전용·기등록 명화엔 별개 경로).
+**[O2 발견·양라인 분기]** detail_image_url은 detail-source(단순라인 상세)로 존재 → 단순라인은 상세 자산 보유. 단, 디테일 라인 5섹션 상세는 별도 합성 필요(#116 단순/디테일 레인의 상세-페이지 적용). MYEONGHWA 트래커에 양라인 현황표 추가.
+**[#121~123 HOLD 해제·Desktop 산출·검증됨]** 전턴 HOLD 해제, #124 앞에 캐논 삽입: #121(Adobe MCP는 생성형 합성·배경교체 불가→3-plane 생성합성=Firefly 브라우저 자동화 전담)·#122(Supabase public bucket URL=/storage/v1/object/public/{bucket}/{path} 직접투입·Adobe encode 400 flake 시 bash curl→view로 Adobe-독립 시각확증·금세션 O1 대표 검증 실적용)·#123(누끼-source 적격성 게이트·마케팅 스트립[다중장면·텍스트·세로롱]=누끼 불가·깨끗한 단일제품 히어로만 누끼-ready·부적격은 C9 Design Readiness 카드 전상품 surface #104·아이스 첫 실증).
+**[#126 신규·후보]** 대표이미지 평가·승인 게이트는 product-agnostic·가역. lifestyle 대표 시 제품 고유 라벨 텍스트는 허용(금지=홍보/가격/테두리 오버레이). 네이버 대표이미지 규정(§3-6) 정합.
+**[gates]** docs only·코드변경0·tsc0·이모지0·비가역0·네이버 무접촉. **다음=[Code] GO 대기 C5-2 collector·SEC-1(product_asset_objects revoke)·SEC-2(leaked-pw). [Desktop] 명화 O2 디테일 5섹션 합성.**
+
+---
+
+## 2026-06-23 (세션9-Code) O3 정보고시 자동조립 검증 + 양라인 결정 박제 (#124·#125)
+
+**[O3 정보고시 검증·코드 단정]** PUT/POST가 정보고시(productInfoProvidedNotice·ETC)를 어떻게 조립하는지 실측. buildNaverProductPayload가 매 상품 인라인 자동조립(product-builder.ts:933→detailAttribute.productInfoProvidedNotice:964). 조립기 buildProductInfoProvidedNoticeEtc(383-423) 폴백 체인: itemName=productInfoName ?? naver_title ?? name ?? '상품상세참조' / modelName=productInfoModel ?? naver_title ?? name / manufacturer=productInfoManufacturer ?? naver_manufacturer ?? 스토어명(꽃틔움). **→ productInfoName/Manufacturer/Model 입력 필수 아님**(선택적 최상위 오버라이드·null이면 폴백). HB(naver_certification)=formatSafetyDeclaration→etc.qualityAssuranceStandard prepend(404-407·전용 인증필드 부재·값 있을 때만·전상품 무회귀).
+**[course-correction]** MYEONGHWA 트래커 '★ PUT 전 마지막 검증 1건'의 'dryRun preview가 정보고시 미표시 추정'은 **stale** — update/route.ts:104-105가 payloadPreview.productInfoProvidedNotice 반환(주석 101-103=HB를 qualityAssuranceStandard에서 검증 명시). 운영자가 update dryRun으로 HB 실적재 즉시 확인 가능. MYEONGHWA 트래커에 'O3 정보고시 자동조립 검증 결과' 블록 추가.
+**[미단정·단정 금지 준수]** ETC 폴백 placeholder + HB-in-qualityAssuranceStandard가 네이버 SUSPENSION을 실제 해제하는지(전용 생활화학 고시유형 요구 여부)=서버 수락 영역, 코드로 단정 불가. 명화 productInfo* null의 발행 차단 여부도 코드 단정 회피(빌더는 폴백 충진으로 non-null 조립까지만 보장).
+**[readiness 실측]** 속성 준비도 A/84(missingRequired []·statusType SALE)·소싱/가격 준비도 BLOCKED(씨앗심기 백필 대기·#117).
+**[양라인 결정]** Desktop=명화 양라인검증(O1→O2→단순)·D3 PARKED(달항·아이스 확장은 명화 양라인 통과 후·#125)·동시 3트랙(Desktop 명화 / Code C5 GO대기 / Operator O1·O2).
+**[codify]** 원칙 #124(검증 순차성)·#125(양라인 플래그십 실테스트 후 확장). PARALLEL_WORK_TRACKER 변경로그+D3 PARKED+Desktop 우선순위표·MYEONGHWA O3 블록·PROGRESS 갱신.
+**[HOLD]** PRINCIPLES #121~123 = Desktop 전턴 콘텐츠 미수신 → 미작성(canonical 날조 금지). Desktop 콘텐츠 수신 시 #124 앞에 삽입.
+**[gates]** docs only·코드변경0·tsc0·이모지0·비가역0·네이버 무접촉. **다음=[Code] GO 대기 C5-2 collector·SEC-1(product_asset_objects revoke)·SEC-2(leaked-pw). [Desktop] 명화 양라인검증.**
+
+---
+
 ## 2026-06-18 (세션9-Code) LIVE WORK BOARD 정렬 + 합성/사실성 표준 박제 (#106·#107)
 
 **[docs]** PARALLEL_WORK_TRACKER에 LIVE WORK BOARD(§4) 정렬 — Code C0~C13/Desktop/Operator 레인+의존성맵+스케줄(C3→C6→C5→C9→C4→P3·C12 E7=GO게이트). 직전 완료 C1(향§4 v6 prose)·C2(archive 유틸)·C10(원칙)=DONE 표기.

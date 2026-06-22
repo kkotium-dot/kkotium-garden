@@ -29,12 +29,33 @@
 - dryRun payloadPreview에 **안전 신고번호(HB)가 미표시** — preview가 핵심필드 부분집합이라 productInfoProvidedNotice(정보고시) 섹션이 빠진 것으로 추정. 단 **생활화학제품 표시가 SUSPENSION 유력 원인**이므로, PUT(비가역) 전 정보고시에 HB가 실제 실리는지 단정 필요.
 - → Code: update dryRun payloadPreview에 productInfoProvidedNotice(qualityAssuranceStandard 등) 포함 → Desktop이 HB 표시 재단정 → 그 후 대표 GO.
 
+## ★ O3 정보고시 자동조립 검증 결과 (2026-06-23 · Code 실측 · 코드 단정)
+> 위 '★ PUT 전 마지막 검증 1건'의 'preview가 정보고시 미표시 추정'은 **stale로 정정**(아래).
+
+- **정보고시는 매 상품 자동조립**: buildNaverProductPayload가 productInfoProvidedNotice(ETC)를 인라인 생성(product-builder.ts:933·964). productInfoName/Manufacturer/Model 입력은 **필수 아님** — buildProductInfoProvidedNoticeEtc(383-423) 폴백 체인이 채움: itemName=productInfoName ?? naver_title ?? name, modelName=productInfoModel ?? naver_title ?? name, manufacturer=productInfoManufacturer ?? naver_manufacturer ?? 스토어명. **명화 productInfo* 전부 null이어도 정보고시 객체 자체는 non-null로 조립**(폴백 충진).
+- **HB는 qualityAssuranceStandard에 적재**: formatSafetyDeclaration(naver_certification)이 '안전기준 적합확인 신고번호 …'를 etc.qualityAssuranceStandard에 prepend(404-407). 전용 인증필드 없음(값 있을 때만·전상품 무회귀). 명화 naver_certification=HB21-12-2572, HB19-12-1462 설정 시 노출.
+- **dryRun preview는 이미 정보고시 노출**: update/route.ts:104-105가 payloadPreview.productInfoProvidedNotice 반환(주석 101-103=HB를 qualityAssuranceStandard에서 검증 명시). → 운영자가 update dryRun으로 HB 실적재를 즉시 fact-check 가능(= naver_certification 실제 set 여부도 동시 확인).
+- **미단정(코드 불가·단정 금지)**: ETC 폴백 placeholder('상품상세참조') + HB-in-qualityAssuranceStandard 조합이 네이버 SUSPENSION을 실제 해제하는지(전용 생활화학제품 고시유형 요구 여부)는 **서버 수락 영역 — 코드로 단정 불가**. update dryRun preview 실측 + 실 PUT 후 inspect로만 확정.
+
 ## 발행 시퀀스 (남은 단계)
 0. **(STEP0·선결) 씨앗심기 소싱 백필** — 크롤(도매매) → 원가/마진 입력 → **판매가/마진 확정**(#117). 미충족 시 이하 단계 진입 금지(`sourcing_incomplete`).
 1. (Code) dryRun preview에 정보고시 노출 → (Desktop) HB 표시 단정.
 2. (대표) 최종 GO.
 3. (Desktop) update confirm:true → PUT(비가역) → statusType SALE 전환.
 4. (Desktop) inspect 3중 검증: statusType SALE·정보고시 HB·origin 중국산(0200037)·옵션 4종.
+
+## ★ O1/O2 양라인 현황 (2026-06-23 · Code 박제)
+
+**O1 = DONE (대표이미지 승인)**: 명화 대표이미지(thumbnail) 평가·승인 완료 — thumbnail_assessed_at 세팅·C19b UI 게이트 통과·가역 확인(재평가 DELETE 원복 가능). 발행 게이트 thumbnailAssessed 입력 충족.
+
+**O2 = 시각검증 완료**: 단순 라인 상세 = detail-source **READY**(프로 공급사 상세·인증·변형·사용법·푸터 완비, 시각확증·#122 적용). 디테일 라인 상세 = detail-S6 **부분골격**(5섹션 합성 필요). → 단순 라인은 발행 자산 완비, 디테일은 별도 합성 트랙(C24·발행후).
+
+**명화 발행 잔여(임박)**: 단순 pre-PUT dryRun + 씨앗심기(소싱·가격·#117) + 대표 GO(비가역 #46). 단순 라인 자산 측면은 준비 완료.
+
+| 라인 | 대표(썸네일) | 상세 | 상태 |
+|---|---|---|---|
+| 단순 | 승인 완료(O1 DONE·thumbnail_assessed_at) | detail-source READY(공급사 상세·인증·변형·사용법·푸터) | 발행 자산 완비 — pre-PUT dryRun+씨앗심기+GO만 잔존(#117) |
+| 디테일 | (단순 공유 또는 별도) | detail-S6 부분골격 → 5섹션 합성 필요 | 합성 트랙 C24(발행후·#116·#125) |
 
 ## 비고
 - 빌더는 구조화 카테고리 속성을 네이버 미전송(Code 확인) → 재질/색상은 내부 완성도 게이트. 단 productInfoProvidedNotice(정보고시)는 전송 대상 → HB 표시가 실 발행 핵심.
