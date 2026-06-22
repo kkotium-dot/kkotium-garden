@@ -254,6 +254,15 @@ authority = docs/design/IMAGE_SEO_STRATEGY_ENGINE.md. All-product common (#55): 
 - 5섹션 상세 합성 엔진 — 슬롯 골격(히어로/문제·해결/사용법/신뢰·인증/CTA 등) → 상품별 자산 충진. 단순/디테일 양라인(#116) 중 디테일 레인 공급.
 - 발행후 트랙: 단순 라인으로 선발행, 디테일은 플래그십 실테스트 검증 후 공급(#125). product-agnostic·전상품 공통. (TRACKER Code 레인 C24)
 
+### P2-E. 기존 폴더적재 자산 채택 → 발행 분기 (studio UI=API 정합·전상품 공통)
+
+**근거**: #127 — studio UI canSave(인앱 생성 state)와 API canRegister(DB자산 full payload)가 불일치. 크롤 임포트로 기존 폴더적재 Storage 자산(mainImage/detail_image_url) 보유 상품은 UI에서 거짓음성(발행 불가로 보임)이나 API dryRun은 canRegister:true. (TRACKER Code 레인 C25)
+
+**구현 작업**:
+- studio Save/Publish에 '기존 폴더적재 자산 채택' 분기 추가 — UI canSave를 DB자산(mainImage/detail_image_url) 인식하도록 정합(재생성 강제 제거).
+- (선택) dryRun payloadPreview에 detailContent(길이·이미지수·요약) 노출 — full-replace fact-check 갭(#46) 해소.
+- product-agnostic · 전상품 공통(#62).
+
 ---
 
 ## Sprint 9+ (P3) — 매출 600만원+ 후

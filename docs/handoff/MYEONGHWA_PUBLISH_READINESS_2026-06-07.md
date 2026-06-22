@@ -76,6 +76,18 @@ fetch('https://kkotium-garden.vercel.app/api/naver/products/update', {
 
 **발행경로 = DB자산 기반(studio 「이미지 저장」 게이트와 독립)**: /api/naver/products/update는 DB row(mainImage·additionalImages·detail_image_url)로 full payload를 빌드·발행한다(update/route.ts:107-119·158). studio 「이미지 저장」 버튼(canSave=인앱 생성 state만 인식)은 한 UI 경로일 뿐, 기존 DB자산 발행을 막지 않는다. 명화 단순 라인(DB자산 보유)은 update dryRun→confirm로 발행 가능.
 
+## ★ dryRun 발행검증 결과 + 상세 전체교체 안전성 (2026-06-23 · Desktop dryRun + Code 판정)
+
+**dryRun 발행검증 (Desktop 실측·read-only)**: `canRegister: true` · readiness **S/94** · errors **0** · 대표이미지 = 기존 폴더적재 Storage 자산(인앱 재생성 아님) · HB · 원산지(중국 0200037) · 가격 · 옵션 · SEO 전부 정상. → 명화 **발행 임박**.
+
+**★ 상세 전체교체(detailContent) 안전성 판정 (Code·#46)**:
+- **detailContent는 payload에 항상 포함**(product-builder.ts:941 `detailContent: buildDetailContent(product, noticeAssets)` 무조건). → 'full-replace → 누락 필드 제거' 경고가 detailContent를 strip하지 않음. 빈값 PUT 위험 없음.
+- buildDetailContent(:649) 조립 순서: 공통상단슬롯 → hookPhrase → **detail_image_url** → description → AEO → 공통하단슬롯. **전부 비면** placeholder `<div>{상품명}</div>` 1줄(:697-700).
+- **명화**: detail_image_url 존재(단순라인 상세 READY) → detailContent non-empty · non-placeholder. **empty-wipe 위험 없음**. 실 PUT은 detail 이미지를 Naver(shop-phinf) 업로드 후 detailContent에 임베드(update/route.ts:122-153).
+- **잔여 위험 2종**: (1) dryRun payloadPreview에 **detailContent 미표시**(update/route.ts:88-110이 imagesToUpload.detailImage=소스URL만 노출, 조립 HTML 미노출) → 실 교체물 fact-check 갭. (2) full-replace라 DB상세 < 라이브 상세면 downgrade.
+- **PUT 권고(조건부 허용)**: 명화는 empty-wipe 위험 없음 → (a) PUT 전 라이브 Naver 상세 GET 스냅샷(롤백 보험·비가역 대비) + (b) DB detail_image_url이 발행하려는 단순라인 상세와 일치 확인 → 두 가지 확인 시 PUT 안전. 미확인이면 차단.
+- **보존 방안**: ① dryRun preview에 detailContent(길이·이미지수·요약) 노출 추가(코드·GO-gated·C25/P2-E) ② PUT 전 GET origin-products/{no} 스냅샷 보관.
+
 ## 비고
 - 빌더는 구조화 카테고리 속성을 네이버 미전송(Code 확인) → 재질/색상은 내부 완성도 게이트. 단 productInfoProvidedNotice(정보고시)는 전송 대상 → HB 표시가 실 발행 핵심.
 - seoTitle·keywords·brand_line 내부 비동기(P3) — 발행 빌더는 name=naver_title·sellerTags=tags 사용이라 발행 무관.

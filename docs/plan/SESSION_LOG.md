@@ -1,3 +1,16 @@
+## 2026-06-23 (세션9-Code) 상세 전체교체 안전성 판정 + dryRun 발행검증 박제 + #127 + docs 체크포인트
+
+**[★상세 전체교체 안전성·#46]** 'full-replace → 누락필드 제거' 경고 추적. **detailContent는 buildNaverProductPayload가 항상 포함**(product-builder.ts:941 무조건) → full-replace가 detailContent를 strip하지 않음 · 빈값 PUT 위험 없음. buildDetailContent(:649) 조립=공통상단 → hookPhrase → detail_image_url → description → AEO → 공통하단, **전부 비면** placeholder `<div>{상품명}</div>`(:697-700).
+**[명화 적용]** detail_image_url 존재(단순라인 상세 READY) → detailContent non-empty · non-placeholder. **empty-wipe 위험 없음**. 실 PUT은 detail을 Naver shop-phinf 업로드 후 detailContent 임베드(update/route.ts:122-153).
+**[잔여 위험 2종]** (1) dryRun payloadPreview에 detailContent **미표시**(update/route.ts:88-110이 imagesToUpload.detailImage=소스URL만 노출·조립 HTML 미노출) → 실 교체물 fact-check 갭. (2) full-replace = DB상세 < 라이브 상세면 downgrade.
+**[PUT 권고]** 조건부 허용 — 명화 empty-wipe 없음 → (a) PUT 전 라이브 Naver 상세 GET 스냅샷(롤백 보험) (b) DB detail_image_url이 발행 의도 단순라인 상세와 일치 확인 → 충족 시 PUT 안전, 미충족 차단. 보존방안: dryRun preview에 detailContent 노출(코드·GO-gated·P2-E) / GET 스냅샷.
+**[dryRun 발행검증·Desktop 실측]** canRegister:true · readiness S/94 · errors 0 · 대표이미지=기존 폴더적재 Storage 자산(인앱 재생성 아님) · HB · 원산지(중국 0200037) · 가격 · 옵션 · SEO 정상 → 명화 발행 임박.
+**[#127 박제]** UI canSave ≠ API canRegister — 크롤 임포트 기존 DB자산 보유 상품은 UI canSave=false지만 API canRegister=true 가능 → UI만 보면 거짓음성. 판정 SoT=API dryRun. 해소=C25.
+**[C25 ROADMAP 등재]** Sprint8 P2-E(기존 폴더적재 자산 채택 → 발행 분기 · studio UI=API 정합 · product-agnostic · #62).
+**[gates]** docs only · 코드변경0 · tsc0 · 이모지0 · 비가역0 · 네이버 무접촉. docs 체크포인트 커밋. **다음=[Code] GO 대기 C5-2·SEC-1(product_asset_objects revoke)·SEC-2(leaked-pw). [Desktop] 라이브 상세 스냅샷 → PUT 또는 preview-detailContent 노출 후 발행.**
+
+---
+
 ## 2026-06-23 (세션9-Code) 이미지 저장 게이트 판정 + dryRun 안전호출 계약 확정 + docs 체크포인트
 
 **[게이트 추적]** 「이미지 저장」 버튼=ActionsCard.tsx(presentational·disabled={!canSave}). canSave 출처=useStudioActions.ts:476 `const canSave = (thumbnails != null || detail != null) && !saveBusy`. thumbnails/detail=useState<null>(142·151), 인앱 생성 성공 시에만 set(310·338), 상품 변경 시 null 리셋(179·183). 주석(30) 'generated thumbnails/detail are intentionally NOT persisted'. → **게이트는 인앱 생성 4변형 썸네일/5섹션 상세 state만 인식, product.mainImage/detail_image_url(DB Supabase URL) 미인식.** (PrePublishGatePanel은 별도 엔진 readiness 패널·이 버튼과 무관.)

@@ -1048,3 +1048,6 @@ Supabase public bucket URL은 `/storage/v1/object/public/{bucket}/{path}` 형식
 
 ## 작업원칙 #126 — 대표이미지 평가·승인 게이트는 product-agnostic·가역, lifestyle 라벨 텍스트는 허용 (2026-06-23 세션9 · 후보)
 대표이미지 평가·승인 게이트(C19/C19b·thumbnailAssessed)는 **product-agnostic(전상품 동형)이며 가역**하다(승인 POST ↔ 재평가 DELETE 원복). lifestyle 대표컷에서 **제품 고유 라벨 텍스트(본품에 인쇄된 브랜드/제품명)는 허용**한다 — 금지 대상은 **홍보/가격 문구·테두리(border) 오버레이** 등 합성 추가 요소뿐(네이버 대표이미지 규정 §3-6 정합). 즉 '본품에 원래 있는 텍스트'와 '마케팅 오버레이'를 구분해 게이트한다.
+
+## 작업원칙 #127 — UI canSave ≠ API canRegister: 크롤 임포트 거짓음성, 판정 기준은 API dryRun (2026-06-23 세션9)
+studio UI 발행 신호(canSave=인앱 생성 state·useStudioActions.ts:476)와 API 실제 발행 가능(canRegister/readiness/dryRun)은 **별개**다. 크롤 임포트로 기존 폴더적재 Storage 자산(product.mainImage/detail_image_url)을 보유한 상품은 UI canSave=false(생성 state 없음)지만 API canRegister=true(DB row로 full payload 빌드 가능)일 수 있다 → **UI 게이트만 보면 거짓음성(false-negative)**. 발행 가능 판정의 SoT = **API dryRun**(POST /api/naver/products/update {dryRun:true} → canRegister·readiness·payloadPreview)이지 UI 버튼이 아니다. 해소 = C25(studio 발행경로 기존 DB자산 인식·studio UI=API 정합). #62(전상품)·#88(완료=검증)·#109(publishReady 구조)·#126(게이트 product-agnostic)과 결합.
