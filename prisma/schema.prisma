@@ -217,6 +217,11 @@ model Product {
   // Code applies MIGRATION_fidelity (ADD COLUMN IF NOT EXISTS) — idempotent;
   // consumers guard P2022/P2021 so routes are safe before the migration lands.
   fidelity                Json?             @map("fidelity")
+  // #106 productAestheticDna — per-product palette/mood echoed into background
+  // prompts (the product's own aesthetic world, distinct from category convention).
+  // Shape = { palette: string[], moodHint?: string }. Operator/Desktop seeded.
+  // C5-1 additive; consumers guard P2022/P2021 so routes are safe pre-migration.
+  aestheticDna            Json?             @map("aesthetic_dna")
   // 2026-06-07 — Adaptive 3-mode system (docs/research/KKOTIUM_ADAPTIVE_SEO_IMAGE_SYSTEM_2026-06-06.md §5).
   // The quality classifier writes quality_score(0-100) + recommended_mode; the
   // operator can override the mode from the control tower. brand_line splits the
@@ -1118,6 +1123,40 @@ model PromptVersion {
   @@index([categoryCode, slotType])
   @@index([parentVersionId])
   @@map("prompt_version")
+}
+
+// E8 v2 / C5 — competitive benchmark research (Korean-first commerce convention).
+// Collected offline in the agent session (NaverSearch MCP, #102 source tiers), parked
+// as draft, and surfaced through a review card (#56) before it can inform strategy.
+// Convention is an INPUT signal that serves product identity, never overrides it (#105).
+model BenchmarkDna {
+  id                 String    @id @default(cuid())
+  // Naver leaf category this benchmark distills.
+  categoryCode       String    @map("category_code")
+  // Source tier priority used for this distillation (#102): e.g.
+  // ["naver_shop","datalab","pinterest"]. T1 Korean commerce -> T3 global mood.
+  sourcePriority     Json      @map("source_priority")
+  // Commerce-convention spectrum, aggregated across MANY sellers (not one):
+  // { thumbnailComposition, luxuryFraming, darkObject, giftFraming, priceBand }.
+  commerceConvention Json      @map("commerce_convention")
+  // Trend / candidate golden keywords (#103). string[].
+  trendKeywords      Json      @map("trend_keywords")
+  // Provenance: listings/searches this was distilled from (audit trail).
+  sourceRefs         Json?     @map("source_refs")
+  // Review gate (A1/C1): draft|approved|retired. Only 'approved' informs strategy.
+  status             String    @default("draft")
+  reviewedBy         String?   @map("reviewed_by")
+  reviewedAt         DateTime? @map("reviewed_at")
+  // How it was collected: desktop_mcp|script|manual.
+  collectedBy        String    @map("collected_by")
+  notes              String?
+  // Immutable-friendly: a new distillation = a new row; status marks the live one.
+  version            Int       @default(1)
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@index([categoryCode, status])
+  @@map("benchmark_dna")
 }
 
 // Engine spec §2 "Generation" — immutable per-slot generation tuple log.

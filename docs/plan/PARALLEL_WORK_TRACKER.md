@@ -16,8 +16,8 @@
 | C19b | 대표이미지 평가 UI 카드(PrePublishGatePanel 승인 버튼·#56) | P1 | ✅ DONE·prod 라이브 e2e 검증(하드리프레시) | - | PrePublishGatePanel ThumbAssessControl(승인 POST/재평가 DELETE)+useEngineStrategy refetch+studio 배선+i18n 5키. **Desktop prod 라이브 e2e(하드리프레시): 평가됨(재평가)→DELETE→미평가+「대표이미지 평가·승인」(enabled) 플립·양 상태 정상 렌더.** f8bfa6a 정합(254-255)·코드변경0·근본원인 D 2회 반증·premise 불성립. 인터럽트 변이(잔여 POST→DELETE) 복원완 |
 | C1 | 향 §4 v6 prose 교체(권위 v6) | P2 | ✅ DONE(84dfe88) | - | 엔진 per-scent mood 기반영 |
 | C2 | archive 유틸 → 자산정합 카드 해소 | P2 | ✅ DONE(5fe06fa) | - | 확정3건 정리·커버리지 3/3·§6 타깃 |
-| C5 | E8 v2 빌드(벤치마크→자산→graft) | P2 | QUEUED | C6 | 컨벤션 스펙트럼+정체성 오버라이드(#105)+productAestheticDna 팔레트에코(#106)+실사(#107)+프롬프트 라이브러리+검토카드+Design Readiness |
-| C9 | INFO-DEP-DESIGN-GATE(Design Readiness 레인+사전생성 풀) | P2 | QUEUED | C5 부분 | - |
+| C5 | E8 v2 빌드(벤치마크→자산→graft) | P2 | WIP(C5-1 DONE·데이터모델) | C6 | 컨벤션 스펙트럼+정체성 오버라이드(#105)+productAestheticDna 팔레트에코(#106)+실사(#107)+프롬프트 라이브러리+검토카드+Design Readiness. **C5-1 DONE**: benchmark_dna 테이블(14컬럼·status draft/approved/retired·#102 sourcePriority·commerceConvention·trendKeywords·#103) + Product.aestheticDna(#106) additive 마이그(c5_1·0행·prisma generate·tsc0/build0). 다음=C5-2 수집어댑터 |
+| C9 | INFO-DEP-DESIGN-GATE(Design Readiness 레인+사전생성 풀) | P2 | QUEUED | C5 부분 | 후보 등재: 아이스(cutout 부재)=info-bound 누끼-선행 readiness 카드(#104·#56). D3 준비도 분기와 연결 |
 | C4 | E6 자산화 폐루프(persistStrategy+SlotGeneration↔asset) | P2 | QUEUED | - | 독립 |
 | C10 | 원칙 박제 #105/#106/#107 | P2 | ✅ DONE | - | #105(84dfe88)·#106/#107(본 커밋) |
 | C15 | 테스트 자산 정리(stray hero@detail) + Desktop 역량 확정 | P2 | ✅ DONE(가역 아카이브) | - | **Desktop 역량 확정: MCP는 물리 Storage 변이(업로드/삭제/이동/복사) 불가(#59 일반화)→물리 변이=Code service-role SDK 전담.** stray(cmqmbemz…·명화 detail/hero-1781957364462.png·640²·firefly_auto·slot=hero@stage=detail 불일치) #79 전수스캔 0참조(12테이블 ::text+레포 grep) 확인 후 **C23 정신대로 가역 아카이브**(move→archive/ + registry stage detail→archive·하드삭제 아님). 검증 stage=archive·detail stray=0. 비네이버 로컬(#46 불요). 원칙 #120 |
@@ -39,7 +39,7 @@
 |----|------|---|------|--------|
 | D1 | 명화 thumbnail Firefly ref-composite→ingest(thumbnail 1:1) | P0 | ✅ DONE | O1 |
 | D4 | 명화 발행 사전검증(payload·인증·타이틀) | P1 | 🔒GATED | 대표이미지평가(thumbnailAssessed)+상태정합(ACTIVE↔판매중지) ※차량용=stale 해소(이미 상품명 포함·C3 LIVE) |
-| D3 | composite/realism 파이프라인 달항아리·아이스 확장 | P2 | QUEUED | D1 검증 |
+| D3 | composite/realism 파이프라인 달항아리·아이스 확장 | P2 | QUEUED(준비도 분기) | D1 검증 | 달항=composite-ready(cutout✓plate✓·#58 육안 확증 대기) / 아이스=누끼-선행(cutout 부재). 아이스 cutout 부재=C9 Design Readiness 카드 후보 |
 
 ### Operator 레인
 | id | 작업 | P | 상태 |
@@ -113,6 +113,7 @@
 
 
 ### 변경로그
+- 2026-06-21 (세션9·Code/C5-1 빌드 + D3 준비도 + C15 흡수): **C5-1 DONE** — E8 v2 데이터 모델: benchmark_dna 테이블(14컬럼·category_code·source_priority·commerce_convention·trend_keywords·source_refs·status draft/approved/retired·reviewed_by/at·collected_by·version·#102/#103/#105) + Product.aesthetic_dna(#106) Supabase additive 마이그(c5_1_benchmark_dna_and_product_aesthetic_dna·IF NOT EXISTS·0행·reversible DROP) + prisma schema/generate. 검증 benchmark_cols=14·aesthetic_col=1·rows=0·tsc0·build0. 설계 A1/B1(런타임 읽기전용·#104=C9). 다음=C5-2 수집어댑터. **D3 준비도**: 달항=composite-ready(cutout✓plate✓·#58 육안확증 대기)/아이스=누끼-선행(cutout 부재)→C9 카드 후보 등재. **C15 흡수(#89)**: 페어정리 재지시는 직전 턴 bbdb235에서 가역 아카이브로 이미 완료(stage=archive·detail stray=0)·하드삭제 재실행 안 함(이미 아카이브된 자산 파괴 방지·idempotent no-op).
 - 2026-06-21 (세션9·Code/C15 정리 + Desktop 역량 확정): C15=DONE. **MCP는 물리 Storage 변이(업로드/삭제/이동/복사) 일체 불가(#59 일반화)**·물리 변이=Code service-role SDK 전담. stray 자산(cmqmbemz…·명화 detail/hero-1781957364462.png·640²·firefly_auto·slot=hero@stage=detail 불일치) #79 전수스캔 0참조(Product/LifestyleAsset/published_assets/asset_references/asset_jobs/art_director_prompts/prompt_library_entry/generation/slot_generation/daily_recommendations/backdrop_jobs ::text + 레포 grep + 타 registry행) → **C23 정신대로 가역 아카이브**(moveAutomationAsset→archive/ + registry stage detail→archive·하드삭제 아님). 검증 registry stage=archive·detail stray=0(복원=move back+stage→detail). 원칙 #120 박제. tsc0·비네이버 로컬(#46 불요).
 - 2026-06-21 (세션9·Code/C19b prod-verified + C16 CLOSE + C23 분리): **C19b=DONE** — Desktop prod 라이브 e2e(하드리프레시) 검증: 명화 평가됨(재평가 버튼) 관측→DELETE→미평가+「대표이미지 평가·승인」(enabled) 플립·양 상태 정상 렌더. f8bfa6a(254-255) 이미 정합·코드변경0·근본원인 D 2회 반증·premise 불성립. 인터럽트된 e2e 변이(명화 잔여 POST→DELETE) 복원 추적완. **C16=CLOSED**(archive 유틸 이미 stage-범용·premise 무효·코드0·#46). 후보 enhancement은 **C23**(supersede→archive 개입카드·P2)로 분리 신설. 원칙 #119 박제(하드리프레시 검증·인터럽트 cleanup 추적·정적 probe=point-in-time·코드done↔prod-verified 컬럼분리). 다음 Code=C5(E8 v2·스코핑→설계 fork 보고→GO 후 빌드).
 - 2026-06-21 (세션9·Code/C16 조사): archive 유틸 stage-범용 여부 실측 — archiveAssets(registryId·any stage)·reconcileRegistryDrift(path)·assets/action archive(path)·fixProductIntegrity **전부 이미 stage-범용**이고 archive action이 일반 integrity카드+variant_composite카드를 모두 재동기. composite 한정 코드는 ratio가드(composite/thumbnail만 비율규칙 보유·정당)와 variant-coverage(변형↔composite 도메인 바인딩·정당)뿐. **C16 premise(composite 전용) 코드상 불성립 → 코드변경 0(#46 날조 금지).** Desktop이 관측한 구체 한계 확인 대기(또는 CLOSE). 옵션 enhancement: product-level(thumbnail/hero/detail) 슈퍼시드 자동아카이브 surfacing.
