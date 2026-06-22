@@ -57,6 +57,25 @@
 | 단순 | 승인 완료(O1 DONE·thumbnail_assessed_at) | detail-source READY(공급사 상세·인증·변형·사용법·푸터) | 발행 자산 완비 — pre-PUT dryRun+씨앗심기+GO만 잔존(#117) |
 | 디테일 | (단순 공유 또는 별도) | detail-S6 부분골격 → 5섹션 합성 필요 | 합성 트랙 C24(발행후·#116·#125) |
 
+## ★ dryRun 안전 호출 + 발행경로 확정 (2026-06-23 · Code)
+
+**update dryRun = 비커밋·읽기전용(네이버 무접촉)**. `isDryRun = dryRun===true || confirm!==true`(update/route.ts:45) — confirm 미포함이면 무조건 preview. 실 PUT은 `confirm===true && dryRun!==true`에서만(:163).
+
+Desktop read-only 호출(절대 PUT 아님·#46):
+
+```
+fetch('https://kkotium-garden.vercel.app/api/naver/products/update', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ productId: 'cmpnooli40001f0gveaxr8iim', dryRun: true }),
+}).then(r => r.json())
+// → data.payloadPreview.productInfoProvidedNotice.etc.qualityAssuranceStandard 에서 HB 확인
+```
+
+반환 payloadPreview: name·leafCategoryId·salePrice·statusType·representativeImage·originAreaInfo·sellerTags·optionCombinationValues·**productInfoProvidedNotice**·imagesToUpload. 가드: productId 필수·naverProductId 등록필수(409)·addressbook 동기화(400). 명화=등록완(naverProductId 13564133057).
+
+**발행경로 = DB자산 기반(studio 「이미지 저장」 게이트와 독립)**: /api/naver/products/update는 DB row(mainImage·additionalImages·detail_image_url)로 full payload를 빌드·발행한다(update/route.ts:107-119·158). studio 「이미지 저장」 버튼(canSave=인앱 생성 state만 인식)은 한 UI 경로일 뿐, 기존 DB자산 발행을 막지 않는다. 명화 단순 라인(DB자산 보유)은 update dryRun→confirm로 발행 가능.
+
 ## 비고
 - 빌더는 구조화 카테고리 속성을 네이버 미전송(Code 확인) → 재질/색상은 내부 완성도 게이트. 단 productInfoProvidedNotice(정보고시)는 전송 대상 → HB 표시가 실 발행 핵심.
 - seoTitle·keywords·brand_line 내부 비동기(P3) — 발행 빌더는 name=naver_title·sellerTags=tags 사용이라 발행 무관.

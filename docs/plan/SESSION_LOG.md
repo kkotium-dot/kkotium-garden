@@ -1,3 +1,13 @@
+## 2026-06-23 (세션9-Code) 이미지 저장 게이트 판정 + dryRun 안전호출 계약 확정 + docs 체크포인트
+
+**[게이트 추적]** 「이미지 저장」 버튼=ActionsCard.tsx(presentational·disabled={!canSave}). canSave 출처=useStudioActions.ts:476 `const canSave = (thumbnails != null || detail != null) && !saveBusy`. thumbnails/detail=useState<null>(142·151), 인앱 생성 성공 시에만 set(310·338), 상품 변경 시 null 리셋(179·183). 주석(30) 'generated thumbnails/detail are intentionally NOT persisted'. → **게이트는 인앱 생성 4변형 썸네일/5섹션 상세 state만 인식, product.mainImage/detail_image_url(DB Supabase URL) 미인식.** (PrePublishGatePanel은 별도 엔진 readiness 패널·이 버튼과 무관.)
+**[판정 (A)/(B)]** 버튼 자체=**(B)설계**(목적=인앱 생성물 Storage 영속화·saveHint '썸네일/상세 먼저 생성하면 저장 가능'). 단 발행 워크플로 관점=**(A)갭**: 크롤 임포트로 기존 DB자산 보유 상품은 studio Save→Publish UI에서 재생성 강제(기존 DB자산 채택 분기 부재). **★단 하드 발행 차단 아님**: /api/naver/products/update가 DB row(product.mainImage·additionalImages·detail_image_url)로 full payload 빌드·발행(update/route.ts:107-119·158-163). studio 버튼은 한 경로일 뿐, API 직접 호출은 DB자산으로 발행 가능.
+**[전상품 영향·#62]** canSave/hasSavedAsset 로직=product-agnostic(useStudioActions 전상품 동형)·크롤 임포트 상품 일반에 적용. DB자산 발행 능력(update API)도 product-agnostic. → C25 신규 트랙 등재(studio 발행경로 기존 DB자산 인식·QUEUED).
+**[dryRun 안전호출 계약]** POST /api/naver/products/update, body `{ productId, dryRun?, confirm?, fields? }`. 안전식 `isDryRun = dryRun === true || confirm !== true`(:45) → **confirm 미포함이면 무조건 preview**(네이버 무접촉). 실 PUT은 `confirm===true && dryRun!==true`(:163)에서만. 반환 payloadPreview에 productInfoProvidedNotice 포함(:104-105·HB는 etc.qualityAssuranceStandard). 가드: productId 필수·naverProductId 등록필수(409 NOT_REGISTERED)·addressbook 동기화(400). 명화=등록완(naverProductId 13564133057)·DB productId cmpnooli40001f0gveaxr8iim.
+**[gates]** docs only·코드변경0·tsc0·이모지0·비가역0·네이버 무접촉. docs 체크포인트 커밋. **다음=[Code] GO 대기 C5-2·SEC-1(product_asset_objects revoke)·SEC-2(leaked-pw). [Desktop] update dryRun read-only(HB 확인)→씨앗심기→발행.**
+
+---
+
 ## 2026-06-23 (세션9-Code) O2 시각검증 완료 + P2 디테일상세엔진 트랙(C24) + docs 체크포인트 커밋
 
 **[O2 시각검증 완료]** 명화 양라인 상세 자산 시각확증(#122 적용): 단순 라인 상세=detail-source **READY**(프로 공급사 상세·인증·변형·사용법·푸터 완비) / 디테일 라인 상세=detail-S6 **부분골격**(5섹션 합성 필요). → 단순 라인=발행 자산 완비, 디테일=별도 합성 트랙.
