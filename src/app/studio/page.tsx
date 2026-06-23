@@ -21,7 +21,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { onProductMutated } from '@/lib/events/product-mutated';
-import { Palette, Loader2, Image as ImageIcon, Check, Monitor, Smartphone } from 'lucide-react';
+import { Palette, Loader2, Image as ImageIcon, Check, Monitor, Smartphone, Warehouse, FlaskConical, NotebookText, Clock } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import {
   DiagnosisCard,
@@ -50,6 +50,7 @@ import {
   ControlTower,
   KkottiGuide,
   type AtelierStepKey,
+  type AtelierSidebarTab,
 } from '@/components/studio/atelier';
 import { Collapsible } from '@/components/common';
 
@@ -198,6 +199,33 @@ function StudioInner() {
       />
     </div>
   );
+
+  // ── Dual sidebar (S2-A 골격) ────────────────────────────────────────────
+  // 창고 hosts the relocated 도구함 (relocate-only, #132); 배양실/일지 are
+  // scaffolds whose content lands in S2-B~D (i18n placeholder, no logic).
+  const s = a.sidebar;
+  const ComingSoon = ({ hint }: { hint: string }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+        background: 'var(--pink-soft)',
+      }}>
+        <Clock size={20} style={{ color: 'var(--brand-red)' }} />
+      </div>
+      <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: 'var(--gp-ink-900)' }}>
+        {s.comingSoon}
+      </h3>
+      <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: 'var(--gp-ink-500)', wordBreak: 'keep-all' }}>
+        {hint}
+      </p>
+    </div>
+  );
+  const sidebarTabs: AtelierSidebarTab[] = [
+    { key: 'warehouse', label: s.warehouse, icon: <Warehouse size={18} />, content: toolboxSlot },
+    { key: 'cultivation', label: s.cultivation, icon: <FlaskConical size={18} />, content: <ComingSoon hint={s.comingSoonHint} /> },
+    { key: 'journal', label: s.journal, icon: <NotebookText size={18} />, content: <ComingSoon hint={s.comingSoonHint} /> },
+  ];
 
   // ── Workspace (center) ──────────────────────────────────────────────────
   // A step group stays mounted but hidden unless active (preserves card state).
@@ -463,7 +491,7 @@ function StudioInner() {
     <AtelierShell
       header={headerSlot}
       stepper={<StudioStepper active={step} onChange={setStep} />}
-      toolbox={toolboxSlot}
+      sidebarTabs={sidebarTabs}
       workspace={workspaceSlot}
       tower={towerSlot}
     />

@@ -80,3 +80,6 @@ tsconfig.tsbuildinfo
 
 # Tesseract.js OCR runtime artifacts (Sprint 8-PF) — downloaded on first call
 *.traineddata
+
+# Claude Code preview dev config (local-only helper)
+.claude/launch.json

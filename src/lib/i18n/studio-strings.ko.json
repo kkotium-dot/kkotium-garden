@@ -432,6 +432,17 @@
       "noProduct": "씨앗 심기에서 상품을 먼저 등록해 주세요",
       "selectPrompt": "상품을 선택하면 도구함이 열려요"
     },
+    "sidebar": {
+      "_note": "S2-A dual-sidebar (이중 사이드바) — w-16 icon rail tabs. 창고=assets, 배양실=cultivation(향/무드 작업), 일지=job log. 배양실/일지 are S2-A scaffolds; content populated in S2-B~D.",
+      "warehouse": "창고",
+      "warehouseHint": "정원 창고 · 템플릿 · 폰트",
+      "cultivation": "배양실",
+      "cultivationHint": "향·무드 배양 (준비 중)",
+      "journal": "일지",
+      "journalHint": "작업 기록 (준비 중)",
+      "comingSoon": "곧 준비될 공간이에요",
+      "comingSoonHint": "다음 업데이트에서 이 탭이 열려요. 지금은 창고 탭에서 작업해 주세요."
+    },
     "workspace": {
       "title": "개화 작업대",
       "subtitle": "실시간 미리보기",

@@ -766,7 +766,7 @@ function CrawlPageInner() {
                 <div style={{ height:1, background:'#F8DCE5', margin:'0 20px' }}/>
 
                 {/* 소싱 정보 그리드 — 라벨+값 */}
-                <div style={{ padding:'14px 20px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px 24px' }}>
+                <div style={{ padding:'14px 20px', display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:'10px 24px' }}>
                   {/* 공급사 */}
                   <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
                     <span style={{ fontSize:10, fontWeight:700, color:'#aaa', letterSpacing:'0.06em', textTransform:'uppercase' }}>공급사</span>
@@ -1026,7 +1026,7 @@ function CrawlPageInner() {
                 </div>
 
                 {/* Step 1 — Cost inputs */}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:12 }}>
                   <div>
                     <p style={{ fontSize:12, fontWeight:600, color:'#555', margin:'0 0 5px' }}>도매가 (원가)</p>
                     <input type="number" value={supPrice} onChange={e => {
@@ -1147,7 +1147,7 @@ function CrawlPageInner() {
                     );
                   } catch { return null; }
                 })()}
-                <div style={{ background:'#FFF0F5', borderRadius:12, padding:'12px 14px', display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6, textAlign:'center', marginBottom:14 }}>
+                <div style={{ background:'#FFF0F5', borderRadius:12, padding:'12px 14px', display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:6, textAlign:'center', marginBottom:14 }}>
                   {[
                     { label:'손익분기', value: sBreakeven > 0 ? `${sBreakeven.toLocaleString()}원` : '—', color:'#555' },
                     { label:`수수료${(naverFeeRate*100).toFixed(2)}%`, value:`${sCommission.toLocaleString()}원`, color:'#c2410c' },
@@ -1610,7 +1610,7 @@ function CrawlPageInner() {
               const pending     = logs.filter(l=>l.sourcing_status==='PENDING').length;
               const registered  = logs.filter(l=>l.sourcing_status==='REGISTERED').length;
               return (
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', gap:10 }}>
                   {[
                     { label:'소싱완료', value:sourced,  color:'#0369A1', bg:'#EFF8FF', border:'#BAE6FD' },
                     { label:'등록대기', value:pending,  color:'#a16207', bg:'#fffbeb', border:'#fde68a' },

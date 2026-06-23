@@ -291,8 +291,14 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  --brand-red:    #E62310;                          /* CTA only, ~10% */
+  --brand-red:    #E62310;                          /* CTA only, ~10% — action / active */
   --brand-pink:   #FFCCEA;                           /* point / badge, ~15% */
+  /* Studio Stage2 S2-A canonical surface tokens (docs/design/STUDIO_UI_UX_GUIDELINES.md
+     §색토큰). --brand-red = action/active · --pink-soft = tint/badge/decorative border
+     · --cream = page canvas. Generic pinks in the atelier resolve to these so a single
+     edit reskins the whole studio. Signal colors (emerald/amber/red) stay literal. */
+  --pink-soft:    #FFCCEA;                           /* tint / badge / decorative border */
+  --cream:        #FAF8F3;                           /* studio canvas background */
   --font-body:    "Pretendard", -apple-system, sans-serif;
   --font-display: "Noto Serif KR", serif;
   --sp-1: 8px; --sp-2: 16px; --sp-3: 24px; --sp-4: 40px; --sp-5: 64px; --sp-6: 96px;

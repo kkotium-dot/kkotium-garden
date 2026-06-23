@@ -2777,7 +2777,7 @@ const handleGenerate = async () => {
                           const validNames = optionNames.filter(n => n.trim());
                           const nameCols = validNames.length;
                           // gridTemplateColumns: checkbox + N name cols + price + stock + status + delete
-                          const gridCols = `28px ${Array(nameCols).fill('1fr').join(' ')} 80px 72px 80px 32px`;
+                          const gridCols = `28px ${Array(nameCols).fill('minmax(0,1fr)').join(' ')} 80px 72px 80px 32px`;
                           return (
                             <>
                               {/* COMBINATION header */}
@@ -2854,7 +2854,7 @@ const handleGenerate = async () => {
                             <>
                               {/* SINGLE header: 체크 | 옵션명 | 옵션값 | 사용여부 | 삭제 */}
                               <div className="grid bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500 gap-2 border-b border-gray-200"
-                                   style={{ gridTemplateColumns: '28px 1fr 1fr 96px 32px' }}>
+                                   style={{ gridTemplateColumns: '28px minmax(0,1fr) minmax(0,1fr) 96px 32px' }}>
                                 <div className="flex items-center justify-center">
                                   <input type="checkbox"
                                     checked={selectedOptionIds.length === optionRows.length && optionRows.length > 0}
@@ -2870,7 +2870,7 @@ const handleGenerate = async () => {
                               {optionRows.map((row, i) => (
                                 <div key={row.id}
                                      className="grid gap-2 px-3 py-2 border-t border-gray-100 items-center"
-                                     style={{ gridTemplateColumns: '28px 1fr 1fr 96px 32px' }}>
+                                     style={{ gridTemplateColumns: '28px minmax(0,1fr) minmax(0,1fr) 96px 32px' }}>
                                   <div className="flex items-center justify-center">
                                     <input type="checkbox"
                                       checked={selectedOptionIds.includes(row.id)}

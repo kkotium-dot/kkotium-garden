@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-23 (rev26 · 스튜디오 Stage1 구조완료[독립패널스크롤·에셋타일 컴포넌트·스테퍼 우측게이팅·#3 PASS] + lg:hidden 인라인 display 핫픽스[이중렌더 제거·prod결함·#62] · dev정지 후 build0·tsc0·커밋우선 #139 · 잔존 세로오버플로·#2·#4 → Stage2 편입 · 원칙 #140/#141 박제)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-24 (rev27 · 스튜디오 Stage2 S2-A 완료[AtelierShell flex-fill·calc매직넘버제거(#141)·이중사이드바 골격(창고/배양실/일지·접힘)·색토큰 중앙클렌징(--brand-red/--pink-soft/--cream·#142)·반응형4종 하드닝(#144)·STUDIO_UI_UX_GUIDELINES 신설] · 글로벌 main bounded(전4페이지 가로overflow0 셀프검증) · tsc0 · 원칙 #142/#143/#144 박제 · prev rev26 · 스튜디오 Stage1 구조완료[독립패널스크롤·에셋타일 컴포넌트·스테퍼 우측게이팅·#3 PASS] + lg:hidden 인라인 display 핫픽스[이중렌더 제거·prod결함·#62] · dev정지 후 build0·tsc0·커밋우선 #139 · 잔존 세로오버플로·#2·#4 → Stage2 편입 · 원칙 #140/#141 박제)
 ---
 
 ## ★★ LIVE WORK BOARD (2026-06-18 S9 · 현 다중병행 단계 권위 · 전거 docs/handoff/HANDOFF_2026-06-18_realism-firefly-composite-upgrade-and-workboard.md §4)
@@ -65,6 +65,19 @@
 | B6-A11Y | 아이콘전용 버튼 title+aria-label | P1 | - | 본 세션 빌드완 | ✅ DONE·Desktop PASS(행단위 포함) — 꽃수레 새로고침·X 닫기 + 행단위(crawl 행 overflow·AssetBrowser 4타일) 라이브 PASS(꽃수레 0=콜드스타트 artifact·데이터정상) — crawl(오류/결과 X 닫기·꽃수레 새로고침·목록제외 X)·AssetBrowser(대표/추가/보관/삭제 4타일). 텍스트 보유 버튼=가시텍스트가 접근명(추가 불요). overflow/Collapsible/스테퍼=기 aria 보유 |
 
 > (B) 결과 메모: edit 경로가 premium 폼으로 통합되며 전상품 공통 편집 패리티 확보(#135). 저장 멱등화로 edit 재저장·재등록 시 중복 product 행 차단. 옵션 prefill GAP만 잔존(데이터 손실 없음·트래킹). 원칙 #133(reload 연타금지)·#134(점진적 공개·컨텍스트 동기화)·#135(재설계=new+edit 동시·공유 컴포넌트).
+
+
+### Studio Stage2 레인 — S2-A~D · 2026-06-24
+> Stage1 잔존(세로 오버플로·이중사이드바 부재)을 S2-A로 흡수. 제약=#132 셸·재배치만·로직불변·Naver PUT 0·SD-01 무접촉·product-agnostic(#55). 검증=localhost dev 셀프(가로 overflow 0·전4페이지)·Desktop 라이브 e2e(#45/#88).
+
+| id | 작업 | 우선순위 | 의존성 | 상태 |
+|----|------|---------|--------|------|
+| S2-A | flex-fill 셸 + 이중사이드바 골격 + 색토큰 + 반응형4종 하드닝 | P1 | Stage1 | ✅ DONE(tsc0·dev 셀프검증)·Desktop 검증대기 — layout.tsx bounded(height:100vh/overflow:hidden·main flex-1 min-h-0)·AtelierShell height:100%(매직넘버 제거#141)+이중사이드바(w-16 레일 창고/배양실/일지+w-96 동적패널·활성아이콘 재클릭=접힘)·창고=도구함 재배치(로직불변)·배양실/일지=i18n 골격 placeholder(S2-B 채움)·globals --brand-red/--pink-soft/--cream + studio 사용·인라인 grid 전부 minmax(0,1fr)(crawl/dashboard/products·new#144(b))·신호등 의미색 유지. dev 셀프: /studio 이중사이드바+접힘 동작·/dashboard·/products·new·/crawl 가로 overflow 0·console error 0 |
+| S2-B | 사이드바 좁은폭 오버레이 정교화 + 배양실/일지 콘텐츠 채움 | P1 | S2-A | QUEUED |
+| S2-C | 폰트 체계(S2-A 미적용분) | P2 | S2-A | QUEUED |
+| S2-D | 마이크로 인터랙션 + a11y 마감 | P2 | S2-A | QUEUED |
+
+> **S2-A 메모**: 글로벌 `<main>`을 단일 스크롤 컨테이너로 바운드 → 아틀리에는 flex-fill(height:100%)로 매직넘버 없이 뷰포트 채움, 일반 페이지는 main 내부 세로 스크롤 유지. 회귀 셀프검증: dashboard/products·new/crawl 모두 `scrollWidth===clientWidth`(가로 overflow 0)·콘텐츠 전폭(wrapper 228→1435@1440). 푸터(SD-01) 무접촉. 원칙 #142(중앙클렌징)·#143(시안=참조·브랜드/로직 우리기준)·#144(반응형 하드닝 4종). 전거 docs/design/STUDIO_UI_UX_GUIDELINES.md.
 
 ### Desktop 레인
 | id | 작업 | P | 상태 | 의존성 |

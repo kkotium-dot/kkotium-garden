@@ -1,34 +1,50 @@
-// AtelierShell — C-STUDIO-UX (2026-06-23). Premium 3-column container for the
-// 온실 아틀리에, replacing the old WorkbenchShell layout for /studio.
+// AtelierShell — C-STUDIO-UX (2026-06-23) · Stage2 S2-A (2026-06-24).
+// Premium container for the 온실 아틀리에 (/studio).
 //
-// Desktop (lg+): a fixed 20 : 55 : 25 grid inside a full-height viewport that
-// does NOT scroll as a whole — each of the three columns scrolls
-// independently (overflow-y-auto), so the 도구함 / 작업대 / 관제탑 stay aligned.
-//   - Left 20%  — 도구함  (AssetBrowser + compact product picker)
-//   - Center 55% — 개화 작업대 (device toggle + live preview + step cards)
-//   - Right 25% — 검색 생장 관제탑 (ControlTower)
-// The stepper spans the full width above the three columns.
+// Desktop (lg+): a viewport-bounded shell that does NOT scroll as a whole — the
+// region below the header/stepper is a flex row whose children scroll
+// independently. Height is flex-fill (height:100% of the global <main>, which is
+// now a bounded scroll container — layout.tsx #141), NOT calc(100vh - 매직넘버):
+// no magic number to drift when the header/footer height changes.
+//   - Left  — 이중 사이드바 (S2-A 골격): w-16 아이콘 탭(창고/배양실/일지) +
+//             w-96 동적 패널. The active icon picks the panel; clicking the
+//             active icon collapses the panel so the 작업대 gets the width.
+//   - Center — 개화 작업대 (device toggle + live preview + step cards)
+//   - Right — 검색 생장 관제탑 (ControlTower)
+// The stepper spans the full width above the row.
 //
-// Mobile (<lg): the fixed-height split is dropped — the page scrolls normally
-// and the three regions stack (stepper -> toolbox -> workspace -> tower) so the
-// seller can still reach everything on a phone. No bottom-sheet here (the
-// atelier is a desktop-first production surface); the legacy WorkbenchShell
-// mobile sheet is untouched for other callers.
+// Mobile (<lg): the fixed-height split is dropped — the page scrolls normally,
+// the sidebar tabs collapse to a horizontal selector, and the regions stack
+// (stepper -> sidebar -> workspace -> tower).
+//
+// S2-A responsive hardening (#144): every flex/grid child carries minWidth:0,
+// text truncates/breaks, grid tracks use minmax(0,…); responsive show/hide uses
+// Tailwind classes only — never an inline `display` that would defeat lg:* (#140).
 
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
+
+export interface AtelierSidebarTab {
+  /** Stable key (English) used for selection state. */
+  key: string;
+  /** Korean surface label shown under the icon (창고 / 배양실 / 일지). */
+  label: string;
+  /** Lucide icon element (no emoji — #3-1). */
+  icon: ReactNode;
+  /** Panel body for this tab. */
+  content: ReactNode;
+}
 
 export interface AtelierShellProps {
-  /** Optional page header rendered INSIDE the fixed-height container, above the
-   *  stepper. Keeping it inside the viewport budget (instead of a sibling above
-   *  the shell) is what makes the per-column scroll truly fixed-viewport — an
-   *  outside header pushed the columns below the fold so col0 grew unbounded. */
+  /** Optional page header rendered INSIDE the bounded container, above the
+   *  stepper, so it stays within the viewport budget (an outside header pushed
+   *  the columns below the fold and broke the per-column scroll). */
   header?: ReactNode;
-  /** Full-width stepper rendered above the columns. */
+  /** Full-width stepper rendered above the row. */
   stepper: ReactNode;
-  /** Left rail — 도구함 (asset browser + product picker). */
-  toolbox: ReactNode;
+  /** Left dual-sidebar tabs (창고/배양실/일지). The first tab is active initially. */
+  sidebarTabs: AtelierSidebarTab[];
   /** Center pane — 개화 작업대 (preview + step cards). */
   workspace: ReactNode;
   /** Right rail — 검색 생장 관제탑 (control tower). */
@@ -41,36 +57,122 @@ const PANEL_STYLE = {
   borderRadius: "var(--radius-card)",
 } as const;
 
-export default function AtelierShell({ header, stepper, toolbox, workspace, tower }: AtelierShellProps) {
+export default function AtelierShell({ header, stepper, sidebarTabs, workspace, tower }: AtelierShellProps) {
+  const firstKey = sidebarTabs[0]?.key ?? "";
+  const [activeKey, setActiveKey] = useState(firstKey);
+  // Collapsible w-96 panel — clicking the active icon folds it so the 작업대
+  // gets the width back; clicking another icon opens that tab. On narrow desktop
+  // the seller can keep it folded (the icon rail stays as the affordance).
+  const [panelOpen, setPanelOpen] = useState(true);
+
+  const activeTab = sidebarTabs.find((t) => t.key === activeKey) ?? sidebarTabs[0];
+
+  const onIconClick = (key: string) => {
+    if (key === activeKey) {
+      setPanelOpen((v) => !v);
+    } else {
+      setActiveKey(key);
+      setPanelOpen(true);
+    }
+  };
+
+  // Shared icon-rail button. `active` = the selected tab; `open` reflects whether
+  // its panel is showing (so the active+folded state reads as a toggle).
+  const RailButton = ({ tab }: { tab: AtelierSidebarTab }) => {
+    const active = tab.key === activeKey;
+    const showing = active && panelOpen;
+    return (
+      <button
+        type="button"
+        onClick={() => onIconClick(tab.key)}
+        title={tab.label}
+        aria-label={tab.label}
+        aria-pressed={showing}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 3,
+          width: "100%",
+          padding: "8px 2px",
+          border: "none",
+          borderRadius: 10,
+          cursor: "pointer",
+          background: showing ? "var(--pink-soft)" : "transparent",
+          color: active ? "var(--brand-red)" : "var(--gp-ink-500)",
+          fontSize: 9,
+          fontWeight: 700,
+          lineHeight: 1.2,
+          transition: "background 0.15s, color 0.15s",
+          minWidth: 0,
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          {tab.icon}
+        </span>
+        <span style={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {tab.label}
+        </span>
+      </button>
+    );
+  };
+
   return (
     <div style={{ wordBreak: "keep-all" }}>
-      {/* ── Desktop (lg+): full-height independent-scroll 3-col split ──────── */}
+      {/* ── Desktop (lg+): viewport-bounded independent-scroll row ─────────── */}
       <div
         className="hidden lg:flex lg:flex-col"
-        style={{ height: "calc(100vh - 60px)", overflow: "hidden", padding: "12px 16px 0" }}
+        style={{ height: "100%", overflow: "hidden", padding: "12px 16px 0" }}
       >
-        {header && <div style={{ flexShrink: 0, marginBottom: 8 }}>{header}</div>}
-        <div style={{ flexShrink: 0, marginBottom: 12 }}>{stepper}</div>
-        <div
-          className="lg:grid"
-          style={{
-            flex: 1,
-            minHeight: 0,
-            gap: 14,
-            paddingBottom: 12,
-            // minmax(0, …) is REQUIRED: a bare `fr` track keeps min-width:auto
-            // (= min-content), so a wide child (e.g. the asset grid's 200+ tiles)
-            // blows the track out horizontally (observed: 11506px). minmax(0,…)
-            // + minWidth:0 + overflowX:hidden on each panel hard-caps the rail
-            // width and forces the content to wrap/clip instead.
-            gridTemplateColumns: "minmax(0, 20fr) minmax(0, 55fr) minmax(0, 25fr)",
-          }}
-        >
-          <aside style={{ ...PANEL_STYLE, minWidth: 0, minHeight: 0, overflowY: "auto", overflowX: "hidden", overscrollBehavior: "contain", padding: 14 }}>
-            {toolbox}
-          </aside>
+        {header && <div style={{ flexShrink: 0, minWidth: 0, marginBottom: 8 }}>{header}</div>}
+        <div style={{ flexShrink: 0, minWidth: 0, marginBottom: 12 }}>{stepper}</div>
+
+        <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: "flex", gap: 14, paddingBottom: 12 }}>
+          {/* 이중 사이드바: w-16 아이콘 레일 + w-96 동적 패널 */}
+          <nav
+            aria-label="아틀리에 도구 탭"
+            style={{
+              ...PANEL_STYLE,
+              width: 64,
+              flexShrink: 0,
+              minHeight: 0,
+              overflowY: "auto",
+              overflowX: "hidden",
+              background: "var(--cream)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+              padding: "8px 6px",
+            }}
+          >
+            {sidebarTabs.map((tab) => (
+              <RailButton key={tab.key} tab={tab} />
+            ))}
+          </nav>
+
+          {panelOpen && activeTab && (
+            <aside
+              style={{
+                ...PANEL_STYLE,
+                width: 384,
+                flexShrink: 0,
+                minWidth: 0,
+                minHeight: 0,
+                overflowY: "auto",
+                overflowX: "hidden",
+                overscrollBehavior: "contain",
+                padding: 14,
+              }}
+            >
+              {activeTab.content}
+            </aside>
+          )}
+
+          {/* 개화 작업대 — 남는 폭 전부 차지 */}
           <section
             style={{
+              flex: 1,
               minWidth: 0,
               minHeight: 0,
               overflowY: "auto",
@@ -84,7 +186,21 @@ export default function AtelierShell({ header, stepper, toolbox, workspace, towe
           >
             {workspace}
           </section>
-          <aside style={{ ...PANEL_STYLE, minWidth: 0, minHeight: 0, overflowY: "auto", overflowX: "hidden", overscrollBehavior: "contain", padding: 14 }}>
+
+          {/* 검색 생장 관제탑 */}
+          <aside
+            style={{
+              ...PANEL_STYLE,
+              width: "clamp(280px, 24%, 360px)",
+              flexShrink: 0,
+              minWidth: 0,
+              minHeight: 0,
+              overflowY: "auto",
+              overflowX: "hidden",
+              overscrollBehavior: "contain",
+              padding: 14,
+            }}
+          >
             {tower}
           </aside>
         </div>
@@ -94,11 +210,50 @@ export default function AtelierShell({ header, stepper, toolbox, workspace, towe
       <div className="flex flex-col gap-3 lg:hidden" style={{ padding: "12px 12px 32px" }}>
         {header}
         {stepper}
-        <section style={{ ...PANEL_STYLE, padding: 12, maxHeight: 240, overflowY: "auto" }}>{toolbox}</section>
+
+        {/* Sidebar tabs collapse to a horizontal selector + active panel. */}
+        <section style={{ ...PANEL_STYLE, padding: 12, minWidth: 0 }}>
+          <div style={{ display: "flex", gap: 6, marginBottom: 10, minWidth: 0 }}>
+            {sidebarTabs.map((tab) => {
+              const active = tab.key === activeKey;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveKey(tab.key)}
+                  aria-pressed={active}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 5,
+                    padding: "8px 6px",
+                    border: "none",
+                    borderRadius: 10,
+                    cursor: "pointer",
+                    background: active ? "var(--pink-soft)" : "var(--cream)",
+                    color: active ? "var(--brand-red)" : "var(--gp-ink-500)",
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >
+                  <span style={{ flexShrink: 0, display: "flex" }}>{tab.icon}</span>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {tab.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ minWidth: 0, maxHeight: 320, overflowY: "auto" }}>{activeTab?.content}</div>
+        </section>
+
         <section style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
           {workspace}
         </section>
-        <section style={{ ...PANEL_STYLE, padding: 12 }}>{tower}</section>
+        <section style={{ ...PANEL_STYLE, padding: 12, minWidth: 0 }}>{tower}</section>
       </div>
     </div>
   );

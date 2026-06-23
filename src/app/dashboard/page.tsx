@@ -110,7 +110,7 @@ function PipelineCard({ stages }: { stages: PipelineStage[] }) {
         <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>파이프라인 현황</p>
         <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>소싱 → 등록 → 판매 → 관리</p>
       </div>
-      <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+      <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10 }}>
         {stages.map((stage) => (
           <Link key={stage.label} href={stage.href} style={{ textDecoration: 'none' }}>
             <div style={{ padding: '14px 10px', borderRadius: 14, textAlign: 'center', background: stage.bg, border: `1.5px solid ${stage.border}`, cursor: 'pointer' }}>
@@ -194,7 +194,7 @@ function TodayCard({ orderCount, revenue, paidAmount, loading }: {
             {loading ? '—' : orderCount}건
           </p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 8, marginTop: 4 }}>
           <div>
             <p style={{ margin: 0, fontSize: 10, color: '#16a34a', fontWeight: 700 }}>총 매입</p>
             <p style={{ margin: '2px 0 0', fontSize: 13, fontWeight: 800, color: '#15803d' }}>
@@ -631,7 +631,7 @@ export default function DashboardPage() {
               <Sparkles size={14} style={{ color: '#FF6B8A' }} />
               <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>빠른 작업</p>
             </div>
-            <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+            <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10 }}>
               {[
                 { label: '씨앗 심기', href: '/products/new', color: '#e62310', bg: '#FFF0F5', border: '#FFB3CE', icon: Package, hint: '상품 등록' },
                 { label: '검색 조련사', href: '/naver-seo', color: '#2563eb', bg: '#EFF6FF', border: '#BFDBFE', icon: TrendingUp, hint: 'SEO 최적화' },

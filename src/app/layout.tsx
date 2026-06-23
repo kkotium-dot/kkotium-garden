@@ -44,14 +44,20 @@ export default function RootLayout({
         <ToastProvider />
 
         {/* Phase 2-MOBILE-1: Sidebar hidden under lg (≤1023px), MobileTabBar
-            shown instead. Desktop layout unchanged. */}
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
+            shown instead. Desktop layout unchanged.
+            S2-A (#141): the shell tree is bounded to the viewport (h-screen +
+            overflow:hidden) so <main> becomes the single scroll container.
+            This lets fixed-viewport workspaces (the atelier) flex-fill with
+            height:100% instead of a calc(100vh - 매직넘버) — no magic number to
+            drift when the header/footer height changes. Normal pages still
+            scroll inside <main>. Footer (SD-01) untouched. */}
+        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
           <div className="hidden lg:flex">
             <Sidebar />
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
             <Header />
-            <main style={{ flex: 1, overflowY: 'auto', background: 'transparent', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', background: 'transparent', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
               <div
                 className="px-4 lg:px-8 pt-6 pb-20 lg:pb-8"
                 style={{ flex: 1, minWidth: 0 }}
