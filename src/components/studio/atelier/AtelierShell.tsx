@@ -20,6 +20,11 @@
 import { ReactNode } from "react";
 
 export interface AtelierShellProps {
+  /** Optional page header rendered INSIDE the fixed-height container, above the
+   *  stepper. Keeping it inside the viewport budget (instead of a sibling above
+   *  the shell) is what makes the per-column scroll truly fixed-viewport — an
+   *  outside header pushed the columns below the fold so col0 grew unbounded. */
+  header?: ReactNode;
   /** Full-width stepper rendered above the columns. */
   stepper: ReactNode;
   /** Left rail — 도구함 (asset browser + product picker). */
@@ -36,7 +41,7 @@ const PANEL_STYLE = {
   borderRadius: "var(--radius-card)",
 } as const;
 
-export default function AtelierShell({ stepper, toolbox, workspace, tower }: AtelierShellProps) {
+export default function AtelierShell({ header, stepper, toolbox, workspace, tower }: AtelierShellProps) {
   return (
     <div style={{ wordBreak: "keep-all" }}>
       {/* ── Desktop (lg+): full-height independent-scroll 3-col split ──────── */}
@@ -44,6 +49,7 @@ export default function AtelierShell({ stepper, toolbox, workspace, tower }: Ate
         className="hidden lg:flex lg:flex-col"
         style={{ height: "calc(100vh - 60px)", overflow: "hidden", padding: "12px 16px 0" }}
       >
+        {header && <div style={{ flexShrink: 0, marginBottom: 8 }}>{header}</div>}
         <div style={{ flexShrink: 0, marginBottom: 12 }}>{stepper}</div>
         <div
           className="lg:grid"
@@ -85,7 +91,8 @@ export default function AtelierShell({ stepper, toolbox, workspace, tower }: Ate
       </div>
 
       {/* ── Mobile (<lg): normal-flow stacked regions ─────────────────────── */}
-      <div className="lg:hidden" style={{ padding: "12px 12px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="flex flex-col gap-3 lg:hidden" style={{ padding: "12px 12px 32px" }}>
+        {header}
         {stepper}
         <section style={{ ...PANEL_STYLE, padding: 12, maxHeight: 240, overflowY: "auto" }}>{toolbox}</section>
         <section style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>

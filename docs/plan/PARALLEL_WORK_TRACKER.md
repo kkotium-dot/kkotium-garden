@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-23 (rev25 · 스튜디오 전면 리팩토링 설계확정·GO수신 -> Stage1/2/3 분할 등재 · C-IA-5TAB 코드완·tsc0 · 커밋우선 #139)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-23 (rev26 · 스튜디오 Stage1 구조완료[독립패널스크롤·에셋타일 컴포넌트·스테퍼 우측게이팅·#3 PASS] + lg:hidden 인라인 display 핫픽스[이중렌더 제거·prod결함·#62] · dev정지 후 build0·tsc0·커밋우선 #139 · 잔존 세로오버플로·#2·#4 → Stage2 편입 · 원칙 #140/#141 박제)
 ---
 
 ## ★★ LIVE WORK BOARD (2026-06-18 S9 · 현 다중병행 단계 권위 · 전거 docs/handoff/HANDOFF_2026-06-18_realism-firefly-composite-upgrade-and-workboard.md §4)

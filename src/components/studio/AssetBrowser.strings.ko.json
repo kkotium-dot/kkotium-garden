@@ -65,7 +65,22 @@
     "deleteModalExtraUnlink": "추가 이미지에서 자동 해제됩니다.",
     "deleteModalConfirm": "영구 삭제",
     "deleteModalCancel": "취소",
-    "working": "처리 중..."
+    "working": "처리 중...",
+    "more": "더보기",
+    "select": "선택",
+    "deselect": "선택 해제"
+  },
+  "bulk": {
+    "selected": "{n}개 선택됨",
+    "archive": "일괄 아카이브",
+    "delete": "일괄 삭제",
+    "clear": "선택 해제",
+    "mainSkipped": "대표컷은 제외됩니다",
+    "busy": "일괄 처리 중...",
+    "deleteModalTitle": "선택 자산 일괄 영구 삭제",
+    "deleteModalBody": "선택한 {n}개 자산을 영구 삭제합니다. 되돌릴 수 없습니다.",
+    "deleteModalConfirm": "{n}개 영구 삭제",
+    "deleteModalCancel": "취소"
   },
   "stage": {
     "source": {

@@ -421,8 +421,12 @@ function StudioInner() {
   );
 
   // ── Tower (right rail) ──────────────────────────────────────────────────
+  // #3 (Stage 1) — the right panel is stepper-gated: ControlTower emphasizes
+  // the section that matches the active step (others collapse), the same way
+  // the canvas (StepGroup) and the 도구함 asset filter (focusStages) already do.
   const towerSlot: ReactNode = (
     <ControlTower
+      step={step}
       gate={engine.data?.gate ?? null}
       dna={engine.data?.dna ?? null}
       diagnosis={actions.diagnosis}
@@ -432,36 +436,37 @@ function StudioInner() {
     />
   );
 
-  return (
-    <>
-      {/* Page header — kept above the atelier shell */}
-      <header
-        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px 0' }}
-      >
-        <div style={{
-          width: 44, height: 44, borderRadius: 12,
-          background: 'var(--gp-pink-50)', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <Palette size={22} style={{ color: 'var(--gp-red-500)' }} strokeWidth={2.4} />
-        </div>
-        <div>
-          <h1 className="gp-h1" style={{ margin: 0 }}>
-            {strings.page.title}
-          </h1>
-          <p className="gp-caption" style={{ margin: '3px 0 0' }}>
-            {strings.page.subtitle}
-          </p>
-        </div>
-      </header>
+  // Page header — rendered INSIDE the atelier shell (fixed-viewport budget) so
+  // the three columns precisely fill the remaining height and scroll
+  // independently, instead of overflowing the fold (#1, Stage 1).
+  const headerSlot: ReactNode = (
+    <header style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{
+        width: 44, height: 44, borderRadius: 12,
+        background: 'var(--gp-pink-50)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        <Palette size={22} style={{ color: 'var(--gp-red-500)' }} strokeWidth={2.4} />
+      </div>
+      <div>
+        <h1 className="gp-h1" style={{ margin: 0 }}>
+          {strings.page.title}
+        </h1>
+        <p className="gp-caption" style={{ margin: '3px 0 0' }}>
+          {strings.page.subtitle}
+        </p>
+      </div>
+    </header>
+  );
 
-      <AtelierShell
-        stepper={<StudioStepper active={step} onChange={setStep} />}
-        toolbox={toolboxSlot}
-        workspace={workspaceSlot}
-        tower={towerSlot}
-      />
-    </>
+  return (
+    <AtelierShell
+      header={headerSlot}
+      stepper={<StudioStepper active={step} onChange={setStep} />}
+      toolbox={toolboxSlot}
+      workspace={workspaceSlot}
+      tower={towerSlot}
+    />
   );
 }
 

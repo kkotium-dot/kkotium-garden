@@ -23,8 +23,11 @@ import type {
   EngineDnaView,
 } from "@/components/studio/engine/useEngineStrategy";
 import type { DiagnosisResult } from "@/components/studio/types";
+import type { AtelierStepKey } from "./StudioStepper";
 
 export interface ControlTowerProps {
+  /** Active stepper step — gates which section is emphasized (#3, Stage 1). */
+  step: AtelierStepKey;
   gate: EngineGateView | null;
   dna: EngineDnaView | null;
   diagnosis: DiagnosisResult | null;
@@ -32,6 +35,17 @@ export interface ControlTowerProps {
   degraded: boolean;
   hasProduct: boolean;
 }
+
+// Stepper -> the control-tower section that should lead (open) for that step.
+// thumbnail -> 썸네일 가시성, seo -> SEO 매칭율, publish -> ROI·후킹. detail keeps
+// the tower quiet (the canvas is the focus there). Pure emphasis — every section
+// stays reachable; nothing is hidden or recomputed (#132).
+const STEP_FOCUS: Record<AtelierStepKey, "s1" | "s2" | "s3" | null> = {
+  thumbnail: "s1",
+  detail: null,
+  seo: "s2",
+  publish: "s3",
+};
 
 type Light = "green" | "yellow" | "red";
 
@@ -191,6 +205,7 @@ function Accordion({
 }
 
 export default function ControlTower({
+  step,
   gate,
   dna,
   diagnosis,
@@ -200,6 +215,7 @@ export default function ControlTower({
 }: ControlTowerProps) {
   const t = strings.atelier.controlTower;
   const [overlay, setOverlay] = useState(false);
+  const focus = STEP_FOCUS[step];
 
   // ── Empty / loading / degraded states ──────────────────────────────────
   if (!hasProduct) {
@@ -278,8 +294,9 @@ export default function ControlTower({
         </p>
       </div>
 
-      {/* Section 1 — 썸네일 가시성 진단 */}
-      <Accordion title={t.s1Title} hint={t.s1Hint} light={s1Light} lightLabel={s1LightLabel} defaultOpen>
+      {/* Section 1 — 썸네일 가시성 진단. Opens when the thumbnail step is active
+          (key includes step so the step-driven default re-applies on switch). */}
+      <Accordion key={`s1-${step}`} title={t.s1Title} hint={t.s1Hint} light={s1Light} lightLabel={s1LightLabel} defaultOpen={focus === "s1"}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, color: "var(--gp-ink-700)" }}>
           <span>{t.s1QualityLabel}</span>
           <span>{gate?.thumbnailAssessed ? `${quality}/100` : t.s1NotAssessed}</span>
@@ -313,8 +330,8 @@ export default function ControlTower({
         )}
       </Accordion>
 
-      {/* Section 2 — 네이버 쇼핑 SEO 매칭율 */}
-      <Accordion title={t.s2Title} hint={t.s2Hint} light={s2Light} lightLabel={s2LightLabel}>
+      {/* Section 2 — 네이버 쇼핑 SEO 매칭율 (opens on the SEO 부스터 step) */}
+      <Accordion key={`s2-${step}`} title={t.s2Title} hint={t.s2Hint} light={s2Light} lightLabel={s2LightLabel} defaultOpen={focus === "s2"}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, color: "var(--gp-ink-700)" }}>
           <span>{t.s2AltLabel}</span>
           <span style={{ color: gate?.seoComplete ? "#15803d" : "#92400e" }}>
@@ -352,8 +369,8 @@ export default function ControlTower({
         )}
       </Accordion>
 
-      {/* Section 3 — 예상 ROI·후킹 검수 */}
-      <Accordion title={t.s3Title} hint={t.s3Hint} light={s3Light} lightLabel={s3LightLabel}>
+      {/* Section 3 — 예상 ROI·후킹 검수 (opens on the 발행 검토 step) */}
+      <Accordion key={`s3-${step}`} title={t.s3Title} hint={t.s3Hint} light={s3Light} lightLabel={s3LightLabel} defaultOpen={focus === "s3"}>
         <RoiRow label={t.s3Review} ok={roi.review} />
         <RoiRow label={t.s3Benefit} ok={roi.benefit} />
         <RoiRow label={t.s3Diff} ok={roi.diff} />
