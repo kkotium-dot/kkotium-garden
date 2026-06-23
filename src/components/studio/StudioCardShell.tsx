@@ -61,7 +61,7 @@ export function Card({
       style={{
         padding: 20,
         marginBottom: 16,
-        borderLeft: `4px solid ${accent ?? '#FFB3CE'}`,
+        borderLeft: `4px solid ${accent ?? 'var(--gp-pink-300)'}`,
       }}
     >
       <header style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -71,7 +71,7 @@ export function Card({
               flexShrink: 0,
               width: 34, height: 34,
               borderRadius: 17,
-              background: done ? '#15803d' : (accent ?? '#FFB3CE'),
+              background: done ? '#15803d' : (accent ?? 'var(--gp-pink-300)'),
               color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 13, fontWeight: 900,
@@ -103,7 +103,7 @@ export function Pill({
   palette?: Palette;
   tooltip?: string;
 }) {
-  const p = palette ?? { bg: '#fff0f5', color: '#e62310', border: '#FFB3CE' };
+  const p = palette ?? { bg: 'var(--gp-pink-50)', color: '#e62310', border: 'var(--gp-pink-300)' };
   return (
     <div
       title={tooltip}
@@ -167,7 +167,7 @@ export function SecondaryButton({
       style={{
         padding: '6px 12px',
         background: '#fff', color: '#e62310',
-        border: '1.5px solid #FFB3CE', borderRadius: 8,
+        border: '1.5px solid var(--gp-pink-300)', borderRadius: 8,
         fontSize: 12, fontWeight: 700,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,

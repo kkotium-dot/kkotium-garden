@@ -11,9 +11,33 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // S2-A.1 (#145): Tailwind preflight defaults every bare `border` to
+      // gray-200 via borderColor.DEFAULT. The globals.css class override only
+      // catches `.border-gray-*` classes, so color-less `border` still leaked
+      // gray app-wide. Rebrand the default to the brand border token — true
+      // root fix for the gray-border retrofit.
+      borderColor: {
+        DEFAULT: "var(--color-border)",
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        // S2-A.1 (#142): redefine Tailwind's default `pink` palette to brand
+        // tokens so every legacy `pink-*` utility (bg/text/border/ring, incl.
+        // hover/group-hover/focus) reads brand pink/red instead of Tailwind
+        // magenta — single source, no per-class CSS overrides. 500+ = action red.
+        pink: {
+          50: "var(--gp-pink-50)",
+          100: "var(--gp-pink-100)",
+          200: "var(--gp-pink-200)",
+          300: "var(--gp-pink-300)",
+          400: "var(--gp-pink-400)",
+          500: "var(--brand-red)",
+          600: "var(--brand-red)",
+          700: "var(--gp-red-600)",
+          800: "var(--gp-red-600)",
+          900: "var(--gp-red-600)",
+        },
         // v6 palette — semantic + primitive aliases
         "gp-cream": {
           50: "var(--gp-cream-50)",

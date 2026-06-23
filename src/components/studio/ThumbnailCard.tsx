@@ -116,7 +116,7 @@ export function ThumbnailCard({
               <div
                 key={v}
                 style={{
-                  border: isMain ? '2.5px solid #e62310' : '1.5px solid #FFB3CE',
+                  border: isMain ? '2.5px solid #e62310' : '1.5px solid var(--gp-pink-300)',
                   borderRadius: 12, overflow: 'hidden', background: '#fff',
                 }}
               >
@@ -132,7 +132,7 @@ export function ThumbnailCard({
                     <ImageIcon size={28} style={{ color: '#B0A0A8' }} />
                   </div>
                 )}
-                <div style={{ padding: '8px 10px', background: isMain ? '#FFF0F5' : '#fff' }}>
+                <div style={{ padding: '8px 10px', background: isMain ? 'var(--gp-pink-50)' : '#fff' }}>
                   <p style={{ fontSize: 12, fontWeight: 700, color: '#1A1A1A', margin: 0 }}>
                     {strings.thumbnail.variants[v]}
                   </p>
@@ -170,7 +170,7 @@ export function ThumbnailCard({
             <span
               style={{
                 fontSize: 10, fontWeight: 800, letterSpacing: 0.4,
-                color: '#1A1A1A', background: '#FFCCEA',
+                color: '#1A1A1A', background: 'var(--pink-soft)',
                 borderRadius: 999, padding: '2px 8px',
               }}
             >

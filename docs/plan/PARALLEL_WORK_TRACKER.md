@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-24 (rev27 · 스튜디오 Stage2 S2-A 완료[AtelierShell flex-fill·calc매직넘버제거(#141)·이중사이드바 골격(창고/배양실/일지·접힘)·색토큰 중앙클렌징(--brand-red/--pink-soft/--cream·#142)·반응형4종 하드닝(#144)·STUDIO_UI_UX_GUIDELINES 신설] · 글로벌 main bounded(전4페이지 가로overflow0 셀프검증) · tsc0 · 원칙 #142/#143/#144 박제 · prev rev26 · 스튜디오 Stage1 구조완료[독립패널스크롤·에셋타일 컴포넌트·스테퍼 우측게이팅·#3 PASS] + lg:hidden 인라인 display 핫픽스[이중렌더 제거·prod결함·#62] · dev정지 후 build0·tsc0·커밋우선 #139 · 잔존 세로오버플로·#2·#4 → Stage2 편입 · 원칙 #140/#141 박제)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-24 (rev28 · S2-A Desktop prod e2e PASS[68cb6e1·이중사이드바 탭/접힘·토큰·#144 active·4페이지 회귀0·#45] + S2-A.1 브랜드 리스킨[Tailwind pink팔레트→브랜드토큰 config 재정의·preflight borderColor.DEFAULT→브랜드·회색보더 전역0·바hex핑크0·#145] · 원칙 #145 박제 · prev rev27 · 스튜디오 Stage2 S2-A 완료[AtelierShell flex-fill·calc매직넘버제거(#141)·이중사이드바 골격(창고/배양실/일지·접힘)·색토큰 중앙클렌징(--brand-red/--pink-soft/--cream·#142)·반응형4종 하드닝(#144)·STUDIO_UI_UX_GUIDELINES 신설] · 글로벌 main bounded(전4페이지 가로overflow0 셀프검증) · tsc0 · 원칙 #142/#143/#144 박제 · prev rev26 · 스튜디오 Stage1 구조완료[독립패널스크롤·에셋타일 컴포넌트·스테퍼 우측게이팅·#3 PASS] + lg:hidden 인라인 display 핫픽스[이중렌더 제거·prod결함·#62] · dev정지 후 build0·tsc0·커밋우선 #139 · 잔존 세로오버플로·#2·#4 → Stage2 편입 · 원칙 #140/#141 박제)
 ---
 
 ## ★★ LIVE WORK BOARD (2026-06-18 S9 · 현 다중병행 단계 권위 · 전거 docs/handoff/HANDOFF_2026-06-18_realism-firefly-composite-upgrade-and-workboard.md §4)
@@ -72,8 +72,9 @@
 
 | id | 작업 | 우선순위 | 의존성 | 상태 |
 |----|------|---------|--------|------|
-| S2-A | flex-fill 셸 + 이중사이드바 골격 + 색토큰 + 반응형4종 하드닝 | P1 | Stage1 | ✅ DONE(tsc0·dev 셀프검증)·Desktop 검증대기 — layout.tsx bounded(height:100vh/overflow:hidden·main flex-1 min-h-0)·AtelierShell height:100%(매직넘버 제거#141)+이중사이드바(w-16 레일 창고/배양실/일지+w-96 동적패널·활성아이콘 재클릭=접힘)·창고=도구함 재배치(로직불변)·배양실/일지=i18n 골격 placeholder(S2-B 채움)·globals --brand-red/--pink-soft/--cream + studio 사용·인라인 grid 전부 minmax(0,1fr)(crawl/dashboard/products·new#144(b))·신호등 의미색 유지. dev 셀프: /studio 이중사이드바+접힘 동작·/dashboard·/products·new·/crawl 가로 overflow 0·console error 0 |
-| S2-B | 사이드바 좁은폭 오버레이 정교화 + 배양실/일지 콘텐츠 채움 | P1 | S2-A | QUEUED |
+| S2-A | flex-fill 셸 + 이중사이드바 골격 + 색토큰 + 반응형4종 하드닝 | P1 | Stage1 | ✅ DONE·**Desktop prod e2e PASS(68cb6e1·#45)** — 이중사이드바 탭/접힘·토큰 resolve·#144 active(min-w-0 2032·ellipsis 67·keep-all 2503)·4페이지 가로overflow0. 잔여 honest gap: 좁은폭(1024/375) 육안 repro는 Desktop 컨트롤러 한계로 미수행(수정은 배포·active 입증) — layout.tsx bounded(height:100vh/overflow:hidden·main flex-1 min-h-0)·AtelierShell height:100%(매직넘버 제거#141)+이중사이드바(w-16 레일 창고/배양실/일지+w-96 동적패널·활성아이콘 재클릭=접힘)·창고=도구함 재배치(로직불변)·배양실/일지=i18n 골격 placeholder(S2-B 채움)·globals --brand-red/--pink-soft/--cream + studio 사용·인라인 grid 전부 minmax(0,1fr)(crawl/dashboard/products·new#144(b))·신호등 의미색 유지. dev 셀프: /studio 이중사이드바+접힘 동작·/dashboard·/products·new·/crawl 가로 overflow 0·console error 0 |
+| S2-A.1 | 브랜드 리스킨 패스(회색보더 전역 retrofit + 레거시 핑크→토큰) | P1 | S2-A | ✅ DONE(tsc0·dev 셀프검증)·Desktop 검증대기 — (1)Tailwind `pink` 팔레트를 config에서 브랜드 토큰으로 재정의(pink-* 유틸 전부 브랜드·hover/ring/group 네이티브) (2)preflight `borderColor.DEFAULT`→`var(--color-border)` + globals `.border-gray-*/.border-stone-*` 오버라이드(#62 근본·bare border 회색 0) (3)바 hex 핑크(#FFB3CE/#FFF0F5/#FFCCEA)→var 토큰(DetailPageCard·StudioCardShell·ThumbnailCard·ProductListPane) (4)신호등 의미색 리터럴 유지. 실측: /studio·/products·new 회색보더 0건·바hex핑크 0·pink-* computed=브랜드. 원칙 #145 |
+| S2-B | 중앙 클렌징(#142): 무거운 폼(Firefly/무드/진단/상세/배경/9슬롯)→좌 배양실 step-sync · 중앙=미리보기+조립슬롯+꼬띠버블 · 폼필드까지 #144 | P1 | S2-A.1 | QUEUED |
 | S2-C | 폰트 체계(S2-A 미적용분) | P2 | S2-A | QUEUED |
 | S2-D | 마이크로 인터랙션 + a11y 마감 | P2 | S2-A | QUEUED |
 

@@ -123,7 +123,7 @@ export function DetailPageCard({
             value={overrideSkeletonId}
             onChange={(e) => onOverrideChange(e.target.value as SkeletonIdLiteral | '')}
             style={{
-              padding: '6px 10px', border: '1.5px solid #FFB3CE',
+              padding: '6px 10px', border: '1.5px solid var(--gp-pink-300)',
               borderRadius: 8, fontSize: 12, fontWeight: 700, color: '#1A1A1A',
               background: '#fff',
             }}
@@ -172,7 +172,7 @@ export function DetailPageCard({
             onChange={(e) => onLifestyleChange(e.target.value)}
             placeholder={strings.detail.moodBackdropPlaceholder}
             style={{
-              flex: 1, minWidth: 200, padding: '6px 10px', border: '1.5px solid #FFB3CE',
+              flex: 1, minWidth: 200, padding: '6px 10px', border: '1.5px solid var(--gp-pink-300)',
               borderRadius: 8, fontSize: 12, color: '#1A1A1A', background: '#fff',
             }}
           />
@@ -217,7 +217,7 @@ export function DetailPageCard({
           </div>
           <div
             style={{
-              border: '1.5px solid #FFB3CE', borderRadius: 12,
+              border: '1.5px solid var(--gp-pink-300)', borderRadius: 12,
               padding: showHtml ? 0 : 8, background: '#FAFAFA',
               maxHeight: 640, overflow: 'auto',
             }}

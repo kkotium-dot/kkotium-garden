@@ -48,7 +48,7 @@ export function ProductListPane({
               display: 'flex', alignItems: 'center', gap: 10,
               padding: 10, border: 'none',
               borderRadius: 10,
-              background: active ? '#FFF0F5' : 'transparent',
+              background: active ? 'var(--gp-pink-50)' : 'transparent',
               cursor: 'pointer',
               textAlign: 'left',
             }}
@@ -63,7 +63,7 @@ export function ProductListPane({
                 style={{
                   width: 44, height: 44, borderRadius: 8,
                   objectFit: 'cover', flexShrink: 0,
-                  border: '1px solid #FFB3CE',
+                  border: '1px solid var(--gp-pink-300)',
                 }}
               />
             ) : (
