@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-13 (rev19 · Scent→Mood 컨셉 재설계 + 생성설정 가드 + april/cotton v3·세션7-e)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-06-23 (rev25 · 스튜디오 전면 리팩토링 설계확정·GO수신 -> Stage1/2/3 분할 등재 · C-IA-5TAB 코드완·tsc0 · 커밋우선 #139)
 ---
 
 ## ★★ LIVE WORK BOARD (2026-06-18 S9 · 현 다중병행 단계 권위 · 전거 docs/handoff/HANDOFF_2026-06-18_realism-firefly-composite-upgrade-and-workboard.md §4)
@@ -21,7 +21,7 @@
 | C4 | E6 자산화 폐루프(persistStrategy+SlotGeneration↔asset) | P2 | QUEUED | - | 독립 |
 | C10 | 원칙 박제 #105/#106/#107 | P2 | ✅ DONE | - | #105(84dfe88)·#106/#107(본 커밋) |
 | C15 | 테스트 자산 정리(stray hero@detail) + Desktop 역량 확정 | P2 | ✅ DONE(가역 아카이브) | - | **Desktop 역량 확정: MCP는 물리 Storage 변이(업로드/삭제/이동/복사) 불가(#59 일반화)→물리 변이=Code service-role SDK 전담.** stray(cmqmbemz…·명화 detail/hero-1781957364462.png·640²·firefly_auto·slot=hero@stage=detail 불일치) #79 전수스캔 0참조(12테이블 ::text+레포 grep) 확인 후 **C23 정신대로 가역 아카이브**(move→archive/ + registry stage detail→archive·하드삭제 아님). 검증 stage=archive·detail stray=0. 비네이버 로컬(#46 불요). 원칙 #120 |
-| C16 | archive 유틸 stage 확장(composite 전용→전 stage 범용) | P2 | ✅ CLOSED(premise 무효·코드0) | - | 실측: archive 유틸 **이미 stage-범용**(archiveAssets·reconcileRegistryDrift·assets/action archive·fixProductIntegrity 전부 stage-범용·composite 한정은 ratio가드/variant-coverage 도메인뿐). premise(composite 전용) 불성립→코드변경0(#46). 후보 enhancement은 C23으로 분리 |
+| C16 | archive 유틸 stage 확장(composite 전용→전 stage 범용) | P2 | ✅ CLOSED(premise 무효·코드0) | - | 실측: archive 유틸 **이미 stage-범용**(archiveAssets·reconcileRegistryDrift·assets/action archive·fixProductIntegrity 전부 stage-범용·composite 한정은 ratio가드/variant-coverage 도메인뿐). premise(composite 전용) 불성립→코드변경0(#46). 후보 enhancement은 C23으로 분리. **C16↔C26 교차참조**: C16이 확인한 reconcileRegistryDrift 기구축 = C26 정합엔진 → C26은 빌드 아닌 실행+능동화로 재정의(중복 0) |
 | C17 | concept별 카메라 매핑(premium 정물 100mm f/4·라이프스타일 35mm·매크로 100mm) | P3 | QUEUED | C6 | C6 후속·MoodCode→camera concept 오버라이드 |
 | C18 | composite 모델 실제 재라우팅(NB Pro 우선)+테스트 갱신 | P3 | QUEUED | C6 | C6 후속·scent_note=firefly 테스트 의도적 갱신 동반 |
 | C20 | C6 폴리시: 프롬프트 'tones tones' 중복어 제거 | P3 | ✅ DONE(본 커밋) | C6 | paletteToneClause 가드(palette가 tones로 끝나면 미중복)·테스트 +1 |
@@ -29,12 +29,42 @@
 | C22 | 통합 레인(단순/디테일 ⊇ A/B) 상태 + sourcing_incomplete 카드 앱 노출(#116/#117) | P2 | QUEUED | - | 워크플로 docs 형식화 완료(§1-A)·앱 surfacing 후속 |
 | C23 | supersede→archive 개입카드(슈퍼시드 자산 자동아카이브 surfacing) | P2 | QUEUED | - | C16에서 분리. product-level(thumbnail/hero/detail) 신버전 확정 시 구버전 자동 아카이브 후보를 개입카드로 표면화(#56·운영자 결정·가역). registry_drift/variant_composite 카드 패턴 동형 |
 | C24 | 디테일 5섹션 상세 엔진(전상품 공통·발행후) | P2 | QUEUED | - | 명화 O2 실증: 단순 상세=detail-source READY(공급사 상세·인증·변형·사용법·푸터) / 디테일 상세=detail-S6 부분골격(5섹션 합성 필요). 적응형 이미지엔진 구조화 실증·product-agnostic. 발행후 트랙(#116 디테일 레인·#125 검증후 공급)·ROADMAP Sprint8 P2-D |
-| C25 | studio 발행경로 기존 DB자산 인식(크롤 임포트 mainImage/detail 재생성 강제 해소) | P2 | QUEUED | - | 판정: studio 「이미지 저장」 canSave=인앱 생성 state(thumbnails/detail)만 인식·product.mainImage/detail_image_url(DB) 미인식(useStudioActions.ts:476). (B)설계이나 발행 워크플로 (A)갭. **하드 차단 아님**(update API가 DB자산으로 발행·update/route.ts:107-119·158). 전상품 공통(#62). 후속: studio Save에 '기존 DB자산 채택' 분기 or 발행탭 DB자산 인식 |
+| C25 | studio 발행경로 기존 DB자산 인식(크롤 임포트 mainImage/detail 재생성 강제 해소) | P2 | QUEUED | **C26** | 판정: studio 「이미지 저장」 canSave=인앱 생성 state(thumbnails/detail)만 인식·product.mainImage/detail_image_url(DB) 미인식(useStudioActions.ts:476). (B)설계이나 발행 워크플로 (A)갭. **하드 차단 아님**(update API가 DB자산으로 발행·update/route.ts:107-119·158). 전상품 공통(#62). **C26 의존**(기존자산 채택은 레지스트리-스토리지 정합 위에서). 후속: studio Save에 '기존 DB자산 채택' 분기 or 발행탭 DB자산 인식 |
+| C26 | 레지스트리-스토리지 정합(정합엔진=기구축) — (a)reconcile 실행 (b)write-path 등록 감사 | P2 | (b)✅DONE · (a)🔒GATED | - | **정정(#129)**: 정합 엔진 신규구축 아님 — reconcileRegistryDrift(asset-integrity)+registry_drift 개입카드(#56) 기구축(C16 CLOSED에 기확인). 재범위: **(a)** **기존 reconcileRegistryDrift 호출 경로**로 드리프트 20/71 해소(신규 스크립트 아님·운영자 GO·#46) · **(b)✅** #62 능동화=생성 write-path registry-insert(registerUploadedAsset 멱등·best-effort·additive — apply-composite/apply-cutout×2/finish-image/thumb-crop/save-assets×2, ingest-firefly·assets/upload 기등록). 드리프트 재발 차단 근본책. **관찰 백로그(비차단)**: positive 등록검증은 non-delete 경로 필요(등록후삭제 사이클은 등록/미등록 구분 불가·reconcile 흡수). ROADMAP P2-F·#129·C16↔C26 |
 | C7 | firefly_auto settingsVerified 서브체크 | P3 | QUEUED | - | - |
 | C8 | 옵션 3표현 정합 | P3 | QUEUED | - | - |
 | C11 | 가드 개선: variantUnmatched→자동등록 스킵/review 스테이지 | P3 | QUEUED | - | 선택 |
 | C13 | 중복 route 2.ts 삭제 | P3 | 🔒GATED | 운영자 GO | - |
 | C12 | E7 엔진 통합(System1 폐기) | - | 🔒GATED | 명시 GO | GO 전 미착수 |
+| C-STUDIO-UX | 온실 아틀리에 3분할(20:55:25)+스테퍼+검색생장관제탑 | P1 | ✅ DONE(본 세션·tsc0/build0)·Desktop LIVE 검증 대기 | - | shell 재구조(AtelierShell h-screen 독립스크롤)+StudioStepper(썸네일랩→상세캔버스→SEO부스터→발행검토)+ControlTower(개화도 게이지=발행게이트 시각화·새 점수엔진 아님·#132)+Kkotti가이드. 좌=AssetBrowser 도구함+상품피커, 중앙=device토글+캔버스+상세조립(상세 단일홈·#131), 우=관제탑 3아코디언(썸네일가시성/SEO매칭율/ROI후킹). 전 카드·훅 보존·relocate only. 신규 src/components/studio/atelier/* (AtelierShell·StudioStepper·ControlTower·KkottiGuide). 다음=Desktop 실렌더 검증(#45/#88) |
+| C-PLANT-UX | 씨앗심기 임시저장+버튼분류+상세 이미지탭 제거 | P2 | ✅ DONE(본 세션·tsc0/build0)·Desktop LIVE 검증 대기 | - | (1)임시저장 버튼(DRAFT upsert·부분데이터OK·페이지잔류·2026-02 승인안 회귀복구) (2)하단 통합 액션바 [임시저장][DB 저장][저장 후 온실 아틀리에][네이버 엑셀 다운로드][네이버 직접 등록]·'비주얼 자동화'→'저장 후 온실 아틀리에'(저장 후 /studio 라우팅) (3)이미지탭 상세페이지/상세설명/상세자동화 제거(상세=Studio 단일홈·#131)·대표/추가+복사가능 SEO훅 유지. saveDraft idempotent(savedProductId시 PUT·아니면 POST)·네이버 무접촉. 다음=Desktop 실렌더 검증 |
+| C-CRAWL-STATE | 꿀통 상태 스테이트머신+수정/삭제/재분류+체크박스 언락 | P1 | ✅ DONE(본 세션·tsc0/build0)·Desktop LIVE 검증 대기 | - | 등록완료 체크박스 disabled 제거·액션행 전상태 노출·수정(product_id시 →/products/[id]/edit)·재분류 셀렉트(소싱완료/등록대기/등록완료/보류 역방향 허용)·삭제 확인모달(#73 타깃프리뷰·크롤기록만·네이버 무접촉)·보류(HOLD) 상태 추가(sourcing_status free string·마이그 불요·PATCH 재사용). 다음=Desktop 실렌더 검증 |
+
+> **C-redesign LIVE-검증 메모(2026-06-23 Desktop, production)**: Plant Panel Split 기구축(6탭+우패널)·임시저장만 부재. Crawl 등록완료 체크박스 disabled+수정/삭제 어포던스 부재·일방향 필터. Studio=수직스택, split+stepper+control-tower 필요. → 본 세션 Code 3건 빌드 완료(C-STUDIO-UX/C-PLANT-UX/C-CRAWL-STATE·tsc0/build0)·Desktop 실렌더 검증 대기(#45/#88·#131/#132).
+
+### UX-v2 레인 — studio 정돈(시선흐름 통제 + 작업 분절) · 2026-06-23
+> 공유 컴포넌트 우선: `src/components/common/*`(Collapsible·OverflowMenu). 제약=#132 셸·표면화만·검증/발행 로직 무변경·Naver PUT 0·SD-01 무접촉·product-agnostic. 검증=localhost dev, Desktop 라이브 e2e.
+
+| id | 작업 | 우선순위 | 의존성 | 스케줄 | 상태 |
+|----|------|---------|--------|--------|------|
+| UX-v2.1 | 도구함 컨텍스트 동기화(AssetBrowser←activeStep STEP_STAGES + 전체보기 토글) | P0 | C-STUDIO-UX | 본 세션 빌드완 | ✅ DONE·Desktop PASS(2026-06-23) |
+| UX-v2.2 | 도구함 압축(스테이지 그리드 높이상한 min(52vh,460px) 독립스크롤·헤더 1줄·업로드 Collapsible 접힘) | P1 | UX-v2.1 | 본 세션 빌드완 | ✅ DONE·Desktop PASS(2026-06-23) |
+| UX-v2.3 | 워크스페이스 점진적 공개(주카드 펼침 / 진단·무드·9슬롯 접힘) | P1 | common/Collapsible | 본 세션 빌드완 | ✅ DONE·Desktop PASS(2026-06-23) |
+| UX-v2.4 | 시각위계(중앙 강조·레일 조용히·보조CTA overflow: AssetBrowser export/refresh) | P1 | common/OverflowMenu | 본 세션 빌드완 | ✅ DONE·Desktop PASS(2026-06-23) |
+| UX-v2.5 | 공통화(/crawl 행 수정·원본·삭제 → overflow / /products/new 네이버 발행 → overflow) | P1 | UX-v2.3·v2.4 | 본 세션 빌드완 | ✅ DONE·Desktop PASS(하단바+행) — /products/new 하단바 overflow + /crawl 행 overflow 모두 라이브 PASS(꽃수레 0=콜드스타트 artifact·데이터정상·행 컴포넌트=하단바 동일) |
+
+> **UX-v2 메모**: 도구함이 스텝과 동기화돼 단계별 자산만 기본 노출(전체보기로 전량 접근 유지)·헤더 1줄+업로드 접힘으로 좌레일 컴팩트·보조카드(진단/무드/퍼널) 접힘 기본으로 중앙 주작업 강조·보조CTA는 kebab(•••)로 강등. 공유 Collapsible/OverflowMenu를 /studio·/crawl·/products/new 3면에 적용(중복 제거). 검증/발행/dryRun 무변경(#132). 원칙 #133(하드리프레시 연타금지)·#134(점진적 공개·컨텍스트 동기화).
+
+### (A)(B) 후속 레인 — 그리드 수정 + edit 패리티 + a11y · 2026-06-23
+> Desktop e2e 발견(도구함 238버튼/11506px 폭발) 대응 + 전상품 공통(B) 검증서 발견 반영. 제약=#132 셸·표면화만·검증/발행 로직 무변경·Naver PUT 0·SD-01 무접촉.
+
+| id | 작업 | 우선순위 | 의존성 | 스케줄 | 상태 |
+|----|------|---------|--------|--------|------|
+| A-GRID | Studio 도구함 가로 폭발(11506px) 수정 | P0 | C-STUDIO-UX | 본 세션 빌드완 | ✅ DONE·Desktop PASS(2026-06-23) — 근본원인: `fr` 트랙 min-width:auto=min-content → `minmax(0,Nfr)` + 패널 minWidth:0 + overflowX:hidden로 하드캡 |
+| B5-EDIT | /products/[id]/edit 재설계 패리티(premium 폼 공유) | P1 | C-PLANT-UX | 본 세션 빌드완 | ✅ DONE·Desktop PASS(2026-06-23) — edit→`/products/new?edit=` 서버 리다이렉트로 단일 편집기화. 구형 이모지탭 ProductForm retire(edit 16.8kB→141B). Lucide 6탭(기본/옵션/이미지/배송·A/S/SEO·원산지/혜택)·임시저장·상세제거(#131)·저장 후 온실 아틀리에 자동 상속. 저장 멱등(savedProductId시 PUT — handleNaverDirect/handleGenerate 중복생성 차단). GAP(비차단): 옵션 prefill-on-edit 미구현(/api/products GET include에 옵션 없음) — 데이터 안전(부분 PUT가 옵션필드 생략→product_options 보존, 구형 폼도 옵션탭 부재였음). 후속=GET include 확장 or 옵션 별도 fetch→optionRows 역매핑 |
+| B6-A11Y | 아이콘전용 버튼 title+aria-label | P1 | - | 본 세션 빌드완 | ✅ DONE·Desktop PASS(행단위 포함) — 꽃수레 새로고침·X 닫기 + 행단위(crawl 행 overflow·AssetBrowser 4타일) 라이브 PASS(꽃수레 0=콜드스타트 artifact·데이터정상) — crawl(오류/결과 X 닫기·꽃수레 새로고침·목록제외 X)·AssetBrowser(대표/추가/보관/삭제 4타일). 텍스트 보유 버튼=가시텍스트가 접근명(추가 불요). overflow/Collapsible/스테퍼=기 aria 보유 |
+
+> (B) 결과 메모: edit 경로가 premium 폼으로 통합되며 전상품 공통 편집 패리티 확보(#135). 저장 멱등화로 edit 재저장·재등록 시 중복 product 행 차단. 옵션 prefill GAP만 잔존(데이터 손실 없음·트래킹). 원칙 #133(reload 연타금지)·#134(점진적 공개·컨텍스트 동기화)·#135(재설계=new+edit 동시·공유 컴포넌트).
 
 ### Desktop 레인
 | id | 작업 | P | 상태 | 의존성 |
@@ -42,6 +72,7 @@
 | D1 | 명화 thumbnail Firefly ref-composite→ingest(thumbnail 1:1) | P0 | ✅ DONE | O1 |
 | D4 | 명화 발행 사전검증(payload·인증·타이틀) | P1 | 🔒GATED | 대표이미지평가(thumbnailAssessed)+상태정합(ACTIVE↔판매중지) ※차량용=stale 해소(이미 상품명 포함·C3 LIVE) |
 | D3 | composite/realism 파이프라인 달항아리·아이스 확장 | P2 | 🔒PARKED(명화 양라인검증 후 재개·#125) | D1 검증 | 달항=composite-ready(cutout✓plate✓·#58 육안 확증 대기) / 아이스=누끼-선행(cutout 부재). 아이스 cutout 부재=C9 Design Readiness 카드 후보 |
+| D7 | AssetBrowser 라이브 전수검증(프로덕션·명화·read-only+classify+upload+delete 4모드+그라운드트루스·Naver무접촉) | P1 | ✅ DONE | - |
 
 ### Desktop 우선순위표 (2026-06-23 세션9 · 양라인 결정)
 > 동시 3트랙(독립 진행): (1) Desktop=명화 양라인검증(O1→O2→단순) (2) Code=C5 E8 v2(GO 대기·스코핑) (3) Operator=O1/O2 생성·평가.
@@ -123,7 +154,31 @@
 > 향 서사 v6 해소(2026-06-18 Desktop 실측): v6=레몬 완숙·웜(M4) / 에이프릴 airy 하이키(M5) / 블랙체리 moody 로우키(M6) 확정. E5 variant-concept에 per-scent mood 반영(엔진이 v6-정확 backdrop 생성). v6 향 3컷 operator 생성·ingest 완료=variant_composite 3/3(card auto-dismiss). 플레이북 §4(v5 narrative)는 legacy 참조(엔진 per-scent mood가 forward 권위). "for a small bottle" 전면 제거 확인. april escape(후레쉰 U+C270 vs 후레쉬 U+C26C) ingest 가드로 차단.
 
 
+### IA-5TAB 레인 — 씨앗심기 7→5탭 재배치 · 2026-06-23
+> 대표님 IA안 GO 후 빌드. 제약=#132 필드재배치만(state/핸들러/검증·발행 로직 무변경)·#135 new+edit 공유(단일 파일·?edit= 리다이렉트)·이모지0·Lucide·SD-01 무접촉·Naver PUT 0. 검증=tsc(build는 dev 정지 후·#136).
+
+| id | 작업 | 우선 | 상태 | 비고 |
+|----|------|------|------|------|
+| C-IA-5TAB | 씨앗심기 7탭→5탭(기본/옵션/이미지/검색최적화/배송·정책) | P1 | ✅ 코드완(본 세션·tsc0·build=dev점유 보류)·Desktop LIVE 검증 대기 | (1)검색최적화 탭 신설=골든키워드·셀러 태그(기본에서 이동)+SEO 훅문구(이미지에서 이동) 집결+상품명 읽기전용 표면화(새 pageTitle/meta state 0·#132)·SEO 점수=우측 패널 유지 (2)배송·A/S→배송·정책: 원산지·수입사(구 SEO·원산지)+혜택(리뷰·구매평·고시) 흡수 (3)비주얼 자동화 탭 제거(온실 아틀리에 대체·autorun jump 은퇴) (4)하단 액션바 sticky(저장 3종 항상노출·네이버 2종 overflow 유지). tabDone/validTabs/activeTab union 동기화·originCode 완료게이트 seo→shipping 이동. 단일 파일 products/new/page.tsx(-1958B)·edit 자동 상속(#135). 다음=dev 정지 후 build0→Desktop 실렌더 e2e(#45/#88) |
+
+### 스튜디오 리팩토링 레인 — 온실 아틀리에 전면 리팩토링 · 2026-06-23 (설계확정·GO수신)
+> 리서치 정본(한글): `docs/research/STUDIO_REFACTOR_RESEARCH_KO_2026-06-23.md` (영문 정본 동일내용 현지화 · 2024-2026 Figma/Canva/Framer/Linear 패턴 + 모바일 반응형 + 네이버 2026 SEO). 핵심 결론: **3컬럼 상시 -> 2컬럼 코어 + 맥락형 우측 인스펙터** / **에셋당 4상시아이콘 제거 -> 호버 1버튼(대표지정(별))+overflow 케밥(점3개)** / **모바일 = 1컬럼 + 하단 4탭(조회·승인 전용·편집은 데스크톱 한정)**. 제약=#132 셸·표면화 우선·검증/발행 로직 무변경 · #138 Stage 분할(구조->라이브검증->대표 리뷰->디테일) · #139 커밋우선.
+> **커밋우선 경로(#139·선행 게이트)**: 대형 리팩토링 착수 전, 검증완료 미커밋 자산(C-IA-5TAB build0 후 + 기존 C-redesign/UX-v2/A·B·common·atelier 더미)을 먼저 commit/push해 위험반경 축소 -> 즉 **Stage 1 착수 전 = 현 검증완 자산 커밋·배포가 선행**.
+
+| id | 작업 | 우선 | 상태 | 통과 기준 |
+|----|------|------|------|----------|
+| STUDIO-RF-S1 | Stage 1 **구조** — 패널별 고정 뷰포트 자체 스크롤(col0 2220px 결함 해소)·에셋 레일 깔끔 썸네일+호버툴바·overflow 케밥(점3개)·다중선택(상시 100-160 아이콘 제거)·스테퍼가 캔버스+우측패널+에셋필터까지 진짜 게이팅 | P1 | QUEUED(설계확정·GO·커밋우선 선행) | 어느 단계든 '다음 행동'을 스크롤 없이 5초 내 발견 |
+| STUDIO-RF-S2 | Stage 2 **레이아웃** — 2컬럼 코어+접이식 맥락형 우측 인스펙터(SEO관제탑->3단계 정점·퍼널보드->2단계·시장DNA->2·3단계·AI진단->1단계 인라인+4단계 프리플라이트)·단계별 빈화면 단일 CTA | P1 | QUEUED(S1 라이브검증·대표 리뷰 후·#138) | 한 단계가 핵심요소 5-9개 초과 노출 안 함 |
+| STUDIO-RF-S3 | Stage 3 **모바일+폴리시** — grid-template-areas 반응형 1컬럼+하단 4탭(조회·승인 전용·드로어 패널·하단 고정 CTA)·중립+1-2강조 시각시스템·8pt 그리드·타입스케일·Cmd+K 팔레트 | P2 | QUEUED(S2 후) | 모바일=편집 컨트롤 0 노출로 검토·승인 완결 / 데스크톱=Linear·Canva급 여백·가독 |
+
 ### 변경로그
+- 2026-06-23 (세션9·Code/스튜디오 전면 리팩토링 설계확정·GO수신 + 거버넌스 박제): 리서치 정본(한글) `docs/research/STUDIO_REFACTOR_RESEARCH_KO_2026-06-23.md` 등재 — 3컬럼->2컬럼+맥락형 우측 인스펙터·에셋 4상시아이콘->호버1+overflow 케밥(점3개)·모바일 1컬럼 하단4탭(조회·승인). **Stage 분할 등재**: S1 구조(패널 자체스크롤·에셋레일 정리·스테퍼 진짜 게이팅)->S2 레이아웃(2컬럼+인스펙터·관제탑/퍼널/DNA/진단 재배치)->S3 모바일+폴리시(반응형·하단탭·Cmd+K)·각 통과기준. **커밋우선(#139)**: 대형 착수 전 검증완 미커밋 자산 먼저 commit/push로 위험반경 축소(Stage1 선행 게이트). 원칙 #137(항목별 액션밀도->overflow 케밥(점3개) 표준·crawl행<->에셋타일 통일)·#138(대형 리팩토링=검증가능 Stage 분할·구조먼저·라이브검증·대표 리뷰->디테일)·#139 박제. docs only·코드변경0·tsc 무관·Naver PUT 0·SD-01 무접촉·sentinel0.
+- 2026-06-23 (세션9·Code/씨앗심기 7→5탭 IA 재배치 — C-IA-5TAB·대표님 GO): 7탭(기본·옵션·이미지·배송·A/S·SEO·원산지·혜택·비주얼)→5탭(기본 정보·옵션·이미지·검색최적화·배송·정책). **검색최적화 탭 신설**(흩어진 SEO 입력 집결: 골든키워드·셀러 태그=기본에서 이동, SEO 훅문구=이미지에서 이동, 상품명 읽기전용 표면화=새 state 0·#132 준수·대표님 결정, SEO 점수=우측 패널 유지). **배송·정책**=배송/AS+원산지·수입사+혜택(리뷰·구매평·고시) 흡수. **비주얼 자동화 탭 제거**(온실 아틀리에 대체·post-register autorun jump 은퇴). **하단 액션바 sticky**(position:sticky bottom:0). 동기화: tab 배열(seo<shipping 재정렬·benefit/visual 드롭)·tabDone(originCode 게이트 seo→shipping)·validTabs·activeTab union. 단일 파일 products/new/page.tsx(214640→212682·-1958B)·edit는 ?edit= 리다이렉트로 동일 폼 자동 상속(#135). **tsc0**·build=dev(next dev:3000) 점유로 #136 보류(dev 정지 후 실행)·Naver PUT 0·SD-01 무접촉·sentinel0. 다음=build0→Desktop 실렌더 e2e(#45/#88)→대표님 GO 후 commit/push.
+- 2026-06-23 (세션9·Code/Desktop 재검증 PASS 박제 — 행단위 포함 전부 PASS): studio·B5·v2.5(하단바+행)·B6 전부 라이브 PASS 확정. 직전 pending-cart-data였던 행단위(v2.5 /crawl 행 overflow·B6 crawl행/AssetBrowser 4타일 aria) Desktop 라이브 PASS. **꽃수레 0개=콜드스타트 artifact(데이터 정상)** — 빈 카트=초기 데이터 상태(결함 아님)·행 컴포넌트=하단바와 동일(저위험). #136 확인(직전 B5/B6/v2.5 500=.next 손상·코드결함 아님). 다음=씨앗심기 7→5탭 IA 재배치(대표님 GO 대기·#132 필드재배치만·#135 new+edit 공유 폼). docs only·코드변경0·Naver PUT 0·SD-01 무접촉·sentinel0.
+- 2026-06-23 (세션9·Desktop/AssetBrowser 라이브 전수검증·DONE): 프로덕션·명화 AssetBrowser 전수검증 PASS — **read-only**(ZIP·딥링크16·경로복사·타일119·뱃지·Adobe라벨) + **classify**(신뢰도·추천합성·저해상플래그·8단계 오버라이드) + **upload**(archive·네이밍·57→58) + **delete**(#73 모달·58→57) + **그라운드트루스**(storage/registry 잔여0·Naver 무접촉). P1 직접업로드·P2 ZIP·P3 딥링크 전부 LIVE. Desktop 레인 D7 DONE 등재. 원칙 #130(라이브 변이=throwaway+즉시정리·잔여검증=storage SoT·이중렌더 보이는 인스턴스+정확속성). 관찰 백로그(비차단): write-path positive 등록검증=non-delete 경로 필요(현 등록후삭제 사이클은 등록/미등록 구분 불가·reconcile 흡수). sentinel0·tsc 무관(docs).
+- 2026-06-23 (세션9·Code/C16↔C26 중복 해소 + #129 보강): Desktop 트래커 실측 — C26 '정합엔진 신규구축'은 **C16(CLOSED) 확인 reconcileRegistryDrift와 중복**. C26 (a)=신규 'storage list→insert 스크립트' 아닌 **기존 reconcileRegistryDrift 호출 경로** 실행(드리프트 20/71·운영자 GO). C16 행에 C16↔C26 교차참조 메모 추가. #129 보강(C16 CLOSED 기록 참조·#45 연장). (b) write-path 등록 감사=직전 턴 구현완료 재확인(registerUploadedAsset 7콜·tsc0·build0). 중복 빌드 0. tsc0·sentinel0.
+- 2026-06-23 (세션9·Code/write-path 등록 감사+추가 + C26 재범위 + #129 + 적재v2 감사): **★정정** — 직전 'C26 정합엔진 신규구축' 취소(#129 실측: reconcileRegistryDrift + registry_drift 카드 #56 기구축). C26 재범위: (a) reconcile 실행 드리프트 20/71 해소(GATED·운영자 GO) (b) write-path 등록 감사. **코드(b)✅**: `registerUploadedAsset`(automation-storage·멱등 P2002·best-effort·STAGE_NAMING 토큰·additive) 신설 + 6 write-path 7콜 — apply-composite·apply-cutout(×2)·finish-image·thumb-crop·save-assets(×2)(ingest-firefly·assets/upload 기등록). 드리프트 재발 차단 근본책(#62). **적재v2 감사**: P1/P2/P3 전구현+초과(콘텐츠인식분류·ratio정규화·classify칩·ZIP export·딥링크/경로복사·AssetBrowser WorkbenchTabs)·P4(데스크톱 헬퍼) 미구현·P5(하우스키핑)=asset-integrity. **#129 박제**(신규 트랙 전 기존 구현 실측). tsc0·build0·additive·비가역0·네이버 무접촉.
+- 2026-06-23 (세션9·Code/5계층 실측 + 백필 실행완료 + #128 + C26 설계): **적재 5계층 실측** — asset_jobs 25 가동(awaiting_human=개입점)·물리 Storage 71 정상·asset_registry 20/71 등록(51 드리프트)·published_assets 0 정상·prompt_library/references 미가동. **백필 실행완료**(ADAPTIVE_IMAGE_ENGINE §7.1): 라이브 평면-루트 0·archive=retire-by-copy 무손실·명화 51/달항 18/아이스 2 전부 폴더화. **#128 박제**(Storage=SoT·registry 부분반영 20/71·발행은 Product row라 무영향·정합=C26). **C26 신규**(🔒GATED 설계완·GO 대기): storage→registry 백필+발행후 자동등록·dry-run→GO 이중게이트·멱등·전상품. ROADMAP P2-F. **C25 의존성 갱신**(C25←C26). docs only·코드변경0·비가역0·네이버 무접촉. tsc0. (커밋 대기·운영자 지시)
 - 2026-06-23 (세션9·Code/상세 전체교체 안전성 + dryRun 발행검증 + #127 + C25 ROADMAP): **★상세 안전성(#46)** — detailContent는 payload에 **항상 포함**(product-builder.ts:941 무조건) → full-replace strip 안 함 · 빈값 위험 없음. buildDetailContent(:649) 전부 비면 placeholder 1줄(:697)이나 명화는 detail_image_url 존재 → non-empty(empty-wipe 없음). 잔여: dryRun preview에 detailContent 미표시(fact-check 갭·:88-110) + DB상세<라이브면 downgrade. 권고=**조건부 PUT**(PUT 전 라이브 GET 스냅샷 + DB상세 일치확인). **dryRun 발행검증(Desktop)**: canRegister:true · S/94 · errors 0 · 대표=기존 폴더적재 Storage · HB/원산지/가격/옵션/SEO 정상 → 명화 발행 임박. **#127 박제**(UI canSave≠API canRegister · 크롤 임포트 거짓음성 · 판정 SoT=dryRun · 해소 C25). **C25 → ROADMAP Sprint8 P2-E 등재**. docs 체크포인트 커밋(가역). tsc0.
 - 2026-06-23 (세션9·Code/이미지 저장 게이트 판정 + dryRun 계약 + docs 체크포인트): **게이트 판정** — studio 「이미지 저장」(ActionsCard·disabled={!canSave}) 게이트 `canSave=(thumbnails!=null||detail!=null)&&!saveBusy`(useStudioActions.ts:476)·**인앱 생성 state만 인식·DB mainImage/detail_image_url 미인식**(thumbnails/detail=useState null·생성시에만 set·상품변경 리셋·주석 'NOT persisted'). 판정=**(B)설계**(버튼 목적=생성물 Storage 영속화) + 발행 워크플로 관점 **(A)갭**(크롤 임포트 기존 DB자산 재생성 강제). **★하드 발행 차단 아님**: /api/naver/products/update가 DB row로 full payload 발행(update/route.ts:107-119·158). **전상품 공통(#62)**(canSave product-agnostic). **C25 신규 트랙**(studio 발행경로 DB자산 인식). **dryRun 계약 확정**: POST /api/naver/products/update {productId,dryRun?,confirm?,fields?}·`isDryRun=dryRun===true||confirm!==true`(:45)·confirm 미포함=무조건 preview(네이버 무접촉)·payloadPreview.productInfoProvidedNotice 포함(:104-105)·실 PUT은 confirm===true&&dryRun!==true(:163)만. docs 체크포인트 커밋(가역·code change 0). tsc0.
 - 2026-06-23 (세션9·Code/O2 시각검증 + P2 C24 트랙 등록 + docs 체크포인트 커밋): **O2 시각검증 완료** — 명화 단순 라인 상세=detail-source **READY**(프로 공급사 상세·인증·변형·사용법·푸터 완비·#122 시각확증), 디테일 라인 상세=detail-S6 **부분골격**(5섹션 합성 필요). 명화 발행 잔여=단순 pre-PUT dryRun + 씨앗심기(#117) + 대표 GO(임박). **신규 P2 트랙 C24** '디테일 5섹션 상세 엔진(전상품 공통·발행후)'=적응형 이미지엔진 구조화 실증·product-agnostic — Code 레인 + ROADMAP Sprint8 P2-D 등록(QUEUED·#116 디테일 레인·#125 검증후 공급). **docs 체크포인트 커밋**: O1(thumbnail-assess)+O3(info-notice verify)+O2(detail readiness)+원칙 #121~126 누적 5 MD를 docs-only 단위 커밋(code change 0·비가역 0·네이버 무접촉·git 가역). tsc0.

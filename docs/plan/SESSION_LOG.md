@@ -1,3 +1,52 @@
+## 2026-06-23 (세션9-Code) 씨앗심기 7->5탭 IA 재배치(C-IA-5TAB) + 스튜디오 전면 리팩토링 설계확정·GO + 거버넌스 #137~139
+
+**[C-IA-5TAB 빌드·대표님 GO]** 씨앗심기 7탭->5탭(기본 정보·옵션·이미지·검색최적화·배송·정책). 검색최적화 탭 신설=골든키워드·셀러 태그(기본에서 이동)+SEO 훅문구(이미지에서 이동) 집결+상품명 읽기전용 표면화(새 pageTitle/meta state 0·#132·대표 결정)·SEO점수 우측패널 유지. 배송·정책=배송/AS+원산지·수입사+혜택(리뷰·구매평·고시) 흡수. 비주얼 자동화 탭 제거(온실 아틀리에 대체·autorun jump 은퇴). 하단 액션바 sticky(저장 3종 항상노출·네이버 2종 overflow). 동기화: tab배열·tabDone(originCode 게이트 seo->shipping)·validTabs·activeTab union. 단일 파일 `products/new/page.tsx`(-1958B)·edit `?edit=` 자동 상속(#135). **tsc0**·build=dev(next dev:3000) 점유로 #136 보류·Naver PUT 0·SD-01 무접촉.
+**[검증 PASS 박제]** studio·B5·v2.5(하단바+행)·B6 전부 라이브 PASS(꽃수레 0=콜드스타트 artifact·데이터정상)·#136 확인.
+**[스튜디오 전면 리팩토링 설계확정·GO수신]** 리서치 정본(한글) `docs/research/STUDIO_REFACTOR_RESEARCH_KO_2026-06-23.md` 등재. 3컬럼->2컬럼+맥락형 우측 인스펙터·에셋 4상시아이콘->호버1+케밥·모바일 1컬럼 하단4탭(조회·승인). Stage 분할 등재(S1 구조->S2 레이아웃->S3 모바일+폴리시·각 통과기준). 커밋우선(#139): 대형 착수 전 검증완 미커밋 자산 먼저 commit/push.
+**[원칙 박제]** #137(항목별 액션밀도->overflow 케밥 표준·crawl행<->에셋타일 통일)·#138(대형 리팩토링=검증가능 Stage 분할·구조먼저·라이브검증·대표 리뷰->디테일)·#139(커밋우선·위험반경 축소).
+**[gates]** 본 턴 docs only(C-IA-5TAB는 직전 턴 코드)·tsc 무관(docs)·sentinel0·이모지0·비가역0·네이버 무접촉. **다음=[운영자] dev 정지->[Code] build0+커밋우선 commit/push->[Desktop] 실렌더 e2e->Stage1 착수.**
+
+---
+
+## 2026-06-23 (세션9-Code) AssetBrowser 라이브 전수검증 DONE 박제 + #130 + write-path positive검증 백로그
+
+**[Desktop AssetBrowser 라이브 전수검증·DONE]** 프로덕션·명화 전수검증 PASS — **read-only**(ZIP·딥링크16·경로복사·타일119·뱃지·Adobe라벨) · **classify**(신뢰도·추천합성·저해상플래그·8단계 오버라이드) · **upload**(archive·네이밍·57→58) · **delete**(#73 모달·58→57) · **그라운드트루스**(storage/registry 잔여0·Naver 무접촉). P1 직접업로드·P2 ZIP·P3 딥링크 전부 LIVE. TRACKER Desktop 레인 D7 DONE 등재.
+**[#130 박제]** 라이브 변이 테스트=throwaway+즉시정리 사이클(업로드→검증→삭제)·잔여검증은 UI 아닌 storage SoT+registry 그라운드트루스(#45·#128)·이중렌더 페이지는 보이는 인스턴스+정확 속성(title vs aria-label) 타겟.
+**[관찰·백로그·비차단]** write-path positive 등록검증 후속: 업로드가 assetRegistry.create 하는지 **non-delete 경로**로 확인 필요(현 업로드→검증→삭제 사이클은 '등록 후 삭제'와 '미등록'을 구분 불가). 비차단 — C26(b) write-time 등록 + reconcile이 흡수. C26 (b) 셀에 관찰 메모 추가.
+**[gates]** docs only·코드변경0·tsc 무관(docs)·sentinel0·이모지0·비가역0·네이버 무접촉. **다음=[운영자 GO] C26(a) reconcile 실행·커밋/push. [Code GO 대기] C5-2·SEC-1(product_asset_objects revoke)·SEC-2(leaked-pw).**
+
+---
+
+## 2026-06-23 (세션9-Code) C16↔C26 중복 해소 + #129 보강 + write-path 코드 재확인
+
+**[★C16↔C26 중복 해소·Desktop 트래커 실측]** C26 '레지스트리-스토리지 정합 엔진 신규 구축'은 **C16(CLOSED)이 이미 확인**한 reconcileRegistryDrift(+registry_drift 카드 #56)와 중복. → C26 (a)는 신규 'storage list→insert 스크립트'가 아니라 **기존 reconcileRegistryDrift 호출 경로** 실행(드리프트 20/71 해소·운영자 GO·#46). 신규 스크립트 표현은 직전 턴 이미 제거(잔재 0 확인). C16 행에 교차참조 메모 추가('C16 확인 reconcileRegistryDrift = C26 정합엔진 · C26은 빌드 아닌 실행+능동화 재정의 · 중복 0').
+**[(b) write-path 등록 감사 — 재확인]** 직전 턴 구현 유지 확인: registerUploadedAsset(automation-storage·멱등·best-effort·additive) 7콜 — apply-composite·apply-cutout×2·finish-image·thumb-crop·save-assets×2(ingest-firefly·assets/upload 기등록). 코드 무변경·tsc0. 드리프트 재발 차단 근본책(#62).
+**[#129 보강]** '신규 트랙 제안 전 기존 구현 코드 실측 필수'에 **C16 CLOSED 기록 참조** 추가(코드+과거 트래커 둘 다 검색·중복제안 방지·#45 연장).
+**[gates]** docs(+코드 재확인 무변경)·tsc0·sentinel0·이모지0·비가역0·네이버 무접촉. **다음=[운영자 GO] C26(a) reconcile 실행→드리프트 20/71 해소. [Code GO 대기] C5-2·SEC-1(product_asset_objects revoke)·SEC-2(leaked-pw).**
+
+---
+
+## 2026-06-23 (세션9-Code) 생성 write-path 등록 감사+추가(#62) + C26 재범위 + #129 + 적재v2 감사
+
+**[★정정·C26 재범위]** 직전 'C26 = 레지스트리-스토리지 정합 엔진 신규 구축'은 **취소**. 실측(#129): reconcileRegistryDrift(asset-integrity) + registry_drift 개입카드(#56)가 **이미 구축**됨. C26 재범위 → (a) reconcile 실행으로 드리프트 20/71 해소(🔒GATED·운영자 GO·#46) (b) #62 능동화 = 생성 write-path registry-insert 감사.
+**[코드·(b) 구현완료]** 감사: assets/upload·ingest-firefly만 assetRegistry.create 하고, apply-composite·apply-cutout·finish-image·thumb-crop·save-assets는 업로드+Product update만 하고 **registry 미등록**(20/71 드리프트 근원). → `registerUploadedAsset` 공유 헬퍼(automation-storage.ts·멱등 P2002·best-effort 비치명·STAGE_NAMING 토큰 parseAssetTokens·additive) 신설 + 6 write-path 7콜 배선: apply-composite(composite)·apply-cutout(thumbnail+cutout)·finish-image(thumbnail)·thumb-crop(thumbnail)·save-assets(thumbnail+detail). 드리프트 **재발 차단 근본책**(#62). tsc0·build0·additive·비가역0·네이버 무접촉.
+**[적재 v2 감사]** P1/P2/P3 전부 **구현+초과**: 업로드 콘텐츠인식분류·비율 정규화·classify 칩·export ZIP·딥링크/경로복사·AssetBrowser WorkbenchTabs 마운트. P4(데스크톱 헬퍼) 미구현. P5(하우스키핑)=asset-integrity로 구현.
+**[#129 박제]** 신규 트랙 제안 전 기존 구현 코드 실측 필수(중복 구축 방지) — '없다고 단정 전에 grep'.
+**[gates]** 코드 additive·tsc0·build0·이모지0·신규 한글리터럴0·prisma 싱글톤·비가역0·네이버 무접촉. **다음=[운영자 GO] C26(a) reconcile 실행→드리프트 20/71 해소. [Code GO 대기] C5-2·SEC-1(product_asset_objects revoke)·SEC-2(leaked-pw).**
+
+---
+
+## 2026-06-23 (세션9-Code) 적재폴더 5계층 실측 + 백필 실행완료 + #128 + C26 설계(GO대기)
+
+**[적재 5계층 아키텍처 실측·#45]** asset_jobs **25** 가동(awaiting_human=개입점 #56) · 물리 Storage **71** 정상 · asset_registry **20/71** 등록(51 미등록 드리프트) · published_assets **0** 정상 · prompt_library/asset_references **미가동**. = 5계층(잡·물리·인덱스·발행기록·재사용).
+**[백필 실행완료]** ADAPTIVE_IMAGE_ENGINE §7.1 갱신: 직전 dry-run(20/3상품)=**실행 완료**. 라이브 상품 평면-루트 자산 **0**(전 자산 폴더화) · archive=**retire-by-copy 무손실**(COPY→검증→retire) · 적재 분포 명화 **51** · 달항아리 **18** · 아이스 **2** 전부 폴더 스테이지화. GO결정 #1 실행됨(§7.2 '미실행·대기' superseded).
+**[#128 박제]** Storage=자산 SoT · asset_registry는 부분반영(20/71)이나 **발행은 Product row(mainImage/additionalImages/detail_image_url)를 읽어 registry 미참조 → 발행 무영향**(buildNaverProductPayload registry 미참조). registry 드리프트 = 발행 블로커 아님 · 인덱스 정합 과제. 정합 = C26.
+**[C26 신규 트랙·설계·GO 대기]** '레지스트리-스토리지 정합 패스' — storage 71 list → 미등록 51 식별(path set diff) → stage/variant 추론(#108) → **dry-run 리포트 선행**(무변경) → 운영자 GO 이중게이트(--go --confirm·#46 동형) → asset_registry insert(멱등·P2002 가드) + 발행후 자동등록(드리프트 재발 방지). 전상품·product-agnostic(#62). TRACKER C26(🔒GATED)·ROADMAP Sprint8 P2-F. **착수 안 함(설계만·GO 대기).**
+**[C25 의존성 갱신]** C25 ← C26(기존자산 채택은 레지스트리-스토리지 정합 위에서).
+**[gates]** docs only · 코드변경0 · tsc0 · 이모지0 · 비가역0 · 네이버 무접촉. (커밋 대기·운영자 지시.) **다음=[Code] GO 대기 C26 실행·C5-2·SEC-1(product_asset_objects revoke)·SEC-2(leaked-pw). [Desktop] 씨앗심기→발행.**
+
+---
+
 ## 2026-06-23 (세션9-Code) 상세 전체교체 안전성 판정 + dryRun 발행검증 박제 + #127 + docs 체크포인트
 
 **[★상세 전체교체 안전성·#46]** 'full-replace → 누락필드 제거' 경고 추적. **detailContent는 buildNaverProductPayload가 항상 포함**(product-builder.ts:941 무조건) → full-replace가 detailContent를 strip하지 않음 · 빈값 PUT 위험 없음. buildDetailContent(:649) 조립=공통상단 → hookPhrase → detail_image_url → description → AEO → 공통하단, **전부 비면** placeholder `<div>{상품명}</div>`(:697-700).

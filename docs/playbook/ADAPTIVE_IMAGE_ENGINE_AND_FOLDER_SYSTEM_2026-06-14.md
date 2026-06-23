@@ -118,6 +118,8 @@
 - 실행 게이트: 기본 dry-run(무변경). 실행은 `--go --confirm` 이중 게이트 + 운영자 GO 필요(#46).
 - 순서 박제: **COPY → DB URL 갱신(Product.mainImage/images/extra_images + AssetRegistry.path/stage/fileName) → 새 URL 도달 검증 → 원본 retire(archive 이동 또는 archive-kind는 삭제)**. move-then-update 절대 금지(라이브 URL 중간 404 방지).
 
+**★ 백필 실행 완료 (2026-06-23 실측·5계층 스캔)**: 위 dry-run(20개/3상품)은 **실행 완료**로 갱신. 라이브 상품 평면-루트 자산 **0**(전 자산 폴더 스테이지화). archive = **retire-by-copy**(COPY→새 URL 도달 검증→원본 retire) = **무손실**. 적재 분포: 명화 **51** · 달항아리 **18** · 아이스 **2** 전부 폴더화. (§7.2 'GO결정 #1 … 본 턴 미실행·대기'는 superseded — 실행됨.)
+
 ### 7.2 분류기 결함 A·B 수정 (전상품·미래파일) + GO결정 3건
 
 - **결함 A (backdrop)**: `kindForSource` plate 규칙에 `backdrop` 토큰 추가. backdrop = 합성 입력 배경 플레이트(asset-source-resolver가 `backdrop-{skeletonId}.png` 로드). **GO결정 #2 = plate** (운영자 승인).

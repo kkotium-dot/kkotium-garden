@@ -21,7 +21,7 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { uploadAutomationAsset } from '@/lib/storage/automation-storage';
+import { uploadAutomationAsset, registerUploadedAsset } from '@/lib/storage/automation-storage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -98,6 +98,8 @@ export async function POST(
           buffer: buf,
         });
         thumbResult = { publicUrl: r.publicUrl, path: r.path };
+        // #62 write-time registry intake (idempotent, best-effort).
+        await registerUploadedAsset({ productId, path: r.path, stage: 'thumbnail', sourceTag: 'save_assets' });
       } catch (err) {
         errors.push({ kind: 'thumbnail', message: String(err) });
       }
@@ -117,6 +119,8 @@ export async function POST(
           buffer: buf,
         });
         detailResult = { publicUrl: r.publicUrl, path: r.path };
+        // #62 write-time registry intake (idempotent, best-effort).
+        await registerUploadedAsset({ productId, path: r.path, stage: 'detail', sourceTag: 'save_assets' });
       } catch (err) {
         errors.push({ kind: 'detail', message: String(err) });
       }

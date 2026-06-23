@@ -263,6 +263,14 @@ authority = docs/design/IMAGE_SEO_STRATEGY_ENGINE.md. All-product common (#55): 
 - (선택) dryRun payloadPreview에 detailContent(길이·이미지수·요약) 노출 — full-replace fact-check 갭(#46) 해소.
 - product-agnostic · 전상품 공통(#62).
 
+### P2-F. 레지스트리-스토리지 정합 (정합엔진=기구축 · 잔여 (a)reconcile 실행 (b)write-path 감사·전상품)
+
+**정정(#129)**: 정합 엔진은 신규 구축 대상이 아님 — `reconcileRegistryDrift`(asset-integrity) + `registry_drift` 개입카드(#56)가 **이미 구축**. C26은 아래로 재범위.
+
+**(a) reconcile 실행 (🔒GATED · 운영자 GO)**: **기존 reconcileRegistryDrift 호출 경로**로 드리프트 **20/71** 해소(신규 스크립트 아님)(storage-only 등록 / registry-only 정리). dry-run 리포트 → 운영자 GO 이중게이트(#46) → 멱등 적용.
+
+**(b) #62 능동화 = write-path registry-insert (✅ 구현완료 2026-06-23)**: 생성 write-path가 업로드 후 registry를 등록하도록 `registerUploadedAsset`(automation-storage · 멱등 P2002 · best-effort 비치명 · STAGE_NAMING 토큰 · additive)를 추가 — apply-composite / apply-cutout(×2) / finish-image / thumb-crop / save-assets(×2). (ingest-firefly · assets/upload는 기등록.) **드리프트 재발 차단 근본책** · product-agnostic · 전상품(#62).
+
 ---
 
 ## Sprint 9+ (P3) — 매출 600만원+ 후

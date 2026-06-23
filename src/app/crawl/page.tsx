@@ -9,7 +9,9 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   Layers, Search, RefreshCw, ExternalLink, ArrowRight,
   Package, Download, X, CheckCircle, AlertCircle, Clock, History, TrendingUp, Tag,
+  Pencil, Trash2, RotateCcw,
 } from 'lucide-react';
+import { OverflowMenu } from '@/components/common';
 import { calcHoneyScore, calcSourcingScore } from '@/lib/honey-score';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 import { getNaverFeeRateByD1, NAVER_DEFAULT_FEE_RATE } from '@/lib/naver-fee-rates-2026';
@@ -581,7 +583,13 @@ function CrawlPageInner() {
   // ── 소싱 보관함 탭 state ─────────────────────────────────────────────────
   const [logs, setLogs]               = useState<SourcingItem[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
-  const [histFilter, setHistFilter]   = useState<'all'|'SOURCED'|'PENDING'|'REGISTERED'|'single'|'bulk'>('all');
+  const [histFilter, setHistFilter]   = useState<'all'|'SOURCED'|'PENDING'|'REGISTERED'|'HOLD'|'single'|'bulk'>('all');
+  // C-CRAWL-STATE: reversible reclassify target options + delete-confirm modal.
+  // sourcing_status is a free string column (no DB enum), so HOLD (보류) is
+  // additive and needs no migration. updateSourcingStatus already PATCHes any
+  // value, so reclassify reuses it. Delete touches the crawl record ONLY —
+  // never a Naver mutation (#73 confirm modal with target preview).
+  const [deleteTarget, setDeleteTarget] = useState<SourcingItem | null>(null);
   const [histSearch, setHistSearch]   = useState('');
   const [histSelected, setHistSelected] = useState<Set<string>>(new Set());
   const [batchLoading, setBatchLoading] = useState(false);
@@ -593,7 +601,7 @@ function CrawlPageInner() {
   const loadShelf = (filter = histFilter, seller = histSellerFilter) => {
     setLogsLoading(true);
     const params = new URLSearchParams({ limit: '100' });
-    if (filter !== 'all' && ['SOURCED','PENDING','REGISTERED'].includes(filter)) params.set('status', filter);
+    if (filter !== 'all' && ['SOURCED','PENDING','REGISTERED','HOLD'].includes(filter)) params.set('status', filter);
     if (filter === 'single' || filter === 'bulk') params.set('source', filter);
     if (seller !== 'all') params.set('seller', seller);
     fetch(`/api/crawler/logs?${params}`)
@@ -1216,7 +1224,7 @@ function CrawlPageInner() {
             {bError && (
               <div style={{ padding:'10px 14px', background:'#FFF0EF', border:'1.5px solid #fca5a5', borderRadius:12, fontSize:13, color:'#b91c1c', display:'flex', alignItems:'center', gap:8 }}>
                 <AlertCircle size={14}/>{bError}
-                <button onClick={() => setBError('')} style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer', color:'#b91c1c' }}><X size={13}/></button>
+                <button onClick={() => setBError('')} aria-label="오류 메시지 닫기" title="닫기" style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer', color:'#b91c1c' }}><X size={13}/></button>
               </div>
             )}
 
@@ -1225,7 +1233,7 @@ function CrawlPageInner() {
               <div style={{ padding:'10px 14px', background: bActionResult.ok?'#F0FDF4':'#FFF0EF', border:`1.5px solid ${bActionResult.ok?'#86efac':'#fca5a5'}`, borderRadius:12, fontSize:13, color: bActionResult.ok?'#15803d':'#b91c1c', display:'flex', alignItems:'center', gap:8 }}>
                 {bActionResult.ok?<CheckCircle size={14}/>:<AlertCircle size={14}/>}
                 {bActionResult.message}
-                <button onClick={() => setBActionResult(null)} style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer' }}><X size={13}/></button>
+                <button onClick={() => setBActionResult(null)} aria-label="결과 메시지 닫기" title="닫기" style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer' }}><X size={13}/></button>
               </div>
             )}
 
@@ -1412,7 +1420,7 @@ function CrawlPageInner() {
                                 style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', background:'#FFF0EF', border:'1px solid #fca5a5', borderRadius:8, fontSize:11, fontWeight:700, color:'#e62310', cursor:'pointer', whiteSpace:'nowrap' }}>
                                 <ArrowRight size={11}/> 등록
                               </button>
-                              <button onClick={() => excludeRow(r.id)} title="목록에서 제외"
+                              <button onClick={() => excludeRow(r.id)} title="목록에서 제외" aria-label="목록에서 제외"
                                 style={{ width:30, height:30, background:'#F5F5F5', border:'1px solid #e5e5e5', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
                                 <X size={12} color="#aaa"/>
                               </button>
@@ -1558,6 +1566,7 @@ function CrawlPageInner() {
                     ['SOURCED','소싱완료'],
                     ['PENDING','등록대기'],
                     ['REGISTERED','등록완료'],
+                    ['HOLD','보류'],
                     ['single','단건'],
                     ['bulk','대량'],
                   ] as [string,string][]).map(([k,l]) => (
@@ -1588,7 +1597,7 @@ function CrawlPageInner() {
                   placeholder="상품명 검색"
                   style={{ padding:'5px 10px', fontSize:12, background:'#FFF5F8', border:'1.5px solid #F8DCE5', borderRadius:8, outline:'none', color:'#555', minWidth:120 }} />
                 {/* Refresh */}
-                <button onClick={() => loadShelf()}
+                <button onClick={() => loadShelf()} aria-label="꽃수레 새로고침" title="새로고침"
                   style={{ width:32, height:32, background:'transparent', border:'none', borderRadius:8, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
                   <RefreshCw size={14} color="#e62310" />
                 </button>
@@ -1735,7 +1744,17 @@ function CrawlPageInner() {
                 SOURCED:    { bg:'#EFF8FF', color:'#0369A1', border:'#BAE6FD', label:'소싱완료' },
                 PENDING:    { bg:'#fffbeb', color:'#92400e', border:'#fde68a', label:'등록대기' },
                 REGISTERED: { bg:'#F0FDF4', color:'#15803d', border:'#86efac', label:'등록완료' },
+                HOLD:       { bg:'#F3F4F6', color:'#6b7280', border:'#d1d5db', label:'보류' },
               }[s] ?? { bg:'#F5F5F5', color:'#888', border:'#e5e5e5', label: s });
+
+              // C-CRAWL-STATE: reversible reclassify targets. Operator can move an
+              // item to ANY state (forward or back) — sourcing_status is free text.
+              const RECLASSIFY_OPTIONS: [string, string][] = [
+                ['SOURCED', '소싱완료'],
+                ['PENDING', '등록대기'],
+                ['REGISTERED', '등록완료'],
+                ['HOLD', '보류'],
+              ];
 
               return (
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -1763,8 +1782,10 @@ function CrawlPageInner() {
                       }}>
                         {/* Row 1: checkbox + info + status + actions */}
                         <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+                          {/* C-CRAWL-STATE: checkbox unlocked for all statuses
+                              (incl. 등록완료) so REGISTERED items can be reselected
+                              for reclassify. */}
                           <input type="checkbox" checked={isSel}
-                            disabled={log.sourcing_status === 'REGISTERED'}
                             onChange={() => toggleSel(log.id)}
                             style={{ width:14, height:14, accentColor:'#e62310', cursor:'pointer', marginTop:3, flexShrink:0 }} />
 
@@ -1834,10 +1855,13 @@ function CrawlPageInner() {
                           </span>
                         </div>
 
-                        {/* Row 2: action buttons */}
-                        {log.sourcing_status !== 'REGISTERED' && (
-                          <div style={{ display:'flex', gap:8, marginTop:10, paddingTop:10, borderTop:'1px solid #F8DCE5' }}>
-                            {/* Go to register */}
+                        {/* Row 2: action buttons — C-CRAWL-STATE: always rendered
+                            (incl. 등록완료) so every item keeps 수정/재분류/삭제
+                            affordances. Registration-only buttons (등록 시작 / 완료
+                            표시) are gated per-status. */}
+                        <div style={{ display:'flex', gap:8, marginTop:10, paddingTop:10, borderTop:'1px solid #F8DCE5', flexWrap:'wrap', alignItems:'center' }}>
+                          {/* Go to register — not for REGISTERED */}
+                          {log.sourcing_status !== 'REGISTERED' && (
                             <button disabled={isUpdating} onClick={() => {
                               updateSourcingStatus(log.id, 'PENDING');
                               const san = (s: string) => (s||'').replace(/[\x00-\x1F\x7F]/g,' ').replace(/"/g,"'").trim();
@@ -1864,30 +1888,67 @@ function CrawlPageInner() {
                               // URL-safe base64: standard "+" gets eaten by URLSearchParams (form-encoded space)
                               const safe = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_');
                               router.push(`/products/new?prefill=${safe}`);
-                            }} style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 14px', background:'#e62310', color:'#fff', border:'none', borderRadius:9, fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                            }} style={{ flex:'2 1 140px', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 14px', background:'#e62310', color:'#fff', border:'none', borderRadius:9, fontSize:12, fontWeight:700, cursor:'pointer' }}>
                               {isUpdating ? <RefreshCw size={11} className="animate-spin"/> : <ArrowRight size={11}/>}
                               등록 시작
                             </button>
+                          )}
 
-                            {/* Mark as registered manually */}
+                          {/* Mark as registered manually — not for REGISTERED */}
+                          {log.sourcing_status !== 'REGISTERED' && (
                             <button disabled={isUpdating} onClick={() => updateSourcingStatus(log.id, 'REGISTERED')}
-                              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'8px 10px', background:'#F0FDF4', border:'1px solid #86efac', borderRadius:9, fontSize:11, fontWeight:600, color:'#15803d', cursor:'pointer' }}>
+                              style={{ flex:'1 1 92px', display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'8px 10px', background:'#F0FDF4', border:'1px solid #86efac', borderRadius:9, fontSize:11, fontWeight:600, color:'#15803d', cursor:'pointer' }}>
                               <CheckCircle size={11}/> 완료 표시
                             </button>
+                          )}
 
-                            {/* View source */}
-                            <a href={log.url} target="_blank" rel="noopener noreferrer"
-                              style={{ width:34, height:34, background:'#F5F5F5', border:'1px solid #e5e5e5', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                              <ExternalLink size={12} color="#888" />
-                            </a>
+                          {/* Reclassify — reversible state move (forward or back). */}
+                          <label style={{ display:'flex', alignItems:'center', gap:4, flex:'0 0 auto' }}>
+                            <RotateCcw size={11} color="#888" />
+                            <select
+                              value={log.sourcing_status}
+                              disabled={isUpdating}
+                              onChange={(e) => { if (e.target.value !== log.sourcing_status) updateSourcingStatus(log.id, e.target.value); }}
+                              aria-label="재분류"
+                              style={{ padding:'7px 8px', fontSize:11, fontWeight:600, color:'#555', background:'#fff', border:'1px solid #F8DCE5', borderRadius:9, outline:'none', cursor:'pointer' }}
+                            >
+                              {RECLASSIFY_OPTIONS.map(([v, l]) => (
+                                <option key={v} value={v}>{l}</option>
+                              ))}
+                            </select>
+                          </label>
 
-                            {/* Delete */}
-                            <button onClick={() => deleteFromShelf(log.id)}
-                              style={{ width:34, height:34, background:'#FFF5F8', border:'1px solid #F8DCE5', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0 }}>
-                              <X size={12} color="#e62310" />
-                            </button>
-                          </div>
-                        )}
+                          {/* UX-v2.4/v2.5 — secondary row actions (수정 / 원본 보기 /
+                              삭제) demoted to the shared overflow menu so 등록 시작
+                              stays the single loud primary. 수정 routes to the
+                              linked product edit page; 삭제 opens the confirm modal
+                              (#73, crawl record only — never Naver). */}
+                          <OverflowMenu
+                            ariaLabel="더보기"
+                            size={34}
+                            items={[
+                              ...(log.product_id ? [{
+                                key: 'edit',
+                                label: '수정',
+                                icon: <Pencil size={14} />,
+                                onClick: () => router.push(`/products/${log.product_id}/edit`),
+                              }] : []),
+                              {
+                                key: 'view',
+                                label: '원본 보기',
+                                icon: <ExternalLink size={14} />,
+                                onClick: () => { if (typeof window !== 'undefined') window.open(log.url, '_blank', 'noopener'); },
+                              },
+                              {
+                                key: 'delete',
+                                label: '삭제',
+                                icon: <Trash2 size={14} />,
+                                danger: true,
+                                onClick: () => setDeleteTarget(log),
+                              },
+                            ]}
+                          />
+                        </div>
                       </div>
                     );
                   })}
@@ -1898,6 +1959,62 @@ function CrawlPageInner() {
         )}
 
       </div>
+
+      {/* C-CRAWL-STATE — delete confirm modal (#73). Crawl record only; the
+          target preview makes the irreversible-on-the-shelf delete explicit. */}
+      {deleteTarget && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setDeleteTarget(null)}
+          style={{ position:'fixed', inset:0, background:'rgba(26,26,26,0.45)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:80, padding:20 }}
+        >
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ width:'100%', maxWidth:380, background:'#fff', borderRadius:16, border:'1.5px solid #F8DCE5', padding:'20px 22px', boxShadow:'0 12px 40px rgba(0,0,0,0.18)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+              <Trash2 size={18} color="#e62310" />
+              <h3 style={{ margin:0, fontSize:15, fontWeight:900, color:'#1A1A1A' }}>꽃수레에서 삭제</h3>
+            </div>
+            {/* Target preview */}
+            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'#FFF5F8', border:'1px solid #F8DCE5', borderRadius:10, marginBottom:12 }}>
+              {(() => {
+                const imgs = Array.isArray(deleteTarget.images) ? deleteTarget.images : [];
+                const thumb = imgs[0] as string | undefined;
+                return thumb ? (
+                  <div style={{ width:40, height:40, borderRadius:8, overflow:'hidden', flexShrink:0, border:'1px solid #F8DCE5' }}>
+                    <img src={thumb} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  </div>
+                ) : (
+                  <div style={{ width:40, height:40, borderRadius:8, background:'#fff', border:'1px solid #F8DCE5', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <Package size={16} color="#FFB3CE" />
+                  </div>
+                );
+              })()}
+              <div style={{ flex:1, minWidth:0 }}>
+                <p style={{ fontSize:13, fontWeight:700, color:'#1A1A1A', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                  {deleteTarget.name || '상품명 없음'}
+                </p>
+                <p style={{ fontSize:11, color:'#888', margin:'2px 0 0' }}>
+                  {deleteTarget.seller_nick ? `${deleteTarget.seller_nick} · ` : ''}{deleteTarget.supplier_price > 0 ? `${deleteTarget.supplier_price.toLocaleString()}원` : ''}
+                </p>
+              </div>
+            </div>
+            <p style={{ fontSize:12, color:'#7A6873', lineHeight:1.6, margin:'0 0 16px' }}>
+              꽃수레(크롤 기록)에서만 삭제됩니다. 네이버 등록 상품에는 영향이 없어요.
+            </p>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => setDeleteTarget(null)}
+                style={{ flex:1, padding:'10px', background:'#F5F5F5', border:'1px solid #e5e5e5', borderRadius:10, fontSize:13, fontWeight:700, color:'#555', cursor:'pointer' }}>
+                취소
+              </button>
+              <button onClick={() => { const id = deleteTarget.id; setDeleteTarget(null); deleteFromShelf(id); }}
+                style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'10px', background:'#e62310', border:'none', borderRadius:10, fontSize:13, fontWeight:800, color:'#fff', cursor:'pointer' }}>
+                <Trash2 size={13}/> 삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

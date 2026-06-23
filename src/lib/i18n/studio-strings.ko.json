@@ -412,5 +412,77 @@
       "originHint": "원산지 코드 명시·추측 발행 차단(허위표시 법적 리스크)",
       "originHeal": "원산지 코드 자동 보정됨 — 정규값 저장 권고"
     }
+  },
+  "atelier": {
+    "_note": "C-STUDIO-UX (2026-06-23) — 3-column premium atelier shell. Stepper + 도구함 + 개화 작업대 + 검색 생장 관제탑. Seller-language terms (no dev jargon).",
+    "steps": {
+      "thumbnail": "썸네일 랩",
+      "thumbnailHint": "대표·썸네일 4변형 + 무드 카메라",
+      "detail": "상세 캔버스",
+      "detailHint": "5섹션 상세페이지 조립",
+      "seo": "SEO 부스터",
+      "seoHint": "검색 노출·키워드 매칭",
+      "publish": "발행 검토",
+      "publishHint": "정책 게이트 + 이미지 저장·발행"
+    },
+    "toolbox": {
+      "title": "도구함",
+      "subtitle": "정원 창고 · 템플릿 · 폰트",
+      "productPicker": "작업할 상품",
+      "noProduct": "씨앗 심기에서 상품을 먼저 등록해 주세요",
+      "selectPrompt": "상품을 선택하면 도구함이 열려요"
+    },
+    "workspace": {
+      "title": "개화 작업대",
+      "subtitle": "실시간 미리보기",
+      "devicePc": "PC",
+      "deviceMobile": "모바일",
+      "selectPrompt": "← 도구함에서 상품을 선택해 주세요"
+    },
+    "controlTower": {
+      "title": "검색 생장 관제탑",
+      "subtitle": "발행 준비도를 신호등으로 한눈에",
+      "gaugeLabel": "개화도",
+      "gaugeHint": "발행 게이트 통과 현황을 0~100으로 시각화 (기존 준비도 판정 기반, 새 점수 엔진 아님)",
+      "gaugePreparing": "상품을 선택하면 개화도가 표시돼요",
+      "gradeReady": "발행 준비 완료",
+      "gradeAlmost": "거의 다 됐어요",
+      "gradeMore": "조금 더 가꿔주세요",
+      "s1Title": "썸네일 가시성 진단",
+      "s1Hint": "1000x1000 규격 일치 + 대표 규정 점검",
+      "s1Overlay": "경쟁사 대표 관례 비교",
+      "s1QualityLabel": "사진 품질 점수",
+      "s1NotAssessed": "대표이미지 평가 전이에요",
+      "s2Title": "네이버 쇼핑 SEO 매칭율",
+      "s2Hint": "검색봇 인식 태그 + 키워드 밀도",
+      "s2AltLabel": "검색봇 인식 태그",
+      "s2KeywordLabel": "상위노출 키워드 밀도",
+      "s2Missing": "SEO 보강 필요 항목",
+      "s3Title": "예상 ROI·후킹 검수",
+      "s3Hint": "3초 안에 사로잡는 셀링포인트 점검",
+      "s3Review": "후기·신뢰 신호",
+      "s3Benefit": "핵심 혜택 강조",
+      "s3Diff": "경쟁 차별화 포인트",
+      "lightGreen": "양호",
+      "lightYellow": "검수 권장",
+      "lightRed": "보강 필요",
+      "empty": "상품을 선택하면 관제탑이 켜져요",
+      "loading": "관제탑 준비 중...",
+      "preparing": "엔진 데이터 준비 중"
+    },
+    "kkotti": {
+      "thumbnail": "첫인상은 대표컷이 결정해요. 4가지 변형 중 제일 끌리는 걸 메인으로 골라보세요.",
+      "detail": "상세페이지는 여기 작업대에서만 만들어요. 골격을 고르면 5섹션이 자동으로 채워져요.",
+      "seo": "검색에 잘 걸리려면 태그와 키워드 밀도가 중요해요. 관제탑 신호등을 초록으로 맞춰봐요.",
+      "publish": "발행 전 정책 게이트를 통과하면 개화 완료! 마지막으로 실물과 한 번 더 대조해 주세요."
+    },
+    "terms": {
+      "_note": "dev jargon -> premium e-commerce term (handoff terminology cleanup)",
+      "resolution": "썸네일 가시성",
+      "altString": "검색봇 인식 태그",
+      "textToImage": "상세 가독성",
+      "competitorKeyword": "상위노출 매칭율",
+      "expectedCtr": "구매전환 유도점수(ROI)"
+    }
   }
 }

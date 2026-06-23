@@ -28,6 +28,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { STAGE_DIRS, LEGACY_STAGE_DIRS } from './asset-taxonomy';
+import { parseAssetTokens } from './asset-naming';
+import { prisma } from '@/lib/prisma';
 
 const BUCKET_NAME = 'product-assets';
 
@@ -119,6 +121,54 @@ export async function uploadAutomationAsset(
     publicUrl: urlData.publicUrl,
     uploadedAt: new Date(ts).toISOString(),
   };
+}
+
+/**
+ * Write-time registry intake (#62 — drift root-fix). Inserts an asset_registry
+ * row for an asset just written via uploadAutomationAsset, so every generation
+ * write-path (apply-composite / apply-cutout / finish-image / thumb-crop) lands
+ * a registry row the same way the manual assets/upload route does. Without it
+ * those writes updated Product + Storage only and left the registry index
+ * behind (the storage-vs-registry drift, #128).
+ *
+ * Best-effort + idempotent: never throws (an upload must not fail on a registry
+ * issue). Swallows P2002 (already registered — idempotent on the unique `path`)
+ * and P2021/P2022 (table/column absent in the pre-migration window). Mirrors the
+ * assets/upload payload (STAGE_NAMING tokens via parseAssetTokens). Returns
+ * whether a new row was created.
+ */
+export async function registerUploadedAsset(opts: {
+  productId: string;
+  /** Canonical path from uploadAutomationAsset (`{pid}/{stage}/{file}`). */
+  path: string;
+  stage: AssetKind;
+  width?: number | null;
+  height?: number | null;
+  sourceTag?: string | null;
+}): Promise<boolean> {
+  const fileName = opts.path.slice(opts.path.lastIndexOf('/') + 1);
+  const tokens = parseAssetTokens(fileName);
+  try {
+    await prisma.assetRegistry.create({
+      data: {
+        productId: opts.productId,
+        stage: opts.stage,
+        angle: tokens.angle ?? null,
+        mood: tokens.mood ?? null,
+        slot: tokens.slot ?? null,
+        context: tokens.context ?? null,
+        fileName,
+        path: opts.path,
+        width: opts.width ?? null,
+        height: opts.height ?? null,
+        sourceTag: opts.sourceTag ?? null,
+      },
+    });
+    return true;
+  } catch {
+    // P2002 = already registered (idempotent); P2021/P2022 = pre-migration.
+    return false;
+  }
 }
 
 /**

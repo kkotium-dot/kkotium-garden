@@ -19,7 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { whiteBgFinish } from '@/lib/images/white-bg';
-import { uploadAutomationAsset } from '@/lib/storage/automation-storage';
+import { uploadAutomationAsset, registerUploadedAsset } from '@/lib/storage/automation-storage';
 import { safeVariant } from '@/lib/storage/asset-taxonomy';
 import { transitionJob, type JobStatus } from '@/lib/jobs/asset-job-state';
 import { BG_CLEAN } from '@/lib/jobs/job-type-routing';
@@ -182,6 +182,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         productId, kind: 'thumbnail', variant: 'cutout', buffer: result.buffer, contentType: 'image/jpeg',
       });
       mainImageUrl = uploaded.publicUrl;
+      // #62 write-time registry intake (idempotent, best-effort).
+      await registerUploadedAsset({ productId, path: uploaded.path, stage: 'thumbnail', sourceTag: 'apply_cutout' });
       await prisma.product.update({
         where: { id: productId },
         data: { mainImage: mainImageUrl, main_image_url: mainImageUrl },
@@ -199,6 +201,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         buffer: input, contentType: 'image/png',
       });
       cutoutSourceUrl = raw.publicUrl;
+      // #62 write-time registry intake (idempotent, best-effort).
+      await registerUploadedAsset({ productId, path: raw.path, stage: 'cutout', sourceTag: 'apply_cutout' });
     } catch { /* raw cutout archival is best-effort */ }
     // Advance the bg_clean job (best-effort, non-fatal).
     try { bgCleanJob = await completeBgCleanJob(productId); } catch { bgCleanJob = null; }

@@ -32,7 +32,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { whiteBgFinish } from '@/lib/images/white-bg';
 import { assessBgDifficulty } from '@/lib/images/bg-difficulty';
-import { uploadAutomationAsset } from '@/lib/storage/automation-storage';
+import { uploadAutomationAsset, registerUploadedAsset } from '@/lib/storage/automation-storage';
 import { REAL_HERO_CUT_GUIDANCE } from '@/lib/images/finishing-guidance';
 import { MAIN_IMAGE_POLICY_LIFESTYLE } from '@/lib/seo/seo-guard-linter';
 import { BG_CLEAN } from '@/lib/jobs/job-type-routing';
@@ -233,6 +233,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         productId, kind: 'thumbnail', variant: 'whitebg', buffer: result.buffer, contentType: 'image/jpeg',
       });
       uploadedUrl = uploaded.publicUrl;
+      // #62 write-time registry intake (idempotent, best-effort).
+      await registerUploadedAsset({ productId, path: uploaded.path, stage: 'thumbnail', sourceTag: 'finish_image' });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return NextResponse.json({ success: false, error: `Apply failed: ${msg}`, stage: 'UPLOAD' }, { status: 502 });

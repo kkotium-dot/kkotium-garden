@@ -1,15 +1,16 @@
 'use client';
 import { Suspense, useState, useEffect, useMemo, useRef, useDeferredValue, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx';
 import {
   Tag, Truck, Wrench, Star, Bell, Clipboard, CheckCircle, XCircle, Settings,
   Package, Image as ImageIcon, Search, Gift, Layers, AlertTriangle, Info, ShieldAlert,
-  Palette,
+  Palette, Save, Database, Sprout, Download, Upload, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { checkProductName, getGradeColor, getSeverityColor, type NameQualityResult } from '@/lib/product-name-checker';
+import { OverflowMenu } from '@/components/common';
 import {
   NAVER_CATEGORIES_FULL,
   type NaverCategoryEntry,
@@ -454,9 +455,14 @@ function SequenceStatusBanner({
 
 function NewProductPageInner() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  // C-PLANT-UX — draft-save (임시저장) state. DRAFT upsert keeps the seller on
+  // the page (no visual-automation / studio jump), so partial data is fine.
+  const [draftBusy, setDraftBusy]       = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
   const [catTab, setCatTab]             = useState<'search'|'drill'>('drill');
   // C-11: 2-Panel Split tab navigation state
-  const [activeTab, setActiveTab] = useState<'basic'|'option'|'image'|'shipping'|'seo'|'benefit'|'visual'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic'|'option'|'image'|'shipping'|'seo'>('basic');
   const [catQuery, setCatQuery]         = useState('');
   const [catResults, setCatResults]     = useState<CategorySearchResult[]>([]);
   const [catOpen, setCatOpen]           = useState(false);
@@ -1197,7 +1203,7 @@ function NewProductPageInner() {
   useEffect(() => {
     const focus = searchParams?.get('focus');
     if (!focus) return;
-    const validTabs = ['basic', 'option', 'image', 'seo', 'shipping', 'visual'];
+    const validTabs = ['basic', 'option', 'image', 'seo', 'shipping'];
     if (validTabs.includes(focus)) {
       setActiveTab(focus as typeof activeTab);
     }
@@ -1492,6 +1498,89 @@ function NewProductPageInner() {
   };
 
   // Naver direct registration via API (Phase D-1)
+  // C-PLANT-UX — DRAFT upsert. Reuses the canonical save payload (same fields
+  // as handleNaverDirect's pre-Naver save) but issues NO Naver call. PUT when a
+  // product already exists (edit / re-save) so 임시저장 is idempotent; POST on
+  // first save. `validate=false` (임시저장) only requires a product name so
+  // partial drafts are allowed; `validate=true` (DB 저장 / 저장 후 온실 아틀리에)
+  // runs the same field gate as direct registration. `thenStudio` navigates to
+  // the 온실 아틀리에 (Studio) after a successful save.
+  const saveDraft = async (opts: { validate: boolean; thenStudio?: boolean }) => {
+    setError('');
+    const catId = getCategoryId(d1, d2, d3, d4);
+    if (opts.validate) {
+      const missing: string[] = [];
+      if (!productName.trim())                                missing.push('상품명');
+      if (!catId)                                             missing.push('카테고리 (대→중→소분류 모두)');
+      if (!price || Number(price) <= 0)                       missing.push('판매가');
+      if (!selectedSupplierId)                                missing.push('공급사');
+      if (optionType !== 'NONE' && optionRows.length === 0)   missing.push('옵션 그룹화');
+      if (!mainImage.trim())                                  missing.push('대표 이미지');
+      if (missing.length > 0) {
+        toast.error(`다음 항목을 먼저 채워주세요:\n• ${missing.join('\n• ')}`, { duration: 5000 });
+        setError(missing.length === 1 ? `${missing[0]}을(를) 입력해주세요` : `${missing.length}개 항목이 비어있습니다`);
+        return;
+      }
+    } else if (!productName.trim()) {
+      toast.error('임시저장하려면 상품명을 먼저 입력해주세요');
+      return;
+    }
+
+    setDraftBusy(true);
+    try {
+      const payload = {
+        name: productName.trim(),
+        salePrice: Number(price) || 0,
+        supplierPrice: Number(supplierPrice) || 0,
+        supplierId: selectedSupplierId || undefined,
+        naverCategoryCode: catId || undefined,
+        brand, originCode, taxType,
+        status: 'DRAFT',
+        mainImage: mainImage || undefined,
+        description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
+        detail_image_url: detailImageUrl || undefined,
+        keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
+        tags: seoTags.length > 0 ? seoTags : undefined,
+        asPhone, asGuide,
+        ...(buildOptionsPayload() ?? {}),
+      };
+
+      let productId = savedProductId;
+      if (productId) {
+        const res = await fetch('/api/products', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: productId, ...payload }),
+        });
+        const d = await res.json();
+        if (!d.success) throw new Error(d.error ?? '저장 실패');
+      } else {
+        const sku = sellerCode || `KKT-${Date.now()}`;
+        const res = await fetch('/api/products', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sku, userId: 'default', ...payload }),
+        });
+        const d = await res.json();
+        if (!d.success) throw new Error(d.error ?? '저장 실패');
+        productId = d.product?.id ?? null;
+        if (productId) {
+          setSavedProductId(productId);
+          setSavedNaverProductId(d.product?.naverProductId ?? null);
+        }
+      }
+
+      setDraftSavedAt(Date.now());
+      toast.success(opts.thenStudio ? '저장 완료 · 온실 아틀리에로 이동합니다' : '임시저장 완료');
+      if (opts.thenStudio && productId) {
+        router.push(`/studio?product=${productId}`);
+      }
+    } catch (e: any) {
+      setError(e.message);
+      toast.error(e.message ?? '저장에 실패했습니다');
+    } finally {
+      setDraftBusy(false);
+    }
+  };
+
   const handleNaverDirect = async () => {
     setNaverResult(null);
     setError('');
@@ -1522,35 +1611,44 @@ function NewProductPageInner() {
 
     setNaverLoading(true);
     try {
-      // 1. Save to DB first to get productId
+      // 1. Persist to DB to get productId. IDEMPOTENT: PUT when a product
+      //    already exists (edit / re-save) so re-registering never creates a
+      //    duplicate row; POST only on first save. DB persistence only — the
+      //    Naver payload build + register call (step 2) are unchanged (#132).
       const sku = sellerCode || `KKT-${Date.now()}`;
-      const saveRes = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sku, name: productName.trim(),
-          salePrice: Number(price),
-          supplierPrice: Number(supplierPrice) || 0,
-          supplierId: selectedSupplierId || undefined,
-          userId: 'default',
-          naverCategoryCode: catId,
-          brand, originCode, taxType,
-          status: 'DRAFT',
-          mainImage,
-          description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
-          detail_image_url: detailImageUrl || undefined,
-          keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
-          tags: seoTags.length > 0 ? seoTags : undefined,
-          asPhone, asGuide,
-          // Persist options to BOTH stores (crawl-option-mapper) so the Naver
-          // register below sees a populated product_options row.
-          ...(buildOptionsPayload() ?? {}),
-        }),
-      });
+      const dbPayload = {
+        name: productName.trim(),
+        salePrice: Number(price),
+        supplierPrice: Number(supplierPrice) || 0,
+        supplierId: selectedSupplierId || undefined,
+        naverCategoryCode: catId,
+        brand, originCode, taxType,
+        status: 'DRAFT',
+        mainImage,
+        description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
+        detail_image_url: detailImageUrl || undefined,
+        keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
+        tags: seoTags.length > 0 ? seoTags : undefined,
+        asPhone, asGuide,
+        // Persist options to BOTH stores (crawl-option-mapper) so the Naver
+        // register below sees a populated product_options row.
+        ...(buildOptionsPayload() ?? {}),
+      };
+      const saveRes = savedProductId
+        ? await fetch('/api/products', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: savedProductId, ...dbPayload }),
+          })
+        : await fetch('/api/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sku, userId: 'default', ...dbPayload }),
+          });
       const saveData = await saveRes.json();
       if (!saveData.success) throw new Error(saveData.error ?? '저장 실패');
 
-      const productId = saveData.product?.id;
+      const productId = saveData.product?.id ?? savedProductId;
       if (!productId) throw new Error('상품 ID를 받지 못했습니다');
       // Phase 3-C-2: unlock 7th "visual" tab even if naver register later fails.
       setSavedProductId(productId);
@@ -1568,11 +1666,9 @@ function NewProductPageInner() {
         setNaverResult({ ok: true, message: naverData.message });
         // Phase 3-C-2: capture naverProductId for publish-assets enablement.
         if (naverData.naverProductId) setSavedNaverProductId(String(naverData.naverProductId));
-        // Phase 3-C-3: opt-in autorun — jump to visual tab so PlantVisualInner
-        // mounts and runFullSequence fires once on mount.
-        if (autoRunVisual) {
-          setActiveTab('visual');
-        }
+        // C-IA-5TAB — the 비주얼 자동화 tab was removed; visual automation now lives
+        // in 온실 아틀리에 (Studio), reached via the "저장 후 온실 아틀리에" action.
+        // The post-register autorun jump is retired with the tab.
         setSuccess(true);
         setTimeout(() => setSuccess(false), 5000);
       } else {
@@ -1732,6 +1828,34 @@ const handleGenerate = async () => {
       reviewVisible,
     };
 
+    // Shared DB payload for the DRAFT save below (sku/userId handled per-method).
+    const excelDraftPayload = {
+      name: productName.trim(),
+      salePrice: Number(price),
+      supplierPrice: Number(supplierPrice) || 0,
+      margin: (Number(supplierPrice) > 0 && Number(price) > 0)
+        ? Math.round(((Number(price) - Number(supplierPrice)) / Number(price)) * 100)
+        : 0,
+      supplierId: selectedSupplierId || undefined,
+      naverCategoryCode: categoryId || undefined,
+      category: [d1, d2, d3, d4].filter(Boolean).join(' > ') || 'uncategorized',
+      brand,
+      // 2026-06-05 — canonical Naver origin area code keeps its leading zero
+      // ('0200037' China); the stripped '200037' triggered register 400.
+      originCode,
+      taxType,
+      // Excel download is a DRAFT (temp-save) flow, not a Naver publish.
+      status: 'DRAFT',
+      keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
+      tags: seoTags.length > 0 ? seoTags : undefined,
+      mainImage: mainImage || undefined,
+      description: description || undefined,
+      shipping_template_id: selectedTemplateId || undefined,
+      return_care_enabled: returnCareEnabled,
+      // Persist options to BOTH stores so the DRAFT carries options end-to-end.
+      ...(buildOptionsPayload() ?? {}),
+    };
+
     try {
       // Run Excel generation and DB save in parallel
       const [excelRes, saveRes] = await Promise.all([
@@ -1740,44 +1864,23 @@ const handleGenerate = async () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ productIds: [], products: [productData] }),
         }),
-        // Save product to DB — always save (supplierId optional)
-        fetch('/api/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sku,
-            name: productName.trim(),
-            salePrice: Number(price),
-            supplierPrice: Number(supplierPrice) || 0,
-            margin: (Number(supplierPrice) > 0 && Number(price) > 0)
-              ? Math.round(((Number(price) - Number(supplierPrice)) / Number(price)) * 100)
-              : 0,
-            supplierId: selectedSupplierId || undefined,
-            // Do NOT send a userId here — the literal "default" is not a real DB
-            // id and caused a Product_userId_fkey violation. Omitting it lets the
-            // API resolve the actual user via findFirst fallback.
-            naverCategoryCode: categoryId || undefined,
-            category: [d1, d2, d3, d4].filter(Boolean).join(' > ') || 'uncategorized',
-            brand,
-            // 2026-06-05 corrected — the canonical Naver origin area code keeps
-            // its leading zero ('0200037' China). The dataset was regenerated
-            // from 원산지코드.xls with codes parsed as strings; the old stripped
-            // form '200037' is what triggered register 400 'originAreaCode NotValid'.
-            originCode,
-            taxType,
-            // Excel download is a DRAFT (temp-save) flow, not a Naver publish.
-            status: 'DRAFT',
-            keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
-            tags: seoTags.length > 0 ? seoTags : undefined,
-            mainImage: mainImage || undefined,
-            description: description || undefined,
-            shipping_template_id: selectedTemplateId || undefined,
-            return_care_enabled: returnCareEnabled,
-            // Persist options to BOTH stores (crawl-option-mapper) so the DRAFT
-            // saved alongside the Excel download carries its options end-to-end.
-            ...(buildOptionsPayload() ?? {}),
-          }),
-        }).catch(() => null),
+        // Save product to DB — always save (supplierId optional). IDEMPOTENT:
+        // PUT when editing an existing product so the Excel-download DRAFT save
+        // never creates a duplicate; POST only on first save.
+        (savedProductId
+          ? fetch('/api/products', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: savedProductId, ...excelDraftPayload }),
+            })
+          : fetch('/api/products', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              // POST adds sku; userId omitted on purpose (literal "default" is
+              // not a real DB id — let the API resolve via findFirst fallback).
+              body: JSON.stringify({ sku, ...excelDraftPayload }),
+            })
+        ).catch(() => null),
       ]);
 
       if (!excelRes.ok) {
@@ -2058,27 +2161,19 @@ const handleGenerate = async () => {
             {/* Tab navigation bar */}
             <div style={{ display: 'flex', gap: 4, padding: '4px', background: '#FFF0F5', borderRadius: 16, marginBottom: 16, border: '1.5px solid #F8DCE5', flexWrap: 'wrap' }}>
               {([
-                { key: 'basic', label: '\uae30\ubcf8 \uc815\ubcf4', Icon: Package },
-                { key: 'option', label: '\uc635\uc158', Icon: Layers },
-                { key: 'image', label: '\uc774\ubbf8\uc9c0', Icon: ImageIcon },
-                { key: 'shipping', label: '\ubc30\uc1a1 \xb7 A/S', Icon: Truck },
-                { key: 'seo', label: 'SEO \xb7 \uc6d0\uc0b0\uc9c0', Icon: Search },
-                { key: 'benefit', label: '\ud61c\ud0dd', Icon: Gift },
-                // Sprint 7-M2 Phase 3-C-2 \u2014 visual automation tab (label from i18n).
-                { key: 'visual', label: studioStrings.plantTab.label, Icon: Palette },
+                { key: 'basic', label: '기본 정보', Icon: Package },
+                { key: 'option', label: '옵션', Icon: Layers },
+                { key: 'image', label: '이미지', Icon: ImageIcon },
+                { key: 'seo', label: '검색최적화', Icon: Search },
+                { key: 'shipping', label: '배송 · 정책', Icon: Truck },
               ] as const).map(tab => {
                 // D-5: Tab completeness check
                 const tabDone: Record<string, boolean> = {
                   basic: !!categoryId && productName.trim().length >= 10 && !!price && Number(price) > 0,
                   option: optionType === 'NONE' || optionRows.some(r => r.value.trim().length > 0),
                   image: !!mainImage.trim(),
-                  shipping: !!selectedShippingTemplate || !!selectedTemplateId,
-                  seo: (aiKeywords.length >= 2 || seoTags.length >= 1) && !!originCode,
-                  benefit: true,
-                  // Phase 3-C-2: visual tab is "done" once asset save returns
-                  // a public URL (tracked indirectly via savedProductId existence
-                  // \u2014 we don't surface partial completion here to avoid noise).
-                  visual: !!savedProductId,
+                  seo: aiKeywords.length >= 2 || seoTags.length >= 1,
+                  shipping: (!!selectedShippingTemplate || !!selectedTemplateId) && !!originCode,
                 };
                 const done = tabDone[tab.key] ?? false;
                 const isActive = activeTab === tab.key;
@@ -2347,85 +2442,6 @@ const handleGenerate = async () => {
                   )}
                 </div>
               </Field>
-
-              {/* Golden keywords display — populated by NaverSEOWorkflow in right panel */}
-              {aiKeywords.length > 0 && (
-                <div>
-                  <p className="text-xs text-gray-400 mb-1.5">황금키워드 (AI SEO 워크플로우에서 생성)</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {aiKeywords.map((kw, i) => (
-                      <span key={i} className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-xs font-medium">{kw}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* SEO tags — direct inline input, max 10, synced to seoTags state */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <p className="text-xs text-gray-400">셀러 태그 (SEO) — 네이버 태그 최대 10개</p>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: seoTags.length >= 10 ? '#16a34a' : seoTags.length >= 5 ? '#d97706' : '#888' }}>
-                    {seoTags.length}/10
-                  </span>
-                </div>
-                {/* Tag chips */}
-                {seoTags.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
-                    {seoTags.map(tag => (
-                      <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99, background: '#FFF0F5', color: '#e62310', border: '1px solid #FFB3CE' }}>
-                        #{tag}
-                        <button
-                          type="button"
-                          onClick={() => setSeoTags(prev => prev.filter(t => t !== tag))}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FFB3CE', padding: 0, lineHeight: 1, fontSize: 14, marginLeft: 1 }}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {/* Tag input */}
-                {seoTags.length < 10 && (
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <input
-                      className={inp}
-                      value={tagInputVal}
-                      onChange={e => setTagInputVal(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const t = tagInputVal.trim().replace(/^#/, '');
-                          if (t && !seoTags.includes(t) && seoTags.length < 10) {
-                            setSeoTags(prev => [...prev, t]);
-                            setTagInputVal('');
-                          }
-                        }
-                      }}
-                      placeholder="태그 입력 후 Enter — 예) 홈웨어, 선물용, 봉로운"
-                      style={{ flex: 1 }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const t = tagInputVal.trim().replace(/^#/, '');
-                        if (t && !seoTags.includes(t) && seoTags.length < 10) {
-                          setSeoTags(prev => [...prev, t]);
-                          setTagInputVal('');
-                        }
-                      }}
-                      style={{ padding: '0 14px', background: '#FFF0F5', color: '#e62310', border: '1.5px solid #FFB3CE', borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-                    >
-                      + 추가
-                    </button>
-                  </div>
-                )}
-                {seoTags.length === 0 && (
-                  <p style={{ fontSize: 11, color: '#B0A0A8', marginTop: 4 }}>태그 10개 입력 시 SEO 점수에 +8점 반영됩니다</p>
-                )}
-                {/* Sprint 7 P1-C: Naver tag-dictionary verification */}
-                <TagVerificationPanel tags={seoTags} />
-              </div>
 
               {/* Price block — sale price + instant discount inline (Naver order) */}
               <div className="grid grid-cols-2 gap-3">
@@ -2929,7 +2945,7 @@ const handleGenerate = async () => {
 
             {activeTab === 'image' && (<>
             {/* ④ Images + SEO hook */}
-            <RSection number={4} title="이미지 / SEO 훅문구">
+            <RSection number={4} title="이미지">
               {/* Drag-and-drop image upload to Supabase — auto URL — Excel cols 18/19/20 */}
               <ImageUploadDropzone
                 type="main"
@@ -2947,48 +2963,107 @@ const handleGenerate = async () => {
                 onChange={setAdditionalImages}
                 maxFiles={9}
               />
-              <ImageUploadDropzone
-                type="detail"
-                label="상세페이지 이미지"
-                hint="엑셀 컨럼 20 삽입 (상세설명 필드)"
-                value={detailImageUrl}
-                onChange={setDetailImageUrl}
-              />
+              {/* C-PLANT-UX (ISSUE 3 / #131) — detail-page production moved to the
+                  온실 아틀리에 (Studio), the single home for detail assembly. The
+                  상세페이지 이미지 dropzone, 상세페이지 자동화 guide, and 상세 설명
+                  텍스트 field were removed from here to end the Plant/Studio
+                  duplication. Detail state (detailImageUrl / description) is still
+                  produced and persisted via Studio + the save payload. Plant's
+                  이미지 tab keeps 대표/추가 이미지 only; the SEO 훅문구 moved
+                  to the 검색최적화 tab. */}
+            </RSection>
+            </>)}
 
-              {/* Detail page automation guide — the legacy manual block builder
-                  was absorbed by the studio skeleton system (visual tab). Specs /
-                  spec-table sections live in the studio renderers; Q&A HTML can
-                  still be authored in the "상세 설명 (텍스트)" field below. */}
-              <div
-                style={{
-                  marginTop: 16, padding: 16, borderRadius: 12,
-                  border: '1.5px dashed var(--gp-pink-300, #FFB3CE)',
-                  background: 'var(--gp-pink-50, #FFF5F8)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                  <Palette size={15} style={{ color: '#FF6B8A' }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>상세페이지 자동화</span>
+            {activeTab === 'seo' && (<>
+            {/* C-IA-5TAB — unified 검색최적화 tab. Consolidates the search-surface
+                inputs previously scattered across 기본 정보 (골든키워드 · 셀러 태그) and
+                이미지 (SEO 훅문구). #132: pure relocation, no state/handler change.
+                상품명 is surfaced read-only as the search title (no new pageTitle/meta
+                state); the live SEO score stays in the right panel. */}
+            <div className="space-y-3">
+              <Field label="상품명 (검색 노출 제목)" hint="기본 정보 탭에서 입력 · 점수는 우측 패널에서 실시간 확인">
+                <input className={`${inp} bg-gray-50 text-gray-500`} value={productName} readOnly tabIndex={-1} />
+              </Field>
+              {/* Golden keywords display — populated by NaverSEOWorkflow in right panel */}
+              {aiKeywords.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1.5">황금키워드 (AI SEO 워크플로우에서 생성)</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {aiKeywords.map((kw, i) => (
+                      <span key={i} className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-xs font-medium">{kw}</span>
+                    ))}
+                  </div>
                 </div>
-                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, marginBottom: 10 }}>
-                  수동 블록 조합 대신 비주얼 자동화 탭에서 진단 → 골격 매칭 → 7섹션 상세페이지를
-                  자동 생성합니다. 사양표·섹션 구성은 골격 시스템에 포함되어 있어요.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('visual')}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '7px 14px', borderRadius: 8,
-                    border: '1px solid #FF6B8A', background: '#fff',
-                    fontSize: 12, fontWeight: 600, color: '#FF6B8A', cursor: 'pointer',
-                  }}
-                >
-                  <Layers size={13} />
-                  비주얼 자동화로 이동
-                </button>
+              )}
+
+              {/* SEO tags — direct inline input, max 10, synced to seoTags state */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <p className="text-xs text-gray-400">셀러 태그 (SEO) — 네이버 태그 최대 10개</p>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: seoTags.length >= 10 ? '#16a34a' : seoTags.length >= 5 ? '#d97706' : '#888' }}>
+                    {seoTags.length}/10
+                  </span>
+                </div>
+                {/* Tag chips */}
+                {seoTags.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
+                    {seoTags.map(tag => (
+                      <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99, background: '#FFF0F5', color: '#e62310', border: '1px solid #FFB3CE' }}>
+                        #{tag}
+                        <button
+                          type="button"
+                          onClick={() => setSeoTags(prev => prev.filter(t => t !== tag))}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FFB3CE', padding: 0, lineHeight: 1, fontSize: 14, marginLeft: 1 }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* Tag input */}
+                {seoTags.length < 10 && (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      className={inp}
+                      value={tagInputVal}
+                      onChange={e => setTagInputVal(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const t = tagInputVal.trim().replace(/^#/, '');
+                          if (t && !seoTags.includes(t) && seoTags.length < 10) {
+                            setSeoTags(prev => [...prev, t]);
+                            setTagInputVal('');
+                          }
+                        }
+                      }}
+                      placeholder="태그 입력 후 Enter — 예) 홈웨어, 선물용, 봉로운"
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const t = tagInputVal.trim().replace(/^#/, '');
+                        if (t && !seoTags.includes(t) && seoTags.length < 10) {
+                          setSeoTags(prev => [...prev, t]);
+                          setTagInputVal('');
+                        }
+                      }}
+                      style={{ padding: '0 14px', background: '#FFF0F5', color: '#e62310', border: '1.5px solid #FFB3CE', borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      + 추가
+                    </button>
+                  </div>
+                )}
+                {seoTags.length === 0 && (
+                  <p style={{ fontSize: 11, color: '#B0A0A8', marginTop: 4 }}>태그 10개 입력 시 SEO 점수에 +8점 반영됩니다</p>
+                )}
+                {/* Sprint 7 P1-C: Naver tag-dictionary verification */}
+                <TagVerificationPanel tags={seoTags} />
               </div>
-              <Field label="SEO 훅문구" hint="네이버 쇼핑 검색 결과 홍보문구 · 최대 100자">
+
+              <Field label="SEO 훅문구" hint="네이버 쇼핑 검색 결과 홍보문구 · 최대 100자 · 복사 가능">
                 <div className="relative">
                   <textarea
                     className={`${inp} h-20 resize-none pr-16`}
@@ -3001,119 +3076,31 @@ const handleGenerate = async () => {
                     seoHook.length >= 80 ? 'text-green-600 font-medium' : 'text-gray-400'
                   }`}>{seoHook.length}/100</span>
                 </div>
+                {seoHook.trim() && (
+                  <div className="flex justify-end mt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                          navigator.clipboard.writeText(seoHook).then(
+                            () => toast.success('SEO 훅문구를 복사했어요'),
+                            () => toast.error('복사에 실패했습니다'),
+                          );
+                        }
+                      }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '5px 10px', borderRadius: 8,
+                        border: '1px solid var(--gp-pink-300, #FFB3CE)', background: '#fff',
+                        fontSize: 11, fontWeight: 700, color: '#e62310', cursor: 'pointer',
+                      }}
+                    >
+                      <Clipboard size={12} /> 복사
+                    </button>
+                  </div>
+                )}
               </Field>
-              <Field label="상세 설명 (텍스트)" hint="200자 이상 권장 · HTML 가능">
-                <textarea className={`${inp} h-32 resize-none`} value={description}
-                  onChange={e => setDescription(e.target.value)} placeholder="상품 특징, 소재, 사이즈, A/S 안내 등..." />
-                <div className="flex justify-end mt-1">
-                  <span className={`text-xs ${description.length >= 200 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
-                    {description.length}자 {description.length >= 200 ? '' : '(200자 이상 권장)'}
-                  </span>
-                </div>
-              </Field>
-            </RSection>
-            </>)}
-
-            {activeTab === 'seo' && (<>
-            {/* ══ D1~D7 기본값 아코디언 ══ */}
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-400 px-1 uppercase tracking-wide flex items-center gap-1"><Settings size={12} style={{ color: '#999' }} />{" "}기본값 — 펼쳐서 수정 가능</p>
-
-              {/* D1 Brand / Origin / Importer */}
-              <DSection icon={<Tag size={14}/>} title="브랜드 / 원산지 / 수입사" summary={`${brand} · ${selectedOrigin?.label ?? originCode}`}>
-                <Field label="브랜드">
-                  <input className={inp} value={brand} onChange={e => setBrand(e.target.value)} />
-                </Field>
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Origin combobox: display/query separated, keyboard nav, no blur-race */}
-                  <Field label="원산지 검색" hint="국가명·지역명 입력 또는 방향키 선택">
-                    <div className="relative">
-                      <input
-                        ref={originInputRef}
-                        className={inp}
-                        value={originOpen ? originQuery : (selectedOrigin?.label ?? '')}
-                        onChange={e => { setOriginQuery(e.target.value); setOriginOpen(true); setOriginActiveIdx(0); }}
-                        onFocus={() => setOriginOpen(true)}
-                        onKeyDown={e => {
-                          if (!originOpen) { if (e.key === 'ArrowDown' || e.key === 'Enter') setOriginOpen(true); return; }
-                          if (e.key === 'ArrowDown') { e.preventDefault(); setOriginActiveIdx(i => Math.min(i + 1, originCandidates.length - 1)); }
-                          else if (e.key === 'ArrowUp') { e.preventDefault(); setOriginActiveIdx(i => Math.max(i - 1, 0)); }
-                          else if (e.key === 'Enter') { e.preventDefault(); const t = originCandidates[originActiveIdx]; if (t) commitOrigin(t.code); }
-                          else if (e.key === 'Escape') { setOriginOpen(false); setOriginQuery(''); }
-                        }}
-                        onBlur={() => { setTimeout(() => setOriginOpen(false), 150); }}
-                        placeholder="예: 중국, 국내산, 경기"
-                        autoComplete="off"
-                      />
-                      {originOpen && originCandidates.length > 0 && (
-                        <div
-                          ref={originListRef}
-                          className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto"
-                          onMouseDown={e => e.preventDefault()}
-                        >
-                          {originCandidates.map((o, idx) => {
-                            const isActive = idx === originActiveIdx;
-                            const isSelected = o.code === originCode;
-                            const q = deferredOriginQuery.trim().toLowerCase();
-                            const label = o.label;
-                            const hi = q ? label.toLowerCase().indexOf(q) : -1;
-                            return (
-                              <button
-                                key={o.code}
-                                type="button"
-                                onClick={() => commitOrigin(o.code)}
-                                onMouseEnter={() => setOriginActiveIdx(idx)}
-                                className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
-                                  isActive ? 'bg-rose-50' : 'hover:bg-gray-50'
-                                }`}
-                              >
-                                <span className={isSelected ? 'text-rose-700 font-semibold' : 'text-gray-700'}>
-                                  {hi >= 0 ? (
-                                    <>
-                                      {label.slice(0, hi)}
-                                      <mark className="bg-yellow-200 text-yellow-900 rounded">{label.slice(hi, hi + q.length)}</mark>
-                                      {label.slice(hi + q.length)}
-                                    </>
-                                  ) : label}
-                                </span>
-                                <span className={`text-xs ml-2 shrink-0 px-1.5 py-0.5 rounded ${Number(o.code) >= 200000 ? 'bg-orange-50 text-orange-500' : Number(o.code) <= 17 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
-                                  {Number(o.code) >= 200000 ? '\uc218\uc785\uc0b0' : ['0','3','4','5'].includes(o.code) ? '\ud2b9\uc218' : '\uad6d\ub0b4\uc0b0'}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                    {selectedOrigin && (
-                      <p className="mt-1 text-xs text-gray-500">
-                        <span className="font-medium text-gray-700">{selectedOrigin.label}</span>
-                        <span className="text-gray-400 ml-1">({selectedOrigin.code})</span>
-                        {isImporter && <span className="ml-1.5 text-amber-600 font-medium">수입산</span>}
-                      </p>
-                    )}
-                  </Field>
-                  <Field
-                    label="수입사"
-                    hint={isImporter ? '수입산 선택 시 필수 입력' : '국내산은 입력 불필요'}
-                  >
-                    <input
-                      className={`${inp} ${isImporter ? 'border-rose-400 ring-1 ring-rose-300' : 'opacity-40 cursor-not-allowed'}`}
-                      value={importerName}
-                      onChange={e => setImporterName(e.target.value)}
-                      placeholder={isImporter ? '수입사명 입력 (필수)' : '해당없음'}
-                      disabled={!isImporter}
-                    />
-                    {isImporter && !importerName.trim() && (
-                      <p className="mt-1 text-xs text-red-500 font-medium">수입산 상품은 수입사 입력 필수</p>
-                    )}
-                    {isImporter && importerName.trim() && (
-                      <p className="mt-1 text-xs text-green-600">입력 완료</p>
-                    )}
-                  </Field>
-                </div>
-              </DSection>
-            </div>{/* seo defaults end */}
+            </div>
             </>)}
 
             {activeTab === 'shipping' && (<>
@@ -3435,9 +3422,109 @@ const handleGenerate = async () => {
                 onChange={setPendingAlternatives}
               />
             </div>{/* shipping defaults end */}
-            </>)}
+            {/* C-IA-5TAB — 배송·정책 tab also hosts 원산지·수입사 (moved from the old
+                SEO·원산지 tab) and 혜택 (리뷰 포인트·구매평·상품정보고시, merged from the
+                removed 혜택 tab). Pure relocation per #132. */}
+            {/* ══ D1~D7 기본값 아코디언 ══ */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-400 px-1 uppercase tracking-wide flex items-center gap-1"><Settings size={12} style={{ color: '#999' }} />{" "}기본값 — 펼쳐서 수정 가능</p>
 
-            {activeTab === 'benefit' && (<>
+              {/* D1 Brand / Origin / Importer */}
+              <DSection icon={<Tag size={14}/>} title="브랜드 / 원산지 / 수입사" summary={`${brand} · ${selectedOrigin?.label ?? originCode}`}>
+                <Field label="브랜드">
+                  <input className={inp} value={brand} onChange={e => setBrand(e.target.value)} />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Origin combobox: display/query separated, keyboard nav, no blur-race */}
+                  <Field label="원산지 검색" hint="국가명·지역명 입력 또는 방향키 선택">
+                    <div className="relative">
+                      <input
+                        ref={originInputRef}
+                        className={inp}
+                        value={originOpen ? originQuery : (selectedOrigin?.label ?? '')}
+                        onChange={e => { setOriginQuery(e.target.value); setOriginOpen(true); setOriginActiveIdx(0); }}
+                        onFocus={() => setOriginOpen(true)}
+                        onKeyDown={e => {
+                          if (!originOpen) { if (e.key === 'ArrowDown' || e.key === 'Enter') setOriginOpen(true); return; }
+                          if (e.key === 'ArrowDown') { e.preventDefault(); setOriginActiveIdx(i => Math.min(i + 1, originCandidates.length - 1)); }
+                          else if (e.key === 'ArrowUp') { e.preventDefault(); setOriginActiveIdx(i => Math.max(i - 1, 0)); }
+                          else if (e.key === 'Enter') { e.preventDefault(); const t = originCandidates[originActiveIdx]; if (t) commitOrigin(t.code); }
+                          else if (e.key === 'Escape') { setOriginOpen(false); setOriginQuery(''); }
+                        }}
+                        onBlur={() => { setTimeout(() => setOriginOpen(false), 150); }}
+                        placeholder="예: 중국, 국내산, 경기"
+                        autoComplete="off"
+                      />
+                      {originOpen && originCandidates.length > 0 && (
+                        <div
+                          ref={originListRef}
+                          className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto"
+                          onMouseDown={e => e.preventDefault()}
+                        >
+                          {originCandidates.map((o, idx) => {
+                            const isActive = idx === originActiveIdx;
+                            const isSelected = o.code === originCode;
+                            const q = deferredOriginQuery.trim().toLowerCase();
+                            const label = o.label;
+                            const hi = q ? label.toLowerCase().indexOf(q) : -1;
+                            return (
+                              <button
+                                key={o.code}
+                                type="button"
+                                onClick={() => commitOrigin(o.code)}
+                                onMouseEnter={() => setOriginActiveIdx(idx)}
+                                className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
+                                  isActive ? 'bg-rose-50' : 'hover:bg-gray-50'
+                                }`}
+                              >
+                                <span className={isSelected ? 'text-rose-700 font-semibold' : 'text-gray-700'}>
+                                  {hi >= 0 ? (
+                                    <>
+                                      {label.slice(0, hi)}
+                                      <mark className="bg-yellow-200 text-yellow-900 rounded">{label.slice(hi, hi + q.length)}</mark>
+                                      {label.slice(hi + q.length)}
+                                    </>
+                                  ) : label}
+                                </span>
+                                <span className={`text-xs ml-2 shrink-0 px-1.5 py-0.5 rounded ${Number(o.code) >= 200000 ? 'bg-orange-50 text-orange-500' : Number(o.code) <= 17 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
+                                  {Number(o.code) >= 200000 ? '\uc218\uc785\uc0b0' : ['0','3','4','5'].includes(o.code) ? '\ud2b9\uc218' : '\uad6d\ub0b4\uc0b0'}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    {selectedOrigin && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        <span className="font-medium text-gray-700">{selectedOrigin.label}</span>
+                        <span className="text-gray-400 ml-1">({selectedOrigin.code})</span>
+                        {isImporter && <span className="ml-1.5 text-amber-600 font-medium">수입산</span>}
+                      </p>
+                    )}
+                  </Field>
+                  <Field
+                    label="수입사"
+                    hint={isImporter ? '수입산 선택 시 필수 입력' : '국내산은 입력 불필요'}
+                  >
+                    <input
+                      className={`${inp} ${isImporter ? 'border-rose-400 ring-1 ring-rose-300' : 'opacity-40 cursor-not-allowed'}`}
+                      value={importerName}
+                      onChange={e => setImporterName(e.target.value)}
+                      placeholder={isImporter ? '수입사명 입력 (필수)' : '해당없음'}
+                      disabled={!isImporter}
+                    />
+                    {isImporter && !importerName.trim() && (
+                      <p className="mt-1 text-xs text-red-500 font-medium">수입산 상품은 수입사 입력 필수</p>
+                    )}
+                    {isImporter && importerName.trim() && (
+                      <p className="mt-1 text-xs text-green-600">입력 완료</p>
+                    )}
+                  </Field>
+                </div>
+              </DSection>
+            </div>{/* seo defaults end */}
+
             <div className="space-y-2">
               {/* D5 리뷰 포인트 */}
               <DSection icon={<Star size={14}/>} title="리뷰 포인트" summary={`텍스트 ${textReviewPoint}P · 포토 ${photoReviewPoint}P`}>
@@ -3501,70 +3588,73 @@ const handleGenerate = async () => {
             </div>
             </>)}
 
-            {activeTab === 'visual' && (<>
-            <div className="space-y-3">
-              {!savedProductId ? (
-                <div style={{ padding: 24, background: '#FFF5F7', border: '1.5px solid #FFB3CE', borderRadius: 16 }}>
-                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#1A1A1A' }}>
-                    {studioStrings.plantTab.needSaveTitle}
-                  </h3>
-                  <p style={{ margin: '6px 0 0', fontSize: 12, color: '#7A6873', lineHeight: 1.6 }}>
-                    {studioStrings.plantTab.needSaveBody}
-                  </p>
-                </div>
-              ) : (
-                <PlantVisualInner productId={savedProductId} naverProductId={savedNaverProductId} autorun={autoRunVisual} />
-              )}
-            </div>
 
-            {/* Action block — registration step (visual tab only) */}
-            <div className="pt-4 border-t border-gray-200 space-y-3">
-              {/* Sprint 7-M2 Phase 3-C-3 — autorun toggle */}
-              <label
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '8px 12px',
-                  background: autoRunVisual ? '#FFF5F7' : '#FAFAFA',
-                  border: `1px solid ${autoRunVisual ? '#FFB3CE' : '#E5E5E5'}`,
-                  borderRadius: 10,
-                  fontSize: 12, color: '#525252',
-                  cursor: 'pointer',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={autoRunVisual}
-                  onChange={(e) => setAutoRunVisual(e.target.checked)}
-                  style={{ accentColor: '#e62310', width: 16, height: 16 }}
-                />
-                <span style={{ fontWeight: 800, color: '#1A1A1A' }}>
-                  {studioStrings.plantTab.autoRunLabel}
-                </span>
-                <span style={{ fontSize: 11, color: '#7A6873' }}>
-                  · {studioStrings.plantTab.autoRunHint}
-                </span>
-              </label>
-              <button
-                onClick={handleNaverDirect}
-                disabled={naverLoading}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 20px', background: naverLoading ? '#aaa' : '#e62310', color: '#fff', borderRadius: 14, fontSize: 14, fontWeight: 900, border: 'none', cursor: naverLoading ? 'not-allowed' : 'pointer' }}
-              >
-                {naverLoading ? (
-                  <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="12" cy="12" r="10" strokeOpacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                )}
-                {naverLoading ? '등록 중...' : '네이버 직접 등록 (API)'}
-              </button>
-              <button onClick={handleGenerate} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 20px', background: '#03C75A', color: '#fff', borderRadius: 14, fontSize: 14, fontWeight: 900, border: 'none', cursor: 'pointer' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                네이버 엑셀 다운로드
-              </button>
-            </div>
-            </>)}
 
             </div>{/* tab content end */}
+
+            {/* C-PLANT-UX — consolidated bottom action bar. One authoritative row
+                for every save / register action, visible on every tab:
+                [임시저장] [DB 저장] [저장 후 온실 아틀리에] [네이버 엑셀 다운로드]
+                [네이버 직접 등록]. 임시저장/DB저장 are DRAFT upserts (no Naver);
+                저장 후 온실 아틀리에 saves then routes to Studio; the two 네이버
+                buttons reuse the existing handlers unchanged.
+                C-IA-5TAB — pinned to the viewport bottom (sticky) so the three
+                save actions stay reachable on every tab without scrolling. */}
+            <div className="mt-4 pt-4 border-t border-gray-200" style={{ position: 'sticky', bottom: 0, zIndex: 20, background: '#fff' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => saveDraft({ validate: false })}
+                  disabled={draftBusy}
+                  style={{ flex: '1 1 120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 14px', background: '#fff', color: '#e62310', border: '1.5px solid #FFB3CE', borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
+                >
+                  <Save size={14} /> 임시저장
+                </button>
+                <button
+                  type="button"
+                  onClick={() => saveDraft({ validate: true })}
+                  disabled={draftBusy}
+                  style={{ flex: '1 1 120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 14px', background: '#1A1A1A', color: '#fff', border: 'none', borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
+                >
+                  <Database size={14} /> DB 저장
+                </button>
+                <button
+                  type="button"
+                  onClick={() => saveDraft({ validate: true, thenStudio: true })}
+                  disabled={draftBusy}
+                  style={{ flex: '1 1 160px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 14px', background: draftBusy ? '#aaa' : '#e62310', color: '#fff', border: 'none', borderRadius: 12, fontSize: 13, fontWeight: 900, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
+                >
+                  <Sprout size={14} /> 저장 후 온실 아틀리에
+                </button>
+                {/* UX-v2.4 — Naver publish actions demoted to an overflow menu so
+                    the save-first flow (#131) stays the visually dominant path.
+                    Handlers unchanged (no Naver mutation added). */}
+                <OverflowMenu
+                  ariaLabel="네이버 발행"
+                  size={44}
+                  items={[
+                    {
+                      key: 'excel',
+                      label: naverLoading ? '등록 중...' : '네이버 엑셀 다운로드',
+                      icon: <Download size={14} />,
+                      onClick: () => handleGenerate(),
+                    },
+                    {
+                      key: 'direct',
+                      label: naverLoading ? '등록 중...' : '네이버 직접 등록',
+                      icon: naverLoading ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />,
+                      onClick: () => { void handleNaverDirect(); },
+                      disabled: naverLoading,
+                    },
+                  ]}
+                />
+              </div>
+              {draftSavedAt && (
+                <p style={{ margin: '8px 2px 0', fontSize: 11, fontWeight: 600, color: '#15803D', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <CheckCircle size={12} /> 임시저장됨 · {new Date(draftSavedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+            </div>
           </div>{/* 좌측 끝 */}
 
           <ShippingTemplateModal

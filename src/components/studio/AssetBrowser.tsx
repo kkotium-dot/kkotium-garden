@@ -40,6 +40,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import strings from './AssetBrowser.strings.ko.json';
+import { Collapsible, OverflowMenu, type OverflowMenuItem } from '@/components/common';
 import { broadcastProductMutated } from '@/lib/events/product-mutated';
 // kindForSource is a pure classifier (asset-taxonomy only `import type`s the
 // server storage module, which the bundler erases) — safe in a client bundle.
@@ -170,9 +171,15 @@ interface PendingUpload {
 
 export interface AssetBrowserProps {
   productId: string | null;
+  /** UX-v2.1 — context sync. When set, the browser defaults to showing only
+   *  these stage groups (the current workflow step's assets); a "전체 보기"
+   *  toggle restores full access. Omit/null = show everything (legacy). */
+  focusStages?: string[] | null;
+  /** Label of the current step (for the focus toggle context). */
+  focusLabel?: string;
 }
 
-export default function AssetBrowser({ productId }: AssetBrowserProps) {
+export default function AssetBrowser({ productId, focusStages, focusLabel }: AssetBrowserProps) {
   const [data, setData] = useState<AssetsResponse | null>(null);
   const [img, setImg] = useState<ProductImageState>({ mainImage: null, extraUrls: new Set() });
   const [loading, setLoading] = useState(false);
@@ -191,6 +198,16 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
   // (thumbnail + name + stage + warnings) replaces the anonymous native confirm,
   // so an operator can never delete the wrong asset by reflex (#73 직관우선).
   const [deleteTarget, setDeleteTarget] = useState<{ file: StageFile; stage: string } | null>(null);
+
+  // UX-v2.1 — context-sync filter. Default to the active step's stages; the
+  // operator can flip "전체 보기" to see every stage. Reset to focused whenever
+  // the focus set changes (step switch) so the toolbox follows the workflow.
+  const hasFocus = Array.isArray(focusStages) && focusStages.length > 0;
+  const [showAll, setShowAll] = useState(false);
+  const focusKey = hasFocus ? (focusStages as string[]).join(',') : '';
+  useEffect(() => {
+    setShowAll(false);
+  }, [focusKey]);
 
   const flash = useCallback((kind: 'ok' | 'err', msg: string) => {
     setToast({ kind, msg });
@@ -391,43 +408,67 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
 
   const total = data?.total ?? 0;
 
+  // UX-v2.1 — visible stage groups follow the active step unless 전체 보기 is on.
+  const allStages = data?.stages ?? [];
+  const focusActive = hasFocus && !showAll;
+  const visibleStages = focusActive
+    ? allStages.filter((g) => (focusStages as string[]).includes(g.stage))
+    : allStages;
+
+  // UX-v2.4 — secondary header actions (export / refresh) demoted to overflow.
+  const headerMenu: OverflowMenuItem[] = [];
+  if (productId && total > 0) {
+    headerMenu.push({
+      key: 'export',
+      label: strings.exportZip,
+      icon: <Download className="w-3.5 h-3.5" />,
+      onClick: () => {
+        if (typeof window !== 'undefined') window.location.href = `/api/products/${productId}/assets/export`;
+      },
+    });
+  }
+  if (productId) {
+    headerMenu.push({
+      key: 'refresh',
+      label: strings.refresh,
+      icon: <RefreshCw className="w-3.5 h-3.5" />,
+      onClick: () => void load(),
+    });
+  }
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <div className="flex items-center justify-between mb-1">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-gray-800">
-          <FolderOpen className="w-5 h-5 text-pink-500" />
-          {strings.title}
+    <div className="bg-white rounded-lg border border-gray-200 p-3">
+      {/* UX-v2.2 — compact 1-line header (title + count + focus toggle + overflow). */}
+      <div className="flex items-center gap-2 mb-2">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-gray-800 min-w-0">
+          <FolderOpen className="w-4 h-4 text-pink-500 shrink-0" />
+          <span className="truncate">{strings.title}</span>
         </h2>
-        <div className="flex items-center gap-3">
-          {!loading && !error && productId && (
-            <span className="text-xs text-gray-500">
-              {strings.totalPrefix} {total}
-              {strings.countUnit}
-            </span>
-          )}
-          {productId && total > 0 && (
-            <a
-              href={`/api/products/${productId}/assets/export`}
-              title={strings.exportZip}
-              className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-pink-600"
-            >
-              <Download className="w-3.5 h-3.5" />
-              {strings.exportZip}
-            </a>
-          )}
-          {productId && (
-            <button
-              type="button"
-              onClick={() => void load()}
-              title={strings.refresh}
-              className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-          )}
-        </div>
+        {!loading && !error && productId && (
+          <span className="text-[11px] text-gray-500 shrink-0">
+            {total}
+            {strings.countUnit}
+          </span>
+        )}
+        <div className="flex-1" />
+        {hasFocus && productId && (
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className={`text-[11px] font-semibold rounded-full px-2.5 py-1 border transition shrink-0 ${
+              focusActive
+                ? 'text-pink-700 bg-pink-50 border-pink-200 hover:bg-pink-100'
+                : 'text-gray-500 bg-white border-gray-200 hover:border-pink-300'
+            }`}
+            title={focusActive ? strings.focus.showAll : strings.focus.stepOnly}
+          >
+            {focusActive
+              ? (focusLabel ? `${focusLabel} · ${strings.focus.stepOnly}` : strings.focus.stepOnly)
+              : strings.focus.showAll}
+          </button>
+        )}
+        {productId && <OverflowMenu items={headerMenu} ariaLabel={strings.title} size={28} />}
       </div>
-      <p className="text-xs text-gray-400 mb-3">{strings.subtitle}</p>
 
       {toast && (
         <div
@@ -450,15 +491,17 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
       {productId && (
         <>
           {/* Direct upload (lane 1 SEMI-AUTO) — pick file -> inferred stage chip
-              -> operator confirm/override -> store into the exact subfolder. */}
-          <div className="mb-4 border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
-                <Upload className="w-4 h-4 text-pink-500" />
-                {strings.upload.heading}
-              </span>
-            </div>
-
+              -> operator confirm/override -> store into the exact subfolder.
+              UX-v2.2: folded by default so the toolbox stays compact; auto-opens
+              implicitly via the pending pick (the Collapsible re-renders open
+              when a file is chosen through the visible "+" inside). */}
+          <div className="mb-3">
+          <Collapsible
+            tone="secondary"
+            defaultOpen={false}
+            icon={<Upload className="w-4 h-4 text-pink-500" />}
+            title={strings.focus.uploadSection}
+          >
             {!pending ? (
               <button
                 type="button"
@@ -586,6 +629,7 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
                 if (f) onPickFile(f);
               }}
             />
+          </Collapsible>
           </div>
 
           {loading && !data && (
@@ -610,8 +654,17 @@ export default function AssetBrowser({ productId }: AssetBrowserProps) {
                   {strings.emptyAll}
                 </div>
               )}
-              <div className="space-y-2">
-                {data.stages?.map((g) => (
+              {total > 0 && focusActive && visibleStages.length === 0 && (
+                <div className="flex items-start gap-2 text-xs text-gray-400 py-3 px-1">
+                  <Inbox className="w-4 h-4 shrink-0" />
+                  <span>{strings.focus.filteredEmpty}</span>
+                </div>
+              )}
+              {/* UX-v2.2 — cap the stage list height; it scrolls independently so
+                  the toolbox never pushes the rail past the fold. Tiles already
+                  lazy-load their images (loading="lazy"). */}
+              <div className="space-y-2 overflow-y-auto pr-0.5" style={{ maxHeight: 'min(52vh, 460px)' }}>
+                {visibleStages.map((g) => (
                   <StageRow
                     key={g.stage}
                     group={g}
@@ -847,6 +900,7 @@ function AssetTile({
           disabled={busy || isMain}
           onClick={() => onAction('set_main', file, stage)}
           title={strings.action.setMain}
+          aria-label={strings.action.setMain}
           className="flex-1 inline-flex items-center justify-center rounded border border-gray-200 py-1 text-gray-500 hover:text-pink-600 hover:border-pink-300 transition disabled:opacity-40"
         >
           {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Star className="w-3 h-3" />}
@@ -856,6 +910,7 @@ function AssetTile({
           disabled={busy || inExtra}
           onClick={() => onAction('add_extra', file, stage)}
           title={strings.action.addExtra}
+          aria-label={strings.action.addExtra}
           className="flex-1 inline-flex items-center justify-center rounded border border-gray-200 py-1 text-gray-500 hover:text-pink-600 hover:border-pink-300 transition disabled:opacity-40"
         >
           <Plus className="w-3 h-3" />
@@ -865,6 +920,7 @@ function AssetTile({
           disabled={busy || isMain}
           onClick={() => onAction('archive', file, stage)}
           title={strings.action.archive}
+          aria-label={strings.action.archive}
           className="flex-1 inline-flex items-center justify-center rounded border border-gray-200 py-1 text-gray-500 hover:text-amber-600 hover:border-amber-300 transition disabled:opacity-40"
         >
           <Archive className="w-3 h-3" />
@@ -874,6 +930,7 @@ function AssetTile({
           disabled={busy || isMain}
           onClick={() => onAction('delete', file, stage)}
           title={strings.action.delete}
+          aria-label={strings.action.delete}
           className="flex-1 inline-flex items-center justify-center rounded border border-gray-200 py-1 text-gray-500 hover:text-red-600 hover:border-red-300 transition disabled:opacity-40"
         >
           <Trash2 className="w-3 h-3" />

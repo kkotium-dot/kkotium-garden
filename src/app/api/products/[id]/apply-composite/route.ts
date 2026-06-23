@@ -23,7 +23,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { compositeMood, normalizeExtraImage, type ExtraFormat } from '@/lib/images/composite';
-import { uploadAutomationAsset, listProductAssets } from '@/lib/storage/automation-storage';
+import { uploadAutomationAsset, listProductAssets, registerUploadedAsset } from '@/lib/storage/automation-storage';
 import { safeVariant } from '@/lib/storage/asset-taxonomy';
 import { BG_CLEAN, PRODUCT_COMPOSITE } from '@/lib/jobs/job-type-routing';
 import {
@@ -225,6 +225,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         contentType: 'image/jpeg',
       });
       extraImageUrl = uploaded.publicUrl;
+      // #62 write-time registry intake (idempotent, best-effort).
+      await registerUploadedAsset({ productId, path: uploaded.path, stage: 'composite', sourceTag: 'apply_composite' });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return NextResponse.json({ success: false, error: `Upload failed: ${msg}`, stage: 'UPLOAD' }, { status: 502 });

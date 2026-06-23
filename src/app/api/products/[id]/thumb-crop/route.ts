@@ -21,7 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { simpleCrop, type CropBox, type CropStrategy } from '@/lib/images/simple-crop';
-import { uploadAutomationAsset } from '@/lib/storage/automation-storage';
+import { uploadAutomationAsset, registerUploadedAsset } from '@/lib/storage/automation-storage';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -131,6 +131,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         contentType: 'image/jpeg',
       });
       mainImageUrl = uploaded.publicUrl;
+      // #62 write-time registry intake (idempotent, best-effort).
+      await registerUploadedAsset({ productId, path: uploaded.path, stage: 'thumbnail', sourceTag: 'thumb_crop' });
       // Set BOTH the builder field (mainImage) and the display field
       // (main_image_url) so register/update PUT uses the cropped representative.
       await prisma.product.update({

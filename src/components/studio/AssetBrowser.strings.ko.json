@@ -108,5 +108,11 @@
       "label": "썸네일·대표",
       "desc": "1:1 대표 후보"
     }
+  },
+  "focus": {
+    "stepOnly": "현재 단계 자산",
+    "showAll": "전체 보기",
+    "filteredEmpty": "이 단계에 해당하는 자산이 아직 없어요. 전체 보기로 다른 단계를 확인하세요.",
+    "uploadSection": "자산 올리기"
   }
 }
