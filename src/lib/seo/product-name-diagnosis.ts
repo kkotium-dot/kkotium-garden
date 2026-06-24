@@ -10,6 +10,7 @@
 // is a domain copy module, not a type-literal (3-1 allows isolated copy).
 
 import bannedData from './banned-words.ko.json';
+import { includesNormalized } from '@/lib/seo/match';
 
 export type CheckStatus = 'pass' | 'warn' | 'fail';
 export type NameGrade = 'S' | 'A' | 'B' | 'C';
@@ -92,9 +93,10 @@ function checkKeywordInclusion(name: string, keywords: string[]): NameCheck {
       suggestion: '황금키워드 사냥으로 키워드를 먼저 확보하면 포함 여부를 진단해 드려요.',
     };
   }
-  const lower = name.toLowerCase();
-  const included = kws.filter(k => lower.includes(k.toLowerCase()));
-  const missing = kws.filter(k => !lower.includes(k.toLowerCase()));
+  // SEO-MATCH-1 (#154): whitespace-insensitive — name "차량용 방향제" matches
+  // golden keyword "차량용방향제" and vice-versa.
+  const included = kws.filter(k => includesNormalized(name, k));
+  const missing = kws.filter(k => !includesNormalized(name, k));
   if (included.length >= 1) {
     return {
       id: 'keywordInclusion', label: '핵심 키워드 포함', status: 'pass',

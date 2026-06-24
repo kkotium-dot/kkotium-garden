@@ -6,6 +6,8 @@
 // category) so the recommendation is predictable and ROI-consistent, instead of
 // letting the AI pick. No I/O, no React — safe to call anywhere.
 
+import { includesNormalized } from '@/lib/seo/match';
+
 export type CopyTone = 'benefit' | 'emotion' | 'trust';
 
 export interface CopyToneRecommendation {
@@ -59,11 +61,8 @@ export function classifyCopyTone(price: number | undefined, categoryPath: string
   return { tone: 'emotion', reason: '중간 가격대 — 공간·감성 변화를 그리는 카피를 기본 추천해요.' };
 }
 
-/** PURE: does the copy contain at least one target keyword? (SEO 신호등) */
+/** PURE: does the copy contain at least one target keyword? (SEO 신호등)
+ *  Whitespace-insensitive (#154) — "차량용 방향제" matches golden "차량용방향제". */
 export function copyContainsKeyword(copy: string, keywords: string[]): boolean {
-  const c = (copy ?? '').toLowerCase();
-  return (keywords ?? []).some(k => {
-    const kw = k.trim().toLowerCase();
-    return kw.length > 0 && c.includes(kw);
-  });
+  return (keywords ?? []).some(k => includesNormalized(copy, k));
 }
