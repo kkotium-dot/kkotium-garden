@@ -15,7 +15,7 @@ import { OverflowMenu, StatusBadge as StatusPill } from '@/components/common';
 import { calcHoneyScore, calcSourcingScore } from '@/lib/honey-score';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 import { getNaverFeeRateByD1, NAVER_DEFAULT_FEE_RATE } from '@/lib/naver-fee-rates-2026';
-import { calcPrefillSalePrice, calcNetMargin } from '@/lib/naver-margin-advisor';
+import { calcPrefillSalePrice, calcMarketSalePrice, calcNetMargin } from '@/lib/naver-margin-advisor';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface CrawledOption {
@@ -1803,12 +1803,15 @@ function CrawlPageInner() {
                 ['HOLD', '보류'],
               ];
 
-              // CRAWL-GRID-v2 — ROI-centric margin (logic unchanged #132): same
-              // formula used by the prefill/seed path, computed per row for the
-              // gauge + the default sort. null = no supplier price (sorts last).
+              // CR-1 (operator-approved): the gauge + default sort now use a
+              // MARKET-price-based sale estimate (calcMarketSalePrice) instead of
+              // the conservative fixed-15%-target prefill — so the 예상마진율
+              // reflects the real opportunity, the 40%+ highlight actually fires,
+              // and the margin sort discriminates between rows. Display estimate
+              // only; the register prefill still uses calcPrefillSalePrice.
               const marginOf = (log: SourcingItem): number | null => {
                 if (!(log.supplier_price > 0)) return null;
-                const estSale = calcPrefillSalePrice(log.supplier_price, log.ship_fee);
+                const estSale = calcMarketSalePrice(log.supplier_price, log.ship_fee);
                 return calcNetMargin(log.supplier_price, estSale, log.ship_fee ?? 3000, 0.057, 2);
               };
               // Sorted view. null-margin rows always sink to the bottom regardless

@@ -343,6 +343,32 @@ export function calcPrefillSalePrice(
   return Math.ceil(raw / 100) * 100;
 }
 
+// CR-1 (operator-approved): market-price-based sale estimate for the /crawl
+// 예상마진율 display. calcPrefillSalePrice back-solves a fixed 15% target net
+// margin, so EVERY crawled row showed ~13% — the 40%+ highlight never fired and
+// the margin sort could not discriminate. This instead applies a realistic
+// smart-store retail MARKUP on the wholesale (도매) price (cheaper items carry a
+// higher multiple, as the market does), so the estimated margin reflects the
+// actual opportunity and varies per product. Display estimate only — the real
+// register prefill still uses calcPrefillSalePrice.
+export function calcMarketSalePrice(
+  supplierPrice: number,
+  shipFee?: number | null,
+): number {
+  const sp = Number(supplierPrice) || 0;
+  if (sp <= 0) return 0;
+  // Retail price ≈ 도매가 × 소매 배수 (shipping is absorbed as a margin cost in
+  // calcNetMargin, not marked up). Lower cost ⇒ higher multiple, as the market
+  // does. So mid/high items realistically clear 40%+ while thin cheap items
+  // (high fixed-shipping ratio) land lower — the sort discriminates.
+  const multiple =
+    sp < 5000 ? 3.0 :
+    sp < 15000 ? 2.5 :
+    sp < 50000 ? 2.2 :
+    2.0;
+  return Math.ceil((sp * multiple) / 100) * 100;
+}
+
 // Calculate actual net margin
 export function calcNetMargin(
   supplierPrice: number,
