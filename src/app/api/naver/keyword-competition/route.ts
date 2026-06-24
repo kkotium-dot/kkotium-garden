@@ -40,12 +40,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'name parameter required' }, { status: 400 });
   }
 
-  const tokens = extractMainKeywordTokens(name).slice(0, 5);
-  if (tokens.length === 0) {
+  // NAME-DIAG-2.1 (#152): the head candidate pool is the CATEGORY-VALIDATED
+  // golden keywords / seller tags (ctx.keywords), NOT raw name tokens — so a
+  // high-volume cross-category token (e.g. 에어컨 = appliance) on a 방향제
+  // product can't be chosen as the head. Falls back to name tokens only when no
+  // keywords were supplied.
+  const keywords = (searchParams.get('keywords') ?? '')
+    .split(',').map(k => k.trim()).filter(Boolean);
+  const tokens = extractMainKeywordTokens(name);
+  const headPool = (keywords.length > 0 ? keywords : tokens).slice(0, 5);
+  if (headPool.length === 0) {
     return NextResponse.json({ success: false, error: '분석할 키워드가 없어요. 상품명을 입력해 주세요.' }, { status: 400 });
   }
 
-  const cacheKey = tokens.join('|');
+  const cacheKey = headPool.join('|');
   const cached = CACHE.get(cacheKey);
   if (cached && Date.now() - cached.ts < TTL) {
     return NextResponse.json({ success: true, cached: true, ...(cached.data as object) });
@@ -53,12 +61,11 @@ export async function GET(req: NextRequest) {
 
   const volMap = new Map<string, number>();
 
-  // Round 1: measure ALL name tokens and pick the HIGHEST-VOLUME one as the head
-  // keyword — that is the term shoppers actually search, not the longest token
-  // (e.g. choose 디퓨저, not the modifier 차량용). SearchAd is essential: if it
+  // Round 1: measure the head pool and pick the HIGHEST-VOLUME entry as the head
+  // keyword — the term shoppers actually search. SearchAd is essential: if it
   // hard-fails we report it honestly, never fabricate volumes.
   try {
-    const stats = await fetchKeywordStats(tokens);
+    const stats = await fetchKeywordStats(headPool);
     for (const s of stats) volMap.set(s.keyword.toLowerCase(), s.totalMonthly);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -68,9 +75,9 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  let main = tokens[0];
+  let main = headPool[0];
   let bestVol = -1;
-  for (const t of tokens) {
+  for (const t of headPool) {
     const v = volMap.get(t.toLowerCase()) ?? -1;
     if (v > bestVol) { bestVol = v; main = t; }
   }

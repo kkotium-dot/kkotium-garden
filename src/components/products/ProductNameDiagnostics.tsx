@@ -114,7 +114,12 @@ export default function ProductNameDiagnostics({ name, ctx, onApplyFix }: Props)
     setCompLoading(true);
     setCompError(null);
     try {
-      const res = await fetch(`/api/naver/keyword-competition?name=${encodeURIComponent(target)}`);
+      // NAME-DIAG-2.1: pass the category-validated golden keywords/tags so the
+      // server restricts the head pool to them (avoids cross-category heads).
+      const kw = (ctx.keywords ?? []).filter(Boolean).join(',');
+      const res = await fetch(
+        `/api/naver/keyword-competition?name=${encodeURIComponent(target)}${kw ? `&keywords=${encodeURIComponent(kw)}` : ''}`,
+      );
       const data = await res.json();
       if (!data.success) {
         setComp(null);
@@ -128,7 +133,8 @@ export default function ProductNameDiagnostics({ name, ctx, onApplyFix }: Props)
     } finally {
       setCompLoading(false);
     }
-  }, [name]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, (ctx.keywords ?? []).join(',')]);
 
   const applyLongtail = (candidate: string) => {
     if (!comp) return;
@@ -285,6 +291,13 @@ export default function ProductNameDiagnostics({ name, ctx, onApplyFix }: Props)
                 </div>
               );
             })}
+            {/* When the head keyword is already low/mid competition and no longtail
+                beats it, that is good news — frame it, don't show an empty list. */}
+            {comp.candidates.every(c => !c.recommended) && comp.main.band && comp.main.band !== 'high' && (
+              <p style={{ fontSize: 11, color: '#16a34a', margin: '8px 2px 0', lineHeight: 1.45 }}>
+                현재 핵심 키워드가 이미 경쟁이 낮아요 — 그대로 써도 좋아요.
+              </p>
+            )}
             <button type="button" onClick={runCompetition} disabled={compLoading} style={{
               marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 7,
               border: '1px solid var(--border-neutral)', background: '#fff', color: 'var(--text-500,#555)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
