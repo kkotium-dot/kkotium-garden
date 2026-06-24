@@ -696,7 +696,7 @@ function CrawlPageInner() {
               </svg>
               <Layers size={18} color="#fff" strokeWidth={2.5} style={{ position:'relative', zIndex:1 }} />
             </div>
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>꿀통 꽃나들이</h1>
+            <h1 className="font-display" style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>꿀통 꽃나들이</h1>
           </div>
           <PinkLine />
           <p style={{ fontSize: 13, color: '#888', marginTop: 6 }}>

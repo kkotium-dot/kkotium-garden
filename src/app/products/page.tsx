@@ -1153,7 +1153,7 @@ function ProductsPageInner() {
                   <path d="M16 10a4 4 0 0 1-8 0"/>
                 </svg>
               </div>
-              <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>정원 창고</h1>
+              <h1 className="font-display" style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>정원 창고</h1>
             </div>
             <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
               {/* View mode toggle */}

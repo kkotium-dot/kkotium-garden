@@ -463,10 +463,15 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   letter-spacing: 0.02em;
 }
 
-/* Typography scale */
-.gp-display   { font-size: 32px; font-weight: 800; line-height: 1.2; }
-.gp-h1        { font-size: 24px; font-weight: 700; line-height: 1.3; }
-.gp-h2        { font-size: 20px; font-weight: 700; line-height: 1.35; }
+/* Typography scale.
+   #132: display/h1/h2 = brand display font (Cafe24 Ssurround via --font-brand);
+   h3 and below stay Pretendard (tasteful accent on major titles only, #147).
+   Numerics inside any heading should stay Pretendard tabular-nums — wrap
+   inline metrics in a Pretendard span rather than letting the rounded display
+   digits hurt data scannability. */
+.gp-display   { font-size: 32px; font-weight: 800; line-height: 1.2; font-family: var(--font-brand), Pretendard, -apple-system, sans-serif; }
+.gp-h1        { font-size: 24px; font-weight: 700; line-height: 1.3; font-family: var(--font-brand), Pretendard, -apple-system, sans-serif; }
+.gp-h2        { font-size: 20px; font-weight: 700; line-height: 1.35; font-family: var(--font-brand), Pretendard, -apple-system, sans-serif; }
 .gp-h3        { font-size: 16px; font-weight: 600; line-height: 1.4; }
 .gp-body      { font-size: 14px; font-weight: 400; line-height: 1.5; }
 .gp-caption   { font-size: 12px; font-weight: 500; line-height: 1.45; color: var(--color-text-muted); }

@@ -1,5 +1,23 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
+
+// #132 brand DISPLAY font — Cafe24 Ssurround (free for commercial use, Cafe24
+// official). Self-hosted via next/font/local for Vercel reliability (no CDN
+// runtime dependency) + automatic CLS-safe fallback metrics. Exposes the
+// `--font-brand` CSS variable (the Tailwind `display` token reads it). BODY/
+// DATA stay Pretendard — this face is applied to titles/headings only.
+// NOTE: the variable is `--font-brand`, NOT `--font-display`: the latter is
+// already owned by the published detail-page preset renderer (Noto Serif KR,
+// globals.css). Reusing it would regress published product detail pages.
+const cafe24Ssurround = localFont({
+  src: "./fonts/Cafe24Ssurround.woff2",
+  weight: "400",
+  style: "normal",
+  display: "swap",
+  variable: "--font-brand",
+  fallback: ["Pretendard", "-apple-system", "sans-serif"],
+});
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileTabBar from "@/components/layout/MobileTabBar";
@@ -25,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={cafe24Ssurround.variable}>
       <head>
         <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />

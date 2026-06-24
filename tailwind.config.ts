@@ -11,6 +11,15 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // #132 brand DISPLAY font token. `font-display` utility -> Cafe24
+      // Ssurround (var set by next/font/local in layout.tsx), falling back to
+      // Pretendard so Korean glyphs render correctly during font-display:swap
+      // and numerics/Latin degrade gracefully. Titles/headings only; body +
+      // numeric data stay Pretendard. Rollback = remove this token + the
+      // var on <html>.
+      fontFamily: {
+        display: ["var(--font-brand)", "Pretendard", "-apple-system", "sans-serif"],
+      },
       // S2-A.1 (#145): Tailwind preflight defaults every bare `border` to
       // gray-200 via borderColor.DEFAULT. The globals.css class override only
       // catches `.border-gray-*` classes, so color-less `border` still leaked

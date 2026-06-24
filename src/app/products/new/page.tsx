@@ -205,7 +205,7 @@ function USection({ icon, title, meta, children }: {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '13px 18px 11px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {icon && <span style={{ display: 'flex', alignItems: 'center', color: '#9A8C84', flexShrink: 0 }}>{icon}</span>}
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>{title}</span>
+          <span className="font-display" style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>{title}</span>
         </div>
         {meta && <div style={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{meta}</div>}
       </div>
@@ -1948,7 +1948,7 @@ const handleGenerate = async () => {
                 <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
               </svg>
             </div>
-            <h1 style={{ fontSize: 16, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>씨앗 심기</h1>
+            <h1 className="font-display" style={{ fontSize: 16, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>씨앗 심기</h1>
             <span style={{ color: '#F8DCE5', fontSize: 16, margin: '0 2px' }}>|</span>
             <a href="/products" style={{ fontSize: 12, color: '#888', textDecoration: 'none' }}>← 목록으로</a>
           </div>

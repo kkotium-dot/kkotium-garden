@@ -461,7 +461,7 @@ export default function DashboardPage() {
                 <ellipse cx="12" cy="20" rx="5" ry="2"/>
               </svg>
             </div>
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', letterSpacing: '-0.3px', margin: 0 }}>정원 일지</h1>
+            <h1 className="font-display" style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', letterSpacing: '-0.3px', margin: 0 }}>정원 일지</h1>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

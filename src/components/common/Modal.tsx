@@ -64,7 +64,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalProps) =>
       >
         {/* 헤더 */}
         <div className="sticky top-0 bg-white border-b border-beige px-6 py-4 flex items-center justify-between rounded-t-lg z-10">
-          <h2 className="text-xl font-semibold text-text-dark font-pretendard">
+          <h2 className="text-xl font-semibold text-text-dark font-display">
             {title}
           </h2>
           <button
