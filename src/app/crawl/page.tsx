@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   Layers, Search, RefreshCw, ExternalLink, ArrowRight,
   Package, Download, X, CheckCircle, AlertCircle, Clock, History, TrendingUp, Tag,
-  Pencil, Trash2, RotateCcw, Play, Store, ArrowUp, ArrowDown, Rows3, Rows4,
+  Pencil, Trash2, RotateCcw, Play, Store, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { OverflowMenu, StatusBadge as StatusPill } from '@/components/common';
 import { calcHoneyScore, calcSourcingScore } from '@/lib/honey-score';
@@ -597,10 +597,9 @@ function CrawlPageInner() {
   const [histSellerFilter, setHistSellerFilter] = useState<string>('all');
   const [sellerGroups, setSellerGroups] = useState<Record<string, string>>({});
   const [shelfUpdating, setShelfUpdating] = useState<Set<string>>(new Set());
-  // CRAWL-GRID-v2 (#132 layout only): sortable columns (default margin DESC) +
-  // density toggle. Pure presentation state — no data/handler rewiring.
+  // CRAWL-GRID-v2 (#132 layout only): sortable columns (default margin DESC).
+  // D2 — the density toggle was removed; rows use one well-tuned density.
   const [histSort, setHistSort] = useState<{ key: 'margin'|'supplier_price'|'none'; dir: 'desc'|'asc' }>({ key: 'margin', dir: 'desc' });
-  const [histDensity, setHistDensity] = useState<'compact'|'comfortable'>('compact');
   // Keyboard nav row cursor (j/k move, Enter fires smart action).
   const [histCursor, setHistCursor] = useState<string | null>(null);
 
@@ -1596,7 +1595,9 @@ function CrawlPageInner() {
 
             {/* Header + controls */}
             <div style={{ background:'#fff', border:'1.5px solid #F8DCE5', borderRadius:16, padding:'14px 18px' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                {/* D1 Row 1: title + status filter badges (edge-aligned) */}
+                <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                   <div style={{ width:3, height:16, background:'#e62310', borderRadius:99 }} />
                   <span style={{ fontSize:13, fontWeight:900, color:'#e62310' }}>꿀통 꽃수레</span>
@@ -1646,36 +1647,42 @@ function CrawlPageInner() {
                     });
                   })()}
                 </div>
-                <div style={{ flex:1 }} />
-                {/* Seller filter */}
-                {Object.keys(sellerGroups).length > 0 && (
-                  <select value={histSellerFilter}
-                    onChange={e => { setHistSellerFilter(e.target.value); loadShelf(histFilter, e.target.value); }}
-                    style={{ padding:'5px 10px', fontSize:12, borderRadius:8, border:'1.5px solid #F8DCE5', background:'#FFF5F8', color:'#555', outline:'none', cursor:'pointer' }}>
-                    <option value="all">공급사 전체</option>
-                    {Object.entries(sellerGroups).map(([id, nick]) => (
-                      <option key={id} value={id}>{nick}</option>
-                    ))}
-                  </select>
-                )}
-                {/* Search */}
-                <input value={histSearch} onChange={e => setHistSearch(e.target.value)}
-                  placeholder="상품명 검색"
-                  style={{ padding:'5px 10px', fontSize:12, background:'#FFF5F8', border:'1.5px solid #F8DCE5', borderRadius:8, outline:'none', color:'#555', minWidth:120 }} />
-                {/* Refresh */}
-                <button onClick={() => loadShelf()} aria-label="꽃수레 새로고침" title="새로고침"
-                  style={{ width:32, height:32, background:'transparent', border:'none', borderRadius:8, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <RefreshCw size={14} color="#e62310" />
-                </button>
+                </div>
+                {/* D1 Row 2: 공급사 + 상품명 검색 + 초기화 — one clean row,
+                    edge-aligned with Row 1 (same gutters). Search grows so 초기화
+                    sits at the right edge. */}
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  {/* Seller filter */}
+                  {Object.keys(sellerGroups).length > 0 && (
+                    <select value={histSellerFilter}
+                      onChange={e => { setHistSellerFilter(e.target.value); loadShelf(histFilter, e.target.value); }}
+                      style={{ padding:'6px 12px', fontSize:12, borderRadius:8, border:'1.5px solid #F8DCE5', background:'#FFF5F8', color:'#555', outline:'none', cursor:'pointer', flexShrink:0 }}>
+                      <option value="all">공급사 전체</option>
+                      {Object.entries(sellerGroups).map(([id, nick]) => (
+                        <option key={id} value={id}>{nick}</option>
+                      ))}
+                    </select>
+                  )}
+                  {/* Search — grows to fill the row */}
+                  <input value={histSearch} onChange={e => setHistSearch(e.target.value)}
+                    placeholder="상품명 검색"
+                    style={{ flex:1, minWidth:120, padding:'6px 12px', fontSize:12, background:'#FFF5F8', border:'1.5px solid #F8DCE5', borderRadius:8, outline:'none', color:'#555' }} />
+                  {/* 초기화 / 새로고침 */}
+                  <button onClick={() => loadShelf()} aria-label="꽃수레 새로고침" title="새로고침"
+                    style={{ width:34, height:34, flexShrink:0, background:'#FFF5F8', border:'1.5px solid #F8DCE5', borderRadius:8, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <RefreshCw size={14} color="#e62310" />
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* CRAWL-GRID-v2: stats box removed — counts folded into the filter
                 tab badges above (reclaimed vertical space = more grid rows). */}
 
-            {/* Bulk action bar — sticky so it stays visible while scrolling the grid */}
+            {/* D5 — registration bar floats at the page BOTTOM (fixed, centered)
+                only while >=1 row is selected; it clears on deselect. */}
             {histSelected.size > 0 && (
-              <div style={{ position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'#FFF0EF', border:'1.5px solid #FFB3CE', borderRadius:12, boxShadow:'0 4px 14px rgba(230,35,16,0.10)' }}>
+              <div style={{ position:'fixed', bottom:20, left:'50%', transform:'translateX(-50%)', zIndex:40, width:'min(960px, calc(100vw - 32px))', display:'flex', alignItems:'center', gap:10, padding:'12px 16px', background:'#FFF0EF', border:'1.5px solid #FFB3CE', borderRadius:14, boxShadow:'0 10px 30px rgba(230,35,16,0.22)' }}>
                 <span style={{ fontSize:13, fontWeight:700, color:'#e62310' }}>{histSelected.size}개 선택됨</span>
                 {batchResult && (
                   <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:99,
@@ -1842,7 +1849,7 @@ function CrawlPageInner() {
                 ({ SOURCED:'소싱완료', PENDING:'등록대기', REGISTERED:'등록완료', HOLD:'보류' } as Record<string,string>)[s] ?? s;
 
               // Density-driven vertical padding (compact ~7px / comfortable ~13px).
-              const rowPadY = histDensity === 'compact' ? 7 : 13;
+              const rowPadY = 9; // D2 — single well-tuned density (compact-comfortable)
 
               // Shared prefill→router.push body (logic unchanged #132, copied
               // verbatim from the original 등록 시작 button). targetStatus lets the
@@ -1915,36 +1922,27 @@ function CrawlPageInner() {
 
               return (
                 <div style={{ display:'flex', flexDirection:'column', gap:0, background:'#fff', border:'1.5px solid var(--border-neutral)', borderRadius:14, overflow:'hidden' }}>
-                  {/* Toolbar: select-all + density toggle */}
+                  {/* Toolbar: select-all (D2 — density toggle removed) */}
                   <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 14px', background:'#FBFAF7', borderBottom:'1px solid var(--border-neutral)', fontSize:12, color:'#888' }}>
                     <input type="checkbox" checked={allChecked}
                       onChange={() => setHistSelected(allChecked ? new Set() : new Set(allIds))}
                       style={{ width:14, height:14, accentColor:'#e62310', cursor:'pointer' }} />
                     <span style={{ fontVariantNumeric:'tabular-nums' }}>전체 {sorted.length}개</span>
                     <div style={{ flex:1 }} />
-                    {/* Density toggle */}
-                    <div style={{ display:'inline-flex', border:'1px solid var(--border-neutral)', borderRadius:8, overflow:'hidden' }}>
-                      <button onClick={() => setHistDensity('compact')} aria-label="조밀하게" title="조밀하게"
-                        style={{ display:'flex', alignItems:'center', gap:4, padding:'4px 9px', background: histDensity==='compact'?'#FFF0EF':'#fff', color: histDensity==='compact'?'#e62310':'#999', border:'none', borderRight:'1px solid var(--border-neutral)', cursor:'pointer', fontSize:11, fontWeight:600 }}>
-                        <Rows4 size={13}/> 조밀
-                      </button>
-                      <button onClick={() => setHistDensity('comfortable')} aria-label="여유롭게" title="여유롭게"
-                        style={{ display:'flex', alignItems:'center', gap:4, padding:'4px 9px', background: histDensity==='comfortable'?'#FFF0EF':'#fff', color: histDensity==='comfortable'?'#e62310':'#999', border:'none', cursor:'pointer', fontSize:11, fontWeight:600 }}>
-                        <Rows3 size={13}/> 여유
-                      </button>
-                    </div>
                   </div>
 
                   {/* Column header row */}
                   <div style={{ display:'grid', gridTemplateColumns:GRID_COLS, alignItems:'center', gap:10, padding:'7px 14px', background:'#FBFAF7', borderBottom:'1px solid var(--border-neutral)', fontSize:10.5, fontWeight:700, color:'#999', letterSpacing:'0.02em' }}>
                     <span />
                     <span>상품정보</span>
+                    {/* D3 — right-aligned headers (justifySelf:end) sit over the
+                        right-aligned tabular data of their columns. */}
                     <button onClick={() => toggleSort('supplier_price')}
-                      style={{ display:'inline-flex', alignItems:'center', justifyContent:'flex-end', gap:3, background:'none', border:'none', cursor:'pointer', font:'inherit', color: histSort.key==='supplier_price'?'#e62310':'#999', textAlign:'right' }}>
+                      style={{ display:'inline-flex', alignItems:'center', justifyContent:'flex-end', justifySelf:'end', gap:3, background:'none', border:'none', cursor:'pointer', font:'inherit', color: histSort.key==='supplier_price'?'#e62310':'#999', textAlign:'right' }}>
                       도매가 {sortArrow('supplier_price')}
                     </button>
                     <button onClick={() => toggleSort('margin')}
-                      style={{ display:'inline-flex', alignItems:'center', gap:3, background:'none', border:'none', cursor:'pointer', font:'inherit', color: histSort.key==='margin'?'#e62310':'#999' }}>
+                      style={{ display:'inline-flex', alignItems:'center', justifyContent:'flex-end', justifySelf:'end', gap:3, background:'none', border:'none', cursor:'pointer', font:'inherit', color: histSort.key==='margin'?'#e62310':'#999', textAlign:'right' }}>
                       예상마진율 {sortArrow('margin')}
                     </button>
                     <span style={{ textAlign:'right' }}>액션</span>
@@ -2025,8 +2023,8 @@ function CrawlPageInner() {
                           {log.supplier_price > 0 ? `${log.supplier_price.toLocaleString()}원` : '—'}
                         </div>
 
-                        {/* Col: 예상마진율 + mini gauge */}
-                        <div>
+                        {/* Col: 예상마진율 + mini gauge (D3 — right-aligned tabular) */}
+                        <div style={{ textAlign:'right' }}>
                           {margin === null ? (
                             <span style={{ fontSize:12.5, color:'#bbb', fontVariantNumeric:'tabular-nums' }}>—</span>
                           ) : (() => {
