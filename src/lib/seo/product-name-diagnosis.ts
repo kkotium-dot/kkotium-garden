@@ -287,3 +287,52 @@ export function diagnoseProductName(name: string, ctx: NameDiagnosisContext = {}
   const score = Math.max(0, Math.min(100, 100 - penalty));
   return { score, grade: toGrade(score), checks };
 }
+
+// ── NAME-DIAG-2: keyword competition (경쟁강도 = 상품수 ÷ 검색량) ──────────────
+// PURE helpers only — the actual volume/count fetch happens in the
+// /api/naver/keyword-competition route (Naver SearchAd + Shopping). research §1.4:
+// 경쟁강도 1 초과 = 공급과다; 10~30 = 경쟁력 有(롱테일 sweet spot); >=30 = 주의.
+
+export type CompetitionBand = 'low' | 'mid' | 'high';
+
+export interface KeywordCompetition {
+  keyword: string;
+  searchVolume: number | null;   // monthly searches; null = unavailable (never faked)
+  productCount: number | null;   // shopping result count; null = unavailable
+  ratio: number | null;          // productCount / searchVolume; null = unavailable
+  band: CompetitionBand | null;
+  recommended?: boolean;         // a viable longtail (band !== high, has real volume)
+}
+
+/** research §1.4 banding. null in -> null out (no fabrication). */
+export function competitionBand(ratio: number | null): CompetitionBand | null {
+  if (ratio == null || !isFinite(ratio)) return null;
+  if (ratio < 10) return 'low';
+  if (ratio < 30) return 'mid';
+  return 'high';
+}
+
+// Weak/structural tokens that aren't useful as a search head term.
+const WEAK_TOKENS = new Set(['본품', '세트', '용', '형', '개', '구', '입', '특가', '정품']);
+
+/** Split a product name into candidate head keywords, strongest (longest) first. */
+export function extractMainKeywordTokens(name: string): string[] {
+  const seen = new Set<string>();
+  return name.trim().split(/\s+/)
+    .map(t => t.replace(/[^\p{L}\p{N}]/gu, ''))
+    .filter(t => t.length >= 2 && !WEAK_TOKENS.has(t))
+    .filter(t => { const k = t.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
+    .sort((a, b) => b.length - a.length);
+}
+
+// Generic longtail modifiers (용도·규격·타깃·시즌). Whether each is actually a
+// good swap is decided by its MEASURED competition, not by this list.
+const LONGTAIL_MODIFIERS = ['실내', '차량용', '대용량', '선물용', '휴대용', '미니'];
+
+/** Build longtail candidates by prefixing modifiers onto a head keyword. */
+export function buildLongtailCandidates(token: string, max = 4): string[] {
+  return LONGTAIL_MODIFIERS
+    .filter(m => !token.startsWith(m))
+    .slice(0, max)
+    .map(m => `${m}${token}`);
+}

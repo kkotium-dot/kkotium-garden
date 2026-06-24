@@ -8,13 +8,15 @@
 
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, AlertTriangle, XCircle, Wand2, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CheckCircle2, AlertTriangle, XCircle, Wand2, Sparkles, TrendingDown, Loader2, BarChart3, ArrowRight } from 'lucide-react';
 import {
   diagnoseProductName,
   type NameDiagnosis,
   type NameDiagnosisContext,
   type CheckStatus,
+  type KeywordCompetition,
+  type CompetitionBand,
 } from '@/lib/seo/product-name-diagnosis';
 
 interface Props {
@@ -38,6 +40,25 @@ function gradeTone(grade: NameDiagnosis['grade']): { color: string; bg: string }
     case 'B': return { color: '#d97706', bg: '#fffbeb' };
     default:  return { color: '#dc2626', bg: '#fef2f2' };
   }
+}
+
+// ── NAME-DIAG-2: keyword-competition (롱테일 추천) helpers ──────────────────────
+const BAND_STYLE: Record<CompetitionBand, { color: string; bg: string; label: string }> = {
+  low:  { color: '#16a34a', bg: '#f0fdf4', label: '여유' },
+  mid:  { color: '#2563eb', bg: '#eff6ff', label: '적정' },
+  high: { color: '#dc2626', bg: '#fef2f2', label: '주의' },
+};
+
+function fmtCount(n: number | null): string {
+  if (n == null) return '—';
+  if (n >= 10000) return `${Math.round(n / 10000 * 10) / 10}만`;
+  if (n >= 1000) return `${Math.round(n / 100) / 10}천`;
+  return n.toLocaleString();
+}
+
+interface CompetitionResult {
+  main: KeywordCompetition;
+  candidates: (KeywordCompetition & { recommended?: boolean })[];
 }
 
 // 꼬띠 한줄 코멘트 — grade별 친근한 안내.
@@ -73,6 +94,48 @@ export default function ProductNameDiagnostics({ name, ctx, onApplyFix }: Props)
     () => [...diag.checks].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]),
     [diag.checks],
   );
+
+  // NAME-DIAG-2: on-demand keyword-competition (검색량·상품수·경쟁강도). On-demand
+  // (not per-keystroke) to be frugal with the Naver API quota.
+  const [comp, setComp] = useState<CompetitionResult | null>(null);
+  const [compLoading, setCompLoading] = useState(false);
+  const [compError, setCompError] = useState<string | null>(null);
+
+  // Reset the (on-demand) competition result when the name changes, so stale
+  // longtail data is never shown against a different name.
+  useEffect(() => {
+    setComp(null);
+    setCompError(null);
+  }, [name]);
+
+  const runCompetition = useCallback(async () => {
+    const target = name.trim();
+    if (!target) return;
+    setCompLoading(true);
+    setCompError(null);
+    try {
+      const res = await fetch(`/api/naver/keyword-competition?name=${encodeURIComponent(target)}`);
+      const data = await res.json();
+      if (!data.success) {
+        setComp(null);
+        setCompError(data.error || '경쟁강도 데이터를 불러올 수 없어요.');
+      } else {
+        setComp({ main: data.main, candidates: data.candidates ?? [] });
+      }
+    } catch {
+      setComp(null);
+      setCompError('경쟁강도 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setCompLoading(false);
+    }
+  }, [name]);
+
+  const applyLongtail = (candidate: string) => {
+    if (!comp) return;
+    const mainKw = comp.main.keyword;
+    const next = name.includes(mainKw) ? name.replace(mainKw, candidate) : `${candidate} ${name}`;
+    onApplyFix(next.replace(/\s+/g, ' ').trim());
+  };
 
   if (!debounced.trim()) {
     return (
@@ -153,6 +216,84 @@ export default function ProductNameDiagnostics({ name, ctx, onApplyFix }: Props)
           빨간불 없음 · 노란불은 선택적으로 다듬으세요.
         </p>
       )}
+
+      {/* NAME-DIAG-2: 롱테일 키워드 추천 (경쟁강도 = 상품수 ÷ 검색량, 실측). */}
+      <div style={{ borderTop: '1px solid var(--border-neutral)', padding: '10px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+          <TrendingDown size={14} style={{ color: '#e62310', flexShrink: 0 }} />
+          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-900, #111)' }}>롱테일 키워드 추천</span>
+          <span style={{ fontSize: 10.5, color: 'var(--text-300, #888)' }}>경쟁강도(상품수÷검색량) 낮은 세부 키워드</span>
+        </div>
+
+        {!comp && (
+          <button
+            type="button"
+            onClick={runCompetition}
+            disabled={compLoading}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8,
+              border: '1px solid var(--border-neutral)', background: '#fff', color: '#e62310',
+              fontSize: 12, fontWeight: 700, cursor: compLoading ? 'wait' : 'pointer',
+            }}
+          >
+            {compLoading ? <Loader2 size={13} className="animate-spin" /> : <BarChart3 size={13} />}
+            {compLoading ? '네이버 검색량·상품수 조회 중…' : '경쟁강도 분석'}
+          </button>
+        )}
+
+        {compError && (
+          <p style={{ fontSize: 11.5, color: '#dc2626', margin: '4px 2px 0', lineHeight: 1.45 }}>{compError}</p>
+        )}
+
+        {comp && (
+          <div style={{ marginTop: 4 }}>
+            {[{ ...comp.main, _main: true }, ...comp.candidates.map(c => ({ ...c, _main: false }))].map((k) => {
+              const b = k.band ? BAND_STYLE[k.band] : null;
+              const isMain = k._main;
+              const rec = !isMain && (k as { recommended?: boolean }).recommended;
+              return (
+                <div key={(isMain ? 'main-' : 'cand-') + k.keyword}>
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: '1fr auto auto auto', alignItems: 'center', gap: 8,
+                    padding: '7px 8px', borderTop: '1px solid var(--border-neutral)',
+                    background: rec ? '#f0fdf4' : 'transparent',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+                      <span style={{ fontSize: 12, fontWeight: isMain ? 800 : 600, color: 'var(--text-900,#111)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{k.keyword}</span>
+                      {isMain && <span style={{ fontSize: 9, color: 'var(--text-300,#888)', flexShrink: 0 }}>현재</span>}
+                      {rec && <span style={{ fontSize: 9, fontWeight: 800, color: '#16a34a', background: '#dcfce7', borderRadius: 99, padding: '1px 6px', flexShrink: 0 }}>추천</span>}
+                    </div>
+                    <span style={{ fontSize: 10.5, color: 'var(--text-500,#555)', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>검색 {fmtCount(k.searchVolume)}</span>
+                    <span style={{ fontSize: 10.5, color: 'var(--text-500,#555)', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>상품 {fmtCount(k.productCount)}</span>
+                    {b && k.ratio != null ? (
+                      <span style={{ fontSize: 10, fontWeight: 800, color: b.color, background: b.bg, borderRadius: 6, padding: '2px 6px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                        {k.ratio}:1 {b.label}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 10, color: 'var(--text-300,#888)' }}>데이터 없음</span>
+                    )}
+                  </div>
+                  {rec && (
+                    <button type="button" onClick={() => applyLongtail(k.keyword)} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, margin: '3px 0 5px 8px',
+                      padding: '3px 8px', borderRadius: 7, border: '1px solid #16a34a55',
+                      background: '#fff', color: '#16a34a', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                    }}>
+                      <ArrowRight size={11} /> 이 키워드로 바꾸기
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            <button type="button" onClick={runCompetition} disabled={compLoading} style={{
+              marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 7,
+              border: '1px solid var(--border-neutral)', background: '#fff', color: 'var(--text-500,#555)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            }}>
+              {compLoading ? <Loader2 size={11} className="animate-spin" /> : <BarChart3 size={11} />} 다시 분석
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
