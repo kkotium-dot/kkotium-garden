@@ -7,6 +7,7 @@ import {
   Tag, Truck, Wrench, Star, Bell, Clipboard, CheckCircle, XCircle, Settings,
   Package, Image as ImageIcon, Search, Gift, AlertTriangle, Info, ShieldAlert,
   Palette, Save, Database, Sprout, Download, Upload, RefreshCw,
+  FolderTree, Type, Layers,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { checkProductName, getGradeColor, getSeverityColor, type NameQualityResult } from '@/lib/product-name-checker';
@@ -185,84 +186,66 @@ function Field({ label, required, hint, children }: {
   );
 }
 
-function RSection({ number, title, badge, children }: {
-  number: number; title: string; badge?: string; children: React.ReactNode;
+// USection — P1-a refine canonical card (③ 통일형, design brief rev4 §P1-a).
+// ONE calm SaaS shell for every section block across the 4 tabs:
+//   header = [small neutral Lucide icon] + [title, font-semibold]
+//   - NO number badge, NO forced accordion (body always visible by default).
+//   - optional subtle right-aligned meta (count / StatusBadge / chip).
+//   border = --border-neutral (#E4DFD4) 1px; white card; tabular-nums on meta.
+//   brand pink (#E62310) is reserved for ACTIVE / PRIMARY CTA / required-* —
+//   NEVER card chrome or headers.
+// Replaces the legacy RSection (numbered-pink) + DSection (icon-accordion);
+// both now delegate here. Skin/structure only — children, handlers, validation
+// and bindings are untouched (#132).
+function USection({ icon, title, meta, children }: {
+  icon?: React.ReactNode; title: string; meta?: React.ReactNode; children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(true);
   return (
-    <div style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 18, overflow: 'hidden' }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-6 py-4 transition-colors"
-        style={{ borderRadius: open ? 0 : '18px 18px 0 0' }}
-        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FFF8FA'}
-        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-      >
-        <div className="flex items-center gap-3">
-          <span
-            className="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0"
-            style={{ background: '#e62310' }}
-          >{number}</span>
-          <span className="font-semibold" style={{ color: '#1A1A1A' }}>{title}</span>
-          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#e62310' }} />
-          {badge && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#FFF0F5', color: '#e62310' }}>{badge}</span>}
+    <div style={{ background: '#fff', border: '1px solid var(--border-neutral)', borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '13px 18px 11px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          {icon && <span style={{ display: 'flex', alignItems: 'center', color: '#9A8C84', flexShrink: 0 }}>{icon}</span>}
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>{title}</span>
         </div>
-        <span style={{ color: '#888', fontSize: 12 }}>{open ? '▲' : '▼'}</span>
-      </button>
-      {open && (
-        <div className="px-6 pb-6 pt-1 space-y-4" style={{ borderTop: '1px solid #F8DCE5' }}>
-          {children}
-        </div>
-      )}
+        {meta && <div style={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{meta}</div>}
+      </div>
+      <div className="space-y-4" style={{ padding: '4px 18px 18px', borderTop: '1px solid var(--border-neutral)' }}>
+        {children}
+      </div>
     </div>
   );
 }
 
-function DSection({ icon, title, summary, children }: {
-  icon: React.ReactNode; title: string; summary: string; children: React.ReactNode;
+// RSection — legacy alias, now renders the unified USection shell (P1-a refine).
+// The 1/2/3 pink number badge is dropped; an optional `badge` becomes a subtle
+// neutral meta chip. Call sites pass an `icon` for the header.
+function RSection({ icon, title, badge, children }: {
+  icon?: React.ReactNode; title: string; badge?: string; number?: number; children: React.ReactNode;
 }) {
-  // POLICY UNCOLLAPSE — DSections render expanded by default (C-PLANT-4TAB).
-  const [open, setOpen] = useState(true);
   return (
-    <div
-      style={{
-        border: open ? '1.5px solid #FFB3CE' : '1.5px solid #F8DCE5',
-        borderRadius: 16,
-        background: '#fff',
-        transition: 'border-color 0.15s',
-        overflow: 'hidden',
-      }}
+    <USection
+      icon={icon}
+      title={title}
+      meta={badge ? (
+        <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: '#F1EEE7', color: '#8A8275' }}>{badge}</span>
+      ) : undefined}
     >
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-5 py-3.5 transition-colors"
-        style={{ background: open ? '#FFF0F5' : 'transparent', borderRadius: open ? 0 : 16 }}
-        onMouseEnter={e => { if (!open) (e.currentTarget as HTMLElement).style.background = '#FFF8FA'; }}
-        onMouseLeave={e => { if (!open) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="shrink-0 flex items-center" style={{ color: '#e62310' }}>{icon}</span>
-          <span className="font-medium text-sm shrink-0" style={{ color: '#2A2A2A' }}>{title}</span>
-          {!open && (
-            <span
-              className="text-xs px-2.5 py-1 rounded-full truncate max-w-xs"
-              style={{ background: '#FFF0F5', color: '#888' }}
-            >
-              {summary}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 shrink-0 ml-2">
-          {!open && <span className="text-xs font-medium" style={{ color: '#e62310' }}>수정 가능 ›</span>}
-          <span style={{ color: '#888', fontSize: 12 }}>{open ? '▲ 접기' : '▼'}</span>
-        </div>
-      </button>
-      {open && (
-        <div className="px-5 pb-5 pt-4 space-y-4" style={{ borderTop: '1px solid #FFB3CE' }}>
-          {children}
-        </div>
-      )}
-    </div>
+      {children}
+    </USection>
+  );
+}
+
+// DSection — legacy alias, now renders the unified USection shell (P1-a refine).
+// The accordion/summary is dropped (body always visible); icon + title kept.
+// `summary` stays in the signature (ignored) so existing call sites typecheck
+// without churn.
+function DSection({ icon, title, children }: {
+  icon?: React.ReactNode; title: string; summary?: string; children: React.ReactNode;
+}) {
+  return (
+    <USection icon={icon} title={title}>
+      {children}
+    </USection>
   );
 }
 
@@ -2274,7 +2257,7 @@ const handleGenerate = async () => {
                 product name lives EXACTLY ONCE, here, editable. */}
             {activeTab === 'seo' && (<>
             {/* ① Category — search tab + drill-down tab */}
-            <RSection number={1} title="카테고리" badge={catTab === 'search' ? '검색' : '4단계선택'}>
+            <RSection icon={<FolderTree size={15}/>} title="카테고리" badge={catTab === 'search' ? '검색' : '4단계선택'}>
               <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
                 {(['drill','search'] as const).map(tab => (
                   <button
@@ -2405,7 +2388,7 @@ const handleGenerate = async () => {
 
             {/* ② (검색최적화) 상품명 — single editable source of the product name.
                 Moved out of the 기본 정보 RSection so it appears EXACTLY ONCE. */}
-            <RSection number={2} title="상품명">
+            <RSection icon={<Type size={15}/>} title="상품명">
               <Field label="상품명" required hint="최대 100자 · 키워드 포함 권장 (25~50자 최적)">
                 <div className="flex gap-2">
                   <input className={`${inp} flex-1`} value={productName} onChange={e => setProductName(e.target.value)}
@@ -2508,7 +2491,7 @@ const handleGenerate = async () => {
                 검색최적화) + option system + 브랜드/원산지/수입사. */}
             {activeTab === 'basic' && (<>
             {/* ② 기본 정보 + AI 키워드 (상품명은 검색최적화 탭으로 이동) */}
-            <RSection number={1} title="기본 정보">
+            <RSection icon={<Info size={15}/>} title="기본 정보">
               {/* Price block — sale price + instant discount inline (Naver order) */}
               <div className="grid grid-cols-2 gap-3">
                 <Field label="판매가" required>
@@ -2692,7 +2675,7 @@ const handleGenerate = async () => {
             </RSection>
 
             {/* ③ Option system — folded into 기본 정보 (standalone option tab removed) */}
-            <RSection number={2} title="옵션" badge={optionType === 'NONE' ? '옵션없음' : optionType === 'COMBINATION' ? '조합형' : optionType === 'SINGLE' ? '단독형' : '직접입력형'}>
+            <RSection icon={<Layers size={15}/>} title="옵션" badge={optionType === 'NONE' ? '옵션없음' : optionType === 'COMBINATION' ? '조합형' : optionType === 'SINGLE' ? '단독형' : '직접입력형'}>
               {/* Type radio */}
               <div className="flex gap-2 flex-wrap">
                 {(['NONE','COMBINATION','SINGLE','DIRECT'] as const).map(t => {
@@ -3009,7 +2992,7 @@ const handleGenerate = async () => {
 
             {activeTab === 'image' && (<>
             {/* Images (대표·추가) */}
-            <RSection number={1} title="이미지">
+            <RSection icon={<ImageIcon size={15}/>} title="이미지">
               {/* Drag-and-drop image upload to Supabase — auto URL — Excel cols 18/19/20 */}
               <ImageUploadDropzone
                 type="main"
