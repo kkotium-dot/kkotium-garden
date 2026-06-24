@@ -52,7 +52,7 @@ import {
   type AtelierStepKey,
   type AtelierSidebarTab,
 } from '@/components/studio/atelier';
-import { Collapsible } from '@/components/common';
+import { Collapsible, StatusBadge, type StatusTone } from '@/components/common';
 
 // UX-v2.1 — step -> asset stages the 도구함 (AssetBrowser) defaults to showing.
 // Stages mirror the canonical taxonomy (source/cutout/plate/reference/composite/
@@ -212,14 +212,63 @@ function StudioInner() {
   const StepGroup = ({ when, children }: { when: AtelierStepKey; children: ReactNode }) => (
     <div
       hidden={step !== when}
+      className={step === when ? 'kk-step-reveal' : undefined}
       style={{ display: step === when ? 'flex' : 'none', flexDirection: 'column', gap: 'var(--space-4)' }}
     >
       {children}
     </div>
   );
 
+  // S2-B.2 — per-step completion status derived from EXISTING actions/engine
+  // state only (no new scoring logic, #132). neutral=미작업 · warning=진행 ·
+  // success=완료, surfaced via the shared StatusBadge tones (#55 product-agnostic).
+  const stepStatusMap: Record<AtelierStepKey, 'todo' | 'progress' | 'done'> = {
+    thumbnail: actions.thumbBusy ? 'progress' : (actions.thumbnails ? 'done' : 'todo'),
+    detail: actions.detailBusy ? 'progress' : (actions.detail ? 'done' : 'todo'),
+    seo: engine.loading ? 'progress' : (engine.data?.dna ? 'done' : 'todo'),
+    publish: (actions.publishBusy || actions.saveBusy) ? 'progress' : (actions.hasSavedAsset ? 'done' : 'todo'),
+  };
+  const STEP_STATUS_TONE: Record<'todo' | 'progress' | 'done', StatusTone> = {
+    todo: 'neutral', progress: 'warning', done: 'success',
+  };
+  const STEP_KEYS: AtelierStepKey[] = ['thumbnail', 'detail', 'seo', 'publish'];
+
   const cultivationSlot: ReactNode = selectedProduct ? (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', minWidth: 0 }}>
+      {/* S2-B.2 — traffic-light step StatusCards + REVEAL nav. Each row shows a
+          step + its 미작업/진행/완료 status (from existing state); clicking reveals
+          that step's form below (active highlighted, only the active form shows). */}
+      <div role="tablist" aria-label={a.stepStatus.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {STEP_KEYS.map((k) => {
+          const st = stepStatusMap[k];
+          const active = step === k;
+          return (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setStep(k)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                padding: '8px 11px', borderRadius: 10, cursor: 'pointer', minWidth: 0, textAlign: 'left',
+                border: active ? '1.5px solid var(--brand-red)' : '1px solid var(--color-border)',
+                background: active ? 'var(--pink-soft)' : 'var(--color-surface)',
+                transition: 'background 0.12s, border-color 0.12s',
+              }}
+            >
+              <span style={{
+                fontSize: 12.5, fontWeight: active ? 800 : 600,
+                color: active ? 'var(--brand-red)' : 'var(--gp-ink-700)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
+              }}>
+                {a.steps[k]}
+              </span>
+              <StatusBadge tone={STEP_STATUS_TONE[st]}>{a.stepStatus[st]}</StatusBadge>
+            </button>
+          );
+        })}
+      </div>
       {/* ── Step 1: 썸네일 랩 ─────────────────────────────────────────────── */}
       {/* UX-v2.3 — primary card (썸네일) leads expanded; supporting cards
           (진단·무드) fold by default so attention lands on one task. */}

@@ -502,6 +502,12 @@
       "slotAdditional": "추가 이미지",
       "slotDetail": "상세 페이지",
       "slotPending": "준비 중"
+    },
+    "stepStatus": {
+      "todo": "미작업",
+      "progress": "진행",
+      "done": "완료",
+      "label": "단계 진행"
     }
   }
 }
