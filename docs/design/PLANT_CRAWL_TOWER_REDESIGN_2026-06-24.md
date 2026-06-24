@@ -1,65 +1,48 @@
-# DESIGN BRIEF 2026-06-24 (rev5) - Plant/Crawl refine VERIFIED + Studio S2-B LOCKED
+# DESIGN BRIEF 2026-06-24 (rev6) - Studio S2-B.1 VERIFIED + S2-B.2 LOCKED
 
-Authoring: DESKTOP (design authority) -> CODE-CLI implements. SD-01 untouched. #132 (UI/structure only). #135 (create+edit shared). #147 (anti-over-build).
-Baseline: main / prod 80c355c. 
-
-================================================================
-## STATUS (all P1 axes DONE)
-================================================================
-- P1-a 4-tab IA (fb7fd8d) PASS.
-- P1-c CRAWL grid (baa8a3c) PASS.
-- P1-e PLANT Tower simplify + top save-bar (3474d3d) -> Desktop e2e PASS (E1-E7 + binding live).
-- P1-d CRAWL refine + D4 OverflowMenu portal (1e65c20) -> Desktop e2e PASS (D1-D5; D4 portal z9999/document.body; D5 bottom bar).
-- P1-a REFINE ③ 통일형 (a9f917a P1-a.1 + fc8d206 P1-a.2) -> Desktop e2e PASS w/ ONE honest gap (see below).
+Authoring: DESKTOP (design authority) -> CODE-CLI implements. SD-01 untouched. #132 (UI/structure only). #135. #147. #148.
+Baseline: main / prod 00b53df.
 
 ================================================================
-## P1-a REFINE - VERIFIED on prod 80c355c (Desktop live DOM)
+## STATUS
+================================================================
+- P1-a/c/d/e + P1-a refine (③ 통일형) : all prod Desktop PASS. (#137 platform/supplier item-kebab = honest gap, operator spot-check pending.)
+- S2-B.1 center cleansing (559a284) : prod Desktop e2e PASS (below).
+
+================================================================
+## S2-B.1 - VERIFIED on prod 00b53df (Desktop live DOM, region-scoped per #148)
 ================================================================
 PASS:
-- USection unify: 카테고리 (folder-tree icon) / 상품명 (type icon) headers = icon+title, NO number badge (digitBadge null), neutral border rgb(228,223,212)=#E4DFD4, radius 16. Delegation applies to all sections across 4 tabs.
-- No legacy form number badges. (The two brand-red "2" pills found = LEFT NAV count badges - 꿀통 꽃나들이 / 정원 창고 - not form chrome. Benign.)
-- 기본정보 ORDER exact: 가격 -> 플랫폼·공급사 -> 상품코드 -> 브랜드·원산지·수입사 -> 대체상품 -> 옵션 (OptionManager LAST). Verified by top-coordinate sort.
-- #135 edit parity: /products/new?edit=cmpnooli40001f0gveaxr8iim prefills 명화 name. 500/overflow 0.
+- Heavy form cards relocated to LEFT 배양실 panel: the thumbnail variation card (깔끔형/가격강조형/뱃지형/감성형 + 무드 카메라) renders INSIDE the 384px left aside (left~436, visible). Not a center sibling.
+- CENTER = calm preview/assembly surface: 미리보기 preview (left~1149) + assembly slot stubs (대표/추가/상세, 추가 at left~973) + stepper overview. The 썸네일/진단/카메라 words in center are STEPPER LABELS + intro text (not the actual form cards) - #148 false-positive avoided.
+- STEP-SYNC works: clicking stepper "상세 캔버스" switched the left panel card from "썸네일 4 변형..." -> "5섹션 상세페이지..." (changed=true). Relocated forms are step-gated; panel reflects active step.
+- 500/overflow 0.
 
-HONEST GAP - #137 platform/supplier ITEM kebab NOT click-exercised:
-- In create mode nothing is selected (no item row -> no kebab, expected). In edit (명화) platform/supplier render as "플랫폼 선택 / 공급사 선택" placeholders (no selected item row). Driving the platform dropdown ("도매매 DMM / 오너클랜 OWC" overlay opened, z9999) to click an option and materialize the selected-item row did NOT succeed via DOM probes (option click target resisted selectors). 
-- Indirect confidence HIGH: #137 reuses the SAME shared portal OverflowMenu verified click-working in /crawl (D4: portal/fixed/z9999/not-clipped); Code converted edit/delete -> that component verbatim, tsc0/build0.
-- ACTION: operator 10-sec spot-check (기본정보 -> 플랫폼 선택 -> 도매매 -> click the added row's kebab -> confirm 수정/삭제 popup, not clipped) OR Desktop retries next turn with deliberate selection drive. NOT claimed as verified.
-
-================================================================
-## ★ NEXT - Studio S2-B center cleansing : LOCKED scope (parallel, independent route)
-================================================================
-Route /studio (AtelierShell dual-sidebar). Independent of products/new. #124-safe. #132 (relocate/skin only - NO new generation features, NO logic change). #147-safe (bounded to relocation; no new score/hero/wrapper layers).
-
-STAGE SPLIT (#138):
-S2-B.1 (relocation skeleton):
-- MOVE the heavy input forms OUT of the center canvas INTO the LEFT 배양실 panel: Firefly prompt composer, mood->camera spec, AI diagnosis, detail-template picker, background select.
-- CENTER canvas becomes: live preview area + assembly slot placeholders (static stubs for now) + 꼬띠 guide bubble (microcopy).
-- Keep all existing handlers/state wiring intact - only relocate the JSX + reparent (#132). No slot-filling logic yet (that is S2-D/Phase 3).
-- Apply #144 (truncate/min-w-0/flex-fill) down to relocated form-field level.
-S2-B.2 (behavior polish):
-- 배양실 step-sync reveal (each step surfaces its relevant relocated form), traffic-light StatusCards, 꼬띠 microcopy pass, brand display font decision (operator: Cafe24 Ssurround vs Gmarket Sans - pending, non-blocking for .1).
-
-GUARDRAILS: SD-01 footer never touched. If center preview needs a data source, stub it - do not wire new backend. Verifiable stage commits.
+MINOR honest notes (for Code, non-blocking):
+1. A non-aside element containing "깔끔형" exists at w:0/left:0 (hidden, no layout box) - NOT a visible center leak, but a possible stray hidden duplicate (responsive/SSR copy?). Code: confirm it is intentional (hidden mobile copy) and not a double-render.
+2. 꼬띠 guide bubble: center preview/slots/stepper confirmed, but the literal "꼬띠" text was not detected in the center region. Likely image/icon-based or microcopy without the word. Code: confirm the bubble actually renders (not silently dropped).
 
 ================================================================
-## VERIFICATION PLAN (Desktop)
+## ★ NEXT - Studio S2-B.2 : LOCKED scope (parallel, /studio, #132/#147)
 ================================================================
-- S2-B.1: heavy forms relocated center->left 배양실; center = preview + stub slots + 꼬띠 bubble; existing form bindings still live; #144 field-level; 500/overflow 0. (Desktop will baseline-probe current /studio at deploy.)
-- #137 retry: drive platform/supplier selection to materialize item-row kebab; confirm portal 수정/삭제 not clipped.
-- Narrow 1024/375: only when a resize-capable tool is available (do NOT fabricate).
+Builds on S2-B.1 (relocation + inherent step-gating already live).
+- REVEAL refine: ensure 배양실 surfaces ONLY the active step's form (hide non-active cleanly; step-sync already changes content - polish the transition/empty handling).
+- TRAFFIC-LIGHT StatusCards: per-step completion status (e.g. 미작업/진행/완료) as the existing neutral->semantic StatusBadge tones (reuse common/StatusBadge from S2-A.2; product-agnostic #55). NO new scoring logic - reflect existing step/engine state only.
+- 꼬띠 MICROCOPY pass: friendly active-step guidance text in the center bubble (confirm bubble renders first per note 2).
+- FONT decision (brand display font Cafe24 Ssurround vs Gmarket Sans): OPERATOR pending, NON-BLOCKING. Proceed with current font; swap is a token change later.
+GUARDRAILS: reuse shared components (StatusBadge, OverflowMenu portal); no backend wiring; slot-FILLING stays out (that is S2-D/Phase 3). SD-01 footer untouched. Verifiable stage commits (#138).
 
 ================================================================
-## BACKLOG / LATER (unchanged)
+## CARRY / BACKLOG / LATER
 ================================================================
+- #137 platform/supplier item-kebab: operator 10-sec spot-check (기본정보 -> 플랫폼 선택 -> 도매매 -> row kebab -> 수정/삭제 not clipped) OR Desktop retry. Child-component rows (대체상품/옵션/asset) = follow-up lane (same portal OverflowMenu).
 - CR-1: 예상마진율 ~13% cluster -> market-price basis (operator approval).
 - #146: ProductLifecycle/LowStockAlert inline #e5e7eb borders -> tokenize.
-- Myeonghwa seed-planting backfill (operator) -> unblocks publish #124.
-- Myeonghwa publish PUT <- backfill + status-reconcile + operator GO (irreversible #46/#124).
+- Narrow 1024/375: still gated - Control Chrome cannot resize OS window; do NOT fabricate. (Claude-in-Chrome resize is a separate browser context; offer to attempt if operator wants a dedicated narrow pass.)
+- Myeonghwa backfill (operator) -> unblocks publish #124. Publish PUT <- backfill+reconcile+GO (#46/#124).
 
 ================================================================
 ## PRINCIPLES
 ================================================================
-- #147 (enshrined): inventory existing functions before adding hero/score/collapse layers; reorder+light polish first; broad change only after operator confirm.
-- NEW (propose #148): Desktop verification must distinguish GLOBAL chrome (nav count badges, persistent header) from the FEATURE under test - classify by ancestor (aside/nav) before flagging a regression, to avoid false alarms. And when a UI sub-state cannot be driven via DOM probes, report the gap honestly + route to operator spot-check; never infer a pass.
-- SD-01 Arabic footer: never touch.
+- #148 (enshrined): region-scope DOM verification (exclude global nav/aside nesting); a child panel nested inside <main> contaminates a main.innerText scan - check aside-containment of the actual feature markers, not flat text. Isolate build from running dev (.next). Distinguish hidden(w:0) nodes from visible leaks.
+- #147 anti-over-build. SD-01 footer never touch.
