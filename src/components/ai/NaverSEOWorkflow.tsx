@@ -8,7 +8,7 @@ import { useState, useMemo, useEffect } from 'react';
 import {
   Sparkles, RotateCcw, Check, Loader2,
   Tag, Search, FileText, Zap, LayoutGrid,
-  ChevronRight, AlertCircle, ChevronDown, ChevronUp,
+  ChevronRight, AlertCircle, ChevronDown, ChevronUp, Copy, Megaphone,
 } from 'lucide-react';
 import type { NaverCategoryEntry } from '@/lib/naver/naver-categories-full';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
@@ -17,7 +17,9 @@ import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 
 interface CategorySuggestion  { code: string; path: string; reason: string; }
 interface ProductNameVariant  { type: 'keyword' | 'benefit' | 'emotion'; name: string; strategy: string; }
-interface HookVariant         { type: 'price' | 'emotion' | 'feature'; text: string; }
+// HOOK-2: 2-slot hooks. event_field = Naver 이벤트필드 혜택 1줄(적용); detail =
+// 상세페이지용 headline+sub by tone(복사). text = 결합본(onApplyHook 호환).
+interface HookVariant         { slot: 'event_field' | 'detail'; tone?: 'benefit' | 'emotion' | 'trust'; headline?: string; sub?: string; text: string; }
 
 interface SEOResult {
   success: boolean;
@@ -97,14 +99,14 @@ const STEP_META = {
   keywords: { icon: Search,     label: '황금 키워드',       color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', tag: '7~10개' },
   names:    { icon: FileText,   label: '상품명 3가지 전략', color: '#059669', bg: '#f0fdf4', border: '#a7f3d0', tag: '선택'   },
   tags:     { icon: Tag,        label: '태그',              color: '#d97706', bg: '#fffbeb', border: '#fde68a', tag: '10개'   },
-  hooks:    { icon: Zap,        label: '훅문구 3가지',      color: '#e62310', bg: '#fff0f0', border: '#fecaca', tag: '선택'   },
+  hooks:    { icon: Zap,        label: '훅문구',           color: '#e62310', bg: '#fff0f0', border: '#fecaca', tag: '선택'   },
 } as const;
 
 const NAME_TYPE_LABEL: Record<ProductNameVariant['type'], string> = {
   keyword: '키워드강조형', benefit: '혜택강조형', emotion: '감성강조형',
 };
-const HOOK_TYPE_LABEL: Record<HookVariant['type'], string> = {
-  price: '가격/혜택형', emotion: '감성/스토리형', feature: '기능/스펙형',
+const HOOK_TONE_LABEL: Record<'benefit' | 'emotion' | 'trust', string> = {
+  benefit: '혜택 강조', emotion: '감성', trust: '신뢰',
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -125,7 +127,8 @@ export default function NaverSEOWorkflow({
   const [appliedKeywords, setAppliedKeywords] = useState(false);
   const [appliedTags,     setAppliedTags]     = useState(false);
   const [selectedNameIdx, setSelectedNameIdx] = useState<number | null>(null);
-  const [selectedHookIdx, setSelectedHookIdx] = useState<number | null>(null);
+  const [hookApplied,     setHookApplied]     = useState(false);   // event_field applied
+  const [copiedKey,       setCopiedKey]       = useState<string | null>(null); // detail copy feedback
 
   const isReady    = useMemo(() => productName.trim().length >= 2, [productName]);
   const hasCategory = (categoryPath?.trim().length ?? 0) > 0;
@@ -144,7 +147,7 @@ export default function NaverSEOWorkflow({
   const handleRun = async () => {
     if (!isReady) return;
     setLoading(true); setError(''); setResult(null);
-    setSelectedNameIdx(null); setSelectedHookIdx(null);
+    setSelectedNameIdx(null); setHookApplied(false); setCopiedKey(null);
     try {
       const res = await fetch('/api/ai/seo-workflow', {
         method: 'POST',
@@ -188,10 +191,18 @@ export default function NaverSEOWorkflow({
     onApplyProductName(result.productNames[idx].name);
   };
 
-  const handleApplyHook = (idx: number) => {
-    if (!result?.hooks[idx]) return;
-    setSelectedHookIdx(idx);
-    onApplyHook(result.hooks[idx].text);
+  // HOOK-2: 적용 = event_field 혜택문구를 훅 필드에 반영.
+  const handleApplyEventHook = (text: string) => {
+    onApplyHook(text);
+    setHookApplied(true);
+  };
+
+  const handleCopyDetail = (text: string, key: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(k => (k === key ? null : k)), 1500);
   };
 
   const handleApplyAll = () => {
@@ -200,7 +211,8 @@ export default function NaverSEOWorkflow({
     onApplyKeywords(result.keywords); flash(setAppliedKeywords);
     if (result.productNames[0]) { onApplyProductName(result.productNames[0].name); setSelectedNameIdx(0); }
     onApplyTags(result.tags); flash(setAppliedTags);
-    if (result.hooks[0]) { onApplyHook(result.hooks[0].text); setSelectedHookIdx(0); }
+    const ev = result.hooks.find(h => h.slot === 'event_field');
+    if (ev) { onApplyHook(ev.text); setHookApplied(true); }
   };
 
   // ── Shared styles ──────────────────────────────────────────────────────────
@@ -545,57 +557,94 @@ export default function NaverSEOWorkflow({
                 );
               })()}
 
-              {/* Step 5: Hook phrases */}
+              {/* Step 5: Hook phrases — HOOK-2 2-slot (이벤트필드용 + 상세페이지용) */}
               {(() => {
                 const s = STEP_META.hooks;
-                const Icon = s.icon;
+                const eventHook = result.hooks.find(h => h.slot === 'event_field');
+                const detailHooks = result.hooks.filter(h => h.slot === 'detail');
                 return (
                   <div style={{ background: s.bg, border: `1.5px solid ${s.border}`, borderRadius: 12, padding: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                      <Icon size={12} style={{ color: s.color }} />
-                      <span style={{ fontSize: 12, fontWeight: 800, color: s.color }}>훅문구 3가지 스타일</span>
-                      <span style={{ fontSize: 10, color: '#6b7280', marginLeft: 'auto' }}>하나 선택 후 적용</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                      <Zap size={12} style={{ color: s.color }} />
+                      <span style={{ fontSize: 12, fontWeight: 800, color: s.color }}>훅문구 (노출 위치별)</span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {result.hooks.map((hook, idx) => {
-                        const isSelected = selectedHookIdx === idx;
-                        return (
-                          <div key={idx} style={{
-                            padding: '9px 10px', borderRadius: 9, background: '#fff',
-                            border: `1.5px solid ${isSelected ? '#16a34a' : s.border}`,
-                            transition: 'border-color 0.15s',
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-                                  <span style={{
-                                    fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
-                                    background: s.bg, color: s.color, border: `1px solid ${s.border}`,
-                                  }}>
-                                    {HOOK_TYPE_LABEL[hook.type]}
-                                  </span>
-                                  <span style={{
-                                    fontSize: 10, fontWeight: 700,
-                                    color: hook.text.length <= 100 ? '#16a34a' : '#dc2626',
-                                  }}>
-                                    {hook.text.length}/100자
-                                  </span>
-                                </div>
-                                <p style={{ fontSize: 12, color: '#1A1A1A', margin: 0, lineHeight: 1.5 }}>{hook.text}</p>
-                              </div>
-                              <button onClick={() => handleApplyHook(idx)} style={{
-                                ...applyBtn(isSelected, s.color),
-                                background: isSelected ? '#16a34a' : '#f3f4f6',
-                                color: isSelected ? '#fff' : '#374151',
-                                flexShrink: 0,
-                              }}>
-                                {isSelected ? <><Check size={10} /> 선택됨</> : '적용'}
-                              </button>
+
+                    {/* 이벤트필드용 — 1개, 적용 */}
+                    {eventHook && (
+                      <div style={{ marginBottom: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                          <Megaphone size={11} style={{ color: s.color }} />
+                          <span style={{ fontSize: 11, fontWeight: 800, color: '#1A1A1A' }}>이벤트필드용</span>
+                          <span style={{ fontSize: 9.5, color: '#6b7280' }}>상품명 하단 혜택문구 · 수치 혜택</span>
+                        </div>
+                        <div style={{ padding: '9px 10px', borderRadius: 9, background: '#fff', border: `1.5px solid ${hookApplied ? '#16a34a' : s.border}` }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ fontSize: 9.5, fontWeight: 700, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>{eventHook.text.length}자</span>
+                              <p style={{ fontSize: 12, color: '#1A1A1A', margin: '3px 0 0', lineHeight: 1.5 }}>{eventHook.text}</p>
                             </div>
+                            <button onClick={() => handleApplyEventHook(eventHook.text)} style={{
+                              ...applyBtn(hookApplied, s.color),
+                              background: hookApplied ? '#16a34a' : '#f3f4f6',
+                              color: hookApplied ? '#fff' : '#374151', flexShrink: 0,
+                            }}>
+                              {hookApplied ? <><Check size={10} /> 적용됨</> : '적용'}
+                            </button>
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 상세페이지용 — 3종 톤, headline+sub, 복사 */}
+                    {detailHooks.length > 0 && (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                          <FileText size={11} style={{ color: s.color }} />
+                          <span style={{ fontSize: 11, fontWeight: 800, color: '#1A1A1A' }}>상세페이지용</span>
+                          <span style={{ fontSize: 9.5, color: '#6b7280' }}>헤드라인 + 서브카피 · 복사해 온실 아틀리에에 사용</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {detailHooks.map((hook, idx) => {
+                            const key = `detail-${idx}`;
+                            const copied = copiedKey === key;
+                            const hl = hook.headline ?? '';
+                            const sub = hook.sub ?? '';
+                            return (
+                              <div key={key} style={{ padding: '9px 10px', borderRadius: 9, background: '#fff', border: `1.5px solid ${s.border}` }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4, flexWrap: 'wrap' }}>
+                                      <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
+                                        {hook.tone ? HOOK_TONE_LABEL[hook.tone] : '상세'}
+                                      </span>
+                                      {hl && (
+                                        <span style={{ fontSize: 9.5, fontWeight: 700, color: hl.length <= 15 ? '#16a34a' : '#d97706', fontVariantNumeric: 'tabular-nums' }}>
+                                          제목 {hl.length}/15
+                                        </span>
+                                      )}
+                                      {sub && (
+                                        <span style={{ fontSize: 9.5, fontWeight: 700, color: sub.length >= 40 && sub.length <= 60 ? '#16a34a' : '#d97706', fontVariantNumeric: 'tabular-nums' }}>
+                                          본문 {sub.length}자
+                                        </span>
+                                      )}
+                                    </div>
+                                    {hl && <p style={{ fontSize: 12.5, fontWeight: 700, color: '#1A1A1A', margin: 0, lineHeight: 1.45 }}>{hl}</p>}
+                                    {sub && <p style={{ fontSize: 11.5, color: '#555', margin: '2px 0 0', lineHeight: 1.5 }}>{sub}</p>}
+                                  </div>
+                                  <button onClick={() => handleCopyDetail(hook.text, key)} style={{
+                                    ...applyBtn(copied, s.color),
+                                    background: copied ? '#16a34a' : '#f3f4f6',
+                                    color: copied ? '#fff' : '#374151', flexShrink: 0,
+                                  }}>
+                                    {copied ? <><Check size={10} /> 복사됨</> : <><Copy size={10} /> 복사</>}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()}

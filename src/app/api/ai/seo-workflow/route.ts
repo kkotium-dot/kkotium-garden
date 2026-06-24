@@ -9,6 +9,69 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { callGroq, GROQ_MODEL } from '@/lib/ai/groq';
+import bannedData from '@/lib/seo/banned-words.ko.json';
+
+// HOOK-2 (#151/#62): reuse the shared product-name banned list as the hook
+// 과장/홍보어 filter — but KEEP benefit words, which are legitimate on the
+// event field / detail page (they are only banned in the product NAME).
+const HOOK_BENEFIT_WHITELIST = new Set(['무료배송', '사은품', '적립', '할인쿠폰']);
+const HOOK_EXAGGERATION: string[] = ((bannedData as { banned?: string[] }).banned ?? [])
+  .filter((w) => !HOOK_BENEFIT_WHITELIST.has(w))
+  .sort((a, b) => b.length - a.length); // strip longer phrases first (초특가 before 특가)
+
+const DECORATIVE_CHARS = /[★☆●○◇◆■□▶◀▲▼※♥♡♠♣✓✔➤➜»«§¶]/g;
+const CONTROL_CHARS = /[\u0000-\u001F\u007F]/g;
+
+// event_field (혜택형): drop decorative symbols + control chars, collapse space.
+function cleanEventField(s: string): string {
+  return s.replace(DECORATIVE_CHARS, '').replace(CONTROL_CHARS, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+}
+
+// detail copy: strip 과장/홍보어 (banned minus benefit whitelist) deterministically.
+function stripExaggeration(s: string): string {
+  let out = s.replace(CONTROL_CHARS, ' ');
+  for (const w of HOOK_EXAGGERATION) {
+    if (!w) continue;
+    out = out.split(w).join(' ');
+  }
+  return out.replace(/\s+/g, ' ').trim();
+}
+
+// Parse the new 2-slot hooks shape ({event_field, detail[]}) with filters, and
+// gracefully fall back to the legacy array shape if the model drifts.
+function normalizeHooks(parsedHooks: unknown): HookVariant[] {
+  const out: HookVariant[] = [];
+  const VALID_TONES = ['benefit', 'emotion', 'trust'];
+
+  if (parsedHooks && typeof parsedHooks === 'object' && !Array.isArray(parsedHooks)) {
+    const ph = parsedHooks as Record<string, unknown>;
+    if (typeof ph.event_field === 'string') {
+      const ev = cleanEventField(ph.event_field);
+      if (ev) out.push({ slot: 'event_field', text: ev });
+    }
+    const details = Array.isArray(ph.detail) ? ph.detail : [];
+    for (const d of details) {
+      const item = (d ?? {}) as Record<string, unknown>;
+      const tone = (VALID_TONES.includes(item.tone as string) ? item.tone : 'benefit') as HookVariant['tone'];
+      const headline = stripExaggeration(String(item.headline ?? '')).slice(0, 15);
+      const sub = stripExaggeration(String(item.sub ?? '')).slice(0, 80);
+      if (!headline && !sub) continue;
+      out.push({ slot: 'detail', tone, headline, sub, text: [headline, sub].filter(Boolean).join(' — ') });
+      if (out.filter(h => h.slot === 'detail').length >= 3) break;
+    }
+    return out;
+  }
+
+  // Legacy fallback: a flat array of { text } — treat each as a detail/benefit.
+  if (Array.isArray(parsedHooks)) {
+    for (const h of parsedHooks.slice(0, 3)) {
+      const item = (h ?? {}) as Record<string, unknown>;
+      const text = stripExaggeration(String(item.text ?? '')).slice(0, 100);
+      if (text) out.push({ slot: 'detail', tone: 'benefit', text });
+    }
+  }
+  return out;
+}
 
 
 export const dynamic = 'force-dynamic';
@@ -34,8 +97,14 @@ interface ProductNameVariant {
   strategy: string;
 }
 
+// HOOK-2: hooks are split by exposure slot. event_field = the Naver event-field
+// benefit line (applied to the hook field); detail = detail-page headline+sub by
+// tone (copied into 온실 아틀리에). text = combined form (keeps onApplyHook compat).
 interface HookVariant {
-  type: 'price' | 'emotion' | 'feature';
+  slot: 'event_field' | 'detail';
+  tone?: 'benefit' | 'emotion' | 'trust';
+  headline?: string;
+  sub?: string;
   text: string;
 }
 
@@ -180,11 +249,14 @@ ${NAVER_CATEGORY_HINT}
     { "type": "emotion", "name": "emotion-focused name 30-50 chars in Korean", "strategy": "quality/lifestyle" }
   ],
   "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10"],
-  "hooks": [
-    { "type": "price",   "text": "benefit hook under 100 chars in Korean" },
-    { "type": "emotion", "text": "emotion hook under 100 chars in Korean" },
-    { "type": "feature", "text": "feature hook under 100 chars in Korean" }
-  ]
+  "hooks": {
+    "event_field": "ONE concrete numeric-benefit line for the Naver event field (e.g. 2만원 이상 무료배송 / 2개 구매 시 리필 1개 증정 / 신한카드 6개월 무이자). Korean, <= 40 chars. NO decorative symbols, NO abstract promo, NO 과장/최상급.",
+    "detail": [
+      { "tone": "benefit", "headline": "benefit headline <= 15 chars Korean", "sub": "benefit subcopy — a FULL 40-60 char Korean sentence with a concrete, specific benefit (e.g. 은은한 향이 2개월간 지속되고 흘림 없는 차량 전용 설계로 편리해요)" },
+      { "tone": "emotion", "headline": "emotion headline <= 15 chars Korean", "sub": "emotion subcopy — a FULL 40-60 char Korean sentence painting a scene/feeling" },
+      { "tone": "trust",   "headline": "trust headline <= 15 chars Korean",   "sub": "trust subcopy — a FULL 40-60 char Korean sentence about quality/verification/material" }
+    ]
+  }
 }
 
 [Rules - Naver 2026 SEO]
@@ -192,7 +264,8 @@ ${NAVER_CATEGORY_HINT}
 - keywords: 7-10, high search volume, low competition, no spaces
 - productNames: 3 names each 30-50 chars Korean, no duplicate words 3+ times, no discount/event/free-shipping/coupon words in name
 - tags: exactly 10, max 10 chars each, no duplicates, product-related only
-- hooks: 3 hooks each under 100 chars Korean
+- hooks.event_field: ONE line, MUST contain a concrete numeric benefit (free-shipping threshold / gift / installment / points). NO abstract promo, NO decorative symbols, NO 과장/최상급. <= 40 chars.
+- hooks.detail: EXACTLY 3 items (tone benefit|emotion|trust). headline <= 15 chars. sub MUST be a complete Korean sentence of 40-60 chars (NOT shorter — add specific concrete detail to reach 40-60). Tone by price tier: 저가/실용 → 가성비·대용량·실용 / 고가/프리미엄 → 향·디자인·선물·품질. NO 과장/최상급/저품질 promo words (최고/최저가/1위/정품 등).
 
 JSON only:`;
 }
@@ -290,20 +363,8 @@ function normalize(raw: string, fallbackPath: string): Omit<SEOWorkflowResponse,
     .filter((t) => t.length >= 1 && t.length <= 10)
     .slice(0, 10);
 
-  // Normalize hooks
-  const VALID_HOOK_TYPES: HookVariant['type'][] = ['price', 'emotion', 'feature'];
-  const hooks: HookVariant[] = (Array.isArray(parsed.hooks) ? parsed.hooks : [])
-    .map((h: unknown) => {
-      const item = h as Record<string, unknown>;
-      return {
-        type: (VALID_HOOK_TYPES.includes(item.type as HookVariant['type'])
-          ? item.type
-          : 'price') as HookVariant['type'],
-        text: String(item.text ?? '').trim().slice(0, 100),
-      };
-    })
-    .filter(h => h.text.length > 0)
-    .slice(0, 3);
+  // Normalize hooks (HOOK-2: event_field + detail[3 tones])
+  const hooks = normalizeHooks(parsed.hooks);
 
   return { category, keywords, productNames, tags, hooks };
 }
