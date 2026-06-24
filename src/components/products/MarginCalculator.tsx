@@ -29,6 +29,8 @@ interface MarginCalculatorProps {
   onSupplierPriceChange: (price: number) => void;
   onSalePriceChange: (price: number) => void;
   onInstantDiscountChange?: (discount: number) => void;
+  // DISCOUNT-UNIT: round-trip the unit back to the form (which holds '%'|'won').
+  onDiscountUnitChange?: (unit: '%' | 'won') => void;
   onCategoryChange?: (cat: { code: string; fullPath: string }) => void;
 }
 
@@ -36,6 +38,9 @@ interface LocalState {
   supplierPrice: number;
   salePrice: number;
   instantDiscount: number;
+  // DISCOUNT-UNIT: how instantDiscount is interpreted — a flat won amount or a
+  // percent of salePrice (Naver-style). Internal 'percent'; prop uses '%'.
+  discountUnit: 'won' | 'percent';
   shippingFee: number;
   packagingCost: number;
   returnRiskRate: number;
@@ -49,6 +54,7 @@ interface LocalState {
 
 interface CostBreakdown {
   effectivePrice: number;
+  discountAmount: number;  // DISCOUNT-UNIT: resolved won amount actually deducted
   naverFee: number;
   naverFeeRate: number;
   orderMgmtFee: number;
@@ -72,6 +78,7 @@ const DEFAULTS: LocalState = {
   supplierPrice: 0,
   salePrice: 0,
   instantDiscount: 0,
+  discountUnit: 'won',
   shippingFee: 0,
   packagingCost: 0,
   returnRiskRate: 1,
@@ -268,12 +275,14 @@ export function MarginCalculator({
   supplierPrice: extSupplier,
   salePrice: extSale,
   instantDiscount: extDiscount = 0,
+  discountUnit: extDiscountUnit = 'won',
   shippingFee: extShipping = 0,
   categoryPath: extCatPath,
   categoryCode: extCatCode,
   onSupplierPriceChange,
   onSalePriceChange,
   onInstantDiscountChange,
+  onDiscountUnitChange,
   onCategoryChange,
 }: MarginCalculatorProps) {
   const [local, setLocal] = useState<LocalState>({
@@ -281,6 +290,7 @@ export function MarginCalculator({
     supplierPrice: extSupplier,
     salePrice: extSale,
     instantDiscount: extDiscount,
+    discountUnit: extDiscountUnit === '%' ? 'percent' : 'won',
     shippingFee: extShipping,
   });
   const [selectedCategory, setSelectedCategory] = useState(extCatPath || '');
@@ -289,7 +299,7 @@ export function MarginCalculator({
   const [showDetail, setShowDetail] = useState(false);
   const [isIndependent, setIsIndependent] = useState(false);
 
-  const prevExtRef = useRef({ extSupplier, extSale, extDiscount, extShipping, extCatPath, extCatCode });
+  const prevExtRef = useRef({ extSupplier, extSale, extDiscount, extDiscountUnit, extShipping, extCatPath, extCatCode });
 
   // Auto-sync from ProductForm
   useEffect(() => {
@@ -299,6 +309,7 @@ export function MarginCalculator({
       prev.extSupplier !== extSupplier ||
       prev.extSale !== extSale ||
       prev.extDiscount !== extDiscount ||
+      prev.extDiscountUnit !== extDiscountUnit ||
       prev.extShipping !== extShipping;
     if (changed) {
       setLocal(s => ({
@@ -306,13 +317,14 @@ export function MarginCalculator({
         supplierPrice: extSupplier,
         salePrice: extSale,
         instantDiscount: extDiscount,
+        discountUnit: extDiscountUnit === '%' ? 'percent' : 'won',
         shippingFee: extShipping,
       }));
     }
     if (extCatPath && prev.extCatPath !== extCatPath) setSelectedCategory(extCatPath);
     if (extCatCode && prev.extCatCode !== extCatCode) setSelectedCategoryCode(extCatCode);
-    prevExtRef.current = { extSupplier, extSale, extDiscount, extShipping, extCatPath, extCatCode };
-  }, [extSupplier, extSale, extDiscount, extShipping, extCatPath, extCatCode, isIndependent]);
+    prevExtRef.current = { extSupplier, extSale, extDiscount, extDiscountUnit, extShipping, extCatPath, extCatCode };
+  }, [extSupplier, extSale, extDiscount, extDiscountUnit, extShipping, extCatPath, extCatCode, isIndependent]);
 
   // When category code changes from ProductForm, resolve d1 and apply recommended margin
   useEffect(() => {
@@ -348,10 +360,19 @@ export function MarginCalculator({
 
   // Core calculation
   const breakdown = useMemo<CostBreakdown>(() => {
-    const effectivePrice = local.salePrice - local.instantDiscount;
+    // DISCOUNT-UNIT: resolve the won amount actually deducted. percent =
+    // floor(salePrice * clamp(v,0,100)/100); won = clamp(v,0,salePrice). All
+    // downstream cost/margin math runs off effectivePrice, so the margin
+    // recalculates automatically.
+    const v = local.instantDiscount;
+    const discountAmount = local.discountUnit === 'percent'
+      ? Math.floor(local.salePrice * Math.min(Math.max(v, 0), 100) / 100)
+      : Math.min(Math.max(v, 0), local.salePrice);
+    const effectivePrice = Math.max(0, local.salePrice - discountAmount);
     if (effectivePrice <= 0 || local.supplierPrice <= 0) {
       return {
-        effectivePrice: Math.max(0, effectivePrice),
+        effectivePrice,
+        discountAmount,
         naverFee: 0, naverFeeRate: effectiveFeeRate,
         orderMgmtFee: 0, salesFee: 0,
         shippingCost: 0, packagingCost: 0,
@@ -375,6 +396,7 @@ export function MarginCalculator({
 
     return {
       effectivePrice,
+      discountAmount,
       naverFee,
       naverFeeRate: effectiveFeeRate,
       orderMgmtFee,
@@ -421,11 +443,29 @@ export function MarginCalculator({
       supplierPrice: extSupplier,
       salePrice: extSale,
       instantDiscount: extDiscount,
+      discountUnit: extDiscountUnit === '%' ? 'percent' : 'won',
       shippingFee: extShipping,
     }));
     if (extCatPath) setSelectedCategory(extCatPath);
     setIsIndependent(false);
-  }, [extSupplier, extSale, extDiscount, extShipping, extCatPath]);
+  }, [extSupplier, extSale, extDiscount, extDiscountUnit, extShipping, extCatPath]);
+
+  // DISCOUNT-UNIT: toggle won <-> percent. Clamp the value to 0..100 when
+  // switching to percent, and round-trip the unit (+ any clamped value) to the
+  // form so both discount UIs stay in sync.
+  const setDiscountUnit = useCallback((unit: 'won' | 'percent') => {
+    // Compute the clamped value from the current render's state, then update
+    // local + notify the form OUTSIDE the setState updater (calling a parent
+    // setter inside the updater = setState-during-render warning).
+    const nextDiscount = unit === 'percent'
+      ? Math.min(Math.max(local.instantDiscount, 0), 100)
+      : local.instantDiscount;
+    setLocal(s => ({ ...s, discountUnit: unit, instantDiscount: nextDiscount }));
+    if (!isIndependent) {
+      onDiscountUnitChange?.(unit === 'percent' ? '%' : 'won');
+      if (nextDiscount !== local.instantDiscount) onInstantDiscountChange?.(nextDiscount);
+    }
+  }, [local.instantDiscount, isIndependent, onDiscountUnitChange, onInstantDiscountChange]);
 
   const applyRecommendedPrice = useCallback(() => {
     if (recommendedPrice > 0) {
@@ -592,30 +632,64 @@ export function MarginCalculator({
         />
       </div>
 
-      {/* Instant Discount */}
+      {/* Instant Discount — DISCOUNT-UNIT: 원/% selectable, Naver-style */}
       <div>
-        <label className="block text-xs font-medium text-gray-500 mb-0.5">즉시할인</label>
+        <label className="block text-xs font-medium text-gray-500 mb-1">즉시할인</label>
+        {/* 원/% segment toggle (reuses the channel-toggle style) */}
+        <div
+          role="radiogroup"
+          aria-label="할인 단위 선택"
+          className="inline-flex items-center gap-1 p-1 bg-gray-100 rounded-lg mb-1.5"
+        >
+          {([['won', '원'], ['percent', '%']] as const).map(([unit, lbl]) => (
+            <button
+              key={unit}
+              type="button"
+              role="radio"
+              aria-checked={local.discountUnit === unit}
+              onClick={() => setDiscountUnit(unit)}
+              className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-colors ${
+                local.discountUnit === unit
+                  ? 'bg-white text-pink-600 shadow-sm border border-pink-200'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {lbl}
+            </button>
+          ))}
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="relative">
             <input
               type="number"
+              inputMode="decimal"
               value={local.instantDiscount || ''}
               onChange={(e) => {
-                const v = parseFloat(e.target.value) || 0;
+                const raw = parseFloat(e.target.value) || 0;
+                // percent clamps to 0..100; won clamps to >= 0 (calc caps at salePrice)
+                const v = local.discountUnit === 'percent'
+                  ? Math.min(Math.max(raw, 0), 100)
+                  : Math.max(raw, 0);
                 updateLocal({ instantDiscount: v });
                 pushToForm('instantDiscount', v);
               }}
+              max={local.discountUnit === 'percent' ? 100 : undefined}
               className="w-full px-3 py-2 pr-8 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+              style={{ fontVariantNumeric: 'tabular-nums' }}
               placeholder="0"
             />
-            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">원</span>
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+              {local.discountUnit === 'percent' ? '%' : '원'}
+            </span>
           </div>
-          <div className="flex items-center gap-1 text-sm text-gray-600">
+          <div className="flex items-center gap-1 text-sm text-gray-600" style={{ fontVariantNumeric: 'tabular-nums' }}>
             <span className="text-gray-400">→</span>
             <span className="font-medium">{breakdown.effectivePrice.toLocaleString()}원</span>
-            {local.salePrice > 0 && local.instantDiscount > 0 && (
+            {local.salePrice > 0 && breakdown.discountAmount > 0 && (
               <span className="text-xs px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full font-medium">
-                {Math.round((local.instantDiscount / local.salePrice) * 100)}%
+                {local.discountUnit === 'percent'
+                  ? `−${breakdown.discountAmount.toLocaleString()}원`
+                  : `${Math.round((breakdown.discountAmount / local.salePrice) * 100)}%`}
               </span>
             )}
           </div>

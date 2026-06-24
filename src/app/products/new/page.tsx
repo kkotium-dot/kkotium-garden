@@ -3997,13 +3997,7 @@ const handleGenerate = async () => {
             <MarginCalculator
               supplierPrice={Number(supplierPrice) || 0}
               salePrice={Number(price) || 0}
-              instantDiscount={
-                discountValue && Number(discountValue) > 0 && Number(price) > 0
-                  ? discountUnit === '%'
-                    ? Math.round(Number(price) * Number(discountValue) / 100)
-                    : Number(discountValue)
-                  : 0
-              }
+              instantDiscount={Number(discountValue) || 0}
               discountUnit={discountUnit === '%' ? '%' : 'won'}
               shippingFee={Number(basicDeliveryFee) || 3000}
               categoryPath={
@@ -4015,6 +4009,7 @@ const handleGenerate = async () => {
               onInstantDiscountChange={v => {
                 setDiscountValue(String(v));
               }}
+              onDiscountUnitChange={u => setDiscountUnit(u === '%' ? '%' : '원')}
               onCategoryChange={cat => {
                 const found = NAVER_CATEGORIES_FULL.find(c => c.code === cat.code);
                 if (found) {
