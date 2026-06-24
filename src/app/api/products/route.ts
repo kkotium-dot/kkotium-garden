@@ -12,6 +12,7 @@ import { KKOTIUM_DEFAULTS } from '@/lib/naver/codes';
 import { generateUniqueSku } from '@/lib/sku-engine';
 import { mapCrawlOptions } from '@/lib/sources/crawl-option-mapper';
 import { parseDomeProductNo } from '@/lib/sources/parse-dome-no';
+import { sanitizeProductWrite } from '@/lib/product-write-fields';
 
 // Fire-and-forget: check honey score drop after product update
 
@@ -321,6 +322,13 @@ export async function POST(request: NextRequest) {
           // create previously dropped (DRAFT 88-field persistence gap). These all
           // map to real Product columns; arrays/null guarded to avoid Prisma 500.
           taxType: data.taxType ? String(data.taxType) : undefined,
+          // A/S fields the save form sends. asGuide is the legacy alias (a
+          // StoreSettings key); on a Product the A/S guidance is asInfo. Both
+          // have schema defaults, so undefined falls back to the default. (#150)
+          asInfo: (data.asInfo ?? data.asGuide) != null
+            ? String(data.asInfo ?? data.asGuide)
+            : undefined,
+          asPhone: data.asPhone != null ? String(data.asPhone) : undefined,
           description: data.description ? String(data.description) : null,
           keywords: Array.isArray(data.keywords) ? data.keywords : undefined,
           tags: Array.isArray(data.tags) ? data.tags : undefined,
@@ -359,26 +367,10 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT: 상품 수정
-// B-5: Product 모델에 없는 필드 (예: stock — 재고는 InventorySnapshot 시계열로 분리)
-// 가 spread 로 흘러 들어가면 Prisma "Unknown arg" 500 발생. 화이트리스트 + 안전 변환.
-const REJECT_KEYS = new Set([
-  'stock',         // 재고는 별도 모델 (InventorySnapshot)
-  'createdAt',     // @default(now()) — 갱신 금지
-  'updatedAt',     // @updatedAt — Prisma 자동
-  'supplier',      // relation accessor
-  'user',          // relation accessor
-  'orderItems',    // relation accessor
-  'naver_categories',
-  'origin_codes',
-  'shipping_templates',
-  'product_options',
-  'inventorySnapshots',
-  'lowStockAlerts',
-  'priceMovementAlerts',
-  'competitorSnapshots',
-  'diagnosis',
-]);
-
+// #150 (supersedes the old REJECT_KEYS denylist, B-5): any key not a real,
+// writable Product column (e.g. `stock`, relation accessors, or the legacy
+// `asGuide` which lives on StoreSettings) is stripped via the schema-derived
+// allowlist in sanitizeProductWrite — a stray key can no longer 500 the save.
 function coerceInt(value: unknown, fallback = 0): number {
   if (value === null || value === undefined || value === '') return fallback;
   const n = typeof value === 'number' ? value : parseInt(String(value), 10);
@@ -397,12 +389,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Strip unknown / read-only / relation fields before forwarding to Prisma.
-    const updateData: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(rawUpdate)) {
-      if (REJECT_KEYS.has(key)) continue;
-      updateData[key] = value;
-    }
+    // #150: restrict to real, writable Product columns (allowlist derived from
+    // the Prisma schema) and remap legacy aliases (asGuide -> asInfo) before
+    // forwarding to Prisma. Unknown keys are dropped, never forwarded.
+    const updateData = sanitizeProductWrite(rawUpdate);
 
     // ⭐ Status 대문자로 정규화
     if (typeof updateData.status === 'string') {
