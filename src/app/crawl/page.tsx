@@ -9,13 +9,13 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   Layers, Search, RefreshCw, ExternalLink, ArrowRight,
   Package, Download, X, CheckCircle, AlertCircle, Clock, History, TrendingUp, Tag,
-  Pencil, Trash2, RotateCcw,
+  Pencil, Trash2, RotateCcw, Play, Store, ArrowUp, ArrowDown, Rows3, Rows4,
 } from 'lucide-react';
-import { OverflowMenu } from '@/components/common';
+import { OverflowMenu, StatusBadge as StatusPill } from '@/components/common';
 import { calcHoneyScore, calcSourcingScore } from '@/lib/honey-score';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 import { getNaverFeeRateByD1, NAVER_DEFAULT_FEE_RATE } from '@/lib/naver-fee-rates-2026';
-import { calcPrefillSalePrice } from '@/lib/naver-margin-advisor';
+import { calcPrefillSalePrice, calcNetMargin } from '@/lib/naver-margin-advisor';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface CrawledOption {
@@ -597,6 +597,12 @@ function CrawlPageInner() {
   const [histSellerFilter, setHistSellerFilter] = useState<string>('all');
   const [sellerGroups, setSellerGroups] = useState<Record<string, string>>({});
   const [shelfUpdating, setShelfUpdating] = useState<Set<string>>(new Set());
+  // CRAWL-GRID-v2 (#132 layout only): sortable columns (default margin DESC) +
+  // density toggle. Pure presentation state — no data/handler rewiring.
+  const [histSort, setHistSort] = useState<{ key: 'margin'|'supplier_price'|'none'; dir: 'desc'|'asc' }>({ key: 'margin', dir: 'desc' });
+  const [histDensity, setHistDensity] = useState<'compact'|'comfortable'>('compact');
+  // Keyboard nav row cursor (j/k move, Enter fires smart action).
+  const [histCursor, setHistCursor] = useState<string | null>(null);
 
   const loadShelf = (filter = histFilter, seller = histSellerFilter) => {
     setLogsLoading(true);
@@ -619,6 +625,43 @@ function CrawlPageInner() {
   useEffect(() => {
     if (tab !== 'history') return;
     loadShelf();
+  }, [tab]);
+
+  // CRAWL-GRID-v2 keyboard nav (j/k move row cursor, Enter fires the focused
+  // row's smart action). DOM-driven so the action stays the single source of
+  // truth inside the row (no handler duplication, #132). Ignores typing fields.
+  useEffect(() => {
+    if (tab !== 'history') return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'j' && e.key !== 'k' && e.key !== 'Enter') return;
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t?.isContentEditable)) return;
+      const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-crawl-row]'));
+      if (rows.length === 0) return;
+      const ids = rows.map(r => r.getAttribute('data-crawl-row') || '');
+      if (e.key === 'Enter') {
+        setHistCursor(cur => {
+          if (!cur) return cur;
+          const btn = document.querySelector<HTMLButtonElement>(`[data-smart-action="${CSS.escape(cur)}"] button`);
+          btn?.click();
+          return cur;
+        });
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      setHistCursor(cur => {
+        const idx = cur ? ids.indexOf(cur) : -1;
+        let next = e.key === 'j' ? idx + 1 : idx - 1;
+        if (next < 0) next = 0;
+        if (next > ids.length - 1) next = ids.length - 1;
+        rows[next]?.scrollIntoView({ block: 'nearest' });
+        return ids[next];
+      });
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [tab]);
 
   const updateSourcingStatus = async (id: string, status: string, productId?: string) => {
@@ -1559,26 +1602,49 @@ function CrawlPageInner() {
                   <span style={{ fontSize:13, fontWeight:900, color:'#e62310' }}>꿀통 꽃수레</span>
                   <span style={{ fontSize:11, color:'#aaa' }}>지금 꽃수레에 담긴 예쁜 상품 {logs.length}개</span>
                 </div>
-                {/* Status filter */}
+                {/* Status filter — CRAWL-GRID-v2: live count badge per tab (folds
+                    in the removed stats box). Counts derive from `logs` so they
+                    reflect the full shelf, not the search-filtered subset. */}
                 <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
-                  {([
-                    ['all','전체'],
-                    ['SOURCED','소싱완료'],
-                    ['PENDING','등록대기'],
-                    ['REGISTERED','등록완료'],
-                    ['HOLD','보류'],
-                    ['single','단건'],
-                    ['bulk','대량'],
-                  ] as [string,string][]).map(([k,l]) => (
-                    <button key={k}
-                      onClick={() => { setHistFilter(k as typeof histFilter); loadShelf(k as typeof histFilter, histSellerFilter); }}
-                      style={{ padding:'4px 10px', borderRadius:99, fontSize:11, fontWeight:600,
-                        border: histFilter===k ? '1.5px solid #e62310' : '1.5px solid #F8DCE5',
-                        background: histFilter===k ? '#FFF0EF' : '#fff',
-                        color: histFilter===k ? '#e62310' : '#888', cursor:'pointer' }}>
-                      {l}
-                    </button>
-                  ))}
+                  {(() => {
+                    const counts: Record<string, number> = {
+                      all: logs.length,
+                      SOURCED: logs.filter(l => l.sourcing_status === 'SOURCED').length,
+                      PENDING: logs.filter(l => l.sourcing_status === 'PENDING').length,
+                      REGISTERED: logs.filter(l => l.sourcing_status === 'REGISTERED').length,
+                      HOLD: logs.filter(l => l.sourcing_status === 'HOLD').length,
+                      single: logs.filter(l => l.source === 'single').length,
+                      bulk: logs.filter(l => l.source === 'bulk').length,
+                    };
+                    return ([
+                      ['all','전체'],
+                      ['SOURCED','소싱완료'],
+                      ['PENDING','등록대기'],
+                      ['REGISTERED','등록완료'],
+                      ['HOLD','보류'],
+                      ['single','단건'],
+                      ['bulk','대량'],
+                    ] as [string,string][]).map(([k,l]) => {
+                      const active = histFilter === k;
+                      const cnt = counts[k] ?? 0;
+                      return (
+                        <button key={k}
+                          onClick={() => { setHistFilter(k as typeof histFilter); loadShelf(k as typeof histFilter, histSellerFilter); }}
+                          style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:99, fontSize:11, fontWeight:600,
+                            border: active ? '1.5px solid #e62310' : '1.5px solid var(--border-neutral)',
+                            background: active ? '#FFF0EF' : '#fff',
+                            color: active ? '#e62310' : '#888', cursor:'pointer' }}>
+                          {l}
+                          <span style={{ fontSize:10, fontWeight:800, lineHeight:1, padding:'2px 6px', borderRadius:99,
+                            fontVariantNumeric:'tabular-nums',
+                            background: active ? '#e62310' : '#F1EEE7',
+                            color: active ? '#fff' : '#999' }}>
+                            {cnt}
+                          </span>
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
                 <div style={{ flex:1 }} />
                 {/* Seller filter */}
@@ -1604,30 +1670,12 @@ function CrawlPageInner() {
               </div>
             </div>
 
-            {/* Stats row */}
-            {!logsLoading && logs.length > 0 && (() => {
-              const sourced     = logs.filter(l=>l.sourcing_status==='SOURCED').length;
-              const pending     = logs.filter(l=>l.sourcing_status==='PENDING').length;
-              const registered  = logs.filter(l=>l.sourcing_status==='REGISTERED').length;
-              return (
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', gap:10 }}>
-                  {[
-                    { label:'소싱완료', value:sourced,  color:'#0369A1', bg:'#EFF8FF', border:'#BAE6FD' },
-                    { label:'등록대기', value:pending,  color:'#a16207', bg:'#fffbeb', border:'#fde68a' },
-                    { label:'등록완료', value:registered, color:'#15803d', bg:'#F0FDF4', border:'#86efac' },
-                  ].map(({ label, value, color, bg, border }) => (
-                    <div key={label} style={{ background:bg, border:`1.5px solid ${border}`, borderRadius:14, padding:'12px 16px', textAlign:'center' }}>
-                      <p style={{ fontSize:11, color:'#888', margin:'0 0 4px' }}>{label}</p>
-                      <p style={{ fontSize:26, fontWeight:900, color, margin:0 }}>{value}</p>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
+            {/* CRAWL-GRID-v2: stats box removed — counts folded into the filter
+                tab badges above (reclaimed vertical space = more grid rows). */}
 
-            {/* Bulk action bar */}
+            {/* Bulk action bar — sticky so it stays visible while scrolling the grid */}
             {histSelected.size > 0 && (
-              <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'#FFF0EF', border:'1.5px solid #FFB3CE', borderRadius:12 }}>
+              <div style={{ position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'#FFF0EF', border:'1.5px solid #FFB3CE', borderRadius:12, boxShadow:'0 4px 14px rgba(230,35,16,0.10)' }}>
                 <span style={{ fontSize:13, fontWeight:700, color:'#e62310' }}>{histSelected.size}개 선택됨</span>
                 {batchResult && (
                   <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:99,
@@ -1739,14 +1787,6 @@ function CrawlPageInner() {
               const allIds = filtered.filter(l=>l.sourcing_status!=='REGISTERED').map(l=>l.id);
               const allChecked = allIds.length > 0 && allIds.every(id => histSelected.has(id));
 
-              // Status style helpers
-              const statusStyle = (s: string) => ({
-                SOURCED:    { bg:'#EFF8FF', color:'#0369A1', border:'#BAE6FD', label:'소싱완료' },
-                PENDING:    { bg:'#fffbeb', color:'#92400e', border:'#fde68a', label:'등록대기' },
-                REGISTERED: { bg:'#F0FDF4', color:'#15803d', border:'#86efac', label:'등록완료' },
-                HOLD:       { bg:'#F3F4F6', color:'#6b7280', border:'#d1d5db', label:'보류' },
-              }[s] ?? { bg:'#F5F5F5', color:'#888', border:'#e5e5e5', label: s });
-
               // C-CRAWL-STATE: reversible reclassify targets. Operator can move an
               // item to ANY state (forward or back) — sourcing_status is free text.
               const RECLASSIFY_OPTIONS: [string, string][] = [
@@ -1756,177 +1796,277 @@ function CrawlPageInner() {
                 ['HOLD', '보류'],
               ];
 
+              // CRAWL-GRID-v2 — ROI-centric margin (logic unchanged #132): same
+              // formula used by the prefill/seed path, computed per row for the
+              // gauge + the default sort. null = no supplier price (sorts last).
+              const marginOf = (log: SourcingItem): number | null => {
+                if (!(log.supplier_price > 0)) return null;
+                const estSale = calcPrefillSalePrice(log.supplier_price, log.ship_fee);
+                return calcNetMargin(log.supplier_price, estSale, log.ship_fee ?? 3000, 0.057, 2);
+              };
+              // Sorted view. null-margin rows always sink to the bottom regardless
+              // of direction. 'none' preserves the API order.
+              const sorted = [...filtered].sort((a, b) => {
+                if (histSort.key === 'none') return 0;
+                const sign = histSort.dir === 'desc' ? -1 : 1;
+                if (histSort.key === 'supplier_price') {
+                  return sign * ((a.supplier_price || 0) - (b.supplier_price || 0));
+                }
+                // margin — nulls last
+                const ma = marginOf(a); const mb = marginOf(b);
+                if (ma === null && mb === null) return 0;
+                if (ma === null) return 1;
+                if (mb === null) return -1;
+                return sign * (ma - mb);
+              });
+
+              const toggleSort = (key: 'margin'|'supplier_price') => setHistSort(prev =>
+                prev.key === key ? { key, dir: prev.dir === 'desc' ? 'asc' : 'desc' } : { key, dir: 'desc' }
+              );
+              const sortArrow = (key: 'margin'|'supplier_price') =>
+                histSort.key !== key ? null : (histSort.dir === 'desc'
+                  ? <ArrowDown size={11} style={{ verticalAlign:'-1px' }} />
+                  : <ArrowUp size={11} style={{ verticalAlign:'-1px' }} />);
+
+              // Margin gauge color tiers (≥40 = HIGHLIGHT strong green/bold).
+              const marginTier = (m: number) =>
+                m >= 40 ? { color:'#15803d', fill:'#16a34a', bold:true }
+                : m >= 20 ? { color:'#15803d', fill:'#22c55e', bold:false }
+                : m >= 10 ? { color:'#a16207', fill:'#f59e0b', bold:false }
+                : { color:'#b91c1c', fill:'#ef4444', bold:false };
+
+              // StatusPill tone map (shared semantic badge — optional secondary signal).
+              const toneOf = (s: string): 'brand'|'warning'|'success'|'neutral' =>
+                s === 'SOURCED' ? 'brand' : s === 'PENDING' ? 'warning' : s === 'REGISTERED' ? 'success' : 'neutral';
+              const statusLabel = (s: string) =>
+                ({ SOURCED:'소싱완료', PENDING:'등록대기', REGISTERED:'등록완료', HOLD:'보류' } as Record<string,string>)[s] ?? s;
+
+              // Density-driven vertical padding (compact ~7px / comfortable ~13px).
+              const rowPadY = histDensity === 'compact' ? 7 : 13;
+
+              // Shared prefill→router.push body (logic unchanged #132, copied
+              // verbatim from the original 등록 시작 button). targetStatus lets the
+              // PENDING "continue work" path skip the extra status write.
+              const goSeed = (log: SourcingItem, opts?: { autoSeo?: boolean }) => {
+                updateSourcingStatus(log.id, 'PENDING');
+                const san = (s: string) => (s||'').replace(/[\x00-\x1F\x7F]/g,' ').replace(/"/g,"'").trim();
+                const logImgs = Array.isArray(log.images) ? log.images : [];
+                const logOpts = Array.isArray(log.options) ? log.options : [];
+                const prefill = {
+                  productName: san(log.name||''),
+                  supplierPrice: log.supplier_price,
+                  salePrice: calcPrefillSalePrice(log.supplier_price, log.ship_fee),
+                  mainImage: (logImgs[0] as string) || '',
+                  additionalImgs: logImgs.slice(1).join('|'),
+                  options: logOpts.map((o: unknown) => san(typeof o === 'string' ? o : (o as {name:string}).name || '')).filter(Boolean),
+                  crawlSellerId: log.seller_id,
+                  crawlSellerNick: log.seller_nick,
+                  crawlShipFee: log.ship_fee ?? 3000,
+                  crawlCanMerge: log.can_merge,
+                  crawlInventory: log.inventory,
+                  crawlCategoryCode: log.category_code,
+                  ...(log.category_name ? { catD1: log.category_name.split('>')[0]?.trim() } : {}),
+                };
+                const j = JSON.stringify(prefill);
+                const b2 = new TextEncoder().encode(j);
+                let bin = ''; b2.forEach((x:number)=>{ bin += String.fromCharCode(x); });
+                // URL-safe base64: standard "+" gets eaten by URLSearchParams (form-encoded space)
+                const safe = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_');
+                router.push(`/products/new?prefill=${safe}${opts?.autoSeo ? '&autoSeo=1' : ''}`);
+              };
+
+              // Context-aware smart action (one per row). Returns the rendered button.
+              const smartAction = (log: SourcingItem, isUpdating: boolean) => {
+                if (log.sourcing_status === 'REGISTERED') {
+                  // 스토어 보기 — link to the linked product when available, else disabled.
+                  const canView = !!log.product_id;
+                  return (
+                    <button disabled={!canView}
+                      onClick={() => { if (log.product_id) router.push(`/products/${log.product_id}`); }}
+                      style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'6px 12px', background:'#f5f5f5', color:'#888', border:'1px solid var(--border-neutral)', borderRadius:8, fontSize:11.5, fontWeight:700, cursor: canView?'pointer':'not-allowed', opacity: canView?1:0.6, whiteSpace:'nowrap' }}>
+                      <Store size={12}/> 스토어 보기
+                    </button>
+                  );
+                }
+                if (log.sourcing_status === 'PENDING') {
+                  // 이어서 작업 — continue work. Route to the edit page when a product
+                  // already exists, otherwise resume via the prefill→new path.
+                  return (
+                    <button disabled={isUpdating}
+                      onClick={() => { if (log.product_id) router.push(`/products/${log.product_id}/edit`); else goSeed(log); }}
+                      style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'6px 14px', background:'#e62310', color:'#fff', border:'none', borderRadius:8, fontSize:11.5, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+                      {isUpdating ? <RefreshCw size={11} className="animate-spin"/> : <ArrowRight size={11}/>}
+                      이어서 작업
+                    </button>
+                  );
+                }
+                // SOURCED (and any other) → black 씨앗심기 (runs the original 등록 시작 body)
+                return (
+                  <button disabled={isUpdating}
+                    onClick={() => goSeed(log)}
+                    style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'6px 14px', background:'#1A1A1A', color:'#fff', border:'none', borderRadius:8, fontSize:11.5, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+                    {isUpdating ? <RefreshCw size={11} className="animate-spin"/> : <Play size={11}/>}
+                    씨앗심기
+                  </button>
+                );
+              };
+
+              const GRID_COLS = '28px minmax(0,1fr) 110px 132px auto';
+
               return (
-                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                  {/* Select all bar */}
-                  <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 14px', background:'#FFF5F8', border:'1.5px solid #F8DCE5', borderRadius:10, fontSize:12, color:'#888' }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:0, background:'#fff', border:'1.5px solid var(--border-neutral)', borderRadius:14, overflow:'hidden' }}>
+                  {/* Toolbar: select-all + density toggle */}
+                  <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 14px', background:'#FBFAF7', borderBottom:'1px solid var(--border-neutral)', fontSize:12, color:'#888' }}>
                     <input type="checkbox" checked={allChecked}
                       onChange={() => setHistSelected(allChecked ? new Set() : new Set(allIds))}
                       style={{ width:14, height:14, accentColor:'#e62310', cursor:'pointer' }} />
-                    <span>전체 {filtered.length}개</span>
-                    <span style={{ marginLeft:4, color:'#e62310', fontWeight:600 }}>({logs.filter(l=>l.sourcing_status==='SOURCED').length}개 소싱완료 / {logs.filter(l=>l.sourcing_status==='PENDING').length}개 등록대기)</span>
+                    <span style={{ fontVariantNumeric:'tabular-nums' }}>전체 {sorted.length}개</span>
+                    <div style={{ flex:1 }} />
+                    {/* Density toggle */}
+                    <div style={{ display:'inline-flex', border:'1px solid var(--border-neutral)', borderRadius:8, overflow:'hidden' }}>
+                      <button onClick={() => setHistDensity('compact')} aria-label="조밀하게" title="조밀하게"
+                        style={{ display:'flex', alignItems:'center', gap:4, padding:'4px 9px', background: histDensity==='compact'?'#FFF0EF':'#fff', color: histDensity==='compact'?'#e62310':'#999', border:'none', borderRight:'1px solid var(--border-neutral)', cursor:'pointer', fontSize:11, fontWeight:600 }}>
+                        <Rows4 size={13}/> 조밀
+                      </button>
+                      <button onClick={() => setHistDensity('comfortable')} aria-label="여유롭게" title="여유롭게"
+                        style={{ display:'flex', alignItems:'center', gap:4, padding:'4px 9px', background: histDensity==='comfortable'?'#FFF0EF':'#fff', color: histDensity==='comfortable'?'#e62310':'#999', border:'none', cursor:'pointer', fontSize:11, fontWeight:600 }}>
+                        <Rows3 size={13}/> 여유
+                      </button>
+                    </div>
                   </div>
 
-                  {filtered.map(log => {
+                  {/* Column header row */}
+                  <div style={{ display:'grid', gridTemplateColumns:GRID_COLS, alignItems:'center', gap:10, padding:'7px 14px', background:'#FBFAF7', borderBottom:'1px solid var(--border-neutral)', fontSize:10.5, fontWeight:700, color:'#999', letterSpacing:'0.02em' }}>
+                    <span />
+                    <span>상품정보</span>
+                    <button onClick={() => toggleSort('supplier_price')}
+                      style={{ display:'inline-flex', alignItems:'center', justifyContent:'flex-end', gap:3, background:'none', border:'none', cursor:'pointer', font:'inherit', color: histSort.key==='supplier_price'?'#e62310':'#999', textAlign:'right' }}>
+                      도매가 {sortArrow('supplier_price')}
+                    </button>
+                    <button onClick={() => toggleSort('margin')}
+                      style={{ display:'inline-flex', alignItems:'center', gap:3, background:'none', border:'none', cursor:'pointer', font:'inherit', color: histSort.key==='margin'?'#e62310':'#999' }}>
+                      예상마진율 {sortArrow('margin')}
+                    </button>
+                    <span style={{ textAlign:'right' }}>액션</span>
+                  </div>
+
+                  {sorted.map(log => {
                     const isSel = histSelected.has(log.id);
                     const isUpdating = shelfUpdating.has(log.id);
-                    const ss = statusStyle(log.sourcing_status);
+                    const isCursor = histCursor === log.id;
                     const inv = Number(log.inventory ?? 0);
+                    const margin = marginOf(log);
+                    const imgs = Array.isArray(log.images) ? log.images : [];
+                    const thumb = imgs[0] as string | undefined;
+                    const opts = Array.isArray(log.options) ? log.options : [];
+                    const oos = opts.filter((o: unknown) => typeof o === 'object' && o !== null && (o as {qty:number}).qty === 0).length;
 
                     return (
-                      <div key={log.id} style={{
-                        background: log.sourcing_status === 'REGISTERED' ? '#FAFFFE' : isSel ? '#FFFBFC' : '#fff',
-                        border: isSel ? '1.5px solid #FFB3CE' : '1.5px solid #F8DCE5',
-                        borderRadius:14, padding:'14px 16px',
-                        opacity: log.sourcing_status === 'REGISTERED' ? 0.75 : 1,
-                      }}>
-                        {/* Row 1: checkbox + info + status + actions */}
-                        <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
-                          {/* C-CRAWL-STATE: checkbox unlocked for all statuses
-                              (incl. 등록완료) so REGISTERED items can be reselected
-                              for reclassify. */}
-                          <input type="checkbox" checked={isSel}
-                            onChange={() => toggleSel(log.id)}
-                            style={{ width:14, height:14, accentColor:'#e62310', cursor:'pointer', marginTop:3, flexShrink:0 }} />
+                      <div key={log.id}
+                        data-crawl-row={log.id}
+                        onMouseEnter={() => setHistCursor(log.id)}
+                        style={{
+                          display:'grid', gridTemplateColumns:GRID_COLS, alignItems:'center', gap:10,
+                          padding:`${rowPadY}px 14px`,
+                          borderBottom:'1px solid var(--border-neutral)',
+                          background: isSel ? '#FFFBFC' : isCursor ? '#FFF8FA' : log.sourcing_status === 'REGISTERED' ? '#FAFAF8' : '#fff',
+                          boxShadow: isSel ? 'inset 2px 0 0 #FFB3CE' : isCursor ? 'inset 2px 0 0 #FFD9E6' : 'none',
+                          opacity: log.sourcing_status === 'REGISTERED' ? 0.82 : 1,
+                        }}>
+                        {/* Col: checkbox — unlocked for all statuses (incl. 등록완료). */}
+                        <input type="checkbox" checked={isSel}
+                          onChange={() => toggleSel(log.id)}
+                          style={{ width:14, height:14, accentColor:'#e62310', cursor:'pointer' }} />
 
-                          {/* Thumbnail */}
-                          {(() => {
-                            const imgs = Array.isArray(log.images) ? log.images : [];
-                            const thumb = imgs[0] as string | undefined;
-                            return thumb ? (
-                              <div style={{ width:44, height:44, borderRadius:8, overflow:'hidden', flexShrink:0, border:'1px solid #F8DCE5' }}>
-                                <img src={thumb} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                              </div>
-                            ) : null;
-                          })()}
-
-                          {/* Product info */}
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <p style={{ fontSize:13, fontWeight:700, color:'#1A1A1A', margin:'0 0 4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                              {log.name || '상품명 없음'}
-                            </p>
-                            <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
-                              {log.category_name && (
-                                <span style={{ fontSize:10, padding:'1px 7px', background:'#F8F5FF', border:'1px solid #DDD6FE', borderRadius:99, color:'#7C3AED' }}>{log.category_name}</span>
+                        {/* Col: 상품정보 (thumb + name + muted secondary + compact pills) */}
+                        <div style={{ display:'flex', alignItems:'center', gap:9, minWidth:0 }}>
+                          {thumb ? (
+                            <div style={{ width:36, height:36, borderRadius:7, overflow:'hidden', flexShrink:0, border:'1px solid var(--border-neutral)' }}>
+                              <img src={thumb} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                            </div>
+                          ) : (
+                            <div style={{ width:36, height:36, borderRadius:7, flexShrink:0, border:'1px solid var(--border-neutral)', background:'#FBFAF7', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                              <Package size={14} color="#FFB3CE" />
+                            </div>
+                          )}
+                          <div style={{ minWidth:0, flex:1 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
+                              <span style={{ fontSize:12.5, fontWeight:700, color:'#1A1A1A', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}>
+                                {log.name || '상품명 없음'}
+                              </span>
+                              {/* Compact inline pills — only the critical signals. */}
+                              {log.ship_fee === 0 && (
+                                <span style={{ flexShrink:0, fontSize:9.5, padding:'1px 6px', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:99, color:'#15803d' }}>무료공급</span>
                               )}
-                              {log.seller_nick && (
-                                <span style={{ fontSize:10, padding:'1px 7px', background:'#EFF8FF', border:'1px solid #BAE6FD', borderRadius:99, color:'#0369A1' }}>{log.seller_nick}</span>
-                              )}
-                              {log.inventory !== null && (
-                                <span style={{ fontSize:10, padding:'1px 7px', background: inv<10?'#fef2f2':inv<30?'#fffbeb':'#f0fdf4', border:`1px solid ${inv<10?'#fecaca':inv<30?'#fde68a':'#86efac'}`, borderRadius:99, color: inv<10?'#b91c1c':inv<30?'#92400e':'#15803d' }}>
-                                  재고 {inv.toLocaleString()}개
+                              {opts.length > 0 && (
+                                <span style={{ flexShrink:0, fontSize:9.5, padding:'1px 6px', background: oos>0?'#fef2f2':'#F1EEE7', border:`1px solid ${oos>0?'#fecaca':'var(--border-neutral)'}`, borderRadius:99, color: oos>0?'#b91c1c':'#999' }}>
+                                  옵션 {opts.length}{oos>0?`·품절${oos}`:''}
                                 </span>
                               )}
-                              {(() => {
-                                const opts = Array.isArray(log.options) ? log.options : [];
-                                if (!opts.length) return null;
-                                const oos = opts.filter((o: unknown) => typeof o === 'object' && o !== null && (o as {qty:number}).qty === 0).length;
-                                return (
-                                  <span style={{ fontSize:10, padding:'1px 7px', background: oos>0?'#fef2f2':'#FFF5F8', border:`1px solid ${oos>0?'#fecaca':'#F8DCE5'}`, borderRadius:99, color: oos>0?'#b91c1c':'#888' }}>
-                                    옵션 {opts.length}개{oos > 0 ? ` (품절 ${oos})` : ''}
-                                  </span>
-                                );
-                              })()}
-                              {log.ship_fee !== null && log.ship_fee !== undefined && (
-                                <span style={{ fontSize:10, padding:'1px 7px', background: log.ship_fee===0?'#f0fdf4':'#F5F5F5', border:`1px solid ${log.ship_fee===0?'#86efac':'#e5e5e5'}`, borderRadius:99, color: log.ship_fee===0?'#15803d':'#888' }}>
-                                  {log.ship_fee === 0 ? '무료공급' : `배송 ${log.ship_fee.toLocaleString()}원`}
-                                </span>
+                              {log.can_merge && (
+                                <span style={{ flexShrink:0, fontSize:9.5, padding:'1px 6px', background:'#F1EEE7', border:'1px solid var(--border-neutral)', borderRadius:99, color:'#999' }}>묶음</span>
                               )}
-                              {log.can_merge !== null && (
-                                <span style={{ fontSize:10, padding:'1px 7px', background: log.can_merge?'#f0fdf4':'#FFF5F8', border:`1px solid ${log.can_merge?'#86efac':'#F8DCE5'}`, borderRadius:99, color: log.can_merge?'#15803d':'#888' }}>
-                                  {log.can_merge ? '묶음배송 O' : '묶음배송 X'}
-                                </span>
-                              )}
-                              <span style={{ fontSize:10, color:'#ccc', padding:'1px 0' }}>{log.source === 'bulk' ? '대량' : '단건'} | {new Date(log.crawled_at).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+                            </div>
+                            {/* Muted secondary line: 재고 N개 · 공급사 nick + category */}
+                            <div style={{ fontSize:10.5, color:'#888', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                              {log.inventory !== null && <span style={{ color: inv<10?'#b91c1c':'#888', fontVariantNumeric:'tabular-nums' }}>재고 {inv.toLocaleString()}개</span>}
+                              {log.seller_nick && <span> · 공급사 {log.seller_nick}</span>}
+                              {log.category_name && <span style={{ color:'#aaa' }}> · {log.category_name}</span>}
                             </div>
                           </div>
-
-                          {/* Price */}
-                          {log.supplier_price > 0 && (
-                            <div style={{ textAlign:'right', flexShrink:0 }}>
-                              <p style={{ fontSize:11, color:'#aaa', margin:'0 0 2px' }}>도매가</p>
-                              <p style={{ fontSize:14, fontWeight:900, color:'#e62310', margin:0 }}>{log.supplier_price.toLocaleString()}원</p>
-                            </div>
-                          )}
-
-                          {/* Sourcing status badge */}
-                          <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:99, background:ss.bg, color:ss.color, border:`1px solid ${ss.border}`, flexShrink:0, whiteSpace:'nowrap' }}>
-                            {ss.label}
-                          </span>
+                          {/* Optional secondary status pill (action button is the primary signal). */}
+                          <StatusPill tone={toneOf(log.sourcing_status)} className="hidden sm:inline-flex">
+                            {statusLabel(log.sourcing_status)}
+                          </StatusPill>
                         </div>
 
-                        {/* Row 2: action buttons — C-CRAWL-STATE: always rendered
-                            (incl. 등록완료) so every item keeps 수정/재분류/삭제
-                            affordances. Registration-only buttons (등록 시작 / 완료
-                            표시) are gated per-status. */}
-                        <div style={{ display:'flex', gap:8, marginTop:10, paddingTop:10, borderTop:'1px solid #F8DCE5', flexWrap:'wrap', alignItems:'center' }}>
-                          {/* Go to register — not for REGISTERED */}
-                          {log.sourcing_status !== 'REGISTERED' && (
-                            <button disabled={isUpdating} onClick={() => {
-                              updateSourcingStatus(log.id, 'PENDING');
-                              const san = (s: string) => (s||'').replace(/[\x00-\x1F\x7F]/g,' ').replace(/"/g,"'").trim();
-                              const logImgs = Array.isArray(log.images) ? log.images : [];
-                              const logOpts = Array.isArray(log.options) ? log.options : [];
-                              const prefill = {
-                                productName: san(log.name||''),
-                                supplierPrice: log.supplier_price,
-                                salePrice: calcPrefillSalePrice(log.supplier_price, log.ship_fee),
-                                mainImage: (logImgs[0] as string) || '',
-                                additionalImgs: logImgs.slice(1).join('|'),
-                                options: logOpts.map((o: unknown) => san(typeof o === 'string' ? o : (o as {name:string}).name || '')).filter(Boolean),
-                                crawlSellerId: log.seller_id,
-                                crawlSellerNick: log.seller_nick,
-                                crawlShipFee: log.ship_fee ?? 3000,
-                                crawlCanMerge: log.can_merge,
-                                crawlInventory: log.inventory,
-                                crawlCategoryCode: log.category_code,
-                                ...(log.category_name ? { catD1: log.category_name.split('>')[0]?.trim() } : {}),
-                              };
-                              const j = JSON.stringify(prefill);
-                              const b2 = new TextEncoder().encode(j);
-                              let bin = ''; b2.forEach((x:number)=>{ bin += String.fromCharCode(x); });
-                              // URL-safe base64: standard "+" gets eaten by URLSearchParams (form-encoded space)
-                              const safe = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_');
-                              router.push(`/products/new?prefill=${safe}`);
-                            }} style={{ flex:'2 1 140px', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 14px', background:'#e62310', color:'#fff', border:'none', borderRadius:9, fontSize:12, fontWeight:700, cursor:'pointer' }}>
-                              {isUpdating ? <RefreshCw size={11} className="animate-spin"/> : <ArrowRight size={11}/>}
-                              등록 시작
-                            </button>
-                          )}
+                        {/* Col: 도매가 (right-aligned, tabular) */}
+                        <div style={{ textAlign:'right', fontSize:12.5, fontWeight:800, color: log.supplier_price>0?'#1A1A1A':'#bbb', fontVariantNumeric:'tabular-nums' }}>
+                          {log.supplier_price > 0 ? `${log.supplier_price.toLocaleString()}원` : '—'}
+                        </div>
 
-                          {/* Mark as registered manually — not for REGISTERED */}
-                          {log.sourcing_status !== 'REGISTERED' && (
-                            <button disabled={isUpdating} onClick={() => updateSourcingStatus(log.id, 'REGISTERED')}
-                              style={{ flex:'1 1 92px', display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'8px 10px', background:'#F0FDF4', border:'1px solid #86efac', borderRadius:9, fontSize:11, fontWeight:600, color:'#15803d', cursor:'pointer' }}>
-                              <CheckCircle size={11}/> 완료 표시
-                            </button>
-                          )}
+                        {/* Col: 예상마진율 + mini gauge */}
+                        <div>
+                          {margin === null ? (
+                            <span style={{ fontSize:12.5, color:'#bbb', fontVariantNumeric:'tabular-nums' }}>—</span>
+                          ) : (() => {
+                            const t = marginTier(margin);
+                            const pct = Math.max(0, Math.min(60, margin)) / 60 * 100;
+                            return (
+                              <div>
+                                <span style={{ fontSize:13, fontWeight: t.bold?900:800, color:t.color, fontVariantNumeric:'tabular-nums' }}>
+                                  {margin.toFixed(1)}%
+                                </span>
+                                <div style={{ marginTop:3, height:4, borderRadius:99, background:'#F1EEE7', overflow:'hidden' }}>
+                                  <div style={{ width:`${pct}%`, height:'100%', background:t.fill, borderRadius:99 }} />
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
 
-                          {/* Reclassify — reversible state move (forward or back). */}
-                          <label style={{ display:'flex', alignItems:'center', gap:4, flex:'0 0 auto' }}>
-                            <RotateCcw size={11} color="#888" />
-                            <select
-                              value={log.sourcing_status}
-                              disabled={isUpdating}
-                              onChange={(e) => { if (e.target.value !== log.sourcing_status) updateSourcingStatus(log.id, e.target.value); }}
-                              aria-label="재분류"
-                              style={{ padding:'7px 8px', fontSize:11, fontWeight:600, color:'#555', background:'#fff', border:'1px solid #F8DCE5', borderRadius:9, outline:'none', cursor:'pointer' }}
-                            >
-                              {RECLASSIFY_OPTIONS.map(([v, l]) => (
-                                <option key={v} value={v}>{l}</option>
-                              ))}
-                            </select>
-                          </label>
-
-                          {/* UX-v2.4/v2.5 — secondary row actions (수정 / 원본 보기 /
-                              삭제) demoted to the shared overflow menu so 등록 시작
-                              stays the single loud primary. 수정 routes to the
-                              linked product edit page; 삭제 opens the confirm modal
-                              (#73, crawl record only — never Naver). */}
+                        {/* Col: 스마트 액션 + overflow menu */}
+                        <div data-smart-action={log.id} style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:4 }}>
+                          {smartAction(log, isUpdating)}
+                          {/* Overflow: 완료 표시 / 재분류 / 수정 / 원본 / 삭제 — all original handlers preserved. */}
                           <OverflowMenu
                             ariaLabel="더보기"
-                            size={34}
+                            size={30}
                             items={[
+                              ...(log.sourcing_status !== 'REGISTERED' ? [{
+                                key: 'mark-registered',
+                                label: '완료 표시',
+                                icon: <CheckCircle size={14} />,
+                                onClick: () => updateSourcingStatus(log.id, 'REGISTERED'),
+                              }] : []),
+                              ...RECLASSIFY_OPTIONS
+                                .filter(([v]) => v !== log.sourcing_status)
+                                .map(([v, l]) => ({
+                                  key: `reclassify-${v}`,
+                                  label: `재분류 → ${l}`,
+                                  icon: <RotateCcw size={14} />,
+                                  onClick: () => updateSourcingStatus(log.id, v),
+                                })),
                               ...(log.product_id ? [{
                                 key: 'edit',
                                 label: '수정',
