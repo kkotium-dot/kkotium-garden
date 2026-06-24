@@ -1,4 +1,10 @@
-import urllib.request, json
+import os, urllib.request, json
+
+# SECRETS-GUARD (#156): the API key MUST come from the environment — never
+# hardcode it. Run with:  GROQ_API_KEY=... python3 test_groq.py
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+if not GROQ_API_KEY:
+    raise SystemExit("Set GROQ_API_KEY in the environment (do not hardcode keys).")
 
 body = json.dumps({
     "model": "llama-3.1-8b-instant",
@@ -14,7 +20,7 @@ req = urllib.request.Request(
     "https://api.groq.com/openai/v1/chat/completions",
     data=body,
     headers={
-        "Authorization": "Bearer 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",
+        "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
 )

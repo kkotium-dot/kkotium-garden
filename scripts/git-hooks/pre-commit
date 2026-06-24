@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# ============================================================================
+# SECRETS-GUARD pre-commit hook (#156 / #43 / #82) — block secrets from ever
+# being committed again (GEMINI revoke 재발 방지). Runs on the STAGED set, so it
+# catches files even when they were force-added with `git add -f` past
+# .gitignore. Intentional bypass is `git commit --no-verify` (강력 비권장).
+# Install with: scripts/install-git-hooks.sh
+# ----------------------------------------------------------------------------
+set -euo pipefail
+
+red() { printf '\033[31m%s\033[0m\n' "$1"; }
+fail=0
+
+# 1) Forbidden file NAMES in the staged set (env / backups). .env.example OK.
+forbidden_files=$(git diff --cached --name-only --diff-filter=AM \
+  | grep -E '(^|/)\.env($|\.)|\.bak$|\.backup$|\.orig$|vercel_env_upload' \
+  | grep -vE '(^|/)\.env\.example$' || true)
+if [ -n "$forbidden_files" ]; then
+  red "[secrets-guard] 차단: env/백업 파일은 커밋 금지 —"
+  printf '%s\n' "$forbidden_files" | sed 's/^/  - /'
+  fail=1
+fi
+
+# 2) Secret VALUE patterns in the added lines of the staged diff.
+#    Google AIza, Groq gsk_, Anthropic sk-ant-, Perplexity pplx-, Supabase JWT.
+#    Redacted/placeholder/example tokens are allowed.
+patterns='AIza[0-9A-Za-z_-]{35}|gsk_[0-9A-Za-z]{40,}|sk-ant-[0-9A-Za-z_-]{40,}|pplx-[0-9A-Za-z]{40,}'
+added=$(git diff --cached -U0 --diff-filter=AM | grep -E '^\+' | grep -v '^+++' || true)
+hits=$(printf '%s\n' "$added" \
+  | grep -vE 'REDACTED|REVOKED|EXAMPLE|example|placeholder|xxxx|your[_-]?key' \
+  | grep -En "$patterns" || true)
+if [ -n "$hits" ]; then
+  red "[secrets-guard] 차단: 시크릿 패턴이 staged diff에 있음 (값은 표시하지 않음)"
+  printf '%s\n' "$hits" \
+    | sed -E 's/(AIza|gsk_|sk-ant-|pplx-)[0-9A-Za-z_-]+/\1***REDACTED***/g' \
+    | sed 's/^/  /'
+  fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  red "커밋 차단됨 — 시크릿을 제거하거나 환경변수로 옮기세요."
+  exit 1
+fi
+exit 0

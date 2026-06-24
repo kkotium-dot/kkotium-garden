@@ -155,8 +155,9 @@
 
 - 옛 DB 비밀번호: `MVbrtA5pFYTDfoTj` (16자 영숫자)
 - 옛 SUPABASE anon JWT prefix: `eyJhbGc...YNe3XGPX2rQc8gkA1OD6ImBBW9Chcc8pVbDhxxt3bdY`
-- 옛 SUPABASE service_role JWT prefix: `eyJhbGc...ome8qMz6usOeVtpU6wFx9CWeYCcX8uFgEWQ8LQjyFIM`
-- 옛 Perplexity 키: `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`
-- 옛 GEMINI 키 (2026-05-19 revoke됨): `AIzaSyBUEME7j-9YyTjZQkj8r1-KLgHh5W7WxqY`
+- 옛 SUPABASE service_role JWT prefix: `eyJhbGc…[REVOKED·REDACTED #156]`
+- 옛 Perplexity 키: `pplx-SAg…[REVOKED·REDACTED #156]`
+- 옛 GEMINI 키 (2026-05-19 revoke됨): `AIzaSyB…[REVOKED·REDACTED #156]`
+  <!-- SECRETS-GUARD #156: revoke된 키라도 전체 값을 추적 문서에 남기지 않는다. prefix만 보존(재등장 탐지용)·pre-commit 훅과 정합. -->
 
 향후 작업 시 위 5개 문자열이 코드/문서 어디든 재등장하면 즉시 사고 의심.
