@@ -82,7 +82,7 @@ export default function ProductLifecycleWidget() {
   });
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 20 }}>
+    <div style={{ background: '#fff', border: '1px solid var(--border-neutral)', borderRadius: 12, padding: 20 }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -91,7 +91,7 @@ export default function ProductLifecycleWidget() {
           {total > 0 && <span style={{ fontSize: 11, color: '#9ca3af' }}>{total}개 상품</span>}
         </div>
         <button onClick={refresh} disabled={loading} style={{
-          padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: 6,
+          padding: '4px 8px', border: '1px solid var(--border-neutral)', borderRadius: 6,
           background: '#fff', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 11,
         }}>
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />

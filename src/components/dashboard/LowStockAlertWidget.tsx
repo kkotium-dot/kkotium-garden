@@ -137,7 +137,7 @@ function ActionButton({
         fontWeight: 700,
         color: disabled ? '#9ca3af' : color,
         background: disabled ? '#f9fafb' : bg,
-        border: `1px solid ${disabled ? '#e5e7eb' : border}`,
+        border: `1px solid ${disabled ? 'var(--border-neutral)' : border}`,
         borderRadius: 6,
         padding: '4px 8px',
         cursor: disabled || busy ? 'not-allowed' : 'pointer',
@@ -265,7 +265,7 @@ function OosConfirmModal({
             disabled={busy}
             style={{
               fontSize: 12, fontWeight: 700, color: '#6b7280',
-              background: 'transparent', border: '1px solid #e5e7eb',
+              background: 'transparent', border: '1px solid var(--border-neutral)',
               borderRadius: 8, padding: '6px 14px',
               cursor: busy ? 'not-allowed' : 'pointer',
             }}
@@ -422,7 +422,7 @@ function AlertRow({ alert, onAction, onToast, onRequestOos }: RowProps) {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
                 fontSize: 11, fontWeight: 700, color: '#374151',
-                background: '#f9fafb', border: '1px solid #e5e7eb',
+                background: '#f9fafb', border: '1px solid var(--border-neutral)',
                 borderRadius: 6, padding: '4px 8px',
                 cursor: busyAction !== null ? 'not-allowed' : 'pointer',
                 opacity: busyAction !== null ? 0.6 : 1,
@@ -656,7 +656,7 @@ export default function LowStockAlertWidget() {
             fontSize: 11, fontWeight: 700,
             color: polling ? '#9ca3af' : '#1d4ed8',
             background: polling ? '#f9fafb' : '#eff6ff',
-            border: `1px solid ${polling ? '#e5e7eb' : '#bfdbfe'}`,
+            border: `1px solid ${polling ? 'var(--border-neutral)' : '#bfdbfe'}`,
             borderRadius: 6, padding: '4px 10px',
             cursor: polling ? 'not-allowed' : 'pointer',
             whiteSpace: 'nowrap',
