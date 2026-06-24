@@ -10,7 +10,8 @@ import {
   FolderTree, Type, Layers, Coins, Store, Hash, Pencil, Trash2,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { checkProductName, getGradeColor, getSeverityColor, type NameQualityResult } from '@/lib/product-name-checker';
+// NAME-DIAG-1 (#151): the legacy product-name-checker readout + NameRulesPanel
+// are superseded by the unified ProductNameDiagnostics live panel below.
 import { OverflowMenu, StatusBadge } from '@/components/common';
 import ElevatedDropdown from '@/components/common/ElevatedDropdown';
 import {
@@ -85,7 +86,7 @@ import { NAVER_EXCEL_COLUMNS } from '@/lib/naver/columns';
 import { calcSeoScore } from '@/lib/seo-calculator';
 import type { SeoResult } from '@/lib/seo-calculator';
 import { MarginCalculator } from '@/components/products/MarginCalculator';
-import NameRulesPanel from '@/components/products/NameRulesPanel';
+import ProductNameDiagnostics from '@/components/products/ProductNameDiagnostics';
 import TagVerificationPanel from '@/components/products/TagVerificationPanel';
 import { BulkEditModal } from '@/components/products/BulkEditModal';
 import { ShippingTemplateModal, type ShippingTemplateItem } from '@/components/products/ShippingTemplateModal';
@@ -787,15 +788,8 @@ function NewProductPageInner() {
     categoryId: getCategoryId(d1, d2, d3, d4),
   }), [productName, brand, aiKeywords, mainImage, description, d1, d2, d3, d4]);
 
-  // D-1: Product name quality check (real-time)
-  const nameQuality: NameQualityResult = useMemo(() => checkProductName(
-    productName,
-    {
-      storeName: storeName || undefined,
-      brandName: brand || undefined,
-      keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
-    }
-  ), [productName, brand, aiKeywords, storeName]);
+  // D-1 superseded by NAME-DIAG-1: real-time name quality now runs in the
+  // ProductNameDiagnostics panel (PURE diagnoseProductName, src/lib/seo).
 
   // Prefill from crawler pipeline (?prefill=base64)
   useEffect(() => {
@@ -2437,58 +2431,18 @@ const handleGenerate = async () => {
                     </button>
                   )}
                 </div>
-                {/* Sprint 7 P1-B: name-rule violations inline panel */}
-                <div className="mt-2">
-                  <NameRulesPanel productName={productName} />
-                </div>
-                <div className="mt-1.5 space-y-1">
-                  {/* D-1: Character count + grade badge */}
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-medium ${nameQuality.isOptimalLength ? 'text-green-600' : productName.length > 50 ? 'text-amber-600' : 'text-gray-400'}`}>
-                      {productName.length}/100자 {nameQuality.isOptimalLength ? '최적' : '(25~50자 권장)'}
-                    </span>
-                    {productName.length >= 5 && (
-                      <span
-                        className="text-xs font-bold px-1.5 py-0.5 rounded"
-                        style={{
-                          color: '#fff',
-                          background: getGradeColor(nameQuality.grade),
-                          fontSize: 10,
-                        }}
-                      >
-                        {nameQuality.grade}등급
-                      </span>
-                    )}
-                    {categoryId && (
-                      <span className="text-xs text-green-600">
-                        카테고리 선택됨
-                      </span>
-                    )}
-                  </div>
-
-                  {/* D-1: Quality issues inline — show top 3 */}
-                  {productName.length >= 5 && nameQuality.issues.length > 0 && (
-                    <div className="space-y-0.5">
-                      {nameQuality.issues.slice(0, 3).map((issue, i) => (
-                        <div key={i} className="flex items-start gap-1.5 text-xs" style={{ color: getSeverityColor(issue.severity) }}>
-                          {issue.severity === 'error' ? (
-                            <ShieldAlert size={12} className="mt-0.5 flex-shrink-0" />
-                          ) : issue.severity === 'warning' ? (
-                            <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
-                          ) : (
-                            <Info size={12} className="mt-0.5 flex-shrink-0" />
-                          )}
-                          <span>{issue.message}</span>
-                        </div>
-                      ))}
-                      {nameQuality.issues.length > 3 && (
-                        <span className="text-xs text-gray-400 ml-5">
-                          +{nameQuality.issues.length - 3}건 추가 개선 포인트
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
+                {/* NAME-DIAG-1 (#151): unified live 상품명 진단 + 1클릭 수정.
+                    ctx = category path + 황금키워드/셀러태그 + brand. Absorbs the
+                    old length readout, grade badge, and NameRulesPanel. */}
+                <ProductNameDiagnostics
+                  name={productName}
+                  ctx={{
+                    categoryPath: [d1, d2, d3, d4].filter(Boolean).join(' > ') || undefined,
+                    keywords: [...aiKeywords, ...seoTags],
+                    brand: brand || undefined,
+                  }}
+                  onApplyFix={setProductName}
+                />
               </Field>
             </RSection>
             </>)}
