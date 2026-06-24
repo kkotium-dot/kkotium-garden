@@ -6,3 +6,6 @@ export type { CollapsibleProps } from "./Collapsible";
 
 export { default as OverflowMenu } from "./OverflowMenu";
 export type { OverflowMenuProps, OverflowMenuItem } from "./OverflowMenu";
+
+export { default as StatusBadge } from "./StatusBadge";
+export type { StatusBadgeProps, StatusTone } from "./StatusBadge";

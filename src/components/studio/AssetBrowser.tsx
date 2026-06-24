@@ -40,7 +40,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import strings from './AssetBrowser.strings.ko.json';
-import { Collapsible, OverflowMenu, type OverflowMenuItem } from '@/components/common';
+import { Collapsible, OverflowMenu, StatusBadge, type OverflowMenuItem } from '@/components/common';
 import { broadcastProductMutated } from '@/lib/events/product-mutated';
 // kindForSource is a pure classifier (asset-taxonomy only `import type`s the
 // server storage module, which the bundler erases) — safe in a client bundle.
@@ -920,22 +920,23 @@ function StageRow({
     <div className="border border-gray-200 rounded-lg p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
+          {/* S2-A.2 ③ — title+badge row hardened: min-w-0 so the truncating
+              title can shrink, badge stays flex-shrink-0 (StatusBadge). */}
+          <div className="flex items-center gap-2 min-w-0">
             {applied ? (
               <ImageIcon className="w-4 h-4 text-pink-500 shrink-0" />
             ) : (
               <Inbox className="w-4 h-4 text-gray-300 shrink-0" />
             )}
-            <span className="text-sm font-semibold text-gray-800">{stageLabel(group.stage)}</span>
+            <span className="text-sm font-semibold text-gray-800 truncate min-w-0">{stageLabel(group.stage)}</span>
             {applied ? (
-              <span className="inline-flex items-center rounded-full bg-pink-50 text-pink-700 text-xs font-medium px-2 py-0.5">
+              <StatusBadge tone="brand">
                 {group.count}
                 {strings.countUnit}
-              </span>
+              </StatusBadge>
             ) : (
-              <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-400 text-xs font-medium px-2 py-0.5">
-                {strings.notApplied}
-              </span>
+              // '미적용' = semantic neutral (excluded from the pink sweep, #146).
+              <StatusBadge tone="neutral">{strings.notApplied}</StatusBadge>
             )}
           </div>
           <p className="mt-0.5 text-xs text-gray-400 truncate">{stageDesc(group.stage)}</p>

@@ -66,7 +66,7 @@ export default function SourcingRecommendWidget() {
   return (
     <div style={{
       background: '#fff',
-      border: '1px solid #e5e7eb',
+      border: '1px solid var(--color-border)',
       borderRadius: 12,
       padding: 20,
     }}>
@@ -89,7 +89,7 @@ export default function SourcingRecommendWidget() {
           style={{
             display: 'flex', alignItems: 'center', gap: 4,
             padding: '6px 12px', borderRadius: 6,
-            border: '1px solid #e5e7eb', background: scanning ? '#f3f4f6' : '#fff',
+            border: '1px solid var(--color-border)', background: scanning ? '#f3f4f6' : '#fff',
             cursor: scanning ? 'not-allowed' : 'pointer',
             fontSize: 12, fontWeight: 500,
           }}
@@ -147,7 +147,7 @@ export default function SourcingRecommendWidget() {
 
         return (
           <div key={opp.keyword} style={{
-            border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8,
+            border: '1px solid var(--color-border)', borderRadius: 8, marginBottom: 8,
             overflow: 'hidden',
           }}>
             {/* Card header - always visible */}
@@ -383,7 +383,7 @@ export default function SourcingRecommendWidget() {
                         style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                           padding: '6px 8px', borderRadius: 6, marginBottom: 4,
-                          background: '#f9fafb', textDecoration: 'none', border: '1px solid #e5e7eb',
+                          background: '#f9fafb', textDecoration: 'none', border: '1px solid var(--color-border)',
                         }}
                       >
                         <div style={{ flex: 1 }}>

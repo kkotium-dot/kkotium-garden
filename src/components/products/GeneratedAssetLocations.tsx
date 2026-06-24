@@ -24,6 +24,7 @@ import {
   Inbox,
   ExternalLink,
 } from 'lucide-react';
+import { StatusBadge } from '@/components/common';
 import strings from './GeneratedAssetLocations.strings.ko.json';
 
 interface StageFile {
@@ -135,22 +136,22 @@ function StageRow({ group }: { group: StageGroup }) {
     <div className="border border-gray-200 rounded-lg p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
+          {/* S2-A.2 ③ — title+badge row hardened (min-w-0 + truncate title +
+              shrink-0 badge via StatusBadge); 미적용 = semantic neutral (#146). */}
+          <div className="flex items-center gap-2 min-w-0">
             {applied ? (
               <ImageIcon className="w-4 h-4 text-pink-500 shrink-0" />
             ) : (
               <Inbox className="w-4 h-4 text-gray-300 shrink-0" />
             )}
-            <span className="text-sm font-semibold text-gray-800">{stageLabel(group.stage)}</span>
+            <span className="text-sm font-semibold text-gray-800 truncate min-w-0">{stageLabel(group.stage)}</span>
             {applied ? (
-              <span className="inline-flex items-center rounded-full bg-pink-50 text-pink-700 text-xs font-medium px-2 py-0.5">
+              <StatusBadge tone="brand">
                 {group.count}
                 {strings.countUnit}
-              </span>
+              </StatusBadge>
             ) : (
-              <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-400 text-xs font-medium px-2 py-0.5">
-                {strings.notApplied}
-              </span>
+              <StatusBadge tone="neutral">{strings.notApplied}</StatusBadge>
             )}
           </div>
           <p className="mt-0.5 text-xs text-gray-400 truncate">{stageDesc(group.stage)}</p>
