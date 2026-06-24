@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { getNaverFeeRate, getNaverFeeRateByD1, getNaverFeeBreakdown, getMarginProfile, type SalesChannel } from '@/lib/naver-fee-rates-2026';
 import { getReturnCareFee } from '@/lib/return-care-fees';
+import ElevatedDropdown from '@/components/common/ElevatedDropdown';
 
 // ----------------------------------------------------------------
 // Types
@@ -149,15 +150,8 @@ function MarginCategorySearch({
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  // Outside-click close handled by ElevatedDropdown (portal-panel aware) so the
+  // result list can escape the Tower rail's overflow clip (#149).
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); return; }
@@ -203,8 +197,12 @@ function MarginCategorySearch({
             placeholder={loading ? '로딩 중...' : `${allCats.length.toLocaleString()}개 카테고리 검색`}
             className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
           />
-          {isOpen && results.length > 0 && (
-            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          <ElevatedDropdown
+            anchorRef={containerRef}
+            open={isOpen && results.length > 0}
+            onClose={() => setIsOpen(false)}
+          >
+            <div className="bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
               {results.map((cat) => (
                 <button
                   key={cat.code}
@@ -217,12 +215,16 @@ function MarginCategorySearch({
                 </button>
               ))}
             </div>
-          )}
-          {isOpen && query && results.length === 0 && !loading && (
-            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm text-gray-500 text-center">
+          </ElevatedDropdown>
+          <ElevatedDropdown
+            anchorRef={containerRef}
+            open={isOpen && !!query && results.length === 0 && !loading}
+            onClose={() => setIsOpen(false)}
+          >
+            <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm text-gray-500 text-center">
               검색 결과가 없습니다
             </div>
-          )}
+          </ElevatedDropdown>
         </div>
       )}
     </div>

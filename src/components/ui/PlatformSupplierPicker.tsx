@@ -14,6 +14,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { ChevronDown, X, Check, Building2, Store } from 'lucide-react';
+import ElevatedDropdown from '@/components/common/ElevatedDropdown';
 
 export interface PlatformItem {
   id: string;
@@ -34,8 +35,10 @@ export interface SupplierItem {
 const baseInput =
   'w-full flex items-center justify-between gap-2 px-3 py-2.5 border rounded-xl text-sm bg-white transition-all focus:outline-none cursor-pointer select-none';
 
+// Visual shell only — positioning/elevation is handled by ElevatedDropdown
+// (portal + fixed + rect-sync), so this no longer needs absolute/z/offset.
 const dropdownCls =
-  'absolute z-[9999] left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden';
+  'bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden';
 
 // ─── PlatformPicker ───────────────────────────────────────────────────────────
 interface PlatformPickerProps {
@@ -70,17 +73,8 @@ export function PlatformPicker({
     );
   }, [query, platforms]);
 
-  // close on outside click
-  useEffect(() => {
-    const fn = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery('');
-      }
-    };
-    document.addEventListener('mousedown', fn);
-    return () => document.removeEventListener('mousedown', fn);
-  }, []);
+  // Outside-click close is handled by ElevatedDropdown (anchor + portal-panel
+  // aware), so the dropdown can be portaled out of the clipping USection card.
 
   const commit = (id: string) => {
     onChange(id);
@@ -145,8 +139,13 @@ export function PlatformPicker({
         </span>
       </button>
 
-      {/* Dropdown */}
-      {open && (
+      {/* Dropdown — portaled + elevated so it is never clipped by the
+          USection card's overflow:hidden (#149). */}
+      <ElevatedDropdown
+        anchorRef={wrapRef}
+        open={open}
+        onClose={() => { setOpen(false); setQuery(''); }}
+      >
         <div className={dropdownCls}>
           {/* Search */}
           <div className="px-3 py-2 border-b border-gray-100">
@@ -210,7 +209,7 @@ export function PlatformPicker({
             )}
           </div>
         </div>
-      )}
+      </ElevatedDropdown>
     </div>
   );
 }
@@ -269,16 +268,7 @@ export function SupplierPicker({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPlatform?.id]);
 
-  useEffect(() => {
-    const fn = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery('');
-      }
-    };
-    document.addEventListener('mousedown', fn);
-    return () => document.removeEventListener('mousedown', fn);
-  }, []);
+  // Outside-click close handled by ElevatedDropdown (portal-panel aware).
 
   const commit = (id: string) => {
     onChange(id);
@@ -354,8 +344,12 @@ export function SupplierPicker({
         </span>
       </button>
 
-      {/* Dropdown */}
-      {open && (
+      {/* Dropdown — portaled + elevated (#149). */}
+      <ElevatedDropdown
+        anchorRef={wrapRef}
+        open={open}
+        onClose={() => { setOpen(false); setQuery(''); }}
+      >
         <div className={dropdownCls}>
           {/* Search */}
           <div className="px-3 py-2 border-b border-gray-100">
@@ -441,7 +435,7 @@ export function SupplierPicker({
             )}
           </div>
         </div>
-      )}
+      </ElevatedDropdown>
     </div>
   );
 }

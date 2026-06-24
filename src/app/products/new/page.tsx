@@ -12,6 +12,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { checkProductName, getGradeColor, getSeverityColor, type NameQualityResult } from '@/lib/product-name-checker';
 import { OverflowMenu, StatusBadge } from '@/components/common';
+import ElevatedDropdown from '@/components/common/ElevatedDropdown';
 import {
   NAVER_CATEGORIES_FULL,
   type NaverCategoryEntry,
@@ -205,7 +206,9 @@ function USection({ icon, title, meta, children }: {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '13px 18px 11px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {icon && <span style={{ display: 'flex', alignItems: 'center', color: '#9A8C84', flexShrink: 0 }}>{icon}</span>}
-          <span className="font-display" style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>{title}</span>
+          {/* #132 follow-up: card titles intentionally stay Pretendard — route
+              heroes alone carry the brand display font (tasteful accent, #147). */}
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>{title}</span>
         </div>
         {meta && <div style={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{meta}</div>}
       </div>
@@ -1979,7 +1982,7 @@ const handleGenerate = async () => {
             visible. Only the necessary saves: 임시저장 / DB 저장 / 네이버
             엑셀·직접등록 (overflow). The "저장 후 온실 아틀리에" CTA moved to the
             이미지 tab (E7) since image work is what hands off to the studio. */}
-        <div className="max-w-7xl mx-auto px-4 pb-3" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div className="max-w-7xl mx-auto px-4 pb-3" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => saveDraft({ validate: false })}
@@ -2303,9 +2306,9 @@ const handleGenerate = async () => {
                       </button>
                     )}
 
-                    {catOpen && catResults.length > 0 && (
+                    <ElevatedDropdown anchorRef={catInputRef} open={catOpen && catResults.length > 0}>
                       <div
-                        className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                        className="bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto"
                         onMouseDown={e => e.preventDefault()}
                       >
                         {catResults.map((r, idx) => {
@@ -2337,13 +2340,16 @@ const handleGenerate = async () => {
                           );
                         })}
                       </div>
-                    )}
+                    </ElevatedDropdown>
 
-                    {catQuery && catResults.length === 0 && deferredCatQuery === catQuery && (
-                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow px-4 py-3 text-sm text-gray-400">
+                    <ElevatedDropdown anchorRef={catInputRef} open={catOpen && !!catQuery && catResults.length === 0 && deferredCatQuery === catQuery}>
+                      <div
+                        className="bg-white border border-gray-200 rounded-xl shadow px-4 py-3 text-sm text-gray-400"
+                        onMouseDown={e => e.preventDefault()}
+                      >
                         일치하는 카테고리가 없습니다. 4단계 선택으로 직접 찾아보세요.
                       </div>
-                    )}
+                    </ElevatedDropdown>
                   </div>
                 </div>
               )}
@@ -2721,10 +2727,10 @@ const handleGenerate = async () => {
                         placeholder="예: 중국, 국내산, 경기"
                         autoComplete="off"
                       />
-                      {originOpen && originCandidates.length > 0 && (
+                      <ElevatedDropdown anchorRef={originInputRef} open={originOpen && originCandidates.length > 0}>
                         <div
                           ref={originListRef}
-                          className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto"
+                          className="bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto"
                           onMouseDown={e => e.preventDefault()}
                         >
                           {originCandidates.map((o, idx) => {
@@ -2759,7 +2765,7 @@ const handleGenerate = async () => {
                             );
                           })}
                         </div>
-                      )}
+                      </ElevatedDropdown>
                     </div>
                     {selectedOrigin && (
                       <p className="mt-1 text-xs text-gray-500">
@@ -2790,13 +2796,6 @@ const handleGenerate = async () => {
                 </div>
               </DSection>
             </div>{/* brand/origin defaults end */}
-            {/* C-PLANT-4TAB — 대체상품 추천 moved into 기본 정보 alongside 브랜드/원산지. */}
-            <AlternativeProductPanel
-              productName={productName || undefined}
-              suppliers={suppliers}
-              onChange={setPendingAlternatives}
-            />
-
 
             {/* ③ Option system — folded into 기본 정보 (standalone option tab removed) */}
             <RSection icon={<Layers size={15}/>} title="옵션" badge={optionType === 'NONE' ? '옵션없음' : optionType === 'COMBINATION' ? '조합형' : optionType === 'SINGLE' ? '단독형' : '직접입력형'}>
@@ -3112,6 +3111,12 @@ const handleGenerate = async () => {
                 </div>
               )}
             </RSection>
+            {/* F2 — 대체상품 관리 now sits LAST in 기본 정보 (after 옵션). */}
+            <AlternativeProductPanel
+              productName={productName || undefined}
+              suppliers={suppliers}
+              onChange={setPendingAlternatives}
+            />
             </>)}
 
             {activeTab === 'image' && (<>
@@ -3848,7 +3853,12 @@ const handleGenerate = async () => {
         )}
 
           {/* C-11: Right fixed panel 38% */}
-          <div style={{ flex: "0 0 38%", position: "sticky", top: 80, alignSelf: "flex-start", maxHeight: "calc(100vh - 100px)", overflowY: "auto" }} className="space-y-4">
+          {/* F4(ii): the right rail scrolls vertically; CSS computes overflow-x
+              to `auto` too when overflow-y is set, so flush inner cards had
+              their focus-rings/active borders side-clipped. Pin overflow-x to
+              hidden (no horizontal scrollbar) and add small horizontal padding
+              so ring-2/shadow has breathing room. Vertical scroll preserved. */}
+          <div style={{ flex: "0 0 38%", position: "sticky", top: 80, alignSelf: "flex-start", maxHeight: "calc(100vh - 100px)", overflowY: "auto", overflowX: "hidden", paddingLeft: 6, paddingRight: 6 }} className="space-y-4">
 
             {/* PLANT Tower (P1-e) — flat panels, native structure. The P1-b hero
                 metrics, SEO signal chips, and TowerSection collapse-wrapper were
