@@ -1,68 +1,87 @@
-# DESIGN BRIEF 2026-06-24 (rev3) - Plant + Crawl REFINEMENT round (operator annotated screenshots)
+# DESIGN BRIEF 2026-06-24 (rev4) - Plant + Crawl REFINEMENT round (operator annotated screenshots)
 
-Authoring: DESKTOP (design authority) -> CODE-CLI implements. Operator-confirmed via 2 annotated screenshots (reference vibe, not pixel targets).
-Baseline: main / prod baa8a3c (P1-a/b/c live). SD-01 untouched. #132 (UI/structure; backend logic unchanged). #135 (create+edit shared - products/new). Screenshots = explanation aids only.
+Authoring: DESKTOP (design authority) -> CODE-CLI implements. Operator-confirmed via 2 annotated screenshots + greenlight.
+Baseline: main / prod 04ca748 (P1-a/b/c/d/e live). SD-01 untouched. #132 (UI/structure; backend logic unchanged). #135 (create+edit shared - products/new). #147 (anti-over-build). Screenshots = explanation aids only.
 
 ================================================================
-## STATUS OF 3 P1 AXES (all live + Desktop-verified PASS)
+## STATUS
 ================================================================
 - P1-a PLANT 4-tab IA (fb7fd8d) PASS.
-- P1-b TOWER hero+chips+TowerSection (f887a0e) PASS technically, but operator REJECTS the added layer as redundant -> see P1-e below (partial revert).
-- P1-c CRAWL grid (baa8a3c) PASS -> refinements below (P1-d).
+- P1-b TOWER hero+chips+TowerSection (f887a0e) -> REVERTED by P1-e (operator: redundant over-build).
+- P1-c CRAWL grid (baa8a3c) PASS.
+- P1-e PLANT Tower simplify + top save-bar (3474d3d) -> Desktop e2e PASS (E1-E7 + binding live + 500/overflow 0).
+- P1-d CRAWL refine + D4 OverflowMenu portal (1e65c20) -> Desktop e2e PASS (D1-D5; D4 portal fixed z9999/document.body/in-viewport; D5 bottom bar on selection).
+- P1-a REFINE -> LOCKED ③ 통일형 (below). Operator greenlit 2026-06-24.
 
 ================================================================
-## P1-e  PLANT right Tower SIMPLIFY + save-bar  (Image 2)  [priority - removes a disliked current state]
+## P1-e  (verified PASS - reference)
 ================================================================
-Operator feedback: the P1-b additions DUPLICATE existing functions and made the panel messier. Correct the over-build.
-
-E1. REMOVE hero 2-metric block (SEO top-exposure + real-margin). Reason: 꿀통지수(honey index = margin/ROI) and SEO 검색최적화 점수 already deliver these. Redundant.
-E2. REMOVE the TowerSection collapsible wrapper (P1-b). It created a SECOND collapsible frame with the SAME title on top of panels that already had their own structure -> double-collapse mess. Render panels FLAT with their native structure.
-E3. REMOVE the 5 SEO signal chips (name 20-50, brand, tags n/10, category, keyword density). Reason: duplicate the SEO 점수 상세 checklist (상품명 10자/20-50자/브랜드 포함/SEO 키워드/키워드 포함). Consolidate into the existing 점수 상세. (Desktop recommendation - operator may keep if wanted.)
-E4. REORDER: place SEO 검색최적화 점수 DIRECTLY BELOW 꿀통지수, both at the TOP of the panel as the primary at-a-glance metrics (each card already shows its score prominently -> preserves "at a glance" WITHOUT the redundant hero).
-E5. KEEP all real functions, flat: 꿀통지수 / SEO 검색최적화 점수 / 실전 마진 계산 / AI SEO 분석 / 엑셀 매핑 체크리스트. Keep neutral borders + tabular-nums polish (non-duplicative). NO feature removal beyond the redundant hero/chips/wrapper.
-   Net effect: Tower returns close to pre-P1-b functional layout, reordered (SEO score under 꿀통지수) + light neutral polish, minus the redundant layer.
-
-SAVE-BAR (Image 2 top):
-E6. Pin the save line to TOP (sticky, always visible). Keep ONLY necessary saves: 임시저장 / DB 저장 / 네이버 엑셀 저장·직접등록.
-E7. Move "저장 후 온실 아틀리에" OUT of the global bar -> show ONLY on the 이미지 tab (contextual). 
-   Desktop proposal: on the 이미지 tab make "저장 후 온실 아틀리에" the PRIMARY contextual CTA (image work hands off to the studio), keeping the global top bar minimal elsewhere. (Operator invited better proposals.)
+E1 hero removed. E2 TowerSection wrapper removed (flat, no double-collapse). E3 5 SEO chips removed (dup of SEO 점수 상세). E4 SEO 검색최적화 점수 directly under 꿀통지수, both top. E5 all real functions flat (꿀통지수/SEO점수/실전마진/마진어드바이저/AI SEO/업로드준비도/엑셀매핑) + tabular-nums. E6 top sticky save bar (임시저장/DB저장/네이버엑셀·직접등록 in overflow); bottom bar removed. E7 "저장 후 온실 아틀리에" = 이미지 tab primary CTA only.
 
 ================================================================
-## P1-d  CRAWL grid REFINE  (Image 1)  [independent route, parallel-safe]
+## P1-d  (verified PASS - reference)
 ================================================================
-D1. FILTER/SEARCH ROW LAYOUT: align 공급사 전체 dropdown (currently top-right) + 상품명 검색 + 초기화(refresh) into ONE clean row; the two rows (filter badges row / search row) edge-aligned left&right (consistent gutters). Tidy two-row header.
-D2. REMOVE density toggle (조밀/여유). Operator questions its necessity. Desktop call: a focused pipeline reads cleaner with ONE well-tuned density (compact-comfortable rows). Remove the control; re-add only if a real need appears.
-D3. COLUMN ALIGNMENT: align table text to consistent gridlines - 상품정보 left; 도매가 / 예상마진율 right-aligned tabular-nums; status + action consistent column anchors. Header labels aligned to their column data.
-D4. OVERFLOW MENU (kebab) POPOVER FIX [#62 SYSTEM - shared OverflowMenu]: in 스토어 보기(등록완료) rows the popover is hidden BEHIND the gray row bg (z-index) and is CLIPPED by the table container (overflow) so content is cut off. Fix: render the menu in a PORTAL above everything (high z-index) and not clipped by table/row overflow. Applies project-wide wherever OverflowMenu is used (products/new etc.).
-D5. STICKY BOTTOM REGISTRATION BAR on selection: when >=1 product selected, a sticky bottom bar appears with the registration actions (등록 대기로 / 한 번에 임시등록 / 등록 시작). Ensure it floats at page bottom on selection and clears on deselect.
-
-Carry from P1-c verification:
-CR-1 (backlog): 예상마진율 estimate clusters ~13% (calcPrefillSalePrice conservative) -> 40%+ highlight never fires + weak sort discrimination. Suggest basing estimate on market price / realistic markup. (Separate from D1-D5; operator to approve.)
+D1 two-row header (title+badges / 공급사+검색+초기화 edge-aligned). D2 density toggle removed (single density rowPadY 9). D3 도매가/예상마진율 right-aligned (justifySelf:end + tabular). D4/#62 shared OverflowMenu -> createPortal(document.body) position:fixed z9999, rect-synced on scroll/resize (fixes clip+hide). D5 bulk registration bar -> fixed bottom-centered, on selection only.
 
 ================================================================
-## STAGING + PRIORITY
+## ★ P1-a REFINE - LOCKED: canonical card = ③ "통일형" (USection)  [/products/new + edit via #135]
 ================================================================
-- P1-e PLANT Tower simplify + save-bar (Code) -> removes the currently-disliked redundant layer. FIRST.
-- P1-d CRAWL refine (Code) -> independent route, parallel-safe. Next/parallel.
-- P1-a refine (block-unify RSection/DSection single card pattern, tab-internal order brand-before-option, #137 kebab) -> MERGE into P1-e (same page) or follow.
-- Studio S2-B center cleansing -> P2 (different route, interleave).
-- Myeonghwa seed-planting backfill (operator) -> after UX (unblocks publish #124).
-- #124 publish lock unaffected.
+Operator greenlit ③ 통일형. Unify ALL ~15 section blocks across the 4 tabs into ONE calm SaaS card pattern. Replaces the two legacy styles (RSection numbered-pink / DSection icon-accordion).
 
-Dependencies:
-- P1-e + P1-a refine touch /products/new -> shared component -> auto-propagate to edit route (#135).
-- P1-d independent of P1-e.
-- D4 OverflowMenu fix is a shared-component change -> regression-check products/new + any other OverflowMenu users (#62).
+CANONICAL CARD SPEC (USection):
+1. HEADER: one row = [small Lucide icon] + [title, font-semibold]. 
+   - NO number badge (drop the 1/2/3 pink badges).
+   - NO forced accordion/chevron. Body always visible by default.
+   - Optional right-aligned minimal meta allowed (e.g. a small count or StatusBadge), kept subtle.
+2. BODY: always visible. (A genuinely long/optional panel MAY collapse, but only ONE collapse mechanism and default-expanded - never a wrapper-on-wrapper double frame, per #147.)
+3. BORDER: --border-neutral (#E4DFD4), rounded (match existing card radius), 1px. NO pink card borders.
+4. SURFACE: white/cream card on the page bg. Consistent padding (align to existing card padding, ~p-4/p-5) and consistent inter-card gap.
+5. BRAND PINK (#E62310): reserved for ACTIVE states, PRIMARY CTAs, required-field asterisks (*), active tab underline/fill - NOT card chrome/headers.
+6. TYPO/NUMERICS: tabular-nums on any numeric display; titles consistent size/weight across all cards.
+7. APPLY TO ALL section blocks across the 4 tabs:
+   - [1 검색최적화]: 카테고리, 상품명, 셀러태그(SEO), SEO 훅문구
+   - [2 기본정보]: 가격(판매가·도매가·즉시할인) , 플랫폼/공급사, 상품코드, 브랜드·원산지·수입사, 대체상품, 옵션
+   - [3 이미지]: image sections
+   - [4 배송 정책]: shipping/policy sections
+   Result: every block reads as the same card; the page looks like one coherent system, not two mixed styles.
+
+REORDER (브랜드 BEFORE 옵션) - within [2 기본정보]:
+- Order identity-first: 가격 -> 플랫폼/공급사 -> 상품코드 -> 브랜드·원산지·수입사 -> 대체상품 -> 옵션 (OptionManager LAST).
+- Rationale: brand/origin/importer are core product identity (and SEO/compliance critical); option matrix is bulky and belongs after identity is set.
+
+#137 KEBAB (per-item action density -> overflow):
+- Where a row/sub-item carries multiple secondary actions (e.g. 대체상품 rows, 옵션 rows, asset rows), collapse secondary actions into the shared OverflowMenu kebab (now portal-fixed from D4 - reuse it, do NOT build a new menu).
+- Keep ONE primary action inline; everything secondary in the kebab. Consistent across the page.
+
+GUARDRAILS:
+- #132: structure/skin/reorder only - NO handler/logic/validation rewiring. All existing bindings (가격->마진, SEO 점수, category select, option CRUD) must remain live.
+- #135: single shared component -> edit route (?edit=ID) inherits automatically. Verify parity.
+- #147: this is the operator-confirmed broad unification - proceed; but do not ADD new score/hero/collapse layers, only unify the SHELL of existing blocks.
+- #136: tsc --noEmit + build gate before commit. #138: if large, split into verifiable stages (e.g. P1-a.1 USection component + apply to tab1-2; P1-a.2 tab3-4 + reorder + #137).
+- SD-01 footer: never touch.
+
+================================================================
+## PARALLEL - Studio S2-B center cleansing  [independent route - can run NOW alongside P1-a refine]
+================================================================
+Different route (/studio), no operator decision pending, #124-safe, #132. Move heavy forms (Firefly prompt / mood camera / AI diagnosis / detail template / bg select) from center -> left 배양실 step-sync; center = preview + assembly slots + 꼬띠 bubble; apply #144 down to form-field level. -> then S2-C (step-sync forms + traffic-light StatusCards + brand display font + 꼬띠 microcopy) -> S2-D (center hover Firefly 누끼/합성 existing-actions-only #132 + assembly slots).
 
 ================================================================
 ## VERIFICATION PLAN (Desktop, after each deploy)
 ================================================================
-- P1-e: hero gone, chips gone, no double-collapse frames, SEO 점수 directly under 꿀통지수, all real panels present + flat, neutral borders; save bar pinned top with 임시/DB/네이버 only; 온실 아틀리에 ONLY on 이미지 tab; bindings still live (판매가->실마진/꿀통지수, SEO 점수 live); edit parity (#135); 500/overflow 0.
-- P1-d: single aligned filter/search row + edge-aligned two rows; density toggle gone; column gridline alignment; OverflowMenu popover renders above+outside (not clipped/hidden) in 등록완료 rows AND on products/new; sticky bottom bar on selection; 500/overflow 0.
+- P1-a refine: every section block uses USection (icon+title, no number badge, no forced accordion, neutral border); brand pink only on active/CTA/asterisk; 기본정보 order 브랜드 before 옵션 (OptionManager last); #137 secondary actions in kebab (reusing portal OverflowMenu); all bindings live; edit-route parity (#135); 500/overflow 0.
+- S2-B: heavy forms relocated center->left step-sync; center = preview+slots+꼬띠; #144 field-level; 500/overflow 0.
 - Narrow 1024/375: only when a resize-capable tool is available (iframe blocked; current controller cannot resize - do NOT fabricate).
+
+================================================================
+## BACKLOG / LATER
+================================================================
+- CR-1: 예상마진율 estimate clusters ~13% -> base on market price / realistic markup (operator approval).
+- #146: ProductLifecycle/LowStockAlert inline #e5e7eb borders -> tokenize.
+- Myeonghwa seed-planting backfill (operator) -> unblocks publish #124.
+- Myeonghwa publish PUT <- backfill + status-reconcile + operator GO (irreversible #46/#124).
 
 ================================================================
 ## PRINCIPLES NOTE
 ================================================================
-- New learning (propose #147): when "elevating" a panel, first inventory EXISTING functions - do not add a hero/score/collapse layer that duplicates existing scores/checklists/collapses. Over-building a data panel on top of working components creates duplicate-title clutter. Prefer reorder + light polish over new wrapper layers.
+- #147 (enshrined): inventory existing functions before adding hero/score/collapse layers; prefer reorder + light polish; broad unification only after operator confirmation (now given for P1-a refine).
 - SD-01 Arabic footer: never touch.
