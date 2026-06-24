@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 import {
   Tag, Truck, Wrench, Star, Bell, Clipboard, CheckCircle, XCircle, Settings,
   Package, Image as ImageIcon, Search, Gift, AlertTriangle, Info, ShieldAlert,
-  Palette, Save, Database, Sprout, Download, Upload, RefreshCw, ChevronDown,
+  Palette, Save, Database, Sprout, Download, Upload, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { checkProductName, getGradeColor, getSeverityColor, type NameQualityResult } from '@/lib/product-name-checker';
@@ -455,48 +455,6 @@ function SequenceStatusBanner({
   );
 }
 
-// TowerSection — consistent collapsible card shell for the right "Tower" panel
-// (PLANT_CRAWL_TOWER_REDESIGN §2). Neutral structural chrome; the wrapped panel
-// keeps its own props/CTAs verbatim.
-function TowerSection({ title, defaultOpen = true, children }: {
-  title: string; defaultOpen?: boolean; children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div
-      style={{
-        background: '#fff',
-        border: '1px solid var(--border-neutral)',
-        borderRadius: 16,
-        overflow: 'hidden',
-        fontVariantNumeric: 'tabular-nums',
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between"
-        style={{ padding: '10px 14px', background: 'transparent' }}
-      >
-        <span className="font-semibold" style={{ fontSize: 13, color: '#1A1A1A' }}>{title}</span>
-        <ChevronDown
-          size={16}
-          style={{
-            color: '#9A9485',
-            transition: 'transform 0.2s ease',
-            transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
-            flexShrink: 0,
-          }}
-        />
-      </button>
-      {open && (
-        <div style={{ padding: '4px 12px 12px', borderTop: '1px solid var(--border-neutral)' }}>
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function NewProductPageInner() {
   const searchParams = useSearchParams();
@@ -2034,6 +1992,53 @@ const handleGenerate = async () => {
             </div>
           </div>
         </div>
+        {/* E6 — global save line pinned to the TOP (sticky header), always
+            visible. Only the necessary saves: 임시저장 / DB 저장 / 네이버
+            엑셀·직접등록 (overflow). The "저장 후 온실 아틀리에" CTA moved to the
+            이미지 tab (E7) since image work is what hands off to the studio. */}
+        <div className="max-w-7xl mx-auto px-4 pb-3" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => saveDraft({ validate: false })}
+            disabled={draftBusy}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#fff', color: '#e62310', border: '1.5px solid #FFB3CE', borderRadius: 10, fontSize: 12.5, fontWeight: 800, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
+          >
+            <Save size={14} /> 임시저장
+          </button>
+          <button
+            type="button"
+            onClick={() => saveDraft({ validate: true })}
+            disabled={draftBusy}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#1A1A1A', color: '#fff', border: 'none', borderRadius: 10, fontSize: 12.5, fontWeight: 800, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
+          >
+            <Database size={14} /> DB 저장
+          </button>
+          {/* Naver publish actions demoted to an overflow menu (#131 save-first). */}
+          <OverflowMenu
+            ariaLabel="네이버 발행"
+            size={36}
+            items={[
+              {
+                key: 'excel',
+                label: naverLoading ? '등록 중...' : '네이버 엑셀 다운로드',
+                icon: <Download size={14} />,
+                onClick: () => handleGenerate(),
+              },
+              {
+                key: 'direct',
+                label: naverLoading ? '등록 중...' : '네이버 직접 등록',
+                icon: naverLoading ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />,
+                onClick: () => { void handleNaverDirect(); },
+                disabled: naverLoading,
+              },
+            ]}
+          />
+          {draftSavedAt && (
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: '#15803D', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <CheckCircle size={12} /> 임시저장됨 · {new Date(draftSavedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -3031,6 +3036,21 @@ const handleGenerate = async () => {
                   이미지 tab keeps 대표/추가 이미지 only; the SEO 훅문구 moved
                   to the 검색최적화 tab. */}
             </RSection>
+
+            {/* E7 — "저장 후 온실 아틀리에" is the PRIMARY contextual CTA on the
+                이미지 tab: image work hands off to the studio. Removed from the
+                global top save bar (E6) so it appears only where it belongs. */}
+            <button
+              type="button"
+              onClick={() => saveDraft({ validate: true, thenStudio: true })}
+              disabled={draftBusy}
+              style={{ marginTop: 16, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px 16px', background: draftBusy ? '#aaa' : '#e62310', color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 900, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
+            >
+              <Sprout size={16} /> 저장 후 온실 아틀리에
+            </button>
+            <p style={{ margin: '8px 2px 0', fontSize: 11.5, color: '#888', textAlign: 'center' }}>
+              대표·추가 이미지를 저장하고 온실 아틀리에에서 상세페이지를 이어서 제작합니다
+            </p>
             </>)}
 
             {activeTab === 'seo' && (<>
@@ -3650,69 +3670,6 @@ const handleGenerate = async () => {
 
             </div>{/* tab content end */}
 
-            {/* C-PLANT-UX — consolidated bottom action bar. One authoritative row
-                for every save / register action, visible on every tab:
-                [임시저장] [DB 저장] [저장 후 온실 아틀리에] [네이버 엑셀 다운로드]
-                [네이버 직접 등록]. 임시저장/DB저장 are DRAFT upserts (no Naver);
-                저장 후 온실 아틀리에 saves then routes to Studio; the two 네이버
-                buttons reuse the existing handlers unchanged.
-                C-IA-5TAB — pinned to the viewport bottom (sticky) so the three
-                save actions stay reachable on every tab without scrolling. */}
-            <div className="mt-4 pt-4 border-t border-gray-200" style={{ position: 'sticky', bottom: 0, zIndex: 20, background: '#fff' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => saveDraft({ validate: false })}
-                  disabled={draftBusy}
-                  style={{ flex: '1 1 120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 14px', background: '#fff', color: '#e62310', border: '1.5px solid #FFB3CE', borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
-                >
-                  <Save size={14} /> 임시저장
-                </button>
-                <button
-                  type="button"
-                  onClick={() => saveDraft({ validate: true })}
-                  disabled={draftBusy}
-                  style={{ flex: '1 1 120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 14px', background: '#1A1A1A', color: '#fff', border: 'none', borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
-                >
-                  <Database size={14} /> DB 저장
-                </button>
-                <button
-                  type="button"
-                  onClick={() => saveDraft({ validate: true, thenStudio: true })}
-                  disabled={draftBusy}
-                  style={{ flex: '1 1 160px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 14px', background: draftBusy ? '#aaa' : '#e62310', color: '#fff', border: 'none', borderRadius: 12, fontSize: 13, fontWeight: 900, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
-                >
-                  <Sprout size={14} /> 저장 후 온실 아틀리에
-                </button>
-                {/* UX-v2.4 — Naver publish actions demoted to an overflow menu so
-                    the save-first flow (#131) stays the visually dominant path.
-                    Handlers unchanged (no Naver mutation added). */}
-                <OverflowMenu
-                  ariaLabel="네이버 발행"
-                  size={44}
-                  items={[
-                    {
-                      key: 'excel',
-                      label: naverLoading ? '등록 중...' : '네이버 엑셀 다운로드',
-                      icon: <Download size={14} />,
-                      onClick: () => handleGenerate(),
-                    },
-                    {
-                      key: 'direct',
-                      label: naverLoading ? '등록 중...' : '네이버 직접 등록',
-                      icon: naverLoading ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />,
-                      onClick: () => { void handleNaverDirect(); },
-                      disabled: naverLoading,
-                    },
-                  ]}
-                />
-              </div>
-              {draftSavedAt && (
-                <p style={{ margin: '8px 2px 0', fontSize: 11, fontWeight: 600, color: '#15803D', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <CheckCircle size={12} /> 임시저장됨 · {new Date(draftSavedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              )}
-            </div>
           </div>{/* 좌측 끝 */}
 
           <ShippingTemplateModal
@@ -3889,93 +3846,67 @@ const handleGenerate = async () => {
           {/* C-11: Right fixed panel 38% */}
           <div style={{ flex: "0 0 38%", position: "sticky", top: 80, alignSelf: "flex-start", maxHeight: "calc(100vh - 100px)", overflowY: "auto" }} className="space-y-4">
 
-            {/* (A) HERO METRICS — anchor metrics, always visible (PLANT_CRAWL_TOWER §2) */}
-            {(() => {
-              // SEO 상위노출확률 = live seoResult.score (0~100)
-              const seoScore = seoResult.score;
-              const seoBarColor = seoScore >= 80 ? '#16a34a' : seoScore >= 60 ? '#f59e0b' : '#dc2626';
-              // Weakest lever — first failing SeoResult check, else first suggestion
-              const firstFail = seoResult.checks.find(c => !c.ok);
-              const weakHint = firstFail
-                ? `가장 약한 항목: ${firstFail.label}`
-                : (seoResult.suggestions[0] ? `가장 약한 항목: ${seoResult.suggestions[0]}` : '모든 항목 통과');
+            {/* PLANT Tower (P1-e) — flat panels, native structure. The P1-b hero
+                metrics, SEO signal chips, and TowerSection collapse-wrapper were
+                removed (#147 anti-over-build): every panel keeps its own card +
+                title, so there is no duplicate-title double-collapse. Order:
+                꿀통지수 → SEO 검색최적화 점수 as the top at-a-glance scores, then
+                준비도 / 마진 / AI SEO / 엑셀 매핑. Bindings stay live: 판매가 →
+                실마진·꿀통지수, 검색최적화 입력 → SEO 점수. */}
 
-              // 실마진율 — live net margin. MarginProfile carries no fee-rate field
-              // (min/recommended/good/reason only), so the Naver fee fraction comes
-              // from getNaverFeeRate(categoryId); getMarginProfileByCode resolves the
-              // category context. Fallback fee rate 0.057.
-              const sp = Number(supplierPrice) || 0;
-              const saleP = Number(price) || 0;
-              const marginUnknown = saleP <= 0 || sp <= 0;
-              getMarginProfileByCode(categoryId || undefined); // resolve category margin profile context
-              const feeRate = categoryId ? (getNaverFeeRate(categoryId) || 0.057) : 0.057;
-              const netMargin = marginUnknown
-                ? 0
-                : calcNetMargin(sp, saleP, Number(basicDeliveryFee) || 3000, feeRate, 2);
-              const marginBarColor = netMargin >= 30 ? '#16a34a' : netMargin >= 15 ? '#f59e0b' : '#dc2626';
+            {/* 꿀통지수 — top at-a-glance score (native card + title) */}
+            <HoneyScorePanel
+              salePrice={Number(price) || 0}
+              supplierPrice={Number(supplierPrice) || 0}
+              categoryId={categoryId || undefined}
+              productName={productName || undefined}
+              keywords={aiKeywords}
+              tags={seoTags}
+              hasMainImage={!!mainImage.trim()}
+              hasDescription={description.length > 50}
+              hasDiscountSet={!!discountValue && Number(discountValue) > 0}
+            />
 
-              return (
-                <div style={{ background: '#fff', border: '1px solid var(--border-neutral)', borderRadius: 16, padding: 14, fontVariantNumeric: 'tabular-nums' }}>
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                    {/* SEO 상위노출확률 */}
-                    <div style={{ flex: '1 1 140px', minWidth: 140 }}>
-                      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'var(--brand-red)', letterSpacing: '0.02em' }}>SEO 상위노출확률</p>
-                      <p style={{ margin: '2px 0 6px', fontSize: 28, fontWeight: 900, color: '#1A1A1A', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
-                        {seoScore}<span style={{ fontSize: 14, fontWeight: 700, color: '#8A8275' }}>%</span>
-                      </p>
-                      <div style={{ height: 6, background: '#EFEBE3', borderRadius: 99, overflow: 'hidden' }}>
-                        <div style={{ width: `${seoScore}%`, height: '100%', background: seoBarColor, borderRadius: 99, transition: 'width 0.5s ease' }} />
-                      </div>
-                      <p style={{ margin: '6px 0 0', fontSize: 11, color: '#6B6457', lineHeight: 1.4 }}>{weakHint}</p>
-                    </div>
-                    {/* 실마진율 */}
-                    <div style={{ flex: '1 1 140px', minWidth: 140 }}>
-                      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'var(--brand-red)', letterSpacing: '0.02em' }}>실마진율</p>
-                      {marginUnknown ? (
-                        <>
-                          <p style={{ margin: '2px 0 6px', fontSize: 28, fontWeight: 900, color: '#C8C0B0', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>—</p>
-                          <div style={{ height: 6, background: '#EFEBE3', borderRadius: 99 }} />
-                          <p style={{ margin: '6px 0 0', fontSize: 11, color: '#8A8275', lineHeight: 1.4 }}>판매가·공급가 입력 시 계산</p>
-                        </>
-                      ) : (
-                        <>
-                          <p style={{ margin: '2px 0 6px', fontSize: 28, fontWeight: 900, color: '#1A1A1A', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
-                            {netMargin.toFixed(1)}<span style={{ fontSize: 14, fontWeight: 700, color: '#8A8275' }}>%</span>
-                          </p>
-                          <div style={{ height: 6, background: '#EFEBE3', borderRadius: 99, overflow: 'hidden' }}>
-                            <div style={{ width: `${Math.max(0, Math.min(100, netMargin))}%`, height: '100%', background: marginBarColor, borderRadius: 99, transition: 'width 0.5s ease' }} />
-                          </div>
-                          <p style={{ margin: '6px 0 0', fontSize: 11, color: '#6B6457', lineHeight: 1.4 }}>네이버 수수료·반품 2% 반영</p>
-                        </>
-                      )}
-                    </div>
-                  </div>
+            {/* SEO 검색최적화 점수 — directly below 꿀통지수 (E4), the second
+                at-a-glance score. Replaces the removed 5 signal chips (E3): its
+                체크 항목 checklist already covers 상품명 길이/브랜드/키워드/카테고리. */}
+            <div className={`bg-gradient-to-r ${seoBg} rounded-2xl border p-4 space-y-3`} style={{ fontVariantNumeric: 'tabular-nums' }}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-gray-900 text-sm">SEO 검색최적화 점수</h3>
+                <span className={`text-3xl font-extrabold ${seoColor}`}>{seoResult.score}점</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-lg font-bold px-3 py-1 rounded-full ${
+                  seoResult.grade === 'S' ? 'bg-green-100 text-green-700' :
+                  seoResult.grade === 'A' ? 'bg-blue-100 text-blue-700' :
+                  seoResult.grade === 'B' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                }`}>등급 {seoResult.grade}</span>
+                <div className="flex-1 bg-white/60 rounded-full h-2.5">
+                  <div className={`h-2.5 rounded-full transition-all duration-500 ${
+                    seoResult.score >= 80 ? 'bg-green-500' : seoResult.score >= 60 ? 'bg-yellow-500' : 'bg-red-400'
+                  }`} style={{ width: `${seoResult.score}%` }} />
                 </div>
-              );
-            })()}
-
-            {/* (B) Naver-first SEO signal chips */}
-            {(() => {
-              const nameLen = productName.trim().length;
-              const chips: { label: string; pass: boolean }[] = [
-                { label: '상품명 20–50자', pass: nameLen >= 20 && nameLen <= 50 },
-                { label: '브랜드 포함', pass: !!brand && productName.includes(brand) },
-                { label: `셀러태그 ${seoTags.length}/10`, pass: seoTags.length >= 10 },
-                { label: '카테고리 매칭', pass: !!categoryId },
-                { label: '키워드 밀도', pass: aiKeywords.length >= 2 },
-              ];
-              return (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {chips.map(chip => (
-                    <StatusBadge key={chip.label} tone={chip.pass ? 'success' : 'neutral'}>
-                      {chip.label}
-                    </StatusBadge>
+              </div>
+              {/* 체크 항목 */}
+              <div className="space-y-1">
+                {seoResult.checks.slice(0, 5).map((c, i) => (
+                  <div key={i} className="flex items-center justify-between bg-white/70 rounded-lg px-2.5 py-1.5 text-xs">
+                    <span className="text-gray-600">{c.label}</span>
+                    <span className={c.ok ? 'text-green-600 font-bold' : 'text-red-400'}>{c.ok ? `+${c.point}` : '0'}</span>
+                  </div>
+                ))}
+              </div>
+              {/* 개선 제안 */}
+              {seoResult.suggestions.length > 0 && (
+                <div className="space-y-1">
+                  {seoResult.suggestions.slice(0, 2).map((s, i) => (
+                    <p key={i} className="text-xs text-gray-600 bg-white/60 rounded-lg px-2.5 py-1.5">{s}</p>
                   ))}
                 </div>
-              );
-            })()}
+              )}
+            </div>
 
-            {/* Upload Readiness panel -- shown in edit mode or when key fields are filled */}
+            {/* 업로드 / 수정 준비도 -- shown in edit mode or when key fields are filled */}
             {(() => {
               const isEditMode = !!searchParams?.get('edit');
               const hasContent = !!productName.trim() || !!price;
@@ -4035,38 +3966,20 @@ const handleGenerate = async () => {
               );
             })()}
 
-            {/* 꿀통지수 (D2) */}
-            <TowerSection title="꿀통지수">
-              <HoneyScorePanel
-                salePrice={Number(price) || 0}
-                supplierPrice={Number(supplierPrice) || 0}
-                categoryId={categoryId || undefined}
-                productName={productName || undefined}
-                keywords={aiKeywords}
-                tags={seoTags}
-                hasMainImage={!!mainImage.trim()}
-                hasDescription={description.length > 50}
-                hasDiscountSet={!!discountValue && Number(discountValue) > 0}
-              />
-            </TowerSection>
-
-            {/* Margin Advisor Panel — shows when category D3 is selected, works with or without crawling */}
+            {/* 마진 어드바이저 — shown when category D3 is selected, works with or without crawling */}
             {d1 && d3 && (
-              <TowerSection title="마진 어드바이저">
-                <MarginAdvisorPanel
-                  d1={d1}
-                  d2={d2}
-                  d3={d3}
-                  supplierPrice={Number(supplierPrice) || 0}
-                  salePrice={Number(price) || 0}
-                  shippingFee={Number(basicDeliveryFee) || 3000}
-                  onApplySalePrice={v => setPrice(String(v))}
-                />
-              </TowerSection>
+              <MarginAdvisorPanel
+                d1={d1}
+                d2={d2}
+                d3={d3}
+                supplierPrice={Number(supplierPrice) || 0}
+                salePrice={Number(price) || 0}
+                shippingFee={Number(basicDeliveryFee) || 3000}
+                onApplySalePrice={v => setPrice(String(v))}
+              />
             )}
 
-            {/* margin calculator */}
-            <TowerSection title="실전 마진 계산">
+            {/* 실전 마진 계산 */}
             <MarginCalculator
               supplierPrice={Number(supplierPrice) || 0}
               salePrice={Number(price) || 0}
@@ -4095,10 +4008,8 @@ const handleGenerate = async () => {
                 }
               }}
             />
-            </TowerSection>
 
-            {/* AI SEO workflow — D1 redesigned */}
-            <TowerSection title="AI SEO 분석">
+            {/* AI SEO 분석 */}
             <NaverSEOWorkflow
               productName={productName}
               categoryPath={[d1, d2, d3, d4].filter(Boolean).join(' > ') || undefined}
@@ -4117,50 +4028,9 @@ const handleGenerate = async () => {
               onApplyTags={tags => setSeoTags(tags)}
               onApplyHook={hook => setSeoHook(hook)}
             />
-            </TowerSection>
-
-            {/* SEO 검색최적화 점수 */}
-            <TowerSection title="SEO 점수 상세">
-            <div className={`bg-gradient-to-r ${seoBg} rounded-2xl border p-4 space-y-3`}>
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-900 text-sm">SEO 검색최적화 점수</h3>
-                <span className={`text-3xl font-extrabold ${seoColor}`}>{seoResult.score}점</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-lg font-bold px-3 py-1 rounded-full ${
-                  seoResult.grade === 'S' ? 'bg-green-100 text-green-700' :
-                  seoResult.grade === 'A' ? 'bg-blue-100 text-blue-700' :
-                  seoResult.grade === 'B' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-                }`}>등급 {seoResult.grade}</span>
-                <div className="flex-1 bg-white/60 rounded-full h-2.5">
-                  <div className={`h-2.5 rounded-full transition-all duration-500 ${
-                    seoResult.score >= 80 ? 'bg-green-500' : seoResult.score >= 60 ? 'bg-yellow-500' : 'bg-red-400'
-                  }`} style={{ width: `${seoResult.score}%` }} />
-                </div>
-              </div>
-              {/* 체크 항목 */}
-              <div className="space-y-1">
-                {seoResult.checks.slice(0, 5).map((c, i) => (
-                  <div key={i} className="flex items-center justify-between bg-white/70 rounded-lg px-2.5 py-1.5 text-xs">
-                    <span className="text-gray-600">{c.label}</span>
-                    <span className={c.ok ? 'text-green-600 font-bold' : 'text-red-400'}>{c.ok ? `+${c.point}` : '0'}</span>
-                  </div>
-                ))}
-              </div>
-              {/* 개선 제안 */}
-              {seoResult.suggestions.length > 0 && (
-                <div className="space-y-1">
-                  {seoResult.suggestions.slice(0, 2).map((s, i) => (
-                    <p key={i} className="text-xs text-gray-600 bg-white/60 rounded-lg px-2.5 py-1.5">{s}</p>
-                  ))}
-                </div>
-              )}
-            </div>
-            </TowerSection>
 
             {/* 엑셀 매핑 미리보기 */}
-            <TowerSection title="엑셀 매핑 체크리스트">
-            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm" style={{ fontVariantNumeric: 'tabular-nums' }}>
               <h3 className="font-bold text-gray-900 text-sm mb-3">엑셀 매핑 미리보기</h3>
               <div className="space-y-1.5 text-xs">
                 {[
@@ -4184,7 +4054,6 @@ const handleGenerate = async () => {
                 ))}
               </div>
             </div>
-            </TowerSection>
 
           </div>{/* 우측 끝 */}
         </div>{/* flex 끝 */}
