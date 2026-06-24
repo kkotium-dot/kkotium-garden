@@ -87,6 +87,7 @@ import { calcSeoScore } from '@/lib/seo-calculator';
 import type { SeoResult } from '@/lib/seo-calculator';
 import { MarginCalculator } from '@/components/products/MarginCalculator';
 import ProductNameDiagnostics from '@/components/products/ProductNameDiagnostics';
+import { buildTemplateCopy, templateHookLine } from '@/lib/seo/copy-template';
 import TagVerificationPanel from '@/components/products/TagVerificationPanel';
 import { BulkEditModal } from '@/components/products/BulkEditModal';
 import { ShippingTemplateModal, type ShippingTemplateItem } from '@/components/products/ShippingTemplateModal';
@@ -502,6 +503,10 @@ function NewProductPageInner() {
   const [additionalImages, setAdditionalImages] = useState('');
   const [detailImageUrl, setDetailImageUrl] = useState('');
   const [seoHook, setSeoHook]         = useState('');
+  // COPY-AUTO-1: true while seoHook holds the auto-generated template draft
+  // (cleared once the user edits it or applies an AI hook).
+  const [seoHookIsDraft, setSeoHookIsDraft] = useState(false);
+  const copyPrefilledRef = useRef(false);
   const [description, setDescription] = useState('');
   // D1: golden keywords from AI SEO workflow — stored in DB via keywords JSON column
   const [aiKeywords, setAiKeywords]   = useState<string[]>([]);
@@ -1294,6 +1299,29 @@ function NewProductPageInner() {
 
   const selectedOrigin = useMemo(() => ORIGIN_CODES.find(o => o.code === originCode), [originCode]);
   const isImporter = selectedOrigin?.importer === true;
+
+  // COPY-AUTO-1: zero-cost auto-prefill. On entry, if the SEO 훅문구 is still
+  // empty (no saved/AI copy), draft it instantly from product data via the PURE
+  // template (NO AI call). Runs once; the AI 사냥 button upgrades it.
+  useEffect(() => {
+    if (copyPrefilledRef.current) return;
+    if (!productName.trim() || seoHook.trim()) return;
+    const line = templateHookLine(buildTemplateCopy({
+      name: productName.trim(),
+      keyword: aiKeywords[0] || seoTags[0] || undefined,
+      categoryWord: [d4, d3, d2].find(Boolean) || undefined,
+      categoryPath: [d1, d2, d3, d4].filter(Boolean).join(' > ') || undefined,
+      price: Number(price) || undefined,
+      origin: selectedOrigin?.label,
+      freeShippingThreshold: Number(freeShippingThreshold) || undefined,
+    }));
+    if (line) {
+      setSeoHook(line);
+      setSeoHookIsDraft(true);
+      copyPrefilledRef.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productName, seoHook, aiKeywords, seoTags, d1, d2, d3, d4, price, freeShippingThreshold, selectedOrigin]);
 
   // Deferred query prevents input lag on large lists
   const deferredOriginQuery = useDeferredValue(originQuery);
@@ -3208,7 +3236,7 @@ const handleGenerate = async () => {
                   <textarea
                     className={`${inp} h-20 resize-none pr-16`}
                     value={seoHook}
-                    onChange={e => setSeoHook(e.target.value)}
+                    onChange={e => { setSeoHook(e.target.value); setSeoHookIsDraft(false); }}
                     placeholder="예) 당일배송 | 프리미엄 품질 | 꽃틔움 공식 · 특별한 날을 더욱 특별하게"
                     maxLength={100}
                   />
@@ -3216,6 +3244,17 @@ const handleGenerate = async () => {
                     seoHook.length >= 80 ? 'text-green-600 font-medium' : 'text-gray-400'
                   }`}>{seoHook.length}/100</span>
                 </div>
+                {/* COPY-AUTO-1: template-draft badge (cleared on edit / AI apply). */}
+                {seoHookIsDraft && seoHook.trim() && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: '#d97706', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 99, padding: '1px 7px' }}>
+                      초안
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text-300, #888)' }}>
+                      상품 데이터로 자동 작성된 초안이에요 · 아래 황금키워드 사냥으로 더 다듬어 보세요.
+                    </span>
+                  </div>
+                )}
                 {seoHook.trim() && (
                   <div className="flex justify-end mt-1">
                     <button
@@ -3989,7 +4028,7 @@ const handleGenerate = async () => {
               onApplyKeywords={kws => setAiKeywords(kws)}
               onApplyProductName={name => setProductName(name)}
               onApplyTags={tags => setSeoTags(tags)}
-              onApplyHook={hook => setSeoHook(hook)}
+              onApplyHook={hook => { setSeoHook(hook); setSeoHookIsDraft(false); }}
             />
 
             {/* 엑셀 매핑 미리보기 */}
