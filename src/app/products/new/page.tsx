@@ -7,7 +7,7 @@ import {
   Tag, Truck, Wrench, Star, Bell, Clipboard, CheckCircle, XCircle, Settings,
   Package, Image as ImageIcon, Search, Gift, AlertTriangle, Info, ShieldAlert,
   Palette, Save, Database, Sprout, Download, Upload, RefreshCw,
-  FolderTree, Type, Layers,
+  FolderTree, Type, Layers, Coins, Store, Hash, Pencil, Trash2,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { checkProductName, getGradeColor, getSeverityColor, type NameQualityResult } from '@/lib/product-name-checker';
@@ -2491,7 +2491,11 @@ const handleGenerate = async () => {
                 검색최적화) + option system + 브랜드/원산지/수입사. */}
             {activeTab === 'basic' && (<>
             {/* ② 기본 정보 + AI 키워드 (상품명은 검색최적화 탭으로 이동) */}
-            <RSection icon={<Info size={15}/>} title="기본 정보">
+            {/* P1-a.2 reorder — identity-first: 가격 → 플랫폼·공급사 → 상품코드 →
+                브랜드·원산지·수입사 → 대체상품 → 옵션 (OptionManager LAST). The
+                bundled 기본 정보 card was split into focused USection blocks;
+                fields/handlers/bindings are unchanged (#132). */}
+            <USection icon={<Coins size={15}/>} title="가격">
               {/* Price block — sale price + instant discount inline (Naver order) */}
               <div className="grid grid-cols-2 gap-3">
                 <Field label="판매가" required>
@@ -2559,6 +2563,9 @@ const handleGenerate = async () => {
                   </select>
                 </Field>
               </div>
+            </USection>
+
+            <USection icon={<Store size={15}/>} title="플랫폼 · 공급사">
               {/* Platform + Supplier — side by side grid */}
               <div className="grid grid-cols-2 gap-3">
 
@@ -2599,10 +2606,15 @@ const handleGenerate = async () => {
                     return (
                       <div className="flex items-center gap-1 mt-1.5">
                         <span className="text-xs text-gray-400 flex-1 truncate">{plat.name}</span>
-                        <button type="button" onClick={() => openPlatformEdit(plat)}
-                          className="text-xs text-blue-500 hover:text-blue-700 px-1.5 py-0.5 rounded hover:bg-blue-50 transition">수정</button>
-                        <button type="button" onClick={() => deleteQuickPlatform(plat.id, plat.name)}
-                          className="text-xs text-red-400 hover:text-red-600 px-1.5 py-0.5 rounded hover:bg-red-50 transition">삭제</button>
+                        {/* #137 — secondary actions collapsed into the shared portal kebab */}
+                        <OverflowMenu
+                          ariaLabel="플랫폼 관리"
+                          size={26}
+                          items={[
+                            { key: 'edit', label: '수정', icon: <Pencil size={14} />, onClick: () => openPlatformEdit(plat) },
+                            { key: 'delete', label: '삭제', icon: <Trash2 size={14} />, onClick: () => deleteQuickPlatform(plat.id, plat.name), danger: true },
+                          ]}
+                        />
                       </div>
                     );
                   })()}
@@ -2630,10 +2642,15 @@ const handleGenerate = async () => {
                     return (
                       <div className="flex items-center gap-1 mt-1.5">
                         <span className="text-xs text-gray-400 flex-1 truncate">{sup.name}{sup.abbr ? ` (${sup.abbr})` : ''}</span>
-                        <button type="button" onClick={() => openSupplierEdit(sup)}
-                          className="text-xs text-blue-500 hover:text-blue-700 px-1.5 py-0.5 rounded hover:bg-blue-50 transition">수정</button>
-                        <button type="button" onClick={() => deleteQuickSupplier(sup.id, sup.name)}
-                          className="text-xs text-red-400 hover:text-red-600 px-1.5 py-0.5 rounded hover:bg-red-50 transition">삭제</button>
+                        {/* #137 — secondary actions collapsed into the shared portal kebab */}
+                        <OverflowMenu
+                          ariaLabel="공급사 관리"
+                          size={26}
+                          items={[
+                            { key: 'edit', label: '수정', icon: <Pencil size={14} />, onClick: () => openSupplierEdit(sup) },
+                            { key: 'delete', label: '삭제', icon: <Trash2 size={14} />, onClick: () => deleteQuickSupplier(sup.id, sup.name), danger: true },
+                          ]}
+                        />
                       </div>
                     );
                   })()}
@@ -2641,6 +2658,9 @@ const handleGenerate = async () => {
                 </div>
 
               </div>
+            </USection>
+
+            <USection icon={<Hash size={15}/>} title="상품코드">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="공급사 상품코드" hint="입력 시 SKU 자동 생성">
                   <input className={inp} value={supplierProductCode}
@@ -2672,7 +2692,111 @@ const handleGenerate = async () => {
                   )}
                 </Field>
               </div>
-            </RSection>
+            </USection>
+
+            <div className="space-y-2">
+              {/* D1 Brand / Origin / Importer */}
+              <DSection icon={<Tag size={14}/>} title="브랜드 / 원산지 / 수입사" summary={`${brand} · ${selectedOrigin?.label ?? originCode}`}>
+                <Field label="브랜드">
+                  <input className={inp} value={brand} onChange={e => setBrand(e.target.value)} />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Origin combobox: display/query separated, keyboard nav, no blur-race */}
+                  <Field label="원산지 검색" hint="국가명·지역명 입력 또는 방향키 선택">
+                    <div className="relative">
+                      <input
+                        ref={originInputRef}
+                        className={inp}
+                        value={originOpen ? originQuery : (selectedOrigin?.label ?? '')}
+                        onChange={e => { setOriginQuery(e.target.value); setOriginOpen(true); setOriginActiveIdx(0); }}
+                        onFocus={() => setOriginOpen(true)}
+                        onKeyDown={e => {
+                          if (!originOpen) { if (e.key === 'ArrowDown' || e.key === 'Enter') setOriginOpen(true); return; }
+                          if (e.key === 'ArrowDown') { e.preventDefault(); setOriginActiveIdx(i => Math.min(i + 1, originCandidates.length - 1)); }
+                          else if (e.key === 'ArrowUp') { e.preventDefault(); setOriginActiveIdx(i => Math.max(i - 1, 0)); }
+                          else if (e.key === 'Enter') { e.preventDefault(); const t = originCandidates[originActiveIdx]; if (t) commitOrigin(t.code); }
+                          else if (e.key === 'Escape') { setOriginOpen(false); setOriginQuery(''); }
+                        }}
+                        onBlur={() => { setTimeout(() => setOriginOpen(false), 150); }}
+                        placeholder="예: 중국, 국내산, 경기"
+                        autoComplete="off"
+                      />
+                      {originOpen && originCandidates.length > 0 && (
+                        <div
+                          ref={originListRef}
+                          className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto"
+                          onMouseDown={e => e.preventDefault()}
+                        >
+                          {originCandidates.map((o, idx) => {
+                            const isActive = idx === originActiveIdx;
+                            const isSelected = o.code === originCode;
+                            const q = deferredOriginQuery.trim().toLowerCase();
+                            const label = o.label;
+                            const hi = q ? label.toLowerCase().indexOf(q) : -1;
+                            return (
+                              <button
+                                key={o.code}
+                                type="button"
+                                onClick={() => commitOrigin(o.code)}
+                                onMouseEnter={() => setOriginActiveIdx(idx)}
+                                className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
+                                  isActive ? 'bg-rose-50' : 'hover:bg-gray-50'
+                                }`}
+                              >
+                                <span className={isSelected ? 'text-rose-700 font-semibold' : 'text-gray-700'}>
+                                  {hi >= 0 ? (
+                                    <>
+                                      {label.slice(0, hi)}
+                                      <mark className="bg-yellow-200 text-yellow-900 rounded">{label.slice(hi, hi + q.length)}</mark>
+                                      {label.slice(hi + q.length)}
+                                    </>
+                                  ) : label}
+                                </span>
+                                <span className={`text-xs ml-2 shrink-0 px-1.5 py-0.5 rounded ${Number(o.code) >= 200000 ? 'bg-orange-50 text-orange-500' : Number(o.code) <= 17 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
+                                  {Number(o.code) >= 200000 ? '\uc218\uc785\uc0b0' : ['0','3','4','5'].includes(o.code) ? '\ud2b9\uc218' : '\uad6d\ub0b4\uc0b0'}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    {selectedOrigin && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        <span className="font-medium text-gray-700">{selectedOrigin.label}</span>
+                        <span className="text-gray-400 ml-1">({selectedOrigin.code})</span>
+                        {isImporter && <span className="ml-1.5 text-amber-600 font-medium">수입산</span>}
+                      </p>
+                    )}
+                  </Field>
+                  <Field
+                    label="수입사"
+                    hint={isImporter ? '수입산 선택 시 필수 입력' : '국내산은 입력 불필요'}
+                  >
+                    <input
+                      className={`${inp} ${isImporter ? 'border-rose-400 ring-1 ring-rose-300' : 'opacity-40 cursor-not-allowed'}`}
+                      value={importerName}
+                      onChange={e => setImporterName(e.target.value)}
+                      placeholder={isImporter ? '수입사명 입력 (필수)' : '해당없음'}
+                      disabled={!isImporter}
+                    />
+                    {isImporter && !importerName.trim() && (
+                      <p className="mt-1 text-xs text-red-500 font-medium">수입산 상품은 수입사 입력 필수</p>
+                    )}
+                    {isImporter && importerName.trim() && (
+                      <p className="mt-1 text-xs text-green-600">입력 완료</p>
+                    )}
+                  </Field>
+                </div>
+              </DSection>
+            </div>{/* brand/origin defaults end */}
+            {/* C-PLANT-4TAB — 대체상품 추천 moved into 기본 정보 alongside 브랜드/원산지. */}
+            <AlternativeProductPanel
+              productName={productName || undefined}
+              suppliers={suppliers}
+              onChange={setPendingAlternatives}
+            />
+
 
             {/* ③ Option system — folded into 기본 정보 (standalone option tab removed) */}
             <RSection icon={<Layers size={15}/>} title="옵션" badge={optionType === 'NONE' ? '옵션없음' : optionType === 'COMBINATION' ? '조합형' : optionType === 'SINGLE' ? '단독형' : '직접입력형'}>
@@ -3479,110 +3603,7 @@ const handleGenerate = async () => {
             {/* C-PLANT-4TAB — 브랜드/원산지/수입사 + 대체상품 belong to 기본 정보 now.
                 They stay physically here but are re-guarded to the basic tab (React
                 accumulates all activeTab==='basic' fragments in source order). */}
-            {activeTab === 'basic' && (<>
-            <div className="space-y-2">
-              {/* D1 Brand / Origin / Importer */}
-              <DSection icon={<Tag size={14}/>} title="브랜드 / 원산지 / 수입사" summary={`${brand} · ${selectedOrigin?.label ?? originCode}`}>
-                <Field label="브랜드">
-                  <input className={inp} value={brand} onChange={e => setBrand(e.target.value)} />
-                </Field>
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Origin combobox: display/query separated, keyboard nav, no blur-race */}
-                  <Field label="원산지 검색" hint="국가명·지역명 입력 또는 방향키 선택">
-                    <div className="relative">
-                      <input
-                        ref={originInputRef}
-                        className={inp}
-                        value={originOpen ? originQuery : (selectedOrigin?.label ?? '')}
-                        onChange={e => { setOriginQuery(e.target.value); setOriginOpen(true); setOriginActiveIdx(0); }}
-                        onFocus={() => setOriginOpen(true)}
-                        onKeyDown={e => {
-                          if (!originOpen) { if (e.key === 'ArrowDown' || e.key === 'Enter') setOriginOpen(true); return; }
-                          if (e.key === 'ArrowDown') { e.preventDefault(); setOriginActiveIdx(i => Math.min(i + 1, originCandidates.length - 1)); }
-                          else if (e.key === 'ArrowUp') { e.preventDefault(); setOriginActiveIdx(i => Math.max(i - 1, 0)); }
-                          else if (e.key === 'Enter') { e.preventDefault(); const t = originCandidates[originActiveIdx]; if (t) commitOrigin(t.code); }
-                          else if (e.key === 'Escape') { setOriginOpen(false); setOriginQuery(''); }
-                        }}
-                        onBlur={() => { setTimeout(() => setOriginOpen(false), 150); }}
-                        placeholder="예: 중국, 국내산, 경기"
-                        autoComplete="off"
-                      />
-                      {originOpen && originCandidates.length > 0 && (
-                        <div
-                          ref={originListRef}
-                          className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto"
-                          onMouseDown={e => e.preventDefault()}
-                        >
-                          {originCandidates.map((o, idx) => {
-                            const isActive = idx === originActiveIdx;
-                            const isSelected = o.code === originCode;
-                            const q = deferredOriginQuery.trim().toLowerCase();
-                            const label = o.label;
-                            const hi = q ? label.toLowerCase().indexOf(q) : -1;
-                            return (
-                              <button
-                                key={o.code}
-                                type="button"
-                                onClick={() => commitOrigin(o.code)}
-                                onMouseEnter={() => setOriginActiveIdx(idx)}
-                                className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
-                                  isActive ? 'bg-rose-50' : 'hover:bg-gray-50'
-                                }`}
-                              >
-                                <span className={isSelected ? 'text-rose-700 font-semibold' : 'text-gray-700'}>
-                                  {hi >= 0 ? (
-                                    <>
-                                      {label.slice(0, hi)}
-                                      <mark className="bg-yellow-200 text-yellow-900 rounded">{label.slice(hi, hi + q.length)}</mark>
-                                      {label.slice(hi + q.length)}
-                                    </>
-                                  ) : label}
-                                </span>
-                                <span className={`text-xs ml-2 shrink-0 px-1.5 py-0.5 rounded ${Number(o.code) >= 200000 ? 'bg-orange-50 text-orange-500' : Number(o.code) <= 17 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
-                                  {Number(o.code) >= 200000 ? '\uc218\uc785\uc0b0' : ['0','3','4','5'].includes(o.code) ? '\ud2b9\uc218' : '\uad6d\ub0b4\uc0b0'}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                    {selectedOrigin && (
-                      <p className="mt-1 text-xs text-gray-500">
-                        <span className="font-medium text-gray-700">{selectedOrigin.label}</span>
-                        <span className="text-gray-400 ml-1">({selectedOrigin.code})</span>
-                        {isImporter && <span className="ml-1.5 text-amber-600 font-medium">수입산</span>}
-                      </p>
-                    )}
-                  </Field>
-                  <Field
-                    label="수입사"
-                    hint={isImporter ? '수입산 선택 시 필수 입력' : '국내산은 입력 불필요'}
-                  >
-                    <input
-                      className={`${inp} ${isImporter ? 'border-rose-400 ring-1 ring-rose-300' : 'opacity-40 cursor-not-allowed'}`}
-                      value={importerName}
-                      onChange={e => setImporterName(e.target.value)}
-                      placeholder={isImporter ? '수입사명 입력 (필수)' : '해당없음'}
-                      disabled={!isImporter}
-                    />
-                    {isImporter && !importerName.trim() && (
-                      <p className="mt-1 text-xs text-red-500 font-medium">수입산 상품은 수입사 입력 필수</p>
-                    )}
-                    {isImporter && importerName.trim() && (
-                      <p className="mt-1 text-xs text-green-600">입력 완료</p>
-                    )}
-                  </Field>
-                </div>
-              </DSection>
-            </div>{/* brand/origin defaults end */}
-            {/* C-PLANT-4TAB — 대체상품 추천 moved into 기본 정보 alongside 브랜드/원산지. */}
-            <AlternativeProductPanel
-              productName={productName || undefined}
-              suppliers={suppliers}
-              onChange={setPendingAlternatives}
-            />
-            </>)}
+
 
             {/* C-PLANT-4TAB — back to 배송 정책: 리뷰 포인트·구매평·상품정보고시. */}
             {activeTab === 'shipping' && (<>
