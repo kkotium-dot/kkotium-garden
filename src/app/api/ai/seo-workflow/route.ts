@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callGroq, GROQ_MODEL } from '@/lib/ai/groq';
 import bannedData from '@/lib/seo/banned-words.ko.json';
+import { classifyCopyTone, type CopyTone } from '@/lib/seo/copy-tone';
 
 // HOOK-2 (#151/#62): reuse the shared product-name banned list as the hook
 // 과장/홍보어 filter — but KEEP benefit words, which are legitimate on the
@@ -19,6 +20,13 @@ const HOOK_EXAGGERATION: string[] = ((bannedData as { banned?: string[] }).banne
   .filter((w) => !HOOK_BENEFIT_WHITELIST.has(w))
   .sort((a, b) => b.length - a.length); // strip longer phrases first (초특가 before 특가)
 
+// HOOK-HYBRID-1 (#153): detail copy also strips abstract 미사여구 (최고의/정성을
+// 다한/아름다운/완벽한 …) from banned-words.ko.json copy_reject. Longer phrases
+// first so "정성을 다한" strips before any sub-token.
+const COPY_REJECT: string[] = ((bannedData as { copy_reject?: string[] }).copy_reject ?? []);
+const HOOK_DETAIL_REJECT: string[] = [...COPY_REJECT, ...HOOK_EXAGGERATION]
+  .sort((a, b) => b.length - a.length);
+
 const DECORATIVE_CHARS = /[★☆●○◇◆■□▶◀▲▼※♥♡♠♣✓✔➤➜»«§¶]/g;
 const CONTROL_CHARS = /[\u0000-\u001F\u007F]/g;
 
@@ -27,10 +35,10 @@ function cleanEventField(s: string): string {
   return s.replace(DECORATIVE_CHARS, '').replace(CONTROL_CHARS, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
 }
 
-// detail copy: strip 과장/홍보어 (banned minus benefit whitelist) deterministically.
+// detail copy: strip 과장/홍보어 + 추상 미사여구 (copy_reject) deterministically.
 function stripExaggeration(s: string): string {
   let out = s.replace(CONTROL_CHARS, ' ');
-  for (const w of HOOK_EXAGGERATION) {
+  for (const w of HOOK_DETAIL_REJECT) {
     if (!w) continue;
     out = out.split(w).join(' ');
   }
@@ -115,6 +123,8 @@ interface SEOWorkflowResponse {
   productNames: ProductNameVariant[];
   tags: string[];
   hooks: HookVariant[];
+  recommendedTone: CopyTone;        // HOOK-HYBRID-1: deterministic detail-tone pick
+  recommendedToneReason: string;
   qualityScore: number;
   provider?: string;
   error?: string;
@@ -265,7 +275,8 @@ ${NAVER_CATEGORY_HINT}
 - productNames: 3 names each 30-50 chars Korean, no duplicate words 3+ times, no discount/event/free-shipping/coupon words in name
 - tags: exactly 10, max 10 chars each, no duplicates, product-related only
 - hooks.event_field: ONE line, MUST contain a concrete numeric benefit (free-shipping threshold / gift / installment / points). NO abstract promo, NO decorative symbols, NO 과장/최상급. <= 40 chars.
-- hooks.detail: EXACTLY 3 items (tone benefit|emotion|trust). headline <= 15 chars. sub MUST be a complete Korean sentence of 40-60 chars (NOT shorter — add specific concrete detail to reach 40-60). Tone by price tier: 저가/실용 → 가성비·대용량·실용 / 고가/프리미엄 → 향·디자인·선물·품질. NO 과장/최상급/저품질 promo words (최고/최저가/1위/정품 등).
+- hooks.detail: EXACTLY 3 items (tone benefit|emotion|trust). headline <= 15 chars. sub MUST be a complete Korean sentence of 40-60 chars (NOT shorter — add specific concrete detail to reach 40-60). Tone by price tier: 저가/실용 → 가성비·대용량·실용 / 고가/프리미엄 → 향·디자인·선물·품질.
+- hooks.detail concreteness: every sub MUST include at least one CONCRETE element — a number (지속 2개월 / 600ml / 2개입), a TPO/use-scene (출근길 차 안 / 신혼집 거실), or a risk-removal (흘림 없는 설계 / 무상 교환). NO abstract 미사여구 ("최고의", "정성을 다한", "아름다운", "완벽한", "특별한") and NO 과장/최상급/저품질 promo words (최고/최저가/1위/정품 등).
 
 JSON only:`;
 }
@@ -299,7 +310,7 @@ function extractOutermostJson(text: string): string | null {
   return null;
 }
 
-function normalize(raw: string, fallbackPath: string): Omit<SEOWorkflowResponse, 'success' | 'qualityScore' | 'provider'> {
+function normalize(raw: string, fallbackPath: string): Omit<SEOWorkflowResponse, 'success' | 'qualityScore' | 'provider' | 'recommendedTone' | 'recommendedToneReason' | 'error'> {
   let text = raw.trim();
   // Strip markdown code fences if present
   if (text.startsWith('```')) {
@@ -452,9 +463,14 @@ export async function POST(request: NextRequest) {
 
     const normalized = normalize(content, categoryPath ?? '카테고리 AI 자동 추론');
 
+    // HOOK-HYBRID-1: deterministic tone recommendation from product data.
+    const copyTone = classifyCopyTone(body.price, body.categoryPath);
+
     return NextResponse.json({
       success: true,
       ...normalized,
+      recommendedTone: copyTone.tone,
+      recommendedToneReason: copyTone.reason,
       qualityScore,
       provider,
     } satisfies SEOWorkflowResponse);

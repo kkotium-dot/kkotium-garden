@@ -9,7 +9,9 @@ import {
   Sparkles, RotateCcw, Check, Loader2,
   Tag, Search, FileText, Zap, LayoutGrid,
   ChevronRight, AlertCircle, ChevronDown, ChevronUp, Copy, Megaphone,
+  CheckCircle2, XCircle, Star,
 } from 'lucide-react';
+import { copyContainsKeyword } from '@/lib/seo/copy-tone';
 import type { NaverCategoryEntry } from '@/lib/naver/naver-categories-full';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 
@@ -28,6 +30,8 @@ interface SEOResult {
   productNames: ProductNameVariant[];
   tags: string[];
   hooks: HookVariant[];
+  recommendedTone?: 'benefit' | 'emotion' | 'trust'; // HOOK-HYBRID-1
+  recommendedToneReason?: string;
   qualityScore: number;
 }
 
@@ -129,6 +133,7 @@ export default function NaverSEOWorkflow({
   const [selectedNameIdx, setSelectedNameIdx] = useState<number | null>(null);
   const [hookApplied,     setHookApplied]     = useState(false);   // event_field applied
   const [copiedKey,       setCopiedKey]       = useState<string | null>(null); // detail copy feedback
+  const [activeTone,      setActiveTone]      = useState<'benefit' | 'emotion' | 'trust' | null>(null); // HOOK-HYBRID-1
 
   const isReady    = useMemo(() => productName.trim().length >= 2, [productName]);
   const hasCategory = (categoryPath?.trim().length ?? 0) > 0;
@@ -157,6 +162,13 @@ export default function NaverSEOWorkflow({
       const data: SEOResult = await res.json();
       if (!data.success) throw new Error((data as unknown as { error?: string }).error ?? 'AI 분석 오류');
       setResult(data);
+      // HOOK-HYBRID-1: Zero-Touch-lite — auto-select the recommended detail tone.
+      const detailTones = data.hooks.filter(h => h.slot === 'detail' && h.tone).map(h => h.tone);
+      setActiveTone(
+        (data.recommendedTone && detailTones.includes(data.recommendedTone))
+          ? data.recommendedTone
+          : (detailTones[0] ?? null),
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'SEO 분석 실패');
     } finally {
@@ -595,56 +607,85 @@ export default function NaverSEOWorkflow({
                       </div>
                     )}
 
-                    {/* 상세페이지용 — 3종 톤, headline+sub, 복사 */}
-                    {detailHooks.length > 0 && (
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
-                          <FileText size={11} style={{ color: s.color }} />
-                          <span style={{ fontSize: 11, fontWeight: 800, color: '#1A1A1A' }}>상세페이지용</span>
-                          <span style={{ fontSize: 9.5, color: '#6b7280' }}>헤드라인 + 서브카피 · 복사해 온실 아틀리에에 사용</span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {detailHooks.map((hook, idx) => {
-                            const key = `detail-${idx}`;
-                            const copied = copiedKey === key;
-                            const hl = hook.headline ?? '';
-                            const sub = hook.sub ?? '';
-                            return (
-                              <div key={key} style={{ padding: '9px 10px', borderRadius: 9, background: '#fff', border: `1.5px solid ${s.border}` }}>
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4, flexWrap: 'wrap' }}>
-                                      <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
-                                        {hook.tone ? HOOK_TONE_LABEL[hook.tone] : '상세'}
-                                      </span>
-                                      {hl && (
-                                        <span style={{ fontSize: 9.5, fontWeight: 700, color: hl.length <= 15 ? '#16a34a' : '#d97706', fontVariantNumeric: 'tabular-nums' }}>
-                                          제목 {hl.length}/15
-                                        </span>
-                                      )}
-                                      {sub && (
-                                        <span style={{ fontSize: 9.5, fontWeight: 700, color: sub.length >= 40 && sub.length <= 60 ? '#16a34a' : '#d97706', fontVariantNumeric: 'tabular-nums' }}>
-                                          본문 {sub.length}자
-                                        </span>
-                                      )}
-                                    </div>
-                                    {hl && <p style={{ fontSize: 12.5, fontWeight: 700, color: '#1A1A1A', margin: 0, lineHeight: 1.45 }}>{hl}</p>}
-                                    {sub && <p style={{ fontSize: 11.5, color: '#555', margin: '2px 0 0', lineHeight: 1.5 }}>{sub}</p>}
-                                  </div>
-                                  <button onClick={() => handleCopyDetail(hook.text, key)} style={{
-                                    ...applyBtn(copied, s.color),
-                                    background: copied ? '#16a34a' : '#f3f4f6',
-                                    color: copied ? '#fff' : '#374151', flexShrink: 0,
+                    {/* 상세페이지용 — HOOK-HYBRID-1: 추천 톤 + 1클릭 톤 칩 + SEO 신호등 */}
+                    {detailHooks.length > 0 && (() => {
+                      const present = detailHooks.map(h => h.tone).filter(Boolean) as ('benefit'|'emotion'|'trust')[];
+                      const active = (activeTone && detailHooks.find(h => h.tone === activeTone)) || detailHooks[0];
+                      const hl = active.headline ?? '';
+                      const sub = active.sub ?? '';
+                      const sigOk = copyContainsKeyword(`${hl} ${sub}`, result.keywords);
+                      const copied = copiedKey === `detail-${active.tone}`;
+                      return (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6, flexWrap: 'wrap' }}>
+                            <FileText size={11} style={{ color: s.color }} />
+                            <span style={{ fontSize: 11, fontWeight: 800, color: '#1A1A1A' }}>상세페이지용</span>
+                            <span style={{ fontSize: 9.5, color: '#6b7280' }}>헤드라인 + 서브카피 · 복사해 온실 아틀리에에 사용</span>
+                          </div>
+
+                          {/* 추천 톤 근거 */}
+                          {result.recommendedToneReason && (
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '6px 8px', borderRadius: 8, background: '#fff7ed', border: '1px solid #fed7aa', marginBottom: 6 }}>
+                              <Star size={11} style={{ color: '#d97706', flexShrink: 0, marginTop: 1 }} />
+                              <span style={{ fontSize: 10.5, color: '#9a3412', lineHeight: 1.4 }}>
+                                <b>{result.recommendedTone ? HOOK_TONE_LABEL[result.recommendedTone] : ''}</b> 추천 — {result.recommendedToneReason}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* 1클릭 톤 칩 (추가 호출 0) */}
+                          <div role="tablist" style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
+                            {present.map(tone => {
+                              const on = active.tone === tone;
+                              const rec = result.recommendedTone === tone;
+                              return (
+                                <button key={tone} type="button" role="tab" aria-selected={on}
+                                  onClick={() => setActiveTone(tone)}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 99,
+                                    fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                                    border: `1px solid ${on ? s.color : s.border}`,
+                                    background: on ? s.color : '#fff', color: on ? '#fff' : '#6b7280',
                                   }}>
-                                    {copied ? <><Check size={10} /> 복사됨</> : <><Copy size={10} /> 복사</>}
-                                  </button>
+                                  {HOOK_TONE_LABEL[tone]}
+                                  {rec && <Star size={9} style={{ color: on ? '#fff' : '#d97706' }} />}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* 활성 카피 카드 + SEO 신호등 */}
+                          <div style={{ padding: '9px 10px', borderRadius: 9, background: '#fff', border: `1.5px solid ${s.border}` }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4, flexWrap: 'wrap' }}>
+                                  {hl && (
+                                    <span style={{ fontSize: 9.5, fontWeight: 700, color: hl.length <= 15 ? '#16a34a' : '#d97706', fontVariantNumeric: 'tabular-nums' }}>제목 {hl.length}/15</span>
+                                  )}
+                                  {sub && (
+                                    <span style={{ fontSize: 9.5, fontWeight: 700, color: sub.length >= 40 && sub.length <= 60 ? '#16a34a' : '#d97706', fontVariantNumeric: 'tabular-nums' }}>본문 {sub.length}자</span>
+                                  )}
+                                  {/* SEO 신호등: 타깃 키워드 포함 여부 */}
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9.5, fontWeight: 800, color: sigOk ? '#16a34a' : '#dc2626' }}>
+                                    {sigOk ? <CheckCircle2 size={11} /> : <XCircle size={11} />}
+                                    {sigOk ? 'SEO 키워드 포함' : 'SEO 키워드 없음'}
+                                  </span>
                                 </div>
+                                {hl && <p style={{ fontSize: 12.5, fontWeight: 700, color: '#1A1A1A', margin: 0, lineHeight: 1.45 }}>{hl}</p>}
+                                {sub && <p style={{ fontSize: 11.5, color: '#555', margin: '2px 0 0', lineHeight: 1.5 }}>{sub}</p>}
                               </div>
-                            );
-                          })}
+                              <button onClick={() => handleCopyDetail(active.text, `detail-${active.tone}`)} style={{
+                                ...applyBtn(copied, s.color),
+                                background: copied ? '#16a34a' : '#f3f4f6',
+                                color: copied ? '#fff' : '#374151', flexShrink: 0,
+                              }}>
+                                {copied ? <><Check size={10} /> 복사됨</> : <><Copy size={10} /> 복사</>}
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 );
               })()}
