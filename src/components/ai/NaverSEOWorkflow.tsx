@@ -157,7 +157,9 @@ export default function NaverSEOWorkflow({
       const res = await fetch('/api/ai/seo-workflow', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productName, categoryPath, categoryCode, description, price, supplierPrice, keywords: currentKeywords }),
+        // 사냥 버튼 = explicit user action → paid (Anthropic) fallback allowed
+        // only if both free providers (Groq·Gemini) fail (#155).
+        body: JSON.stringify({ productName, categoryPath, categoryCode, description, price, supplierPrice, keywords: currentKeywords, allowPaidFallback: true }),
       });
       const data: SEOResult = await res.json();
       if (!data.success) throw new Error((data as unknown as { error?: string }).error ?? 'AI 분석 오류');

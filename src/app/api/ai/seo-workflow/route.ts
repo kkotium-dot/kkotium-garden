@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { callGroq, GROQ_MODEL } from '@/lib/ai/groq';
+import { callGemini, hasGeminiKey, GEMINI_MODEL } from '@/lib/ai/gemini';
 import bannedData from '@/lib/seo/banned-words.ko.json';
 import { classifyCopyTone, type CopyTone } from '@/lib/seo/copy-tone';
 
@@ -91,6 +92,9 @@ interface SEOWorkflowRequest {
   price?: number;
   supplierPrice?: number;
   keywords?: string[];
+  // #155 guardrail: paid (Anthropic) fallback is OFF unless an explicit user
+  // action opts in. Automatic/background callers leave this false → free only.
+  allowPaidFallback?: boolean;
 }
 
 interface CategorySuggestion {
@@ -417,15 +421,18 @@ export async function POST(request: NextRequest) {
     // Category is optional — without it, AI infers from product name only (lower quality)
     // qualityScore will be lower (60 vs 75+), prompting user to add category later
 
-    // Check at least one AI key exists (Groq primary, Anthropic last-resort)
+    // GEMINI-RESTORE (#155): free providers first (Groq → Gemini), Anthropic
+    // (paid) only as an explicit-opt-in last resort.
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
     const hasGroqKey = !!(
       process.env.GROQ_API_KEY ||
       process.env.GROQ_API_KEY_2 ||
       process.env.GROQ_API_KEY_3
     );
+    const hasGemini = hasGeminiKey();
+    const allowPaidFallback = body.allowPaidFallback === true;
 
-    if (!hasGroqKey && !anthropicKey) {
+    if (!hasGroqKey && !hasGemini && !(allowPaidFallback && anthropicKey)) {
       return NextResponse.json(
         { success: false, error: 'AI API 키 미설정. GROQ_API_KEY를 .env.local에 추가해주세요 (무료, 14,400회/일).' },
         { status: 500 }
@@ -434,31 +441,39 @@ export async function POST(request: NextRequest) {
 
     const qualityScore = computeQualityScore(body);
     const prompt = buildPrompt(body);
+    const systemPrompt = 'You are a Naver Shopping SEO expert. CRITICAL RULE: Output ONLY a raw JSON object. The very first character MUST be { and the very last MUST be }. Zero explanation, zero markdown, zero prefix text before or after the JSON.';
 
     let content = '';
     let provider = '';
 
-    // Priority: Groq (free, 3 keys round-robin) > Anthropic (last-resort)
+    // 1) Groq (free, 3 keys round-robin)
     if (hasGroqKey) {
       try {
-        content = await callGroq(
-          prompt,
-          'You are a Naver Shopping SEO expert. CRITICAL RULE: Output ONLY a raw JSON object. The very first character MUST be { and the very last MUST be }. Zero explanation, zero markdown, zero prefix text before or after the JSON.',
-        );
-        // provider string references GROQ_MODEL constant — 작업원칙 #44 정합 (메타-단정)
-        provider = `groq-${GROQ_MODEL}`;
+        content = await callGroq(prompt, systemPrompt);
+        provider = `groq-${GROQ_MODEL}`; // references GROQ_MODEL constant (#44)
       } catch (groqErr: unknown) {
         const msg = groqErr instanceof Error ? groqErr.message : String(groqErr);
-        console.warn('[seo-workflow] Groq failed, trying Anthropic fallback:', msg.slice(0, 80));
-        // Fall through to Anthropic
+        console.warn('[seo-workflow] Groq failed, trying Gemini (free) fallback:', msg.slice(0, 80));
       }
     }
 
-    if (!content && anthropicKey) {
+    // 2) Gemini 2.0 Flash (free) — next free provider
+    if (!content && hasGemini) {
+      try {
+        content = await callGemini(prompt, systemPrompt);
+        provider = `gemini-${GEMINI_MODEL}`;
+      } catch (gemErr: unknown) {
+        const msg = gemErr instanceof Error ? gemErr.message : String(gemErr);
+        console.warn('[seo-workflow] Gemini failed, free providers exhausted:', msg.slice(0, 80));
+      }
+    }
+
+    // 3) Anthropic (paid) — ONLY on explicit opt-in (#155 guardrail)
+    if (!content && allowPaidFallback && anthropicKey) {
       content = await callAnthropic(prompt, anthropicKey);
       provider = 'claude-sonnet';
     } else if (!content) {
-      throw new Error('AI 서비스 일시 응답 없음 (Groq + Anthropic 모두 실패). 잠시 후 다시 시도해주세요.');
+      throw new Error('무료 AI 제공자(Groq·Gemini) 일시 응답 없음. 잠시 후 다시 시도해주세요.');
     }
 
     const normalized = normalize(content, categoryPath ?? '카테고리 AI 자동 추론');
