@@ -437,7 +437,7 @@
       "warehouse": "창고",
       "warehouseHint": "정원 창고 · 템플릿 · 폰트",
       "cultivation": "배양실",
-      "cultivationHint": "향·무드 배양 (준비 중)",
+      "cultivationHint": "단계별 작업 (썸네일·상세·SEO·발행)",
       "journal": "일지",
       "journalHint": "작업 기록 (준비 중)",
       "comingSoon": "곧 준비될 공간이에요",
@@ -494,6 +494,14 @@
       "textToImage": "상세 가독성",
       "competitorKeyword": "상위노출 매칭율",
       "expectedCtr": "구매전환 유도점수(ROI)"
+    },
+    "assembly": {
+      "title": "조립 슬롯",
+      "hint": "각 단계에서 만든 결과가 여기 슬롯에 모여 상세페이지로 조립돼요. (준비 중)",
+      "slotMain": "대표 이미지",
+      "slotAdditional": "추가 이미지",
+      "slotDetail": "상세 페이지",
+      "slotPending": "준비 중"
     }
   }
 }

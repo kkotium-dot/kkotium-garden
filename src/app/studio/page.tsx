@@ -200,155 +200,26 @@ function StudioInner() {
     </div>
   );
 
-  // ── Dual sidebar (S2-A 골격) ────────────────────────────────────────────
-  // 창고 hosts the relocated 도구함 (relocate-only, #132); 배양실/일지 are
-  // scaffolds whose content lands in S2-B~D (i18n placeholder, no logic).
-  const s = a.sidebar;
-  const ComingSoon = ({ hint }: { hint: string }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-        background: 'var(--pink-soft)',
-      }}>
-        <Clock size={20} style={{ color: 'var(--brand-red)' }} />
-      </div>
-      <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: 'var(--gp-ink-900)' }}>
-        {s.comingSoon}
-      </h3>
-      <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: 'var(--gp-ink-500)', wordBreak: 'keep-all' }}>
-        {hint}
-      </p>
-    </div>
-  );
-  const sidebarTabs: AtelierSidebarTab[] = [
-    { key: 'warehouse', label: s.warehouse, icon: <Warehouse size={18} />, content: toolboxSlot },
-    { key: 'cultivation', label: s.cultivation, icon: <FlaskConical size={18} />, content: <ComingSoon hint={s.comingSoonHint} /> },
-    { key: 'journal', label: s.journal, icon: <NotebookText size={18} />, content: <ComingSoon hint={s.comingSoonHint} /> },
-  ];
-
-  // ── Workspace (center) ──────────────────────────────────────────────────
-  // A step group stays mounted but hidden unless active (preserves card state).
+  // ── Step cards (heavy forms) — relocated to 배양실 (S2-B.1) ────────────────
+  // #132/#147 relocate-only: the step input/generation cards (Firefly prompt /
+  // mood→camera / AI diagnosis / detail-template / background select, carried by
+  // the thumbnail·detail·seo·publish cards) were reparented from the center
+  // canvas into the 배양실 (cultivation) sidebar panel. Every handler/state
+  // binding is unchanged — they read the page-level `actions` / `engine` / `step`;
+  // only the JSX parent moved. Step-sync (each step shows its own cards) is
+  // inherent in StepGroup's `step` gating; the S2-B.2 reveal polish builds on it.
+  // The 꼬띠 guide bubble + live preview stay in the center workspace.
   const StepGroup = ({ when, children }: { when: AtelierStepKey; children: ReactNode }) => (
     <div
       hidden={step !== when}
       style={{ display: step === when ? 'flex' : 'none', flexDirection: 'column', gap: 'var(--space-4)' }}
     >
-      <KkottiGuide text={a.kkotti[when]} />
       {children}
     </div>
   );
 
-  const workspaceSlot: ReactNode = selectedProduct ? (
-    <>
-      {/* Selected-product summary header */}
-      <section
-        style={{
-          display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px',
-          background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-card)', wordBreak: 'keep-all', flexShrink: 0,
-        }}
-      >
-        {selectedProduct.mainImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={selectedProduct.mainImage}
-            alt=""
-            width={56}
-            height={56}
-            style={{ width: 56, height: 56, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
-          />
-        ) : (
-          <div style={{
-            width: 56, height: 56, borderRadius: 10,
-            background: 'var(--gp-pink-50)', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <ImageIcon size={22} style={{ color: 'var(--gp-pink-300)' }} />
-          </div>
-        )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{
-            fontSize: 15, fontWeight: 800, color: 'var(--gp-ink-900)',
-            margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {selectedProduct.name}
-          </h2>
-          <p style={{ fontSize: 11, color: 'var(--gp-ink-500)', margin: '3px 0 0' }}>
-            {strings.header.category}: {selectedProduct.category ?? strings.header.noCategory} ·
-            {' '}{strings.header.brand}: {selectedProduct.brand ?? '-'} ·
-            {' '}{strings.header.price}: {fmtPrice(selectedProduct.supplierPrice)}
-          </p>
-          {actions.draftSavedAt && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
-              fontSize: 10, fontWeight: 600, color: '#15803D',
-            }}>
-              <Check size={11} />
-              {strings.header.draftSaved.replace(
-                '{time}',
-                new Date(actions.draftSavedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-              )}
-            </span>
-          )}
-        </div>
-
-        {/* Device toggle — PC / 모바일 live preview */}
-        <div style={{ display: 'flex', gap: 4, flexShrink: 0, background: 'var(--gp-pink-50)', padding: 3, borderRadius: 10 }}>
-          {([['pc', a.workspace.devicePc, Monitor], ['mobile', a.workspace.deviceMobile, Smartphone]] as const).map(
-            ([key, label, Icon]) => {
-              const active = device === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setDevice(key)}
-                  aria-pressed={active}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px',
-                    borderRadius: 8, border: 'none', cursor: 'pointer',
-                    fontSize: 11, fontWeight: 700,
-                    background: active ? '#fff' : 'transparent',
-                    color: active ? 'var(--gp-red-600, #c81e0f)' : 'var(--gp-ink-500)',
-                    boxShadow: active ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                  }}
-                >
-                  <Icon size={13} /> {label}
-                </button>
-              );
-            },
-          )}
-        </div>
-      </section>
-
-      {/* Job progress (lifecycle) */}
-      {selectedProduct.id && (
-        <div style={{ flexShrink: 0 }}>
-          <JobLifecyclePanel productId={selectedProduct.id} />
-        </div>
-      )}
-
-      {/* Live preview — device-constrained */}
-      <div
-        style={{
-          flexShrink: 0,
-          maxWidth: device === 'mobile' ? 390 : '100%',
-          width: '100%',
-          marginInline: device === 'mobile' ? 'auto' : undefined,
-          transition: 'max-width 0.2s ease',
-        }}
-      >
-        <WorkbenchCanvas
-          mainImage={selectedProduct.mainImage ?? null}
-          productName={selectedProduct.name}
-          thumbnails={actions.thumbnails}
-          mainVariant={actions.mainVariant}
-          onSelectMain={actions.setMainVariant}
-          cutoutUrl={actions.manualCutoutUrl || undefined}
-          backdropUrl={actions.manualBackdropUrl || undefined}
-        />
-      </div>
-
+  const cultivationSlot: ReactNode = selectedProduct ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', minWidth: 0 }}>
       {/* ── Step 1: 썸네일 랩 ─────────────────────────────────────────────── */}
       {/* UX-v2.3 — primary card (썸네일) leads expanded; supporting cards
           (진단·무드) fold by default so attention lands on one task. */}
@@ -441,6 +312,185 @@ function StudioInner() {
           hasNaverId={hasNaverId}
         />
       </StepGroup>
+    </div>
+  ) : (
+    <div style={{ padding: 16, textAlign: 'center', color: 'var(--gp-ink-500)', fontSize: 12, lineHeight: 1.6 }}>
+      {a.workspace.selectPrompt}
+    </div>
+  );
+
+  // ── Dual sidebar (S2-A 골격 · S2-B.1 배양실 populated) ──────────────────────
+  // 창고 hosts the 도구함 (relocate-only #132); 배양실 now hosts the relocated
+  // step work-forms (S2-B.1); 일지 stays a scaffold (content in S2-B.2~D).
+  const s = a.sidebar;
+  const ComingSoon = ({ hint }: { hint: string }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+        background: 'var(--pink-soft)',
+      }}>
+        <Clock size={20} style={{ color: 'var(--brand-red)' }} />
+      </div>
+      <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: 'var(--gp-ink-900)' }}>
+        {s.comingSoon}
+      </h3>
+      <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: 'var(--gp-ink-500)', wordBreak: 'keep-all' }}>
+        {hint}
+      </p>
+    </div>
+  );
+  const sidebarTabs: AtelierSidebarTab[] = [
+    { key: 'warehouse', label: s.warehouse, icon: <Warehouse size={18} />, content: toolboxSlot },
+    { key: 'cultivation', label: s.cultivation, icon: <FlaskConical size={18} />, content: cultivationSlot },
+    { key: 'journal', label: s.journal, icon: <NotebookText size={18} />, content: <ComingSoon hint={s.comingSoonHint} /> },
+  ];
+
+  // ── Assembly slot placeholders — static stubs (S2-B.1) ─────────────────────
+  // Communicate the future center layout where each step's output assembles into
+  // the detail page. No slot-filling logic yet (S2-D/Phase 3) — purely visual,
+  // no backend wiring (#132).
+  const assemblySlotStub: ReactNode = (
+    <section style={{
+      background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+      borderRadius: 'var(--radius-card)', padding: '14px 16px', flexShrink: 0, minWidth: 0,
+    }}>
+      <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: 'var(--gp-ink-900)' }}>{a.assembly.title}</h3>
+      <p style={{ margin: '3px 0 12px', fontSize: 11, color: 'var(--gp-ink-500)', lineHeight: 1.5 }}>{a.assembly.hint}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+        {[a.assembly.slotMain, a.assembly.slotAdditional, a.assembly.slotDetail].map((label) => (
+          <div key={label} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 6, aspectRatio: '1 / 1', borderRadius: 12, minWidth: 0, padding: 8, textAlign: 'center',
+            border: '1.5px dashed var(--color-border)', background: 'var(--cream)',
+          }}>
+            <ImageIcon size={20} style={{ color: 'var(--gp-pink-300)' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gp-ink-700)' }}>{label}</span>
+            <span style={{ fontSize: 10, color: 'var(--gp-ink-500)' }}>{a.assembly.slotPending}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+
+  // ── Workspace (center) — live preview + assembly slot stubs + 꼬띠 bubble ───
+  // S2-B.1: the heavy step forms moved to 배양실; the center is now the calm
+  // preview/assembly surface. The 꼬띠 bubble reflects the active step.
+  const workspaceSlot: ReactNode = selectedProduct ? (
+    <>
+      {/* Selected-product summary header */}
+      <section
+        style={{
+          display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px',
+          background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-card)', wordBreak: 'keep-all', flexShrink: 0,
+        }}
+      >
+        {selectedProduct.mainImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={selectedProduct.mainImage}
+            alt=""
+            width={56}
+            height={56}
+            style={{ width: 56, height: 56, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
+          />
+        ) : (
+          <div style={{
+            width: 56, height: 56, borderRadius: 10,
+            background: 'var(--gp-pink-50)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <ImageIcon size={22} style={{ color: 'var(--gp-pink-300)' }} />
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 style={{
+            fontSize: 15, fontWeight: 800, color: 'var(--gp-ink-900)',
+            margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {selectedProduct.name}
+          </h2>
+          <p style={{ fontSize: 11, color: 'var(--gp-ink-500)', margin: '3px 0 0' }}>
+            {strings.header.category}: {selectedProduct.category ?? strings.header.noCategory} ·
+            {' '}{strings.header.brand}: {selectedProduct.brand ?? '-'} ·
+            {' '}{strings.header.price}: {fmtPrice(selectedProduct.supplierPrice)}
+          </p>
+          {actions.draftSavedAt && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
+              fontSize: 10, fontWeight: 600, color: '#15803D',
+            }}>
+              <Check size={11} />
+              {strings.header.draftSaved.replace(
+                '{time}',
+                new Date(actions.draftSavedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+              )}
+            </span>
+          )}
+        </div>
+
+        {/* Device toggle — PC / 모바일 live preview */}
+        <div style={{ display: 'flex', gap: 4, flexShrink: 0, background: 'var(--gp-pink-50)', padding: 3, borderRadius: 10 }}>
+          {([['pc', a.workspace.devicePc, Monitor], ['mobile', a.workspace.deviceMobile, Smartphone]] as const).map(
+            ([key, label, Icon]) => {
+              const active = device === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setDevice(key)}
+                  aria-pressed={active}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px',
+                    borderRadius: 8, border: 'none', cursor: 'pointer',
+                    fontSize: 11, fontWeight: 700,
+                    background: active ? '#fff' : 'transparent',
+                    color: active ? 'var(--gp-red-600, #c81e0f)' : 'var(--gp-ink-500)',
+                    boxShadow: active ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  }}
+                >
+                  <Icon size={13} /> {label}
+                </button>
+              );
+            },
+          )}
+        </div>
+      </section>
+
+      {/* 꼬띠 guide bubble — reflects the active step (microcopy) */}
+      <KkottiGuide text={a.kkotti[step]} />
+
+      {/* Job progress (lifecycle) */}
+      {selectedProduct.id && (
+        <div style={{ flexShrink: 0 }}>
+          <JobLifecyclePanel productId={selectedProduct.id} />
+        </div>
+      )}
+
+      {/* Live preview — device-constrained */}
+      <div
+        style={{
+          flexShrink: 0,
+          maxWidth: device === 'mobile' ? 390 : '100%',
+          width: '100%',
+          marginInline: device === 'mobile' ? 'auto' : undefined,
+          transition: 'max-width 0.2s ease',
+        }}
+      >
+        <WorkbenchCanvas
+          mainImage={selectedProduct.mainImage ?? null}
+          productName={selectedProduct.name}
+          thumbnails={actions.thumbnails}
+          mainVariant={actions.mainVariant}
+          onSelectMain={actions.setMainVariant}
+          cutoutUrl={actions.manualCutoutUrl || undefined}
+          backdropUrl={actions.manualBackdropUrl || undefined}
+        />
+      </div>
+
+      {/* Assembly slot placeholders (static stub) */}
+      {assemblySlotStub}
     </>
   ) : (
     <div style={{ padding: 40, textAlign: 'center', color: 'var(--gp-ink-500)', fontSize: 13 }}>
