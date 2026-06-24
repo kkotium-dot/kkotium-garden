@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx';
 import {
   Tag, Truck, Wrench, Star, Bell, Clipboard, CheckCircle, XCircle, Settings,
-  Package, Image as ImageIcon, Search, Gift, Layers, AlertTriangle, Info, ShieldAlert,
+  Package, Image as ImageIcon, Search, Gift, AlertTriangle, Info, ShieldAlert,
   Palette, Save, Database, Sprout, Download, Upload, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -220,7 +220,8 @@ function RSection({ number, title, badge, children }: {
 function DSection({ icon, title, summary, children }: {
   icon: React.ReactNode; title: string; summary: string; children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  // POLICY UNCOLLAPSE — DSections render expanded by default (C-PLANT-4TAB).
+  const [open, setOpen] = useState(true);
   return (
     <div
       style={{
@@ -462,7 +463,10 @@ function NewProductPageInner() {
   const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
   const [catTab, setCatTab]             = useState<'search'|'drill'>('drill');
   // C-11: 2-Panel Split tab navigation state
-  const [activeTab, setActiveTab] = useState<'basic'|'option'|'image'|'shipping'|'seo'>('basic');
+  // C-PLANT-4TAB — default tab is SEO (검색최적화), the new front-of-funnel.
+  // 'option' kept in the union (harmless) since the standalone option tab was
+  // folded into 기본 정보; any stray 'option' value just renders nothing.
+  const [activeTab, setActiveTab] = useState<'basic'|'option'|'image'|'shipping'|'seo'>('seo');
   const [catQuery, setCatQuery]         = useState('');
   const [catResults, setCatResults]     = useState<CategorySearchResult[]>([]);
   const [catOpen, setCatOpen]           = useState(false);
@@ -1199,13 +1203,16 @@ function NewProductPageInner() {
   }, [searchParams]);
 
   // E-14: Deep-link from dashboard "Upload Readiness Center" — focus a specific tab
-  // Accepts ?focus=basic|option|image|seo|shipping (corresponds to seed-planting tabs)
+  // Accepts ?focus=seo|basic|image|shipping (corresponds to seed-planting tabs).
+  // C-PLANT-4TAB — the standalone option tab was folded into 기본 정보; a legacy
+  // ?focus=option deep-link maps to 'basic' so it still lands on the right panel.
   useEffect(() => {
     const focus = searchParams?.get('focus');
     if (!focus) return;
-    const validTabs = ['basic', 'option', 'image', 'seo', 'shipping'];
-    if (validTabs.includes(focus)) {
-      setActiveTab(focus as typeof activeTab);
+    const validTabs = ['seo', 'basic', 'image', 'shipping'];
+    const resolved = focus === 'option' ? 'basic' : focus;
+    if (validTabs.includes(resolved)) {
+      setActiveTab(resolved as typeof activeTab);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -2161,18 +2168,17 @@ const handleGenerate = async () => {
             {/* Tab navigation bar */}
             <div style={{ display: 'flex', gap: 4, padding: '4px', background: '#FFF0F5', borderRadius: 16, marginBottom: 16, border: '1.5px solid #F8DCE5', flexWrap: 'wrap' }}>
               {([
-                { key: 'basic', label: '기본 정보', Icon: Package },
-                { key: 'option', label: '옵션', Icon: Layers },
-                { key: 'image', label: '이미지', Icon: ImageIcon },
                 { key: 'seo', label: '검색최적화', Icon: Search },
-                { key: 'shipping', label: '배송 · 정책', Icon: Truck },
+                { key: 'basic', label: '기본 정보', Icon: Package },
+                { key: 'image', label: '이미지', Icon: ImageIcon },
+                { key: 'shipping', label: '배송 정책', Icon: Truck },
               ] as const).map(tab => {
-                // D-5: Tab completeness check
+                // D-5: Tab completeness check — C-PLANT-4TAB: 카테고리·상품명·키워드 now
+                // live on SEO; option-completeness folded into 기본 정보.
                 const tabDone: Record<string, boolean> = {
-                  basic: !!categoryId && productName.trim().length >= 10 && !!price && Number(price) > 0,
-                  option: optionType === 'NONE' || optionRows.some(r => r.value.trim().length > 0),
+                  seo: !!categoryId && productName.trim().length >= 10 && (aiKeywords.length >= 2 || seoTags.length >= 1),
+                  basic: !!price && Number(price) > 0 && (optionType === 'NONE' || optionRows.some(r => r.value.trim().length > 0)),
                   image: !!mainImage.trim(),
-                  seo: aiKeywords.length >= 2 || seoTags.length >= 1,
                   shipping: (!!selectedShippingTemplate || !!selectedTemplateId) && !!originCode,
                 };
                 const done = tabDone[tab.key] ?? false;
@@ -2214,7 +2220,10 @@ const handleGenerate = async () => {
             </div>
             <div className="space-y-4">
 
-            {activeTab === 'basic' && (<>
+            {/* C-PLANT-4TAB — SEO tab now leads: 카테고리 + (editable) 상품명 +
+                키워드/태그/훅. 상품명 was lifted out of the 기본 정보 RSection so the
+                product name lives EXACTLY ONCE, here, editable. */}
+            {activeTab === 'seo' && (<>
             {/* ① Category — search tab + drill-down tab */}
             <RSection number={1} title="카테고리" badge={catTab === 'search' ? '검색' : '4단계선택'}>
               <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
@@ -2345,8 +2354,9 @@ const handleGenerate = async () => {
               )}
             </RSection>
 
-            {/* ② 기본 정보 + AI 키워드 */}
-            <RSection number={2} title="기본 정보">
+            {/* ② (검색최적화) 상품명 — single editable source of the product name.
+                Moved out of the 기본 정보 RSection so it appears EXACTLY ONCE. */}
+            <RSection number={2} title="상품명">
               <Field label="상품명" required hint="최대 100자 · 키워드 포함 권장 (25~50자 최적)">
                 <div className="flex gap-2">
                   <input className={`${inp} flex-1`} value={productName} onChange={e => setProductName(e.target.value)}
@@ -2442,7 +2452,14 @@ const handleGenerate = async () => {
                   )}
                 </div>
               </Field>
+            </RSection>
+            </>)}
 
+            {/* C-PLANT-4TAB — 기본 정보 tab: pricing/platform/supplier (상품명 lifted to
+                검색최적화) + option system + 브랜드/원산지/수입사. */}
+            {activeTab === 'basic' && (<>
+            {/* ② 기본 정보 + AI 키워드 (상품명은 검색최적화 탭으로 이동) */}
+            <RSection number={1} title="기본 정보">
               {/* Price block — sale price + instant discount inline (Naver order) */}
               <div className="grid grid-cols-2 gap-3">
                 <Field label="판매가" required>
@@ -2624,11 +2641,9 @@ const handleGenerate = async () => {
                 </Field>
               </div>
             </RSection>
-            </>)}
 
-            {activeTab === 'option' && (<>
-            {/* ③ Option system — Combination / Single / Direct */}
-            <RSection number={3} title="옵션" badge={optionType === 'NONE' ? '옵션없음' : optionType === 'COMBINATION' ? '조합형' : optionType === 'SINGLE' ? '단독형' : '직접입력형'}>
+            {/* ③ Option system — folded into 기본 정보 (standalone option tab removed) */}
+            <RSection number={2} title="옵션" badge={optionType === 'NONE' ? '옵션없음' : optionType === 'COMBINATION' ? '조합형' : optionType === 'SINGLE' ? '단독형' : '직접입력형'}>
               {/* Type radio */}
               <div className="flex gap-2 flex-wrap">
                 {(['NONE','COMBINATION','SINGLE','DIRECT'] as const).map(t => {
@@ -2944,8 +2959,8 @@ const handleGenerate = async () => {
             </>)}
 
             {activeTab === 'image' && (<>
-            {/* ④ Images + SEO hook */}
-            <RSection number={4} title="이미지">
+            {/* Images (대표·추가) */}
+            <RSection number={1} title="이미지">
               {/* Drag-and-drop image upload to Supabase — auto URL — Excel cols 18/19/20 */}
               <ImageUploadDropzone
                 type="main"
@@ -2975,15 +2990,10 @@ const handleGenerate = async () => {
             </>)}
 
             {activeTab === 'seo' && (<>
-            {/* C-IA-5TAB — unified 검색최적화 tab. Consolidates the search-surface
-                inputs previously scattered across 기본 정보 (골든키워드 · 셀러 태그) and
-                이미지 (SEO 훅문구). #132: pure relocation, no state/handler change.
-                상품명 is surfaced read-only as the search title (no new pageTitle/meta
-                state); the live SEO score stays in the right panel. */}
+            {/* C-PLANT-4TAB — 검색최적화 tab continues: 황금키워드 · 셀러 태그 · SEO 훅문구.
+                The editable 상품명 lives in the SEO fragment above (single source);
+                the redundant read-only mirror was removed. #132: pure relocation. */}
             <div className="space-y-3">
-              <Field label="상품명 (검색 노출 제목)" hint="기본 정보 탭에서 입력 · 점수는 우측 패널에서 실시간 확인">
-                <input className={`${inp} bg-gray-50 text-gray-500`} value={productName} readOnly tabIndex={-1} />
-              </Field>
               {/* Golden keywords display — populated by NaverSEOWorkflow in right panel */}
               {aiKeywords.length > 0 && (
                 <div>
@@ -3416,19 +3426,14 @@ const handleGenerate = async () => {
                   </div>
                 )}
               </DSection>
-              <AlternativeProductPanel
-                productName={productName || undefined}
-                suppliers={suppliers}
-                onChange={setPendingAlternatives}
-              />
             </div>{/* shipping defaults end */}
-            {/* C-IA-5TAB — 배송·정책 tab also hosts 원산지·수입사 (moved from the old
-                SEO·원산지 tab) and 혜택 (리뷰 포인트·구매평·상품정보고시, merged from the
-                removed 혜택 tab). Pure relocation per #132. */}
-            {/* ══ D1~D7 기본값 아코디언 ══ */}
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-400 px-1 uppercase tracking-wide flex items-center gap-1"><Settings size={12} style={{ color: '#999' }} />{" "}기본값 — 펼쳐서 수정 가능</p>
+            </>)}
 
+            {/* C-PLANT-4TAB — 브랜드/원산지/수입사 + 대체상품 belong to 기본 정보 now.
+                They stay physically here but are re-guarded to the basic tab (React
+                accumulates all activeTab==='basic' fragments in source order). */}
+            {activeTab === 'basic' && (<>
+            <div className="space-y-2">
               {/* D1 Brand / Origin / Importer */}
               <DSection icon={<Tag size={14}/>} title="브랜드 / 원산지 / 수입사" summary={`${brand} · ${selectedOrigin?.label ?? originCode}`}>
                 <Field label="브랜드">
@@ -3523,8 +3528,17 @@ const handleGenerate = async () => {
                   </Field>
                 </div>
               </DSection>
-            </div>{/* seo defaults end */}
+            </div>{/* brand/origin defaults end */}
+            {/* C-PLANT-4TAB — 대체상품 추천 moved into 기본 정보 alongside 브랜드/원산지. */}
+            <AlternativeProductPanel
+              productName={productName || undefined}
+              suppliers={suppliers}
+              onChange={setPendingAlternatives}
+            />
+            </>)}
 
+            {/* C-PLANT-4TAB — back to 배송 정책: 리뷰 포인트·구매평·상품정보고시. */}
+            {activeTab === 'shipping' && (<>
             <div className="space-y-2">
               {/* D5 리뷰 포인트 */}
               <DSection icon={<Star size={14}/>} title="리뷰 포인트" summary={`텍스트 ${textReviewPoint}P · 포토 ${photoReviewPoint}P`}>
