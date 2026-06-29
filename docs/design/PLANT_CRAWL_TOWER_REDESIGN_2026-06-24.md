@@ -1,66 +1,51 @@
-# DESIGN BRIEF 2026-06-24 (rev23) - COPY-AUTO-1 프리필 갭 FIX · GEMINI-RESTORE/COPY-AUTO-1 DONE(prod) · backups 제거
+# DESIGN BRIEF 2026-06-24 (rev25) - COPY-AUTO-2 DONE(Code·preview검증) · COPY-AUTO-1 VERIFIED
 
-Authoring: DESKTOP -> CODE-CLI. SD-01 untouched. #43/#62/#82/#155/#156/#157.
-Baseline prod d5c6dc0 (rev50). 권위 리서치: docs/research/NAVER_PRODUCT_NAME_DIAGNOSIS_AND_HOOK_PHRASE_2026-06.md
-(rev23 메모: Filesystem MCP 다운으로 Desktop 미기록 → Code-CLI가 인-챗 핸드오프 기준으로 반영. #41 핑퐁.)
-
-> 운영 메모(#157): 이 브리프는 단일 파일을 rev마다 덮어써서 과거 rev 상세가 유실될 수 있음(rev20 COPY-AUTO-1 상세가 rev21에서 소실 → Code가 정직 요청). 이후 **활성 작업 + 하단 'BACKLOG SPECS(영구)' 누적 보관** 원칙. 미착수 작업의 상세 스펙은 BACKLOG SPECS에 남긴다.
+Authoring: DESKTOP -> CODE-CLI. SD-01 untouched. #43/#45/#55/#62/#82/#155/#156/#157/#158.
+Baseline prod 41f4d16 (code: COPY-AUTO-1 자가복구). 권위 리서치: docs/research/NAVER_PRODUCT_NAME_DIAGNOSIS_AND_HOOK_PHRASE_2026-06.md
 
 ================================================================
-## ★ COPY-AUTO-1 프리필 갭 - FIX (Code, 이번 세션 · prod 검증대기)
+## ★ COPY-AUTO-2 - DONE (Code · preview 실측 통과 · prod 검증대기)
 ================================================================
-증상(Desktop 라이브 재현): 신규 /products/new에서 상품명 입력 + 무료배송 기준 30,000(기본값) 존재에도 seoHook 자동 프리필 미발화(훅 빈칸·초안 배지 없음). 프리뷰는 통과했으나 실제 신규상품 플로우에서 안 뜸(#45 — 프리뷰 통과 ≠ 실측 통과).
+Zero-Touch AI 카피, 트리거 = 페이지 오픈(운영자 확정·쿼터 안전). 무료 제공자만(#155).
 
-원인/수정 (src/app/products/new/page.tsx):
-- 기존 프리필 useEffect가 `copyPrefilledRef`로 **첫 발화 후 영구 잠금** → 로드/세팅 비동기 레이스로 한 번 잘못 잠기면 자가복구 불가. 데이터(카테고리/키워드/threshold) 도착 후 re-run 안 함.
-- 수정: ref를 `hookTouchedRef`(운영자가 직접 입력/삭제한 순간만 latch)로 교체. latch 전에는 데이터 변경마다 **자가복구 재실행** — 비어 있거나 우리 초안을 들고 있는 동안 최선 템플릿 라인으로 계속 동기화. 운영자 편집/AI 적용/저장된 훅이 점유하면 더 이상 건드리지 않음.
-- event_field는 threshold만으로 단독 생성: `buildTemplateCopy`는 null 반환 안 하고, `templateHookLine`이 event_field("{N}원 이상 무료배송")를 최우선 반환. 카테고리 불요. (이름만 있어도 톤 헤드라인으로 항상 비어있지 않은 라인 생성.)
-- textarea onChange가 `hookTouchedRef=true` + 초안 배지 해제.
+구현 (src/app/products/new/page.tsx + src/app/api/ai/seo-workflow + src/app/api/products):
+- 페이지 오픈 시 디바운스(1.4s, 핸드타이핑 mid-keystroke 발사 방지) 후 `/api/ai/seo-workflow`를 **1회** 호출(`aiAutoFiredRef`). `allowPaidFallback:false` 하드코딩 → Groq→Gemini만, **Anthropic 절대 미사용**.
+- 적용 게이트: 운영자 미편집(hookTouchedRef false) + 우리 템플릿 초안 상태(`seoHook && !isDraft`면 skip)일 때만. AI event_field로 1회 교체 후 isDraft=false(초안 배지 해제). 인플라이트 중 운영자 편집 시 미적용.
+- **캐시(상품 영속)**: seoHook → `hookPhrase`(Naver register가 읽는 정식 컬럼)로 저장. 3개 경로(DB 저장·네이버 발행 dbPayload, 임시저장 excelDraftPayload) 모두 + POST create(명시 화이트리스트라 hookPhrase 추가)·PUT(sanitizeProductWrite 스키마 화이트리스트=자동 통과). 로드(?edit=)는 p.hookPhrase→seoHook(기존 死코드 p.seoHook 교정). 로드된 훅=isDraft false라 두 effect 모두 bail → 재오픈 0 재호출.
+- 일일 자동 캡: localStorage `copyAuto2:day` 카운터(40/일). 초과 시 자동 발사 skip(템플릿 초안 유지·수동 사냥 버튼 항상 가용).
 
-검증(Code 실측·preview dev): 상품명 입력 → seoHook "30,000원 이상 무료배송" + 초안 배지 즉시 표시 · 수동 편집 시 배지 해제 + 점유 이양 · 필드 비운 뒤 가격 변경에도 재프리필 안 함(점유 존중) · AI 네트워크 호출 0 · tsc0 · build0. ▶ Desktop은 prod 배포본에서 동일 재확인 요망(#45·#88, 캐시 hard-refresh 권장).
-
-================================================================
-## GEMINI-RESTORE - DONE (prod, rev49/50)
-================================================================
-- src/lib/gemini.ts env 기반 복원(`process.env.GEMINI_API_KEY`, 하드코딩 0). AI 체인: Groq(무료) → Gemini Flash(무료) → Anthropic(유료·최후, 명시적 액션만 #155).
-- ⚠ 운영 관측(rev50): Gemini 키 3종 429-quota flagged — 무료 티어 쿼터 소진 정황. Groq 1차 무료 경로는 동작. (모니터 항목.)
-
-================================================================
-## COPY-AUTO-1 (기본) - DONE (prod, rev50 · 26c13b3)
-================================================================
-PURE `buildTemplateCopy` + templateHookLine + 진입 자동 프리필 + 초안 배지. 0원·AI 호출 0. (위 '프리필 갭 FIX'가 실 신규플로우 발화를 보강.)
+검증 (Code 실측 · preview dev · 로컬 GROQ 3키+GEMINI, ANTHROPIC 키 없음):
+- 신규 오픈+상품명 → 템플릿 초안 즉시 → 디바운스 후 `POST /api/ai/seo-workflow` **1회**(200, ~2.7s=Groq) → 훅 "2만원 이상 무료배송"(AI 자연어) 교체·배지 해제 ✓
+- 네트워크에 **api.anthropic.com 호출 0** · seo-workflow 1회만 ✓
+- 편집 점유(디바운스 전 훅 직접입력) → seo-workflow 호출 **0**·내 텍스트 유지 ✓
+- ?edit= 재오픈(hookPhrase 보유 상품) → 훅 캐시 로드·seo-workflow 호출 **0** ✓ (POST create가 hookPhrase 영속함도 확인)
+- tsc0 · build0(클린 빌드).
+▶ Desktop prod 검증: 신규 첫 오픈 → 템플릿 즉시 → (무료 가용 시) AI 1회 갱신 · 재오픈 0 · Anthropic 0(네트워크) · 편집 점유 미갱신. 주의: prod Gemini 429 → Groq 경로 확인.
 
 ================================================================
-## SECRETS-GUARD - DONE (prod afb1476)
+## COPY-AUTO-1 - VERIFIED (prod 41f4d16) [DONE]
 ================================================================
-- test_groq.py 실 Groq 키 하드코딩 → env 교체. SECURITY 문서 revoke 키 prefix만 레닥션. pre-commit 훅(키패턴+.env/.bak/.backup staging 차단) + 설치 스크립트. *.bak 129→0, stale 워크트리 8개 제거.
-- ✅ Vercel #36 자가복구. 현재 트리 real-키 0·추적 시크릿 0(.env.example 제외).
-
-### ★ 운영자 조치 (잔여)
-1. 🟡 **노출 Groq 키 ROTATION (콘솔 확인만)**: 과거 노출 Groq 키는 **현재 코드 3슬롯에 없음(이미 교체 확인됨)** → 코드 조치 불요. 운영자는 Groq 콘솔에서 옛 키 revoke 여부만 확인.
-2. ✅ #34 **backups/ 제거 완료(이번 세션)**: 운영자 GO → `git rm -r backups/20260202_215123/`(ProductFilters.tsx/page.tsx/route.ts 3개 추적파일) 제거·커밋. backups/ 추적 #43 재발 위험 해소.
+Desktop 라이브 PASS: 상품명 입력 → seoHook 자동 "30,000원 이상 무료배송"·초안 배지·AI 호출 0 · 편집 시 점유 latch(hookTouchedRef) · 비운 뒤 미재프리필. copyPrefilledRef(영구잠금)→hookTouchedRef 자가복구 수정 정확. (지난 "미발화"는 검증오류=검색창 오입력, #158.)
 
 ================================================================
 ## LANE PLAN (우선순위)
 ================================================================
-1. ✅ GEMINI-RESTORE (prod).
-2. ✅ COPY-AUTO-1 기본 (prod).
-3. ★ COPY-AUTO-1 프리필 갭 FIX (Code 완료 · Desktop prod 검증대기).
-4. ✅ #34 backups 제거 (Code 완료). 운영자: Groq 옛 키 콘솔 revoke 확인.
-5. COPY-AUTO-2 Zero-Touch (Code — 프리필 갭 검증 후 착수). 트리거=페이지 오픈(운영자 확정).
-6. 명화 backfill (operator) → publish PUT (#46/#124).
-7. HOOK-3 / CR-1 폴리시 — BACKLOG SPECS 참조.
+1. ✅ COPY-AUTO-1 (prod) · ✅ COPY-AUTO-2 (Code·preview검증, prod 검증대기).
+2. ✅ #34 backups git rm (41f4d16). 운영자: Groq 옛 키 콘솔 revoke 확인만.
+3. COPY-AUTO-2 검증 (Desktop, 배포 후).
+4. 명화 backfill (operator) → publish PUT (#46/#124).
+5. HOOK-3 / CR-1 폴리시 — BACKLOG SPECS 참조.
 
 ================================================================
-## BACKLOG SPECS (영구 — rev 덮어쓰기에도 유지 #157)
+## BACKLOG SPECS (영구 #157)
 ================================================================
-- COPY-AUTO-2 (Zero-Touch 완전 자동초안): 트리거=**페이지 오픈**(운영자 확정·쿼터 안전). 첫 오픈 시 무료(Groq→Gemini) 1회 생성→캐시. Anthropic 절대 미사용(#155). 재진입 재호출 0. 가드레일: 자동 경로 `allowPaidFallback=false`, 일일 자동 캡.
-- HOOK-3 (detail→온실 아틀리에 이송): 상세 헤드라인+서브카피를 아틀리에 상세작업으로 이송. 운영자 흐름 확정 후.
-- CR-1 폴리시(선택): /crawl 40%+ 행 시각 변별 강화(현재 weight 800→900·동일 녹색이라 미묘). 배지/배경 추가 검토.
-- NAME-DIAG-1.1: SEO-MATCH-1로 해소됨(공용 includesNormalized). CLOSED.
+- HOOK-3: detail 헤드라인+서브카피 → 온실 아틀리에 상세작업 이송. 운영자 흐름 확정 후.
+- CR-1 폴리시(선택): /crawl 40%+ 행 시각 변별 강화(weight 800→900·동일 녹색 미묘). 배지/배경 검토.
+- Gemini 무료 폴백 실사용: 키 별도 GCP 프로젝트 분리(현재 공유 쿼터 동시 429). 비차단.
+- NAME-DIAG-1.1: SEO-MATCH-1로 CLOSED.
 
 ================================================================
 ## PRINCIPLES
 ================================================================
-- #157: 설계 브리프는 활성작업 + 하단 BACKLOG SPECS(영구) 분리 보관 — rev 덮어쓰기로 미착수 스펙이 유실되지 않게. Code가 스펙 부재 시 추측 금지·요청(정직).
-- #156 키는 env에만·신규키 운영자 직접 입력·Claude 키 미취급·.gitignore+훅 이중방어·유출키 영구폐기. #155 자동경로 무료 제공자 전용. #82 시크릿 스캔 정직·값 미노출. #43 백업파일 금지. #62 전역. #45 Done=실측. #88 완료=검증. SD-01 불가침.
+- #158: 라이브 DOM 검증 시 대상 요소 정체를 먼저 확정(라벨/placeholder)하고 단언 — "첫 text input" 폴백 등 잘못된 타깃 주입은 false negative를 낳는다(검색창 vs 상품명 혼동 사례). 검증 방법 자체도 검증 대상.
+- #157 브리프=활성+BACKLOG SPECS(영구) 분리. #156 키 env 전용·운영자 직접입력·Claude 키 미취급. #155 자동경로 무료 제공자 전용·Anthropic 명시적 액션만. #82 정직·가짜 금지·데이터 없는 슬롯 미노출. #45 Done=실측(대상 정확히). #43 백업파일 금지. #62 전역. SD-01 불가침.
