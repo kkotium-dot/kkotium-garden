@@ -511,6 +511,9 @@ function NewProductPageInner() {
   // the best template line as product data arrives (self-healing, no permanent
   // lock); once true, the field is the operator's and we never touch it again.
   const hookTouchedRef = useRef(false);
+  // COPY-AUTO-2: fires the free Zero-Touch AI copy at most once per page open.
+  const aiAutoFiredRef = useRef(false);
+  const aiAutoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [description, setDescription] = useState('');
   // D1: golden keywords from AI SEO workflow — stored in DB via keywords JSON column
   const [aiKeywords, setAiKeywords]   = useState<string[]>([]);
@@ -1171,8 +1174,12 @@ function NewProductPageInner() {
         if (p.return_care_enabled)   setReturnCareEnabled(p.return_care_enabled);
         if (p.images && Array.isArray(p.images) && p.images.length > 0)
           setAdditionalImages(p.images.join(','));
-        // Restore SEO fields
-        if (p.seoHook)           setSeoHook(p.seoHook);
+        // Restore SEO fields. COPY-AUTO-2 cache: hookPhrase is the persisted hook
+        // (the canonical DB column the Naver register path consumes). Loading it
+        // leaves seoHook non-empty & !isDraft, so neither COPY-AUTO-1 nor
+        // COPY-AUTO-2 re-fires — re-open costs 0 AI calls.
+        if (p.hookPhrase)        setSeoHook(p.hookPhrase);
+        else if (p.seoHook)      setSeoHook(p.seoHook);
         if (p.naver_keywords)    setAiKeywords(
           typeof p.naver_keywords === 'string'
             ? p.naver_keywords.split(',').map((k: string) => k.trim()).filter(Boolean)
@@ -1332,6 +1339,80 @@ function NewProductPageInner() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productName, seoHook, seoHookIsDraft, aiKeywords, seoTags, d1, d2, d3, d4, price, freeShippingThreshold, selectedOrigin]);
+
+  // COPY-AUTO-2 (#155/#158): Zero-Touch AI copy on page open. The template draft
+  // (COPY-AUTO-1) shows instantly at 0 cost; this fires the FREE AI chain
+  // (Groq -> Gemini, allowPaidFallback=false -> Anthropic never) exactly ONCE per
+  // open to upgrade the hook — but only while the field is still our unedited
+  // draft (operator/AI/saved hook is never overwritten). A loaded hookPhrase
+  // (cache) leaves seoHook non-empty & !isDraft, so re-open does 0 AI calls.
+  // Debounced so a manually-typed name does not fire mid-keystroke; a per-day
+  // localStorage cap bounds free-quota use. The 꼬띠 사냥 button stays the manual
+  // (paid-opt-in) path; ?autoSeo=1 deep-link is handled by that workflow, not here.
+  useEffect(() => {
+    if (aiAutoFiredRef.current) return;             // once per open
+    if (hookTouchedRef.current) return;             // operator owns the field
+    if (searchParams?.get('autoSeo') === '1') return; // full workflow handles it
+    if (!productName.trim()) return;                // need a name to generate
+    if (seoHook.trim() && !seoHookIsDraft) return;  // AI / saved (cached) hook owns it
+
+    if (aiAutoTimerRef.current) clearTimeout(aiAutoTimerRef.current);
+    // Debounce: wait for inputs to settle (loaded products are stable instantly;
+    // a hand-typed name settles ~1.4s after the last keystroke).
+    aiAutoTimerRef.current = setTimeout(async () => {
+      if (aiAutoFiredRef.current || hookTouchedRef.current) return;
+      // Per-day cap (free-quota guard). Skips silently when exhausted — the
+      // template draft remains and the manual 사냥 button is always available.
+      const DAILY_CAP = 40;
+      let usedToday = 0;
+      try {
+        if (typeof window !== 'undefined') {
+          const today = new Date().toISOString().slice(0, 10);
+          const raw = window.localStorage.getItem('copyAuto2:day');
+          const parsed = raw ? JSON.parse(raw) as { d: string; n: number } : null;
+          usedToday = parsed && parsed.d === today ? parsed.n : 0;
+          if (usedToday >= DAILY_CAP) return;
+        }
+      } catch { /* localStorage unavailable -> proceed without cap */ }
+
+      aiAutoFiredRef.current = true;
+      try {
+        const res = await fetch('/api/ai/seo-workflow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productName: productName.trim(),
+            categoryPath: [d1, d2, d3, d4].filter(Boolean).join(' > ') || undefined,
+            categoryCode: getCategoryId(d1, d2, d3, d4) || undefined,
+            description: description || undefined,
+            price: Number(price) || undefined,
+            supplierPrice: Number(supplierPrice) || undefined,
+            keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
+            allowPaidFallback: false, // #155 — free providers only, never Anthropic
+          }),
+        });
+        const data = await res.json();
+        if (!data?.success || !Array.isArray(data.hooks)) return; // free providers down -> keep template
+        const ev = data.hooks.find((h: { slot?: string; text?: string }) => h.slot === 'event_field');
+        const best = (ev?.text || data.hooks[0]?.text || '').trim();
+        // Apply only if the operator did not take over while the call was in flight.
+        if (best && !hookTouchedRef.current) {
+          setSeoHook(best);
+          setSeoHookIsDraft(false); // AI-owned now (better than the template stub)
+        }
+        // Count the spent free call toward the daily cap (success or graceful empty).
+        try {
+          if (typeof window !== 'undefined') {
+            const today = new Date().toISOString().slice(0, 10);
+            window.localStorage.setItem('copyAuto2:day', JSON.stringify({ d: today, n: usedToday + 1 }));
+          }
+        } catch { /* ignore */ }
+      } catch { /* network/free-provider failure -> template draft stays */ }
+    }, 1400);
+
+    return () => { if (aiAutoTimerRef.current) clearTimeout(aiAutoTimerRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productName, seoHook, seoHookIsDraft, d1, d2, d3, d4, price, supplierPrice, aiKeywords, description, searchParams]);
 
   // Deferred query prevents input lag on large lists
   const deferredOriginQuery = useDeferredValue(originQuery);
@@ -1568,6 +1649,9 @@ function NewProductPageInner() {
         detail_image_url: detailImageUrl || undefined,
         keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
         tags: seoTags.length > 0 ? seoTags : undefined,
+        // COPY-AUTO-2 cache: persist the SEO 훅문구 so a re-open loads it and skips
+        // any AI re-generation. hookPhrase is the canonical column (Naver register).
+        hookPhrase: seoHook.trim() || undefined,
         asPhone, asGuide,
         ...(buildOptionsPayload() ?? {}),
       };
@@ -1656,6 +1740,9 @@ function NewProductPageInner() {
         detail_image_url: detailImageUrl || undefined,
         keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
         tags: seoTags.length > 0 ? seoTags : undefined,
+        // COPY-AUTO-2 cache: persist the SEO 훅문구 so a re-open loads it and skips
+        // any AI re-generation. hookPhrase is the canonical column (Naver register).
+        hookPhrase: seoHook.trim() || undefined,
         asPhone, asGuide,
         // Persist options to BOTH stores (crawl-option-mapper) so the Naver
         // register below sees a populated product_options row.
@@ -1875,6 +1962,9 @@ const handleGenerate = async () => {
       status: 'DRAFT',
       keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
       tags: seoTags.length > 0 ? seoTags : undefined,
+      // COPY-AUTO-2 cache: persist the SEO 훅문구 on DRAFT save too, so re-opening
+      // a temp-saved product loads it and skips AI re-generation.
+      hookPhrase: seoHook.trim() || undefined,
       mainImage: mainImage || undefined,
       description: description || undefined,
       shipping_template_id: selectedTemplateId || undefined,

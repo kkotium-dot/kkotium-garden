@@ -332,6 +332,9 @@ export async function POST(request: NextRequest) {
           description: data.description ? String(data.description) : null,
           keywords: Array.isArray(data.keywords) ? data.keywords : undefined,
           tags: Array.isArray(data.tags) ? data.tags : undefined,
+          // COPY-AUTO-2 cache: persist the SEO 훅문구 on first create so a re-open
+          // loads it and skips AI re-generation (canonical column, Naver register).
+          hookPhrase: data.hookPhrase ? String(data.hookPhrase) : null,
           shipping_template_id: data.shipping_template_id
             ? String(data.shipping_template_id)
             : null,
