@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma'; // singleton — avoids connection pool exhaustion
-import { getTodayOrderSummary, isNaverAppStatusInvalid, NAVER_APP_STATUS_USER_MESSAGE } from '@/lib/naver/api-client';
+import { getTodayOrderSummary, isNaverAppStatusInvalid, NAVER_APP_STATUS_USER_MESSAGE, isNaverClientSecretInvalid, NAVER_CLIENT_SECRET_USER_MESSAGE } from '@/lib/naver/api-client';
 
 
 export const dynamic = 'force-dynamic';
@@ -86,12 +86,17 @@ export async function GET(request: NextRequest) {
     // zeros as if they were real sales (#82). Capture the failure kind so the UI can
     // surface an honest status instead — application-status-invalid needs an operator
     // console action, so it gets its own user-facing message.
-    let naverOrderStatus: 'ok' | 'app_status_invalid' | 'unavailable' = 'ok';
+    let naverOrderStatus: 'ok' | 'app_status_invalid' | 'client_secret_invalid' | 'unavailable' = 'ok';
     let naverOrderMessage: string | undefined;
     const todayOrders = await getTodayOrderSummary().catch((e: unknown) => {
       if (isNaverAppStatusInvalid(e)) {
         naverOrderStatus = 'app_status_invalid';
         naverOrderMessage = NAVER_APP_STATUS_USER_MESSAGE;
+      } else if (isNaverClientSecretInvalid(e)) {
+        // #62: client_secret_sign not-valid.args — honest, actionable instead of
+        // a vague "unavailable" (or a false "ok" with fake zero orders).
+        naverOrderStatus = 'client_secret_invalid';
+        naverOrderMessage = NAVER_CLIENT_SECRET_USER_MESSAGE;
       } else {
         naverOrderStatus = 'unavailable';
       }

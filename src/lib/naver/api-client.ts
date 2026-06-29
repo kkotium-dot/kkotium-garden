@@ -39,7 +39,8 @@ export type NaverFailKind =
   | 'NETWORK_TIMEOUT'     // ETIMEDOUT
   | 'DNS_FAIL'            // EAI_AGAIN / ENOTFOUND
   | 'HTTP_ERROR'          // 4xx/5xx (분류 불명)
-  | 'AUTH_FAIL'           // 토큰 발급 실패
+  | 'AUTH_FAIL'           // 토큰 발급 실패 (분류 불명)
+  | 'AUTH_SIGN_INVALID'   // NAVER 분류 GAP (#62): client_secret_sign not-valid.args — 시크릿 서명 불일치 (운영자 NAVER_CLIENT_SECRET 교체 필요)
   | 'APP_STATUS_INVALID'  // NAVER-APP-1: 커머스 API 애플리케이션 상태 무효 (운영자 콘솔 조치 필요)
   | 'UNKNOWN';
 
@@ -56,6 +57,40 @@ const APP_STATUS_INVALID_RE =
 
 export const NAVER_APP_STATUS_USER_MESSAGE =
   '네이버 커머스 API 애플리케이션 상태가 유효하지 않습니다. 네이버 커머스 API 센터에서 애플리케이션 상태(승인·약관 동의·계약 갱신)를 확인해 주세요.';
+
+// ── NAVER 분류 GAP (#62): client_secret_sign not-valid.args ──────────────────
+// The OAuth token request signs `${clientId}_${timestamp}` with the client
+// secret (bcrypt). When the configured NAVER_CLIENT_SECRET is wrong/stale, Naver
+// rejects the request with an invalidInputs entry naming `client_secret_sign`
+// and type `not-valid.args`. This is NOT a transient outage — it needs the
+// operator to replace the secret (proxy/server env). Previously it fell through
+// to a generic AUTH_FAIL/HTTP_ERROR, so the dashboard could read it as a vague
+// "unavailable" (or, on a 200-wrapped proxy body, a false "ok"). Detect it
+// explicitly so every caller surfaces an honest, actionable message.
+const CLIENT_SECRET_SIGN_INVALID_RE = /not-valid\.args/i;
+
+export const NAVER_CLIENT_SECRET_USER_MESSAGE =
+  '네이버 커머스 API 시크릿 서명(client_secret_sign)이 유효하지 않습니다. 프록시/서버 환경변수의 NAVER_CLIENT_SECRET 값을 최신 시크릿으로 교체($ 이스케이프)하고 재시작해 주세요.';
+
+/**
+ * True when an error is the client_secret_sign not-valid.args signature failure
+ * (#62). Mirrors isNaverAppStatusInvalid: checks the structured diagnostic kind
+ * and the captured body, then the raw message as a fallback.
+ */
+export function isNaverClientSecretInvalid(error: unknown): boolean {
+  if (error instanceof NaverApiError) {
+    if (error.diagnostic?.kind === 'AUTH_SIGN_INVALID') return true;
+    if (error.diagnostic?.bodyHead && isClientSecretSignBody(error.diagnostic.bodyHead)) return true;
+  }
+  return error instanceof Error ? CLIENT_SECRET_SIGN_INVALID_RE.test(error.message) : false;
+}
+
+// The not-valid.args type is generic to invalidInputs; require the offending
+// field to be client_secret_sign so a different field's not-valid.args (e.g. a
+// product attribute) is never misattributed to the secret.
+function isClientSecretSignBody(body: string): boolean {
+  return CLIENT_SECRET_SIGN_INVALID_RE.test(body) && /client_secret_sign/i.test(body);
+}
 
 interface NaverDiagnostic {
   kind: NaverFailKind;
@@ -99,6 +134,9 @@ function classifyHttpStatus(status: number, bodyHead: string): NaverFailKind {
   // NAVER-APP-1: detected on the body regardless of the (proxy-rewrapped) status —
   // checked first so it is never masked as a generic HTTP_ERROR.
   if (APP_STATUS_INVALID_RE.test(bodyHead)) return 'APP_STATUS_INVALID';
+  // NAVER 분류 GAP (#62): client_secret_sign not-valid.args — body-based, status-
+  // agnostic (also catches a proxy 200-wrapped error body), before HTTP_ERROR.
+  if (isClientSecretSignBody(bodyHead)) return 'AUTH_SIGN_INVALID';
   if (status === 429) return 'RATE_LIMIT';
   if (status === 403 && /GW\.IP_NOT_ALLOWED/i.test(bodyHead)) return 'IP_NOT_ALLOWED';
   if (status >= 400) return 'HTTP_ERROR';
@@ -281,7 +319,14 @@ async function getAccessToken(): Promise<string> {
     }
 
     if (!data.access_token) {
-      const diag: NaverDiagnostic = { kind: 'AUTH_FAIL', bodyHead: text, status: res.status, gwTraceId };
+      // #62: a 200-wrapped proxy body with no token is the false-ok case — classify
+      // the body so client_secret_sign not-valid.args surfaces as AUTH_SIGN_INVALID
+      // instead of a vague AUTH_FAIL.
+      const bodyKind = classifyHttpStatus(res.status, text);
+      const diag: NaverDiagnostic = {
+        kind: bodyKind === 'UNKNOWN' ? 'AUTH_FAIL' : bodyKind,
+        bodyHead: text, status: res.status, gwTraceId,
+      };
       logNaverDiagnostic(diag);
       throw new NaverApiError('Proxy OAuth response missing access_token', diag);
     }
