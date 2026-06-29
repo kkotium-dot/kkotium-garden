@@ -123,7 +123,10 @@ export async function GET(request: NextRequest) {
           todayOrderCount:   todayOrders.count,
           todayRevenue:      todayOrders.revenue,
           todayPaidAmount:   todayOrders.paidAmount,
-          naverApiReady:     !!(process.env.NAVER_CLIENT_ID && process.env.NAVER_CLIENT_SECRET),
+          // #62: env presence is a false readiness signal — proxy mode always has
+          // it (and a wrong secret still "exists"). Ready means the live order
+          // call actually succeeded.
+          naverApiReady:     naverOrderStatus === 'ok',
           // NAVER-APP-1: honest live-order status so the dashboard can warn instead
           // of presenting fake zeros when the Naver order API is unavailable.
           naverOrderStatus,

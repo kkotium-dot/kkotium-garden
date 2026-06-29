@@ -802,8 +802,12 @@ export async function getTodayOrderSummary(): Promise<{
     const revenue    = orders.reduce((s: number, o: any) => s + Number(o.totalPaymentAmount ?? o.paymentAmount ?? 0), 0);
     const paidAmount = orders.reduce((s: number, o: any) => s + Number(o.paymentAmount ?? 0), 0);
     return { count: orders.length, revenue, paidAmount };
-  } catch {
-    return { count: 0, revenue: 0, paidAmount: 0 };
+  } catch (e) {
+    // #62/#82: do NOT swallow into fake zeros here — that masked AUTH_SIGN_INVALID /
+    // APP_STATUS_INVALID and made the stats route's classification catch dead code.
+    // Propagate so the single caller (dashboard stats) classifies the failure and
+    // owns its own 0 fallback honestly.
+    throw e;
   }
 }
 
