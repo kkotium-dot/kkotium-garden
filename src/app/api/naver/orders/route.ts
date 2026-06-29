@@ -3,7 +3,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { naverRequest } from '@/lib/naver/api-client';
+import {
+  naverRequest,
+  isNaverAppStatusInvalid,
+  isNaverClientSecretInvalid,
+  NAVER_APP_STATUS_USER_MESSAGE,
+  NAVER_CLIENT_SECRET_USER_MESSAGE,
+} from '@/lib/naver/api-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +83,11 @@ export async function GET(request: NextRequest) {
     const windows  = splitWindows(fromDate, toDate);
 
     let allItems: unknown[] = [];
+    // #62/#82: track per-window failures so a TOTAL outage (every window failed)
+    // is surfaced honestly instead of masquerading as success+empty. Partial
+    // failures stay tolerant (sync whatever succeeded).
+    let windowErrors = 0;
+    let lastWindowError: unknown = null;
 
     for (const w of windows) {
       try {
@@ -84,8 +95,31 @@ export async function GET(request: NextRequest) {
         const raw  = await naverRequest('GET', qUrl);
         allItems   = allItems.concat(extractItems(raw));
       } catch (err: unknown) {
+        windowErrors++;
+        lastWindowError = err;
         console.error('[naver/orders] window error:', err instanceof Error ? err.message : err);
       }
+    }
+
+    // Honest total-failure gate: when EVERY window failed there is no real "0
+    // orders" — the API is down. Classify and surface instead of a false success.
+    if (windows.length > 0 && windowErrors === windows.length) {
+      const naverStatus = isNaverAppStatusInvalid(lastWindowError)
+        ? 'app_status_invalid'
+        : isNaverClientSecretInvalid(lastWindowError)
+        ? 'client_secret_invalid'
+        : 'unavailable';
+      const message =
+        naverStatus === 'app_status_invalid'
+          ? NAVER_APP_STATUS_USER_MESSAGE
+          : naverStatus === 'client_secret_invalid'
+          ? NAVER_CLIENT_SECRET_USER_MESSAGE
+          : '네이버 주문 API가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요.';
+      console.error(`[naver/orders] all ${windows.length} windows failed — naverStatus=${naverStatus}`);
+      return NextResponse.json(
+        { success: false, naverStatus, error: message, synced: 0, skipped: 0, total: 0, windows: windows.length },
+        { status: 200 },
+      );
     }
 
     // Deduplicate by productOrderId
