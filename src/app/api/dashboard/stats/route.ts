@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma'; // singleton — avoids connection pool exhaustion
-import { getTodayOrderSummary } from '@/lib/naver/api-client';
+import { getTodayOrderSummary, isNaverAppStatusInvalid, NAVER_APP_STATUS_USER_MESSAGE } from '@/lib/naver/api-client';
 
 
 export const dynamic = 'force-dynamic';
@@ -81,8 +81,22 @@ export async function GET(request: NextRequest) {
     });
     const totalRevenue = (marginStats._sum.salePrice || 0) - (marginStats._sum.supplierPrice || 0);
 
-    // 6. Naver live order summary (non-blocking — falls back to zeros if API unavailable)
-    const todayOrders = await getTodayOrderSummary().catch(() => ({ count: 0, revenue: 0, paidAmount: 0 }));
+    // 6. Naver live order summary (non-blocking — falls back to zeros if API unavailable).
+    // NAVER-APP-1 (#62/#160): when the Naver order API is down we must NOT show fake
+    // zeros as if they were real sales (#82). Capture the failure kind so the UI can
+    // surface an honest status instead — application-status-invalid needs an operator
+    // console action, so it gets its own user-facing message.
+    let naverOrderStatus: 'ok' | 'app_status_invalid' | 'unavailable' = 'ok';
+    let naverOrderMessage: string | undefined;
+    const todayOrders = await getTodayOrderSummary().catch((e: unknown) => {
+      if (isNaverAppStatusInvalid(e)) {
+        naverOrderStatus = 'app_status_invalid';
+        naverOrderMessage = NAVER_APP_STATUS_USER_MESSAGE;
+      } else {
+        naverOrderStatus = 'unavailable';
+      }
+      return { count: 0, revenue: 0, paidAmount: 0 };
+    });
 
     return NextResponse.json({
       success: true,
@@ -105,6 +119,10 @@ export async function GET(request: NextRequest) {
           todayRevenue:      todayOrders.revenue,
           todayPaidAmount:   todayOrders.paidAmount,
           naverApiReady:     !!(process.env.NAVER_CLIENT_ID && process.env.NAVER_CLIENT_SECRET),
+          // NAVER-APP-1: honest live-order status so the dashboard can warn instead
+          // of presenting fake zeros when the Naver order API is unavailable.
+          naverOrderStatus,
+          naverOrderMessage,
           // Legacy aliases kept for any other consumers
           readyProducts: activeProducts,
           avgAiScore: avgScore,

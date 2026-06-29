@@ -40,7 +40,22 @@ export type NaverFailKind =
   | 'DNS_FAIL'            // EAI_AGAIN / ENOTFOUND
   | 'HTTP_ERROR'          // 4xx/5xx (분류 불명)
   | 'AUTH_FAIL'           // 토큰 발급 실패
+  | 'APP_STATUS_INVALID'  // NAVER-APP-1: 커머스 API 애플리케이션 상태 무효 (운영자 콘솔 조치 필요)
   | 'UNKNOWN';
+
+// ── NAVER-APP-1 (#62/#160): application-status-invalid common signal ─────────
+// Naver Commerce OAuth rejects the token request when the registered application
+// status is invalid (expired / unapproved / contract-renewal / deactivated). It
+// is NOT a credential or code fault — it needs an operator action in the Commerce
+// API center, and it surfaces identically on EVERY path (token + API, proxy +
+// direct). We detect it once (here) so all callers can surface one honest message
+// instead of an opaque, repeating 500. Matches the gateway type token and the
+// Korean message the API returns.
+const APP_STATUS_INVALID_RE =
+  /eapp-application\.status\.invalid|어플리케이션 상태가 유효하지 않습니다/i;
+
+export const NAVER_APP_STATUS_USER_MESSAGE =
+  '네이버 커머스 API 애플리케이션 상태가 유효하지 않습니다. 네이버 커머스 API 센터에서 애플리케이션 상태(승인·약관 동의·계약 갱신)를 확인해 주세요.';
 
 interface NaverDiagnostic {
   kind: NaverFailKind;
@@ -81,6 +96,9 @@ function classifyFetchFailure(
 }
 
 function classifyHttpStatus(status: number, bodyHead: string): NaverFailKind {
+  // NAVER-APP-1: detected on the body regardless of the (proxy-rewrapped) status —
+  // checked first so it is never masked as a generic HTTP_ERROR.
+  if (APP_STATUS_INVALID_RE.test(bodyHead)) return 'APP_STATUS_INVALID';
   if (status === 429) return 'RATE_LIMIT';
   if (status === 403 && /GW\.IP_NOT_ALLOWED/i.test(bodyHead)) return 'IP_NOT_ALLOWED';
   if (status >= 400) return 'HTTP_ERROR';
@@ -178,6 +196,21 @@ export class NaverApiError extends Error {
     this.name = 'NaverApiError';
     this.diagnostic = diagnostic;
   }
+}
+
+/**
+ * NAVER-APP-1 (#62/#160): true when a caught error is the Naver application-status
+ * -invalid failure. Common across every Naver path — any route can call this to
+ * surface NAVER_APP_STATUS_USER_MESSAGE honestly instead of a raw repeating 500.
+ * Checks the structured diagnostic first, then falls back to scanning the message
+ * (covers errors re-thrown without a NaverApiError wrapper).
+ */
+export function isNaverAppStatusInvalid(error: unknown): boolean {
+  if (error instanceof NaverApiError) {
+    if (error.diagnostic?.kind === 'APP_STATUS_INVALID') return true;
+    if (error.diagnostic?.bodyHead && APP_STATUS_INVALID_RE.test(error.diagnostic.bodyHead)) return true;
+  }
+  return error instanceof Error ? APP_STATUS_INVALID_RE.test(error.message) : false;
 }
 
 // ── Token cache (in-memory, refreshed when expired) ──────────────────────

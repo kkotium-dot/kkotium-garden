@@ -583,6 +583,10 @@ export interface DashboardStatsApiData {
   todayRevenue?: number;
   todayPaidAmount?: number;
   naverApiReady?: boolean;
+  // NAVER-APP-1 (#62/#160): honest live-order status. 'app_status_invalid' means the
+  // Naver Commerce app needs an operator console action; the message is user-facing.
+  naverOrderStatus?: 'ok' | 'app_status_invalid' | 'unavailable';
+  naverOrderMessage?: string;
   // Legacy aliases — preserved for parity with the existing dashboard page
   readyProducts?: number;
   avgAiScore?: number;

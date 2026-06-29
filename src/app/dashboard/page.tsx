@@ -133,10 +133,16 @@ function PipelineCard({ stages }: { stages: PipelineStage[] }) {
 }
 
 // ── Today's Performance Card (Section 3) ──────────────────────────────────
-function TodayCard({ orderCount, revenue, paidAmount, loading }: {
-  orderCount: number; revenue: number; paidAmount: number; loading?: boolean;
+function TodayCard({ orderCount, revenue, paidAmount, naverOrderStatus, naverOrderMessage, loading }: {
+  orderCount: number; revenue: number; paidAmount: number;
+  naverOrderStatus?: 'ok' | 'app_status_invalid' | 'unavailable';
+  naverOrderMessage?: string;
+  loading?: boolean;
 }) {
   const fmt = (n: number) => n >= 10000 ? `${(n / 10000).toFixed(1)}만원` : `${n.toLocaleString()}원`;
+  // NAVER-APP-1 (#62/#160): when the Naver order API is unavailable, show an honest
+  // notice instead of fake zeros (#82). app_status_invalid carries an operator action.
+  const naverDown = !loading && (naverOrderStatus === 'app_status_invalid' || naverOrderStatus === 'unavailable');
   return (
     <div
       className="kk-card"
@@ -175,6 +181,33 @@ function TodayCard({ orderCount, revenue, paidAmount, loading }: {
         </span>
       </div>
 
+      {naverDown ? (
+        <div
+          style={{
+            flex: 1,
+            background: '#FFFBEB',
+            border: '1px solid #FDE68A',
+            borderRadius: 10,
+            padding: '12px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            gap: 6,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <AlertTriangle size={14} style={{ color: '#b45309', flexShrink: 0 }} />
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: '#b45309' }}>
+              {naverOrderStatus === 'app_status_invalid' ? '네이버 앱 상태 확인 필요' : '네이버 주문 데이터 일시 불러오기 실패'}
+            </p>
+          </div>
+          <p style={{ margin: 0, fontSize: 11, color: '#92400e', lineHeight: 1.5 }}>
+            {naverOrderStatus === 'app_status_invalid'
+              ? (naverOrderMessage ?? '네이버 커머스 API 애플리케이션 상태를 확인해 주세요.')
+              : '네이버 주문 API가 일시적으로 응답하지 않습니다. 잠시 후 다시 표시됩니다.'}
+          </p>
+        </div>
+      ) : (
       <div
         style={{
           flex: 1,
@@ -209,6 +242,7 @@ function TodayCard({ orderCount, revenue, paidAmount, loading }: {
           </div>
         </div>
       </div>
+      )}
 
       <p style={{ margin: 0, fontSize: 10, color: '#A3A3A3' }}>
         {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} KST 기준
@@ -544,6 +578,8 @@ export default function DashboardPage() {
               orderCount={stats?.todayOrderCount ?? 0}
               revenue={stats?.todayRevenue ?? 0}
               paidAmount={stats?.todayPaidAmount ?? 0}
+              naverOrderStatus={stats?.naverOrderStatus}
+              naverOrderMessage={stats?.naverOrderMessage}
               loading={statsLoading}
             />
             <TopProductsCard />
