@@ -1446,6 +1446,10 @@ function NewProductPageInner() {
             supplierPrice: Number(supplierPrice) || undefined,
             keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
             allowPaidFallback: false, // #155 — free providers only, never Anthropic
+            // AI-PRIORITY-1 (#162): page-open auto-fire is high-frequency →
+            // 'speed' (Groq-first). Kept explicit so a future quality flip is a
+            // one-line, intentional change (activation is a separate commit).
+            providerProfile: 'speed',
           }),
         });
         const data = await res.json();

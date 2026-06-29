@@ -159,7 +159,10 @@ export default function NaverSEOWorkflow({
         headers: { 'Content-Type': 'application/json' },
         // 사냥 버튼 = explicit user action → paid (Anthropic) fallback allowed
         // only if both free providers (Groq·Gemini) fail (#155).
-        body: JSON.stringify({ productName, categoryPath, categoryCode, description, price, supplierPrice, keywords: currentKeywords, allowPaidFallback: true }),
+        // AI-PRIORITY-1 (#162): providerProfile wired as 'speed' for now (no
+        // behavior change). The copy/hook quality flip to 'quality' (Gemini-first)
+        // is a separate commit, gated on Gemini slot1 returning 200.
+        body: JSON.stringify({ productName, categoryPath, categoryCode, description, price, supplierPrice, keywords: currentKeywords, allowPaidFallback: true, providerProfile: 'speed' }),
       });
       const data: SEOResult = await res.json();
       if (!data.success) throw new Error((data as unknown as { error?: string }).error ?? 'AI 분석 오류');

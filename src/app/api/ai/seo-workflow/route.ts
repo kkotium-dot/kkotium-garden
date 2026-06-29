@@ -1,15 +1,22 @@
 // POST /api/ai/seo-workflow
-// D1 SEO workflow — AI provider priority (2026-05-19, Sprint 7-PC-C):
-//   1. Groq llama-3.1-8b-instant  (3 keys round-robin, free 43,200/day)
-//   2. Anthropic Claude Sonnet   (ANTHROPIC_API_KEY) — last resort, cost-capped
+// D1 SEO workflow — AI provider chain (AI-PRIORITY-1, #162):
+//   FREE providers, ordered by request.providerProfile (default 'speed'):
+//     - 'speed'   → Groq llama-3.1-8b-instant (3 keys, free) → Gemini 2.0 Flash
+//     - 'quality' → Gemini 2.0 Flash (free) → Groq
+//   PAID last-resort (always last, profile-independent):
+//     - Anthropic Claude Sonnet — only when allowPaidFallback (#155 gate).
+// Profile ordering lives in src/lib/ai/provider-profile.ts (common layer).
 //
-// DEPRECATED chain (removed in this commit):
-//   - Perplexity sonar-pro (Pro plan expired 2026-05)
-//   - Google Gemini 2.0 Flash (revoked due to backup file exposure 2026-05-19)
+// DEPRECATED: Perplexity sonar-pro (Pro plan expired 2026-05).
 
 import { NextRequest, NextResponse } from 'next/server';
 import { callGroq, GROQ_MODEL } from '@/lib/ai/groq';
 import { callGemini, hasGeminiKey, GEMINI_MODEL } from '@/lib/ai/gemini';
+import {
+  normalizeProfile,
+  resolveFreeProviderOrder,
+  type ProviderProfile,
+} from '@/lib/ai/provider-profile';
 import bannedData from '@/lib/seo/banned-words.ko.json';
 import { classifyCopyTone, type CopyTone } from '@/lib/seo/copy-tone';
 
@@ -95,6 +102,10 @@ interface SEOWorkflowRequest {
   // #155 guardrail: paid (Anthropic) fallback is OFF unless an explicit user
   // action opts in. Automatic/background callers leave this false → free only.
   allowPaidFallback?: boolean;
+  // AI-PRIORITY-1 (#162): free-provider ordering profile. 'speed' (default) =
+  // Groq-first; 'quality' = Gemini-first. Absent/invalid → 'speed' (no change).
+  // Only orders the FREE providers; Anthropic stays gated by allowPaidFallback.
+  providerProfile?: ProviderProfile;
 }
 
 interface CategorySuggestion {
@@ -446,35 +457,44 @@ export async function POST(request: NextRequest) {
     let content = '';
     let provider = '';
 
-    // 1) Groq (free, 3 keys round-robin)
-    if (hasGroqKey) {
-      try {
-        content = await callGroq(prompt, systemPrompt);
-        provider = `groq-${GROQ_MODEL}`; // references GROQ_MODEL constant (#44)
-      } catch (groqErr: unknown) {
-        const msg = groqErr instanceof Error ? groqErr.message : String(groqErr);
-        console.warn('[seo-workflow] Groq failed, trying Gemini (free) fallback:', msg.slice(0, 80));
+    // AI-PRIORITY-1 (#162): order the FREE providers by the request's profile.
+    // 'speed' (default) = Groq-first (current behavior); 'quality' = Gemini-first.
+    // Anthropic is NOT in this list — it stays the gated paid last-resort below.
+    const profile = normalizeProfile(body.providerProfile);
+    const freeOrder = resolveFreeProviderOrder(profile);
+
+    for (const p of freeOrder) {
+      if (content) break;
+      if (p === 'groq' && hasGroqKey) {
+        try {
+          content = await callGroq(prompt, systemPrompt);
+          provider = `groq-${GROQ_MODEL}`; // references GROQ_MODEL constant (#44)
+        } catch (groqErr: unknown) {
+          const msg = groqErr instanceof Error ? groqErr.message : String(groqErr);
+          console.warn('[seo-workflow] Groq failed, falling through free chain:', msg.slice(0, 80));
+        }
+      } else if (p === 'gemini' && hasGemini) {
+        try {
+          content = await callGemini(prompt, systemPrompt);
+          provider = `gemini-${GEMINI_MODEL}`;
+        } catch (gemErr: unknown) {
+          const msg = gemErr instanceof Error ? gemErr.message : String(gemErr);
+          console.warn('[seo-workflow] Gemini failed, falling through free chain:', msg.slice(0, 80));
+        }
       }
     }
 
-    // 2) Gemini 2.0 Flash (free) — next free provider
-    if (!content && hasGemini) {
-      try {
-        content = await callGemini(prompt, systemPrompt);
-        provider = `gemini-${GEMINI_MODEL}`;
-      } catch (gemErr: unknown) {
-        const msg = gemErr instanceof Error ? gemErr.message : String(gemErr);
-        console.warn('[seo-workflow] Gemini failed, free providers exhausted:', msg.slice(0, 80));
-      }
-    }
-
-    // 3) Anthropic (paid) — ONLY on explicit opt-in (#155 guardrail)
+    // Anthropic (paid) — ONLY on explicit opt-in (#155 guardrail). Always last,
+    // independent of profile.
     if (!content && allowPaidFallback && anthropicKey) {
       content = await callAnthropic(prompt, anthropicKey);
       provider = 'claude-sonnet';
     } else if (!content) {
       throw new Error('무료 AI 제공자(Groq·Gemini) 일시 응답 없음. 잠시 후 다시 시도해주세요.');
     }
+
+    // AI-PRIORITY-1: log which provider actually served (profile tuning signal).
+    console.info(`[seo-workflow] profile=${profile} served=${provider || 'none'}`);
 
     const normalized = normalize(content, categoryPath ?? '카테고리 AI 자동 추론');
 
