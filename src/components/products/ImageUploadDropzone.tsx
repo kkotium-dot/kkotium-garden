@@ -3,6 +3,11 @@
 // Uploads directly to Supabase Storage → returns public URL immediately
 // No preview rendering (by design) — URL is set in field for Excel export
 // Supports: main image (1), additional images (up to 9), detail-page images (many)
+//
+// IMAGE-DROPZONE-MAIN (2026-06-29, operator request): the single-slot (대표/main)
+// now keeps its dropzone visible even when filled, so the representative image can
+// be drag/drop- or click-REPLACED at any time — consistent with 추가/상세. A new
+// file on a filled single slot overwrites the existing URL.
 
 import { useState, useRef, useCallback, DragEvent, ChangeEvent } from 'react';
 import { Upload, X, CheckCircle, AlertCircle, Loader, Link } from 'lucide-react';
@@ -77,7 +82,10 @@ export default function ImageUploadDropzone({
 
   const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    const toUpload = Array.from(files).slice(0, max - currentUrls.length);
+    // IMAGE-DROPZONE-MAIN: single slots (대표) REPLACE — a new file overwrites the
+    // existing one even when full. Multi slots fill the remaining capacity only.
+    const remaining = multi ? max - currentUrls.length : 1;
+    const toUpload = Array.from(files).slice(0, remaining);
     if (toUpload.length === 0) return;
 
     setUploading(true);
@@ -88,13 +96,14 @@ export default function ImageUploadDropzone({
       newResults.push(result);
     }
 
-    setResults(prev => [...prev, ...newResults]);
+    // Single slot replaces its result history; multi appends.
+    setResults(prev => (multi ? [...prev, ...newResults] : newResults));
 
     const newUrls = newResults.filter(r => r.ok).map(r => r.url);
     if (newUrls.length > 0) {
       const merged = multi
         ? [...currentUrls, ...newUrls].join(', ')
-        : newUrls[0];
+        : newUrls[0];   // single: overwrite existing URL
       onChange(merged);
     }
     setUploading(false);
@@ -127,7 +136,11 @@ export default function ImageUploadDropzone({
     setUrlInput('');
   };
 
-  const canAddMore = currentUrls.length < max;
+  // IMAGE-DROPZONE-MAIN: single slot (대표) always exposes the dropzone so the
+  // image can be drag/drop- or click-REPLACED at any time. Multi slots hide the
+  // zone once full.
+  const canAddMore = multi ? currentUrls.length < max : true;
+  const isFilledSingle = !multi && currentUrls.length > 0;
 
   return (
     <div className="space-y-2">
@@ -142,7 +155,7 @@ export default function ImageUploadDropzone({
         )}
       </div>
 
-      {/* Drop zone — only show when can add more */}
+      {/* Drop zone — single (대표) always shown for replace; multi shown until full */}
       {canAddMore && (
         <div
           onDrop={onDrop}
@@ -173,9 +186,11 @@ export default function ImageUploadDropzone({
               <>
                 <Upload size={18} className="text-gray-400" />
                 <p className="text-xs text-gray-600 font-semibold">
-                  파일을 드래그하거나 클릭해서 선택
+                  {isFilledSingle ? '파일을 드래그하거나 클릭해서 교체' : '파일을 드래그하거나 클릭해서 선택'}
                 </p>
-                <p className="text-xs text-gray-400">{meta.desc} · JPG, PNG, WebP · 최대 10MB</p>
+                <p className="text-xs text-gray-400">
+                  {isFilledSingle ? '기존 이미지 교체 · ' : ''}{meta.desc} · JPG, PNG, WebP · 최대 10MB
+                </p>
               </>
             )}
           </div>
