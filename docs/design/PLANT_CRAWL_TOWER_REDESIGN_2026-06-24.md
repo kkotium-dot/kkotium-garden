@@ -1,51 +1,53 @@
-# DESIGN BRIEF 2026-06-24 (rev25) - COPY-AUTO-2 DONE(Code·preview검증) · COPY-AUTO-1 VERIFIED
+# DESIGN BRIEF 2026-06-24 (rev27) - COPY-AUTO-2 확정·2.1 진행 · Gemini 로그결론 · ★NAVER-APP 장애 발견
 
-Authoring: DESKTOP -> CODE-CLI. SD-01 untouched. #43/#45/#55/#62/#82/#155/#156/#157/#158.
-Baseline prod 41f4d16 (code: COPY-AUTO-1 자가복구). 권위 리서치: docs/research/NAVER_PRODUCT_NAME_DIAGNOSIS_AND_HOOK_PHRASE_2026-06.md
-
-================================================================
-## ★ COPY-AUTO-2 - DONE (Code · preview 실측 통과 · prod 검증대기)
-================================================================
-Zero-Touch AI 카피, 트리거 = 페이지 오픈(운영자 확정·쿼터 안전). 무료 제공자만(#155).
-
-구현 (src/app/products/new/page.tsx + src/app/api/ai/seo-workflow + src/app/api/products):
-- 페이지 오픈 시 디바운스(1.4s, 핸드타이핑 mid-keystroke 발사 방지) 후 `/api/ai/seo-workflow`를 **1회** 호출(`aiAutoFiredRef`). `allowPaidFallback:false` 하드코딩 → Groq→Gemini만, **Anthropic 절대 미사용**.
-- 적용 게이트: 운영자 미편집(hookTouchedRef false) + 우리 템플릿 초안 상태(`seoHook && !isDraft`면 skip)일 때만. AI event_field로 1회 교체 후 isDraft=false(초안 배지 해제). 인플라이트 중 운영자 편집 시 미적용.
-- **캐시(상품 영속)**: seoHook → `hookPhrase`(Naver register가 읽는 정식 컬럼)로 저장. 3개 경로(DB 저장·네이버 발행 dbPayload, 임시저장 excelDraftPayload) 모두 + POST create(명시 화이트리스트라 hookPhrase 추가)·PUT(sanitizeProductWrite 스키마 화이트리스트=자동 통과). 로드(?edit=)는 p.hookPhrase→seoHook(기존 死코드 p.seoHook 교정). 로드된 훅=isDraft false라 두 effect 모두 bail → 재오픈 0 재호출.
-- 일일 자동 캡: localStorage `copyAuto2:day` 카운터(40/일). 초과 시 자동 발사 skip(템플릿 초안 유지·수동 사냥 버튼 항상 가용).
-
-검증 (Code 실측 · preview dev · 로컬 GROQ 3키+GEMINI, ANTHROPIC 키 없음):
-- 신규 오픈+상품명 → 템플릿 초안 즉시 → 디바운스 후 `POST /api/ai/seo-workflow` **1회**(200, ~2.7s=Groq) → 훅 "2만원 이상 무료배송"(AI 자연어) 교체·배지 해제 ✓
-- 네트워크에 **api.anthropic.com 호출 0** · seo-workflow 1회만 ✓
-- 편집 점유(디바운스 전 훅 직접입력) → seo-workflow 호출 **0**·내 텍스트 유지 ✓
-- ?edit= 재오픈(hookPhrase 보유 상품) → 훅 캐시 로드·seo-workflow 호출 **0** ✓ (POST create가 hookPhrase 영속함도 확인)
-- tsc0 · build0(클린 빌드).
-▶ Desktop prod 검증: 신규 첫 오픈 → 템플릿 즉시 → (무료 가용 시) AI 1회 갱신 · 재오픈 0 · Anthropic 0(네트워크) · 편집 점유 미갱신. 주의: prod Gemini 429 → Groq 경로 확인.
+Authoring: DESKTOP -> CODE-CLI. SD-01 untouched. #45/#46/#55/#62/#82/#124/#155/#157/#158/#159.
+Baseline prod edd0281 (COPY-AUTO-2). 권위 리서치: docs/research/NAVER_PRODUCT_NAME_DIAGNOSIS_AND_HOOK_PHRASE_2026-06.md
 
 ================================================================
-## COPY-AUTO-1 - VERIFIED (prod 41f4d16) [DONE]
+## COPY-AUTO-2 - 확정(신규 PASS) · COPY-AUTO-2.1 진행 중
 ================================================================
-Desktop 라이브 PASS: 상품명 입력 → seoHook 자동 "30,000원 이상 무료배송"·초안 배지·AI 호출 0 · 편집 시 점유 latch(hookTouchedRef) · 비운 뒤 미재프리필. copyPrefilledRef(영구잠금)→hookTouchedRef 자가복구 수정 정확. (지난 "미발화"는 검증오류=검색창 오입력, #158.)
+- COPY-AUTO-2 신규 플로우: Desktop 라이브 PASS(자동초안·1회·Anthropic 0·편집점유). Code 정적 fact-check(allowPaidFallback:false가 seo-workflow:472에서 Anthropic 차단·hookPhrase PUT 동적 allowlist 라운드트립·POST 명시저장·GET include 로드)·tsc0/build0. prod=edd0281.
+- COPY-AUTO-2.1(재오픈 캐시 레이스): Desktop 발견(fresh 캐시 상품 재오픈 시 비동기 로드 전 자동발사 1회). Code 수정 진행 중. 배포 후 Desktop 검증(재오픈 seo-workflow 0·미덮어쓰기).
+
+================================================================
+## Gemini 상태 - 로그 실측 결론 (운영자 질의)
+================================================================
+- Vercel 런타임 로그(승인) 실측: prod edd0281 statusCode 200(90)/304(46)·**4xx/5xx 없음** → 서비스 건강·Groq 정상 응답·사용자 영향 0.
+- ★Gemini 429는 prod 로그로 **격리 불가**: Gemini는 폴백이라 Groq 200 성공에 가려져 에러로그에 미표출. 직접 smoke(이전 429·공유 GCP 쿼터)가 유일 근거.
+- 결론: Groq=정상(로그 확정). Gemini=키 유효·쿼터 제한 추정·서비스 무지장. **운영자 GCP 프로젝트 분리가 정확한 해법(진행 중)**. 분리 후 Desktop이 강제 폴백 경로로 재검증 가능.
+
+================================================================
+## ★★ NAVER-APP-1 (네이버 커머스 API 애플리케이션 상태 무효) [신규 발견·운영자 조치 — 중요]
+================================================================
+Desktop 로그 실측(prod edd0281, 최근 1h, 1분 간격 반복):
+```
+GET /api/dashboard/stats → [NAVER_DIAG] HTTP_ERROR status=500
+GET [proxy]/v1/pay-order/seller/product-orders ...
+body: Naver OAuth failed: 400 - {code:BadRequest, message:"입력한 데이터가 유효하지 않습니다",
+  invalidInputs:[{type:"auth.eapp-application.status.invalid", message:"어플리케이션 상태가 유효하지 않습니다"}]}
+```
+- 증상: 대시보드 주문/매출 통계(pay-order/product-orders)가 **1분마다 500 실패**. OAuth 단계에서 네이버가 **애플리케이션 상태 무효(eapp-application.status.invalid)**로 거부.
+- 근본원인: **코드 아님 — 네이버 커머스 API 애플리케이션 상태 문제**(만료/미승인/비활성/계약 갱신필요 등). 자격증명(키/시크릿)이 아니라 '애플리케이션 상태'.
+- ★영향 확대(#62): 동일 OAuth 경로를 쓰는 **명화 발행 PUT(#46/#124)도 동일 사유로 실패할 것** → NAVER-APP-1 미해결 시 발행 불가. 즉 발행 GATE에 이 항목 추가.
+- 조치(운영자): 네이버 **커머스 API 센터**에서 애플리케이션 상태 확인 — 승인/재승인, 약관 재동의, 등록/계약 갱신, 또는 애플리케이션 재활성화. (Claude는 네이버 콘솔 접근·키 미취급.)
+- Code(보조): /api/dashboard/stats가 이 상태를 사용자에게 친화적으로 표면화(무한 500 대신 "네이버 앱 상태 확인 필요" 안내)하는 graceful 처리 검토 — 단건 아닌 전 네이버 호출 경로 공통(#62). 우선순위는 운영자 콘솔 조치가 먼저.
 
 ================================================================
 ## LANE PLAN (우선순위)
 ================================================================
-1. ✅ COPY-AUTO-1 (prod) · ✅ COPY-AUTO-2 (Code·preview검증, prod 검증대기).
-2. ✅ #34 backups git rm (41f4d16). 운영자: Groq 옛 키 콘솔 revoke 확인만.
-3. COPY-AUTO-2 검증 (Desktop, 배포 후).
-4. 명화 backfill (operator) → publish PUT (#46/#124).
-5. HOOK-3 / CR-1 폴리시 — BACKLOG SPECS 참조.
+1. COPY-AUTO-2.1 재오픈 캐시 레이스 수정 (Code, 진행 중) → Desktop 검증.
+2. ★NAVER-APP-1: 운영자 네이버 커머스 API 센터에서 애플리케이션 상태 조치(대시보드 복구 + 발행 GATE 해제 전제).
+3. 명화 backfill (operator).
+4. 명화 publish PUT <- backfill+reconcile+**NAVER-APP-1 해결**+GO (#46/#124).
 
 ================================================================
 ## BACKLOG SPECS (영구 #157)
 ================================================================
-- HOOK-3: detail 헤드라인+서브카피 → 온실 아틀리에 상세작업 이송. 운영자 흐름 확정 후.
-- CR-1 폴리시(선택): /crawl 40%+ 행 시각 변별 강화(weight 800→900·동일 녹색 미묘). 배지/배경 검토.
-- Gemini 무료 폴백 실사용: 키 별도 GCP 프로젝트 분리(현재 공유 쿼터 동시 429). 비차단.
-- NAME-DIAG-1.1: SEO-MATCH-1로 CLOSED.
+- NAVER-APP-1 graceful 표면화(Code·전 네이버 경로 공통)·운영자 콘솔 조치 후.
+- HOOK-3: detail→온실 아틀리에 이송. CR-1 폴리시(선택). Gemini 키 GCP 분리(운영자 진행). NAME-DIAG-1.1 CLOSED.
 
 ================================================================
 ## PRINCIPLES
 ================================================================
-- #158: 라이브 DOM 검증 시 대상 요소 정체를 먼저 확정(라벨/placeholder)하고 단언 — "첫 text input" 폴백 등 잘못된 타깃 주입은 false negative를 낳는다(검색창 vs 상품명 혼동 사례). 검증 방법 자체도 검증 대상.
-- #157 브리프=활성+BACKLOG SPECS(영구) 분리. #156 키 env 전용·운영자 직접입력·Claude 키 미취급. #155 자동경로 무료 제공자 전용·Anthropic 명시적 액션만. #82 정직·가짜 금지·데이터 없는 슬롯 미노출. #45 Done=실측(대상 정확히). #43 백업파일 금지. #62 전역. SD-01 불가침.
+- #160 (NEW): 런타임 로그로 발견한 무관 장애도 단건 무시 말고 즉시 표면화·영향 확대(#62) 분석 — NAVER-APP-1은 대시보드뿐 아니라 발행 경로 공통 OAuth라 발행 GATE에 연결. 정적 코드검증으론 못 잡는 운영 장애는 prod 로그/실측으로만.
+- #159 비동기 로드 이후 평가 자동동작은 로드 완료 게이트(프리뷰 미검출·prod 레이스). #158 검증 대상 정체 먼저확정. #155 자동경로 무료 전용. #82 정직·로그 한계 명시(Gemini 격리 불가). #45 Done=실측. #46/#124 발행 lock. SD-01 불가침.
