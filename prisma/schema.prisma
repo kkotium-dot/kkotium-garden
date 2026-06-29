@@ -186,6 +186,13 @@ model Product {
   shipping_template_id    String?
   main_image_url          String?
   detail_image_url        String?
+  // IMAGE-SPLIT (#163) — operator-uploaded 상세페이지(상품상세정보) images. These
+  // are the Excel 일괄등록 "상품상세정보 이미지" column (distinct from the search
+  // gallery thumbnails in mainImage/images, and from the single composed/supplier
+  // detail in detail_image_url). jsonb array of public URLs. Consumers guard
+  // Array.isArray before use; PUT auto-allowlists it via the schema-derived
+  // sanitizeProductWrite (#150). Migration: ADD COLUMN IF NOT EXISTS detail_images.
+  detail_images           Json?             @map("detail_images")
   aeo_content             Json?
   aeo_generated_at        DateTime?
   seo_hook_text           String?

@@ -237,6 +237,10 @@ export interface LocalProduct {
   mainImage?: string | null;
   additionalImages?: unknown; // JSON array
   detail_image_url?: string | null;
+  // IMAGE-SPLIT (#163) — operator-uploaded 상세페이지 images (Excel 상품상세정보
+  // column). jsonb array; emitted as <img> inside detailContent (after the single
+  // composed detail_image_url). Array.isArray-guarded in buildDetailContent.
+  detail_images?: unknown;
   description?: string | null;
   hookPhrase?: string | null;
   aeo_content?: any; // JSONB: { qna: [{q,a}], faq: [{q,a}] }
@@ -670,6 +674,17 @@ export function buildDetailContent(
 
   if (product.detail_image_url) {
     parts.push(`<div style="text-align:center;"><img src="${escapeHtml(product.detail_image_url)}" style="max-width:860px;width:100%;" alt="${escapeHtml(product.name)}" /></div>`);
+  }
+
+  // IMAGE-SPLIT (#163) — operator-uploaded 상세페이지 images, in order, each as a
+  // full-width <img> in the detail body (the Excel 상품상세정보 column 1:1).
+  if (Array.isArray(product.detail_images)) {
+    for (const raw of product.detail_images) {
+      const url = typeof raw === 'string' ? raw.trim() : '';
+      if (url) {
+        parts.push(`<div style="text-align:center;"><img src="${escapeHtml(url)}" style="max-width:860px;width:100%;" alt="${escapeHtml(product.name)}" /></div>`);
+      }
+    }
   }
 
   if (product.description) {

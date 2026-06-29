@@ -1,53 +1,76 @@
-# DESIGN BRIEF 2026-06-24 (rev27) - COPY-AUTO-2 확정·2.1 진행 · Gemini 로그결론 · ★NAVER-APP 장애 발견
+# DESIGN BRIEF 2026-06-24 (rev31) - IMAGE-SPLIT-1(이미지 3분할 복원) · AI-PRIORITY-1(작업별 제공자 우선순위)
 
-Authoring: DESKTOP -> CODE-CLI. SD-01 untouched. #45/#46/#55/#62/#82/#124/#155/#157/#158/#159.
-Baseline prod edd0281 (COPY-AUTO-2). 권위 리서치: docs/research/NAVER_PRODUCT_NAME_DIAGNOSIS_AND_HOOK_PHRASE_2026-06.md
+Authoring: DESKTOP -> CODE-CLI. SD-01 untouched. #45/#55/#62/#82/#155/#156/#157/#158/#159/#160/#161.
+Baseline prod a262a3b (COPY-AUTO-2.x 종결·Gemini 새 키 env 라이브). 권위 리서치: docs/research/NAVER_PRODUCT_NAME_DIAGNOSIS_AND_HOOK_PHRASE_2026-06.md
 
-================================================================
-## COPY-AUTO-2 - 확정(신규 PASS) · COPY-AUTO-2.1 진행 중
-================================================================
-- COPY-AUTO-2 신규 플로우: Desktop 라이브 PASS(자동초안·1회·Anthropic 0·편집점유). Code 정적 fact-check(allowPaidFallback:false가 seo-workflow:472에서 Anthropic 차단·hookPhrase PUT 동적 allowlist 라운드트립·POST 명시저장·GET include 로드)·tsc0/build0. prod=edd0281.
-- COPY-AUTO-2.1(재오픈 캐시 레이스): Desktop 발견(fresh 캐시 상품 재오픈 시 비동기 로드 전 자동발사 1회). Code 수정 진행 중. 배포 후 Desktop 검증(재오픈 seo-workflow 0·미덮어쓰기).
+> 직전 종결: COPY-AUTO-1/2/2.1/2.2 전부 라이브 검증(재오픈 0·신규 1·Anthropic 0). NAVER-APP-1 해결. rev28/29 "2.1 미배포" 오기재 정정 완료.
 
 ================================================================
-## Gemini 상태 - 로그 실측 결론 (운영자 질의)
+## ★ IMAGE-SPLIT-1 - 씨앗심기 이미지 3분할 복원 [Code A · 독립 · 우선]
 ================================================================
-- Vercel 런타임 로그(승인) 실측: prod edd0281 statusCode 200(90)/304(46)·**4xx/5xx 없음** → 서비스 건강·Groq 정상 응답·사용자 영향 0.
-- ★Gemini 429는 prod 로그로 **격리 불가**: Gemini는 폴백이라 Groq 200 성공에 가려져 에러로그에 미표출. 직접 smoke(이전 429·공유 GCP 쿼터)가 유일 근거.
-- 결론: Groq=정상(로그 확정). Gemini=키 유효·쿼터 제한 추정·서비스 무지장. **운영자 GCP 프로젝트 분리가 정확한 해법(진행 중)**. 분리 후 Desktop이 강제 폴백 경로로 재검증 가능.
+### 회귀 확인 (Desktop 라이브 재확정, prod a262a3b, 명화 편집)
+- 파일 입력 zone **1개뿐**(라벨 "추가이미지 최대 9장 · JPG,PNG,WebP · 10MB", multiple). 상세페이지 이미지 업로드란 **소실**. 대표는 업로드본 중 지정 추정.
+- 과거엔 엑셀 양식에 맞춰 3분할이었으나 리팩터링 중 상세페이지 zone 누락된 회귀.
+
+### 네이버 엑셀 양식 ↔ 3분할 매핑 (복원 목표)
+| Zone | 엑셀 컬럼 | 개수 | 네이버 필드 | 성격 |
+|---|---|---|---|---|
+| ① 대표 썸네일 | 대표이미지 파일명 | 1 | representativeImage | 검색·목록 대표컷 |
+| ② 추가 썸네일 | 추가이미지 파일명 | ≤9 | optionalImages(갤러리) | 썸네일 나머지 |
+| ③ 상세페이지 이미지 | 상품상세정보(상세페이지) | n | detailContent(상세설명 HTML 삽입) | 긴 세로 콘텐츠 이미지(Firefly 3-plane 합성물) |
+- ①② 썸네일(정사각 제품컷)과 ③ 상세페이지(긴 콘텐츠)는 네이버에서 저장위치·필드가 다름(갤러리 vs 상세설명 본문).
+
+### 구현 (Code)
+1. ★복원 우선(재발명 금지): `git log -p -- src/app/products/new/page.tsx` 등으로 상세페이지 업로드 zone 제거 커밋 추적 → 그 구조 복원.
+2. 3 zone UI: 대표 썸네일(1) / 추가 썸네일(≤9) / 상세페이지 이미지(n) 분리. 폼 상태 3분할 — 현재 단일 업로드(additionalImages류)만 있으면 detailImages[] 추가, 대표 지정 로직 유지.
+3. DB: 상세 이미지 필드 확인(명화는 이미 합성물 적재 — assets/detailImages 필드 존재 가능). 없으면 Prisma 마이그레이션(#150 DMMF allowlist 자동 반영).
+4. 엑셀 매핑 미리보기: 3컬럼 모두 매핑 노출.
+5. 네이버 발행 페이로드: ①②→이미지 갤러리, ③→상세설명 HTML.
+6. **product-agnostic(#55)**: 전 상품 공통 3분할. tsc0/build0.
+### 검증(Desktop, 배포 후)
+- 명화 편집페이지 3 zone 라이브 표시 · 각 zone 파일입력 존재 · 엑셀 매핑 3컬럼 · 업로드본이 올바른 필드/스토리지에 적재(#92 3-step).
 
 ================================================================
-## ★★ NAVER-APP-1 (네이버 커머스 API 애플리케이션 상태 무효) [신규 발견·운영자 조치 — 중요]
+## ★ AI-PRIORITY-1 - 작업별 제공자 우선순위 [Code B · 독립]
 ================================================================
-Desktop 로그 실측(prod edd0281, 최근 1h, 1분 간격 반복):
-```
-GET /api/dashboard/stats → [NAVER_DIAG] HTTP_ERROR status=500
-GET [proxy]/v1/pay-order/seller/product-orders ...
-body: Naver OAuth failed: 400 - {code:BadRequest, message:"입력한 데이터가 유효하지 않습니다",
-  invalidInputs:[{type:"auth.eapp-application.status.invalid", message:"어플리케이션 상태가 유효하지 않습니다"}]}
-```
-- 증상: 대시보드 주문/매출 통계(pay-order/product-orders)가 **1분마다 500 실패**. OAuth 단계에서 네이버가 **애플리케이션 상태 무효(eapp-application.status.invalid)**로 거부.
-- 근본원인: **코드 아님 — 네이버 커머스 API 애플리케이션 상태 문제**(만료/미승인/비활성/계약 갱신필요 등). 자격증명(키/시크릿)이 아니라 '애플리케이션 상태'.
-- ★영향 확대(#62): 동일 OAuth 경로를 쓰는 **명화 발행 PUT(#46/#124)도 동일 사유로 실패할 것** → NAVER-APP-1 미해결 시 발행 불가. 즉 발행 GATE에 이 항목 추가.
-- 조치(운영자): 네이버 **커머스 API 센터**에서 애플리케이션 상태 확인 — 승인/재승인, 약관 재동의, 등록/계약 갱신, 또는 애플리케이션 재활성화. (Claude는 네이버 콘솔 접근·키 미취급.)
-- Code(보조): /api/dashboard/stats가 이 상태를 사용자에게 친화적으로 표면화(무한 500 대신 "네이버 앱 상태 확인 필요" 안내)하는 graceful 처리 검토 — 단건 아닌 전 네이버 호출 경로 공통(#62). 우선순위는 운영자 콘솔 조치가 먼저.
+운영자 의도: "Gemini가 문제없는 전제 하에, Gemini 결과가 더 도움되는 기능엔 Gemini 최우선." 작업 성격별로 Gemini-우선/Groq-우선 배치.
+
+### 작업별 우선순위 배치 (확정)
+| 작업 | 볼륨 | 품질민감 | 1순위 | 근거 |
+|---|---|---|---|---|
+| 훅·카피 생성(COPY-AUTO) | 낮음(캐시·40/일) | 높음 | Gemini→Groq | 한국어 정서 카피 품질·저볼륨 안전 |
+| 상세 헤드라인·서브카피(HOOK-3) | 낮음 | 높음 | Gemini→Groq | 고객 노출 카피 |
+| 실시간 키워드 추천/확장 | 높음 | 낮음 | Groq→Gemini | 속도·UI 즉시성 |
+| 상품명 진단 보조 | 중 | 중 | Groq→Gemini | 빠른 응답 |
+| MD 일괄·병렬 | 높음 | 중 | Groq→Gemini | 무료 43k/일 볼륨 |
+
+### 구현 (Code) — 2단 롤아웃
+1. 인프라: seo-workflow route에 `providerProfile` 도입. quality=[gemini,groq,anthropic*] / speed=[groq,gemini,anthropic*](기본). *anthropic은 allowPaidFallback 게이트 불변(#155 자동경로 도달 불가). 각 제공자 try/catch→실패시 다음 순서 폴백(체인 보존·graceful degrade). served 제공자 로그(튜닝용).
+2. 배선: 카피/훅 호출부에 providerProfile 전달(값은 ★일단 speed). 키워드/실시간은 speed. **현행 무변화로 먼저 출하**.
+3. ★활성화(카피/훅=quality 전환)는 **Gemini slot1 200 확인 후** 별도 커밋 한 줄. 지금은 금지.
+- product-agnostic(#55): profile은 작업 속성. tsc0/build0.
+### Gemini 상태 (활성화 게이트)
+- slot1=신프로젝트(kkotium-gemini-1) 라이브. _2/_3 분리 운영자 진행 중(다른 계정/프로젝트로 동일 절차 → GEMINI_API_KEY_2/_3 교체+redeploy → 무료 쿼터 3배).
+- [Code 선택·낮음] slot1 직접 smoke → 200/429 보고. 200이면 카피 quality 활성화 GO.
 
 ================================================================
 ## LANE PLAN (우선순위)
 ================================================================
-1. COPY-AUTO-2.1 재오픈 캐시 레이스 수정 (Code, 진행 중) → Desktop 검증.
-2. ★NAVER-APP-1: 운영자 네이버 커머스 API 센터에서 애플리케이션 상태 조치(대시보드 복구 + 발행 GATE 해제 전제).
-3. 명화 backfill (operator).
-4. 명화 publish PUT <- backfill+reconcile+**NAVER-APP-1 해결**+GO (#46/#124).
+1. IMAGE-SPLIT-1 (Code A·독립·우선) → Desktop 검증.
+2. AI-PRIORITY-1 인프라 (Code B·독립) → Gemini slot1 200 확인 → 카피 quality 활성화.
+3. Gemini _2/_3 분리 (운영자 진행 중).
+4. 명화 backfill (운영자).
+5. 명화 publish PUT <- backfill+reconcile+GO (#46/#124). ★NAVER 차단 해제됨.
+→ Code A·B 상호 독립·동시 진행 가능.
 
 ================================================================
 ## BACKLOG SPECS (영구 #157)
 ================================================================
-- NAVER-APP-1 graceful 표면화(Code·전 네이버 경로 공통)·운영자 콘솔 조치 후.
-- HOOK-3: detail→온실 아틀리에 이송. CR-1 폴리시(선택). Gemini 키 GCP 분리(운영자 진행). NAME-DIAG-1.1 CLOSED.
+- NAVER-APP graceful 실패배너 강제검증(낮음). HOOK-3 아틀리에 이송. CR-1 폴리시(선택). NAME-DIAG-1.1 CLOSED.
 
 ================================================================
 ## PRINCIPLES
 ================================================================
-- #160 (NEW): 런타임 로그로 발견한 무관 장애도 단건 무시 말고 즉시 표면화·영향 확대(#62) 분석 — NAVER-APP-1은 대시보드뿐 아니라 발행 경로 공통 OAuth라 발행 GATE에 연결. 정적 코드검증으론 못 잡는 운영 장애는 prod 로그/실측으로만.
-- #159 비동기 로드 이후 평가 자동동작은 로드 완료 게이트(프리뷰 미검출·prod 레이스). #158 검증 대상 정체 먼저확정. #155 자동경로 무료 전용. #82 정직·로그 한계 명시(Gemini 격리 불가). #45 Done=실측. #46/#124 발행 lock. SD-01 불가침.
+- #162 (NEW): 작업별 AI 제공자 우선순위 = 품질민감·저볼륨 → Gemini우선 / 속도·고볼륨 → Groq우선. 인프라(라우팅)와 활성화(기본 프로파일 전환) 분리 — 활성화는 제공자 헬스 확인 후. anthropic 게이트 불변(#155).
+- #161 자동발사 스킵은 발사직전 실제값 판정. #160 운영장애 즉시 표면화·#62 전역. #159 비동기 로드후 평가는 로드완료 게이트. #158 검증대상 정체 먼저확정. #157 브리프 rev 정정·SHA ground-truth. #156 키 env·운영자 직접. #155 자동경로 무료전용. #82 정직(MCP 행 보고·격리불가 명시). #55 product-agnostic. #45 Done=실측. #46/#124 발행 lock. SD-01 불가침.
+- ★작업유의: 로컬 MCP(Control Chrome/filesystem) 4분 행 재발 시 #26 — 재시도 말고 Claude Desktop 재시작. 본 세션서 재시작으로 복구 확인.

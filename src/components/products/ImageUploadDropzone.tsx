@@ -2,7 +2,7 @@
 // ImageUploadDropzone — drag-and-drop image uploader for product registration
 // Uploads directly to Supabase Storage → returns public URL immediately
 // No preview rendering (by design) — URL is set in field for Excel export
-// Supports: main image (1), additional images (up to 9), detail image (1)
+// Supports: main image (1), additional images (up to 9), detail-page images (many)
 
 import { useState, useRef, useCallback, DragEvent, ChangeEvent } from 'react';
 import { Upload, X, CheckCircle, AlertCircle, Loader, Link } from 'lucide-react';
@@ -30,7 +30,7 @@ interface Props {
 const TYPE_META: Record<ImageSlotType, { accept: string; desc: string; color: string }> = {
   main:       { accept: 'image/jpeg,image/jpg,image/png,image/webp', desc: '대표이미지 1장', color: 'border-rose-300 hover:border-rose-400 hover:bg-rose-50' },
   additional: { accept: 'image/jpeg,image/jpg,image/png,image/webp', desc: '추가이미지 최대 9장', color: 'border-blue-300 hover:border-blue-400 hover:bg-blue-50' },
-  detail:     { accept: 'image/jpeg,image/jpg,image/png,image/webp,image/gif', desc: '상세이미지 1장', color: 'border-purple-300 hover:border-purple-400 hover:bg-purple-50' },
+  detail:     { accept: 'image/jpeg,image/jpg,image/png,image/webp,image/gif', desc: '상세페이지 이미지', color: 'border-purple-300 hover:border-purple-400 hover:bg-purple-50' },
 };
 
 async function uploadToSupabase(file: File, type: ImageSlotType): Promise<UploadResult> {
@@ -60,6 +60,9 @@ export default function ImageUploadDropzone({
   type, label, hint, value, onChange, maxFiles, required,
 }: Props) {
   const max        = maxFiles ?? (type === 'additional' ? 9 : 1);
+  // Multi-file mode is driven by capacity, not slot type: 추가(9) and now
+  // 상세페이지(다수) both accept many files when maxFiles > 1. 대표 stays single.
+  const multi      = max > 1;
   const meta       = TYPE_META[type];
   const fileRef    = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -89,13 +92,13 @@ export default function ImageUploadDropzone({
 
     const newUrls = newResults.filter(r => r.ok).map(r => r.url);
     if (newUrls.length > 0) {
-      const merged = type === 'additional'
+      const merged = multi
         ? [...currentUrls, ...newUrls].join(', ')
         : newUrls[0];
       onChange(merged);
     }
     setUploading(false);
-  }, [currentUrls, max, onChange, type]);
+  }, [currentUrls, max, onChange, type, multi]);
 
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -115,7 +118,7 @@ export default function ImageUploadDropzone({
 
   const applyManualUrl = () => {
     if (!urlInput.trim()) return;
-    if (type === 'additional') {
+    if (multi) {
       const merged = [...currentUrls, urlInput.trim()].join(', ');
       onChange(merged);
     } else {
@@ -156,7 +159,7 @@ export default function ImageUploadDropzone({
             ref={fileRef}
             type="file"
             accept={meta.accept}
-            multiple={type === 'additional'}
+            multiple={multi}
             className="hidden"
             onChange={onFileInput}
           />

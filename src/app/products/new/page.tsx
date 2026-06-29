@@ -502,6 +502,21 @@ function NewProductPageInner() {
   const [mainImage, setMainImage]     = useState('');
   const [additionalImages, setAdditionalImages] = useState('');
   const [detailImageUrl, setDetailImageUrl] = useState('');
+  // IMAGE-SPLIT (#163) — operator-uploaded 상세페이지(상품상세정보) images, the 3rd
+  // independent upload zone (Excel 일괄등록 "상품상세정보 이미지" column). Stored as
+  // a comma-joined URL string (same convention as additionalImages); persisted to
+  // the Product.detail_images jsonb column, distinct from the search-gallery
+  // thumbnails (mainImage/images) and the single composed detail (detail_image_url).
+  const [detailImages, setDetailImages] = useState('');
+  // Parsed lists of image URLs (comma-joined string -> array) for save payloads.
+  const detailImagesArr = useMemo(
+    () => detailImages.split(',').map(s => s.trim()).filter(Boolean),
+    [detailImages],
+  );
+  const additionalImagesArr = useMemo(
+    () => additionalImages.split(',').map(s => s.trim()).filter(Boolean),
+    [additionalImages],
+  );
   const [seoHook, setSeoHook]         = useState('');
   // COPY-AUTO-1: true while seoHook holds the auto-generated template draft
   // (cleared once the user edits it or applies an AI hook).
@@ -1190,6 +1205,9 @@ function NewProductPageInner() {
         if (p.return_care_enabled)   setReturnCareEnabled(p.return_care_enabled);
         if (p.images && Array.isArray(p.images) && p.images.length > 0)
           setAdditionalImages(p.images.join(','));
+        // IMAGE-SPLIT (#163) — restore the 상세페이지 images zone (3-area round-trip).
+        if (p.detail_images && Array.isArray(p.detail_images) && p.detail_images.length > 0)
+          setDetailImages(p.detail_images.join(','));
         // Restore SEO fields. COPY-AUTO-2 cache: hookPhrase is the persisted hook
         // (the canonical DB column the Naver register path consumes). Loading it
         // leaves seoHook non-empty & !isDraft, so neither COPY-AUTO-1 nor
@@ -1683,7 +1701,12 @@ function NewProductPageInner() {
         naverCategoryCode: catId || undefined,
         brand, originCode, taxType,
         status: 'DRAFT',
+        // IMAGE-SPLIT (#163) — persist all three image zones so the 이미지 tab save
+        // round-trips 대표/추가/상세 on re-open. images = 추가 썸네일 (String[]),
+        // detail_images = 상세페이지 images (jsonb array). mainImage = 대표.
         mainImage: mainImage || undefined,
+        images: additionalImagesArr,
+        detail_images: detailImagesArr,
         description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
         detail_image_url: detailImageUrl || undefined,
         keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
@@ -1774,7 +1797,10 @@ function NewProductPageInner() {
         naverCategoryCode: catId,
         brand, originCode, taxType,
         status: 'DRAFT',
+        // IMAGE-SPLIT (#163) — carry all three image zones into the register save.
         mainImage,
+        images: additionalImagesArr,
+        detail_images: detailImagesArr,
         description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
         detail_image_url: detailImageUrl || undefined,
         keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
@@ -1936,8 +1962,15 @@ const handleGenerate = async () => {
       // Images
       mainImage: mainImage || '',
       additionalImages: additionalImages || '',
-      // Content
-      description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
+      // Content — IMAGE-SPLIT (#163): the Excel 상세설명 column maps from
+      // description, so embed every 상세페이지 image (and the legacy single
+      // detail_image_url) as <img> tags, newest-first, so the operator's
+      // 상품상세정보 images land in that column 1:1.
+      description: (() => {
+        const imgs = [...(detailImageUrl ? [detailImageUrl] : []), ...detailImagesArr];
+        if (imgs.length > 0) return imgs.map(u => `<img src="${u}">`).join('');
+        return description || undefined;
+      })(),
       detail_image_url: detailImageUrl || undefined,
       // ① 기본 — product info
       productStatus: '신상품',
@@ -2004,7 +2037,10 @@ const handleGenerate = async () => {
       // COPY-AUTO-2 cache: persist the SEO 훅문구 on DRAFT save too, so re-opening
       // a temp-saved product loads it and skips AI re-generation.
       hookPhrase: seoHook.trim() || undefined,
+      // IMAGE-SPLIT (#163) — persist all three image zones on the Excel DRAFT save.
       mainImage: mainImage || undefined,
+      images: additionalImagesArr,
+      detail_images: detailImagesArr,
       description: description || undefined,
       shipping_template_id: selectedTemplateId || undefined,
       return_care_enabled: returnCareEnabled,
@@ -3246,28 +3282,39 @@ const handleGenerate = async () => {
               {/* Drag-and-drop image upload to Supabase — auto URL — Excel cols 18/19/20 */}
               <ImageUploadDropzone
                 type="main"
-                label="대표 이미지"
-                hint="최소 500x500px · 1장 · 엑셀 컨럼 18"
+                label="대표 썸네일"
+                hint="최소 500x500px · 1장 · 정사각 권장 · 엑셀 컬럼 18 (대표이미지)"
                 required
                 value={mainImage}
                 onChange={setMainImage}
               />
               <ImageUploadDropzone
                 type="additional"
-                label="추가 이미지"
-                hint="최대 9장 · 엑셀 컨럼 19"
+                label="추가 썸네일"
+                hint="최대 9장 · 정사각 권장 · 엑셀 컬럼 19 (추가이미지)"
                 value={additionalImages}
                 onChange={setAdditionalImages}
                 maxFiles={9}
               />
-              {/* C-PLANT-UX (ISSUE 3 / #131) — detail-page production moved to the
-                  온실 아틀리에 (Studio), the single home for detail assembly. The
-                  상세페이지 이미지 dropzone, 상세페이지 자동화 guide, and 상세 설명
-                  텍스트 field were removed from here to end the Plant/Studio
-                  duplication. Detail state (detailImageUrl / description) is still
-                  produced and persisted via Studio + the save payload. Plant's
-                  이미지 tab keeps 대표/추가 이미지 only; the SEO 훅문구 moved
-                  to the 검색최적화 tab. */}
+              {/* IMAGE-SPLIT (#163) — 3rd independent zone restored. The Naver 엑셀
+                  일괄등록 양식 has THREE distinct image columns (대표 / 추가 / 상품상세
+                  정보), which are semantically different: 대표·추가 are search-gallery
+                  thumbnails, 상세페이지 is the detail HTML body content. The previous
+                  #131 single-zone consolidation (detail moved to Studio) broke that
+                  1:1 mapping; this zone restores it. Multi-file (세로 긴 콘텐츠), stored
+                  in detailImages -> Product.detail_images, mapped to the Excel 상세설명
+                  column and the Naver detailContent HTML on publish. */}
+              <ImageUploadDropzone
+                type="detail"
+                label="상세페이지 이미지"
+                hint="다수 가능 · 세로 긴 콘텐츠 · 엑셀 컬럼 20 (상품상세정보)"
+                value={detailImages}
+                onChange={setDetailImages}
+                maxFiles={20}
+              />
+              <p style={{ margin: '2px 2px 0', fontSize: 11, color: '#999', lineHeight: 1.5 }}>
+                썸네일(대표·추가)은 검색 결과 갤러리, 상세페이지 이미지는 상품 상세설명 본문에 들어갑니다.
+              </p>
             </RSection>
 
             {/* E7 — "저장 후 온실 아틀리에" is the PRIMARY contextual CTA on the
@@ -4175,6 +4222,12 @@ const handleGenerate = async () => {
               <h3 className="font-bold text-gray-900 text-sm mb-3">엑셀 매핑 미리보기</h3>
               <div className="space-y-1.5 text-xs">
                 {[
+                  // IMAGE-SPLIT (#163) — three image columns mirror the Naver 일괄등록
+                  // 양식 1:1 (대표이미지 / 추가이미지 / 상품상세정보), restoring the
+                  // 3-split that the single-zone regression had collapsed.
+                  { label: '대표 썸네일 (컬럼 18)', value: mainImage.trim() ? '1개' : '-' },
+                  { label: '추가 썸네일 (컬럼 19)', value: additionalImagesArr.length > 0 ? `${additionalImagesArr.length}개` : '-' },
+                  { label: '상세페이지 이미지 (컬럼 20)', value: detailImagesArr.length > 0 ? `${detailImagesArr.length}개` : '-' },
                   { label: '카테고리코드', value: categoryId || '-' },
                   { label: '판매가', value: price ? `${Number(price).toLocaleString()}원` : '-' },
                   { label: '할인율', value: discountValue ? `${discountValue}${discountUnit}` : '-' },

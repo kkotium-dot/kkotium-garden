@@ -296,6 +296,9 @@ export async function POST(request: NextRequest) {
           images: Array.isArray(data.images) ? data.images : [],
           imageAltTexts: Array.isArray(data.imageAltTexts) ? data.imageAltTexts : [],
           mainImage: data.mainImage ? String(data.mainImage) : null,
+          // IMAGE-SPLIT (#163) — operator-uploaded 상세페이지(상품상세정보) images.
+          // jsonb array, distinct from the search-gallery thumbnails above.
+          detail_images: Array.isArray(data.detail_images) ? data.detail_images : undefined,
           aiScore: data.aiScore ?? 0,
           naver_title: data.naver_title ? String(data.naver_title) : null,
           naver_description: data.naver_description ? String(data.naver_description) : null,
