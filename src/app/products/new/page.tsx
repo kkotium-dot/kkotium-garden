@@ -506,7 +506,11 @@ function NewProductPageInner() {
   // COPY-AUTO-1: true while seoHook holds the auto-generated template draft
   // (cleared once the user edits it or applies an AI hook).
   const [seoHookIsDraft, setSeoHookIsDraft] = useState(false);
-  const copyPrefilledRef = useRef(false);
+  // COPY-AUTO-1: latches true the moment the operator types into / clears the
+  // SEO 훅문구 field by hand. While false, the auto-draft keeps re-syncing to
+  // the best template line as product data arrives (self-healing, no permanent
+  // lock); once true, the field is the operator's and we never touch it again.
+  const hookTouchedRef = useRef(false);
   const [description, setDescription] = useState('');
   // D1: golden keywords from AI SEO workflow — stored in DB via keywords JSON column
   const [aiKeywords, setAiKeywords]   = useState<string[]>([]);
@@ -1300,12 +1304,19 @@ function NewProductPageInner() {
   const selectedOrigin = useMemo(() => ORIGIN_CODES.find(o => o.code === originCode), [originCode]);
   const isImporter = selectedOrigin?.importer === true;
 
-  // COPY-AUTO-1: zero-cost auto-prefill. On entry, if the SEO 훅문구 is still
-  // empty (no saved/AI copy), draft it instantly from product data via the PURE
-  // template (NO AI call). Runs once; the AI 사냥 button upgrades it.
+  // COPY-AUTO-1: zero-cost auto-prefill. Drafts the SEO 훅문구 instantly from
+  // product data via the PURE template (NO AI call). Unlike a run-once effect,
+  // this re-derives whenever the inputs change *while the field is still ours*
+  // (empty or holding our draft) — so it self-heals from any load/settings race
+  // and upgrades the line as richer data (category/keyword/threshold) arrives.
+  // The moment the operator edits the field (hookTouchedRef), or AI/a saved hook
+  // owns it (non-empty & !isDraft), we stop touching it. The AI 사냥 button still
+  // upgrades the draft. event_field (e.g. "30,000원 이상 무료배송") drafts from the
+  // threshold alone — a category is NOT required.
   useEffect(() => {
-    if (copyPrefilledRef.current) return;
-    if (!productName.trim() || seoHook.trim()) return;
+    if (hookTouchedRef.current) return;            // operator owns the field
+    if (seoHook.trim() && !seoHookIsDraft) return; // AI / saved hook owns it
+    if (!productName.trim()) return;               // need a name to draft from
     const line = templateHookLine(buildTemplateCopy({
       name: productName.trim(),
       keyword: aiKeywords[0] || seoTags[0] || undefined,
@@ -1315,13 +1326,12 @@ function NewProductPageInner() {
       origin: selectedOrigin?.label,
       freeShippingThreshold: Number(freeShippingThreshold) || undefined,
     }));
-    if (line) {
+    if (line && line !== seoHook) {
       setSeoHook(line);
       setSeoHookIsDraft(true);
-      copyPrefilledRef.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productName, seoHook, aiKeywords, seoTags, d1, d2, d3, d4, price, freeShippingThreshold, selectedOrigin]);
+  }, [productName, seoHook, seoHookIsDraft, aiKeywords, seoTags, d1, d2, d3, d4, price, freeShippingThreshold, selectedOrigin]);
 
   // Deferred query prevents input lag on large lists
   const deferredOriginQuery = useDeferredValue(originQuery);
@@ -3236,7 +3246,7 @@ const handleGenerate = async () => {
                   <textarea
                     className={`${inp} h-20 resize-none pr-16`}
                     value={seoHook}
-                    onChange={e => { setSeoHook(e.target.value); setSeoHookIsDraft(false); }}
+                    onChange={e => { hookTouchedRef.current = true; setSeoHook(e.target.value); setSeoHookIsDraft(false); }}
                     placeholder="예) 당일배송 | 프리미엄 품질 | 꽃틔움 공식 · 특별한 날을 더욱 특별하게"
                     maxLength={100}
                   />
