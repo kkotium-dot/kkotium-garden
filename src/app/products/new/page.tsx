@@ -521,6 +521,15 @@ function NewProductPageInner() {
   // we never fire (and never overwrite the cached/saved hook).
   const [editLoadDone, setEditLoadDone] = useState(false);
   const cachedHookLoadedRef = useRef(false);
+  // COPY-AUTO-2.2 (#161): live mirrors of the hook state so the DEBOUNCED auto-fire
+  // callback re-checks the CURRENT value at fire time. The closure captured stale
+  // (pre-load) values in prod, so the cache-skip silently missed and the AI
+  // regenerated over a loaded hook. Refs are written on every render (latest-value
+  // pattern) and read only inside the timer — never during render.
+  const seoHookRef = useRef(seoHook);
+  const seoHookIsDraftRef = useRef(seoHookIsDraft);
+  seoHookRef.current = seoHook;
+  seoHookIsDraftRef.current = seoHookIsDraft;
   const [description, setDescription] = useState('');
   // D1: golden keywords from AI SEO workflow — stored in DB via keywords JSON column
   const [aiKeywords, setAiKeywords]   = useState<string[]>([]);
@@ -1384,6 +1393,13 @@ function NewProductPageInner() {
     // a hand-typed name settles ~1.4s after the last keystroke).
     aiAutoTimerRef.current = setTimeout(async () => {
       if (aiAutoFiredRef.current || hookTouchedRef.current) return;
+      // COPY-AUTO-2.2 (#161) — FINAL value-based guard, evaluated at fire time on
+      // the LIVE hook value (not the stale closure / ref assumption). This is what
+      // actually prevents the re-open regen: if a settled (non-draft) hook now owns
+      // the field — cache / AI / operator — never overwrite it; and on edit re-open
+      // never regenerate over ANY existing hook, including our own template draft.
+      if (seoHookRef.current.trim() && !seoHookIsDraftRef.current) return;
+      if (searchParams?.get('edit') && seoHookRef.current.trim()) return;
       // Per-day cap (free-quota guard). Skips silently when exhausted — the
       // template draft remains and the manual 사냥 button is always available.
       const DAILY_CAP = 40;
