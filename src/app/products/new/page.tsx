@@ -514,6 +514,13 @@ function NewProductPageInner() {
   // COPY-AUTO-2: fires the free Zero-Touch AI copy at most once per page open.
   const aiAutoFiredRef = useRef(false);
   const aiAutoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // COPY-AUTO-2.1 (#159): close the re-open cache race. In edit mode (?edit=),
+  // seoHook is loaded ASYNCHRONOUSLY, so the auto-fire gate must NOT evaluate the
+  // pre-load "hook empty" state. editLoadDone gates arming until the load settles;
+  // cachedHookLoadedRef latches when the loaded product already carries a hook so
+  // we never fire (and never overwrite the cached/saved hook).
+  const [editLoadDone, setEditLoadDone] = useState(false);
+  const cachedHookLoadedRef = useRef(false);
   const [description, setDescription] = useState('');
   // D1: golden keywords from AI SEO workflow — stored in DB via keywords JSON column
   const [aiKeywords, setAiKeywords]   = useState<string[]>([]);
@@ -1178,8 +1185,12 @@ function NewProductPageInner() {
         // (the canonical DB column the Naver register path consumes). Loading it
         // leaves seoHook non-empty & !isDraft, so neither COPY-AUTO-1 nor
         // COPY-AUTO-2 re-fires — re-open costs 0 AI calls.
-        if (p.hookPhrase)        setSeoHook(p.hookPhrase);
-        else if (p.seoHook)      setSeoHook(p.seoHook);
+        // COPY-AUTO-2.1: latch when a cached hook is present so the page-open
+        // auto-fire skips entirely (the gate can no longer race the async load).
+        // Mark !isDraft so the cache owns the field even if COPY-AUTO-1 flipped the
+        // draft flag on mount before this async load landed (correct badge + gate).
+        if (p.hookPhrase)        { setSeoHook(p.hookPhrase); setSeoHookIsDraft(false); cachedHookLoadedRef.current = true; }
+        else if (p.seoHook)      { setSeoHook(p.seoHook);    setSeoHookIsDraft(false); cachedHookLoadedRef.current = true; }
         if (p.naver_keywords)    setAiKeywords(
           typeof p.naver_keywords === 'string'
             ? p.naver_keywords.split(',').map((k: string) => k.trim()).filter(Boolean)
@@ -1196,6 +1207,11 @@ function NewProductPageInner() {
         }
         if (Array.isArray(p.keywords) && p.keywords.length > 0) setAiKeywords(p.keywords as string[]);
         if (Array.isArray(p.tags) && p.tags.length > 0)         setSeoTags(p.tags as string[]);
+        // COPY-AUTO-2.1: load settled — release the auto-fire gate. Batched with the
+        // setters above so the gate re-evaluates with the loaded hook in hand. Left
+        // false on early-return / fetch error so a failed load never fires (no
+        // overwrite of an unknown existing hook).
+        setEditLoadDone(true);
       })
       .catch(() => null);
   }, [searchParams]);
@@ -1353,6 +1369,13 @@ function NewProductPageInner() {
     if (aiAutoFiredRef.current) return;             // once per open
     if (hookTouchedRef.current) return;             // operator owns the field
     if (searchParams?.get('autoSeo') === '1') return; // full workflow handles it
+    // COPY-AUTO-2.1 (#159): in edit mode the hook loads async — never evaluate the
+    // gate on the pre-load state. Wait for the load to settle; if the loaded
+    // product already carries a cached hook, the cache owns the field — never fire.
+    if (searchParams?.get('edit')) {
+      if (!editLoadDone) return;                    // load not settled -> do not arm
+      if (cachedHookLoadedRef.current) return;      // cached hook present -> skip
+    }
     if (!productName.trim()) return;                // need a name to generate
     if (seoHook.trim() && !seoHookIsDraft) return;  // AI / saved (cached) hook owns it
 
@@ -1412,7 +1435,7 @@ function NewProductPageInner() {
 
     return () => { if (aiAutoTimerRef.current) clearTimeout(aiAutoTimerRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productName, seoHook, seoHookIsDraft, d1, d2, d3, d4, price, supplierPrice, aiKeywords, description, searchParams]);
+  }, [productName, seoHook, seoHookIsDraft, d1, d2, d3, d4, price, supplierPrice, aiKeywords, description, searchParams, editLoadDone]);
 
   // Deferred query prevents input lag on large lists
   const deferredOriginQuery = useDeferredValue(originQuery);
