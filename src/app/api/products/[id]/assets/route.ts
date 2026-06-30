@@ -9,6 +9,16 @@
 // Wraps listProductAssets() (already stage-aware + legacy-root compatible) and
 // projects every canonical stage — including empty ones — so the UI can show a
 // "미적용" badge per stage. No writes, no Naver, no mutation. GET only.
+//
+// ASSET-INTEGRITY (2026-06-30, #180): this STORAGE-DIRECT listing — NOT
+// asset_registry — is the display source for studio/AssetBrowser. asset_registry
+// is a SUPPLEMENTARY index for the new generation pipeline (mood/camera/slot
+// metadata) and is intentionally PARTIAL: pre-registry assets (달항아리/아이스트레이/
+// 명화 일부) are still fully visible here because the browser reads storage, not the
+// registry. Therefore no storage→registry backfill is required (audit: every
+// unregistered file belongs to a real Product — 정상 자산, not 고아). The only
+// integrity concern is a registry row WITHOUT a file (dangling), guarded at delete
+// time in assets/action (assetRegistry.deleteMany before the storage remove).
 // ============================================================================
 
 import { NextResponse } from 'next/server';
