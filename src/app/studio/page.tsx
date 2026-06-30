@@ -21,7 +21,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { onProductMutated } from '@/lib/events/product-mutated';
-import { Palette, Loader2, Image as ImageIcon, Check, Monitor, Smartphone, Warehouse, FlaskConical, NotebookText, Clock } from 'lucide-react';
+import { Palette, Loader2, Image as ImageIcon, Check, Monitor, Smartphone, Warehouse, FlaskConical, NotebookText } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import {
   DiagnosisCard,
@@ -383,29 +383,30 @@ function StudioInner() {
 
   // ── Dual sidebar (S2-A 골격 · S2-B.1 배양실 populated) ──────────────────────
   // 창고 hosts the 도구함 (relocate-only #132); 배양실 now hosts the relocated
-  // step work-forms (S2-B.1); 일지 stays a scaffold (content in S2-B.2~D).
+  // step work-forms (S2-B.1); 일지 hosts JobLifecyclePanel (JOURNAL-1, relocated
+  // from the center workspace).
   const s = a.sidebar;
-  const ComingSoon = ({ hint }: { hint: string }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-        background: 'var(--pink-soft)',
-      }}>
-        <Clock size={20} style={{ color: 'var(--brand-red)' }} />
-      </div>
-      <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: 'var(--gp-ink-900)' }}>
-        {s.comingSoon}
-      </h3>
-      <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: 'var(--gp-ink-500)', wordBreak: 'keep-all' }}>
-        {hint}
-      </p>
+  // JOURNAL-1 — 일지 tab = product job lifecycle. minWidth:0 so the panel fits the
+  // ~384px sidebar without overflow (#144); panel is responsive internally.
+  const journalSlot: ReactNode = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+      <header>
+        <h2 style={{ margin: 0, fontSize: 13, fontWeight: 900, color: 'var(--gp-ink-900)' }}>
+          {s.journal}
+        </h2>
+        <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--gp-ink-500)' }}>
+          {a.journal.subtitle}
+        </p>
+      </header>
+      {selectedProduct?.id
+        ? <JobLifecyclePanel productId={selectedProduct.id} />
+        : <p style={{ fontSize: 11, color: 'var(--gp-ink-500)', lineHeight: 1.6 }}>{a.workspace.selectPrompt}</p>}
     </div>
   );
   const sidebarTabs: AtelierSidebarTab[] = [
     { key: 'warehouse', label: s.warehouse, icon: <Warehouse size={18} />, content: toolboxSlot },
     { key: 'cultivation', label: s.cultivation, icon: <FlaskConical size={18} />, content: cultivationSlot },
-    { key: 'journal', label: s.journal, icon: <NotebookText size={18} />, content: <ComingSoon hint={s.comingSoonHint} /> },
+    { key: 'journal', label: s.journal, icon: <NotebookText size={18} />, content: journalSlot },
   ];
 
   // ── Assembly slot placeholders — static stubs (S2-B.1) ─────────────────────
@@ -523,12 +524,7 @@ function StudioInner() {
       {/* 꼬띠 guide bubble — reflects the active step (microcopy) */}
       <KkottiGuide text={a.kkotti[step]} />
 
-      {/* Job progress (lifecycle) */}
-      {selectedProduct.id && (
-        <div style={{ flexShrink: 0 }}>
-          <JobLifecyclePanel productId={selectedProduct.id} />
-        </div>
-      )}
+      {/* JOURNAL-1: JobLifecyclePanel relocated to the 일지 sidebar tab (journalSlot). */}
 
       {/* Live preview — device-constrained */}
       <div

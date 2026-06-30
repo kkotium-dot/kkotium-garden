@@ -450,6 +450,9 @@
       "deviceMobile": "모바일",
       "selectPrompt": "← 도구함에서 상품을 선택해 주세요"
     },
+    "journal": {
+      "subtitle": "진행 중인 작업의 생명주기를 기록합니다"
+    },
     "controlTower": {
       "title": "검색 생장 관제탑",
       "subtitle": "발행 준비도를 신호등으로 한눈에",
