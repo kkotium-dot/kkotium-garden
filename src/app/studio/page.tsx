@@ -332,8 +332,9 @@ function StudioInner() {
             degraded={engine.degraded}
           />
         </Collapsible>
-        {/* SLOT FUNNEL BOARD SF-1 — read-only detail assembly (7 sections + asset
-            tray). Empty stages deep-link back to the image-generation step.
+        {/* SLOT FUNNEL BOARD SF-1/SF-2 — detail assembly. SF-2: click-assign assets
+            to the 7 sections → flatten → autosave to Product.detail_images (flat
+            string[] contract, #184). Empty stages deep-link to the generation step.
             #62: isolated by ErrorBoundary so a render fault here can never blank
             the whole step canvas — the rest of 배양실 keeps rendering. */}
         <ErrorBoundary label="상세 조립 보드">
