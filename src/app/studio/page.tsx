@@ -383,11 +383,12 @@ function StudioInner() {
 
   // ── Dual sidebar (S2-A 골격 · S2-B.1 배양실 populated) ──────────────────────
   // 창고 hosts the 도구함 (relocate-only #132); 배양실 now hosts the relocated
-  // step work-forms (S2-B.1); 일지 hosts JobLifecyclePanel (JOURNAL-1, relocated
-  // from the center workspace).
+  // step work-forms (S2-B.1); 일지 hosts JobLifecyclePanel (JOURNAL-1) + activity
+  // log (JOURNAL-2, future second section).
   const s = a.sidebar;
-  // JOURNAL-1 — 일지 tab = product job lifecycle. minWidth:0 so the panel fits the
-  // ~384px sidebar without overflow (#144); panel is responsive internally.
+  // JOURNAL-1 — 일지 tab = product job lifecycle. flex-column section structure so
+  // JOURNAL-2 (활동 기록) can extend as a second section below. minWidth:0 keeps the
+  // panel inside the ~384px sidebar without overflow (#144); panel is responsive.
   const journalSlot: ReactNode = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
       <header>
@@ -398,6 +399,7 @@ function StudioInner() {
           {a.journal.subtitle}
         </p>
       </header>
+      {/* Section 1 — job lifecycle (JOURNAL-1). Section 2 (activity log) lands here. */}
       {selectedProduct?.id
         ? <JobLifecyclePanel productId={selectedProduct.id} />
         : <p style={{ fontSize: 11, color: 'var(--gp-ink-500)', lineHeight: 1.6 }}>{a.workspace.selectPrompt}</p>}
