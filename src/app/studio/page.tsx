@@ -40,6 +40,7 @@ import {
 } from '@/components/studio/workbench';
 // SLOT FUNNEL BOARD SF-1 — read-only 7-section detail assembly board.
 import DetailAssemblyBoard from '@/components/studio/assembly/DetailAssemblyBoard';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 import {
   CategoryDnaCard,
   SlotFunnelBoard,
@@ -327,11 +328,15 @@ function StudioInner() {
           />
         </Collapsible>
         {/* SLOT FUNNEL BOARD SF-1 — read-only detail assembly (7 sections + asset
-            tray). Empty stages deep-link back to the image-generation step. */}
-        <DetailAssemblyBoard
-          productId={selectedProduct.id}
-          onNavigateToGenerate={() => setStep('thumbnail')}
-        />
+            tray). Empty stages deep-link back to the image-generation step.
+            #62: isolated by ErrorBoundary so a render fault here can never blank
+            the whole step canvas — the rest of 배양실 keeps rendering. */}
+        <ErrorBoundary label="상세 조립 보드">
+          <DetailAssemblyBoard
+            productId={selectedProduct.id}
+            onNavigateToGenerate={() => setStep('thumbnail')}
+          />
+        </ErrorBoundary>
       </StepGroup>
 
       {/* ── Step 3: SEO 부스터 ────────────────────────────────────────────── */}
