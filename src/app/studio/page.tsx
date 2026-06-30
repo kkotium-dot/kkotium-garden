@@ -38,6 +38,8 @@ import {
   JobLifecyclePanel,
   MoodCameraPanel,
 } from '@/components/studio/workbench';
+// SLOT FUNNEL BOARD SF-1 — read-only 7-section detail assembly board.
+import DetailAssemblyBoard from '@/components/studio/assembly/DetailAssemblyBoard';
 import {
   CategoryDnaCard,
   SlotFunnelBoard,
@@ -324,6 +326,12 @@ function StudioInner() {
             degraded={engine.degraded}
           />
         </Collapsible>
+        {/* SLOT FUNNEL BOARD SF-1 — read-only detail assembly (7 sections + asset
+            tray). Empty stages deep-link back to the image-generation step. */}
+        <DetailAssemblyBoard
+          productId={selectedProduct.id}
+          onNavigateToGenerate={() => setStep('thumbnail')}
+        />
       </StepGroup>
 
       {/* ── Step 3: SEO 부스터 ────────────────────────────────────────────── */}
