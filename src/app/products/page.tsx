@@ -17,6 +17,7 @@ import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
 import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
 import InventoryBadge from '@/components/products/InventoryBadge';
+import { StageBadge } from '@/components/products/StageBadge';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
 import { useProductsList } from '@/lib/hooks/useDashboardData';
 import { useInventoryBadges } from '@/lib/hooks/useInventoryBadges';
@@ -126,18 +127,12 @@ function HoneyBadge({ score, grade }: { score: number; grade: string }) {
   );
 }
 
+// SEED-SAVE C-3 Step 5: 창고 status now uses the shared StageBadge so it matches
+// 꿀통/대시보드 exactly. A warehouse row is always a real Product (linked).
 function StatusDot({ product }: { product: Product }) {
-  let key: TabKey = 'draft';
-  if (product.status === 'ACTIVE' && product.naverProductId) key = 'active';
-  else if (product.status === 'ACTIVE') key = 'pending';
-  else if (product.status === 'READY') key = 'ready';
-  else if (product.status === 'OUT_OF_STOCK') key = 'oos';
-  else if (product.status === 'INACTIVE' || product.status === 'HIDDEN') key = 'reactivation';
-  const { dot, dotLabel } = TAB_CONFIG[key];
   return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      <span className={`w-2 h-2 rounded-full ${dot} shrink-0`} />
-      <span className="text-xs whitespace-nowrap" style={{ color: '#666' }}>{dotLabel || '작성중'}</span>
+    <div className="flex items-center shrink-0">
+      <StageBadge linked productStatus={product.status} naverProductId={product.naverProductId} size="sm" />
     </div>
   );
 }

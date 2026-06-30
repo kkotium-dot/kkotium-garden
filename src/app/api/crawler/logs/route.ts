@@ -13,13 +13,16 @@ export async function GET(request: NextRequest) {
     const seller = searchParams.get('seller');   // filter by seller_id
     const source = searchParams.get('source');   // single | bulk | all
 
-    // Build WHERE clauses
+    // Build WHERE clauses (cl-qualified — a Product join is added below).
     const conditions: string[] = [];
-    if (status && status !== 'all') conditions.push(`sourcing_status = '${status}'`);
-    if (seller) conditions.push(`seller_id = '${seller}'`);
-    if (source && source !== 'all') conditions.push(`source = '${source}'`);
+    if (status && status !== 'all') conditions.push(`cl.sourcing_status = '${status}'`);
+    if (seller) conditions.push(`cl.seller_id = '${seller}'`);
+    if (source && source !== 'all') conditions.push(`cl.source = '${source}'`);
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
+    // SEED-SAVE C-3 Step 5: LEFT JOIN the linked Product so the UI can render the
+    // shared StageBadge from product.status (the trustworthy signal, #179) instead
+    // of the legacy-polluted sourcing_status.
     const rows = await prisma.$queryRawUnsafe<Array<{
       id: string; url: string; name: string | null;
       supplier_price: number; images: unknown; options: unknown;
@@ -29,14 +32,18 @@ export async function GET(request: NextRequest) {
       category_name: string | null; category_code: string | null;
       inventory: number | null; ship_fee: number | null; can_merge: boolean | null;
       sourcing_status: string; product_id: string | null;
+      linked_product_status: string | null; linked_naver_id: string | null;
     }>>(`
       SELECT
-        id, url, name, supplier_price, images, options, status, error_msg, source, crawled_at,
-        seller_nick, seller_id, seller_rank, category_name, category_code,
-        inventory, ship_fee, can_merge, sourcing_status, product_id
-      FROM crawl_logs
+        cl.id, cl.url, cl.name, cl.supplier_price, cl.images, cl.options, cl.status,
+        cl.error_msg, cl.source, cl.crawled_at, cl.seller_nick, cl.seller_id, cl.seller_rank,
+        cl.category_name, cl.category_code, cl.inventory, cl.ship_fee, cl.can_merge,
+        cl.sourcing_status, cl.product_id,
+        p."status" AS linked_product_status, p."naverProductId" AS linked_naver_id
+      FROM crawl_logs cl
+      LEFT JOIN "Product" p ON p.id = cl.product_id
       ${where}
-      ORDER BY crawled_at DESC
+      ORDER BY cl.crawled_at DESC
       LIMIT ${limit}
     `);
 

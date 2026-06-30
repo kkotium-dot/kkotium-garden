@@ -11,7 +11,8 @@ import {
   Package, Download, X, CheckCircle, AlertCircle, Clock, History, TrendingUp, Tag,
   Pencil, Trash2, RotateCcw, Play, Store, ArrowUp, ArrowDown, Eye, EyeOff,
 } from 'lucide-react';
-import { OverflowMenu, StatusBadge as StatusPill } from '@/components/common';
+import { StageBadge } from '@/components/products/StageBadge';
+import { OverflowMenu } from '@/components/common';
 import { calcHoneyScore, calcSourcingScore } from '@/lib/honey-score';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 import { getNaverFeeRateByD1, NAVER_DEFAULT_FEE_RATE } from '@/lib/naver-fee-rates-2026';
@@ -75,6 +76,8 @@ interface SourcingItem {
   category_name: string | null; category_code: string | null; inventory: number | null;
   ship_fee: number | null; can_merge: boolean | null;
   sourcing_status: string; product_id: string | null;
+  // SEED-SAVE C-3 Step 5: linked Product status (StageBadge source of truth, #179).
+  linked_product_status?: string | null; linked_naver_id?: string | null;
 }
 
 type Tab = 'single' | 'bulk' | 'history';
@@ -238,6 +241,8 @@ function CrawlPageInner() {
   const [sError, setSError]       = useState('');
   const [sSuccess, setSSuccess]   = useState('');
   const [sessionWarning, setSessionWarning] = useState<string | null>(null);
+  // SEED-SAVE C-3 Step 4 — re-crawl duplicate guard (non-blocking notice).
+  const [dupWarn, setDupWarn] = useState<{ productId: string; productName: string } | null>(null);
   const [supPrice, setSupPrice]   = useState(0);
   const [sellPrice, setSellPrice] = useState(0);
   const [shipFee, setShipFee]     = useState(3000);
@@ -297,7 +302,7 @@ function CrawlPageInner() {
       ? `https://domeme.domeggook.com/s/${sUrl.trim()}`
       : sUrl.trim();
     if (!resolvedUrl) { setSError('URL 또는 상품번호를 입력해주세요'); return; }
-    setSLoading(true); setSError(''); setSResult(null); setSSuccess('');
+    setSLoading(true); setSError(''); setSResult(null); setSSuccess(''); setDupWarn(null);
     try {
       const res  = await fetch('/api/crawler/domemae', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -307,6 +312,11 @@ function CrawlPageInner() {
       if (data.success && data.data) {
         setSResult(data.data);
         setSessionWarning(data.sessionWarning || null);
+        // Step 4: non-blocking re-crawl guard — warn if this URL is already a 창고 상품.
+        fetch(`/api/crawler/check-productized?url=${encodeURIComponent(resolvedUrl)}`)
+          .then(r => r.json())
+          .then(c => { if (c?.productized && c.productId) setDupWarn({ productId: c.productId, productName: c.productName }); })
+          .catch(() => {});
         const p = data.data.supplierPrice || 0;
         setSupPrice(p);
         // Auto-apply ship fee from API
@@ -760,6 +770,13 @@ function CrawlPageInner() {
               <span style={{ display:"inline-flex", alignItems:"center", color:"#e62310" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
               <span>{sessionWarning}</span>
               <a href="/settings/supplier-login" style={{ marginLeft:'auto', fontSize:12, fontWeight:700, color:'#e62310', textDecoration:'none', whiteSpace:'nowrap' }}>재로기인 →</a>
+            </div>
+          )}
+          {dupWarn && (
+            <div style={{ marginTop: 10, padding:'9px 12px', background:'#FFF0F5', border:'1px solid #FFB3CE', borderRadius:10, fontSize:13, color:'#9d174d', display:'flex', alignItems:'center', gap:8 }}>
+              <AlertCircle size={15} style={{ color:'#e62310', flexShrink:0 }} />
+              <span>이미 <b>{dupWarn.productName}</b>(으)로 상품화된 항목입니다.</span>
+              <a href={`/products/new?edit=${dupWarn.productId}`} style={{ marginLeft:'auto', fontSize:12, fontWeight:700, color:'#e62310', textDecoration:'none', whiteSpace:'nowrap' }}>창고에서 열기 →</a>
             </div>
           )}
           {sError && <div style={{ marginTop: 10, padding:'9px 12px', background:'#fff0ef', border:'1px solid #ffd6d3', borderRadius:10, fontSize:13, color:'#b91c1c' }}>{sError}</div>}
@@ -1857,11 +1874,6 @@ function CrawlPageInner() {
                 : m >= 10 ? { color:'#a16207', fill:'#f59e0b', bold:false }
                 : { color:'#b91c1c', fill:'#ef4444', bold:false };
 
-              // StatusPill tone map (shared semantic badge — optional secondary signal).
-              const toneOf = (s: string): 'brand'|'warning'|'success'|'neutral' =>
-                s === 'SOURCED' ? 'brand' : s === 'PENDING' ? 'warning' : s === 'REGISTERED' ? 'success' : 'neutral';
-              const statusLabel = (s: string) =>
-                ({ SOURCED:'소싱완료', PENDING:'등록대기', REGISTERED:'등록완료', HOLD:'보류' } as Record<string,string>)[s] ?? s;
 
               // Density-driven vertical padding (compact ~7px / comfortable ~13px).
               const rowPadY = 9; // D2 — single well-tuned density (compact-comfortable)
@@ -2039,10 +2051,17 @@ function CrawlPageInner() {
                               {log.category_name && <span style={{ color:'#aaa' }}> · {log.category_name}</span>}
                             </div>
                           </div>
-                          {/* Optional secondary status pill (action button is the primary signal). */}
-                          <StatusPill tone={toneOf(log.sourcing_status)} className="hidden sm:inline-flex">
-                            {statusLabel(log.sourcing_status)}
-                          </StatusPill>
+                          {/* SEED-SAVE C-3 Step 5: shared StageBadge — derived from the
+                              linked Product status when linked (#179), else 수집됨. */}
+                          <span className="hidden sm:inline-flex">
+                            <StageBadge
+                              linked={!!log.product_id}
+                              productStatus={log.linked_product_status}
+                              naverProductId={log.linked_naver_id}
+                              sourcingStatus={log.sourcing_status}
+                              size="sm"
+                            />
+                          </span>
                         </div>
 
                         {/* Col: 도매가 (right-aligned, tabular) */}
