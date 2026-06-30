@@ -461,6 +461,10 @@ function NewProductPageInner() {
   const [readinessStatus, setReadinessStatus] = useState<'DRAFT'|'READY'>('DRAFT');
   const savingRef            = useRef(false);
   const lastSavedSnapshotRef = useRef('');
+  // SEED-SAVE C-3 — originating 꿀통 crawl_log, carried from the prefill so the
+  // first (create) save can atomically link it (꿀통 → 창고 lifecycle, #82).
+  const crawlLogIdRef        = useRef('');
+  const crawlSourceUrlRef    = useRef('');
   const [catTab, setCatTab]             = useState<'search'|'drill'>('drill');
   // C-11: 2-Panel Split tab navigation state
   // C-PLANT-4TAB — default tab is SEO (검색최적화), the new front-of-funnel.
@@ -869,6 +873,10 @@ function NewProductPageInner() {
       if (typeof data.crawlMinQuantity === 'number' && data.crawlMinQuantity >= 1) {
         setCrawlMinQuantity(data.crawlMinQuantity);
       }
+      // SEED-SAVE C-3: stash the crawl_log link keys so the create save links the
+      // 꿀통 item to the new 창고 Product (crawlLogId preferred; URL as fallback).
+      if (typeof data.crawlLogId === 'string') crawlLogIdRef.current = data.crawlLogId;
+      if (typeof data.crawlSourceUrl === 'string') crawlSourceUrlRef.current = data.crawlSourceUrl;
       // Inject crawlSourceUrl into URL so handleGenerate can mark sourcing log REGISTERED
       if (data.crawlSourceUrl && typeof window !== 'undefined') {
         const currentUrl = new URL(window.location.href);
@@ -1772,9 +1780,15 @@ function NewProductPageInner() {
       } else {
         // New product: a sku is required — use the operator seller code or generate.
         const sku = sellerCode.trim() || `KKT-${Date.now()}`;
+        // SEED-SAVE C-3: forward the crawl_log link keys ONLY on create so the
+        // server atomically links the originating 꿀통 item (#82).
         const res = await fetch('/api/products', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: 'default', ...payload, sku, status: statusField.status ?? 'DRAFT' }),
+          body: JSON.stringify({
+            userId: 'default', ...payload, sku, status: statusField.status ?? 'DRAFT',
+            ...(crawlLogIdRef.current ? { crawlLogId: crawlLogIdRef.current } : {}),
+            ...(crawlSourceUrlRef.current ? { crawlSourceUrl: crawlSourceUrlRef.current } : {}),
+          }),
         });
         const d = await res.json();
         if (!d.success) throw new Error(d.error ?? '저장 실패');
@@ -1782,6 +1796,9 @@ function NewProductPageInner() {
         if (productId) {
           setSavedProductId(productId);
           setSavedNaverProductId(d.product?.naverProductId ?? null);
+          // Linked now (or no link to make) — clear so the next PUT never re-sends.
+          crawlLogIdRef.current = '';
+          crawlSourceUrlRef.current = '';
         }
       }
 

@@ -358,6 +358,26 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // SEED-SAVE C-3 (#82): atomically link the originating 꿀통 crawl_log to the
+      // new 창고 Product so the same item stops showing in both places. Link by the
+      // explicit crawlLogId (history → 씨앗심기) or, failing that, the source URL
+      // (carried by every prefill path). `product_id IS NULL` keeps it idempotent —
+      // a re-save never steals an already-linked log. sourcing_status → REGISTERED
+      // matches the existing batch-register taxonomy (a Product now exists for it).
+      const crawlLogId = typeof data.crawlLogId === 'string' ? data.crawlLogId.trim() : '';
+      const crawlSourceUrl =
+        (typeof data.crawlSourceUrl === 'string' && data.crawlSourceUrl.trim()) ||
+        (typeof data.sourceUrl === 'string' && data.sourceUrl.trim()) || '';
+      if (crawlLogId) {
+        await tx.$executeRaw`
+          UPDATE crawl_logs SET sourcing_status = 'REGISTERED', product_id = ${created.id}
+          WHERE id = ${crawlLogId} AND product_id IS NULL`;
+      } else if (crawlSourceUrl) {
+        await tx.$executeRaw`
+          UPDATE crawl_logs SET sourcing_status = 'REGISTERED', product_id = ${created.id}
+          WHERE url = ${crawlSourceUrl} AND product_id IS NULL`;
+      }
+
       return created;
     });
 

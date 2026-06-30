@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   Layers, Search, RefreshCw, ExternalLink, ArrowRight,
   Package, Download, X, CheckCircle, AlertCircle, Clock, History, TrendingUp, Tag,
-  Pencil, Trash2, RotateCcw, Play, Store, ArrowUp, ArrowDown,
+  Pencil, Trash2, RotateCcw, Play, Store, ArrowUp, ArrowDown, Eye, EyeOff,
 } from 'lucide-react';
 import { OverflowMenu, StatusBadge as StatusPill } from '@/components/common';
 import { calcHoneyScore, calcSourcingScore } from '@/lib/honey-score';
@@ -584,6 +584,9 @@ function CrawlPageInner() {
   const [logs, setLogs]               = useState<SourcingItem[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [histFilter, setHistFilter]   = useState<'all'|'SOURCED'|'PENDING'|'REGISTERED'|'HOLD'|'single'|'bulk'>('all');
+  // SEED-SAVE C-3 — soft-hide items already turned into a 창고 Product (product_id
+  // set) so the same item never shows in both 꿀통 and 창고. "처리완료 보기" reveals them.
+  const [showProcessed, setShowProcessed] = useState(false);
   // C-CRAWL-STATE: reversible reclassify target options + delete-confirm modal.
   // sourcing_status is a free string column (no DB enum), so HOLD (보류) is
   // additive and needs no migration. updateSourcingStatus already PATCHes any
@@ -1750,6 +1753,10 @@ function CrawlPageInner() {
                     crawlCanMerge: first.can_merge,
                     crawlInventory: first.inventory,
                     crawlCategoryCode: first.category_code,
+                    // SEED-SAVE C-3: carry the crawl_log id + URL so the create save
+                    // atomically links this 꿀통 item to the new 창고 Product (#82).
+                    crawlLogId: first.id,
+                    crawlSourceUrl: first.url,
                     ...(first.category_name ? { catD1: first.category_name.split('>')[0]?.trim() } : {}),
                   };
                   const j = JSON.stringify(prefill);
@@ -1771,8 +1778,13 @@ function CrawlPageInner() {
                 <p style={{ fontSize:13, color:'#888', margin:0 }}>꿀통 꽃수레 불러오는 중...</p>
               </div>
             ) : (() => {
+              // C-3: hidden = linked to a Product (product_id). Default view hides
+              // them (they live in 창고 now); the toggle or the explicit 등록완료 filter
+              // reveals them. processedCount drives the toggle label.
+              const processedCount = logs.filter(l => !!l.product_id).length;
               const filtered = logs.filter(log => {
                 if (histSearch && !((log.name||'') + log.url).toLowerCase().includes(histSearch.toLowerCase())) return false;
+                if (log.product_id && !showProcessed && histFilter !== 'REGISTERED') return false;
                 return true;
               });
 
@@ -1875,6 +1887,10 @@ function CrawlPageInner() {
                   crawlCanMerge: log.can_merge,
                   crawlInventory: log.inventory,
                   crawlCategoryCode: log.category_code,
+                  // SEED-SAVE C-3: carry the crawl_log id + URL so the create save
+                  // atomically links this 꿀통 item to the new 창고 Product (#82).
+                  crawlLogId: log.id,
+                  crawlSourceUrl: log.url,
                   ...(log.category_name ? { catD1: log.category_name.split('>')[0]?.trim() } : {}),
                 };
                 const j = JSON.stringify(prefill);
@@ -1932,6 +1948,14 @@ function CrawlPageInner() {
                       style={{ width:14, height:14, accentColor:'#e62310', cursor:'pointer' }} />
                     <span style={{ fontVariantNumeric:'tabular-nums' }}>전체 {sorted.length}개</span>
                     <div style={{ flex:1 }} />
+                    {/* SEED-SAVE C-3: reveal/hide items already turned into a 창고 상품. */}
+                    {processedCount > 0 && histFilter !== 'REGISTERED' && (
+                      <button onClick={() => setShowProcessed(v => !v)}
+                        style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'4px 10px', background: showProcessed ? '#FFF0F5' : 'transparent', border:'1px solid #FFD9E6', borderRadius:999, fontSize:11, fontWeight:700, color:'#e62310', cursor:'pointer', whiteSpace:'nowrap' }}>
+                        {showProcessed ? <Eye size={11}/> : <EyeOff size={11}/>}
+                        처리완료 {processedCount}개 {showProcessed ? '숨기기' : '보기'}
+                      </button>
+                    )}
                   </div>
 
                   {/* Column header row */}
