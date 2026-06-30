@@ -53,7 +53,7 @@ interface Product {
   naverTemplateNo?: string | null;
 }
 
-type TabKey = 'all' | 'active' | 'pending' | 'oos' | 'reactivation' | 'draft';
+type TabKey = 'all' | 'draft' | 'ready' | 'active' | 'pending' | 'oos' | 'reactivation';
 type ViewMode = 'list' | 'group';
 type ScoredProduct = Product & { _hs: ReturnType<typeof calcHoneyScore> };
 
@@ -62,13 +62,30 @@ type ScoredProduct = Product & { _hs: ReturnType<typeof calcHoneyScore> };
 const TAB_CONFIG: Record<TabKey, {
   label: string; dot: string; dotLabel: string; filter: (p: Product) => boolean;
 }> = {
+  // SEED-SAVE C-4 (#62): segment order surfaces 작성중/발행대기 at the top. 'draft'
+  // is now labelled 작성중 (the C-1 autosave model retired the "임시저장" wording),
+  // and 'ready' (발행대기·green) is the new READY status the readiness-check promotes.
   all:          { label: '전체',          dot: 'bg-gray-400',   dotLabel: '',              filter: () => true },
-  active:       { label: '네이버 판매중', dot: 'bg-green-500',  dotLabel: '네이버 판매중', filter: p => p.status === 'ACTIVE' && !!p.naverProductId },
+  draft:        { label: '작성중',        dot: 'bg-gray-300',   dotLabel: '작성중',        filter: p => p.status === 'DRAFT' },
+  ready:        { label: '발행대기',      dot: 'bg-green-500',  dotLabel: '발행대기',      filter: p => p.status === 'READY' },
+  active:       { label: '네이버 판매중', dot: 'bg-green-600',  dotLabel: '네이버 판매중', filter: p => p.status === 'ACTIVE' && !!p.naverProductId },
   pending:      { label: '네이버 등록 대기',     dot: 'bg-amber-400',  dotLabel: '네이버 등록 대기', filter: p => p.status === 'ACTIVE' && !p.naverProductId },
   oos:          { label: '품절',          dot: 'bg-[#E8001F]',  dotLabel: '품절',          filter: p => p.status === 'OUT_OF_STOCK' },
   reactivation: { label: '재활성화 필요', dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
-  draft:        { label: '임시저장',          dot: 'bg-gray-300',   dotLabel: '임시저장',          filter: p => p.status === 'DRAFT' },
 };
+
+// SEED-SAVE C-4 — status segments for the default warehouse view. Order makes the
+// authoring lifecycle legible: 작성중 → 발행대기 → 발행됨 → 품절 → 재활성화. 발행됨
+// folds both ACTIVE variants (with/without naverProductId). A product lives in
+// exactly one segment, so DRAFT/READY are surfaced as their own top sections
+// instead of being buried as a gray dot in a flat list.
+const STATUS_SEGMENTS: { key: TabKey; label: string; dot: string; match: (p: Product) => boolean }[] = [
+  { key: 'draft',        label: '작성중',        dot: 'bg-gray-300',   match: p => p.status === 'DRAFT' },
+  { key: 'ready',        label: '발행대기',      dot: 'bg-green-500',  match: p => p.status === 'READY' },
+  { key: 'active',       label: '발행됨',        dot: 'bg-green-600',  match: p => p.status === 'ACTIVE' },
+  { key: 'oos',          label: '품절',          dot: 'bg-[#E8001F]',  match: p => p.status === 'OUT_OF_STOCK' },
+  { key: 'reactivation', label: '재활성화 필요', dot: 'bg-orange-400', match: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
+];
 
 // Check readiness for Naver upload
 function getReadinessIssues(p: Product): string[] {
@@ -113,13 +130,14 @@ function StatusDot({ product }: { product: Product }) {
   let key: TabKey = 'draft';
   if (product.status === 'ACTIVE' && product.naverProductId) key = 'active';
   else if (product.status === 'ACTIVE') key = 'pending';
+  else if (product.status === 'READY') key = 'ready';
   else if (product.status === 'OUT_OF_STOCK') key = 'oos';
   else if (product.status === 'INACTIVE' || product.status === 'HIDDEN') key = 'reactivation';
   const { dot, dotLabel } = TAB_CONFIG[key];
   return (
     <div className="flex items-center gap-1.5 shrink-0">
       <span className={`w-2 h-2 rounded-full ${dot} shrink-0`} />
-      <span className="text-xs whitespace-nowrap" style={{ color: '#666' }}>{dotLabel || '초안'}</span>
+      <span className="text-xs whitespace-nowrap" style={{ color: '#666' }}>{dotLabel || '작성중'}</span>
     </div>
   );
 }
@@ -624,11 +642,14 @@ function BulkFloatMenu({
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   if (selectedIds.length === 0) return null;
 
+  // SEED-SAVE C-4 (#62): keep the bulk options in sync with the status taxonomy —
+  // 작성중(DRAFT)/발행대기(READY)/판매중(ACTIVE)/품절/비활성화.
   const STATUS_OPTIONS = [
-    { value: 'ACTIVE',        label: '판매 중',       color: '#16a34a' },
+    { value: 'DRAFT',         label: '작성중',      color: '#9ca3af' },
+    { value: 'READY',         label: '발행대기',    color: '#16a34a' },
+    { value: 'ACTIVE',        label: '판매 중',     color: '#16a34a' },
     { value: 'OUT_OF_STOCK',  label: '품절',        color: '#e62310' },
     { value: 'INACTIVE',      label: '비활성화',    color: '#888' },
-    { value: 'DRAFT',         label: '임시저장',     color: '#aaa' },
   ];
 
   // Phase 2-MOBILE-3 M4: dock above MobileTabBar on mobile (60px tab bar +
@@ -906,6 +927,23 @@ function ProductsPageInner() {
     return Array.from(map.entries()).map(([key, val]) => ({ key, ...val }));
   }, [filtered]);
 
+  // SEED-SAVE C-4 — default view grouped by status segment (작성중/발행대기/발행됨/…).
+  // Only non-empty segments render. Used when no specific status tab is selected.
+  const statusSections = useMemo(() =>
+    STATUS_SEGMENTS
+      .map(seg => ({ ...seg, items: filtered.filter(seg.match) }))
+      .filter(s => s.items.length > 0),
+    [filtered]);
+
+  // C-4 (mobile): the card stack intentionally stays flat (grouping headers are a
+  // desktop affordance), but in the default view we order by status segment so
+  // 작성중/발행대기 surface at the top instead of being buried by honey score.
+  const mobileList = useMemo(() => {
+    if (tab !== 'all') return filtered;
+    const idx = (p: ScoredProduct) => { const i = STATUS_SEGMENTS.findIndex(s => s.match(p)); return i === -1 ? STATUS_SEGMENTS.length : i; };
+    return [...filtered].sort((a, b) => (idx(a) - idx(b)) || (b._hs.total - a._hs.total));
+  }, [filtered, tab]);
+
   const toggleSelect = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll    = () => { if (selected.size === filtered.length) setSelected(new Set()); else setSelected(new Set(filtered.map(p => p.id))); };
   const toggleGroup  = (key: string) => {
@@ -923,7 +961,7 @@ function ProductsPageInner() {
 
   const toggleStatus = async (e: React.MouseEvent, product: Product) => {
     e.stopPropagation();
-    const next: Record<string, string> = { ACTIVE: 'OUT_OF_STOCK', OUT_OF_STOCK: 'INACTIVE', INACTIVE: 'ACTIVE', DRAFT: 'ACTIVE', HIDDEN: 'ACTIVE' };
+    const next: Record<string, string> = { DRAFT: 'READY', READY: 'ACTIVE', ACTIVE: 'OUT_OF_STOCK', OUT_OF_STOCK: 'INACTIVE', INACTIVE: 'ACTIVE', HIDDEN: 'ACTIVE' };
     const newStatus = next[product.status] ?? 'ACTIVE';
     await fetch(`/api/products/${product.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
     setRawProducts(prev => prev.map(p => p.id === product.id ? { ...p, status: newStatus } : p));
@@ -1083,6 +1121,26 @@ function ProductsPageInner() {
       </div>
       <div style={{ height: 1, background: '#F8DCE5' }} />
     </>
+  );
+
+  // SEED-SAVE C-4 — status-segmented default list (작성중 → 발행대기 → 발행됨 → …).
+  // Each segment is a labelled section header followed by its rows; DRAFT/READY get
+  // their own top sections so in-progress items are immediately visible.
+  const StatusSectionsView = () => (
+    <div>
+      {statusSections.map(({ key, label, dot, items }) => (
+        <div key={key} style={{ borderBottom: '1.5px solid #F8DCE5' }}>
+          <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: '#FFF8FA' }}>
+            <span className={`w-2 h-2 rounded-full ${dot} shrink-0`} />
+            <span className="text-sm font-bold text-gray-800">{label}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded-lg font-bold" style={{ background: '#F8DCE5', color: '#e62310' }}>{items.length}</span>
+          </div>
+          <div style={{ borderTop: '1px solid #F8DCE5' }}>
+            {items.map((p, i) => renderRow(p, i, i === items.length - 1))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 
   const GroupView = () => (
@@ -1296,6 +1354,9 @@ function ProductsPageInner() {
             </div>
           ) : viewMode === 'group' ? (
             <GroupView />
+          ) : tab === 'all' ? (
+            // C-4: default (no status tab) view groups by status segment.
+            <StatusSectionsView />
           ) : (
             <div>{filtered.map((p, idx) => renderRow(p, idx, idx === filtered.length - 1))}</div>
           )}
@@ -1330,7 +1391,7 @@ function ProductsPageInner() {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {filtered.map((p) => {
+              {mobileList.map((p) => {
                 const isSel = selected.has(p.id);
                 const honey = p._hs;
                 const seo = Math.max(0, Math.min(100, p._hs?.seoScore ?? 0));
