@@ -8,6 +8,7 @@ import {
   Package, Image as ImageIcon, Search, Gift, AlertTriangle, Info, ShieldAlert,
   Palette, Save, Database, Sprout, Download, Upload, RefreshCw,
   FolderTree, Type, Layers, Coins, Store, Hash, Pencil, Trash2,
+  Loader, AlertCircle,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 // NAME-DIAG-1 (#151): the legacy product-name-checker readout + NameRulesPanel
@@ -95,6 +96,7 @@ import NaverSEOWorkflow from '@/components/ai/NaverSEOWorkflow';
 import HoneyScorePanel from '@/components/products/HoneyScorePanel';
 import AlternativeProductPanel from '@/components/products/AlternativeProductPanel';
 import ImageUploadDropzone from '@/components/products/ImageUploadDropzone';
+import { productFormSerialize, productFormHydrate, type ProductFormValues } from '@/lib/products/product-form-mapping';
 import { PlatformPicker, SupplierPicker } from '@/components/ui/PlatformSupplierPicker';
 import MarginAdvisorPanel from '@/components/products/MarginAdvisorPanel';
 import { calcUploadReadiness, getReadinessColor, READINESS_GRADE_STYLE } from '@/lib/upload-readiness';
@@ -451,6 +453,14 @@ function NewProductPageInner() {
   // the page (no visual-automation / studio jump), so partial data is fine.
   const [draftBusy, setDraftBusy]       = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+  // SEED-SAVE C-1 — single save model: silent autosave + a status chip, plus an
+  // explicit "발행 준비완료 검사" that validates and promotes DRAFT→READY. saveState
+  // drives the chip; readinessStatus tracks the DRAFT/READY promotion. savingRef
+  // serializes saves so a burst of autosaves can never create duplicate products.
+  const [saveState, setSaveState]       = useState<'idle'|'saving'|'saved'|'error'>('idle');
+  const [readinessStatus, setReadinessStatus] = useState<'DRAFT'|'READY'>('DRAFT');
+  const savingRef            = useRef(false);
+  const lastSavedSnapshotRef = useRef('');
   const [catTab, setCatTab]             = useState<'search'|'drill'>('drill');
   // C-11: 2-Panel Split tab navigation state
   // C-PLANT-4TAB — default tab is SEO (검색최적화), the new front-of-funnel.
@@ -1192,22 +1202,20 @@ function NewProductPageInner() {
         // (?edit=ID&focus=visual) land on a working tab.
         setSavedProductId(p.id);
         setSavedNaverProductId(p.naverProductId ?? null);
-        if (p.name)          setProductName(p.name);
-        if (p.salePrice)     setPrice(String(p.salePrice));
-        if (p.supplierPrice) setSupplierPrice(String(p.supplierPrice ?? 0));
-        if (p.mainImage)     setMainImage(p.mainImage);
-        if (p.description)   setDescription(p.description ?? '');
-        if (p.brand)         setBrand(p.brand);
-        if (p.originCode)    setOriginCode(p.originCode);
-        if (p.sku)           setSellerCode(p.sku);
-        // Restore image fields
-        if (p.detail_image_url)   setDetailImageUrl(p.detail_image_url);
-        if (p.return_care_enabled)   setReturnCareEnabled(p.return_care_enabled);
-        if (p.images && Array.isArray(p.images) && p.images.length > 0)
-          setAdditionalImages(p.images.join(','));
-        // IMAGE-SPLIT (#163) — restore the 상세페이지 images zone (3-area round-trip).
-        if (p.detail_images && Array.isArray(p.detail_images) && p.detail_images.length > 0)
-          setDetailImages(p.detail_images.join(','));
+        // SEED-SAVE C-1: reflect a previously-promoted READY status on the chip.
+        if (p.status === 'READY') setReadinessStatus('READY');
+        // SEED-SAVE C-2 (#62): restore all drift-prone roundtrip fields through the
+        // single shared mapping (name/price/supplier/brand/origin/taxType + 3 image
+        // zones + asPhone/asGuide + shipping_template_id/return_care_enabled/sku).
+        // This is the SAME field set productFormSerialize persists — drift-proof.
+        productFormHydrate(p, {
+          setProductName, setPrice, setSupplierPrice, setSelectedSupplierId,
+          setBrand, setOriginCode, setTaxType, setMainImage,
+          setAdditionalImages, setDetailImages, setDetailImageUrl, setDescription,
+          setAsPhone, setAsGuide, setSelectedTemplateId, setReturnCareEnabled,
+          setSellerCode,
+        });
+        // Page-managed fields below (bespoke side-effects beyond a setter):
         // Restore SEO fields. COPY-AUTO-2 cache: hookPhrase is the persisted hook
         // (the canonical DB column the Naver register path consumes). Loading it
         // leaves seoHook non-empty & !isDraft, so neither COPY-AUTO-1 nor
@@ -1223,8 +1231,8 @@ function NewProductPageInner() {
             ? p.naver_keywords.split(',').map((k: string) => k.trim()).filter(Boolean)
             : (p.naver_keywords as string[])
         );
-        // Restore shipping template
-        if (p.shippingTemplateId) setSelectedTemplateId(p.shippingTemplateId);
+        // (shipping template now restored via productFormHydrate above — using the
+        // real shipping_template_id key, fixing the prior camelCase no-op.)
         // Restore category drill-down from stored code
         if (p.naverCategoryCode) {
           const found = NAVER_CATEGORIES_FULL.find(c => c.code === p.naverCategoryCode);
@@ -1674,9 +1682,15 @@ function NewProductPageInner() {
   // partial drafts are allowed; `validate=true` (DB 저장 / 저장 후 온실 아틀리에)
   // runs the same field gate as direct registration. `thenStudio` navigates to
   // the 온실 아틀리에 (Studio) after a successful save.
-  const saveDraft = async (opts: { validate: boolean; thenStudio?: boolean }) => {
-    setError('');
+  // SEED-SAVE C-1/C-2: one persistence path for autosave (silent), explicit
+  // saves, and the "발행 준비완료 검사" (validate + promote). `silent` autosave
+  // shows no toasts/errors and preserves the DB status; `promote` sets READY on a
+  // passing validation. The payload is built from the single shared serializer so
+  // it can never drift from the ?edit= loader (productFormHydrate).
+  const saveDraft = async (opts: { validate: boolean; thenStudio?: boolean; silent?: boolean; promote?: boolean }) => {
+    if (!opts.silent) setError('');
     const catId = getCategoryId(d1, d2, d3, d4);
+    let validatedPass = false;
     if (opts.validate) {
       const missing: string[] = [];
       if (!productName.trim())                                missing.push('상품명');
@@ -1686,39 +1700,64 @@ function NewProductPageInner() {
       if (optionType !== 'NONE' && optionRows.length === 0)   missing.push('옵션 그룹화');
       if (!mainImage.trim())                                  missing.push('대표 이미지');
       if (missing.length > 0) {
-        toast.error(`다음 항목을 먼저 채워주세요:\n• ${missing.join('\n• ')}`, { duration: 5000 });
-        setError(missing.length === 1 ? `${missing[0]}을(를) 입력해주세요` : `${missing.length}개 항목이 비어있습니다`);
+        if (!opts.silent) {
+          toast.error(`다음 항목을 먼저 채워주세요:\n• ${missing.join('\n• ')}`, { duration: 5000 });
+          setError(missing.length === 1 ? `${missing[0]}을(를) 입력해주세요` : `${missing.length}개 항목이 비어있습니다`);
+        }
         return;
       }
+      validatedPass = true;
     } else if (!productName.trim()) {
-      toast.error('임시저장하려면 상품명을 먼저 입력해주세요');
+      // Autosave silently waits for a product name; explicit saves nudge the user.
+      if (!opts.silent) toast.error('저장하려면 상품명을 먼저 입력해주세요');
       return;
     }
 
-    setDraftBusy(true);
+    // Serialize all saves so a burst of autosaves (or an autosave racing an
+    // explicit save) can never fire two creates and duplicate the product. A
+    // silent autosave yields immediately; an explicit save waits briefly for the
+    // in-flight save to finish so a click is never silently dropped.
+    if (savingRef.current) {
+      if (opts.silent) return;
+      await new Promise(r => setTimeout(r, 500));
+      if (savingRef.current) { toast.error('저장 중입니다 — 잠시 후 다시 시도해주세요'); return; }
+    }
+    savingRef.current = true;
+
+    if (!opts.silent) setDraftBusy(true);
+    setSaveState('saving');
     try {
-      const payload = {
+      const formValues: ProductFormValues = {
         name: productName.trim(),
         salePrice: Number(price) || 0,
         supplierPrice: Number(supplierPrice) || 0,
-        supplierId: selectedSupplierId || undefined,
-        naverCategoryCode: catId || undefined,
+        supplierId: selectedSupplierId,
         brand, originCode, taxType,
-        status: 'DRAFT',
-        // IMAGE-SPLIT (#163) — persist all three image zones so the 이미지 tab save
-        // round-trips 대표/추가/상세 on re-open. images = 추가 썸네일 (String[]),
-        // detail_images = 상세페이지 images (jsonb array). mainImage = 대표.
-        mainImage: mainImage || undefined,
-        images: additionalImagesArr,
-        detail_images: detailImagesArr,
-        description: detailImageUrl ? `<img src="${detailImageUrl}">` : (description || undefined),
-        detail_image_url: detailImageUrl || undefined,
+        mainImage,
+        additionalImages: additionalImagesArr,
+        detailImages: detailImagesArr,
+        detailImageUrl,
+        description,
+        asPhone, asGuide,
+        shippingTemplateId: selectedTemplateId,
+        returnCareEnabled,
+        sku: sellerCode,
+      };
+      const promoted = opts.promote && validatedPass;
+      // promote → READY; explicit non-promote save → DRAFT; silent autosave omits
+      // status so it preserves whatever the row already is (never demotes READY).
+      const statusField: Record<string, string> = promoted
+        ? { status: 'READY' }
+        : opts.silent ? {} : { status: 'DRAFT' };
+      const payload = {
+        ...productFormSerialize(formValues),
+        naverCategoryCode: catId || undefined,
         keywords: aiKeywords.length > 0 ? aiKeywords : undefined,
         tags: seoTags.length > 0 ? seoTags : undefined,
         // COPY-AUTO-2 cache: persist the SEO 훅문구 so a re-open loads it and skips
         // any AI re-generation. hookPhrase is the canonical column (Naver register).
         hookPhrase: seoHook.trim() || undefined,
-        asPhone, asGuide,
+        ...statusField,
         ...(buildOptionsPayload() ?? {}),
       };
 
@@ -1731,10 +1770,11 @@ function NewProductPageInner() {
         const d = await res.json();
         if (!d.success) throw new Error(d.error ?? '저장 실패');
       } else {
-        const sku = sellerCode || `KKT-${Date.now()}`;
+        // New product: a sku is required — use the operator seller code or generate.
+        const sku = sellerCode.trim() || `KKT-${Date.now()}`;
         const res = await fetch('/api/products', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sku, userId: 'default', ...payload }),
+          body: JSON.stringify({ userId: 'default', ...payload, sku, status: statusField.status ?? 'DRAFT' }),
         });
         const d = await res.json();
         if (!d.success) throw new Error(d.error ?? '저장 실패');
@@ -1746,17 +1786,67 @@ function NewProductPageInner() {
       }
 
       setDraftSavedAt(Date.now());
-      toast.success(opts.thenStudio ? '저장 완료 · 온실 아틀리에로 이동합니다' : '임시저장 완료');
+      setSaveState('saved');
+      if (promoted) setReadinessStatus('READY');
+      if (!opts.silent) {
+        toast.success(
+          promoted ? '발행 준비 완료 — 모든 필수 항목 통과'
+          : opts.thenStudio ? '저장 완료 · 온실 아틀리에로 이동합니다'
+          : '저장됨',
+        );
+      }
       if (opts.thenStudio && productId) {
         router.push(`/studio?product=${productId}`);
       }
     } catch (e: any) {
-      setError(e.message);
-      toast.error(e.message ?? '저장에 실패했습니다');
+      setSaveState('error');
+      // Force the autosave loop to retry this snapshot on the next change.
+      if (opts.silent) lastSavedSnapshotRef.current = '';
+      if (!opts.silent) {
+        setError(e.message);
+        toast.error(e.message ?? '저장에 실패했습니다');
+      }
     } finally {
-      setDraftBusy(false);
+      savingRef.current = false;
+      if (!opts.silent) setDraftBusy(false);
     }
   };
+
+  // SEED-SAVE C-1 — autosave. A stable snapshot of every roundtrip field; any
+  // change schedules a debounced silent DRAFT save. Editing a READY product
+  // re-opens it as DRAFT-in-progress only when the operator re-runs the check
+  // (silent saves omit status, so READY is preserved until then).
+  const formSnapshot = useMemo(() => JSON.stringify({
+    productName, price, supplierPrice, selectedSupplierId,
+    cat: [d1, d2, d3, d4], brand, originCode, taxType,
+    mainImage, additionalImages, detailImages, detailImageUrl, description,
+    aiKeywords, seoTags, seoHook, asPhone, asGuide,
+    selectedTemplateId, returnCareEnabled, sellerCode,
+    optionType, optionRows, directOptionNames,
+  }), [
+    productName, price, supplierPrice, selectedSupplierId,
+    d1, d2, d3, d4, brand, originCode, taxType,
+    mainImage, additionalImages, detailImages, detailImageUrl, description,
+    aiKeywords, seoTags, seoHook, asPhone, asGuide,
+    selectedTemplateId, returnCareEnabled, sellerCode,
+    optionType, optionRows, directOptionNames,
+  ]);
+
+  useEffect(() => {
+    // Gate: need a product name; in edit mode wait for the loader so a load never
+    // looks like an edit and triggers a redundant save.
+    const isEdit = !!searchParams?.get('edit');
+    if (isEdit && !editLoadDone) return;
+    if (!productName.trim()) return;
+    if (formSnapshot === lastSavedSnapshotRef.current) return;
+    if (savingRef.current) return; // re-runs when saveState flips back to saved
+    const handle = setTimeout(() => {
+      lastSavedSnapshotRef.current = formSnapshot;
+      void saveDraft({ validate: false, silent: true });
+    }, 1500);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formSnapshot, editLoadDone, saveState]);
 
   const handleNaverDirect = async () => {
     setNaverResult(null);
@@ -2179,26 +2269,40 @@ const handleGenerate = async () => {
             </div>
           </div>
         </div>
-        {/* E6 — global save line pinned to the TOP (sticky header), always
-            visible. Only the necessary saves: 임시저장 / DB 저장 / 네이버
-            엑셀·직접등록 (overflow). The "저장 후 온실 아틀리에" CTA moved to the
-            이미지 tab (E7) since image work is what hands off to the studio. */}
-        <div className="max-w-7xl mx-auto px-4 pb-3" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+        {/* SEED-SAVE C-1 — single save model. Autosave persists DRAFT silently
+            (status chip, left); the only explicit save button validates the 6
+            required fields and promotes DRAFT→READY ("발행 준비완료 검사"). The old
+            임시저장/DB 저장 false dichotomy is gone. Naver 발행 stays in overflow. */}
+        <div className="max-w-7xl mx-auto px-4 pb-3" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+          {/* Autosave status chip (Notion/Linear pattern) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600, marginRight: 'auto' }}>
+            {readinessStatus === 'READY' && saveState !== 'saving' ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#15803D', background: '#dcfce7', border: '1px solid #86efac', padding: '3px 9px', borderRadius: 999, fontWeight: 800 }}>
+                <CheckCircle size={12} /> 발행 준비완료
+              </span>
+            ) : saveState === 'saving' ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#6b7280' }}>
+                <Loader size={12} className="animate-spin" /> 저장 중…
+              </span>
+            ) : saveState === 'error' ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#dc2626' }}>
+                <AlertCircle size={12} /> 저장 실패 — 변경 시 자동 재시도
+              </span>
+            ) : draftSavedAt ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#15803D' }}>
+                <CheckCircle size={12} /> 모든 변경사항 저장됨 · {new Date(draftSavedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            ) : (
+              <span style={{ color: '#9ca3af' }}>입력하면 자동 저장됩니다</span>
+            )}
+          </div>
           <button
             type="button"
-            onClick={() => saveDraft({ validate: false })}
-            disabled={draftBusy}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#fff', color: '#e62310', border: '1.5px solid #FFB3CE', borderRadius: 10, fontSize: 12.5, fontWeight: 800, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
-          >
-            <Save size={14} /> 임시저장
-          </button>
-          <button
-            type="button"
-            onClick={() => saveDraft({ validate: true })}
+            onClick={() => saveDraft({ validate: true, promote: true })}
             disabled={draftBusy}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#1A1A1A', color: '#fff', border: 'none', borderRadius: 10, fontSize: 12.5, fontWeight: 800, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
           >
-            <Database size={14} /> DB 저장
+            <CheckCircle size={14} /> 발행 준비완료 검사
           </button>
           {/* Naver publish actions demoted to an overflow menu (#131 save-first). */}
           <OverflowMenu
@@ -2220,11 +2324,6 @@ const handleGenerate = async () => {
               },
             ]}
           />
-          {draftSavedAt && (
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: '#15803D', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <CheckCircle size={12} /> 임시저장됨 · {new Date(draftSavedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-            </p>
-          )}
         </div>
       </div>
 
