@@ -18,7 +18,7 @@
 // Cards stay mounted across steps (display toggle) so per-card state survives
 // step switches, matching the previous tab behaviour.
 
-import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Children, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { onProductMutated } from '@/lib/events/product-mutated';
 import { Palette, Loader2, Image as ImageIcon, Check, Monitor, Smartphone, Warehouse, FlaskConical, NotebookText } from 'lucide-react';
@@ -212,13 +212,18 @@ function StudioInner() {
   // only the JSX parent moved. Step-sync (each step shows its own cards) is
   // inherent in StepGroup's `step` gating; the S2-B.2 reveal polish builds on it.
   // The 꼬띠 guide bubble + live preview stay in the center workspace.
+  // ROBUST-1 (#62/#82): each direct child card is isolated by its own ErrorBoundary
+  // so a render fault in one card never blanks the whole step canvas — siblings keep
+  // rendering, and the failed card shows a panel-level diagnostic (no silent blank).
   const StepGroup = ({ when, children }: { when: AtelierStepKey; children: ReactNode }) => (
     <div
       hidden={step !== when}
       className={step === when ? 'kk-step-reveal' : undefined}
       style={{ display: step === when ? 'flex' : 'none', flexDirection: 'column', gap: 'var(--space-4)' }}
     >
-      {children}
+      {Children.map(children, (child, i) => (
+        <ErrorBoundary key={i} label={a.steps[when]}>{child}</ErrorBoundary>
+      ))}
     </div>
   );
 
@@ -405,10 +410,13 @@ function StudioInner() {
         : <p style={{ fontSize: 11, color: 'var(--gp-ink-500)', lineHeight: 1.6 }}>{a.workspace.selectPrompt}</p>}
     </div>
   );
+  // ROBUST-1 (#62): each sidebar tab's content is isolated so a fault in one slot
+  // can never blank the whole shell — the other tabs and the rest of the studio
+  // keep working, and the failed slot shows a panel-level diagnostic (#82).
   const sidebarTabs: AtelierSidebarTab[] = [
-    { key: 'warehouse', label: s.warehouse, icon: <Warehouse size={18} />, content: toolboxSlot },
-    { key: 'cultivation', label: s.cultivation, icon: <FlaskConical size={18} />, content: cultivationSlot },
-    { key: 'journal', label: s.journal, icon: <NotebookText size={18} />, content: journalSlot },
+    { key: 'warehouse', label: s.warehouse, icon: <Warehouse size={18} />, content: <ErrorBoundary label={s.warehouse}>{toolboxSlot}</ErrorBoundary> },
+    { key: 'cultivation', label: s.cultivation, icon: <FlaskConical size={18} />, content: <ErrorBoundary label={s.cultivation}>{cultivationSlot}</ErrorBoundary> },
+    { key: 'journal', label: s.journal, icon: <NotebookText size={18} />, content: <ErrorBoundary label={s.journal}>{journalSlot}</ErrorBoundary> },
   ];
 
   // ── Assembly slot placeholders — static stubs (S2-B.1) ─────────────────────
