@@ -510,6 +510,7 @@ const IV = m.intervention as {
     working: string; done: string; fail: string; confirmArchive: string; none: string; storageGroup: string; registryGroup: string;
   };
   variant_composite: { label: string; lead: string; coverage: string; missing: string; covered: string; hint: string };
+  detail_assembly: { label: string; lead: string; action: string; missingImages: string; missingCopy: string; missingBoth: string };
 };
 
 function interventionLabel(type: string | undefined): string | null {
@@ -525,6 +526,7 @@ function interventionLabel(type: string | undefined): string | null {
   if (type === 'category_dna_unseeded') return IV.category_dna_unseeded.label;
   if (type === 'registry_drift') return IV.registry_drift.label;
   if (type === 'variant_composite') return IV.variant_composite.label;
+  if (type === 'detail_assembly') return IV.detail_assembly.label;
   return null;
 }
 
@@ -988,6 +990,22 @@ function InterventionDetail({ type, payload, productId, onRefresh }: { type: str
           <p className="text-[10px] text-slate-500">{t.missing}: {missing.join(', ')}</p>
         )}
         <p className="text-[10px] text-slate-400">{t.hint}</p>
+      </div>
+    );
+  }
+  if (type === 'detail_assembly') {
+    const da = payload as { missingImages?: boolean; missingCopy?: boolean } | null;
+    const t = IV.detail_assembly;
+    const mi = da?.missingImages ?? false;
+    const mc = da?.missingCopy ?? false;
+    const branch = mi && mc ? t.missingBoth : mi ? t.missingImages : t.missingCopy;
+    return (
+      <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
+        <p className="text-slate-500">{t.lead}</p>
+        <div className="flex flex-wrap gap-1.5 text-[10px]">
+          <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-700">{branch}</span>
+        </div>
+        <p className="text-[10px] text-slate-400">{t.action}</p>
       </div>
     );
   }

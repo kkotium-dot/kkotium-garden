@@ -245,6 +245,28 @@ export async function GET() {
         const c = (dbProduct.naverCategoryCode ?? '').trim();
         return !c || !seededCodes.has(c);
       })(),
+      // SF-5 — assets-ready-but-detail-unassembled nudge. Read-only, no new column
+      // (#46). "assemblable" is a DB-cheap, high-recall proxy for the spec's
+      // composite/cutout/detail stage assets (per-product storage listing is too
+      // costly in the matrix, and asset_registry has known drift): any curated /
+      // generated imagery. "incomplete" = detail_images empty OR description carries
+      // no assembly copy. Idle-gated in the engine so it never masks urgent work.
+      assemblyNudge: (() => {
+        const di = dbProduct.detail_images;
+        const hasDetailImages = Array.isArray(di) && di.length > 0;
+        const hasCopy = !!(dbProduct.description && String(dbProduct.description).trim());
+        const addl = dbProduct.additionalImages;
+        const imgs = (dbProduct as { images?: unknown }).images;
+        const assemblable =
+          !!dbProduct.mainImage ||
+          !!dbProduct.detail_image_url ||
+          (Array.isArray(addl) && addl.length > 0) ||
+          (Array.isArray(imgs) && imgs.length > 0);
+        const missingImages = !hasDetailImages;
+        const missingCopy = !hasCopy;
+        if (!assemblable || (!missingImages && !missingCopy)) return null;
+        return { missingImages, missingCopy };
+      })(),
     });
     counts[row.overall]++;
 

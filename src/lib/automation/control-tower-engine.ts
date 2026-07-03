@@ -240,6 +240,10 @@ export interface ComputeContext {
   // strategy engine falls back to the neutral universal funnel). Surfaced as an
   // idle-priority informational nudge to seed real DNA — never masks real work.
   dnaUnseeded?: boolean;
+  // SF-5 — set when the product has assemblable assets but its detail page is not
+  // assembled yet (detail_images empty and/or description has no assembly copy).
+  // Surfaced as an idle-priority nudge (same gating as dnaUnseeded); null = none.
+  assemblyNudge?: { missingImages: boolean; missingCopy: boolean } | null;
 }
 
 // C-9 intervention type keys (mirror src/lib/jobs/intervention.ts — duplicated
@@ -260,6 +264,9 @@ const IV_CATEGORY_DNA_UNSEEDED = 'category_dna_unseeded';
 const IV_REGISTRY_DRIFT = 'registry_drift';
 // #62 P2 — variant<->composite coverage. Operator generates missing variant cuts.
 const IV_VARIANT_COMPOSITE = 'variant_composite';
+// SF-5 — assets ready but detail page not assembled (idle nudge, mirrors
+// category_dna_unseeded gating).
+const IV_DETAIL_ASSEMBLY = 'detail_assembly';
 
 /** Two-branch source strategy from the split quality eval (blueprint §3). */
 function deriveSourceStrategy(
@@ -432,6 +439,7 @@ export function computeControlTowerRow(
     ctx.imageJobIntervention ?? null,
     ctx.dnaUnseeded ?? false,
     naverCategoryCode,
+    ctx.assemblyNudge ?? null,
   );
 
   // #62 — every additional active intervention becomes its own card so none is
@@ -439,7 +447,7 @@ export function computeControlTowerRow(
   // only those that resolved to a precise intervention card.
   const extraQueue = (ctx.imageJobInterventionsExtra ?? [])
     .map((iv) =>
-      computeActionQueueItem(product.id, product.name, image, nextAction, iv, false, naverCategoryCode),
+      computeActionQueueItem(product.id, product.name, image, nextAction, iv, false, naverCategoryCode, null),
     )
     .filter((it) => !!it.interventionType);
 
@@ -461,6 +469,7 @@ export function computeActionQueueItem(
   intervention?: { type: string; payload?: unknown } | null,
   dnaUnseeded = false,
   categoryCode = '',
+  assemblyNudge: { missingImages: boolean; missingCopy: boolean } | null = null,
 ): ActionQueueItem {
   const base = { productId, productName };
   // C-9 — a precise image-track intervention. When the awaiting_human job names
@@ -567,6 +576,20 @@ export function computeActionQueueItem(
     return { ...base, category: 'AUTO', stage: 'processing', deepLink: `/products/${productId}` };
   }
   if (!nextAction) {
+    // SF-5 — assets ready but detail page not assembled. Idle nudge (mirrors the
+    // category_dna_unseeded gating below): only an otherwise-idle product shows it
+    // so it never masks urgent work (#56). More actionable than seed-DNA, so it
+    // wins the single idle slot when both apply.
+    if (assemblyNudge) {
+      return {
+        ...base,
+        category: 'INPUT_DECISION',
+        stage: IV_DETAIL_ASSEMBLY,
+        deepLink: `/studio?product=${productId}&tab=image`,
+        interventionType: IV_DETAIL_ASSEMBLY,
+        payload: { productId, missingImages: assemblyNudge.missingImages, missingCopy: assemblyNudge.missingCopy },
+      };
+    }
     // Idle product — surface the unseeded-DNA nudge HERE so it never masks real
     // work (#62, firefly_auto-style additive informational card). Any product
     // with a pending action keeps that action; only otherwise-idle products show

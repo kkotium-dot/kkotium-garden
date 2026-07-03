@@ -67,6 +67,12 @@ export const INTERVENTION_REGISTRY_DRIFT = 'registry_drift';
 // representative composite for one or more in-stock variants. Operator generates
 // the missing variant cuts. Non-blocking advisory card.
 export const INTERVENTION_VARIANT_COMPOSITE = 'variant_composite';
+// SF-5 (#56, SF5_ASSEMBLY_QUEUE_SPEC): assets are ready but the detail page is not
+// assembled yet (detail_images empty and/or description carries no assembly copy).
+// An idle-priority informational nudge to open the 상세 캔버스 (배양실 탭) — never a
+// forced modal, surfaced only when the product is otherwise idle so it never masks
+// urgent work (category_dna_unseeded-style additive). INPUT_DECISION.
+export const INTERVENTION_DETAIL_ASSEMBLY = 'detail_assembly';
 
 export type InterventionType =
   | typeof INTERVENTION_SOURCE_REQUEST
@@ -80,7 +86,8 @@ export type InterventionType =
   | typeof INTERVENTION_VARIANT_SELECT
   | typeof INTERVENTION_CATEGORY_DNA_UNSEEDED
   | typeof INTERVENTION_REGISTRY_DRIFT
-  | typeof INTERVENTION_VARIANT_COMPOSITE;
+  | typeof INTERVENTION_VARIANT_COMPOSITE
+  | typeof INTERVENTION_DETAIL_ASSEMBLY;
 
 export { buildMountCheckPayload };
 export type { FidelityChecklistPayload, MountCheckPayload };
@@ -372,6 +379,23 @@ export function buildVariantCompositePayload(o: {
     ratio: o.ratio,
     checkedAt: o.checkedAt,
   };
+}
+
+export interface DetailAssemblyPayload {
+  productId: string;
+  /** detail_images empty — no images assigned to the detail page yet. */
+  missingImages: boolean;
+  /** description carries no assembly copy (blank/placeholder). */
+  missingCopy: boolean;
+}
+
+/** Detail-assembly payload (SF-5) — assets ready but detail page not assembled. */
+export function buildDetailAssemblyPayload(o: {
+  productId: string;
+  missingImages: boolean;
+  missingCopy: boolean;
+}): DetailAssemblyPayload {
+  return { productId: o.productId, missingImages: o.missingImages, missingCopy: o.missingCopy };
 }
 
 // Open (non-terminal) statuses — an existing such job is reused before creating.

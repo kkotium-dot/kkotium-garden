@@ -329,6 +329,14 @@
         "missing": "누락 변형",
         "covered": "보유",
         "hint": "이미지 탭에서 누락 변형의 대표 컷을 생성·바인딩하세요."
+      },
+      "detail_assembly": {
+        "label": "상세 조립 미완",
+        "lead": "자산은 준비됐으나 상세페이지가 아직 조립되지 않았습니다.",
+        "action": "상세 캔버스 열기",
+        "missingImages": "이미지 미배정",
+        "missingCopy": "카피 미작성",
+        "missingBoth": "이미지·카피 미완"
       }
     }
   }
