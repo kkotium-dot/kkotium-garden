@@ -25,12 +25,45 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutGrid, ImageOff, Sparkles, Pin, ArrowRight, ArrowUp, ArrowDown, X, Plus, Check, Loader, AlertCircle } from 'lucide-react';
+import { LayoutGrid, ImageOff, Sparkles, Pin, ArrowRight, ArrowUp, ArrowDown, X, Plus, Check, Loader, AlertCircle, FileText, Copy } from 'lucide-react';
 import { DETAIL_SECTIONS, STAGE_LABELS } from '@/lib/studio/detail-sections';
+import { buildSectionCopies } from '@/lib/studio/section-copy';
 
 interface StageFile { name: string; path: string; publicUrl: string }
 interface StageGroup { stage: string; count: number; files: StageFile[]; storagePath: string }
 interface AssetsResponse { success: boolean; stages?: StageGroup[]; total?: number; error?: string }
+
+// SF-3a — minimal product/store shapes for read-only copy suggestions.
+interface ProductMeta {
+  name?: string;
+  hookPhrase?: string | null;
+  seo_hook_text?: string | null;
+  keywords?: unknown;
+  targetKeywords?: unknown;
+  category?: string | null;
+  salePrice?: number | null;
+  naver_origin?: string | null;
+  freeShippingThreshold?: number | null;
+  freeShippingMinPrice?: number | null;
+  naver_gift_wrapping?: boolean;
+}
+interface StoreMeta {
+  as_phone?: string | null;
+  as_guide?: string | null;
+  default_return_fee?: number | null;
+  default_exchange_fee?: number | null;
+  free_shipping_threshold?: number | null;
+  notice_top_text?: string | null;
+  notice_bottom_text?: string | null;
+}
+
+const toStrArr = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+const categoryWordOf = (cat?: string | null): string | null => {
+  if (!cat) return null;
+  const seg = cat.split(/[>/]/).map((s) => s.trim()).filter(Boolean).pop();
+  return seg || null;
+};
 
 // The assignable sections (notice is a pinned store-settings slot — excluded from
 // the flatten). Order here IS the detail_images flatten order.
@@ -57,15 +90,21 @@ export default function DetailAssemblyBoard({ productId, onNavigateToGenerate }:
   const savingRef = useRef(false);
   const lastSavedRef = useRef<string>('[]'); // JSON of the last-persisted flat array
 
+  // SF-3a — read-only per-section copy suggestions (no persistence).
+  const [product, setProduct] = useState<ProductMeta | null>(null);
+  const [store, setStore] = useState<StoreMeta | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     if (!productId) { setData(null); return; }
     setLoading(true); setError(null);
     // Fresh board for a new product — section assignments don't persist (#185).
     setAssignments({}); setActiveSection(null); setDirty(false); setSaveState('idle');
     try {
-      const [assetsRes, prodRes] = await Promise.all([
+      const [assetsRes, prodRes, storeRes] = await Promise.all([
         fetch(`/api/products/${productId}/assets`, { cache: 'no-store' }).then((r) => r.json()),
         fetch(`/api/products/${productId}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => null),
+        fetch(`/api/store-settings`, { cache: 'no-store' }).then((r) => r.json()).catch(() => null),
       ]);
       if ((assetsRes as AssetsResponse).success) setData(assetsRes as AssetsResponse);
       else setError((assetsRes as AssetsResponse).error || '자산을 불러오지 못했습니다');
@@ -74,6 +113,9 @@ export default function DetailAssemblyBoard({ productId, onNavigateToGenerate }:
       const arr = Array.isArray(di) ? di.filter((x: unknown): x is string => typeof x === 'string') : [];
       setDetailImages(arr);
       lastSavedRef.current = JSON.stringify(arr);
+      // SF-3a sources (copy suggestions are derived read-only; #82-safe).
+      setProduct((prodRes?.product as ProductMeta) ?? null);
+      setStore((storeRes?.settings as StoreMeta) ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : '자산을 불러오지 못했습니다');
     } finally {
@@ -87,6 +129,30 @@ export default function DetailAssemblyBoard({ productId, onNavigateToGenerate }:
   const flattened = useMemo(
     () => ASSIGNABLE.flatMap((s) => assignments[s.key] ?? []),
     [assignments],
+  );
+
+  // SF-3a — PURE per-section copy suggestions from product + store data (#155/#82).
+  const sectionCopies = useMemo(
+    () => buildSectionCopies({
+      name: product?.name?.trim() || '상품',
+      hookPhrase: product?.hookPhrase,
+      seoHookText: product?.seo_hook_text,
+      keywords: toStrArr(product?.keywords),
+      goldenKeywords: toStrArr(product?.targetKeywords),
+      categoryWord: categoryWordOf(product?.category),
+      categoryPath: product?.category ?? null,
+      price: product?.salePrice ?? null,
+      origin: product?.naver_origin ?? null,
+      freeShippingThreshold: product?.freeShippingThreshold ?? product?.freeShippingMinPrice ?? null,
+      giftWrapping: Boolean(product?.naver_gift_wrapping),
+      store: store ? {
+        asPhone: store.as_phone, asGuide: store.as_guide,
+        returnFee: store.default_return_fee, exchangeFee: store.default_exchange_fee,
+        freeShippingThreshold: store.free_shipping_threshold,
+        noticeTopText: store.notice_top_text, noticeBottomText: store.notice_bottom_text,
+      } : undefined,
+    }),
+    [product, store],
   );
 
   // SF-2 autosave (C-1 pattern). Only fires AFTER a user assignment (dirty) so the
@@ -144,6 +210,14 @@ export default function DetailAssemblyBoard({ productId, onNavigateToGenerate }:
       return { ...prev, [secKey]: cur };
     });
     setDirty(true);
+  }, []);
+
+  // SF-3a — copy a section's suggestion to the clipboard (UI feedback only, no persist).
+  const copySection = useCallback((secKey: string, text: string) => {
+    if (!text) return;
+    void navigator.clipboard?.writeText(text);
+    setCopiedKey(secKey);
+    window.setTimeout(() => setCopiedKey((k) => (k === secKey ? null : k)), 1500);
   }, []);
 
   if (!productId) {
@@ -339,6 +413,33 @@ export default function DetailAssemblyBoard({ productId, onNavigateToGenerate }:
                     })}
                   </div>
                 )}
+
+                {/* SF-3a — read-only copy suggestion (template/rule/data-direct, no persist) */}
+                {(() => {
+                  const cp = sectionCopies[sec.key];
+                  if (!cp) return null;
+                  const copyText = [cp.headline, cp.body].filter(Boolean).join('\n');
+                  return (
+                    <div onClick={(e) => e.stopPropagation()} style={copyBox}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
+                        <span style={copySrc}><FileText size={10} /> 카피 제안 · {cp.sourceLabel}</span>
+                        {cp.available && copyText && (
+                          <button type="button" onClick={() => copySection(sec.key, copyText)} style={copyBtn} title="카피 복사">
+                            {copiedKey === sec.key ? (<><Check size={10} /> 복사됨</>) : (<><Copy size={10} /> 복사</>)}
+                          </button>
+                        )}
+                      </div>
+                      {cp.available ? (
+                        <>
+                          {cp.headline && <p style={copyHl}>{cp.headline}</p>}
+                          {cp.body && <p style={copyBd}>{cp.body}</p>}
+                        </>
+                      ) : (
+                        <p style={copyEmpty}>소스 데이터가 없어요 · 생성 필요</p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
@@ -377,6 +478,13 @@ const secNum: React.CSSProperties = { display: 'inline-flex', alignItems: 'cente
 const emptyCard: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '18px 12px', borderRadius: 10, border: '1px dashed var(--color-border)', background: 'var(--gp-pink-50)' };
 const emptyStageChip: React.CSSProperties = { padding: '1px 7px', borderRadius: 999, fontSize: 10, fontWeight: 700, background: 'var(--color-surface)', color: 'var(--gp-ink-500)', border: '1px solid var(--color-border)' };
 const genBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, border: '1px solid var(--gp-red-500)', background: 'var(--color-surface)', color: 'var(--gp-red-500)', fontSize: 11, fontWeight: 800, cursor: 'pointer' };
+// SF-3a copy-suggestion styles
+const copyBox: React.CSSProperties = { marginTop: 8, padding: '7px 9px', borderRadius: 8, background: 'var(--gp-pink-50)', border: '1px dashed var(--color-border)' };
+const copySrc: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9.5, fontWeight: 700, color: 'var(--gp-ink-500)' };
+const copyBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--gp-ink-700)', fontSize: 10, fontWeight: 700, cursor: 'pointer' };
+const copyHl: React.CSSProperties = { margin: '0 0 2px', fontSize: 11.5, fontWeight: 800, color: 'var(--gp-ink-900)', lineHeight: 1.4 };
+const copyBd: React.CSSProperties = { margin: 0, fontSize: 11, color: 'var(--gp-ink-700)', lineHeight: 1.5 };
+const copyEmpty: React.CSSProperties = { margin: 0, fontSize: 10.5, fontWeight: 700, color: 'var(--gp-ink-500)' };
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
