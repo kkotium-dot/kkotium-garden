@@ -25,9 +25,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutGrid, ImageOff, Sparkles, Pin, ArrowRight, ArrowUp, ArrowDown, X, Plus, Check, Loader, AlertCircle, FileText, Copy } from 'lucide-react';
+import { LayoutGrid, ImageOff, Sparkles, Pin, ArrowRight, ArrowUp, ArrowDown, X, Plus, Check, Loader, AlertCircle, FileText, Copy, Eye, Save, Monitor, Smartphone } from 'lucide-react';
 import { DETAIL_SECTIONS, STAGE_LABELS } from '@/lib/studio/detail-sections';
-import { buildSectionCopies } from '@/lib/studio/section-copy';
+import { buildSectionCopies, type SectionCopy } from '@/lib/studio/section-copy';
+import { buildDetailCopyText, buildDetailPreviewHtml, type AssembleSection } from '@/lib/studio/detail-assemble';
 
 interface StageFile { name: string; path: string; publicUrl: string }
 interface StageGroup { stage: string; count: number; files: StageFile[]; storagePath: string }
@@ -36,6 +37,7 @@ interface AssetsResponse { success: boolean; stages?: StageGroup[]; total?: numb
 // SF-3a — minimal product/store shapes for read-only copy suggestions.
 interface ProductMeta {
   name?: string;
+  description?: string | null;
   hookPhrase?: string | null;
   seo_hook_text?: string | null;
   keywords?: unknown;
@@ -95,11 +97,19 @@ export default function DetailAssemblyBoard({ productId, onNavigateToGenerate }:
   const [store, setStore] = useState<StoreMeta | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+  // SF-3b/SF-4a — editable section copy (overrides seed suggestions) + 860px preview.
+  const [copyEdits, setCopyEdits] = useState<Record<string, string>>({});
+  const [savedDescription, setSavedDescription] = useState<string>('');
+  const [copySaveState, setCopySaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+
   const load = useCallback(async () => {
     if (!productId) { setData(null); return; }
     setLoading(true); setError(null);
     // Fresh board for a new product — section assignments don't persist (#185).
     setAssignments({}); setActiveSection(null); setDirty(false); setSaveState('idle');
+    setCopyEdits({}); setCopySaveState('idle'); setShowPreview(false);
     try {
       const [assetsRes, prodRes, storeRes] = await Promise.all([
         fetch(`/api/products/${productId}/assets`, { cache: 'no-store' }).then((r) => r.json()),
@@ -116,6 +126,9 @@ export default function DetailAssemblyBoard({ productId, onNavigateToGenerate }:
       // SF-3a sources (copy suggestions are derived read-only; #82-safe).
       setProduct((prodRes?.product as ProductMeta) ?? null);
       setStore((storeRes?.settings as StoreMeta) ?? null);
+      // SF-3b — persisted copy lives in Product.description (feeds detailContent).
+      const desc = prodRes?.product?.description;
+      setSavedDescription(typeof desc === 'string' ? desc : '');
     } catch (e) {
       setError(e instanceof Error ? e.message : '자산을 불러오지 못했습니다');
     } finally {
@@ -154,6 +167,56 @@ export default function DetailAssemblyBoard({ productId, onNavigateToGenerate }:
     }),
     [product, store],
   );
+
+  // SF-3b — effective copy per section = operator edit (if any) else SF-3a suggestion.
+  const suggestionText = useCallback((cp?: SectionCopy): string => {
+    if (!cp || !cp.available) return '';
+    return [cp.headline, cp.body].filter(Boolean).join('\n');
+  }, []);
+  const effectiveCopy = useCallback((key: string): string => {
+    const edit = copyEdits[key];
+    if (typeof edit === 'string') return edit;
+    return suggestionText(sectionCopies[key]);
+  }, [copyEdits, sectionCopies, suggestionText]);
+
+  // SF-4a — 860px preview sections: in-session image structure (#185) + effective copy,
+  // in fixed assignable order. Falls back to the persisted flat detail_images.
+  const previewSections = useMemo<AssembleSection[]>(() => {
+    const secs: AssembleSection[] = ASSIGNABLE.map((s) => ({
+      key: s.key, label: s.label,
+      images: assignments[s.key] ?? [],
+      copy: effectiveCopy(s.key),
+    }));
+    const totalImgs = secs.reduce((n, s) => n + s.images.length, 0);
+    if (totalImgs === 0 && detailImages.length > 0) {
+      secs.push({ key: '_saved', label: '상세 이미지', images: detailImages, copy: '' });
+    }
+    return secs;
+  }, [assignments, detailImages, effectiveCopy]);
+  const previewHtml = useMemo(() => buildDetailPreviewHtml(previewSections), [previewSections]);
+  const previewImgCount = useMemo(() => previewSections.reduce((n, s) => n + s.images.length, 0), [previewSections]);
+  const previewCopyChars = useMemo(() => buildDetailCopyText(previewSections).length, [previewSections]);
+
+  // SF-3b — persist the assembled section copy to Product.description (zero new
+  // field). Explicit save (not autosave) — description is higher-stakes than the
+  // image order, so the operator commits it intentionally.
+  const saveCopy = useCallback(async () => {
+    if (!productId) return;
+    const text = buildDetailCopyText(ASSIGNABLE.map((s) => ({ copy: effectiveCopy(s.key) })));
+    setCopySaveState('saving');
+    try {
+      const res = await fetch('/api/products', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: productId, description: text }),
+      });
+      const d = await res.json();
+      if (!d.success) throw new Error(d.error || '저장 실패');
+      setSavedDescription(text);
+      setCopySaveState('saved');
+    } catch {
+      setCopySaveState('error');
+    }
+  }, [productId, effectiveCopy]);
 
   // SF-2 autosave (C-1 pattern). Only fires AFTER a user assignment (dirty) so the
   // initial empty board never wipes an existing detail_images. Debounced + serialized.
@@ -414,29 +477,29 @@ export default function DetailAssemblyBoard({ productId, onNavigateToGenerate }:
                   </div>
                 )}
 
-                {/* SF-3a — read-only copy suggestion (template/rule/data-direct, no persist) */}
+                {/* SF-3a suggestion + SF-3b editable copy (seeded from the suggestion) */}
                 {(() => {
                   const cp = sectionCopies[sec.key];
                   if (!cp) return null;
-                  const copyText = [cp.headline, cp.body].filter(Boolean).join('\n');
+                  const value = effectiveCopy(sec.key);
                   return (
                     <div onClick={(e) => e.stopPropagation()} style={copyBox}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
-                        <span style={copySrc}><FileText size={10} /> 카피 제안 · {cp.sourceLabel}</span>
-                        {cp.available && copyText && (
-                          <button type="button" onClick={() => copySection(sec.key, copyText)} style={copyBtn} title="카피 복사">
+                        <span style={copySrc}><FileText size={10} /> 카피 · {cp.available ? cp.sourceLabel : '생성 필요'}</span>
+                        {value && (
+                          <button type="button" onClick={() => copySection(sec.key, value)} style={copyBtn} title="카피 복사">
                             {copiedKey === sec.key ? (<><Check size={10} /> 복사됨</>) : (<><Copy size={10} /> 복사</>)}
                           </button>
                         )}
                       </div>
-                      {cp.available ? (
-                        <>
-                          {cp.headline && <p style={copyHl}>{cp.headline}</p>}
-                          {cp.body && <p style={copyBd}>{cp.body}</p>}
-                        </>
-                      ) : (
-                        <p style={copyEmpty}>소스 데이터가 없어요 · 생성 필요</p>
-                      )}
+                      <textarea
+                        value={value}
+                        onChange={(e) => setCopyEdits((prev) => ({ ...prev, [sec.key]: e.target.value }))}
+                        onClick={(e) => e.stopPropagation()}
+                        rows={2}
+                        placeholder={cp.available ? '' : '소스 데이터가 없어요 · 카피를 직접 입력하세요'}
+                        style={copyArea}
+                      />
                     </div>
                   );
                 })()}
@@ -446,8 +509,56 @@ export default function DetailAssemblyBoard({ productId, onNavigateToGenerate }:
           <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--gp-ink-500)', lineHeight: 1.5 }}>
             섹션 순서대로 평탄화되어 상세 이미지로 자동 저장됩니다(공통 안내 제외). 섹션 구성은 저장되지 않고 순서만 유지됩니다.
           </p>
+
+          {/* SF-4a/SF-3b — assemble controls: preview toggle + explicit copy save */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+            <button type="button" onClick={() => setShowPreview((v) => !v)} style={ctlPrimary}>
+              <Eye size={13} /> {showPreview ? '미리보기 닫기' : '860px 미리보기'}
+            </button>
+            <button type="button" onClick={() => void saveCopy()} disabled={copySaveState === 'saving'} style={ctlPrimary}>
+              {copySaveState === 'saving'
+                ? (<><Loader size={13} className="animate-spin" /> 저장 중…</>)
+                : (<><Save size={13} /> 상세 카피 저장</>)}
+            </button>
+            {copySaveState === 'saved' && <span style={{ fontSize: 11, fontWeight: 700, color: '#15803d', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Check size={12} /> 카피 저장됨</span>}
+            {copySaveState === 'error' && <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: 3 }}><AlertCircle size={12} /> 저장 실패</span>}
+            {copySaveState === 'idle' && savedDescription && <span style={{ fontSize: 10.5, color: 'var(--gp-ink-500)' }}>저장된 상세 카피 {savedDescription.length}자</span>}
+          </div>
+          <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--gp-ink-500)', lineHeight: 1.5 }}>
+            상세 카피는 상세설명(description)에 저장되어 발행 시 상세페이지 본문으로 들어갑니다. 발행과는 무관합니다.
+          </p>
         </div>
       </div>
+
+      {/* SF-4a — 860px live preview (desktop/mobile toggle + spec indicators) */}
+      {showPreview && (
+        <div style={{ marginTop: 12, borderTop: '1px solid var(--color-border)', paddingTop: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--gp-ink-900)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <LayoutGrid size={13} color="var(--gp-red-500)" strokeWidth={2.4} /> 상세페이지 미리보기
+            </span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button type="button" onClick={() => setPreviewDevice('desktop')} style={deviceBtn(previewDevice === 'desktop')} title="860px 데스크톱"><Monitor size={12} /> 860</button>
+              <button type="button" onClick={() => setPreviewDevice('mobile')} style={deviceBtn(previewDevice === 'mobile')} title="360px 모바일"><Smartphone size={12} /> 360</button>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+            <span style={specChip}>가로 {previewDevice === 'desktop' ? 860 : 360}px</span>
+            <span style={specChip}>이미지 {previewImgCount}장</span>
+            <span style={specChip}>카피 {previewCopyChars}자</span>
+          </div>
+          {previewHtml ? (
+            <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid var(--color-border)', borderRadius: 10, padding: 8 }}>
+              <div
+                style={{ maxWidth: previewDevice === 'desktop' ? 860 : 360, width: '100%', margin: '0 auto' }}
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
+            </div>
+          ) : (
+            <p style={{ ...muted, textAlign: 'center' }}>섹션에 이미지를 배정하거나 카피를 입력하면 미리보기가 표시됩니다.</p>
+          )}
+        </div>
+      )}
     </Shell>
   );
 }
@@ -482,9 +593,10 @@ const genBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'cente
 const copyBox: React.CSSProperties = { marginTop: 8, padding: '7px 9px', borderRadius: 8, background: 'var(--gp-pink-50)', border: '1px dashed var(--color-border)' };
 const copySrc: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9.5, fontWeight: 700, color: 'var(--gp-ink-500)' };
 const copyBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--gp-ink-700)', fontSize: 10, fontWeight: 700, cursor: 'pointer' };
-const copyHl: React.CSSProperties = { margin: '0 0 2px', fontSize: 11.5, fontWeight: 800, color: 'var(--gp-ink-900)', lineHeight: 1.4 };
-const copyBd: React.CSSProperties = { margin: 0, fontSize: 11, color: 'var(--gp-ink-700)', lineHeight: 1.5 };
-const copyEmpty: React.CSSProperties = { margin: 0, fontSize: 10.5, fontWeight: 700, color: 'var(--gp-ink-500)' };
+const copyArea: React.CSSProperties = { width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 40, padding: '5px 7px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--gp-ink-900)', fontSize: 11.5, lineHeight: 1.5, fontFamily: 'inherit' };
+const ctlPrimary: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 11px', borderRadius: 8, border: '1px solid var(--gp-red-500)', background: 'var(--color-surface)', color: 'var(--gp-red-500)', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' };
+const deviceBtn = (active: boolean): React.CSSProperties => ({ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 7, border: `1px solid ${active ? 'var(--gp-red-500)' : 'var(--color-border)'}`, background: active ? '#FFF7FA' : 'var(--color-surface)', color: active ? 'var(--gp-red-500)' : 'var(--gp-ink-700)', fontSize: 11, fontWeight: 800, cursor: 'pointer' });
+const specChip: React.CSSProperties = { padding: '2px 9px', borderRadius: 999, fontSize: 10.5, fontWeight: 700, background: 'var(--gp-pink-50)', color: 'var(--gp-ink-700)', border: '1px solid var(--color-border)' };
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
