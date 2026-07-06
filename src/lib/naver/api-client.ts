@@ -761,23 +761,60 @@ export async function getProduct(productNo: string): Promise<any> {
 // ── Order APIs ────────────────────────────────────────────────────────────
 
 export interface NaverOrderSearchParams {
-  lastChangedFrom: string;   // ISO datetime e.g. 2026-03-01T00:00:00.000+09:00
-  lastChangedTo?:  string;
-  pageNum?:        number;
-  pageSize?:       number;   // max 300
+  from: string;      // KST ISO datetime e.g. 2026-03-01T00:00:00.000+09:00
+  to?:  string;
+  pageNum?: number;
+  pageSize?: number; // max 300
 }
 
-/** Fetch changed orders within a time window */
-// Correct endpoint: /v1/pay-order/seller/product-orders
-// Required params: from, to (KST ISO datetime), productOrderStatuses (optional)
+/**
+ * Fetch orders CREATED within a time window (order-date query), for the dashboard
+ * "today's orders" summary.
+ * Endpoint: GET /v1/pay-order/seller/product-orders — Naver REQUIRES `from` (the
+ * live 400 body is `"from 필드는 필수값 입니다"`). This queries by ORDER/CREATE date,
+ * so it does NOT capture state transitions of older orders — that is what the
+ * last-changed flow below (getChangedOrderIds + getOrderDetails, #192) is for.
+ */
 export async function getOrders(params: NaverOrderSearchParams): Promise<any> {
   const q = new URLSearchParams({
-    from: params.lastChangedFrom,
-    ...(params.lastChangedTo ? { to: params.lastChangedTo } : {}),
-    ...(params.pageNum       ? { pageNum:  String(params.pageNum)  } : {}),
-    ...(params.pageSize      ? { pageSize: String(params.pageSize) } : {}),
+    from: params.from,
+    ...(params.to      ? { to:      params.to }             : {}),
+    ...(params.pageNum ? { pageNum:  String(params.pageNum)  } : {}),
+    ...(params.pageSize ? { pageSize: String(params.pageSize) } : {}),
   });
   return naverRequest('GET', `/v1/pay-order/seller/product-orders?${q}`);
+}
+
+// ── Last-changed order flow (#192) — captures state transitions ────────────
+// The correct source for sync: query by CHANGE time (not create time), then pull
+// full details. Live-verified shapes (2026-07-06, proxy path):
+//   1. GET  /v1/pay-order/seller/product-orders/last-changed-statuses
+//        ?lastChangedFrom=&lastChangedTo=   (window MUST be <= 24h; code 104140
+//        "조회 날짜가 유효하지 않습니다" otherwise) →
+//        { data: { lastChangeStatuses: [{ productOrderId, lastChangedType,
+//          productOrderStatus, lastChangedDate, ... }], count } }
+//   2. POST /v1/pay-order/seller/product-orders/query { productOrderIds: [...] } →
+//        { data: [{ order, productOrder, delivery, currentClaim? }] }
+
+interface LastChangedStatus { productOrderId?: string }
+
+/** Changed productOrderIds in a <=24h window (state transitions). */
+export async function getChangedOrderIds(from: string, to: string): Promise<string[]> {
+  const q = new URLSearchParams({ lastChangedFrom: from, lastChangedTo: to });
+  const r = await naverRequest<{ data?: { lastChangeStatuses?: LastChangedStatus[] } }>(
+    'GET', `/v1/pay-order/seller/product-orders/last-changed-statuses?${q}`,
+  );
+  const list = r?.data?.lastChangeStatuses ?? [];
+  return list.map((x) => String(x.productOrderId ?? '')).filter(Boolean);
+}
+
+/** Full order details for a batch of productOrderIds (max 300 per Naver call). */
+export async function getOrderDetails(productOrderIds: string[]): Promise<any[]> {
+  if (productOrderIds.length === 0) return [];
+  const r = await naverRequest<{ data?: any[] }>(
+    'POST', `/v1/pay-order/seller/product-orders/query`, { productOrderIds } as unknown as undefined,
+  );
+  return r?.data ?? [];
 }
 
 /** Get today's order summary (count + revenue) for dashboard */
@@ -792,8 +829,8 @@ export async function getTodayOrderSummary(): Promise<{
 
   try {
     const data = await getOrders({
-      lastChangedFrom: fmt(todayKST),
-      lastChangedTo:   fmt(now),
+      from: fmt(todayKST),
+      to:   fmt(now),
       pageSize: 300,
     });
     // Naver API response: { data: { contents: [...] } }

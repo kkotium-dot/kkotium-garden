@@ -4,7 +4,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
-  naverRequest,
+  getChangedOrderIds,
+  getOrderDetails,
   isNaverAppStatusInvalid,
   isNaverClientSecretInvalid,
   NAVER_APP_STATUS_USER_MESSAGE,
@@ -56,17 +57,6 @@ function splitWindows(from: Date, to: Date) {
   return windows;
 }
 
-function extractItems(raw: unknown): unknown[] {
-  if (!raw || typeof raw !== 'object') return [];
-  const r = raw as Record<string, unknown>;
-  if (r.data && typeof r.data === 'object') {
-    const d = r.data as Record<string, unknown>;
-    if (Array.isArray(d.contents)) return d.contents;
-  }
-  if (Array.isArray(r.contents)) return r.contents;
-  return [];
-}
-
 export async function GET(request: NextRequest) {
   try {
     const url    = new URL(request.url);
@@ -82,31 +72,52 @@ export async function GET(request: NextRequest) {
     const toDate   = new Date();
     const windows  = splitWindows(fromDate, toDate);
 
-    let allItems: unknown[] = [];
-    // #62/#82: track per-window failures so a TOTAL outage (every window failed)
-    // is surfaced honestly instead of masquerading as success+empty. Partial
-    // failures stay tolerant (sync whatever succeeded).
+    // #192 — Step 1: collect CHANGED productOrderIds per <=23h window from the
+    // last-changed-statuses endpoint (queries by change time, so it captures state
+    // transitions — 구매확정/취소/반품 — of orders created outside the window). The
+    // old `from`/`to` product-orders query is CREATE-date only and missed these.
+    // #62/#82: track per-window failures so a TOTAL outage is surfaced honestly.
+    const changedIds = new Set<string>();
     let windowErrors = 0;
-    let lastWindowError: unknown = null;
+    let lastError: unknown = null;
 
     for (const w of windows) {
       try {
-        const qUrl = `/v1/pay-order/seller/product-orders?from=${encodeURIComponent(toKST(w.from))}&to=${encodeURIComponent(toKST(w.to))}&pageSize=300`;
-        const raw  = await naverRequest('GET', qUrl);
-        allItems   = allItems.concat(extractItems(raw));
+        const ids = await getChangedOrderIds(toKST(w.from), toKST(w.to));
+        for (const id of ids) changedIds.add(id);
       } catch (err: unknown) {
         windowErrors++;
-        lastWindowError = err;
-        console.error('[naver/orders] window error:', err instanceof Error ? err.message : err);
+        lastError = err;
+        console.error('[naver/orders] last-changed window error:', err instanceof Error ? err.message : err);
       }
     }
 
-    // Honest total-failure gate: when EVERY window failed there is no real "0
-    // orders" — the API is down. Classify and surface instead of a false success.
-    if (windows.length > 0 && windowErrors === windows.length) {
-      const naverStatus = isNaverAppStatusInvalid(lastWindowError)
+    // #192 — Step 2: pull full order details in batches of 300 (POST query). Each
+    // element is { order, productOrder, delivery, currentClaim? } (flat, not under
+    // `content` like the old product-orders GET response).
+    const ids = Array.from(changedIds);
+    const details: unknown[] = [];
+    let detailErrors = 0;
+    for (let k = 0; k < ids.length; k += 300) {
+      try {
+        const d = await getOrderDetails(ids.slice(k, k + 300));
+        details.push(...d);
+      } catch (err: unknown) {
+        detailErrors++;
+        lastError = err;
+        console.error('[naver/orders] detail batch error:', err instanceof Error ? err.message : err);
+      }
+    }
+
+    // Honest total-failure gate (#82): every last-changed window failed, OR there
+    // were changed ids but every detail batch failed — a real outage, not "0 orders".
+    const totalFailure =
+      (windows.length > 0 && windowErrors === windows.length) ||
+      (ids.length > 0 && details.length === 0 && detailErrors > 0);
+    if (totalFailure) {
+      const naverStatus = isNaverAppStatusInvalid(lastError)
         ? 'app_status_invalid'
-        : isNaverClientSecretInvalid(lastWindowError)
+        : isNaverClientSecretInvalid(lastError)
         ? 'client_secret_invalid'
         : 'unavailable';
       const message =
@@ -115,36 +126,26 @@ export async function GET(request: NextRequest) {
           : naverStatus === 'client_secret_invalid'
           ? NAVER_CLIENT_SECRET_USER_MESSAGE
           : '네이버 주문 API가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요.';
-      console.error(`[naver/orders] all ${windows.length} windows failed — naverStatus=${naverStatus}`);
+      console.error(`[naver/orders] total failure — naverStatus=${naverStatus} windowErrors=${windowErrors}/${windows.length} detailErrors=${detailErrors}`);
       return NextResponse.json(
         { success: false, naverStatus, error: message, synced: 0, skipped: 0, total: 0, windows: windows.length },
         { status: 200 },
       );
     }
 
-    // Deduplicate by productOrderId
-    const seen = new Set<string>();
-    const unique = allItems.filter(item => {
-      const id = String((item as Record<string, unknown>).productOrderId ?? '');
-      if (!id || seen.has(id)) return false;
-      seen.add(id);
-      return true;
-    });
-
     let synced = 0, skipped = 0;
 
-    for (const item of unique) {
-      const i       = item as Record<string, unknown>;
-      const naverOrderId = String(i.productOrderId ?? '');
+    for (const item of details) {
+      const el      = item as Record<string, unknown>;
+      const productOrder = (el.productOrder as Record<string, unknown>) ?? {};
+      const order        = (el.order        as Record<string, unknown>) ?? {};
+      // Address lives under `shippingAddress` when present, else the `delivery` block.
+      const shipping     = (el.shippingAddress as Record<string, unknown>) ?? (el.delivery as Record<string, unknown>) ?? {};
+      const claim        = (el.currentClaim  as Record<string, unknown>) ?? {};
+      const naverOrderId = String(productOrder.productOrderId ?? '');
       if (!naverOrderId) { skipped++; continue; }
 
       try {
-        // All data is nested under 'content'
-        const content      = (i.content as Record<string, unknown>) ?? {};
-        const productOrder = (content.productOrder  as Record<string, unknown>) ?? {};
-        const order        = (content.order         as Record<string, unknown>) ?? {};
-        const shipping     = (content.shippingAddress as Record<string, unknown>) ?? {};
-        const claim        = (content.currentClaim  as Record<string, unknown>) ?? {};
 
         // Status: from productOrder
         const rawStatus = String(productOrder.productOrderStatus ?? '');
@@ -220,7 +221,8 @@ export async function GET(request: NextRequest) {
       success: true,
       synced,
       skipped,
-      total:   unique.length,
+      total:   details.length,
+      changed: ids.length,
       windows: windows.length,
       period:  `${toKST(fromDate)} ~ ${toKST(toDate)}`,
     });
