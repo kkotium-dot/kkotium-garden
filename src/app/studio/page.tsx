@@ -36,6 +36,7 @@ import {
 import {
   WorkbenchCanvas,
   JobLifecyclePanel,
+  ActivityTimeline,
   MoodCameraPanel,
 } from '@/components/studio/workbench';
 // SLOT FUNNEL BOARD SF-1 — read-only 7-section detail assembly board.
@@ -405,10 +406,15 @@ function StudioInner() {
           {a.journal.subtitle}
         </p>
       </header>
-      {/* Section 1 — job lifecycle (JOURNAL-1). Section 2 (activity log) lands here. */}
-      {selectedProduct?.id
-        ? <JobLifecyclePanel productId={selectedProduct.id} />
-        : <p style={{ fontSize: 11, color: 'var(--gp-ink-500)', lineHeight: 1.6 }}>{a.workspace.selectPrompt}</p>}
+      {/* Section 1 — job lifecycle (JOURNAL-1) + Section 2 — activity log (JOURNAL-2/J2-1). */}
+      {selectedProduct?.id ? (
+        <>
+          <JobLifecyclePanel productId={selectedProduct.id} />
+          <ActivityTimeline productId={selectedProduct.id} />
+        </>
+      ) : (
+        <p style={{ fontSize: 11, color: 'var(--gp-ink-500)', lineHeight: 1.6 }}>{a.workspace.selectPrompt}</p>
+      )}
     </div>
   );
   // ROBUST-1 (#62): each sidebar tab's content is isolated so a fault in one slot

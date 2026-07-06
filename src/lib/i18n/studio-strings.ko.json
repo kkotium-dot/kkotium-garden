@@ -451,7 +451,21 @@
       "selectPrompt": "← 도구함에서 상품을 선택해 주세요"
     },
     "journal": {
-      "subtitle": "진행 중인 작업의 생명주기를 기록합니다"
+      "subtitle": "진행 중인 작업의 생명주기를 기록합니다",
+      "activity": {
+        "title": "활동 기록",
+        "empty": "아직 기록된 활동이 없어요",
+        "loading": "활동 기록을 불러오는 중…",
+        "error": "활동 기록을 불러오지 못했어요",
+        "sourcing": "소싱",
+        "asset": "자산 생성",
+        "job": "작업",
+        "status": "상태 변경",
+        "now": "방금 전",
+        "minAgo": "분 전",
+        "hourAgo": "시간 전",
+        "dayAgo": "일 전"
+      }
     },
     "controlTower": {
       "title": "검색 생장 관제탑",
