@@ -20,7 +20,7 @@
     },
     {
       "path": "/api/cron/order-sync",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 11 * * *"
     },
     {
       "path": "/api/cron/asset-integrity-sweep",

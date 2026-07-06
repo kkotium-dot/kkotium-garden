@@ -1,11 +1,13 @@
 // src/app/api/cron/order-sync/route.ts
 // ============================================================================
-// ORDER-SYNC cron (#193) — dedicated, more-frequent order sync so status
-// transitions (구매확정/취소/반품) stay fresh between the once-daily cron/daily run.
-// Orders benefit from a shorter period than daily; this runs every 6h.
+// ORDER-SYNC cron (#193) — dedicated order sync so status transitions
+// (구매확정/취소/반품) stay fresh. The Vercel plan caps cron FREQUENCY at daily
+// (deploy fails on a sub-daily schedule — vercel.com/docs/cron-jobs/usage-and-pricing),
+// so this runs once daily at 11:00 UTC (20:00 KST), staggered ~12h from cron/daily
+// (23:00 UTC) → orders effectively sync ~2x/day within the plan limit.
 //
 // Delegates to /api/naver/orders (the 3-endpoint last-changed flow, #192) with a
-// 48h lookback — wide enough to bridge any gap between 6-hourly runs so no
+// 48h lookback — wide enough to bridge the gap between the two daily runs so no
 // transition is missed. CRON_SECRET guarded (Vercel cron passes the Bearer header);
 // the sync route enforces the same secret when `manual` is absent.
 // ============================================================================
