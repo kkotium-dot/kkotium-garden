@@ -579,6 +579,11 @@ export interface DashboardStatsApiData {
   period?: string;
   sourcingCount?: number;
   zombieCount?: number;
+  // ORDER-QUEUE-1 (#195): order-processing nudge counts (read-only)
+  ordersToShip?: number;
+  ordersClaim?: number;
+  ordersCancelRequested?: number;
+  ordersReturnRequested?: number;
   todayOrderCount?: number;
   todayRevenue?: number;
   todayPaidAmount?: number;

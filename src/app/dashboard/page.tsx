@@ -39,6 +39,7 @@ import {
 import KkottiWidget from '@/components/dashboard/KkottiWidget';
 import KkottiBriefingWidget from '@/components/dashboard/KkottiBriefingWidget';
 import LowStockAlertWidget from '@/components/dashboard/LowStockAlertWidget';
+import OrderProcessingNudge from '@/components/dashboard/OrderProcessingNudge';
 import PriceMovementWidget from '@/components/dashboard/PriceMovementWidget';
 import CompetitorRadarWidget from '@/components/dashboard/CompetitorRadarWidget';
 import GoldenWindowWidget from '@/components/dashboard/GoldenWindowWidget';
@@ -540,6 +541,9 @@ export default function DashboardPage() {
           ════════════════════════════════════════════════════════════════════ */}
       <CollapsibleSection section="inbox" variant="hunter">
         <div className="space-y-4">
+          {/* ORDER-QUEUE-1 (#195): order-processing nudge — 발송/클레임 (최우선, self-hides at 0) */}
+          <OrderProcessingNudge />
+
           {/* Publish Control Tower — 오늘 발행 가능한 상품 신호등 (매일 첫 화면 최상단) */}
           <PublishControlTowerWidget />
 

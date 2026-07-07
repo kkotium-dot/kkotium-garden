@@ -1,0 +1,14 @@
+{
+  "header": {
+    "title": "주문 처리 대기",
+    "subtitle": "지금 발송·응대가 필요한 주문"
+  },
+  "nudge": {
+    "shipLabel": "발송 필요",
+    "shipHint": "결제완료 · 미발송",
+    "claimLabel": "클레임 응대",
+    "claimHint": "취소 · 반품 요청",
+    "countSuffix": "건",
+    "cta": "처리하러 가기"
+  }
+}

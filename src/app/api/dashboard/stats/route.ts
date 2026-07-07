@@ -48,6 +48,23 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // ORDER-QUEUE-1 (#195): read-only order-processing nudge counts. Surfaces
+    // orders that need an operator action now — PAID/PAYED = needs dispatch;
+    // CANCEL/RETURN_REQUESTED = needs a claim response. ORDER-SYNC keeps these
+    // statuses accurate; no new columns. The write actions live on /orders (#46).
+    const orderStatusRows = await prisma.order.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+    });
+    const orderStatusMap: Record<string, number> = {};
+    for (const row of orderStatusRows) {
+      orderStatusMap[row.status ?? 'UNKNOWN'] = row._count._all;
+    }
+    const ordersToShip          = (orderStatusMap['PAID'] ?? 0) + (orderStatusMap['PAYED'] ?? 0);
+    const ordersCancelRequested = orderStatusMap['CANCEL_REQUESTED'] ?? 0;
+    const ordersReturnRequested = orderStatusMap['RETURN_REQUESTED'] ?? 0;
+    const ordersClaim           = ordersCancelRequested + ordersReturnRequested;
+
     // avg score — single aggregate
     const avgScoreRaw = await prisma.product.aggregate({
       _avg: { aiScore: true },
@@ -119,6 +136,11 @@ export async function GET(request: NextRequest) {
           // Pipeline counts for sidebar badges + pipeline card
           sourcingCount,
           zombieCount,
+          // ORDER-QUEUE-1 (#195): order-processing nudge counts (read-only)
+          ordersToShip,
+          ordersClaim,
+          ordersCancelRequested,
+          ordersReturnRequested,
           // Naver live data
           todayOrderCount:   todayOrders.count,
           todayRevenue:      todayOrders.revenue,
