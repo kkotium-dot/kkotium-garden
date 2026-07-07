@@ -8,7 +8,7 @@ import {
   RefreshCw, Package, Truck, Check, AlertTriangle, Search,
   ShoppingCart, XCircle, RotateCcw, CheckCircle2, Clock,
   X, Phone, MapPin, CreditCard, Hash, User, Info,
-  ChevronRight, MessageSquare, Bell, Star,
+  ChevronRight, ChevronDown, Copy, MessageSquare, Bell, Star,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -21,6 +21,7 @@ interface Order {
   customerName: string;
   customerPhone: string;
   shippingAddress?: string;
+  shippingZipcode?: string;
   createdAt?: string;
   updatedAt?: string;
   deliveredAt?: string;
@@ -236,7 +237,9 @@ function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) 
           <DetailRow
             icon={<MapPin size={13} />}
             label="배송지"
-            value={order.shippingAddress || (problem && cancel ? '취소 주문 — 배송지 정보 없음' : '배송지 정보 없음')}
+            value={order.shippingAddress
+              ? `${order.shippingAddress}${order.shippingZipcode ? ` (${order.shippingZipcode})` : ''}`
+              : (problem && cancel ? '취소 주문 — 배송지 정보 없음' : '배송지 정보 없음')}
             highlight={!order.shippingAddress}
           />
           {order.shippingRequest && (
@@ -325,6 +328,17 @@ function OrdersInner() {
   const [confirming, setConfirming] = useState(false);
   const [hours, setHours]           = useState(48);
   const [drawer, setDrawer]         = useState<Order | null>(null);
+  // ORDER-UI-1: inline per-row expand for shipping info (fulfillment view).
+  const [expanded, setExpanded]     = useState<Set<string>>(new Set());
+  const [copiedId, setCopiedId]     = useState<string | null>(null);
+  const toggleExpand = (id: string) => setExpanded(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const copyAddress = (order: Order) => {
+    const text = [order.shippingAddress, order.shippingZipcode ? `(${order.shippingZipcode})` : ''].filter(Boolean).join(' ');
+    if (!text) return;
+    void navigator.clipboard?.writeText(text);
+    setCopiedId(order.id);
+    setTimeout(() => setCopiedId(c => (c === order.id ? null : c)), 1500);
+  };
   // Dispatch modal state
   const [dispatchModal, setDispatchModal] = useState<{ orderId: string; productName: string } | null>(null);
   const [dispatchCourier, setDispatchCourier]   = useState('CJ대한통운');
@@ -676,6 +690,22 @@ function OrdersInner() {
 
                   {/* Col: actions — only actionable items, no redundant labels */}
                   <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
+                    {/* ORDER-UI-1: expand toggle — reveals shipping address inline */}
+                    <button
+                      onClick={() => toggleExpand(order.id)}
+                      title="배송 정보 펼치기"
+                      aria-expanded={expanded.has(order.id)}
+                      aria-label="배송 정보 펼치기"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: 24, height: 24, borderRadius: 6, flexShrink: 0,
+                        background: expanded.has(order.id) ? '#fff0ef' : '#f9fafb',
+                        border: `1px solid ${expanded.has(order.id) ? '#ffd6d3' : 'var(--border-neutral)'}`,
+                        color: expanded.has(order.id) ? '#e62310' : '#9ca3af', cursor: 'pointer',
+                      }}
+                    >
+                      {expanded.has(order.id) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </button>
                     {/* E-2B: Review prompt badge — shown alongside other action buttons */}
                     {(() => {
                       const badge = getReviewBadge(order);
@@ -796,6 +826,49 @@ function OrdersInner() {
                     )}
                   </div>
                 </div>
+
+                {/* ORDER-UI-1: inline shipping panel (fulfillment) */}
+                {expanded.has(order.id) && (
+                  <div style={{ padding: '10px 14px 12px 52px', background: '#FFFBFC', borderTop: '1px dashed #F3D9E2', display: 'flex', flexDirection: 'column', gap: 7 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <MapPin size={13} style={{ color: '#e62310', flexShrink: 0, marginTop: 2 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#B0A0A8' }}>배송지</span>
+                        {order.shippingAddress ? (
+                          <p style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A', margin: '1px 0 0', wordBreak: 'break-word' }}>
+                            {order.shippingAddress}
+                            {order.shippingZipcode && <span style={{ fontSize: 11, color: '#888', marginLeft: 6 }}>({order.shippingZipcode})</span>}
+                          </p>
+                        ) : (
+                          <p style={{ fontSize: 12, color: '#B0A0A8', margin: '1px 0 0' }}>{cancel ? '취소 주문 — 배송지 정보 없음' : '배송지 정보 없음'}</p>
+                        )}
+                      </div>
+                      {order.shippingAddress && (
+                        <button
+                          onClick={() => copyAddress(order)}
+                          title="주소 복사"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: copiedId === order.id ? '#15803d' : '#6b7280', background: copiedId === order.id ? '#f0fdf4' : '#f9fafb', border: `1px solid ${copiedId === order.id ? '#bbf7d0' : 'var(--border-neutral)'}`, borderRadius: 6, padding: '4px 8px', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}
+                        >
+                          {copiedId === order.id ? <CheckCircle2 size={11} /> : <Copy size={11} />}
+                          {copiedId === order.id ? '복사됨' : '복사'}
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 18px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#555' }}>
+                        <User size={12} style={{ color: '#9ca3af' }} /><span style={{ fontSize: 10, color: '#B0A0A8' }}>수령인</span> {order.customerName || '—'}
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#555' }}>
+                        <Phone size={12} style={{ color: '#9ca3af' }} /><span style={{ fontSize: 10, color: '#B0A0A8' }}>연락처</span> {order.customerPhone || '—'}
+                      </span>
+                    </div>
+                    {order.shippingRequest && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#555' }}>
+                        <Info size={12} style={{ color: '#9ca3af' }} /><span style={{ fontSize: 10, color: '#B0A0A8' }}>배송 메모</span> {order.shippingRequest}
+                      </span>
+                    )}
+                  </div>
+                )}
                 {!isLast && <div style={{ height: 1, background: '#F8DCE5', margin: '0 14px' }} />}
               </div>
             );
