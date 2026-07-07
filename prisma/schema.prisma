@@ -154,7 +154,17 @@ model Product {
   minorPurchase           String            @default("Y")
   name                    String
   naverCategoryCode       String            @default("50003307")
-  naverProductId          String?
+  naverProductId          String?           @unique
+  // PRODUCT-LINK (PL-1) — link metadata (Supabase ALTER applied 2026-07-07).
+  // Access still goes through the guarded helper in src/lib/product-link.ts;
+  // these typed fields make it available to the ORM (spec §1.44 step 3).
+  channelProductNo        String?           @map("channel_product_no")
+  source                  String            @default("NATIVE")   @map("source")
+  linkStatus              String            @default("UNLINKED") @map("link_status")
+  naverModifiedAt         DateTime?         @map("naver_modified_at")
+  lastSyncedAt            DateTime?         @map("last_synced_at")
+  syncHash                String?           @map("sync_hash")
+  syncState               String            @default("SYNCED")   @map("sync_state")
   originCode              String            @default("0001")
   productInfoManufacturer String?
   productInfoModel        String?
