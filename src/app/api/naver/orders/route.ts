@@ -62,6 +62,10 @@ export async function GET(request: NextRequest) {
     const url    = new URL(request.url);
     const hours  = Number(url.searchParams.get('hours') ?? '24');
     const manual = url.searchParams.get('manual') === '1';
+    // ORDER-SYNC-2: backfill re-fetches EVERY locally-stored order (not just the
+    // last-changed delta) so field fixes (e.g. the address mapping) reach orders
+    // that have not changed status recently. Read-only from Naver, upsert locally.
+    const backfill = url.searchParams.get('backfill') === '1';
 
     const authHeader = request.headers.get('authorization');
     if (!manual && process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -96,6 +100,13 @@ export async function GET(request: NextRequest) {
     // element is { order, productOrder, delivery, currentClaim? } (flat, not under
     // `content` like the old product-orders GET response).
     const ids = Array.from(changedIds);
+    // Backfill: union in every locally-stored order id so their details (and thus
+    // fixed fields like the shipping address) are re-pulled and re-upserted.
+    if (backfill) {
+      const existing = await prisma.order.findMany({ select: { id: true } });
+      const seen = new Set(ids);
+      for (const o of existing) if (!seen.has(o.id)) { ids.push(o.id); seen.add(o.id); }
+    }
     const details: unknown[] = [];
     let detailErrors = 0;
     for (let k = 0; k < ids.length; k += 300) {
@@ -139,8 +150,12 @@ export async function GET(request: NextRequest) {
       const el      = item as Record<string, unknown>;
       const productOrder = (el.productOrder as Record<string, unknown>) ?? {};
       const order        = (el.order        as Record<string, unknown>) ?? {};
-      // Address lives under `shippingAddress` when present, else the `delivery` block.
-      const shipping     = (el.shippingAddress as Record<string, unknown>) ?? (el.delivery as Record<string, unknown>) ?? {};
+      // ORDER-SYNC-2 (#200): in the flat query response the address is nested
+      // under `productOrder.shippingAddress` — NOT el.shippingAddress (absent) nor
+      // el.delivery (tracking only). The whole store showed blank addresses while
+      // customerName worked, because order.ordererName was already the right path.
+      // Live-verified shape: { name, tel1, zipCode, baseAddress, detailedAddress }.
+      const shipping     = (productOrder.shippingAddress as Record<string, unknown>) ?? {};
       const claim        = (el.currentClaim  as Record<string, unknown>) ?? {};
       const naverOrderId = String(productOrder.productOrderId ?? '');
       if (!naverOrderId) { skipped++; continue; }
@@ -161,12 +176,12 @@ export async function GET(request: NextRequest) {
         const customerName  = String(order.ordererName  ?? shipping.name ?? '');
         const customerPhone = String(order.ordererTel   ?? shipping.tel1 ?? '');
 
-        // Shipping address (not available for cancelled orders)
-        const shippingAddress = String(
-          (shipping.roadAddress   as string | undefined) ??
-          (shipping.baseAddress   as string | undefined) ??
-          ''
-        );
+        // Shipping address = baseAddress + detailedAddress (composed). Cancelled
+        // orders may legitimately have neither → '' (no fabrication, #82).
+        const baseAddress     = String((shipping.baseAddress     as string | undefined) ?? '');
+        const detailedAddress = String((shipping.detailedAddress as string | undefined) ?? '');
+        const shippingAddress = [baseAddress, detailedAddress].filter(Boolean).join(' ');
+        const shippingZipcode = String((shipping.zipCode as string | undefined) ?? '');
 
         const totalAmount = Number(productOrder.totalPaymentAmount ?? order.generalPaymentAmount ?? 0);
         const productName = String(productOrder.productName ?? '');
@@ -181,6 +196,7 @@ export async function GET(request: NextRequest) {
             customerName,
             customerPhone,
             shippingAddress,
+            shippingZipcode,
             productName,
             quantity,
             claimReason:  claimReason  || null,
@@ -199,6 +215,7 @@ export async function GET(request: NextRequest) {
             customerEmail:  '',
             customerPhone,
             shippingAddress,
+            shippingZipcode,
             productName,
             quantity,
             claimReason:    claimReason  || null,

@@ -47,9 +47,13 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        // ORDER-SYNC-2: sort by real order time (paymentDate) — createdAt is the
+        // local sync time, which made every order look like it arrived today.
+        // Fallback to createdAt for rows without a paymentDate.
+        orderBy: [
+          { paymentDate: 'desc' },
+          { createdAt: 'desc' },
+        ],
         skip,
         take: limit,
       }),
