@@ -758,6 +758,34 @@ export async function getProduct(productNo: string): Promise<any> {
   return naverRequest('GET', `/v2/products/origin-products/${productNo}`);
 }
 
+// ── PRODUCT-LINK (PL-1) — read-only listing + channel→origin normalization ──
+// Naver has no product-change webhook; the store product list is a POST search
+// (Spring Page shape). PL-1 uses these GET/search only (no write). Research §3.
+
+export interface NaverProductSearchParams {
+  page?: number;                 // 1-based
+  size?: number;                 // page size (upper bound verified live — research §8)
+  productStatusTypes?: string[]; // e.g. ['SALE']
+}
+
+/** List my store products. POST /v1/products/search (body + paging). Read-only. */
+export async function searchProducts(params: NaverProductSearchParams = {}): Promise<any> {
+  const body = {
+    productStatusTypes: params.productStatusTypes ?? ['SALE'],
+    page: params.page ?? 1,
+    size: params.size ?? 50,
+  };
+  return naverRequest('POST', '/v1/products/search', body);
+}
+
+/**
+ * Channel product detail — normalizes a directly-entered channelProductNo (the
+ * number the operator sees in the store URL) to its originProductNo.
+ */
+export async function getChannelProduct(channelProductNo: string): Promise<any> {
+  return naverRequest('GET', `/v2/products/channel-products/${channelProductNo}`);
+}
+
 // ── Order APIs ────────────────────────────────────────────────────────────
 
 export interface NaverOrderSearchParams {

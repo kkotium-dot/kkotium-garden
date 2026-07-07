@@ -1,0 +1,80 @@
+{
+  "pageTitle": "상품 연동",
+  "pageSubtitle": "네이버 스마트스토어 상품을 앱으로 불러오고, 재고·가격·상태를 한눈에",
+  "zone1": {
+    "browseTitle": "내 스토어에서 불러오기",
+    "browseDesc": "판매중 상품 목록에서 골라 연동",
+    "browseCta": "목록 열기",
+    "manualTitle": "상품번호로 연동",
+    "manualDesc": "상품번호를 쉼표 또는 줄바꿈으로 여러 개",
+    "manualPlaceholder": "예: 11477814600, 11531557965",
+    "manualCta": "연동"
+  },
+  "zone2": {
+    "title": "연동 상품",
+    "empty": "아직 연동된 상품이 없습니다. 위에서 불러오거나 번호로 연동해 주세요.",
+    "colThumb": "이미지",
+    "colName": "상품명",
+    "colPrice": "가격",
+    "colStatus": "상태",
+    "colSource": "연동유형",
+    "colSync": "동기화",
+    "colLastSync": "최근 동기화",
+    "filterAll": "전체",
+    "filterNative": "앱 발행",
+    "filterImported": "임포트",
+    "filterConflict": "충돌"
+  },
+  "zone3": {
+    "title": "네이버 vs 앱 비교",
+    "hint": "행을 선택하면 필드별로 비교합니다.",
+    "colField": "항목",
+    "colNaver": "네이버",
+    "colApp": "앱",
+    "inSync": "네이버와 일치합니다.",
+    "outOfSync": "차이 있는 항목이 있습니다.",
+    "stockNote": "재고는 네이버 기준입니다(실주문 보호).",
+    "readOnlyNote": "PL-1은 읽기 전용입니다. 반영(push)은 다음 단계에서 지원됩니다.",
+    "loading": "비교 중...",
+    "close": "닫기"
+  },
+  "modal": {
+    "title": "내 스토어 상품",
+    "search": "상품명 검색",
+    "loading": "불러오는 중...",
+    "empty": "표시할 상품이 없습니다.",
+    "alreadyLinked": "이미 연동됨",
+    "selectedCount": "선택 {n}개",
+    "importCta": "선택 상품 연동",
+    "prev": "이전",
+    "next": "다음",
+    "pageInfo": "{page} / {total} 페이지",
+    "close": "닫기"
+  },
+  "result": {
+    "imported": "연동 완료 {n}개",
+    "skipped": "건너뜀 {n}개",
+    "failed": "실패 {n}개",
+    "reasonAlready": "이미 연동됨"
+  },
+  "fields": {
+    "name": "상품명",
+    "salePrice": "판매가",
+    "stockQuantity": "재고",
+    "statusType": "상태",
+    "representativeImageUrl": "대표이미지"
+  },
+  "sor": {
+    "naver": "네이버 기준",
+    "app": "앱 기준"
+  },
+  "status": {
+    "SALE": "판매중",
+    "OUTOFSTOCK": "품절",
+    "SUSPENSION": "판매중지",
+    "ACTIVE": "판매중",
+    "OUT_OF_STOCK": "품절",
+    "INACTIVE": "중지",
+    "DRAFT": "임시저장"
+  }
+}

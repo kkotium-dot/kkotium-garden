@@ -13,7 +13,7 @@ import {
   Search, Layers, Store, Truck,
   KeyRound, FileText, ShoppingCart,
   ChevronRight, MessageCircle, CreditCard, Workflow,
-  Palette, Images,
+  Palette, Images, Link2,
 } from 'lucide-react';
 
 // Fountain SVG — garden concept, matches dashboard page header icon
@@ -77,6 +77,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
     label: 'ORDERS',
     items: [
       { href: '/orders', label: '주문 관리', iconKey: 'shoppingcart', badgeKey: 'orders' },
+      { href: '/products/link', label: '상품 연동', iconKey: 'link2' },
     ],
   },
   {
@@ -187,6 +188,7 @@ function NavIcon({ iconKey, active }: { iconKey: string; active: boolean }) {
     case 'keyround':    icon = <KeyRound    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'filetext':    icon = <FileText    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'shoppingcart': icon = <ShoppingCart size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'link2':        icon = <Link2        size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'messagecircle': icon = <MessageCircle size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'creditcard':   icon = <CreditCard   size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'workflow':     icon = <Workflow     size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;

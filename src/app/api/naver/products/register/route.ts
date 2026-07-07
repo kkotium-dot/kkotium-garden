@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { naverRequest, NaverApiError, uploadImagesToNaver } from '@/lib/naver/api-client';
+import { writeLinkFields } from '@/lib/product-link';
 import {
   buildNaverProductPayload,
   buildDeliveryInfo,
@@ -463,6 +464,20 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       },
     });
+
+    // 9b. PRODUCT-LINK auto-enroll hook (PL-1 wiring; PL-5 completes): a freshly
+    // published product joins the same sync system as imports — source=NATIVE,
+    // LINKED. Guarded (no-op until Desktop's ALTER); never blocks registration.
+    try {
+      await writeLinkFields(productId, {
+        source: 'NATIVE',
+        linkStatus: 'LINKED',
+        lastSyncedAt: new Date().toISOString(),
+        syncState: 'SYNCED',
+      });
+    } catch {
+      // Non-critical — link metadata is best-effort.
+    }
 
     // 10. Log registration event
     try {
