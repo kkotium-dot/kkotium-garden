@@ -1094,3 +1094,115 @@ export async function diffNaverProduct(
 
   return { productNo, inSync: diffs.length === 0, diffs, naverSnapshot };
 }
+
+// ── PRODUCT-LINK PL-2 — status push (품절/재판매) via GET-merge full-replace ──
+// First Naver WRITE path. Safety: full GET-merge (#196 — never partial-PUT),
+// no arbitrary stock-quantity push (#197 — OUTOFSTOCK is exactly stock=0 for a
+// deliberate 품절, and option products go OOS via optionCombinations, not the
+// top-level stockQuantity, per the live-verified shape, #181). seoInfo and every
+// other field are carried through unchanged. dryRun stops before the PUT.
+
+export interface ProductStatusUpdateResult {
+  productNo: string;
+  target: 'OUTOFSTOCK' | 'SALE';
+  previousStatusType: string | null;
+  isOptionProduct: boolean;
+  changedTopLevelFields: string[]; // originProduct keys whose value changed (should be minimal)
+  optionStockZeroed: number;       // # of option combinations set to 0 (OUTOFSTOCK path)
+  stockQuantityChanged: boolean;   // top-level stockQuantity overridden (non-option OUTOFSTOCK)
+  dryRun: boolean;
+  applied: boolean;                // true only when a real PUT was sent
+  preservedFieldCount: number;
+}
+
+export async function updateProductStatus(
+  productNo: string,
+  target: 'OUTOFSTOCK' | 'SALE',
+  opts: { dryRun?: boolean } = {},
+): Promise<ProductStatusUpdateResult> {
+  if (!productNo) {
+    throw new NaverApiError(
+      '상태 변경 불가 — productNo(naverProductId)가 비어 있습니다 (미연동 상품).',
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+  if (target !== 'OUTOFSTOCK' && target !== 'SALE') {
+    throw new NaverApiError(`상태 변경 불가 — 알 수 없는 target(${target}).`, { kind: 'HTTP_ERROR' });
+  }
+
+  // 1. Read current full Naver state — never blind partial-PUT (#196).
+  const current = await getProduct(productNo);
+  const originProduct = current?.originProduct;
+  if (!originProduct || typeof originProduct !== 'object') {
+    throw new NaverApiError(
+      `상태 변경 중단 — GET origin-products/${productNo} 응답에 originProduct가 없어 ` +
+      '전체 페이로드를 보존할 수 없습니다 (부분 PUT 금지).',
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+
+  const previousStatusType =
+    typeof originProduct.statusType === 'string' ? originProduct.statusType : null;
+
+  const optionInfo = originProduct?.detailAttribute?.optionInfo;
+  const combos = Array.isArray(optionInfo?.optionCombinations) ? optionInfo.optionCombinations : [];
+  const isOptionProduct = combos.length > 0;
+
+  // 2. Deep-clone the full origin, then override ONLY the target fields — every
+  // other field (seoInfo, images, price, detail, options) is carried through.
+  const merged = JSON.parse(JSON.stringify(originProduct)) as Record<string, any>;
+  let optionStockZeroed = 0;
+  let stockQuantityChanged = false;
+
+  if (target === 'OUTOFSTOCK') {
+    if (isOptionProduct) {
+      // #181: option/useStockManagement products go OOS via optionCombinations,
+      // NOT top-level stockQuantity (which Naver auto-derives from the options).
+      for (const c of merged.detailAttribute.optionInfo.optionCombinations) {
+        if (typeof c.stockQuantity === 'number' && c.stockQuantity !== 0) {
+          c.stockQuantity = 0;
+          optionStockZeroed++;
+        }
+      }
+    } else if (typeof merged.stockQuantity === 'number' && merged.stockQuantity !== 0) {
+      // #197: exactly-zero for a deliberate 품절 — never an arbitrary stock value.
+      merged.stockQuantity = 0;
+      stockQuantityChanged = true;
+    }
+  } else {
+    // 재판매 — statusType only (no stock push, #197). If the listing is OOS due to
+    // zero stock, restock happens Naver-side; the app never pushes a stock number.
+    merged.statusType = 'SALE';
+  }
+
+  // Which top-level originProduct keys actually changed (proves "타 필드 무변경").
+  const changedTopLevelFields: string[] = [];
+  for (const k of Object.keys(merged)) {
+    if (JSON.stringify(merged[k]) !== JSON.stringify((originProduct as Record<string, unknown>)[k])) {
+      changedTopLevelFields.push(k);
+    }
+  }
+
+  const result: ProductStatusUpdateResult = {
+    productNo,
+    target,
+    previousStatusType,
+    isOptionProduct,
+    changedTopLevelFields,
+    optionStockZeroed,
+    stockQuantityChanged,
+    dryRun: opts.dryRun === true,
+    applied: false,
+    preservedFieldCount: Object.keys(merged).length,
+  };
+
+  // 3. dryRun stops before the irreversible PUT.
+  if (opts.dryRun) return result;
+
+  // 4. Full-payload PUT — full replace that preserves all fields (#196).
+  const payload: Record<string, unknown> = { originProduct: merged };
+  if (current.smartstoreChannelProduct) payload.smartstoreChannelProduct = current.smartstoreChannelProduct;
+  await naverRequest('PUT', `/v2/products/origin-products/${productNo}`, payload);
+  result.applied = true;
+  return result;
+}

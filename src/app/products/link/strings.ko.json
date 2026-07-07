@@ -68,6 +68,21 @@
     "naver": "네이버 기준",
     "app": "앱 기준"
   },
+  "push": {
+    "sectionTitle": "판매 상태 변경",
+    "outOfStock": "품절 처리",
+    "resale": "재판매",
+    "previewTitle": "변경 미리보기 (실행 전)",
+    "previewing": "미리보기 중...",
+    "previewFail": "미리보기 실패",
+    "onlyStatus": "상태만 변경 — 다른 필드는 그대로 유지",
+    "statusChange": "판매상태",
+    "optionZeroed": "옵션 {n}개 재고 0(품절)",
+    "stockZeroed": "재고 0(품절)",
+    "changedField": "변경 필드",
+    "preserved": "보존 필드 {n}개",
+    "goNote": "실제 반영(네이버 전송)은 운영자 승인(GO) 후 활성화됩니다. 지금은 미리보기만 가능합니다."
+  },
   "status": {
     "SALE": "판매중",
     "OUTOFSTOCK": "품절",

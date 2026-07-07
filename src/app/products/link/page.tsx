@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Link2, Store, Hash, X, Loader2, CheckCircle2, AlertTriangle,
-  ChevronRight, ChevronLeft, RefreshCw, PackageSearch,
+  ChevronRight, ChevronLeft, RefreshCw, PackageSearch, PackageX, RotateCcw, ShieldAlert,
 } from 'lucide-react';
 import strings from './strings.ko.json';
 
@@ -206,10 +206,30 @@ function ImportModal({ onClose, onImported }: { onClose: () => void; onImported:
 
 // ─── Diff slide panel (zone 3) ────────────────────────────────────────────────
 interface DiffData { inSync: boolean; diffs: Array<{ field: string; naver: unknown; app: unknown }>; naverSnapshot: Record<string, unknown>; app: Record<string, unknown>; }
+interface StatusPreview { target: 'OUTOFSTOCK' | 'SALE'; previousStatusType: string | null; isOptionProduct: boolean; changedTopLevelFields: string[]; optionStockZeroed: number; stockQuantityChanged: boolean; preservedFieldCount: number; }
 function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => void }) {
   const [data, setData] = useState<DiffData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // PL-2: status-push dry-run preview (real PUT is GO-gated server-side).
+  const [preview, setPreview] = useState<StatusPreview | null>(null);
+  const [previewBusy, setPreviewBusy] = useState<'OUTOFSTOCK' | 'SALE' | null>(null);
+  const [previewErr, setPreviewErr] = useState<string | null>(null);
+
+  async function doPreview(target: 'OUTOFSTOCK' | 'SALE') {
+    setPreviewBusy(target); setPreviewErr(null); setPreview(null);
+    try {
+      const r = await fetch(`/api/products/${product.id}/naver-status`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target, dryRun: true }),
+      });
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error ?? 'preview failed');
+      setPreview(j as StatusPreview);
+    } catch (e) {
+      setPreviewErr(e instanceof Error ? e.message : strings.push.previewFail);
+    } finally { setPreviewBusy(null); }
+  }
 
   useEffect(() => {
     let alive = true;
@@ -274,6 +294,54 @@ function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => vo
             </div>
             <p style={{ margin: '10px 0 0', fontSize: 11, color: '#6b7280' }}>{strings.zone3.stockNote}</p>
             <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9ca3af' }}>{strings.zone3.readOnlyNote}</p>
+
+            {/* PL-2: status push (dry-run preview; real PUT is GO-gated) */}
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px dashed #F3D9E2' }}>
+              <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 800, color: '#111827' }}>{strings.push.sectionTitle}</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => void doPreview('OUTOFSTOCK')} disabled={previewBusy !== null}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '7px 12px', cursor: previewBusy ? 'not-allowed' : 'pointer' }}>
+                  {previewBusy === 'OUTOFSTOCK' ? <Loader2 size={13} className="animate-spin" /> : <PackageX size={13} />}{strings.push.outOfStock}
+                </button>
+                <button onClick={() => void doPreview('SALE')} disabled={previewBusy !== null}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '7px 12px', cursor: previewBusy ? 'not-allowed' : 'pointer' }}>
+                  {previewBusy === 'SALE' ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}{strings.push.resale}
+                </button>
+              </div>
+
+              {previewErr && <p style={{ margin: '8px 0 0', fontSize: 12, color: '#b91c1c' }}>{previewErr}</p>}
+
+              {preview && (
+                <div style={{ marginTop: 10, border: '1px solid #bfdbfe', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ padding: '7px 12px', background: '#eff6ff', fontSize: 11, fontWeight: 800, color: '#1d4ed8' }}>{strings.push.previewTitle}</div>
+                  <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#111827' }}>
+                      <span style={{ fontSize: 11, color: '#6b7280', fontWeight: 600 }}>{strings.push.statusChange}</span>
+                      {statusLabel(preview.previousStatusType ?? '—')}
+                      <ChevronRight size={13} style={{ color: '#9ca3af' }} />
+                      <span style={{ color: preview.target === 'SALE' ? '#15803d' : '#b45309' }}>{statusLabel(preview.target)}</span>
+                    </div>
+                    {preview.target === 'OUTOFSTOCK' && (
+                      <p style={{ margin: 0, fontSize: 12, color: '#b45309' }}>
+                        {preview.isOptionProduct
+                          ? strings.push.optionZeroed.replace('{n}', String(preview.optionStockZeroed))
+                          : strings.push.stockZeroed}
+                      </p>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#15803d', fontWeight: 700 }}>
+                      <CheckCircle2 size={13} />{strings.push.onlyStatus}
+                    </div>
+                    <p style={{ margin: 0, fontSize: 11, color: '#6b7280' }}>
+                      {strings.push.changedField}: {preview.changedTopLevelFields.join(', ') || '—'} · {strings.push.preserved.replace('{n}', String(preview.preservedFieldCount))}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginTop: 4, padding: '7px 10px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8 }}>
+                      <ShieldAlert size={13} style={{ color: '#c2410c', flexShrink: 0, marginTop: 1 }} />
+                      <p style={{ margin: 0, fontSize: 11, color: '#9a3412', lineHeight: 1.5 }}>{strings.push.goNote}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
