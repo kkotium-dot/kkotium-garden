@@ -12,10 +12,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Link2, Store, Hash, X, Loader2, CheckCircle2, AlertTriangle,
-  ChevronRight, ChevronLeft, RefreshCw, PackageSearch, PackageX, RotateCcw, ShieldAlert, Radar,
+  ChevronRight, ChevronLeft, RefreshCw, PackageX, RotateCcw, ShieldAlert, Radar,
 } from 'lucide-react';
 import strings from './strings.ko.json';
 import SubstituteEditor from '@/components/products/SubstituteEditor';
+import PanelTabs, { type PanelTabDef } from '@/components/ui/PanelTabs';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface LinkedRow {
@@ -31,6 +32,7 @@ interface LinkedRow {
   syncState: 'SYNCED' | 'PENDING' | 'CONFLICT' | 'FAILED' | 'DRIFT' | 'UNKNOWN';
   driftFields: string[];
   lastSyncedAt: string | null;
+  hasSubstitute?: boolean;
 }
 interface SearchRow {
   channelProductNo: string | null;
@@ -229,6 +231,9 @@ function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => vo
   const [preview, setPreview] = useState<StatusPreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState<'OUTOFSTOCK' | 'SALE' | null>(null);
   const [previewErr, setPreviewErr] = useState<string | null>(null);
+  // ZONE3 3-tab refactor (#212) — one concern at a time. Default = 동기화 (first
+  // understand what differs, then decide reflect/substitute). Tab state is local.
+  const [tab, setTab] = useState<'sync' | 'push' | 'substitute'>('sync');
 
   async function doPreview(target: 'OUTOFSTOCK' | 'SALE') {
     setPreviewBusy(target); setPreviewErr(null); setPreview(null);
@@ -265,104 +270,129 @@ function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => vo
   ];
   const fmt = (k: string, v: unknown) => v == null ? '—' : k === 'salePrice' ? won(Number(v)) : k === 'statusType' ? statusLabel(String(v)) : k === 'representativeImageUrl' ? '이미지' : String(v);
 
+  // #212 — tab badges from the row (available immediately, no wait for diff load):
+  // app-SoR drift count drives 동기화 (count) + 반영 (pending dot); missing
+  // substitute drives 품절대체 ("!").
+  const appDriftCount = (product.driftFields ?? []).filter((f) => APP_SOR_FIELDS.has(f)).length;
+  const TABS: PanelTabDef[] = [
+    { key: 'sync', label: strings.tabs.sync, badge: appDriftCount > 0 ? { text: `${appDriftCount}${strings.tabs.fieldSuffix}`, tone: 'amber' } : null },
+    { key: 'push', label: strings.tabs.push, badge: appDriftCount > 0 ? { dot: true, tone: 'blue' } : null },
+    { key: 'substitute', label: strings.tabs.substitute, badge: product.hasSubstitute ? null : { text: '!', tone: 'red' } },
+  ];
+
   return (
-    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(440px, 92vw)', zIndex: 55, background: '#fff', borderLeft: '1px solid #F8DCE5', boxShadow: '-8px 0 30px rgba(0,0,0,0.12)', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 18px', borderBottom: '1px solid #F8DCE5' }}>
-        <PackageSearch size={18} style={{ color: '#e62310' }} />
-        <p style={{ margin: 0, flex: 1, fontSize: 14, fontWeight: 800, color: '#111827' }}>{strings.zone3.title}</p>
-        <button onClick={onClose} aria-label={strings.zone3.close} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><X size={18} /></button>
+    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(460px, 96vw)', zIndex: 55, background: '#fff', borderLeft: '1px solid #F8DCE5', boxShadow: '-8px 0 30px rgba(0,0,0,0.12)', display: 'flex', flexDirection: 'column' }}>
+      {/* Panel header — thumbnail + name + status (§2) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderBottom: '1px solid #F8DCE5' }}>
+        {product.representativeImageUrl
+          ? <img src={product.representativeImageUrl} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+          : <div style={{ width: 40, height: 40, borderRadius: 8, background: '#f3f4f6', flexShrink: 0 }} />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</p>
+          <div style={{ marginTop: 3 }}><StatusBadge status={product.statusType} /></div>
+        </div>
+        <button onClick={onClose} aria-label={strings.zone3.close} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', flexShrink: 0 }}><X size={18} /></button>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-        <p style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 700, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.name}</p>
-        {loading && <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af' }}><Loader2 size={18} className="animate-spin" style={{ margin: '0 auto 6px' }} /><p style={{ margin: 0, fontSize: 12 }}>{strings.zone3.loading}</p></div>}
-        {error && <div style={{ color: '#b91c1c', fontSize: 13 }}>{error}</div>}
-        {data && (
+
+      {/* Tab bar (§1) */}
+      <PanelTabs tabs={TABS} active={tab} onChange={(k) => setTab(k as typeof tab)} ariaLabel={strings.tabs.panelAria} />
+
+      {/* Content — one concern at a time (§2: 20px padding) */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+        {/* ── 동기화 (diff / drift) ── */}
+        {tab === 'sync' && (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 8, marginBottom: 12, background: data.inSync ? '#f0fdf4' : '#fffbeb', border: `1px solid ${data.inSync ? '#bbf7d0' : '#fde68a'}`, color: data.inSync ? '#15803d' : '#b45309', fontSize: 12, fontWeight: 700 }}>
-              {data.inSync ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
-              {data.inSync ? strings.zone3.inSync : strings.zone3.outOfSync}
-            </div>
-            <div style={{ border: '1px solid var(--border-neutral)', borderRadius: 10, overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr 1fr', fontSize: 11, fontWeight: 800, color: '#6b7280', background: '#faf8f3', borderBottom: '1px solid var(--border-neutral)' }}>
-                <div style={{ padding: '8px 10px' }}>{strings.zone3.colField}</div>
-                <div style={{ padding: '8px 10px' }}>{strings.zone3.colNaver}</div>
-                <div style={{ padding: '8px 10px' }}>{strings.zone3.colApp}</div>
-              </div>
-              {FIELDS.map((f) => {
-                const nv = (data.naverSnapshot as Record<string, unknown>)[f.key];
-                const av = (data.app as Record<string, unknown>)[f.key];
-                const differ = f.key !== 'stockQuantity' && data.diffs.some((d) => d.field === f.key);
-                return (
-                  <div key={f.key} style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr 1fr', fontSize: 12, borderBottom: '1px solid #f3f0ea', background: differ ? '#fffdf6' : '#fff' }}>
-                    <div style={{ padding: '8px 10px', color: '#374151', fontWeight: 600 }}>
-                      {(strings.fields as Record<string, string>)[f.key] ?? f.key}
-                      <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 800, color: f.sor === 'naver' ? '#1d4ed8' : '#e62310' }}>
-                        {f.sor === 'naver' ? strings.sor.naver : strings.sor.app}
-                      </span>
-                    </div>
-                    <div style={{ padding: '8px 10px', color: '#111827', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fmt(f.key, nv)}</div>
-                    <div style={{ padding: '8px 10px', color: differ ? '#b45309' : '#111827', fontWeight: differ ? 700 : 400, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.key === 'stockQuantity' ? '—' : fmt(f.key, av)}</div>
-                  </div>
-                );
-              })}
-            </div>
-            <p style={{ margin: '10px 0 0', fontSize: 11, color: '#6b7280' }}>{strings.zone3.stockNote}</p>
-            <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9ca3af' }}>{strings.zone3.readOnlyNote}</p>
-
-            {/* PL-2: status push (dry-run preview; real PUT is GO-gated) */}
-            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px dashed #F3D9E2' }}>
-              <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 800, color: '#111827' }}>{strings.push.sectionTitle}</p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => void doPreview('OUTOFSTOCK')} disabled={previewBusy !== null}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '7px 12px', cursor: previewBusy ? 'not-allowed' : 'pointer' }}>
-                  {previewBusy === 'OUTOFSTOCK' ? <Loader2 size={13} className="animate-spin" /> : <PackageX size={13} />}{strings.push.outOfStock}
-                </button>
-                <button onClick={() => void doPreview('SALE')} disabled={previewBusy !== null}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '7px 12px', cursor: previewBusy ? 'not-allowed' : 'pointer' }}>
-                  {previewBusy === 'SALE' ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}{strings.push.resale}
-                </button>
-              </div>
-
-              {previewErr && <p style={{ margin: '8px 0 0', fontSize: 12, color: '#b91c1c' }}>{previewErr}</p>}
-
-              {preview && (
-                <div style={{ marginTop: 10, border: '1px solid #bfdbfe', borderRadius: 10, overflow: 'hidden' }}>
-                  <div style={{ padding: '7px 12px', background: '#eff6ff', fontSize: 11, fontWeight: 800, color: '#1d4ed8' }}>{strings.push.previewTitle}</div>
-                  <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#111827' }}>
-                      <span style={{ fontSize: 11, color: '#6b7280', fontWeight: 600 }}>{strings.push.statusChange}</span>
-                      {statusLabel(preview.previousStatusType ?? '—')}
-                      <ChevronRight size={13} style={{ color: '#9ca3af' }} />
-                      <span style={{ color: preview.target === 'SALE' ? '#15803d' : '#b45309' }}>{statusLabel(preview.target)}</span>
-                    </div>
-                    {preview.target === 'OUTOFSTOCK' && (
-                      <p style={{ margin: 0, fontSize: 12, color: '#b45309' }}>
-                        {preview.isOptionProduct
-                          ? strings.push.optionZeroed.replace('{n}', String(preview.optionStockZeroed))
-                          : strings.push.stockZeroed}
-                      </p>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#15803d', fontWeight: 700 }}>
-                      <CheckCircle2 size={13} />{strings.push.onlyStatus}
-                    </div>
-                    <p style={{ margin: 0, fontSize: 11, color: '#6b7280' }}>
-                      {strings.push.changedField}: {preview.changedTopLevelFields.join(', ') || '—'} · {strings.push.preserved.replace('{n}', String(preview.preservedFieldCount))}
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginTop: 4, padding: '7px 10px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8 }}>
-                      <ShieldAlert size={13} style={{ color: '#c2410c', flexShrink: 0, marginTop: 1 }} />
-                      <p style={{ margin: 0, fontSize: 11, color: '#9a3412', lineHeight: 1.5 }}>{strings.push.goNote}</p>
-                    </div>
-                  </div>
+            {loading && <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af' }}><Loader2 size={18} className="animate-spin" style={{ margin: '0 auto 6px' }} /><p style={{ margin: 0, fontSize: 12 }}>{strings.zone3.loading}</p></div>}
+            {error && <div style={{ color: '#b91c1c', fontSize: 13 }}>{error}</div>}
+            {data && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 8, marginBottom: 12, background: data.inSync ? '#f0fdf4' : '#fffbeb', border: `1px solid ${data.inSync ? '#bbf7d0' : '#fde68a'}`, color: data.inSync ? '#15803d' : '#b45309', fontSize: 12, fontWeight: 700 }}>
+                  {data.inSync ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                  {data.inSync ? strings.zone3.inSync : strings.zone3.outOfSync}
                 </div>
-              )}
-            </div>
-
-            {/* SUBSTITUTE (#210) — stock-out safety net (app-side input, no Naver write) */}
-            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px dashed #F3D9E2' }}>
-              <SubstituteEditor productId={product.id} />
-            </div>
+                <div style={{ border: '1px solid var(--border-neutral)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr 1fr', fontSize: 11, fontWeight: 800, color: '#6b7280', background: '#faf8f3', borderBottom: '1px solid var(--border-neutral)' }}>
+                    <div style={{ padding: '8px 10px' }}>{strings.zone3.colField}</div>
+                    <div style={{ padding: '8px 10px' }}>{strings.zone3.colNaver}</div>
+                    <div style={{ padding: '8px 10px' }}>{strings.zone3.colApp}</div>
+                  </div>
+                  {FIELDS.map((f) => {
+                    const nv = (data.naverSnapshot as Record<string, unknown>)[f.key];
+                    const av = (data.app as Record<string, unknown>)[f.key];
+                    const differ = f.key !== 'stockQuantity' && data.diffs.some((d) => d.field === f.key);
+                    return (
+                      <div key={f.key} style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr 1fr', fontSize: 12, borderBottom: '1px solid #f3f0ea', background: differ ? '#fffdf6' : '#fff' }}>
+                        <div style={{ padding: '8px 10px', color: '#374151', fontWeight: 600 }}>
+                          {(strings.fields as Record<string, string>)[f.key] ?? f.key}
+                          <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 800, color: f.sor === 'naver' ? '#1d4ed8' : '#e62310' }}>
+                            {f.sor === 'naver' ? strings.sor.naver : strings.sor.app}
+                          </span>
+                        </div>
+                        <div style={{ padding: '8px 10px', color: '#111827', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fmt(f.key, nv)}</div>
+                        <div style={{ padding: '8px 10px', color: differ ? '#b45309' : '#111827', fontWeight: differ ? 700 : 400, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.key === 'stockQuantity' ? '—' : fmt(f.key, av)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p style={{ margin: '10px 0 0', fontSize: 11, color: '#6b7280' }}>{strings.zone3.stockNote}</p>
+                <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9ca3af' }}>{strings.zone3.readOnlyNote}</p>
+              </>
+            )}
           </>
         )}
+
+        {/* ── 반영 (status push · dry-run preview; real PUT is GO-gated) ── */}
+        {tab === 'push' && (
+          <div>
+            <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 800, color: '#111827' }}>{strings.push.sectionTitle}</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => void doPreview('OUTOFSTOCK')} disabled={previewBusy !== null}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '7px 12px', cursor: previewBusy ? 'not-allowed' : 'pointer' }}>
+                {previewBusy === 'OUTOFSTOCK' ? <Loader2 size={13} className="animate-spin" /> : <PackageX size={13} />}{strings.push.outOfStock}
+              </button>
+              <button onClick={() => void doPreview('SALE')} disabled={previewBusy !== null}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '7px 12px', cursor: previewBusy ? 'not-allowed' : 'pointer' }}>
+                {previewBusy === 'SALE' ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}{strings.push.resale}
+              </button>
+            </div>
+
+            {previewErr && <p style={{ margin: '8px 0 0', fontSize: 12, color: '#b91c1c' }}>{previewErr}</p>}
+
+            {preview && (
+              <div style={{ marginTop: 10, border: '1px solid #bfdbfe', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{ padding: '7px 12px', background: '#eff6ff', fontSize: 11, fontWeight: 800, color: '#1d4ed8' }}>{strings.push.previewTitle}</div>
+                <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#111827' }}>
+                    <span style={{ fontSize: 11, color: '#6b7280', fontWeight: 600 }}>{strings.push.statusChange}</span>
+                    {statusLabel(preview.previousStatusType ?? '—')}
+                    <ChevronRight size={13} style={{ color: '#9ca3af' }} />
+                    <span style={{ color: preview.target === 'SALE' ? '#15803d' : '#b45309' }}>{statusLabel(preview.target)}</span>
+                  </div>
+                  {preview.target === 'OUTOFSTOCK' && (
+                    <p style={{ margin: 0, fontSize: 12, color: '#b45309' }}>
+                      {preview.isOptionProduct
+                        ? strings.push.optionZeroed.replace('{n}', String(preview.optionStockZeroed))
+                        : strings.push.stockZeroed}
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#15803d', fontWeight: 700 }}>
+                    <CheckCircle2 size={13} />{strings.push.onlyStatus}
+                  </div>
+                  <p style={{ margin: 0, fontSize: 11, color: '#6b7280' }}>
+                    {strings.push.changedField}: {preview.changedTopLevelFields.join(', ') || '—'} · {strings.push.preserved.replace('{n}', String(preview.preservedFieldCount))}
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginTop: 4, padding: '7px 10px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8 }}>
+                    <ShieldAlert size={13} style={{ color: '#c2410c', flexShrink: 0, marginTop: 1 }} />
+                    <p style={{ margin: 0, fontSize: 11, color: '#9a3412', lineHeight: 1.5 }}>{strings.push.goNote}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 품절대체 (SubstituteEditor + 전환 전 체크리스트) ── */}
+        {tab === 'substitute' && <SubstituteEditor productId={product.id} />}
       </div>
     </div>
   );

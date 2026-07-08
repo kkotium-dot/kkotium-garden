@@ -103,5 +103,12 @@
     "scanDone": "동기화 검사 완료 — {scanned}건 검사 · {drift}건 어긋남",
     "scanCooldown": "잠시 후 다시 시도해 주세요 ({n}초)",
     "scanFail": "동기화 검사 중 오류가 발생했습니다."
+  },
+  "tabs": {
+    "sync": "동기화",
+    "push": "반영",
+    "substitute": "품절대체",
+    "fieldSuffix": "필드",
+    "panelAria": "상품 연동 상세"
   }
 }
