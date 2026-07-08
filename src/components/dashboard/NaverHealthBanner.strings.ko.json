@@ -1,13 +1,17 @@
 {
   "title": {
+    "FUNNEL_DOWN": "네이버 연동 끊김 — Funnel 멈춤",
     "PROXY_DOWN": "네이버 연동 끊김",
+    "PROXY_AUTH": "네이버 연동 인증 불일치",
     "IP_NOT_ALLOWED": "네이버 연동 차단",
     "AUTH_SIGN_INVALID": "네이버 인증 만료",
     "RATE_LIMIT": "네이버 호출 한도",
     "NAVER_ERROR": "네이버 연동 오류"
   },
   "guide": {
-    "PROXY_DOWN": "홈 프록시(맥/Tailscale)가 응답하지 않습니다. 프록시 실행 상태를 확인해 주세요. 복구되면 이 알림은 자동으로 사라집니다.",
+    "FUNNEL_DOWN": "홈 Mac의 Tailscale Funnel serve가 멈췄습니다(503). 홈 Mac 터미널에서 Tailscale serve reset 후 funnel을 재수립하면 복구됩니다. 복구되면 이 알림은 자동으로 사라집니다.",
+    "PROXY_DOWN": "홈 프록시/Funnel(맥·Tailscale)이 응답하지 않습니다. 홈 Mac과 프록시 프로세스 상태를 확인해 주세요. 복구되면 이 알림은 자동으로 사라집니다.",
+    "PROXY_AUTH": "앱과 프록시의 시크릿(PROXY_SECRET)이 일치하지 않습니다(401). 양쪽 시크릿 값을 동일하게 맞춰 주세요.",
     "IP_NOT_ALLOWED": "네이버가 요청 IP를 차단했습니다. 커머스 API 센터에서 국내 IP를 재등록해 주세요.",
     "AUTH_SIGN_INVALID": "토큰 또는 시크릿 서명이 유효하지 않습니다. NAVER_CLIENT_SECRET 값을 최신으로 교체해 주세요.",
     "RATE_LIMIT": "호출 한도에 도달했습니다. 별도 조치 없이 잠시 후 자동으로 복구됩니다.",

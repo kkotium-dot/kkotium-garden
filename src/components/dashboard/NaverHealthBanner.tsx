@@ -20,11 +20,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, WifiOff, ShieldAlert, KeyRound, Timer, ServerCrash } from 'lucide-react';
+import { AlertTriangle, WifiOff, Unplug, Lock, ShieldAlert, KeyRound, Timer, ServerCrash } from 'lucide-react';
 import strings from './NaverHealthBanner.strings.ko.json';
 
 type ErrorClass =
+  | 'FUNNEL_DOWN'
   | 'PROXY_DOWN'
+  | 'PROXY_AUTH'
   | 'IP_NOT_ALLOWED'
   | 'AUTH_SIGN_INVALID'
   | 'RATE_LIMIT'
@@ -39,7 +41,9 @@ interface HealthResponse {
 }
 
 const ICON_BY_CLASS: Record<ErrorClass, typeof AlertTriangle> = {
+  FUNNEL_DOWN: Unplug,
   PROXY_DOWN: WifiOff,
+  PROXY_AUTH: Lock,
   IP_NOT_ALLOWED: ShieldAlert,
   AUTH_SIGN_INVALID: KeyRound,
   RATE_LIMIT: Timer,
@@ -49,7 +53,9 @@ const ICON_BY_CLASS: Record<ErrorClass, typeof AlertTriangle> = {
 // RATE_LIMIT is transient/self-recovering → softer amber tone. Every other
 // class needs an operator action → alert red.
 const TONE_BY_CLASS: Record<ErrorClass, { bg: string; border: string; accent: string; text: string }> = {
+  FUNNEL_DOWN:       { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626', text: '#991B1B' },
   PROXY_DOWN:        { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626', text: '#991B1B' },
+  PROXY_AUTH:        { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626', text: '#991B1B' },
   IP_NOT_ALLOWED:    { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626', text: '#991B1B' },
   AUTH_SIGN_INVALID: { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626', text: '#991B1B' },
   NAVER_ERROR:       { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626', text: '#991B1B' },
