@@ -519,6 +519,8 @@ const IV = m.intervention as {
     label: string; labelNudge: string; leadOos: string; leadLow: string;
     substitute: string; note: string; sourcing: string; action: string;
     noSubstitute: string; registerHint: string;
+    stepsTitle: string; step1: string; step2: string; step3: string; step4: string;
+    penalty: string; penaltyLink: string; storeCenterUrl: string;
   };
 };
 
@@ -1083,6 +1085,24 @@ function InterventionDetail({ type, payload, productId, onRefresh }: { type: str
             <span className="text-slate-400">{t.registerHint}</span>
           </div>
         )}
+
+        {/* #211 — stock-out response order (least ranking impact first) */}
+        <div className="mt-1 border-t border-slate-100 pt-1.5">
+          <p className="text-[10px] font-semibold text-slate-500">{t.stepsTitle}</p>
+          <ol className="mt-1 space-y-0.5 text-[10px] text-slate-600" style={{ listStyle: 'decimal', paddingLeft: 16 }}>
+            <li>{t.step1}</li>
+            <li>{t.step2}</li>
+            <li>{t.step3}</li>
+            <li>{t.step4}</li>
+          </ol>
+        </div>
+
+        {/* #211 — penalty guidance (numbers are defaults, not hardcoded truth) + latest-check link */}
+        <div className="mt-1 rounded bg-rose-50 px-2 py-1.5 text-[10px] text-rose-700">
+          {t.penalty}
+          <a href={t.storeCenterUrl} target="_blank" rel="noreferrer" className="ml-1 underline">{t.penaltyLink}</a>
+        </div>
+
         <p className="text-[10px] text-slate-400">{t.action}</p>
       </div>
     );

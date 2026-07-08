@@ -12,10 +12,19 @@
   "sourcingCodePlaceholder": "예: 12345678",
   "threshold": "재고 임박 임계",
   "thresholdSuffix": "개 이하 경보",
+  "thresholdTip": "재고 10개 또는 5일치 판매량 중 큰 값을 권장합니다",
   "save": "저장",
   "saving": "저장 중…",
   "saved": "저장됨",
   "saveFail": "저장하지 못했습니다",
   "loadFail": "불러오지 못했습니다",
-  "emptyHint": "대체상품을 등록하면 품절 시 자동으로 안내됩니다"
+  "emptyHint": "대체상품을 등록하면 품절 시 자동으로 안내됩니다",
+  "checklistTitle": "전환 전 확인",
+  "checklistLead": "리스팅을 재활용하려면 아래를 지켜야 순위가 유지됩니다",
+  "check1": "같은 카테고리인가요?",
+  "check2": "상품명 핵심키워드를 유지했나요?",
+  "check3": "대표이미지를 크게 바꾸지 않았나요?",
+  "check4": "동급·상위호환인가요?",
+  "checkWarn": "미확인 항목이 있으면 순위 리셋·상품 불일치 신고 위험이 있습니다",
+  "checkOk": "전환 준비 확인 완료"
 }

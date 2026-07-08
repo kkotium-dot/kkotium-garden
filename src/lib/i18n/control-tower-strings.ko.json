@@ -358,7 +358,15 @@
         "sourcing": "재소싱 링크 열기",
         "action": "대체상품 발행 준비 또는 재소싱을 진행하세요",
         "noSubstitute": "대체상품 미등록",
-        "registerHint": "상품 연동 화면에서 등록 권장"
+        "registerHint": "상품 연동 화면에서 등록 권장",
+        "stepsTitle": "품절 대응 순서 (랭킹 영향 적은 순)",
+        "step1": "옵션 일부만 품절 처리",
+        "step2": "재입고·재소싱 확인",
+        "step3": "7~10일 내 재입고면 예약구매 전환",
+        "step4": "대체상품으로 전환",
+        "penalty": "주문 취소 시 판매관리 페널티 2점 (선물하기 3점) — 취소보다 옵션 품절처리·예약전환을 권장합니다",
+        "penaltyLink": "최신 기준은 스토어센터에서 확인",
+        "storeCenterUrl": "https://sell.smartstore.naver.com/"
       }
     }
   }

@@ -11,8 +11,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { LifeBuoy, Loader2, Check, Link2, Hash, Bell } from 'lucide-react';
+import { LifeBuoy, Loader2, Check, Link2, Hash, Bell, AlertTriangle, ClipboardCheck } from 'lucide-react';
 import strings from './SubstituteEditor.strings.ko.json';
+
+// #211 — research default (재고 10개 or 5일치); a starting value, not hardcoded
+// truth (the tooltip + threshold field let the operator adjust it).
+const DEFAULT_LOW_STOCK_THRESHOLD = 10;
 
 interface SubstituteInfo {
   hasSubstitute: boolean;
@@ -27,8 +31,12 @@ interface SubstituteInfo {
 const EMPTY: SubstituteInfo = {
   hasSubstitute: false,
   substituteName: '', substituteNote: '', sourcingUrl: '', sourcingCode: '',
-  lowStockThreshold: null,
+  lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
 };
+
+// #211 — 전환 전 확인 체크리스트 (conservative listing-reuse rules). Client-side
+// guidance only; unchecked items surface a ranking-reset / mismatch warning.
+const CHECK_KEYS = ['check1', 'check2', 'check3', 'check4'] as const;
 
 export default function SubstituteEditor({
   productId,
@@ -42,6 +50,8 @@ export default function SubstituteEditor({
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // #211 — 전환 전 확인 checklist (client-side guidance, not persisted).
+  const [checks, setChecks] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let alive = true;
@@ -126,11 +136,41 @@ export default function SubstituteEditor({
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <input type="number" min={0} value={info.lowStockThreshold ?? ''}
                 onChange={(e) => patch({ lowStockThreshold: e.target.value === '' ? null : Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                title={strings.thresholdTip}
                 style={{ ...input, width: 70 }} />
-              <span style={{ fontSize: 10, color: '#9ca3af', whiteSpace: 'nowrap' }}>{strings.thresholdSuffix}</span>
+              <span style={{ fontSize: 10, color: '#9ca3af', whiteSpace: 'nowrap' }} title={strings.thresholdTip}>{strings.thresholdSuffix}</span>
             </div>
           </Field>
         </div>
+      </div>
+
+      {/* #211 — 전환 전 확인 체크리스트: conservative listing-reuse guidance */}
+      <div style={{ marginTop: 12, paddingTop: 11, borderTop: '1px dashed #F3D9E2' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+          <ClipboardCheck size={13} style={{ color: '#b45309' }} />
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#111827' }}>{strings.checklistTitle}</span>
+        </div>
+        <p style={{ margin: '0 0 8px', fontSize: 10.5, color: '#9ca3af' }}>{strings.checklistLead}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {CHECK_KEYS.map((k) => (
+            <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: '#374151', cursor: 'pointer' }}>
+              <input type="checkbox" checked={!!checks[k]}
+                onChange={(e) => setChecks((c) => ({ ...c, [k]: e.target.checked }))}
+                style={{ width: 14, height: 14, flexShrink: 0 }} />
+              {(strings as Record<string, string>)[k]}
+            </label>
+          ))}
+        </div>
+        {CHECK_KEYS.every((k) => checks[k]) ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 11, fontWeight: 700, color: '#15803d' }}>
+            <Check size={12} />{strings.checkOk}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginTop: 8, padding: '7px 9px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8 }}>
+            <AlertTriangle size={12} style={{ color: '#dc2626', flexShrink: 0, marginTop: 1 }} />
+            <span style={{ fontSize: 10.5, color: '#991b1b', lineHeight: 1.5 }}>{strings.checkWarn}</span>
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 11 }}>
