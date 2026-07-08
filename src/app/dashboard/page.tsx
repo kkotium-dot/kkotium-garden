@@ -40,6 +40,7 @@ import KkottiWidget from '@/components/dashboard/KkottiWidget';
 import KkottiBriefingWidget from '@/components/dashboard/KkottiBriefingWidget';
 import LowStockAlertWidget from '@/components/dashboard/LowStockAlertWidget';
 import OrderProcessingNudge from '@/components/dashboard/OrderProcessingNudge';
+import NaverHealthBanner from '@/components/dashboard/NaverHealthBanner';
 import PriceMovementWidget from '@/components/dashboard/PriceMovementWidget';
 import CompetitorRadarWidget from '@/components/dashboard/CompetitorRadarWidget';
 import GoldenWindowWidget from '@/components/dashboard/GoldenWindowWidget';
@@ -541,6 +542,9 @@ export default function DashboardPage() {
           ════════════════════════════════════════════════════════════════════ */}
       <CollapsibleSection section="inbox" variant="hunter">
         <div className="space-y-4">
+          {/* PROXY-HEALTH (#204): Naver-integration SPOF alert — proxy/token/IP 끊김 시만 노출 (정상 시 self-hides) */}
+          <NaverHealthBanner />
+
           {/* ORDER-QUEUE-1 (#195): order-processing nudge — 발송/클레임 (최우선, self-hides at 0) */}
           <OrderProcessingNudge />
 

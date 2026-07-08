@@ -1,0 +1,20 @@
+{
+  "title": {
+    "PROXY_DOWN": "네이버 연동 끊김",
+    "IP_NOT_ALLOWED": "네이버 연동 차단",
+    "AUTH_SIGN_INVALID": "네이버 인증 만료",
+    "RATE_LIMIT": "네이버 호출 한도",
+    "NAVER_ERROR": "네이버 연동 오류"
+  },
+  "guide": {
+    "PROXY_DOWN": "홈 프록시(맥/Tailscale)가 응답하지 않습니다. 프록시 실행 상태를 확인해 주세요. 복구되면 이 알림은 자동으로 사라집니다.",
+    "IP_NOT_ALLOWED": "네이버가 요청 IP를 차단했습니다. 커머스 API 센터에서 국내 IP를 재등록해 주세요.",
+    "AUTH_SIGN_INVALID": "토큰 또는 시크릿 서명이 유효하지 않습니다. NAVER_CLIENT_SECRET 값을 최신으로 교체해 주세요.",
+    "RATE_LIMIT": "호출 한도에 도달했습니다. 별도 조치 없이 잠시 후 자동으로 복구됩니다.",
+    "NAVER_ERROR": "네이버 연동 확인 중 문제가 발생했습니다. 잠시 후 다시 확인해 주세요."
+  },
+  "footer": {
+    "checkedPrefix": "확인",
+    "spofNote": "네이버 주문·상품 동기화가 이 연동에 의존합니다"
+  }
+}

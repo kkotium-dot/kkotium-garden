@@ -706,6 +706,81 @@ export async function checkNaverConnection(): Promise<{
   }
 }
 
+// ── PROXY-HEALTH (#204, PROXY_HEALTH_SPEC_2026-07-07) ────────────────────────
+// The Naver proxy (home Mac / Tailscale Funnel) is the single point of failure
+// for every Naver integration. When it goes down silently (ECONNRESET), order
+// and product sync stop but the app shows nothing. This coarse health check
+// runs one lightweight Naver call and maps the fine-grained NaverFailKind
+// classifier (#181) onto the five operator-actionable error classes the
+// dashboard banner surfaces. Detect -> surface -> guide (3-tier, #204).
+export type NaverHealthErrorClass =
+  | 'PROXY_DOWN'          // proxy unreachable (ECONNRESET / timeout / DNS)
+  | 'IP_NOT_ALLOWED'      // request left an unregistered (non-KR) IP
+  | 'AUTH_SIGN_INVALID'   // token / client_secret_sign invalid
+  | 'RATE_LIMIT'          // 429 — transient, self-recovers
+  | 'NAVER_ERROR';        // any other Naver-side failure
+
+export interface NaverHealthResult {
+  healthy: boolean;
+  errorClass?: NaverHealthErrorClass;
+  message?: string;
+  checkedAt: string;      // ISO — when this check actually ran
+}
+
+// Fine-grained NaverFailKind -> coarse operator-facing error class.
+function mapFailKindToHealthClass(kind: NaverFailKind): NaverHealthErrorClass {
+  switch (kind) {
+    case 'NETWORK_RESET':
+    case 'NETWORK_TIMEOUT':
+    case 'DNS_FAIL':
+      return 'PROXY_DOWN';
+    case 'IP_NOT_ALLOWED':
+      return 'IP_NOT_ALLOWED';
+    case 'AUTH_SIGN_INVALID':
+      return 'AUTH_SIGN_INVALID';
+    case 'RATE_LIMIT':
+      return 'RATE_LIMIT';
+    // APP_STATUS_INVALID / AUTH_FAIL / HTTP_ERROR / UNKNOWN — Naver-side, carry
+    // the concrete message so the caller can still surface specifics.
+    default:
+      return 'NAVER_ERROR';
+  }
+}
+
+// Short honest server-side message per class (fallback for non-dashboard
+// consumers; the dashboard banner renders its own richer i18n guidance).
+const HEALTH_CLASS_MESSAGE: Record<NaverHealthErrorClass, string> = {
+  PROXY_DOWN:        '네이버 프록시 연결이 끊겼습니다. 홈 프록시(맥/Tailscale) 상태를 확인해 주세요.',
+  IP_NOT_ALLOWED:    '네이버가 요청 IP를 차단했습니다. 국내 IP 재등록이 필요합니다.',
+  AUTH_SIGN_INVALID: '네이버 인증(토큰/시크릿 서명)이 유효하지 않습니다. 키 값을 확인해 주세요.',
+  RATE_LIMIT:        '네이버 호출 한도에 도달했습니다. 잠시 후 자동 복구됩니다.',
+  NAVER_ERROR:       '네이버 연동에 문제가 발생했습니다.',
+};
+
+/**
+ * One lightweight Naver call (GET /v1/seller/channels) to verify proxy + token
+ * + IP are all alive. Returns a coarse health verdict with an operator-facing
+ * error class. Never throws — a failed check is a healthy=false result.
+ */
+export async function checkNaverHealth(): Promise<NaverHealthResult> {
+  const checkedAt = new Date().toISOString();
+  try {
+    await naverRequest<any>('GET', '/v1/seller/channels');
+    return { healthy: true, checkedAt };
+  } catch (e: unknown) {
+    const kind: NaverFailKind =
+      e instanceof NaverApiError ? e.diagnostic.kind : 'UNKNOWN';
+    const errorClass = mapFailKindToHealthClass(kind);
+    // Prefer the concrete operator message for the auth/app-status family so a
+    // NAVER_ERROR verdict still tells the operator what to fix.
+    const message =
+      errorClass === 'NAVER_ERROR' && e instanceof NaverApiError && isNaverAppStatusInvalid(e)
+        ? NAVER_APP_STATUS_USER_MESSAGE
+        : HEALTH_CLASS_MESSAGE[errorClass];
+    return { healthy: false, errorClass, message, checkedAt };
+  }
+}
+
 // ── Product APIs ──────────────────────────────────────────────────────────
 
 export interface NaverProductOrigin {
