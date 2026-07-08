@@ -28,7 +28,7 @@ import {
 import type { ImageTier, RecommendedMode } from '@/lib/images/quality-classifier';
 import type { LocalProduct } from '@/lib/naver/product-builder';
 import { SEED_DNA_CARDS } from '@/lib/engine/category-dna';
-import { readLinkFields } from '@/lib/product-link';
+import { readLinkFields, readSubstituteInfo, hasSubstitutePlan } from '@/lib/product-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -231,6 +231,33 @@ export async function GET() {
     syncDriftById.set(p.id, { driftFields: appDrift, statusMismatch });
   }
 
+  // SUBSTITUTE (#210) — OUTOFSTOCK safety net. OUTOFSTOCK comes from the cached
+  // Naver status (PL-5a pull, #210 — no new polling). The low-stock threshold path
+  // is dormant until Naver stock is persisted (naverStock stays null here). Only
+  // OUTOFSTOCK (or a future threshold hit) produces a card.
+  const subMap = await readSubstituteInfo(products.map((p) => p.id));
+  const substituteById = new Map<string, {
+    outOfStock: boolean; lowStock: boolean; hasSubstitute: boolean;
+    substituteName?: string | null; substituteNote?: string | null;
+    sourcingUrl?: string | null; lowStockThreshold?: number | null; naverStock?: number | null;
+  }>();
+  for (const p of products) {
+    const status = (p as { naver_status_type?: string | null }).naver_status_type ?? null;
+    const outOfStock = status === 'OUTOFSTOCK' || status === 'OUT_OF_STOCK';
+    if (!outOfStock) continue; // threshold path dormant (no persisted Naver stock)
+    const info = subMap.get(p.id) ?? null;
+    substituteById.set(p.id, {
+      outOfStock: true,
+      lowStock: false,
+      hasSubstitute: hasSubstitutePlan(info),
+      substituteName: info?.substituteName ?? null,
+      substituteNote: info?.substituteNote ?? null,
+      sourcingUrl: info?.sourcingUrl ?? null,
+      lowStockThreshold: info?.lowStockThreshold ?? null,
+      naverStock: null,
+    });
+  }
+
   const counts: Record<Overall, number> = { risk: 0, attention: 0, caution: 0, ok: 0, none: 0 };
   const rows = products.map((dbProduct) => {
     const product: LocalProduct = {
@@ -285,6 +312,8 @@ export async function GET() {
       })(),
       // PL-5a (#209) — persisted drift-scan result (idle-gated sync_drift card).
       syncDrift: syncDriftById.get(dbProduct.id) ?? null,
+      // SUBSTITUTE (#210) — OUTOFSTOCK safety net (idle-gated substitute_ready card).
+      substitute: substituteById.get(dbProduct.id) ?? null,
     });
     counts[row.overall]++;
 

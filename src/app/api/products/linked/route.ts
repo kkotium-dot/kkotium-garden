@@ -12,7 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { readLinkFields, resolveLinkDisplay } from '@/lib/product-link';
+import { readLinkFields, resolveLinkDisplay, readSubstituteInfo, hasSubstitutePlan } from '@/lib/product-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,9 +31,12 @@ export async function GET(request: NextRequest) {
   });
 
   const linkMap = await readLinkFields(products.map((p) => p.id));
+  // SUBSTITUTE (#210) — per-product stock-out safety net for the row indicator.
+  const subMap = await readSubstituteInfo(products.map((p) => p.id));
 
   const allRows = products.map((p) => {
     const link = resolveLinkDisplay(p, linkMap.get(p.id));
+    const substitute = subMap.get(p.id) ?? null;
     return {
       id: p.id,
       name: p.name,
@@ -48,6 +51,8 @@ export async function GET(request: NextRequest) {
       driftFields: link.driftFields,
       lastSyncedAt: link.lastSyncedAt,
       naverModifiedAt: link.naverModifiedAt,
+      substituteInfo: substitute,
+      hasSubstitute: hasSubstitutePlan(substitute),
     };
   });
 

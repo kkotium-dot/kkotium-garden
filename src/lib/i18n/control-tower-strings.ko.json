@@ -347,6 +347,18 @@
         "fieldName": "상품명",
         "fieldPrice": "판매가",
         "fieldImage": "대표이미지"
+      },
+      "substitute_ready": {
+        "label": "품절 · 대체상품",
+        "labelNudge": "품절 · 대체상품 미등록",
+        "leadOos": "네이버에서 품절 감지 — 대체상품/재소싱 안내입니다.",
+        "leadLow": "재고 임박 — 품절 전 대비하세요.",
+        "substitute": "대체상품",
+        "note": "메모",
+        "sourcing": "재소싱 링크 열기",
+        "action": "대체상품 발행 준비 또는 재소싱을 진행하세요",
+        "noSubstitute": "대체상품 미등록",
+        "registerHint": "상품 연동 화면에서 등록 권장"
       }
     }
   }

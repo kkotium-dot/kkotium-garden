@@ -248,6 +248,20 @@ export interface ComputeContext {
   // Naver listing out of sync on app-SoR fields. Surfaced as an idle-priority
   // nudge (mirrors assemblyNudge gating); null = in sync / not scanned / unlinked.
   syncDrift?: { driftFields: string[]; statusMismatch: boolean } | null;
+  // SUBSTITUTE (#210) — stock-out safety net. Set when the product is OUTOFSTOCK
+  // (from the cached Naver status) or near its low-stock threshold. The card shows
+  // the substitute / re-sourcing plan, or a register nudge when none exists. null =
+  // in stock / no threshold hit. (lowStock is dormant until Naver stock is persisted.)
+  substitute?: {
+    outOfStock: boolean;
+    lowStock: boolean;
+    hasSubstitute: boolean;
+    substituteName?: string | null;
+    substituteNote?: string | null;
+    sourcingUrl?: string | null;
+    lowStockThreshold?: number | null;
+    naverStock?: number | null;
+  } | null;
 }
 
 // C-9 intervention type keys (mirror src/lib/jobs/intervention.ts — duplicated
@@ -274,6 +288,11 @@ const IV_DETAIL_ASSEMBLY = 'detail_assembly';
 // PL-5a (#209) — a LINKED product drifted from the live Naver listing (app-SoR
 // fields out of sync). Idle nudge, mirrors detail_assembly gating.
 const IV_SYNC_DRIFT = 'sync_drift';
+// SUBSTITUTE (#210) — a LINKED product is OUTOFSTOCK (or near its low-stock
+// threshold); surface the stock-out safety net (substitute / re-sourcing) or a
+// register nudge. Idle-gated, mirrors sync_drift; a stock-out stops revenue, so
+// it wins the single idle slot over drift.
+const IV_SUBSTITUTE_READY = 'substitute_ready';
 
 /** Two-branch source strategy from the split quality eval (blueprint §3). */
 function deriveSourceStrategy(
@@ -448,6 +467,7 @@ export function computeControlTowerRow(
     naverCategoryCode,
     ctx.assemblyNudge ?? null,
     ctx.syncDrift ?? null,
+    ctx.substitute ?? null,
   );
 
   // #62 — every additional active intervention becomes its own card so none is
@@ -455,7 +475,7 @@ export function computeControlTowerRow(
   // only those that resolved to a precise intervention card.
   const extraQueue = (ctx.imageJobInterventionsExtra ?? [])
     .map((iv) =>
-      computeActionQueueItem(product.id, product.name, image, nextAction, iv, false, naverCategoryCode, null, null),
+      computeActionQueueItem(product.id, product.name, image, nextAction, iv, false, naverCategoryCode, null, null, null),
     )
     .filter((it) => !!it.interventionType);
 
@@ -479,6 +499,11 @@ export function computeActionQueueItem(
   categoryCode = '',
   assemblyNudge: { missingImages: boolean; missingCopy: boolean } | null = null,
   syncDrift: { driftFields: string[]; statusMismatch: boolean } | null = null,
+  substitute: {
+    outOfStock: boolean; lowStock: boolean; hasSubstitute: boolean;
+    substituteName?: string | null; substituteNote?: string | null;
+    sourcingUrl?: string | null; lowStockThreshold?: number | null; naverStock?: number | null;
+  } | null = null,
 ): ActionQueueItem {
   const base = { productId, productName };
   // C-9 — a precise image-track intervention. When the awaiting_human job names
@@ -585,6 +610,29 @@ export function computeActionQueueItem(
     return { ...base, category: 'AUTO', stage: 'processing', deepLink: `/products/${productId}` };
   }
   if (!nextAction) {
+    // SUBSTITUTE (#210) — an OUTOFSTOCK (or near-threshold) LINKED product. A
+    // stock-out stops revenue, so it is the most urgent idle signal and wins the
+    // single idle slot over drift. Idle-gated so it never masks a pending action.
+    if (substitute && (substitute.outOfStock || substitute.lowStock)) {
+      return {
+        ...base,
+        category: 'INPUT_DECISION',
+        stage: IV_SUBSTITUTE_READY,
+        deepLink: `/products/link`,
+        interventionType: IV_SUBSTITUTE_READY,
+        payload: {
+          productId,
+          outOfStock: substitute.outOfStock,
+          lowStock: substitute.lowStock,
+          hasSubstitute: substitute.hasSubstitute,
+          substituteName: substitute.substituteName ?? null,
+          substituteNote: substitute.substituteNote ?? null,
+          sourcingUrl: substitute.sourcingUrl ?? null,
+          lowStockThreshold: substitute.lowStockThreshold ?? null,
+          naverStock: substitute.naverStock ?? null,
+        },
+      };
+    }
     // PL-5a (#209) — a LINKED product whose live Naver listing drifted from the
     // app-SoR fields. Idle-gated (mirrors detail_assembly): only an otherwise-idle
     // product surfaces it so it never masks urgent work (#56). A live-listing

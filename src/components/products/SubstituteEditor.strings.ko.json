@@ -1,0 +1,21 @@
+{
+  "title": "품절 안전망",
+  "subtitle": "품절 감지 시 관제탑에 자동 표출됩니다",
+  "enable": "대체상품/재소싱 계획 등록",
+  "name": "대체상품명",
+  "namePlaceholder": "예: 명화 클립 디퓨저 (블랙)",
+  "note": "대체 메모",
+  "notePlaceholder": "예: 품절 시 이 상품으로 전환 안내",
+  "sourcingUrl": "재소싱 링크",
+  "sourcingUrlPlaceholder": "https://domeggook.com/...",
+  "sourcingCode": "도매매 상품번호",
+  "sourcingCodePlaceholder": "예: 12345678",
+  "threshold": "재고 임박 임계",
+  "thresholdSuffix": "개 이하 경보",
+  "save": "저장",
+  "saving": "저장 중…",
+  "saved": "저장됨",
+  "saveFail": "저장하지 못했습니다",
+  "loadFail": "불러오지 못했습니다",
+  "emptyHint": "대체상품을 등록하면 품절 시 자동으로 안내됩니다"
+}

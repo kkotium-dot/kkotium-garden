@@ -168,6 +168,10 @@ model Product {
   // PL-5a — drift-scan result: app-SoR fields (+ statusType marker) found out of
   // sync with the live Naver listing (Supabase ALTER applied 2026-07-08, verified).
   driftFields             Json?             @map("drift_fields")
+  // SUBSTITUTE (#210) — stock-out safety net: substitute product / re-sourcing plan
+  // + low-stock threshold, surfaced automatically on OUTOFSTOCK (Supabase ALTER
+  // applied 2026-07-08, verified). See src/lib/product-link.ts SubstituteInfo.
+  substituteInfo          Json?             @map("substitute_info")
   originCode              String            @default("0001")
   productInfoManufacturer String?
   productInfoModel        String?

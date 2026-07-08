@@ -515,6 +515,11 @@ const IV = m.intervention as {
     label: string; lead: string; fields: string; statusMismatch: string; action: string;
     fieldName: string; fieldPrice: string; fieldImage: string;
   };
+  substitute_ready: {
+    label: string; labelNudge: string; leadOos: string; leadLow: string;
+    substitute: string; note: string; sourcing: string; action: string;
+    noSubstitute: string; registerHint: string;
+  };
 };
 
 function interventionLabel(type: string | undefined): string | null {
@@ -532,6 +537,7 @@ function interventionLabel(type: string | undefined): string | null {
   if (type === 'variant_composite') return IV.variant_composite.label;
   if (type === 'detail_assembly') return IV.detail_assembly.label;
   if (type === 'sync_drift') return IV.sync_drift.label;
+  if (type === 'substitute_ready') return IV.substitute_ready.label;
   return null;
 }
 
@@ -550,6 +556,12 @@ function actionLabel(item: ActionQueueItem): string {
       const sd = item.payload as { driftFields?: string[] } | undefined;
       const n = (sd?.driftFields ?? []).length;
       if (n > 0) return `${iv} (${n}${IV.sync_drift.fields})`;
+    }
+    // substitute_ready: name the substitute when one exists, else the register nudge.
+    if (item.interventionType === 'substitute_ready') {
+      const sr = item.payload as { hasSubstitute?: boolean; substituteName?: string | null } | undefined;
+      if (!sr?.hasSubstitute) return IV.substitute_ready.labelNudge;
+      if (sr.substituteName) return `${iv}: ${sr.substituteName}`;
     }
     return iv;
   }
@@ -1036,6 +1048,41 @@ function InterventionDetail({ type, payload, productId, onRefresh }: { type: str
             <span className="rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">{t.statusMismatch}</span>
           )}
         </div>
+        <p className="text-[10px] text-slate-400">{t.action}</p>
+      </div>
+    );
+  }
+  if (type === 'substitute_ready') {
+    const sr = payload as {
+      outOfStock?: boolean; lowStock?: boolean; hasSubstitute?: boolean;
+      substituteName?: string | null; substituteNote?: string | null; sourcingUrl?: string | null;
+    } | null;
+    const t = IV.substitute_ready;
+    const has = sr?.hasSubstitute ?? false;
+    return (
+      <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
+        <p className="text-slate-500">{sr?.lowStock && !sr?.outOfStock ? t.leadLow : t.leadOos}</p>
+        {has ? (
+          <div className="space-y-1">
+            {sr?.substituteName && (
+              <div className="flex items-center gap-1.5">
+                <span className="shrink-0 text-slate-400">{t.substitute}:</span>
+                <span className="font-semibold text-amber-700">{sr.substituteName}</span>
+              </div>
+            )}
+            {sr?.substituteNote && <p className="text-[10px] text-slate-500">{t.note}: {sr.substituteNote}</p>}
+            {sr?.sourcingUrl && (
+              <a href={sr.sourcingUrl} target="_blank" rel="noreferrer" className="inline-block text-[10px] text-blue-600 underline">
+                {t.sourcing}
+              </a>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-1.5 text-[10px]">
+            <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-700">{t.noSubstitute}</span>
+            <span className="text-slate-400">{t.registerHint}</span>
+          </div>
+        )}
         <p className="text-[10px] text-slate-400">{t.action}</p>
       </div>
     );

@@ -15,6 +15,7 @@ import {
   ChevronRight, ChevronLeft, RefreshCw, PackageSearch, PackageX, RotateCcw, ShieldAlert, Radar,
 } from 'lucide-react';
 import strings from './strings.ko.json';
+import SubstituteEditor from '@/components/products/SubstituteEditor';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface LinkedRow {
@@ -354,6 +355,11 @@ function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => vo
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* SUBSTITUTE (#210) — stock-out safety net (app-side input, no Naver write) */}
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px dashed #F3D9E2' }}>
+              <SubstituteEditor productId={product.id} />
             </div>
           </>
         )}

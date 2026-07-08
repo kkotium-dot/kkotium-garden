@@ -95,6 +95,7 @@ import { ShippingTemplateModal, type ShippingTemplateItem } from '@/components/p
 import NaverSEOWorkflow from '@/components/ai/NaverSEOWorkflow';
 import HoneyScorePanel from '@/components/products/HoneyScorePanel';
 import AlternativeProductPanel from '@/components/products/AlternativeProductPanel';
+import SubstituteEditor from '@/components/products/SubstituteEditor';
 import ImageUploadDropzone from '@/components/products/ImageUploadDropzone';
 import { productFormSerialize, productFormHydrate, type ProductFormValues } from '@/lib/products/product-form-mapping';
 import { PlatformPicker, SupplierPicker } from '@/components/ui/PlatformSupplierPicker';
@@ -3394,6 +3395,13 @@ const handleGenerate = async () => {
               suppliers={suppliers}
               onChange={setPendingAlternatives}
             />
+            {/* SUBSTITUTE (#210) — stock-out safety net; needs a saved product id to
+                persist substitute_info, so it appears once the seed is saved. */}
+            {savedProductId && (
+              <div style={{ marginTop: 12 }}>
+                <SubstituteEditor productId={savedProductId} />
+              </div>
+            )}
             </>)}
 
             {activeTab === 'image' && (<>

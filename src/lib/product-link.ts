@@ -138,6 +138,77 @@ export async function writeLinkFields(productId: string, f: Partial<LinkFields>)
   }
 }
 
+// ── SUBSTITUTE (#210, SUBSTITUTE_STOCKOUT_SPEC) ─────────────────────────────
+// Stock-out safety net stored in Product.substitute_info (jsonb). Flexible: an
+// app-internal substitute product reference OR free text OR a re-sourcing link.
+// Surfaced automatically on OUTOFSTOCK (C-9 substitute_ready) — not a plain memo.
+export interface SubstituteInfo {
+  hasSubstitute: boolean;
+  substituteProductId?: string | null;   // app-internal substitute (optional chain)
+  substituteName?: string | null;
+  substituteNote?: string | null;
+  sourcingUrl?: string | null;           // domeggook re-sourcing link
+  sourcingCode?: string | null;          // domeggook product no
+  lowStockThreshold?: number | null;     // pre-OOS alert threshold (optional)
+}
+
+/** Normalize an arbitrary jsonb value into a SubstituteInfo (safe defaults). */
+export function normalizeSubstituteInfo(raw: unknown): SubstituteInfo {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
+  const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  return {
+    hasSubstitute: o.hasSubstitute === true,
+    substituteProductId: str(o.substituteProductId),
+    substituteName: str(o.substituteName),
+    substituteNote: str(o.substituteNote),
+    sourcingUrl: str(o.sourcingUrl),
+    sourcingCode: str(o.sourcingCode),
+    lowStockThreshold: num(o.lowStockThreshold),
+  };
+}
+
+/** True when the substitute info carries any actionable content. */
+export function hasSubstitutePlan(info: SubstituteInfo | null | undefined): boolean {
+  if (!info) return false;
+  return (
+    info.hasSubstitute ||
+    !!info.substituteName || !!info.substituteNote ||
+    !!info.sourcingUrl || !!info.sourcingCode || !!info.substituteProductId
+  );
+}
+
+/** Read substitute_info for the given products. Empty map if column absent. */
+export async function readSubstituteInfo(productIds: string[]): Promise<Map<string, SubstituteInfo>> {
+  const map = new Map<string, SubstituteInfo>();
+  if (productIds.length === 0) return map;
+  try {
+    const rows = await prisma.$queryRaw<Array<{ id: string; substitute_info: unknown }>>`
+      SELECT id, substitute_info FROM "Product" WHERE id IN (${Prisma.join(productIds)})
+    `;
+    for (const r of rows) {
+      if (r.substitute_info != null) map.set(r.id, normalizeSubstituteInfo(r.substitute_info));
+    }
+  } catch (e) {
+    if (!isUndefinedColumnError(e)) throw e;
+  }
+  return map;
+}
+
+/** Write substitute_info for one product. Returns false (no-op) if column absent. */
+export async function writeSubstituteInfo(productId: string, info: SubstituteInfo): Promise<boolean> {
+  const json = JSON.stringify(normalizeSubstituteInfo(info));
+  try {
+    await prisma.$executeRaw`
+      UPDATE "Product" SET substitute_info = ${json}::jsonb WHERE id = ${productId}
+    `;
+    return true;
+  } catch (e) {
+    if (!isUndefinedColumnError(e)) throw e;
+    return false;
+  }
+}
+
 /**
  * Safe display values. Before the ALTER (no persisted link fields) this derives
  * sensible defaults so the UI never shows blanks: linkStatus follows whether the
