@@ -35,7 +35,7 @@ cd /Users/jyekkot/Desktop/kkotium-garden && \
 
 순서대로 정독:
 
-1. `docs/plan/PROGRESS.md` — 슬림 상태 스냅샷 + 인덱스 (202줄, 2026-05-12 분할 후 진입점)
+1. `docs/plan/PROGRESS.md` — 슬림 상태 스냅샷 + 인덱스 (27줄, 2026-07-08 재분할 후 진입점)
 2. `docs/plan/ROADMAP.md` — Sprint 계획 + 다음 새 채팅 시작 메시지 영역
 3. `docs/plan/SESSION_LOG.md` — 직전 5세션 상세 기록
 4. `docs/plan/TASK_BRIDGE.md` — Desktop ↔ Code 실시간 hand-off ledger (2026-05-19 도입, 작업원칙 #41). §3 ACTIVE + §4 STANDING + §6 PENDING 의무 정독
