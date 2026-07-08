@@ -27,7 +27,9 @@ import { prisma } from '@/lib/prisma';
 
 export type LinkSource = 'NATIVE' | 'IMPORTED';
 export type LinkStatus = 'LINKED' | 'UNLINKED';
-export type SyncState = 'SYNCED' | 'PENDING' | 'CONFLICT' | 'FAILED';
+// PL-5a adds DRIFT (drift-scan found app-SoR fields out of sync) and UNKNOWN
+// (never scanned — the honest state before the first drift-scan, #209).
+export type SyncState = 'SYNCED' | 'PENDING' | 'CONFLICT' | 'FAILED' | 'DRIFT' | 'UNKNOWN';
 
 export interface LinkFields {
   source: LinkSource;
@@ -36,6 +38,9 @@ export interface LinkFields {
   naverModifiedAt: string | null; // ISO
   lastSyncedAt: string | null;    // ISO
   syncState: SyncState;
+  // PL-5a — app-SoR fields (name/salePrice/representativeImageUrl) + a possible
+  // 'statusType' marker that the last drift-scan found out of sync. [] when in sync.
+  driftFields: string[];
 }
 
 /** True when the error is "column does not exist" (pre-ALTER window). */
@@ -79,9 +84,10 @@ export async function readLinkFields(productIds: string[]): Promise<Map<string, 
       naver_modified_at: Date | null;
       last_synced_at: Date | null;
       sync_state: string | null;
+      drift_fields: unknown;
     }>>`
       SELECT id, source, channel_product_no, link_status,
-             naver_modified_at, last_synced_at, sync_state
+             naver_modified_at, last_synced_at, sync_state, drift_fields
       FROM "Product"
       WHERE id IN (${Prisma.join(productIds)})
     `;
@@ -93,6 +99,9 @@ export async function readLinkFields(productIds: string[]): Promise<Map<string, 
         naverModifiedAt: r.naver_modified_at ? r.naver_modified_at.toISOString() : null,
         lastSyncedAt: r.last_synced_at ? r.last_synced_at.toISOString() : null,
         syncState: (r.sync_state as SyncState) ?? undefined,
+        driftFields: Array.isArray(r.drift_fields)
+          ? (r.drift_fields as string[]).filter((f): f is string => typeof f === 'string')
+          : [],
       });
     }
   } catch (e) {
@@ -106,6 +115,9 @@ export async function writeLinkFields(productId: string, f: Partial<LinkFields>)
   if (!(await linkColumnsExist())) return false;
   const naverModified = f.naverModifiedAt ? new Date(f.naverModifiedAt) : null;
   const lastSynced = f.lastSyncedAt ? new Date(f.lastSyncedAt) : null;
+  // drift_fields (jsonb): an empty array is a meaningful value ("no drift"), so
+  // pass a JSON string when provided (incl. []) and null to keep the existing.
+  const driftJson = f.driftFields !== undefined ? JSON.stringify(f.driftFields) : null;
   try {
     // COALESCE(new, existing): only overwrite a column when a value is provided.
     await prisma.$executeRaw`
@@ -115,7 +127,8 @@ export async function writeLinkFields(productId: string, f: Partial<LinkFields>)
         link_status        = COALESCE(${f.linkStatus ?? null}, link_status),
         naver_modified_at  = COALESCE(${naverModified}, naver_modified_at),
         last_synced_at     = COALESCE(${lastSynced}, last_synced_at),
-        sync_state         = COALESCE(${f.syncState ?? null}, sync_state)
+        sync_state         = COALESCE(${f.syncState ?? null}, sync_state),
+        drift_fields       = COALESCE(${driftJson}::jsonb, drift_fields)
       WHERE id = ${productId}
     `;
     return true;
@@ -128,18 +141,25 @@ export async function writeLinkFields(productId: string, f: Partial<LinkFields>)
 /**
  * Safe display values. Before the ALTER (no persisted link fields) this derives
  * sensible defaults so the UI never shows blanks: linkStatus follows whether the
- * product is registered on Naver; source defaults to NATIVE; syncState to SYNCED.
+ * product is registered on Naver; source defaults to NATIVE.
+ *
+ * #209 — syncState is NOT statically defaulted to SYNCED (that lied when a product
+ * had real drift but was never scanned). It is honest about the measured state:
+ * a product with no lastSyncedAt has never been drift-scanned → UNKNOWN. Only a
+ * product that has actually been scanned reports its persisted syncState.
  */
 export function resolveLinkDisplay(
   p: { naverProductId: string | null },
   lf?: Partial<LinkFields>,
 ): LinkFields {
+  const scanned = !!lf?.lastSyncedAt;
   return {
     source: lf?.source ?? 'NATIVE',
     channelProductNo: lf?.channelProductNo ?? null,
     linkStatus: lf?.linkStatus ?? (p.naverProductId ? 'LINKED' : 'UNLINKED'),
     naverModifiedAt: lf?.naverModifiedAt ?? null,
     lastSyncedAt: lf?.lastSyncedAt ?? null,
-    syncState: lf?.syncState ?? 'SYNCED',
+    syncState: scanned ? (lf?.syncState ?? 'SYNCED') : 'UNKNOWN',
+    driftFields: lf?.driftFields ?? [],
   };
 }

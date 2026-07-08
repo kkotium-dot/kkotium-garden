@@ -28,6 +28,7 @@ import {
 import type { ImageTier, RecommendedMode } from '@/lib/images/quality-classifier';
 import type { LocalProduct } from '@/lib/naver/product-builder';
 import { SEED_DNA_CARDS } from '@/lib/engine/category-dna';
+import { readLinkFields } from '@/lib/product-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -215,6 +216,21 @@ export async function GET() {
   }
 
   // 4. Compute each row via the SoT engine.
+  // PL-5a (#209) — persisted drift-scan result per product (guarded; empty map
+  // before the ALTER or when never scanned). Only DRIFT rows with app-SoR fields
+  // (or a statusType mismatch) become an idle sync_drift card.
+  const linkMap = await readLinkFields(products.map((p) => p.id));
+  const syncDriftById = new Map<string, { driftFields: string[]; statusMismatch: boolean }>();
+  for (const p of products) {
+    const lf = linkMap.get(p.id);
+    if (lf?.syncState !== 'DRIFT') continue;
+    const fields = Array.isArray(lf.driftFields) ? lf.driftFields : [];
+    const appDrift = fields.filter((f) => f !== 'statusType');
+    const statusMismatch = fields.includes('statusType');
+    if (appDrift.length === 0 && !statusMismatch) continue;
+    syncDriftById.set(p.id, { driftFields: appDrift, statusMismatch });
+  }
+
   const counts: Record<Overall, number> = { risk: 0, attention: 0, caution: 0, ok: 0, none: 0 };
   const rows = products.map((dbProduct) => {
     const product: LocalProduct = {
@@ -267,6 +283,8 @@ export async function GET() {
         if (!assemblable || (!missingImages && !missingCopy)) return null;
         return { missingImages, missingCopy };
       })(),
+      // PL-5a (#209) — persisted drift-scan result (idle-gated sync_drift card).
+      syncDrift: syncDriftById.get(dbProduct.id) ?? null,
     });
     counts[row.overall]++;
 

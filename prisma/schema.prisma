@@ -165,6 +165,9 @@ model Product {
   lastSyncedAt            DateTime?         @map("last_synced_at")
   syncHash                String?           @map("sync_hash")
   syncState               String            @default("SYNCED")   @map("sync_state")
+  // PL-5a — drift-scan result: app-SoR fields (+ statusType marker) found out of
+  // sync with the live Naver listing (Supabase ALTER applied 2026-07-08, verified).
+  driftFields             Json?             @map("drift_fields")
   originCode              String            @default("0001")
   productInfoManufacturer String?
   productInfoModel        String?

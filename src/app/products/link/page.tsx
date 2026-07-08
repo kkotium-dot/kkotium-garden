@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Link2, Store, Hash, X, Loader2, CheckCircle2, AlertTriangle,
-  ChevronRight, ChevronLeft, RefreshCw, PackageSearch, PackageX, RotateCcw, ShieldAlert,
+  ChevronRight, ChevronLeft, RefreshCw, PackageSearch, PackageX, RotateCcw, ShieldAlert, Radar,
 } from 'lucide-react';
 import strings from './strings.ko.json';
 
@@ -27,7 +27,8 @@ interface LinkedRow {
   statusType: string;
   source: 'NATIVE' | 'IMPORTED';
   linkStatus: string;
-  syncState: 'SYNCED' | 'PENDING' | 'CONFLICT' | 'FAILED';
+  syncState: 'SYNCED' | 'PENDING' | 'CONFLICT' | 'FAILED' | 'DRIFT' | 'UNKNOWN';
+  driftFields: string[];
   lastSyncedAt: string | null;
 }
 interface SearchRow {
@@ -40,7 +41,10 @@ interface SearchRow {
   representativeImageUrl: string | null;
   alreadyLinked: boolean;
 }
-type Filter = 'all' | 'native' | 'imported' | 'conflict';
+type Filter = 'all' | 'native' | 'imported' | 'conflict' | 'drift';
+
+// PL-5a — app-SoR fields the drift-scan may flag (statusType handled separately).
+const APP_SOR_FIELDS = new Set(['name', 'salePrice', 'representativeImageUrl']);
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
 const won = (n: number) => `${(n ?? 0).toLocaleString('ko-KR')}원`;
@@ -67,14 +71,23 @@ function SourceBadge({ source }: { source: 'NATIVE' | 'IMPORTED' }) {
     </span>
   );
 }
-function SyncChip({ state }: { state: LinkedRow['syncState'] }) {
+function SyncChip({ state, driftFields = [] }: { state: LinkedRow['syncState']; driftFields?: string[] }) {
+  const sync = strings.sync as Record<string, string>;
+  // PL-5a — DRIFT surfaces the app-SoR field count ("동기화 필요 N필드"); a bare
+  // statusType mismatch (no app-SoR drift) shows as "확인 필요"; UNKNOWN = not
+  // yet drift-scanned (honest, #209).
+  const appDriftCount = driftFields.filter((f) => APP_SOR_FIELDS.has(f)).length;
+  const statusOnly = driftFields.includes('statusType') && appDriftCount === 0;
   const map: Record<string, { color: string; bg: string; border: string; label: string }> = {
-    SYNCED:   { color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb', label: 'SYNCED' },
+    SYNCED:   { color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0', label: sync.synced },
+    UNKNOWN:  { color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb', label: sync.unknown },
     PENDING:  { color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe', label: 'PENDING' },
+    DRIFT:    { color: '#b45309', bg: '#fffbeb', border: '#fde68a',
+               label: statusOnly ? sync.statusMismatch : sync.driftN.replace('{n}', String(appDriftCount)) },
     CONFLICT: { color: '#b45309', bg: '#fffbeb', border: '#fde68a', label: strings.zone2.filterConflict },
     FAILED:   { color: '#b91c1c', bg: '#fef2f2', border: '#fecaca', label: 'FAILED' },
   };
-  const c = map[state] ?? map.SYNCED;
+  const c = map[state] ?? map.UNKNOWN;
   return (
     <span style={{ fontSize: 10, fontWeight: 800, color: c.color, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 99, padding: '2px 8px', whiteSpace: 'nowrap' }}>
       {c.label}
@@ -352,7 +365,7 @@ function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => vo
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ProductLinkPage() {
   const [rows, setRows] = useState<LinkedRow[]>([]);
-  const [counts, setCounts] = useState({ all: 0, native: 0, imported: 0, conflict: 0 });
+  const [counts, setCounts] = useState({ all: 0, native: 0, imported: 0, conflict: 0, drift: 0 });
   const [filter, setFilter] = useState<Filter>('all');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -360,6 +373,8 @@ export default function ProductLinkPage() {
   const [manual, setManual] = useState('');
   const [manualBusy, setManualBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // PL-5a — drift-scan (network GET/product; 60s server cooldown).
+  const [scanning, setScanning] = useState(false);
 
   const loadLinked = useCallback(async (f: Filter) => {
     setLoading(true);
@@ -372,6 +387,27 @@ export default function ProductLinkPage() {
   }, []);
 
   useEffect(() => { void loadLinked(filter); }, [filter, loadLinked]);
+
+  // PL-5a — run the drift-scan, then reload the list to reflect persisted state.
+  const runDriftScan = useCallback(async () => {
+    if (scanning) return;
+    setScanning(true);
+    try {
+      const r = await fetch('/api/products/linked/drift-scan');
+      const j = await r.json();
+      const s = j.summary ?? {};
+      setToast(
+        j.cooled
+          ? strings.sync.scanCooldown.replace('{n}', String(j.cooldownSecondsRemaining ?? 0))
+          : strings.sync.scanDone
+              .replace('{scanned}', String(s.scanned ?? 0))
+              .replace('{drift}', String(s.drift ?? 0)),
+      );
+      await loadLinked(filter);
+    } catch {
+      setToast(strings.sync.scanFail);
+    } finally { setScanning(false); }
+  }, [scanning, filter, loadLinked]);
 
   async function importManual() {
     const nums = manual.split(/[\s,\n]+/).map((s) => s.trim()).filter(Boolean);
@@ -396,7 +432,7 @@ export default function ProductLinkPage() {
     { key: 'all', label: strings.zone2.filterAll, n: counts.all },
     { key: 'native', label: strings.zone2.filterNative, n: counts.native },
     { key: 'imported', label: strings.zone2.filterImported, n: counts.imported },
-    { key: 'conflict', label: strings.zone2.filterConflict, n: counts.conflict },
+    { key: 'drift', label: strings.sync.filterDrift, n: counts.drift },
   ];
 
   return (
@@ -461,6 +497,16 @@ export default function ProductLinkPage() {
             ))}
           </div>
           <div style={{ flex: 1 }} />
+          {/* PL-5a — drift summary + scan trigger */}
+          {counts.drift > 0 && (
+            <span style={{ fontSize: 12, fontWeight: 800, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 99, padding: '3px 10px', whiteSpace: 'nowrap' }}>
+              {strings.sync.driftSummary.replace('{n}', String(counts.drift))}
+            </span>
+          )}
+          <button onClick={() => void runDriftScan()} disabled={scanning}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: scanning ? '#9ca3af' : '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '6px 12px', cursor: scanning ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+            {scanning ? <Loader2 size={13} className="animate-spin" /> : <Radar size={13} />}{strings.sync.scanCta}
+          </button>
           <button onClick={() => void loadLinked(filter)} aria-label="새로고침" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B0A0A8' }}>
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -496,7 +542,7 @@ export default function ProductLinkPage() {
                     <td style={{ padding: '10px 14px', fontSize: 13, color: '#111827', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{won(r.salePrice)}</td>
                     <td style={{ padding: '10px 14px' }}><StatusBadge status={r.statusType} /></td>
                     <td style={{ padding: '10px 14px' }}><SourceBadge source={r.source} /></td>
-                    <td style={{ padding: '10px 14px' }}><SyncChip state={r.syncState} /></td>
+                    <td style={{ padding: '10px 14px' }}><SyncChip state={r.syncState} driftFields={r.driftFields} /></td>
                     <td style={{ padding: '10px 14px', fontSize: 12, color: '#9ca3af', whiteSpace: 'nowrap' }}>{relTime(r.lastSyncedAt)}</td>
                   </tr>
                 ))}

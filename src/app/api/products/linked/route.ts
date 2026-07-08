@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
       source: link.source,
       linkStatus: link.linkStatus,
       syncState: link.syncState,
+      driftFields: link.driftFields,
       lastSyncedAt: link.lastSyncedAt,
       naverModifiedAt: link.naverModifiedAt,
     };
@@ -55,12 +56,15 @@ export async function GET(request: NextRequest) {
     native: allRows.filter((r) => r.source === 'NATIVE').length,
     imported: allRows.filter((r) => r.source === 'IMPORTED').length,
     conflict: allRows.filter((r) => r.syncState === 'CONFLICT').length,
+    // PL-5a — products whose last drift-scan found app-SoR fields out of sync.
+    drift: allRows.filter((r) => r.syncState === 'DRIFT').length,
   };
 
   let rows = allRows;
   if (filter === 'native')   rows = allRows.filter((r) => r.source === 'NATIVE');
   if (filter === 'imported') rows = allRows.filter((r) => r.source === 'IMPORTED');
   if (filter === 'conflict') rows = allRows.filter((r) => r.syncState === 'CONFLICT');
+  if (filter === 'drift')    rows = allRows.filter((r) => r.syncState === 'DRIFT');
 
   return NextResponse.json({ success: true, filter, count: rows.length, counts, items: rows });
 }

@@ -244,6 +244,10 @@ export interface ComputeContext {
   // assembled yet (detail_images empty and/or description has no assembly copy).
   // Surfaced as an idle-priority nudge (same gating as dnaUnseeded); null = none.
   assemblyNudge?: { missingImages: boolean; missingCopy: boolean } | null;
+  // PL-5a (#209) — set when the last drift-scan found this LINKED product's live
+  // Naver listing out of sync on app-SoR fields. Surfaced as an idle-priority
+  // nudge (mirrors assemblyNudge gating); null = in sync / not scanned / unlinked.
+  syncDrift?: { driftFields: string[]; statusMismatch: boolean } | null;
 }
 
 // C-9 intervention type keys (mirror src/lib/jobs/intervention.ts — duplicated
@@ -267,6 +271,9 @@ const IV_VARIANT_COMPOSITE = 'variant_composite';
 // SF-5 — assets ready but detail page not assembled (idle nudge, mirrors
 // category_dna_unseeded gating).
 const IV_DETAIL_ASSEMBLY = 'detail_assembly';
+// PL-5a (#209) — a LINKED product drifted from the live Naver listing (app-SoR
+// fields out of sync). Idle nudge, mirrors detail_assembly gating.
+const IV_SYNC_DRIFT = 'sync_drift';
 
 /** Two-branch source strategy from the split quality eval (blueprint §3). */
 function deriveSourceStrategy(
@@ -440,6 +447,7 @@ export function computeControlTowerRow(
     ctx.dnaUnseeded ?? false,
     naverCategoryCode,
     ctx.assemblyNudge ?? null,
+    ctx.syncDrift ?? null,
   );
 
   // #62 — every additional active intervention becomes its own card so none is
@@ -447,7 +455,7 @@ export function computeControlTowerRow(
   // only those that resolved to a precise intervention card.
   const extraQueue = (ctx.imageJobInterventionsExtra ?? [])
     .map((iv) =>
-      computeActionQueueItem(product.id, product.name, image, nextAction, iv, false, naverCategoryCode, null),
+      computeActionQueueItem(product.id, product.name, image, nextAction, iv, false, naverCategoryCode, null, null),
     )
     .filter((it) => !!it.interventionType);
 
@@ -470,6 +478,7 @@ export function computeActionQueueItem(
   dnaUnseeded = false,
   categoryCode = '',
   assemblyNudge: { missingImages: boolean; missingCopy: boolean } | null = null,
+  syncDrift: { driftFields: string[]; statusMismatch: boolean } | null = null,
 ): ActionQueueItem {
   const base = { productId, productName };
   // C-9 — a precise image-track intervention. When the awaiting_human job names
@@ -576,6 +585,20 @@ export function computeActionQueueItem(
     return { ...base, category: 'AUTO', stage: 'processing', deepLink: `/products/${productId}` };
   }
   if (!nextAction) {
+    // PL-5a (#209) — a LINKED product whose live Naver listing drifted from the
+    // app-SoR fields. Idle-gated (mirrors detail_assembly): only an otherwise-idle
+    // product surfaces it so it never masks urgent work (#56). A live-listing
+    // mismatch is the most actionable idle signal, so it wins the single idle slot.
+    if (syncDrift && (syncDrift.driftFields.length > 0 || syncDrift.statusMismatch)) {
+      return {
+        ...base,
+        category: 'INPUT_DECISION',
+        stage: IV_SYNC_DRIFT,
+        deepLink: `/products/link`,
+        interventionType: IV_SYNC_DRIFT,
+        payload: { productId, driftFields: syncDrift.driftFields, statusMismatch: syncDrift.statusMismatch },
+      };
+    }
     // SF-5 — assets ready but detail page not assembled. Idle nudge (mirrors the
     // category_dna_unseeded gating below): only an otherwise-idle product shows it
     // so it never masks urgent work (#56). More actionable than seed-DNA, so it

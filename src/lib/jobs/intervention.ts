@@ -74,6 +74,13 @@ export const INTERVENTION_VARIANT_COMPOSITE = 'variant_composite';
 // urgent work (category_dna_unseeded-style additive). INPUT_DECISION.
 export const INTERVENTION_DETAIL_ASSEMBLY = 'detail_assembly';
 
+// PL-5a (#209, PL5A_DRIFT_DETECTION_SPEC): a LINKED product's live Naver listing
+// has drifted from the app-SoR fields (name/salePrice/representativeImageUrl). An
+// idle-priority nudge (mirrors detail_assembly gating) that surfaces "동기화 필요"
+// on the control tower without a new queue UI. Reflecting drift (push) stays
+// GO-gated in PL-2/PL-3. Read-only detection. INPUT_DECISION.
+export const INTERVENTION_SYNC_DRIFT = 'sync_drift';
+
 export type InterventionType =
   | typeof INTERVENTION_SOURCE_REQUEST
   | typeof INTERVENTION_HERO_CROP_REQUEST
@@ -87,7 +94,8 @@ export type InterventionType =
   | typeof INTERVENTION_CATEGORY_DNA_UNSEEDED
   | typeof INTERVENTION_REGISTRY_DRIFT
   | typeof INTERVENTION_VARIANT_COMPOSITE
-  | typeof INTERVENTION_DETAIL_ASSEMBLY;
+  | typeof INTERVENTION_DETAIL_ASSEMBLY
+  | typeof INTERVENTION_SYNC_DRIFT;
 
 export { buildMountCheckPayload };
 export type { FidelityChecklistPayload, MountCheckPayload };

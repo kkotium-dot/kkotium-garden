@@ -511,6 +511,10 @@ const IV = m.intervention as {
   };
   variant_composite: { label: string; lead: string; coverage: string; missing: string; covered: string; hint: string };
   detail_assembly: { label: string; lead: string; action: string; missingImages: string; missingCopy: string; missingBoth: string };
+  sync_drift: {
+    label: string; lead: string; fields: string; statusMismatch: string; action: string;
+    fieldName: string; fieldPrice: string; fieldImage: string;
+  };
 };
 
 function interventionLabel(type: string | undefined): string | null {
@@ -527,6 +531,7 @@ function interventionLabel(type: string | undefined): string | null {
   if (type === 'registry_drift') return IV.registry_drift.label;
   if (type === 'variant_composite') return IV.variant_composite.label;
   if (type === 'detail_assembly') return IV.detail_assembly.label;
+  if (type === 'sync_drift') return IV.sync_drift.label;
   return null;
 }
 
@@ -539,6 +544,12 @@ function actionLabel(item: ActionQueueItem): string {
     if (item.interventionType === 'variant_composite') {
       const vc = item.payload as { active?: string[]; covered?: string[] } | undefined;
       if (vc?.active) return `${iv} (${(vc.covered ?? []).length}/${vc.active.length})`;
+    }
+    // sync_drift carries the drifting app-SoR field count: "동기화 필요 (N필드)".
+    if (item.interventionType === 'sync_drift') {
+      const sd = item.payload as { driftFields?: string[] } | undefined;
+      const n = (sd?.driftFields ?? []).length;
+      if (n > 0) return `${iv} (${n}${IV.sync_drift.fields})`;
     }
     return iv;
   }
@@ -1009,7 +1020,37 @@ function InterventionDetail({ type, payload, productId, onRefresh }: { type: str
       </div>
     );
   }
+  if (type === 'sync_drift') {
+    const sd = payload as { driftFields?: string[]; statusMismatch?: boolean } | null;
+    const t = IV.sync_drift;
+    const fields = sd?.driftFields ?? [];
+    const statusMismatch = sd?.statusMismatch ?? false;
+    return (
+      <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-600">
+        <p className="text-slate-500">{t.lead}</p>
+        <div className="flex flex-wrap gap-1.5 text-[10px]">
+          {fields.length > 0 && (
+            <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-700">{fields.map(driftFieldLabel).join(', ')}</span>
+          )}
+          {statusMismatch && (
+            <span className="rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">{t.statusMismatch}</span>
+          )}
+        </div>
+        <p className="text-[10px] text-slate-400">{t.action}</p>
+      </div>
+    );
+  }
   return null;
+}
+
+// PL-5a — humanize the drifting app-SoR field names for the drift card.
+function driftFieldLabel(field: string): string {
+  const map: Record<string, string> = {
+    name: IV.sync_drift.fieldName,
+    salePrice: IV.sync_drift.fieldPrice,
+    representativeImageUrl: IV.sync_drift.fieldImage,
+  };
+  return map[field] ?? field;
 }
 
 function ActionQueueCard({ item, onRefresh }: { item: ActionQueueItem; onRefresh?: () => void }) {

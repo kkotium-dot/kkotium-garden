@@ -337,6 +337,16 @@
         "missingImages": "이미지 미배정",
         "missingCopy": "카피 미작성",
         "missingBoth": "이미지·카피 미완"
+      },
+      "sync_drift": {
+        "label": "동기화 필요",
+        "lead": "네이버 실제 리스팅이 앱 값과 어긋났습니다. 재고 차이는 정상입니다.",
+        "fields": "필드",
+        "statusMismatch": "판매상태 불일치 · 확인 필요",
+        "action": "상품 연동 화면에서 반영(GO) 여부를 결정하세요",
+        "fieldName": "상품명",
+        "fieldPrice": "판매가",
+        "fieldImage": "대표이미지"
       }
     }
   }
