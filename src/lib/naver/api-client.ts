@@ -1293,3 +1293,141 @@ export async function updateProductStatus(
   result.applied = true;
   return result;
 }
+
+// ── PRODUCT-LINK PL-3 — price / stock push (app -> Naver) via GET-merge full PUT ─
+// Extends the PL-2 full-replace pattern (#196) to the two operator-editable
+// fields. Same 3-layer safety: GET-merge (never partial-PUT), dryRun preview,
+// GO gate at the route. Only the target field changes; every other field is
+// carried through unchanged. #197 (updated): the app NEVER auto-pushes stock —
+// updateProductStock is a MANUAL, explicit action only, and it overwrites the
+// live Naver stock (the caller must warn about in-flight order decrements).
+
+export interface ProductPriceUpdateResult {
+  productNo: string;
+  previousSalePrice: number | null;
+  newSalePrice: number;
+  changedTopLevelFields: string[];
+  dryRun: boolean;
+  applied: boolean;
+  preservedFieldCount: number;
+}
+
+export async function updateProductPrice(
+  productNo: string,
+  newSalePrice: number,
+  opts: { dryRun?: boolean } = {},
+): Promise<ProductPriceUpdateResult> {
+  if (!productNo) {
+    throw new NaverApiError('가격 반영 불가 — productNo(naverProductId)가 비어 있습니다 (미연동 상품).', { kind: 'HTTP_ERROR' });
+  }
+  if (!Number.isFinite(newSalePrice) || newSalePrice <= 0) {
+    throw new NaverApiError(`가격 반영 불가 — 유효하지 않은 판매가(${newSalePrice}).`, { kind: 'HTTP_ERROR' });
+  }
+
+  const current = await getProduct(productNo);
+  const originProduct = current?.originProduct;
+  if (!originProduct || typeof originProduct !== 'object') {
+    throw new NaverApiError(
+      `가격 반영 중단 — GET origin-products/${productNo} 응답에 originProduct가 없어 전체 페이로드를 보존할 수 없습니다 (부분 PUT 금지).`,
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+
+  const previousSalePrice = typeof originProduct.salePrice === 'number' ? originProduct.salePrice : null;
+  const merged = JSON.parse(JSON.stringify(originProduct)) as Record<string, any>;
+  merged.salePrice = newSalePrice;
+
+  const changedTopLevelFields = diffTopLevelKeys(merged, originProduct as Record<string, unknown>);
+  const result: ProductPriceUpdateResult = {
+    productNo, previousSalePrice, newSalePrice, changedTopLevelFields,
+    dryRun: opts.dryRun === true, applied: false, preservedFieldCount: Object.keys(merged).length,
+  };
+  if (opts.dryRun) return result;
+
+  const payload: Record<string, unknown> = { originProduct: merged };
+  if (current.smartstoreChannelProduct) payload.smartstoreChannelProduct = current.smartstoreChannelProduct;
+  await naverRequest('PUT', `/v2/products/origin-products/${productNo}`, payload);
+  result.applied = true;
+  return result;
+}
+
+export interface ProductStockUpdateResult {
+  productNo: string;
+  isOptionProduct: boolean;
+  previousStock: number | null;    // top-level (non-option) or summed option stock
+  newStock: number;
+  optionCombosSet: number;         // # of option combinations overwritten
+  stockQuantityChanged: boolean;   // top-level stockQuantity overwritten (non-option)
+  changedTopLevelFields: string[];
+  overwriteWarning: boolean;       // always true — a stock push overwrites live Naver stock (#197)
+  dryRun: boolean;
+  applied: boolean;
+  preservedFieldCount: number;
+}
+
+export async function updateProductStock(
+  productNo: string,
+  newStock: number,
+  opts: { dryRun?: boolean } = {},
+): Promise<ProductStockUpdateResult> {
+  if (!productNo) {
+    throw new NaverApiError('재고 반영 불가 — productNo(naverProductId)가 비어 있습니다 (미연동 상품).', { kind: 'HTTP_ERROR' });
+  }
+  if (!Number.isInteger(newStock) || newStock < 0) {
+    throw new NaverApiError(`재고 반영 불가 — 유효하지 않은 재고값(${newStock}).`, { kind: 'HTTP_ERROR' });
+  }
+
+  const current = await getProduct(productNo);
+  const originProduct = current?.originProduct;
+  if (!originProduct || typeof originProduct !== 'object') {
+    throw new NaverApiError(
+      `재고 반영 중단 — GET origin-products/${productNo} 응답에 originProduct가 없어 전체 페이로드를 보존할 수 없습니다 (부분 PUT 금지).`,
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+
+  const optionInfo = originProduct?.detailAttribute?.optionInfo;
+  const combos = Array.isArray(optionInfo?.optionCombinations) ? optionInfo.optionCombinations : [];
+  const isOptionProduct = combos.length > 0;
+
+  const merged = JSON.parse(JSON.stringify(originProduct)) as Record<string, any>;
+  let optionCombosSet = 0;
+  let stockQuantityChanged = false;
+  let previousStock: number | null = null;
+
+  if (isOptionProduct) {
+    // #181/PL-2 동형: option products carry stock on optionCombinations, NOT the
+    // top-level stockQuantity (Naver auto-derives it). A manual push sets every
+    // combination to the requested value (drop-ship "set to N" intent, §1).
+    previousStock = combos.reduce((s: number, c: any) => s + (typeof c.stockQuantity === 'number' ? c.stockQuantity : 0), 0);
+    for (const c of merged.detailAttribute.optionInfo.optionCombinations) {
+      if (c.stockQuantity !== newStock) { c.stockQuantity = newStock; optionCombosSet++; }
+    }
+  } else {
+    previousStock = typeof merged.stockQuantity === 'number' ? merged.stockQuantity : null;
+    if (merged.stockQuantity !== newStock) { merged.stockQuantity = newStock; stockQuantityChanged = true; }
+  }
+
+  const changedTopLevelFields = diffTopLevelKeys(merged, originProduct as Record<string, unknown>);
+  const result: ProductStockUpdateResult = {
+    productNo, isOptionProduct, previousStock, newStock, optionCombosSet, stockQuantityChanged,
+    changedTopLevelFields, overwriteWarning: true,
+    dryRun: opts.dryRun === true, applied: false, preservedFieldCount: Object.keys(merged).length,
+  };
+  if (opts.dryRun) return result;
+
+  const payload: Record<string, unknown> = { originProduct: merged };
+  if (current.smartstoreChannelProduct) payload.smartstoreChannelProduct = current.smartstoreChannelProduct;
+  await naverRequest('PUT', `/v2/products/origin-products/${productNo}`, payload);
+  result.applied = true;
+  return result;
+}
+
+// Which top-level keys of `merged` differ from `original` (proves "타 필드 무변경").
+function diffTopLevelKeys(merged: Record<string, unknown>, original: Record<string, unknown>): string[] {
+  const changed: string[] = [];
+  for (const k of Object.keys(merged)) {
+    if (JSON.stringify(merged[k]) !== JSON.stringify(original[k])) changed.push(k);
+  }
+  return changed;
+}

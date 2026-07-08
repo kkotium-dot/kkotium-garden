@@ -17,6 +17,7 @@ import {
 import strings from './strings.ko.json';
 import SubstituteEditor from '@/components/products/SubstituteEditor';
 import PanelTabs, { type PanelTabDef } from '@/components/ui/PanelTabs';
+import NaverPushPanel from '@/components/products/NaverPushPanel';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface LinkedRow {
@@ -388,6 +389,9 @@ function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => vo
                 </div>
               </div>
             )}
+
+            {/* PL-3 (#46/#196/#197) — price / stock push (dry-run preview, GO-gated) */}
+            <NaverPushPanel productId={product.id} appSalePrice={product.salePrice} />
           </div>
         )}
 
