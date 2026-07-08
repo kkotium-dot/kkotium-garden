@@ -464,7 +464,16 @@
         "now": "방금 전",
         "minAgo": "분 전",
         "hourAgo": "시간 전",
-        "dayAgo": "일 전"
+        "dayAgo": "일 전",
+        "filter": {
+          "all": "전체",
+          "sourcing": "크롤",
+          "job": "이미지",
+          "asset": "자산",
+          "status": "상태"
+        },
+        "more": "더보기",
+        "moreRemaining": "더보기 ({n})"
       }
     },
     "controlTower": {
