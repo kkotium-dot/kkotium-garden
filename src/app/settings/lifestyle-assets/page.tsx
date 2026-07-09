@@ -205,7 +205,7 @@ export default function LifestyleAssetsPage() {
               {uploadBusy ? strings.upload.uploading : strings.upload.uploadButton}
             </button>
             {uploadSuccess && (
-              <div style={{ padding: '8px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 12, color: '#15803d', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ padding: '8px 12px', background: 'var(--success-bg)', border: '1px solid var(--success)', borderRadius: 8, fontSize: 12, color: '#15803d', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Check size={13} /> {strings.upload.uploadSuccess}
               </div>
             )}
@@ -230,7 +230,7 @@ export default function LifestyleAssetsPage() {
               {strings.list.loading}
             </div>
           ) : loadError ? (
-            <div style={{ padding: 16, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, fontSize: 12, color: '#b91c1c' }}>
+            <div style={{ padding: 16, background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: 12, fontSize: 12, color: '#b91c1c' }}>
               {strings.list.error}: {loadError}
               <button onClick={fetchList} style={{ marginLeft: 12, padding: '4px 10px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
                 {strings.list.retry}
@@ -296,9 +296,9 @@ function AssetCard({ asset, onDelete, deleting }: { asset: LifestyleAsset; onDel
           <span style={{
             fontSize: 10, fontWeight: 700,
             padding: '2px 6px', borderRadius: 999,
-            background: cooldown ? '#FFF7ED' : '#F0FDF4',
+            background: cooldown ? 'var(--warning-bg)' : 'var(--success-bg)',
             color: cooldown ? '#9A3412' : '#15803D',
-            border: `1px solid ${cooldown ? '#FED7AA' : '#BBF7D0'}`,
+            border: `1px solid ${cooldown ? 'var(--warning)' : 'var(--success)'}`,
           }}>
             {cooldown ? strings.list.cooldownActive : strings.list.cooldownReady}
           </span>

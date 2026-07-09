@@ -217,7 +217,7 @@ export default function NaverSettingsPage() {
             </div>
           </div>
           {/* Shipping vs template diff note */}
-          <div style={{ margin: '12px 20px 0', padding: '10px 14px', borderRadius: 12, background: '#eff6ff', border: '1.5px solid #bfdbfe', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <div style={{ margin: '12px 20px 0', padding: '10px 14px', borderRadius: 12, background: 'var(--info-bg)', border: '1.5px solid var(--info)', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
             <Info size={13} style={{ color: '#2563eb', flexShrink: 0, marginTop: 1 }} />
             <p style={{ fontSize: 11, color: '#1e40af', margin: 0, lineHeight: 1.6 }}>
               <strong>여기 배송 설정</strong>은 배송 레시피(템플릿)가 연결되지 않은 상품의 엑셀 fallback 기본값입니다.

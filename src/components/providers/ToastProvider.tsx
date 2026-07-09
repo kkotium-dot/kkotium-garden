@@ -18,24 +18,25 @@ export default function ToastProvider() {
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
           fontSize: '14px',
         },
+        // Phase 2c (#224): general single-meaning semantics → trendy tokens.
         success: {
           duration: 3000,
           iconTheme: {
-            primary: '#10b981',
+            primary: 'var(--success)',
             secondary: '#fff',
           },
           style: {
-            border: '1px solid #10b981',
+            border: '1px solid var(--success)',
           },
         },
         error: {
           duration: 4000,
           iconTheme: {
-            primary: '#ef4444',
+            primary: 'var(--danger)',
             secondary: '#fff',
           },
           style: {
-            border: '1px solid #ef4444',
+            border: '1px solid var(--danger)',
           },
         },
         loading: {
