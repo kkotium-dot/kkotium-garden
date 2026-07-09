@@ -146,20 +146,22 @@ export default function GoodServiceWidget() {
           />
           {/* Right: 3 axes */}
           <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
-            <ScoreGauge value={score.orderFulfillment} label="주문이행" icon={TrendingUp} color="#16a34a" size={70} />
-            <ScoreGauge value={score.deliveryQuality} label="배송품질" icon={Truck} color="#2563eb" size={70} />
-            <ScoreGauge value={score.customerSatisfaction} label="고객만족" icon={Star} color="#eab308" size={70} />
+            {/* §3 3-metric hues — literal master values (ScoreGauge feeds color to
+                SVG stroke + `color + '20'` alpha, where a CSS var can't resolve). */}
+            <ScoreGauge value={score.orderFulfillment} label="주문이행" icon={TrendingUp} color="#12B886" size={70} />
+            <ScoreGauge value={score.deliveryQuality} label="배송품질" icon={Truck} color="#4DABF7" size={70} />
+            <ScoreGauge value={score.customerSatisfaction} label="고객만족" icon={Star} color="#FFB020" size={70} />
           </div>
         </div>
 
         {/* Talktalk 12h info chip (2025-04 hardened) */}
         <div style={{
           marginTop: 12, padding: '8px 12px', borderRadius: 8,
-          background: '#F0F9FF', border: '1px solid #BAE6FD',
+          background: 'var(--m-sky-bg)', border: '1px solid var(--m-sky-fg)',
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          <MessageCircle size={12} style={{ color: '#0369a1', flexShrink: 0 }} />
-          <span style={{ fontSize: 11, color: '#0369a1', fontWeight: 600, lineHeight: 1.4 }}>
+          <MessageCircle size={12} style={{ color: 'var(--m-sky-tx)', flexShrink: 0 }} />
+          <span style={{ fontSize: 11, color: 'var(--m-sky-tx)', fontWeight: 600, lineHeight: 1.4 }}>
             톡톡 응답 기준 <strong style={{ fontWeight: 800 }}>12시간 강화</strong> (2025.4) - 자동응답 설정 권장
           </span>
         </div>
@@ -168,16 +170,16 @@ export default function GoodServiceWidget() {
         {score.tips.length > 0 && (
           <div style={{
             marginTop: 14, padding: '10px 14px', borderRadius: 10,
-            background: '#FFF8E1', border: '1px solid #FFE082',
+            background: 'var(--m-amber-bg)', border: '1px solid var(--m-amber-fg)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <AlertTriangle size={12} style={{ color: '#F59E0B' }} />
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}>
+              <AlertTriangle size={12} style={{ color: 'var(--m-amber-tx)' }} />
+              <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--m-amber-tx)' }}>
                 개선 포인트
               </span>
             </div>
             {score.tips.map((tip, i) => (
-              <p key={i} style={{ fontSize: 11, color: '#92400E', margin: '3px 0', lineHeight: 1.5 }}>
+              <p key={i} style={{ fontSize: 11, color: 'var(--m-amber-tx)', margin: '3px 0', lineHeight: 1.5 }}>
                 {tip}
               </p>
             ))}
@@ -225,34 +227,34 @@ export default function GoodServiceWidget() {
               </div>
               <div style={{ textAlign: 'center', padding: '8px', borderRadius: 8, background: '#fff', border: '1px solid #E5E7EB' }}>
                 <p style={{ fontSize: 10, color: '#B0A0A8', margin: '0 0 4px', fontWeight: 600 }}>월 매출</p>
-                <p style={{ fontSize: 14, fontWeight: 900, color: '#2563eb', margin: 0 }}>{fmt(monthlySummary.salesAmount)}</p>
+                <p style={{ fontSize: 14, fontWeight: 900, color: 'var(--m-sky-tx)', margin: 0 }}>{fmt(monthlySummary.salesAmount)}</p>
               </div>
               <div style={{ textAlign: 'center', padding: '8px', borderRadius: 8, background: '#fff', border: '1px solid #E5E7EB' }}>
                 <p style={{ fontSize: 10, color: '#B0A0A8', margin: '0 0 4px', fontWeight: 600 }}>월 판매</p>
-                <p style={{ fontSize: 14, fontWeight: 900, color: '#16a34a', margin: 0 }}>{monthlySummary.salesCount}건</p>
+                <p style={{ fontSize: 14, fontWeight: 900, color: 'var(--m-mint-tx)', margin: 0 }}>{monthlySummary.salesCount}건</p>
               </div>
             </div>
 
             {gradeSimulation.nextGrade && gradeSimulation.gap && (
               <div style={{
                 padding: '10px 12px', borderRadius: 8,
-                background: '#EFF6FF', border: '1px solid #BFDBFE',
+                background: 'var(--m-sky-bg)', border: '1px solid var(--m-sky-fg)',
               }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: '#1E40AF', margin: '0 0 6px' }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--m-sky-tx)', margin: '0 0 6px' }}>
                   {gradeSimulation.nextGrade} 달성까지
                 </p>
                 {gradeSimulation.gap.salesAmount > 0 && (
-                  <p style={{ fontSize: 11, color: '#1E40AF', margin: '2px 0' }}>
+                  <p style={{ fontSize: 11, color: 'var(--m-sky-tx)', margin: '2px 0' }}>
                     매출 {fmt(gradeSimulation.gap.salesAmount)} 더 필요
                   </p>
                 )}
                 {gradeSimulation.gap.salesCount > 0 && (
-                  <p style={{ fontSize: 11, color: '#1E40AF', margin: '2px 0' }}>
+                  <p style={{ fontSize: 11, color: 'var(--m-sky-tx)', margin: '2px 0' }}>
                     판매 {gradeSimulation.gap.salesCount}건 더 필요
                   </p>
                 )}
                 {gradeSimulation.gap.score > 0 && (
-                  <p style={{ fontSize: 11, color: '#1E40AF', margin: '2px 0' }}>
+                  <p style={{ fontSize: 11, color: 'var(--m-sky-tx)', margin: '2px 0' }}>
                     굿서비스 점수 {gradeSimulation.gap.score}점 더 필요
                   </p>
                 )}
@@ -262,9 +264,9 @@ export default function GoodServiceWidget() {
             {!gradeSimulation.nextGrade && (
               <div style={{
                 padding: '10px 12px', borderRadius: 8,
-                background: '#F0FDF4', border: '1px solid #86EFAC',
+                background: 'var(--m-mint-bg)', border: '1px solid var(--m-mint-fg)',
               }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: '#166534', margin: 0 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--m-mint-tx)', margin: 0 }}>
                   최고 등급 달성 중입니다!
                 </p>
               </div>
@@ -273,9 +275,9 @@ export default function GoodServiceWidget() {
             {/* Grade reform notice */}
             <div style={{
               marginTop: 10, padding: '8px 10px', borderRadius: 6,
-              background: '#FEF3C7', border: '1px solid #FDE68A',
+              background: 'var(--m-amber-bg)', border: '1px solid var(--m-amber-fg)',
             }}>
-              <p style={{ fontSize: 10, color: '#92400E', margin: 0, lineHeight: 1.4 }}>
+              <p style={{ fontSize: 10, color: 'var(--m-amber-tx)', margin: 0, lineHeight: 1.4 }}>
                 <strong style={{ fontWeight: 800 }}>2025.12 등급 개편</strong>: 평가 기간 3개월→1개월, 빅파워 4,000만→1,000만원, 파워 800만→300만원, 새싹 200만→80만원
               </p>
             </div>

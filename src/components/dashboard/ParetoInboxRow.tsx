@@ -49,7 +49,7 @@ export default function ParetoInboxRow() {
         style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 12px', borderRadius: 10,
-          background: '#FFFBEB', border: '1px solid #FDE68A',
+          background: 'var(--m-amber-bg)', border: '1px solid var(--m-amber-fg)',
         }}
       >
         <div
@@ -57,7 +57,7 @@ export default function ParetoInboxRow() {
             flexShrink: 0, width: 28, height: 28, borderRadius: 7,
             background: '#FFFFFF', display: 'inline-flex',
             alignItems: 'center', justifyContent: 'center',
-            color: '#CA8A04', border: '1px solid #FDE68A',
+            color: 'var(--m-amber-tx)', border: '1px solid var(--m-amber-fg)',
           }}
           aria-hidden="true"
         >
@@ -65,15 +65,15 @@ export default function ParetoInboxRow() {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 800, color: '#854D0E' }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--m-amber-tx)' }}>
               {strings.labelTop} {paretoSlice.length}{strings.labelOf}
               {paretoSlice.length > 0 ? Math.ceil(paretoSlice.length / 0.2) : 0}
             </span>
             <span
               style={{
-                fontSize: 10, fontWeight: 700, color: '#854D0E',
+                fontSize: 10, fontWeight: 700, color: 'var(--m-amber-tx)',
                 background: '#FFFFFF', padding: '2px 6px',
-                borderRadius: 999, border: '1px solid #FDE68A',
+                borderRadius: 999, border: '1px solid var(--m-amber-fg)',
               }}
             >
               {sharePct}% {strings.share}
@@ -81,7 +81,7 @@ export default function ParetoInboxRow() {
           </div>
           <p
             style={{
-              margin: '2px 0 0', fontSize: 11, color: '#7c2d12', lineHeight: 1.4,
+              margin: '2px 0 0', fontSize: 11, color: 'var(--m-amber-tx)', lineHeight: 1.4,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}
           >
@@ -114,34 +114,34 @@ function EmptyRow() {
         style={{
           display: 'flex', alignItems: 'center', gap: 12,
           padding: '12px 14px', borderRadius: 10,
-          background: '#F0FDF4', border: '1px solid #BBF7D0',
+          background: 'var(--m-mint-bg)', border: '1px solid var(--m-mint-fg)',
         }}
       >
         <div
           style={{
             flexShrink: 0, width: 32, height: 32, borderRadius: 8,
-            background: '#FFFFFF', border: '1px solid #BBF7D0',
+            background: '#FFFFFF', border: '1px solid var(--m-mint-fg)',
             display: 'inline-flex', alignItems: 'center',
-            justifyContent: 'center', color: '#16A34A',
+            justifyContent: 'center', color: 'var(--m-mint-tx)',
           }}
           aria-hidden="true"
         >
           <Check size={16} strokeWidth={2.5} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#15803D', lineHeight: 1.3 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--m-mint-tx)', lineHeight: 1.3 }}>
             {strings.title} — {strings.emptyOk}
           </p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#16A34A', lineHeight: 1.4 }}>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--m-mint-tx)', lineHeight: 1.4 }}>
             {strings.emptyHint}
           </p>
         </div>
         <span
           style={{
             flexShrink: 0, fontSize: 10, fontWeight: 700,
-            color: '#15803D', background: '#FFFFFF',
+            color: 'var(--m-mint-tx)', background: '#FFFFFF',
             padding: '3px 8px', borderRadius: 999,
-            border: '1px solid #BBF7D0', whiteSpace: 'nowrap',
+            border: '1px solid var(--m-mint-fg)', whiteSpace: 'nowrap',
           }}
         >
           {strings.sprintLabel}
