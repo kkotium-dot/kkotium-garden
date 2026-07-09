@@ -136,9 +136,9 @@ function ScoreRing({ score, grade }: { score: number; grade: HoneyScoreResult['g
   const circ = 2 * Math.PI * r;
   const filled = (score / 100) * circ;
   const colors: Record<string, string> = {
-    S: '#9333ea', A: '#16a34a', B: '#2563eb', C: '#ca8a04', D: '#F63B28',
+    S: 'var(--m-grape-fg)', A: 'var(--m-mint-fg)', B: 'var(--m-sky-fg)', C: 'var(--m-amber-fg)', D: 'var(--m-coral-fg)',
   };
-  const col = colors[grade] ?? '#6b7280';
+  const col = colors[grade] ?? 'var(--m-gray-fg)';
 
   return (
     <svg width="64" height="64" viewBox="0 0 64 64">
@@ -189,13 +189,13 @@ export default function HoneyScorePanel({
 
   // Grade accent color for border/bg
   const gradeColor: Record<string, string> = {
-    S: '#9333ea', A: '#16a34a', B: '#2563eb', C: '#ca8a04', D: '#F63B28',
+    S: 'var(--m-grape-fg)', A: 'var(--m-mint-fg)', B: 'var(--m-sky-fg)', C: 'var(--m-amber-fg)', D: 'var(--m-coral-fg)',
   };
   const gradeLight: Record<string, string> = {
-    S: '#faf5ff', A: '#f0fdf4', B: '#eff6ff', C: '#fefce8', D: '#fff0f0',
+    S: 'var(--m-grape-bg)', A: 'var(--m-mint-bg)', B: 'var(--m-sky-bg)', C: 'var(--m-amber-bg)', D: 'var(--m-coral-bg)',
   };
-  const gc  = gradeColor[result.grade] ?? '#F63B28';
-  const gbl = gradeLight[result.grade] ?? '#fff0f0';
+  const gc  = gradeColor[result.grade] ?? 'var(--m-coral-fg)';
+  const gbl = gradeLight[result.grade] ?? 'var(--m-coral-bg)';
 
   return (
     <div className="kk-card" style={{ overflow: 'hidden' }}>

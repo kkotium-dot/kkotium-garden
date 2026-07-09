@@ -65,7 +65,7 @@ export default function OrderProcessingNudge() {
       hint: strings.nudge.shipHint,
       count: shipCount,
       href: '/orders?status=PAID',
-      color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe',
+      color: 'var(--m-sky-tx)', bg: 'var(--m-sky-bg)', border: 'var(--m-sky-fg)',
     },
     {
       key: 'claim',
@@ -74,7 +74,7 @@ export default function OrderProcessingNudge() {
       hint: strings.nudge.claimHint,
       count: claimCount,
       href: claimHref,
-      color: '#b45309', bg: '#fffbeb', border: '#fde68a',
+      color: 'var(--m-amber-tx)', bg: 'var(--m-amber-bg)', border: 'var(--m-amber-fg)',
     },
   ];
   const items = allItems.filter((item) => item.count > 0);
@@ -97,17 +97,17 @@ export default function OrderProcessingNudge() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 32, height: 32, borderRadius: 8, background: '#eff6ff',
+          width: 32, height: 32, borderRadius: 8, background: 'var(--m-sky-bg)',
         }}>
-          <ShoppingCart size={18} style={{ color: '#1d4ed8' }} />
+          <ShoppingCart size={18} style={{ color: 'var(--m-sky-tx)' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#111827', lineHeight: 1.2 }}>
             {strings.header.title}
             <span style={{
               marginLeft: 8, fontSize: 11, fontWeight: 800,
-              color: '#1d4ed8', background: '#eff6ff',
-              border: '1px solid #bfdbfe', borderRadius: 99,
+              color: 'var(--m-sky-tx)', background: 'var(--m-sky-bg)',
+              border: '1px solid var(--m-sky-fg)', borderRadius: 99,
               padding: '1px 8px',
             }}>
               {total}
