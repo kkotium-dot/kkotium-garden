@@ -38,6 +38,8 @@ import {
 } from 'lucide-react';
 import KkottiWidget from '@/components/dashboard/KkottiWidget';
 import KkottiBriefingWidget from '@/components/dashboard/KkottiBriefingWidget';
+import TodayQueue from '@/components/dashboard/TodayQueue';
+import KpiStrip from '@/components/dashboard/KpiStrip';
 import LowStockAlertWidget from '@/components/dashboard/LowStockAlertWidget';
 import OrderProcessingNudge from '@/components/dashboard/OrderProcessingNudge';
 import NaverHealthBanner from '@/components/dashboard/NaverHealthBanner';
@@ -529,19 +531,31 @@ export default function DashboardPage() {
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
-          SECTION 1 — 영웅 (Hero)
-          꼬띠 한 줄 브리핑 — 지금 가장 먼저 할 행동 단 1개
+          PRIMARY ROW — 오늘 할 일 (single priority queue) + KPI 4카드
+          DASHBOARD-SHELL Phase 1 (#216/#217): the one always-visible focus.
+          Left = merged action To-do (발송·클레임·품절·상품개입) with 1 primary
+          button. Right = monitoring KPIs. Not collapsible (single focus).
           ════════════════════════════════════════════════════════════════════ */}
-      <CollapsibleSection section="hero" variant="gardener">
-        <KkottiBriefingWidget />
-      </CollapsibleSection>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5" style={{ marginBottom: 28 }}>
+        <div className="xl:col-span-3">
+          <TodayQueue />
+        </div>
+        <div className="xl:col-span-2">
+          <KpiStrip />
+        </div>
+      </div>
 
       {/* ════════════════════════════════════════════════════════════════════
           SECTION 2 — 받은편지함 (Inbox)
           품절·발주 알림 + 향후 가격/경쟁사/골든윈도우/효자상품 자동 합류
+          꼬띠 한 줄 브리핑(구 Hero)은 여기 상단으로 이동 — 기능 보존, 시야 정리.
           ════════════════════════════════════════════════════════════════════ */}
       <CollapsibleSection section="inbox" variant="hunter">
         <div className="space-y-4">
+          {/* Kkotti daily briefing — relocated from the standalone Hero section
+              (widget moved, not removed; the top TodayQueue is now the focus). */}
+          <KkottiBriefingWidget />
+
           {/* PROXY-HEALTH (#204): Naver-integration SPOF alert — proxy/token/IP 끊김 시만 노출 (정상 시 self-hides) */}
           <NaverHealthBanner />
 

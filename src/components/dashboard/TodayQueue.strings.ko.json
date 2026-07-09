@@ -1,0 +1,20 @@
+{
+  "header": {
+    "title": "오늘 할 일",
+    "countNow": "지금 {count}건",
+    "empty": "지금 처리할 일 없음"
+  },
+  "items": {
+    "ship": { "label": "발송 필요", "hint": "결제완료 · 미발송" },
+    "claim": { "label": "클레임 응대", "hint": "취소 · 반품 요청" },
+    "oos": { "label": "품절 경보", "hint": "재고 보충 필요" },
+    "intervention": { "label": "상품 작업 개입", "hint": "이미지 · 발행 대기" }
+  },
+  "unit": "건",
+  "cta": "바로 처리하기",
+  "empty": {
+    "title": "정원이 평화로워요",
+    "body": "급하게 처리할 일이 없어요. 새 꽃을 둘러볼까요?",
+    "cta": "꿀통 꽃나들이"
+  }
+}

@@ -47,52 +47,45 @@ interface NavItem {
   badgeKey?: 'sourcing' | 'zombie' | 'orders' | 'draft' | 'oos';
 }
 
+// DASHBOARD-SHELL Phase 1 (#216/#218): 7 sections → 5 JTBD groups.
+// Group headers carry metaphor + function (은유·기능 병기, #73/#218); every
+// route + badge is preserved (기능 무손실 — items regrouped, none removed).
 const NAV: { label: string; items: NavItem[] }[] = [
   {
-    label: 'GARDEN',
+    label: '홈',
     items: [{ href: '/dashboard', label: '정원 일지', iconKey: 'fountain' }],
   },
   {
-    label: 'HUNT',
+    label: '화단 · 상품',
     items: [
-      { href: '/crawl', label: '꿀통 꽃나들이', iconKey: 'layers', badgeKey: 'sourcing' },
-    ],
-  },
-  {
-    label: 'PLANT',
-    items: [
-      { href: '/products/new', label: '씨앗 심기', iconKey: 'packageplus' },
-    ],
-  },
-  {
-    label: 'TEND',
-    items: [
+      { href: '/crawl',                 label: '꿀통 꽃나들이', iconKey: 'layers',      badgeKey: 'sourcing' },
+      { href: '/products/new',          label: '씨앗 심기',     iconKey: 'packageplus' },
       { href: '/products',              label: '정원 창고',     iconKey: 'shoppingbag', badgeKey: 'draft' },
       { href: '/naver-seo',             label: '검색 조련사',   iconKey: 'search' },
-      { href: '/products/reactivation', label: '좀비 부활소',   iconKey: 'refreshcw', badgeKey: 'zombie' },
       { href: '/studio',                label: '온실 아틀리에', iconKey: 'palette' },
+      { href: '/products/reactivation', label: '좀비 부활소',   iconKey: 'refreshcw',   badgeKey: 'zombie' },
     ],
   },
   {
-    label: 'ORDERS',
+    label: '수확 · 주문',
     items: [
-      { href: '/orders', label: '주문 관리', iconKey: 'shoppingcart', badgeKey: 'orders' },
-      { href: '/products/link', label: '상품 연동', iconKey: 'link2' },
-    ],
-  },
-  {
-    label: 'OPS',
-    items: [
+      { href: '/orders',          label: '주문 관리',   iconKey: 'shoppingcart', badgeKey: 'orders' },
+      { href: '/products/link',   label: '상품 연동',   iconKey: 'link2' },
       { href: '/ops/insert-card', label: '인서트 카드', iconKey: 'creditcard' },
     ],
   },
   {
-    label: 'TOOLS',
+    label: '벌통 · 고객',
     items: [
-      { href: '/settings/suppliers',         label: '거래처 명단',   iconKey: 'store' },
+      { href: '/settings/kakao', label: '카카오 채널', iconKey: 'messagecircle' },
+    ],
+  },
+  {
+    label: '설정 · 도구',
+    items: [
+      { href: '/settings/suppliers',        label: '거래처 명단',   iconKey: 'store' },
       { href: '/settings/shipping',         label: '배송 레시피',   iconKey: 'truck' },
       { href: '/settings/supplier-login',   label: '공급사 열쇠방', iconKey: 'keyround' },
-      { href: '/settings/kakao',            label: '카카오 채널',   iconKey: 'messagecircle' },
       { href: '/naver-settings',            label: '네이버 기본값', iconKey: 'filetext' },
       { href: '/settings/lifestyle-assets', label: '라이프 자산',   iconKey: 'images' },
     ],
@@ -311,12 +304,10 @@ function SidebarInner() {
               <SectionFlower />
               <p
                 style={{
-                  fontSize: 10,
-                  fontWeight: 900,
+                  fontSize: 11,
+                  fontWeight: 800,
                   color: '#e62310',
-                  letterSpacing: '0.16em',
-                  textTransform: 'uppercase',
-                  fontFamily: "'Arial Black', Impact, sans-serif",
+                  letterSpacing: '0.02em',
                   margin: 0,
                 }}
               >

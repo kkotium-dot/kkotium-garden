@@ -1,26 +1,26 @@
 {
-  "$schema": "Garden nav labels — Korean primary, English italic-serif sublabel. Maps to actual working routes (mirrors src/components/layout/Sidebar.tsx NAV constant). New shell components import from here; do not inline Korean strings (rule #35).",
+  "$schema": "Garden nav labels — Korean primary, English italic-serif sublabel. Maps to actual working routes (mirrors src/components/layout/Sidebar.tsx NAV constant). New shell components import from here; do not inline Korean strings (rule #35). 2026-07-09 DASHBOARD-SHELL Phase 1 (#216): 7 sections → 5 JTBD groups, metaphor+function headers.",
   "brand": {
     "primary": "KKOTIUM",
     "secondary": "GARDEN"
   },
   "sections": [
     {
-      "key": "garden",
-      "label": "GARDEN",
+      "key": "home",
+      "label": "홈",
       "items": [
         {
           "key": "dashboard",
           "href": "/dashboard",
-          "ko": "가든 홈",
+          "ko": "정원 일지",
           "en": "Garden",
           "icon": "fountain"
         }
       ]
     },
     {
-      "key": "hunt",
-      "label": "HUNT",
+      "key": "products",
+      "label": "화단 · 상품",
       "items": [
         {
           "key": "crawl",
@@ -29,26 +29,14 @@
           "en": "Foraging",
           "icon": "layers",
           "badgeKey": "sourcing"
-        }
-      ]
-    },
-    {
-      "key": "plant",
-      "label": "PLANT",
-      "items": [
+        },
         {
           "key": "sow",
           "href": "/products/new",
           "ko": "씨앗 심기",
           "en": "Sow Seeds",
           "icon": "packageplus"
-        }
-      ]
-    },
-    {
-      "key": "tend",
-      "label": "TEND",
-      "items": [
+        },
         {
           "key": "products",
           "href": "/products",
@@ -65,25 +53,25 @@
           "icon": "search"
         },
         {
+          "key": "studio",
+          "href": "/studio",
+          "ko": "온실 아틀리에",
+          "en": "Atelier",
+          "icon": "palette"
+        },
+        {
           "key": "reactivation",
           "href": "/products/reactivation",
           "ko": "좀비 부활소",
           "en": "Revive",
           "icon": "refreshcw",
           "badgeKey": "zombie"
-        },
-        {
-          "key": "studio",
-          "href": "/studio",
-          "ko": "온실 아틀리에",
-          "en": "Atelier",
-          "icon": "palette"
         }
       ]
     },
     {
       "key": "orders",
-      "label": "ORDERS",
+      "label": "수확 · 주문",
       "items": [
         {
           "key": "orders",
@@ -92,13 +80,14 @@
           "en": "Orders",
           "icon": "shoppingcart",
           "badgeKey": "orders"
-        }
-      ]
-    },
-    {
-      "key": "ops",
-      "label": "OPS",
-      "items": [
+        },
+        {
+          "key": "product-link",
+          "href": "/products/link",
+          "ko": "상품 연동",
+          "en": "Link",
+          "icon": "link2"
+        },
         {
           "key": "insert-card",
           "href": "/ops/insert-card",
@@ -109,8 +98,21 @@
       ]
     },
     {
-      "key": "tools",
-      "label": "TOOLS",
+      "key": "customer",
+      "label": "벌통 · 고객",
+      "items": [
+        {
+          "key": "kakao",
+          "href": "/settings/kakao",
+          "ko": "카카오 채널",
+          "en": "Kakao",
+          "icon": "messagecircle"
+        }
+      ]
+    },
+    {
+      "key": "settings",
+      "label": "설정 · 도구",
       "items": [
         {
           "key": "suppliers",
@@ -132,13 +134,6 @@
           "ko": "공급사 열쇠방",
           "en": "Vendor Keys",
           "icon": "keyround"
-        },
-        {
-          "key": "kakao",
-          "href": "/settings/kakao",
-          "ko": "카카오 채널",
-          "en": "Kakao",
-          "icon": "messagecircle"
         },
         {
           "key": "naver",
