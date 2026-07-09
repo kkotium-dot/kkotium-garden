@@ -593,3 +593,43 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   font-family: var(--font-pop-display);
   letter-spacing: -0.01em;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   DASHBOARD-SHELL Phase 3 — 장식강도 + 모션 절제 (#217)
+   권위: DASHBOARD_SHELL_REFACTOR_SPEC §4 + RESEARCH #217. Controlled by
+   data-decor on <html> (ShellControls.tsx): calm (default) / mid / maximal.
+═══════════════════════════════════════════════════════════════ */
+
+/* Mascot expression pills on section HEADINGS = 시각 노이즈 (spec §0). Hidden
+   by DEFAULT (= calm); revealed only when the user opts into mid / maximal. */
+.kk-mascot-face { display: none; }
+:root[data-decor="mid"] .kk-mascot-face,
+:root[data-decor="maximal"] .kk-mascot-face { display: inline-flex; }
+
+/* Decorative motion (spin/wiggle/marquee/rotation/washi) is OFF unless maximal.
+   Calm + mid keep the app still; essential feedback (loading spinners marked
+   .kk-motion-keep, short transitions) is exempt. Forward-looking hooks — the
+   app currently ships no infinite decoration (무한루프 금지 already holds). */
+:root:not([data-decor="maximal"]) .kk-decor-anim:not(.kk-motion-keep) {
+  animation: none !important;
+  transform: none !important;
+}
+
+/* Accessibility: honor the OS reduce-motion setting app-wide (WCAG 2.3.3 /
+   2.2.2) — near-instant animations/transitions, no iteration loops. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Alert 4-tier color system (#221 / research §1): 위험 상시 · 경고 해제가능 ·
+   정보 자동소멸 · 성공 자동소멸. Colors here; dismiss/auto-hide timing is owned
+   by the toast/alert component. Trendy semantic tokens, fixed across palettes. */
+.kk-alert-critical { color: var(--danger);  background: var(--danger-bg);  border: 1px solid var(--danger); }
+.kk-alert-warning  { color: #8a5a00;         background: var(--warning-bg); border: 1px solid var(--warning); }
+.kk-alert-info     { color: #0b6bb3;         background: var(--info-bg);    border: 1px solid var(--info); }
+.kk-alert-success  { color: #0a6b4f;         background: var(--success-bg); border: 1px solid var(--success); }

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Search, User } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
+import ShellControls from '@/components/layout/ShellControls';
 
 export default function Header() {
   return (
@@ -71,6 +72,7 @@ export default function Header() {
 
         {/* ── Right ── */}
         <div className="flex items-center gap-2 shrink-0">
+          <ShellControls />
           <NotificationCenter />
           <button
             className="flex items-center gap-2 font-semibold transition-all"

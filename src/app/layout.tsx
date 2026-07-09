@@ -43,7 +43,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className={cafe24Ssurround.variable}>
+    // suppressHydrationWarning: the pre-paint script sets data-decor / data-palette
+    // on <html> before hydration (from localStorage) — intended theme-flash pattern.
+    <html lang="ko" className={cafe24Ssurround.variable} suppressHydrationWarning>
       <head>
         <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -55,6 +57,15 @@ export default function RootLayout({
             = body (가독). Loaded via the same Google Fonts <link> pattern the
             shell already uses; consumed through --font-pop-display / --font-read. */}
         <link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet" />
+        {/* Phase 3 (#217): apply saved view prefs (장식강도 / 팔레트) BEFORE first
+            paint so a non-default choice does not flash. Defaults (calm / brand)
+            leave the attributes unset = CSS default. See ShellControls.tsx. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var e=document.documentElement,d=localStorage.getItem('kk-decor'),p=localStorage.getItem('kk-palette');if(d&&d!=='calm')e.setAttribute('data-decor',d);if(p&&p!=='brand')e.setAttribute('data-palette',p);}catch(_){}})();",
+          }}
+        />
       </head>
       <body
         className="font-pretendard antialiased"

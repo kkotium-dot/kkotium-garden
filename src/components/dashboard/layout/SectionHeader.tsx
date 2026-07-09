@@ -212,10 +212,12 @@ export default function SectionHeader({
             {/* Part A2: Mascot persona pill — face expression + accessory label.
                 Sits inline with the title so it scales naturally with screen width. */}
             <span
+              className="kk-mascot-face"
               title={`${variantMeta.label} · ${variantMeta.signature}`}
               aria-label={`${variantMeta.label} 모드, ${accessoryLabel}`}
               style={{
-                display: 'inline-flex',
+                // display governed by .kk-mascot-face (data-decor gate) — hidden
+                // in calm (default), inline-flex in mid/maximal.
                 alignItems: 'center',
                 gap: 6,
                 marginLeft: 10,

@@ -117,7 +117,7 @@ export default function TodayQueue() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '18px 12px', background: '#FFF8FA', border: '1px solid #FBD3DE', borderRadius: 12, textAlign: 'center' }}>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#171717' }}>{strings.empty.title}</p>
           <p style={{ margin: 0, fontSize: 12, color: '#737373', lineHeight: 1.5 }}>{strings.empty.body}</p>
-          <Link href="/crawl" style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, background: '#F63B28', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+          <Link href="/crawl" style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 15px', borderRadius: 10, background: '#F63B28', color: '#fff', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
             <Sparkles size={14} />{strings.empty.cta}
           </Link>
         </div>
@@ -165,7 +165,7 @@ export default function TodayQueue() {
             </p>
             <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6b7280' }}>{primary.hint}</p>
           </div>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 9, background: 'var(--brand-red)', color: '#fff', fontSize: 13, fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '9px 13px', borderRadius: 9, background: 'var(--brand-red)', color: '#fff', fontSize: 14, fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>
             {strings.cta}<ArrowRight size={14} />
           </span>
         </div>
