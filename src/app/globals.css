@@ -514,14 +514,33 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   --brand-pink-mid:  #FB7DBB;   /* vivid rose — 2nd accent / graph point */
   --line:            #F0D9E4;   /* pink hairline border */
 
-  /* ── Semantic — trendy 채도업, FIXED across all palettes (#221). Meaning-
-     stable: success mint / warning amber / danger coral / info sky. Danger
-     coral (#FF4757) is hue-distinct from the brand red so alerts stay legible
-     on pink surfaces. ── */
-  --success:    #12B886;  --success-bg: #E6FCF5;
-  --warning:    #FFB020;  --warning-bg: #FFF4E0;
-  --danger:     #FF4757;  --danger-bg:  #FFE9EC;
-  --info:       #4DABF7;  --info-bg:    #E7F5FF;
+  /* ── MASTER 12-color state system (#227 · MASTER_STATE_COLOR_SYSTEM) — the
+     single trendy language for ALL taxonomies (order status / control-tower /
+     grades / MODE·LINE·TIER·CATEGORY) AND the general semantics. FIXED across
+     palettes. Each hue = fg (dot/border/large solid) · bg (tint) · tx (dark
+     text, AA). Per-context rule #226: badge bg=-bg · text=-tx · dot/border=-fg
+     · solid+white text = large/bold only. tx-on-bg 5.4~7.4 / on-white 5.9~8.2
+     (all AA). New states pick from these 12 — no per-page ad-hoc color. ── */
+  --m-amber-fg:  #FFB020;  --m-amber-bg:  #FFF4E0;  --m-amber-tx:  #8A5A00;
+  --m-sky-fg:    #4DABF7;  --m-sky-bg:    #E7F5FF;  --m-sky-tx:    #0B5FA5;
+  --m-violet-fg: #7C6BF0;  --m-violet-bg: #EFECFE;  --m-violet-tx: #4B3BB5;
+  --m-mint-fg:   #12B886;  --m-mint-bg:   #E6FCF5;  --m-mint-tx:   #0B6E50;
+  --m-teal-fg:   #0CA678;  --m-teal-bg:   #E3FAF1;  --m-teal-tx:   #075E44;
+  --m-cyan-fg:   #22B8CF;  --m-cyan-bg:   #E3FAFC;  --m-cyan-tx:   #0B6B7C;
+  --m-coral-fg:  #FF4757;  --m-coral-bg:  #FFE9EC;  --m-coral-tx:  #B21F2C;
+  --m-orange-fg: #FF922B;  --m-orange-bg: #FFF0E0;  --m-orange-tx: #9A4E00;
+  --m-grape-fg:  #E64980;  --m-grape-bg:  #FFE8F0;  --m-grape-tx:  #A61E4D;
+  --m-indigo-fg: #4263EB;  --m-indigo-bg: #E8ECFF;  --m-indigo-tx: #2B44B5;
+  --m-lime-fg:   #66A80F;  --m-lime-bg:   #F0FBE0;  --m-lime-tx:   #3F6600;
+  --m-gray-fg:   #868E96;  --m-gray-bg:   #F1F3F5;  --m-gray-tx:   #495057;
+
+  /* ── General single-meaning semantics (#224 A) = aliases INTO the master
+     system: success=mint · warning=amber · danger=coral · info=sky. -tx = the
+     AA-dark text tone for a badge/label sitting on the -bg tint. ── */
+  --success: var(--m-mint-fg);  --success-bg: var(--m-mint-bg);  --success-tx: var(--m-mint-tx);
+  --warning: var(--m-amber-fg); --warning-bg: var(--m-amber-bg); --warning-tx: var(--m-amber-tx);
+  --danger:  var(--m-coral-fg); --danger-bg:  var(--m-coral-bg); --danger-tx:  var(--m-coral-tx);
+  --info:    var(--m-sky-fg);   --info-bg:    var(--m-sky-bg);   --info-tx:    var(--m-sky-tx);
 
   /* ── Concept aliases → follow the ACTIVE palette's brand vars, so Phase-2
      components (--pop / --canvas-cream) + var(--kk-red)/var(--gp-red-*)

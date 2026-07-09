@@ -209,7 +209,7 @@ export default function ShippingPage() {
         <div style={{
           position: 'fixed', top: 20, right: 20, zIndex: 99999,
           padding: '10px 18px', borderRadius: 12, fontSize: 13, fontWeight: 700,
-          background: toast.type === 'success' ? '#15803d' : '#F63B28', color: '#fff',
+          background: toast.type === 'success' ? 'var(--success-tx)' : '#F63B28', color: '#fff',
           boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
         }}>
           {toast.msg}
@@ -241,7 +241,7 @@ export default function ShippingPage() {
             <button
               onClick={syncAddressbook}
               disabled={syncingAddr}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#eff6ff', color: '#1d4ed8', padding: '9px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13, border: '1.5px solid #bfdbfe', cursor: syncingAddr ? 'not-allowed' : 'pointer', flexShrink: 0, opacity: syncingAddr ? 0.6 : 1 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--info-bg)', color: 'var(--info-tx)', padding: '9px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13, border: '1.5px solid var(--info)', cursor: syncingAddr ? 'not-allowed' : 'pointer', flexShrink: 0, opacity: syncingAddr ? 0.6 : 1 }}
             >
               <RefreshCw size={14} className={syncingAddr ? 'animate-spin' : ''} /> 주소록 동기화
             </button>
@@ -249,7 +249,7 @@ export default function ShippingPage() {
             <button
               onClick={extractDelivery}
               disabled={extracting}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f0fdf4', color: '#15803d', padding: '9px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13, border: '1.5px solid #86efac', cursor: extracting ? 'not-allowed' : 'pointer', flexShrink: 0, opacity: extracting ? 0.6 : 1 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--success-bg)', color: 'var(--success-tx)', padding: '9px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13, border: '1.5px solid var(--success)', cursor: extracting ? 'not-allowed' : 'pointer', flexShrink: 0, opacity: extracting ? 0.6 : 1 }}
             >
               <Download size={14} /> 배송 역추출
             </button>
@@ -262,23 +262,23 @@ export default function ShippingPage() {
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
           padding: '12px 16px', borderRadius: 14, marginBottom: 12,
-          background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
-          border: '1.5px solid #86efac',
+          background: 'var(--success-bg)',
+          border: '1.5px solid var(--success)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--success-tx)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Truck size={15} color="#fff" />
             </div>
             <div>
-              <p style={{ fontSize: 12, fontWeight: 800, color: '#15803d', margin: '0 0 2px' }}>네이버 스마트스토어 배송 템플릿 번호 입력 방법</p>
-              <p style={{ fontSize: 11, color: '#166534', margin: 0, lineHeight: 1.5 }}>네이버 스마트스토어 센터 › 배송 › 배송 템플릿에서 <strong>정책 번호(deliveryPolicyNo)</strong>를 확인 후 아래 [코드 입력] 버튼으로 등록하세요.</p>
+              <p style={{ fontSize: 12, fontWeight: 800, color: 'var(--success-tx)', margin: '0 0 2px' }}>네이버 스마트스토어 배송 템플릿 번호 입력 방법</p>
+              <p style={{ fontSize: 11, color: 'var(--success-tx)', margin: 0, lineHeight: 1.5 }}>네이버 스마트스토어 센터 › 배송 › 배송 템플릿에서 <strong>정책 번호(deliveryPolicyNo)</strong>를 확인 후 아래 [코드 입력] 버튼으로 등록하세요.</p>
             </div>
           </div>
           <a
             href="https://sell.smartstore.naver.com/#/store-delivery/delivery-policy"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 10, background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 700, textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 10, background: 'var(--success-tx)', color: '#fff', fontSize: 12, fontWeight: 700, textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap' }}
           >
             스마트스토어 센터
           </a>
@@ -289,14 +289,14 @@ export default function ShippingPage() {
           <div style={{
             display: 'flex', alignItems: 'flex-start', gap: 10,
             padding: '12px 16px', borderRadius: 14, marginBottom: 16,
-            background: '#fffbeb', border: '1.5px solid #fde68a',
+            background: 'var(--warning-bg)', border: '1.5px solid var(--warning)',
           }}>
-            <AlertTriangle size={16} style={{ color: '#d97706', flexShrink: 0, marginTop: 1 }} />
+            <AlertTriangle size={16} style={{ color: 'var(--warning-tx)', flexShrink: 0, marginTop: 1 }} />
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 12, fontWeight: 800, color: '#92400e', margin: '0 0 2px' }}>
+              <p style={{ fontSize: 12, fontWeight: 800, color: 'var(--warning-tx)', margin: '0 0 2px' }}>
                 배송 템플릿 코드 미입력 {missingCount}개
               </p>
-              <p style={{ fontSize: 11, color: '#a16207', margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 11, color: 'var(--warning-tx)', margin: 0, lineHeight: 1.5 }}>
                 코드가 없으면 엑셀 업로드 시 [배송비 템플릿코드] 컬럼이 비어 배송 정보를 수동 입력해야 합니다.
                 아래 카드의 <strong>[코드 입력]</strong> 버튼을 눌러 네이버 스마트스토어센터에서 받은 배송 템플릿 코드를 등록해주세요.
               </p>
@@ -362,7 +362,7 @@ export default function ShippingPage() {
               return (
                 <div key={t.id} style={{
                   background: '#fff', borderRadius: 18,
-                  border: `1.5px solid ${!t.active ? '#F8DCE5' : hasCode ? '#F8DCE5' : '#fde68a'}`,
+                  border: `1.5px solid ${!t.active ? '#F8DCE5' : hasCode ? '#F8DCE5' : 'var(--warning)'}`,
                   padding: '16px 18px',
                   opacity: t.active ? 1 : 0.55,
                   transition: 'box-shadow 0.15s',
@@ -387,7 +387,7 @@ export default function ShippingPage() {
                           background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`,
                         }}>{meta.label}</span>
                         {!t.active && (
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: '#fee2e2', color: '#b91c1c' }}>비활성</span>
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'var(--danger-bg)', color: 'var(--danger-tx)' }}>비활성</span>
                         )}
                       </div>
 
@@ -460,10 +460,10 @@ export default function ShippingPage() {
                           <div style={{
                             display: 'flex', alignItems: 'center', gap: 5,
                             padding: '4px 10px', borderRadius: 8,
-                            background: '#fffbeb', border: '1px solid #fde68a',
+                            background: 'var(--warning-bg)', border: '1px solid var(--warning)',
                           }}>
-                            <AlertTriangle size={11} style={{ color: '#d97706' }} />
-                            <span style={{ fontSize: 11, fontWeight: 700, color: '#92400e' }}>
+                            <AlertTriangle size={11} style={{ color: 'var(--warning-tx)' }} />
+                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--warning-tx)' }}>
                               배송 템플릿 코드 미입력 — [배송비 템플릿코드] 컬럼 비어있음
                             </span>
                           </div>
