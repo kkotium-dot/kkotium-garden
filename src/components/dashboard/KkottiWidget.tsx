@@ -233,7 +233,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
       <div className="kk-card" style={{ overflow: 'hidden' }}>
         <div style={{ padding: '14px 20px 12px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
+            <div className="kk-mascot-face" style={{
               width: 40, height: 40, borderRadius: '50%',
               background: 'linear-gradient(135deg, #ffe4ed, #ffd0e0)',
               border: '2px solid #FFB3CE',
@@ -272,7 +272,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
 
         {stats.topRecs.length === 0 ? (
           <div style={{ padding: '32px 20px', textAlign: 'center' }}>
-            <p style={{ fontSize: 28, margin: '0 0 8px' }}>·ㅅ·</p>
+            <p className="kk-mascot-face" style={{ fontSize: 28, margin: '0 0 8px' }}>·ㅅ·</p>
             <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>
               판매가 + 공급가가 입력된 상품을 등록하면 쫳통지수가 계산됩니다.
             </p>
@@ -286,7 +286,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
                 border: '1.5px solid #FFB3CE', borderRadius: 12,
                 display: 'flex', alignItems: 'flex-start', gap: 8,
               }}>
-                <div style={{
+                <div className="kk-mascot-face" style={{
                   width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                   background: '#F63B28', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 9, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px',

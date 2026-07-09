@@ -216,8 +216,9 @@ export default function SectionHeader({
               title={`${variantMeta.label} · ${variantMeta.signature}`}
               aria-label={`${variantMeta.label} 모드, ${accessoryLabel}`}
               style={{
-                // display governed by .kk-mascot-face (data-decor gate) — hidden
-                // in calm (default), inline-flex in mid/maximal.
+                // .kk-mascot-face gate hides this in calm (default) via !important;
+                // this inline display renders in mid/maximal.
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
                 marginLeft: 10,

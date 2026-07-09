@@ -42,11 +42,9 @@ html {
 
 body {
   color: var(--text-900);
-  /* Phase 2b (#220/#221): brand pink-wash canvas — pink dominates the wide area,
-     a faint pink radial adds warmth without introducing a 3rd structural color. */
-  background:
-    radial-gradient(1100px 760px at 12% -8%, var(--brand-pink-soft), transparent 60%),
-    var(--brand-pink-wash);
+  /* #222: neutral white canvas (gradient removed). Single reversible token —
+     flip --page-bg to var(--brand-pink-wash) to restore the pink canvas. */
+  background: var(--page-bg);
   background-attachment: fixed;
   min-height: 100vh;
   line-height: 1.55;
@@ -546,10 +544,24 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   --obj-lilac:  #C8B6FF;
   --obj-sky:    #BFE0E8;
 
-  /* ── Concept fonts (docs §2). Display = titles / KPI numbers ONLY;
-     body = Gowun Dodum for 가독. ── */
+  /* ── Font roles — 3 independent tokens (#222, spec §2). Each editable in
+     isolation when the Claude Design frame is finalized.
+       display  = trendy/concept — titles / hero / branding
+       body     = general prose
+       readable = ★가독성 전용 — data / tables / numbers / prices / forms / KPI
+                  values / order numbers. Stays Pretendard regardless of concept.
+     (--font-display is reserved by the published detail-page preset renderer =
+      Noto Serif KR; the shell display token is --font-pop-display.) ── */
   --font-pop-display: "Caprasimo", "Black Han Sans", var(--font-brand), Pretendard, -apple-system, sans-serif;
-  --font-read:        "Gowun Dodum", Pretendard, -apple-system, sans-serif;
+  --font-body:        "Gowun Dodum", Pretendard, -apple-system, sans-serif;
+  --font-readable:    "Pretendard", -apple-system, system-ui, "Segoe UI", sans-serif;
+  --font-read:        var(--font-body);   /* legacy alias (layout body consumer) */
+
+  /* ── Page canvas — NEUTRAL WHITE base (#222). Kept as a single reversible
+     token: flip --page-bg to var(--brand-pink-wash) to restore the pink
+     canvas once the concept frame is finalized. Pink now lives only in
+     badges / tags / active states / card-header tints, not the wide bg. ── */
+  --page-bg: #FCFCFD;
 }
 
 /* ── Concept palette variants — toggle targets (Phase 3 UI). Only the brand
@@ -580,12 +592,20 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   box-shadow: 3px 3px 0 var(--pop-shadow);
 }
 
-/* ── Display-font numeric utility — KPI values / big numbers only.
-   Digits stay tabular so columns of numbers line up. ── */
-.kk-pop-num {
-  font-family: var(--font-pop-display);
+/* ── Numeric utility — KPI values / big numbers. #222: uses the READABLE font
+   (Pretendard) not the display font — precise numbers must stay scannable
+   regardless of the concept display face. Digits tabular so columns align. ── */
+.kk-pop-num, .kk-num {
+  font-family: var(--font-readable);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+}
+
+/* ── #222: readable font on precise/dense information — data tables, form
+   controls, and anything opted in via .kk-readable. Titles/body keep their
+   own roles; only the "정확히 읽어야 하는" surfaces switch to Pretendard. ── */
+table, input, textarea, select, .kk-readable {
+  font-family: var(--font-readable);
 }
 
 /* ── Display-font heading utility — page/section titles. ── */
@@ -600,11 +620,15 @@ html, body { overflow-x: hidden; max-width: 100vw; }
    data-decor on <html> (ShellControls.tsx): calm (default) / mid / maximal.
 ═══════════════════════════════════════════════════════════════ */
 
-/* Mascot expression pills on section HEADINGS = 시각 노이즈 (spec §0). Hidden
-   by DEFAULT (= calm); revealed only when the user opts into mid / maximal. */
-.kk-mascot-face { display: none; }
-:root[data-decor="mid"] .kk-mascot-face,
-:root[data-decor="maximal"] .kk-mascot-face { display: inline-flex; }
+/* Mascot expressions = 시각 노이즈 (spec §0 / #62). Hidden by DEFAULT (= calm)
+   EVERYWHERE — section-heading pills AND widget-embedded faces — revealed only
+   in mid / maximal. The calm rule uses !important so it beats each element's
+   own inline `display` (widget faces keep their inline styles; no per-element
+   surgery needed). In mid/maximal no rule applies, so the natural/inline
+   display renders. Project-wide via the .kk-mascot-face class (#62 일괄). */
+:root:not([data-decor="mid"]):not([data-decor="maximal"]) .kk-mascot-face {
+  display: none !important;
+}
 
 /* Decorative motion (spin/wiggle/marquee/rotation/washi) is OFF unless maximal.
    Calm + mid keep the app still; essential feedback (loading spinners marked

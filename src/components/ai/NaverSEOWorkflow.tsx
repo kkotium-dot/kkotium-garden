@@ -256,8 +256,8 @@ export default function NaverSEOWorkflow({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* Kkotti face bubble */}
-          <div style={{
+          {/* Kkotti face bubble (#62: gated by calm default) */}
+          <div className="kk-mascot-face" style={{
             width: 36, height: 36, borderRadius: '50%',
             background: '#fff', border: `2px solid ${kk.color}30`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',

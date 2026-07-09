@@ -304,8 +304,9 @@ export default function KkottiBriefingWidget({ variantOverride }: KkottiBriefing
           alignItems: 'center',
         }}
       >
-        {/* Mascot face — 9-stage emotional state */}
+        {/* Mascot face — 9-stage emotional state (#62: gated by calm default) */}
         <div
+          className="kk-mascot-face"
           aria-hidden="true"
           style={{
             display: 'inline-flex',
