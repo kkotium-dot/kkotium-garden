@@ -154,21 +154,24 @@ const m = strings.matrix;
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+// Phase 2c step3 (#227 §3): control-tower STATUS/OVERALL → master hues.
+// bg=-bg · text=-tx · border=-fg (#226; the pill's Icon inherits currentColor
+// = text = -tx). States stay distinct.
 const STATUS_STYLE: Record<TrackStatus, { bg: string; border: string; text: string; icon: React.ElementType }> = {
-  done:           { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D', icon: CheckCircle2 },
-  in_progress:    { bg: '#EFF6FF', border: '#93C5FD', text: '#1D4ED8', icon: Loader2 },
-  awaiting_human: { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9', icon: Hand },
-  pending:        { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207', icon: Clock },
-  blocked:        { bg: '#FFF0EF', border: '#FFD6D3', text: '#C2410C', icon: XCircle },
-  none:           { bg: '#F8FAFC', border: '#E2E8F0', text: '#94A3B8', icon: MinusCircle },
+  done:           { bg: 'var(--m-mint-bg)',   border: 'var(--m-mint-fg)',   text: 'var(--m-mint-tx)',   icon: CheckCircle2 }, // mint
+  in_progress:    { bg: 'var(--m-sky-bg)',    border: 'var(--m-sky-fg)',    text: 'var(--m-sky-tx)',    icon: Loader2 },      // sky
+  awaiting_human: { bg: 'var(--m-violet-bg)', border: 'var(--m-violet-fg)', text: 'var(--m-violet-tx)', icon: Hand },        // violet
+  pending:        { bg: 'var(--m-amber-bg)',  border: 'var(--m-amber-fg)',  text: 'var(--m-amber-tx)',  icon: Clock },       // amber
+  blocked:        { bg: 'var(--m-coral-bg)',  border: 'var(--m-coral-fg)',  text: 'var(--m-coral-tx)',  icon: XCircle },     // coral
+  none:           { bg: 'var(--m-gray-bg)',   border: 'var(--m-gray-fg)',   text: 'var(--m-gray-tx)',   icon: MinusCircle }, // gray
 };
 
 const OVERALL_STYLE: Record<Overall, { bg: string; border: string; text: string }> = {
-  risk:      { bg: '#FFF0EF', border: '#FFD6D3', text: '#C2410C' },
-  attention: { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9' },
-  caution:   { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' },
-  ok:        { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' },
-  none:      { bg: '#F8FAFC', border: '#E2E8F0', text: '#94A3B8' },
+  risk:      { bg: 'var(--m-coral-bg)',  border: 'var(--m-coral-fg)',  text: 'var(--m-coral-tx)' },  // coral
+  attention: { bg: 'var(--m-orange-bg)', border: 'var(--m-orange-fg)', text: 'var(--m-orange-tx)' }, // orange
+  caution:   { bg: 'var(--m-amber-bg)',  border: 'var(--m-amber-fg)',  text: 'var(--m-amber-tx)' },  // amber
+  ok:        { bg: 'var(--m-mint-bg)',   border: 'var(--m-mint-fg)',   text: 'var(--m-mint-tx)' },   // mint
+  none:      { bg: 'var(--m-gray-bg)',   border: 'var(--m-gray-fg)',   text: 'var(--m-gray-tx)' },   // gray
 };
 
 const TRACK_KEYS = ['image', 'publish', 'line', 'ops'] as const;
@@ -176,30 +179,30 @@ const TRACK_KEYS = ['image', 'publish', 'line', 'ops'] as const;
 const MODE_ORDER: ProductMode[] = ['SIMPLE', 'ENHANCE', 'NEW'];
 
 const MODE_STYLE: Record<ProductMode, { bg: string; border: string; text: string }> = {
-  SIMPLE:  { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' }, // SIMPLE — green
-  ENHANCE: { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' }, // ENHANCE — amber
-  NEW:     { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9' }, // NEW — purple
+  SIMPLE:  { bg: 'var(--m-amber-bg)',  border: 'var(--m-amber-fg)',  text: 'var(--m-amber-tx)' },  // §3 MODE amber
+  ENHANCE: { bg: 'var(--m-sky-bg)',    border: 'var(--m-sky-fg)',    text: 'var(--m-sky-tx)' },    // sky
+  NEW:     { bg: 'var(--m-violet-bg)', border: 'var(--m-violet-fg)', text: 'var(--m-violet-tx)' }, // violet
 };
 
 const LINE_ORDER: ProductLine[] = ['A', 'B'];
 
 const LINE_STYLE: Record<ProductLine, { bg: string; border: string; text: string }> = {
-  A: { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' }, // A crop/as-is — green
-  B: { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9' }, // B build — purple
+  A: { bg: 'var(--m-sky-bg)',  border: 'var(--m-sky-fg)',  text: 'var(--m-sky-tx)' },   // §3 LINE sky
+  B: { bg: 'var(--m-gray-bg)', border: 'var(--m-gray-fg)', text: 'var(--m-gray-tx)' },  // gray
 };
 
 // nextAction severity → chip color (item 2). blocker red, action blue, review slate.
 const SEVERITY_STYLE: Record<NextAction['severity'], { bg: string; border: string; text: string }> = {
-  blocker: { bg: '#FFF0EF', border: '#FFD6D3', text: '#C2410C' },
-  action:  { bg: '#EFF6FF', border: '#93C5FD', text: '#1D4ED8' },
-  review:  { bg: '#F1F5F9', border: '#E2E8F0', text: '#475569' },
+  blocker: { bg: 'var(--m-coral-bg)', border: 'var(--m-coral-fg)', text: 'var(--m-coral-tx)' }, // coral
+  action:  { bg: 'var(--m-sky-bg)',   border: 'var(--m-sky-fg)',   text: 'var(--m-sky-tx)' },   // sky
+  review:  { bg: 'var(--m-gray-bg)',  border: 'var(--m-gray-fg)',  text: 'var(--m-gray-tx)' },  // gray
 };
 
 // Readiness grade → badge color (publish track SoT).
 function gradeColor(grade: string): { bg: string; border: string; text: string } {
-  if (grade === 'S' || grade === 'A') return { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' };
-  if (grade === 'B') return { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' };
-  return { bg: '#FFF0EF', border: '#FFD6D3', text: '#C2410C' }; // C/D
+  if (grade === 'S' || grade === 'A') return { bg: 'var(--m-mint-bg)',  border: 'var(--m-mint-fg)',  text: 'var(--m-mint-tx)' };
+  if (grade === 'B') return { bg: 'var(--m-amber-bg)', border: 'var(--m-amber-fg)', text: 'var(--m-amber-tx)' };
+  return { bg: 'var(--m-coral-bg)', border: 'var(--m-coral-fg)', text: 'var(--m-coral-tx)' }; // C/D
 }
 
 // Readiness badge — publish-readiness grade/score from validateForRegistration SoT.
@@ -220,10 +223,10 @@ function ReadinessBadge({ publish }: { publish: PublishInfo }) {
 
 // Image strategy tier → badge color (item 3). T0 cheapest (green) → T3 (purple).
 const TIER_STYLE: Record<ImageTier, { bg: string; border: string; text: string }> = {
-  T0: { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' },
-  T1: { bg: '#EFF6FF', border: '#93C5FD', text: '#1D4ED8' },
-  T2: { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' },
-  T3: { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9' },
+  T0: { bg: 'var(--m-grape-bg)',  border: 'var(--m-grape-fg)',  text: 'var(--m-grape-tx)' },  // §3 TIER grape/violet/sky/gray
+  T1: { bg: 'var(--m-violet-bg)', border: 'var(--m-violet-fg)', text: 'var(--m-violet-tx)' },
+  T2: { bg: 'var(--m-sky-bg)',    border: 'var(--m-sky-fg)',    text: 'var(--m-sky-tx)' },
+  T3: { bg: 'var(--m-gray-bg)',   border: 'var(--m-gray-fg)',   text: 'var(--m-gray-tx)' },
 };
 
 function TierBadge({ tier }: { tier: ImageTier }) {
@@ -424,12 +427,12 @@ function LineCell({ productId, line, onChanged }: {
 // drift(주의), dotted=미적용. NO red (75/15/10).
 type ChipTone = 'live' | 'curated' | 'db' | 'default' | 'drift' | 'none';
 const CHIP_STYLE: Record<ChipTone, { bg: string; border: string; text: string; dashed: boolean }> = {
-  live:    { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D', dashed: false },
-  curated: { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D', dashed: false },
-  db:      { bg: '#F8FAFC', border: '#E2E8F0', text: '#64748B', dashed: false },
-  default: { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207', dashed: false }, // attention, not red
-  drift:   { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207', dashed: false },
-  none:    { bg: 'transparent', border: '#CBD5E1', text: '#94A3B8', dashed: true },
+  live:    { bg: 'var(--m-mint-bg)',  border: 'var(--m-mint-fg)',  text: 'var(--m-mint-tx)',  dashed: false }, // mint
+  curated: { bg: 'var(--m-mint-bg)',  border: 'var(--m-mint-fg)',  text: 'var(--m-mint-tx)',  dashed: false },
+  db:      { bg: 'var(--m-gray-bg)',  border: 'var(--m-gray-fg)',  text: 'var(--m-gray-tx)',  dashed: false }, // gray
+  default: { bg: 'var(--m-amber-bg)', border: 'var(--m-amber-fg)', text: 'var(--m-amber-tx)', dashed: false }, // amber (attention, not red)
+  drift:   { bg: 'var(--m-amber-bg)', border: 'var(--m-amber-fg)', text: 'var(--m-amber-tx)', dashed: false },
+  none:    { bg: 'transparent',       border: 'var(--m-gray-fg)',  text: 'var(--m-gray-tx)',  dashed: true },
 };
 
 function ApplyStatusIndicator({ status }: { status: ApplyStatus }) {
@@ -469,7 +472,7 @@ function ApplyStatusIndicator({ status }: { status: ApplyStatus }) {
           style={{
             display: 'inline-flex', alignItems: 'center',
             fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 999,
-            background: '#EFF6FF', border: '1px solid #93C5FD', color: '#1D4ED8', whiteSpace: 'nowrap',
+            background: 'var(--m-sky-bg)', border: '1px solid var(--m-sky-fg)', color: 'var(--m-sky-tx)', whiteSpace: 'nowrap',
           }}
         >
           {(a.sourceStrategy as Record<string, string>)[status.sourceStrategy] ?? status.sourceStrategy}
@@ -482,10 +485,10 @@ function ApplyStatusIndicator({ status }: { status: ApplyStatus }) {
 // Operator action queue (#56) — single cross-product surface for "what needs
 // the operator, on which product, why". Red is reserved for GO_PENDING only.
 const CATEGORY_STYLE: Record<ActionCategory, { bg: string; border: string; text: string }> = {
-  GO_PENDING:     { bg: '#FFF0EF', border: '#FFD6D3', text: '#C2410C' }, // red — irreversible GO only
-  AUTH:           { bg: '#F5F3FF', border: '#C4B5FD', text: '#6D28D9' }, // paused / external auth
-  INPUT_DECISION: { bg: '#FEFCE8', border: '#FDE68A', text: '#A16207' }, // amber — decide / input
-  AUTO:           { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D' }, // green — autonomous
+  GO_PENDING:     { bg: 'var(--m-coral-bg)',  border: 'var(--m-coral-fg)',  text: 'var(--m-coral-tx)' },  // coral — irreversible GO only
+  AUTH:           { bg: 'var(--m-violet-bg)', border: 'var(--m-violet-fg)', text: 'var(--m-violet-tx)' }, // violet — paused / external auth
+  INPUT_DECISION: { bg: 'var(--m-amber-bg)',  border: 'var(--m-amber-fg)',  text: 'var(--m-amber-tx)' },  // amber — decide / input
+  AUTO:           { bg: 'var(--m-mint-bg)',   border: 'var(--m-mint-fg)',   text: 'var(--m-mint-tx)' },   // mint — autonomous
 };
 // Most urgent first (GO), then paused auth, then decisions, then autonomous.
 const CATEGORY_ORDER: ActionCategory[] = ['GO_PENDING', 'AUTH', 'INPUT_DECISION', 'AUTO'];
@@ -1253,8 +1256,8 @@ export default function ControlTowerMatrixWidget() {
           className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
           style={
             wip.over
-              ? { backgroundColor: '#FEFCE8', border: '1px solid #FDE68A', color: '#A16207' }
-              : { backgroundColor: '#F1F5F9', border: '1px solid #E2E8F0', color: '#475569' }
+              ? { backgroundColor: 'var(--m-amber-bg)', border: '1px solid var(--m-amber-fg)', color: 'var(--m-amber-tx)' }
+              : { backgroundColor: 'var(--m-gray-bg)', border: '1px solid var(--m-gray-fg)', color: 'var(--m-gray-tx)' }
           }
         >
           {wip.over && <AlertTriangle size={12} />}
@@ -1267,7 +1270,7 @@ export default function ControlTowerMatrixWidget() {
       {hasBlocked && (
         <div
           className="mb-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium"
-          style={{ backgroundColor: '#FFF0EF', border: '1px solid #FFD6D3', color: '#C2410C' }}
+          style={{ backgroundColor: 'var(--m-coral-bg)', border: '1px solid var(--m-coral-fg)', color: 'var(--m-coral-tx)' }}
         >
           <XCircle size={12} />
           {m.blockedPinned}
