@@ -177,7 +177,7 @@ export default function KakaoSettingsPage() {
           </span>
         </div>
         <div style={{ height: 8, background: '#F4E4A6', borderRadius: 99, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${data.progressPercent}%`, background: data.eligibleForActivation ? '#22C55E' : '#FEE500', borderRadius: 99, transition: 'width 0.4s' }} />
+          <div style={{ height: '100%', width: `${data.progressPercent}%`, background: data.eligibleForActivation ? 'var(--success)' : '#FEE500', borderRadius: 99, transition: 'width 0.4s' }} />
         </div>
         <p style={{ fontSize: 11, color: '#7A5A1A', margin: '8px 0 0', lineHeight: 1.5 }}>
           {data.eligibleForActivation
@@ -274,7 +274,7 @@ export default function KakaoSettingsPage() {
       {/* Section 3: Solapi credentials (disabled until eligible) */}
       <Section
         title="알림톡 발송 연동 (솔라피)"
-        icon={data.solapiConfigured ? <CheckCircle2 size={14} color="#22C55E" /> : <Lock size={14} />}
+        icon={data.solapiConfigured ? <CheckCircle2 size={14} style={{ color: 'var(--success-tx)' }} /> : <Lock size={14} />}
         muted={!data.solapiConfigured}
       >
         {!data.solapiConfigured && (
@@ -337,8 +337,8 @@ export default function KakaoSettingsPage() {
               (item.key === 'activate' && data.solapiConfigured);
             return (
               <li key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #FFE4EC' }}>
-                {done ? <CheckCircle2 size={16} color="#22C55E" /> : <Circle size={16} color="#CCC" />}
-                <span style={{ fontSize: 13, color: done ? '#22C55E' : '#444', textDecoration: done ? 'line-through' : 'none' }}>
+                {done ? <CheckCircle2 size={16} style={{ color: 'var(--success-tx)' }} /> : <Circle size={16} color="#CCC" />}
+                <span style={{ fontSize: 13, color: done ? 'var(--success-tx)' : '#444', textDecoration: done ? 'line-through' : 'none' }}>
                   {item.label}
                 </span>
                 {item.required && !done && (
@@ -355,7 +355,7 @@ export default function KakaoSettingsPage() {
       {/* Save bar */}
       <div style={{ position: 'sticky', bottom: 16, marginTop: 24, padding: 12, background: '#fff', border: '2px solid #FF6B8A', borderRadius: 12, boxShadow: '0 4px 16px rgba(255,107,138,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ fontSize: 12, color: '#666' }}>
-          {savedAt && <span style={{ color: '#22C55E', fontWeight: 600 }}>저장 완료</span>}
+          {savedAt && <span style={{ color: 'var(--success-tx)', fontWeight: 600 }}>저장 완료</span>}
           {error && <span style={{ color: '#F63B28' }}>{error}</span>}
           {!savedAt && !error && '변경 사항이 있다면 저장해주세요'}
         </div>

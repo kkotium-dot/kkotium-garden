@@ -42,27 +42,31 @@ const STATUS: Record<string, {
   label: string; color: string; bg: string; border: string;
   rowBg: string; rowOpacity: number; group: 'action' | 'progress' | 'done' | 'problem';
 }> = {
-  PENDING:          { label: '결제대기',  color: '#92400e', bg: '#fffbeb', border: '#fde68a', rowBg: '#fffdf5', rowOpacity: 1,   group: 'action'   },
-  PAID:             { label: '결제완료',  color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe', rowBg: '#f0f7ff', rowOpacity: 1,   group: 'action'   },
-  PAYED:            { label: '결제완료',  color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe', rowBg: '#f0f7ff', rowOpacity: 1,   group: 'action'   },
-  SHIPPING:         { label: '배송중',    color: '#6d28d9', bg: '#f5f3ff', border: '#c4b5fd', rowBg: '#faf9ff', rowOpacity: 1,   group: 'progress' },
-  DELIVERING:       { label: '배송중',    color: '#6d28d9', bg: '#f5f3ff', border: '#c4b5fd', rowBg: '#faf9ff', rowOpacity: 1,   group: 'progress' },
-  DELIVERED:        { label: '배송완료',  color: '#065f46', bg: '#ecfdf5', border: '#6ee7b7', rowBg: '#f5fef9', rowOpacity: 1,   group: 'progress' },
-  COMPLETED:        { label: '구매확정',  color: '#14532d', bg: '#dcfce7', border: '#86efac', rowBg: '#f4fef7', rowOpacity: 1,   group: 'done'     },
-  CANCELLED:        { label: '취소완료',  color: '#991b1b', bg: '#fef2f2', border: '#fca5a5', rowBg: '#fff5f5', rowOpacity: 0.72, group: 'problem' },
-  CANCELED:         { label: '취소완료',  color: '#991b1b', bg: '#fef2f2', border: '#fca5a5', rowBg: '#fff5f5', rowOpacity: 0.72, group: 'problem' },
-  CANCEL_DONE:      { label: '취소완료',  color: '#991b1b', bg: '#fef2f2', border: '#fca5a5', rowBg: '#fff5f5', rowOpacity: 0.72, group: 'problem' },
-  CANCEL_REQUESTED: { label: '취소요청',  color: '#c2410c', bg: '#fff7ed', border: '#fed7aa', rowBg: '#fffaf5', rowOpacity: 1,   group: 'problem'  },
-  CANCEL_REQUEST:   { label: '취소요청',  color: '#c2410c', bg: '#fff7ed', border: '#fed7aa', rowBg: '#fffaf5', rowOpacity: 1,   group: 'problem'  },
-  RETURNED:         { label: '반품완료',  color: '#7c2d12', bg: '#fff7ed', border: '#fdba74', rowBg: '#fff8f3', rowOpacity: 0.72, group: 'problem' },
-  RETURN_DONE:      { label: '반품완료',  color: '#7c2d12', bg: '#fff7ed', border: '#fdba74', rowBg: '#fff8f3', rowOpacity: 0.72, group: 'problem' },
-  RETURN_REQUESTED: { label: '반품요청',  color: '#b45309', bg: '#fffbeb', border: '#fde68a', rowBg: '#fffef5', rowOpacity: 1,   group: 'problem'  },
-  RETURN_REQUEST:   { label: '반품요청',  color: '#b45309', bg: '#fffbeb', border: '#fde68a', rowBg: '#fffef5', rowOpacity: 1,   group: 'problem'  },
-  EXCHANGED:        { label: '교환완료',  color: '#0e7490', bg: '#ecfeff', border: '#a5f3fc', rowBg: '#f5feff', rowOpacity: 1,   group: 'done'     },
+  // Phase 2c step 2 (#227 §3): order-status taxonomy → master hues. color=-tx ·
+  // bg=-bg · border=-fg (#226). rowBg (subtle row tint) kept literal. All 8
+  // states stay distinct: 대기 amber · 완료 sky · 배송중 violet · 배송완료 mint ·
+  // 확정 teal · 취소 coral · 반품 orange · 교환 cyan.
+  PENDING:          { label: '결제대기',  color: 'var(--m-amber-tx)',  bg: 'var(--m-amber-bg)',  border: 'var(--m-amber-fg)',  rowBg: '#fffdf5', rowOpacity: 1,   group: 'action'   },
+  PAID:             { label: '결제완료',  color: 'var(--m-sky-tx)',    bg: 'var(--m-sky-bg)',    border: 'var(--m-sky-fg)',    rowBg: '#f0f7ff', rowOpacity: 1,   group: 'action'   },
+  PAYED:            { label: '결제완료',  color: 'var(--m-sky-tx)',    bg: 'var(--m-sky-bg)',    border: 'var(--m-sky-fg)',    rowBg: '#f0f7ff', rowOpacity: 1,   group: 'action'   },
+  SHIPPING:         { label: '배송중',    color: 'var(--m-violet-tx)', bg: 'var(--m-violet-bg)', border: 'var(--m-violet-fg)', rowBg: '#faf9ff', rowOpacity: 1,   group: 'progress' },
+  DELIVERING:       { label: '배송중',    color: 'var(--m-violet-tx)', bg: 'var(--m-violet-bg)', border: 'var(--m-violet-fg)', rowBg: '#faf9ff', rowOpacity: 1,   group: 'progress' },
+  DELIVERED:        { label: '배송완료',  color: 'var(--m-mint-tx)',   bg: 'var(--m-mint-bg)',   border: 'var(--m-mint-fg)',   rowBg: '#f5fef9', rowOpacity: 1,   group: 'progress' },
+  COMPLETED:        { label: '구매확정',  color: 'var(--m-teal-tx)',   bg: 'var(--m-teal-bg)',   border: 'var(--m-teal-fg)',   rowBg: '#f4fef7', rowOpacity: 1,   group: 'done'     },
+  CANCELLED:        { label: '취소완료',  color: 'var(--m-coral-tx)',  bg: 'var(--m-coral-bg)',  border: 'var(--m-coral-fg)',  rowBg: '#fff5f5', rowOpacity: 0.72, group: 'problem' },
+  CANCELED:         { label: '취소완료',  color: 'var(--m-coral-tx)',  bg: 'var(--m-coral-bg)',  border: 'var(--m-coral-fg)',  rowBg: '#fff5f5', rowOpacity: 0.72, group: 'problem' },
+  CANCEL_DONE:      { label: '취소완료',  color: 'var(--m-coral-tx)',  bg: 'var(--m-coral-bg)',  border: 'var(--m-coral-fg)',  rowBg: '#fff5f5', rowOpacity: 0.72, group: 'problem' },
+  CANCEL_REQUESTED: { label: '취소요청',  color: 'var(--m-coral-tx)',  bg: 'var(--m-coral-bg)',  border: 'var(--m-coral-fg)',  rowBg: '#fffaf5', rowOpacity: 1,   group: 'problem'  },
+  CANCEL_REQUEST:   { label: '취소요청',  color: 'var(--m-coral-tx)',  bg: 'var(--m-coral-bg)',  border: 'var(--m-coral-fg)',  rowBg: '#fffaf5', rowOpacity: 1,   group: 'problem'  },
+  RETURNED:         { label: '반품완료',  color: 'var(--m-orange-tx)', bg: 'var(--m-orange-bg)', border: 'var(--m-orange-fg)', rowBg: '#fff8f3', rowOpacity: 0.72, group: 'problem' },
+  RETURN_DONE:      { label: '반품완료',  color: 'var(--m-orange-tx)', bg: 'var(--m-orange-bg)', border: 'var(--m-orange-fg)', rowBg: '#fff8f3', rowOpacity: 0.72, group: 'problem' },
+  RETURN_REQUESTED: { label: '반품요청',  color: 'var(--m-orange-tx)', bg: 'var(--m-orange-bg)', border: 'var(--m-orange-fg)', rowBg: '#fffef5', rowOpacity: 1,   group: 'problem'  },
+  RETURN_REQUEST:   { label: '반품요청',  color: 'var(--m-orange-tx)', bg: 'var(--m-orange-bg)', border: 'var(--m-orange-fg)', rowBg: '#fffef5', rowOpacity: 1,   group: 'problem'  },
+  EXCHANGED:        { label: '교환완료',  color: 'var(--m-cyan-tx)',   bg: 'var(--m-cyan-bg)',   border: 'var(--m-cyan-fg)',   rowBg: '#f5feff', rowOpacity: 1,   group: 'done'     },
 };
 
 function getSt(s: string) {
-  return STATUS[s] ?? { label: s || '—', color: '#888', bg: '#f9fafb', border: '#e5e7eb', rowBg: 'transparent', rowOpacity: 1, group: 'progress' as const };
+  return STATUS[s] ?? { label: s || '—', color: 'var(--m-gray-tx)', bg: 'var(--m-gray-bg)', border: 'var(--m-gray-fg)', rowBg: 'transparent', rowOpacity: 1, group: 'progress' as const };
 }
 function isPaid(s: string)    { return ['PAID', 'PAYED'].includes(s); }
 function isProblem(s: string) { return getSt(s).group === 'problem'; }
@@ -89,9 +93,9 @@ function getReviewBadge(order: Order): ReviewBadge | null {
     if (elapsed >= 1 && elapsed <= 3) {
       return {
         label: '구매확정 유도',
-        color: '#15803d',
-        bg: '#dcfce7',
-        border: '#86efac',
+        color: 'var(--m-mint-tx)',
+        bg: 'var(--m-mint-bg)',
+        border: 'var(--m-mint-fg)',
         hint: `배송완료 ${Math.floor(elapsed)}일째 — 알림톡 추천 시점`,
         alimtalkType: 'CONFIRM',
       };
@@ -103,9 +107,9 @@ function getReviewBadge(order: Order): ReviewBadge | null {
     if (elapsed >= 1 && elapsed <= 3) {
       return {
         label: '리뷰 요청',
-        color: '#1d4ed8',
-        bg: '#dbeafe',
-        border: '#93c5fd',
+        color: 'var(--m-sky-tx)',
+        bg: 'var(--m-sky-bg)',
+        border: 'var(--m-sky-fg)',
         hint: `구매확정 ${Math.floor(elapsed)}일째 — 첫 리뷰 알림 시점`,
         alimtalkType: 'REVIEW',
       };
@@ -113,9 +117,9 @@ function getReviewBadge(order: Order): ReviewBadge | null {
     if (elapsed >= 28 && elapsed <= 32) {
       return {
         label: '한달 리뷰',
-        color: '#7c3aed',
-        bg: '#ede9fe',
-        border: '#c4b5fd',
+        color: 'var(--m-violet-tx)',
+        bg: 'var(--m-violet-bg)',
+        border: 'var(--m-violet-fg)',
         hint: `구매확정 ${Math.floor(elapsed)}일째 — 한달 사용 리뷰 시점`,
         alimtalkType: 'MONTH_REVIEW',
       };
