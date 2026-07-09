@@ -74,7 +74,7 @@ function gradeBadgeStyle(score: number): { bg: string; color: string; label: str
   if (score >= 75) return { bg: '#F0FDF4', color: '#16a34a', label: 'A' };
   if (score >= 60) return { bg: '#EFF6FF', color: '#2563EB', label: 'B' };
   if (score >= 45) return { bg: '#FFFBEB', color: '#D97706', label: 'C' };
-  return              { bg: '#FFF0F5',  color: '#e62310',  label: 'D' };
+  return              { bg: '#FFF0F5',  color: '#F63B28',  label: 'D' };
 }
 
 // C-12: Inline competition level badge for table rows
@@ -112,7 +112,7 @@ function CompetitionCell({ productName }: { productName: string }) {
 function ScoreBar({ detail, total }: { detail?: SeoDetail; total: number }) {
   if (!detail) return <span className="text-xs" style={{ color: '#B0A0A8' }}>{total}점</span>;
   const segments = [
-    { label: '카테고리', score: detail.categoryScore, max: 25, color: '#e62310' },
+    { label: '카테고리', score: detail.categoryScore, max: 25, color: '#F63B28' },
     { label: '상품명',   score: detail.titleScore,     max: 25, color: '#F97316' },
     { label: '속성',     score: detail.attributeScore, max: 15, color: '#EAB308' },
     { label: '키워드',   score: detail.keywordScore,   max: 15, color: '#22C55E' },
@@ -141,8 +141,8 @@ function CheckDot({ ok, label }: { ok: boolean; label: string }) {
     <div className="flex items-center gap-1.5 text-xs">
       {ok
         ? <Check size={10} className="shrink-0" style={{ color: '#16a34a' }} />
-        : <AlertTriangle size={10} className="shrink-0" style={{ color: '#e62310' }} />}
-      <span style={{ color: ok ? '#16a34a' : '#e62310' }}>{label}</span>
+        : <AlertTriangle size={10} className="shrink-0" style={{ color: '#F63B28' }} />}
+      <span style={{ color: ok ? '#16a34a' : '#F63B28' }}>{label}</span>
     </div>
   );
 }
@@ -201,7 +201,7 @@ function KeywordStatsPanel({ keywords }: { keywords: string[] }) {
 // ─── AI Style Buttons ─────────────────────────────────────────────────────────
 
 const AI_STYLES = [
-  { key: 'orthodox' as const, icon: Zap,    label: '정석 SEO',   desc: '검색량 최대화, 정확한 키워드 매칭', color: '#e62310', bg: '#FFF0F5', border: '#FFB3CE' },
+  { key: 'orthodox' as const, icon: Zap,    label: '정석 SEO',   desc: '검색량 최대화, 정확한 키워드 매칭', color: '#F63B28', bg: '#FFF0F5', border: '#FFB3CE' },
   { key: 'emotional' as const, icon: Heart, label: '감성 타겟',  desc: '감성·시즌·선물 소구, 높은 클릭률',  color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
   { key: 'niche' as const, icon: Target,    label: '틈새 키워드', desc: '세부 속성·롱테일, 낮은 경쟁',       color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
 ] as const;
@@ -481,8 +481,8 @@ function ReviewAnalysisPanel({
             <div style={{ padding: '10px 12px', borderRadius: 8, background: '#FFF0F5', border: '1.5px solid #FFB3CE' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <Sparkles size={11} style={{ color: '#e62310' }} />
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#e62310', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <Sparkles size={11} style={{ color: '#F63B28' }} />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#F63B28', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     추천 SEO 태그 ({newTags.length}개 추가 가능 · 남은 슬롯 {remainingSlots}/10)
                   </span>
                 </div>
@@ -491,7 +491,7 @@ function ReviewAnalysisPanel({
                     onClick={() => onApplyAllTags(newTags.slice(0, remainingSlots))}
                     style={{
                       fontSize: 10, fontWeight: 800, padding: '4px 10px', borderRadius: 6,
-                      background: '#e62310', color: '#fff', border: 'none', cursor: 'pointer',
+                      background: '#F63B28', color: '#fff', border: 'none', cursor: 'pointer',
                       display: 'inline-flex', alignItems: 'center', gap: 3,
                     }}
                   >
@@ -511,7 +511,7 @@ function ReviewAnalysisPanel({
                         display: 'inline-flex', alignItems: 'center', gap: 3,
                         fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 99,
                         background: already ? '#E5E7EB' : '#fff',
-                        color: already ? '#9CA3AF' : '#e62310',
+                        color: already ? '#9CA3AF' : '#F63B28',
                         border: `1px solid ${already ? '#D1D5DB' : '#FFB3CE'}`,
                         cursor: already || remainingSlots <= 0 ? 'not-allowed' : 'pointer',
                         textDecoration: already ? 'line-through' : 'none',
@@ -701,7 +701,7 @@ function SeoEditPanel({
           style={{
             display: 'flex', alignItems: 'center', gap: 5,
             fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 8,
-            background: saved ? '#16a34a' : '#e62310', color: '#fff',
+            background: saved ? '#16a34a' : '#F63B28', color: '#fff',
             border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
             opacity: saving ? 0.7 : 1, transition: 'background 0.2s',
           }}
@@ -752,7 +752,7 @@ function SeoEditPanel({
           {keywords && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
               {keywords.split(',').filter(k => k.trim()).map((kw, i) => (
-                <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#F8DCE5', color: '#e62310', fontWeight: 600 }}>{kw.trim()}</span>
+                <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#F8DCE5', color: '#F63B28', fontWeight: 600 }}>{kw.trim()}</span>
               ))}
             </div>
           )}
@@ -800,7 +800,7 @@ function SeoEditPanel({
           <label style={lbl()}>SEO 태그 ({tags.length}/10)</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
             {tags.map(tag => (
-              <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#FFF0F5', color: '#e62310', border: '1px solid #FFB3CE' }}>
+              <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#FFF0F5', color: '#F63B28', border: '1px solid #FFB3CE' }}>
                 #{tag}
                 <button onClick={() => setTags(prev => prev.filter(t => t !== tag))}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FFB3CE', padding: 0, lineHeight: 1, fontSize: 14, display: 'flex', alignItems: 'center' }}>
@@ -820,7 +820,7 @@ function SeoEditPanel({
                 style={{ ...inp({ flex: '1' }) }}
               />
               <button onClick={addTag}
-                style={{ fontSize: 11, fontWeight: 700, padding: '7px 12px', borderRadius: 8, background: '#FFF0F5', color: '#e62310', border: '1px solid #FFB3CE', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                style={{ fontSize: 11, fontWeight: 700, padding: '7px 12px', borderRadius: 8, background: '#FFF0F5', color: '#F63B28', border: '1px solid #FFB3CE', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 + 추가
               </button>
             </div>
@@ -915,9 +915,9 @@ export default function NaverSeoProductTable({
         <input type="checkbox" checked={isAllSelected}
           ref={input => { if (input) input.indeterminate = isSomeSelected; }}
           onChange={handleSelectAll}
-          className="w-4 h-4 rounded border-gray-300 text-[#E8001F] focus:ring-[#E8001F]/30" />
+          className="w-4 h-4 rounded border-gray-300 text-[#F63B28] focus:ring-[#F63B28]/30" />
         {['상품명 / SKU', '경쟁', 'SEO 점수 상세', '체크리스트', '작업'].map(h => (
-          <span key={h} className="text-[11px] font-black tracking-wide" style={{ color: '#e62310' }}>{h}</span>
+          <span key={h} className="text-[11px] font-black tracking-wide" style={{ color: '#F63B28' }}>{h}</span>
         ))}
       </div>
       <div style={{ height: 1, background: '#F8DCE5' }} />
@@ -941,7 +941,7 @@ export default function NaverSeoProductTable({
               className="group transition-colors"
               style={{
                 background: isSelected ? 'rgba(230,35,16,0.04)' : 'transparent',
-                borderLeft: isExpanded ? '3px solid #e62310' : '3px solid transparent',
+                borderLeft: isExpanded ? '3px solid #F63B28' : '3px solid transparent',
               }}
               onMouseEnter={e => { if (!isSelected && !isExpanded) (e.currentTarget as HTMLElement).style.background = '#FFF8FA'; }}
               onMouseLeave={e => { if (!isSelected && !isExpanded) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
@@ -953,7 +953,7 @@ export default function NaverSeoProductTable({
                 {/* Checkbox */}
                 <div onClick={e => e.stopPropagation()}>
                   <input type="checkbox" checked={isSelected} onChange={() => handleSelectOne(product.id)}
-                    className="w-4 h-4 rounded border-gray-300 text-[#E8001F] focus:ring-[#E8001F]/30" />
+                    className="w-4 h-4 rounded border-gray-300 text-[#F63B28] focus:ring-[#F63B28]/30" />
                 </div>
 
                 {/* Image + Name */}
@@ -981,7 +981,7 @@ export default function NaverSeoProductTable({
                     }
                   </div>
                   {isExpanded
-                    ? <ChevronDown size={14} className="shrink-0" style={{ color: '#e62310' }} />
+                    ? <ChevronDown size={14} className="shrink-0" style={{ color: '#F63B28' }} />
                     : <ChevronRight size={14} className="shrink-0" style={{ color: '#D4B0BC' }} />}
                 </div>
 
@@ -1029,7 +1029,7 @@ export default function NaverSeoProductTable({
                 <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                   <Link href={`/products/new?edit=${product.id}`}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition"
-                    style={{ background: '#FFF0F5', color: '#e62310', border: '1px solid #FFB3CE' }}>
+                    style={{ background: '#FFF0F5', color: '#F63B28', border: '1px solid #FFB3CE' }}>
                     <Edit2 size={11} /> 수정
                   </Link>
                 </div>
@@ -1043,11 +1043,11 @@ export default function NaverSeoProductTable({
                 {/* Suggestions */}
                 {product.suggestions.length > 0 && (
                   <div style={{ paddingTop: 12, paddingBottom: 10 }}>
-                    <p className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: '#e62310' }}>개선 필요 항목</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: '#F63B28' }}>개선 필요 항목</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {product.suggestions.slice(0, 4).map((s, i) => (
                         <p key={i} className="text-xs flex items-start gap-1.5" style={{ color: '#666', margin: 0 }}>
-                          <AlertTriangle size={10} className="shrink-0 mt-0.5" style={{ color: '#e62310' }} />
+                          <AlertTriangle size={10} className="shrink-0 mt-0.5" style={{ color: '#F63B28' }} />
                           {s}
                         </p>
                       ))}
@@ -1061,7 +1061,7 @@ export default function NaverSeoProductTable({
                     <p className="text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: '#888' }}>현재 키워드</p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 4 }}>
                       {kwArr.map((kw, i) => (
-                        <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 8, background: '#F8DCE5', color: '#e62310', fontWeight: 600 }}>{kw}</span>
+                        <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 8, background: '#F8DCE5', color: '#F63B28', fontWeight: 600 }}>{kw}</span>
                       ))}
                     </div>
                     <KeywordStatsPanel keywords={kwArr.slice(0, 5)} />
@@ -1089,7 +1089,7 @@ export default function NaverSeoProductTable({
         style={{ borderTop: '1px solid #F8DCE5', background: '#FFF8FA', color: '#B0A0A8' }}>
         <span>{products.length}개 상품</span>
         {selectedIds.length > 0 && (
-          <span style={{ color: '#e62310', fontWeight: 700 }}>{selectedIds.length}개 선택됨</span>
+          <span style={{ color: '#F63B28', fontWeight: 700 }}>{selectedIds.length}개 선택됨</span>
         )}
       </div>
     </div>

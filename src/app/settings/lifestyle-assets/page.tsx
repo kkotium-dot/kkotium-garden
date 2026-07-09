@@ -194,7 +194,7 @@ export default function LifestyleAssetsPage() {
               disabled={uploadBusy}
               style={{
                 marginTop: 4, padding: '10px 16px',
-                background: uploadBusy ? '#aaa' : '#e62310',
+                background: uploadBusy ? '#aaa' : '#F63B28',
                 color: '#fff', border: 'none', borderRadius: 10,
                 fontSize: 13, fontWeight: 800,
                 cursor: uploadBusy ? 'not-allowed' : 'pointer',

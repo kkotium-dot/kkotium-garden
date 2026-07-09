@@ -278,7 +278,7 @@ export default function ControlTower({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-          <Flower2 size={15} style={{ color: "var(--gp-red-500, #e62310)" }} />
+          <Flower2 size={15} style={{ color: "var(--gp-red-500, #F63B28)" }} />
           <span style={{ fontSize: 12, fontWeight: 800, color: "var(--gp-ink-900)" }}>{t.gaugeLabel}</span>
           <span style={{ marginLeft: "auto", fontSize: 22, fontWeight: 900, color: LIGHT_COLOR[gaugeLight].dot }}>
             {score}

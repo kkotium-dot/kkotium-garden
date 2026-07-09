@@ -68,7 +68,7 @@ function relTime(iso: string | null): string {
 function SourceBadge({ source }: { source: 'NATIVE' | 'IMPORTED' }) {
   const c = source === 'IMPORTED'
     ? { color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe', label: strings.zone2.filterImported }
-    : { color: '#e62310', bg: '#fff0ef', border: '#ffd6d3', label: strings.zone2.filterNative };
+    : { color: '#F63B28', bg: '#fff0ef', border: '#ffd6d3', label: strings.zone2.filterNative };
   return (
     <span style={{ fontSize: 11, fontWeight: 800, color: c.color, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 6, padding: '2px 7px', whiteSpace: 'nowrap' }}>
       {c.label}
@@ -164,7 +164,7 @@ function ImportModal({ onClose, onImported }: { onClose: () => void; onImported:
         style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 640, maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
         {/* header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', borderBottom: '1px solid #F8DCE5' }}>
-          <Store size={18} style={{ color: '#e62310' }} />
+          <Store size={18} style={{ color: '#F63B28' }} />
           <p style={{ margin: 0, flex: 1, fontSize: 15, fontWeight: 800, color: '#111827' }}>{strings.modal.title}</p>
           <button onClick={onClose} aria-label={strings.modal.close} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><X size={18} /></button>
         </div>
@@ -211,7 +211,7 @@ function ImportModal({ onClose, onImported }: { onClose: () => void; onImported:
           </button>
           <div style={{ flex: 1 }} />
           <button onClick={() => void doImport()} disabled={selected.size === 0 || importing}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: '#fff', background: selected.size === 0 ? '#f3b8c6' : '#e62310', border: 'none', borderRadius: 10, padding: '9px 16px', cursor: selected.size === 0 || importing ? 'not-allowed' : 'pointer' }}>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: '#fff', background: selected.size === 0 ? '#f3b8c6' : '#F63B28', border: 'none', borderRadius: 10, padding: '9px 16px', cursor: selected.size === 0 || importing ? 'not-allowed' : 'pointer' }}>
             {importing ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
             {strings.modal.selectedCount.replace('{n}', String(selected.size))} · {strings.modal.importCta}
           </button>
@@ -325,7 +325,7 @@ function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => vo
                       <div key={f.key} style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr 1fr', fontSize: 12, borderBottom: '1px solid #f3f0ea', background: differ ? '#fffdf6' : '#fff' }}>
                         <div style={{ padding: '8px 10px', color: '#374151', fontWeight: 600 }}>
                           {(strings.fields as Record<string, string>)[f.key] ?? f.key}
-                          <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 800, color: f.sor === 'naver' ? '#1d4ed8' : '#e62310' }}>
+                          <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 800, color: f.sor === 'naver' ? '#1d4ed8' : '#F63B28' }}>
                             {f.sor === 'naver' ? strings.sor.naver : strings.sor.app}
                           </span>
                         </div>
@@ -481,7 +481,7 @@ export default function ProductLinkPage() {
       <div style={{ marginBottom: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff0ef', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Link2 size={20} style={{ color: '#e62310' }} />
+            <Link2 size={20} style={{ color: '#F63B28' }} />
           </div>
           <div>
             <h1 className="font-display" style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>{strings.pageTitle}</h1>
@@ -494,11 +494,11 @@ export default function ProductLinkPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14, marginBottom: 18 }}>
         <div style={{ background: '#fff', border: '1px solid #F8DCE5', borderRadius: 16, padding: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <Store size={16} style={{ color: '#e62310' }} />
+            <Store size={16} style={{ color: '#F63B28' }} />
             <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#111827' }}>{strings.zone1.browseTitle}</p>
           </div>
           <p style={{ margin: '0 0 12px', fontSize: 12, color: '#6b7280' }}>{strings.zone1.browseDesc}</p>
-          <button onClick={() => setShowModal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: '#fff', background: '#e62310', border: 'none', borderRadius: 10, padding: '9px 16px', cursor: 'pointer' }}>
+          <button onClick={() => setShowModal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: '#fff', background: '#F63B28', border: 'none', borderRadius: 10, padding: '9px 16px', cursor: 'pointer' }}>
             <Store size={14} />{strings.zone1.browseCta}
           </button>
         </div>
@@ -531,7 +531,7 @@ export default function ProductLinkPage() {
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {FILTERS.map((f) => (
               <button key={f.key} onClick={() => setFilter(f.key)}
-                style={{ fontSize: 12, fontWeight: 700, color: filter === f.key ? '#fff' : '#6b7280', background: filter === f.key ? '#e62310' : '#f3f4f6', border: 'none', borderRadius: 99, padding: '4px 12px', cursor: 'pointer' }}>
+                style={{ fontSize: 12, fontWeight: 700, color: filter === f.key ? '#fff' : '#6b7280', background: filter === f.key ? '#F63B28' : '#f3f4f6', border: 'none', borderRadius: 99, padding: '4px 12px', cursor: 'pointer' }}>
                 {f.label} {f.n}
               </button>
             ))}

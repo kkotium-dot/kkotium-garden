@@ -59,13 +59,12 @@ export default function RootLayout({
       <body
         className="font-pretendard antialiased"
         style={{
-          // DASHBOARD-SHELL Phase 2: Gowun Dodum body (가독) + warm cream canvas
-          // with a very light pink/sage radial wash (docs §4, "아주 옅게").
+          // DASHBOARD-SHELL Phase 2b (#220/#221): Gowun Dodum body (가독) + brand
+          // pink-wash canvas (structure stays pink-red — no 3rd structural color).
           fontFamily: 'var(--font-read)',
           background:
-            'radial-gradient(1200px 780px at 12% -8%, rgba(255,184,200,0.28), transparent 58%),' +
-            'radial-gradient(1000px 700px at 100% 0%, rgba(111,168,143,0.12), transparent 55%),' +
-            'var(--canvas-cream)',
+            'radial-gradient(1100px 760px at 12% -8%, var(--brand-pink-soft), transparent 60%),' +
+            'var(--brand-pink-wash)',
           backgroundAttachment: 'fixed',
           minHeight: '100vh',
         }}

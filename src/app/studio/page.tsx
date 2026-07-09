@@ -629,7 +629,7 @@ export default function StudioPage() {
   return (
     <Suspense fallback={
       <div style={{ padding: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-        <Loader2 size={20} className="animate-spin" style={{ color: '#e62310' }} />
+        <Loader2 size={20} className="animate-spin" style={{ color: '#F63B28' }} />
         <span style={{ fontSize: 14, color: '#666' }}>{strings.productList.loading}</span>
       </div>
     }>

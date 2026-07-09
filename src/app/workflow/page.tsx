@@ -118,7 +118,7 @@ export default function WorkflowPage() {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '10px 20px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-                background: '#e62310', color: '#fff', textDecoration: 'none',
+                background: '#F63B28', color: '#fff', textDecoration: 'none',
               }}
             >
               <Search size={13} /> 상품 수집 시작
@@ -147,7 +147,7 @@ export default function WorkflowPage() {
                 style={{
                   background: '#fff',
                   borderRadius: 16,
-                  border: isOpen ? '1.5px solid #e62310' : '1.5px solid #F8DCE5',
+                  border: isOpen ? '1.5px solid #F63B28' : '1.5px solid #F8DCE5',
                   overflow: 'hidden',
                   transition: 'border-color 0.15s',
                 }}
@@ -164,8 +164,8 @@ export default function WorkflowPage() {
                 >
                   <div style={{
                     width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-                    background: isOpen ? '#e62310' : '#FEF0F3',
-                    color: isOpen ? '#fff' : '#e62310',
+                    background: isOpen ? '#F63B28' : '#FEF0F3',
+                    color: isOpen ? '#fff' : '#F63B28',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'all 0.15s',
                   }}>
@@ -201,10 +201,10 @@ export default function WorkflowPage() {
                           }}
                         >
                           <div>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: '#e62310', margin: 0 }}>{action.label}</p>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: '#F63B28', margin: 0 }}>{action.label}</p>
                             <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>{action.description}</p>
                           </div>
-                          <ArrowRight size={14} style={{ color: '#e62310', flexShrink: 0 }} />
+                          <ArrowRight size={14} style={{ color: '#F63B28', flexShrink: 0 }} />
                         </Link>
                       ))}
                     </div>
@@ -247,7 +247,7 @@ export default function WorkflowPage() {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '10px 24px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-              background: '#e62310', color: '#fff', textDecoration: 'none',
+              background: '#F63B28', color: '#fff', textDecoration: 'none',
             }}
           >
             <Search size={13} /> 상품 수집 시작하기

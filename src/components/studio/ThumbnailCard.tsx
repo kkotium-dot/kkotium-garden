@@ -116,7 +116,7 @@ export function ThumbnailCard({
               <div
                 key={v}
                 style={{
-                  border: isMain ? '2.5px solid #e62310' : '1.5px solid var(--gp-pink-300)',
+                  border: isMain ? '2.5px solid #F63B28' : '1.5px solid var(--gp-pink-300)',
                   borderRadius: 12, overflow: 'hidden', background: '#fff',
                 }}
               >
@@ -140,9 +140,9 @@ export function ThumbnailCard({
                     onClick={() => onSelectMain(v)}
                     style={{
                       marginTop: 6, padding: '4px 10px',
-                      background: isMain ? '#e62310' : '#fff',
-                      color: isMain ? '#fff' : '#e62310',
-                      border: '1.5px solid #e62310', borderRadius: 6,
+                      background: isMain ? '#F63B28' : '#fff',
+                      color: isMain ? '#fff' : '#F63B28',
+                      border: '1.5px solid #F63B28', borderRadius: 6,
                       fontSize: 11, fontWeight: 700, cursor: 'pointer',
                       width: '100%',
                     }}

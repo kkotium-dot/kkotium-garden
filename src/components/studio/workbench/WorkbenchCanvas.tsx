@@ -318,7 +318,7 @@ function VariantGrid({
               background: "var(--color-surface)",
               border: isMain ? "2px solid var(--gp-red-500)" : "1.5px solid var(--color-border)",
               boxShadow: isMain
-                ? "0 4px 14px rgba(230, 35, 16, 0.22)"
+                ? "0 4px 14px rgba(246, 59, 40, 0.22)"
                 : "0 1px 4px rgba(0, 0, 0, 0.05)",
               transition: "border-color 0.12s, box-shadow 0.12s",
               display: "flex",

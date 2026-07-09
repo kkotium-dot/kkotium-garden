@@ -95,7 +95,7 @@ export default function DataLabTrendWidget() {
         borderBottom: '1px solid #f5f5f5',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <BarChart3 size={18} style={{ color: '#e62310' }} />
+          <BarChart3 size={18} style={{ color: '#F63B28' }} />
           <span style={{ fontWeight: 700, fontSize: 15 }}>{'\uCE74\uD14C\uACE0\uB9AC \uD2B8\uB80C\uB4DC'}</span>
           <span style={{ fontSize: 10, color: '#aaa' }}>DataLab</span>
         </div>
@@ -110,7 +110,7 @@ export default function DataLabTrendWidget() {
                   padding: '4px 10px', borderRadius: 6, border: 'none',
                   fontSize: 11, fontWeight: period === opt.value ? 700 : 400,
                   background: period === opt.value ? '#fff' : 'transparent',
-                  color: period === opt.value ? '#e62310' : '#888',
+                  color: period === opt.value ? '#F63B28' : '#888',
                   cursor: 'pointer', transition: 'all 0.15s',
                   boxShadow: period === opt.value ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                 }}
@@ -192,7 +192,7 @@ export default function DataLabTrendWidget() {
                       width: 20, height: 20, borderRadius: 6,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 11, fontWeight: 700, flexShrink: 0,
-                      background: i < 3 ? '#e62310' : '#e5e5e5',
+                      background: i < 3 ? '#F63B28' : '#e5e5e5',
                       color: i < 3 ? '#fff' : '#888',
                     }}>
                       {i + 1}

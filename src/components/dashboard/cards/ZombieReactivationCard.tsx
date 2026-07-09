@@ -26,7 +26,7 @@ export default function ZombieReactivationCard({
     ? { bg: '#F0FDF4', border: '#BBF7D0', accent: '#16a34a', label: '깨끗해요' }
     : zombieCount <= 3
       ? { bg: '#FFFBEB', border: '#FDE68A', accent: '#a16207', label: '점검 권장' }
-      : { bg: '#FFF0EF', border: '#FFD6D3', accent: '#e62310', label: '부활 작전' };
+      : { bg: '#FFF0EF', border: '#FFD6D3', accent: '#F63B28', label: '부활 작전' };
 
   return (
     <Link href="/products/reactivation" style={{ textDecoration: 'none' }}>

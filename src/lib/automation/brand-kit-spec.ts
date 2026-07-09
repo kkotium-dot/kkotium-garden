@@ -11,7 +11,7 @@
 
 export const KKOTIUM_BRAND_KIT = {
   colors: {
-    brandRed: '#E62310',
+    brandRed: '#F63B28',
     brandPink: '#FFCCEA',
     ink: '#111111',
     paper: '#FFFFFF',

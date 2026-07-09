@@ -42,14 +42,14 @@ export default function EventTimeline() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Clock size={14} style={{ color: '#e62310' }} />
+          <Clock size={14} style={{ color: '#F63B28' }} />
           <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>
             최근 이벤트
           </p>
           {events.length > 0 && (
             <span style={{
               fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
-              background: '#FFF0F5', color: '#e62310', border: '1px solid #FFB3CE',
+              background: '#FFF0F5', color: '#F63B28', border: '1px solid #FFB3CE',
             }}>
               {events.length}건
             </span>
@@ -73,7 +73,7 @@ export default function EventTimeline() {
           </div>
         ) : events.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <p style={{ fontSize: 22, color: '#e62310', margin: '0 0 4px' }}>^ㅅ^</p>
+            <p style={{ fontSize: 22, color: '#F63B28', margin: '0 0 4px' }}>^ㅅ^</p>
             <p style={{ fontSize: 12, color: '#B0A0A8', margin: 0 }}>
               아직 기록된 이벤트가 없어요
             </p>

@@ -77,7 +77,7 @@ export function ProductListPane({
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{
-                fontSize: 13, fontWeight: 700, color: active ? '#e62310' : '#1A1A1A',
+                fontSize: 13, fontWeight: 700, color: active ? '#F63B28' : '#1A1A1A',
                 margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
                 {p.name}

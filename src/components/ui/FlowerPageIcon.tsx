@@ -8,10 +8,10 @@ import React from 'react';
 interface FlowerPageIconProps {
   children: React.ReactNode;
   size?: number;       // outer container size (default 40)
-  color?: string;      // fill color (default #e62310)
+  color?: string;      // fill color (default #F63B28)
 }
 
-export function FlowerPageIcon({ children, size = 52, color = '#e62310' }: FlowerPageIconProps) {
+export function FlowerPageIcon({ children, size = 52, color = '#F63B28' }: FlowerPageIconProps) {
   const c = size / 2;
   // 6-petal flower — round chubby petals (ry close to rx = rounder)
   const petalOffset = size * 0.22;

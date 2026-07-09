@@ -145,7 +145,7 @@ export default function KakaoSettingsPage() {
 
   if (!data) {
     return (
-      <div style={{ padding: 40, color: '#E62310' }}>
+      <div style={{ padding: 40, color: '#F63B28' }}>
         <AlertCircle size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 6 }} />
         설정을 불러올 수 없습니다. {error}
       </div>
@@ -342,7 +342,7 @@ export default function KakaoSettingsPage() {
                   {item.label}
                 </span>
                 {item.required && !done && (
-                  <span style={{ fontSize: 10, fontWeight: 600, color: '#E62310', background: '#FFF0F0', padding: '2px 6px', borderRadius: 4, marginLeft: 'auto' }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#F63B28', background: '#FFF0F0', padding: '2px 6px', borderRadius: 4, marginLeft: 'auto' }}>
                     필수
                   </span>
                 )}
@@ -356,7 +356,7 @@ export default function KakaoSettingsPage() {
       <div style={{ position: 'sticky', bottom: 16, marginTop: 24, padding: 12, background: '#fff', border: '2px solid #FF6B8A', borderRadius: 12, boxShadow: '0 4px 16px rgba(255,107,138,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ fontSize: 12, color: '#666' }}>
           {savedAt && <span style={{ color: '#22C55E', fontWeight: 600 }}>저장 완료</span>}
-          {error && <span style={{ color: '#E62310' }}>{error}</span>}
+          {error && <span style={{ color: '#F63B28' }}>{error}</span>}
           {!savedAt && !error && '변경 사항이 있다면 저장해주세요'}
         </div>
         <button
@@ -366,7 +366,7 @@ export default function KakaoSettingsPage() {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '10px 20px', fontSize: 14, fontWeight: 700,
-            color: '#fff', background: saving ? '#FFB3CE' : '#E62310',
+            color: '#fff', background: saving ? '#FFB3CE' : '#F63B28',
             border: 'none', borderRadius: 10, cursor: saving ? 'wait' : 'pointer',
           }}
         >
@@ -400,7 +400,7 @@ function Section({ title, icon, children, muted }: { title: string; icon: React.
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <span style={{ color: muted ? '#888' : '#E62310' }}>{icon}</span>
+        <span style={{ color: muted ? '#888' : '#F63B28' }}>{icon}</span>
         <h2 style={{ fontSize: 14, fontWeight: 700, color: '#222', margin: 0 }}>{title}</h2>
       </div>
       {children}

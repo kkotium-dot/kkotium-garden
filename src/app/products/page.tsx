@@ -71,7 +71,7 @@ const TAB_CONFIG: Record<TabKey, {
   ready:        { label: '발행대기',      dot: 'bg-green-500',  dotLabel: '발행대기',      filter: p => p.status === 'READY' },
   active:       { label: '네이버 판매중', dot: 'bg-green-600',  dotLabel: '네이버 판매중', filter: p => p.status === 'ACTIVE' && !!p.naverProductId },
   pending:      { label: '네이버 등록 대기',     dot: 'bg-amber-400',  dotLabel: '네이버 등록 대기', filter: p => p.status === 'ACTIVE' && !p.naverProductId },
-  oos:          { label: '품절',          dot: 'bg-[#E8001F]',  dotLabel: '품절',          filter: p => p.status === 'OUT_OF_STOCK' },
+  oos:          { label: '품절',          dot: 'bg-[#F63B28]',  dotLabel: '품절',          filter: p => p.status === 'OUT_OF_STOCK' },
   reactivation: { label: '재활성화 필요', dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
 };
 
@@ -84,7 +84,7 @@ const STATUS_SEGMENTS: { key: TabKey; label: string; dot: string; match: (p: Pro
   { key: 'draft',        label: '작성중',        dot: 'bg-gray-300',   match: p => p.status === 'DRAFT' },
   { key: 'ready',        label: '발행대기',      dot: 'bg-green-500',  match: p => p.status === 'READY' },
   { key: 'active',       label: '발행됨',        dot: 'bg-green-600',  match: p => p.status === 'ACTIVE' },
-  { key: 'oos',          label: '품절',          dot: 'bg-[#E8001F]',  match: p => p.status === 'OUT_OF_STOCK' },
+  { key: 'oos',          label: '품절',          dot: 'bg-[#F63B28]',  match: p => p.status === 'OUT_OF_STOCK' },
   { key: 'reactivation', label: '재활성화 필요', dot: 'bg-orange-400', match: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
 ];
 
@@ -107,7 +107,7 @@ function getShippingInfo(p: Product): { label: string; color: string; icon: 'fre
   };
   return {
     label: p.shippingFee > 0 ? `유료 ${p.shippingFee.toLocaleString()}원` : '유료',
-    color: p.shippingFee >= 5000 ? '#e62310' : '#555',
+    color: p.shippingFee >= 5000 ? '#F63B28' : '#555',
     icon: 'paid',
   };
 }
@@ -141,7 +141,7 @@ function ShippingBadge({ product }: { product: Product }) {
   if (!product.shippingTemplateId) {
     return (
       <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-lg"
-        style={{ background: '#FFF0F5', color: '#e62310', border: '1px solid #FFB3CE' }}>
+        style={{ background: '#FFF0F5', color: '#F63B28', border: '1px solid #FFB3CE' }}>
         <Truck size={10} />
         <span className="font-semibold">미설정</span>
       </span>
@@ -209,7 +209,7 @@ function SidePanel({ product, onClose, onDelete }: {
         {/* Upload readiness */}
         <div className="rounded-2xl p-4"
           style={{ background: issues.length === 0 ? '#f0fdf4' : '#FFF0F5', border: `1px solid ${issues.length === 0 ? '#bbf7d0' : '#F8DCE5'}` }}>
-          <p className="text-xs font-bold mb-2" style={{ color: issues.length === 0 ? '#16a34a' : '#e62310' }}>
+          <p className="text-xs font-bold mb-2" style={{ color: issues.length === 0 ? '#16a34a' : '#F63B28' }}>
             네이버 업로드 준비 {issues.length === 0 ? '— 완료' : `— ${issues.length}개 항목 미흡`}
           </p>
           {issues.length > 0 ? issues.map((issue, i) => (
@@ -284,14 +284,14 @@ function SidePanel({ product, onClose, onDelete }: {
         </div>
 
         <div className="rounded-2xl px-4 py-3" style={{ background: '#FFF0F5', border: '1px solid #FFB3CE' }}>
-          <p className="text-xs font-bold mb-1" style={{ color: '#e62310' }}>꼬띠 한마디</p>
+          <p className="text-xs font-bold mb-1" style={{ color: '#F63B28' }}>꼬띠 한마디</p>
           <p className="text-xs leading-relaxed" style={{ color: '#FF6B8A' }}>{hs.kkottiDialogue}</p>
         </div>
       </div>
       <div className="p-4 flex flex-col gap-2" style={{ borderTop: '1.5px solid #F8DCE5' }}>
         <Link href={`/products/new?edit=${product.id}`}
           className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl text-sm font-bold transition"
-          style={{ background: '#e62310' }}>
+          style={{ background: '#F63B28' }}>
           <Edit2 size={14} /> 상품 수정
         </Link>
         <div className="flex gap-2">
@@ -567,7 +567,7 @@ function ReadinessCheckModal({
         {/* Header */}
         <div style={{ padding: '16px 20px 14px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Upload size={15} style={{ color: allPass ? '#16a34a' : '#e62310' }} />
+            <Upload size={15} style={{ color: allPass ? '#16a34a' : '#F63B28' }} />
             <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>
               {allPass ? '엑셀 다운로드 준비 완료' : '업로드 준비도 확인'}
             </p>
@@ -588,7 +588,7 @@ function ReadinessCheckModal({
           ) : (
             <>
               <div style={{ padding: '10px 12px', borderRadius: 12, background: '#FFF0F5', border: '1px solid #FFB3CE', marginBottom: 12 }}>
-                <p style={{ fontSize: 12, fontWeight: 700, color: '#e62310', margin: '0 0 2px' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#F63B28', margin: '0 0 2px' }}>
                   {failing.length}개 상품의 업로드 준비도가 60% 미만이에요
                 </p>
                 <p style={{ fontSize: 11, color: '#888', margin: 0 }}>미비 항목을 수정 후 업로드하면 검색 노출이 높아집니다. 그대로 진행할 수도 있습니다.</p>
@@ -620,7 +620,7 @@ function ReadinessCheckModal({
           <button onClick={onCancel} style={{ flex: 1, padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 700, background: '#fff', color: '#888', border: '1.5px solid #F8DCE5', cursor: 'pointer' }}>
             취소
           </button>
-          <button onClick={onConfirm} style={{ flex: 1, padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 800, background: '#e62310', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <button onClick={onConfirm} style={{ flex: 1, padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 800, background: '#F63B28', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <Check size={13} /> {allPass ? '다운로드' : '그대로 다운로드'}
           </button>
         </div>
@@ -643,7 +643,7 @@ function BulkFloatMenu({
     { value: 'DRAFT',         label: '작성중',      color: '#9ca3af' },
     { value: 'READY',         label: '발행대기',    color: '#16a34a' },
     { value: 'ACTIVE',        label: '판매 중',     color: '#16a34a' },
-    { value: 'OUT_OF_STOCK',  label: '품절',        color: '#e62310' },
+    { value: 'OUT_OF_STOCK',  label: '품절',        color: '#F63B28' },
     { value: 'INACTIVE',      label: '비활성화',    color: '#888' },
   ];
 
@@ -658,7 +658,7 @@ function BulkFloatMenu({
       <div className="flex-1 flex items-center gap-2 overflow-x-auto">
         <Link href={`/naver-seo?ids=${selectedIds.join(',')}`}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition"
-          style={{ background: '#e62310', color: '#fff' }}>
+          style={{ background: '#F63B28', color: '#fff' }}>
           <Search size={12} /> 검색 조련사로 이동 <ArrowRight size={11} />
         </Link>
         <button onClick={onExcelWithCheck}
@@ -750,8 +750,8 @@ function ApplyTemplateModal({
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {templates.map(t => (
               <label key={t.id}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer border transition ${chosen === t.id ? 'border-[#e62310] bg-red-50' : 'border-gray-100 hover:bg-gray-50'}`}>
-                <input type="radio" name="tmpl" value={t.id} checked={chosen === t.id} onChange={() => setChosen(t.id)} className="accent-[#e62310]" />
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer border transition ${chosen === t.id ? 'border-[#F63B28] bg-red-50' : 'border-gray-100 hover:bg-gray-50'}`}>
+                <input type="radio" name="tmpl" value={t.id} checked={chosen === t.id} onChange={() => setChosen(t.id)} className="accent-[#F63B28]" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">{t.name}</p>
                   <p className="text-xs" style={{ color: '#888' }}>
@@ -767,7 +767,7 @@ function ApplyTemplateModal({
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition">취소</button>
           <button onClick={apply} disabled={!chosen || applying}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-40"
-            style={{ background: '#e62310' }}>
+            style={{ background: '#F63B28' }}>
             {applying ? '적용 중...' : '적용'}
           </button>
         </div>
@@ -1012,7 +1012,7 @@ function ProductsPageInner() {
         >
           <div onClick={e => e.stopPropagation()}>
             <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelect(p.id)}
-              className="w-4 h-4 rounded border-gray-300 text-[#E8001F] focus:ring-[#E8001F]/30" />
+              className="w-4 h-4 rounded border-gray-300 text-[#F63B28] focus:ring-[#F63B28]/30" />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-900 truncate leading-snug">{p.name}</p>
@@ -1021,7 +1021,7 @@ function ProductsPageInner() {
               {inventoryByProductId[p.id] && <InventoryBadge inv={inventoryByProductId[p.id]} />}
             </div>
             {naverMismatches[p.id] && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#e62310', background: '#fff1f1', border: '1px solid #fca5a5', borderRadius: 6, padding: '1px 6px', marginTop: 2 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#F63B28', background: '#fff1f1', border: '1px solid #fca5a5', borderRadius: 6, padding: '1px 6px', marginTop: 2 }}>
                 <AlertTriangle size={9} /> {naverMismatches[p.id]}
               </span>
             )}
@@ -1051,7 +1051,7 @@ function ProductsPageInner() {
                 onBlur={saveInlineEdit}
                 onKeyDown={e => { if (e.key === 'Enter') saveInlineEdit(); if (e.key === 'Escape') setInlineEdit(null); }}
                 onClick={e => e.stopPropagation()}
-                style={{ width: 80, fontSize: 13, fontWeight: 700, textAlign: 'right', border: '1.5px solid #e62310', borderRadius: 6, padding: '2px 4px', outline: 'none', background: '#fff9f9' }}
+                style={{ width: 80, fontSize: 13, fontWeight: 700, textAlign: 'right', border: '1.5px solid #F63B28', borderRadius: 6, padding: '2px 4px', outline: 'none', background: '#fff9f9' }}
               />
             ) : (
               <p className="text-right text-sm font-semibold text-gray-900" style={{ margin: 0 }}>
@@ -1087,7 +1087,7 @@ function ProductsPageInner() {
           <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
             <button onClick={e => toggleStatus(e, p)} title="상태 변경"
               className="p-1.5 rounded-lg transition hover:bg-gray-100"
-              style={{ color: p.status === 'ACTIVE' ? '#16a34a' : p.status === 'OUT_OF_STOCK' ? '#e62310' : '#9CA3AF' }}>
+              style={{ color: p.status === 'ACTIVE' ? '#16a34a' : p.status === 'OUT_OF_STOCK' ? '#F63B28' : '#9CA3AF' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/>
               </svg>
@@ -1109,9 +1109,9 @@ function ProductsPageInner() {
         <input type="checkbox"
           checked={selected.size === filtered.length && filtered.length > 0}
           onChange={toggleAll}
-          className="w-4 h-4 rounded border-gray-300 text-[#E8001F] focus:ring-[#E8001F]/30" />
+          className="w-4 h-4 rounded border-gray-300 text-[#F63B28] focus:ring-[#F63B28]/30" />
         {['상품명 / 상품코드(SKU)', '상태', '공급사', '배송', '순마진', '판매가', '준비도', '점수', '관리'].map(h => (
-          <span key={h} className="text-[11px] font-black tracking-wide" style={{ color: '#e62310' }}>{h}</span>
+          <span key={h} className="text-[11px] font-black tracking-wide" style={{ color: '#F63B28' }}>{h}</span>
         ))}
       </div>
       <div style={{ height: 1, background: '#F8DCE5' }} />
@@ -1128,7 +1128,7 @@ function ProductsPageInner() {
           <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: '#FFF8FA' }}>
             <span className={`w-2 h-2 rounded-full ${dot} shrink-0`} />
             <span className="text-sm font-bold text-gray-800">{label}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded-lg font-bold" style={{ background: '#F8DCE5', color: '#e62310' }}>{items.length}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded-lg font-bold" style={{ background: '#F8DCE5', color: '#F63B28' }}>{items.length}</span>
           </div>
           <div style={{ borderTop: '1px solid #F8DCE5' }}>
             {items.map((p, i) => renderRow(p, i, i === items.length - 1))}
@@ -1150,16 +1150,16 @@ function ProductsPageInner() {
             <div className="flex items-center gap-3 px-4 py-3 hover:bg-pink-50 transition-colors" style={{ background: '#FFF8FA' }}>
               <input type="checkbox" checked={groupSelected} onChange={() => toggleGroup(key)}
                 onClick={e => e.stopPropagation()}
-                className="w-4 h-4 rounded border-gray-300 text-[#E8001F] focus:ring-[#E8001F]/30" />
+                className="w-4 h-4 rounded border-gray-300 text-[#F63B28] focus:ring-[#F63B28]/30" />
               <button onClick={() => toggleExpand(key)} className="flex items-center gap-2 flex-1 min-w-0">
-                {expanded ? <ChevronDown size={14} style={{ color: '#e62310' }} /> : <ChevronRight size={14} style={{ color: '#e62310' }} />}
+                {expanded ? <ChevronDown size={14} style={{ color: '#F63B28' }} /> : <ChevronRight size={14} style={{ color: '#F63B28' }} />}
                 <span className="text-sm font-bold text-gray-800">{label}</span>
-                <span className="text-xs px-1.5 py-0.5 rounded-lg font-bold" style={{ background: '#F8DCE5', color: '#e62310' }}>{items.length}</span>
+                <span className="text-xs px-1.5 py-0.5 rounded-lg font-bold" style={{ background: '#F8DCE5', color: '#F63B28' }}>{items.length}</span>
               </button>
               <div className="flex items-center gap-2 shrink-0">
                 {hasTemplateIssue && (
                   <span className="text-xs flex items-center gap-1 px-2 py-0.5 rounded-lg"
-                    style={{ background: '#FFF0F5', color: '#e62310', border: '1px solid #FFB3CE' }}>
+                    style={{ background: '#FFF0F5', color: '#F63B28', border: '1px solid #FFB3CE' }}>
                     <Truck size={10} /> 배송 미설정 있음
                   </span>
                 )}
@@ -1196,9 +1196,9 @@ function ProductsPageInner() {
                 <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ position: 'absolute', top: 0, left: 0 }}>
                   {([0,60,120,180,240,300] as number[]).map((deg, i) => {
                     const r = deg * Math.PI / 180; const cx = 26 + Math.cos(r) * 11.4; const cy = 26 + Math.sin(r) * 11.4;
-                    return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#e62310" />;
+                    return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#F63B28" />;
                   })}
-                  <circle cx="26" cy="26" r="14.6" fill="#e62310" />
+                  <circle cx="26" cy="26" r="14.6" fill="#F63B28" />
                 </svg>
                 <svg style={{ position: 'relative', zIndex: 1 }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
@@ -1213,12 +1213,12 @@ function ProductsPageInner() {
               <div className="flex rounded-xl overflow-hidden" style={{ border: '1.5px solid #F8DCE5', background: '#fff' }}>
                 <button onClick={() => setViewMode('list')}
                   className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors"
-                  style={{ background: viewMode === 'list' ? '#e62310' : 'transparent', color: viewMode === 'list' ? '#fff' : '#6B6B6B' }}>
+                  style={{ background: viewMode === 'list' ? '#F63B28' : 'transparent', color: viewMode === 'list' ? '#fff' : '#6B6B6B' }}>
                   <LayoutList size={13} /> 목록
                 </button>
                 <button onClick={() => setViewMode('group')}
                   className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors"
-                  style={{ background: viewMode === 'group' ? '#e62310' : 'transparent', color: viewMode === 'group' ? '#fff' : '#6B6B6B' }}>
+                  style={{ background: viewMode === 'group' ? '#F63B28' : 'transparent', color: viewMode === 'group' ? '#fff' : '#6B6B6B' }}>
                   <Layers size={13} /> 공급사별
                 </button>
               </div>
@@ -1231,18 +1231,18 @@ function ProductsPageInner() {
                 style={{
                   border: `1.5px solid ${Object.keys(naverMismatches).length > 0 ? '#fca5a5' : '#F8DCE5'}`,
                   background: Object.keys(naverMismatches).length > 0 ? '#fff1f1' : '#fff',
-                  color: Object.keys(naverMismatches).length > 0 ? '#e62310' : '#6B6B6B',
+                  color: Object.keys(naverMismatches).length > 0 ? '#F63B28' : '#6B6B6B',
                 }}>
                 <RefreshCw size={13} className={naverSyncing ? 'animate-spin' : ''} />
                 {naverSyncing ? '동기화 중...' : '네이버 동기화'}
                 {Object.keys(naverMismatches).length > 0 && (
-                  <span style={{ background: '#e62310', color: '#fff', borderRadius: 99, padding: '1px 6px', fontSize: 10, fontWeight: 800 }}>
+                  <span style={{ background: '#F63B28', color: '#fff', borderRadius: 99, padding: '1px 6px', fontSize: 10, fontWeight: 800 }}>
                     {Object.keys(naverMismatches).length}
                   </span>
                 )}
               </button>
               {naverSyncMsg && (
-                <span style={{ fontSize: 11, color: Object.keys(naverMismatches).length > 0 ? '#e62310' : '#16a34a', fontWeight: 600 }}>
+                <span style={{ fontSize: 11, color: Object.keys(naverMismatches).length > 0 ? '#F63B28' : '#16a34a', fontWeight: 600 }}>
                   {naverSyncMsg}
                 </span>
               )}
@@ -1252,7 +1252,7 @@ function ProductsPageInner() {
                 <RefreshCw size={14} className={`text-gray-500 ${loading ? 'animate-spin' : ''}`} />
               </button>
               <Link href="/products/new" className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-sm font-bold transition"
-                style={{ background: '#e62310' }}>
+                style={{ background: '#F63B28' }}>
                 <Plus size={14} /> 상품 등록
               </Link>
             </div>
@@ -1270,14 +1270,14 @@ function ProductsPageInner() {
             {(Object.keys(TAB_CONFIG) as TabKey[]).map(k => (
               <button key={k} onClick={() => { setTab(k); setSelected(new Set()); }}
                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors whitespace-nowrap"
-                style={{ background: tab === k ? '#e62310' : 'transparent', color: tab === k ? '#fff' : '#6B6B6B' }}>
+                style={{ background: tab === k ? '#F63B28' : 'transparent', color: tab === k ? '#fff' : '#6B6B6B' }}>
                 {tab === k
                   ? <span className="w-1.5 h-1.5 rounded-full bg-white opacity-90" />
                   : <span className={`w-1.5 h-1.5 rounded-full ${TAB_CONFIG[k].dot}`} />
                 }
                 {TAB_CONFIG[k].label}
                 <span className="ml-0.5 px-1 rounded-md text-[10px] font-bold"
-                  style={{ background: tab === k ? 'rgba(255,255,255,0.9)' : '#F8DCE5', color: '#e62310' }}>
+                  style={{ background: tab === k ? 'rgba(255,255,255,0.9)' : '#F8DCE5', color: '#F63B28' }}>
                   {counts[k]}
                 </span>
               </button>
@@ -1298,9 +1298,9 @@ function ProductsPageInner() {
           <button onClick={() => setShowUploadReady(v => !v)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors"
             style={{
-              background: showUploadReady ? '#e62310' : '#fff',
+              background: showUploadReady ? '#F63B28' : '#fff',
               color: showUploadReady ? '#fff' : '#6B6B6B',
-              border: '1.5px solid', borderColor: showUploadReady ? '#e62310' : '#F8DCE5',
+              border: '1.5px solid', borderColor: showUploadReady ? '#F63B28' : '#F8DCE5',
             }}>
             <Upload size={12} /> 업로드 준비 미흡만
           </button>
@@ -1345,7 +1345,7 @@ function ProductsPageInner() {
             <div className="py-16 text-center">
               <Package size={32} className="mx-auto mb-3" style={{ color: '#F8DCE5' }} />
               <p className="text-sm" style={{ color: '#B0A0A8' }}>표시할 상품이 없습니다</p>
-              {tab !== 'all' && <button onClick={() => setTab('all')} className="mt-2 text-xs underline" style={{ color: '#e62310' }}>전체 보기</button>}
+              {tab !== 'all' && <button onClick={() => setTab('all')} className="mt-2 text-xs underline" style={{ color: '#F63B28' }}>전체 보기</button>}
             </div>
           ) : viewMode === 'group' ? (
             <GroupView />
@@ -1382,7 +1382,7 @@ function ProductsPageInner() {
             <div className="py-12 text-center" style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 16 }}>
               <Package size={28} className="mx-auto mb-2" style={{ color: '#F8DCE5' }} />
               <p className="text-sm" style={{ color: '#B0A0A8' }}>표시할 상품이 없습니다</p>
-              {tab !== 'all' && <button onClick={() => setTab('all')} className="mt-2 text-xs underline" style={{ color: '#e62310' }}>전체 보기</button>}
+              {tab !== 'all' && <button onClick={() => setTab('all')} className="mt-2 text-xs underline" style={{ color: '#F63B28' }}>전체 보기</button>}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -1390,13 +1390,13 @@ function ProductsPageInner() {
                 const isSel = selected.has(p.id);
                 const honey = p._hs;
                 const seo = Math.max(0, Math.min(100, p._hs?.seoScore ?? 0));
-                const seoColor = seo >= 75 ? '#16a34a' : seo >= 45 ? '#D97706' : '#e62310';
+                const seoColor = seo >= 75 ? '#16a34a' : seo >= 45 ? '#D97706' : '#F63B28';
                 return (
                   <article
                     key={p.id}
                     style={{
                       background: '#fff',
-                      border: isSel ? '1.5px solid #e62310' : '1.5px solid #F8DCE5',
+                      border: isSel ? '1.5px solid #F63B28' : '1.5px solid #F8DCE5',
                       borderRadius: 14,
                       padding: 12,
                       wordBreak: 'keep-all',
@@ -1409,7 +1409,7 @@ function ProductsPageInner() {
                         type="checkbox"
                         checked={isSel}
                         onChange={() => toggleSelect(p.id)}
-                        className="w-5 h-5 rounded border-gray-300 text-[#E8001F] focus:ring-[#E8001F]/30 shrink-0"
+                        className="w-5 h-5 rounded border-gray-300 text-[#F63B28] focus:ring-[#F63B28]/30 shrink-0"
                         style={{ marginTop: 2 }}
                       />
                       {p.mainImage ? (
@@ -1514,7 +1514,7 @@ function ProductsPageInner() {
                           flex: 1, minHeight: 44, minWidth: 44,
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                           background: '#FFF8FA', border: '1.5px solid #F8DCE5',
-                          color: p.status === 'ACTIVE' ? '#16a34a' : p.status === 'OUT_OF_STOCK' ? '#e62310' : '#888',
+                          color: p.status === 'ACTIVE' ? '#16a34a' : p.status === 'OUT_OF_STOCK' ? '#F63B28' : '#888',
                           borderRadius: 10, cursor: 'pointer',
                           fontSize: 11, fontWeight: 700,
                         }}
@@ -1545,7 +1545,7 @@ function ProductsPageInner() {
                           flex: 1, minHeight: 44, minWidth: 44,
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                           background: '#FFF0F5', border: '1.5px solid #FFB3CE',
-                          color: '#e62310', borderRadius: 10, textDecoration: 'none',
+                          color: '#F63B28', borderRadius: 10, textDecoration: 'none',
                           fontSize: 11, fontWeight: 700,
                         }}
                       >
@@ -1630,7 +1630,7 @@ export default function ProductsPage() {
   return (
     <Suspense fallback={
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid #FFB3CE', borderTop: '3px solid #e62310', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ width: 32, height: 32, border: '3px solid #FFB3CE', borderTop: '3px solid #F63B28', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       </div>
     }>
       <ProductsPageInner />

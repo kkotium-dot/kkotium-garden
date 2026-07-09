@@ -209,7 +209,7 @@ export default function ShippingPage() {
         <div style={{
           position: 'fixed', top: 20, right: 20, zIndex: 99999,
           padding: '10px 18px', borderRadius: 12, fontSize: 13, fontWeight: 700,
-          background: toast.type === 'success' ? '#15803d' : '#e62310', color: '#fff',
+          background: toast.type === 'success' ? '#15803d' : '#F63B28', color: '#fff',
           boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
         }}>
           {toast.msg}
@@ -224,8 +224,8 @@ export default function ShippingPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ position: 'absolute', top: 0, left: 0 }}>
-                  {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r = deg * Math.PI / 180; const cx = 26 + Math.cos(r) * 11.4; const cy = 26 + Math.sin(r) * 11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#e62310" />; })}
-                  <circle cx="26" cy="26" r="14.6" fill="#e62310" />
+                  {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r = deg * Math.PI / 180; const cx = 26 + Math.cos(r) * 11.4; const cy = 26 + Math.sin(r) * 11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#F63B28" />; })}
+                  <circle cx="26" cy="26" r="14.6" fill="#F63B28" />
                 </svg>
                 <Truck size={20} color="#fff" style={{ position: 'relative', zIndex: 1 }} />
               </div>
@@ -233,7 +233,7 @@ export default function ShippingPage() {
             </div>
             <button
               onClick={() => setModal({ open:true, mode:'add', data: { ...EMPTY_FORM, platformCode: fpc||'' } })}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#e62310', color: '#fff', padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', flexShrink: 0 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#F63B28', color: '#fff', padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', flexShrink: 0 }}
             >
               <Plus size={15} /> 템플릿 추가
             </button>
@@ -536,7 +536,7 @@ export default function ShippingPage() {
               {/* Template name */}
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: '#555', display: 'block', marginBottom: 5 }}>
-                  템플릿 이름 <span style={{ color: '#e62310' }}>*</span>
+                  템플릿 이름 <span style={{ color: '#F63B28' }}>*</span>
                 </label>
                 <input
                   style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #F8DCE5', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
@@ -544,7 +544,7 @@ export default function ShippingPage() {
                   value={modal.data.name} onChange={e => setField('name', e.target.value)}
                 />
                 <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 10, background: '#FFF8FB', border: '1px solid #F8DCE5', fontSize: 11, color: '#B0A0A8', lineHeight: 1.6 }}>
-                  <strong style={{ color: '#e62310' }}>{'{플랫폼}_{공급사약자}_{배송유형}_{조건}'}</strong>
+                  <strong style={{ color: '#F63B28' }}>{'{플랫폼}_{공급사약자}_{배송유형}_{조건}'}</strong>
                   <span style={{ marginLeft: 8 }}>예) DMM_NEXT_조건부_30000 · DMM_LHMK_무료 · DMM_유료_3000</span>
                 </div>
               </div>
@@ -612,7 +612,7 @@ export default function ShippingPage() {
                   <label style={{ fontSize: 13, fontWeight: 800, color: '#4c1d95', margin: 0 }}>
                     배송 템플릿 코드
                   </label>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: '#e62310', color: '#fff', marginLeft: 2 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: '#F63B28', color: '#fff', marginLeft: 2 }}>
                     배송비 템플릿코드 컬럼
                   </span>
                 </div>
@@ -673,7 +673,7 @@ export default function ShippingPage() {
               <button
                 onClick={save}
                 disabled={saving}
-                style={{ flex: 1, padding: '11px 0', borderRadius: 12, fontSize: 13, fontWeight: 800, background: saving ? '#FFB3CE' : '#e62310', color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                style={{ flex: 1, padding: '11px 0', borderRadius: 12, fontSize: 13, fontWeight: 800, background: saving ? '#FFB3CE' : '#F63B28', color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               >
                 {saving ? '저장 중...' : <><Check size={14} /> 저장</>}
               </button>

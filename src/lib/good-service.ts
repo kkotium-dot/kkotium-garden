@@ -48,7 +48,7 @@ const GRADE_CONFIG = {
   GOOD:      { min: 75, label: '양호', color: '#2563eb' },
   NORMAL:    { min: 60, label: '보통', color: '#eab308' },
   WARNING:   { min: 40, label: '개선 필요', color: '#f97316' },
-  DANGER:    { min: 0,  label: '위험', color: '#e62310' },
+  DANGER:    { min: 0,  label: '위험', color: '#F63B28' },
 } as const;
 
 function calcOrderFulfillment(input: GoodServiceInput): { score: number; tips: string[] } {

@@ -17,7 +17,7 @@ type CardPalette = {
 
 const DEFAULT_PALETTE: CardPalette = {
   slot1: { name: 'Pink',  hex: '#FF6B8A' },
-  slot2: { name: 'Red',   hex: '#E62310' },
+  slot2: { name: 'Red',   hex: '#F63B28' },
   slot3: { name: 'Beige', hex: '#A37B4B' },
   slot4: { name: 'Blush', hex: '#D4537E' },
 };

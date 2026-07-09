@@ -84,7 +84,7 @@ export default function StudioStepper({ active, onChange }: StudioStepperProps) 
               textAlign: "left",
               background: isActive ? "var(--gp-pink-50, #FFF5F8)" : "transparent",
               border: isActive
-                ? "1.5px solid var(--gp-red-500, #e62310)"
+                ? "1.5px solid var(--gp-red-500, #F63B28)"
                 : "1.5px solid var(--color-border)",
               transition: "background 0.12s, border-color 0.12s",
             }}
@@ -103,7 +103,7 @@ export default function StudioStepper({ active, onChange }: StudioStepperProps) 
                 color: isActive || isDone ? "#fff" : "var(--gp-ink-500)",
                 background:
                   isActive || isDone
-                    ? "var(--gp-red-500, #e62310)"
+                    ? "var(--gp-red-500, #F63B28)"
                     : "var(--gp-pink-50, #FFF5F8)",
                 border:
                   isActive || isDone

@@ -56,11 +56,11 @@ function KpiCard({ card }: { card: KpiCardModel }) {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-          <p className="kk-pop-num" style={{ margin: 0, fontSize: 26, fontWeight: 400, color: card.down ? '#B0A0A8' : card.color, lineHeight: 1 }}>
+          <p className="kk-pop-num" style={{ margin: 0, fontSize: 26, fontWeight: 400, color: card.down ? '#B0A0A8' : '#2A1F1A', lineHeight: 1 }}>
             {card.value}
           </p>
           {card.down && (
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#b45309', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 99, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#8a5a00', background: 'var(--warning-bg)', border: '1px solid var(--warning)', borderRadius: 99, padding: '1px 6px', whiteSpace: 'nowrap' }}>
               {strings.naverDown}
             </span>
           )}
@@ -87,25 +87,25 @@ export default function KpiStrip() {
       key: 'revenue', label: strings.cards.revenue.label, sub: strings.cards.revenue.sub,
       value: isLoading ? empty : naverDown ? empty : (revenue > 0 ? fmtWon(revenue) : empty),
       down: !isLoading && naverDown,
-      icon: TrendingUp, color: '#16a34a', iconBg: '#F0FDF4', href: '/orders',
+      icon: TrendingUp, color: 'var(--success)', iconBg: 'var(--success-bg)', href: '/orders',
     },
     {
       key: 'orders', label: strings.cards.orders.label, sub: strings.cards.orders.sub,
       value: isLoading ? empty : naverDown ? empty : `${orders}${strings.unit.count}`,
       down: !isLoading && naverDown,
-      icon: ShoppingCart, color: '#1d4ed8', iconBg: '#EFF6FF', href: '/orders',
+      icon: ShoppingCart, color: 'var(--info)', iconBg: 'var(--info-bg)', href: '/orders',
     },
     {
       key: 'settlement', label: strings.cards.settlement.label, sub: strings.cards.settlement.sub,
       value: isLoading ? empty : naverDown ? empty : (settlement > 0 ? fmtWon(settlement) : empty),
       down: !isLoading && naverDown,
-      icon: CreditCard, color: '#15803d', iconBg: '#F0FDF4', href: '/orders',
+      icon: CreditCard, color: 'var(--success)', iconBg: 'var(--success-bg)', href: '/orders',
     },
     {
       key: 'oos', label: strings.cards.oos.label, sub: strings.cards.oos.sub,
       value: isLoading ? empty : `${oos}${strings.unit.count}`,
       down: false,
-      icon: AlertTriangle, color: '#e62310', iconBg: '#FFF0EF', href: '/products/reactivation',
+      icon: AlertTriangle, color: 'var(--danger)', iconBg: 'var(--danger-bg)', href: '/products/reactivation',
     },
   ];
 

@@ -40,7 +40,7 @@ export default function KkottiGuide({ text }: KkottiGuideProps) {
           flexShrink: 0,
         }}
       >
-        <Sparkles size={13} style={{ color: "var(--gp-red-500, #e62310)" }} />
+        <Sparkles size={13} style={{ color: "var(--gp-red-500, #F63B28)" }} />
       </span>
       <p
         style={{

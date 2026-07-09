@@ -4,13 +4,13 @@
 
 /* ═══════════════════════════════════════════════════════════════
    KKOTIUM Design System v5
-   Red #e62310 · Pink #FF6B8A · Pure blush bg #FEF0F3
+   Red #F63B28 · Pink #FF6B8A · Pure blush bg #FEF0F3
    No gray backgrounds — all surfaces white or pink-tinted
 ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  --kk-red:        #e62310;
-  --kk-red-dark:   #c41a0b;
+  --kk-red:        var(--brand-red);
+  --kk-red-dark:   var(--brand-red-deep);
   --kk-red-50:     #fff0ef;
   --kk-red-100:    #ffd6d3;
   --kk-pink:       #FF6B8A;
@@ -42,8 +42,11 @@ html {
 
 body {
   color: var(--text-900);
-  /* More white, pink only at bottom 25% */
-  background: linear-gradient(180deg, #ffffff 0%, #ffffff 55%, #fff0f5 78%, #ffd6e8 100%);
+  /* Phase 2b (#220/#221): brand pink-wash canvas — pink dominates the wide area,
+     a faint pink radial adds warmth without introducing a 3rd structural color. */
+  background:
+    radial-gradient(1100px 760px at 12% -8%, var(--brand-pink-soft), transparent 60%),
+    var(--brand-pink-wash);
   background-attachment: fixed;
   min-height: 100vh;
   line-height: 1.55;
@@ -112,7 +115,7 @@ div[class*="bg-gray-50"] {
   transition: box-shadow 0.2s ease, transform 0.15s ease;
 }
 .kk-card:hover {
-  box-shadow: 0 6px 24px rgba(230, 35, 16, 0.10);
+  box-shadow: 0 6px 24px rgba(246, 59, 40, 0.10);
   transform: translateY(-2px);
 }
 
@@ -182,8 +185,8 @@ div[class*="bg-gray-50"] {
   --gp-cream-200:   #ECE5D3;
 
   /* Brand red — action / critical only (10% accent) */
-  --gp-red-500:     #E62310;
-  --gp-red-600:     #C41A0B;
+  --gp-red-500:     var(--brand-red);
+  --gp-red-600:     var(--brand-red-deep);
   --gp-red-50:      #FFF0EF;
   --gp-red-100:     #FFD6D3;
 
@@ -244,14 +247,14 @@ div[class*="bg-gray-50"] {
   --card-border:    1px solid var(--color-border);
   --card-radius:    var(--radius-card);
   --card-padding:   var(--space-6);
-  --card-shadow:    0 1px 2px rgba(230, 35, 16, 0.04),
-                    0 2px 8px rgba(230, 35, 16, 0.06);
+  --card-shadow:    0 1px 2px rgba(246, 59, 40, 0.04),
+                    0 2px 8px rgba(246, 59, 40, 0.06);
 
   --btn-primary-bg:     var(--color-accent);
   --btn-primary-fg:     var(--color-text-on-accent);
   --btn-primary-radius: var(--radius-button);
   --btn-primary-shadow: 0 1px 0 rgba(0, 0, 0, 0.08),
-                        0 2px 6px rgba(230, 35, 16, 0.18);
+                        0 2px 6px rgba(246, 59, 40, 0.18);
 
   --badge-bg:      var(--gp-pink-100);
   --badge-fg:      var(--gp-red-500);
@@ -260,7 +263,7 @@ div[class*="bg-gray-50"] {
   /* Sticker effect — micro-shadow + thick pop border (brief: 평면 플랫 아님) */
   --sticker-border: 1.5px solid var(--gp-pink-200);
   --sticker-shadow: 0 1px 0 rgba(0, 0, 0, 0.06),
-                    0 2px 3px rgba(230, 35, 16, 0.10),
+                    0 2px 3px rgba(246, 59, 40, 0.10),
                     inset 0 1px 0 rgba(255, 255, 255, 0.6);
 
   /* Shell — sidebar + grid */
@@ -306,7 +309,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  --brand-red:    #E62310;                          /* CTA only, ~10% — action / active */
+  --brand-red:    #F63B28;                          /* CTA only, ~10% — action / active */
   --brand-pink:   #FFCCEA;                           /* point / badge, ~15% */
   /* Studio Stage2 S2-A canonical surface tokens (docs/design/STUDIO_UI_UX_GUIDELINES.md
      §색토큰). --brand-red = action/active · --pink-soft = tint/badge/decorative border
@@ -485,64 +488,87 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 .kk-step-reveal { animation: kkStepReveal 0.22s ease both; }
 
 /* ═══════════════════════════════════════════════════════════════
-   DASHBOARD-SHELL Phase 2 — Claude Design 컨셉 미감 배선 (2026-07-09)
-   권위: docs/design/CONCEPT_DESIGN_TOKENS_2026-07-08.md §1~5 (#219).
-   STATIC aesthetic only — 장식(와시테이프·회전·분수대 애니)·모션은 Phase 3
-   토글(기본 차분). 이 레이어는 팔레트 토큰 + 폰트 + 카드 미감 + 캔버스만 배선.
+   DASHBOARD-SHELL Phase 2b — KKOTIUM brand palette (logo pink+red) (2026-07-09)
+   권위: docs/design/KKOTIUM_BRAND_PALETTE_2026-07-08.md §1~4 (#220/#221)
+   + CONCEPT_DESIGN_TOKENS §1~5 (#219). STATIC aesthetic — 장식·모션은 Phase 3.
 
-   NAMESPACE — the concept palette collides with the app's existing tokens on
-   --cream / --ink / --pink-soft / --shadow (v6 + preset layers above), so the
-   concept vars are prefixed to stay orthogonal: brand --pop / success --sage
-   (semantic split, #218) are collision-free and used verbatim; the canvas /
-   ink / pink / shadow variants carry a --pop-/--canvas- prefix.
+   ARCHITECTURE — the DEFAULT palette is the brand (--brand-red #F63B28 /
+   --brand-pink #FCB4DC / --brand-pink-wash canvas). Concept aliases
+   (--pop / --canvas-cream …) and the legacy --kk-red / --gp-red-* tokens all
+   resolve THROUGH --brand-red, so a single data-palette flip re-themes every
+   var-based surface. The app-wide literal #e62310 → #F63B28 sweep pins legacy
+   inline styles to the brand default (they don't toggle — a full var migration
+   is future work). Trendy semantics (--success/--warning/--danger/--info) are
+   FIXED across palettes (#221); extra hues live only in --obj-* decoration.
 
-   PALETTE SWAP (Phase 3): flip data-palette on <html> and these 15 vars
-   re-theme every surface that reads them. :root default = Garden Bloom.
+   PALETTE SWAP (Phase 3): flip data-palette on <html> among
+   garden / sunset / lavender / strawberry. :root default = brand.
 ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Palette: 정원의 만개 Garden Bloom [기본] ── */
-  --pop:            #E8385A;   /* brand accent (꽃 핑크/코랄) — NOT success, NOT danger */
-  --pop-soft:       #FF6B8A;
-  --pop-ink:        #2A1F1A;   /* ink for neubrutal borders/shadows */
-  --pop-ink-soft:   #4A3A30;
-  --pop-pink:       #FFB8C8;
-  --pop-pink-2:     #FFD9DE;
-  --sage:           #2D5F4E;   /* success semantic (초록) — separate from brand */
-  --sage-soft:      #6FA88F;
-  --butter:         #FFD93D;   /* warning-lite */
-  --lilac:          #C8B6FF;
-  --sky:            #BFE0E8;
-  --terra:          #C25A3F;   /* warning-strong */
-  --canvas-cream:   #FFF1E4;   /* page canvas — warm cream */
-  --canvas-cream-2: #FCE6D2;
+  /* ── DEFAULT palette = KKOTIUM brand, logo-extracted pink+red (#220) ── */
+  --brand-red:       #F63B28;   /* logo red — CTA / primary / active / symbol */
+  --brand-red-deep:  #D42818;   /* hover / active */
+  --brand-red-tint:  #FFE7E2;   /* red bg tint (emphasis card, NOT warning) */
+  --brand-pink:      #FCB4DC;   /* logo pink — badge / tag / sub-accent (dominant area) */
+  --brand-pink-soft: #FEE9F3;   /* card / section bg tint */
+  --brand-pink-wash: #FFF5FA;   /* page canvas — near white-pink */
+  --brand-pink-mid:  #FB7DBB;   /* vivid rose — 2nd accent / graph point */
+  --line:            #F0D9E4;   /* pink hairline border */
+
+  /* ── Semantic — trendy 채도업, FIXED across all palettes (#221). Meaning-
+     stable: success mint / warning amber / danger coral / info sky. Danger
+     coral (#FF4757) is hue-distinct from the brand red so alerts stay legible
+     on pink surfaces. ── */
+  --success:    #12B886;  --success-bg: #E6FCF5;
+  --warning:    #FFB020;  --warning-bg: #FFF4E0;
+  --danger:     #FF4757;  --danger-bg:  #FFE9EC;
+  --info:       #4DABF7;  --info-bg:    #E7F5FF;
+
+  /* ── Concept aliases → follow the ACTIVE palette's brand vars, so Phase-2
+     components (--pop / --canvas-cream) + var(--kk-red)/var(--gp-red-*)
+     consumers re-theme when data-palette flips. ── */
+  --pop:            var(--brand-red);
+  --pop-soft:       var(--brand-pink-mid);
+  --pop-ink:        #2A1F1A;
+  --pop-ink-soft:   #6B5A52;
+  --pop-pink:       var(--brand-pink);
+  --pop-pink-2:     var(--brand-pink-soft);
+  --canvas-cream:   var(--brand-pink-wash);
+  --canvas-cream-2: var(--brand-pink-soft);
   --pop-shadow:     rgba(42, 31, 26, 0.12);
 
+  /* ── Object-accent tones — decoration / illustration / mascot ONLY (#221
+     1-b), never UI structure. Keeps the app pink-red while flowers/clouds/꼬띠
+     stay multicolor. ── */
+  --obj-sage:   #6FA88F;
+  --obj-butter: #FFD93D;
+  --obj-lilac:  #C8B6FF;
+  --obj-sky:    #BFE0E8;
+
   /* ── Concept fonts (docs §2). Display = titles / KPI numbers ONLY;
-     body = Gowun Dodum for 가독. Chains fall back to the existing self-hosted
-     brand face + Pretendard so nothing breaks if a webfont is slow. ── */
+     body = Gowun Dodum for 가독. ── */
   --font-pop-display: "Caprasimo", "Black Han Sans", var(--font-brand), Pretendard, -apple-system, sans-serif;
   --font-read:        "Gowun Dodum", Pretendard, -apple-system, sans-serif;
 }
 
-/* ── Palette variants (Phase 3 toggle targets) ── */
+/* ── Concept palette variants — toggle targets (Phase 3 UI). Only the brand
+   hue set changes; the trendy semantic tokens above stay fixed (#221). ── */
+:root[data-palette="garden"] {
+  --brand-red: #E8385A; --brand-red-deep: #C41A0B; --brand-red-tint: #FFE0E4;
+  --brand-pink: #FFB8C8; --brand-pink-soft: #FFD9DE; --brand-pink-wash: #FFF1E4; --brand-pink-mid: #FF6B8A;
+}
 :root[data-palette="sunset"] {
-  --pop: #F25C3D; --pop-soft: #FF8E6E; --pop-ink: #3A1F1A; --pop-ink-soft: #5C3A2C;
-  --pop-pink: #FFC4A0; --pop-pink-2: #FFE0CB; --sage: #3D5A40; --sage-soft: #88AA85;
-  --butter: #FFCC2A; --lilac: #E1B0FF; --sky: #CFE6E0; --terra: #B84A2A;
-  --canvas-cream: #FFF6EC; --canvas-cream-2: #FFE9D2;
+  --brand-red: #F25C3D; --brand-red-deep: #B84A2A; --brand-red-tint: #FFE3D6;
+  --brand-pink: #FFC4A0; --brand-pink-soft: #FFE0CB; --brand-pink-wash: #FFF6EC; --brand-pink-mid: #FF8E6E;
 }
 :root[data-palette="lavender"] {
-  --pop: #D04E89; --pop-soft: #E68AB1; --pop-ink: #2B1F3A; --pop-ink-soft: #4A3A5C;
-  --pop-pink: #E2C7E8; --pop-pink-2: #F0DEEE; --sage: #3D5A50; --sage-soft: #88B0A0;
-  --butter: #F4D06F; --lilac: #B095E0; --sky: #C7DCE6; --terra: #A85B7C;
-  --canvas-cream: #FFF6F2; --canvas-cream-2: #F5E6F0;
+  --brand-red: #D04E89; --brand-red-deep: #A85B7C; --brand-red-tint: #F5E0EC;
+  --brand-pink: #E2C7E8; --brand-pink-soft: #F0DEEE; --brand-pink-wash: #FFF6F2; --brand-pink-mid: #E68AB1;
 }
 :root[data-palette="strawberry"] {
-  --pop: #D02642; --pop-soft: #F26882; --pop-ink: #2A1A22; --pop-ink-soft: #4A2D38;
-  --pop-pink: #FFA9BA; --pop-pink-2: #FFCBD3; --sage: #1F3D2E; --sage-soft: #5C8A6E;
-  --butter: #FFCD3C; --lilac: #D6BCFF; --sky: #BBE2D8; --terra: #9C3725;
-  --canvas-cream: #FFEEE6; --canvas-cream-2: #FFD9C7;
+  --brand-red: #D02642; --brand-red-deep: #9C3725; --brand-red-tint: #FFDCE0;
+  --brand-pink: #FFA9BA; --brand-pink-soft: #FFCBD3; --brand-pink-wash: #FFEEE6; --brand-pink-mid: #F26882;
 }
 
 /* ── Hero / empty-state card — full neubrutal pop (docs §3 .card, softened for

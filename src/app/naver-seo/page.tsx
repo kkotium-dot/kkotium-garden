@@ -18,11 +18,11 @@ import { useNaverSeoProducts, type NaverSeoProductApiItem as Product } from '@/l
 type FilterKey = 'all' | 'perfect' | 'good' | 'fair' | 'poor';
 
 const FILTER_CONFIG: Record<FilterKey, { label: string; sub: string; color: string; bg: string; min: number; max: number }> = {
-  all:     { label: '전체',      sub: '',        color: '#e62310', bg: '#FFF0F5', min: 0,  max: 100 },
+  all:     { label: '전체',      sub: '',        color: '#F63B28', bg: '#FFF0F5', min: 0,  max: 100 },
   perfect: { label: '90-100점', sub: '완벽',    color: '#7C3AED', bg: '#F5F3FF', min: 90, max: 100 },
   good:    { label: '75-89점',  sub: '양호',    color: '#16a34a', bg: '#F0FDF4', min: 75, max: 89  },
   fair:    { label: '45-74점',  sub: '보통',    color: '#2563EB', bg: '#EFF6FF', min: 45, max: 74  },
-  poor:    { label: '~44점',    sub: '개선필요', color: '#e62310', bg: '#FFF0EF', min: 0,  max: 44  },
+  poor:    { label: '~44점',    sub: '개선필요', color: '#F63B28', bg: '#FFF0EF', min: 0,  max: 44  },
 };
 
 function NaverSeoInner() {
@@ -191,16 +191,16 @@ function NaverSeoInner() {
               <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ position: 'absolute', top: 0, left: 0 }}>
                 {([0,60,120,180,240,300] as number[]).map((deg, i) => {
                   const r = deg * Math.PI / 180; const cx = 26 + Math.cos(r) * 11.4; const cy = 26 + Math.sin(r) * 11.4;
-                  return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#e62310" />;
+                  return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#F63B28" />;
                 })}
-                <circle cx="26" cy="26" r="14.6" fill="#e62310" />
+                <circle cx="26" cy="26" r="14.6" fill="#F63B28" />
               </svg>
               <Search size={18} style={{ position: 'relative', zIndex: 1, color: '#fff' }} />
             </div>
             <div>
               <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>검색 조련사</h1>
               {presetIds && (
-                <p style={{ fontSize: 11, color: '#e62310', margin: 0, marginTop: 2 }}>
+                <p style={{ fontSize: 11, color: '#F63B28', margin: 0, marginTop: 2 }}>
                   정원 창고에서 {presetIds.split(',').length}개 상품 전달됨
                 </p>
               )}
@@ -212,7 +212,7 @@ function NaverSeoInner() {
                 <button
                   onClick={() => handleAiBulkGenerate('orthodox')}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition"
-                  style={{ background: '#e62310' }}>
+                  style={{ background: '#F63B28' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                   </svg>
@@ -221,7 +221,7 @@ function NaverSeoInner() {
                 <button
                   onClick={() => setShowBulkEditModal(true)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition"
-                  style={{ background: '#fff', color: '#e62310', border: '1.5px solid #e62310' }}>
+                  style={{ background: '#fff', color: '#F63B28', border: '1.5px solid #F63B28' }}>
                   {selectedIds.length}개 일괄 수정
                 </button>
                 <button
@@ -251,13 +251,13 @@ function NaverSeoInner() {
         <div style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 16, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#B0A0A8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>평균 SEO 점수</p>
-            <p style={{ fontSize: 34, fontWeight: 900, color: '#e62310', lineHeight: 1, margin: 0 }}>
+            <p style={{ fontSize: 34, fontWeight: 900, color: '#F63B28', lineHeight: 1, margin: 0 }}>
               {stats.avg}<span style={{ fontSize: 15, fontWeight: 700, color: '#B0A0A8' }}>점</span>
             </p>
             <p style={{ fontSize: 12, color: '#888', marginTop: 4 }}>전체 {stats.total}개 상품</p>
           </div>
           <div style={{ width: 44, height: 44, background: '#FFF0F5', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e62310" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F63B28" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           </div>
         </div>
         {/* Filter cards */}

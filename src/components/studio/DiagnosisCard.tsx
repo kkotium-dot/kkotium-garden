@@ -30,7 +30,7 @@ export function DiagnosisCard({
     <Card
       title={strings.diagnosis.title}
       subtitle={strings.diagnosis.subtitle}
-      accent="#e62310"
+      accent="#F63B28"
       step={1}
       totalSteps={4}
       done={diagnosis != null}

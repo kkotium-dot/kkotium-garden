@@ -80,7 +80,7 @@ export default function NaverSettingsPage() {
   const Section = ({ title, icon: Icon, children }: { title: string; icon?: React.ElementType; children: React.ReactNode }) => (
     <div className="kk-card overflow-hidden">
       <div style={{ padding: '14px 20px 12px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', gap: 8 }}>
-        {Icon && <Icon size={14} style={{ color: '#e62310' }} />}
+        {Icon && <Icon size={14} style={{ color: '#F63B28' }} />}
         <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>{title}</p>
       </div>
       <div style={{ padding: '16px 20px' }}>{children}</div>
@@ -130,7 +130,7 @@ export default function NaverSettingsPage() {
         <div style={{
           position: 'fixed', top: 20, right: 20, zIndex: 99999,
           padding: '10px 18px', borderRadius: 12, fontSize: 13, fontWeight: 700,
-          background: toast.ok ? '#15803d' : '#e62310', color: '#fff',
+          background: toast.ok ? '#15803d' : '#F63B28', color: '#fff',
           boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
           display: 'flex', alignItems: 'center', gap: 6,
         }}>
@@ -145,8 +145,8 @@ export default function NaverSettingsPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ position: 'absolute', top: 0, left: 0 }}>
-                {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r=deg*Math.PI/180; const cx=26+Math.cos(r)*11.4; const cy=26+Math.sin(r)*11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#e62310" />; })}
-                <circle cx="26" cy="26" r="14.6" fill="#e62310" />
+                {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r=deg*Math.PI/180; const cx=26+Math.cos(r)*11.4; const cy=26+Math.sin(r)*11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#F63B28" />; })}
+                <circle cx="26" cy="26" r="14.6" fill="#F63B28" />
               </svg>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', zIndex: 1 }}>
                 <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
@@ -155,7 +155,7 @@ export default function NaverSettingsPage() {
             <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>네이버 기본값</h1>
           </div>
           <button onClick={save} disabled={saving}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: saving ? '#F8DCE5' : '#e62310', color: saving ? '#B0A0A8' : '#fff', padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: 13, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: saving ? '#F8DCE5' : '#F63B28', color: saving ? '#B0A0A8' : '#fff', padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: 13, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
             <Check size={14} />
             {saving ? '저장 중...' : '저장'}
           </button>
@@ -169,7 +169,7 @@ export default function NaverSettingsPage() {
         {/* 도매꾹 API 키 — NEW */}
         <div className="kk-card overflow-hidden">
           <div style={{ padding: '14px 20px 12px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <KeyRound size={14} style={{ color: '#e62310' }} />
+            <KeyRound size={14} style={{ color: '#F63B28' }} />
             <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>도매꾹 API 키</p>
           </div>
           <div style={{ padding: '16px 20px' }}>
@@ -212,7 +212,7 @@ export default function NaverSettingsPage() {
         <div className="kk-card overflow-hidden">
           <div style={{ padding: '14px 20px 12px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Layers size={14} style={{ color: '#e62310' }} />
+              <Layers size={14} style={{ color: '#F63B28' }} />
               <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>배송 기본값</p>
             </div>
           </div>

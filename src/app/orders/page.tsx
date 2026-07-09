@@ -131,7 +131,7 @@ function DetailRow({ icon, label, value, highlight }: { icon: React.ReactNode; l
   if (!value) return null;
   return (
     <div style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: '1px solid #F8DCE5' }}>
-      <span style={{ color: '#e62310', flexShrink: 0, marginTop: 1 }}>{icon}</span>
+      <span style={{ color: '#F63B28', flexShrink: 0, marginTop: 1 }}>{icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: 10, fontWeight: 700, color: '#B0A0A8', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
         <p style={{ fontSize: 13, color: highlight ? '#dc2626' : '#1A1A1A', margin: 0, lineHeight: 1.5, wordBreak: 'break-word', fontWeight: highlight ? 700 : 400 }}>{value}</p>
@@ -224,7 +224,7 @@ function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) 
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <span style={{ fontSize: 12, color: '#888' }}>수량: {order.quantity ?? 1}개</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#e62310' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#F63B28' }}>
                 {(order.totalAmount ?? 0).toLocaleString()}원
               </span>
             </div>
@@ -477,7 +477,7 @@ function OrdersInner() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <ShoppingCart size={20} style={{ color: '#e62310' }} />
+          <ShoppingCart size={20} style={{ color: '#F63B28' }} />
           <div>
             <h1 style={{ fontSize: 19, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>주문 관리</h1>
             <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>네이버 스마트스토어</p>
@@ -493,7 +493,7 @@ function OrdersInner() {
           </select>
           <button onClick={syncOrders} disabled={syncing} style={{
             display: 'flex', alignItems: 'center', gap: 6,
-            background: syncing ? '#FFB3CE' : '#e62310', color: '#fff',
+            background: syncing ? '#FFB3CE' : '#F63B28', color: '#fff',
             padding: '8px 15px', borderRadius: 9, fontWeight: 700, fontSize: 13,
             border: 'none', cursor: syncing ? 'not-allowed' : 'pointer',
           }}>
@@ -503,7 +503,7 @@ function OrdersInner() {
         </div>
       </div>
 
-      <div style={{ height: 2, background: 'linear-gradient(90deg, #e62310, #FFB3CE)', borderRadius: 99, marginBottom: 14 }} />
+      <div style={{ height: 2, background: 'linear-gradient(90deg, #F63B28, #FFB3CE)', borderRadius: 99, marginBottom: 14 }} />
 
       {/* Sync result banner */}
       {syncMsg && (
@@ -538,16 +538,16 @@ function OrdersInner() {
             <button key={key} onClick={() => setFilter(key)} style={{
               display: 'flex', alignItems: 'center', gap: 4,
               padding: '5px 11px', borderRadius: 99, fontSize: 12, fontWeight: 700,
-              background: active ? '#e62310' : '#fff',
+              background: active ? '#F63B28' : '#fff',
               color: active ? '#fff' : '#555',
-              border: `1.5px solid ${active ? '#e62310' : '#F8DCE5'}`,
+              border: `1.5px solid ${active ? '#F63B28' : '#F8DCE5'}`,
               cursor: 'pointer', transition: 'all 0.12s',
             }}>
               {label}
               <span style={{
                 fontSize: 10, fontWeight: 900, padding: '1px 5px', borderRadius: 99,
                 background: active ? 'rgba(255,255,255,0.25)' : '#F8DCE5',
-                color: active ? '#fff' : '#e62310',
+                color: active ? '#fff' : '#F63B28',
               }}>{cnt}</span>
             </button>
           );
@@ -589,9 +589,9 @@ function OrdersInner() {
           background: '#FFF0F5', borderBottom: '2px solid #FFB3CE', alignItems: 'center',
         }}>
           <input type="checkbox" checked={allPaidSelected} onChange={toggleAllPaid}
-            style={{ width: 13, height: 13, cursor: 'pointer', accentColor: '#e62310' }} />
+            style={{ width: 13, height: 13, cursor: 'pointer', accentColor: '#F63B28' }} />
           {['주문번호 / 고객', '상품명', '결제금액', '상태', '주문일', '처리'].map(h => (
-            <span key={h} style={{ fontSize: 10, fontWeight: 900, color: '#e62310', letterSpacing: '0.04em' }}>{h}</span>
+            <span key={h} style={{ fontSize: 10, fontWeight: 900, color: '#F63B28', letterSpacing: '0.04em' }}>{h}</span>
           ))}
         </div>
 
@@ -638,7 +638,7 @@ function OrdersInner() {
                       checked={isSel}
                       disabled={!paid}
                       onChange={() => paid && toggleSelect(order.id)}
-                      style={{ width: 13, height: 13, cursor: paid ? 'pointer' : 'default', accentColor: '#e62310', opacity: paid ? 1 : 0.2 }}
+                      style={{ width: 13, height: 13, cursor: paid ? 'pointer' : 'default', accentColor: '#F63B28', opacity: paid ? 1 : 0.2 }}
                     />
                   </div>
 
@@ -701,7 +701,7 @@ function OrdersInner() {
                         width: 24, height: 24, borderRadius: 6, flexShrink: 0,
                         background: expanded.has(order.id) ? '#fff0ef' : '#f9fafb',
                         border: `1px solid ${expanded.has(order.id) ? '#ffd6d3' : 'var(--border-neutral)'}`,
-                        color: expanded.has(order.id) ? '#e62310' : '#9ca3af', cursor: 'pointer',
+                        color: expanded.has(order.id) ? '#F63B28' : '#9ca3af', cursor: 'pointer',
                       }}
                     >
                       {expanded.has(order.id) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -831,7 +831,7 @@ function OrdersInner() {
                 {expanded.has(order.id) && (
                   <div style={{ padding: '10px 14px 12px 52px', background: '#FFFBFC', borderTop: '1px dashed #F3D9E2', display: 'flex', flexDirection: 'column', gap: 7 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <MapPin size={13} style={{ color: '#e62310', flexShrink: 0, marginTop: 2 }} />
+                      <MapPin size={13} style={{ color: '#F63B28', flexShrink: 0, marginTop: 2 }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: '#B0A0A8' }}>배송지</span>
                         {order.shippingAddress ? (
@@ -881,7 +881,7 @@ function OrdersInner() {
             <span style={{ fontSize: 11, color: '#B0A0A8' }}>전체 {orders.length}건{query ? ` / 검색 ${filtered.length}건` : ''}</span>
             {selected.size > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#e62310' }}>{selected.size}건 선택</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#F63B28' }}>{selected.size}건 선택</span>
                 <button onClick={handleConfirm} disabled={confirming} style={{
                   display: 'flex', alignItems: 'center', gap: 4,
                   background: '#16a34a', color: '#fff', padding: '4px 11px',
@@ -936,7 +936,7 @@ function OrdersInner() {
             </div>
 
             {dispatchMsg && (
-              <div style={{ fontSize: 12, color: '#e62310', marginBottom: 12, padding: '8px 12px', background: '#fff0f0', borderRadius: 8 }}>
+              <div style={{ fontSize: 12, color: '#F63B28', marginBottom: 12, padding: '8px 12px', background: '#fff0f0', borderRadius: 8 }}>
                 {dispatchMsg}
               </div>
             )}
@@ -953,7 +953,7 @@ function OrdersInner() {
                 disabled={dispatching || !dispatchTracking.trim()}
                 style={{
                   flex: 2, padding: '11px 0', borderRadius: 10, border: 'none',
-                  background: dispatching || !dispatchTracking.trim() ? '#F8DCE5' : '#e62310',
+                  background: dispatching || !dispatchTracking.trim() ? '#F8DCE5' : '#F63B28',
                   color: '#fff', fontWeight: 800, fontSize: 13, cursor: dispatching || !dispatchTracking.trim() ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}

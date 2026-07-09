@@ -14,7 +14,7 @@ import { Sprout, Sparkles, Search, ShoppingCart } from "lucide-react";
 const SWATCHES: { name: string; varName: string; hex: string }[] = [
   { name: "cream-50", varName: "--gp-cream-50", hex: "#FAF8F3" },
   { name: "cream-100", varName: "--gp-cream-100", hex: "#F5F1E8" },
-  { name: "red-500", varName: "--gp-red-500", hex: "#E62310" },
+  { name: "red-500", varName: "--gp-red-500", hex: "#F63B28" },
   { name: "red-600", varName: "--gp-red-600", hex: "#C41A0B" },
   { name: "pink-50", varName: "--gp-pink-50", hex: "#FFF5F8" },
   { name: "pink-100", varName: "--gp-pink-100", hex: "#FFE0EC" },
@@ -47,7 +47,7 @@ export default function DesignTokensPage() {
           Retro Pop Garden Fantasy v6
         </h1>
         <p className="gp-caption" style={{ marginTop: 6 }}>
-          크림 #FAF8F3 / 레드 #E62310 / 핑크 파스텔 / 정원 그린 · 스캘롭 + 스티커 토큰
+          크림 #FAF8F3 / 레드 #F63B28 / 핑크 파스텔 / 정원 그린 · 스캘롭 + 스티커 토큰
         </p>
       </header>
 

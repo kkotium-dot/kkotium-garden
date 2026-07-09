@@ -99,7 +99,7 @@ export default function InsertCardPage() {
 
   if (!settings) {
     return (
-      <div style={{ padding: 40, color: '#E62310' }}>
+      <div style={{ padding: 40, color: '#F63B28' }}>
         <AlertCircle size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 6 }} />
         설정을 불러올 수 없습니다.
       </div>
@@ -112,7 +112,7 @@ export default function InsertCardPage() {
       <div className="no-print" style={{ padding: '20px 32px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FFF0F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CreditCard size={20} strokeWidth={2.5} color="#E62310" />
+            <CreditCard size={20} strokeWidth={2.5} color="#F63B28" />
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: '#222', margin: 0 }}>인서트 카드</h1>
         </div>
@@ -138,7 +138,7 @@ export default function InsertCardPage() {
                     style={{
                       padding: 6,
                       background: active ? '#FFF0F5' : '#fff',
-                      border: `2px solid ${active ? '#E62310' : '#FFE4EC'}`,
+                      border: `2px solid ${active ? '#F63B28' : '#FFE4EC'}`,
                       borderRadius: 8,
                       cursor: 'pointer',
                       display: 'flex',
@@ -148,7 +148,7 @@ export default function InsertCardPage() {
                     }}
                   >
                     <div style={{ width: '100%', height: 28, borderRadius: 4, background: s.hex }} />
-                    <span style={{ fontSize: 10, color: active ? '#E62310' : '#666', fontWeight: 600 }}>{s.name}</span>
+                    <span style={{ fontSize: 10, color: active ? '#F63B28' : '#666', fontWeight: 600 }}>{s.name}</span>
                   </button>
                 );
               })}
@@ -161,13 +161,13 @@ export default function InsertCardPage() {
               style={{
                 width: '100%', padding: 8,
                 background: activeSlot === 'custom' ? '#FFF0F5' : '#fff',
-                border: `2px solid ${activeSlot === 'custom' ? '#E62310' : '#FFE4EC'}`,
+                border: `2px solid ${activeSlot === 'custom' ? '#F63B28' : '#FFE4EC'}`,
                 borderRadius: 8, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: 8,
               }}
             >
-              <Sparkles size={12} color={activeSlot === 'custom' ? '#E62310' : '#888'} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: activeSlot === 'custom' ? '#E62310' : '#666' }}>
+              <Sparkles size={12} color={activeSlot === 'custom' ? '#F63B28' : '#888'} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: activeSlot === 'custom' ? '#F63B28' : '#666' }}>
                 이번 카드만 다른 색
               </span>
             </button>
@@ -225,8 +225,8 @@ export default function InsertCardPage() {
                       fontSize: 10,
                       fontWeight: 600,
                       color: reviewReward === p.amount ? '#fff' : '#666',
-                      background: reviewReward === p.amount ? '#E62310' : '#fff',
-                      border: `1px solid ${reviewReward === p.amount ? '#E62310' : '#E5E5E5'}`,
+                      background: reviewReward === p.amount ? '#F63B28' : '#fff',
+                      border: `1px solid ${reviewReward === p.amount ? '#F63B28' : '#E5E5E5'}`,
                       borderRadius: 6,
                       cursor: 'pointer',
                     }}
@@ -250,8 +250,8 @@ export default function InsertCardPage() {
                   fontSize: 12,
                   fontWeight: 600,
                   color: layout === 'fourPerA4' ? '#fff' : '#666',
-                  background: layout === 'fourPerA4' ? '#E62310' : '#fff',
-                  border: `1px solid ${layout === 'fourPerA4' ? '#E62310' : '#E5E5E5'}`,
+                  background: layout === 'fourPerA4' ? '#F63B28' : '#fff',
+                  border: `1px solid ${layout === 'fourPerA4' ? '#F63B28' : '#E5E5E5'}`,
                   borderRadius: 8,
                   cursor: 'pointer',
                 }}
@@ -266,8 +266,8 @@ export default function InsertCardPage() {
                   fontSize: 12,
                   fontWeight: 600,
                   color: layout === 'single' ? '#fff' : '#666',
-                  background: layout === 'single' ? '#E62310' : '#fff',
-                  border: `1px solid ${layout === 'single' ? '#E62310' : '#E5E5E5'}`,
+                  background: layout === 'single' ? '#F63B28' : '#fff',
+                  border: `1px solid ${layout === 'single' ? '#F63B28' : '#E5E5E5'}`,
                   borderRadius: 8,
                   cursor: 'pointer',
                 }}
@@ -287,7 +287,7 @@ export default function InsertCardPage() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 20px', fontSize: 14, fontWeight: 700,
-              color: '#fff', background: '#E62310',
+              color: '#fff', background: '#F63B28',
               border: 'none', borderRadius: 10, cursor: 'pointer',
             }}
           >
@@ -528,7 +528,7 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
   return (
     <section style={{ background: '#fff', border: '1px solid #FFE4EC', borderRadius: 12, padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <span style={{ color: '#E62310' }}>{icon}</span>
+        <span style={{ color: '#F63B28' }}>{icon}</span>
         <h2 style={{ fontSize: 13, fontWeight: 700, color: '#222', margin: 0 }}>{title}</h2>
       </div>
       {children}

@@ -1,7 +1,7 @@
 'use client';
 // /crawl — Kkotium Unified Crawler v2
 // Tabs: [단건] single URL | [대량] bulk SSE | [이력] crawl logs
-// Design: Kkotium system (red #e62310, pink lines, white cards)
+// Design: Kkotium system (red #F63B28, pink lines, white cards)
 
 import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -704,8 +704,8 @@ function CrawlPageInner() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <div style={{ position:'relative', width:52, height:52, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
               <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ position:'absolute', top:0, left:0 }}>
-                {([0,60,120,180,240,300] as number[]).map((deg,i)=>{ const r=deg*Math.PI/180; const cx=26+Math.cos(r)*11.4; const cy=26+Math.sin(r)*11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#e62310" />; })}
-                <circle cx="26" cy="26" r="14.6" fill="#e62310" />
+                {([0,60,120,180,240,300] as number[]).map((deg,i)=>{ const r=deg*Math.PI/180; const cx=26+Math.cos(r)*11.4; const cy=26+Math.sin(r)*11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#F63B28" />; })}
+                <circle cx="26" cy="26" r="14.6" fill="#F63B28" />
               </svg>
               <Layers size={18} color="#fff" strokeWidth={2.5} style={{ position:'relative', zIndex:1 }} />
             </div>
@@ -731,7 +731,7 @@ function CrawlPageInner() {
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 padding: '9px 16px', borderRadius: 10, border: 'none',
                 background: tab === key ? '#fff' : 'transparent',
-                color: tab === key ? '#e62310' : '#888',
+                color: tab === key ? '#F63B28' : '#888',
                 fontSize: 13, fontWeight: tab === key ? 700 : 500,
                 cursor: 'pointer',
                 boxShadow: tab === key ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
@@ -761,22 +761,22 @@ function CrawlPageInner() {
                     onBlur={e => { e.currentTarget.style.background='#FFF5F8'; e.currentTarget.style.borderColor='#F8DCE5'; }}
                   />
                 </div>
-                <button onClick={handleSingleCrawl} disabled={sLoading} style={{ display:'flex', alignItems:'center', gap:6, padding:'13px 22px', background: sLoading ? '#F8DCE5' : '#e62310', color: sLoading ? '#B0A0A8' : '#fff', fontSize:14, fontWeight:900, borderRadius:12, border:'none', cursor: sLoading ? 'not-allowed':'pointer', whiteSpace:'nowrap' }}>
+                <button onClick={handleSingleCrawl} disabled={sLoading} style={{ display:'flex', alignItems:'center', gap:6, padding:'13px 22px', background: sLoading ? '#F8DCE5' : '#F63B28', color: sLoading ? '#B0A0A8' : '#fff', fontSize:14, fontWeight:900, borderRadius:12, border:'none', cursor: sLoading ? 'not-allowed':'pointer', whiteSpace:'nowrap' }}>
                   {sLoading ? <><RefreshCw size={14} className="animate-spin" /> 불러오는 중...</> : <><Search size={14} /> 불러오기</>}
                 </button>
               </div>
               {sessionWarning && (
             <div style={{ marginTop: 10, padding:'9px 12px', background:'#fffbeb', border:'1px solid #fde68a', borderRadius:10, fontSize:13, color:'#a16207', display:'flex', alignItems:'center', gap:8 }}>
-              <span style={{ display:"inline-flex", alignItems:"center", color:"#e62310" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+              <span style={{ display:"inline-flex", alignItems:"center", color:"#F63B28" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
               <span>{sessionWarning}</span>
-              <a href="/settings/supplier-login" style={{ marginLeft:'auto', fontSize:12, fontWeight:700, color:'#e62310', textDecoration:'none', whiteSpace:'nowrap' }}>재로기인 →</a>
+              <a href="/settings/supplier-login" style={{ marginLeft:'auto', fontSize:12, fontWeight:700, color:'#F63B28', textDecoration:'none', whiteSpace:'nowrap' }}>재로기인 →</a>
             </div>
           )}
           {dupWarn && (
             <div style={{ marginTop: 10, padding:'9px 12px', background:'#FFF0F5', border:'1px solid #FFB3CE', borderRadius:10, fontSize:13, color:'#9d174d', display:'flex', alignItems:'center', gap:8 }}>
-              <AlertCircle size={15} style={{ color:'#e62310', flexShrink:0 }} />
+              <AlertCircle size={15} style={{ color:'#F63B28', flexShrink:0 }} />
               <span>이미 <b>{dupWarn.productName}</b>(으)로 상품화된 항목입니다.</span>
-              <a href={`/products/new?edit=${dupWarn.productId}`} style={{ marginLeft:'auto', fontSize:12, fontWeight:700, color:'#e62310', textDecoration:'none', whiteSpace:'nowrap' }}>창고에서 열기 →</a>
+              <a href={`/products/new?edit=${dupWarn.productId}`} style={{ marginLeft:'auto', fontSize:12, fontWeight:700, color:'#F63B28', textDecoration:'none', whiteSpace:'nowrap' }}>창고에서 열기 →</a>
             </div>
           )}
           {sError && <div style={{ marginTop: 10, padding:'9px 12px', background:'#fff0ef', border:'1px solid #ffd6d3', borderRadius:10, fontSize:13, color:'#b91c1c' }}>{sError}</div>}
@@ -810,7 +810,7 @@ function CrawlPageInner() {
                     </div>
                     {sResult.supplierPrice > 0 ? (
                       <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
-                        <span style={{ fontSize:24, fontWeight:900, color:'#e62310' }}>{sResult.supplierPrice.toLocaleString()}원</span>
+                        <span style={{ fontSize:24, fontWeight:900, color:'#F63B28' }}>{sResult.supplierPrice.toLocaleString()}원</span>
                         <span style={{ fontSize:11, color:'#aaa', fontWeight:400 }}>도매 공급가</span>
                       </div>
                     ) : (
@@ -858,7 +858,7 @@ function CrawlPageInner() {
                   <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
                     <span style={{ fontSize:10, fontWeight:700, color:'#aaa', letterSpacing:'0.06em', textTransform:'uppercase' }}>묶음배송</span>
                     {sResult.canMerge !== undefined ? (
-                      <span style={{ fontSize:13, fontWeight:700, color: sResult.canMerge ? '#15803d' : '#e62310' }}>
+                      <span style={{ fontSize:13, fontWeight:700, color: sResult.canMerge ? '#15803d' : '#F63B28' }}>
                         {sResult.canMerge ? '가능' : '불가'}
                         <span style={{ fontSize:11, color:'#aaa', fontWeight:400, marginLeft:4 }}>{sResult.canMerge ? '(배송비 절약 기회)' : '(단독 배송)'}</span>
                       </span>
@@ -893,7 +893,7 @@ function CrawlPageInner() {
                     <div style={{ padding:'12px 20px' }}>
                       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
                         <span style={{ fontSize:10, fontWeight:700, color:'#aaa', letterSpacing:'0.06em', textTransform:'uppercase' }}>옵션</span>
-                        <span style={{ fontSize:11, color:'#e62310', background:'#FFF0EF', border:'1px solid #fca5a5', borderRadius:99, padding:'1px 7px', fontWeight:700 }}>
+                        <span style={{ fontSize:11, color:'#F63B28', background:'#FFF0EF', border:'1px solid #fca5a5', borderRadius:99, padding:'1px 7px', fontWeight:700 }}>
                           {(() => { const oos = sResult.options.filter(o => typeof o !== 'string' && o.qty === 0).length; return oos > 0 ? `${sResult.options.length}개 (품절 ${oos}개)` : `${sResult.options.length}개`; })()} → 상품등록에 자동 입력됩니다
                         </span>
                       </div>
@@ -922,10 +922,10 @@ function CrawlPageInner() {
             {sResult && (
               <div style={{ background:'#fff', borderRadius:18, border:'1.5px solid #F8DCE5', padding:'18px 22px' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
-                  <div style={{ width:3, height:16, background:'#e62310', borderRadius:99 }} />
-                  <p style={{ fontSize:11, fontWeight:900, color:'#e62310', letterSpacing:'0.14em', textTransform:'uppercase', margin:0, fontFamily:"'Arial Black',Impact,sans-serif" }}>카테고리 자동 추천</p>
+                  <div style={{ width:3, height:16, background:'#F63B28', borderRadius:99 }} />
+                  <p style={{ fontSize:11, fontWeight:900, color:'#F63B28', letterSpacing:'0.14em', textTransform:'uppercase', margin:0, fontFamily:"'Arial Black',Impact,sans-serif" }}>카테고리 자동 추천</p>
                   {sCatLoading && (
-                    <RefreshCw size={12} className="animate-spin" style={{ color:'#e62310', marginLeft:4 }} />
+                    <RefreshCw size={12} className="animate-spin" style={{ color:'#F63B28', marginLeft:4 }} />
                   )}
                   {!sCatLoading && sCatSuggestions.length > 0 && (
                     <span style={{ fontSize:10, color:'#15803d', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:99, padding:'1px 8px', marginLeft:4 }}>자동 선택됨</span>
@@ -1057,10 +1057,10 @@ function CrawlPageInner() {
                               setSellPrice(autoRound ? smartRound(raw) : raw);
                             }
                           }}
-                          style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px', borderRadius:10, border: isSelected ? '2px solid #e62310' : '1.5px solid #F8DCE5', background: isSelected ? '#FFF0F5' : '#fff', cursor:'pointer', textAlign:'left', transition:'all 0.12s' }}>
-                          <div style={{ width:16, height:16, borderRadius:'50%', border: isSelected ? '5px solid #e62310' : '2px solid #ddd', flexShrink:0, transition:'all 0.12s' }} />
+                          style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px', borderRadius:10, border: isSelected ? '2px solid #F63B28' : '1.5px solid #F8DCE5', background: isSelected ? '#FFF0F5' : '#fff', cursor:'pointer', textAlign:'left', transition:'all 0.12s' }}>
+                          <div style={{ width:16, height:16, borderRadius:'50%', border: isSelected ? '5px solid #F63B28' : '2px solid #ddd', flexShrink:0, transition:'all 0.12s' }} />
                           <div style={{ flex:1, minWidth:0 }}>
-                            <p style={{ fontSize:12, fontWeight: isSelected ? 700 : 400, color: isSelected ? '#e62310' : '#333', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            <p style={{ fontSize:12, fontWeight: isSelected ? 700 : 400, color: isSelected ? '#F63B28' : '#333', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                               {[cat.d1, cat.d2, cat.d3, (cat as {d1:string;d2:string;d3:string;d4?:string}).d4].filter(Boolean).join(' > ')}
                             </p>
                           </div>
@@ -1077,7 +1077,7 @@ function CrawlPageInner() {
             {sResult && (
               <div style={{ background:'#fff', borderRadius:18, border:'1.5px solid #F8DCE5', padding:'20px 22px' }}>
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-                  <p style={{ fontSize:11, fontWeight:900, color:'#e62310', letterSpacing:'0.14em', textTransform:'uppercase', margin:0, fontFamily:"'Arial Black',Impact,sans-serif" }}>판매가 계산기</p>
+                  <p style={{ fontSize:11, fontWeight:900, color:'#F63B28', letterSpacing:'0.14em', textTransform:'uppercase', margin:0, fontFamily:"'Arial Black',Impact,sans-serif" }}>판매가 계산기</p>
                   {/* Honey score for current prices with correct fee rate */}
                   <HoneyBadge
                     supplierPrice={supPrice} salePrice={sellPrice} naverFeeRate={naverFeeRate}
@@ -1136,12 +1136,12 @@ function CrawlPageInner() {
                       <input type="checkbox" checked={autoRound} onChange={e => {
                         setAutoRound(e.target.checked);
                         if (e.target.checked && sellPrice > 0) setSellPrice(smartRound(sellPrice));
-                      }} style={{ accentColor:'#e62310', cursor:'pointer' }} />
+                      }} style={{ accentColor:'#F63B28', cursor:'pointer' }} />
                       자동 단수조정
                     </label>
                   </div>
                   <input type="number" value={sellPrice} onChange={e => setSellPrice(Number(e.target.value))}
-                    style={{ width:'100%', padding:'9px 10px', fontSize:16, fontWeight:700, background:'#FFF5F8', border:'1.5px solid #FF6B8A', borderRadius:10, color:'#e62310', outline:'none' }} />
+                    style={{ width:'100%', padding:'9px 10px', fontSize:16, fontWeight:700, background:'#FFF5F8', border:'1.5px solid #FF6B8A', borderRadius:10, color:'#F63B28', outline:'none' }} />
                   {supPrice > 0 && sBreakeven > 0 && sellPrice < sBreakeven && (
                     <p style={{ fontSize:12, color:'#b91c1c', marginTop:4 }}>
                       손익분기({sBreakeven.toLocaleString()}원) 미만입니다. 손해 확정!
@@ -1222,7 +1222,7 @@ function CrawlPageInner() {
                 <Divider />
                 <div style={{ display:'flex', gap:10 }}>
                   <button onClick={handleGoToRegister} disabled={sSaving||supPrice===0||sellPrice===0}
-                    style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'12px 18px', background: sSaving||supPrice===0||sellPrice===0?'#F8DCE5':'#e62310', color: sSaving||supPrice===0||sellPrice===0?'#B0A0A8':'#fff', fontSize:14, fontWeight:900, borderRadius:12, border:'none', cursor: sSaving||supPrice===0||sellPrice===0?'not-allowed':'pointer' }}>
+                    style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'12px 18px', background: sSaving||supPrice===0||sellPrice===0?'#F8DCE5':'#F63B28', color: sSaving||supPrice===0||sellPrice===0?'#B0A0A8':'#fff', fontSize:14, fontWeight:900, borderRadius:12, border:'none', cursor: sSaving||supPrice===0||sellPrice===0?'not-allowed':'pointer' }}>
                     {sSaving?<><RefreshCw size={14} className="animate-spin"/>처리 중...</>:<><ArrowRight size={14}/>상품 등록으로 이동</>}
                   </button>
                   <button onClick={handleSaveOnly} disabled={sSaving||supPrice===0||sellPrice===0}
@@ -1257,14 +1257,14 @@ function CrawlPageInner() {
                 <div style={{ display:'flex', gap:6, flex:1 }}>
                   {[10, 20, 30, 40].map(pct => (
                     <button key={pct} onClick={() => setBMarginRate(pct)}
-                      style={{ flex:1, padding:'7px 0', borderRadius:8, fontSize:12, fontWeight:700, border: bMarginRate === pct ? '2px solid #e62310' : '1.5px solid #F8DCE5', background: bMarginRate === pct ? '#FFF0EF' : '#fff', color: bMarginRate === pct ? '#e62310' : '#888', cursor:'pointer' }}>
+                      style={{ flex:1, padding:'7px 0', borderRadius:8, fontSize:12, fontWeight:700, border: bMarginRate === pct ? '2px solid #F63B28' : '1.5px solid #F8DCE5', background: bMarginRate === pct ? '#FFF0EF' : '#fff', color: bMarginRate === pct ? '#F63B28' : '#888', cursor:'pointer' }}>
                       +{pct}%
                     </button>
                   ))}
                   <div style={{ display:'flex', alignItems:'center', gap:4, flex:1.2 }}>
                     <input type="number" min={1} max={200} value={bMarginRate}
                       onChange={e => setBMarginRate(Math.max(1, Number(e.target.value)))}
-                      style={{ width:'100%', padding:'7px 8px', borderRadius:8, fontSize:12, fontWeight:700, color:'#e62310', background:'#FFF5F8', border:'1.5px solid #F8DCE5', outline:'none', textAlign:'center' }}
+                      style={{ width:'100%', padding:'7px 8px', borderRadius:8, fontSize:12, fontWeight:700, color:'#F63B28', background:'#FFF5F8', border:'1.5px solid #F8DCE5', outline:'none', textAlign:'center' }}
                     />
                     <span style={{ fontSize:11, color:'#888', whiteSpace:'nowrap' }}>%</span>
                   </div>
@@ -1272,11 +1272,11 @@ function CrawlPageInner() {
               </div>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                 <p style={{ fontSize:11, color:'#aaa', margin:0 }}>
-                  도매가 10,000원 → 판매가 <strong style={{ color:'#e62310' }}>{bulkSalePrice(10000).toLocaleString()}원</strong>
+                  도매가 10,000원 → 판매가 <strong style={{ color:'#F63B28' }}>{bulkSalePrice(10000).toLocaleString()}원</strong>
                 </p>
                 <label style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'#888', cursor:'pointer', whiteSpace:'nowrap' }}>
                   <input type="checkbox" checked={bAutoRound} onChange={e => setBAutoRound(e.target.checked)}
-                    style={{ width:13, height:13, accentColor:'#e62310' }} />
+                    style={{ width:13, height:13, accentColor:'#F63B28' }} />
                   자동 단수조정
                 </label>
               </div>
@@ -1303,7 +1303,7 @@ function CrawlPageInner() {
             {bStep === 'input' && (
               <div style={{ background:'#fff', border:'1.5px solid #F8DCE5', borderRadius:18, padding:'22px' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
-                  <span style={{ width:22, height:22, background:'#e62310', borderRadius:'50%', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:900, color:'#fff', flexShrink:0 }}>1</span>
+                  <span style={{ width:22, height:22, background:'#F63B28', borderRadius:'50%', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:900, color:'#fff', flexShrink:0 }}>1</span>
                   <span style={{ fontSize:14, fontWeight:700, color:'#1A1A1A' }}>URL 입력</span>
                   <span style={{ fontSize:12, color:'#888' }}>— 줄바꿈 구분, 최대 50개</span>
                 </div>
@@ -1320,7 +1320,7 @@ function CrawlPageInner() {
                   {validBulkUrls.length > 50 && <span style={{ fontSize:12, color:'#c2410c', fontWeight:600 }}>초과분 무시됨</span>}
                 </div>
                 <button onClick={handleBulkCrawl} disabled={validBulkUrls.length===0}
-                  style={{ marginTop:14, width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'13px 20px', background: validBulkUrls.length===0?'#F8DCE5':'#e62310', color: validBulkUrls.length===0?'#B0A0A8':'#fff', fontSize:14, fontWeight:900, borderRadius:14, border:'none', cursor: validBulkUrls.length===0?'not-allowed':'pointer' }}>
+                  style={{ marginTop:14, width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'13px 20px', background: validBulkUrls.length===0?'#F8DCE5':'#F63B28', color: validBulkUrls.length===0?'#B0A0A8':'#fff', fontSize:14, fontWeight:900, borderRadius:14, border:'none', cursor: validBulkUrls.length===0?'not-allowed':'pointer' }}>
                   <Layers size={16}/>
                   {validBulkUrls.length > 0 ? `${Math.min(validBulkUrls.length,50)}개 크롤링 시작` : 'URL을 입력해주세요'}
                 </button>
@@ -1331,7 +1331,7 @@ function CrawlPageInner() {
             {bStep === 'running' && (
               <div style={{ background:'#fff', border:'1.5px solid #F8DCE5', borderRadius:18, padding:'32px 22px', textAlign:'center' }}>
                 <div style={{ width:56, height:56, background:'#FFF0EF', borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
-                  <RefreshCw size={28} color="#e62310" className="animate-spin" />
+                  <RefreshCw size={28} color="#F63B28" className="animate-spin" />
                 </div>
                 <p style={{ fontSize:17, fontWeight:900, color:'#1A1A1A', margin:'0 0 4px' }}>크롤링 중...</p>
                 <p style={{ fontSize:12, color:'#888', margin:'0 0 20px' }}>5개씩 처리 중입니다</p>
@@ -1341,7 +1341,7 @@ function CrawlPageInner() {
                     <span>{bProgress.total > 0 ? Math.round((bProgress.done/bProgress.total)*100) : 0}%</span>
                   </div>
                   <div style={{ height:10, background:'#F8DCE5', borderRadius:99, overflow:'hidden' }}>
-                    <div style={{ height:'100%', width:`${bProgress.total>0?(bProgress.done/bProgress.total)*100:0}%`, background:'#e62310', borderRadius:99, transition:'width 0.4s ease' }} />
+                    <div style={{ height:'100%', width:`${bProgress.total>0?(bProgress.done/bProgress.total)*100:0}%`, background:'#F63B28', borderRadius:99, transition:'width 0.4s ease' }} />
                   </div>
                   {/* 실시간 결과 피드 */}
                   <div style={{ marginTop:14, textAlign:'left', maxHeight:200, overflowY:'auto' }}>
@@ -1352,7 +1352,7 @@ function CrawlPageInner() {
                           {r.name || r.url}
                         </span>
                         {r.status === 'success' && r.supplierPrice ? (
-                          <span style={{ color:'#e62310', fontWeight:700, flexShrink:0 }}>{r.supplierPrice.toLocaleString()}원</span>
+                          <span style={{ color:'#F63B28', fontWeight:700, flexShrink:0 }}>{r.supplierPrice.toLocaleString()}원</span>
                         ) : null}
                       </div>
                     ))}
@@ -1384,16 +1384,16 @@ function CrawlPageInner() {
                       <input type="checkbox"
                         checked={selectedIds.size===bRows.filter(r=>r.status==='success'&&!r.excluded).length&&selectedIds.size>0}
                         onChange={toggleBAll}
-                        style={{ width:14, height:14, accentColor:'#e62310', cursor:'pointer' }} />
+                        style={{ width:14, height:14, accentColor:'#F63B28', cursor:'pointer' }} />
                       <span>전체 선택</span>
-                      {selectedIds.size > 0 && <span style={{ color:'#e62310', fontWeight:700 }}>({selectedIds.size}개)</span>}
+                      {selectedIds.size > 0 && <span style={{ color:'#F63B28', fontWeight:700 }}>({selectedIds.size}개)</span>}
                     </label>
                     <div style={{ flex:1 }}/>
                     {/* 꿀통순 정렬 */}
                     <button onClick={() => {
                       const calcM = (sup:number) => { const s=bulkSalePrice(sup); return s>0?((s-sup-3000-s*0.05733)/s):-1; };
                       setBRows(prev => [...prev].sort((a,b) => calcM(b.editedPrice??b.supplierPrice??0) - calcM(a.editedPrice??a.supplierPrice??0)));
-                    }} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 12px', background:'#FFF5F8', border:'1.5px solid #FFB3CE', borderRadius:10, fontSize:12, fontWeight:700, color:'#e62310', cursor:'pointer', whiteSpace:'nowrap' }}>
+                    }} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 12px', background:'#FFF5F8', border:'1.5px solid #FFB3CE', borderRadius:10, fontSize:12, fontWeight:700, color:'#F63B28', cursor:'pointer', whiteSpace:'nowrap' }}>
                       <TrendingUp size={12}/> 꿀통순 정렬
                     </button>
                     {/* 새 크롤링 */}
@@ -1440,7 +1440,7 @@ function CrawlPageInner() {
                           {/* Checkbox */}
                           <input type="checkbox" checked={isSelected} disabled={r.excluded}
                             onChange={() => toggleBSelect(r.id)}
-                            style={{ width:15, height:15, accentColor:'#e62310', cursor:'pointer', marginTop:2, flexShrink:0 }} />
+                            style={{ width:15, height:15, accentColor:'#F63B28', cursor:'pointer', marginTop:2, flexShrink:0 }} />
                           {/* Thumbnail */}
                           <div style={{ width:56, height:56, borderRadius:10, overflow:'hidden', border:'1px solid #F8DCE5', background:'#F5F5F5', flexShrink:0 }}>
                             {r.images?.[0]
@@ -1479,7 +1479,7 @@ function CrawlPageInner() {
                           {!r.excluded && (
                             <div style={{ display:'flex', gap:6, flexShrink:0 }}>
                               <button onClick={() => handleBulkToRegister(r)} title="상품등록으로 이동"
-                                style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', background:'#FFF0EF', border:'1px solid #fca5a5', borderRadius:8, fontSize:11, fontWeight:700, color:'#e62310', cursor:'pointer', whiteSpace:'nowrap' }}>
+                                style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', background:'#FFF0EF', border:'1px solid #fca5a5', borderRadius:8, fontSize:11, fontWeight:700, color:'#F63B28', cursor:'pointer', whiteSpace:'nowrap' }}>
                                 <ArrowRight size={11}/> 등록
                               </button>
                               <button onClick={() => excludeRow(r.id)} title="목록에서 제외" aria-label="목록에서 제외"
@@ -1504,7 +1504,7 @@ function CrawlPageInner() {
                               <p style={{ fontSize:10, color:'#aaa', margin:'0 0 2px' }}>도매가</p>
                               <input type="number" value={r.editedPrice??r.supplierPrice??0}
                                 onChange={e => updateBRow(r.id,'editedPrice',Number(e.target.value))}
-                                style={{ width:90, fontSize:14, fontWeight:900, color:'#e62310', border:'none', borderBottom:'1.5px solid #FFB3CE', padding:'0 2px', background:'transparent', outline:'none' }}
+                                style={{ width:90, fontSize:14, fontWeight:900, color:'#F63B28', border:'none', borderBottom:'1.5px solid #FFB3CE', padding:'0 2px', background:'transparent', outline:'none' }}
                               />
                             </div>
                             <div style={{ color:'#ddd', fontSize:16, fontWeight:300 }}>/</div>
@@ -1597,7 +1597,7 @@ function CrawlPageInner() {
                     if (lossCount > 0 && !window.confirm(`${lossCount}개 손해 상품이 포함되어 있습니다.\n꽃수레에 담으시겠습니까?`)) return;
                     handleBulkExcel();
                   }} disabled={selectedIds.size===0||excelLoading}
-                    style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'14px 20px', background: selectedIds.size===0?'#F8DCE5':'#e62310', color: selectedIds.size===0?'#B0A0A8':'#fff', fontSize:15, fontWeight:900, borderRadius:14, border:'none', cursor: selectedIds.size===0?'not-allowed':'pointer', boxShadow: selectedIds.size>0?'0 2px 8px rgba(230,35,16,0.25)':'none' }}>
+                    style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'14px 20px', background: selectedIds.size===0?'#F8DCE5':'#F63B28', color: selectedIds.size===0?'#B0A0A8':'#fff', fontSize:15, fontWeight:900, borderRadius:14, border:'none', cursor: selectedIds.size===0?'not-allowed':'pointer', boxShadow: selectedIds.size>0?'0 2px 8px rgba(230,35,16,0.25)':'none' }}>
                     {excelLoading
                       ? <><RefreshCw size={15} className="animate-spin"/> 꽃수레에 담는 중...</>
                       : <><Package size={15}/> 선택한 {selectedIds.size}개 꽃수레에 담기</>}
@@ -1619,8 +1619,8 @@ function CrawlPageInner() {
                 {/* D1 Row 1: title + status filter badges (edge-aligned) */}
                 <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <div style={{ width:3, height:16, background:'#e62310', borderRadius:99 }} />
-                  <span style={{ fontSize:13, fontWeight:900, color:'#e62310' }}>꿀통 꽃수레</span>
+                  <div style={{ width:3, height:16, background:'#F63B28', borderRadius:99 }} />
+                  <span style={{ fontSize:13, fontWeight:900, color:'#F63B28' }}>꿀통 꽃수레</span>
                   <span style={{ fontSize:11, color:'#aaa' }}>지금 꽃수레에 담긴 예쁜 상품 {logs.length}개</span>
                 </div>
                 {/* Status filter — CRAWL-GRID-v2: live count badge per tab (folds
@@ -1652,13 +1652,13 @@ function CrawlPageInner() {
                         <button key={k}
                           onClick={() => { setHistFilter(k as typeof histFilter); loadShelf(k as typeof histFilter, histSellerFilter); }}
                           style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:99, fontSize:11, fontWeight:600,
-                            border: active ? '1.5px solid #e62310' : '1.5px solid var(--border-neutral)',
+                            border: active ? '1.5px solid #F63B28' : '1.5px solid var(--border-neutral)',
                             background: active ? '#FFF0EF' : '#fff',
-                            color: active ? '#e62310' : '#888', cursor:'pointer' }}>
+                            color: active ? '#F63B28' : '#888', cursor:'pointer' }}>
                           {l}
                           <span style={{ fontSize:10, fontWeight:800, lineHeight:1, padding:'2px 6px', borderRadius:99,
                             fontVariantNumeric:'tabular-nums',
-                            background: active ? '#e62310' : '#F1EEE7',
+                            background: active ? '#F63B28' : '#F1EEE7',
                             color: active ? '#fff' : '#999' }}>
                             {cnt}
                           </span>
@@ -1690,7 +1690,7 @@ function CrawlPageInner() {
                   {/* 초기화 / 새로고침 */}
                   <button onClick={() => loadShelf()} aria-label="꽃수레 새로고침" title="새로고침"
                     style={{ width:34, height:34, flexShrink:0, background:'#FFF5F8', border:'1.5px solid #F8DCE5', borderRadius:8, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <RefreshCw size={14} color="#e62310" />
+                    <RefreshCw size={14} color="#F63B28" />
                   </button>
                 </div>
               </div>
@@ -1703,7 +1703,7 @@ function CrawlPageInner() {
                 only while >=1 row is selected; it clears on deselect. */}
             {histSelected.size > 0 && (
               <div style={{ position:'fixed', bottom:20, left:'50%', transform:'translateX(-50%)', zIndex:40, width:'min(960px, calc(100vw - 32px))', display:'flex', alignItems:'center', gap:10, padding:'12px 16px', background:'#FFF0EF', border:'1.5px solid #FFB3CE', borderRadius:14, boxShadow:'0 10px 30px rgba(230,35,16,0.22)' }}>
-                <span style={{ fontSize:13, fontWeight:700, color:'#e62310' }}>{histSelected.size}개 선택됨</span>
+                <span style={{ fontSize:13, fontWeight:700, color:'#F63B28' }}>{histSelected.size}개 선택됨</span>
                 {batchResult && (
                   <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:99,
                     background: batchResult.errors > 0 ? '#fee2e2' : '#dcfce7',
@@ -1782,7 +1782,7 @@ function CrawlPageInner() {
                   // URL-safe base64: standard "+" gets eaten by URLSearchParams (form-encoded space)
                   const safe = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_');
                   router.push(`/products/new?prefill=${safe}&autoSeo=1`);
-                }} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 14px', background:'#e62310', border:'none', borderRadius:8, fontSize:12, fontWeight:700, color:'#fff', cursor:'pointer' }}>
+                }} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 14px', background:'#F63B28', border:'none', borderRadius:8, fontSize:12, fontWeight:700, color:'#fff', cursor:'pointer' }}>
                   <ArrowRight size={12}/> 등록 시작
                 </button>
               </div>
@@ -1791,7 +1791,7 @@ function CrawlPageInner() {
             {/* List */}
             {logsLoading ? (
               <div style={{ padding:'48px', textAlign:'center', background:'#fff', borderRadius:16, border:'1.5px solid #F8DCE5' }}>
-                <RefreshCw size={24} className="animate-spin" color="#e62310" style={{ margin:'0 auto 10px', display:'block' }} />
+                <RefreshCw size={24} className="animate-spin" color="#F63B28" style={{ margin:'0 auto 10px', display:'block' }} />
                 <p style={{ fontSize:13, color:'#888', margin:0 }}>꿀통 꽃수레 불러오는 중...</p>
               </div>
             ) : (() => {
@@ -1932,7 +1932,7 @@ function CrawlPageInner() {
                   return (
                     <button disabled={isUpdating}
                       onClick={() => { if (log.product_id) router.push(`/products/${log.product_id}/edit`); else goSeed(log); }}
-                      style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'6px 14px', background:'#e62310', color:'#fff', border:'none', borderRadius:8, fontSize:11.5, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+                      style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'6px 14px', background:'#F63B28', color:'#fff', border:'none', borderRadius:8, fontSize:11.5, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
                       {isUpdating ? <RefreshCw size={11} className="animate-spin"/> : <ArrowRight size={11}/>}
                       이어서 작업
                     </button>
@@ -1957,13 +1957,13 @@ function CrawlPageInner() {
                   <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 14px', background:'#FBFAF7', borderBottom:'1px solid var(--border-neutral)', fontSize:12, color:'#888' }}>
                     <input type="checkbox" checked={allChecked}
                       onChange={() => setHistSelected(allChecked ? new Set() : new Set(allIds))}
-                      style={{ width:14, height:14, accentColor:'#e62310', cursor:'pointer' }} />
+                      style={{ width:14, height:14, accentColor:'#F63B28', cursor:'pointer' }} />
                     <span style={{ fontVariantNumeric:'tabular-nums' }}>전체 {sorted.length}개</span>
                     <div style={{ flex:1 }} />
                     {/* SEED-SAVE C-3: reveal/hide items already turned into a 창고 상품. */}
                     {processedCount > 0 && histFilter !== 'REGISTERED' && (
                       <button onClick={() => setShowProcessed(v => !v)}
-                        style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'4px 10px', background: showProcessed ? '#FFF0F5' : 'transparent', border:'1px solid #FFD9E6', borderRadius:999, fontSize:11, fontWeight:700, color:'#e62310', cursor:'pointer', whiteSpace:'nowrap' }}>
+                        style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'4px 10px', background: showProcessed ? '#FFF0F5' : 'transparent', border:'1px solid #FFD9E6', borderRadius:999, fontSize:11, fontWeight:700, color:'#F63B28', cursor:'pointer', whiteSpace:'nowrap' }}>
                         {showProcessed ? <Eye size={11}/> : <EyeOff size={11}/>}
                         처리완료 {processedCount}개 {showProcessed ? '숨기기' : '보기'}
                       </button>
@@ -1977,11 +1977,11 @@ function CrawlPageInner() {
                     {/* D3 — right-aligned headers (justifySelf:end) sit over the
                         right-aligned tabular data of their columns. */}
                     <button onClick={() => toggleSort('supplier_price')}
-                      style={{ display:'inline-flex', alignItems:'center', justifyContent:'flex-end', justifySelf:'end', gap:3, background:'none', border:'none', cursor:'pointer', font:'inherit', color: histSort.key==='supplier_price'?'#e62310':'#999', textAlign:'right' }}>
+                      style={{ display:'inline-flex', alignItems:'center', justifyContent:'flex-end', justifySelf:'end', gap:3, background:'none', border:'none', cursor:'pointer', font:'inherit', color: histSort.key==='supplier_price'?'#F63B28':'#999', textAlign:'right' }}>
                       도매가 {sortArrow('supplier_price')}
                     </button>
                     <button onClick={() => toggleSort('margin')}
-                      style={{ display:'inline-flex', alignItems:'center', justifyContent:'flex-end', justifySelf:'end', gap:3, background:'none', border:'none', cursor:'pointer', font:'inherit', color: histSort.key==='margin'?'#e62310':'#999', textAlign:'right' }}>
+                      style={{ display:'inline-flex', alignItems:'center', justifyContent:'flex-end', justifySelf:'end', gap:3, background:'none', border:'none', cursor:'pointer', font:'inherit', color: histSort.key==='margin'?'#F63B28':'#999', textAlign:'right' }}>
                       예상마진율 {sortArrow('margin')}
                     </button>
                     <span style={{ textAlign:'right' }}>액션</span>
@@ -2013,7 +2013,7 @@ function CrawlPageInner() {
                         {/* Col: checkbox — unlocked for all statuses (incl. 등록완료). */}
                         <input type="checkbox" checked={isSel}
                           onChange={() => toggleSel(log.id)}
-                          style={{ width:14, height:14, accentColor:'#e62310', cursor:'pointer' }} />
+                          style={{ width:14, height:14, accentColor:'#F63B28', cursor:'pointer' }} />
 
                         {/* Col: 상품정보 (thumb + name + muted secondary + compact pills) */}
                         <div style={{ display:'flex', alignItems:'center', gap:9, minWidth:0 }}>
@@ -2156,7 +2156,7 @@ function CrawlPageInner() {
           <div onClick={(e) => e.stopPropagation()}
             style={{ width:'100%', maxWidth:380, background:'#fff', borderRadius:16, border:'1.5px solid #F8DCE5', padding:'20px 22px', boxShadow:'0 12px 40px rgba(0,0,0,0.18)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
-              <Trash2 size={18} color="#e62310" />
+              <Trash2 size={18} color="#F63B28" />
               <h3 style={{ margin:0, fontSize:15, fontWeight:900, color:'#1A1A1A' }}>꽃수레에서 삭제</h3>
             </div>
             {/* Target preview */}
@@ -2192,7 +2192,7 @@ function CrawlPageInner() {
                 취소
               </button>
               <button onClick={() => { const id = deleteTarget.id; setDeleteTarget(null); deleteFromShelf(id); }}
-                style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'10px', background:'#e62310', border:'none', borderRadius:10, fontSize:13, fontWeight:800, color:'#fff', cursor:'pointer' }}>
+                style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'10px', background:'#F63B28', border:'none', borderRadius:10, fontSize:13, fontWeight:800, color:'#fff', cursor:'pointer' }}>
                 <Trash2 size={13}/> 삭제
               </button>
             </div>

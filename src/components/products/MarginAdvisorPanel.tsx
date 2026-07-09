@@ -92,8 +92,8 @@ export default function MarginAdvisorPanel({
         alignItems: 'center',
         gap: 8,
       }}>
-        <Zap size={13} color="#e62310" strokeWidth={2.5} />
-        <span style={{ fontSize: 11, fontWeight: 900, color: '#e62310', letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'Arial Black', Impact, sans-serif" }}>
+        <Zap size={13} color="#F63B28" strokeWidth={2.5} />
+        <span style={{ fontSize: 11, fontWeight: 900, color: '#F63B28', letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'Arial Black', Impact, sans-serif" }}>
           마진 어드바이저
         </span>
         <span style={{ fontSize: 11, color: '#888', marginLeft: 2 }}>
@@ -152,7 +152,7 @@ export default function MarginAdvisorPanel({
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
               {[
-                { label: `최소 ${advice.marginMin}%`, price: calculations.recMin, color: '#e62310', bg: '#FFF0EF' },
+                { label: `최소 ${advice.marginMin}%`, price: calculations.recMin, color: '#F63B28', bg: '#FFF0EF' },
                 { label: `권장 ${advice.marginRecommended}%`, price: calculations.recRecommended, color: '#2563eb', bg: '#EFF6FF' },
                 { label: `우수 ${advice.marginGood}%`, price: calculations.recGood, color: '#15803d', bg: '#F0FDF4' },
               ].map(({ label, price, color, bg }) => (
@@ -186,10 +186,10 @@ export default function MarginAdvisorPanel({
 
         {/* Return rate info */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', background: '#FFF8FA', borderRadius: 8, border: '1px solid #FFB3CE' }}>
-          <Info size={12} color="#e62310" style={{ flexShrink: 0, marginTop: 1 }} />
+          <Info size={12} color="#F63B28" style={{ flexShrink: 0, marginTop: 1 }} />
           <div>
             <span style={{ fontSize: 11, fontWeight: 700, color: '#555' }}>예상 반품률: </span>
-            <span style={{ fontSize: 11, color: '#e62310', fontWeight: 700 }}>
+            <span style={{ fontSize: 11, color: '#F63B28', fontWeight: 700 }}>
               {advice.returnRateMin}~{advice.returnRateMax}% (평균 {advice.returnRateTypical}%)
             </span>
             <span style={{ fontSize: 10, color: '#888', marginLeft: 4 }}>— {advice.returnRateReason}</span>

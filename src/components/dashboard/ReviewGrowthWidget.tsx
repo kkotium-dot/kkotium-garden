@@ -138,7 +138,7 @@ export default function ReviewGrowthWidget() {
 
   // Rate color
   const rateOk = data.writingRate >= 20;
-  const rateColor = rateOk ? '#16a34a' : data.writingRate >= 10 ? '#f59e0b' : '#e62310';
+  const rateColor = rateOk ? '#16a34a' : data.writingRate >= 10 ? '#f59e0b' : '#F63B28';
   const stageColor = data.stage.stage === 3 ? '#16a34a' : data.stage.stage === 2 ? '#2563eb' : '#FF6B8A';
   const stageBg = data.stage.stage === 3 ? '#dcfce7' : data.stage.stage === 2 ? '#dbeafe' : '#FFE5EE';
 
@@ -267,7 +267,7 @@ export default function ReviewGrowthWidget() {
       <div style={{ padding: '14px 20px', borderTop: '1px solid #F8DCE5', background: '#FFFAFB' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <MessageSquare size={12} style={{ color: '#e62310' }} />
+            <MessageSquare size={12} style={{ color: '#F63B28' }} />
             <span style={{ fontSize: 12, fontWeight: 800, color: '#1A1A1A' }}>운영 체크리스트</span>
             <span style={{ fontSize: 11, color: '#B0A0A8' }}>9개 중 {displayCheckedCount}개 완료</span>
           </div>
@@ -284,7 +284,7 @@ export default function ReviewGrowthWidget() {
           {CHECKLIST_ITEMS.map((item) => {
             const checked = displayChecklist[item.key] ?? false;
             const isAuto = data.autoDetected.includes(item.key);
-            const phaseColor = item.phase === '필수' ? '#e62310' : item.phase === '확장' ? '#2563eb' : '#7c3aed';
+            const phaseColor = item.phase === '필수' ? '#F63B28' : item.phase === '확장' ? '#2563eb' : '#7c3aed';
             return (
               <button
                 key={item.key}

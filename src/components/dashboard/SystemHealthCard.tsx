@@ -128,7 +128,7 @@ export function SystemHealthCard() {
           flexWrap: 'wrap',
         }}
       >
-        <Activity size={16} style={{ color: '#E8001F' }} />
+        <Activity size={16} style={{ color: '#F63B28' }} />
         <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>시스템 상태</p>
         {Date.now() < NEW_BADGE_EXPIRES_AT && (
           <span
@@ -311,7 +311,7 @@ export function SystemHealthCard() {
             marginLeft: 'auto',
             fontSize: 11,
             fontWeight: 700,
-            color: '#E8001F',
+            color: '#F63B28',
             textDecoration: 'none',
             display: 'inline-flex',
             alignItems: 'center',

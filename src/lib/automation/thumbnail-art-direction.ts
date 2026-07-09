@@ -85,7 +85,7 @@ const PALETTES: Record<ConceptTone['colorMood'], ArtPalette> = {
   vivid: {
     topRgb: [250, 240, 244],
     floorRgb: [255, 250, 252],
-    accent: '#E62310',
+    accent: '#F63B28',
     spotlight: '#FFFFFF',
   },
   // mono — monochrome / minimal neutral

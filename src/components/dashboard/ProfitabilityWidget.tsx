@@ -28,7 +28,7 @@ function DistributionBar({ distribution, total }: {
     { key: 'good', count: distribution.good, color: '#2563eb', label: '30~50%' },
     { key: 'normal', count: distribution.normal, color: '#eab308', label: '15~30%' },
     { key: 'low', count: distribution.low, color: '#f97316', label: '0~15%' },
-    { key: 'danger', count: distribution.danger, color: '#e62310', label: '적자' },
+    { key: 'danger', count: distribution.danger, color: '#F63B28', label: '적자' },
   ].filter(s => s.count > 0);
 
   return (
@@ -82,7 +82,7 @@ export default function ProfitabilityWidget() {
 
   const { summary, distribution, top5, bottom5, feeComparison } = data;
   const fmt = (n: number) => n >= 10000 ? `${(n / 10000).toFixed(1)}만` : n.toLocaleString();
-  const marginColor = summary.avgMarginNormal >= 30 ? '#16a34a' : summary.avgMarginNormal >= 15 ? '#eab308' : '#e62310';
+  const marginColor = summary.avgMarginNormal >= 30 ? '#16a34a' : summary.avgMarginNormal >= 15 ? '#eab308' : '#F63B28';
   const monthlySaved = summary.totalFeeSaved * 30;
 
   return (
@@ -94,13 +94,13 @@ export default function ProfitabilityWidget() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <DollarSign size={14} style={{ color: '#e62310' }} />
+          <DollarSign size={14} style={{ color: '#F63B28' }} />
           <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>
             수익성 분석
           </p>
           <span style={{
             fontSize: 10, padding: '2px 7px', borderRadius: 99,
-            background: '#FEF0F3', color: '#e62310', fontWeight: 700,
+            background: '#FEF0F3', color: '#F63B28', fontWeight: 700,
           }}>
             {summary.totalProducts}개 상품
           </span>
@@ -265,7 +265,7 @@ export default function ProfitabilityWidget() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <BarChart3 size={12} style={{ color: '#e62310' }} />
+            <BarChart3 size={12} style={{ color: '#F63B28' }} />
             <span style={{ fontSize: 12, fontWeight: 700, color: '#1A1A1A' }}>
               상품별 수익 순위
             </span>
@@ -306,7 +306,7 @@ export default function ProfitabilityWidget() {
             {/* Bottom 5 */}
             {bottom5.some(p => p.profitNormal < 0) && (
               <>
-                <p style={{ fontSize: 11, fontWeight: 800, color: '#e62310', margin: '12px 0 6px' }}>
+                <p style={{ fontSize: 11, fontWeight: 800, color: '#F63B28', margin: '12px 0 6px' }}>
                   주의 상품
                 </p>
                 {bottom5.filter(p => p.marginNormal < 15).map((p, i) => (
@@ -318,7 +318,7 @@ export default function ProfitabilityWidget() {
                       {p.name}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: p.profitNormal < 0 ? '#e62310' : '#f97316' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: p.profitNormal < 0 ? '#F63B28' : '#f97316' }}>
                         {p.profitNormal >= 0 ? '+' : ''}{p.profitNormal.toLocaleString()}원
                       </span>
                       <span style={{ fontSize: 10, color: '#6B7280' }}>{p.marginNormal}%</span>

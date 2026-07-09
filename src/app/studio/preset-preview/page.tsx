@@ -45,8 +45,8 @@ const SAMPLES = samplesRaw as unknown as Sample[];
 const btn = (active: boolean): React.CSSProperties => ({
   padding: '6px 12px',
   borderRadius: 8,
-  border: active ? '1px solid #E62310' : '1px solid #E2E2E2',
-  background: active ? '#E62310' : '#FFFFFF',
+  border: active ? '1px solid #F63B28' : '1px solid #E2E2E2',
+  background: active ? '#F63B28' : '#FFFFFF',
   color: active ? '#FFFFFF' : '#3A3A3A',
   fontSize: 13,
   fontWeight: 600,
@@ -54,7 +54,7 @@ const btn = (active: boolean): React.CSSProperties => ({
 });
 
 const STATUS_COLOR: Record<string, string> = {
-  pass: '#228f18', warn: '#C8860B', fail: '#E62310', manual: '#6B6B6B',
+  pass: '#228f18', warn: '#C8860B', fail: '#F63B28', manual: '#6B6B6B',
 };
 
 export default function PresetPreviewPage() {
@@ -134,7 +134,7 @@ export default function PresetPreviewPage() {
             {loading ? 'loading…' : 'Load from product'}
           </button>
           {live ? <button type="button" style={btn(false)} onClick={() => setLive(null)}>clear</button> : null}
-          {error ? <span style={{ fontSize: 12, color: '#E62310' }}>{error}</span> : null}
+          {error ? <span style={{ fontSize: 12, color: '#F63B28' }}>{error}</span> : null}
         </div>
 
         {!live ? (
@@ -168,7 +168,7 @@ export default function PresetPreviewPage() {
                 : ` (recommended: ${live.layout.recommendedPreset})`}
             </span>
             <span style={{ color: '#888' }}>·</span>
-            <span style={{ color: live.seoGuard.ok ? '#228f18' : '#E62310' }}>
+            <span style={{ color: live.seoGuard.ok ? '#228f18' : '#F63B28' }}>
               SEO guard {live.seoGuard.ok ? 'ok' : 'fail'}
             </span>
             {live.seoGuard.checks.map((c) => (

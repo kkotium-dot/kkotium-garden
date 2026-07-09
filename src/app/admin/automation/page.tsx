@@ -104,7 +104,7 @@ export default function AutomationPage() {
   if (loading) {
     return (
       <div style={{ padding: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-        <Loader2 size={20} className="animate-spin" style={{ color: '#e62310' }} />
+        <Loader2 size={20} className="animate-spin" style={{ color: '#F63B28' }} />
         <span style={{ fontSize: 14, color: '#666' }}>불러오는 중…</span>
       </div>
     );
@@ -118,7 +118,7 @@ export default function AutomationPage() {
           onClick={() => { setLoading(true); fetchRegistry(); }}
           style={{
             marginTop: 12, padding: '8px 16px',
-            background: '#e62310', color: '#fff', border: 'none', borderRadius: 8,
+            background: '#F63B28', color: '#fff', border: 'none', borderRadius: 8,
             cursor: 'pointer', fontWeight: 700,
           }}
         >
@@ -162,7 +162,7 @@ export default function AutomationPage() {
               flexShrink: 0,
             }}
           >
-            <Workflow size={22} style={{ color: '#e62310' }} strokeWidth={2.4} />
+            <Workflow size={22} style={{ color: '#F63B28' }} strokeWidth={2.4} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -201,7 +201,7 @@ export default function AutomationPage() {
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '6px 12px',
-              background: '#fff', color: '#e62310',
+              background: '#fff', color: '#F63B28',
               border: '1.5px solid #FFB3CE', borderRadius: 8,
               cursor: refreshing ? 'wait' : 'pointer',
               fontSize: 12, fontWeight: 700,

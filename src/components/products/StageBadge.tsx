@@ -64,7 +64,7 @@ const STAGE_META: Record<Stage, StageMeta> = {
   ready:     { label: '발행대기', bg: '#DCFCE7', color: '#15803D', dot: '#22C55E' },
   pending:   { label: '등록대기', bg: '#FEF3C7', color: '#92400E', dot: '#F59E0B' },
   published: { label: '발행됨',   bg: '#DCFCE7', color: '#166534', dot: '#16A34A' },
-  oos:       { label: '품절',     bg: '#FEE2E2', color: '#B91C1C', dot: '#E8001F' },
+  oos:       { label: '품절',     bg: '#FEE2E2', color: '#B91C1C', dot: '#F63B28' },
   inactive:  { label: '재활성화', bg: '#FFEDD5', color: '#C2410C', dot: '#FB923C' },
 };
 

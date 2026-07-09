@@ -86,7 +86,7 @@ export default function ProductLifecycleWidget() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Activity size={18} style={{ color: '#e62310' }} />
+          <Activity size={18} style={{ color: '#F63B28' }} />
           <span style={{ fontWeight: 700, fontSize: 15 }}>상품 수명 주기</span>
           {total > 0 && <span style={{ fontSize: 11, color: '#9ca3af' }}>{total}개 상품</span>}
         </div>

@@ -30,7 +30,7 @@ export default function Header() {
             style={{
               width: 38,
               height: 38,
-              background: '#e62310',
+              background: '#F63B28',
               borderRadius: '50%',
               overflow: 'hidden',
               flexShrink: 0,
@@ -43,7 +43,7 @@ export default function Header() {
           >
             <img src="/kkotium-symbol-white.svg" alt="KKOTIUM" width={42} height={42} style={{ objectFit: "contain", width: "100%", height: "100%" }} /></div>
           <div className="leading-tight">
-            <span style={{ fontSize: '18px', fontWeight: 900, color: '#e62310', fontFamily: "'Arial Black', Impact, sans-serif", letterSpacing: '-0.5px', display: 'block', lineHeight: 1 }}>
+            <span style={{ fontSize: '18px', fontWeight: 900, color: '#F63B28', fontFamily: "'Arial Black', Impact, sans-serif", letterSpacing: '-0.5px', display: 'block', lineHeight: 1 }}>
               KKOTIUM
             </span>
             <span style={{ fontSize: '9px', fontWeight: 900, color: '#FF6B8A', letterSpacing: '0.22em', textTransform: 'uppercase', display: 'block' }}>
@@ -78,7 +78,7 @@ export default function Header() {
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FFF0F5'; (e.currentTarget as HTMLElement).style.borderColor = '#FFB3CE'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = '#F8DCE5'; }}
           >
-            <div style={{ width: 26, height: 26, background: '#e62310', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 26, height: 26, background: '#F63B28', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <User size={13} className="text-white" strokeWidth={2.5} />
             </div>
             {/* Phase 2-MOBILE-3 M1: hide user label on mobile to prevent

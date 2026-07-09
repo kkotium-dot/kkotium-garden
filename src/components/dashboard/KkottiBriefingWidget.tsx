@@ -319,7 +319,7 @@ export default function KkottiBriefingWidget({ variantOverride }: KkottiBriefing
             fontSize: 22,
             fontWeight: 700,
             fontFamily: 'monospace',
-            color: '#E8001F',
+            color: '#F63B28',
             letterSpacing: '-0.05em',
             flexShrink: 0,
           }}
@@ -334,7 +334,7 @@ export default function KkottiBriefingWidget({ variantOverride }: KkottiBriefing
             style={{
               fontSize: 11,
               fontWeight: 600,
-              color: '#E8001F',
+              color: '#F63B28',
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
               marginBottom: 4,
@@ -364,7 +364,7 @@ export default function KkottiBriefingWidget({ variantOverride }: KkottiBriefing
               alignItems: 'center',
               padding: '10px 14px',
               borderRadius: 10,
-              background: '#E8001F',
+              background: '#F63B28',
               color: '#FFFFFF',
               fontSize: 13,
               fontWeight: 600,

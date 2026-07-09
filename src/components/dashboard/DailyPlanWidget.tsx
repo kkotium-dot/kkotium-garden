@@ -31,7 +31,7 @@ const SLOT_META = {
     Icon: Sparkles,
     label: '꼬띠 추천',
     hint: '꿀통지수 70점↑ 자동 선별',
-    accentColor: '#e62310',
+    accentColor: '#F63B28',
     accentBg: '#FFF0F5',
     borderColor: '#FFB3CE',
   },
@@ -93,11 +93,11 @@ function OnboardingGuide() {
       border: '1.5px solid #FFB3CE',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-        <Rocket size={13} style={{ color: '#e62310' }} />
+        <Rocket size={13} style={{ color: '#F63B28' }} />
         <span style={{ fontSize: 12, fontWeight: 800, color: '#1A1A1A' }}>첫 판매까지 4단계</span>
         <span style={{
           fontSize: 10, padding: '2px 7px', borderRadius: 99,
-          background: '#e62310', color: '#fff', fontWeight: 700,
+          background: '#F63B28', color: '#fff', fontWeight: 700,
         }}>
           초기 운영 모드
         </span>
@@ -117,7 +117,7 @@ function OnboardingGuide() {
           >
             <div style={{
               width: 20, height: 20, borderRadius: '50%', margin: '0 auto 4px',
-              background: step.done ? '#16a34a' : '#e62310',
+              background: step.done ? '#16a34a' : '#F63B28',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <span style={{ fontSize: 10, fontWeight: 900, color: '#fff' }}>{step.num}</span>
@@ -300,7 +300,7 @@ export default function DailyPlanWidget({ products: propProducts, productsLoadin
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Sparkles size={14} style={{ color: '#e62310' }} />
+            <Sparkles size={14} style={{ color: '#F63B28' }} />
             <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>
               오늘 할 일
             </p>

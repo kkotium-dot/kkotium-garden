@@ -143,7 +143,7 @@ function FlowerSVG({ fill, size = 40 }: { fill: string; size?: number }) {
 }
 
 function FlowerIconBox({ active, children }: { active: boolean; children: React.ReactNode }) {
-  const fill = active ? '#e62310' : '#F8DCE5';
+  const fill = active ? '#F63B28' : '#F8DCE5';
   const size = 40;
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0,
@@ -160,7 +160,7 @@ function FlowerIconBox({ active, children }: { active: boolean; children: React.
 function SectionFlower() {
   return (
     <div style={{ position: 'relative', width: 14, height: 14, flexShrink: 0 }}>
-      <FlowerSVG fill="#e62310" size={14} />
+      <FlowerSVG fill="#F63B28" size={14} />
     </div>
   );
 }
@@ -206,7 +206,7 @@ function NavBadge({ count, active }: { count: number; active: boolean }) {
     <span style={{
       fontSize: 10, fontWeight: 900, minWidth: 18, height: 18,
       padding: '0 5px', borderRadius: 99,
-      background: active ? 'rgba(255,255,255,0.25)' : '#e62310',
+      background: active ? 'rgba(255,255,255,0.25)' : '#F63B28',
       color: '#fff',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       flexShrink: 0, lineHeight: 1,
@@ -245,7 +245,7 @@ function SidebarInner() {
         display: 'flex',
         flexDirection: 'column',
         background: '#fff',
-        borderRight: '3px solid #e62310',
+        borderRight: '3px solid #F63B28',
         paddingBottom: 40,
       }}
     >
@@ -257,7 +257,7 @@ function SidebarInner() {
           alignItems: 'center',
           gap: 12,
           padding: '16px 20px',
-          background: '#e62310',
+          background: '#F63B28',
           textDecoration: 'none',
           flexShrink: 0,
         }}
@@ -306,7 +306,7 @@ function SidebarInner() {
                 style={{
                   fontSize: 11,
                   fontWeight: 800,
-                  color: '#e62310',
+                  color: '#F63B28',
                   letterSpacing: '0.02em',
                   margin: 0,
                 }}
@@ -331,12 +331,12 @@ function SidebarInner() {
                       padding: '10px 12px',
                       fontSize: 14,
                       fontWeight: 500,
-                      background: active ? '#e62310' : 'transparent',
+                      background: active ? '#F63B28' : 'transparent',
                       color: active ? '#fff' : '#3A3A3A',
                       textDecoration: 'none',
                       transition: 'background 0.12s, color 0.12s',
                     }}
-                    onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = '#FFF0F5'; (e.currentTarget as HTMLElement).style.color = '#e62310'; } }}
+                    onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = '#FFF0F5'; (e.currentTarget as HTMLElement).style.color = '#F63B28'; } }}
                     onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#3A3A3A'; } }}
                   >
                     <NavIcon iconKey={iconKey} active={active} />

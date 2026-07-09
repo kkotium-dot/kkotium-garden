@@ -75,9 +75,9 @@ export default function PanelTabs({
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '0 14px', marginBottom: -1,
               background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
-              borderBottom: on ? '2px solid #E62310' : '2px solid transparent',
+              borderBottom: on ? '2px solid #F63B28' : '2px solid transparent',
               fontSize: 13, fontWeight: on ? 800 : 600,
-              color: on ? '#E62310' : '#737373',
+              color: on ? '#F63B28' : '#737373',
             }}
           >
             {tab.label}

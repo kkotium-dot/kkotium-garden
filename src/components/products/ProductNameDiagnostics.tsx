@@ -171,7 +171,7 @@ export default function ProductNameDiagnostics({ name, ctx, onApplyFix }: Props)
           {diag.grade}등급
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, minWidth: 0 }}>
-          <Sparkles size={14} style={{ color: '#e62310', flexShrink: 0, marginTop: 2 }} />
+          <Sparkles size={14} style={{ color: '#F63B28', flexShrink: 0, marginTop: 2 }} />
           <p style={{ fontSize: 12, color: 'var(--text-700, #3A3A3A)', margin: 0, lineHeight: 1.4 }}>
             {kkottiComment(diag)}
           </p>
@@ -226,7 +226,7 @@ export default function ProductNameDiagnostics({ name, ctx, onApplyFix }: Props)
       {/* NAME-DIAG-2: 롱테일 키워드 추천 (경쟁강도 = 상품수 ÷ 검색량, 실측). */}
       <div style={{ borderTop: '1px solid var(--border-neutral)', padding: '10px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-          <TrendingDown size={14} style={{ color: '#e62310', flexShrink: 0 }} />
+          <TrendingDown size={14} style={{ color: '#F63B28', flexShrink: 0 }} />
           <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-900, #111)' }}>롱테일 키워드 추천</span>
           <span style={{ fontSize: 10.5, color: 'var(--text-300, #888)' }}>경쟁강도(상품수÷검색량) 낮은 세부 키워드</span>
         </div>
@@ -238,7 +238,7 @@ export default function ProductNameDiagnostics({ name, ctx, onApplyFix }: Props)
             disabled={compLoading}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8,
-              border: '1px solid var(--border-neutral)', background: '#fff', color: '#e62310',
+              border: '1px solid var(--border-neutral)', background: '#fff', color: '#F63B28',
               fontSize: 12, fontWeight: 700, cursor: compLoading ? 'wait' : 'pointer',
             }}
           >

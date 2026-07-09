@@ -110,7 +110,7 @@ function PipelineCard({ stages }: { stages: PipelineStage[] }) {
   return (
     <div className="kk-card" style={{ overflow: 'hidden' }}>
       <div style={{ padding: '14px 20px 12px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Layers size={14} style={{ color: '#e62310' }} />
+        <Layers size={14} style={{ color: '#F63B28' }} />
         <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>파이프라인 현황</p>
         <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0 }}>소싱 → 등록 → 판매 → 관리</p>
       </div>
@@ -308,7 +308,7 @@ function ModeToggle({ mode, onChange }: ModeToggleProps) {
               borderRadius: 7,
               cursor: 'pointer',
               background: active ? '#FFFFFF' : 'transparent',
-              color: active ? '#E8001F' : '#737373',
+              color: active ? '#F63B28' : '#737373',
               boxShadow: active ? '0 1px 3px rgba(232, 0, 31, 0.12)' : 'none',
               transition: 'all 0.15s ease',
             }}
@@ -483,7 +483,7 @@ export default function DashboardPage() {
     { label: '소싱 대기', count: stats?.sourcingCount ?? 0, icon: Layers,     color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', href: '/crawl',                  hint: '보관함 SOURCED' },
     { label: '등록 대기', count: stats?.draftProducts ?? 0, icon: Package,    color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', href: '/products',               hint: 'DRAFT 상태'    },
     { label: '판매중',    count: stats?.activeProducts ?? 0, icon: TrendingUp, color: '#16a34a', bg: '#f0fdf4', border: '#86efac', href: '/products',               hint: 'ACTIVE 상태'   },
-    { label: '좀비 감지', count: stats?.zombieCount ?? 0,   icon: Skull,      color: '#e62310', bg: '#fff0ef', border: '#ffd6d3', href: '/products/reactivation', hint: '30일+ 미판매'  },
+    { label: '좀비 감지', count: stats?.zombieCount ?? 0,   icon: Skull,      color: '#F63B28', bg: '#fff0ef', border: '#ffd6d3', href: '/products/reactivation', hint: '30일+ 미판매'  },
   ];
 
   const moreSubtitle = buildMoreSubtitle(mode, stats);
@@ -497,8 +497,8 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ position: 'absolute', top: 0, left: 0 }}>
-                {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r=deg*Math.PI/180; const cx=26+Math.cos(r)*11.4; const cy=26+Math.sin(r)*11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#e62310" />; })}
-                <circle cx="26" cy="26" r="14.6" fill="#e62310" />
+                {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r=deg*Math.PI/180; const cx=26+Math.cos(r)*11.4; const cy=26+Math.sin(r)*11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#F63B28" />; })}
+                <circle cx="26" cy="26" r="14.6" fill="#F63B28" />
               </svg>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', zIndex: 1 }}>
                 <path d="M12 22V12"/><path d="M12 12C12 12 8 9 8 6a4 4 0 0 1 8 0c0 3-4 6-4 6z"/>
@@ -659,7 +659,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
             <KpiCard label="전체 상품"     value={stats?.totalProducts ?? 0}          sub="등록된 상품 수"  icon={Package}      valueColor="#1A1A1A" iconBg="#F5F5F5" iconColor="#9CA3AF" href="/products" />
             <KpiCard label="네이버 판매중"  value={stats?.activeProducts ?? 0}         sub="노출 중"        icon={TrendingUp}   valueColor="#16a34a" iconBg="#F0FDF4" iconColor="#16a34a" href="/products" />
-            <KpiCard label="품절"           value={stats?.outOfStockProducts ?? 0}     sub="재고 보충 필요" icon={AlertTriangle} valueColor="#e62310" iconBg="#FFF0EF" iconColor="#e62310" href="/products/reactivation" />
+            <KpiCard label="품절"           value={stats?.outOfStockProducts ?? 0}     sub="재고 보충 필요" icon={AlertTriangle} valueColor="#F63B28" iconBg="#FFF0EF" iconColor="#F63B28" href="/products/reactivation" />
             <KpiCard label="평균 꿀통지수"  value={stats?.avgScore ? `${stats.avgScore}점` : '—'} sub="AI 상품 품질" icon={Sparkles} valueColor="#FF6B8A" iconBg="#FFF0F5" iconColor="#FF6B8A" />
           </div>
 
@@ -698,7 +698,7 @@ export default function DashboardPage() {
             </div>
             <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10 }}>
               {[
-                { label: '씨앗 심기', href: '/products/new', color: '#e62310', bg: '#FFF0F5', border: '#FFB3CE', icon: Package, hint: '상품 등록' },
+                { label: '씨앗 심기', href: '/products/new', color: '#F63B28', bg: '#FFF0F5', border: '#FFB3CE', icon: Package, hint: '상품 등록' },
                 { label: '검색 조련사', href: '/naver-seo', color: '#2563eb', bg: '#EFF6FF', border: '#BFDBFE', icon: TrendingUp, hint: 'SEO 최적화' },
                 { label: '주문 관리', href: '/orders', color: '#16a34a', bg: '#F0FDF4', border: '#BBF7D0', icon: ShoppingCart, hint: '발주/송장' },
                 { label: '꿀통 꽃나들이', href: '/crawl', color: '#7c3aed', bg: '#F5F3FF', border: '#DDD6FE', icon: Layers, hint: '꽃 한 송이씩 담기' },

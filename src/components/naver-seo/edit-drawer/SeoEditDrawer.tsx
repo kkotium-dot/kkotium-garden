@@ -353,7 +353,7 @@ export default function SeoEditDrawer({
           height: "100vh",
           background: "var(--color-bg)",
           borderLeft: isMobile ? "none" : "1px solid var(--color-border-strong)",
-          boxShadow: isMobile ? "none" : "-12px 0 24px rgba(230, 35, 16, 0.08)",
+          boxShadow: isMobile ? "none" : "-12px 0 24px rgba(246, 59, 40, 0.08)",
           display: "flex",
           flexDirection: "column",
           animation: isMobile

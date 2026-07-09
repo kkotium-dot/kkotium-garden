@@ -280,8 +280,8 @@ export default function SuppliersPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ position: 'absolute', top: 0, left: 0 }}>
-                  {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r = deg * Math.PI / 180; const cx = 26 + Math.cos(r) * 11.4; const cy = 26 + Math.sin(r) * 11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#e62310" />; })}
-                  <circle cx="26" cy="26" r="14.6" fill="#e62310" />
+                  {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r = deg * Math.PI / 180; const cx = 26 + Math.cos(r) * 11.4; const cy = 26 + Math.sin(r) * 11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#F63B28" />; })}
+                  <circle cx="26" cy="26" r="14.6" fill="#F63B28" />
                 </svg>
                 <Store size={20} color="#fff" style={{ position: 'relative', zIndex: 1 }} />
               </div>
@@ -289,7 +289,7 @@ export default function SuppliersPage() {
             </div>
             <button
               onClick={openAdd}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#e62310', color: '#fff', padding: '8px 16px', borderRadius: 10, fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', flexShrink: 0 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#F63B28', color: '#fff', padding: '8px 16px', borderRadius: 10, fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', flexShrink: 0 }}
             >
               <Plus size={15} /> 공급사 추가
             </button>

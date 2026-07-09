@@ -197,7 +197,7 @@ export default function CompetitionMonitorWidget() {
         borderBottom: '1px solid #f5f5f5',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Eye size={18} style={{ color: '#e62310' }} />
+          <Eye size={18} style={{ color: '#F63B28' }} />
           <span style={{ fontWeight: 700, fontSize: 15 }}>{'\uACBD\uC7C1 \uC0C1\uD488 \uBAA8\uB2C8\uD130\uB9C1'}</span>
           {data && (
             <span style={{
@@ -369,13 +369,13 @@ export default function CompetitionMonitorWidget() {
                               position: 'absolute', top: -3,
                               left: `${Math.min(96, Math.max(2, ((p.myPrice - s.minPrice) / (s.maxPrice - s.minPrice)) * 100))}%`,
                               width: 14, height: 14, borderRadius: '50%',
-                              background: '#e62310', border: '2px solid #fff',
+                              background: '#F63B28', border: '2px solid #fff',
                               boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                             }} />
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#aaa', marginTop: 2 }}>
                             <span>{s.minPrice.toLocaleString()}</span>
-                            <span style={{ fontWeight: 700, color: '#e62310' }}>{'\uB0B4 \uAC00\uACA9'}: {p.myPrice.toLocaleString()}</span>
+                            <span style={{ fontWeight: 700, color: '#F63B28' }}>{'\uB0B4 \uAC00\uACA9'}: {p.myPrice.toLocaleString()}</span>
                             <span>{s.maxPrice.toLocaleString()}</span>
                           </div>
                         </div>

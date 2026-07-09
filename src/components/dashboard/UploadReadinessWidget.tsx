@@ -265,7 +265,7 @@ function ProductRow({
                 padding: '6px 8px',
                 borderRadius: 8,
                 background: '#fff',
-                color: '#e62310',
+                color: '#F63B28',
                 fontSize: 11,
                 fontWeight: 700,
                 textDecoration: 'none',
@@ -477,7 +477,7 @@ export default function UploadReadinessWidget({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Package size={14} style={{ color: '#e62310' }} />
+            <Package size={14} style={{ color: '#F63B28' }} />
             <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>
               등록 준비 명령탑
             </p>
@@ -490,7 +490,7 @@ export default function UploadReadinessWidget({
             style={{
               fontSize: 11,
               fontWeight: 700,
-              color: '#e62310',
+              color: '#F63B28',
               textDecoration: 'none',
               display: 'inline-flex',
               alignItems: 'center',
@@ -521,7 +521,7 @@ export default function UploadReadinessWidget({
             </p>
           </div>
           <div style={{ textAlign: 'center', borderLeft: '1px solid #FFB3CE', borderRight: '1px solid #FFB3CE' }}>
-            <p style={{ fontSize: 18, fontWeight: 900, color: '#e62310', margin: 0, lineHeight: 1 }}>
+            <p style={{ fontSize: 18, fontWeight: 900, color: '#F63B28', margin: 0, lineHeight: 1 }}>
               {workCount}
             </p>
             <p style={{ fontSize: 10, color: '#b91c1c', fontWeight: 700, margin: '3px 0 0' }}>
@@ -577,7 +577,7 @@ export default function UploadReadinessWidget({
               style={{
                 fontSize: 11,
                 fontWeight: 700,
-                color: '#e62310',
+                color: '#F63B28',
                 textDecoration: 'none',
                 display: 'inline-flex',
                 alignItems: 'center',

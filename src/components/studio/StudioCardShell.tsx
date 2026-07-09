@@ -103,7 +103,7 @@ export function Pill({
   palette?: Palette;
   tooltip?: string;
 }) {
-  const p = palette ?? { bg: 'var(--gp-pink-50)', color: '#e62310', border: 'var(--gp-pink-300)' };
+  const p = palette ?? { bg: 'var(--gp-pink-50)', color: '#F63B28', border: 'var(--gp-pink-300)' };
   return (
     <div
       title={tooltip}
@@ -139,7 +139,7 @@ export function PrimaryButton({
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 8,
         padding: '10px 18px',
-        background: disabled || busy ? '#FFD9E5' : '#e62310',
+        background: disabled || busy ? '#FFD9E5' : '#F63B28',
         color: '#fff',
         border: 'none', borderRadius: 10,
         fontSize: 14, fontWeight: 800,
@@ -166,7 +166,7 @@ export function SecondaryButton({
       disabled={disabled}
       style={{
         padding: '6px 12px',
-        background: '#fff', color: '#e62310',
+        background: '#fff', color: '#F63B28',
         border: '1.5px solid var(--gp-pink-300)', borderRadius: 8,
         fontSize: 12, fontWeight: 700,
         cursor: disabled ? 'not-allowed' : 'pointer',

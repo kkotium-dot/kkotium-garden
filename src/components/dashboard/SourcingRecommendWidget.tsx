@@ -355,7 +355,7 @@ export default function SourcingRecommendWidget() {
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4,
                       fontSize: 11, padding: '4px 10px', borderRadius: 5,
-                      background: '#e62310', color: '#fff', textDecoration: 'none',
+                      background: '#F63B28', color: '#fff', textDecoration: 'none',
                       fontWeight: 500,
                     }}
                   >

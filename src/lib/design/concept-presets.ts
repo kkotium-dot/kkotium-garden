@@ -2,7 +2,7 @@
 //
 // Concept preset registry — code-ification of docs/design/CONCEPT_PRESET_SYSTEM.md.
 //
-// Core principle: the brand core (logo, signature Red #E62310 / Pink #FFCCEA,
+// Core principle: the brand core (logo, signature Red #F63B28 / Pink #FFCCEA,
 // Pretendard, mascot) is FIXED. The product-concept layer is swapped per
 // category at three variable intensities (Level 1..3).
 //

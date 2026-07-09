@@ -1,7 +1,7 @@
 'use client';
 // HoneyScorePanel — 꼬띠 꿀통지수 실시간 평가 패널
 // Placed in product registration right panel, reads live form inputs
-// Design: app unified style — white card, #e62310 accent, #FFB3CE lines
+// Design: app unified style — white card, #F63B28 accent, #FFB3CE lines
 
 import { useState, useMemo } from 'react';
 import {
@@ -46,8 +46,8 @@ function KkottiFace({ mood, size = 44 }: { mood: HoneyScoreResult['kkottiMood'];
     mouthType: 'smile-big' | 'smile' | 'flat' | 'frown';
     accessory?: 'star' | 'sweat';
   }> = {
-    celebrate: { hatColor: '#e62310', bodyColor: '#fce7f3', bootColor: '#f472b6', eyeType: 'happy',   mouthType: 'smile-big', accessory: 'star'  },
-    happy:     { hatColor: '#e62310', bodyColor: '#fce7f3', bootColor: '#f472b6', eyeType: 'happy',   mouthType: 'smile',     accessory: undefined },
+    celebrate: { hatColor: '#F63B28', bodyColor: '#fce7f3', bootColor: '#f472b6', eyeType: 'happy',   mouthType: 'smile-big', accessory: 'star'  },
+    happy:     { hatColor: '#F63B28', bodyColor: '#fce7f3', bootColor: '#f472b6', eyeType: 'happy',   mouthType: 'smile',     accessory: undefined },
     thinking:  { hatColor: '#2563eb', bodyColor: '#eff6ff', bootColor: '#93c5fd', eyeType: 'normal',  mouthType: 'flat',      accessory: undefined },
     worried:   { hatColor: '#ca8a04', bodyColor: '#fef9c3', bootColor: '#fbbf24', eyeType: 'worried', mouthType: 'frown',     accessory: undefined },
     stressed:  { hatColor: '#dc2626', bodyColor: '#fee2e2', bootColor: '#f87171', eyeType: 'stressed',mouthType: 'frown',     accessory: 'sweat'  },
@@ -136,7 +136,7 @@ function ScoreRing({ score, grade }: { score: number; grade: HoneyScoreResult['g
   const circ = 2 * Math.PI * r;
   const filled = (score / 100) * circ;
   const colors: Record<string, string> = {
-    S: '#9333ea', A: '#16a34a', B: '#2563eb', C: '#ca8a04', D: '#e62310',
+    S: '#9333ea', A: '#16a34a', B: '#2563eb', C: '#ca8a04', D: '#F63B28',
   };
   const col = colors[grade] ?? '#6b7280';
 
@@ -189,12 +189,12 @@ export default function HoneyScorePanel({
 
   // Grade accent color for border/bg
   const gradeColor: Record<string, string> = {
-    S: '#9333ea', A: '#16a34a', B: '#2563eb', C: '#ca8a04', D: '#e62310',
+    S: '#9333ea', A: '#16a34a', B: '#2563eb', C: '#ca8a04', D: '#F63B28',
   };
   const gradeLight: Record<string, string> = {
     S: '#faf5ff', A: '#f0fdf4', B: '#eff6ff', C: '#fefce8', D: '#fff0f0',
   };
-  const gc  = gradeColor[result.grade] ?? '#e62310';
+  const gc  = gradeColor[result.grade] ?? '#F63B28';
   const gbl = gradeLight[result.grade] ?? '#fff0f0';
 
   return (
@@ -288,7 +288,7 @@ export default function HoneyScorePanel({
               ].map(item => {
                 const col = item.value >= 40 ? '#16a34a'
                   : item.value >= 30 ? '#2563eb'
-                  : item.value >= 20 ? '#ca8a04' : '#e62310';
+                  : item.value >= 20 ? '#ca8a04' : '#F63B28';
                 return (
                   <div key={item.label} style={{
                     background: '#FFF8FB', borderRadius: 12,

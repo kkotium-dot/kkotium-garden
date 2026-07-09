@@ -238,7 +238,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
               background: 'linear-gradient(135deg, #ffe4ed, #ffd0e0)',
               border: '2px solid #FFB3CE',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 14, fontWeight: 700, color: '#e62310', flexShrink: 0,
+              fontSize: 14, fontWeight: 700, color: '#F63B28', flexShrink: 0,
             }}>
               {face}
             </div>
@@ -254,7 +254,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 padding: '6px 12px', borderRadius: 10, fontSize: 11, fontWeight: 700,
-                background: lastSent.daily ? '#dcfce7' : '#e62310',
+                background: lastSent.daily ? '#dcfce7' : '#F63B28',
                 color: lastSent.daily ? '#15803d' : '#fff',
                 border: lastSent.daily ? '1px solid #bbf7d0' : 'none',
                 cursor: sending === 'daily' ? 'not-allowed' : 'pointer',
@@ -288,7 +288,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
               }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                  background: '#e62310', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: '#F63B28', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 9, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px',
                 }}>
                   {face}
@@ -309,7 +309,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
                 }}>
                   <span style={{
                     width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                    background: i === 0 ? '#e62310' : i === 1 ? '#ff6b8a' : '#FFB3CE',
+                    background: i === 0 ? '#F63B28' : i === 1 ? '#ff6b8a' : '#FFB3CE',
                     color: '#fff', fontSize: 11, fontWeight: 900,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>{i + 1}</span>
@@ -331,7 +331,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
                       style={{
                         display: 'flex', alignItems: 'center', gap: 3,
                         padding: '4px 8px', borderRadius: 8, fontSize: 10, fontWeight: 700,
-                        background: '#e62310', color: '#fff', textDecoration: 'none',
+                        background: '#F63B28', color: '#fff', textDecoration: 'none',
                         whiteSpace: 'nowrap',
                       }}
                     >
@@ -345,9 +345,9 @@ export default function KkottiDashboardWidget({ products: propProducts, products
             <div style={{ padding: '10px 20px', borderTop: '1px solid #F8DCE5', background: '#FFF8FB', display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 11, color: '#B0A0A8', fontWeight: 600 }}>평균 쫳통지수</span>
               <div style={{ flex: 1, height: 6, background: '#F8DCE5', borderRadius: 99, overflow: 'hidden' }}>
-                <div style={{ width: `${Math.min(stats.avgHoneyScore, 100)}%`, height: '100%', background: stats.avgHoneyScore >= 70 ? '#e62310' : stats.avgHoneyScore >= 50 ? '#ff6b8a' : '#FFB3CE', borderRadius: 99, transition: 'width 0.6s ease' }} />
+                <div style={{ width: `${Math.min(stats.avgHoneyScore, 100)}%`, height: '100%', background: stats.avgHoneyScore >= 70 ? '#F63B28' : stats.avgHoneyScore >= 50 ? '#ff6b8a' : '#FFB3CE', borderRadius: 99, transition: 'width 0.6s ease' }} />
               </div>
-              <span style={{ fontSize: 13, fontWeight: 900, color: '#e62310', minWidth: 32 }}>{stats.avgHoneyScore}점</span>
+              <span style={{ fontSize: 13, fontWeight: 900, color: '#F63B28', minWidth: 32 }}>{stats.avgHoneyScore}점</span>
             </div>
           </>
         )}
@@ -358,7 +358,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
         <div className="kk-card" style={{ overflow: 'hidden', flex: 1 }}>
           <div style={{ padding: '14px 20px 12px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <AlertTriangle size={14} style={{ color: stats.oosProducts > 0 ? '#e62310' : '#B0A0A8' }} />
+              <AlertTriangle size={14} style={{ color: stats.oosProducts > 0 ? '#F63B28' : '#B0A0A8' }} />
               <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>품절 현황</p>
               {stats.oosProducts > 0 && (
                 <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: '#fee2e2', color: '#b91c1c' }}>
@@ -366,14 +366,14 @@ export default function KkottiDashboardWidget({ products: propProducts, products
                 </span>
               )}
             </div>
-            <a href="/products/reactivation" style={{ fontSize: 12, fontWeight: 600, color: '#e62310', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+            <a href="/products/reactivation" style={{ fontSize: 12, fontWeight: 600, color: '#F63B28', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
               전체 <ExternalLink size={11} />
             </a>
           </div>
 
           {stats.oosUrgent.length === 0 ? (
             <div style={{ padding: '20px', textAlign: 'center' }}>
-              <p style={{ fontSize: 22, margin: '0 0 4px', color: '#e62310' }}>^ㅅ^</p>
+              <p style={{ fontSize: 22, margin: '0 0 4px', color: '#F63B28' }}>^ㅅ^</p>
               <p style={{ fontSize: 12, color: '#B0A0A8', margin: 0 }}>품절 상품 없음</p>
             </div>
           ) : (
@@ -381,7 +381,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
               const gs = GRADE_STYLE[p.honeyGrade] ?? GRADE_STYLE['D'];
               return (
                 <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', borderBottom: i < stats.oosUrgent.length - 1 ? '1px solid #F8DCE5' : 'none' }}>
-                  <Package size={13} style={{ color: '#e62310', flexShrink: 0 }} />
+                  <Package size={13} style={{ color: '#F63B28', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 12, fontWeight: 700, color: '#1A1A1A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
                     <p style={{ fontSize: 10, color: '#B0A0A8', margin: 0 }}>{p.daysOos > 0 ? `${p.daysOos}일째 품절` : '방금 품절'}</p>
@@ -398,7 +398,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {discordStatus === true  ? <Wifi    size={14} style={{ color: '#16a34a' }} /> :
-               discordStatus === false ? <WifiOff size={14} style={{ color: '#e62310' }} /> :
+               discordStatus === false ? <WifiOff size={14} style={{ color: '#F63B28' }} /> :
                <Zap size={14} style={{ color: '#B0A0A8' }} />}
               <div>
                 <p style={{ fontSize: 13, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>디스코드 알림</p>
@@ -415,7 +415,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
               style={{
                 display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px',
                 borderRadius: 10, fontSize: 11, fontWeight: 700,
-                background: discordStatus === true ? '#dcfce7' : '#e62310',
+                background: discordStatus === true ? '#dcfce7' : '#F63B28',
                 color: discordStatus === true ? '#15803d' : '#fff',
                 border: discordStatus === true ? '1px solid #bbf7d0' : 'none',
                 cursor: sending === 'test' ? 'not-allowed' : 'pointer',

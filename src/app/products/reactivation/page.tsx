@@ -82,15 +82,15 @@ function CloneConfirmModal({
           <div className="space-y-2 text-xs" style={{ color: '#555' }}>
             <p className="font-bold" style={{ color: '#1A1A1A' }}>진행될 작업:</p>
             <div className="flex items-start gap-2">
-              <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: '#e62310' }}>1</span>
+              <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: '#F63B28' }}>1</span>
               <span>기존 상품 데이터를 복제합니다 (이미지, 옵션, 가격 모두 복사)</span>
             </div>
             <div className="flex items-start gap-2">
-              <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: '#e62310' }}>2</span>
+              <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: '#F63B28' }}>2</span>
               <span>새 상품코드 (SKU): <span className="font-mono font-bold">{item.product.sku.replace(/-R\d+$/, '')}-R1</span> (임시등록 상태)</span>
             </div>
             <div className="flex items-start gap-2">
-              <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: '#e62310' }}>3</span>
+              <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: '#F63B28' }}>3</span>
               <span>원본 상품은 앱에서 <strong>HIDDEN</strong> 처리됩니다</span>
             </div>
             <div className="flex items-start gap-2">
@@ -211,7 +211,7 @@ export default function ReactivationPage() {
         {/* Toast */}
         {toast && (
           <div className="fixed top-6 right-6 z-[70] flex items-center gap-2 px-4 py-3 rounded-2xl shadow-xl text-sm font-semibold"
-            style={{ background: toast.ok ? '#16a34a' : '#e62310', color: '#fff', minWidth: 240 }}>
+            style={{ background: toast.ok ? '#16a34a' : '#F63B28', color: '#fff', minWidth: 240 }}>
             {toast.ok ? <CheckCircle size={15} /> : <AlertTriangle size={15} />}
             {toast.msg}
           </div>
@@ -225,9 +225,9 @@ export default function ReactivationPage() {
                 <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ position: 'absolute', top: 0, left: 0 }}>
                   {([0,60,120,180,240,300] as number[]).map((deg, i) => {
                     const r = deg * Math.PI / 180; const cx = 26 + Math.cos(r) * 11.4; const cy = 26 + Math.sin(r) * 11.4;
-                    return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#e62310" />;
+                    return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#F63B28" />;
                   })}
-                  <circle cx="26" cy="26" r="14.6" fill="#e62310" />
+                  <circle cx="26" cy="26" r="14.6" fill="#F63B28" />
                 </svg>
                 <RefreshCw size={20} color="#fff" strokeWidth={2.5} style={{ position: 'relative', zIndex: 1 }} />
               </div>
@@ -235,7 +235,7 @@ export default function ReactivationPage() {
             </div>
             <button onClick={load} disabled={loading} title="새로고침"
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer' }}>
-              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} style={{ color: '#e62310' }} />
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} style={{ color: '#F63B28' }} />
             </button>
           </div>
           <div style={{ height: 2.5, background: '#FFB3CE', borderRadius: 99, margin: '8px 0 6px' }} />
@@ -253,12 +253,12 @@ export default function ReactivationPage() {
             width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
             background: '#fff', border: '1.5px solid #FFB3CE',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, fontWeight: 800, color: '#e62310', letterSpacing: '-1px',
+            fontSize: 11, fontWeight: 800, color: '#F63B28', letterSpacing: '-1px',
           }}>
             ;ㅅ;
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 11, fontWeight: 800, color: '#e62310', margin: '0 0 2px' }}>꼬띠 긴급 알림</p>
+            <p style={{ fontSize: 11, fontWeight: 800, color: '#F63B28', margin: '0 0 2px' }}>꼬띠 긴급 알림</p>
             <p style={{ fontSize: 11, color: '#7f1d1d', margin: 0, lineHeight: 1.5 }}>
               <strong>새 생명 부여</strong> 버튼을 누르면 상품을 복제하고 검색 조련사로 이동해요.
               AI로 상품명·키워드를 완전히 갈아엎고 신규 등록하면 최신성 버프를 받을 수 있어유!
@@ -295,16 +295,16 @@ export default function ReactivationPage() {
               style={{
                 padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 600,
                 border: '1.5px solid', cursor: 'pointer',
-                background: filter === key ? '#e62310' : '#fff',
+                background: filter === key ? '#F63B28' : '#fff',
                 color: filter === key ? '#fff' : '#555',
-                borderColor: filter === key ? '#e62310' : '#F8DCE5',
+                borderColor: filter === key ? '#F63B28' : '#F8DCE5',
                 transition: 'all 0.12s',
               }}>
               {label}
               <span style={{
                 marginLeft: 6, padding: '1px 7px', borderRadius: 99, fontSize: 10, fontWeight: 700,
                 background: filter === key ? 'rgba(255,255,255,0.25)' : '#F8DCE5',
-                color: filter === key ? '#fff' : '#e62310',
+                color: filter === key ? '#fff' : '#F63B28',
               }}>
                 {counts[key as keyof typeof counts]}
               </span>
@@ -408,7 +408,7 @@ export default function ReactivationPage() {
                       <a href={`/naver-seo?ids=${item.product.id}`}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 5,
-                          padding: '8px 12px', background: '#e62310', color: '#fff',
+                          padding: '8px 12px', background: '#F63B28', color: '#fff',
                           borderRadius: 10, fontSize: 12, fontWeight: 700, textDecoration: 'none',
                         }}>
                         <Zap size={12} /> SEO 최적화

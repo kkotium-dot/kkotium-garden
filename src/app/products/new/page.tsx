@@ -184,7 +184,7 @@ function Field({ label, required, hint, children }: {
     <div>
       <div className="flex items-center gap-1 mb-1.5">
         <label className="text-sm font-semibold" style={{ color: '#2A2A2A' }}>{label}</label>
-        {required && <span className="text-xs" style={{ color: '#e62310' }}>*</span>}
+        {required && <span className="text-xs" style={{ color: '#F63B28' }}>*</span>}
       </div>
       {children}
       {hint && <p className="mt-1 text-xs" style={{ color: '#666' }}>{hint}</p>}
@@ -198,7 +198,7 @@ function Field({ label, required, hint, children }: {
 //   - NO number badge, NO forced accordion (body always visible by default).
 //   - optional subtle right-aligned meta (count / StatusBadge / chip).
 //   border = --border-neutral (#E4DFD4) 1px; white card; tabular-nums on meta.
-//   brand pink (#E62310) is reserved for ACTIVE / PRIMARY CTA / required-* —
+//   brand pink (#F63B28) is reserved for ACTIVE / PRIMARY CTA / required-* —
 //   NEVER card chrome or headers.
 // Replaces the legacy RSection (numbered-pink) + DSection (icon-accordion);
 // both now delegate here. Skin/structure only — children, handlers, validation
@@ -2253,8 +2253,8 @@ const handleGenerate = async () => {
             {/* Flower icon — matches all other pages */}
             <div style={{ position: 'relative', width: 44, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="44" height="44" viewBox="0 0 44 44" fill="none" style={{ position: 'absolute', top: 0, left: 0 }}>
-                {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r=deg*Math.PI/180; const cx=22+Math.cos(r)*9.7; const cy=22+Math.sin(r)*9.7; return <ellipse key={i} cx={cx} cy={cy} rx={11.9} ry={8.8} transform={`rotate(${deg} ${cx} ${cy})`} fill="#e62310" />; })}
-                <circle cx="22" cy="22" r="12.3" fill="#e62310" />
+                {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r=deg*Math.PI/180; const cx=22+Math.cos(r)*9.7; const cy=22+Math.sin(r)*9.7; return <ellipse key={i} cx={cx} cy={cy} rx={11.9} ry={8.8} transform={`rotate(${deg} ${cx} ${cy})`} fill="#F63B28" />; })}
+                <circle cx="22" cy="22" r="12.3" fill="#F63B28" />
               </svg>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', zIndex: 1 }}>
                 <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
@@ -2348,12 +2348,12 @@ const handleGenerate = async () => {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Edit mode banner */}
         {searchParams?.get('edit') && (
-          <div style={{ marginBottom: 16, padding: '12px 16px', background: '#FFF0EF', border: '1.5px solid #e62310', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 28, height: 28, background: '#e62310', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ marginBottom: 16, padding: '12px 16px', background: '#FFF0EF', border: '1.5px solid #F63B28', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 28, height: 28, background: '#F63B28', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </div>
             <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#e62310', margin: 0 }}>상품 수정 모드</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#F63B28', margin: 0 }}>상품 수정 모드</p>
               <p style={{ fontSize: 12, color: '#888', margin: 0 }}>기존 데이터가 입력됐습니다 — 수정 후 엑셀을 다운로드하세요</p>
             </div>
           </div>
@@ -2375,7 +2375,7 @@ const handleGenerate = async () => {
               border: `1.5px solid ${crawlMapBanner.type === 'matched' ? '#86efac' : '#FFB3CE'}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 11, fontWeight: 800,
-              color: crawlMapBanner.type === 'matched' ? '#16a34a' : '#e62310',
+              color: crawlMapBanner.type === 'matched' ? '#16a34a' : '#F63B28',
               letterSpacing: '-1px',
             }}>
               {crawlMapBanner.type === 'matched' ? '^w^' : ';ㅅ;'}
@@ -2396,7 +2396,7 @@ const handleGenerate = async () => {
                 </>
               ) : (
                 <>
-                  <p style={{ fontSize: 11, fontWeight: 800, color: '#e62310', margin: '0 0 2px' }}>
+                  <p style={{ fontSize: 11, fontWeight: 800, color: '#F63B28', margin: '0 0 2px' }}>
                     공급사를 찾을 수 없어요
                   </p>
                   <p style={{ fontSize: 11, color: '#7f1d1d', margin: '0 0 6px', lineHeight: 1.5 }}>
@@ -2409,7 +2409,7 @@ const handleGenerate = async () => {
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4,
                       fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 8,
-                      background: '#e62310', color: '#fff', textDecoration: 'none',
+                      background: '#F63B28', color: '#fff', textDecoration: 'none',
                     }}
                   >
                     거래처 명단에서 등록
@@ -2430,7 +2430,7 @@ const handleGenerate = async () => {
           <div style={{ marginBottom: 16, padding: '12px 16px', background: '#FFF0F5', border: '1.5px solid #FFB3CE', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 18 }}>&#x2728;</span>
             <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#e62310', margin: 0 }}>크롤러에서 데이터가 자동 입력됐습니다</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#F63B28', margin: 0 }}>크롤러에서 데이터가 자동 입력됐습니다</p>
               <p style={{ fontSize: 12, color: '#888', margin: 0 }}>카테고리 선택 후 나머지 항목을 확인하고 엑셀을 다운로드하세요</p>
             </div>
           </div>
@@ -2505,7 +2505,7 @@ const handleGenerate = async () => {
               ? 'bg-green-50 border-green-200 text-green-800'
               : 'bg-red-50 border-red-200 text-red-700'
           }`}>
-            <span className="text-base shrink-0">{naverResult.ok ? <CheckCircle size={14} style={{color:'#16a34a'}}/> : <XCircle size={14} style={{color:'#e62310'}}/>}</span>
+            <span className="text-base shrink-0">{naverResult.ok ? <CheckCircle size={14} style={{color:'#16a34a'}}/> : <XCircle size={14} style={{color:'#F63B28'}}/>}</span>
             <div>
               <p className="font-bold">{naverResult.ok ? '네이버 직접 등록 성공!' : '네이버 등록 실패'}</p>
               <p className="mt-0.5 text-xs opacity-80">{naverResult.message}</p>
@@ -2550,7 +2550,7 @@ const handleGenerate = async () => {
                     borderRadius: 12,
                     fontSize: 13, fontWeight: isActive ? 800 : 500,
                     background: isActive ? '#fff' : isMissing ? '#FFF5F5' : 'transparent',
-                    color: isActive ? '#e62310' : isMissing ? '#dc2626' : '#888',
+                    color: isActive ? '#F63B28' : isMissing ? '#dc2626' : '#888',
                     border: isActive ? '1.5px solid #FFB3CE' : isMissing ? '1.5px solid #fecaca' : '1.5px solid transparent',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
@@ -2743,12 +2743,12 @@ const handleGenerate = async () => {
                       }}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 4,
-                        padding: '0 12px', background: '#FFF0F5', color: '#e62310',
+                        padding: '0 12px', background: '#FFF0F5', color: '#F63B28',
                         border: '1.5px solid #FFB3CE', borderRadius: 12,
                         fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
                       }}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e62310" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F63B28" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                       </svg>
                       카테고리 자동 추천
@@ -3452,7 +3452,7 @@ const handleGenerate = async () => {
               type="button"
               onClick={() => saveDraft({ validate: true, thenStudio: true })}
               disabled={draftBusy}
-              style={{ marginTop: 16, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px 16px', background: draftBusy ? '#aaa' : '#e62310', color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 900, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
+              style={{ marginTop: 16, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px 16px', background: draftBusy ? '#aaa' : '#F63B28', color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 900, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
             >
               <Sprout size={16} /> 저장 후 온실 아틀리에
             </button>
@@ -3490,7 +3490,7 @@ const handleGenerate = async () => {
                 {seoTags.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
                     {seoTags.map(tag => (
-                      <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99, background: '#FFF0F5', color: '#e62310', border: '1px solid #FFB3CE' }}>
+                      <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99, background: '#FFF0F5', color: '#F63B28', border: '1px solid #FFB3CE' }}>
                         #{tag}
                         <button
                           type="button"
@@ -3532,7 +3532,7 @@ const handleGenerate = async () => {
                           setTagInputVal('');
                         }
                       }}
-                      style={{ padding: '0 14px', background: '#FFF0F5', color: '#e62310', border: '1.5px solid #FFB3CE', borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                      style={{ padding: '0 14px', background: '#FFF0F5', color: '#F63B28', border: '1.5px solid #FFB3CE', borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
                     >
                       + 추가
                     </button>
@@ -3585,7 +3585,7 @@ const handleGenerate = async () => {
                         display: 'inline-flex', alignItems: 'center', gap: 5,
                         padding: '5px 10px', borderRadius: 8,
                         border: '1px solid var(--gp-pink-300, #FFB3CE)', background: '#fff',
-                        fontSize: 11, fontWeight: 700, color: '#e62310', cursor: 'pointer',
+                        fontSize: 11, fontWeight: 700, color: '#F63B28', cursor: 'pointer',
                       }}
                     >
                       <Clipboard size={12} /> 복사
@@ -3631,12 +3631,12 @@ const handleGenerate = async () => {
                       width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
                       background: '#fff', border: '1.5px solid #FFB3CE',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 800, color: '#e62310', letterSpacing: '-1px',
+                      fontSize: 11, fontWeight: 800, color: '#F63B28', letterSpacing: '-1px',
                     }}>
                       {FACE[kkottiPick]}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 11, fontWeight: 800, color: '#e62310', margin: '0 0 3px' }}>
+                      <p style={{ fontSize: 11, fontWeight: 800, color: '#F63B28', margin: '0 0 3px' }}>
                         꼬띠 배송 추천 — {kkottiPick}안
                       </p>
                       <p style={{ fontSize: 11, color: '#7f1d1d', margin: '0 0 6px', lineHeight: 1.5 }}>
@@ -3644,7 +3644,7 @@ const handleGenerate = async () => {
                       </p>
                       <button
                         type="button" onClick={doApply}
-                        style={{ padding: '4px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: '#e62310', color: '#fff', border: 'none', cursor: 'pointer' }}
+                        style={{ padding: '4px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: '#F63B28', color: '#fff', border: 'none', cursor: 'pointer' }}
                       >
                         바로 적용
                       </button>
@@ -3731,7 +3731,7 @@ const handleGenerate = async () => {
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
                             <span style={{ fontSize: 11, fontWeight: 900, color: s.active ? s.color : '#888', fontFamily: "'Arial Black',Impact,sans-serif" }}>{s.label}</span>
-                            {s.kkottiPick && <span style={{ fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 99, background: '#e62310', color: '#fff', marginLeft: 2 }}>꼬띠</span>}
+                            {s.kkottiPick && <span style={{ fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 99, background: '#F63B28', color: '#fff', marginLeft: 2 }}>꼬띠</span>}
                             <span style={{ fontSize: 10, fontWeight: 700, color: s.active ? s.color : '#aaa', background: s.active ? s.border : '#F8DCE5', padding: '1px 6px', borderRadius: 99 }}>{s.sub}</span>
                           </div>
                           <p style={{ fontSize: 11, color: s.active ? s.color : '#555', fontWeight: s.active ? 700 : 400, margin: '0 0 2px' }}>{s.desc}</p>
@@ -3757,7 +3757,7 @@ const handleGenerate = async () => {
                     border: selectedShippingTemplate ? '1.5px solid #86efac' : '1.5px solid #FFB3CE',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 11, fontWeight: 800, letterSpacing: '-1px',
-                    color: selectedShippingTemplate ? '#16a34a' : '#e62310',
+                    color: selectedShippingTemplate ? '#16a34a' : '#F63B28',
                   }}>
                     {selectedShippingTemplate ? '^w^' : '^_^'}
                   </div>
@@ -3795,7 +3795,7 @@ const handleGenerate = async () => {
                       </div>
                     ) : (
                       <div>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: '#e62310', margin: '0 0 1px' }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: '#F63B28', margin: '0 0 1px' }}>
                           배송 레시피 선택
                         </p>
                         <p style={{ fontSize: 10, color: '#B0A0A8', margin: 0 }}>
@@ -3812,7 +3812,7 @@ const handleGenerate = async () => {
                       onClick={() => setShippingModalOpen(true)}
                       style={{
                         padding: '6px 12px', borderRadius: 9, fontSize: 11, fontWeight: 700,
-                        background: '#e62310', color: '#fff', border: 'none', cursor: 'pointer',
+                        background: '#F63B28', color: '#fff', border: 'none', cursor: 'pointer',
                         transition: 'all 0.15s',
                       }}
                     >
@@ -4037,10 +4037,10 @@ const handleGenerate = async () => {
                   width: 38, height: 38, borderRadius: '50%',
                   background: '#fff', border: '2px solid #FFB3CE',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 13, fontWeight: 800, color: '#e62310', letterSpacing: '-1px', flexShrink: 0,
+                  fontSize: 13, fontWeight: 800, color: '#F63B28', letterSpacing: '-1px', flexShrink: 0,
                 }}>^ㅅ^</div>
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 800, color: '#e62310', margin: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: '#F63B28', margin: 0 }}>
                     배송 레시피가 없어요!
                   </p>
                   <p style={{ fontSize: 11, color: '#7f1d1d', margin: 0 }}>
@@ -4136,7 +4136,7 @@ const handleGenerate = async () => {
                     }}
                     style={{
                       flex: 1, padding: '10px 0', borderRadius: 12, fontSize: 13,
-                      fontWeight: 800, background: '#e62310', color: '#fff',
+                      fontWeight: 800, background: '#F63B28', color: '#fff',
                       border: 'none', cursor: 'pointer',
                     }}
                   >
@@ -4537,7 +4537,7 @@ export default function NewProductPage() {
   return (
     <Suspense fallback={
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid #FFB3CE', borderTop: '3px solid #e62310', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ width: 32, height: 32, border: '3px solid #FFB3CE', borderTop: '3px solid #F63B28', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       </div>
     }>
       <NewProductPageInner />

@@ -2,7 +2,7 @@
 
 // NaverSEOWorkflow — 꼬띠 황금 키워드 사냥꾼
 // 5단계: 카테고리 / 황금키워드 / 상품명 3종 / 태그 / 훅문구
-// Design: app unified style — #e62310 accent, #FFB3CE lines, Kkotti face by state
+// Design: app unified style — #F63B28 accent, #FFB3CE lines, Kkotti face by state
 
 import { useState, useMemo, useEffect } from 'react';
 import {
@@ -57,7 +57,7 @@ interface NaverSEOWorkflowProps extends SEOApplyCallbacks {
 // ── Kkotti face by workflow state ─────────────────────────────────────────────
 // idle=ready, scanning=loading, done=celebrate, warn=no product name
 const KKOTTI_FACE: Record<'idle' | 'scanning' | 'done' | 'warn', { face: string; color: string; bg: string; label: string }> = {
-  idle:     { face: '^_^',   color: '#e62310', bg: '#fff0f0', label: '준비 완료' },
+  idle:     { face: '^_^',   color: '#F63B28', bg: '#fff0f0', label: '준비 완료' },
   scanning: { face: '·_·',   color: '#2563eb', bg: '#eff6ff', label: '사냥 중...' },
   done:     { face: '✿ㅅ✿', color: '#9333ea', bg: '#faf5ff', label: '사냥 완료!' },
   warn:     { face: ';ㅅ;',  color: '#ca8a04', bg: '#fefce8', label: '상품명 필요' },
@@ -103,7 +103,7 @@ const STEP_META = {
   keywords: { icon: Search,     label: '황금 키워드',       color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', tag: '7~10개' },
   names:    { icon: FileText,   label: '상품명 3가지 전략', color: '#059669', bg: '#f0fdf4', border: '#a7f3d0', tag: '선택'   },
   tags:     { icon: Tag,        label: '태그',              color: '#d97706', bg: '#fffbeb', border: '#fde68a', tag: '10개'   },
-  hooks:    { icon: Zap,        label: '훅문구',           color: '#e62310', bg: '#fff0f0', border: '#fecaca', tag: '선택'   },
+  hooks:    { icon: Zap,        label: '훅문구',           color: '#F63B28', bg: '#fff0f0', border: '#fecaca', tag: '선택'   },
 } as const;
 
 const NAME_TYPE_LABEL: Record<ProductNameVariant['type'], string> = {
@@ -278,7 +278,7 @@ export default function NaverSEOWorkflow({
           </div>
           <span style={{
             fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 99,
-            background: '#e62310', color: '#fff', flexShrink: 0,
+            background: '#F63B28', color: '#fff', flexShrink: 0,
           }}>
             5단계
           </span>
@@ -346,8 +346,8 @@ export default function NaverSEOWorkflow({
                 ? '#F8DCE5'
                 : result
                   ? '#fff0f0'
-                  : 'linear-gradient(135deg, #e62310, #ff6b8a)',
-              color: loading || !isReady ? '#B0A0A8' : result ? '#e62310' : '#fff',
+                  : 'linear-gradient(135deg, #F63B28, #ff6b8a)',
+              color: loading || !isReady ? '#B0A0A8' : result ? '#F63B28' : '#fff',
             }}
           >
             {loading ? (
@@ -387,7 +387,7 @@ export default function NaverSEOWorkflow({
               padding: '8px 12px', borderRadius: 10,
               background: '#fef2f2', border: '1px solid #fecaca',
             }}>
-              <AlertCircle size={12} style={{ color: '#e62310', flexShrink: 0, marginTop: 1 }} />
+              <AlertCircle size={12} style={{ color: '#F63B28', flexShrink: 0, marginTop: 1 }} />
               <p style={{ fontSize: 11, color: '#dc2626', margin: 0 }}>{error}</p>
             </div>
           )}
@@ -724,12 +724,12 @@ export default function NaverSEOWorkflow({
                   width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
                   background: '#fff', border: '1.5px solid #FFB3CE',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 13, fontWeight: 800, color: '#e62310',
+                  fontSize: 13, fontWeight: 800, color: '#F63B28',
                 }}>
                   ✿ㅅ✿
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 11, fontWeight: 800, color: '#e62310', margin: '0 0 2px' }}>
+                  <p style={{ fontSize: 11, fontWeight: 800, color: '#F63B28', margin: '0 0 2px' }}>
                     황금 키워드 사냥 완료!
                   </p>
                   <p style={{ fontSize: 11, color: '#7f1d1d', margin: 0 }}>
@@ -744,7 +744,7 @@ export default function NaverSEOWorkflow({
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   gap: 8, padding: '11px 0', borderRadius: 12, fontSize: 12, fontWeight: 800,
-                  background: '#e62310', color: '#fff', border: 'none', cursor: 'pointer',
+                  background: '#F63B28', color: '#fff', border: 'none', cursor: 'pointer',
                   transition: 'all 0.15s',
                 }}
               >

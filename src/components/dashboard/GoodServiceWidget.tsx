@@ -115,13 +115,13 @@ export default function GoodServiceWidget() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Shield size={14} style={{ color: '#e62310' }} />
+          <Shield size={14} style={{ color: '#F63B28' }} />
           <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>
             굿서비스 (Good Service) 점수
           </p>
           <span style={{
             fontSize: 10, padding: '2px 7px', borderRadius: 99,
-            background: '#FEF0F3', color: '#e62310', fontWeight: 700,
+            background: '#FEF0F3', color: '#F63B28', fontWeight: 700,
           }}>
             14일 기준
           </span>
@@ -194,13 +194,13 @@ export default function GoodServiceWidget() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Info size={12} style={{ color: '#e62310' }} />
+            <Info size={12} style={{ color: '#F63B28' }} />
             <span style={{ fontSize: 12, fontWeight: 700, color: '#1A1A1A' }}>
               등급 시뮬레이터 (Seller Grade)
             </span>
             <span style={{
               fontSize: 9, padding: '1px 6px', borderRadius: 99,
-              background: '#F8DCE5', color: '#e62310', fontWeight: 700,
+              background: '#F8DCE5', color: '#F63B28', fontWeight: 700,
             }}>
               월 단위 평가 (2025.12 개편)
             </span>

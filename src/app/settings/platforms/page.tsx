@@ -137,8 +137,8 @@ export default function PlatformsSettingPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ position: 'absolute', top: 0, left: 0 }}>
-                {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r = deg * Math.PI / 180; const cx = 26 + Math.cos(r) * 11.4; const cy = 26 + Math.sin(r) * 11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#e62310" />; })}
-                <circle cx="26" cy="26" r="14.6" fill="#e62310" />
+                {([0,60,120,180,240,300] as number[]).map((deg, i) => { const r = deg * Math.PI / 180; const cx = 26 + Math.cos(r) * 11.4; const cy = 26 + Math.sin(r) * 11.4; return <ellipse key={i} cx={cx} cy={cy} rx={14} ry={10.4} transform={`rotate(${deg} ${cx} ${cy})`} fill="#F63B28" />; })}
+                <circle cx="26" cy="26" r="14.6" fill="#F63B28" />
               </svg>
                 <Building2 size={20} color="#fff" style={{ position: 'relative', zIndex: 1 }} />
               </div>
@@ -146,7 +146,7 @@ export default function PlatformsSettingPage() {
             </div>
             <button
               onClick={() => setPlatModal({ open: true, mode: 'add', data: { ...EMPTY_PLATFORM } })}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#e62310', color: '#fff', padding: '8px 16px', borderRadius: 10, fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', flexShrink: 0 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#F63B28', color: '#fff', padding: '8px 16px', borderRadius: 10, fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', flexShrink: 0 }}
             >
               <Plus size={15} /> 플랫폼 추가
             </button>
@@ -228,7 +228,7 @@ export default function PlatformsSettingPage() {
                             SKU 예시: <strong className="text-pink-500">{plat.code.toUpperCase()}-[상품번호]</strong>
                             {sup.contact && <> · {sup.contact}</>}
                             {sup.domeggookSellerId && (
-                              <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: '#FFF0F5', color: '#e62310', border: '1px solid #FFB3CE', marginLeft: 4 }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: '#FFF0F5', color: '#F63B28', border: '1px solid #FFB3CE', marginLeft: 4 }}>
                                 도매꾹 {sup.domeggookSellerId}
                               </span>
                             )}

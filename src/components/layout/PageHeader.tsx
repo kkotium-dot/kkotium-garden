@@ -24,7 +24,7 @@ export function PageHeader({ icon, title, subtitle, action }: PageHeaderProps) {
             <div
               style={{
                 width: 38, height: 38,
-                background: '#e62310',
+                background: '#F63B28',
                 borderRadius: 10,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
@@ -90,7 +90,7 @@ export function KkBtn({
       style={{
         display: 'flex', alignItems: 'center', gap: 6,
         padding: '10px 18px',
-        background: disabled ? '#F8DCE5' : '#e62310',
+        background: disabled ? '#F8DCE5' : '#F63B28',
         color: disabled ? '#B0A0A8' : '#fff',
         borderRadius: 12,
         fontWeight: 700,

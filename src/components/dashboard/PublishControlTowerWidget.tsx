@@ -212,7 +212,7 @@ function ProductCard({ item }: { item: TowerItem }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
             padding: '7px 0', borderRadius: 8,
             background: '#FFF0F5', border: '1px solid #FFB3CE',
-            fontSize: 11, fontWeight: 700, color: '#e62310', cursor: 'pointer',
+            fontSize: 11, fontWeight: 700, color: '#F63B28', cursor: 'pointer',
           }}>
             {strings.cta.openStudio} <ArrowRight size={12} />
           </div>
@@ -241,7 +241,7 @@ export default function PublishControlTowerWidget() {
     <div className="kk-card" style={{ overflow: 'hidden' }}>
       {/* header */}
       <div style={{ padding: '14px 18px 12px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <ListChecks size={15} style={{ color: '#e62310' }} />
+        <ListChecks size={15} style={{ color: '#F63B28' }} />
         <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>{strings.title}</p>
         <p style={{ fontSize: 11, color: '#B0A0A8', margin: 0, flex: 1 }}>{strings.subtitle}</p>
         {!isLoading && !error && items.length > 0 && (

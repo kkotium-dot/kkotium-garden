@@ -62,7 +62,7 @@ export default function MobileTabBar() {
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
         background: "var(--color-surface)",
         borderTop: "1px solid var(--color-border)",
-        boxShadow: "0 -2px 12px rgba(230, 35, 16, 0.06)",
+        boxShadow: "0 -2px 12px rgba(246, 59, 40, 0.06)",
       }}
     >
       <ul

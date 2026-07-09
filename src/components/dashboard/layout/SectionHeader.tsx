@@ -10,7 +10,7 @@
 // Style decisions:
 //  - No JSX emoji — Lucide React icons only (work principle)
 //  - English type literals only
-//  - Inline styles to match existing dashboard / KKOT brand red #E8001F
+//  - Inline styles to match existing dashboard / KKOT brand red #F63B28
 //  - No external state — fully presentational
 
 'use client';
@@ -189,7 +189,7 @@ export default function SectionHeader({
             height: 36,
             borderRadius: 10,
             background: '#FEF0F3',
-            color: '#E8001F',
+            color: '#F63B28',
             flexShrink: 0,
           }}
           aria-hidden="true"
@@ -222,7 +222,7 @@ export default function SectionHeader({
                 padding: '3px 9px',
                 fontSize: 11,
                 fontWeight: 700,
-                color: '#E8001F',
+                color: '#F63B28',
                 background: '#FEF0F3',
                 border: '1px solid #F8DCE5',
                 borderRadius: 999,
@@ -235,7 +235,7 @@ export default function SectionHeader({
                 style={{
                   fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                   fontSize: 11,
-                  color: '#E8001F',
+                  color: '#F63B28',
                   letterSpacing: '-0.5px',
                 }}
               >

@@ -175,7 +175,7 @@ export default function SubstituteEditor({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 11 }}>
         <button onClick={() => void save()} disabled={saving}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: '#fff', background: saving ? '#f3b8c6' : '#e62310', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: saving ? 'not-allowed' : 'pointer' }}>
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: '#fff', background: saving ? '#f3b8c6' : '#F63B28', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: saving ? 'not-allowed' : 'pointer' }}>
           {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
           {saving ? strings.saving : strings.save}
         </button>

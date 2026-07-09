@@ -74,7 +74,7 @@ export default function NaverPushPanel({ productId, appSalePrice }: { productId:
       {/* 가격 반영 */}
       <section style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-          <Tag size={14} style={{ color: '#e62310' }} />
+          <Tag size={14} style={{ color: '#F63B28' }} />
           <span style={{ fontSize: 13, fontWeight: 800, color: '#111827' }}>{strings.priceTitle}</span>
         </div>
         <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 4 }}>{strings.priceLabel}</label>
@@ -132,7 +132,7 @@ export default function NaverPushPanel({ productId, appSalePrice }: { productId:
           <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#111827' }}>
               {result.field === 'price'
-                ? <>{won(result.previousSalePrice)}<ChevronRight size={13} style={{ color: '#9ca3af' }} /><span style={{ color: '#e62310' }}>{won(result.newSalePrice)}</span></>
+                ? <>{won(result.previousSalePrice)}<ChevronRight size={13} style={{ color: '#9ca3af' }} /><span style={{ color: '#F63B28' }}>{won(result.newSalePrice)}</span></>
                 : <>{result.previousStock ?? '—'}{strings.stockUnit}<ChevronRight size={13} style={{ color: '#9ca3af' }} /><span style={{ color: '#b45309' }}>{result.newStock}{strings.stockUnit}</span></>}
             </div>
 
@@ -171,7 +171,7 @@ const inputStyle: React.CSSProperties = {
   flex: 1, minWidth: 0, boxSizing: 'border-box', fontSize: 13, padding: '7px 10px',
   border: '1px solid #e5e7eb', borderRadius: 8, outline: 'none', background: '#fff',
 };
-function primaryBtn(disabled: boolean, color = '#e62310'): React.CSSProperties {
+function primaryBtn(disabled: boolean, color = '#F63B28'): React.CSSProperties {
   return {
     display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800,
     color: '#fff', background: disabled ? '#f3b8c6' : color, border: 'none', borderRadius: 8,
