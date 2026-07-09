@@ -1,6 +1,6 @@
 {
   "cards": {
-    "revenue": { "label": "오늘 매출", "sub": "네이버 결제 기준" },
+    "revenue": { "label": "오늘 매출", "sub": "주문 결제 기준" },
     "orders": { "label": "신규 주문", "sub": "오늘 접수" },
     "settlement": { "label": "정산 예정", "sub": "정산 대기액" },
     "oos": { "label": "품절 경보", "sub": "재고 보충 필요" }
