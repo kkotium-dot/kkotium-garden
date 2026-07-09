@@ -94,7 +94,6 @@ import { BulkEditModal } from '@/components/products/BulkEditModal';
 import { ShippingTemplateModal, type ShippingTemplateItem } from '@/components/products/ShippingTemplateModal';
 import NaverSEOWorkflow from '@/components/ai/NaverSEOWorkflow';
 import HoneyScorePanel from '@/components/products/HoneyScorePanel';
-import AlternativeProductPanel from '@/components/products/AlternativeProductPanel';
 import SubstituteEditor from '@/components/products/SubstituteEditor';
 import ImageUploadDropzone from '@/components/products/ImageUploadDropzone';
 import { productFormSerialize, productFormHydrate, type ProductFormValues } from '@/lib/products/product-form-mapping';
@@ -589,8 +588,6 @@ function NewProductPageInner() {
   const [reviewVisible, setReviewVisible] = useState('Y');
   // E-4: Return Care toggle
   const [returnCareEnabled, setReturnCareEnabled] = useState(false);
-  // Alternative products (collected pre-save for registration page)
-  const [pendingAlternatives, setPendingAlternatives] = useState<any[]>([]);
   // Store settings — free shipping threshold from /settings/store
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(30000);
   // D-1: Store name for product name checker (detects seller name in title)
@@ -2223,22 +2220,9 @@ const handleGenerate = async () => {
         }).catch(() => null);
       }
 
-      // Save pending alternatives if product was saved to DB
-      if (selectedSupplierId && pendingAlternatives.length > 0) {
-        // savedProductId is from the DB save response (fire-and-forget above)
-        // We use sku to find the product and save alts async
-        Promise.all(
-          pendingAlternatives
-            .filter(a => a.alt_product_name?.trim())
-            .map(a =>
-              fetch('/api/products/alternatives', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...a, productId: sku }),
-              }).catch(() => null)
-            )
-        ).catch(() => null);
-      }
+      // P4 (#223 cleanup): 대체상품 = substitute_info 일원화 — the pre-save
+      // product_alternatives write path was removed (dead table). Substitutes
+      // are now set via SubstituteEditor (Product.substitute_info) after save.
     } catch (e) {
       setError('네트워크 오류가 발생했습니다');
     }
@@ -3389,14 +3373,10 @@ const handleGenerate = async () => {
                 </div>
               )}
             </RSection>
-            {/* F2 — 대체상품 관리 now sits LAST in 기본 정보 (after 옵션). */}
-            <AlternativeProductPanel
-              productName={productName || undefined}
-              suppliers={suppliers}
-              onChange={setPendingAlternatives}
-            />
-            {/* SUBSTITUTE (#210) — stock-out safety net; needs a saved product id to
-                persist substitute_info, so it appears once the seed is saved. */}
+            {/* SUBSTITUTE (#210 / P4 #223) — 대체상품 = substitute_info 일원화 (the
+                old product_alternatives panel was removed — dead table). Needs a
+                saved product id to persist substitute_info, so it appears once the
+                seed is saved. */}
             {savedProductId && (
               <div style={{ marginTop: 12 }}>
                 <SubstituteEditor productId={savedProductId} />

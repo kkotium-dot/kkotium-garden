@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { sendDiscord, buildWeeklyReportEmbed } from '@/lib/discord';
+import { readSubstituteInfo, hasSubstitutePlan } from '@/lib/product-link';
 
 
 export const dynamic = 'force-dynamic';
@@ -51,16 +52,13 @@ export async function GET(req: Request) {
       : 0;
     const topProduct = scored.sort((a, b) => b.score - a.score)[0] ?? null;
 
-    // OOS without alternatives
+    // OOS without a substitute plan (substitute_info — P4 #223, was the dead
+    // product_alternatives table). Guarded reader degrades to no-plan on failure.
     const oosIds = allProducts.filter(p => p.status === 'OUT_OF_STOCK').map(p => p.id);
     let noAltOosCount = 0;
     if (oosIds.length > 0) {
-      const alts = await prisma.$queryRaw<{ product_id: string }[]>`
-        SELECT DISTINCT product_id FROM product_alternatives
-        WHERE product_id = ANY(${oosIds}) AND is_active = true
-      `;
-      const hasAltIds = new Set(alts.map(a => a.product_id));
-      noAltOosCount = oosIds.filter(id => !hasAltIds.has(id)).length;
+      const subMap = await readSubstituteInfo(oosIds);
+      noAltOosCount = oosIds.filter(id => !hasSubstitutePlan(subMap.get(id))).length;
     }
 
     // Price changes this week

@@ -12,7 +12,7 @@ import { evaluateIntegrity, aggregateLevel } from '@/lib/option-integrity';
 // As of Sprint 6.5 the parsing/networking logic now lives in
 // src/lib/sources/domemae-adapter.ts. This route is a thin HTTP wrapper
 // that preserves the existing external contract (request body { url } and
-// response shape) so callers (/crawl page, AlternativeProductPanel,
+// response shape) so callers (/crawl page,
 // DomemaeCrawler component) need no changes.
 
 export const dynamic = 'force-dynamic';

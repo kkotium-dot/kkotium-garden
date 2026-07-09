@@ -43,7 +43,7 @@ export interface CrawledOption {
 /**
  * Detailed product info returned by getItemDetail().
  * Field names mirror the existing domemae/route.ts response so that
- * frontend code (crawl/page.tsx, AlternativeProductPanel, DomemaeCrawler)
+ * frontend code (crawl/page.tsx, DomemaeCrawler)
  * does not need to change.
  */
 export interface ItemDetail {

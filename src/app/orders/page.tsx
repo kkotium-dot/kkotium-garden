@@ -579,8 +579,9 @@ function OrdersInner() {
         <span style={{ fontSize: 11, color: '#B0A0A8' }}>{filtered.length}건</span>
       </div>
 
-      {/* Table */}
-      <div style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 16, overflow: 'hidden' }}>
+      {/* Table — #222: readable (Pretendard) font on the data grid (row container
+          anchor, so the page title above stays on its own font role). */}
+      <div className="kk-readable" style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 16, overflow: 'hidden' }}>
 
         {/* Table header */}
         <div style={{

@@ -1333,8 +1333,10 @@ function ProductsPageInner() {
           </div>
         )}
 
-        {/* Phase 2-MOBILE-1c: desktop table (lg+) — unchanged behaviour. */}
-        <div className="hidden lg:block" style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 18, overflow: 'hidden' }}>
+        {/* Phase 2-MOBILE-1c: desktop table (lg+) — unchanged behaviour.
+            #222: readable (Pretendard) font on the data grid (table container
+            anchor, so the page title above keeps its own font role). */}
+        <div className="hidden lg:block kk-readable" style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 18, overflow: 'hidden' }}>
           <TableHeader />
           {loading ? (
             <div className="py-16 text-center">
@@ -1372,7 +1374,7 @@ function ProductsPageInner() {
             44x44px touch targets. Group view collapses to a flat stack on
             mobile to keep the gesture surface predictable; rare enough that
             losing the grouping UI on small screens is acceptable. */}
-        <div className="lg:hidden">
+        <div className="lg:hidden kk-readable">
           {loading ? (
             <div className="py-12 text-center" style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 16 }}>
               <RefreshCw size={20} className="animate-spin mx-auto mb-2" style={{ color: '#FFB3CE' }} />

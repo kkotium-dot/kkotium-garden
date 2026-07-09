@@ -9,6 +9,7 @@ import * as iconv from 'iconv-lite';
 import * as cheerio from 'cheerio';
 import { sendDiscord, buildStockAlertEmbed, buildPriceChangeEmbed } from '@/lib/discord';
 import { calcHoneyScore } from '@/lib/honey-score';
+import { readSubstituteInfo, hasSubstitutePlan } from '@/lib/product-link';
 
 // ── OOS detection patterns (Korean supplier sites) ──────────────────────────
 
@@ -96,7 +97,9 @@ export async function POST(req: Request) {
     const limit = body.limit ?? 30;  // max products to check per run
     const dryRun = body.dryRun ?? false;  // if true, don't update DB
 
-    // Get active products with supplier URLs (from product_alternatives or supplier platformUrl)
+    // Get active products with a supplier URL (Supplier.platformUrl). P4 (#223):
+    // the product_alternatives JOIN was removed (dead table) — the substitute
+    // safety-net now lives in substitute_info and is not a stock-check source.
     const productsWithUrls = await prisma.$queryRaw<{
       id: string;
       name: string;
@@ -113,18 +116,13 @@ export async function POST(req: Request) {
         p."salePrice" as sale_price,
         COALESCE(p."supplierPrice", 0) as supplier_price,
         COALESCE(p."naverCategoryCode", '') as naver_cat,
-        COALESCE(pa.platform_url, s."platformUrl", '') as supplier_url,
-        pa.id as alt_id
+        COALESCE(s."platformUrl", '') as supplier_url,
+        NULL::text as alt_id
       FROM "Product" p
-      LEFT JOIN product_alternatives pa
-        ON pa.product_id = p.id AND pa.is_active = true AND pa.platform_url IS NOT NULL
       LEFT JOIN "Supplier" s ON s.id = p."supplierId"
       WHERE p.status NOT IN ('INACTIVE')
-        AND (
-          (pa.platform_url IS NOT NULL AND pa.platform_url != '')
-          OR (s."platformUrl" IS NOT NULL AND s."platformUrl" != '')
-        )
-      ORDER BY p.id, pa.priority ASC NULLS LAST
+        AND s."platformUrl" IS NOT NULL AND s."platformUrl" != ''
+      ORDER BY p.id
       LIMIT ${limit}
     `;
 
@@ -236,12 +234,14 @@ export async function POST(req: Request) {
 
     // #📦재고-알림
     if (newlyOos.length > 0) {
+      // P4 (#223): substitute plan now comes from substitute_info (was the dead
+      // product_alternatives table). Guarded batch read; map to the alert shape.
+      const subMap = await readSubstituteInfo(newlyOos.map(r => r.productId));
       const enriched = await Promise.all(newlyOos.map(async r => {
-        const alts = await prisma.$queryRaw<any[]>`
-          SELECT alt_product_name, platform_code, platform_url
-          FROM product_alternatives WHERE product_id = ${r.productId} AND is_active = true
-          ORDER BY priority ASC LIMIT 3
-        `.catch(() => []);
+        const sub = subMap.get(r.productId);
+        const alts = sub && hasSubstitutePlan(sub)
+          ? [{ alt_product_name: sub.substituteName ?? null, platform_code: sub.sourcingCode ?? null, platform_url: sub.sourcingUrl ?? null }]
+          : [];
 
         const hs = calcHoneyScore({ salePrice: 0, supplierPrice: r.previousPrice });
         return {
