@@ -50,11 +50,22 @@ export default function RootLayout({
         {/* Noto Serif KR = concept-preset display font (--font-display). Used by
             the detail-page preset renderer only; body stays Pretendard. */}
         <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600&display=swap" rel="stylesheet" />
+        {/* DASHBOARD-SHELL Phase 2 — Claude Design concept faces (docs §2).
+            Caprasimo/Black Han Sans = display (titles/KPI numbers), Gowun Dodum
+            = body (가독). Loaded via the same Google Fonts <link> pattern the
+            shell already uses; consumed through --font-pop-display / --font-read. */}
+        <link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet" />
       </head>
       <body
         className="font-pretendard antialiased"
         style={{
-          background: 'linear-gradient(180deg, #ffffff 0%, #ffffff 50%, #fff0f5 75%, #ffd6e8 100%)',
+          // DASHBOARD-SHELL Phase 2: Gowun Dodum body (가독) + warm cream canvas
+          // with a very light pink/sage radial wash (docs §4, "아주 옅게").
+          fontFamily: 'var(--font-read)',
+          background:
+            'radial-gradient(1200px 780px at 12% -8%, rgba(255,184,200,0.28), transparent 58%),' +
+            'radial-gradient(1000px 700px at 100% 0%, rgba(111,168,143,0.12), transparent 55%),' +
+            'var(--canvas-cream)',
           backgroundAttachment: 'fixed',
           minHeight: '100vh',
         }}

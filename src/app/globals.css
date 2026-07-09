@@ -483,3 +483,87 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   to   { opacity: 1; transform: none; }
 }
 .kk-step-reveal { animation: kkStepReveal 0.22s ease both; }
+
+/* ═══════════════════════════════════════════════════════════════
+   DASHBOARD-SHELL Phase 2 — Claude Design 컨셉 미감 배선 (2026-07-09)
+   권위: docs/design/CONCEPT_DESIGN_TOKENS_2026-07-08.md §1~5 (#219).
+   STATIC aesthetic only — 장식(와시테이프·회전·분수대 애니)·모션은 Phase 3
+   토글(기본 차분). 이 레이어는 팔레트 토큰 + 폰트 + 카드 미감 + 캔버스만 배선.
+
+   NAMESPACE — the concept palette collides with the app's existing tokens on
+   --cream / --ink / --pink-soft / --shadow (v6 + preset layers above), so the
+   concept vars are prefixed to stay orthogonal: brand --pop / success --sage
+   (semantic split, #218) are collision-free and used verbatim; the canvas /
+   ink / pink / shadow variants carry a --pop-/--canvas- prefix.
+
+   PALETTE SWAP (Phase 3): flip data-palette on <html> and these 15 vars
+   re-theme every surface that reads them. :root default = Garden Bloom.
+═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Palette: 정원의 만개 Garden Bloom [기본] ── */
+  --pop:            #E8385A;   /* brand accent (꽃 핑크/코랄) — NOT success, NOT danger */
+  --pop-soft:       #FF6B8A;
+  --pop-ink:        #2A1F1A;   /* ink for neubrutal borders/shadows */
+  --pop-ink-soft:   #4A3A30;
+  --pop-pink:       #FFB8C8;
+  --pop-pink-2:     #FFD9DE;
+  --sage:           #2D5F4E;   /* success semantic (초록) — separate from brand */
+  --sage-soft:      #6FA88F;
+  --butter:         #FFD93D;   /* warning-lite */
+  --lilac:          #C8B6FF;
+  --sky:            #BFE0E8;
+  --terra:          #C25A3F;   /* warning-strong */
+  --canvas-cream:   #FFF1E4;   /* page canvas — warm cream */
+  --canvas-cream-2: #FCE6D2;
+  --pop-shadow:     rgba(42, 31, 26, 0.12);
+
+  /* ── Concept fonts (docs §2). Display = titles / KPI numbers ONLY;
+     body = Gowun Dodum for 가독. Chains fall back to the existing self-hosted
+     brand face + Pretendard so nothing breaks if a webfont is slow. ── */
+  --font-pop-display: "Caprasimo", "Black Han Sans", var(--font-brand), Pretendard, -apple-system, sans-serif;
+  --font-read:        "Gowun Dodum", Pretendard, -apple-system, sans-serif;
+}
+
+/* ── Palette variants (Phase 3 toggle targets) ── */
+:root[data-palette="sunset"] {
+  --pop: #F25C3D; --pop-soft: #FF8E6E; --pop-ink: #3A1F1A; --pop-ink-soft: #5C3A2C;
+  --pop-pink: #FFC4A0; --pop-pink-2: #FFE0CB; --sage: #3D5A40; --sage-soft: #88AA85;
+  --butter: #FFCC2A; --lilac: #E1B0FF; --sky: #CFE6E0; --terra: #B84A2A;
+  --canvas-cream: #FFF6EC; --canvas-cream-2: #FFE9D2;
+}
+:root[data-palette="lavender"] {
+  --pop: #D04E89; --pop-soft: #E68AB1; --pop-ink: #2B1F3A; --pop-ink-soft: #4A3A5C;
+  --pop-pink: #E2C7E8; --pop-pink-2: #F0DEEE; --sage: #3D5A50; --sage-soft: #88B0A0;
+  --butter: #F4D06F; --lilac: #B095E0; --sky: #C7DCE6; --terra: #A85B7C;
+  --canvas-cream: #FFF6F2; --canvas-cream-2: #F5E6F0;
+}
+:root[data-palette="strawberry"] {
+  --pop: #D02642; --pop-soft: #F26882; --pop-ink: #2A1A22; --pop-ink-soft: #4A2D38;
+  --pop-pink: #FFA9BA; --pop-pink-2: #FFCBD3; --sage: #1F3D2E; --sage-soft: #5C8A6E;
+  --butter: #FFCD3C; --lilac: #D6BCFF; --sky: #BBE2D8; --terra: #9C3725;
+  --canvas-cream: #FFEEE6; --canvas-cream-2: #FFD9C7;
+}
+
+/* ── Hero / empty-state card — full neubrutal pop (docs §3 .card, softened for
+   차분 default #217). Work-area cards keep the light .kk-card treatment. ── */
+.kk-hero {
+  background: #ffffff;
+  border: 1.5px solid var(--pop-ink-soft);
+  border-radius: 22px;
+  box-shadow: 3px 3px 0 var(--pop-shadow);
+}
+
+/* ── Display-font numeric utility — KPI values / big numbers only.
+   Digits stay tabular so columns of numbers line up. ── */
+.kk-pop-num {
+  font-family: var(--font-pop-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ── Display-font heading utility — page/section titles. ── */
+.kk-pop-title {
+  font-family: var(--font-pop-display);
+  letter-spacing: -0.01em;
+}

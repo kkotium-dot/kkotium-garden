@@ -56,7 +56,7 @@ function KpiCard({ card }: { card: KpiCardModel }) {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-          <p style={{ margin: 0, fontSize: 24, fontWeight: 900, color: card.down ? '#B0A0A8' : card.color, lineHeight: 1, letterSpacing: '-0.01em' }}>
+          <p className="kk-pop-num" style={{ margin: 0, fontSize: 26, fontWeight: 400, color: card.down ? '#B0A0A8' : card.color, lineHeight: 1 }}>
             {card.value}
           </p>
           {card.down && (

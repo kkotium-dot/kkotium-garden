@@ -102,7 +102,7 @@ export default function TodayQueue() {
   // ── Empty state — calm, one gentle next action (research checklist ⑦) ──
   if (items.length === 0) {
     return (
-      <div className="kk-card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="kk-hero" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 9, background: '#FEF0F3' }}>
             <ListChecks size={18} style={{ color: '#e62310' }} />
@@ -139,7 +139,7 @@ export default function TodayQueue() {
         <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#1A1A1A', lineHeight: 1.2, flex: 1 }}>
           {strings.header.title}
         </p>
-        <span style={{ fontSize: 12, fontWeight: 800, color: '#e62310', background: '#FFF0EF', border: '1px solid #FFD6D3', borderRadius: 99, padding: '3px 10px', whiteSpace: 'nowrap' }}>
+        <span className="kk-pop-num" style={{ fontSize: 12, fontWeight: 700, color: '#e62310', background: '#FFF0EF', border: '1px solid #FFD6D3', borderRadius: 99, padding: '3px 10px', whiteSpace: 'nowrap' }}>
           {strings.header.countNow.replace('{count}', String(total))}
         </span>
       </div>
