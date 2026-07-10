@@ -26,13 +26,15 @@ interface ApiResponse {
   data: PriceMovementAlertRow[];
 }
 
+// Severity taxonomy (red/orange/yellow) → master hues (#227, §3): coral/orange/
+// amber. bg=-bg tint · border/icon=-fg · text=-tx (dark, AA).
 const LEVEL_TONE: Record<
   PriceMovementAlertRow['level'],
   { bg: string; border: string; iconColor: string; text: string }
 > = {
-  red:    { bg: '#FEF2F2', border: '#FCA5A5', iconColor: '#DC2626', text: '#991B1B' },
-  orange: { bg: '#FFF7ED', border: '#FED7AA', iconColor: '#EA580C', text: '#9A3412' },
-  yellow: { bg: '#FEFCE8', border: '#FEF08A', iconColor: '#CA8A04', text: '#854D0E' },
+  red:    { bg: 'var(--m-coral-bg)',  border: 'var(--m-coral-fg)',  iconColor: 'var(--m-coral-fg)',  text: 'var(--m-coral-tx)' },
+  orange: { bg: 'var(--m-orange-bg)', border: 'var(--m-orange-fg)', iconColor: 'var(--m-orange-fg)', text: 'var(--m-orange-tx)' },
+  yellow: { bg: 'var(--m-amber-bg)',  border: 'var(--m-amber-fg)',  iconColor: 'var(--m-amber-fg)',  text: 'var(--m-amber-tx)' },
 };
 
 const LEVEL_LABEL: Record<PriceMovementAlertRow['level'], string> = {
@@ -202,8 +204,8 @@ function EmptyRow() {
           gap: 12,
           padding: '12px 14px',
           borderRadius: 10,
-          background: '#F0FDF4',
-          border: '1px solid #BBF7D0',
+          background: 'var(--m-mint-bg)',
+          border: '1px solid var(--m-mint-fg)',
           transition: 'background 0.15s ease',
         }}
       >
@@ -214,11 +216,11 @@ function EmptyRow() {
             height: 32,
             borderRadius: 8,
             background: '#FFFFFF',
-            border: '1px solid #BBF7D0',
+            border: '1px solid var(--m-mint-fg)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#16A34A',
+            color: 'var(--m-mint-fg)',
           }}
           aria-hidden="true"
         >
@@ -230,7 +232,7 @@ function EmptyRow() {
               margin: 0,
               fontSize: 13,
               fontWeight: 700,
-              color: '#15803D',
+              color: 'var(--m-mint-tx)',
               lineHeight: 1.3,
             }}
           >
@@ -240,7 +242,7 @@ function EmptyRow() {
             style={{
               margin: '2px 0 0',
               fontSize: 11,
-              color: '#16A34A',
+              color: 'var(--m-mint-tx)',
               lineHeight: 1.4,
             }}
           >
@@ -252,11 +254,11 @@ function EmptyRow() {
             flexShrink: 0,
             fontSize: 10,
             fontWeight: 700,
-            color: '#15803D',
+            color: 'var(--m-mint-tx)',
             background: '#FFFFFF',
             padding: '3px 8px',
             borderRadius: 999,
-            border: '1px solid #BBF7D0',
+            border: '1px solid var(--m-mint-fg)',
             whiteSpace: 'nowrap',
           }}
         >

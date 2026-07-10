@@ -63,35 +63,40 @@ interface MonitorData {
   lastCheck: string | null;
 }
 
+// Competition intensity (4-state ascending) \u2192 master hues (#227, \u00A73): \uB0AE\uC74C\u2192mint,
+// \uBCF4\uD1B5\u2192amber, \uB192\uC74C\u2192orange, \uCE58\uC5F4\u2192coral (badge bg=-bg \u00B7 text=-tx dark, AA).
 const LEVEL_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  LOW:       { bg: '#dcfce7', text: '#166534', label: '\uB0AE\uC74C' },
-  MEDIUM:    { bg: '#fef9c3', text: '#854d0e', label: '\uBCF4\uD1B5' },
-  HIGH:      { bg: '#fed7aa', text: '#9a3412', label: '\uB192\uC74C' },
-  VERY_HIGH: { bg: '#fecaca', text: '#991b1b', label: '\uCE58\uC5F4' },
+  LOW:       { bg: 'var(--m-mint-bg)',   text: 'var(--m-mint-tx)',   label: '\uB0AE\uC74C' },
+  MEDIUM:    { bg: 'var(--m-amber-bg)',  text: 'var(--m-amber-tx)',  label: '\uBCF4\uD1B5' },
+  HIGH:      { bg: 'var(--m-orange-bg)', text: 'var(--m-orange-tx)', label: '\uB192\uC74C' },
+  VERY_HIGH: { bg: 'var(--m-coral-bg)',  text: 'var(--m-coral-tx)',  label: '\uCE58\uC5F4' },
 };
 
-// E-10: Entry barrier badge style by level
+// E-10: Entry barrier (3-state ascending) \u2192 master hues (\u00A73): \uB0AE\uC74C/easy\u2192mint,
+// \uBCF4\uD1B5\u2192amber, \uB192\uC74C/hard\u2192coral. bar (bar fill + figure text) = -fg.
 const BARRIER_STYLE: Record<string, { bg: string; text: string; label: string; bar: string }> = {
-  LOW:    { bg: '#dcfce7', text: '#166534', label: '\uB0AE\uC74C', bar: '#16a34a' },
-  MEDIUM: { bg: '#fef9c3', text: '#854d0e', label: '\uBCF4\uD1B5', bar: '#ca8a04' },
-  HIGH:   { bg: '#fecaca', text: '#991b1b', label: '\uB192\uC74C', bar: '#dc2626' },
+  LOW:    { bg: 'var(--m-mint-bg)',  text: 'var(--m-mint-tx)',  label: '\uB0AE\uC74C', bar: 'var(--m-mint-fg)' },
+  MEDIUM: { bg: 'var(--m-amber-bg)', text: 'var(--m-amber-tx)', label: '\uBCF4\uD1B5', bar: 'var(--m-amber-fg)' },
+  HIGH:   { bg: 'var(--m-coral-bg)', text: 'var(--m-coral-tx)', label: '\uB192\uC74C', bar: 'var(--m-coral-fg)' },
 };
 
 function PricePosition({ myPrice, avgPrice }: { myPrice: number; avgPrice: number }) {
   if (!avgPrice || !myPrice) return null;
   const diff = ((myPrice - avgPrice) / avgPrice) * 100;
+  // Directional price position → master hues (§3): below avg (cheaper) mint,
+  // above avg (pricier) coral, in-range amber. -tx for small (11px) text (AA).
   if (diff < -10) return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, color: '#16a34a' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, color: 'var(--m-mint-tx)' }}>
       <ArrowDownRight size={12} /> {Math.abs(diff).toFixed(0)}% below
     </span>
   );
   if (diff > 10) return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, color: '#dc2626' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, color: 'var(--m-coral-tx)' }}>
       <ArrowUpRight size={12} /> {diff.toFixed(0)}% above
     </span>
   );
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, color: '#ca8a04' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, color: 'var(--m-amber-tx)' }}>
       <Minus size={12} /> avg range
     </span>
   );
@@ -107,8 +112,8 @@ function PriceChangeIndicator({ current, previous }: { current: number; previous
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 2,
       fontSize: 10, fontWeight: 600,
-      color: isUp ? '#dc2626' : '#16a34a',
-      background: isUp ? '#fef2f2' : '#f0fdf4',
+      color: isUp ? 'var(--m-coral-tx)' : 'var(--m-mint-tx)',
+      background: isUp ? 'var(--m-coral-bg)' : 'var(--m-mint-bg)',
       padding: '1px 6px', borderRadius: 8,
     }}>
       {isUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
@@ -231,7 +236,7 @@ export default function CompetitionMonitorWidget() {
           <div style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 12px', borderRadius: 10,
-            background: '#fef2f2', color: '#991b1b', fontSize: 12, marginBottom: 8,
+            background: 'var(--m-coral-bg)', color: 'var(--m-coral-tx)', fontSize: 12, marginBottom: 8,
           }}>
             <AlertTriangle size={14} />
             {error}
@@ -279,7 +284,8 @@ export default function CompetitionMonitorWidget() {
                     {/* Status dot */}
                     <span style={{
                       width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                      background: p.naverProductId ? '#16a34a' : p.status === 'DRAFT' ? '#d1d5db' : '#f59e0b',
+                      // Status dot (§3): published→mint · DRAFT→neutral gray · other→amber. Dot = -fg.
+                      background: p.naverProductId ? 'var(--m-mint-fg)' : p.status === 'DRAFT' ? '#d1d5db' : 'var(--m-amber-fg)',
                     }} />
 
                     {/* Product name */}
@@ -342,7 +348,7 @@ export default function CompetitionMonitorWidget() {
                       }}>
                         <div style={{ background: '#fff', borderRadius: 8, padding: '8px 10px', border: '1px solid #f0f0f0' }}>
                           <div style={{ fontSize: 10, color: '#888' }}>{'\uCD5C\uC800\uAC00'}</div>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: '#16a34a' }}>{s.minPrice.toLocaleString()}{'\uC6D0'}</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--m-mint-tx)' }}>{s.minPrice.toLocaleString()}{'\uC6D0'}</div>
                         </div>
                         <div style={{ background: '#fff', borderRadius: 8, padding: '8px 10px', border: '1px solid #f0f0f0' }}>
                           <div style={{ fontSize: 10, color: '#888' }}>{'\uD3C9\uADE0\uAC00'}</div>
@@ -350,7 +356,7 @@ export default function CompetitionMonitorWidget() {
                         </div>
                         <div style={{ background: '#fff', borderRadius: 8, padding: '8px 10px', border: '1px solid #f0f0f0' }}>
                           <div style={{ fontSize: 10, color: '#888' }}>{'\uCD5C\uACE0\uAC00'}</div>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: '#dc2626' }}>{s.maxPrice.toLocaleString()}{'\uC6D0'}</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--m-coral-tx)' }}>{s.maxPrice.toLocaleString()}{'\uC6D0'}</div>
                         </div>
                       </div>
 
@@ -363,7 +369,8 @@ export default function CompetitionMonitorWidget() {
                               position: 'absolute', top: 0, left: 0,
                               width: `${Math.min(100, Math.max(0, ((p.myPrice - s.minPrice) / (s.maxPrice - s.minPrice)) * 100))}%`,
                               height: 8, borderRadius: 4,
-                              background: 'linear-gradient(90deg, #16a34a, #ca8a04, #dc2626)',
+                              // Cheap→expensive scale (§3): mint→amber→coral.
+                              background: 'linear-gradient(90deg, var(--m-mint-fg), var(--m-amber-fg), var(--m-coral-fg))',
                             }} />
                             <div style={{
                               position: 'absolute', top: -3,

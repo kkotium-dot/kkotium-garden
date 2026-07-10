@@ -72,13 +72,13 @@ function CompetitorRowItem({ row }: { row: CompetitorRow }) {
   const delta = hasComparison ? (row.ourPrice! - row.medianPrice!) / row.medianPrice! : 0;
   const absPct = Math.abs(delta);
 
-  // Tone selection: red when our price is >=10% above median (margin risk),
-  // yellow when 5-10%, otherwise green.
+  // Tone (§3): our price >=10% above median (margin risk) → coral, 5-10% → amber,
+  // otherwise → mint. bg=-bg · border/accent=-fg · text=-tx (dark, AA).
   const tone = hasComparison && absPct >= 0.10
-    ? { bg: '#FEF2F2', border: '#FCA5A5', accent: '#DC2626', text: '#991B1B' }
+    ? { bg: 'var(--m-coral-bg)', border: 'var(--m-coral-fg)', accent: 'var(--m-coral-fg)', text: 'var(--m-coral-tx)' }
     : hasComparison && absPct >= 0.05
-      ? { bg: '#FEFCE8', border: '#FEF08A', accent: '#CA8A04', text: '#854D0E' }
-      : { bg: '#F0FDF4', border: '#BBF7D0', accent: '#16A34A', text: '#15803D' };
+      ? { bg: 'var(--m-amber-bg)', border: 'var(--m-amber-fg)', accent: 'var(--m-amber-fg)', text: 'var(--m-amber-tx)' }
+      : { bg: 'var(--m-mint-bg)', border: 'var(--m-mint-fg)', accent: 'var(--m-mint-fg)', text: 'var(--m-mint-tx)' };
 
   const Icon = !hasComparison ? Equal : delta > 0 ? TrendingUp : delta < 0 ? TrendingDown : Equal;
   const productLabel = row.productName.length > 26
@@ -184,8 +184,8 @@ function EmptyRow() {
           gap: 12,
           padding: '12px 14px',
           borderRadius: 10,
-          background: '#F0FDF4',
-          border: '1px solid #BBF7D0',
+          background: 'var(--m-mint-bg)',
+          border: '1px solid var(--m-mint-fg)',
         }}
       >
         <div
@@ -195,21 +195,21 @@ function EmptyRow() {
             height: 32,
             borderRadius: 8,
             background: '#FFFFFF',
-            border: '1px solid #BBF7D0',
+            border: '1px solid var(--m-mint-fg)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#16A34A',
+            color: 'var(--m-mint-fg)',
           }}
           aria-hidden="true"
         >
           <Check size={16} strokeWidth={2.5} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#15803D', lineHeight: 1.3 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--m-mint-tx)', lineHeight: 1.3 }}>
             {strings.title} — {strings.emptyOk}
           </p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#16A34A', lineHeight: 1.4 }}>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--m-mint-tx)', lineHeight: 1.4 }}>
             {strings.emptyHint}
           </p>
         </div>
@@ -218,11 +218,11 @@ function EmptyRow() {
             flexShrink: 0,
             fontSize: 10,
             fontWeight: 700,
-            color: '#15803D',
+            color: 'var(--m-mint-tx)',
             background: '#FFFFFF',
             padding: '3px 8px',
             borderRadius: 999,
-            border: '1px solid #BBF7D0',
+            border: '1px solid var(--m-mint-fg)',
             whiteSpace: 'nowrap',
           }}
         >

@@ -62,16 +62,18 @@ export default function GoldenWindowWidget() {
 
 function GoldenRow({ row }: { row: GoldenWindowRow }) {
   // Sprint 7 P0-B enhancement: tone driven by severity (which blends stage status
-  // with market context). critical = red, warning = orange, note = gray, ok = green.
+  // with market context).
+  // Severity → master hues (#227, §3): critical→coral, warning→orange, ok→mint.
+  // note/expired keep the neutral gray tone (inactive). bg=-bg·border/accent=-fg·text=-tx.
   const tone = row.severity === 'critical'
-    ? { bg: '#FEF2F2', border: '#FCA5A5', accent: '#DC2626', text: '#991B1B' }
+    ? { bg: 'var(--m-coral-bg)', border: 'var(--m-coral-fg)', accent: 'var(--m-coral-fg)', text: 'var(--m-coral-tx)' }
     : row.severity === 'warning'
-      ? { bg: '#FFF7ED', border: '#FED7AA', accent: '#EA580C', text: '#9A3412' }
+      ? { bg: 'var(--m-orange-bg)', border: 'var(--m-orange-fg)', accent: 'var(--m-orange-fg)', text: 'var(--m-orange-tx)' }
       : row.severity === 'note'
         ? { bg: '#FAFAFA', border: '#E5E5E5', accent: '#737373', text: '#525252' }
         : row.stage === 'expired'
           ? { bg: '#FAFAFA', border: '#E5E5E5', accent: '#737373', text: '#525252' }
-          : { bg: '#F0FDF4', border: '#BBF7D0', accent: '#16A34A', text: '#15803D' };
+          : { bg: 'var(--m-mint-bg)', border: 'var(--m-mint-fg)', accent: 'var(--m-mint-fg)', text: 'var(--m-mint-tx)' };
 
   const Icon =
     row.severity === 'critical' ? AlertTriangle :
@@ -163,34 +165,34 @@ function EmptyRow() {
         style={{
           display: 'flex', alignItems: 'center', gap: 12,
           padding: '12px 14px', borderRadius: 10,
-          background: '#F0FDF4', border: '1px solid #BBF7D0',
+          background: 'var(--m-mint-bg)', border: '1px solid var(--m-mint-fg)',
         }}
       >
         <div
           style={{
             flexShrink: 0, width: 32, height: 32, borderRadius: 8,
-            background: '#FFFFFF', border: '1px solid #BBF7D0',
+            background: '#FFFFFF', border: '1px solid var(--m-mint-fg)',
             display: 'inline-flex', alignItems: 'center',
-            justifyContent: 'center', color: '#16A34A',
+            justifyContent: 'center', color: 'var(--m-mint-fg)',
           }}
           aria-hidden="true"
         >
           <Check size={16} strokeWidth={2.5} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#15803D', lineHeight: 1.3 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--m-mint-tx)', lineHeight: 1.3 }}>
             {strings.title} — {strings.emptyOk}
           </p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#16A34A', lineHeight: 1.4 }}>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--m-mint-tx)', lineHeight: 1.4 }}>
             {strings.emptyHint}
           </p>
         </div>
         <span
           style={{
             flexShrink: 0, fontSize: 10, fontWeight: 700,
-            color: '#15803D', background: '#FFFFFF',
+            color: 'var(--m-mint-tx)', background: '#FFFFFF',
             padding: '3px 8px', borderRadius: 999,
-            border: '1px solid #BBF7D0', whiteSpace: 'nowrap',
+            border: '1px solid var(--m-mint-fg)', whiteSpace: 'nowrap',
           }}
         >
           {strings.sprintLabel}

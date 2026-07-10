@@ -53,8 +53,8 @@ function ChangeIndicator({ change }: { change: number }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 2,
       fontSize: 11, fontWeight: 600,
-      color: isUp ? '#16a34a' : '#dc2626',
-      background: isUp ? '#f0fdf4' : '#fef2f2',
+      color: isUp ? 'var(--m-mint-tx)' : 'var(--m-coral-tx)',
+      background: isUp ? 'var(--m-mint-bg)' : 'var(--m-coral-bg)',
       padding: '1px 6px', borderRadius: 8,
     }}>
       {isUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
@@ -138,7 +138,7 @@ export default function DataLabTrendWidget() {
         {error && (
           <div style={{
             padding: '12px 14px', borderRadius: 10,
-            background: '#fef2f2', color: '#991b1b', fontSize: 12, marginBottom: 8,
+            background: 'var(--m-coral-bg)', color: 'var(--m-coral-tx)', fontSize: 12, marginBottom: 8,
           }}>
             {error}
           </div>
@@ -158,7 +158,7 @@ export default function DataLabTrendWidget() {
                 {data.topRising?.map(cat => (
                   <span key={cat} style={{
                     fontSize: 11, padding: '3px 8px', borderRadius: 8,
-                    background: '#f0fdf4', color: '#166534', fontWeight: 500,
+                    background: 'var(--m-mint-bg)', color: 'var(--m-mint-tx)', fontWeight: 500,
                     display: 'inline-flex', alignItems: 'center', gap: 3,
                   }}>
                     <TrendingUp size={10} /> {cat}
@@ -167,7 +167,7 @@ export default function DataLabTrendWidget() {
                 {data.topDecline?.map(cat => (
                   <span key={cat} style={{
                     fontSize: 11, padding: '3px 8px', borderRadius: 8,
-                    background: '#fef2f2', color: '#991b1b', fontWeight: 500,
+                    background: 'var(--m-coral-bg)', color: 'var(--m-coral-tx)', fontWeight: 500,
                     display: 'inline-flex', alignItems: 'center', gap: 3,
                   }}>
                     <TrendingDown size={10} /> {cat}
@@ -179,7 +179,9 @@ export default function DataLabTrendWidget() {
             {/* Category list with sparklines */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {data.trends.map((trend, i) => {
-                const sparkColor = trend.change > 1 ? '#16a34a' : trend.change < -1 ? '#dc2626' : '#888';
+                // Sparkline stroke feeds an SVG `stroke` attr (a CSS var can't
+                // resolve there) → LITERAL master hues: mint-fg / coral-fg, flat gray.
+                const sparkColor = trend.change > 1 ? '#12B886' : trend.change < -1 ? '#FF4757' : '#888';
                 return (
                   <div key={i} style={{
                     display: 'flex', alignItems: 'center', gap: 8,
