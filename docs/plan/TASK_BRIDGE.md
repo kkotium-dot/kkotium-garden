@@ -72,6 +72,15 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-07-10 (105) sync POST 파괴적 부분 PUT 제거 — GET-merge systemic 확장 (FROM 💻 Code, main 5bcdbf7, 규칙 3-7·#62·prod deployed)
+- **Target**: Claude Code CLI · 권위 §4-C + CLAUDE.md 3-7. §4-C(104)는 products/update route만 방어했으나 /api/naver/sync POST(대량 가격·상태 동기화)에 부분 PUT 잔존 — Code가 104에서 별건 관찰로 flag했고 사용자가 systemic 확장 지시.
+- **DONE (5bcdbf7)**: (1) api-client.ts `updateProductPriceStatus()` GET-merge 헬퍼 추가(updateStock 동형) — GET origin-products/{no}로 현재 전체 상태 read → salePrice/statusType만 override → 전체 payload PUT · originProduct 부재 시 loud throw(부분 PUT 금지) · dryRun 지원(비가역 게이트). (2) sync/route.ts updateProduct 부분 PUT 제거 → updateProductPriceStatus 교체. 이전엔 detailContent:''·images:{representativeImageUrl:''}·leafCategoryId:'' 등 빈값을 보내 FULL REPLACE로 전 필드 소실 위험이었음. body 스트림 1회 읽기 정리(auth manual + dryRun 공유). 응답 dryRun 플래그.
+- **검증**: tsc0 · build0 · verify-vercel-deploy OK(production 5bcdbf7 REGISTERED). 실 sync PUT 라운드트립 = Desktop(#88).
+- **패치 위치**: src/lib/naver/api-client.ts(updateProductPriceStatus) · src/app/api/naver/sync/route.ts.
+- **★ 별건 잔존(미수정·spawn_task task_45ebdf1b 분리)**: updateProduct 부분 PUT 2곳 남음 — (1) publish-assets/route.ts:104-124(썸네일/상세 patch·주석에 "부분 업데이트 허용" 그릇된 전제 명시·발행 파이프라인 매 갱신 소실 위험) (2) naver/products/route.ts:120-121 PUT(toNaverPayload 완전성 미확인·레거시/중복 여부 확인 필요). 동일 위험 계열 별도 트랙.
+- **다음 1액션**: [Desktop] sync POST dryRun 검증 — POST /api/naver/sync {manual:true, dryRun:true} → 응답 dryRun:true·synced=대상수·PUT 미실행 확인 후, 실 동기화(dryRun 생략) 1건 라운드트립에서 상품명·이미지·옵션 미소실 확인(#88). [Code] task_45ebdf1b(부분 PUT 2곳) 착수는 사용자 승인 후. [결정·대표] publish-assets/naver-products PUT 교체 GO.
+
+
 ### 2026-07-10 (104) 네이버 §4 P1 3태스크 A/B/C — 단위가격·주문sync·수정 null 방어 (FROM 💻 Code, main 284faab, additive·비가역0·네이버 무접촉·prod deployed)
 - **Target**: Claude Code CLI · 권위 docs/research/NAVER_STORE_OPERATIONS_UPDATE_2026-07-09.md §4 (P1). 각 독립 커밋·Desktop 검증.
 - **DONE (A · 단위가격 unitCapacity · 2026-04-29 필수 · 284faab)**: (1) DB Supabase 마이그 `product_unit_price_fields` 4컬럼(unit_price_yn/unit_total_capacity/unit_capacity/unit_indication_unit) additive. (2) 판별 정책 `src/lib/naver/unit-price-policy.ts` NEW — D1 '식품'|'화장품/미용'=전 mandatory · D1 '생활/건강' + D2 세제/청소/화장지/기저귀/생리대/… = mandatory · 그외 optional. classifyUnitPricePolicy + validateUnitPriceFields. (3) product-builder LocalProduct 4필드 + NaverProductPayloadV2.detailAttribute.unitPriceInfo 타입 + 사용(Y)시 emit {unitPriceYn/totalCapacityValue/unitCapacity/indicationUnit}. (4) validateForRegistration unit-price gate — mandatory 미충족 시 발행 BLOCK. (5) UI /products/new 기본정보 탭 원산지 DSection 뒤 새 USection — 필수/권장/미지정 배지 + 안내 + 사용Y 체크박스(mandatory disabled+자동활성 버튼) + 3필드(총량/기준량/표시단위). (6) 편집 hydrate + POST/PUT 배선 (sanitizeProductWrite DMMF 파생이라 PUT 자동 인식).
