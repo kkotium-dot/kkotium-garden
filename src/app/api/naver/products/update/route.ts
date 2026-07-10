@@ -20,9 +20,27 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { naverRequest, NaverApiError, uploadImagesToNaver } from '@/lib/naver/api-client';
+import { naverRequest, NaverApiError, uploadImagesToNaver, getProduct } from '@/lib/naver/api-client';
 import { buildNaverProductPayload } from '@/lib/naver/product-builder';
 import { loadNaverUpdateContext } from '@/lib/naver/load-update-context';
+
+// v2 상품 수정 null 방어 (권위=NAVER_STORE_OPERATIONS_UPDATE_2026-07-09 §4-C):
+// v2 PUT은 FULL REPLACE 이므로 DB에서 재구성한 payload의 detailContent/seoInfo가
+// 실질적으로 비어 있으면(placeholder-only 상세, 빈 sellerTags/metaDescription)
+// 네이버 측 실사용 값(태그·상세 HTML)을 그대로 덮어씀 → 데이터 유실. 방어:
+//   1. UPDATE 실행 직전 GET origin-products/{no} 로 현재 네이버 값 확보.
+//   2. DB-built 값이 아래 판정에서 "빈 것으로 간주"면 네이버-side 값으로 대체.
+//      · detailContent = placeholder(<div>${name}</div> 뿐, 그 외 <img>/<div> 무)
+//      · seoInfo.sellerTags = 없음/빈배열 & 네이버-side 태그 존재
+//      · seoInfo.metaDescription = 빈 문자열 & 네이버-side 값 존재
+//   3. 명시 재전송(payload 에서 필드를 절대 drop 하지 않음) → 필드 자체 초기화 방지.
+
+/** DB-built detailContent가 placeholder(제품명 div 하나) 뿐인지 판정. */
+function isPlaceholderDetail(html: string): boolean {
+  const stripped = html.replace(/\s+/g, ' ').trim();
+  // buildDetailContent placeholder pattern — text-align:center; padding:40px; color:#888
+  return /^<div style="text-align:center;padding:40px;font-size:14px;color:#888;">[^<]*<\/div>$/.test(stripped);
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -158,6 +176,56 @@ export async function POST(request: NextRequest) {
 
     const payload = buildNaverProductPayload(productForBuild, deliveryInfo, naverImageUrls, noticeAssets, storeName);
 
+    // 9-2. Null defense (§4-C) — GET current Naver state, preserve detailContent /
+    // sellerTags / metaDescription when the DB-built payload is degenerate. Failure
+    // to GET is non-fatal (proceed with DB-built values) — the update still runs.
+    let nullDefenseNote: string[] = [];
+    try {
+      const current = await getProduct(naverProductId);
+      const curOrigin = current?.originProduct as Record<string, unknown> | undefined;
+      const curDetailContent = typeof curOrigin?.detailContent === 'string'
+        ? (curOrigin.detailContent as string)
+        : '';
+      const curSeo = ((curOrigin?.detailAttribute as Record<string, unknown> | undefined)
+        ?.seoInfo as Record<string, unknown> | undefined);
+      const curSellerTags = Array.isArray(curSeo?.sellerTags)
+        ? (curSeo?.sellerTags as Array<{ code?: number; text: string }>)
+        : [];
+      const curMetaDesc = typeof curSeo?.metaDescription === 'string'
+        ? (curSeo.metaDescription as string)
+        : '';
+
+      // detailContent — DB placeholder-only + Naver 실사용 값 존재 → 보존
+      if (isPlaceholderDetail(payload.originProduct.detailContent) && curDetailContent.trim().length > 0) {
+        payload.originProduct.detailContent = curDetailContent;
+        nullDefenseNote.push('detailContent=preserved');
+      }
+
+      // seoInfo — 항상 재전송(payload에 이미 객체 존재). 하위 필드만 방어.
+      const seo = payload.originProduct.detailAttribute?.seoInfo;
+      if (seo) {
+        // sellerTags: DB 빈배열/부재 + 네이버 태그 존재 → 보존
+        if ((!seo.sellerTags || seo.sellerTags.length === 0) && curSellerTags.length > 0) {
+          seo.sellerTags = curSellerTags
+            .filter(t => t && typeof t.text === 'string')
+            .map(t => ({ text: String(t.text).slice(0, 20) }));
+          nullDefenseNote.push(`sellerTags=preserved(${seo.sellerTags.length})`);
+        }
+        // metaDescription: DB 빈문자열 + 네이버 값 존재 → 보존
+        if ((!seo.metaDescription || seo.metaDescription.trim().length === 0) && curMetaDesc.trim().length > 0) {
+          seo.metaDescription = curMetaDesc;
+          nullDefenseNote.push('metaDescription=preserved');
+        }
+      }
+    } catch (getErr: unknown) {
+      // GET 실패는 fatal 아님 — 로그만 남기고 DB-built payload 그대로 PUT.
+      console.warn(
+        '[naver/products/update] GET current-state failed — null defense skipped:',
+        getErr instanceof Error ? getErr.message : String(getErr),
+      );
+      nullDefenseNote.push('get-failed');
+    }
+
     // 10. PUT the full payload to the existing product.
     try {
       await naverRequest('PUT', `/v2/products/origin-products/${naverProductId}`, payload);
@@ -181,7 +249,7 @@ export async function POST(request: NextRequest) {
           type: 'NAVER_UPDATED',
           oldValue: naverProductId,
           newValue: Array.isArray(fields) && fields.length > 0 ? fields.join(',') : 'full',
-          note: `PUT origin-products (rep:${naverImageUrls?.representative ? 'shop-phinf' : 'unchanged'})`,
+          note: `PUT origin-products (rep:${naverImageUrls?.representative ? 'shop-phinf' : 'unchanged'})${nullDefenseNote.length > 0 ? ` [null-defense: ${nullDefenseNote.join(',')}]` : ''}`,
         },
       });
     } catch {
@@ -194,6 +262,7 @@ export async function POST(request: NextRequest) {
       naverProductId,
       representativeImage: payload.originProduct.images.representativeImage.url,
       validation,
+      nullDefense: nullDefenseNote,
     });
 
   } catch (error: unknown) {
