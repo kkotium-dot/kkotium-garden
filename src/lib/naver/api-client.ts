@@ -1104,6 +1104,96 @@ export async function setProductOutOfStock(
   return updateStock(productNo, 0, opts);
 }
 
+// ── Price / status GET-merge (규칙 3-7 · §4-C systemic #62) ────────────────
+// Same FULL-REPLACE hazard as stock: PUT /v2/products/origin-products/{no} drops
+// any omitted field. The bulk sync route used to blind-PUT a partial payload
+// (empty detailContent / representativeImageUrl / leafCategoryId) which would
+// wipe the whole listing. This helper reads the CURRENT full Naver state, then
+// overrides ONLY salePrice and/or statusType, and PUTs the merged full payload —
+// preserving every other field (name, images, options, origin, notice, detail).
+
+export interface PriceStatusUpdateResult {
+  productNo: string;
+  previousSalePrice: number | null;
+  previousStatusType: string | null;
+  newSalePrice: number | null;      // null = 미변경
+  newStatusType: string | null;     // null = 미변경
+  applied: boolean;                 // true only when a real PUT was sent
+  dryRun: boolean;
+  preservedFieldCount: number;      // originProduct top-level keys carried through
+}
+
+/**
+ * Update salePrice and/or statusType WITHOUT dropping any other field.
+ *
+ * Reads the current full product from Naver (GET), overrides only the provided
+ * fields, and PUTs the merged full payload back. Never sends a partial payload.
+ * Both overrides optional — omit one to leave it exactly as Naver has it.
+ *
+ * @param opts.dryRun  GET + merge only, no PUT (verify the merge before write).
+ */
+export async function updateProductPriceStatus(
+  productNo: string,
+  overrides: { salePrice?: number; statusType?: 'SALE' | 'SUSPENSION' | 'CLOSE' },
+  opts: { dryRun?: boolean } = {},
+): Promise<PriceStatusUpdateResult> {
+  if (!productNo) {
+    throw new NaverApiError(
+      '상품 수정 불가 — productNo(naverProductId)가 비어 있습니다 (미등록 상품).',
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+  if (overrides.salePrice !== undefined && (!Number.isFinite(overrides.salePrice) || overrides.salePrice <= 0)) {
+    throw new NaverApiError(
+      `상품 수정 불가 — salePrice 값이 올바르지 않습니다 (${overrides.salePrice}).`,
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+
+  // 1. Read current full Naver state — never blind partial-PUT.
+  const current = await getProduct(productNo);
+  const originProduct = current?.originProduct;
+  if (!originProduct || typeof originProduct !== 'object') {
+    throw new NaverApiError(
+      `상품 수정 중단 — GET origin-products/${productNo} 응답에 originProduct가 없어 ` +
+      '전체 페이로드를 보존할 수 없습니다 (부분 PUT 금지).',
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+
+  const previousSalePrice =
+    typeof originProduct.salePrice === 'number' ? originProduct.salePrice : null;
+  const previousStatusType =
+    typeof originProduct.statusType === 'string' ? originProduct.statusType : null;
+
+  // 2. Merge: preserve EVERY existing field, override only provided ones.
+  const mergedOrigin: Record<string, unknown> = { ...originProduct };
+  if (overrides.salePrice !== undefined)  mergedOrigin.salePrice  = overrides.salePrice;
+  if (overrides.statusType !== undefined) mergedOrigin.statusType = overrides.statusType;
+  const payload: Record<string, unknown> = { originProduct: mergedOrigin };
+  // Carry channel-product blocks back unchanged so the PUT stays a true superset.
+  if (current.smartstoreChannelProduct) payload.smartstoreChannelProduct = current.smartstoreChannelProduct;
+
+  const result: PriceStatusUpdateResult = {
+    productNo,
+    previousSalePrice,
+    previousStatusType,
+    newSalePrice:  overrides.salePrice  ?? null,
+    newStatusType: overrides.statusType ?? null,
+    applied: false,
+    dryRun: opts.dryRun === true,
+    preservedFieldCount: Object.keys(mergedOrigin).length,
+  };
+
+  // 3. dryRun stops before the irreversible PUT.
+  if (opts.dryRun) return result;
+
+  // 4. Full-payload PUT — full replace that preserves all fields.
+  await naverRequest('PUT', `/v2/products/origin-products/${productNo}`, payload);
+  result.applied = true;
+  return result;
+}
+
 /** Bulk inventory update for multiple products */
 export async function bulkUpdateStock(
   items: Array<{ productNo: string; stockQuantity: number }>,
