@@ -72,6 +72,14 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-07-10 (106) 부분 PUT 2곳 제거 — publish-assets GET-merge + 레거시 PUT deprecate (FROM 💻 Code, main faf2a4e, 규칙 3-7 systemic·비가역 게이트 유지·prod 배포대기)
+- **Target**: Claude Code CLI · 권위 NAVER_STORE_OPERATIONS_UPDATE_2026-07-09 §4-C + CLAUDE.md 3-7. (105)에서 spawn한 task_45ebdf1b(부분 PUT 2곳) 완결 — 사용자 systemic 확장 지시.
+- **DONE (faf2a4e)**: (1) publish-assets/route.ts — `{originProduct:{images:{representativeImageUrl},detailContent}}` 부분 PUT(주석에 "네이버 부분 업데이트 허용"이라는 그릇된 전제 명시분) 제거 → 신규 GET-merge 헬퍼 `updateProductAssets`(api-client.ts, updateProductPriceStatus 동형) 교체: GET origin-products/{no} read → 대표이미지(canonical representativeImage.url shape·optionalImages 보존·레거시 flat mirror 삭제)/detailContent만 override → 전체 payload PUT · originProduct 부재 loud throw · dryRun 지원 · https 가드. 라우트 body에 dryRun 옵션 추가(기존 studio 호출 {thumbUrl,detailUrl} 하위호환 유지). (2) naver/products/route.ts PUT — toNaverPayload(원산지/고시/옵션/배송 누락 레거시 빌더)를 그대로 PUT하던 파괴적 경로 확인: 앱 내 호출자 0(preview 화면은 canonical POST /api/naver/products/update 사용)·dryRun/confirm 게이트 없음 → 410 Gone + canonical update 위임으로 neuter. toNaverPayload는 POST(register=신규 생성·full-replace 아님)에만 잔존. updateProduct import 제거.
+- **검증**: tsc0 · build0(Compiled successfully) · sentinel grep 0. verify-vercel-deploy = push 후 확인. 실 발행 라운드트립(썸네일/상세 갱신 후 상품명·가격·옵션·원산지·고시 미소실) = Desktop(#88).
+- **패치 위치**: src/lib/naver/api-client.ts(updateProductAssets NEW) · src/app/api/products/[id]/publish-assets/route.ts · src/app/api/naver/products/route.ts(PUT deprecate).
+- **★ 잔여 관찰(비 3-7, 별건 품질 트랙)**: naver/products/route.ts POST(register)는 여전히 레거시 toNaverPayload 사용(원산지/고시/옵션 누락) — 신규 생성이라 3-7 파괴 위험은 없으나 불완전 등록 품질 이슈. products/new 페이지가 canonical /api/naver/products/register 대신 이 레거시 POST를 호출. 별도 품질 트랙(3-7 범위 아님).
+- **다음 1액션**: [Desktop] publish-assets dryRun 검증 — POST /api/products/{id}/publish-assets {thumbUrl, detailUrl, dryRun:true} → 응답 dryRun:true·applied:false·preservedFieldCount>0·previousRepresentativeImageUrl 확인 후, 실 발행(dryRun 생략) 1건에서 상품명·가격·옵션·원산지·고시 미소실 확인(#88). [Code] 잔여 register 품질 트랙 착수는 사용자 승인 후. [결정·대표] 레거시 POST register→canonical /register 전환 여부.
+
 ### 2026-07-10 (105) sync POST 파괴적 부분 PUT 제거 — GET-merge systemic 확장 (FROM 💻 Code, main 5bcdbf7, 규칙 3-7·#62·prod deployed)
 - **Target**: Claude Code CLI · 권위 §4-C + CLAUDE.md 3-7. §4-C(104)는 products/update route만 방어했으나 /api/naver/sync POST(대량 가격·상태 동기화)에 부분 PUT 잔존 — Code가 104에서 별건 관찰로 flag했고 사용자가 systemic 확장 지시.
 - **DONE (5bcdbf7)**: (1) api-client.ts `updateProductPriceStatus()` GET-merge 헬퍼 추가(updateStock 동형) — GET origin-products/{no}로 현재 전체 상태 read → salePrice/statusType만 override → 전체 payload PUT · originProduct 부재 시 loud throw(부분 PUT 금지) · dryRun 지원(비가역 게이트). (2) sync/route.ts updateProduct 부분 PUT 제거 → updateProductPriceStatus 교체. 이전엔 detailContent:''·images:{representativeImageUrl:''}·leafCategoryId:'' 등 빈값을 보내 FULL REPLACE로 전 필드 소실 위험이었음. body 스트림 1회 읽기 정리(auth manual + dryRun 공유). 응답 dryRun 플래그.
