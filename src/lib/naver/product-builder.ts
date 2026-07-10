@@ -7,6 +7,11 @@ import { calcAttributeCompleteness, type ProductAttributeData } from '../categor
 import { calcUploadReadiness, type ReadinessInput } from '../upload-readiness';
 import { NAVER_CATEGORIES_FULL } from './naver-categories-full';
 import { NAVER_ORIGIN_CODES } from './naver-origin-codes';
+import {
+  classifyUnitPricePolicy,
+  validateUnitPriceFields,
+  type UnitPriceFields,
+} from './unit-price-policy';
 
 // ─── Origin area code guard (2026-06-05) ─────────────────────────────────────
 // Naver register rejects any originAreaCode not present in the official table
@@ -209,6 +214,14 @@ export interface NaverProductPayloadV2 {
         sellerManagementCode?: string;
         sellerBarcode?: string;
       };
+      // §4-A 단위가격 (2026-04-29 필수). 대상 카테고리(식품·화장품·생활위생 등)에서
+      // 이 블록 미포함 시 네이버 등록/수정 400. 필드명은 권위 doc §4 명시.
+      unitPriceInfo?: {
+        unitPriceYn: 'Y' | 'N';
+        totalCapacityValue?: number;
+        unitCapacity?: number;
+        indicationUnit?: string;
+      };
     };
   };
   smartstoreChannelProduct: {
@@ -277,6 +290,11 @@ export interface LocalProduct {
   // likely SUSPENSION cause). The operator sets this (per-scent numbers may share
   // one string); the ETC notice builder surfaces it only when present (no regression).
   naver_certification?: string | null;
+  // §4-A 단위가격 4필드
+  unit_price_yn?: boolean | null;
+  unit_total_capacity?: number | null;
+  unit_capacity?: number | null;
+  unit_indication_unit?: string | null;
   // Shipping
   shippingFee?: number | null;
   courierCode?: string | null;
@@ -852,6 +870,20 @@ export function validateForRegistration(
     warnings.push(`Upload readiness is C grade (${readiness.score}%) — consider improving: ${readiness.failed.slice(0, 3).map(f => f.label).join(', ')}`);
   }
 
+  // ── §4-A 단위가격 unitCapacity gate (2026-04-29) ─────────────────────────
+  // 대상 카테고리(식품·화장품·생활위생)인데 4필드 미충족이면 발행 차단.
+  // 대상 아닌 카테고리는 사용(Y)일 때만 필드 완결성을 warn.
+  const unitPricePolicy = classifyUnitPricePolicy(naverCat);
+  const unitFields: UnitPriceFields = {
+    unitPriceYn: product.unit_price_yn === true,
+    unitTotalCapacity: product.unit_total_capacity ?? null,
+    unitCapacity: product.unit_capacity ?? null,
+    unitIndicationUnit: product.unit_indication_unit ?? null,
+  };
+  const unitVerdict = validateUnitPriceFields(unitPricePolicy, unitFields);
+  errors.push(...unitVerdict.errors);
+  warnings.push(...unitVerdict.warnings);
+
   // ── Origin truth gate (#95, product-agnostic #62) ────────────────────────
   // Origin MUST be explicitly set and resolvable to an official code. We never
   // silently guess (the builder used to fall back to China '0200037' — a guessed
@@ -947,6 +979,23 @@ export function buildNaverProductPayload(
   // RESEARCH §1: 템플릿 코드 참조 방식 미지원(공식). 매 상품 인라인이 유일.
   const productInfoProvidedNotice = buildProductInfoProvidedNoticeEtc(product, store);
 
+  // §4-A 단위가격 unitPriceInfo — 사용(Y)일 때만 emit. 대상 카테고리인데 미사용은
+  // validateForRegistration 이 상위에서 이미 차단.
+  const unitPriceInfo = product.unit_price_yn
+    ? {
+        unitPriceYn: 'Y' as const,
+        ...(product.unit_total_capacity != null && product.unit_total_capacity > 0
+          ? { totalCapacityValue: Number(product.unit_total_capacity) }
+          : {}),
+        ...(product.unit_capacity != null && product.unit_capacity > 0
+          ? { unitCapacity: Number(product.unit_capacity) }
+          : {}),
+        ...(product.unit_indication_unit && product.unit_indication_unit.trim()
+          ? { indicationUnit: product.unit_indication_unit.trim() }
+          : {}),
+      }
+    : undefined;
+
   const payload: NaverProductPayloadV2 = {
     originProduct: {
       statusType: 'SALE',
@@ -987,6 +1036,7 @@ export function buildNaverProductPayload(
             ...(product.barcode ? { sellerBarcode: product.barcode } : {}),
           },
         } : {}),
+        ...(unitPriceInfo ? { unitPriceInfo } : {}),
       },
     },
     smartstoreChannelProduct: {

@@ -87,6 +87,17 @@ model Product {
   naver_care_instructions String?
   naver_warranty          String?
   naver_certification     String?
+  // §4-A 단위가격 unitCapacity (2026-04-29 필수·NAVER_STORE_OPERATIONS_UPDATE_
+  // 2026-07-09). 대상 카테고리(식품·음료·화장품·생활용품 등)는 등록/수정에서 강제.
+  // 대상이 아닌 카테고리는 unit_price_yn=false 로 두면 payload에서 자동 생략.
+  //   unit_price_yn        : Y/N (JS: boolean → 'Y'/'N' 변환)
+  //   unit_total_capacity  : 총량 (예: 500g의 500)
+  //   unit_capacity        : 단위 기준량 (예: 100g당 → 100)
+  //   unit_indication_unit : 표시 단위 코드 ('g'/'ml'/'매'/'개'/...)
+  unit_price_yn           Boolean?          @map("unit_price_yn")
+  unit_total_capacity     Float?            @map("unit_total_capacity")
+  unit_capacity           Float?            @map("unit_capacity")
+  unit_indication_unit    String?           @map("unit_indication_unit") @db.VarChar(20)
   // Cached last-observed Naver statusType (SALE / SUSPENSION / ...) from the
   // inspect route (live Naver read). Drives applyStatus.publishState accuracy.
   naver_status_type       String?           @map("naver_status_type") @db.VarChar(30)

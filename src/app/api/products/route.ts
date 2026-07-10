@@ -320,6 +320,11 @@ export async function POST(request: NextRequest) {
           })(),
           instant_discount: data.instant_discount != null ? data.instant_discount : null,
           importer_name: data.importer_name ? String(data.importer_name) : null,
+          // §4-A 단위가격 unitCapacity — 대상 카테고리(식품·화장품·생활위생)에서 필수.
+          unit_price_yn:        typeof data.unit_price_yn === 'boolean' ? data.unit_price_yn : null,
+          unit_total_capacity:  data.unit_total_capacity != null ? Number(data.unit_total_capacity) : null,
+          unit_capacity:        data.unit_capacity       != null ? Number(data.unit_capacity)       : null,
+          unit_indication_unit: data.unit_indication_unit ? String(data.unit_indication_unit) : null,
           return_care_enabled: data.return_care_enabled === true,
           // G7 Fix C: persist fields the register form actually sends but the
           // create previously dropped (DRAFT 88-field persistence gap). These all

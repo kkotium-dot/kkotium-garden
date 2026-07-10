@@ -84,6 +84,10 @@ import {
   KKOTIUM_DEFAULTS, COURIER_CODES, SHIPPING_FEE_TYPES, TAX_TYPES, ORIGIN_CODES,
 } from '@/lib/naver/codes';
 import { NAVER_EXCEL_COLUMNS } from '@/lib/naver/columns';
+import {
+  classifyUnitPricePolicy,
+  UNIT_INDICATION_UNITS,
+} from '@/lib/naver/unit-price-policy';
 import { calcSeoScore } from '@/lib/seo-calculator';
 import type { SeoResult } from '@/lib/seo-calculator';
 import { MarginCalculator } from '@/components/products/MarginCalculator';
@@ -494,6 +498,11 @@ function NewProductPageInner() {
   const [originOpen, setOriginOpen]         = useState(false);
   const [originActiveIdx, setOriginActiveIdx] = useState(0);
   const [importerName, setImporterName]     = useState('');
+  // §4-A 단위가격 unitCapacity — 2026-04-29 대상 카테고리 필수
+  const [unitPriceYn, setUnitPriceYn]                   = useState<boolean>(false);
+  const [unitTotalCapacity, setUnitTotalCapacity]       = useState<string>('');
+  const [unitCapacity, setUnitCapacity]                 = useState<string>('');
+  const [unitIndicationUnit, setUnitIndicationUnit]     = useState<string>('');
   const originInputRef = useRef<HTMLInputElement>(null);
   const originListRef  = useRef<HTMLDivElement>(null);
   const [brand, setBrand]                   = useState(KKOTIUM_DEFAULTS.brand);
@@ -1248,6 +1257,11 @@ function NewProductPageInner() {
         }
         if (Array.isArray(p.keywords) && p.keywords.length > 0) setAiKeywords(p.keywords as string[]);
         if (Array.isArray(p.tags) && p.tags.length > 0)         setSeoTags(p.tags as string[]);
+        // §4-A 단위가격 hydrate — DB snake_case 그대로.
+        if (typeof p.unit_price_yn === 'boolean')          setUnitPriceYn(p.unit_price_yn);
+        if (p.unit_total_capacity != null)                 setUnitTotalCapacity(String(p.unit_total_capacity));
+        if (p.unit_capacity != null)                       setUnitCapacity(String(p.unit_capacity));
+        if (typeof p.unit_indication_unit === 'string')    setUnitIndicationUnit(p.unit_indication_unit);
         // COPY-AUTO-2.1: load settled — release the auto-fire gate. Batched with the
         // setters above so the gate re-evaluates with the loaded hook in hand. Left
         // false on early-return / fetch error so a failed load never fires (no
@@ -1763,6 +1777,11 @@ function NewProductPageInner() {
         // COPY-AUTO-2 cache: persist the SEO 훅문구 so a re-open loads it and skips
         // any AI re-generation. hookPhrase is the canonical column (Naver register).
         hookPhrase: seoHook.trim() || undefined,
+        // §4-A 단위가격 unitCapacity — 사용(Y) 아니면 4필드 모두 null 저장(초기화).
+        unit_price_yn: unitPriceYn,
+        unit_total_capacity: unitPriceYn && unitTotalCapacity !== '' ? Number(unitTotalCapacity) : null,
+        unit_capacity:       unitPriceYn && unitCapacity       !== '' ? Number(unitCapacity)       : null,
+        unit_indication_unit: unitPriceYn && unitIndicationUnit ? unitIndicationUnit : null,
         ...statusField,
         ...(buildOptionsPayload() ?? {}),
       };
@@ -3058,6 +3077,79 @@ const handleGenerate = async () => {
                 </div>
               </DSection>
             </div>{/* brand/origin defaults end */}
+
+            {/* §4-A 단위가격 unitCapacity (2026-04-29 필수 · 대상 카테고리에서 발행 차단 게이트) */}
+            {(() => {
+              const policy = classifyUnitPricePolicy(getCategoryId(d1, d2, d3, d4));
+              const isMandatory = policy.eligibility === 'mandatory';
+              const isOptional  = policy.eligibility === 'optional';
+              // 대상 아닌 카테고리는 완전히 접혀 있어야 함 (isMandatory === false && !unitPriceYn ⇒ 축약).
+              // 대상 카테고리이거나 이미 사용중이면 4필드 노출.
+              const showFields = isMandatory || unitPriceYn;
+              return (
+                <USection
+                  icon={<Coins size={15}/>}
+                  title="단위가격 (2026-04-29 시행)"
+                  meta={isMandatory
+                    ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200">필수</span>
+                    : <span className="text-[11px] text-stone-400">{isOptional ? '권장' : '카테고리 미지정'}</span>}
+                >
+                  <div className="text-[11px] leading-relaxed text-stone-500">
+                    {isMandatory
+                      ? `${policy.d1}${policy.d2 ? ' > ' + policy.d2 : ''} 카테고리는 단위가격 표시가 필수입니다 — 4필드를 채우지 않으면 등록·수정이 거부됩니다.`
+                      : isOptional
+                        ? '이 카테고리는 단위가격 표시 대상이 아닙니다. 필요 시 사용(Y)으로 켜세요.'
+                        : '카테고리를 먼저 선택하세요 — 대상 카테고리 여부는 카테고리로 판정합니다.'}
+                  </div>
+                  <div className="flex gap-3 items-center">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={unitPriceYn}
+                        onChange={e => setUnitPriceYn(e.target.checked)}
+                        disabled={isMandatory /* 대상 카테고리는 무조건 Y — 스토리지엔 저장되지만 UI로 해제 불가 */}
+                      />
+                      <span className="font-medium">단위가격 사용 (Y)</span>
+                    </label>
+                    {isMandatory && !unitPriceYn && (
+                      <button
+                        type="button"
+                        onClick={() => setUnitPriceYn(true)}
+                        className="text-xs text-rose-600 hover:text-rose-700 underline"
+                      >
+                        자동 활성화
+                      </button>
+                    )}
+                  </div>
+                  {showFields && (
+                    <div className="grid grid-cols-3 gap-3">
+                      <Field label="총량" hint="예: 500 (g/ml)" required={isMandatory}>
+                        <input className={inp} type="number" min={0} step="any"
+                          value={unitTotalCapacity}
+                          onChange={e => setUnitTotalCapacity(e.target.value)}
+                          placeholder="500" />
+                      </Field>
+                      <Field label="단위 기준량" hint="예: 100 (100g당)" required={isMandatory}>
+                        <input className={inp} type="number" min={0} step="any"
+                          value={unitCapacity}
+                          onChange={e => setUnitCapacity(e.target.value)}
+                          placeholder="100" />
+                      </Field>
+                      <Field label="표시 단위" hint="g / ml / 개 등" required={isMandatory}>
+                        <select className={sel}
+                          value={unitIndicationUnit}
+                          onChange={e => setUnitIndicationUnit(e.target.value)}>
+                          <option value="">선택</option>
+                          {UNIT_INDICATION_UNITS.map(u => (
+                            <option key={u} value={u}>{u}</option>
+                          ))}
+                        </select>
+                      </Field>
+                    </div>
+                  )}
+                </USection>
+              );
+            })()}
 
             {/* ③ Option system — folded into 기본 정보 (standalone option tab removed) */}
             <RSection icon={<Layers size={15}/>} title="옵션" badge={optionType === 'NONE' ? '옵션없음' : optionType === 'COMBINATION' ? '조합형' : optionType === 'SINGLE' ? '단독형' : '직접입력형'}>
