@@ -50,16 +50,17 @@ const ICON_BY_CLASS: Record<ErrorClass, typeof AlertTriangle> = {
   NAVER_ERROR: ServerCrash,
 };
 
-// RATE_LIMIT is transient/self-recovering → softer amber tone. Every other
-// class needs an operator action → alert red.
+// Tones → master hues (#227, §3 general semantics). RATE_LIMIT is transient/
+// self-recovering → warning=amber. Every other class needs an operator action
+// → danger=coral.
 const TONE_BY_CLASS: Record<ErrorClass, { bg: string; border: string; accent: string; text: string }> = {
-  FUNNEL_DOWN:       { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626', text: '#991B1B' },
-  PROXY_DOWN:        { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626', text: '#991B1B' },
-  PROXY_AUTH:        { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626', text: '#991B1B' },
-  IP_NOT_ALLOWED:    { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626', text: '#991B1B' },
-  AUTH_SIGN_INVALID: { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626', text: '#991B1B' },
-  NAVER_ERROR:       { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626', text: '#991B1B' },
-  RATE_LIMIT:        { bg: '#FFFBEB', border: '#FDE68A', accent: '#B45309', text: '#92400E' },
+  FUNNEL_DOWN:       { bg: 'var(--m-coral-bg)', border: 'var(--m-coral-fg)', accent: 'var(--m-coral-fg)', text: 'var(--m-coral-tx)' },
+  PROXY_DOWN:        { bg: 'var(--m-coral-bg)', border: 'var(--m-coral-fg)', accent: 'var(--m-coral-fg)', text: 'var(--m-coral-tx)' },
+  PROXY_AUTH:        { bg: 'var(--m-coral-bg)', border: 'var(--m-coral-fg)', accent: 'var(--m-coral-fg)', text: 'var(--m-coral-tx)' },
+  IP_NOT_ALLOWED:    { bg: 'var(--m-coral-bg)', border: 'var(--m-coral-fg)', accent: 'var(--m-coral-fg)', text: 'var(--m-coral-tx)' },
+  AUTH_SIGN_INVALID: { bg: 'var(--m-coral-bg)', border: 'var(--m-coral-fg)', accent: 'var(--m-coral-fg)', text: 'var(--m-coral-tx)' },
+  NAVER_ERROR:       { bg: 'var(--m-coral-bg)', border: 'var(--m-coral-fg)', accent: 'var(--m-coral-fg)', text: 'var(--m-coral-tx)' },
+  RATE_LIMIT:        { bg: 'var(--m-amber-bg)', border: 'var(--m-amber-fg)', accent: 'var(--m-amber-fg)', text: 'var(--m-amber-tx)' },
 };
 
 function formatRelative(iso: string): string {

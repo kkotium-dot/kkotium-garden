@@ -8,6 +8,11 @@
 // Option D (2026-05-03): migrated to useProfitability() shared SWR hook.
 // - 60s polling + revalidateOnFocus for live updates
 // - Single source of truth for SWR options (src/lib/hooks/useDashboardData.ts)
+//
+// Phase 2c (#226/#227): margin distribution taxonomy → master hues (mint/sky/amber/
+// orange/coral, -fg solid fills). Metric/fee semantics use -tx text on -bg tints (AA).
+// Brand red (#F63B28) stays ONLY as widget identity (header/section icons, count badge);
+// danger-STATE (적자 bucket, 주의 상품, negative profit) maps to coral.
 
 'use client';
 
@@ -23,12 +28,13 @@ function DistributionBar({ distribution, total }: {
   distribution: ProfitabilityApiData['distribution']; total: number;
 }) {
   if (total === 0) return null;
+  // Distribution taxonomy → master hues (#227, §3). Solid fills/dots = -fg.
   const segments = [
-    { key: 'excellent', count: distribution.excellent, color: '#16a34a', label: '50%+' },
-    { key: 'good', count: distribution.good, color: '#2563eb', label: '30~50%' },
-    { key: 'normal', count: distribution.normal, color: '#eab308', label: '15~30%' },
-    { key: 'low', count: distribution.low, color: '#f97316', label: '0~15%' },
-    { key: 'danger', count: distribution.danger, color: '#F63B28', label: '적자' },
+    { key: 'excellent', count: distribution.excellent, color: 'var(--m-mint-fg)', label: '50%+' },
+    { key: 'good', count: distribution.good, color: 'var(--m-sky-fg)', label: '30~50%' },
+    { key: 'normal', count: distribution.normal, color: 'var(--m-amber-fg)', label: '15~30%' },
+    { key: 'low', count: distribution.low, color: 'var(--m-orange-fg)', label: '0~15%' },
+    { key: 'danger', count: distribution.danger, color: 'var(--m-coral-fg)', label: '적자' },
   ].filter(s => s.count > 0);
 
   return (
@@ -82,7 +88,11 @@ export default function ProfitabilityWidget() {
 
   const { summary, distribution, top5, bottom5, feeComparison } = data;
   const fmt = (n: number) => n >= 10000 ? `${(n / 10000).toFixed(1)}만` : n.toLocaleString();
-  const marginColor = summary.avgMarginNormal >= 30 ? '#16a34a' : summary.avgMarginNormal >= 15 ? '#eab308' : '#F63B28';
+  // Avg-margin metric tier → master hue. -fg literal drives the tint bg (+alpha concat,
+  // where a CSS var cannot resolve); -tx literal drives the number text (AA on the tint).
+  const marginTier = summary.avgMarginNormal >= 30 ? 'mint' : summary.avgMarginNormal >= 15 ? 'amber' : 'coral';
+  const marginFg = marginTier === 'mint' ? '#12B886' : marginTier === 'amber' ? '#FFB020' : '#FF4757';
+  const marginTx = marginTier === 'mint' ? '#0B6E50' : marginTier === 'amber' ? '#8A5A00' : '#B21F2C';
   const monthlySaved = summary.totalFeeSaved * 30;
 
   return (
@@ -109,7 +119,7 @@ export default function ProfitabilityWidget() {
             title={feeComparison.reformNote}
             style={{
               fontSize: 9, padding: '2px 6px', borderRadius: 99,
-              background: '#ECFDF5', color: '#15803D', fontWeight: 700,
+              background: 'var(--m-mint-bg)', color: 'var(--m-mint-tx)', fontWeight: 700,
               display: 'inline-flex', alignItems: 'center', gap: 3,
             }}
           >
@@ -130,9 +140,9 @@ export default function ProfitabilityWidget() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
           <div style={{
             textAlign: 'center', padding: '10px 8px', borderRadius: 12,
-            background: marginColor + '10', border: `1px solid ${marginColor}30`,
+            background: marginFg + '10', border: `1px solid ${marginFg}30`,
           }}>
-            <p style={{ fontSize: 22, fontWeight: 900, color: marginColor, margin: '0 0 2px', lineHeight: 1 }}>
+            <p style={{ fontSize: 22, fontWeight: 900, color: marginTx, margin: '0 0 2px', lineHeight: 1 }}>
               {summary.avgMarginNormal}%
             </p>
             <p style={{ fontSize: 10, fontWeight: 700, color: '#6B7280', margin: 0 }}>
@@ -141,9 +151,9 @@ export default function ProfitabilityWidget() {
           </div>
           <div style={{
             textAlign: 'center', padding: '10px 8px', borderRadius: 12,
-            background: '#F0FDF4', border: '1px solid #BBF7D0',
+            background: 'var(--m-mint-bg)', border: '1px solid var(--m-mint-fg)',
           }}>
-            <p style={{ fontSize: 18, fontWeight: 900, color: '#16a34a', margin: '0 0 2px', lineHeight: 1 }}>
+            <p style={{ fontSize: 18, fontWeight: 900, color: 'var(--m-mint-tx)', margin: '0 0 2px', lineHeight: 1 }}>
               {fmt(summary.totalProfitNormal)}원
             </p>
             <p style={{ fontSize: 10, fontWeight: 700, color: '#6B7280', margin: 0 }}>
@@ -152,9 +162,9 @@ export default function ProfitabilityWidget() {
           </div>
           <div style={{
             textAlign: 'center', padding: '10px 8px', borderRadius: 12,
-            background: '#EFF6FF', border: '1px solid #BFDBFE',
+            background: 'var(--m-sky-bg)', border: '1px solid var(--m-sky-fg)',
           }}>
-            <p style={{ fontSize: 18, fontWeight: 900, color: '#2563eb', margin: '0 0 2px', lineHeight: 1 }}>
+            <p style={{ fontSize: 18, fontWeight: 900, color: 'var(--m-sky-tx)', margin: '0 0 2px', lineHeight: 1 }}>
               {fmt(summary.totalFeeNormal)}원
             </p>
             <p style={{ fontSize: 10, fontWeight: 700, color: '#6B7280', margin: 0 }}>
@@ -166,15 +176,15 @@ export default function ProfitabilityWidget() {
         {/* Fee comparison card */}
         <div style={{
           padding: '12px 14px', borderRadius: 10,
-          background: '#FFFBEB', border: '1px solid #FDE68A', marginBottom: 12,
+          background: 'var(--m-amber-bg)', border: '1px solid var(--m-amber-fg)', marginBottom: 12,
         }}>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             gap: 6, marginBottom: 8,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Link2 size={12} style={{ color: '#B45309' }} />
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}>
+              <Link2 size={12} style={{ color: 'var(--m-amber-tx)' }} />
+              <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--m-amber-tx)' }}>
                 자체마케팅 링크 수수료 절감
               </span>
             </div>
@@ -183,7 +193,7 @@ export default function ProfitabilityWidget() {
               aria-label="자체마케팅 링크 설명"
               style={{
                 padding: 2, borderRadius: 4, border: 'none', background: 'transparent',
-                cursor: 'pointer', color: '#B45309', display: 'flex',
+                cursor: 'pointer', color: 'var(--m-amber-tx)', display: 'flex',
               }}
             >
               <Info size={12} />
@@ -193,10 +203,10 @@ export default function ProfitabilityWidget() {
           {showMarketingTip && (
             <div style={{
               padding: '8px 10px', borderRadius: 8, marginBottom: 8,
-              background: '#FFFFFF', border: '1px solid #FDE68A',
-              fontSize: 10, color: '#78350F', lineHeight: 1.5,
+              background: '#FFFFFF', border: '1px solid var(--m-amber-fg)',
+              fontSize: 10, color: 'var(--m-amber-tx)', lineHeight: 1.5,
             }}>
-              <strong style={{ color: '#92400E' }}>자체마케팅 링크란?</strong>{' '}
+              <strong style={{ color: 'var(--m-amber-tx)' }}>자체마케팅 링크란?</strong>{' '}
               네이버 검색이 아닌 <em>셀러가 직접 만든 유입 경로</em>로 들어와 구매한 주문입니다.
               블로그·인스타그램·카카오 채널·외부 검색광고 등이 해당.
               해당 경로로 들어온 주문은 판매수수료가 2.73% → 0.91%로 인하 적용됩니다.
@@ -205,23 +215,23 @@ export default function ProfitabilityWidget() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'center' }}>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 10, color: '#92400E', margin: '0 0 2px' }}>일반 노출</p>
-              <p style={{ fontSize: 14, fontWeight: 900, color: '#B45309', margin: 0 }}>
+              <p style={{ fontSize: 10, color: 'var(--m-amber-tx)', margin: '0 0 2px' }}>일반 노출</p>
+              <p style={{ fontSize: 14, fontWeight: 900, color: 'var(--m-amber-tx)', margin: 0 }}>
                 {feeComparison.normalRate.toFixed(2)}%
               </p>
-              <p style={{ fontSize: 9, color: '#A16207', margin: '2px 0 0' }}>
+              <p style={{ fontSize: 9, color: 'var(--m-amber-tx)', margin: '2px 0 0' }}>
                 판매수수료 {feeComparison.salesFeeNormal.toFixed(2)}%
               </p>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <ChevronRight size={16} style={{ color: '#F59E0B' }} />
+              <ChevronRight size={16} style={{ color: 'var(--m-amber-fg)' }} />
             </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 10, color: '#15803D', margin: '0 0 2px' }}>자체마케팅</p>
-              <p style={{ fontSize: 14, fontWeight: 900, color: '#16a34a', margin: 0 }}>
+              <p style={{ fontSize: 10, color: 'var(--m-mint-tx)', margin: '0 0 2px' }}>자체마케팅</p>
+              <p style={{ fontSize: 14, fontWeight: 900, color: 'var(--m-mint-tx)', margin: 0 }}>
                 {feeComparison.marketingRate.toFixed(2)}%
               </p>
-              <p style={{ fontSize: 9, color: '#15803D', margin: '2px 0 0' }}>
+              <p style={{ fontSize: 9, color: 'var(--m-mint-tx)', margin: '2px 0 0' }}>
                 판매수수료 {feeComparison.salesFeeMarketing.toFixed(2)}%
               </p>
             </div>
@@ -229,15 +239,15 @@ export default function ProfitabilityWidget() {
 
           <div style={{
             marginTop: 8, padding: '6px 8px', borderRadius: 6,
-            background: '#FFFFFF', border: '1px solid #FCD34D',
+            background: '#FFFFFF', border: '1px solid var(--m-amber-fg)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <span style={{ fontSize: 10, color: '#92400E' }}>
+            <span style={{ fontSize: 10, color: 'var(--m-amber-tx)' }}>
               건당 절감 <strong>{fmt(summary.totalFeeSaved)}원</strong>
             </span>
             {monthlySaved > 0 && (
               <span style={{
-                fontSize: 10, color: '#15803D', fontWeight: 700,
+                fontSize: 10, color: 'var(--m-mint-tx)', fontWeight: 700,
                 display: 'inline-flex', alignItems: 'center', gap: 3,
               }}>
                 <TrendingUp size={10} />
@@ -280,7 +290,7 @@ export default function ProfitabilityWidget() {
         {showDetail && (
           <div style={{ marginTop: 8, padding: '12px', borderRadius: 10, background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
             {/* Top 5 */}
-            <p style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', marginBottom: 6 }}>
+            <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--m-mint-tx)', marginBottom: 6 }}>
               수익 TOP 5
             </p>
             {top5.map((p, i) => (
@@ -289,13 +299,13 @@ export default function ProfitabilityWidget() {
                 padding: '6px 0', borderBottom: i < top5.length - 1 ? '1px solid #F3F4F6' : 'none',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 11, fontWeight: 900, color: '#16a34a', width: 16 }}>{i + 1}</span>
+                  <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--m-mint-tx)', width: 16 }}>{i + 1}</span>
                   <span style={{ fontSize: 11, color: '#1A1A1A', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.name}
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--m-mint-tx)' }}>
                     +{p.profitNormal.toLocaleString()}원
                   </span>
                   <span style={{ fontSize: 10, color: '#6B7280' }}>{p.marginNormal}%</span>
@@ -306,7 +316,7 @@ export default function ProfitabilityWidget() {
             {/* Bottom 5 */}
             {bottom5.some(p => p.profitNormal < 0) && (
               <>
-                <p style={{ fontSize: 11, fontWeight: 800, color: '#F63B28', margin: '12px 0 6px' }}>
+                <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--m-coral-tx)', margin: '12px 0 6px' }}>
                   주의 상품
                 </p>
                 {bottom5.filter(p => p.marginNormal < 15).map((p, i) => (
@@ -318,7 +328,7 @@ export default function ProfitabilityWidget() {
                       {p.name}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: p.profitNormal < 0 ? '#F63B28' : '#f97316' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: p.profitNormal < 0 ? 'var(--m-coral-tx)' : 'var(--m-orange-tx)' }}>
                         {p.profitNormal >= 0 ? '+' : ''}{p.profitNormal.toLocaleString()}원
                       </span>
                       <span style={{ fontSize: 10, color: '#6B7280' }}>{p.marginNormal}%</span>

@@ -40,10 +40,12 @@ import { useLowStockAlerts, type LowStockAlertRow } from '@/lib/hooks/useLowStoc
 
 type Level = 'yellow' | 'orange' | 'red';
 
+// Level severity taxonomy (3-state) → master hues (#227, §3): red→coral, orange→
+// orange, yellow→amber. Per #226: stripe/border = -fg · pill text = -tx (dark, AA).
 const LEVEL_COLOR: Record<Level, { stripe: string; pill: string; pillBg: string; pillBorder: string; icon: typeof AlertOctagon }> = {
-  red:    { stripe: '#dc2626', pill: '#991b1b', pillBg: '#fef2f2', pillBorder: '#fecaca', icon: AlertOctagon },
-  orange: { stripe: '#f97316', pill: '#9a3412', pillBg: '#fff7ed', pillBorder: '#fed7aa', icon: AlertTriangle },
-  yellow: { stripe: '#eab308', pill: '#a16207', pillBg: '#fefce8', pillBorder: '#fde68a', icon: Info },
+  red:    { stripe: 'var(--m-coral-fg)',  pill: 'var(--m-coral-tx)',  pillBg: 'var(--m-coral-bg)',  pillBorder: 'var(--m-coral-fg)',  icon: AlertOctagon },
+  orange: { stripe: 'var(--m-orange-fg)', pill: 'var(--m-orange-tx)', pillBg: 'var(--m-orange-bg)', pillBorder: 'var(--m-orange-fg)', icon: AlertTriangle },
+  yellow: { stripe: 'var(--m-amber-fg)',  pill: 'var(--m-amber-tx)',  pillBg: 'var(--m-amber-bg)',  pillBorder: 'var(--m-amber-fg)',  icon: Info },
 };
 
 const LEVEL_PRIORITY: Record<Level, number> = { red: 3, orange: 2, yellow: 1 };
@@ -59,10 +61,12 @@ interface ToastState {
 }
 
 function ToastBanner({ toast, onClose }: { toast: ToastState; onClose: () => void }) {
+  // Toast = general single-meaning semantics → master hues (§3): success→mint,
+  // error→coral, info→sky. Badge rule #226: bg=-bg tint · border=-fg · text=-tx.
   const palette: Record<ToastKind, { bg: string; border: string; color: string }> = {
-    success: { bg: '#f0fdf4', border: '#bbf7d0', color: '#15803d' },
-    error:   { bg: '#fef2f2', border: '#fecaca', color: '#b91c1c' },
-    info:    { bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8' },
+    success: { bg: 'var(--m-mint-bg)',  border: 'var(--m-mint-fg)',  color: 'var(--m-mint-tx)' },
+    error:   { bg: 'var(--m-coral-bg)', border: 'var(--m-coral-fg)', color: 'var(--m-coral-tx)' },
+    info:    { bg: 'var(--m-sky-bg)',   border: 'var(--m-sky-fg)',   color: 'var(--m-sky-tx)' },
   };
   const c = palette[toast.kind];
   return (
@@ -202,7 +206,7 @@ function OosConfirmModal({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <CircleX size={20} style={{ color: '#dc2626' }} />
+          <CircleX size={20} style={{ color: 'var(--m-coral-fg)' }} />
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#111827' }}>
             {strings.oosModal.title}
           </h3>
@@ -221,16 +225,16 @@ function OosConfirmModal({
           onClick={() => onConfirm(false)}
           style={{
             display: 'block', width: '100%', textAlign: 'left',
-            background: '#f0fdf4', border: '1.5px solid #86efac',
+            background: 'var(--m-mint-bg)', border: '1.5px solid var(--m-mint-fg)',
             borderRadius: 10, padding: '10px 14px', marginBottom: 8,
             cursor: busy ? 'not-allowed' : 'pointer',
             opacity: busy ? 0.6 : 1,
           }}
         >
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#15803d' }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: 'var(--m-mint-tx)' }}>
             {strings.oosModal.appOnly}
           </p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#166534', lineHeight: 1.4 }}>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--m-mint-tx)', lineHeight: 1.4 }}>
             {strings.oosModal.appOnlyHint}
           </p>
         </button>
@@ -241,16 +245,16 @@ function OosConfirmModal({
           onClick={() => onConfirm(true)}
           style={{
             display: 'block', width: '100%', textAlign: 'left',
-            background: '#fff7ed', border: '1.5px solid #fed7aa',
+            background: 'var(--m-orange-bg)', border: '1.5px solid var(--m-orange-fg)',
             borderRadius: 10, padding: '10px 14px', marginBottom: 10,
             cursor: busy ? 'not-allowed' : 'pointer',
             opacity: busy ? 0.6 : 1,
           }}
         >
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#9a3412' }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: 'var(--m-orange-tx)' }}>
             {strings.oosModal.alsoNaver}
           </p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#7c2d12', lineHeight: 1.4 }}>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--m-orange-tx)', lineHeight: 1.4 }}>
             {strings.oosModal.alsoNaverHint}
           </p>
         </button>
@@ -366,7 +370,7 @@ function AlertRow({ alert, onAction, onToast, onRequestOos }: RowProps) {
           <span style={{ fontFamily: 'monospace', color: '#9ca3af' }}>{alert.product.sku}</span>
           <span>
             <strong style={{ color: '#111827' }}>{strings.qty.current}</strong>{' '}
-            <strong style={{ color: palette.stripe }}>{alert.currentQty}</strong>
+            <strong style={{ color: palette.pill }}>{alert.currentQty}</strong>
             {strings.qty.unit}
             <span style={{ color: '#9ca3af' }}> / {strings.qty.threshold} {alert.threshold}{strings.qty.unit}</span>
           </span>
@@ -395,7 +399,7 @@ function AlertRow({ alert, onAction, onToast, onRequestOos }: RowProps) {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
                 fontSize: 11, fontWeight: 700,
-                color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe',
+                color: 'var(--m-sky-tx)', background: 'var(--m-sky-bg)', border: '1px solid var(--m-sky-fg)',
                 borderRadius: 6, padding: '4px 8px', textDecoration: 'none', whiteSpace: 'nowrap',
               }}
               title={strings.action.priceCutHint}
@@ -447,16 +451,16 @@ function AlertRow({ alert, onAction, onToast, onRequestOos }: RowProps) {
               }}
               style={{
                 flex: 1, fontSize: 12, padding: '5px 8px',
-                border: '1.5px solid #16a34a', borderRadius: 6,
-                outline: 'none', background: '#f0fdf4',
+                border: '1.5px solid var(--m-mint-fg)', borderRadius: 6,
+                outline: 'none', background: 'var(--m-mint-bg)',
               }}
             />
             <ActionButton
               icon={CheckCircle2}
               label={strings.action.resolve}
-              color="#15803d"
-              bg="#f0fdf4"
-              border="#bbf7d0"
+              color="var(--m-mint-tx)"
+              bg="var(--m-mint-bg)"
+              border="var(--m-mint-fg)"
               busy={busyAction === 'resolve'}
               disabled={busyAction !== null && busyAction !== 'resolve'}
               onClick={() => void doAction('resolve')}
@@ -625,9 +629,9 @@ export default function LowStockAlertWidget() {
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           width: 32, height: 32, borderRadius: 8,
-          background: hasAny ? '#fef2f2' : '#f0fdf4',
+          background: hasAny ? 'var(--m-coral-bg)' : 'var(--m-mint-bg)',
         }}>
-          <AlertOctagon size={18} style={{ color: hasAny ? '#dc2626' : '#16a34a' }} />
+          <AlertOctagon size={18} style={{ color: hasAny ? 'var(--m-coral-fg)' : 'var(--m-mint-fg)' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#111827', lineHeight: 1.2 }}>
@@ -635,8 +639,8 @@ export default function LowStockAlertWidget() {
             {hasAny && (
               <span style={{
                 marginLeft: 8, fontSize: 11, fontWeight: 800,
-                color: '#dc2626', background: '#fef2f2',
-                border: '1px solid #fecaca', borderRadius: 99,
+                color: 'var(--m-coral-tx)', background: 'var(--m-coral-bg)',
+                border: '1px solid var(--m-coral-fg)', borderRadius: 99,
                 padding: '1px 8px',
               }}>
                 {alerts.length}
@@ -654,9 +658,9 @@ export default function LowStockAlertWidget() {
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
             fontSize: 11, fontWeight: 700,
-            color: polling ? '#9ca3af' : '#1d4ed8',
-            background: polling ? '#f9fafb' : '#eff6ff',
-            border: `1px solid ${polling ? 'var(--border-neutral)' : '#bfdbfe'}`,
+            color: polling ? '#9ca3af' : 'var(--m-sky-tx)',
+            background: polling ? '#f9fafb' : 'var(--m-sky-bg)',
+            border: `1px solid ${polling ? 'var(--border-neutral)' : 'var(--m-sky-fg)'}`,
             borderRadius: 6, padding: '4px 10px',
             cursor: polling ? 'not-allowed' : 'pointer',
             whiteSpace: 'nowrap',
@@ -676,8 +680,8 @@ export default function LowStockAlertWidget() {
       {/* Body */}
       {!hasAny && !isLoading && (
         <div style={{ textAlign: 'center', padding: '20px 12px', color: '#9ca3af' }}>
-          <CheckCircle2 size={24} style={{ color: '#22c55e', margin: '0 auto 8px' }} />
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#16a34a' }}>
+          <CheckCircle2 size={24} style={{ color: 'var(--m-mint-fg)', margin: '0 auto 8px' }} />
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--m-mint-tx)' }}>
             {strings.header.emptyAll}
           </p>
           <p style={{ margin: 0, fontSize: 11, marginTop: 4 }}>
