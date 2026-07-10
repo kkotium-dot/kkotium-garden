@@ -858,14 +858,6 @@ export async function registerProduct(payload: NaverProductPayload): Promise<str
   return data.productNo ?? data.originProductNo ?? data.id;
 }
 
-/** Update existing product */
-export async function updateProduct(
-  productNo: string,
-  payload: Partial<NaverProductPayload>
-): Promise<void> {
-  await naverRequest('PUT', `/v2/products/origin-products/${productNo}`, payload);
-}
-
 /** Get product detail */
 export async function getProduct(productNo: string): Promise<any> {
   return naverRequest('GET', `/v2/products/origin-products/${productNo}`);
