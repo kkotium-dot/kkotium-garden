@@ -6,13 +6,27 @@ import raw from "./garden-nav.ko.json";
 
 export type BadgeKey = "sourcing" | "zombie" | "orders" | "draft" | "oos";
 
-export interface GardenNavItem {
+export interface GardenNavChild {
   key: string;
   href: string;
   ko: string;
   en: string;
   icon: string;
   badgeKey?: BadgeKey;
+}
+
+export interface GardenNavItem {
+  key: string;
+  href: string;
+  ko: string;
+  /** Metaphor / secondary sublabel (function-first label rule #233·§3A). */
+  sub?: string;
+  en: string;
+  icon: string;
+  badgeKey?: BadgeKey;
+  /** Merged workspace stages shown as indented sub-tabs when the section is
+   *  active (progressive disclosure, #233·§3B). Every child route preserved. */
+  children?: GardenNavChild[];
 }
 
 export interface GardenNavSection {

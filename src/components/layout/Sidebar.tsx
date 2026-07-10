@@ -1,19 +1,26 @@
 'use client';
-// Sidebar — KKOTIUM v11 (SWR realtime via shared hook, 2026-05-03 옵션 D)
-// - 5 badges (sourcing/zombie/orders/draft/oos) backed by useSidebarStats()
-// - Polling cadence + focus revalidation handled centrally in useDashboardData
+// Sidebar — KKOTIUM v12 (2026-07-09 ADHD-IA-REAUDIT · #233)
+// - Single source of truth: renders directly from garden-nav.ko.json (no more
+//   hardcoded NAV — the previous mirror drifted, e.g. /market·/growth·/control
+//   missing from the JSON. Now one file drives both, #26/#5 consistency).
+// - 6 top groups · ≤5 items each · function-first labels + metaphor sublabel.
+// - Merged workspaces (상품 만들기 / 공급사 관리 / 설정) carry `children` shown
+//   as indented sub-tabs when that section is active (progressive disclosure,
+//   #233 §3B). Every route preserved — no renames, no redirects.
+// - 4 live badges (sourcing/zombie/orders/draft) on top-level items via
+//   useSidebarStats().
 
 import { Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useSidebarStats } from '@/lib/hooks/useDashboardData';
+import { gardenNav, type GardenNavItem, type GardenNavChild, type BadgeKey } from '@/lib/i18n/garden-nav';
 import {
   Package, PackagePlus, RefreshCw,
   Search, Layers, Store, Truck,
   KeyRound, FileText, ShoppingCart,
   ChevronRight, MessageCircle, CreditCard, Workflow,
-  Palette, Images, Link2, BarChart3, Sprout,
+  Palette, Images, Link2, BarChart3, Sprout, Settings,
 } from 'lucide-react';
 
 // Fountain SVG — garden concept, matches dashboard page header icon
@@ -39,70 +46,12 @@ function ShoppingBagIcon({ size = 16, color = 'currentColor' }: { size?: number;
   );
 }
 
-// Nav item type extended with optional badge key
-interface NavItem {
-  href: string;
-  label: string;
-  iconKey: string;
-  badgeKey?: 'sourcing' | 'zombie' | 'orders' | 'draft' | 'oos';
-}
-
-// DASHBOARD-SHELL Phase 1 (#216/#218): 7 sections → 5 JTBD groups.
-// Group headers carry metaphor + function (은유·기능 병기, #73/#218); every
-// route + badge is preserved (기능 무손실 — items regrouped, none removed).
-const NAV: { label: string; items: NavItem[] }[] = [
-  {
-    label: '홈',
-    items: [
-      { href: '/dashboard', label: '정원 일지',   iconKey: 'fountain' },
-      { href: '/market',    label: '시장 분석',   iconKey: 'chart' },
-      { href: '/growth',    label: '성장 · 소싱', iconKey: 'sprout' },
-      { href: '/control',   label: '관제탑',      iconKey: 'workflow' },
-    ],
-  },
-  {
-    label: '화단 · 상품',
-    items: [
-      { href: '/crawl',                 label: '꿀통 꽃나들이', iconKey: 'layers',      badgeKey: 'sourcing' },
-      { href: '/products/new',          label: '씨앗 심기',     iconKey: 'packageplus' },
-      { href: '/products',              label: '정원 창고',     iconKey: 'shoppingbag', badgeKey: 'draft' },
-      { href: '/naver-seo',             label: '검색 조련사',   iconKey: 'search' },
-      { href: '/studio',                label: '온실 아틀리에', iconKey: 'palette' },
-      { href: '/products/reactivation', label: '좀비 부활소',   iconKey: 'refreshcw',   badgeKey: 'zombie' },
-    ],
-  },
-  {
-    label: '수확 · 주문',
-    items: [
-      { href: '/orders',          label: '주문 관리',   iconKey: 'shoppingcart', badgeKey: 'orders' },
-      { href: '/products/link',   label: '상품 연동',   iconKey: 'link2' },
-      { href: '/ops/insert-card', label: '인서트 카드', iconKey: 'creditcard' },
-    ],
-  },
-  {
-    label: '벌통 · 고객',
-    items: [
-      { href: '/settings/kakao', label: '카카오 채널', iconKey: 'messagecircle' },
-    ],
-  },
-  {
-    label: '설정 · 도구',
-    items: [
-      { href: '/settings/suppliers',        label: '거래처 명단',   iconKey: 'store' },
-      { href: '/settings/shipping',         label: '배송 레시피',   iconKey: 'truck' },
-      { href: '/settings/supplier-login',   label: '공급사 열쇠방', iconKey: 'keyround' },
-      { href: '/naver-settings',            label: '네이버 기본값', iconKey: 'filetext' },
-      { href: '/settings/lifestyle-assets', label: '라이프 자산',   iconKey: 'images' },
-    ],
-  },
-];
-
-// Pre-computed href list for sibling deep-link detection (module-level, single pass)
-const NAV_HREFS: string[] = NAV.flatMap(s => s.items).map(i => i.href);
+// Pre-computed href list (parents + children) for sibling deep-link detection.
+const NAV_HREFS: string[] = gardenNav.sections.flatMap((s) =>
+  s.items.flatMap((i) => [i.href, ...(i.children ?? []).map((c) => c.href)]),
+);
 
 // Z-3b: active path matcher — supports query-based deep-links (e.g., /crawl?tab=history)
-// - Plain href (/crawl) is active when pathname matches AND current tab does NOT match any sibling deep-link
-// - Query href (/crawl?tab=history) is active when pathname AND tab query both match exactly
 function computeActive(href: string, pathname: string, tabQuery: string | null): boolean {
   const qIdx = href.indexOf('?');
   if (qIdx === -1) {
@@ -121,6 +70,13 @@ function computeActive(href: string, pathname: string, tabQuery: string | null):
   if (pathname !== hPath) return false;
   const hq = new URLSearchParams(href.slice(qIdx + 1));
   return hq.get('tab') === tabQuery;
+}
+
+// A merged parent's sub-tabs surface when the current route is anywhere inside
+// that workspace (parent href or any child href matches).
+function isSectionActive(item: GardenNavItem, pathname: string, tabQuery: string | null): boolean {
+  if (computeActive(item.href, pathname, tabQuery)) return true;
+  return (item.children ?? []).some((c) => computeActive(c.href, pathname, tabQuery));
 }
 
 function FlowerSVG({ fill, size = 40 }: { fill: string; size?: number }) {
@@ -170,34 +126,36 @@ function SectionFlower() {
   );
 }
 
+function iconFor(iconKey: string, color: string, size: number) {
+  switch (iconKey) {
+    case 'fountain':     return <FountainIcon size={size} color={color} />;
+    case 'shoppingbag':  return <ShoppingBagIcon size={size} color={color} />;
+    case 'packageplus':  return <PackagePlus size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'refreshcw':    return <RefreshCw   size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'search':       return <Search      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'layers':       return <Layers      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'store':        return <Store       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'truck':        return <Truck       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'keyround':     return <KeyRound    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'filetext':     return <FileText    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'shoppingcart': return <ShoppingCart size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'link2':        return <Link2        size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'messagecircle': return <MessageCircle size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'creditcard':   return <CreditCard   size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'workflow':     return <Workflow     size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'palette':      return <Palette      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'package':      return <Package      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'images':       return <Images       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'chart':        return <BarChart3    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'sprout':       return <Sprout       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    case 'settings':     return <Settings     size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+    default:             return <Search       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
+  }
+}
+
 function NavIcon({ iconKey, active }: { iconKey: string; active: boolean }) {
   const color = active ? '#fff' : '#c0687a';
-  const size = 15;
-  let icon;
-  switch (iconKey) {
-    case 'fountain':    icon = <FountainIcon size={size} color={color} />; break;
-    case 'shoppingbag': icon = <ShoppingBagIcon size={size} color={color} />; break;
-    case 'packageplus': icon = <PackagePlus size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'refreshcw':   icon = <RefreshCw   size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'search':      icon = <Search      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'layers':      icon = <Layers      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'store':       icon = <Store       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'truck':       icon = <Truck       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'keyround':    icon = <KeyRound    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'filetext':    icon = <FileText    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'shoppingcart': icon = <ShoppingCart size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'link2':        icon = <Link2        size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'messagecircle': icon = <MessageCircle size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'creditcard':   icon = <CreditCard   size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'workflow':     icon = <Workflow     size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'palette':      icon = <Palette      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'package':      icon = <Package      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'images':       icon = <Images       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'chart':        icon = <BarChart3    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    case 'sprout':       icon = <Sprout       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
-    default:            icon = <Search      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
-  }
-  return <FlowerIconBox active={active}>{icon}</FlowerIconBox>;
+  return <FlowerIconBox active={active}>{iconFor(iconKey, color, 15)}</FlowerIconBox>;
 }
 
 function SectionLine() {
@@ -223,18 +181,43 @@ function NavBadge({ count, active }: { count: number; active: boolean }) {
   );
 }
 
+// ── Child sub-tab row (indented, no flower box — visually subordinate) ──────
+function SubTab({ child, active }: { child: GardenNavChild; active: boolean }) {
+  return (
+    <Link
+      href={child.href}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        margin: '2px 0 2px 30px',
+        borderRadius: 9, padding: '7px 10px',
+        fontSize: 13, fontWeight: active ? 700 : 500,
+        background: active ? '#FFF0F5' : 'transparent',
+        color: active ? '#F63B28' : '#6A5560',
+        textDecoration: 'none',
+        transition: 'background 0.12s, color 0.12s',
+      }}
+      onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = '#FFF6FA'; }}
+      onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+    >
+      <span style={{
+        width: 5, height: 5, borderRadius: 99, flexShrink: 0,
+        background: active ? '#F63B28' : '#E7B7C6',
+      }} />
+      {iconFor(child.icon, active ? '#F63B28' : '#B78598', 13)}
+      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{child.ko}</span>
+    </Link>
+  );
+}
+
 function SidebarInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabQuery = searchParams.get('tab');
 
-  // Live badge counts from shared SWR hook (Option D, 2026-05-03)
-  // — replaces inline useSWR call from v10. Polling cadence + focus revalidation
-  //   options live in src/lib/hooks/useDashboardData.ts (single source of truth).
   const { counts: sideStats } = useSidebarStats();
 
-  const getBadgeCount = (key: NavItem['badgeKey']): number => {
-    if (!sideStats) return 0;
+  const getBadgeCount = (key: BadgeKey | undefined): number => {
+    if (!sideStats || !key) return 0;
     if (key === 'sourcing') return sideStats.sourcingCount;
     if (key === 'zombie')   return sideStats.zombieCount;
     if (key === 'orders')   return sideStats.ordersCount;
@@ -285,18 +268,18 @@ function SidebarInner() {
           <img src="/kkotium-symbol-white.svg" alt="KKOTIUM" width={42} height={42} style={{ objectFit: "contain", width: "100%", height: "100%" }} /></div>
         <div style={{ lineHeight: 1.2 }}>
           <p style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: "'Arial Black', Impact, sans-serif", letterSpacing: '-0.5px', margin: 0 }}>
-            KKOTIUM
+            {gardenNav.brand.primary}
           </p>
           <p style={{ fontSize: 10, fontWeight: 900, color: '#FFB3CE', letterSpacing: '0.28em', textTransform: 'uppercase', margin: 0, marginTop: 2 }}>
-            GARDEN
+            {gardenNav.brand.secondary}
           </p>
         </div>
       </Link>
 
       {/* ── Nav ── */}
       <nav style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
-        {NAV.map((section, si) => (
-          <div key={section.label}>
+        {gardenNav.sections.map((section, si) => (
+          <div key={section.key}>
             {si > 0 && <SectionLine />}
 
             <div
@@ -323,42 +306,72 @@ function SidebarInner() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {section.items.map(({ href, label, iconKey, badgeKey }) => {
-                const active     = computeActive(href, pathname, tabQuery);
-                const badgeCount = badgeKey ? getBadgeCount(badgeKey) : 0;
+              {section.items.map((item) => {
+                const active     = computeActive(item.href, pathname, tabQuery);
+                const badgeCount = getBadgeCount(item.badgeKey);
+                const sectionActive = isSectionActive(item, pathname, tabQuery);
+                const hasChildren = !!item.children?.length;
                 return (
-                  <Link
-                    key={href}
-                    href={href}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      borderRadius: 12,
-                      padding: '10px 12px',
-                      fontSize: 14,
-                      fontWeight: 500,
-                      background: active ? '#F63B28' : 'transparent',
-                      color: active ? '#fff' : '#3A3A3A',
-                      textDecoration: 'none',
-                      transition: 'background 0.12s, color 0.12s',
-                    }}
-                    onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = '#FFF0F5'; (e.currentTarget as HTMLElement).style.color = '#F63B28'; } }}
-                    onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#3A3A3A'; } }}
-                  >
-                    <NavIcon iconKey={iconKey} active={active} />
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-                    {badgeCount > 0 && <NavBadge count={badgeCount} active={active} />}
-                    {active && badgeCount === 0 && <ChevronRight size={13} style={{ color: 'rgba(255,255,255,0.65)', marginLeft: 'auto' }} />}
-                  </Link>
+                  <div key={item.key}>
+                    <Link
+                      href={item.href}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        borderRadius: 12,
+                        padding: '9px 12px',
+                        fontSize: 14,
+                        fontWeight: 500,
+                        background: active ? '#F63B28' : 'transparent',
+                        color: active ? '#fff' : '#3A3A3A',
+                        textDecoration: 'none',
+                        transition: 'background 0.12s, color 0.12s',
+                      }}
+                      onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = '#FFF0F5'; (e.currentTarget as HTMLElement).style.color = '#F63B28'; } }}
+                      onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#3A3A3A'; } }}
+                    >
+                      <NavIcon iconKey={item.icon} active={active} />
+                      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+                          {item.ko}
+                        </span>
+                        {item.sub && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 500, lineHeight: 1.1,
+                            color: active ? 'rgba(255,255,255,0.75)' : '#B0A0A8',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            {item.sub}
+                          </span>
+                        )}
+                      </span>
+                      {badgeCount > 0 && <NavBadge count={badgeCount} active={active} />}
+                      {active && badgeCount === 0 && !hasChildren && (
+                        <ChevronRight size={13} style={{ color: 'rgba(255,255,255,0.65)', marginLeft: 'auto' }} />
+                      )}
+                    </Link>
+
+                    {/* Merged workspace sub-tabs — surface only when the section
+                        is active (progressive disclosure, #233 §3B). */}
+                    {hasChildren && sectionActive && (
+                      <div style={{ display: 'flex', flexDirection: 'column', marginTop: 2, marginBottom: 4 }}>
+                        {item.children!.map((child) => (
+                          <SubTab
+                            key={child.key}
+                            child={child}
+                            active={computeActive(child.href, pathname, tabQuery)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
           </div>
         ))}
       </nav>
-
-      {/* ── Today stats section removed per P3-A — KPI data visible on dashboard ── */}
     </aside>
   );
 }

@@ -1,5 +1,5 @@
 {
-  "$schema": "Garden nav labels — Korean primary, English italic-serif sublabel. Maps to actual working routes (mirrors src/components/layout/Sidebar.tsx NAV constant). New shell components import from here; do not inline Korean strings (rule #35). 2026-07-09 DASHBOARD-SHELL Phase 1 (#216): 7 sections → 5 JTBD groups, metaphor+function headers.",
+  "$schema": "Garden nav labels — function-first primary (ko), metaphor secondary (sub). Single source of truth: src/components/layout/Sidebar.tsx renders directly from this file (no hardcoded NAV). 2026-07-09 ADHD-IA-REAUDIT (#233): 기능 우선 라벨(은유 괄호/보조)·상위 그룹 6·각 ≤5·유사 기능 병합(상품 만들기/공급사 관리/설정=children 하위탭). 라우트 100% 보존(리네임 0·리다이렉트 불요). New shell components import from here; do not inline Korean strings (rule #35).",
   "brand": {
     "primary": "KKOTIUM",
     "secondary": "GARDEN"
@@ -12,57 +12,100 @@
         {
           "key": "dashboard",
           "href": "/dashboard",
-          "ko": "정원 일지",
+          "ko": "대시보드",
+          "sub": "정원 일지",
           "en": "Garden",
           "icon": "fountain"
+        },
+        {
+          "key": "market",
+          "href": "/market",
+          "ko": "시장 분석",
+          "en": "Market",
+          "icon": "chart"
+        },
+        {
+          "key": "growth",
+          "href": "/growth",
+          "ko": "성장 · 소싱",
+          "en": "Growth",
+          "icon": "sprout"
+        },
+        {
+          "key": "control",
+          "href": "/control",
+          "ko": "관제탑",
+          "en": "Control",
+          "icon": "workflow"
         }
       ]
     },
     {
       "key": "products",
-      "label": "화단 · 상품",
+      "label": "상품",
       "items": [
         {
           "key": "crawl",
           "href": "/crawl",
-          "ko": "꿀통 꽃나들이",
-          "en": "Foraging",
+          "ko": "상품 소싱",
+          "sub": "꿀통 꽃나들이",
+          "en": "Sourcing",
           "icon": "layers",
           "badgeKey": "sourcing"
         },
         {
-          "key": "sow",
+          "key": "make",
           "href": "/products/new",
-          "ko": "씨앗 심기",
-          "en": "Sow Seeds",
-          "icon": "packageplus"
+          "ko": "상품 만들기",
+          "sub": "등록 · 디자인 · 창고",
+          "en": "Make",
+          "icon": "packageplus",
+          "badgeKey": "draft",
+          "children": [
+            {
+              "key": "sow",
+              "href": "/products/new",
+              "ko": "상품 등록",
+              "en": "Register",
+              "icon": "packageplus"
+            },
+            {
+              "key": "studio",
+              "href": "/studio",
+              "ko": "상세 디자인",
+              "en": "Design",
+              "icon": "palette"
+            },
+            {
+              "key": "products",
+              "href": "/products",
+              "ko": "상품 창고",
+              "en": "Warehouse",
+              "icon": "shoppingbag"
+            }
+          ]
         },
         {
-          "key": "products",
-          "href": "/products",
-          "ko": "정원 창고",
-          "en": "Products",
-          "icon": "shoppingbag",
-          "badgeKey": "draft"
+          "key": "product-link",
+          "href": "/products/link",
+          "ko": "상품 연동",
+          "sub": "네이버 동기화",
+          "en": "Link",
+          "icon": "link2"
         },
         {
           "key": "naver-seo",
           "href": "/naver-seo",
-          "ko": "검색 조련사",
+          "ko": "SEO 진단",
+          "sub": "검색 조련사",
           "en": "Keywords",
           "icon": "search"
         },
         {
-          "key": "studio",
-          "href": "/studio",
-          "ko": "온실 아틀리에",
-          "en": "Atelier",
-          "icon": "palette"
-        },
-        {
           "key": "reactivation",
           "href": "/products/reactivation",
-          "ko": "좀비 부활소",
+          "ko": "품절 대체",
+          "sub": "좀비 부활소",
           "en": "Revive",
           "icon": "refreshcw",
           "badgeKey": "zombie"
@@ -71,7 +114,7 @@
     },
     {
       "key": "orders",
-      "label": "수확 · 주문",
+      "label": "주문",
       "items": [
         {
           "key": "orders",
@@ -80,26 +123,12 @@
           "en": "Orders",
           "icon": "shoppingcart",
           "badgeKey": "orders"
-        },
-        {
-          "key": "product-link",
-          "href": "/products/link",
-          "ko": "상품 연동",
-          "en": "Link",
-          "icon": "link2"
-        },
-        {
-          "key": "insert-card",
-          "href": "/ops/insert-card",
-          "ko": "인서트 카드",
-          "en": "Insert Card",
-          "icon": "creditcard"
         }
       ]
     },
     {
       "key": "customer",
-      "label": "벌통 · 고객",
+      "label": "고객",
       "items": [
         {
           "key": "kakao",
@@ -107,47 +136,81 @@
           "ko": "카카오 채널",
           "en": "Kakao",
           "icon": "messagecircle"
+        },
+        {
+          "key": "insert-card",
+          "href": "/ops/insert-card",
+          "ko": "인서트 카드",
+          "sub": "동봉 감사카드",
+          "en": "Insert Card",
+          "icon": "creditcard"
+        }
+      ]
+    },
+    {
+      "key": "supplier",
+      "label": "공급사",
+      "items": [
+        {
+          "key": "supplier-manage",
+          "href": "/settings/suppliers",
+          "ko": "공급사 관리",
+          "sub": "명단 · 열쇠방",
+          "en": "Suppliers",
+          "icon": "store",
+          "children": [
+            {
+              "key": "suppliers",
+              "href": "/settings/suppliers",
+              "ko": "거래처 명단",
+              "en": "Directory",
+              "icon": "store"
+            },
+            {
+              "key": "supplier-login",
+              "href": "/settings/supplier-login",
+              "ko": "공급사 열쇠방",
+              "en": "Vendor Keys",
+              "icon": "keyround"
+            }
+          ]
         }
       ]
     },
     {
       "key": "settings",
-      "label": "설정 · 도구",
+      "label": "설정",
       "items": [
         {
-          "key": "suppliers",
-          "href": "/settings/suppliers",
-          "ko": "거래처 명단",
-          "en": "Suppliers",
-          "icon": "store"
-        },
-        {
-          "key": "shipping",
+          "key": "settings",
           "href": "/settings/shipping",
-          "ko": "배송 레시피",
-          "en": "Shipping",
-          "icon": "truck"
-        },
-        {
-          "key": "supplier-login",
-          "href": "/settings/supplier-login",
-          "ko": "공급사 열쇠방",
-          "en": "Vendor Keys",
-          "icon": "keyround"
-        },
-        {
-          "key": "naver",
-          "href": "/naver-settings",
-          "ko": "네이버 기본값",
-          "en": "Naver",
-          "icon": "filetext"
-        },
-        {
-          "key": "lifestyle",
-          "href": "/settings/lifestyle-assets",
-          "ko": "라이프 자산",
-          "en": "Lifestyle",
-          "icon": "images"
+          "ko": "설정",
+          "sub": "배송 · 네이버 · 자산",
+          "en": "Settings",
+          "icon": "settings",
+          "children": [
+            {
+              "key": "shipping",
+              "href": "/settings/shipping",
+              "ko": "배송 설정",
+              "en": "Shipping",
+              "icon": "truck"
+            },
+            {
+              "key": "naver",
+              "href": "/naver-settings",
+              "ko": "네이버 기본값",
+              "en": "Naver",
+              "icon": "filetext"
+            },
+            {
+              "key": "lifestyle",
+              "href": "/settings/lifestyle-assets",
+              "ko": "라이프 자산",
+              "en": "Lifestyle",
+              "icon": "images"
+            }
+          ]
         }
       ]
     }
@@ -158,12 +221,12 @@
     "note": "Tulip mascot — do not substitute the user nickname here. Per docs/research/GARDEN_CONCEPT_ANALYSIS_2026-06.md section 1."
   },
   "mobileTabs": {
-    "_meta": "Phase 2-MOBILE-1 — 하단 고정 4탭(가든홈/화단/씨앗심기/온실). 44px 터치 타겟. 권위: MOBILE_NAMING_FIREFLY 주제1.",
+    "_meta": "Phase 2-MOBILE-1 — 하단 고정 4탭(대시보드/상품창고/상품등록/디자인). 44px 터치 타겟. 권위: MOBILE_NAMING_FIREFLY 주제1.",
     "items": [
-      { "key": "dashboard", "href": "/dashboard", "ko": "가든 홈", "icon": "fountain" },
-      { "key": "products", "href": "/products", "ko": "화단", "icon": "shoppingbag" },
-      { "key": "sow", "href": "/products/new", "ko": "씨앗 심기", "icon": "packageplus" },
-      { "key": "studio", "href": "/studio", "ko": "온실", "icon": "palette" }
+      { "key": "dashboard", "href": "/dashboard", "ko": "대시보드", "icon": "fountain" },
+      { "key": "products", "href": "/products", "ko": "상품 창고", "icon": "shoppingbag" },
+      { "key": "sow", "href": "/products/new", "ko": "상품 등록", "icon": "packageplus" },
+      { "key": "studio", "href": "/studio", "ko": "디자인", "icon": "palette" }
     ],
     "more": "더보기"
   },
