@@ -1,0 +1,40 @@
+<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="꼬띠 마스코트">
+  <defs>
+    <style>
+      .ln{stroke:#5A3D2A;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
+      .halo{stroke:#fff;stroke-width:9;stroke-linejoin:round;fill:none;opacity:.9;}
+    </style>
+  </defs>
+  <g class="halo">
+    <path d="M100 44 C70 44 55 66 58 92 C60 112 78 126 100 126 C122 126 140 112 142 92 C145 66 130 44 100 44 Z"/>
+    <rect x="72" y="120" width="56" height="70" rx="26"/>
+    <path d="M78 196 h18 v34 a9 9 0 0 1 -18 0 Z"/>
+    <path d="M104 196 h18 v34 a9 9 0 0 1 -18 0 Z"/>
+  </g>
+  <g>
+    <path class="ln" d="M78 150 h18 v70 a9 9 0 0 1 -18 0 Z" fill="#FFA0C0"/>
+    <ellipse cx="82" cy="170" rx="3" ry="7" fill="#fff" opacity=".35"/>
+    <path class="ln" d="M74 220 h26 v10 a4 4 0 0 1 -4 4 H78 a4 4 0 0 1 -4 -4 Z" fill="#A87752"/>
+    <path class="ln" d="M104 150 h18 v70 a9 9 0 0 1 -18 0 Z" fill="#FFA0C0"/>
+    <ellipse cx="108" cy="170" rx="3" ry="7" fill="#fff" opacity=".35"/>
+    <path class="ln" d="M100 220 h26 v10 a4 4 0 0 1 -4 4 h-18 a4 4 0 0 1 -4 -4 Z" fill="#A87752"/>
+  </g>
+  <rect class="ln" x="72" y="120" width="56" height="74" rx="26" fill="#88D466"/>
+  <path d="M84 130 q-4 30 4 56" stroke="#6BB048" stroke-width="4" fill="none" stroke-linecap="round" opacity=".5"/>
+  <path class="ln" d="M72 150 q-20 -6 -26 10 q18 6 26 -2 Z" fill="#B5DB87"/>
+  <path class="ln" d="M128 150 q20 -6 26 10 q-18 6 -26 -2 Z" fill="#B5DB87"/>
+  <path class="ln" d="M100 44 C70 44 55 66 58 92 C60 112 78 126 100 126 C122 126 140 112 142 92 C145 66 130 44 100 44 Z" fill="#FF5C70"/>
+  <path d="M100 46 V118" stroke="#E63960" stroke-width="2.5" fill="none" opacity=".55"/>
+  <path d="M78 52 Q88 84 92 120" stroke="#E63960" stroke-width="2.5" fill="none" opacity=".45"/>
+  <path d="M122 52 Q112 84 108 120" stroke="#E63960" stroke-width="2.5" fill="none" opacity=".45"/>
+  <ellipse cx="78" cy="68" rx="9" ry="6" fill="#FF8A9B" opacity=".7"/>
+  <ellipse cx="76" cy="98" rx="9" ry="6" fill="#FFC8D6"/>
+  <ellipse cx="124" cy="98" rx="9" ry="6" fill="#FFC8D6"/>
+  <ellipse cx="84" cy="88" rx="7.5" ry="9" fill="#2A2A2A"/>
+  <ellipse cx="116" cy="88" rx="7.5" ry="9" fill="#2A2A2A"/>
+  <circle cx="81.5" cy="84.5" r="2.6" fill="#fff"/>
+  <circle cx="86.5" cy="91" r="1.3" fill="#fff"/>
+  <circle cx="113.5" cy="84.5" r="2.6" fill="#fff"/>
+  <circle cx="118.5" cy="91" r="1.3" fill="#fff"/>
+  <path d="M92 104 Q100 112 108 104" stroke="#5A3D2A" stroke-width="3" fill="none" stroke-linecap="round"/>
+</svg>

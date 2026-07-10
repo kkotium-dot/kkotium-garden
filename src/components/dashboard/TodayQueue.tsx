@@ -28,10 +28,12 @@
 import Link from 'next/link';
 import useSWR from 'swr';
 import {
-  ListChecks, Truck, RotateCcw, PackageX, Wrench, ArrowRight, Sparkles, ChevronRight,
+  ListChecks, Truck, RotateCcw, PackageX, Wrench, ArrowRight, Sparkles, ChevronRight, X,
 } from 'lucide-react';
 import strings from './TodayQueue.strings.ko.json';
 import { useDashboardStats } from '@/lib/hooks/useDashboardData';
+import KkottiMascot from '@/components/brand/KkottiMascot';
+import { useKkottiAppearance } from '@/components/brand/useKkottiAppearance';
 
 // Control-tower matrix counts — reuses the exact SWR key the matrix widget
 // already mounts on this page, so this is a cache read (no extra request).
@@ -62,6 +64,9 @@ export default function TodayQueue() {
     matrixFetcher,
     { refreshInterval: 60_000, revalidateOnFocus: true, dedupingInterval: 10_000, keepPreviousData: true },
   );
+  // 꼬띠 appears on the calm empty state only (spec §5 1st placement · #228).
+  // Dismissible + never returns once dismissed for this context.
+  const kkotti = useKkottiAppearance('today-queue-empty');
 
   const shipCount   = stats?.ordersToShip ?? 0;
   const claimCount  = stats?.ordersClaim ?? 0;
@@ -114,7 +119,18 @@ export default function TodayQueue() {
             <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9ca3af' }}>{strings.header.empty}</p>
           </div>
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '18px 12px', background: '#FFF8FA', border: '1px solid #FBD3DE', borderRadius: 12, textAlign: 'center' }}>
+        <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '18px 12px', background: '#FFF8FA', border: '1px solid #FBD3DE', borderRadius: 12, textAlign: 'center' }}>
+          {kkotti.visible && (
+            <button
+              onClick={kkotti.dismiss}
+              aria-label={strings.empty.hideKkotti}
+              title={strings.empty.hideKkotti}
+              style={{ position: 'absolute', top: 8, right: 8, display: 'flex', padding: 4, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: '#C9A9B4' }}
+            >
+              <X size={14} />
+            </button>
+          )}
+          {kkotti.visible && <KkottiMascot mood="happy" size={92} />}
           <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#171717' }}>{strings.empty.title}</p>
           <p style={{ margin: 0, fontSize: 12, color: '#737373', lineHeight: 1.5 }}>{strings.empty.body}</p>
           <Link href="/crawl" style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 15px', borderRadius: 10, background: '#F63B28', color: '#fff', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
