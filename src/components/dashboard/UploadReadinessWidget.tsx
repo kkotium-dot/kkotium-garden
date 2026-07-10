@@ -27,7 +27,7 @@ import {
   type ReadinessItemId,
   type ReadinessResult,
 } from '@/lib/upload-readiness';
-import type { DashboardProduct } from '@/app/dashboard/page';
+import type { DashboardProduct } from '@/lib/dashboard-product';
 import AutoFillModal from './AutoFillModal';
 
 // ── Mapping: readiness item -> seed-planting tab + icon ──────────────────────

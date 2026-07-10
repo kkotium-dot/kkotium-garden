@@ -16,7 +16,7 @@ import {
 import { buildDailyPlan, DAILY_SLOT_CONFIG, type DailyPlan, type SlotItem } from '@/lib/daily-slots';
 import { getSeasonContext } from '@/lib/discord';
 import { useProductsList } from '@/lib/hooks/useDashboardData';
-import type { DashboardProduct } from '@/app/dashboard/page';
+import type { DashboardProduct } from '@/lib/dashboard-product';
 
 const GRADE_STYLE: Record<string, { bg: string; text: string }> = {
   S: { bg: '#f3e8ff', text: '#7e22ce' },

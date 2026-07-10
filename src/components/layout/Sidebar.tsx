@@ -13,7 +13,7 @@ import {
   Search, Layers, Store, Truck,
   KeyRound, FileText, ShoppingCart,
   ChevronRight, MessageCircle, CreditCard, Workflow,
-  Palette, Images, Link2,
+  Palette, Images, Link2, BarChart3, Sprout,
 } from 'lucide-react';
 
 // Fountain SVG — garden concept, matches dashboard page header icon
@@ -53,7 +53,12 @@ interface NavItem {
 const NAV: { label: string; items: NavItem[] }[] = [
   {
     label: '홈',
-    items: [{ href: '/dashboard', label: '정원 일지', iconKey: 'fountain' }],
+    items: [
+      { href: '/dashboard', label: '정원 일지',   iconKey: 'fountain' },
+      { href: '/market',    label: '시장 분석',   iconKey: 'chart' },
+      { href: '/growth',    label: '성장 · 소싱', iconKey: 'sprout' },
+      { href: '/control',   label: '관제탑',      iconKey: 'workflow' },
+    ],
   },
   {
     label: '화단 · 상품',
@@ -188,6 +193,8 @@ function NavIcon({ iconKey, active }: { iconKey: string; active: boolean }) {
     case 'palette':      icon = <Palette      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'package':      icon = <Package      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     case 'images':       icon = <Images       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'chart':        icon = <BarChart3    size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
+    case 'sprout':       icon = <Sprout       size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />; break;
     default:            icon = <Search      size={size} strokeWidth={2} color={color} style={{ flexShrink: 0 }} />;
   }
   return <FlowerIconBox active={active}>{icon}</FlowerIconBox>;

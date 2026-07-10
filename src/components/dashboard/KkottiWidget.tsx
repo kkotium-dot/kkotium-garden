@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { KKOTTI_FACE as KKOTTI_FACE_STATES, GRADE_TO_FACE } from '@/lib/kkotti-vocab';
-import type { DashboardProduct } from '@/app/dashboard/page';
+import type { DashboardProduct } from '@/lib/dashboard-product';
 
 interface DailyRec {
   id: string; name: string; score: number;
