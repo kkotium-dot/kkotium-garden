@@ -45,14 +45,26 @@ const CLAIM_REASON_MAP: Record<string, string> = {
 
 const toKST = (d: Date) => d.toISOString().replace('Z', '+09:00');
 
+// §4-B — 창(window) 사이 겹침(overlap)로 상태 전이 경계 유실 방지.
+// last-changed-statuses 는 창의 시작·끝 시각에 정확히 걸친 이벤트를 하나의 창에서만
+// 잡음. 창 사이가 무겹침이면 경계 시각의 배송완료/구매확정 등이 한쪽 창에서 안잡히고
+// 다음 창은 이미 지나 있어 완전 유실 가능. 5분 겹침으로 완충(dedup은 changedIds Set에서
+// 자연 처리). 24h 최대 창(104140 회피) - 5min ≈ 82500000ms.
+const NAVER_LAST_CHANGED_MAX_MS = 23 * 60 * 60 * 1000; // 23h (Naver 24h 하드리밋 보수)
+const NAVER_WINDOW_OVERLAP_MS   = 5 * 60 * 1000;       // 5분 overlap
+
 function splitWindows(from: Date, to: Date) {
-  const MAX_MS = 23 * 60 * 60 * 1000;
   const windows: { from: Date; to: Date }[] = [];
   let cursor = new Date(from);
   while (cursor < to) {
-    const end = new Date(Math.min(cursor.getTime() + MAX_MS, to.getTime()));
+    const end = new Date(Math.min(cursor.getTime() + NAVER_LAST_CHANGED_MAX_MS, to.getTime()));
     windows.push({ from: new Date(cursor), to: end });
-    cursor = end;
+    // 요청 끝(to)까지 커버했으면 종료 — cursor 반복 뒤로 밀기(무한루프) 방지.
+    if (end.getTime() >= to.getTime()) break;
+    // 다음 창을 5분 앞당겨서 겹침 확보. overlap이 window 폭 이상이면 방어 종료.
+    const nextStart = end.getTime() - NAVER_WINDOW_OVERLAP_MS;
+    if (nextStart <= cursor.getTime()) break;
+    cursor = new Date(nextStart);
   }
   return windows;
 }

@@ -251,6 +251,30 @@ export function isNaverAppStatusInvalid(error: unknown): boolean {
   return error instanceof Error ? APP_STATUS_INVALID_RE.test(error.message) : false;
 }
 
+// ── 2RPS 글로벌 스로틀 (§4-B) ────────────────────────────────────────────
+// 권위=NAVER_STORE_OPERATIONS_UPDATE_2026-07-09 §1: "내스토어 전 API 2RPS 고정".
+// 429 반응형 백오프는 이미 있으나(fetchNoKeepAlive의 재시도 + Naver 응답의
+// GNCP-GW-RateLimit-Remaining 헤더), 벌크 처리(주문 sync·일괄 재고 갱신 등)에서
+// 순간 폭주로 429가 대량 발생하면 각 요청이 backoff 리트라이를 반복해 총 시간이
+// 오히려 늘어남. 여기서는 프로세스 전역 큐로 요청 간 최소 간격을 강제(2RPS = 500ms).
+// - 토큰 발급 요청도 동일 큐에 태워 인증 폭주까지 완충.
+// - 진짜 병렬성이 필요한 (개발 로컬) 케이스에서도 안전 — 서로 다른 요청이
+//   동시에 도착해도 순차 대기.
+const NAVER_MIN_REQUEST_GAP_MS = 500;
+let _naverThrottleTail: Promise<void> = Promise.resolve();
+
+/** 다음 Naver 요청까지 최소 간격 확보. 큐 방식으로 동시성도 자연 순차화. */
+export function throttleNaverRequest(): Promise<void> {
+  const previous = _naverThrottleTail;
+  let release: () => void;
+  const gate = new Promise<void>(res => { release = res; });
+  _naverThrottleTail = gate;
+  return previous.then(async () => {
+    await new Promise(r => setTimeout(r, NAVER_MIN_REQUEST_GAP_MS));
+    release();
+  });
+}
+
 // ── Token cache (in-memory, refreshed when expired) ──────────────────────
 let _cachedToken: string | null = null;
 let _tokenExpiry = 0;
@@ -416,6 +440,8 @@ export async function naverRequest<T = any>(
   path: string,
   body?: unknown,
 ): Promise<T> {
+  // §4-B — 2RPS 큐 통과. 토큰 발급은 아래에서 별도 태움.
+  await throttleNaverRequest();
   const proxy = getProxyConfig();
   const t0 = Date.now();
 
