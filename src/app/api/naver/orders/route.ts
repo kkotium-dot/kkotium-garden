@@ -151,9 +151,10 @@ export async function GET(request: NextRequest) {
       const productOrder = (el.productOrder as Record<string, unknown>) ?? {};
       const order        = (el.order        as Record<string, unknown>) ?? {};
       // ORDER-SYNC-2 (#200): in the flat query response the address is nested
-      // under `productOrder.shippingAddress` — NOT el.shippingAddress (absent) nor
-      // el.delivery (tracking only). The whole store showed blank addresses while
-      // customerName worked, because order.ordererName was already the right path.
+      // under `productOrder.shippingAddress` — NOT el.shippingAddress (absent). The
+      // whole store showed blank addresses while customerName worked, because
+      // order.ordererName was already the right path. (el.delivery carries the
+      // tracking/courier fields — now mapped below, #230.)
       // Live-verified shape: { name, tel1, zipCode, baseAddress, detailedAddress }.
       const shipping     = (productOrder.shippingAddress as Record<string, unknown>) ?? {};
       const claim        = (el.currentClaim  as Record<string, unknown>) ?? {};
@@ -188,6 +189,27 @@ export async function GET(request: NextRequest) {
         const quantity    = Number(productOrder.quantity    ?? 1);
         const paymentDate = order.paymentDate ? new Date(String(order.paymentDate)) : null;
 
+        // ★ Delivery tracking (#230) — the flat query element carries a `delivery`
+        // object (송장번호·택배사·발송/배송완료일). It was known but never mapped
+        // (see the `el.delivery (tracking only)` note above), so EVERY order — even
+        // DELIVERED — had null tracking. Naver product-order query shape:
+        //   { deliveryMethod, deliveryCompany, trackingNumber, sendDate,
+        //     deliveredDate, ... }. Any field absent (e.g. not yet shipped) → null
+        //   (#82 no fabrication — null = unknown, never a fake value).
+        const delivery       = (el.delivery as Record<string, unknown>) ?? {};
+        const trackingNumber = String(delivery.trackingNumber ?? '') || null;
+        const courierCompany = String(delivery.deliveryCompany ?? '') || null;
+        const shippedAt      = delivery.sendDate      ? new Date(String(delivery.sendDate))      : null;
+        const deliveredAt    = delivery.deliveredDate ? new Date(String(delivery.deliveredDate)) : null;
+
+        // Payment / settlement (#230). paidAt mirrors the payment timestamp. Fee &
+        // method only when Naver returns them → else null (#82: 0 would fake "free
+        // shipping"; null = unknown).
+        const paidAt         = paymentDate;
+        const shippingFeeRaw = productOrder.deliveryFeeAmount ?? order.deliveryFeeAmount;
+        const shippingFee    = shippingFeeRaw != null ? Number(shippingFeeRaw) : null;
+        const paymentMethod  = String(order.paymentMeans ?? '') || null;
+
         await (prisma as any).order.upsert({
           where:  { id: naverOrderId },
           update: {
@@ -203,6 +225,14 @@ export async function GET(request: NextRequest) {
             claimDetail:  claimDetail  || null,
             refundStatus: refundStatus || null,
             paymentDate,
+            // #230 — delivery + settlement completeness
+            trackingNumber,
+            courierCompany,
+            shippedAt,
+            deliveredAt,
+            paidAt,
+            shippingFee,
+            paymentMethod,
             updatedAt: new Date(),
           },
           create: {
@@ -222,6 +252,14 @@ export async function GET(request: NextRequest) {
             claimDetail:    claimDetail  || null,
             refundStatus:   refundStatus || null,
             paymentDate,
+            // #230 — delivery + settlement completeness
+            trackingNumber,
+            courierCompany,
+            shippedAt,
+            deliveredAt,
+            paidAt,
+            shippingFee,
+            paymentMethod,
           },
         }).catch((e: unknown) => {
           console.error('[naver/orders] upsert error:', naverOrderId, e instanceof Error ? e.message : e);
