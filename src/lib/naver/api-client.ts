@@ -1194,6 +1194,126 @@ export async function updateProductPriceStatus(
   return result;
 }
 
+// ── Assets (대표이미지 / 상세) GET-merge (규칙 3-7 · publish-assets systemic #62) ──
+// Same FULL-REPLACE hazard as stock/price: PUT /v2/products/origin-products/{no}
+// drops any omitted field. The publish-assets route used to blind-PUT a partial
+// payload ({ originProduct: { images: { representativeImageUrl }, detailContent } })
+// on the FALSE premise that "Naver accepts partial updates on this endpoint" — the
+// exact misconception rule 3-7 corrects. That partial PUT would wipe name /
+// salePrice / options / origin / notice on every asset publish. This helper reads
+// the CURRENT full Naver state, then overrides ONLY the representative image and/or
+// detailContent, and PUTs the merged full payload — preserving every other field
+// (including optionalImages).
+
+export interface AssetsUpdateResult {
+  productNo: string;
+  previousRepresentativeImageUrl: string | null;
+  newRepresentativeImageUrl: string | null;   // null = 미변경
+  detailContentUpdated: boolean;
+  applied: boolean;                 // true only when a real PUT was sent
+  dryRun: boolean;
+  preservedFieldCount: number;      // originProduct top-level keys carried through
+}
+
+/**
+ * Update the representative image and/or detailContent WITHOUT dropping any other
+ * field.
+ *
+ * Reads the current full product from Naver (GET), overrides only the provided
+ * asset fields, and PUTs the merged full payload back. Never sends a partial
+ * payload — see the module note above for why that would corrupt the listing.
+ * optionalImages and every other originProduct field survive untouched.
+ *
+ * @param opts.dryRun  GET + merge only, no PUT (verify the merge before write).
+ */
+export async function updateProductAssets(
+  productNo: string,
+  overrides: { representativeImageUrl?: string; detailContent?: string },
+  opts: { dryRun?: boolean } = {},
+): Promise<AssetsUpdateResult> {
+  if (!productNo) {
+    throw new NaverApiError(
+      '이미지/상세 수정 불가 — productNo(naverProductId)가 비어 있습니다 (미등록 상품).',
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+  if (overrides.representativeImageUrl === undefined && overrides.detailContent === undefined) {
+    throw new NaverApiError(
+      '이미지/상세 수정 불가 — representativeImageUrl / detailContent 중 최소 1개가 필요합니다.',
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+  if (
+    overrides.representativeImageUrl !== undefined &&
+    !/^https:\/\//.test(overrides.representativeImageUrl)
+  ) {
+    throw new NaverApiError(
+      '이미지/상세 수정 불가 — representativeImageUrl 값이 https URL이 아닙니다.',
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+
+  // 1. Read current full Naver state — never blind partial-PUT.
+  const current = await getProduct(productNo);
+  const originProduct = current?.originProduct;
+  if (!originProduct || typeof originProduct !== 'object') {
+    throw new NaverApiError(
+      `이미지/상세 수정 중단 — GET origin-products/${productNo} 응답에 originProduct가 없어 ` +
+      '전체 페이로드를 보존할 수 없습니다 (부분 PUT 금지).',
+      { kind: 'HTTP_ERROR' },
+    );
+  }
+
+  const currentImages =
+    originProduct.images && typeof originProduct.images === 'object'
+      ? (originProduct.images as Record<string, unknown>)
+      : {};
+  const previousRepresentativeImageUrl: string | null =
+    (currentImages.representativeImage as { url?: string } | undefined)?.url ??
+    (typeof currentImages.representativeImageUrl === 'string'
+      ? (currentImages.representativeImageUrl as string)
+      : null) ??
+    null;
+
+  // 2. Merge: preserve EVERY existing field; override only the representative
+  //    image and/or detailContent. optionalImages + all other keys survive.
+  const mergedOrigin: Record<string, unknown> = { ...originProduct };
+  if (overrides.representativeImageUrl !== undefined) {
+    const mergedImages: Record<string, unknown> = {
+      ...currentImages,
+      // Canonical PUT shape (buildNaverProductPayload) — { representativeImage: { url } }.
+      representativeImage: { url: overrides.representativeImageUrl },
+    };
+    // Drop the legacy flat mirror if Naver echoed it, so the two shapes cannot disagree.
+    delete mergedImages.representativeImageUrl;
+    mergedOrigin.images = mergedImages;
+  }
+  if (overrides.detailContent !== undefined) {
+    mergedOrigin.detailContent = overrides.detailContent;
+  }
+  const payload: Record<string, unknown> = { originProduct: mergedOrigin };
+  // Carry channel-product blocks back unchanged so the PUT stays a true superset.
+  if (current.smartstoreChannelProduct) payload.smartstoreChannelProduct = current.smartstoreChannelProduct;
+
+  const result: AssetsUpdateResult = {
+    productNo,
+    previousRepresentativeImageUrl,
+    newRepresentativeImageUrl: overrides.representativeImageUrl ?? null,
+    detailContentUpdated: overrides.detailContent !== undefined,
+    applied: false,
+    dryRun: opts.dryRun === true,
+    preservedFieldCount: Object.keys(mergedOrigin).length,
+  };
+
+  // 3. dryRun stops before the irreversible PUT.
+  if (opts.dryRun) return result;
+
+  // 4. Full-payload PUT — full replace that preserves all fields.
+  await naverRequest('PUT', `/v2/products/origin-products/${productNo}`, payload);
+  result.applied = true;
+  return result;
+}
+
 /** Bulk inventory update for multiple products */
 export async function bulkUpdateStock(
   items: Array<{ productNo: string; stockQuantity: number }>,

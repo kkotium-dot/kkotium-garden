@@ -1,12 +1,11 @@
 // POST /api/naver/products        — register product on Naver
-// PUT  /api/naver/products?id=X  — update existing product
+// PUT  /api/naver/products?id=X  — DEPRECATED, delegates to /api/naver/products/update
 // GET  /api/naver/products/check — connectivity check
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
   registerProduct,
-  updateProduct,
   checkNaverConnection,
   type NaverProductPayload,
 } from '@/lib/naver/api-client';
@@ -100,34 +99,36 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT /api/naver/products?id={productId} — update existing product
+// PUT /api/naver/products?id={productId} — DEPRECATED (410 Gone).
+//
+// This handler used to rebuild the payload via toNaverPayload() (a legacy,
+// INCOMPLETE builder — no origin / notice / options / delivery) and PUT it. Under
+// rule 3-7 (Naver v2 PUT is a FULL REPLACE — omitted fields are removed) that
+// partial rebuild would WIPE 원산지 · 상품정보제공고시 · 옵션 · 배송정보 on every
+// update. It also had no dryRun/confirm irreversible-write gate.
+//
+// The route is dead in-app (no caller — the publish-preview screen calls the
+// canonical POST /api/naver/products/update, which rebuilds the COMPLETE payload
+// via buildNaverProductPayload, GETs current Naver state for null-defense, and
+// gates the real PUT behind confirm:true). Rather than duplicate that logic or
+// keep a destructive partial-PUT path, this handler now refuses and delegates.
 export async function PUT(request: NextRequest) {
-  try {
-    const url = new URL(request.url);
-    const productId = url.searchParams.get('id');
-    if (!productId) {
-      return NextResponse.json({ success: false, error: 'id query param required' }, { status: 400 });
-    }
-
-    const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (!product) {
-      return NextResponse.json({ success: false, error: '상품을 찾을 수 없습니다' }, { status: 404 });
-    }
-    if (!(product as any).naverProductId) {
-      return NextResponse.json({ success: false, error: '네이버 상품번호가 없습니다. 먼저 등록해주세요.' }, { status: 400 });
-    }
-
-    const payload = toNaverPayload(product);
-    await updateProduct((product as any).naverProductId, payload);
-
-    return NextResponse.json({
-      success: true,
-      message: `네이버 상품이 업데이트됐습니다 (상품번호: ${(product as any).naverProductId})`,
-    });
-  } catch (e: any) {
-    console.error('[naver/products PUT]', e);
-    return NextResponse.json({ success: false, error: e.message }, { status: 500 });
-  }
+  const url = new URL(request.url);
+  const productId = url.searchParams.get('id');
+  return NextResponse.json(
+    {
+      success: false,
+      error:
+        '이 엔드포인트는 더 이상 사용되지 않습니다. 상품 수정은 POST /api/naver/products/update 를 사용하세요 (전체 페이로드 교체 + dryRun/confirm 게이트).',
+      deprecated: true,
+      use: {
+        method: 'POST',
+        endpoint: '/api/naver/products/update',
+        body: { productId: productId ?? '<productId>', dryRun: true, confirm: false },
+      },
+    },
+    { status: 410 },
+  );
 }
 
 export const dynamic = 'force-dynamic';

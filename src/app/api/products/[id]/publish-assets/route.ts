@@ -16,9 +16,13 @@
 //   - 422 when the Product has no naverProductId (= not yet registered on
 //     Naver). Caller should register first or call register API.
 //   - 200 with the Naver response on success, 500 on Naver-side error.
-//   - The PUT body is intentionally minimal (only the fields we want to
-//     patch). Naver Commerce API accepts partial updates on
-//     /v2/products/origin-products/{productNo}.
+//   - The update goes through the GET-merge helper updateProductAssets — Naver v2
+//     PUT /v2/products/origin-products/{no} is a FULL REPLACE (rule 3-7), so a
+//     partial body would WIPE every omitted field (name / salePrice / options /
+//     origin / notice). The helper reads the current full listing, overrides only
+//     the representative image and/or detailContent, and PUTs the merged whole.
+//   - Optional `dryRun: true` in the body returns the merge preview WITHOUT any
+//     PUT (verify before the irreversible write).
 //
 // Notes
 //   - runtime = 'nodejs' (network + Naver auth requires it).
@@ -30,7 +34,7 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { updateProduct } from '@/lib/naver/api-client';
+import { updateProductAssets } from '@/lib/naver/api-client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,6 +42,7 @@ export const dynamic = 'force-dynamic';
 interface PublishAssetsBody {
   thumbUrl?: string;
   detailUrl?: string;
+  dryRun?: boolean;
 }
 
 function jsonError(message: string, status: number, detail?: unknown) {
@@ -101,27 +106,21 @@ export async function POST(
     );
   }
 
-  // Build minimal patch payload — only fields we want to update.
-  // Naver Commerce API accepts partial updates on this endpoint.
-  const patch: Record<string, unknown> = {};
-  const originProduct: Record<string, unknown> = {};
+  // Build the asset overrides. updateProductAssets performs a GET-merge full
+  // replace (rule 3-7) — it reads the current full listing and overrides ONLY
+  // these fields, so no other field is ever dropped.
+  const overrides: { representativeImageUrl?: string; detailContent?: string } = {};
   if (body.thumbUrl) {
-    originProduct.images = { representativeImageUrl: body.thumbUrl };
+    overrides.representativeImageUrl = body.thumbUrl;
   }
   if (body.detailUrl) {
-    originProduct.detailContent = wrapDetailHtml(body.detailUrl);
+    overrides.detailContent = wrapDetailHtml(body.detailUrl);
   }
-  patch.originProduct = originProduct;
 
   try {
-    // updateProduct uses `Partial<NaverProductPayload>` typing but the actual
-    // shape we send here is even narrower than the type. Cast through unknown
-    // to bypass the strict type until the Naver client gains a dedicated
-    // "patch" overload (Sprint 7-M3 cleanup).
-    await updateProduct(
-      product.naverProductId,
-      patch as unknown as Parameters<typeof updateProduct>[1],
-    );
+    const result = await updateProductAssets(product.naverProductId, overrides, {
+      dryRun: body.dryRun === true,
+    });
     return NextResponse.json({
       ok: true,
       productId: product.id,
@@ -130,6 +129,10 @@ export async function POST(
         thumbnail: !!body.thumbUrl,
         detail: !!body.detailUrl,
       },
+      dryRun: result.dryRun,
+      applied: result.applied,
+      preservedFieldCount: result.preservedFieldCount,
+      previousRepresentativeImageUrl: result.previousRepresentativeImageUrl,
       publishedAt: new Date().toISOString(),
     });
   } catch (err) {
