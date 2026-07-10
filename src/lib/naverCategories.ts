@@ -59,10 +59,10 @@ export const NAVER_CATEGORIES: NaverCategory[] = [
   { categoryId:'50001326', depth1:'가구/인테리어', depth2:'수납가구', depth3:'신발장', depth4:'' },
   { categoryId:'50001319', depth1:'가구/인테리어', depth2:'수납가구', depth3:'행거', depth4:'' },
   { categoryId:'50001325', depth1:'가구/인테리어', depth2:'수납가구', depth3:'CD/DVD장', depth4:'' },
-  { categoryId:'50003296', depth1:'가구/인테리어', depth2:'서재/사무용가구', depth3:'사무/교구용가구', depth4:'사무용책상' },
-  { categoryId:'50003299', depth1:'가구/인테리어', depth2:'서재/사무용가구', depth3:'사무/교구용가구', depth4:'사무용의자' },
-  { categoryId:'50003298', depth1:'가구/인테리어', depth2:'서재/사무용가구', depth3:'사무/교구용가구', depth4:'사무용소파' },
-  { categoryId:'50003304', depth1:'가구/인테리어', depth2:'서재/사무용가구', depth3:'사무/교구용가구', depth4:'교구용가구/소품' },
+  // Naver 2026-07 restructure: 사무/교구용가구 depth3 subtree removed. 사무용책상/
+  // 의자/소파 have no 1:1 successor → dropped from the curated shortlist (still
+  // reachable via full-list search). 교구용가구/소품 → 1:1 rename to 50023439.
+  { categoryId:'50023439', depth1:'가구/인테리어', depth2:'서재/사무용가구', depth3:'교구용가구/소품', depth4:'' },
   { categoryId:'50003264', depth1:'가구/인테리어', depth2:'서재/사무용가구', depth3:'의자', depth4:'일반의자' },
   { categoryId:'50003266', depth1:'가구/인테리어', depth2:'서재/사무용가구', depth3:'의자', depth4:'스툴' },
   { categoryId:'50001346', depth1:'가구/인테리어', depth2:'서재/사무용가구', depth3:'책장', depth4:'' },
