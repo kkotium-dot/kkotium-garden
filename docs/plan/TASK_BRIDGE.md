@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-07-10 (104) 네이버 §4 P1 3태스크 A/B/C — 단위가격·주문sync·수정 null 방어 (FROM 💻 Code, main 284faab, additive·비가역0·네이버 무접촉·prod deployed)
+- **Target**: Claude Code CLI · 권위 docs/research/NAVER_STORE_OPERATIONS_UPDATE_2026-07-09.md §4 (P1). 각 독립 커밋·Desktop 검증.
+- **DONE (A · 단위가격 unitCapacity · 2026-04-29 필수 · 284faab)**: (1) DB Supabase 마이그 `product_unit_price_fields` 4컬럼(unit_price_yn/unit_total_capacity/unit_capacity/unit_indication_unit) additive. (2) 판별 정책 `src/lib/naver/unit-price-policy.ts` NEW — D1 '식품'|'화장품/미용'=전 mandatory · D1 '생활/건강' + D2 세제/청소/화장지/기저귀/생리대/… = mandatory · 그외 optional. classifyUnitPricePolicy + validateUnitPriceFields. (3) product-builder LocalProduct 4필드 + NaverProductPayloadV2.detailAttribute.unitPriceInfo 타입 + 사용(Y)시 emit {unitPriceYn/totalCapacityValue/unitCapacity/indicationUnit}. (4) validateForRegistration unit-price gate — mandatory 미충족 시 발행 BLOCK. (5) UI /products/new 기본정보 탭 원산지 DSection 뒤 새 USection — 필수/권장/미지정 배지 + 안내 + 사용Y 체크박스(mandatory disabled+자동활성 버튼) + 3필드(총량/기준량/표시단위). (6) 편집 hydrate + POST/PUT 배선 (sanitizeProductWrite DMMF 파생이라 PUT 자동 인식).
+- **DONE (B · 주문sync overlap + 2RPS Queue · 3ddd31f)**: (1) `orders/route.ts` splitWindows에 5분 overlap 추가(경계 유실 방지·to까지 커버시 loop 종료 무한루프 방어·overlap≥window 방어). (2) `api-client.ts` throttleNaverRequest() 프로세스 전역 큐 도입(500ms gap=2RPS) — naverRequest 진입 최상단 await·tail-Promise 체인으로 동시성 순차화. 기존 429 반응형 백오프와 병용.
+- **DONE (C · 상품수정 null 방어 · d6aa583)**: `update/route.ts`에 실 PUT 직전 GET origin-products/{no} 호출 → DB-built detailContent가 <div>${name}</div> placeholder 뿐이면 네이버 값 보존 · sellerTags 부재 & 네이버 태그 존재시 유지 · metaDescription 빈문자 & 네이버 값 존재시 유지. GET 실패는 fatal 아님(로그+DB-built PUT). 응답 nullDefense: string[] + productEvent note 태그.
+- **검증**: tsc0 · build0 (route /products/new 64.5kB) · verify-vercel-deploy OK (production 284faab REGISTERED). Prisma generate 정합. 브라우저 UI 렌더 + 실 등록/수정/주문sync 실측 = Desktop(#88 필수).
+- **패치 위치**: prisma/schema.prisma · src/lib/naver/{unit-price-policy.ts NEW, product-builder.ts, api-client.ts} · src/app/api/naver/{orders/route.ts, products/update/route.ts} · src/app/api/products/route.ts · src/app/products/new/page.tsx.
+- **★ 별건 관찰(비 P1)**: `src/app/api/naver/sync/route.ts` (POST 대량 sync)는 여전히 `updateProduct(no, {originProduct:{detailContent:'', images:{representativeImageUrl:''}, leafCategoryId:'', ...}})` 부분 PUT — 규칙 3-7 + §4-C 이중 위반(전체 payload 소실 위험). 이번 커밋 범위 아님 → 별도 트랙 필요(현재 무단 트리거 경로 = 대시보드 manual:true bypass).
+- **다음 1액션**: [Desktop] (1) A UI 실 렌더 검증 — /products/new 카테고리 '식품' 계열 선택시 필수 배지+3필드+체크박스 disabled 표시, '기타' 계열은 권장 배지 확인. (2) A 실 등록 dryRun 검증 — 명화(차량용방향제=optional) publish-preview payload에 unitPriceInfo 없음 · 식품 계열 테스트 상품에서 4필드 세팅 후 payload emit 확인. (3) B 주문 sync 실측 — /api/naver/orders?hours=48&manual=1 (5분 겹침·2RPS 지연 프로파일) 로그 확인. (4) C 실 update dryRun — 임의 상품에 description 비운 상태로 confirm:false로 payload preview → confirm:true PUT 시 응답의 nullDefense 배열 관찰. [Code] Desktop 검증 결과 대기 · 별건 sync/route.ts 파괴적 부분 PUT 트랙은 사용자 결정 대기. [결정·대표] A 판별 정책의 D1/D2 매핑 목록이 실제 네이버 대상목록과 정합하는지(정책 변동성 큼·§231) Desktop 재확인 요청.
+
+
 ### 2026-06-17 (103) 엔진 프롬프트 last-mile E1·E2·E3·E4 (FROM 💻 Code, main 8eadbbb, additive·비가역0·네이버 무접촉)
 - **Target**: Claude Code CLI · 권위 docs/handoff/HANDOFF_2026-06-17_engine-prompt-gap-verdict-and-consolidation-plan.md. 전상품(#55/#62). queue-masking과 의존성 0(병렬).
 - **진단(Desktop)**: 6축 엔진 resolvedPrompt 조립하나 마지막 1마일 끊김 — resolution 미주입·한글 subject 누수·benchmarkDna 미주입·슬롯보드 280자 프리뷰만. 두 프롬프트 엔진(System1/System2) 미병합.
