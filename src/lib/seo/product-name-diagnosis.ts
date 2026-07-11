@@ -368,6 +368,7 @@ export interface NameDiagnosisInput {
   keywords?: string[];
   brand?: string;
   supplierPrice?: number | null;
+  shippingFee?: number | null;
   /** Resolved D1 trend entry (from category-trend-cache); caller does the async lookup. */
   trend?: CategoryTrendEntry | null;
 }
@@ -428,6 +429,7 @@ export function computeNameDiagnosis(input: NameDiagnosisInput): NameDiagnosisPl
         d2: triple.d2,
         d3: triple.d3,
         supplierPrice: input.supplierPrice,
+        shippingFee: input.shippingFee,
         trend: input.trend,
       })
     : null;

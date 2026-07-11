@@ -12,6 +12,7 @@ import {
 import { calcHoneyScore } from '@/lib/honey-score';
 import { getReactivationReason, type ReactivationReason } from '@/lib/daily-slots';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
+import NameDiagnosisBadge, { type NameBadgeData } from '@/components/products/NameDiagnosisBadge';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -127,6 +128,8 @@ export default function ReactivationPage() {
   const [cloneTarget, setCloneTarget] = useState<ReactivationItem | null>(null);
   const [cloning, setCloning]   = useState(false);
   const [toast, setToast]       = useState<{ msg: string; ok: boolean } | null>(null);
+  // NAME-DIAG-3 (#251): per-product 상품명 진단 badges (server-computed).
+  const [diagnoses, setDiagnoses] = useState<Record<string, NameBadgeData>>({});
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
@@ -166,6 +169,23 @@ export default function ReactivationPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // NAME-DIAG-3 (#251): fetch server-computed 상품명 진단 for the listed rows.
+  // Non-blocking — the list renders immediately; badges fill in when ready.
+  useEffect(() => {
+    const ids = items.map((it) => it.product.id);
+    if (ids.length === 0) { setDiagnoses({}); return; }
+    let cancelled = false;
+    fetch('/api/seo/name-diagnosis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productIds: ids }),
+    })
+      .then((r) => r.json())
+      .then((data) => { if (!cancelled && data?.success) setDiagnoses(data.diagnoses ?? {}); })
+      .catch(() => { /* badge is best-effort; list stays usable */ });
+    return () => { cancelled = true; };
+  }, [items]);
 
   const handleClone = async () => {
     if (!cloneTarget || cloning) return;
@@ -352,6 +372,9 @@ export default function ReactivationPage() {
                       <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: meta.bgColor, color: meta.color, border: `1px solid ${meta.borderColor}`, flexShrink: 0 }}>
                         {meta.label}
                       </span>
+                      {diagnoses[item.product.id] && (
+                        <NameDiagnosisBadge data={diagnoses[item.product.id]} />
+                      )}
                     </div>
                     <div style={{ height: 1, background: '#F8DCE5', margin: '6px 0' }} />
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

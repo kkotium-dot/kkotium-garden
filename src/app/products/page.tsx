@@ -18,6 +18,7 @@ import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { deriveOriginKind, type OriginKind } from '@/lib/products/origin-kind';
 import { computeRevivalScore, revivalSignalsFromProduct, isRevivalCandidateProduct, type RevivalResult } from '@/lib/products/revival-score';
+import NameDiagnosisBadge, { type NameBadgeData } from '@/components/products/NameDiagnosisBadge';
 import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
 import InventoryBadge from '@/components/products/InventoryBadge';
 import { StageBadge } from '@/components/products/StageBadge';
@@ -1009,6 +1010,8 @@ function ProductsPageInner() {
   const [sideProduct, setSide]                = useState<ScoredProduct | null>(null);
   // Per-row 발행준비 X/8 (#245) — batched from the same getPublishReadiness gate.
   const [readinessMap, setReadinessMap] = useState<Record<string, { ready: boolean; passed: number; total: number }>>({});
+  // NAME-DIAG-3 (#251): per-row 상품명 진단 badges (server-computed SEO×ROI trend).
+  const [nameDiagnoses, setNameDiagnoses] = useState<Record<string, NameBadgeData>>({});
   const [viewMode, setViewMode]               = useState<ViewMode>('list');
   const [showUploadReady, setShowUploadReady] = useState(false);
   const [expandedGroups, setExpandedGroups]   = useState<Set<string>>(new Set());
@@ -1035,6 +1038,23 @@ function ProductsPageInner() {
         setReadinessMap(m);
       })
       .catch(() => { /* non-critical — the X/8 badge just won't show */ });
+    return () => { alive = false; };
+  }, [rawProducts]);
+
+  // NAME-DIAG-3 (#251): batch 상품명 진단 for the hub rows. Non-blocking; the
+  // list renders immediately and badges fill in when the server responds.
+  useEffect(() => {
+    let alive = true;
+    const ids = (rawProducts ?? []).map((p) => p.id);
+    if (ids.length === 0) { setNameDiagnoses({}); return; }
+    fetch('/api/seo/name-diagnosis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productIds: ids }),
+    })
+      .then((r) => r.json())
+      .then((d) => { if (alive && d?.success) setNameDiagnoses(d.diagnoses ?? {}); })
+      .catch(() => { /* best-effort — badge just won't show */ });
     return () => { alive = false; };
   }, [rawProducts]);
 
@@ -1304,6 +1324,9 @@ function ProductsPageInner() {
               {inventoryByProductId[p.id] && <InventoryBadge inv={inventoryByProductId[p.id]} />}
             </div>
             <HubBadges p={p} rd={readinessMap[p.id]} />
+            {nameDiagnoses[p.id] && (
+              <div style={{ marginTop: 3 }}><NameDiagnosisBadge data={nameDiagnoses[p.id]} /></div>
+            )}
             {naverMismatches[p.id] && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#F63B28', background: '#fff1f1', border: '1px solid #fca5a5', borderRadius: 6, padding: '1px 6px', marginTop: 2 }}>
                 <AlertTriangle size={9} /> {naverMismatches[p.id]}
