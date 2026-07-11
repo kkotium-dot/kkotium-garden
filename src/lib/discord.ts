@@ -6,14 +6,17 @@
 //   - sendDiscord() core sender
 //   - Shared helpers used by builders (getSeasonContext, GRADE_EMOJI)
 
+// Env keys are STABLE (KKOTTI_SCORE / PRICE_CHANGE kept) — only the channel
+// PURPOSE was repurposed for the operational-event alert routing (#250 §2).
+// The operator renames the actual Discord channels to match these labels.
 export const DISCORD_WEBHOOKS = {
-  /** #🌸꼬띠-오늘추천 — daily recommendation 08:00 KST */
+  /** #🌸꼬띠-오늘추천 — daily recommendation 08:00 + publish-ready (발행준비 완료) */
   KKOTTI_RECOMMEND: process.env.DISCORD_WEBHOOK_KKOTTI_RECOMMEND ?? '',
-  /** #📦재고-알림 — out-of-stock / restock alerts */
+  /** #📦재고-알림 — out-of-stock / low-stock (🔴10/🟠30/🟡100) */
   STOCK_ALERT:      process.env.DISCORD_WEBHOOK_STOCK_ALERT ?? '',
-  /** #💰가격-변동 — supplier price change */
+  /** #💰마진-가격 (was 가격-변동) — supplier price change + margin warning (임계 이하) */
   PRICE_CHANGE:     process.env.DISCORD_WEBHOOK_PRICE_CHANGE ?? '',
-  /** #📉꼬띠-점수급락 — honey score drop ≥20 pts */
+  /** #🌱부활-알림 (was 점수급락) — reset/tuning · revival candidates (S/A) · zombie */
   KKOTTI_SCORE:     process.env.DISCORD_WEBHOOK_KKOTTI_SCORE ?? '',
   /** #📊운영-리포트 — weekly ops summary Monday 08:00 KST */
   OPS_REPORT:       process.env.DISCORD_WEBHOOK_OPS_REPORT ?? '',
@@ -92,4 +95,10 @@ export {
   buildPriceChangeEmbed,
   buildScoreDropEmbed,
   buildWeeklyReportEmbed,
+  buildAdhdAlert,
+  buildPublishReadyAlert,
+  buildRevivalAlert,
+  buildZombieAlert,
+  buildMarginWarnAlert,
 } from '@/lib/notifications/discord-builder';
+export type { AlertTier, AdhdAlertParams } from '@/lib/notifications/discord-builder';

@@ -121,5 +121,27 @@
     "action_first": "제일 먼저: 정원 일지에서 이번 주 우선순위 확인",
     "kkotti_revenue": "이번 주 수고하셨어요! 다음 주는 한 계단 더 성장해봐요.",
     "kkotti_zero": "이번 주는 준비 기간! 차분히 다음 주 소싱과 등록에 집중해봐요."
+  },
+  "adhd": {
+    "tierRealtime": "[🔴 긴급]",
+    "tierDigest": "[🟢 아침 다이제스트]",
+    "actionArrow": "→",
+    "kkottiPrefix": "🌷 꼬띠:",
+    "openApp": "앱에서 열기",
+    "footer": "꽃틔움 가든 · 꼬띠 운영 알림"
+  },
+  "ops": {
+    "publishReady_title": "발행 준비 완료 — {name}",
+    "publishReady_action": "바로 검토하고 네이버에 올리세요 (8/8 통과).",
+    "publishReady_kkotti": "준비 끝났어유! 지금 올리면 최신성 버프 받아유 🌱",
+    "revival_title": "부활 후보 {n}건 — 되살리면 매출 기회예요",
+    "revival_action": "부활소에서 복제→검색 조련사로 새 생명 부여하세요.",
+    "revival_kkotti": "잠자는 상품 깨울 시간이에유! 되살리면 다시 팔려유 🌷",
+    "zombie_title": "좀비 상품 {n}건 — 30일+ 무판매",
+    "zombie_action": "정리하거나 부활 결정을 내려주세요.",
+    "zombie_kkotti": "이 아이들, 손 좀 봐줘유. 정리하든 살리든 결정이 필요해유 🥀",
+    "margin_title": "마진 경고 {n}건 — 수익이 위험해요",
+    "margin_action": "공급가·판매가를 조정하거나 대체 상품을 찾으세요.",
+    "margin_kkotti": "이대로면 손해예유! 얼른 값을 손봐줘유 💰"
   }
 }

@@ -12,9 +12,15 @@ import {
   buildRecommendEmbed,
   buildStockAlertEmbed,
   buildScoreDropEmbed,
+  buildPublishReadyAlert,
+  buildRevivalAlert,
+  buildZombieAlert,
+  buildMarginWarnAlert,
   getSeasonContext,
   GRADE_EMOJI,
 } from '@/lib/discord';
+import { computeRevivalScore, revivalSignalsFromProduct } from '@/lib/products/revival-score';
+import { getReactivationReason } from '@/lib/daily-slots';
 import { fetchNaverTrends, matchProductsToTrends } from '@/lib/trend-analyzer';
 import { refreshCategoryTrendCache } from '@/lib/naver/category-trend-cache';
 import { naverRequest } from '@/lib/naver/api-client';
@@ -259,6 +265,78 @@ export async function GET(req: NextRequest) {
       results.scoreDropAlert = { sent: dropResult.ok, count: scoreDrops.length };
     } else {
       results.scoreDropAlert = { sent: false, count: 0, reason: 'no score drops >= 20pts' };
+    }
+
+    // ── 2.5 Operational-event digest (#250 §2) ────────────────────────────
+    // Reuse the already-loaded `products` — one morning digest per signal set,
+    // routed by the repurposed channels. Green (digest) tier for standing sets;
+    // margin loss fires red (realtime). Reuses existing pure helpers only.
+    try {
+      const publishReady: string[] = [];
+      const revival: string[] = [];
+      const zombie: string[] = [];
+      const marginWarn: { name: string; margin: number }[] = [];
+
+      for (const p of products) {
+        // 발행 준비 완료: passes every upload-readiness check AND not yet live on Naver.
+        if (!p.naverProductId) {
+          const rd = calcUploadReadiness({
+            naverCategoryCode: p.naverCategoryCode,
+            keywords: Array.isArray(p.keywords) ? (p.keywords as string[]) : [],
+            tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+            name: p.name,
+            mainImage: p.mainImage,
+            salePrice: p.salePrice,
+            supplierPrice: p.supplierPrice,
+          });
+          if (rd.failed.length === 0) publishReady.push(p.name);
+        }
+
+        // 부활 후보 (revival S/A) + 좀비 (long_inactive).
+        const rev = computeRevivalScore(revivalSignalsFromProduct({
+          naver_status_type: (p as { naver_status_type?: string | null }).naver_status_type ?? null,
+          status: p.status,
+          naverProductId: p.naverProductId,
+          name: p.name,
+          mainImage: p.mainImage,
+        }));
+        if (rev.grade === 'S' || rev.grade === 'A') revival.push(p.name);
+
+        const reason = getReactivationReason({
+          ...p,
+          createdAt: p.createdAt ? new Date(p.createdAt) : undefined,
+          lastSaleDate: p.lastSaleDate ? new Date(p.lastSaleDate) : undefined,
+          updatedAt: p.updatedAt ? new Date(p.updatedAt) : undefined,
+        } as Parameters<typeof getReactivationReason>[0]);
+        if (reason?.reason === 'long_inactive') zombie.push(p.name);
+
+        // 마진 경고 (임계 이하: 순마진 < 20%, honey-score 위험 기준).
+        if (p.salePrice > 0 && p.supplierPrice > 0) {
+          const m = scoreProduct(p).netMarginRate;
+          if (m < 20) marginWarn.push({ name: p.name, margin: m });
+        }
+      }
+
+      const opsDigest: Record<string, unknown> = {};
+      if (publishReady.length > 0) {
+        const r = await sendDiscord('KKOTTI_RECOMMEND', '', [buildPublishReadyAlert(publishReady)]);
+        opsDigest.publishReady = { sent: r.ok, count: publishReady.length };
+      }
+      if (revival.length > 0) {
+        const r = await sendDiscord('KKOTTI_SCORE', '', [buildRevivalAlert(revival)]);
+        opsDigest.revival = { sent: r.ok, count: revival.length };
+      }
+      if (zombie.length > 0) {
+        const r = await sendDiscord('KKOTTI_SCORE', '', [buildZombieAlert(zombie)]);
+        opsDigest.zombie = { sent: r.ok, count: zombie.length };
+      }
+      if (marginWarn.length > 0) {
+        const r = await sendDiscord('PRICE_CHANGE', '', [buildMarginWarnAlert(marginWarn)]);
+        opsDigest.marginWarn = { sent: r.ok, count: marginWarn.length };
+      }
+      results.opsDigest = opsDigest;
+    } catch (e) {
+      results.opsDigest = { error: e instanceof Error ? e.message.slice(0, 100) : String(e) };
     }
 
     // ── 3. Daily recommendation with Perplexity trend boost ─────────────

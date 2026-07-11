@@ -63,6 +63,114 @@ function buildFourSectionFields(sections: {
   ];
 }
 
+// ── 0. ADHD compact alert (operational events, #250 §3) ─────────────────────
+// A scannable one-glance format for real-time operational alerts (distinct from
+// the 4-section digest embeds below): tier-tagged title / →action / 🌷kkotti /
+// [앱에서 열기] deep link. Priority tier: 🔴 realtime vs 🟢 morning digest.
+
+export type AlertTier = 'realtime' | 'digest';
+
+export interface AdhdAlertParams {
+  tier: AlertTier;
+  channel: DiscordChannel;
+  /** Situation emoji (e.g. 🔴🟠🟡🏆💎🗓️) prefixed to the title. */
+  emoji?: string;
+  title: string;
+  /** One-line concrete next step. */
+  action: string;
+  /** One-line mascot voice. */
+  kkotti: string;
+  /** In-app deep link target. */
+  deepLink?: { label?: string; path: string };
+  /** Optional extra situation lines shown above the action. */
+  extraLines?: string[];
+}
+
+export function buildAdhdAlert(params: AdhdAlertParams): DiscordEmbed {
+  const A = STRINGS.adhd;
+  const tierTag = params.tier === 'realtime' ? A.tierRealtime : A.tierDigest;
+  const emoji = params.emoji ? `${params.emoji} ` : '';
+  const lines: string[] = [
+    ...(params.extraLines ?? []),
+    `${A.actionArrow} ${params.action}`,
+    `${A.kkottiPrefix} ${params.kkotti}`,
+  ];
+  if (params.deepLink) {
+    lines.push(link(params.deepLink.label ?? A.openApp, params.deepLink.path));
+  }
+  return {
+    title: `${tierTag} ${emoji}${params.title}`,
+    description: lines.join('\n'),
+    color: CHANNEL_COLOR[params.channel],
+    footer: { text: A.footer },
+    timestamp: new Date().toISOString(),
+  };
+}
+
+// ── 0b. Operational-event digests (#250 §2) — built on buildAdhdAlert ────────
+// Each maps a computed signal set to its channel with the repurposed routing:
+//   publish-ready → KKOTTI_RECOMMEND · revival/zombie → KKOTTI_SCORE · margin → PRICE_CHANGE
+
+function digestExtraLines(names: string[]): string[] {
+  const shown = names.slice(0, 5).map((n) => `• ${n}`);
+  if (names.length > 5) shown.push(`_${fmt(STRINGS.common.more, { n: names.length - 5 })}_`);
+  return shown;
+}
+
+/** 발행 준비 완료 → KKOTTI_RECOMMEND (green digest). */
+export function buildPublishReadyAlert(names: string[]): DiscordEmbed {
+  const O = STRINGS.ops;
+  return buildAdhdAlert({
+    tier: 'digest', channel: 'KKOTTI_RECOMMEND', emoji: '✅',
+    title: fmt(O.publishReady_title, { name: names.length === 1 ? names[0] : `${names.length}건` }),
+    action: O.publishReady_action,
+    kkotti: O.publishReady_kkotti,
+    deepLink: { path: '/products' },
+    extraLines: names.length > 1 ? digestExtraLines(names) : undefined,
+  });
+}
+
+/** 부활 후보(S/A) → KKOTTI_SCORE (green digest). */
+export function buildRevivalAlert(names: string[]): DiscordEmbed {
+  const O = STRINGS.ops;
+  return buildAdhdAlert({
+    tier: 'digest', channel: 'KKOTTI_SCORE', emoji: '🌱',
+    title: fmt(O.revival_title, { n: names.length }),
+    action: O.revival_action,
+    kkotti: O.revival_kkotti,
+    deepLink: { path: '/products/reactivation' },
+    extraLines: digestExtraLines(names),
+  });
+}
+
+/** 좀비(30일+ 무판매) → KKOTTI_SCORE (green digest). */
+export function buildZombieAlert(names: string[]): DiscordEmbed {
+  const O = STRINGS.ops;
+  return buildAdhdAlert({
+    tier: 'digest', channel: 'KKOTTI_SCORE', emoji: '🥀',
+    title: fmt(O.zombie_title, { n: names.length }),
+    action: O.zombie_action,
+    kkotti: O.zombie_kkotti,
+    deepLink: { path: '/products/reactivation' },
+    extraLines: digestExtraLines(names),
+  });
+}
+
+/** 마진 경고(임계 이하) → PRICE_CHANGE (red realtime). */
+export function buildMarginWarnAlert(items: { name: string; margin: number }[]): DiscordEmbed {
+  const O = STRINGS.ops;
+  const lines = items.slice(0, 5).map((i) => `• ${i.name} (${STRINGS.common.netMargin} ${i.margin.toFixed(1)}%)`);
+  if (items.length > 5) lines.push(`_${fmt(STRINGS.common.more, { n: items.length - 5 })}_`);
+  return buildAdhdAlert({
+    tier: 'realtime', channel: 'PRICE_CHANGE', emoji: '⚠️',
+    title: fmt(O.margin_title, { n: items.length }),
+    action: O.margin_action,
+    kkotti: O.margin_kkotti,
+    deepLink: { path: '/products' },
+    extraLines: lines,
+  });
+}
+
 // ── 1. Daily recommendation (KKOTTI_RECOMMEND) — Legacy single-mode ─────────
 
 export interface RecommendProduct {
