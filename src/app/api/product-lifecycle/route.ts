@@ -2,6 +2,13 @@
 // E-3: Product lifecycle analysis API
 // Calculates lifecycle stage, zombie risk, sales velocity for all products
 // Used by ProductLifecycleWidget on dashboard
+//
+// ROLE BOUNDARY (#62/#247): this route is the "라이프사이클 단계 분석" — a
+// SALES/기간-based view (NEW/GROWING/PEAK/DECLINING/ZOMBIE). It is NOT the
+// authority for "부활 대상". Revival necessity is owned solely by
+// src/lib/products/revival-score.ts (listing-state based), which BOTH the hub
+// revival filter and the dashboard 부활소 count use. Do not re-derive a separate
+// "revival candidate" set here — that divergence (#247) is exactly what was fixed.
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';

@@ -17,7 +17,7 @@ import {
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { deriveOriginKind, type OriginKind } from '@/lib/products/origin-kind';
-import { computeRevivalScore, type RevivalResult } from '@/lib/products/revival-score';
+import { computeRevivalScore, revivalSignalsFromProduct, isRevivalCandidateProduct, type RevivalResult } from '@/lib/products/revival-score';
 import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
 import InventoryBadge from '@/components/products/InventoryBadge';
 import { StageBadge } from '@/components/products/StageBadge';
@@ -70,19 +70,10 @@ type ScoredProduct = Product & {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-// Revival candidate (#244) — a live store product gone stale (판매중지/품절/약한
-// SEO/이미지 부족). Computed from Product fields already loaded, so it works as a
-// filter predicate without the scored wrapper.
-const imageCountOf = (p: Product): number =>
-  (p.mainImage ? 1 : 0) + (Array.isArray(p.images) ? p.images.length : 0);
-const isRevivalCandidate = (p: Product): boolean =>
-  computeRevivalScore({
-    naverStatusType: p.naver_status_type,
-    appStatus: p.status,
-    registered: !!p.naverProductId,
-    name: p.name,
-    imageCount: imageCountOf(p),
-  }).isCandidate;
+// Revival candidate (#244/#247) — a live store product gone stale (판매중지/품절/
+// 약한 SEO/이미지 부족). Uses the SHARED isRevivalCandidateProduct judgment so the
+// hub filter and the dashboard 부활소 count are provably identical (#62).
+const isRevivalCandidate = (p: Product): boolean => isRevivalCandidateProduct(p);
 
 // Hub filter matrix (#245 §2-B). Low margin = net margin under the attention
 // band (< 10%); drift = drift-scan found app↔Naver out-of-sync fields.
@@ -1029,13 +1020,7 @@ function ProductsPageInner() {
     // Hub axis (#245/#244): source tag + revival-candidate score, both from
     // fields already loaded (origin_kind derived until the migration lands).
     _origin: deriveOriginKind(p),
-    _rev: computeRevivalScore({
-      naverStatusType: p.naver_status_type,
-      appStatus: p.status,
-      registered: !!p.naverProductId,
-      name: p.name,
-      imageCount: (p.mainImage ? 1 : 0) + (Array.isArray(p.images) ? p.images.length : 0),
-    }),
+    _rev: computeRevivalScore(revivalSignalsFromProduct(p)),
   })), [raw]);
 
   const filtered = useMemo<ScoredProduct[]>(() => {

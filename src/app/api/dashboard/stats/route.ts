@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma'; // singleton — avoids connection pool exhaustion
 import { getTodayOrderSummary, isNaverAppStatusInvalid, NAVER_APP_STATUS_USER_MESSAGE, isNaverClientSecretInvalid, NAVER_CLIENT_SECRET_USER_MESSAGE } from '@/lib/naver/api-client';
+import { isRevivalCandidateProduct } from '@/lib/products/revival-score';
 
 
 export const dynamic = 'force-dynamic';
@@ -38,15 +39,19 @@ export async function GET(request: NextRequest) {
     // Pipeline counts — sourcing shelf + zombie detection
     const sourcingCount = await prisma.crawlLog.count({ where: { sourcingStatus: 'SOURCED' } });
 
-    // Zombie detection: ACTIVE + no lastSaleDate + createdAt > 30 days ago
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const zombieCount = await prisma.product.count({
-      where: {
-        status: 'ACTIVE',
-        lastSaleDate: null,
-        createdAt: { lt: thirtyDaysAgo },
+    // 부활 대상 count (#62/#247) — SINGLE source with the hub revival filter.
+    // Was a divergent ad-hoc query (ACTIVE + no-sale + 30d) that disagreed with
+    // the hub (e.g. a SUSPENSION DRAFT is a hub candidate but was ACTIVE-gated
+    // out here). Now both count computeRevivalScore(...).isCandidate over ALL
+    // products via the shared isRevivalCandidateProduct helper, so the dashboard
+    // 부활소 card and the hub "부활 후보" filter always show the same number.
+    const revivalRows = await prisma.product.findMany({
+      select: {
+        naver_status_type: true, status: true, naverProductId: true,
+        name: true, mainImage: true, images: true,
       },
     });
+    const zombieCount = revivalRows.filter(isRevivalCandidateProduct).length;
 
     // ORDER-QUEUE-1 (#195): read-only order-processing nudge counts. Surfaces
     // orders that need an operator action now — PAID/PAYED = needs dispatch;

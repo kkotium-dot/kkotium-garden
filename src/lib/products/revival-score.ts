@@ -127,3 +127,37 @@ export function computeRevivalScore(signals: RevivalSignals): RevivalResult {
 
   return { score, grade, reasons, isCandidate: grade === 'S' || grade === 'A' };
 }
+
+// ─── Single revival-necessity source (#62/#247) ──────────────────────────────
+// revival-score is THE authority for "부활 필요도" (does this listing need
+// reviving). product-lifecycle (calcZombieRisk/stage) is a SEPARATE, sales-based
+// "라이프사이클 단계" analysis — the two must NOT diverge on "부활 대상". Both the
+// hub revival filter AND the dashboard 부활소 count derive their candidate set
+// from THIS helper, so the two screens always agree.
+
+/** Shape any product row (DB or hub API) exposes for revival scoring. */
+export interface RevivalProductLike {
+  naver_status_type?: string | null;
+  status?: string | null;
+  naverProductId?: string | null;
+  name?: string | null;
+  mainImage?: string | null;
+  images?: unknown;
+}
+
+/** Map a product row → RevivalSignals (single mapping shared by every caller). */
+export function revivalSignalsFromProduct(p: RevivalProductLike): RevivalSignals {
+  const imageCount = (p.mainImage ? 1 : 0) + (Array.isArray(p.images) ? p.images.length : 0);
+  return {
+    naverStatusType: p.naver_status_type ?? null,
+    appStatus: p.status ?? null,
+    registered: !!p.naverProductId,
+    name: p.name ?? null,
+    imageCount,
+  };
+}
+
+/** Canonical "is this a revival candidate" judgment for a product row. */
+export function isRevivalCandidateProduct(p: RevivalProductLike): boolean {
+  return computeRevivalScore(revivalSignalsFromProduct(p)).isCandidate;
+}
