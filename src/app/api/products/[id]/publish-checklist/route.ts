@@ -29,8 +29,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ success: false, error: 'product not found' }, { status: 404 });
     }
 
-    const readiness = getPublishReadiness(ctx.product, ctx.hasShippingTemplate, !!ctx.addresses);
     const registered = !!ctx.dbProduct.naverProductId;
+    const readiness = getPublishReadiness(ctx.product, ctx.hasShippingTemplate, !!ctx.addresses, {
+      registered,
+      statusType: ctx.dbProduct.naver_status_type ?? null,
+    });
 
     return NextResponse.json({ success: true, registered, readiness });
   } catch (e) {

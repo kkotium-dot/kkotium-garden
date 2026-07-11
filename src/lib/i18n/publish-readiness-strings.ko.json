@@ -16,7 +16,23 @@
     "statusNa": "해당 없음",
     "publishCta": "발행 화면으로",
     "publishDisabledHint": "준비되지 않은 항목이 있어 아직 발행할 수 없어요",
-    "reasonPrefix": "남은 항목"
+    "reasonPrefix": "남은 항목",
+    "naverStatusLabel": "네이버 등록상태",
+    "naverUnregistered": "미등록",
+    "naverRegisteredUnknown": "등록됨 (상태 미동기화)"
+  },
+  "naverStatus": {
+    "SALE": "판매중",
+    "ON_SALE": "판매중",
+    "SUSPENSION": "판매중지",
+    "OUTOFSTOCK": "품절",
+    "CLOSE": "판매종료",
+    "PROHIBITION": "판매금지",
+    "DELETION": "삭제",
+    "UNKNOWN": "상태 확인 필요"
+  },
+  "naverStatusHint": {
+    "SUSPENSION": "재개 대기"
   },
   "checks": {
     "name": {

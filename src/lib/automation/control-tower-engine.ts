@@ -79,6 +79,9 @@ export interface PublishInfo {
   attributeScore: number;
   missingRequired: string[]; // missing required attribute names (data) — UI shows verbatim
   errorCount: number;
+  // Cached last-observed Naver statusType (SALE / SUSPENSION / OUTOFSTOCK / ...),
+  // null when not registered / not yet synced. Drives the "네이버 등록상태" label.
+  naverStatusType: string | null;
 }
 
 export interface ImageInfo {
@@ -396,6 +399,7 @@ export function computeControlTowerRow(
     attributeScore: v.attributeScore,
     missingRequired: v.missingRequired,
     errorCount: v.errors.length,
+    naverStatusType: registered ? (ctx.naverStatusType ?? null) : null,
   };
 
   // ── image track ──────────────────────────────────────────────────────────

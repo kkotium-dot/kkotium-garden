@@ -70,6 +70,17 @@ export interface PublishReadiness {
   /** Always the full check count (spec badge "발행 준비 X/8"). */
   total: number;
   checks: ReadinessCheck[];
+  /** Live on Naver (naverProductId present). #240 강화 — 등록상태 한 줄. */
+  naverRegistered: boolean;
+  /** Cached Naver statusType (SALE / SUSPENSION / OUTOFSTOCK / ...), null when
+   *  not registered or not yet synced. UI maps to a 미등록/판매중/판매중지 label. */
+  naverStatusType: string | null;
+}
+
+/** Naver registration state for a product (from the DB, not re-fetched). */
+export interface NaverRegistrationInfo {
+  registered: boolean;
+  statusType: string | null;
 }
 
 /**
@@ -79,11 +90,15 @@ export interface PublishReadiness {
  *
  * @param hasShippingTemplate mirrors the register/update path (drives readiness).
  * @param hasAddresses        Naver release/return address ids synced (check #5).
+ * @param naver               Naver registration state (registered + cached
+ *                            statusType) — surfaced as the 등록상태 line (#240).
+ *                            Defaults to not-registered when omitted.
  */
 export function getPublishReadiness(
   product: LocalProduct,
   hasShippingTemplate: boolean,
   hasAddresses: boolean,
+  naver?: NaverRegistrationInfo,
 ): PublishReadiness {
   // Authoritative gate — the single source of truth for the GO decision.
   const gate = validateForRegistration(product, hasShippingTemplate, hasAddresses);
@@ -247,11 +262,14 @@ export function getPublishReadiness(
 
   const passed = checks.filter((c) => c.status === 'pass' || c.status === 'na').length;
 
+  const naverRegistered = naver?.registered ?? false;
   return {
     ready: gate.canRegister,
     passed,
     total: checks.length,
     checks,
+    naverRegistered,
+    naverStatusType: naverRegistered ? (naver?.statusType ?? null) : null,
   };
 }
 

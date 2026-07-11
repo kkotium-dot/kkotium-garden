@@ -48,6 +48,7 @@ interface PublishInfo {
   attributeScore: number;
   missingRequired: string[];
   errorCount: number;
+  naverStatusType: string | null;
 }
 
 type ImageTier = 'T0' | 'T1' | 'T2' | 'T3';
@@ -217,6 +218,33 @@ function ReadinessBadge({ publish }: { publish: PublishInfo }) {
       style={{ backgroundColor: c.bg, border: `1px solid ${c.border}`, color: c.text }}
     >
       {label}
+    </span>
+  );
+}
+
+// Naver registration-status badge (#240) — 미등록 / 판매중(mint) / 판매중지 등(coral).
+const NS = m.naverStatus as Record<string, string>;
+function NaverStatusBadge({ publish }: { publish: PublishInfo }) {
+  let text: string;
+  let tone: { bg: string; border: string; text: string };
+  if (!publish.registered) {
+    text = NS.unregistered;
+    tone = { bg: 'var(--m-gray-bg)', border: 'var(--m-gray-fg)', text: 'var(--m-gray-tx)' };
+  } else {
+    const st = publish.naverStatusType;
+    const live = st === 'SALE' || st === 'ON_SALE';
+    text = st ? (NS[st] ?? st) : NS.registeredUnknown;
+    tone = live
+      ? { bg: 'var(--m-mint-bg)', border: 'var(--m-mint-fg)', text: 'var(--m-mint-tx)' }
+      : { bg: 'var(--m-coral-bg)', border: 'var(--m-coral-fg)', text: 'var(--m-coral-tx)' };
+  }
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+      style={{ backgroundColor: tone.bg, border: `1px solid ${tone.border}`, color: tone.text }}
+      title={NS.label}
+    >
+      {text}
     </span>
   );
 }
@@ -1332,6 +1360,7 @@ export default function ControlTowerMatrixWidget() {
                   <td className="py-1.5 pr-2">
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium text-slate-700">{row.name}</span>
+                      <NaverStatusBadge publish={row.publish} />
                       <ReadinessBadge publish={row.publish} />
                       {row.image.tier && <TierBadge tier={row.image.tier} />}
                     </div>

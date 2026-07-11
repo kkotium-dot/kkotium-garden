@@ -39,6 +39,8 @@ interface PublishReadiness {
   passed: number;
   total: number;
   checks: ReadinessCheck[];
+  naverRegistered: boolean;
+  naverStatusType: string | null;
 }
 interface ChecklistResponse {
   success: boolean;
@@ -49,6 +51,24 @@ interface ChecklistResponse {
 
 const c = strings.card;
 const CK = strings.checks as Record<CheckKey, { label: string; pass: string; fail: string; na?: string } & Record<string, string>>;
+const NAVER_STATUS = strings.naverStatus as Record<string, string>;
+const NAVER_STATUS_HINT = strings.naverStatusHint as Record<string, string>;
+
+// Naver registration line (#240) — 미등록 / 판매중 / 판매중지(재개 대기) …
+function naverStatusLine(registered: boolean, statusType: string | null): { text: string; tone: 'live' | 'stopped' | 'none' } {
+  if (!registered) return { text: c.naverUnregistered, tone: 'none' };
+  if (!statusType) return { text: c.naverRegisteredUnknown, tone: 'stopped' };
+  const label = NAVER_STATUS[statusType] ?? statusType;
+  const hint = NAVER_STATUS_HINT[statusType];
+  const text = hint ? `${label} · ${hint}` : label;
+  const live = statusType === 'SALE' || statusType === 'ON_SALE';
+  return { text, tone: live ? 'live' : 'stopped' };
+}
+const NAVER_TONE: Record<'live' | 'stopped' | 'none', { text: string; bg: string; border: string }> = {
+  live:    { text: '#047857', bg: '#ECFDF5', border: '#A7F3D0' }, // 판매중 — green
+  stopped: { text: '#B45309', bg: '#FFFBEB', border: '#FDE68A' }, // 중지/품절 — amber
+  none:    { text: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB' }, // 미등록 — gray
+};
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -115,9 +135,11 @@ export default function PublishReadinessCard({ productId }: { productId: string 
     );
   }
 
-  const { ready, passed, total, checks } = data.readiness;
-  const registered = !!data.registered;
+  const { ready, passed, total, checks, naverRegistered, naverStatusType } = data.readiness;
+  const registered = naverRegistered || !!data.registered;
   const badge = c.badge.replace('{passed}', String(passed)).replace('{total}', String(total));
+  const nStatus = naverStatusLine(registered, naverStatusType);
+  const nTone = NAVER_TONE[nStatus.tone];
 
   // Remaining (non-na) failing items — the "왜 발행 불가" reason for the operator.
   const remaining = checks.filter((chk) => chk.status === 'fail');
@@ -136,6 +158,17 @@ export default function PublishReadinessCard({ productId }: { productId: string 
           style={{ color: readyTone.text, backgroundColor: readyTone.bg, border: `1px solid ${readyTone.border}` }}
         >
           {badge}
+        </span>
+      </div>
+
+      {/* Naver registration status line (#240) — unregistered / on-sale / suspended */}
+      <div className="mt-3 flex items-center gap-2">
+        <span className="text-xs text-gray-500">{c.naverStatusLabel}</span>
+        <span
+          className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+          style={{ color: nTone.text, backgroundColor: nTone.bg, border: `1px solid ${nTone.border}` }}
+        >
+          {nStatus.text}
         </span>
       </div>
 

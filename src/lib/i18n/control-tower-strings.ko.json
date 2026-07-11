@@ -374,6 +374,19 @@
       "blocked": "발행 대기 {count}",
       "readyHint": "지금 발행할 수 있는 상품",
       "blockedHint": "아직 준비가 필요한 상품"
+    },
+    "naverStatus": {
+      "label": "네이버",
+      "unregistered": "미등록",
+      "registeredUnknown": "등록됨",
+      "SALE": "판매중",
+      "ON_SALE": "판매중",
+      "SUSPENSION": "판매중지",
+      "OUTOFSTOCK": "품절",
+      "CLOSE": "판매종료",
+      "PROHIBITION": "판매금지",
+      "DELETION": "삭제",
+      "UNKNOWN": "상태확인"
     }
   }
 }
