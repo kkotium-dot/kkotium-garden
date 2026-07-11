@@ -116,6 +116,11 @@ model Product {
   naver_delivery_info     String?
   naver_exchange_info     String?
   naver_refund_info       String?
+  // #250: selected Naver template codes (from the store-managed lists) — output
+  // to the bulk excel 제공고시/AS 템플릿코드 columns. Column names are camelCase
+  // (no @map) to match the naverExcelJS reader (p.noticeTemplateCode/asTemplateCode).
+  noticeTemplateCode      String?
+  asTemplateCode          String?
   naver_min_order         String?
   naver_max_order         String?
   naver_adult_only        Boolean           @default(false)
@@ -425,6 +430,10 @@ model StoreSettings {
   storeName             String   @default("") @map("store_name")
   asPhone               String   @default("") @map("as_phone")
   asGuide               String   @default("") @map("as_guide")
+  // #250: seller-managed Naver template-code lists ({code,name}[]) — shared by
+  // the 제공고시/AS template pickers in the 씨앗심기 form.
+  noticeTemplates       Json     @default("[]") @map("notice_templates")
+  asTemplates           Json     @default("[]") @map("as_templates")
   defaultCourierCode    String   @default("CJGLS") @map("default_courier_code")
   defaultReturnFee      Int      @default(6000) @map("default_return_fee")
   defaultExchangeFee    Int      @default(6000) @map("default_exchange_fee")

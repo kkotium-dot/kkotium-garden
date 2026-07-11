@@ -5,6 +5,24 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 const SETTINGS_ID = 'default';
 
+// #250: normalize a seller-entered template list to {code,name}[] — codes are
+// operator-typed digits, names are labels. Drops rows without a code, caps at 50.
+function sanitizeTemplates(v: unknown): { code: string; name: string }[] {
+  if (!Array.isArray(v)) return [];
+  const out: { code: string; name: string }[] = [];
+  const seen = new Set<string>();
+  for (const raw of v) {
+    if (!raw || typeof raw !== 'object') continue;
+    const code = String((raw as { code?: unknown }).code ?? '').trim();
+    const name = String((raw as { name?: unknown }).name ?? '').trim();
+    if (!code || seen.has(code)) continue;
+    seen.add(code);
+    out.push({ code, name });
+    if (out.length >= 50) break;
+  }
+  return out;
+}
+
 export async function GET() {
   try {
     // Use raw query to include domeggook_api_key which is not in Prisma schema yet
@@ -57,6 +75,11 @@ export async function PATCH(req: NextRequest) {
       data.defaultReturnFee = Number(body.defaultReturnFee);
     if (body.defaultExchangeFee !== undefined)
       data.defaultExchangeFee = Number(body.defaultExchangeFee);
+    // #250: seller-managed template-code lists (제공고시/AS).
+    if (body.noticeTemplates !== undefined)
+      data.noticeTemplates = sanitizeTemplates(body.noticeTemplates);
+    if (body.asTemplates !== undefined)
+      data.asTemplates = sanitizeTemplates(body.asTemplates);
     // Domeggook OpenAPI Key
     if (body.domeggookApiKey !== undefined) {
       const key = String(body.domeggookApiKey).trim();

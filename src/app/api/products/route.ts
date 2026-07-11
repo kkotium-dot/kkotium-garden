@@ -344,6 +344,9 @@ export async function POST(request: NextRequest) {
             ? String(data.asInfo ?? data.asGuide)
             : undefined,
           asPhone: data.asPhone != null ? String(data.asPhone) : undefined,
+          // #250: selected Naver template codes → bulk excel 제공고시/AS 컬럼.
+          noticeTemplateCode: data.noticeTemplateCode != null ? String(data.noticeTemplateCode) : undefined,
+          asTemplateCode: data.asTemplateCode != null ? String(data.asTemplateCode) : undefined,
           description: data.description ? String(data.description) : null,
           keywords: Array.isArray(data.keywords) ? data.keywords : undefined,
           tags: Array.isArray(data.tags) ? data.tags : undefined,

@@ -92,6 +92,7 @@ import { calcSeoScore } from '@/lib/seo-calculator';
 import type { SeoResult } from '@/lib/seo-calculator';
 import { MarginCalculator } from '@/components/products/MarginCalculator';
 import ProductNameDiagnostics from '@/components/products/ProductNameDiagnostics';
+import TemplateCodePicker from '@/components/products/TemplateCodePicker';
 import { buildTemplateCopy, templateHookLine } from '@/lib/seo/copy-template';
 import TagVerificationPanel from '@/components/products/TagVerificationPanel';
 import { BulkEditModal } from '@/components/products/BulkEditModal';
@@ -589,6 +590,7 @@ function NewProductPageInner() {
   const [asPhone, setAsPhone]         = useState(KKOTIUM_DEFAULTS.asPhone);
   const [asGuide, setAsGuide]         = useState(KKOTIUM_DEFAULTS.asGuide);
   const [noticeTemplateCode, setNoticeTemplateCode] = useState('');
+  const [asTemplateCode, setAsTemplateCode]         = useState('');
   const [discountValue, setDiscountValue] = useState('');
   const [discountUnit, setDiscountUnit]   = useState('%');
   const [textReviewPoint, setTextReviewPoint]   = useState('100');
@@ -1262,6 +1264,9 @@ function NewProductPageInner() {
         if (p.unit_total_capacity != null)                 setUnitTotalCapacity(String(p.unit_total_capacity));
         if (p.unit_capacity != null)                       setUnitCapacity(String(p.unit_capacity));
         if (typeof p.unit_indication_unit === 'string')    setUnitIndicationUnit(p.unit_indication_unit);
+        // #250: restore selected 제공고시/AS 템플릿코드.
+        if (typeof p.noticeTemplateCode === 'string')      setNoticeTemplateCode(p.noticeTemplateCode);
+        if (typeof p.asTemplateCode === 'string')          setAsTemplateCode(p.asTemplateCode);
         // COPY-AUTO-2.1: load settled — release the auto-fire gate. Batched with the
         // setters above so the gate re-evaluates with the loaded hook in hand. Left
         // false on early-return / fetch error so a failed load never fires (no
@@ -2119,8 +2124,9 @@ const handleGenerate = async () => {
       returnFee: Number(returnFee),
       exchangeFee: Number(exchangeFee),
       conditionalFreeAmount: conditionalFreeAmount ? Number(conditionalFreeAmount) : undefined,
-      // ⑤ SEO — notice + AS
+      // ⑤ SEO — notice + AS (template codes → bulk excel columns, #250)
       noticeTemplateCode: noticeTemplateCode || undefined,
+      asTemplateCode: asTemplateCode || undefined,
       asPhone,
       asGuide,
       // SEO tags → sellerRemark (max 10 tags, comma-separated)
@@ -3089,7 +3095,7 @@ const handleGenerate = async () => {
               return (
                 <USection
                   icon={<Coins size={15}/>}
-                  title="단위가격 (2026-04-29 시행)"
+                  title="단위가격"
                   meta={isMandatory
                     ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200">필수</span>
                     : <span className="text-[11px] text-stone-400">{isOptional ? '권장' : '카테고리 미지정'}</span>}
@@ -3934,8 +3940,18 @@ const handleGenerate = async () => {
                 </div>
               </DSection>
 
-              {/* D4 A/S */}
-              <DSection icon={<Wrench size={14}/>} title="A/S 설정" summary={asPhone}>
+              {/* D3.5 상품정보제공고시 — moved up next to 배송/A/S (#250 §3 논리 순서) */}
+              <DSection icon={<Clipboard size={14}/>} title="상품정보제공고시" summary={`코드: ${noticeTemplateCode || '미선택'}`}>
+                <Field label="상품정보제공고시 템플릿코드">
+                  <TemplateCodePicker kind="notice" value={noticeTemplateCode} onChange={setNoticeTemplateCode} />
+                </Field>
+              </DSection>
+
+              {/* D4 A/S — 템플릿코드(#250 §2) + 전화/안내 자유입력 유지(fallback) */}
+              <DSection icon={<Wrench size={14}/>} title="A/S 설정" summary={asTemplateCode ? `템플릿 ${asTemplateCode}` : asPhone}>
+                <Field label="A/S 템플릿코드">
+                  <TemplateCodePicker kind="as" value={asTemplateCode} onChange={setAsTemplateCode} />
+                </Field>
                 <Field label="A/S 전화번호">
                   <input className={inp} value={asPhone} onChange={e => setAsPhone(e.target.value)} />
                 </Field>
@@ -4045,12 +4061,6 @@ const handleGenerate = async () => {
                 </div>
               </DSection>
 
-              {/* D7 상품정보고시 */}
-              <DSection icon={<Clipboard size={14}/>} title="상품정보제공고시" summary={`코드: ${noticeTemplateCode || '미입력'}`}>
-                <Field label="상품정보제공고시 템플릿코드">
-                  <input className={inp} value={noticeTemplateCode} onChange={e => setNoticeTemplateCode(e.target.value)} placeholder="템플릿 코드" />
-                </Field>
-              </DSection>
             </div>
             </>)}
 
