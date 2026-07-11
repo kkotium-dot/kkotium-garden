@@ -8,6 +8,40 @@ import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 import { getCachedMapping, saveMapping, nameHashKey } from '@/lib/dome-category-cache';
 import { validatePageCategory } from '@/lib/naver/category-page-validator';
 import { callGroq } from '@/lib/ai/groq';
+import { computeCategoryScore, type CategoryScore } from '@/lib/naver/category-score';
+import { getCachedTrend, buildD1Key, type CategoryTrendEntry } from '@/lib/naver/category-trend-cache';
+
+type ScoredSuggestion = { d1: string; d2: string; d3: string; d4?: string; score: CategoryScore };
+
+// #249: fuse SEO(trend) × ROI(margin) into each candidate and rank by the
+// composite totalScore desc, so the seller sees the "검색 유리 + 마진 좋은"
+// category first. Trend lookups are D1-level; we memoize per-d1 to avoid
+// redundant cache hits when several candidates share a top category. Pure
+// scoring lives in category-score.ts — this only resolves the (async) trend
+// and orders the list.
+async function rankByScore(
+  suggestions: Array<{ d1: string; d2: string; d3: string; d4?: string }>,
+  supplierPrice?: number | null,
+): Promise<ScoredSuggestion[]> {
+  const trendByD1 = new Map<string, CategoryTrendEntry | null>();
+  const scored: ScoredSuggestion[] = [];
+  for (const s of suggestions) {
+    const key = buildD1Key(s.d1);
+    if (!trendByD1.has(key)) {
+      trendByD1.set(key, await getCachedTrend(key).catch(() => null));
+    }
+    const score = computeCategoryScore({
+      d1: s.d1,
+      d2: s.d2,
+      d3: s.d3,
+      supplierPrice,
+      trend: trendByD1.get(key) ?? null,
+    });
+    scored.push({ ...s, score });
+  }
+  scored.sort((a, b) => b.score.totalScore - a.score.totalScore);
+  return scored;
+}
 
 // ── AI: Groq with compact prompt (no full category list) ──────────────────────
 // Keeping prompt small (< 500 tokens) so AI has room to respond
@@ -234,6 +268,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const productName: string = body?.productName ?? '';
     const domeCategoryCode: string | undefined = body?.domeCategoryCode;
+    // #249: optional wholesale price makes the ROI score product-specific.
+    const supplierPrice: number | undefined =
+      typeof body?.supplierPrice === 'number' && body.supplierPrice > 0
+        ? body.supplierPrice
+        : undefined;
     if (!productName?.trim()) {
       return NextResponse.json({ success: false, error: '상품명을 입력해주세요' }, { status: 400 });
     }
@@ -254,7 +293,7 @@ export async function POST(request: NextRequest) {
         if (sanitized.length > 0) {
           return NextResponse.json({
             success: true,
-            suggestions: sanitized,
+            suggestions: await rankByScore(sanitized, supplierPrice),
             usedAI: false,
             cacheHit: 'dome_code',
           });
@@ -271,7 +310,7 @@ export async function POST(request: NextRequest) {
         if (sanitized.length > 0) {
           return NextResponse.json({
             success: true,
-            suggestions: sanitized,
+            suggestions: await rankByScore(sanitized, supplierPrice),
             usedAI: false,
             cacheHit: 'name_hash',
           });
@@ -396,9 +435,15 @@ export async function POST(request: NextRequest) {
       }).catch((e) => console.warn('[category/suggest] cache write failed:', String(e).slice(0, 120)));
     }
 
+    // #249: cache write above intentionally uses the mapping-order top (the
+    // page-validated canonical category). The RESPONSE is ranked by SEO×ROI so
+    // the seller sees the most search-favourable + profitable candidate first —
+    // these are two different concerns (correct mapping vs. best opportunity).
+    const rankedSuggestions = await rankByScore(suggestions, supplierPrice);
+
     return NextResponse.json({
       success: true,
-      suggestions,
+      suggestions: rankedSuggestions,
       usedAI,
       pageValidation: pageValidation
         ? {

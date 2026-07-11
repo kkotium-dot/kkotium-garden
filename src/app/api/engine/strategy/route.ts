@@ -24,6 +24,8 @@ import { getActiveVariants } from '@/lib/storage/variant-coverage';
 import { variantConceptFor } from '@/lib/engine/variant-concept';
 import { assemblePrompt } from '@/lib/mood/prompt-assembler';
 import type { MoodCode } from '@/lib/mood/types';
+import { computeCategoryScore } from '@/lib/naver/category-score';
+import { getCachedTrend, buildD1Key } from '@/lib/naver/category-trend-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +44,7 @@ export async function GET(req: NextRequest) {
   try {
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      select: { id: true, name: true, category: true, naverCategoryCode: true, originCode: true, naver_origin: true },
+      select: { id: true, name: true, category: true, naverCategoryCode: true, originCode: true, naver_origin: true, supplierPrice: true, shippingFee: true },
     });
     if (!product) {
       return NextResponse.json({ error: 'product_not_found' }, { status: 404 });
@@ -159,6 +161,33 @@ export async function GET(req: NextRequest) {
       if (!isMissingTable(e)) throw e;
     }
 
+    // #249: SEO × ROI composite score for the CategoryDnaCard. The category
+    // triple comes from the product's stored category string; the ROI is made
+    // product-specific by the wholesale price. Trend is D1-level (approx, the
+    // score's caveats say so). Best-effort — a cold trend cache or missing
+    // margin data degrades to a neutral score, never an error.
+    const categoryScore = await (async () => {
+      const parts = (product.category ?? '')
+        .split(/\s*[>/]\s*/)
+        .map((p) => p.trim())
+        .filter(Boolean);
+      const [d1, d2 = '', d3 = ''] = parts;
+      if (!d1) return null;
+      try {
+        const trend = await getCachedTrend(buildD1Key(d1)).catch(() => null);
+        return computeCategoryScore({
+          d1,
+          d2,
+          d3,
+          supplierPrice: product.supplierPrice,
+          shippingFee: product.shippingFee,
+          trend,
+        });
+      } catch {
+        return null;
+      }
+    })();
+
     return NextResponse.json({
       productId,
       categoryCode,
@@ -178,6 +207,8 @@ export async function GET(req: NextRequest) {
         mandatorySlots: card.mandatorySlots,
         thumbnailConventions: card.thumbnailConventions,
         limitations: card.limitations ?? [],
+        // #249: composite recommendation (null when category unknown).
+        score: categoryScore,
       },
       slots,
       gate,

@@ -344,7 +344,18 @@
       "loading": "DNA 분석 중...",
       "degraded": "엔진 데이터 준비 중",
       "monthSuffix": "월",
-      "ageSuffix": "대"
+      "ageSuffix": "대",
+      "scoreTitle": "SEO × 마진 종합 추천",
+      "scoreSubtitle": "검색 유리도와 마진 매력도를 합쳐 카테고리를 추천해요",
+      "scoreSeo": "검색 유리도",
+      "scoreRoi": "마진 매력도",
+      "scoreTotal": "종합 추천",
+      "scoreReasons": "이렇게 봤어요",
+      "scoreCaveats": "데이터 한계(정직 표기)",
+      "gradeS": "강력 추천",
+      "gradeA": "추천",
+      "gradeB": "보통",
+      "gradeC": "신중 검토"
     },
     "funnel": {
       "title": "9슬롯 퍼널 보드",

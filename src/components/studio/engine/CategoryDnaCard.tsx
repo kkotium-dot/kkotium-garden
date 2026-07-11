@@ -6,12 +6,98 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { Activity, CalendarRange, Users, Tag, Type, ShieldCheck, Layers, Palette } from 'lucide-react';
+import { Activity, CalendarRange, Users, Tag, Type, ShieldCheck, Layers, Palette, TrendingUp, Coins, Award, Info } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import type { EngineDnaView } from './useEngineStrategy';
+import type { CategoryGrade, CategoryScore } from '@/lib/naver/category-score';
 
 const c = strings.engine.dna;
 const slotNames = strings.engine.funnel.slot as Record<string, string>;
+
+// #249: grade → seller-facing label + palette. No jargon (#233).
+const GRADE_META: Record<CategoryGrade, { label: string; bg: string; border: string; text: string }> = {
+  S: { label: c.gradeS, bg: '#ECFDF5', border: '#A7F3D0', text: '#047857' },
+  A: { label: c.gradeA, bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' },
+  B: { label: c.gradeB, bg: 'var(--gp-pink-50)', border: 'var(--color-border)', text: 'var(--gp-ink-700)' },
+  C: { label: c.gradeC, bg: '#FFF7ED', border: '#FED7AA', text: '#C2410C' },
+};
+
+// A metric bar tinted by its own value (higher = greener), so the eye reads the
+// three scores at a glance without any number-crunching.
+function ScoreBar({ icon, label, value, strong }: { icon: ReactNode; label: string; value: number; strong?: boolean }) {
+  const hue = value >= 70 ? '#059669' : value >= 45 ? '#2563EB' : '#D97706';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: strong ? 900 : 700, color: 'var(--gp-ink-700)' }}>
+          {icon}
+          {label}
+        </span>
+        <span style={{ fontSize: 12, fontWeight: 900, color: hue }}>{value}</span>
+      </div>
+      <div style={{ height: strong ? 8 : 6, borderRadius: 999, background: 'var(--gp-pink-50)', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
+        <div style={{ width: `${Math.max(0, Math.min(100, value))}%`, height: '100%', background: hue, borderRadius: 999 }} />
+      </div>
+    </div>
+  );
+}
+
+function CategoryScorePanel({ score }: { score: CategoryScore }) {
+  const g = GRADE_META[score.grade];
+  return (
+    <section style={{ padding: 10, borderRadius: 'var(--radius-card)', background: 'var(--gp-pink-50)', border: '1px solid var(--color-border)', marginBottom: 10 }}>
+      <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+        <div>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 900, color: 'var(--gp-ink-900)' }}>
+            <Award size={14} color="var(--gp-red-500)" strokeWidth={2.4} />
+            {c.scoreTitle}
+          </span>
+          <p style={{ margin: '2px 0 0', fontSize: 10.5, color: 'var(--gp-ink-500)', wordBreak: 'keep-all' }}>{c.scoreSubtitle}</p>
+        </div>
+        <span style={{
+          flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 999,
+          background: g.bg, border: `1px solid ${g.border}`, color: g.text, fontSize: 12, fontWeight: 900,
+        }}>
+          <span style={{ fontSize: 15, lineHeight: 1 }}>{score.grade}</span>
+          {g.label}
+        </span>
+      </header>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <ScoreBar icon={<TrendingUp size={13} />} label={c.scoreSeo} value={score.seoScore} />
+        <ScoreBar icon={<Coins size={13} />} label={c.scoreRoi} value={score.roiScore} />
+        <ScoreBar icon={<Award size={13} />} label={c.scoreTotal} value={score.totalScore} strong />
+      </div>
+
+      {score.reasons.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <span style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--gp-ink-700)' }}>{c.scoreReasons}</span>
+          <div style={{ marginTop: 3 }}>
+            {score.reasons.map((r) => (
+              <span key={r} style={{
+                display: 'inline-block', padding: '2px 8px', margin: '0 4px 4px 0', borderRadius: 999,
+                background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--gp-ink-700)',
+                fontSize: 11, fontWeight: 600, wordBreak: 'keep-all',
+              }}>{r}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {score.caveats.length > 0 && (
+        <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 800, color: 'var(--gp-ink-500)' }}>
+            <Info size={11} />
+            {c.scoreCaveats}
+          </span>
+          {score.caveats.map((cav) => (
+            <span key={cav} style={{ fontSize: 10.5, color: 'var(--gp-ink-500)', lineHeight: 1.45, wordBreak: 'keep-all' }}>· {cav}</span>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
 
 function Row({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
   return (
@@ -80,6 +166,8 @@ export default function CategoryDnaCard({ dna, source, loading, degraded }: Cate
       <div style={{ fontSize: 11, color: 'var(--gp-ink-500)', marginBottom: 6, wordBreak: 'keep-all' }}>
         {dna.categoryName} <span style={{ opacity: 0.6 }}>({dna.categoryCode})</span>
       </div>
+
+      {dna.score && <CategoryScorePanel score={dna.score} />}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Row icon={<CalendarRange size={13} />} label={c.season}>

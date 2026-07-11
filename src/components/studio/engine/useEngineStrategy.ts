@@ -6,6 +6,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import type { CategoryScore } from '@/lib/naver/category-score';
 
 export interface EngineSlotView {
   slotType: string;
@@ -43,6 +44,8 @@ export interface EngineDnaView {
   mandatorySlots: string[];
   thumbnailConventions: { rule?: string; source?: string };
   limitations: string[];
+  // #249: SEO × ROI composite recommendation (null when category unknown).
+  score?: CategoryScore | null;
 }
 
 export interface EngineGateView {
