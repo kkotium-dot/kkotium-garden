@@ -136,6 +136,12 @@ export async function GET(request: NextRequest) {
         updatedAt: true,
         naverCategoryCode: true,
         naverProductId: true,
+        // Registration status (#240) + revival scoring (#244) + source tag (#245)
+        // for the hub axis. origin_kind column is live (Desktop applied the
+        // migration, verified); deriveOriginKind reads it and falls back to
+        // naverProductId for any row that predates the backfill.
+        naver_status_type: true,
+        origin_kind: true,
         shippingFee: true,
         shipping_fee_type: true,
         shipping_template_id: true,

@@ -101,6 +101,12 @@ model Product {
   // Cached last-observed Naver statusType (SALE / SUSPENSION / ...) from the
   // inspect route (live Naver read). Drives applyStatus.publishState accuracy.
   naver_status_type       String?           @map("naver_status_type") @db.VarChar(30)
+  // Product management hub source tag (#245) — IMPORTED (상품 연동) / APP_CREATED
+  // (씨앗심기) / HYBRID (imported then improved in-app). NOT NULL DEFAULT
+  // 'APP_CREATED'; existing rows backfilled by naverProductId presence. Desktop
+  // applied the Supabase migration (20260711000000_add_origin_kind, verified).
+  // deriveOriginKind reads this column and falls back to naverProductId.
+  origin_kind             String            @default("APP_CREATED") @map("origin_kind") @db.VarChar(20)
   // Captured full-res supplier detail image (app-hosted). Two-branch system —
   // resolves the P16 crawl gap (only 330px thumbnails were captured before).
   source_detail_url       String?           @map("source_detail_url")

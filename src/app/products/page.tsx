@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
+import { deriveOriginKind, type OriginKind } from '@/lib/products/origin-kind';
+import { computeRevivalScore, type RevivalResult } from '@/lib/products/revival-score';
 import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
 import InventoryBadge from '@/components/products/InventoryBadge';
 import { StageBadge } from '@/components/products/StageBadge';
@@ -52,13 +54,33 @@ interface Product {
   shippingType?: number | null; // 1=paid 2=free 3=conditional
   shipping_fee_type?: string;
   naverTemplateNo?: string | null;
+  naver_status_type?: string | null;
+  origin_kind?: string | null; // present only after Desktop applies the migration
 }
 
-type TabKey = 'all' | 'draft' | 'ready' | 'active' | 'pending' | 'oos' | 'reactivation';
+type TabKey = 'all' | 'draft' | 'ready' | 'active' | 'pending' | 'oos' | 'reactivation' | 'revival';
 type ViewMode = 'list' | 'group';
-type ScoredProduct = Product & { _hs: ReturnType<typeof calcHoneyScore> };
+type ScoredProduct = Product & {
+  _hs: ReturnType<typeof calcHoneyScore>;
+  _origin: OriginKind;   // hub source tag (#245)
+  _rev: RevivalResult;   // revival-candidate score (#244)
+};
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+
+// Revival candidate (#244) — a live store product gone stale (판매중지/품절/약한
+// SEO/이미지 부족). Computed from Product fields already loaded, so it works as a
+// filter predicate without the scored wrapper.
+const imageCountOf = (p: Product): number =>
+  (p.mainImage ? 1 : 0) + (Array.isArray(p.images) ? p.images.length : 0);
+const isRevivalCandidate = (p: Product): boolean =>
+  computeRevivalScore({
+    naverStatusType: p.naver_status_type,
+    appStatus: p.status,
+    registered: !!p.naverProductId,
+    name: p.name,
+    imageCount: imageCountOf(p),
+  }).isCandidate;
 
 const TAB_CONFIG: Record<TabKey, {
   label: string; dot: string; dotLabel: string; filter: (p: Product) => boolean;
@@ -73,6 +95,7 @@ const TAB_CONFIG: Record<TabKey, {
   pending:      { label: '네이버 등록 대기',     dot: 'bg-amber-400',  dotLabel: '네이버 등록 대기', filter: p => p.status === 'ACTIVE' && !p.naverProductId },
   oos:          { label: '품절',          dot: 'bg-[#F63B28]',  dotLabel: '품절',          filter: p => p.status === 'OUT_OF_STOCK' },
   reactivation: { label: '재활성화 필요', dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
+  revival:      { label: '부활 후보',     dot: 'bg-purple-500', dotLabel: '부활 후보',     filter: isRevivalCandidate },
 };
 
 // SEED-SAVE C-4 — status segments for the default warehouse view. Order makes the
@@ -133,6 +156,45 @@ function StatusDot({ product }: { product: Product }) {
   return (
     <div className="flex items-center shrink-0">
       <StageBadge linked productStatus={product.status} naverProductId={product.naverProductId} size="sm" />
+    </div>
+  );
+}
+
+// Hub status axis (#245/#244) — source tag + Naver registration status (#240) +
+// revival-candidate grade, in one compact badge row on each product.
+const ORIGIN_BADGE: Record<OriginKind, { t: string; bg: string; fg: string; bd: string }> = {
+  IMPORTED:    { t: '연동',   bg: '#EFF6FF', fg: '#1d4ed8', bd: '#bfdbfe' },
+  APP_CREATED: { t: '앱생성', bg: '#F0FDF4', fg: '#15803d', bd: '#bbf7d0' },
+  HYBRID:      { t: '혼합',   bg: '#FAF5FF', fg: '#7e22ce', bd: '#e9d5ff' },
+};
+const NAVER_STATUS_KO: Record<string, string> = {
+  SALE: '판매중', ON_SALE: '판매중', SUSPENSION: '판매중지', OUTOFSTOCK: '품절',
+  CLOSE: '판매종료', PROHIBITION: '판매금지', DELETION: '삭제',
+};
+function chip(text: string, fg: string, bg: string, bd: string, key: string) {
+  return (
+    <span key={key} style={{
+      display: 'inline-flex', alignItems: 'center', fontSize: 10, fontWeight: 700,
+      color: fg, background: bg, border: `1px solid ${bd}`, borderRadius: 6, padding: '1px 6px', whiteSpace: 'nowrap',
+    }}>{text}</span>
+  );
+}
+function HubBadges({ p }: { p: ScoredProduct }) {
+  const o = ORIGIN_BADGE[p._origin];
+  const registered = !!p.naverProductId;
+  const st = p.naver_status_type ?? null;
+  const live = st === 'SALE' || st === 'ON_SALE';
+  // Registration status: 미등록 (gray) / 판매중 (green) / 판매중지·품절 등 (coral).
+  const regChip = !registered
+    ? { t: '미등록', fg: '#6B7280', bg: '#F9FAFB', bd: '#E5E7EB' }
+    : live
+      ? { t: NAVER_STATUS_KO[st!] ?? '판매중', fg: '#15803d', bg: '#F0FDF4', bd: '#bbf7d0' }
+      : { t: st ? (NAVER_STATUS_KO[st] ?? st) : '등록됨', fg: '#b91c1c', bg: '#FEF2F2', bd: '#fecaca' };
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4, marginTop: 3 }}>
+      {chip(o.t, o.fg, o.bg, o.bd, 'origin')}
+      {chip(regChip.t, regChip.fg, regChip.bg, regChip.bd, 'reg')}
+      {p._rev.isCandidate && chip(`부활 ${p._rev.grade}`, '#7e22ce', '#FAF5FF', '#e9d5ff', 'rev')}
     </div>
   );
 }
@@ -899,6 +961,16 @@ function ProductsPageInner() {
       keywords: p.keywords ?? [], tags: p.tags ?? [],
       hasMainImage: !!p.mainImage,
     }),
+    // Hub axis (#245/#244): source tag + revival-candidate score, both from
+    // fields already loaded (origin_kind derived until the migration lands).
+    _origin: deriveOriginKind(p),
+    _rev: computeRevivalScore({
+      naverStatusType: p.naver_status_type,
+      appStatus: p.status,
+      registered: !!p.naverProductId,
+      name: p.name,
+      imageCount: (p.mainImage ? 1 : 0) + (Array.isArray(p.images) ? p.images.length : 0),
+    }),
   })), [raw]);
 
   const filtered = useMemo<ScoredProduct[]>(() => {
@@ -1024,6 +1096,7 @@ function ProductsPageInner() {
               <p className="text-xs font-mono truncate" style={{ color: '#B0A0A8', minWidth: 0 }}>{p.sku}</p>
               {inventoryByProductId[p.id] && <InventoryBadge inv={inventoryByProductId[p.id]} />}
             </div>
+            <HubBadges p={p} />
             {naverMismatches[p.id] && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#F63B28', background: '#fff1f1', border: '1px solid #fca5a5', borderRadius: 6, padding: '1px 6px', marginTop: 2 }}>
                 <AlertTriangle size={9} /> {naverMismatches[p.id]}
