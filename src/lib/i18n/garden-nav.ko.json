@@ -57,7 +57,7 @@
           "key": "make",
           "href": "/products/new",
           "ko": "상품 만들기",
-          "sub": "등록 · 디자인 · 창고",
+          "sub": "등록 · 디자인 · 창고 · 연동",
           "en": "Make",
           "icon": "packageplus",
           "badgeKey": "draft",
@@ -82,16 +82,15 @@
               "ko": "상품 창고",
               "en": "Warehouse",
               "icon": "shoppingbag"
+            },
+            {
+              "key": "product-link",
+              "href": "/products/link",
+              "ko": "상품 연동",
+              "en": "Link",
+              "icon": "link2"
             }
           ]
-        },
-        {
-          "key": "product-link",
-          "href": "/products/link",
-          "ko": "상품 연동",
-          "sub": "네이버 동기화",
-          "en": "Link",
-          "icon": "link2"
         },
         {
           "key": "naver-seo",
@@ -223,20 +222,58 @@
   "mobileTabs": {
     "_meta": "Phase 2-MOBILE-1 — 하단 고정 4탭(대시보드/상품창고/상품등록/디자인). 44px 터치 타겟. 권위: MOBILE_NAMING_FIREFLY 주제1.",
     "items": [
-      { "key": "dashboard", "href": "/dashboard", "ko": "대시보드", "icon": "fountain" },
-      { "key": "products", "href": "/products", "ko": "상품 창고", "icon": "shoppingbag" },
-      { "key": "sow", "href": "/products/new", "ko": "상품 등록", "icon": "packageplus" },
-      { "key": "studio", "href": "/studio", "ko": "디자인", "icon": "palette" }
+      {
+        "key": "dashboard",
+        "href": "/dashboard",
+        "ko": "대시보드",
+        "icon": "fountain"
+      },
+      {
+        "key": "products",
+        "href": "/products",
+        "ko": "상품 창고",
+        "icon": "shoppingbag"
+      },
+      {
+        "key": "sow",
+        "href": "/products/new",
+        "ko": "상품 등록",
+        "icon": "packageplus"
+      },
+      {
+        "key": "studio",
+        "href": "/studio",
+        "ko": "디자인",
+        "icon": "palette"
+      }
     ],
     "more": "더보기"
   },
   "concept_pending": {
     "_comment": "Not implemented routes — kept for future Claude Design alignment. Do not generate route stubs.",
-    "shipping_dachshund": { "ko": "닥스훈트 배송", "en": "Shipping" },
-    "zombie_storage": { "ko": "좀비소", "en": "Returns" },
-    "mushroom_reviews": { "ko": "버섯밭", "en": "Reviews" },
-    "greenhouse_stock": { "ko": "온실", "en": "Stock" },
-    "mailbox_inquiries": { "ko": "우편함", "en": "Inquiries" },
-    "journal": { "ko": "가든 일지", "en": "Journal" }
+    "shipping_dachshund": {
+      "ko": "닥스훈트 배송",
+      "en": "Shipping"
+    },
+    "zombie_storage": {
+      "ko": "좀비소",
+      "en": "Returns"
+    },
+    "mushroom_reviews": {
+      "ko": "버섯밭",
+      "en": "Reviews"
+    },
+    "greenhouse_stock": {
+      "ko": "온실",
+      "en": "Stock"
+    },
+    "mailbox_inquiries": {
+      "ko": "우편함",
+      "en": "Inquiries"
+    },
+    "journal": {
+      "ko": "가든 일지",
+      "en": "Journal"
+    }
   }
 }

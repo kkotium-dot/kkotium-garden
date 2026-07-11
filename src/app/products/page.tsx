@@ -12,7 +12,7 @@ import {
   ChevronDown, ChevronRight,
   Layers, Upload, ArrowRight,
   LayoutList, Send, Globe, Loader,
-  ShieldCheck, Eye,
+  ShieldCheck, Eye, Link2,
 } from 'lucide-react';
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
@@ -1441,6 +1441,13 @@ function ProductsPageInner() {
                 style={{ border: '1.5px solid #F8DCE5', background: '#fff' }}>
                 <RefreshCw size={14} className={`text-gray-500 ${loading ? 'animate-spin' : ''}`} />
               </button>
+              {/* 연동 진입점 (#245 Phase 3) — /products/link를 허브의 "스토어에서
+                  부활 상품 가져오기" 진입 버튼으로 통합(별도 기능 아님). */}
+              <Link href="/products/link" title="네이버 스토어에서 부활 상품 가져오기 (연동)"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition"
+                style={{ border: '1.5px solid #bfdbfe', background: '#EFF6FF', color: '#1d4ed8' }}>
+                <Link2 size={13} /> 연동 가져오기
+              </Link>
               <Link href="/products/new" className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-sm font-bold transition"
                 style={{ background: '#F63B28' }}>
                 <Plus size={14} /> 상품 등록
