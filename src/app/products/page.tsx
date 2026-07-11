@@ -262,15 +262,21 @@ function MarginCell({ hs }: { hs: ReturnType<typeof calcHoneyScore> }) {
 
 // ─── Side Panel ───────────────────────────────────────────────────────────────
 
-function SidePanel({ product, onClose, onDelete, onMutate }: {
+function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync }: {
   product: ScoredProduct;
   onClose: () => void;
   onDelete: (id: string) => void;
   onMutate: (id: string, patch: Partial<Product>) => Promise<boolean>;
+  onReset: (id: string) => Promise<boolean>;
+  onStockSync: () => Promise<string>;
 }) {
   const { _hs: hs } = product;
   const issues = getReadinessIssues(product);
   const [mutating, setMutating] = useState(false);
+  const [stockMsg, setStockMsg] = useState<string | null>(null);
+  // 리셋 only for 연동(IMPORTED/HYBRID) — an APP_CREATED product has no origin.
+  const canReset = product._origin === 'IMPORTED' || product._origin === 'HYBRID';
+  const isOOS = product.status === 'OUT_OF_STOCK';
   // Confirm-gated (#46) status mutation with optimistic update + rollback (handled
   // by onMutate). 부활소 이동 = INACTIVE (재활성화 대기열로).
   const STATUS_LABEL: Record<string, string> = {
@@ -284,6 +290,27 @@ function SidePanel({ product, onClose, onDelete, onMutate }: {
     try {
       const ok = await onMutate(product.id, { status: next });
       if (ok) onClose(); // close so the list reflects the change (panel holds a snapshot)
+    } finally { setMutating(false); }
+  };
+  // 품절 토글 — 품절(OUT_OF_STOCK) ↔ 판매중(ACTIVE).
+  const toggleOOS = () => changeStatus(
+    isOOS ? 'ACTIVE' : 'OUT_OF_STOCK',
+    isOOS ? '재입고 처리(판매중)할까요?' : '이 상품을 품절 처리할까요?',
+  );
+  // 공급사 재고 동기화 — 기존 stock-check 재사용 (confirm 게이트).
+  const stockSync = async () => {
+    if (!window.confirm('공급사 재고를 동기화할까요? (공급사 URL이 등록된 상품의 품절/가격을 갱신)')) return;
+    setMutating(true);
+    try { setStockMsg(await onStockSync()); } finally { setMutating(false); }
+  };
+  // 리셋 — 앱 튜닝을 연동 원본으로 되돌림 (비가역 · confirm 게이트).
+  const resetToOrigin = async () => {
+    if (!canReset) return;
+    if (!window.confirm('앱에서 튜닝한 상품명·이미지·가격을 연동 원본(네이버 현재 상태)으로 되돌립니다. 비가역입니다. 진행할까요?')) return;
+    setMutating(true);
+    try {
+      const ok = await onReset(product.id);
+      if (ok) onClose();
     } finally { setMutating(false); }
   };
   return (
@@ -424,6 +451,30 @@ function SidePanel({ product, onClose, onDelete, onMutate }: {
             부활소 이동
           </button>
         </div>
+        {/* 재고 · 리셋 (Phase 2b, #46 confirm 게이트) — 공급사 재고 동기화(stock-check
+            재사용)·품절 토글(상태)·리셋(연동 원본 복원, IMPORTED/HYBRID만). */}
+        <div className="flex items-center gap-2">
+          <button type="button" disabled={mutating} onClick={stockSync}
+            className="flex-1 py-2 rounded-xl text-xs font-semibold transition disabled:opacity-40"
+            style={{ color: '#1d4ed8', background: '#EFF6FF', border: '1px solid #bfdbfe' }}
+            title="공급사 재고 동기화 (stock-check)">
+            재고 동기화
+          </button>
+          <button type="button" disabled={mutating} onClick={toggleOOS}
+            className="flex-1 py-2 rounded-xl text-xs font-semibold transition disabled:opacity-40"
+            style={isOOS
+              ? { color: '#15803d', background: '#F0FDF4', border: '1px solid #bbf7d0' }
+              : { color: '#b91c1c', background: '#FEF2F2', border: '1px solid #fecaca' }}>
+            {isOOS ? '재입고' : '품절 처리'}
+          </button>
+          <button type="button" disabled={mutating || !canReset} onClick={resetToOrigin}
+            className="flex-1 py-2 rounded-xl text-xs font-semibold transition disabled:opacity-40"
+            style={{ color: '#6b7280', background: '#F9FAFB', border: '1px solid #E5E7EB' }}
+            title={canReset ? '연동 원본으로 되돌림 (비가역)' : '앱생성 상품은 원본이 없어 리셋 불가'}>
+            리셋
+          </button>
+        </div>
+        {stockMsg && <p className="text-[11px] text-slate-500">{stockMsg}</p>}
         {/* 마진 재계산 (읽기 전용 — 변이 아님) */}
         <div className="flex items-center justify-between rounded-xl px-3 py-2 text-xs"
           style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
@@ -1165,6 +1216,45 @@ function ProductsPageInner() {
     }
   };
 
+  // 리셋 (#245) — undo app-tuning to the Naver 연동 원본 (server re-fetches;
+  // NOT optimistic since restored values come from the store). IMPORTED/HYBRID
+  // only (route enforces). Returns true on success.
+  const handleProductReset = async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/products/${id}/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: true }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || j?.success === false) throw new Error(j?.error || `HTTP ${res.status}`);
+      const r = j.restored ?? {};
+      setRawProducts(prev => prev.map(p => p.id === id ? { ...p, ...r } : p));
+      return true;
+    } catch (e) {
+      alert(`리셋 실패: ${e instanceof Error ? e.message : String(e)}`);
+      return false;
+    }
+  };
+
+  // 공급사 재고 동기화 (#245) — reuse the existing stock-check sync (bulk over
+  // products with a supplier URL). Returns a short result message for a toast.
+  const handleStockSync = async (): Promise<string> => {
+    try {
+      const res = await fetch('/api/crawler/stock-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 50, dryRun: false }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || j?.success === false) throw new Error(j?.error || `HTTP ${res.status}`);
+      await fetchProducts();
+      return j.message ?? `동기화 완료 — 확인 ${j.checked ?? 0} · 품절 ${j.oosDetected ?? 0}`;
+    } catch (e) {
+      return `동기화 실패: ${e instanceof Error ? e.message : String(e)}`;
+    }
+  };
+
   // Inline quick-edit save handler
   const saveInlineEdit = async () => {
     if (!inlineEdit) return;
@@ -1780,7 +1870,7 @@ function ProductsPageInner() {
       {sideProduct && (
         <>
           <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setSide(null)} />
-          <SidePanel product={sideProduct} onClose={() => setSide(null)} onDelete={deleteProduct} onMutate={handleProductMutate} />
+          <SidePanel product={sideProduct} onClose={() => setSide(null)} onDelete={deleteProduct} onMutate={handleProductMutate} onReset={handleProductReset} onStockSync={handleStockSync} />
         </>
       )}
 
