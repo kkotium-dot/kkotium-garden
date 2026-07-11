@@ -12,6 +12,7 @@ import {
   ChevronDown, ChevronRight,
   Layers, Upload, ArrowRight,
   LayoutList, Send, Globe, Loader,
+  ShieldCheck, Eye,
 } from 'lucide-react';
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
@@ -378,6 +379,26 @@ function SidePanel({ product, onClose, onDelete }: {
         </div>
       </div>
       <div className="p-4 flex flex-col gap-2" style={{ borderTop: '1.5px solid #F8DCE5' }}>
+        {/* 공통 관리 액션 바 (#245 §2-C) — 출처 무관 동일 액션. Phase 2a: 네비게이션
+            액션(튜닝→아틀리에·발행 준비→preview·상세). 변이 액션(리셋/마진재산정/
+            재고/부활소)은 Phase 2b에서 confirm 게이트(#46)로 추가. */}
+        <div className="grid grid-cols-3 gap-2">
+          <Link href={`/studio?product=${product.id}`}
+            className="flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[11px] font-semibold transition"
+            style={{ color: '#7e22ce', background: '#FAF5FF', border: '1px solid #e9d5ff' }} title="온실 아틀리에에서 튜닝">
+            <Palette size={15} /> 튜닝
+          </Link>
+          <Link href={`/products/${product.id}/preview`}
+            className="flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[11px] font-semibold transition"
+            style={{ color: '#047857', background: '#ECFDF5', border: '1px solid #A7F3D0' }} title="발행 준비 · 미리보기">
+            <ShieldCheck size={15} /> 발행 준비
+          </Link>
+          <Link href={`/products/${product.id}`}
+            className="flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[11px] font-semibold transition"
+            style={{ color: '#1d4ed8', background: '#EFF6FF', border: '1px solid #bfdbfe' }} title="상품 상세">
+            <Eye size={15} /> 상세
+          </Link>
+        </div>
         <Link href={`/products/new?edit=${product.id}`}
           className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl text-sm font-bold transition"
           style={{ background: '#F63B28' }}>
