@@ -262,13 +262,30 @@ function MarginCell({ hs }: { hs: ReturnType<typeof calcHoneyScore> }) {
 
 // ─── Side Panel ───────────────────────────────────────────────────────────────
 
-function SidePanel({ product, onClose, onDelete }: {
+function SidePanel({ product, onClose, onDelete, onMutate }: {
   product: ScoredProduct;
   onClose: () => void;
   onDelete: (id: string) => void;
+  onMutate: (id: string, patch: Partial<Product>) => Promise<boolean>;
 }) {
   const { _hs: hs } = product;
   const issues = getReadinessIssues(product);
+  const [mutating, setMutating] = useState(false);
+  // Confirm-gated (#46) status mutation with optimistic update + rollback (handled
+  // by onMutate). 부활소 이동 = INACTIVE (재활성화 대기열로).
+  const STATUS_LABEL: Record<string, string> = {
+    DRAFT: '작성중', READY: '발행대기', ACTIVE: '판매중',
+    OUT_OF_STOCK: '품절', INACTIVE: '부활소(비활성)', HIDDEN: '숨김',
+  };
+  const changeStatus = async (next: string, confirmMsg: string) => {
+    if (next === product.status) return;
+    if (!window.confirm(confirmMsg)) return;
+    setMutating(true);
+    try {
+      const ok = await onMutate(product.id, { status: next });
+      if (ok) onClose(); // close so the list reflects the change (panel holds a snapshot)
+    } finally { setMutating(false); }
+  };
   return (
     <div className="fixed inset-y-0 right-0 w-[400px] bg-white shadow-2xl z-50 flex flex-col"
       style={{ borderLeft: '1.5px solid #F8DCE5' }}>
@@ -389,6 +406,31 @@ function SidePanel({ product, onClose, onDelete }: {
             style={{ color: '#1d4ed8', background: '#EFF6FF', border: '1px solid #bfdbfe' }} title="상품 상세">
             <Eye size={15} /> 상세
           </Link>
+        </div>
+        {/* 변이 액션 (Phase 2b, #46) — confirm 게이트 + 낙관적 업데이트 + 실패 롤백.
+            상태 변경·부활소 이동(→INACTIVE). 재고 조정·리셋은 정의 확인 후. */}
+        <div className="flex items-center gap-2">
+          <select value={product.status} disabled={mutating} aria-label="상태 변경"
+            onChange={e => changeStatus(e.target.value, `상태를 '${STATUS_LABEL[e.target.value] ?? e.target.value}'(으)로 변경할까요?`)}
+            className="flex-1 py-2 px-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white disabled:opacity-50">
+            {['DRAFT', 'READY', 'ACTIVE', 'OUT_OF_STOCK', 'INACTIVE', 'HIDDEN'].map(s => (
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            ))}
+          </select>
+          <button type="button" disabled={mutating || product.status === 'INACTIVE'}
+            onClick={() => changeStatus('INACTIVE', '이 상품을 부활소로 이동할까요? 판매를 중단(비활성)하고 재활성화 대기열에 넣습니다.')}
+            className="px-2.5 py-2 rounded-xl text-xs font-semibold transition disabled:opacity-40"
+            style={{ color: '#7e22ce', background: '#FAF5FF', border: '1px solid #e9d5ff' }}>
+            부활소 이동
+          </button>
+        </div>
+        {/* 마진 재계산 (읽기 전용 — 변이 아님) */}
+        <div className="flex items-center justify-between rounded-xl px-3 py-2 text-xs"
+          style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
+          <span className="text-gray-500">마진 재계산 (읽기)</span>
+          <span className={`font-bold ${hs.netMarginRate < 5 ? 'text-red-600' : hs.netMarginRate < 10 ? 'text-amber-600' : 'text-gray-700'}`}>
+            순마진 {hs.netMarginRate.toFixed(1)}%
+          </span>
         </div>
         <Link href={`/products/new?edit=${product.id}`}
           className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl text-sm font-bold transition"
@@ -1102,6 +1144,27 @@ function ProductsPageInner() {
     setSelected(new Set());
   };
 
+  // Phase 2b (#245 §2-C / #46) — single-product mutation with confirm-gated
+  // callers, OPTIMISTIC update, and ROLLBACK on failure. Reuses the PATCH route.
+  const handleProductMutate = async (id: string, patch: Partial<Product>): Promise<boolean> => {
+    const before = raw.find(p => p.id === id);
+    setRawProducts(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p)); // optimistic
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || j?.success === false) throw new Error(j?.error || `HTTP ${res.status}`);
+      return true;
+    } catch (e) {
+      if (before) setRawProducts(prev => prev.map(p => p.id === id ? before : p)); // rollback
+      alert(`변경 실패 — 되돌렸습니다: ${e instanceof Error ? e.message : String(e)}`);
+      return false;
+    }
+  };
+
   // Inline quick-edit save handler
   const saveInlineEdit = async () => {
     if (!inlineEdit) return;
@@ -1710,7 +1773,7 @@ function ProductsPageInner() {
       {sideProduct && (
         <>
           <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setSide(null)} />
-          <SidePanel product={sideProduct} onClose={() => setSide(null)} onDelete={deleteProduct} />
+          <SidePanel product={sideProduct} onClose={() => setSide(null)} onDelete={deleteProduct} onMutate={handleProductMutate} />
         </>
       )}
 
