@@ -306,7 +306,11 @@ function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync 
   // 리셋 — 앱 튜닝을 연동 원본으로 되돌림 (비가역 · confirm 게이트).
   const resetToOrigin = async () => {
     if (!canReset) return;
-    if (!window.confirm('앱에서 튜닝한 상품명·이미지·가격을 연동 원본(네이버 현재 상태)으로 되돌립니다. 비가역입니다. 진행할까요?')) return;
+    if (!window.confirm(
+      '리셋하면 상품명·이미지·가격이 공급사/네이버 원본으로 되돌아갑니다.\n' +
+      '⚠ 수동으로 정정한 내용(SEO 상품명·가격 등)이 유실될 수 있습니다.\n' +
+      '(원산지 등 검증 필드는 보존됩니다.)\n\n비가역입니다. 진행할까요?'
+    )) return;
     setMutating(true);
     try {
       const ok = await onReset(product.id);

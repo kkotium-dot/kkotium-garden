@@ -17,6 +17,13 @@ import { getProduct } from '@/lib/naver/api-client';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Manually verified FACTUAL fields reset must NEVER overwrite from the Naver
+// original (#248/#62). naver_origin/originCode are corrections (원산지 정정), not
+// app-tuning — restoring the supplier original would re-introduce a known error
+// (명화: original says 중국, operator corrected to 국산). Extend this list when a
+// new operator-verified field is added.
+const PRESERVED_ON_RESET = ['naver_origin', 'originCode'] as const;
+
 // Mirrors the import route's mapping (those helpers are route-local, not exported).
 function mapStatus(statusType: string | null | undefined): string {
   switch (statusType) {
@@ -76,17 +83,24 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       );
     }
 
-    const restored = {
+    const restored: Record<string, unknown> = {
       name: op.name as string,
       salePrice: Number.isFinite(op.salePrice) ? Number(op.salePrice) : product.salePrice,
       mainImage: pickImageUrl(op as never) ?? product.mainImage,
       naver_status_type: typeof op.statusType === 'string' ? (op.statusType as string) : product.naver_status_type,
       status: mapStatus(op.statusType as string | undefined),
     };
+    // #248/#62 — reset restores TUNING fields only (name/salePrice/mainImage/
+    // status). Manually verified FACTUAL fields are PRESERVED, never rolled back
+    // to the supplier/Naver original: the Naver original re-introduces known
+    // errors (e.g. naver_origin was corrected 중국→국산 but the store listing
+    // still says 중국; #242 treats naver_origin as authoritative). Defensive
+    // strip so a future edit can never leak a preserved field into the payload.
+    for (const k of PRESERVED_ON_RESET) delete restored[k];
 
     await prisma.product.update({ where: { id: productId }, data: restored });
 
-    return NextResponse.json({ success: true, restored });
+    return NextResponse.json({ success: true, restored, preserved: [...PRESERVED_ON_RESET] });
   } catch (e) {
     return NextResponse.json(
       { success: false, error: e instanceof Error ? e.message : String(e) },
