@@ -11,6 +11,7 @@ import {
   type SourcingRecommendResult,
 } from '@/lib/sourcing-recommender';
 import { sendDiscord } from '@/lib/discord';
+import { resolveRecoTypeTags } from '@/lib/naver/reco-type-resolver';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,6 +120,20 @@ export async function POST(req: NextRequest) {
           status: 'sent',
         })),
       });
+    }
+
+    // #250 §3: tag each opportunity 황금/니치/시즌 (category-score, D1-level).
+    // opp.category is a DataLab D1 name; 'general'/unknown → no tag (honest #231).
+    if (result.opportunities.length > 0) {
+      const nowMonth = new Date().getMonth() + 1;
+      const tags = await resolveRecoTypeTags(
+        result.opportunities.map((o) => ({
+          d1: o.category === 'general' ? '' : o.category,
+          supplierPrice: o.suggestedSupplyPrice,
+        })),
+        nowMonth,
+      ).catch(() => result.opportunities.map(() => null));
+      result.opportunities.forEach((o, i) => { o.recoType = tags[i] ?? null; });
     }
 
     // Send Discord notification

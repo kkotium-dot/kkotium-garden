@@ -20,6 +20,7 @@ import { GRADE_EMOJI } from '@/lib/discord';
 import type { DiscordChannel } from '@/lib/discord';
 import STRINGS from './discord-strings.ko.json';
 import type { FourModeResult, ModeResult } from '@/lib/recommendation-modes';
+import { recoTypeSummary, type RecoTypeTag } from '@/lib/naver/recommendation-type';
 
 // ── Visual identity ──────────────────────────────────────────────────────────
 
@@ -183,6 +184,8 @@ export interface RecommendProduct {
   keywords?: string[];
   volumeBoost?: number;
   isSourcing?: boolean;
+  // #250 §3: 꼬띠 추천 유형 태그 (황금🏆/니치💎/시즌🗓️) — resolved by the caller.
+  recoType?: RecoTypeTag | null;
 }
 
 export interface RecommendEmbedParams {
@@ -217,11 +220,13 @@ export function buildRecommendEmbed(params: RecommendEmbedParams): DiscordEmbed 
       ? `\n   → ${S.kw_label}: ${p.keywords.slice(0, 3).join(' · ')}`
       : '';
     const sup = p.supplierName ? `\n   → ${S.supplier_label}: ${p.supplierName}` : '';
-    return `${RANK_EMOJI[i] ?? `${i + 1}.`} **${p.name}**\n   ${tags}${kw}${sup}`;
+    const typeTag = p.recoType ? `${p.recoType.emoji} ${p.recoType.label} ` : '';
+    return `${RANK_EMOJI[i] ?? `${i + 1}.`} ${typeTag}**${p.name}**\n   ${tags}${kw}${sup}`;
   });
-  const situation = situationLines.length > 0
+  const typeSummary = recoTypeSummary(top.map((p) => p.recoType));
+  const situation = (typeSummary ? `${typeSummary}\n\n` : '') + (situationLines.length > 0
     ? situationLines.join('\n\n')
-    : S.noProducts;
+    : S.noProducts);
 
   const seasonNote = params.season && params.season.daysLeft <= 7
     ? fmt(S.impact_seasonNear, { label: params.season.label, days: params.season.daysLeft })
@@ -296,14 +301,21 @@ export function buildFourModeRecommendEmbed(params: FourModeEmbedParams): Discor
     } else {
       m.items.forEach((opp, i) => {
         const margin = opp.estimatedMargin.toFixed(0);
+        const rt = (opp as { recoType?: RecoTypeTag | null }).recoType;
+        const typeTag = rt ? `${rt.emoji} ${rt.label} ` : '';
         situationLines.push(
-          `${i + 1}. **${opp.keyword}** — ${C.netMargin} ${margin}% / 경쟁 ${opp.competition} / ${opp.monthlySearchVolume.toLocaleString()}회/월`
+          `${i + 1}. ${typeTag}**${opp.keyword}** — ${C.netMargin} ${margin}% / 경쟁 ${opp.competition} / ${opp.monthlySearchVolume.toLocaleString()}회/월`
         );
       });
     }
     situationLines.push('');
   }
-  const situation = situationLines.join('\n').trim() || S.noProducts;
+  // #250 §3: type summary across all modes' items.
+  const allTags = result.modes.flatMap((m) =>
+    m.items.map((opp) => (opp as { recoType?: RecoTypeTag | null }).recoType),
+  );
+  const typeSummary = recoTypeSummary(allTags);
+  const situation = (typeSummary ? `${typeSummary}\n\n` : '') + (situationLines.join('\n').trim() || S.noProducts);
 
   // Impact: collapse seasonal context if present
   let impact = S.impact_base;

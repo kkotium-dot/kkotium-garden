@@ -41,6 +41,26 @@ export interface RecoTypeResult {
   score: CategoryScore; // carries caveats (#231) for the caller to surface
 }
 
+// Compact tag the embed builders render (no score/reasons payload).
+export interface RecoTypeTag {
+  type: RecommendationType;
+  emoji: string;
+  label: string;
+}
+
+/** Summary counts for an embed header, e.g. "🏆 황금 3 · 🗓️ 시즌 2". Pure. */
+export function recoTypeSummary(tags: Array<RecoTypeTag | null | undefined>): string {
+  const c = { golden: 0, niche: 0, seasonal: 0 };
+  for (const t of tags) {
+    if (t) c[t.type] += 1;
+  }
+  const parts: string[] = [];
+  if (c.golden) parts.push(`🏆 황금 ${c.golden}`);
+  if (c.niche) parts.push(`💎 니치 ${c.niche}`);
+  if (c.seasonal) parts.push(`🗓️ 시즌 ${c.seasonal}`);
+  return parts.join(' · ');
+}
+
 // Type metadata (emoji + seller-facing label).
 const TYPE_META: Record<RecommendationType, { emoji: string; label: string }> = {
   golden: { emoji: '🏆', label: '황금상품' },

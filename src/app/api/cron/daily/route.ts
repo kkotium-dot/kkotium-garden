@@ -21,6 +21,8 @@ import {
 } from '@/lib/discord';
 import { computeRevivalScore, revivalSignalsFromProduct } from '@/lib/products/revival-score';
 import { getReactivationReason } from '@/lib/daily-slots';
+import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
+import { resolveRecoTypeTags } from '@/lib/naver/reco-type-resolver';
 import { fetchNaverTrends, matchProductsToTrends } from '@/lib/trend-analyzer';
 import { refreshCategoryTrendCache } from '@/lib/naver/category-trend-cache';
 import { naverRequest } from '@/lib/naver/api-client';
@@ -446,6 +448,7 @@ export async function GET(req: NextRequest) {
       keywords:      Array.isArray(item.p.keywords) ? (item.p.keywords as string[]).slice(0, 3) : [],
       volumeBoost:   volumeBoostMap.get(item.p.id) ?? 0,
       isSourcing:    false as const,
+      naverCategoryCode: item.p.naverCategoryCode ?? null,
     }));
 
     const sourcingWithBoost = sourcingCandidates.map(c => ({
@@ -458,13 +461,14 @@ export async function GET(req: NextRequest) {
       keywords:      [] as string[],
       volumeBoost:   volumeBoostMap.get(c.id) ?? 0,
       isSourcing:    true as const,
+      naverCategoryCode: null as string | null,
     }));
 
     const reRanked = [...scoredWithBoost, ...sourcingWithBoost]
       .sort((a, b) => b.finalScore - a.finalScore);
 
     // Top 5 overall (C-5 upgrade: TOP3 → TOP5)
-    const top5 = reRanked.slice(0, 5).map(item => ({
+    const top5base = reRanked.slice(0, 5).map(item => ({
       name:          item.name,
       score:         item.finalScore,
       grade:         item.grade,
@@ -473,7 +477,23 @@ export async function GET(req: NextRequest) {
       keywords:      item.keywords,
       volumeBoost:   item.volumeBoost,
       isSourcing:    item.isSourcing,
+      naverCategoryCode: item.naverCategoryCode,
     }));
+
+    // #250 §3: tag each recommended product 황금/니치/시즌 (category-score).
+    // DB products resolve d1/d2/d3 from naverCategoryCode; sourcing rows (no
+    // category) get no tag (honest #231).
+    const nowMonth = new Date().getMonth() + 1;
+    const recoTags = await resolveRecoTypeTags(
+      top5base.map((t) => {
+        const cat = t.naverCategoryCode
+          ? NAVER_CATEGORIES_FULL.find((c) => c.code === t.naverCategoryCode)
+          : null;
+        return cat ? { d1: cat.d1, d2: cat.d2 ?? '', d3: cat.d3 ?? '' } : { d1: '' };
+      }),
+      nowMonth,
+    ).catch(() => top5base.map(() => null));
+    const top5 = top5base.map((t, i) => ({ ...t, recoType: recoTags[i] ?? null }));
     // Keep top3 alias for backward compat with embed builder
     const top3 = top5.slice(0, 3);
 

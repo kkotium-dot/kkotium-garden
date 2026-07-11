@@ -9,6 +9,7 @@ import { searchShopping, analyzeCompetition, type CompetitionAnalysis } from '@/
 import { fetchKeywordStats, type KeywordStat } from '@/lib/naver/keyword-api';
 import { matchWholesaleProducts, type WholesaleProduct } from '@/lib/wholesale-matcher';
 import { entryBarrierToBlueOceanBonus, type EntryBarrierAnalysis } from '@/lib/competition-monitor';
+import { recoTypeSummary, type RecoTypeTag } from '@/lib/naver/recommendation-type';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ export interface SourcingOpportunity {
   entryBarrierLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
   entryBarrierScore?: number;       // 0~5 (5 = highest barrier)
   entryBarrierBonus?: number;       // -10, 0, or +15 applied to BlueOcean
+  // #250 §3: 꼬띠 추천 유형 태그 (황금🏆/니치💎/시즌🗓️) — resolved by the route.
+  recoType?: RecoTypeTag | null;
   blueOceanBase?: number;           // Score before entry barrier bonus
   uniqueSellersInTop?: number;      // unique mallNames in top results
   priceSpread?: number;             // (max-min)/avg, rounded to 2 decimals
@@ -442,8 +445,9 @@ export function buildSourcingRecommendEmbed(result: SourcingRecommendResult): Re
 
   const fields: Record<string, unknown>[] = result.opportunities.map((opp, i) => {
     const marginColor = opp.estimatedMargin >= 30 ? ':green_heart:' : opp.estimatedMargin >= 20 ? ':yellow_heart:' : ':broken_heart:';
+    const typeTag = opp.recoType ? `${opp.recoType.emoji} ${opp.recoType.label} ` : '';
     return {
-      name: `${RANK_ICONS[i] ?? `${i + 1}.`} ${opp.keyword} (${opp.blueOceanScore}pt)`,
+      name: `${RANK_ICONS[i] ?? `${i + 1}.`} ${typeTag}${opp.keyword} (${opp.blueOceanScore}pt)`,
       value: [
         `${COMP_LABEL[opp.competition] ?? ''} | ${opp.monthlySearchVolume.toLocaleString()}/month | ${opp.totalResults.toLocaleString()} results`,
         `avg **${opp.avgPrice.toLocaleString()}** (${opp.minPrice.toLocaleString()}~${opp.maxPrice.toLocaleString()})`,
@@ -471,13 +475,15 @@ export function buildSourcingRecommendEmbed(result: SourcingRecommendResult): Re
     });
   }
 
+  const typeSummary = recoTypeSummary(result.opportunities.map((o) => o.recoType));
   const description = [
     result.aiSummary ?? 'DataLab trend + keyword analysis complete.',
+    typeSummary ? `\n**이번 주 유형** — ${typeSummary}` : '',
     '',
     result.opportunities.length > 0
       ? `**${result.opportunities.length}** blue-ocean found. Supply search recommended!`
       : 'No clear opportunities today. Check again tomorrow.',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 
   return {
     title: `:tulip: sourcing recommendation - ${result.date}`,
