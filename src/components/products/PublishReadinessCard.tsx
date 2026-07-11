@@ -32,6 +32,7 @@ interface ReadinessCheck {
   message: string;
   fixHref: string;
   detail?: string;
+  messageKey?: string;
 }
 interface PublishReadiness {
   ready: boolean;
@@ -47,7 +48,7 @@ interface ChecklistResponse {
 }
 
 const c = strings.card;
-const CK = strings.checks as Record<CheckKey, { label: string; pass: string; fail: string; na?: string }>;
+const CK = strings.checks as Record<CheckKey, { label: string; pass: string; fail: string; na?: string } & Record<string, string>>;
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -70,7 +71,10 @@ function checkMessage(chk: ReadinessCheck): string {
   const t = CK[chk.key];
   if (!t) return chk.message; // fall back to the lib's self-describing English
   if (chk.status === 'na') return t.na ?? chk.message;
-  const base = chk.status === 'pass' ? t.pass : t.fail;
+  // A messageKey selects a specific reason variant (e.g. origin 'failMismatch').
+  const base =
+    (chk.messageKey && t[chk.messageKey]) ??
+    (chk.status === 'pass' ? t.pass : t.fail);
   return chk.detail ? `${base} (${chk.detail})` : base;
 }
 function statusWord(status: CheckStatus): string {

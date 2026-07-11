@@ -7,6 +7,7 @@ import { calcAttributeCompleteness, type ProductAttributeData } from '../categor
 import { calcUploadReadiness, type ReadinessInput } from '../upload-readiness';
 import { NAVER_CATEGORIES_FULL } from './naver-categories-full';
 import { NAVER_ORIGIN_CODES } from './naver-origin-codes';
+import { ORIGIN_CODES_FULL } from './origin-codes-full';
 import {
   classifyUnitPricePolicy,
   validateUnitPriceFields,
@@ -30,8 +31,11 @@ const OFFICIAL_ORIGIN_CODES: ReadonlySet<string> = new Set(
 // by validateForRegistration (publish HARD BLOCK) and the strategy gate panel
 // (UI surfacing, #56). 'pass' = explicit + canonical; 'heal' = resolvable but a
 // stripped leading zero needs persisting (warn); 'block' = missing/unknown
-// (refuse to guess — a guessed origin = false labelling = legal risk).
-export type OriginTruthState = 'pass' | 'heal' | 'block';
+// (refuse to guess — a guessed origin = false labelling = legal risk);
+// 'mismatch' = code valid but the naver_origin content LABEL contradicts it
+// (#242 — e.g. domestic code '00' 국산 but content "중국"; the payload would ship
+// contradictory origin info → HARD BLOCK until the label is corrected).
+export type OriginTruthState = 'pass' | 'heal' | 'block' | 'mismatch';
 export interface OriginTruthVerdict {
   state: OriginTruthState;
   code: string | null;
@@ -39,7 +43,53 @@ export interface OriginTruthVerdict {
   message: string | null;
 }
 
-export function evaluateOriginTruth(originCode: string | null | undefined): OriginTruthVerdict {
+// label (naver_origin content) -> importer flag, from the official code table
+// (the authoritative label source, incl. the domestic special '국산' code '00',
+// importer:false). A label present with BOTH importer flags (ambiguous) is
+// dropped so it never forces a false mismatch. Table-driven so NO Hangul literal
+// lives in this module (rule 3-1).
+const ORIGIN_LABEL_IMPORTER: ReadonlyMap<string, boolean> = (() => {
+  const seen = new Map<string, boolean>();
+  const ambiguous = new Set<string>();
+  for (const e of ORIGIN_CODES_FULL) {
+    if (seen.has(e.label) && seen.get(e.label) !== e.importer) ambiguous.add(e.label);
+    else seen.set(e.label, e.importer);
+  }
+  for (const a of ambiguous) seen.delete(a);
+  return seen;
+})();
+
+// Resolve the importer-ness a content label implies: false = domestic,
+// true = import origin, null = not a recognized table label (don't guess —
+// avoids false positives on free-text origins the operator typed).
+function originImporterForLabel(label: string | null | undefined): boolean | null {
+  const norm = (label ?? '').trim();
+  if (!norm) return null;
+  return ORIGIN_LABEL_IMPORTER.has(norm) ? (ORIGIN_LABEL_IMPORTER.get(norm) as boolean) : null;
+}
+
+// Code<->label consistency (#242). Given a RESOLVED (canonical) origin code and
+// the naver_origin content label, return an English mismatch message when the
+// two contradict (domestic code + import label, or import code + domestic
+// label), else null. Only fires when BOTH the code entry and the content label
+// are recognized in the official table — an unrecognized content is left alone.
+function originLabelMismatch(code: string, naverOrigin: string | null | undefined): string | null {
+  const content = (naverOrigin ?? '').trim();
+  if (!content) return null;
+  const codeEntry = ORIGIN_CODES_FULL.find((e) => e.code === code);
+  if (!codeEntry) return null;
+  const contentImporter = originImporterForLabel(content);
+  if (contentImporter === null) return null;
+  if (contentImporter === codeEntry.importer) return null;
+  return codeEntry.importer
+    ? `Origin mismatch: code ${code} (${codeEntry.label}, import) but naver_origin "${content}" is a domestic origin — correct the code or the label so they agree`
+    : `Origin mismatch: domestic code ${code} (${codeEntry.label}) but naver_origin "${content}" names an import origin — set naver_origin to a domestic label (e.g. 국산) or fix the code`;
+}
+
+export function evaluateOriginTruth(
+  originCode: string | null | undefined,
+  naverOrigin?: string | null,
+): OriginTruthVerdict {
   const raw = (originCode ?? '').trim();
   if (!raw) {
     return {
@@ -49,20 +99,27 @@ export function evaluateOriginTruth(originCode: string | null | undefined): Orig
       message: 'Origin code (originCode) is required — refusing to guess origin (false origin = legal risk)',
     };
   }
+  let code: string;
   try {
-    const code = resolveOriginAreaCode(raw);
-    if (code !== raw) {
-      return {
-        state: 'heal',
-        code,
-        raw,
-        message: `Origin code "${raw}" auto-healed to "${code}" — persist the canonical value (stripped leading zero)`,
-      };
-    }
-    return { state: 'pass', code, raw, message: null };
+    code = resolveOriginAreaCode(raw);
   } catch (e) {
     return { state: 'block', code: null, raw, message: `Origin code invalid: ${e instanceof Error ? e.message : String(e)}` };
   }
+  // #242 — a valid code whose content LABEL contradicts it is a legal-labelling
+  // risk (payload ships contradictory origin). Takes priority over heal/pass.
+  const mismatch = originLabelMismatch(code, naverOrigin);
+  if (mismatch) {
+    return { state: 'mismatch', code, raw, message: mismatch };
+  }
+  if (code !== raw) {
+    return {
+      state: 'heal',
+      code,
+      raw,
+      message: `Origin code "${raw}" auto-healed to "${code}" — persist the canonical value (stripped leading zero)`,
+    };
+  }
+  return { state: 'pass', code, raw, message: null };
 }
 
 export function resolveOriginAreaCode(raw: string | null | undefined): string {
@@ -889,9 +946,11 @@ export function validateForRegistration(
   // silently guess (the builder used to fall back to China '0200037' — a guessed
   // origin = false country-of-origin labelling = legal risk under 대외무역법/
   // 관세법). Single source of truth = evaluateOriginTruth (also drives the gate
-  // panel #56): block = missing/unknown, heal = warn (dirty value to persist).
-  const originVerdict = evaluateOriginTruth(product.originCode);
-  if (originVerdict.state === 'block' && originVerdict.message) {
+  // panel #56): block = missing/unknown, heal = warn (dirty value to persist),
+  // mismatch = code<->naver_origin label contradiction (#242, HARD BLOCK — the
+  // payload would ship contradictory origin content).
+  const originVerdict = evaluateOriginTruth(product.originCode, product.naver_origin);
+  if ((originVerdict.state === 'block' || originVerdict.state === 'mismatch') && originVerdict.message) {
     errors.push(originVerdict.message);
   } else if (originVerdict.state === 'heal' && originVerdict.message) {
     warnings.push(originVerdict.message);

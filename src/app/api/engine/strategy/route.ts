@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   try {
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      select: { id: true, name: true, category: true, naverCategoryCode: true, originCode: true },
+      select: { id: true, name: true, category: true, naverCategoryCode: true, originCode: true, naver_origin: true },
     });
     if (!product) {
       return NextResponse.json({ error: 'product_not_found' }, { status: 404 });
@@ -150,7 +150,7 @@ export async function GET(req: NextRequest) {
           // panel: pass / heal(warn) / block, with the validateForRegistration
           // message inline. Product-agnostic (#55).
           originTruth: (() => {
-            const v = evaluateOriginTruth(product.originCode);
+            const v = evaluateOriginTruth(product.originCode, product.naver_origin);
             return { state: v.state, code: v.code, message: v.message };
           })(),
         };

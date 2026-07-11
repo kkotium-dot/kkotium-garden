@@ -57,6 +57,9 @@ export interface ReadinessCheck {
   fixHref: string;
   /** Non-translated dynamic value (code / score) — safe to show verbatim. */
   detail?: string;
+  /** Optional ko.json sub-message selector (e.g. 'failMismatch') so a check can
+   *  surface a specific reason variant instead of the generic pass/fail text. */
+  messageKey?: string;
 }
 
 export interface PublishReadiness {
@@ -218,10 +221,13 @@ export function getPublishReadiness(
     }
   }
 
-  // 8 — origin truth (#95). block = fail; heal/pass = pass (heal only warns).
+  // 8 — origin truth (#95 / #242). block(missing/invalid) = fail; mismatch
+  // (code<->naver_origin label contradiction) = fail with a distinct reason;
+  // heal/pass = pass (heal only warns).
   {
-    const origin = evaluateOriginTruth(product.originCode);
-    const ok = origin.state !== 'block';
+    const origin = evaluateOriginTruth(product.originCode, product.naver_origin);
+    const isMismatch = origin.state === 'mismatch';
+    const ok = origin.state === 'pass' || origin.state === 'heal';
     checks.push({
       key: 'origin',
       label: 'Origin',
@@ -230,7 +236,12 @@ export function getPublishReadiness(
         ? 'Origin is set'
         : origin.message ?? 'Origin code is required',
       fixHref: editHref,
-      detail: origin.code ?? undefined,
+      // On a mismatch show "code ↔ label" so the operator sees the contradiction;
+      // otherwise show the resolved code.
+      detail: isMismatch
+        ? `${origin.code ?? product.originCode ?? '?'} ↔ ${(product.naver_origin ?? '').trim()}`
+        : origin.code ?? undefined,
+      ...(isMismatch ? { messageKey: 'failMismatch' } : {}),
     });
   }
 
