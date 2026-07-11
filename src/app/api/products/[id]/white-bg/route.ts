@@ -18,7 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { whiteBgFinish } from '@/lib/images/white-bg';
 import { assessBgDifficulty } from '@/lib/images/bg-difficulty';
-import { uploadAutomationAsset } from '@/lib/storage/automation-storage';
+import { uploadAutomationAsset, registerUploadedAsset } from '@/lib/storage/automation-storage';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -126,6 +126,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         where: { id: productId },
         data: { mainImage: mainImageUrl, main_image_url: mainImageUrl },
       });
+      // Registry intake (#241) — every storage write lands a registry row so the
+      // index stays a complete inventory (best-effort, idempotent on path).
+      await registerUploadedAsset({ productId, path: uploaded.path, stage: 'thumbnail', sourceTag: 'white_bg' });
       applied = true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

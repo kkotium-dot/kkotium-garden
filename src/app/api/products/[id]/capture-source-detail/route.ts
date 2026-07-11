@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { uploadAutomationAsset } from '@/lib/storage/automation-storage';
+import { uploadAutomationAsset, registerUploadedAsset } from '@/lib/storage/automation-storage';
 import { captureSupplierDetail } from '@/lib/sources/capture-supplier-detail';
 import { assessImageQuality } from '@/lib/images/quality-classifier';
 
@@ -95,6 +95,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         source_detail_url: detailUrl,
         quality_reasons: quality_reasons as unknown as Prisma.InputJsonValue,
       },
+    });
+    // Registry intake (#241) — every storage write lands a registry row so the
+    // index stays a complete inventory (best-effort, idempotent on path).
+    await registerUploadedAsset({
+      productId,
+      path: uploaded.path,
+      stage: 'detail',
+      width: captured.width ?? null,
+      height: captured.height ?? null,
+      sourceTag: 'capture_source_detail',
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

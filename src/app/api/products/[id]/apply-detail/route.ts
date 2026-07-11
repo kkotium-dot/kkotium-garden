@@ -14,7 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { uploadAutomationAsset } from '@/lib/storage/automation-storage';
+import { uploadAutomationAsset, registerUploadedAsset } from '@/lib/storage/automation-storage';
 import { assessImageQuality } from '@/lib/images/quality-classifier';
 
 // occupancy (fraction differing from background) below this = mostly-blank
@@ -88,6 +88,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       where: { id: productId },
       data: { detail_image_url: detailUrl, quality_reasons: quality_reasons as unknown as Prisma.InputJsonValue },
     });
+    // Registry intake (#241) — every storage write lands a registry row so the
+    // index stays a complete inventory (best-effort, idempotent on path).
+    await registerUploadedAsset({ productId, path: uploaded.path, stage: 'detail', sourceTag: 'apply_detail' });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ success: false, error: `Apply failed: ${msg}`, stage: 'APPLY' }, { status: 502 });

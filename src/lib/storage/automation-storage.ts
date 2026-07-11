@@ -92,6 +92,13 @@ function extFromContentType(contentType: string): string {
  * where {ext} is derived from the content type so the stored object name
  * matches its MIME body (a JPEG no longer lands on a `.png` path). Existing
  * uploads are untouched; only new objects use the derived extension.
+ *
+ * INVARIANT (#241 — asset/registry integrity): a storage write is only half the
+ * operation. Every caller MUST follow a successful upload with a registry write
+ * (`registerUploadedAsset({ path: uploaded.path, stage, ... })`, or the
+ * equivalent assetRegistry.create for variant-bound ingests) so the registry
+ * stays a COMPLETE inventory of storage. Skipping it creates an orphan (file
+ * with no registry row) — the exact drift the 2026-07 reconciliation backfilled.
  */
 export async function uploadAutomationAsset(
   opts: UploadAssetOptions,
