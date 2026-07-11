@@ -49,7 +49,19 @@
     "prev": "이전",
     "next": "다음",
     "pageInfo": "{page} / {total} 페이지",
-    "close": "닫기"
+    "close": "닫기",
+    "filterAll": "전체",
+    "filterRevival": "부활 후보만",
+    "filterOutOfStock": "품절",
+    "filterSuspension": "중지",
+    "sortRevival": "부활 시급순",
+    "sortRecent": "최신순",
+    "sortLabel": "정렬",
+    "selectAll": "전체 선택",
+    "clearSel": "선택 해제",
+    "revivalGrade": "부활",
+    "revivalHint": "품절·중지·상품명 약점 등 되살릴 시급도예요",
+    "emptyRevival": "부활 후보가 없어요 — 스토어 상품이 건강해요"
   },
   "result": {
     "imported": "연동 완료 {n}개",

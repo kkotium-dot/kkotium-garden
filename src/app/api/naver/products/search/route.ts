@@ -66,11 +66,16 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1);
   const size = Math.min(100, Math.max(1, Number(searchParams.get('size') ?? '50') || 50));
-  const status = searchParams.get('status') ?? 'SALE';
+  // Accept a comma-separated status list so the connect picker can surface
+  // revival candidates (품절/중지), not just SALE. Backward compatible: a single
+  // value still works. Empty/blank falls back to SALE.
+  const statusParam = searchParams.get('status') ?? 'SALE';
+  const productStatusTypes = statusParam.split(',').map((s) => s.trim()).filter(Boolean);
+  if (productStatusTypes.length === 0) productStatusTypes.push('SALE');
   const debug = searchParams.get('debug') === '1';
 
   try {
-    const raw = await searchProducts({ page, size, productStatusTypes: [status] });
+    const raw = await searchProducts({ page, size, productStatusTypes });
     const items = normalize(raw);
 
     // Tag already-linked items (naverProductId = originProductNo).

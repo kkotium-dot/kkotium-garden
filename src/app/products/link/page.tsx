@@ -13,11 +13,13 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Link2, Store, Hash, X, Loader2, CheckCircle2, AlertTriangle,
   ChevronRight, ChevronLeft, RefreshCw, PackageX, RotateCcw, ShieldAlert, Radar,
+  ArrowUpDown, Check,
 } from 'lucide-react';
 import strings from './strings.ko.json';
 import SubstituteEditor from '@/components/products/SubstituteEditor';
 import PanelTabs, { type PanelTabDef } from '@/components/ui/PanelTabs';
 import NaverPushPanel from '@/components/products/NaverPushPanel';
+import { computeRevivalScore, type RevivalGrade } from '@/lib/products/revival-score';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface LinkedRow {
@@ -43,6 +45,7 @@ interface SearchRow {
   stockQuantity: number;
   statusType: string;
   representativeImageUrl: string | null;
+  modifiedDate: string | null;
   alreadyLinked: boolean;
 }
 type Filter = 'all' | 'native' | 'imported' | 'conflict' | 'drift';
@@ -111,7 +114,39 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// ─── Import modal ─────────────────────────────────────────────────────────────
+// ─── Import modal (A-2 #250 §4: card grid + checkbox + revival filter/sort) ────
+type PickerFilter = 'all' | 'revival' | 'outofstock' | 'suspension';
+type PickerSort = 'revival' | 'recent';
+
+// Revival grade for a store search row — reuses the single revival authority
+// (#247): a live store product judged by status + name + image coverage.
+function rowRevival(row: SearchRow): { grade: RevivalGrade; score: number; isCandidate: boolean } {
+  const r = computeRevivalScore({
+    naverStatusType: row.statusType,
+    appStatus: null,
+    registered: true,
+    name: row.name,
+    imageCount: row.representativeImageUrl ? 1 : 0,
+  });
+  return { grade: r.grade, score: r.score, isCandidate: r.isCandidate };
+}
+
+const REVIVAL_TONE: Record<RevivalGrade, { bg: string; border: string; color: string }> = {
+  S: { bg: '#fff0ef', border: '#ffd6d3', color: '#b91c1c' },
+  A: { bg: '#fff7ed', border: '#fed7aa', color: '#c2410c' },
+  B: { bg: '#fffbeb', border: '#fde68a', color: '#b45309' },
+  C: { bg: '#f3f4f6', border: '#e5e7eb', color: '#6b7280' },
+};
+
+function RevivalGradeBadge({ grade }: { grade: RevivalGrade }) {
+  const t = REVIVAL_TONE[grade];
+  return (
+    <span style={{ fontSize: 10, fontWeight: 800, color: t.color, background: t.bg, border: `1px solid ${t.border}`, borderRadius: 6, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+      {strings.modal.revivalGrade} {grade}
+    </span>
+  );
+}
+
 function ImportModal({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState<SearchRow[]>([]);
@@ -120,11 +155,15 @@ function ImportModal({ onClose, onImported }: { onClose: () => void; onImported:
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
+  const [filter, setFilter] = useState<PickerFilter>('all');
+  const [sort, setSort] = useState<PickerSort>('revival');
 
   const load = useCallback(async (p: number) => {
     setLoading(true); setError(null);
     try {
-      const r = await fetch(`/api/naver/products/search?page=${p}&size=50&status=SALE`);
+      // Broaden beyond SALE so the picker can surface revival candidates
+      // (품절/중지) too — that is the whole point of the connect flow.
+      const r = await fetch(`/api/naver/products/search?page=${p}&size=50&status=SALE,OUTOFSTOCK,SUSPENSION`);
       const j = await r.json();
       if (!j.success) throw new Error(j.error ?? 'load failed');
       setRows(j.items ?? []);
@@ -143,6 +182,31 @@ function ImportModal({ onClose, onImported }: { onClose: () => void; onImported:
     return n;
   });
 
+  const rowNo = (row: SearchRow) => row.originProductNo ?? row.channelProductNo ?? '';
+
+  // Filter + sort are pure client-side over the loaded page (no extra fetch).
+  const visible = rows
+    .filter((row) => {
+      const st = (row.statusType ?? '').toUpperCase();
+      if (filter === 'revival') return rowRevival(row).isCandidate;
+      if (filter === 'outofstock') return st === 'OUTOFSTOCK' || st === 'OUT_OF_STOCK';
+      if (filter === 'suspension') return st === 'SUSPENSION' || st === 'INACTIVE' || st === 'CLOSE';
+      return true;
+    })
+    .sort((a, b) => {
+      if (sort === 'revival') return rowRevival(b).score - rowRevival(a).score;
+      return (b.modifiedDate ?? '').localeCompare(a.modifiedDate ?? '');
+    });
+
+  const selectableNos = visible.filter((r) => !r.alreadyLinked && rowNo(r)).map(rowNo);
+  const allSelected = selectableNos.length > 0 && selectableNos.every((no) => selected.has(no));
+  const toggleAll = () => setSelected((s) => {
+    const n = new Set(s);
+    if (allSelected) selectableNos.forEach((no) => n.delete(no));
+    else selectableNos.forEach((no) => n.add(no));
+    return n;
+  });
+
   async function doImport() {
     if (selected.size === 0 || importing) return;
     setImporting(true);
@@ -157,36 +221,82 @@ function ImportModal({ onClose, onImported }: { onClose: () => void; onImported:
     } finally { setImporting(false); }
   }
 
+  const FILTERS: Array<{ key: PickerFilter; label: string }> = [
+    { key: 'all', label: strings.modal.filterAll },
+    { key: 'revival', label: strings.modal.filterRevival },
+    { key: 'outofstock', label: strings.modal.filterOutOfStock },
+    { key: 'suspension', label: strings.modal.filterSuspension },
+  ];
+
   return (
     <div role="dialog" aria-modal="true" onClick={onClose}
       style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,23,42,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()}
-        style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 640, maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
+        style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 760, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
         {/* header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', borderBottom: '1px solid #F8DCE5' }}>
           <Store size={18} style={{ color: '#F63B28' }} />
           <p style={{ margin: 0, flex: 1, fontSize: 15, fontWeight: 800, color: '#111827' }}>{strings.modal.title}</p>
           <button onClick={onClose} aria-label={strings.modal.close} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><X size={18} /></button>
         </div>
-        {/* body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', minHeight: 0 }}>
+
+        {/* filter + sort + select-all bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderBottom: '1px solid #F8DCE5', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            {FILTERS.map((f) => (
+              <button key={f.key} onClick={() => setFilter(f.key)}
+                style={{ fontSize: 12, fontWeight: 700, color: filter === f.key ? '#fff' : '#6b7280', background: filter === f.key ? '#F63B28' : '#f3f4f6', border: 'none', borderRadius: 99, padding: '4px 12px', cursor: 'pointer' }}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ flex: 1 }} />
+          <button onClick={() => setSort((s) => (s === 'revival' ? 'recent' : 'revival'))}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: '#374151', background: '#f9fafb', border: '1px solid var(--border-neutral)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer' }}>
+            <ArrowUpDown size={12} />{sort === 'revival' ? strings.modal.sortRevival : strings.modal.sortRecent}
+          </button>
+          <button onClick={toggleAll} disabled={selectableNos.length === 0}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: allSelected ? '#F63B28' : '#374151', background: '#f9fafb', border: '1px solid var(--border-neutral)', borderRadius: 8, padding: '5px 10px', cursor: selectableNos.length === 0 ? 'not-allowed' : 'pointer' }}>
+            <Check size={12} />{allSelected ? strings.modal.clearSel : strings.modal.selectAll}
+          </button>
+        </div>
+
+        {/* body — card grid */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', minHeight: 0 }}>
           {loading && <div style={{ textAlign: 'center', padding: 30, color: '#9ca3af' }}><Loader2 size={20} className="animate-spin" style={{ margin: '0 auto' }} /></div>}
           {error && <div style={{ color: '#b91c1c', fontSize: 13, padding: 12 }}>{error}</div>}
-          {!loading && !error && rows.length === 0 && <div style={{ textAlign: 'center', padding: 30, color: '#9ca3af', fontSize: 13 }}>{strings.modal.empty}</div>}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {rows.map((row) => {
-              const no = row.originProductNo ?? row.channelProductNo ?? '';
+          {!loading && !error && visible.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 30, color: '#9ca3af', fontSize: 13 }}>
+              {filter === 'revival' ? strings.modal.emptyRevival : strings.modal.empty}
+            </div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 10 }}>
+            {visible.map((row) => {
+              const no = rowNo(row);
               const checked = selected.has(no);
+              const rev = rowRevival(row);
+              const disabled = row.alreadyLinked || !no;
               return (
-                <label key={no} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, border: `1px solid ${checked ? '#bfdbfe' : '#f1f1f1'}`, background: row.alreadyLinked ? '#fafafa' : checked ? '#f5f9ff' : '#fff', cursor: row.alreadyLinked ? 'not-allowed' : 'pointer', opacity: row.alreadyLinked ? 0.65 : 1 }}>
-                  <input type="checkbox" checked={checked} disabled={row.alreadyLinked || !no} onChange={() => no && toggle(no)} style={{ width: 16, height: 16, flexShrink: 0 }} />
+                <label key={no || row.name} style={{
+                  position: 'relative', display: 'flex', flexDirection: 'column', gap: 8, padding: 10, borderRadius: 12,
+                  border: `1.5px solid ${checked ? '#F63B28' : '#f1f1f1'}`,
+                  background: row.alreadyLinked ? '#fafafa' : checked ? '#fff5f6' : '#fff',
+                  cursor: disabled ? 'not-allowed' : 'pointer', opacity: row.alreadyLinked ? 0.6 : 1,
+                }}>
+                  <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 1 }}>
+                    <input type="checkbox" checked={checked} disabled={disabled} onChange={() => no && toggle(no)}
+                      style={{ width: 18, height: 18, accentColor: '#F63B28', cursor: disabled ? 'not-allowed' : 'pointer' }} />
+                  </div>
+                  {rev.isCandidate && (
+                    <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}><RevivalGradeBadge grade={rev.grade} /></div>
+                  )}
                   {row.representativeImageUrl
-                    ? <img src={row.representativeImageUrl} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
-                    : <div style={{ width: 40, height: 40, borderRadius: 8, background: '#f3f4f6', flexShrink: 0 }} />}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.name}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-                      <span style={{ fontSize: 11, color: '#6b7280', fontVariantNumeric: 'tabular-nums' }}>{won(row.salePrice)}</span>
+                    ? <img src={row.representativeImageUrl} alt="" style={{ width: '100%', aspectRatio: '1 / 1', borderRadius: 8, objectFit: 'cover' }} />
+                    : <div style={{ width: '100%', aspectRatio: '1 / 1', borderRadius: 8, background: '#f3f4f6' }} />}
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: '#111827', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{row.name}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 11.5, fontWeight: 700, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>{won(row.salePrice)}</span>
                       <StatusBadge status={row.statusType} />
                       {row.alreadyLinked && <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af' }}>{strings.modal.alreadyLinked}</span>}
                     </div>
@@ -196,7 +306,8 @@ function ImportModal({ onClose, onImported }: { onClose: () => void; onImported:
             })}
           </div>
         </div>
-        {/* footer */}
+
+        {/* footer — pagination + import action bar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderTop: '1px solid #F8DCE5' }}>
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1 || loading}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 12, fontWeight: 700, color: page <= 1 ? '#c4c4c4' : '#374151', background: '#f9fafb', border: '1px solid var(--border-neutral)', borderRadius: 8, padding: '6px 10px', cursor: page <= 1 ? 'not-allowed' : 'pointer' }}>
