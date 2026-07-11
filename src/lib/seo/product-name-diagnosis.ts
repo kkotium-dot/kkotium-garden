@@ -11,6 +11,8 @@
 
 import bannedData from './banned-words.ko.json';
 import { includesNormalized } from '@/lib/seo/match';
+import { computeCategoryScore, type CategoryScore } from '@/lib/naver/category-score';
+import type { CategoryTrendEntry } from '@/lib/naver/category-trend-cache';
 
 export type CheckStatus = 'pass' | 'warn' | 'fail';
 export type NameGrade = 'S' | 'A' | 'B' | 'C';
@@ -337,4 +339,151 @@ export function buildLongtailCandidates(token: string, max = 4): string[] {
     .filter(m => !token.startsWith(m))
     .slice(0, max)
     .map(m => `${m}${token}`);
+}
+
+// ── NAME-DIAG-3: 부활 상품명 종합 진단 (composition, #249 흐름) ────────────────
+// Authority: docs/design/SEO_NAME_DIAGNOSIS_ENGINE_SPEC_2026-07-12.md
+// PURE composition — reuses diagnoseProductName (name rules) + computeCategoryScore
+// (SEO×ROI trend, #249) so the revival hub can rank a product name's weaknesses
+// and surface the highest-impact fixes WITHOUT a second rule engine (#34 no dupe).
+// No I/O, no clock: the caller resolves the (async) trend entry and injects it,
+// exactly like category-score. Seller language (#233), honest limits (#231).
+
+export type TrendReflection = 'strong' | 'ok' | 'weak' | 'unknown';
+
+export interface NameWeakness {
+  id: string;
+  label: string;
+  severity: 'fail' | 'warn';
+  detail: string;
+}
+
+export interface NameDiagnosisInput {
+  name: string;
+  /** Category triple for the SEO×ROI/trend axis. If absent, parsed from categoryPath. */
+  d1?: string;
+  d2?: string;
+  d3?: string;
+  categoryPath?: string;
+  keywords?: string[];
+  brand?: string;
+  supplierPrice?: number | null;
+  /** Resolved D1 trend entry (from category-trend-cache); caller does the async lookup. */
+  trend?: CategoryTrendEntry | null;
+}
+
+export interface NameDiagnosisPlus {
+  nameScore: number; // 0-100 (diagnoseProductName)
+  nameGrade: NameGrade;
+  categoryScore: CategoryScore | null; // #249 SEO×ROI (null when category unknown)
+  trendReflected: TrendReflection;
+  weaknesses: NameWeakness[]; // fail→warn, ranked by penalty weight
+  suggestions: string[]; // top 1..3 improvements, seller language (#233)
+  caveats: string[]; // honest data limits (#231)
+  grade: NameGrade; // overall: name-centric with a small trend nudge
+}
+
+const MAX_SUGGESTIONS = 3;
+
+function parseCategoryTriple(
+  input: NameDiagnosisInput,
+): { d1: string; d2: string; d3: string } | null {
+  if (input.d1 && input.d1.trim()) {
+    return { d1: input.d1.trim(), d2: (input.d2 ?? '').trim(), d3: (input.d3 ?? '').trim() };
+  }
+  const parts = (input.categoryPath ?? '')
+    .split(/\s*[>/]\s*/)
+    .map(p => p.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return null;
+  return { d1: parts[0], d2: parts[1] ?? '', d3: parts[2] ?? '' };
+}
+
+function trendBand(score: CategoryScore | null): TrendReflection {
+  // trendScore === null means the cache is cold -> we did not actually observe
+  // a trend, so it is 'unknown' (no reward, no penalty), not 'weak'.
+  if (!score || score.detail.trendScore == null) return 'unknown';
+  const s = score.seoScore;
+  if (s >= 60) return 'strong';
+  if (s >= 30) return 'ok';
+  return 'weak';
+}
+
+/**
+ * PURE. Revival-oriented composite name diagnosis. Ranks the name's weaknesses
+ * and returns the highest-impact fixes plus the SEO×ROI trend context.
+ */
+export function computeNameDiagnosis(input: NameDiagnosisInput): NameDiagnosisPlus {
+  const base = diagnoseProductName(input.name, {
+    categoryPath: input.categoryPath,
+    keywords: input.keywords,
+    brand: input.brand,
+  });
+
+  // #249 SEO×ROI trend axis (only when we know the category).
+  const triple = parseCategoryTriple(input);
+  const categoryScore = triple
+    ? computeCategoryScore({
+        d1: triple.d1,
+        d2: triple.d2,
+        d3: triple.d3,
+        supplierPrice: input.supplierPrice,
+        trend: input.trend,
+      })
+    : null;
+  const trendReflected = trendBand(categoryScore);
+
+  // Rank the failing/weak checks by their penalty weight (heaviest first).
+  const ranked = base.checks
+    .filter(c => c.status === 'fail' || c.status === 'warn')
+    .sort((a, b) => {
+      if (a.status !== b.status) return a.status === 'fail' ? -1 : 1;
+      const wa = PENALTY[a.id]?.[a.status as 'fail' | 'warn'] ?? 0;
+      const wb = PENALTY[b.id]?.[b.status as 'fail' | 'warn'] ?? 0;
+      return wb - wa;
+    });
+
+  const weaknesses: NameWeakness[] = ranked.map(c => ({
+    id: c.id,
+    label: c.label,
+    severity: c.status as 'fail' | 'warn',
+    detail: c.detail,
+  }));
+
+  // Top improvement suggestions (#233): the strongest checks' own suggestions,
+  // plus a trend-derived one when the category search demand is weak.
+  const suggestions: string[] = [];
+  for (const c of ranked) {
+    if (c.suggestion && !suggestions.includes(c.suggestion)) {
+      suggestions.push(c.suggestion);
+      if (suggestions.length >= MAX_SUGGESTIONS) break;
+    }
+  }
+  if (suggestions.length < MAX_SUGGESTIONS && trendReflected === 'weak') {
+    suggestions.push('이 카테고리는 검색 수요가 낮은 편이에요 — 검색 상승세 세부 키워드를 상품명 앞에 넣어보세요.');
+  }
+
+  // Honest limits (#231): inherit category-score caveats, add a keyword caveat.
+  const caveats: string[] = [];
+  if (categoryScore) caveats.push(...categoryScore.caveats);
+  const hasKeywords = (input.keywords ?? []).some(k => k.trim());
+  if (!hasKeywords) {
+    caveats.push('황금키워드가 아직 없어 키워드 포함 진단은 참고용이에요 — 키워드 확보 후 정밀해져요.');
+  }
+  const dedupCaveats = [...new Set(caveats)];
+
+  // Overall grade: name-centric, nudged a little by the trend reflection.
+  const nudge = trendReflected === 'strong' ? 5 : trendReflected === 'weak' ? -5 : 0;
+  const overallScore = Math.max(0, Math.min(100, base.score + nudge));
+
+  return {
+    nameScore: base.score,
+    nameGrade: base.grade,
+    categoryScore,
+    trendReflected,
+    weaknesses,
+    suggestions,
+    caveats: dedupCaveats,
+    grade: toGrade(overallScore),
+  };
 }
