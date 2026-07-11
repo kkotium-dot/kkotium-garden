@@ -142,6 +142,7 @@ export async function GET(request: NextRequest) {
         // naverProductId for any row that predates the backfill.
         naver_status_type: true,
         origin_kind: true,
+        driftFields: true, // hub drift filter (#245) — app↔Naver out-of-sync
         shippingFee: true,
         shipping_fee_type: true,
         shipping_template_id: true,

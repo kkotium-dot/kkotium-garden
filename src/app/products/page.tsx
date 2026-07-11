@@ -56,9 +56,10 @@ interface Product {
   naverTemplateNo?: string | null;
   naver_status_type?: string | null;
   origin_kind?: string | null; // present only after Desktop applies the migration
+  driftFields?: unknown;       // app↔Naver drift (drift-scan) — hub drift filter
 }
 
-type TabKey = 'all' | 'draft' | 'ready' | 'active' | 'pending' | 'oos' | 'reactivation' | 'revival';
+type TabKey = 'all' | 'draft' | 'ready' | 'active' | 'pending' | 'oos' | 'reactivation' | 'revival' | 'lowMargin' | 'drift';
 type ViewMode = 'list' | 'group';
 type ScoredProduct = Product & {
   _hs: ReturnType<typeof calcHoneyScore>;
@@ -82,6 +83,23 @@ const isRevivalCandidate = (p: Product): boolean =>
     imageCount: imageCountOf(p),
   }).isCandidate;
 
+// Hub filter matrix (#245 §2-B). Low margin = net margin under the attention
+// band (< 10%); drift = drift-scan found app↔Naver out-of-sync fields.
+const netMarginOf = (p: Product): number =>
+  calcHoneyScore({
+    salePrice: p.salePrice, supplierPrice: p.supplierPrice,
+    categoryId: p.naverCategoryCode ?? '', productName: p.name,
+    keywords: p.keywords ?? [], tags: p.tags ?? [], hasMainImage: !!p.mainImage,
+  }).netMarginRate;
+const isLowMargin = (p: Product): boolean => netMarginOf(p) < 10;
+const hasDrift = (p: Product): boolean => {
+  const d = p.driftFields;
+  if (!d) return false;
+  if (Array.isArray(d)) return d.length > 0;
+  if (typeof d === 'object') return Object.keys(d as Record<string, unknown>).length > 0;
+  return false;
+};
+
 const TAB_CONFIG: Record<TabKey, {
   label: string; dot: string; dotLabel: string; filter: (p: Product) => boolean;
 }> = {
@@ -96,6 +114,8 @@ const TAB_CONFIG: Record<TabKey, {
   oos:          { label: '품절',          dot: 'bg-[#F63B28]',  dotLabel: '품절',          filter: p => p.status === 'OUT_OF_STOCK' },
   reactivation: { label: '재활성화 필요', dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
   revival:      { label: '부활 후보',     dot: 'bg-purple-500', dotLabel: '부활 후보',     filter: isRevivalCandidate },
+  lowMargin:    { label: '마진 낮음',     dot: 'bg-rose-500',   dotLabel: '마진 낮음',     filter: isLowMargin },
+  drift:        { label: '동기화 필요',   dot: 'bg-yellow-500', dotLabel: '동기화 필요',   filter: hasDrift },
 };
 
 // SEED-SAVE C-4 — status segments for the default warehouse view. Order makes the
@@ -179,7 +199,7 @@ function chip(text: string, fg: string, bg: string, bd: string, key: string) {
     }}>{text}</span>
   );
 }
-function HubBadges({ p }: { p: ScoredProduct }) {
+function HubBadges({ p, rd }: { p: ScoredProduct; rd?: { ready: boolean; passed: number; total: number } }) {
   const o = ORIGIN_BADGE[p._origin];
   const registered = !!p.naverProductId;
   const st = p.naver_status_type ?? null;
@@ -190,10 +210,17 @@ function HubBadges({ p }: { p: ScoredProduct }) {
     : live
       ? { t: NAVER_STATUS_KO[st!] ?? '판매중', fg: '#15803d', bg: '#F0FDF4', bd: '#bbf7d0' }
       : { t: st ? (NAVER_STATUS_KO[st] ?? st) : '등록됨', fg: '#b91c1c', bg: '#FEF2F2', bd: '#fecaca' };
+  // 발행준비 X/8 — green when the gate passes (ready), amber while items remain.
+  const readyChip = rd
+    ? rd.ready
+      ? { t: `발행 ${rd.passed}/${rd.total}`, fg: '#15803d', bg: '#F0FDF4', bd: '#bbf7d0' }
+      : { t: `발행 ${rd.passed}/${rd.total}`, fg: '#b45309', bg: '#FFFBEB', bd: '#fde68a' }
+    : null;
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4, marginTop: 3 }}>
       {chip(o.t, o.fg, o.bg, o.bd, 'origin')}
       {chip(regChip.t, regChip.fg, regChip.bg, regChip.bd, 'reg')}
+      {readyChip && chip(readyChip.t, readyChip.fg, readyChip.bg, readyChip.bd, 'ready')}
       {p._rev.isCandidate && chip(`부활 ${p._rev.grade}`, '#7e22ce', '#FAF5FF', '#e9d5ff', 'rev')}
     </div>
   );
@@ -871,6 +898,8 @@ function ProductsPageInner() {
   const [supplierFilter, setSupplierFilter]   = useState<string>(() => searchParams?.get('supplier') ?? '');
   const [selected, setSelected]               = useState<Set<string>>(new Set());
   const [sideProduct, setSide]                = useState<ScoredProduct | null>(null);
+  // Per-row 발행준비 X/8 (#245) — batched from the same getPublishReadiness gate.
+  const [readinessMap, setReadinessMap] = useState<Record<string, { ready: boolean; passed: number; total: number }>>({});
   const [viewMode, setViewMode]               = useState<ViewMode>('list');
   const [showUploadReady, setShowUploadReady] = useState(false);
   const [expandedGroups, setExpandedGroups]   = useState<Set<string>>(new Set());
@@ -884,6 +913,21 @@ function ProductsPageInner() {
   const [naverMismatches, setNaverMismatches] = useState<Record<string, string>>({});
   // Inline quick-edit state: { id, field, value }
   const [inlineEdit, setInlineEdit] = useState<{ id: string; field: 'salePrice' | 'supplierPrice'; value: string } | null>(null);
+
+  // Batch 발행준비 X/8 for the hub (#245) — one fetch, mapped by product id.
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/products/publish-readiness-batch')
+      .then(r => r.json())
+      .then(d => {
+        if (!alive || !d?.success || !Array.isArray(d.items)) return;
+        const m: Record<string, { ready: boolean; passed: number; total: number }> = {};
+        for (const it of d.items) m[it.id] = { ready: it.ready, passed: it.passed, total: it.total };
+        setReadinessMap(m);
+      })
+      .catch(() => { /* non-critical — the X/8 badge just won't show */ });
+    return () => { alive = false; };
+  }, [rawProducts]);
 
   // Fire Excel download once after readiness check is confirmed
   useEffect(() => {
@@ -1096,7 +1140,7 @@ function ProductsPageInner() {
               <p className="text-xs font-mono truncate" style={{ color: '#B0A0A8', minWidth: 0 }}>{p.sku}</p>
               {inventoryByProductId[p.id] && <InventoryBadge inv={inventoryByProductId[p.id]} />}
             </div>
-            <HubBadges p={p} />
+            <HubBadges p={p} rd={readinessMap[p.id]} />
             {naverMismatches[p.id] && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#F63B28', background: '#fff1f1', border: '1px solid #fca5a5', borderRadius: 6, padding: '1px 6px', marginTop: 2 }}>
                 <AlertTriangle size={9} /> {naverMismatches[p.id]}
