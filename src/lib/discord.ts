@@ -30,7 +30,7 @@ const KKOTTI_AVATAR =
 export function getSeasonContext(): { label: string; daysLeft: number; words: string[] } | null {
   const now = new Date();
   const EVENTS = [
-    { month: 2,  day: 14, label: '\uBC1C\uB80C\uD0C0\uC778\uB370\uC774',  words: ['\uC8FC\uCF5C\uB9BF', '\uBC1C\uB80C\uD0C0\uC778', '\uC120\uBB3C', '\uD3EC\uC7A5'] },
+    { month: 2,  day: 14, label: '\uBC1C\uB80C\uD0C0\uC778\uB370\uC774',  words: ['\uCD08\uCF5C\uB9BF', '\uBC1C\uB80C\uD0C0\uC778', '\uC120\uBB3C', '\uD3EC\uC7A5'] },
     { month: 3,  day: 14, label: '\uD654\uC774\uD2B8\uB370\uC774',        words: ['\uC0AC\uD0D5', '\uD654\uC774\uD2B8', '\uC120\uBB3C', '\uD3EC\uC7A5'] },
     { month: 5,  day: 5,  label: '\uC5B4\uB9B0\uC774\uB0A0',               words: ['\uC7A5\uB09C\uAC10', '\uC5B4\uB9B0\uC774', '\uC120\uBB3C', '\uB180\uC774'] },
     { month: 5,  day: 8,  label: '\uC5B4\uBC84\uC774\uB0A0',               words: ['\uCE74\uB124\uC774\uC158', '\uC120\uBB3C', '\uBD80\uBAA8\uB2D8'] },
@@ -65,7 +65,7 @@ export async function sendDiscord(
 
   try {
     const body: Record<string, unknown> = {
-      username:   '\uAF2C\uB6F2',
+      username:   '\uAF2C\uB760',
       avatar_url: KKOTTI_AVATAR,
     };
     if (embeds && embeds.length > 0) body.embeds = embeds;

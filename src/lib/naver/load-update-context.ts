@@ -28,7 +28,7 @@ import {
 
 // Store-name fallback (escaped so no Hangul literal sits in code). Mirrors the
 // register/update store default (the KKOTIUM store brand).
-const DEFAULT_STORE_NAME = '\uAF43\uD2F4\uC6C0';
+const DEFAULT_STORE_NAME = '\uAF43\uD2D4\uC6C0';
 const DEFAULT_NOTICE_TOP_IMAGE_URL: string | null = null;
 const DEFAULT_NOTICE_BOTTOM_IMAGE_URL: string | null = null;
 

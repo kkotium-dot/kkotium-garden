@@ -330,7 +330,7 @@ export function buildCompetitionAlertEmbed(alerts: PriceChangeAlert[]): Record<s
     description: '\uACBD\uC7C1 \uC0C1\uD488\uC758 \uAC00\uACA9\uC774 \uD06C\uAC8C \uBCC0\uB3D9\uB418\uC5C8\uC5B4\uC694!',
     color: 0xf59e0b,
     fields,
-    footer: { text: '\uAF43\uD2F0\uC6C0 \uAC00\uB4E0 \u00B7 \uACBD\uC7C1\uBAA8\uB2C8\uD130' },
+    footer: { text: '\uAF43\uD2D4\uC6C0 \uAC00\uB4E0 \u00B7 \uACBD\uC7C1\uBAA8\uB2C8\uD130' },
     timestamp: new Date().toISOString(),
   };
 }
