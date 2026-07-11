@@ -368,6 +368,12 @@
         "penaltyLink": "최신 기준은 스토어센터에서 확인",
         "storeCenterUrl": "https://sell.smartstore.naver.com/"
       }
+    },
+    "readinessSummary": {
+      "ready": "준비완료 {count}",
+      "blocked": "발행 대기 {count}",
+      "readyHint": "지금 발행할 수 있는 상품",
+      "blockedHint": "아직 준비가 필요한 상품"
     }
   }
 }

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Sparkles, Package, Loader2, CheckCircle } from 'lucide-react';
 import GeneratedAssetLocations from '@/components/products/GeneratedAssetLocations';
+import PublishReadinessCard from '@/components/products/PublishReadinessCard';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -90,6 +91,8 @@ export default function ProductDetailPage() {
         </div>
 
         <div className="space-y-6">
+          <PublishReadinessCard productId={product.id} />
+
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">가격 정보</h2>
             <div className="space-y-2">

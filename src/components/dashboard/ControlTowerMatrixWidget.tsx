@@ -1248,6 +1248,12 @@ export default function ControlTowerMatrixWidget() {
 
   const hasBlocked = rows.some((r) => r.overall === 'risk');
 
+  // Publish-readiness aggregate (spec §2-B-2, #240) — over not-yet-registered
+  // products: ready = canRegister now, blocked = still being prepared.
+  const readyCount = rows.filter((r) => !r.publish.registered && r.publish.canRegister).length;
+  const blockedCount = rows.filter((r) => !r.publish.registered && !r.publish.canRegister).length;
+  const rs = m.readinessSummary;
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between">
@@ -1265,6 +1271,28 @@ export default function ControlTowerMatrixWidget() {
             ? m.wip.over.replace('{count}', String(wip.count)).replace('{limit}', String(wip.limit))
             : m.wip.ok.replace('{count}', String(wip.count))}
         </span>
+      </div>
+
+      {/* Publish-readiness summary (#240) — click filters the product list. */}
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <a
+          href="/products?tab=ready"
+          title={rs.readyHint}
+          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold hover:opacity-80"
+          style={{ backgroundColor: 'var(--m-mint-bg)', border: '1px solid var(--m-mint-fg)', color: 'var(--m-mint-tx)' }}
+        >
+          <CheckCircle2 size={12} />
+          {rs.ready.replace('{count}', String(readyCount))}
+        </a>
+        <a
+          href="/products?tab=draft"
+          title={rs.blockedHint}
+          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold hover:opacity-80"
+          style={{ backgroundColor: 'var(--m-amber-bg)', border: '1px solid var(--m-amber-fg)', color: 'var(--m-amber-tx)' }}
+        >
+          <Clock size={12} />
+          {rs.blocked.replace('{count}', String(blockedCount))}
+        </a>
       </div>
 
       {hasBlocked && (

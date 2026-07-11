@@ -799,7 +799,11 @@ function ProductsPageInner() {
   // Stable empty-array fallback so downstream useMemo dependencies do not
   // re-fire on every render while the SWR fetch is in flight.
   const raw = useMemo<Product[]>(() => rawProducts ?? [], [rawProducts]);
-  const [tab, setTab]                         = useState<TabKey>('all');
+  // tab: pre-populated from ?tab= URL param (control-tower readiness summary deep-link)
+  const [tab, setTab]                         = useState<TabKey>(() => {
+    const t = searchParams?.get('tab');
+    return t && Object.prototype.hasOwnProperty.call(TAB_CONFIG, t) ? (t as TabKey) : 'all';
+  });
   const [search, setSearch]                   = useState('');
   // supplierFilter: pre-populated from ?supplier= URL param (거래처 명단 연결)
   const [supplierFilter, setSupplierFilter]   = useState<string>(() => searchParams?.get('supplier') ?? '');
