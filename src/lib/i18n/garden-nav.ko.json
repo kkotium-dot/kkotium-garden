@@ -45,52 +45,60 @@
       "label": "상품",
       "items": [
         {
-          "key": "crawl",
+          "key": "honey-warehouse",
           "href": "/crawl",
-          "ko": "상품 소싱",
-          "sub": "꿀통 꽃나들이",
-          "en": "Sourcing",
+          "ko": "꿀통 창고",
+          "sub": "소싱 · 작성중",
+          "en": "Honey Warehouse",
           "icon": "layers",
-          "badgeKey": "sourcing"
+          "children": [
+            {
+              "key": "crawl-tab",
+              "href": "/crawl",
+              "ko": "크롤링",
+              "en": "Crawl",
+              "icon": "layers"
+            },
+            {
+              "key": "draft-tab",
+              "href": "/products?tab=draft",
+              "ko": "작성중",
+              "en": "Draft",
+              "icon": "shoppingbag"
+            }
+          ]
         },
         {
           "key": "make",
           "href": "/products/new",
-          "ko": "상품 만들기",
-          "sub": "등록 · 디자인 · 창고 · 연동",
-          "en": "Make",
+          "ko": "온실아틀리에",
+          "sub": "등록 · 디자인",
+          "en": "Atelier",
           "icon": "packageplus",
-          "badgeKey": "draft",
           "children": [
             {
               "key": "sow",
               "href": "/products/new",
-              "ko": "상품 등록",
+              "ko": "씨앗 심기",
               "en": "Register",
               "icon": "packageplus"
             },
             {
               "key": "studio",
               "href": "/studio",
-              "ko": "상세 디자인",
+              "ko": "꽃단장 작업실",
               "en": "Design",
               "icon": "palette"
-            },
-            {
-              "key": "products",
-              "href": "/products",
-              "ko": "상품 창고",
-              "en": "Warehouse",
-              "icon": "shoppingbag"
-            },
-            {
-              "key": "product-link",
-              "href": "/products/link",
-              "ko": "상품 연동",
-              "en": "Link",
-              "icon": "link2"
             }
           ]
+        },
+        {
+          "key": "garden-care",
+          "href": "/products/link",
+          "ko": "꽃밭 돌보기",
+          "sub": "연동 · 부활",
+          "en": "Garden Care",
+          "icon": "link2"
         },
         {
           "key": "naver-seo",

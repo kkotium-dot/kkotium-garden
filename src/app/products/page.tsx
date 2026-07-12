@@ -102,14 +102,21 @@ const TAB_CONFIG: Record<TabKey, {
   all:          { label: '전체',          dot: 'bg-gray-400',   dotLabel: '',              filter: () => true },
   draft:        { label: '작성중',        dot: 'bg-gray-300',   dotLabel: '작성중',        filter: p => p.status === 'DRAFT' },
   ready:        { label: '발행대기',      dot: 'bg-green-500',  dotLabel: '발행대기',      filter: p => p.status === 'READY' },
-  active:       { label: '네이버 판매중', dot: 'bg-green-600',  dotLabel: '네이버 판매중', filter: p => p.status === 'ACTIVE' && !!p.naverProductId },
+  active:       { label: '판매중',        dot: 'bg-green-600',  dotLabel: '네이버 판매중', filter: p => p.status === 'ACTIVE' && !!p.naverProductId },
   pending:      { label: '네이버 등록 대기',     dot: 'bg-amber-400',  dotLabel: '네이버 등록 대기', filter: p => p.status === 'ACTIVE' && !p.naverProductId },
   oos:          { label: '품절',          dot: 'bg-[#F63B28]',  dotLabel: '품절',          filter: p => p.status === 'OUT_OF_STOCK' },
-  reactivation: { label: '재활성화 필요', dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
-  revival:      { label: '부활 후보',     dot: 'bg-purple-500', dotLabel: '부활 후보',     filter: isRevivalCandidate },
+  reactivation: { label: '판매중지',      dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
+  revival:      { label: '좀비발견',      dot: 'bg-purple-500', dotLabel: '부활 후보',     filter: isRevivalCandidate },
   lowMargin:    { label: '마진 낮음',     dot: 'bg-rose-500',   dotLabel: '마진 낮음',     filter: isLowMargin },
   drift:        { label: '동기화 필요',   dot: 'bg-yellow-500', dotLabel: '동기화 필요',   filter: hasDrift },
 };
+
+// 정원창고 필터 밀도 완화(2026-07-13 P1·PRODUCT_IA_REDESIGN_V2) — 10개 버튼을
+// 판매중/판매중지/좀비발견 3개 상시탭 + 나머지는 "더보기" 드롭다운으로 이동.
+const PRIMARY_TAB_KEYS: TabKey[] = ['active', 'reactivation', 'revival'];
+const MORE_TAB_KEYS: TabKey[] = (Object.keys(TAB_CONFIG) as TabKey[]).filter(
+  k => !PRIMARY_TAB_KEYS.includes(k),
+);
 
 // SEED-SAVE C-4 — status segments for the default warehouse view. Order makes the
 // authoring lifecycle legible: 작성중 → 발행대기 → 발행됨 → 품절 → 재활성화. 발행됨
@@ -1015,6 +1022,7 @@ function ProductsPageInner() {
   const [viewMode, setViewMode]               = useState<ViewMode>('list');
   const [showUploadReady, setShowUploadReady] = useState(false);
   const [expandedGroups, setExpandedGroups]   = useState<Set<string>>(new Set());
+  const [showMoreFilters, setShowMoreFilters]       = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showReadinessModal, setShowReadinessModal] = useState(false);
   const [excelPending, setExcelPending]             = useState(false);
@@ -1580,22 +1588,69 @@ function ProductsPageInner() {
             6-tab pill and search input get full width each; tab pill scrolls
             horizontally on overflow. Desktop (lg+) wraps as before. */}
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3 lg:flex-wrap">
-          <div className="flex rounded-xl overflow-x-auto w-full lg:w-auto lg:overflow-hidden shrink-0" style={{ background: '#fff', border: '1.5px solid #F8DCE5' }}>
-            {(Object.keys(TAB_CONFIG) as TabKey[]).map(k => (
-              <button key={k} onClick={() => { setTab(k); setSelected(new Set()); }}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors whitespace-nowrap"
-                style={{ background: tab === k ? '#F63B28' : 'transparent', color: tab === k ? '#fff' : '#6B6B6B' }}>
-                {tab === k
-                  ? <span className="w-1.5 h-1.5 rounded-full bg-white opacity-90" />
-                  : <span className={`w-1.5 h-1.5 rounded-full ${TAB_CONFIG[k].dot}`} />
-                }
-                {TAB_CONFIG[k].label}
-                <span className="ml-0.5 px-1 rounded-md text-[10px] font-bold"
-                  style={{ background: tab === k ? 'rgba(255,255,255,0.9)' : '#F8DCE5', color: '#F63B28' }}>
-                  {counts[k]}
-                </span>
+          <div className="flex items-center gap-2 w-full lg:w-auto shrink-0">
+            <div className="flex rounded-xl overflow-x-auto lg:overflow-hidden" style={{ background: '#fff', border: '1.5px solid #F8DCE5' }}>
+              {PRIMARY_TAB_KEYS.map(k => (
+                <button key={k} onClick={() => { setTab(k); setSelected(new Set()); }}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors whitespace-nowrap"
+                  style={{ background: tab === k ? '#F63B28' : 'transparent', color: tab === k ? '#fff' : '#6B6B6B' }}>
+                  {tab === k
+                    ? <span className="w-1.5 h-1.5 rounded-full bg-white opacity-90" />
+                    : <span className={`w-1.5 h-1.5 rounded-full ${TAB_CONFIG[k].dot}`} />
+                  }
+                  {TAB_CONFIG[k].label}
+                  <span className="ml-0.5 px-1 rounded-md text-[10px] font-bold"
+                    style={{ background: tab === k ? 'rgba(255,255,255,0.9)' : '#F8DCE5', color: '#F63B28' }}>
+                    {counts[k]}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* 더보기 드롭다운 — 나머지 7개 필터(전체/작성중/발행대기/네이버 등록
+                대기/품절/마진 낮음/동기화 필요)를 여기 수렴 (#256 밀도 완화). */}
+            <div className="relative">
+              <button type="button" onClick={() => setShowMoreFilters(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap"
+                style={{
+                  background: MORE_TAB_KEYS.includes(tab) ? '#F63B28' : '#fff',
+                  color: MORE_TAB_KEYS.includes(tab) ? '#fff' : '#6B6B6B',
+                  border: '1.5px solid', borderColor: MORE_TAB_KEYS.includes(tab) ? '#F63B28' : '#F8DCE5',
+                }}>
+                {MORE_TAB_KEYS.includes(tab) ? TAB_CONFIG[tab].label : '더보기'}
+                {MORE_TAB_KEYS.includes(tab) && (
+                  <span className="px-1 rounded-md text-[10px] font-bold" style={{ background: 'rgba(255,255,255,0.9)', color: '#F63B28' }}>
+                    {counts[tab]}
+                  </span>
+                )}
+                <ChevronDown size={12} />
               </button>
-            ))}
+              {showMoreFilters && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowMoreFilters(false)} />
+                  <div className="absolute z-50" style={{
+                    top: '110%', left: 0, minWidth: 180,
+                    background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 12,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden',
+                  }}>
+                    {MORE_TAB_KEYS.map(k => (
+                      <button key={k} type="button"
+                        onClick={() => { setTab(k); setSelected(new Set()); setShowMoreFilters(false); }}
+                        className="w-full flex items-center justify-between gap-3 px-3 py-2 text-xs font-semibold transition hover:bg-pink-50"
+                        style={{ color: tab === k ? '#F63B28' : '#3A3A3A', background: tab === k ? '#FFF0F5' : 'transparent' }}>
+                        <span className="flex items-center gap-1.5">
+                          <span className={`w-1.5 h-1.5 rounded-full ${TAB_CONFIG[k].dot}`} />
+                          {TAB_CONFIG[k].label}
+                        </span>
+                        <span className="px-1 rounded-md text-[10px] font-bold" style={{ background: '#F8DCE5', color: '#F63B28' }}>
+                          {counts[k]}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Phase 2-MOBILE-3 M3: full-width on mobile, fixed cap on desktop. */}
