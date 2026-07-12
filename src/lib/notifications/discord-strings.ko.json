@@ -140,6 +140,10 @@
     "zombie_title": "좀비 상품 {n}건 — 30일+ 무판매",
     "zombie_action": "정리하거나 부활 결정을 내려주세요.",
     "zombie_kkotti": "이 아이들, 손 좀 봐줘유. 정리하든 살리든 결정이 필요해유 🥀",
+    "zombieDetected_title": "좀비 출현! {name}",
+    "zombieDetected_action": "{reason} · 지금 부활 시 마진 {margin}%",
+    "zombieDetected_kkotti": "지금 손보면 아직 살릴 수 있어유! 수정 바로가기로 가봐유 🧟",
+    "zombieDetected_editLabel": "수정 바로가기",
     "margin_title": "마진 경고 {n}건 — 수익이 위험해요",
     "margin_action": "공급가·판매가를 조정하거나 대체 상품을 찾으세요.",
     "margin_kkotti": "이대로면 손해예유! 얼른 값을 손봐줘유 💰"

@@ -15,12 +15,13 @@ import {
   buildPublishReadyAlert,
   buildRevivalAlert,
   buildZombieAlert,
+  buildZombieDetectedAlert,
   buildMarginWarnAlert,
   getSeasonContext,
   GRADE_EMOJI,
 } from '@/lib/discord';
 import { computeRevivalScore, revivalSignalsFromProduct } from '@/lib/products/revival-score';
-import { getReactivationReason } from '@/lib/daily-slots';
+import { loadTuningScores } from '@/lib/products/tuning-signals';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 import { resolveRecoTypeTags } from '@/lib/naver/reco-type-resolver';
 import { fetchNaverTrends, matchProductsToTrends } from '@/lib/trend-analyzer';
@@ -277,7 +278,14 @@ export async function GET(req: NextRequest) {
       const publishReady: string[] = [];
       const revival: string[] = [];
       const zombie: string[] = [];
+      const zombieDetected: { name: string; productId: string; marginPct: number; reason: string }[] = [];
       const marginWarn: { name: string; margin: number }[] = [];
+
+      // 튜닝 필요도 지수 (#256 P4) — 좀비 판정을 getReactivationReason의
+      // long_inactive 단일 신호에서 품절+실적/마진위기/성장여력/악성재고 복합
+      // 지수로 교체(#252 재사용: revival-score/honey-score/name-diagnosis/
+      // category-trend-cache/SupplierStockProfile 배치 로더).
+      const tuningMap = await loadTuningScores(products);
 
       for (const p of products) {
         // 발행 준비 완료: passes every upload-readiness check AND not yet live on Naver.
@@ -304,13 +312,15 @@ export async function GET(req: NextRequest) {
         }));
         if (rev.grade === 'S' || rev.grade === 'A') revival.push(p.name);
 
-        const reason = getReactivationReason({
-          ...p,
-          createdAt: p.createdAt ? new Date(p.createdAt) : undefined,
-          lastSaleDate: p.lastSaleDate ? new Date(p.lastSaleDate) : undefined,
-          updatedAt: p.updatedAt ? new Date(p.updatedAt) : undefined,
-        } as Parameters<typeof getReactivationReason>[0]);
-        if (reason?.reason === 'long_inactive') zombie.push(p.name);
+        const tuning = tuningMap.get(p.id);
+        if (tuning?.isZombie) {
+          zombie.push(p.name);
+          zombieDetected.push({
+            name: p.name, productId: p.id,
+            marginPct: p.salePrice > 0 && p.supplierPrice > 0 ? scoreProduct(p).netMarginRate : 0,
+            reason: tuning.zombieReason ?? '튜닝 필요',
+          });
+        }
 
         // 마진 경고 (임계 이하: 순마진 < 20%, honey-score 위험 기준).
         if (p.salePrice > 0 && p.supplierPrice > 0) {
@@ -331,6 +341,12 @@ export async function GET(req: NextRequest) {
       if (zombie.length > 0) {
         const r = await sendDiscord('KKOTTI_SCORE', '', [buildZombieAlert(zombie)]);
         opsDigest.zombie = { sent: r.ok, count: zombie.length };
+      }
+      // #256 P4-4 — 좀비 감지 실시간 알림(근거+마진+수정 바로가기), 상위 5건.
+      if (zombieDetected.length > 0) {
+        const top = zombieDetected.slice(0, 5);
+        const r = await sendDiscord('KKOTTI_SCORE', '', top.map(buildZombieDetectedAlert));
+        opsDigest.zombieDetected = { sent: r.ok, count: zombieDetected.length, notified: top.length };
       }
       if (marginWarn.length > 0) {
         const r = await sendDiscord('PRICE_CHANGE', '', [buildMarginWarnAlert(marginWarn)]);

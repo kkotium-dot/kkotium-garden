@@ -26,5 +26,13 @@
   "check3": "대표이미지를 크게 바꾸지 않았나요?",
   "check4": "동급·상위호환인가요?",
   "checkWarn": "미확인 항목이 있으면 순위 리셋·상품 불일치 신고 위험이 있습니다",
-  "checkOk": "전환 준비 확인 완료"
+  "checkOk": "전환 준비 확인 완료",
+  "oosBanner": "재고 0 — 지금 대체상품을 지정해 기회손실을 줄이세요",
+  "pickAppProduct": "앱 상품에서 선택",
+  "pickAppProductPlaceholder": "상품명 검색 (2글자 이상)",
+  "pickCategoryRecommend": "카테고리 자동 추천",
+  "pickCategoryEmpty": "같은 카테고리에 추천할 상품이 없어요",
+  "pickSearchEmpty": "검색 결과가 없어요",
+  "pickSelected": "선택됨",
+  "pickClear": "선택 해제"
 }

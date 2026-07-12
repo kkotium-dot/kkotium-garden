@@ -14,7 +14,7 @@ import Link from 'next/link';
 import {
   Link2, Store, Hash, X, Loader2, CheckCircle2, AlertTriangle,
   ChevronRight, ChevronLeft, RefreshCw, PackageX, RotateCcw, ShieldAlert, Radar,
-  ArrowUpDown, Check, Search, Edit2,
+  ArrowUpDown, Check, Search, Edit2, Skull,
 } from 'lucide-react';
 import strings from './strings.ko.json';
 import SubstituteEditor from '@/components/products/SubstituteEditor';
@@ -31,12 +31,18 @@ interface LinkedRow {
   channelProductNo: string | null;
   representativeImageUrl: string | null;
   statusType: string;
+  isLive: boolean;
   source: 'NATIVE' | 'IMPORTED';
   linkStatus: string;
   syncState: 'SYNCED' | 'PENDING' | 'CONFLICT' | 'FAILED' | 'DRIFT' | 'UNKNOWN';
   driftFields: string[];
   lastSyncedAt: string | null;
   hasSubstitute?: boolean;
+  // 튜닝 필요도 지수 (#256 P4)
+  tuningScore: number | null;
+  tuningTier: 'grow' | 'defend' | 'demote' | null;
+  isZombie: boolean;
+  zombieReason: string | null;
 }
 interface SearchRow {
   channelProductNo: string | null;
@@ -49,7 +55,9 @@ interface SearchRow {
   modifiedDate: string | null;
   alreadyLinked: boolean;
 }
-type Filter = 'all' | 'native' | 'imported' | 'conflict' | 'drift';
+// #256 P4-3 — 판매중/판매중지/좀비발견 3버킷으로 정리(구 native/imported/
+// conflict/drift 필터 은퇴, 소스/동기화 배지는 컬럼으로만 유지).
+type Filter = 'all' | 'active' | 'suspended' | 'zombie';
 
 // PL-5a — app-SoR fields the drift-scan may flag (statusType handled separately).
 const APP_SOR_FIELDS = new Set(['name', 'salePrice', 'representativeImageUrl']);
@@ -125,6 +133,33 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span style={{ fontSize: 11, fontWeight: 700, color: c.color, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 6, padding: '2px 7px', whiteSpace: 'nowrap' }}>
       {statusLabel(status)}
+    </span>
+  );
+}
+
+// 튜닝 필요도 지수 (#256 P4) — 관리방향 배지(키울/방어/내릴) + 좀비 배지.
+// 연동 목록에서 "이 상품 지금 어떻게 다뤄야 하나"를 한눈에 보여준다.
+const TIER_TONE: Record<'grow' | 'defend' | 'demote', { color: string; bg: string; border: string }> = {
+  grow: { color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
+  defend: { color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+  demote: { color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+};
+function TuningTierBadge({ tier }: { tier: 'grow' | 'defend' | 'demote' | null }) {
+  if (!tier) return <span style={{ fontSize: 11, color: '#d1d5db' }}>—</span>;
+  const t = strings.tuning as Record<string, string>;
+  const label = tier === 'grow' ? t.tierGrow : tier === 'defend' ? t.tierDefend : t.tierDemote;
+  const c = TIER_TONE[tier];
+  return (
+    <span style={{ fontSize: 11, fontWeight: 700, color: c.color, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 6, padding: '2px 7px', whiteSpace: 'nowrap' }}>
+      {label}
+    </span>
+  );
+}
+function ZombieBadge({ reason }: { reason: string | null }) {
+  if (!reason) return null;
+  return (
+    <span title={reason} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 800, color: '#fff', background: '#dc2626', borderRadius: 99, padding: '2px 7px', whiteSpace: 'nowrap' }}>
+      <Skull size={10} />{(strings.tuning as Record<string, string>).zombieBadge}
     </span>
   );
 }
@@ -362,7 +397,17 @@ interface NaverDetailApp {
   name: string; salePrice: number; supplierPrice: number; categoryPath: string | null;
   shippingTemplateName: string | null; shippingFee: number; shippingType: number | null;
 }
-interface NaverDetail { linked: boolean; app: NaverDetailApp; naver: NaverDetailNaver | null; }
+// 튜닝 필요도 지수 (#256 P4) — tuning-score.ts의 TuningScoreResult 미러(경량, 이
+// 파일은 서버 타입을 직접 import하지 않는 클라이언트 파일이라 shape만 맞춘다).
+interface TuningScoreView {
+  score: number;
+  tier: 'grow' | 'defend' | 'demote';
+  isZombie: boolean;
+  zombieReason: string | null;
+  reasons: string[];
+  caveat: string;
+}
+interface NaverDetail { linked: boolean; app: NaverDetailApp; naver: NaverDetailNaver | null; tuning: TuningScoreView | null; }
 
 // P2 — 인라인 정보 화면 (연동 상품은 네이버 중요 정보 최대 표시). 답답하지 않게
 // 큰 썸네일 + 섹션 구분(네이버/앱)으로 배치, 하단에 [수정] 바로가기.
@@ -403,11 +448,37 @@ function InfoTab({ product }: { product: LinkedRow }) {
               <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 800, color: '#111827', lineHeight: 1.35 }}>{product.name}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <StatusBadge status={product.statusType} />
+                <TuningTierBadge tier={data.tuning?.tier ?? null} />
                 <SourceBadge source={product.source} />
                 <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{won(product.salePrice)}</span>
               </div>
             </div>
           </div>
+
+          {/* 튜닝 필요도 지수 (#256 P4) — 좀비 감지 시 "왜 좀비인지" 한 줄 + 근거. */}
+          {data.tuning && (
+            <div style={{
+              marginBottom: 16, padding: '10px 12px', borderRadius: 10,
+              background: data.tuning.isZombie ? '#fef2f2' : '#f9fafb',
+              border: `1px solid ${data.tuning.isZombie ? '#fecaca' : '#e5e7eb'}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: data.tuning.reasons.length > 0 ? 6 : 0 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: data.tuning.isZombie ? '#991b1b' : '#374151' }}>
+                  {data.tuning.isZombie && <Skull size={13} />}
+                  {strings.tuning.title} {data.tuning.score}
+                </span>
+              </div>
+              {data.tuning.isZombie && data.tuning.zombieReason && (
+                <p style={{ margin: '0 0 6px', fontSize: 12.5, fontWeight: 700, color: '#991b1b' }}>{data.tuning.zombieReason}</p>
+              )}
+              {data.tuning.reasons.length > 0 && (
+                <ul style={{ margin: '0 0 6px', paddingLeft: 16, fontSize: 11.5, color: '#6b7280' }}>
+                  {data.tuning.reasons.map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+              )}
+              <p style={{ margin: 0, fontSize: 10, color: '#9ca3af' }}>{data.tuning.caveat}</p>
+            </div>
+          )}
 
           {data.naver ? (
             <>
@@ -622,7 +693,10 @@ function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => vo
         )}
 
         {/* ── 품절대체 (SubstituteEditor + 전환 전 체크리스트) ── */}
-        {tab === 'substitute' && <SubstituteEditor productId={product.id} />}
+        {tab === 'substitute' && (
+          <SubstituteEditor productId={product.id}
+            isOutOfStock={product.statusType === 'OUTOFSTOCK' || product.statusType === 'OUT_OF_STOCK'} />
+        )}
       </div>
     </div>
   );
@@ -631,7 +705,7 @@ function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => vo
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ProductLinkPage() {
   const [rows, setRows] = useState<LinkedRow[]>([]);
-  const [counts, setCounts] = useState({ all: 0, native: 0, imported: 0, conflict: 0, drift: 0 });
+  const [counts, setCounts] = useState({ all: 0, active: 0, suspended: 0, zombie: 0, drift: 0 });
   const [filter, setFilter] = useState<Filter>('all');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -736,9 +810,9 @@ export default function ProductLinkPage() {
 
   const FILTERS: Array<{ key: Filter; label: string; n: number }> = [
     { key: 'all', label: strings.zone2.filterAll, n: counts.all },
-    { key: 'native', label: strings.zone2.filterNative, n: counts.native },
-    { key: 'imported', label: strings.zone2.filterImported, n: counts.imported },
-    { key: 'drift', label: strings.sync.filterDrift, n: counts.drift },
+    { key: 'active', label: strings.zone2.filterActive, n: counts.active },
+    { key: 'suspended', label: strings.zone2.filterSuspended, n: counts.suspended },
+    { key: 'zombie', label: strings.zone2.filterZombie, n: counts.zombie },
   ];
 
   return (
@@ -844,6 +918,7 @@ export default function ProductLinkPage() {
                   <th style={{ padding: '10px 14px', fontWeight: 800 }}>{strings.zone2.colName}</th>
                   <th style={{ padding: '10px 14px', fontWeight: 800 }}>{strings.zone2.colPrice}</th>
                   <th style={{ padding: '10px 14px', fontWeight: 800 }}>{strings.zone2.colStatus}</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 800 }}>{strings.zone2.colTuning}</th>
                   <th style={{ padding: '10px 14px', fontWeight: 800 }}>{strings.zone2.colSource}</th>
                   <th style={{ padding: '10px 14px', fontWeight: 800 }}>{strings.zone2.colSync}</th>
                   <th style={{ padding: '10px 14px', fontWeight: 800 }}>{strings.zone2.colLastSync}</th>
@@ -859,10 +934,12 @@ export default function ProductLinkPage() {
                           ? <img src={r.representativeImageUrl} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                           : <div style={{ width: 36, height: 36, borderRadius: 8, background: '#f3f4f6', flexShrink: 0 }} />}
                         <span style={{ fontSize: 13, fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+                        {r.isZombie && <ZombieBadge reason={r.zombieReason} />}
                       </div>
                     </td>
                     <td style={{ padding: '10px 14px', fontSize: 13, color: '#111827', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{won(r.salePrice)}</td>
                     <td style={{ padding: '10px 14px' }}><StatusBadge status={r.statusType} /></td>
+                    <td style={{ padding: '10px 14px' }}><TuningTierBadge tier={r.tuningTier} /></td>
                     <td style={{ padding: '10px 14px' }}><SourceBadge source={r.source} /></td>
                     <td style={{ padding: '10px 14px' }}><SyncChip state={r.syncState} driftFields={r.driftFields} /></td>
                     <td style={{ padding: '10px 14px', fontSize: 12, color: '#9ca3af', whiteSpace: 'nowrap' }}>{relTime(r.lastSyncedAt)}</td>

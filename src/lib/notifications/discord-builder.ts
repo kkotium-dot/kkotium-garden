@@ -157,6 +157,23 @@ export function buildZombieAlert(names: string[]): DiscordEmbed {
   });
 }
 
+/**
+ * 좀비 감지(#256 P4-4, 튜닝 필요도 지수) → KKOTTI_SCORE (red realtime), 상품별
+ * 개별 임베드. buildZombieAlert(디지스트 이름 목록)와 달리 근거+마진+수정
+ * 바로가기 딥링크까지 담아 "좀비 출현! 지금 부활 시 마진 00%·[수정 바로가기]"
+ * 포맷을 낸다. buildAdhdAlert 재사용(#252), 신규 인프라 0.
+ */
+export function buildZombieDetectedAlert(item: { name: string; productId: string; marginPct: number; reason: string }): DiscordEmbed {
+  const O = STRINGS.ops;
+  return buildAdhdAlert({
+    tier: 'realtime', channel: 'KKOTTI_SCORE', emoji: '🧟',
+    title: fmt(O.zombieDetected_title, { name: item.name }),
+    action: fmt(O.zombieDetected_action, { reason: item.reason, margin: item.marginPct.toFixed(1) }),
+    kkotti: O.zombieDetected_kkotti,
+    deepLink: { label: O.zombieDetected_editLabel, path: `/products/new?edit=${item.productId}` },
+  });
+}
+
 /** 마진 경고(임계 이하) → PRICE_CHANGE (red realtime). */
 export function buildMarginWarnAlert(items: { name: string; margin: number }[]): DiscordEmbed {
   const O = STRINGS.ops;

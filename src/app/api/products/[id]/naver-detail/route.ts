@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getProduct } from '@/lib/naver/api-client';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
+import { loadTuningScores } from '@/lib/products/tuning-signals';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,8 @@ export async function GET(
       id: true, name: true, salePrice: true, supplierPrice: true,
       naverProductId: true, mainImage: true, naver_status_type: true,
       status: true, naverCategoryCode: true, category: true,
-      shippingFee: true, updatedAt: true,
+      shippingFee: true, updatedAt: true, keywords: true, tags: true,
+      lastSaleDate: true, supplier_product_code: true,
       shipping_templates: { select: { name: true, shippingType: true } },
     },
   });
@@ -49,8 +51,12 @@ export async function GET(
     shippingType: product.shipping_templates?.shippingType ?? null,
   };
 
+  // 튜닝 필요도 지수 (#256 P4) — 정보 화면에 왜 손봐야 하는지 한 줄 표시.
+  const tuningMap = await loadTuningScores([product]);
+  const tuning = tuningMap.get(product.id) ?? null;
+
   if (!product.naverProductId) {
-    return NextResponse.json({ success: true, linked: false, app, naver: null });
+    return NextResponse.json({ success: true, linked: false, app, naver: null, tuning });
   }
 
   try {
@@ -79,7 +85,7 @@ export async function GET(
       saleStartDate: typeof op.saleStartDate === 'string' ? op.saleStartDate : null,
     };
 
-    return NextResponse.json({ success: true, linked: true, app, naver });
+    return NextResponse.json({ success: true, linked: true, app, naver, tuning });
   } catch (e) {
     const msg = e instanceof Error ? e.message : '알 수 없는 오류';
     return NextResponse.json({ success: false, error: msg }, { status: 502 });

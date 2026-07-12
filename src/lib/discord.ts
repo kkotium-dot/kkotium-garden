@@ -99,6 +99,7 @@ export {
   buildPublishReadyAlert,
   buildRevivalAlert,
   buildZombieAlert,
+  buildZombieDetectedAlert,
   buildMarginWarnAlert,
 } from '@/lib/notifications/discord-builder';
 export type { AlertTier, AdhdAlertParams } from '@/lib/notifications/discord-builder';

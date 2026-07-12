@@ -25,6 +25,10 @@
     "filterNative": "앱 발행",
     "filterImported": "임포트",
     "filterConflict": "충돌",
+    "filterActive": "판매중",
+    "filterSuspended": "판매중지",
+    "filterZombie": "좀비발견",
+    "colTuning": "관리방향",
     "searchPlaceholder": "상품명, 상품번호 검색",
     "totalCount": "전체 {n}개"
   },
@@ -161,5 +165,14 @@
     "saleStartDate": "판매 시작일",
     "shipping": "배송",
     "editCta": "수정하기"
+  },
+  "tuning": {
+    "title": "튜닝 필요도",
+    "caveatSuffix": "(참고 지수)",
+    "zombieBadge": "좀비",
+    "tierGrow": "키울 상품",
+    "tierDefend": "방어",
+    "tierDemote": "내릴 상품",
+    "reasonsTitle": "왜 튜닝이 필요한가요"
   }
 }

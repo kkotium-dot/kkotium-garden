@@ -7,14 +7,18 @@
 // returns nothing and resolveLinkDisplay derives safe defaults (source=NATIVE,
 // linkStatus from naverProductId). Read-only.
 //
-// filter: all | native | imported | conflict
+// filter: all | active | suspended | zombie (#256 P4 — 판매중/판매중지/좀비발견
+// 3버킷으로 정리. 이전 native/imported/conflict/drift 필터는 통합/은퇴).
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { readLinkFields, resolveLinkDisplay, readSubstituteInfo, hasSubstitutePlan } from '@/lib/product-link';
+import { loadTuningScores } from '@/lib/products/tuning-signals';
 
 export const dynamic = 'force-dynamic';
+
+const LIVE_NAVER_STATUS = new Set(['SALE', 'ON_SALE']);
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -36,8 +40,10 @@ export async function GET(request: NextRequest) {
   const products = await prisma.product.findMany({
     where,
     select: {
-      id: true, name: true, salePrice: true, naverProductId: true,
+      id: true, name: true, salePrice: true, supplierPrice: true, naverProductId: true,
       mainImage: true, naver_status_type: true, status: true, updatedAt: true,
+      naverCategoryCode: true, category: true, keywords: true, tags: true,
+      lastSaleDate: true, supplier_product_code: true,
     },
     orderBy: { updatedAt: 'desc' },
     take: 2000,
@@ -46,10 +52,15 @@ export async function GET(request: NextRequest) {
   const linkMap = await readLinkFields(products.map((p) => p.id));
   // SUBSTITUTE (#210) — per-product stock-out safety net for the row indicator.
   const subMap = await readSubstituteInfo(products.map((p) => p.id));
+  // 튜닝 필요도 지수 (#256 P4) — batched, best-effort (#82).
+  const tuningMap = await loadTuningScores(products);
 
   const allRows = products.map((p) => {
     const link = resolveLinkDisplay(p, linkMap.get(p.id));
     const substitute = subMap.get(p.id) ?? null;
+    const tuning = tuningMap.get(p.id) ?? null;
+    const statusType = p.naver_status_type ?? p.status;
+    const isLive = LIVE_NAVER_STATUS.has(p.naver_status_type ?? '') || (!p.naver_status_type && p.status === 'ACTIVE');
     return {
       id: p.id,
       name: p.name,
@@ -57,7 +68,8 @@ export async function GET(request: NextRequest) {
       naverProductId: p.naverProductId,
       channelProductNo: link.channelProductNo,
       representativeImageUrl: p.mainImage,
-      statusType: p.naver_status_type ?? p.status,
+      statusType,
+      isLive,
       source: link.source,
       linkStatus: link.linkStatus,
       syncState: link.syncState,
@@ -66,23 +78,26 @@ export async function GET(request: NextRequest) {
       naverModifiedAt: link.naverModifiedAt,
       substituteInfo: substitute,
       hasSubstitute: hasSubstitutePlan(substitute),
+      tuningScore: tuning?.score ?? null,
+      tuningTier: tuning?.tier ?? null,
+      isZombie: tuning?.isZombie ?? false,
+      zombieReason: tuning?.zombieReason ?? null,
     };
   });
 
   const counts = {
     all: allRows.length,
-    native: allRows.filter((r) => r.source === 'NATIVE').length,
-    imported: allRows.filter((r) => r.source === 'IMPORTED').length,
-    conflict: allRows.filter((r) => r.syncState === 'CONFLICT').length,
-    // PL-5a — products whose last drift-scan found app-SoR fields out of sync.
+    active: allRows.filter((r) => r.isLive).length,
+    suspended: allRows.filter((r) => !r.isLive).length,
+    zombie: allRows.filter((r) => r.isZombie).length,
+    // PL-5a — 필터 pill은 아니지만(#256 §3 정리 대상 아님) 동기화 배너가 여전히 참조.
     drift: allRows.filter((r) => r.syncState === 'DRIFT').length,
   };
 
   let rows = allRows;
-  if (filter === 'native')   rows = allRows.filter((r) => r.source === 'NATIVE');
-  if (filter === 'imported') rows = allRows.filter((r) => r.source === 'IMPORTED');
-  if (filter === 'conflict') rows = allRows.filter((r) => r.syncState === 'CONFLICT');
-  if (filter === 'drift')    rows = allRows.filter((r) => r.syncState === 'DRIFT');
+  if (filter === 'active')    rows = allRows.filter((r) => r.isLive);
+  if (filter === 'suspended') rows = allRows.filter((r) => !r.isLive);
+  if (filter === 'zombie')    rows = allRows.filter((r) => r.isZombie);
 
   // 서버 페이지네이션 (#256 §2) — 수백 개 대비, 클라이언트에는 현재 페이지분만 전달.
   const total = rows.length;
