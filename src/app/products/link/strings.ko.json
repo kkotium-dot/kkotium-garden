@@ -13,6 +13,7 @@
   "zone2": {
     "title": "연동 상품",
     "empty": "아직 연동된 상품이 없습니다. 위에서 불러오거나 번호로 연동해 주세요.",
+    "emptySearch": "검색 결과가 없습니다.",
     "colThumb": "이미지",
     "colName": "상품명",
     "colPrice": "가격",
@@ -23,7 +24,22 @@
     "filterAll": "전체",
     "filterNative": "앱 발행",
     "filterImported": "임포트",
-    "filterConflict": "충돌"
+    "filterConflict": "충돌",
+    "searchPlaceholder": "상품명, 상품번호 검색",
+    "totalCount": "전체 {n}개"
+  },
+  "pagination": {
+    "prev": "이전",
+    "next": "다음",
+    "pageInfo": "{page} / {total} 페이지"
+  },
+  "syncAll": {
+    "cta": "네이버 동기화",
+    "syncing": "동기화 중...",
+    "done": "{total}개 확인 — 불일치 {n}건 발견",
+    "doneClean": "{total}개 확인 — 모두 정상",
+    "fail": "네이버 동기화 실패",
+    "networkFail": "네트워크 오류"
   },
   "zone3": {
     "title": "네이버 vs 앱 비교",
@@ -117,10 +133,33 @@
     "scanFail": "동기화 검사 중 오류가 발생했습니다."
   },
   "tabs": {
+    "info": "정보",
     "sync": "동기화",
     "push": "반영",
     "substitute": "품절대체",
     "fieldSuffix": "필드",
     "panelAria": "상품 연동 상세"
+  },
+  "info": {
+    "loading": "불러오는 중...",
+    "loadFail": "정보를 불러오지 못했습니다.",
+    "notLinked": "네이버에 연동되지 않은 상품입니다.",
+    "naverSection": "네이버 스토어 정보",
+    "appSection": "앱 정보",
+    "category": "카테고리",
+    "origin": "원산지",
+    "importer": "수입사",
+    "stock": "재고",
+    "optionCount": "옵션",
+    "optionCountUnit": "개",
+    "images": "이미지",
+    "imagesUnit": "장 (대표 포함)",
+    "sellerTags": "셀러 태그",
+    "detailContent": "상세페이지",
+    "detailContentYes": "있음",
+    "detailContentNo": "없음",
+    "saleStartDate": "판매 시작일",
+    "shipping": "배송",
+    "editCta": "수정하기"
   }
 }

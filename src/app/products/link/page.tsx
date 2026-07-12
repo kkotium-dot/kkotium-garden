@@ -10,10 +10,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   Link2, Store, Hash, X, Loader2, CheckCircle2, AlertTriangle,
   ChevronRight, ChevronLeft, RefreshCw, PackageX, RotateCcw, ShieldAlert, Radar,
-  ArrowUpDown, Check,
+  ArrowUpDown, Check, Search, Edit2,
 } from 'lucide-react';
 import strings from './strings.ko.json';
 import SubstituteEditor from '@/components/products/SubstituteEditor';
@@ -66,6 +67,20 @@ function relTime(iso: string | null): string {
   const h = Math.round(m / 60);
   if (h < 24) return `${h}시간 전`;
   return `${Math.round(h / 24)}일 전`;
+}
+
+// P2 (#256 §2) — "< 1 2 3 4 … >" page-number list, same shape as the crawl
+// picker's prev/next but with numbered pages for hundreds-of-rows lists.
+function buildPageList(current: number, total: number): Array<number | '…'> {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = new Set<number>([1, 2, total - 1, total, current - 1, current, current + 1]);
+  const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const out: Array<number | '…'> = [];
+  sorted.forEach((p, i) => {
+    if (i > 0 && p - sorted[i - 1] > 1) out.push('…');
+    out.push(p);
+  });
+  return out;
 }
 
 function SourceBadge({ source }: { source: 'NATIVE' | 'IMPORTED' }) {
@@ -335,6 +350,101 @@ function ImportModal({ onClose, onImported }: { onClose: () => void; onImported:
 // ─── Diff slide panel (zone 3) ────────────────────────────────────────────────
 interface DiffData { inSync: boolean; diffs: Array<{ field: string; naver: unknown; app: unknown }>; naverSnapshot: Record<string, unknown>; app: Record<string, unknown>; }
 interface StatusPreview { target: 'OUTOFSTOCK' | 'SALE'; previousStatusType: string | null; isOptionProduct: boolean; changedTopLevelFields: string[]; optionStockZeroed: number; stockQuantityChanged: boolean; preservedFieldCount: number; }
+
+// P2 (#256 §5) — inline info screen data (naver-detail route).
+interface NaverDetailNaver {
+  name: string | null; salePrice: number | null; stockQuantity: number | null; statusType: string | null;
+  representativeImageUrl: string | null; optionalImageCount: number; leafCategoryId: string | null;
+  categoryPath: string | null; originAreaCode: string | null; importer: string | null;
+  sellerTags: string[]; optionCount: number; hasDetailContent: boolean; saleStartDate: string | null;
+}
+interface NaverDetailApp {
+  name: string; salePrice: number; supplierPrice: number; categoryPath: string | null;
+  shippingTemplateName: string | null; shippingFee: number; shippingType: number | null;
+}
+interface NaverDetail { linked: boolean; app: NaverDetailApp; naver: NaverDetailNaver | null; }
+
+// P2 — 인라인 정보 화면 (연동 상품은 네이버 중요 정보 최대 표시). 답답하지 않게
+// 큰 썸네일 + 섹션 구분(네이버/앱)으로 배치, 하단에 [수정] 바로가기.
+function InfoTab({ product }: { product: LinkedRow }) {
+  const [data, setData] = useState<NaverDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true); setError(null); setData(null);
+    fetch(`/api/products/${product.id}/naver-detail`)
+      .then((r) => r.json())
+      .then((j) => { if (!alive) return; if (!j.success) throw new Error(j.error); setData(j); })
+      .catch((e) => { if (alive) setError(e instanceof Error ? e.message : strings.info.loadFail); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [product.id]);
+
+  const row = (label: string, value: React.ReactNode) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '7px 0', borderBottom: '1px solid #f3f0ea', fontSize: 13 }}>
+      <span style={{ color: '#6b7280' }}>{label}</span>
+      <span style={{ color: '#111827', fontWeight: 600, textAlign: 'right', minWidth: 0 }}>{value}</span>
+    </div>
+  );
+
+  return (
+    <div>
+      {loading && <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af' }}><Loader2 size={18} className="animate-spin" style={{ margin: '0 auto 6px' }} /><p style={{ margin: 0, fontSize: 12 }}>{strings.info.loading}</p></div>}
+      {error && <div style={{ color: '#b91c1c', fontSize: 13 }}>{error}</div>}
+      {data && (
+        <>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+            {product.representativeImageUrl
+              ? <img src={product.representativeImageUrl} alt="" style={{ width: 96, height: 96, borderRadius: 12, objectFit: 'cover', flexShrink: 0, border: '1px solid #F8DCE5' }} />
+              : <div style={{ width: 96, height: 96, borderRadius: 12, background: '#f3f4f6', flexShrink: 0 }} />}
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 800, color: '#111827', lineHeight: 1.35 }}>{product.name}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <StatusBadge status={product.statusType} />
+                <SourceBadge source={product.source} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{won(product.salePrice)}</span>
+              </div>
+            </div>
+          </div>
+
+          {data.naver ? (
+            <>
+              <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: 0.3 }}>{strings.info.naverSection}</p>
+              <div style={{ marginBottom: 16 }}>
+                {row(strings.info.category, data.naver.categoryPath ?? '—')}
+                {row(strings.info.stock, data.naver.stockQuantity != null ? `${data.naver.stockQuantity.toLocaleString('ko-KR')}개` : '—')}
+                {row(strings.info.optionCount, `${data.naver.optionCount}${strings.info.optionCountUnit}`)}
+                {row(strings.info.images, `${1 + data.naver.optionalImageCount}${strings.info.imagesUnit}`)}
+                {row(strings.info.origin, data.naver.originAreaCode ?? '—')}
+                {data.naver.importer && row(strings.info.importer, data.naver.importer)}
+                {row(strings.info.detailContent, data.naver.hasDetailContent ? strings.info.detailContentYes : strings.info.detailContentNo)}
+                {data.naver.sellerTags.length > 0 && row(strings.info.sellerTags, data.naver.sellerTags.slice(0, 6).join(', '))}
+                {data.naver.saleStartDate && row(strings.info.saleStartDate, data.naver.saleStartDate.slice(0, 10))}
+              </div>
+            </>
+          ) : (
+            <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 16 }}>{strings.info.notLinked}</p>
+          )}
+
+          <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 800, color: '#F63B28', textTransform: 'uppercase', letterSpacing: 0.3 }}>{strings.info.appSection}</p>
+          <div style={{ marginBottom: 18 }}>
+            {row(strings.info.category, data.app.categoryPath ?? '—')}
+            {row(strings.info.shipping, data.app.shippingTemplateName
+              ? `${data.app.shippingTemplateName}${data.app.shippingFee > 0 ? ` · ${won(data.app.shippingFee)}` : ''}`
+              : '—')}
+          </div>
+
+          <Link href={`/products/new?edit=${product.id}`}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '10px 0', borderRadius: 10, background: '#F63B28', color: '#fff', fontSize: 13, fontWeight: 800, textDecoration: 'none' }}>
+            <Edit2 size={14} />{strings.info.editCta}
+          </Link>
+        </>
+      )}
+    </div>
+  );
+}
 function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => void }) {
   const [data, setData] = useState<DiffData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -343,9 +453,10 @@ function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => vo
   const [preview, setPreview] = useState<StatusPreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState<'OUTOFSTOCK' | 'SALE' | null>(null);
   const [previewErr, setPreviewErr] = useState<string | null>(null);
-  // ZONE3 3-tab refactor (#212) — one concern at a time. Default = 동기화 (first
-  // understand what differs, then decide reflect/substitute). Tab state is local.
-  const [tab, setTab] = useState<'sync' | 'push' | 'substitute'>('sync');
+  // P2 (#256 §5) 4-tab — 정보(인라인 정보 화면, 기본) → 동기화 → 반영 → 품절대체.
+  // 답답하지 않게: 클릭 시 우선 큰 그림/핵심 정보부터 보여주고, 필요할 때만
+  // 동기화/반영/품절대체로 이동.
+  const [tab, setTab] = useState<'info' | 'sync' | 'push' | 'substitute'>('info');
 
   async function doPreview(target: 'OUTOFSTOCK' | 'SALE') {
     setPreviewBusy(target); setPreviewErr(null); setPreview(null);
@@ -387,6 +498,7 @@ function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => vo
   // substitute drives 품절대체 ("!").
   const appDriftCount = (product.driftFields ?? []).filter((f) => APP_SOR_FIELDS.has(f)).length;
   const TABS: PanelTabDef[] = [
+    { key: 'info', label: strings.tabs.info, badge: null },
     { key: 'sync', label: strings.tabs.sync, badge: appDriftCount > 0 ? { text: `${appDriftCount}${strings.tabs.fieldSuffix}`, tone: 'amber' } : null },
     { key: 'push', label: strings.tabs.push, badge: appDriftCount > 0 ? { dot: true, tone: 'blue' } : null },
     { key: 'substitute', label: strings.tabs.substitute, badge: product.hasSubstitute ? null : { text: '!', tone: 'red' } },
@@ -411,6 +523,9 @@ function DiffPanel({ product, onClose }: { product: LinkedRow; onClose: () => vo
 
       {/* Content — one concern at a time (§2: 20px padding) */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+        {/* ── 정보 (인라인 정보 화면, 기본 탭) ── */}
+        {tab === 'info' && <InfoTab product={product} />}
+
         {/* ── 동기화 (diff / drift) ── */}
         {tab === 'sync' && (
           <>
@@ -526,18 +641,58 @@ export default function ProductLinkPage() {
   const [toast, setToast] = useState<string | null>(null);
   // PL-5a — drift-scan (network GET/product; 60s server cooldown).
   const [scanning, setScanning] = useState(false);
+  // P2 (#256 §2/§3) — server pagination + name/number search over the unified list.
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  // P2 (#256 §4) — 네이버 동기화, reuses /products' real-time sync endpoint.
+  const [syncing, setSyncing] = useState(false);
 
-  const loadLinked = useCallback(async (f: Filter) => {
+  const loadLinked = useCallback(async (f: Filter, p: number, q: string) => {
     setLoading(true);
     try {
-      const r = await fetch(`/api/products/linked?filter=${f}`);
+      const r = await fetch(`/api/products/linked?filter=${f}&page=${p}&pageSize=20&q=${encodeURIComponent(q)}`);
       const j = await r.json();
       setRows(j.items ?? []);
       if (j.counts) setCounts(j.counts);
+      setTotalPages(j.totalPages ?? 1);
+      setTotal(j.total ?? (j.items ?? []).length);
+      if (typeof j.page === 'number') setPage(j.page);
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { void loadLinked(filter); }, [filter, loadLinked]);
+  useEffect(() => { void loadLinked(filter, page, search); }, [filter, page, search, loadLinked]);
+  // Filter/search change resets to page 1 (avoids landing on an empty tail page).
+  useEffect(() => { setPage(1); }, [filter, search]);
+  // Debounce the search box so typing doesn't fire a request per keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // 네이버 동기화 — reuses the same /api/naver/products/sync real-time status
+  // sync as /products (B-3), then reloads the current page.
+  const runNaverSync = useCallback(async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const r = await fetch('/api/naver/products/sync');
+      const j = await r.json();
+      if (j.success) {
+        const mc = j.mismatchCount ?? 0;
+        setToast(mc > 0
+          ? strings.syncAll.done.replace('{total}', String(j.total ?? 0)).replace('{n}', String(mc))
+          : strings.syncAll.doneClean.replace('{total}', String(j.total ?? 0)));
+        await loadLinked(filter, page, search);
+      } else {
+        setToast(j.error ?? strings.syncAll.fail);
+      }
+    } catch {
+      setToast(strings.syncAll.networkFail);
+    } finally { setSyncing(false); }
+  }, [syncing, filter, page, search, loadLinked]);
 
   // PL-5a — run the drift-scan, then reload the list to reflect persisted state.
   const runDriftScan = useCallback(async () => {
@@ -554,7 +709,7 @@ export default function ProductLinkPage() {
               .replace('{scanned}', String(s.scanned ?? 0))
               .replace('{drift}', String(s.drift ?? 0)),
       );
-      await loadLinked(filter);
+      await loadLinked(filter, page, search);
     } catch {
       setToast(strings.sync.scanFail);
     } finally { setScanning(false); }
@@ -571,7 +726,7 @@ export default function ProductLinkPage() {
       const im = (j.imported ?? []).length, sk = (j.skipped ?? []).length, fa = (j.failed ?? []).length;
       setToast(`${strings.result.imported.replace('{n}', String(im))} · ${strings.result.skipped.replace('{n}', String(sk))} · ${strings.result.failed.replace('{n}', String(fa))}`);
       setManual('');
-      void loadLinked(filter);
+      void loadLinked(filter, page, search);
     } catch {
       setToast('연동 중 오류가 발생했습니다.');
     } finally { setManualBusy(false); }
@@ -639,6 +794,7 @@ export default function ProductLinkPage() {
       <div style={{ background: '#fff', border: '1px solid #F8DCE5', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderBottom: '1px solid #F8DCE5', flexWrap: 'wrap' }}>
           <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#111827' }}>{strings.zone2.title}</p>
+          <span style={{ fontSize: 12, color: '#9ca3af' }}>{strings.zone2.totalCount.replace('{n}', String(total))}</span>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {FILTERS.map((f) => (
               <button key={f.key} onClick={() => setFilter(f.key)}
@@ -647,6 +803,12 @@ export default function ProductLinkPage() {
               </button>
             ))}
           </div>
+          {/* P2 (#256 §3) — 상품번호·상품명 검색 */}
+          <div style={{ position: 'relative', minWidth: 200 }}>
+            <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#c9c2c6' }} />
+            <input value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder={strings.zone2.searchPlaceholder}
+              style={{ width: '100%', fontSize: 12.5, padding: '7px 10px 7px 28px', border: '1px solid var(--border-neutral)', borderRadius: 8, outline: 'none' }} />
+          </div>
           <div style={{ flex: 1 }} />
           {/* PL-5a — drift summary + scan trigger */}
           {counts.drift > 0 && (
@@ -654,17 +816,26 @@ export default function ProductLinkPage() {
               {strings.sync.driftSummary.replace('{n}', String(counts.drift))}
             </span>
           )}
+          {/* P2 (#256 §4) — 네이버 동기화 (products 페이지 real-time sync 재사용) */}
+          <button onClick={() => void runNaverSync()} disabled={syncing}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: syncing ? '#9ca3af' : '#fff', background: syncing ? '#f3f4f6' : '#F63B28', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: syncing ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+            <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />{syncing ? strings.syncAll.syncing : strings.syncAll.cta}
+          </button>
           <button onClick={() => void runDriftScan()} disabled={scanning}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: scanning ? '#9ca3af' : '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '6px 12px', cursor: scanning ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
             {scanning ? <Loader2 size={13} className="animate-spin" /> : <Radar size={13} />}{strings.sync.scanCta}
           </button>
-          <button onClick={() => void loadLinked(filter)} aria-label="새로고침" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B0A0A8' }}>
+          <button onClick={() => void loadLinked(filter, page, search)} aria-label="새로고침" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B0A0A8' }}>
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
 
         {loading && <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}><Loader2 size={20} className="animate-spin" style={{ margin: '0 auto' }} /></div>}
-        {!loading && rows.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af', fontSize: 13 }}>{strings.zone2.empty}</div>}
+        {!loading && rows.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af', fontSize: 13 }}>
+            {search ? strings.zone2.emptySearch : strings.zone2.empty}
+          </div>
+        )}
         {!loading && rows.length > 0 && (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
@@ -701,9 +872,31 @@ export default function ProductLinkPage() {
             </table>
           </div>
         )}
+
+        {/* P2 (#256 §2) — 하단 페이지네이션 (수백 개 대비 서버 페이지네이션) */}
+        {!loading && totalPages > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '12px 16px', borderTop: '1px solid #F8DCE5' }}>
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}
+              style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 700, color: page <= 1 ? '#d1d5db' : '#374151', background: 'none', border: 'none', padding: '4px 6px', cursor: page <= 1 ? 'not-allowed' : 'pointer' }}>
+              <ChevronLeft size={14} />
+            </button>
+            {buildPageList(page, totalPages).map((p, i) => p === '…'
+              ? <span key={`e${i}`} style={{ fontSize: 12, color: '#9ca3af', padding: '0 2px' }}>…</span>
+              : (
+                <button key={p} onClick={() => setPage(p)}
+                  style={{ fontSize: 12, fontWeight: 700, minWidth: 26, height: 26, borderRadius: 8, color: page === p ? '#fff' : '#374151', background: page === p ? '#F63B28' : 'transparent', border: 'none', cursor: 'pointer' }}>
+                  {p}
+                </button>
+              ))}
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+              style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 700, color: page >= totalPages ? '#d1d5db' : '#374151', background: 'none', border: 'none', padding: '4px 6px', cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
-      {showModal && <ImportModal onClose={() => setShowModal(false)} onImported={() => { setToast(strings.zone1.browseTitle + ' 완료'); void loadLinked(filter); }} />}
+      {showModal && <ImportModal onClose={() => setShowModal(false)} onImported={() => { setToast(strings.zone1.browseTitle + ' 완료'); void loadLinked(filter, page, search); }} />}
       {selected && <DiffPanel product={selected} onClose={() => setSelected(null)} />}
     </div>
   );
