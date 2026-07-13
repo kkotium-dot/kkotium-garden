@@ -1,9 +1,9 @@
 {
   "section": {
-    "situation": "📍 현황",
-    "impact": "⚠️ 영향",
-    "action": "✅ 다음 액션",
-    "kkotti": "🌸 꼬띠 한마디"
+    "situation": "🌱 현황",
+    "impact": "⛲️ 영향",
+    "action": "🍯 꼬띠의 미션",
+    "kkotti": "🌷 꼬띠 한마디"
   },
   "common": {
     "honeyScore": "꿀통",
@@ -16,7 +16,7 @@
     "noItems": "해당 상품이 없어요"
   },
   "recommend": {
-    "title": "🌸 꼬띠 오늘의 추천 — {today}",
+    "title": "🌷 꼬띠 오늘의 추천 — {today}",
     "description": "지금 가장 좋은 상품들을 골라봤어요!",
     "footer": "꽃틔움 가든 · 꼬띠 오늘의 추천",
     "noProducts": "오늘 추천할 상품이 없어요. 새 상품을 소싱해볼까요?",
@@ -31,7 +31,7 @@
     "impact_seasonFar": "\n📅 {label} D-{days} — 시즌 키워드 선점 기회",
     "action_register": "씨앗 심기에서 바로 등록",
     "action_seoCheck": "검색 조련사에서 경쟁 강도 한 번 더 확인",
-    "kkotti_intro": "오늘도 꽃틔움 피워볼 준비 되셨어유?",
+    "kkotti_intro": "까꿍💖 오늘도 꽃틔움 피워볼 준비 되셨어유?",
     "kkotti_top": "\"{name}\"부터 등록하면 매출이 제일 빨리 올라올 것 같아유!",
     "kkotti_empty": "내일은 더 좋은 꿀통이 기다리고 있을 거예유.",
     "season_extraTitle": "🎁 시즌 추가 추천 — {label} D-{days}"
@@ -71,8 +71,8 @@
     "action_supplier": "공급사 카톡으로 입고 일정 문의 + 대체상품 있는지 확인",
     "action_alt": "대체상품 등록 또는 네이버에서 즉시 품절처리",
     "alt_section": "**대체상품 후보:**",
-    "kkotti_one": "이 친구 빨리 살리고 와야겠어요! 고객이 기다리고 있을 거예요.",
-    "kkotti_many": "{n}개나 품절이라니, 비상 스위칭 해야 할 상황이에요! 지금 바로 주력 공급사부터 확인해보세요."
+    "kkotti_one": "빵야➰ 이 친구 빨리 구하러 가야겠어유! 고객님이 기다리고 있다구.",
+    "kkotti_many": "이랴이랴➰ {n}개나 품절이라니, 비상 소집이다! 주력 공급사부터 얼른 확인해봐유."
   },
   "priceChange": {
     "title": "💰 공급가 변동 감지 — {n}건",
@@ -86,9 +86,9 @@
     "action_adjust": "정원 창고에서 판매가 조정",
     "action_simulate": "마진 계산기에서 새 공급가로 이익 시뮬레이션",
     "action_alternative": "대안: 공급사 변경 또는 단종 결정",
-    "kkotti_negative": "마이너스 마진 경고예요! 지금 당장 멈추거나 가격을 올려야 해요!",
-    "kkotti_danger": "마진이 아슬아슬한 구간이에요. 경쟁사 가격도 같이 보고 결정해보세요.",
-    "kkotti_safe": "공급가 변동은 있었지만 마진은 지켜냈어요. 휴!"
+    "kkotti_negative": "빵야➰ 마이너스 마진 경보! 지금 당장 멈추거나 가격을 올려야 해유!",
+    "kkotti_danger": "이랴➰ 마진이 아슬아슬한 구간이에유. 경쟁사 가격도 같이 보고 결정해봐유.",
+    "kkotti_safe": "휴~ 공급가 변동은 있었지만 마진은 지켜냈어유! 오늘도 무사고예유 🤠"
   },
   "scoreDrop": {
     "title": "📉 꿀통지수 급락 알림 — {n}건",
@@ -100,7 +100,7 @@
     "action_seo": "검색 조련사에서 점수 세부항목 확인",
     "action_token": "상품명 토큰 1개만 교체 또는 키워드 보강",
     "action_revive": "고칠 수 없는 경우 좀비 부활소에서 복제 재등록",
-    "kkotti": "점수가 떨어지는 건 신호였으니 다행이에요! 지금 작은 한 걸음이 나중 큰 매출로 이어져요."
+    "kkotti": "빵야➰ 점수 급락 포착! 지금 발견한 게 다행이에유 — 작은 한 걸음이 나중 큰 매출로 이어져유."
   },
   "weeklyReport": {
     "title": "📊 주간 운영 리포트 — {weekLabel}",
@@ -113,7 +113,7 @@
     "stats": "신규 등록 {newReg}개 / 평균 꿀통 {avg}점 / 공급가 변동 {price}건",
     "stats_pending": "신규 등록 {newReg}개 / 평균 꿀통 집계중(가격 정보 있는 판매 상품 없음) / 공급가 변동 {price}건",
     "topProduct": "🏆 이주의 꿀통 1위: **{name}** ({score}점)",
-    "warn_noAlt": "⚠️ 대체상품 미등록 품절 {n}건 — 고객 이탈 위험",
+    "warn_noAlt": "🤠 대체상품 미등록 품절 {n}건 — 고객 이탈 위험",
     "warn_pricing": "공급가 변동이 많았어요 — 마진 재점검 필요",
     "warn_lowAvg": "평균 꿀통 50점 미만 — 상품명/키워드 튜닝 시기",
     "all_good": "특별한 이슈는 없었어요. 꾸준하게 잘하고 계세요!",
@@ -122,8 +122,8 @@
     "task_tuning": "평균 꿀통 50점 미만인 상품 {n}개 골라서 튜닝",
     "task_default": "신규 상품 소싱 지속 + 골든윈도우 트래킹",
     "action_first": "제일 먼저: 정원 일지에서 이번 주 우선순위 확인",
-    "kkotti_revenue": "이번 주 수고하셨어유! 다음 주는 한 계단 더 성장해봐유.",
-    "kkotti_zero": "이번 주는 준비 기간이에유! 차분히 다음 주 소싱과 등록에 집중해봐유."
+    "kkotti_revenue": "까꿍💖 이번 주 수고하셨어유! 다음 주는 한 계단 더 성장해봐유.",
+    "kkotti_zero": "까꿍💖 이번 주는 준비 기간이에유! 차분히 다음 주 소싱과 등록에 집중해봐유."
   },
   "adhd": {
     "tierRealtime": "[🔴 긴급]",
@@ -136,19 +136,19 @@
   "ops": {
     "publishReady_title": "발행 준비 완료 — {name}",
     "publishReady_action": "바로 검토하고 네이버에 올리세요 (8/8 통과).",
-    "publishReady_kkotti": "준비 끝났어유! 지금 올리면 최신성 버프 받아유 🌱",
+    "publishReady_kkotti": "까꿍💖 준비 끝났어유! 지금 올리면 최신성 버프 받아유 🌱",
     "revival_title": "부활 후보 {n}건 — 되살리면 매출 기회예요",
     "revival_action": "부활소에서 복제→검색 조련사로 새 생명 부여하세요.",
-    "revival_kkotti": "잠자는 상품 깨울 시간이에유! 되살리면 다시 팔려유 🌷",
+    "revival_kkotti": "까꿍💖 잠자는 상품 깨울 시간이에유! 되살리면 다시 팔려유 🌷",
     "zombie_title": "좀비 상품 {n}건 — 30일+ 무판매",
     "zombie_action": "정리하거나 부활 결정을 내려주세요.",
-    "zombie_kkotti": "이 아이들, 손 좀 봐줘유. 정리하든 살리든 결정이 필요해유 🥀",
+    "zombie_kkotti": "이랴➰ 이 아이들, 손 좀 봐줘유. 정리하든 살리든 결정이 필요해유 🥀",
     "zombieDetected_title": "좀비 출현! {name}",
     "zombieDetected_action": "{reason} · 지금 부활 시 마진 {margin}%",
-    "zombieDetected_kkotti": "지금 손보면 아직 살릴 수 있어유! 수정 바로가기로 가봐유 🧟",
+    "zombieDetected_kkotti": "빵야➰ 지금 손보면 아직 살릴 수 있어유! 수정 바로가기로 가봐유 🧟",
     "zombieDetected_editLabel": "수정 바로가기",
     "margin_title": "마진 경고 {n}건 — 수익이 위험해요",
     "margin_action": "공급가·판매가를 조정하거나 대체 상품을 찾으세요.",
-    "margin_kkotti": "이대로면 손해예유! 얼른 값을 손봐줘유 💰"
+    "margin_kkotti": "빵야➰ 이대로면 손해예유! 얼른 값을 손봐줘유 💰"
   }
 }
