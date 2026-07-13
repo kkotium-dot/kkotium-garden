@@ -55,8 +55,39 @@ export async function GET(
   const tuningMap = await loadTuningScores([product]);
   const tuning = tuningMap.get(product.id) ?? null;
 
+  // STOCK_VISIBILITY_DISCORD_CONTENT_DIAGNOSIS_2026-07-13 §1-A/C — surface the
+  // upstream Domeggook stock (inventory_snapshots) independently of the live
+  // Naver call below: DB-only, so it still renders if the Naver GET fails,
+  // and it's honestly a *different* number than Naver's own stockQuantity
+  // (what we last pushed) — this is what the supplier actually has right now.
+  const supplierProductCode = product.supplier_product_code;
+  let supplierStock: {
+    qty: number; status: string | null; polledAt: string; isTrustworthy: boolean;
+  } | null = null;
+  if (supplierProductCode) {
+    const [snapshot, profile] = await Promise.all([
+      prisma.inventorySnapshot.findFirst({
+        where: { productId: product.id },
+        orderBy: { polledAt: 'desc' },
+        select: { qty: true, status: true, polledAt: true },
+      }),
+      (prisma as any).supplierStockProfile.findUnique({
+        where: { productNo: supplierProductCode },
+        select: { isTrustworthy: true },
+      }).catch(() => null),
+    ]);
+    if (snapshot) {
+      supplierStock = {
+        qty: snapshot.qty,
+        status: snapshot.status,
+        polledAt: snapshot.polledAt.toISOString(),
+        isTrustworthy: profile?.isTrustworthy ?? true,
+      };
+    }
+  }
+
   if (!product.naverProductId) {
-    return NextResponse.json({ success: true, linked: false, app, naver: null, tuning });
+    return NextResponse.json({ success: true, linked: false, app, naver: null, tuning, supplierProductCode, supplierStock });
   }
 
   try {
@@ -85,7 +116,7 @@ export async function GET(
       saleStartDate: typeof op.saleStartDate === 'string' ? op.saleStartDate : null,
     };
 
-    return NextResponse.json({ success: true, linked: true, app, naver, tuning });
+    return NextResponse.json({ success: true, linked: true, app, naver, tuning, supplierProductCode, supplierStock });
   } catch (e) {
     const msg = e instanceof Error ? e.message : '알 수 없는 오류';
     return NextResponse.json({ success: false, error: msg }, { status: 502 });

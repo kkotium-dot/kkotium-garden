@@ -174,5 +174,29 @@
     "tierDefend": "방어",
     "tierDemote": "내릴 상품",
     "reasonsTitle": "왜 튜닝이 필요한가요"
+  },
+  "stock": {
+    "monitoringTitle": "재고 모니터링 중",
+    "qtyUnit": "개",
+    "qtyUnknown": "확인 안 됨",
+    "qtyUnknownHint": "지난 폴링에서 공급사 응답을 읽지 못했어요. 다음 확인 때 다시 시도해요.",
+    "lastCheckedPrefix": "마지막 확인",
+    "nextCheckHint": "다음 확인 매일 09:00",
+    "untrustworthy": "공급사 재고 변동이 없어 신뢰도가 낮게 표시돼요.",
+    "pendingTitle": "도매매 재고 확인 중",
+    "pendingHint": "코드는 연결됐어요. 다음 폴링(매일 09:00)에 첫 재고가 채워져요.",
+    "untracked": "도매매 재고 미연결",
+    "untrackedHint": "이 상품은 도매매 상품코드가 없어서 재고를 추적할 수 없어요.",
+    "autoMapCta": "자동 매핑 시도",
+    "manualPlaceholder": "도매매 상품번호",
+    "manualCta": "연결",
+    "mapping": "연결 중...",
+    "autoMapMiss": "자동 매칭 실패 — 도매매 상품번호를 직접 입력해주세요.",
+    "mapFail": "연결에 실패했습니다.",
+    "justNow": "방금",
+    "minutesAgoSuffix": "분 전",
+    "hoursAgoSuffix": "시간 전",
+    "daysAgoSuffix": "일 전",
+    "unknownTime": "확인 불가"
   }
 }

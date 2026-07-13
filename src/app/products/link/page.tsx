@@ -407,14 +407,128 @@ interface TuningScoreView {
   reasons: string[];
   caveat: string;
 }
-interface NaverDetail { linked: boolean; app: NaverDetailApp; naver: NaverDetailNaver | null; tuning: TuningScoreView | null; }
+// STOCK_VISIBILITY_DISCORD_CONTENT_DIAGNOSIS_2026-07-13 §1 — Domeggook upstream
+// stock (inventory_snapshots), independent of Naver's own stockQuantity above.
+interface SupplierStockView { qty: number; status: string | null; polledAt: string; isTrustworthy: boolean; }
+interface NaverDetail {
+  linked: boolean; app: NaverDetailApp; naver: NaverDetailNaver | null; tuning: TuningScoreView | null;
+  supplierProductCode?: string | null; supplierStock?: SupplierStockView | null;
+}
 
 // P2 — 인라인 정보 화면 (연동 상품은 네이버 중요 정보 최대 표시). 답답하지 않게
 // 큰 썸네일 + 섹션 구분(네이버/앱)으로 배치, 하단에 [수정] 바로가기.
+function relativeTimeKo(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return strings.stock.unknownTime;
+  const diffMin = Math.max(0, Math.round((Date.now() - t) / 60_000));
+  if (diffMin < 1) return strings.stock.justNow;
+  if (diffMin < 60) return `${diffMin}${strings.stock.minutesAgoSuffix}`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}${strings.stock.hoursAgoSuffix}`;
+  return `${Math.round(diffHr / 24)}${strings.stock.daysAgoSuffix}`;
+}
+
+// STOCK_VISIBILITY_DISCORD_CONTENT_DIAGNOSIS_2026-07-13 §1/§3 — Domeggook stock
+// visibility + "monitoring" badge. Three honest states: tracked-with-data,
+// tracked-pending-first-poll, and untracked (no supplier_product_code yet —
+// #1-B auto-match or manual attach).
+function SupplierStockSection({ productId, data, onMapped }: { productId: string; data: NaverDetail; onMapped: () => void }) {
+  const [manualCode, setManualCode] = useState('');
+  const [busy, setBusy] = useState<'auto' | 'manual' | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  const attach = useCallback((code?: string) => {
+    setBusy(code ? 'manual' : 'auto');
+    setNote(null);
+    fetch(`/api/products/${productId}/supplier-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(code ? { code } : {}),
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j.success) throw new Error(j.error);
+        if (j.matched) { setManualCode(''); onMapped(); }
+        else setNote(strings.stock.autoMapMiss);
+      })
+      .catch((e) => setNote(e instanceof Error ? e.message : strings.stock.mapFail))
+      .finally(() => setBusy(null));
+  }, [productId, onMapped]);
+
+  const box = { marginBottom: 16, padding: '10px 12px', borderRadius: 10, background: '#f9fafb', border: '1px solid #e5e7eb' };
+  const title = { display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: '#374151', marginBottom: 6 } as const;
+
+  if (!data.supplierProductCode) {
+    return (
+      <div style={box}>
+        <div style={title}><PackageX size={13} />{strings.stock.untracked}</div>
+        <p style={{ margin: '0 0 8px', fontSize: 11.5, color: '#6b7280' }}>{strings.stock.untrackedHint}</p>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <button onClick={() => attach()} disabled={busy !== null}
+            style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '6px 10px', cursor: busy !== null ? 'not-allowed' : 'pointer' }}>
+            {busy === 'auto' ? strings.stock.mapping : strings.stock.autoMapCta}
+          </button>
+          <input value={manualCode} onChange={(e) => setManualCode(e.target.value)} placeholder={strings.stock.manualPlaceholder}
+            style={{ fontSize: 12, border: '1px solid var(--border-neutral)', borderRadius: 8, padding: '6px 8px', width: 130 }} />
+          <button onClick={() => manualCode.trim() && attach(manualCode.trim())} disabled={busy !== null || !manualCode.trim()}
+            style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: !manualCode.trim() ? '#9dbdf0' : '#1d4ed8', border: 'none', borderRadius: 8, padding: '6px 10px', cursor: busy !== null || !manualCode.trim() ? 'not-allowed' : 'pointer' }}>
+            {busy === 'manual' ? strings.stock.mapping : strings.stock.manualCta}
+          </button>
+        </div>
+        {note && <p style={{ margin: '6px 0 0', fontSize: 11, color: '#b91c1c' }}>{note}</p>}
+      </div>
+    );
+  }
+
+  if (!data.supplierStock) {
+    return (
+      <div style={box}>
+        <div style={title}><Loader2 size={13} />{strings.stock.pendingTitle}</div>
+        <p style={{ margin: 0, fontSize: 11.5, color: '#6b7280' }}>{strings.stock.pendingHint}</p>
+      </div>
+    );
+  }
+
+  const s = data.supplierStock;
+  // qty:-1 / status:'unknown' are documented sentinels (source-adapter.ts) for
+  // "공급사 응답 파싱 실패" — showing them raw ("-1개") reads as broken, not
+  // honest. Render the same "확인 안 됨" honesty the InventoryBadge warehouse
+  // pill already uses for this exact sentinel, rather than the literal value.
+  const qtyKnown = s.qty >= 0;
+  const statusKnown = !!s.status && s.status !== 'unknown';
+  return (
+    <div style={box}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span style={title}>
+          <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: !qtyKnown ? '#9ca3af' : s.isTrustworthy ? '#16a34a' : '#737373', display: 'inline-block' }} />
+          {strings.stock.monitoringTitle}
+        </span>
+        <span style={{ fontSize: 13, fontWeight: 800, color: qtyKnown ? '#111827' : '#9ca3af' }}>
+          {qtyKnown ? `${s.qty.toLocaleString('ko-KR')}${strings.stock.qtyUnit}` : strings.stock.qtyUnknown}
+        </span>
+      </div>
+      <p style={{ margin: 0, fontSize: 11.5, color: '#6b7280' }}>
+        {statusKnown ? `${s.status} · ` : ''}{strings.stock.lastCheckedPrefix} {relativeTimeKo(s.polledAt)} · {strings.stock.nextCheckHint}
+      </p>
+      {!qtyKnown && <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9ca3af' }}>{strings.stock.qtyUnknownHint}</p>}
+      {qtyKnown && !s.isTrustworthy && <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9a3412' }}>{strings.stock.untrustworthy}</p>}
+    </div>
+  );
+}
+
 function InfoTab({ product }: { product: LinkedRow }) {
   const [data, setData] = useState<NaverDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const reload = useCallback(() => {
+    setLoading(true); setError(null);
+    fetch(`/api/products/${product.id}/naver-detail`)
+      .then((r) => r.json())
+      .then((j) => { if (!j.success) throw new Error(j.error); setData(j); })
+      .catch((e) => setError(e instanceof Error ? e.message : strings.info.loadFail))
+      .finally(() => setLoading(false));
+  }, [product.id]);
 
   useEffect(() => {
     let alive = true;
@@ -479,6 +593,11 @@ function InfoTab({ product }: { product: LinkedRow }) {
               <p style={{ margin: 0, fontSize: 10, color: '#9ca3af' }}>{data.tuning.caveat}</p>
             </div>
           )}
+
+          {/* STOCK_VISIBILITY_DISCORD_CONTENT_DIAGNOSIS_2026-07-13 §1/§3 —
+              도매매 재고 가시화 + 모니터링 배지. 네이버 stockQuantity(아래 절)와는
+              별개 신호(우리가 마지막으로 반영한 값 vs 지금 공급사 실재고). */}
+          <SupplierStockSection productId={product.id} data={data} onMapped={reload} />
 
           {data.naver ? (
             <>
