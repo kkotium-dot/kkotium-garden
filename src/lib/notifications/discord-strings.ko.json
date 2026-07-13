@@ -17,21 +17,23 @@
   },
   "recommend": {
     "title": "🌸 꼬띠 오늘의 추천 — {today}",
-    "description": "지금 이 순간 가장 좋은 4가지 모드별로 발굴했어요!",
-    "footer": "꽃틔움 가든 · 꼬띠 4모드 추천",
+    "description": "지금 가장 좋은 상품들을 골라봤어요!",
+    "footer": "꽃틔움 가든 · 꼬띠 오늘의 추천",
     "noProducts": "오늘 추천할 상품이 없어요. 새 상품을 소싱해볼까요?",
-    "tag_volumeBoost": "검색량 블루오션 +{n}",
-    "tag_sourcing": "소싱보관함 후보",
+    "tag_volumeBoost_sweet": "검색량 딱 좋음(경쟁 적당)",
+    "tag_volumeBoost_niche": "검색량 적지만 경쟁 낮음",
+    "tag_volumeBoost_crowded": "검색량 많지만 경쟁 치열",
+    "tag_sourcing": "꿀통 창고 후보",
     "kw_label": "키워드",
     "supplier_label": "공급사",
-    "impact_base": "오늘 등록하면 7일 신상품 가산점 유지 기간이 시작돼요. 4가지 모드별로 우선순위 다르게 검토해보세요.",
+    "impact_base": "오늘 등록하면 7일 신상품 가산점 유지 기간이 시작돼요. 순위 높은 것부터 먼저 검토해보세요.",
     "impact_seasonNear": "\n⚡ 지금 {label} D-{days} — 골든타임이에요!",
     "impact_seasonFar": "\n📅 {label} D-{days} — 시즌 키워드 선점 기회",
     "action_register": "씨앗 심기에서 바로 등록",
     "action_seoCheck": "검색 조련사에서 경쟁 강도 한 번 더 확인",
-    "kkotti_intro": "오늘도 꽃틔움을 피워볼 준비 끝났나요?",
-    "kkotti_top": "\"{name}\"부터 등록하면 매출이 제일 빨리 올라올 것 같아요!",
-    "kkotti_empty": "내일은 더 좋은 꿀통이 기다리고 있을 거예요.",
+    "kkotti_intro": "오늘도 꽃틔움 피워볼 준비 되셨어유?",
+    "kkotti_top": "\"{name}\"부터 등록하면 매출이 제일 빨리 올라올 것 같아유!",
+    "kkotti_empty": "내일은 더 좋은 꿀통이 기다리고 있을 거예유.",
     "season_extraTitle": "🎁 시즌 추가 추천 — {label} D-{days}"
   },
   "modes": {
@@ -46,9 +48,9 @@
       "emptyNote": "30일 이내 다가오는 시즌 이벤트가 없어요"
     },
     "nicheBlue": {
-      "sectionTitle": "🌊 니치 — 경쟁 낮은 블루오션",
+      "sectionTitle": "🌊 니치 — 경쟁 낮은 틈새",
       "shortLabel": "니치",
-      "emptyNote": "오늘은 블루오션 후보가 부족해요"
+      "emptyNote": "오늘은 틈새 후보가 부족해요"
     },
     "storeFit": {
       "sectionTitle": "✨ 꽃틔움 맞춤 — {context} 강점 카테고리",
@@ -107,8 +109,9 @@
     "revenue_with": "매출: **{won}원** (주문 {orders}건 / 취소 {cancels}건)",
     "revenue_zero": "이번 주 주문은 없었어요.",
     "profit": "순이익 추정: **{won}원**",
-    "products": "상품: 전체 {total}개 / 판매중 {active}개 / 품절 {oos}개",
+    "products": "상품: 전체 {total}개 / 판매중 {active}개 / 발행대기 {pending}개 / 품절 {oos}개",
     "stats": "신규 등록 {newReg}개 / 평균 꿀통 {avg}점 / 공급가 변동 {price}건",
+    "stats_pending": "신규 등록 {newReg}개 / 평균 꿀통 집계중(가격 정보 있는 판매 상품 없음) / 공급가 변동 {price}건",
     "topProduct": "🏆 이주의 꿀통 1위: **{name}** ({score}점)",
     "warn_noAlt": "⚠️ 대체상품 미등록 품절 {n}건 — 고객 이탈 위험",
     "warn_pricing": "공급가 변동이 많았어요 — 마진 재점검 필요",
@@ -116,11 +119,11 @@
     "all_good": "특별한 이슈는 없었어요. 꾸준하게 잘하고 계세요!",
     "task_alt": "대체상품 등록 {n}건 완료",
     "task_register": "이번 주 신규 상품 3개+ 소싱해서 등록",
-    "task_tuning": "평균 꿀통 50점 미만인 상품 5개 골라서 튜닝",
+    "task_tuning": "평균 꿀통 50점 미만인 상품 {n}개 골라서 튜닝",
     "task_default": "신규 상품 소싱 지속 + 골든윈도우 트래킹",
     "action_first": "제일 먼저: 정원 일지에서 이번 주 우선순위 확인",
-    "kkotti_revenue": "이번 주 수고하셨어요! 다음 주는 한 계단 더 성장해봐요.",
-    "kkotti_zero": "이번 주는 준비 기간! 차분히 다음 주 소싱과 등록에 집중해봐요."
+    "kkotti_revenue": "이번 주 수고하셨어유! 다음 주는 한 계단 더 성장해봐유.",
+    "kkotti_zero": "이번 주는 준비 기간이에유! 차분히 다음 주 소싱과 등록에 집중해봐유."
   },
   "adhd": {
     "tierRealtime": "[🔴 긴급]",

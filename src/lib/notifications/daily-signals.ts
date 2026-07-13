@@ -13,6 +13,7 @@ import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 import { resolveRecoTypeTags, type RecoTypeTag } from '@/lib/naver/reco-type-resolver';
 import { fetchNaverTrends, matchProductsToTrends } from '@/lib/trend-analyzer';
 import { fetchKeywordStats } from '@/lib/naver/keyword-api';
+import { getCachedMapping, nameHashKey } from '@/lib/dome-category-cache';
 import { prisma } from '@/lib/prisma';
 
 export interface DailyDigestProduct extends TuningSourceProduct {
@@ -258,16 +259,23 @@ export async function computeRecommendation(
   }));
 
   // #250 §3: tag each recommended product 황금/니치/시즌 (category-score).
+  // #258 — naverCategoryCode is often unset for sourced/unregistered candidates
+  // (that's most of this list, not the exception), which previously starved
+  // the classifier of a d1/d2/d3 triple and the tag silently never showed.
+  // Fall back to the learned name_hash cache (dome-category-cache) — a
+  // cache-only lookup, no new AI calls. A cache miss still yields no tag
+  // (#231 honest: never fabricate a category to force a tag to appear).
   const nowMonth = new Date().getMonth() + 1;
-  const recoTags = await resolveRecoTypeTags(
-    top5base.map((t) => {
-      const cat = t.naverCategoryCode
-        ? NAVER_CATEGORIES_FULL.find((c) => c.code === t.naverCategoryCode)
-        : null;
-      return cat ? { d1: cat.d1, d2: cat.d2 ?? '', d3: cat.d3 ?? '' } : { d1: '' };
-    }),
-    nowMonth,
-  ).catch(() => top5base.map(() => null));
+  const catDescriptors = await Promise.all(top5base.map(async (t) => {
+    if (t.naverCategoryCode) {
+      const cat = NAVER_CATEGORIES_FULL.find((c) => c.code === t.naverCategoryCode);
+      if (cat) return { d1: cat.d1, d2: cat.d2 ?? '', d3: cat.d3 ?? '' };
+    }
+    const cached = await getCachedMapping('name_hash', nameHashKey(t.name)).catch(() => null);
+    return cached ? { d1: cached.d1, d2: cached.d2, d3: cached.d3 } : { d1: '' };
+  }));
+  const recoTags = await resolveRecoTypeTags(catDescriptors, nowMonth)
+    .catch(() => top5base.map(() => null));
   const top5 = top5base.map((t, i) => ({ ...t, recoType: recoTags[i] ?? null }));
 
   const seasonTop2 = season
@@ -277,8 +285,11 @@ export async function computeRecommendation(
         .map(({ p, score }) => ({ name: p.name, score: score.total }))
     : [];
 
+  // #258 — plain sentence, seller language: no raw "(datalab)" source jargon,
+  // no markdown/leading blank lines (that combined with the action-line
+  // numbering to look like a hollow "3." bullet in Discord).
   const trendNote = trends.trendKeywords.length > 0
-    ? `\n\n**오늘 네이버 트렌드**: ${trends.trendKeywords.slice(0, 3).join(', ')} (${trends.source})`
+    ? `오늘 네이버 트렌드: ${trends.trendKeywords.slice(0, 3).join(', ')} 참고해서 등록해보세요`
     : '';
 
   return { top5, seasonTop2, season, trendNote, trendSource: trends.source, trendKeywords: trends.trendKeywords };

@@ -103,7 +103,9 @@ export async function GET(req: NextRequest) {
     });
 
     let avgHoneyScore = 0;
+    let lowScoreCount = 0;
     let topProduct: { name: string; score: number } | undefined;
+    const avgHoneyScoreComputed = activeRaw.length > 0;
 
     if (activeRaw.length > 0) {
       const scores = activeRaw.map(p => ({
@@ -119,6 +121,7 @@ export async function GET(req: NextRequest) {
         }).total,
       }));
       avgHoneyScore = Math.round(scores.reduce((s, x) => s + x.score, 0) / scores.length);
+      lowScoreCount = scores.filter(x => x.score < 50).length;
       topProduct = scores.sort((a, b) => b.score - a.score)[0];
     }
 
@@ -214,6 +217,8 @@ export async function GET(req: NextRequest) {
       oosProducts,
       newRegistered,
       avgHoneyScore,
+      avgHoneyScoreComputed,
+      lowScoreCount,
       topProduct,
       noAltOosCount: oosProducts,
       priceChanges,

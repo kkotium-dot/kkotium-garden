@@ -49,6 +49,19 @@ function link(label: string, path: string): string {
   return `[${label}](${APP_URL}${path})`;
 }
 
+/**
+ * Seller-language label for the keyword-volume ranking boost (#258 — the raw
+ * "+{n}" internal score delta read as alien jargon; sellers care about the
+ * competition tier, not the point value). Tiers mirror the boost values
+ * assigned in daily-signals.ts computeRecommendation (5 / 3 / 1).
+ */
+function volumeBoostLabel(n: number): string {
+  const S = STRINGS.recommend;
+  if (n >= 5) return S.tag_volumeBoost_sweet;
+  if (n >= 3) return S.tag_volumeBoost_niche;
+  return S.tag_volumeBoost_crowded;
+}
+
 function buildFourSectionFields(sections: {
   situation: string;
   impact:    string;
@@ -229,7 +242,7 @@ export function buildRecommendEmbed(params: RecommendEmbedParams): DiscordEmbed 
     tagPieces.push(`${GRADE_EMOJI[p.grade] ?? ''}${C.honeyScore} ${p.score}${C.ptSuffix}`);
     tagPieces.push(`${C.netMargin} ${p.netMarginRate.toFixed(1)}%`);
     if (p.volumeBoost && p.volumeBoost > 0) {
-      tagPieces.push(fmt(S.tag_volumeBoost, { n: p.volumeBoost }));
+      tagPieces.push(volumeBoostLabel(p.volumeBoost));
     }
     if (p.isSourcing) tagPieces.push(S.tag_sourcing);
     const tags = tagPieces.join(' | ');
@@ -252,12 +265,14 @@ export function buildRecommendEmbed(params: RecommendEmbedParams): DiscordEmbed 
       : '';
   const impact = `${S.impact_base}${seasonNote}`;
 
-  const actionLines: string[] = [
-    `1. ${link(S.action_register, '/products/new')}`,
-    `2. ${link(S.action_seoCheck, '/naver-seo')}`,
+  // #258 — build the item list first, then number it, so a missing trendNote
+  // never leaves a dangling empty numbered line.
+  const actionItemsRec: string[] = [
+    link(S.action_register, '/products/new'),
+    link(S.action_seoCheck, '/naver-seo'),
   ];
-  if (params.trendNote) actionLines.push(`3. ${params.trendNote}`);
-  const action = actionLines.join('\n');
+  if (params.trendNote) actionItemsRec.push(params.trendNote);
+  const action = actionItemsRec.map((it, i) => `${i + 1}. ${it}`).join('\n');
 
   const kkottiTail = top.length > 0
     ? fmt(S.kkotti_top, { name: top[0].name })
@@ -594,12 +609,18 @@ export interface WeeklyReportEmbedParams {
   weekOrderCount?: number;
   weekCancelCount?: number;
   weekNetProfit?: number;
+  /** Whether avgHoneyScore was actually computed from eligible products (false = no eligible product had both salePrice + supplierPrice set). Defaults true for older callers. */
+  avgHoneyScoreComputed?: boolean;
+  /** Count of active products actually scoring below 50 — drives the dynamic tuning task count (#258, replaces a hardcoded "5개"). */
+  lowScoreCount?: number;
 }
 
 export function buildWeeklyReportEmbed(params: WeeklyReportEmbedParams): DiscordEmbed {
   const S = STRINGS.weeklyReport;
   const p = params;
   const hasRevenue = (p.weekRevenue ?? 0) > 0;
+  const scoreComputed = p.avgHoneyScoreComputed ?? true;
+  const lowAvg = scoreComputed && p.avgHoneyScore < 50;
 
   const situationLines: string[] = [];
   if (hasRevenue) {
@@ -614,12 +635,16 @@ export function buildWeeklyReportEmbed(params: WeeklyReportEmbedParams): Discord
   } else {
     situationLines.push(S.revenue_zero);
   }
+  // #258 — "판매중 0개" alone reads as broken when most products are simply
+  // not published yet. Derived from the same counts already reported, so
+  // every existing caller gets this for free (no new required param).
+  const pendingProducts = Math.max(0, p.totalProducts - p.activeProducts - p.oosProducts);
   situationLines.push(fmt(S.products, {
-    total: p.totalProducts, active: p.activeProducts, oos: p.oosProducts,
+    total: p.totalProducts, active: p.activeProducts, pending: pendingProducts, oos: p.oosProducts,
   }));
-  situationLines.push(fmt(S.stats, {
-    newReg: p.newRegistered, avg: p.avgHoneyScore, price: p.priceChanges,
-  }));
+  situationLines.push(scoreComputed
+    ? fmt(S.stats, { newReg: p.newRegistered, avg: p.avgHoneyScore, price: p.priceChanges })
+    : fmt(S.stats_pending, { newReg: p.newRegistered, price: p.priceChanges }));
   if (p.topProduct) {
     situationLines.push(fmt(S.topProduct, {
       name: p.topProduct.name, score: p.topProduct.score,
@@ -634,7 +659,7 @@ export function buildWeeklyReportEmbed(params: WeeklyReportEmbedParams): Discord
   if (p.priceChanges >= 5) {
     impactPieces.push(S.warn_pricing);
   }
-  if (p.avgHoneyScore < 50) {
+  if (lowAvg) {
     impactPieces.push(S.warn_lowAvg);
   }
   if (impactPieces.length === 0) {
@@ -649,8 +674,8 @@ export function buildWeeklyReportEmbed(params: WeeklyReportEmbedParams): Discord
   if (p.newRegistered < 3) {
     actionItems.push(S.task_register);
   }
-  if (p.avgHoneyScore < 50) {
-    actionItems.push(S.task_tuning);
+  if (lowAvg) {
+    actionItems.push(fmt(S.task_tuning, { n: p.lowScoreCount ?? 0 }));
   }
   if (actionItems.length === 0) {
     actionItems.push(S.task_default);
