@@ -2,8 +2,8 @@
   "header": {
     "title": "품절 위험 알림",
     "subtitle": "재고 임계값을 넘은 활성 상품들",
-    "emptyAll": "현재 품절 위험 알림이 없습니다",
-    "emptyHint": "재고 폴링이 6시간 또는 24시간마다 자동 갱신됩니다",
+    "emptyAll": "까꿍💖 지금은 품절 위험이 없어요",
+    "emptyHint": "꼬띠가 재고를 6시간·24시간마다 자동으로 순찰하고 있어요",
     "pollNow": "지금 폴링",
     "pollNowHint": "도매꾹 재고를 즉시 다시 확인합니다 (3분 간격 제한)",
     "polling": "폴링 중..."
@@ -58,16 +58,16 @@
     "justNow": "방금"
   },
   "toast": {
-    "resolveSuccess": "알림이 해결됨으로 처리되었습니다",
-    "resolveFail": "처리 실패 — 다시 시도해 주세요",
-    "relistAlertSuccess": "재등록 알림이 디스코드로 전송되었습니다",
-    "outOfStockSuccess": "품절 처리되었습니다",
-    "outOfStockNaverSuccess": "앱 + 네이버 스토어 모두 품절 처리되었습니다",
-    "outOfStockNaverFail": "앱은 품절 처리됐지만 네이버 반영은 실패 — 직접 확인하세요",
-    "pollSuccess": "재고 폴링 완료",
-    "pollNoProducts": "폴링 대상 상품이 없습니다 — 첫 상품을 등록해주세요",
-    "pollRateLimited": "최근 폴링 후 너무 빨라요 — 잠시 후 다시 시도",
-    "pollFail": "폴링 실패",
+    "resolveSuccess": "빵야➰ 알림 해결 완료!",
+    "resolveFail": "앗, 처리에 실패했어요 — 다시 시도해 주세요",
+    "relistAlertSuccess": "재등록 알림을 디스코드로 쏘아 보냈어요",
+    "outOfStockSuccess": "품절 처리했어요",
+    "outOfStockNaverSuccess": "이랴➰ 앱 + 네이버 스토어 모두 품절 처리 완료!",
+    "outOfStockNaverFail": "앱은 품절 처리됐지만 네이버 반영은 실패했어요 — 직접 확인해 주세요",
+    "pollSuccess": "재고 순찰 완료!",
+    "pollNoProducts": "폴링 대상 상품이 없어요 — 첫 상품을 등록해 주세요",
+    "pollRateLimited": "방금 폴링했어요 — 잠시 후 다시 시도해 주세요",
+    "pollFail": "폴링에 실패했어요",
     "actionPending": "처리 중..."
   }
 }

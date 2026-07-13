@@ -64,8 +64,8 @@
     "repWhiteOnly": "대표이미지는 흰배경 누끼만 — 라이프스타일 합성컷은 상세·추가 전용"
   },
   "empty": {
-    "title": "이 상품에 등록된 교체 작업이 없어요",
-    "hint": "asset_jobs에 product_swap 단계가 등록되면 여기에 표시됩니다"
+    "title": "🌷 이 상품엔 아직 교체 작업이 없어요",
+    "hint": "asset_jobs에 product_swap 단계가 등록되면 여기에 표시돼요"
   },
   "migrationPending": {
     "title": "교체 워크플로우 준비 중",
