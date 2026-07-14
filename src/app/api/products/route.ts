@@ -13,6 +13,7 @@ import { generateUniqueSku } from '@/lib/sku-engine';
 import { mapCrawlOptions } from '@/lib/sources/crawl-option-mapper';
 import { parseDomeProductNo } from '@/lib/sources/parse-dome-no';
 import { sanitizeProductWrite } from '@/lib/product-write-fields';
+import { loadTuningScores } from '@/lib/products/tuning-signals';
 
 // Fire-and-forget: check honey score drop after product update
 
@@ -149,6 +150,11 @@ export async function GET(request: NextRequest) {
         return_care_enabled: true,
         keywords: true,
         tags: true,
+        // Tuning score inputs (#256 P4) — loadTuningScores() needs these to
+        // compute the same signal set used by /api/products/linked. (category
+        // is already selected above for the search filter.)
+        lastSaleDate: true,
+        supplier_product_code: true,
         supplier: {
           select: {
             id: true,
@@ -185,10 +191,24 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Tuning score enrichment (#256 P4) — best-effort, must never break the
+    // list response if scoring hiccups (#82). Same engine/inputs as
+    // /api/products/linked so warehouse and quality-signal views agree.
+    let tuningById: Awaited<ReturnType<typeof loadTuningScores>> = new Map();
+    try {
+      tuningById = await loadTuningScores(normalizedProducts as unknown as Parameters<typeof loadTuningScores>[0]);
+    } catch (err) {
+      console.error('튜닝 점수 계산 오류(리스트는 정상 반환):', err);
+    }
+    const productsWithTuning = normalizedProducts.map((p) => ({
+      ...p,
+      tuningScore: tuningById.get(p.id) ?? null,
+    }));
+
     return NextResponse.json({
       success: true,
-      products: normalizedProducts,
-      total: normalizedProducts.length,
+      products: productsWithTuning,
+      total: productsWithTuning.length,
     });
 
   } catch (error: any) {

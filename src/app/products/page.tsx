@@ -19,6 +19,7 @@ import { calcHoneyScore } from '@/lib/honey-score';
 import { deriveOriginKind, type OriginKind } from '@/lib/products/origin-kind';
 import { computeRevivalScore, revivalSignalsFromProduct, isRevivalCandidateProduct, type RevivalResult } from '@/lib/products/revival-score';
 import NameDiagnosisBadge, { type NameBadgeData } from '@/components/products/NameDiagnosisBadge';
+import TuningBadge, { type TuningBadgeData } from '@/components/products/TuningBadge';
 import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
 import InventoryBadge from '@/components/products/InventoryBadge';
 import { StageBadge } from '@/components/products/StageBadge';
@@ -59,6 +60,7 @@ interface Product {
   naver_status_type?: string | null;
   origin_kind?: string | null; // present only after Desktop applies the migration
   driftFields?: unknown;       // app↔Naver drift (drift-scan) — hub drift filter
+  tuningScore?: TuningBadgeData | null; // 튜닝 필요도 지수 (#256 P4) — server-computed, null if scoring degraded
 }
 
 type TabKey = 'all' | 'draft' | 'ready' | 'active' | 'pending' | 'oos' | 'reactivation' | 'revival' | 'lowMargin' | 'drift';
@@ -1334,6 +1336,9 @@ function ProductsPageInner() {
             <HubBadges p={p} rd={readinessMap[p.id]} />
             {nameDiagnoses[p.id] && (
               <div style={{ marginTop: 3 }}><NameDiagnosisBadge data={nameDiagnoses[p.id]} /></div>
+            )}
+            {p.tuningScore && (
+              <div style={{ marginTop: 3 }}><TuningBadge data={p.tuningScore} /></div>
             )}
             {naverMismatches[p.id] && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#F63B28', background: '#fff1f1', border: '1px solid #fca5a5', borderRadius: 6, padding: '1px 6px', marginTop: 2 }}>

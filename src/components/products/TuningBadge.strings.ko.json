@@ -1,0 +1,11 @@
+{
+  "grade": {
+    "grow": "키울 상품",
+    "defend": "방어",
+    "demote": "내릴 상품",
+    "zombie": "좀비"
+  },
+  "prefix": "튜닝",
+  "reasonsHeader": "사유:",
+  "caveatHeader": "안내:"
+}
