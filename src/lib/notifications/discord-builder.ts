@@ -21,12 +21,12 @@ import type { DiscordChannel } from '@/lib/discord';
 import STRINGS from './discord-strings.ko.json';
 import type { FourModeResult, ModeResult } from '@/lib/recommendation-modes';
 import { recoTypeSummary, type RecoTypeTag } from '@/lib/naver/recommendation-type';
-import { pickVariant, seasonalGreeting } from './kkotti-variation';
+import { pickVariant, seasonalGreeting, isUrgentAlert } from './kkotti-variation';
 
 /** 꼬띠 한마디 조립: 상황별 후보(층1+3, seedKey로 순환) + 가끔 붙는 날짜/계절
  *  인사(층2). 모든 kkotti_* 라인이 이 함수를 거쳐 매일 다른 문구가 나가게 한다. */
 function kkottiLine(candidates: readonly string[], seedKey: string): string {
-  return pickVariant(candidates, seedKey) + seasonalGreeting(seedKey);
+  return pickVariant(candidates, seedKey) + seasonalGreeting(seedKey, new Date(), isUrgentAlert(seedKey));
 }
 
 // ── Visual identity ──────────────────────────────────────────────────────────
@@ -284,7 +284,7 @@ export function buildRecommendEmbed(params: RecommendEmbedParams): DiscordEmbed 
   const kkottiTail = top.length > 0
     ? fmt(pickVariant(S.kkotti_top, 'recommend:top'), { name: top[0].name })
     : pickVariant(S.kkotti_empty, 'recommend:empty');
-  const kkotti = `${pickVariant(S.kkotti_intro, 'recommend:intro')} ${kkottiTail}${seasonalGreeting('recommend')}`;
+  const kkotti = `${pickVariant(S.kkotti_intro, 'recommend:intro')} ${kkottiTail}${seasonalGreeting('recommend', new Date(), isUrgentAlert('recommend'))}`;
 
   const fields = buildFourSectionFields({ situation, impact, action, kkotti });
   if (params.season && params.seasonTop2 && params.seasonTop2.length > 0) {
@@ -379,7 +379,7 @@ export function buildFourModeRecommendEmbed(params: FourModeEmbedParams): Discor
   const kkottiTail = strongMode
     ? fmt(pickVariant(S.kkotti_top, 'recommend4:top'), { name: strongMode.items[0].keyword })
     : pickVariant(S.kkotti_empty, 'recommend4:empty');
-  const kkotti = `${pickVariant(S.kkotti_intro, 'recommend4:intro')} ${kkottiTail}${seasonalGreeting('recommend4')}`;
+  const kkotti = `${pickVariant(S.kkotti_intro, 'recommend4:intro')} ${kkottiTail}${seasonalGreeting('recommend4', new Date(), isUrgentAlert('recommend4'))}`;
 
   return {
     title: fmt(S.title, { today: params.today }),
@@ -466,7 +466,7 @@ export function buildStockAlertEmbed(params: StockAlertEmbedParams): DiscordEmbe
 
   const kkotti = totalCount === 1
     ? kkottiLine(S.kkotti_one, 'stockAlert:one')
-    : fmt(pickVariant(S.kkotti_many, 'stockAlert:many'), { n: totalCount }) + seasonalGreeting('stockAlert:many');
+    : fmt(pickVariant(S.kkotti_many, 'stockAlert:many'), { n: totalCount }) + seasonalGreeting('stockAlert:many', new Date(), isUrgentAlert('stockAlert:many'));
 
   return {
     title: fmt(S.title, { n: totalCount }),

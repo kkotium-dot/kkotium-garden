@@ -84,8 +84,16 @@ const SEASON_GREETINGS: Record<Season, string[]> = {
  * 2층: 날짜/요일/계절 인사 한 조각(뒤에 덧붙일 접미사, 없으면 빈 문자열).
  * 확률적으로만 등장하도록 seedKey를 섞어 "요일마다 100% 붙는" 새 고정 패턴을
  * 만들지 않는다 — 대략 40% 정도의 알림에만 붙는다(5개 중 2개 슬롯).
+ *
+ * urgent=true면 아무것도 붙이지 않는다 (2026-07-15 Desktop 검증에서 발견):
+ * 좀비/품절 같은 급한 알림에 "여름엔 배송 지연도 잘 챙겨야 해유~" 같은 한가한
+ * 계절 인사가 붙으면 문맥이 깨진다. 위기 상황에서 카우걸 꼬띠가 급하게 말하다가
+ * 갑자기 날씨 얘기를 하는 꼴 — 페르소나 가이드의 모드 분기와도 충돌한다.
+ * 인사는 정원사🌷 모드(평온한 알림)에서만 쓴다.
  */
-export function seasonalGreeting(seedKey: string, date: Date = new Date()): string {
+export function seasonalGreeting(seedKey: string, date: Date = new Date(), urgent = false): string {
+  if (urgent) return '';
+
   const dow = date.getDay(); // 0=일 ... 1=월 ... 5=금
   const pool: string[] =
     dow === 1 ? MONDAY_GREETINGS
@@ -96,6 +104,14 @@ export function seasonalGreeting(seedKey: string, date: Date = new Date()): stri
   const slot = (daysSinceEpoch(date) + hashString(seedKey)) % 5;
   if (slot >= 2) return '';
   return ` ${pickVariant(pool, seedKey, date)}`;
+}
+
+/**
+ * 위기 알림 판별 — 카우걸🤠 모드로 나가는 알림에는 계절 인사를 붙이지 않는다.
+ * seedKey(알림 종류 식별자)로 판단하므로 호출부가 따로 플래그를 넘길 필요 없다.
+ */
+export function isUrgentAlert(seedKey: string): boolean {
+  return /zombie|stock|price|scoreDrop|margin/i.test(seedKey);
 }
 
 /** SEASON_WORD를 노출용으로 쓰고 싶을 때(디버그/검증 스크립트용). */
