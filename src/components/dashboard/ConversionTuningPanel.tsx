@@ -1,5 +1,5 @@
 'use client';
-// ConversionTuningPanel — 전환 튜닝 체크리스트
+// ConversionTuningPanel — 전환율 손질 체크리스트
 // P2: Manual checklist (no Naver API yet)
 // Shows actionable items to improve product visibility before API integration
 
@@ -84,7 +84,7 @@ export default function ConversionTuningPanel({ productId }: { productId?: strin
       <div className="px-4 py-3 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sparkles size={14} className="text-indigo-600" />
-          <span className="text-sm font-bold text-gray-800">전환 튜닝 체크리스트</span>
+          <span className="text-sm font-bold text-gray-800">전환율 손질 체크리스트</span>
           {highCount > 0 && (
             <span className="text-xs text-red-600 bg-red-100 px-2 py-0.5 rounded-full font-semibold">
               높음 {highCount}개 미완료

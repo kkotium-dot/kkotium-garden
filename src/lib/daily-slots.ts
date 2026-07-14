@@ -147,7 +147,7 @@ export function getReactivationReason(
   if (product.lastSaleDate) {
     const daysSince = Math.floor((now - new Date(product.lastSaleDate).getTime()) / 86_400_000);
     if (daysSince >= 30) {
-      return { reason: 'long_inactive', label: `${daysSince}일째 판매 없음 — 전환 튜닝 필요` };
+      return { reason: 'long_inactive', label: `${daysSince}일째 판매 없음 — 판매 전환 손질 필요` };
     }
   }
 

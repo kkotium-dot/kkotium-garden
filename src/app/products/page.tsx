@@ -60,7 +60,7 @@ interface Product {
   naver_status_type?: string | null;
   origin_kind?: string | null; // present only after Desktop applies the migration
   driftFields?: unknown;       // app↔Naver drift (drift-scan) — hub drift filter
-  tuningScore?: TuningBadgeData | null; // 튜닝 필요도 지수 (#256 P4) — server-computed, null if scoring degraded
+  tuningScore?: TuningBadgeData | null; // 손질필요도 지수 (#256 P4) — server-computed, null if scoring degraded
 }
 
 type TabKey = 'all' | 'draft' | 'ready' | 'active' | 'pending' | 'oos' | 'reactivation' | 'revival' | 'lowMargin' | 'drift';
@@ -313,7 +313,7 @@ function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync 
     setMutating(true);
     try { setStockMsg(await onStockSync()); } finally { setMutating(false); }
   };
-  // 리셋 — 앱 튜닝을 연동 원본으로 되돌림 (비가역 · confirm 게이트).
+  // 리셋 — 앱에서 손본 내용을 연동 원본으로 되돌림 (비가역 · confirm 게이트).
   const resetToOrigin = async () => {
     if (!canReset) return;
     if (!window.confirm(
@@ -429,13 +429,13 @@ function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync 
       </div>
       <div className="p-4 flex flex-col gap-2" style={{ borderTop: '1.5px solid #F8DCE5' }}>
         {/* 공통 관리 액션 바 (#245 §2-C) — 출처 무관 동일 액션. Phase 2a: 네비게이션
-            액션(튜닝→아틀리에·발행 준비→preview·상세). 변이 액션(리셋/마진재산정/
+            액션(꽃단장→아틀리에·발행 준비→preview·상세). 변이 액션(리셋/마진재산정/
             재고/부활소)은 Phase 2b에서 confirm 게이트(#46)로 추가. */}
         <div className="grid grid-cols-3 gap-2">
           <Link href={`/studio?product=${product.id}`}
             className="flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[11px] font-semibold transition"
-            style={{ color: '#7e22ce', background: '#FAF5FF', border: '1px solid #e9d5ff' }} title="온실 아틀리에에서 튜닝">
-            <Palette size={15} /> 튜닝
+            style={{ color: '#7e22ce', background: '#FAF5FF', border: '1px solid #e9d5ff' }} title="온실 아틀리에에서 꽃단장">
+            <Palette size={15} /> 꽃단장
           </Link>
           <Link href={`/products/${product.id}/preview`}
             className="flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[11px] font-semibold transition"

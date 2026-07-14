@@ -1,6 +1,6 @@
 // src/lib/products/tuning-score.ts
 // ============================================================================
-// 튜닝 필요도 지수 (#256 P4) — PURE composite score answering "이 상품, 지금
+// 손질필요도 지수 (#256 P4) — PURE composite score answering "이 상품, 지금
 // 얼마나 손봐야 하나?" for 꽃밭 돌보기. Reuses existing scoring engines only
 // (no dupe, #252): revival-score (품절/판매중지 신호) + honey-score (마진) +
 // product-name-diagnosis (상품명 SEO) + category-trend-cache (카테고리 트렌드)
@@ -10,6 +10,11 @@
 //
 // Priority order (운영자 확정, PRODUCT_IA_REDESIGN_V2_CONFIRMED §4):
 //   품절+실적(0~40) > 마진위기(0~30) > 성장여력(0~20) > 악성재고(0~10)
+//
+// Seller-facing copy: "손질필요도"/"관찰" instead of developer jargon
+// ("튜닝"/"방어") per 2026-07-14 운영자 지시. Internal type names (TuningTier
+// = 'grow'|'defend'|'demote') are unchanged — they never render directly;
+// only TUNING_TIER_LABEL and the badge strings carry the seller-facing text.
 //
 // Caveat (#255): this is an app-internal heuristic, NOT Naver's official score
 // (Naver does not expose a per-product ranking API) — always surfaced with the
@@ -67,7 +72,7 @@ export interface TuningScoreResult {
 const ZOMBIE_THRESHOLD = 60;
 const DEFEND_THRESHOLD = 30;
 
-const CAVEAT = '튜닝 필요도는 앱이 자체 산정하는 참고 지수입니다 — 네이버 공식 판매점수가 아닙니다.';
+const CAVEAT = '손질필요도는 앱이 자체 산정하는 참고 지수입니다 — 네이버 공식 판매점수가 아닙니다.';
 
 const OOS_STATUS = new Set(['OUTOFSTOCK', 'OUT_OF_STOCK']);
 const SUSPENDED_STATUS = new Set(['SUSPENSION', 'CLOSE', 'PROHIBITION', 'INACTIVE', 'HIDDEN']);
@@ -130,6 +135,6 @@ export function computeTuningScore(input: TuningScoreInput): TuningScoreResult {
 
 export const TUNING_TIER_LABEL: Record<TuningTier, string> = {
   grow: '키울 상품',
-  defend: '방어',
+  defend: '관찰',
   demote: '내릴 상품',
 };

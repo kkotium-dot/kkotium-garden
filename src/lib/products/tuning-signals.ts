@@ -1,12 +1,13 @@
 // src/lib/products/tuning-signals.ts
 // ============================================================================
-// 튜닝 필요도 지수 — async signal loader (#256 P4). Batches the DB/lookup work
+// 손질필요도 지수 — async signal loader (#256 P4). Batches the DB/lookup work
 // so tuning-score.ts stays pure. Reuses existing engines only (#252):
 //   revival-score(품절/판매중지) · honey-score(마진) ·
 //   product-name-diagnosis(상품명 SEO) · category-trend-cache(카테고리 트렌드) ·
 //   SupplierStockProfile(dome-inventory-poller의 공급사 신뢰도).
-// Callers: /api/products/linked (list) · /api/products/[id]/naver-detail
-// (single-product info panel) · cron/daily (zombie Discord digest).
+// Callers: /api/products (warehouse list) · /api/products/linked (list) ·
+// /api/products/[id]/naver-detail (single-product info panel) · cron/daily
+// (zombie Discord digest).
 // ============================================================================
 
 import { prisma } from '@/lib/prisma';

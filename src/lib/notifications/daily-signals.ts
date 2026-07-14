@@ -93,7 +93,7 @@ export async function computeOpsDigestSignals(
       zombieDetected.push({
         name: p.name, productId: p.id,
         marginPct: p.salePrice > 0 && p.supplierPrice > 0 ? scoreProduct(p).netMarginRate : 0,
-        reason: tuning.zombieReason ?? '튜닝 필요',
+        reason: tuning.zombieReason ?? '손질 필요',
       });
     }
 
