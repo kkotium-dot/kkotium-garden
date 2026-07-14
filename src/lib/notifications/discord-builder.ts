@@ -21,6 +21,13 @@ import type { DiscordChannel } from '@/lib/discord';
 import STRINGS from './discord-strings.ko.json';
 import type { FourModeResult, ModeResult } from '@/lib/recommendation-modes';
 import { recoTypeSummary, type RecoTypeTag } from '@/lib/naver/recommendation-type';
+import { pickVariant, seasonalGreeting } from './kkotti-variation';
+
+/** 꼬띠 한마디 조립: 상황별 후보(층1+3, seedKey로 순환) + 가끔 붙는 날짜/계절
+ *  인사(층2). 모든 kkotti_* 라인이 이 함수를 거쳐 매일 다른 문구가 나가게 한다. */
+function kkottiLine(candidates: readonly string[], seedKey: string): string {
+  return pickVariant(candidates, seedKey) + seasonalGreeting(seedKey);
+}
 
 // ── Visual identity ──────────────────────────────────────────────────────────
 
@@ -138,7 +145,7 @@ export function buildPublishReadyAlert(names: string[]): DiscordEmbed {
     tier: 'digest', channel: 'KKOTTI_RECOMMEND', emoji: '✅',
     title: fmt(O.publishReady_title, { name: names.length === 1 ? names[0] : `${names.length}건` }),
     action: O.publishReady_action,
-    kkotti: O.publishReady_kkotti,
+    kkotti: kkottiLine(O.publishReady_kkotti, 'ops:publishReady'),
     deepLink: { path: '/products' },
     extraLines: names.length > 1 ? digestExtraLines(names) : undefined,
   });
@@ -151,7 +158,7 @@ export function buildRevivalAlert(names: string[]): DiscordEmbed {
     tier: 'digest', channel: 'KKOTTI_SCORE', emoji: '🌱',
     title: fmt(O.revival_title, { n: names.length }),
     action: O.revival_action,
-    kkotti: O.revival_kkotti,
+    kkotti: kkottiLine(O.revival_kkotti, 'ops:revival'),
     deepLink: { path: '/products/reactivation' },
     extraLines: digestExtraLines(names),
   });
@@ -164,7 +171,7 @@ export function buildZombieAlert(names: string[]): DiscordEmbed {
     tier: 'digest', channel: 'KKOTTI_SCORE', emoji: '🥀',
     title: fmt(O.zombie_title, { n: names.length }),
     action: O.zombie_action,
-    kkotti: O.zombie_kkotti,
+    kkotti: kkottiLine(O.zombie_kkotti, 'ops:zombie'),
     deepLink: { path: '/products/reactivation' },
     extraLines: digestExtraLines(names),
   });
@@ -182,7 +189,7 @@ export function buildZombieDetectedAlert(item: { name: string; productId: string
     tier: 'realtime', channel: 'KKOTTI_SCORE', emoji: '🧟',
     title: fmt(O.zombieDetected_title, { name: item.name }),
     action: fmt(O.zombieDetected_action, { reason: item.reason, margin: item.marginPct.toFixed(1) }),
-    kkotti: O.zombieDetected_kkotti,
+    kkotti: kkottiLine(O.zombieDetected_kkotti, `ops:zombieDetected:${item.productId}`),
     deepLink: { label: O.zombieDetected_editLabel, path: `/products/new?edit=${item.productId}` },
   });
 }
@@ -196,7 +203,7 @@ export function buildMarginWarnAlert(items: { name: string; margin: number }[]):
     tier: 'realtime', channel: 'PRICE_CHANGE', emoji: '⚠️',
     title: fmt(O.margin_title, { n: items.length }),
     action: O.margin_action,
-    kkotti: O.margin_kkotti,
+    kkotti: kkottiLine(O.margin_kkotti, 'ops:margin'),
     deepLink: { path: '/products' },
     extraLines: lines,
   });
@@ -275,9 +282,9 @@ export function buildRecommendEmbed(params: RecommendEmbedParams): DiscordEmbed 
   const action = actionItemsRec.map((it, i) => `${i + 1}. ${it}`).join('\n');
 
   const kkottiTail = top.length > 0
-    ? fmt(S.kkotti_top, { name: top[0].name })
-    : S.kkotti_empty;
-  const kkotti = `${S.kkotti_intro} ${kkottiTail}`;
+    ? fmt(pickVariant(S.kkotti_top, 'recommend:top'), { name: top[0].name })
+    : pickVariant(S.kkotti_empty, 'recommend:empty');
+  const kkotti = `${pickVariant(S.kkotti_intro, 'recommend:intro')} ${kkottiTail}${seasonalGreeting('recommend')}`;
 
   const fields = buildFourSectionFields({ situation, impact, action, kkotti });
   if (params.season && params.seasonTop2 && params.seasonTop2.length > 0) {
@@ -370,9 +377,9 @@ export function buildFourModeRecommendEmbed(params: FourModeEmbedParams): Discor
   // Kkotti voice — speak to the strongest mode's first item
   const strongMode = result.modes.find(m => m.items.length > 0);
   const kkottiTail = strongMode
-    ? fmt(S.kkotti_top, { name: strongMode.items[0].keyword })
-    : S.kkotti_empty;
-  const kkotti = `${S.kkotti_intro} ${kkottiTail}`;
+    ? fmt(pickVariant(S.kkotti_top, 'recommend4:top'), { name: strongMode.items[0].keyword })
+    : pickVariant(S.kkotti_empty, 'recommend4:empty');
+  const kkotti = `${pickVariant(S.kkotti_intro, 'recommend4:intro')} ${kkottiTail}${seasonalGreeting('recommend4')}`;
 
   return {
     title: fmt(S.title, { today: params.today }),
@@ -458,8 +465,8 @@ export function buildStockAlertEmbed(params: StockAlertEmbedParams): DiscordEmbe
     : actionLines.join('\n');
 
   const kkotti = totalCount === 1
-    ? S.kkotti_one
-    : fmt(S.kkotti_many, { n: totalCount });
+    ? kkottiLine(S.kkotti_one, 'stockAlert:one')
+    : fmt(pickVariant(S.kkotti_many, 'stockAlert:many'), { n: totalCount }) + seasonalGreeting('stockAlert:many');
 
   return {
     title: fmt(S.title, { n: totalCount }),
@@ -525,10 +532,10 @@ export function buildPriceChangeEmbed(params: PriceChangeEmbedParams): DiscordEm
   const action = actionLines.join('\n');
 
   const kkotti = negativeCount > 0
-    ? S.kkotti_negative
+    ? kkottiLine(S.kkotti_negative, 'priceChange:negative')
     : dangerCount > 0
-      ? S.kkotti_danger
-      : S.kkotti_safe;
+      ? kkottiLine(S.kkotti_danger, 'priceChange:danger')
+      : kkottiLine(S.kkotti_safe, 'priceChange:safe');
 
   return {
     title: fmt(S.title, { n: totalCount }),
@@ -581,7 +588,7 @@ export function buildScoreDropEmbed(params: ScoreDropEmbedParams): DiscordEmbed 
   ];
   const action = actionLines.join('\n');
 
-  const kkotti = S.kkotti;
+  const kkotti = kkottiLine(S.kkotti, 'scoreDrop');
 
   return {
     title: fmt(S.title, { n: totalCount }),
@@ -684,7 +691,9 @@ export function buildWeeklyReportEmbed(params: WeeklyReportEmbedParams): Discord
   actionLines.push(`${S.action_first.split(':')[0]}: ${link(S.action_first.split(':').slice(1).join(':').trim(), '/dashboard')}`);
   const action = actionLines.join('\n');
 
-  const kkotti = hasRevenue ? S.kkotti_revenue : S.kkotti_zero;
+  const kkotti = hasRevenue
+    ? kkottiLine(S.kkotti_revenue, 'weeklyReport:revenue')
+    : kkottiLine(S.kkotti_zero, 'weeklyReport:zero');
 
   return {
     title: fmt(S.title, { weekLabel: p.weekLabel }),
