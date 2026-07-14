@@ -87,7 +87,7 @@ export function isOutOfStockOrSuspended(input: Pick<TuningScoreInput, 'naverStat
   );
 }
 
-const CAVEAT = '손질필요도는 앱이 자체 산정하는 참고 지수입니다 — 네이버 공식 판매점수가 아닙니다.';
+const CAVEAT = '좀비 지수는 앱이 자체 산정하는 참고 지수입니다 — 네이버 공식 판매점수가 아닙니다.';
 
 const OOS_STATUS = new Set(['OUTOFSTOCK', 'OUT_OF_STOCK']);
 const SUSPENDED_STATUS = new Set(['SUSPENSION', 'CLOSE', 'PROHIBITION', 'INACTIVE', 'HIDDEN']);
