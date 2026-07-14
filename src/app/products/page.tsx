@@ -17,7 +17,6 @@ import {
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { deriveOriginKind, type OriginKind } from '@/lib/products/origin-kind';
-import { computeRevivalScore, revivalSignalsFromProduct, isRevivalCandidateProduct, type RevivalResult } from '@/lib/products/revival-score';
 import NameDiagnosisBadge, { type NameBadgeData } from '@/components/products/NameDiagnosisBadge';
 import TuningBadge, { type TuningBadgeData } from '@/components/products/TuningBadge';
 import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
@@ -60,7 +59,7 @@ interface Product {
   naver_status_type?: string | null;
   origin_kind?: string | null; // present only after Desktop applies the migration
   driftFields?: unknown;       // app↔Naver drift (drift-scan) — hub drift filter
-  tuningScore?: TuningBadgeData | null; // 손질필요도 지수 (#256 P4) — server-computed, null if scoring degraded
+  tuningScore?: TuningBadgeData | null; // 좀비 통합 판정 (#264, computeZombieVerdict) — server-computed, null if scoring degraded
 }
 
 type TabKey = 'all' | 'draft' | 'ready' | 'active' | 'pending' | 'oos' | 'reactivation' | 'revival' | 'lowMargin' | 'drift';
@@ -68,15 +67,14 @@ type ViewMode = 'list' | 'group';
 type ScoredProduct = Product & {
   _hs: ReturnType<typeof calcHoneyScore>;
   _origin: OriginKind;   // hub source tag (#245)
-  _rev: RevivalResult;   // revival-candidate score (#244)
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-// Revival candidate (#244/#247) — a live store product gone stale (판매중지/품절/
-// 약한 SEO/이미지 부족). Uses the SHARED isRevivalCandidateProduct judgment so the
-// hub filter and the dashboard 부활소 count are provably identical (#62).
-const isRevivalCandidate = (p: Product): boolean => isRevivalCandidateProduct(p);
+// 좀비 판정 (#264) — "좀비발견" 탭과 TuningBadge 배지가 서로 다른 기준으로
+// 어긋나지 않도록, 둘 다 서버가 loadTuningScores()/computeZombieVerdict()로
+// 계산해 넣어준 p.tuningScore.isZombie 하나만 본다(#261 폐기, 병행 기준 금지).
+const isZombieProduct = (p: Product): boolean => p.tuningScore?.isZombie === true;
 
 // Hub filter matrix (#245 §2-B). Low margin = net margin under the attention
 // band (< 10%); drift = drift-scan found app↔Naver out-of-sync fields.
@@ -108,7 +106,7 @@ const TAB_CONFIG: Record<TabKey, {
   pending:      { label: '네이버 등록 대기',     dot: 'bg-amber-400',  dotLabel: '네이버 등록 대기', filter: p => p.status === 'ACTIVE' && !p.naverProductId },
   oos:          { label: '품절',          dot: 'bg-[#F63B28]',  dotLabel: '품절',          filter: p => p.status === 'OUT_OF_STOCK' },
   reactivation: { label: '판매중지',      dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
-  revival:      { label: '좀비발견',      dot: 'bg-purple-500', dotLabel: '부활 후보',     filter: isRevivalCandidate },
+  revival:      { label: '좀비발견',      dot: 'bg-purple-500', dotLabel: '좀비',          filter: isZombieProduct },
   lowMargin:    { label: '마진 낮음',     dot: 'bg-rose-500',   dotLabel: '마진 낮음',     filter: isLowMargin },
   drift:        { label: '동기화 필요',   dot: 'bg-yellow-500', dotLabel: '동기화 필요',   filter: hasDrift },
 };
@@ -223,7 +221,7 @@ function HubBadges({ p, rd }: { p: ScoredProduct; rd?: { ready: boolean; passed:
       {chip(o.t, o.fg, o.bg, o.bd, 'origin')}
       {chip(regChip.t, regChip.fg, regChip.bg, regChip.bd, 'reg')}
       {readyChip && chip(readyChip.t, readyChip.fg, readyChip.bg, readyChip.bd, 'ready')}
-      {p._rev.isCandidate && chip(`부활 ${p._rev.grade}`, '#7e22ce', '#FAF5FF', '#e9d5ff', 'rev')}
+      {/* #264 — "부활 {grade}" 병렬 배지는 제거. 좀비 판정은 TuningBadge 하나로만 노출. */}
     </div>
   );
 }
@@ -1144,10 +1142,11 @@ function ProductsPageInner() {
       keywords: p.keywords ?? [], tags: p.tags ?? [],
       hasMainImage: !!p.mainImage,
     }),
-    // Hub axis (#245/#244): source tag + revival-candidate score, both from
-    // fields already loaded (origin_kind derived until the migration lands).
+    // Hub axis (#245): source tag, from fields already loaded (origin_kind
+    // derived until the migration lands). Zombie judgment (#264) comes from
+    // p.tuningScore (server-computed via computeZombieVerdict), not a
+    // client-recomputed revival score.
     _origin: deriveOriginKind(p),
-    _rev: computeRevivalScore(revivalSignalsFromProduct(p)),
   })), [raw]);
 
   const filtered = useMemo<ScoredProduct[]>(() => {

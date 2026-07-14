@@ -1,15 +1,15 @@
 // src/components/products/TuningBadge.tsx
 // ============================================================================
-// 손질필요도 배지 (#256 P4) — compact badge for the 꽃밭 돌보기 warehouse
-// list rows. PRESENTATIONAL only: renders the TuningScoreResult computed
-// server-side by computeTuningScore() / loadTuningScores() (no scoring logic
-// here, #62). Same visual language as NameDiagnosisBadge/InventoryBadge
-// (compact pill, hover tooltip for detail).
+// 좀비 배지 (#256 P4, #264 좀비 통합 판정으로 라벨 통일) — compact badge for the
+// 꽃밭 돌보기 warehouse list rows. PRESENTATIONAL only: renders the
+// ZombieVerdictResult computed server-side by computeZombieVerdict() /
+// loadTuningScores() (no scoring logic here, #62). Same visual language as
+// NameDiagnosisBadge/InventoryBadge (compact pill, hover tooltip for detail).
 //
-// UI copy uses seller-facing terms ("손질필요도", "관찰") instead of developer
-// jargon ("튜닝"/"방어") per 2026-07-14 운영자 지시— internal type/variable
-// names (tier: 'defend') stay as-is since they never render; only strings the
-// seller actually sees were translated.
+// "좀비"가 유일한 화면 노출 라벨이다(#264) — "손질필요도"·"부활 필요도" 등
+// 병렬 라벨은 쓰지 않는다. 관리방향(키울/관찰/내릴)은 좀비 여부와 별개로
+// 보조 정보로만 함께 표시한다. 내부 타입/변수명(tier: 'defend')은 화면에
+// 직접 노출되지 않으므로 그대로 둔다.
 //
 // Korean strings live in TuningBadge.strings.ko.json per work principle #35.
 // The caveat text is always surfaced in the tooltip per #255 — this score is

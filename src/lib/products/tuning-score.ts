@@ -65,12 +65,27 @@ export interface TuningScoreResult {
   zombieReason: string | null;
   /** All contributing reasons, most severe first. */
   reasons: string[];
+  /** Same as `reasons` but with weights — lets composing engines (zombie-verdict)
+   *  merge in extra signals without re-deriving this module's internal weights. */
+  reasonsWeighted: TuningScoreReason[];
   /** #255 — always surfaced so this never reads as Naver's official score. */
   caveat: string;
 }
 
-const ZOMBIE_THRESHOLD = 60;
-const DEFEND_THRESHOLD = 30;
+// Exported so zombie-verdict.ts (#264 unification) can share the same cutoffs
+// instead of redefining them.
+export const ZOMBIE_THRESHOLD = 60;
+export const DEFEND_THRESHOLD = 30;
+
+/** Shared OOS/판매중지 status check — reused by zombie-verdict.ts (#264) so the
+ *  "품절 대체 신호" extra weight only applies when this engine already sees the
+ *  product as out-of-stock/suspended. */
+export function isOutOfStockOrSuspended(input: Pick<TuningScoreInput, 'naverStatusType' | 'appStatus'>): boolean {
+  return (
+    OOS_STATUS.has(input.naverStatusType ?? '') || OOS_STATUS.has(input.appStatus) ||
+    SUSPENDED_STATUS.has(input.naverStatusType ?? '') || SUSPENDED_STATUS.has(input.appStatus)
+  );
+}
 
 const CAVEAT = '손질필요도는 앱이 자체 산정하는 참고 지수입니다 — 네이버 공식 판매점수가 아닙니다.';
 
@@ -129,6 +144,7 @@ export function computeTuningScore(input: TuningScoreInput): TuningScoreResult {
     isZombie,
     zombieReason: isZombie ? (reasons[0]?.text ?? null) : null,
     reasons: reasons.map((r) => r.text),
+    reasonsWeighted: reasons,
     caveat: CAVEAT,
   };
 }
