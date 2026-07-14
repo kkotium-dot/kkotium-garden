@@ -28,9 +28,20 @@ const COLOR_BY_LEVEL: Record<Level, { fg: string; bg: string; border: string; do
 };
 
 const UNTRUSTWORTHY_COLOR = { fg: '#525252', bg: '#fafafa', border: '#d4d4d4', dot: '#737373' };
+const POLL_FAILED_COLOR = { fg: '#525252', bg: '#f5f5f4', border: '#d6d3d1', dot: '#a8a29e' };
+
+// qty=-1 is an explicit sentinel from the Domeggook adapter meaning "could not
+// look up this product" (getItemView returned no match), not a real stock
+// count. Never render it as a number — conflates polling failure with a real
+// zero/negative stock (work principle #260). Same treatment for any negative
+// qty defensively, since the sentinel contract could shift.
+function isPollFailure(inv: InventoryBadgeData): boolean {
+  return inv.qty < 0 || inv.status === 'unknown';
+}
 
 function pickLevel(inv: InventoryBadgeData): Level {
-  if (inv.status && inv.status !== STATUS_ACTIVE && inv.status !== 'unknown') return 'red';
+  if (isPollFailure(inv)) return 'red';
+  if (inv.status && inv.status !== STATUS_ACTIVE) return 'red';
   if (inv.alertLevel === 'red') return 'red';
   if (inv.alertLevel === 'orange') return 'orange';
   if (inv.alertLevel === 'yellow') return 'yellow';
@@ -64,15 +75,21 @@ export interface InventoryBadgeProps {
 }
 
 export default function InventoryBadge({ inv }: InventoryBadgeProps) {
+  const pollFailed = isPollFailure(inv);
   const level = pickLevel(inv);
-  const palette = inv.isTrustworthy ? COLOR_BY_LEVEL[level] : UNTRUSTWORTHY_COLOR;
-  const isNonActive = inv.status && inv.status !== STATUS_ACTIVE && inv.status !== 'unknown';
+  const palette = pollFailed
+    ? POLL_FAILED_COLOR
+    : inv.isTrustworthy
+      ? COLOR_BY_LEVEL[level]
+      : UNTRUSTWORTHY_COLOR;
+  const isNonActive = !pollFailed && inv.status && inv.status !== STATUS_ACTIVE && inv.status !== 'unknown';
   const relTime = formatRelativeTime(inv.polledAt);
 
   const tooltipParts: string[] = [];
   tooltipParts.push(`${strings.tooltip.polledAtPrefix}: ${relTime}`);
-  if (!inv.isTrustworthy) tooltipParts.push(strings.untrustworthy.tooltip);
-  if (inv.alertLevel && level !== 'green') {
+  if (pollFailed) tooltipParts.push(strings.pollFailed.tooltip);
+  if (!pollFailed && !inv.isTrustworthy) tooltipParts.push(strings.untrustworthy.tooltip);
+  if (!pollFailed && inv.alertLevel && level !== 'green') {
     tooltipParts.push(`${strings.level[inv.alertLevel]} \u00B7 ${inv.alertThreshold ?? 0} \uC774\uD558`); // 단순 임계 표시
   }
   const title = tooltipParts.join('\n');
@@ -95,7 +112,7 @@ export default function InventoryBadge({ inv }: InventoryBadgeProps) {
         whiteSpace: 'nowrap',
       }}
     >
-      {!inv.isTrustworthy && <ShieldOff size={9} style={{ color: palette.fg, flexShrink: 0 }} />}
+      {!pollFailed && !inv.isTrustworthy && <ShieldOff size={9} style={{ color: palette.fg, flexShrink: 0 }} />}
       <span
         aria-hidden
         style={{
@@ -107,9 +124,11 @@ export default function InventoryBadge({ inv }: InventoryBadgeProps) {
         }}
       />
       <span>
-        {isNonActive
-          ? statusLabel(inv.status)
-          : `${strings.label.qtyPrefix} ${inv.qty}${strings.label.qtyUnit}`}
+        {pollFailed
+          ? strings.label.pollFailed
+          : isNonActive
+            ? statusLabel(inv.status)
+            : `${strings.label.qtyPrefix} ${inv.qty}${strings.label.qtyUnit}`}
       </span>
     </span>
   );

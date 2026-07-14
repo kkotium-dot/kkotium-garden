@@ -3,7 +3,8 @@
     "qtyPrefix": "재고",
     "qtyUnit": "개",
     "unknownStatus": "상태 미확인",
-    "unknownPoll": "폴링 대기"
+    "unknownPoll": "폴링 대기",
+    "pollFailed": "재고 확인 실패"
   },
   "level": {
     "yellow": "주의",
@@ -13,6 +14,9 @@
   "untrustworthy": {
     "label": "재고 미신뢰",
     "tooltip": "공급사가 재고를 7일 이상 그대로 두고 있어요. 직접 확인 권장."
+  },
+  "pollFailed": {
+    "tooltip": "공급사 상품 조회가 계속 실패하고 있어요 — 소싱 코드를 확인해주세요."
   },
   "tooltip": {
     "polledAtPrefix": "마지막 확인",
