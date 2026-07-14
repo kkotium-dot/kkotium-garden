@@ -72,6 +72,24 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-07-14 (107) 문서부채 정리 + IA재설계 P1~P4/페르소나/재고이슈 갭 등재 + 명화 소싱단절 발견 (FROM 🖥️ Desktop, HEAD=origin/main=prod ea4e26d, docs only·코드변경0·네이버 무접촉·비가역0)
+- **Target**: 다음 세션(Desktop 또는 Code) · 3주 문서 갱신 공백(2026-06-24~07-13) 사후 보정 + 신규 발견 2건 등재.
+- **배경**: (106)까지는 2026-07-10 기준. 그 사이(07-11~07-13) 상품 IA 전면 재설계(P1~P4)·꼬띠 페르소나 전면 적용·재고 가시화가 실제로는 진행·배포까지 완료됐으나(git log e7a3581~ea4e26d), PARALLEL_WORK_TRACKER.md와 본 TASK_BRIDGE.md 둘 다 갱신되지 않아 "코드는 있는데 문서에 없는" 상태였음.
+- **DONE (문서 정리·코드 무관)**:
+  1. `PARALLEL_WORK_TRACKER.md`를 rev51로 갱신 — rev50(2026-06-24) 이하 원문은 하단에 그대로 보존, 최상단에 rev51 신규 절로 P1~P4/씨앗심기폼/재고가시화/페르소나 전부를 커밋SHA와 함께 표로 등재.
+  2. `PRINCIPLES_LEARNED.md`에 원칙 #254~#260 정식 이관 완료. 단 **#149~#253 사이 약 100개 원칙은 여전히 미이관** — 경고 블록으로 표시, 다음 세션 필수 작업.
+  3. **원칙 #260 신규**: `/products` 명화 카드 "재고 -1개"의 근본원인 = `inventory_snapshots.qty=-1`은 도매매 API가 productNo를 못 찾을 때의 실패 센티널(실재고 아님). 폴링 대상 전 상품이 2주+ 연속 이 상태.
+  4. **★신규 발견(본 턴)**: 명화 상품(productNo 65322245)을 `/api/crawler/domemae`로 실측 → **도매매에서 상품이 삭제/판매종료되어 소싱 자체가 끊김을 운영자 확인**. 재고 -1은 UI 버그가 아니라 실제 소싱단절을 정직 반영한 것. 명화는 대체 상품 전환 필요(운영자 판단, 이번 세션 미착수).
+- **검증**: 문서 변경만이라 tsc/build 무관. Supabase SQL + `/api/crawler/domemae` POST 라이브 호출로 실측(2026-07-14). 코드 수정 0건(진단만).
+- **패치 위치**: `docs/plan/PARALLEL_WORK_TRACKER.md`(rev51 prepend) · `docs/plan/PRINCIPLES_LEARNED.md`(#254~#260 + 미이관 경고블록) · 본 파일(§3 갱신).
+- **다음 1액션**:
+  - [운영자] 명화 대체 상품 결정(재소싱 or 유사 대체품) — 결정되면 씨앗심기부터 재시작.
+  - [Desktop 또는 Code] CRON_SECRET 로컬↔prod 불일치 확인됨(로컬 값 401 재현) — Vercel 대시보드 실값 확인 후 로컬 동기화 → `/api/admin/test-daily-discord` 실발송 검증.
+  - [Code] 원칙 #149~#253 정식 이관(중간 우선순위 — 특히 #196/#197 네이버 full-replace PUT 규칙 포함).
+  - [Desktop] P4 좀비엔진 배지/사유 텍스트 상세 브라우저 검증(현재는 필터 동작만 확인).
+  - [Code] 재고 스냅샷 qty=-1/unknown UI 표시 수정(#260 규칙 (1)) — 운영자 착수 승인 대기.
+- **의존성**: 명화 대체 상품 결정은 재고 UI 수정과 독립(병행 가능). CRON_SECRET 확인은 디스코드 실발송 검증의 유일한 선행조건.
+
 ### 2026-07-10 (106) 부분 PUT 2곳 제거 — publish-assets GET-merge + 레거시 PUT deprecate (FROM 💻 Code, main faf2a4e, 규칙 3-7 systemic·비가역 게이트 유지·prod 배포대기)
 - **Target**: Claude Code CLI · 권위 NAVER_STORE_OPERATIONS_UPDATE_2026-07-09 §4-C + CLAUDE.md 3-7. (105)에서 spawn한 task_45ebdf1b(부분 PUT 2곳) 완결 — 사용자 systemic 확장 지시.
 - **DONE (faf2a4e)**: (1) publish-assets/route.ts — `{originProduct:{images:{representativeImageUrl},detailContent}}` 부분 PUT(주석에 "네이버 부분 업데이트 허용"이라는 그릇된 전제 명시분) 제거 → 신규 GET-merge 헬퍼 `updateProductAssets`(api-client.ts, updateProductPriceStatus 동형) 교체: GET origin-products/{no} read → 대표이미지(canonical representativeImage.url shape·optionalImages 보존·레거시 flat mirror 삭제)/detailContent만 override → 전체 payload PUT · originProduct 부재 loud throw · dryRun 지원 · https 가드. 라우트 body에 dryRun 옵션 추가(기존 studio 호출 {thumbUrl,detailUrl} 하위호환 유지). (2) naver/products/route.ts PUT — toNaverPayload(원산지/고시/옵션/배송 누락 레거시 빌더)를 그대로 PUT하던 파괴적 경로 확인: 앱 내 호출자 0(preview 화면은 canonical POST /api/naver/products/update 사용)·dryRun/confirm 게이트 없음 → 410 Gone + canonical update 위임으로 neuter. toNaverPayload는 POST(register=신규 생성·full-replace 아님)에만 잔존. updateProduct import 제거.

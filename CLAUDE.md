@@ -93,6 +93,10 @@ cd /Users/jyekkot/Desktop/kkotium-garden && \
 - Sprint 6-Pre 1·2·3 ✅, 6.5 SourceAdapter PoC ✅
 - Sprint 6-D 1-5단계 (꼬띠 4모드 foundation) ✅
 - Sprint 6-A 백엔드 (Option C 하이브리드 동적 임계값 재고 폴링) ✅
+- **상품 IA 전면 재설계 P1~P4 완료·배포** (2026-07-11~13, c7b191b~fb58248)
+- **꼬띠 페르소나 전면 적용 완료·배포** (2026-07-13, 67aca71/ea4e26d) — **실발송 검증 미완료**(CRON_SECRET 불일치)
+- **재고 가시화 배포되었으나 결함 발견**(#260): qty=-1을 실재고처럼 노출 — UI 수정 운영자 승인 대기
+- **명화 상품 소싱 단절**(2026-07-14 확인) — 대체상품 전환 결정 대기, 관련 작업 보류
 - **다음**: Sprint 6-A UI (재고 뱃지 + LowStockAlertWidget) + 첫 실제 도매꾹 상품 등록으로 폴링 검증
 
 ---
@@ -308,6 +312,9 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 - **#88** — 완료=검증 (Done Means Verified) — no "done" label before real browser/field verification (binds #45).
 - **#89** — 변경 흡수 (Change Absorption) — absorb mid-session changes into the board immediately, then re-prioritize.
 - **#108** — INGEST 추론 종속성: 명시 stage/variant 파라미터 ⊳ 파일명 토큰. 거짓 conflict 억제(explicitStage)·제품레벨 stage variant=null(전상품 #62·C14).
+- **#254~#259** — 상품 IA 재설계/페르소나/알림 검증 관련 원칙(PRINCIPLES_LEARNED.md 이관완료).
+- **#260** — 재고 스냅샷 qty=-1/status=unknown은 UI에 "재고 N개"로 노출 금지.
+- **⚠ 미이관 구간**: 원칙 #149~#253은 PARALLEL_WORK_TRACKER.md rev50 이하 원문 안에만 존재(미이관 — 특히 #196/#197 네이버 full-replace PUT 규칙 포함됨).
 
 ---
 
