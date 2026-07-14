@@ -312,9 +312,10 @@ claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
 - **#88** — 완료=검증 (Done Means Verified) — no "done" label before real browser/field verification (binds #45).
 - **#89** — 변경 흡수 (Change Absorption) — absorb mid-session changes into the board immediately, then re-prioritize.
 - **#108** — INGEST 추론 종속성: 명시 stage/variant 파라미터 ⊳ 파일명 토큰. 거짓 conflict 억제(explicitStage)·제품레벨 stage variant=null(전상품 #62·C14).
+- **#149~#203** — SEO/카피/키워드 도구 PURE화, verify-first(#181), 주문 동기화 3-endpoint, **네이버 v2 full-replace PUT(#196)·필드별 SoR 양방향(#197)** 등 (2026-07-14 PRINCIPLES_LEARNED.md 정식 이관완료. #165/#217~#220/#225/#231은 결번).
+- **#216~#227** — 대시보드·셸 리팩터(IA/팔레트/가독폰트) + 상태 색 마스터 12색 체계(PRINCIPLES_LEARNED.md 이관완료).
 - **#254~#259** — 상품 IA 재설계/페르소나/알림 검증 관련 원칙(PRINCIPLES_LEARNED.md 이관완료).
 - **#260** — 재고 스냅샷 qty=-1/status=unknown은 UI에 "재고 N개"로 노출 금지.
-- **⚠ 미이관 구간**: 원칙 #149~#253은 PARALLEL_WORK_TRACKER.md rev50 이하 원문 안에만 존재(미이관 — 특히 #196/#197 네이버 full-replace PUT 규칙 포함됨).
 
 ---
 
