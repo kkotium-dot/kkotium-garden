@@ -106,7 +106,7 @@ const TAB_CONFIG: Record<TabKey, {
   pending:      { label: '네이버 등록 대기',     dot: 'bg-amber-400',  dotLabel: '네이버 등록 대기', filter: p => p.status === 'ACTIVE' && !p.naverProductId },
   oos:          { label: '품절',          dot: 'bg-[#F63B28]',  dotLabel: '품절',          filter: p => p.status === 'OUT_OF_STOCK' },
   reactivation: { label: '판매중지',      dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
-  revival:      { label: '좀비발견',      dot: 'bg-purple-500', dotLabel: '좀비',          filter: isZombieProduct },
+  revival:      { label: '좀비꽃 발견',   dot: 'bg-purple-500', dotLabel: '좀비꽃',        filter: isZombieProduct },
   lowMargin:    { label: '마진 낮음',     dot: 'bg-rose-500',   dotLabel: '마진 낮음',     filter: isLowMargin },
   drift:        { label: '동기화 필요',   dot: 'bg-yellow-500', dotLabel: '동기화 필요',   filter: hasDrift },
 };
