@@ -167,13 +167,12 @@
     "editCta": "수정하기"
   },
   "tuning": {
-    "title": "좀비",
-    "caveatSuffix": "(참고 지수)",
-    "zombieBadge": "좀비",
-    "tierGrow": "키울 상품",
-    "tierDefend": "관찰",
-    "tierDemote": "내릴 상품",
-    "reasonsTitle": "왜 좀비가 됐나요"
+    "zombieLabel": "좀비 발견",
+    "healthyGrow": "잘 자라는 중",
+    "healthyDefend": "지켜보는 중",
+    "reasonsTitle": "좀비가 된 이유",
+    "scoreLabel": "좀비 지수",
+    "caveatSuffix": "(참고 지수)"
   },
   "stock": {
     "monitoringTitle": "재고 모니터링 중",

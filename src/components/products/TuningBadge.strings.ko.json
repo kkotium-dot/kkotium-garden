@@ -1,11 +1,13 @@
 {
-  "grade": {
-    "grow": "키울 상품",
-    "defend": "관찰",
-    "demote": "내릴 상품",
-    "zombie": "좀비"
+  "zombie": {
+    "label": "좀비 발견",
+    "reasonPrefix": "왜?"
   },
-  "prefix": "좀비",
-  "reasonsHeader": "사유:",
-  "caveatHeader": "안내:"
+  "healthy": {
+    "grow": "잘 자라는 중",
+    "defend": "지켜보는 중"
+  },
+  "reasonsHeader": "좀비가 된 이유",
+  "caveatHeader": "안내:",
+  "scoreLabel": "좀비 지수"
 }

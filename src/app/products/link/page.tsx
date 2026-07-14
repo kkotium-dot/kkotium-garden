@@ -14,8 +14,9 @@ import Link from 'next/link';
 import {
   Link2, Store, Hash, X, Loader2, CheckCircle2, AlertTriangle,
   ChevronRight, ChevronLeft, RefreshCw, PackageX, RotateCcw, ShieldAlert, Radar,
-  ArrowUpDown, Check, Search, Edit2, Skull,
+  ArrowUpDown, Check, Search, Edit2, Skull, Sprout,
 } from 'lucide-react';
+import { kkottiZombieLine } from '@/lib/products/kkotti-zombie-voice';
 import strings from './strings.ko.json';
 import SubstituteEditor from '@/components/products/SubstituteEditor';
 import PanelTabs, { type PanelTabDef } from '@/components/ui/PanelTabs';
@@ -569,28 +570,45 @@ function InfoTab({ product }: { product: LinkedRow }) {
             </div>
           </div>
 
-          {/* 튜닝 필요도 지수 (#256 P4) — 좀비 감지 시 "왜 좀비인지" 한 줄 + 근거. */}
+          {/* 좀비 판정 (#264) — 좀비일 때만 눈에 띄게, 아니면 조용하게.
+              좀비면 "왜 좀비꽃이 됐는지"를 즉시 파악 가능하게 사유 + 꼬띠 한마디. */}
           {data.tuning && (
             <div style={{
               marginBottom: 16, padding: '10px 12px', borderRadius: 10,
-              background: data.tuning.isZombie ? '#fef2f2' : '#f9fafb',
-              border: `1px solid ${data.tuning.isZombie ? '#fecaca' : '#e5e7eb'}`,
+              background: data.tuning.isZombie ? '#fef2f2' : '#f8faf9',
+              border: `1px solid ${data.tuning.isZombie ? '#fca5a5' : '#e3e8e5'}`,
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: data.tuning.reasons.length > 0 ? 6 : 0 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: data.tuning.isZombie ? '#991b1b' : '#374151' }}>
-                  {data.tuning.isZombie && <Skull size={13} />}
-                  {strings.tuning.title} {data.tuning.score}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: data.tuning.isZombie ? 6 : 0 }}>
+                {data.tuning.isZombie
+                  ? <Skull size={13} style={{ color: '#b91c1c' }} />
+                  : <Sprout size={13} style={{ color: '#6b7280' }} />}
+                <span style={{ fontSize: 12, fontWeight: data.tuning.isZombie ? 800 : 600, color: data.tuning.isZombie ? '#b91c1c' : '#6b7280' }}>
+                  {data.tuning.isZombie
+                    ? strings.tuning.zombieLabel
+                    : data.tuning.tier === 'grow' ? strings.tuning.healthyGrow : strings.tuning.healthyDefend}
                 </span>
               </div>
-              {data.tuning.isZombie && data.tuning.zombieReason && (
-                <p style={{ margin: '0 0 6px', fontSize: 12.5, fontWeight: 700, color: '#991b1b' }}>{data.tuning.zombieReason}</p>
+              {data.tuning.isZombie && (
+                <>
+                  {data.tuning.reasons.length > 0 && (
+                    <>
+                      <p style={{ margin: '0 0 3px', fontSize: 11, fontWeight: 700, color: '#991b1b' }}>{strings.tuning.reasonsTitle}</p>
+                      <ul style={{ margin: '0 0 8px', paddingLeft: 16, fontSize: 12, color: '#7f1d1d', lineHeight: 1.5 }}>
+                        {data.tuning.reasons.map((r, i) => <li key={i}>{r}</li>)}
+                      </ul>
+                    </>
+                  )}
+                  <p style={{
+                    margin: '0 0 6px', padding: '6px 8px', borderRadius: 6,
+                    background: '#fff1f2', fontSize: 12, color: '#9f1239', lineHeight: 1.5,
+                  }}>
+                    {kkottiZombieLine(data.tuning.zombieReason)}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 10, color: '#9ca3af' }}>
+                    {strings.tuning.scoreLabel} {data.tuning.score} {strings.tuning.caveatSuffix} &middot; {data.tuning.caveat}
+                  </p>
+                </>
               )}
-              {data.tuning.reasons.length > 0 && (
-                <ul style={{ margin: '0 0 6px', paddingLeft: 16, fontSize: 11.5, color: '#6b7280' }}>
-                  {data.tuning.reasons.map((r, i) => <li key={i}>{r}</li>)}
-                </ul>
-              )}
-              <p style={{ margin: 0, fontSize: 10, color: '#9ca3af' }}>{data.tuning.caveat}</p>
             </div>
           )}
 

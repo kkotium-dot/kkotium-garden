@@ -1,24 +1,24 @@
 // src/components/products/TuningBadge.tsx
 // ============================================================================
-// 좀비 배지 (#256 P4, #264 좀비 통합 판정으로 라벨 통일) — compact badge for the
-// 꽃밭 돌보기 warehouse list rows. PRESENTATIONAL only: renders the
-// ZombieVerdictResult computed server-side by computeZombieVerdict() /
-// loadTuningScores() (no scoring logic here, #62). Same visual language as
-// NameDiagnosisBadge/InventoryBadge (compact pill, hover tooltip for detail).
+// 좀비 발견 배지 (작업원칙 #264) — 꽃밭 돌보기 목록 행에 붙는 압축 배지.
+// PRESENTATIONAL only: computeZombieVerdict()가 서버에서 계산한 결과를 그리기만
+// 한다(판정 로직 없음, #62).
 //
-// "좀비"가 유일한 화면 노출 라벨이다(#264) — "손질필요도"·"부활 필요도" 등
-// 병렬 라벨은 쓰지 않는다. 관리방향(키울/관찰/내릴)은 좀비 여부와 별개로
-// 보조 정보로만 함께 표시한다. 내부 타입/변수명(tier: 'defend')은 화면에
-// 직접 노출되지 않으므로 그대로 둔다.
+// 설계 의도 (2026-07-14 운영자 지시):
+//   - 좀비인 상품만 눈에 띄게 — 빨간 배지 + 해골 + 사유 한 줄.
+//   - 좀비가 아닌 상품은 조용하게 — 시야를 방해하지 않는 저채도 배지.
+//     ("좀비 16 · 키울 상품"처럼 멀쩡한 상품에 좀비 라벨이 붙는 건 오설계였음)
+//   - hover 시 좀비가 된 이유 전체 + 꼬띠 한마디(#264 운영자 아이디어).
 //
-// Korean strings live in TuningBadge.strings.ko.json per work principle #35.
-// The caveat text is always surfaced in the tooltip per #255 — this score is
-// an app-internal heuristic, never presented as Naver's official ranking.
+// 화면 문구는 셀러 실무 용어 + 꽃틔움 정원 컨셉(#262). 한글 문자열은 전부
+// TuningBadge.strings.ko.json에 분리(#35). caveat는 항상 노출(#255) — 앱 자체
+// 참고 지수이지 네이버 공식 점수가 아님.
 // ============================================================================
 
 'use client';
 
-import { Skull, ShieldCheck, TrendingDown } from 'lucide-react';
+import { Skull, Sprout, Eye } from 'lucide-react';
+import { kkottiLine } from '@/lib/products/kkotti-zombie-voice';
 import strings from './TuningBadge.strings.ko.json';
 
 export interface TuningBadgeData {
@@ -30,22 +30,26 @@ export interface TuningBadgeData {
   caveat: string;
 }
 
-const TIER_TONE: Record<TuningBadgeData['tier'], { bg: string; border: string; color: string }> = {
-  grow:   { bg: '#ECFDF5', border: '#A7F3D0', color: '#047857' },
-  defend: { bg: '#FFFBEB', border: '#FDE68A', color: '#B45309' },
-  demote: { bg: '#FEF2F2', border: '#FECACA', color: '#B91C1C' },
-};
+const ZOMBIE_TONE  = { bg: '#FEF2F2', border: '#FCA5A5', color: '#B91C1C' };
+const HEALTHY_TONE = { bg: '#F8FAF9', border: '#E3E8E5', color: '#6B7280' };
 
 export default function TuningBadge({ data }: { data: TuningBadgeData }) {
-  const tone = TIER_TONE[data.tier];
-  const gradeLabel = data.isZombie ? strings.grade.zombie : strings.grade[data.tier];
+  const tone = data.isZombie ? ZOMBIE_TONE : HEALTHY_TONE;
 
-  const title = [
-    `${strings.prefix} ${data.score}\u00B7${gradeLabel}`,
-    ...(data.reasons.length ? ['', strings.reasonsHeader, ...data.reasons.map((r) => `\u2022 ${r}`)] : []),
-    '',
-    `${strings.caveatHeader} ${data.caveat}`,
-  ].join('\n');
+  const label = data.isZombie
+    ? strings.zombie.label
+    : data.tier === 'grow'
+      ? strings.healthy.grow
+      : strings.healthy.defend;
+
+  const titleLines: string[] = [];
+  if (data.isZombie && data.reasons.length) {
+    titleLines.push(strings.reasonsHeader, ...data.reasons.map((r) => `\u2022 ${r}`), '');
+  }
+  titleLines.push(kkottiLine(data), '');
+  titleLines.push(`${strings.scoreLabel} ${data.score}`);
+  titleLines.push(`${strings.caveatHeader} ${data.caveat}`);
+  const title = titleLines.join('\n');
 
   return (
     <span
@@ -53,16 +57,17 @@ export default function TuningBadge({ data }: { data: TuningBadgeData }) {
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px',
         borderRadius: 999, background: tone.bg, border: `1px solid ${tone.border}`,
-        color: tone.color, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', cursor: 'help',
+        color: tone.color, fontSize: 11,
+        fontWeight: data.isZombie ? 700 : 600,
+        whiteSpace: 'nowrap', cursor: 'help',
       }}
     >
       {data.isZombie
         ? <Skull size={12} strokeWidth={2.4} />
         : data.tier === 'grow'
-          ? <ShieldCheck size={12} strokeWidth={2.4} />
-          : <TrendingDown size={12} strokeWidth={2.4} />}
-      <span>{strings.prefix} {data.score}</span>
-      <span style={{ opacity: 0.7, fontWeight: 600 }}>&middot; {gradeLabel}</span>
+          ? <Sprout size={12} strokeWidth={2.2} />
+          : <Eye size={12} strokeWidth={2.2} />}
+      <span>{label}</span>
       {data.isZombie && data.zombieReason && (
         <span style={{ opacity: 0.85, fontWeight: 600 }}>&middot; {data.zombieReason}</span>
       )}
