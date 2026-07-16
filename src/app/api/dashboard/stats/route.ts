@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma'; // singleton — avoids connection pool exhaustion
 import { getTodayOrderSummary, isNaverAppStatusInvalid, NAVER_APP_STATUS_USER_MESSAGE, isNaverClientSecretInvalid, NAVER_CLIENT_SECRET_USER_MESSAGE } from '@/lib/naver/api-client';
-import { isRevivalCandidateProduct } from '@/lib/products/revival-score';
+import { loadTuningScores } from '@/lib/products/tuning-signals';
 
 
 export const dynamic = 'force-dynamic';
@@ -45,13 +45,30 @@ export async function GET(request: NextRequest) {
     // out here). Now both count computeRevivalScore(...).isCandidate over ALL
     // products via the shared isRevivalCandidateProduct helper, so the dashboard
     // 부활소 card and the hub "부활 후보" filter always show the same number.
+    // 좀비 카운트 — 통합 엔진(zombie-verdict, 원칙 #264)으로 계산한다.
+    // 2026-07-15 Desktop 실측에서 발견: 여기가 revival-score 단독 판정을 쓰는
+    // 바람에 대시보드/사이드바 배지는 2건, 꽃밭 돌보기 좀비꽃 탭은 1건으로
+    // 화면마다 숫자가 달랐다. 운영자가 배지 "2"를 보고 눌렀는데 1건만 나오면
+    // 신뢰가 깨지므로, 목록 화면(/api/products)과 동일한 loadTuningScores를
+    // 태워 같은 판정을 쓴다.
     const revivalRows = await prisma.product.findMany({
       select: {
+        id: true, name: true, category: true,
         naver_status_type: true, status: true, naverProductId: true,
-        name: true, mainImage: true, images: true,
+        mainImage: true, images: true,
+        salePrice: true, supplierPrice: true, keywords: true, tags: true,
+        naverCategoryCode: true, lastSaleDate: true, supplier_product_code: true,
+        updatedAt: true,
       },
     });
-    const zombieCount = revivalRows.filter(isRevivalCandidateProduct).length;
+    // best-effort — 좀비 점수 계산이 실패해도 대시보드 전체가 죽으면 안 된다(#82).
+    let zombieCount = 0;
+    try {
+      const verdicts = await loadTuningScores(revivalRows as unknown as Parameters<typeof loadTuningScores>[0]);
+      zombieCount = [...verdicts.values()].filter((v) => v.isZombie).length;
+    } catch (err) {
+      console.error('좀비 카운트 계산 오류(대시보드는 정상 반환):', err);
+    }
 
     // ORDER-QUEUE-1 (#195): read-only order-processing nudge counts. Surfaces
     // orders that need an operator action now — PAID/PAYED = needs dispatch;
