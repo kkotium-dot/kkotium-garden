@@ -326,7 +326,7 @@ function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync 
     } finally { setMutating(false); }
   };
   return (
-    <div className="fixed inset-y-0 right-0 w-[400px] bg-white shadow-2xl z-50 flex flex-col"
+    <div className="fixed inset-y-0 right-0 w-[min(720px,50vw)] min-w-[420px] bg-white shadow-2xl z-50 flex flex-col"
       style={{ borderLeft: '1.5px solid #F8DCE5' }}>
       <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1.5px solid #F8DCE5' }}>
         <StatusDot product={product} />

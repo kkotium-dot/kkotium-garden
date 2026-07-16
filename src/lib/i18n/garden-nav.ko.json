@@ -99,37 +99,7 @@
           "sub": "좀비꽃 · 연동",
           "en": "Garden Care",
           "icon": "link2",
-          "badgeKey": "zombie",
-          "children": [
-            {
-              "key": "garden-list",
-              "href": "/products",
-              "ko": "내 상품",
-              "en": "My Products",
-              "icon": "shoppingbag"
-            },
-            {
-              "key": "garden-zombie",
-              "href": "/products?tab=revival",
-              "ko": "좀비꽃 발견",
-              "en": "Zombies",
-              "icon": "refreshcw"
-            },
-            {
-              "key": "garden-link",
-              "href": "/products/link",
-              "ko": "네이버 연동",
-              "en": "Naver Link",
-              "icon": "link2"
-            },
-            {
-              "key": "garden-seo",
-              "href": "/naver-seo",
-              "ko": "검색 조련사",
-              "en": "Keywords",
-              "icon": "search"
-            }
-          ]
+          "badgeKey": "zombie"
         }
       ]
     },
