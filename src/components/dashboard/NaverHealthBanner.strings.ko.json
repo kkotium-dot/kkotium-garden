@@ -9,13 +9,13 @@
     "NAVER_ERROR": "네이버 연동 오류"
   },
   "guide": {
-    "FUNNEL_DOWN": "홈 Mac의 Tailscale Funnel serve가 멈췄습니다(503). 홈 Mac 터미널에서 Tailscale serve reset 후 funnel을 재수립하면 복구됩니다. 복구되면 이 알림은 자동으로 사라집니다.",
-    "PROXY_DOWN": "홈 프록시/Funnel(맥·Tailscale)이 응답하지 않습니다. 홈 Mac과 프록시 프로세스 상태를 확인해 주세요. 복구되면 이 알림은 자동으로 사라집니다.",
-    "PROXY_AUTH": "앱과 프록시의 시크릿(PROXY_SECRET)이 일치하지 않습니다(401). 양쪽 시크릿 값을 동일하게 맞춰 주세요.",
-    "IP_NOT_ALLOWED": "네이버가 요청 IP를 차단했습니다. 커머스 API 센터에서 국내 IP를 재등록해 주세요.",
-    "AUTH_SIGN_INVALID": "토큰 또는 시크릿 서명이 유효하지 않습니다. NAVER_CLIENT_SECRET 값을 최신으로 교체해 주세요.",
-    "RATE_LIMIT": "호출 한도에 도달했습니다. 별도 조치 없이 잠시 후 자동으로 복구됩니다.",
-    "NAVER_ERROR": "네이버 연동 확인 중 문제가 발생했습니다. 잠시 후 다시 확인해 주세요."
+    "FUNNEL_DOWN": "이랴, 홈 Mac의 Tailscale Funnel serve가 멈췄어유(503)! 홈 Mac 터미널에서 Tailscale serve reset 후 funnel을 재수립하면 복구돼유. 복구되면 이 알림은 자동으로 사라져유.",
+    "PROXY_DOWN": "이랴, 홈 프록시/Funnel(맥·Tailscale)이 응답이 없어유! 홈 Mac과 프록시 프로세스 상태를 확인해주어유. 복구되면 이 알림은 자동으로 사라져유.",
+    "PROXY_AUTH": "이랴, 앱과 프록시의 시크릿(PROXY_SECRET)이 서로 안 맞아유(401)! 양쪽 시크릿 값을 동일하게 맞춰주어유.",
+    "IP_NOT_ALLOWED": "이랴, 네이버가 요청 IP를 막았어유! 커머스 API 센터에서 국내 IP를 재등록해주어유.",
+    "AUTH_SIGN_INVALID": "이랴, 토큰 또는 시크릿 서명이 유효하지 않아유! NAVER_CLIENT_SECRET 값을 최신으로 교체해주어유.",
+    "RATE_LIMIT": "호출 한도에 닿았어유 — 별도 조치 없이 잠시 후 꼬띠가 알아서 복구해줘유.",
+    "NAVER_ERROR": "네이버 연동 확인 중 문제가 생겼어유. 잠시 후 다시 확인해주어유."
   },
   "footer": {
     "checkedPrefix": "확인",
