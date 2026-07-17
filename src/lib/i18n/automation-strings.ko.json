@@ -55,12 +55,12 @@
     "detail": "상세"
   },
   "envWarn": {
-    "discordMissing": "환경변수 미설정",
-    "solapiMissing": "솔라피 키 미설정"
+    "discordMissing": "이랴, 환경변수가 아직 없어유! 설정부터 해주어유",
+    "solapiMissing": "이랴, 솔라피 키가 아직 없어유! 설정에서 넣어주어유"
   },
   "empty": {
-    "active": "정상 가동 중인 자동화가 아직 없습니다.",
-    "group": "이 그룹의 자동화가 아직 없습니다."
+    "active": "까꿍, 아직 정상 가동 중인 자동화가 없어유",
+    "group": "까꿍, 이 그룹엔 아직 자동화가 없어유"
   },
   "name": {
     "inventoryPoll": "도매꾹 재고 자동 확인",
