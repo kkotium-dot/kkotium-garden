@@ -143,8 +143,8 @@ export function buildPublishReadyAlert(names: string[]): DiscordEmbed {
   const O = STRINGS.ops;
   return buildAdhdAlert({
     tier: 'digest', channel: 'KKOTTI_RECOMMEND', emoji: '✅',
-    title: fmt(O.publishReady_title, { name: names.length === 1 ? names[0] : `${names.length}건` }),
-    action: O.publishReady_action,
+    title: fmt(pickVariant(O.publishReady_title, 'ops:publishReady:title'), { name: names.length === 1 ? names[0] : `${names.length}건` }),
+    action: pickVariant(O.publishReady_action, 'ops:publishReady:action'),
     kkotti: kkottiLine(O.publishReady_kkotti, 'ops:publishReady'),
     deepLink: { path: '/products' },
     extraLines: names.length > 1 ? digestExtraLines(names) : undefined,
@@ -156,8 +156,8 @@ export function buildRevivalAlert(names: string[]): DiscordEmbed {
   const O = STRINGS.ops;
   return buildAdhdAlert({
     tier: 'digest', channel: 'KKOTTI_SCORE', emoji: '🌱',
-    title: fmt(O.revival_title, { n: names.length }),
-    action: O.revival_action,
+    title: fmt(pickVariant(O.revival_title, 'ops:revival:title'), { n: names.length }),
+    action: pickVariant(O.revival_action, 'ops:revival:action'),
     kkotti: kkottiLine(O.revival_kkotti, 'ops:revival'),
     deepLink: { path: '/products/reactivation' },
     extraLines: digestExtraLines(names),
@@ -169,8 +169,8 @@ export function buildZombieAlert(names: string[]): DiscordEmbed {
   const O = STRINGS.ops;
   return buildAdhdAlert({
     tier: 'digest', channel: 'KKOTTI_SCORE', emoji: '🥀',
-    title: fmt(O.zombie_title, { n: names.length }),
-    action: O.zombie_action,
+    title: fmt(pickVariant(O.zombie_title, 'ops:zombie:title'), { n: names.length }),
+    action: pickVariant(O.zombie_action, 'ops:zombie:action'),
     kkotti: kkottiLine(O.zombie_kkotti, 'ops:zombie'),
     deepLink: { path: '/products/reactivation' },
     extraLines: digestExtraLines(names),
@@ -187,8 +187,8 @@ export function buildZombieDetectedAlert(item: { name: string; productId: string
   const O = STRINGS.ops;
   return buildAdhdAlert({
     tier: 'realtime', channel: 'KKOTTI_SCORE', emoji: '🧟',
-    title: fmt(O.zombieDetected_title, { name: item.name }),
-    action: fmt(O.zombieDetected_action, { reason: item.reason, margin: item.marginPct.toFixed(1) }),
+    title: fmt(pickVariant(O.zombieDetected_title, `ops:zombieDetected:title:${item.productId ?? item.name}`), { name: item.name }),
+    action: fmt(pickVariant(O.zombieDetected_action, `ops:zombieDetected:action:${item.productId ?? item.name}`), { reason: item.reason, margin: item.marginPct.toFixed(1) }),
     kkotti: kkottiLine(O.zombieDetected_kkotti, `ops:zombieDetected:${item.productId}`),
     deepLink: { label: O.zombieDetected_editLabel, path: `/products/new?edit=${item.productId}` },
   });
@@ -201,8 +201,8 @@ export function buildMarginWarnAlert(items: { name: string; margin: number }[]):
   if (items.length > 5) lines.push(`_${fmt(STRINGS.common.more, { n: items.length - 5 })}_`);
   return buildAdhdAlert({
     tier: 'realtime', channel: 'PRICE_CHANGE', emoji: '⚠️',
-    title: fmt(O.margin_title, { n: items.length }),
-    action: O.margin_action,
+    title: fmt(pickVariant(O.margin_title, 'ops:margin:title'), { n: items.length }),
+    action: pickVariant(O.margin_action, 'ops:margin:action'),
     kkotti: kkottiLine(O.margin_kkotti, 'ops:margin'),
     deepLink: { path: '/products' },
     extraLines: lines,
