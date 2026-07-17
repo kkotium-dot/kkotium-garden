@@ -2,17 +2,19 @@
 // /products — Garden Warehouse v6
 // P2-1: supplier grouping, shipping badge, margin warning, bulk float menu, upload readiness filter
 
-import { Suspense, useState, useEffect, useMemo } from 'react';
+import { Suspense, useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   Plus, RefreshCw, Search, Edit2,
   Trash2, X, Package, Palette,
   Check, AlertTriangle, Truck,
-  ChevronDown, ChevronRight,
+  ChevronDown, ChevronRight, ChevronLeft,
   Layers, Upload, ArrowRight,
-  LayoutList, Send, Globe, Loader,
-  ShieldCheck, Eye, Link2,
+  LayoutList, Send, Globe, Loader, Loader2,
+  ShieldCheck, Eye, Link2, Store, Hash,
+  CheckCircle2, PackageX, RotateCcw, ShieldAlert,
+  Skull, Sprout, ArrowUpDown,
 } from 'lucide-react';
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
@@ -25,6 +27,11 @@ import { StageBadge } from '@/components/products/StageBadge';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
 import { useProductsList } from '@/lib/hooks/useDashboardData';
 import { useInventoryBadges } from '@/lib/hooks/useInventoryBadges';
+import { kkottiZombieLine } from '@/lib/products/kkotti-zombie-voice';
+import PanelTabs, { type PanelTabDef } from '@/components/ui/PanelTabs';
+import NaverPushPanel from '@/components/products/NaverPushPanel';
+import SubstituteEditor from '@/components/products/SubstituteEditor';
+import { computeRevivalScore, type RevivalGrade } from '@/lib/products/revival-score';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -270,6 +277,140 @@ function MarginCell({ hs }: { hs: ReturnType<typeof calcHoneyScore> }) {
 
 // ─── Side Panel ───────────────────────────────────────────────────────────────
 
+const won = (n: number) => `${(n ?? 0).toLocaleString('ko-KR')}원`;
+
+// 작업 F — 연동 diff / 상태 반영 미리보기 데이터 shape (구 /products/link
+// DiffPanel과 동일 API 재사용, 신규 엔드포인트 0). 흡수 탭(동기화/반영)에서만 사용.
+interface SyncDiffData { inSync: boolean; diffs: Array<{ field: string; naver: unknown; app: unknown }>; naverSnapshot: Record<string, unknown>; app: Record<string, unknown>; }
+interface StatusPushPreview { target: 'OUTOFSTOCK' | 'SALE'; previousStatusType: string | null; isOptionProduct: boolean; changedTopLevelFields: string[]; optionStockZeroed: number; stockQuantityChanged: boolean; preservedFieldCount: number; }
+const SYNC_FIELDS: Array<{ key: string; label: string; sor: 'naver' | 'app' }> = [
+  { key: 'name', label: '상품명', sor: 'app' },
+  { key: 'salePrice', label: '판매가', sor: 'app' },
+  { key: 'stockQuantity', label: '재고', sor: 'naver' },
+  { key: 'statusType', label: '상태', sor: 'naver' },
+  { key: 'representativeImageUrl', label: '대표이미지', sor: 'app' },
+];
+const fmtSyncVal = (k: string, v: unknown) =>
+  v == null ? '—' : k === 'salePrice' ? won(Number(v)) : k === 'statusType' ? (NAVER_STATUS_KO[String(v)] ?? String(v)) : k === 'representativeImageUrl' ? '이미지' : String(v);
+
+// ── 동기화 탭 — 구 link/page.tsx DiffPanel의 sync 섹션 이식(#256 흡수) ──────────
+function SyncTab({ productId }: { productId: string }) {
+  const [data, setData] = useState<SyncDiffData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setLoading(true); setError(null); setData(null);
+    fetch(`/api/products/${productId}/naver-sync`)
+      .then((r) => r.json())
+      .then((j) => { if (!alive) return; if (!j.success) throw new Error(j.error); setData(j); })
+      .catch((e) => { if (alive) setError(e instanceof Error ? e.message : '비교 실패'); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [productId]);
+  if (loading) return <div className="text-center py-6" style={{ color: '#9ca3af' }}><Loader2 size={18} className="animate-spin mx-auto mb-1.5" /><p className="text-xs">비교 중...</p></div>;
+  if (error) return <p className="text-sm" style={{ color: '#b91c1c' }}>{error}</p>;
+  if (!data) return null;
+  return (
+    <>
+      <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg mb-3 text-xs font-bold"
+        style={{ background: data.inSync ? '#f0fdf4' : '#fffbeb', border: `1px solid ${data.inSync ? '#bbf7d0' : '#fde68a'}`, color: data.inSync ? '#15803d' : '#b45309' }}>
+        {data.inSync ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+        {data.inSync ? '네이버와 동기화됨' : '차이가 있습니다'}
+      </div>
+      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-neutral)' }}>
+        <div className="grid text-xs font-bold" style={{ gridTemplateColumns: '1.1fr 1fr 1fr', color: '#6b7280', background: '#faf8f3', borderBottom: '1px solid var(--border-neutral)' }}>
+          <div className="px-2.5 py-2">필드</div><div className="px-2.5 py-2">네이버</div><div className="px-2.5 py-2">앱</div>
+        </div>
+        {SYNC_FIELDS.map((f) => {
+          const nv = data.naverSnapshot[f.key];
+          const av = data.app[f.key];
+          const differ = f.key !== 'stockQuantity' && data.diffs.some((d) => d.field === f.key);
+          return (
+            <div key={f.key} className="grid text-xs" style={{ gridTemplateColumns: '1.1fr 1fr 1fr', borderBottom: '1px solid #f3f0ea', background: differ ? '#fffdf6' : '#fff' }}>
+              <div className="px-2.5 py-2 font-semibold" style={{ color: '#374151' }}>
+                {f.label}
+                <span className="ml-1 text-[9px] font-extrabold" style={{ color: f.sor === 'naver' ? '#1d4ed8' : '#F63B28' }}>{f.sor === 'naver' ? 'N' : '앱'}</span>
+              </div>
+              <div className="px-2.5 py-2 truncate" style={{ color: '#111827' }}>{fmtSyncVal(f.key, nv)}</div>
+              <div className="px-2.5 py-2 truncate" style={{ color: differ ? '#b45309' : '#111827', fontWeight: differ ? 700 : 400 }}>{f.key === 'stockQuantity' ? '—' : fmtSyncVal(f.key, av)}</div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[11px] mt-2.5" style={{ color: '#6b7280' }}>재고는 네이버가 기준값이라 비교하지 않습니다.</p>
+      <p className="text-[11px] mt-1" style={{ color: '#9ca3af' }}>읽기 전용 비교입니다 — 실제 반영은 [반영] 탭에서.</p>
+    </>
+  );
+}
+
+// ── 반영 탭 — 상태(품절/재판매) 미리보기 + 가격·재고 반영(NaverPushPanel, #46 GO-gated) ──
+function PushTab({ productId, appSalePrice, currentNaverStatus }: { productId: string; appSalePrice: number; currentNaverStatus: string | null }) {
+  const [preview, setPreview] = useState<StatusPushPreview | null>(null);
+  const [busy, setBusy] = useState<'OUTOFSTOCK' | 'SALE' | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  async function doPreview(target: 'OUTOFSTOCK' | 'SALE') {
+    setBusy(target); setErr(null); setPreview(null);
+    try {
+      const r = await fetch(`/api/products/${productId}/naver-status`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target, dryRun: true }),
+      });
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error ?? 'preview failed');
+      setPreview(j as StatusPushPreview);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : '미리보기 실패');
+    } finally { setBusy(null); }
+  }
+  return (
+    <div>
+      <p className="text-xs font-extrabold mb-2" style={{ color: '#111827' }}>상태 반영</p>
+      <div className="flex gap-2">
+        <button onClick={() => void doPreview('OUTOFSTOCK')} disabled={busy !== null}
+          className="inline-flex items-center gap-1.5 text-xs font-extrabold rounded-lg px-3 py-1.5"
+          style={{ color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', cursor: busy ? 'not-allowed' : 'pointer' }}>
+          {busy === 'OUTOFSTOCK' ? <Loader2 size={13} className="animate-spin" /> : <PackageX size={13} />}품절 처리
+        </button>
+        <button onClick={() => void doPreview('SALE')} disabled={busy !== null}
+          className="inline-flex items-center gap-1.5 text-xs font-extrabold rounded-lg px-3 py-1.5"
+          style={{ color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', cursor: busy ? 'not-allowed' : 'pointer' }}>
+          {busy === 'SALE' ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}재판매
+        </button>
+      </div>
+      {err && <p className="text-xs mt-2" style={{ color: '#b91c1c' }}>{err}</p>}
+      {preview && (
+        <div className="mt-2.5 rounded-xl overflow-hidden" style={{ border: '1px solid #bfdbfe' }}>
+          <div className="px-3 py-1.5 text-[11px] font-extrabold" style={{ background: '#eff6ff', color: '#1d4ed8' }}>반영 미리보기 (dry-run)</div>
+          <div className="p-3 flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5 text-sm font-bold" style={{ color: '#111827' }}>
+              <span className="text-[11px] font-semibold" style={{ color: '#6b7280' }}>상태 변경</span>
+              {NAVER_STATUS_KO[preview.previousStatusType ?? ''] ?? preview.previousStatusType ?? '—'}
+              <ChevronRight size={13} style={{ color: '#9ca3af' }} />
+              <span style={{ color: preview.target === 'SALE' ? '#15803d' : '#b45309' }}>{NAVER_STATUS_KO[preview.target] ?? preview.target}</span>
+            </div>
+            {preview.target === 'OUTOFSTOCK' && (
+              <p className="text-xs" style={{ color: '#b45309' }}>
+                {preview.isOptionProduct ? `옵션 재고 ${preview.optionStockZeroed}건이 0으로 설정됩니다.` : '재고가 0으로 설정됩니다.'}
+              </p>
+            )}
+            <p className="text-[11px]" style={{ color: '#6b7280' }}>
+              변경 필드: {preview.changedTopLevelFields.join(', ') || '—'} · 나머지 {preview.preservedFieldCount}개 필드 보존
+            </p>
+            <div className="flex items-start gap-1.5 mt-1 px-2.5 py-1.5 rounded-lg" style={{ background: '#fff7ed', border: '1px solid #fed7aa' }}>
+              <ShieldAlert size={13} style={{ color: '#c2410c', flexShrink: 0, marginTop: 1 }} />
+              <p className="text-[11px] leading-relaxed" style={{ color: '#9a3412' }}>실제 반영은 대표님 확인(GO) 후에만 실행됩니다.</p>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="mt-4">
+        <NaverPushPanel productId={productId} appSalePrice={appSalePrice} />
+      </div>
+    </div>
+  );
+}
+
 function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync }: {
   product: ScoredProduct;
   onClose: () => void;
@@ -285,6 +426,23 @@ function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync 
   // 리셋 only for 연동(IMPORTED/HYBRID) — an APP_CREATED product has no origin.
   const canReset = product._origin === 'IMPORTED' || product._origin === 'HYBRID';
   const isOOS = product.status === 'OUT_OF_STOCK';
+  // 작업 F — 네이버 연동 상품만 동기화/반영/품절대체 탭을 보여준다(#256 흡수).
+  const isLinked = !!product.naverProductId;
+  const appDriftCount = (() => {
+    const d = product.driftFields;
+    const arr = Array.isArray(d) ? d : [];
+    const APP_SOR = new Set(['name', 'salePrice', 'representativeImageUrl']);
+    return arr.filter((f) => APP_SOR.has(String(f))).length;
+  })();
+  const TABS: PanelTabDef[] = [
+    { key: 'info', label: '정보', badge: null },
+    ...(isLinked ? [
+      { key: 'sync', label: '동기화', badge: appDriftCount > 0 ? { text: `${appDriftCount}필드`, tone: 'amber' as const } : null },
+      { key: 'push', label: '반영', badge: appDriftCount > 0 ? { dot: true, tone: 'blue' as const } : null },
+      { key: 'substitute', label: '품절대체', badge: null },
+    ] : []),
+  ];
+  const [tab, setTab] = useState<'info' | 'sync' | 'push' | 'substitute'>('info');
   // Confirm-gated (#46) status mutation with optimistic update + rollback (handled
   // by onMutate). 부활소 이동 = INACTIVE (재활성화 대기열로).
   const STATUS_LABEL: Record<string, string> = {
@@ -328,102 +486,138 @@ function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync 
   return (
     <div className="fixed inset-y-0 right-0 w-[min(720px,50vw)] min-w-[420px] bg-white shadow-2xl z-50 flex flex-col"
       style={{ borderLeft: '1.5px solid #F8DCE5' }}>
-      <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1.5px solid #F8DCE5' }}>
-        <StatusDot product={product} />
-        <button onClick={onClose} className="p-1.5 hover:bg-pink-50 rounded-lg transition">
+      {/* 작업 F 보강1 — 헤더에 썸네일+상품명+상태를 노출(구 헤더는 상태점만 있어
+          이름조차 스크롤해야 보였음). 프리미엄 SaaS 패턴(#212 zone3 미러). */}
+      <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: '1.5px solid #F8DCE5' }}>
+        {product.mainImage
+          ? <img src={product.mainImage} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+          : <div className="w-10 h-10 rounded-lg flex-shrink-0" style={{ background: '#f3f4f6' }} />}
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-extrabold truncate" style={{ color: '#111827' }}>{product.name}</p>
+          <div className="mt-0.5"><StatusDot product={product} /></div>
+        </div>
+        <button onClick={onClose} className="p-1.5 hover:bg-pink-50 rounded-lg transition flex-shrink-0">
           <X size={16} style={{ color: '#9CA3AF' }} />
         </button>
       </div>
+
+      <PanelTabs tabs={TABS} active={tab} onChange={(k) => setTab(k as typeof tab)} ariaLabel="상품 상세 탭" />
+
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
-        <div>
-          <p className="text-lg font-bold text-gray-900 leading-snug">{product.name}</p>
-          <p className="text-xs font-mono mt-1" style={{ color: '#B0A0A8' }}>{product.sku}</p>
-          {product.supplierName && (
-            <p className="text-xs mt-1" style={{ color: '#D4B0BC' }}>{product.supplierName}</p>
-          )}
-        </div>
-
-        {/* Upload readiness */}
-        <div className="rounded-2xl p-4"
-          style={{ background: issues.length === 0 ? '#f0fdf4' : '#FFF0F5', border: `1px solid ${issues.length === 0 ? '#bbf7d0' : '#F8DCE5'}` }}>
-          <p className="text-xs font-bold mb-2" style={{ color: issues.length === 0 ? '#16a34a' : '#F63B28' }}>
-            네이버 업로드 준비 {issues.length === 0 ? '— 완료' : `— ${issues.length}개 항목 미흡`}
-          </p>
-          {issues.length > 0 ? issues.map((issue, i) => (
-            <p key={i} className="text-xs text-red-500 flex items-center gap-1.5 mt-1">
-              <AlertTriangle size={10} /> {issue}
-            </p>
-          )) : (
-            <p className="text-xs text-green-600 flex items-center gap-1.5">
-              <Check size={10} /> 카테고리 / 배송 / 이미지 모두 설정됨
-            </p>
-          )}
-        </div>
-
-        {/* Honey score */}
-        <div className="rounded-2xl p-4" style={{ background: '#FFF0F5', border: '1px solid #F8DCE5' }}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold" style={{ color: '#555' }}>꿀통지수</span>
-            <HoneyBadge score={hs.total} grade={hs.grade} />
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-xs">
-            {([
-              ['순마진', `${hs.netMarginRate.toFixed(1)}%`, hs.netMarginRate < 5],
-              ['마진율', `${hs.marginRate.toFixed(1)}%`, false],
-              ['SEO 검색최적화', `${hs.seoScore}점`, false],
-            ] as [string, string, boolean][]).map(([k, v, warn]) => (
-              <div key={k} className="bg-white rounded-xl p-2 text-center">
-                <p style={{ color: '#B0A0A8' }}>{k}</p>
-                <p className={`font-bold ${warn ? 'text-red-600' : 'text-gray-800'}`}>{v}</p>
-              </div>
-            ))}
-          </div>
-          {hs.warnings.length > 0 && (
-            <div className="mt-3 space-y-1">
-              {hs.warnings.slice(0, 3).map((w, i) => (
-                <p key={i} className="text-xs text-amber-600 flex items-start gap-1">
-                  <AlertTriangle size={10} className="shrink-0 mt-0.5" /> {w}
+        {tab === 'info' && (
+          <>
+            {/* 좀비 사유 (#264) — 스크롤 없이 첫 화면에서 바로 "왜"를 파악하도록
+                최상단 배치. 좀비가 아니면 조용히(#264 설계 의도 유지). */}
+            {product.tuningScore?.isZombie && (
+              <div className="rounded-2xl p-3.5" style={{ background: '#fef2f2', border: '1px solid #fca5a5' }}>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Skull size={13} style={{ color: '#b91c1c' }} />
+                  <span className="text-xs font-extrabold" style={{ color: '#b91c1c' }}>좀비꽃 발견</span>
+                </div>
+                {product.tuningScore.reasons.length > 0 && (
+                  <ul className="pl-4 mb-2 text-xs leading-relaxed" style={{ color: '#7f1d1d' }}>
+                    {product.tuningScore.reasons.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                )}
+                <p className="px-2 py-1.5 rounded-md text-xs leading-relaxed" style={{ background: '#fff1f2', color: '#9f1239' }}>
+                  {kkottiZombieLine(product.tuningScore.zombieReason)}
                 </p>
+              </div>
+            )}
+
+            {product.supplierName && (
+              <p className="text-xs" style={{ color: '#D4B0BC' }}>{product.supplierName}</p>
+            )}
+
+            {/* Upload readiness */}
+            <div className="rounded-2xl p-4"
+              style={{ background: issues.length === 0 ? '#f0fdf4' : '#FFF0F5', border: `1px solid ${issues.length === 0 ? '#bbf7d0' : '#F8DCE5'}` }}>
+              <p className="text-xs font-bold mb-2" style={{ color: issues.length === 0 ? '#16a34a' : '#F63B28' }}>
+                네이버 업로드 준비 {issues.length === 0 ? '— 완료' : `— ${issues.length}개 항목 미흡`}
+              </p>
+              {issues.length > 0 ? issues.map((issue, i) => (
+                <p key={i} className="text-xs text-red-500 flex items-center gap-1.5 mt-1">
+                  <AlertTriangle size={10} /> {issue}
+                </p>
+              )) : (
+                <p className="text-xs text-green-600 flex items-center gap-1.5">
+                  <Check size={10} /> 카테고리 / 배송 / 이미지 모두 설정됨
+                </p>
+              )}
+            </div>
+
+            {/* Honey score */}
+            <div className="rounded-2xl p-4" style={{ background: '#FFF0F5', border: '1px solid #F8DCE5' }}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold" style={{ color: '#555' }}>꿀통지수</span>
+                <HoneyBadge score={hs.total} grade={hs.grade} />
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                {([
+                  ['순마진', `${hs.netMarginRate.toFixed(1)}%`, hs.netMarginRate < 5],
+                  ['마진율', `${hs.marginRate.toFixed(1)}%`, false],
+                  ['SEO 검색최적화', `${hs.seoScore}점`, false],
+                ] as [string, string, boolean][]).map(([k, v, warn]) => (
+                  <div key={k} className="bg-white rounded-xl p-2 text-center">
+                    <p style={{ color: '#B0A0A8' }}>{k}</p>
+                    <p className={`font-bold ${warn ? 'text-red-600' : 'text-gray-800'}`}>{v}</p>
+                  </div>
+                ))}
+              </div>
+              {hs.warnings.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  {hs.warnings.slice(0, 3).map((w, i) => (
+                    <p key={i} className="text-xs text-amber-600 flex items-start gap-1">
+                      <AlertTriangle size={10} className="shrink-0 mt-0.5" /> {w}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Shipping */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#888' }}>배송 정보</p>
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: '#888' }}>템플릿</span>
+                <ShippingBadge product={product} />
+              </div>
+              {product.shippingTemplateName && (
+                <p className="text-xs font-mono" style={{ color: '#B0A0A8' }}>{product.shippingTemplateName}</p>
+              )}
+            </div>
+
+            {/* C-12: Market Analysis */}
+            <MarketAnalysisCard productName={product.name} />
+
+            {/* Prices */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#888' }}>가격 정보</p>
+              {([
+                ['도매가 (공급가)', `${product.supplierPrice.toLocaleString()}원`, false],
+                ['판매가', `${product.salePrice.toLocaleString()}원`, false],
+                ['마진율', `${hs.marginRate.toFixed(1)}%`, false],
+                ['순마진율', `${hs.netMarginRate.toFixed(1)}%`, hs.netMarginRate < 5],
+              ] as [string, string, boolean][]).map(([k, v, danger]) => (
+                <div key={k} className="flex justify-between text-sm">
+                  <span style={{ color: '#888' }}>{k}</span>
+                  <span className={`font-semibold ${danger ? 'text-red-600' : 'text-gray-800'}`}>{v}</span>
+                </div>
               ))}
             </div>
-          )}
-        </div>
 
-        {/* Shipping */}
-        <div className="space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#888' }}>배송 정보</p>
-          <div className="flex items-center justify-between">
-            <span className="text-xs" style={{ color: '#888' }}>템플릿</span>
-            <ShippingBadge product={product} />
-          </div>
-          {product.shippingTemplateName && (
-            <p className="text-xs font-mono" style={{ color: '#B0A0A8' }}>{product.shippingTemplateName}</p>
-          )}
-        </div>
-
-        {/* C-12: Market Analysis */}
-        <MarketAnalysisCard productName={product.name} />
-
-        {/* Prices */}
-        <div className="space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#888' }}>가격 정보</p>
-          {([
-            ['도매가 (공급가)', `${product.supplierPrice.toLocaleString()}원`, false],
-            ['판매가', `${product.salePrice.toLocaleString()}원`, false],
-            ['마진율', `${hs.marginRate.toFixed(1)}%`, false],
-            ['순마진율', `${hs.netMarginRate.toFixed(1)}%`, hs.netMarginRate < 5],
-          ] as [string, string, boolean][]).map(([k, v, danger]) => (
-            <div key={k} className="flex justify-between text-sm">
-              <span style={{ color: '#888' }}>{k}</span>
-              <span className={`font-semibold ${danger ? 'text-red-600' : 'text-gray-800'}`}>{v}</span>
+            <div className="rounded-2xl px-4 py-3" style={{ background: '#FFF0F5', border: '1px solid #FFB3CE' }}>
+              <p className="text-xs font-bold mb-1" style={{ color: '#F63B28' }}>꼬띠 한마디</p>
+              <p className="text-xs leading-relaxed" style={{ color: '#FF6B8A' }}>{hs.kkottiDialogue}</p>
             </div>
-          ))}
-        </div>
+          </>
+        )}
 
-        <div className="rounded-2xl px-4 py-3" style={{ background: '#FFF0F5', border: '1px solid #FFB3CE' }}>
-          <p className="text-xs font-bold mb-1" style={{ color: '#F63B28' }}>꼬띠 한마디</p>
-          <p className="text-xs leading-relaxed" style={{ color: '#FF6B8A' }}>{hs.kkottiDialogue}</p>
-        </div>
+        {tab === 'sync' && <SyncTab productId={product.id} />}
+        {tab === 'push' && <PushTab productId={product.id} appSalePrice={product.salePrice} currentNaverStatus={product.naver_status_type ?? null} />}
+        {tab === 'substitute' && (
+          <SubstituteEditor productId={product.id} isOutOfStock={product.status === 'OUT_OF_STOCK'} />
+        )}
       </div>
       <div className="p-4 flex flex-col gap-2" style={{ borderTop: '1.5px solid #F8DCE5' }}>
         {/* 공통 관리 액션 바 (#245 §2-C) — 출처 무관 동일 액션. Phase 2a: 네비게이션
@@ -513,7 +707,247 @@ function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync 
   );
 }
 
-// ─── Naver Direct Register Modal ────────────────────────────────────────────── 
+// ─── Naver Import Modal (구 /products/link Zone1, 작업 F 흡수) ────────────────
+// 네이버 스토어에서 상품을 검색·선택하거나 상품번호로 직접 가져와 연동한다.
+// /api/products/import 재사용, 신규 엔드포인트 0.
+
+interface NaverSearchRow {
+  channelProductNo: string | null;
+  originProductNo: string | null;
+  name: string;
+  salePrice: number;
+  stockQuantity: number;
+  statusType: string;
+  representativeImageUrl: string | null;
+  modifiedDate: string | null;
+  alreadyLinked: boolean;
+}
+type ImportPickerFilter = 'all' | 'revival' | 'outofstock' | 'suspension';
+type ImportPickerSort = 'revival' | 'recent';
+
+function importRowRevival(row: NaverSearchRow): { grade: RevivalGrade; score: number; isCandidate: boolean } {
+  const r = computeRevivalScore({
+    naverStatusType: row.statusType,
+    appStatus: null,
+    registered: true,
+    name: row.name,
+    imageCount: row.representativeImageUrl ? 1 : 0,
+  });
+  return { grade: r.grade, score: r.score, isCandidate: r.isCandidate };
+}
+
+const IMPORT_REVIVAL_TONE: Record<RevivalGrade, { bg: string; border: string; color: string }> = {
+  S: { bg: '#fff0ef', border: '#ffd6d3', color: '#b91c1c' },
+  A: { bg: '#fff7ed', border: '#fed7aa', color: '#c2410c' },
+  B: { bg: '#fffbeb', border: '#fde68a', color: '#b45309' },
+  C: { bg: '#f3f4f6', border: '#e5e7eb', color: '#6b7280' },
+};
+
+function NaverImportModal({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
+  const [page, setPage] = useState(1);
+  const [rows, setRows] = useState<NaverSearchRow[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [importing, setImporting] = useState(false);
+  const [filter, setFilter] = useState<ImportPickerFilter>('all');
+  const [sort, setSort] = useState<ImportPickerSort>('revival');
+  const [manual, setManual] = useState('');
+  const [manualBusy, setManualBusy] = useState(false);
+
+  const load = useCallback(async (p: number) => {
+    setLoading(true); setError(null);
+    try {
+      const r = await fetch(`/api/naver/products/search?page=${p}&size=50&status=SALE,OUTOFSTOCK,SUSPENSION`);
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error ?? 'load failed');
+      setRows(j.items ?? []);
+      setTotalPages(j.totalPages ?? 1);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '불러오기 실패');
+      setRows([]);
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { void load(page); }, [page, load]);
+
+  const toggle = (no: string) => setSelected((s) => {
+    const n = new Set(s);
+    n.has(no) ? n.delete(no) : n.add(no);
+    return n;
+  });
+  const rowNo = (row: NaverSearchRow) => row.originProductNo ?? row.channelProductNo ?? '';
+
+  const visible = rows
+    .filter((row) => {
+      const st = (row.statusType ?? '').toUpperCase();
+      if (filter === 'revival') return importRowRevival(row).isCandidate;
+      if (filter === 'outofstock') return st === 'OUTOFSTOCK' || st === 'OUT_OF_STOCK';
+      if (filter === 'suspension') return st === 'SUSPENSION' || st === 'INACTIVE' || st === 'CLOSE';
+      return true;
+    })
+    .sort((a, b) => sort === 'revival'
+      ? importRowRevival(b).score - importRowRevival(a).score
+      : (b.modifiedDate ?? '').localeCompare(a.modifiedDate ?? ''));
+
+  const selectableNos = visible.filter((r) => !r.alreadyLinked && rowNo(r)).map(rowNo);
+  const allSelected = selectableNos.length > 0 && selectableNos.every((no) => selected.has(no));
+  const toggleAll = () => setSelected((s) => {
+    const n = new Set(s);
+    if (allSelected) selectableNos.forEach((no) => n.delete(no));
+    else selectableNos.forEach((no) => n.add(no));
+    return n;
+  });
+
+  async function doImport(nos: string[]) {
+    if (nos.length === 0) return;
+    setImporting(true);
+    try {
+      const items = nos.map((no) => ({ originProductNo: no }));
+      await fetch('/api/products/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }) });
+      onImported();
+    } catch {
+      setError('연동 중 오류가 발생했습니다.');
+    } finally { setImporting(false); }
+  }
+
+  async function importManual() {
+    const nums = manual.split(/[\s,\n]+/).map((s) => s.trim()).filter(Boolean);
+    if (nums.length === 0 || manualBusy) return;
+    setManualBusy(true);
+    try {
+      await doImport(nums);
+      setManual('');
+    } finally { setManualBusy(false); }
+  }
+
+  const FILTERS: Array<{ key: ImportPickerFilter; label: string }> = [
+    { key: 'all', label: '전체' },
+    { key: 'revival', label: '부활 후보' },
+    { key: 'outofstock', label: '품절' },
+    { key: 'suspension', label: '판매중지' },
+  ];
+
+  return (
+    <div role="dialog" aria-modal="true" onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,23,42,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 780, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
+        {/* header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', borderBottom: '1px solid #F8DCE5' }}>
+          <Store size={18} style={{ color: '#F63B28' }} />
+          <p style={{ margin: 0, flex: 1, fontSize: 15, fontWeight: 800, color: '#111827' }}>네이버 상품 가져오기</p>
+          <button onClick={onClose} aria-label="닫기" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><X size={18} /></button>
+        </div>
+
+        {/* 상품번호 직접 입력 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px', borderBottom: '1px solid #F8DCE5' }}>
+          <Hash size={14} style={{ color: '#1d4ed8', flexShrink: 0 }} />
+          <input value={manual} onChange={(e) => setManual(e.target.value)} placeholder="상품번호(콤마·줄바꿈 구분)로 바로 가져오기"
+            onKeyDown={(e) => { if (e.key === 'Enter') void importManual(); }}
+            style={{ flex: 1, minWidth: 0, fontSize: 13, padding: '7px 10px', border: '1px solid var(--border-neutral)', borderRadius: 8, outline: 'none' }} />
+          <button onClick={() => void importManual()} disabled={manualBusy || !manual.trim()}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, fontWeight: 800, color: '#fff', background: !manual.trim() ? '#9dbdf0' : '#1d4ed8', border: 'none', borderRadius: 8, padding: '7px 12px', cursor: manualBusy || !manual.trim() ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+            {manualBusy ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}가져오기
+          </button>
+        </div>
+
+        {/* filter + sort + select-all bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderBottom: '1px solid #F8DCE5', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            {FILTERS.map((f) => (
+              <button key={f.key} onClick={() => setFilter(f.key)}
+                style={{ fontSize: 12, fontWeight: 700, color: filter === f.key ? '#fff' : '#6b7280', background: filter === f.key ? '#F63B28' : '#f3f4f6', border: 'none', borderRadius: 99, padding: '4px 12px', cursor: 'pointer' }}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ flex: 1 }} />
+          <button onClick={() => setSort((s) => (s === 'revival' ? 'recent' : 'revival'))}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: '#374151', background: '#f9fafb', border: '1px solid var(--border-neutral)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer' }}>
+            <ArrowUpDown size={12} />{sort === 'revival' ? '부활점수순' : '최신순'}
+          </button>
+          <button onClick={toggleAll} disabled={selectableNos.length === 0}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: allSelected ? '#F63B28' : '#374151', background: '#f9fafb', border: '1px solid var(--border-neutral)', borderRadius: 8, padding: '5px 10px', cursor: selectableNos.length === 0 ? 'not-allowed' : 'pointer' }}>
+            <Check size={12} />{allSelected ? '선택 해제' : '전체 선택'}
+          </button>
+        </div>
+
+        {/* body — card grid */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', minHeight: 0 }}>
+          {loading && <div style={{ textAlign: 'center', padding: 30, color: '#9ca3af' }}><Loader2 size={20} className="animate-spin" style={{ margin: '0 auto' }} /></div>}
+          {error && <div style={{ color: '#b91c1c', fontSize: 13, padding: 12 }}>{error}</div>}
+          {!loading && !error && visible.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 30, color: '#9ca3af', fontSize: 13 }}>
+              {filter === 'revival' ? '부활 후보가 없습니다.' : '표시할 상품이 없습니다.'}
+            </div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 10 }}>
+            {visible.map((row) => {
+              const no = rowNo(row);
+              const checked = selected.has(no);
+              const rev = importRowRevival(row);
+              const disabled = row.alreadyLinked || !no;
+              return (
+                <label key={no || row.name} style={{
+                  position: 'relative', display: 'flex', flexDirection: 'column', gap: 8, padding: 10, borderRadius: 12,
+                  border: `1.5px solid ${checked ? '#F63B28' : '#f1f1f1'}`,
+                  background: row.alreadyLinked ? '#fafafa' : checked ? '#fff5f6' : '#fff',
+                  cursor: disabled ? 'not-allowed' : 'pointer', opacity: row.alreadyLinked ? 0.6 : 1,
+                }}>
+                  <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 1 }}>
+                    <input type="checkbox" checked={checked} disabled={disabled} onChange={() => no && toggle(no)}
+                      style={{ width: 18, height: 18, accentColor: '#F63B28', cursor: disabled ? 'not-allowed' : 'pointer' }} />
+                  </div>
+                  {rev.isCandidate && (
+                    <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: IMPORT_REVIVAL_TONE[rev.grade].color, background: IMPORT_REVIVAL_TONE[rev.grade].bg, border: `1px solid ${IMPORT_REVIVAL_TONE[rev.grade].border}`, borderRadius: 6, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+                        부활등급 {rev.grade}
+                      </span>
+                    </div>
+                  )}
+                  {row.representativeImageUrl
+                    ? <img src={row.representativeImageUrl} alt="" style={{ width: '100%', aspectRatio: '1 / 1', borderRadius: 8, objectFit: 'cover' }} />
+                    : <div style={{ width: '100%', aspectRatio: '1 / 1', borderRadius: 8, background: '#f3f4f6' }} />}
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: '#111827', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{row.name}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 11.5, fontWeight: 700, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>{won(row.salePrice)}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280' }}>{NAVER_STATUS_KO[row.statusType] ?? row.statusType}</span>
+                      {row.alreadyLinked && <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af' }}>연동됨</span>}
+                    </div>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* footer — pagination + import action bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderTop: '1px solid #F8DCE5' }}>
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1 || loading}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 12, fontWeight: 700, color: page <= 1 ? '#c4c4c4' : '#374151', background: '#f9fafb', border: '1px solid var(--border-neutral)', borderRadius: 8, padding: '6px 10px', cursor: page <= 1 ? 'not-allowed' : 'pointer' }}>
+            <ChevronLeft size={13} />이전
+          </button>
+          <span style={{ fontSize: 12, color: '#6b7280', fontVariantNumeric: 'tabular-nums' }}>{page} / {totalPages}</span>
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages || loading}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 12, fontWeight: 700, color: page >= totalPages ? '#c4c4c4' : '#374151', background: '#f9fafb', border: '1px solid var(--border-neutral)', borderRadius: 8, padding: '6px 10px', cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}>
+            다음<ChevronRight size={13} />
+          </button>
+          <div style={{ flex: 1 }} />
+          <button onClick={() => void doImport([...selected]).then(() => { onClose(); })} disabled={selected.size === 0 || importing}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: '#fff', background: selected.size === 0 ? '#f3b8c6' : '#F63B28', border: 'none', borderRadius: 10, padding: '9px 16px', cursor: selected.size === 0 || importing ? 'not-allowed' : 'pointer' }}>
+            {importing ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
+            {selected.size}개 선택 · 가져오기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Naver Direct Register Modal ──────────────────────────────────────────────
 // C-1: Pre-registration validation + sequential API registration
 
 function NaverRegisterModal({
@@ -1027,6 +1461,8 @@ function ProductsPageInner() {
   const [showReadinessModal, setShowReadinessModal] = useState(false);
   const [excelPending, setExcelPending]             = useState(false);
   const [showNaverRegisterModal, setShowNaverRegisterModal] = useState(false);
+  // 작업 F — 네이버 상품 가져오기 모달(구 /products/link Zone1 흡수)
+  const [showImportModal, setShowImportModal] = useState(false);
   // B-3: Naver real-time sync
   const [naverSyncing, setNaverSyncing]   = useState(false);
   const [naverSyncMsg, setNaverSyncMsg]   = useState('');
@@ -1570,13 +2006,13 @@ function ProductsPageInner() {
                 style={{ border: '1.5px solid #F8DCE5', background: '#fff' }}>
                 <RefreshCw size={14} className={`text-gray-500 ${loading ? 'animate-spin' : ''}`} />
               </button>
-              {/* 연동 진입점 (#245 Phase 3) — /products/link를 허브의 "스토어에서
-                  부활 상품 가져오기" 진입 버튼으로 통합(별도 기능 아님). */}
-              <Link href="/products/link" title="네이버 스토어에서 부활 상품 가져오기 (연동)"
+              {/* 연동 진입점 (#245 Phase 3, 작업 F 재이식) — 구 /products/link
+                  라우트를 헤더 버튼→모달로 흡수(#256 단일 목록·별도 화면 폐기). */}
+              <button onClick={() => setShowImportModal(true)} title="네이버 스토어에서 상품 가져오기 (연동)"
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition"
                 style={{ border: '1.5px solid #bfdbfe', background: '#EFF6FF', color: '#1d4ed8' }}>
-                <Link2 size={13} /> 연동 가져오기
-              </Link>
+                <Link2 size={13} /> 네이버 상품 가져오기
+              </button>
               <Link href="/products/new" className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-sm font-bold transition"
                 style={{ background: '#F63B28' }}>
                 <Plus size={14} /> 상품 등록
@@ -1974,6 +2410,13 @@ function ProductsPageInner() {
           products={scored.filter(p => selected.has(p.id))}
           onClose={() => setShowNaverRegisterModal(false)}
           onSuccess={() => { setShowNaverRegisterModal(false); setSelected(new Set()); fetchProducts(); }}
+        />
+      )}
+
+      {showImportModal && (
+        <NaverImportModal
+          onClose={() => setShowImportModal(false)}
+          onImported={() => { fetchProducts(); }}
         />
       )}
 

@@ -622,7 +622,7 @@ export function computeActionQueueItem(
         ...base,
         category: 'INPUT_DECISION',
         stage: IV_SUBSTITUTE_READY,
-        deepLink: `/products/link`,
+        deepLink: `/products`,
         interventionType: IV_SUBSTITUTE_READY,
         payload: {
           productId,
@@ -646,7 +646,7 @@ export function computeActionQueueItem(
         ...base,
         category: 'INPUT_DECISION',
         stage: IV_SYNC_DRIFT,
-        deepLink: `/products/link`,
+        deepLink: `/products`,
         interventionType: IV_SYNC_DRIFT,
         payload: { productId, driftFields: syncDrift.driftFields, statusMismatch: syncDrift.statusMismatch },
       };
