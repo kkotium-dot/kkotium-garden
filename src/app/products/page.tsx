@@ -26,7 +26,7 @@ import InventoryBadge from '@/components/products/InventoryBadge';
 import { StageBadge } from '@/components/products/StageBadge';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
 import { useProductsList } from '@/lib/hooks/useDashboardData';
-import { useInventoryBadges } from '@/lib/hooks/useInventoryBadges';
+import { useInventoryBadges, type InventoryBadgeData } from '@/lib/hooks/useInventoryBadges';
 import { kkottiZombieLine } from '@/lib/products/kkotti-zombie-voice';
 import PanelTabs, { type PanelTabDef } from '@/components/ui/PanelTabs';
 import NaverPushPanel from '@/components/products/NaverPushPanel';
@@ -106,7 +106,10 @@ const TAB_CONFIG: Record<TabKey, {
   // SEED-SAVE C-4 (#62): segment order surfaces 작성중/발행대기 at the top. 'draft'
   // is now labelled 작성중 (the C-1 autosave model retired the "임시저장" wording),
   // and 'ready' (발행대기·green) is the new READY status the readiness-check promotes.
-  all:          { label: '전체',          dot: 'bg-gray-400',   dotLabel: '',              filter: () => true },
+  // 작업 F-2 (#256 §1) — 꽃밭 돌보기 기본 뷰는 "발행/연동" 상품만(미발행=꿀통창고
+  // 소관). 작성중(DRAFT)은 여기서 제외 — /crawl 또는 ?tab=draft로 진입(같은
+  // 테이블 두 뷰). 라벨도 '전체'→'발행 전체'로 의미 명확화(#262).
+  all:          { label: '발행 전체',      dot: 'bg-gray-400',   dotLabel: '',              filter: p => p.status !== 'DRAFT' },
   draft:        { label: '작성중',        dot: 'bg-gray-300',   dotLabel: '작성중',        filter: p => p.status === 'DRAFT' },
   ready:        { label: '발행대기',      dot: 'bg-green-500',  dotLabel: '발행대기',      filter: p => p.status === 'READY' },
   active:       { label: '판매중',        dot: 'bg-green-600',  dotLabel: '네이버 판매중', filter: p => p.status === 'ACTIVE' && !!p.naverProductId },
@@ -411,8 +414,9 @@ function PushTab({ productId, appSalePrice, currentNaverStatus }: { productId: s
   );
 }
 
-function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync }: {
+function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, onStockSync }: {
   product: ScoredProduct;
+  inventory?: InventoryBadgeData;
   onClose: () => void;
   onDelete: (id: string) => void;
   onMutate: (id: string, patch: Partial<Product>) => Promise<boolean>;
@@ -503,11 +507,14 @@ function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync 
 
       <PanelTabs tabs={TABS} active={tab} onChange={(k) => setTab(k as typeof tab)} ariaLabel="상품 상세 탭" />
 
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+      <div className="flex-1 overflow-y-auto p-5 space-y-4">
         {tab === 'info' && (
           <>
-            {/* 좀비 사유 (#264) — 스크롤 없이 첫 화면에서 바로 "왜"를 파악하도록
-                최상단 배치. 좀비가 아니면 조용히(#264 설계 의도 유지). */}
+            {/* 작업 F-3 (PANEL_REDESIGN_SPEC_2026-07-17) — 섹션 순서 = 셀러 작업
+                순서(급한 순). R4: 좀비사유+지금할일+핵심지표는 스크롤 없이 보여야
+                함 → 최상단 3개 배치. R3: 라벨 통일(11px·600·#9CA3AF·uppercase 금지). */}
+
+            {/* 1. 좀비 사유 (#264) — 라벨 없음, 카드 자체가 신호. 좀비 아니면 조용히. */}
             {product.tuningScore?.isZombie && (
               <div className="rounded-2xl p-3.5" style={{ background: '#fef2f2', border: '1px solid #fca5a5' }}>
                 <div className="flex items-center gap-1.5 mb-1.5">
@@ -525,74 +532,34 @@ function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync 
               </div>
             )}
 
-            {product.supplierName && (
-              <p className="text-xs" style={{ color: '#D4B0BC' }}>{product.supplierName}</p>
+            {/* 2. 지금 할 일 — R1: 미흡 항목 있을 때만 렌더(빈 "완료" 카드도 소음). */}
+            {issues.length > 0 && (
+              <div className="rounded-2xl p-4" style={{ background: '#FFF0F5', border: '1px solid #F8DCE5' }}>
+                <p className="text-[11px] font-semibold mb-2" style={{ color: '#9CA3AF' }}>지금 할 일</p>
+                {issues.map((issue, i) => (
+                  <p key={i} className="text-xs text-red-500 flex items-center gap-1.5 mt-1 first:mt-0">
+                    <AlertTriangle size={10} /> {issue}
+                  </p>
+                ))}
+              </div>
             )}
 
-            {/* Upload readiness */}
-            <div className="rounded-2xl p-4"
-              style={{ background: issues.length === 0 ? '#f0fdf4' : '#FFF0F5', border: `1px solid ${issues.length === 0 ? '#bbf7d0' : '#F8DCE5'}` }}>
-              <p className="text-xs font-bold mb-2" style={{ color: issues.length === 0 ? '#16a34a' : '#F63B28' }}>
-                네이버 업로드 준비 {issues.length === 0 ? '— 완료' : `— ${issues.length}개 항목 미흡`}
-              </p>
-              {issues.length > 0 ? issues.map((issue, i) => (
-                <p key={i} className="text-xs text-red-500 flex items-center gap-1.5 mt-1">
-                  <AlertTriangle size={10} /> {issue}
-                </p>
-              )) : (
-                <p className="text-xs text-green-600 flex items-center gap-1.5">
-                  <Check size={10} /> 카테고리 / 배송 / 이미지 모두 설정됨
-                </p>
-              )}
-            </div>
-
-            {/* Honey score */}
+            {/* 3. 한눈에 보기 — R2: 꿀통지수·SEO만(순마진은 4.가격 섹션에서 1회만). */}
             <div className="rounded-2xl p-4" style={{ background: '#FFF0F5', border: '1px solid #F8DCE5' }}>
-              <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px] font-semibold mb-2" style={{ color: '#9CA3AF' }}>한눈에 보기</p>
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold" style={{ color: '#555' }}>꿀통지수</span>
                 <HoneyBadge score={hs.total} grade={hs.grade} />
               </div>
-              <div className="grid grid-cols-3 gap-2 text-xs">
-                {([
-                  ['순마진', `${hs.netMarginRate.toFixed(1)}%`, hs.netMarginRate < 5],
-                  ['마진율', `${hs.marginRate.toFixed(1)}%`, false],
-                  ['SEO 검색최적화', `${hs.seoScore}점`, false],
-                ] as [string, string, boolean][]).map(([k, v, warn]) => (
-                  <div key={k} className="bg-white rounded-xl p-2 text-center">
-                    <p style={{ color: '#B0A0A8' }}>{k}</p>
-                    <p className={`font-bold ${warn ? 'text-red-600' : 'text-gray-800'}`}>{v}</p>
-                  </div>
-                ))}
-              </div>
-              {hs.warnings.length > 0 && (
-                <div className="mt-3 space-y-1">
-                  {hs.warnings.slice(0, 3).map((w, i) => (
-                    <p key={i} className="text-xs text-amber-600 flex items-start gap-1">
-                      <AlertTriangle size={10} className="shrink-0 mt-0.5" /> {w}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Shipping */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#888' }}>배송 정보</p>
               <div className="flex items-center justify-between">
-                <span className="text-xs" style={{ color: '#888' }}>템플릿</span>
-                <ShippingBadge product={product} />
+                <span className="text-xs" style={{ color: '#888' }}>SEO 검색최적화</span>
+                <span className="text-xs font-bold text-gray-800">{hs.seoScore}점</span>
               </div>
-              {product.shippingTemplateName && (
-                <p className="text-xs font-mono" style={{ color: '#B0A0A8' }}>{product.shippingTemplateName}</p>
-              )}
             </div>
 
-            {/* C-12: Market Analysis */}
-            <MarketAnalysisCard productName={product.name} />
-
-            {/* Prices */}
+            {/* 4. 가격 — 마진 수치의 유일한 출처(중복 제거, R2). */}
             <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#888' }}>가격 정보</p>
+              <p className="text-[11px] font-semibold" style={{ color: '#9CA3AF' }}>가격</p>
               {([
                 ['도매가 (공급가)', `${product.supplierPrice.toLocaleString()}원`, false],
                 ['판매가', `${product.salePrice.toLocaleString()}원`, false],
@@ -606,10 +573,72 @@ function SidePanel({ product, onClose, onDelete, onMutate, onReset, onStockSync 
               ))}
             </div>
 
-            <div className="rounded-2xl px-4 py-3" style={{ background: '#FFF0F5', border: '1px solid #FFB3CE' }}>
-              <p className="text-xs font-bold mb-1" style={{ color: '#F63B28' }}>꼬띠 한마디</p>
-              <p className="text-xs leading-relaxed" style={{ color: '#FF6B8A' }}>{hs.kkottiDialogue}</p>
+            {/* 5. 재고 · 배송 — 고아 텍스트였던 공급사명을 소속 섹션으로 편입(R3). */}
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold" style={{ color: '#9CA3AF' }}>재고 · 배송</p>
+              {product.supplierName && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: '#888' }}>공급사</span>
+                  <span className="text-xs font-semibold" style={{ color: '#555' }}>{product.supplierName}</span>
+                </div>
+              )}
+              {inventory && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: '#888' }}>재고</span>
+                  <InventoryBadge inv={inventory} />
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: '#888' }}>배송</span>
+                <ShippingBadge product={product} />
+              </div>
+              {product.shippingTemplateName && (
+                <p className="text-xs font-mono text-right" style={{ color: '#B0A0A8' }}>{product.shippingTemplateName}</p>
+              )}
             </div>
+
+            {/* 6. 네이버 정보 — 연동 상품만(#256 §5 미러). */}
+            {isLinked && (
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold" style={{ color: '#9CA3AF' }}>네이버 정보</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: '#888' }}>상품번호</span>
+                  <span className="text-xs font-mono" style={{ color: '#555' }}>{product.naverProductId}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: '#888' }}>상태</span>
+                  <span className="text-xs font-semibold" style={{ color: '#555' }}>
+                    {NAVER_STATUS_KO[product.naver_status_type ?? ''] ?? product.naver_status_type ?? '—'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* 7. 상품 정보 — 항상 노출되는 기본 메타(라벨 5개 이상 확보용 겸용, R3). */}
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold" style={{ color: '#9CA3AF' }}>상품 정보</p>
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: '#888' }}>상품코드</span>
+                <span className="text-xs font-mono" style={{ color: '#555' }}>{product.sku}</span>
+              </div>
+              {product.createdAt && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: '#888' }}>등록일</span>
+                  <span className="text-xs" style={{ color: '#555' }}>{product.createdAt.slice(0, 10)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 8. 시장 분석 — 데이터 있을 때만(컴포넌트 자체 판단, R1). */}
+            <MarketAnalysisCard productName={product.name} />
+
+            {/* 9. 꼬띠 한마디 — 라벨 없음, 좀비 아닐 때만(1.과 중복 방지). */}
+            {!product.tuningScore?.isZombie && (
+              <div className="rounded-2xl px-4 py-3" style={{ background: '#FFF0F5', border: '1px solid #FFB3CE' }}>
+                <p className="text-xs font-bold mb-1" style={{ color: '#F63B28' }}>꼬띠 한마디</p>
+                <p className="text-xs leading-relaxed" style={{ color: '#FF6B8A' }}>{hs.kkottiDialogue}</p>
+              </div>
+            )}
           </>
         )}
 
@@ -2392,7 +2421,7 @@ function ProductsPageInner() {
       {sideProduct && (
         <>
           <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setSide(null)} />
-          <SidePanel product={sideProduct} onClose={() => setSide(null)} onDelete={deleteProduct} onMutate={handleProductMutate} onReset={handleProductReset} onStockSync={handleStockSync} />
+          <SidePanel product={sideProduct} inventory={inventoryByProductId[sideProduct.id]} onClose={() => setSide(null)} onDelete={deleteProduct} onMutate={handleProductMutate} onReset={handleProductReset} onStockSync={handleStockSync} />
         </>
       )}
 

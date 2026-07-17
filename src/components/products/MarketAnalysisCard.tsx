@@ -83,6 +83,9 @@ export default function MarketAnalysisCard({ productName }: { productName: strin
   if (error || !data) return null;
 
   const { competition: comp, insight } = data;
+  // 패널 재설계 R1 (PANEL_REDESIGN_SPEC_2026-07-17) — 경쟁상품수·평균가격이 모두
+  // 0이면 정보가 아니라 소음이므로 섹션 자체를 렌더하지 않는다(전상품 범용·#55).
+  if (comp.totalResults === 0 && comp.avgPrice === 0) return null;
   const levelStyle = LEVEL_STYLE[comp.competitionLevel] ?? LEVEL_STYLE.MEDIUM;
 
   return (
