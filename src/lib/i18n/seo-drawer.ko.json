@@ -7,7 +7,7 @@
     "save": "저장",
     "saving": "저장 중...",
     "saved": "저장 완료",
-    "saveFailed": "저장 실패",
+    "saveFailed": "이랴, 저장에 실패했어유! 다시 눌러주어유",
     "openExternal": "전체 편집기에서 열기",
     "originalName": "원본 상품명 (Product.name)",
     "originalNameNote": "보존 — Lane 1-D 정합으로 발행 단계에서만 naver_title이 노출됩니다."
@@ -20,9 +20,9 @@
   "title": {
     "label": "네이버 발행 상품명 (naver_title)",
     "placeholder": "예: 무드등 침실 LED 캠핑 분위기 조명 USB 충전식",
-    "helpRecommendedUnder": "50자 이내 권장",
-    "helpRange": "50–100자 — 점수 감점 구간",
-    "helpOver": "100자 초과 — 노출 차단 위험",
+    "helpRecommendedUnder": "50자 이내가 딱 좋아유",
+    "helpRange": "50–100자예유 — 점수 감점 구간",
+    "helpOver": "100자 초과예유 — 노출 차단 위험",
     "countSuffix": "자"
   },
   "duplicate": {
@@ -35,7 +35,7 @@
   "keywords": {
     "label": "네이버 키워드 (naver_keywords)",
     "placeholder": "쉼표로 구분 — 예: 무드등, 침실조명, LED",
-    "help": "최대 5개 키워드의 월간 검색량을 아래 차트로 표시합니다."
+    "help": "최대 5개 키워드의 월간 검색량을 꼬띠가 아래 차트로 보여드려유"
   },
   "description": {
     "label": "네이버 짧은 설명 (naver_description)",
@@ -44,10 +44,10 @@
   "volume": {
     "title": "키워드 검색량·경쟁강도",
     "subtitle": "Naver SearchAd · 12시간 캐시",
-    "empty": "키워드를 입력하면 검색량이 표시됩니다",
+    "empty": "키워드를 넣어주면 꼬띠가 검색량을 보여드려유",
     "loading": "검색량 조회 중...",
-    "errorCredentials": "Naver SearchAd API 키 미설정",
-    "errorGeneric": "검색량 조회 실패",
+    "errorCredentials": "이랴, 네이버 SearchAd API 키가 아직 없어유! 설정부터 해주어유",
+    "errorGeneric": "이랴, 검색량을 못 가져왔어유! 잠시 후 다시 해봐주어유",
     "competitionLow": "저",
     "competitionMid": "중",
     "competitionHigh": "고",
@@ -55,7 +55,7 @@
     "monthlyLabel": "회/월",
     "pickToInsert": "클릭하면 상품명에 추가",
     "alreadyInTitle": "이미 상품명에 포함됨",
-    "insertedToast": "상품명에 추가됨",
+    "insertedToast": "까꿍, 상품명에 넣었어유!",
     "caveat": "낮은 경쟁강도가 판매를 보장하지 않습니다 — 포털 전체 검색 기반 데이터이며 쇼핑 의도와 차이가 있을 수 있습니다.",
     "goldenGrade": {
       "premium": "최적",
@@ -67,11 +67,11 @@
   "publish": {
     "title": "발행 준비도 게이트",
     "loading": "발행 준비도 확인 중...",
-    "error": "발행 준비도 확인 실패",
+    "error": "이랴, 발행 준비도를 못 확인했어유! 다시 시도해주어유",
     "summaryReady": "발행 준비 완료",
-    "summaryReadyHint": "모든 게이트 통과 — 발행 버튼이 활성화되었습니다.",
+    "summaryReadyHint": "까꿍, 모든 게이트를 통과했어유 — 발행 버튼이 열렸어유!",
     "summaryBlocked": "발행 차단",
-    "summaryBlockedHint": "아래 미통과 항목을 보완하면 발행 버튼이 열립니다.",
+    "summaryBlockedHint": "아래 미통과 항목을 보완하면 발행 버튼이 열려유",
     "axisFields": "상품 필드 (19개)",
     "axisAuthentic": "진위성 검증",
     "axisPayload": "상품정보제공고시 (7개)",
@@ -89,10 +89,10 @@
   "imageGuide": {
     "title": "이미지 실행 가이드",
     "unit": "장",
-    "complete": "권장 장수 도달 — 이미지 점수 최대치 가능",
+    "complete": "까꿍, 권장 장수까지 다 채웠어유 — 이미지 점수 최대치예유!",
     "prescriptionPrefix": "더 올리면 SEO 점수",
-    "prescriptionSuffix": "점 더 받을 수 있어요",
-    "note": "휴리스틱 — 실제 점수는 도매꾹 이미지 품질·해상도·구도에 따라 달라질 수 있습니다."
+    "prescriptionSuffix": "점 더 받을 수 있어유",
+    "note": "휴리스틱이에유 — 실제 점수는 도매꾹 이미지 품질·해상도·구도에 따라 달라질 수 있어유."
   },
   "footer": {
     "phaseNote": "Phase 2-A-1·2·3: 게이지 + 중복경고 + 검색량 + 발행 게이트 + 이미지 가이드 활성."
