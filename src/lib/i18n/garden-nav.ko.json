@@ -12,8 +12,8 @@
         {
           "key": "dashboard",
           "href": "/dashboard",
-          "ko": "대시보드",
-          "sub": "정원 일지",
+          "ko": "정원 일지",
+          "sub": "오늘 할 일 · 현황",
           "en": "Garden",
           "icon": "fountain"
         },
@@ -48,21 +48,21 @@
           "key": "honey-warehouse",
           "href": "/crawl",
           "ko": "꿀통 창고",
-          "sub": "소싱 · 작성중",
+          "sub": "꽃나들이 · 정원 창고",
           "en": "Honey Warehouse",
           "icon": "layers",
           "children": [
             {
               "key": "crawl-tab",
               "href": "/crawl",
-              "ko": "크롤링",
+              "ko": "꿀통 꽃나들이",
               "en": "Crawl",
               "icon": "layers"
             },
             {
               "key": "draft-tab",
               "href": "/products?tab=draft",
-              "ko": "작성중",
+              "ko": "정원 창고",
               "en": "Draft",
               "icon": "shoppingbag"
             }
@@ -71,8 +71,8 @@
         {
           "key": "make",
           "href": "/products/new",
-          "ko": "온실아틀리에",
-          "sub": "등록 · 디자인",
+          "ko": "온실 아틀리에",
+          "sub": "씨앗심기 · 꽃단장",
           "en": "Atelier",
           "icon": "packageplus",
           "children": [
@@ -155,7 +155,8 @@
               "href": "/settings/suppliers",
               "ko": "거래처 명단",
               "en": "Directory",
-              "icon": "store"
+              "icon": "store",
+              "sub": "명단 · 열쇠방"
             },
             {
               "key": "supplier-login",
@@ -175,7 +176,7 @@
         {
           "key": "settings",
           "href": "/settings/shipping",
-          "ko": "설정",
+          "ko": "정원 설정",
           "sub": "배송 · 네이버 · 자산",
           "en": "Settings",
           "icon": "settings",
@@ -183,7 +184,7 @@
             {
               "key": "shipping",
               "href": "/settings/shipping",
-              "ko": "배송 설정",
+              "ko": "배송 레시피",
               "en": "Shipping",
               "icon": "truck"
             },

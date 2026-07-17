@@ -17,7 +17,12 @@ export const dynamic = 'force-dynamic';
 // R-1 — 시장 분석 경쟁사 집계에서 자사를 빼려면 자사 몰명이 필요하다.
 // 운영자가 설정 안 했으면 브랜드 기본값("꽃틔움")으로 대체 — 네이버 몰명이
 // "꽃틔움 KKOTIUM"처럼 접미어가 붙어도 부분일치로 잡힌다.
-const DEFAULT_OWN_MALL = '꽃틔움';
+// 운영자 확인(2026-07-18): 정확한 스토어명은 "꽃틔움 KKOTIUM".
+// DB store_settings.store_name이 "꽃틔움"으로만 등록돼 있어 부분일치로 우연히
+// 걸리던 상태였음 → DB를 정식 명칭으로 교정하고 폴백 상수도 일치시킴.
+// 짧은 이름을 쓰면 "꽃틔움농원" 같은 타사 몰까지 자사로 오인해 제외해버려
+// 경쟁사가 분석에서 사라진다(시장 분석 왜곡).
+const DEFAULT_OWN_MALL = '꽃틔움 KKOTIUM';
 async function getOwnMallKey(): Promise<string> {
   try {
     const row = await prisma.storeSettings.findUnique({ where: { id: 'default' }, select: { storeName: true } });
