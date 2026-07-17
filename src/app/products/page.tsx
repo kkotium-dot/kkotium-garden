@@ -111,14 +111,16 @@ const TAB_CONFIG: Record<TabKey, {
   // 테이블 두 뷰). 라벨도 '전체'→'발행 전체'로 의미 명확화(#262).
   all:          { label: '발행 전체',      dot: 'bg-gray-400',   dotLabel: '',              filter: p => !!p.naverProductId },
   draft:        { label: '작성중',        dot: 'bg-gray-300',   dotLabel: '작성중',        filter: p => p.status === 'DRAFT' && !p.naverProductId },
-  ready:        { label: '발행대기',      dot: 'bg-green-500',  dotLabel: '발행대기',      filter: p => p.status === 'READY' },
+  ready:        { label: '발행대기',      dot: 'bg-green-500',  dotLabel: '발행대기',      filter: p => p.status === 'READY' && !p.naverProductId },
   active:       { label: '판매중',        dot: 'bg-green-600',  dotLabel: '네이버 판매중', filter: p => p.status === 'ACTIVE' && !!p.naverProductId },
   pending:      { label: '네이버 등록 대기',     dot: 'bg-amber-400',  dotLabel: '네이버 등록 대기', filter: p => p.status === 'ACTIVE' && !p.naverProductId },
-  oos:          { label: '품절',          dot: 'bg-[#F63B28]',  dotLabel: '품절',          filter: p => p.status === 'OUT_OF_STOCK' },
-  reactivation: { label: '판매중지',      dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
-  revival:      { label: '좀비꽃 발견',   dot: 'bg-purple-500', dotLabel: '좀비꽃',        filter: isZombieProduct },
-  lowMargin:    { label: '마진 낮음',     dot: 'bg-rose-500',   dotLabel: '마진 낮음',     filter: isLowMargin },
-  drift:        { label: '동기화 필요',   dot: 'bg-yellow-500', dotLabel: '동기화 필요',   filter: hasDrift },
+  // 작업 H-2 — 꽃밭 돌보기 전용 탭(oos/reactivation/lowMargin/drift)은 뷰 스코프를
+  // naverProductId로 강제해 정원 창고 상품이 새어 들어오지 않게 한다.
+  oos:          { label: '품절',          dot: 'bg-[#F63B28]',  dotLabel: '품절',          filter: p => p.status === 'OUT_OF_STOCK' && !!p.naverProductId },
+  reactivation: { label: '판매중지',      dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => (p.status === 'INACTIVE' || p.status === 'HIDDEN') && !!p.naverProductId },
+  revival:      { label: '좀비꽃 발견',   dot: 'bg-purple-500', dotLabel: '좀비꽃',        filter: p => isZombieProduct(p) && !!p.naverProductId },
+  lowMargin:    { label: '마진 낮음',     dot: 'bg-rose-500',   dotLabel: '마진 낮음',     filter: p => isLowMargin(p) && !!p.naverProductId },
+  drift:        { label: '동기화 필요',   dot: 'bg-yellow-500', dotLabel: '동기화 필요',   filter: p => hasDrift(p) && !!p.naverProductId },
 };
 
 // 정원창고 필터 밀도 완화(2026-07-13 P1·PRODUCT_IA_REDESIGN_V2) — 10개 버튼을
@@ -1476,6 +1478,11 @@ function ProductsPageInner() {
   // 꽃밭 돌보기(/products)          = 스토어에 올라간 상품(앱 등록 + 연동)
   // 제목이 고정이면 클릭한 메뉴와 도착한 화면 이름이 어긋난다(2026-07-17 교정).
   const pageTitle = tab === 'draft' ? '정원 창고' : '꽃밭 돌보기';
+  // 작업 H (SCREEN_DIFFERENTIATION_SPEC_2026-07-17) — 정원 창고는 판매 상태가
+  // 아니라 "작업 단계"(준비도) 기준으로 나뉜다. 별도 축이라 TAB_CONFIG에 얹지
+  // 않고 이 로컬 서브필터로 분리.
+  const isGarden = tab === 'draft';
+  const [gardenReadiness, setGardenReadiness] = useState<'all' | 'notReady' | 'ready'>('all');
   // supplierFilter: pre-populated from ?supplier= URL param (거래처 명단 연결)
   const [supplierFilter, setSupplierFilter]   = useState<string>(() => searchParams?.get('supplier') ?? '');
   const [selected, setSelected]               = useState<Set<string>>(new Set());
@@ -1492,6 +1499,8 @@ function ProductsPageInner() {
   const [showReadinessModal, setShowReadinessModal] = useState(false);
   const [excelPending, setExcelPending]             = useState(false);
   const [showNaverRegisterModal, setShowNaverRegisterModal] = useState(false);
+  // 작업 H-1 — 정원 창고 "준비된 것 일괄 발행" (준비도 100% 상품만 대상).
+  const [showGardenPublishModal, setShowGardenPublishModal] = useState(false);
   // 작업 F — 네이버 상품 가져오기 모달(구 /products/link Zone1 흡수)
   const [showImportModal, setShowImportModal] = useState(false);
   // B-3: Naver real-time sync
@@ -1620,15 +1629,23 @@ function ProductsPageInner() {
     const tabFn = TAB_CONFIG[tab].filter;
     return scored
       .filter(p => tabFn(p))
+      .filter(p => !isGarden || gardenReadiness === 'all' || !!readinessMap[p.id]?.ready === (gardenReadiness === 'ready'))
       .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
       .filter(p => !supplierFilter || p.supplierId === supplierFilter)
       .filter(p => !showUploadReady || getReadinessIssues(p).length > 0)
       .sort((a, b) => b._hs.total - a._hs.total);
-  }, [scored, tab, search, supplierFilter, showUploadReady]);
+  }, [scored, tab, isGarden, gardenReadiness, readinessMap, search, supplierFilter, showUploadReady]);
 
   const counts = useMemo(() =>
     Object.fromEntries((Object.keys(TAB_CONFIG) as TabKey[]).map(k => [k, scored.filter(TAB_CONFIG[k].filter).length])) as Record<TabKey, number>,
     [scored]);
+
+  // 정원 창고 서브필터 카운트 — draft 뷰 안에서만 의미 있음(뷰 스코프 제한, H-2).
+  const gardenCounts = useMemo(() => {
+    const draftProducts = scored.filter(TAB_CONFIG.draft.filter);
+    const ready = draftProducts.filter(p => !!readinessMap[p.id]?.ready);
+    return { all: draftProducts.length, ready: ready.length, notReady: draftProducts.length - ready.length, readyProducts: ready };
+  }, [scored, readinessMap]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, { label: string; items: ScoredProduct[] }>();
@@ -1797,7 +1814,9 @@ function ProductsPageInner() {
             <p className="text-sm font-semibold text-gray-900 truncate leading-snug">{p.name}</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
               <p className="text-xs font-mono truncate" style={{ color: '#B0A0A8', minWidth: 0 }}>{p.sku}</p>
-              {inventoryByProductId[p.id] && <InventoryBadge inv={inventoryByProductId[p.id]} />}
+              {/* 작업 H-3 — 정원 창고(미발행)는 재고 폴링 대상이 아니라 실패
+                  표시가 의미 없다("네이버에 없는 상품을 물어본 것", 스펙 §2). */}
+              {!isGarden && inventoryByProductId[p.id] && <InventoryBadge inv={inventoryByProductId[p.id]} />}
             </div>
             <HubBadges p={p} rd={readinessMap[p.id]} />
             {nameDiagnoses[p.id] && (
@@ -1896,7 +1915,13 @@ function ProductsPageInner() {
           checked={selected.size === filtered.length && filtered.length > 0}
           onChange={toggleAll}
           className="w-4 h-4 rounded border-gray-300 text-[#F63B28] focus:ring-[#F63B28]/30" />
-        {['상품명 / 상품코드(SKU)', '상태', '공급사', '배송', '순마진', '판매가', '준비도', '점수', '관리'].map(h => (
+        {/* 작업 H-3 — 정원 창고는 "작업 단계·예상 마진·예상 판매가"로 라벨을
+            바꿔 실적이 아니라 전망치임을 명시(SCREEN_DIFFERENTIATION_SPEC_
+            2026-07-17 §4-3). 꽃밭 돌보기는 실적 라벨 유지. */}
+        {(isGarden
+          ? ['상품명 / 상품코드(SKU)', '작업 단계', '공급사', '배송', '예상 마진', '예상 판매가', '준비도', '점수', '관리']
+          : ['상품명 / 상품코드(SKU)', '상태', '공급사', '배송', '순마진', '판매가', '준비도', '점수', '관리']
+        ).map(h => (
           <span key={h} className="text-[11px] font-black tracking-wide" style={{ color: '#F63B28' }}>{h}</span>
         ))}
       </div>
@@ -2011,46 +2036,68 @@ function ProductsPageInner() {
                   <Layers size={13} /> 공급사별
                 </button>
               </div>
-              {/* B-3: Naver real-time sync button */}
-              <button
-              onClick={handleNaverSync}
-              disabled={naverSyncing}
-                title={naverSyncMsg || '네이버 실시간 상품 상태 동기화'}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40"
-                style={{
-                  border: `1.5px solid ${Object.keys(naverMismatches).length > 0 ? '#fca5a5' : '#F8DCE5'}`,
-                  background: Object.keys(naverMismatches).length > 0 ? '#fff1f1' : '#fff',
-                  color: Object.keys(naverMismatches).length > 0 ? '#F63B28' : '#6B6B6B',
-                }}>
-                <RefreshCw size={13} className={naverSyncing ? 'animate-spin' : ''} />
-                {naverSyncing ? '동기화 중...' : '네이버 동기화'}
-                {Object.keys(naverMismatches).length > 0 && (
-                  <span style={{ background: '#F63B28', color: '#fff', borderRadius: 99, padding: '1px 6px', fontSize: 10, fontWeight: 800 }}>
-                    {Object.keys(naverMismatches).length}
-                  </span>
-                )}
-              </button>
-              {naverSyncMsg && (
-                <span style={{ fontSize: 11, color: Object.keys(naverMismatches).length > 0 ? '#F63B28' : '#16a34a', fontWeight: 600 }}>
-                  {naverSyncMsg}
-                </span>
-              )}
               <button onClick={fetchProducts} disabled={loading}
                 className="p-2 rounded-xl transition disabled:opacity-40"
-                style={{ border: '1.5px solid #F8DCE5', background: '#fff' }}>
+                style={{ border: '1.5px solid #F8DCE5', background: '#fff' }} title="새로고침">
                 <RefreshCw size={14} className={`text-gray-500 ${loading ? 'animate-spin' : ''}`} />
               </button>
-              {/* 연동 진입점 (#245 Phase 3, 작업 F 재이식) — 구 /products/link
-                  라우트를 헤더 버튼→모달로 흡수(#256 단일 목록·별도 화면 폐기). */}
-              <button onClick={() => setShowImportModal(true)} title="네이버 스토어에서 상품 가져오기 (연동)"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition"
-                style={{ border: '1.5px solid #bfdbfe', background: '#EFF6FF', color: '#1d4ed8' }}>
-                <Link2 size={13} /> 네이버 상품 가져오기
-              </button>
-              <Link href="/products/new" className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-sm font-bold transition"
-                style={{ background: '#F63B28' }}>
-                <Plus size={14} /> 상품 등록
-              </Link>
+              {/* 작업 H-1 (SCREEN_DIFFERENTIATION_SPEC_2026-07-17 §4-1) — 헤더
+                  액션 분화. 정원 창고=아직 스토어에 없는 상품 정리소라 네이버
+                  동기화·가져오기가 무의미(대상 0건)하고, 대신 씨앗 확보(상품
+                  등록·크롤링)+일괄 발행이 핵심 액션. 꽃밭 돌보기=이미 발행된
+                  상품 관리라 신규 등록은 온실아틀리에 소관(#266). */}
+              {isGarden ? (
+                <>
+                  <Link href="/crawl" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition"
+                    style={{ border: '1.5px solid #F8DCE5', background: '#fff', color: '#6B6B6B' }}>
+                    <Search size={13} /> 크롤링에서 가져오기
+                  </Link>
+                  <button onClick={() => setShowGardenPublishModal(true)} disabled={gardenCounts.ready === 0}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40"
+                    style={{ border: '1.5px solid #bbf7d0', background: '#F0FDF4', color: '#15803d' }}
+                    title="준비도 100%인 상품을 한 번에 발행">
+                    <Send size={13} /> 준비된 것 일괄 발행 {gardenCounts.ready}
+                  </button>
+                  <Link href="/products/new" className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-sm font-bold transition"
+                    style={{ background: '#F63B28' }}>
+                    <Plus size={14} /> 상품 등록
+                  </Link>
+                </>
+              ) : (
+                <>
+                  {/* B-3: Naver real-time sync button */}
+                  <button
+                  onClick={handleNaverSync}
+                  disabled={naverSyncing}
+                    title={naverSyncMsg || '네이버 실시간 상품 상태 동기화'}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40"
+                    style={{
+                      border: `1.5px solid ${Object.keys(naverMismatches).length > 0 ? '#fca5a5' : '#F8DCE5'}`,
+                      background: Object.keys(naverMismatches).length > 0 ? '#fff1f1' : '#fff',
+                      color: Object.keys(naverMismatches).length > 0 ? '#F63B28' : '#6B6B6B',
+                    }}>
+                    <RefreshCw size={13} className={naverSyncing ? 'animate-spin' : ''} />
+                    {naverSyncing ? '동기화 중...' : '네이버 동기화'}
+                    {Object.keys(naverMismatches).length > 0 && (
+                      <span style={{ background: '#F63B28', color: '#fff', borderRadius: 99, padding: '1px 6px', fontSize: 10, fontWeight: 800 }}>
+                        {Object.keys(naverMismatches).length}
+                      </span>
+                    )}
+                  </button>
+                  {naverSyncMsg && (
+                    <span style={{ fontSize: 11, color: Object.keys(naverMismatches).length > 0 ? '#F63B28' : '#16a34a', fontWeight: 600 }}>
+                      {naverSyncMsg}
+                    </span>
+                  )}
+                  {/* 연동 진입점 (#245 Phase 3, 작업 F 재이식) — 구 /products/link
+                      라우트를 헤더 버튼→모달로 흡수(#256 단일 목록·별도 화면 폐기). */}
+                  <button onClick={() => setShowImportModal(true)} title="네이버 스토어에서 상품 가져오기 (연동)"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition"
+                    style={{ border: '1.5px solid #bfdbfe', background: '#EFF6FF', color: '#1d4ed8' }}>
+                    <Link2 size={13} /> 네이버 상품 가져오기
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <div style={{ height: 2.5, background: '#FFB3CE', borderRadius: 99, margin: '8px 0 6px' }} />
@@ -2063,68 +2110,99 @@ function ProductsPageInner() {
             horizontally on overflow. Desktop (lg+) wraps as before. */}
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3 lg:flex-wrap">
           <div className="flex items-center gap-2 w-full lg:w-auto shrink-0">
-            <div className="flex rounded-xl overflow-x-auto lg:overflow-hidden" style={{ background: '#fff', border: '1.5px solid #F8DCE5' }}>
-              {PRIMARY_TAB_KEYS.map(k => (
-                <button key={k} onClick={() => { setTab(k); setSelected(new Set()); }}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors whitespace-nowrap"
-                  style={{ background: tab === k ? '#F63B28' : 'transparent', color: tab === k ? '#fff' : '#6B6B6B' }}>
-                  {tab === k
-                    ? <span className="w-1.5 h-1.5 rounded-full bg-white opacity-90" />
-                    : <span className={`w-1.5 h-1.5 rounded-full ${TAB_CONFIG[k].dot}`} />
-                  }
-                  {TAB_CONFIG[k].label}
-                  <span className="ml-0.5 px-1 rounded-md text-[10px] font-bold"
-                    style={{ background: tab === k ? 'rgba(255,255,255,0.9)' : '#F8DCE5', color: '#F63B28' }}>
-                    {counts[k]}
-                  </span>
-                </button>
-              ))}
-            </div>
+            {/* 작업 H-2 (SCREEN_DIFFERENTIATION_SPEC_2026-07-17 §4-2) — 정원
+                창고는 판매 상태(판매중/판매중지/좀비꽃) 필터가 무의미(대상 0건,
+                #266)하므로 작업 단계 기준(준비 미흡/발행 가능)으로 교체.
+                꽃밭 돌보기 뷰의 건수가 새어 보이던 문제의 근본 원인이었음. */}
+            {isGarden ? (
+              <div className="flex rounded-xl overflow-x-auto lg:overflow-hidden" style={{ background: '#fff', border: '1.5px solid #F8DCE5' }}>
+                {([
+                  ['notReady', '준비 미흡', gardenCounts.notReady, 'bg-rose-500'],
+                  ['ready', '발행 가능', gardenCounts.ready, 'bg-green-500'],
+                  ['all', '전체', gardenCounts.all, 'bg-gray-400'],
+                ] as const).map(([key, label, count, dot]) => (
+                  <button key={key} onClick={() => setGardenReadiness(key)}
+                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors whitespace-nowrap"
+                    style={{ background: gardenReadiness === key ? '#F63B28' : 'transparent', color: gardenReadiness === key ? '#fff' : '#6B6B6B' }}>
+                    {gardenReadiness === key
+                      ? <span className="w-1.5 h-1.5 rounded-full bg-white opacity-90" />
+                      : <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+                    }
+                    {label}
+                    <span className="ml-0.5 px-1 rounded-md text-[10px] font-bold"
+                      style={{ background: gardenReadiness === key ? 'rgba(255,255,255,0.9)' : '#F8DCE5', color: '#F63B28' }}>
+                      {count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="flex rounded-xl overflow-x-auto lg:overflow-hidden" style={{ background: '#fff', border: '1.5px solid #F8DCE5' }}>
+                  {PRIMARY_TAB_KEYS.map(k => (
+                    <button key={k} onClick={() => { setTab(k); setSelected(new Set()); }}
+                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors whitespace-nowrap"
+                      style={{ background: tab === k ? '#F63B28' : 'transparent', color: tab === k ? '#fff' : '#6B6B6B' }}>
+                      {tab === k
+                        ? <span className="w-1.5 h-1.5 rounded-full bg-white opacity-90" />
+                        : <span className={`w-1.5 h-1.5 rounded-full ${TAB_CONFIG[k].dot}`} />
+                      }
+                      {TAB_CONFIG[k].label}
+                      <span className="ml-0.5 px-1 rounded-md text-[10px] font-bold"
+                        style={{ background: tab === k ? 'rgba(255,255,255,0.9)' : '#F8DCE5', color: '#F63B28' }}>
+                        {counts[k]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
 
-            {/* 더보기 드롭다운 — 나머지 7개 필터(전체/작성중/발행대기/네이버 등록
-                대기/품절/마진 낮음/동기화 필요)를 여기 수렴 (#256 밀도 완화). */}
-            <div className="relative">
-              <button type="button" onClick={() => setShowMoreFilters(v => !v)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap"
-                style={{
-                  background: MORE_TAB_KEYS.includes(tab) ? '#F63B28' : '#fff',
-                  color: MORE_TAB_KEYS.includes(tab) ? '#fff' : '#6B6B6B',
-                  border: '1.5px solid', borderColor: MORE_TAB_KEYS.includes(tab) ? '#F63B28' : '#F8DCE5',
-                }}>
-                {MORE_TAB_KEYS.includes(tab) ? TAB_CONFIG[tab].label : '더보기'}
-                {MORE_TAB_KEYS.includes(tab) && (
-                  <span className="px-1 rounded-md text-[10px] font-bold" style={{ background: 'rgba(255,255,255,0.9)', color: '#F63B28' }}>
-                    {counts[tab]}
-                  </span>
-                )}
-                <ChevronDown size={12} />
-              </button>
-              {showMoreFilters && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowMoreFilters(false)} />
-                  <div className="absolute z-50" style={{
-                    top: '110%', left: 0, minWidth: 180,
-                    background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 12,
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden',
-                  }}>
-                    {MORE_TAB_KEYS.map(k => (
-                      <button key={k} type="button"
-                        onClick={() => { setTab(k); setSelected(new Set()); setShowMoreFilters(false); }}
-                        className="w-full flex items-center justify-between gap-3 px-3 py-2 text-xs font-semibold transition hover:bg-pink-50"
-                        style={{ color: tab === k ? '#F63B28' : '#3A3A3A', background: tab === k ? '#FFF0F5' : 'transparent' }}>
-                        <span className="flex items-center gap-1.5">
-                          <span className={`w-1.5 h-1.5 rounded-full ${TAB_CONFIG[k].dot}`} />
-                          {TAB_CONFIG[k].label}
-                        </span>
-                        <span className="px-1 rounded-md text-[10px] font-bold" style={{ background: '#F8DCE5', color: '#F63B28' }}>
-                          {counts[k]}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+                {/* 더보기 드롭다운 — 나머지 필터(전체/발행대기/네이버 등록
+                    대기/품절/마진 낮음/동기화 필요)를 여기 수렴 (#256 밀도 완화).
+                    작성중(정원 창고)은 사이드바 "꿀통 창고" 진입점 소관이라 여기선 제외. */}
+                <div className="relative">
+                  <button type="button" onClick={() => setShowMoreFilters(v => !v)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap"
+                    style={{
+                      background: MORE_TAB_KEYS.includes(tab) ? '#F63B28' : '#fff',
+                      color: MORE_TAB_KEYS.includes(tab) ? '#fff' : '#6B6B6B',
+                      border: '1.5px solid', borderColor: MORE_TAB_KEYS.includes(tab) ? '#F63B28' : '#F8DCE5',
+                    }}>
+                    {MORE_TAB_KEYS.includes(tab) ? TAB_CONFIG[tab].label : '더보기'}
+                    {MORE_TAB_KEYS.includes(tab) && (
+                      <span className="px-1 rounded-md text-[10px] font-bold" style={{ background: 'rgba(255,255,255,0.9)', color: '#F63B28' }}>
+                        {counts[tab]}
+                      </span>
+                    )}
+                    <ChevronDown size={12} />
+                  </button>
+                  {showMoreFilters && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowMoreFilters(false)} />
+                      <div className="absolute z-50" style={{
+                        top: '110%', left: 0, minWidth: 180,
+                        background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 12,
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden',
+                      }}>
+                        {MORE_TAB_KEYS.filter(k => k !== 'draft').map(k => (
+                          <button key={k} type="button"
+                            onClick={() => { setTab(k); setSelected(new Set()); setShowMoreFilters(false); }}
+                            className="w-full flex items-center justify-between gap-3 px-3 py-2 text-xs font-semibold transition hover:bg-pink-50"
+                            style={{ color: tab === k ? '#F63B28' : '#3A3A3A', background: tab === k ? '#FFF0F5' : 'transparent' }}>
+                            <span className="flex items-center gap-1.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${TAB_CONFIG[k].dot}`} />
+                              {TAB_CONFIG[k].label}
+                            </span>
+                            <span className="px-1 rounded-md text-[10px] font-bold" style={{ background: '#F8DCE5', color: '#F63B28' }}>
+                              {counts[k]}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Phase 2-MOBILE-3 M3: full-width on mobile, fixed cap on desktop. */}
@@ -2444,6 +2522,14 @@ function ProductsPageInner() {
           products={scored.filter(p => selected.has(p.id))}
           onClose={() => setShowNaverRegisterModal(false)}
           onSuccess={() => { setShowNaverRegisterModal(false); setSelected(new Set()); fetchProducts(); }}
+        />
+      )}
+
+      {showGardenPublishModal && (
+        <NaverRegisterModal
+          products={gardenCounts.readyProducts}
+          onClose={() => setShowGardenPublishModal(false)}
+          onSuccess={() => { setShowGardenPublishModal(false); fetchProducts(); }}
         />
       )}
 

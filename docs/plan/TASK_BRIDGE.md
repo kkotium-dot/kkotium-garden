@@ -72,6 +72,19 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-07-18 (113) 작업 H — 정원 창고/꽃밭 돌보기 화면 분화 (H-1~H-4, 코드변경 있음·tsc0·build0·prod 배포대기)
+- **Target**: 다음 세션 · 권위 docs/design/SCREEN_DIFFERENTIATION_SPEC_2026-07-17.md + 원칙 #266/#264/#62/#265 + 운영자 승인(2026-07-18).
+- **착수 순서**: 지시대로 H-4(시스템 가드) 먼저 → H-3 좀비배지 제거가 자동으로 따라옴 확인 → H-1/H-2/H-3 나머지.
+- **H-4 DONE (★최우선)**: `src/lib/products/tuning-signals.ts`의 `loadTuningScores()` 최상단에 `allProducts.filter(p => !!p.naverProductId)` 가드 추가 + `TuningSourceProduct`에 `naverProductId` 필드 신설. 이 함수 하나가 4개 호출부(`/api/products`·`/api/products/linked`·`/api/dashboard/stats`·`/api/products/[id]/naver-detail`·`daily-signals.ts` 디스코드 다이제스트) 전부의 공통 관문이라 **한 곳 수정으로 5곳 동시 정상화**(#62). 전수 확인: 5개 호출부 모두 `naverProductId` 이미 Prisma select에 포함 + 필드명 일치 확인(캐스팅 그대로 통과). **실측**: `/api/dashboard/stats` zombieCount=1로 목록의 좀비 배지 1건(플라티코)과 일치 확인.
+- **H-1 DONE**: 헤더 액션 완전 분기. 정원 창고 = `[크롤링에서 가져오기]`(→`/crawl`) `[준비된 것 일괄 발행 N]`(readinessMap 기준 100% 상품만, 기존 `NaverRegisterModal` 재사용) `[+ 상품 등록]`. 꽃밭 돌보기 = 기존 `[네이버 동기화][네이버 상품 가져오기]` 유지, `[+ 상품 등록]` 제거. 새로고침 버튼은 공통 유지.
+- **H-2 DONE**: 정원 창고 필터를 `TAB_CONFIG`에 얹지 않고 로컬 `gardenReadiness` 서브필터(준비 미흡/발행 가능/전체)로 분리 — 판매 상태 축과 완전히 다른 축이라 혼재 방지. `gardenCounts`를 draft-필터된 부분집합에서만 계산해 **뷰 스코프 누출 근본 차단**(스펙 지적사항). 꽃밭 돌보기 더보기 드롭다운에서 `draft` 항목 제거(정원 창고는 사이드바 "꿀통 창고" 진입점 소관으로 일원화). 부수 조치: `oos`/`reactivation`/`revival`/`lowMargin`/`drift`/`ready` TAB_CONFIG 필터에 `!!p.naverProductId` 방어 가드 추가(엣지케이스 누출 방지, revival은 H-4로 이미 자동 방어됨).
+- **H-3 부분 DONE**: 컬럼 헤더 라벨 조건부 전환(정원="작업 단계/예상 마진/예상 판매가", 꽃밭="상태/순마진/판매가"). 정원 창고 행에서 `InventoryBadge`("재고 확인 실패") 렌더 억제. 좀비 배지는 H-4로 자동 해결(지시대로 순서 이득 확인).
+  - **★스코프 축소 2건(운영자 재확인 필요)**: (1) 스펙 4-3 표의 "정원=배송 컬럼 제거·준비도 핵심 강조 / 꽃밭=준비도 컬럼 제거·점수→좀비지수 교체" 같은 **컬럼 재배치/제거**는 이번 턴에 미착수 — `COL` 그리드 템플릿과 `renderRow`/`TableHeader`가 강하게 결합돼 있어 폭 재분배 없는 라벨 교체보다 리스크가 커서 별도 검증 턴으로 분리 판단. (2) "네이버 재고 폴링도 동일 가드(#260 연장)" — `dome-inventory-poller.ts`를 확인한 결과 이건 **네이버가 아니라 도매꾹(공급사) 재고 폴러**이고, 헤더 주석에 "Persist InventorySnapshot rows for every product (incl. DRAFT)"가 **의도적 설계**로 명시돼 있음(발행 전에도 공급사 재고를 미리 알고 싶다는 합리적 이유 가능). 백엔드 폴링 자체를 끄는 대신 **화면 렌더링만 억제**하는 쪽으로 스코프를 좁혔음 — 폴링을 실제로 꺼야 한다면 별도 지시 필요(비용/DB 부하 관점 재검토 대상일 수 있음).
+- **검증**: tsc0 · `rm -rf .next && npm run build` 0 errors · 로컬 dev 브라우저 실측 — 정원 창고: 네이버동기화/가져오기 버튼 0개·판매중/판매중지/좀비꽃 필터 0개·좀비배지 0건·재고확인실패 0건·헤더 라벨 전환 확인(스크린샷). 꽃밭 돌보기: 상품등록 버튼 제거·기존 필터/배지/좀비 정상 표시·회귀 없음 확인(스크린샷). sentinel grep 0. **prod 미배포** — 이 턴 종료 시점 기준.
+- **패치 위치**: `src/lib/products/tuning-signals.ts`(H-4 가드) · `src/app/products/page.tsx`(H-1/H-2/H-3, TAB_CONFIG 가드 포함).
+- **다음 1액션**: [운영자] push+deploy 승인 후 **육안 확인 필수**(#265) — 특히 정원 창고 헤더 3버튼·필터 3종·"준비된 것 일괄 발행" 동작. [운영자] 스코프 축소 2건(컬럼 재배치, 도매꾹 재고폴링 실제 차단 여부) 진행 여부 결정.
+- **의존성**: (112) 커밋 위에 이어짐.
+
 ### 2026-07-18 (112) #266 정합 확인 + 작업 G 잔여(swap/NaverPushPanel) 배포 완료 (FROM 💻 Code, 코드변경 있음·tsc0·build0·prod 배포완료)
 - **Target**: 다음 세션 · 권위 docs/plan/PRINCIPLES_LEARNED.md #266 + docs/design/KKOTTI_PERSONA_VOICE_GUIDE.md + 운영자 승인(2026-07-18).
 - **#266 정합 확인(코드 변경 없음)**: 운영자가 "9f0de1b에 Desktop 교정 3건이 함께 들어갔으니 되돌리지 말 것"이라 안내해 `git blame`으로 실측 — `src/app/products/page.tsx`의 `TAB_CONFIG.all.filter`가 이미 `p => !!p.naverProductId`(스토어 등록 여부 기준, #266 정의와 일치), `draft.filter`도 `status === 'DRAFT' && !p.naverProductId`로 정합, h1도 `{pageTitle}`(`tab==='draft' ? '정원 창고' : '꽃밭 돌보기'`) 동적 렌더로 이미 반영되어 있음을 확인. **손대지 않음** — 지시대로 되돌리지 않았고, 추가 수정도 불필요했음.

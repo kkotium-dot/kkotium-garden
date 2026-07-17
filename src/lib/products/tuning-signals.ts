@@ -33,6 +33,9 @@ export interface TuningSourceProduct {
   images?: unknown;
   naver_status_type?: string | null;
   status: string;
+  // H-4 (#266 연장, SCREEN_DIFFERENTIATION_SPEC_2026-07-17) — 좀비 판정 스킵
+  // 가드의 기준. 미발행(정원 창고) 상품은 판정 대상에서 제외한다.
+  naverProductId?: string | null;
   lastSaleDate?: Date | string | null;
   updatedAt?: Date | string | null;
   supplier_product_code?: string | null;
@@ -57,9 +60,15 @@ const d1Of = (category: string | null | undefined): string | null => {
  * the 꽃밭 돌보기 list (#82).
  */
 export async function loadTuningScores(
-  products: TuningSourceProduct[],
+  allProducts: TuningSourceProduct[],
 ): Promise<Map<string, ZombieVerdictResult>> {
   const out = new Map<string, ZombieVerdictResult>();
+  // H-4 (#266 연장, SCREEN_DIFFERENTIATION_SPEC_2026-07-17 §4-5) — 좀비 =
+  // "되살릴 수 있는 상품"(#264)이라 판 적 없는(미발행) 상품엔 무의미. 스토어에
+  // 올라간 적 있는 상품(naverProductId 有)만 판정 대상으로 좁힌다. 이 한 곳의
+  // 가드가 4개 노출처(목록 배지·dashboard/stats·사이드바·디스코드 좀비알림)를
+  // 동시에 정상화한다(#62) — 전부 이 함수를 거쳐가기 때문.
+  const products = allProducts.filter((p) => !!p.naverProductId);
   if (products.length === 0) return out;
 
   // Batch 1 — category trend (distinct D1s → single-ish set of cache reads).
