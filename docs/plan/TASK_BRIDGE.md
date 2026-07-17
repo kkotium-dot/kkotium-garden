@@ -72,6 +72,17 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-07-18 (112) #266 정합 확인 + 작업 G 잔여(swap/NaverPushPanel) 배포 완료 (FROM 💻 Code, 코드변경 있음·tsc0·build0·prod 배포완료)
+- **Target**: 다음 세션 · 권위 docs/plan/PRINCIPLES_LEARNED.md #266 + docs/design/KKOTTI_PERSONA_VOICE_GUIDE.md + 운영자 승인(2026-07-18).
+- **#266 정합 확인(코드 변경 없음)**: 운영자가 "9f0de1b에 Desktop 교정 3건이 함께 들어갔으니 되돌리지 말 것"이라 안내해 `git blame`으로 실측 — `src/app/products/page.tsx`의 `TAB_CONFIG.all.filter`가 이미 `p => !!p.naverProductId`(스토어 등록 여부 기준, #266 정의와 일치), `draft.filter`도 `status === 'DRAFT' && !p.naverProductId`로 정합, h1도 `{pageTitle}`(`tab==='draft' ? '정원 창고' : '꽃밭 돌보기'`) 동적 렌더로 이미 반영되어 있음을 확인. **손대지 않음** — 지시대로 되돌리지 않았고, 추가 수정도 불필요했음.
+- **작업 G 잔여 그룹(swap+NaverPushPanel) DONE**: `swap-strings.ko.json`(7건 — concept.hint/human.hint/review.sliderHint/empty.title·hint/migrationPending.hint/error.title)·`NaverPushPanel.strings.ko.json`(4건 — autoWarnBody/stockOverwriteWarn/previewFail, autoWarnTitle은 배지형 라벨이라 미적용)에 정원사(까꿍)·카우걸(이랴) 톤 적용. 둘 다 `// No emoji` 컴포넌트 규율 유지(신규 텍스트는 이모지 없이 마커만; swap-strings의 기존 "🌷" 이모지는 손대지 않고 그대로 둠 — 원래 있던 것이라 범위 밖).
+- **검증**: `persona-audit.py` 0건 파일 18→16개로 감소 · tsc0 · `rm -rf .next && npm run build` 0 errors · sentinel/이모지(신규분) grep 0 · push+`scripts/verify-vercel-deploy.sh --wait`(#36) 완료, prod HEAD `dc5b0da`, `/products` HTTP 200.
+- **작업 G 잔여 남은 항목(운영자 보류 지시, 미착수)**: AssetBrowser(13)/GeneratedAssetLocations(12)/lifestyle-assets(12) — "꽃단장은 나중에 한 번에 수정" 지시로 보류(그때 페르소나 동시 적용). 나머지 13개 — 노출 빈도 낮아 보류. 0건 파일 16개 잔여.
+- **R-1/R-2/R-3 시각 검증 — 대기 중**: 운영자가 "Desktop DOM 확인 완료했으나 시각 검증은 운영자 육안 필요(#265)"라고 명시. 이번 턴에서는 코드 변경 없이 대기만 함 — **운영자 스크린샷 회신 오면 후속 판단 필요**(다음 세션 최우선 확인 사항).
+- **패치 위치**: `src/lib/i18n/swap-strings.ko.json` · `src/components/products/NaverPushPanel.strings.ko.json`.
+- **다음 1액션**: [운영자] R-1/R-2/R-3 스크린샷 회신 → 문제 있으면 즉시 후속 수정, 없으면 rev58 3건 완전 종결. [운영자] "작업 H — 정원창고/꽃밭돌보기 화면 분화" 설계(b6167c7, docs only) 검토 후 착수 승인 여부. [운영자] 작업 G 잔여 16개 파일 착수 시점 결정.
+- **의존성**: (111) 커밋 위에 이어짐. af9b760(#266 원칙)·b6167c7(작업 H 설계, docs only) 두 Desktop 커밋을 이번 세션에서 확인·반영.
+
 ### 2026-07-17 (111) rev58 R-1/R-2/R-3 — 운영자 스크린샷 발견 3건 전부 수정·검증 완료 (FROM 💻 Code, 코드변경 있음·tsc0·build0·prod 배포대기)
 - **Target**: 다음 세션 · 권위 docs/plan/PARALLEL_WORK_TRACKER.md rev58 R-1/R-2/R-3 + docs/design/PANEL_REDESIGN_SPEC_2026-07-17.md + 운영자 승인(2026-07-17).
 - **R-1 (자사 경쟁자 오집계, 🔴 최우선) DONE**: `src/lib/naver/shopping-search.ts`의 `analyzeCompetition(query, ownMallKey)`에 자사 몰명 제외 필터 추가(공백무시 부분일치) + `sampleSize` 필드 신설(자사 제외 후 실제 통계 낸 표본 크기). `src/app/api/naver/market-analysis/route.ts`가 `StoreSettings.storeName`(미설정 시 기본값 '꽃틔움')을 조회해 전달. `MarketAnalysisCard.tsx`에 R1 확장 — `sampleSize`가 1~2면 260px 전체 카드 대신 한 줄 축약("경쟁 상품 N개뿐(참고용)"), 0이면 기존 규칙대로 완전히 숨김. **실측**: 플라티코 쿼리를 API 직접 호출 — 자사 제외 후 `totalResults:0, sampleSize:0`으로 완전히 사라짐(원래 버그였던 "경쟁자는 꽃틔움 KKOTIUM 1개만 존재" 문구 자체가 이제 발생 불가). 실 경쟁사 10건 있는 쿼리("디자인 복 달항아리")는 전체 카드 그대로 정상 렌더 확인 — 회귀 없음.
