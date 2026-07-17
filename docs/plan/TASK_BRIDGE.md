@@ -72,6 +72,22 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-07-17 (110) 작업 G — 꼬띠 페르소나 앱 UI 적용 1~5순위 그룹 완료·배포 (FROM 💻 Code, 코드변경 있음·tsc0·build0·prod 배포완료)
+- **Target**: 다음 세션 · 권위 docs/design/KKOTTI_PERSONA_VOICE_GUIDE.md §5 체크리스트 + 운영자 승인(2026-07-17).
+- **배경**: 2026-07-14 인계 "Code 블록 A" 2번(앱 UI 페르소나 적용) 미착수분. `python3 scripts/persona-audit.py` 기준 대상 파일 30개 중 23개(77%)가 페르소나 0건이던 상태.
+- **DONE — 5개 우선순위 그룹 전부 적용·배포**:
+  1. `publish-readiness-strings.ko.json`(11건) — 발행 체크리스트 fail/hint. 원산지·주소동기화(법적/차단 사유)만 이랴 오프너로 긴급도 구분, 나머지 필드는 해유체.
+  2. `seo-drawer.ko.json`(15건) — SEO 편집 드로어 empty/error/hint/toast/imageGuide. 50자/100자 등 숫자 기준은 원문 보존.
+  3. `NaverHealthBanner.strings.ko.json`(7건) — 대시보드 상시 노출 인프라 알림 7종. PROXY_SECRET·NAVER_CLIENT_SECRET 등 기술 지시는 원문 보존, 오프너/어미만 페르소나화.
+  4. `automation-strings.ko.json`(4건, **의도적 부분 적용**) — empty(2)+envWarn(2)만 적용. groupHint/statusHint/description(16건)은 "코드 작성 예정"·"Sprint 9+ 진입 시" 등 로드맵 개발 용어가 섞인 관제 상태표라 페르소나 미적용 유지(#233 과밀 방지 + #262 셀러 용어 우선 판단, 감사 스크립트는 파일당 1건 이상이면 통과라 empty/envWarn만으로 충족).
+  5. `publish-preview-strings.ko.json`(16건) — 발행 전 검수(이미지 경고 8종·발행차단 3종·크롭스튜디오 3종·에러 2종). 1000px·2024-10-28 정책 등 기준 수치·정책 참조는 원문 보존.
+- **이모지 정책**: 5개 파일 모두 렌더 컴포넌트가 `// No emoji (#3-1)`를 명시(PublishReadinessCard/naver-seo 드로어/NaverHealthBanner/preview page/CropStudioPanel) → 이모지 글자 없이 텍스트 마커(이랴/까꿍/해유/어유)만 사용해 대상 컴포넌트의 기존 "No emoji" 설계를 존중. persona-audit.py의 PERSONA 정규식(까꿍|빵야|이랴|어유|에유|해유)은 이모지를 요구하지 않으므로 감사 통과에 지장 없음.
+- **검증**: 그룹마다 `python3 scripts/persona-audit.py` 재실행(0건 파일 23→18개로 감소 확인) → `npx tsc --noEmit` 0 errors → `rm -rf .next && npm run build` 0 errors → 그룹별 개별 커밋(5개 커밋) → 1회 push+`scripts/verify-vercel-deploy.sh --wait`(#36)로 배포 검증. sentinel grep 0. prod HTTP 200 확인(/products·/naver-seo·/control).
+- **미착수 — "나머지" 18개 파일**(#6, 다음 세션): `components/detail/preset/samples.ko.json`(15) · `components/studio/AssetBrowser.strings.ko.json`(13) · `components/products/GeneratedAssetLocations.strings.ko.json`(12) · `lib/i18n/lifestyle-assets-strings.ko.json`(12) · `lib/i18n/swap-strings.ko.json`(7) · `lib/i18n/detail-content-templates.ko.json`(5) · `components/products/NaverPushPanel.strings.ko.json`(4) · `lib/i18n/products-new-strings.ko.json`(3) · 대시보드 위젯 5종(각 2건: SupplierGardenWidget/OrderProcessingNudge/ParetoInboxRow/CompetitorRadarWidget/GoldenWindowWidget) · `lib/automation/section-renderers/strings.ko.json`(2) · 1건짜리 4개(InventoryBadge/PriceMovementWidget/concept-presets/p-filter-messages). 우선순위 미지정 상태라 다음 세션에서 운영자 판단 필요(발행 임박도·노출 빈도 기준).
+- **패치 위치**: `src/lib/i18n/{publish-readiness,seo-drawer,automation,publish-preview}-strings.ko.json` · `src/components/dashboard/NaverHealthBanner.strings.ko.json`.
+- **다음 1액션**: [운영자] 프로덕션에서 실제 UI 육안 확인(특히 publish-preview의 이미지 경고 8종 — 실제 발행 시나리오에서 톤이 과하지 않은지). [운영자] "나머지" 18개 파일 진행 여부·우선순위 지정. [Desktop] persona-audit.py 재실행해 5그룹 반영 확인(0건 18개 잔여 정상인지).
+- **의존성**: (108)/(109) 작업 F 커밋 위에 이어짐. git 이력에 반영 완료(e0736b4~6ca377f, prod 배포 확인됨).
+
 ### 2026-07-17 (109) 작업 F-2·F-3 — 발행여부 기본필터 + 패널 재설계 완료 (FROM 💻 Code, 코드변경 있음·tsc0·build0·prod 배포대기)
 - **Target**: 다음 세션 · 권위 docs/design/PANEL_REDESIGN_SPEC_2026-07-17.md(신규) + PRODUCT_IA_REDESIGN_V2_CONFIRMED_2026-07-12.md §1 + 운영자 승인(2026-07-17, F-1/F-2/F-3 동시 승인).
 - **배경**: (108)에서 F-1(라우트 병합)만 완료하고 보강 1(발행여부 분리)을 미착수로 남겼음. 같은 세션에서 운영자가 F-2(그 보강1)와 F-3(패널 재설계 신규 스펙)을 추가 승인해 이어서 완료.
