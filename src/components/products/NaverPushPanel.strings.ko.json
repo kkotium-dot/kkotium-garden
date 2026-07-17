@@ -1,13 +1,13 @@
 {
   "autoWarnTitle": "네이버 자동반영 안 됨",
-  "autoWarnBody": "가격·재고는 수동 반영입니다. 반영 후 스토어센터에서 실제 노출을 확인해 주세요.",
+  "autoWarnBody": "가격·재고는 수동으로 반영돼유. 반영 후 스토어센터에서 실제 노출을 꼭 확인해주어유.",
   "priceTitle": "가격 반영",
   "priceLabel": "반영할 판매가",
   "pricePreview": "가격 미리보기",
   "stockTitle": "재고 반영",
   "stockLabel": "반영할 재고",
   "stockPreview": "재고 미리보기",
-  "stockOverwriteWarn": "네이버 실재고를 덮어씁니다 — 진행 중 주문 차감분을 확인하세요",
+  "stockOverwriteWarn": "이랴, 네이버 실재고를 덮어써유! 진행 중 주문 차감분부터 확인해주어유",
   "checklistTitle": "재고 반영 전 확인",
   "check1": "판매가·할인가 확인",
   "check2": "옵션별 재고 확인",
@@ -23,7 +23,7 @@
   "preserved": "보존 필드 {n}개",
   "changedField": "변경 필드",
   "goNote": "실제 반영은 운영자 GO 후에만 진행됩니다 (되돌릴 수 없음).",
-  "previewFail": "미리보기에 실패했습니다",
+  "previewFail": "이랴, 미리보기에 실패했어유!",
   "unit": "원",
   "stockUnit": "개"
 }
