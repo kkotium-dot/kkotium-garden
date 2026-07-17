@@ -584,7 +584,7 @@ export default function UploadReadinessWidget({
                 gap: 3,
               }}
             >
-              정원 창고에서 전체 보기 <ChevronRight size={11} />
+              꽃밭 돌보기에서 전체 보기 <ChevronRight size={11} />
             </Link>
           </div>
         )}

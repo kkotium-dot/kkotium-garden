@@ -56,10 +56,10 @@ export default function WorkflowPage() {
       id: 3,
       icon: <CheckCircle size={28} />,
       title: '3단계: 등록 검토',
-      subtitle: '정원 창고에서 상품 목록 확인',
+      subtitle: '꽃밭 돌보기에서 상품 목록 확인',
       description: '등록된 상품 목록을 확인하고 누락된 정보를 보완합니다.',
       actions: [
-        { label: '정원 창고 이동', href: '/products', description: '상품 목록 · 준비도 확인 · 인라인 빠른 편집' },
+        { label: '꽃밭 돌보기 이동', href: '/products', description: '상품 목록 · 준비도 확인 · 인라인 빠른 편집' },
       ],
       tips: [
         '판매가는 목록에서 더블클릭으로 바로 수정할 수 있습니다',
@@ -74,7 +74,7 @@ export default function WorkflowPage() {
       subtitle: '엑셀 다운로드 후 스마트스토어 등록',
       description: '엑셀 파일을 다운로드하고 네이버 스마트스토어에 상품을 업로드합니다.',
       actions: [
-        { label: '정원 창고 엑셀 다운로드', href: '/products', description: '상품 선택 후 엑셀 다운로드' },
+        { label: '꽃밭 돌보기 엑셀 다운로드', href: '/products', description: '상품 선택 후 엑셀 다운로드' },
       ],
       tips: [
         '상품을 선택하고 엑셀 다운로드 버튼을 누르면 네이버 형식 파일이 생성됩니다',

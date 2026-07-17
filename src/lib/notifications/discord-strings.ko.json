@@ -82,7 +82,7 @@
     "loss_estimate": "하루 약 **{won}원** 매출 손실 예상.",
     "loss_default": "주문 들어오면 발주 불가 → 취소로 이어지기 쉬워요.",
     "impact_base": "품절 상품은 검색 노출도 떨어지고 구매 확정률도 떨어져요.\n{loss}\n고객을 지켜드리는 게 굿서비스 점수 유지의 기본이에요.",
-    "action_check": "정원 창고에서 품절 상품 확인",
+    "action_check": "꽃밭 돌보기에서 품절 상품 확인",
     "action_supplier": "공급사 카톡으로 입고 일정 문의 + 대체상품 있는지 확인",
     "action_alt": "대체상품 등록 또는 네이버에서 즉시 품절처리",
     "alt_section": "**대체상품 후보:**",
@@ -110,7 +110,7 @@
     "impact_danger": "순마진 20% 미만 {n}건 — 위험 구간이에요.",
     "impact_safe": "다행히 마진은 안전권이에요.",
     "impact_tail": " 지금 조치 안 하면 팔릴 때마다 돈이 새어나가요.",
-    "action_adjust": "정원 창고에서 판매가 조정",
+    "action_adjust": "꽃밭 돌보기에서 판매가 조정",
     "action_simulate": "마진 계산기에서 새 공급가로 이익 시뮬레이션",
     "action_alternative": "대안: 공급사 변경 또는 단종 결정",
     "kkotti_negative": [

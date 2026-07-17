@@ -80,7 +80,7 @@ function OnboardingGuide() {
   const steps = [
     { num: 1, label: '상품 크롤링',     hint: '꿀통 사냥터에서 도매꾹 상품 수집',     href: '/crawl',    done: false },
     { num: 2, label: 'SEO 최적화',      hint: '검색 조련사에서 AI 상품명·태그 생성',  href: '/naver-seo', done: false },
-    { num: 3, label: '네이버 엑셀 등록', hint: '정원 창고 → 엑셀 다운로드 → 스마트스토어 업로드', href: '/products', done: false },
+    { num: 3, label: '네이버 엑셀 등록', hint: '꽃밭 돌보기 → 엑셀 다운로드 → 스마트스토어 업로드', href: '/products', done: false },
     { num: 4, label: '첫 판매 달성',    hint: '판매 시작 후 데이터 기반 운영 모드 전환', href: '/dashboard', done: false },
   ];
 

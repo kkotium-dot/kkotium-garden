@@ -201,7 +201,7 @@ function NaverSeoInner() {
               <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>검색 조련사</h1>
               {presetIds && (
                 <p style={{ fontSize: 11, color: '#F63B28', margin: 0, marginTop: 2 }}>
-                  정원 창고에서 {presetIds.split(',').length}개 상품 전달됨
+                  꽃밭 돌보기에서 {presetIds.split(',').length}개 상품 전달됨
                 </p>
               )}
             </div>
