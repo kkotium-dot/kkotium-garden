@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-07-17 (111) rev58 R-1/R-2/R-3 — 운영자 스크린샷 발견 3건 전부 수정·검증 완료 (FROM 💻 Code, 코드변경 있음·tsc0·build0·prod 배포대기)
+- **Target**: 다음 세션 · 권위 docs/plan/PARALLEL_WORK_TRACKER.md rev58 R-1/R-2/R-3 + docs/design/PANEL_REDESIGN_SPEC_2026-07-17.md + 운영자 승인(2026-07-17).
+- **R-1 (자사 경쟁자 오집계, 🔴 최우선) DONE**: `src/lib/naver/shopping-search.ts`의 `analyzeCompetition(query, ownMallKey)`에 자사 몰명 제외 필터 추가(공백무시 부분일치) + `sampleSize` 필드 신설(자사 제외 후 실제 통계 낸 표본 크기). `src/app/api/naver/market-analysis/route.ts`가 `StoreSettings.storeName`(미설정 시 기본값 '꽃틔움')을 조회해 전달. `MarketAnalysisCard.tsx`에 R1 확장 — `sampleSize`가 1~2면 260px 전체 카드 대신 한 줄 축약("경쟁 상품 N개뿐(참고용)"), 0이면 기존 규칙대로 완전히 숨김. **실측**: 플라티코 쿼리를 API 직접 호출 — 자사 제외 후 `totalResults:0, sampleSize:0`으로 완전히 사라짐(원래 버그였던 "경쟁자는 꽃틔움 KKOTIUM 1개만 존재" 문구 자체가 이제 발생 불가). 실 경쟁사 10건 있는 쿼리("디자인 복 달항아리")는 전체 카드 그대로 정상 렌더 확인 — 회귀 없음.
+- **R-2 (하단 액션 11개 과밀, 🟡) DONE**: `SidePanel`(products/page.tsx) 하단을 이동경로 3개(꽃단장/발행준비/상세, 유지)+상태 select(유지, [반영]탭이 다루지 않는 DRAFT~HIDDEN 전체 상태기계)+주액션 [상품 수정](빨강, `<Link>`)+[⋯더보기] 2버튼으로 재구성. 더보기 드롭다운에 재고동기화·부활소이동·리셋·엑셀다운로드·삭제 5종 수렴(지시된 4종 + 재고동기화 추가 포함, 근거: 다른 어디에도 없는 고유 액션이라 폐기 대신 이동). 품절처리/재판매 버튼은 [반영]탭과 중복이라 완전 삭제(`isOOS`/`toggleOOS` 제거). 마진 재계산은 [정보]탭 가격 섹션의 기존 순마진율 행이 이미 흡수(전 턴 F-3에서 이미 구현돼 있었음 — 주석만 명시적으로 보강). **실측**: 브라우저 스크린샷으로 하단 컨트롤이 상태select+상품수정+더보기 3개로 줄어든 것 확인.
+- **R-3 (패널이 목록 컬럼 가림, 🟡) DONE**: `ProductsPageInner`의 목록 컨테이너(`.flex-1.min-w-0.p-6.space-y-4`)에 `marginRight: sideProduct ? 'min(720px, 50vw)' : 0`(패널 폭과 동일 값, transition 포함) 부여 — 압축모드 대신 밀어내기 방식(지시 사양대로, 구현 단순). **실측**: DOM 컴퓨티드스타일로 `marginRight:"720px"`, 목록 폭 793px로 축소되어 순마진·판매가 컬럼이 패널 열림 상태에서도 보임을 확인.
+- **검증**: tsc0 · `rm -rf .next && npm run build` 0 errors · 로컬 dev 브라우저 실측 3건 전부(스크린샷 + JS DOM 조회 + API 직접 curl 호출 교차검증) · sentinel/이모지 grep 0. **아직 커밋 전** — 이 턴 종료 시점 기준.
+- **패치 위치**: `src/lib/naver/shopping-search.ts`(analyzeCompetition 자사제외+sampleSize) · `src/app/api/naver/market-analysis/route.ts`(storeName 조회) · `src/components/products/MarketAnalysisCard.tsx`(R1 확장 축약 렌더) · `src/app/products/page.tsx`(SidePanel 하단 재구성 + 목록 margin-right).
+- **다음 1액션**: [운영자] git push + `scripts/verify-vercel-deploy.sh --wait` 확인(#36) 후 **prod에서 반드시 육안 확인**(#265 — 수치 검증만으로 "정상"이라 단정 금지, 이번 3건 전부 운영자 스크린샷에서 발견됐던 사례). 특히: (a) 자사 스토어명이 실제로 "꽃틔움"이 아니라 다른 명칭으로 설정돼 있으면 이 부분일치 로직이 자사를 못 걸러낼 수 있음 — 설정→스토어 화면에서 실제 storeName 값 확인 요망. (b) 더보기 드롭다운 UX(위치·클릭 영역) 육안 확인.
+- **의존성**: (110) 작업 G 커밋(717a296) 위에 이어짐.
+
 ### 2026-07-17 (110) 작업 G — 꼬띠 페르소나 앱 UI 적용 1~5순위 그룹 완료·배포 (FROM 💻 Code, 코드변경 있음·tsc0·build0·prod 배포완료)
 - **Target**: 다음 세션 · 권위 docs/design/KKOTTI_PERSONA_VOICE_GUIDE.md §5 체크리스트 + 운영자 승인(2026-07-17).
 - **배경**: 2026-07-14 인계 "Code 블록 A" 2번(앱 UI 페르소나 적용) 미착수분. `python3 scripts/persona-audit.py` 기준 대상 파일 30개 중 23개(77%)가 페르소나 0건이던 상태.

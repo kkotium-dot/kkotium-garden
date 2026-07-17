@@ -10,8 +10,22 @@ import {
   analyzeCompetition,
   generateMarketInsight,
 } from '@/lib/naver/shopping-search';
+import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
+
+// R-1 — 시장 분석 경쟁사 집계에서 자사를 빼려면 자사 몰명이 필요하다.
+// 운영자가 설정 안 했으면 브랜드 기본값("꽃틔움")으로 대체 — 네이버 몰명이
+// "꽃틔움 KKOTIUM"처럼 접미어가 붙어도 부분일치로 잡힌다.
+const DEFAULT_OWN_MALL = '꽃틔움';
+async function getOwnMallKey(): Promise<string> {
+  try {
+    const row = await prisma.storeSettings.findUnique({ where: { id: 'default' }, select: { storeName: true } });
+    return (row?.storeName ?? '').trim() || DEFAULT_OWN_MALL;
+  } catch {
+    return DEFAULT_OWN_MALL;
+  }
+}
 
 // Simple in-memory cache (1 hour TTL)
 const cache = new Map<string, { data: any; ts: number }>();
@@ -31,8 +45,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, cached: true, ...cached.data });
     }
 
-    // 1. Competition analysis (Naver Shopping Search)
-    const competition = await analyzeCompetition(q);
+    // 1. Competition analysis (Naver Shopping Search) — 자사 제외(R-1)
+    const ownMallKey = await getOwnMallKey();
+    const competition = await analyzeCompetition(q, ownMallKey);
 
     // 2. AI market insight (Groq — free)
     const insight = await generateMarketInsight(q, competition);

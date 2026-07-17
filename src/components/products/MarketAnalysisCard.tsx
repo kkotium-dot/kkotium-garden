@@ -17,6 +17,8 @@ interface MarketData {
     competitionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
     topSellers: string[];
     priceRange: string;
+    // R-1 (2026-07-17) — 자사 제외 후 실제 통계를 낸 경쟁상품 표본 크기.
+    sampleSize?: number;
   };
   insight: {
     summary: string;
@@ -86,6 +88,21 @@ export default function MarketAnalysisCard({ productName }: { productName: strin
   // 패널 재설계 R1 (PANEL_REDESIGN_SPEC_2026-07-17) — 경쟁상품수·평균가격이 모두
   // 0이면 정보가 아니라 소음이므로 섹션 자체를 렌더하지 않는다(전상품 범용·#55).
   if (comp.totalResults === 0 && comp.avgPrice === 0) return null;
+  const sampleSize = comp.sampleSize ?? comp.topSellers.length;
+  // R-1 확장 (rev58 운영자 스크린샷) — 자사 제외 후 표본이 0이면 위 조건과
+  // 동치라 이미 숨겨지지만, 1~2개뿐이면 "경쟁자는 자사 1개만 존재" 같은
+  // 오분석을 큰 블록으로 보여주던 문제라 한 줄 축약으로 대체한다(전상품 범용).
+  if (sampleSize > 0 && sampleSize < 3) {
+    return (
+      <div className="rounded-xl px-3 py-2 flex items-center gap-1.5" style={{ background: '#f0f9ff', border: '1px solid #bae6fd' }}>
+        <TrendingUp size={12} style={{ color: '#0369a1', flexShrink: 0 }} />
+        <span className="text-[11px]" style={{ color: '#0369a1' }}>
+          {'네이버 쇼핑 시장 분석 · '}
+          {'경쟁 상품 '}{sampleSize}{'개뿐(참고용)'}
+        </span>
+      </div>
+    );
+  }
   const levelStyle = LEVEL_STYLE[comp.competitionLevel] ?? LEVEL_STYLE.MEDIUM;
 
   return (

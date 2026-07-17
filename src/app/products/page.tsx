@@ -14,7 +14,7 @@ import {
   LayoutList, Send, Globe, Loader, Loader2,
   ShieldCheck, Eye, Link2, Store, Hash,
   CheckCircle2, PackageX, RotateCcw, ShieldAlert,
-  Skull, Sprout, ArrowUpDown,
+  Skull, Sprout, ArrowUpDown, MoreHorizontal,
 } from 'lucide-react';
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
@@ -109,8 +109,8 @@ const TAB_CONFIG: Record<TabKey, {
   // 작업 F-2 (#256 §1) — 꽃밭 돌보기 기본 뷰는 "발행/연동" 상품만(미발행=꿀통창고
   // 소관). 작성중(DRAFT)은 여기서 제외 — /crawl 또는 ?tab=draft로 진입(같은
   // 테이블 두 뷰). 라벨도 '전체'→'발행 전체'로 의미 명확화(#262).
-  all:          { label: '발행 전체',      dot: 'bg-gray-400',   dotLabel: '',              filter: p => p.status !== 'DRAFT' },
-  draft:        { label: '작성중',        dot: 'bg-gray-300',   dotLabel: '작성중',        filter: p => p.status === 'DRAFT' },
+  all:          { label: '발행 전체',      dot: 'bg-gray-400',   dotLabel: '',              filter: p => !!p.naverProductId },
+  draft:        { label: '작성중',        dot: 'bg-gray-300',   dotLabel: '작성중',        filter: p => p.status === 'DRAFT' && !p.naverProductId },
   ready:        { label: '발행대기',      dot: 'bg-green-500',  dotLabel: '발행대기',      filter: p => p.status === 'READY' },
   active:       { label: '판매중',        dot: 'bg-green-600',  dotLabel: '네이버 판매중', filter: p => p.status === 'ACTIVE' && !!p.naverProductId },
   pending:      { label: '네이버 등록 대기',     dot: 'bg-amber-400',  dotLabel: '네이버 등록 대기', filter: p => p.status === 'ACTIVE' && !p.naverProductId },
@@ -427,9 +427,10 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
   const issues = getReadinessIssues(product);
   const [mutating, setMutating] = useState(false);
   const [stockMsg, setStockMsg] = useState<string | null>(null);
+  // R-2 (rev58 운영자 스크린샷) — 하단 액션 11개 과밀(#233) 교정용 더보기 메뉴.
+  const [showMoreActions, setShowMoreActions] = useState(false);
   // 리셋 only for 연동(IMPORTED/HYBRID) — an APP_CREATED product has no origin.
   const canReset = product._origin === 'IMPORTED' || product._origin === 'HYBRID';
-  const isOOS = product.status === 'OUT_OF_STOCK';
   // 작업 F — 네이버 연동 상품만 동기화/반영/품절대체 탭을 보여준다(#256 흡수).
   const isLinked = !!product.naverProductId;
   const appDriftCount = (() => {
@@ -462,11 +463,7 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
       if (ok) onClose(); // close so the list reflects the change (panel holds a snapshot)
     } finally { setMutating(false); }
   };
-  // 품절 토글 — 품절(OUT_OF_STOCK) ↔ 판매중(ACTIVE).
-  const toggleOOS = () => changeStatus(
-    isOOS ? 'ACTIVE' : 'OUT_OF_STOCK',
-    isOOS ? '재입고 처리(판매중)할까요?' : '이 상품을 품절 처리할까요?',
-  );
+  // R-2 — 품절 처리/재판매는 [반영] 탭(naver-status)에 이미 있어 여기선 제거(중복).
   // 공급사 재고 동기화 — 기존 stock-check 재사용 (confirm 게이트).
   const stockSync = async () => {
     if (!window.confirm('공급사 재고를 동기화할까요? (공급사 URL이 등록된 상품의 품절/가격을 갱신)')) return;
@@ -557,7 +554,8 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
               </div>
             </div>
 
-            {/* 4. 가격 — 마진 수치의 유일한 출처(중복 제거, R2). */}
+            {/* 4. 가격 — 마진 수치의 유일한 출처(중복 제거, R2). 순마진율 행이
+                구 하단바 "마진 재계산(읽기)"을 흡수(R-2, 맥락 일치). */}
             <div className="space-y-2">
               <p className="text-[11px] font-semibold" style={{ color: '#9CA3AF' }}>가격</p>
               {([
@@ -649,9 +647,9 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
         )}
       </div>
       <div className="p-4 flex flex-col gap-2" style={{ borderTop: '1.5px solid #F8DCE5' }}>
-        {/* 공통 관리 액션 바 (#245 §2-C) — 출처 무관 동일 액션. Phase 2a: 네비게이션
-            액션(꽃단장→아틀리에·발행 준비→preview·상세). 변이 액션(리셋/마진재산정/
-            재고/부활소)은 Phase 2b에서 confirm 게이트(#46)로 추가. */}
+        {/* R-2 (rev58 운영자 스크린샷) — 하단 액션 11개 과밀(#233) 교정.
+            이동 경로(꽃단장/발행준비/상세)는 자주 쓰는 화면전환이라 유지·
+            "액션" 카운트에서 별도(#245 §2-C). */}
         <div className="grid grid-cols-3 gap-2">
           <Link href={`/studio?product=${product.id}`}
             className="flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[11px] font-semibold transition"
@@ -669,67 +667,66 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
             <Eye size={15} /> 상세
           </Link>
         </div>
-        {/* 변이 액션 (Phase 2b, #46) — confirm 게이트 + 낙관적 업데이트 + 실패 롤백.
-            상태 변경·부활소 이동(→INACTIVE). 재고 조정·리셋은 정의 확인 후. */}
-        <div className="flex items-center gap-2">
-          <select value={product.status} disabled={mutating} aria-label="상태 변경"
-            onChange={e => changeStatus(e.target.value, `상태를 '${STATUS_LABEL[e.target.value] ?? e.target.value}'(으)로 변경할까요?`)}
-            className="flex-1 py-2 px-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white disabled:opacity-50">
-            {['DRAFT', 'READY', 'ACTIVE', 'OUT_OF_STOCK', 'INACTIVE', 'HIDDEN'].map(s => (
-              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-            ))}
-          </select>
-          <button type="button" disabled={mutating || product.status === 'INACTIVE'}
-            onClick={() => changeStatus('INACTIVE', '이 상품을 부활소로 이동할까요? 판매를 중단(비활성)하고 재활성화 대기열에 넣습니다.')}
-            className="px-2.5 py-2 rounded-xl text-xs font-semibold transition disabled:opacity-40"
-            style={{ color: '#7e22ce', background: '#FAF5FF', border: '1px solid #e9d5ff' }}>
-            부활소 이동
-          </button>
-        </div>
-        {/* 재고 · 리셋 (Phase 2b, #46 confirm 게이트) — 공급사 재고 동기화(stock-check
-            재사용)·품절 토글(상태)·리셋(연동 원본 복원, IMPORTED/HYBRID만). */}
-        <div className="flex items-center gap-2">
-          <button type="button" disabled={mutating} onClick={stockSync}
-            className="flex-1 py-2 rounded-xl text-xs font-semibold transition disabled:opacity-40"
-            style={{ color: '#1d4ed8', background: '#EFF6FF', border: '1px solid #bfdbfe' }}
-            title="공급사 재고 동기화 (stock-check)">
-            재고 동기화
-          </button>
-          <button type="button" disabled={mutating} onClick={toggleOOS}
-            className="flex-1 py-2 rounded-xl text-xs font-semibold transition disabled:opacity-40"
-            style={isOOS
-              ? { color: '#15803d', background: '#F0FDF4', border: '1px solid #bbf7d0' }
-              : { color: '#b91c1c', background: '#FEF2F2', border: '1px solid #fecaca' }}>
-            {isOOS ? '재입고' : '품절 처리'}
-          </button>
-          <button type="button" disabled={mutating || !canReset} onClick={resetToOrigin}
-            className="flex-1 py-2 rounded-xl text-xs font-semibold transition disabled:opacity-40"
-            style={{ color: '#6b7280', background: '#F9FAFB', border: '1px solid #E5E7EB' }}
-            title={canReset ? '연동 원본으로 되돌림 (비가역)' : '앱생성 상품은 원본이 없어 리셋 불가'}>
-            리셋
-          </button>
-        </div>
+        {/* 상태 변경 (핵심 상태기계, #46 confirm 게이트) — DRAFT→READY→ACTIVE 등
+            [반영] 탭이 다루지 않는 앱 전체 상태 전환. */}
+        <select value={product.status} disabled={mutating} aria-label="상태 변경"
+          onChange={e => changeStatus(e.target.value, `상태를 '${STATUS_LABEL[e.target.value] ?? e.target.value}'(으)로 변경할까요?`)}
+          className="w-full py-2 px-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white disabled:opacity-50">
+          {['DRAFT', 'READY', 'ACTIVE', 'OUT_OF_STOCK', 'INACTIVE', 'HIDDEN'].map(s => (
+            <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+          ))}
+        </select>
         {stockMsg && <p className="text-[11px] text-slate-500">{stockMsg}</p>}
-        {/* 마진 재계산 (읽기 전용 — 변이 아님) */}
-        <div className="flex items-center justify-between rounded-xl px-3 py-2 text-xs"
-          style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
-          <span className="text-gray-500">마진 재계산 (읽기)</span>
-          <span className={`font-bold ${hs.netMarginRate < 5 ? 'text-red-600' : hs.netMarginRate < 10 ? 'text-amber-600' : 'text-gray-700'}`}>
-            순마진 {hs.netMarginRate.toFixed(1)}%
-          </span>
-        </div>
-        <Link href={`/products/new?edit=${product.id}`}
-          className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl text-sm font-bold transition"
-          style={{ background: '#F63B28' }}>
-          <Edit2 size={14} /> 상품 수정
-        </Link>
+        {/* 주 액션(상품 수정, 빨강·풀폭) + 더보기(2차 액션 4종 수렴).
+            목표: 하단 액션 버튼 11개 → 3개 이하(상태select·상품수정·더보기). */}
         <div className="flex gap-2">
-          <ExcelExportButton mode="batch" productIds={[product.id]} buttonText="엑셀 다운로드"
-            buttonClassName="flex-1 flex items-center justify-center gap-1.5 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition" />
-          <button onClick={() => { onDelete(product.id); onClose(); }}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 border border-red-200 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 transition">
-            <Trash2 size={12} /> 삭제
-          </button>
+          <Link href={`/products/new?edit=${product.id}`}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-white rounded-xl text-sm font-bold transition"
+            style={{ background: '#F63B28' }}>
+            <Edit2 size={14} /> 상품 수정
+          </Link>
+          <div className="relative">
+            <button type="button" onClick={() => setShowMoreActions(v => !v)} aria-label="더보기"
+              className="h-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
+              <MoreHorizontal size={16} />
+            </button>
+            {showMoreActions && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowMoreActions(false)} />
+                <div className="absolute z-50 bottom-full right-0 mb-1.5" style={{
+                  minWidth: 176, background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 12,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden',
+                }}>
+                  <button type="button" disabled={mutating} onClick={() => { setShowMoreActions(false); stockSync(); }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-left transition hover:bg-pink-50 disabled:opacity-40"
+                    style={{ color: '#1d4ed8' }} title="공급사 재고 동기화 (stock-check)">
+                    <RefreshCw size={13} /> 재고 동기화
+                  </button>
+                  <button type="button" disabled={mutating || product.status === 'INACTIVE'}
+                    onClick={() => { setShowMoreActions(false); changeStatus('INACTIVE', '이 상품을 부활소로 이동할까요? 판매를 중단(비활성)하고 재활성화 대기열에 넣습니다.'); }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-left transition hover:bg-pink-50 disabled:opacity-40"
+                    style={{ color: '#7e22ce' }}>
+                    <RotateCcw size={13} /> 부활소 이동
+                  </button>
+                  <button type="button" disabled={mutating || !canReset}
+                    onClick={() => { setShowMoreActions(false); resetToOrigin(); }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-left transition hover:bg-pink-50 disabled:opacity-40"
+                    style={{ color: '#6b7280' }}
+                    title={canReset ? '연동 원본으로 되돌림 (비가역)' : '앱생성 상품은 원본이 없어 리셋 불가'}>
+                    <Sprout size={13} /> 리셋
+                  </button>
+                  <div style={{ borderTop: '1px solid #F3F4F6' }}>
+                    <ExcelExportButton mode="batch" productIds={[product.id]} buttonText="엑셀 다운로드"
+                      buttonClassName="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-left text-gray-600 hover:bg-pink-50 transition" />
+                  </div>
+                  <button type="button" onClick={() => { setShowMoreActions(false); onDelete(product.id); onClose(); }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-left text-red-500 hover:bg-red-50 transition">
+                    <Trash2 size={13} /> 삭제
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1474,6 +1471,11 @@ function ProductsPageInner() {
     return t && Object.prototype.hasOwnProperty.call(TAB_CONFIG, t) ? (t as TabKey) : 'all';
   });
   const [search, setSearch]                   = useState('');
+  // 같은 라우트가 두 화면을 서빙한다(#256 §1 — 같은 Product 테이블의 두 뷰).
+  // 꿀통 창고 > 작성중(?tab=draft) = 정원 창고 — 스토어에 아직 안 올린 상품
+  // 꽃밭 돌보기(/products)          = 스토어에 올라간 상품(앱 등록 + 연동)
+  // 제목이 고정이면 클릭한 메뉴와 도착한 화면 이름이 어긋난다(2026-07-17 교정).
+  const pageTitle = tab === 'draft' ? '정원 창고' : '꽃밭 돌보기';
   // supplierFilter: pre-populated from ?supplier= URL param (거래처 명단 연결)
   const [supplierFilter, setSupplierFilter]   = useState<string>(() => searchParams?.get('supplier') ?? '');
   const [selected, setSelected]               = useState<Set<string>>(new Set());
@@ -1970,7 +1972,10 @@ function ProductsPageInner() {
 
   return (
     <div className="flex h-full" style={{ minHeight: '100vh', background: 'transparent' }}>
-      <div className="flex-1 min-w-0 p-6 space-y-4">
+      {/* R-3 (rev58 운영자 스크린샷) — 패널이 열리면 목록을 밀어내 순마진·판매가
+          등 우측 컬럼이 패널 뒤로 가려지지 않게 한다(압축모드 대신 margin-right
+          — 구현 단순 + 맥락 유지, #245). 패널 폭(min(720px,50vw))과 동일 값. */}
+      <div className="flex-1 min-w-0 p-6 space-y-4" style={{ marginRight: sideProduct ? 'min(720px, 50vw)' : 0, transition: 'margin-right 0.2s ease' }}>
 
         {/* Page header */}
         <div>
@@ -1990,7 +1995,7 @@ function ProductsPageInner() {
                   <path d="M16 10a4 4 0 0 1-8 0"/>
                 </svg>
               </div>
-              <h1 className="font-display" style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>꽃밭 돌보기</h1>
+              <h1 className="font-display" style={{ fontSize: 22, fontWeight: 900, color: '#1A1A1A', margin: 0 }}>{pageTitle}</h1>
             </div>
             <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
               {/* View mode toggle */}

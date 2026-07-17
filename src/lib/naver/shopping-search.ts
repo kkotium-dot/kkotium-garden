@@ -179,13 +179,33 @@ export interface CompetitionAnalysis {
   topSellers: string[];
   priceRange: string;
   competitionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
+  // R-1 (2026-07-17 운영자 스크린샷 발견) — 자사 상품 제외 후 실제로 통계를
+  // 낸 경쟁상품 표본 크기. totalResults(네이버 전체 색인 추정치)와 달리, 이
+  // analyzeCompetition이 실제로 가져온 페이지(최대 10건) 중 자사 제외분이다.
+  // 호출부가 "표본 3개 미만" 축약 여부를 이 값으로 판단한다.
+  sampleSize: number;
 }
 
-/** Analyze competition for a product keyword */
-export async function analyzeCompetition(query: string): Promise<CompetitionAnalysis> {
+// 자사 판매몰 여부 판정 — 공백 제거 후 부분일치(대표 스토어명이 몰 표기에
+// "꽃틔움 KKOTIUM"처럼 접미어가 붙어도 잡히게). 대소문자 구분 없음.
+function isOwnMall(mallName: string, ownKey: string): boolean {
+  if (!ownKey) return false;
+  const norm = (s: string) => s.replace(/\s+/g, '').toLowerCase();
+  return norm(mallName).includes(norm(ownKey));
+}
+
+/** Analyze competition for a product keyword. ownMallKey excludes our own
+ *  store from the competitor set (R-1 — 자사 상품을 자사 경쟁자로 집계하던
+ *  버그 수정, 전상품 범용·#55). */
+export async function analyzeCompetition(query: string, ownMallKey = ''): Promise<CompetitionAnalysis> {
   const result = await searchShopping(query, { display: 10, sort: 'sim' });
 
-  const prices = result.items
+  const items = ownMallKey
+    ? result.items.filter(i => !isOwnMall(i.mallName, ownMallKey))
+    : result.items;
+  const excludedCount = result.items.length - items.length;
+
+  const prices = items
     .map(i => Number(i.lprice))
     .filter(p => p > 0);
 
@@ -196,23 +216,28 @@ export async function analyzeCompetition(query: string): Promise<CompetitionAnal
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
 
-  const sellers = [...new Set(result.items.map(i => i.mallName).filter(Boolean))];
+  const sellers = [...new Set(items.map(i => i.mallName).filter(Boolean))];
+
+  // totalResults는 네이버 전체 색인 추정치라 페이지 밖 자사 건수는 알 수
+  // 없다 — 이번 페이지에서 확인된 자사 건수만 근사 차감한다.
+  const totalResults = Math.max(0, result.total - excludedCount);
 
   // Competition level based on total results
   const level: CompetitionAnalysis['competitionLevel'] =
-    result.total > 100000 ? 'VERY_HIGH' :
-    result.total > 30000  ? 'HIGH' :
-    result.total > 5000   ? 'MEDIUM' : 'LOW';
+    totalResults > 100000 ? 'VERY_HIGH' :
+    totalResults > 30000  ? 'HIGH' :
+    totalResults > 5000   ? 'MEDIUM' : 'LOW';
 
   return {
     query,
-    totalResults: result.total,
+    totalResults,
     avgPrice,
     minPrice,
     maxPrice,
     topSellers: sellers.slice(0, 5),
     priceRange: `${minPrice.toLocaleString()}~${maxPrice.toLocaleString()}`,
     competitionLevel: level,
+    sampleSize: items.length,
   };
 }
 
