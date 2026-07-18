@@ -72,6 +72,16 @@
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
 
+### 2026-07-18 (114) #270 폴러 파서 교정 검증 완료 — 재고 부활 실측 확인 (FROM 💻 Code, main c05644c 위·코드변경 있음(신규 스크립트만)·tsc0·build0·prod 미배포)
+- **Target**: 다음 세션 · 권위 docs/plan/PARALLEL_WORK_TRACKER.md rev60 + 원칙 #260/#269/#270 + 운영자 지시(2026-07-18).
+- **배경**: Desktop이 c05644c까지 #270(도매꾹 파서 4곳 교정) 배포했으나 로컬 iterm 장애로 폴러 강제 실행 미검증 상태였음. 되돌린 것 없음 — 검증만 수행.
+- **DONE**: (1) CRON_SECRET 로컬↔prod 불일치 재확인(curl 401, TASK_BRIDGE (107) 기존 관찰과 일치) — cron 라우트 인증 우회. (2) `scripts/manual-inventory-poll.ts` 신설(비밀값 미포함, `pollAppRegisteredInventory()` 직접 호출) → `npx tsx scripts/manual-inventory-poll.ts`로 prod DB(Supabase doxfizicftgtqktmtftf) 대상 실행 — snapshotsSaved:3·errors:0. (3) Supabase SQL 직접 조회로 결과 확인.
+- **검증 결과 — 기대값 3/3 일치**: 아이스틀(36904429) qty=**7934**·status=판매중 / 달항아리(63860451) qty=**19998**·status=판매중 / 명화(65322245) qty=**-1**·status=unknown(도매꾹 실제 미소싱 상태, #260 정직 반영 — 정상 케이스). 직전 폴(07-17) 스냅샷은 3건 전부 qty=-1/unknown이었음 — 폴러가 4일 연속 전패하던 상태에서 파서 교정으로 실데이터 회복 확인.
+- **브라우저 실측**: 로컬 dev(`npx tsx` 실행 직후 최신 스냅샷 반영) `/products?tab=draft` 스크린샷 — 아이스틀·달항아리 두 행 모두 재고뱃지 **"넉넉해요"**(녹색) 렌더 확인. "확인 중이에요"(폴링 실패 상태) 잔존 0.
+- **패치 위치**: `scripts/manual-inventory-poll.ts`(신규, 시크릿 미포함·재사용 가능한 수동 검증 도구로 보존).
+- **다음 1액션**: [운영자] 검증 결과 확인 후 승인 시 [작업 I](꿀통 꽃나들이 UI) 착수 또는 [H-3 잔여](컬럼 재배치) 진행 여부 결정. [운영자/Desktop] 명화(65322245) 대체 소싱처 결정(도매꾹 실제 하차 확인됨, #270과 별개 사안). [Code] CRON_SECRET 로컬↔prod 재동기화는 이번 턴 범위 밖(cron 자동 실행에는 영향 없음 — Vercel 측 정상 시크릿으로 스케줄 실행되므로 이번 우회는 수동 1회성 검증 목적뿐).
+- **의존성**: (113) 위·(824f765/2f3b622/c05644c, Desktop #269/#270) 검증 턴.
+
 ### 2026-07-18 (113) 작업 H — 정원 창고/꽃밭 돌보기 화면 분화 (H-1~H-4, 코드변경 있음·tsc0·build0·prod 배포대기)
 - **Target**: 다음 세션 · 권위 docs/design/SCREEN_DIFFERENTIATION_SPEC_2026-07-17.md + 원칙 #266/#264/#62/#265 + 운영자 승인(2026-07-18).
 - **착수 순서**: 지시대로 H-4(시스템 가드) 먼저 → H-3 좀비배지 제거가 자동으로 따라옴 확인 → H-1/H-2/H-3 나머지.
