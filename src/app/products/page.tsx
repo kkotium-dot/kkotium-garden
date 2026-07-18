@@ -1816,7 +1816,7 @@ function ProductsPageInner() {
               <p className="text-xs font-mono truncate" style={{ color: '#B0A0A8', minWidth: 0 }}>{p.sku}</p>
               {/* 작업 H-3 — 정원 창고(미발행)는 재고 폴링 대상이 아니라 실패
                   표시가 의미 없다("네이버에 없는 상품을 물어본 것", 스펙 §2). */}
-              {!isGarden && inventoryByProductId[p.id] && <InventoryBadge inv={inventoryByProductId[p.id]} />}
+              {!isGarden && inventoryByProductId[p.id] && <InventoryBadge inv={inventoryByProductId[p.id]} mode="sourcing" />}
             </div>
             <HubBadges p={p} rd={readinessMap[p.id]} />
             {nameDiagnoses[p.id] && (

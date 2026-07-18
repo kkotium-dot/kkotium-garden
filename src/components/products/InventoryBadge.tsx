@@ -70,11 +70,84 @@ function statusLabel(status: string): string {
   return status;
 }
 
-export interface InventoryBadgeProps {
-  inv: InventoryBadgeData;
+// Sourcing thresholds (operator decision 2026-07-18, work principle #269).
+// Rationale: one listing costs ~40min of work (images + name + detail page).
+// Under 20 units the listing burns its 7-day new-product boost and dies before
+// payback; the rank never recovers after a restock. So the garden view asks
+// "is this worth 40 minutes?" rather than "how many are left?".
+const SOURCING_PLENTY_MIN = 100;
+const SOURCING_TIGHT_MIN = 20;
+
+type SourcingLevel = 'plenty' | 'tight' | 'risky' | 'soldOut' | 'unknown';
+
+function pickSourcingLevel(inv: InventoryBadgeData): SourcingLevel {
+  if (isPollFailure(inv)) return 'unknown';
+  if (inv.status && inv.status !== STATUS_ACTIVE) return 'soldOut';
+  if (inv.qty <= 0) return 'soldOut';
+  if (inv.qty >= SOURCING_PLENTY_MIN) return 'plenty';
+  if (inv.qty >= SOURCING_TIGHT_MIN) return 'tight';
+  return 'risky';
 }
 
-export default function InventoryBadge({ inv }: InventoryBadgeProps) {
+const SOURCING_COLOR: Record<SourcingLevel, { fg: string; bg: string; border: string; dot: string }> = {
+  plenty:  COLOR_BY_LEVEL.green,
+  tight:   COLOR_BY_LEVEL.yellow,
+  risky:   COLOR_BY_LEVEL.orange,
+  soldOut: COLOR_BY_LEVEL.red,
+  unknown: POLL_FAILED_COLOR,
+};
+
+export interface InventoryBadgeProps {
+  inv: InventoryBadgeData;
+  /**
+   * 'selling' (default) — 꽃밭 돌보기: 실제 재고 수량이 판매 가능 여부를 뜻함.
+   * 'sourcing' — 정원 창고: 아직 안 올린 상품. 수량 자체보다 "40분 들여 올릴
+   *   가치가 있나"가 질문이므로 숫자 대신 판단(신호등)을 노출한다.
+   */
+  mode?: 'selling' | 'sourcing';
+}
+
+export default function InventoryBadge({ inv, mode = 'selling' }: InventoryBadgeProps) {
+  if (mode === 'sourcing') return <SourcingBadge inv={inv} />;
+  return <SellingBadge inv={inv} />;
+}
+
+// 정원 창고 — 소싱 판단 신호등. 숫자는 툴팁으로 내리고 판단을 앞에 둔다(3초 룰).
+function SourcingBadge({ inv }: { inv: InventoryBadgeData }) {
+  const level = pickSourcingLevel(inv);
+  const palette = !inv.isTrustworthy && level !== 'unknown' ? UNTRUSTWORTHY_COLOR : SOURCING_COLOR[level];
+  const relTime = formatRelativeTime(inv.polledAt);
+
+  const lines: string[] = [strings.sourcingVoice[level], ''];
+  if (level !== 'unknown' && level !== 'soldOut') {
+    lines.push(`${strings.label.qtyPrefix} ${inv.qty}${strings.label.qtyUnit} (${strings.sourcingHint[level]})`);
+  }
+  if (!inv.isTrustworthy && level !== 'unknown') lines.push(strings.untrustworthy.tooltip);
+  if (level === 'unknown') lines.push(strings.pollFailed.tooltip);
+  lines.push(`${strings.tooltip.polledAtPrefix}: ${relTime}`);
+
+  return (
+    <span
+      title={lines.join('\n')}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        fontSize: 10, fontWeight: 700, lineHeight: 1,
+        color: palette.fg, background: palette.bg,
+        border: `1px solid ${palette.border}`, borderRadius: 6,
+        padding: '2px 6px', whiteSpace: 'nowrap', cursor: 'help',
+      }}
+    >
+      {!inv.isTrustworthy && level !== 'unknown' && (
+        <ShieldOff size={9} style={{ color: palette.fg, flexShrink: 0 }} />
+      )}
+      <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: palette.dot, flexShrink: 0 }} />
+      <span>{strings.sourcing[level]}</span>
+    </span>
+  );
+}
+
+// 꽃밭 돌보기 — 기존 판매 재고 배지(회귀 방지를 위해 로직 그대로 보존).
+function SellingBadge({ inv }: InventoryBadgeProps) {
   const pollFailed = isPollFailure(inv);
   const level = pickLevel(inv);
   const palette = pollFailed

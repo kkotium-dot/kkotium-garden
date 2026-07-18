@@ -29,5 +29,24 @@
     "soldOut": "품절",
     "stopped": "판매 중지",
     "hidden": "비공개"
+  },
+  "sourcing": {
+    "plenty": "넉넉해요",
+    "tight": "아슬해요",
+    "risky": "위험해요",
+    "soldOut": "품절이에요",
+    "unknown": "확인 중이에요"
+  },
+  "sourcingVoice": {
+    "plenty": "까꿍💖 마음 놓고 올려도 되어유",
+    "tight": "까꿍💖 팔리면 금방 없어져유, 대체상품 미리 봐두어유",
+    "risky": "이랴➰ 이건 올려도 금방 품절이에유! 순위만 날려유",
+    "soldOut": "빵야➰ 지금은 못 올려유, 다른 꽃 찾아보아유",
+    "unknown": "까꿍💖 공급사에 물어보는 중이에유"
+  },
+  "sourcingHint": {
+    "plenty": "100개 이상",
+    "tight": "20~99개",
+    "risky": "1~19개"
   }
 }
