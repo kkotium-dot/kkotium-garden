@@ -1814,9 +1814,16 @@ function ProductsPageInner() {
             <p className="text-sm font-semibold text-gray-900 truncate leading-snug">{p.name}</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
               <p className="text-xs font-mono truncate" style={{ color: '#B0A0A8', minWidth: 0 }}>{p.sku}</p>
-              {/* 작업 H-3 — 정원 창고(미발행)는 재고 폴링 대상이 아니라 실패
-                  표시가 의미 없다("네이버에 없는 상품을 물어본 것", 스펙 §2). */}
-              {!isGarden && inventoryByProductId[p.id] && <InventoryBadge inv={inventoryByProductId[p.id]} mode="sourcing" />}
+              {/* 재고 배지는 양쪽 다 노출하되 질문이 다르므로 모드를 나눈다(#269).
+                  정원 창고 → 'sourcing': 공급사(도매꾹) 재고로 "40분 들여 올릴
+                    가치가 있나"를 신호등으로 판단. 숫자는 툴팁으로.
+                  꽃밭 돌보기 → 'selling': 판매 가능 재고 수량 그대로.
+                  ※ H-3에서 "정원 창고는 폴링 대상 아님"으로 껐던 것은 네이버 재고와
+                    공급사 재고를 혼동한 오설계였음 — 정원 창고야말로 공급사 재고가
+                    가장 필요한 화면이다. */}
+              {inventoryByProductId[p.id] && (
+                <InventoryBadge inv={inventoryByProductId[p.id]} mode={isGarden ? 'sourcing' : 'selling'} />
+              )}
             </div>
             <HubBadges p={p} rd={readinessMap[p.id]} />
             {nameDiagnoses[p.id] && (
