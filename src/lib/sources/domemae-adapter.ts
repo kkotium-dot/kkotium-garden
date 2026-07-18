@@ -555,22 +555,18 @@ export class DomemaeAdapter implements SourceAdapter {
       );
     }
 
+    // Real API shape (verified against live API 2026-07-18, work principle #270):
+    //   multiple=true -> { domeggook: { item: [ { basis:{no,status}, qty:{inventory}, price:{supply} } ] } }
+    //   single        -> { domeggook: {   basis:{no,status}, qty:{inventory}, price:{supply} } }
+    // Note `inventory` arrives as a STRING ("7934"), and the item id lives at
+    // basis.no — not at the item root, and there is no `multipleResult` wrapper.
+    type DomeItem = {
+      basis?: { no?: string | number; status?: string; minq?: number | string };
+      qty?: { inventory?: number | string };
+      price?: { supply?: number | string };
+    };
     const raw = (await res.json()) as {
-      domeggook?:
-        | {
-            multipleResult?: {
-              item?: Array<{
-                no?: string | number;
-                basis?: { status?: string; minq?: number | string };
-                qty?: { inventory?: number };
-                price?: { supply?: number | string };
-              }>;
-            };
-            // Single-item fallback shape (when API returns 1 item without multipleResult wrapper)
-            basis?: { status?: string; minq?: number | string };
-            qty?: { inventory?: number };
-            price?: { supply?: number | string };
-          };
+      domeggook?: DomeItem & { item?: DomeItem[] };
       errors?: unknown;
     };
 
@@ -586,16 +582,21 @@ export class DomemaeAdapter implements SourceAdapter {
     }
 
     const dome = raw.domeggook;
-    // multiple=true wraps in multipleResult.item; single result returns basis/qty at root
-    const items = dome.multipleResult?.item ?? (dome.basis ? [dome] : []);
+    // multiple=true -> domeggook.item[]; single -> basis/qty at root.
+    const items: DomeItem[] = dome.item ?? (dome.basis ? [dome] : []);
 
     // Build a map for O(1) lookup, then preserve input order
     const resultMap = new Map<string, InventorySnapshot>();
     for (const it of items) {
-      const no = String((it as { no?: string | number }).no ?? '');
-      const qtyVal = (it as { qty?: { inventory?: number } }).qty?.inventory ?? -1;
-      const statusVal = (it as { basis?: { status?: string } }).basis?.status ?? 'unknown';
-      const supplyRaw = (it as { price?: { supply?: number | string } }).price?.supply;
+      // Item id lives at basis.no (not at the item root).
+      const no = String(it.basis?.no ?? '');
+      // inventory arrives as a string; coerce defensively and keep -1 as the
+      // "could not read" sentinel (work principle #260).
+      const invRaw = it.qty?.inventory;
+      const invNum = invRaw === undefined || invRaw === null ? NaN : Number(invRaw);
+      const qtyVal = Number.isFinite(invNum) ? invNum : -1;
+      const statusVal = it.basis?.status ?? 'unknown';
+      const supplyRaw = it.price?.supply;
       // parseSupplyPrice returns 0 when unavailable. Distinguish 0 (unknown) from
       // a real "free item" by treating only undefined as null.
       const supplierPrice =
@@ -605,7 +606,7 @@ export class DomemaeAdapter implements SourceAdapter {
       if (no) {
         resultMap.set(no, {
           productNo: no,
-          qty: typeof qtyVal === 'number' ? qtyVal : -1,
+          qty: qtyVal,
           status: String(statusVal),
           supplierPrice,
           polledAt,
