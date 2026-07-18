@@ -182,6 +182,28 @@ function HoneyBadge({ score, grade }: { score: number; grade: string }) {
   );
 }
 
+// 작업 H-3 — 좀비 지수 셀 (꽃밭 돌보기 전용). 점수 열을 대체한다.
+// 좁은 열(72px)이라 숫자 + 상태 점만 노출하고, 좀비가 된 상세 사유는
+// 이름칸의 TuningBadge(hover)에서 이미 보여준다(#233 과밀 방지). PRESENTATIONAL
+// only — 판정은 서버 computeZombieVerdict 결과(p.tuningScore)를 그리기만 함(#62).
+function ZombieIndexCell({ data }: { data?: TuningBadgeData | null }) {
+  if (!data) {
+    return (
+      <div className="flex justify-center">
+        <span className="text-xs" style={{ color: '#D4B0BC' }}>—</span>
+      </div>
+    );
+  }
+  const dotColor = data.isZombie ? '#B91C1C' : '#9CA3AF';
+  const numColor = data.isZombie ? '#B91C1C' : '#6B7280';
+  return (
+    <div className="flex items-center justify-center gap-1" title={`좀비 지수 ${data.score}`}>
+      <span style={{ width: 6, height: 6, borderRadius: 999, background: dotColor, display: 'inline-block', flexShrink: 0 }} />
+      <span style={{ fontSize: 12, fontWeight: 800, color: numColor }}>{data.score}</span>
+    </div>
+  );
+}
+
 // SEED-SAVE C-3 Step 5: 창고 status now uses the shared StageBadge so it matches
 // 꿀통/대시보드 exactly. A warehouse row is always a real Product (linked).
 function StatusDot({ product }: { product: Product }) {
@@ -1788,8 +1810,17 @@ function ProductsPageInner() {
     setInlineEdit(null);
   };
 
-  // Grid: checkbox | name/sku | status | supplier | shipping | netMargin | salePrice | readiness | score | actions
-  const COL = '36px 1fr 90px 110px 130px 62px 90px 72px 68px 70px';
+  // 작업 H-3 — grid split per view (SCREEN_DIFFERENTIATION_SPEC §7).
+  // Garden (draft, !naverProductId): drop shipping (unpublished = no shipping yet),
+  //   keep readiness + name score. Cells: checkbox | name/sku | status | supplier |
+  //   estMargin | estSalePrice | readiness | score | actions  (9 tracks)
+  // Care (published, !!naverProductId): drop readiness (already published = moot),
+  //   keep shipping, replace name-score column with zombie index. Cells:
+  //   checkbox | name/sku | status | supplier | shipping | netMargin | salePrice |
+  //   zombieIndex | actions  (9 tracks)
+  const COL_GARDEN = '36px 1fr 90px 110px 62px 90px 72px 68px 70px';
+  const COL_CARE   = '36px 1fr 90px 110px 130px 62px 90px 72px 70px';
+  const COL = isGarden ? COL_GARDEN : COL_CARE;
 
   const renderRow = (p: ScoredProduct, idx: number, isLast: boolean) => {
     const dangerMargin = p._hs.netMarginRate < 5;
@@ -1846,7 +1877,8 @@ function ProductsPageInner() {
             }
             {p.platformName && <p className="text-[10px] truncate" style={{ color: '#B0A0A8' }}>{p.platformName}</p>}
           </div>
-          <div className="flex justify-start"><ShippingBadge product={p} /></div>
+          {/* H-3: shipping is Care-only (garden = unpublished, no shipping yet) */}
+          {!isGarden && <div className="flex justify-start"><ShippingBadge product={p} /></div>}
           <MarginCell hs={p._hs} />
           {/* Inline-editable sale price cell — double-click to edit */}
           <div
@@ -1871,8 +1903,8 @@ function ProductsPageInner() {
               </p>
             )}
           </div>
-          {/* Readiness mini bar */}
-          {(() => {
+          {/* H-3: readiness mini bar is Garden-only (published items = readiness moot) */}
+          {isGarden && (() => {
             const rd = calcUploadReadiness({
               naverCategoryCode: p.naverCategoryCode,
               keywords: p.keywords,
@@ -1895,7 +1927,13 @@ function ProductsPageInner() {
               </div>
             );
           })()}
-          <div className="flex justify-center"><HoneyBadge score={p._hs.total} grade={p._hs.grade} /></div>
+          {/* H-3: score column diverges. Garden = name score (HoneyBadge).
+              Care = zombie index (tuningScore number + status dot). Full zombie
+              reasons already render as TuningBadge in the name cell above, so this
+              column stays compact: number + red/gray dot only. */}
+          {isGarden
+            ? <div className="flex justify-center"><HoneyBadge score={p._hs.total} grade={p._hs.grade} /></div>
+            : <ZombieIndexCell data={p.tuningScore} />}
           <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
             <button onClick={e => toggleStatus(e, p)} title="상태 변경"
               className="p-1.5 rounded-lg transition hover:bg-gray-100"
@@ -1926,8 +1964,8 @@ function ProductsPageInner() {
             바꿔 실적이 아니라 전망치임을 명시(SCREEN_DIFFERENTIATION_SPEC_
             2026-07-17 §4-3). 꽃밭 돌보기는 실적 라벨 유지. */}
         {(isGarden
-          ? ['상품명 / 상품코드(SKU)', '작업 단계', '공급사', '배송', '예상 마진', '예상 판매가', '준비도', '점수', '관리']
-          : ['상품명 / 상품코드(SKU)', '상태', '공급사', '배송', '순마진', '판매가', '준비도', '점수', '관리']
+          ? ['상품명 / 상품코드(SKU)', '작업 단계', '공급사', '예상 마진', '예상 판매가', '준비도', '점수', '관리']
+          : ['상품명 / 상품코드(SKU)', '상태', '공급사', '배송', '순마진', '판매가', '좀비 지수', '관리']
         ).map(h => (
           <span key={h} className="text-[11px] font-black tracking-wide" style={{ color: '#F63B28' }}>{h}</span>
         ))}
