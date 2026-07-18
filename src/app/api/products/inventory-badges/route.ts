@@ -22,7 +22,17 @@ export interface InventoryBadgeData {
   polledAt: string;
   alertLevel: 'yellow' | 'orange' | 'red' | null;
   alertThreshold: number | null;
+  // 공급처 단절(소싱처 소멸) 신호. qty=-1(조회 실패 센티널·#260)이 최근 연속
+  // SOURCE_GONE_MIN회 이상 지속되면 일시적 폴링 실패가 아니라 공급사가 도매꾹에서
+  // 상품을 내린 것으로 판정한다(#270 실측 근거: 파서 정상화 후 살아있는 상품은
+  // 다음 폴에서 실재고로 복구되지만, 하차된 상품은 -1이 무한 지속). 전상품 범용(#55).
+  sourceGone: boolean;
 }
+
+// Consecutive qty=-1 count from the newest poll before this is treated as a
+// permanent supplier delisting rather than a transient lookup failure. A single
+// hiccup self-heals within 1-2 polls; a delisted product stays -1 indefinitely.
+const SOURCE_GONE_MIN = 3;
 
 export async function GET() {
   // 1. Products with supplier_product_code (= DMM productNo mapped)
@@ -56,6 +66,19 @@ export async function GET() {
   const snapshotByProduct = new Map<string, (typeof snapshots)[number]>();
   for (const s of snapshots) {
     if (!snapshotByProduct.has(s.productId)) snapshotByProduct.set(s.productId, s);
+  }
+
+  // Consecutive leading qty=-1 count per product (snapshots already sorted
+  // polledAt desc). Stops at the first non-negative qty. Used for sourceGone.
+  const consecutiveNeg1 = new Map<string, number>();
+  const stopped = new Set<string>();
+  for (const s of snapshots) {
+    if (stopped.has(s.productId)) continue;
+    if (s.qty < 0) {
+      consecutiveNeg1.set(s.productId, (consecutiveNeg1.get(s.productId) ?? 0) + 1);
+    } else {
+      stopped.add(s.productId); // first non-negative seals the run
+    }
   }
 
   // 3. Open alerts (resolvedAt IS NULL) per product
@@ -96,6 +119,7 @@ export async function GET() {
       polledAt: snap.polledAt.toISOString(),
       alertLevel: level === 'yellow' || level === 'orange' || level === 'red' ? level : null,
       alertThreshold: alert?.threshold ?? null,
+      sourceGone: (consecutiveNeg1.get(product.id) ?? 0) >= SOURCE_GONE_MIN,
     };
   }
 

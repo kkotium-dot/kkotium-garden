@@ -12,7 +12,7 @@
 // Korean strings live in InventoryBadge.strings.ko.json per work principle #35.
 // ============================================================================
 
-import { ShieldOff } from 'lucide-react';
+import { ShieldOff, Unplug } from 'lucide-react';
 import strings from './InventoryBadge.strings.ko.json';
 import type { InventoryBadgeData } from '@/lib/hooks/useInventoryBadges';
 
@@ -29,6 +29,15 @@ const COLOR_BY_LEVEL: Record<Level, { fg: string; bg: string; border: string; do
 
 const UNTRUSTWORTHY_COLOR = { fg: '#525252', bg: '#fafafa', border: '#d4d4d4', dot: '#737373' };
 const POLL_FAILED_COLOR = { fg: '#525252', bg: '#f5f5f4', border: '#d6d3d1', dot: '#a8a29e' };
+// 공급처 단절 — 삭제 권장. 활성 재고 긴급(빨강)과 구별되는 자주빛(action-needed)
+// 톤으로, "이건 재고 문제가 아니라 상품 자체를 정리할 때"임을 색으로 구분한다.
+const SOURCE_GONE_COLOR = { fg: '#86198f', bg: '#fdf4ff', border: '#f5d0fe', dot: '#a21caf' };
+
+// 공급처 단절은 일시적 폴링 실패보다 상위 신호다. 두 배지(판매/소싱) 모두
+// 이 상태를 최우선으로 렌더한다(#55 전상품 범용).
+function isSourceGone(inv: InventoryBadgeData): boolean {
+  return inv.sourceGone === true;
+}
 
 // qty=-1 is an explicit sentinel from the Domeggook adapter meaning "could not
 // look up this product" (getItemView returned no match), not a real stock
@@ -108,8 +117,36 @@ export interface InventoryBadgeProps {
 }
 
 export default function InventoryBadge({ inv, mode = 'selling' }: InventoryBadgeProps) {
+  // 공급처 단절은 판매/소싱 모드 무관하게 동일 신호 — 최우선 분기(#55).
+  if (isSourceGone(inv)) return <SourceGoneBadge inv={inv} mode={mode} />;
   if (mode === 'sourcing') return <SourcingBadge inv={inv} />;
   return <SellingBadge inv={inv} />;
+}
+
+// 공급처 단절 · 삭제 권장 배지 (전상품 범용). 재고 신호가 아니라 "이 상품은
+// 다시 못 들여오니 정리하세요"라는 운영 신호. 목록 어디서든 동일하게 보인다.
+function SourceGoneBadge({ inv, mode }: { inv: InventoryBadgeData; mode: 'selling' | 'sourcing' }) {
+  const p = SOURCE_GONE_COLOR;
+  const relTime = formatRelativeTime(inv.polledAt);
+  const title = [strings.sourceGone.tooltip, '', strings.sourceGone.voice, '', `${strings.tooltip.polledAtPrefix}: ${relTime}`].join('\n');
+  // 소싱(정원) 뷰는 라벨만, 판매(꽃밭) 뷰는 라벨+삭제 권장 액션까지.
+  const text = mode === 'sourcing'
+    ? strings.sourceGone.sourcingLabel
+    : `${strings.sourceGone.label} · ${strings.sourceGone.action}`;
+  return (
+    <span
+      title={title}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        fontSize: 10, fontWeight: 700, lineHeight: 1,
+        color: p.fg, background: p.bg, border: `1px solid ${p.border}`,
+        borderRadius: 6, padding: '2px 6px', whiteSpace: 'nowrap', cursor: 'help',
+      }}
+    >
+      <Unplug size={9} style={{ color: p.fg, flexShrink: 0 }} />
+      <span>{text}</span>
+    </span>
+  );
 }
 
 // 정원 창고 — 소싱 판단 신호등. 숫자는 툴팁으로 내리고 판단을 앞에 둔다(3초 룰).

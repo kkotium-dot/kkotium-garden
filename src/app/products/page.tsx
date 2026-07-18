@@ -1706,8 +1706,22 @@ function ProductsPageInner() {
   };
   const toggleExpand = (key: string) => setExpandedGroups(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
+  // 삭제 확인 (전역 공통 게이트·#62·#46). 모든 삭제 경로(목록 행·모바일·상세
+  // 패널)가 이 함수 하나를 거치므로 여기서 한 번 막으면 앱 전체가 안전해진다.
+  // 스토어에 등록된 상품(naverProductId)은 삭제해도 네이버 스토어에는 그대로
+  // 남으므로 강경고로 오클릭을 막는다(앱에서만 사라지고 스토어엔 유령 상품이
+  // 남는 사고 방지).
   const deleteProduct = async (id: string) => {
-    if (!confirm('삭제하시겠습니까?')) return;
+    const target = raw.find(p => p.id === id);
+    const name = target?.name?.trim();
+    const shortName = name ? (name.length > 30 ? name.slice(0, 30) + '…' : name) : '이 상품';
+    const isLinked = !!target?.naverProductId;
+
+    const message = isLinked
+      ? `"${shortName}"\n\n이 상품은 네이버 스토어에 판매중(또는 등록됨)입니다.\n앱에서 삭제해도 네이버 스토어에는 그대로 남습니다.\n스토어에서도 내리려면 먼저 [반영] 탭에서 판매중지를 하세요.\n\n앱에서 삭제할까요? 이 작업은 되돌릴 수 없습니다.`
+      : `"${shortName}"\n\n앱에서 삭제할까요? 이 작업은 되돌릴 수 없습니다.`;
+
+    if (!confirm(message)) return;
     await fetch(`/api/products?id=${id}`, { method: 'DELETE' });
     fetchProducts();
   };
