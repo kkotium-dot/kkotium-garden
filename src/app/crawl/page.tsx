@@ -593,7 +593,9 @@ function CrawlPageInner() {
   // ── 소싱 보관함 탭 state ─────────────────────────────────────────────────
   const [logs, setLogs]               = useState<SourcingItem[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
-  const [histFilter, setHistFilter]   = useState<'all'|'SOURCED'|'PENDING'|'REGISTERED'|'HOLD'|'single'|'bulk'>('all');
+  // I-1 (#233): 'single'/'bulk' removed from this axis — capture method is now
+  // a row badge, not a filter (see loadShelf below).
+  const [histFilter, setHistFilter]   = useState<'all'|'SOURCED'|'PENDING'|'REGISTERED'|'HOLD'>('all');
   // SEED-SAVE C-3 — soft-hide items already turned into a 창고 Product (product_id
   // set) so the same item never shows in both 꿀통 and 창고. "처리완료 보기" reveals them.
   const [showProcessed, setShowProcessed] = useState(false);
@@ -619,8 +621,7 @@ function CrawlPageInner() {
   const loadShelf = (filter = histFilter, seller = histSellerFilter) => {
     setLogsLoading(true);
     const params = new URLSearchParams({ limit: '100' });
-    if (filter !== 'all' && ['SOURCED','PENDING','REGISTERED','HOLD'].includes(filter)) params.set('status', filter);
-    if (filter === 'single' || filter === 'bulk') params.set('source', filter);
+    if (filter !== 'all') params.set('status', filter);
     if (seller !== 'all') params.set('seller', seller);
     fetch(`/api/crawler/logs?${params}`)
       .then(r => r.json())
@@ -1628,23 +1629,25 @@ function CrawlPageInner() {
                     reflect the full shelf, not the search-filtered subset. */}
                 <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
                   {(() => {
+                    // I-1 (#233): filter axis split — this row is progress-stage
+                    // ONLY. 단건/대량 (capture method) is a different axis and was
+                    // demoted to a per-row badge (see 상품정보 col pills below).
                     const counts: Record<string, number> = {
                       all: logs.length,
                       SOURCED: logs.filter(l => l.sourcing_status === 'SOURCED').length,
                       PENDING: logs.filter(l => l.sourcing_status === 'PENDING').length,
                       REGISTERED: logs.filter(l => l.sourcing_status === 'REGISTERED').length,
                       HOLD: logs.filter(l => l.sourcing_status === 'HOLD').length,
-                      single: logs.filter(l => l.source === 'single').length,
-                      bulk: logs.filter(l => l.source === 'bulk').length,
                     };
+                    // I-2 (#262/#267): label world-view unification — persona wording
+                    // instead of raw dev status names, and "등록" ambiguity (app vs
+                    // store) resolved by naming the app-side destination explicitly.
                     return ([
                       ['all','전체'],
-                      ['SOURCED','소싱완료'],
-                      ['PENDING','등록대기'],
-                      ['REGISTERED','등록완료'],
-                      ['HOLD','보류'],
-                      ['single','단건'],
-                      ['bulk','대량'],
+                      ['SOURCED','꽃 골랐어요'],
+                      ['PENDING','정원 창고로 보낼 준비'],
+                      ['REGISTERED','정원 창고에 있어요'],
+                      ['HOLD','다음에 볼 꽃'],
                     ] as [string,string][]).map(([k,l]) => {
                       const active = histFilter === k;
                       const cnt = counts[k] ?? 0;
@@ -1811,9 +1814,22 @@ function CrawlPageInner() {
                   <p style={{ fontSize:15, fontWeight:700, color:'#1A1A1A', marginBottom:4 }}>
                     {logs.length === 0 ? '꿀통 꽃수레가 비어 있어요' : '검색 결과가 없습니다'}
                   </p>
-                  <p style={{ fontSize:13, color:'#AAA', margin:0 }}>
+                  <p style={{ fontSize:13, color:'#AAA', margin: logs.length === 0 ? '0 0 16px' : 0 }}>
                     {logs.length === 0 ? '꽃 한 송이/한아름 담기 후 "꽃수레에 담기"를 누르면 여기 모여요' : ''}
                   </p>
+                  {/* I-3 (#256): empty state carries an action, not just a message. */}
+                  {logs.length === 0 && (
+                    <div style={{ display:'flex', gap:8, justifyContent:'center' }}>
+                      <button onClick={() => setTab('single')}
+                        style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 16px', background:'#1A1A1A', color:'#fff', border:'none', borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                        <Search size={13}/> 꽃 한 송이 담기
+                      </button>
+                      <button onClick={() => setTab('bulk')}
+                        style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 16px', background:'#F63B28', color:'#fff', border:'none', borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                        <Layers size={13}/> 꽃 한아름 담기
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
 
@@ -1825,11 +1841,12 @@ function CrawlPageInner() {
 
               // C-CRAWL-STATE: reversible reclassify targets. Operator can move an
               // item to ANY state (forward or back) — sourcing_status is free text.
+              // I-2 (#262/#267): same world-view labels as the filter chips above.
               const RECLASSIFY_OPTIONS: [string, string][] = [
-                ['SOURCED', '소싱완료'],
-                ['PENDING', '등록대기'],
-                ['REGISTERED', '등록완료'],
-                ['HOLD', '보류'],
+                ['SOURCED', '꽃 골랐어요'],
+                ['PENDING', '정원 창고로 보낼 준비'],
+                ['REGISTERED', '정원 창고에 있어요'],
+                ['HOLD', '다음에 볼 꽃'],
               ];
 
               // CR-1 (operator-approved): the gauge + default sort now use a
@@ -2042,6 +2059,12 @@ function CrawlPageInner() {
                               )}
                               {log.can_merge && (
                                 <span style={{ flexShrink:0, fontSize:9.5, padding:'1px 6px', background:'#F1EEE7', border:'1px solid var(--border-neutral)', borderRadius:99, color:'#999' }}>묶음</span>
+                              )}
+                              {/* I-1 (#233): 담기방식(단건/대량)은 필터 축에서 내려와 여기 배지로 표시 */}
+                              {(log.source === 'single' || log.source === 'bulk') && (
+                                <span style={{ flexShrink:0, fontSize:9.5, padding:'1px 6px', background:'#F1EEE7', border:'1px solid var(--border-neutral)', borderRadius:99, color:'#999' }}>
+                                  {log.source === 'single' ? '한 송이' : '한아름'}
+                                </span>
                               )}
                             </div>
                             {/* Muted secondary line: 재고 N개 · 공급사 nick + category */}
