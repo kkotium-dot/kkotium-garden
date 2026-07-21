@@ -39,6 +39,36 @@ export function countLeadingNegatives(
   return counts;
 }
 
+/**
+ * 연속 품절 지속일 집계 (#273 처분 권고 입력).
+ *
+ * `snapshots`는 polledAt DESC(최신 우선)로 전 상품이 섞여 들어온다. 상품별로
+ * 최신부터 qty<=0인 스냅샷이 이어지는 구간을 세고, 그 구간의 *가장 오래된*
+ * 폴링 시각으로부터 지난 일수를 돌려준다. 최신 스냅샷이 재고 양수면 품절이
+ * 아니므로 해당 상품은 맵에 담지 않는다(= 지속일 없음).
+ *
+ * qty<0(조회 실패 센티널 #260)도 런을 끊지 않는다 — 조회가 한 번 실패했다고
+ * 품절 시계가 리셋되면 장기 품절이 영원히 임계에 닿지 못한다. 조회 실패가
+ * 지속되는 경우는 sourceGone이 별도로 잡아내므로(#271) 이중 방어가 된다.
+ */
+export function countLeadingOutOfStockDays(
+  snapshots: Array<{ productId: string; qty: number; polledAt: Date }>,
+): Map<string, number> {
+  const oldestInRun = new Map<string, Date>();
+  const sealed = new Set<string>();
+  for (const s of snapshots) {
+    if (sealed.has(s.productId)) continue;
+    if (s.qty <= 0) oldestInRun.set(s.productId, s.polledAt); // desc 정렬이므로 계속 덮어쓰면 최고(最古)가 남는다
+    else sealed.add(s.productId); // 재고가 있었던 시점에서 런이 끊긴다
+  }
+  const days = new Map<string, number>();
+  for (const [productId, since] of oldestInRun) {
+    const ms = Date.now() - since.getTime();
+    days.set(productId, Math.max(0, Math.floor(ms / 86_400_000)));
+  }
+  return days;
+}
+
 /** Whether a consecutive-negative run means the supplier has delisted. */
 export function isSourceGoneFromCount(consecutiveNegatives: number | undefined): boolean {
   return (consecutiveNegatives ?? 0) >= SOURCE_GONE_MIN_CONSECUTIVE;

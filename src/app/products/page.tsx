@@ -611,7 +611,15 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
               {inventory && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs" style={{ color: '#888' }}>재고</span>
-                  <InventoryBadge inv={inventory} />
+                  <InventoryBadge
+                    inv={inventory}
+                    product={{
+                      salesCount: product.salesCount,
+                      lastSaleDate: product.lastSaleDate,
+                      naverProductId: product.naverProductId,
+                      naverStatusType: product.naver_status_type,
+                    }}
+                  />
                 </div>
               )}
               <div className="flex items-center justify-between">
@@ -1895,7 +1903,12 @@ function ProductsPageInner() {
                 <InventoryBadge
                   inv={inventoryByProductId[p.id]}
                   mode={isGarden ? 'sourcing' : 'selling'}
-                  hasSalesAssets={hasSalesAssets(p)}
+                  product={{
+                    salesCount: p.salesCount,
+                    lastSaleDate: p.lastSaleDate,
+                    naverProductId: p.naverProductId,
+                    naverStatusType: p.naver_status_type,
+                  }}
                 />
               )}
             </div>

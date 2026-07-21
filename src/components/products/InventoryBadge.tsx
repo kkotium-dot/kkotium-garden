@@ -12,8 +12,16 @@
 // Korean strings live in InventoryBadge.strings.ko.json per work principle #35.
 // ============================================================================
 
-import { ShieldOff, Unplug } from 'lucide-react';
+import { ShieldOff, Unplug, PackageX, PauseCircle } from 'lucide-react';
 import strings from './InventoryBadge.strings.ko.json';
+import dispositionCopy from '@/lib/products/disposition.strings.ko.json';
+import {
+  decideDisposition,
+  hasDisposition,
+  type DispositionAction,
+  type DispositionInput,
+  type DispositionVerdict,
+} from '@/lib/products/disposition';
 import type { InventoryBadgeData } from '@/lib/hooks/useInventoryBadges';
 
 type Level = 'green' | 'yellow' | 'orange' | 'red';
@@ -29,15 +37,24 @@ const COLOR_BY_LEVEL: Record<Level, { fg: string; bg: string; border: string; do
 
 const UNTRUSTWORTHY_COLOR = { fg: '#525252', bg: '#fafafa', border: '#d4d4d4', dot: '#737373' };
 const POLL_FAILED_COLOR = { fg: '#525252', bg: '#f5f5f4', border: '#d6d3d1', dot: '#a8a29e' };
-// 공급처 단절 — 삭제 권장. 활성 재고 긴급(빨강)과 구별되는 자주빛(action-needed)
-// 톤으로, "이건 재고 문제가 아니라 상품 자체를 정리할 때"임을 색으로 구분한다.
-const SOURCE_GONE_COLOR = { fg: '#86198f', bg: '#fdf4ff', border: '#f5d0fe', dot: '#a21caf' };
 
-// 공급처 단절은 일시적 폴링 실패보다 상위 신호다. 두 배지(판매/소싱) 모두
-// 이 상태를 최우선으로 렌더한다(#55 전상품 범용).
-function isSourceGone(inv: InventoryBadgeData): boolean {
-  return inv.sourceGone === true;
-}
+// 처분 권고 팔레트(#273). 색이 곧 "얼마나 급한가"다:
+//   자주빛 — 공급처가 사라진 상품(재고 문제가 아니라 상품 자체를 정리할 때)
+//   빨강  — 지금 주문 들어오면 취소해야 하는 상태(취소율 = 스토어 등급 손상)
+//   주황  — 당장 사고는 안 나지만 순위가 서서히 깎이는 상태
+const DISPOSITION_COLOR: Record<Exclude<DispositionAction, 'NONE'>, { fg: string; bg: string; border: string; dot: string }> = {
+  RESOURCE:          { fg: '#86198f', bg: '#fdf4ff', border: '#f5d0fe', dot: '#a21caf' },
+  DELETE_SAFE:       { fg: '#86198f', bg: '#fdf4ff', border: '#f5d0fe', dot: '#a21caf' },
+  MARK_OUT_OF_STOCK: { fg: '#991b1b', bg: '#fef2f2', border: '#fecaca', dot: '#dc2626' },
+  SUSPEND:           { fg: '#9a3412', bg: '#fff7ed', border: '#fed7aa', dot: '#f97316' },
+};
+
+const DISPOSITION_ICON: Record<Exclude<DispositionAction, 'NONE'>, typeof Unplug> = {
+  RESOURCE: Unplug,
+  DELETE_SAFE: Unplug,
+  MARK_OUT_OF_STOCK: PackageX,
+  SUSPEND: PauseCircle,
+};
 
 // qty=-1 is an explicit sentinel from the Domeggook adapter meaning "could not
 // look up this product" (getItemView returned no match), not a real stock
@@ -106,6 +123,16 @@ const SOURCING_COLOR: Record<SourcingLevel, { fg: string; bg: string; border: st
   unknown: POLL_FAILED_COLOR,
 };
 
+/**
+ * 처분 권고 판정에 필요한 상품 측 입력(#273). 재고 측 입력(sourceGone·qty·
+ * status·daysOutOfStock)은 `inv`에서 자동으로 채우므로 여기서 받지 않는다 —
+ * 호출부가 필드를 빠뜨려 권고가 조용히 틀리는 일을 구조적으로 막는다.
+ */
+export type DispositionProduct = Pick<
+  DispositionInput,
+  'salesCount' | 'lastSaleDate' | 'naverProductId' | 'naverStatusType'
+>;
+
 export interface InventoryBadgeProps {
   inv: InventoryBadgeData;
   /**
@@ -115,35 +142,50 @@ export interface InventoryBadgeProps {
    */
   mode?: 'selling' | 'sourcing';
   /**
-   * 지켜야 할 판매 자산(리뷰·검색순위·판매이력)이 있는지(#272).
-   * true면 공급처 단절 시에도 "삭제"가 아니라 "대체 소싱"을 권한다 —
-   * 삭제하면 상품 URL에 쌓인 리뷰·순위가 영구 소멸하기 때문.
+   * 처분 권고(#273) 판정용 상품 정보. 주면 배지가 재고 상태 대신 "무엇을 할지"를
+   * 말한다(품절 처리 / 판매중지 / 대체 소싱 / 삭제). 없으면 기존 재고 배지 그대로.
    */
-  hasSalesAssets?: boolean;
+  product?: DispositionProduct;
 }
 
-export default function InventoryBadge({ inv, mode = 'selling', hasSalesAssets = false }: InventoryBadgeProps) {
-  // 공급처 단절은 판매/소싱 모드 무관하게 동일 신호 — 최우선 분기(#55).
-  if (isSourceGone(inv)) return <SourceGoneBadge inv={inv} mode={mode} hasSalesAssets={hasSalesAssets} />;
+export default function InventoryBadge({ inv, mode = 'selling', product }: InventoryBadgeProps) {
+  // 처분 권고는 재고 신호보다 상위다 — 운영자가 알아야 할 건 "재고 몇 개"가
+  // 아니라 "그래서 뭘 해야 하나"이기 때문. 배지 개수는 늘리지 않고 같은 자리에서
+  // 문구만 승격한다(#233 과밀 방지).
+  const verdict = decideDisposition({
+    ...product,
+    sourceGone: inv.sourceGone,
+    qty: inv.qty,
+    supplierStatus: inv.status,
+    daysOutOfStock: inv.daysOutOfStock,
+  });
+  if (hasDisposition(verdict)) return <DispositionBadge inv={inv} mode={mode} verdict={verdict} />;
   if (mode === 'sourcing') return <SourcingBadge inv={inv} />;
   return <SellingBadge inv={inv} />;
 }
 
-// 공급처 단절 · 삭제 권장 배지 (전상품 범용). 재고 신호가 아니라 "이 상품은
-// 다시 못 들여오니 정리하세요"라는 운영 신호. 목록 어디서든 동일하게 보인다.
-function SourceGoneBadge({ inv, mode, hasSalesAssets }: { inv: InventoryBadgeData; mode: 'selling' | 'sourcing'; hasSalesAssets: boolean }) {
-  const p = SOURCE_GONE_COLOR;
+// 처분 권고 배지(#273 · 전상품 범용 #55). 재고 숫자가 아니라 "그래서 뭘 해야
+// 하나"를 말한다. 툴팁에 근거(왜 이 권고인가)와 꼬띠 보이스를 함께 실어, 배지
+// 하나로 판단→근거→행동이 끊기지 않게 한다.
+function DispositionBadge({ inv, mode, verdict }: { inv: InventoryBadgeData; mode: 'selling' | 'sourcing'; verdict: DispositionVerdict }) {
+  const action = verdict.action as Exclude<DispositionAction, 'NONE'>;
+  const p = DISPOSITION_COLOR[action];
+  const Icon = DISPOSITION_ICON[action];
+  const copy = dispositionCopy[action];
   const relTime = formatRelativeTime(inv.polledAt);
-  // 자산 보호(#272): 판매 이력이 있으면 삭제하면 리뷰·순위가 함께 사라지므로
-  // "대체 소싱"을 권한다. 이력이 없는 미판매 상품만 삭제를 권한다.
-  const tooltip = hasSalesAssets ? strings.sourceGone.tooltipKeep : strings.sourceGone.tooltip;
-  const voice = hasSalesAssets ? strings.sourceGone.voiceKeep : strings.sourceGone.voice;
-  const action = hasSalesAssets ? strings.sourceGone.actionKeep : strings.sourceGone.action;
-  const title = [tooltip, '', voice, '', `${strings.tooltip.polledAtPrefix}: ${relTime}`].join('\n');
-  // 소싱(정원) 뷰는 라벨만, 판매(꽃밭) 뷰는 라벨+권장 액션까지.
-  const text = mode === 'sourcing'
-    ? strings.sourceGone.sourcingLabel
-    : `${strings.sourceGone.label} · ${action}`;
+
+  // 품절 권고는 "며칠째"가 붙어야 운영자가 체감한다 (3일째 품절 vs 21일째 품절).
+  const days = verdict.daysOutOfStock;
+  const label = days !== null && (action === 'MARK_OUT_OF_STOCK' || action === 'SUSPEND')
+    ? `${copy.label} ${days}${dispositionCopy.daysSuffix}`
+    : copy.label;
+
+  const title = [copy.tooltip, '', copy.voice, '', `${strings.tooltip.polledAtPrefix}: ${relTime}`].join('\n');
+
+  // 소싱(정원) 뷰는 라벨만 — 아직 안 올린 상품에 스토어 조치를 권할 수 없다.
+  // 판매(꽃밭) 뷰는 라벨 + 권장 액션까지.
+  const text = mode === 'sourcing' ? dispositionCopy.sourcingLabel : `${label} · ${copy.action}`;
+
   return (
     <span
       title={title}
@@ -154,7 +196,7 @@ function SourceGoneBadge({ inv, mode, hasSalesAssets }: { inv: InventoryBadgeDat
         borderRadius: 6, padding: '2px 6px', whiteSpace: 'nowrap', cursor: 'help',
       }}
     >
-      <Unplug size={9} style={{ color: p.fg, flexShrink: 0 }} />
+      <Icon size={9} style={{ color: p.fg, flexShrink: 0 }} />
       <span>{text}</span>
     </span>
   );

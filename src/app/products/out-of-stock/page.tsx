@@ -7,6 +7,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { AlertTriangle, RefreshCw, Search, TrendingUp, Package, ArrowRight, CheckCircle, XCircle, Zap } from 'lucide-react';
 import { calcHoneyScore } from '@/lib/honey-score';
 import type { HoneyScoreResult } from '@/lib/honey-score';
+import { decideDisposition, LONG_OUT_OF_STOCK_DAYS } from '@/lib/products/disposition';
+import dispositionCopy from '@/lib/products/disposition.strings.ko.json';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface OutOfStockProduct {
@@ -25,6 +27,12 @@ interface OutOfStockProduct {
   supplierName: string | null;
   createdAt: string;
   updatedAt: string;
+  // 처분 권고(#273) 판정 입력. 판매 이력이 있으면 "정리"가 아니라 "대체 소싱"이
+  // 정답이므로(#272) 이 네 필드 없이는 올바른 권고를 낼 수 없다.
+  naverProductId?: string | null;
+  naver_status_type?: string | null;
+  salesCount?: number | null;
+  lastSaleDate?: string | null;
   // Computed
   honeyScore?: HoneyScoreResult;
   daysOutOfStock?: number;
@@ -46,13 +54,71 @@ function formatPrice(n: number): string {
   return n.toLocaleString('ko-KR') + '원';
 }
 
-// ── Kkotti out-of-stock advice ─────────────────────────────────────────────────
-function getOosAdvice(days: number, honey: HoneyScoreResult) {
-  if (days <= 3 && honey.total >= 70) return { label: '긴급 재입고', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', icon: 'urgent', msg: `꿀통 ${honey.total}점 상품! ${days}일째 품절 중 — 빨리 재입고하면 손해가 없어요!` };
-  if (days <= 7 && honey.total >= 50) return { label: '재입고 권장', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', icon: 'warn', msg: `아직 늦지 않았어요! ${days}일째 품절 — 공급사에 연락해봐요.` };
-  if (days > 14 && honey.total < 40) return { label: '대체상품 찾기', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', icon: 'find', msg: `${days}일이나 품절! 꿀통지수도 낮아요. 더 좋은 상품으로 교체해봐요.` };
-  if (days > 30) return { label: '정리 권장', color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200', icon: 'clean', msg: `${days}일 품절 장기화. 비활성화 후 유사 상품으로 교체를 고려하세요.` };
-  return { label: '모니터링 중', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200', icon: 'wait', msg: `${days}일째 품절 중이에요. 공급사 재고를 확인해보세요.` };
+// ── 처분 권고 (#273) ──────────────────────────────────────────────────────────
+// 이 화면은 자체 규칙을 두지 않는다. "이 상품을 어떻게 할까"의 답은
+// disposition.ts 단일 권위가 낸다(#62). 예전 이 자리에 있던 로직은 판매 이력을
+// 모른 채 "30일 품절 = 정리 권장"을 띄워, 리뷰·검색순위가 쌓인 상품까지 지우도록
+// 유도할 수 있었다(#272 위반). 그 결론을 엔진으로 옮기고, 이 함수는 엔진의 판정을
+// 화면 표현(색·문구·기본 선택 버튼)으로 옮기는 역할만 한다.
+//
+// 꿀통지수는 처분 여부가 아니라 *재입고 우선순위*에만 쓴다 — 점수가 높다고 자산이
+// 지켜지는 것도, 낮다고 지워도 되는 것도 아니기 때문.
+function getOosAdvice(product: OutOfStockProduct, days: number, honey: HoneyScoreResult) {
+  const verdict = decideDisposition({
+    // 이 페이지에 오는 상품은 정의상 품절 상태다.
+    qty: 0,
+    daysOutOfStock: days,
+    naverProductId: product.naverProductId,
+    naverStatusType: product.naver_status_type,
+    salesCount: product.salesCount,
+    lastSaleDate: product.lastSaleDate,
+    // 공급처 단절 판정은 재고 스냅샷이 필요하다(#271). 이 화면은 스냅샷을 읽지
+    // 않으므로 미판정으로 두고, 단절 신호는 목록 배지가 담당한다.
+    sourceGone: false,
+  });
+
+  if (verdict.action === 'RESOURCE') {
+    return {
+      label: dispositionCopy.RESOURCE.action, color: 'text-fuchsia-700', bg: 'bg-fuchsia-50',
+      border: 'border-fuchsia-200', icon: 'find', recommended: 'replace' as ActionType,
+      msg: dispositionCopy.RESOURCE.tooltip,
+    };
+  }
+  if (verdict.action === 'DELETE_SAFE') {
+    return {
+      label: dispositionCopy.DELETE_SAFE.action, color: 'text-fuchsia-700', bg: 'bg-fuchsia-50',
+      border: 'border-fuchsia-200', icon: 'clean', recommended: 'deactivate' as ActionType,
+      msg: dispositionCopy.DELETE_SAFE.tooltip,
+    };
+  }
+  if (verdict.action === 'SUSPEND') {
+    // 장기 품절 — 자산 유무로 "그 다음에 뭘 할지"가 갈린다.
+    const tail = verdict.hasAssets
+      ? ' 이 상품은 팔린 적이 있어서 리뷰와 순위가 쌓여 있어요. 삭제하지 말고 판매중지 후 대체 공급처를 찾아주세요.'
+      : ' 판매 이력이 없어서 지킬 리뷰·순위는 없어요. 정리하거나 더 나은 상품으로 교체해도 괜찮아요.';
+    return {
+      label: dispositionCopy.SUSPEND.action, color: 'text-orange-700', bg: 'bg-orange-50',
+      border: 'border-orange-200', icon: 'clean', recommended: 'deactivate' as ActionType,
+      msg: dispositionCopy.SUSPEND.tooltip + tail,
+    };
+  }
+  if (verdict.action === 'MARK_OUT_OF_STOCK') {
+    return {
+      label: dispositionCopy.MARK_OUT_OF_STOCK.action, color: 'text-red-600', bg: 'bg-red-50',
+      border: 'border-red-200', icon: 'urgent', recommended: 'restock' as ActionType,
+      msg: dispositionCopy.MARK_OUT_OF_STOCK.tooltip,
+    };
+  }
+
+  // 권고 없음(이미 품절 처리된 단기 품절) — 남은 질문은 "얼마나 급히 재입고하나"뿐.
+  // 여기서만 꿀통지수를 쓴다.
+  if (days <= 3 && honey.total >= 70) {
+    return { label: '긴급 재입고', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', icon: 'urgent', recommended: 'restock' as ActionType, msg: `꿀통 ${honey.total}점 상품! ${days}일째 품절 중 — 빨리 재입고하면 손해가 없어요!` };
+  }
+  if (honey.total >= 50) {
+    return { label: '재입고 권장', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', icon: 'warn', recommended: 'restock' as ActionType, msg: `아직 늦지 않았어요! ${days}일째 품절 — 공급사에 연락해봐요.` };
+  }
+  return { label: '모니터링 중', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200', icon: 'wait', recommended: 'none' as ActionType, msg: `${days}일째 품절 중이에요. ${LONG_OUT_OF_STOCK_DAYS}일이 넘으면 판매중지를 권해드릴게요.` };
 }
 
 const ACTION_LABELS: Record<ActionType, string> = {
@@ -237,7 +303,7 @@ export default function OutOfStockPage() {
             {filtered.map(product => {
               const honey = product.honeyScore!;
               const days  = product.daysOutOfStock ?? 0;
-              const advice = getOosAdvice(days, honey);
+              const advice = getOosAdvice(product, days, honey);
               const currentAction = getAction(product.id);
 
               return (
@@ -321,6 +387,9 @@ export default function OutOfStockPage() {
                           }`}
                         >
                           {ACTION_LABELS[act]}
+                          {advice.recommended === act && currentAction !== act && (
+                            <span className="ml-1 text-[10px] font-bold text-rose-500">추천</span>
+                          )}
                         </button>
                       ))}
                       {currentAction !== 'none' && (

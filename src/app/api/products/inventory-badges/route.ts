@@ -9,7 +9,11 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { countLeadingNegatives, isSourceGoneFromCount } from '@/lib/products/source-gone';
+import {
+  countLeadingNegatives,
+  countLeadingOutOfStockDays,
+  isSourceGoneFromCount,
+} from '@/lib/products/source-gone';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +32,9 @@ export interface InventoryBadgeData {
   // 상품을 내린 것으로 판정한다(#270 실측 근거: 파서 정상화 후 살아있는 상품은
   // 다음 폴에서 실재고로 복구되지만, 하차된 상품은 -1이 무한 지속). 전상품 범용(#55).
   sourceGone: boolean;
+  // 연속 품절 지속일(#273). 최신 스냅샷이 품절이 아니면 null. 처분 권고에서
+  // "일시 품절(품절 처리)" vs "장기 품절(판매중지)"을 가르는 입력이다.
+  daysOutOfStock: number | null;
 }
 
 export async function GET() {
@@ -67,6 +74,8 @@ export async function GET() {
   // 공급처 단절 판정은 source-gone.ts가 단일 권위(#271/#62) — 임계값·계산을
   // 여기서 재구현하지 않는다. snapshots는 이미 polledAt desc 정렬.
   const consecutiveNeg1 = countLeadingNegatives(snapshots);
+  // 품절 지속일도 같은 스냅샷 배열에서 in-memory 집계 — 추가 쿼리 0.
+  const oosDays = countLeadingOutOfStockDays(snapshots);
 
   // 3. Open alerts (resolvedAt IS NULL) per product
   const openAlerts = await prisma.lowStockAlert.findMany({
@@ -107,6 +116,7 @@ export async function GET() {
       alertLevel: level === 'yellow' || level === 'orange' || level === 'red' ? level : null,
       alertThreshold: alert?.threshold ?? null,
       sourceGone: isSourceGoneFromCount(consecutiveNeg1.get(product.id)),
+      daysOutOfStock: oosDays.get(product.id) ?? null,
     };
   }
 
