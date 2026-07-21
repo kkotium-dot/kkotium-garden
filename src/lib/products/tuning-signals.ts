@@ -19,6 +19,7 @@ import { getCachedTrend, buildD1Key } from '@/lib/naver/category-trend-cache';
 import { isOutOfStockOrSuspended } from './tuning-score';
 import { computeZombieVerdict, type ZombieVerdictResult } from './zombie-verdict';
 import { readSubstituteInfo, hasSubstitutePlan } from '@/lib/product-link';
+import { loadSourceGoneFlags } from './source-gone';
 
 export interface TuningSourceProduct {
   id: string;
@@ -108,6 +109,10 @@ export async function loadTuningScores(
     .map((p) => p.id);
   const substituteMap = oosIds.length > 0 ? await readSubstituteInfo(oosIds) : new Map();
 
+  // Batch 4 — 공급처 단절(#271). 공급사가 상품을 내려 재매입이 불가능하면
+  // 마진·판매실적과 무관하게 좀비로 확정된다. 판정 권위는 source-gone.ts(#62).
+  const sourceGoneMap = await loadSourceGoneFlags(products.map((p) => p.id));
+
   for (const p of products) {
     const netMarginRate = p.salePrice > 0 && p.supplierPrice > 0
       ? calcHoneyScore({
@@ -134,6 +139,7 @@ export async function loadTuningScores(
       daysSinceUpdated: daysSince(p.updatedAt),
       imageCount,
       oosSubstituteConfigured: oos ? hasSubstitutePlan(substituteMap.get(p.id)) : null,
+      sourceGone: sourceGoneMap.get(p.id) ?? false,
     });
     out.set(p.id, result);
   }

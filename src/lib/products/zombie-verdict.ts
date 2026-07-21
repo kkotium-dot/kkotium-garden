@@ -34,6 +34,10 @@ export interface ZombieVerdictInput extends TuningScoreInput {
   /** 품절 대체 신호: 대체상품/재소싱 정보가 설정돼 있는지. 품절/판매중지가
    *  아닌 상품엔 해당 없음(null) — 감점하지 않는다. */
   oosSubstituteConfigured?: boolean | null;
+  /** 공급처 단절(#271): 공급사가 도매꾹에서 상품을 내려 다시 매입할 수 없는
+   *  상태. 마진·판매실적과 무관하게 되살릴 수 없으므로 최우선 좀비 신호다 —
+   *  "잘 자라는 중" 같은 건강 판정이 붙는 모순을 여기서 차단한다(#62). */
+  sourceGone?: boolean | null;
 }
 
 export interface ZombieVerdictResult {
@@ -54,6 +58,10 @@ export interface ZombieVerdictResult {
 const THIN_IMAGES_WEIGHT = 10;
 const OOS_NO_SUBSTITUTE_WEIGHT = 14;
 const MAX_REASONS = 3;
+// 공급처 단절(#271)은 가중치가 아니라 확정 신호다. 마진이 좋아도 다시 매입할 수
+// 없으면 되살릴 방법이 없으므로 점수 누적으로 임계를 넘기길 기대하지 않고
+// 좀비로 확정한다(건강 배지 오노출 차단·#62).
+const SOURCE_GONE_REASON = '공급처 단절 — 재매입 불가';
 
 /**
  * 좀비 통합 판정. tuning-score.ts를 메인 엔진으로 재사용하고, revival-score.ts의
@@ -76,9 +84,18 @@ export function computeZombieVerdict(input: ZombieVerdictInput): ZombieVerdictRe
   const extraTotal = extra.reduce((sum, r) => sum + r.weight, 0);
   const score = Math.max(0, Math.min(100, base.score + extraTotal));
 
-  const tier: TuningTier = score >= ZOMBIE_THRESHOLD ? 'demote' : score >= DEFEND_THRESHOLD ? 'defend' : 'grow';
-  const isZombie = score >= ZOMBIE_THRESHOLD;
-  const reasons = merged.slice(0, MAX_REASONS).map((r) => r.text);
+  // 공급처 단절(#271) — 확정 좀비. 점수와 무관하게 tier/isZombie를 고정하고
+  // 사유 맨 앞에 세운다. 마진이 좋아도 재매입이 불가능하면 되살릴 수 없다.
+  const sourceGone = input.sourceGone === true;
+
+  const tier: TuningTier = sourceGone
+    ? 'demote'
+    : score >= ZOMBIE_THRESHOLD ? 'demote' : score >= DEFEND_THRESHOLD ? 'defend' : 'grow';
+  const isZombie = sourceGone || score >= ZOMBIE_THRESHOLD;
+  const reasons = (sourceGone
+    ? [SOURCE_GONE_REASON, ...merged.map((r) => r.text)]
+    : merged.map((r) => r.text)
+  ).slice(0, MAX_REASONS);
 
   return {
     score,
