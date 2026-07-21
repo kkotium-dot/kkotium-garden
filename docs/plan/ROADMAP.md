@@ -1,6 +1,64 @@
 # KKOTIUM GARDEN — ROADMAP
 > 2026-06-17 (세션8) **Image+SEO/ROI Engine Stage 1 빌드 + 6축 main 머지·prod LIVE** (Code turn, 비가역0·네이버 무접촉). 6축+엔진 Stage0 머지(349b9db) → Stage 1 백엔드(3a~3g)+UI(3i) 빌드(8964ce7). DNA 로드+50014980 시드·9슬롯 결정테이블·전략조립기(6축 재사용)·개입 2종·썸네일 게이트·3탭 UI. tsc0/build0/테스트11. **다음=[Desktop] ENG-1 실측 → Stage 2(학습루프: 평점→승격·CTR/CVR) / [결정] 명화 카테고리 정합·캡처방식·발행.**
 
+
+## 다음 새 채팅 시작 메시지 — 2026-07-18 Cowork 인계 ⭐ ACTIVE
+
+```
+꽃틔움 가든 — Cowork 이어받기
+prod HEAD: cad3a46 (== origin/main == prod, 코드 미커밋 0, Vercel 200)
+로컬: /Users/jyekkot/Desktop/kkotium-garden
+
+[가장 먼저 읽을 것]
+- docs/plan/PARALLEL_WORK_TRACKER.md (rev66이 최신 — 전체 상태)
+- docs/plan/PRINCIPLES_LEARNED.md (#271 공급처 단절 · #272 자산 보호 신규)
+
+[직전 세션(2026-07-18 Cowork) 완료 — 전부 배포·검증완]
+1. H-3 컬럼 재배치 (5809921) — COL_GARDEN/COL_CARE 분리, 정원=배송제거·준비도유지,
+   꽃밭=준비도제거·점수→좀비지수(ZombieIndexCell)
+2. 공급처 단절 배지 (2cbd592) — qty=-1 연속3회+ = sourceGone, 자주빛 배지
+3. 삭제 확인 게이트 (2cbd592) — deleteProduct 단일함수(3경로 공통)
+4. 크로스 신호 정합 (5cfca5d) — sourceGone을 좀비 판정에 확정 신호로 반영
+5. 명화 종결 — 네이버 이미 SUSPENSION 확인(PUT 불필요) → 앱 삭제 완료
+6. 자산 보호 정책 (09fab39) — 판매이력 있으면 삭제 대신 대체소싱 권장
+
+[다음 작업 — 우선순위]
+1순위: 행 배지 과밀 정리 (#233) — 의존성 없음, 바로 착수 가능
+  현상: 상품 행 이름칸에 배지 최대 6개(공급처단절·연동·판매중지·발행N/N·
+        상품명등급·좀비발견) → 행 높이 178px, 좁은 화면에서 뭉침
+  접근: 배지 우선순위 정해 상시노출 3개 + 나머지는 hover/더보기로.
+        플라티코도 5개라 특정 상품 문제 아님 — 구조적 누적
+  주의: 배지는 5개 파일에 흩어져 있으니 공통 컴포넌트화 검토(#62)
+
+2순위: R-1/R-2/R-3 육안 확인 결과 반영 (운영자 확인 후)
+  ※ 운영자에게 요청할 때는 반드시 "어느 화면 → 어떤 조작 → 무엇을 확인"까지
+    명시할 것(2026-07-18 운영자 지시). rev66에 절차 명문화됨
+
+3순위: 작업 G 나머지 18개 파일 꼬띠 페르소나 (우선순위 운영자 미지정)
+
+[꼭 지킬 원칙]
+- #29a: 한글 다량 편집은 Python 스크립트로 (edit_file 오염 실증됨)
+- #46: 스토어 PUT/POST는 운영자 명시 승인 후에만
+- #265: 수치 PASS ≠ 화면 정상. 시각 판단은 운영자 육안
+- #266: 정원/꽃밭 나눔 축은 naverProductId (status 아님)
+- #271: 공급처 단절 = qty=-1 지속성으로 판정 (source-gone.ts 단일 권위)
+- #272: 삭제는 "지킬 자산 있나"로 판단. 판매이력 O = 대체소싱, X = 삭제 안전
+- #32: 클라이언트에서 쓰는 로직은 prisma 의존 모듈에서 분리 (tsc 통과해도 build 실패)
+- 커밋은 .commit-msg.tmp에 쓰고 git commit -F (멀티라인 한글 셸 깨짐 방지)
+
+[보류 — 건드리지 말 것]
+- z3c stash (운영자 진행 전까지)
+- 클로드디자인 v7 PDF (운영자 전달 전까지)
+- api-client SUSPENSION 지원 (앱에서 판매중지 push 필요해지면)
+
+[환경 메모]
+- Cowork는 스크린샷 전달 정상 작동(Desktop 세션의 장애 없음) — 육안 검증 가능
+- dev 서버는 포트 3100 사용(3000 충돌 회피), 작업 후 반드시 kill
+- 백그라운드 프로세스는 bash 호출 간 유지 안 됨 → Desktop Commander 사용
+```
+
+---
+
 ## 단계(Phase) 정의 — 재작업 방지 명문화 (2026-06-17)
 > 이미지 작업은 **Phase 2**이며, 슬롯 조립(상세페이지 디자인 기능) 미구현은 **정상(Phase 3 예정)**입니다.
 
@@ -91,7 +149,7 @@
 > **소싱 워크플로우 리서치**: `docs/research/SPROUT_TO_POWER_SELLER_WORKFLOW_2026_05.md`
 
 ---
-## 다음 새 채팅 시작 메시지 — 2026-06-12 P0 실사용 검증 (Desktop) ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-06-12 P0 실사용 검증 (Desktop) (SUPERSEDED 2026-07-18)
 
 권위본 정독: docs/handoff/NEW_CHAT_STARTER_2026-06-12_image_studio_live.md -> PARALLEL_WORK_TRACKER(rev13) -> TASK_BRIDGE §3(82).
 전제: feat/image-studio main fa9ad01 production LIVE·READY. DB fidelity 완성(scents 4향). 순서 P0병합완료→P1실사용테스트→P2이미지→P3타상품.
