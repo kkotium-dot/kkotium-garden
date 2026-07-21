@@ -83,3 +83,6 @@ tsconfig.tsbuildinfo
 
 # Claude Code preview dev config (local-only helper)
 .claude/launch.json
+
+# dev server logs (Cowork 세션 산출물 — 매 세션 stray 파일로 남던 것 근본 차단)
+.devserver*.log
