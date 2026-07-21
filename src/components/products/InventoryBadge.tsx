@@ -22,6 +22,7 @@ import {
   type DispositionInput,
   type DispositionVerdict,
 } from '@/lib/products/disposition';
+import { BADGE_PRIORITY } from '@/components/common/badge-priority';
 import type { InventoryBadgeData } from '@/lib/hooks/useInventoryBadges';
 
 type Level = 'green' | 'yellow' | 'orange' | 'red';
@@ -146,6 +147,22 @@ export interface InventoryBadgeProps {
    * 말한다(품절 처리 / 판매중지 / 대체 소싱 / 삭제). 없으면 기존 재고 배지 그대로.
    */
   product?: DispositionProduct;
+}
+
+/**
+ * 이 배지가 배지 레일에서 가져야 할 우선순위(#274). 처분 권고가 붙은 재고 배지는
+ * 단순 재고 표시와 급수가 다르다 — 전자는 사고 직결, 후자는 사실 정보.
+ * 판정은 disposition.ts 단일 권위를 그대로 쓴다(#62·#273).
+ */
+export function inventoryBadgeRank(inv: InventoryBadgeData, product?: DispositionProduct): number {
+  const v = decideDisposition({
+    ...product,
+    sourceGone: inv.sourceGone,
+    qty: inv.qty,
+    supplierStatus: inv.status,
+    daysOutOfStock: inv.daysOutOfStock,
+  });
+  return hasDisposition(v) ? BADGE_PRIORITY.disposition : BADGE_PRIORITY.stock;
 }
 
 export default function InventoryBadge({ inv, mode = 'selling', product }: InventoryBadgeProps) {

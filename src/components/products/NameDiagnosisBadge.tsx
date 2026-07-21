@@ -28,7 +28,16 @@ const GRADE_TONE: Record<NameBadgeData['grade'], { bg: string; border: string; c
   C: { bg: '#FEF2F2', border: '#FECACA', color: '#B91C1C', label: '개선 필요' },
 };
 
-export default function NameDiagnosisBadge({ data }: { data: NameBadgeData }) {
+export interface NameDiagnosisBadgeProps {
+  data: NameBadgeData;
+  /**
+   * 밀집 목록(배지 레일 #274)용 압축 모드 — 등급만 남기고 등급 라벨·개선 건수는
+   * 뺀다. 전문은 hover 툴팁에 그대로 있으므로 정보 손실 0(#276).
+   */
+  compact?: boolean;
+}
+
+export default function NameDiagnosisBadge({ data, compact = false }: NameDiagnosisBadgeProps) {
   const tone = GRADE_TONE[data.grade];
   // Hover title carries the full seller-language coaching + honest limits (#231).
   const title = [
@@ -50,8 +59,8 @@ export default function NameDiagnosisBadge({ data }: { data: NameBadgeData }) {
         ? <ShieldCheck size={12} strokeWidth={2.4} />
         : <AlertTriangle size={12} strokeWidth={2.4} />}
       <span>상품명 {data.grade}</span>
-      <span style={{ opacity: 0.7, fontWeight: 600 }}>· {tone.label}</span>
-      {data.weaknessCount > 0 && (
+      {!compact && <span style={{ opacity: 0.7, fontWeight: 600 }}>· {tone.label}</span>}
+      {!compact && data.weaknessCount > 0 && (
         <span style={{ opacity: 0.85, fontWeight: 600 }}>
           · {data.topWeakness ? `${data.topWeakness} 외 ` : ''}개선 {data.weaknessCount}건
         </span>

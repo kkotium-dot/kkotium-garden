@@ -33,7 +33,19 @@ export interface TuningBadgeData {
 const ZOMBIE_TONE  = { bg: '#FEF2F2', border: '#FCA5A5', color: '#B91C1C' };
 const HEALTHY_TONE = { bg: '#F8FAF9', border: '#E3E8E5', color: '#6B7280' };
 
-export default function TuningBadge({ data }: { data: TuningBadgeData }) {
+export interface TuningBadgeProps {
+  data: TuningBadgeData;
+  /**
+   * 밀집 목록(배지 레일 #274)용 압축 모드. 인라인 사유를 빼고 라벨만 남긴다.
+   * 사유는 이미 hover 툴팁에 전문이 있으므로 **정보 손실 0**이다.
+   * 근거: 사유까지 인라인으로 붙으면 배지 하나가 199px를 먹어 다른 신호를 전부
+   * 밀어낸다(브라우저 실측). 밀집 목록의 배지는 "무엇"만 말하고 "왜"는 hover로
+   * 내리는 것이 원칙(#276).
+   */
+  compact?: boolean;
+}
+
+export default function TuningBadge({ data, compact = false }: TuningBadgeProps) {
   const tone = data.isZombie ? ZOMBIE_TONE : HEALTHY_TONE;
 
   const label = data.isZombie
@@ -68,7 +80,7 @@ export default function TuningBadge({ data }: { data: TuningBadgeData }) {
           ? <Sprout size={12} strokeWidth={2.2} />
           : <Eye size={12} strokeWidth={2.2} />}
       <span>{label}</span>
-      {data.isZombie && data.zombieReason && (
+      {!compact && data.isZombie && data.zombieReason && (
         <span style={{ opacity: 0.85, fontWeight: 600 }}>&middot; {data.zombieReason}</span>
       )}
     </span>

@@ -23,7 +23,9 @@ import { hasSalesAssets } from '@/lib/products/sales-assets';
 import NameDiagnosisBadge, { type NameBadgeData } from '@/components/products/NameDiagnosisBadge';
 import TuningBadge, { type TuningBadgeData } from '@/components/products/TuningBadge';
 import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
-import InventoryBadge from '@/components/products/InventoryBadge';
+import InventoryBadge, { inventoryBadgeRank } from '@/components/products/InventoryBadge';
+import BadgeRail, { type BadgeRailItem } from '@/components/common/BadgeRail';
+import { BADGE_PRIORITY } from '@/components/common/badge-priority';
 import { StageBadge } from '@/components/products/StageBadge';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
 import { useProductsList } from '@/lib/hooks/useDashboardData';
@@ -237,31 +239,32 @@ function chip(text: string, fg: string, bg: string, bd: string, key: string) {
     }}>{text}</span>
   );
 }
-function HubBadges({ p, rd }: { p: ScoredProduct; rd?: { ready: boolean; passed: number; total: number } }) {
+// 허브 상태축 배지(#245/#244/#240)를 *개별 항목*으로 돌려준다. 예전에는 3개를
+// 한 묶음 div로 렌더했는데, 배지 레일이 우선순위로 줄을 세우려면 묶음을 풀어야
+// 한다 — "연동"(메타)과 "판매중지"(상태)는 급수가 다르기 때문(#274).
+function hubBadgeItems(p: ScoredProduct, rd?: { ready: boolean; passed: number; total: number }): BadgeRailItem[] {
   const o = ORIGIN_BADGE[p._origin];
   const registered = !!p.naverProductId;
   const st = p.naver_status_type ?? null;
   const live = st === 'SALE' || st === 'ON_SALE';
-  // Registration status: 미등록 (gray) / 판매중 (green) / 판매중지·품절 등 (coral).
   const regChip = !registered
     ? { t: '미등록', fg: '#6B7280', bg: '#F9FAFB', bd: '#E5E7EB' }
     : live
       ? { t: NAVER_STATUS_KO[st!] ?? '판매중', fg: '#15803d', bg: '#F0FDF4', bd: '#bbf7d0' }
       : { t: st ? (NAVER_STATUS_KO[st] ?? st) : '등록됨', fg: '#b91c1c', bg: '#FEF2F2', bd: '#fecaca' };
-  // 발행준비 X/8 — green when the gate passes (ready), amber while items remain.
   const readyChip = rd
     ? rd.ready
       ? { t: `발행 ${rd.passed}/${rd.total}`, fg: '#15803d', bg: '#F0FDF4', bd: '#bbf7d0' }
       : { t: `발행 ${rd.passed}/${rd.total}`, fg: '#b45309', bg: '#FFFBEB', bd: '#fde68a' }
     : null;
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4, marginTop: 3 }}>
-      {chip(o.t, o.fg, o.bg, o.bd, 'origin')}
-      {chip(regChip.t, regChip.fg, regChip.bg, regChip.bd, 'reg')}
-      {readyChip && chip(readyChip.t, readyChip.fg, readyChip.bg, readyChip.bd, 'ready')}
-      {/* #264 — "부활 {grade}" 병렬 배지는 제거. 좀비 판정은 TuningBadge 하나로만 노출. */}
-    </div>
-  );
+  const items: BadgeRailItem[] = [
+    { key: 'origin', priority: BADGE_PRIORITY.origin, node: chip(o.t, o.fg, o.bg, o.bd, 'origin') },
+    { key: 'reg', priority: BADGE_PRIORITY.registration, node: chip(regChip.t, regChip.fg, regChip.bg, regChip.bd, 'reg') },
+  ];
+  if (readyChip) {
+    items.push({ key: 'ready', priority: BADGE_PRIORITY.readiness, node: chip(readyChip.t, readyChip.fg, readyChip.bg, readyChip.bd, 'ready') });
+  }
+  return items;
 }
 
 function ShippingBadge({ product }: { product: Product }) {
@@ -1865,9 +1868,28 @@ function ProductsPageInner() {
   //   keep shipping, replace name-score column with zombie index. Cells:
   //   checkbox | name/sku | status | supplier | shipping | netMargin | salePrice |
   //   zombieIndex | actions  (9 tracks)
-  const COL_GARDEN = '36px 1fr 90px 110px 62px 90px 72px 68px 70px';
-  const COL_CARE   = '36px 1fr 90px 110px 130px 62px 90px 72px 70px';
+  // ── 상품명 칸 0px 붕괴 수정 (#275) ─────────────────────────────────────
+  // 기존 `1fr`은 min이 auto라, 고정 트랙 합(꽃밭 660px) + gap(64px) = 724px가
+  // 컨테이너 가용폭(약 710px)을 넘는 순간 **0px로 붕괴**했다. 그 결과 목록에서
+  // 가장 중요한 상품명과 SKU가 모든 데스크톱 폭에서 보이지 않았다(브라우저 실측:
+  // nameCell width=0). 배지들만 블록 요소라 밖으로 흘러넘쳐 보였을 뿐이다.
+  //
+  // 해법: 이름 칸에 **하한**을 주고(minmax), 그래도 안 들어가면 침묵 붕괴 대신
+  // **가로 스크롤**로 넘긴다. 데이터 테이블에서 열이 조용히 사라지는 것보다
+  // 스크롤이 언제나 낫다 — 없어진 정보는 운영자가 없어진 줄도 모른다.
+  const NAME_COL_MIN = 260;
+  // minmax 안에 공백을 넣지 않는다 — 아래 TABLE_MIN_WIDTH가 공백으로 트랙을
+  // 나누므로 `minmax(220px, 1fr)`처럼 쓰면 한 트랙이 둘로 쪼개진다.
+  const COL_GARDEN = `36px minmax(${NAME_COL_MIN}px,1fr) 90px 110px 62px 90px 72px 68px 70px`;
+  const COL_CARE   = `36px minmax(${NAME_COL_MIN}px,1fr) 90px 110px 130px 62px 90px 72px 70px`;
   const COL = isGarden ? COL_GARDEN : COL_CARE;
+  // 고정 트랙 합 + 이름칸 하한 + gap + 좌우 패딩. COL 문자열에서 직접 계산하므로
+  // 컬럼을 바꿔도 자동으로 따라온다(#62 — 상수 두 벌이 어긋나는 일 방지).
+  const TABLE_MIN_WIDTH = (() => {
+    const tracks = COL.split(' ');
+    const fixed = tracks.reduce((a, t) => a + (/^\d+(?:\.\d+)?px$/.test(t) ? parseFloat(t) : 0), 0);
+    return Math.ceil(fixed + NAME_COL_MIN + 8 * (tracks.length - 1) + 32);
+  })();
 
   const renderRow = (p: ScoredProduct, idx: number, isLast: boolean) => {
     const dangerMargin = p._hs.netMarginRate < 5;
@@ -1877,6 +1899,7 @@ function ProductsPageInner() {
           className="grid items-center gap-2 px-4 py-3 cursor-pointer group transition-colors"
           style={{
             gridTemplateColumns: COL,
+            minWidth: TABLE_MIN_WIDTH,
             background: selected.has(p.id) ? 'rgba(230,35,16,0.04)' : dangerMargin ? 'rgba(239,68,68,0.03)' : 'transparent',
             borderLeft: dangerMargin ? '3px solid #ef4444' : '3px solid transparent',
           }}
@@ -1890,40 +1913,65 @@ function ProductsPageInner() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-900 truncate leading-snug">{p.name}</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-              <p className="text-xs font-mono truncate" style={{ color: '#B0A0A8', minWidth: 0 }}>{p.sku}</p>
-              {/* 재고 배지는 양쪽 다 노출하되 질문이 다르므로 모드를 나눈다(#269).
-                  정원 창고 → 'sourcing': 공급사(도매꾹) 재고로 "40분 들여 올릴
-                    가치가 있나"를 신호등으로 판단. 숫자는 툴팁으로.
-                  꽃밭 돌보기 → 'selling': 판매 가능 재고 수량 그대로.
-                  ※ H-3에서 "정원 창고는 폴링 대상 아님"으로 껐던 것은 네이버 재고와
-                    공급사 재고를 혼동한 오설계였음 — 정원 창고야말로 공급사 재고가
-                    가장 필요한 화면이다. */}
-              {inventoryByProductId[p.id] && (
-                <InventoryBadge
-                  inv={inventoryByProductId[p.id]}
-                  mode={isGarden ? 'sourcing' : 'selling'}
-                  product={{
-                    salesCount: p.salesCount,
-                    lastSaleDate: p.lastSaleDate,
-                    naverProductId: p.naverProductId,
-                    naverStatusType: p.naver_status_type,
-                  }}
-                />
-              )}
+            {/* 배지 레일(#274/#233) — 예전에는 SKU줄·허브배지·상품명·좀비·불일치가
+                각각 별도 블록으로 쌓여 이름칸만 155px, 행 178px이었다. 배지를 지우면
+                정보가 사라지므로 지우지 않고, 우선순위 상위 3개만 상시 노출하고
+                나머지는 "+N"으로 접는다. 순서 기준은 badge-priority.ts(돈이 새는 순서).
+                재고 배지는 처분 권고가 붙으면 급수가 올라간다(#273). */}
+            <div style={{ marginTop: 2 }}>
+              <BadgeRail
+                items={[
+                  p.sku && {
+                    key: 'sku',
+                    priority: BADGE_PRIORITY.sku,
+                    node: (
+                      <span className="text-xs font-mono" style={{ color: '#B0A0A8', whiteSpace: 'nowrap' }}>{p.sku}</span>
+                    ),
+                  },
+                  inventoryByProductId[p.id] && {
+                    key: 'inventory',
+                    priority: inventoryBadgeRank(inventoryByProductId[p.id], {
+                      salesCount: p.salesCount,
+                      lastSaleDate: p.lastSaleDate,
+                      naverProductId: p.naverProductId,
+                      naverStatusType: p.naver_status_type,
+                    }),
+                    node: (
+                      <InventoryBadge
+                        inv={inventoryByProductId[p.id]}
+                        mode={isGarden ? 'sourcing' : 'selling'}
+                        product={{
+                          salesCount: p.salesCount,
+                          lastSaleDate: p.lastSaleDate,
+                          naverProductId: p.naverProductId,
+                          naverStatusType: p.naver_status_type,
+                        }}
+                      />
+                    ),
+                  },
+                  p.tuningScore && {
+                    key: 'tuning',
+                    priority: BADGE_PRIORITY.tuning,
+                    node: <TuningBadge data={p.tuningScore} compact />,
+                  },
+                  naverMismatches[p.id] && {
+                    key: 'mismatch',
+                    priority: BADGE_PRIORITY.mismatch,
+                    node: (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#F63B28', background: '#fff1f1', border: '1px solid #fca5a5', borderRadius: 6, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+                        <AlertTriangle size={9} /> {naverMismatches[p.id]}
+                      </span>
+                    ),
+                  },
+                  nameDiagnoses[p.id] && {
+                    key: 'nameGrade',
+                    priority: BADGE_PRIORITY.nameGrade,
+                    node: <NameDiagnosisBadge data={nameDiagnoses[p.id]} compact />,
+                  },
+                  ...hubBadgeItems(p, readinessMap[p.id]),
+                ]}
+              />
             </div>
-            <HubBadges p={p} rd={readinessMap[p.id]} />
-            {nameDiagnoses[p.id] && (
-              <div style={{ marginTop: 3 }}><NameDiagnosisBadge data={nameDiagnoses[p.id]} /></div>
-            )}
-            {p.tuningScore && (
-              <div style={{ marginTop: 3 }}><TuningBadge data={p.tuningScore} /></div>
-            )}
-            {naverMismatches[p.id] && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#F63B28', background: '#fff1f1', border: '1px solid #fca5a5', borderRadius: 6, padding: '1px 6px', marginTop: 2 }}>
-                <AlertTriangle size={9} /> {naverMismatches[p.id]}
-              </span>
-            )}
           </div>
           <div className="flex justify-center"><StatusDot product={p} /></div>
           <div className="min-w-0">
@@ -2011,7 +2059,7 @@ function ProductsPageInner() {
   const TableHeader = () => (
     <>
       <div className="grid items-center gap-2 px-4"
-        style={{ gridTemplateColumns: COL, background: '#FFF0F5', borderBottom: '2px solid #FFB3CE', paddingTop: 10, paddingBottom: 10 }}>
+        style={{ gridTemplateColumns: COL, minWidth: TABLE_MIN_WIDTH, background: '#FFF0F5', borderBottom: '2px solid #FFB3CE', paddingTop: 10, paddingBottom: 10 }}>
         <input type="checkbox"
           checked={selected.size === filtered.length && filtered.length > 0}
           onChange={toggleAll}
@@ -2359,6 +2407,9 @@ function ProductsPageInner() {
             #222: readable (Pretendard) font on the data grid (table container
             anchor, so the page title above keeps its own font role). */}
         <div className="hidden lg:block kk-readable" style={{ background: '#fff', border: '1.5px solid #F8DCE5', borderRadius: 18, overflow: 'hidden' }}>
+          {/* #275 — 컬럼이 안 들어가면 조용히 붕괴시키지 말고 가로 스크롤로 넘긴다.
+              헤더와 행이 같은 스크롤 컨테이너 안에 있어야 스크롤 시 정렬이 유지된다. */}
+          <div style={{ overflowX: 'auto' }}>
           <TableHeader />
           {loading ? (
             <div className="py-16 text-center">
@@ -2379,6 +2430,7 @@ function ProductsPageInner() {
           ) : (
             <div>{filtered.map((p, idx) => renderRow(p, idx, idx === filtered.length - 1))}</div>
           )}
+          </div>
 
           {filtered.length > 0 && (
             <div className="px-4 py-2.5 flex items-center justify-between text-xs"
