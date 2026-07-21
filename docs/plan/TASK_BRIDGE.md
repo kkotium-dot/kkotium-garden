@@ -70,7 +70,80 @@
 
 ---
 
+## §2-B 🌸 Cowork 환경 (2026-07-21 신설) — 제3의 작업 환경
+
+기존 표(§1)는 Desktop/Code 2환경 전제였으나, **Cowork는 양쪽 능력을 모두 가진 하이브리드**다. 인계 시 어느 쪽으로 보낼지 판단할 때 이 표를 본다.
+
+| 능력 | 🖥 Desktop | 💻 Code | 🌸 **Cowork** |
+|---|---|---|---|
+| 파일 생성/편집 | ✗ | ✓ | **✓** |
+| git commit/push | ✗ | ✓ | **✓** |
+| tsc / build / npm | ✗ | ✓ | **✓** |
+| Supabase SQL | ✓ | ✗ | **읽기 ✓ / 쓰기 △**(정책 차단 가능) |
+| Vercel 조회 | ✓ | ✗ | **✓**(curl 폴링) |
+| Chrome 브라우저 실측·스크린샷 | ✓ | △ | **✓** |
+| 백그라운드 프로세스 | ✓ | ✓ | **✓**(Desktop Commander 경유 — bash 호출 간 유지 안 됨) |
+
+**결론**: Cowork는 **단독으로 전 사이클(설계→구현→검증→배포→문서)을 닫을 수 있다.**
+→ 기본은 Cowork 단독 진행. 아래 경우에만 분기한다:
+- **Supabase 쓰기(INSERT/UPDATE/DDL)가 꼭 필요** → 🖥 Desktop으로
+- **장시간 배치·대량 파일 리팩터** → 💻 Code로
+- **네이버 스토어 비가역 쓰기(#46)** → 어느 환경이든 **운영자 승인 먼저**
+
+---
+
+## §3-A 🗂 작업 큐 · 의존성 보드 (2026-07-21 신설 — 매 세션 종료 시 갱신 의무)
+
+> **이 보드의 목적**: 병행 작업이 많아 "무엇을 다음에 하는지, 무엇이 무엇을 막고 있는지"를 매번 되묻지 않게 한다. **운영자에게 진행 여부를 다시 묻지 않으려면 이 표가 항상 최신이어야 한다.**
+>
+> 상태값: `READY`(의존성 없음, 즉시 착수) / `BLOCKED`(선행 필요) / `WAIT-OP`(운영자 판단 대기) / `HOLD`(보류) / `DONE`
+
+| # | 작업 | 상태 | 선행 의존성 | 담당 적합 | 비고 |
+|---|---|---|---|---|---|
+| A1 | 처분 권고 엔진(#273) | `DONE` | — | 🌸 | `4ee8585` 배포·검증완 |
+| A2 | 배지 레일(#274) + 상품명 붕괴(#275) + 압축(#276) | `DONE` | — | 🌸 | `7ebaae3` 배포·검증완 |
+| **B1** | **처분 권고 "원클릭 실행"** | `BLOCKED` | **B2**(api-client SUSPENSION) | 🌸 | 권고만 하고 실행은 수동인 상태. 실행까지 닫아야 가치가 완성 |
+| **B2** | api-client `SUSPENSION` 지원 | `READY` | — | 🌸 or 💻 | `updateProductStatus`가 `OUTOFSTOCK\|SALE`만 지원. **네이버 PUT은 #46 운영자 승인 게이트 유지** |
+| **B3** | 품절 페이지 → "처분 결정 대기함" 재정의 | `READY` | (B1과 함께면 시너지) | 🌸 | 권고별 그룹핑 + 일괄 처리. A1로 엔진은 이미 있음 |
+| C1 | R-1/R-2/R-3 육안 확인 | `READY` | — | 🌸 | **운영자 스크린샷 불필요** — Cowork가 직접 촬영 가능. 최종 미감 판단만 운영자 |
+| C2 | 배지 레일 다른 화면 확장 | `READY` | A2 | 🌸 | 모바일 카드·사이드패널·재활성화 목록. 현재는 데스크톱 목록만 적용 |
+| D1 | 작업 G 나머지 16개 파일 페르소나 | `WAIT-OP` | 우선순위 미지정 | 💻 | 대량 문자열 편집 — #29a Python 스크립트 필수 |
+| D2 | 도매꾹 폴링 on/off | `WAIT-OP` | 운영자 지시 | 🖥 | 비용/DB 부하 관점 |
+| E1 | 클로드디자인 v7 PDF | `HOLD` | — | — | 보류 — 건드리지 말 것 |
+| E2 | z3c stash | `HOLD` | — | — | 보류 — 건드리지 말 것 |
+
+**다음 세션 권장 순서**: `B2 → B1` (한 흐름으로 묶으면 "권고 → 실행"이 닫힘) → `B3` → `C1/C2` 병렬.
+
+**병행 가능 조합**(의존성 없음 — 동시 진행해도 충돌 없음):
+- `B2/B1`(api-client + 실행 배선) ↔ `C2`(배지 레일 확장) — 파일 겹침 없음
+- `C1`(육안 확인) — 언제든 단독 가능
+- `D1`(페르소나) — 문자열 JSON만 건드리므로 어떤 작업과도 병행 가능
+
+---
+
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
+
+### 2026-07-21 (117) 🌸 Cowork — 배지 레일(#274) + 상품명 0px 붕괴(#275) + 배지 압축(#276) (FROM 🌸 Cowork, main `7ebaae3`, tsc0·build0·prod 배포완료)
+- **Target**: 권위 `docs/plan/PARALLEL_WORK_TRACKER.md` rev68 + 원칙 #274/#275/#276 + 운영자 지시(2026-07-21 "개선안 이어서, 전체 공통 시스템으로").
+- **A2-1 배지 레일 DONE(#274/#233)**: `src/components/common/badge-priority.ts`(우선순위 단일 권위 — "돈이 새는 순서") + `BadgeRail.tsx`(실측 기반 자동 맞춤) 신설, `common/index.ts` 배럴 등재. `HubBadges` 묶음 div를 `hubBadgeItems()` 개별 항목으로 해체(급수가 다른 배지를 한 묶음으로 두면 정렬 불가). **행 높이 178px → 65px**.
+  - **설계 전환 기록**: 최초 "상위 3개 고정 노출" → 좁은 칸에서 잘림 실측 → **실측 기반**으로 전환. 배지 폭이 34~199px로 제각각이라 개수로는 못 맞춘다. 미러(visibility:hidden) 측정 + ResizeObserver.
+- **A2-2 상품명 0px 붕괴 DONE(#275, ★기존 결함 발견)**: 배지 작업 중 DOM 실측으로 **이름칸 width=0** 발견 — 내 변경 무관, 원래 그랬음. `1fr`의 min이 auto라 고정트랙(660)+gap(64)=724 > 컨테이너(710)에서 붕괴. **상품명·SKU가 모든 데스크톱 폭에서 안 보이던 상태**. `minmax(260px,1fr)` + 가로 스크롤 래퍼로 수정, `TABLE_MIN_WIDTH`는 COL 문자열에서 계산(컬럼 변경 자동 추종).
+  - **전수 확인**: 앱 전 페이지(대시보드/주문/소싱/재활성화/크롤/시장/성장/관제탑/SEO/워크플로) 0폭 트랙 브라우저 스캔 → **상품 목록 하나뿐**. 단건 수습 아님.
+- **A2-3 배지 압축 DONE(#276)**: `TuningBadge`/`NameDiagnosisBadge`에 `compact` prop. 인라인 사유 제거로 199px → 75px, 사유 전문은 hover에 이미 존재하므로 **정보 손실 0**.
+- **검증**: tsc0 · build0 · 브라우저 DOM 실측(행높이·이름칸폭·잘림0·정원/꽃밭 양쪽) · **상호작용 4건**(+N 팝오버 열림 / 행클릭 사이드패널 정상 / Escape 닫힘 / 팝오버 클릭이 패널 안 엶) · 콘솔 에러 0 · 전 페이지 200.
+- **패치 위치**: `src/components/common/{badge-priority.ts,BadgeRail.tsx,index.ts}` · `src/components/products/{TuningBadge,NameDiagnosisBadge,InventoryBadge}.tsx` · `src/app/products/page.tsx`.
+- **다음 1액션**: §3-A 보드의 `B2 → B1`(api-client SUSPENSION → 처분 권고 원클릭 실행). **네이버 PUT은 #46 운영자 승인 게이트 유지**.
+- **의존성**: (116) 위에 이어짐.
+
+### 2026-07-21 (116) 🌸 Cowork — 처분 권고 엔진(#273) + 시장분석 접속 불가 원인 규명 (FROM 🌸 Cowork, main `c1af55b`, tsc0·build0·prod 배포완료)
+- **Target**: 운영자 요청 "#272 권고사항대로 앱이 판단을 대신하게" + "/market 접속 불가 원인".
+- **시장분석 접속 불가 — 앱 결함 아님**: dev 서버(3100) 미기동이 원인. 직전 세션 종료 시 원칙대로 kill한 상태에서 localhost 탭을 연 것. prod는 전 경로 200이었음. 재기동 후 200 확인.
+- **처분 권고 엔진 DONE(#273)**: `src/lib/products/disposition.ts`(PURE, prisma 무의존 #32) 신설 — 5액션(NONE/MARK_OUT_OF_STOCK/SUSPEND/RESOURCE/DELETE_SAFE), 우선순위 분기(가중치 합산 아님). `disposition.strings.ko.json`(카피 단일 출처 #35). `countLeadingOutOfStockDays` → API `daysOutOfStock`(추가 쿼리 0). InventoryBadge를 DispositionBadge로 **승격**(배지 개수 유지 — #233 악화 방지). 임계 `LONG_OUT_OF_STOCK_DAYS=14`(운영자 결정).
+- **★착수 전 발견한 결함**: `/products/out-of-stock`의 `getOosAdvice`가 판매 이력을 모른 채 "30일 품절 = 정리 권장"을 띄워 **#272 정면 위반**. 엔진 호출로 교체하며 권위 통합. **꿀통지수를 처분 판단에서 분리**(재입고 우선순위에만 사용) — 기존 코드의 근본 오류.
+- **검증**: tsc0 · build0 · 로직 15케이스 전부 PASS(경계값 포함) · **임시 프리뷰 라우트에 8분기 렌더 후 삭제 — 프로덕션 DB 무오염**(Supabase 쓰기가 정책 차단되어 전환했고 결과적으로 더 나은 방식) · 회귀 렌더·콘솔 0.
+- **패치 위치**: `src/lib/products/{disposition.ts,disposition.strings.ko.json,source-gone.ts}` · `src/app/api/products/inventory-badges/route.ts` · `src/components/products/InventoryBadge.*` · `src/app/products/{page.tsx,out-of-stock/page.tsx}` · `.gitignore`.
+- **다음 1액션**: 배지 과밀(#233) — (117)에서 수행됨.
+- **의존성**: `448d5de` 위에 이어짐.
 
 ### 2026-07-18 (115) 작업 I — 꿀통 꽃나들이 UI 개선 (I-1/I-2/I-3 전부 완료·배포대기) (FROM 💻 Code, main f22009d 위·코드변경 있음·tsc0·build0·prod 미배포)
 - **Target**: 다음 세션 · 권위 docs/plan/PARALLEL_WORK_TRACKER.md rev60 "미해결 잔여 1" + 운영자 지시(2026-07-18).

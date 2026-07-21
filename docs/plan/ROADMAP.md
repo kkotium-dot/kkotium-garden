@@ -2,7 +2,70 @@
 > 2026-06-17 (세션8) **Image+SEO/ROI Engine Stage 1 빌드 + 6축 main 머지·prod LIVE** (Code turn, 비가역0·네이버 무접촉). 6축+엔진 Stage0 머지(349b9db) → Stage 1 백엔드(3a~3g)+UI(3i) 빌드(8964ce7). DNA 로드+50014980 시드·9슬롯 결정테이블·전략조립기(6축 재사용)·개입 2종·썸네일 게이트·3탭 UI. tsc0/build0/테스트11. **다음=[Desktop] ENG-1 실측 → Stage 2(학습루프: 평점→승격·CTR/CVR) / [결정] 명화 카테고리 정합·캡처방식·발행.**
 
 
-## 다음 새 채팅 시작 메시지 — 2026-07-18 Cowork 인계 ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-07-21 Cowork 인계 ⭐ ACTIVE
+
+```
+꽃틔움 가든 — 이어받기
+prod HEAD: 7ebaae3 (== origin/main == prod, Vercel 200)
+로컬: /Users/jyekkot/Desktop/kkotium-garden
+
+[가장 먼저 읽을 것 — 이 순서]
+1. docs/plan/TASK_BRIDGE.md §3-A 작업 큐·의존성 보드  ← 무엇을 할지 여기에 다 있음
+2. docs/plan/TASK_BRIDGE.md §2-B Cowork 환경 표      ← 어느 환경이 맡을지
+3. docs/plan/PARALLEL_WORK_TRACKER.md rev68           ← 전체 상태
+4. docs/plan/PRINCIPLES_LEARNED.md #273~#276          ← 신규 원칙 4건
+
+[직전 2세션 완료 — 전부 배포·검증완]
+· 처분 권고 엔진 #273 (4ee8585) — disposition.ts 단일 권위, 5액션, 14일 임계
+  · out-of-stock 페이지의 #272 위반 로직(판매이력 무시한 "정리 권장") 제거·통합
+  · 꿀통지수를 처분 판단에서 분리 (재입고 우선순위 전용)
+· 배지 레일 #274 (7ebaae3) — 행 높이 178px → 65px, 배지 삭제 0
+  · badge-priority.ts = "돈이 새는 순서" 단일 권위
+  · 고정 개수가 아니라 실측 자동 맞춤 (배지 폭이 34~199px로 제각각)
+· 상품명 0px 붕괴 #275 (7ebaae3) — ★기존 결함. 상품명·SKU가 모든 데스크톱
+  폭에서 안 보이던 상태였음. minmax 하한 + 가로 스크롤. 전 페이지 전수 확인 완료
+· 배지 압축 #276 (7ebaae3) — compact prop, 199px → 75px, 정보 손실 0
+
+[다음 작업 — TASK_BRIDGE §3-A 보드가 정본. 권장 순서]
+1. B2 api-client SUSPENSION 지원        (READY, 의존성 없음)
+2. B1 처분 권고 원클릭 실행             (B2 선행 — 묶으면 "권고→실행" 완결)
+3. B3 품절 페이지 → "처분 결정 대기함"  (READY, 엔진은 이미 있음)
+4. C1 R-1/R-2/R-3 육안 / C2 배지 레일 확장 (READY, 병렬 가능)
+
+[꼭 지킬 원칙]
+- #29a  한글 다량 편집은 Python 스크립트로 (edit_file 오염 실증)
+- #46   스토어 PUT/POST는 운영자 명시 승인 후에만
+- #62   같은 결론은 한 곳에서만. 소비처는 자체 규칙을 두지 않는다
+- #265  수치 PASS ≠ 화면 정상 (시각 판단)
+- #275  ★그 역방향도 참 — 화면이 그럴듯해도 수치가 0일 수 있다.
+        레이아웃 변경은 스크린샷 + DOM 실측 **둘 다**
+- #266  정원/꽃밭 나눔 축은 naverProductId (status 아님)
+- #273  처분 결론은 disposition.ts 단일 권위. 조치 완료 상품엔 권고 금지
+- #274  배지는 지우지 말고 줄을 세워라. 순서는 "돈이 새는 순서"
+- #276  밀집 목록의 배지는 "무엇"만, "왜"는 hover로
+- #32   클라 로직은 prisma 의존 모듈에서 분리 (tsc 통과해도 build 실패)
+- 커밋은 .commit-msg.tmp에 쓰고 git commit -F
+
+[검증 표준 — #273/#275에서 확립]
+· 배지·카드 분기: DB 주입 대신 **임시 프리뷰 라우트**에 전 분기 렌더 후 삭제
+  (프로덕션 무오염 + 분기 누락이 한눈에)
+· 레이아웃: 스크린샷 + getBoundingClientRect 실측 **둘 다**
+· 결함 발견 시: 단건 수습 금지. **전 페이지 동일 패턴 스캔까지가 한 세트**
+
+[환경 메모]
+- ⚠️ dev 서버는 세션 종료 시 kill됨 → 새 세션 첫 접속은 prod URL 사용
+  (localhost:3100은 재기동 후에만 열림). "사이트 연결 안 됨"의 99% 원인
+- Cowork는 Chrome MCP로 직접 스크린샷 촬영 가능 → **운영자 스크린샷 불필요**
+- Supabase 쓰기(INSERT/UPDATE)는 정책 차단될 수 있음 → 프리뷰 라우트 방식 권장
+- 백그라운드 프로세스는 bash 호출 간 유지 안 됨 → Desktop Commander 사용
+
+[보류 — 건드리지 말 것]
+- z3c stash / 클로드디자인 v7 PDF
+```
+
+---
+
+## 다음 새 채팅 시작 메시지 — 2026-07-18 Cowork 인계 (SUPERSEDED by 2026-07-21)
 
 ```
 꽃틔움 가든 — Cowork 이어받기
