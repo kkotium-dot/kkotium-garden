@@ -19,6 +19,7 @@ import {
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { deriveOriginKind, type OriginKind } from '@/lib/products/origin-kind';
+import { hasSalesAssets } from '@/lib/products/sales-assets';
 import NameDiagnosisBadge, { type NameBadgeData } from '@/components/products/NameDiagnosisBadge';
 import TuningBadge, { type TuningBadgeData } from '@/components/products/TuningBadge';
 import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
@@ -55,6 +56,9 @@ interface Product {
   createdAt?: string;
   updatedAt?: string;
   lastSaleDate?: string;
+  /** 누적 판매 건수. 판매 이력이 있으면 상품 URL에 리뷰·검색순위가 쌓여 있어
+   *  삭제 시 영구 소멸한다(#272) — 삭제 권장/경고 문구 분기의 기준. */
+  salesCount?: number;
   supplierName?: string;
   supplierId?: string;
   platformName?: string;
@@ -1716,12 +1720,33 @@ function ProductsPageInner() {
     const name = target?.name?.trim();
     const shortName = name ? (name.length > 30 ? name.slice(0, 30) + '…' : name) : '이 상품';
     const isLinked = !!target?.naverProductId;
+    // 자산 보호(#272) — 판매 이력이 있으면 삭제 시 리뷰·검색순위가 영구 소멸한다.
+    const hasAssets = target ? hasSalesAssets(target) : false;
 
-    const message = isLinked
-      ? `"${shortName}"\n\n이 상품은 네이버 스토어에 판매중(또는 등록됨)입니다.\n앱에서 삭제해도 네이버 스토어에는 그대로 남습니다.\n스토어에서도 내리려면 먼저 [반영] 탭에서 판매중지를 하세요.\n\n앱에서 삭제할까요? 이 작업은 되돌릴 수 없습니다.`
-      : `"${shortName}"\n\n앱에서 삭제할까요? 이 작업은 되돌릴 수 없습니다.`;
+    const lines: string[] = [`"${shortName}"`, ''];
+    if (hasAssets) {
+      lines.push(
+        '이 상품은 판매된 적이 있습니다.',
+        '삭제하면 리뷰·구매평, 판매 건수, 그동안 쌓인 검색 순위가',
+        '모두 영구히 사라지고 되돌릴 수 없습니다.',
+        '같은 상품을 다시 등록해도 리뷰 0개인 새 상품이 됩니다.',
+        '',
+        '공급처가 끊긴 경우라면 삭제 대신 판매중지 후',
+        '같은 상품에 다른 공급처를 연결하는 편이 좋습니다.',
+        '',
+      );
+    }
+    if (isLinked) {
+      lines.push(
+        '이 상품은 네이버 스토어에 등록되어 있습니다.',
+        '앱에서 삭제해도 네이버 스토어에는 그대로 남습니다.',
+        '스토어에서도 내리려면 스마트스토어센터에서 처리하세요.',
+        '',
+      );
+    }
+    lines.push('앱에서 삭제할까요? 이 작업은 되돌릴 수 없습니다.');
 
-    if (!confirm(message)) return;
+    if (!confirm(lines.join('\n'))) return;
     await fetch(`/api/products?id=${id}`, { method: 'DELETE' });
     fetchProducts();
   };
@@ -1867,7 +1892,11 @@ function ProductsPageInner() {
                     공급사 재고를 혼동한 오설계였음 — 정원 창고야말로 공급사 재고가
                     가장 필요한 화면이다. */}
               {inventoryByProductId[p.id] && (
-                <InventoryBadge inv={inventoryByProductId[p.id]} mode={isGarden ? 'sourcing' : 'selling'} />
+                <InventoryBadge
+                  inv={inventoryByProductId[p.id]}
+                  mode={isGarden ? 'sourcing' : 'selling'}
+                  hasSalesAssets={hasSalesAssets(p)}
+                />
               )}
             </div>
             <HubBadges p={p} rd={readinessMap[p.id]} />

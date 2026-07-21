@@ -44,6 +44,10 @@ export function isSourceGoneFromCount(consecutiveNegatives: number | undefined):
   return (consecutiveNegatives ?? 0) >= SOURCE_GONE_MIN_CONSECUTIVE;
 }
 
+// 자산 보호 판단(#272)은 클라이언트 컴포넌트에서도 쓰이므로 prisma 의존이 없는
+// sales-assets.ts에 분리했다(이 파일은 prisma를 import하므로 서버 전용).
+export { hasSalesAssets, type SalesAssetInput } from './sales-assets';
+
 /**
  * Batch-load the source-gone flag for the given products.
  * Best-effort (#82): any DB/schema problem degrades to "not gone" rather than

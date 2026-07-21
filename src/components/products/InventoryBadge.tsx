@@ -114,25 +114,36 @@ export interface InventoryBadgeProps {
    *   가치가 있나"가 질문이므로 숫자 대신 판단(신호등)을 노출한다.
    */
   mode?: 'selling' | 'sourcing';
+  /**
+   * 지켜야 할 판매 자산(리뷰·검색순위·판매이력)이 있는지(#272).
+   * true면 공급처 단절 시에도 "삭제"가 아니라 "대체 소싱"을 권한다 —
+   * 삭제하면 상품 URL에 쌓인 리뷰·순위가 영구 소멸하기 때문.
+   */
+  hasSalesAssets?: boolean;
 }
 
-export default function InventoryBadge({ inv, mode = 'selling' }: InventoryBadgeProps) {
+export default function InventoryBadge({ inv, mode = 'selling', hasSalesAssets = false }: InventoryBadgeProps) {
   // 공급처 단절은 판매/소싱 모드 무관하게 동일 신호 — 최우선 분기(#55).
-  if (isSourceGone(inv)) return <SourceGoneBadge inv={inv} mode={mode} />;
+  if (isSourceGone(inv)) return <SourceGoneBadge inv={inv} mode={mode} hasSalesAssets={hasSalesAssets} />;
   if (mode === 'sourcing') return <SourcingBadge inv={inv} />;
   return <SellingBadge inv={inv} />;
 }
 
 // 공급처 단절 · 삭제 권장 배지 (전상품 범용). 재고 신호가 아니라 "이 상품은
 // 다시 못 들여오니 정리하세요"라는 운영 신호. 목록 어디서든 동일하게 보인다.
-function SourceGoneBadge({ inv, mode }: { inv: InventoryBadgeData; mode: 'selling' | 'sourcing' }) {
+function SourceGoneBadge({ inv, mode, hasSalesAssets }: { inv: InventoryBadgeData; mode: 'selling' | 'sourcing'; hasSalesAssets: boolean }) {
   const p = SOURCE_GONE_COLOR;
   const relTime = formatRelativeTime(inv.polledAt);
-  const title = [strings.sourceGone.tooltip, '', strings.sourceGone.voice, '', `${strings.tooltip.polledAtPrefix}: ${relTime}`].join('\n');
-  // 소싱(정원) 뷰는 라벨만, 판매(꽃밭) 뷰는 라벨+삭제 권장 액션까지.
+  // 자산 보호(#272): 판매 이력이 있으면 삭제하면 리뷰·순위가 함께 사라지므로
+  // "대체 소싱"을 권한다. 이력이 없는 미판매 상품만 삭제를 권한다.
+  const tooltip = hasSalesAssets ? strings.sourceGone.tooltipKeep : strings.sourceGone.tooltip;
+  const voice = hasSalesAssets ? strings.sourceGone.voiceKeep : strings.sourceGone.voice;
+  const action = hasSalesAssets ? strings.sourceGone.actionKeep : strings.sourceGone.action;
+  const title = [tooltip, '', voice, '', `${strings.tooltip.polledAtPrefix}: ${relTime}`].join('\n');
+  // 소싱(정원) 뷰는 라벨만, 판매(꽃밭) 뷰는 라벨+권장 액션까지.
   const text = mode === 'sourcing'
     ? strings.sourceGone.sourcingLabel
-    : `${strings.sourceGone.label} · ${strings.sourceGone.action}`;
+    : `${strings.sourceGone.label} · ${action}`;
   return (
     <span
       title={title}

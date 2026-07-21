@@ -154,6 +154,9 @@ export async function GET(request: NextRequest) {
         // compute the same signal set used by /api/products/linked. (category
         // is already selected above for the search filter.)
         lastSaleDate: true,
+        // 자산 보호 판단(#272) — 판매 이력이 있으면 리뷰·검색순위가 상품 URL에
+        // 축적돼 있으므로 삭제가 아니라 판매중지+대체소싱을 권한다.
+        salesCount: true,
         supplier_product_code: true,
         supplier: {
           select: {
