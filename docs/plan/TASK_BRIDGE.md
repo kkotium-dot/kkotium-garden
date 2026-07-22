@@ -104,7 +104,7 @@
 | D1·F2 | 페르소나 · 독자 축(#283) | `DONE` | — | 💻/🌸 | 잔여 3파일은 G1-A로 이관 |
 | C5 | 발행 게이트(#286) | `DONE` | A1 | 🌸 | `17bf310` · 돈 새던 결함 차단 |
 | D2 | 도매꾹 폴링 판단 | `DONE` | — | 🌸 | **유지(ON)·DRAFT 포함** 결정. 코드 변경 없음 |
-| **G1-A** | 꽃단장 문구 정비 | `READY` | — | 💻 Code | 페르소나 37문구 + **개발 은어 9건**(#262 위반) |
+| **G1-A** | 꽃단장 문구 정비 | `DONE` | — | 💻 Code | `a692b7c` · 은어 8건 제거 + 페르소나 0건 3→0 |
 | **C5-b** | 잔여 개입점 역신호 점검 | `READY` | C5 | 🌸 | 소싱 담기·상품 등록 등 나머지 행동 지점 |
 | **G1-B** | 꽃단장 UI 구조 개편 | `WAIT-OP` | **스펙 정의 필요** | 🌸 | 무엇을 바꿀지 미정의. 운영자 정의 후 착수 |
 | D3 | 폴링 배치/상한 | `CONDITIONAL` | 상품 수백 개 도달 | 🌸 | 지금은 과잉 엔지니어링 |
@@ -120,6 +120,14 @@
 ---
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
+
+### 2026-07-22 (124) 💻 Code — 꽃단장 문구 정비 DONE(G1-A·#262/#283/#284) (FROM 💻 Code, main `a692b7c`, tsc0·build0·prod 배포)
+- **G1-A DONE**: AssetBrowser/GeneratedAssetLocations/lifestyle-assets 3파일 — 셀러 화면에 노출 중이던 개발 은어 8건 제거(#262). Supabase/Storage 인프라명 3건·ConceptTone 내부 타입명 2건·cooldown 미번역 3건·DB row 노출 1건 + picker 미번역 1건(보너스, 핸드오프 목록 외 추가 발견). 남은 페르소나 0건 파일 3개에 정원사(까꿍)/카우걸(이랴·빵야) 적용 — 고객 대면 상품 카피 아니므로 #283 경계 내 확인 후 진행.
+- **검증**: 은어 재검사(핸드오프 스크립트 직접 재실행) 0건 · `persona-audit.py` 0건 파일 3→0(전체 28개 중 0개) · tsc0 · build0(dev kill 후) · `@types` 중복 폴더 0(재확인).
+- **부수 발견**: `src/app/products/page.tsx` 병행 세션(🌸 Cowork C5-b 추정) 미커밋 변경 발견 — 미접촉, `git add` 시 경로 지정으로 제외(#284).
+- **패치 위치**: `src/components/studio/AssetBrowser.strings.ko.json`, `src/components/products/GeneratedAssetLocations.strings.ko.json`, `src/lib/i18n/lifestyle-assets-strings.ko.json`.
+- **다음 1액션**: 💻 Code 착수 항목 없음. `G1-B`(꽃단장 UI 구조 개편)는 스펙 미정의 `WAIT-OP` 유지 — 운영자 정의 대기.
+- **의존성**: (123) 위에 이어짐.
 
 ### 2026-07-22 (123) 🌸 Cowork — 발행 게이트(C5·#286) + D2 결정 + G1 분해 (FROM 🌸 Cowork, main `17bf310`, tsc0·build0·prod 배포)
 - **★C5 DONE(#286) — 돈이 새던 결함**: 발행 검증이 준비도만 봐서 **공급사가 내린 상품도 준비도 100%면 일괄 발행에 섞였다**. 발행 즉시 매입 불가 → 주문 취소 → 취소율이 스토어 등급 훼손 + 신규 7일 부스트 소멸. `publish-gate.ts` 단일 권위 신설(SOURCE_GONE/SUPPLIER_OUT_OF_STOCK), 선택발행·정원일괄발행 양쪽 배선. **기본 제외 + override 토글**(#46). **모르는 것으로 막지 않음**(폴링 전·조회실패는 통과 — 막으면 신규 소싱을 영영 못 올림).
