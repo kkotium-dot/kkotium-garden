@@ -4,6 +4,7 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { loadDispositionVerdicts } from '@/lib/products/disposition-load';
 
 
 export const dynamic = 'force-dynamic';
@@ -32,11 +33,29 @@ export async function GET() {
   try {
     const notifications: Notification[] = [];
 
+    // #294/#293 — 알림은 status가 아니라 **판정**으로 모은다. 공급처가 끊긴
+    // 상품은 앱 status가 ACTIVE로 남아 status 조회에서 빠지는데, 그게 가장
+    // 급한 처분 대상이다. 화면(대기함·대시보드)·디스코드와 같은 기준을
+    // 써야 앱이 한 목소리를 낸다(#62).
+    let dispositionPendingIds: string[] = [];
+    try {
+      dispositionPendingIds = (await loadDispositionVerdicts())
+        .filter(v => v.verdict.action !== 'NONE')
+        .map(v => v.productId);
+    } catch {
+      // best-effort(#82) — 판정 실패 시 status 기준으로 degrade한다.
+    }
+
     // Single query — fetch all needed product data at once
     const [oosProducts, lowScoreProducts, recentProducts, inactiveProducts] = await Promise.all([
-      // 1. Out of stock
+      // 1. 처분 필요 — status 품절 ∪ 처분 판정 대기
       prisma.product.findMany({
-        where: { status: 'OUT_OF_STOCK' },
+        where: {
+          OR: [
+            { status: 'OUT_OF_STOCK' },
+            ...(dispositionPendingIds.length > 0 ? [{ id: { in: dispositionPendingIds } }] : []),
+          ],
+        },
         select: { id: true, name: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
         take: 5,
@@ -71,8 +90,8 @@ export async function GET() {
       notifications.push({
         id: 'oos-alert',
         type: 'stock',
-        title: `품절 상품 ${oosProducts.length}개`,
-        message: `${names}${extra} — 대체 상품 등록이 필요합니다`,
+        title: `처분 필요 ${oosProducts.length}개`,
+        message: `${names}${extra} — 품절이거나 공급처가 끊긴 상품이에요`,
         time: timeAgo(oosProducts[0].updatedAt),
         read: false,
         href: '/products/reactivation',

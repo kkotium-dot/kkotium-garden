@@ -3,6 +3,7 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { loadDispositionVerdicts } from '@/lib/products/disposition-load';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { sendDiscord, buildWeeklyReportEmbed } from '@/lib/discord';
 import { readSubstituteInfo, hasSubstitutePlan } from '@/lib/product-link';
@@ -30,7 +31,16 @@ export async function GET(req: Request) {
 
     const totalProducts   = allProducts.length;
     const activeProducts  = allProducts.filter(p => p.status === 'ACTIVE').length;
-    const oosProducts     = allProducts.filter(p => p.status === 'OUT_OF_STOCK').length;
+    // #294/#293 — 주간 리포트도 판정 기준. status만 보면 공급처 단절이 빠진다.
+    let pendingIdSet = new Set<string>();
+    try {
+      pendingIdSet = new Set(
+        (await loadDispositionVerdicts()).filter(v => v.verdict.action !== 'NONE').map(v => v.productId),
+      );
+    } catch { /* best-effort(#82) — status 기준으로 degrade */ }
+    const oosProducts     = allProducts.filter(
+      p => p.status === 'OUT_OF_STOCK' || pendingIdSet.has(p.id),
+    ).length;
     const newRegistered   = allProducts.filter(p => p.createdAt >= weekAgo).length;
 
     // Score all & find top
@@ -54,7 +64,7 @@ export async function GET(req: Request) {
 
     // OOS without a substitute plan (substitute_info — P4 #223, was the dead
     // product_alternatives table). Guarded reader degrades to no-plan on failure.
-    const oosIds = allProducts.filter(p => p.status === 'OUT_OF_STOCK').map(p => p.id);
+    const oosIds = allProducts.filter(p => p.status === 'OUT_OF_STOCK' || pendingIdSet.has(p.id)).map(p => p.id);
     let noAltOosCount = 0;
     if (oosIds.length > 0) {
       const subMap = await readSubstituteInfo(oosIds);
