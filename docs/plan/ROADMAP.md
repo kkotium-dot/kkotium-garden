@@ -2,7 +2,75 @@
 > 2026-06-17 (세션8) **Image+SEO/ROI Engine Stage 1 빌드 + 6축 main 머지·prod LIVE** (Code turn, 비가역0·네이버 무접촉). 6축+엔진 Stage0 머지(349b9db) → Stage 1 백엔드(3a~3g)+UI(3i) 빌드(8964ce7). DNA 로드+50014980 시드·9슬롯 결정테이블·전략조립기(6축 재사용)·개입 2종·썸네일 게이트·3탭 UI. tsc0/build0/테스트11. **다음=[Desktop] ENG-1 실측 → Stage 2(학습루프: 평점→승격·CTR/CVR) / [결정] 명화 카테고리 정합·캡처방식·발행.**
 
 
-## 다음 새 채팅 시작 메시지 — 2026-07-22(7) 인계 ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-07-22(8) 인계 ⭐ ACTIVE
+
+```
+꽃틔움 가든 — 이어받기
+prod HEAD: cb2e536 이후 docs 커밋 (== origin/main == prod, Vercel 200)
+로컬: /Users/jyekkot/Desktop/kkotium-garden
+
+[읽을 순서]
+1. docs/plan/TASK_BRIDGE.md §3-A 작업 큐 보드   ← 정본
+2. docs/plan/PARALLEL_WORK_TRACKER.md rev76
+3. docs/plan/PRINCIPLES_LEARNED.md #273~#289
+   ※ 옛 원칙은 archive/PRINCIPLES_LEARNED_archived-2026-07-22.md (두 파일 grep)
+
+[★현재 상태 — 양쪽 작업 큐 소진]
+READY 항목 없음. G1-B(꽃단장 UI 구조 개편)만 남았고 스펙 미정의로 대기.
+신규 지시 또는 G1-B 스펙이 필요합니다.
+
+[이번 세션 완료]
+· 발행 게이트 #286 · 일괄변경 신뢰성 #287 · 조용한 실패 전수 색출(C5-c)
+· 라벨 표기 통일 #288 · 병행 순번 충돌 해소 #289 · #284 보강
+· D2 폴링 유지 결정 · G1-A 꽃단장 문구(💻 Code, 은어 9건 제거)
+
+[꼭 지킬 원칙 — 이번 세션 신규]
+#286 "준비됐는가"와 "지금 팔 수 있는가"는 다른 축. 모르는 것으로는 막지 않는다
+#287 일괄 작업은 단건보다 규율이 느슨해진다. allSettled + 부분실패 보고
+     ★fetch는 HTTP 500에도 reject하지 않는다 — Promise.all+fetch는 res.ok 필수
+#288 라벨은 붙여쓰기 고정(식별자), 문장은 자연스러운 한국어. 다른 축
+#289 병행 순번은 충돌한다. 식별자는 SHA가 정본, 순번은 보조
+#284 보강: 소유권은 동시 편집 방지이지 영구 배타 아님.
+     상대 영역 수정 시 (1)큐 확인 (2)미커밋 확인 (3)인계 명시
+
+[기존 필수 원칙]
+#29a Python으로 한글 편집 · #31 문서 1500줄 분할(무손실)
+#46  스토어 GO는 운영자 클릭으로만 · #62 같은 결론은 한 곳에서만
+#262 셀러 실무 용어. 개발자 은어 금지 · #283 페르소나는 셀러 대면에만
+#265/#275 수치 PASS≠화면 정상 / 화면 그럴듯해도 수치 0일 수 있다
+#278 대기함은 상태가 아니라 판정으로 · #279 dev 안 되면 환경부터
+#280 두 화면이 같은 데이터를 그리면 아이템 구성은 한 함수에서
+#281 공간 부족하면 밀어내기가 아니라 줄이기
+#282 React 렌더 측정은 커밋 완료를 기다린다
+#285 행동을 유도하는 화면에는 말리는 신호도 함께
+
+[검증 표준]
+· 인계 문서는 증거가 아니다 — 작업 전 target을 직접 추출해 확인(#283)
+· "코드가 틀렸다" 결론 전에 테스트가 틀렸을 가능성부터(#282/#288 실증)
+· 목록·배지 분기: DB 주입 대신 fetch 스텁 또는 임시 프리뷰 라우트
+· 레이아웃: 스샷 + getBoundingClientRect 둘 다
+· 비동기 렌더: 1.5초 이상 대기, 단일 단계 재현
+· 결함 발견 시: 단건 수습 금지, 전 페이지·전 스크립트 확장까지가 한 세트
+
+[환경 — 파손 3대 원인]
+1. 셸 NODE_ENV=production → package.json에 고정해 해결됨(#279)
+2. dev 실행 중 npm run build → .next 충돌. build 전 dev 반드시 kill
+3. node_modules/@types에 macOS 중복 폴더("xxx 2") → tsc 실패
+   find node_modules/@types -maxdepth 1 -name "* 2" -type d -exec rm -rf {} +
+복구: pkill -9 -f next && rm -rf .next && npm run dev
+※ dev 서버가 장시간 후 죽는 사례 있음 — 응답 000이면 재기동
+
+[파일 영역 소유권 — 동시 편집 방지용(#284 보강)]
+· src/app/products/page.tsx  → 🌸 Cowork 주담
+· *.strings.ko.json          → 💻 Code 주담
+· 상대 영역 필요 시 큐·미커밋 확인 후 인계에 명시하면 가능
+
+[보류] z3c stash / 클로드디자인 v7 PDF
+```
+
+---
+
+## 다음 새 채팅 시작 메시지 — 2026-07-22(7) 인계 (SUPERSEDED)
 
 ```
 꽃틔움 가든 — 이어받기
