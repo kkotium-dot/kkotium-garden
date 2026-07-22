@@ -1,17 +1,41 @@
 'use client';
-// Out-of-Stock Improvement Page
-// Shows sold-out products with Kkotti analysis + alternative product suggestions
-// Improvement actions: restock alert, find alternative, deactivate, reprice
+// src/app/products/out-of-stock/page.tsx
+// ============================================================================
+// 처분 결정 대기함 (#278/#273/#62) — 예전 "품절 상품 개선" 페이지의 재정의.
+//
+// ── 왜 재정의했나 ──────────────────────────────────────────────────────────
+// 1) 이 화면은 `status=OUT_OF_STOCK`인 상품만 불러왔다. 그런데 **공급처가 끊긴
+//    상품은 앱 상태가 ACTIVE인 채로 남아 있을 수 있다** — 가장 급한 처분 대상이
+//    이 화면에서 통째로 누락되고 있었다. 처분 권고(#273)는 재고 상태가 아니라
+//    "재고 신호 + 자산 유무"로 판정되므로, 대기함은 **전 상품**을 훑어야 한다.
+// 2) 상품마다 사이드패널을 열어 하나씩 판단하는 반복이 남아 있었다. 같은 결론이
+//    붙은 상품은 묶어서 한 번에 처리하는 게 실무 동선이다.
+//
+// ── 화면 정의 ──────────────────────────────────────────────────────────────
+// "앱이 판단한 할 일"이 모이는 단일 지점. 처분 권고별로 그룹핑하고, 그룹 안에서
+// 선택 → 일괄 반영한다. 권고가 없는 품절 상품은 마지막 "재입고 검토" 그룹으로
+// 내려 꿀통지수 기준 우선순위만 보여준다(기존 가치 보존 — 아무것도 잃지 않는다).
+//
+// ── 안전 ───────────────────────────────────────────────────────────────────
+// 일괄 반영도 단건과 동일한 #46 이중 게이트를 거친다: 전 건 dryRun 미리보기 →
+// 운영자 확인 → 순차 실행. 앱이 자동으로 스토어에 쓰는 경로는 존재하지 않는다.
+// 변경 없는 항목(no-op)은 미리보기 단계에서 제외해 헛쓰기를 만들지 않는다(#277).
+// ============================================================================
 
-import { useState, useEffect, useMemo } from 'react';
-import { AlertTriangle, RefreshCw, Search, TrendingUp, Package, ArrowRight, CheckCircle, XCircle, Zap } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import Link from 'next/link';
+import {
+  AlertTriangle, RefreshCw, Search, Package, ArrowRight, CheckCircle,
+  Unplug, PackageX, PauseCircle, Loader2, ShieldAlert, Trash2,
+} from 'lucide-react';
 import { calcHoneyScore } from '@/lib/honey-score';
 import type { HoneyScoreResult } from '@/lib/honey-score';
-import { decideDisposition, LONG_OUT_OF_STOCK_DAYS } from '@/lib/products/disposition';
+import { decideDisposition, LONG_OUT_OF_STOCK_DAYS, type DispositionAction } from '@/lib/products/disposition';
 import dispositionCopy from '@/lib/products/disposition.strings.ko.json';
+import { useInventoryBadges } from '@/lib/hooks/useInventoryBadges';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-interface OutOfStockProduct {
+interface QueueProduct {
   id: string;
   sku: string;
   name: string;
@@ -19,115 +43,90 @@ interface OutOfStockProduct {
   supplierPrice: number;
   status: string;
   naverCategoryCode: string | null;
-  brand: string | null;
-  tags: string[] | null;
-  keywords: string[] | null;
   mainImage: string | null;
   supplierId: string | null;
   supplierName: string | null;
   createdAt: string;
   updatedAt: string;
-  // 처분 권고(#273) 판정 입력. 판매 이력이 있으면 "정리"가 아니라 "대체 소싱"이
-  // 정답이므로(#272) 이 네 필드 없이는 올바른 권고를 낼 수 없다.
   naverProductId?: string | null;
   naver_status_type?: string | null;
   salesCount?: number | null;
   lastSaleDate?: string | null;
   // Computed
   honeyScore?: HoneyScoreResult;
-  daysOutOfStock?: number;
+  daysOutOfStock?: number | null;
+  action: DispositionAction;
+  hasAssets: boolean;
 }
 
-type ActionType = 'restock' | 'replace' | 'reprice' | 'deactivate' | 'none';
-
-interface ImprovementAction {
-  productId: string;
-  action: ActionType;
-}
+/** 일괄 반영이 가능한 그룹(스토어 상태 push로 의미가 통일되는 것만). */
+type BulkTarget = 'OUTOFSTOCK' | 'SUSPENSION';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function daysSince(dateStr: string): number {
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000);
-}
-
 function formatPrice(n: number): string {
   return n.toLocaleString('ko-KR') + '원';
 }
 
-// ── 처분 권고 (#273) ──────────────────────────────────────────────────────────
-// 이 화면은 자체 규칙을 두지 않는다. "이 상품을 어떻게 할까"의 답은
-// disposition.ts 단일 권위가 낸다(#62). 예전 이 자리에 있던 로직은 판매 이력을
-// 모른 채 "30일 품절 = 정리 권장"을 띄워, 리뷰·검색순위가 쌓인 상품까지 지우도록
-// 유도할 수 있었다(#272 위반). 그 결론을 엔진으로 옮기고, 이 함수는 엔진의 판정을
-// 화면 표현(색·문구·기본 선택 버튼)으로 옮기는 역할만 한다.
-//
-// 꿀통지수는 처분 여부가 아니라 *재입고 우선순위*에만 쓴다 — 점수가 높다고 자산이
-// 지켜지는 것도, 낮다고 지워도 되는 것도 아니기 때문.
-function getOosAdvice(product: OutOfStockProduct, days: number, honey: HoneyScoreResult) {
-  const verdict = decideDisposition({
-    // 이 페이지에 오는 상품은 정의상 품절 상태다.
-    qty: 0,
-    daysOutOfStock: days,
-    naverProductId: product.naverProductId,
-    naverStatusType: product.naver_status_type,
-    salesCount: product.salesCount,
-    lastSaleDate: product.lastSaleDate,
-    // 공급처 단절 판정은 재고 스냅샷이 필요하다(#271). 이 화면은 스냅샷을 읽지
-    // 않으므로 미판정으로 두고, 단절 신호는 목록 배지가 담당한다.
-    sourceGone: false,
-  });
+// ── 그룹 정의 ─────────────────────────────────────────────────────────────────
+// 순서 = 급한 순(돈이 새는 순서, #274와 같은 사상). 위에서부터 처리하면 된다.
+const GROUPS: Array<{
+  action: DispositionAction | 'RESTOCK';
+  title: string;
+  why: string;
+  tone: { fg: string; bg: string; bd: string };
+  icon: typeof Unplug;
+  bulk: BulkTarget | null;
+}> = [
+  {
+    action: 'RESOURCE',
+    title: '대체 소싱 필요',
+    why: '공급처가 끊겼지만 판매 이력이 있어요. 삭제하면 리뷰·검색순위가 영구히 사라집니다 — 판매중지 후 같은 상품에 다른 공급처를 연결하세요.',
+    tone: { fg: '#86198f', bg: '#fdf4ff', bd: '#f5d0fe' },
+    icon: Unplug,
+    bulk: 'SUSPENSION',
+  },
+  {
+    action: 'MARK_OUT_OF_STOCK',
+    title: '품절 처리 필요',
+    why: '공급사 재고가 없는데 스토어는 아직 판매 중이에요. 주문이 들어오면 취소해야 하고, 취소가 쌓이면 스토어 등급이 깎입니다.',
+    tone: { fg: '#991b1b', bg: '#fef2f2', bd: '#fecaca' },
+    icon: PackageX,
+    bulk: 'OUTOFSTOCK',
+  },
+  {
+    action: 'SUSPEND',
+    title: '판매중지 권장',
+    why: `${LONG_OUT_OF_STOCK_DAYS}일 넘게 품절이에요. 이대로 두면 노출이 점점 낮아져 순위가 깎입니다. 판매중지는 검색에서만 내려가고 URL·리뷰는 보존돼요.`,
+    tone: { fg: '#9a3412', bg: '#fff7ed', bd: '#fed7aa' },
+    icon: PauseCircle,
+    bulk: 'SUSPENSION',
+  },
+  {
+    action: 'DELETE_SAFE',
+    title: '삭제 안전',
+    why: '공급처가 끊겼고 판매 이력도 없어요. 지킬 리뷰·순위가 없으니 목록에서 정리해도 괜찮습니다.',
+    tone: { fg: '#86198f', bg: '#fdf4ff', bd: '#f5d0fe' },
+    icon: Trash2,
+    bulk: null,
+  },
+  {
+    action: 'RESTOCK',
+    title: '재입고 검토',
+    why: '아직 처분할 단계는 아니에요. 꿀통지수가 높을수록 재입고 우선순위가 높습니다.',
+    tone: { fg: '#b45309', bg: '#fffbeb', bd: '#fde68a' },
+    icon: Package,
+    bulk: null,
+  },
+];
 
-  if (verdict.action === 'RESOURCE') {
-    return {
-      label: dispositionCopy.RESOURCE.action, color: 'text-fuchsia-700', bg: 'bg-fuchsia-50',
-      border: 'border-fuchsia-200', icon: 'find', recommended: 'replace' as ActionType,
-      msg: dispositionCopy.RESOURCE.tooltip,
-    };
-  }
-  if (verdict.action === 'DELETE_SAFE') {
-    return {
-      label: dispositionCopy.DELETE_SAFE.action, color: 'text-fuchsia-700', bg: 'bg-fuchsia-50',
-      border: 'border-fuchsia-200', icon: 'clean', recommended: 'deactivate' as ActionType,
-      msg: dispositionCopy.DELETE_SAFE.tooltip,
-    };
-  }
-  if (verdict.action === 'SUSPEND') {
-    // 장기 품절 — 자산 유무로 "그 다음에 뭘 할지"가 갈린다.
-    const tail = verdict.hasAssets
-      ? ' 이 상품은 팔린 적이 있어서 리뷰와 순위가 쌓여 있어요. 삭제하지 말고 판매중지 후 대체 공급처를 찾아주세요.'
-      : ' 판매 이력이 없어서 지킬 리뷰·순위는 없어요. 정리하거나 더 나은 상품으로 교체해도 괜찮아요.';
-    return {
-      label: dispositionCopy.SUSPEND.action, color: 'text-orange-700', bg: 'bg-orange-50',
-      border: 'border-orange-200', icon: 'clean', recommended: 'deactivate' as ActionType,
-      msg: dispositionCopy.SUSPEND.tooltip + tail,
-    };
-  }
-  if (verdict.action === 'MARK_OUT_OF_STOCK') {
-    return {
-      label: dispositionCopy.MARK_OUT_OF_STOCK.action, color: 'text-red-600', bg: 'bg-red-50',
-      border: 'border-red-200', icon: 'urgent', recommended: 'restock' as ActionType,
-      msg: dispositionCopy.MARK_OUT_OF_STOCK.tooltip,
-    };
-  }
-
-  // 권고 없음(이미 품절 처리된 단기 품절) — 남은 질문은 "얼마나 급히 재입고하나"뿐.
-  // 여기서만 꿀통지수를 쓴다.
-  if (days <= 3 && honey.total >= 70) {
-    return { label: '긴급 재입고', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', icon: 'urgent', recommended: 'restock' as ActionType, msg: `꿀통 ${honey.total}점 상품! ${days}일째 품절 중 — 빨리 재입고하면 손해가 없어요!` };
-  }
-  if (honey.total >= 50) {
-    return { label: '재입고 권장', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', icon: 'warn', recommended: 'restock' as ActionType, msg: `아직 늦지 않았어요! ${days}일째 품절 — 공급사에 연락해봐요.` };
-  }
-  return { label: '모니터링 중', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200', icon: 'wait', recommended: 'none' as ActionType, msg: `${days}일째 품절 중이에요. ${LONG_OUT_OF_STOCK_DAYS}일이 넘으면 판매중지를 권해드릴게요.` };
+interface BulkPreviewRow {
+  productId: string;
+  name: string;
+  ok: boolean;
+  changed: string[];
+  noop: boolean;
+  error?: string;
 }
-
-const ACTION_LABELS: Record<ActionType, string> = {
-  restock:    '재입고 요청',
-  replace:    '대체상품 찾기',
-  reprice:    '가격 재조정',
-  deactivate: '비활성화',
-  none:       '미정',
-};
 
 // ── Stats card ────────────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, color }: { label: string; value: string | number; sub?: string; color?: string }) {
@@ -141,279 +140,344 @@ function StatCard({ label, value, sub, color }: { label: string; value: string |
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function OutOfStockPage() {
-  const [products, setProducts] = useState<OutOfStockProduct[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState('');
-  const [actions, setActions]   = useState<ImprovementAction[]>([]);
-  const [saving, setSaving]     = useState<Record<string, boolean>>({});
+export default function DispositionQueuePage() {
+  const [raw, setRaw] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkPreview, setBulkPreview] = useState<{ target: BulkTarget; rows: BulkPreviewRow[] } | null>(null);
+  const [bulkResult, setBulkResult] = useState<string | null>(null);
 
-  // Load out-of-stock products
-  const loadProducts = async () => {
+  const { byProductId: inventory, refresh: refreshInventory } = useInventoryBadges();
+
+  const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/products?status=OUT_OF_STOCK&limit=100');
+      // 전 상품을 읽는다 — 처분 대상은 status가 아니라 재고신호+자산으로 정해진다(#273).
+      const res = await fetch('/api/products?limit=200');
       const data = await res.json();
-      const list: OutOfStockProduct[] = (data.products ?? data.data ?? []).map((p: any) => ({
-        ...p,
-        daysOutOfStock: daysSince(p.updatedAt ?? p.createdAt),
-        honeyScore: calcHoneyScore({
-          salePrice:     p.salePrice ?? 0,
-          supplierPrice: p.supplierPrice ?? 0,
-          categoryId:    p.naverCategoryCode ?? '',
-          productName:   p.name ?? '',
-          keywords:      Array.isArray(p.keywords) ? p.keywords : [],
-          tags:          Array.isArray(p.tags) ? p.tags : [],
-          hasMainImage:  !!p.mainImage,
-          hasDescription: false,
-        }),
-      }));
-      setProducts(list);
+      setRaw(data.products ?? data.data ?? []);
     } catch {
-      // Silently fail — show empty state
+      setRaw([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { loadProducts(); }, []);
+  useEffect(() => { void loadProducts(); }, [loadProducts]);
 
-  const filtered = useMemo(() => {
+  // 처분 판정 — disposition.ts 단일 권위(#62). 이 화면은 자체 규칙을 두지 않는다.
+  const products: QueueProduct[] = useMemo(() => {
+    return raw.map((p: any) => {
+      const inv = inventory[p.id];
+      const v = decideDisposition({
+        salesCount: p.salesCount,
+        lastSaleDate: p.lastSaleDate,
+        naverProductId: p.naverProductId,
+        naverStatusType: p.naver_status_type,
+        sourceGone: inv?.sourceGone,
+        qty: inv?.qty,
+        supplierStatus: inv?.status,
+        daysOutOfStock: inv?.daysOutOfStock,
+      });
+      return {
+        ...p,
+        action: v.action,
+        hasAssets: v.hasAssets,
+        daysOutOfStock: v.daysOutOfStock,
+        honeyScore: calcHoneyScore({
+          salePrice: p.salePrice ?? 0,
+          supplierPrice: p.supplierPrice ?? 0,
+          categoryId: p.naverCategoryCode ?? '',
+          productName: p.name ?? '',
+          keywords: Array.isArray(p.keywords) ? p.keywords : [],
+          tags: Array.isArray(p.tags) ? p.tags : [],
+          hasMainImage: !!p.mainImage,
+          hasDescription: false,
+        }),
+      } as QueueProduct;
+    });
+  }, [raw, inventory]);
+
+  const searched = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return products;
-    return products.filter(p => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+    return products.filter(p => p.name?.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q));
   }, [products, search]);
 
-  // Stats
-  const urgentCount    = products.filter(p => (p.daysOutOfStock ?? 0) <= 3 && (p.honeyScore?.total ?? 0) >= 70).length;
-  const avgHoney       = products.length > 0 ? Math.round(products.reduce((a, p) => a + (p.honeyScore?.total ?? 0), 0) / products.length) : 0;
-  const longTermCount  = products.filter(p => (p.daysOutOfStock ?? 0) > 14).length;
-  const lostRevEstimate = products.reduce((a, p) => a + (p.salePrice * 0.3), 0); // rough 30% daily loss estimate
+  // 그룹 배분. RESTOCK 그룹에는 "권고 없음 + 앱 상태가 품절"인 것만 담는다 —
+  // 정상 판매 중인 상품까지 대기함에 쌓이면 대기함이 아니라 전체 목록이 된다.
+  const grouped = useMemo(() => {
+    const map = new Map<string, QueueProduct[]>();
+    for (const g of GROUPS) map.set(g.action, []);
+    for (const p of searched) {
+      if (p.action !== 'NONE') {
+        map.get(p.action)?.push(p);
+      } else if (p.status === 'OUT_OF_STOCK') {
+        map.get('RESTOCK')?.push(p);
+      }
+    }
+    // 재입고 검토는 꿀통 높은 순 = 재입고 우선순위
+    map.get('RESTOCK')?.sort((a, b) => (b.honeyScore?.total ?? 0) - (a.honeyScore?.total ?? 0));
+    return map;
+  }, [searched]);
 
-  const setAction = (productId: string, action: ActionType) => {
-    setActions(prev => {
-      const existing = prev.find(a => a.productId === productId);
-      if (existing) return prev.map(a => a.productId === productId ? { ...a, action } : a);
-      return [...prev, { productId, action }];
+  const totalPending = GROUPS.filter(g => g.action !== 'RESTOCK')
+    .reduce((n, g) => n + (grouped.get(g.action)?.length ?? 0), 0);
+  const criticalCount = grouped.get('RESOURCE')?.length ?? 0;
+  const restockCount = grouped.get('RESTOCK')?.length ?? 0;
+
+  const toggle = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleGroup = (items: QueueProduct[]) => {
+    const allSel = items.length > 0 && items.every(p => selected.has(p.id));
+    setSelected(prev => {
+      const next = new Set(prev);
+      for (const p of items) { if (allSel) next.delete(p.id); else next.add(p.id); }
+      return next;
     });
   };
 
-  const getAction = (productId: string): ActionType =>
-    actions.find(a => a.productId === productId)?.action ?? 'none';
-
-  const handleApplyAction = async (product: OutOfStockProduct, action: ActionType) => {
-    if (action === 'none') return;
-    setSaving(prev => ({ ...prev, [product.id]: true }));
-    try {
-      if (action === 'deactivate') {
-        await fetch(`/api/products/${product.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'INACTIVE' }),
+  // ── 일괄 반영: 1단계 전 건 dryRun 미리보기 (#46 — 실제 쓰기 전에 반드시) ──
+  async function previewBulk(target: BulkTarget, items: QueueProduct[]) {
+    const picked = items.filter(p => selected.has(p.id) && p.naverProductId);
+    if (picked.length === 0) return;
+    setBulkBusy(true); setBulkResult(null);
+    const rows: BulkPreviewRow[] = [];
+    for (const p of picked) {
+      try {
+        const r = await fetch(`/api/products/${p.id}/naver-status`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target, dryRun: true }),
         });
-        setProducts(prev => prev.filter(p => p.id !== product.id));
-      } else if (action === 'restock') {
-        // Navigate to supplier page
-        window.open(`/settings/platforms?supplierId=${product.supplierId}`, '_blank');
-      } else if (action === 'replace') {
-        // Navigate to new product with pre-filled category
-        const params = new URLSearchParams({ categoryCode: product.naverCategoryCode ?? '', ref: product.sku });
-        window.open(`/products/new?${params}`, '_blank');
-      } else if (action === 'reprice') {
-        // Navigate to product edit
-        window.open(`/products/${product.id}/edit`, '_blank');
+        const j = await r.json();
+        if (!j.success) throw new Error(j.error ?? 'preview failed');
+        rows.push({
+          productId: p.id, name: p.name, ok: true,
+          changed: j.changedTopLevelFields ?? [],
+          noop: (j.changedTopLevelFields ?? []).length === 0,
+        });
+      } catch (e) {
+        rows.push({ productId: p.id, name: p.name, ok: false, changed: [], noop: false, error: e instanceof Error ? e.message : '실패' });
       }
-    } finally {
-      setSaving(prev => ({ ...prev, [product.id]: false }));
     }
-  };
+    setBulkPreview({ target, rows });
+    setBulkBusy(false);
+  }
+
+  // ── 일괄 반영: 2단계 실제 실행 (운영자 확인 후에만) ──
+  async function applyBulk() {
+    if (!bulkPreview) return;
+    const applicable = bulkPreview.rows.filter(r => r.ok && !r.noop);
+    if (applicable.length === 0) return;
+    const ok = window.confirm(
+      `네이버 스토어에 ${applicable.length}건을 실제로 반영합니다.\n\n` +
+      applicable.map(r => `· ${r.name}`).join('\n') +
+      `\n\n비가역 작업입니다. 계속할까요?`,
+    );
+    if (!ok) return;
+    setBulkBusy(true);
+    let done = 0; let failed = 0;
+    for (const r of applicable) {
+      try {
+        const res = await fetch(`/api/products/${r.productId}/naver-status`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target: bulkPreview.target, dryRun: false, confirm: true }),
+        });
+        const j = await res.json();
+        if (j.success && j.applied) done++; else failed++;
+      } catch { failed++; }
+    }
+    setBulkBusy(false);
+    setBulkPreview(null);
+    setSelected(new Set());
+    setBulkResult(`반영 완료 ${done}건${failed > 0 ? ` · 실패 ${failed}건` : ''}`);
+    await loadProducts();
+    refreshInventory();
+  }
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <a href="/products" className="text-gray-400 hover:text-gray-600 text-sm">← 목록</a>
             <span className="text-gray-300">|</span>
             <AlertTriangle size={16} className="text-orange-500" />
-            <h1 className="text-lg font-bold text-gray-900">품절 상품 개선</h1>
-            {products.length > 0 && (
+            <h1 className="text-lg font-bold text-gray-900">처분 결정 대기함</h1>
+            {totalPending > 0 && (
               <span className="text-xs bg-orange-100 text-orange-700 font-semibold px-2.5 py-1 rounded-full">
-                {products.length}개 품절
+                {totalPending}건 대기
               </span>
             )}
           </div>
-          <button
-            onClick={loadProducts}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition"
-          >
-            <RefreshCw size={12} />
-            새로고침
+          <button onClick={() => { void loadProducts(); refreshInventory(); }}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
+            <RefreshCw size={12} />새로고침
           </button>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
-
-        {/* Stats */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard label="총 품절 상품" value={products.length} sub="개" color="text-orange-600" />
-          <StatCard label="긴급 재입고 필요" value={urgentCount} sub="꿀통 70+ / 3일내" color="text-red-600" />
-          <StatCard label="평균 꿀통지수" value={avgHoney} sub="점" color={avgHoney >= 70 ? 'text-green-600' : avgHoney >= 50 ? 'text-blue-600' : 'text-gray-500'} />
-          <StatCard label="장기 품절" value={longTermCount} sub="14일 이상" color="text-gray-600" />
+          <StatCard label="처분 대기" value={totalPending} sub="건" color="text-orange-600" />
+          <StatCard label="대체 소싱 필요" value={criticalCount} sub="자산 보호 대상" color="text-fuchsia-700" />
+          <StatCard label="재입고 검토" value={restockCount} sub="건" color="text-amber-600" />
+          <StatCard label="선택" value={selected.size} sub="건" color="text-gray-700" />
         </div>
 
-        {/* Kkotti summary banner */}
-        {urgentCount > 0 && (
-          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
-            <Zap size={16} className="text-red-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-bold text-red-700">꼬띠 긴급 알림</p>
-              <p className="text-xs text-red-600 mt-0.5">
-                꿀통 상품 {urgentCount}개가 3일 이내에 품절됐어요! 지금 바로 재입고 요청하면 매출 손실을 최소화할 수 있어요.
-              </p>
-            </div>
+        {bulkResult && (
+          <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-2xl px-4 py-3">
+            <CheckCircle size={16} className="text-green-600 shrink-0 mt-0.5" />
+            <p className="text-sm font-semibold text-green-700">{bulkResult}</p>
           </div>
         )}
 
-        {/* Search */}
         <div className="relative">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             className="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-300 placeholder-gray-300"
             placeholder="상품명 또는 상품코드(SKU) 검색..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+            value={search} onChange={e => setSearch(e.target.value)}
           />
         </div>
 
-        {/* Product list */}
         {loading ? (
           <div className="py-16 text-center text-gray-400 text-sm">불러오는 중...</div>
-        ) : filtered.length === 0 ? (
+        ) : totalPending === 0 && restockCount === 0 ? (
           <div className="py-16 text-center">
             <CheckCircle size={40} className="text-green-400 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">품절 상품이 없어요!</p>
-            <p className="text-xs text-gray-400 mt-1">재고가 잘 관리되고 있어요. 수고하셨어요!</p>
+            <p className="text-gray-500 font-medium">처분할 상품이 없어요!</p>
+            <p className="text-xs text-gray-400 mt-1">공급처도 재고도 안정적이에요. 수고하셨어요!</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {filtered.map(product => {
-              const honey = product.honeyScore!;
-              const days  = product.daysOutOfStock ?? 0;
-              const advice = getOosAdvice(product, days, honey);
-              const currentAction = getAction(product.id);
-
+          <div className="space-y-5">
+            {GROUPS.map(g => {
+              const items = grouped.get(g.action) ?? [];
+              if (items.length === 0) return null;
+              const Icon = g.icon;
+              const selInGroup = items.filter(p => selected.has(p.id)).length;
+              const allSel = selInGroup === items.length;
               return (
-                <div key={product.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-                  {/* Top bar: urgency color */}
-                  <div className={`h-1 w-full ${
-                    days <= 3 && honey.total >= 70 ? 'bg-red-400' :
-                    days <= 7 ? 'bg-orange-300' :
-                    days > 14 ? 'bg-gray-200' : 'bg-yellow-300'
-                  }`} />
-
-                  <div className="p-4">
-                    <div className="flex items-start gap-4">
-                      {/* Image placeholder */}
-                      <div className="w-14 h-14 shrink-0 bg-gray-100 rounded-xl flex items-center justify-center text-gray-300">
-                        {product.mainImage ? (
-                          <img src={product.mainImage} alt="" className="w-full h-full object-cover rounded-xl" />
-                        ) : (
-                          <Package size={20} />
-                        )}
-                      </div>
-
-                      {/* Product info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-bold text-gray-900 truncate">{product.name}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">{product.sku}</p>
-                          </div>
-                          {/* Honey score badge */}
-                          <div className={`shrink-0 text-center px-2.5 py-1 rounded-xl border ${
-                            honey.grade === 'S' ? 'bg-purple-50 border-purple-200' :
-                            honey.grade === 'A' ? 'bg-green-50 border-green-200' :
-                            honey.grade === 'B' ? 'bg-blue-50 border-blue-200' :
-                            honey.grade === 'C' ? 'bg-yellow-50 border-yellow-200' :
-                            'bg-gray-50 border-gray-200'
-                          }`}>
-                            <p className={`text-xs font-black ${
-                              honey.grade === 'S' ? 'text-purple-700' :
-                              honey.grade === 'A' ? 'text-green-700' :
-                              honey.grade === 'B' ? 'text-blue-700' :
-                              honey.grade === 'C' ? 'text-yellow-700' : 'text-gray-500'
-                            }`}>{honey.total}</p>
-                            <p className="text-xs text-gray-400">{honey.grade}등급</p>
-                          </div>
-                        </div>
-
-                        {/* Price info */}
-                        <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                          <span>판매가 <strong className="text-gray-800">{formatPrice(product.salePrice)}</strong></span>
-                          <span>공급가 <strong className="text-gray-700">{formatPrice(product.supplierPrice)}</strong></span>
-                          <span className={`font-semibold ${honey.netMarginRate >= 30 ? 'text-green-600' : honey.netMarginRate >= 20 ? 'text-yellow-600' : 'text-red-500'}`}>
-                            순마진 {honey.netMarginRate.toFixed(1)}%
-                          </span>
-                        </div>
-
-                        {/* Days out of stock + advice */}
-                        <div className={`mt-2 px-3 py-2 rounded-xl border text-xs ${advice.bg} ${advice.border}`}>
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className={`font-bold ${advice.color}`}>{advice.label}</span>
-                            <span className="text-gray-400">{days}일째 품절</span>
-                          </div>
-                          <p className={`${advice.color} opacity-80`}>{advice.msg}</p>
-                        </div>
-                      </div>
+                <section key={g.action} className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: g.tone.bd }}>
+                  <header className="px-4 py-3" style={{ background: g.tone.bg, borderBottom: `1px solid ${g.tone.bd}` }}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Icon size={15} style={{ color: g.tone.fg }} />
+                      <span className="text-sm font-black" style={{ color: g.tone.fg }}>{g.title}</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: '#fff', color: g.tone.fg, border: `1px solid ${g.tone.bd}` }}>{items.length}</span>
+                      <button onClick={() => toggleGroup(items)}
+                        className="ml-auto text-[11px] font-bold underline" style={{ color: g.tone.fg }}>
+                        {allSel ? '선택 해제' : '그룹 전체 선택'}
+                      </button>
                     </div>
+                    <p className="text-[11px] mt-1.5 leading-relaxed" style={{ color: '#6b7280' }}>{g.why}</p>
+                    {g.bulk && selInGroup > 0 && (
+                      <button onClick={() => void previewBulk(g.bulk as BulkTarget, items)} disabled={bulkBusy}
+                        className="mt-2 inline-flex items-center gap-1.5 text-xs font-extrabold rounded-lg px-3 py-1.5"
+                        style={{ color: '#fff', background: bulkBusy ? '#9ca3af' : g.tone.fg, cursor: bulkBusy ? 'not-allowed' : 'pointer' }}>
+                        {bulkBusy ? <Loader2 size={13} className="animate-spin" /> : <ShieldAlert size={13} />}
+                        선택 {selInGroup}건 일괄 반영 미리보기
+                      </button>
+                    )}
+                  </header>
 
-                    {/* Action selector */}
-                    <div className="mt-3 flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-gray-400 shrink-0">개선안:</span>
-                      {(['restock', 'replace', 'reprice', 'deactivate'] as ActionType[]).map(act => (
-                        <button
-                          key={act}
-                          onClick={() => setAction(product.id, act)}
-                          className={`text-xs px-2.5 py-1 rounded-lg border transition-all font-medium ${
-                            currentAction === act
-                              ? act === 'deactivate'
-                                ? 'bg-red-500 text-white border-red-500'
-                                : 'bg-green-500 text-white border-green-500'
-                              : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          {ACTION_LABELS[act]}
-                          {advice.recommended === act && currentAction !== act && (
-                            <span className="ml-1 text-[10px] font-bold text-rose-500">추천</span>
-                          )}
-                        </button>
-                      ))}
-                      {currentAction !== 'none' && (
-                        <button
-                          onClick={() => handleApplyAction(product, currentAction)}
-                          disabled={saving[product.id]}
-                          className={`ml-auto flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-bold transition-all ${
-                            currentAction === 'deactivate'
-                              ? 'bg-red-500 hover:bg-red-600 text-white'
-                              : 'bg-green-500 hover:bg-green-600 text-white'
-                          } disabled:opacity-50`}
-                        >
-                          {saving[product.id] ? '처리 중...' : '실행'}
-                          <ArrowRight size={11} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  <ul>
+                    {items.map(p => {
+                      const honey = p.honeyScore;
+                      const copy = p.action !== 'NONE' ? (dispositionCopy as any)[p.action] : null;
+                      return (
+                        <li key={p.id} className="px-4 py-3 border-b last:border-b-0 border-gray-100 flex items-start gap-3">
+                          <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)}
+                            className="mt-1 w-4 h-4 rounded border-gray-300 text-[#F63B28] focus:ring-[#F63B28]/30 shrink-0" />
+                          <div className="w-11 h-11 shrink-0 bg-gray-100 rounded-xl flex items-center justify-center text-gray-300 overflow-hidden">
+                            {p.mainImage
+                              // eslint-disable-next-line @next/next/no-img-element
+                              ? <img src={p.mainImage} alt="" className="w-full h-full object-cover" />
+                              : <Package size={18} />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-gray-900 truncate">{p.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap text-xs text-gray-500">
+                              <span className="font-mono text-[11px] text-gray-400">{p.sku}</span>
+                              <span>{formatPrice(p.salePrice ?? 0)}</span>
+                              {typeof p.daysOutOfStock === 'number' && p.daysOutOfStock > 0 && (
+                                <span className="text-amber-700 font-semibold">{p.daysOutOfStock}일째 품절</span>
+                              )}
+                              {p.hasAssets && (
+                                <span className="text-fuchsia-700 font-semibold">판매 이력 {p.salesCount ?? 0}건</span>
+                              )}
+                              {g.action === 'RESTOCK' && honey && (
+                                <span className="font-semibold" style={{ color: honey.total >= 70 ? '#15803d' : honey.total >= 50 ? '#2563eb' : '#6b7280' }}>
+                                  꿀통 {honey.total}
+                                </span>
+                              )}
+                            </div>
+                            {copy && (
+                              <p className="text-[11px] mt-1" style={{ color: g.tone.fg }}>{copy.action}</p>
+                            )}
+                          </div>
+                          <Link href={`/products?open=${p.id}`}
+                            className="shrink-0 inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg"
+                            style={{ color: g.tone.fg, background: g.tone.bg, border: `1px solid ${g.tone.bd}`, textDecoration: 'none' }}>
+                            상세<ArrowRight size={11} />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* 일괄 반영 미리보기 모달 — #46 이중 게이트의 1단계. */}
+      {bulkPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.35)' }}
+          onClick={() => !bulkBusy && setBulkPreview(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-4 py-3" style={{ background: '#eff6ff', borderBottom: '1px solid #bfdbfe' }}>
+              <p className="text-sm font-black" style={{ color: '#1d4ed8' }}>
+                일괄 반영 미리보기 (dry-run) — {bulkPreview.target === 'SUSPENSION' ? '판매중지' : '품절 처리'}
+              </p>
+            </div>
+            <ul className="max-h-72 overflow-y-auto">
+              {bulkPreview.rows.map(r => (
+                <li key={r.productId} className="px-4 py-2.5 border-b last:border-b-0 border-gray-100 flex items-center gap-2">
+                  {r.ok
+                    ? (r.noop ? <CheckCircle size={13} className="text-gray-400 shrink-0" /> : <ShieldAlert size={13} className="text-orange-600 shrink-0" />)
+                    : <AlertTriangle size={13} className="text-red-500 shrink-0" />}
+                  <span className="text-xs text-gray-800 truncate flex-1">{r.name}</span>
+                  <span className="text-[11px] shrink-0" style={{ color: r.ok ? (r.noop ? '#9ca3af' : '#c2410c') : '#dc2626' }}>
+                    {r.ok ? (r.noop ? '변경 없음' : r.changed.join(', ')) : r.error}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="p-4 flex items-center gap-2" style={{ borderTop: '1px solid #f3f4f6' }}>
+              <p className="text-[11px] flex-1" style={{ color: '#9a3412' }}>
+                실제 반영은 대표님 확인 후에만 실행됩니다. 변경 없는 항목은 건너뜁니다.
+              </p>
+              <button onClick={() => setBulkPreview(null)} disabled={bulkBusy}
+                className="text-xs font-bold px-3 py-2 rounded-lg border border-gray-200 text-gray-600">취소</button>
+              <button onClick={() => void applyBulk()} disabled={bulkBusy || bulkPreview.rows.every(r => !r.ok || r.noop)}
+                className="text-xs font-extrabold px-3 py-2 rounded-lg text-white inline-flex items-center gap-1.5"
+                style={{ background: bulkBusy || bulkPreview.rows.every(r => !r.ok || r.noop) ? '#9ca3af' : '#dc2626' }}>
+                {bulkBusy ? <Loader2 size={13} className="animate-spin" /> : <ShieldAlert size={13} />}
+                GO — 실제 반영
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
