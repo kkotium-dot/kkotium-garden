@@ -13,6 +13,8 @@ import { calcHoneyScore } from '@/lib/honey-score';
 import { getReactivationReason, type ReactivationReason } from '@/lib/daily-slots';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
 import NameDiagnosisBadge, { type NameBadgeData } from '@/components/products/NameDiagnosisBadge';
+import InventoryBadge from '@/components/products/InventoryBadge';
+import { useInventoryBadges } from '@/lib/hooks/useInventoryBadges';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,6 +24,11 @@ interface Product {
   naverCategoryCode?: string; keywords?: string[]; tags?: string[];
   mainImage?: string; aiScore?: number;
   lastSaleDate?: string; updatedAt?: string; createdAt?: string;
+  // 처분 권고(#273/#285) 판정 입력. 되살릴지 판단하려면 "왜 죽었는지"가 먼저다 —
+  // 공급처가 끊긴 상품을 되살리려 시간을 쓰는 일을 이 신호가 막는다.
+  naverProductId?: string | null;
+  naver_status_type?: string | null;
+  salesCount?: number | null;
 }
 
 interface ReactivationItem {
@@ -130,6 +137,9 @@ export default function ReactivationPage() {
   const [toast, setToast]       = useState<{ msg: string; ok: boolean } | null>(null);
   // NAME-DIAG-3 (#251): per-product 상품명 진단 badges (server-computed).
   const [diagnoses, setDiagnoses] = useState<Record<string, NameBadgeData>>({});
+  // 재고/공급처 신호 — 처분 권고(#273)의 입력. 배지 컴포넌트가 판정까지
+  // 담당하므로 이 화면은 자체 규칙을 두지 않는다(#62).
+  const { byProductId: inventory } = useInventoryBadges();
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
@@ -373,7 +383,22 @@ export default function ReactivationPage() {
                         {meta.label}
                       </span>
                       {diagnoses[item.product.id] && (
-                        <NameDiagnosisBadge data={diagnoses[item.product.id]} />
+                        <NameDiagnosisBadge data={diagnoses[item.product.id]} compact />
+                      )}
+                      {/* 처분 권고(#285) — 되살릴지 정하기 전에 "왜 죽었는지"를 보여준다.
+                          공급처가 끊긴 상품은 되살려도 매입이 불가하므로 복구 작업이
+                          통째로 헛수고가 된다. 판정은 disposition.ts 단일 권위(#62). */}
+                      {inventory[item.product.id] && (
+                        <InventoryBadge
+                          inv={inventory[item.product.id]}
+                          mode="selling"
+                          product={{
+                            salesCount: item.product.salesCount,
+                            lastSaleDate: item.product.lastSaleDate,
+                            naverProductId: item.product.naverProductId,
+                            naverStatusType: item.product.naver_status_type,
+                          }}
+                        />
                       )}
                     </div>
                     <div style={{ height: 1, background: '#F8DCE5', margin: '6px 0' }} />
