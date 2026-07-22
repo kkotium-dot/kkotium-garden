@@ -1,9 +1,47 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-07-22 (rev80 — 체크리스트 실행으로 사각지대 2곳 추가 색출 #294 · Desktop 인계)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-07-23 (rev81 — DESKTOP-1 처분 7채널 정합 실측 종결·부활소 이탈 확정·생애주기 일원화 착수 · Desktop) / 직전 rev80 2026-07-22
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
 > **원칙 #149~#253 전문은 `docs/plan/PRINCIPLES_LEARNED.md`를 참조하세요** (2026-07-14 정식 이관 완료 — #165/#217~#220/#225/#231은 원문에 개별 정의가 없는 결번으로 확정). rev50 이하 원문(rev40~rev50 상세 커밋 로그)은 이 트래커의 커밋 `5c9e9f5^`(`git show 5c9e9f5^:docs/plan/PARALLEL_WORK_TRACKER.md`)에서 조회 가능합니다 — 현재 HEAD 파일 본문에서는 제거되어 있습니다(직전 커밋 5c9e9f5가 "원문 보존"이라 주장했으나 실제로는 528줄을 삭제했던 것을 2026-07-14 발견, 아래 참조).
 
+
+## rev81 — DESKTOP-1 처분 7채널 정합 실측 종결 + 생애주기 일원화 착수 (2026-07-23 Desktop)
+
+### ★ DESKTOP-1 실측 종결 — 정합 6/7, 부활소 이탈 확정, 원복 완결
+실 DB 주입(inventory_snapshots qty=-1 3행 · now/-1h/-2h 끼임회피) → **sourceGone=TRUE**(선두 연속음수 3) 실측 → 채널1(처분 대기함) 육안 PASS(삭제안전 1건) → 부활소 육안+grep 이탈 확정 → 원복 완결(TESTDISP-* 0 · pid/type NULL).
+- 안전조치: 주입 전 pid/status NULL 확인(무손실 원복) · id text타입 확인 · 끼임 교정(실 07-22 양수 위에 3행 안착).
+- Cowork 스텁이 못 잡은 "실 DB 행" 정합을 실측으로 증명(이번 사이클 마지막 구멍 종결).
+
+### 채널별 판정
+| 채널 | 판정 | 근거 |
+|---|---|---|
+| 1 처분 대기함 | 정상 | 육안(삭제안전 1건) |
+| 2 목록배지 · 3·4 대시보드 · 5 알림 · 7 발행게이트 | 정상(추정) | grep — 육안 미확인 |
+| 6 부활소 | **이탈 확정** | 육안+grep (getReactivationReason 자체 status 판정 · daily-slots.ts:143) |
+
+### 신규 발견 (단건 아님 · 전체 확장 대상)
+1. 부활소 = 화면간 모순 지시("삭제 권장" 배지 + "등록 완료" 버튼 동시). 근본 = 화면별 자체 분류(#295).
+2. products/page.tsx:878 SubstituteEditor 재고0 넛지 = `status==='OUT_OF_STOCK'` 직접 비교(부분 이탈). sourceGone+ACTIVE 케이스 강조 누락. 1줄 수정 후보(일원화 배치).
+3. sourceGone 스냅샷 타이밍 취약(#297 · SOURCE_GONE_ROBUSTNESS_TICKET_2026-07-23.md).
+4. 카테고리 회귀 의심: 부활소에 미발행("등록 미완료") 노출 = 발행여부 분리(스펙 §1) 미전파(#296) → Code 검증.
+5. 상품셋 변화: 명화(검증 baseline #55) → Product 테이블 제거, 플라티코 추가. 교체 경위 확인 필요.
+
+### 작업 큐 (우선순위 · 상태 · 다음 액션)
+| P | 작업 | 레인 | 상태 | 다음 액션 |
+|---|---|---|---|---|
+| 1 | 생애주기 state machine 설계(deriveLifecycleState · 발행여부 축) | Cowork | 착수 | docs/design 3종(LIFECYCLE/COPY/SURFACE) |
+| 1 | 판정 일원화 전면 감사(부활소 외 이탈 색출) | Code | 감사분 완료 | 카테고리 회귀 검증 추가 |
+| 2 | 처분 스모크 스크립트 커밋 | Code | 대기 | git 커밋(실행은 보류) |
+| 2 | sourceGone 강건성 정책확정(연속N vs 최근M중N) | Code | 설계완 | 운영자 확정 후 구현 |
+| 3 | 일원화 구현(부활소·SubstituteEditor:878·발행여부 필터) | Code | 대기 | Cowork 설계 확정 후 |
+| 3 | 처분 스모크 실행 | Desktop | 대기 | 대상 선정(naverPid有+스냅샷0) |
+| — | 명화 판매중지 PUT | 운영자 | 보류 | GO(#46) |
+| — | 명화→플라티코 교체 경위 | Desktop | 확인필요 | 다음 세션 |
+
+### 커넥터 노트
+Filesystem MCP 다운(#26) → **Desktop Commander로 우회 저장 성공**(#298). 이 rev81도 Desktop Commander로 기입. Code 미커밋 3파일(DISPOSITION_SURFACE_AUDIT·SOURCE_GONE_ROBUSTNESS_TICKET·smoke script)은 Code 커밋 대기.
+
+---
 
 ## rev80 — 체크리스트 실행 + Desktop 인계 (2026-07-22 Cowork)
 
