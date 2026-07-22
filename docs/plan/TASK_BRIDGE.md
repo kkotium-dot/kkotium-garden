@@ -101,27 +101,39 @@
 | # | 작업 | 상태 | 선행 의존성 | 담당 적합 | 비고 |
 |---|---|---|---|---|---|
 | A1 | 처분 권고 엔진(#273) | `DONE` | — | 🌸 | `4ee8585` 배포·검증완 |
-| A2 | 배지 레일(#274) + 상품명 붕괴(#275) + 압축(#276) | `DONE` | — | 🌸 | `7ebaae3` 배포·검증완 |
-| **B1** | **처분 권고 "원클릭 실행"** | `BLOCKED` | **B2**(api-client SUSPENSION) | 🌸 | 권고만 하고 실행은 수동인 상태. 실행까지 닫아야 가치가 완성 |
-| **B2** | api-client `SUSPENSION` 지원 | `READY` | — | 🌸 or 💻 | `updateProductStatus`가 `OUTOFSTOCK\|SALE`만 지원. **네이버 PUT은 #46 운영자 승인 게이트 유지** |
-| **B3** | 품절 페이지 → "처분 결정 대기함" 재정의 | `READY` | (B1과 함께면 시너지) | 🌸 | 권고별 그룹핑 + 일괄 처리. A1로 엔진은 이미 있음 |
-| C1 | R-1/R-2/R-3 육안 확인 | `READY` | — | 🌸 | **운영자 스크린샷 불필요** — Cowork가 직접 촬영 가능. 최종 미감 판단만 운영자 |
-| C2 | 배지 레일 다른 화면 확장 | `READY` | A2 | 🌸 | 모바일 카드·사이드패널·재활성화 목록. 현재는 데스크톱 목록만 적용 |
-| D1 | 작업 G 나머지 16개 파일 페르소나 | `WAIT-OP` | 우선순위 미지정 | 💻 | 대량 문자열 편집 — #29a Python 스크립트 필수 |
-| D2 | 도매꾹 폴링 on/off | `WAIT-OP` | 운영자 지시 | 🖥 | 비용/DB 부하 관점 |
-| E1 | 클로드디자인 v7 PDF | `HOLD` | — | — | 보류 — 건드리지 말 것 |
-| E2 | z3c stash | `HOLD` | — | — | 보류 — 건드리지 말 것 |
+| A2 | 배지 레일(#274)+상품명 붕괴(#275)+압축(#276) | `DONE` | — | 🌸 | `7ebaae3` 배포·검증완 |
+| B2 | api-client `SUSPENSION` 지원(#277) | `DONE` | — | 🌸 | `c36d380` 배포·prod dryRun 검증완 |
+| B1 | 처분 권고 원클릭 실행(#277) | `DONE` | B2 | 🌸 | `c36d380` 배포·prod UI 검증완. **실제 GO는 운영자 전용** |
+| **B3** | 품절 페이지 → "처분 결정 대기함" 재정의 | `READY` | — | 🌸 | 권고별 그룹핑 + 일괄 처리. 엔진(A1)·실행(B1) 이미 있음 → 목록만 재구성 |
+| **C1** | R-1/R-2/R-3 육안 확인 | `READY` | — | 🌸 | Cowork 직접 촬영 가능. 최종 미감만 운영자 |
+| **C2** | 배지 레일 다른 화면 확장 | `READY` | A2 | 🌸 | 모바일 카드·재활성화 목록. 현재 데스크톱 목록만 |
+| **C3** | 로컬 dev CSS 파이프라인 복구 | `READY` | — | 💻 or 🌸 | `@tailwind` 파싱 실패(rev69 이슈). `npm ci` 시도. **prod 무영향** |
+| D1 | 작업 G 나머지 16개 파일 페르소나 | `WAIT-OP` | 우선순위 미지정 | 💻 | 대량 문자열 — #29a Python 필수. **의존성 0, 병행 안전** |
+| D2 | 도매꾹 폴링 on/off | `WAIT-OP` | 운영자 지시 | 🖥 | 비용/DB 부하 |
+| E1 | 클로드디자인 v7 PDF | `HOLD` | — | — | 보류 |
+| E2 | z3c stash | `HOLD` | — | — | 보류 |
 
-**다음 세션 권장 순서**: `B2 → B1` (한 흐름으로 묶으면 "권고 → 실행"이 닫힘) → `B3` → `C1/C2` 병렬.
+**다음 세션 권장 순서**: `B3`(처분 결정 대기함 — 엔진·실행이 이미 있어 목록 재구성만) → `C2`(배지 레일 확장) → `C1`(육안).
 
-**병행 가능 조합**(의존성 없음 — 동시 진행해도 충돌 없음):
-- `B2/B1`(api-client + 실행 배선) ↔ `C2`(배지 레일 확장) — 파일 겹침 없음
-- `C1`(육안 확인) — 언제든 단독 가능
-- `D1`(페르소나) — 문자열 JSON만 건드리므로 어떤 작업과도 병행 가능
+**병행 가능 조합**(의존성 0 — 동시 진행해도 충돌 없음):
+- `B3`(품절 페이지) ↔ `C2`(배지 레일 확장) — 파일 겹침 없음(out-of-stock/page vs components)
+- `C1`(육안) — 언제든 단독
+- `D1`(페르소나, → 💻 Code) — `*.strings.ko.json`만 건드려 어떤 작업과도 병행 안전
+- `C3`(dev CSS 복구) — 환경 작업이라 코드 작업과 독립
 
 ---
 
 ## §3 ACTIVE HAND-OFF ⭐ (항상 최상단 한 섹션, 매 hand-off 시 갱신)
+
+### 2026-07-22 (118) 🌸 Cowork — 판매중지 push(B2) + 처분 권고 원클릭 실행(B1) (FROM 🌸 Cowork, main `c36d380`, tsc0·build0·prod 배포완료)
+- **Target**: TASK_BRIDGE §3-A 보드 `B2→B1` + 운영자 지시(2026-07-22).
+- **B2 DONE(#277)**: `updateProductStatus` target에 SUSPENSION 추가(statusType 직접 세팅·재고 무변경·no-op 방어 `statusTypeChanged`). naver-status 라우트가 SUSPENSION 수용, dryRun·confirm GO게이트(#46) 유지.
+- **B1 DONE(#277/#273)**: 반영 탭 3-way(품절/판매중지/재판매) + 처분 권고 배너·추천버튼 강조 + GO 실행(미리보기→confirm→`dryRun:false+confirm:true`). no-op이면 GO 숨김. SidePanel이 disposition 계산해 PushTab에 전달(#62).
+- **검증(prod)**: tsc0·build0. **prod dryRun 실측**(읽기전용·PUT0): SUSPENSION no-op(changedFields=[]) / SALE 실diff(changedFields=[statusType])·applied=false. **prod Chrome UI**: 3버튼·SUSPENSION문구·no-op시 GO숨김·실변경시 GO노출+비가역경고 확인. **실제 GO(비가역 쓰기)는 미실행 — 운영자 전용(#46/#277)**.
+- **⚠️ 환경 이슈(정직)**: 로컬 dev CSS 파손(`@tailwind` 파싱 실패). build 정상·코드 무관. prod 검증으로 전환. 복구는 C3(`npm ci`).
+- **패치 위치**: `src/lib/naver/api-client.ts`(SUSPENSION 분기) · `src/app/api/products/[id]/naver-status/route.ts`(target 확장) · `src/app/products/page.tsx`(PushTab 3-way+권고+GO, SidePanel 배선).
+- **다음 1액션**: `B3`(품절 페이지 → 처분 결정 대기함) 또는 `C2`(배지 레일 확장). `D1`(페르소나)은 💻 Code로 별도 병행.
+- **의존성**: (117) 위에 이어짐.
 
 ### 2026-07-21 (117) 🌸 Cowork — 배지 레일(#274) + 상품명 0px 붕괴(#275) + 배지 압축(#276) (FROM 🌸 Cowork, main `7ebaae3`, tsc0·build0·prod 배포완료)
 - **Target**: 권위 `docs/plan/PARALLEL_WORK_TRACKER.md` rev68 + 원칙 #274/#275/#276 + 운영자 지시(2026-07-21 "개선안 이어서, 전체 공통 시스템으로").

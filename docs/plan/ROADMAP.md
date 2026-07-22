@@ -2,7 +2,63 @@
 > 2026-06-17 (세션8) **Image+SEO/ROI Engine Stage 1 빌드 + 6축 main 머지·prod LIVE** (Code turn, 비가역0·네이버 무접촉). 6축+엔진 Stage0 머지(349b9db) → Stage 1 백엔드(3a~3g)+UI(3i) 빌드(8964ce7). DNA 로드+50014980 시드·9슬롯 결정테이블·전략조립기(6축 재사용)·개입 2종·썸네일 게이트·3탭 UI. tsc0/build0/테스트11. **다음=[Desktop] ENG-1 실측 → Stage 2(학습루프: 평점→승격·CTR/CVR) / [결정] 명화 카테고리 정합·캡처방식·발행.**
 
 
-## 다음 새 채팅 시작 메시지 — 2026-07-21 Cowork 인계 ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-07-22 Cowork 인계 ⭐ ACTIVE
+
+```
+꽃틔움 가든 — 이어받기
+prod HEAD: c36d380 (== origin/main == prod, Vercel 200)
+로컬: /Users/jyekkot/Desktop/kkotium-garden
+
+[읽을 순서]
+1. docs/plan/TASK_BRIDGE.md §3-A 작업 큐 보드   ← 무엇을 할지 정본
+2. docs/plan/PARALLEL_WORK_TRACKER.md rev69
+3. docs/plan/PRINCIPLES_LEARNED.md #273~#277
+
+[직전 완료 — 전부 배포·검증완]
+· 처분 권고 엔진 #273 (4ee8585)
+· 배지 레일 #274/#275/#276 (7ebaae3) — 행 178→65px, 상품명 0px 붕괴 수정
+· 판매중지 push + 처분 원클릭 실행 #277 (c36d380)
+  · api-client SUSPENSION(재고 무변경) · 반영탭 3-way · 권고 배너·추천버튼
+  · GO 실행은 미리보기→confirm 이중게이트(#46). no-op이면 GO 숨김
+  · ★실제 GO(비가역 쓰기)는 운영자 전용 — 앱은 절대 자동 실행 안 함
+
+[다음 — §3-A 보드 정본. 권장 순서]
+B3 품절 페이지 → "처분 결정 대기함"  (READY, 엔진·실행 이미 있음)
+C2 배지 레일 다른 화면 확장          (READY, 모바일·재활성화)
+C1 R-1/R-2/R-3 육안                  (READY, 병렬)
+C3 로컬 dev CSS 복구 (npm ci)        (READY, prod 무영향)
+D1 페르소나 16개 → 💻 Code로 별도 병행
+
+[꼭 지킬 원칙]
+#29a 한글 다량 편집은 Python 스크립트로
+#46  스토어 PUT/POST·GO는 운영자 명시 승인(클릭)으로만. 앱 자동 실행 금지
+#62  같은 결론은 한 곳에서만
+#265 수치 PASS ≠ 화면 정상
+#275 ★역방향도 참 — 화면 그럴듯해도 수치 0일 수 있다. 레이아웃은 스샷+DOM실측 둘 다
+#273 처분 결론은 disposition.ts 단일 권위. 조치완료 상품엔 권고 금지
+#274 배지는 지우지 말고 줄을 세워라("돈 새는 순서")
+#277 판단과 실행을 한 흐름으로 잇되, 실행 방아쇠는 항상 사람이. no-op은 실행경로 숨김
+#32  클라 로직은 prisma 의존 모듈에서 분리
+
+[검증 표준]
+· 배지·카드 분기: DB주입 대신 임시 프리뷰 라우트 렌더 후 삭제(prod 무오염)
+· 레이아웃: 스샷 + getBoundingClientRect 둘 다
+· 비가역 쓰기(GO): dryRun·UI는 검증자가 prod 실측, 실제 GO는 운영자가 클릭(=승인=실쓰기 테스트)
+· 결함 발견 시: 단건 수습 금지, 전 페이지 동일 패턴 스캔까지가 한 세트
+
+[환경]
+⚠️ 로컬 dev CSS 파손 중(@tailwind 파싱 실패) — build/prod는 정상.
+   dev 필요하면 npm ci 먼저(C3). 그 전까지 검증은 prod로.
+⚠️ dev 서버는 세션 종료 시 kill → 새 세션 첫 접속은 prod URL
+· Supabase 쓰기는 정책 차단될 수 있음 → 프리뷰 라우트 방식
+· 백그라운드 프로세스는 bash 호출 간 유지 안 됨 → Desktop Commander
+
+[보류] z3c stash / 클로드디자인 v7 PDF
+```
+
+---
+
+## 다음 새 채팅 시작 메시지 — 2026-07-21 Cowork 인계 (SUPERSEDED by 2026-07-22)
 
 ```
 꽃틔움 가든 — 이어받기

@@ -1,8 +1,66 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-07-21 (rev68 — 배지 레일 + 상품명 0px 붕괴 수정)
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-07-22 (rev69 — 판매중지 push + 처분 권고 원클릭 실행)
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
 > **원칙 #149~#253 전문은 `docs/plan/PRINCIPLES_LEARNED.md`를 참조하세요** (2026-07-14 정식 이관 완료 — #165/#217~#220/#225/#231은 원문에 개별 정의가 없는 결번으로 확정). rev50 이하 원문(rev40~rev50 상세 커밋 로그)은 이 트래커의 커밋 `5c9e9f5^`(`git show 5c9e9f5^:docs/plan/PARALLEL_WORK_TRACKER.md`)에서 조회 가능합니다 — 현재 HEAD 파일 본문에서는 제거되어 있습니다(직전 커밋 5c9e9f5가 "원문 보존"이라 주장했으나 실제로는 528줄을 삭제했던 것을 2026-07-14 발견, 아래 참조).
+
+
+## rev69 — 판매중지 push + 처분 권고 원클릭 실행 (2026-07-22 Cowork)
+
+### ★B2 — api-client SUSPENSION 지원 (#277) · `c36d380` 배포·prod검증
+
+기존에 `updateProductStatus`가 `OUTOFSTOCK|SALE`만 지원 → **SUSPENSION 추가**.
+
+| 항목 | 조치 |
+|---|---|
+| target 타입 | `ProductStatusTarget = OUTOFSTOCK\|SALE\|SUSPENSION` |
+| SUSPENSION 분기 | statusType 직접 세팅(#197/#277). 재고 무변경 — 재입고 시 즉시 재판매 |
+| no-op 방어 | 이미 목표 상태면 `changedTopLevelFields=[]`, `statusTypeChanged=false` |
+| 라우트 | naver-status가 SUSPENSION 수용. dryRun 기본·confirm GO게이트(#46) 유지 |
+
+**prod dryRun 실검증(읽기 전용, PUT 0)**:
+- SUSPENSION on 이미-SUSPENSION → `changedFields=[]`·`applied=false` (no-op 정확)
+- SALE on SUSPENSION → `changedFields=["statusType"]`·`statusTypeChanged=true`·`applied=false`
+- 라이브 네이버 GET 성공, 11개 필드 보존
+
+### ★B1 — 처분 권고 원클릭 실행 (#277/#273/#46) · `c36d380`
+
+권고(판단)와 반영(실행)의 간극 제거. **앱은 절대 자동 실행하지 않는다.**
+
+| 항목 | 조치 |
+|---|---|
+| 반영 탭 3-way | 품절 처리 / **판매중지** / 재판매 |
+| 권고 배너 | disposition 판정을 탭 상단에 노출 + 추천 버튼 강조("추천") |
+| 매핑 | SUSPEND/RESOURCE→SUSPENSION, MARK_OUT_OF_STOCK→OUTOFSTOCK |
+| GO 실행 | 미리보기 → window.confirm → `dryRun:false+confirm:true` 이중게이트(#46) |
+| no-op | 변경 없으면 GO 버튼 자체를 숨김(실수 표면적 축소) |
+| 단일 권위 | SidePanel이 disposition 계산해 PushTab에 전달(#62) |
+
+**prod UI 실검증(Chrome)**:
+- 3-way 버튼 렌더 확인
+- 판매중지 미리보기: SUSPENSION 전용 문구·"11개 보존"·no-op 감지·**GO 숨김** 확인
+- 재판매 미리보기: `changedFields=statusType`·비가역 경고·**GO 버튼 노출** 확인
+- **실제 GO(비가역 쓰기)는 미실행** — 운영자 전용(#46/#277)
+
+### ⚠️ 환경 이슈 (정직 보고)
+
+**로컬 dev 서버 CSS 파이프라인 파손** — `next dev`가 globals.css의 `@tailwind`를
+파싱 못 함(`Unexpected character '@'`). babel 설정 없음·postcss 설치됨·`npm run
+build`는 정상. `.next` 완전 삭제 후에도 지속. Next 14.2 dev에서 `next build`↔
+`next dev`가 `.next`를 공유하며 생긴 것으로 추정. **제 코드 변경과 무관**(route·
+api-client `.ts` 2개, CSS 무접촉).
+→ **대응**: dev 브라우저 검증 대신 prod 검증으로 전환(prod CSS 정상, dryRun은
+읽기 전용이라 무해). 향후 dev 필요 시 `npm ci` 또는 node_modules 재설치 권장.
+
+### 미해결 잔여 (우선순위 — TASK_BRIDGE §3-A 보드가 정본)
+
+1. **B3 품절 페이지 → "처분 결정 대기함"** (`READY`) — 권고별 그룹핑 + 일괄 처리
+2. **C1 R-1/R-2/R-3 육안** (`READY`) — Cowork 직접 촬영 가능, 최종 미감만 운영자
+3. **C2 배지 레일 다른 화면 확장** (`READY`) — 모바일 카드·재활성화 목록
+4. **로컬 dev CSS 복구** (`READY`) — `npm ci` 시도. prod엔 영향 없음
+5. D1 페르소나 16개 (`WAIT-OP`, → Code) · D2 도매꾹 폴링 (`WAIT-OP`)
+6. 클로드디자인 v7 / z3c stash — `HOLD`
+
 
 
 ## rev68 — 배지 레일 + 상품명 0px 붕괴 수정 (2026-07-21 Cowork)
