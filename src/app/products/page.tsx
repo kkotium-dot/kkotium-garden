@@ -13,7 +13,7 @@ import {
   Layers, Upload, ArrowRight,
   LayoutList, Send, Globe, Loader, Loader2,
   ShieldCheck, Eye, Link2, Store, Hash,
-  CheckCircle2, PackageX, RotateCcw, ShieldAlert, PauseCircle,
+  CheckCircle2, PackageX, RotateCcw, ShieldAlert, PauseCircle, Unplug,
   Skull, Sprout, ArrowUpDown, MoreHorizontal,
 } from 'lucide-react';
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
@@ -26,6 +26,8 @@ import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
 import InventoryBadge, { inventoryBadgeRank } from '@/components/products/InventoryBadge';
 import BadgeRail, { type BadgeRailItem } from '@/components/common/BadgeRail';
 import { decideDisposition, type DispositionAction } from '@/lib/products/disposition';
+import { checkPublishGate, type PublishBlockReason } from '@/lib/products/publish-gate';
+import publishGateCopy from '@/lib/products/publish-gate.strings.ko.json';
 import { BADGE_PRIORITY } from '@/components/common/badge-priority';
 import { StageBadge } from '@/components/products/StageBadge';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
@@ -1207,11 +1209,13 @@ function NaverImportModal({ onClose, onImported }: { onClose: () => void; onImpo
 // C-1: Pre-registration validation + sequential API registration
 
 function NaverRegisterModal({
-  products, onClose, onSuccess,
+  products, onClose, onSuccess, inventory,
 }: {
   products: ScoredProduct[];
   onClose: () => void;
   onSuccess: () => void;
+  /** 발행 게이트(#286) 입력 — 공급처 단절/공급사 품절 상품의 발행을 막는다. */
+  inventory: Record<string, InventoryBadgeData>;
 }) {
   const [phase, setPhase] = useState<'validate' | 'registering' | 'done'>('validate');
   const [results, setResults] = useState<Array<{ id: string; name: string; ok: boolean; error?: string; naverProductId?: string }>>([]);
@@ -1223,8 +1227,17 @@ function NaverRegisterModal({
   const hasNoImage = registerable.filter(p => !p.mainImage);
   const hasNoCategory = registerable.filter(p => !p.category || p.category === '50003307');
 
+  // ── 발행 게이트(#286) ───────────────────────────────────────────────────
+  // "준비됐는가"(준비도)와 "지금 팔 수 있는가"(공급 가능성)는 다른 질문이다.
+  // 공급처가 끊겼거나 공급사 품절인 상품을 발행하면 주문 취소 → 스토어 등급
+  // 하락 + 신규 7일 부스트 소멸. 판정은 publish-gate.ts 단일 권위(#62).
+  const [includeBlocked, setIncludeBlocked] = useState(false);
+  const gated = registerable.map(p => ({ p, gate: checkPublishGate(inventory[p.id]) }));
+  const blocked = gated.filter(g => g.gate.blocked);
+  const publishable = includeBlocked ? registerable : gated.filter(g => !g.gate.blocked).map(g => g.p);
+
   // Calculate readiness for each product inline
-  const withReadiness = registerable.map(p => ({
+  const withReadiness = publishable.map(p => ({
     ...p,
     readinessScore: calcUploadReadiness({
       naverCategoryCode: p.naverCategoryCode ?? p.category,
@@ -1322,6 +1335,41 @@ function NaverRegisterModal({
                 <p className="text-xs font-semibold flex items-center gap-1" style={{ color: '#a16207' }}>
                   <AlertTriangle size={12} /> 카테고리 미선택 ({hasNoCategory.length}개) — 등록 차단됨
                 </p>
+              </div>
+            )}
+
+            {/* 발행 보류 권장(#286) — 준비도가 100%여도 공급이 안 되면 올리면 안 된다.
+                기본 제외하되 운영자가 판단을 뒤집을 수 있게 토글을 준다(#46 사상:
+                앱은 권하고 결정은 사람이). */}
+            {blocked.length > 0 && (
+              <div className="p-3 rounded-xl" style={{ background: '#fdf4ff', border: '1px solid #f5d0fe' }}>
+                <p className="text-xs font-extrabold flex items-center gap-1" style={{ color: '#86198f' }}>
+                  <Unplug size={12} /> {publishGateCopy.sectionTitle} ({blocked.length}개)
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {blocked.map(({ p, gate }) => {
+                    const copy = publishGateCopy[gate.reason as PublishBlockReason];
+                    return (
+                      <div key={p.id} className="text-xs" style={{ color: '#6b7280' }}>
+                        <span className="font-bold" style={{ color: '#86198f' }}>{copy.label}</span>
+                        <span className="mx-1">·</span>
+                        <span className="font-semibold" style={{ color: '#374151' }}>{p.name}</span>
+                        <p className="mt-0.5 leading-relaxed" style={{ color: '#9ca3af' }}>{copy.why}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <label className="mt-2.5 flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={!includeBlocked}
+                    onChange={e => setIncludeBlocked(!e.target.checked)}
+                    className="w-3.5 h-3.5 rounded border-gray-300" />
+                  <span className="text-xs font-semibold" style={{ color: '#86198f' }}>{publishGateCopy.excludeToggle}</span>
+                </label>
+                {includeBlocked && (
+                  <p className="text-xs mt-1.5 font-semibold" style={{ color: '#b91c1c' }}>
+                    보류 대상이 발행에 포함됩니다. 주문 취소 위험을 감수합니다.
+                  </p>
+                )}
               </div>
             )}
 
@@ -2860,6 +2908,7 @@ function ProductsPageInner() {
       {showNaverRegisterModal && (
         <NaverRegisterModal
           products={scored.filter(p => selected.has(p.id))}
+          inventory={inventoryByProductId}
           onClose={() => setShowNaverRegisterModal(false)}
           onSuccess={() => { setShowNaverRegisterModal(false); setSelected(new Set()); fetchProducts(); }}
         />
@@ -2868,6 +2917,7 @@ function ProductsPageInner() {
       {showGardenPublishModal && (
         <NaverRegisterModal
           products={gardenCounts.readyProducts}
+          inventory={inventoryByProductId}
           onClose={() => setShowGardenPublishModal(false)}
           onSuccess={() => { setShowGardenPublishModal(false); fetchProducts(); }}
         />
