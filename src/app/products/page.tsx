@@ -2068,11 +2068,22 @@ function ProductsPageInner() {
   // 해법: 이름 칸에 **하한**을 주고(minmax), 그래도 안 들어가면 침묵 붕괴 대신
   // **가로 스크롤**로 넘긴다. 데이터 테이블에서 열이 조용히 사라지는 것보다
   // 스크롤이 언제나 낫다 — 없어진 정보는 운영자가 없어진 줄도 모른다.
-  const NAME_COL_MIN = 260;
+  // ── R-3: 패널 열림 시 컴팩트 모드 (#281) ──────────────────────────────
+  // 사이드패널은 720px를 차지한다. 패널이 열리면 목록에 약 495px만 남는데
+  // 9컬럼 테이블은 최소 1020px가 필요하다 — 밀어내기만으로는 **물리적으로
+  // 불가능**해서 순마진·판매가·좀비지수가 가로 스크롤 뒤로 숨었다(실측).
+  // 해법: 패널을 보는 중에는 목록에 "이게 어떤 상품인지 + 핵심 판단"만 있으면
+  // 되므로 컬럼을 줄인다. 스크롤로 밀어내는 것보다 명시적 축소가 정직하다(#275).
+  const compact = !!sideProduct;
+  const NAME_COL_MIN = compact ? 150 : 260;
   // minmax 안에 공백을 넣지 않는다 — 아래 TABLE_MIN_WIDTH가 공백으로 트랙을
   // 나누므로 `minmax(220px, 1fr)`처럼 쓰면 한 트랙이 둘로 쪼개진다.
-  const COL_GARDEN = `36px minmax(${NAME_COL_MIN}px,1fr) 90px 110px 62px 90px 72px 68px 70px`;
-  const COL_CARE   = `36px minmax(${NAME_COL_MIN}px,1fr) 90px 110px 130px 62px 90px 72px 70px`;
+  const COL_GARDEN = compact
+    ? `36px minmax(${NAME_COL_MIN}px,1fr) 90px 68px 70px`
+    : `36px minmax(${NAME_COL_MIN}px,1fr) 90px 110px 62px 90px 72px 68px 70px`;
+  const COL_CARE = compact
+    ? `36px minmax(${NAME_COL_MIN}px,1fr) 90px 72px 70px`
+    : `36px minmax(${NAME_COL_MIN}px,1fr) 90px 110px 130px 62px 90px 72px 70px`;
   const COL = isGarden ? COL_GARDEN : COL_CARE;
   // 고정 트랙 합 + 이름칸 하한 + gap + 좌우 패딩. COL 문자열에서 직접 계산하므로
   // 컬럼을 바꿔도 자동으로 따라온다(#62 — 상수 두 벌이 어긋나는 일 방지).
@@ -2122,17 +2133,22 @@ function ProductsPageInner() {
             </div>
           </div>
           <div className="flex justify-center"><StatusDot product={p} /></div>
-          <div className="min-w-0">
-            {p.supplierName
-              ? <p className="text-xs font-medium truncate" style={{ color: '#555' }}>{p.supplierName}</p>
-              : <p className="text-xs" style={{ color: '#D4B0BC' }}>미설정</p>
-            }
-            {p.platformName && <p className="text-[10px] truncate" style={{ color: '#B0A0A8' }}>{p.platformName}</p>}
-          </div>
+          {/* #281 컴팩트: 패널 열림 시 공급사·배송·마진·판매가 열을 숨긴다.
+              (숨긴 정보는 패널 안에 전부 있으므로 손실 0) */}
+          {!compact && (
+            <div className="min-w-0">
+              {p.supplierName
+                ? <p className="text-xs font-medium truncate" style={{ color: '#555' }}>{p.supplierName}</p>
+                : <p className="text-xs" style={{ color: '#D4B0BC' }}>미설정</p>
+              }
+              {p.platformName && <p className="text-[10px] truncate" style={{ color: '#B0A0A8' }}>{p.platformName}</p>}
+            </div>
+          )}
           {/* H-3: shipping is Care-only (garden = unpublished, no shipping yet) */}
-          {!isGarden && <div className="flex justify-start"><ShippingBadge product={p} /></div>}
-          <MarginCell hs={p._hs} />
+          {!compact && !isGarden && <div className="flex justify-start"><ShippingBadge product={p} /></div>}
+          {!compact && <MarginCell hs={p._hs} />}
           {/* Inline-editable sale price cell — double-click to edit */}
+          {!compact && (
           <div
             onDoubleClick={e => { e.stopPropagation(); setInlineEdit({ id: p.id, field: 'salePrice', value: String(p.salePrice || '') }); }}
             title="더블클릭으로 판매가 수정"
@@ -2155,8 +2171,9 @@ function ProductsPageInner() {
               </p>
             )}
           </div>
+          )}
           {/* H-3: readiness mini bar is Garden-only (published items = readiness moot) */}
-          {isGarden && (() => {
+          {!compact && isGarden && (() => {
             const rd = calcUploadReadiness({
               naverCategoryCode: p.naverCategoryCode,
               keywords: p.keywords,
@@ -2215,9 +2232,14 @@ function ProductsPageInner() {
         {/* 작업 H-3 — 정원 창고는 "작업 단계·예상 마진·예상 판매가"로 라벨을
             바꿔 실적이 아니라 전망치임을 명시(SCREEN_DIFFERENTIATION_SPEC_
             2026-07-17 §4-3). 꽃밭 돌보기는 실적 라벨 유지. */}
+        {/* #281 컴팩트: 트랙 수와 라벨 수가 반드시 일치해야 정렬이 안 깨진다. */}
         {(isGarden
-          ? ['상품명 / 상품코드(SKU)', '작업 단계', '공급사', '예상 마진', '예상 판매가', '준비도', '점수', '관리']
-          : ['상품명 / 상품코드(SKU)', '상태', '공급사', '배송', '순마진', '판매가', '좀비 지수', '관리']
+          ? (compact
+              ? ['상품명 / 상품코드(SKU)', '작업 단계', '점수', '관리']
+              : ['상품명 / 상품코드(SKU)', '작업 단계', '공급사', '예상 마진', '예상 판매가', '준비도', '점수', '관리'])
+          : (compact
+              ? ['상품명 / 상품코드(SKU)', '상태', '좀비 지수', '관리']
+              : ['상품명 / 상품코드(SKU)', '상태', '공급사', '배송', '순마진', '판매가', '좀비 지수', '관리'])
         ).map(h => (
           <span key={h} className="text-[11px] font-black tracking-wide" style={{ color: '#F63B28' }}>{h}</span>
         ))}
