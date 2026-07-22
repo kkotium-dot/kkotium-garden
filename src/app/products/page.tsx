@@ -13,7 +13,7 @@ import {
   Layers, Upload, ArrowRight,
   LayoutList, Send, Globe, Loader, Loader2,
   ShieldCheck, Eye, Link2, Store, Hash,
-  CheckCircle2, PackageX, RotateCcw, ShieldAlert,
+  CheckCircle2, PackageX, RotateCcw, ShieldAlert, PauseCircle,
   Skull, Sprout, ArrowUpDown, MoreHorizontal,
 } from 'lucide-react';
 import { ExcelExportButton } from '@/components/naver/ExcelExportButton';
@@ -25,6 +25,7 @@ import TuningBadge, { type TuningBadgeData } from '@/components/products/TuningB
 import MarketAnalysisCard from '@/components/products/MarketAnalysisCard';
 import InventoryBadge, { inventoryBadgeRank } from '@/components/products/InventoryBadge';
 import BadgeRail, { type BadgeRailItem } from '@/components/common/BadgeRail';
+import { decideDisposition, type DispositionAction } from '@/lib/products/disposition';
 import { BADGE_PRIORITY } from '@/components/common/badge-priority';
 import { StageBadge } from '@/components/products/StageBadge';
 import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
@@ -316,7 +317,8 @@ const won = (n: number) => `${(n ?? 0).toLocaleString('ko-KR')}원`;
 // 작업 F — 연동 diff / 상태 반영 미리보기 데이터 shape (구 /products/link
 // DiffPanel과 동일 API 재사용, 신규 엔드포인트 0). 흡수 탭(동기화/반영)에서만 사용.
 interface SyncDiffData { inSync: boolean; diffs: Array<{ field: string; naver: unknown; app: unknown }>; naverSnapshot: Record<string, unknown>; app: Record<string, unknown>; }
-interface StatusPushPreview { target: 'OUTOFSTOCK' | 'SALE'; previousStatusType: string | null; isOptionProduct: boolean; changedTopLevelFields: string[]; optionStockZeroed: number; stockQuantityChanged: boolean; preservedFieldCount: number; }
+type StatusPushTarget = 'OUTOFSTOCK' | 'SALE' | 'SUSPENSION';
+interface StatusPushPreview { target: StatusPushTarget; previousStatusType: string | null; isOptionProduct: boolean; changedTopLevelFields: string[]; optionStockZeroed: number; stockQuantityChanged: boolean; statusTypeChanged: boolean; preservedFieldCount: number; }
 const SYNC_FIELDS: Array<{ key: string; label: string; sor: 'naver' | 'app' }> = [
   { key: 'name', label: '상품명', sor: 'app' },
   { key: 'salePrice', label: '판매가', sor: 'app' },
@@ -379,12 +381,43 @@ function SyncTab({ productId }: { productId: string }) {
 }
 
 // ── 반영 탭 — 상태(품절/재판매) 미리보기 + 가격·재고 반영(NaverPushPanel, #46 GO-gated) ──
-function PushTab({ productId, appSalePrice, currentNaverStatus }: { productId: string; appSalePrice: number; currentNaverStatus: string | null }) {
+// ── 반영 탭 — 상태 반영(품절/재판매/판매중지) + 처분 권고 원클릭 (#273/#277/#46) ──
+// 처분 권고(disposition.ts)가 "무엇을 하라"고 판단하면, 이 탭이 그 판단을
+// 실행 가능한 지점에 자연스럽게 녹인다: 권고 배너 → 추천 버튼 강조 → 미리보기
+// → GO. 실제 스토어 쓰기는 반드시 미리보기 뒤 명시적 GO(운영자 클릭)로만
+// 일어난다(#46 — dryRun:false + confirm:true 이중 게이트). 앱은 절대 자동 실행하지 않는다.
+const STATUS_TARGET_META: Record<StatusPushTarget, { label: string; fg: string; bg: string; bd: string; icon: typeof PackageX }> = {
+  OUTOFSTOCK: { label: '품절 처리', fg: '#b45309', bg: '#fffbeb', bd: '#fde68a', icon: PackageX },
+  SALE:       { label: '재판매',    fg: '#15803d', bg: '#f0fdf4', bd: '#bbf7d0', icon: RotateCcw },
+  SUSPENSION: { label: '판매중지',  fg: '#9a3412', bg: '#fff7ed', bd: '#fed7aa', icon: PauseCircle },
+};
+
+// 처분 권고(action)를 스토어 상태 반영 target으로 매핑. RESOURCE(대체 소싱)도
+// 즉시 취할 스토어 조치는 판매중지 — URL/리뷰를 보존한 채 공급처만 교체하기 때문(#272).
+function dispositionToStatusTarget(action: DispositionAction): StatusPushTarget | null {
+  if (action === 'MARK_OUT_OF_STOCK') return 'OUTOFSTOCK';
+  if (action === 'SUSPEND' || action === 'RESOURCE') return 'SUSPENSION';
+  return null; // SALE 복귀·DELETE_SAFE·NONE은 이 탭의 권고 대상이 아님
+}
+
+function PushTab({ productId, appSalePrice, recommendedTarget, recommendReason, onApplied }: {
+  productId: string;
+  appSalePrice: number;
+  /** 처분 권고(#273)가 이 탭에 제안하는 상태 target. null이면 권고 없음. */
+  recommendedTarget?: StatusPushTarget | null;
+  /** 권고 근거 한 줄(꼬띠 보이스). */
+  recommendReason?: string | null;
+  /** 실제 반영(GO) 성공 후 목록 갱신용. */
+  onApplied?: () => void;
+}) {
   const [preview, setPreview] = useState<StatusPushPreview | null>(null);
-  const [busy, setBusy] = useState<'OUTOFSTOCK' | 'SALE' | null>(null);
+  const [busy, setBusy] = useState<StatusPushTarget | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [appliedMsg, setAppliedMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  async function doPreview(target: 'OUTOFSTOCK' | 'SALE') {
-    setBusy(target); setErr(null); setPreview(null);
+
+  async function doPreview(target: StatusPushTarget) {
+    setBusy(target); setErr(null); setPreview(null); setAppliedMsg(null);
     try {
       const r = await fetch(`/api/products/${productId}/naver-status`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -397,22 +430,83 @@ function PushTab({ productId, appSalePrice, currentNaverStatus }: { productId: s
       setErr(e instanceof Error ? e.message : '미리보기 실패');
     } finally { setBusy(null); }
   }
+
+  // 실제 반영(GO) — 비가역 스토어 쓰기(#46). 미리보기를 본 뒤에만, 그리고 운영자가
+  // 확인 다이얼로그를 승인해야만 실행된다. dryRun:false + confirm:true 이중 게이트.
+  async function doApply() {
+    if (!preview) return;
+    const meta = STATUS_TARGET_META[preview.target];
+    const ok = window.confirm(
+      `네이버 스토어에 "${meta.label}"을(를) 실제로 반영합니다.\n\n` +
+      `이 작업은 네이버 상품을 직접 수정하며 되돌리려면 다시 반영해야 합니다.\n` +
+      `변경 필드: ${preview.changedTopLevelFields.join(', ') || '없음'}\n\n계속할까요?`,
+    );
+    if (!ok) return;
+    setApplying(true); setErr(null);
+    try {
+      const r = await fetch(`/api/products/${productId}/naver-status`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: preview.target, dryRun: false, confirm: true }),
+      });
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error ?? 'apply failed');
+      if (!j.applied) throw new Error('반영이 실행되지 않았습니다(게이트 미통과).');
+      setAppliedMsg(`${meta.label} 반영 완료 — 네이버 상태가 ${NAVER_STATUS_KO[preview.target] ?? preview.target}로 변경되었습니다.`);
+      setPreview(null);
+      onApplied?.();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : '반영 실패');
+    } finally { setApplying(false); }
+  }
+
+  const noop = preview && preview.changedTopLevelFields.length === 0;
+
   return (
     <div>
       <p className="text-xs font-extrabold mb-2" style={{ color: '#111827' }}>상태 반영</p>
-      <div className="flex gap-2">
-        <button onClick={() => void doPreview('OUTOFSTOCK')} disabled={busy !== null}
-          className="inline-flex items-center gap-1.5 text-xs font-extrabold rounded-lg px-3 py-1.5"
-          style={{ color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', cursor: busy ? 'not-allowed' : 'pointer' }}>
-          {busy === 'OUTOFSTOCK' ? <Loader2 size={13} className="animate-spin" /> : <PackageX size={13} />}품절 처리
-        </button>
-        <button onClick={() => void doPreview('SALE')} disabled={busy !== null}
-          className="inline-flex items-center gap-1.5 text-xs font-extrabold rounded-lg px-3 py-1.5"
-          style={{ color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', cursor: busy ? 'not-allowed' : 'pointer' }}>
-          {busy === 'SALE' ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}재판매
-        </button>
+
+      {/* 처분 권고 배너(#273) — 앱이 판단한 "지금 할 일"을 실행 지점 바로 위에 노출. */}
+      {recommendedTarget && (
+        <div className="mb-2.5 rounded-xl overflow-hidden" style={{ border: `1px solid ${STATUS_TARGET_META[recommendedTarget].bd}` }}>
+          <div className="px-3 py-1.5 text-[11px] font-extrabold flex items-center gap-1.5"
+            style={{ background: STATUS_TARGET_META[recommendedTarget].bg, color: STATUS_TARGET_META[recommendedTarget].fg }}>
+            <ShieldAlert size={12} /> 앱 추천 · {STATUS_TARGET_META[recommendedTarget].label}
+          </div>
+          {recommendReason && (
+            <p className="px-3 py-2 text-[11px] leading-relaxed" style={{ color: '#6b7280' }}>{recommendReason}</p>
+          )}
+        </div>
+      )}
+
+      <div className="flex gap-2 flex-wrap">
+        {(['OUTOFSTOCK', 'SUSPENSION', 'SALE'] as StatusPushTarget[]).map((t) => {
+          const meta = STATUS_TARGET_META[t];
+          const Icon = meta.icon;
+          const isRec = recommendedTarget === t;
+          return (
+            <button key={t} onClick={() => void doPreview(t)} disabled={busy !== null || applying}
+              className="inline-flex items-center gap-1.5 text-xs font-extrabold rounded-lg px-3 py-1.5"
+              style={{
+                color: meta.fg, background: meta.bg,
+                border: isRec ? `2px solid ${meta.fg}` : `1px solid ${meta.bd}`,
+                boxShadow: isRec ? `0 0 0 2px ${meta.bg}` : 'none',
+                cursor: (busy || applying) ? 'not-allowed' : 'pointer',
+              }}>
+              {busy === t ? <Loader2 size={13} className="animate-spin" /> : <Icon size={13} />}{meta.label}
+              {isRec && <span className="text-[9px] font-black" style={{ marginLeft: 2 }}>추천</span>}
+            </button>
+          );
+        })}
       </div>
+
       {err && <p className="text-xs mt-2" style={{ color: '#b91c1c' }}>{err}</p>}
+      {appliedMsg && (
+        <div className="mt-2.5 flex items-start gap-1.5 px-2.5 py-2 rounded-lg" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+          <CheckCircle2 size={13} style={{ color: '#15803d', flexShrink: 0, marginTop: 1 }} />
+          <p className="text-[11px] leading-relaxed" style={{ color: '#15803d' }}>{appliedMsg}</p>
+        </div>
+      )}
+
       {preview && (
         <div className="mt-2.5 rounded-xl overflow-hidden" style={{ border: '1px solid #bfdbfe' }}>
           <div className="px-3 py-1.5 text-[11px] font-extrabold" style={{ background: '#eff6ff', color: '#1d4ed8' }}>반영 미리보기 (dry-run)</div>
@@ -421,20 +515,38 @@ function PushTab({ productId, appSalePrice, currentNaverStatus }: { productId: s
               <span className="text-[11px] font-semibold" style={{ color: '#6b7280' }}>상태 변경</span>
               {NAVER_STATUS_KO[preview.previousStatusType ?? ''] ?? preview.previousStatusType ?? '—'}
               <ChevronRight size={13} style={{ color: '#9ca3af' }} />
-              <span style={{ color: preview.target === 'SALE' ? '#15803d' : '#b45309' }}>{NAVER_STATUS_KO[preview.target] ?? preview.target}</span>
+              <span style={{ color: STATUS_TARGET_META[preview.target].fg }}>{NAVER_STATUS_KO[preview.target] ?? preview.target}</span>
             </div>
             {preview.target === 'OUTOFSTOCK' && (
               <p className="text-xs" style={{ color: '#b45309' }}>
                 {preview.isOptionProduct ? `옵션 재고 ${preview.optionStockZeroed}건이 0으로 설정됩니다.` : '재고가 0으로 설정됩니다.'}
               </p>
             )}
+            {preview.target === 'SUSPENSION' && (
+              <p className="text-xs" style={{ color: '#9a3412' }}>판매중지로 검색에서 내려가지만 상품 주소·리뷰·판매이력은 보존됩니다(재고 무변경).</p>
+            )}
             <p className="text-[11px]" style={{ color: '#6b7280' }}>
-              변경 필드: {preview.changedTopLevelFields.join(', ') || '—'} · 나머지 {preview.preservedFieldCount}개 필드 보존
+              변경 필드: {preview.changedTopLevelFields.join(', ') || '없음'} · 나머지 {preview.preservedFieldCount}개 필드 보존
             </p>
-            <div className="flex items-start gap-1.5 mt-1 px-2.5 py-1.5 rounded-lg" style={{ background: '#fff7ed', border: '1px solid #fed7aa' }}>
-              <ShieldAlert size={13} style={{ color: '#c2410c', flexShrink: 0, marginTop: 1 }} />
-              <p className="text-[11px] leading-relaxed" style={{ color: '#9a3412' }}>실제 반영은 대표님 확인(GO) 후에만 실행됩니다.</p>
-            </div>
+            {noop ? (
+              <div className="flex items-start gap-1.5 mt-1 px-2.5 py-1.5 rounded-lg" style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}>
+                <CheckCircle2 size={13} style={{ color: '#6b7280', flexShrink: 0, marginTop: 1 }} />
+                <p className="text-[11px] leading-relaxed" style={{ color: '#6b7280' }}>이미 해당 상태입니다 — 반영할 변경이 없습니다.</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start gap-1.5 mt-1 px-2.5 py-1.5 rounded-lg" style={{ background: '#fff7ed', border: '1px solid #fed7aa' }}>
+                  <ShieldAlert size={13} style={{ color: '#c2410c', flexShrink: 0, marginTop: 1 }} />
+                  <p className="text-[11px] leading-relaxed" style={{ color: '#9a3412' }}>실제 반영은 대표님 확인(GO) 후에만 실행됩니다. 네이버 스토어를 직접 수정하는 비가역 작업입니다.</p>
+                </div>
+                <button onClick={() => void doApply()} disabled={applying}
+                  className="mt-1 inline-flex items-center justify-center gap-1.5 text-xs font-extrabold rounded-lg px-3 py-2"
+                  style={{ color: '#fff', background: applying ? '#9ca3af' : '#dc2626', cursor: applying ? 'not-allowed' : 'pointer' }}>
+                  {applying ? <Loader2 size={13} className="animate-spin" /> : <ShieldAlert size={13} />}
+                  {applying ? '반영 중...' : `GO — ${STATUS_TARGET_META[preview.target].label} 실제 반영`}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -445,7 +557,7 @@ function PushTab({ productId, appSalePrice, currentNaverStatus }: { productId: s
   );
 }
 
-function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, onStockSync }: {
+function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, onStockSync, onStatusApplied }: {
   product: ScoredProduct;
   inventory?: InventoryBadgeData;
   onClose: () => void;
@@ -453,6 +565,7 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
   onMutate: (id: string, patch: Partial<Product>) => Promise<boolean>;
   onReset: (id: string) => Promise<boolean>;
   onStockSync: () => Promise<string>;
+  onStatusApplied: () => void;
 }) {
   const { _hs: hs } = product;
   const issues = getReadinessIssues(product);
@@ -464,6 +577,26 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
   const canReset = product._origin === 'IMPORTED' || product._origin === 'HYBRID';
   // 작업 F — 네이버 연동 상품만 동기화/반영/품절대체 탭을 보여준다(#256 흡수).
   const isLinked = !!product.naverProductId;
+  // 처분 권고(#273) — 반영 탭이 "지금 할 일"을 실행 지점에 노출하도록 판정을 계산한다.
+  // 재고 신호(sourceGone·qty·daysOutOfStock)는 inventory에서, 자산 신호(salesCount·
+  // lastSaleDate)는 product에서 가져와 disposition.ts 단일 권위로 판정(#62).
+  const dispositionVerdict = decideDisposition({
+    salesCount: product.salesCount,
+    lastSaleDate: product.lastSaleDate,
+    naverProductId: product.naverProductId,
+    naverStatusType: product.naver_status_type,
+    sourceGone: inventory?.sourceGone,
+    qty: inventory?.qty,
+    supplierStatus: inventory?.status,
+    daysOutOfStock: inventory?.daysOutOfStock,
+  });
+  const recommendedStatusTarget = dispositionToStatusTarget(dispositionVerdict.action);
+  const recommendReason = (() => {
+    if (dispositionVerdict.action === 'SUSPEND') return '2주 넘게 품절이에유. 순위 깎이기 전에 잠깐 내려두어유 — 리뷰는 안 사라져유.';
+    if (dispositionVerdict.action === 'RESOURCE') return '공급처가 사라졌지만 팔린 적 있는 꽃이에유. 지우지 말고 판매중지 후 다른 공급처를 찾아주어유.';
+    if (dispositionVerdict.action === 'MARK_OUT_OF_STOCK') return '지금 주문 들어오면 취소해야 해유. 품절로 바꿔두어유 — 재입고되면 바로 살아나유.';
+    return null;
+  })();
   const appDriftCount = (() => {
     const d = product.driftFields;
     const arr = Array.isArray(d) ? d : [];
@@ -680,7 +813,7 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
         )}
 
         {tab === 'sync' && <SyncTab productId={product.id} />}
-        {tab === 'push' && <PushTab productId={product.id} appSalePrice={product.salePrice} currentNaverStatus={product.naver_status_type ?? null} />}
+        {tab === 'push' && <PushTab productId={product.id} appSalePrice={product.salePrice} recommendedTarget={recommendedStatusTarget} recommendReason={recommendReason} onApplied={onStatusApplied} />}
         {tab === 'substitute' && (
           <SubstituteEditor productId={product.id} isOutOfStock={product.status === 'OUT_OF_STOCK'} />
         )}
@@ -2657,7 +2790,7 @@ function ProductsPageInner() {
       {sideProduct && (
         <>
           <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setSide(null)} />
-          <SidePanel product={sideProduct} inventory={inventoryByProductId[sideProduct.id]} onClose={() => setSide(null)} onDelete={deleteProduct} onMutate={handleProductMutate} onReset={handleProductReset} onStockSync={handleStockSync} />
+          <SidePanel product={sideProduct} inventory={inventoryByProductId[sideProduct.id]} onClose={() => setSide(null)} onDelete={deleteProduct} onMutate={handleProductMutate} onReset={handleProductReset} onStockSync={handleStockSync} onStatusApplied={fetchProducts} />
         </>
       )}
 

@@ -2,11 +2,12 @@
 // ============================================================================
 // PRODUCT-LINK PL-2 — push a status change (품절/재판매) to Naver.
 //
-// body: { target: 'OUTOFSTOCK' | 'SALE', dryRun?: boolean, confirm?: boolean }
+// body: { target: 'OUTOFSTOCK' | 'SALE' | 'SUSPENSION', dryRun?: boolean, confirm?: boolean }
 //   - dryRun defaults TRUE. A real PUT happens ONLY when dryRun===false AND
 //     confirm===true (GO gate, #46). Everything else returns the dry-run diff.
 //   - The push itself is a full-replace GET-merge (#196); no stock-quantity
-//     push beyond exactly-zero for 품절 (#197).
+//     push beyond exactly-zero for 품절 (#197). SUSPENSION(판매중지)은 statusType
+//     만 직접 세팅하고 재고는 보존한다(#277) — 처분 권고(#273) 장기품절 경로.
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -32,9 +33,13 @@ export async function POST(
   }
 
   const body = await request.json().catch(() => ({} as Record<string, unknown>));
-  const target = body?.target === 'SALE' ? 'SALE' : body?.target === 'OUTOFSTOCK' ? 'OUTOFSTOCK' : null;
+  const target =
+    body?.target === 'SALE' ? 'SALE'
+    : body?.target === 'OUTOFSTOCK' ? 'OUTOFSTOCK'
+    : body?.target === 'SUSPENSION' ? 'SUSPENSION'
+    : null;
   if (!target) {
-    return NextResponse.json({ success: false, error: "target은 'OUTOFSTOCK' 또는 'SALE'." }, { status: 400 });
+    return NextResponse.json({ success: false, error: "target은 'OUTOFSTOCK' | 'SALE' | 'SUSPENSION'." }, { status: 400 });
   }
 
   // GO gate (#46): a real write requires BOTH an explicit dryRun:false AND confirm:true.

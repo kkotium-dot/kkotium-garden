@@ -1410,21 +1410,32 @@ export async function diffNaverProduct(
   return { productNo, inSync: diffs.length === 0, diffs, naverSnapshot };
 }
 
-// ── PRODUCT-LINK PL-2 — status push (품절/재판매) via GET-merge full-replace ──
+// ── PRODUCT-LINK PL-2 — status push (품절/재판매/판매중지) via GET-merge full-replace ──
 // First Naver WRITE path. Safety: full GET-merge (#196 — never partial-PUT),
 // no arbitrary stock-quantity push (#197 — OUTOFSTOCK is exactly stock=0 for a
 // deliberate 품절, and option products go OOS via optionCombinations, not the
 // top-level stockQuantity, per the live-verified shape, #181). seoInfo and every
 // other field are carried through unchanged. dryRun stops before the PUT.
+//
+// 세 target의 성격이 다르다(#197/#277):
+//   - OUTOFSTOCK : statusType는 재고 파생값이라 직접 못 쓴다. 재고를 0으로 만들면
+//                  네이버가 자동으로 OUTOFSTOCK으로 넘긴다(옵션상품은 optionCombinations).
+//   - SALE       : 재판매. statusType='SALE'만 직접 세팅(재고 push 없음).
+//   - SUSPENSION : 판매중지. statusType='SUSPENSION'을 직접 세팅. 재고는 건드리지
+//                  않는다 — 재입고 시 재고가 그대로 남아 있어야 재판매가 즉시 된다.
+//                  처분 권고(#273)의 장기품절→판매중지 경로가 이 target을 쓴다.
+
+export type ProductStatusTarget = 'OUTOFSTOCK' | 'SALE' | 'SUSPENSION';
 
 export interface ProductStatusUpdateResult {
   productNo: string;
-  target: 'OUTOFSTOCK' | 'SALE';
+  target: ProductStatusTarget;
   previousStatusType: string | null;
   isOptionProduct: boolean;
   changedTopLevelFields: string[]; // originProduct keys whose value changed (should be minimal)
   optionStockZeroed: number;       // # of option combinations set to 0 (OUTOFSTOCK path)
   stockQuantityChanged: boolean;   // top-level stockQuantity overridden (non-option OUTOFSTOCK)
+  statusTypeChanged: boolean;      // statusType set directly (SALE / SUSPENSION path, #197)
   dryRun: boolean;
   applied: boolean;                // true only when a real PUT was sent
   preservedFieldCount: number;
@@ -1432,7 +1443,7 @@ export interface ProductStatusUpdateResult {
 
 export async function updateProductStatus(
   productNo: string,
-  target: 'OUTOFSTOCK' | 'SALE',
+  target: ProductStatusTarget,
   opts: { dryRun?: boolean } = {},
 ): Promise<ProductStatusUpdateResult> {
   if (!productNo) {
@@ -1441,7 +1452,7 @@ export async function updateProductStatus(
       { kind: 'HTTP_ERROR' },
     );
   }
-  if (target !== 'OUTOFSTOCK' && target !== 'SALE') {
+  if (target !== 'OUTOFSTOCK' && target !== 'SALE' && target !== 'SUSPENSION') {
     throw new NaverApiError(`상태 변경 불가 — 알 수 없는 target(${target}).`, { kind: 'HTTP_ERROR' });
   }
 
@@ -1468,6 +1479,7 @@ export async function updateProductStatus(
   const merged = JSON.parse(JSON.stringify(originProduct)) as Record<string, any>;
   let optionStockZeroed = 0;
   let stockQuantityChanged = false;
+  let statusTypeChanged = false;
 
   if (target === 'OUTOFSTOCK') {
     if (isOptionProduct) {
@@ -1484,10 +1496,22 @@ export async function updateProductStatus(
       merged.stockQuantity = 0;
       stockQuantityChanged = true;
     }
+  } else if (target === 'SUSPENSION') {
+    // 판매중지 — statusType 직접 세팅(#197/#277). 재고는 건드리지 않는다: 재입고
+    // 시 재고가 보존돼 있어야 재판매(SALE)가 즉시 성립한다. 처분 권고(#273)의
+    // 장기품절→판매중지 경로. previousStatusType이 이미 SUSPENSION이면 아래
+    // changedTopLevelFields가 비어 no-op PUT로 남으므로 호출부가 걸러야 한다.
+    if (merged.statusType !== 'SUSPENSION') {
+      merged.statusType = 'SUSPENSION';
+      statusTypeChanged = true;
+    }
   } else {
     // 재판매 — statusType only (no stock push, #197). If the listing is OOS due to
     // zero stock, restock happens Naver-side; the app never pushes a stock number.
-    merged.statusType = 'SALE';
+    if (merged.statusType !== 'SALE') {
+      merged.statusType = 'SALE';
+      statusTypeChanged = true;
+    }
   }
 
   // Which top-level originProduct keys actually changed (proves "타 필드 무변경").
@@ -1506,6 +1530,7 @@ export async function updateProductStatus(
     changedTopLevelFields,
     optionStockZeroed,
     stockQuantityChanged,
+    statusTypeChanged,
     dryRun: opts.dryRun === true,
     applied: false,
     preservedFieldCount: Object.keys(merged).length,
