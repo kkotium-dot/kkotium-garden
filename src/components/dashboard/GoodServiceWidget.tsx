@@ -1,3 +1,10 @@
+// ⚠️ @unmounted — 현재 어떤 화면에도 마운트되지 않은 컴포넌트입니다 (2026-07-22 전수 확인).
+// 되살리기 전에 반드시 확인할 것(#292):
+//   1. 카운트를 `status`로 세고 있지 않은가 → 처분 판정(disposition)이 정본(#278/#290)
+//   2. 링크 목적지가 행동과 맞는가 → 품절·단절은 부활소가 아니라 처분 결정 대기함(#285)
+//   3. 문구에 개발 은어가 없는가(#262) / 페르소나 대상이 맞는가(#283)
+// 죽은 코드를 그대로 되살리면 이미 고친 결함이 함께 부활합니다.
+
 // src/components/dashboard/GoodServiceWidget.tsx
 // C-9: Good Service Score Dashboard Widget
 // 3-axis gauge + grade badge + improvement tips + grade simulator

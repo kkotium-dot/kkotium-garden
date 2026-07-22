@@ -1,8 +1,15 @@
+// ⚠️ @unmounted — 현재 어떤 화면에도 마운트되지 않은 컴포넌트입니다 (2026-07-22 전수 확인).
+// 되살리기 전에 반드시 확인할 것(#292):
+//   1. 카운트를 `status`로 세고 있지 않은가 → 처분 판정(disposition)이 정본(#278/#290)
+//   2. 링크 목적지가 행동과 맞는가 → 품절·단절은 부활소가 아니라 처분 결정 대기함(#285)
+//   3. 문구에 개발 은어가 없는가(#262) / 페르소나 대상이 맞는가(#283)
+// 죽은 코드를 그대로 되살리면 이미 고친 결함이 함께 부활합니다.
+
 'use client';
 // KkottiWidget — v3
 // TASK 3: accepts parent-provided products prop — no duplicate fetch when used in dashboard
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   RefreshCw, AlertTriangle, Zap,
   ExternalLink, Bell, Package, Wifi, WifiOff,
@@ -10,6 +17,8 @@ import {
 import { calcHoneyScore } from '@/lib/honey-score';
 import { KKOTTI_FACE as KKOTTI_FACE_STATES, GRADE_TO_FACE } from '@/lib/kkotti-vocab';
 import type { DashboardProduct } from '@/lib/dashboard-product';
+import { useInventoryBadges } from '@/lib/hooks/useInventoryBadges';
+import { decideDisposition } from '@/lib/products/disposition';
 
 interface DailyRec {
   id: string; name: string; score: number;
@@ -54,6 +63,12 @@ interface KkottiWidgetProps {
 }
 
 export default function KkottiDashboardWidget({ products: propProducts, productsLoading }: KkottiWidgetProps = {}) {
+  // 재고/공급처 신호(#290) — computeStats가 useCallback 안에서 최신 값을 읽어야
+  // 하므로 ref로 넘긴다(의존성에 넣으면 재고 갱신마다 전체 재계산이 돈다).
+  const { byProductId: inventory } = useInventoryBadges();
+  const invRef = useRef(inventory);
+  invRef.current = inventory;
+
   const [stats, setStats]           = useState<WidgetStats | null>(null);
   const [loading, setLoading]       = useState(true);
   const [sending, setSending]       = useState<string | null>(null);
@@ -96,6 +111,9 @@ export default function KkottiDashboardWidget({ products: propProducts, products
       .map((p: any) => ({
         id: p.id, name: p.name, sku: p.sku, status: p.status,
         updatedAt: p.updatedAt,
+        // 처분 판정 입력(#290) — status만 보면 공급처 단절 상품이 빠진다.
+        naverProductId: p.naverProductId, naverStatusType: p.naver_status_type,
+        salesCount: p.salesCount, lastSaleDate: p.lastSaleDate,
         supplierName: p.supplier?.name ?? p.supplierName,
         hs: calcHoneyScore({
           salePrice:    p.salePrice,
@@ -108,8 +126,20 @@ export default function KkottiDashboardWidget({ products: propProducts, products
         }),
       }));
 
-    const activeScored = scored.filter((p: any) => p.status !== 'OUT_OF_STOCK');
-    const oosScored    = scored.filter((p: any) => p.status === 'OUT_OF_STOCK');
+    // #290/#278 — status가 아니라 **판정**으로 가른다. 공급처가 끊긴 상품은
+    // 앱 status가 ACTIVE로 남아 status 분류에서 빠지는데, 그게 가장 급한
+    // 처분 대상이다. 판정은 disposition.ts 단일 권위(#62).
+    const verdictOf = (p: any) => decideDisposition({
+      salesCount: p.salesCount, lastSaleDate: p.lastSaleDate,
+      naverProductId: p.naverProductId, naverStatusType: p.naverStatusType,
+      sourceGone: invRef.current[p.id]?.sourceGone,
+      qty: invRef.current[p.id]?.qty,
+      supplierStatus: invRef.current[p.id]?.status,
+      daysOutOfStock: invRef.current[p.id]?.daysOutOfStock,
+    });
+    const withVerdict  = scored.map((p: any) => ({ ...p, _v: verdictOf(p) }));
+    const activeScored = withVerdict.filter((p: any) => p._v.action === 'NONE' && p.status !== 'OUT_OF_STOCK');
+    const oosScored    = withVerdict.filter((p: any) => p._v.action !== 'NONE' || p.status === 'OUT_OF_STOCK');
 
     const topRecs: DailyRec[] = activeScored
       .sort((a: any, b: any) => b.hs.total - a.hs.total)
@@ -126,7 +156,8 @@ export default function KkottiDashboardWidget({ products: propProducts, products
       .map((p: any) => ({
         id: p.id, name: p.name, sku: p.sku,
         honeyScore: p.hs.total, honeyGrade: p.hs.grade,
-        daysOos: Math.floor((Date.now() - new Date(p.updatedAt ?? Date.now()).getTime()) / 86_400_000),
+        // 실제 품절 지속일(#273)이 있으면 그걸 쓰고, 없으면 updatedAt 추정치로 degrade.
+        daysOos: p._v?.daysOutOfStock ?? Math.floor((Date.now() - new Date(p.updatedAt ?? Date.now()).getTime()) / 86_400_000),
       }));
 
     const avg = activeScored.length > 0
@@ -136,7 +167,7 @@ export default function KkottiDashboardWidget({ products: propProducts, products
     const nextStats: WidgetStats = {
       totalProducts:  raw.length,
       activeProducts: raw.filter((p: any) => p.status === 'ACTIVE').length,
-      oosProducts:    raw.filter((p: any) => p.status === 'OUT_OF_STOCK').length,
+      oosProducts:    oosScored.length,   // 판정 기준(#290) — status 집계 아님
       avgHoneyScore:  avg,
       topRecs, oosUrgent,
     };
@@ -353,20 +384,21 @@ export default function KkottiDashboardWidget({ products: propProducts, products
         )}
       </div>
 
-      {/* ── 품절 현황 + 디스코드 1줄 ───────────────────────── */}
+      {/* ── 처분 대기 + 디스코드 1줄 ───────────────────────── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div className="kk-card" style={{ overflow: 'hidden', flex: 1 }}>
           <div style={{ padding: '14px 20px 12px', borderBottom: '1px solid #F8DCE5', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <AlertTriangle size={14} style={{ color: stats.oosProducts > 0 ? '#F63B28' : '#B0A0A8' }} />
-              <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>품절 현황</p>
+              <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>처분 대기</p>
               {stats.oosProducts > 0 && (
                 <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: '#fee2e2', color: '#b91c1c' }}>
                   {stats.oosProducts}개
                 </span>
               )}
             </div>
-            <a href="/products/reactivation" style={{ fontSize: 12, fontWeight: 600, color: '#F63B28', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+            {/* 품절·단절은 "되살릴까"가 아니라 "어떻게 처분할까"의 문제다(#285). */}
+            <a href="/products/out-of-stock" style={{ fontSize: 12, fontWeight: 600, color: '#F63B28', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
               전체 <ExternalLink size={11} />
             </a>
           </div>
