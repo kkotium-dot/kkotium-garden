@@ -27,7 +27,7 @@
   },
   "statusBadge": {
     "soldOut": "품절",
-    "stopped": "판매 중지",
+    "stopped": "판매중지",
     "hidden": "비공개"
   },
   "sourcing": {

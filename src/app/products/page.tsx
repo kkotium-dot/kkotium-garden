@@ -1586,7 +1586,7 @@ function BulkFloatMenu({
   const STATUS_OPTIONS = [
     { value: 'DRAFT',         label: '작성중',      color: '#9ca3af' },
     { value: 'READY',         label: '발행대기',    color: '#16a34a' },
-    { value: 'ACTIVE',        label: '판매 중',     color: '#16a34a' },
+    { value: 'ACTIVE',        label: '판매중',      color: '#16a34a' },
     { value: 'OUT_OF_STOCK',  label: '품절',        color: '#F63B28' },
     { value: 'INACTIVE',      label: '비활성화',    color: '#888' },
   ];
@@ -1668,17 +1668,31 @@ function ApplyTemplateModal({
       .then(d => setTemplates(d.templates ?? []));
   }, []);
 
+  // #287 — fetch는 HTTP 500에도 reject하지 않는다. 예전 코드는 Promise.all로
+  // PATCH를 쏘고 결과를 보지 않아, **서버가 전부 실패해도 "적용 완료"로 닫혔다**.
+  // 일괄 상태 변경(handleBulkStatusChange)과 같은 규율을 적용한다: allSettled로
+  // 개별 결과를 수집하고, res.ok까지 확인하고, 부분 실패를 정직하게 보고한다.
   const apply = async () => {
     if (!chosen || applying) return;
     setApplying(true);
     try {
-      await Promise.all(
-        selectedIds.map(id => fetch(`/api/products/${id}`, {
-          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ shipping_template_id: chosen }),
-        }))
+      const settled = await Promise.allSettled(
+        selectedIds.map(async (id) => {
+          const res = await fetch(`/api/products/${id}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ shipping_template_id: chosen }),
+          });
+          const j = await res.json().catch(() => ({}));
+          if (!res.ok || j?.success === false) throw new Error(j?.error || `HTTP ${res.status}`);
+          return id;
+        }),
       );
-      onSuccess();
+      const failed = settled.filter(r => r.status === 'rejected').length;
+      if (failed > 0) {
+        alert(`${selectedIds.length}개 중 ${selectedIds.length - failed}개 적용 완료, ${failed}개 실패했습니다.`);
+      }
+      // 일부라도 성공했으면 목록을 갱신해 실제 상태를 반영한다(전부 실패면 그대로).
+      if (failed < selectedIds.length) onSuccess();
     } finally { setApplying(false); }
   };
 
