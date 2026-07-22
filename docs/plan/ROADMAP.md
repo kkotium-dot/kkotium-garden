@@ -2,7 +2,70 @@
 > 2026-06-17 (세션8) **Image+SEO/ROI Engine Stage 1 빌드 + 6축 main 머지·prod LIVE** (Code turn, 비가역0·네이버 무접촉). 6축+엔진 Stage0 머지(349b9db) → Stage 1 백엔드(3a~3g)+UI(3i) 빌드(8964ce7). DNA 로드+50014980 시드·9슬롯 결정테이블·전략조립기(6축 재사용)·개입 2종·썸네일 게이트·3탭 UI. tsc0/build0/테스트11. **다음=[Desktop] ENG-1 실측 → Stage 2(학습루프: 평점→승격·CTR/CVR) / [결정] 명화 카테고리 정합·캡처방식·발행.**
 
 
-## 다음 새 채팅 시작 메시지 — 2026-07-22 Cowork 인계 ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-07-22(2) Cowork 인계 ⭐ ACTIVE
+
+```
+꽃틔움 가든 — 이어받기
+prod HEAD: 9c3e1dd (== origin/main == prod, Vercel 200)
+로컬: /Users/jyekkot/Desktop/kkotium-garden
+
+[읽을 순서]
+1. docs/plan/TASK_BRIDGE.md §3-A 작업 큐 보드   ← 무엇을 할지 정본
+2. docs/plan/PARALLEL_WORK_TRACKER.md rev70
+3. docs/plan/PRINCIPLES_LEARNED.md #273~#279
+   ※ #31 분할됨 — 옛 원칙은 archive/PRINCIPLES_LEARNED_archived-2026-07-22.md
+     두 파일 함께 grep 할 것
+
+[직전 완료 — 전부 배포·검증완]
+· 처분 권고 엔진 #273 (4ee8585)
+· 배지 레일 #274~#276 (7ebaae3) — 행 178→65px, 상품명 0px 붕괴 수정
+· 판매중지 push + 원클릭 실행 #277 (c36d380)
+· 처분 결정 대기함 #278 (9c3e1dd) — ★누락결함: status 필터라 공급처 단절
+  상품이 통째로 빠져 있었음. 전 상품+판정으로 전환. 5그룹 + 일괄 반영
+· dev 환경 근본 수정 #279 (9c3e1dd) — 셸 NODE_ENV=production이 범인.
+  package.json dev 스크립트에 못박아 재발 차단
+· PRINCIPLES 분할 #31 — 1713→913줄, 무손실 검증 PASS
+
+[다음 — §3-A 보드 정본]
+C2 배지 레일 다른 화면 확장  (READY, 모바일 카드·재활성화 목록)
+C1 R-1/R-2/R-3 육안          (READY, dev 복구돼 직접 촬영 가능)
+D1 페르소나 1~10+14~15       (IN-PROGRESS, 💻 Code 병행 — 11~13은 G1 종속)
+G1 꽃단장 UI 개편            (WAIT-OP, 착수 시 D1 11~13 흡수)
+
+[꼭 지킬 원칙]
+#29a 한글 다량 편집은 Python 스크립트로
+#31  문서 1500줄 임계 시 분할. 분할은 반드시 무손실 검증
+#46  스토어 PUT/POST·GO는 운영자 클릭으로만. 앱 자동 실행 금지
+#62  같은 결론은 한 곳에서만
+#265 수치 PASS ≠ 화면 정상
+#275 ★역방향도 참 — 화면 그럴듯해도 수치 0일 수 있다(스샷+DOM실측 둘 다)
+#273 처분 결론은 disposition.ts 단일 권위
+#274 배지는 지우지 말고 줄을 세워라("돈 새는 순서")
+#277 판단과 실행을 잇되 방아쇠는 사람이. no-op은 실행경로 숨김
+#278 ★대기함은 상태가 아니라 판정으로 모은다. 상태로 거르면 급한 게 빠진다
+#279 ★빌드는 되는데 dev만 안 되면 코드가 아니라 환경을 먼저 본다.
+     재발 방지는 개인 셸이 아니라 스크립트에 못박기
+#32  클라 로직은 prisma 의존 모듈에서 분리
+
+[검증 표준]
+· 배지·카드·목록 분기: DB 주입 대신 **임시 프리뷰 라우트 또는 fetch 스텁**으로
+  전 분기 렌더 후 원복 (프로덕션 무오염 + 분기 누락이 한눈에)
+· 레이아웃: 스샷 + getBoundingClientRect 둘 다
+· 비가역 쓰기(GO): dryRun·UI는 검증자가 실측, 실제 GO는 운영자 클릭
+· 결함 발견 시: 단건 수습 금지, 전 페이지 동일 패턴 스캔까지가 한 세트
+
+[환경]
+· dev 서버: npm run dev (NODE_ENV 고정됨). 세션 종료 시 kill되므로
+  새 세션 첫 접속은 prod URL 또는 재기동
+· Supabase 쓰기는 정책 차단될 수 있음 → 스텁/프리뷰 방식
+· 백그라운드 프로세스는 bash 호출 간 유지 안 됨 → Desktop Commander
+
+[보류] z3c stash(z3c-misdirected-changes-needs-redo) / 클로드디자인 v7 PDF
+```
+
+---
+
+## 다음 새 채팅 시작 메시지 — 2026-07-22(1) Cowork 인계 (SUPERSEDED)
 
 ```
 꽃틔움 가든 — 이어받기
