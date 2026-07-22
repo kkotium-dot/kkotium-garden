@@ -2010,16 +2010,62 @@ function ProductsPageInner() {
   };
 
   // Bulk status change for selected products
+  // 일괄 상태 변경 (#287) — 예전에는 Promise.all로 쏘고 결과를 보지 않았다.
+  // 실패해도 아무 알림 없이 로컬 상태만 바뀌어 **화면과 DB가 어긋났고**, 판매중
+  // 전환에 공급 가능성 게이트도 없었다. 같은 기능인 /products/sourced는 실패를
+  // 보고하고 있었는데 이 경로만 빠져 있었다(#62의 반대 사례 — 같은 동작이 두 곳에
+  // 다르게 구현됨). 단건 경로(handleProductMutate)의 규율을 일괄에도 맞춘다.
   const handleBulkStatusChange = async (status: string) => {
     const ids = [...selected];
-    await Promise.all(ids.map(id =>
-      fetch(`/api/products/${id}`, {
+    if (ids.length === 0) return;
+
+    // 1. 판매중 전환은 "지금 팔 수 있는가"를 묻는 행동이다(#286). 공급이 끊긴
+    //    상품을 판매중으로 돌리면 주문이 들어와도 매입할 수 없어 취소로 이어진다.
+    if (status === 'ACTIVE') {
+      const blocked = ids
+        .map(id => ({ id, gate: checkPublishGate(inventoryByProductId[id]) }))
+        .filter(x => x.gate.blocked);
+      if (blocked.length > 0) {
+        const names = blocked
+          .map(b => raw.find(p => p.id === b.id)?.name ?? b.id)
+          .slice(0, 5);
+        const ok = window.confirm(
+          `공급이 어려운 상품 ${blocked.length}건이 포함돼 있습니다.\n\n` +
+          names.map(n => `· ${n}`).join('\n') +
+          (blocked.length > names.length ? `\n· 외 ${blocked.length - names.length}건` : '') +
+          `\n\n판매중으로 바꾸면 주문이 들어와도 매입하지 못해 취소해야 하고, ` +
+          `취소가 쌓이면 스토어 등급이 깎여요.\n\n그래도 계속할까요?`,
+        );
+        if (!ok) return;
+      }
+    }
+
+    // 2. 개별 결과를 수집한다 — 하나가 실패해도 나머지는 진행하되, 실패는
+    //    반드시 보고하고 해당 항목만 되돌린다(부분 성공을 정직하게 반영).
+    const before = new Map(ids.map(id => [id, raw.find(p => p.id === id)?.status]));
+    setRawProducts(prev => prev.map(p => selected.has(p.id) ? { ...p, status } : p)); // optimistic
+
+    const settled = await Promise.allSettled(ids.map(async (id) => {
+      const res = await fetch(`/api/products/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
-      })
-    ));
-    setRawProducts(prev => prev.map(p => selected.has(p.id) ? { ...p, status } : p));
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || j?.success === false) throw new Error(j?.error || `HTTP ${res.status}`);
+      return id;
+    }));
+
+    const failedIds = ids.filter((_, i) => settled[i].status === 'rejected');
+    if (failedIds.length > 0) {
+      // 실패분만 원래 상태로 롤백 — 성공분은 그대로 둔다.
+      setRawProducts(prev => prev.map(p =>
+        failedIds.includes(p.id) ? { ...p, status: before.get(p.id) ?? p.status } : p));
+      alert(
+        `${ids.length}개 중 ${ids.length - failedIds.length}개 변경 완료, ` +
+        `${failedIds.length}개 실패 — 실패한 상품은 원래 상태로 되돌렸습니다.`,
+      );
+    }
     setSelected(new Set());
   };
 
