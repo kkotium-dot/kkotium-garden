@@ -2,7 +2,7 @@
   "title": "다른 셀러 추적",
   "subtitleEmpty": "같은 상품의 1페이지 경쟁 셀러 가격·재고 변화 감지",
   "emptyOk": "추적 대기 중",
-  "emptyHint": "활성 상품 등록 후 자동 폴링",
+  "emptyHint": "이랴, 활성 상품 등록 후 자동 폴링",
   "loading": "확인 중…",
   "error": "조회 실패",
   "more": "건 외 더 보기",

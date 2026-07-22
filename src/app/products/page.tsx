@@ -268,6 +268,64 @@ function hubBadgeItems(p: ScoredProduct, rd?: { ready: boolean; passed: number; 
   return items;
 }
 
+// ── 상품 배지 아이템 빌더 (#280/#274/#62) ──────────────────────────────────
+// 데스크톱 목록 행과 모바일 카드가 **같은 배지 목록**을 쓰게 하는 단일 출처.
+// 예전에는 목록 행에만 배지가 있고 모바일 카드에는 처분 권고·좀비 배지가 아예
+// 없었다 — 같은 상품인데 기기를 바꾸면 앱의 판단이 사라지는 정보 비대칭이었다.
+// 배지 구성을 JSX 안에 인라인으로 두면 한쪽만 고치는 사고가 반복되므로,
+// 아이템 생성을 이 함수 하나로 모으고 소비처는 렌더 방식(폭·max)만 다르게 한다.
+interface ProductBadgeCtx {
+  inventory?: InventoryBadgeData;
+  mismatch?: string;
+  nameDiag?: NameBadgeData;
+  readiness?: { ready: boolean; passed: number; total: number };
+  /** 'sourcing' = 정원 창고(미발행), 'selling' = 꽃밭 돌보기(발행됨). #269 */
+  mode: 'selling' | 'sourcing';
+  /** SKU를 레일에 태울지. 모바일 카드는 SKU를 이미 따로 보여주므로 false. */
+  includeSku?: boolean;
+}
+
+function buildProductBadgeItems(p: ScoredProduct, ctx: ProductBadgeCtx): Array<BadgeRailItem | null | false | undefined> {
+  const dispositionInput = {
+    salesCount: p.salesCount,
+    lastSaleDate: p.lastSaleDate,
+    naverProductId: p.naverProductId,
+    naverStatusType: p.naver_status_type,
+  };
+  return [
+    ctx.includeSku !== false && p.sku && {
+      key: 'sku',
+      priority: BADGE_PRIORITY.sku,
+      node: <span className="text-xs font-mono" style={{ color: '#B0A0A8', whiteSpace: 'nowrap' }}>{p.sku}</span>,
+    },
+    ctx.inventory && {
+      key: 'inventory',
+      priority: inventoryBadgeRank(ctx.inventory, dispositionInput),
+      node: <InventoryBadge inv={ctx.inventory} mode={ctx.mode} product={dispositionInput} />,
+    },
+    p.tuningScore && {
+      key: 'tuning',
+      priority: BADGE_PRIORITY.tuning,
+      node: <TuningBadge data={p.tuningScore} compact />,
+    },
+    ctx.mismatch && {
+      key: 'mismatch',
+      priority: BADGE_PRIORITY.mismatch,
+      node: (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#F63B28', background: '#fff1f1', border: '1px solid #fca5a5', borderRadius: 6, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+          <AlertTriangle size={9} /> {ctx.mismatch}
+        </span>
+      ),
+    },
+    ctx.nameDiag && {
+      key: 'nameGrade',
+      priority: BADGE_PRIORITY.nameGrade,
+      node: <NameDiagnosisBadge data={ctx.nameDiag} compact />,
+    },
+    ...hubBadgeItems(p, ctx.readiness),
+  ];
+}
+
 function ShippingBadge({ product }: { product: Product }) {
   if (!product.shippingTemplateId) {
     return (
@@ -2053,56 +2111,13 @@ function ProductsPageInner() {
                 재고 배지는 처분 권고가 붙으면 급수가 올라간다(#273). */}
             <div style={{ marginTop: 2 }}>
               <BadgeRail
-                items={[
-                  p.sku && {
-                    key: 'sku',
-                    priority: BADGE_PRIORITY.sku,
-                    node: (
-                      <span className="text-xs font-mono" style={{ color: '#B0A0A8', whiteSpace: 'nowrap' }}>{p.sku}</span>
-                    ),
-                  },
-                  inventoryByProductId[p.id] && {
-                    key: 'inventory',
-                    priority: inventoryBadgeRank(inventoryByProductId[p.id], {
-                      salesCount: p.salesCount,
-                      lastSaleDate: p.lastSaleDate,
-                      naverProductId: p.naverProductId,
-                      naverStatusType: p.naver_status_type,
-                    }),
-                    node: (
-                      <InventoryBadge
-                        inv={inventoryByProductId[p.id]}
-                        mode={isGarden ? 'sourcing' : 'selling'}
-                        product={{
-                          salesCount: p.salesCount,
-                          lastSaleDate: p.lastSaleDate,
-                          naverProductId: p.naverProductId,
-                          naverStatusType: p.naver_status_type,
-                        }}
-                      />
-                    ),
-                  },
-                  p.tuningScore && {
-                    key: 'tuning',
-                    priority: BADGE_PRIORITY.tuning,
-                    node: <TuningBadge data={p.tuningScore} compact />,
-                  },
-                  naverMismatches[p.id] && {
-                    key: 'mismatch',
-                    priority: BADGE_PRIORITY.mismatch,
-                    node: (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#F63B28', background: '#fff1f1', border: '1px solid #fca5a5', borderRadius: 6, padding: '1px 6px', whiteSpace: 'nowrap' }}>
-                        <AlertTriangle size={9} /> {naverMismatches[p.id]}
-                      </span>
-                    ),
-                  },
-                  nameDiagnoses[p.id] && {
-                    key: 'nameGrade',
-                    priority: BADGE_PRIORITY.nameGrade,
-                    node: <NameDiagnosisBadge data={nameDiagnoses[p.id]} compact />,
-                  },
-                  ...hubBadgeItems(p, readinessMap[p.id]),
-                ]}
+                items={buildProductBadgeItems(p, {
+                  inventory: inventoryByProductId[p.id],
+                  mismatch: naverMismatches[p.id],
+                  nameDiag: nameDiagnoses[p.id],
+                  readiness: readinessMap[p.id],
+                  mode: isGarden ? 'sourcing' : 'selling',
+                })}
               />
             </div>
           </div>
@@ -2665,6 +2680,23 @@ function ProductsPageInner() {
                             {p.sku}
                           </p>
                         )}
+                        {/* 배지 레일(#280) — 예전 모바일 카드에는 처분 권고·좀비 배지가
+                            아예 없어서, 같은 상품인데 폰으로 보면 앱의 판단이 사라졌다.
+                            데스크톱 행과 **같은 빌더**를 써서 두 화면이 갈라지지 않게 한다(#62).
+                            SKU는 위에 이미 있으므로 레일에서는 제외. 폭이 좁아 레일이
+                            스스로 접으므로 max를 따로 주지 않는다(#274 실측 자동맞춤). */}
+                        <div style={{ marginTop: 5 }}>
+                          <BadgeRail
+                            items={buildProductBadgeItems(p, {
+                              inventory: inventoryByProductId[p.id],
+                              mismatch: naverMismatches[p.id],
+                              nameDiag: nameDiagnoses[p.id],
+                              readiness: readinessMap[p.id],
+                              mode: isGarden ? 'sourcing' : 'selling',
+                              includeSku: false,
+                            })}
+                          />
+                        </div>
                       </div>
                     </header>
 
