@@ -2,7 +2,68 @@
 > 2026-06-17 (세션8) **Image+SEO/ROI Engine Stage 1 빌드 + 6축 main 머지·prod LIVE** (Code turn, 비가역0·네이버 무접촉). 6축+엔진 Stage0 머지(349b9db) → Stage 1 백엔드(3a~3g)+UI(3i) 빌드(8964ce7). DNA 로드+50014980 시드·9슬롯 결정테이블·전략조립기(6축 재사용)·개입 2종·썸네일 게이트·3탭 UI. tsc0/build0/테스트11. **다음=[Desktop] ENG-1 실측 → Stage 2(학습루프: 평점→승격·CTR/CVR) / [결정] 명화 카테고리 정합·캡처방식·발행.**
 
 
-## 다음 새 채팅 시작 메시지 — 2026-07-22(2) Cowork 인계 ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-07-22(3) Cowork 인계 ⭐ ACTIVE
+
+```
+꽃틔움 가든 — 이어받기
+prod HEAD: b2a3a80 (== origin/main == prod, Vercel 200)
+로컬: /Users/jyekkot/Desktop/kkotium-garden
+
+[읽을 순서]
+1. docs/plan/TASK_BRIDGE.md §3-A 작업 큐 보드   ← 무엇을 할지 정본
+2. docs/plan/PARALLEL_WORK_TRACKER.md rev71
+3. docs/plan/PRINCIPLES_LEARNED.md #273~#282
+   ※ #31 분할됨 — 옛 원칙은 archive/PRINCIPLES_LEARNED_archived-2026-07-22.md
+     원칙 찾을 땐 두 파일 함께 grep
+
+[직전 완료 — 전부 배포·검증완]
+· 처분 권고 엔진 #273 / 배지 레일 #274~#276 / 판매중지+원클릭 #277
+· 처분 결정 대기함 #278 — status 필터라 공급처 단절 상품이 빠져 있던 것 수정
+· dev 환경 근본 수정 #279 — 셸 NODE_ENV=production이 범인
+· 배지 레일 모바일 확장 #280 — 모바일에 배지가 아예 없던 정보 비대칭 해소
+· R-3 종결 #281 — 패널 열림 시 컬럼 축소(밀어내기로는 물리적 불가였음)
+· R-1·R-2 통과 확인 (자사 제외 정상 / 하단 버튼 3개)
+· PRINCIPLES 분할 #31 — 무손실 검증 PASS
+
+[다음 — §3-A 보드 정본]
+C4 재활성화 목록에 처분 권고 노출  (READY, 현재 상품명 배지만 있음)
+G1 꽃단장 UI 개편                  (WAIT-OP, 착수 시 D1 11~13 흡수)
+D1 페르소나 1~10+14~15             (IN-PROGRESS, 💻 Code 병행)
+
+[꼭 지킬 원칙]
+#29a 한글 다량 편집은 Python 스크립트로
+#31  문서 1500줄 임계 시 분할. 분할은 반드시 무손실 검증
+#46  스토어 PUT/GO는 운영자 클릭으로만. 앱 자동 실행 금지
+#62  같은 결론은 한 곳에서만
+#265 수치 PASS ≠ 화면 정상
+#275 화면 그럴듯해도 수치 0일 수 있다(스샷+DOM실측 둘 다)
+#277 판단과 실행을 잇되 방아쇠는 사람이. no-op은 실행경로 숨김
+#278 대기함은 상태가 아니라 판정으로 모은다
+#279 빌드는 되는데 dev만 안 되면 환경을 먼저 본다
+#280 ★같은 데이터를 두 화면이 그리면 아이템 구성은 한 함수에서
+#281 ★공간이 부족하면 밀어내기가 아니라 줄이기. 그리드 열 숨김은
+     트랙·헤더라벨·셀개수를 반드시 함께 분기(타입검사 미검출)
+#282 ★React 렌더 측정은 커밋 완료를 기다린다. "버그다" 결론 전 단일 단계 재현
+
+[검증 표준]
+· 목록·배지·카드 분기: DB 주입 대신 fetch 스텁 또는 임시 프리뷰 라우트
+· 레이아웃: 스샷 + getBoundingClientRect 둘 다
+· 비동기 렌더(ResizeObserver/SWR): 1.5초 이상 대기 후 측정, 단일 단계 재현
+· 비가역 쓰기(GO): dryRun·UI는 검증자가 실측, 실제 GO는 운영자 클릭
+· 결함 발견 시: 단건 수습 금지, 전 페이지 동일 패턴 스캔까지가 한 세트
+
+[환경 — dev 파손 2대 원인]
+1. 셸 NODE_ENV=production → package.json에 고정해 해결됨(#279)
+2. dev 실행 중 npm run build → .next 충돌. **build 전 dev 반드시 kill**
+· 복구: pkill -9 -f next && rm -rf .next && npm run dev
+· Supabase 쓰기는 정책 차단될 수 있음 → 스텁/프리뷰 방식
+
+[보류] z3c stash / 클로드디자인 v7 PDF
+```
+
+---
+
+## 다음 새 채팅 시작 메시지 — 2026-07-22(2) Cowork 인계 (SUPERSEDED)
 
 ```
 꽃틔움 가든 — 이어받기
