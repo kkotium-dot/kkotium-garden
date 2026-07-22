@@ -2,7 +2,76 @@
 > 2026-06-17 (세션8) **Image+SEO/ROI Engine Stage 1 빌드 + 6축 main 머지·prod LIVE** (Code turn, 비가역0·네이버 무접촉). 6축+엔진 Stage0 머지(349b9db) → Stage 1 백엔드(3a~3g)+UI(3i) 빌드(8964ce7). DNA 로드+50014980 시드·9슬롯 결정테이블·전략조립기(6축 재사용)·개입 2종·썸네일 게이트·3탭 UI. tsc0/build0/테스트11. **다음=[Desktop] ENG-1 실측 → Stage 2(학습루프: 평점→승격·CTR/CVR) / [결정] 명화 카테고리 정합·캡처방식·발행.**
 
 
-## 다음 새 채팅 시작 메시지 — 2026-07-22(5) 인계 ⭐ ACTIVE
+## 다음 새 채팅 시작 메시지 — 2026-07-22(6) 인계 ⭐ ACTIVE
+
+```
+꽃틔움 가든 — 이어받기
+prod HEAD: 17bf310 이후 docs 커밋 (== origin/main == prod, Vercel 200)
+로컬: /Users/jyekkot/Desktop/kkotium-garden
+
+[읽을 순서]
+1. docs/plan/TASK_BRIDGE.md §3-A 작업 큐 보드   ← 정본
+2. docs/plan/PARALLEL_WORK_TRACKER.md rev74
+3. docs/plan/PRINCIPLES_LEARNED.md #273~#286
+   ※ 옛 원칙은 archive/PRINCIPLES_LEARNED_archived-2026-07-22.md (두 파일 grep)
+
+[직전 완료 — 전부 배포·검증완]
+· 처분엔진 #273 / 배지레일 #274~#276,#280 / 원클릭 #277 / 대기함 #278
+· dev환경 #279 / R-3 컴팩트 #281 / 검증방법론 #282
+· 페르소나 독자경계 #283 / 병행규율 #284 / 부활소 권고 #285
+· ★발행 게이트 #286 — 준비도 100%면 공급 끊긴 상품도 발행되던 결함 차단
+· D2 결정: 도매꾹 폴링 유지(ON)·DRAFT 포함. 끄면 위 3개가 무력화됨
+
+[다음 — §3-A 보드 정본. 병행 가능]
+🌸 C5-b 잔여 개입점 역신호 점검 (READY)
+    소싱 담기·상품 등록 등 나머지 행동 지점에 "말리는 신호"가 있는지
+💻 G1-A 꽃단장 문구 정비 (READY)
+    페르소나 37문구 + ★개발 은어 9건(#262 위반: "Supabase Storage",
+    "cooldown", "DB row"가 셀러 화면에 노출 중)
+    인계: docs/handoff/CODE_HANDOFF_G1A_STUDIO_STRINGS_2026-07-22.md
+⏸ G1-B 꽃단장 UI 구조 개편 (WAIT-OP — 무엇을 바꿀지 스펙 미정의)
+
+[꼭 지킬 원칙]
+#29a Python 스크립트로 한글 편집 · #31 문서 1500줄 분할(무손실)
+#46  스토어 GO는 운영자 클릭으로만 · #62 같은 결론은 한 곳에서만
+#262 셀러 실무 용어. 개발자 은어 금지
+#265/#275 수치 PASS≠화면 정상 / 화면 그럴듯해도 수치 0일 수 있다
+#277 판단과 실행을 잇되 방아쇠는 사람이
+#278 대기함은 상태가 아니라 판정으로 모은다
+#279 빌드/타입검사가 갑자기 깨지면 코드가 아니라 환경을 먼저 본다
+#280 두 화면이 같은 데이터를 그리면 아이템 구성은 한 함수에서
+#281 공간 부족하면 밀어내기가 아니라 줄이기
+#282 React 렌더 측정은 커밋 완료를 기다린다
+#283 페르소나는 셀러 대면 앱 UI에만. 고객 대면 상품 카피는 금지
+#284 병행 세션은 git add -A 금지. 남의 미커밋은 stash 금지·보고
+#285 행동을 유도하는 화면에는 말리는 신호도 함께
+#286 ★"준비됐는가"와 "지금 팔 수 있는가"는 다른 축. 발행은 둘 다 통과해야.
+     단 모르는 것으로 막지 않는다(막으면 운영자가 게이트를 끈다)
+
+[검증 표준]
+· 인계 문서는 증거가 아니다 — 작업 전 target을 직접 추출해 확인(#283)
+· 목록·배지 분기: DB 주입 대신 fetch 스텁 또는 임시 프리뷰 라우트
+· 레이아웃: 스샷 + getBoundingClientRect 둘 다
+· 비동기 렌더(ResizeObserver/SWR): 1.5초 이상 대기, 단일 단계 재현
+· 결함 발견 시: 단건 수습 금지, 전 페이지·전 스크립트 확장까지가 한 세트
+
+[환경 — 파손 3대 원인]
+1. 셸 NODE_ENV=production → package.json에 고정해 해결됨(#279)
+2. dev 실행 중 npm run build → .next 충돌. build 전 dev 반드시 kill
+3. node_modules/@types에 macOS 중복 폴더("xxx 2") → tsc 실패.
+   find node_modules/@types -maxdepth 1 -name "* 2" -type d -exec rm -rf {} +
+복구: pkill -9 -f next && rm -rf .next && npm run dev
+
+[파일 영역 소유권 — 병행 충돌 방지]
+· src/app/products/page.tsx  → 🌸 Cowork 전용
+· *.strings.ko.json          → 💻 Code 전용
+
+[보류] z3c stash / 클로드디자인 v7 PDF
+```
+
+---
+
+## 다음 새 채팅 시작 메시지 — 2026-07-22(5) 인계 (SUPERSEDED)
 
 ```
 꽃틔움 가든 — 이어받기
