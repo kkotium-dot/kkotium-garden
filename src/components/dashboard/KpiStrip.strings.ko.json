@@ -1,11 +1,25 @@
 {
   "cards": {
-    "revenue": { "label": "오늘 매출", "sub": "주문 결제 기준" },
-    "orders": { "label": "신규 주문", "sub": "오늘 접수" },
-    "settlement": { "label": "정산 예정", "sub": "정산 대기액" },
-    "oos": { "label": "품절 경보", "sub": "재고 보충 필요" }
+    "revenue": {
+      "label": "오늘 매출",
+      "sub": "주문 결제 기준"
+    },
+    "orders": {
+      "label": "신규 주문",
+      "sub": "오늘 접수"
+    },
+    "settlement": {
+      "label": "정산 예정",
+      "sub": "정산 대기액"
+    },
+    "oos": {
+      "label": "처분 대기",
+      "sub": "공급 끊김·장기 품절"
+    }
   },
   "naverDown": "확인 필요",
   "empty": "—",
-  "unit": { "count": "건" }
+  "unit": {
+    "count": "건"
+  }
 }

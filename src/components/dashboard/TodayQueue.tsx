@@ -70,7 +70,11 @@ export default function TodayQueue() {
 
   const shipCount   = stats?.ordersToShip ?? 0;
   const claimCount  = stats?.ordersClaim ?? 0;
-  const oosCount    = stats?.outOfStockProducts ?? 0;
+  // #290/#278 — status가 아니라 **판정**으로 센다. 공급처가 끊긴 상품은 앱
+  // status가 ACTIVE로 남아 status 집계(outOfStockProducts)에서 빠지는데,
+  // 그게 가장 급한 처분 대상이다. 서버가 대기함과 같은 규칙으로 계산해 준다.
+  // 구버전 API 응답(필드 부재) 대비로 status 집계를 fallback으로 둔다(#82).
+  const oosCount    = stats?.dispositionPending ?? stats?.outOfStockProducts ?? 0;
   // Intervention = products blocked and waiting on the operator (risk tier).
   const riskCount   = matrix?.success ? (matrix.counts?.risk ?? 0) : 0;
 
@@ -91,7 +95,9 @@ export default function TodayQueue() {
     {
       key: 'oos', icon: PackageX,
       label: strings.items.oos.label, hint: strings.items.oos.hint,
-      count: oosCount, href: '/products/reactivation',
+      // 품절/단절은 "되살릴까"가 아니라 "어떻게 처분할까"의 문제다. 부활소가
+      // 아니라 처분 결정 대기함으로 보낸다(#285 — 행동과 화면 목적을 맞춘다).
+      count: oosCount, href: '/products/out-of-stock',
       color: 'var(--danger)', bg: 'var(--danger-bg)', border: 'var(--danger)',
     },
     {

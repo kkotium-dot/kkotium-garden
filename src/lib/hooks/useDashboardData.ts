@@ -572,6 +572,9 @@ export interface DashboardStatsApiData {
   totalProducts?: number;
   activeProducts?: number;
   outOfStockProducts?: number;
+  /** 처분 조치가 필요한 상품 수(#290). status가 아니라 판정 기준이라
+   *  공급처 단절(status=ACTIVE) 상품도 포함된다 — outOfStockProducts와 다르다. */
+  dispositionPending?: number;
   draftProducts?: number;
   inactiveProducts?: number;
   avgScore?: number;

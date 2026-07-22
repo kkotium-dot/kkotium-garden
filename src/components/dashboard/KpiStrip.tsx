@@ -11,7 +11,7 @@
 //       value (0 is real, #82) — never degrades with the Naver API.
 //   - 정산 예정              : Naver order API (/api/dashboard/stats) — degrades
 //       to "—" + "확인 필요" when naverOrderStatus != ok (#82/#45).
-//   - 품절 경보              : DB-native (outOfStockProducts).
+//   - 처분 대기              : DB-native (dispositionPending, 판정 기준 #290).
 //
 // Sparkline = pure inline SVG (no chart lib, #223). Delta: 상승 → --success /
 // 하락 → --danger (trendy semantic). No emoji (Lucide only).
@@ -136,7 +136,10 @@ export default function KpiStrip() {
   // Naver-derived (settlement only) degrades honestly.
   const naverDown = stats?.naverOrderStatus !== undefined && stats.naverOrderStatus !== 'ok';
   const settlement = stats?.todayPaidAmount ?? 0;
-  const oos        = stats?.outOfStockProducts ?? 0;
+  // #290/#278 — status가 아니라 **판정** 기준. 공급처가 끊긴 상품은 앱 status가
+  // ACTIVE로 남아 outOfStockProducts에서 빠지는데 그게 가장 급한 처분 대상이다.
+  // 구버전 API 응답 대비 fallback 유지(#82).
+  const oos        = stats?.dispositionPending ?? stats?.outOfStockProducts ?? 0;
 
   const empty = strings.empty;
   const cards: KpiCardModel[] = [
@@ -166,7 +169,9 @@ export default function KpiStrip() {
       key: 'oos', label: strings.cards.oos.label, sub: strings.cards.oos.sub,
       value: isLoading ? empty : `${oos}${strings.unit.count}`,
       down: false,
-      icon: AlertTriangle, color: 'var(--danger)', iconBg: 'var(--danger-bg)', href: '/products/reactivation',
+      // 처분이 필요한 상품은 "되살리기"(부활소)가 아니라 "어떻게 할지 정하기"
+      // (처분 결정 대기함)로 보낸다(#285 — 행동과 화면 목적을 맞춘다).
+      icon: AlertTriangle, color: 'var(--danger)', iconBg: 'var(--danger-bg)', href: '/products/out-of-stock',
     },
   ];
 

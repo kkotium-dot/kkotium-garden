@@ -4,7 +4,8 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma'; // singleton — avoids connection pool exhaustion
+import { prisma } from '@/lib/prisma';
+import { countDispositionPending } from '@/lib/products/disposition-load'; // singleton — avoids connection pool exhaustion
 import { getTodayOrderSummary, isNaverAppStatusInvalid, NAVER_APP_STATUS_USER_MESSAGE, isNaverClientSecretInvalid, NAVER_CLIENT_SECRET_USER_MESSAGE } from '@/lib/naver/api-client';
 import { loadTuningScores } from '@/lib/products/tuning-signals';
 
@@ -38,6 +39,11 @@ export async function GET(request: NextRequest) {
 
     // Pipeline counts — sourcing shelf + zombie detection
     const sourcingCount = await prisma.crawlLog.count({ where: { sourcingStatus: 'SOURCED' } });
+
+    // 처분 대기 수(#290/#278) — status가 아니라 **판정**으로 센다. 공급처가
+    // 끊긴 상품은 앱 status가 ACTIVE로 남아 있어 status 집계에서 빠지는데,
+    // 그게 가장 급한 처분 대상이다. 화면(대기함)과 같은 규칙을 쓴다(#62).
+    const dispositionPending = await countDispositionPending();
 
     // 부활 대상 count (#62/#247) — SINGLE source with the hub revival filter.
     // Was a divergent ad-hoc query (ACTIVE + no-sale + 30d) that disagreed with
@@ -157,6 +163,7 @@ export async function GET(request: NextRequest) {
           period,
           // Pipeline counts for sidebar badges + pipeline card
           sourcingCount,
+          dispositionPending,
           zombieCount,
           // ORDER-QUEUE-1 (#195): order-processing nudge counts (read-only)
           ordersToShip,
