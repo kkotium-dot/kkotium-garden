@@ -1,11 +1,11 @@
 {
   "title": "에셋 브라우저",
-  "subtitle": "상품별·단계별 자산 관리 (저장소: Supabase Storage). 대표/추가/보관·직접 업로드·폴더 바로가기.",
+  "subtitle": "상품별·단계별 자산 관리. 대표/추가/보관·직접 업로드·폴더 바로가기.",
   "totalPrefix": "총",
   "countUnit": "개",
   "loading": "에셋 불러오는 중...",
-  "error": "에셋을 불러오지 못했습니다",
-  "emptyAll": "🌱 아직 여기서 피어난 에셋이 없어요",
+  "error": "이랴, 에셋을 불러오지 못했어요",
+  "emptyAll": "🌱 까꿍! 아직 여기서 피어난 에셋이 없어요",
   "notApplied": "미적용",
   "selectProduct": "상품을 선택하면 에셋이 표시돼요",
   "refresh": "새로고침",
@@ -41,7 +41,7 @@
     "notImage": "이미지 파일만 업로드할 수 있습니다"
   },
   "shortcut": {
-    "supabase": "Supabase 폴더 열기",
+    "supabase": "자산 폴더 열기",
     "copyPath": "폴더 경로 복사",
     "copied": "복사됨"
   },
@@ -78,7 +78,7 @@
     "mainSkipped": "대표컷은 제외됩니다",
     "busy": "일괄 처리 중...",
     "deleteModalTitle": "선택 자산 일괄 영구 삭제",
-    "deleteModalBody": "선택한 {n}개 자산을 영구 삭제합니다. 되돌릴 수 없습니다.",
+    "deleteModalBody": "빵야, 선택한 {n}개 자산을 영구 삭제합니다. 되돌릴 수 없습니다.",
     "deleteModalConfirm": "{n}개 영구 삭제",
     "deleteModalCancel": "취소"
   },
@@ -127,7 +127,7 @@
   "focus": {
     "stepOnly": "현재 단계 자산",
     "showAll": "전체 보기",
-    "filteredEmpty": "이 단계에 해당하는 자산이 아직 없어요. 전체 보기로 다른 단계를 확인하세요.",
+    "filteredEmpty": "까꿍, 이 단계에 해당하는 자산이 아직 없어요. 전체 보기로 다른 단계를 확인하세요.",
     "uploadSection": "자산 올리기"
   }
 }
