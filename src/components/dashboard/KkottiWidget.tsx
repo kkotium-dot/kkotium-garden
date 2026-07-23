@@ -19,6 +19,7 @@ import { KKOTTI_FACE as KKOTTI_FACE_STATES, GRADE_TO_FACE } from '@/lib/kkotti-v
 import type { DashboardProduct } from '@/lib/dashboard-product';
 import { useInventoryBadges } from '@/lib/hooks/useInventoryBadges';
 import { decideDisposition } from '@/lib/products/disposition';
+import { deriveLifecycleState, isQueueEligible } from '@/lib/products/surfaceRules';
 
 interface DailyRec {
   id: string; name: string; score: number;
@@ -137,9 +138,13 @@ export default function KkottiDashboardWidget({ products: propProducts, products
       supplierStatus: invRef.current[p.id]?.status,
       daysOutOfStock: invRef.current[p.id]?.daysOutOfStock,
     });
+    // 작업2(#295 실배선) — 대시보드 할일도 작업 큐(발행 전용, T-19). action==='NONE'인
+    // 상태에서 status만 보고 다시 주워담으면(원래 fallback) 미발행 상품이 새어
+    // 들어온다 — isQueueEligible로 발행 여부를 명시적으로 재확인한다.
+    const isQueueItem = (p: any) => isQueueEligible(deriveLifecycleState({ naverProductId: p.naverProductId, status: p.status }));
     const withVerdict  = scored.map((p: any) => ({ ...p, _v: verdictOf(p) }));
     const activeScored = withVerdict.filter((p: any) => p._v.action === 'NONE' && p.status !== 'OUT_OF_STOCK');
-    const oosScored    = withVerdict.filter((p: any) => p._v.action !== 'NONE' || p.status === 'OUT_OF_STOCK');
+    const oosScored    = withVerdict.filter((p: any) => p._v.action !== 'NONE' || (p.status === 'OUT_OF_STOCK' && isQueueItem(p)));
 
     const topRecs: DailyRec[] = activeScored
       .sort((a: any, b: any) => b.hs.total - a.hs.total)

@@ -5,6 +5,23 @@
 > **원칙 #149~#253 전문은 `docs/plan/PRINCIPLES_LEARNED.md`를 참조하세요** (2026-07-14 정식 이관 완료 — #165/#217~#220/#225/#231은 원문에 개별 정의가 없는 결번으로 확정). rev50 이하 원문(rev40~rev50 상세 커밋 로그)은 이 트래커의 커밋 `5c9e9f5^`(`git show 5c9e9f5^:docs/plan/PARALLEL_WORK_TRACKER.md`)에서 조회 가능합니다 — 현재 HEAD 파일 본문에서는 제거되어 있습니다(직전 커밋 5c9e9f5가 "원문 보존"이라 주장했으나 실제로는 528줄을 삭제했던 것을 2026-07-14 발견, 아래 참조).
 
 
+## rev90 — 작업1 F3 사전조사(검수 판정 근거) + 작업2 surfaceRules 실배선 2건 (2026-07-24 Code)
+
+**작업1 (F3 사전조사 — 구현 없음, 조사·보고만)**:
+- `/products/[id]/preview` + `GET /api/products/[id]/publish-preview`는 **완전 읽기전용**(prisma read만, DB write 0). 매 GET마다 OCR·이미지품질을 재계산해 반환 — **검수 이력이 남는 구조가 아니다**. Product 스키마에도 발행-검수용 필드는 없음(`reviewedBy/reviewedAt`은 다른 모델=전략 콘텐츠 draft/approved 게이트 소관, `StoreSettings.manualReviewCount`는 고객리뷰 수동추적용 — 둘 다 무관).
+- **경고 0건 판정은 이미 계산돼 있음**: `imageWarnings`/`blockingImageWarnings` 배열 + `canPublish`(readinessOk && canRegister && blockingImageWarnings.length===0) 반환. F3 판정 근거로 그대로 쓸 수 있는 형태.
+- ★**구조적 발견(설계에 중요)**: 이 검수 화면의 "발행하기" 버튼은 `POST /api/naver/products/update`(이미 등록된 상품의 재발행/수정 전용, `naverProductId` 없으면 409)로 연결돼 있다. 반면 실제 **최초 발행 경로**(정원창고 "준비된 것 일괄 발행" → `NaverRegisterModal` → `POST /api/naver/products/register`)는 이 검수 화면·`publish-preview`의 이미지품질/OCR 경고 계산을 **전혀 거치지 않는다** — 자체적으로 `validateForRegistration`(readiness/attribute grade)만 체크. 즉 오늘 기준 "경고 0건"과 "실제 최초발행 가능"은 **서로 다른 경로**라 즉시 연결 불가. Cowork 설계 시 결정 필요: (a) 최초발행도 이 검수화면을 강제로 거치게 라우팅을 바꾸거나, (b) `publish-preview`의 경고계산을 register 경로에도 이식하거나, (c) 별도의 경량 게이트를 register 직전에 추가.
+
+**작업2 (surfaceRules 실배선, T-05/T-18 제외)**: 코드를 더 훑어 실제 T-19 위반 2건을 발견·수정.
+- `products/out-of-stock/page.tsx`(처분 결정 대기함) — "재입고 검토" 그룹 편입 조건이 `p.status === 'OUT_OF_STOCK'`만 보고 `naverProductId`를 확인하지 않아 미발행 상품이 새어들어올 수 있었음(T-19 위반 가능 지점). `isQueueEligible(deriveLifecycleState(...))` 가드 추가.
+- `KkottiWidget.tsx`(대시보드 할일 — 품절임박 위젯) — 동일 패턴(`p.status === 'OUT_OF_STOCK'` fallback, naverProductId 미확인). 동일하게 가드 추가.
+- 두 곳 모두 `decideDisposition`의 action이 이미 'NONE'인 케이스에서 status만으로 다시 주워담는 fallback 분기였음 — action 기반 1차 필터는 원래도 안전했으나(disposition.ts:129 내장 게이트), fallback 분기가 그 안전판을 우회하고 있었다.
+- T-05/T-18(삭제버튼 숨김)은 지시대로 미적용.
+
+검증: tsc 0 · `npm run build` 0(out-of-stock 8.9→9.07kB로 실제 포함 확인) · surfaceRules.test.ts 10/10 · 로컬 브라우저 실측(두 화면 모두 정상 렌더, 콘솔 에러 0).
+
+---
+
 ## rev89 — 작업1 양성검증 보강 + 작업2 prisma분리(1단계) 완료 + 2단계 재검토 결과 (2026-07-24 Code · #310 미검증 해소)
 
 **작업1 (배너 양성 검증 보강)**: `NewVersionBanner.tsx`에 `?forceVersionCheck=1` 쿼리 처리 추가 — 가짜 SHA 조작 없이 (1) 스로틀 전면 우회(마운트 즉시 + 매 탭포커스 복귀마다), (2) 화면 우하단에 `초기 SHA / 현재 SHA / 일치여부` 디버그 텍스트 노출. 파라미터 없으면 완전히 기존과 동일. **버그 1건을 구현 중 발견·수정**: 최초 작성 시 `if (!initialSha.current) return`이 디버그 표시보다 먼저 실행돼 dev(sha=null)에서는 디버그 텍스트 자체가 절대 안 뜨는 결함이 있었음 — early return을 디버그 세팅 뒤로 옮겨 해결. 로컬 브라우저 실측: `?forceVersionCheck=1` → "forceVersionCheck — 초기: null / 현재: null / 비교불가(dev sha=null)" 정상 노출, 파라미터 없으면 미노출 확인.

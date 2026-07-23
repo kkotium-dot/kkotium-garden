@@ -33,6 +33,7 @@ import type { HoneyScoreResult } from '@/lib/honey-score';
 import { decideDisposition, LONG_OUT_OF_STOCK_DAYS, type DispositionAction } from '@/lib/products/disposition';
 import dispositionCopy from '@/lib/products/disposition.strings.ko.json';
 import { useInventoryBadges } from '@/lib/hooks/useInventoryBadges';
+import { deriveLifecycleState, isQueueEligible } from '@/lib/products/surfaceRules';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface QueueProduct {
@@ -214,7 +215,13 @@ export default function DispositionQueuePage() {
     for (const p of searched) {
       if (p.action !== 'NONE') {
         map.get(p.action)?.push(p);
-      } else if (p.status === 'OUT_OF_STOCK') {
+      } else if (
+        p.status === 'OUT_OF_STOCK' &&
+        // 작업2(#295 실배선) — 재입고 검토도 작업 큐(발행 전용, T-19)다. action이
+        // 이미 !naverProductId면 NONE을 돌려주지만(disposition.ts:129) 그 경우
+        // status만 보고 여기서 다시 주워담으면 미발행 상품이 새어 들어온다.
+        isQueueEligible(deriveLifecycleState({ naverProductId: p.naverProductId, status: p.status }))
+      ) {
         map.get('RESTOCK')?.push(p);
       }
     }
