@@ -2,6 +2,7 @@
 
 > 이 파일은 Claude Code가 세션 시작 시 자동으로 읽는 영구 컨텍스트입니다.
 > 실시간 진행 상태는 항상 `docs/plan/PROGRESS.md` / `ROADMAP.md` / `SESSION_LOG.md` / **`TASK_BRIDGE.md`** (2026-05-19 도입)를 정독해서 확인하세요.
+> 설계·기획 착수 전 필독: `docs/DOMAIN_FACTS.md`
 
 ---
 
