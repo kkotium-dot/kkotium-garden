@@ -44,6 +44,7 @@ const REASON_META: Record<ReactivationReason, {
   icon: React.ElementType; color: string; bgColor: string; borderColor: string; label: string;
 }> = {
   out_of_stock:     { icon: AlertTriangle, color: '#b91c1c', bgColor: '#fff0ef', borderColor: '#ffd6d3', label: '품절' },
+  suspended:        { icon: AlertTriangle, color: '#c2410c', bgColor: '#fff7ed', borderColor: '#fed7aa', label: '판매중지' },
   long_inactive:    { icon: Clock,         color: '#c2410c', bgColor: '#fff7ed', borderColor: '#fed7aa', label: '장기 미판매' },
   score_drop:       { icon: TrendingDown,  color: '#b45309', bgColor: '#fffbeb', borderColor: '#fde68a', label: '점수 급락' },
   draft_incomplete: { icon: FileX,         color: '#555',    bgColor: '#f8f8f8', borderColor: '#F8DCE5', label: '등록 미완료' },
@@ -173,7 +174,7 @@ export default function ReactivationPage() {
         results.push({ product: p, honeyScore: hs, reason: reason.reason, reasonLabel: reason.label });
       }
       results.sort((a, b) => {
-        const order: Record<ReactivationReason, number> = { out_of_stock: 0, score_drop: 1, long_inactive: 2, draft_incomplete: 3 };
+        const order: Record<ReactivationReason, number> = { out_of_stock: 0, suspended: 1, score_drop: 2, long_inactive: 3, draft_incomplete: 4 };
         if (order[a.reason] !== order[b.reason]) return order[a.reason] - order[b.reason];
         return b.honeyScore.total - a.honeyScore.total;
       });
@@ -232,6 +233,7 @@ export default function ReactivationPage() {
   const counts = {
     all:              items.length,
     out_of_stock:     items.filter(i => i.reason === 'out_of_stock').length,
+    suspended:        items.filter(i => i.reason === 'suspended').length,
     long_inactive:    items.filter(i => i.reason === 'long_inactive').length,
     score_drop:       items.filter(i => i.reason === 'score_drop').length,
     draft_incomplete: items.filter(i => i.reason === 'draft_incomplete').length,
@@ -300,8 +302,8 @@ export default function ReactivationPage() {
         </div>
 
         {/* Summary cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
-          {(['out_of_stock', 'long_inactive', 'score_drop', 'draft_incomplete'] as ReactivationReason[]).map(reason => {
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 16 }}>
+          {(['out_of_stock', 'suspended', 'long_inactive', 'score_drop', 'draft_incomplete'] as ReactivationReason[]).map(reason => {
             const meta = REASON_META[reason];
             const Icon = meta.icon;
             const isActive = filter === reason;
@@ -323,7 +325,7 @@ export default function ReactivationPage() {
 
         {/* Filter tabs */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-          {([['all', '전체'], ['out_of_stock', '품절'], ['long_inactive', '장기 미판매'], ['score_drop', '점수 급락'], ['draft_incomplete', '등록 미완료']] as const).map(([key, label]) => (
+          {([['all', '전체'], ['out_of_stock', '품절'], ['suspended', '판매중지'], ['long_inactive', '장기 미판매'], ['score_drop', '점수 급락'], ['draft_incomplete', '등록 미완료']] as const).map(([key, label]) => (
             <button key={key} onClick={() => setFilter(key as any)}
               style={{
                 padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 600,
@@ -441,8 +443,8 @@ export default function ReactivationPage() {
 
                   {/* Actions */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    {/* 새 생명 부여 — for OOS and long_inactive */}
-                    {(isZombie || item.reason === 'out_of_stock') && (
+                    {/* 새 생명 부여 — for OOS, suspended, long_inactive */}
+                    {(isZombie || item.reason === 'out_of_stock' || item.reason === 'suspended') && (
                       <button
                         onClick={() => setCloneTarget(item)}
                         style={{

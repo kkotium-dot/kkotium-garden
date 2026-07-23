@@ -38,6 +38,7 @@ import PanelTabs, { type PanelTabDef } from '@/components/ui/PanelTabs';
 import NaverPushPanel from '@/components/products/NaverPushPanel';
 import SubstituteEditor from '@/components/products/SubstituteEditor';
 import { computeRevivalScore, type RevivalGrade } from '@/lib/products/revival-score';
+import { getReactivationReason } from '@/lib/daily-slots';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,6 +102,15 @@ const netMarginOf = (p: Product): number =>
     keywords: p.keywords ?? [], tags: p.tags ?? [], hasMainImage: !!p.mainImage,
   }).netMarginRate;
 const isLowMargin = (p: Product): boolean => netMarginOf(p) < 10;
+// F1 (#295 연장, 2026-07-23): 꽃밭돌보기의 "재활성화 필요" 배지가 부활소와 다른
+// 판정(raw status)을 써서 배지는 뜨는데 부활소는 0건인 모순이 있었다. 이제 부활소와
+// 같은 getReactivationReason 단일 함수를 소비해 두 화면이 항상 같은 결과를 낸다.
+const needsReactivation = (p: Product): boolean => !!getReactivationReason({
+  ...p,
+  createdAt:    p.createdAt    ? new Date(p.createdAt)    : undefined,
+  lastSaleDate: p.lastSaleDate ? new Date(p.lastSaleDate) : undefined,
+  updatedAt:    p.updatedAt    ? new Date(p.updatedAt)    : undefined,
+});
 const hasDrift = (p: Product): boolean => {
   const d = p.driftFields;
   if (!d) return false;
@@ -126,7 +136,7 @@ const TAB_CONFIG: Record<TabKey, {
   // 작업 H-2 — 꽃밭 돌보기 전용 탭(oos/reactivation/lowMargin/drift)은 뷰 스코프를
   // naverProductId로 강제해 정원 창고 상품이 새어 들어오지 않게 한다.
   oos:          { label: '품절',          dot: 'bg-[#F63B28]',  dotLabel: '품절',          filter: p => p.status === 'OUT_OF_STOCK' && !!p.naverProductId },
-  reactivation: { label: '판매중지',      dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => (p.status === 'INACTIVE' || p.status === 'HIDDEN') && !!p.naverProductId },
+  reactivation: { label: '판매중지',      dot: 'bg-orange-400', dotLabel: '재활성화',      filter: p => needsReactivation(p) && !!p.naverProductId },
   revival:      { label: '좀비꽃 발견',   dot: 'bg-purple-500', dotLabel: '좀비꽃',        filter: p => isZombieProduct(p) && !!p.naverProductId },
   lowMargin:    { label: '마진 낮음',     dot: 'bg-rose-500',   dotLabel: '마진 낮음',     filter: p => isLowMargin(p) && !!p.naverProductId },
   drift:        { label: '동기화 필요',   dot: 'bg-yellow-500', dotLabel: '동기화 필요',   filter: p => hasDrift(p) && !!p.naverProductId },
@@ -149,7 +159,7 @@ const STATUS_SEGMENTS: { key: TabKey; label: string; dot: string; match: (p: Pro
   { key: 'ready',        label: '발행대기',      dot: 'bg-green-500',  match: p => p.status === 'READY' },
   { key: 'active',       label: '발행됨',        dot: 'bg-green-600',  match: p => p.status === 'ACTIVE' },
   { key: 'oos',          label: '품절',          dot: 'bg-[#F63B28]',  match: p => p.status === 'OUT_OF_STOCK' },
-  { key: 'reactivation', label: '재활성화 필요', dot: 'bg-orange-400', match: p => p.status === 'INACTIVE' || p.status === 'HIDDEN' },
+  { key: 'reactivation', label: '재활성화 필요', dot: 'bg-orange-400', match: p => needsReactivation(p) && !!p.naverProductId },
 ];
 
 // Check readiness for Naver upload
@@ -1934,7 +1944,11 @@ function ProductsPageInner() {
   const gardenCounts = useMemo(() => {
     const draftProducts = scored.filter(TAB_CONFIG.draft.filter);
     const ready = draftProducts.filter(p => !!readinessMap[p.id]?.ready);
-    return { all: draftProducts.length, ready: ready.length, notReady: draftProducts.length - ready.length, readyProducts: ready };
+    // F2 (#307, 2026-07-23): notReady(입력정보 부족)와 별도로 "미발행 상태" 전체를
+    // 센다 — 검수 안내 배지는 준비도 체크섬이 아니라 발행 여부(naverProductId)
+    // 기준이어야 한다(준비도 통과=발행 승인 아님).
+    const unpublished = scored.filter(p => !p.naverProductId).length;
+    return { all: draftProducts.length, ready: ready.length, notReady: draftProducts.length - ready.length, readyProducts: ready, unpublished };
   }, [scored, readinessMap]);
 
   const grouped = useMemo(() => {
@@ -2529,15 +2543,16 @@ function ProductsPageInner() {
           </div>
           <div style={{ height: 2.5, background: '#FFB3CE', borderRadius: 99, margin: '8px 0 6px' }} />
           <p style={{ fontSize: 12, color: '#888', margin: 0 }}>전체 {raw.length}개 · 표시 {filtered.length}개</p>
-          {/* 등록 미완료 큐 (LIFECYCLE_BRIDGE_V2 §6) — 부활소 draft_incomplete
-              분기 제거로 사라지는 "등록 미완료 N건" 넛지를 정원 창고로 이식.
-              부활소=발행 전용 큐라 미발행 상품이 있을 자리가 원래 아니었다. */}
-          {isGarden && gardenCounts.notReady > 0 && (
-            <button onClick={() => setGardenReadiness('notReady')}
-              className="flex items-center gap-1.5 mt-2 px-3 py-2 rounded-xl text-xs font-bold transition"
+          {/* 검수 안내 큐 (#307, 2026-07-23) — 미발행 상품은 "발행하러 가기"로
+              재촉하지 않는다. 준비도 체크섬 통과 ≠ 발행 승인. 씨앗심기 검수
+              (SEO 상품명·키워드·썸네일)로 안내만 한다. 조건축=naverProductId
+              null(미발행 상태) — notReady(입력정보 부족)와는 다른 축이다. */}
+          {isGarden && gardenCounts.unpublished > 0 && (
+            <Link href="/products/new"
+              className="flex items-center gap-1.5 mt-2 px-3 py-2 rounded-xl text-xs font-bold transition w-fit"
               style={{ border: '1.5px solid #fecdd3', background: '#fff1f2', color: '#be123c' }}>
-              <PackageX size={13} /> 등록 미완료 {gardenCounts.notReady}건 — 이어서 작성
-            </button>
+              <PackageX size={13} /> 검수 대기 {gardenCounts.unpublished}건 — 씨앗심기에서 확인
+            </Link>
           )}
         </div>
 

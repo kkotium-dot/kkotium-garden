@@ -17,6 +17,7 @@ export type SlotType = keyof typeof DAILY_SLOT_CONFIG;
 
 export type ReactivationReason =
   | 'out_of_stock'
+  | 'suspended'
   | 'long_inactive'
   | 'score_drop'
   | 'draft_incomplete';
@@ -142,6 +143,14 @@ export function getReactivationReason(
 
   if (product.status === 'OUT_OF_STOCK') {
     return { reason: 'out_of_stock', label: '품절 상품 — 대체상품 등록 후 재등록 권장' };
+  }
+
+  // F1 (#295 연장, 2026-07-23): 판매중지(INACTIVE/HIDDEN) 상태는 장기미판매·점수급락
+  // 조건을 우연히 만족하지 못하면 어떤 사유에도 걸리지 않아 부활소에서 누락됐다
+  // (꽃밭돌보기 "재활성화 필요" 배지와 부활소 후보 목록이 서로 다른 판정을 씀).
+  // 여기서 직접 잡아 두 화면이 같은 함수를 소비하게 한다.
+  if (product.status === 'INACTIVE' || product.status === 'HIDDEN') {
+    return { reason: 'suspended', label: '판매중지 — 재활성화 검토 필요' };
   }
 
   if (product.lastSaleDate) {
