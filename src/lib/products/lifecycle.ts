@@ -16,7 +16,9 @@
 // not touch prisma so it stays usable from client components too.
 // ============================================================================
 
-import { isSourceGoneFromCount } from './source-gone';
+// #32/#37 — source-gone.ts imports prisma; use the prisma-free pure module
+// (작업2, 2026-07-24) so this file stays safe to import from client components.
+import { isSourceGoneFromCount } from './source-gone-pure';
 
 export type LifecycleState =
   | 'DRAFT_INCOMPLETE'

@@ -5,6 +5,20 @@
 > **원칙 #149~#253 전문은 `docs/plan/PRINCIPLES_LEARNED.md`를 참조하세요** (2026-07-14 정식 이관 완료 — #165/#217~#220/#225/#231은 원문에 개별 정의가 없는 결번으로 확정). rev50 이하 원문(rev40~rev50 상세 커밋 로그)은 이 트래커의 커밋 `5c9e9f5^`(`git show 5c9e9f5^:docs/plan/PARALLEL_WORK_TRACKER.md`)에서 조회 가능합니다 — 현재 HEAD 파일 본문에서는 제거되어 있습니다(직전 커밋 5c9e9f5가 "원문 보존"이라 주장했으나 실제로는 528줄을 삭제했던 것을 2026-07-14 발견, 아래 참조).
 
 
+## rev89 — 작업1 양성검증 보강 + 작업2 prisma분리(1단계) 완료 + 2단계 재검토 결과 (2026-07-24 Code · #310 미검증 해소)
+
+**작업1 (배너 양성 검증 보강)**: `NewVersionBanner.tsx`에 `?forceVersionCheck=1` 쿼리 처리 추가 — 가짜 SHA 조작 없이 (1) 스로틀 전면 우회(마운트 즉시 + 매 탭포커스 복귀마다), (2) 화면 우하단에 `초기 SHA / 현재 SHA / 일치여부` 디버그 텍스트 노출. 파라미터 없으면 완전히 기존과 동일. **버그 1건을 구현 중 발견·수정**: 최초 작성 시 `if (!initialSha.current) return`이 디버그 표시보다 먼저 실행돼 dev(sha=null)에서는 디버그 텍스트 자체가 절대 안 뜨는 결함이 있었음 — early return을 디버그 세팅 뒤로 옮겨 해결. 로컬 브라우저 실측: `?forceVersionCheck=1` → "forceVersionCheck — 초기: null / 현재: null / 비교불가(dev sha=null)" 정상 노출, 파라미터 없으면 미노출 확인.
+
+- **미검증으로 남는 것(#310 원칙 그대로 적용)**: 실제 SHA 불일치 시 배너가 뜨는지(양성 경로) — dev에서는 SHA가 항상 null이라 재현 불가, fetch 가로채기로도 React ref(initialSha)를 외부에서 주입할 방법이 없어 인위적 검증이 불가능함을 재확인(Desktop #310 진단과 동일 결론). **다음 실제 프로덕션 배포 때 이 디버그 도구(`?forceVersionCheck=1`)로 즉시(스로틀 대기 없이) 확인** — 이번 보강의 목적은 "당장 검증"이 아니라 "다음 자연검증을 빠르게 만드는 것".
+
+**작업2 1단계 (prisma 분리, 완료)**: `source-gone.ts`의 순수 계산 4종(`SOURCE_GONE_MIN_CONSECUTIVE`·`countLeadingNegatives`·`countLeadingOutOfStockDays`·`isSourceGoneFromCount`)을 신규 `source-gone-pure.ts`로 추출, `source-gone.ts`는 재수출만(기존 서버측 import 3곳 무변경 동작). `lifecycle.ts`가 이제 순수 모듈만 import — prisma 체인 완전 제거. **실제로 검증**: `/workflow`(client 컴포넌트)에 `surfaceRules.ts` import를 임시로 추가해 `npm run build` — 에러 0·번들 4.42kB→5.08kB(실제 포함됨 확인) → 되돌림(diff 0 확인). 이걸로 "client 컴포넌트에서 안전하게 import 가능"이 추측이 아니라 실측이 됨.
+
+**작업2 2단계 (배지·카운트 전환) — 재검토 결과: 추가 변경 불필요로 판단**: 승인받은 방향대로 착수 전 실제 코드를 다시 훑어보니, "배지·카운트가 raw status를 직접 비교"하는 잔여 지점이 없었다. `InventoryBadge.tsx`·`/products/out-of-stock`는 이미 `decideDisposition`(disposition.ts 단일 권위)을 직접 소비 중이었고, 두 작업 큐 화면(부활소·처분대기함) 모두 `naverProductId` 필터가 이미 있어 T-19(작업큐 발행전용)는 `decideDisposition` 자체의 내장 게이트(`if (!p.naverProductId) return NONE`)로 이미 실질 충족돼 있었다. 남은 후보는 `StageBadge.tsx`(대시보드·꿀통·창고 3화면 공유)였으나 이건 lifecycle.ts의 7상태와 **다른 모델**(수집됨/씨앗/발행대기/등록대기/발행됨/품절/재활성화 — 자산·단절 축이 없는 저작 단계 배지)이라, 억지로 갈아끼우면 3개 화면에 회귀 위험만 키우고 실질 개선은 없다고 판단해 손대지 않았다. **결론**: surfaceRules.ts는 SURFACE_RULES.md v2를 코드화한 테스트/문서 권위로 존재하고, 실제 런타임은 이미 (다른 이름의) 동일 단일권위 함수를 올바르게 소비하고 있어 "전환"이라 부를 실질 변경점이 없었다 — 없는 일을 만들지 않음(#56/#303).
+
+검증: tsc 0 · `npm run build` 0(clean cache) · surfaceRules.test.ts 10/10 · client-safety 실측(위) · 로컬 브라우저 배너 디버그모드 실측.
+
+---
+
 ## rev88 — 작업1 완료 (새 버전 감지 배너, #308) (2026-07-24 Code · 운영자 승인: SHA API·탭포커스 트리거·전역배너 전부 권장안 채택)
 
 `GET /api/version`(신규) — Vercel이 배포마다 자동 주입하는 `VERCEL_GIT_COMMIT_SHA`를 그대로 반환(force-dynamic, 별도 빌드스크립트 불요). `NewVersionBanner`(신규, `src/components/layout/NewVersionBanner.tsx`) — 최초 로드 시 캡처한 SHA와 재조회 SHA를 비교해 다르면 상단 전역 배너("새 버전이 준비됐어요 — 새로고침") 노출. `layout.tsx`에 배선해 전 페이지 공통.

@@ -11,68 +11,23 @@
 // 임계값과 계산 로직을 이 파일 하나에 두어 소비처(inventory-badges API·
 // tuning-signals 좀비 판정)가 서로 어긋나지 않게 한다(#62). 전상품 범용(#55) —
 // 특정 상품 하드코딩 금지(CLAUDE.md §0).
+//
+// 순수 계산(카운트·임계 판정)은 source-gone-pure.ts로 분리돼 있다(작업2,
+// 2026-07-24) — 이 파일은 prisma를 import하므로 client 컴포넌트에서 직접
+// import하면 안 된다(#32/#37). lifecycle.ts 등 client-safe 모듈은 그 순수
+// 모듈만 가져다 쓴다. 기존 import 경로(`from './source-gone'`)는 아래
+// 재수출로 그대로 동작한다.
 // ============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { countLeadingNegatives, isSourceGoneFromCount } from './source-gone-pure';
 
-/**
- * Consecutive qty=-1 count (from the newest poll) at which a lookup failure is
- * treated as a permanent supplier delisting rather than a transient hiccup.
- */
-export const SOURCE_GONE_MIN_CONSECUTIVE = 3;
-
-/**
- * Count leading consecutive qty<0 snapshots per product.
- * `snapshots` MUST be ordered polledAt DESC (newest first) across all products;
- * the run for each product stops at its first non-negative qty.
- */
-export function countLeadingNegatives(
-  snapshots: Array<{ productId: string; qty: number }>,
-): Map<string, number> {
-  const counts = new Map<string, number>();
-  const sealed = new Set<string>();
-  for (const s of snapshots) {
-    if (sealed.has(s.productId)) continue;
-    if (s.qty < 0) counts.set(s.productId, (counts.get(s.productId) ?? 0) + 1);
-    else sealed.add(s.productId); // first non-negative seals the run
-  }
-  return counts;
-}
-
-/**
- * 연속 품절 지속일 집계 (#273 처분 권고 입력).
- *
- * `snapshots`는 polledAt DESC(최신 우선)로 전 상품이 섞여 들어온다. 상품별로
- * 최신부터 qty<=0인 스냅샷이 이어지는 구간을 세고, 그 구간의 *가장 오래된*
- * 폴링 시각으로부터 지난 일수를 돌려준다. 최신 스냅샷이 재고 양수면 품절이
- * 아니므로 해당 상품은 맵에 담지 않는다(= 지속일 없음).
- *
- * qty<0(조회 실패 센티널 #260)도 런을 끊지 않는다 — 조회가 한 번 실패했다고
- * 품절 시계가 리셋되면 장기 품절이 영원히 임계에 닿지 못한다. 조회 실패가
- * 지속되는 경우는 sourceGone이 별도로 잡아내므로(#271) 이중 방어가 된다.
- */
-export function countLeadingOutOfStockDays(
-  snapshots: Array<{ productId: string; qty: number; polledAt: Date }>,
-): Map<string, number> {
-  const oldestInRun = new Map<string, Date>();
-  const sealed = new Set<string>();
-  for (const s of snapshots) {
-    if (sealed.has(s.productId)) continue;
-    if (s.qty <= 0) oldestInRun.set(s.productId, s.polledAt); // desc 정렬이므로 계속 덮어쓰면 최고(最古)가 남는다
-    else sealed.add(s.productId); // 재고가 있었던 시점에서 런이 끊긴다
-  }
-  const days = new Map<string, number>();
-  for (const [productId, since] of oldestInRun) {
-    const ms = Date.now() - since.getTime();
-    days.set(productId, Math.max(0, Math.floor(ms / 86_400_000)));
-  }
-  return days;
-}
-
-/** Whether a consecutive-negative run means the supplier has delisted. */
-export function isSourceGoneFromCount(consecutiveNegatives: number | undefined): boolean {
-  return (consecutiveNegatives ?? 0) >= SOURCE_GONE_MIN_CONSECUTIVE;
-}
+export {
+  SOURCE_GONE_MIN_CONSECUTIVE,
+  countLeadingNegatives,
+  countLeadingOutOfStockDays,
+  isSourceGoneFromCount,
+} from './source-gone-pure';
 
 // 자산 보호 판단(#272)은 클라이언트 컴포넌트에서도 쓰이므로 prisma 의존이 없는
 // sales-assets.ts에 분리했다(이 파일은 prisma를 import하므로 서버 전용).
