@@ -5,6 +5,16 @@
 > **원칙 #149~#253 전문은 `docs/plan/PRINCIPLES_LEARNED.md`를 참조하세요** (2026-07-14 정식 이관 완료 — #165/#217~#220/#225/#231은 원문에 개별 정의가 없는 결번으로 확정). rev50 이하 원문(rev40~rev50 상세 커밋 로그)은 이 트래커의 커밋 `5c9e9f5^`(`git show 5c9e9f5^:docs/plan/PARALLEL_WORK_TRACKER.md`)에서 조회 가능합니다 — 현재 HEAD 파일 본문에서는 제거되어 있습니다(직전 커밋 5c9e9f5가 "원문 보존"이라 주장했으나 실제로는 528줄을 삭제했던 것을 2026-07-14 발견, 아래 참조).
 
 
+## rev88 — 작업1 완료 (새 버전 감지 배너, #308) (2026-07-24 Code · 운영자 승인: SHA API·탭포커스 트리거·전역배너 전부 권장안 채택)
+
+`GET /api/version`(신규) — Vercel이 배포마다 자동 주입하는 `VERCEL_GIT_COMMIT_SHA`를 그대로 반환(force-dynamic, 별도 빌드스크립트 불요). `NewVersionBanner`(신규, `src/components/layout/NewVersionBanner.tsx`) — 최초 로드 시 캡처한 SHA와 재조회 SHA를 비교해 다르면 상단 전역 배너("새 버전이 준비됐어요 — 새로고침") 노출. `layout.tsx`에 배선해 전 페이지 공통.
+
+- **트리거**: setInterval 폴링 아님 — `visibilitychange`(탭 포커스 복귀) 시에만 체크, 최소 60초 스로틀. 자동발사 타이머 금지(#72) 정신 준수.
+- **오탐 방지**: 로컬 dev는 `VERCEL_GIT_COMMIT_SHA` 자체가 없어 sha=null → null끼리는 비교하지 않아 배너가 절대 뜨지 않음(운영 prod에서만 동작). fetch 실패도 best-effort로 무시(네트워크 문제로 오탐 배너 금지).
+- **검증**: tsc 0 · build 0(라우트 `ƒ /api/version` 등록 확인) · 로컬 `/api/version` → `{"sha":null}` 확인 · 대시보드에서 배너 미노출(오탐 없음) 확인 · 콘솔 에러 0. mismatch 발생 경로(SHA 실제 변경 시 배너 노출)는 로직 리뷰로 확인 — 다음 실제 프로덕션 배포 때 자연 검증됨(기능 목적상 자기증명적).
+
+---
+
 ## rev87 — 작업2/작업3 완료 (SubstituteEditor 단일권위 전환 + surfaceRules 매트릭스) (2026-07-24 Code · SURFACE_RULES.md v2 기준)
 
 **작업2**: `products/page.tsx`(현재 888번 줄) `SubstituteEditor isOutOfStock={product.status === 'OUT_OF_STOCK'}` → `dispositionVerdict.action !== 'NONE'`로 교체(#295). 이미 같은 컴포넌트 scope에 계산돼 있던 `dispositionVerdict`(disposition.ts 단일 권위)를 재사용 — 신규 계산 없음. 로컬 브라우저 실측: 품절대체 탭 정상 렌더, 콘솔 에러 0.

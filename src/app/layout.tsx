@@ -22,6 +22,7 @@ import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileTabBar from "@/components/layout/MobileTabBar";
 import ToastProvider from "@/components/providers/ToastProvider";
+import NewVersionBanner from "@/components/layout/NewVersionBanner";
 
 export const metadata: Metadata = {
   title: "꽃틔움 가든 - 상품 관리 시스템",
@@ -79,6 +80,7 @@ export default function RootLayout({
         }}
       >
         <ToastProvider />
+        <NewVersionBanner />
 
         {/* Phase 2-MOBILE-1: Sidebar hidden under lg (≤1023px), MobileTabBar
             shown instead. Desktop layout unchanged.
