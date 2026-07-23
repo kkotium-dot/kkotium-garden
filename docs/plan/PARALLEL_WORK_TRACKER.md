@@ -1,9 +1,44 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-07-23 (rev81 — DESKTOP-1 처분 7채널 정합 실측 종결·부활소 이탈 확정·생애주기 일원화 착수 · Desktop) / 직전 rev80 2026-07-22
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-07-23 (rev82 — Cowork 생애주기 설계 검증·브리지 v2 확정·부활소 경계 판정 · Desktop) / 직전 rev81 동일자
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
 > **원칙 #149~#253 전문은 `docs/plan/PRINCIPLES_LEARNED.md`를 참조하세요** (2026-07-14 정식 이관 완료 — #165/#217~#220/#225/#231은 원문에 개별 정의가 없는 결번으로 확정). rev50 이하 원문(rev40~rev50 상세 커밋 로그)은 이 트래커의 커밋 `5c9e9f5^`(`git show 5c9e9f5^:docs/plan/PARALLEL_WORK_TRACKER.md`)에서 조회 가능합니다 — 현재 HEAD 파일 본문에서는 제거되어 있습니다(직전 커밋 5c9e9f5가 "원문 보존"이라 주장했으나 실제로는 528줄을 삭제했던 것을 2026-07-14 발견, 아래 참조).
 
+
+## rev82 — Cowork 생애주기 설계 검증 + 브리지 v2 확정 (2026-07-23 Desktop)
+
+### ★ Cowork 3종 설계 검증 — 골격 채택 / 도메인 축 이식
+Cowork가 **코드 접근 없이 독립 설계**("첨부된 지식 폴더가 비어 있어")한 결과, 실제 스키마·코드와 갭 6건 확정(Supabase information_schema + disposition.ts/source-gone.ts/daily-slots.ts 실독).
+
+| 갭 | 내용 |
+|---|---|
+| G1 | Cowork 원자 7필드 중 **실재 0개**(isPublished/isArchived/isSuspended/saleStartAt/saleEndAt/requiredFieldsComplete/stock 전부 부재) |
+| G2 | **sourceGone(공급처 단절) 상태 소실** — OUT_OF_STOCK로 뭉개짐. 이번 작업의 존재 이유가 빠짐 |
+| G3 | 처분 5액션(NONE/MARK_OUT_OF_STOCK/SUSPEND/RESOURCE/DELETE_SAFE) 미반영 |
+| G4 | 자산 축 소실 — T-05 "발행 트랙 삭제 전면금지"는 과잉(실제는 자산 유무 분기) |
+| G5 | 도메인 오인("화훼 이커머스") → 실제 도매매 드롭십. 기간판매 미사용 |
+| G6 | "status 컬럼 제거" 실현 불가(write 3경로+필터탭 사용 중) |
+
+**판정**: 폐기 아님. **골격 채택**(파생 단일함수·발행여부 1급 축·권한 매트릭스·금지조합 테스트·3초룰·T-11 주액션 유일성) + **도메인 축 이식** → `docs/design/LIFECYCLE_BRIDGE_V2_2026-07-23.md` 신설(브리지가 Cowork 문서의 원자·상태·액션을 override).
+
+### 확정 사항
+- 파생 상태 **7 → 9**: `SOURCE_GONE_RESOURCE`/`SOURCE_GONE_DELETABLE` 이식. 우선순위 **단절 > 중지 > 품절**(명화 케이스: 중지만 보이면 대체소싱이 숨음).
+- **상태 축 ↔ 권고 축 분리**(#300): 배지=진단(9상태) / 버튼=처방(5액션). disposition.ts:139가 이미 SUSPENSION→NONE인 것과 정합.
+- **화면 성격 2종**(#301): 보관함(위치·발행여부 분리) vs 작업 큐(조건·발행 전용). disposition.ts:129 `!naverProductId→NONE`이 이미 발행 게이트 내장.
+- **부활소 `draft_incomplete` = 경계 위반 확정** → 분기 제거 + `!!p.naverProductId` 필터. 누락 방지로 꿀통창고에 '이어서 작성' 큐 이식(#56).
+- 테스트: T-04/T-06/T-07/T-10 폐기(미구현 개념), T-05 수정(자산 축), **T-16~T-20 신규**.
+
+### Code 카테고리 회귀 검증 결과 (읽기전용 · 접수)
+| 항목 | 결과 |
+|---|---|
+| /products 기본뷰 미발행 제외 | ✅ 반영됨(`ccf8e2c` · `all: filter p => !!p.naverProductId`). TASK_BRIDGE:364-367 "미착수" 메모는 **stale → 정정 필요** |
+| 부활소 미발행 포함 | 코드 확인(daily-slots.ts:161-163). **정책 판정 = 위반 → 제거**(위 확정) |
+| 꿀통창고 2탭 | ✅ 구현됨(garden-nav.ko.json:47-70 · 꿀통 꽃나들이/정원 창고) |
+
+### 커밋 상태
+`c5f5290` — Desktop rev81+원칙#295~299+인계 / Code 판정감사·강건성티켓·스모크스크립트 7파일 한 커밋 완료. **코드 변경 0(docs only) → 브라우저 테스트 대상 없음**.
+
+---
 
 ## rev81 — DESKTOP-1 처분 7채널 정합 실측 종결 + 생애주기 일원화 착수 (2026-07-23 Desktop)
 
