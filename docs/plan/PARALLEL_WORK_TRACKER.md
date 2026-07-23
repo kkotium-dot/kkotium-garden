@@ -5,6 +5,18 @@
 > **원칙 #149~#253 전문은 `docs/plan/PRINCIPLES_LEARNED.md`를 참조하세요** (2026-07-14 정식 이관 완료 — #165/#217~#220/#225/#231은 원문에 개별 정의가 없는 결번으로 확정). rev50 이하 원문(rev40~rev50 상세 커밋 로그)은 이 트래커의 커밋 `5c9e9f5^`(`git show 5c9e9f5^:docs/plan/PARALLEL_WORK_TRACKER.md`)에서 조회 가능합니다 — 현재 HEAD 파일 본문에서는 제거되어 있습니다(직전 커밋 5c9e9f5가 "원문 보존"이라 주장했으나 실제로는 528줄을 삭제했던 것을 2026-07-14 발견, 아래 참조).
 
 
+## rev87 — 작업2/작업3 완료 (SubstituteEditor 단일권위 전환 + surfaceRules 매트릭스) (2026-07-24 Code · SURFACE_RULES.md v2 기준)
+
+**작업2**: `products/page.tsx`(현재 888번 줄) `SubstituteEditor isOutOfStock={product.status === 'OUT_OF_STOCK'}` → `dispositionVerdict.action !== 'NONE'`로 교체(#295). 이미 같은 컴포넌트 scope에 계산돼 있던 `dispositionVerdict`(disposition.ts 단일 권위)를 재사용 — 신규 계산 없음. 로컬 브라우저 실측: 품절대체 탭 정상 렌더, 콘솔 에러 0.
+
+**작업3**: `src/lib/products/surfaceRules.ts`(신규) + `surfaceRules.test.ts`(신규) — SURFACE_RULES.md v2 §2(surface 5종 registry: 보관함 2·작업큐 3) + §5(액션 권한 매트릭스)를 코드화. 순수함수(`isQueueEligible`·`isDeleteAllowed`·`isDeleteVisible`·`allowedActionsFor`·`isPrimaryLabelAllowed`·`hasFullStateCoverage`)로 lifecycle.ts(7상태)·disposition.ts(5액션)를 감싼다. 테스트는 v2 문서에 **구체적으로 정의된** ID만 구현(T-05 수정판·T-08·T-11·T-12·T-13·T-16~T-20 = 10건) — T-01~04/06/07/09/10/14/15는 v2 문서 어디에도 개별 정의가 없어(T-04/06/07/10은 명시 폐기) 지어내지 않고 스킵(#303 원칙). `npx tsx src/lib/products/surfaceRules.test.ts` 10/10 PASS. T-20은 이번 F1 모순(배지=단절인데 주액션=등록완료/되살리기) 재발 방지 회귀 테스트로 직결.
+
+**주의(향후 배선 시 확인 필요)**: `lifecycle.ts`가 `source-gone.ts`(prisma 의존)를 import하므로, `surfaceRules.ts`를 client 컴포넌트에서 직접 import하면 #32/#37 빌드 경계를 건드릴 수 있다. 현재는 어디서도 import하지 않아(독립 신규 모듈) 문제 없음 — SURFACE_RULES.md §7 5단계("전 화면 배지/버튼을 판정함수 소비로 전환")를 실제 착수할 때 prisma 분리(sales-assets.ts처럼 pure 서브모듈 분리)부터 먼저 확인할 것.
+
+검증: tsc 0 errors · `npm run build` 0 errors · surfaceRules.test.ts 10/10 · 로컬 브라우저 실측(작업2).
+
+---
+
 ## rev86 — F1/F2 근본수정 완료 + F3 조사·제안 (2026-07-23 Code · #295/#307 연장)
 
 ★운영자 확정 #307("준비도≠발행승인") 적용 하에 진행. F3는 지시대로 조사·제안까지만(구현 안함).

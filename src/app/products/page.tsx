@@ -885,7 +885,9 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
         {tab === 'sync' && <SyncTab productId={product.id} />}
         {tab === 'push' && <PushTab productId={product.id} appSalePrice={product.salePrice} recommendedTarget={recommendedStatusTarget} recommendReason={recommendReason} onApplied={onStatusApplied} />}
         {tab === 'substitute' && (
-          <SubstituteEditor productId={product.id} isOutOfStock={product.status === 'OUT_OF_STOCK'} />
+          // 작업2 (#295, 2026-07-23) — raw status 직접비교 대신 disposition.ts
+          // 단일 권위(dispositionVerdict)를 소비. action==='NONE'이면 개입 불필요.
+          <SubstituteEditor productId={product.id} isOutOfStock={dispositionVerdict.action !== 'NONE'} />
         )}
       </div>
       <div className="p-4 flex flex-col gap-2" style={{ borderTop: '1.5px solid #F8DCE5' }}>
