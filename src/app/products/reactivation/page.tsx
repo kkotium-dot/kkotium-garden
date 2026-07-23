@@ -155,6 +155,9 @@ export default function ReactivationPage() {
 
       const results: ReactivationItem[] = [];
       for (const p of prods) {
+        // 부활소=발행 전용 작업 큐(LIFECYCLE_BRIDGE_V2 §6·T-19) — 미발행 상품은
+        // 정원 창고(꿀통창고) 소관이라 여기 섞이면 안 된다.
+        if (!p.naverProductId) continue;
         const reason = getReactivationReason({
           ...p,
           createdAt:    p.createdAt    ? new Date(p.createdAt)    : undefined,

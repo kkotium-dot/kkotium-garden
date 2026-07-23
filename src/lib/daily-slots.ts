@@ -158,10 +158,6 @@ export function getReactivationReason(
     }
   }
 
-  if (product.status === 'DRAFT') {
-    return { reason: 'draft_incomplete', label: '등록 미완료 상품 — 네이버 업로드 대기 중' };
-  }
-
   if (product.aiScore !== null && product.aiScore !== undefined) {
     const currentScore = calcHoneyScore({
       salePrice: product.salePrice,

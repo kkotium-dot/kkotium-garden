@@ -2529,6 +2529,16 @@ function ProductsPageInner() {
           </div>
           <div style={{ height: 2.5, background: '#FFB3CE', borderRadius: 99, margin: '8px 0 6px' }} />
           <p style={{ fontSize: 12, color: '#888', margin: 0 }}>전체 {raw.length}개 · 표시 {filtered.length}개</p>
+          {/* 등록 미완료 큐 (LIFECYCLE_BRIDGE_V2 §6) — 부활소 draft_incomplete
+              분기 제거로 사라지는 "등록 미완료 N건" 넛지를 정원 창고로 이식.
+              부활소=발행 전용 큐라 미발행 상품이 있을 자리가 원래 아니었다. */}
+          {isGarden && gardenCounts.notReady > 0 && (
+            <button onClick={() => setGardenReadiness('notReady')}
+              className="flex items-center gap-1.5 mt-2 px-3 py-2 rounded-xl text-xs font-bold transition"
+              style={{ border: '1.5px solid #fecdd3', background: '#fff1f2', color: '#be123c' }}>
+              <PackageX size={13} /> 등록 미완료 {gardenCounts.notReady}건 — 이어서 작성
+            </button>
+          )}
         </div>
 
         {/* Toolbar */}
