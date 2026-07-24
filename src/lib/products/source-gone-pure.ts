@@ -20,19 +20,38 @@
 export const SOURCE_GONE_MIN_CONSECUTIVE = 3;
 
 /**
- * Count leading consecutive qty<0 snapshots per product.
- * `snapshots` MUST be ordered polledAt DESC (newest first) across all products;
- * the run for each product stops at its first non-negative qty.
+ * Count leading consecutive qty<0 snapshots per product, tolerating one
+ * isolated positive spike (ADR-0002, option C).
+ *
+ * `snapshots` MUST be ordered polledAt DESC (newest first) across all products.
+ * A single positive sandwiched between negatives is a poller misread and is
+ * skipped without breaking the run. Two positives in a row is treated as a
+ * genuine recovery: the count resets to 0 and the run seals (older snapshots
+ * are ignored). MIN_CONSECUTIVE stays 3 — see ADR-0002 for rationale.
  */
 export function countLeadingNegatives(
   snapshots: Array<{ productId: string; qty: number }>,
 ): Map<string, number> {
   const counts = new Map<string, number>();
   const sealed = new Set<string>();
+  const pendingSpike = new Set<string>();
   for (const s of snapshots) {
-    if (sealed.has(s.productId)) continue;
-    if (s.qty < 0) counts.set(s.productId, (counts.get(s.productId) ?? 0) + 1);
-    else sealed.add(s.productId); // first non-negative seals the run
+    const id = s.productId;
+    if (sealed.has(id)) continue;
+    if (pendingSpike.has(id)) {
+      pendingSpike.delete(id);
+      if (s.qty < 0) {
+        // isolated spike confirmed — ignore it, keep the negative run going
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+      } else {
+        // two positives in a row — genuine recovery, reset and stop
+        counts.set(id, 0);
+        sealed.add(id);
+      }
+      continue;
+    }
+    if (s.qty < 0) counts.set(id, (counts.get(id) ?? 0) + 1);
+    else pendingSpike.add(id); // candidate isolated spike — wait for next snapshot
   }
   return counts;
 }

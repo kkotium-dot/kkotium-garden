@@ -1,128 +1,159 @@
-# PUBLISH_REVIEW_GATE — 일괄 발행 검수 게이트 UX 설계 (F3 · 설계만)
+# PUBLISH_REVIEW_GATE — 발행 검수 게이트 설계 (v2 · 경로 게이트)
 
-> **범위**: 설계·기획만. 구현·DB쓰기·네이버·디스코드 금지.
-> **착수 전 필독 정합**: `docs/PRODUCT_LIFECYCLE_FLOW.md`(정본) · `docs/DOMAIN_FACTS.md` · `docs/plan/COLLABORATION_PLAYBOOK.md`.
-> **코드가 정답**: 아래 현황은 실제 파일·라인 실측(추측 아님).
-
----
-
-## 0. 문제 정의 (실측 근거)
-
-**"준비도 100%"와 "검수 통과"는 다른 질문인데, 일괄 발행은 전자만 본다.**
-
-| 경로 | 실제로 보는 것 | 파일·라인 |
-|---|---|---|
-| 단건 검수 `/products/[id]/preview` | `canPublish = readinessOk(S/A) && canRegister && blockingImageWarnings==0` | publish-preview/route.ts:167 · preview/page.tsx:279 |
-| 일괄 발행 `batch-register` | `productIds`만 받음. **검수/canPublish 검사 0** | batch-register/route.ts:20-40 (readiness 언급 없음) |
-| 준비도 모달 | `readinessScore`(%)만 | products/page.tsx:1254,1395 |
-
-→ 준비도 100%면 검수 화면을 **건너뛰고** 발행 가능. #307("준비도는 발행 승인이 아니다")·PRODUCT_LIFECYCLE_FLOW §3 위반.
+> 상태: 시점(2026-07-23) · **v2 (v1 "화면 연결" → v2 "경로 게이트"로 전면 재작성 · 2026-07-24 P0 경로 추가)**
+> 한 줄 요약 — 최초 발행 4경로(P0~P3)를 서버 진입점에서 강제 검수하는 설계. 착수 전 필독.
+> **권위 정합**: 아래 경로·라인은 실제 코드 실측(추측 아님). 판정 근거: 원칙 #311(게이트는 화면 아닌 경로에).
+> 필독: `docs/PRODUCT_LIFECYCLE_FLOW.md` · `docs/DOMAIN_FACTS.md` · `docs/plan/COLLABORATION_PLAYBOOK.md`.
 
 ---
 
-## ① 일괄 발행 대상 조건에 "검수 통과" 추가 시 UI 흐름
+## 0. v1이 틀린 이유 (전제 붕괴)
 
-### 현재 → 목표
+v1은 "일괄 발행 UI에 검수 통과 조건을 추가"로 설계했다. 그러나 Desktop 실측 확증:
+
+> **검수 화면은 최초 발행 경로에 아예 없다.** 검수화면 `/products/[id]/preview`의 발행 버튼은 **재발행(`/update`) 전용**이고 미등록 상품엔 409를 던진다(#311). "경고 0건 계산"과 "실제 발행 실행"은 **분리된 두 경로**였다.
+
+따라서 게이트를 UI에 붙이면 우회 경로로 다 새어나간다. **게이트는 서버 진입점(API route)에 건다.**
+
+---
+
+## ① 발행에 도달하는 모든 경로 (실측 전수 열거)
+
+**"발행" = 네이버에 최초 등록(POST `/v2/products`)** = `naverProductId`를 최초 부여하는 행위.
+
+| # | 경로 | 진입점 | 최초발행 실행 | 현재 게이트 | 파일·라인 |
+|---|---|---|---|---|---|
+| **P0** | **신규 등록 폼** (v1 누락 · Code 조사 발견) | `POST /api/naver/products` → `toNaverPayload` → `registerProduct` | ✅ POST /v2/products | **없음**. DB필드 존재 검사만(카테고리·대표이미지). readiness·검수 0 | naver/products/route.ts:59-80 |
+| P1 | **단건 UI** (NaverRegisterModal) | products/page.tsx:1223 → `POST /api/naver/products/register` | ✅ POST /v2/products | readiness만(:158). 검수 없음. `checkPublishGate`는 재고만(:1247) | page.tsx:1276 · register:426 |
+| P2 | **일괄 UI** (batch) | `POST /api/products/batch-register` | ✅ POST /v2/products (:140) | **없음**(productIds만) | batch-register:20-140 |
+| P3 | **API 직접/레거시** | `POST /api/naver/register` | ✅ POST /v2/products (:175) | **없음**(payload 직행) | naver/register:76-175 |
+| P4 | 재발행 | `POST /api/naver/products/update` → PUT origin-products | ❌ 최초 아님(재발행) | canPublish는 preview UI에만 | update:231 |
+| P5 | 크론 | `cron/daily` → PUT origin-products (statusType만) | ❌ 최초 아님(상태/재고) | — | cron/daily:95 |
+
+**비경로(오인 주의)**: `crawl/batch-register` = DRAFT **저장만**(naverRequest 0). 발행 아님.
+
+### 결론
+- **최초 발행 경로는 P0·P1·P2·P3 네 개.** 이 중 P0·P2·P3는 readiness조차 없다(P0은 v1에서 누락됐던 4번째 경로 — Code 조사 발견).
+- **검수(canPublish) 게이트는 네 경로 어디에도 없다.** preview 화면(안내용 UI)에만 계산이 존재.
+- ⇒ 화면에 무엇을 붙이든 P0·P2·P3로 우회 발행 가능. **P0·P1·P2·P3 네 진입점에 공통 서버 게이트가 필요.**
+
+---
+
+## ② 서버 진입점 공통 게이트 함수 설계 (#311-3 · #295 연장)
+
+네 경로가 **같은 함수 하나**를 호출한다. UI 게이트는 안내용, 이 서버 함수가 강제용.
+
+### 시그니처 (PURE 판정 + 로더 분리)
+```ts
+// src/lib/products/publish-gate.ts  (신설 — 판정은 PURE)
+export type PublishBlockReason =
+  | 'READINESS_INCOMPLETE'   // 필수 항목 미충족 (calcUploadReadiness < 100)
+  | 'IMAGE_WARNING'          // 대표/상세 하드블록 경고 잔존
+  | 'NOT_REVIEWED'           // 운영자 검수 미승인 (reviewChecklist.approved != true)
+  | 'REVIEW_STALE';          // 승인 후 상품 수정됨 (reviewLastUpdated < updatedAt)
+
+export interface PublishGateVerdict {
+  canPublish: boolean;
+  reasons: PublishBlockReason[];   // 비어있으면 통과
+}
+
+// 원자만 받는 PURE 함수 (테스트·클라이언트 재사용)
+export function decidePublishGate(input: PublishGateInput): PublishGateVerdict;
+
+// 서버 진입점이 호출하는 강제 게이트 (throw 아님, 구조적 반환)
+export async function assertPublishable(productId: string): Promise<PublishGateVerdict>;
 ```
-[현재]  정원 창고 → (준비도 100% 필터) → 일괄 발행 모달 → batch-register
-[목표]  정원 창고 → (준비도 100% AND 검수 통과 필터) → 일괄 발행 모달 → batch-register
-                                    └ 검수 미통과분은 발행 대상에서 제외, "검수 대기"로 분리 안내
+
+### 판정 규칙 (기존 함수 재사용 · 재발명 금지 #62)
+```
+canPublish =
+      calcUploadReadiness == 100        (기존 upload-readiness.ts 재사용)
+  AND blockingImageWarnings == 0        (기존 publish-preview 로직 재사용)
+  AND reviewChecklist.approved == true  (대안 D · ④ 참조)
+  AND reviewLastUpdated >= updatedAt     (승인 신선도 · 수정 시 만료)
 ```
 
-### 모달 3영역 분리 (한 화면에서 상태가 즉시 읽히게)
-| 영역 | 내용 | 액션 |
+### 네 경로에 배선 (강제 지점)
+| 경로 | 삽입 위치 | 실패 시 |
 |---|---|---|
-| **발행 가능** | 준비도 100% **+ 검수 통과** N건 | 체크 → 일괄 발행 |
-| **검수 대기** | 준비도 100% **but 검수 미통과** M건 | "검수하러 가기" → `/products/[id]/preview` (발행 버튼 아님) |
-| **준비 미완** | 준비도 < 100% K건 | "씨앗심기에서 채우기" |
+| P0 naver/products | POST 핸들러 진입 직후, `toNaverPayload`/`registerProduct` **전**(route.ts:78 앞) | 409 + `reasons[]` 반환. 발행 중단 |
+| P1 register | POST 핸들러 진입 직후, `buildNaverProductPayload` **전** | 409 + `reasons[]` 반환. 발행 중단 |
+| P2 batch-register | 각 productId 루프 안, `naverRequest` **전** | 해당 건 `status:'skipped'` + reason. 나머지 진행 |
+| P3 naver/register | POST 핸들러 진입 직후 | 409 + `reasons[]` |
 
-> 핵심: 검수 미통과분을 **숨기지 않고 별도 영역으로 노출**하되, 그 영역의 주 액션은 "검수"이지 "발행"이 아니다(#307 재촉 금지). 큐에서 뺀 항목은 갈 곳을 만든다(#56).
+> **P0 주의**: 현재 P0은 카테고리·대표이미지 존재만 검사(route.ts:71-76)하고 발행한다. 이 검사는 게이트 이전 단계일 뿐 검수가 아니다 — `assertPublishable`을 그 뒤·`registerProduct` 앞에 추가한다.
+
+> **원칙(#311-2)**: UI는 안내(발행 버튼 비활성·사유표시), 서버는 강제(게이트 통과 못 하면 `naverRequest` 도달 불가). 둘 다 같은 `decidePublishGate` 결과를 소비 → 화면·서버 판정 불일치 0(#295).
+
+### best-effort 예외 (#82)
+`assertPublishable`이 DB 문제로 검수 상태를 못 읽으면 → **fail-closed**(발행 차단). 게이트는 조회 실패 시 "통과"가 아니라 "차단"으로 degrade해야 우회가 안 생긴다(권고 판정의 fail-open과 반대).
 
 ---
 
-## ② 검수 안 한 상품 안내 문구 (3초룰 · 발행 재촉 금지 #307)
+## ③ 검수 미통과 시 안내 UX (3초룰 · 발행 재촉 금지 #307)
 
-### 원칙
-- 배지=진단 / 버튼=처방(#300). 진단은 "검수 안 됨", 처방은 "검수하기"(발행 아님).
-- **금지**: "발행 가능 N건 — 발행하러 가기" / "지금 발행" / 발행 카운트다운·강조.
-- **권장**: 검수를 다음 단계로 자연스럽게 안내하되 재촉하지 않음.
-
-### 문구안 (셀러 실무 용어 + 정원 컨셉 #262)
-| 위치 | 문구 |
+### 경로별 안내
+| 경로 | 미통과 시 표시 |
 |---|---|
-| 검수 대기 영역 헤더 | **검수 대기 {M}건** — 준비는 끝났지만 아직 눈으로 확인 안 한 상품이에요 |
-| 서브텍스트 | 상품명·키워드·대표컷을 한 번 보고 올리면 반품·수정이 줄어요 |
-| 주 버튼 | **검수하러 가기** (→ preview) |
-| 발행 가능 영역 헤더 | 검수 끝난 상품 {N}건 — 골라서 함께 올릴 수 있어요 |
-| 빈 상태(검수 통과 0건) | 아직 검수를 마친 상품이 없어요. 정원 창고에서 하나씩 살펴보아요 |
+| P1 단건 모달 | 발행 버튼 비활성 + 사유칩(아래) + "검수하러 가기"(→ preview) |
+| P2 일괄 모달 | 3영역 분리: **검수 끝난 N건**(발행 가능) / **검수 대기 M건**(→검수) / **준비 미완 K건**(→씨앗심기). 미통과분 숨김 금지(#56) |
+| P3 API 직접 | 409 JSON `{ canPublish:false, reasons:[...] }` — 호출자가 사유 파싱 |
 
-> "발행 가능"이 아니라 "검수 끝난"이라 부른다 — 시스템이 발행을 권하는 게 아니라 운영자가 검수를 마쳤음을 서술.
-
----
-
-## ③ "검수 완료"를 무엇으로 판정할지 — 대안 비교
-
-> **최우선 발견(COLLABORATION_PLAYBOOK #1 "기존 것을 고쳐 쓴다")**: 스키마에 이미 `reviewChecklist Json` / `reviewLastUpdated DateTime` / `manualReviewCount Int` 필드가 **존재**(schema.prisma:442-444, E-2A). **DB 신설 없이** 검수 상태를 담을 그릇이 이미 있다.
-
-| 대안 | 판정 방법 | 장점 | 단점 | DB |
-|---|---|---|---|---|
-| **A. preview 방문 기록** | preview 페이지 열면 자동 기록 | 마찰 0 | "열어보기만"과 "검수 통과"를 구분 못 함. 그냥 클릭해도 통과 처리 → 게이트 무력화 | reviewLastUpdated 재사용 가능 |
-| **B. 명시적 "검수 완료" 버튼** | preview에서 운영자가 명시 클릭 | 사람 판단 = 검수의 본질(#307). 우회 불가 | 클릭 한 번 필요(의도된 마찰) | reviewChecklist에 `{approved:true, at}` |
-| **C. 경고 0건 자동판정** | `canPublish`(readiness+canRegister+imageWarning0)로 자동 | 신설 0·즉시 | **체크섬을 검수로 오독**. "팔릴 만한가"(상품명 품질·키워드·상세 매력)는 판정 못 함 → #307 정면 위반 | 불필요 |
-| **D. B+기존필드** ★권장 | 명시 버튼 + `reviewChecklist` 기존 컬럼에 기록 | B의 견고함 + 신설 0(#1 정합) | 없음 | **기존 `reviewChecklist`/`reviewLastUpdated` 재사용** |
-
-### 권장: **D (= B + 기존 필드 재사용)**
-근거:
-1. **#307의 본질**은 "사람이 내용을 보고 판단"이다. A·C는 사람 판단을 우회하므로 게이트의 존재 이유를 무너뜨린다.
-2. B의 "의도된 마찰"(버튼 1클릭)은 비용이 아니라 **검수 게이트 그 자체**다. 마찰 0을 추구하면 검수가 사라진다.
-3. DB 신설은 최후 수단인데 **이미 그릇이 있다**(reviewChecklist). 신설 없이 D가 성립 → COLLABORATION_PLAYBOOK #1·#3.
-4. `canPublish`(대안 C 로직)는 **버림이 아니라 전제조건**으로 재사용: 검수 완료 버튼은 `canPublish===true`일 때만 활성(경고 남은 채 승인 불가). 즉 **자동판정(C)을 게이트로, 사람 승인(B)을 결정으로** 이층 구성.
-
-```
-검수 완료 = canPublish(자동 체크섬 통과)  AND  운영자 명시 승인(reviewChecklist.approved)
-             └ 필요조건(빠진 것 없음)          └ 충분조건(내용이 팔릴 만함 · 사람만 판단)
-```
-
-### 무효화 규칙 (설계 주의)
-검수 승인 후 상품이 수정되면 승인이 낡는다. `reviewLastUpdated < product.updatedAt`이면 **승인 만료 → 재검수 필요**로 표시(스냅샷 신선도). 이 규칙이 없으면 "승인 후 몰래 수정 발행"이 뚫린다.
-
----
-
-## ④ 정원창고 → 씨앗심기 → 검수 → 발행 동선 단계 표시 (진행바)
-
-### 4단계 스텝퍼 (상품 상세/정원창고 카드 상단)
-```
-①정원창고 ──▶ ②씨앗심기 ──▶ ③검수 ──▶ ④발행
-  보관 중       정보 채움      눈으로 확인    스토어 등록
-```
-
-| 단계 | 완료 판정 | 배지 상태 |
+### 사유칩 문구 (reason → 한글 · #262)
+| reason | 칩 | 안내 |
 |---|---|---|
-| ① 정원창고 | 상품이 미발행으로 존재 | 항상 done(시작점) |
-| ② 씨앗심기 | 준비도 100%(빠진 항목 없음) | readinessScore==100 → done |
-| ③ 검수 | `canPublish` AND `reviewChecklist.approved` (대안 D) | 승인 → done / 미승인 → current |
-| ④ 발행 | `naverProductId !== null` | 발행됨 → done |
+| READINESS_INCOMPLETE | 준비 미완 | 아직 빠진 항목이 있어요 — 씨앗심기에서 채워요 |
+| IMAGE_WARNING | 대표컷 확인 | 대표/상세 이미지에 손볼 곳이 있어요 |
+| NOT_REVIEWED | 검수 대기 | 준비는 끝났어요. 눈으로 한 번 확인하고 올려요 |
+| REVIEW_STALE | 재검수 필요 | 검수 후 상품이 바뀌었어요 — 다시 한 번 확인해요 |
 
-### 표시 규칙 (3초룰 · #307)
-- 현재 단계만 강조(current), 앞 단계는 회색 done, 뒷 단계는 옅은 pending.
-- **③이 current일 때 CTA = "검수하러 가기"**(→ preview). ④로 건너뛰는 CTA 없음.
-- 진행바는 **상태 서술**이지 발행 재촉이 아니다. "④까지 2단계 남음" 같은 압박 카피 금지.
-- 미발행 카드의 주 액션은 항상 현재 미완 단계로 유도(②미완→씨앗심기 / ③미완→검수). 발행(④)은 ③ done일 때만 노출.
+- **금지**: "발행 가능 N건 — 발행하러 가기" / 발행 카운트다운 / 발행 강조.
+- 주 액션은 항상 미완 단계로 유도(검수 or 씨앗심기), 발행이 아니다.
 
-### 재활성화 예외 (#307 경계)
-발행됨→재활성화(좀비 일부수정+튜닝리셋)는 이 진행바 대상 아님. 신규 검수가 아니라 기존 자산 회복이므로 자동화 경로(별도).
+---
+
+## ④ reviewChecklist JSON 스키마 확정안 (대안 D)
+
+> **기존 필드 재사용(COLLABORATION_PLAYBOOK #1 · DB 신설 0)**: `Product.reviewChecklist Json` + `reviewLastUpdated DateTime`가 **이미 존재**(schema.prisma:442-444, E-2A). 신설 없이 검수 상태를 담는다.
+
+### 대안 비교 요약 (v1 유지 + 경로 관점 보강)
+| 대안 | 방법 | 판정 | 결론 |
+|---|---|---|---|
+| A 방문기록 | preview 열면 자동 | 열기만 해도 통과 → 우회 | ✗ |
+| B 명시 버튼 | 운영자 "검수 완료" 클릭 | 사람 판단=검수 본질 | 채택 |
+| C 경고0 자동 | canPublish로 자동 | 체크섬을 검수로 오독(#307 위반) | 전제조건으로만 |
+| **D = B + 기존필드** | 명시 버튼 + reviewChecklist 기록 | B견고 + 신설0 | **★권장** |
+
+### JSON 스키마
+```jsonc
+// Product.reviewChecklist (기존 Json 컬럼)
+{
+  "approved": true,                    // 운영자 명시 승인 (B)
+  "approvedAt": "2026-07-23T12:00:00Z",// 승인 시각 (신선도 판정용)
+  "gateSnapshot": {                    // 승인 순간의 자동 게이트 스냅샷 (C = 전제조건)
+    "readiness": 100,
+    "imageWarnings": 0
+  },
+  "note": ""                           // 선택 — 운영자 메모
+}
+```
+- `reviewLastUpdated`(기존 컬럼)에 `approvedAt`과 동일 시각 기록 → **신선도 판정**은 `reviewLastUpdated >= Product.updatedAt`으로.
+- 승인은 **`canPublish(readiness100 && imageWarning0)===true`일 때만 버튼 활성** → C를 필요조건, B를 충분조건으로 이층화.
+- 상품 수정 시 `updatedAt`이 갱신되면 `reviewLastUpdated < updatedAt` → `REVIEW_STALE` → 재검수 유도. "승인 후 몰래 수정 발행" 차단.
+
+### 미확정 (운영자 결정)
+- `updatedAt` 갱신이 **검수 무관 필드 수정**(예: 재고 스냅샷 연관)에도 튀면 과민 만료. → 신선도 기준을 `updatedAt` 전체로 볼지, 검수 관련 필드 화이트리스트로 볼지 결정 필요.
+- `approvedBy`는 1인 운영이라 생략(다중 셀러 미사용, DOMAIN_FACTS §2).
 
 ---
 
 ## 요약 — 권장 결정
 | 항목 | 권장 |
 |---|---|
-| ① 일괄발행 조건 | 준비도 100% **AND** 검수 통과. 미통과분은 "검수 대기" 영역으로 분리(숨김 금지) |
-| ② 문구 | "검수 대기 N건 / 검수하러 가기". 발행 재촉·발행 카운트 금지 |
-| ③ 검수 판정 | **대안 D** — 명시 승인 버튼 + 기존 `reviewChecklist` 재사용(DB 신설 0). `canPublish`는 버튼 활성 전제조건. 수정 시 승인 만료 |
-| ④ 진행바 | 4단계 스텝퍼. ③ current CTA=검수. ④는 ③ done일 때만 |
+| ① 경로 | 최초발행 P0·P1·P2·P3 네 개. P0·P2·P3는 readiness조차 없음(P0=v1 누락분). crawl/batch는 발행 아님 |
+| ② 공통 게이트 | `decidePublishGate`(PURE) + `assertPublishable`(서버). P0·P1·P2·P3가 `naverRequest`/`registerProduct` 전 호출. fail-closed |
+| ③ 안내 | reason별 사유칩 + "검수/씨앗심기로". 발행 재촉 금지 |
+| ④ 스키마 | 대안 D. 기존 `reviewChecklist`/`reviewLastUpdated` 재사용, DB 신설 0. 수정 시 승인 만료 |
 
-## 미확정 (운영자 결정 필요)
-- 대안 D 채택 시 `reviewChecklist` JSON 스키마 확정(`{approved, approvedAt, approvedBy?}`).
-- 승인 만료 판정에 쓸 `updatedAt` 기준 필드가 검수 관련 수정만 잡는지, 전 필드 수정을 잡는지(과민 만료 방지).
-- 진행바를 정원창고 카드에도 넣을지, 상세 화면에만 넣을지(과밀 방지 #73).
+## 완료 정의 (#311-4)
+"화면 만들었다"가 아니라 **우회 경로 0건 확인**이 완료. P0·P1·P2·P3 네 진입점이 모두 `assertPublishable`를 통과해야 `naverRequest`/`registerProduct`에 도달함을 테스트로 증명(게이트 우회 시 발행 실패).

@@ -68,3 +68,70 @@ docs/README.md (색인)
 2. **인계 문서**: 다음 세션이 이어받으면 즉시 archive 대상. 최신 1~2개만 `handoff/` 루트에 둔다.
 3. **중복 발견 시**: 새 문서를 만들지 말고 기존 문서를 갱신한다(COLLABORATION_PLAYBOOK #1).
 4. **분기 1회 점검**: 루트에 날짜 붙은 파일이 있는가 / SUPERSEDED 미표기 구본이 있는가 / README 색인이 최신인가.
+
+---
+
+# ★ v2 개정 (2026-07-24) — 리서치 반영
+
+> 근거: `docs/research/AI_DOCS_MANAGEMENT_STANDARD_2026-07-24.md`
+> 아래 규칙이 위 §1~§6을 **보강**한다(폐기 아님).
+
+## 7. 맥락 예산 규칙 (Context Budget) — 최우선
+
+문서는 많을수록 좋은 게 아니다. **Claude가 매 세션 읽는 양이 곧 성능 비용**이다.
+
+| 대상 | 상한 | 근거 |
+|---|---|---|
+| `CLAUDE.md` | **≤200줄**(목표 150) | Anthropic 공식 권고. 초과 시 지시 준수율 하락 |
+| 세션 시작 필독 | **4문서**(README·DOMAIN_FACTS·PRODUCT_LIFECYCLE_FLOW·TRACKER 최신 rev) | 진입 비용 고정 |
+| 활성 인계 | **1개** | 다수 존재 시 최신 판별 불가 |
+
+**판별 기준**: *"이 줄을 지우면 Claude가 실수하게 되는가?"* 아니면 지운다.
+**금지**: 코드 보면 아는 것 · 자주 바뀌는 정보 · 파일별 설명 · 일반론.
+
+## 8. 인계 문서 규칙 (기존 §2 보강 · 107개 누적 대응)
+
+1. **활성 인계는 `docs/handoff/CURRENT.md` 단 하나.** 세션이 이어받는 즉시 이전 것은 archive.
+2. 머리에 필수 4항목: `status` · `branch` · `goal` · `next-action`.
+3. **받는 쪽은 인계문을 믿지 말고 저장소 현재 상태와 대조 검증한다.** 인계문은 단서지 진실이 아니다.
+4. 산문 덩어리를 넘기지 않는다. **구조화된 상태**(표·체크리스트)로 넘긴다.
+5. 나머지 106개는 `docs/handoff/archive/YYYY-QN/`으로 **물리적 격리**(삭제 아님).
+
+## 9. 기계가 갱신하는 상태는 JSON으로
+
+Anthropic 실험 결과, **모델은 Markdown보다 JSON을 함부로 덮어쓸 가능성이 낮다.**
+- 진행 상태 요약처럼 **레인이 반복 갱신하는 값**은 `docs/plan/feature-status.json`에 둔다.
+- 갱신은 **불리언·짧은 값만** 바꾸도록 제한. 서술은 Markdown에.
+
+## 10. 보관(archive) 규칙 — "색인병" 차단
+
+- 낡은 문서는 **지우지 않고 격리**한다. 어텐션은 문서의 '유효 여부'를 구분하지 못하므로, 살아있는 폴더에 두면 계속 성능을 깎는다.
+- **월 1회**: 현재 스프린트보다 오래된 `handoff/`·`research/` 스냅샷 → `archive/YYYY-QN/`.
+- 대체된 문서에는 상단에 `> SUPERSEDED BY: <경로>` **필수 표기**(현재 0건 — 규약 미적용 상태).
+
+## 11. `.claude/rules/` 도입 (맥락 절약의 유일한 실제 수단)
+
+`@경로` import는 파일을 그대로 펼쳐 넣어 **맥락을 절약하지 못한다.** 실제 절약은 `paths:` 범위 지정 규칙뿐이다.
+
+```
+.claude/rules/prisma.md    (paths: prisma/**, **/*.prisma)
+.claude/rules/naver-api.md (paths: src/app/api/naver/**)
+.claude/rules/korean-md.md (paths: docs/**/*.md)
+```
+
+→ 해당 파일을 건드릴 때만 로드되므로, CLAUDE.md 본문을 얇게 유지할 수 있다.
+
+## 12. ADR(결정 기록) — Nygard 형식 채택
+
+`docs/decisions/ADR-NNNN-소문자-요약.md`
+
+```markdown
+# ADR-0001: 제목
+> 상태: 승인 | 폐기 | Superseded by ADR-NNNN
+## 맥락   서로 충돌하는 힘들을 서술
+## 결정   "우리는 ~한다" (능동태)
+## 결과   긍정·부정·중립 영향을 함께
+```
+
+- **1 ADR = 1 결정.** 승인 후 **본문 불변** — 바꾸려면 새 ADR을 쓰고 구본에 `Superseded by` 표기.
+- MADR(선택지별 장단점)은 **진짜 논쟁적 사안에만**. 기본은 Nygard.
