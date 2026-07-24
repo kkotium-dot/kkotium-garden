@@ -72,6 +72,31 @@
 
 ---
 
+## rev91 — F3 구조적 발견 확증 · T-19 전체확장 검증 · 문서기준 수립 (2026-07-23 Desktop · 배포 `7858694`)
+
+### ★ F3 전제가 바뀌었다 — 검수 화면은 최초발행 경로에 없다 (#311 신설)
+Desktop 실측으로 Code 보고를 교차 확인:
+| 항목 | 실측 |
+|---|---|
+| `batch-register` 게이트 | `productIds`만 받음 — readiness/canPublish 검사 **0** |
+| 최초발행 모달(`NaverRegisterModal`) | `publish-preview` 참조 **0건** — 검수 화면 안 거침 |
+| 검수 화면 발행 버튼 | **재발행(`/update`) 전용**, 미등록 상품에는 409 |
+
+→ 기존 제안("있는 검수 화면을 일괄발행에 연결")만으로는 불충분. **최초발행 경로 자체에 게이트가 없다.**
+→ 원칙 **#311**: 게이트는 화면이 아니라 **경로(서버 진입점)**에 건다. 우회 경로 0건 확인이 완료 조건.
+
+### T-19 전체확장 검증 PASS
+Code가 기존 7채널 외 **신규 위반 2건 자발 색출·수정**: `out-of-stock/page.tsx`(재입고 검토 그룹) · `KkottiWidget.tsx`(대시보드 품절임박) — 둘 다 `status==='OUT_OF_STOCK'`만 보고 발행여부 미확인 → `isQueueEligible` 배선.
+Desktop 프로덕션 실측: 처분 결정 대기함 정상(0건·빈상태 문구 정상). **단건 수습이 아닌 전체 확장 이행 사례.**
+
+### Cowork 설계 접수 — 대안 D 권장
+`docs/design/PUBLISH_REVIEW_GATE_2026-07-23.md`. 결정적 발견: 스키마에 **`reviewChecklist Json` · `reviewLastUpdated` · `manualReviewCount` 이미 존재**(schema.prisma:442-444) → **DB 신설 0**으로 검수 상태 저장 가능. PLAYBOOK #1(기존 것 고쳐 쓰기) 정합.
+
+### 문서 관리 기준 수립
+`docs/DOCS_STANDARD.md` 신설 — docs 299개 MD 누적 대응. 수명별 4분류(영구/누적/시점/만료) · 폴더 단일책임 · 날짜접미사 규약 · 필수헤더 3줄 · 진입경로 4문서 · archive 규칙.
+
+---
+
 ## rev87 — 작업1/2/3 배포 검증 (2026-07-23 Desktop · 배포 `bbc1a97`)
 
 ### 검증 결과
