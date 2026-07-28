@@ -115,11 +115,11 @@ export function isPublishedLifecycleState(state: LifecycleState): boolean;
 |---|---|
 | 상태 "9종" 표현 | lifecycle.ts 실제 표 = 7행. 표현 오류였음 |
 | `PERIOD_ENDED` | 기간판매 미사용(드롭십, saleStartAt/saleEndAt 부재) |
-| `ARCHIVED` / RESTORE 상태 | 보관함 미구현. 운영자 미결정(브리지 §10) |
+| `ARCHIVED` / RESTORE 상태 | **폐기 확정**(ADR-0001) — 보관함 미도입. 정원창고+SUSPEND+DELETE_SAFE로 대체 |
 | 원자 7필드(isPublished 등) | 실재 0개 |
 
 ---
 
-## 7. 미확정 (운영자 결정 필요 · 브리지 §10)
-- `ARCHIVE/RESTORE`(숨김) 도입 여부 — 현재 미구현.
-- sourceGone 강건성 정책 — 연속N vs 최근M중N vs 연속+스파이크1회 허용(#297 · SOURCE_GONE_ROBUSTNESS_TICKET). 별도 티켓.
+## 7. 확정 완료 (구 미확정 · 2026-07-24 종결)
+- `ARCHIVE/RESTORE`(숨김) 도입 — **폐기 확정**(ADR-0001). 보관함 미도입, 기존 처분 판정으로 대체. 재검토 조건: "지우기도 판매중지도 애매한" 상품 10건+ 누적 시.
+- sourceGone 강건성 — **옵션 C 확정**(ADR-0002): 연속 판정 + 고립 스파이크 1회 허용(양수 2연속이면 리셋). 임계값 `SOURCE_GONE_MIN_CONSECUTIVE=3` 유지. 수정 지점 = source-gone.ts 1곳.

@@ -58,7 +58,7 @@
 | `RESUME` / `UNPUBLISH` | 부분 | |
 | ~~`RESTOCK`~~ | **X 제거** | 드롭십 — 셀러 재고 못 채움 → RESOURCE로 대체 |
 | ~~`EXTEND_PERIOD`~~ | **X 제거** | 기간판매 미사용 |
-| ~~`ARCHIVE` / `RESTORE`~~ | **X 제거** | 미구현 개념 |
+| ~~`ARCHIVE` / `RESTORE`~~ | **X 폐기 확정** | ADR-0001 보관함 미도입 |
 
 ---
 
@@ -72,13 +72,13 @@
 | T-12 | total function (7상태 전부 커버, 미분류 없음) |
 | T-13 | 카피 키 정합 (disposition.strings.ko.json 키 ↔ DispositionAction) |
 
-### 폐기 (해당 개념 미구현)
+### 폐기 (확정 — 해당 개념 미채택)
 | ID | 폐기 사유 |
 |---|---|
-| T-04 | EXTEND_PERIOD — 기간판매 미사용 |
-| T-06 | ARCHIVED 계열 — 미구현 |
-| T-07 | ARCHIVED 계열 — 미구현 |
-| T-10 | ARCHIVED 계열 — 미구현 |
+| T-04 | EXTEND_PERIOD — 기간판매 미사용(DOMAIN_FACTS §2) |
+| T-06 | ARCHIVED 계열 — **폐기 확정**(ADR-0001 보관함 미도입) |
+| T-07 | ARCHIVED 계열 — **폐기 확정**(ADR-0001) |
+| T-10 | ARCHIVED 계열 — **폐기 확정**(ADR-0001) |
 
 ### 수정
 | ID | v1 | v2 |

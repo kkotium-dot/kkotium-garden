@@ -95,5 +95,5 @@
 | 카피 | 폐기 사유 |
 |---|---|
 | 기간판매 종료(PERIOD_ENDED) 문구 | 상태 폐기 |
-| 보관/복원(ARCHIVE/RESTORE) 문구 | 미구현 개념 |
+| 보관/복원(ARCHIVE/RESTORE) 문구 | 폐기 확정(ADR-0001) |
 | "재입고(RESTOCK)" 액션 문구 | 드롭십 — 셀러 재고 없음. RESOURCE로 대체 |
