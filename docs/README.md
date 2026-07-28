@@ -48,4 +48,4 @@
 - `design/LIFECYCLE_STATE_MACHINE.md` · `COPY_SYSTEM.md` · `SURFACE_RULES.md` — 상태/카피/표면 (v2)
 - `design/PUBLISH_REVIEW_GATE_2026-07-23.md` — 발행 검수 경로 게이트 (v2)
 
-> design/ 전체 92개 중 날짜 없는 22개는 정리 대상 — `design/DOCS_CLEANUP_PLAN_2026-07-24.md` 참조(계획만, 미이동. 구본 CLEANUP_PLAN_2026-07-23는 SUPERSEDED).
+> docs 정리는 `design/DOCS_CLEANUP_PLAN_2026-07-25.md`(v3, 최신) 참조(계획만, 미이동). 구본 07-24·07-23은 SUPERSEDED 표기됨.

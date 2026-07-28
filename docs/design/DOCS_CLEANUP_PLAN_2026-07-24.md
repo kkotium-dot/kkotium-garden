@@ -1,6 +1,7 @@
 # DOCS 정리 계획표 v2 (2026-07-24)
 
-> 상태: 시점(2026-07-24) · v2 (구본: CLEANUP_PLAN_2026-07-23.md)
+> SUPERSEDED BY: docs/design/DOCS_CLEANUP_PLAN_2026-07-25.md
+> 상태: 시점(2026-07-24) · 구본 — v3가 정보 3그룹 재분류(DOCS_STANDARD v3 §14)·handoff 집행결과를 반영
 > 한 줄 요약 — docs 전체 정리 계획. **모든 항목 위험도 표기(#314). 이동·삭제 미실행 — 계획만.**
 > 기준: `docs/DOCS_STANDARD.md` v2 · 원칙 #314. 구본 대비 추가: handoff 격리 · CLAUDE.md 분산 · 군C 확증 결과 · 전항목 위험도.
 

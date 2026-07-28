@@ -1,7 +1,9 @@
-# PUBLISH_REVIEW_GATE — 발행 검수 게이트 설계 (v2 · 경로 게이트)
+# PUBLISH_REVIEW_GATE — 발행 검수 게이트 설계 (v2 · 경로 게이트 · 최종 확정)
 
-> 상태: 시점(2026-07-23) · **v2 (v1 "화면 연결" → v2 "경로 게이트"로 전면 재작성 · 2026-07-24 P0 경로 추가)**
+> 상태: 시점(2026-07-23) · **v2 최종 확정 (v1 "화면 연결" → 경로 게이트 재작성 · 07-24 P0 추가 · 07-25 4경로 공통게이트·스키마 확정)**
 > 한 줄 요약 — 최초 발행 4경로(P0~P3)를 서버 진입점에서 강제 검수하는 설계. 착수 전 필독.
+>
+> **확정 요약(07-25)**: ① 최초발행 4경로 = P0·P1·P2·P3 ② 네 경로 모두 `registerProduct`/`naverRequest` 직전 `assertPublishable` 호출 ③ UI=안내·서버=강제 ④ 조회 실패 시 fail-closed ⑤ reviewChecklist 기존 컬럼 재사용(DB 신설 0). 구현 착수 가능 상태.
 > **권위 정합**: 아래 경로·라인은 실제 코드 실측(추측 아님). 판정 근거: 원칙 #311(게이트는 화면 아닌 경로에).
 > 필독: `docs/PRODUCT_LIFECYCLE_FLOW.md` · `docs/DOMAIN_FACTS.md` · `docs/plan/COLLABORATION_PLAYBOOK.md`.
 
@@ -87,6 +89,18 @@ canPublish =
 
 ### best-effort 예외 (#82)
 `assertPublishable`이 DB 문제로 검수 상태를 못 읽으면 → **fail-closed**(발행 차단). 게이트는 조회 실패 시 "통과"가 아니라 "차단"으로 degrade해야 우회가 안 생긴다(권고 판정의 fail-open과 반대).
+
+### ★ 최종 확정 — 4경로 단일 게이트 (우회 0건 증명 대상)
+네 경로가 `naverRequest('POST','/v2/products', ...)` **직전**에 `assertPublishable`를 통과해야만 발행에 도달한다. 이 표가 완료 정의(#311-4)의 검증 대상이다.
+
+| 경로 | 발행 실행 호출 | 게이트 삽입점(이 호출 직전) | 통과 못 하면 |
+|---|---|---|---|
+| P0 | `registerProduct(payload)` (route.ts:80) | route.ts:78 (`toNaverPayload` 뒤) | 409 |
+| P1 | `naverRequest POST /v2/products` (register:426) | payload build 전 | 409 |
+| P2 | `naverRequest POST /v2/products` (batch:140) | 루프 내 각 건 | skip + reason |
+| P3 | `naverRequest POST /v2/products` (naver/register:175) | 핸들러 진입 직후 | 409 |
+
+> 단일 함수 `assertPublishable` 하나를 네 곳이 호출(#295). 어느 경로든 게이트를 우회해 `/v2/products`에 도달하면 완료 아님.
 
 ---
 
