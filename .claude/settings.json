@@ -1,0 +1,7 @@
+{
+  "claudeMdExcludes": [
+    "**/node_modules/**",
+    "**/docs/handoff/archive/**",
+    "**/docs/**/archive/**"
+  ]
+}

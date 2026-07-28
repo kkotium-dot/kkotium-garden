@@ -1,5 +1,6 @@
 # CLAUDE.md 축소 — 삭제 후보 목록 (1단계, 실행 전)
 
+> SUPERSEDED BY: `docs/design/CLAUDE_MD_REDUCTION_CANDIDATES_2026-07-28.md` (v2 — DOCS_STANDARD v3 §13-17 기준 재평가 + 후보#3 수정 + 신규 3건)
 > 원본 전문 보존: `docs/archive/CLAUDE_MD_FULL_2026-07-24.md` (346줄, 원본과 diff 0 확인).
 > 이 문서는 **후보 제시만** — 실 삭제는 운영자 승인 후 2단계에서 진행(작업원칙 #314).
 > 목표: 346줄 → ≤200줄. 아래 표 전체 적용 시 예상 **약 196줄**.
