@@ -7,3 +7,78 @@
 - **branch**: `main` (baseline `d282523`, 1인 개발 direct-push 체계 — 별도 브랜치 없음)
 - **goal**: docs/DOCS_STANDARD.md v2 기준으로 handoff 산더미·CLAUDE.md 비대(346줄)를 정리해 다음 세션 온보딩 비용을 낮춘다. 동시에 ADR-0002(공급처 단절 판정 고립 스파이크 1회 허용)를 코드에 반영해 폴러 오독 1건으로 처분 대상이 누락되는 사고를 막는다.
 - **next-action**: 운영자가 CLAUDE.md 삭제후보 표를 검토 후 승인하면 2단계(실제 삭제 + grep 검증)를 진행. 그 전까지 Code 측 추가 착수 항목 없음 — 승인 대기.
+
+---
+
+# 2026-07-28 세션 마무리 (Desktop · rev92 시점)
+
+BASELINE: main `6b0d82a` (== origin/main == prod, Vercel SHA 일치 확인)
+
+## ✅ 이번 사이클 완료 요약
+
+### 코드 기능
+- lifecycle.ts 신설 (7상태 파생 단일함수)
+- 부활소 발행 게이트(T-19) + draft_incomplete 제거 + 정원창고 "검수 대기" 배지
+- sourceGone 옵션 C (고립 스파이크 1회 허용, 테스트 6/6)
+- surfaceRules.ts 권한 매트릭스 + T-01~T-20, T-19 전체확장 (out-of-stock·KkottiWidget 포함)
+- 새 버전 감지 배너 (음성: 오탐 없음 확인 / 양성: 다음 배포 시 자연 검증)
+
+### 문서·시스템
+- CORE_PRINCIPLES.md 신설 (115줄, 44→46항목, 전 레인 관문)
+- DOCS_STANDARD v3 (린터위임·파일:라인·audit모드·행동가이드라인 블록)
+- ADR-0001(ARCHIVE 미도입) · ADR-0002(sourceGone 옵션 C)
+- CLAUDE.md 346→88줄 (WHAT/WHY/HOW 구조, 행동가이드라인 내장, 참조 4종)
+- PARALLEL_WORK_TRACKER 1938→258줄 (rev80 이전 archive 분할)
+- handoff 116개 격리 → CURRENT.md 단일 활성
+- .claude/rules/ 3종 (naver-api·korean-md·image-assets, paths 범위)
+- claudeMdExcludes 설정 (archive 폴더 자동 로드 제외)
+- PRODUCT_LIFECYCLE_FLOW.md 신설 (상품 생애 흐름 정본)
+- DOMAIN_FACTS.md 갱신 + 발행 워크플로우(#307) 명문화
+- COLLABORATION_PLAYBOOK.md (문제해결 방식 지침)
+- 원칙 #295~#314 등재
+
+### 프로덕션 검증 완료 (Chrome 실측)
+- 부활소: 미발행 0건(T-19 해소) ✅
+- 정원창고: "검수 대기 2건" 배지 ✅
+- 꽃밭돌보기: 발행분 1건만(경계 정상) ✅
+- 재활성화 카운트: 꽃밭돌보기↔부활소 수치 일치 ✅
+- surfaceRules 10/10 독립 재실행 ✅
+
+## 🔴 다음 Desktop READY (우선순위 순)
+
+### P1 ★최우선 — 검수 게이트 구현
+**현황**: 최초 발행 4경로(P0~P3) 전부 게이트 없음. 지금도 검수 없이 발행 가능.
+**설계 확정**: PUBLISH_REVIEW_GATE_2026-07-23.md 최종판 (4경로 registerProduct 직전 assertPublishable, UI=안내·서버=강제, reviewChecklist 기존 컬럼 재사용, DB 신설 0)
+**Code 인계**: 착수 계획 보고 → 승인 → 구현 (비가역 발행경로 변경이므로 계획 선보고 필수)
+
+### P2 — 새 버전 배너 양성 검증
+**현황**: 음성(오탐 없음) 확인됨. 양성("다른 버전 감지 시 뜨는가")은 미검증(#310).
+**방법**: 다음 배포 후 Desktop이 Chrome으로 직접 확인.
+
+### P3 — 처분 스모크 재실행
+scripts/smoke-disposition-channels.ts. 대상: naverProductId 有 + 스냅샷 0건인 상품.
+
+### P4 — 명화→플라티코 상품셋 교체 경위 확인
+명화는 검증 baseline(#55)이었는데 Product 테이블에서 제거됨.
+
+### P5 — CORE_PRINCIPLES audit 추가 권장 2건 CORE 반영 확인
+#296(분류축 파생)·#88(레인간 완료검증)을 본문 표에 삽입 — 현재는 말미 추가 블록 상태.
+
+## 능력 경계
+
+- ✅ Supabase SQL 읽기/쓰기 · Chrome 프로덕션 실측 · Vercel 조회
+- ✅ Desktop Commander / Filesystem MCP (교차 백업)
+- ❌ 코드 파일 쓰기 · git commit/push → Code 레인으로
+- ⚠️ 화면 스크린샷 전송 불가 → 페이지 텍스트로 검증
+
+## 절대 금지 (매 세션 확인)
+
+- 네이버 스토어 PUT/POST → 운영자 "GO" 없이 절대 금지
+- 디스코드 실발송(크론 수동 실행) → 실제 알림 발송됨
+- 테스트 데이터 방치 → 주입했으면 같은 세션에 원복
+- 문서 무단 삭제 → 전문 보존 + 후보 목록 승인 후에만
+- 허위 완료 보고 → 실측 못 한 것은 "미검증"으로 명시
+
+## 다음 링크 자료 (대표님 추가 예정)
+
+- 대표님이 추가 링크를 주실 예정. 도착 시 `docs/research/`에 한국어 정리 후 DOCS_STANDARD v3+에 채택분 반영.
