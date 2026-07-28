@@ -279,6 +279,17 @@ model Product {
   quality_score           Int?              @map("quality_score")                     // 0-100
   recommended_mode        String?           @map("recommended_mode") @db.VarChar(20)  // SIMPLE | ENHANCE | NEW
   quality_reasons         Json?             @map("quality_reasons")
+  // 2026-07-29 — Publish review gate (ADR-0003, docs/decisions/
+  // ADR-0003-publish-review-gate-decisions.md). Per-product operator approval
+  // record consumed by src/lib/products/publish-review-gate.ts. NULL = never
+  // reviewed (fail-closed default). Desktop applies MIGRATION_product_review_gate
+  // (ADD COLUMN IF NOT EXISTS) — idempotent; consumers guard P2021/P2022 so
+  // routes are safe before the migration lands (same pattern as fidelity/
+  // aestheticDna above). NOTE: this is deliberately separate from
+  // StoreSettings.reviewChecklist (E-2A manual customer-review count) — that
+  // field is a store-wide singleton and cannot represent per-product approval.
+  reviewChecklist         Json?             @map("review_checklist")
+  reviewLastUpdated       DateTime?         @map("review_last_updated")
   orderItems              OrderItem[]
   supplier                Supplier          @relation(fields: [supplierId], references: [id])
   user                    User              @relation(fields: [userId], references: [id])

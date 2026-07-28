@@ -9,6 +9,7 @@ import {
   checkNaverConnection,
   type NaverProductPayload,
 } from '@/lib/naver/api-client';
+import { assertPublishable } from '@/lib/products/publish-review-gate';
 
 // Map internal DB product to Naver API payload
 function toNaverPayload(p: any): NaverProductPayload {
@@ -73,6 +74,15 @@ export async function POST(request: NextRequest) {
     }
     if (!product.mainImage) {
       return NextResponse.json({ success: false, error: '대표 이미지가 없습니다. 이미지를 추가해주세요.' }, { status: 400 });
+    }
+
+    // 검수 게이트(#311·ADR-0003) — P0. registerProduct 직전, 최초발행 4경로 중 하나.
+    const gate = await assertPublishable(productId);
+    if (!gate.canPublish) {
+      return NextResponse.json(
+        { success: false, error: '발행 검수를 통과하지 못했습니다.', canPublish: false, reviewReasons: gate.review.reasons, supply: gate.supply },
+        { status: 409 },
+      );
     }
 
     // Call Naver API

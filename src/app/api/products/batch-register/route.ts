@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { buildNaverProductPayload } from '@/lib/naver/product-builder';
 import { naverRequest } from '@/lib/naver/api-client';
 import { sendDiscord } from '@/lib/discord';
+import { assertPublishable } from '@/lib/products/publish-review-gate';
 
 export const dynamic = 'force-dynamic';
 
@@ -132,6 +133,19 @@ export async function POST(request: NextRequest) {
             sku: product.sku,
             status: 'success',
             naverProductId: 'DRY_RUN',
+          });
+          continue;
+        }
+
+        // 검수 게이트(#311·ADR-0003) — P2. naverRequest 직전, 각 건별 판정.
+        const gate = await assertPublishable(product.id);
+        if (!gate.canPublish) {
+          results.push({
+            id: product.id,
+            name: product.name,
+            sku: product.sku,
+            status: 'skipped',
+            error: `발행 검수 미통과: ${[...gate.review.reasons, gate.supply.reason].filter(Boolean).join(', ')}`,
           });
           continue;
         }

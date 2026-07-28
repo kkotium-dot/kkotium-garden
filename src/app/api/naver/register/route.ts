@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { naverRequest } from '@/lib/naver/api-client';
 import { resolveOriginAreaCode } from '@/lib/naver/product-builder';
+import { assertPublishable } from '@/lib/products/publish-review-gate';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -105,6 +106,16 @@ export async function POST(request: NextRequest) {
     // ── Gate 3: pricing sanity ───────────────────────────────────────────────
     if (!product.salePrice || product.salePrice <= 0) {
       return fail('salePrice must be > 0', 422, { productId, salePrice: product.salePrice });
+    }
+
+    // ── Gate 4: 검수 게이트(#311·ADR-0003) — P3. 핸들러 진입 직후, payload 빌드 전.
+    const gate = await assertPublishable(productId);
+    if (!gate.canPublish) {
+      return fail('발행 검수를 통과하지 못했습니다.', 409, {
+        productId,
+        reviewReasons: gate.review.reasons,
+        supply: gate.supply,
+      });
     }
 
     // ── Build payload (Commerce API v2 shape) ────────────────────────────────

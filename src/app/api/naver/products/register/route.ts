@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { naverRequest, NaverApiError, uploadImagesToNaver } from '@/lib/naver/api-client';
 import { writeLinkFields } from '@/lib/product-link';
+import { assertPublishable } from '@/lib/products/publish-review-gate';
 import {
   buildNaverProductPayload,
   buildDeliveryInfo,
@@ -212,6 +213,12 @@ export async function POST(request: NextRequest) {
     // 빈 값이면 builder가 '꽃틔움' 코드 기본값 사용. 앱 이름 '꽃틔움 가든' 아님.
     const storeName = (noticeSettings?.storeName ?? '').trim() || '꽃틔움';
 
+    // 검수 게이트(#311·ADR-0003) — P1. dryRun은 차단하지 않고 사유만 반환한다
+    // (미리보기는 "왜 막히는지" 보여주는 진단 용도 — 여기서 막으면 그 기능이
+    // 죽는다, ADR-0003 결정3). 실 register는 이미지 업로드(7-img) 전에 차단
+    // 해야 이미 막힐 상품의 네이버 대역폭·쓰레기 이미지 업로드를 피한다.
+    const gate = await assertPublishable(productId);
+
     // 7-pre. dryRun preview — build with Supabase URLs (no Naver upload). The
     // real register path below uploads to Naver first, then rebuilds.
     if (dryRun) {
@@ -293,7 +300,22 @@ export async function POST(request: NextRequest) {
           },
         },
         payload,
+        // 검수 게이트 사유만 — dryRun은 차단하지 않는다(ADR-0003 결정3).
+        canPublish: gate.canPublish,
+        reviewReasons: gate.review.reasons,
+        supply: gate.supply,
       });
+    }
+
+    // 검수 게이트(#311·ADR-0003) — P1 실경로. 이미지 업로드(7-img) 전에 차단해
+    // 어차피 막힐 상품의 네이버 업로드를 아끼고, 네이버 측 고아 이미지도 막는다.
+    if (!gate.canPublish) {
+      return NextResponse.json({
+        success: false,
+        error: '발행 검수를 통과하지 못했습니다.',
+        reviewReasons: gate.review.reasons,
+        supply: gate.supply,
+      }, { status: 409 });
     }
 
     // 7-img. Upload product images to Naver FIRST (RESEARCH §1 — external URLs
