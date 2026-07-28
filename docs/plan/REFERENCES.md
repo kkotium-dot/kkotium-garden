@@ -50,6 +50,9 @@
 | 사이드바 | `src/components/layout/Sidebar.tsx` |
 | cron daily | `src/app/api/cron/daily/route.ts` |
 | cron weekly | `src/app/api/cron/weekly/route.ts` |
+| 카테고리 원산지 코드 (518개) | `src/lib/naver/naver-origin-codes.ts` |
+| 재고 폴링 (Sprint 6-A 하이브리드) | `src/lib/dome-inventory-poller.ts` |
+| cron 재고 동기화(6시간) | `src/app/api/cron/inventory-sync/route.ts` |
 
 ---
 

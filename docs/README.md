@@ -49,3 +49,16 @@
 - `design/PUBLISH_REVIEW_GATE_2026-07-23.md` — 발행 검수 경로 게이트 (v2)
 
 > docs 정리는 `design/DOCS_CLEANUP_PLAN_2026-07-25.md`(v3, 최신) 참조(계획만, 미이동). 구본 07-24·07-23은 SUPERSEDED 표기됨.
+
+## 환경 설정 (최초 1회)
+
+```bash
+# 브라우저 테스트 (Chrome MCP 대체)
+claude mcp add playwright -- npx -y @playwright/mcp@latest
+
+# Supabase (마이그레이션 직접 실행)
+claude mcp add supabase -- npx -y @supabase/mcp-server-supabase \
+  --access-token=YOUR_SUPABASE_TOKEN
+```
+
+설정 후 `/mcp` 명령으로 연결 확인. (CLAUDE.md에서 이관 — 상시 규칙 아닌 1회성 설치 안내.)
