@@ -126,3 +126,51 @@ ALTER TABLE public."Product"
 2. 검수 승인 플로우 E2E: 씨앗심기에서 1건 승인 → 정원창고 "발행 가능 1"로 전환되는지
 3. 우회 경로 0건 최종 확인(P0~P3 · #311)
 4. P2 배너 양성 · P3 스모크 · P4 명화→플라티코
+
+---
+
+# 2026-07-29 마이그레이션 적용 + 검증 (Desktop · GO 승인)
+
+## ✅ 마이그레이션 성공
+운영자 GO 후 `apply_migration` (product_review_gate) 적용:
+- `Product.review_checklist` (jsonb, nullable) 생성 확인
+- `Product.review_last_updated` (timestamp, nullable) 생성 확인
+- 상품 3개·발행 1개 불변(데이터 손실 0), 미검수(NULL) 3개 = 정확한 초기화
+
+## ⚠️ 그러나 게이트 미작동 — Prisma 스키마 갭 발견 (E2E 막힘)
+
+프로덕션 실측(reload 후):
+| 시점 | 준비미흡 | 발행가능 | 일괄발행 |
+|---|---|---|---|
+| 마이그레이션 전 | 2 | 0 | **0**(차단) |
+| 마이그레이션 후 | 0 | 2 | **2**(열림) ⚠️ |
+
+**역설**: 컬럼 부재 시엔 fail-closed로 우연히 차단됐으나, 컬럼 생성 후 게이트가 오히려 열림.
+
+**근본 원인**(API 실측): `/api/products` 응답에 `review_checklist` 필드가 **FIELD_ABSENT**.
+→ DB엔 컬럼 있으나 **Prisma가 모름**. `schema.prisma`에 필드 미추가 → `prisma generate` 미실행 → API가 컬럼을 read하지 않음 → 게이트가 undefined로 판정해 통과.
+
+## 🔴 Code 인계 필수 (Desktop 불가 영역)
+1. `prisma/schema.prisma` Product 모델에 필드 추가:
+   ```
+   review_checklist    Json?     @map("review_checklist")
+   review_last_updated DateTime? @map("review_last_updated")
+   ```
+2. `npx prisma generate` → 빌드 → push → 배포
+3. publish-review-gate.ts가 **NULL(미검수)=발행 차단**으로 판정하는지 재확인
+   (현재 undefined 통과 로직이 NULL도 통과시키면 안 됨)
+4. 배포 후 Desktop 재검증: 정원창고 "발행 가능 0" 복귀 확인
+
+## 다음 Desktop READY (Code 배포 후)
+1. reload 후 정원창고 "발행 가능 0 / 준비미흡 2" 확인(NULL=차단)
+2. 검수 승인 E2E: 씨앗심기 승인 1건 → 해당 상품만 "발행 가능 1" → 원복
+3. 우회 경로 0건(P0~P3 · #311)
+4. P2 배너 양성 · P3 스모크 · P4 명화→플라티코
+
+## 롤백 정보 (문제 시)
+```sql
+ALTER TABLE public."Product"
+  DROP COLUMN IF EXISTS review_checklist,
+  DROP COLUMN IF EXISTS review_last_updated;
+```
+단, 컬럼 추가는 무해(NULL)하므로 롤백 불필요. Prisma 스키마 동기화가 정답.
