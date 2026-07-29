@@ -33,7 +33,27 @@ CUSTOMER_FACING = (
     "lib/i18n/detail-content-templates.ko.json",         # 상세페이지 프리셋 템플릿
 )
 
-rows, excluded = [], []
+# ── 판단 표면 (Judgment surface) — 사투리 감탄사 없어야 정상 (원칙 #318) ──────
+# 검수·발행 게이트처럼 셀러가 즉시 판단을 내려야 하는 문구. 친밀 표면(빈상태·
+# 성공토스트)과 달리 여기는 "사투리 부재"가 올바른 상태다.
+JUDGMENT_SURFACE_KEYS = (
+    ("lib/i18n/publish-preview-strings.ko.json", ("error.title", "publish.disabledHint",
+        "publish.fail", "publish.notRegisteredHint", "cropStudio.drawHint",
+        "cropStudio.editHint", "cropStudio.clipWarn", "cropStudio.error")),
+)
+JUDGMENT_SURFACE_BY_FILE = dict(JUDGMENT_SURFACE_KEYS)
+
+
+def get_by_path(d, path):
+    node = d
+    for part in path.split("."):
+        if not isinstance(node, dict) or part not in node:
+            return None
+        node = node[part]
+    return node
+
+
+rows, excluded, judgment_violations, judgment_ok = [], [], [], 0
 
 for path in glob.glob(f"{ROOT}/**/*ko.json", recursive=True):
     try:
@@ -58,6 +78,15 @@ for path in glob.glob(f"{ROOT}/**/*ko.json", recursive=True):
 
     walk(d)
     rel = path.replace(ROOT + "/", "")
+
+    if rel in JUDGMENT_SURFACE_BY_FILE:
+        for key in JUDGMENT_SURFACE_BY_FILE[rel]:
+            val = get_by_path(d, key)
+            if isinstance(val, str) and PERSONA.search(val):
+                judgment_violations.append((rel, key, val))
+            else:
+                judgment_ok += 1
+
     if rel in CUSTOMER_FACING:
         if targets:
             excluded.append((rel, len(targets)))
@@ -80,3 +109,11 @@ if excluded:
     for rel, t in excluded:
         print(f"  · {rel} (문구 {t}개)")
     print("  네이버 고객이 보는 상세페이지 문구입니다. 꼬띠 보이스를 넣지 마세요.")
+
+print(f"\n[판단 표면 — 사투리 위반 (원칙 #318, 사투리 부재가 정상)]")
+if judgment_violations:
+    for rel, key, val in judgment_violations:
+        print(f"  · {rel} :: {key} — \"{val}\"")
+    print(f"  판단 표면 위반 {len(judgment_violations)}건 — 사투리 감탄사(이랴/~어유/~에유/~해유)를 제거하세요.")
+else:
+    print(f"  판단 표면 위반 0건 ({judgment_ok}개 키 확인)")
