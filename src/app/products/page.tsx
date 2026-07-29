@@ -2554,7 +2554,18 @@ function ProductsPageInner() {
                   <button onClick={() => setShowGardenPublishModal(true)} disabled={gardenCounts.ready === 0}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40"
                     style={{ border: '1.5px solid #bbf7d0', background: '#F0FDF4', color: '#15803d' }}
-                    title="준비도 100%인 상품을 한 번에 발행">
+                    title={
+                      gardenCounts.ready > 0
+                        ? '준비도 100%인 상품을 한 번에 발행'
+                        // 2026-07-30 (UX-1, #308 3초룰 §0) — 비활성 사유를 원인+행동으로
+                        // 명시. 검수 대기와 구조 미흡을 구분(둘 다 있으면 검수 대기 우선
+                        // — 검수는 정보 입력만으론 안 풀리는, 셀러가 놓치기 쉬운 축).
+                        : gardenCounts.reviewPending > 0
+                        ? `검수 승인 후 이용 가능 — 검수 승인 대기 ${gardenCounts.reviewPending}건 (씨앗심기에서 승인)`
+                        : gardenCounts.notReady > 0
+                        ? `발행 준비도를 먼저 채워주세요 — 준비 미흡 ${gardenCounts.notReady}건`
+                        : '발행 가능한 상품이 없어요'
+                    }>
                     <Send size={13} /> 준비된 것 일괄 발행 {gardenCounts.ready}
                   </button>
                   <Link href="/products/new" className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-sm font-bold transition"
