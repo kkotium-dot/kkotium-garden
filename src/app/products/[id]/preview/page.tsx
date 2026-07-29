@@ -15,10 +15,14 @@ import {
   CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Loader2, ShieldCheck, ImageOff, ShieldAlert, Undo2,
 } from 'lucide-react';
 import strings from '@/lib/i18n/publish-preview-strings.ko.json';
+import readinessStrings from '@/lib/i18n/publish-readiness-strings.ko.json';
 import CropStudioPanel from '@/components/products/CropStudioPanel';
 import { translateGateMessage } from '@/lib/naver/gate-message-i18n';
+import { categoryFullPath } from '@/lib/naver/naver-categories-full';
+import { originCodeLabel } from '@/lib/naver/naver-origin-codes';
 
 const t = strings;
+const NAVER_STATUS = readinessStrings.naverStatus as Record<string, string>;
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 type CheckKey = 'resolutionOk' | 'uniformBg' | 'textFree' | 'singleSubject';
@@ -296,14 +300,19 @@ export default function PublishPreviewPage({ params }: { params: { id: string } 
             <h2 className="mb-2 text-sm font-semibold text-slate-700">{t.section.payload}</h2>
             <dl className="space-y-1.5 text-xs">
               <Row label={t.payload.name} value={data.summary.name} />
-              <Row label={t.payload.category} value={data.summary.leafCategoryId} />
-              <Row label={t.payload.price} value={String(data.summary.salePrice)} />
-              <Row label={t.payload.statusType} value={data.summary.statusType} />
+              <Row label={t.payload.category} value={categoryFullPath(data.summary.leafCategoryId)} />
+              <Row label={t.payload.price} value={`${data.summary.salePrice.toLocaleString('ko-KR')}원`} />
+              <Row label={t.payload.statusType} value={NAVER_STATUS[data.summary.statusType] ?? data.summary.statusType} />
               <Row label={t.payload.tags} value={data.summary.sellerTags.join(', ') || '-'} />
               <Row label={t.payload.options} value={data.summary.optionCombinationValues.join(' / ') || '-'} />
               <Row
                 label={t.payload.origin}
-                value={data.summary.originAreaInfo ? `${data.summary.originAreaInfo.originAreaCode} ${data.summary.originAreaInfo.content ?? ''}` : '-'}
+                value={(() => {
+                  const o = data.summary.originAreaInfo;
+                  if (!o) return '-';
+                  const label = originCodeLabel(o.originAreaCode);
+                  return o.content && o.content !== label ? `${label} (${o.content})` : label;
+                })()}
               />
               <Row
                 label={t.payload.notice}
