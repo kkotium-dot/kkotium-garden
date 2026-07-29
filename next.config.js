@@ -1,3 +1,30 @@
+// 2026-07-30 (2차 추가수정) — 위 두 수정 배포 후 worker-script 크래시는
+// 사라졌으나 **다음 단계 크래시가 새로 노출**됐다(Vercel 함수 로그):
+//   ENOENT: '.../tesseract.js-core/tesseract-core-relaxedsimd.wasm'
+// 워커 자체는 이제 뜨지만, WASM 엔진 바이너리(tesseract.js-core, CPU 기능에
+// 따라 6개 변형 중 하나를 런타임에 선택)가 트레이싱 대상에서 빠져있었다.
+// 어떤 변형이 선택될지는 실행 환경(SIMD 지원 여부)에 달려있어 정적으로
+// 하나만 고를 수 없다 — 6개 전부 포함(패키지 전체, ~17MB).
+const TESSERACT_INCLUDES = [
+  './node_modules/tesseract.js/src/worker-script/**/*',
+  './node_modules/tesseract.js-core/**/*',
+];
+const OCR_ROUTES = [
+  '/api/products/[id]/publish-preview',
+  '/api/products/[id]/review-approve',
+  '/api/products/[id]/apply-composite',
+  '/api/products/[id]/finish-image',
+  '/api/products/[id]/seo-guard',
+  '/api/products/[id]/white-bg',
+  '/api/products/[id]/apply-cutout',
+  '/api/products/[id]/thumb-crop',
+  '/api/products/[id]/main-image-policy',
+  '/api/naver/products/register',
+  '/api/naver/products',
+  '/api/naver/register',
+  '/api/products/batch-register',
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -31,23 +58,11 @@ const nextConfig = {
   // 런타임에 진짜 require()로 로드돼 __dirname이 실제 node_modules 위치를
   // 가리킨다 — outputFileTracingIncludes(파일 존재 보장)와 함께 있어야 완결.
   experimental: {
-    serverComponentsExternalPackages: ['tesseract.js'],
+    serverComponentsExternalPackages: ['tesseract.js', 'tesseract.js-core'],
     outputFileTracingIncludes: {
       '/api/thumbnail/[sku]': ['./fonts/**/*'],
       '/api/products/[id]/generate-detail': ['./fonts/**/*'],
-      '/api/products/[id]/publish-preview': ['./node_modules/tesseract.js/src/worker-script/**/*'],
-      '/api/products/[id]/review-approve': ['./node_modules/tesseract.js/src/worker-script/**/*'],
-      '/api/products/[id]/apply-composite': ['./node_modules/tesseract.js/src/worker-script/**/*'],
-      '/api/products/[id]/finish-image': ['./node_modules/tesseract.js/src/worker-script/**/*'],
-      '/api/products/[id]/seo-guard': ['./node_modules/tesseract.js/src/worker-script/**/*'],
-      '/api/products/[id]/white-bg': ['./node_modules/tesseract.js/src/worker-script/**/*'],
-      '/api/products/[id]/apply-cutout': ['./node_modules/tesseract.js/src/worker-script/**/*'],
-      '/api/products/[id]/thumb-crop': ['./node_modules/tesseract.js/src/worker-script/**/*'],
-      '/api/products/[id]/main-image-policy': ['./node_modules/tesseract.js/src/worker-script/**/*'],
-      '/api/naver/products/register': ['./node_modules/tesseract.js/src/worker-script/**/*'],
-      '/api/naver/products': ['./node_modules/tesseract.js/src/worker-script/**/*'],
-      '/api/naver/register': ['./node_modules/tesseract.js/src/worker-script/**/*'],
-      '/api/products/batch-register': ['./node_modules/tesseract.js/src/worker-script/**/*'],
+      ...Object.fromEntries(OCR_ROUTES.map((route) => [route, TESSERACT_INCLUDES])),
     },
   },
 
