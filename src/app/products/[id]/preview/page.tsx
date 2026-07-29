@@ -9,7 +9,7 @@
 //
 // No emoji (Lucide icons). No Korean literals (publish-preview-strings.ko.json).
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import {
   CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Loader2, ShieldCheck, ImageOff, ShieldAlert, Undo2,
@@ -122,6 +122,18 @@ export default function PublishPreviewPage({ params }: { params: { id: string } 
   const [reviewActing, setReviewActing] = useState(false);
   const [reviewResult, setReviewResult] = useState<{ ok: boolean; message: string } | null>(null);
 
+  // 2026-07-30 (#317 방향, Desktop 실측 — 프로덕션 무한로딩 체감) — 이 화면의
+  // publish-preview 응답은 대표·상세 이미지 OCR·품질검사를 포함해 정상 상태에서도
+  // 수 초가 걸린다(근본 원인은 next.config.js의 tesseract 워커 번들 누락 수정으로
+  // 별도 처리 — 여기는 그와 무관하게 남는 체감 문제: 몇 초가 걸리는지 안내가 없어
+  // "멈췄나?"로 보인다). 2.5초 넘으면 무엇을 하고 있는지 구체적으로 알려준다.
+  const [showAnalyzing, setShowAnalyzing] = useState(false);
+  useEffect(() => {
+    if (!isLoading) { setShowAnalyzing(false); return; }
+    const t = setTimeout(() => setShowAnalyzing(true), 2500);
+    return () => clearTimeout(t);
+  }, [isLoading]);
+
   async function doReviewAction(action: 'approve' | 'revoke') {
     setReviewActing(true);
     setReviewResult(null);
@@ -176,7 +188,12 @@ export default function PublishPreviewPage({ params }: { params: { id: string } 
       <h1 className="text-lg font-semibold text-slate-800">{t.title}</h1>
       <p className="mb-4 text-sm text-slate-500">{t.subtitle}</p>
 
-      {isLoading && <p className="text-sm text-slate-400">{t.loading}</p>}
+      {isLoading && (
+        <p className="flex items-center gap-1.5 text-sm text-slate-400">
+          <Loader2 size={14} className="animate-spin" />
+          {showAnalyzing ? t.loadingAnalyzing : t.loading}
+        </p>
+      )}
       {(error || (data && !data.success)) && (
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <p className="text-sm text-slate-600">{t.error.title}{data?.error ? ` — ${data.error}` : ''}</p>
