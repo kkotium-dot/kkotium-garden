@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { captureDeletionSnapshots, recordProductDeletedEvents } from '@/lib/products/deletion-audit';
 
 // 일괄 삭제
 
@@ -15,6 +16,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // 삭제 전에 스냅샷·처분판정 캡처(#315) — 순서는 단건 경로와 동일 이유.
+    const snapshots = await captureDeletionSnapshots(ids);
+
     await prisma.product.deleteMany({
       where: {
         id: {
@@ -22,6 +26,8 @@ export async function DELETE(request: NextRequest) {
         },
       },
     });
+
+    await recordProductDeletedEvents(snapshots);
 
     return NextResponse.json({
       success: true,

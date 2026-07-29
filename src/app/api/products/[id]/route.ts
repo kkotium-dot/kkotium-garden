@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendDiscord, buildPriceChangeEmbed } from '@/lib/discord';
+import { captureDeletionSnapshots, recordProductDeletedEvents } from '@/lib/products/deletion-audit';
 
 
 export const dynamic = 'force-dynamic';
@@ -184,7 +185,11 @@ export async function DELETE(
     if (!product) {
       return NextResponse.json({ success: false, error: '상품을 찾을 수 없습니다' }, { status: 404 });
     }
+    // 삭제 전에 스냅샷·처분판정 캡처(#315) — 삭제 후엔 재고 스냅샷이 cascade로
+    // 사라져 판정 불가.
+    const [snapshot] = await captureDeletionSnapshots([id]);
     await prisma.product.delete({ where: { id } });
+    await recordProductDeletedEvents(snapshot ? [snapshot] : []);
     return NextResponse.json({ success: true, message: '상품이 삭제되었습니다' });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';

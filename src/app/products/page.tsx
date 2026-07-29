@@ -27,6 +27,7 @@ import InventoryBadge, { inventoryBadgeRank } from '@/components/products/Invent
 import BadgeRail, { type BadgeRailItem } from '@/components/common/BadgeRail';
 import { decideDisposition, type DispositionAction } from '@/lib/products/disposition';
 import { checkPublishGate, type PublishBlockReason } from '@/lib/products/publish-gate';
+import { translateGateMessages } from '@/lib/naver/gate-message-i18n';
 import publishGateCopy from '@/lib/products/publish-gate.strings.ko.json';
 import { BADGE_PRIORITY } from '@/components/common/badge-priority';
 import { StageBadge } from '@/components/products/StageBadge';
@@ -1293,7 +1294,9 @@ function NaverRegisterModal({
           id: p.id,
           name: p.name,
           ok: data.success,
-          error: data.error ?? data.validation?.errors?.join(', '),
+          // #317 — validation.errors는 product-builder.ts 원문(영어, #240 안정키
+          // 사유로 무변경) → 표시 직전에만 한글화(gate-message-i18n 공유 #62).
+          error: data.error ?? (translateGateMessages(data.validation?.errors ?? [], ', ') || undefined),
           naverProductId: data.naverProductId,
         });
       } catch (e: any) {

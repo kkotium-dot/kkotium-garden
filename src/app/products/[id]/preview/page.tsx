@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import strings from '@/lib/i18n/publish-preview-strings.ko.json';
 import CropStudioPanel from '@/components/products/CropStudioPanel';
+import { translateGateMessage } from '@/lib/naver/gate-message-i18n';
 
 const t = strings;
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -208,7 +209,7 @@ export default function PublishPreviewPage({ params }: { params: { id: string } 
               <p className="mt-2 text-xs text-orange-700">{t.readiness.missing}: {data.readiness.missingRequired.join(', ')}</p>
             )}
             {data.readiness.errors.length > 0 && (
-              <p className="mt-1 text-xs text-red-700">{t.readiness.errors}: {data.readiness.errors.join('; ')}</p>
+              <p className="mt-1 text-xs text-red-700">{t.readiness.errors}: {data.readiness.errors.map(translateGateMessage).join('; ')}</p>
             )}
           </section>
 
