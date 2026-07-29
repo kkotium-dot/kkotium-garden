@@ -54,7 +54,8 @@
     "attribute": "속성",
     "missing": "필수 누락",
     "errors": "발행 차단 사유",
-    "none": "없음"
+    "none": "없음",
+    "fixLink": "고치러 가기"
   },
   "publish": {
     "ready": "이 상태로 발행",
