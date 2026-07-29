@@ -174,3 +174,71 @@ ALTER TABLE public."Product"
   DROP COLUMN IF EXISTS review_last_updated;
 ```
 단, 컬럼 추가는 무해(NULL)하므로 롤백 불필요. Prisma 스키마 동기화가 정답.
+
+---
+
+# 2026-07-29 검수 게이트 코드 경로 검증 (Desktop · 배포 2b5812c)
+
+## ★ 직전 관측 정정 (#310 · Code 지적 수용)
+Desktop이 관측한 "정원창고 준비미흡/발행가능/일괄발행 배지 숫자 변화(2↔0)"를 **검수 게이트 효과로 단정한 것은 근거 부족**이었다. 실측으로 정정:
+
+- 정원창고 배지 소스(`publish-readiness.ts`·`load-update-context.ts`·`product-builder.ts`·`control-tower-engine.ts`)는 **reviewChecklist 참조 0건**(grep 확인). 배지는 구 8항목 구조 게이트(이름/카테고리/이미지/가격/주소/단위가격/원산지)이며 검수와 무관.
+- 즉 배지 숫자 변화는 검수 게이트 때문이 아니다. 우연한 동시 데이터 변화 가능성. **관측표 무효화, 미검증 처리.**
+
+## 코드 경로 검증 (소스 확인 — PASS)
+| 항목 | 결과 | 근거 |
+|---|---|---|
+| build 스크립트 근본수정 | ✅ | `"build": "prisma generate && next build"` (Prisma+Vercel 캐시 함정 방지) |
+| assertPublishable 연결 | ✅ 4경로 | batch-register·naver/products/register·naver/products·naver/register |
+| batch-register skip 로직 | ✅ | route.ts:141 assertPublishable → 실패 시 :147 status='skipped' :150 continue |
+| NULL=차단(fail-closed) | ✅ | publish-review-gate.ts:108 `if(!cl?.approved)` → null·undefined·false 전부 NOT_REVIEWED |
+| REVIEW_STALE 화이트리스트 | ✅ | :84-85 스냅샷 없으면 stale, 화이트리스트 필드 변경만 비교(#316-A) |
+| DB 컬럼 | ✅ | review_checklist·review_last_updated 존재, 미발행 2건 다 NULL |
+
+## ⚠️ 미검증 (정직 · #310)
+1. **실제 발행 차단 동작**: batch-register 실 실행은 **네이버 발행 유발 → 테스트 금지(#46)**. 코드 경로는 확인했으나 런타임 skip 실증은 불가. 운영자 GO 하에 dryRun 경로가 있으면 그때 검증.
+2. **API 목록의 reviewChecklist ABSENT**: `/api/products` 응답에 필드 없음. 단, 게이트는 `assertPublishable`이 product.id로 **별도 조회**하므로 목록 API select와 무관 — 게이트 동작에는 영향 없음. 목록에 노출하려면 별도 select 추가 필요(후속).
+
+## 🔴 후속 과제 (Code 인계)
+1. **검수 승인 UI/엔드포인트 부재** — reviewChecklist에 {approved:true} 쓰는 경로 0건.
+   설계안(기보고): PATCH /api/products/[id]/review-approve + 씨앗심기 승인 버튼. 계획 선보고 후 착수.
+   ※ 이게 없으면 어떤 상품도 검수 통과 불가 → 게이트가 "전부 차단" 상태로만 존재.
+2. **정원창고 배지에 검수 상태 미반영** — 실무 갭. 배지는 구조 준비도만, 검수 승인 여부는 안 보임.
+   → 셀러가 "왜 발행이 안 되지?"를 배지로 알 수 없음. 후속 통합 과제로 결정 필요.
+3. 정원창고 "준비된 것 일괄 발행"이 batch-register(검수 게이트 O)를 타는지, 별도 경로인지 확인 필요.
+
+## 다음 Desktop READY
+1. 검수 승인 UI 구현·배포 후 → E2E(승인 1건 → 그 상품만 발행가능 → 원복)
+2. 우회 경로 0건 최종(P0~P3)
+3. P2 배너 양성 · P3 스모크 · P4 명화→플라티코
+
+---
+
+# 2026-07-29 (2) 세션 상태 정정 + P4 경위 규명 (Desktop)
+
+## ⚠️ 검수 승인 UI — 아직 미구현 (실측 정정)
+이번 세션 첨부가 비어 있었고, 실측 결과:
+- 배포 SHA = `2b5812c` (직전 세션과 동일, 신규 커밋 없음)
+- 미push: `0 0` / `review-approve` 엔드포인트 **부재**
+- 검수 승인 UI는 **아직 구현되지 않음**. Code 착수 대기 상태 유지.
+→ 지어내지 않고 사실 보고. E2E는 승인 UI 배포 후로 유지.
+
+## ✅ P4 규명 — 명화→플라티코 경위 (product_events 실측)
+현재 Product 3개(달항아리·아이스트레이·플라티코)에 명화 없음. 삭제 상품 추적:
+
+**삭제된 상품 `cmpnooli40001f0gveaxr8iim`** (명화 디퓨저로 추정):
+| 필드 | 값 |
+|---|---|
+| 이벤트 | `NAVER_REGISTERED` (2026-06-05 09:54) |
+| 전이 | DRAFT → naverProductId `13564133057` |
+| note | **`API direct (attr:C readiness:74%)`** |
+
+**핵심 발견**: 이 상품은 **준비도 74%·검수 없이 API로 직접 발행**됐다. 정확히 검수 게이트가 없던 시절의 무검수 발행(#307 위반)이며, 현재 우리가 막으려는 P0~P3 경로의 과거 실제 사례다. **P4가 검수 게이트의 존재 이유를 실증한다.**
+
+- 삭제 이벤트는 product_events에 없음(하드 삭제로 추정 — 이벤트 미기록).
+- 명화는 baseline(#55)에서 빠지고 플라티코로 대체된 것으로 확인. 별도 조치 불요.
+- ⚠️ 후속: 상품 하드 삭제가 이벤트를 남기지 않는 갭 발견 → 삭제도 product_events에 기록하면 추적성 향상(후속 과제 후보, #315 판단 필요).
+
+## 현재 세션에서 가능/불가 경계
+- ✅ 가능: DB 실측(P4 완료), 프로덕션 브라우저 읽기, 게이트 코드 경로 확인
+- ⛔ 불가: 검수 E2E(승인 UI 부재), 실제 발행 차단 런타임(#46), P3 스모크(코드 실행은 Code 레인)

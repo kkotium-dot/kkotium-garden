@@ -21,7 +21,6 @@ import { calcUploadReadiness, type ReadinessInput } from '@/lib/upload-readiness
 import { computeImageGateWarnings } from './image-gate-warnings';
 import { checkPublishGate, type PublishGateVerdict as SupplyGateVerdict } from './publish-gate';
 import { loadSourceGoneFlags } from './source-gone';
-import { isUndefinedColumnError } from '@/lib/product-link';
 
 export type PublishReviewBlockReason =
   | 'READINESS_INCOMPLETE'  // calcUploadReadiness < 100
@@ -123,13 +122,29 @@ export interface AssertPublishableResult {
 
 const FAIL_CLOSED_REVIEW: PublishReviewGateVerdict = { approved: false, reasons: ['NOT_REVIEWED'] };
 
+/** loadReviewInputs()가 상품 없음/DB 조회 실패일 때 반환하는 판별 유니온 태그. */
+export interface ReviewInputsUnavailable {
+  ok: false;
+}
+
+export interface ReviewInputsLoaded {
+  ok: true;
+  readinessScore: number;
+  blockingImageWarningCount: number;
+  currentSnapshot: ReviewWhitelistSnapshot;
+  reviewChecklist: ReviewChecklist | null;
+}
+
 /**
- * 서버 진입점(P0~P3)이 발행 직전에 호출하는 강제 게이트(#311). throw 아님 —
- * 구조적 반환. DB 조회 실패(마이그레이션 전 P2021/P2022 포함)는 fail-closed로
- * degrade한다 — 게이트는 "모르면 통과"가 아니라 "모르면 차단"이어야 우회가
- * 안 생긴다(권고 판정의 fail-open과 반대, #82).
+ * assertPublishable(등록 게이트)과 review-approve(승인 엔드포인트) 양쪽이
+ * 공유하는 계산 — 두 곳이 각자 재구현하면 판정이 갈라질 위험(#62). I/O 포함
+ * (product 조회 + 이미지 OCR/품질), PURE 아님. 실패 시 { ok:false }만 반환하고
+ * fail-closed 여부 판단은 호출부 책임(등록 게이트는 차단, 승인 엔드포인트는
+ * 에러 응답 — 같은 "모르면" 신호라도 문맥에 따라 다른 응답이 맞다).
  */
-export async function assertPublishable(productId: string): Promise<AssertPublishableResult> {
+export async function loadReviewInputs(
+  productId: string,
+): Promise<ReviewInputsLoaded | ReviewInputsUnavailable> {
   let product;
   try {
     product = await prisma.product.findUnique({
@@ -151,15 +166,13 @@ export async function assertPublishable(productId: string): Promise<AssertPublis
         product_options: { select: { option_names: true, option_rows: true } },
       },
     });
-  } catch (e) {
+  } catch {
     // pre-migration window (review_checklist/review_last_updated columns not
-    // yet applied) or transient DB issue — fail-closed, never fail-open.
-    if (isUndefinedColumnError(e)) return { canPublish: false, review: FAIL_CLOSED_REVIEW, supply: { blocked: false, reason: null } };
-    return { canPublish: false, review: FAIL_CLOSED_REVIEW, supply: { blocked: false, reason: null } };
+    // yet applied) or transient DB issue — caller decides fail-open/closed.
+    return { ok: false };
   }
-  if (!product) return { canPublish: false, review: FAIL_CLOSED_REVIEW, supply: { blocked: false, reason: null } };
+  if (!product) return { ok: false };
 
-  // ── 검수 승인 판정 ───────────────────────────────────────────────────────
   const readinessInput: ReadinessInput = {
     naverCategoryCode: product.naverCategoryCode,
     keywords: Array.isArray(product.keywords) ? (product.keywords as string[]) : [],
@@ -187,11 +200,32 @@ export async function assertPublishable(productId: string): Promise<AssertPublis
     optionRows: product.product_options?.option_rows ?? null,
   });
 
-  const review = decidePublishGate({
+  return {
+    ok: true,
     readinessScore: readiness.score,
     blockingImageWarningCount,
-    reviewChecklist: (product.reviewChecklist as ReviewChecklist | null) ?? null,
     currentSnapshot,
+    reviewChecklist: (product.reviewChecklist as ReviewChecklist | null) ?? null,
+  };
+}
+
+/**
+ * 서버 진입점(P0~P3)이 발행 직전에 호출하는 강제 게이트(#311). throw 아님 —
+ * 구조적 반환. DB 조회 실패(마이그레이션 전 P2021/P2022 포함)는 fail-closed로
+ * degrade한다 — 게이트는 "모르면 통과"가 아니라 "모르면 차단"이어야 우회가
+ * 안 생긴다(권고 판정의 fail-open과 반대, #82).
+ */
+export async function assertPublishable(productId: string): Promise<AssertPublishableResult> {
+  const inputs = await loadReviewInputs(productId);
+  if (!inputs.ok) {
+    return { canPublish: false, review: FAIL_CLOSED_REVIEW, supply: { blocked: false, reason: null } };
+  }
+
+  const review = decidePublishGate({
+    readinessScore: inputs.readinessScore,
+    blockingImageWarningCount: inputs.blockingImageWarningCount,
+    reviewChecklist: inputs.reviewChecklist,
+    currentSnapshot: inputs.currentSnapshot,
   });
 
   // ── 공급 가능성 판정(기존, publish-gate.ts) ─────────────────────────────

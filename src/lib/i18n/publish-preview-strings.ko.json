@@ -64,6 +64,20 @@
     "canRegister": "필수 항목 충족",
     "imageClean": "이미지 경고 0"
   },
+  "review": {
+    "title": "검수 승인",
+    "approved": "검수 승인됨",
+    "notReviewed": "검수 대기",
+    "stale": "재검수 필요 — 승인 후 정보가 바뀌었어요",
+    "approveBtn": "검수 승인",
+    "revokeBtn": "승인 취소",
+    "approving": "승인 중",
+    "revoking": "취소 중",
+    "approveDisabledHint": "준비도 100%·이미지 경고 0이어야 검수 승인할 수 있어요",
+    "approveFail": "검수 승인에 실패했어요",
+    "revokeFail": "승인 취소에 실패했어요",
+    "approvedAt": "승인 일시"
+  },
   "cropStudio": {
     "title": "크롭 스튜디오",
     "subtitle": "잘 찍힌 제품컷을 1:1로 크롭하거나 편집해 대표 이미지로 적용하세요",

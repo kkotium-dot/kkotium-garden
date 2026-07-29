@@ -1221,13 +1221,18 @@ function NaverImportModal({ onClose, onImported }: { onClose: () => void; onImpo
 // C-1: Pre-registration validation + sequential API registration
 
 function NaverRegisterModal({
-  products, onClose, onSuccess, inventory,
+  products, onClose, onSuccess, inventory, reviewApproved,
 }: {
   products: ScoredProduct[];
   onClose: () => void;
   onSuccess: () => void;
   /** 발행 게이트(#286) 입력 — 공급처 단절/공급사 품절 상품의 발행을 막는다. */
   inventory: Record<string, InventoryBadgeData>;
+  /** 검수 게이트(#300·ADR-0003) 입력 — 미승인 상품은 서버(assertPublishable)가
+   *  409로 어차피 막으므로 여기서도 제외해 "등록 가능"이라 보여준 뒤 하나씩
+   *  실패하는 UX를 막는다. id 미존재 = 아직 배치 로드 전(모름) → 통과시킨다
+   *  (서버가 최종 방어선, 클라 필터는 보조일 뿐 #82와 반대로 fail-open). */
+  reviewApproved: Record<string, boolean>;
 }) {
   const [phase, setPhase] = useState<'validate' | 'registering' | 'done'>('validate');
   const [results, setResults] = useState<Array<{ id: string; name: string; ok: boolean; error?: string; naverProductId?: string }>>([]);
@@ -1248,8 +1253,13 @@ function NaverRegisterModal({
   const blocked = gated.filter(g => g.gate.blocked);
   const publishable = includeBlocked ? registerable : gated.filter(g => !g.gate.blocked).map(g => g.p);
 
+  // 검수 게이트(#300) — id가 reviewApproved에 없으면(배치 미로드) 통과시킨다.
+  // 서버가 최종 방어선이라 여기서 과차단하지 않는다.
+  const reviewPending = publishable.filter(p => reviewApproved[p.id] === false);
+  const gateReady = publishable.filter(p => reviewApproved[p.id] !== false);
+
   // Calculate readiness for each product inline
-  const withReadiness = publishable.map(p => ({
+  const withReadiness = gateReady.map(p => ({
     ...p,
     readinessScore: calcUploadReadiness({
       naverCategoryCode: p.naverCategoryCode ?? p.category,
@@ -1382,6 +1392,23 @@ function NaverRegisterModal({
                     보류 대상이 발행에 포함됩니다. 주문 취소 위험을 감수합니다.
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* 검수 미승인(#300) — 서버가 어차피 409로 막으므로 시작 전에 안내.
+                공급게이트와 달리 override 토글이 없다: 서버가 무조건 막아 토글을
+                줘도 의미가 없다(씨앗심기에서 승인해야만 통과). */}
+            {reviewPending.length > 0 && (
+              <div className="p-3 rounded-xl" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+                <p className="text-xs font-extrabold flex items-center gap-1" style={{ color: '#a16207' }}>
+                  <AlertTriangle size={12} /> 검수 미승인 ({reviewPending.length}개) — 자동 제외
+                </p>
+                <p className="mt-1 text-xs" style={{ color: '#92702a' }}>
+                  {reviewPending.map(p => p.name).join(', ')}
+                </p>
+                <p className="mt-1.5 text-xs" style={{ color: '#a16207' }}>
+                  씨앗심기(발행 전 검수)에서 승인 후 다시 시도하세요.
+                </p>
               </div>
             )}
 
@@ -1784,13 +1811,13 @@ function ProductsPageInner() {
   // 아니라 "작업 단계"(준비도) 기준으로 나뉜다. 별도 축이라 TAB_CONFIG에 얹지
   // 않고 이 로컬 서브필터로 분리.
   const isGarden = tab === 'draft';
-  const [gardenReadiness, setGardenReadiness] = useState<'all' | 'notReady' | 'ready'>('all');
+  const [gardenReadiness, setGardenReadiness] = useState<'all' | 'notReady' | 'reviewPending' | 'ready'>('all');
   // supplierFilter: pre-populated from ?supplier= URL param (거래처 명단 연결)
   const [supplierFilter, setSupplierFilter]   = useState<string>(() => searchParams?.get('supplier') ?? '');
   const [selected, setSelected]               = useState<Set<string>>(new Set());
   const [sideProduct, setSide]                = useState<ScoredProduct | null>(null);
   // Per-row 발행준비 X/8 (#245) — batched from the same getPublishReadiness gate.
-  const [readinessMap, setReadinessMap] = useState<Record<string, { ready: boolean; passed: number; total: number }>>({});
+  const [readinessMap, setReadinessMap] = useState<Record<string, { ready: boolean; passed: number; total: number; reviewApproved: boolean }>>({});
   // NAME-DIAG-3 (#251): per-row 상품명 진단 badges (server-computed SEO×ROI trend).
   const [nameDiagnoses, setNameDiagnoses] = useState<Record<string, NameBadgeData>>({});
   const [viewMode, setViewMode]               = useState<ViewMode>('list');
@@ -1819,8 +1846,8 @@ function ProductsPageInner() {
       .then(r => r.json())
       .then(d => {
         if (!alive || !d?.success || !Array.isArray(d.items)) return;
-        const m: Record<string, { ready: boolean; passed: number; total: number }> = {};
-        for (const it of d.items) m[it.id] = { ready: it.ready, passed: it.passed, total: it.total };
+        const m: Record<string, { ready: boolean; passed: number; total: number; reviewApproved: boolean }> = {};
+        for (const it of d.items) m[it.id] = { ready: it.ready, passed: it.passed, total: it.total, reviewApproved: !!it.reviewApproved };
         setReadinessMap(m);
       })
       .catch(() => { /* non-critical — the X/8 badge just won't show */ });
@@ -1931,7 +1958,14 @@ function ProductsPageInner() {
     const tabFn = TAB_CONFIG[tab].filter;
     return scored
       .filter(p => tabFn(p))
-      .filter(p => !isGarden || gardenReadiness === 'all' || !!readinessMap[p.id]?.ready === (gardenReadiness === 'ready'))
+      .filter(p => {
+        if (!isGarden || gardenReadiness === 'all') return true;
+        const r = readinessMap[p.id];
+        // 2026-07-29 (#300): 3분류 — 구조 미준비 / 구조OK·검수대기 / 구조OK·검수승인.
+        if (gardenReadiness === 'notReady') return !r?.ready;
+        if (gardenReadiness === 'reviewPending') return !!r?.ready && !r?.reviewApproved;
+        return !!r?.ready && !!r?.reviewApproved; // 'ready'
+      })
       .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
       .filter(p => !supplierFilter || p.supplierId === supplierFilter)
       .filter(p => !showUploadReady || getReadinessIssues(p).length > 0)
@@ -1943,15 +1977,37 @@ function ProductsPageInner() {
     [scored]);
 
   // 정원 창고 서브필터 카운트 — draft 뷰 안에서만 의미 있음(뷰 스코프 제한, H-2).
+  // 2026-07-29 (#300 · #310 Desktop 관측 반영): "발행 가능"이 구조 준비도만
+  // 보고 검수 승인은 무시해 서버(assertPublishable)와 어긋나던 것을 정합.
+  // structurallyReady(구조 8항목) AND reviewApproved(ADR-0003 검수) 둘 다여야
+  // "발행 가능" — 하나만 통과했으면 별도 버킷(reviewPending)으로 분리해
+  // "왜 막혔는지"가 배지에서 바로 보이게 한다.
   const gardenCounts = useMemo(() => {
     const draftProducts = scored.filter(TAB_CONFIG.draft.filter);
-    const ready = draftProducts.filter(p => !!readinessMap[p.id]?.ready);
+    const structurallyReady = draftProducts.filter(p => !!readinessMap[p.id]?.ready);
+    const ready = structurallyReady.filter(p => !!readinessMap[p.id]?.reviewApproved);
+    const reviewPending = structurallyReady.filter(p => !readinessMap[p.id]?.reviewApproved);
+    const notReady = draftProducts.length - structurallyReady.length;
     // F2 (#307, 2026-07-23): notReady(입력정보 부족)와 별도로 "미발행 상태" 전체를
     // 센다 — 검수 안내 배지는 준비도 체크섬이 아니라 발행 여부(naverProductId)
     // 기준이어야 한다(준비도 통과=발행 승인 아님).
     const unpublished = scored.filter(p => !p.naverProductId).length;
-    return { all: draftProducts.length, ready: ready.length, notReady: draftProducts.length - ready.length, readyProducts: ready, unpublished };
+    return {
+      all: draftProducts.length,
+      ready: ready.length,
+      notReady,
+      reviewPending: reviewPending.length,
+      readyProducts: ready,
+      unpublished,
+    };
   }, [scored, readinessMap]);
+
+  // NaverRegisterModal(선택발행·정원 일괄발행 공용) 검수 필터 입력(#300).
+  const reviewApprovedMap = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    for (const id of Object.keys(readinessMap)) m[id] = readinessMap[id].reviewApproved;
+    return m;
+  }, [readinessMap]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, { label: string; items: ScoredProduct[] }>();
@@ -2572,6 +2628,7 @@ function ProductsPageInner() {
               <div className="flex rounded-xl overflow-x-auto lg:overflow-hidden" style={{ background: '#fff', border: '1.5px solid #F8DCE5' }}>
                 {([
                   ['notReady', '준비 미흡', gardenCounts.notReady, 'bg-rose-500'],
+                  ['reviewPending', '검수 승인 대기', gardenCounts.reviewPending, 'bg-amber-500'],
                   ['ready', '발행 가능', gardenCounts.ready, 'bg-green-500'],
                   ['all', '전체', gardenCounts.all, 'bg-gray-400'],
                 ] as const).map(([key, label, count, dot]) => (
@@ -2996,6 +3053,7 @@ function ProductsPageInner() {
         <NaverRegisterModal
           products={scored.filter(p => selected.has(p.id))}
           inventory={inventoryByProductId}
+          reviewApproved={reviewApprovedMap}
           onClose={() => setShowNaverRegisterModal(false)}
           onSuccess={() => { setShowNaverRegisterModal(false); setSelected(new Set()); fetchProducts(); }}
         />
@@ -3005,6 +3063,7 @@ function ProductsPageInner() {
         <NaverRegisterModal
           products={gardenCounts.readyProducts}
           inventory={inventoryByProductId}
+          reviewApproved={reviewApprovedMap}
           onClose={() => setShowGardenPublishModal(false)}
           onSuccess={() => { setShowGardenPublishModal(false); fetchProducts(); }}
         />

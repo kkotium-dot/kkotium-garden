@@ -12,7 +12,7 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import {
-  CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Loader2, ShieldCheck, ImageOff,
+  CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Loader2, ShieldCheck, ImageOff, ShieldAlert, Undo2,
 } from 'lucide-react';
 import strings from '@/lib/i18n/publish-preview-strings.ko.json';
 import CropStudioPanel from '@/components/products/CropStudioPanel';
@@ -21,6 +21,15 @@ const t = strings;
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 type CheckKey = 'resolutionOk' | 'uniformBg' | 'textFree' | 'singleSubject';
+
+interface ReviewChecklistView { approved?: boolean; approvedAt?: string; note?: string }
+interface ReviewData {
+  success: boolean;
+  review: { approved: boolean; reasons: string[] };
+  reviewChecklist: ReviewChecklistView | null;
+  readinessScore: number;
+  blockingImageWarningCount: number;
+}
 
 interface EtcNotice { qualityAssuranceStandard?: string; itemName?: string; manufacturer?: string }
 interface PreviewData {
@@ -101,10 +110,38 @@ export default function PublishPreviewPage({ params }: { params: { id: string } 
     `/api/products/${productId}/publish-preview`,
     fetcher,
   );
+  const { data: reviewData, mutate: mutateReview } = useSWR<ReviewData>(
+    `/api/products/${productId}/review-approve`,
+    fetcher,
+  );
 
   const [confirming, setConfirming] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [reviewActing, setReviewActing] = useState(false);
+  const [reviewResult, setReviewResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  async function doReviewAction(action: 'approve' | 'revoke') {
+    setReviewActing(true);
+    setReviewResult(null);
+    try {
+      const res = await fetch(`/api/products/${productId}/review-approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const j = await res.json();
+      if (res.ok && j.success) {
+        mutateReview();
+      } else {
+        setReviewResult({ ok: false, message: `${action === 'approve' ? t.review.approveFail : t.review.revokeFail}: ${j.error ?? res.status}` });
+      }
+    } catch (e) {
+      setReviewResult({ ok: false, message: `${action === 'approve' ? t.review.approveFail : t.review.revokeFail}: ${e instanceof Error ? e.message : String(e)}` });
+    } finally {
+      setReviewActing(false);
+    }
+  }
 
   async function doPublish() {
     setPublishing(true);
@@ -255,6 +292,67 @@ export default function PublishPreviewPage({ params }: { params: { id: string } 
                 value={data.summary.productInfoProvidedNotice?.etc?.qualityAssuranceStandard ?? t.payload.noticeNone}
               />
             </dl>
+          </section>
+
+          {/* Review approval (ADR-0003) */}
+          <section className="rounded-xl border border-slate-200 bg-white p-4">
+            <h2 className="mb-2 text-sm font-semibold text-slate-700">{t.review.title}</h2>
+            {!reviewData ? (
+              <p className="text-xs text-slate-400">{t.loading}</p>
+            ) : (
+              <>
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  {reviewData.review.approved ? (
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold" style={{ backgroundColor: '#F0FDF4', border: '1px solid #86EFAC', color: '#15803D' }}>
+                      <ShieldCheck size={13} /> {t.review.approved}
+                    </span>
+                  ) : reviewData.reviewChecklist?.approved === false && reviewData.review.reasons.includes('REVIEW_STALE') ? (
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold" style={{ backgroundColor: '#FEFCE8', border: '1px solid #FDE68A', color: '#A16207' }}>
+                      <ShieldAlert size={13} /> {t.review.stale}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold" style={{ backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', color: '#475569' }}>
+                      {t.review.notReviewed}
+                    </span>
+                  )}
+                  {reviewData.reviewChecklist?.approvedAt && (
+                    <span className="text-[11px] text-slate-400">
+                      {t.review.approvedAt}: {new Date(reviewData.reviewChecklist.approvedAt).toLocaleString('ko-KR')}
+                    </span>
+                  )}
+                </div>
+
+                {reviewResult && (
+                  <p className={`mb-2 text-xs font-medium ${reviewResult.ok ? 'text-green-700' : 'text-red-700'}`}>{reviewResult.message}</p>
+                )}
+
+                {reviewData.review.approved ? (
+                  <button
+                    type="button"
+                    disabled={reviewActing}
+                    onClick={() => doReviewAction('revoke')}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 disabled:opacity-60"
+                  >
+                    {reviewActing ? <Loader2 size={13} className="animate-spin" /> : <Undo2 size={13} />}
+                    {reviewActing ? t.review.revoking : t.review.revokeBtn}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={reviewActing || reviewData.readinessScore < 100 || reviewData.blockingImageWarningCount > 0}
+                    onClick={() => doReviewAction('approve')}
+                    title={reviewData.readinessScore < 100 || reviewData.blockingImageWarningCount > 0 ? t.review.approveDisabledHint : ''}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                  >
+                    {reviewActing ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
+                    {reviewActing ? t.review.approving : t.review.approveBtn}
+                  </button>
+                )}
+                {(reviewData.readinessScore < 100 || reviewData.blockingImageWarningCount > 0) && !reviewData.review.approved && (
+                  <p className="mt-2 text-xs text-slate-400">{t.review.approveDisabledHint}</p>
+                )}
+              </>
+            )}
           </section>
 
           {/* Publish gate */}
