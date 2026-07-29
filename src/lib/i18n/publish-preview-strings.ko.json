@@ -4,7 +4,7 @@
   "loading": "검수 정보 불러오는 중",
   "loadingAnalyzing": "이미지 분석 중이에요 (대표·상세 이미지 텍스트·품질 검사) — 몇 초 더 걸릴 수 있어요",
   "error": {
-    "title": "이랴, 검수 정보를 못 불러왔어유!",
+    "title": "검수 정보를 불러오지 못했어요",
     "retry": "다시 시도"
   },
   "section": {
@@ -63,10 +63,10 @@
     "confirmYes": "네, 발행합니다",
     "cancel": "취소",
     "publishing": "발행 중",
-    "disabledHint": "아직 발행 조건이 안 됐어유 — 준비도 A 이상 + 이미지 경고 0이어야 발행할 수 있어유",
+    "disabledHint": "아직 발행 조건을 채우지 못했어요 — 준비도 A 이상 + 이미지 경고 0이면 발행할 수 있어요",
     "success": "발행 완료",
-    "fail": "이랴, 발행에 실패했어유!",
-    "notRegisteredHint": "아직 네이버 미등록 상품이에유 — 신규 발행 경로를 사용해주어유"
+    "fail": "발행에 실패했어요",
+    "notRegisteredHint": "아직 네이버 미등록 상품이에요 — 신규 발행 경로를 사용해주세요"
   },
   "gate": {
     "readinessOk": "준비도 A 이상",
@@ -93,7 +93,7 @@
     "source": "소스 이미지",
     "sourceDetail": "상세페이지",
     "sourceRep": "현재 대표",
-    "drawHint": "이미지 위에서 드래그해 크롭 영역을 지정해주어유 (1:1 정사각으로 적용돼유)",
+    "drawHint": "이미지 위에서 드래그해 크롭 영역을 지정하세요 (1:1 정사각으로 적용돼요)",
     "loadingImage": "이미지 불러오는 중",
     "noSource": "크롭할 소스 이미지가 없어요",
     "autoTitle": "자동 후보",
@@ -110,7 +110,7 @@
     "blocked": "적용 불가 — 대표에 텍스트가 있어요. 글씨 제거 후 다시 시도하세요",
     "caution": "주의",
     "editTitle": "편집 (창작 도구)",
-    "editHint": "편집은 창작 도구(Firefly·Express)에서 운영자가 직접 실행해유. 작업은 관제탑에 등록돼유",
+    "editHint": "편집은 창작 도구(Firefly·Express)에서 운영자가 직접 실행해요. 작업은 관제탑에 등록돼요",
     "editTextRemove": "글씨 제거",
     "editCanvasExpand": "1:1 확장",
     "editBgClean": "배경 정리",
@@ -118,10 +118,10 @@
     "editReused": "이미 등록된 편집 작업이 있어요",
     "candidateContain": "주제 완전포함",
     "subjectLabel": "검출된 제품 영역",
-    "clipWarn": "이랴, 제품이 잘려유! 제품 전체가 프레임에 들어와야 해유",
+    "clipWarn": "제품이 프레임 밖으로 잘렸어요! 제품 전체가 프레임에 들어와야 해요",
     "fitSubject": "주제 완전포함으로 맞춤",
     "propException": "연출 소품만 걸침 (예외 허용)",
     "busy": "처리 중",
-    "error": "이랴, 처리 중 오류가 생겼어유!"
+    "error": "처리 중 오류가 생겼어요"
   }
 }
