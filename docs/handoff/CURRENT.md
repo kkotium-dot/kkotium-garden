@@ -362,3 +362,45 @@ Code의 "OCR+원격이미지 fetch로 무거운 서버리스 함수" 진단은 �
 3. 만약 SWR/fetch에 타임아웃이 걸려있어 응답을 받기 전에 포기하는 코드라면 그게 진짜 회귀 — 해당 설정 확인 필요
 
 이 항목은 Desktop 실측 권한 범위 내에서 더 파고들 방법이 없어 여기서 Code에게 넘김. #310 유지 — 미검증(원인 미확정) 상태.
+
+---
+
+# 2026-07-30 (3) ★근본원인 확정 + 해소 (Code · 배포 1bb914f)
+
+## 근본원인 — Vercel 함수 로그로 확정 (Desktop 실측 권한 밖 영역, Code가 획득)
+
+`get_runtime_logs`(Vercel MCP)로 `publish-preview` 호출마다 남는 실제 크래시를 확인:
+
+```
+Uncaught Exception: Error: Cannot find module '/var/task/.next/worker-script/node/index.js'
+Node.js process exited with exit status: 129.
+```
+
+**두 세션의 상반된 관측이 둘 다 맞았던 이유**: API가 "느린" 게 아니라 **매 호출마다 서버리스 함수가 실제로 크래시**하고, `p-filter-watermark.ts`의 안전장치(`WORKER_INIT_TIMEOUT_MS=8000`, fail-open)가 8초를 다 채운 뒤에야 실패를 삼키고 200을 반환하고 있었다. curl 직접 측정 `time_total=9.0~9.5s`, 매 호출 동일(콜드스타트 아님 — 매번 크래시-재시도).
+
+**진짜 원인**: `tesseract.js`의 워커 경로가 `path.join(__dirname,'..','..','worker-script','node','index.js')`로 **런타임에 조립**되는데, webpack이 이 모듈을 서버 번들에 인라인하면서 `__dirname`을 번들 청크 위치로 치환 — 실제 node_modules 경로가 아니라 존재한 적 없는 `.next/worker-script/...`가 됐다. 단순 파일 트레이싱 누락이 아니라 **webpack 인라인+`__dirname` 치환** 문제였다(1차 시도 `outputFileTracingIncludes`만으로는 불충분 — 배포 후 재실측에서 동일 크래시 재확인, 원인 재규명 후 2차 수정).
+
+## 3단계 수정 (배포 `1bb914f`)
+1. `outputFileTracingIncludes`에 `tesseract.js/src/worker-script/**/*` 포함(OCR 경유 라우트 13곳)
+2. `serverComponentsExternalPackages: ['tesseract.js']` — webpack 인라인 자체를 막아 `__dirname`이 실제 경로를 가리키게 함 (1번만으론 불충분해 추가)
+3. 2번 배포 후 **다음 단계 크래시 노출**(`tesseract.js-core`의 WASM 바이너리 ENOENT) → `serverComponentsExternalPackages`에 `tesseract.js-core` 추가 + 6개 WASM 변형 전부 트레이싱 포함
+
+## ✅ 해소 확인 (curl 원본, 배포 1bb914f)
+```
+run1 time_total=2.306432s http_code=200   (첫 호출, 콜드스타트 포함)
+run2 time_total=0.730597s http_code=200
+run3 time_total=0.450367s http_code=200
+```
+9.0~9.5s → 0.45~0.73s(웜 상태). Vercel 함수 로그 재확인: `Cannot find module`/`Uncaught Exception`/`exit 129` **0건**, 정상 OCR 로그(`Image too small to scale`, `Line cannot be recognized` — 크래시 아닌 정상 인식 결과 메시지)만 남음. 브라우저 재확인(reload 후): 콘텐츠 2초 내 렌더 확인.
+
+## 부수 — 로딩 체감 개선(#317 방향, 요청 항목)
+2.5초 넘게 로딩 중이면 "이미지 분석 중이에요(대표·상세 이미지 텍스트·품질 검사)"로 안내 문구 전환(`/preview` 화면).
+
+## #317 한글화 재검증
+회귀 해소 확인됐으므로 재검증: `translateGateMessage` 렌더 정상(직전 턴에서 이미 확인한 내용 유효, 이번 회귀와 무관했음을 코드 근거로 재확인 — errors=[] 상품에서 해당 코드경로 자체가 실행되지 않아 회귀 원인이 될 수 없었음).
+
+## Desktop 다음 READY
+1. reload 후 `/preview` 화면 2초 내 렌더 확인(체감 검증)
+2. 검수 승인 E2E(승인 가능한 상품이 생기면): 승인 1건 → 정원창고 "발행 가능 1" → 원복
+3. 삭제 상품 보관함 1단계(PRODUCT_DELETED 이벤트, `7c7502a`/`5f8fc04` 근처 배포에 이미 포함) 실증 — 다음 실제 삭제 시 `product_events` 확인
+4. P2 배너 양성 · P3 스모크 · P4 완료(위 참조)
