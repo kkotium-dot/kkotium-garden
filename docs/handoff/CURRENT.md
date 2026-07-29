@@ -82,3 +82,47 @@ scripts/smoke-disposition-channels.ts. 대상: naverProductId 有 + 스냅샷 0�
 ## 다음 링크 자료 (대표님 추가 예정)
 
 - 대표님이 추가 링크를 주실 예정. 도착 시 `docs/research/`에 한국어 정리 후 DOCS_STANDARD v3+에 채택분 반영.
+
+---
+
+# 2026-07-29 검수 게이트 프로덕션 실측 (Desktop · 배포 6dd64fe)
+
+## ★ 마이그레이션 전 fail-closed 작동 확인 (예상대로)
+
+배포 `6dd64fe`에서 검수 게이트가 **DB 컬럼 없이도** 정확히 동작:
+
+| 항목 | rev86 | 현재 | 판정 |
+|---|---|---|---|
+| 정원창고 준비미흡 | 0 | **2** | 검수 미승인=미흡 |
+| 발행 가능 | 2 | **0** | ✅ 검수 안 한 상품 발행 불가 |
+| "준비된 것 일괄 발행" | 2 | **0** | ✅ 일괄발행 경로 차단(#307 실효) |
+| 검수 대기 배지 | 2건 | 2건 | 유지 |
+
+→ 컬럼 NULL = "검수 안 함" = fail-closed = 발행 차단. **ADR-0003 결정2·결정4가 프로덕션에서 실증됨.** 앱 정상(화면 렌더·콘솔 무이상).
+
+## DB 스키마 실측 — Code 발견 확증
+
+`information_schema.columns` (review 관련):
+- `store_settings.review_checklist` (jsonb) — **싱글턴 스토어 1행**. 상품별 불가 (Code 정확)
+- `store_settings.review_last_updated`, `manual_review_count` — 스토어 단위 E-2A 카운터
+- `Product.review_checklist` — **없음** → 마이그레이션 필요
+- `benchmark_dna.reviewed_at/by` — 무관
+
+→ ADR-0003 "기존 컬럼 재사용" 전제는 **부정확했음**. Code가 멈춰 확인 요청한 것이 옳음(#303).
+
+## 대기: DB 마이그레이션 (운영자 GO 필요)
+
+```sql
+ALTER TABLE public."Product"
+  ADD COLUMN IF NOT EXISTS review_checklist JSONB,
+  ADD COLUMN IF NOT EXISTS review_last_updated TIMESTAMP(3);
+```
+- 안전: 추가만 · idempotent · reversible · NULL 기본(=미검수) · 코드 이미 fail-closed 방어
+- 적용 주체: **Desktop만**(Code는 프로덕션 변경 불가 · #41). 운영자 GO 후 apply_migration.
+- 적용 후 검증: information_schema 재확인 → 씨앗심기 검수 승인 1건 테스트 → 해당 상품만 발행가능 전환 확인 → 원복.
+
+## 다음 Desktop READY
+1. (GO 시) 마이그레이션 apply_migration → 컬럼 2개 확인
+2. 검수 승인 플로우 E2E: 씨앗심기에서 1건 승인 → 정원창고 "발행 가능 1"로 전환되는지
+3. 우회 경로 0건 최종 확인(P0~P3 · #311)
+4. P2 배너 양성 · P3 스모크 · P4 명화→플라티코
