@@ -20,7 +20,18 @@ const nextConfig = {
   // 걸리는 근본원인. OCR을 쓰는(ocrFullFrame/image-gate-warnings 경유) 전
   // 라우트에 워커 스크립트 자체를 명시 포함해 크래시-후-fail-open이 아니라
   // 워커가 실제로 뜨게 한다(정상 시 수백ms, Sprint 8-PF 주석 근거).
+  //
+  // 2026-07-30 (추가수정) — outputFileTracingIncludes만으로는 부족했다(prod
+  // 재실측: 배포 후에도 동일 크래시). 진짜 원인은 webpack이 tesseract.js를
+  // 서버 번들에 **인라인**하면서 defaultOptions.js의 `__dirname`을 번들 청크의
+  // 위치로 치환해버리는 것 — path.join(__dirname,'..','..','worker-script',...)
+  // 결과가 실제 node_modules 경로가 아니라 `.next/worker-script/...`라는
+  // 존재한 적 없는 경로가 된다(트레이싱 문제가 아니라 __dirname 치환 문제).
+  // serverComponentsExternalPackages로 tesseract.js를 번들링 대상에서 빼면
+  // 런타임에 진짜 require()로 로드돼 __dirname이 실제 node_modules 위치를
+  // 가리킨다 — outputFileTracingIncludes(파일 존재 보장)와 함께 있어야 완결.
   experimental: {
+    serverComponentsExternalPackages: ['tesseract.js'],
     outputFileTracingIncludes: {
       '/api/thumbnail/[sku]': ['./fonts/**/*'],
       '/api/products/[id]/generate-detail': ['./fonts/**/*'],
