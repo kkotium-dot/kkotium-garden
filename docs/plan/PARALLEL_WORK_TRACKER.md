@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-07-23 (rev82 — Cowork 생애주기 설계 검증·브리지 v2 확정·부활소 경계 판정 · Desktop) / 직전 rev81 동일자
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-07-30 (rev93 — 꼬띠 페르소나 표면축 신설·발행전검수 개선 완료 검증 · Desktop) / 직전 rev82
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -255,4 +255,32 @@ Cowork가 **코드 접근 없이 독립 설계**("첨부된 지식 폴더가 비
 Filesystem MCP 다운(#26) → **Desktop Commander로 우회 저장 성공**(#298). 이 rev81도 Desktop Commander로 기입. Code 미커밋 3파일(DISPOSITION_SURFACE_AUDIT·SOURCE_GONE_ROBUSTNESS_TICKET·smoke script)은 Code 커밋 대기.
 
 ---
+
+---
+
+## rev93 — 발행전검수 화면 개선 + 꼬띠 페르소나 표면축 신설 완료 (2026-07-30 Desktop 검증)
+
+**배경**: 대표님 스크린샷 기반 "발행 전 검수" 화면 UI/UX 개선 요청(문구 오류·레이아웃 밋밋함) + 이어서 발견된 잔여 사투리 8곳 정리.
+
+**작업1~2 (Desktop 설계, Code 구현, 2026-07-30 오전 세션)**:
+- `3532d78` 문구 근본수정 — `simple-crop.ts`의 개발자용 영어 경고 메시지가 화면에 그대로 노출되던 버그의 근본원인(`CropStudioPanel.tsx`가 `warning.message`를 raw 렌더) 확정·해소. `code`→한글 매핑 + 자동후보 2종(주목도·디테일) 중복 dedup. 페이로드 사람표기(가격 콤마, 원산지 라벨, 카테고리 풀네임).
+- `994fb91` 레이아웃 재설계 — 1단 세로 스택 → 마스터-디테일 2단 그리드(좌: 이미지 작업 / 우: sticky 결정 패널 — 준비도 게이트·페이로드·검수승인). 상단 고정바(상품명+상태+발행버튼).
+- Desktop 브라우저 실측: 아이스틀·달항아리 2개 상품 정상 렌더, 영어원문 0건, 중복 0건, 콘솔 에러 0.
+
+**작업3 (페르소나 표면축, 2026-07-30 오후 세션)**: 검증 중 판단표면(검수·발행 게이트)에 사투리 감탄사("이랴", "~어유")가 남아있는 게 오히려 판단력을 흐린다는 문제를 발견. 조사 결과 `persona-audit.py`가 "사투리 존재=페르소나 적용 완료"로만 판정하는 얕은 기준이 원인(판단표면에도 기계적으로 사투리 삽입을 유도).
+- **원칙 #318 신설**: 정원사🌷/카우걸🤠 모드축과 별개로 "친밀 표면"(사투리 허용) vs "판단 표면"(사투리 감탄사 제거, 정확한 톤) 축 추가.
+- `e16dcde` `KKOTTI_PERSONA_VOICE_GUIDE.md` §6 신설(§1~5 원문 무변경, 순수 추가).
+- `bf72731` 판단표면 8곳(`publish-preview-strings.ko.json`의 error.title·publish.disabledHint·publish.fail·publish.notRegisteredHint·cropStudio.drawHint·editHint·clipWarn·error) 사투리 제거.
+- `373cca9` `persona-audit.py`에 `JUDGMENT_SURFACE_KEYS` 반전판정 추가(#283 `CUSTOMER_FACING` 패턴 재사용, #62 준수) — 판단표면은 "사투리 부재"가 정상으로 판정되도록 로직 수정.
+
+**Desktop 실측(직접 git diff 대조 + 재실행 + 브라우저)**:
+- git diff로 8곳 값이 지정 스펙과 글자 단위까지 정확히 일치 확인
+- JSON 유효성·sentinel 0건·사투리 잔존 0건 확인
+- `persona-audit.py` 직접 실행 → "판단 표면 위반 0건 (8개 키 확인)" 재현
+- 로컬 dev 서버(전경 프로세스 방식) + 브라우저로 `disabledHint`·`drawHint`·`editHint` 3곳 실제 렌더 확인, `notRegisteredHint`도 코드 기준 확인
+- 미검증(정직 표기, #310): `publish.fail`·`cropStudio.clipWarn`·`cropStudio.error`·`error.title` — 인위적 오류 유발 없이는 재현 불가, git diff로만 확인
+
+**★ 부수 발견 — 문서 정합성 사고 (재발방지 기록)**: 이번 세션에서 "CLAUDE.md 축소 2단계"와 "`#311` 게이트 배선"을 낡은 인계 문서를 근거로 "미완료"로 오판, 재작업을 준비하다가 실측(git log, grep)으로 **둘 다 이미 완료돼 있음**을 발견했다. 원인은 `TASK_BRIDGE.md` §3-A 작업큐 보드가 2026-07-22 이후 갱신되지 않고 방치된 것. `docs/handoff/CURRENT.md`에 상세 기록, 향후 세션은 인계 문서의 "미완료" 표시를 그대로 믿지 말고 먼저 실측할 것.
+
+**검증**: tsc 0 errors · 로컬 브라우저 실측(6곳 중 4곳 직접 확인, 2곳 코드리뷰) · sentinel 0건 · JSON 유효성 확인. 브랜치 `feature/preview-copy-then-redesign`(6커밋) 미push — 운영자 결정 대기.
 
