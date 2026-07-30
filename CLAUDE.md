@@ -69,12 +69,13 @@ cd /Users/jyekkot/Desktop/kkotium-garden && \
 - **닉네임 규칙(#29 e++)**: 응답 본문 prose에 사용자 닉네임 "꽃졔" 사용 금지(사용자 메시지 직접 인용·코드 변수명·MD 파일 기록은 예외). 오타 변종(꽃졤/꽃제/꽃젤) 절대 출력 금지 — 오타 수정 시 사용자 verbatim 메시지에서 복사, 기억으로 타이핑 금지.
 - **MD 파일 갱신(#29 b+#31)**: 한글 다량 포함 MD는 `Read`+`Write`(전체 덮어쓰기) 또는 Python 안전 삽입. `Edit`는 영어/구두점만일 때만. 1500줄 초과 시 `docs/plan/archive/`로 분할. 갱신 후 한글 sentinel grep 검증은 `.claude/rules/md-hangul-check.md` 참조.
 - **Git**: commit/push 전 TSC 0 errors 확인. 커밋 메시지 prefix `feat:`/`fix:`/`docs:`/`refactor:`/`chore:`. 한글 다량 시 `.commit-msg.tmp`+`git commit -F`(#17). main 직접 push(1인 개발). **push 직후 `scripts/verify-vercel-deploy.sh --wait` 의무**(#36) — exit 1 시 webhook 진단.
+- **세션 종료 시 문서 3종 점검(#319)**: 의미 있는 작업 단위(기능·수정·설계 확정) 완료 시 다음을 빠짐없이 확인 — ① `docs/handoff/CURRENT.md` 덮어쓰기(다음 세션이 이어받을 상태), ② `docs/plan/PARALLEL_WORK_TRACKER.md`에 rev 추가(무엇을 했는지 누적기록), ③ 새 규칙이 생겼으면 `docs/plan/PRINCIPLES_LEARNED.md`에 번호 등재. 셋 중 하나라도 스킵했으면 "완료"로 보고하지 않는다. **착수 전에는 이 문서들의 "미완료" 표기를 그대로 믿지 말고 먼저 `git log`/`grep`으로 실측 확인**(#318 문서정합성 사고 교훈 — 낡은 인계문서가 이미 끝난 작업을 "대기중"으로 잘못 표시했던 사례 있음).
 - **의심 파일(#34)**: 명백히 잘못된 파일명/구조 발견 시 자동 처리 금지 → 즉시 알리고 결정 위임.
 - **Auto-accept 주의**: `Shift+Tab` 자동승인 중 `git push --force`/`rm -rf` 직전엔 반드시 끄고 개별 승인.
 
 ## 절대 금지 · 원칙 인덱스 (참조)
 
-네이버 PUT/POST 비가역·디스코드 실발송·테스트 데이터 방치·문서 무단삭제·허위 완료 보고 등 **어겼을 때 실제 사고가 났던 절대 규칙 전체는 `docs/CORE_PRINCIPLES.md`가 정본**(운영자 승인 없이 그 문서 항목 삭제 금지). 작업원칙 전체 인덱스는 `docs/plan/PRINCIPLES_CODE.md`(#1-25)·`docs/plan/PRINCIPLES_LEARNED.md`(#26+) 참조. AI 인프라 변경 시 #42~#45 필독.
+네이버 PUT/POST 비가역·디스코드 실발송·테스트 데이터 방치·문서 무단삭제·허위 완료 보고 등 **어겼을 때 실제 사고가 났던 절대 규칙 전체는 `docs/CORE_PRINCIPLES.md`가 정본**(운영자 승인 없이 그 문서 항목 삭제 금지). 작업원칙 전체 인덱스는 `docs/plan/PRINCIPLES_CODE.md`(#1-25)·`docs/plan/PRINCIPLES_LEARNED.md`(#26+) 참조. **AI 인프라 변경 시**(새 스킬·서브에이전트·hooks·MCP 서버 도입 포함) **#42~#45 필독** — 도입 시 `docs/plan/PRINCIPLES_LEARNED.md`에 그 도구가 문서 갱신 규율(#319)과 어떻게 맞물리는지 별도 검토·등재할 것(예: 서브에이전트가 자동으로 문서를 쓰게 되면 sentinel 검증·덮어쓰기 규칙이 그대로 적용되는지 재확인).
 
 ## 행동 가이드라인
 
