@@ -335,8 +335,11 @@ export async function GET(req: NextRequest) {
       const todayDate = new Date();
       todayDate.setHours(0, 0, 0, 0);
 
+      // #62/CURRENT.md §3-2: season_tag 필터가 없으면 같은 날짜의 sourcing
+      // 레코드(sourcing-recommend가 별도로 관리)까지 지운다. 여기서는 daily
+      // 추천 레코드(season_tag != 'sourcing')만 지운다.
       await prisma.daily_recommendations.deleteMany({
-        where: { date: todayDate },
+        where: { date: todayDate, season_tag: { not: 'sourcing' } },
       });
 
       await prisma.daily_recommendations.createMany({
@@ -438,17 +441,23 @@ export async function GET(req: NextRequest) {
     }
 
     // ── E-7: Kkotti sourcing recommendation (daily trend scan) ───────────
+    // P1-C: 운영자 승인 전까지는 실발송 금지 — SOURCING_RECOMMEND_LIVE가 명시적으로
+    // 'true'가 아닌 한 항상 dryRun으로 호출한다(기본값 = 안전한 미발송).
+    // 승인 후 활성화 방법: Vercel 환경변수 SOURCING_RECOMMEND_LIVE=true 설정.
     try {
+      const sourcingLive = process.env.SOURCING_RECOMMEND_LIVE === 'true';
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
       const srcRes = await fetch(`${baseUrl}/api/sourcing-recommend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discord: true }),
+        body: JSON.stringify({ discord: true, dryRun: !sourcingLive }),
       });
       const srcData = await srcRes.json();
       results.sourcingRecommend = {
+        dryRun: !sourcingLive,
         sent: srcData.discordSent ?? false,
         opportunities: srcData.opportunityCount ?? 0,
+        excludedCount: srcData.excludedCount ?? 0,
       };
     } catch (srcErr) {
       results.sourcingRecommendError = String(srcErr);
