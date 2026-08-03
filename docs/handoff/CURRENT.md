@@ -3,71 +3,88 @@
 > 이 파일 1개만 활성 인계. 매 세션 종료 시 덮어쓴다.
 > **작업 우선순위는 `docs/plan/WORK_SCHEDULE_BOARD.md`가 단일 권위.**
 
-- **status**: P1+P1-E 구현·커밋 완료 + 빌드위험 복구 완료. **★그러나 쇼핑검색 API(SE05) 장애로 경쟁분석 전량 실패 → 후보 여전히 0건. 운영자 조치 필요(코드 문제 아님).**
-- **branch**: `feature/preview-copy-then-redesign` (HEAD `72e20a4`, 미push — Code의 f88f5cf + Desktop의 policy 복구커밋)
-- **next-action**: **운영자가 네이버 개발자센터에서 쇼핑검색 API 권한 등록** → 그 후 dry-run 재검증 → 후보 생성 확인 → 커밋 push → 승인 → 실발송
+- **status**: P1+P1-E 구현 완료. **★SE05 근본원인 최종 확정 = 네이버 쇼핑검색 API 영구 종료(2026-07-31). 운영자 조치 불필요 — 코드 재설계 필요.**
+- **branch**: `feature/preview-copy-then-redesign` (HEAD 이 커밋, 미push — Code f88f5cf + Desktop policy복구 72e20a4 + SE05기록 f655ef9 + 이번 대응설계)
+- **next-action**: 3-A(경쟁분석을 검색광고 경쟁지수로 대체) 구현 → dry-run 후보 생성 확인 → 커밋 push → 승인 → 실발송
 
 ---
 
-## 1. ★★ 이번 세션 최중요 발견 — 왜 아직도 후보가 0건인가
+## 1. ★★ SE05 최종 확정 — 제 이전 진단이 틀렸음 (정정)
 
-### 1-1. P1-E는 근본원인 하나를 해결했다 (검증 완료)
-- **시드 키워드 사전**(`expandCategoryToKeywords`)이 비어 3.5개월 무력화됐던 문제 → Code가 8개 D1 카테고리 × 상품어 15~20개로 채움. **해결 확인**: 프로덕션 실측으로 시드 키워드가 검색량 임계 통과 — 수납장 43,000 / 청소기 89,000 / 요가매트 45,660 / 크로스백 61,550 (이전 카테고리명은 10건대였음).
+### 무슨 일이었나
+- 이전 세션 Desktop이 "운영자가 개발자센터에서 쇼핑검색 API 권한 등록 필요"로 기록 → **틀렸다.**
+- 운영자가 "개발자센터 문제 없어 보인다"고 지적 + 공식 공지 링크 제공.
+- **공식 공지 실측 확정**(curl로 확인, web_fetch는 SITE_BLOCKED):
+  - `article/32564`: 네이버 검색 '쇼핑/책/전문자료' API **2026-07-31 서비스 종료**
+  - `article/32530`: **API HUB 이관 대상에서도 제외** — 유예기간·대체경로 없음
+- **결론**: 네이버가 어제(7/31) 쇼핑검색 API를 영구 폐기. 오늘이 8/1이라 SE05가 나온 것. **운영자 설정 문제 전혀 아님.**
+- 원칙 #324 신설(외부 API 실패는 설정 의심 전에 공급자 공지 실측) + #310 재확인.
 
-### 1-2. ★ 그런데 두 번째 병목이 드러났다 — 쇼핑검색 API SE05
-- 소싱 파이프라인: 시드확장 → **검색량 조회(OK)** → **경쟁분석(실패)** → 도매매칭 → 후보.
-- **경쟁분석이 8건 전량 실패**한다(dry-run `competitionAnalysisFailures: 8`). Code가 추가한 실패 카운터 덕에 드러남(#270 수정 효과 — 이전엔 무음이라 안 보였음).
-- **직접 원인 확정**: 경쟁분석은 `searchShopping()`으로 상품 개수(productCount)를 얻는데, 네이버 쇼핑검색 API가 **HTTP 404 / errorCode SE05 ("존재하지 않는 검색 api")**를 반환.
-- **로컬·프로덕션 양쪽 다 실패 확인**: 프로덕션 `/api/naver/keyword-competition?name=수납장` → `searchVolume: 43000` 오지만 `productCount: null`.
-
-### 1-3. 이건 코드 문제가 아니다 — 운영자 조치 필요 ★
-- SE05는 **네이버 개발자센터(developers.naver.com) 앱에 "검색" API가 등록/권한 부여되지 않았을 때** 나는 에러다.
-- 현재 DataLab(트렌드)·검색광고(검색량)는 정상 → 그 API들은 등록됨. **오직 "검색(쇼핑)" API만 미등록**.
-- **운영자 조치**: developers.naver.com → 해당 애플리케이션 → "API 설정" → **"검색" API 사용 추가** (무료). 이미 쓰는 DataLab 앱에 체크 하나 추가하면 될 가능성이 높다.
-- Desktop은 이 설정을 대신 못 한다(운영자 계정 로그인 필요). **정직하게 보고 — 지어내지 않음(#310).**
+### 살아있는 것 / 죽은 것
+| API | 상태 |
+|---|---|
+| 쇼핑검색(shop.json) | ❌ **영구 종료** |
+| DataLab 트렌드·검색어 트렌드 | ✅ API HUB 이관, 사용 가능 |
+| 검색광고(keywordstool, 검색량+경쟁지수) | ✅ 정상 |
+| 커머스 API | ✅ 정상 |
 
 ---
 
-## 2. 이번 세션 검증·복구 내역 (Desktop 실측)
+## 2. ★ 영향 범위 — 11개 파일 (전 상품 공통, 단건 아님)
+
+`searchShopping()`/`analyzeCompetition()`(폐기 API 사용) 소비처 11개: `sourcing-recommender` · `recommendation-runner` · `keyword-competition` · `market-analysis` · `naver-seo/ai-generate` · `kkotti-comment` · `datalab` · `competition-monitor` · `strategy/identity-extractor` · `strategy/signal-collector` · `strategy/identity-dictionary`.
+
+→ **하나씩 땜질 금지.** 공통 추상화 계층 하나로(#62). 상세 설계: `docs/design/NAVER_SHOPPING_API_SUNSET_RESPONSE.md`.
+
+---
+
+## 3. 재설계 방향 (의존성 순서) — Code 착수 지점
+
+### 3-A [최우선] 경쟁분석을 검색광고 경쟁지수로 대체
+- `keyword-stats`(살아있음)가 이미 `competition: low/mid/high` 반환(실측: 수납장 mid·청소기 high).
+- 소싱의 `calcBlueOceanScore()`는 이미 이 값을 쓴다 → **productCount 없이 점수 산출 가능**.
+- **최소 수정**: 소싱에서 `analyzeCompetition()` 의존 제거 또는 null 허용(파이프라인이 안 죽게). 가격대는 도매매칭 도매가로 보완.
+- 이러면 **소싱 후보 즉시 생성** → dry-run으로 검증(로컬 검색광고 키 있음).
+
+### 3-B [단기] 공통 경쟁분석 provider 신설
+- `src/lib/market/competition-provider.ts`(신규) — 경쟁도·가격대 인터페이스. 11개 파일 점진 이관.
+- **멀티플랫폼 대비**: provider를 플랫폼 중립으로 설계(운영자 방향 — 향후 타 플랫폼·해외 확장).
+
+### 3-C [중기] 쇼핑인사이트(API HUB) 도입 검토 — 후순위
+
+---
+
+## 4. 이번 세션 검증·복구 내역 (유지)
 
 | 항목 | 결과 |
 |---|---|
-| ★ **빌드 위험 복구** | `src/lib/policy/exclusion-rules.ts`가 **untracked라 커밋 누락**된 것 발견. P1-E의 `sourcing-recommender.ts`가 이걸 import하므로 push 시 프로덕션 빌드 실패했을 것. → Desktop이 `72e20a4`로 커밋 복구 |
-| `npm run build` | ✅ 0 errors (policy 커밋 후 git 기준 빌드 성공 확인) |
-| tsc | ✅ 0 errors |
-| P1-E 시드 사전 | ✅ 8개 카테고리 실물 확인, 식품·화장품 제외 준수 |
-| dry-run 게이트 | ✅ fail-safe, `discordSent: false` |
-| 실패 카운터(#270) | ✅ embed에 "⚠️ 조회 실패: 경쟁 분석 실패 8건" 정상 노출 |
-| 취급제외 엔진 내용 | ✅ PRD §5-2 스펙 일치 |
+| 빌드위험 복구 `72e20a4` | policy 커밋 누락 → 복구, build 0 확인 |
+| P1-E 시드 사전 | ✅ 검색량 임계 통과(수납장 43000 등) — 첫 병목 해결 확인 |
+| dry-run 게이트 | ✅ fail-safe, discordSent false |
+| 실패 카운터(#270) | ✅ competitionAnalysisFailures:8 노출 → SE05 발견의 단서 |
 
-## 3. Cowork P2 산출물 (미커밋, 검증 완료)
-- `SEASON_CALENDAR_DATA_2026.md`(274줄, 이벤트 24건) + `SEASON_CALENDAR_DESIGN.md`(106줄) + `SEASON_KEYWORD_AUDIT.md`(121줄)
-- **키워드 감사 핵심**: 시즌 keywords 109개 중 **42%(46개)가 카테고리명·추상어라 시드 부적합**(이번 3.5개월 사고와 동일 유형). Cowork가 정확히 잡아냄. → P2 시즌 키워드를 P1-E 시드에 합류시키기 전 이 46개를 구체 상품어로 교체해야 함.
-- sentinel 0건 확인. 아직 커밋 안 함(Cowork 소유).
+## 5. Cowork P2 (미커밋, 검증됨)
+- 시즌 데이터 24건 + 설계 + 키워드감사(109개 중 46개 시드부적합 식별).
+- **P2 키워드 46개 교체는 쇼핑API와 무관 → 지금 병렬 가능.**
 
-## 4. 다음 작업 순서 (의존성)
+## 6. 다음 작업 순서
 
 ```
-[운영자] 쇼핑검색 API 권한 등록 (SE05 해소)   ← ★ 이게 안 되면 아래 전부 막힘
-   └─▶ [Desktop] dry-run 재검증 → 후보 1건+ 생성 확인
-          └─▶ [정리] Code f88f5cf + policy + P2 문서 전체 커밋 push
-                 └─▶ [운영자] dry-run 결과 검토 → 승인
-                        └─▶ [설정] SOURCING_RECOMMEND_LIVE=true → 실발송
-[병렬 가능] P2 시즌 키워드 46개 교체(SEASON_KEYWORD_AUDIT 반영) — 쇼핑API와 무관, 지금 가능
+[Code 3-A] 경쟁분석 검색광고 대체 → dry-run 후보 생성 확인   ← 최우선, 지금 가능
+   └─▶ [정리] 전체 커밋 push (f88f5cf+72e20a4+f655ef9+대응설계)
+          └─▶ [운영자] dry-run 결과 검토 → 승인 → SOURCING_RECOMMEND_LIVE=true
+[Cowork P2] 시즌 키워드 46개 교체 — 병렬 가능, 지금
+[Code 3-B] 공통 provider — 3-A 후
 ```
 
-## 5. 절대 금지 (매 세션 확인)
-- 네이버 스토어 PUT/POST → 운영자 "GO" 없이 금지
-- **디스코드 실발송 → 운영자 승인 없이 금지.** `SOURCING_RECOMMEND_LIVE` 미설정 = 안전
+## 7. 절대 금지 (매 세션 확인)
+- 네이버 PUT/POST → 운영자 "GO" 없이 금지
+- 디스코드 실발송 → 승인 없이 금지. `SOURCING_RECOMMEND_LIVE` 미설정=안전
 - 자동 발행 → 영구 금지(#307)
-- 테스트 데이터 방치 → 같은 세션에 원복
-- 허위 완료 보고 → 미실측은 "미검증" 명시(#310). **SE05는 운영자 조치 필요를 정직히 보고**
-- 부재 증명은 전수 검색으로(#323)
-- 무음 실패 금지 — 삼킨 오류는 카운트·표시(#270). keyword-competition:91 등 잔여 silent catch도 향후 정리 대상
-- 병렬 작업 시 write set 밖 파일 되돌리기 금지(#322)
+- 테스트 데이터 방치 → 같은 세션 원복
+- **외부 API 실패는 설정 의심 전에 공급자 공지 실측(#324). 미실측 단정 금지(#310)**
+- productCount 등 못 얻는 값을 가짜로 채우지 말 것("never fabricate")
+- 부재 증명은 전수 검색(#323), 무음 실패 금지(#270), write set 밖 되돌리기 금지(#322)
 
-## 6. AI·멀티플랫폼 확장 염두 (운영자 방향, 2026-08-01)
-- 현재는 네이버 스마트스토어 단일. **수익 성장 시 타 플랫폼·해외 플랫폼 확장 가능성**.
-- 함의: 소싱·SEO·제외정책 로직을 **플랫폼 종속으로 하드코딩하지 말 것.** `judgeExclusion()`처럼 순수 함수로 분리해두면 플랫폼 어댑터만 갈아끼우면 된다.
-- 이미 `/settings/platforms` 라우트 존재 — 멀티플랫폼 기반 일부 있음. 확장 시 이 지점 활용.
-- 새 기능 설계 시 "네이버 전용 상수"와 "플랫폼 공통 로직"을 파일 단위로 분리하는 것을 기본 원칙으로.
+## 8. 멀티플랫폼·AI 확장 방향 (운영자, 유지)
+현재 네이버 단일, 수익 성장 시 타/해외 플랫폼 가능성. 로직을 플랫폼 종속 하드코딩 금지, 순수함수 분리(judgeExclusion·competition-provider 패턴). `/settings/platforms` 라우트 존재.
