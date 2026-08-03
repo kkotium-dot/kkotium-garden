@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-07-30 (rev95 — 꼬띠 소싱 에이전트 PRD·작업 스케줄 보드 신설 · Desktop) / 직전 rev94
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-03 (rev96 — 3-A 소싱 회생 검증·SE05/도매꾹 API 이슈 확정 · Desktop) / 직전 rev95
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -328,4 +328,20 @@ Filesystem MCP 다운(#26) → **Desktop Commander로 우회 저장 성공**(#29
 **구현 계획**: P1 소싱추천 크론 연결+dry-run(🟢READY) → P3 검수관 → P4 앱 브리핑 화면 → P5 피드백 루프. **P2 시즌 캘린더 확장은 P1과 write set 안 겹쳐 병렬 안전**.
 
 **미착수**: 코드 구현 전량(설계만 확정). 디스코드 실발송은 dry-run 검증 후 운영자 승인 필요.
+
+---
+
+## rev96 — 3-A 소싱 회생 검증 완료 + 도매꾹 API 별개 이슈 발견 (2026-08-03 Desktop)
+
+**★ 소싱 추천 3.5개월 만에 회생 확인(dry-run 실측)**: Code가 3-A(경쟁분석을 검색광고 경쟁지수로 대체)를 구현. Desktop 검증 결과 dry-run에서 **후보 5건 생성**(무선충전기 검색량22100 경쟁mid 블루오션70 / 모자 52200 mid 65 / 파우치 29770 high 55 / 선글라스 76200 high 50 / 크로스백 61680 high 50). competitionAnalysisFailures 0 · keywordStatFailures 0 · discordSent false. 이전(SE05로 즉시 실패 1.7초·후보 0건)과 대비해 9.4초 소요하며 정상 파이프라인 완주. tsc 0.
+
+**미커밋 3파일(Code 3-A 작업분)**: `sourcing-recommender.ts`(analyzeCompetition 의존 제거, competition만으로 블루오션 산출) · `keyword-competition/route.ts`(silent catch 정리) · `wholesale-matcher.ts`(가격대 보완). 대응 설계 `NAVER_SHOPPING_API_SUNSET_RESPONSE.md`의 3-A와 일치.
+
+**★★ 새 발견 — 도매꾹 API도 죽어있음(SE05와 별개)**: dry-run 후보 5건 전부 도매매칭 0건. DB 확인 결과 2026-07-09 소싱 기록도 supplier_id 전부 null → **도매매칭은 원래부터 0건이었음**(SE05와 무관한 기존 이슈). 도매꾹 키는 DB store_settings에 SET(32자). 직접 curl 테스트(node --env-file로 DB 키 추출 후 호출): `https://domeggook.com/ssl/api/?ver=4.5&mode=getItemList` → **HTTP 404 `UNKNOWN_SERVICE`("해당 오픈 API 서비스가 없습니다")**. 즉 도매꾹 getItemList OpenAPI도 죽어있다. SE05(네이버 쇼핑검색)와 유사한 별개의 외부 API 폐기/변경 이슈로 추정. #324 원칙대로 단정하지 않고 사실만 기록 — 도매꾹 공식 공지·API 문서 실측 필요(다음 세션).
+
+**의미**: 소싱 후보 자체는 회생했으나, 후보에 붙는 "실제 도매 공급처·공급가·마진" 정보가 도매꾹 API death로 채워지지 않는다. 후보 발굴(검색량+경쟁도 기반)은 정상, 도매 실물 매칭은 별도 복구 필요.
+
+**미커밋 Cowork P2**: `SEASON_CALENDAR_DATA_2026.md`(24이벤트, 키워드 실상품어 교체 완료) + `SEASON_CALENDAR_DESIGN.md` + `SEASON_KEYWORD_AUDIT.md`. 카테고리명·추상어 잔존 0건 재확인.
+
+**다음 세션 최우선**: (1)도매꾹 API 404 원인 규명(공식 공지 실측) (2)3-A 코드 + P2 문서 전체 커밋 push (3)운영자 승인 후 실발송.
 

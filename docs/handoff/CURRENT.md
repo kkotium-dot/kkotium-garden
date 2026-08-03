@@ -1,90 +1,104 @@
-# 현재 인계 (CURRENT)
+# 현재 인계 (CURRENT) — 2026-08-03 세션 종료
 
-> 이 파일 1개만 활성 인계. 매 세션 종료 시 덮어쓴다.
-> **작업 우선순위는 `docs/plan/WORK_SCHEDULE_BOARD.md`가 단일 권위.**
+> 이 파일 1개만 활성 인계. 다음 세션은 이 파일 → `WORK_SCHEDULE_BOARD.md` → `PRINCIPLES_LEARNED.md` #295~#324 순으로 읽고 시작.
 
-- **status**: P1+P1-E 구현 완료. **★SE05 근본원인 최종 확정 = 네이버 쇼핑검색 API 영구 종료(2026-07-31). 운영자 조치 불필요 — 코드 재설계 필요.**
-- **branch**: `feature/preview-copy-then-redesign` (HEAD 이 커밋, 미push — Code f88f5cf + Desktop policy복구 72e20a4 + SE05기록 f655ef9 + 이번 대응설계)
-- **next-action**: 3-A(경쟁분석을 검색광고 경쟁지수로 대체) 구현 → dry-run 후보 생성 확인 → 커밋 push → 승인 → 실발송
-
----
-
-## 1. ★★ SE05 최종 확정 — 제 이전 진단이 틀렸음 (정정)
-
-### 무슨 일이었나
-- 이전 세션 Desktop이 "운영자가 개발자센터에서 쇼핑검색 API 권한 등록 필요"로 기록 → **틀렸다.**
-- 운영자가 "개발자센터 문제 없어 보인다"고 지적 + 공식 공지 링크 제공.
-- **공식 공지 실측 확정**(curl로 확인, web_fetch는 SITE_BLOCKED):
-  - `article/32564`: 네이버 검색 '쇼핑/책/전문자료' API **2026-07-31 서비스 종료**
-  - `article/32530`: **API HUB 이관 대상에서도 제외** — 유예기간·대체경로 없음
-- **결론**: 네이버가 어제(7/31) 쇼핑검색 API를 영구 폐기. 오늘이 8/1이라 SE05가 나온 것. **운영자 설정 문제 전혀 아님.**
-- 원칙 #324 신설(외부 API 실패는 설정 의심 전에 공급자 공지 실측) + #310 재확인.
-
-### 살아있는 것 / 죽은 것
-| API | 상태 |
-|---|---|
-| 쇼핑검색(shop.json) | ❌ **영구 종료** |
-| DataLab 트렌드·검색어 트렌드 | ✅ API HUB 이관, 사용 가능 |
-| 검색광고(keywordstool, 검색량+경쟁지수) | ✅ 정상 |
-| 커머스 API | ✅ 정상 |
+- **status**: ★소싱 추천 3.5개월 만에 회생 확인(dry-run 후보 5건). 단, 도매매칭은 도매꾹 API death로 별도 이슈. **미커밋 코드 3파일 + 문서 3건 존재 — 다음 세션에서 push.**
+- **branch**: `feature/preview-copy-then-redesign` (HEAD `71de270`, 미push)
+- **next-action(최우선)**: ①도매꾹 API 404 원인 규명 → ②3-A 코드+P2 문서 전체 커밋 push → ③운영자 승인 후 실발송
 
 ---
 
-## 2. ★ 영향 범위 — 11개 파일 (전 상품 공통, 단건 아님)
+## 1. ★ 이번 세션 최대 성과 — 소싱 추천 회생 확인
 
-`searchShopping()`/`analyzeCompetition()`(폐기 API 사용) 소비처 11개: `sourcing-recommender` · `recommendation-runner` · `keyword-competition` · `market-analysis` · `naver-seo/ai-generate` · `kkotti-comment` · `datalab` · `competition-monitor` · `strategy/identity-extractor` · `strategy/signal-collector` · `strategy/identity-dictionary`.
+**3-A 구현(Code) + 검증(Desktop) 완료.** SE05(네이버 쇼핑검색 API 종료)로 죽었던 경쟁분석을 검색광고 경쟁지수로 대체.
 
-→ **하나씩 땜질 금지.** 공통 추상화 계층 하나로(#62). 상세 설계: `docs/design/NAVER_SHOPPING_API_SUNSET_RESPONSE.md`.
+**dry-run 실측 결과** (로컬, `POST /api/sourcing-recommend?dryRun=true`, 9.4초):
+| 후보 | 검색량 | 경쟁 | 블루오션 | 도매매칭 |
+|---|---|---|---|---|
+| 무선충전기 | 22,100 | mid | 70 | 0건 |
+| 모자 | 52,200 | mid | 65 | 0건 |
+| 파우치 | 29,770 | high | 55 | 0건 |
+| 선글라스 | 76,200 | high | 50 | 0건 |
+| 크로스백 | 61,680 | high | 50 | 0건 |
 
----
-
-## 3. 재설계 방향 (의존성 순서) — Code 착수 지점
-
-### 3-A [최우선] 경쟁분석을 검색광고 경쟁지수로 대체
-- `keyword-stats`(살아있음)가 이미 `competition: low/mid/high` 반환(실측: 수납장 mid·청소기 high).
-- 소싱의 `calcBlueOceanScore()`는 이미 이 값을 쓴다 → **productCount 없이 점수 산출 가능**.
-- **최소 수정**: 소싱에서 `analyzeCompetition()` 의존 제거 또는 null 허용(파이프라인이 안 죽게). 가격대는 도매매칭 도매가로 보완.
-- 이러면 **소싱 후보 즉시 생성** → dry-run으로 검증(로컬 검색광고 키 있음).
-
-### 3-B [단기] 공통 경쟁분석 provider 신설
-- `src/lib/market/competition-provider.ts`(신규) — 경쟁도·가격대 인터페이스. 11개 파일 점진 이관.
-- **멀티플랫폼 대비**: provider를 플랫폼 중립으로 설계(운영자 방향 — 향후 타 플랫폼·해외 확장).
-
-### 3-C [중기] 쇼핑인사이트(API HUB) 도입 검토 — 후순위
+- `opportunityCount: 5` · `competitionAnalysisFailures: 0` · `discordSent: false`
+- 이전엔 SE05로 즉시 실패(1.7초·0건) → 이제 정상 완주(9.4초·5건). **근본 회생 확인.**
+- tsc 0.
 
 ---
 
-## 4. 이번 세션 검증·복구 내역 (유지)
+## 2. ★★ 이번 세션 새 발견 — 도매꾹 API도 죽어있음 (SE05와 별개)
 
-| 항목 | 결과 |
-|---|---|
-| 빌드위험 복구 `72e20a4` | policy 커밋 누락 → 복구, build 0 확인 |
-| P1-E 시드 사전 | ✅ 검색량 임계 통과(수납장 43000 등) — 첫 병목 해결 확인 |
-| dry-run 게이트 | ✅ fail-safe, discordSent false |
-| 실패 카운터(#270) | ✅ competitionAnalysisFailures:8 노출 → SE05 발견의 단서 |
+**증상**: 후보 5건 전부 `도매매칭 0건`. 실패 카운터는 0(=실패가 아니라 결과 없음).
 
-## 5. Cowork P2 (미커밋, 검증됨)
-- 시즌 데이터 24건 + 설계 + 키워드감사(109개 중 46개 시드부적합 식별).
-- **P2 키워드 46개 교체는 쇼핑API와 무관 → 지금 병렬 가능.**
+**실측 추적**:
+- DB `daily_recommendations` 2026-07-09 소싱 기록도 `supplier_id` 전부 null → **도매매칭은 원래부터 0건**(SE05 이전부터의 기존 이슈).
+- 도매꾹 키는 DB `store_settings.domeggook_api_key`에 SET(32자, 정상 존재).
+- **직접 curl 테스트**(node --env-file로 DB 키 추출 후 호출): `https://domeggook.com/ssl/api/?ver=4.5&mode=getItemList&aid=<KEY>&keyword=무선충전기&om=json` → **HTTP 404 `{"dcode":"UNKNOWN_SERVICE","dmessage":"해당 오픈 API 서비스가 없습니다"}`**
 
-## 6. 다음 작업 순서
+**해석**: 도매꾹 getItemList OpenAPI도 SE05와 유사하게 폐기/변경된 것으로 추정. **아직 원인 미확정** — #324 원칙대로 단정하지 않음.
+
+**다음 세션 할 일**: 도매꾹 공식 공지·API 문서를 실측(web_fetch 차단 시 `curl -A "Mozilla/5.0"`). 엔드포인트/버전 변경인지, 완전 종료인지 확인. `wholesale-matcher.ts`(37행 `DOMEGGOOK_API = 'https://domeggook.com/ssl/api/'`)가 대상.
+
+**의미**: 후보 발굴(검색량+경쟁도)은 정상 회생했으나, 후보에 붙는 **실제 도매 공급처·공급가·마진**은 도매꾹 API death로 못 채운다. 두 기능은 독립 — 후보는 지금도 유효, 도매 매칭만 별도 복구 필요.
+
+---
+
+## 3. 미커밋 현황 (다음 세션에서 push)
+
+**코드 3파일 (Code 3-A 작업, tsc 0 검증됨)**:
+- `src/lib/sourcing-recommender.ts` — analyzeCompetition 의존 제거, competition만으로 블루오션 산출
+- `src/app/api/naver/keyword-competition/route.ts` — silent catch 정리(#270)
+- `src/lib/wholesale-matcher.ts` — 가격대 보완
+
+**문서 3건 (Cowork P2, sentinel 0 검증됨)**:
+- `docs/design/SEASON_CALENDAR_DATA_2026.md` (24이벤트, 키워드 실상품어 교체 완료)
+- `docs/design/SEASON_CALENDAR_DESIGN.md`
+- `docs/design/SEASON_KEYWORD_AUDIT.md`
+
+**push 전 확인**: 3-A 코드가 `build` 통과하는지 최종 확인 후 push 권장(이번 세션은 tsc만 확인, build 미실행).
+
+---
+
+## 4. 전체 소싱 파이프라인 상태 (한눈에)
 
 ```
-[Code 3-A] 경쟁분석 검색광고 대체 → dry-run 후보 생성 확인   ← 최우선, 지금 가능
-   └─▶ [정리] 전체 커밋 push (f88f5cf+72e20a4+f655ef9+대응설계)
-          └─▶ [운영자] dry-run 결과 검토 → 승인 → SOURCING_RECOMMEND_LIVE=true
-[Cowork P2] 시즌 키워드 46개 교체 — 병렬 가능, 지금
-[Code 3-B] 공통 provider — 3-A 후
+시드확장(P1-E) ✅  →  검색량(검색광고) ✅  →  경쟁분석(검색광고 대체, 3-A) ✅
+   →  블루오션 점수 ✅  →  취급제외 필터 ✅  →  도매매칭(도매꾹 API) ❌ 404
+   →  디스코드 embed(한글화) ✅  →  dry-run 게이트 ✅
+```
+**살아있음**: 후보 발굴 전 과정. **죽어있음**: 도매 실물 매칭만.
+
+---
+
+## 5. 다음 작업 순서 (의존성)
+
+```
+[최우선] 도매꾹 API 404 원인 규명(공식 공지 실측, #324)
+   └─▶ 엔드포인트/버전 변경이면 → wholesale-matcher.ts 수정
+   └─▶ 완전 종료면 → 대체 소싱처 검토(도매매 등)
+
+[정리·독립] 3-A 코드 + P2 문서 전체 커밋 push  ← 도매꾹과 무관, 지금 가능
+   └─▶ build 확인 → 운영자 저녁 검토 → merge
+
+[BLOCKED→push후] 운영자 승인 → SOURCING_RECOMMEND_LIVE=true → 실발송
+
+[BLOCKED→3-A push후] 3-B 공통 competition-provider (나머지 10개 파일 이관)
 ```
 
-## 7. 절대 금지 (매 세션 확인)
+**병렬 가능**: "도매꾹 원인 규명"(Desktop MCP/curl)과 "3-A push 준비"(Code build)는 독립 — 동시 진행 안전.
+
+---
+
+## 6. 절대 금지 (매 세션 확인)
 - 네이버 PUT/POST → 운영자 "GO" 없이 금지
-- 디스코드 실발송 → 승인 없이 금지. `SOURCING_RECOMMEND_LIVE` 미설정=안전
+- 디스코드 실발송 → 승인 없이 금지. `SOURCING_RECOMMEND_LIVE` 미설정=안전(현재 안전)
 - 자동 발행 → 영구 금지(#307)
-- 테스트 데이터 방치 → 같은 세션 원복
-- **외부 API 실패는 설정 의심 전에 공급자 공지 실측(#324). 미실측 단정 금지(#310)**
-- productCount 등 못 얻는 값을 가짜로 채우지 말 것("never fabricate")
-- 부재 증명은 전수 검색(#323), 무음 실패 금지(#270), write set 밖 되돌리기 금지(#322)
+- 테스트 데이터 방치 → 같은 세션 원복 (이번 세션: DB 조회만, 쓰기 없음)
+- 외부 API 실패는 설정 의심 전 공급자 공지 실측(#324) — 도매꾹도 이 원칙 적용
+- 미실측 단정 금지(#310) · 부재증명 전수검색(#323) · 무음실패 금지(#270)
+- 병렬 시 write set 밖 되돌리기 금지(#322)
+- **dev 서버 정리**: 이번 세션 pid 31099 kill 완료. 다음 세션 시작 시 `lsof -ti:3000` 확인
 
-## 8. 멀티플랫폼·AI 확장 방향 (운영자, 유지)
-현재 네이버 단일, 수익 성장 시 타/해외 플랫폼 가능성. 로직을 플랫폼 종속 하드코딩 금지, 순수함수 분리(judgeExclusion·competition-provider 패턴). `/settings/platforms` 라우트 존재.
+## 7. 멀티플랫폼·AI 확장 방향 (운영자, 유지)
+네이버 단일 → 수익 성장 시 타/해외 플랫폼 가능성. 로직을 플랫폼 종속 하드코딩 금지, 순수함수 분리(judgeExclusion·competition-provider 패턴). 도매꾹 대체 검토 시에도 "도매처 provider" 추상화로 설계하면 향후 다른 도매처 추가가 쉬움. `/settings/platforms` 라우트 존재.
