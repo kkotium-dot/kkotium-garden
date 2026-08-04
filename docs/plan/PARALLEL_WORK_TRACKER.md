@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-04 (rev101 — 소싱봇 모바일 레이아웃 옵션1 구현 완료 · Desktop) / 직전 rev100
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-04 (rev102 — 웹앱 소싱위젯 긴급버그 수정+전수조사+심화화면 설계 · Desktop) / 직전 rev101
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -328,6 +328,20 @@ Filesystem MCP 다운(#26) → **Desktop Commander로 우회 저장 성공**(#29
 **구현 계획**: P1 소싱추천 크론 연결+dry-run(🟢READY) → P3 검수관 → P4 앱 브리핑 화면 → P5 피드백 루프. **P2 시즌 캘린더 확장은 P1과 write set 안 겹쳐 병렬 안전**.
 
 **미착수**: 코드 구현 전량(설계만 확정). 디스코드 실발송은 dry-run 검증 후 운영자 승인 필요.
+
+---
+
+## rev102 — 웹앱 소싱위젯 긴급버그 수정 + 시스템레벨 전수조사 + 심화화면 설계 (2026-08-04 Desktop)
+
+**배경**: 대표님이 "Discord=간단, 웹앱=심화" 요청을 하며 `/growth` 페이지를 직접 열어봄 → 전 상품이 빨간 "0%" 마진 배지로 표시되는 것을 실측 발견.
+
+**★★ 긴급 근본수정**(커밋 `05fa9ca`): 근본원인 = 이번 세션 Discord 쪽에서 폐기한 필드(avgPrice·estimatedMargin 등)를 웹 위젯(SourcingRecommendWidget.tsx)이 여전히 참조 — "전 채널 정합"(#293) 위반 사례. useDashboardData.ts·SourcingRecommendWidget.tsx에서 죽은 필드 전량 제거, supplyPriceRange·priceOutlier로 교체. tsc0·build0·로컬+프로덕션 브라우저 확인(빨간 0% 완전 소거, 콘솔에러 0).
+
+**★ 시스템레벨 전수조사**: grep으로 동일 패턴(avgPrice·totalResults 등) 사용처 3개 더 발견(MarketAnalysisCard.tsx·CompetitionMonitorWidget.tsx·MarketTrendWidget.tsx) → 코드+프로덕션 브라우저(`/market`) 실측 결과 **전부 방어적 조건부 렌더링이 이미 있어 안전**(거짓값 노출 0, "0/2" 정직 표시 확인). 스캔 버튼은 죽은 API라 무의미하나 버그는 아님, 급하지 않음.
+
+**★ 심화화면 설계 완료**(`docs/design/SOURCING_DEEP_DIVE_WEBAPP_2026-08-04.md`, 구현 대기): 3트랙 — A(daily_recommendations DB 스키마 확장, 선행필수) → B(상세 드로어 UI, 안1 권장) → C(실무자동화: 원클릭 소싱시작·낙점상태관리·주간요약, 대표님이 가장 강조). 부수발견: "스캔 시작" 버튼이 discord:true 고정이라 웹에서 눌러도 실제 Discord 발송됨 — 분리 필요.
+
+**다음 세션 최우선**: 트랙A(DB스키마 확장)부터 착수 → daily 크론 저장로직 갱신 → 트랙B안1(드로어) 구현.
 
 ---
 
