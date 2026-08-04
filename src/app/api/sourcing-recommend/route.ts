@@ -88,15 +88,47 @@ export async function GET() {
 }
 
 // POST: Force fresh scan + Discord notification + DB save
+// P1-C: dryRun=true(쿼리 또는 body) → 디스코드 미발송, DB 미저장, embed JSON +
+// 취급 제외 통계만 반환. 운영자 승인 전까지 실발송 금지(#절대원칙).
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const sendToDiscord = (body as Record<string, unknown>).discord !== false;
+    const bodyRecord = body as Record<string, unknown>;
+    const sendToDiscord = bodyRecord.discord !== false;
+    const dryRun =
+      req.nextUrl.searchParams.get('dryRun') === 'true' || bodyRecord.dryRun === true;
 
     // Generate fresh recommendations
     const result = await generateSourcingRecommendations();
     cachedResult = result;
     cachedAt = Date.now();
+
+    if (dryRun) {
+      // #250 §3 recoType 태그는 dry-run 미리보기에도 붙여준다(운영자 확인용).
+      if (result.opportunities.length > 0) {
+        const nowMonth = new Date().getMonth() + 1;
+        const tags = await resolveRecoTypeTags(
+          result.opportunities.map((o) => ({
+            d1: o.category === 'general' ? '' : o.category,
+            supplierPrice: o.suggestedSupplyPrice,
+          })),
+          nowMonth,
+        ).catch(() => result.opportunities.map(() => null));
+        result.opportunities.forEach((o, i) => { o.recoType = tags[i] ?? null; });
+      }
+
+      const embed = buildSourcingRecommendEmbed(result);
+      return NextResponse.json({
+        ok: true,
+        dryRun: true,
+        discordSent: false,
+        opportunityCount: result.opportunities.length,
+        excludedCount: result.excludedCount ?? 0,
+        excludedSamples: result.excludedSamples ?? [],
+        embedPreview: embed,
+        ...result,
+      });
+    }
 
     // Save to DB
     if (result.opportunities.length > 0) {

@@ -538,3 +538,8 @@ export const NAVER_ORIGIN_CODES: OriginCode[] = [
   { code: '0205039', name: '프랑스령 기아나' },
   { code: '0205040', name: '하이티' },
 ];
+
+/** code → 표시용 한글 라벨. 매칭 실패 시 코드 원문(추측 지양 — #82). */
+export function originCodeLabel(code: string): string {
+  return NAVER_ORIGIN_CODES.find(o => o.code === code)?.name ?? code;
+}

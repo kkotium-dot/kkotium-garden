@@ -24,6 +24,7 @@ import { boxClipsSubject, snapBoxToSubject } from '@/lib/images/subject-containm
 import type { SubjectBBox } from '@/lib/images/quality-classifier';
 
 const t = strings.cropStudio;
+const cropWarningLabel = strings.cropWarning as Record<string, string>;
 
 interface Box { x: number; y: number; width: number; height: number; }
 interface CropWarning { code: string; severity: 'block' | 'warn'; message: string; remediation?: string; }
@@ -46,6 +47,17 @@ interface Props {
 }
 
 type SourceKey = 'detail' | 'rep';
+
+// 자동(주목도) / 자동(디테일) 후보가 같은 소스에서 나와 같은 code의 경고를
+// 중복 반환할 수 있다 — 화면에는 code당 한 번만 노출한다.
+function dedupeByCode(warnings: CropWarning[]): CropWarning[] {
+  const seen = new Set<string>();
+  return warnings.filter(w => {
+    if (seen.has(w.code)) return false;
+    seen.add(w.code);
+    return true;
+  });
+}
 
 export default function CropStudioPanel({ productId, repUrl, detailUrl, onApplied }: Props) {
   const [source, setSource] = useState<SourceKey>(detailUrl ? 'detail' : 'rep');
@@ -425,12 +437,12 @@ export default function CropStudioPanel({ productId, repUrl, detailUrl, onApplie
 
               {selected && (selected.cautions.length > 0 || selected.warnings.length > 0) && (
                 <ul className="mt-2 space-y-1">
-                  {[...selected.warnings, ...selected.cautions].map((w, i) => (
+                  {dedupeByCode([...selected.warnings, ...selected.cautions]).map(w => (
                     <li
-                      key={`${w.code}-${i}`}
+                      key={w.code}
                       className={`flex items-start gap-1.5 text-[11px] ${w.severity === 'block' ? 'text-red-700' : 'text-amber-700'}`}
                     >
-                      <AlertTriangle size={12} className="mt-0.5 shrink-0" /> <span>{w.message}</span>
+                      <AlertTriangle size={12} className="mt-0.5 shrink-0" /> <span>{cropWarningLabel[w.code] ?? w.message}</span>
                     </li>
                   ))}
                 </ul>

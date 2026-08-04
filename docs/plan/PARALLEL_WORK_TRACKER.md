@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-07-23 (rev82 — Cowork 생애주기 설계 검증·브리지 v2 확정·부활소 경계 판정 · Desktop) / 직전 rev81 동일자
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-04 (rev98 — 음수마진 근본수정+push 완료 · Desktop) / 직전 rev97
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -255,4 +255,128 @@ Cowork가 **코드 접근 없이 독립 설계**("첨부된 지식 폴더가 비
 Filesystem MCP 다운(#26) → **Desktop Commander로 우회 저장 성공**(#298). 이 rev81도 Desktop Commander로 기입. Code 미커밋 3파일(DISPOSITION_SURFACE_AUDIT·SOURCE_GONE_ROBUSTNESS_TICKET·smoke script)은 Code 커밋 대기.
 
 ---
+
+---
+
+## rev93 — 발행전검수 화면 개선 + 꼬띠 페르소나 표면축 신설 완료 (2026-07-30 Desktop 검증)
+
+**배경**: 대표님 스크린샷 기반 "발행 전 검수" 화면 UI/UX 개선 요청(문구 오류·레이아웃 밋밋함) + 이어서 발견된 잔여 사투리 8곳 정리.
+
+**작업1~2 (Desktop 설계, Code 구현, 2026-07-30 오전 세션)**:
+- `3532d78` 문구 근본수정 — `simple-crop.ts`의 개발자용 영어 경고 메시지가 화면에 그대로 노출되던 버그의 근본원인(`CropStudioPanel.tsx`가 `warning.message`를 raw 렌더) 확정·해소. `code`→한글 매핑 + 자동후보 2종(주목도·디테일) 중복 dedup. 페이로드 사람표기(가격 콤마, 원산지 라벨, 카테고리 풀네임).
+- `994fb91` 레이아웃 재설계 — 1단 세로 스택 → 마스터-디테일 2단 그리드(좌: 이미지 작업 / 우: sticky 결정 패널 — 준비도 게이트·페이로드·검수승인). 상단 고정바(상품명+상태+발행버튼).
+- Desktop 브라우저 실측: 아이스틀·달항아리 2개 상품 정상 렌더, 영어원문 0건, 중복 0건, 콘솔 에러 0.
+
+**작업3 (페르소나 표면축, 2026-07-30 오후 세션)**: 검증 중 판단표면(검수·발행 게이트)에 사투리 감탄사("이랴", "~어유")가 남아있는 게 오히려 판단력을 흐린다는 문제를 발견. 조사 결과 `persona-audit.py`가 "사투리 존재=페르소나 적용 완료"로만 판정하는 얕은 기준이 원인(판단표면에도 기계적으로 사투리 삽입을 유도).
+- **원칙 #318 신설**: 정원사🌷/카우걸🤠 모드축과 별개로 "친밀 표면"(사투리 허용) vs "판단 표면"(사투리 감탄사 제거, 정확한 톤) 축 추가.
+- `e16dcde` `KKOTTI_PERSONA_VOICE_GUIDE.md` §6 신설(§1~5 원문 무변경, 순수 추가).
+- `bf72731` 판단표면 8곳(`publish-preview-strings.ko.json`의 error.title·publish.disabledHint·publish.fail·publish.notRegisteredHint·cropStudio.drawHint·editHint·clipWarn·error) 사투리 제거.
+- `373cca9` `persona-audit.py`에 `JUDGMENT_SURFACE_KEYS` 반전판정 추가(#283 `CUSTOMER_FACING` 패턴 재사용, #62 준수) — 판단표면은 "사투리 부재"가 정상으로 판정되도록 로직 수정.
+
+**Desktop 실측(직접 git diff 대조 + 재실행 + 브라우저)**:
+- git diff로 8곳 값이 지정 스펙과 글자 단위까지 정확히 일치 확인
+- JSON 유효성·sentinel 0건·사투리 잔존 0건 확인
+- `persona-audit.py` 직접 실행 → "판단 표면 위반 0건 (8개 키 확인)" 재현
+- 로컬 dev 서버(전경 프로세스 방식) + 브라우저로 `disabledHint`·`drawHint`·`editHint` 3곳 실제 렌더 확인, `notRegisteredHint`도 코드 기준 확인
+- 미검증(정직 표기, #310): `publish.fail`·`cropStudio.clipWarn`·`cropStudio.error`·`error.title` — 인위적 오류 유발 없이는 재현 불가, git diff로만 확인
+
+**★ 부수 발견 — 문서 정합성 사고 (재발방지 기록)**: 이번 세션에서 "CLAUDE.md 축소 2단계"와 "`#311` 게이트 배선"을 낡은 인계 문서를 근거로 "미완료"로 오판, 재작업을 준비하다가 실측(git log, grep)으로 **둘 다 이미 완료돼 있음**을 발견했다. 원인은 `TASK_BRIDGE.md` §3-A 작업큐 보드가 2026-07-22 이후 갱신되지 않고 방치된 것. `docs/handoff/CURRENT.md`에 상세 기록, 향후 세션은 인계 문서의 "미완료" 표시를 그대로 믿지 말고 먼저 실측할 것.
+
+**검증**: tsc 0 errors · 로컬 브라우저 실측(6곳 중 4곳 직접 확인, 2곳 코드리뷰) · sentinel 0건 · JSON 유효성 확인. 브랜치 `feature/preview-copy-then-redesign`(6커밋) 미push — 운영자 결정 대기.
+
+---
+
+## rev94 — 팀 구조 정정 + PRINCIPLES_LEARNED 분할 완료 (2026-07-30 Desktop)
+
+**배경**: 대표님 확정 — "이건 1인 개발이 아니다. 대표님+Claude가 함께 진행하며, 에이전트가 늘어나면 역할이 더 나뉠 것". "1인 개발이라는 단어 이외에 문제되는 내용이 없다면 그렇게 처리"로 범위 한정.
+
+**작업1 (팀 구조 정정)**: 전 활성 문서(archive 제외) 전수 스캔 — `CLAUDE.md`(팀 구조 각주 신설 + 3곳 정정, 이전 세션), `TASK_BRIDGE.md` §4 SD-04(STANDING DECISIONS, 정확히 1건 매치 확인 후 치환), `PRINCIPLES_LEARNED.md` #320(정확히 2건 매치 확인 후 치환). 전부 "1인 개발" 단어만 제거, 문장 나머지 의미 보존. "1인 셀러"·"1인 운영자"(스토어 운영 형태를 가리키는 정당한 표현)와 과거 archive 문서(시점 기록)는 의도적으로 유지.
+
+**작업2 (PRINCIPLES_LEARNED.md 분할, #31)**: 1483줄로 1500줄 임계 근접 → 원칙 #46~#227 구간(131건, 718줄)을 `docs/plan/archive/PRINCIPLES_LEARNED_archived-2026-07-30.md`로 이동. 현재 파일은 #254부터 시작, 763줄(임계까지 여유 737줄 확보).
+
+**손실 0 검증(코드로 증명)**: `git show HEAD:...`로 원본 1483줄을 복원한 뒤, "헤더 + archive본문 + 현재파일본문"을 파이썬으로 재조합해 원본과 라인 단위로 완전 일치(`Match: True`) 확인. 상단 인덱스 표(2026-07-22 분할 시 만든 것, 이제 실태와 어긋난 상태였음)도 함께 정정.
+
+**검증**: tsc 0 errors · sentinel grep 0건(현재파일·archive파일 양쪽) · 손상문자 0건 · 재조합 완전일치 확인.
+
+---
+
+## rev95 — 꼬띠 소싱 에이전트 PRD + 작업 스케줄 보드 신설 (2026-07-30 Desktop)
+
+**배경**: 운영자 요구 — "디스코드 꼬띠 추천이 기존 크롤링 상품 내에서만 나온다. 웹데이터로 시즌·니치 상품을 발굴해 제안하고, 내가 할 일을 자동화해 컨펌만 하게 해달라. 에이전트로 폴더구조를 확장해야 하나?"
+
+**실측 진단(근본원인 확정)**:
+- `/api/cron/daily`(08:00 KST)가 `computeRecommendation(products)` 호출 — products = 자사 DB 상품뿐. **이것이 "추천이 부실하다"의 직접 원인.**
+- **신규 발굴 엔진은 이미 존재**: `src/lib/sourcing-recommender.ts`(496줄)가 DataLab 트렌드→검색량→경쟁분석→도매꾹/도매매 OpenAPI 실시간 검색→마진계산→황금/니치/시즌 태그까지 수행. **그러나 `vercel.json` crons에 없어 어떤 크론에도 연결 안 됨** → 수동 POST 아니면 절대 실행되지 않음.
+- 좀비·품절·마진위기·발행준비 알림은 이미 정상 작동(`computeOpsDigestSignals`).
+- `getSeasonContext()`는 6개 이벤트만 하드코딩(발렌타인/화이트/어린이/어버이/빼빼로/크리스마스) — 설·추석·신학기·장마·김장·블프·이사철 전부 누락. "시즌 전략상품"이 안 나오는 직접 원인.
+
+**wikidocs 「Claude 기초부터 고급까지 100」 검토**(034·036·092·097·098 전문 정독, 093~096은 092 템플릿 따르는 역할별 예시):
+- 092 Subagents: `.claude/agents/*.md`, 별도 context window, **세션 중에만 동작** → 프로덕션 크론 대체 불가 확인
+- 097 구현에이전트: "동시 작업자의 변경을 되돌리지 말라" 지시문 — 다중 레인 환경에 직접 적용 가치 있음
+- 098 Agent Teams: **write set 기준 병렬 분리 + 공유 계약 + 통합 담당자** — 운영자의 "작업 흐름 꼬임" 우려에 대한 정확한 해법
+- 036 PRD: 범위/비범위 분리로 "알아서 만들어줘" 위험 차단
+- 034 디렉터리별 CLAUDE.md: 위험 폴더(naver·discord·prisma)에 경고 배치 — 향후 검토 후보
+
+**산출물**:
+| 파일 | 역할 |
+|---|---|
+| `docs/design/KKOTTI_AGENT_SYSTEM_PRD.md` (신규) | 에이전트 시스템 PRD — 3계층 구분·4역할 파이프라인(정찰병/전략가/검수관/전령)·범위/비범위·수용기준·P1~P5 의존성 그래프·열린질문 4건 |
+| `docs/plan/WORK_SCHEDULE_BOARD.md` (신규) | **작업 우선순위·의존성 단일 권위 보드** — READY/PARALLEL-OK/BLOCKED 상태 + write set 표기 + 레인 배분 원칙 |
+
+**신규 원칙**: #321(에이전트 3계층 A/B/C 구분 — 운영자가 원하는 건 항상 C, MCP는 시드 데이터 구축용) · #322(병렬 판단은 write set 겹침 여부로, 주제 유사성 아님)
+
+**구현 계획**: P1 소싱추천 크론 연결+dry-run(🟢READY) → P3 검수관 → P4 앱 브리핑 화면 → P5 피드백 루프. **P2 시즌 캘린더 확장은 P1과 write set 안 겹쳐 병렬 안전**.
+
+**미착수**: 코드 구현 전량(설계만 확정). 디스코드 실발송은 dry-run 검증 후 운영자 승인 필요.
+
+---
+
+## rev98 — 음수마진 근본수정(C안) + 4-Mode 시스템 이슈 발견 + push 완료 (2026-08-04 Desktop)
+
+**★ 음수마진 근본원인 규명·수정·검증 완결**(운영자 결정: C안 — 마진% 완전 폐기, 공급가 범위만 표시). 근본원인: 도매매칭은 키워드 전문검색이라 이종상품이 섞이는데(예: "텐트" 검색→캠핑 소품), `sourcing-recommender.ts`가 그중 최저가 1건으로 avgPrice를 역산해 전체 마진을 계산하던 게 이종상품 오염으로 마이너스 수백% 노출의 원인이었다. 문서: `docs/research/SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE_2026-08-04.md`.
+
+**수정 3파일**(커밋 `b39f2d7`): `wholesale-matcher.ts`(estimatedMargin·avgNaverPrice 전량 제거, 공급가 오름차순 정렬) · `sourcing-recommender.ts`(avgPrice 역산 블록→supplyPriceRange로 교체, Discord 문구 정직화) · `recommendation-runner.ts`(옛 시그니처 호출부 수정 + estimatedMargin 기반 정렬을 blueOceanScore로 안전 전환).
+
+**Desktop 재검증**: tsc 0 · build 0(BUILD_EXIT:0, grep error/failed 0건) · dry-run 재실행 → **5/5 후보 전부 음수마진 완전 소멸**, 공급가 범위(예: 텐트 440원~6,000원) 정직 노출 확인. dev서버 kill·임시파일 삭제·git status clean 확인.
+
+**★ 신규 발견(미착수)**: `recommendation-runner.ts`의 4-Mode 추천 시스템(SEASONAL_AHEAD 모드)이 SE05로 영구종료된 `analyzeCompetition()`을 여전히 호출 중 — 사실상 죽어있을 가능성. 크론 연결 여부부터 다음 세션에서 확인 필요(CURRENT.md §3).
+
+**push 완료**: `62a5dcf..3365f8c..b39f2d7` feature 브랜치로 fast-forward push(main 영향 없음, Vercel 프리뷰 배포만 트리거). main merge는 운영자 결정 대기.
+
+**다음 세션 최우선**: Vercel 프리뷰 READY 확인 → 운영자 main merge 결정 → merge 후 프로덕션 브라우저 검증 일괄 진행(검수재설계·페르소나·도매꾹수정·음수마진수정 4건 전부 대상) → 4-Mode 시스템 범위 확인.
+
+---
+
+## rev97 — 도매꾹 API 404 규명·수정·라이브검증 완결 + 신규 버그 3건 발견 (2026-08-04 Desktop)
+
+**★ 도매꾹 API 404 — #324 원칙대로 공식문서 실측 후 완전 규명**: 도매꾹은 폐기 아님. `ver=4.5`가 `getItemList`엔 없는 버전(v4.0 구조전면개편, 현재 권장 4.1)이라 404였음. 실제 DB 키로 라이브 차등검증(구버전 재현 404 / 신버전 200+실상품 2172건·1657건). 근본원인 문서 저장: `docs/research/DOMEGGOOK_API_404_ROOT_CAUSE_2026-08-04.md`.
+
+**Code 수정 완료**(`3365f8c`): `wholesale-matcher.ts` 전면 재작성 — ver=4.1+market파라미터화+평면스키마. `searchDomemae`(HTML스크래핑) 폐기 → 동일API `market=supply`로 대체. supply(도매매)1차→dome(도매꾹)2차 순서로 DOMAIN_FACTS 정합. tsc 0·build 0(Code).
+
+**Desktop 재검증(git log·파일 실측 + dry-run 재실행)**: `git log`로 커밋 실재 확인, 파일 diff 직접 대조(스펙 일치). 로컬 dev 기동 → `POST /api/sourcing-recommend?dryRun=true` → **5/5 후보 전부 도매매칭 성공**(`wholesaleMatchFailures:0`, 캠핑테이블4·보조배터리5·텐트3·캐리어1·아이스박스3). rev96의 "5/5 전부 0건"에서 완전 반전. dev서버 kill·임시파일 삭제·git status clean 확인(원복 완결).
+
+**★★ 신규 발견 — 별개 버그 3건**(도매꾹 이슈와 무관, 다음 세션 조사 대상):
+1. 음수 마진 노출(텐트 -367%, 아이스박스 -61% 등) — `avgPrice`가 비정상적으로 낮은 게 원인 추정(텐트 평균가 3,143원). 마이너스 마진은 15% 필터 조건(`>=0 && <15`)을 안 거쳐 그대로 통과.
+2. `totalResults:0`인데 `competitionLevel:MEDIUM/HIGH` 값이 채워짐 — 계산 근거 없는 값 의심.
+3. `imageUrl`에 `?hash=...` 쿼리스트링 — 다운스트림(이미지저장) 영향 미확인.
+
+**의미**: 도매매칭(공급처 발굴)은 완전 회생. 단 마진 계산 입력값 신뢰성 문제로 **디스코드 실발송은 2-1 해결 전까지 비권장**.
+
+**다음 세션 최우선**: avgPrice 출처 추적(`sourcing-recommender.ts`/`keyword-competition/route.ts`) → 음수마진 근본수정 → 재검증. 이후 운영자 push 결정.
+
+---
+
+## rev96 — 3-A 소싱 회생 검증 완료 + 도매꾹 API 별개 이슈 발견 (2026-08-03 Desktop)
+
+**★ 소싱 추천 3.5개월 만에 회생 확인(dry-run 실측)**: Code가 3-A(경쟁분석을 검색광고 경쟁지수로 대체)를 구현. Desktop 검증 결과 dry-run에서 **후보 5건 생성**(무선충전기 검색량22100 경쟁mid 블루오션70 / 모자 52200 mid 65 / 파우치 29770 high 55 / 선글라스 76200 high 50 / 크로스백 61680 high 50). competitionAnalysisFailures 0 · keywordStatFailures 0 · discordSent false. 이전(SE05로 즉시 실패 1.7초·후보 0건)과 대비해 9.4초 소요하며 정상 파이프라인 완주. tsc 0.
+
+**미커밋 3파일(Code 3-A 작업분)**: `sourcing-recommender.ts`(analyzeCompetition 의존 제거, competition만으로 블루오션 산출) · `keyword-competition/route.ts`(silent catch 정리) · `wholesale-matcher.ts`(가격대 보완). 대응 설계 `NAVER_SHOPPING_API_SUNSET_RESPONSE.md`의 3-A와 일치.
+
+**★★ 새 발견 — 도매꾹 API도 죽어있음(SE05와 별개)**: dry-run 후보 5건 전부 도매매칭 0건. DB 확인 결과 2026-07-09 소싱 기록도 supplier_id 전부 null → **도매매칭은 원래부터 0건이었음**(SE05와 무관한 기존 이슈). 도매꾹 키는 DB store_settings에 SET(32자). 직접 curl 테스트(node --env-file로 DB 키 추출 후 호출): `https://domeggook.com/ssl/api/?ver=4.5&mode=getItemList` → **HTTP 404 `UNKNOWN_SERVICE`("해당 오픈 API 서비스가 없습니다")**. 즉 도매꾹 getItemList OpenAPI도 죽어있다. SE05(네이버 쇼핑검색)와 유사한 별개의 외부 API 폐기/변경 이슈로 추정. #324 원칙대로 단정하지 않고 사실만 기록 — 도매꾹 공식 공지·API 문서 실측 필요(다음 세션).
+
+**의미**: 소싱 후보 자체는 회생했으나, 후보에 붙는 "실제 도매 공급처·공급가·마진" 정보가 도매꾹 API death로 채워지지 않는다. 후보 발굴(검색량+경쟁도 기반)은 정상, 도매 실물 매칭은 별도 복구 필요.
+
+**미커밋 Cowork P2**: `SEASON_CALENDAR_DATA_2026.md`(24이벤트, 키워드 실상품어 교체 완료) + `SEASON_CALENDAR_DESIGN.md` + `SEASON_KEYWORD_AUDIT.md`. 카테고리명·추상어 잔존 0건 재확인.
+
+**다음 세션 최우선**: (1)도매꾹 API 404 원인 규명(공식 공지 실측) (2)3-A 코드 + P2 문서 전체 커밋 push (3)운영자 승인 후 실발송.
 

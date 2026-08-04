@@ -4,7 +4,7 @@
   "loading": "검수 정보 불러오는 중",
   "loadingAnalyzing": "이미지 분석 중이에요 (대표·상세 이미지 텍스트·품질 검사) — 몇 초 더 걸릴 수 있어요",
   "error": {
-    "title": "이랴, 검수 정보를 못 불러왔어유!",
+    "title": "검수 정보를 불러오지 못했어요",
     "retry": "다시 시도"
   },
   "section": {
@@ -22,14 +22,21 @@
   "ok": "통과",
   "warn": "경고",
   "warning": {
-    "text_overlay": "이랴, 대표이미지에 텍스트가 있어유! (네이버 2024-10-28 정책 위반 소지)",
-    "low_resolution": "이랴, 대표이미지 해상도가 1000px 미만이에유!",
-    "background_not_uniform": "이랴, 배경이 단색이 아니에유! (대표컷은 단일 누끼 권장)",
-    "subject_not_single": "이랴, 단품 구도가 아니에유! (라인업·합성컷은 추가이미지로)",
-    "representative_missing": "이랴, 대표 이미지가 없어유!",
-    "mostly_blank": "이랴, 상세 이미지가 거의 비어있어유! (스켈레톤/미완성)",
-    "low_quality": "이랴, 상세 이미지 품질이 낮아유!",
-    "detail_missing": "이랴, 상세 이미지가 없어유!"
+    "text_overlay": "대표이미지에 텍스트가 있어요 (네이버 2024-10-28 정책 위반 소지)",
+    "low_resolution": "대표이미지 해상도가 1000px 미만이에요",
+    "background_not_uniform": "배경이 단색이 아니에요 (대표컷은 단일 누끼 권장)",
+    "subject_not_single": "단품 구도가 아니에요 (라인업·합성컷은 추가이미지로)",
+    "representative_missing": "대표 이미지가 없어요",
+    "mostly_blank": "상세 이미지가 거의 비어있어요 (스켈레톤/미완성)",
+    "low_quality": "상세 이미지 품질이 낮아요",
+    "detail_missing": "상세 이미지가 없어요"
+  },
+  "cropWarning": {
+    "SOURCE_TOO_SMALL": "원본 이미지가 작아요 (1000px 미만) — 썸네일이 흐릿해질 수 있어요. 확대하거나 1:1 캔버스 확장으로 보완하세요",
+    "LOW_RESOLUTION": "크롭한 영역이 1000px보다 작아서 확대 처리돼요 (약간 흐려질 수 있어요) — 1:1 캔버스 확장으로 선명하게 만들 수 있어요",
+    "TEXT_DETECTED": "크롭 영역에서 텍스트가 감지됐어요 — 대표이미지는 텍스트가 없어야 해요 (네이버 2024-10-28 정책). 텍스트 없는 영역을 고르거나 글씨 제거를 실행하세요",
+    "SUBJECT_CLIPPED": "제품이 프레임 밖으로 잘렸어요 — 제품 전체가 보이도록 맞추거나(주제 완전포함), 연출 소품만 걸친 경우라면 예외로 확인해 진행하세요",
+    "BACKGROUND_NOT_WHITE": "배경이 흰색이 아니에요 — 대표이미지는 흰 배경이어야 해요 (네이버 정책)"
   },
   "payload": {
     "name": "상품명",
@@ -47,7 +54,8 @@
     "attribute": "속성",
     "missing": "필수 누락",
     "errors": "발행 차단 사유",
-    "none": "없음"
+    "none": "없음",
+    "fixLink": "고치러 가기"
   },
   "publish": {
     "ready": "이 상태로 발행",
@@ -55,10 +63,10 @@
     "confirmYes": "네, 발행합니다",
     "cancel": "취소",
     "publishing": "발행 중",
-    "disabledHint": "아직 발행 조건이 안 됐어유 — 준비도 A 이상 + 이미지 경고 0이어야 발행할 수 있어유",
+    "disabledHint": "아직 발행 조건을 채우지 못했어요 — 준비도 A 이상 + 이미지 경고 0이면 발행할 수 있어요",
     "success": "발행 완료",
-    "fail": "이랴, 발행에 실패했어유!",
-    "notRegisteredHint": "아직 네이버 미등록 상품이에유 — 신규 발행 경로를 사용해주어유"
+    "fail": "발행에 실패했어요",
+    "notRegisteredHint": "아직 네이버 미등록 상품이에요 — 신규 발행 경로를 사용해주세요"
   },
   "gate": {
     "readinessOk": "준비도 A 이상",
@@ -85,7 +93,7 @@
     "source": "소스 이미지",
     "sourceDetail": "상세페이지",
     "sourceRep": "현재 대표",
-    "drawHint": "이미지 위에서 드래그해 크롭 영역을 지정해주어유 (1:1 정사각으로 적용돼유)",
+    "drawHint": "이미지 위에서 드래그해 크롭 영역을 지정하세요 (1:1 정사각으로 적용돼요)",
     "loadingImage": "이미지 불러오는 중",
     "noSource": "크롭할 소스 이미지가 없어요",
     "autoTitle": "자동 후보",
@@ -102,7 +110,7 @@
     "blocked": "적용 불가 — 대표에 텍스트가 있어요. 글씨 제거 후 다시 시도하세요",
     "caution": "주의",
     "editTitle": "편집 (창작 도구)",
-    "editHint": "편집은 창작 도구(Firefly·Express)에서 운영자가 직접 실행해유. 작업은 관제탑에 등록돼유",
+    "editHint": "편집은 창작 도구(Firefly·Express)에서 운영자가 직접 실행해요. 작업은 관제탑에 등록돼요",
     "editTextRemove": "글씨 제거",
     "editCanvasExpand": "1:1 확장",
     "editBgClean": "배경 정리",
@@ -110,10 +118,10 @@
     "editReused": "이미 등록된 편집 작업이 있어요",
     "candidateContain": "주제 완전포함",
     "subjectLabel": "검출된 제품 영역",
-    "clipWarn": "이랴, 제품이 잘려유! 제품 전체가 프레임에 들어와야 해유",
+    "clipWarn": "제품이 프레임 밖으로 잘렸어요! 제품 전체가 프레임에 들어와야 해요",
     "fitSubject": "주제 완전포함으로 맞춤",
     "propException": "연출 소품만 걸침 (예외 허용)",
     "busy": "처리 중",
-    "error": "이랴, 처리 중 오류가 생겼어유!"
+    "error": "처리 중 오류가 생겼어요"
   }
 }

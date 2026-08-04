@@ -1,733 +1,13 @@
 # PRINCIPLES_LEARNED — 작업원칙 (현행)
 
-> **분할 안내(2026-07-22, #31)**: 이 파일이 1713줄로 임계를 넘어 앞부분을
-> `archive/PRINCIPLES_LEARNED_archived-2026-07-22.md`로 옮겼습니다. **삭제된 내용은 없습니다.**
+> **분할 이력(#31)**: 이 파일이 임계(1500줄)에 근접할 때마다 앞부분을 archive로 이동합니다. **삭제된 내용은 없습니다.**
+> - 2026-07-22 분할: `archive/PRINCIPLES_LEARNED_archived-2026-07-22.md` (#1~#45 구간 대응 — PRINCIPLES_CODE.md 이관분과 별개)
+> - 2026-07-30 분할: `archive/PRINCIPLES_LEARNED_archived-2026-07-30.md` (**#46~#227 구간**, 131건)
 >
-> - **이 파일**(145건): #46, #47, #48, #49, #50, #51, #52, #53, #54, #55, #56, #57, #58, #59, #60, #61, #62, #63, #64, #65, #66, #67, #68, #69, #71, #72, #73, #74, #77, #78, #79, #80, #81, #82, #83, #84, #85, #86, #87, #90, #91, #92, #93, #94, #95, #96, #97, #98, #99, #100, #101, #102, #103, #104, #105, #106, #107, #108, #109, #113, #114, #115, #116, #117, #118, #119, #120, #121, #122, #123, #124, #125, #126, #127, #128, #129, #130, #131, #132, #133, #134, #135, #136, #137, #138, #139, #140, #141, #142, #143, #144, #145, #146, #147, #148, #149, #150, #151, #152, #153, #154, #155, #156, #181, #182, #183, #184, #185, #186, #187, #188, #189, #190, #191, #192, #193, #194, #195, #196, #197, #198, #199, #200, #201, #202, #203, #216, #223, #224, #226, #227, #254, #255, #256, #257, #258, #259, #260, #271, #272, #273, #274, #275, #276, #277
-> - **아카이브**(26건): #26, #29, #31, #32, #33, #34, #35, #36, #37, #38, #39, #40, #41, #42, #43, #44, #45, #262, #263, #264, #265, #266, #267, #268, #270
->
-> 원칙을 찾을 때는 두 파일을 함께 grep 하세요:
-> `grep -rn "작업원칙 #NNN" docs/plan/PRINCIPLES_LEARNED.md docs/plan/archive/PRINCIPLES_LEARNED_archived-2026-07-22.md`
+> **이 파일(현재)**: #254부터 시작. 원칙을 찾을 때는 archive 두 파일과 함께 grep 하세요:
+> `grep -rn "작업원칙 #NNN" docs/plan/PRINCIPLES_LEARNED.md docs/plan/archive/PRINCIPLES_LEARNED_archived-2026-07-22.md docs/plan/archive/PRINCIPLES_LEARNED_archived-2026-07-30.md`
 >
 > **신규 원칙은 이 파일 맨 아래에 추가합니다.**
-
----
-
-## 작업원칙 #46 — 거짓 라벨 금지: registry/UI는 실 가동 단정 후 등재 (2026-05-19 명문화)
-
-**배경**:
-2026-05-19 Sprint 8-IA 진입 결정 시 발견. 직전 세션에서 만들어진 `/automation` 페이지의 `automation-registry` 26-entry 중 14개가 *미구현 작업의 사전 라벨*. 사용자가 "정상 17"으로 표시된 화면을 보고 *실제로는 cron 3건만 가동*임을 직접 시각 점검으로 발견. 파워셀러 시각: 작동하지 않는 기능이 작동한다고 표시되는 게 가장 큰 운영 리스크 (사용자 신뢰 깨짐).
-
-**원인 진단**:
-- "향후 작업의 *등록 지점*을 미리 깔아둔다"는 의도 → 실제로는 *미구현을 정상으로 위장*
-- registry는 모니터링 도구가 아니라 *사용자에게 시스템 상태를 보고하는 화면*
-- 미가동 작업을 미리 등재하면 *그 행이 정상으로 표시되는 순간 거짓 보고*
-
-**규칙 5가지 (강제 적용)**:
-
-(a) **registry 등재 = 실 가동 단정 후만** — 다음 3 조건 모두 통과해야 entry 추가:
-  1. 코드 구현 완료 (production deploy 통과)
-  2. 최소 1회 실 실행 확인 (cron 발화 또는 on-event trigger 성공)
-  3. 로그/메트릭 endpoint 존재 (상태 fetch 가능)
-
-(b) **미가동 작업은 *Sprint 인벤토리*에 등재** — `SPRINT_PLAN.md` 또는 `ROADMAP.md`에만 명시. registry/UI에는 진입 금지.
-
-(c) **사용자 노출 UI에서 "준비"/"대기"/"보류" 상태 금지** — 사용자가 보는 화면은 "정상" 또는 "오류" 2가지만. "준비/대기/보류"는 *관리자 영역* (`/admin/*`)에서만 허용.
-
-(d) **상태 라벨은 *fetch 결과 기반*만 허용** — hardcoded "정상" 라벨 금지. 매 페이지 로드 시 endpoint fetch → 실 상태 표시. fetch 실패 → "오류" 표시 (가짜 정상 금지).
-
-(e) **신규 자동화 작업 commit 시 registry entry 동시 추가 의무** — 코드 commit + registry entry는 *같은 commit*. 분리 시 *commit gap 동안 가짜 라벨 발생 위험*.
-
-**검증 패턴**:
-
-```bash
-# registry entry 수 == 실 가동 작업 수 검증
-grep -c "id: '" src/lib/automation-registry.ts
-# == 실 cron 작업 + Discord 채널 + 알림톡 등 가동 단정된 것의 합
-```
-
-신규 자동화 sprint 진입 시:
-1. 코드 구현 → production deploy → 실 실행 확인 (검증 통과)
-2. 같은 commit에 registry entry 추가
-3. 사용자 노출 UI에서 자동으로 "정상" 표시 (hardcoded 아님)
-
-**적용 사례 (2026-05-19 Sprint 8-IA Phase 1)**:
-
-- BEFORE: registry 26 entry (정상 17 / 대기 2 / 보른 6 / 준비 2)
-  - 정상 17 중 *실제 가동*: 3건 (재고폴링 + 일배치 + 주배치)
-  - 14개 가짜 정상 라벨 = 본 원칙 *직접 발화 사례*
-- AFTER (Phase 1 적용): registry 8 entry (정상 8 / 대기 0 / 보류 0 / 준비 0)
-  - 모두 실 가동 단정된 작업만 (Discord 5채널 + 재고폴링 + 일/주 배치)
-  - 사용자가 본 화면 = 실 상태 100% 정합
-
-**파생 학습**: "registry는 *미래 작업의 등록 지점*이 아니라 *현재 가동의 보고 화면*". 등록 지점 역할은 `SPRINT_PLAN.md`가 담당. 두 역할을 한 파일에 합치면 *시점 충돌* 발생 → 본 사고가 그 직접 사례.
-
----
-
-## 작업원칙 — publishReady 라벨의 검사축 명시 의무 (#46 확장, 2026-05-31 학습)
-
-**사고**: 달항아리 상세 환각제거 cycle 후 `publishReady=true`로 라벨이 떴으나, 네이버로 실제 전송되는 naver_* 페이로드 17필드가 전부 NULL이었음. authentic 게이트는 detail PNG 콘텐츠만 검사하고 네이버 전송정보는 미검사 → 발행 불가 상태에서 "발행가능" 거짓신호.
-
-**교훈**: **publishReady 라벨은 검사 축을 명시해야 한다. authentic(PNG) ≠ naverPayloadComplete(전송정보).** 발행 게이트는 네이버로 실제 가는 페이로드를 검증해야 하며, 자산 미리보기 검증만으로 "발행가능" 라벨을 붙이는 것은 #46(거짓 라벨 금지)의 확장 위반.
-
-**시스템 강제**:
-- `evaluatePublishReadiness`의 publishReady는 다축 AND: `fieldsAllSet && authentic && naverPayloadComplete && status=DRAFT && naverProductId=null`.
-- 각 축은 응답에 독립 노출 (publishReady만 보지 말고 어느 축이 false인지 확인).
-- 신규 게이트 축 추가 시 라벨 라이브 의미가 변함 — 회귀 0 + 전 상품 영향 신경.
-
-**파생 학습**: 단일 boolean 신호는 *축의 합성*이지 단일 진실이 아니다. 라벨이 true일 때 어느 축 통과로 true인지 추적 가능해야 한다. 단축 추가 시 기존 true가 false로 강등되는 것은 *의도된 강등*(거짓신호 차단).
-
----
-
-## 작업원칙 #47 — AI 생성 인물 정책: 익명 모델 허용 / 특정 실존인물 금지 (2026-06-04 대표 확정)
-
-**정책 변경(대표 확정)**: 상품·컨셉상 사람이 들어가야 감도가 사는 경우 AI 생성 인물 등장을 허용한다. 단 (a) 특정 실존 모델(연예인·식별 가능 개인·유명인 얼굴) 생성 금지 = 익명 일반 모델/비식별만, (b) 미성년자 부적절 묘사 금지(상업 제품컷 맥락 유지).
-
-**대체 관계**: 구 하드룰 "얼굴 없는 인체 일부 전략"(KKOTIUM_ART_DIRECTION_RESEARCH_2026-05-29 §3-D, DETAIL_PAGE_PLAYBOOK §5)은 본 정책으로 대체된다. 법적 근거: 익명·비식별 모델은 퍼블리시티권(부정경쟁방지법 (타)목)·표시광고법(AI 가상인물 광고 표시) 리스크를 회피하므로 "식별 불가" 조건만 지키면 허용 가능.
-
-**Firefly 공통 네거티브(인물 포함 시)**: `no recognizable celebrity, no specific real person likeness, no text, no logo, no watermark, no brand marks`.
-
-**적용 의무(#44 stale fact 연동)**: 본 정책 변경 시 구 하드룰을 명시한 라이브 SOP(DETAIL_PAGE_PLAYBOOK §5)를 동시 갱신한다(본 turn 이행). 동결된 과거 리서치/핸드오프(KKOTIUM_ART_DIRECTION_RESEARCH, HANDOFF_S2 등)는 시점 기록이므로 보존하되, 본 #47이 최신 권위임을 본 ledger로 단정.
-
-**권위 문서**: docs/handoff/FIREFLY_CONCEPT_PROMPTS_v2_human_allowed_2026-06-04.md §0.
-
-## 작업원칙 #48 — 도구 생태계 라우팅 규칙 (2026-06-04 명문화, TOOL_ECOSYSTEM_MANUAL 근거)
-
-**도구 라우팅(고정)**:
-- **이미지 생성** = Adobe Firefly 웹 1-click(대표 수동) — Firefly Services api 모드는 엔터프라이즈 키 장착 시에만(작업원칙 #38 예외).
-- **가공**(누끼/리사이즈/리프레임/합성준비) = Adobe MCP 자동.
-- **합성·연속성**(상세페이지 레이아웃) = 빌더(section-builder/composeContinuous) + 디자인 도구(Figma). sharp 단순 적층은 약함 — 빌더 연속 캔버스가 담당.
-- **시안·의사결정·배너**(내부용, 2026-06-05 추가) = 캔버스 시각화(Claude Design 류) / Canva — 발행 GO/NO-GO 의사결정 카드·둘째 상품 hero 시안 탐색·단발 이벤트 배너. **판매 발행물 아님** → IP 면책 불요. 판매 자산은 여전히 Firefly-native 생성 + Figma 양산만(면책 경계 불변).
-
-**연결 상태 명문화(2026-06-05 갱신, #44 stale-fact)**:
-- **AEM MCP**: 연결 유지(2026-06-05 대표 재연결), 단 현재 1인 셀러 워크플로우 미해당 — 향후 멀티채널 확장(자사몰 등) 시 활용. **Adobe Marketing Agent MCP**: 동일(연결 유지·현재 미해당). 억지 편입 금지(정직 평가 #46) — 엔터프라이즈 CMS/마케팅 운영 도구로 현재 1인 셀러 호출 표면 없음.
-
-**파트너 모델 면책 경계(중요)**:
-- FLUX / Nano Banana / gemini-image / imagen / gpt-image 등 **파트너(비 Firefly-native) 모델은 IP 면책 없음** → **최종 판매물(발행 자산)로 사용 금지**. Firefly-native(firefly-image-4/4-ultra/5, 유료 플랜 면책)만 판매물 허용. firefly-generate.ts는 api 모드에서 파트너 모델을 manual로 강등해 자동 발행 경로에서 배제(주석 반영).
-
-**근거**: docs/research/TOOL_ECOSYSTEM_MANUAL_2026-06-04.md + 빌더 하이브리드 대수술 STEP5. 2026-06-05 보강(Claude Design 슬롯 편입·AEM 재연결 정정): docs/handoff/HANDOFF_claude_design_slot_aem_2026-06-05.md.
-
----
-
-## 작업원칙 #49 — Desktop 핸드오프 직접 write 인계 (2026-06-04 명문화, 손품 제거)
-
-**배경**: 기존 핑퐁은 Desktop이 핸드오프 작성 → 대표가 다운로드 → Claude Code에 업로드(첨부)하는 사이클로, 매 핑퐁마다 대표 수작업 발생.
-
-**실증(2026-06-04 Desktop)**: Filesystem:write_file로 docs/handoff/에 한글 핸드오프 직접 작성 → read 재검증 결과 한글·특수문자(·, ★, →)·따옴표 깨짐 0 확인. 다운/업로드 사이클 불필요 입증.
-
-**규칙**: Desktop → Code 인계 시, Desktop은 핸드오프 MD를 docs/handoff/에 Filesystem:write_file로 직접 작성한다. 대표는 Code에 "docs/handoff/{파일명} 정독" 한 줄만 전달(다운/업로드 0).
-- **적용 범위**: 핸드오프/인계 문서(일회성). Desktop write_file = 전체 작성(overwrite)이라 안전.
-- **제약(불변)**: 큰 추적 MD 5종(PROGRESS/ROADMAP/SESSION_LOG/TASK_BRIDGE/CLAUDE) 및 PRINCIPLES_LEARNED 등 누적형 한글 MD의 부분 편집은 여전히 Code의 Python full-overwrite(#29b 불변 — Desktop이 큰 파일 전체 덮어쓰면 기존 내용 유실 위험).
-- **git**: Desktop write 파일은 git 미추적 → Code가 작업 turn에 git add/commit으로 보존.
-- **역할 분담**: Desktop=핸드오프 직접 쓰기 / Code=큰 추적 MD 반영 + git 보존.
-
-**근거**: docs/handoff/HANDOFF_principle49_publish_handoff_2026-06-04.md §0.
-
-
-## 작업원칙 #50 — 신규 테이블 의존 코드는 migrationPending 가드로 역순배포 안전화 (2026-06-06 학습, Phase 1 asset_jobs)
-
-**문제**: 새 DB 테이블(asset_jobs 등)을 읽는 코드를 마이그레이션 적용 전 push하면, production에서 테이블 부재(Prisma P2021)로 런타임 에러. 그러나 마이그레이션 선행(commit 보류) → push 순서는 두 환경 핑퐁(#41)에서 직렬 대기를 강제해 느림.
-
-**규칙**: 신규 테이블을 읽는 라우트는 P2021/relation-does-not-exist를 catch해 `{migrationPending:true}` 등 안전 응답으로 degrade한다. 그러면 (a) 코드 push가 마이그레이션보다 먼저여도 production 무중단(위젯은 '준비 중' 표시), (b) Desktop이 Supabase apply_migration 적용 시 자동으로 정상 표시 전환. 마이그레이션 SQL은 docs/handoff/에 박제(단일 소스, prisma/migrations는 gitignore).
-- **적용 범위**: 신규 테이블 read 경로(집계/조회 API). 신규 테이블 write 경로는 마이그레이션 선행 필수(쓰기는 degrade 불가).
-- **검증**: 가짜 초록 금지(#46) — migrationPending은 '데이터 없음'이 아니라 '준비 중'으로 명시 표시.
-
-**근거**: 본 세션 /api/products/asset-jobs-matrix가 P2021 가드로 a55976b/e9a6c95 push를 Supabase 마이그레이션보다 먼저 안전 배포.
-
-
-## 작업원칙 #51 — 제품교체 B안: 실제 제품 누끼 고정 + 배경만 AI (2026-06-06 대표 확정)
-
-**규칙**: AI 생성 이미지의 "상상 제품"을 실제 제품으로 교체(재생성/채우기 swap)하지 않는다. 실제 제품 누끼를 고정하고 배경/무드만 AI로 생성해 레이어 합성 + 빛 정합한다. 라벨·텍스트·형태 왜곡 0.
-- **근거**: Adobe/Google 공식 문서가 재생성 시 라벨·텍스트 보존 미보장 + 소비자 71% '실물 불일치' 반품(Salsify). 라벨 유리병(명화 등)은 재생성 시 라벨 왜곡 = 전환↑ 노리다 반품↑ 자충수.
-- **대표이미지 = 흰배경 누끼만**(네이버 2024-10-28): 라이프스타일 합성컷은 상세/추가 전용. 코드 가드 = naver-normalize.ts assertWhiteBackground(4모서리 luma/chroma) + assertRepresentativeAssetKind.
-- **방향전환 트리거**: 라벨 왜곡 클레임/네이버 제재 1건 → 흰배경 누끼 회귀.
-
-## 작업원칙 #52 — 브라우저 반자동 핸드오프: detect→deliver→resume (2026-06-06)
-
-**규칙**: 대표가 로그인 Chrome 환경을 열어두면 AI(Claude in Chrome)가 이어받되, 비가역·고위험·봇차단 단계는 사람이 한다.
-- **사람**: 로그인/MFA, CAPTCHA, 로컬 파일 업로드, 다운로드 확인, 결제·발행 비가역 클릭, 최종 품질 승인.
-- **AI**: 프롬프트 입력, 생성 클릭, 변형 선택, 내비게이션, 상태 폴링, 로그 읽기.
-- **패턴**: AI가 인증벽/업로드 지점 감지→일시정지(awaiting_human) → 앱이 '지금 이 작업 하세요' 알림(딥링크) → 사람 해결 → AI가 폴링으로 완료 감지→재개(human_done→in_progress). 높은 핸드오프 비율 = 실패가 아니라 자기 한계를 아는 견고함. (잔여 프롬프트 인젝션 11.2% → 비가역은 사람.)
-
-## 작업원칙 #53 — 도구 적재적소 (각 프로그램 장점 최대 활용, 2026-06-06 대표 확정)
-
-**규칙**: 단계별 최적 도구로 분담한다. Firefly=생성(면책 경로) / Photoshop=정밀 누끼·레이어 합성·빛 정합(Harmonize) / Adobe Express=브랜드 마감·Bulk Create 대량변형·리사이즈 / Sharp=네이버 규격화(서버 자동) / Claude Design=시안·관제탑. 이미지 생성은 면책/크레딧 불문 최고 품질 모델(단 판매물 상업 사용권은 발행 전 확인 — 파트너 모델은 참조 외부 전송 주의, Firefly 네이티브가 명확).
-
-
-## 작업원칙 #54 — 적용 현황 항상 명시 (application status visibility, 2026-06-08 대표 상시 요구)
-
-**규칙**: 무엇이 실제 라이브인지 추정 금지(#45 실측우선). 모든 세션 보고에 "앱 적용 현황" 블록을 항상 포함하고, 상품별로 3구분 명시한다: **LIVE(production 실측) / DB-only(가역 반영) / 미적용(pending)**.
-- **시스템화(채팅 의존 탈피)**: 관제탑/스튜디오에 상품별 "적용 현황 인디케이터"(필드 4종 = attributesApplied / mainImageApplied / detailApplied / publishState)를 내장해 앱에서 상시 가시화. 컬럼 부재 가드(#50), 전상품 동작, 텍스트 잘림 0, 레드 금지(75/15/10 — LIVE 초록/DB-only 뉴트럴/미적용 점선).
-- **근거**: 과잉/누락 작업 방지(ROI). 권위: docs/decisions/2026-06-08-always-state-status-and-universal.md.
-
-## 작업원칙 #55 — 전상품 범용 (product-agnostic, 2026-06-08 대표 상시 요구)
-
-**규칙**: 신규 작업은 출시 전 범용화(상품 불문 동작) 선행. 명화 = 검증 케이스일 뿐 특수 경로 아님. 명화 전용 일회성 금지.
-- **전상품 공통 대상**: 크롭 표준(주제 완전포함+프레이밍) · 아틀리에/스튜디오 UI · 발행 파이프라인 · 이미지 전략 · 라인 엔진 · 적용 현황 인디케이터.
-- **이미 범용 확인**: T5 파이프라인 수렴 · THUMBNAIL_CROP_EDIT_STANDARD · 2026-06-07 crop-full-subject-containment · KKOTIUM_DESIGN_SYSTEM · 라인 엔진(quality_reasons.line). 권위: docs/decisions/2026-06-08-always-state-status-and-universal.md.
-
-
-## 작업원칙 #56 — 개입 자연스러움 (smooth human-in-the-loop, 2026-06-08 대표 지시)
-
-**규칙**: 대표 개입이 필요한 모든 지점은 앱이 자연스럽게 surface한다(숨김·추측 강요 금지). 권위: docs/design/OPERATOR_SYSTEM_BLUEPRINT.md §3·§4.
-- **개입 대기열(Operator Action Queue)**: 전상품을 가로지르는 단일 surface. "지금 무엇이·어느 상품에·왜 필요한가"를 카드로 노출. 4분류 = AUTO(자동 진행·초록) / INPUT_DECISION(입력·결정·앰버) / GO_PENDING(비가역 발행 GO 대기·레드) / AUTH(외부 인증·일시정지). 데이터 원천 = control-tower-engine의 nextAction+applyStatus+게이트 파생(신규 컬럼 0).
-- **순서 강제 0**: 기능은 상황에 따라 융통적으로 사용. #54(적용현황 상시=결과축)·#55(전상품 범용)와 한 쌍(개입 대기열=행동축).
-- **자동/반자동 경계**: 비가역·인증·창작 판단은 대표; 그 외 의존성 없는 기술작업은 앱/Code가 완결 후 보고.
-- **레드 스코프**: GO_PENDING(비가역 GO) + 1차 액션(메인 지정)만 레드. 보조 CTA(프롬프트 복사 등)는 뉴트럴(75/15/10).
-
-
-## 작업원칙 #57 — 누끼 소스 = 실촬영 히어로컷 + 투-트랙 합성 (2026-06-09 대표 확정)
-
-**규칙**: 상품 누끼·합성컷의 소스는 항상 공급사 실촬영 단품 히어로컷(상세페이지의 크고 선명한 실사진)에서 따다. 작은 변형 카드컷·텍스트 섞인 컷·저해상 썸네일 금지(평면·그래픽·잘림 원인). 명화 = 검증 케이스(전상품 적용 #55).
-- **완전 포함**: 캡·병·라벨 잘림 0(완전포함 원칙·T6 가드). 합성 = 빛·그림자·재질 살아있는 입체감 유지(평면 금지).
-- **투-트랙 추가이미지 전략**: (1) 정보형 = 흰배경/린넷 새배경 합성(라벨 또렷이, 추가이미지 상단 2~3번) / (2) 감성형 = Firefly 포토리얼 무드(차량·골든 홈, 전환 유도 히어로). 정보·감성 역할 분담 → SEO+전환 동시.
-- **배경 톤 = 라벨과 호응**: 인상주의 자연·풍경 라벨 → 따뜻한 우드+린넷+은은한 식물그림자. 차갑거나 화려한 배경 금지(라벨 충돌).
-- **도구**: 누끼=Adobe MCP image_remove_background(복구됨) / 새배경=앱 sharp 즉시 / 포토리얼 무드=Firefly 웹UI 브라우저(#52, 파일드롭·생성클릭=대표). compositing/gen-bg는 Adobe MCP 영구 미지원.
-- **앱 적용**: C-7 apply-composite(extra_images 슬롯)·C-8 멀티슬롯 매니저에 본 표준 반영. 합성 소스 선택 UI에 '실촬영 히어로컷' 우선 표기. 권위: HANDOFF_myeonghwa_composite_recipe §4.
-
-
-## 작업원칙 #58 — 제품 정체 우선 검증 (2026-06-11 학습, 명화 리드목업 사고)
-
-**규칙**: 이미지 작업(누끼·합성·상세) 전 **공급사 실상세(detail-source)로 진짜 제품을 먼저 육안 확정**하고 MD에 제품정체 1줄 박제. Supabase/생성폴더의 기존 이미지를 제품으로 가정 금지(AI목업 혼입 함정 — 명화 리드목업 사고). 전상품 영구구조(#55). 권위 = docs/playbook/CUTOUT_HERO_STANDARD.md·HANDOFF_2026-06-10_PRODUCT-IDENTITY-RECOVERY.md.
-
-## 작업원칙 #59 — 산출물 영구화 (2026-06-11 학습, 끊김 방지)
-
-**규칙**: 누끼/합성/실소스 산출 즉시 ①프로젝트 `assets/generated/{pid}/cutout|composite/` ②Supabase `{pid}/cutout|composite/` **양쪽 적재**. Claude 환경/다운로드만으로 두면 유실(세션 끊김 원인). MCP는 Storage 업로드 불가 → Supabase 적재는 Code 1스텝. 전상품(#55).
-
-## 작업원칙 #60 — 세션 진입 시 HEAD 대조 후 pull (2026-06-11 제안, EOD 드리프트 방지)
-
-**규칙**: 새 세션 진입 시 **Vercel production HEAD vs 로컬 HEAD를 먼저 대조** — 다르면 편집 전 `git pull`. (EOD 핸드오프가 production보다 뒤처진 사례를 #45가 적발 → 본 원칙으로 사전 차단.) STEP 0 환경 점검(verify-vercel-deploy)과 정합.
-
-## 작업원칙 #61 — 합성 표준: 상품진실 앵커 + 3-Plane 리얼리즘 + ≥2무드 (2026-06-11 대표 확정)
-
-**규칙**: 본품 무드 합성은 상품의 **실측 비율·형태에 충실**하게(과대·왜곡·잘림 금지 = "상품진실 앵커"), 스튜디오 촬영처럼 **현실감 있게**(3-plane 후경/중경/전경·접지그림자·키라이트), **상품마다 ≥2 무드**(사용맥락 + 스튜디오 정물). 전상품 합성 표준(#55). 권위 = docs/design/ADAPTIVE_COMPOSITE_ENGINE.md.
-- **상품현실시트**: 합성 전 상품별 실측 비율/용량/형태/소재/핵심셀링 시트 작성(과대 차단 앵커).
-- **누끼 진실성**: 레퍼런스 누끼가 실제 본체 형태·비율과 일치(불일치 시 재누끼). 명화 #2(9T0) 폐기 = 형태오류(클립)·과대 → 본 원칙으로 차단.
-- **생성=Firefly·결정적변환=코드**: 자연 합성은 Firefly Nano Banana Pro(3-plane), harmonize/normalize/접지는 sharp. Pillow 기계겹침 폐기. (#52·#53·#57 재확인)
-- **앱 적용**: finish-image(C-3)·apply-composite(C-7)·개입카드(C-9)·스튜디오 마무리 카드(C-5)가 본 표준 소비.
-- 번호 정합: #58(제품정체 우선)·#59(산출물 영구화)·#60(세션 HEAD 대조) 정식 등재 완료(갭 해소).
-
-## 작업원칙 #62 — 교차뷰 리페치 브로드캐스트 (2026-06-12, SWR/plain-fetch 환경)
-
-**규칙**: 한 뷰가 상품 이미지 상태(대표/추가/아카이브)를 바꾸면 같은 상품을 띄운 타 뷰(스튜디오 헤더·캔버스·상세)가 즉시 리페치해야 한다. 앱은 React Query 부재(SWR/plain-fetch) → 라이브러리 무관 window CustomEvent(`kkotium:product-mutated`) 브로드캐스트로 구현(src/lib/events/product-mutated.ts). 액션 측 broadcast → 구독 측 refetch. SSR 안전(window 가드).
-
-## 작업원칙 #63 — 실사용 브라우저 테스트 통과 후 다음 작업·가짜보고 절대 금지 (2026-06-12 대표 확정)
-
-**규칙**: 기능 "완료"는 실사용 브라우저 테스트 통과가 조건. Desktop이 preview 인증벽(Vercel Deployment Protection)으로 검증 불가 시 → (a) 병합 후 production에서 테스트 또는 (b) 대표 점검 요청. **절대 가짜보고 금지** — 미검증을 "검증완"으로, 미표시를 "표시"로 기록 금지. 발견된 미해결(예: /assets composite 미표시)은 그대로 노출. #44(stale fact 갱신)·#45(출력 fact-check) 강화.
-
-## 작업원칙 #64 — 등록 시 공급사 권위원본에서 fidelity card 자동생성 (2026-06-12 대표 확정)
-
-**규칙**: 모든 상품은 등록 시 공급사 권위 원본(실상세·#58)에서 충실도 카드(Product.fidelity)를 자동생성한다 — 향(scents)·부속(components)·마운트(mountType/mountMechanic)·금지데코(decorForbidden)·promptInject. 카드는 이미지 프롬프트 주입 + 발행 게이트(fidelity_check/mount_check)의 권위. 권위 PRODUCT_REGISTRATION_WORKFLOW.md·ADAPTIVE_COMPOSITE_ENGINE.md §11. 전상품(#55).
-
-## 작업원칙 #65 — Firefly 수동 드롭은 임시·Firefly Bridge 수렴 (2026-06-12 방향)
-
-**규칙**: 현행 Firefly 참조 슬롯 수동 드롭(#52)은 과도기. 목표 = Firefly Bridge가 reference/ 스테이지 자동로드 + 생성 자동구동, 운영자 개입은 "당선작 픽(최종 선별)"으로 수렴. 전자동화 전까지 수동 드롭 유지하되 reference/ 적재·STAGE_NAMING로 자동화 준비.
-
-## 작업원칙 #66 — 스토리지 list 진단 5단 격리 (2026-06-12 학습, /assets composite=0 근본원인)
-
-**규칙**: `/assets` 등 스토리지 표시 이상 시 추측으로 production env/키를 먼저 건드리지 않고 5단 격리한다 — (a) storage.objects 데이터 SQL 전컬럼 비교, (b) storage.search/search_v2/list_objects_with_delimiter를 service_role로 직접, (c) storage-api REST를 실제 키·body 변형으로, (d) 배포소스 GitHub raw diff, (e) 배포 클라이언트(storage-js) 정확버전 설치 후 collect() 복제. 각 계층을 무혐의/혐의로 분리한 뒤 단일 미통제 변수(런타임)를 계측(probe)으로 확정. #45(출력 fact-check)·#63(가짜보고 금지) 연속.
-
-## 작업원칙 #67 — storage list trailing-slash 자가치유 (2026-06-12, 전상품 방어)
-
-**규칙**: nested prefix `.list()`가 비-빈 폴더에 0행을 반환할 수 있음(클라이언트/키/런타임 조합 특이). no-slash 0행 → trailing-slash 1회 재시도 = 전상품 표준 방어(자산 무음 누락 0). 0행일 때만 동작하므로 정상결과 불변(automation-storage.ts listProductAssets.collect). 권위 HANDOFF_2026-06-12_composite-rootcause-probe. 라이브 검증완 2026-06-12(세션6-c) — composite 0→9 3-tier(/assets x-vercel-cache MISS·SQL storage.objects 1:1·/studio 에셋탭 9썸네일 naturalWidth>0). 근본원인=no-slash list버그 확정·자가치유 영구복구.
-
-## 작업원칙 #68 — production env 정합 게이트 (2026-06-12)
-
-**규칙**: 로컬 .env와 Vercel env의 키 drift가 "코드·DB는 정상인데 production만 이상"의 원인이 될 수 있음. 신형 sb_secret_ 키 마이그레이션 시 Vercel env 동기화 필수. 진단 시 probe로 env.keyPrefix/keyLen을 노출해 drift를 직접 판정(추측 금지).
-
-## 작업원칙 #69 — 인계 in-chat 박제 · 누락0 연속성 (2026-06-12 대표 확정)
-
-**규칙**: 모든 작업 종료 시 인계 메시지를 채팅 응답 본문에 누락 없이 정리한다(파일에만 두지 않음). 포함: Target Session·Branch·다음 1액션·검증절차·코드패치 위치·세션요약. 운영자=paste-mediator → 채팅에서 바로 복사·착수 가능해야 함. CLAUDE.md 작업원칙 섹션 + PRINCIPLES_LEARNED 양쪽 박제.
-
-## 작업원칙 #71 — 진짜 예술은 진짜로 (Authenticity Realism Lane) (2026-06-13 세션7-g, 전상품)
-
-**규칙**: 모든 자산 슬롯은 사실성 레인으로 태깅한다. **AUTHENTIC-ART**(제품 라벨·브랜드 스토리 S5) = 퍼블릭도메인 실제 작품만(실제 명화 reproduction·진짜 모네). **PHOTOREAL**(히어로·라이프스타일·향 씬·합성·썸네일·추가이미지) = 실사 카메라 촬영 품질, AI 유화/회화/페인터리 마감 전면 금지. 명화 컨셉은 라벨(실제)+S5 스토리(실제 모네)가 짊어지고, 향 씬·히어로·합성을 AI 유화로 칠하면 컨셉이 사는 게 아니라 AI 이질감만 생겨 신뢰가 깎인다. 비명화 상품은 AUTHENTIC-ART 레인이 비어도 PHOTOREAL 룰(회화 마감 금지)을 보편 적용(#55). 앱 개입점 = 사실성 레인 가드(asset 슬롯 realism_lane('authentic_art'|'photoreal') 파생 + PHOTOREAL 슬롯 회화마감 경고, 기존 fidelity_check/main_image_white_bg 가드 동형·강제모달 0 #56). 전거 docs/playbook/SCENT_MOOD_4SCENE_GRADE_2026-06-13.md §0·§7, docs/design/SCENT_MOOD_BACKGROUND_SYSTEM.md, 스펙 docs/design/REALISM_LANE_GUARD_SPEC_2026-06-13.md.
-
-## 작업원칙 #74 — Firefly programmatic 프롬프트 주입 유지 가능 (SUPERSEDE, 2026-06-13 실측)
-
-**규칙**: Firefly programmatic 프롬프트 주입은 shadow-walk 노드 포착 + native 프로토타입 setter+InputEvent면 유지됨(stuck 실측). 구#74의 '폐기'는 단순 el.value= 방식 한정. blob 결과는 fetch->arrayBuffer로 추출 가능(image/png 검증). 구체: Firefly SPA는 353 Shadow DOM 호스트로 캡슐화되어 top-level querySelector는 0이지만 shadow root 재귀 관통으로 textarea·생성·다운로드 버튼·결과 이미지(4컷 1376x768) 전부 포착. native setter+InputEvent 주입은 React/Spectrum 내부 상태에 반영되어 값 유지(stuck:true). 결과 blob은 fetch->arrayBuffer->base64로 바이트 추출(2.45MB·시그니처 89504e47 유효). 적재 catch-basin = POST /api/products/[id]/ingest-firefly(base64->uploadAutomationAsset->{pid}/{stage}/ + asset_registry 인테이크, 비가역 0·네이버 무접촉, 전상품). 개입카드 firefly_drop->firefly_auto 확장(탭 열림 감지 시 '자동 생성 가능' 표시·강제모달 0 #56). 생성 트리거·폴링은 Desktop 1컷 실측서 확정(크레딧 소비). 근거 docs/playbook/FIREFLY_AUTOMATION_PLAYBOOK_2026-06-13.md. 보완 #75(Scene-first 3-Layer 합성 표준).
-
-## 작업원칙 #77 (정정판) — Firefly 모드 가드: view=edit 워크스페이스는 안전, ACTIVE 마스크/선택영역/참조잠금만 ABORT (2026-06-13 정정, 전상품)
-
-**규칙(정정)**: `view=edit` 편집 워크스페이스 자체는 위험이 아니다. 마스크가 없고 전체 캔버스가 생성 타겟이면 `생성` 클릭은 새 풀생성으로 작동(허용). 진짜 위험 = **ACTIVE MASK / 선택영역 / 참조 잠금(부분 인페인)** 활성일 때만. 따라서 가드는 `edit-locked-ABORT`(maskActive || refLoaded>0)만 중단하고, `generate`·`generate-in-edit-OK`(편집 워크스페이스 진입했으나 마스크 없음=풀생성 안전)는 진행한다. ※ 1차판(세션7-c, '편집도구 버튼 존재=편집모드') 오탐 정정 — 편집도구 버튼(새로 편집·마크업·디테일 조절·업스케일)·대형 단일 표시이미지는 편집 워크스페이스 신호일 뿐 ABORT 사유 아님(상시노출 오탐). 실측 근거: 5컷 배치 maskActive=false + perceptual hash minHamming 19/64(전부 distinct)=정상 풀생성, 시각 확인도 5컷 전부 프롬프트 일치 별개 씬. 통합 규칙: 단건·5컷 루프 매 iteration `kkSetPrompt` 직전 `kkAssertGenerateMode()` 호출 → `edit-locked-ABORT`(마스크/선택영역/참조잠금)만 중단+개입알림, `generate`·`generate-in-edit-OK`는 진행. 사후 perceptual hash(minHamming<10=오염) 보강 유지. 앱 연동(기박제, 중복 금지): firefly_auto 개입카드 payload.generateModeConfirmed 게이트(미확인=검증대기·강제모달 0 #56·전상품 #55). 전거 docs/playbook/FIREFLY_GROUNDING_AND_QUALITY_UPGRADE_2026-06-13.md §1.2~1.4 (PLAYBOOK §8.3 supersede).
-
-**검증판 kkAssertGenerateMode (§1.3 그대로 인용)**:
-```js
-function kkAssertGenerateMode(){
-  const seen=new Set();
-  let genBtn=false, newEditBtn=false, markupTools=0, refLoaded=0, maskActive=false, dom=null;
-  (function w(root,d){ if(!root||d>14)return; let ns; try{ns=root.querySelectorAll('*');}catch(e){return;}
-    ns.forEach(el=>{ if(seen.has(el))return; seen.add(el);
-      const tag=el.tagName?el.tagName.toLowerCase():'';
-      const lab=((el.innerText||'')+' '+((el.getAttribute&&el.getAttribute('aria-label'))||'')).trim();
-      const cls=(typeof el.className==='string'?el.className:'')||'';
-      if((tag==='button'||(el.getAttribute&&el.getAttribute('role')==='button'))&&(el.offsetWidth||el.offsetHeight)){
-        if(/생성|generate/i.test(lab)) genBtn=true;                          // FIX: no ^$ anchor
-        if(/새로 편집|new edit/i.test(lab)) newEditBtn=true;
-        if(/마크업|markup|디테일 조절|detail adjust|업스케일|upscale/i.test(lab)) markupTools++;
-      }
-      if(tag==='img'&&el.naturalWidth>200&&(el.offsetWidth||el.offsetHeight)){
-        const r=el.getBoundingClientRect();
-        if(!dom||r.width*r.height>dom.dw*dom.dh) dom={dw:Math.round(r.width),dh:Math.round(r.height)};
-        if(/reference|참조|composition|구도|base/i.test(cls+lab)) refLoaded++;
-      }
-      if(/mask|마스크|선택 영역|brush|브러시|selection/i.test(cls+lab)&&(el.offsetWidth||el.offsetHeight)) maskActive=true;
-      if(el.shadowRoot) w(el.shadowRoot,d+1);
-    });
-  })(document,0);
-  const dominantOpen = !!(dom && dom.dw>=500);
-  // SAFE to generate even in edit workspace IF no mask/region/reference lock:
-  const partialEditLock = maskActive || refLoaded>0;
-  const editSession = newEditBtn || (dominantOpen && markupTools>=2);
-  const mode = partialEditLock ? 'edit-locked-ABORT'
-             : genBtn ? (editSession ? 'generate-in-edit-OK' : 'generate')
-             : 'ambiguous';
-  return { mode, genBtn, newEditBtn, markupTools, dominantOpen, refLoaded, maskActive };
-}
-```
-- 실측 검증: 라이브 편집상태에서 newEditBtn=true·markupTools=3·dominantOpen=true·maskActive=false → generate-in-edit-OK(풀생성 안전). 마스크 활성 시 edit-locked-ABORT.
-
-## 작업원칙 #72 — 자동재시도 타이머 절대 금지 (2026-06-14 세션7-h 학습)
-
-- setTimeout/setInterval로 생성을 자동발사하지 않는다. 크레딧 소모 + 레이트리밋 쿨다운 무한 리셋 = Firefly 차단의 실제 원인.
-- 생성은 항상 단발 수동 트리거. 레이트리밋("사용 문제/나중에 다시 시도")은 요청 0 + 실제 시간 경과만이 해제(두드리면 쿨다운 리셋되어 악화). 크레딧 정상이어도 발생(횟수 기반 단기 throttle).
-- 전거: docs/playbook/ADAPTIVE_IMAGE_ENGINE_AND_FOLDER_SYSTEM_2026-06-14.md §6.
-
-## 작업원칙 (이미지 엔진 보강 3종) — 2026-06-14 세션7-h
-
-- **(a) 편집모드 비율컨트롤 부재 → 파이프라인 정규화로 해결**: Gemini/Nano Banana 편집모드엔 종횡비 UI가 없다(DOM 실측 ratioControls=[]). 생성단계 통제는 약함 → Sharp 슬롯비율 정규화(conformToSlotRatio, 향씬 4:5·대표 1:1)가 본질적 2층 방어. 적재/사용 전 강제, 적재 경로 둘 다(/assets/upload·/ingest-firefly) 보강. 2% 허용오차 게이트(순응 자산은 무재인코딩 통과).
-- **(b) 레거시 백필 = 시스템 개선(단건 버그 수습 아님)**: 발견 오류는 단건 수습이 아니라 전상품 확장. 평면 레거시 자산은 kindForSource로 분류 후 {pid}/{kind}/ 이동(COPY→DB갱신→검증→retire). move-then-update 절대 금지(라이브 URL 중간 404 방지)·멱등(서브폴더 소속 스킵)·이중게이트(--go --confirm).
-- **(c) 비상품 네임스페이스 제외**: common/·lifestyle/ = 안정 URL·비상품 → 백필·재분류 영구 제외. 스코프 게이트 = Product 테이블 멤버십.
-
-## 작업원칙 #73 — UI 작업 기본전제 3종 (2026-06-14 세션7-i 학습)
-
-모든 UI 작업의 기본 전제. 위반 = 재작업.
-
-- **(a) 직관 우선·과밀 금지**: 화면은 한눈에 이해되어야 한다. 탭/카드/컨트롤 과밀 금지 — 정보는 작업 단계로 묶고 한 화면의 결정 수를 줄인다. 추론 결과는 확신도·품질경고로 투명하게(블랙박스 금지).
-- **(b) 한글 우선 라벨**: UI 표면 문구는 한글 우선. 음차(스테이지·플레이트·레퍼런스·레거시 등) 금지 — 자연스러운 한국어로(단계·배경판·참고 이미지·이전 방식). 코드 내부=영어 식별자 유지(§3-1), 표면=한글. 유지 가능 외래어=정착 용어(누끼·합성·SEO·AI·ZIP·Firefly). ko.json 음차 sweep 의무.
-- **(c) 작업 여정 정합**: 정보구조(IA)는 사용자의 실제 작업 여정 순서를 따른다. 워크벤치 = 상품 분석 → 이미지 → 발행. 기능 나열이 아니라 여정 단계로 그룹핑. 기존 동작 폴백 유지(회귀0).
-
-## 작업원칙 #78 — 콘텐츠 신호는 채널 존재가 아닌 실제 상태로 판정 (2026-06-14 세션7-i 검증 BUG)
-
-메타데이터 플래그의 '존재'를 의미로 단정하지 않는다 — 실제 픽셀 '상태'로 확증한다.
-
-- **알파 채널 존재 ≠ 투명**: canvas/Firefly/디자인툴 PNG는 불투명이어도 RGBA(4채널). `hasAlpha`를 cutout(누끼) 신호로 쓰면 전 PNG 오분류. 실제 투명 = `hasAlpha && sharp(buf).stats().isOpaque === false`(투명 픽셀 존재). 불투명 RGBA → 신호 무시·비율 폴백.
-- **사각지대 교훈**: 스모크가 '알파有·불투명 PNG' 케이스를 누락(PNG=JPEG 동일 치수 대조로 적발). 신호 교정 시 실이미지(sharp 생성)로 PNG/JPEG 양쪽 재검증 의무. #73(직관우선) 검증완료 — 투명 사유 칩 표시로 분류 근거 투명화. #45(출력 fact-check)·#63(가짜보고 금지) 연속.
-
-## 작업원칙 #79 — DB ref 일괄 치환/감사는 하드코딩 컬럼리스트 금지 (2026-06-15 백필 dangling 적발)
-
-스토리지 URL/키를 DB에서 일괄 치환하거나 dangling을 감사할 때, **하드코딩한 컬럼 목록을 쓰지 않는다** — jsonb·중첩 필드를 반드시 누락한다(사례: quality_reasons).
-
-- **EXHAUSTIVE 판정**: 전체 row를 fetch해 모든 컬럼의 JSON 표현(또는 `to_jsonb(row)::text`)을 전수스캔. 변경된 컬럼만 write-back. 자가검증(잔존 ref=0)도 동일한 전수스캔으로. 대상은 Product 전컬럼 + 연관 테이블(asset_references·published_assets·asset_registry) 전부.
-- **치환 안전규칙(dangling-only)**: depth-2 원본이 storage서 사라졌고 정규 키가 존재할 때만 치환(정규 미존재=orphan은 날조 금지·보고). 캡처 후 교정·dry-by-default·멱등. #45(출력 fact-check)·#46(비가역) 연속. 'dangling 0' 같은 단정은 전수스캔으로 입증된 뒤에만.
-
-## 작업원칙 #80 — force-dynamic ≠ Data Cache 무효화; server SDK fetch는 no-store 주입 (2026-06-15 /assets STALE)
-
-라우트 `dynamic='force-dynamic'`는 렌더를 동적화할 뿐, 서버 SDK(supabase-js 등) 내부 `fetch`가 Next Data Cache에 잔류하는 것을 막지 못한다(배포로도 미소거 — Data Cache는 deploy 비종속).
-
-- **근본 차단**: out-of-band로 바뀌는 자원(스토리지 리스팅 등)을 읽는 운영자용 SDK 클라이언트에는 `global.fetch`로 `cache:'no-store'`를 주입한다. 라우트엔 `fetchCache='force-no-store'`+`revalidate=0`을 방어층으로. 'force-dynamic 걸었으니 라이브'라는 가정 금지 — 실앱서 stale 입증되면 SDK fetch 층을 의심(#45 출력 fact-check·#28 production source-of-truth 연속).
-
-## 작업원칙 #81 — 드리프트는 상시감지·개입점화한다 (2026-06-15 #80 후속 시스템 가드)
-
-무결성 격차가 '사람이 화면을 봐야' 드러나면 이미 늦다(stale-listing 사고 #80). 라이브 소스 기준 자동 점검 → 이상 시 개입점으로 자연 노출한다.
-
-- **패턴**: (1) 라이브 소스(no-store 리스팅)로 상품별 무결성 점검 → (2) 이상 시 control-tower 개입 대기열 카드 시드(멱등·best-effort·강제모달0 #56), 정합 OK면 카드 클리어 → (3) 1클릭 교정(비가역은 confirm 게이트 #46·원본 archive 백업) → (4) cron 상시 스윕으로 out-of-band 변동까지 포착. 점검은 read-only/다운로드0 우선(외부 image API 0·#37). #80(stale 근본수정)의 시스템 확장.
-
-## 작업원칙 #82 — 최대 직접 자동화 (Maximize Direct Automation) (2026-06-16 세션8)
-
-진정으로 불가능하지 않은 한 Claude가 직접 실행한다 — 설정 포함. 운영자 핸드오프는 정말 불가능할 때만.
-
-- **직접 실행 우선**: 비율/해상도/토글/클릭 등 설정 표면도 실제 클릭 커넥터로 직접 처리. 운영자에게 토스 = 진짜 불가능 입증 후 최후수단. 완료 후 사후보고(허락 요청 0).
-- **날조 금지**: 직접 못 하면 거짓/추정 라벨 금지 — 솔직히 "불가능, 운영자 클릭 필요"라고 물어본다(#46 가짜라벨 금지 연속). 폴링(상태 확인)은 OK, 재생성 자동 재시도는 금지(#72 크레딧 보호).
-
-## 작업원칙 #83 — 편집모드 참조 오염은 매 컷 클리어로 차단 (2026-06-16 세션8 근본원인)
-
-Firefly 편집모드는 생성물이 자동으로 참조(0/N→1/N)에 붙어 다음 생성을 오염시킨다 — "April·Cotton이 비슷"했던 근본원인.
-
-- **가드 `referenceCleared`**: 매 컷 생성 직전 참조 0/N 확인. 직전 생성물이 참조로 잔류하면 '새 이미지(+)' 버튼으로 클리어 후 생성. 첫 생성은 자연히 0/N.
-- **전상품 시스템**: 4컷 이상 연속 생성하는 모든 상품에 적용. firefly_auto 카드 subcheck로 노출(#56 자연 개입). 상세: `docs/design/MOOD_CAMERA_SPEC_SYSTEM.md` §7.
-
-## 작업원칙 #84 — 단일 디폴트 카메라 영구 금지; 무드 6축 시스템 (2026-06-16 세션8 근본원인+리서치)
-
-v5 템플릿이 4향 전부에 Sony 1종을 하드코딩 → "전부 소니" 근본원인. 상품 무한·무드 유한(6축)으로 분류, 무드별 카메라 다르게·그레이드는 통일.
-
-- **가드 `cameraVarietyApplied`**: 배치 내 카메라 스펙이 무드별로 달라야 통과(단일 디폴트면 RED). 무드=전환 기능 기준 6축(M1 신뢰/M2 욕망/M3 명료/M4 코지/M5 발랄/M6 프리미엄), 각 축에 카메라/렌즈/조명/벤치마크DNA 매핑.
-- **전상품 시스템**: 처음 보는 상품도 무드 채점→스펙 조회→조립→생성(상품별 코딩 0). 권위 문서 `docs/design/MOOD_CAMERA_SPEC_SYSTEM.md`, 근거 `docs/research/MOOD_TO_CAMERA_SPEC_RESEARCH_2026-06-16.md`.
-
-## 작업원칙 #85 — 트러스티드 클릭 vs 합성 이벤트 구분 (2026-06-16 세션8 확증)
-
-Spectrum 컴포넌트별로 합성 JS 이벤트 수용 여부가 다르다. 잘못 가정하면 클릭이 무시된다.
-
-- **수용/거부 맵**: `SP-BUTTON`(생성)=합성 클릭 존중(JS 생성 가능). `SP-ACTION-BUTTON`(새 이미지)·`sp-picker`(비율)·`sp-switch`(grounding)=합성 무시, 실제 트러스티드 클릭만 인정 → Claude-in-Chrome `find`→ref → `computer` ref 클릭.
-- **좌표 금지**: 스크린샷은 가변 윈도우서 스케일 캡처(0.457 비균일) → DOM좌표≠스크린샷좌표. JS getBoundingClientRect 또는 ref 클릭만. 셀렉터 카탈로그: `docs/playbook/FIREFLY_AUTOMATION_PLAYBOOK_2026-06-13.md`.
-
-## 작업원칙 #86 — 제외는 긍정형 표현; Gemini 네거티브 필드 전송 금지 (2026-06-16 세션8 리서치)
-
-Nano Banana/Gemini는 네거티브 프롬프트 필드가 없다(HTTP 400) — "제외가 안 먹혔던" 근본원인.
-
-- **긍정형 작성**: "no cars"가 아니라 "empty street". 제외 = `clean composition containing only the product..., realistic photograph only` + 선언형 `no on-image text, no logos, no human figures, no illustration`. 가드 `exclusionsPresent`.
-- **모델별**: Gemini류엔 `negativePrompt` 필드 절대 전송 금지. 디퓨전/Flux 폴백에서만 네거티브 필드 사용. 전상품 프롬프트 조립기 고정 규칙.
-
-## 작업원칙 #87~#89 — 작업 관제탑 체계 (2026-06-16 세션8)
-
-### #87 단일 관제탑 (Single Control Tower)
-모든 병행 트랙은 PARALLEL_WORK_TRACKER 상단 라이브 보드 한 곳에만 산다. 보드에 없으면 존재하지 않는 작업(누락 방지). 세션 시작 = 보드 필독 → 지금 큐 top 실행. 세션 종료 = 보드 갱신(상태·다음 1액션) + 변경로그 1줄 + 핸드오프. 우선순위/스케줄 변경은 변경로그에 기록. 파생 큐(지금/결정대기/검증대기)는 보드에서 자동 도출.
-
-### #88 완료=검증 (Done Means Verified)
-코드/기능 작업은 실제 브라우저/실측 검증을 통과하기 전 "검증 대기" 상태로 둔다. 검증 없이 "완료" 라벨 금지, 검증 없이 다음 본작업 진행 금지. Code 보고만으로 완료 처리 금지(#45 결합). 실측 불가 시 거짓 보고 대신 대표에게 요청.
-
-### #89 변경 흡수 (Change Absorption)
-세션 도중 추가 요청·개선·변경은 즉시 관제탑 보드에 등재 + 우선순위 재산정 후 진행한다. 흐름 보존이 목적 — 대표가 같은 사항을 재언급하지 않아도 누락 없이 이어지게.
-
-## 작업원칙 #90 — 폴백 기본값은 카테고리 중립 + 신호 오발화 가드 (2026-06-17 세션8 #62 배치)
-미시드 카테고리의 안전 폴백(emptyCard)은 절대 특정 카테고리 편향을 담지 않는다. 향수 baseline(scent_note/use_install/size_duration)이 기본 슬롯열에 박혀 있어 비향수 전 카테고리(아이스트레이 등)가 향 슬롯을 오상속한 사고 재발 방지. 폴백 = 구조 슬롯만(hero·problem·solution_usp·trust·gift·cta), 카테고리 전용 슬롯은 실 DNA 시드로만 추가. 미시드는 control-tower 'category_dna_unseeded' 개입카드(INPUT_DECISION·idle priority·강제모달0·#56)로 가시화하되, 실작업을 마스킹하지 않게 idle(다음액션 없음)에서만 점화. 신호 휴리스틱(deriveProductSignals)도 오발화 가드: '리필'이 본품동반(bundleAnchor) 또는 giftBiased면 lowInvolvement 미발화 — 본품+리필 번들/선물은 충동소모품이 아니므로 펀들 단축(problem/size_duration 드롭) 금지. 단, 순수 소모품(commodityHard)은 가드 예외(여전히 단축). 매칭 키워드는 JSON(product-signal-keywords.json), 코드 한글 리터럴 0.
-
-## 작업원칙 #91 — Vercel 서버리스 본문 한계 < full-res base64; 적재 기본 = web-JPEG (2026-06-17 IMG-INGEST 실측)
-Vercel 서버리스 함수 본문 한계(~4.5MB) < full-res Firefly base64(~7MB) → ingest-firefly의 15MB 가드는 도달 불가(그 전에 HTTP 413). 상세페이지 용도는 web-JPEG(1456px·~330KB)로 충분 — full-res 2K 마스터가 꼭 필요할 때만 Supabase signed-URL 직업로드(서버 본문 우회) 검토. 즉 적재 기본 포맷 = web-JPEG, 2K 마스터 = 예외적 signed-URL. 전상품 #55. 실측: April(composite/fresh-1781657005726.jpg)·Black Cherry(composite/dark_luxury-1781657008705.jpg) web-JPEG 1456×1807 ingest 성공·registered·publicUrl 200.
-
-## 작업원칙 #92 — ingest 검증 3단 레시피 (전상품·#55, 2026-06-17)
-ingest(적재) 검증은 3단으로 단정한다: (1) /assets 200 → (2) composite 그룹에 신규 파일 존재 → (3) 이미지 탭 DOM 렌더(최신순 맨앞). 검증경로 = 상품선택 → 이미지탭. 어느 상품이든 동일(전상품 공통 레시피). #45(출력 품질까지 단정)·#88(완료=검증) 결합 — HTTP 200·registered만으로 완료 금지, DOM 렌더까지 확인.
-
-
-## 작업원칙 #93 — 자산 검증은 storage 물리 + registry DB 양쪽 교차 (2026-06-17 세션9 #62 승격)
-자산 정합 검증은 storage 물리 파일과 asset_registry 인덱스를 **양쪽 교차**로 본다. 한쪽만 보면 고아를 놓친다: storage-only(미등록 물리 — 레지스트리 도입 2026-06-13 이전 자산은 전부 여기)·registry-only(파일 부재 등록). 단건 발견 시 전상품 정합성 패스로 승격(#62 적용). 구현: checkProductIntegrity.registryDrift(asset-integrity.ts) — 기존 #80/#81(storage vs DB ref) 위에 registry 차원 가산. **검증(2026-06-17 production 실측)**: 명화 registryOnly=1(botanical-1781410335495.png 파일 부재)·storageOnly composite=9 / 달항아리 storageOnly=9 / 아이스 storageOnly=1 = 3상품 전부 드리프트 = 전상품 공통(단건 아님). advisory — ok 게이트 불변(스턱 카드 0·#56). 고아 reconcile = 운영자 결정(등록 vs 아카이브)=COMPOSITE-CLEANUP 후속.
-
-## 작업원칙 #94 — 스테이지 택소노미는 storage 실측으로 주기 점검 (2026-06-17 세션9)
-스테이지 택소노미는 storage 직속 폴더 실측(listProductStageFolders — `{pid}/` 직속 폴더 열거)으로 주기 점검한다. listProductAssets는 STAGE_DIRS만 순회하므로 택소노미에 없는 폴더는 invisible(silent drop) — 진짜 undefined stage는 별도 폴더 열거로만 탐지된다. **단 본 세션 교차검증(#45·#88)**: 핸드오프가 우려한 `plate`는 이미 STAGE_DIRS v2(2026-06-12)에 존재 → undefined 아님. production 실측 undefinedStages=0(전 3상품). 보고를 맹신하지 않고 코드 상수로 교차검증한 결과 — 핸드오프 #94 우려는 코드 레벨 기해소 확인. (가드는 미래 surprise용으로 유지.)
-
-## 작업원칙 #95 — 원산지 진실성: 추측 발행 절대 금지·불일치 HARD BLOCK (2026-06-17 세션9 전상품 #62)
-payload origin은 Product 실제 origin(originCode)과 **불일치 절대 금지**. 국산(00)이든 중국(0200037)이든 **디폴트 폴백 금지** — origin 미상 시 추측하지 말고 **발행 HARD BLOCK**. 허위 원산지 = 대외무역법/관세법 법적 리스크. 구현(전상품·전 발행경로 공유): validateForRegistration에 origin 진실 게이트 — originCode 미상/무효 시 errors(canRegister=false → 관제탑 publish track 자동 개입점화 #56), 선행 0 절삭 치유 시 warning(DB 정규값 저장 권고). buildNaverProductPayload/register route의 silent 중국 폴백 `?? '0200037'` 제거 → resolveOriginAreaCode가 빈 origin에 loud throw(last-line defense). **근본 메커니즘**: 구코드 `resolveOriginAreaCode(originCode ?? '0200037')`의 `?? '0200037'`이 빈 값을 중국으로 먼저 치환해 resolveOriginAreaCode의 empty-throw 가드를 무력화 = silent 추측. **검증(production 실측)**: 명화/달항아리 0200037 PASS·canRegister 무회귀(S/94)·payload 0200037(DB 반영) / 아이스 200037 auto-heal WARNING. 옵션도 정합 가드(DB option_rows vs payload combinations 불일치 시 warning, 미로드 경로 skip=오탐0). ★"payload 국산/4" 류 경보는 코드 의심 전 DB 실측 선행(#96 동형).
-
-## 작업원칙 #96 — 엔진/발행 진실원천은 Product 정규 필드, 산출 이상 시 값 먼저 실측 (2026-06-17 세션9)
-엔진 카테고리 진실원천 = Product.naverCategoryCode(라벨 product.category 아님·#62 CAT-CODE 정합). 발행 원산지 진실원천 = Product.originCode. **산출/표시 이상 시 코드(빌더/엔진) 의심 전에 DB 값을 먼저 실측**한다. 사례: 세션9 "payload 국산(00)" 경보 → DB 실측 결과 originCode=0200037(중국, 정확) = 경보는 stale 스냅샷, 코드 결함 아님. "옵션 4 vs 3" → DB option_rows=4 전부 ON_SALE(Cotton 품절 의도 미반영=데이터 드리프트, 빌더는 DB 충실 반영). #45(보고 비신뢰·직접검증)·#88(완료=검증) 결합 — 추측 전 그라운드 truth 실측.
-
-## 작업원칙 #97 — 전상품 검증은 시드+미시드 양쪽 (2026-06-17 세션9)
-엔진/가드 검증은 **시드된 상품 + 미시드 상품 양쪽**으로 한다. 시드: 카테고리-특화 슬롯/DNA 정상 산출. 미시드: fallback이 **우아하게 degrade**(에러 아님)되고 **카테고리-특화 슬롯을 오상속하지 않음**(ICE-TRAY-DNA 사례: emptyCard 향수편향이 미시드 전 카테고리에 scent_note 오상속 → 중립화 #62/#90). 한쪽만 보면 fallback 오염/누락을 놓친다(#93 storage+registry 양쪽 교차와 동형 — 양면 검증 원칙). REGISTRY-STORAGE-DRIFT/엔진 strategy 검증 시 3상품(명화=시드 / 달항아리·아이스=미시드) 전수 실측이 표준.
-
-## 작업원칙 #98 — 변형(variant) 바인딩 차원: 옵션 상품은 변형별 대표 컷 커버리지 의무 (2026-06-17 세션9 #62 P2)
-옵션이 있는 상품(향/색/사이즈)은 **재고 있는 각 변형에 대표 컷을 바인딩**해야 한다. 일시적 mood/slot 태그만으로는 불충분 — 변형 커버리지는 **대기열 표면화 1급 지표**다. 구현(전상품): asset_registry.variant 컬럼(향 옵션 바인딩)·computeVariantCoverage(분모=Product.options jsonb stockQuantity>0=진실원천 #96·분자=variant바인딩 LIVE composite distinct·고아제외)·INTERVENTION_VARIANT_COMPOSITE 카드(INPUT_DECISION·cron 전상품 상시·seed<100%&hasOptions·clear=100%)·ingest-firefly variant param(생성물→바인딩). **검증(2026-06-17 명화)**: active 3(레몬유칼립·에이프릴·블랙체리·코튼 stock0 제외)·covered 0·missing 3 → 카드 0/3. 바인딩 라운드트립 covered 0→1→복원. Desktop 감사 일치(바인딩 계층 filename/schema/data 3중 부재가 근본). 페어: realism_lane 가드(#71)와 묶어 변형 컷 파이프라인을 ingest 시점 사실성 게이트(후속).
-
-## 작업원칙 #99 — 브라우저 검증: element.click() 비신뢰, 풀 MouseEvent 디스패치 (2026-06-17 세션9)
-React 핸들러는 `element.click()`로 안정적으로 발화하지 않는다(no-op처럼 보여 거짓 'no bug'/'bug' 판정 위험). 브라우저 검증 시 풀 MouseEvent 시퀀스(pointerdown/mousedown/pointerup/mouseup/click·bubbles:true)를 디스패치한다. 네이티브 window.confirm은 JS를 블록 — 클릭 전 오버라이드하거나 운영자가 취소(비가역 게이트 #46 PASS 확인). 사례: per-orphan reconcile UI 아카이브 버튼 — element.click() 무발화 적발 후 풀 이벤트로 재시도 → 실제 confirm 발화 → 운영자 취소 → mutation 0(드리프트 22/1 불변). #45(직접검증)·#88(완료=검증) 결합.
-
-## 작업원칙 #100 — 개입 대기열은 상품당 다중 카드 비마스킹 (2026-06-17 세션9 P0·#56)
-개입 대기열은 상품당 활성 개입을 **전부** 노출한다(스택 또는 "+N" 어포던스) — 상품당 1카드만 렌더하면 후순위 개입이 가려져 숨은 개입점(#56 위반)이 된다. 사례: 명화 registry_drift + variant_composite 2개 동시 awaiting_human인데 대기열은 variant 1개만 렌더(자산 정합 전체 부재). 근본 = route가 상품당 첫 잡만 보관(interventionById) + ControlTowerRow.actionQueue 단수 + widget map(상품당 1). 수정 = route 전체 수집(타입별 dedup·primary+extra) → ControlTowerRow.extraQueue → widget flatMap(actionQueue+extraQueue)·key=productId+type. ★응답 매핑(필드 명시 선택)에도 extraQueue 추가 필수(엔진 구성만으론 미전달). 비회귀: clear된 카드 비노출(awaiting_human만)·idle 비마스킹(#90 동형)·단일 개입 무변경. #90(저긴급 상시·긴급큐 비마스킹)과 동형 — 둘 다 "숨기지 말 것" 원칙.
-
-## 작업원칙 #101 — 변형 바인딩은 in-stock 진실원천과 대조 검증 (2026-06-17 세션9 #62·E5)
-생성물의 변형(variant/scent/color) 바인딩은 적재 시 상품 in-stock optionValues(Product.options stock>0=진실원천 #96)와 **대조 검증**한다. 불일치(오타 포함) 시 바인딩 거부(variant=null·파일은 적재)+응답 variantUnmatched:true+validVariants 노출 — 침묵 등록 금지. 사례(april escape): april '후레쉰'(후레쉬 오타)이 registered=True로 적재됐으나 어떤 변형과도 불일치 → 해당 향이 영구 coverage 미달인데 2/3 침묵 정체(아무 경고 없음). 가드: ingest-firefly stage=composite+variant 시 getActiveVariants 대조. 전상품(#55). #88(완료=검증)·#98(변형 커버리지)와 결합 — 바인딩 진실성이 커버리지 진실성의 선결.
-
-
-## 작업원칙 #102 — 레퍼런스 리서치는 한국 우선(커머스 컨벤션 vs 무드 품질 2축) (2026-06-18 세션9 E8)
-네이버 스마트스토어(한국 사용자 압도적) 판매이므로 레퍼런스 리서치는 한국 인기/트렌드 시장 우선(Pinterest/Google=외국 사용자 편향). 2축 분리: (1)커머스 컨벤션(클릭+전환)=메인 썸네일 구도·명품/고급·선물 프레이밍·골든키워드 → 한국 우선 필수, (2)무드/미감 품질바=향배경·상세 무드 → 글로벌(Pinterest) 보조 허용. 소스 티어(전상품): T1 한국 커머스 진실(네이버 쇼핑 상위·쿠팡·올리브영·오늘의집·29CM/W컨셉) → T2 한국 트렌드(DataLab·블로그·인스타 한국 해시태그) → T3 글로벌 무드 보조(Pinterest·Google·품질바만). NaverSearch MCP(search_shop/image·datalab·find_category)=Tier1 즉시 엔진. 실증: '차량용 디퓨저' 232,164건·명품/고급 프레이밍 만연·datalab 차량용 방향제(60~100)>>디퓨저(5~9)>>송풍구(1~5).
-
-## 작업원칙 #103 — SEO 골든키워드 가드: 상품명/태그를 검색량으로 검증 (2026-06-18 세션9 E8)
-모든 상품명/태그는 datalab 검색량 진실원천과 대조하고 카테고리 1위 검색어 누락 시 '상품명 키워드 검증' 개입카드로 표면화한다(전상품·additive·비가역0·네이버 무접촉·#56). 사례: 명화 상품명 '선물 본품리필 가벼운 명화 송풍구 방향제'가 검색 1위어 '차량용' 누락·니치 '송풍구 방향제' 사용 → '상품명 67(B)' 점수 원인. 니치 키워드는 노출 손실. #96(진실원천 실측)·#102(한국 우선) 결합.
-
-## 작업원칙 #104 — info-dependency 디자인 게이트 + 사전생성 자산풀 (2026-06-18 세션9 하이브리드 워크플로)
-디자인 산출물을 상품정보 의존성으로 분리해 비강제 게이트(#56)한다. info-free(언제나·소싱 전 가능): 향/무드 배경·일반 라이프스타일·브랜드미감 — 컨셉 구동·사전 일괄생성→사전생성 자산풀 파킹. info-bound(소싱 게이트): 메인썸네일(카테고리 컨벤션+SEO 1위어+가격/선물)·상세 히어로/스펙(옵션/재질/인증/원산지)·변형 대표컷 바인딩(확정 optionValues 필요=변형 컷을 옵션 확정 전 적재 못한 이유). 메커니즘: 온실아틀리에 'Design Readiness' 레인(산출물별 필요정보 충족/대기)·info-free 항상 생성가능→풀·info-bound 소싱 필드 충진 시 자동활성(자연 표면화·비강제). 양방향 바인딩: 사전생성 무드배경을 후에 소싱 상품 변형/썸네일에 바인딩(ingest variant 바인딩 일반화). 코드: engine slot/strategy에 infoDependency 메타(산출물별 필요 product 필드).
-
-
-## 작업원칙 #105 — 컨벤션은 상품 정체성에 복무한다(충돌 시 정체성 우선) (2026-06-18 세션9 E8)
-경쟁사/카테고리 컨벤션(스펙트럼 추출·benchmarkDna)은 클릭·전환을 위한 입력 신호이지 상품 정체성을 덮어쓰는 권위가 아니다. 컨벤션과 상품 정체성(브랜드·핵심가치·제품 진실)이 충돌하면 **정체성 우선**. 따라서 벤치마크 적용 파이프라인은 '상품 정체성 적합/오버라이드' 단계를 반드시 거친다(컨벤션 제안→정체성 대조→채택/오버라이드). 사례: 차량용 디퓨저 카테고리 '명품/다크오브제' 컨벤션이 만연하나, 상품이 밝은 향(레몬)·선물 포지션이면 다크 컨벤션을 정체성에 맞게 오버라이드. #62(전상품)·#102(한국우선)·#71(사실성 레인)과 정합 — 컨벤션은 수단, 정체성은 목적.
-
-
-## 작업원칙 #106 — 어우러짐 = 배경이 상품 자신의 작품세계를 에코 (2026-06-18 세션9)
-배경/씬이 상품과 어우러진다는 것은 배경이 상품 자신의 작품세계(productAestheticDna: 상품 고유의 팔레트·무드)를 에코하는 것이다. **카테고리 컨벤션 = 포맷(구도·프레이밍), 상품 정체성 = 팔레트·무드.** 예: 명화 디퓨저는 라벨의 인상주의 회화 팔레트(세이지-올리브·웜크림·선햇살 옐로)를 배경이 에코해야 하나로 읽힌다. #105(컨벤션⊳정체성)의 적용 — 컨벤션이 포맷을 주면 정체성이 색·무드를 채운다. 엔진 productAestheticDna 필드(상품별 팔레트/무드)→배경 프롬프트 팔레트 절 주입(전상품·#62).
-
-## 작업원칙 #107 — 합성/이미지 표준: 누끼→Firefly 레퍼런스 합성·전 이미지 실사 카메라 (2026-06-18 세션9)
-합성/이미지 표준 = (1) 누끼컷(cutout)을 레퍼런스로 첨부 → Firefly 레퍼런스 합성(프롬프트가 실제 제품을 씬에 배치·제품/라벨/유리/캡 재생성 금지)·타깃별 최적 모델(Nano Banana Pro=합성 최강·Firefly Image 5=무배상 대안). 분리 합성(빈 배경판+PIL/sharp 로컬 페이스트)은 **폐기·폴백 한정**(붙인 티·AI 이질감). (2) 전 이미지(hero/lifestyle/scene/composite)는 **실사 카메라 품질** — REALISM-CAMERA-BLOCK(카메라바디+렌즈+조리개+자연광+필름그레인+true-to-life색+고마이크로콘트라스트+'photorealistic editorial' + 'no CGI/3D-render/AI artifacts/illustration' 제외) + 상품 컨셉별 카메라(프리미엄 정물→중형 100mm f/4·라이프스타일→풀프레임 35-50mm·매크로→100mm 매크로). AI 이질감 0 = 프리미엄 신뢰 상승. 아마추어 AI 위조감 = 최하급 역효과. 사실성 레인(#71) 하드닝·전상품(#62)·엔진 편입(C6).
-
-## 작업원칙 #108 — INGEST 추론 종속성: 명시 파라미터 ⊳ 파일명 토큰 (2026-06-18 세션9 #62·C14)
-ingest(catch-basin) 적재 시 **명시 `stage`/`variant` 파라미터가 파일명 토큰 추론을 오버라이드**한다. (1) 운영자가 `stage:'thumbnail'`을 명시했는데 파일명에 'composite'/'thumbnail' 같은 서술 토큰이 섞여 분류기가 다른 stage를 추론하더라도 **명시값이 권위** — 거짓 `conflict` 보고 금지(`explicitStage` 표기, 픽셀 신호 불일치는 비차단 `contentMismatch` advisory로만). (2) `variant`(옵션 변형 바인딩)는 **변형 보유 stage(scent_note=composite)에서 실제 in-stock 옵션과 매치되거나 명시 전달될 때만** 설정 — 제품레벨 stage(thumbnail/hero/source/detail…)는 일대일(상품당 1)이므로 **variant=null 강제**, 서술형 파일명이 가짜 변형을 만들어 커버리지를 오염시키지 못하게 함(`variantIgnoredForStage` 표기). 단발 케이스 수습 금지·전상품 가드(#62)·기존 INGEST-GUARD(variantUnmatched·C11) 패밀리 확장. 적재 = 진실(추측 금지), 명시 = 권위.
-
-## 작업원칙 #109 — publishReady=첫발행 게이트·기등록 상품은 재개/업데이트 별도 경로 (2026-06-20 세션9 C19 e2e)
-`evaluatePublishReadiness`의 `publishReady = … && status==='DRAFT' && naverProductId===null` 는 **신규 DRAFT 첫 발행 전용 게이트**다. 이미 네이버에 등록된 상품(naverProductId 보유·판매중지/판매중)은 publishReady가 **구조적으로 영원히 false**이며 이는 정상 — 첫발행이 아니라 **재개/업데이트** 상황이기 때문. 기등록 상품 변경은 별도 경로: (a) 콘텐츠 수정 = `POST /api/naver/products/update`(PUT origin-products 전체교체·confirm 게이트·#3-7) — 존재함, (b) 판매재개(SUSPENSION→SALE)도 동일 update route가 커버 — buildNaverProductPayload가 originProduct.statusType='SALE'를 항상 emit(product-builder.ts:937)하므로 full-replace PUT가 판매중지를 해제한다(prod dryRun 실증: payloadPreview.statusType=SALE·네이버 무접촉). api-client의 'statusType read-only' 주석은 OUTOFSTOCK(재고 파생)에만 해당하고 SALE/SUSPENSION/CLOSE는 PUT 페이로드로 설정 가능. ★정정(#44): 직전 D5의 'read-only→전용 엔드포인트/수동' 보고는 오류, 본 실증으로 정정·D6 불필요. 추가로 **thumbnailAssessed는 publishReady 공식의 입력이 아니다**(공식엔 thumbnailPass만·미평가 시 기본 true); thumbnailAssessed는 게이트 readout/품질 표식일 뿐. **교훈(#45 강화): e2e 왕복(POST 플립/DELETE 원복)이 sub-flag 개별 독해보다 게이트의 진짜 구조를 드러낸다** — '유일 미충족=thumbnailAssessed' 가설이 e2e로 'publishReady=첫발행 전용·thumbnailAssessed=공식 밖'으로 정정됨.
-
-> 참고: 작업원칙 #110~#112는 **의도적 결번**(Desktop 레인/예약 번호) — Code가 내용을 날조하지 않음(#115). Code 레인 박제는 #113부터 이어짐.
-
-## 작업원칙 #113 — 판매재개 = update route의 full-replace PUT(statusType='SALE')·D6 CLOSED (2026-06-21 세션9 D5 정정)
-기등록 상품의 판매재개(SUSPENSION→SALE)는 신규 라우트가 아니라 기존 `POST /api/naver/products/update {confirm:true}`가 그대로 수행한다 — buildNaverProductPayload가 `originProduct.statusType='SALE'`를 항상 emit(`product-builder.ts:937`)하므로 v2 full-replace PUT가 판매중지를 해제한다. prod dryRun 실증(payloadPreview.statusType=SALE·네이버 무접촉). **D6(전용 판매상태 변경 라우트)=CLOSED·불필요.** 명화 재개 동선: 씨앗심기 백필→가격/마진 확정→re-dryRun→대표 GO→update confirm:true(비가역 #46).
-
-## 작업원칙 #114 — statusType 가변성: SALE/SUSPENSION/CLOSE는 PUT로 설정 가능, OUTOFSTOCK만 read-only (2026-06-21 세션9)
-네이버 v2 `originProduct.statusType`의 SALE/SUSPENSION/CLOSE는 상품 PUT 페이로드로 **직접 설정 가능**하다. OUTOFSTOCK만 재고 파생(stockQuantity=0→자동 전환)이라 직접 설정 불가(read-only). api-client setProductOutOfStock 주석의 'statusType read-only'는 OUTOFSTOCK 한정 의미였고 이를 전체 statusType로 오독하면 안 된다(주석 정정 완료).
-
-## 작업원칙 #115 — 문서 회귀 방지 + 검증 규율: 정정 사실은 전 사본 동시 정합·grep 거짓음성 경계 (2026-06-21 세션9)
-직전 턴에 박제한 사실이 정정되면 **모든 사본(PRINCIPLES_LEARNED + PARALLEL_WORK_TRACKER §4 + 소스 문서)을 동시 정합**해야 한다 — 한 곳만 고치면 문서 회귀(stale fact 잔존)가 생긴다. 검증 규율: grep 거짓음성(예: product-builder.ts statusType 미매치)에 속지 말고 **직접 읽기(sed/Read)+런타임 실증(dryRun)**으로 확정(#45/#88 강화). D5 사례: grep 거짓음성+api-client 주석 오독→오보고→직접읽기+dryRun으로 정정.
-
-## 작업원칙 #116 — 통합 노력 레인: 단순/디테일이 최상위 축이며 공급사 A/B를 흡수 (2026-06-21 세션9 rev2)
-노력 레인 **단순(=실 발행 경로)/디테일(=Firefly 3-plane 프리미엄 테스트)**이 최상위 축이며, 공급사 자산품질 A/B 라우팅(IMAGE_DETAIL_TWO_BRANCH_SYSTEM: A=양호 재사용/B=빈약 크롭·생성)을 **별도 축이 아니라 레인 내부 서브라우팅으로 흡수**한다. 실 발행은 단순 레인 사용 — 라이브 상품의 단순·스테일 대표이미지는 버그가 아니라 단순 레인이 의도대로 동작한 결과(개선 범위=단순 레인 대표 흰배경 마감). 디테일 레인은 검증된 뒤에만 발행에 공급. 전상품(#55·#62).
-
-## 작업원칙 #117 — 씨앗심기 선행: 소싱 시드가 디자인보다 먼저 (2026-06-21 세션9 rev2)
-씨앗심기(SEO/ROI 소싱 시드·크롤 기반)는 온실 아틀리에 디자인보다 **반드시 선행**한다. 가격/마진 검증은 소싱 정보에 게이트되며, 디자인-전-소싱은 가격을 검증 불가로 만든다. 올바른 순서: 크롤링→씨앗심기(소싱 채움)→(공급사 제공정보+소싱)→온실 아틀리에(디자인·STEP6). 앱은 design-ran-before-sourcing를 `sourcing_incomplete` 개입 카드로 표시. 명화가 이를 위반(STEP6로 점프→가격 BLOCKED).
-
-## 작업원칙 #118 — 재입고 미정/일시품절 옵션은 품절 유지(은닉 제외 금지) (2026-06-21 세션9 rev2)
-재입고 미정·일시품절 옵션은 **품절(stock 0, 옵션+상세에 노출) 유지**하고 은닉/임의 제외하지 않는다. 운영자 명시 지시에서만 제거. (명화 코튼어라운드 = 품절 유지.)
-
-## 작업원칙 #119 — 검증 거버넌스 4종: 하드리프레시·인터럽트 cleanup·정적 probe 시점성·done↔verified 컬럼분리 (2026-06-21 세션9 C19b)
-브라우저/필드 검증(#88)을 4가지로 정밀화한다. (a) **하드리프레시 의무**: 브라우저 검증은 하드리프레시(캐시 무시 재로드)로 current bundle을 보장한다 — stale 탭은 옛 번들을 실행해 거짓 FAIL(false-negative)을 만든다. (b) **인터럽트된 e2e 변이는 명시적 cleanup 추적**: e2e 왕복(POST 플립→DELETE 원복) 중 중단되면 잔여 상태 변이를 명시 추적·복원한다(이번 명화 대표이미지 평가 잔여 POST→DELETE 복원 사례). 비가역 게이트(#46)와 동형 — 검증이 남긴 부작용도 장부에 남긴다. (c) **정적 API probe = point-in-time**: 정적 API 응답 probe는 호출 시점 스냅샷일 뿐, 라이브 DOM/DB가 ground truth다(#45 보강). 평가 플립 같은 상태 전이는 응답 1회가 아니라 라이브 양 상태 렌더로 단정. (d) **'코드 done ↔ prod-verified' 컬럼 분리**: 기능 상태는 '코드 완료(빌드/배포)'와 'prod 검증완(라이브 e2e)'를 별도 컬럼으로 분리 관리한다(전기능 거버넌스). C19b 사례: '코드 done'은 직전 턴이나 'prod-verified'는 본 턴 Desktop 하드리프레시 e2e로 확정 — 둘을 합치면 미검증을 done으로 오인한다. #45(출력 품질 단정)·#88(완료=검증)·#100(비마스킹)과 결합.
-
-## 작업원칙 #120 — MCP는 물리 Storage 변이 불가, 물리 변이는 Code service-role SDK/앱 API 전담 (2026-06-21 세션9 C15·#59 일반화)
-MCP(Supabase MCP 포함)는 DB SQL 읽기/쓰기는 가능하나 **물리 Storage 객체 변이(업로드·삭제·이동·복사)는 일체 불가**하다(#59 일반화). 따라서 자산 물리 정리/이관/삭제는 **Code service-role SDK(@supabase/supabase-js·SUPABASE_SERVICE_ROLE_KEY) 또는 앱 API**가 전담한다. 역할 분담: 진단/참조스캔(#79)·registry DB 갱신 = MCP execute_sql 가능 / 물리 객체 move·remove = Code SDK(moveAutomationAsset/deleteAutomationAsset). **가역 우선(C23·#46 정신)**: 물리삭제는 복구 불가이므로 stray/슈퍼시드 정리는 하드삭제 대신 `{pid}/archive/`로 move(가역)+registry stage→archive를 기본으로 한다(하드삭제는 명시 지시 시에만). 선행 필수: #79 전수 참조스캔(::text 캐스트로 중첩jsonb 포함·하드코딩 컬럼리스트 폐기·레포 grep 병행) 0참조 확인 후에만 변이. 사례: 명화 detail/hero-1781957364462.png(slot=hero@stage=detail 불일치 firefly_auto stray) — 12테이블 0참조 확인 → 가역 아카이브(detail→archive)·registry 정합·복원경로 보존. #88(완료=검증)·#119(b)(검증 부작용 추적)와 결합.
-
-## 작업원칙 #121 — Adobe MCP는 생성형 합성·배경교체 불가, 3-plane 생성합성은 Firefly 브라우저 자동화 전담 (2026-06-23 세션9 · Desktop 산출·검증됨)
-Adobe MCP(Express/Photoshop 계열 도구)는 누끼·크롭·보정·리사이즈 등 결정론적 편집은 가능하나 **생성형 합성(프롬프트 기반 배경 생성·배경 교체)은 불가**하다. 따라서 3-plane 생성합성(피사체 보존 + 무드 배경 생성·하모나이즈)은 **Firefly 브라우저 자동화가 전담**한다(#74·#77·shadow-walk + native setter + InputEvent). 역할 분리: Adobe MCP=결정론 편집 레인 / Firefly 자동화=생성 합성 레인. #61(3-plane 합성표준)·#107(누끼→Firefly 레퍼런스 합성·PIL 폴백)과 정합.
-
-## 작업원칙 #122 — Supabase public URL 직접투입 + Adobe-독립 시각확증 폴백 (2026-06-23 세션9 · Desktop 산출·금세션 O1 적용·검증됨)
-Supabase public bucket URL은 `/storage/v1/object/public/{bucket}/{path}` 형식이며, URL을 수용하는 도구(뷰어·Adobe import 등)에 **직접 투입**한다. Adobe encode 400 flake(간헐 인코딩 실패)가 발생하면 **bash `curl` 다운로드 → 로컬 view로 Adobe-독립 시각확증**으로 폴백한다(도구 한 곳의 장애가 검증 자체를 막지 않게). 금세션 O1(명화 대표이미지) 승인 검증에 실제 적용·검증됨. #45(출력 품질 단정)·#88(완료=검증)의 검증 수단 다변화.
-
-## 작업원칙 #123 — 누끼-source 적격성 게이트 (2026-06-23 세션9 · Desktop 산출·검증됨)
-누끼(배경제거) 소스는 **적격성 게이트**를 통과해야 한다. 마케팅 스트립(다중 장면·텍스트 오버레이·세로 롱 이미지)은 **누끼 불가**이며, **깨끗한 단일 제품 히어로만 누끼-ready**다. 부적격 소스는 임의 누끼하지 말고 **C9 Design Readiness 카드로 전상품 surface**한다(#104·info-bound 소싱 충진 시 자동활성·#56). 아이스(트레이)가 첫 실증(cutout 부재=info-bound 누끼-선행 readiness). #78(누끼 신호=실제 투명)·#107(누끼→Firefly 합성)과 결합.
-
-## 작업원칙 #124 — 검증 순차성: 선행 검증이 후행을 게이트한다 (2026-06-23 세션9 O3)
-검증은 순차적으로 수행하며 선행 검증이 후행 단계를 게이트한다. 여러 미검증 항목을 동시에 'done'으로 주장하지 않는다(#88 보강). 사례(명화 발행): (1) O3 정보고시 자동조립 확인 → (2) 대표이미지 평가 → (3) 상태정합(ACTIVE↔판매중지) → (4) 대표 GO(비가역 #46) 순서이며, 앞 게이트 미통과 시 뒤 단계 진입 금지. 정적 API probe는 호출 시점 스냅샷이므로(#119c) 순차 게이트의 각 단계는 라이브로 단정한다. 역할 분리: #119='어떻게 검증하나'(하드리프레시·인터럽트 cleanup·시점성·done↔verified), #124='어떤 순서로 게이트하나'.
-
-## 작업원칙 #125 — 양라인 플래그십 실테스트 후 확장 (2026-06-23 세션9 양라인 결정)
-양라인(단순/디테일·#116) 파이프라인은 플래그십 상품(명화)으로 실테스트(실 발행/실 자산 e2e)를 통과한 뒤에만 타 상품으로 확장한다. 미검증 파이프라인을 다수 상품에 선행 적용하면 결함이 N배로 번진다. 사례: 명화 양라인검증(O1→O2→단순)이 P0이며, D3(달항아리·아이스 composite/realism 확장)는 명화 양라인 통과 전까지 PARKED. #116(단순/디테일 레인)·#124(검증 순차성)와 결합 — 플래그십이 먼저, 확장은 검증 후.
-
-## 작업원칙 #126 — 대표이미지 평가·승인 게이트는 product-agnostic·가역, lifestyle 라벨 텍스트는 허용 (2026-06-23 세션9 · 후보)
-대표이미지 평가·승인 게이트(C19/C19b·thumbnailAssessed)는 **product-agnostic(전상품 동형)이며 가역**하다(승인 POST ↔ 재평가 DELETE 원복). lifestyle 대표컷에서 **제품 고유 라벨 텍스트(본품에 인쇄된 브랜드/제품명)는 허용**한다 — 금지 대상은 **홍보/가격 문구·테두리(border) 오버레이** 등 합성 추가 요소뿐(네이버 대표이미지 규정 §3-6 정합). 즉 '본품에 원래 있는 텍스트'와 '마케팅 오버레이'를 구분해 게이트한다.
-
-## 작업원칙 #127 — UI canSave ≠ API canRegister: 크롤 임포트 거짓음성, 판정 기준은 API dryRun (2026-06-23 세션9)
-studio UI 발행 신호(canSave=인앱 생성 state·useStudioActions.ts:476)와 API 실제 발행 가능(canRegister/readiness/dryRun)은 **별개**다. 크롤 임포트로 기존 폴더적재 Storage 자산(product.mainImage/detail_image_url)을 보유한 상품은 UI canSave=false(생성 state 없음)지만 API canRegister=true(DB row로 full payload 빌드 가능)일 수 있다 → **UI 게이트만 보면 거짓음성(false-negative)**. 발행 가능 판정의 SoT = **API dryRun**(POST /api/naver/products/update {dryRun:true} → canRegister·readiness·payloadPreview)이지 UI 버튼이 아니다. 해소 = C25(studio 발행경로 기존 DB자산 인식·studio UI=API 정합). #62(전상품)·#88(완료=검증)·#109(publishReady 구조)·#126(게이트 product-agnostic)과 결합.
-
-## 작업원칙 #128 — Storage가 자산 SoT, registry는 부분반영(20/71)이나 발행 무영향 (2026-06-23 세션9)
-적재 5계층(asset_jobs·물리 Storage·asset_registry·published_assets·prompt_library/references) 중 **물리 Storage가 자산의 SoT**다. asset_registry는 인덱스/메타 계층으로 현재 **부분 반영(20/71 등록·51 미등록 드리프트)**이나, **발행 경로는 registry가 아니라 Product row(mainImage/additionalImages/detail_image_url)를 읽으므로 발행에 무영향**(buildNaverProductPayload는 registry 미참조). 따라서 registry 드리프트는 발행 블로커가 아니라 **인덱스 정합 과제**다. 정합 = C26(storage→registry 백필 + 발행후 자동등록·dry-run→GO·전상품). #62(전상품)·#93/#94(registry 교차차원 탐지)·#120(물리변이=Code SDK)와 결합.
-
-## 작업원칙 #129 — 신규 트랙 제안 전 기존 구현 코드 실측 필수 (중복 구축 방지) (2026-06-23 세션9)
-신규 트랙/엔진을 제안·등재하기 전에 **기존 구현을 코드로 실측**한다(grep/직독) — 그리고 **과거 트래커 기록도 검색**한다. 직전 C26은 '레지스트리-스토리지 정합 엔진 신규 구축'으로 등재됐으나, 실측 결과 `reconcileRegistryDrift`(asset-integrity) + `registry_drift` 개입카드(#56)가 **이미 구축**돼 있었고 **C16(CLOSED)에 이미 기록**돼 있었다 → C26을 (a) 기존 reconcile **실행** + (b) write-path 등록 **감사**로 재범위했다(중복 빌드 0). 추측 기반 신규 트랙은 중복 구축·자원 낭비를 낳는다. '없다고 단정하기 전에 grep'(코드 + 트래커 둘 다). #45(추측 금지·실측)·#46(비가역 전 확인)·#88(완료=검증)과 결합.
-
-## 작업원칙 #130 — 라이브 변이 테스트 = throwaway+즉시정리 사이클, 잔여검증은 storage SoT (2026-06-23 세션9 Desktop)
-프로덕션 라이브에서 변이(업로드/삭제 등)를 검증할 때는 **throwaway 자산 + 즉시정리 사이클**(업로드 → 검증 → 삭제)로 수행해 잔재를 남기지 않는다. 변이 후 **잔여검증은 UI 표시가 아니라 storage SoT + asset_registry 그라운드트루스**로 단정한다(#45 출력 단정·#128 Storage=SoT). 이중 렌더(같은 자산이 2회 DOM 출현 등) 페이지에서는 **보이는 인스턴스 + 정확한 속성(title vs aria-label 구분)**을 타겟해 오검증을 피한다(#119 point-in-time 보강). 한계: 등록후삭제 사이클은 'positive 등록(업로드가 registry.create 하는지)'을 단정 불가 → non-delete 경로 별도 검증(백로그·C26 흡수). #88(완료=검증)·#46(비가역 변이 추적)과 결합.
-
-## 작업원칙 #131 — 스테이지 단일책임: 소싱·초안입력·상세/비주얼 생산·발행을 분리, 중복 시 생산 스테이지로 통합 (2026-06-23 premium-redesign)
-워크플로 스테이지는 단일책임을 가진다: **소싱(Crawl/꿀통 intake)** → **초안 입력(Plant/씨앗 심기)** → **상세+비주얼 생산(Studio/온실 아틀리에)** → **발행**. 같은 산출물(예: 상세페이지 조립)이 두 스테이지에 중복 노출되면 **생산 스테이지로 통합**한다. 사례: 상세페이지(상세설명/상세자동화)가 Plant 이미지탭과 Studio에 이중 존재 → Plant에서 제거하고 Studio를 단일 홈으로 확정(C-PLANT-UX/ISSUE 3). 중복은 운영자에게 '어디서 작업하나'를 모호하게 만들고 동기화 결함을 부른다. IA 단일책임 = 직관·정합의 전제(#73 작업여정 정합·#26 IA 점검).
-
-## 작업원칙 #132 — UI 리디자인은 검증된 기존 백엔드를 먼저 표면화한다, 새 엔진 최소화 (#129 확장) (2026-06-23 premium-redesign)
-UI 리디자인/관제탑/점수 시각화는 **새 스코어링 엔진을 만들기 전에 이미 검증된 백엔드 상태를 표면화(surfacing)**한다. 검색 생장 관제탑의 **개화도 게이지·신호등**은 기존 dryRun 발행 게이트(`EngineGateView` 불리언)·asset-integrity·DNA를 **시각화한 것**이며 새 점수 엔진이 아니다 — 새 fetch·새 산식 금지, 기존 pass/fail 플래그 카운트만 허용. 사례: 개화도 = 발행게이트 통과 현황(hardComplete/seoComplete/authentic/naverPayloadComplete/thumbnailPass) 카운트의 0~100 시각화. 이는 #129(신규 트랙 전 기존 코드 실측)의 UI 적용판이다. 검증 로직(dryRun·게이트·마진·SEO 계산)은 절대 변경 금지(shell/relocate only).
-
-## 작업원칙 #133 — 하드리프레시 연타 금지(dev thrash): 컴파일·HMR 완료를 기다린 뒤 1회 검증 (2026-06-23 studio UX-v2)
-localhost dev에서 변경 직후 **하드리프레시를 연타하면 dev thrash**가 발생한다 — Next dev 서버가 동시다발 재컴파일/HMR 폭주로 큐가 밀리고, 화면이 이전(스테일) 번들을 잠깐 노출하거나 빈 화면을 거치며 **거짓 음성**(고쳤는데 안 고쳐진 듯 보임)을 만든다. 규칙: **저장 → 터미널 'compiled' 또는 HMR 적용 로그를 확인 → 1회만** 새로고침해 검증한다(소프트 리로드 우선, 필요 시에만 하드). 잔여 의심은 #45(출력 단정)·#88(완료=검증)대로 storage/네트워크 그라운드트루스로 확인하되 새로고침 횟수로 해결하려 들지 않는다. (production 검증은 #36 verify-vercel-deploy·#32 build로 별도.)
-
-## 작업원칙 #134 — 점진적 공개 + 컨텍스트 동기화: 현 단계가 필요로 하는 것만 보이고 나머지는 접는다 (2026-06-23 studio UX-v2)
-프리미엄 정돈의 두 축: **(1) 컨텍스트 동기화** — 도구·자산을 현재 워크플로 스텝에 맞춰 기본 노출하고(예: 도구함 AssetBrowser가 activeStep의 스테이지 자산만), '전체 보기' 토글로 전량 접근은 항상 유지한다. **(2) 점진적 공개** — 한 화면에 주작업 1개를 펼치고 보조 카드(진단·무드·퍼널 등)는 접어 시선 흐름을 통제한다. 보조 CTA는 overflow(•••)로 강등해 주 액션을 시각적으로 단일화한다. 구현은 **공유 컴포넌트 우선**(`src/components/common/Collapsible`·`OverflowMenu`)으로 /studio·/crawl·/products/new에 동형 적용(중복 0). 이는 셸·표면화만 바꾸는 작업이며 검증/발행 로직은 불변(#132)·#73(직관우선·과밀금지)의 구조적 실현이다.
-
-## 작업원칙 #135 — 재설계는 new+edit를 동시에, 하나의 공유 컴포넌트/모드로 (2026-06-23 edit 패리티)
-폼·화면을 재설계할 때 생성(new) 경로만 고치고 수정(edit) 경로를 방치하면 패리티 갭이 생긴다 — edit가 구형 UI에 고립되고(이모지탭·옵션/배송탭 부재) 동일 데이터에 두 가지 편집 경험이 공존한다. 규칙: 같은 폼은 하나의 공유 컴포넌트 또는 한 컴포넌트의 edit 모드로 양 경로가 같은 UI+저장 로직을 쓰게 한다. 사례: `/products/[id]/edit`를 구형 ProductForm에서 떼어 premium 씨앗심기 폼의 `?edit=` 모드로 서버 리다이렉트 → 단일 편집기(Lucide 6탭·임시저장·상세제거#131·저장 후 온실 아틀리에 자동 상속, 구형 폼 번들 16.8kB→141B). 저장은 멱등(savedProductId시 PUT)으로 재저장/재등록 중복 행을 차단한다. 미연결 잔존 필드(옵션 prefill 등)는 데이터 안전 먼저 보장(부분 PUT가 누락 필드를 보존)한 뒤 GAP으로 트래킹한다. #132(셸·표면화만)·#62(전상품 공통)·#129(기존 구현 실측)와 결합.
-
-## 작업원칙 #136 — dev 실행 중 build 금지: 공유 .next 청크 손상으로 'Cannot find module' 500 다발 (2026-06-23 Desktop 진단)
-`npm run dev`가 떠 있는 동안 `npm run build`를 돌리면 둘이 같은 `.next` 디렉터리를 공유해 빌드가 청크 매니페스트를 덮어쓰고, 실행 중인 dev 서버가 `Cannot find module './<chunk>.js'` 런타임 500을 다발로 뱉는다 — **코드 결함이 아니라 캐시 손상**이다. 규칙: (1) Code의 1차 검증은 **`tsc --noEmit`**(타입 0)로 한다. (2) production build가 꼭 필요하면 **dev를 정지한 뒤** 돌리거나 별도 트리/포트에서 돌린다. (3) build 후 dev를 재개할 때는 **`rm -rf .next`**로 손상 캐시를 비우고 시작한다. 500을 코드 결함으로 오판해 불필요한 수정 인계를 만들지 않는다 — 클린 캐시 재검증으로 먼저 가른다. 직전 세션 B5/B6/v2.5의 500은 본 원인(캐시 손상)으로 진단됨(코드 무결). #45(실측·추측 금지)·#88(완료=검증)·#32(build 검증은 별도 단계)와 결합.
-
-## 작업원칙 #137 — 항목별 액션 밀도는 overflow 케밥(점3개)으로 표준화 (2026-06-23 스튜디오 리서치)
-리스트/그리드의 각 항목에 상시 노출되는 액션이 많으면(에셋 타일당 4버튼 x 100-160타일 = 수백 개 동시 노출) 시선이 폭발하고 좁은 레일(217px)에서 잘린다. 표준: **평소 = 아이콘 0개(깔끔한 썸네일/행) -> 호버·포커스 = 주요 액션 1개(예 대표지정(별)) + 케밥(점3개: 부차 액션 — 추가이미지·아카이브·삭제) -> 다중선택 = 하단 일괄 액션 툴바.** 케밥엔 항상 라벨/툴팁(접근성). PatternFly 기준 '액션 2개 이하면 케밥 금지 / 공간 제약이면 케밥'. **crawl 행 <-> 스튜디오 에셋 타일에 동일 패턴(공유 `OverflowMenu`) 적용해 통일**(#134 보조CTA 강등·#73 과밀금지의 구조적 실현). 근거 `docs/research/STUDIO_REFACTOR_RESEARCH_KO_2026-06-23.md` §2·§5.
-
-## 작업원칙 #138 — 대형 리팩토링은 검증 가능한 Stage로 분할 — 구조 먼저, 라이브 검증, 대표 리뷰 후 디테일 도출 (2026-06-23 스튜디오 리팩토링)
-화면 전면 재설계를 한 번에 빌드하면 검증 불가능한 거대 변경이 되고 회귀·되돌림 비용이 폭증한다. 규칙: **(1) 구조(Stage 1)부터** — 스크롤·게이팅·항목 액션밀도 같은 골격을 먼저 빌드. **(2) 라이브 검증**(#88·#45 실렌더). **(3) 대표 리뷰**로 방향 확정 -> 그 다음에 레이아웃(Stage 2)·모바일/폴리시(Stage 3)의 디테일을 도출. 각 Stage엔 명시적 통과 기준(예 '어느 단계든 다음 행동을 스크롤 없이 5초 내 발견')을 둔다. 셸·표면화 우선(#132)·기존 검증 백엔드 재사용. 근거 동 리서치 §9 3단계 로드맵.
-
-## 작업원칙 #139 — 검증완료 미커밋 자산 누적 시, 대형작업 착수 전 먼저 커밋·배포해 위험반경 축소 (커밋우선) (2026-06-23)
-tsc/라이브 검증을 통과했으나 commit/push되지 않은 자산이 작업트리에 쌓인 상태에서 또 다른 대형 변경을 시작하면, 한 번의 충돌·되돌림이 여러 세션치 검증완 작업을 함께 위태롭게 한다(위험반경 확대). 규칙: **대형 리팩토링·재설계 착수 전, 이미 검증완료된 미커밋 자산을 먼저 커밋(필요 시 배포)해 베이스라인을 고정**한다 — 이후 변경은 깨끗한 출발선 위에서 독립적으로 되돌릴 수 있다. 단, 비가역·발행 경로는 여전히 대표 GO 게이트(#46)를 따른다. #136(검증 규율)·#88(완료=검증)과 결합.
-
-## 작업원칙 #140 — 인라인 style이 Tailwind 반응형 유틸(lg:hidden 등)을 무력화 → 반응형 표시 토글은 클래스로만·인라인 display 금지 (2026-06-23 studio Stage1 핫픽스)
-같은 요소에 인라인 `style={{display:...}}`와 Tailwind 반응형 표시 유틸(`lg:hidden`·`hidden lg:flex` 등)을 함께 쓰면 인라인 스타일이 항상 클래스를 이긴다(인라인 specificity 최상위). 결과: `lg:hidden`(=lg에서 display:none)이 인라인 `display:flex`에 무력화돼 데스크톱에서도 모바일 블록이 렌더 → **이중 렌더 + 페이지 전체 스크롤**(prod에도 존재한 결함). 사례: AtelierShell 모바일 블록 `className="lg:hidden" style={{display:"flex",...}}` → `className="flex flex-col gap-3 lg:hidden"`로 이관(인라인은 padding 등 비충돌만 잔존). 규칙: **반응형 표시/방향 토글은 클래스로만, 요소에 인라인 `display` 금지.** 전 컴포넌트 #62 점검(동일 요소에 인라인 display + 반응형 toggle 0건 정합 — 본 세션 전수 스캔으로 AtelierShell 유일 발생지 확인·수정 후 0). 검증=lg 폭에서 모바일 블록 computed display:none·가로오버플로 0. #73(직관·정합)·#62(전상품)와 결합.
-
-## 작업원칙 #141 — 고정 뷰포트 워크스페이스 높이 calc(100vh - 매직넘버) 금지 → flex-fill (2026-06-23 studio Stage1)
-독립 스크롤 컬럼 등 '페이지 전체는 스크롤하지 않는' 고정 뷰포트 워크스페이스의 높이를 `height: calc(100vh - 매직넘버px)`로 잡으면, 헤더·패딩·네비 높이가 바뀔 때 매직넘버가 어긋나 페이지가 수십px 넘쳐 의도한 'no page scroll'이 깨진다. 실측: AtelierShell `calc(100vh - 60px)` vs 실제 글로벌 헤더 76px(main.top) → 세로 ~100px 잔존 오버플로(이중렌더 버그와 무관·별개 선재). 규칙: 고정 뷰포트 높이는 매직넘버 대신 **flex-fill**로 — 부모 `flex flex-col` + 셸 `flex-1 min-h-0`(min-h-0 없으면 flex 자식이 콘텐츠로 늘어나 오버플로). 단 셸이 글로벌 main 레이아웃을 공유하면 전환 시 **전 페이지(dashboard 등) 회귀 셀프체크 필수**·tsc 0. (본 핫픽스 세션은 커밋우선(#139)으로 잔존을 Stage2 편입·calc 보정 보류.) #88(완료=검증)·#32(build)·#136(dev중 build금지)·#140과 결합.
-
-## 작업원칙 #142 — 색상 중앙 클렌징(토큰 단일 출처) — 제네릭 색은 :root 정규 토큰으로, 의미색은 리터럴 유지 (2026-06-24 studio Stage2 S2-A)
-스튜디오/작업화면의 장식·브랜드 색을 컴포넌트마다 하드코드(`#FFCCEA` 등)하면 리스킨 시 누락이 생기고 시안 변경이 반영 안 된다. 규칙: **제네릭 브랜드/장식 색은 `globals.css :root` 정규 토큰으로 중앙화** — `--brand-red`(#E62310·액션/활성)·`--pink-soft`(#FFCCEA·틴트/뱃지/장식보더)·`--cream`(#FAF8F3·배경). 한 번 수정 = 스튜디오 전체 리스킨. 단 **신호등 의미색(emerald 양호/amber 검수/red 보강)은 토큰화하지 않고 리터럴 유지** — 의미가 곧 색이라 추상화하면 가독성만 떨어진다. 기존 `--gp-*`/`--color-*` 시스템 토큰과 충돌 0(신규는 동값 의미 별칭). 전거 docs/design/STUDIO_UI_UX_GUIDELINES.md §3. #143·#144와 한 세트.
-
-## 작업원칙 #143 — 시안=참조, 브랜드·로직은 우리 기준 (2026-06-24 studio Stage2 S2-A)
-Figma/외부 시안·레퍼런스 구현체는 **참조일 뿐 권위가 아니다.** 시안이 채택한 특정 구현(예: `pink-500` 색, `execCommand` 에디팅, Zustand 상태관리)을 그대로 베끼지 않는다 — 우리 브랜드 토큰(#142)·기존 스택(React state/hooks)·기존 로직 계약을 우선한다. 시안에서 가져오는 것은 **레이아웃 의도·정보 위계·인터랙션 패턴**이지 구현 디테일이 아니다. 채택/비채택을 명시적으로 판단하고 비채택 사유를 남긴다. #132(재배치만·로직불변)·#28(production source of truth)와 결합.
-
-## 작업원칙 #144 — 반응형 4종 하드닝(전상품) — truncate/break-words · minmax(0,1fr) · min-w-0 · 인라인 display 금지 (2026-06-24 studio Stage2 S2-A)
-가로 폭발(11506px 실측·A-GRID)·세로 오버플로 재발을 막는 4종을 전 작업화면(studio/crawl/products·new/dashboard)에 의무 적용: **(a)** 넘칠 수 있는 텍스트는 `truncate` 또는 `break-words` · **(b)** 모든 그리드 트랙은 `minmax(0,1fr)`(bare `1fr`은 `min-width:auto`=min-content라 넓은 자식이 트랙을 폭발시킴; Tailwind `grid-cols-*`는 이미 minmax 내장이라 인라인 `gridTemplateColumns`만 교정) · **(c)** 모든 flex/grid 자식 `min-width:0`(없으면 a·b가 무동작) · **(d)** 인라인 `display` 금지(#140). 검증=1440/1024/375 폭에서 `scrollWidth===clientWidth`(가로 overflow 0). 전거 docs/design/STUDIO_UI_UX_GUIDELINES.md §4. #62(전상품)·#140·#141과 결합.
-
-## 작업원칙 #145 — 앱 전역 색 오버라이드는 border까지 덮어야 한다 + 단일출처 토큰 리스킨은 새 셸뿐 아니라 내부 컴포넌트 전수 열거 (2026-06-24 studio S2-A.1)
-두 갈래 교훈. (1) **border 누락**: globals.css의 회색 클렌징이 bg/text만 덮고 `border-gray-*`를 빼면, 카드/인풋의 회색 보더가 전역으로 새어 브랜드가 반쪽만 적용된 것처럼 보인다. 더 깊은 근본은 Tailwind preflight의 `borderColor.DEFAULT`(=gray-200)라 색-없는 bare `border`까지 회색 → **tailwind.config `borderColor.DEFAULT`를 브랜드 토큰으로 재정의**해야 진짜 0. 더해 `.border-gray-*/.border-stone-*` 클래스 오버라이드는 NON-important + @tailwind utilities 이후 배치(소스순으로 base utility를 이기되 higher-specificity hover/focus는 살림). (2) **전수 열거**: '제네릭 핑크 전량 치환' 류 단일출처 리스킨을 서브스테이지로 분리하지 않으면 새 셸에만 적용되고 기존 내부 컴포넌트(AssetBrowser 카드·중앙 step 카드·ControlTower)는 누락된다 → 리스킨은 **새 셸 + 내부 컴포넌트 전부**를 대상으로 명시. 실측 검증: /studio·/products·new 전 요소 회색 보더 0(`rgb(229,231,235)` 0건)·바 hex 핑크 0·pink-* 유틸 computed=브랜드 토큰. 단일출처(#142) 레버리지=Tailwind `pink` 팔레트를 config에서 브랜드 토큰으로 재정의(클래스 전수 편집 대신). #142·#62·#132와 결합.
-
-## 작업원칙 #146 — 전역 색 오버라이드는 class 한정(인라인/arbitrary 사각지대) + 의미 중립색은 sweep에서 제외 (2026-06-24 studio S2-A.2)
-두 갈래. (1) **사각지대**: globals.css의 회색→브랜드 sweep과 tailwind.config preflight 재정의는 **Tailwind 클래스에만** 적용된다. 컴포넌트의 **인라인 style 보더**(`border:'1px solid #e5e7eb'`)·arbitrary value(`border-[#e5e7eb]`)는 전역 규칙이 못 잡아 회색이 잔존 → **컴포넌트 단위 수정** 필요(예: SourcingRecommendWidget 인라인 #e5e7eb→var(--color-border)). 사각지대는 상시 재발하므로 인라인 색 grep(`#e5e7eb`/`#f3f4f6` 등)을 리스킨 검증에 포함. (2) **의미 중립색 제외**: '미적용·비활성·disabled' 같은 inactive 상태 뱃지/보더를 회색→핑크 sweep에 통과시키면 비활성이 브랜드(활성)처럼 보여 의미가 뒤집힌다. → 전용 semantic neutral 토큰(`--status-neutral-bg/-fg`, 웜 중립·핑크 아님)으로 분리하고 sweep 대상 클래스(`bg-gray-*`)를 쓰지 않는다. 공용 `StatusBadge`(tone: neutral/brand/success/warning/danger)로 의미↔색 매핑 일원화(신호등 의미색=리터럴 유지·#142). 실측: /studio·/products 미적용 뱃지 computed bg=#ECE8E0(중립·핑크 아님)·적용=브랜드. 잔존 백로그(#62 후속): ProductLifecycle/LowStockAlert 등 dashboard 위젯 인라인 보더 #e5e7eb = 동일 사각지대·차기 sweep. #142·#145·#62·#144와 결합.
-
-## 작업원칙 #147 — 데이터 패널 "격상" 시 기존 기능 인벤토리 먼저 (과빌드 금지) (2026-06-24 P1-e)
-
-**맥락**: P1-b에서 /products/new 우패널(Tower)을 "구조 격상"하며 히어로 2지표 블록 + SEO 신호칩 5종 + TowerSection 접이식 래퍼를 추가했으나, 이 셋은 모두 이미 존재하는 패널(꿀통지수·SEO 검색최적화 점수상세 체크리스트·각 패널 자체 카드/접힘) 위에 덧대진 중복 레이어였다. 동일 타이틀이 이중으로 접히고(double-collapse), 점수·체크리스트가 두 번 표시되어 운영자가 "더 지저분해졌다"며 거부 → P1-e에서 전부 제거(순감 -131줄).
-
-**원칙**: 작동 중인 데이터 패널을 "격상/정돈"하기 전에, **기존 기능을 먼저 인벤토리**하라. 새 히어로/점수/접이식 래퍼를 기존 점수·체크리스트·접힘 위에 덧대지 말 것. 중복 레이어는 제목 중복·과밀(#73 과밀금지)을 만든다. **재배치(reorder) + 가벼운 폴리시**가 새 래퍼 레이어보다 거의 항상 낫다. 광범위 카드/구조 통일은 "정본 패턴" 디자인 결정이 필요하므로 추측 금지 → 운영자 1줄 확정 후 착수(사이클 낭비 방지). [[작업원칙-73]] 직관우선·과밀금지와 결합.
-
-## 작업원칙 #148 — 검증은 전역 chrome·transient infra와 "기능"을 구분하라 (2026-06-24 S2-B.1)
-
-**맥락 2건**: (1) /studio 재배치 검증 중 `document.querySelector('aside')`로 첫 aside를 잡았더니 그건 **전역 앱 사이드바**(KKOTIUM GARDEN nav)였고 기능 패널(배양실)이 아니었다 → "단계 카드가 사라졌다"는 거짓 음성. 실제론 aside[1](배양실·pressed=true)에 카드가 정상 이주돼 있었다. (2) preview **dev 서버**가 `.next`를 점유한 상태로 `npm run build`를 돌리니 무관 라우트(/api/ai/seo-workflow) page-collection 오류 → dev 정지 + `.next` 클린 후 재빌드하니 통과(거짓 실패).
-
-**원칙**: 라이브 검증 시 (a) DOM 프로브는 **기능 컨테이너로 스코프**하라 — 전역 셸/사이드바/헤더(앱 chrome)는 기능 영역과 섞이므로 `querySelector` 첫 매치를 신뢰하지 말고 컨테이너(예: AtelierShell aside 인덱스·aria-label·data-속성)로 좁힌다. (b) 프로덕션 빌드는 **러닝 dev 서버와 격리**하라 — preview dev가 `.next`를 점유하면 build collection이 오염될 수 있으니 dev 정지 + `.next` 클린 후 빌드. 거짓 음성/거짓 실패를 코드 결함으로 오인하지 말 것. [[작업원칙-88]] 완료=검증, [[작업원칙-45]] 3-tier fact-check와 결합.
-
-
----
-
-## 작업원칙 #149 — P1-f 공용 포털 프리미티브(ElevatedDropdown)로 overflow:hidden 탈출 (2026-06-24 rev40)
-
-**규칙**: 드롭다운/팝오버가 `overflow:hidden` 컨테이너(USection 등)에 잘리는 문제는 개별 컴포넌트마다 땜질하지 않고 **공용 포털 프리미티브**(`createPortal(body)` + `fixed` + `z-9999` + anchor rect 동기화 + scroll(capture)/resize/ResizeObserver 추적 + 뷰포트 하단 flip-up + anchor/panel 인지 outside-close)로 일반화한다. D4 OverflowMenu의 포털 메커니즘을 재사용해 플랫폼/공급사 드롭다운 등에 동형 적용. 근거: 컨테이너별 개별 수정은 동일 결함이 신규 드롭다운마다 재발한다 — 프리미티브 1곳 수정이 전체를 해결.
-
-## 작업원칙 #150 — 저장 페이로드는 schema-allowlist 가드 필수 (2026-06-24 rev41, BUG-SAVE CRITICAL)
-
-**맥락**: 저장 페이로드가 프론트 필드명(`asGuide`)을 그대로 전송했으나 Prisma 컬럼은 다른 이름(`asInfo`)이라 `Unknown arg` 500이 발생, 16개 필드 중 1개만 무효인데도 **전체 저장이 실패**했다(명화 백필/발행 차단).
-
-**규칙**: PUT/PATCH 핸들러의 REJECT_KEYS(denylist) 방식은 신규 필드 추가 시 놓치기 쉽다 — 저장 경로는 **schema-allowlist**(Prisma 컬럼과 1:1 검증된 키만 통과, stray 키는 조용히 무해화)로 가드해 필드명 드리프트가 전체 저장을 깨지 않게 한다. 한 필드 오류가 나머지 15개 필드까지 함께 실패시키는 것은 부분 실패가 아니라 설계 결함.
-
-## 작업원칙 #151 — SEO 진단/생성 로직은 PURE 공용 lib, 룰/금지어는 데이터 파일로 분리 (2026-06-24 rev43~45)
-
-**규칙**: 상품명·카피 진단/생성 로직(`product-name-diagnosis.ts`, `copy-tone.ts` 등)은 **부작용 없는 PURE 함수**로 작성하고, 금지어·밴드 기준 등 튜닝 가능한 룰은 코드가 아니라 **데이터 파일**(`banned-words.ko.json` 등)로 분리한다. 여러 진입점(HOOK/NAME-DIAG/COPY-AUTO)이 동일 PURE lib+데이터를 공유해 판정 기준의 드리프트를 막는다.
-
-## 작업원칙 #152 — 키워드 경쟁도 계산은 원시 토큰이 아니라 카테고리 검증된 키워드로 제한 (2026-06-24 rev47, NAME-DIAG-2.1)
-
-**맥락**: keyword-competition의 head 키워드 후보 풀을 상품명 원시 토큰에서 뽑으면 교차 카테고리 오염(예: "차량용 방향제"에서 "에어컨"이 head로 잘못 선택)이 생긴다.
-
-**규칙**: head 키워드 풀은 **카테고리 검증된 `ctx.keywords`로 제한**한다(원시 토큰 전체가 아님). 검색량 데이터가 실측과 다르게 나올 수 있음을 숨기지 말고 그대로 노출(honest — 브리프 가정과 실측이 다르면 실측을 따른다).
-
-## 작업원칙 #153 — 카피 톤은 가격대·카테고리 기반 자동 분류 + 사유 노출, 배너에서 1클릭 전환 (2026-06-24 rev47, HOOK-HYBRID-1)
-
-**규칙**: 카피 생성 시 톤(trust/benefit/emotion)을 가격대·카테고리로 **자동 분류하고 분류 사유를 함께 응답**한다(신선/보장→trust 강제·저가/소모품→benefit·고가/선물→emotion). UI는 추천 톤 배너 + 톤칩 1클릭 즉시전환(추가 API 호출 0)으로 운영자가 근거를 보고 바꿀 수 있게 한다. 카피는 미사여구 금지·구체적 수치/TPO 강제.
-
-## 작업원칙 #154 — 키워드 포함 판정은 공백 무시 정규화로 (SEO 신호등 substring false-negative 방지) (2026-06-24 rev48, SEO-MATCH-1)
-
-**맥락**: 카피에 "차량용 방향제로"가 있어도 셀러태그가 "차량용방향제"(공백 없음)면 단순 substring 매칭이 "키워드 없음"으로 오판했다(false-negative, 2개 호출처 동일 결함).
-
-**규칙**: 키워드 포함 검사는 공용 PURE `normalizeForMatch`(소문자+전체 공백 제거) 기반 `includesNormalized`로 통일한다. 토큰 부분겹침 같은 과설계는 하지 않는다(#147 과설계 금지) — 공백 무시만으로 실사용 오탐의 대부분을 해결.
-
-## 작업원칙 #155 — AI 제공자 체인은 무료 우선 + 라운드로빈 + 유료 폴백은 명시적 게이트 (2026-06-24 rev50, GEMINI-RESTORE/COPY-AUTO-1)
-
-**규칙**: AI 호출 체인은 **Groq(무료)→Gemini(무료, 다중 키 라운드로빈)→Anthropic(유료)** 순서로 폴백하며, 429/quota 시 다음 키→다음 제공자로 자동 전환한다. **유료 폴백(`allowPaidFallback`)은 기본값 false**이고 운영자의 명시적 액션(사냥 버튼 클릭)에서만 true가 된다 — 무료 쿼터 소진이 조용히 과금으로 새지 않게 한다. 키 값은 로그/에러에 절대 포함하지 않고 index만 남긴다(#43 연장).
-
-## 작업원칙 #156 — 시크릿 스캔은 히스토리+현재추적 양쪽, 값 노출 없이 prefix만 리포트 (2026-06-24 rev50, SECRETS-GUARD)
-
-**규칙**: 시크릿 유출 점검은 **git 히스토리**(`git log -G` / `git grep`, gitleaks 부재 시 폴백)와 **현재 추적 파일** 양쪽을 스캔한다. 발견된 키는 리포트에 **값을 절대 노출하지 않고 prefix만**(예: `gsk_9pDP…`) 남긴다. 히스토리에 노출된 키는 파일 수정만으로 해결되지 않으므로 **운영자 키 ROTATION이 필수**임을 명시한다(#43 backup 패턴 금지의 연장 — 스캔 자체도 재유출을 만들지 않아야 함).
-
-## 작업원칙 #181 — verify-first: 외부 API/기존 스키마는 구현 전 라이브 실측, 스펙 문서를 맹신하지 않는다 (2026-06-24~07-07, 반복 확인)
-
-**맥락**: 리서치 스펙 문서의 권고("`from`→`lastChangedFrom` 리네임")가 라이브에서 400 에러로 반증되는 등, 문서 기반 가정과 실제 API 응답이 어긋나는 사례가 반복됐다(주문 배송지 중첩 경로, 옵션 shape, 활동 기록 스키마 등).
-
-**규칙**: 외부 API 호출·기존 스키마 참조·필드 매핑을 구현하기 전에 **throwaway 프로브 또는 라이브 호출로 실제 shape/응답을 먼저 실측**한다(스펙 문서는 참고일 뿐 권위 아님). 실측 없이 문서만 믿고 구현하면 라이브에서 반증되어 재작업이 생긴다. [[작업원칙-45]](추측 금지·실측), [[작업원칙-88]](완료=검증)와 결합 — 구현 전 검증판.
-
-## 작업원칙 #182 — 활성 탭만 마운트하는 셸은 탭 전환 후 재검증 필수 (2026-06-30, STUDIO IA SF-1)
-
-**규칙**: `AtelierShell`처럼 `activeTab.content`만 렌더하는(비활성 탭은 언마운트) 셸 구조에서는, 특정 탭의 UI 변경 검증을 **그 탭이 활성화된 상태에서** 수행해야 한다 — 다른 탭이 활성인 채로 DOM을 조회하면 대상 컴포넌트 자체가 마운트돼 있지 않아 거짓 실패가 난다.
-
-## 작업원칙 #183 — 넓은 중앙 레이아웃을 좁은 사이드바(384px)로 이동 시 반응형 회귀 점검 의무 (2026-06-30, STUDIO IA)
-
-**규칙**: 넓은 중앙 컬럼 전제로 만들어진 컴포넌트를 좁은 고정폭 사이드바(예 384px)로 옮길 때는 **반응형 회귀를 의무 점검**한다 — `minWidth:0`이 자식에 없으면 좁은 컨테이너에서 넘침이 발생한다(#144 반응형 4종 하드닝의 전조 사례).
-
-## 작업원칙 #184 — 카피/섹션 영속은 기존 평면 필드 재사용, 신규 필드 0 (2026-06-30~07-03, SF-2/SF-3b)
-
-**규칙**: 섹션 카피 영속 같은 신규 기능은 가능하면 **기존 평면 필드**(`Product.description` 등)를 재사용하고 신규 DB 필드를 만들지 않는다. `detail_images`(string[])도 마찬가지로 섹션을 평탄화해 기존 배열 필드에 저장한다 — 계약(평면 string[] 등)은 불변으로 유지해 하위 소비자(발행 경로)를 깨지 않는다.
-
-## 작업원칙 #185 — 슬롯 배정 저장은 debounce+silent+dirty 게이트로 autosave (2026-06-30, SF-2)
-
-**규칙**: 보드형 편집 UI(섹션 클릭 활성화→트레이 클릭 추가→슬롯 내 순서/제거)의 저장은 **debounce + silent(토스트 스팸 금지) + savingRef + dirty 게이트**로 autosave한다. "현재 조립됨" 상태는 항상 DB(`detail_images`)를 진실원천으로 표시.
-
-## 작업원칙 #186 — 보드 섹션 활성화는 섹션 카드 컨테이너 클릭, 헤더 클릭이 아니다 (2026-07-03, SF-2 prod 검증)
-
-**규칙**: `DetailAssemblyBoard` 같은 섹션형 보드에서 "섹션 활성화" 인터랙션은 **카드 컨테이너 전체 클릭**으로 트리거되며, 헤더 텍스트만의 클릭 영역이 아니다. UI 검증/QA 시 이 클릭 타겟을 정확히 구분해야 거짓 실패를 피한다.
-
-## 작업원칙 #187 — prod 빌드에서 React fiber introspection은 false-negative 가능, 관찰 가능한 상태변화로 검증 (2026-07-03)
-
-**규칙**: 프로덕션 빌드는 `__reactProps$` 등 React 내부 fiber 프로퍼티명이 난독화/최적화로 검증 스크립트가 기대하는 형태와 달라질 수 있다 — **fiber introspection으로 UI 상호작용을 검증하지 않는다.** 대신 **관찰 가능한 상태 변화**(DOM 텍스트 변경, 토스트, 프롬프트 등)로 검증한다. [[작업원칙-45]] 3-tier fact-check의 prod 빌드 특화 보강.
-
-## 작업원칙 #188 — Desktop 설계 문서(docs/design/*)는 항상 sync 커밋에 포함 (2026-07-03)
-
-**규칙**: Desktop이 작성한 설계 스펙 문서(`docs/design/*`)는 코드 변경과 별개로 **항상 git sync 커밋에 포함**한다. 미커밋 설계 문서는 유실 리스크가 있다 — 문서만 있고 커밋이 없으면 다음 세션이 근거 문서를 잃는다(#62 프로세스 수정 사례).
-
-## 작업원칙 #189 — 네이버 상세페이지는 HTML 조립 우선, 이미지 합성은 옵션 (2026-07-03, SF-4a+SF-3b)
-
-**규칙**: 네이버 상세페이지는 **이미지 합성(단일 롱이미지)보다 HTML 조립(섹션별 텍스트+이미지 마크업)을 우선**한다 — SEO(텍스트 인덱싱)와 유지보수(섹션별 개별 수정) 양쪽에서 유리하다. 프리미엄 합성 이미지는 별도 옵션(SF-4b)으로 분리하고 기본 발행 경로에 강제하지 않는다.
-
-## 작업원칙 #190 — 신규 개입점은 기존 Operator Action Queue(C-9)에 통합, 별도 큐/카드 신설 금지 (2026-07-06, SF-5)
-
-**규칙**: 새로운 운영자 개입 필요 상황(예: 상세 조립 미완)이 생겨도 **별도의 큐/카드/컬럼을 만들지 않고 기존 C-9 큐에 개입 타입 1종을 추가**하는 방식으로 통합한다. [[작업원칙-87]](단일 관제탑)의 직접 적용 — 개입 표면이 여러 곳으로 흩어지면 운영자가 확인할 곳이 늘어난다.
-
-## 작업원칙 #191 — 활동 기록은 기존 이벤트 소스 집계, 신규 로깅 인프라 금지 (2026-07-06, J2-1)
-
-**규칙**: "활동 기록" 같은 타임라인 기능은 **기존 이벤트 소스(crawl_logs·asset_jobs·asset_registry·Product 등)를 집계**해 만들고, 이를 위한 신규 로깅 테이블/인프라를 새로 만들지 않는다. 통일된 shape(`{ts, kind, label, target}`)으로 여러 소스를 합쳐 시간 역순 정렬하면 충분한 경우가 대부분.
-
-## 작업원칙 #192 — 주문 상태 전이 동기화는 3-endpoint 변경분 흐름, 리서치 권고도 라이브 검증 필수 (2026-07-06, ORDER-SYNC)
-
-**규칙**: 주문 상태 전이 동기화는 `last-changed-statuses`(≤24h 변경 ID 조회) → `query POST`(상세 평면 조회) → dedup+upsert의 **3-endpoint 흐름**을 쓴다. 리서치 문서의 권고(예: 파라미터 리네임)라도 **라이브 검증 없이 채택하지 않는다**([[작업원칙-181]] verify-first) — 실제로 해당 권고는 400 에러로 반증됐다.
-
-## 작업원칙 #193 — 동기화는 수동+자동(cron) 병행, 주문은 플랜 daily 상한 내에서 staggered (2026-07-06, ORDER-SYNC)
-
-**규칙**: 데이터 동기화는 운영자 수동 트리거와 cron 자동 실행을 **병행**한다. 주문처럼 빈번한 변경이 있는 엔티티도 **Vercel cron 플랜의 daily 상한을 넘지 않는 범위**에서 스케줄을 짠다(여러 엔티티가 겹치면 시간을 분산·staggered).
-
-## 작업원칙 #194 — vercel.json cron 빈도는 플랜 상한을 준수해야 하며, 변경 시 반드시 배포 검증 (2026-07-06, ORDER-SYNC)
-
-**규칙**: `vercel.json`의 cron 빈도(예: sub-daily·hourly)가 플랜 상한(daily)을 초과하면 **배포 자체가 거부**된다. cron 설정을 변경할 때는 일반 코드 변경과 동일하게 [[작업원칙-36]](push 후 `verify-vercel-deploy.sh --wait`)를 적용해 배포가 실제로 반영됐는지 확인한다 — cron 설정 오류는 겉보기엔 배포된 것처럼 보이지만 실행되지 않을 수 있다.
-
-## 작업원칙 #195 — 주문(Order) 개입은 대시보드 서피스로, 상품 C-9 매트릭스와는 엔티티가 다르다 (2026-07-07, ORDER-QUEUE-1)
-
-**규칙**: 주문 관련 개입 알림(발송 필요·클레임 응대 등)은 상품 개입용 C-9 Action Queue 매트릭스에 억지로 끼워 넣지 않고, **대시보드 "오늘 처리 액션" 서피스**에 별도 노출한다 — 주문과 상품은 서로 다른 엔티티이며 개입 트리거 조건도 다르다(Order.status PAID/PAYED=발송 필요, CANCEL_REQUESTED/RETURN_REQUESTED=클레임). [[작업원칙-190]](C-9 통합 원칙)은 *상품* 개입에 한정되고, 엔티티가 다르면 서피스도 분리한다.
-
-## 작업원칙 #196 — 네이버 v2 상품 PUT은 전량 full-replace: 모든 push는 GET-merge 필수, 부분 PUT 절대 금지 (2026-07-07, PRODUCT-LINK 리서치)
-
-**규칙**: 네이버 Commerce API `PUT /v2/products/origin-products/{no}`는 **요청 body에 없는 필드를 상품에서 제거하는 전량 교체(full-replace)** 방식이다. 따라서 이 엔드포인트로 향하는 **모든 push는 예외 없이 GET-merge**(현재 전체 상태를 GET → 변경할 필드만 교체 → 전체 payload PUT)를 거쳐야 하며, `{stockQuantity}`처럼 일부 필드만 담은 부분 PUT은 절대 금지한다. 예외: `detailContent`만 생략 시 기존 값 유지(다른 필드와 달리 생략=유지), `seoInfo`는 빈 값 전송 시 삭제로 처리되므로 유지하려면 **항상 명시 전송**해야 한다.
-
-**근거**: 부분 PUT은 명시하지 않은 필드(상품명·가격·이미지·옵션·원산지·상세 등)를 네이버 상품에서 통째로 날린다(commerce-api discussion #1650). CLAUDE.md §3-7에 이미 코드 절대 규칙으로 격상되어 있으며, `api-client.ts`의 `updateStock`/`setProductOutOfStock`/`bulkUpdateStock`이 이 GET-merge 패턴으로 교정 완료된 것이 실제 적용 사례.
-
-## 작업원칙 #197 — 네이버 양방향 동기화는 필드별 SoR(Source of Record) 고정 + syncHash 에코 방지 + CONFLICT는 운영자 큐로 (2026-07-07, PRODUCT-LINK 리서치)
-
-**규칙**: 네이버-앱 양방향 동기화는 필드마다 **SoR을 고정**한다 — **재고는 네이버가 SoR**(실주문 보호, 앱이 임의로 덮어쓰지 않음), **상세/가격/옵션은 앱이 SoR**(앱에서 편집한 값이 권위). push 전에는 반드시 **pull을 먼저 수행**(최신 네이버 상태 확인 없이 push하면 GET-merge의 GET이 스테일해짐). 앱이 쓴 값을 다시 pull해서 자기 자신의 변경을 변경으로 오인하지 않도록 **syncHash로 에코를 방지**한다. 두 SoR이 동시에 바뀐 **충돌(CONFLICT)은 자동 해소하지 않고 운영자 큐**로 넘긴다.
-
-**근거**: 재고를 앱이 SoR로 삼으면 네이버에서 실시간 주문으로 빠진 재고를 앱이 덮어써 초과판매를 유발할 수 있다. 반대로 상세/가격은 운영자가 앱에서 편집하는 워크플로이므로 앱이 권위가 맞다. [[작업원칙-196]](full-replace PUT)과 결합 — SoR이 다른 필드가 섞인 payload를 GET-merge 없이 보내면 한쪽 SoR의 최신 값을 반대쪽이 덮어쓴다.
-
-## 작업원칙 #198 — 상품 식별자는 origin/channel 유형을 함께 저장, 매핑키는 originProductNo (2026-07-07, PRODUCT-LINK 리서치)
-
-**규칙**: 네이버 상품 식별자는 origin(상품 단위)과 channel(채널 단위) 두 유형이 있고 **번호 공간이 겹칠 수 있어(숫자 충돌 가능) 유형을 함께 저장**해야 한다. 앱-네이버 매핑의 기준 키는 **originProductNo**로 고정한다.
-
-## 작업원칙 #199 — 임포트/동기화는 선택 소수 상품 전제, 대량 일괄은 금지 (2026-07-07, PRODUCT-LINK 리서치)
-
-**규칙**: 네이버 상품 임포트·동기화 기능은 **운영자가 목록에서 선택한 소수 상품**(체크박스 또는 번호 직접입력) 전제로 설계한다 — full-replace PUT은 건당 ~2초가 걸리고 네이버 API에 429(rate limit) 위험이 있으므로 **대량 일괄 처리는 금지**한다.
-
-## 작업원칙 #200 — 외부 API 필드 매핑은 필드별로 개별 라이브 실측, "한 필드 정상"이 "전 필드 정상"을 보장하지 않는다 (2026-07-07, ORDER-SYNC-2)
-
-**맥락**: 주문 배송지가 전량 빈값이었던 근본 원인은 `customerName`(정상 경로 `order.ordererName`)은 맞게 매핑됐지만 배송지는 `productOrder.shippingAddress`라는 **다른 중첩 경로**를 써야 하는데 `el.shippingAddress`(부재)를 조회했기 때문이다. 한 필드가 정상이라고 나머지도 정상이라 가정한 것이 결함의 원인.
-
-**규칙**: 외부 API 응답의 필드 매핑을 구현/점검할 때는 **필드마다 개별적으로 라이브 실측**한다 — 같은 응답 객체 안에서도 필드별로 중첩 경로가 다를 수 있다. [[작업원칙-181]](verify-first)의 확장.
-
-## 작업원칙 #201 — 동기화 검증은 건수뿐 아니라 필드 완전성까지 확인한다 (2026-07-07, ORDER-SYNC-2)
-
-**규칙**: "동기화됨"의 검증 기준은 **행 개수 일치만으로 충분하지 않다** — 실무에 필수적인 핵심 필드(배송지·수령인·연락처 등, 없으면 발송 자체가 불가능한 필드)가 채워졌는지까지 **필드 완전성 체크리스트**로 확인한다. 24건이 동기화됐어도 배송지가 전부 빈값이면 실무상 무용지물이다.
-
-## 작업원칙 #202 — 동기화(sync) 수정은 DB뿐 아니라 UI 표출까지 완결해야 완료다 (2026-07-07, ORDER-UI-1)
-
-**규칙**: 데이터 동기화 버그를 고칠 때 **DB 값만 고치고 화면(UI)에 노출하지 않으면 실무상 미해결**이다 — 셀러는 화면을 보고 작업하므로, sync 수정은 항상 **DB 수정 + UI 표출**을 한 쌍으로 완결한다. [[작업원칙-201]](필드 완전성)의 표출 확장.
-
-## 작업원칙 #203 — 앱의 주문 기능 스코프는 "정보 동기화+조회 전용", 실제 발송/운영은 네이버 스토어에서 (2026-07-07, ORDER 워크스트림 확정, 운영자 확정 스코프)
-
-**규칙**: 앱 내 주문 기능의 스코프는 **정보 동기화와 조회에 한정**한다 — 실제 발송 처리·주문 운영은 네이버 스토어 자체에서 수행한다(앱 내 인라인 발송 기능은 스코프아웃). 앱의 목표는 "오류 없는 정확한 동기화"이지 네이버 스토어의 주문 관리 기능을 복제하는 것이 아니다. 향후 주문 관련 기능 제안 시 이 스코프를 기준으로 판단한다.
-
-## 작업원칙 #216~#222 — 대시보드·셸 리팩터 확정 규칙 묶음 (2026-07-09, DASHBOARD_SHELL_REFACTOR 마일스톤)
-
-**맥락**: Phase 1(IA)·2(미감)·2b(브랜드팔레트)·3(장식/모션)·배경중립화를 아우르는 대시보드/셸 전면 리팩터. 권위 문서: `DASHBOARD_SHELL_REFACTOR_SPEC` / `DASHBOARD_SHELL_REDESIGN_RESEARCH` / `CONCEPT_DESIGN_TOKENS` / `KKOTIUM_BRAND_PALETTE` / `BACKGROUND_FONT_NEUTRALIZE_SPEC`.
-
-**규칙**:
-- **#216 (Phase 1 IA)**: 대시보드 최상단은 단일 "오늘 할 일" 큐(발송/클레임/품절/상품개입 병합, "지금 N건" + primary 1)로 통합하고, KPI는 4카드(오늘매출/신규주문/정산예정/품절경보, 외부 데이터 정직 degrade는 [[작업원칙-82]]/[[작업원칙-45]] 준수)로 압축한다. 기존 22개 위젯은 손실 없이 핵심 노출+점진적 공개로 재배치한다([[작업원칙-134]] 점진적 공개와 결합).
-- **#221 (팔레트 불변)**: 트렌디 시맨틱 색(민트/앰버/코랄/스카이)과 레거시 `--kk-red`/`--gp-red-*` 토큰은 `--brand-red` 등 신규 토큰을 경유하도록만 리다이렉트하고, 팔레트 자체(주색 2색 고정)는 변경하지 않는다.
-- **#222 (가독 폰트 + 배경중립화)**: 밀집 데이터(테이블 셀 등)에는 `.kk-readable`(Pretendard) 클래스를 행 컨테이너 앵커 단위로 적용해 가독성을 높이되, 제목 폰트(display/body)의 역할은 오염시키지 않는다.
-
-## 작업원칙 #223 — KPI 시계열은 기존 트랜잭션 테이블 직접 집계, 신규 metrics 테이블 회피 (2026-07-09, 비운영자 병렬 큐 P1)
-
-**규칙**: KPI 시계열 데이터는 신규 `metrics` 집계 테이블을 만들지 않고 **기존 트랜잭션 테이블(Order 등)을 직접 집계**한다(중복 데이터원 방지, [[작업원칙-191]] 신규 인프라 금지와 동일 정신). 로컬에서 집계한 실값은 외부(네이버) API degrade 상태와 명확히 구분해 **항상 실값으로 표시**한다(0도 실값 — [[작업원칙-82]]). 스파크라인 등 소규모 시각화는 차트 라이브러리 도입 없이 **경량 인라인 SVG**로 구현한다.
-
-## 작업원칙 #224 — 상태 색 통일은 도메인별 다상태 택소노미를 보존한 채로 (4토큰 축소 금지) (2026-07-09, Phase 2c)
-
-**규칙**: 상태 배지 색을 마스터 시스템으로 트렌디 통일할 때, **일반적인 단일의미 시맨틱**(success/warning/danger/info) 4토큰과 **도메인별 다상태 택소노미**(예: 주문 상태 5종, 관제탑 OVERALL 5종)를 혼동하지 않는다. 도메인 다상태는 **보존**하되 색상 팔레트만 마스터 12색 체계로 통일한다 — 4토큰으로 축소하면 상태 구분 정보 자체가 소실된다.
-
-## 작업원칙 #226 — 상태 배지 색 규칙: 배경/텍스트/포인트 컬러 역할 분리 + 솔리드는 대형·볼드 한정 (2026-07-09, MASTER_STATE_COLOR_SYSTEM)
-
-**규칙**: 상태 배지의 색 적용은 역할별로 분리한다 — **배경(-bg)**은 틴트, **텍스트(-tx)**는 AA 대비를 만족하는 다크 톤, **점/보더(-fg)**는 포인트 컬러로 사용한다. 솔리드 배경 + 흰 텍스트 조합은 **대형·볼드 배지에만** 한정 사용한다(작은 배지에 솔리드+흰텍스트를 쓰면 대비/가독이 깨지기 쉬움). Lucide 아이콘 색은 `style={{color}}`로 직접 지정(Tailwind 클래스 상속에 의존하지 않음).
-
-## 작업원칙 #227 — 상태 택소노미는 페이지군별 즉흥 정의 금지, 단일 마스터 12색 (2026-07-09, MASTER_STATE_COLOR_SYSTEM)
-
-**규칙**: 전체 앱의 상태 택소노미는 **단일 마스터 12색 체계**로 관리하며, 페이지/위젯마다 색을 즉흥적으로 새로 정의하지 않는다. 신규 상태 유형이 필요하면 마스터 팔레트에서 매핑하고, 팔레트 자체를 확장할 때만 중앙에서 추가한다(#224 다상태 보존과 결합 — 축소가 아니라 통일).
-
----
-
-**이관 경위 및 잔여 갭 (2026-07-14 Code 세션)**: 위 항목들은 `docs/plan/PARALLEL_WORK_TRACKER.md`의 이전 커밋(5c9e9f5 직전, `git show 5c9e9f5^:docs/plan/PARALLEL_WORK_TRACKER.md`로 복구)에 남아있던 rev40~rev50 원문에서 "원칙 #NNN 박제" 표기를 grep해 추출·정식화했다. **주의**: 커밋 5c9e9f5("rev51 — 3주 문서 갱신 공백 보정")는 커밋 메시지에 "rev50 이하 원문 보존"이라 명시했으나, 실제로는 PARALLEL_WORK_TRACKER.md에서 해당 원문 528줄을 전량 삭제했다(그 결과 HEAD의 "## rev50 이하 원문" 섹션은 헤더만 남고 본문이 없었다) — 이번 이관은 git 히스토리에서 복구한 원문을 근거로 했다. #149~#253 범위 중 **#165, #217~#220, #225, #231은 원문 grep 결과 개별 규칙 본문이 존재하지 않았다**(이전 인덱스의 "확인된 번호 범위" 기재가 부정확했음 — #216~#222는 하나의 묶음 커밋 메시지에서 언급된 범위 표기였을 뿐 전 번호가 개별 정의를 가진 것은 아니었다). [[작업원칙-115]](의도적 결번 표기, #110~#112 선례)와 동일하게, 이 6개 번호는 실제 정의가 없는 결번으로 간주한다.
 
 ---
 
@@ -1430,3 +710,116 @@ Chroma 실험(194,480회 호출, 18개 모델)에서 **집중된 300토큰 프�
 - 원인은 **왜(무엇이 문제인지)** → 행동은 **무엇을 하면 되는지**. 코드 사유 상수를 그대로 붙이지 않고 한글 문장으로 번역.
 
 **적용 범위**: 이번 세션 이후 Code·Cowork가 화면 요소를 만들거나 수정할 때마다 발견되는 즉시 적용. 별도 지시 없이도 상시 적용(#40 확장).
+
+---
+
+## 2026-07-30 (2) (Desktop) 신규 원칙 #318
+
+### #318 — 꼬띠 페르소나에 "표면(Surface)" 축 추가 — 판단 표면은 사투리 감탄사 제거
+정원사🌷/카우걸🤠 모드축(`KKOTTI_PERSONA_VOICE_GUIDE.md` §1~5, #259)과 별개로, 화면의 목적에 따라 "친밀 표면"(인사·빈상태·성공토스트 — 사투리 허용)과 "판단 표면"(검수·발행 게이트·차단사유·에러 — 셀러가 즉시 판단해야 하는 문구, 사투리 감탄사 제거)을 구분한다.
+
+**사건**: `persona-audit.py`가 "사투리(까꿍|빵야|이랴|어유|에유|해유) 존재 여부"만으로 페르소나 적용 완료를 판정하는 얕은 기준이었다. 그 결과 검수·발행 게이트처럼 정확한 판단이 필요한 화면에도 "이랴, 발행에 실패했어유!" 같은 감탄사가 기계적으로 채워졌다. 캐릭터를 지우지 않으면서(꼬띠 인격은 유지) 판단 표면에서만 톤을 정확·신뢰가는 방향으로 조정하는 것이 해법.
+
+**근본 수정**: `persona-audit.py`에 `JUDGMENT_SURFACE_KEYS` 화이트리스트 추가 — 이 목록에 있는 파일·키는 "사투리 존재"가 아니라 "사투리 부재"가 정상으로 반전 판정된다(#283의 `CUSTOMER_FACING` 제외 패턴과 동일 원리 재사용, #62). 조용히 빠지지 않고 리포트에 "판단 표면 — 사투리 위반" 별도 섹션으로 명시(#283 사례와 동일하게 침묵 제외 금지).
+
+**적용 대상 등록 시**: 새 판단표면 문구(발행/삭제/승인처럼 되돌리기 어려운 액션과 관련된 화면)를 추가할 때는 `JUDGMENT_SURFACE_KEYS`에 등록하고 `KKOTTI_PERSONA_VOICE_GUIDE.md` §6 판별기준("이 문구를 읽고 셀러가 즉시 판단을 내려야 하는가?")으로 재확인한다.
+
+전문: `docs/design/KKOTTI_PERSONA_VOICE_GUIDE.md` §6.
+
+---
+
+## 2026-07-30 (3) (Desktop) 신규 원칙 #319
+
+### #319 — 세션 종료 시 문서 3종 점검을 완료 조건으로 삼는다
+의미 있는 작업 단위(기능 구현·버그수정·설계 확정)를 완료로 보고하기 전에 반드시 아래 3가지를 확인한다. 하나라도 스킵했으면 "완료"라고 말하지 않는다.
+
+1. `docs/handoff/CURRENT.md` — 매 세션 종료 시 덮어쓰기(누적 아님, DOCS_STANDARD 만료성 문서 규칙). 다음 세션이 여기서부터 이어받는다.
+2. `docs/plan/PARALLEL_WORK_TRACKER.md` — 새 rev 블록 추가(무엇을 했는지 누적 기록, 삭제 없이 append).
+3. `docs/plan/PRINCIPLES_LEARNED.md` — 새로 확립된 규칙이 있으면 번호 등재.
+
+**사건**: 2026-07-30 세션에서 CLAUDE.md 축소 2단계와 `#311` 발행게이트 배선을 "미완료"로 오판해 재작업을 준비하다가, git log·grep 실측으로 **둘 다 이미 완료돼 있었음**을 발견했다(`docs/handoff/CURRENT.md` 2026-07-30 세션 기록 참조). 원인은 `docs/plan/TASK_BRIDGE.md` §3-A 작업큐 보드가 2026-07-22 이후 갱신되지 않고 방치된 것 — 그 사이 20개 이상 커밋이 진행됐는데 보드는 낡은 스냅샷 그대로였다.
+
+**근본 수정**: 문서 갱신을 "여유 있으면 하는 것"이 아니라 **작업 완료의 정의에 포함**시킨다(#319). 동시에 **착수 전에는 인계 문서의 "미완료/대기중" 표기를 그대로 믿지 않고 실제 코드·git log로 먼저 확인**하는 것을 상시 원칙으로 굳힌다 — 문서가 아무리 잘 갱신돼도 다음 세션 사이에 다른 레인(Code/Cowork)이 먼저 끝냈을 가능성은 항상 있다.
+
+**AI 인프라 확장 시 재검토**: 스킬·서브에이전트·MCP 서버 등을 새로 도입할 때는 그 도구가 이 문서 3종 점검 규율과 충돌하지 않는지 확인한다(예: 자동으로 문서를 쓰는 서브에이전트를 붙일 경우, 한글 sentinel 검증과 덮어쓰기 규칙이 그대로 적용되는지). CLAUDE.md "절대 금지·원칙 인덱스" 섹션에 이 재검토 의무를 명시해둠.
+
+---
+
+## 2026-07-30 (4) (Desktop) 신규 원칙 #320
+
+### #320 — 브랜치·머지 리듬: 저녁 세션 우선 검토, 짧은 브랜치 수명
+운영자+Claude 협업 환경에서 feature 브랜치를 언제 main에 합칠지에 대한 운영자 확정 규칙.
+
+**규칙**: 저녁 작업 세션 때 그날 만든 feature 브랜치를 **우선적으로 검토** — 문제없으면 그 자리에서 main에 merge한다. 저녁 시간이 아니어도 급하거나 중요한 판단이 필요한 사안은 그때그때 알린다. **브랜치를 며칠~몇 주 방치하지 않는다.**
+
+**근거**: 업계 조사(2026-07-30) — CI/CD·트렁크 기반 개발 표준 문헌들이 공통적으로 "브랜치 수명은 짧게, 하루~며칠 이내 merge"를 권장한다. 오픈소스 데이터 기준 merge의 약 20%가 충돌로 이어지고 그중 75% 이상이 개발자가 멈춰서 로직을 재검토해야 하는 수준 — 브랜치가 오래 살수록 이 위험이 커진다("새싹셀러라 제대로 만드는 게 중요하다"는 운영자의 신중함과, 업계의 "짧은 브랜치" 권장이 상충하는 것처럼 보이지만 실제로는 상충하지 않는다: 신중한 검토는 브랜치를 오래 묵혀서가 아니라 merge *전에* 철저히 검증해서 얻는다).
+
+**적용**:
+- 세션 브리핑(CLAUDE.md STEP 2)에 push된 미merge 브랜치가 있으면 "며칠째 대기 중"인지 반드시 포함.
+- 저위험(문서만, 소규모 문구수정 등)은 main 직접 push, 화면 재설계·다중파일 묶음은 feature 브랜치 — 최종 PR 검토·merge 승인은 항상 운영자 본인.
+- AI 인프라(스킬·서브에이전트 등) 도입 시 이 리듬과 충돌하지 않는지 재검토(#319와 동일한 재검토 트리거를 CLAUDE.md에 명시).
+
+전문: `CLAUDE.md` "HOW — 작업 흐름 규칙" §브랜치·머지 리듬.
+
+---
+
+## 2026-07-30 (5) (Desktop) 신규 원칙 #321~#322
+
+### #321 — "에이전트"는 3계층으로 구분해 말한다 (개념 혼동 방지)
+운영자와 개발 레인이 "에이전트"를 다르게 이해하면 몇 주를 낭비한다. 이 프로젝트에서는 항상 아래 셋 중 무엇인지 명시한다.
+
+| 계층 | 정체 | 위치 | 24시간 자동 실행 |
+|---|---|---|---|
+| A. Claude Code 서브에이전트 | 개발 보조 AI | `.claude/agents/*.md` | ❌ (세션 중에만) |
+| B. Desktop MCP 도구 | 리서치·검증 AI | Claude Desktop | ❌ (대화 중에만) |
+| C. 앱 내부 파이프라인 | 프로덕션 코드 | `src/lib/` + Vercel Cron | ✅ |
+
+**핵심**: 운영자가 "내 일을 대신하는 에이전트"라고 할 때 원하는 것은 거의 항상 **C**다. A·B는 C를 *만드는* 도구일 뿐 C를 대체하지 못한다(아침 8시 디스코드 알림을 A나 B가 보낼 수는 없다). 새 기능 요청을 받으면 먼저 "이건 A/B/C 중 무엇인가"를 확정하고 시작한다.
+
+**부수 규칙**: MCP(계층 B)의 최적 활용은 "실시간 자동화"가 아니라 **1회성 리서치로 풍부한 시드 데이터셋을 구축**하고 그것을 앱(C)이 매일 사용하게 하는 것이다(예: 시즌 캘린더). 근거: wikidocs 「Claude 기초부터 고급까지 100」 092.
+
+### #322 — 병렬 작업은 write set(수정 파일 집합) 기준으로 나눈다
+두 작업을 동시에 진행해도 되는지 판단하는 기준은 "주제가 다른가"가 아니라 **"수정하는 파일이 겹치는가"**다. write set이 겹치지 않으면 병렬 안전, 겹치면 순차.
+
+**작업 분해 시 반드시 명시할 7가지**(wikidocs 098):
+1. 목표 2. 담당 레인 3. 읽을 파일 4. **수정 가능 파일(write set)** 5. **수정 금지 파일** 6. 산출물 7. 병합 시 충돌 위험
+
+**병렬화하면 안 되는 것**: 같은 파일 동시 수정 · 요구사항이 모호한 작업 · DB migration처럼 순서가 중요한 작업 · 인증/권한/발행처럼 단일 책임자 판단이 필요한 작업.
+
+**동시 작업 중 필수 지시문**(wikidocs 097): "다른 레인이 동시에 작업 중일 수 있다. 담당 write set 밖의 파일은 되돌리거나 정리하지 말 것. 범위 밖 변경을 발견하면 수정하지 말고 요약만 남긴다." — 한 레인이 다른 레인의 변경을 "불필요한 diff"로 판단해 되돌리는 사고를 막는다.
+
+**적용**: 작업 스케줄은 `docs/plan/WORK_SCHEDULE_BOARD.md`가 단일 권위. 각 작업에 write set과 PARALLEL-OK 여부를 표기한다.
+
+---
+
+## 2026-07-31 (Desktop) 신규 원칙 #323
+
+### #323 — 부재 증명은 전수 검색으로 한다 (head/tail 잘린 출력으로 "없다" 단정 금지)
+"X가 연결돼 있지 않다", "그 코드는 없다" 같은 **부재(不在) 결론**은 시스템 진단의 방향을 통째로 바꾼다. 따라서 부재를 주장하기 전에는 반드시 **잘리지 않은 전수 검색**으로 확인한다.
+
+**사건(2026-07-31)**: Desktop이 `grep ... | head -20`으로 `cron/daily/route.ts`를 조사한 뒤 "소싱 추천 엔진은 어떤 크론에도 연결돼 있지 않다"고 `CURRENT.md`에 기록했다. 그러나 실제로는 **440행에 E-7 소싱 블록이 존재**했고(파일 총 484줄), `head -20`이 407행에서 잘려 보이지 않았을 뿐이다. 이 오진 위에 P1 스펙 전체가 세워졌고, Code 레인이 구현 중 실측으로 발견해 정정했다.
+
+**규칙**:
+- 부재를 결론짓기 전 `grep -c`(건수) 또는 `wc -l`(전체 줄수)로 **탐색 범위가 파일 전체를 덮었는지** 먼저 확인한다.
+- 파일 크기를 모르는 상태에서 `head`/`tail`/`sed -n 'A,Bp'`로 본 결과만으로 "없다"고 쓰지 않는다.
+- 부재 주장은 문서에 기록할 때 **확인 방법을 함께 남긴다**(예: "grep 전수, 매치 0건").
+
+**부수 확인 사실**: 레인 간 교차검증(Desktop 설계 → Code 구현 중 실측)이 이 오류를 잡아냈다. 단일 레인이었으면 잘못된 전제 위에 계속 쌓였을 것이다. **핑퐁 구조의 실효성이 입증된 사례**이며, Code/Cowork가 Desktop 분석과 다른 실측 결과를 발견하면 **즉시 보고하는 것이 정상 동작**임을 확인한다.
+
+---
+
+## 2026-08-01 (Desktop) 신규 원칙 #324
+
+### #324 — 외부 API "실패"는 내 설정을 의심하기 전에 공급자 공지를 실측한다
+외부 API가 갑자기 실패하면 "내 키/권한/설정 문제"로 단정하기 쉽다. 그러나 공급자가 API를 종료·변경했을 수 있다. **설정 문제로 결론짓기 전에 공급자 공식 공지를 실측**한다.
+
+**사건(2026-08-01)**: 네이버 쇼핑검색 API가 SE05(404)를 반환하자 Desktop이 "운영자가 개발자센터에서 검색 API 권한을 등록해야 한다"고 단정해 CURRENT.md에 기록했다. 운영자가 "개발자센터에 문제 없어 보인다"고 지적하고 공식 공지 링크를 제공. 확인 결과 **네이버가 2026-07-31자로 쇼핑/책/전문자료 검색 API를 영구 종료**(API HUB 이관 대상에서도 제외)한 것이었다. 운영자 설정 문제가 전혀 아니었다.
+
+**규칙**:
+- 외부 API 오류 코드는 그대로 검색해 공급자 공지/변경 이력을 먼저 확인한다.
+- "운영자가 X를 설정해야 한다"고 쓰기 전에, 그 설정이 실제 원인인지 실측 근거를 확보한다(#310 연계).
+- 공급자 사이트가 web_fetch로 차단되면 `curl -A "Mozilla/5.0"`로 우회해 본문을 확인할 수 있다(이번에 사용).
+- API 종료는 **단건이 아니라 그 API를 쓰는 모든 파일에 영향**한다 — 즉시 전수 검색으로 영향 범위를 파악한다(#62). 이번 건은 `searchShopping`/`analyzeCompetition` 소비처 11개 파일.
+
+**부수 효과**: 폐기된 기능을 "더 나은 방식으로 갈아탈" 기회로 삼는다. 쇼핑검색 productCount 기반 경쟁분석은 원래도 부실했고, 검색광고 경쟁지수(살아있음)로 대체하는 것이 더 정확하다. 대응 설계: `docs/design/NAVER_SHOPPING_API_SUNSET_RESPONSE.md`.
+

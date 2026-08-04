@@ -37,6 +37,9 @@ export interface CropWarning {
   // it. Kept on this shared type so both tools speak one warning language (§6).
   code: 'SOURCE_TOO_SMALL' | 'LOW_RESOLUTION' | 'TEXT_DETECTED' | 'SUBJECT_CLIPPED' | 'BACKGROUND_NOT_WHITE';
   severity: 'block' | 'warn';
+  // English, server log / API-internal only (#317) — the seller-facing screen
+  // (CropStudioPanel) renders by `code` via publish-preview-strings.ko.json's
+  // cropWarning map, never this field. Kept for diagnostics/debugging.
   message: string;
   remediation?: string;
 }

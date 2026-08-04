@@ -5048,3 +5048,8 @@ export const NAVER_DEPTH1_LIST: string[] = Array.from(
 ).sort();
 
 export const TOTAL_CATEGORY_COUNT = 5021;
+
+/** leaf category code → 전체 경로(트리명). 매칭 실패 시 코드 원문(추측 지양 — #82). */
+export function categoryFullPath(code: string): string {
+  return NAVER_CATEGORIES_FULL.find(c => c.code === code)?.fullPath ?? code;
+}
