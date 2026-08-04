@@ -523,7 +523,9 @@ export function buildSourcingRecommendEmbed(result: SourcingRecommendResult): Re
         // E-8: Wholesale matches inline
         opp.wholesaleMatches && opp.wholesaleMatches.length > 0
           ? `**도매처 (${opp.wholesalePlatforms?.join('+') ?? ''}):**\n` + opp.wholesaleMatches.slice(0, 2).map(w => {
-              return `  [${w.platform}] 공급가 ${w.supplyPrice.toLocaleString()}원 | [보러가기](${w.url})`;
+              // #326-B: 이종상품 오염 의심(가격 이상치)은 배제하지 않고 표시만 한다.
+              const outlierNote = w.priceOutlier ? ' :warning: 가격 확인 필요' : '';
+              return `  [${w.platform}] 공급가 ${w.supplyPrice.toLocaleString()}원${outlierNote} | [보러가기](${w.url})`;
             }).join('\n')
           : null,
       ].filter(Boolean).join('\n'),

@@ -19,6 +19,7 @@ export interface WholesaleProduct {
   imageUrl: string;
   sellerName: string;
   url: string;
+  priceOutlier: boolean; // #326-B: 이 매칭묶음 내에서 가격이 비정상적으로 벗어남(이종상품 오염 의심)
 }
 
 export interface WholesaleMatchResult {
@@ -108,6 +109,24 @@ async function searchDomeggookMarket(
       const supplyPrice = Number(item.price);
       if (!Number.isFinite(supplyPrice) || supplyPrice <= 0) continue;
 
+      const rawTitle = String(item.title ?? '').replace(/\s+/g, ' ').trim();
+
+      // #326-B(2026-08-04, 캐리어 90원 오염 실사례 — 확인: "캐리어" 검색 상위에
+      // 에어컨 브랜드 "캐리어"(Carrier) 리모컨 부속품, 캐리어용 파우치/이너백
+      // 등 이종상품 다수 포함). 도매매칭은 전문검색이라 키워드가 상품명에
+      // 아예 없는 완전 무관 상품까지 섞이는 걸 막는다 — 상품명에 키워드가
+      // 한 글자도 없으면 애초에 이 키워드의 상품이 아니므로 제외한다.
+      // 공백 제거 후 비교(★ 실측 발견·2026-08-04): 도매처 상품명은 "캠핑
+      // 테이블"처럼 띄어쓰기가 들어간 경우가 많아, 원본 키워드 "캠핑테이블"과
+      // 그대로 비교하면 정상 매칭까지 전량 소실된다(실측: 필터 적용 직후
+      // 캠핑테이블 매칭 0건으로 확인). 공백을 지우고 비교해 이 문제를 없앤다.
+      // 주의: 이건 "이종상품 완전 차단"이 아니라 "완전 무관 상품만 배제"하는
+      // 최소 필터다("캐리어 파우치"처럼 키워드를 포함한 연관상품은 여전히
+      // 통과 — 그건 priceOutlier 플래그로 별도 표시한다, 아래 참조).
+      const normalizedTitle = rawTitle.replace(/\s+/g, '');
+      const normalizedKeyword = keyword.replace(/\s+/g, '');
+      if (!normalizedTitle.includes(normalizedKeyword)) continue;
+
       // 목록 API는 판매중지·품절·단종을 제외하고 반환하므로 재고 필터 불필요
       // (docs/research/DOMEGGOOK_API_404_ROOT_CAUSE_2026-08-04.md §3-2).
 
@@ -126,7 +145,7 @@ async function searchDomeggookMarket(
       results.push({
         platform,
         productNo,
-        name: String(item.title ?? '').replace(/\s+/g, ' ').trim(),
+        name: rawTitle,
         supplyPrice,
         minOrderQty,
         inventory: 1, // 목록 API는 판매중 상품만 반환 — 정확한 재고수는 제공되지 않음
@@ -134,11 +153,28 @@ async function searchDomeggookMarket(
         imageUrl: String(item.thumb ?? ''),
         sellerName,
         url: `https://domeme.domeggook.com/s/${productNo}`,
+        priceOutlier: false, // 아래에서 매칭묶음 전체 기준으로 재계산
       });
     }
 
     // 공급가 오름차순(저렴한 순) 상위 3건 — 마진 정렬 폐기(위 주석 참조)
-    return results.sort((a, b) => a.supplyPrice - b.supplyPrice).slice(0, 3);
+    const top3 = results.sort((a, b) => a.supplyPrice - b.supplyPrice).slice(0, 3);
+
+    // #326-B: 키워드 필터를 통과해도 남는 가격 이상치("캐리어 파우치" 3000원처럼
+    // 연관은 있으나 다른 제품)를 지어내지 않고 표시만 한다. 이 3건의 중앙값 대비
+    // 5배 이상 벗어나면 이종상품 오염 의심으로 플래그 — 배제는 하지 않는다
+    // (배제는 또 다른 추측이 되므로, 판단은 항상 대표님이 링크를 보고 내린다).
+    if (top3.length >= 2) {
+      const prices = top3.map((p) => p.supplyPrice).sort((a, b) => a - b);
+      const median = prices[Math.floor(prices.length / 2)];
+      for (const p of top3) {
+        if (median > 0 && (p.supplyPrice < median / 5 || p.supplyPrice > median * 5)) {
+          p.priceOutlier = true;
+        }
+      }
+    }
+
+    return top3;
   } catch {
     return [];
   }
@@ -195,8 +231,10 @@ export function buildWholesaleMatchField(result: WholesaleMatchResult): Record<s
   const lines = result.matches.slice(0, 3).map((p, i) => {
     const platformTag = p.platform === 'DMK' ? 'DMK' : 'DMM';
     // 마진(%)은 지어내지 않는다(SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE 2026-08-04)
-    // — 실측 공급가만 표시.
-    return `${i + 1}. [${platformTag}] 공급가 **${p.supplyPrice.toLocaleString()}원** | ${p.name.slice(0, 30)}${p.name.length > 30 ? '...' : ''}\n   [보러가기](${p.url})`;
+    // — 실측 공급가만 표시. priceOutlier(#326-B)는 이종상품 오염 의심을
+    // 배제하지 않고 표시만 한다 — 최종 판단은 대표님이 링크를 보고 내린다.
+    const outlierNote = p.priceOutlier ? ' :warning: 가격 확인 필요' : '';
+    return `${i + 1}. [${platformTag}] 공급가 **${p.supplyPrice.toLocaleString()}원**${outlierNote} | ${p.name.slice(0, 30)}${p.name.length > 30 ? '...' : ''}\n   [보러가기](${p.url})`;
   });
 
   return {
