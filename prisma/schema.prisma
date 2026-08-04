@@ -435,6 +435,43 @@ model daily_recommendations {
   @@index([status], map: "idx_daily_recommendations_status")
 }
 
+// 2026-08-04 — 소싱 심화화면 트랙 A(DB 영속화, docs/design/
+// SOURCING_DEEP_DIVE_WEBAPP_2026-08-04.md §3). daily_recommendations는
+// 상품명·점수만 저장하는 얕은 구조라 5분 in-memory 캐시가 만료되면 가격·
+// 도매매칭·AI인사이트가 전부 사라진다(#325 계열 — 캐시 폴백이 얕은 데이터로
+// 착지하며 정보 소실). 이 테이블이 하루치 소싱 추천 전체를 완전한 형태로
+// 영속화한다. Additive table — 기존 daily_recommendations는 무변경(자사 DB
+// 상품 추천용, 소싱 추천과는 별개 목적). Product 모델과 무관(외부 발굴
+// 상품이라 FK 없음, AssetJob/AssetRegistry와 동일 패턴).
+model SourcingOpportunityRecord {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date                DateTime  @db.Date
+  keyword             String    @db.VarChar(200)
+  category            String?   @db.VarChar(100)
+  monthlySearchVolume Int       @default(0) @map("monthly_search_volume")
+  competition         String?   @db.VarChar(20)
+  blueOceanScore      Int       @default(0) @map("blue_ocean_score")
+  rank                Int       @default(0)
+  // supplyPriceRange: {min:number,max:number} — SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE
+  // (2026-08-04) 이후 마진(%)은 지어내지 않는다. 실측 공급가만 저장.
+  supplyPriceRange    Json?     @map("supply_price_range")
+  // wholesaleMatches: WholesaleProduct[] (platform/productNo/name/supplyPrice/
+  // minOrderQty/url/priceOutlier) — 도매매칭 전체 목록(현재 위젯은 일부만 노출,
+  // 심화화면 드로어에서 전부 보여주기 위해 전량 저장).
+  wholesaleMatches    Json?     @map("wholesale_matches")
+  aiInsight           String?   @map("ai_insight")
+  recoType            String?   @map("reco_type") @db.VarChar(20)
+  // 트랙C: 낙점 상태 관리 — null=미검토, interested/skipped/sourcing_started.
+  operatorStatus      String?   @map("operator_status") @db.VarChar(20)
+  operatorStatusAt    DateTime? @map("operator_status_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  @@index([date], map: "idx_sourcing_opp_date")
+  @@index([keyword], map: "idx_sourcing_opp_keyword")
+  @@index([operatorStatus], map: "idx_sourcing_opp_status")
+  @@map("sourcing_opportunity_records")
+}
+
 model StoreSettings {
   id                    String   @id @default("default")
   freeShippingThreshold Int      @default(30000) @map("free_shipping_threshold")

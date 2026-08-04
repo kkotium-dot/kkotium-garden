@@ -4,6 +4,7 @@
 // POST: Force fresh scan (used by cron/daily and dashboard button)
 
 import { NextRequest, NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import {
   generateSourcingRecommendations,
@@ -32,10 +33,52 @@ export async function GET() {
       });
     }
 
-    // Check DB for today's recommendation
+    // 트랙A(2026-08-04, docs/design/SOURCING_DEEP_DIVE_WEBAPP_2026-08-04.md §3):
+    // 완전한 형태로 영속화된 새 테이블을 먼저 조회한다. daily_recommendations
+    // (상품명·점수만 저장하는 얕은 구조)로의 폴백은 이 테이블이 비어있을 때만
+    // 남긴다(과거 데이터·마이그레이션 이전 호환).
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
+    const fullRecords = await prisma.sourcingOpportunityRecord.findMany({
+      where: { date: { gte: todayStart } },
+      orderBy: { rank: 'asc' },
+      take: 5,
+    }).catch(() => []); // P2021 가드 — 마이그레이션 이전 배포에서도 안전하게 동작
+
+    if (fullRecords.length > 0) {
+      const result: SourcingRecommendResult = {
+        date: todayStart.toLocaleDateString('ko-KR'),
+        trendSource: 'db-full',
+        trendCategories: [...new Set(fullRecords.map(r => r.category).filter((c): c is string => !!c))],
+        opportunities: fullRecords.map(r => ({
+          keyword: r.keyword,
+          category: r.category ?? '',
+          monthlySearchVolume: r.monthlySearchVolume,
+          competition: (r.competition ?? 'unknown') as 'low' | 'mid' | 'high' | 'unknown',
+          avgPrice: 0,
+          minPrice: 0,
+          maxPrice: 0,
+          totalResults: 0,
+          competitionLevel: '',
+          suggestedSupplyPrice: 0,
+          estimatedMargin: 0,
+          blueOceanScore: r.blueOceanScore,
+          reason: 'db-full',
+          topSellers: [],
+          aiInsight: r.aiInsight ?? undefined,
+          recoType: (r.recoType as any) ?? null,
+          supplyPriceRange: (r.supplyPriceRange as { min: number; max: number } | null) ?? undefined,
+          wholesaleMatches: (r.wholesaleMatches as any) ?? undefined,
+        })),
+      };
+      cachedResult = result;
+      cachedAt = Date.now();
+      return NextResponse.json({ ok: true, cached: true, ...result });
+    }
+
+    // Check DB for today's recommendation (레거시 폴백 — 신규 테이블 마이그레이션
+    // 이전 데이터 또는 아직 오늘자 sourcing 레코드가 없는 경우)
     const dbResult = await prisma.daily_recommendations.findMany({
       where: {
         date: { gte: todayStart },
@@ -130,6 +173,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // #250 §3: tag each opportunity 황금/니치/시즌 (category-score, D1-level).
+    // opp.category is a DataLab D1 name; 'general'/unknown → no tag (honest #231).
+    // 트랙A(2026-08-04): DB 저장 블록보다 먼저 실행해야 한다 — recoType이
+    // 붙기 전에 저장하면 sourcing_opportunity_records.reco_type이 항상
+    // null로 저장되는 순서 버그가 될 뻔했다(실측으로 발견·즉시 재배치).
+    if (result.opportunities.length > 0) {
+      const nowMonth = new Date().getMonth() + 1;
+      const tags = await resolveRecoTypeTags(
+        result.opportunities.map((o) => ({
+          d1: o.category === 'general' ? '' : o.category,
+          supplierPrice: o.suggestedSupplyPrice,
+        })),
+        nowMonth,
+      ).catch(() => result.opportunities.map(() => null));
+      result.opportunities.forEach((o, i) => { o.recoType = tags[i] ?? null; });
+    }
+
     // Save to DB
     if (result.opportunities.length > 0) {
       const todayDate = new Date();
@@ -152,20 +212,33 @@ export async function POST(req: NextRequest) {
           status: 'sent',
         })),
       });
-    }
 
-    // #250 §3: tag each opportunity 황금/니치/시즌 (category-score, D1-level).
-    // opp.category is a DataLab D1 name; 'general'/unknown → no tag (honest #231).
-    if (result.opportunities.length > 0) {
-      const nowMonth = new Date().getMonth() + 1;
-      const tags = await resolveRecoTypeTags(
-        result.opportunities.map((o) => ({
-          d1: o.category === 'general' ? '' : o.category,
-          supplierPrice: o.suggestedSupplyPrice,
+      // 트랙A(2026-08-04): 완전한 형태로 새 테이블에도 저장. daily_recommendations
+      // (위)는 다른 화면이 이미 참조할 수 있어 그대로 보존하고, 이 테이블이
+      // 심화화면(드로어·아카이브)의 실제 데이터 소스가 된다. P2021 가드로
+      // 마이그레이션 이전 배포에서도 전체 요청이 실패하지 않게 한다(#82 best-effort).
+      await prisma.sourcingOpportunityRecord.deleteMany({
+        where: { date: todayDate },
+      }).catch(() => null);
+
+      await prisma.sourcingOpportunityRecord.createMany({
+        data: result.opportunities.map((opp, i) => ({
+          date: todayDate,
+          keyword: opp.keyword,
+          category: opp.category || null,
+          monthlySearchVolume: opp.monthlySearchVolume,
+          competition: opp.competition,
+          blueOceanScore: opp.blueOceanScore,
+          rank: i,
+          // Prisma의 Json 필드는 배열/객체를 InputJsonValue로 명시 캐스팅해야
+          // 받는다(TS2322 — WholesaleProduct[]가 InputJsonObject와 구조적으로
+          // 안 맞는다는 tsc 실측 오류를 그대로 따라 수정, unknown 경유 필요).
+          supplyPriceRange: (opp.supplyPriceRange ?? null) as unknown as Prisma.InputJsonValue,
+          wholesaleMatches: (opp.wholesaleMatches ?? null) as unknown as Prisma.InputJsonValue,
+          aiInsight: opp.aiInsight ?? null,
+          recoType: opp.recoType?.type ?? null,
         })),
-        nowMonth,
-      ).catch(() => result.opportunities.map(() => null));
-      result.opportunities.forEach((o, i) => { o.recoType = tags[i] ?? null; });
+      }).catch(() => null);
     }
 
     // Send Discord notification
