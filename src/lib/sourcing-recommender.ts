@@ -224,6 +224,8 @@ Trending categories today: ${trendCategories.join(', ')}
 Top opportunities:
 ${itemList}
 
+IMPORTANT CONTEXT: For each item, real wholesale supplier links (from Domeggook/Domemae) have ALREADY been found and will be shown directly below your tip in the same message. Do NOT suggest "find a supplier" or "look for alternatives elsewhere" — that contradicts the links already shown. Instead, give a tip about THIS SPECIFIC keyword: what to check before ordering (packaging, minimum order quantity, seller reviews), how to differentiate the listing, or a pricing/margin consideration. Keep each tip concrete and specific to that keyword, not generic sourcing advice.
+
 Respond ONLY in Korean JSON (no markdown, no backticks):
 {
   "summary": "2-3 sentence overall sourcing strategy for today",
@@ -520,11 +522,19 @@ export function buildSourcingRecommendEmbed(result: SourcingRecommendResult): Re
         `${supplyLine} — 판매가는 직접 책정해주세요`,
         opp.topSellers.length > 0 ? `상위 판매자: ${opp.topSellers.join(' / ')}` : null,
         opp.aiInsight ? `> ${opp.aiInsight}` : null,
+        // 모바일 가독성(2026-08-04, 운영자 실측 스크린샷 피드백): AI 코멘트를
+        // 도매처 목록보다 먼저 배치한다 — 코멘트가 "다른 대안을 찾아보라"는
+        // 취지인데 그 아래 정작 해당 키워드의 도매처 링크가 나오면 순서가
+        // 논리적으로 어긋나 보인다(실사례: "캐리어 대안으로 여행가방을
+        // 찾으라"는 코멘트 밑에 캐리어 도매처 링크가 나옴). 순서: 경쟁정보 →
+        // 공급가 범위 → 상위판매자 → AI코멘트 → 도매처 목록.
         // E-8: Wholesale matches inline
         opp.wholesaleMatches && opp.wholesaleMatches.length > 0
           ? `**도매처 (${opp.wholesalePlatforms?.join('+') ?? ''}):**\n` + opp.wholesaleMatches.slice(0, 2).map(w => {
-              // #326-B: 이종상품 오염 의심(가격 이상치)은 배제하지 않고 표시만 한다.
-              const outlierNote = w.priceOutlier ? ' :warning: 가격 확인 필요' : '';
+              // #326-B: 이종상품 오염 의심(가격 이상치)은 배제하지 않고 표시만
+              // 한다. 이유를 함께 적어 링크를 누르기 전에 판단할 수 있게 한다
+              // (2026-08-04 운영자 피드백: "왜 경고인지 모르겠다").
+              const outlierNote = w.priceOutlier ? ' :warning: 가격 확인 필요(다른 상품일 수 있어요)' : '';
               return `  [${w.platform}] 공급가 ${w.supplyPrice.toLocaleString()}원${outlierNote} | [보러가기](${w.url})`;
             }).join('\n')
           : null,
