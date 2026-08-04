@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-03 (rev96 — 3-A 소싱 회생 검증·SE05/도매꾹 API 이슈 확정 · Desktop) / 직전 rev95
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-04 (rev98 — 음수마진 근본수정+push 완료 · Desktop) / 직전 rev97
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -328,6 +328,41 @@ Filesystem MCP 다운(#26) → **Desktop Commander로 우회 저장 성공**(#29
 **구현 계획**: P1 소싱추천 크론 연결+dry-run(🟢READY) → P3 검수관 → P4 앱 브리핑 화면 → P5 피드백 루프. **P2 시즌 캘린더 확장은 P1과 write set 안 겹쳐 병렬 안전**.
 
 **미착수**: 코드 구현 전량(설계만 확정). 디스코드 실발송은 dry-run 검증 후 운영자 승인 필요.
+
+---
+
+## rev98 — 음수마진 근본수정(C안) + 4-Mode 시스템 이슈 발견 + push 완료 (2026-08-04 Desktop)
+
+**★ 음수마진 근본원인 규명·수정·검증 완결**(운영자 결정: C안 — 마진% 완전 폐기, 공급가 범위만 표시). 근본원인: 도매매칭은 키워드 전문검색이라 이종상품이 섞이는데(예: "텐트" 검색→캠핑 소품), `sourcing-recommender.ts`가 그중 최저가 1건으로 avgPrice를 역산해 전체 마진을 계산하던 게 이종상품 오염으로 마이너스 수백% 노출의 원인이었다. 문서: `docs/research/SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE_2026-08-04.md`.
+
+**수정 3파일**(커밋 `b39f2d7`): `wholesale-matcher.ts`(estimatedMargin·avgNaverPrice 전량 제거, 공급가 오름차순 정렬) · `sourcing-recommender.ts`(avgPrice 역산 블록→supplyPriceRange로 교체, Discord 문구 정직화) · `recommendation-runner.ts`(옛 시그니처 호출부 수정 + estimatedMargin 기반 정렬을 blueOceanScore로 안전 전환).
+
+**Desktop 재검증**: tsc 0 · build 0(BUILD_EXIT:0, grep error/failed 0건) · dry-run 재실행 → **5/5 후보 전부 음수마진 완전 소멸**, 공급가 범위(예: 텐트 440원~6,000원) 정직 노출 확인. dev서버 kill·임시파일 삭제·git status clean 확인.
+
+**★ 신규 발견(미착수)**: `recommendation-runner.ts`의 4-Mode 추천 시스템(SEASONAL_AHEAD 모드)이 SE05로 영구종료된 `analyzeCompetition()`을 여전히 호출 중 — 사실상 죽어있을 가능성. 크론 연결 여부부터 다음 세션에서 확인 필요(CURRENT.md §3).
+
+**push 완료**: `62a5dcf..3365f8c..b39f2d7` feature 브랜치로 fast-forward push(main 영향 없음, Vercel 프리뷰 배포만 트리거). main merge는 운영자 결정 대기.
+
+**다음 세션 최우선**: Vercel 프리뷰 READY 확인 → 운영자 main merge 결정 → merge 후 프로덕션 브라우저 검증 일괄 진행(검수재설계·페르소나·도매꾹수정·음수마진수정 4건 전부 대상) → 4-Mode 시스템 범위 확인.
+
+---
+
+## rev97 — 도매꾹 API 404 규명·수정·라이브검증 완결 + 신규 버그 3건 발견 (2026-08-04 Desktop)
+
+**★ 도매꾹 API 404 — #324 원칙대로 공식문서 실측 후 완전 규명**: 도매꾹은 폐기 아님. `ver=4.5`가 `getItemList`엔 없는 버전(v4.0 구조전면개편, 현재 권장 4.1)이라 404였음. 실제 DB 키로 라이브 차등검증(구버전 재현 404 / 신버전 200+실상품 2172건·1657건). 근본원인 문서 저장: `docs/research/DOMEGGOOK_API_404_ROOT_CAUSE_2026-08-04.md`.
+
+**Code 수정 완료**(`3365f8c`): `wholesale-matcher.ts` 전면 재작성 — ver=4.1+market파라미터화+평면스키마. `searchDomemae`(HTML스크래핑) 폐기 → 동일API `market=supply`로 대체. supply(도매매)1차→dome(도매꾹)2차 순서로 DOMAIN_FACTS 정합. tsc 0·build 0(Code).
+
+**Desktop 재검증(git log·파일 실측 + dry-run 재실행)**: `git log`로 커밋 실재 확인, 파일 diff 직접 대조(스펙 일치). 로컬 dev 기동 → `POST /api/sourcing-recommend?dryRun=true` → **5/5 후보 전부 도매매칭 성공**(`wholesaleMatchFailures:0`, 캠핑테이블4·보조배터리5·텐트3·캐리어1·아이스박스3). rev96의 "5/5 전부 0건"에서 완전 반전. dev서버 kill·임시파일 삭제·git status clean 확인(원복 완결).
+
+**★★ 신규 발견 — 별개 버그 3건**(도매꾹 이슈와 무관, 다음 세션 조사 대상):
+1. 음수 마진 노출(텐트 -367%, 아이스박스 -61% 등) — `avgPrice`가 비정상적으로 낮은 게 원인 추정(텐트 평균가 3,143원). 마이너스 마진은 15% 필터 조건(`>=0 && <15`)을 안 거쳐 그대로 통과.
+2. `totalResults:0`인데 `competitionLevel:MEDIUM/HIGH` 값이 채워짐 — 계산 근거 없는 값 의심.
+3. `imageUrl`에 `?hash=...` 쿼리스트링 — 다운스트림(이미지저장) 영향 미확인.
+
+**의미**: 도매매칭(공급처 발굴)은 완전 회생. 단 마진 계산 입력값 신뢰성 문제로 **디스코드 실발송은 2-1 해결 전까지 비권장**.
+
+**다음 세션 최우선**: avgPrice 출처 추적(`sourcing-recommender.ts`/`keyword-competition/route.ts`) → 음수마진 근본수정 → 재검증. 이후 운영자 push 결정.
 
 ---
 
