@@ -387,7 +387,10 @@ export default function PublishPreviewPage({ params }: { params: { id: string } 
                   <div className="flex flex-wrap gap-1.5">
                     <CheckChip label={t.gate.readinessOk} ok={data.gateReasons.readinessOk} />
                     <CheckChip label={t.gate.canRegister} ok={data.gateReasons.canRegister} />
-                    <CheckChip label={t.gate.imageClean} ok={data.gateReasons.imageWarningCount === 0} />
+                    <CheckChip
+                      label={data.gateReasons.imageWarningCount === 0 ? t.gate.imageClean : `${t.gate.imageCleanPrefix}${data.gateReasons.imageWarningCount}`}
+                      ok={data.gateReasons.imageWarningCount === 0}
+                    />
                   </div>
                 </div>
               </div>

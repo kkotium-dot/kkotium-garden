@@ -71,7 +71,8 @@
   "gate": {
     "readinessOk": "준비도 A 이상",
     "canRegister": "필수 항목 충족",
-    "imageClean": "이미지 경고 0"
+    "imageClean": "이미지 경고 0",
+    "imageCleanPrefix": "이미지 경고 "
   },
   "review": {
     "title": "검수 승인",
