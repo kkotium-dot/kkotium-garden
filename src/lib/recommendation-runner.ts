@@ -9,6 +9,39 @@
 //
 // Each mode runs as a thin filter/sort wrapper over the existing data flow,
 // keeping API call cost minimal and behavior consistent with current sourcing logic.
+//
+// @unmounted (2026-08-04, Desktop, #292) — CONFIRMED DEAD CODE. Exhaustive grep
+// across src/app/api/cron/ and the whole repo (excluding this file itself) found
+// ZERO importers of `runFourModes` or this module. It is not wired into
+// vercel.json crons (only /api/cron/{daily,weekly,inventory-sync,order-sync,
+// asset-integrity-sweep} exist), nor into any API route. The live sourcing path
+// is /api/cron/daily → POST /api/sourcing-recommend → sourcing-recommender.ts
+// (that one IS live and was fixed this session — see docs/research/
+// SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE_2026-08-04.md). This file is a separate,
+// never-invoked pipeline.
+//
+// ★ CHECKLIST BEFORE REVIVING THIS FILE — confirm each item, don't assume:
+// 1. #324 (SE05 permanent shutdown): runSeasonalAhead() calls analyzeCompetition()
+//    and searchShopping() from naver/shopping-search.ts — BOTH depend on the
+//    Naver Shopping Search API, which Naver permanently discontinued 2026-07-31.
+//    These calls will fail/return empty. Must be rewritten to the 검색광고
+//    competition-index pattern that sourcing-recommender.ts now uses (3-A fix).
+// 2. #325/SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE (this session): avgPrice-based
+//    margin math was removed from wholesale-matcher.ts and sourcing-recommender.ts
+//    in favor of supplyPriceRange (honest, no invented numbers). runSeasonalAhead
+//    still computes `avgPrice = competition.avgPrice ?? 0` and sets it on the
+//    opportunity — harmless now (estimatedMargin fixed at 0) but check it doesn't
+//    resurrect a margin-percentage display anywhere downstream.
+// 3. runStoreFit() depends on getActiveSeasonalEvents() (recommendation-modes.ts)
+//    which per rev95 (2026-07-30) only hardcodes 6 events (Valentine/White Day/
+//    Children's Day/Parents' Day/Pepero/Christmas) — missing 설/추석/신학기/장마/
+//    김장/블프/이사철. Confirm P2 season calendar expansion (docs/handoff work)
+//    has landed before relying on this for seasonal accuracy.
+// 4. Check whether any NEW code written after 2026-08-04 has started importing
+//    this file — grep again before assuming it's still unmounted.
+// 5. If reviving: decide whether this 4-mode system replaces or complements the
+//    live single-mode sourcing-recommend pipeline, and update vercel.json crons
+//    + docs/design/KKOTTI_AGENT_SYSTEM_PRD.md accordingly.
 
 import { generateSourcingRecommendations, type SourcingOpportunity } from '@/lib/sourcing-recommender';
 import { searchShopping, analyzeCompetition } from '@/lib/naver/shopping-search';
