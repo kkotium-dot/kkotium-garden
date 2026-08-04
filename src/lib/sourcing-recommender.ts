@@ -505,40 +505,44 @@ export function buildSourcingRecommendEmbed(result: SourcingRecommendResult): Re
     unknown: ':white_circle: 미확인',
   };
 
+  // 모바일 레이아웃 재설계 옵션1(2026-08-04, docs/design/
+  // SOURCING_DISCORD_MOBILE_LAYOUT_2026-08-04.md §3-2): 필드 압축.
+  // Discord embed는 클라이언트 렌더(desktop/mobile)에 따라 폭이 크게 달라지고
+  // (Discord 공식 가이드: "Embeds are rendered client-side... plan out and
+  // test how your embeds look on desktop and mobile"), inline 필드도 화면폭에
+  // 따라 자동 세로 재배치되어 예측이 어렵다 — 그래서 열(inline) 분할이 아니라
+  // "필드 하나당 줄 수를 줄이는" 방향으로 압축한다.
+  //
+  // AI 코멘트는 더 이상 상품별 필드에 넣지 않고 description(상단 요약)에서
+  // 한 번만 노출한다 — 이전엔 5개 필드마다 코멘트가 반복돼 모바일에서 필드
+  // 하나가 5~6줄까지 길어졌다(운영자 스크린샷 실측). 상품별 필드는 "무엇을
+  // 살지 판단하는 데 필요한 핵심 3줄"(제목/경쟁+검색량/가격+도매처)만 남긴다.
   const fields: Record<string, unknown>[] = result.opportunities.map((opp, i) => {
     const typeTag = opp.recoType ? `${opp.recoType.emoji} ${opp.recoType.label} ` : '';
-    // SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE(2026-08-04): avgPrice·estimatedMargin은
-    // 이종상품 오염 위험으로 폐기했다 — 지어낸 판매가/마진(%) 문구를 만들지
-    // 않는다. 실측 공급가 범위만 사실대로 노출하고, 판매가는 대표님이 책정한다.
     const supplyLine = opp.supplyPriceRange
       ? (opp.supplyPriceRange.min === opp.supplyPriceRange.max
-          ? `도매 공급가 **${opp.supplyPriceRange.min.toLocaleString()}원** 확인됨`
-          : `도매 공급가 **${opp.supplyPriceRange.min.toLocaleString()}원~${opp.supplyPriceRange.max.toLocaleString()}원** 확인됨`)
-      : '도매 공급가 미확인';
+          ? `공급가 **${opp.supplyPriceRange.min.toLocaleString()}원**`
+          : `공급가 **${opp.supplyPriceRange.min.toLocaleString()}~${opp.supplyPriceRange.max.toLocaleString()}원**`)
+      : '공급가 미확인';
+
+    // 도매처는 1건만 인라인 표시(기존 2건 → 1건, 모바일 줄 수 절감). 단
+    // 최저가가 이종상품 의심(outlier)이면 무의미한 정보라 그 다음 정상가를
+    // 대신 보여준다(정상품 정보 손실 방지) — 전부 outlier면 최저가로 폴백.
+    const normal = opp.wholesaleMatches?.find((w) => !w.priceOutlier);
+    const top = normal ?? opp.wholesaleMatches?.[0];
+    // outlier 경고는 필드 압축(#326-B)과 "이유를 알아야 한다"는 운영자 요구가
+    // 상충하므로, 짧게라도 이유를 남긴다(완전 생략하지 않음).
+    const outlierNote = top?.priceOutlier ? ' :warning:다른상품일수있음' : '';
+    const wholesaleLine = top
+      ? `[${top.platform}] 공급가 **${top.supplyPrice.toLocaleString()}원**${outlierNote} | [보러가기](${top.url})`
+      : `${supplyLine} — 도매처 미확인`;
+
     return {
       name: `${RANK_ICONS[i] ?? `${i + 1}.`} ${typeTag}${opp.keyword} (${opp.blueOceanScore}점)`,
       value: [
         `${COMP_LABEL[opp.competition] ?? ''} 경쟁 | 월 ${opp.monthlySearchVolume.toLocaleString()}건 검색`,
-        `${supplyLine} — 판매가는 직접 책정해주세요`,
-        opp.topSellers.length > 0 ? `상위 판매자: ${opp.topSellers.join(' / ')}` : null,
-        opp.aiInsight ? `> ${opp.aiInsight}` : null,
-        // 모바일 가독성(2026-08-04, 운영자 실측 스크린샷 피드백): AI 코멘트를
-        // 도매처 목록보다 먼저 배치한다 — 코멘트가 "다른 대안을 찾아보라"는
-        // 취지인데 그 아래 정작 해당 키워드의 도매처 링크가 나오면 순서가
-        // 논리적으로 어긋나 보인다(실사례: "캐리어 대안으로 여행가방을
-        // 찾으라"는 코멘트 밑에 캐리어 도매처 링크가 나옴). 순서: 경쟁정보 →
-        // 공급가 범위 → 상위판매자 → AI코멘트 → 도매처 목록.
-        // E-8: Wholesale matches inline
-        opp.wholesaleMatches && opp.wholesaleMatches.length > 0
-          ? `**도매처 (${opp.wholesalePlatforms?.join('+') ?? ''}):**\n` + opp.wholesaleMatches.slice(0, 2).map(w => {
-              // #326-B: 이종상품 오염 의심(가격 이상치)은 배제하지 않고 표시만
-              // 한다. 이유를 함께 적어 링크를 누르기 전에 판단할 수 있게 한다
-              // (2026-08-04 운영자 피드백: "왜 경고인지 모르겠다").
-              const outlierNote = w.priceOutlier ? ' :warning: 가격 확인 필요(다른 상품일 수 있어요)' : '';
-              return `  [${w.platform}] 공급가 ${w.supplyPrice.toLocaleString()}원${outlierNote} | [보러가기](${w.url})`;
-            }).join('\n')
-          : null,
-      ].filter(Boolean).join('\n'),
+        wholesaleLine,
+      ].join('\n'),
       inline: false,
     };
   });
