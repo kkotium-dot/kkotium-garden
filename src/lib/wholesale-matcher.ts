@@ -107,14 +107,18 @@ async function searchDomeggook(keyword: string, avgNaverPrice: number): Promise<
       const inventory = item.qty?.inventory ?? 0;
       if (inventory <= 0) continue;
 
-      // Calculate estimated margin vs Naver average price
+      // Calculate estimated margin vs Naver average price.
+      // SE05(#324): 호출부가 판매가를 모를 때(avgNaverPrice<=0)는 마진을 0으로
+      // 지어내지 않는다 — -1(미확인) sentinel로 두고 15% 필터도 건너뛴다. 호출부가
+      // 이 도매가로 판매가를 역산한 뒤 실제 마진을 재계산해 채워 넣는다.
       const naverFeeRate = 0.058; // 5.8% total Naver fees
       const estimatedMargin = avgNaverPrice > 0
         ? Math.round(((avgNaverPrice - supplyPrice - avgNaverPrice * naverFeeRate) / avgNaverPrice) * 100)
-        : 0;
+        : -1;
 
-      // Only include products with viable margin (>= 15%)
-      if (estimatedMargin < 15) continue;
+      // Only include products with viable margin (>= 15%) — skip this filter
+      // when the margin is unknown (-1), since it isn't a real signal.
+      if (estimatedMargin >= 0 && estimatedMargin < 15) continue;
 
       const shipFeeRaw = item.deli?.supply?.fee;
       const shipType = item.deli?.supply?.type;
@@ -185,12 +189,14 @@ async function searchDomemae(keyword: string, avgNaverPrice: number): Promise<Wh
       const supplyPrice = parseInt(priceStr, 10);
       if (isNaN(supplyPrice) || supplyPrice <= 0) continue;
 
+      // SE05(#324): avgNaverPrice를 모르면 마진을 0으로 지어내지 않는다 — -1(미확인)
+      // sentinel로 두고 15% 필터도 건너뛴다(호출부가 도매가로 역산해 재계산).
       const naverFeeRate = 0.058;
       const estimatedMargin = avgNaverPrice > 0
         ? Math.round(((avgNaverPrice - supplyPrice - avgNaverPrice * naverFeeRate) / avgNaverPrice) * 100)
-        : 0;
+        : -1;
 
-      if (estimatedMargin < 15) continue;
+      if (estimatedMargin >= 0 && estimatedMargin < 15) continue;
 
       // Extract product name nearby (simplified)
       const nameMatch = html.substring(match.index, match.index + 500).match(/title="([^"]+)"/);

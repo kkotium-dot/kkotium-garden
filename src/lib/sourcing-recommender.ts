@@ -5,10 +5,8 @@
 // Runs daily via cron and pushable to Discord #kkotti-daily
 
 import { fetchNaverTrends, type TrendResult } from '@/lib/trend-analyzer';
-import { searchShopping, analyzeCompetition, type CompetitionAnalysis } from '@/lib/naver/shopping-search';
 import { fetchKeywordStats, type KeywordStat } from '@/lib/naver/keyword-api';
 import { matchWholesaleProducts, type WholesaleProduct } from '@/lib/wholesale-matcher';
-import { entryBarrierToBlueOceanBonus, type EntryBarrierAnalysis } from '@/lib/competition-monitor';
 import { recoTypeSummary, type RecoTypeTag } from '@/lib/naver/recommendation-type';
 import { judgeExclusion } from '@/lib/policy/exclusion-rules';
 import { pickVariant, seasonalGreeting } from '@/lib/notifications/kkotti-variation';
@@ -152,11 +150,16 @@ function expandCategoryToKeywords(categoryName: string): string[] {
 
 // ── Blue Ocean Score Calculator ──────────────────────────────────────────────
 // Higher = better opportunity
+// SE05(#324): 네이버 쇼핑검색 API 영구 종료로 totalResults·avgPrice를 더 이상
+// 얻을 수 없다. 두 값은 optional로 두고, 없으면(undefined) 해당 항목의 점수
+// 기여를 생략한다 — 모르는 값을 0/미확인으로 채워 가짜 신호를 주지 않는다
+// (docs/design/NAVER_SHOPPING_API_SUNSET_RESPONSE.md §4 "가짜값 채우기 금지").
+// 블루오션 판정은 검색량 + 검색광고 competition(low/mid/high)만으로 산출된다.
 function calcBlueOceanScore(params: {
   monthlyVolume: number;
   competition: string;
-  totalResults: number;
-  avgPrice: number;
+  totalResults?: number;
+  avgPrice?: number;
 }): number {
   let score = 50; // base
 
@@ -170,70 +173,27 @@ function calcBlueOceanScore(params: {
   else if (vol < 500 && vol > 0) score += 10;          // very niche
   else score -= 10;                                     // no data
 
-  // Competition: low = great, high = bad
+  // Competition: low = great, high = bad (검색광고 keywordstool, 살아있음)
   if (params.competition === 'low') score += 20;
   else if (params.competition === 'mid') score += 10;
   else if (params.competition === 'high') score -= 5;
 
-  // Total search results: fewer = less competition
-  if (params.totalResults < 1000) score += 15;
-  else if (params.totalResults < 5000) score += 10;
-  else if (params.totalResults < 30000) score += 5;
-  else if (params.totalResults > 100000) score -= 10;
+  // Total search results: fewer = less competition (unavailable since SE05 — skip)
+  if (params.totalResults !== undefined) {
+    if (params.totalResults < 1000) score += 15;
+    else if (params.totalResults < 5000) score += 10;
+    else if (params.totalResults < 30000) score += 5;
+    else if (params.totalResults > 100000) score -= 10;
+  }
 
-  // Price range: 10,000~50,000 = optimal for home goods margin
-  if (params.avgPrice >= 10000 && params.avgPrice <= 50000) score += 10;
-  else if (params.avgPrice >= 5000 && params.avgPrice < 10000) score += 5;
-  else if (params.avgPrice > 50000 && params.avgPrice <= 100000) score += 3;
+  // Price range: 10,000~50,000 = optimal for home goods margin (unavailable since SE05 — skip)
+  if (params.avgPrice !== undefined) {
+    if (params.avgPrice >= 10000 && params.avgPrice <= 50000) score += 10;
+    else if (params.avgPrice >= 5000 && params.avgPrice < 10000) score += 5;
+    else if (params.avgPrice > 50000 && params.avgPrice <= 100000) score += 3;
+  }
 
   return Math.max(0, Math.min(100, score));
-}
-
-// E-10: Estimate entry barrier directly from competition analysis (no full snapshot needed).
-// Reuses the same indirect signals as calcEntryBarrier() in competition-monitor.ts but
-// works against analyzeCompetition() output (which gives topSellers, not topItems).
-function calcEntryBarrierFromComp(params: {
-  topSellers: string[];
-  minPrice: number;
-  maxPrice: number;
-  avgPrice: number;
-  totalResults: number;
-  competitionLevel: string;
-}): { score: number; level: 'LOW' | 'MEDIUM' | 'HIGH'; uniqueSellers: number; priceSpread: number } {
-  let score = 2.5;
-
-  const uniqueSellers = new Set(params.topSellers.filter(Boolean)).size;
-  if (uniqueSellers >= 5) score += 0.5;
-  else if (uniqueSellers > 0 && uniqueSellers <= 2) score -= 0.5;
-
-  const spread = params.avgPrice > 0
-    ? (params.maxPrice - params.minPrice) / params.avgPrice
-    : 0;
-  if (spread >= 0.5) score -= 0.5;
-  else if (spread > 0 && spread < 0.2) score += 0.5;
-
-  if (params.totalResults >= 100000) score += 1.5;
-  else if (params.totalResults >= 30000) score += 1.0;
-  else if (params.totalResults >= 5000) score += 0.5;
-  else if (params.totalResults < 1000) score -= 0.5;
-
-  // analyzeCompetition's competitionLevel is a string label; normalize via known buckets
-  const lvl = (params.competitionLevel ?? '').toUpperCase();
-  if (lvl.includes('VERY') || lvl.includes('ㅈ')) score += 0.5;
-  else if (lvl.includes('LOW') || lvl.includes('ㄴ')) score -= 0.5;
-
-  score = Math.max(0, Math.min(5, score));
-
-  const level: 'LOW' | 'MEDIUM' | 'HIGH' =
-    score >= 3.5 ? 'HIGH' :
-    score >= 2.0 ? 'MEDIUM' : 'LOW';
-
-  return {
-    score: Math.round(score * 10) / 10,
-    level,
-    uniqueSellers,
-    priceSpread: Math.round(spread * 100) / 100,
-  };
 }
 
 // ── Groq AI Insight Generator ────────────────────────────────────────────────
@@ -378,85 +338,56 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
       })
       .slice(0, 8);
 
+    // SE05(#324): 네이버 쇼핑검색 API가 영구 종료돼 analyzeCompetition()은 항상
+    // 실패한다 — 더 이상 호출하지 않는다. 블루오션 판정은 검색량 + 검색광고
+    // competition(low/mid/high)만으로 산출하고, 가격대는 Step 6에서 실측
+    // 도매가(matchWholesaleProducts)로 보완한다(docs/design/NAVER_SHOPPING_API_SUNSET_RESPONSE.md §3-A).
+    const COMPETITION_LEVEL_LABEL: Record<string, string> = {
+      low: 'LOW', mid: 'MEDIUM', high: 'HIGH', unknown: 'UNKNOWN',
+    };
+
     const opportunities: SourcingOpportunity[] = [];
-    let competitionAnalysisFailures = 0;
+    // 경쟁분석 API 호출이 없어졌으므로 이 단계에서 실패할 여지가 없다 — 필드는
+    // 결과 스키마 호환을 위해 유지하되 항상 0이다.
+    const competitionAnalysisFailures = 0;
 
     for (const kw of promising) {
-      try {
-        const comp = await analyzeCompetition(kw.keyword);
+      const blueOceanScore = calcBlueOceanScore({
+        monthlyVolume: kw.totalMonthly,
+        competition: kw.competition,
+      });
 
-        // Estimate supply price as ~35% of avg price (typical wholesale margin)
-        const suggestedSupplyPrice = Math.round(comp.avgPrice * 0.35);
-        const estimatedMargin = comp.avgPrice > 0
-          ? Math.round(((comp.avgPrice - suggestedSupplyPrice - comp.avgPrice * 0.058) / comp.avgPrice) * 100)
-          : 0;
-
-        const baseScore = calcBlueOceanScore({
-          monthlyVolume: kw.totalMonthly,
-          competition: kw.competition,
-          totalResults: comp.totalResults,
-          avgPrice: comp.avgPrice,
-        });
-
-        // E-10: Apply entry barrier bonus to BlueOcean score
-        const barrier = calcEntryBarrierFromComp({
-          topSellers: comp.topSellers,
-          minPrice: comp.minPrice,
-          maxPrice: comp.maxPrice,
-          avgPrice: comp.avgPrice,
-          totalResults: comp.totalResults,
-          competitionLevel: comp.competitionLevel,
-        });
-        const entryBarrierBonus = entryBarrierToBlueOceanBonus(barrier.level);
-        const blueOceanScore = Math.max(0, Math.min(100, baseScore + entryBarrierBonus));
-
-        // Build reason string
-        const reasons: string[] = [];
-        if (kw.totalMonthly >= 1000 && kw.totalMonthly < 10000) {
-          reasons.push('ideal_search_volume');
-        }
-        if (kw.competition === 'low') reasons.push('low_competition');
-        if (comp.totalResults < 5000) reasons.push('few_competitors');
-        if (comp.avgPrice >= 10000 && comp.avgPrice <= 50000) reasons.push('good_price_range');
-        // E-10: Reflect entry barrier in reason
-        if (barrier.level === 'LOW') reasons.push('low_entry_barrier');
-        else if (barrier.level === 'HIGH') reasons.push('high_entry_barrier');
-
-        // Find matching trend category
-        const matchedCat = trendCategories.find(cat =>
-          kw.keyword.includes(cat) || cat.includes(kw.keyword)
-        ) ?? trendCategories[0] ?? 'general';
-
-        opportunities.push({
-          keyword: kw.keyword,
-          category: matchedCat,
-          monthlySearchVolume: kw.totalMonthly,
-          competition: kw.competition,
-          avgPrice: comp.avgPrice,
-          minPrice: comp.minPrice,
-          maxPrice: comp.maxPrice,
-          totalResults: comp.totalResults,
-          competitionLevel: comp.competitionLevel,
-          suggestedSupplyPrice,
-          estimatedMargin,
-          blueOceanScore,
-          reason: reasons.join(', ') || 'trend_match',
-          topSellers: comp.topSellers.slice(0, 3),
-          // E-10: Entry barrier breakdown for UI display
-          entryBarrierLevel: barrier.level,
-          entryBarrierScore: barrier.score,
-          entryBarrierBonus,
-          blueOceanBase: baseScore,
-          uniqueSellersInTop: barrier.uniqueSellers,
-          priceSpread: barrier.priceSpread,
-        });
-
-        // Rate limit between competition checks
-        await new Promise(r => setTimeout(r, 300));
-      } catch {
-        // P1-E(#270): 무음 실패 금지 — 이 키워드는 건너뛰되 카운트는 남긴다.
-        competitionAnalysisFailures++;
+      const reasons: string[] = [];
+      if (kw.totalMonthly >= 1000 && kw.totalMonthly < 10000) {
+        reasons.push('ideal_search_volume');
       }
+      if (kw.competition === 'low') reasons.push('low_competition');
+      else if (kw.competition === 'high') reasons.push('high_competition');
+
+      // Find matching trend category
+      const matchedCat = trendCategories.find(cat =>
+        kw.keyword.includes(cat) || cat.includes(kw.keyword)
+      ) ?? trendCategories[0] ?? 'general';
+
+      opportunities.push({
+        keyword: kw.keyword,
+        category: matchedCat,
+        monthlySearchVolume: kw.totalMonthly,
+        competition: kw.competition,
+        // 가격대·상품수는 쇼핑검색 없이는 알 수 없다 — 가짜값 대신 0(미확인)으로
+        // 두고 Step 6에서 top5에 한해 실측 도매가로 보완한다.
+        avgPrice: 0,
+        minPrice: 0,
+        maxPrice: 0,
+        totalResults: 0,
+        competitionLevel: COMPETITION_LEVEL_LABEL[kw.competition] ?? 'UNKNOWN',
+        suggestedSupplyPrice: 0,
+        estimatedMargin: 0,
+        blueOceanScore,
+        reason: reasons.join(', ') || 'trend_match',
+        topSellers: [],
+        blueOceanBase: blueOceanScore,
+      });
     }
 
     // Sort by blue ocean score descending
@@ -493,9 +424,32 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
       try {
         const wholesaleResult = await matchWholesaleProducts(opp.keyword, opp.avgPrice);
         // P1-A: 개별 도매 상품명도 브랜드 휴리스틱으로 한 번 더 거른다(키워드 통과 ≠ 실상품 통과).
-        opp.wholesaleMatches = wholesaleResult.matches.filter(
+        const cleanMatches = wholesaleResult.matches.filter(
           (w) => !judgeExclusion({ productName: w.name }).excluded
         );
+
+        // SE05(#324): 판매가를 쇼핑검색으로 알 수 없으므로, 가장 저렴한 실측
+        // 도매가를 "공급가 ≈ 판매가의 35%"(기존 로직이 이미 쓰던 비율, 새 가정
+        // 아님)로 역산해 avgPrice를 추정한다. wholesale-matcher가 반환한 -1(미확인)
+        // 마진도 이 추정 판매가로 재계산해 채운다.
+        if (cleanMatches.length > 0) {
+          const cheapest = cleanMatches.reduce((a, b) => (a.supplyPrice < b.supplyPrice ? a : b));
+          const estimatedAvgPrice = Math.round(cheapest.supplyPrice / 0.35);
+          opp.avgPrice = estimatedAvgPrice;
+          opp.minPrice = estimatedAvgPrice;
+          opp.maxPrice = estimatedAvgPrice;
+          opp.suggestedSupplyPrice = cheapest.supplyPrice;
+          opp.estimatedMargin = estimatedAvgPrice > 0
+            ? Math.round(((estimatedAvgPrice - cheapest.supplyPrice - estimatedAvgPrice * 0.058) / estimatedAvgPrice) * 100)
+            : 0;
+          opp.wholesaleMatches = cleanMatches.map((w) => (
+            w.estimatedMargin === -1 && estimatedAvgPrice > 0
+              ? { ...w, estimatedMargin: Math.round(((estimatedAvgPrice - w.supplyPrice - estimatedAvgPrice * 0.058) / estimatedAvgPrice) * 100) }
+              : w
+          ));
+        } else {
+          opp.wholesaleMatches = cleanMatches;
+        }
         opp.wholesalePlatforms = wholesaleResult.searchedPlatforms;
       } catch {
         // Non-fatal(#270): opportunity still valid without wholesale matches —

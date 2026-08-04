@@ -85,15 +85,22 @@ export async function GET(req: NextRequest) {
   const candidates = buildLongtailCandidates(main, 4);
 
   // Round 2: candidate volumes (best-effort — candidates may be 0-volume).
+  // #270: 무음 실패 금지 — 실패해도 rows는 "데이터 없음"으로 정상 표시되지만,
+  // 실패 사실 자체는 응답에 남겨 호출부가 원인을 구분할 수 있게 한다.
+  let candidateVolumeFailed = false;
   try {
     const candStats = await fetchKeywordStats(candidates);
     for (const s of candStats) volMap.set(s.keyword.toLowerCase(), s.totalMonthly);
   } catch {
-    /* candidate volumes are non-essential; rows show "데이터 없음" if missing */
+    candidateVolumeFailed = true;
   }
 
   const allKeywords = [main, ...candidates];
   const counts = await Promise.all(allKeywords.map(fetchProductCount));
+  // SE05(#324): 쇼핑검색(shop.json)이 2026-07-31 영구 종료돼 fetchProductCount는
+  // 이제 항상 null을 반환한다(searchShopping 404 → catch → null, "가짜값 금지"
+  // 원칙에 따라 이미 정직하게 동작 중). 매번 조용히 비는 대신 그 사실을 명시한다.
+  const productCountFailures = counts.filter((c) => c === null).length;
 
   const rows: KeywordCompetition[] = allKeywords.map((kw, i) => {
     const searchVolume = volMap.get(kw.toLowerCase()) ?? null;
@@ -110,7 +117,14 @@ export async function GET(req: NextRequest) {
     .map(r => ({ ...r, recommended: r.band != null && r.band !== 'high' && (r.searchVolume ?? 0) > 0 }))
     .sort((a, b) => Number(b.recommended) - Number(a.recommended) || ((a.ratio ?? Infinity) - (b.ratio ?? Infinity)));
 
-  const data = { main: mainRow, candidates: candidateRows };
+  const data = {
+    main: mainRow,
+    candidates: candidateRows,
+    ...(candidateVolumeFailed ? { candidateVolumeFailed: true } : {}),
+    ...(productCountFailures === allKeywords.length
+      ? { productCountNote: '네이버 쇼핑검색 API 종료(2026-07-31)로 상품수 데이터를 가져올 수 없어요. 경쟁 판정은 검색량 기준으로만 참고해 주세요.' }
+      : {}),
+  };
 
   if (CACHE.size >= 300) {
     const oldest = [...CACHE.entries()].sort((a, b) => a[1].ts - b[1].ts)[0];
