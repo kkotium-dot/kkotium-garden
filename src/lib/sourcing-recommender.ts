@@ -32,6 +32,9 @@ export interface SourcingOpportunity {
   // E-8: Wholesale matches from DMK/DMM
   wholesaleMatches?: WholesaleProduct[];
   wholesalePlatforms?: string[];
+  // SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE(2026-08-04): 마진(%) 대신 실측 공급가
+  // 범위만 노출한다 — avgPrice 기반 마진 역산은 이종상품 오염 위험으로 폐기.
+  supplyPriceRange?: { min: number; max: number };
   // E-10: Entry barrier analysis (Option A - indirect estimation)
   entryBarrierLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
   entryBarrierScore?: number;       // 0~5 (5 = highest barrier)
@@ -211,7 +214,7 @@ async function generateAiInsight(
 
   const top5 = opportunities.slice(0, 5);
   const itemList = top5.map((o, i) =>
-    `${i + 1}. "${o.keyword}" - monthly ${o.monthlySearchVolume}, competition ${o.competition}, avgPrice ${o.avgPrice}KRW, blueOcean ${o.blueOceanScore}/100`
+    `${i + 1}. "${o.keyword}" - monthly ${o.monthlySearchVolume}, competition ${o.competition}, blueOcean ${o.blueOceanScore}/100`
   ).join('\n');
 
   const prompt = `You are a Korean Naver Smart Store sourcing expert. Analyze these blue-ocean product opportunities and give actionable sourcing advice.
@@ -422,35 +425,25 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
     let wholesaleMatchFailures = 0;
     for (const opp of top5Opps) {
       try {
-        const wholesaleResult = await matchWholesaleProducts(opp.keyword, opp.avgPrice);
+        const wholesaleResult = await matchWholesaleProducts(opp.keyword);
         // P1-A: 개별 도매 상품명도 브랜드 휴리스틱으로 한 번 더 거른다(키워드 통과 ≠ 실상품 통과).
         const cleanMatches = wholesaleResult.matches.filter(
           (w) => !judgeExclusion({ productName: w.name }).excluded
         );
 
-        // SE05(#324): 판매가를 쇼핑검색으로 알 수 없으므로, 가장 저렴한 실측
-        // 도매가를 "공급가 ≈ 판매가의 35%"(기존 로직이 이미 쓰던 비율, 새 가정
-        // 아님)로 역산해 avgPrice를 추정한다. wholesale-matcher가 반환한 -1(미확인)
-        // 마진도 이 추정 판매가로 재계산해 채운다.
-        if (cleanMatches.length > 0) {
-          const cheapest = cleanMatches.reduce((a, b) => (a.supplyPrice < b.supplyPrice ? a : b));
-          const estimatedAvgPrice = Math.round(cheapest.supplyPrice / 0.35);
-          opp.avgPrice = estimatedAvgPrice;
-          opp.minPrice = estimatedAvgPrice;
-          opp.maxPrice = estimatedAvgPrice;
-          opp.suggestedSupplyPrice = cheapest.supplyPrice;
-          opp.estimatedMargin = estimatedAvgPrice > 0
-            ? Math.round(((estimatedAvgPrice - cheapest.supplyPrice - estimatedAvgPrice * 0.058) / estimatedAvgPrice) * 100)
-            : 0;
-          opp.wholesaleMatches = cleanMatches.map((w) => (
-            w.estimatedMargin === -1 && estimatedAvgPrice > 0
-              ? { ...w, estimatedMargin: Math.round(((estimatedAvgPrice - w.supplyPrice - estimatedAvgPrice * 0.058) / estimatedAvgPrice) * 100) }
-              : w
-          ));
-        } else {
-          opp.wholesaleMatches = cleanMatches;
-        }
+        // SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE(2026-08-04): 도매매칭은 키워드
+        // 전문검색이라 이종 상품이 섞인다(예: "텐트" 검색에 캠핑 소품이 걸림).
+        // 최저가 1건으로 "대표 판매가"를 역산해 전체 마진을 계산하던 과거
+        // 로직은 이종상품 오염으로 마이너스 수백%가 나올 수 있어 폐기했다.
+        // avgPrice/estimatedMargin은 채우지 않는다(0 유지, 가짜값 금지) — 대신
+        // 실측 공급가 "범위"만 사실대로 노출해 대표님이 직접 판매가를 책정한다.
+        opp.wholesaleMatches = cleanMatches;
         opp.wholesalePlatforms = wholesaleResult.searchedPlatforms;
+        if (cleanMatches.length > 0) {
+          const prices = cleanMatches.map((w) => w.supplyPrice);
+          opp.suggestedSupplyPrice = Math.min(...prices);
+          opp.supplyPriceRange = { min: Math.min(...prices), max: Math.max(...prices) };
+        }
       } catch {
         // Non-fatal(#270): opportunity still valid without wholesale matches —
         // but count it instead of swallowing silently.
@@ -511,21 +504,26 @@ export function buildSourcingRecommendEmbed(result: SourcingRecommendResult): Re
   };
 
   const fields: Record<string, unknown>[] = result.opportunities.map((opp, i) => {
-    const marginColor = opp.estimatedMargin >= 30 ? ':green_heart:' : opp.estimatedMargin >= 20 ? ':yellow_heart:' : ':broken_heart:';
     const typeTag = opp.recoType ? `${opp.recoType.emoji} ${opp.recoType.label} ` : '';
+    // SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE(2026-08-04): avgPrice·estimatedMargin은
+    // 이종상품 오염 위험으로 폐기했다 — 지어낸 판매가/마진(%) 문구를 만들지
+    // 않는다. 실측 공급가 범위만 사실대로 노출하고, 판매가는 대표님이 책정한다.
+    const supplyLine = opp.supplyPriceRange
+      ? (opp.supplyPriceRange.min === opp.supplyPriceRange.max
+          ? `도매 공급가 **${opp.supplyPriceRange.min.toLocaleString()}원** 확인됨`
+          : `도매 공급가 **${opp.supplyPriceRange.min.toLocaleString()}원~${opp.supplyPriceRange.max.toLocaleString()}원** 확인됨`)
+      : '도매 공급가 미확인';
     return {
       name: `${RANK_ICONS[i] ?? `${i + 1}.`} ${typeTag}${opp.keyword} (${opp.blueOceanScore}점)`,
       value: [
-        `${COMP_LABEL[opp.competition] ?? ''} 경쟁 | 월 ${opp.monthlySearchVolume.toLocaleString()}건 검색 | 검색결과 ${opp.totalResults.toLocaleString()}건`,
-        `평균가 **${opp.avgPrice.toLocaleString()}원** (${opp.minPrice.toLocaleString()}~${opp.maxPrice.toLocaleString()}원)`,
-        `${marginColor} 예상 순마진 **${opp.estimatedMargin}%** | 예상 공급가 ~${opp.suggestedSupplyPrice.toLocaleString()}원`,
+        `${COMP_LABEL[opp.competition] ?? ''} 경쟁 | 월 ${opp.monthlySearchVolume.toLocaleString()}건 검색`,
+        `${supplyLine} — 판매가는 직접 책정해주세요`,
         opp.topSellers.length > 0 ? `상위 판매자: ${opp.topSellers.join(' / ')}` : null,
         opp.aiInsight ? `> ${opp.aiInsight}` : null,
         // E-8: Wholesale matches inline
         opp.wholesaleMatches && opp.wholesaleMatches.length > 0
           ? `**도매처 (${opp.wholesalePlatforms?.join('+') ?? ''}):**\n` + opp.wholesaleMatches.slice(0, 2).map(w => {
-              const mIcon = w.estimatedMargin >= 30 ? ':green_heart:' : ':yellow_heart:';
-              return `  [${w.platform}] ${w.supplyPrice.toLocaleString()}원 ${mIcon}${w.estimatedMargin}% | [보러가기](${w.url})`;
+              return `  [${w.platform}] 공급가 ${w.supplyPrice.toLocaleString()}원 | [보러가기](${w.url})`;
             }).join('\n')
           : null,
       ].filter(Boolean).join('\n'),

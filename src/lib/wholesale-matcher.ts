@@ -19,7 +19,6 @@ export interface WholesaleProduct {
   imageUrl: string;
   sellerName: string;
   url: string;
-  estimatedMargin: number; // calculated vs Naver avg price
 }
 
 export interface WholesaleMatchResult {
@@ -64,7 +63,6 @@ interface DomeggookListItem {
 
 async function searchDomeggookMarket(
   keyword: string,
-  avgNaverPrice: number,
   market: DomeggookMarket,
 ): Promise<WholesaleProduct[]> {
   const apiKey = await getApiKey();
@@ -113,16 +111,13 @@ async function searchDomeggookMarket(
       // 목록 API는 판매중지·품절·단종을 제외하고 반환하므로 재고 필터 불필요
       // (docs/research/DOMEGGOOK_API_404_ROOT_CAUSE_2026-08-04.md §3-2).
 
-      // SE05(#324): 호출부가 판매가를 모를 때(avgNaverPrice<=0)는 마진을 0으로
-      // 지어내지 않는다 — -1(미확인) sentinel로 두고 15% 필터도 건너뛴다. 호출부가
-      // 이 도매가로 판매가를 역산한 뒤 실제 마진을 재계산해 채워 넣는다.
-      const naverFeeRate = 0.058; // 네이버 수수료 총 5.8%
-      const estimatedMargin = avgNaverPrice > 0
-        ? Math.round(((avgNaverPrice - supplyPrice - avgNaverPrice * naverFeeRate) / avgNaverPrice) * 100)
-        : -1;
-
-      // 마진 15% 이상만 채택 — 마진 미확인(-1)일 때는 이 필터를 건너뛴다.
-      if (estimatedMargin >= 0 && estimatedMargin < 15) continue;
+      // SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE(#324 정신 연장, 2026-08-04):
+      // 도매매칭은 "키워드 전문검색"이라 같은 검색어라도 이종 상품이 섞인다
+      // (예: "텐트" 검색에 캠핑용 샌드팩이 걸림). 호출부가 그 중 최저가 1건을
+      // "이 키워드의 대표 판매가"로 역산해 전체 마진을 계산하던 과거 로직은
+      // 이종상품 오염으로 마이너스 수백%가 나올 수 있어 폐기했다(문서 §1-§3).
+      // 마진(%)은 지어내지 않는다 — 이 함수는 실측 공급가만 반환하고, 판매가
+      // 추정·마진 계산은 하지 않는다.
 
       const shipFee = item.deli?.who === 'S' ? 0 : parseInt(String(item.deli?.fee), 10) || 3000;
       const productNo = String(item.no ?? '');
@@ -139,12 +134,11 @@ async function searchDomeggookMarket(
         imageUrl: String(item.thumb ?? ''),
         sellerName,
         url: `https://domeme.domeggook.com/s/${productNo}`,
-        estimatedMargin,
       });
     }
 
-    // 마진 내림차순 상위 3건
-    return results.sort((a, b) => b.estimatedMargin - a.estimatedMargin).slice(0, 3);
+    // 공급가 오름차순(저렴한 순) 상위 3건 — 마진 정렬 폐기(위 주석 참조)
+    return results.sort((a, b) => a.supplyPrice - b.supplyPrice).slice(0, 3);
   } catch {
     return [];
   }
@@ -156,13 +150,12 @@ async function searchDomeggookMarket(
 
 export async function matchWholesaleProducts(
   keyword: string,
-  avgNaverPrice: number
 ): Promise<WholesaleMatchResult> {
   const searchedPlatforms: string[] = [];
   const allMatches: WholesaleProduct[] = [];
 
   try {
-    const dmmResults = await searchDomeggookMarket(keyword, avgNaverPrice, 'supply');
+    const dmmResults = await searchDomeggookMarket(keyword, 'supply');
     allMatches.push(...dmmResults);
     searchedPlatforms.push('DMM');
   } catch { /* silent */ }
@@ -171,7 +164,7 @@ export async function matchWholesaleProducts(
   await new Promise(r => setTimeout(r, 300));
 
   try {
-    const dmkResults = await searchDomeggookMarket(keyword, avgNaverPrice, 'dome');
+    const dmkResults = await searchDomeggookMarket(keyword, 'dome');
     allMatches.push(...dmkResults);
     searchedPlatforms.push('DMK');
   } catch { /* silent */ }
@@ -184,8 +177,8 @@ export async function matchWholesaleProducts(
     return true;
   });
 
-  // Sort by margin, take top 5
-  const sorted = deduped.sort((a, b) => b.estimatedMargin - a.estimatedMargin).slice(0, 5);
+  // Sort by supply price ascending (cheapest first) — margin sort retired
+  const sorted = deduped.sort((a, b) => a.supplyPrice - b.supplyPrice).slice(0, 5);
 
   return {
     keyword,
@@ -201,8 +194,9 @@ export function buildWholesaleMatchField(result: WholesaleMatchResult): Record<s
 
   const lines = result.matches.slice(0, 3).map((p, i) => {
     const platformTag = p.platform === 'DMK' ? 'DMK' : 'DMM';
-    const marginIcon = p.estimatedMargin >= 30 ? ':green_heart:' : p.estimatedMargin >= 20 ? ':yellow_heart:' : ':orange_heart:';
-    return `${i + 1}. [${platformTag}] **${p.supplyPrice.toLocaleString()}** ${marginIcon}${p.estimatedMargin}% | ${p.name.slice(0, 30)}${p.name.length > 30 ? '...' : ''}\n   [view](${p.url})`;
+    // 마진(%)은 지어내지 않는다(SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE 2026-08-04)
+    // — 실측 공급가만 표시.
+    return `${i + 1}. [${platformTag}] 공급가 **${p.supplyPrice.toLocaleString()}원** | ${p.name.slice(0, 30)}${p.name.length > 30 ? '...' : ''}\n   [보러가기](${p.url})`;
   });
 
   return {

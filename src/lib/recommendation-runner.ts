@@ -50,13 +50,15 @@ function mapCompetitionLevel(
 // ── Mode 1: CURRENT_HOT — top items by trend volume + margin ─────────────────
 
 function runCurrentHot(base: SourcingOpportunity[], topN: number): ModeResult {
-  // Sort by (search volume) primarily, (margin) as tiebreaker
+  // Sort by (search volume) primarily, (blueOceanScore) as tiebreaker.
+  // SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE(2026-08-04): estimatedMargin은 더 이상
+  // 채워지지 않는다(항상 0) — 정렬 기준에서 제외.
   const sorted = [...base]
     .sort((a, b) => {
       if (b.monthlySearchVolume !== a.monthlySearchVolume) {
         return b.monthlySearchVolume - a.monthlySearchVolume;
       }
-      return b.estimatedMargin - a.estimatedMargin;
+      return b.blueOceanScore - a.blueOceanScore;
     })
     .slice(0, topN);
 
@@ -89,17 +91,24 @@ async function runSeasonalAhead(topN: number): Promise<ModeResult> {
       const search = await searchShopping(kw, { display: 5 });
       if (!competition || competition.totalResults === 0) continue;
 
+      // SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE(2026-08-04): avgPrice 기반 마진
+      // 역산은 이종상품 오염 위험으로 폐기 — 지어낸 판매가/마진을 만들지 않는다.
       const avgPrice = competition.avgPrice ?? 0;
-      const supplyPrice = Math.round(avgPrice * 0.4);
-      const estimatedMargin = avgPrice > 0 ? Math.round(((avgPrice - supplyPrice) / avgPrice) * 100) : 0;
 
       // Wholesale match (best-effort)
       let wholesaleMatches: SourcingOpportunity['wholesaleMatches'];
       let wholesalePlatforms: SourcingOpportunity['wholesalePlatforms'];
+      let suggestedSupplyPrice = 0;
+      let supplyPriceRange: SourcingOpportunity['supplyPriceRange'];
       try {
-        const ws = await matchWholesaleProducts(kw, avgPrice);
+        const ws = await matchWholesaleProducts(kw);
         wholesaleMatches = ws.matches;
         wholesalePlatforms = ws.searchedPlatforms;
+        if (ws.matches.length > 0) {
+          const prices = ws.matches.map((w) => w.supplyPrice);
+          suggestedSupplyPrice = Math.min(...prices);
+          supplyPriceRange = { min: Math.min(...prices), max: Math.max(...prices) };
+        }
       } catch { /* non-fatal */ }
 
       items.push({
@@ -112,13 +121,14 @@ async function runSeasonalAhead(topN: number): Promise<ModeResult> {
         maxPrice: competition.maxPrice ?? 0,
         totalResults: competition.totalResults,
         competitionLevel: competition.competitionLevel,
-        suggestedSupplyPrice: supplyPrice,
-        estimatedMargin,
+        suggestedSupplyPrice,
+        estimatedMargin: 0,
         blueOceanScore: 50, // baseline
         reason: `seasonal D-${events[0].daysLeft}: ${nearest.event.label}`,
         topSellers: search.items.slice(0, 3).map(it => it.mallName ?? '').filter(Boolean),
         wholesaleMatches,
         wholesalePlatforms,
+        supplyPriceRange,
       });
 
       if (items.length >= topN) break;
@@ -137,9 +147,11 @@ async function runSeasonalAhead(topN: number): Promise<ModeResult> {
 // ── Mode 3: NICHE_BLUE — low competition + decent margin ────────────────────
 
 function runNicheBlue(base: SourcingOpportunity[], topN: number): ModeResult {
-  // Filter: low competition AND margin >= 25%, sort by blueOcean score
+  // Filter: low competition, sort by blueOcean score.
+  // SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE(2026-08-04): estimatedMargin은 더 이상
+  // 채워지지 않는다(항상 0) — 마진 필터를 제거하고 경쟁도만으로 판정한다.
   const filtered = base
-    .filter(opp => opp.competition === 'low' && opp.estimatedMargin >= 25)
+    .filter(opp => opp.competition === 'low')
     .sort((a, b) => b.blueOceanScore - a.blueOceanScore)
     .slice(0, topN);
 
