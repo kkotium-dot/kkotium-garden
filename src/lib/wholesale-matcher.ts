@@ -29,12 +29,16 @@ export interface WholesaleMatchResult {
   error?: string;
 }
 
-// ── Domeggook OpenAPI search ─────────────────────────────────────────────────
-// API: https://domeggook.com/ssl/api/?ver=4.5&mode=getItemList
-// Returns list of products matching keyword
-// Filter: supplyUnit = 1 (minimum order 1 piece)
+// ── 도매꾹/도매매 통합 OpenAPI 검색 ────────────────────────────────────────────
+// API: https://domeggook.com/ssl/api/?ver=4.1&mode=getItemList&market=dome|supply
+// 근본원인 규명: docs/research/DOMEGGOOK_API_404_ROOT_CAUSE_2026-08-04.md
+// v4.0에서 getItemList Request/Response가 평면 구조로 전면 개편됨 — v4.5는
+// getItemView(단건) 전용이라 getItemList에 존재하지 않아 404를 유발했었다.
+// market 값만 다를 뿐 도매꾹(dome)·도매매(supply)는 동일 API·동일 키를 쓴다.
 
 const DOMEGGOOK_API = 'https://domeggook.com/ssl/api/';
+
+type DomeggookMarket = 'dome' | 'supply';
 
 async function getApiKey(): Promise<string | null> {
   try {
@@ -46,40 +50,39 @@ async function getApiKey(): Promise<string | null> {
   } catch { return null; }
 }
 
-function parseSupplyPrice(val: unknown): number {
-  if (typeof val === 'number') return val;
-  if (typeof val === 'string') {
-    const first = val.split('|')[0];
-    const price = parseInt(first.split('+')[1] ?? first, 10);
-    return isNaN(price) ? 0 : price;
-  }
-  return 0;
-}
-
+// getItemList 응답은 평면 스키마 — item.price/unitQty/thumb/nick/deli.who,fee
 interface DomeggookListItem {
   no?: string | number;
   title?: string;
-  price?: { supply?: unknown };
-  qty?: { inventory?: number; supplyUnit?: number };
-  deli?: { supply?: { fee?: unknown; type?: string } };
-  thumb?: { large?: string; largePng?: string };
-  seller?: { nick?: string; id?: string; company?: { name?: string } };
+  price?: unknown;
+  unitQty?: unknown;
+  deli?: { who?: string; fee?: unknown };
+  thumb?: unknown;
+  nick?: string;
+  id?: string;
 }
 
-async function searchDomeggook(keyword: string, avgNaverPrice: number): Promise<WholesaleProduct[]> {
+async function searchDomeggookMarket(
+  keyword: string,
+  avgNaverPrice: number,
+  market: DomeggookMarket,
+): Promise<WholesaleProduct[]> {
   const apiKey = await getApiKey();
   if (!apiKey) return [];
 
   try {
-    // Domeggook OpenAPI getItemList with keyword search
     const params = new URLSearchParams({
-      ver: '4.5',
+      ver: '4.1',
       mode: 'getItemList',
       aid: apiKey,
-      keyword: keyword,
+      market,
       om: 'json',
-      display: '20',
-      sort: 'pop', // sort by popularity
+      kw: keyword,
+      sz: '50',
+      pg: '1',
+      so: 'ha',
+      mnq: '1',
+      mxq: '1',
     });
 
     const res = await fetch(`${DOMEGGOOK_API}?${params}`, {
@@ -89,142 +92,67 @@ async function searchDomeggook(keyword: string, avgNaverPrice: number): Promise<
     if (!res.ok) return [];
 
     const raw = await res.json();
-    const items: DomeggookListItem[] = raw?.domeggook?.list ?? raw?.domeggook ?? [];
+    if (raw?.errors) return [];
 
-    if (!Array.isArray(items)) return [];
+    const rawItems = raw?.domeggook?.list?.item;
+    const items: DomeggookListItem[] = Array.isArray(rawItems)
+      ? rawItems
+      : rawItems ? [rawItems] : [];
 
+    const platform: WholesaleProduct['platform'] = market === 'supply' ? 'DMM' : 'DMK';
     const results: WholesaleProduct[] = [];
 
     for (const item of items) {
-      const supplyUnit = item.qty?.supplyUnit ?? 1;
+      const minOrderQty = Number(item.unitQty);
+      // 최소구매수량 1개(단건 구매 가능)만 채택
+      if (minOrderQty !== 1) continue;
 
-      // CRITICAL FILTER: only products with min order qty = 1
-      if (supplyUnit !== 1) continue;
+      const supplyPrice = Number(item.price);
+      if (!Number.isFinite(supplyPrice) || supplyPrice <= 0) continue;
 
-      const supplyPrice = parseSupplyPrice(item.price?.supply);
-      if (supplyPrice <= 0) continue;
+      // 목록 API는 판매중지·품절·단종을 제외하고 반환하므로 재고 필터 불필요
+      // (docs/research/DOMEGGOOK_API_404_ROOT_CAUSE_2026-08-04.md §3-2).
 
-      const inventory = item.qty?.inventory ?? 0;
-      if (inventory <= 0) continue;
-
-      // Calculate estimated margin vs Naver average price.
       // SE05(#324): 호출부가 판매가를 모를 때(avgNaverPrice<=0)는 마진을 0으로
       // 지어내지 않는다 — -1(미확인) sentinel로 두고 15% 필터도 건너뛴다. 호출부가
       // 이 도매가로 판매가를 역산한 뒤 실제 마진을 재계산해 채워 넣는다.
-      const naverFeeRate = 0.058; // 5.8% total Naver fees
+      const naverFeeRate = 0.058; // 네이버 수수료 총 5.8%
       const estimatedMargin = avgNaverPrice > 0
         ? Math.round(((avgNaverPrice - supplyPrice - avgNaverPrice * naverFeeRate) / avgNaverPrice) * 100)
         : -1;
 
-      // Only include products with viable margin (>= 15%) — skip this filter
-      // when the margin is unknown (-1), since it isn't a real signal.
+      // 마진 15% 이상만 채택 — 마진 미확인(-1)일 때는 이 필터를 건너뛴다.
       if (estimatedMargin >= 0 && estimatedMargin < 15) continue;
 
-      const shipFeeRaw = item.deli?.supply?.fee;
-      const shipType = item.deli?.supply?.type;
-      const shipFee = shipType === '\uBB34\uB8CC\uBC30\uC1A1' ? 0 :
-        typeof shipFeeRaw === 'number' ? shipFeeRaw :
-        typeof shipFeeRaw === 'string' ? parseInt(shipFeeRaw, 10) || 3000 : 3000;
-
+      const shipFee = item.deli?.who === 'S' ? 0 : parseInt(String(item.deli?.fee), 10) || 3000;
       const productNo = String(item.no ?? '');
-      const sellerName = String(
-        (item.seller as any)?.company?.name ||
-        item.seller?.nick || ''
-      );
+      const sellerName = String(item.nick ?? item.id ?? '');
 
       results.push({
-        platform: 'DMK',
+        platform,
         productNo,
         name: String(item.title ?? '').replace(/\s+/g, ' ').trim(),
         supplyPrice,
-        minOrderQty: supplyUnit,
-        inventory,
+        minOrderQty,
+        inventory: 1, // 목록 API는 판매중 상품만 반환 — 정확한 재고수는 제공되지 않음
         shipFee,
-        imageUrl: item.thumb?.largePng ?? item.thumb?.large ?? '',
+        imageUrl: String(item.thumb ?? ''),
         sellerName,
         url: `https://domeme.domeggook.com/s/${productNo}`,
         estimatedMargin,
       });
     }
 
-    // Sort by margin desc, take top 3
+    // 마진 내림차순 상위 3건
     return results.sort((a, b) => b.estimatedMargin - a.estimatedMargin).slice(0, 3);
   } catch {
     return [];
   }
 }
 
-// ── Domemae web search (HTML scraping fallback) ──────────────────────────────
-// Domemae uses the same Domeggook backend but with different URL structure
-// We search via the Domeggook API which covers both platforms
-
-async function searchDomemae(keyword: string, avgNaverPrice: number): Promise<WholesaleProduct[]> {
-  // Domemae search via web — fetch search results page
-  try {
-    const searchUrl = `https://domeme.domeggook.com/main/index.php?log=search&keyword=${encodeURIComponent(keyword)}`;
-
-    const res = await fetch(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        'Accept': 'text/html',
-        'Accept-Language': 'ko-KR,ko;q=0.9',
-      },
-      signal: AbortSignal.timeout(10_000),
-    });
-
-    if (!res.ok) return [];
-
-    const html = await res.text();
-
-    // Extract product cards from search results
-    // Pattern: <a href="/s/XXXXXXXX" ... data-price="XXXX" ...>
-    const productPattern = /href="\/s\/(\d{6,10})"[^>]*>[\s\S]*?<span[^>]*class="[^"]*price[^"]*"[^>]*>([\d,]+)/g;
-    const matches: WholesaleProduct[] = [];
-    let match;
-    let count = 0;
-
-    while ((match = productPattern.exec(html)) !== null && count < 10) {
-      const productNo = match[1];
-      const priceStr = match[2].replace(/,/g, '');
-      const supplyPrice = parseInt(priceStr, 10);
-      if (isNaN(supplyPrice) || supplyPrice <= 0) continue;
-
-      // SE05(#324): avgNaverPrice를 모르면 마진을 0으로 지어내지 않는다 — -1(미확인)
-      // sentinel로 두고 15% 필터도 건너뛴다(호출부가 도매가로 역산해 재계산).
-      const naverFeeRate = 0.058;
-      const estimatedMargin = avgNaverPrice > 0
-        ? Math.round(((avgNaverPrice - supplyPrice - avgNaverPrice * naverFeeRate) / avgNaverPrice) * 100)
-        : -1;
-
-      if (estimatedMargin >= 0 && estimatedMargin < 15) continue;
-
-      // Extract product name nearby (simplified)
-      const nameMatch = html.substring(match.index, match.index + 500).match(/title="([^"]+)"/);
-      const name = nameMatch?.[1]?.replace(/\s+/g, ' ').trim() ?? '';
-
-      matches.push({
-        platform: 'DMM',
-        productNo,
-        name: name || `DMM-${productNo}`,
-        supplyPrice,
-        minOrderQty: 1, // Domemae generally allows single-item purchase
-        inventory: 99, // not available from search page
-        shipFee: 3000, // default estimate
-        imageUrl: '',
-        sellerName: '',
-        url: `https://domeme.domeggook.com/s/${productNo}`,
-        estimatedMargin,
-      });
-      count++;
-    }
-
-    return matches.sort((a, b) => b.estimatedMargin - a.estimatedMargin).slice(0, 3);
-  } catch {
-    return [];
-  }
-}
-
-// ── Main wholesale matcher ───────────────────────────────────────────────────
+// ── 메인 도매매칭 ─────────────────────────────────────────────────────────────
+// DOMAIN_FACTS §1 "도매매(DMM) 우선, 도매꾹(DMK) 폴백"에 맞춰 supply를 1차,
+// dome을 2차로 호출한다.
 
 export async function matchWholesaleProducts(
   keyword: string,
@@ -233,21 +161,19 @@ export async function matchWholesaleProducts(
   const searchedPlatforms: string[] = [];
   const allMatches: WholesaleProduct[] = [];
 
-  // Search Domeggook (API-based, more reliable)
   try {
-    const dmkResults = await searchDomeggook(keyword, avgNaverPrice);
-    allMatches.push(...dmkResults);
-    searchedPlatforms.push('DMK');
-  } catch { /* silent */ }
-
-  // Rate limit between platform searches
-  await new Promise(r => setTimeout(r, 300));
-
-  // Search Domemae (web scraping)
-  try {
-    const dmmResults = await searchDomemae(keyword, avgNaverPrice);
+    const dmmResults = await searchDomeggookMarket(keyword, avgNaverPrice, 'supply');
     allMatches.push(...dmmResults);
     searchedPlatforms.push('DMM');
+  } catch { /* silent */ }
+
+  // 플랫폼 검색 간 rate limit
+  await new Promise(r => setTimeout(r, 300));
+
+  try {
+    const dmkResults = await searchDomeggookMarket(keyword, avgNaverPrice, 'dome');
+    allMatches.push(...dmkResults);
+    searchedPlatforms.push('DMK');
   } catch { /* silent */ }
 
   // Deduplicate by productNo (same product on both platforms)
