@@ -367,8 +367,9 @@ export interface SourcingWholesaleProduct {
   name: string;
   supplyPrice: number;
   minOrderQty: number;
-  estimatedMargin: number;
   url: string;
+  // #326-B(2026-08-04): 이종상품 오염 의심 — 배제하지 않고 표시만 한다.
+  priceOutlier?: boolean;
 }
 
 export interface SourcingOpportunityItem {
@@ -376,25 +377,21 @@ export interface SourcingOpportunityItem {
   category: string;
   monthlySearchVolume: number;
   competition: string;
-  avgPrice: number;
-  minPrice: number;
-  maxPrice: number;
-  totalResults: number;
-  competitionLevel: string;
-  suggestedSupplyPrice: number;
-  estimatedMargin: number;
   blueOceanScore: number;
   reason: string;
   topSellers: string[];
   aiInsight?: string;
   wholesaleMatches?: SourcingWholesaleProduct[];
   wholesalePlatforms?: string[];
+  // SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE(2026-08-04): avgPrice/estimatedMargin은
+  // 이종상품 오염 위험으로 폐기됨(API가 더 이상 채우지 않음, 항상 0). 위젯 쪽도
+  // 이 필드를 아예 참조하지 않는다 — 실측 공급가 범위만 정직하게 노출한다.
+  supplyPriceRange?: { min: number; max: number };
   entryBarrierLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
   entryBarrierScore?: number;
   entryBarrierBonus?: number;
   blueOceanBase?: number;
   uniqueSellersInTop?: number;
-  priceSpread?: number;
 }
 
 export interface SourcingRecommendApiData {

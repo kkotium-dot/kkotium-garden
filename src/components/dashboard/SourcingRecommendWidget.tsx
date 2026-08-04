@@ -194,9 +194,17 @@ export default function SourcingRecommendWidget() {
                     <span style={{ fontSize: 11, color: '#6b7280' }}>
                       {opp.monthlySearchVolume.toLocaleString()}/월
                     </span>
-                    <span style={{ fontSize: 11, color: '#6b7280' }}>
-                      평균 {opp.avgPrice.toLocaleString()}
-                    </span>
+                    {/* SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE(2026-08-04): avgPrice는
+                        더 이상 채워지지 않는다(항상 0) — supplyPriceRange(실측
+                        도매공급가)로 교체. 없으면 표시하지 않는다(가짜값 금지). */}
+                    {opp.supplyPriceRange && (
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>
+                        공급가 {opp.supplyPriceRange.min.toLocaleString()}
+                        {opp.supplyPriceRange.min !== opp.supplyPriceRange.max
+                          ? `~${opp.supplyPriceRange.max.toLocaleString()}`
+                          : ''}원
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -217,14 +225,9 @@ export default function SourcingRecommendWidget() {
                   </span>
                 </div>
 
-                {/* Margin badge */}
-                <span style={{
-                  fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
-                  background: opp.estimatedMargin >= 30 ? '#dcfce7' : opp.estimatedMargin >= 20 ? '#fef3c7' : '#fee2e2',
-                  color: opp.estimatedMargin >= 30 ? '#15803d' : opp.estimatedMargin >= 20 ? '#b45309' : '#b91c1c',
-                }}>
-                  {opp.estimatedMargin}%
-                </span>
+                {/* SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE(2026-08-04): estimatedMargin은
+                    이종상품 오염 위험으로 폐기됨(API가 항상 0을 반환) — 지어낸
+                    마진(%) 배지를 제거한다. 판단은 공급가 범위+도매처 링크로. */}
 
                 {isExpanded ? <ChevronUp size={14} color="#9ca3af" /> : <ChevronDown size={14} color="#9ca3af" />}
               </div>
@@ -260,58 +263,32 @@ export default function SourcingRecommendWidget() {
                   </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10, fontSize: 12 }}>
-                  <div>
-                    <span style={{ color: '#9ca3af' }}>가격대</span>
-                    <div style={{ fontWeight: 600, color: '#374151' }}>
-                      {opp.minPrice.toLocaleString()} ~ {opp.maxPrice.toLocaleString()}
-                    </div>
-                  </div>
-                  <div>
-                    <span style={{ color: '#9ca3af' }}>예상 공급가</span>
-                    <div style={{ fontWeight: 600, color: '#374151' }}>
-                      ~{opp.suggestedSupplyPrice.toLocaleString()}
-                    </div>
-                  </div>
-                  <div>
-                    <span style={{ color: '#9ca3af' }}>검색 결과수</span>
-                    <div style={{ fontWeight: 600, color: '#374151' }}>
-                      {opp.totalResults.toLocaleString()}
-                    </div>
-                  </div>
-                  <div>
-                    <span style={{ color: '#9ca3af' }}>경쟁 강도</span>
-                    <div style={{ fontWeight: 600, color: '#374151' }}>
-                      {opp.competitionLevel}
-                    </div>
-                  </div>
+                {/* SOURCING_NEGATIVE_MARGIN_ROOT_CAUSE(2026-08-04): 가격대·예상공급가·
+                    검색결과수·경쟁강도·가격분산은 SE05(쇼핑검색 종료) 이후 API가
+                    더 이상 채우지 않는다(전부 0/빈값 고정) — 지어낸 상세 그리드를
+                    통째로 제거. 실측 정보(공급가 범위)는 카드 헤더에 이미 표시됨. */}
 
-                  {/* E-10: Entry barrier factors in expanded grid */}
-                  {opp.entryBarrierScore !== undefined && (
-                    <div>
-                      <span style={{ color: '#9ca3af' }}>진입장벽 점수</span>
-                      <div style={{ fontWeight: 600, color: barrierBadge?.bar ?? '#374151' }}>
-                        {opp.entryBarrierScore.toFixed(1)} / 5
+                {/* Entry barrier factors — API가 실제로 채우는 값만 남긴다 */}
+                {(opp.entryBarrierScore !== undefined || opp.uniqueSellersInTop !== undefined) && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10, fontSize: 12 }}>
+                    {opp.entryBarrierScore !== undefined && (
+                      <div>
+                        <span style={{ color: '#9ca3af' }}>진입장벽 점수</span>
+                        <div style={{ fontWeight: 600, color: barrierBadge?.bar ?? '#374151' }}>
+                          {opp.entryBarrierScore.toFixed(1)} / 5
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {opp.uniqueSellersInTop !== undefined && (
-                    <div>
-                      <span style={{ color: '#9ca3af' }}>판매처 다양성</span>
-                      <div style={{ fontWeight: 600, color: '#374151' }}>
-                        {opp.uniqueSellersInTop}개
+                    )}
+                    {opp.uniqueSellersInTop !== undefined && (
+                      <div>
+                        <span style={{ color: '#9ca3af' }}>판매처 다양성</span>
+                        <div style={{ fontWeight: 600, color: '#374151' }}>
+                          {opp.uniqueSellersInTop}개
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {opp.priceSpread !== undefined && (
-                    <div>
-                      <span style={{ color: '#9ca3af' }}>가격 분산</span>
-                      <div style={{ fontWeight: 600, color: '#374151' }}>
-                        {(opp.priceSpread * 100).toFixed(0)}%
-                      </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Top sellers */}
                 {opp.topSellers.length > 0 && (
@@ -398,15 +375,19 @@ export default function SourcingRecommendWidget() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>
-                            {w.supplyPrice.toLocaleString()}
+                            {w.supplyPrice.toLocaleString()}원
                           </span>
-                          <span style={{
-                            fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 4,
-                            background: w.estimatedMargin >= 30 ? '#dcfce7' : '#fef3c7',
-                            color: w.estimatedMargin >= 30 ? '#15803d' : '#b45309',
-                          }}>
-                            {w.estimatedMargin}%
-                          </span>
+                          {/* #326-B(2026-08-04): 마진(%) 지어내지 않는다. 이종상품
+                              오염 의심만 경고로 표시(배제하지 않음) — 판단은
+                              대표님이 링크를 보고 내린다. */}
+                          {w.priceOutlier && (
+                            <span style={{
+                              fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 4,
+                              background: '#fef3c7', color: '#b45309',
+                            }}>
+                              ⚠️ 확인필요
+                            </span>
+                          )}
                         </div>
                       </a>
                     ))}
