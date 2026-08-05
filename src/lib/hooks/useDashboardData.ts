@@ -370,6 +370,9 @@ export interface SourcingWholesaleProduct {
   url: string;
   // #326-B(2026-08-04): 이종상품 오염 의심 — 배제하지 않고 표시만 한다.
   priceOutlier?: boolean;
+  // 2026-08-05: 부속품/소모품/호환용품 의심(본품이 아닐 가능성) — 웹앱에서도
+  // 디스코드와 동일하게 경고를 표시하기 위한 필드(전 상품 공통 시스템).
+  accessoryRisk?: boolean;
 }
 
 export interface SourcingOpportunityItem {

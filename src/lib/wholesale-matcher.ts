@@ -20,6 +20,43 @@ export interface WholesaleProduct {
   sellerName: string;
   url: string;
   priceOutlier: boolean; // #326-B: 이 매칭묶음 내에서 가격이 비정상적으로 벗어남(이종상품 오염 의심)
+  // 2026-08-05: 부속품/소모품/호환용품 의심(본품이 아닐 가능성). 예: "가습기"
+  // 검색에 "가습기 필터·청소솔", "제습기"에 "습기제거제"가 최저가로 걸린다.
+  // priceOutlier(가격 이탈)와 별개 축 — 이건 "상품 종류"가 본품이 아님을 뜻한다.
+  // 완전 배제하지 않고(진짜 부속품을 찾는 경우도 있으므로) 후순위+경고만 한다.
+  accessoryRisk: boolean;
+}
+
+// 2026-08-05 — 본품 판별용 부속품/소모품/호환용품 신호어(전 상품 공통 시스템).
+// 특정 상품을 하드코딩하지 않는다 — 상품명에 이 신호어가 있으면 "본품이 아니라
+// 그 상품의 부속품·소모품일 가능성"이 높다는 범용 휴리스틱이다. 도매매칭은
+// 키워드 전문검색이라 본품(가습기)을 찾아도 부속품(가습기 필터)이 최저가로
+// 섞여 대표 노출되는 구조적 문제가 있어(#326 연장, 실측: 가습기→청소솔 170원,
+// 제습기→습기제거제 870원, 청소기→차량유리 걸레 1,000원) 이를 걸러낸다.
+const ACCESSORY_SIGNAL_WORDS = [
+  // 부속품·부품
+  '필터', '브러쉬', '브러시', '청소솔', '커버', '거치대', '받침', '부품',
+  '호스', '노즐', '패드', '망', '트레이', '캡', '뚜껑', '스탠드', '홀더',
+  '어댑터', '충전기', '배터리', '전용케이스', '파우치', '가방', '스트랩',
+  // 소모품
+  '제거제', '방향제', '리필', '세정제', '탈취제', '방습제', '습기제거',
+  '스티커', '테이프', '건전지', '심지', '카트리지',
+  // 호환·전용(다른 본품의 액세서리임을 강하게 시사)
+  '호환', '전용', '증정', '사은품',
+];
+
+// 상품명이 부속품/소모품 신호어를 포함하는지 — 본품이 아닐 가능성 판별.
+// 단, 키워드 자체가 부속품류일 때(예: 키워드가 "필터"·"커버")는 그 신호어를
+// 무시한다(그 경우 필터/커버가 본품이므로).
+function detectAccessoryRisk(productName: string, keyword: string): boolean {
+  const normalizedName = productName.replace(/\s+/g, '');
+  const normalizedKeyword = keyword.replace(/\s+/g, '');
+  for (const sig of ACCESSORY_SIGNAL_WORDS) {
+    // 키워드에 이미 그 신호어가 들어 있으면(예: "가습기필터"를 찾는 중) 스킵
+    if (normalizedKeyword.includes(sig)) continue;
+    if (normalizedName.includes(sig)) return true;
+  }
+  return false;
 }
 
 export interface WholesaleMatchResult {
@@ -154,11 +191,20 @@ async function searchDomeggookMarket(
         sellerName,
         url: `https://domeme.domeggook.com/s/${productNo}`,
         priceOutlier: false, // 아래에서 매칭묶음 전체 기준으로 재계산
+        accessoryRisk: detectAccessoryRisk(rawTitle, keyword),
       });
     }
 
-    // 공급가 오름차순(저렴한 순) 상위 3건 — 마진 정렬 폐기(위 주석 참조)
-    const top3 = results.sort((a, b) => a.supplyPrice - b.supplyPrice).slice(0, 3);
+    // 2026-08-05 본품 우선 정렬(전 상품 공통): 부속품/소모품 의심(accessoryRisk)이
+    // 아닌 "본품"을 먼저 올리고, 그 안에서 공급가 오름차순. 이렇게 하면 "가습기"
+    // 검색에서 청소솔(부속품)이 최저가여도 진짜 가습기 본품이 대표로 노출된다.
+    // 부속품이 전부인 경우엔 부속품이라도 보여준다(정보 손실 방지).
+    const top3 = results
+      .sort((a, b) => {
+        if (a.accessoryRisk !== b.accessoryRisk) return a.accessoryRisk ? 1 : -1;
+        return a.supplyPrice - b.supplyPrice;
+      })
+      .slice(0, 3);
 
     // #326-B: 키워드 필터를 통과해도 남는 가격 이상치("캐리어 파우치" 3000원처럼
     // 연관은 있으나 다른 제품)를 지어내지 않고 표시만 한다. 이 3건의 중앙값 대비
@@ -213,8 +259,14 @@ export async function matchWholesaleProducts(
     return true;
   });
 
-  // Sort by supply price ascending (cheapest first) — margin sort retired
-  const sorted = deduped.sort((a, b) => a.supplyPrice - b.supplyPrice).slice(0, 5);
+  // Sort: 본품 우선(accessoryRisk=false 먼저) → 공급가 오름차순. 2026-08-05
+  // 전 상품 공통 — 부속품/소모품이 최저가로 대표 노출되는 문제 방지.
+  const sorted = deduped
+    .sort((a, b) => {
+      if (a.accessoryRisk !== b.accessoryRisk) return a.accessoryRisk ? 1 : -1;
+      return a.supplyPrice - b.supplyPrice;
+    })
+    .slice(0, 5);
 
   return {
     keyword,

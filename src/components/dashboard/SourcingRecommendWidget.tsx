@@ -379,15 +379,23 @@ export default function SourcingRecommendWidget() {
                           </span>
                           {/* #326-B(2026-08-04): 마진(%) 지어내지 않는다. 이종상품
                               오염 의심만 경고로 표시(배제하지 않음) — 판단은
-                              대표님이 링크를 보고 내린다. */}
-                          {w.priceOutlier && (
+                              대표님이 링크를 보고 내린다. 2026-08-05: 부속품/소모품
+                              의심(accessoryRisk)도 동일하게 경고(디스코드와 정합). */}
+                          {w.priceOutlier ? (
                             <span style={{
                               fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 4,
                               background: '#fef3c7', color: '#b45309',
                             }}>
-                              ⚠️ 확인필요
+                              ⚠️ 다른상품?
                             </span>
-                          )}
+                          ) : w.accessoryRisk ? (
+                            <span style={{
+                              fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 4,
+                              background: '#fef3c7', color: '#b45309',
+                            }}>
+                              ⚠️ 부속품?
+                            </span>
+                          ) : null}
                         </div>
                       </a>
                     ))}

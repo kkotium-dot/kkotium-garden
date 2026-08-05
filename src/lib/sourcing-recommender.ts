@@ -167,12 +167,17 @@ function calcBlueOceanScore(params: {
   let score = 50; // base
 
   // Search volume sweet spot: 1,000~10,000/month = ideal
+  // 2026-08-05 초레드오션 감점 강화: 10만 건 초과는 대기업·브랜드 각축장이라
+  // 1인 새싹셀러가 진입하기 어렵다(실측: "제습기" 월 43만·"청소기" 월 9만은
+  // 블루오션이 아니라 레드오션). 검색량이 많다고 무조건 좋은 게 아니라 "적당한
+  // 검색량 + 낮은 경쟁"이 진짜 블루오션이므로 초대형 검색량을 강하게 감점한다.
   const vol = params.monthlyVolume;
   if (vol >= 1000 && vol < 5000) score += 25;       // sweet spot
   else if (vol >= 5000 && vol < 10000) score += 20;  // good
   else if (vol >= 500 && vol < 1000) score += 15;    // niche
   else if (vol >= 10000 && vol < 30000) score += 10;  // crowded but volume
-  else if (vol >= 30000) score += 5;                   // very crowded
+  else if (vol >= 30000 && vol < 100000) score += 3;  // very crowded
+  else if (vol >= 100000) score -= 20;                 // 초레드오션(대기업 각축장)
   else if (vol < 500 && vol > 0) score += 10;          // very niche
   else score -= 10;                                     // no data
 
@@ -526,13 +531,19 @@ export function buildSourcingRecommendEmbed(result: SourcingRecommendResult): Re
       : '공급가 미확인';
 
     // 도매처는 1건만 인라인 표시(기존 2건 → 1건, 모바일 줄 수 절감). 단
-    // 최저가가 이종상품 의심(outlier)이면 무의미한 정보라 그 다음 정상가를
-    // 대신 보여준다(정상품 정보 손실 방지) — 전부 outlier면 최저가로 폴백.
-    const normal = opp.wholesaleMatches?.find((w) => !w.priceOutlier);
+    // 최저가가 이종상품 의심(outlier)이거나 부속품/소모품 의심(accessoryRisk)
+    // 이면 무의미한 정보라 그 다음 "본품+정상가"를 대신 보여준다(정상품 정보
+    // 손실 방지) — 전부 걸리면 최저가로 폴백. 2026-08-05 accessoryRisk 추가.
+    const clean = opp.wholesaleMatches?.find((w) => !w.priceOutlier && !w.accessoryRisk);
+    const normal = clean ?? opp.wholesaleMatches?.find((w) => !w.priceOutlier);
     const top = normal ?? opp.wholesaleMatches?.[0];
-    // outlier 경고는 필드 압축(#326-B)과 "이유를 알아야 한다"는 운영자 요구가
-    // 상충하므로, 짧게라도 이유를 남긴다(완전 생략하지 않음).
-    const outlierNote = top?.priceOutlier ? ' :warning:다른상품일수있음' : '';
+    // 경고는 필드 압축(#326-B)과 "이유를 알아야 한다"는 운영자 요구가 상충하므로
+    // 짧게라도 이유를 남긴다. 가격이탈(다른상품)과 부속품 의심을 구분해 표기.
+    const outlierNote = top?.priceOutlier
+      ? ' :warning:다른상품일수있음'
+      : top?.accessoryRisk
+        ? ' :warning:부속품일수있음'
+        : '';
     const wholesaleLine = top
       ? `[${top.platform}] 공급가 **${top.supplyPrice.toLocaleString()}원**${outlierNote} | [보러가기](${top.url})`
       : `${supplyLine} — 도매처 미확인`;
