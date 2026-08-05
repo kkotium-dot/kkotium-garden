@@ -8,7 +8,6 @@ import { prisma } from '@/lib/prisma';
 import { loadDispositionVerdicts } from '@/lib/products/disposition-load';
 import {
   sendDiscord,
-  buildRecommendEmbed,
   buildStockAlertEmbed,
   buildScoreDropEmbed,
   buildPublishReadyAlert,
@@ -306,29 +305,21 @@ export async function GET(req: NextRequest) {
       results.opsDigest = { error: e instanceof Error ? e.message.slice(0, 100) : String(e) };
     }
 
-    // ── 3. Daily recommendation with Perplexity trend boost ─────────────
+    // ── 3. Daily recommendation 데이터 산출 (KKOTTI_RECOMMEND 채널 발송 제거) ──
+    // 2026-08-05 운영자 방향 확정: "오늘의 추천" 아침 알림은 자사 DB 상품이
+    // 아니라 꼬띠의 **소싱 발굴 추천**(트렌드·니치 키워드 → 도소매 사이트에서
+    // 발굴)이어야 한다. 자사 상품 정보는 추천이 아니라 좀비/부활/점수 알림
+    // (섹션 2.5 publishReady/revival/zombie)에서 이미 다룬다.
+    //
+    // 따라서 이 buildRecommendEmbed(자사 DB 상품 추천) 발송을 KKOTTI_RECOMMEND
+    // 채널에서 제거한다 — 이 발송이 매일 같은 자사 상품을 반복 추천하며 하단
+    // E-7 소싱봇 발송을 사실상 덮어쓰던 원인이었다(같은 채널 이중 발송).
+    // computeRecommendation 산출값은 DB 영속화(섹션 4)에만 계속 쓴다.
     const season = getSeasonContext();
-    const { top5, seasonTop2, trendNote, trendSource, trendKeywords } =
+    const { top5, trendSource, trendKeywords } =
       await computeRecommendation(products as any, season);
     results.trends = { source: trendSource, keywords: trendKeywords };
-
-    const today = new Date().toLocaleDateString('ko-KR', {
-      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
-    });
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-
-    // #257 — always send, even when top5 is empty: buildRecommendEmbed already
-    // renders an honest "오늘 추천할 상품이 없어요" state (S.noProducts) for an
-    // empty list. Previously this branch was skipped entirely when there was
-    // nothing to recommend, which read as "the alert is broken" rather than
-    // "there's genuinely nothing to recommend today" (진단 2026-07-13 §2B).
-    const recResult = await sendDiscord(
-      'KKOTTI_RECOMMEND',
-      '',
-      [buildRecommendEmbed({ today, top3: top5, season, seasonTop2, appUrl, trendNote })]
-    );
-    results.recommendation = { sent: recResult.ok, top5Count: top5.length, trendSource };
+    results.recommendation = { sent: false, top5Count: top5.length, trendSource, note: 'KKOTTI_RECOMMEND now owned by sourcing bot (E-7)' };
 
     // ── 4. Persist today's recommendation to DB ───────────────────────────
     if (top5.length > 0) {
@@ -440,21 +431,24 @@ export async function GET(req: NextRequest) {
       results.competitionError = String(compErr);
     }
 
-    // ── E-7: Kkotti sourcing recommendation (daily trend scan) ───────────
-    // P1-C: 운영자 승인 전까지는 실발송 금지 — SOURCING_RECOMMEND_LIVE가 명시적으로
-    // 'true'가 아닌 한 항상 dryRun으로 호출한다(기본값 = 안전한 미발송).
-    // 승인 후 활성화 방법: Vercel 환경변수 SOURCING_RECOMMEND_LIVE=true 설정.
+    // ── E-7: 꼬띠 소싱 추천 (아침 KKOTTI_RECOMMEND 채널의 메인 알림) ──────────
+    // 2026-08-05 운영자 방향 확정: 이 소싱 발굴 추천이 "오늘의 추천" 아침 알림의
+    // 주인공이다(자사 DB 상품 추천은 섹션3에서 채널 발송 제거됨). 따라서 기본
+    // 동작을 "발송"으로 뒤집는다 — SOURCING_RECOMMEND_LIVE를 명시적으로
+    // 'false'로 설정할 때만 dry-run(비상 정지)이고, 미설정/그 외에는 실발송.
+    // 이렇게 해야 운영자가 Vercel에서 아무 설정을 안 해도 내일 아침부터 개선된
+    // 소싱봇이 정상 발송된다(교체가 실질적으로 완료됨).
     try {
-      const sourcingLive = process.env.SOURCING_RECOMMEND_LIVE === 'true';
+      const sourcingPaused = process.env.SOURCING_RECOMMEND_LIVE === 'false';
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
       const srcRes = await fetch(`${baseUrl}/api/sourcing-recommend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discord: true, dryRun: !sourcingLive }),
+        body: JSON.stringify({ discord: true, dryRun: sourcingPaused }),
       });
       const srcData = await srcRes.json();
       results.sourcingRecommend = {
-        dryRun: !sourcingLive,
+        dryRun: sourcingPaused,
         sent: srcData.discordSent ?? false,
         opportunities: srcData.opportunityCount ?? 0,
         excludedCount: srcData.excludedCount ?? 0,

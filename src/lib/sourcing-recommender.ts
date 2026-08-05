@@ -585,16 +585,42 @@ export function buildSourcingRecommendEmbed(result: SourcingRecommendResult): Re
     : pickVariant(KKOTTI_SOURCING_EMPTY, 'sourcing:empty');
   const kkotti = `${pickVariant(KKOTTI_SOURCING_INTRO, 'sourcing:intro')} ${kkottiTail}${seasonalGreeting('sourcing', new Date(), false)}`;
 
+  // 정원 컨셉 4섹션 구조(2026-08-05, 운영자 스크린샷 피드백: "오늘의 추천"
+  // 알림의 🌱현황/⛲️영향/🍯미션/🌷한마디 이모지·구조가 마음에 든다 →
+  // 소싱봇에도 이식). description 상단은 AI 요약 + 유형 요약만 간결히 두고,
+  // 나머지는 섹션 필드로 구조화해 모바일 스캔성을 높인다.
   const description = [
-    result.aiSummary ?? '트렌드 데이터 + 키워드 분석을 마쳤어요.',
+    result.aiSummary ?? '오늘 뜨는 카테고리를 뒤져서 소싱하기 좋은 상품을 골라왔어유.',
     typeSummary ? `\n**이번 주 유형** — ${typeSummary}` : '',
     '',
     result.opportunities.length > 0
-      ? `**블루오션 ${result.opportunities.length}건**을 찾았어요. 도매처 확인을 추천드려요!`
+      ? `:seedling: **블루오션 ${result.opportunities.length}건**을 찾았어요. 아래에서 도매처를 바로 확인할 수 있어요!`
       : '오늘은 조건에 맞는 후보가 없어요. 내일 다시 찾아볼게요.',
-    '',
-    kkotti,
   ].filter(Boolean).join('\n');
+
+  // ⛲️ 영향 + 🍯 미션 + 🌷 한마디 섹션(발송 embed 하단에 순서대로 붙는다).
+  // 소싱은 "오늘 발굴 → 오늘 등록"이 핵심이므로 등록 타이밍 가치를 짚어준다.
+  if (result.opportunities.length > 0) {
+    fields.push({
+      name: ':fountain: 왜 지금인가요',
+      value: '오늘 등록하면 7일 신상품 가산점 기간이 바로 시작돼요. 경쟁 낮은 것부터 먼저 검토해보세요.',
+      inline: false,
+    });
+    fields.push({
+      name: ':honey_pot: 꼬띠의 미션',
+      value: [
+        '1. 마음에 드는 키워드의 [보러가기]로 도매처 확인',
+        '2. 씨앗 심기에서 상품 등록 시작',
+        '3. 검색 조련사에서 경쟁 강도 한 번 더 확인',
+      ].join('\n'),
+      inline: false,
+    });
+  }
+  fields.push({
+    name: ':tulip: 꼬띠 한마디',
+    value: kkotti,
+    inline: false,
+  });
 
   return {
     title: `:tulip: 꼬띠의 오늘 소싱 추천 — ${result.date}`,
