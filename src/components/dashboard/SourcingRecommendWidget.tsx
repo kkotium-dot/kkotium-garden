@@ -10,9 +10,9 @@ import { useState } from 'react';
 import {
   Search, TrendingUp, RefreshCw,
   ChevronDown, ChevronUp, Sparkles, ShoppingBag,
-  Target, Shield,
+  Target, Shield, X, ExternalLink, Sprout, ArrowRight,
 } from 'lucide-react';
-import { useSourcingRecommend, type SourcingRecommendApiData } from '@/lib/hooks/useDashboardData';
+import { useSourcingRecommend, type SourcingRecommendApiData, type SourcingOpportunityItem } from '@/lib/hooks/useDashboardData';
 
 // Competition badge color
 function getCompBadge(comp: string): { label: string; bg: string; text: string } {
@@ -45,6 +45,10 @@ export default function SourcingRecommendWidget() {
   const { data: result, isLoading, setData } = useSourcingRecommend();
   const [scanning, setScanning] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
+  // 트랙B(2026-08-05): 우측 슬라이드 드로어로 상세를 연다. 카드=빠른 스캔용
+  // 요약, 드로어=심화(도매매칭 전체·AI인사이트 전문·소싱 시작). 프리미엄 SaaS
+  // 표준 패턴 — 인라인 확장(expanded)은 보존하되 드로어가 주 상세 경로다.
+  const [drawerItem, setDrawerItem] = useState<SourcingOpportunityItem | null>(null);
 
   // Trigger fresh scan via POST and replace SWR cache directly with the response.
   // Note: do NOT call refresh() after scan — that would re-GET and overwrite
@@ -408,11 +412,290 @@ export default function SourcingRecommendWidget() {
                     ))}
                   </div>
                 )}
+
+                {/* 트랙B: 상세 드로어 열기 — 도매매칭 전체·AI인사이트 전문·
+                    소싱 시작 버튼을 우측 드로어에서 본다(카드는 요약, 드로어는 심화) */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDrawerItem(opp); }}
+                  style={{
+                    marginTop: 12, width: '100%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    padding: '8px 12px', borderRadius: 8,
+                    border: 'none', background: '#FF6B8A', color: '#fff',
+                    cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                  }}
+                >
+                  <Sprout size={13} />
+                  상세 보기 · 소싱 시작
+                  <ArrowRight size={13} />
+                </button>
               </div>
             )}
           </div>
         );
       })}
+
+      {/* 트랙B(2026-08-05): 소싱 상세 드로어 — 우측 슬라이드 오버레이 */}
+      {drawerItem && (
+        <SourcingDetailDrawer
+          item={drawerItem}
+          onClose={() => setDrawerItem(null)}
+        />
+      )}
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 트랙B: 소싱 상세 드로어 (프리미엄 SaaS 우측 슬라이드 패턴)
+// 카드가 요약이라면 드로어는 심화 — 도매매칭 전체 목록(경고 이유 포함),
+// AI 인사이트 전문, 그리고 "이 키워드로 소싱 시작"(씨앗심기 프리필) 액션.
+// ─────────────────────────────────────────────────────────────────────────────
+function SourcingDetailDrawer({
+  item,
+  onClose,
+}: {
+  item: SourcingOpportunityItem;
+  onClose: () => void;
+}) {
+  const compBadge = getCompBadge(item.competition);
+  const scoreColor = getScoreColor(item.blueOceanScore);
+
+  // "이 키워드로 소싱 시작" — 씨앗심기(상품 등록) 화면으로 키워드를 프리필해
+  // 이동한다. 운영자가 발굴→등록 사이에서 키워드를 다시 입력할 필요가 없다.
+  // /products/new는 이미 ?prefillName= 파라미터로 상품명 입력란을 채우는
+  // 기능이 있다(page.tsx:1296 setProductName) — 새 파라미터를 만들지 않고
+  // 그 기존 경로를 재사용한다(#62 — 같은 목적의 기능을 중복 생성 금지).
+  const seedUrl = `/products/new?prefillName=${encodeURIComponent(item.keyword)}`;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, background: 'rgba(17,24,39,0.45)',
+          zIndex: 1000, animation: 'kkotiFadeIn 0.15s ease',
+        }}
+      />
+      {/* Drawer panel */}
+      <div
+        style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0,
+          width: 'min(460px, 92vw)', background: '#fff', zIndex: 1001,
+          boxShadow: '-8px 0 32px rgba(0,0,0,0.18)',
+          display: 'flex', flexDirection: 'column',
+          animation: 'kkotiSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '20px 22px 16px', borderBottom: '1px solid var(--color-border)',
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12,
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <Sparkles size={16} style={{ color: '#FF6B8A' }} />
+              <span style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>
+                {item.keyword}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 3,
+                padding: '2px 8px', borderRadius: 6, background: '#f0fdf4',
+                fontSize: 13, fontWeight: 700, color: scoreColor,
+              }}>
+                <Target size={12} /> 블루오션 {item.blueOceanScore}점
+              </span>
+              <span style={{
+                fontSize: 11, padding: '2px 7px', borderRadius: 5,
+                background: compBadge.bg, color: compBadge.text, fontWeight: 600,
+              }}>
+                경쟁 {compBadge.label}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="닫기"
+            style={{
+              flexShrink: 0, width: 32, height: 32, borderRadius: 8,
+              border: 'none', background: '#f3f4f6', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <X size={16} color="#6b7280" />
+          </button>
+        </div>
+
+        {/* Body (scrollable) */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 22px' }}>
+          {/* 핵심 지표 그리드 */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18,
+          }}>
+            <div style={{ padding: '12px 14px', borderRadius: 10, background: '#f9fafb' }}>
+              <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4 }}>월 검색량</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
+                {item.monthlySearchVolume.toLocaleString()}
+              </div>
+            </div>
+            <div style={{ padding: '12px 14px', borderRadius: 10, background: '#f9fafb' }}>
+              <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4 }}>카테고리</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
+                {item.category || '-'}
+              </div>
+            </div>
+            {item.supplyPriceRange && (
+              <div style={{ padding: '12px 14px', borderRadius: 10, background: '#f9fafb', gridColumn: '1 / -1' }}>
+                <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4 }}>실측 도매 공급가</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
+                  {item.supplyPriceRange.min.toLocaleString()}
+                  {item.supplyPriceRange.min !== item.supplyPriceRange.max
+                    ? ` ~ ${item.supplyPriceRange.max.toLocaleString()}`
+                    : ''}원
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* AI 인사이트 전문 */}
+          {item.aiInsight && (
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Sparkles size={13} style={{ color: '#FF6B8A' }} /> 꼬띠의 소싱 조언
+              </div>
+              <div style={{
+                padding: '12px 14px', borderRadius: 10, background: '#FEF0F3',
+                fontSize: 13, lineHeight: 1.6, color: '#374151',
+              }}>
+                {item.aiInsight}
+              </div>
+            </div>
+          )}
+
+          {/* 도매매칭 전체 목록 */}
+          {item.wholesaleMatches && item.wholesaleMatches.length > 0 && (
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <ShoppingBag size={13} style={{ color: '#228f18' }} />
+                도매 매칭 {item.wholesalePlatforms?.length ? `(${item.wholesalePlatforms.join('+')})` : ''}
+                <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 400 }}>최소수량 1개</span>
+              </div>
+              {item.wholesaleMatches.map((w, wi) => (
+                <a
+                  key={wi}
+                  href={w.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 12px', borderRadius: 10, marginBottom: 6,
+                    background: '#fff', textDecoration: 'none',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
+                        background: w.platform === 'DMK' ? '#dcfce7' : '#fee2e2',
+                        color: w.platform === 'DMK' ? '#15803d' : '#b91c1c',
+                      }}>{w.platform}</span>
+                      {/* 경고 이유를 드로어에서는 전체로 명시(카드는 축약) */}
+                      {w.priceOutlier && (
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: '#fef3c7', color: '#b45309' }}>
+                          ⚠️ 다른 상품일 수 있어요
+                        </span>
+                      )}
+                      {!w.priceOutlier && w.accessoryRisk && (
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: '#fef3c7', color: '#b45309' }}>
+                          ⚠️ 부속품일 수 있어요
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#374151', lineHeight: 1.4 }}>
+                      {w.name}
+                    </div>
+                  </div>
+                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
+                      {w.supplyPrice.toLocaleString()}원
+                    </div>
+                    <div style={{ fontSize: 10, color: '#9ca3af', display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-end' }}>
+                      보러가기 <ExternalLink size={9} />
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+
+          {/* 도매 사이트 직접 검색 */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+            <a
+              href={`https://domeme.domeggook.com/main/index.php?log=search&keyword=${encodeURIComponent(item.keyword)}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{
+                flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                fontSize: 12, padding: '8px 10px', borderRadius: 8,
+                background: '#fff', color: '#F63B28', textDecoration: 'none',
+                fontWeight: 600, border: '1px solid #F63B28',
+              }}
+            >
+              <Search size={12} /> 도매매에서 더 찾기
+            </a>
+            <a
+              href={`https://domeggook.com/main/index.php?log=search&keyword=${encodeURIComponent(item.keyword)}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{
+                flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                fontSize: 12, padding: '8px 10px', borderRadius: 8,
+                background: '#fff', color: '#228f18', textDecoration: 'none',
+                fontWeight: 600, border: '1px solid #228f18',
+              }}
+            >
+              <Search size={12} /> 도매꾹에서 더 찾기
+            </a>
+          </div>
+        </div>
+
+        {/* Footer — 주 액션(소싱 시작) */}
+        <div style={{
+          padding: '16px 22px', borderTop: '1px solid var(--color-border)',
+          background: '#fff',
+        }}>
+          <a
+            href={seedUrl}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              width: '100%', padding: '13px', borderRadius: 10,
+              background: '#FF6B8A', color: '#fff', textDecoration: 'none',
+              fontSize: 14, fontWeight: 700,
+            }}
+          >
+            <Sprout size={16} />
+            이 키워드로 소싱 시작
+            <ArrowRight size={16} />
+          </a>
+          <div style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 8 }}>
+            씨앗 심기에서 &quot;{item.keyword}&quot; 키워드로 상품 등록을 시작해요
+          </div>
+        </div>
+      </div>
+
+      {/* 드로어 애니메이션 keyframes */}
+      <style>{`
+        @keyframes kkotiSlideIn {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+        @keyframes kkotiFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
+    </>
   );
 }
