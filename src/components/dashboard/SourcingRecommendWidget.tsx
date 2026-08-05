@@ -49,13 +49,20 @@ export default function SourcingRecommendWidget() {
   // Trigger fresh scan via POST and replace SWR cache directly with the response.
   // Note: do NOT call refresh() after scan — that would re-GET and overwrite
   // the fresh result with a possibly-stale cached one.
+  //
+  // 2026-08-05: discord:false로 호출한다. 웹 "스캔 시작"은 운영자가 화면에서
+  // 최신 데이터를 새로고침하는 동작이지 Discord 알림을 발송하는 게 아니다.
+  // 기존 discord:true는 웹에서 버튼을 누를 때마다 실제 Discord 채널에 알림이
+  // 나가는 부수효과가 있었다(아침 크론과 웹 스캔의 목적 혼동). POST는
+  // discord:false여도 DB 저장·최신 데이터 반환은 그대로 수행하므로 화면
+  // 갱신에는 문제가 없다. 실제 Discord 발송은 아침 크론(E-7)만 담당한다.
   const runScan = async () => {
     setScanning(true);
     try {
       const res = await fetch('/api/sourcing-recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discord: true }),
+        body: JSON.stringify({ discord: false }),
       });
       const json: SourcingRecommendApiData = await res.json();
       if (json.ok) setData(json);
