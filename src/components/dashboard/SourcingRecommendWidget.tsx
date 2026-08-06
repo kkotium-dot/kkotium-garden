@@ -11,6 +11,7 @@ import {
   Search, TrendingUp, RefreshCw,
   ChevronDown, ChevronUp, Sparkles, ShoppingBag,
   Target, Shield, X, ExternalLink, Sprout, ArrowRight,
+  Star, EyeOff,
 } from 'lucide-react';
 import { useSourcingRecommend, type SourcingRecommendApiData, type SourcingOpportunityItem } from '@/lib/hooks/useDashboardData';
 
@@ -42,9 +43,12 @@ function getScoreColor(score: number): string {
 
 export default function SourcingRecommendWidget() {
   // Option E: SWR-backed cache + setData for POST scan replace.
-  const { data: result, isLoading, setData } = useSourcingRecommend();
+  // 트랙C-1(2026-08-05): setStatus로 낙점 상태를 변경한다(낙관적 업데이트).
+  const { data: result, isLoading, setData, setStatus } = useSourcingRecommend();
   const [scanning, setScanning] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
+  // 트랙C-1: 제외(skipped) 항목 펼치기 토글. 기본은 접힘(화면 정리).
+  const [showSkipped, setShowSkipped] = useState(false);
   // 트랙B(2026-08-05): 우측 슬라이드 드로어로 상세를 연다. 카드=빠른 스캔용
   // 요약, 드로어=심화(도매매칭 전체·AI인사이트 전문·소싱 시작). 프리미엄 SaaS
   // 표준 패턴 — 인라인 확장(expanded)은 보존하되 드로어가 주 상세 경로다.
@@ -74,6 +78,32 @@ export default function SourcingRecommendWidget() {
     setScanning(false);
   };
 
+  // 트랙C-1(2026-08-05): 낙점 파이프라인 파생 계산.
+  // - 요약 카운트: 상단 배지에 "관심 N·소싱중 M" 표시(0이면 숨김).
+  // - 표시 목록: skipped(제외)는 기본 접힘. showSkipped일 때만 펼친다.
+  //   원본 인덱스(expanded 상태 키)를 보존하기 위해 [opp, originalIndex] 페어로 담는다.
+  const allOpps = result?.opportunities ?? [];
+  const interestedCount = allOpps.filter((o) => o.operatorStatus === 'interested').length;
+  const sourcingCount = allOpps.filter((o) => o.operatorStatus === 'sourcing_started').length;
+  const skippedCount = allOpps.filter((o) => o.operatorStatus === 'skipped').length;
+  const visibleOpps = allOpps
+    .map((opp, i) => ({ opp, i }))
+    .filter(({ opp }) => opp.operatorStatus !== 'skipped');
+  const skippedOpps = allOpps
+    .map((opp, i) => ({ opp, i }))
+    .filter(({ opp }) => opp.operatorStatus === 'skipped');
+
+  // 관심 토글 — interested ↔ null. stopPropagation은 호출부(칩 onClick)에서 처리.
+  const toggleInterest = (opp: SourcingOpportunityItem) => {
+    const next = opp.operatorStatus === 'interested' ? null : 'interested';
+    void setStatus(opp.keyword, next, opp.recordId);
+  };
+  // 제외 토글 — skipped ↔ null.
+  const toggleSkip = (opp: SourcingOpportunityItem) => {
+    const next = opp.operatorStatus === 'skipped' ? null : 'skipped';
+    void setStatus(opp.keyword, next, opp.recordId);
+  };
+
   return (
     <div style={{
       background: '#fff',
@@ -94,20 +124,46 @@ export default function SourcingRecommendWidget() {
             </span>
           )}
         </div>
-        <button
-          onClick={runScan}
-          disabled={scanning}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            padding: '6px 12px', borderRadius: 6,
-            border: '1px solid var(--color-border)', background: scanning ? '#f3f4f6' : '#fff',
-            cursor: scanning ? 'not-allowed' : 'pointer',
-            fontSize: 12, fontWeight: 500,
-          }}
-        >
-          <RefreshCw size={13} className={scanning ? 'animate-spin' : ''} />
-          {scanning ? '분석 중...' : '스캔 시작'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* 트랙C-1: 낙점 파이프라인 요약 배지 — 관심·소싱중 건수를 한눈에.
+              0이면 노이즈 방지를 위해 숨긴다. */}
+          {(interestedCount > 0 || sourcingCount > 0) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {interestedCount > 0 && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 3,
+                  fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20,
+                  background: '#fef3c7', color: '#b45309',
+                }}>
+                  <Star size={11} fill="#f59e0b" strokeWidth={0} /> 관심 {interestedCount}
+                </span>
+              )}
+              {sourcingCount > 0 && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 3,
+                  fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20,
+                  background: '#dcfce7', color: '#15803d',
+                }}>
+                  <Sprout size={11} /> 소싱중 {sourcingCount}
+                </span>
+              )}
+            </div>
+          )}
+          <button
+            onClick={runScan}
+            disabled={scanning}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '6px 12px', borderRadius: 6,
+              border: '1px solid var(--color-border)', background: scanning ? '#f3f4f6' : '#fff',
+              cursor: scanning ? 'not-allowed' : 'pointer',
+              fontSize: 12, fontWeight: 500,
+            }}
+          >
+            <RefreshCw size={13} className={scanning ? 'animate-spin' : ''} />
+            {scanning ? '분석 중...' : '스캔 시작'}
+          </button>
+        </div>
       </div>
 
       {/* Trend categories */}
@@ -150,16 +206,24 @@ export default function SourcingRecommendWidget() {
         </div>
       )}
 
-      {/* Opportunity cards */}
-      {result?.opportunities.map((opp, i) => {
+      {/* Opportunity cards — 트랙C-1: 제외(skipped) 항목은 여기서 빠지고
+          아래 "제외 N건" 토글로 내려간다. i = 원본 인덱스(expanded 상태 키 보존) */}
+      {visibleOpps.map(({ opp, i }) => {
         const compBadge = getCompBadge(opp.competition);
         const barrierBadge = getBarrierBadge(opp.entryBarrierLevel);
         const isExpanded = expanded === i;
+        const isInterested = opp.operatorStatus === 'interested';
+        const isSourcing = opp.operatorStatus === 'sourcing_started';
 
         return (
           <div key={opp.keyword} style={{
-            border: '1px solid var(--color-border)', borderRadius: 8, marginBottom: 8,
-            overflow: 'hidden',
+            border: isSourcing
+              ? '1.5px solid #86efac'
+              : isInterested
+                ? '1.5px solid #fcd34d'
+                : '1px solid var(--color-border)',
+            borderRadius: 8, marginBottom: 8, overflow: 'hidden',
+            background: isSourcing ? '#f0fdf4' : isInterested ? '#fffbeb' : '#fff',
           }}>
             {/* Card header - always visible */}
             <button
@@ -221,6 +285,40 @@ export default function SourcingRecommendWidget() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* 트랙C-1: 관심 토글(⭐). 카드 확장과 분리하기 위해 stopPropagation.
+                    소싱중(🌱)이면 관심 칩 대신 소싱중 상태를 표시한다. */}
+                {isSourcing ? (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                    fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 20,
+                    background: '#dcfce7', color: '#15803d',
+                  }}>
+                    <Sprout size={10} /> 소싱중
+                  </span>
+                ) : (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); toggleInterest(opp); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); toggleInterest(opp); } }}
+                    title={isInterested ? '관심 해제' : '관심 표시'}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 26, height: 26, borderRadius: 7, cursor: 'pointer',
+                      background: isInterested ? '#fef3c7' : 'transparent',
+                      border: isInterested ? '1px solid #fcd34d' : '1px solid var(--color-border)',
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    <Star
+                      size={13}
+                      fill={isInterested ? '#f59e0b' : 'none'}
+                      color={isInterested ? '#f59e0b' : '#9ca3af'}
+                      strokeWidth={isInterested ? 0 : 2}
+                    />
+                  </span>
+                )}
+
                 {/* Blue ocean score badge */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 3,
@@ -413,32 +511,97 @@ export default function SourcingRecommendWidget() {
                   </div>
                 )}
 
-                {/* 트랙B: 상세 드로어 열기 — 도매매칭 전체·AI인사이트 전문·
-                    소싱 시작 버튼을 우측 드로어에서 본다(카드는 요약, 드로어는 심화) */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); setDrawerItem(opp); }}
-                  style={{
-                    marginTop: 12, width: '100%',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    padding: '8px 12px', borderRadius: 8,
-                    border: 'none', background: '#FF6B8A', color: '#fff',
-                    cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                  }}
-                >
-                  <Sprout size={13} />
-                  상세 보기 · 소싱 시작
-                  <ArrowRight size={13} />
-                </button>
+                {/* 트랙B: 상세 드로어 열기 + 트랙C-1: 제외 버튼.
+                    상세 보기(주 액션)와 제외(보조)를 나란히 둔다. */}
+                <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDrawerItem(opp); }}
+                    style={{
+                      flex: 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      padding: '8px 12px', borderRadius: 8,
+                      border: 'none', background: '#FF6B8A', color: '#fff',
+                      cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                    }}
+                  >
+                    <Sprout size={13} />
+                    상세 보기 · 소싱 시작
+                    <ArrowRight size={13} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleSkip(opp); }}
+                    title="이 키워드를 제외 목록으로 보냅니다"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                      padding: '8px 12px', borderRadius: 8,
+                      border: '1px solid var(--color-border)', background: '#fff', color: '#9ca3af',
+                      cursor: 'pointer', fontSize: 12, fontWeight: 500,
+                    }}
+                  >
+                    <EyeOff size={13} />
+                    제외
+                  </button>
+                </div>
               </div>
             )}
           </div>
         );
       })}
 
+      {/* 트랙C-1: 제외(skipped) 항목 접기 — 기본 숨김, 토글로 펼침(정보 손실 0) */}
+      {skippedCount > 0 && (
+        <div style={{ marginTop: 4 }}>
+          <button
+            onClick={() => setShowSkipped((v) => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '6px 4px', background: 'transparent', border: 'none',
+              cursor: 'pointer', fontSize: 12, color: '#9ca3af', fontWeight: 500,
+            }}
+          >
+            <EyeOff size={12} />
+            제외 {skippedCount}건 {showSkipped ? '숨기기' : '보기'}
+            {showSkipped ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </button>
+          {showSkipped && (
+            <div style={{ marginTop: 4 }}>
+              {skippedOpps.map(({ opp }) => (
+                <div key={opp.keyword} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 12px', borderRadius: 8, marginBottom: 6,
+                  background: '#f9fafb', border: '1px dashed var(--color-border)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: '#9ca3af', textDecoration: 'line-through' }}>
+                      {opp.keyword}
+                    </span>
+                    <span style={{ fontSize: 11, color: '#9ca3af' }}>
+                      {opp.monthlySearchVolume.toLocaleString()}/월
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => toggleSkip(opp)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 3,
+                      padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
+                      border: '1px solid var(--color-border)', background: '#fff',
+                      fontSize: 11, fontWeight: 500, color: '#6b7280',
+                    }}
+                  >
+                    <RefreshCw size={11} /> 되돌리기
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 트랙B(2026-08-05): 소싱 상세 드로어 — 우측 슬라이드 오버레이 */}
       {drawerItem && (
         <SourcingDetailDrawer
           item={drawerItem}
+          onStartSourcing={(kw, recId) => { void setStatus(kw, 'sourcing_started', recId); }}
           onClose={() => setDrawerItem(null)}
         />
       )}
@@ -453,9 +616,12 @@ export default function SourcingRecommendWidget() {
 // ─────────────────────────────────────────────────────────────────────────────
 function SourcingDetailDrawer({
   item,
+  onStartSourcing,
   onClose,
 }: {
   item: SourcingOpportunityItem;
+  // 트랙C-1: "소싱 시작" 클릭 시 자동 낙점(sourcing_started). 행동이 곧 상태.
+  onStartSourcing: (keyword: string, recordId?: string) => void;
   onClose: () => void;
 }) {
   const compBadge = getCompBadge(item.competition);
@@ -668,6 +834,7 @@ function SourcingDetailDrawer({
         }}>
           <a
             href={seedUrl}
+            onClick={() => onStartSourcing(item.keyword, item.recordId)}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               width: '100%', padding: '13px', borderRadius: 10,

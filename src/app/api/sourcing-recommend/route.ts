@@ -70,6 +70,10 @@ export async function GET() {
           recoType: (r.recoType as any) ?? null,
           supplyPriceRange: (r.supplyPriceRange as { min: number; max: number } | null) ?? undefined,
           wholesaleMatches: (r.wholesaleMatches as any) ?? undefined,
+          // 트랙C-1(2026-08-05): 낙점 상태 관리 — 위젯이 상태 칩 표시·PATCH
+          // 대상 식별에 쓴다. db-full 경로에서만 채워진다(레거시 폴백엔 없음).
+          recordId: r.id,
+          operatorStatus: (r.operatorStatus as 'interested' | 'sourcing_started' | 'skipped' | null) ?? null,
         })),
       };
       cachedResult = result;

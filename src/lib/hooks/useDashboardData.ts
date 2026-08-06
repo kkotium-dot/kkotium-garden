@@ -395,6 +395,10 @@ export interface SourcingOpportunityItem {
   entryBarrierBonus?: number;
   blueOceanBase?: number;
   uniqueSellersInTop?: number;
+  // 트랙C-1(2026-08-05, SOURCING_NAKJEOM_PIPELINE): 낙점 상태 관리. GET db-full
+  // 경로에서 채워진다 — 위젯이 상태 칩 표시·PATCH 대상 식별에 쓴다.
+  recordId?: string;
+  operatorStatus?: 'interested' | 'sourcing_started' | 'skipped' | null;
 }
 
 export interface SourcingRecommendApiData {
@@ -414,6 +418,19 @@ export function useSourcingRecommend(): {
   isValidating: boolean;
   /** Replace the SWR cache entry without refetching (e.g. after POST scan). */
   setData: (next: SourcingRecommendApiData) => void;
+  /**
+   * 트랙C-1(SOURCING_NAKJEOM_PIPELINE): 낙점 상태 변경.
+   * PATCH /api/sourcing-recommend/status 호출 + 낙관적 캐시 업데이트.
+   * GET에 5분 in-memory 캐시가 있어 refresh는 stale할 수 있으므로, 해당
+   * opportunity의 operatorStatus를 즉시 반영한다(revalidate:false).
+   * best-effort(#82): PATCH가 실패해도 UI는 유지한다(다음 스캔 때 서버 정본
+   * 으로 자연 정정). 반환값은 서버 저장 성공 여부.
+   */
+  setStatus: (
+    keyword: string,
+    status: 'interested' | 'sourcing_started' | 'skipped' | null,
+    recordId?: string,
+  ) => Promise<boolean>;
   refresh: () => void;
 } {
   const { data, isLoading, isValidating, mutate } = useSWR<SourcingRecommendApiData>(
@@ -422,11 +439,44 @@ export function useSourcingRecommend(): {
     SWR_PROFILE_24H,
   );
 
+  const applyStatusToCache = (
+    current: SourcingRecommendApiData | undefined,
+    keyword: string,
+    status: 'interested' | 'sourcing_started' | 'skipped' | null,
+  ): SourcingRecommendApiData | undefined => {
+    if (!current) return current;
+    return {
+      ...current,
+      opportunities: current.opportunities.map((o) =>
+        o.keyword === keyword ? { ...o, operatorStatus: status } : o,
+      ),
+    };
+  };
+
   return {
     data: data && data.ok ? data : null,
     isLoading,
     isValidating,
     setData: (next) => { void mutate(next, { revalidate: false }); },
+    setStatus: async (keyword, status, recordId) => {
+      // 1. 낙관적 업데이트 — 화면에 즉시 반영(서버 캐시 stale 우회).
+      void mutate(
+        (current) => applyStatusToCache(current, keyword, status),
+        { revalidate: false },
+      );
+      // 2. 서버 저장(best-effort). 실패해도 낙관적 상태는 유지한다.
+      try {
+        const res = await fetch('/api/sourcing-recommend/status', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keyword, status, recordId }),
+        });
+        const json = await res.json().catch(() => ({ ok: false }));
+        return res.ok && json?.ok === true;
+      } catch {
+        return false;
+      }
+    },
     refresh: () => { void mutate(); },
   };
 }

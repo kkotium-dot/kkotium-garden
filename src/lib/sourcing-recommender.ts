@@ -44,6 +44,11 @@ export interface SourcingOpportunity {
   blueOceanBase?: number;           // Score before entry barrier bonus
   uniqueSellersInTop?: number;      // unique mallNames in top results
   priceSpread?: number;             // (max-min)/avg, rounded to 2 decimals
+  // 트랙C-1(2026-08-05, SOURCING_NAKJEOM_PIPELINE): 낙점 상태 관리. GET이
+  // db-full(SourcingOpportunityRecord)에서 채워 내려준다 — 위젯이 상태 칩을
+  // 표시하고 PATCH 대상을 식별하는 데 쓴다. 스캔 생성 시점엔 없다(undefined).
+  recordId?: string;
+  operatorStatus?: 'interested' | 'sourcing_started' | 'skipped' | null;
 }
 
 export interface SourcingRecommendResult {
