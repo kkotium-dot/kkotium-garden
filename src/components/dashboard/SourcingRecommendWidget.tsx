@@ -538,7 +538,13 @@ export default function SourcingRecommendWidget() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
                       <ShoppingBag size={12} style={{ color: '#228f18' }} />
                       <span style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>
-                        도매 매칭 ({(opp.wholesalePlatforms ?? []).map((p) => getPlatformLabel(p).label).join('·') || ''})
+                        {/* 플랫폼 목록은 실제 매칭 데이터에서 유도한다(#325 — 별도
+                            wholesalePlatforms 필드는 API가 안 채워 항상 비어 "()"만
+                            남았다). 고유 플랫폼만 한글 라벨로. 없으면 괄호 자체 생략. */}
+                        {(() => {
+                          const labels = [...new Set((opp.wholesaleMatches ?? []).map((m) => getPlatformLabel(m.platform).label))];
+                          return labels.length ? `도매 매칭 (${labels.join('·')})` : '도매 매칭';
+                        })()}
                       </span>
                       <span style={{ fontSize: 10, color: '#9ca3af' }}>최소수량 1개</span>
                     </div>
@@ -829,7 +835,12 @@ function SourcingDetailDrawer({
             <div style={{ marginBottom: 18 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
                 <ShoppingBag size={13} style={{ color: '#228f18' }} />
-                도매 매칭 {item.wholesalePlatforms?.length ? `(${item.wholesalePlatforms.map((p) => getPlatformLabel(p).label).join('·')})` : ''}
+                {/* 플랫폼 목록은 실제 매칭 데이터에서 유도(#325 — wholesalePlatforms
+                    필드는 API가 안 채운다). 없으면 괄호 생략. */}
+                {(() => {
+                  const labels = [...new Set((item.wholesaleMatches ?? []).map((m) => getPlatformLabel(m.platform).label))];
+                  return labels.length ? `도매 매칭 (${labels.join('·')})` : '도매 매칭';
+                })()}
                 <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 400 }}>최소수량 1개</span>
               </div>
               {item.wholesaleMatches.map((w, wi) => (
