@@ -41,6 +41,15 @@ function getScoreColor(score: number): string {
   return '#b91c1c';
 }
 
+// 도매처 플랫폼 코드 → 셀러가 바로 아는 한글 라벨 + 색(#317 개발자 은어 금지).
+// DMM/DMK는 내부 코드일 뿐 화면에는 "도매매"/"도매꾹"으로 노출한다. 카드·드로어
+// 두 곳이 이 단일 함수를 공유해 표기가 갈라지지 않게 한다(#62 단일 권위).
+function getPlatformLabel(platform?: string): { label: string; bg: string; text: string } {
+  // DMK=도매꾹(초록), DMM=도매매(빨강) — 기존 색 관례 유지.
+  if (platform === 'DMK') return { label: '도매꾹', bg: '#dcfce7', text: '#15803d' };
+  return { label: '도매매', bg: '#fee2e2', text: '#b91c1c' };
+}
+
 export default function SourcingRecommendWidget() {
   // Option E: SWR-backed cache + setData for POST scan replace.
   // 트랙C-1(2026-08-05): setStatus로 낙점 상태를 변경한다(낙관적 업데이트).
@@ -529,7 +538,7 @@ export default function SourcingRecommendWidget() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
                       <ShoppingBag size={12} style={{ color: '#228f18' }} />
                       <span style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>
-                        도매 매칭 ({opp.wholesalePlatforms?.join('+') ?? ''})
+                        도매 매칭 ({(opp.wholesalePlatforms ?? []).map((p) => getPlatformLabel(p).label).join('·') || ''})
                       </span>
                       <span style={{ fontSize: 10, color: '#9ca3af' }}>최소수량 1개</span>
                     </div>
@@ -547,11 +556,12 @@ export default function SourcingRecommendWidget() {
                       >
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
-                            <span style={{
-                              fontSize: 10, fontWeight: 700, padding: '1px 4px', borderRadius: 3, marginRight: 4,
-                              background: w.platform === 'DMK' ? '#dcfce7' : '#fee2e2',
-                              color: w.platform === 'DMK' ? '#15803d' : '#b91c1c',
-                            }}>{w.platform}</span>
+                            {(() => { const p = getPlatformLabel(w.platform); return (
+                              <span style={{
+                                fontSize: 10, fontWeight: 700, padding: '1px 4px', borderRadius: 3, marginRight: 4,
+                                background: p.bg, color: p.text,
+                              }}>{p.label}</span>
+                            ); })()}
                             {w.name.slice(0, 35)}{w.name.length > 35 ? '...' : ''}
                           </div>
                         </div>
@@ -819,7 +829,7 @@ function SourcingDetailDrawer({
             <div style={{ marginBottom: 18 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
                 <ShoppingBag size={13} style={{ color: '#228f18' }} />
-                도매 매칭 {item.wholesalePlatforms?.length ? `(${item.wholesalePlatforms.join('+')})` : ''}
+                도매 매칭 {item.wholesalePlatforms?.length ? `(${item.wholesalePlatforms.map((p) => getPlatformLabel(p).label).join('·')})` : ''}
                 <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 400 }}>최소수량 1개</span>
               </div>
               {item.wholesaleMatches.map((w, wi) => (
@@ -837,11 +847,12 @@ function SourcingDetailDrawer({
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
-                        background: w.platform === 'DMK' ? '#dcfce7' : '#fee2e2',
-                        color: w.platform === 'DMK' ? '#15803d' : '#b91c1c',
-                      }}>{w.platform}</span>
+                      {(() => { const p = getPlatformLabel(w.platform); return (
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
+                          background: p.bg, color: p.text,
+                        }}>{p.label}</span>
+                      ); })()}
                       {/* 경고 이유를 드로어에서는 전체로 명시(카드는 축약) */}
                       {w.priceOutlier && (
                         <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: '#fef3c7', color: '#b45309' }}>
