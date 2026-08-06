@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-05 (rev104 — 웹 스캔/발송 분리 + 트랙B 상세 드로어 완결 + Cowork 리서치 인계 · Desktop) / 직전 rev103
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-05 (rev105 — 트랙C-1 소싱 낙점 파이프라인 완결 · Desktop) / 직전 rev104
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -328,6 +328,42 @@ Filesystem MCP 다운(#26) → **Desktop Commander로 우회 저장 성공**(#29
 **구현 계획**: P1 소싱추천 크론 연결+dry-run(🟢READY) → P3 검수관 → P4 앱 브리핑 화면 → P5 피드백 루프. **P2 시즌 캘린더 확장은 P1과 write set 안 겹쳐 병렬 안전**.
 
 **미착수**: 코드 구현 전량(설계만 확정). 디스코드 실발송은 dry-run 검증 후 운영자 승인 필요.
+
+---
+
+## rev105 — 트랙C-1 소싱 낙점 파이프라인 완결 (2026-08-05 Desktop)
+
+**운영자 방향 재확인**: 기능은 잃지 않되 유료 SaaS처럼 직관적·간소화된 자동화. 완료 작업은 브라우저 실사용+DB 실측 검증 후 다음으로. 핑퐁/병렬 시 채팅 본문에 핵심 인계 메시지 정리.
+
+**레인 배분(#322 write set 기준)** — 전부 Desktop 순차(같은 도메인 write set 물림):
+| 단계 | write set | 의존성 | 처리 |
+|---|---|---|---|
+| C-1a 설계 | SOURCING_NAKJEOM_PIPELINE md(신규) | 없음 | Desktop 완료 |
+| C-1b API | status/route.ts(신규)+route.ts GET+sourcing-recommender.ts | 스키마(존재) | Desktop 완료 |
+| C-1c 훅 | useDashboardData.ts | C-1b | Desktop 완료 |
+| C-1d 위젯 | SourcingRecommendWidget.tsx | C-1c | Desktop 완료 |
+
+**★★ 설계 — "칸반형 낙점 파이프라인"**(운영자 확정): 스키마 3상태(interested/sourcing_started/skipped, null=미검토)를 버튼 나열이 아니라 단일 파이프라인으로. 발견→⭐관심→🌱소싱중, 별도로 ✕제외(접힘). **행동이 곧 상태**: 드로어 "소싱 시작" 클릭 시 자동 sourcing_started. 관심은 카드 1탭 토글. 유료 셀러툴(셀러오션·아이템스카우트) 패턴.
+
+**★ 구현**:
+- C-1b: `PATCH /api/sourcing-recommend/status`(스캔 POST와 분리 #316, recordId 우선·keyword+date 폴백, P2021/P2022 가드). GET db-full에 recordId·operatorStatus 추가. 타입 확장(sourcing-recommender.ts).
+- C-1c: `setStatus` 액션(PATCH+낙관적 업데이트, GET 5분 캐시 stale 우회 revalidate:false, best-effort #82). 타입 확장(useDashboardData.ts).
+- C-1d: 상단 요약배지(⭐관심 N·🌱소싱중 M, 0이면 숨김)·카드 ⭐관심 토글칩(stopPropagation)·관심 노란/소싱중 초록 강조·제외 버튼·드로어 자동낙점·제외 접기(되돌리기).
+
+**★★ 근본원인 발견·수정 (신규 원칙 #330)**: 신규 route를 `create_file`로 만들었으나 그 도구는 별도 샌드박스에 써서 로컬 맥에 파일이 안 생김(PATCH 404). tsc·build는 런타임 fetch 문자열이라 파일 부재를 못 잡음. `Desktop Commander:write_file`로 로컬 맥 재생성해 해결. **신규 파일은 반드시 write_file 사용(create_file 금지)**. 기존 파일 edit_block은 로컬 맥에 정상 반영됨.
+
+**검증(로컬 브라우저 실사용 + Supabase DB 실측)**:
+- PATCH 낙점 ok:true. GET recordId·operatorStatus 정상 반환.
+- ⭐관심 토글 → 요약배지 즉시 "관심 2" 낙관적 업데이트 + DB 저장 확인.
+- 드로어 "소싱 시작" → DB에 청소기 sourcing_started 자동 저장 확인(핵심 자동화).
+- 제외 → 메인목록서 사라짐 + 접기 토글 + 취소선/되돌리기.
+- 테스트 데이터 원복: 2026-08-05 낙점상태 전부 NULL 복구(Supabase UPDATE, 방치 0).
+
+**검증**: tsc 0 · build 0(/api/sourcing-recommend/status 라우트 빌드 포함).
+
+**커밋·push**: `4a8f56d`(6파일 449줄) push 완료. Vercel 배포 BUILDING(다음 세션 READY 확인).
+
+**다음 세션 최우선**: ① 4a8f56d 배포 READY 확인 ② 프로덕션 낙점 파이프라인 재확인 ③ 트랙C-2(상태별 필터/뱃지) 착수.
 
 ---
 

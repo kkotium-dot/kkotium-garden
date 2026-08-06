@@ -894,3 +894,25 @@ Chroma 실험(194,480회 호출, 18개 모델)에서 **집중된 300토큰 프�
 4. 이 검증은 build보다 빠른 tsc로 먼저 하고, 통과하면 build로 최종 확인한다(#32).
 
 
+---
+
+## 2026-08-05 (3) (Desktop) 신규 원칙 #330
+
+### #330 — 이 프로젝트에서 신규 파일은 Desktop Commander:write_file로 만든다 (create_file은 로컬 맥이 아닌 별도 샌드박스에 쓴다)
+신규 파일을 만들 때 `create_file` 도구를 쓰면 **로컬 맥 파일시스템이 아니라 별도 샌드박스(bash_tool과 같은 환경)에 기록**된다. 그 결과 iterm·Desktop Commander·`npm run dev`가 보는 실제 로컬 맥에는 파일이 존재하지 않아, 새 API route라면 런타임 404가 난다. 반드시 **`Desktop Commander:write_file`**(디렉토리는 iterm `mkdir -p` 선행)로 만들어야 로컬 맥에 생긴다. 기존 파일 편집(`Desktop Commander:edit_block`)은 로컬 맥에 정상 반영되므로 문제없다.
+
+**사건(2026-08-05)**: 트랙C-1에서 신규 `src/app/api/sourcing-recommend/status/route.ts`(PATCH 낙점 엔드포인트)를 `create_file`로 만들었다. 도구는 "File created successfully"를 반환했고 tsc·build도 통과했으나, 브라우저에서 PATCH 호출 시 404가 났다. 진단 결과: `bash_tool`(`cat`, `find`)로는 파일이 보이는데 iterm `test -f`·Desktop Commander `list_directory`로는 `MISSING_ON_LOCAL_MAC`. 즉 파일은 샌드박스에만 있고 로컬 맥에 없었다. `mkdir -p`(iterm) + `Desktop Commander:write_file`로 로컬 맥에 재생성하자 PATCH가 정상 동작(`ok:true`)했고, build 결과에도 `/api/sourcing-recommend/status` 라우트가 포함됐다.
+
+**왜 tsc·build가 못 잡았나**: 그 route를 호출하는 코드(훅의 `fetch('/api/sourcing-recommend/status')`)는 **런타임 문자열**이라 컴파일러가 파일 존재 여부를 검사하지 않는다. import로 참조되는 모듈이 아니면 tsc·build는 파일 부재를 통과시킨다. 따라서 신규 route는 **브라우저 실호출로만 검증 가능**하다.
+
+**규칙**:
+1. **신규 파일 생성 = `Desktop Commander:write_file`만 사용한다. `create_file` 금지.** (디렉토리가 없으면 iterm `mkdir -p` 먼저.)
+2. 신규 파일을 만든 직후 **로컬 맥에 실존하는지 iterm `test -f` 또는 Desktop Commander `list_directory`로 확인**한다. `bash_tool`/`create_file`의 성공 메시지는 로컬 맥 존재의 증거가 아니다(별도 샌드박스일 수 있음).
+3. 신규 API route는 tsc·build 통과만으로 완료로 보지 않고 **브라우저 실호출(PATCH/GET 등)로 200 응답을 실측**해야 완료다(#310 양성 검증 연장).
+4. `bash_tool`은 별도 샌드박스이므로 **로컬 맥 파일 검증에 신뢰하지 않는다** — 실제 로컬 맥은 iterm·Desktop Commander가 본다. 두 환경이 갈리면(#279 "빌드는 되는데 dev만 안 됨"의 파일시스템판) 환경 차이를 먼저 의심한다.
+
+**부수 효과**: 기존 파일 편집은 `edit_block`이 로컬 맥에 정상 반영되므로 이번 트랙C-1의 위젯·훅·타입 수정(3개 파일)은 전부 로컬 맥에 올바르게 적용됐다(git status로 확인). 문제는 오직 `create_file`로 만든 신규 1개 파일이었다.
+
+**메타 교훈(이 원칙을 쓰다 재발)**: 이 #330을 처음 `Filesystem:write_file`로 파일 끝에 추가하려다, 그 도구가 **전체 덮어쓰기**로 동작해 #254~#329 전체(896줄)를 19줄로 날렸다. `git checkout`으로 즉시 복구 후 `Desktop Commander:edit_block`(마지막 줄 앵커 이어붙이기)으로 재등재했다. **대용량 MD에 내용을 추가할 때는 `write_file` 전체 덮어쓰기가 아니라 `edit_block` 앵커 방식으로 이어붙인다**(#29 한글 대용량 MD 안전 규칙의 연장 — 전체 덮어쓰기는 마지막 write가 이전 전체를 담고 있을 때만 안전하다).
+
+
