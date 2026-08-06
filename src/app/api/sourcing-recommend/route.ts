@@ -21,6 +21,14 @@ let cachedResult: SourcingRecommendResult | null = null;
 let cachedAt = 0;
 const CACHE_TTL = 5 * 60 * 1000;
 
+// 소싱 레코드 보관 기간(일). 이 기간보다 오래된 레코드는 POST 스캔 때 정리한다.
+// 소싱 스캔은 하루 1회 배치이고 GET은 "가장 최신 date 하나"만 조회하므로(#331)
+// 과거 레코드는 화면에 안 나오지만, POST가 오늘 것만 deleteMany 하던 기존
+// 로직으로는 DB에 무한 누적됐다(실측: 8/3~8/6). 7일은 "최근 한 주 소싱 이력"을
+// 남기면서(주간 요약·회귀 확인용) 무한 증가를 막는 균형점이다. 특정 상품이
+// 아니라 전 소싱 레코드에 일괄 적용된다(#55 전 상품 공통).
+const SOURCING_RETENTION_DAYS = 7;
+
 // GET: Return cached result or generate new one
 export async function GET() {
   try {
@@ -214,6 +222,20 @@ export async function POST(req: NextRequest) {
     if (result.opportunities.length > 0) {
       const todayDate = new Date();
       todayDate.setHours(0, 0, 0, 0);
+
+      // ★누적 정리(2026-08-06, #331 후속): 보관 기간(SOURCING_RETENTION_DAYS)보다
+      // 오래된 레코드를 두 테이블에서 함께 정리한다. 기존엔 오늘 것만 deleteMany
+      // 해서 과거 레코드가 무한 누적됐다(실측 8/3~8/6). GET을 "최신 date 하나"로
+      // 고쳐(#331) 화면은 안전하나 DB 용량이 계속 늘던 문제의 근본 해소.
+      // best-effort(#82): 정리 실패해도 저장은 진행한다(정리는 부가 작업).
+      const retentionCutoff = new Date(todayDate);
+      retentionCutoff.setDate(retentionCutoff.getDate() - SOURCING_RETENTION_DAYS);
+      await prisma.daily_recommendations.deleteMany({
+        where: { date: { lt: retentionCutoff }, season_tag: 'sourcing' },
+      }).catch(() => null);
+      await prisma.sourcingOpportunityRecord.deleteMany({
+        where: { date: { lt: retentionCutoff } },
+      }).catch(() => null);
 
       // Delete old sourcing recommendations for today
       await prisma.daily_recommendations.deleteMany({
