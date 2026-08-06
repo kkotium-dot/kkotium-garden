@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-06 (rev106 — 트랙C-2 세그먼트 필터 + GET 날짜중복 근본수정 · Desktop) / 직전 rev105
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-06 (rev107 — 소싱 레코드 누적정리 + 3레인 병렬 배분 · Desktop) / 직전 rev106
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -328,6 +328,29 @@ Filesystem MCP 다운(#26) → **Desktop Commander로 우회 저장 성공**(#29
 **구현 계획**: P1 소싱추천 크론 연결+dry-run(🟢READY) → P3 검수관 → P4 앱 브리핑 화면 → P5 피드백 루프. **P2 시즌 캘린더 확장은 P1과 write set 안 겹쳐 병렬 안전**.
 
 **미착수**: 코드 구현 전량(설계만 확정). 디스코드 실발송은 dry-run 검증 후 운영자 승인 필요.
+
+---
+
+## rev107 — 소싱 레코드 누적정리 + 3레인 병렬 배분 (2026-08-06 Desktop)
+
+**운영자 방향(신규)**: 토큰 비용 절감 위해 Cowork·Claude Code·Desktop 3레인 병렬 배분. 병렬작업 검증·오류 누락 없이 체크, 완료작업은 브라우저 실사용 검증 후 다음. 오류는 전 상품 공통 시스템 관점. 문서 지속 갱신 + 채팅 핵심 인계 메시지 + 진행/미진행/계획 리스트 브리핑.
+
+**★ 레인 배분(#322 write set 겹침 0 확인)**:
+| 레인 | 작업 | write set | 인계 문서 | 상태 |
+|---|---|---|---|---|
+| 🖥️ Desktop | ① 소싱 레코드 누적정리 | `sourcing-recommend/route.ts` | (CURRENT §1) | ✅ 완료·push |
+| 💻 Code | ② 트랙C-3 주간 소싱 요약 | `cron/weekly/route.ts`+`notifications/discord-builder.ts` | `docs/handoff/CODE_TRACK_C3_HANDOFF_2026-08-06.md` | 🟢 대기 |
+| 🌸 Cowork | ③ 키워드 카테고리 정밀화 | `wholesale-matcher.ts`(설계만)+리서치문서 | `docs/handoff/COWORK_KEYWORD_CATEGORY_RESEARCH_2026-08-05.md` | 🟢 대기 |
+
+**의존성**: ①②③ 파일 겹침 0. ②는 sourcingOpportunityRecord 읽기만(①쓰기와 충돌X). ②는 #331 후속 7일보관에 의존(①완료로 충족). ③은 sourcing-recommender import되나 시그니처 유지 시 무해(리서치 단계).
+
+**★ ① 소싱 레코드 누적정리(sourcing-recommend/route.ts, 전 상품 공통)**: #331 후속. GET을 최신date로 고쳐 화면 중복은 막았으나 POST가 오늘만 deleteMany해 과거 무한 누적(실측 8/3~8/6 두 테이블). → SOURCING_RETENTION_DAYS=7 상수 + POST 저장 직전 두 테이블 `date<오늘-7일` 정리(best-effort #82, #55 전상품). 
+
+**검증(로컬 브라우저 + DB 실측)**: 7/25 테스트레코드 주입→POST스캔→7일이전 자동삭제 확인(cutoff 7/30). 8/6·8/5 보존(경계 정확). daily_recommendations 옛 누적분(8/3~8/5)도 함께 청소. GET 최신date 유지(#331). 테스트데이터 원복(두 테이블 8/6 5건). tsc0·build0.
+
+**커밋·push**: `164a222`(1파일 22줄) push 완료. Vercel 배포 진행중.
+
+**다음 세션 최우선**: ① 배포 READY 확인 → Code②·Cowork③ 결과 수신·검증(②실발송은 운영자 승인 하) → 각 결과 CURRENT/TRACKER 병합.
 
 ---
 
