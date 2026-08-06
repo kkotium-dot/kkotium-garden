@@ -49,6 +49,9 @@ export default function SourcingRecommendWidget() {
   const [expanded, setExpanded] = useState<number | null>(null);
   // 트랙C-1: 제외(skipped) 항목 펼치기 토글. 기본은 접힘(화면 정리).
   const [showSkipped, setShowSkipped] = useState(false);
+  // 트랙C-2(2026-08-06): 낙점 상태별 세그먼트 필터. 상단 요약 배지를 탭하면
+  // 해당 상태만 걸러 본다. 'all'=제외 뺀 전부(기본). 순수 클라이언트 필터.
+  const [filter, setFilter] = useState<'all' | 'interested' | 'sourcing_started'>('all');
   // 트랙B(2026-08-05): 우측 슬라이드 드로어로 상세를 연다. 카드=빠른 스캔용
   // 요약, 드로어=심화(도매매칭 전체·AI인사이트 전문·소싱 시작). 프리미엄 SaaS
   // 표준 패턴 — 인라인 확장(expanded)은 보존하되 드로어가 주 상세 경로다.
@@ -93,6 +96,18 @@ export default function SourcingRecommendWidget() {
     .map((opp, i) => ({ opp, i }))
     .filter(({ opp }) => opp.operatorStatus === 'skipped');
 
+  // 트랙C-2(2026-08-06): 세그먼트 필터 적용. visibleOpps(제외 뺀 전부)에서
+  // 현재 필터에 맞는 것만 화면에 표시한다. 'all'이면 그대로. 제외 접기는
+  // 이 필터와 독립적으로 하단에 유지된다(제외는 세그먼트가 아니라 숨김 축).
+  const displayedOpps = filter === 'all'
+    ? visibleOpps
+    : visibleOpps.filter(({ opp }) => opp.operatorStatus === filter);
+  // 필터가 활성인데(전체 아님) 관심/소싱중 카운트가 0이 되면(마지막 항목을
+  // 해제/재분류) 필터 칩 자체가 사라지므로 자동으로 'all'로 되돌린다.
+  // (렌더 중 setState 금지 — 파생값으로만 처리: 표시할 게 없으면 안내 표시)
+  const filterActive = filter !== 'all';
+  const filterEmpty = filterActive && displayedOpps.length === 0;
+
   // 관심 토글 — interested ↔ null. stopPropagation은 호출부(칩 onClick)에서 처리.
   const toggleInterest = (opp: SourcingOpportunityItem) => {
     const next = opp.operatorStatus === 'interested' ? null : 'interested';
@@ -125,27 +140,60 @@ export default function SourcingRecommendWidget() {
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* 트랙C-1: 낙점 파이프라인 요약 배지 — 관심·소싱중 건수를 한눈에.
-              0이면 노이즈 방지를 위해 숨긴다. */}
+          {/* 트랙C-2(2026-08-06): 낙점 상태별 세그먼트 필터 — 요약 배지를
+              탭 가능한 필터 칩으로 승격(표시+필터 겸용). 관심/소싱중이 하나라도
+              있을 때만 필터 UI를 노출한다(둘 다 0이면 필터 자체가 무의미).
+              단일 선택(라디오식): 활성 칩은 채워진 배경, 비활성은 외곽선. */}
           {(interestedCount > 0 || sourcingCount > 0) && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {interestedCount > 0 && (
-                <span style={{
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 2,
+              padding: 2, borderRadius: 8, background: '#f3f4f6',
+            }}>
+              <button
+                onClick={() => setFilter('all')}
+                style={{
                   display: 'inline-flex', alignItems: 'center', gap: 3,
-                  fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20,
-                  background: '#fef3c7', color: '#b45309',
-                }}>
-                  <Star size={11} fill="#f59e0b" strokeWidth={0} /> 관심 {interestedCount}
-                </span>
+                  fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6,
+                  border: 'none', cursor: 'pointer',
+                  background: filter === 'all' ? '#fff' : 'transparent',
+                  color: filter === 'all' ? '#374151' : '#9ca3af',
+                  boxShadow: filter === 'all' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                  transition: 'all 0.12s',
+                }}
+              >
+                전체 {visibleOpps.length}
+              </button>
+              {interestedCount > 0 && (
+                <button
+                  onClick={() => setFilter('interested')}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                    fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6,
+                    border: 'none', cursor: 'pointer',
+                    background: filter === 'interested' ? '#fef3c7' : 'transparent',
+                    color: filter === 'interested' ? '#b45309' : '#9ca3af',
+                    boxShadow: filter === 'interested' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  <Star size={11} fill={filter === 'interested' ? '#f59e0b' : '#d1d5db'} strokeWidth={0} /> 관심 {interestedCount}
+                </button>
               )}
               {sourcingCount > 0 && (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 3,
-                  fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20,
-                  background: '#dcfce7', color: '#15803d',
-                }}>
+                <button
+                  onClick={() => setFilter('sourcing_started')}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                    fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6,
+                    border: 'none', cursor: 'pointer',
+                    background: filter === 'sourcing_started' ? '#dcfce7' : 'transparent',
+                    color: filter === 'sourcing_started' ? '#15803d' : '#9ca3af',
+                    boxShadow: filter === 'sourcing_started' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                    transition: 'all 0.12s',
+                  }}
+                >
                   <Sprout size={11} /> 소싱중 {sourcingCount}
-                </span>
+                </button>
               )}
             </div>
           )}
@@ -206,9 +254,34 @@ export default function SourcingRecommendWidget() {
         </div>
       )}
 
+      {/* 트랙C-2: 필터 결과 빈 목록 안내 — 무음 폴백(#270) 대신 왜 비었는지
+          알리고 전체로 돌아가는 버튼을 준다. */}
+      {filterEmpty && (
+        <div style={{
+          textAlign: 'center', padding: '20px 16px', borderRadius: 8,
+          background: '#f9fafb', border: '1px dashed var(--color-border)',
+        }}>
+          <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+            {filter === 'interested' ? '관심 표시한 항목이 없어요.' : '소싱 진행 중인 항목이 없어요.'}
+          </div>
+          <button
+            onClick={() => setFilter('all')}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '5px 12px', borderRadius: 6, cursor: 'pointer',
+              border: '1px solid var(--color-border)', background: '#fff',
+              fontSize: 12, fontWeight: 600, color: '#374151',
+            }}
+          >
+            전체 보기
+          </button>
+        </div>
+      )}
+
       {/* Opportunity cards — 트랙C-1: 제외(skipped) 항목은 여기서 빠지고
-          아래 "제외 N건" 토글로 내려간다. i = 원본 인덱스(expanded 상태 키 보존) */}
-      {visibleOpps.map(({ opp, i }) => {
+          아래 "제외 N건" 토글로 내려간다. 트랙C-2: 세그먼트 필터(displayedOpps)
+          적용. i = 원본 인덱스(expanded 상태 키 보존) */}
+      {displayedOpps.map(({ opp, i }) => {
         const compBadge = getCompBadge(opp.competition);
         const barrierBadge = getBarrierBadge(opp.entryBarrierLevel);
         const isExpanded = expanded === i;

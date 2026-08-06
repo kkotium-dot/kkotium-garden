@@ -40,11 +40,27 @@ export async function GET() {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const fullRecords = await prisma.sourcingOpportunityRecord.findMany({
-      where: { date: { gte: todayStart } },
-      orderBy: { rank: 'asc' },
-      take: 5,
-    }).catch(() => []); // P2021 가드 — 마이그레이션 이전 배포에서도 안전하게 동작
+    // ★근본수정(2026-08-06, 트랙C-2 검증 중 발견): "가장 최신 날짜의 스캔 1회분"만
+    // 조회한다. 기존 `date: { gte: todayStart }` + `take: 5`는 날짜 경계·타임존
+    // 차이로 어제/오늘 레코드가 DB에 함께 있으면(이전 스캔 잔존, 원복 누락 등)
+    // 두 날짜에서 rank=0끼리 섞여 같은 키워드가 중복 반환되는 문제가 있었다
+    // (실측: "가습기"가 8/5·8/6 두 건으로 나와 setStatus가 keyword 기준이라
+    // 엉뚱한 레코드를 낙점). 정상 운영에서 소싱 스캔은 하루 1회 배치이고 POST가
+    // 매번 같은 날짜를 deleteMany 후 재생성하므로, "최신 date 하나"가 곧 "오늘의
+    // 스캔"이라는 정확한 의미가 된다. 날짜 자체를 조건으로 넣지 않아 타임존
+    // 경계 문제를 원천 차단한다.
+    const latestRecord = await prisma.sourcingOpportunityRecord.findFirst({
+      orderBy: { date: 'desc' },
+      select: { date: true },
+    }).catch(() => null); // P2021 가드 — 마이그레이션 이전 배포에서도 안전
+
+    const fullRecords = latestRecord
+      ? await prisma.sourcingOpportunityRecord.findMany({
+          where: { date: latestRecord.date },
+          orderBy: { rank: 'asc' },
+          take: 5,
+        }).catch(() => [])
+      : [];
 
     if (fullRecords.length > 0) {
       const result: SourcingRecommendResult = {
