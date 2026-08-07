@@ -2,9 +2,9 @@
 
 > **담당 레인**: Claude Code (파일·git·빌드)
 > **작성**: Desktop, 2026-08-06
-> **BASELINE**: main `164a222` (이 시점 기준 — 착수 전 `git pull` 후 최신 확인, #291)
+> **BASELINE**: main `7409869` (착수 전 `git pull`로 최신 확인, #291). 이 baseline에는 소싱 레코드 누적정리(164a222)·도매처 코드 한글화(befcb72·0168591)·rev108 문서가 포함돼 있다. 모두 Code의 write set(cron/weekly·discord-builder)과 무관하니 그대로 pull 후 진행.
 > **의존성**: 없음 (독립 병렬 안전 — write set이 Desktop①·Cowork③과 겹치지 않음, #322)
-> **착수 전 필독**: `docs/DOMAIN_FACTS.md`, `CLAUDE.md`, `docs/plan/PRINCIPLES_LEARNED.md` #295~#331, 이 문서
+> **착수 전 필독**: `docs/DOMAIN_FACTS.md`, `CLAUDE.md`, `docs/plan/PRINCIPLES_LEARNED.md` #295~#332, 이 문서
 
 ---
 
