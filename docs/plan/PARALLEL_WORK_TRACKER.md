@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-07 (rev111 — 카테고리 정밀화 리서치 완료·구현 착수 가능 확정 · Desktop) / 직전 rev110
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-07 (rev112 — 트랙③ 1단계 카테고리 정밀화 구현 완료 · Code) / 직전 rev111
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -328,6 +328,26 @@ Filesystem MCP 다운(#26) → **Desktop Commander로 우회 저장 성공**(#29
 **구현 계획**: P1 소싱추천 크론 연결+dry-run(🟢READY) → P3 검수관 → P4 앱 브리핑 화면 → P5 피드백 루프. **P2 시즌 캘린더 확장은 P1과 write set 안 겹쳐 병렬 안전**.
 
 **미착수**: 코드 구현 전량(설계만 확정). 디스코드 실발송은 dry-run 검증 후 운영자 승인 필요.
+
+---
+
+## rev112 — 트랙③ 1단계 카테고리 정밀화 구현 완료 (2026-08-07 Code, 커밋 `6b8b585`)
+
+**배경**: rev111 리서치·설계 확정 후 배분된 구현 작업. 명세: `docs/handoff/TRACK3_IMPL_HANDOFF_2026-08-07.md`.
+
+**★ 구현**: `src/lib/category-mismatch-dict.ts`(신규) — 설계 §4-4 그대로 6개 축(신체부위·동물·장소이동수단·대상기기·연령사용자·소재형태축소어) 블랙리스트 + 화이트리스트 + head noun별 확장 맵. `wholesale-matcher.ts`에 `detectCategoryMismatch()` 추가(export, 순수함수), `WholesaleProduct`에 `categoryMismatch`/`categoryMismatchAxis`/`categoryMismatchModifier` 3필드. 정렬·표시는 손대지 않음(명세대로 write set 분리 — Desktop 2단계 몫).
+
+**★★ 실측으로 발견·수정한 오탐(설계 §5가 예견한 위험의 실제 사례)**: 최초 구현(공백 전부 제거 후 substring 매칭)을 실 DB 데이터(`sourcingOpportunityRecord.wholesaleMatches`)로 교차검증하던 중, 키워드 "멀티탭" 상품명 "...와이파이 멀티탭..."에서 공백 제거 시 "...파이멀티탭..."이 되어 축A 한정어 "이"(치아/이)가 "이"+"멀티탭"으로 **우연히** 매칭되는 오탐을 발견. "이"는 "와이파이"의 말음절일 뿐 신체부위 의미가 아님. → `hasTokenBoundedPrefixMatch()`로 토큰(띄어쓰기) 단위 판정으로 재설계: (1)같은 토큰 안 수식어+키워드 접두(예: "귀청소기") (2)수식어가 독립 토큰이고 바로 다음 토큰이 키워드로 시작(예: "차량용 청소기", 설계 §4-4 경계사례 실존 확인 패턴) — 이 두 형태만 매칭, 서로 다른 단어에 우연히 걸치는 결합은 차단. 수정 후 실DB 재검증: suspect 3건→2건(오탐 1건 제거), 남은 2건 전부 실제 카테고리 전환 확인(차량용 공기청정기·귀청소기류).
+
+**검증(단위 테스트, 순수함수 직접 호출)**: 명세 지정 5케이스 + 경계 4케이스(총 9건) 전부 기대대로 판정 — 청소기/귀청소기/어항청소기/차량용청소기(suspect) · 무선청소기/로봇청소기(정상) · 미니청소기(정상, 크기) vs 미니어처청소기(suspect, 완구 — 형태소 경계 정확 구분) · 강아지청소기(suspect) · 키워드 자체가 한정어 포함 시 스킵("귀청소기" 키워드로 "귀청소기" 검색 시 정상 통과).
+
+**검증**: tsc 0 · build 0 · sentinel grep 0건.
+
+**write set 준수**: `category-mismatch-dict.ts`(신규)+`wholesale-matcher.ts` 2파일만. `sourcing-recommend/route.ts`·`SourcingRecommendWidget.tsx` 미접촉.
+
+**커밋·push·배포**: `6b8b585` main 직접 push(#36 — 순수함수 추가, route/위젯 미변경으로 저위험) → `verify-vercel-deploy.sh --wait` OK(production=6b8b585). 결과 문서: `docs/handoff/CODE_TRACK3_IMPL_RESULT_2026-08-07.md`.
+
+**다음 단계(Desktop 2단계)**: 표시부 배지+정렬 반영(`SourcingRecommendWidget.tsx`) · 프로덕션 브라우저 실사용 검증(청소기/가습기 등 동음이의 키워드) · 효과 관찰 후 2단계(대분류 대조) 착수 여부 판단.
 
 ---
 
