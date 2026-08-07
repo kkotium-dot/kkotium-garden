@@ -50,6 +50,23 @@ function getPlatformLabel(platform?: string): { label: string; bg: string; text:
   return { label: '도매매', bg: '#fee2e2', text: '#b91c1c' };
 }
 
+// 트랙③ 2단계(2026-08-07): 카테고리 전환 축(bodyPart 등 내부 코드) → 셀러가
+// 바로 이해하는 한글 문구(#317 개발자 은어 금지). 1단계는 카테고리 전환
+// "의심"만 판별하므로(대분류 대조 없음), 문구도 단정 아닌 질문형으로 —
+// 완전 배제가 아니라 운영자 판단을 돕는 경고다(#327 정신).
+const CATEGORY_MISMATCH_AXIS_LABEL: Record<string, string> = {
+  bodyPart: '신체용품',
+  animal: '반려동물용품',
+  placeVehicle: '자동차/장소용품',
+  targetDevice: '전용 액세서리',
+  ageUser: '유아/시니어용품',
+  miniature: '완구/모형',
+};
+function getCategoryMismatchLabel(axis?: string | null, modifier?: string | null): string {
+  const axisLabel = axis ? CATEGORY_MISMATCH_AXIS_LABEL[axis] ?? '다른 카테고리' : '다른 카테고리';
+  return modifier ? `${axisLabel}(${modifier}) 의심` : `${axisLabel} 의심`;
+}
+
 export default function SourcingRecommendWidget() {
   // Option E: SWR-backed cache + setData for POST scan replace.
   // 트랙C-1(2026-08-05): setStatus로 낙점 상태를 변경한다(낙관적 업데이트).
@@ -578,7 +595,11 @@ export default function SourcingRecommendWidget() {
                           {/* #326-B(2026-08-04): 마진(%) 지어내지 않는다. 이종상품
                               오염 의심만 경고로 표시(배제하지 않음) — 판단은
                               대표님이 링크를 보고 내린다. 2026-08-05: 부속품/소모품
-                              의심(accessoryRisk)도 동일하게 경고(디스코드와 정합). */}
+                              의심(accessoryRisk)도 동일하게 경고(디스코드와 정합).
+                              트랙③ 2단계(2026-08-07): 카테고리 전환 의심
+                              (categoryMismatch)도 같은 톤으로 추가 — 배제 없이
+                              경고만(#327). 세 경고는 서로 다른 축이라 동시에
+                              여러 개 뜰 수 있어도 카드는 좁으니 우선순위 하나만. */}
                           {w.priceOutlier ? (
                             <span style={{
                               fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 4,
@@ -592,6 +613,15 @@ export default function SourcingRecommendWidget() {
                               background: '#fef3c7', color: '#b45309',
                             }}>
                               ⚠️ 부속품?
+                            </span>
+                          ) : w.categoryMismatch === 'suspect' ? (
+                            <span
+                              title={getCategoryMismatchLabel(w.categoryMismatchAxis, w.categoryMismatchModifier)}
+                              style={{
+                                fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 4,
+                                background: '#fef3c7', color: '#b45309',
+                              }}>
+                              ⚠️ 카테고리 확인?
                             </span>
                           ) : null}
                         </div>
@@ -864,7 +894,9 @@ function SourcingDetailDrawer({
                           background: p.bg, color: p.text,
                         }}>{p.label}</span>
                       ); })()}
-                      {/* 경고 이유를 드로어에서는 전체로 명시(카드는 축약) */}
+                      {/* 경고 이유를 드로어에서는 전체로 명시(카드는 축약).
+                          트랙③ 2단계: 카테고리 전환 의심도 같은 톤(#327 경고만,
+                          배제 아님). 축·한정어까지 구체적으로 보여준다. */}
                       {w.priceOutlier && (
                         <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: '#fef3c7', color: '#b45309' }}>
                           ⚠️ 다른 상품일 수 있어요
@@ -873,6 +905,11 @@ function SourcingDetailDrawer({
                       {!w.priceOutlier && w.accessoryRisk && (
                         <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: '#fef3c7', color: '#b45309' }}>
                           ⚠️ 부속품일 수 있어요
+                        </span>
+                      )}
+                      {!w.priceOutlier && !w.accessoryRisk && w.categoryMismatch === 'suspect' && (
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: '#fef3c7', color: '#b45309' }}>
+                          ⚠️ {getCategoryMismatchLabel(w.categoryMismatchAxis, w.categoryMismatchModifier)}
                         </span>
                       )}
                     </div>

@@ -373,6 +373,12 @@ export interface SourcingWholesaleProduct {
   // 2026-08-05: 부속품/소모품/호환용품 의심(본품이 아닐 가능성) — 웹앱에서도
   // 디스코드와 동일하게 경고를 표시하기 위한 필드(전 상품 공통 시스템).
   accessoryRisk?: boolean;
+  // 트랙③(2026-08-07): 카테고리 전환 동음이의 의심(청소기→귀청소기 등).
+  // 1단계(사전 매칭)만 있으면 'suspect', 2단계(대분류 대조) 도입 전까지는
+  // 'confirmed'/'cleared'는 아직 안 옴 — 필드는 3값 다 받도록 넉넉히 잡는다.
+  categoryMismatch?: 'suspect' | 'confirmed' | 'cleared' | null;
+  categoryMismatchAxis?: string | null;
+  categoryMismatchModifier?: string | null;
 }
 
 export interface SourcingOpportunityItem {
