@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-06 (rev108 — 도매처 코드 화면 한글화 + 빈괄호 근본수정 · Desktop) / 직전 rev107
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-07 (rev109 — 트랙C-3 주간 소싱 요약 완결 · Code) / 직전 rev108
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -328,6 +328,24 @@ Filesystem MCP 다운(#26) → **Desktop Commander로 우회 저장 성공**(#29
 **구현 계획**: P1 소싱추천 크론 연결+dry-run(🟢READY) → P3 검수관 → P4 앱 브리핑 화면 → P5 피드백 루프. **P2 시즌 캘린더 확장은 P1과 write set 안 겹쳐 병렬 안전**.
 
 **미착수**: 코드 구현 전량(설계만 확정). 디스코드 실발송은 dry-run 검증 후 운영자 승인 필요.
+
+---
+
+## rev109 — 트랙C-3 주간 소싱 요약 완결 (2026-08-07 Code, 커밋 `230f1c5`)
+
+**배경**: rev107에서 배분된 레인② — 주간 운영 리포트(cron/weekly, 매주 월 08:00 KST Discord)에 "이번 주 소싱 발굴·낙점 현황" 섹션 추가. 명세: `docs/handoff/CODE_TRACK_C3_HANDOFF_2026-08-06.md`.
+
+**★ 구현**: `cron/weekly/route.ts`에서 `sourcingOpportunityRecord` 최근 7일 조회 → 발굴(고유 키워드)·관심·소싱중·제외 카운트 + 블루오션 TOP3 집계(best-effort try/catch, #82). `buildWeeklyReportEmbed`에 `sourcingWeekly?` 옵셔널 파라미터 추가. **설계 판단**: 코드베이스가 이미 "4섹션 구조(situation/impact/action/kkotti) + 한글은 discord-strings.ko.json에만" 원칙을 엄격히 지키고 있어, 인계문서의 "새 embed field" 예시 대신 기존 `situation` 섹션에 한 줄 추가하는 방식으로 구현(기존 아키텍처 규칙 2개 동시 준수). 발굴 0건이면 섹션 자체 생략(#325 — 정적 라벨 하드코딩 금지 원칙 적용).
+
+**검증(실DB 실측, Discord 실발송 없이)**: Prisma 직접조회 스크립트(스크래치패드, 검증 후 삭제)로 실데이터 확인 — 총 5행, 발굴 5건(가습기·멀티탭·공기청정기 등), 관심/소싱중/제외 전부 0(운영자 미결정 상태). `buildWeeklyReportEmbed`를 이 실측값으로 직접 호출해 embed JSON 렌더 확인 — situation 필드에 "🌱 이번 주 소싱: 발굴 5건 · ⭐관심 0 · 🔎소싱중 0 · 블루오션 TOP: 가습기, 멀티탭, 공기청정기" 정상 노출. **Discord 실채널 발송은 하지 않음**(sendDiscord 경로 미실행) — 다음 정규 크론 또는 운영자 승인 하 수동 트리거 시 실채널 렌더 확인 필요.
+
+**write set 준수**: `cron/weekly/route.ts`+`discord-builder.ts`(명세대로) + `discord-strings.ko.json`(한글 리터럴 금지 규칙 준수 위해 추가, 명세엔 미기재였으나 필수). 금지 파일(`sourcing-recommend/route.ts`·`wholesale-matcher.ts`·`SourcingRecommendWidget.tsx`) 미접촉. 범위 밖 미커밋 변경(`settings/platforms/page.tsx`·`settings/suppliers/page.tsx`, 타 레인 추정) 발견 — 손대지 않고 커밋에서 제외.
+
+**검증**: tsc 0 · build 0 · sentinel grep 0건.
+
+**커밋·push·배포**: `230f1c5` main 직접 push(#36, 저위험) → `verify-vercel-deploy.sh --wait` OK(production=230f1c5). 결과 문서: `docs/handoff/CODE_TRACK_C3_RESULT_2026-08-06.md`.
+
+**다음 세션**: Desktop이 이 결과를 CURRENT.md에 병합 → 다음 정규 월요일 크론 또는 운영자 승인 시 Discord 실채널 렌더 확인.
 
 ---
 
