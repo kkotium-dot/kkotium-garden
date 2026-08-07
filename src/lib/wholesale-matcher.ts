@@ -5,6 +5,12 @@
 // Used by sourcing-recommender.ts to enrich opportunities with real wholesale products
 
 import { prisma } from '@/lib/prisma';
+import {
+  CATEGORY_MISMATCH_DICT,
+  WHITELIST_MODIFIERS,
+  HEAD_NOUN_WHITELIST,
+  type MismatchAxis,
+} from '@/lib/category-mismatch-dict';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,6 +31,62 @@ export interface WholesaleProduct {
   // priceOutlier(가격 이탈)와 별개 축 — 이건 "상품 종류"가 본품이 아님을 뜻한다.
   // 완전 배제하지 않고(진짜 부속품을 찾는 경우도 있으므로) 후순위+경고만 한다.
   accessoryRisk: boolean;
+  // 트랙③ 1단계(2026-08-07): 상품명이 "청소기"→"귀청소기"처럼 다른 카테고리로
+  // 전환된 것으로 의심되는 한정어를 포함하는지(사전 기반, category-mismatch-dict.ts).
+  // 완전 배제하지 않는다(#327) — 1단계는 필드만 채우고 정렬·표시 반영은 후속 작업.
+  categoryMismatch: 'suspect' | null;
+  categoryMismatchAxis: MismatchAxis | null;
+  categoryMismatchModifier: string | null;
+}
+
+// 토큰 경계를 지킨 "수식어+키워드 접두" 매칭(설계 §5 체크리스트 3번 — 단순
+// substring 매칭은 형태소 경계를 무시해 오탐을 낳는다). 실측 발견(2026-08-07):
+// 키워드="멀티탭" 상품명 "...와이파이 멀티탭..."에서 공백을 통째로 제거하면
+// "...파이멀티탭..."이 되어 축A 한정어 "이"(치아/이)가 "이"+"멀티탭"으로 우연히
+// 걸린다 — "이"는 "와이파이"의 마지막 음절일 뿐 신체부위 의미가 아니다. 공백을
+// 지우기 전에 토큰(띄어쓰기) 단위로 판정해 이런 교차-토큰 우연 결합을 막는다.
+// 단, "차량용 청소기"처럼 수식어와 키워드가 서로 다른 토큰(사이 공백)인 정상
+// 패턴은 여전히 잡아야 한다(리서치 §Details 확인된 실사례) — 그래서 "같은 토큰
+// 내 접두" + "수식어가 독립 토큰이고 바로 다음 토큰이 키워드로 시작" 두 형태 모두 허용한다.
+function hasTokenBoundedPrefixMatch(productName: string, modifier: string, keyword: string): boolean {
+  const tokens = productName.trim().split(/\s+/).filter(Boolean);
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    // 같은 토큰 안에 수식어+키워드가 붙어있음(예: "귀청소기", "차량용청소기")
+    if (token.includes(modifier + keyword)) return true;
+    // 수식어가 그 자체로 독립 토큰이고, 바로 다음 토큰이 키워드로 시작함(예: "차량용 청소기")
+    if (token === modifier && tokens[i + 1]?.startsWith(keyword)) return true;
+  }
+  return false;
+}
+
+// 트랙③ 1단계 — 카테고리 전환 한정어 판별(사전만, 도매 API 추가 호출 0).
+// 설계: docs/design/KEYWORD_CATEGORY_PRECISION_2026-08-05.md §4-1/§4-4.
+// detectAccessoryRisk(위)와 같은 패턴: 상품명이 [블랙리스트 수식어]+[키워드]
+// 접두 패턴일 때만(수식어가 head noun 바로 앞, 토큰 경계 준수) 강신호로 판정한다.
+export function detectCategoryMismatch(
+  productName: string,
+  keyword: string,
+): {
+  mismatch: 'suspect' | null;
+  axis: MismatchAxis | null;
+  matchedModifier: string | null;
+} {
+  const normalizedKeyword = keyword.replace(/\s+/g, '');
+  const extraWhitelist = HEAD_NOUN_WHITELIST[normalizedKeyword] ?? [];
+
+  for (const [axis, modifiers] of Object.entries(CATEGORY_MISMATCH_DICT) as [MismatchAxis, string[]][]) {
+    for (const modifier of modifiers) {
+      // 키워드 자체가 이미 그 한정어를 포함하면(예: 키워드="귀청소기") 스킵
+      if (normalizedKeyword.includes(modifier)) continue;
+      // 화이트리스트(정상 하위속성)가 블랙리스트보다 우선
+      if (WHITELIST_MODIFIERS.includes(modifier) || extraWhitelist.includes(modifier)) continue;
+      if (hasTokenBoundedPrefixMatch(productName, modifier, normalizedKeyword)) {
+        return { mismatch: 'suspect', axis, matchedModifier: modifier };
+      }
+    }
+  }
+  return { mismatch: null, axis: null, matchedModifier: null };
 }
 
 // 2026-08-05 — 본품 판별용 부속품/소모품/호환용품 신호어(전 상품 공통 시스템).
@@ -164,6 +226,8 @@ async function searchDomeggookMarket(
       const normalizedKeyword = keyword.replace(/\s+/g, '');
       if (!normalizedTitle.includes(normalizedKeyword)) continue;
 
+      const categoryMismatchResult = detectCategoryMismatch(rawTitle, keyword);
+
       // 목록 API는 판매중지·품절·단종을 제외하고 반환하므로 재고 필터 불필요
       // (docs/research/DOMEGGOOK_API_404_ROOT_CAUSE_2026-08-04.md §3-2).
 
@@ -192,6 +256,9 @@ async function searchDomeggookMarket(
         url: `https://domeme.domeggook.com/s/${productNo}`,
         priceOutlier: false, // 아래에서 매칭묶음 전체 기준으로 재계산
         accessoryRisk: detectAccessoryRisk(rawTitle, keyword),
+        categoryMismatch: categoryMismatchResult.mismatch,
+        categoryMismatchAxis: categoryMismatchResult.axis,
+        categoryMismatchModifier: categoryMismatchResult.matchedModifier,
       });
     }
 
