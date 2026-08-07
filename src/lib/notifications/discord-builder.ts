@@ -620,6 +620,14 @@ export interface WeeklyReportEmbedParams {
   avgHoneyScoreComputed?: boolean;
   /** Count of active products actually scoring below 50 — drives the dynamic tuning task count (#258, replaces a hardcoded "5개"). */
   lowScoreCount?: number;
+  /** Weekly sourcing discovery/decision summary (track C-3). Omit or discovered=0 to skip the line entirely (#325 — no zero-padded placeholder). */
+  sourcingWeekly?: {
+    discovered: number;
+    interested: number;
+    sourcingStarted: number;
+    skipped: number;
+    topKeywords: string[];
+  };
 }
 
 export function buildWeeklyReportEmbed(params: WeeklyReportEmbedParams): DiscordEmbed {
@@ -656,6 +664,16 @@ export function buildWeeklyReportEmbed(params: WeeklyReportEmbedParams): Discord
     situationLines.push(fmt(S.topProduct, {
       name: p.topProduct.name, score: p.topProduct.score,
     }));
+  }
+  if (p.sourcingWeekly && p.sourcingWeekly.discovered > 0) {
+    const sw = p.sourcingWeekly;
+    let sourcingLine = fmt(S.sourcingWeekly, {
+      discovered: sw.discovered, interested: sw.interested, sourcingStarted: sw.sourcingStarted,
+    });
+    if (sw.topKeywords.length > 0) {
+      sourcingLine += fmt(S.sourcingWeekly_top, { topKeywords: sw.topKeywords.join(', ') });
+    }
+    situationLines.push(sourcingLine);
   }
   const situation = situationLines.join('\n');
 

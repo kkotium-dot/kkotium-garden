@@ -156,6 +156,8 @@
     "stats": "신규 등록 {newReg}개 / 평균 꿀통 {avg}점 / 공급가 변동 {price}건",
     "stats_pending": "신규 등록 {newReg}개 / 평균 꿀통 집계중(가격 정보 있는 판매 상품 없음) / 공급가 변동 {price}건",
     "topProduct": "🏆 이주의 꿀통 1위: **{name}** ({score}점)",
+  "sourcingWeekly": "🌱 이번 주 소싱: 발굴 {discovered}건 · ⭐관심 {interested} · 🔎소싱중 {sourcingStarted}",
+  "sourcingWeekly_top": " · 블루오션 TOP: {topKeywords}",
     "warn_noAlt": "🤠 대체상품 미등록 품절 {n}건 — 고객 이탈 위험",
     "warn_pricing": "공급가 변동이 많았어요 — 마진 재점검 필요",
     "warn_lowAvg": "평균 꿀통 50점 미만 — 상품명/키워드 손질 시기",

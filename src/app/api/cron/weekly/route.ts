@@ -93,6 +93,25 @@ export async function GET(req: NextRequest) {
       where: { type: 'PRICE_CHANGE', createdAt: { gte: weekAgo } },
     });
 
+    // Weekly sourcing discovery/decision summary (track C-3).
+    // best-effort(#82): a failure here must not block the rest of the weekly report.
+    let sourcingWeekly = { discovered: 0, interested: 0, sourcingStarted: 0, skipped: 0, topKeywords: [] as string[] };
+    try {
+      const weekRecords = await prisma.sourcingOpportunityRecord.findMany({
+        where: { date: { gte: weekAgo } },
+        select: { keyword: true, operatorStatus: true, blueOceanScore: true },
+      });
+      // "발굴" = unique keywords (the same keyword can resurface across multiple daily scans).
+      sourcingWeekly.discovered = new Set(weekRecords.map(r => r.keyword)).size;
+      sourcingWeekly.interested = weekRecords.filter(r => r.operatorStatus === 'interested').length;
+      sourcingWeekly.sourcingStarted = weekRecords.filter(r => r.operatorStatus === 'sourcing_started').length;
+      sourcingWeekly.skipped = weekRecords.filter(r => r.operatorStatus === 'skipped').length;
+      sourcingWeekly.topKeywords = [...new Map(weekRecords.map(r => [r.keyword, r])).values()]
+        .sort((a, b) => b.blueOceanScore - a.blueOceanScore)
+        .slice(0, 3)
+        .map(r => r.keyword);
+    } catch { /* sourcing table may be empty — degrade silently */ }
+
     // Average honey score across active products
     const activeRaw = await prisma.product.findMany({
       where: { status: 'ACTIVE', salePrice: { gt: 0 }, supplierPrice: { gt: 0 } },
@@ -226,6 +245,7 @@ export async function GET(req: NextRequest) {
       weekOrderCount,
       weekCancelCount,
       weekNetProfit,
+      sourcingWeekly,
     });
 
     const result = await sendDiscord('OPS_REPORT', '', [embed]);
@@ -251,7 +271,7 @@ export async function GET(req: NextRequest) {
       ok:        result.ok,
       timestamp: new Date().toISOString(),
       weekLabel,
-      stats: { totalProducts, activeProducts, oosProducts, newRegistered, avgHoneyScore, priceChanges, weekRevenue, weekOrderCount, weekCancelCount, weekNetProfit },
+      stats: { totalProducts, activeProducts, oosProducts, newRegistered, avgHoneyScore, priceChanges, weekRevenue, weekOrderCount, weekCancelCount, weekNetProfit, sourcing: sourcingWeekly },
       priceDrift: { checked: priceDriftChecked, drifts: priceDrifts.length, items: priceDrifts },
       categoryRefresh,
     });
