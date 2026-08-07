@@ -152,7 +152,7 @@ export default function PlatformsSettingPage() {
             </button>
           </div>
           <div style={{ height: 2.5, background: '#FFB3CE', borderRadius: 99, margin: '8px 0 6px' }} />
-          <p style={{ fontSize: 13, color: '#888', margin: 0 }}>도매매, 도매꽉 등 플랫폼과 소속 공급사를 관리합니다.</p>
+          <p style={{ fontSize: 13, color: '#888', margin: 0 }}>도매매, 도매꾹 등 플랫폼과 소속 공급사를 관리합니다.</p>
         </div>
         {/* SKU 안내 배너 */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-sm text-blue-800">

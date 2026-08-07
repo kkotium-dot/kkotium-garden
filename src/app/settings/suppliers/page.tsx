@@ -11,11 +11,21 @@ import Link from 'next/link';
 const PLATFORM_CODES = ['DMM', 'DMK', 'OWN', 'ETC'] as const;
 type PlatformCode = typeof PLATFORM_CODES[number];
 
+// 셀러 실무 용어(한글)를 앞세우고, SKU 접두사로 쓰이는 코드는 괄호로 보조 표기한다.
+// (#317/#332 — 화면엔 "도매매"가 먼저, 코드 DMM은 SKU 참조용으로만 남긴다.)
 const PLATFORM_LABELS: Record<PlatformCode, string> = {
-  DMM: 'Domeggook (DMM)',
-  DMK: 'Domeki (DMK)',
-  OWN: 'Own Brand (OWN)',
-  ETC: 'Other (ETC)',
+  DMM: '도매매 (DMM)',
+  DMK: '도매꾹 (DMK)',
+  OWN: '자체 브랜드 (OWN)',
+  ETC: '기타 (ETC)',
+};
+
+// 필터 칩·배지 등 좁은 공간에는 코드 없이 한글 라벨만 쓴다.
+const PLATFORM_SHORT: Record<string, string> = {
+  DMM: '도매매',
+  DMK: '도매꾹',
+  OWN: '자체 브랜드',
+  ETC: '기타',
 };
 
 interface Platform {
@@ -330,7 +340,7 @@ export default function SuppliersPage() {
             return (
               <div key={pc} className={`px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer ${filterPlatform === pc ? 'ring-2 ring-pink-400' : ''} ${platformBadgeColor[pc]}`}
                 onClick={() => setFilterPlatform(filterPlatform === pc ? '' : pc)}>
-                {pc} {count}
+                {PLATFORM_SHORT[pc] ?? pc} {count}
               </div>
             );
           })}
@@ -378,7 +388,7 @@ export default function SuppliersPage() {
                     </td>
                     <td className="px-3 py-4">
                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${platformBadgeColor[s.platformCode] ?? 'bg-gray-100 text-gray-600'}`}>
-                        {s.platformCode}
+                        {PLATFORM_SHORT[s.platformCode] ?? s.platformCode}
                       </span>
                     </td>
                     {/* Fixed: 도매꾹 ID */}
@@ -449,7 +459,7 @@ export default function SuppliersPage() {
                   {PLATFORM_CODES.map(pc => (
                     <button key={pc} type="button" onClick={() => handlePlatformChange(pc)}
                       className={`py-2 rounded-xl text-sm font-medium border transition ${modal.data.platformCode === pc ? 'border-pink-400 bg-pink-50 text-pink-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                      {pc}
+                      {PLATFORM_SHORT[pc] ?? pc}
                     </button>
                   ))}
                 </div>
