@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-08 (rev114 — 아침 소싱 알림 미발송 원인 조사 완료 · Code) / 직전 rev113 — 트랙③ 2단계 표시부 프로덕션 검증 완료 · Desktop
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-08 (rev115 — 아침 소싱 알림 미발송 수정 실행 완료 · Code) / 직전 rev114 — 아침 소싱 알림 미발송 원인 조사 완료 · Code
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -6,6 +6,23 @@
 
 
 > **📦 rev80 이전은 archive로 분할됨(#31, 2026-07-28)**: `docs/plan/archive/PARALLEL_WORK_TRACKER_~rev80.md` 참조(rev51~rev80, 삭제 0).
+
+## rev115 — 아침 소싱 알림(E-7) 미발송 — 원인 확정 + 수정 실행 완료 (2026-08-08 Code)
+
+**배경**: rev114(Code 조사)에서 제기한 SSO Deployment Protection 가설을 Desktop이 curl 직접 실측(`/` 200, `/api/cron/daily` 401=앱 JSON)으로 기각. 원인은 최초 가설(Hobby maxDuration 미설정 + 8단계 순차 실행 지연으로 E-7이 타임아웃 전 도달 못함)로 최종 확정. 운영자 실행 지시 확정 후 Code가 5단계 수정 진행.
+
+**수정 내용**(`docs/handoff/CODE_DAILY_CRON_FIX_HANDOFF_2026-08-08.md` 실행 지시 그대로):
+1. `cron/daily/route.ts`에 `export const maxDuration = 60;` 추가.
+2. **E-7(소싱 추천)을 독립 크론으로 분리**: 신규 `src/app/api/cron/sourcing-daily/route.ts`(로직 이전 + `isAuthorized` 가드 동일 적용) + `vercel.json`에 `/api/cron/sourcing-daily` 엔트리 추가(`0 23 * * *`, 기존 daily와 동일 시각 — path가 다르면 Vercel이 독립 함수로 실행). 기존 `cron/daily`에서 E-7 블록 완전 삭제(중복 발송 방지).
+3. 무보호였던 4개 섹션(OOS 후반부·점수하락·추천산출·DB영속화)에 개별 try-catch 추가(`results.xxxError` 패턴 통일) — `computeRecommendation` 실패 시 `top5`를 빈 배열로 안전하게 degrade해 하단 DB영속화 섹션이 계속 진행되도록 처리.
+4. 검증: `npx tsc --noEmit` 0 errors, `npm run build` exit 0(두 크론 함수 모두 정상 포함 확인).
+5. 결과 문서 갱신(`CODE_DAILY_CRON_FIX_RESULT_2026-08-08.md` §7) + `docs/handoff/CURRENT.md` 갱신 + 커밋·push.
+
+**미실행(지시대로)**: 실제 Discord 발송 테스트는 이번 세션에 하지 않음 — 운영자/Desktop 승인 후 정규 스케줄 또는 수동 Run으로 검증 필요. Vercel 대시보드에서 `sourcing-daily` 크론 등록 최종 확인(Hobby 슬롯 5개→6개 증가, 배포 실패 여부)도 운영자/Desktop 몫으로 남김.
+
+**교훈**: ① UI 설정 문구보다 curl 실측이 항상 우선(#310 재확인) — 인증/권한 관련 원인 추정은 실제 요청 결과로 재검증. ② 무거운 순차 크론은 try-catch로 예외만 막아서는 타임아웃 자체를 못 막는다(catch는 예외 전용, 강제종료엔 무력) — 무거운 하위 작업을 독립 크론(동일 스케줄, 다른 path)으로 분리하는 게 근본 해법.
+
+---
 
 ## rev114 — 아침 소싱 알림(E-7) 미발송 — 원인 조사 완료, 신규 발견(크론 미호출 의심) (2026-08-08 Code)
 

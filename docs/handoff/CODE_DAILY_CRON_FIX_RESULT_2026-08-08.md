@@ -1,9 +1,9 @@
 # 결과 — 아침 소싱 알림(E-7) 미발송 원인 조사
 
 > **담당**: Claude Code
-> **작성**: 2026-08-08
-> **인계 원문**: `docs/handoff/CODE_DAILY_CRON_FIX_HANDOFF_2026-08-08.md`
-> **범위**: 조사만 수행(운영자 채팅 지시가 "조사"에 한정). 코드 수정은 미실행 — 아래 "권고 수정안" 참조, 실행은 운영자 승인 후.
+> **작성**: 2026-08-08 (조사) → **2026-08-08 갱신(수정 실행 완료, §7)**
+> **인계 원문**: `docs/handoff/CODE_DAILY_CRON_FIX_HANDOFF_2026-08-08.md`(SSO 가설은 Desktop이 curl 실측으로 기각, 타임아웃/실행순서로 원인 재확정 — 최종 실행 지시는 해당 문서 맨 아래 참조)
+> **범위**: §1~§6 = 조사 단계(원문 그대로 보존). **§7 = 2026-08-08 실행 지시에 따른 수정 실행 결과(신규 추가).**
 
 ---
 
@@ -85,3 +85,56 @@ Desktop 인계문서는 "①앞 섹션 예외로 인한 조기 종료" 또는 "�
 - [x] tsc 0 · build 0 — 코드 변경 없어 해당 없음
 - [x] 결과 문서 작성 + 커밋·push + 채팅 인계
 - [x] 실제 Discord 발송 테스트 없음(미실행)
+
+
+---
+
+## 7. ★ 수정 실행 완료 (2026-08-08, 운영자 실행 지시 확정 후)
+
+Desktop이 curl 실측(`/` 200, `/api/cron/daily` 401=앱 JSON)으로 SSO 가설을 기각하고 원인을 타임아웃/실행순서로 재확정 → 아래 5단계 실행 지시를 그대로 진행했다.
+
+### 7-1. `cron/daily/route.ts`에 `maxDuration = 60` 추가
+`export const maxDuration = 60;`을 `isAuthorized` 위에 배치(`inventory-sync` 패턴과 동일). 기존 하단의 `export const dynamic = 'force-dynamic';`도 같은 자리로 이동(중복 export 정리).
+
+### 7-2. E-7(소싱 추천)을 독립 크론으로 분리
+- **신규 파일** `src/app/api/cron/sourcing-daily/route.ts`: `cron/daily`의 E-7 블록(구 434~458행, `/api/sourcing-recommend` POST 호출 로직 전체)을 그대로 이전. `isAuthorized` 가드·`maxDuration = 60` 동일 적용. 다른 섹션이 전혀 없어 그 자체로는 절대 타임아웃 걸릴 일 없는 가벼운 함수.
+- **`vercel.json`**: `/api/cron/sourcing-daily` 엔트리 추가, 스케줄 `0 23 * * *`(기존 daily와 동일 시각 — Vercel은 path가 다르면 별개 함수라 서로 독립 실행됨). 등록 크론 5개 → **6개**.
+- **`cron/daily/route.ts`에서 E-7 블록 완전 삭제**(중복 발송 방지) — 자리에 분리 사실을 알리는 주석만 남김.
+
+### 7-3. 무보호 4개 섹션에 개별 try-catch 추가
+조사(§1)에서 무보호로 확인된 4곳 전부 `results.xxxError` 패턴으로 격리:
+- 섹션 1 후반부(OOS Discord 발송+이벤트 기록) → `results.stockAlertError`
+- 섹션 2(점수 하락 감지) → `results.scoreDropAlertError`
+- 섹션 3(추천 데이터 산출, `computeRecommendation`) → `results.recommendationError`(실패 시 `top5`는 빈 배열로 안전하게 degrade, 섹션4가 이어서 정상 진행)
+- 섹션 4(DB 영속화) → `results.dbSavedError`
+
+이제 `cron/daily/route.ts`의 11개(→10개, E-7 이관) 섹션 전부 개별 try-catch로 격리됨 — 어느 한 섹션이 죽어도 나머지는 계속 실행된다.
+
+### 7-4. 검증
+```
+npx tsc --noEmit   → No errors found
+npm run build      → exit 0, /api/cron/daily·/api/cron/sourcing-daily 둘 다 함수로 정상 포함 확인
+```
+로컬 dev 서버 기동/브라우저 검증은 생략 — 크론 라우트는 프로덕션 전용(로컬에서 관찰 가능한 UI 변화 없음, `<when_to_verify>` 기준 미해당).
+
+### 7-5. 미실행 항목 (운영자/Desktop 후속 필요)
+- **배포 후 Vercel 대시보드 Cron Jobs 탭에서 `sourcing-daily` 신규 등록 확인** — Hobby 크론 슬롯 상한에 걸려 배포 실패 시 이 세션에서 임의 조치하지 않고 즉시 보고하기로 했으나, **push 시점까지 슬롯 상한 관련 배포 실패는 없었음**(로컬 build 성공은 확인, 실제 Vercel 배포의 크론 슬롯 검증은 대시보드에서 최종 확인 필요).
+- **실제 Discord 발송 테스트는 미실행**(지시대로) — 운영자/Desktop 승인 후 내일 아침 정규 스케줄 또는 대시보드 "Run" 수동 트리거로 검증 요망.
+
+### 7-6. 변경 파일
+| 파일 | 변경 |
+|---|---|
+| `src/app/api/cron/daily/route.ts` | maxDuration 추가, E-7 블록 제거, 4개 섹션 try-catch 격리 |
+| `src/app/api/cron/sourcing-daily/route.ts` | 신규 — E-7 로직 이전 |
+| `vercel.json` | `/api/cron/sourcing-daily` 크론 엔트리 추가(0 23 * * *) |
+
+## 8. 체크리스트 결과 (갱신)
+
+- [x] `git pull` 최신 확인 (HEAD==origin/main, c00b121)
+- [x] `cron/daily/route.ts`에 `maxDuration = 60` 추가 → §7-1
+- [x] E-7 독립 크론(`sourcing-daily`) 분리 + `vercel.json` 등록 → §7-2
+- [x] 무보호 4개 섹션 try-catch 추가 → §7-3
+- [x] tsc 0 · build 0 → §7-4
+- [x] 결과 문서 갱신 + 커밋·push + 채팅 인계
+- [x] 실제 Discord 발송 테스트 없음(미실행)
+- [ ] Vercel 대시보드에서 `sourcing-daily` 크론 등록 최종 확인 — **운영자/Desktop 배포 후 확인 필요**

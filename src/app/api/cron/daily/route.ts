@@ -22,6 +22,12 @@ import { refreshCategoryTrendCache } from '@/lib/naver/category-trend-cache';
 import { naverRequest } from '@/lib/naver/api-client';
 import { scoreProduct, computeOpsDigestSignals, computeRecommendation } from '@/lib/notifications/daily-signals';
 
+export const dynamic = 'force-dynamic';
+// #333 후속 — 8단계 순차 실행(외부 API 다수)이 Hobby 기본 10초를 초과해
+// E-7 도달 전 강제종료되던 것이 미발송 근본원인이었다. E-7은 별도 크론
+// (sourcing-daily)으로 분리했지만 나머지 단계도 여전히 무겁다.
+export const maxDuration = 60;
+
 // ── Auth guard ──────────────────────────────────────────────────────────────
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -152,117 +158,125 @@ export async function GET(req: NextRequest) {
       // best-effort(#82) — 판정 실패가 일일 크론 전체를 막으면 안 된다.
       // 이 경우 아래 status 기준만으로 degrade한다(알림이 아예 안 가는 것보다 낫다).
     }
-    const oosProducts = products.filter(
-      p => p.status === 'OUT_OF_STOCK' || dispositionPendingIds.has(p.id),
-    );
+    try {
+      const oosProducts = products.filter(
+        p => p.status === 'OUT_OF_STOCK' || dispositionPendingIds.has(p.id),
+      );
 
-    if (oosProducts.length > 0) {
-      // Record events for new OOS products (those without a recent event).
-      // ※ 이벤트는 "status가 OUT_OF_STOCK으로 바뀜"의 기록이므로 **status 기준을
-      //   유지**한다. 처분 판정 대상(공급처 단절 등)까지 OOS 이벤트로 남기면
-      //   이벤트의 의미가 흐려진다 — 알림 대상과 이벤트 대상은 다른 축이다.
-      for (const p of oosProducts.filter(x => x.status === 'OUT_OF_STOCK')) {
-        const existing = await prisma.productEvent.findFirst({
-          where: {
-            productId: p.id,
-            type: 'OOS',
-            createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-          },
-        });
-        if (!existing) {
-          await prisma.productEvent.create({
-            data: {
+      if (oosProducts.length > 0) {
+        // Record events for new OOS products (those without a recent event).
+        // ※ 이벤트는 "status가 OUT_OF_STOCK으로 바뀜"의 기록이므로 **status 기준을
+        //   유지**한다. 처분 판정 대상(공급처 단절 등)까지 OOS 이벤트로 남기면
+        //   이벤트의 의미가 흐려진다 — 알림 대상과 이벤트 대상은 다른 축이다.
+        for (const p of oosProducts.filter(x => x.status === 'OUT_OF_STOCK')) {
+          const existing = await prisma.productEvent.findFirst({
+            where: {
               productId: p.id,
               type: 'OOS',
-              oldValue: 'ACTIVE',
-              newValue: 'OUT_OF_STOCK',
-              note: 'Detected by daily cron',
+              createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
             },
           });
+          if (!existing) {
+            await prisma.productEvent.create({
+              data: {
+                productId: p.id,
+                type: 'OOS',
+                oldValue: 'ACTIVE',
+                newValue: 'OUT_OF_STOCK',
+                note: 'Detected by daily cron',
+              },
+            });
+          }
         }
+
+        const stockPayload = oosProducts.map(p => {
+          const score = scoreProduct(p);
+          return {
+            name:          p.name,
+            sku:           p.sku,
+            salePrice:     p.salePrice,
+            honeyScore:    score.total,
+            honeyGrade:    score.grade,
+            netMarginRate: score.netMarginRate,
+            // 실제 품절 지속일(#273) — "3일째 품절"처럼 체감되는 정보를 준다.
+            daysOos:       daysOosById.get(p.id) ?? undefined,
+            alternatives:  [],
+          };
+        });
+
+        const stockResult = await sendDiscord(
+          'STOCK_ALERT',
+          '',
+          [buildStockAlertEmbed({ products: stockPayload })]
+        );
+        results.stockAlert = { sent: stockResult.ok, count: oosProducts.length };
+      } else {
+        results.stockAlert = { sent: false, count: 0, reason: 'no OOS products' };
       }
-
-      const stockPayload = oosProducts.map(p => {
-        const score = scoreProduct(p);
-        return {
-          name:          p.name,
-          sku:           p.sku,
-          salePrice:     p.salePrice,
-          honeyScore:    score.total,
-          honeyGrade:    score.grade,
-          netMarginRate: score.netMarginRate,
-          // 실제 품절 지속일(#273) — "3일째 품절"처럼 체감되는 정보를 준다.
-          daysOos:       daysOosById.get(p.id) ?? undefined,
-          alternatives:  [],
-        };
-      });
-
-      const stockResult = await sendDiscord(
-        'STOCK_ALERT',
-        '',
-        [buildStockAlertEmbed({ products: stockPayload })]
-      );
-      results.stockAlert = { sent: stockResult.ok, count: oosProducts.length };
-    } else {
-      results.stockAlert = { sent: false, count: 0, reason: 'no OOS products' };
+    } catch (e) {
+      results.stockAlertError = e instanceof Error ? e.message.slice(0, 100) : String(e);
     }
 
     // ── 2. Score drop detection ───────────────────────────────────────────
     // Compare current honey score vs stored aiScore (previous snapshot)
-    const scoreDrops: {
-      productName: string;
-      sku: string;
-      oldScore: number;
-      newScore: number;
-      dropAmt: number;
-      reason: string;
-    }[] = [];
+    try {
+      const scoreDrops: {
+        productName: string;
+        sku: string;
+        oldScore: number;
+        newScore: number;
+        dropAmt: number;
+        reason: string;
+      }[] = [];
 
-    for (const p of products) {
-      if (p.aiScore === null || p.aiScore === undefined) continue;
-      const current = scoreProduct(p);
-      const drop = p.aiScore - current.total;
-      if (drop >= 20) {
-        scoreDrops.push({
-          productName: p.name,
-          sku:         p.sku,
-          oldScore:    p.aiScore,
-          newScore:    current.total,
-          dropAmt:     drop,
-          reason:      current.warnings.slice(0, 2).join(' / ') || 'Score recalculation',
-        });
+      for (const p of products) {
+        if (p.aiScore === null || p.aiScore === undefined) continue;
+        const current = scoreProduct(p);
+        const drop = p.aiScore - current.total;
+        if (drop >= 20) {
+          scoreDrops.push({
+            productName: p.name,
+            sku:         p.sku,
+            oldScore:    p.aiScore,
+            newScore:    current.total,
+            dropAmt:     drop,
+            reason:      current.warnings.slice(0, 2).join(' / ') || 'Score recalculation',
+          });
 
-        // Record event
-        const existing = await prisma.productEvent.findFirst({
-          where: {
-            productId: p.id,
-            type: 'SCORE_DROP',
-            createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-          },
-        });
-        if (!existing) {
-          await prisma.productEvent.create({
-            data: {
+          // Record event
+          const existing = await prisma.productEvent.findFirst({
+            where: {
               productId: p.id,
-              type:      'SCORE_DROP',
-              oldValue:  String(p.aiScore),
-              newValue:  String(current.total),
-              note:      `Drop: ${drop}pts`,
+              type: 'SCORE_DROP',
+              createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
             },
           });
+          if (!existing) {
+            await prisma.productEvent.create({
+              data: {
+                productId: p.id,
+                type:      'SCORE_DROP',
+                oldValue:  String(p.aiScore),
+                newValue:  String(current.total),
+                note:      `Drop: ${drop}pts`,
+              },
+            });
+          }
         }
       }
-    }
 
-    if (scoreDrops.length > 0) {
-      const dropResult = await sendDiscord(
-        'KKOTTI_SCORE',
-        '',
-        [buildScoreDropEmbed({ drops: scoreDrops })]
-      );
-      results.scoreDropAlert = { sent: dropResult.ok, count: scoreDrops.length };
-    } else {
-      results.scoreDropAlert = { sent: false, count: 0, reason: 'no score drops >= 20pts' };
+      if (scoreDrops.length > 0) {
+        const dropResult = await sendDiscord(
+          'KKOTTI_SCORE',
+          '',
+          [buildScoreDropEmbed({ drops: scoreDrops })]
+        );
+        results.scoreDropAlert = { sent: dropResult.ok, count: scoreDrops.length };
+      } else {
+        results.scoreDropAlert = { sent: false, count: 0, reason: 'no score drops >= 20pts' };
+      }
+    } catch (e) {
+      results.scoreDropAlertError = e instanceof Error ? e.message.slice(0, 100) : String(e);
     }
 
     // ── 2.5 Operational-event digest (#250 §2) ────────────────────────────
@@ -312,38 +326,53 @@ export async function GET(req: NextRequest) {
     // (섹션 2.5 publishReady/revival/zombie)에서 이미 다룬다.
     //
     // 따라서 이 buildRecommendEmbed(자사 DB 상품 추천) 발송을 KKOTTI_RECOMMEND
-    // 채널에서 제거한다 — 이 발송이 매일 같은 자사 상품을 반복 추천하며 하단
-    // E-7 소싱봇 발송을 사실상 덮어쓰던 원인이었다(같은 채널 이중 발송).
-    // computeRecommendation 산출값은 DB 영속화(섹션 4)에만 계속 쓴다.
+    // 채널에서 제거한다 — 이 발송이 매일 같은 자사 상품을 반복 추천하며
+    // 소싱봇(별도 크론 sourcing-daily로 분리됨) 발송을 사실상 덮어쓰던
+    // 원인이었다(같은 채널 이중 발송). computeRecommendation 산출값은
+    // DB 영속화(섹션 4)에만 계속 쓴다.
     const season = getSeasonContext();
-    const { top5, trendSource, trendKeywords } =
-      await computeRecommendation(products as any, season);
-    results.trends = { source: trendSource, keywords: trendKeywords };
-    results.recommendation = { sent: false, top5Count: top5.length, trendSource, note: 'KKOTTI_RECOMMEND now owned by sourcing bot (E-7)' };
+    let top5: Awaited<ReturnType<typeof computeRecommendation>>['top5'] = [];
+    try {
+      const rec = await computeRecommendation(products as any, season);
+      top5 = rec.top5;
+      results.trends = { source: rec.trendSource, keywords: rec.trendKeywords };
+      results.recommendation = {
+        sent: false,
+        top5Count: top5.length,
+        trendSource: rec.trendSource,
+        note: 'KKOTTI_RECOMMEND now owned by sourcing bot (separate cron: sourcing-daily)',
+      };
+    } catch (e) {
+      results.recommendationError = e instanceof Error ? e.message.slice(0, 100) : String(e);
+    }
 
     // ── 4. Persist today's recommendation to DB ───────────────────────────
-    if (top5.length > 0) {
-      const todayDate = new Date();
-      todayDate.setHours(0, 0, 0, 0);
+    try {
+      if (top5.length > 0) {
+        const todayDate = new Date();
+        todayDate.setHours(0, 0, 0, 0);
 
-      // #62/CURRENT.md §3-2: season_tag 필터가 없으면 같은 날짜의 sourcing
-      // 레코드(sourcing-recommend가 별도로 관리)까지 지운다. 여기서는 daily
-      // 추천 레코드(season_tag != 'sourcing')만 지운다.
-      await prisma.daily_recommendations.deleteMany({
-        where: { date: todayDate, season_tag: { not: 'sourcing' } },
-      });
+        // #62/CURRENT.md §3-2: season_tag 필터가 없으면 같은 날짜의 sourcing
+        // 레코드(sourcing-recommend가 별도로 관리)까지 지운다. 여기서는 daily
+        // 추천 레코드(season_tag != 'sourcing')만 지운다.
+        await prisma.daily_recommendations.deleteMany({
+          where: { date: todayDate, season_tag: { not: 'sourcing' } },
+        });
 
-      await prisma.daily_recommendations.createMany({
-        data: top5.map((item) => ({
-          date:         todayDate,
-          product_name: item.name,
-          honey_score:  item.score,
-          season_tag:   season?.label ?? null,
-          status:       'sent',
-        })),
-      });
+        await prisma.daily_recommendations.createMany({
+          data: top5.map((item) => ({
+            date:         todayDate,
+            product_name: item.name,
+            honey_score:  item.score,
+            season_tag:   season?.label ?? null,
+            status:       'sent',
+          })),
+        });
 
-      results.dbSaved = top5.length;
+        results.dbSaved = top5.length;
+      }
+    } catch (e) {
+      results.dbSavedError = e instanceof Error ? e.message.slice(0, 100) : String(e);
     }
 
     // ── A3-CRON-SYNC: Naver orders sync (added 2026-05-06) ────────────────
@@ -431,31 +460,11 @@ export async function GET(req: NextRequest) {
       results.competitionError = String(compErr);
     }
 
-    // ── E-7: 꼬띠 소싱 추천 (아침 KKOTTI_RECOMMEND 채널의 메인 알림) ──────────
-    // 2026-08-05 운영자 방향 확정: 이 소싱 발굴 추천이 "오늘의 추천" 아침 알림의
-    // 주인공이다(자사 DB 상품 추천은 섹션3에서 채널 발송 제거됨). 따라서 기본
-    // 동작을 "발송"으로 뒤집는다 — SOURCING_RECOMMEND_LIVE를 명시적으로
-    // 'false'로 설정할 때만 dry-run(비상 정지)이고, 미설정/그 외에는 실발송.
-    // 이렇게 해야 운영자가 Vercel에서 아무 설정을 안 해도 내일 아침부터 개선된
-    // 소싱봇이 정상 발송된다(교체가 실질적으로 완료됨).
-    try {
-      const sourcingPaused = process.env.SOURCING_RECOMMEND_LIVE === 'false';
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-      const srcRes = await fetch(`${baseUrl}/api/sourcing-recommend`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discord: true, dryRun: sourcingPaused }),
-      });
-      const srcData = await srcRes.json();
-      results.sourcingRecommend = {
-        dryRun: sourcingPaused,
-        sent: srcData.discordSent ?? false,
-        opportunities: srcData.opportunityCount ?? 0,
-        excludedCount: srcData.excludedCount ?? 0,
-      };
-    } catch (srcErr) {
-      results.sourcingRecommendError = String(srcErr);
-    }
+    // E-7(꼬띠 소싱 추천)은 2026-08-08 별도 크론(`/api/cron/sourcing-daily`,
+    // 동일 시각 0 23 * * *)으로 분리됐다(#333 후속) — 여기서 순차 실행하면
+    // 앞 단계 누적 지연으로 Hobby maxDuration을 초과해 아예 발송되지 않던
+    // 문제의 근본원인이었다. 로직은 src/app/api/cron/sourcing-daily/route.ts
+    // 참조. 이 파일에서는 완전히 제거(중복 발송 방지).
 
     // Sprint 7 P0-B enhancement: refresh DataLab category trend cache.
     // Powers the golden-window-tracker market context. Failure is non-fatal.
@@ -477,5 +486,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }
-
-export const dynamic = 'force-dynamic';

@@ -1,19 +1,26 @@
-# 현재 인계 (CURRENT) — 2026-08-08 세션 (아침 소싱 알림 미발송 이슈 — Code 조사 완료, 원인 확정 대기)
+# 현재 인계 (CURRENT) — 2026-08-08 세션 (아침 소싱 알림 미발송 — 원인 확정 + Code 수정 실행 완료, 배포 후 대시보드 확인 대기)
 
 > 다음 세션은 이 파일 → 해당 트랙 설계문서 → `PRINCIPLES_LEARNED.md` 순으로 읽고 시작.
 
-- **status**: **🚨 긴급 — 매일 아침 8시 꼬띠 소싱 추천 디스코드 알림 미발송. Code 조사 완료, 원인 후보 2개(코드 결함 확정 + 크론 미호출 의심) 확인. 코드 수정은 운영자 승인 대기 중(미실행).** 트랙③은 이전 세션에 전 과정 완료.
-- **branch**: `main` (HEAD `cd6c327`, 전부 push, 동기화 0/0)
-- **배포 상태**: 문서 커밋만, 프로덕션 영향 없음(코드 미변경). 단 **STEP0 verify-vercel-deploy.sh가 MISMATCH 보고 중** — production 배포 SHA(`1738ab8`)가 HEAD(`cd6c327`)보다 1커밋 뒤(github-deployments 기록 지연, 문서 전용 커밋이라 코드 영향은 없어 보이나 다음 세션 STEP0에서 재확인 필요).
+- **status**: **🚨 긴급(수정 완료, 확인 대기) — 매일 아침 8시 꼬띠 소싱 추천 디스코드 알림 미발송. 원인 확정(Hobby maxDuration 미설정 + 순차실행 지연으로 E-7 도달 전 타임아웃) → Code가 5단계 실행 지시 전부 완료·push.** 실제 발송 검증은 다음 정규 스케줄(내일 08:00 KST) 또는 운영자 승인 하 수동 Run으로 확인 필요. 트랙③은 이전 세션에 전 과정 완료.
+- **branch**: `main` (HEAD는 이번 세션 커밋 참조, 전부 push, 동기화 0/0)
+- **배포 상태**: 코드 변경 포함 커밋 push 완료. **다음 세션 STEP0에서 반드시 확인**: ① prod deploy SHA==HEAD 일치 여부, ② Vercel 대시보드 Cron Jobs 탭에 `/api/cron/sourcing-daily` 신규 크론이 정상 등록됐는지(Hobby 슬롯 상한 이슈 없었는지).
 
-**★★ 긴급 이슈: 아침 소싱 알림 미발송 — Code 조사 결과 (2026-08-08, 상세는 `docs/handoff/CODE_DAILY_CRON_FIX_RESULT_2026-08-08.md`)**
+**★★ 긴급 이슈: 아침 소싱 알림 미발송 — 원인 확정 + 수정 실행 완료 (2026-08-08)**
 
-- **확정 사실 1 — route.ts 구조 결함**: `cron/daily/route.ts`의 11개 섹션 중 **섹션 1(후반부)·2·3·4가 개별 try-catch 없이 공통 try-catch에만 의존**. 이 중 하나라도 예외 발생 시 하단의 E-7(소싱 추천, 434행)까지 아예 도달 못 하고 500 반환.
-- **확정 사실 2 — maxDuration 미설정**: `cron/daily/route.ts`에 `export const maxDuration`이 없어 Hobby 기본 10초로 동작. 내부에서 self-fetch하는 `/api/sourcing-recommend`도 동일하게 미설정이며, 그 내부(`sourcing-recommender.ts`)에 300ms·500ms 하드코딩 딜레이가 있어 이 서브루틴만으로 수 초 이상 소요 가능. E-7은 11개 섹션 중 뒤에서 2번째라 타임아웃에 가장 취약.
-- **신규 발견(계획서에 없던 추가 조사, Vercel Runtime Logs 직접 조회)**: **지난 7일간 등록된 크론잡 5개 전부(daily/weekly/inventory-sync/order-sync/asset-integrity-sweep) 예정 스케줄 시각에 실행된 로그가 하나도 없음.** 유일한 `/api/cron/daily` 로그 1건(200)도 크론 예정 시각이 아닌 것으로 보아 수동 테스트로 추정. 프로젝트 전체 7일 로그에 4xx/5xx도 0건 — Function 레벨(runtime logs)에 도달하기 전 엣지 단에서 조용히 막혔을 가능성. 프로젝트의 **SSO Protection(Vercel Authentication)이 `all_except_custom_domains`로 활성화**돼 있음을 확인 — `kkotium-garden.vercel.app`이 이 보호 대상에 포함되는지, Vercel Cron이 이를 자동 우회하는지는 **미확정(대시보드 직접 확인 필요, MCP로 확인 불가)**.
-- **미확인**: `SOURCING_RECOMMEND_LIVE` 실제 프로덕션 값 — MCP 도구에 환경변수 값 조회 기능이 없어 확인 못함(우선순위 낮음 — 크론이 함수까지 도달 안 하면 이 값은 무관).
-- **다음 액션(운영자/Desktop)**: ① Vercel 대시보드 → Cron Jobs 탭 "Recent Invocations" 직접 확인(MCP로 못 본 유일한 데이터 — "시도했지만 실패" vs "시도 자체 없음" 구분 가능). ② Settings → Deployment Protection에서 SSO Protection이 프로덕션 도메인에 실제 적용되는지 확인. ③ 원인 확정 후 Code가 §5 권고 수정(maxDuration 추가 + 섹션별 try-catch 격리) 진행.
-- **실제 Discord 발송 테스트는 이번 세션 미실행**(운영자/Desktop 승인 필요, Code가 임의로 안 함).
+**원인 확정 경위**: Code 1차 조사에서 SSO Deployment Protection이 크론을 막고 있을 가능성을 제기했으나(1차 조사 결과), **Desktop이 curl 직접 실측으로 이 가설을 기각**했다 — `curl -sI https://kkotium-garden.vercel.app/` → 200(SSO라면 막혔어야 함), `/api/cron/daily` → 401이지만 Vercel 로그인 페이지가 아니라 **앱 코드의 JSON 401**(`isAuthorized()`가 CRON_SECRET 불일치로 반환). 즉 인증 게이트가 아니라 앱 로직이 정상 동작 중이었다는 뜻. 운영자가 대시보드 "Run"으로 마진-가격 메시지(opsDigest)까지는 받았다는 사실과도 부합 — **원인은 최초 가설(Hobby maxDuration 미설정 + 8단계 순차 실행 지연)로 최종 확정**됐다(교훈 #310 재확인: UI 설정 문구보다 curl 실측이 우선).
+
+**Code 수정 실행 완료(이번 세션, 상세는 `docs/handoff/CODE_DAILY_CRON_FIX_RESULT_2026-08-08.md` §7)**:
+1. `cron/daily/route.ts`에 `maxDuration = 60` 추가.
+2. **E-7(소싱 추천)을 독립 크론으로 분리** — 신규 `src/app/api/cron/sourcing-daily/route.ts`(동일 스케줄 `0 23 * * *`) + `vercel.json` 신규 엔트리. 기존 `cron/daily`에서 E-7 블록 완전 삭제(중복 발송 방지 확인).
+3. 무보호였던 4개 섹션(OOS 후반부·점수하락·추천산출·DB영속화)에 개별 try-catch 추가 — 이제 `cron/daily`의 모든 섹션이 격리돼 한 섹션 실패가 나머지를 막지 않음.
+4. `npx tsc --noEmit` 0 errors · `npm run build` exit 0 확인(두 크론 함수 모두 정상 포함).
+5. 커밋·push 완료.
+
+**미확인(운영자/Desktop 배포 후 확인 필요)**:
+- Vercel 대시보드 Cron Jobs 탭에서 `sourcing-daily` 신규 크론이 실제 등록됐는지(Hobby 크론 슬롯이 5개→6개로 늘어 상한에 걸렸을 가능성 — 로컬 build는 통과했으나 Vercel 배포 단계의 슬롯 검증은 대시보드에서만 확인 가능).
+- **실제 Discord 발송 테스트는 이번 세션 미실행**(지시 그대로 — 운영자/Desktop 승인 필요). 내일 아침 정규 스케줄에서 자연 검증되거나, 승인 하 수동 Run으로 앞당겨 확인 가능.
+- `SOURCING_RECOMMEND_LIVE` 실제 프로덕션 값은 여전히 대시보드 직접 확인 필요(우선순위 낮음 — 미설정 시 기본이 실발송이므로 이 값이 막고 있었을 가능성은 낮음).
 
 **★ 방침 변경(2026-08-08, 운영자 지시)**: 별도 지시 전까지 **Claude Code·Desktop 병렬 위주**, Cowork는 가능한 경우에만 추가 활용.
 
@@ -29,7 +36,7 @@
 **★ 신규 설계 확정(구현 대기)**: `docs/design/KKOTTI_DAILY_SOURCING_V2_2026-08-07.md` — 꼬띠 데일리 소싱 추천을 다중 발굴 렌즈(급상승·시즌선점·니치·블루오션·꿀통·황금·스테디+레드오션경고) × 공급사 매칭으로 개편. 도매매 API `id` 파라미터로 공급사별 상품 조회 실측 확인. 품절 대체상품 연계 포함.
 
 **★ 운영자 승인 대기**:
-- 아침 소싱 알림 미발송 — 원인 확정 + 수정 실행 승인(위 긴급 이슈 섹션)
+- 아침 소싱 알림 — 대시보드에서 `sourcing-daily` 크론 등록 확인 + 실제 발송 검증(위 긴급 이슈 섹션)
 - Code② 주간리포트 실제 Discord 채널 육안 확인 (실발송 필요)
 - git stash `z3c-misdirected-changes-needs-redo` 처리 방향
 - 꼬띠 소싱 v2 구현 착수 우선순위(로드맵 1·1b~6, 문서 §7)
@@ -82,7 +89,9 @@
 
 ## 5. 다음 세션 시작 순서
 ```
-1. [확인] 아침 소싱 알림 미발송 — 위 긴급 이슈 §의 "다음 액션" 3가지(Cron Jobs Recent Invocations · Deployment Protection · SOURCING_RECOMMEND_LIVE) 운영자/Desktop 확인 결과 수신 → 원인 확정 → Code에 수정 지시
+1. [최우선 확인] 아침 소싱 알림 — Vercel 대시보드 Cron Jobs 탭에서 sourcing-daily 등록 확인
+   → 문제 없으면 다음 08:00 KST 정규 스케줄에서 자연 발송 확인, 급하면 운영자 승인 하 수동 Run
+   → 발송 확인되면 이 이슈 종결(§CURRENT 상단 긴급 표기 해제)
 2. [수신] Code②·Cowork③ 결과 인계 확인(각 핸드오프 파일 + 채팅 인계)
    - Code②: cron/weekly 소싱 섹션 커밋 SHA·검증 결과 확인 → 필요시 Desktop이 테스트 데이터 주입해 실발송 검증(운영자 승인 하)
    - Cowork③: KEYWORD_CATEGORY_PRECISION 설계 문서 검토 → 구현 착수 여부 결정
@@ -101,7 +110,9 @@
 | **빈 괄호 근본수정 (#325)** | 0168591 | ✅ 프로덕션 검증 |
 | 아침 소싱 알림 미발송 — 진단+Code 인계 | 1738ab8 | ✅ 인계 완료 |
 | 아침 소싱 알림 미발송 — CURRENT.md 긴급 기록 | cd6c327 | ✅ |
-| **아침 소싱 알림 미발송 — Code 조사 완료(원인 후보 확정, 크론 미호출 의심 신규 발견)** | (이번 세션, 아래 참조) | ✅ 조사·문서화, 수정은 승인 대기 |
+| 아침 소싱 알림 미발송 — Code 조사 완료(원인 후보 확정, 크론 미호출 의심 신규 발견) | 7b2f19f | ✅ 조사·문서화 |
+| 아침 소싱 알림 미발송 — Desktop curl 실측으로 SSO 기각, 타임아웃 원인 최종 확정 | c00b121 | ✅ |
+| **아침 소싱 알림 미발송 — Code 수정 실행 완료(maxDuration+크론분리+try-catch격리)** | (이번 세션) | ✅ tsc0·build0, push 완료. 실발송 검증만 대기 |
 
 ## 7. 절대 금지 + 교훈
 - 네이버 PUT/POST → 운영자 GO 없이 금지 · 자동발행 영구금지(#307)
@@ -112,3 +123,5 @@
 - 병렬 배분은 write set 겹침 0 확인 후(#322) · 범위 밖 파일 수정 금지(#97)
 - dev 서버: 이번 세션 kill 완료(포트 3000 비어있음)
 - **크론잡 진단 시 Vercel MCP `get_runtime_logs`/`get_runtime_errors`로 실제 invocation 유무를 직접 조회 가능**(로그 보관이 대시보드 UI 표기(1시간)보다 API는 더 길게(최소 7일) 조회됨) — "대시보드에 Enabled로 보임"과 "실제로 매일 실행됨"은 별개이므로 다음부터 크론 미실행 의심 시 이 방법을 1순위로 사용.
+- **UI 설정 화면 문구보다 curl 실측이 항상 우선**(#310 재확인) — SSO Protection 가설도 대시보드 문구만으로 확정했다가 curl로 기각된 사례. 인증/권한 관련 원인 추정은 반드시 실제 요청 결과로 재검증할 것.
+- **무거운 순차 크론은 무거운 하위 작업을 독립 크론으로 쪼개는 게 근본 해법**(#333 후속) — try-catch로 예외 전파만 막아서는 타임아웃 자체는 못 막는다(catch는 예외에만 작동, 강제종료엔 무력). 같은 시각(`0 23 * * *`) 크론을 여러 path로 등록하면 Vercel이 각각 독립 함수로 실행해준다.
