@@ -78,6 +78,33 @@ Code가 §추가조사에서 "SSO Protection이 원인일 수 있으나 단정 �
 
 ---
 
+## ★★★★★ 정정 (2026-08-08, Desktop curl 직접 실측 — 위 SSO 가설 기각)
+
+**바로 위 "★★★★ 최종 확정"의 SSO 원인 지목을 철회한다.** UI 문구만 보고 성급히 확정했던 것을 curl 실측으로 재검증했다:
+
+```
+curl -sI https://kkotium-garden.vercel.app/               → HTTP/2 200 (정상, SSO라면 막혔어야 함)
+curl -sI https://kkotium-garden.vercel.app/api/cron/daily → HTTP/2 401, content-type: application/json
+```
+
+`/`가 200으로 정상 응답한 것은 **SSO Protection이 실제로 이 도메인에 걸려있지 않음**을 뜻한다(Standard Protection이 걸려있다면 홈페이지도 로그인 리다이렉트를 받아야 한다). `/api/cron/daily`의 401은 Vercel 로그인 페이지(HTML)가 아니라 **애플리케이션 코드의 JSON 401**(`isAuthorized()`가 `CRON_SECRET` 불일치로 반환한 것) — 인증 헤더 없는 curl 요청이 정상적으로 막힌 것뿐이다.
+
+**교훈(#310 재확인)**: UI 설정 화면의 문구·툴팁은 실제 동작의 증거가 아니다. curl/실제 요청 결과가 항상 우선한다. 이번엔 이 원칙을 스스로 어기고 대시보드 문구만으로 결론 내렸다가 정정하게 됐다.
+
+**따라서 원인은 다시 최초 가설(타임아웃/실행순서)로 되돌아간다.** 운영자가 "Run"으로 마진-가격 메시지를 받은 것은 **인증은 정상 통과했고 크론이 실제로 실행됐다**는 뜻이며, opsDigest(2.5)까지는 갔지만 그 뒤 E-7(소싱 추천)에 도달하지 못했다는 최초 관찰은 그대로 유효하다.
+
+## ★★★★★ 실행 지시 확정 (Code, 지금 바로 진행)
+
+1. `cron/daily/route.ts`에 `export const maxDuration = 60;` 추가(다른 크론들처럼 명시 — inventory-sync=60초 참고, Hobby 상한 확인).
+2. **E-7(소싱 추천) 블록을 독립 크론으로 분리**: `vercel.json`에 `/api/cron/sourcing-daily` 신규 엔트리(`0 23 * * *`, 기존 daily와 동일 시각 — Vercel은 서로 다른 path면 별개 함수라 독립 실행됨). 새 route 파일에 E-7 로직(434~458행) 이전 + `isAuthorized` 가드 동일 적용. 기존 `cron/daily`에서는 E-7 블록 제거(중복 발송 방지).
+3. 섹션 1(OOS 후반부)·2(점수하락)·3(추천산출)·4(DB영속화)에 개별 try-catch 추가(Code §1 표에서 무보호로 확인된 4곳) — `results.xxxError` 패턴으로 통일.
+4. tsc 0 · build 0 확인 후 커밋·push.
+5. 배포 후 Vercel Cron Jobs 탭에서 신규 크론(`sourcing-daily`) 등록 확인(Hobby 슬롯 상한 걸리면 즉시 보고).
+6. **실제 Discord 발송 테스트는 운영자 승인 필요** — 신규 크론 "Run" 테스트 전 채팅으로 확인 요청.
+
+---
+
+
 
 매일 아침 8시(KST) 오는 "꼬띠의 소싱 추천" 디스코드 알림이 최근 안 옴.
 
