@@ -43,9 +43,42 @@ Desktop이 즉시 DB 교차검증: 수동 Run 이후에도 `sourcing_opportunity
 2. 무거운 것(외부 API 반복 호출: 자동품절·네이버동기화·경쟁모니터링·소싱추천)과 가벼운 것(DB 조회 기반: OOS·점수하락·opsDigest)을 분리
 3. 무거운 섹션들을 각각 독립 크론으로 분산하거나, 최소한 소싱 추천(E-7)만이라도 최우선으로 분리
 
+## ★★★★ 최종 확정 (2026-08-08, Desktop Vercel 대시보드 직접 확인 — Code의 SSO 의심을 확정으로 승격)
+
+Code가 §추가조사에서 "SSO Protection이 원인일 수 있으나 단정 못함"이라 정직하게 남긴 부분을 Desktop이 브라우저로 직접 확인해 **확정**했다.
+
+**Vercel 대시보드 → Settings → Deployment Protection → Vercel Authentication**:
+- **"Require Log In" = 켜짐(Standard Protection)**
+- 드롭다운 툴팁 원문: **"Standard Protection — Protect all except production **Custom Domains** for your project."**
+- 이 프로젝트의 프로덕션 주소는 `kkotium-garden.vercel.app` — **이건 Custom Domain이 아니라 Vercel이 자동 발급한 기본 도메인**이다. 즉 "production Custom Domains" 예외에 해당하지 않는다.
+
+**결론**: **프로덕션 자체가 Vercel Authentication에 걸려 있다.** Vercel 공식 문서(Deployment Protection 관련 여러 문서 확인, 2026-08-08 웹서치)를 종합하면, 이 보호를 우회하는 공식 경로는 다음뿐이다:
+- 로그인한 팀원/프로젝트 멤버/접근그룹 멤버
+- Shareable Link 소지자
+- **"Protection Bypass for Automation" 헤더(`x-vercel-protection-bypass`)를 실은 요청**
+- Trusted Sources의 OIDC 토큰(다른 Vercel 프로젝트/외부 서비스용)
+
+**Vercel Cron이 이 보호를 "자동으로" 우회한다는 명시적 공식 문서는 찾지 못했다.** 이게 Code가 발견한 "5개 크론 전부 7일간 실행 로그 0건, 4xx/5xx 에러도 0건"과 정확히 부합한다 — 크론 요청이 Function(runtime logs가 잡는 지점)에 도달하기도 전에 Vercel 엣지의 인증 게이트에서 조용히 리다이렉트/차단되고 있을 가능성이 매우 높다.
+
+**이게 사실이라면 지금까지의 모든 코드 레벨 원인(try-catch 구조·maxDuration·타임아웃)은 부차적이다** — 크론이 함수에 진입도 못 하면 그 안의 로직이 아무리 정확해도 무의미하다. 다만 타임아웃/try-catch 문제는 **SSO를 해결한 뒤에도 여전히 잠재 위험**이므로 함께 고쳐야 한다(§근본 수정 방향, 아래 유지).
+
+## ★★★★ 최종 해결책 (2가지 옵션, 운영자 승인 필요 — Code가 임의 실행 금지)
+
+**옵션 A — Vercel Authentication 끄기 (가장 간단, 보안 트레이드오프 있음)**
+- 대시보드에서 "Require Log In" 토글 OFF.
+- 장점: 즉시 해결, 코드 변경 0.
+- 단점: **프리뷰 배포까지 전부 공개**된다(현재는 프리뷰도 보호되고 있었다는 뜻이므로, 꺼지면 프리뷰 URL을 아는 사람은 누구나 접근 가능). 프로덕션 API도 전부 공개 상태가 된다(이미 CRON_SECRET으로 크론 API는 보호되고 있으니 그 자체는 안전하나, 다른 미보호 API가 있는지 점검 필요).
+
+**옵션 B — Protection Bypass for Automation 시크릿 사용 (권장, 안전)**
+- 대시보드에서 시크릿 발급(Settings → Deployment Protection → Protection Bypass for Automation).
+- Vercel Cron 요청에 이 시크릿이 자동으로 실리는지 확인 필요 — **Vercel 공식 문서에 "Vercel이 내부적으로 생성하는 크론 요청에 이 헤더를 자동으로 붙이는지"가 명시돼 있는지 Code가 재확인**. 만약 자동으로 안 붙는다면, 이 시크릿을 코드에서 알 방법이 없으므로 이 옵션은 실질적으로 무의미할 수 있다(자체 조사 필요).
+- 대안: `SOURCING_RECOMMEND_LIVE` 등 CRON_SECRET 패턴처럼, Vercel이 크론 요청에 자동으로 붙이는 `Authorization: Bearer $CRON_SECRET` 헤더 자체가 이미 있는데도 SSO가 그 앞단에서 막는다면, **커스텀 도메인을 하나 연결하는 게 근본 해법**일 수 있다(Custom Domain 예외 조항을 활용). 도메인이 없다면 이 방법은 비용/시간이 든다.
+
+**Code에게 요청**: 옵션 A/B 각각의 실현 가능성(특히 B의 "크론이 자동으로 bypass 헤더를 갖는지")을 Vercel 공식 문서로 추가 확인하고, 장단점을 정리해 운영자가 선택할 수 있게 제시할 것. **직접 설정을 바꾸지 말고 확인 결과만 보고.**
+
 ---
 
-## 1. 증상 (참고용 — 원인은 위에서 확정됨)
+
 매일 아침 8시(KST) 오는 "꼬띠의 소싱 추천" 디스코드 알림이 최근 안 옴.
 
 ## 2. Desktop이 이미 확인한 사실 (중복 조사 불필요)
