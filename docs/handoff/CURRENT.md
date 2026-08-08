@@ -1,17 +1,19 @@
-# 현재 인계 (CURRENT) — 2026-08-08 세션 (아침 소싱 알림 미발송 이슈 진단 → Code 인계)
+# 현재 인계 (CURRENT) — 2026-08-08 세션 (아침 소싱 알림 미발송 이슈 — Code 조사 완료, 원인 확정 대기)
 
 > 다음 세션은 이 파일 → 해당 트랙 설계문서 → `PRINCIPLES_LEARNED.md` 순으로 읽고 시작.
 
-- **status**: **🚨 긴급 — 매일 아침 8시 꼬띠 소싱 추천 디스코드 알림 미발송 이슈 발견·진단·Code 인계 완료.** 트랙③은 이전 세션에 전 과정 완료.
-- **branch**: `main` (HEAD `1738ab8`, 전부 push, 동기화 0/0)
-- **배포 상태**: 문서 커밋만, 프로덕션 영향 없음(원인 확정 전이라 코드 미변경)
+- **status**: **🚨 긴급 — 매일 아침 8시 꼬띠 소싱 추천 디스코드 알림 미발송. Code 조사 완료, 원인 후보 2개(코드 결함 확정 + 크론 미호출 의심) 확인. 코드 수정은 운영자 승인 대기 중(미실행).** 트랙③은 이전 세션에 전 과정 완료.
+- **branch**: `main` (HEAD `cd6c327`, 전부 push, 동기화 0/0)
+- **배포 상태**: 문서 커밋만, 프로덕션 영향 없음(코드 미변경). 단 **STEP0 verify-vercel-deploy.sh가 MISMATCH 보고 중** — production 배포 SHA(`1738ab8`)가 HEAD(`cd6c327`)보다 1커밋 뒤(github-deployments 기록 지연, 문서 전용 커밋이라 코드 영향은 없어 보이나 다음 세션 STEP0에서 재확인 필요).
 
-**★★ 긴급 이슈: 아침 소싱 알림 미발송(운영자 신고, 2026-08-08)**
-- 진단(Desktop, Vercel 대시보드 직접 확인): Cron Jobs Enabled·`/api/cron/daily` 정상 등록(`0 23 * * *` UTC = 08:00 KST). **단 Hobby 플랜 로그 보관이 최대 1시간이라 어젯밤 크론이 실제로 호출됐는지 로그로 직접 확인 불가.**
-- DB 교차검증: 8/7 소싱 레코드가 크론 예정 시각이 아니라 Desktop의 낮 수동 스캔 시각에만 생성 — 크론 경로 생성 흔적 없음.
-- 원인 후보(미확정): 앞쪽 섹션 예외로 인한 조기 종료, 또는 Hobby 함수 타임아웃(10초) 안에 여러 외부 API 순차호출이 다 못 끝나 E-7(순서상 후반)이 잘렸을 가능성.
-- **Code 인계 완료**: `docs/handoff/CODE_DAILY_CRON_FIX_HANDOFF_2026-08-08.md` — 조사범위·확인방법·근본수정 방향 명시. **실제 Discord 발송 테스트는 운영자/Desktop 승인 필요**(Code가 임의로 안 함).
-- **운영자 결정 대기**: Vercel 대시보드 "Run" 버튼으로 지금 수동 실행해 볼지(아침 알림 중복 가능성 있음).
+**★★ 긴급 이슈: 아침 소싱 알림 미발송 — Code 조사 결과 (2026-08-08, 상세는 `docs/handoff/CODE_DAILY_CRON_FIX_RESULT_2026-08-08.md`)**
+
+- **확정 사실 1 — route.ts 구조 결함**: `cron/daily/route.ts`의 11개 섹션 중 **섹션 1(후반부)·2·3·4가 개별 try-catch 없이 공통 try-catch에만 의존**. 이 중 하나라도 예외 발생 시 하단의 E-7(소싱 추천, 434행)까지 아예 도달 못 하고 500 반환.
+- **확정 사실 2 — maxDuration 미설정**: `cron/daily/route.ts`에 `export const maxDuration`이 없어 Hobby 기본 10초로 동작. 내부에서 self-fetch하는 `/api/sourcing-recommend`도 동일하게 미설정이며, 그 내부(`sourcing-recommender.ts`)에 300ms·500ms 하드코딩 딜레이가 있어 이 서브루틴만으로 수 초 이상 소요 가능. E-7은 11개 섹션 중 뒤에서 2번째라 타임아웃에 가장 취약.
+- **신규 발견(계획서에 없던 추가 조사, Vercel Runtime Logs 직접 조회)**: **지난 7일간 등록된 크론잡 5개 전부(daily/weekly/inventory-sync/order-sync/asset-integrity-sweep) 예정 스케줄 시각에 실행된 로그가 하나도 없음.** 유일한 `/api/cron/daily` 로그 1건(200)도 크론 예정 시각이 아닌 것으로 보아 수동 테스트로 추정. 프로젝트 전체 7일 로그에 4xx/5xx도 0건 — Function 레벨(runtime logs)에 도달하기 전 엣지 단에서 조용히 막혔을 가능성. 프로젝트의 **SSO Protection(Vercel Authentication)이 `all_except_custom_domains`로 활성화**돼 있음을 확인 — `kkotium-garden.vercel.app`이 이 보호 대상에 포함되는지, Vercel Cron이 이를 자동 우회하는지는 **미확정(대시보드 직접 확인 필요, MCP로 확인 불가)**.
+- **미확인**: `SOURCING_RECOMMEND_LIVE` 실제 프로덕션 값 — MCP 도구에 환경변수 값 조회 기능이 없어 확인 못함(우선순위 낮음 — 크론이 함수까지 도달 안 하면 이 값은 무관).
+- **다음 액션(운영자/Desktop)**: ① Vercel 대시보드 → Cron Jobs 탭 "Recent Invocations" 직접 확인(MCP로 못 본 유일한 데이터 — "시도했지만 실패" vs "시도 자체 없음" 구분 가능). ② Settings → Deployment Protection에서 SSO Protection이 프로덕션 도메인에 실제 적용되는지 확인. ③ 원인 확정 후 Code가 §5 권고 수정(maxDuration 추가 + 섹션별 try-catch 격리) 진행.
+- **실제 Discord 발송 테스트는 이번 세션 미실행**(운영자/Desktop 승인 필요, Code가 임의로 안 함).
 
 **★ 방침 변경(2026-08-08, 운영자 지시)**: 별도 지시 전까지 **Claude Code·Desktop 병렬 위주**, Cowork는 가능한 경우에만 추가 활용.
 
@@ -26,7 +28,8 @@
 
 **★ 신규 설계 확정(구현 대기)**: `docs/design/KKOTTI_DAILY_SOURCING_V2_2026-08-07.md` — 꼬띠 데일리 소싱 추천을 다중 발굴 렌즈(급상승·시즌선점·니치·블루오션·꿀통·황금·스테디+레드오션경고) × 공급사 매칭으로 개편. 도매매 API `id` 파라미터로 공급사별 상품 조회 실측 확인. 품절 대체상품 연계 포함.
 
-**★ 운영자 승인 대기(변동 없음)**:
+**★ 운영자 승인 대기**:
+- 아침 소싱 알림 미발송 — 원인 확정 + 수정 실행 승인(위 긴급 이슈 섹션)
 - Code② 주간리포트 실제 Discord 채널 육안 확인 (실발송 필요)
 - git stash `z3c-misdirected-changes-needs-redo` 처리 방향
 - 꼬띠 소싱 v2 구현 착수 우선순위(로드맵 1·1b~6, 문서 §7)
@@ -79,7 +82,7 @@
 
 ## 5. 다음 세션 시작 순서
 ```
-1. [확인] 0168591까지 전부 배포 READY(Vercel) — 이미 프로덕션 검증 완료
+1. [확인] 아침 소싱 알림 미발송 — 위 긴급 이슈 §의 "다음 액션" 3가지(Cron Jobs Recent Invocations · Deployment Protection · SOURCING_RECOMMEND_LIVE) 운영자/Desktop 확인 결과 수신 → 원인 확정 → Code에 수정 지시
 2. [수신] Code②·Cowork③ 결과 인계 확인(각 핸드오프 파일 + 채팅 인계)
    - Code②: cron/weekly 소싱 섹션 커밋 SHA·검증 결과 확인 → 필요시 Desktop이 테스트 데이터 주입해 실발송 검증(운영자 승인 하)
    - Cowork③: KEYWORD_CATEGORY_PRECISION 설계 문서 검토 → 구현 착수 여부 결정
@@ -96,6 +99,9 @@
 | 문서 rev107 (누적정리+3레인 배분) | 83db0a1 | ✅ |
 | **도매처 코드 한글화 (#317)** | befcb72 | ✅ 프로덕션 검증 |
 | **빈 괄호 근본수정 (#325)** | 0168591 | ✅ 프로덕션 검증 |
+| 아침 소싱 알림 미발송 — 진단+Code 인계 | 1738ab8 | ✅ 인계 완료 |
+| 아침 소싱 알림 미발송 — CURRENT.md 긴급 기록 | cd6c327 | ✅ |
+| **아침 소싱 알림 미발송 — Code 조사 완료(원인 후보 확정, 크론 미호출 의심 신규 발견)** | (이번 세션, 아래 참조) | ✅ 조사·문서화, 수정은 승인 대기 |
 
 ## 7. 절대 금지 + 교훈
 - 네이버 PUT/POST → 운영자 GO 없이 금지 · 자동발행 영구금지(#307)
@@ -105,3 +111,4 @@
 - GET 목록 조회는 "최신 1회분"(#331) · 누적은 N일 보관 정리(#331 후속)
 - 병렬 배분은 write set 겹침 0 확인 후(#322) · 범위 밖 파일 수정 금지(#97)
 - dev 서버: 이번 세션 kill 완료(포트 3000 비어있음)
+- **크론잡 진단 시 Vercel MCP `get_runtime_logs`/`get_runtime_errors`로 실제 invocation 유무를 직접 조회 가능**(로그 보관이 대시보드 UI 표기(1시간)보다 API는 더 길게(최소 7일) 조회됨) — "대시보드에 Enabled로 보임"과 "실제로 매일 실행됨"은 별개이므로 다음부터 크론 미실행 의심 시 이 방법을 1순위로 사용.

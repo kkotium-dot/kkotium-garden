@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-07 (rev113 — 트랙③ 2단계 표시부 프로덕션 검증 완료 · Desktop) / 직전 rev112 — 트랙③ 1단계 카테고리 정밀화 구현 완료 · Code
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-08 (rev114 — 아침 소싱 알림 미발송 원인 조사 완료 · Code) / 직전 rev113 — 트랙③ 2단계 표시부 프로덕션 검증 완료 · Desktop
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -6,6 +6,24 @@
 
 
 > **📦 rev80 이전은 archive로 분할됨(#31, 2026-07-28)**: `docs/plan/archive/PARALLEL_WORK_TRACKER_~rev80.md` 참조(rev51~rev80, 삭제 0).
+
+## rev114 — 아침 소싱 알림(E-7) 미발송 — 원인 조사 완료, 신규 발견(크론 미호출 의심) (2026-08-08 Code)
+
+**배경**: 매일 아침 8시(KST) 오는 꼬띠 소싱 추천 디스코드 알림 미발송(운영자 신고). Desktop 인계문서(`docs/handoff/CODE_DAILY_CRON_FIX_HANDOFF_2026-08-08.md`) — 원인 후보: 앞 섹션 예외로 조기종료, 또는 Hobby 10초 타임아웃.
+
+**확정 사실 1 — route.ts 구조 결함**: `cron/daily/route.ts`(11개 섹션, 공통 try-catch 1개)에서 섹션 1(후반부)·2·3·4가 개별 try-catch 없이 무보호. 이 중 하나라도 예외 시 하단 E-7(434행)까지 도달 못하고 500 반환.
+
+**확정 사실 2 — maxDuration 미설정**: `cron/daily/route.ts`에 `maxDuration` 없음(Hobby 기본 10초). 동일 저장소 타 크론(inventory-sync 60초·asset-integrity-sweep 300초)은 명시 설정돼 있는데 daily만 누락. 내부 self-fetch하는 `/api/sourcing-recommend`도 미설정, 그 내부(`sourcing-recommender.ts`)에 300ms·500ms 하드코딩 딜레이 다수 — E-7은 뒤에서 2번째 섹션이라 타임아웃에 가장 취약.
+
+**★★ 신규 발견(계획서 범위 밖, Vercel Runtime Logs MCP 직접 조회)**: 등록된 크론잡 5개(daily/weekly/inventory-sync/order-sync/asset-integrity-sweep) 전부 **지난 7일간 예정 스케줄 시각에 실행된 로그가 0건**. 유일한 `/api/cron/daily` 로그 1건(200)도 예정 시각이 아니라 수동 테스트로 추정. 프로젝트 전체 7일 로그에 4xx/5xx도 0건 — Function 레벨(runtime logs) 도달 전 엣지 단 차단 가능성. `get_project_deployment_protection` 조회 결과 **SSO Protection이 `all_except_custom_domains`로 활성화** 확인 — `kkotium-garden.vercel.app`이 대상 포함되는지, Vercel Cron이 이를 자동우회하는지는 미확정(대시보드 직접 확인 필요, MCP 도구 한계).
+
+**미확인**: `SOURCING_RECOMMEND_LIVE` 실제 프로덕션 값(MCP에 env 값 조회 도구 없음, 우선순위 낮음).
+
+**교훈**: 크론 미실행 의심 시 Vercel MCP `get_runtime_logs`/`get_runtime_errors`로 실제 invocation 유무를 직접 조회하면 대시보드 UI가 표기하는 1시간 제한보다 긴 기간(최소 7일) 조회 가능. "대시보드 Enabled 표기"와 "실제 매일 실행"은 별개 — 다음부터 이 방법을 1순위 진단 도구로 사용.
+
+**범위**: 운영자 채팅 지시가 "조사"에 한정돼 코드 수정 미실행. 결과 문서: `docs/handoff/CODE_DAILY_CRON_FIX_RESULT_2026-08-08.md`. `docs/handoff/CURRENT.md` 갱신 완료. 다음 액션은 운영자/Desktop이 대시보드에서 Cron Jobs Recent Invocations + Deployment Protection 직접 확인 → 원인 확정 → Code에 수정 지시.
+
+---
 
 ## rev90 — 작업1 F3 사전조사(검수 판정 근거) + 작업2 surfaceRules 실배선 2건 (2026-07-24 Code)
 

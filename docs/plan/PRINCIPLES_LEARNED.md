@@ -956,3 +956,19 @@ Chroma 실험(194,480회 호출, 18개 모델)에서 **집중된 300토큰 프�
 4. 이런 표시 결함은 tsc/build로 안 잡힌다(타입은 맞고 렌더 문자열만 이상). **프로덕션 브라우저 실측**으로만 확인된다(#45/#275) — 배포 후 실제 화면을 눈으로 본다.
 
 
+
+
+---
+
+## 2026-08-08 (Code) 신규 원칙 #333
+
+### #333 — 크론 미실행 의심 시 대시보드 "Enabled" 표기를 믿지 말고 Vercel Runtime Logs로 실제 invocation 유무를 직접 조회한다
+
+Vercel 대시보드의 Cron Jobs가 "Enabled"·정상 등록으로 보여도 **실제로 스케줄대로 실행됐는지는 별개 사실**이다. Hobby 플랜은 대시보드 UI 로그 보관이 1시간이라 "어젯밤 크론이 불렸는지"를 UI만으로는 확인할 수 없다고 오판하기 쉽다.
+
+**사건(2026-08-08, 아침 소싱 알림 미발송 조사)**: Desktop이 대시보드에서 크론 "Enabled"·`0 23 * * *` 정상 등록을 확인했으나, 실제 발송은 안 됐다. Code가 Vercel MCP `get_runtime_logs`(group_by=statusCode, query=경로)로 직접 조회한 결과 **등록된 크론잡 5개 전부 지난 7일간 예정 스케줄 시각의 실행 로그가 0건**임을 확인 — "등록됨"과 "실행됨"이 다른 사실이었다.
+
+**규칙**:
+1. Vercel MCP의 `get_runtime_logs`/`get_runtime_errors`는 대시보드 UI가 표기하는 1시간 제한보다 **긴 기간(최소 7일)** 조회 가능하다 — 크론·백그라운드 작업 미실행 의심 시 이 도구를 1순위로 사용한다.
+2. 경로별 `group_by: requestPath` 또는 `query`로 필터링해 "그 경로가 예정 시각에 실제로 찍혔는지" 직접 대조한다 — 등록 상태(dashboard "Enabled")만으로 실행을 단정하지 않는다.
+3. 4xx/5xx 로그조차 0건인데 요청도 0건이면, 앱 코드(route.ts) 내부 실패가 아니라 **Function에 도달하기 전 엣지 단(Deployment Protection·SSO 등)에서 막혔을 가능성**을 함께 의심한다(`get_project_deployment_protection`으로 확인).
