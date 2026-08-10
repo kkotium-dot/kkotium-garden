@@ -880,7 +880,7 @@ export function MarginCalculator({
             <div className="flex items-center gap-1">
               <input
                 type="number"
-                value={local.targetMargin}
+                value={local.targetMargin || ''}
                 onChange={(e) => updateLocal({ targetMargin: parseFloat(e.target.value) || 0 })}
                 className="w-14 px-2 py-1 text-sm text-center border border-gray-300 rounded focus:ring-2 focus:ring-pink-500"
                 min={0}
