@@ -42,6 +42,38 @@ function pickImageUrl(op: any): string | null {
   );
 }
 
+// #5/#6 — 가져온 상품이 씨앗심기(?edit=)로 열릴 때 재입력 없이 이어 쓸 수 있도록,
+// Naver 원상품 상세에 이미 있는 정보는 가져오기 시점에 최대한 함께 저장한다.
+// (씨앗심기 hydrate 자체는 정상 — 문제는 import가 name/salePrice/mainImage 외
+// 전부 비워서 저장했던 것.) 형식이 앱 스키마와 100% 동일한 필드만 채운다
+// (원산지 코드 등 체계가 다른 필드는 오매핑 위험이 있어 제외).
+function pickAdditionalImages(op: any): string[] {
+  const opt = op?.images?.optionalImages;
+  if (!Array.isArray(opt)) return [];
+  return opt.map((i: any) => i?.url).filter((u: unknown): u is string => typeof u === 'string' && !!u);
+}
+
+function pickSellerTags(op: any): string[] {
+  const tags = op?.detailAttribute?.seoInfo?.sellerTags;
+  if (!Array.isArray(tags)) return [];
+  return tags.map((t: any) => t?.text).filter((t: unknown): t is string => typeof t === 'string' && !!t);
+}
+
+// #4 — 마진 계산은 salePrice - instant_discount(원)를 실제 판매가로 쓴다
+// (profitability/route.ts). 네이버 즉시할인(customerBenefit.immediateDiscountPolicy,
+// PC 우선)을 읽어 원화 금액으로 환산해 그대로 세팅 — 안 하면 마진이 정가 기준으로 계산됨.
+function pickInstantDiscountWon(op: any, salePrice: number): number | null {
+  const method = op?.customerBenefit?.immediateDiscountPolicy?.discountMethod?.[0];
+  if (!method || typeof method.value !== 'number') return null;
+  if (method.unitType === 'PERCENT') {
+    return Math.floor(salePrice * Math.min(Math.max(method.value, 0), 100) / 100);
+  }
+  if (method.unitType === 'WON') {
+    return Math.min(Math.max(method.value, 0), salePrice);
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   let body: { items?: ImportItem[] };
   try {
@@ -108,6 +140,13 @@ export async function POST(request: NextRequest) {
       const name: string = typeof op.name === 'string' && op.name ? op.name : `네이버 상품 ${originNo}`;
       const salePrice = Number.isFinite(op?.salePrice) ? Number(op.salePrice) : 0;
       const modifiedDate: string | null = op?.modifiedDate ?? detail?.modifiedDate ?? null;
+      const instantDiscount = pickInstantDiscountWon(op, salePrice);
+      const description: string | undefined =
+        typeof op?.detailContent === 'string' && op.detailContent.trim() ? op.detailContent : undefined;
+      const naverCategoryCode: string | undefined =
+        typeof op?.leafCategoryId === 'string' && op.leafCategoryId ? op.leafCategoryId : undefined;
+      const additionalImages = pickAdditionalImages(op);
+      const sellerTags = pickSellerTags(op);
 
       const created = await prisma.product.create({
         data: {
@@ -122,6 +161,11 @@ export async function POST(request: NextRequest) {
           status: mapStatus(op?.statusType),
           mainImage: pickImageUrl(op),
           naver_status_type: typeof op?.statusType === 'string' ? op.statusType : null,
+          instant_discount: instantDiscount,
+          description,
+          naverCategoryCode,
+          images: additionalImages,
+          tags: sellerTags.length > 0 ? sellerTags : undefined,
         },
         select: { id: true },
       });
