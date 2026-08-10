@@ -1,10 +1,26 @@
-# 현재 인계 (CURRENT) — 2026-08-10 세션 (꼬띠 소싱 v2 로드맵 1b 다중 렌즈 완료, 아침 소싱 크론 조사 여전히 미착수)
+# 현재 인계 (CURRENT) — 2026-08-10 세션 (거래처 "null" 텍스트 버그 근본수정 완료 + 로드맵1b 완료, 아침 소싱 크론 조사 세 세션째 이월)
 
 > 다음 세션은 이 파일 → 해당 트랙 설계문서 → `PRINCIPLES_LEARNED.md` 순으로 읽고 시작.
 
-- **status**: **✅ 꼬띠 소싱 v2 로드맵 1b(다중 발굴 렌즈) 완료·push 대기.** 상세는 `docs/handoff/CODE_SOURCING_V2_LENSES_RESULT_2026-08-10.md`. **아침 소싱 알림 크론 조사는 이번 세션에도 착수 못 함** — 직전 CURRENT.md가 "Code 진행 중"이라 적어뒀었지만, 실제로는 운영자가 이 세션에서 로드맵 1b로 바로 전환 지시해 조사 자체가 시작되지 않았다(#318 교훈 그대로 재확인 — 낡은 인계문서를 실측 없이 믿지 말 것). 다음 세션 최우선.
-- **branch**: `main`, 이번 세션 커밋 예정(아래 §커밋 참조).
-- **배포 상태**: 다음 세션 STEP0에서 prod deploy SHA==HEAD 확인 필요.
+- **status**: **✅ 거래처 명단 "null" 텍스트 노출 버그 근본수정·데이터정리·프로덕션 검증 완료(#334, 커밋 `10b8a7e`).** ✅ 꼬띠 소싱 v2 로드맵 1(공급사 축, `d50b45a`)+1b(다중 렌즈, `2a406d8`) 완료. **아침 소싱 크론 조사는 여전히 미착수** — 다음 세션 최우선.
+- **branch**: `main` (HEAD `10b8a7e`, 전부 push, 동기화 0/0)
+- **배포 상태**: `10b8a7e`까지 전부 배포·Desktop 프로덕션 브라우저 검증 완료
+
+---
+
+## ★★★ 신규 완료 — 거래처 "null" 텍스트 버그 근본수정 (2026-08-10, 커밋 `10b8a7e`)
+
+운영자 스크린샷 신고: 거래처 명단 화면 연락처 아래 "null" 텍스트 노출.
+
+**근본원인**: `suppliers/[id]/route.ts` PATCH가 `String(body.x).trim() || null` 패턴 사용 — `String(null) === "null"`(JS 함정)이라, 필드가 이미 JS null인 채로 PATCH 요청에 실리면 문자열 "null"이 그대로 DB에 저장됨. POST(생성)는 `String(body?.x ?? '')`로 `??`가 먼저 빈 문자열로 바꿔서 안전했음 — PATCH만 취약.
+
+**수정**: 4개 필드(contact/address/description/domeggookSellerId) 전부 `body.x == null` 체크 후 String() 우회하도록 한 번에 근본 수정(#55 전 상품 공통).
+
+**데이터 정리**: 오염된 4건(이현마켓·gseller2022·보배몰·BanD반디)의 description/address를 NULLIF로 실제 null 원복. Product 테이블 유사 패턴 전수조사 — 0건, Supplier만의 문제로 확산 위험 없음 확인.
+
+**검증(Desktop)**: tsc 0·build 0·프로덕션 브라우저 확인("null" 텍스트 완전 소멸, 스크린샷 확인)·회귀 검증(재저장 후에도 "null" 재발 안 함, DB 재조회로 확인).
+
+**★ 운영자 후속 조치 확인됨**: 4개 공급사에 실제 도매매 셀러ID 등록 완료(jaemin9335·gseller2022·boubaemall·pazzemax, 스크린샷 확인) — **다음 세션에 로드맵1(searchBySupplier) 실데이터 재검증 필요**(이전엔 더미 데이터라 0건이었음).
 
 ---
 
