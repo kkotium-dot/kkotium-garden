@@ -63,6 +63,7 @@ CRITICAL RULES (verified against actual Naver DB):
 - 소파 → 가구/인테리어 > 거실가구 > 소파
 - 두꺼비집가리개/분전함커버 → 가구/인테리어 > 인테리어소품 > 인터폰박스
 - 인테리어소품/장식 → 가구/인테리어 > 인테리어소품 > 기타장식용품
+- 반려동물/펫 관련 용품(급식기·급수기·사료·장난감 등) → d1은 "반려동물"이나 "펫용품"이 아니라 "생활/건강" > "반려동물" > (구체적 하위카테고리)
 - If the product does not clearly match any category you know, respond with an empty array [] instead of guessing.
 
 Respond ONLY with raw JSON array (no markdown):
@@ -146,9 +147,12 @@ const FALLBACK_RULES: Array<{ keywords: string[]; d1: string; d2: string; d3: st
   { keywords: ['충전케이블', 'USB케이블'],                        d1: '디지털/가전',  d2: '휴대폰액세서리',    d3: '케이블/젠더' },
   { keywords: ['무선이어폰', '이어버즈'],                         d1: '디지털/가전',  d2: '이어폰/헤드폰',     d3: '블루투스이어폰' },
   { keywords: ['보조배터리'],                                     d1: '디지털/가전',  d2: '휴대폰액세서리',    d3: '보조배터리' },
-  // ── 반려동물 ──
-  { keywords: ['강아지', '반려견'],                               d1: '반려동물',     d2: '강아지',            d3: '사료' },
-  { keywords: ['고양이', '반려묘'],                               d1: '반려동물',     d2: '고양이',            d3: '사료' },
+  // ── 반려동물 (실제 DB 축은 d1='생활/건강' > d2='반려동물' — '반려동물'은 d1이 아니다,
+  //   A 후속조사 2026-08-10: 기존 d1:'반려동물' 규칙이 존재하지 않는 카테고리라
+  //   selfValidateSuggestions에서 전부 드롭돼 안전망이 무력화돼 있었음) ──
+  { keywords: ['자동급식기', '급식기', '급수기'],                 d1: '생활/건강',    d2: '반려동물',          d3: '식기/급수기' },
+  { keywords: ['강아지', '반려견'],                               d1: '생활/건강',    d2: '반려동물',          d3: '강아지 사료' },
+  { keywords: ['고양이', '반려묘'],                               d1: '생활/건강',    d2: '반려동물',          d3: '고양이 사료' },
   // ── 문구/오피스 ──
   { keywords: ['노트', '다이어리'],                               d1: '문구/오피스',  d2: '노트/메모/다이어리',d3: '다이어리/플래너' },
   { keywords: ['볼펜', '펜'],                                     d1: '문구/오피스',  d2: '필기구',            d3: '볼펜' },
