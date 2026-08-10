@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-08 (rev115 — 아침 소싱 알림 미발송 수정 실행 완료 · Code) / 직전 rev114 — 아침 소싱 알림 미발송 원인 조사 완료 · Code
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-10 (rev116 — 운영자 실사용 오류 8건 수정 완료 · Code) / 직전 rev115 — 아침 소싱 알림 미발송 수정 실행 완료 · Code
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -6,6 +6,26 @@
 
 
 > **📦 rev80 이전은 archive로 분할됨(#31, 2026-07-28)**: `docs/plan/archive/PARALLEL_WORK_TRACKER_~rev80.md` 참조(rev51~rev80, 삭제 0).
+
+## rev116 — 운영자 실사용 발견 오류 8건 수정 완료 (2026-08-10 Code)
+
+**배경**: 아침 소싱 알림 크론 조사 착수 직후 운영자가 실사용 중 발견한 오류 8건(`docs/handoff/CODE_UX_FIXES_HANDOFF_2026-08-10.md`)으로 작업 전환. 크론 조사는 브리핑만 하고 미착수(`docs/handoff/CURRENT.md`에 별도 기록).
+
+**수정 내용**(상세는 `docs/handoff/CODE_UX_FIXES_RESULT_2026-08-10.md`):
+1. **#1 카테고리 오분류(최우선)**: `api/category/suggest/route.ts` AI 프롬프트의 강제 폴백 지시(`For unknown items: use 가구/인테리어...`) 삭제 → 모르면 빈 배열 반환하도록 변경, `suggestFallback()`으로 자연 이관.
+2. **#2 네이버 가져오기 작동 안 함**: `products/page.tsx`의 `NaverImportModal.doImport()`가 응답을 안 읽고 무조건 성공 취급하던 것을 수정 — imported/skipped/failed 파싱 후 실패 시 사유 표시, 완전 성공 시에만 모달 닫음.
+3. **#3 페이지네이션 숫자버튼**: 동일 모달에 축약 표기 페이지 버튼(`1 … 5 6 [7] 8 9 … 20`) 추가.
+4. **#4 마진 계산 할인가 미반영**: `api/products/import/route.ts`가 `instant_discount`(profitability API가 실판매가 계산에 쓰는 필드)를 전혀 안 채우던 것을 네이버 `customerBenefit.immediateDiscountPolicy`에서 읽어 채우도록 수정.
+5. **#5+#6 씨앗심기 리셋 방지**: hydrate 로직은 정상이었음 — import가 name/salePrice/mainImage 4개만 저장하던 것에 naverCategoryCode/description/images(추가썸네일)/tags 추가(형식이 앱 스키마와 100% 동일한 필드만, 원산지·AS정보는 코드 체계 불일치 위험으로 제외).
+6. **#7 목표마진율 "0" 접두 버그**: `MarginCalculator.tsx`의 targetMargin input만 `value={x || ''}` 패턴이 누락돼 있던 것 수정.
+
+**검증**: `npx tsc --noEmit` 0 · `npm run build` 0. 브라우저 실사용 시나리오 — #2(404 상품번호로 에러 메시지 정확히 표시), #3(페이지 3 클릭 시 직접 이동), #5+#6(edit 화면 하이드레이션), #7(DOM 레벨로 필드를 비운 뒤 "30" 타이핑 → "30" 정확, 수정 전이면 "030") 전부 확인. #1은 curl로 신규(캐시 없는) 상품명 재현 — 강제 쏠림 해소 확인.
+
+**⚠️ 다음 세션 확인 필요**: ① `dome_category_cache`에 남은 "가구/인테리어" 오답 캐시 정리 방침(운영자 결정), ② #4는 실제 즉시할인 걸린 네이버 상품으로 재현 테스트 권장(로컬 테스트 데이터 없어 코드 레벨만 검증).
+
+**커밋 상태**: 이번 rev 작성 시점 아직 미커밋 — 항목별 커밋 예정.
+
+---
 
 ## rev115 — 아침 소싱 알림(E-7) 미발송 — 원인 확정 + 수정 실행 완료 (2026-08-08 Code)
 
