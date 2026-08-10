@@ -1007,6 +1007,21 @@ function importRowRevival(row: NaverSearchRow): { grade: RevivalGrade; score: nu
   return { grade: r.grade, score: r.score, isCandidate: r.isCandidate };
 }
 
+// 프리미엄 SaaS 스타일 축약 페이지네이션: "1 ... 5 6 [7] 8 9 ... 20"
+function buildPageList(current: number, total: number): Array<number | '…'> {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const keep = new Set<number>([1, total, current - 2, current - 1, current, current + 1, current + 2]);
+  const sorted = [...keep].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const out: Array<number | '…'> = [];
+  let prev = 0;
+  for (const p of sorted) {
+    if (prev && p - prev > 1) out.push('…');
+    out.push(p);
+    prev = p;
+  }
+  return out;
+}
+
 const IMPORT_REVIVAL_TONE: Record<RevivalGrade, { bg: string; border: string; color: string }> = {
   S: { bg: '#fff0ef', border: '#ffd6d3', color: '#b91c1c' },
   A: { bg: '#fff7ed', border: '#fed7aa', color: '#c2410c' },
@@ -1071,15 +1086,35 @@ function NaverImportModal({ onClose, onImported }: { onClose: () => void; onImpo
     return n;
   });
 
-  async function doImport(nos: string[]) {
-    if (nos.length === 0) return;
+  async function doImport(nos: string[]): Promise<boolean> {
+    if (nos.length === 0) return false;
     setImporting(true);
+    setError(null);
     try {
       const items = nos.map((no) => ({ originProductNo: no }));
-      await fetch('/api/products/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }) });
+      const r = await fetch('/api/products/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }) });
+      const j = await r.json();
+      if (!r.ok || !j.success) {
+        setError(j?.error ?? '연동 중 오류가 발생했습니다.');
+        return false;
+      }
+      const importedCount = (j.imported ?? []).length;
+      const skippedCount = (j.skipped ?? []).length;
+      const failedList: Array<{ no: string; error: string }> = j.failed ?? [];
       onImported();
+      if (failedList.length > 0) {
+        const first = failedList[0];
+        setError(`${importedCount}개 연동 완료 · ${failedList.length}개 실패 (${first.no}: ${first.error})`);
+        return false;
+      }
+      if (importedCount === 0 && skippedCount > 0) {
+        setError('이미 연동된 상품입니다.');
+        return false;
+      }
+      return true;
     } catch {
       setError('연동 중 오류가 발생했습니다.');
+      return false;
     } finally { setImporting(false); }
   }
 
@@ -1088,8 +1123,8 @@ function NaverImportModal({ onClose, onImported }: { onClose: () => void; onImpo
     if (nums.length === 0 || manualBusy) return;
     setManualBusy(true);
     try {
-      await doImport(nums);
-      setManual('');
+      const ok = await doImport(nums);
+      if (ok) setManual('');
     } finally { setManualBusy(false); }
   }
 
@@ -1201,13 +1236,31 @@ function NaverImportModal({ onClose, onImported }: { onClose: () => void; onImpo
             style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 12, fontWeight: 700, color: page <= 1 ? '#c4c4c4' : '#374151', background: '#f9fafb', border: '1px solid var(--border-neutral)', borderRadius: 8, padding: '6px 10px', cursor: page <= 1 ? 'not-allowed' : 'pointer' }}>
             <ChevronLeft size={13} />이전
           </button>
-          <span style={{ fontSize: 12, color: '#6b7280', fontVariantNumeric: 'tabular-nums' }}>{page} / {totalPages}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            {buildPageList(page, totalPages).map((p, i) =>
+              p === '…' ? (
+                <span key={`ellipsis-${i}`} style={{ fontSize: 12, color: '#c4c4c4', padding: '0 2px' }}>…</span>
+              ) : (
+                <button key={p} onClick={() => setPage(p)} disabled={loading}
+                  aria-current={p === page ? 'page' : undefined}
+                  style={{
+                    minWidth: 26, height: 26, fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+                    color: p === page ? '#fff' : '#374151',
+                    background: p === page ? '#F63B28' : '#f9fafb',
+                    border: p === page ? 'none' : '1px solid var(--border-neutral)',
+                    borderRadius: 8, cursor: loading ? 'not-allowed' : 'pointer',
+                  }}>
+                  {p}
+                </button>
+              ),
+            )}
+          </div>
           <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages || loading}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 12, fontWeight: 700, color: page >= totalPages ? '#c4c4c4' : '#374151', background: '#f9fafb', border: '1px solid var(--border-neutral)', borderRadius: 8, padding: '6px 10px', cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}>
             다음<ChevronRight size={13} />
           </button>
           <div style={{ flex: 1 }} />
-          <button onClick={() => void doImport([...selected]).then(() => { onClose(); })} disabled={selected.size === 0 || importing}
+          <button onClick={() => void doImport([...selected]).then((ok) => { if (ok) onClose(); })} disabled={selected.size === 0 || importing}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: '#fff', background: selected.size === 0 ? '#f3b8c6' : '#F63B28', border: 'none', borderRadius: 10, padding: '9px 16px', cursor: selected.size === 0 || importing ? 'not-allowed' : 'pointer' }}>
             {importing ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
             {selected.size}개 선택 · 가져오기
