@@ -1,10 +1,26 @@
-# 현재 인계 (CURRENT) — 2026-08-10 세션 (거래처 "null" 텍스트 버그 근본수정 완료 + 로드맵1b 완료, 아침 소싱 크론 조사 세 세션째 이월)
+# 현재 인계 (CURRENT) — 2026-08-10 세션 (거래처 "null" 텍스트 버그 근본수정 + 로드맵1b 완료 + 아침 소싱 크론 조사 착수·중복발송 가드 추가, GitHub Actions 안전망은 승인 대기)
 
 > 다음 세션은 이 파일 → 해당 트랙 설계문서 → `PRINCIPLES_LEARNED.md` 순으로 읽고 시작.
 
-- **status**: **✅ 거래처 명단 "null" 텍스트 노출 버그 근본수정·데이터정리·프로덕션 검증 완료(#334, 커밋 `10b8a7e`).** ✅ 꼬띠 소싱 v2 로드맵 1(공급사 축, `d50b45a`)+1b(다중 렌즈, `2a406d8`) 완료. **아침 소싱 크론 조사는 여전히 미착수** — 다음 세션 최우선.
-- **branch**: `main` (HEAD `10b8a7e`, 전부 push, 동기화 0/0)
-- **배포 상태**: `10b8a7e`까지 전부 배포·Desktop 프로덕션 브라우저 검증 완료
+- **status**: **✅ 거래처 명단 "null" 텍스트 노출 버그 근본수정·데이터정리·프로덕션 검증 완료(#334, 커밋 `10b8a7e`).** ✅ 꼬띠 소싱 v2 로드맵 1(공급사 축, `d50b45a`)+1b(다중 렌즈, `2a406d8`) 완료. **아침 소싱 크론: 이번 세션에 착수했으나 근본원인은 여전히 미확정** — Vercel Hobby 크론의 실행 이력을 조회할 API/로그 자체가 없어 사후 확인이 구조적으로 불가능함을 확인. 대신 중복발송 방지 가드를 코드에 추가(안전망 선행조건). GitHub Actions 외부 안전망은 설계만 하고 **운영자 승인 대기**(시크릿 등록 필요, 실발송 자동화이므로 임의 활성화 안 함).
+- **branch**: `main` (HEAD 이번 세션 커밋 예정분 반영 전 `31038b1`, 전부 push)
+- **배포 상태**: `31038b1`까지 배포·verify-vercel-deploy.sh OK
+
+---
+
+## ★★★ 이번 세션 — 아침 소싱 크론 조사 (2026-08-10, Code)
+
+원본 지시: `docs/handoff/CODE_DAILY_CRON_FIX_HANDOFF_2026-08-08.md` · 결과 상세: `docs/handoff/CODE_DAILY_CRON_FIX_RESULT_2026-08-10.md`
+
+**신규 확인 사실**:
+1. Vercel 공식문서(Cron Jobs Usage & Pricing) 직접 재확인 — Hobby 크론 개수 상한은 **100개**(5개 아님, 우려 기각), 스케줄 정밀도는 **시간 단위(±59분)**. 스킵 조건에 대한 별도 공식 문서는 없음.
+2. Vercel Runtime Logs/Errors API로 재확인 — 로그 보관 1시간 한계 재확인(Desktop 관찰과 일치). 단 **최근 7일간 두 크론 라우트 모두 에러 0건** — "불렸다면 항상 무결하게 끝났다"로 범위가 좁혀짐(원인 확정은 아님).
+3. **DB 재검증에서 새 불일치 발견**: `sourcing_opportunity_records`·`daily_recommendations` 둘 다 8/8 이후 레코드가 전무함(최신은 8/7 13:14 낮 스캔). 인계문서의 "8/8 수동 curl 테스트로 `{sent:true}` + DB 레코드 확인"이라는 기존 서술과 배치됨 — **Desktop 재확인 필요**(상세는 결과문서 §3).
+4. Code의 브라우저 세션은 Vercel에 로그인돼 있지 않아 크론 상세페이지(Recent Invocations)는 여전히 Code가 직접 확인 불가 — **Desktop/운영자 전용 작업으로 남음**.
+
+**코드 변경(완료)**: `src/app/api/sourcing-recommend/route.ts` POST에 당일 중복발송 방지 가드 추가 — 같은 날 이미 레코드가 있으면 재실행을 스킵(`skipped:true`). 외부 안전망을 붙여도 Vercel 자체 크론과 겹쳐 하루 2번 발송될 위험을 원천 차단. `npx tsc --noEmit` 0 확인.
+
+**미구현(운영자 승인 대기)**: GitHub Actions 외부 안전망(`.github/workflows/sourcing-daily-safety-net.yml`, 00:10 UTC=09:10 KST, Vercel 시간창 종료 후 실행). 활성화 시 매일 자동으로 실제 프로덕션에 발송 요청을 보내게 되므로, 그리고 프로덕션 `CRON_SECRET`을 GitHub repo secret으로 등록해야 하므로 임의로 구현·활성화하지 않았다. 설계 상세는 결과문서 §5.
 
 ---
 
@@ -30,7 +46,7 @@
 
 ---
 
-## ★★ 이번 세션 완료 — 꼬띠 소싱 v2 로드맵 1b (다중 발굴 렌즈, 2026-08-10)
+## ★★ 꼬띠 소싱 v2 로드맵 1b (다중 발굴 렌즈, 2026-08-10)
 
 원본 지시: `docs/handoff/CODE_SOURCING_V2_LENSES_HANDOFF_2026-08-10.md` · 결과 상세: `docs/handoff/CODE_SOURCING_V2_LENSES_RESULT_2026-08-10.md`
 
@@ -47,32 +63,13 @@
 
 **다음 단계(이번 범위 밖)**: 실제 `sourcing-recommender.ts`(cron 소비)에 렌즈 분류기를 연결해 10개 추천에 배지를 붙이고 디스코드/앱에서 렌즈별로 그룹핑하는 실배선 작업(설계 §3-1·§3-4)은 `cron/*` 수정 금지 지시로 이번 범위에서 제외 — 별도 로드맵 단계로 이어감.
 
-**커밋**: 이번 세션 다음 액션으로 커밋·push 예정.
-
----
-
-## ★★ 여전히 미착수 — 아침 소싱 알림 정규 스케줄 미실행
-
-2026-08-08부터 세 세션째 이월 중. 상세는 `docs/handoff/CODE_DAILY_CRON_FIX_HANDOFF_2026-08-08.md` 최하단 "★★★★★★ 2026-08-10 최신 상태" 참조.
-
-**직전 세션까지 확정된 사실**:
-- 함수 코드·환경변수·웹훅·신규 크론(`sourcing-daily`) 전부 수동 호출 시 100% 정상.
-- **정규 스케줄(08:00 KST) 자동 실행만 계속 실패** — 신규 크론 분리(maxDuration+독립크론) 이후에도 재발.
-- 문제 범위 = Vercel 크론 스케줄러 자체(또는 그 앞단), 개별 라우트 코드 아님.
-
-**조사 방향(미착수, 그대로 유효)**:
-1. Vercel Cron Jobs 탭 각 크론 이름 클릭 시 별도 상세페이지(Recent Invocations) 존재 여부 재확인.
-2. Vercel 공식 문서에서 Hobby 크론이 스킵되는 조건 재검색.
-3. 대안: GitHub Actions scheduled workflow로 `sourcing-daily`를 매일 정시 curl 호출하는 우회 안전망 검토(`.github/workflows/`).
-
-**절대 금지**: 실제 Discord 발송 테스트 임의 실행 금지(운영자/Desktop 승인 필요).
-
 ---
 
 ## 다음 세션 시작 순서
 ```
-1. [최우선] 아침 소싱 알림 정규 스케줄 미실행 조사 — 세 세션째 이월, 이번엔 반드시 착수
-   → docs/handoff/CODE_DAILY_CRON_FIX_HANDOFF_2026-08-08.md 최신 섹션부터
+1. [운영자 결정 대기] 아침 소싱 크론 — GitHub Actions 외부 안전망 구현 승인 여부
+   (docs/handoff/CODE_DAILY_CRON_FIX_RESULT_2026-08-10.md §5·§6)
+   + Desktop 대시보드 Recent Invocations 확인 + §3 DB 불일치 재확인
 2. [후속] 소싱 v2 로드맵 1b(렌즈 분류기)를 실제 파이프라인(sourcing-recommender.ts/cron)에 배선 — 운영자 우선순위 확인 후
 3. push된 미merge 브랜치 존재(가장 최근 feature/preview-copy-then-redesign) — 저녁 세션 때 우선 검토·merge(#320)
 ```
@@ -85,4 +82,6 @@
 - **UI 설정 화면 문구보다 curl/실측이 항상 우선**(#310)
 - DB 캐시 정리는 규모 파악 후 id 지정 삭제만(전체 삭제 금지, #334)
 - **낡은 인계문서의 "진행 중"·"대기 중" 표기를 실측 없이 믿지 말 것**(#318) — 이번에도 "크론 조사 Code 진행 중"이 실제로는 착수 전이었음
+- **인계문서의 "확인됨" 서술도 재검증 대상**(#310 연장) — 8/8 수동 테스트 DB 레코드 "확인" 서술이 이번 재조회에서 배치됨(위 §참조)
+- 매일 자동 실행되며 실제 외부 발송을 일으키는 CI 워크플로(GitHub Actions 등) 추가·활성화 = 디스코드 실발송과 동급 승인 대상
 - git stash `z3c-misdirected-changes-needs-redo` 처리 방향 — 여전히 운영자 결정 대기(손대지 않음)

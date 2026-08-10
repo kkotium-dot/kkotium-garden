@@ -169,6 +169,28 @@ export async function POST(req: NextRequest) {
     const dryRun =
       req.nextUrl.searchParams.get('dryRun') === 'true' || bodyRecord.dryRun === true;
 
+    // 중복 발송 방지(2026-08-10, #337): 같은 날 이미 스캔+저장된 레코드가
+    // 있으면 재실행을 건너뛴다. Vercel Hobby 크론은 정시 보장이 없어(공식
+    // 문서: "0 23 * * *"가 23:00~23:59 UTC 사이 아무 때나 실행) 외부 안전망
+    // (예: GitHub Actions 보조 트리거)과 겹쳐 하루에 두 번 불릴 수 있다.
+    // dryRun/discord:false 미리보기 호출은 발송이 없으므로 예외로 둔다.
+    if (!dryRun && sendToDiscord) {
+      const todayGuard = new Date();
+      todayGuard.setHours(0, 0, 0, 0);
+      const alreadyToday = await prisma.sourcingOpportunityRecord
+        .count({ where: { date: todayGuard } })
+        .catch(() => 0);
+      if (alreadyToday > 0) {
+        return NextResponse.json({
+          ok: true,
+          skipped: true,
+          reason: 'already-sent-today',
+          discordSent: false,
+          opportunityCount: alreadyToday,
+        });
+      }
+    }
+
     // Generate fresh recommendations
     const result = await generateSourcingRecommendations();
     cachedResult = result;
