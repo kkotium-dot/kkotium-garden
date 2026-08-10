@@ -2143,13 +2143,9 @@ function ProductsPageInner() {
     fetchProducts();
   };
 
-  const toggleStatus = async (e: React.MouseEvent, product: Product) => {
-    e.stopPropagation();
-    const next: Record<string, string> = { DRAFT: 'READY', READY: 'ACTIVE', ACTIVE: 'OUT_OF_STOCK', OUT_OF_STOCK: 'INACTIVE', INACTIVE: 'ACTIVE', HIDDEN: 'ACTIVE' };
-    const newStatus = next[product.status] ?? 'ACTIVE';
-    await fetch(`/api/products/${product.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
-    setRawProducts(prev => prev.map(p => p.id === product.id ? { ...p, status: newStatus } : p));
-  };
+  // #334-A1(2026-08-10): toggleStatus(구 "동기화 아이콘" 단축버튼)는 두 호출부
+  // (데스크톱 행·모바일 카드)를 전부 제거해 이제 죽은 함수라 정의도 함께 제거.
+  // 상태 변경은 SidePanel의 confirm 게이트 있는 select/changeStatus로만.
 
   // Bulk status change for selected products
   // 일괄 상태 변경 (#287) — 예전에는 Promise.all로 쏘고 결과를 보지 않았다.
@@ -2440,13 +2436,13 @@ function ProductsPageInner() {
             ? <div className="flex justify-center"><HoneyBadge score={p._hs.total} grade={p._hs.grade} /></div>
             : <ZombieIndexCell data={p.tuningScore} />}
           <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-            <button onClick={e => toggleStatus(e, p)} title="상태 변경"
-              className="p-1.5 rounded-lg transition hover:bg-gray-100"
-              style={{ color: p.status === 'ACTIVE' ? '#16a34a' : p.status === 'OUT_OF_STOCK' ? '#F63B28' : '#9CA3AF' }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/>
-              </svg>
-            </button>
+            {/* #334-A1(2026-08-10): "동기화 아이콘"으로 오인되던 상태 순환
+                버튼(toggleStatus) 제거. confirm 게이트 없이 클릭 한 번에
+                DRAFT→READY→ACTIVE→품절→비활성을 즉시 전환해 실수 클릭
+                위험이 있었고, 아이콘도 라벨 없이 툴팁만 있어 정체가 불명확
+                했다(운영자 신고). 상태 변경은 이제 상세 패널(SidePanel)의
+                확인창(confirm) 있는 정식 경로로만 — 기능 손실 없음, 위험한
+                단축 경로만 제거. */}
             <Link href={`/products/new?edit=${p.id}`} className="p-1.5 rounded-lg transition text-blue-400 hover:text-blue-600 hover:bg-blue-50" title="수정"><Edit2 size={13} /></Link>
             <Link href={`/studio?product=${p.id}`} className="p-1.5 rounded-lg transition text-pink-400 hover:text-pink-600 hover:bg-pink-50" title="콘텐츠 자동화 (온실 아틀리에)"><Palette size={13} /></Link>
             <button onClick={() => deleteProduct(p.id)} className="p-1.5 rounded-lg transition text-red-300 hover:text-red-500 hover:bg-red-50" title="삭제"><Trash2 size={13} /></button>
@@ -3028,24 +3024,11 @@ function ProductsPageInner() {
                     </div>
 
                     {/* Actions — 44px touch targets */}
+                    {/* #334-A1(2026-08-10): 데스크톱과 동일하게 상태 순환
+                        단축버튼 제거(운영자 신고 — "동기화 아이콘" 오인,
+                        confirm 게이트 부재 위험). 상태 변경은 상품 상세
+                        패널의 확인창 있는 정식 경로로. */}
                     <div style={{ display: 'flex', gap: 6, marginTop: 10, borderTop: '1px solid #F8DCE5', paddingTop: 10 }}>
-                      <button
-                        onClick={(e) => toggleStatus(e, p)}
-                        aria-label="상태 변경"
-                        style={{
-                          flex: 1, minHeight: 44, minWidth: 44,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                          background: '#FFF8FA', border: '1.5px solid #F8DCE5',
-                          color: p.status === 'ACTIVE' ? '#16a34a' : p.status === 'OUT_OF_STOCK' ? '#F63B28' : '#888',
-                          borderRadius: 10, cursor: 'pointer',
-                          fontSize: 11, fontWeight: 700,
-                        }}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                          <path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/>
-                        </svg>
-                        <span>상태</span>
-                      </button>
                       <Link
                         href={`/products/new?edit=${p.id}`}
                         aria-label="수정"
