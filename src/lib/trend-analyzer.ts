@@ -20,6 +20,20 @@ export interface TrendMatchResult {
   boostScore:      number;   // +5 ~ +20 pts added to honey score
 }
 
+// ── 꼬띠 소싱 v2 §3-0: rising-rate / volatility signal (급상승·스테디 렌즈) ──
+// Reuses the same 7-day DataLab series fetchDataLabTrends() already pulls —
+// no additional API call. Sourcing-lenses.ts (src/lib/sourcing-lenses.ts)
+// consumes CategoryTrendSignal to judge the 급상승📈 and 스테디📚 lenses.
+export interface CategoryTrendSignal {
+  name: string;           // D1 category name (matches DATALAB_CATEGORIES / naver d1 strings)
+  latestRatio: number;    // most recent day's ratio (raw DataLab scale)
+  risingRate: number;     // % change, first-half avg -> second-half avg of the window
+  volatility: number;     // coefficient of variation (stddev/mean * 100), lower = steadier
+  points: number;         // how many daily points fed the calc (honesty — thin data = less trust)
+  isRising: boolean;
+  isStable: boolean;
+}
+
 // Naver DataLab category codes (top 10 shopping categories)
 const DATALAB_CATEGORIES = [
   { name: '패션의류',   param: '50000000' },
@@ -34,8 +48,13 @@ const DATALAB_CATEGORIES = [
   { name: '여가/생활편의', param: '50000009' },
 ];
 
-// ── A-8: Naver DataLab Shopping Insight ──────────────────────────────────
-async function fetchDataLabTrends(): Promise<TrendResult | null> {
+// ── Shared raw fetch: last-7-day per-category DataLab series ──────────────
+// Extracted so both fetchDataLabTrends() (latest-ratio ranking) and
+// fetchCategoryTrendSignals() (rising-rate/volatility, 꼬띠 소싱 v2 §3-0)
+// reuse the SAME API calls instead of hitting DataLab twice.
+type RawCategorySeries = { title: string; data: Array<{ period: string; ratio: number }> };
+
+async function fetchRawCategorySeries(): Promise<RawCategorySeries[] | null> {
   // DataLab uses separate Open API keys (not Commerce API keys)
   const clientId     = process.env.NAVER_DATALAB_CLIENT_ID
                     ?? process.env.NAVER_OPEN_API_CLIENT_ID
@@ -61,7 +80,7 @@ async function fetchDataLabTrends(): Promise<TrendResult | null> {
       batches.push(DATALAB_CATEGORIES.slice(i, i + CHUNK));
     }
 
-    const results: Array<{ title: string; data: Array<{ period: string; ratio: number }> }> = [];
+    const results: RawCategorySeries[] = [];
 
     for (const batch of batches) {
       const body = {
@@ -81,12 +100,21 @@ async function fetchDataLabTrends(): Promise<TrendResult | null> {
       });
       if (!res.ok) continue; // Skip failed batch, keep partial results
       const data = await res.json();
-      const batchResults: Array<{ title: string; data: Array<{ period: string; ratio: number }> }> =
-        data.results ?? [];
+      const batchResults: RawCategorySeries[] = data.results ?? [];
       results.push(...batchResults);
     }
 
-    if (results.length === 0) return null;
+    return results.length > 0 ? results : null;
+  } catch {
+    return null;
+  }
+}
+
+// ── A-8: Naver DataLab Shopping Insight ──────────────────────────────────
+async function fetchDataLabTrends(): Promise<TrendResult | null> {
+  try {
+    const results = await fetchRawCategorySeries();
+    if (!results || results.length === 0) return null;
 
     // Get latest day ratio for each category, sort by ratio desc
     const ranked = results
@@ -171,4 +199,70 @@ export function matchProductsToTrends(
   }
 
   return results.sort((a, b) => b.boostScore - a.boostScore);
+}
+
+// ── 꼬띠 소싱 v2 §3-0: rising-rate / volatility (pure, unit-testable) ──────
+// Thresholds tuned conservative and documented (no magic numbers) — mirrors
+// the tunables style of naver/category-score.ts.
+const RISING_RATE_THRESHOLD = 15;   // % — first-half→second-half avg change to call "rising"
+const STABLE_VOLATILITY_MAX = 20;   // % coefficient of variation — below this = "steady"
+const MIN_POINTS_FOR_SIGNAL = 4;    // fewer daily points than this = too thin to trust (#231)
+
+/** % change from the window's first-half average to its second-half average. */
+export function computeRisingRate(ratios: number[]): number {
+  if (ratios.length < 2) return 0;
+  const mid = Math.floor(ratios.length / 2);
+  const firstHalf = ratios.slice(0, mid);
+  const secondHalf = ratios.slice(mid);
+  const avg = (arr: number[]) => arr.reduce((s, v) => s + v, 0) / arr.length;
+  const before = avg(firstHalf);
+  const after = avg(secondHalf);
+  if (before <= 0) return after > 0 ? 100 : 0;
+  return Math.round(((after - before) / before) * 1000) / 10; // 1 decimal
+}
+
+/** Coefficient of variation (stddev/mean * 100) — lower = steadier demand. */
+export function computeVolatility(ratios: number[]): number {
+  if (ratios.length < 2) return 0;
+  const mean = ratios.reduce((s, v) => s + v, 0) / ratios.length;
+  if (mean <= 0) return 0;
+  const variance = ratios.reduce((s, v) => s + (v - mean) ** 2, 0) / ratios.length;
+  const stddev = Math.sqrt(variance);
+  return Math.round((stddev / mean) * 1000) / 10; // 1 decimal
+}
+
+/** PURE. Derive a CategoryTrendSignal from one category's raw daily series. */
+export function classifyTrendSignal(
+  name: string,
+  data: Array<{ period: string; ratio: number }>,
+): CategoryTrendSignal {
+  const ratios = data.map(d => d.ratio);
+  const latestRatio = ratios.length > 0 ? ratios[ratios.length - 1] : 0;
+  const risingRate = computeRisingRate(ratios);
+  const volatility = computeVolatility(ratios);
+  const enoughData = ratios.length >= MIN_POINTS_FOR_SIGNAL;
+  return {
+    name,
+    latestRatio,
+    risingRate,
+    volatility,
+    points: ratios.length,
+    isRising: enoughData && risingRate >= RISING_RATE_THRESHOLD,
+    // Stability needs BOTH low volatility and no rising/falling trend — a
+    // steady seller isn't spiking OR crashing.
+    isStable: enoughData && volatility <= STABLE_VOLATILITY_MAX && Math.abs(risingRate) < RISING_RATE_THRESHOLD,
+  };
+}
+
+/**
+ * Fetch per-D1-category rising-rate/volatility signals from the SAME 7-day
+ * DataLab window fetchNaverTrends() already pulls (no extra API call — reuses
+ * fetchRawCategorySeries()). Returns [] when DataLab is unavailable (cold
+ * start / missing credentials) so callers degrade gracefully, same pattern
+ * as fetchNaverTrends()'s silent fallback.
+ */
+export async function fetchCategoryTrendSignals(): Promise<CategoryTrendSignal[]> {
+  const series = await fetchRawCategorySeries();
+  if (!series) return [];
+  return series.map(s => classifyTrendSignal(s.title, s.data));
 }
