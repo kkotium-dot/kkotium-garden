@@ -40,10 +40,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       if (plat) data.platformId = plat.id;
     }
     if (body.defaultMargin !== undefined) data.defaultMargin = Number(body.defaultMargin);
-    if (body.contact !== undefined) data.contact = String(body.contact).trim() || null;
-    if (body.address !== undefined) data.address = String(body.address).trim() || null;
-    if (body.description !== undefined) data.description = String(body.description).trim() || null;
-    if (body.domeggookSellerId !== undefined) data.domeggookSellerId = String(body.domeggookSellerId).trim() || null;
+    // #334(2026-08-10): String(null) === "null" — 자바스크립트 함정. body.x가
+    // 이미 JS null(필드를 비운 채 저장, 또는 클라이언트가 null을 그대로 보낸
+    // 경우)이면 String()이 문자열 "null"을 만들어 DB에 그대로 저장돼버렸다
+    // (거래처 명단 화면에 "null" 텍스트로 노출된 실측 사례, 4개 공급사 전부
+    // 오염 확인). null/undefined는 String() 없이 그대로 null로 저장하고,
+    // 실제 문자열 값만 trim한다. 4개 필드(contact/address/description/
+    // domeggookSellerId) 전부 같은 패턴이라 한 번에 근본 수정한다(#55).
+    if (body.contact !== undefined) data.contact = body.contact == null ? null : String(body.contact).trim() || null;
+    if (body.address !== undefined) data.address = body.address == null ? null : String(body.address).trim() || null;
+    if (body.description !== undefined) data.description = body.description == null ? null : String(body.description).trim() || null;
+    if (body.domeggookSellerId !== undefined) data.domeggookSellerId = body.domeggookSellerId == null ? null : String(body.domeggookSellerId).trim() || null;
     if (body.active !== undefined) data.active = Boolean(body.active);
     // Default shipping template connection
     if (body.defaultShippingTemplateId !== undefined) {
