@@ -63,7 +63,7 @@ CRITICAL RULES (verified against actual Naver DB):
 - 소파 → 가구/인테리어 > 거실가구 > 소파
 - 두꺼비집가리개/분전함커버 → 가구/인테리어 > 인테리어소품 > 인터폰박스
 - 인테리어소품/장식 → 가구/인테리어 > 인테리어소품 > 기타장식용품
-- For unknown items: use 가구/인테리어 > DIY자재/용품 > 기타DIY자재/용품
+- If the product does not clearly match any category you know, respond with an empty array [] instead of guessing.
 
 Respond ONLY with raw JSON array (no markdown):
 [{"d1":"...","d2":"...","d3":"..."},{"d1":"...","d2":"...","d3":"..."},{"d1":"...","d2":"...","d3":"..."}]`;
