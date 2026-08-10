@@ -37,6 +37,10 @@ export interface WholesaleProduct {
   categoryMismatch: 'suspect' | null;
   categoryMismatchAxis: MismatchAxis | null;
   categoryMismatchModifier: string | null;
+  // 꼬띠 소싱 v2(로드맵 1, 2026-08-10) — 이 상품이 내가 실제 거래 중인
+  // 공급사(Supplier.domeggookSellerId)의 것인지. true면 배송·정산·합배송이
+  // 이미 세팅돼 있어 마찰 없이 바로 소싱 가능(공급사 프리미엄, 설계 §3-2).
+  isMySupplier: boolean;
 }
 
 // 토큰 경계를 지킨 "수식어+키워드 접두" 매칭(설계 §5 체크리스트 3번 — 단순
@@ -164,6 +168,7 @@ interface DomeggookListItem {
 async function searchDomeggookMarket(
   keyword: string,
   market: DomeggookMarket,
+  sellerId?: string,
 ): Promise<WholesaleProduct[]> {
   const apiKey = await getApiKey();
   if (!apiKey) return [];
@@ -182,6 +187,11 @@ async function searchDomeggookMarket(
       mnq: '1',
       mxq: '1',
     });
+    // 꼬띠 소싱 v2(로드맵 1, 2026-08-10) — 공급사 축: id 파라미터로 특정
+    // 판매자(공급사)의 상품만 조회. 도매매 OpenAPI v4.1 공식 문서 확인
+    // (KKOTTI_DAILY_SOURCING_V2_2026-08-07.md §2) — id는 kw와 함께 써서
+    // "이 공급사 안에서 이 키워드에 맞는 상품"으로 범위를 좁힌다.
+    if (sellerId) params.set('id', sellerId);
 
     const res = await fetch(`${DOMEGGOOK_API}?${params}`, {
       signal: AbortSignal.timeout(10_000),
@@ -259,6 +269,7 @@ async function searchDomeggookMarket(
         categoryMismatch: categoryMismatchResult.mismatch,
         categoryMismatchAxis: categoryMismatchResult.axis,
         categoryMismatchModifier: categoryMismatchResult.matchedModifier,
+        isMySupplier: !!sellerId,
       });
     }
 
@@ -340,6 +351,44 @@ export async function matchWholesaleProducts(
     matches: sorted,
     searchedPlatforms,
   };
+}
+
+// ── 꼬띠 소싱 v2 로드맵 1(2026-08-10): 공급사 축 ────────────────────────────
+// 설계: docs/design/KKOTTI_DAILY_SOURCING_V2_2026-08-07.md §2·§3-1·§6.
+// "이 키워드에 맞는 상품 중, 내가 실제 거래하는 공급사가 취급하는 것"을 찾는다.
+// 새 API가 아니라 기존 searchDomeggookMarket에 sellerId만 추가해 구현(§2 확인).
+// 도매매(supply)만 조회한다 — domeggookSellerId는 도매매 셀러 계정 기준이며
+// 도매매·도매꾹은 같은 API 키를 쓰는 동일 계정군이라(DOMAIN_FACTS §1) 우선
+// supply만으로 충분하다. 필요시 dome도 추가 가능(현재는 범위 최소화).
+export interface SupplierMatchResult {
+  supplierId: string;
+  supplierName: string;
+  matches: WholesaleProduct[];
+}
+
+// 내가 거래 중인 공급사들(domeggookSellerId 보유) 중, 주어진 키워드에 맞는
+// 상품을 취급하는 공급사만 골라 반환한다. 취급 안 하면 그 공급사는 결과에서
+// 제외(빈 배열 억지로 채우지 않음 — #325 정직한 실패).
+export async function searchBySupplier(keyword: string): Promise<SupplierMatchResult[]> {
+  const suppliers = await prisma.supplier.findMany({
+    where: { domeggookSellerId: { not: null } },
+    select: { id: true, name: true, domeggookSellerId: true },
+  });
+  if (suppliers.length === 0) return [];
+
+  const results: SupplierMatchResult[] = [];
+  for (const supplier of suppliers) {
+    if (!supplier.domeggookSellerId) continue;
+    try {
+      const matches = await searchDomeggookMarket(keyword, 'supply', supplier.domeggookSellerId);
+      if (matches.length > 0) {
+        results.push({ supplierId: supplier.id, supplierName: supplier.name, matches });
+      }
+    } catch { /* best-effort — 한 공급사 실패가 나머지를 막지 않는다(#82) */ }
+    // 공급사 간 rate limit(기존 플랫폼 간 300ms 관례와 동일)
+    await new Promise(r => setTimeout(r, 300));
+  }
+  return results;
 }
 
 // ── Discord embed helper for wholesale matches ───────────────────────────────
