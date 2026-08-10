@@ -1,84 +1,66 @@
-# 현재 인계 (CURRENT) — 2026-08-10 세션 (오류 8건+후속 A/B/C 전부 Desktop 최종 재검증 완료, 아침 소싱 크론 조사는 Code 진행 중)
+# 현재 인계 (CURRENT) — 2026-08-10 세션 (꼬띠 소싱 v2 로드맵 1b 다중 렌즈 완료, 아침 소싱 크론 조사 여전히 미착수)
 
 > 다음 세션은 이 파일 → 해당 트랙 설계문서 → `PRINCIPLES_LEARNED.md` 순으로 읽고 시작.
 
-- **status**: **✅ 운영자 실사용 발견 오류 8건 + 후속 A/B/C 전부 완료·push·Desktop 독립 재검증 완료.** 상세는 `docs/handoff/CODE_UX_FIXES_RESULT_2026-08-10.md` + `CODE_UX_FIXES_FOLLOWUP_2026-08-10.md`(Desktop 최종 재검증 섹션 추가됨). **아침 소싱 크론 조사는 Code가 진행 중**(운영자 승인, 3가지 방향) — 결과 대기.
-- **branch**: `main` (HEAD `11e1a81`, 전부 push, 동기화 0/0)
-- **배포 상태**: `11e1a81`까지 전부 배포 확인 완료(문서만이라 코드 영향 없음, 직전 코드 배포 `fea3475` READY 확인됨)
+- **status**: **✅ 꼬띠 소싱 v2 로드맵 1b(다중 발굴 렌즈) 완료·push 대기.** 상세는 `docs/handoff/CODE_SOURCING_V2_LENSES_RESULT_2026-08-10.md`. **아침 소싱 알림 크론 조사는 이번 세션에도 착수 못 함** — 직전 CURRENT.md가 "Code 진행 중"이라 적어뒀었지만, 실제로는 운영자가 이 세션에서 로드맵 1b로 바로 전환 지시해 조사 자체가 시작되지 않았다(#318 교훈 그대로 재확인 — 낡은 인계문서를 실측 없이 믿지 말 것). 다음 세션 최우선.
+- **branch**: `main`, 이번 세션 커밋 예정(아래 §커밋 참조).
+- **배포 상태**: 다음 세션 STEP0에서 prod deploy SHA==HEAD 확인 필요.
 
 ---
 
-## ★★ Desktop 최종 독립 재검증 완료 (2026-08-10, 이 세션 마지막 작업)
+## ★★ 이번 세션 완료 — 꼬띠 소싱 v2 로드맵 1b (다중 발굴 렌즈, 2026-08-10)
 
-Code의 A/B/C 완료 보고를 그대로 믿지 않고 전부 재검증(#45):
-- **A(반려동물 오분류)**: 프로덕션 API 재현 → 대분류 오류("가구/인테리어" 쏠림) 완전 해소 확인. ⚠️ 세부(d3)가 "강아지 사료"로 뭉뚱그려지는 경미한 잔여 오차 발견(급식기/목줄/캣타워 전부) — 원래 심각도보다 훨씬 가벼워 긴급 조치 불필요, 다음 라운드 후보로만 기록.
-- **B(캐시 정리)**: Supabase 직접 조회(`category_mappings` 테이블) → 오염분 잔존 0건, 정상 캐시 26건 보존 확인(과도 삭제 없음).
-- **C(테스트 데이터)**: `Product` 테이블 조회 → 테스트 상품 완전 삭제 확인, 방치 0.
-- tsc 독립 재실행 0 에러.
+원본 지시: `docs/handoff/CODE_SOURCING_V2_LENSES_HANDOFF_2026-08-10.md` · 결과 상세: `docs/handoff/CODE_SOURCING_V2_LENSES_RESULT_2026-08-10.md`
 
-**결론**: 8건 + 후속 A/B/C 전 항목이 근본 수정→구현→Desktop 독립 검증까지 완결. 유일한 경미 잔여는 A의 d3 세부 오차(비긴급).
+**핵심**: 설계 문서(`docs/design/KKOTTI_DAILY_SOURCING_V2_2026-08-07.md` §3-0)의 8개 렌즈(급상승📈·시즌선점🗓️·니치💎·블루오션🌊·꿀통🍯·황금🏆·스테디📚 + 레드오션⚠️경고)를 구현. 기존 `naver/recommendation-type.ts`(황금/니치/시즌 3렌즈)와 `naver/category-score.ts`·`naver-margin-advisor.ts`를 재사용하는 순수 분류 계층 — 신규 대발명 아님.
 
----
+| 파일 | 작업 |
+|---|---|
+| `src/lib/sourcing-lenses.ts`(신규) | 8개 렌즈 판정 로직 + `LENS_DAILY_QUOTA`(상수화) + `allocateByLens()` |
+| `src/lib/trend-analyzer.ts` | `computeRisingRate`/`computeVolatility`/`fetchCategoryTrendSignals` 추가 — 기존 7일 DataLab 시계열 재해석, **API 재호출 추가 없음** |
 
-## ★★ 이번 세션 완료 — 운영자 실사용 발견 오류 8건 + Desktop 교차검증 후속 3건 (2026-08-10)
+**수정 금지 확인**: `wholesale-matcher.ts`(로드맵1 완료분) · `cron/*` · `.github/workflows/*` 전부 미변경(git diff로 확인).
 
-원본 지시: `docs/handoff/CODE_UX_FIXES_HANDOFF_2026-08-10.md` + `docs/handoff/CODE_UX_FIXES_FOLLOWUP_2026-08-10.md` · 결과 상세: `docs/handoff/CODE_UX_FIXES_RESULT_2026-08-10.md`
+**검증**: `npx tsc --noEmit` 0 · `npm run build` 0. 로컬 임시 스크립트(tsx, 검증 후 삭제)로 순수함수 단위 검증 — 급상승/스테디/시즌선점/레드오션 각 렌즈가 알려진 샘플 데이터로 정확히 분류됨, 얇은 데이터(1포인트)는 근거 없이 판정 안 함(#231) 확인, 배분기 중복 배정 없음·미달 정직 표시(#325) 확인.
 
-### 원본 8건
+**다음 단계(이번 범위 밖)**: 실제 `sourcing-recommender.ts`(cron 소비)에 렌즈 분류기를 연결해 10개 추천에 배지를 붙이고 디스코드/앱에서 렌즈별로 그룹핑하는 실배선 작업(설계 §3-1·§3-4)은 `cron/*` 수정 금지 지시로 이번 범위에서 제외 — 별도 로드맵 단계로 이어감.
 
-| # | 항목 | 근본 원인 | write set |
-|---|---|---|---|
-| 1(최우선) | 씨앗심기 카테고리 "가구/인테리어" 대량 오분류 | AI 프롬프트의 강제 폴백 지시 | `api/category/suggest/route.ts` |
-| 2 | 네이버 상품 가져오기 작동 안 함 | 클라이언트가 import API 응답을 안 읽고 무조건 성공 취급 | `products/page.tsx`(`NaverImportModal`) |
-| 3 | 페이지네이션 숫자 버튼 없음 | UX 개선 요청 | `products/page.tsx`(동일 모달) |
-| 4 | 마진 계산이 즉시할인 미반영 | import 시 `instant_discount` 컬럼을 전혀 안 채움 | `api/products/import/route.ts` |
-| 5+6 | 씨앗심기 이동 시 정보/이미지 리셋 | import가 name/salePrice/mainImage 4개만 저장하고 나머지를 버림(hydrate 자체는 정상) | `api/products/import/route.ts` |
-| 7 | 목표 마진율 "0" 접두 버그 | targetMargin input만 `value={x \|\| ''}` 패턴 누락 | `components/products/MarginCalculator.tsx` |
-
-### Desktop 교차검증 후속 A/B/C (같은 날 이어서)
-
-| # | 항목 | 결과 |
-|---|---|---|
-| A | 반려동물 자동급식기 → 가구/인테리어 잔여 오분류 | 원인은 fuzzy 매칭이 아니라 `FALLBACK_RULES`가 존재하지 않는 카테고리 축(`d1:'반려동물'`)을 가리키고 있어 안전망이 무력화된 것 — 실제 축(`생활/건강>반려동물`)으로 정정 + AI 프롬프트에 힌트 1줄 추가 |
-| B | `dome_category_cache` 오염 | 규모 파악(Supabase 직접 조회) → 9건(프롬프트 수정 전 7건 + 조사 중 테스트로 생성된 2건)만 정밀 id 지정 삭제, 무관한 정상 fallback 캐시 3건은 보존 |
-| C | 씨앗심기 프리필 end-to-end 미검증 | 실제 네이버 상품(원상품번호 13564133057) 실제 import → `?edit=`로 카테고리 4단계·판매가·대표이미지·태그(3개) 프리필 브라우저 확인 → 테스트 상품 DELETE로 정리 완료 |
-
-**잔여(급하지 않음)**: #4(즉시할인 반영)는 이번 C의 테스트 상품이 할인 0원이라 "실제 할인 있는 상품" 시나리오는 여전히 미검증 — 코드 로직 자체는 Naver 공식 스키마로 이미 검증됨, 다음에 할인 걸린 상품 가져올 기회 있으면 재확인 권장.
-
-**커밋**: 원본 8건 5개 커밋(`8541d04`~`666ac87`) + 후속 A/B/C는 다음 커밋으로 push 예정(아래 참조). 전부 push 완료.
+**커밋**: 이번 세션 다음 액션으로 커밋·push 예정.
 
 ---
 
-## ★★ 진행 중 — 아침 소싱 알림 정규 스케줄 미실행 (Code 조사 착수, 결과 대기)
+## ★★ 여전히 미착수 — 아침 소싱 알림 정규 스케줄 미실행
 
-2026-08-10 세션에 운영자가 이 조사를 승인(3가지 방향 + GitHub Actions 대안 설계까지). Code가 착수했으나 이 문서 갱신 시점까지 결과 커밋 미도착 — 다음 세션 시작 시 최우선 확인.
+2026-08-08부터 세 세션째 이월 중. 상세는 `docs/handoff/CODE_DAILY_CRON_FIX_HANDOFF_2026-08-08.md` 최하단 "★★★★★★ 2026-08-10 최신 상태" 참조.
 
-**직전 세션(2026-08-08~08-10)까지 확정된 사실** — 상세는 `docs/handoff/CODE_DAILY_CRON_FIX_HANDOFF_2026-08-08.md` 최하단 "★★★★★★ 2026-08-10 최신 상태" 참조:
+**직전 세션까지 확정된 사실**:
 - 함수 코드·환경변수·웹훅·신규 크론(`sourcing-daily`) 전부 수동 호출 시 100% 정상.
-- **정규 스케줄(08:00 KST) 자동 실행만 8/9·8/10 이틀 연속 실패** — 신규 크론 분리(maxDuration+독립크론) 이후에도 재발.
+- **정규 스케줄(08:00 KST) 자동 실행만 계속 실패** — 신규 크론 분리(maxDuration+독립크론) 이후에도 재발.
 - 문제 범위 = Vercel 크론 스케줄러 자체(또는 그 앞단), 개별 라우트 코드 아님.
 
-**다음 세션 조사 방향(미착수, 그대로 유효)**:
+**조사 방향(미착수, 그대로 유효)**:
 1. Vercel Cron Jobs 탭 각 크론 이름 클릭 시 별도 상세페이지(Recent Invocations) 존재 여부 재확인.
 2. Vercel 공식 문서에서 Hobby 크론이 스킵되는 조건 재검색.
 3. 대안: GitHub Actions scheduled workflow로 `sourcing-daily`를 매일 정시 curl 호출하는 우회 안전망 검토(`.github/workflows/`).
 
-**절대 금지**: 실제 Discord 발송 테스트 임의 실행 금지(운영자/Desktop 승인 필요) — 이번 세션도 준수, 발송 테스트 없음.
+**절대 금지**: 실제 Discord 발송 테스트 임의 실행 금지(운영자/Desktop 승인 필요).
 
 ---
 
 ## 다음 세션 시작 순서
 ```
-1. [최우선] 아침 소싱 알림 정규 스케줄 미실행 조사 착수
+1. [최우선] 아침 소싱 알림 정규 스케줄 미실행 조사 — 세 세션째 이월, 이번엔 반드시 착수
    → docs/handoff/CODE_DAILY_CRON_FIX_HANDOFF_2026-08-08.md 최신 섹션부터
-2. push된 미merge 브랜치 존재(가장 최근 feature/preview-copy-then-redesign, 기준일로부터 며칠째) — 저녁 세션 때 우선 검토·merge(#320)
+2. [후속] 소싱 v2 로드맵 1b(렌즈 분류기)를 실제 파이프라인(sourcing-recommender.ts/cron)에 배선 — 운영자 우선순위 확인 후
+3. push된 미merge 브랜치 존재(가장 최근 feature/preview-copy-then-redesign) — 저녁 세션 때 우선 검토·merge(#320)
 ```
 
-## 절대 금지 + 교훈 (누적, 변경 없음)
+## 절대 금지 + 교훈 (누적)
 - 네이버 PUT/POST → 운영자 GO 없이 금지 · 자동발행 영구금지(#307)
 - 디스코드 실발송 → 승인 없이 금지
 - 신규 파일은 Desktop Commander:write_file만(#330) · 대용량MD 추가는 edit_block 앵커
-- 테스트 데이터 방치 금지 — 이번 세션도 import 테스트 상품 DELETE로 정리 완료
+- 테스트 데이터 방치 금지
 - **UI 설정 화면 문구보다 curl/실측이 항상 우선**(#310)
-- DB 캐시 정리는 규모 파악 후 id 지정 삭제만(전체 삭제 금지, #334 관련) — 이번 세션 B에서 그대로 적용
+- DB 캐시 정리는 규모 파악 후 id 지정 삭제만(전체 삭제 금지, #334)
+- **낡은 인계문서의 "진행 중"·"대기 중" 표기를 실측 없이 믿지 말 것**(#318) — 이번에도 "크론 조사 Code 진행 중"이 실제로는 착수 전이었음
 - git stash `z3c-misdirected-changes-needs-redo` 처리 방향 — 여전히 운영자 결정 대기(손대지 않음)

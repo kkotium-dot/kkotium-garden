@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-10 (rev117 — UX 8건 Desktop 교차검증 후속 A/B/C 완료 · Code) / 직전 rev116 — 운영자 실사용 오류 8건 수정 완료 · Code
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-10 (rev118 — 꼬띠 소싱 v2 로드맵 1b 다중 렌즈 완료 · Code) / 직전 rev117 — UX 8건 Desktop 교차검증 후속 A/B/C 완료 · Code
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -6,6 +6,24 @@
 
 
 > **📦 rev80 이전은 archive로 분할됨(#31, 2026-07-28)**: `docs/plan/archive/PARALLEL_WORK_TRACKER_~rev80.md` 참조(rev51~rev80, 삭제 0).
+
+## rev118 — 꼬띠 소싱 v2 로드맵 1b 다중 발굴 렌즈 완료 (2026-08-10 Code)
+
+**배경**: `docs/design/KKOTTI_DAILY_SOURCING_V2_2026-08-07.md` §3-0 설계를 구현. 기존 소싱 추천이 "DataLab 뜨는 키워드" 렌즈 하나뿐이던 것을 급상승📈·시즌선점🗓️·니치💎·블루오션🌊·꿀통🍯·황금🏆·스테디📚 7개 발굴 렌즈 + 레드오션⚠️ 경고 렌즈로 확장. `naver/recommendation-type.ts`(황금/니치/시즌 3렌즈)를 신규 대발명 없이 재사용·확장하는 순수 분류 계층.
+
+**신규 `src/lib/sourcing-lenses.ts`**: `classifySourcingLenses()`가 한 후보를 여러 렌즈에 동시 매칭(다중 배지, 설계 요구사항). 레드오션은 `SourcingLens` 타입에 넣지 않고 별도 `RedOceanWarning` 타입으로 분리(발굴 렌즈가 아니라 경고라는 걸 타입 레벨에서도 강제). `LENS_DAILY_QUOTA`(급상승2·시즌선점2·니치2·블루오션2·꿀통1·스테디1=10, 설계 예시 그대로) 상수화 + `allocateByLens()`(중복 배정 없음, 미달 시 `unfilledLenses`로 정직 표시 #325).
+
+**`src/lib/trend-analyzer.ts` 확장**: `fetchDataLabTrends()`가 이미 매번 가져오던 7일 시계열을 재해석해 `computeRisingRate`/`computeVolatility`/`fetchCategoryTrendSignals` 추가 — **API 재호출 0건 추가**(배치 fetch 로직을 `fetchRawCategorySeries()`로 분리해 공유). 기존 `fetchNaverTrends()`/`matchProductsToTrends()` 시그니처 무변경 확인(소비처 `sourcing-recommender.ts`/`daily-signals.ts` 무영향).
+
+**시즌선점 vs 급상승 구분**: 기존 `seasonalNow()`(이번달 또는 다음달)는 "지금 뜨는 것"과 "곧 올 시즌"을 구분 못 해 신규 `seasonalLeadWindow()`(1~2개월 뒤만)로 분리 — 설계가 "시즌 선점이 핵심 차별점"이라 명시한 부분을 살림.
+
+**검증**: `npx tsc --noEmit` 0 · `npm run build` 0. 로컬 tsx 스크립트(검증 후 삭제)로 순수함수 단위 검증 — 상승/평탄/하락 시계열 방향성 정확, 얇은 데이터(1포인트)는 근거 없이 판정 안 함(#231), 다중 렌즈 동시 매칭·시즌 리드윈도우·레드오션 경고·배분기 무중복 전부 확인.
+
+**수정 금지 확인**: `wholesale-matcher.ts`(로드맵1)·`cron/*`·`.github/workflows/*` 전부 미변경(git diff 확인). `naver/recommendation-type.ts`는 "필요시" 옵션이었으나 `sourcing-lenses.ts`가 자체 메타데이터를 갖고 있어 미수정 판단.
+
+**다음 단계(범위 밖)**: 실제 `sourcing-recommender.ts`(cron 소비)에 렌즈 분류기 배선(설계 §3-1·§3-4)은 cron 수정 금지 지시로 이번 범위 제외 — 별도 로드맵 단계.
+
+---
 
 ## rev117 — UX 8건 Desktop 교차검증 후속 A/B/C 완료 (2026-08-10 Code)
 
