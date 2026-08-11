@@ -842,3 +842,29 @@ Filesystem MCP 다운(#26) → **Desktop Commander로 우회 저장 성공**(#29
 
 **다음 세션 최우선**: (1)도매꾹 API 404 원인 규명(공식 공지 실측) (2)3-A 코드 + P2 문서 전체 커밋 push (3)운영자 승인 후 실발송.
 
+
+
+---
+
+## rev — 씨앗심기 정보완전성 4건 (2026-08-11 Code)
+
+**#1 원산지 미연동 근본수정**: `api/products/import/route.ts`가 naver_origin/originCode/
+importer_name을 전혀 안 채우던 버그. 인계 문서의 "코드체계가 다를 수 있다" 우려를 코드
+추적으로 검증한 결과 `Product.originCode`와 네이버 originAreaCode는 완전히 같은 코드표
+(naver-origin-codes.ts, 518건)임을 확인 — 변환 없이 직접 매핑. 표에 없는 값은 저장 안 함.
+
+**#3 권장 판매가 좌측 반영**: 이미 정상 작동(적용 버튼+배선 기존 존재) — 브라우저 실측으로
+확인만, 코드 변경 없음.
+
+**#4 즉시할인 인라인 배치**: MarginCalculator.tsx 판매가 컬럼에 즉시할인 토글+입력 인라인
+배치(기존 별도 줄 → 관계 안 보이던 문제 해소).
+
+**#2 부분 재연동**: 설계 문서만(NAVER_PARTIAL_SYNC_2026-08-11.md). 네이버 v2 PUT은 FULL
+REPLACE 확정이라 부분 PUT 불가 — "변경 필드 감지+전체 재구성+PUT"으로 설계, 쓰기
+파이프라인(`/api/naver/products/update`)은 이미 존재해 신규 인프라 거의 불요. 구현은
+승인 후 별도 라운드.
+
+**검증**: tsc 0 · build 0 · 브라우저 실측(로컬 dev, /products/new) — 마진계산·추천가 적용·
+인라인 할인 레이아웃 전부 정상 확인.
+
+결과 문서: `docs/handoff/CODE_SEED_PLANTING_IMPROVEMENTS_2026-08-11.md`

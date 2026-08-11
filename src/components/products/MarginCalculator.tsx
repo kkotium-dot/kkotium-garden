@@ -618,75 +618,68 @@ export function MarginCalculator({
         </div>
       )}
 
-      {/* Price Inputs */}
+      {/* Price Inputs — 판매가 옆에 즉시할인 인라인 배치(#4 UX: 판매가 대비 할인이라는
+          관계가 한눈에 들어오도록, 이전엔 별도 줄이라 시각적으로 분리돼 있었음) */}
       <div className="grid grid-cols-2 gap-3">
         <NumField
           label="도매가 (공급가)"
           value={local.supplierPrice}
           onChange={(v) => { updateLocal({ supplierPrice: v }); pushToForm('supplierPrice', v); }}
         />
-        <NumField
-          label="판매가"
-          value={local.salePrice}
-          onChange={(v) => { updateLocal({ salePrice: v }); pushToForm('salePrice', v); }}
-        />
-      </div>
-
-      {/* Instant Discount — DISCOUNT-UNIT: 원/% selectable, Naver-style */}
-      <div>
-        <label className="block text-xs font-medium text-gray-500 mb-1">즉시할인</label>
-        {/* 원/% segment toggle (reuses the channel-toggle style) */}
-        <div
-          role="radiogroup"
-          aria-label="할인 단위 선택"
-          className="inline-flex items-center gap-1 p-1 bg-gray-100 rounded-lg mb-1.5"
-        >
-          {([['won', '원'], ['percent', '%']] as const).map(([unit, lbl]) => (
-            <button
-              key={unit}
-              type="button"
-              role="radio"
-              aria-checked={local.discountUnit === unit}
-              onClick={() => setDiscountUnit(unit)}
-              className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-colors ${
-                local.discountUnit === unit
-                  ? 'bg-white text-pink-600 shadow-sm border border-pink-200'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {lbl}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="relative">
-            <input
-              type="number"
-              inputMode="decimal"
-              value={local.instantDiscount || ''}
-              onChange={(e) => {
-                const raw = parseFloat(e.target.value) || 0;
-                // percent clamps to 0..100; won clamps to >= 0 (calc caps at salePrice)
-                const v = local.discountUnit === 'percent'
-                  ? Math.min(Math.max(raw, 0), 100)
-                  : Math.max(raw, 0);
-                updateLocal({ instantDiscount: v });
-                pushToForm('instantDiscount', v);
-              }}
-              max={local.discountUnit === 'percent' ? 100 : undefined}
-              className="w-full px-3 py-2 pr-8 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-              style={{ fontVariantNumeric: 'tabular-nums' }}
-              placeholder="0"
-            />
-            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-              {local.discountUnit === 'percent' ? '%' : '원'}
-            </span>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-0.5">판매가</label>
+          <div className="flex items-center gap-1">
+            <div className="relative flex-1 min-w-0">
+              <input
+                type="number"
+                value={local.salePrice || ''}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value) || 0;
+                  updateLocal({ salePrice: v });
+                  pushToForm('salePrice', v);
+                }}
+                min={0}
+                className="w-full pr-6 pl-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                placeholder="0"
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">원</span>
+            </div>
+            <span className="shrink-0 text-gray-300 text-sm">−</span>
+            <div className="relative w-20 shrink-0">
+              <input
+                type="number"
+                inputMode="decimal"
+                value={local.instantDiscount || ''}
+                onChange={(e) => {
+                  const raw = parseFloat(e.target.value) || 0;
+                  // percent clamps to 0..100; won clamps to >= 0 (calc caps at salePrice)
+                  const v = local.discountUnit === 'percent'
+                    ? Math.min(Math.max(raw, 0), 100)
+                    : Math.max(raw, 0);
+                  updateLocal({ instantDiscount: v });
+                  pushToForm('instantDiscount', v);
+                }}
+                max={local.discountUnit === 'percent' ? 100 : undefined}
+                title="즉시할인"
+                className="w-full pl-2 pr-5 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                style={{ fontVariantNumeric: 'tabular-nums' }}
+                placeholder="할인"
+              />
+              <button
+                type="button"
+                onClick={() => setDiscountUnit(local.discountUnit === 'percent' ? 'won' : 'percent')}
+                title="할인 단위 전환 (원/%)"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-pink-500 hover:text-pink-600"
+              >
+                {local.discountUnit === 'percent' ? '%' : '원'}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-1 text-sm text-gray-600" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            <span className="text-gray-400">→</span>
-            <span className="font-medium">{breakdown.effectivePrice.toLocaleString()}원</span>
+          <div className="mt-1 flex items-center gap-1 text-xs text-gray-500" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            <span className="text-gray-400">→ 실판매가</span>
+            <span className="font-medium text-gray-700">{breakdown.effectivePrice.toLocaleString()}원</span>
             {local.salePrice > 0 && breakdown.discountAmount > 0 && (
-              <span className="text-xs px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full font-medium">
+              <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full font-medium">
                 {local.discountUnit === 'percent'
                   ? `−${breakdown.discountAmount.toLocaleString()}원`
                   : `${Math.round((breakdown.discountAmount / local.salePrice) * 100)}%`}

@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getProduct, getChannelProduct } from '@/lib/naver/api-client';
 import { writeLinkFields } from '@/lib/product-link';
+import { NAVER_ORIGIN_CODES, originCodeLabel } from '@/lib/naver/naver-origin-codes';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,8 +46,7 @@ function pickImageUrl(op: any): string | null {
 // #5/#6 — 가져온 상품이 씨앗심기(?edit=)로 열릴 때 재입력 없이 이어 쓸 수 있도록,
 // Naver 원상품 상세에 이미 있는 정보는 가져오기 시점에 최대한 함께 저장한다.
 // (씨앗심기 hydrate 자체는 정상 — 문제는 import가 name/salePrice/mainImage 외
-// 전부 비워서 저장했던 것.) 형식이 앱 스키마와 100% 동일한 필드만 채운다
-// (원산지 코드 등 체계가 다른 필드는 오매핑 위험이 있어 제외).
+// 전부 비워서 저장했던 것.)
 function pickAdditionalImages(op: any): string[] {
   const opt = op?.images?.optionalImages;
   if (!Array.isArray(opt)) return [];
@@ -57,6 +57,23 @@ function pickSellerTags(op: any): string[] {
   const tags = op?.detailAttribute?.seoInfo?.sellerTags;
   if (!Array.isArray(tags)) return [];
   return tags.map((t: any) => t?.text).filter((t: unknown): t is string => typeof t === 'string' && !!t);
+}
+
+// #1 (2026-08-11) — 원산지 미연동 근본수정. Product.originCode는 네이버
+// originAreaCode와 **같은 코드표**(원산지코드.xls 518건, src/lib/naver/
+// naver-origin-codes.ts)를 기준으로 검증된다(product-builder.ts
+// OFFICIAL_ORIGIN_CODES 참조) — 코드체계가 다르다는 이전 가정은 틀렸으므로
+// 변환 없이 그대로 저장해도 안전하다. 표에 없는 코드는 저장하지 않는다
+// (스키마 default '0001'로 남겨 다음 라운드 정정 — 추측 저장 금지 #82).
+const OFFICIAL_ORIGIN_CODE_SET = new Set(NAVER_ORIGIN_CODES.map((o) => o.code));
+function pickOrigin(op: any): { originCode: string | undefined; naverOrigin: string | undefined; importerName: string | undefined } {
+  const originAreaInfo = (op?.detailAttribute?.originAreaInfo ?? {}) as Record<string, any>;
+  const rawCode = typeof originAreaInfo.originAreaCode === 'string' ? originAreaInfo.originAreaCode.trim() : '';
+  const originCode = rawCode && OFFICIAL_ORIGIN_CODE_SET.has(rawCode) ? rawCode : undefined;
+  const content = typeof originAreaInfo.content === 'string' && originAreaInfo.content.trim() ? originAreaInfo.content.trim() : undefined;
+  const naverOrigin = content ?? (originCode ? originCodeLabel(originCode) : undefined);
+  const importerName = typeof originAreaInfo.importer === 'string' && originAreaInfo.importer.trim() ? originAreaInfo.importer.trim() : undefined;
+  return { originCode, naverOrigin, importerName };
 }
 
 // #4 — 마진 계산은 salePrice - instant_discount(원)를 실제 판매가로 쓴다
@@ -147,6 +164,7 @@ export async function POST(request: NextRequest) {
         typeof op?.leafCategoryId === 'string' && op.leafCategoryId ? op.leafCategoryId : undefined;
       const additionalImages = pickAdditionalImages(op);
       const sellerTags = pickSellerTags(op);
+      const { originCode, naverOrigin, importerName } = pickOrigin(op);
 
       const created = await prisma.product.create({
         data: {
@@ -166,6 +184,9 @@ export async function POST(request: NextRequest) {
           naverCategoryCode,
           images: additionalImages,
           tags: sellerTags.length > 0 ? sellerTags : undefined,
+          originCode,
+          naver_origin: naverOrigin,
+          importer_name: importerName,
         },
         select: { id: true },
       });
