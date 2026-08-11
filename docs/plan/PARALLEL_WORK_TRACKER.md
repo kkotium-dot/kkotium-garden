@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-10 (rev119 — 아침 소싱 크론 조사 착수·중복발송 가드 추가·GH Actions 안전망 승인대기 · Code) / 직전 rev118 — 꼬띠 소싱 v2 로드맵 1b 다중 렌즈 완료 · Code
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-11 (rev120 — 아침 소싱 알림 미발송+카테고리 편중 통합 근본수정 · Code) / 직전 rev119 — 아침 소싱 크론 조사 착수·중복발송 가드 추가 · Code
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -6,6 +6,24 @@
 
 
 > **📦 rev80 이전은 archive로 분할됨(#31, 2026-07-28)**: `docs/plan/archive/PARALLEL_WORK_TRACKER_~rev80.md` 참조(rev51~rev80, 삭제 0).
+
+## rev120 — 아침 소싱 알림 미발송 + 카테고리 편중 통합 근본수정 (2026-08-11 Code)
+
+원본 지시: `docs/handoff/CODE_SOURCING_ROOT_CAUSE_HANDOFF_2026-08-11.md` · 결과 상세: `docs/handoff/CODE_SOURCING_ROOT_CAUSE_2026-08-11.md`
+
+**증상 A(미발송) 근본원인 확정**: `cron/sourcing-daily`가 실작업(DataLab+검색량+AI+도매매칭+DB저장+Discord)을 전부 하는 `/api/sourcing-recommend`를 HTTP self-fetch로 호출했는데, 그 라우트에 `maxDuration` 지정이 빠져 있어 Vercel Hobby 기본 10초 제한에 걸렸다(prod 실측: dryRun만으로도 8.4~10.2초). DB 저장 중단 시점(8/7 이후 0건, 직접 쿼리로 확인)이 self-fetch 분리 배포일(8/8, `fec8759`)과 정확히 겹침을 확인.
+
+**수정**: self-fetch 자체 제거. `sourcing-recommender.ts`에 `runSourcingScan()` 신설(중복발송 가드→스캔→recoType 태깅→DB저장→Discord발송 전체를 하나의 함수로 통합), cron이 같은 프로세스에서 직접 호출(`maxDuration=60`이 전체 커버). `/api/sourcing-recommend` POST(대시보드 버튼용)도 같은 함수로 재배선 + 방어적으로 `maxDuration=60` 추가. 응답 shape 무변경(회귀 없음).
+
+**증상 B(카테고리 편중) 근본원인 확정**: `fetchDataLabTrends()`가 "최신일자 절대 ratio" 상위 3개를 그대로 반환 — 베이스라인 큰 카테고리("생활/건강")가 매일 1~3위 독식(prod dryRun 실측으로 매번 동일 조합 확인). 로드맵1b(`sourcing-lenses.ts`)는 grep 전수 확인 결과 완전 미연결.
+
+**수정**: 정렬 기준을 절대 ratio → `risingRate`(로드맵1b `classifyTrendSignal` 재사용, 추가 API 호출 0)로 교체해 상위 2개 선정 + 날짜 기반 순환으로 3번째 슬롯 채움. 로드맵1b 전체(8렌즈 쿼터 배분)는 데이터 구조가 완전히 달라 오늘 전체 연결은 스코프 아웃 — 운영자 판단 필요 항목으로 남김.
+
+**검증**: `npx tsc --noEmit` 0 · `npm run build` 0. prod dryRun 배포 전/후 비교로 `trendCategories`가 실제로 바뀜을 확인, 배포 후 재호출(10.2초)이 새 `maxDuration=60` 안에서 정상 완주함을 확인. 실 Discord 발송 테스트는 미실행(금지 사항 준수).
+
+**★ 남은 미확인**: "sent:true인데 DB엔 없었다"는 관측을 100% 재현하지는 못했다(Vercel Hobby 런타임 로그 보존 1시간 한계로 8/8~8/11 실제 실행 로그 조회 불가). self-fetch 제거로 그 질문 자체가 소멸했다고 판단하지만 완전 확정은 아니다 — 다음 단계는 운영자 승인 하 실 발송 검증(docs/handoff/CURRENT.md 참조).
+
+---
 
 ## rev119 — 아침 소싱 크론 조사 재착수 + 중복발송 방지 가드 추가 (2026-08-10 Code)
 
