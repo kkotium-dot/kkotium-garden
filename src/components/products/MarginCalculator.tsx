@@ -661,7 +661,7 @@ export function MarginCalculator({
                 }}
                 max={local.discountUnit === 'percent' ? 100 : undefined}
                 title="즉시할인"
-                className="w-full pl-2 pr-5 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                className="w-full pl-2 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                 style={{ fontVariantNumeric: 'tabular-nums' }}
                 placeholder="할인"
               />
@@ -669,7 +669,12 @@ export function MarginCalculator({
                 type="button"
                 onClick={() => setDiscountUnit(local.discountUnit === 'percent' ? 'won' : 'percent')}
                 title="할인 단위 전환 (원/%)"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-pink-500 hover:text-pink-600"
+                aria-label={`할인 단위 ${local.discountUnit === 'percent' ? '퍼센트' : '원'} — 클릭해서 전환`}
+                /* #341-후속(2026-08-11): 이전엔 배경·테두리 없는 순수 텍스트라
+                   클릭 가능한 토글임이 시각적으로 안 드러났음(Desktop 조작 시
+                   실제로 헷갈렸던 사례). 작은 칩 스타일(배경+테두리+라운드)로
+                   바꿔 버튼임을 명확히 함 — 클릭 로직은 그대로, 시각만 강화. */
+                className="absolute right-1 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[11px] font-bold text-pink-600 bg-pink-50 border border-pink-200 rounded-md hover:bg-pink-100 hover:border-pink-300 transition-colors cursor-pointer"
               >
                 {local.discountUnit === 'percent' ? '%' : '원'}
               </button>
