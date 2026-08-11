@@ -868,3 +868,24 @@ REPLACE 확정이라 부분 PUT 불가 — "변경 필드 감지+전체 재구�
 인라인 할인 레이아웃 전부 정상 확인.
 
 결과 문서: `docs/handoff/CODE_SEED_PLANTING_IMPROVEMENTS_2026-08-11.md`
+
+
+---
+
+## rev — "네이버에도 반영" 부분재연동 실구현 (2026-08-11 Code)
+
+설계(NAVER_PARTIAL_SYNC_2026-08-11.md) 승인 후 실구현. products/new/page.tsx에
+18필드 화이트리스트(product-builder.ts 직독 확정) + dirty-field diff + "네이버에도
+반영" 버튼 + dryRun 프리뷰 모달(변경 필드 강조/그대로 유지 안내/비가역 경고) +
+confirm 실행 흐름(#46 기존 GO 게이트 재사용). 백엔드(/api/naver/products/update)는
+실측 결과 변경 불필요 확정(curl dryRun 직접 호출로 정상 동작 확인).
+
+부수 발견: Product.taxType(폼 저장 컬럼)과 buildNaverProductPayload가 실제로 읽는
+naver_tax_type이 다른 컬럼 — 화이트리스트에서 taxType 제외해 오표시만 방지, 근본수정은
+범위 밖(#340).
+
+검증: tsc 0 · build 0 · 실 LINKED 상품(cmsk2387l...)으로 브라우저 dryRun 흐름 전체
+실측(버튼 활성화→모달 diff 정확→취소). 지시대로 confirm:true 실행은 하지 않음.
+테스트 데이터 원복 확인.
+
+결과 문서: `docs/handoff/CODE_NAVER_PARTIAL_SYNC_RESULT_2026-08-11.md`

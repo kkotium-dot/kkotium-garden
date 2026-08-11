@@ -1,14 +1,63 @@
-# 현재 인계 (CURRENT) — 2026-08-11 세션 (씨앗심기 정보완전성 4건 — 원산지 근본수정 + UX 개선 + 부분재연동 설계)
+# 현재 인계 (CURRENT) — 2026-08-11 세션 ("네이버에도 반영" 부분재연동 실구현 — dryRun까지 완료, confirm 실행은 재승인 대기)
 
 > 다음 세션은 이 파일 → 해당 트랙 설계문서 → `PRINCIPLES_LEARNED.md` 순으로 읽고 시작.
 
-- **status**: ✅ 씨앗심기 정보완전성+부분재연동+우측패널UX 4건 완료. #1(원산지 import 미연동) 근본수정, #3(권장판매가 좌측반영) 이미 정상 작동 확인, #4(즉시할인 인라인 배치) 구현, #2(부분재연동) 설계 문서 작성(구현은 승인 후 별도 라운드). tsc 0·build 0·브라우저 실측 완료.
+- **status**: ✅ "네이버에도 반영" 부분 재연동 실구현 완료(설계 §3-A/3-B/3-C 전부). dirty-field 감지 + "네이버에도 반영" 버튼 + dryRun 프리뷰 모달까지 브라우저 실측 완료. **confirm:true 실 PUT은 지시대로 이번 라운드에 실행하지 않음** — 운영자 재승인 후 별도. tsc 0·build 0.
 - **branch**: `main` (본 커밋까지 push 예정)
 - **배포 상태**: 본 세션 커밋 push 후 `verify-vercel-deploy.sh --wait` 필요(다음 세션 STEP 0에서 자동 확인됨)
 
 ---
 
-## ★★★★★ 이번 세션 — 씨앗심기 정보완전성 4건 (2026-08-11, Code)
+## ★★★★★★ 이번 세션 — "네이버에도 반영" 부분재연동 실구현 (2026-08-11, Code)
+
+원본 지시: `docs/handoff/CODE_NAVER_PARTIAL_SYNC_HANDOFF_2026-08-11.md`
+결과 상세: `docs/handoff/CODE_NAVER_PARTIAL_SYNC_RESULT_2026-08-11.md`
+설계(그대로 따름): `docs/design/NAVER_PARTIAL_SYNC_2026-08-11.md`
+
+**3-A 변경 감지**: `products/new/page.tsx`에 `product-builder.ts`를 직접 읽어 확정한
+18필드 화이트리스트(`NAVER_FIELD_LABELS`) + 순수 diff 함수. `?edit=` hydrate 정착
+시점(또는 같은 세션 신규 네이버 등록 성공 시점)에 기준선을 1회 캡처, 이후 폼 상태와
+실시간 비교해 "몇 개 필드가 바뀌었는지" 계산.
+
+**3-B UI**: "네이버에도 반영" 버튼(LINKED 상품에만, 변경 0건이면 비활성) → 클릭 시
+기존 `/api/naver/products/update`를 dryRun으로 호출해 모달에 "이 필드가 바뀝니다"
+(변경 필드 강조) + "그 외 N개 필드는 그대로 유지" + payload 프리뷰 + 비가역 경고 →
+"네이버에 반영"(confirm) 클릭 시 같은 라우트를 confirm:true로 재호출(#46 기존 GO
+게이트 재사용, 새 게이트 없음).
+
+**3-C 백엔드**: 실 LINKED 상품(`cmsk2387l...`)으로 dryRun curl 직접 실측 → 기존
+`/api/naver/products/update` 코드 그대로 정상 동작 확인. **백엔드 변경 0**(설계
+문서의 예측이 실측으로 확정됨).
+
+**★부수 발견(수정 안 함)**: `Product.taxType`(폼이 저장하는 컬럼)과
+`buildNaverProductPayload`가 실제로 읽는 `Product.naver_tax_type`이 **서로 다른
+컬럼**임을 발견 — 화이트리스트에서 `taxType`을 제외해 오표시만 막고, 근본수정은
+범위 밖이라 다음 라운드 후보로 기록만.
+
+**검증**: tsc 0 · build 0. 브라우저 실측(로컬 dev, 실 LINKED 상품): 최초 진입 시
+버튼 비활성 → 상품명 수정 시 "네이버에도 반영 (1)"로 활성화 → 클릭 시 모달에 정확한
+diff("상품명"만 강조, 그 외 17개 유지 안내) + dryRun 프리뷰 정상 렌더 확인. **confirm
+버튼은 지시대로 클릭하지 않음.** 테스트로 수정한 상품명은 원상태로 되돌리고 DB
+직접 조회로 원복 확인(테스트 데이터 잔존 0).
+
+---
+
+## 다음 세션 시작 순서
+```
+1. [운영자 재승인 대기] 실전 투입 — Desktop이 dryRun 흐름 재검증 후, 운영자가 실제
+   상품 1건을 골라 "confirm:true 실행 GO"를 명시적으로 낸 뒤에만 실제 PUT 테스트.
+2. [운영자 판단] taxType vs naver_tax_type 컬럼 분리 이슈 근본수정 착수 여부 —
+   어느 컬럼이 SoR인지 먼저 확인 필요.
+3. [기회 있을 때] #1(원산지 import) 실 네이버 연동 상품으로 round-trip 1회 실측(로컬
+   DB에 연동 후보 없어 이전 라운드엔 코드 경로 정합성 확인까지만 완료)
+4. [운영자 방향 결정] 로드맵1b(8렌즈 쿼터 배분 시스템, sourcing-lenses.ts) 전체 연결 여부 — 여전히 대기
+5. push된 미merge 브랜치 존재 여부 재확인(#320 브랜치 머지 리듬)
+6. git stash `z3c-misdirected-changes-needs-redo` 처리 방향 — 여전히 운영자 결정 대기
+```
+
+---
+
+## ★★★★★ 직전 세션 — 씨앗심기 정보완전성 4건 (2026-08-11, Code)
 
 원본 지시: `docs/handoff/CODE_SEED_PLANTING_IMPROVEMENTS_HANDOFF_2026-08-11.md`
 결과 상세: `docs/handoff/CODE_SEED_PLANTING_IMPROVEMENTS_2026-08-11.md`
@@ -31,7 +80,7 @@
 재연동"은 부분 PUT이 아니라 "변경 필드 감지+전체 payload 정확 재구성+PUT"으로 설계.
 조사 결과 쓰기 파이프라인(`/api/naver/products/update` + GET-merge 방어 + confirm 게이트)이
 **이미 존재** — 씨앗심기 화면의 진입점(dirty-field 감지+버튼+프리뷰 모달)만 부족.
-실 구현은 승인 후 별도 라운드.
+→ **이번 세션(위 참조)에서 실구현 완료.**
 
 **검증**: `npx tsc --noEmit` 0 · `npm run build` 0. 브라우저 실측(로컬 dev
 `/products/new`): 도매가/판매가/할인 입력→마진 계산 정상, 추천가 "적용"→좌측 폼 반영
@@ -39,19 +88,7 @@
 
 ---
 
-## 다음 세션 시작 순서
-```
-1. [운영자 판단] #2 설계 문서(NAVER_PARTIAL_SYNC_2026-08-11.md) 검토 후 구현 승인 여부
-2. [기회 있을 때] #1 실 네이버 연동 상품으로 import round-trip 1회 실측(로컬 DB에
-   연동 후보 없어 이번엔 코드 경로 정합성 확인까지만 완료)
-3. [운영자 방향 결정] 로드맵1b(8렌즈 쿼터 배분 시스템, sourcing-lenses.ts) 전체 연결 여부 — 여전히 대기
-4. push된 미merge 브랜치 존재 여부 재확인(#320 브랜치 머지 리듬)
-5. git stash `z3c-misdirected-changes-needs-redo` 처리 방향 — 여전히 운영자 결정 대기
-```
-
----
-
-## ★★★★ 직전 세션 — 아침 소싱 알림 실발송·DB저장 검증 완료 (2026-08-11, Desktop+운영자)
+## ★★★★ 아침 소싱 알림 실발송·DB저장 검증 완료 (2026-08-11, Desktop+운영자)
 
 **"남은 미확인 사실"(아래 §참조) 완전 해소.** 운영자 승인 하 Desktop이 실제 크론을 호출(dryRun 아님)해 최종 검증:
 
@@ -140,3 +177,4 @@ Code 완료 보고(커밋 `519bead`)를 독립 재검증:
 - git stash `z3c-misdirected-changes-needs-redo` 처리 방향 — 여전히 운영자 결정 대기(손대지 않음)
 - **self-fetch(자기 자신의 다른 API 라우트를 HTTP로 호출)는 별개 서버리스 함수 홉을 만든다**(#338) — 호출자의 maxDuration은 피호출 라우트에 적용되지 않는다. 무거운 작업은 in-process 함수 호출로 묶거나, self-fetch 대상 라우트에도 반드시 별도로 maxDuration을 지정할 것.
 - **인계문서가 "코드체계가 다를 수 있다"고 경고한 것도 실제로 코드를 추적해 확인하기 전엔 사실로 단정하지 말 것**(#339) — 이번 세션 원산지 코드가 실제로는 같은 표였음이 그 예.
+- **네이버에 실제로 PUT되는 필드와 씨앗심기 폼이 저장하는 DB 컬럼이 이름은 비슷해도 다른 컬럼일 수 있다**(#340) — `Product.taxType`(폼)과 `Product.naver_tax_type`(payload가 실제로 읽는 컬럼)이 서로 다른 사례 발견. dirty-field 화이트리스트 설계 시 반드시 `product-builder.ts`가 읽는 실제 컬럼명을 확인할 것.

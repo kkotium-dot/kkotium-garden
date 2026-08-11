@@ -116,6 +116,45 @@ import productsNewStrings from '@/lib/i18n/products-new-strings.ko.json';
 import { calcPrefillSalePrice, calcNetMargin } from '@/lib/naver-margin-advisor';
 import { getMarginProfileByCode, getNaverFeeRate } from '@/lib/naver-fee-rates-2026';
 
+// NAVER-PARTIAL-SYNC (2026-08-11, docs/design/NAVER_PARTIAL_SYNC_2026-08-11.md §3-A)
+// — human-readable labels for the fields that feed buildNaverProductPayload
+// (src/lib/naver/product-builder.ts). Keys match NaverRelevantFields below —
+// this IS the whitelist: only these keys are compared for the dirty-field
+// detector, so unrelated internal fields (supplierPrice, taxType — which maps
+// to a DIFFERENT DB column than the payload reads, returnCareEnabled, ...)
+// never get mis-flagged as "네이버 반영 대상".
+const NAVER_FIELD_LABELS: Record<string, string> = {
+  name: '상품명',
+  category: '카테고리',
+  salePrice: '판매가',
+  mainImage: '대표이미지',
+  additionalImages: '추가이미지',
+  detailImages: '상세페이지 이미지',
+  detailImageUrl: '상세 이미지',
+  description: '상세설명',
+  hookPhrase: 'SEO 훅문구',
+  tags: '셀러 태그',
+  keywords: '키워드',
+  originCode: '원산지',
+  brand: '브랜드',
+  asPhone: 'AS 전화번호',
+  asGuide: 'AS 안내',
+  sellerCode: '판매자 상품코드',
+  shippingTemplateId: '배송 템플릿',
+  unitPrice: '단위가격',
+};
+
+/** Diff two Naver-relevant field snapshots -> changed field keys (§3-A). Pure. */
+function computeNaverDirtyFields(
+  baseline: Record<string, unknown> | null,
+  current: Record<string, unknown>,
+): string[] {
+  if (!baseline) return [];
+  return Object.keys(current).filter(
+    (k) => JSON.stringify(baseline[k]) !== JSON.stringify(current[k]),
+  );
+}
+
 interface Platform { id: string; name: string; code: string; }
 interface Supplier {
   id: string; name: string; code: string; abbr?: string | null;
@@ -618,6 +657,19 @@ function NewProductPageInner() {
   // Sprint 7-M2 Phase 3-C-3 — opt-in autorun: when true, registering on Naver
   // immediately switches to the visual tab and runs the full sequence.
   const [autoRunVisual, setAutoRunVisual] = useState(true);
+
+  // NAVER-PARTIAL-SYNC (2026-08-11, docs/design/NAVER_PARTIAL_SYNC_2026-08-11.md
+  // §3) — "네이버에도 반영" dirty-field detect + dryRun preview + confirm flow.
+  // naverHydrateSnapshotRef holds the Naver-relevant field values at the moment
+  // the LINKED product's data was last known to match Naver (either the ?edit=
+  // hydrate load, or right after a fresh register) — the diff baseline.
+  const naverHydrateSnapshotRef = useRef<Record<string, unknown> | null>(null);
+  const [naverSyncModalOpen, setNaverSyncModalOpen] = useState(false);
+  const [naverSyncLoading, setNaverSyncLoading] = useState(false);
+  const [naverSyncError, setNaverSyncError] = useState('');
+  const [naverSyncPreview, setNaverSyncPreview] = useState<any>(null);
+  const [naverSyncConfirming, setNaverSyncConfirming] = useState(false);
+  const [naverSyncApplied, setNaverSyncApplied] = useState(false);
 
   // Quick-add / edit modals for platform and supplier
   const PLATFORM_CODES_VALID = ['DMM', 'DMK', 'OWN', 'ETC'] as const;
@@ -1887,6 +1939,120 @@ function NewProductPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formSnapshot, editLoadDone, saveState]);
 
+  // NAVER-PARTIAL-SYNC §3-A — the Naver-relevant subset of form state (the
+  // fields NAVER_FIELD_LABELS names, matching what buildNaverProductPayload
+  // actually reads). This is compared against naverHydrateSnapshotRef to find
+  // what changed since the product last matched Naver.
+  const naverRelevantFields = useMemo(() => ({
+    name: productName.trim(),
+    category: getCategoryId(d1, d2, d3, d4),
+    salePrice: Number(price) || 0,
+    mainImage,
+    additionalImages,
+    detailImages,
+    detailImageUrl,
+    description,
+    hookPhrase: seoHook,
+    tags: seoTags,
+    keywords: aiKeywords,
+    originCode,
+    brand,
+    asPhone,
+    asGuide,
+    sellerCode,
+    shippingTemplateId: selectedTemplateId,
+    unitPrice: unitPriceYn ? [unitPriceYn, unitTotalCapacity, unitCapacity, unitIndicationUnit] : [false],
+  }), [
+    productName, d1, d2, d3, d4, price, mainImage, additionalImages, detailImages,
+    detailImageUrl, description, seoHook, seoTags, aiKeywords, originCode, brand,
+    asPhone, asGuide, sellerCode, selectedTemplateId,
+    unitPriceYn, unitTotalCapacity, unitCapacity, unitIndicationUnit,
+  ]);
+
+  // Capture the diff baseline exactly once, right when the ?edit= hydrate load
+  // settles (editLoadDone flips false -> true) — at that instant the form
+  // mirrors the last-known Naver state, so "0 dirty fields" is correct.
+  useEffect(() => {
+    if (!editLoadDone) return;
+    if (naverHydrateSnapshotRef.current) return; // already captured once
+    naverHydrateSnapshotRef.current = naverRelevantFields;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editLoadDone]);
+
+  const naverDirtyFields = useMemo(
+    () => computeNaverDirtyFields(naverHydrateSnapshotRef.current, naverRelevantFields),
+    [naverRelevantFields],
+  );
+
+  // §3-B — step 1: dryRun preview. Reuses the existing update route as-is
+  // (§3-C confirmed no backend change needed — see result doc). `fields` is
+  // advisory (server only echoes it back); the dirty-field highlight in the
+  // modal is computed client-side from naverDirtyFields, the actual
+  // whitelist-diff source of truth.
+  const openNaverSyncModal = async () => {
+    if (!savedProductId || !savedNaverProductId) return;
+    setNaverSyncModalOpen(true);
+    setNaverSyncLoading(true);
+    setNaverSyncError('');
+    setNaverSyncPreview(null);
+    setNaverSyncApplied(false);
+    try {
+      const res = await fetch('/api/naver/products/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: savedProductId, dryRun: true, fields: naverDirtyFields }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? '미리보기를 불러오지 못했습니다');
+      setNaverSyncPreview(data);
+    } catch (e: any) {
+      setNaverSyncError(e.message ?? '미리보기 요청 실패');
+    } finally {
+      setNaverSyncLoading(false);
+    }
+  };
+
+  const closeNaverSyncModal = () => {
+    if (naverSyncConfirming) return; // never close mid-write
+    setNaverSyncModalOpen(false);
+    setNaverSyncError('');
+    setNaverSyncPreview(null);
+  };
+
+  // §3-B — step 2: GO-gated real PUT (#46, reuses the existing confirm:true &&
+  // !dryRun gate — no new gate invented). ★ 이번 라운드 제약: 실제로 호출되는
+  // 코드는 구현하되, 이번 검증 라운드에서는 이 버튼을 직접 클릭해 실행하지 않는다
+  // (docs/handoff/CODE_NAVER_PARTIAL_SYNC_HANDOFF_2026-08-11.md §3).
+  const confirmNaverSync = async () => {
+    if (!savedProductId) return;
+    if (typeof window !== 'undefined') {
+      const ok = window.confirm(
+        '네이버 상품 정보를 지금 전체 갱신합니다. 되돌릴 수 없는 작업이에요 — 계속할까요?',
+      );
+      if (!ok) return;
+    }
+    setNaverSyncConfirming(true);
+    setNaverSyncError('');
+    try {
+      const res = await fetch('/api/naver/products/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: savedProductId, dryRun: false, confirm: true, fields: naverDirtyFields,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? '네이버 반영에 실패했습니다');
+      setNaverSyncApplied(true);
+      naverHydrateSnapshotRef.current = naverRelevantFields; // new baseline — 0 dirty after a successful sync
+      toast.success('네이버에 반영했어요');
+    } catch (e: any) {
+      setNaverSyncError(e.message ?? '반영 요청 실패');
+    } finally {
+      setNaverSyncConfirming(false);
+    }
+  };
+
   const handleNaverDirect = async () => {
     setNaverResult(null);
     setError('');
@@ -1977,7 +2143,13 @@ function NewProductPageInner() {
       if (naverData.success) {
         setNaverResult({ ok: true, message: naverData.message });
         // Phase 3-C-2: capture naverProductId for publish-assets enablement.
-        if (naverData.naverProductId) setSavedNaverProductId(String(naverData.naverProductId));
+        if (naverData.naverProductId) {
+          setSavedNaverProductId(String(naverData.naverProductId));
+          // NAVER-PARTIAL-SYNC §3-A — a fresh register just made Naver match this
+          // exact form state, so this is a valid new diff baseline (covers the
+          // same-session register case, not only the ?edit= reload case).
+          naverHydrateSnapshotRef.current = naverRelevantFields;
+        }
         // C-IA-5TAB — the 비주얼 자동화 tab was removed; visual automation now lives
         // in 온실 아틀리에 (Studio), reached via the "저장 후 온실 아틀리에" action.
         // The post-register autorun jump is retired with the tab.
@@ -2331,6 +2503,26 @@ const handleGenerate = async () => {
           >
             <CheckCircle size={14} /> 발행 준비완료 검사
           </button>
+          {/* NAVER-PARTIAL-SYNC (2026-08-11, 설계 §3-B) — LINKED 상품에만 노출.
+              로컬 저장(자동)과 네이버 반영(명시적 트리거)을 분리 — 요청 원문 그대로. */}
+          {savedNaverProductId && (
+            <button
+              type="button"
+              onClick={() => void openNaverSyncModal()}
+              disabled={naverDirtyFields.length === 0}
+              title={naverDirtyFields.length === 0 ? '변경된 내용이 없어요' : `${naverDirtyFields.length}개 필드가 바뀌었어요`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+                background: naverDirtyFields.length === 0 ? '#F3F4F6' : '#FFF0EF',
+                color: naverDirtyFields.length === 0 ? '#9CA3AF' : '#F63B28',
+                border: `1.5px solid ${naverDirtyFields.length === 0 ? '#E5E7EB' : '#F63B28'}`,
+                borderRadius: 10, fontSize: 12.5, fontWeight: 800,
+                cursor: naverDirtyFields.length === 0 ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <RefreshCw size={14} /> 네이버에도 반영{naverDirtyFields.length > 0 ? ` (${naverDirtyFields.length})` : ''}
+            </button>
+          )}
           {/* Naver publish actions demoted to an overflow menu (#131 save-first). */}
           <OverflowMenu
             ariaLabel="네이버 발행"
@@ -4095,6 +4287,134 @@ const handleGenerate = async () => {
 }}
 
           />
+
+        {/* NAVER-PARTIAL-SYNC (2026-08-11, 설계 §3-B) — "네이버에도 반영" dryRun
+            프리뷰 + confirm 모달. 변경 필드 강조 + 안 바뀐 필드는 "그대로 유지"
+            안내. confirm 실행은 #46 GO 게이트(confirm:true && !dryRun) 그대로. */}
+        {naverSyncModalOpen && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}>
+            <div style={{
+              background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480,
+              maxHeight: '85vh', overflowY: 'auto',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.18)',
+              border: '2px solid #FFB3CE',
+            }}>
+              <div style={{ padding: '18px 20px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 32, height: 32, background: '#F63B28', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <RefreshCw size={16} color="#fff" />
+                </div>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>네이버에 반영될 변경사항</p>
+                  <p style={{ fontSize: 11.5, color: '#9CA3AF', margin: 0 }}>바뀐 필드만 새 값으로, 그 외 필드는 기존 값 그대로 전송돼요</p>
+                </div>
+              </div>
+
+              <div style={{ padding: 20 }}>
+                {naverSyncLoading && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#6B7280', fontSize: 13, padding: '20px 0', justifyContent: 'center' }}>
+                    <Loader size={16} className="animate-spin" /> 네이버 상품 정보를 비교하는 중…
+                  </div>
+                )}
+
+                {!naverSyncLoading && naverSyncError && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: 12, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, color: '#B91C1C', fontSize: 12.5 }}>
+                    <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                    <span>{naverSyncError}</span>
+                  </div>
+                )}
+
+                {!naverSyncLoading && !naverSyncError && naverSyncApplied && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 14, background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: 10, color: '#15803D', fontSize: 13, fontWeight: 700 }}>
+                    <CheckCircle size={16} /> 네이버에 반영했어요
+                  </div>
+                )}
+
+                {!naverSyncLoading && !naverSyncError && !naverSyncApplied && naverSyncPreview && (
+                  <>
+                    {naverDirtyFields.length > 0 ? (
+                      <div style={{ marginBottom: 14 }}>
+                        <p style={{ fontSize: 11.5, fontWeight: 700, color: '#F63B28', marginBottom: 8 }}>
+                          이 필드가 바뀝니다 ({naverDirtyFields.length}개)
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {naverDirtyFields.map((f) => (
+                            <span key={f} style={{ fontSize: 12, fontWeight: 700, color: '#F63B28', background: '#FFF0EF', border: '1px solid #FFB3CE', borderRadius: 999, padding: '4px 10px' }}>
+                              {NAVER_FIELD_LABELS[f] ?? f}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ marginBottom: 14, fontSize: 12.5, color: '#9CA3AF' }}>변경된 내용이 없어요.</div>
+                    )}
+
+                    <p style={{ fontSize: 11.5, color: '#9CA3AF', marginBottom: 4 }}>
+                      그 외 {Math.max(Object.keys(NAVER_FIELD_LABELS).length - naverDirtyFields.length, 0)}개 필드는 기존 값 그대로 유지됩니다.
+                    </p>
+
+                    {/* dryRun payloadPreview — sanity-check the rebuilt full payload */}
+                    {naverSyncPreview.payloadPreview && (
+                      <div style={{ marginTop: 14, padding: 12, background: '#FAFBFC', border: '1px solid #F3F4F6', borderRadius: 10, fontSize: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
+                          <span style={{ color: '#9CA3AF' }}>상품명</span>
+                          <span style={{ color: '#374151', fontWeight: 600, maxWidth: 260, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{naverSyncPreview.payloadPreview.name}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
+                          <span style={{ color: '#9CA3AF' }}>판매가</span>
+                          <span style={{ color: '#374151', fontWeight: 600 }}>{Number(naverSyncPreview.payloadPreview.salePrice ?? 0).toLocaleString()}원</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
+                          <span style={{ color: '#9CA3AF' }}>카테고리코드</span>
+                          <span style={{ color: '#374151', fontWeight: 600 }}>{naverSyncPreview.payloadPreview.leafCategoryId || '-'}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
+                          <span style={{ color: '#9CA3AF' }}>원산지코드</span>
+                          <span style={{ color: '#374151', fontWeight: 600 }}>{naverSyncPreview.payloadPreview.originAreaInfo?.originAreaCode ?? '-'}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <p style={{ marginTop: 14, fontSize: 11, color: '#B91C1C', lineHeight: 1.6 }}>
+                      이 작업은 네이버 상품 정보를 전체 재전송해요(비가역) — 실행 전 위 내용을 확인하세요.
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <div style={{ padding: '14px 20px', borderTop: '1px solid #F3F4F6', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={closeNaverSyncModal}
+                  disabled={naverSyncConfirming}
+                  style={{ padding: '8px 16px', background: '#F3F4F6', color: '#374151', border: 'none', borderRadius: 10, fontSize: 12.5, fontWeight: 700, cursor: naverSyncConfirming ? 'not-allowed' : 'pointer' }}
+                >
+                  {naverSyncApplied ? '닫기' : '취소'}
+                </button>
+                {!naverSyncApplied && (
+                  <button
+                    type="button"
+                    onClick={() => void confirmNaverSync()}
+                    disabled={naverSyncLoading || naverSyncConfirming || naverDirtyFields.length === 0 || !!naverSyncError}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px',
+                      background: '#F63B28', color: '#fff', border: 'none', borderRadius: 10,
+                      fontSize: 12.5, fontWeight: 800,
+                      cursor: (naverSyncLoading || naverSyncConfirming || naverDirtyFields.length === 0) ? 'not-allowed' : 'pointer',
+                      opacity: (naverSyncLoading || naverSyncConfirming || naverDirtyFields.length === 0) ? 0.5 : 1,
+                    }}
+                  >
+                    {naverSyncConfirming ? <Loader size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    네이버에 반영
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Kkotti template auto-create modal ── */}
         {showTemplateCreateModal && pendingTemplateData && (
