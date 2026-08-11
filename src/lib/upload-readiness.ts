@@ -89,10 +89,9 @@ export function calcUploadReadiness(input: ReadinessInput): ReadinessResult {
   const safeName     = name ?? '';
   const safeImages   = Array.isArray(images)   ? images.filter(Boolean)   : [];
 
-  // 1. Category check — default code "50003307" means not selected
+  // 1. Category check — default code "" means not selected
   const categoryPassed = !!(
     naverCategoryCode &&
-    naverCategoryCode !== '50003307' &&
     naverCategoryCode.length > 0
   );
 

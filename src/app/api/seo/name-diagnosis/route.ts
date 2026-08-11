@@ -40,7 +40,7 @@ function tripleFromProduct(
 ): { d1: string; d2: string; d3: string } | null {
   // 1) Numeric Naver code -> canonical triple (most reliable).
   const code = naverCategoryCode?.trim();
-  if (code && code !== '50003307') {
+  if (code) {
     const hit = NAVER_CATEGORIES_FULL.find((c) => c.code === code);
     if (hit) return { d1: hit.d1, d2: hit.d2 ?? '', d3: hit.d3 ?? '' };
   }

@@ -158,6 +158,10 @@ export async function GET(request: NextRequest) {
         // 축적돼 있으므로 삭제가 아니라 판매중지+대체소싱을 권한다.
         salesCount: true,
         supplier_product_code: true,
+        // A-2(#334): IMPORTED 상품은 네이버 API가 원가를 안 줘서 supplierPrice=0로
+        // 저장된다 — MarginCell이 "0원"을 실제 원가로 오인해 마진%를 지어내지
+        // 않도록 source를 함께 내려준다.
+        source: true,
         supplier: {
           select: {
             id: true,

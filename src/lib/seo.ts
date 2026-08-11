@@ -3,7 +3,7 @@
 // Weights: category(25) + title(25) + attributes(15) + keywords(15) + image(20)
 
 // Default category code assigned at product creation — means "not set"
-const DEFAULT_CATEGORY_CODE = '50003307';
+const DEFAULT_CATEGORY_CODE = '';
 
 interface SeoProduct {
   id?: string;

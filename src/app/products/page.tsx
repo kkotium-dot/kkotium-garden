@@ -78,6 +78,9 @@ interface Product {
   origin_kind?: string | null; // present only after Desktop applies the migration
   driftFields?: unknown;       // app↔Naver drift (drift-scan) — hub drift filter
   tuningScore?: TuningBadgeData | null; // 좀비 통합 판정 (#264, computeZombieVerdict) — server-computed, null if scoring degraded
+  /** 'NATIVE' | 'IMPORTED' | 'LINKED' — 네이버 가져오기 상품(IMPORTED)은 원가 정보가
+   *  없어 supplierPrice=0으로 저장된다(#334-A2). 마진 표시 분기에 사용. */
+  source?: string;
 }
 
 type TabKey = 'all' | 'draft' | 'ready' | 'active' | 'pending' | 'oos' | 'reactivation' | 'revival' | 'lowMargin' | 'drift';
@@ -166,7 +169,7 @@ const STATUS_SEGMENTS: { key: TabKey; label: string; dot: string; match: (p: Pro
 // Check readiness for Naver upload
 function getReadinessIssues(p: Product): string[] {
   const issues: string[] = [];
-  if (!p.naverCategoryCode || p.naverCategoryCode === '50003307') issues.push('카테고리 미설정');
+  if (!p.naverCategoryCode || p.naverCategoryCode === '') issues.push('카테고리 미설정');
   if (!p.shippingTemplateId) issues.push('배송 템플릿 없음');
   if (!p.mainImage) issues.push('대표 이미지 없음');
   return issues;
@@ -370,7 +373,23 @@ function ShippingBadge({ product }: { product: Product }) {
   );
 }
 
-function MarginCell({ hs }: { hs: ReturnType<typeof calcHoneyScore> }) {
+function MarginCell({ hs, source, supplierPrice }: {
+  hs: ReturnType<typeof calcHoneyScore>;
+  source?: string;
+  supplierPrice?: number;
+}) {
+  // A-2(#334): 네이버 가져오기(IMPORTED)는 네이버 API가 매입원가를 안 줘서
+  // supplierPrice=0으로 저장된다 — 그 상태로 마진%를 그대로 보여주면 판매가
+  // 전액이 이익인 것처럼 왜곡된 값(사실상 100%)을 보고하게 된다. 조용히 틀린
+  // 숫자를 보여주는 대신 "아직 모른다"고 정직하게 표시한다(#325 정직한 미달성
+  // 표시 원칙과 동일 사상).
+  if (source === 'IMPORTED' && (supplierPrice ?? 0) === 0) {
+    return (
+      <div className="text-right text-xs font-medium" style={{ color: '#B08968' }} title="공급가 미입력 — 마진 계산 불가">
+        공급가 미입력
+      </div>
+    );
+  }
   const net = hs.netMarginRate;
   const danger = net < 5;
   return (
@@ -793,17 +812,37 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
                 구 하단바 "마진 재계산(읽기)"을 흡수(R-2, 맥락 일치). */}
             <div className="space-y-2">
               <p className="text-[11px] font-semibold" style={{ color: '#9CA3AF' }}>가격</p>
-              {([
-                ['도매가 (공급가)', `${product.supplierPrice.toLocaleString()}원`, false],
-                ['판매가', `${product.salePrice.toLocaleString()}원`, false],
-                ['마진율', `${hs.marginRate.toFixed(1)}%`, false],
-                ['순마진율', `${hs.netMarginRate.toFixed(1)}%`, hs.netMarginRate < 5],
-              ] as [string, string, boolean][]).map(([k, v, danger]) => (
-                <div key={k} className="flex justify-between text-sm">
-                  <span style={{ color: '#888' }}>{k}</span>
-                  <span className={`font-semibold ${danger ? 'text-red-600' : 'text-gray-800'}`}>{v}</span>
-                </div>
-              ))}
+              {/* A-2(#334): 네이버 가져오기(IMPORTED)는 API가 매입원가를 안 줘서
+                  supplierPrice=0으로 저장된다 — 마진율·순마진율을 그대로 계산해
+                  보여주면 왜곡된 값(사실상 100%)이 나온다. 조용히 틀린 숫자를
+                  보여주는 대신 공급가 입력 전까지는 정직하게 "계산 불가"로 표시. */}
+              {product.source === 'IMPORTED' && product.supplierPrice === 0 ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span style={{ color: '#888' }}>도매가 (공급가)</span>
+                    <span className="font-semibold" style={{ color: '#B08968' }}>미입력</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span style={{ color: '#888' }}>판매가</span>
+                    <span className="font-semibold text-gray-800">{product.salePrice.toLocaleString()}원</span>
+                  </div>
+                  <p className="text-xs rounded-lg px-2 py-1.5" style={{ background: '#FFF7ED', color: '#B08968' }}>
+                    공급가 미입력 — 마진 계산 불가 (네이버 가져오기는 원가 정보가 없어요)
+                  </p>
+                </>
+              ) : (
+                ([
+                  ['도매가 (공급가)', `${product.supplierPrice.toLocaleString()}원`, false],
+                  ['판매가', `${product.salePrice.toLocaleString()}원`, false],
+                  ['마진율', `${hs.marginRate.toFixed(1)}%`, false],
+                  ['순마진율', `${hs.netMarginRate.toFixed(1)}%`, hs.netMarginRate < 5],
+                ] as [string, string, boolean][]).map(([k, v, danger]) => (
+                  <div key={k} className="flex justify-between text-sm">
+                    <span style={{ color: '#888' }}>{k}</span>
+                    <span className={`font-semibold ${danger ? 'text-red-600' : 'text-gray-800'}`}>{v}</span>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* 5. 재고 · 배송 — 고아 텍스트였던 공급사명을 소속 섹션으로 편입(R3). */}
@@ -1296,7 +1335,7 @@ function NaverRegisterModal({
   const registerable = products.filter(p => !p.naverProductId && (p.status === 'DRAFT' || p.status === 'ACTIVE'));
   const alreadyRegistered = products.filter(p => !!p.naverProductId);
   const hasNoImage = registerable.filter(p => !p.mainImage);
-  const hasNoCategory = registerable.filter(p => !p.category || p.category === '50003307');
+  const hasNoCategory = registerable.filter(p => !p.category || p.category === '');
 
   // ── 발행 게이트(#286) ───────────────────────────────────────────────────
   // "준비됐는가"(준비도)와 "지금 팔 수 있는가"(공급 가능성)는 다른 질문이다.
@@ -1408,7 +1447,7 @@ function NaverRegisterModal({
               </div>
             )}
 
-            {hasNoCategory.length > 0 && registerable.filter(p => !p.category || p.category === '50003307').length > 0 && (
+            {hasNoCategory.length > 0 && registerable.filter(p => !p.category || p.category === '').length > 0 && (
               <div className="p-3 rounded-xl" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
                 <p className="text-xs font-semibold flex items-center gap-1" style={{ color: '#a16207' }}>
                   <AlertTriangle size={12} /> 카테고리 미선택 ({hasNoCategory.length}개) — 등록 차단됨
@@ -2378,7 +2417,7 @@ function ProductsPageInner() {
           )}
           {/* H-3: shipping is Care-only (garden = unpublished, no shipping yet) */}
           {!compact && !isGarden && <div className="flex justify-start"><ShippingBadge product={p} /></div>}
-          {!compact && <MarginCell hs={p._hs} />}
+          {!compact && <MarginCell hs={p._hs} source={p.source} supplierPrice={p.supplierPrice} />}
           {/* Inline-editable sale price cell — double-click to edit */}
           {!compact && (
           <div
@@ -2982,7 +3021,18 @@ function ProductsPageInner() {
                       <span style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A' }}>
                         {Number(p.salePrice ?? 0).toLocaleString()}원
                       </span>
-                      {typeof honey?.netMarginRate === 'number' && (
+                      {p.source === 'IMPORTED' && p.supplierPrice === 0 ? (
+                        <span
+                          style={{
+                            fontSize: 11, fontWeight: 700,
+                            padding: '2px 8px', borderRadius: 99,
+                            background: '#FFF7ED', color: '#B08968', border: '1px solid #FDE9D0',
+                          }}
+                          title="공급가 미입력 — 마진 계산 불가"
+                        >
+                          공급가 미입력
+                        </span>
+                      ) : typeof honey?.netMarginRate === 'number' && (
                         <span
                           style={{
                             fontSize: 11, fontWeight: 700,

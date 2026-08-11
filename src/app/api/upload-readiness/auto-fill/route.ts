@@ -283,7 +283,7 @@ export async function PATCH(request: NextRequest) {
             break;
           }
           const code = a.value.trim();
-          if (!code || code === '50003307') {
+          if (!code) {
             rejected.push({ itemId: a.itemId, reason: 'empty or default category' });
             break;
           }

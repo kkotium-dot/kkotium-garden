@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
               name,
               sku,
               category:          'uncategorized',
-              naverCategoryCode: sanitize(item.categoryCode ?? item.category_code) || '50003307',
+              naverCategoryCode: sanitize(item.categoryCode ?? item.category_code) || '',
               salePrice,
               supplierPrice,
               margin,

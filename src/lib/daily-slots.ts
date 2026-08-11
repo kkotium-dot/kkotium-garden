@@ -227,7 +227,7 @@ export function buildEarlyStageSlotA(products: DailySlotProduct[]): SlotItem[] {
       });
       const readinessBonus =
         (p.mainImage ? 30 : 0) +
-        (p.naverCategoryCode && p.naverCategoryCode !== '50003307' ? 25 : 0) +
+        (p.naverCategoryCode && p.naverCategoryCode !== '' ? 25 : 0) +
         ((p.keywords?.length ?? 0) >= 3 ? 20 : (p.keywords?.length ?? 0) > 0 ? 10 : 0) +
         ((p.tags?.length ?? 0) >= 3 ? 15 : 0);
       return { product: p, honeyScore: score, readinessBonus, combined: score.total + readinessBonus };

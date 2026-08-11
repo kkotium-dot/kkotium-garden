@@ -175,7 +175,7 @@ model Product {
   margin                  Float
   minorPurchase           String            @default("Y")
   name                    String
-  naverCategoryCode       String            @default("50003307")
+  naverCategoryCode       String            @default("")
   naverProductId          String?           @unique
   // PRODUCT-LINK (PL-1) — link metadata (Supabase ALTER applied 2026-07-07).
   // Access still goes through the guarded helper in src/lib/product-link.ts;

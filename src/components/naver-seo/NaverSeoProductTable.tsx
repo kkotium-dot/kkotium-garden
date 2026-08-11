@@ -67,7 +67,7 @@ interface Props {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const DEFAULT_CATEGORY = '50003307';
+const DEFAULT_CATEGORY = '';
 
 function gradeBadgeStyle(score: number): { bg: string; color: string; label: string } {
   if (score >= 90) return { bg: '#F5F3FF', color: '#7C3AED', label: 'S' };

@@ -63,7 +63,7 @@ const SLOT_META = {
 // Determine the best action button for a DRAFT product based on what's missing
 function getDraftAction(item: SlotItem): { label: string; href: string; Icon: React.ElementType; color: string } {
   const p = item.product;
-  const hasCategory = p.naverCategoryCode && p.naverCategoryCode !== '50003307';
+  const hasCategory = p.naverCategoryCode && p.naverCategoryCode !== '';
   const hasKeywords  = (p.keywords?.length ?? 0) >= 3;
   const hasTags      = (p.tags?.length ?? 0) >= 1;
   const hasImage     = !!p.mainImage;

@@ -203,12 +203,15 @@ export function evaluateNaver(product: ProductData): NaverValidation {
   // 네이버 SEO 점수 계산
   const seoScore = calculateNaverSeo(product);
 
-  // 자동 채움 (AI 분석)
+  // 자동 채움 (AI 분석) — category는 아직 실제 AI 매칭이 붙지 않은 자리표시자였다.
+  // "가구다리" 하드코딩은 미분류 센티널(50003307)과 실제 카테고리 코드가 겹치던
+  // 근본원인 중 하나였다(#334) — 지어낸 값 대신 상품 자체의 category 문자열을
+  // 정직하게 반영하고, confidence 0으로 "실제 AI 분석 아님"을 표시한다.
   const autoFilled = {
     category: {
-      code: '50003307',
-      name: '가구/인테리어 > DIY자재/용품 > 가구부속품 > 가구다리',
-      confidence: 0.85,
+      code: '',
+      name: product.category || '미분류',
+      confidence: 0,
     },
     origin: {
       code: '0',

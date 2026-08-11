@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
         // Copy all base fields
         name: source.name,
         category: source.category ?? 'uncategorized',
-        naverCategoryCode: source.naverCategoryCode ?? '50003307',
+        naverCategoryCode: source.naverCategoryCode ?? '',
         salePrice: source.salePrice,
         supplierPrice: source.supplierPrice,
         margin: source.margin,
