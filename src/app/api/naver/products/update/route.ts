@@ -42,6 +42,107 @@ function isPlaceholderDetail(html: string): boolean {
   return /^<div style="text-align:center;padding:40px;font-size:14px;color:#888;">[^<]*<\/div>$/.test(stripped);
 }
 
+const VALID_LEAF_CATEGORY_ID = /^\d{6,10}$/;
+
+// 2026-08-12 — 부분재연동 안전장치 긴급 보강
+// (docs/handoff/CODE_PARTIAL_SYNC_SAFETY_HANDOFF_2026-08-11.md): 초기버전 import
+// route가 naverCategoryCode/원산지를 채우지 않은 채 임포트한 상품이 다수 존재
+// (발행 6건 중 카테고리 5건·원산지 라벨 6건 공백). 앱 DB가 비어 있다고 해서
+// "네이버 값도 비어 있다"고 가정하면 안 됨 — v2 PUT은 FULL REPLACE라 그대로
+// 보내면 네이버의 실제 값을 지운다. §4-C null 방어를 카테고리/원산지 라벨까지
+// 확장하고, dryRun/confirm 양쪽에서 동일하게 적용해 미리보기가 실제 전송값과
+// 일치하게 만든다. GET-merge 이후에도 leafCategoryId가 여전히 유효하지 않으면
+// (GET 실패 포함) 실 PUT을 하드 블록 — "이 정도면 됐다" 없이 전 상품 공통 방어.
+interface NullDefenseResult {
+  notes: string[];
+  leafCategoryIdInvalid: boolean;
+  getFailed: boolean;
+}
+
+async function applyNaverStateDefense(
+  payload: ReturnType<typeof buildNaverProductPayload>,
+  naverProductId: string,
+): Promise<NullDefenseResult> {
+  const notes: string[] = [];
+  let getFailed = false;
+  try {
+    const current = await getProduct(naverProductId);
+    const curOrigin = current?.originProduct as Record<string, unknown> | undefined;
+    const curDetailContent = typeof curOrigin?.detailContent === 'string'
+      ? (curOrigin.detailContent as string)
+      : '';
+    const curDetailAttr = curOrigin?.detailAttribute as Record<string, unknown> | undefined;
+    const curSeo = curDetailAttr?.seoInfo as Record<string, unknown> | undefined;
+    const curSellerTags = Array.isArray(curSeo?.sellerTags)
+      ? (curSeo?.sellerTags as Array<{ code?: number; text: string }>)
+      : [];
+    const curMetaDesc = typeof curSeo?.metaDescription === 'string'
+      ? (curSeo.metaDescription as string)
+      : '';
+
+    // detailContent — DB placeholder-only + Naver 실사용 값 존재 → 보존
+    if (isPlaceholderDetail(payload.originProduct.detailContent) && curDetailContent.trim().length > 0) {
+      payload.originProduct.detailContent = curDetailContent;
+      notes.push('detailContent=preserved');
+    }
+
+    // seoInfo — 항상 재전송(payload에 이미 객체 존재). 하위 필드만 방어.
+    const seo = payload.originProduct.detailAttribute?.seoInfo;
+    if (seo) {
+      // sellerTags: DB 빈배열/부재 + 네이버 태그 존재 → 보존
+      if ((!seo.sellerTags || seo.sellerTags.length === 0) && curSellerTags.length > 0) {
+        seo.sellerTags = curSellerTags
+          .filter(t => t && typeof t.text === 'string')
+          .map(t => ({ text: String(t.text).slice(0, 20) }));
+        notes.push(`sellerTags=preserved(${seo.sellerTags.length})`);
+      }
+      // metaDescription: DB 빈문자열 + 네이버 값 존재 → 보존
+      if ((!seo.metaDescription || seo.metaDescription.trim().length === 0) && curMetaDesc.trim().length > 0) {
+        seo.metaDescription = curMetaDesc;
+        notes.push('metaDescription=preserved');
+      }
+    }
+
+    // leafCategoryId (2026-08-12 확장) — DB-built 값이 네이버 8자리 리프코드 형식이
+    // 아니면(초기버전 import 공백 포함) 네이버 현재 카테고리로 대체.
+    const curLeafCategoryId = typeof curOrigin?.leafCategoryId === 'string'
+      ? curOrigin.leafCategoryId
+      : (typeof curOrigin?.leafCategoryId === 'number' ? String(curOrigin.leafCategoryId) : '');
+    if (!VALID_LEAF_CATEGORY_ID.test(payload.originProduct.leafCategoryId)
+      && VALID_LEAF_CATEGORY_ID.test(curLeafCategoryId)) {
+      payload.originProduct.leafCategoryId = curLeafCategoryId;
+      notes.push(`leafCategoryId=preserved(${curLeafCategoryId})`);
+    }
+
+    // originAreaInfo.content (원산지 라벨, 2026-08-12 확장) — DB naver_origin이
+    // 비어 payload에 content 키 자체가 빠져 있는데 네이버에는 라벨이 있으면 보존.
+    // originAreaCode 자체는 DB 기본값("0001")이 있어 비는 경우가 없으므로 대상 아님.
+    const originArea = payload.originProduct.detailAttribute?.originAreaInfo;
+    const curOriginArea = curDetailAttr?.originAreaInfo as Record<string, unknown> | undefined;
+    const curOriginContent = typeof curOriginArea?.content === 'string' ? curOriginArea.content : '';
+    if (originArea && !originArea.content && curOriginContent.trim().length > 0) {
+      originArea.content = curOriginContent;
+      notes.push('originAreaInfo.content=preserved');
+    }
+  } catch (getErr: unknown) {
+    // GET 실패는 기존 필드(detailContent 등)엔 non-fatal이었으나, leafCategoryId가
+    // DB에서부터 이미 무효였다면 이번엔 복구 수단이 없다는 뜻 — 아래
+    // leafCategoryIdInvalid 판정에서 하드 블록으로 이어짐.
+    console.warn(
+      '[naver/products/update] GET current-state failed — null defense skipped:',
+      getErr instanceof Error ? getErr.message : String(getErr),
+    );
+    notes.push('get-failed');
+    getFailed = true;
+  }
+
+  return {
+    notes,
+    leafCategoryIdInvalid: !VALID_LEAF_CATEGORY_ID.test(payload.originProduct.leafCategoryId),
+    getFailed,
+  };
+}
+
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -94,6 +195,11 @@ export async function POST(request: NextRequest) {
     // no PUT). Mirrors register's dryRun so the operator can fact-check.
     if (isDryRun) {
       const payload = buildNaverProductPayload(product, deliveryInfo, undefined, noticeAssets, storeName);
+      // 2026-08-12 — GET-merge defense must run in dryRun too, otherwise the
+      // preview shows the pre-merge (possibly blank) value and misleads the
+      // operator into thinking a real PUT would wipe a field that the real
+      // path would actually have preserved (or vice versa — see handoff).
+      const defense = await applyNaverStateDefense(payload, naverProductId);
       const oa = payload.originProduct.detailAttribute?.originAreaInfo;
       return NextResponse.json({
         success: true,
@@ -103,6 +209,10 @@ export async function POST(request: NextRequest) {
         endpoint: `PUT /v2/products/origin-products/${naverProductId}`,
         fieldsRequested: Array.isArray(fields) ? fields : null,
         validation,
+        nullDefense: defense.notes,
+        wouldBlockRealPut: defense.leafCategoryIdInvalid
+          ? '카테고리코드가 앱 DB와 네이버 양쪽 모두에서 확인되지 않아 실 수정(confirm:true)은 차단됩니다 — 카테고리를 먼저 지정하세요.'
+          : null,
         payloadPreview: {
           name: payload.originProduct.name,
           leafCategoryId: payload.originProduct.leafCategoryId,
@@ -176,54 +286,26 @@ export async function POST(request: NextRequest) {
 
     const payload = buildNaverProductPayload(productForBuild, deliveryInfo, naverImageUrls, noticeAssets, storeName);
 
-    // 9-2. Null defense (§4-C) — GET current Naver state, preserve detailContent /
-    // sellerTags / metaDescription when the DB-built payload is degenerate. Failure
-    // to GET is non-fatal (proceed with DB-built values) — the update still runs.
-    let nullDefenseNote: string[] = [];
-    try {
-      const current = await getProduct(naverProductId);
-      const curOrigin = current?.originProduct as Record<string, unknown> | undefined;
-      const curDetailContent = typeof curOrigin?.detailContent === 'string'
-        ? (curOrigin.detailContent as string)
-        : '';
-      const curSeo = ((curOrigin?.detailAttribute as Record<string, unknown> | undefined)
-        ?.seoInfo as Record<string, unknown> | undefined);
-      const curSellerTags = Array.isArray(curSeo?.sellerTags)
-        ? (curSeo?.sellerTags as Array<{ code?: number; text: string }>)
-        : [];
-      const curMetaDesc = typeof curSeo?.metaDescription === 'string'
-        ? (curSeo.metaDescription as string)
-        : '';
+    // 9-2. Null defense (§4-C, extended 2026-08-12) — GET current Naver state,
+    // preserve detailContent / sellerTags / metaDescription / leafCategoryId /
+    // originAreaInfo.content when the DB-built payload is degenerate.
+    const defense = await applyNaverStateDefense(payload, naverProductId);
+    const nullDefenseNote = defense.notes;
 
-      // detailContent — DB placeholder-only + Naver 실사용 값 존재 → 보존
-      if (isPlaceholderDetail(payload.originProduct.detailContent) && curDetailContent.trim().length > 0) {
-        payload.originProduct.detailContent = curDetailContent;
-        nullDefenseNote.push('detailContent=preserved');
-      }
-
-      // seoInfo — 항상 재전송(payload에 이미 객체 존재). 하위 필드만 방어.
-      const seo = payload.originProduct.detailAttribute?.seoInfo;
-      if (seo) {
-        // sellerTags: DB 빈배열/부재 + 네이버 태그 존재 → 보존
-        if ((!seo.sellerTags || seo.sellerTags.length === 0) && curSellerTags.length > 0) {
-          seo.sellerTags = curSellerTags
-            .filter(t => t && typeof t.text === 'string')
-            .map(t => ({ text: String(t.text).slice(0, 20) }));
-          nullDefenseNote.push(`sellerTags=preserved(${seo.sellerTags.length})`);
-        }
-        // metaDescription: DB 빈문자열 + 네이버 값 존재 → 보존
-        if ((!seo.metaDescription || seo.metaDescription.trim().length === 0) && curMetaDesc.trim().length > 0) {
-          seo.metaDescription = curMetaDesc;
-          nullDefenseNote.push('metaDescription=preserved');
-        }
-      }
-    } catch (getErr: unknown) {
-      // GET 실패는 fatal 아님 — 로그만 남기고 DB-built payload 그대로 PUT.
-      console.warn(
-        '[naver/products/update] GET current-state failed — null defense skipped:',
-        getErr instanceof Error ? getErr.message : String(getErr),
-      );
-      nullDefenseNote.push('get-failed');
+    // 9-3. Hard block (2026-08-12, docs/handoff/CODE_PARTIAL_SYNC_SAFETY_HANDOFF_
+    // 2026-08-11.md) — leafCategoryId is still unusable after the GET-merge
+    // attempt (DB blank AND Naver GET didn't recover it, or the GET itself
+    // failed). v2 PUT is FULL REPLACE — sending an empty/invalid leafCategoryId
+    // would erase the product's real Naver category. Refuse rather than guess.
+    if (defense.leafCategoryIdInvalid) {
+      return NextResponse.json({
+        success: false,
+        error: defense.getFailed
+          ? '카테고리코드가 앱 DB에 없고, 네이버 현재값 조회(GET)도 실패해 안전하게 병합할 수 없습니다 — 수정 중단 (기존 상품 미변경). 잠시 후 다시 시도하거나 카테고리를 직접 지정하세요.'
+          : '카테고리코드가 앱 DB와 네이버 양쪽 모두에서 확인되지 않습니다 — 수정 중단 (기존 상품 미변경). 카테고리를 먼저 지정한 뒤 다시 시도하세요.',
+        stage: 'CATEGORY_UNRESOLVED',
+        nullDefense: nullDefenseNote,
+      }, { status: 409 });
     }
 
     // 10. PUT the full payload to the existing product.

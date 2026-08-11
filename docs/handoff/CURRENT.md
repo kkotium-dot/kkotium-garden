@@ -1,186 +1,102 @@
-# 현재 인계 (CURRENT) — 2026-08-11 세션 (신규버그3건 근본수정+브랜치3개조사 완료, 부분재연동 대상 재확인 필요)
+# 현재 인계 (CURRENT) — 2026-08-12 세션 (부분재연동 안전장치 긴급 보강 완료)
 
 > 다음 세션은 이 파일 → 해당 트랙 설계문서 → `PRINCIPLES_LEARNED.md` 순으로 읽고 시작.
 
-- **status**: ✅ "온실 아틀리에"→"꽃단장 작업실" 오표시 수정·즉시할인 단위버튼 시각강화·썸네일 문제(실은 이미해결됨 확인) 전부 근본수정+프로덕션 검증 완료(Desktop). ✅ 미merge 브랜치 3개 조사 완료(운영자 결정 대기). ✅ "네이버에도 반영" 부분재연동은 dryRun까지 완료된 상태에서, **운영자가 제안한 정원창고 미발행 상품(얼음틀)은 이 기능 대상이 아님을 확인·안내**(DB로 naverProductId null 재확인) — 다음 세션에 발행된 상품으로 대상 재지정 필요.
-- **branch**: `main` (HEAD `de16a51`, 전부 push, 동기화 0/0)
-- **배포 상태**: `9d4a13e`까지 배포·프로덕션 검증 완료
+- **status**: ✅ 부분재연동(#2) 안전장치 긴급 보강 완료 — 카테고리코드 wipe 위험(운영자 발견) 근본수정 + 실 dryRun 검증(발행 6건 중 2건) + DB 백필 스크립트 dry-run 완료(--apply는 미실행, Desktop 검토 대기). **confirm:true 실행은 여전히 하지 않음.**
+- **branch**: `main` (커밋 예정 — 아래 참조)
+- **배포 상태**: `9d4a13e`까지 배포·프로덕션 검증 완료 (이번 세션 변경분은 push 후 Vercel 배포·verify-deploy 확인 필요)
 
 ---
 
-## ★★★★★★★★★ 신규 발견 버그 3건 — 전부 근본수정·프로덕션 검증 완료 (2026-08-11, Desktop)
+## ★★★★★★★★★ 부분재연동 안전장치 긴급 보강 — 완료 (2026-08-12, Code)
 
-1. **"온실 아틀리에" 오표시(#341, 커밋 `9de885a`)**: `/studio`(꽃단장 작업실) 헤더가 `studio-strings.ko.json`의 `page.title`을 쓰는데 이 값이 상위그룹명("온실 아틀리에")으로 잘못 하드코딩됨(사이드바 정의 `garden-nav.ko.json`은 정확했음 — 두 문자열 소스 분리로 발생한 불일치). "꽃단장 작업실"로 정정. 프로덕션 `<h1>` 텍스트로 최종 확인.
-2. **썸네일(추가이미지) "안 보임" — 실측 결과 이미 해결돼 있었음(코드 버그 아님)**: `productFormHydrate`(`product-form-mapping.ts`)의 이미지 매핑 로직은 정확했음. import route의 `pickAdditionalImages()`도 정확. 실제로 미연동 상품("귀여운 패턴 유아킥보드")을 새로 임포트해 실측한 결과 추가이미지 4개가 정확히 채워지고 씨앗심기 화면(4/9개 등록)에 정상 표시됨을 스크린샷으로 검증(테스트 상품은 DELETE로 정리, DB 재조회로 확인). **기존에 이미 임포트된 6개 상품만** 구버전 import 코드로 생성돼 이미지 배열이 빈 상태로 남아있음(재임포트는 dedup 스킵). **근본 해결 아이디어(다음 라운드 후보)**: "이미 연동된 상품도 네이버에서 이미지 재동기화"하는 별도 기능 — 방금 만든 "네이버에도 반영"(앱→네이버)의 반대 방향(네이버→앱, "네이버에서 새로고침"류).
-3. **즉시할인 단위 버튼 UX(커밋 `9d4a13e`)**: 이전 세션에 발견한 "버튼임이 시각적으로 안 드러남" 문제를 칩 스타일(연분홍 배경+테두리+호버효과)로 개선. 클릭 로직·상태관리는 전혀 안 건드림, 인풋 우측 패딩만 버튼 크기에 맞게 조정(pr-5→pr-8). 프로덕션에서 실제 클릭해 "%"↔"원" 정상 전환 확인 후 원복.
+원본 지시: `docs/handoff/CODE_PARTIAL_SYNC_SAFETY_HANDOFF_2026-08-11.md`
+결과 상세: `docs/handoff/CODE_PARTIAL_SYNC_SAFETY_FIX_2026-08-11.md`
 
-## ★★★★★★★★★ 미merge 브랜치 3개 조사 완료 (운영자 결정 대기, 코드 수정 0)
+**발견된 위험**: "듀얼 무선 가습기" dryRun 미리보기에 "카테고리코드: -"(빈 값)로 나왔는데 실제 네이버는 정확한 카테고리가 설정돼 있었음 — confirm:true 실행 시 v2 PUT(FULL REPLACE)이 실제 네이버 카테고리를 지웠을 위험(운영자가 실행 전 발견, Desktop이 중단).
 
-`docs/handoff/BRANCH_AUDIT_2026-08-11.md` 참조. `git rev-list --left-right --count`+`diff --stat`로 정밀 조사:
-- `feat/finish-image-router` — **폐기 후보**: main에 같은 경로(`finish-image/route.ts`)가 브랜치보다 늦게(더 최신) 이미 존재, 다른 방식으로 이미 완료된 것으로 추정.
-- `feature/prompt-asset-engine` — **재검토 후보**: 28개 파일 3768줄 순수 신규 추가(삭제 0), main과 경로 충돌 없어 병합 리스크는 낮음. 다만 2.5개월 방치돼 지금 로드맵(소싱v2·카테고리정밀화)과 여전히 맞는지 내용 검토 먼저 필요.
-- `feature/sprint-7-m2-smart-asset-workflow` — **병합 절대 금지(확정)**: `diagnose/route.ts`를 main의 최신 버전(5/30, VLM 빈배경판 게이트)보다 10일 오래된 버전(5/20)으로 덮어씀 — 병합 시 확정적 회귀. 필요 부분은 브랜치 병합이 아니라 개별 cherry-pick으로 재작업 권장.
+**근본원인(코드 실측 확정)**: `/api/naver/products/update` 라우트가 `validateForRegistration()`이 이미 계산해 반환하던 `validation.canRegister`(카테고리 빈값이면 false)를 응답에만 실어 보낼 뿐 **PUT 실행 여부 결정에 전혀 쓰지 않았음**(register 라우트는 이 체크로 막는데 update 라우트만 빠져 있었음). 게다가 기존 §4-C GET-merge 방어(detailContent/sellerTags/metaDescription)는 카테고리·원산지 라벨을 커버하지 않았고, **dryRun 경로에는 GET-merge 자체가 없어서** 미리보기가 실제 전송값과 달랐음.
 
-## ★★★★★★★★★ 부분재연동(#2) 실전 투입 — 대상 재확인 필요 (다음 세션 최우선)
+**수정(`src/app/api/naver/products/update/route.ts`)**:
+1. GET-merge 방어를 `leafCategoryId`·`originAreaInfo.content`까지 확장(`applyNaverStateDefense()` 공용 함수로 리팩터).
+2. 이 GET-merge를 dryRun 경로에도 동일 적용 — 미리보기 = 실제 전송값.
+3. GET-merge 이후에도 `leafCategoryId`가 무효(8자리 숫자 아님)면 confirm:true 실 PUT을 409로 하드 블록 — "이 정도면 됐다" 없이 전 상품 공통 원천 차단.
 
-운영자가 "정원창고 미발행 상품(얼음틀)으로 테스트"를 제안했으나, DB 조회(`SELECT naverProductId FROM Product WHERE name ILIKE '%얼음%'`)로 **2건 전부 `naverProductId: null`(미발행)**임을 확인. "네이버에도 반영" 기능은 **발행된(LINKED) 상품에만 버튼이 노출**되도록 설계·구현돼 있어(설계 의도상 "이미 네이버에 있는 상품을 수정 후 재연동"하는 기능), 미발행 상품으로는 이 기능을 테스트할 수 없음을 명확히 안내함. **다음 세션 시작 시 운영자에게 실제 발행 상품 하나(예: 이미 검증에 써온 `cmsk2387l...` 듀얼 무선 가습기 등)를 재확인받아 진행할 것.**
+**검증**: tsc 0 · build 0. 로컬 dev 서버에서 발행된 6개 상품 중 2개로 실제 dryRun 호출(Naver GET 포함, PUT은 미실행) — "듀얼 무선 가습기"가 `leafCategoryId: "50002540"`(이전 "-")·원산지 라벨 "중국산(꽃틔움(협력사))"(이전 없음)으로 정확히 복구됨을 확인, `wouldBlockRealPut: null`.
+
+**옵션 B(DB 백필)**: `scripts/backfill-naver-category-origin.ts` 작성, dry-run 실행 결과 카테고리 5/6·원산지 6/6 fix 대상 — 인계문서의 실측치와 정확히 일치. **`--apply`는 실행하지 않음**(작업원칙 #41 두 환경 핑퐁 — production mutation은 Desktop이 dry-run 검토 후 실행). Desktop 검토 후 `npx tsx scripts/backfill-naver-category-origin.ts --apply`.
+
+**남은 스코프**: 카테고리·원산지 라벨 2필드만 확장. `product-builder.ts` 18필드 화이트리스트 나머지(brand/asPhone/unitPrice 등)의 공백률 실측은 후속 과제로 남김(가장 위험한 카테고리 wipe는 하드블록으로 원천 차단됐다고 판단).
+
+## 다음 세션 시작 순서
+```
+1. [필수, 순서대로] 이번 세션 변경분 커밋·push → verify-vercel-deploy.sh --wait 확인
+2. [Desktop] docs/handoff/CODE_PARTIAL_SYNC_SAFETY_FIX_2026-08-11.md 재검증 —
+   "듀얼 무선 가습기" dryRun을 프로덕션 UI로 직접 열어 카테고리코드가 실제 값으로
+   보이는지 확인 (안전 확인되면 confirm:true 실전 투입 GO)
+3. [Desktop 검토 후] scripts/backfill-naver-category-origin.ts --apply 실행 여부 결정
+4. [운영자 판단] taxType vs naver_tax_type 컬럼 분리 이슈 근본수정 착수 여부
+5. [운영자 방향 결정] 로드맵1b(8렌즈 쿼터 배분 시스템, sourcing-lenses.ts) 전체 연결 여부
+6. [운영자 결정 필요] 미merge 브랜치 3개 처리(BRANCH_AUDIT_2026-08-11.md)
+7. [기회 있을 때] 기존 6개 상품 썸네일 미표시 — "네이버에서 이미지 재동기화" 신규 기능 설계 검토
+8. git stash `z3c-misdirected-changes-needs-redo` 처리 방향 — 여전히 운영자 결정 대기
+```
 
 ---
 
-## ★★★★★★ 이번 세션 — "네이버에도 반영" 부분재연동 실구현 (2026-08-11, Code)
+## ★★★★★★★★★ 직전 세션 — 신규버그3건+브랜치3개조사 (2026-08-11, Desktop/Code)
+
+1. **"온실 아틀리에" 오표시(#341, 커밋 `9de885a`)**: `/studio` 헤더 문구 정정, 프로덕션 확인.
+2. **썸네일(추가이미지) "안 보임" — 코드 버그 아님으로 확인**: 신규 임포트 실측으로 정상 동작 확인. 기존 6개 상품만 구버전 import로 이미지 배열 빈 상태.
+3. **즉시할인 단위 버튼 UX(커밋 `9d4a13e`)**: 칩 스타일로 클릭 가능함을 시각 강조.
+
+**미merge 브랜치 3개 조사**(`docs/handoff/BRANCH_AUDIT_2026-08-11.md`): `feat/finish-image-router`(폐기 후보) · `feature/prompt-asset-engine`(재검토 후보) · `feature/sprint-7-m2-smart-asset-workflow`(병합 절대 금지 확정, 회귀 위험).
+
+## ★★★★★★★★★ "네이버에도 반영" 부분재연동 실구현 (2026-08-11, Code)
 
 원본 지시: `docs/handoff/CODE_NAVER_PARTIAL_SYNC_HANDOFF_2026-08-11.md`
 결과 상세: `docs/handoff/CODE_NAVER_PARTIAL_SYNC_RESULT_2026-08-11.md`
 설계(그대로 따름): `docs/design/NAVER_PARTIAL_SYNC_2026-08-11.md`
 
 **3-A 변경 감지**: `products/new/page.tsx`에 `product-builder.ts`를 직접 읽어 확정한
-18필드 화이트리스트(`NAVER_FIELD_LABELS`) + 순수 diff 함수. `?edit=` hydrate 정착
-시점(또는 같은 세션 신규 네이버 등록 성공 시점)에 기준선을 1회 캡처, 이후 폼 상태와
-실시간 비교해 "몇 개 필드가 바뀌었는지" 계산.
+18필드 화이트리스트(`NAVER_FIELD_LABELS`) + 순수 diff 함수.
 
-**3-B UI**: "네이버에도 반영" 버튼(LINKED 상품에만, 변경 0건이면 비활성) → 클릭 시
-기존 `/api/naver/products/update`를 dryRun으로 호출해 모달에 "이 필드가 바뀝니다"
-(변경 필드 강조) + "그 외 N개 필드는 그대로 유지" + payload 프리뷰 + 비가역 경고 →
-"네이버에 반영"(confirm) 클릭 시 같은 라우트를 confirm:true로 재호출(#46 기존 GO
-게이트 재사용, 새 게이트 없음).
+**3-B UI**: "네이버에도 반영" 버튼(LINKED 상품에만, 변경 0건이면 비활성) → dryRun 모달
+→ confirm 클릭 시 같은 라우트를 confirm:true로 재호출(#46 기존 GO 게이트 재사용).
 
-**3-C 백엔드**: 실 LINKED 상품(`cmsk2387l...`)으로 dryRun curl 직접 실측 → 기존
-`/api/naver/products/update` 코드 그대로 정상 동작 확인. **백엔드 변경 0**(설계
-문서의 예측이 실측으로 확정됨).
+**3-C 백엔드**: 백엔드 변경 0(당시 설계 예측). **→ 이번 세션(위 참조)에서 이 백엔드
+경로의 카테고리 wipe 위험이 실제로 발견돼 안전장치를 긴급 보강함.**
 
 **★부수 발견(수정 안 함)**: `Product.taxType`(폼이 저장하는 컬럼)과
 `buildNaverProductPayload`가 실제로 읽는 `Product.naver_tax_type`이 **서로 다른
 컬럼**임을 발견 — 화이트리스트에서 `taxType`을 제외해 오표시만 막고, 근본수정은
 범위 밖이라 다음 라운드 후보로 기록만.
 
-**검증**: tsc 0 · build 0. 브라우저 실측(로컬 dev, 실 LINKED 상품): 최초 진입 시
-버튼 비활성 → 상품명 수정 시 "네이버에도 반영 (1)"로 활성화 → 클릭 시 모달에 정확한
-diff("상품명"만 강조, 그 외 17개 유지 안내) + dryRun 프리뷰 정상 렌더 확인. **confirm
-버튼은 지시대로 클릭하지 않음.** 테스트로 수정한 상품명은 원상태로 되돌리고 DB
-직접 조회로 원복 확인(테스트 데이터 잔존 0).
-
----
-
-## 다음 세션 시작 순서
-```
-1. [운영자 재확인 필요] 부분재연동 실전 투입 — 정원창고 미발행 상품은 대상 아님을
-   확인함(위 참조). 운영자에게 실제 발행 상품 1건 재지정받아 confirm:true 실행 GO.
-2. [운영자 판단] taxType vs naver_tax_type 컬럼 분리 이슈 근본수정 착수 여부 —
-   어느 컬럼이 SoR인지 먼저 확인 필요.
-3. [기회 있을 때] #1(원산지 import) 실 네이버 연동 상품으로 round-trip 1회 실측(로컬
-   DB에 연동 후보 없어 이전 라운드엔 코드 경로 정합성 확인까지만 완료)
-4. [운영자 방향 결정] 로드맵1b(8렌즈 쿼터 배분 시스템, sourcing-lenses.ts) 전체 연결 여부 — 여전히 대기
-5. [운영자 결정 필요] 미merge 브랜치 3개 처리(BRANCH_AUDIT_2026-08-11.md) — finish-image-router 삭제·prompt-asset-engine 내용검토·sprint-7-m2 폐기(병합 금지 확정)
-6. [기회 있을 때] 기존 6개 상품 썸네일 미표시 — "네이버에서 이미지 재동기화" 신규 기능 설계 검토(다음 라운드 후보)
-7. git stash `z3c-misdirected-changes-needs-redo` 처리 방향 — 여전히 운영자 결정 대기
-```
-
----
-
-## ★★★★★ 직전 세션 — 씨앗심기 정보완전성 4건 (2026-08-11, Code)
-
-원본 지시: `docs/handoff/CODE_SEED_PLANTING_IMPROVEMENTS_HANDOFF_2026-08-11.md`
-결과 상세: `docs/handoff/CODE_SEED_PLANTING_IMPROVEMENTS_2026-08-11.md`
-설계 문서(#2): `docs/design/NAVER_PARTIAL_SYNC_2026-08-11.md`
-
-**#1 원산지 미연동 근본수정**: `api/products/import/route.ts`가 원산지(`naver_origin`/
-`originCode`/`importer_name`)를 전혀 채우지 않던 버그. 인계 문서의 "코드체계가 다를 수
-있다"는 우려를 코드 추적으로 검증한 결과 **`Product.originCode`와 네이버
-`originAreaCode`는 완전히 같은 코드표**(`naver-origin-codes.ts`의 `NAVER_ORIGIN_CODES`
-518건이 유일한 소스, `product-builder.ts`의 `OFFICIAL_ORIGIN_CODES`가 그 표로 검증)임을
-확인 — 변환 없이 직접 매핑 가능. 표에 없는 값은 저장하지 않음(추측 금지 #82).
-
-**#3 권장 판매가 좌측 반영**: 이미 "적용" 버튼 + 배선이 존재해 정상 작동. 브라우저 실측으로
-좌측 "기본 정보" 탭 판매가 필드까지 실제 갱신됨을 확인 — 코드 변경 없음.
-
-**#4 즉시할인 인라인 배치**: `MarginCalculator.tsx` 판매가 컬럼 안에 즉시할인 토글+입력을
-인라인 배치(기존엔 별도 줄이라 "판매가 대비 할인" 관계가 안 보임 — 운영자 신고 해소).
-
-**#2 부분 재연동 설계만**: 네이버 v2 PUT은 FULL REPLACE 확정(기존 규칙)이므로 "부분
-재연동"은 부분 PUT이 아니라 "변경 필드 감지+전체 payload 정확 재구성+PUT"으로 설계.
-조사 결과 쓰기 파이프라인(`/api/naver/products/update` + GET-merge 방어 + confirm 게이트)이
-**이미 존재** — 씨앗심기 화면의 진입점(dirty-field 감지+버튼+프리뷰 모달)만 부족.
-→ **이번 세션(위 참조)에서 실구현 완료.**
-
-**검증**: `npx tsc --noEmit` 0 · `npm run build` 0. 브라우저 실측(로컬 dev
-`/products/new`): 도매가/판매가/할인 입력→마진 계산 정상, 추천가 "적용"→좌측 폼 반영
-확인, 인라인 즉시할인 레이아웃 정상 렌더, 콘솔 신규 에러 0.
-
 ---
 
 ## ★★★★ 아침 소싱 알림 실발송·DB저장 검증 완료 (2026-08-11, Desktop+운영자)
 
-**"남은 미확인 사실"(아래 §참조) 완전 해소.** 운영자 승인 하 Desktop이 실제 크론을 호출(dryRun 아님)해 최종 검증:
-
-1. **DB 저장 확인**: `sourcing_opportunity_records`에 **8/7 이후 처음으로 8/11 신규 5건 생성**(행거·모자·수납장·지갑·선글라스, `created_at` 호출 시각과 정확히 일치).
-2. **카테고리 다양성 확인**: 패션잡화/가구인테리어/식품 계열로 — 이전 "생활/건강" 독점(가습기·청소기·공기청정기) 완전 해소.
-3. **Discord 실제 도착 확인**: 운영자가 `#꼬띠-오늘추천` 채널 스크린샷으로 직접 확인. "🌷 꼬띠의 오늘 소싱 추천 — 2026년 8월 11일 화" 메시지가 DB 내용과 정확히 일치하는 형식(순위·경쟁도·검색량·공급가·도매처 링크 전부 정상 렌더)으로 도착.
-
-**결론: self-fetch 제거(maxDuration 문제 근본 해소)가 진짜 원인이었음이 실전 데이터로 완전히 확정됨.** 코드 리뷰·dryRun 실측에 이어 실발송까지 3단계 전부 통과.
-
----
+**"남은 미확인 사실" 완전 해소.** DB 저장(8/11 신규 5건)·카테고리 다양성·Discord 실제 도착 전부 실측 확인. self-fetch 제거(maxDuration 문제 근본 해소)가 진짜 원인이었음이 실전 데이터로 확정됨.
 
 ## 아침 소싱 크론 통합 근본수정 (2026-08-11, Code)
 
 원본 지시: `docs/handoff/CODE_SOURCING_ROOT_CAUSE_HANDOFF_2026-08-11.md`
 결과 상세: `docs/handoff/CODE_SOURCING_ROOT_CAUSE_2026-08-11.md`
 
-**증상 A(미발송) 근본원인**: `cron/sourcing-daily`가 실작업(DataLab+검색량+AI+도매매칭+
-DB저장+Discord)을 전부 하는 `/api/sourcing-recommend`를 **HTTP self-fetch**로 호출했는데,
-그 라우트에 `maxDuration` 지정이 빠져 있어 Vercel Hobby 기본 10초 제한에 걸렸다. prod
-실측: dryRun만으로도 8.4~10.2초(경계선). DB 저장 중단 시점(8/7 이후 0건, 직접 쿼리로
-확인)이 self-fetch 분리 배포일(8/8, `fec8759`)과 정확히 겹침을 확인.
-
-**수정**: self-fetch 자체 제거. `runSourcingScan()`을 `sourcing-recommender.ts`에 신설해
-(중복발송 가드→스캔→recoType 태깅→DB저장→Discord발송) 전체를 하나의 함수로 통합,
-cron이 같은 프로세스 안에서 직접 호출(`maxDuration=60`이 전체를 커버). `/api/sourcing-
-recommend` POST(대시보드 버튼용)도 같은 함수로 재배선 + 방어적으로 `maxDuration=60` 추가.
-응답 shape은 기존과 완전히 동일(회귀 없음).
-
-**증상 B(카테고리 편중) 근본원인**: `fetchDataLabTrends()`가 DataLab 10개 카테고리 중
-"최신일자 절대 ratio" 상위 3개를 그대로 반환 — 베이스라인 큰 카테고리("생활/건강")가
-매일 1~3위를 독식(prod dryRun 실측으로 확인: `trendCategories: ['생활/건강','여가/
-생활편의','디지털/가전']` 매번 동일).
-
-**수정**: 정렬 기준을 절대 ratio → **risingRate**(로드맵1b `classifyTrendSignal` 재사용,
-추가 API 호출 0)로 교체해 상위 2개 선정 + 날짜 기반 순환으로 3번째 슬롯 채움. 로드맵1b
-전체(8렌즈 쿼터 배분 시스템, `sourcing-lenses.ts`)는 데이터 구조가 완전히 달라(키워드
-단위 top5 vs 카테고리 단위 하루10개 배분) 오늘 전체 연결은 스코프 아웃 — 운영자 판단
-필요 항목으로 남김.
+**증상 A(미발송)**: self-fetch 제거, `runSourcingScan()` in-process 통합.
+**증상 B(카테고리 편중)**: 정렬 기준을 절대 ratio → risingRate로 교체.
 
 ## ★★★★★ 카테고리 센티널(50003307) — Desktop 프로덕션 최종 검증 완료 (2026-08-11)
 
-Code 보고(커밋 `af6b95b`)를 전부 독립 재검증:
-1. **Prisma 스키마**: `Product.naverCategoryCode`가 `@default("")`로 정확히 변경됨(grep 확인).
-2. **DB 컬럼 기본값**: `information_schema.columns` 조회로 `''::text` 확인.
-3. **오염 데이터 정리**: `naverCategoryCode = '50003307'`인 상품 **0건**(정리 전 5건).
-4. **15곳 grep 재확인**: 남은 4곳 전부 정당(카테고리 사전 정의 2곳 + 범위밖 레거시 1곳 + 주석 1곳). 실제 센티널 오염 코드 0건.
-5. **프로덕션 브라우저 최종 검증**: 정확히 재현됐던 그 상품(`?edit=cmsk23ahi0007vzjezafjys06`)을 프로덕션에서 다시 열어 카테고리 4단계 전부 "선택" 플레이스홀더로 정직하게 비어있음 확인, "가구다리"·"50003307" 완전히 사라짐.
-6. **A-2(순마진 왜곡 경고) 프로덕션 검증**: 목록 페이지에서 "공급가 미입력" 배지 4건 정확히 표시(Code 보고 "5건 중 1건만 실공급가" 일치).
-7. tsc 독립 재실행 0 에러.
+Code 보고(커밋 `af6b95b`)를 전부 독립 재검증 — 오염 데이터 0건, 프로덕션 UI 정상 확인.
 
 ## ★★★★★★ 꽃밭 돌보기 원 요청 5건 — 전체 재검증 완료 (2026-08-11, Desktop)
 
-운영자 확인 질문("꽃밭돌보기 관련 요청사항들도 진행되고 있는건가요?")에 답하기 위해 8/10 원 요청 5건을 프로덕션에서 하나씩 실측 재확인:
-
-1. **네이버 상품번호로 가져오기**: 실제 UI(상품번호 입력창→가져오기 버튼)로 실제 네이버 상품번호(11431754371) 입력·클릭 → "이미 연동된 상품입니다" 정확히 표시(정상 스킵 처리). API 직접 호출로도 `{skipped:[{reason:'이미 연동됨'}]}` 확인.
-2. **페이지네이션 숫자 버튼**: 스크린샷으로 "1 2 3 ... 10" 정확히 렌더 확인(이전 세션 검증 재확인).
-3. **마진 계산 할인가 반영**: 코드 로직은 정확(이전 세션 리뷰 완료). ⚠️ DB 전수조회 결과 IMPORTED 상품 6건 전부 `instant_discount: null`(실제 할인 있는 상품이 아직 없음) — **실할인 케이스는 여전히 미검증**(정직 유지, 다음에 할인 있는 상품 가져올 기회에 확인).
-4+5. **씨앗심기 이동 시 정보 유지**: 실제 공급가 있는 상품(`cmsk2387l...`, 듀얼 무선 가습기)을 씨앗심기로 열어 확인 — **순마진율 36.9% 정확 계산**(공급가 12,900원 기준), 태그 9개(#가습기 #무선가습기 등) 전부 유지 확인.
-
-**결론: 5건 전부 실제로 작동 확인.** #3(할인가)만 실증 데이터 부재로 "코드는 맞지만 실측 완료는 아님" 상태 — 버그가 아니라 검증 기회 대기.
+5건 전부 실제로 작동 확인. #3(할인가)만 실증 데이터 부재로 검증 기회 대기.
 
 ## ★★★★★★★ 씨앗심기 정보완전성 4건 — Desktop 프로덕션 검증 완료 (2026-08-11)
 
-Code 완료 보고(커밋 `519bead`)를 독립 재검증:
-
-1. **#1 원산지 매핑 코드**: `NAVER_ORIGIN_CODES`(518건 공식표)가 `product-builder.ts`의 `OFFICIAL_ORIGIN_CODES`와 **동일 소스**임을 grep으로 확인(같은 파일을 import route·발행 검증 게이트 양쪽이 공유 — #55 전 상품 공통 원칙 정확히 부합). `product-builder.ts`가 `file` 명령에 "data"(바이너리)로 오판되는 걸 발견해 `iconv`로 UTF-8 유효성 재확인(정상, 단순 non-ASCII 비율 문제). sentinel 재검사 통과. 실증 데이터(원산지 있는 IMPORTED 상품)가 아직 없어 end-to-end 브라우저 검증은 다음 임포트 기회에.
-2. **#4 즉시할인 인라인 배치**: 프로덕션 브라우저로 실제 인터랙션 검증. 판매가(27,600) 옆에 즉시할인 입력+단위버튼이 정확히 인라인 배치됨(이전엔 별도 줄). **실제 값 입력 테스트**: 1,000원 할인 입력 → "실판매가 26,600원(-4%)" 정확히 계산, 순마진율 35.7%→33.5% 즉시 재계산 확인. 계산 로직 완전 정상.
-   - ⚠️ 부가 발견(경미, 다음 라운드 후보): 단위 전환 버튼("원"/"%")이 시각적으로 일반 텍스트처럼 보여 클릭 가능한 토글임이 한눈에 안 들어옴 — 처음 조작 시 Desktop도 헷갈렸음. 버튼임을 명확히 하는 시각 강조(테두리·배경색 등) 검토 여지.
-   - 테스트 데이터 정확히 원복 확인(DB `instant_discount: null` 재확인).
-3. **#3 권장 판매가 반영**: Code가 이미 정상 작동 확인(코드 변경 없음) — Desktop 별도 재검증 불필요(#3은 읽기 전용 확인이라 Code 보고 신뢰).
-
-**결론**: #1은 코드 정확성 확인(실증 대기), #4는 완전한 end-to-end 실사용 검증 완료(계산 정확, 인라인 배치 확인, 경미한 UX 여지 1건 발견).
+#1 원산지 매핑, #4 즉시할인 인라인 배치 실측 검증 완료. #3은 코드 변경 없어 재검증 불필요.
 
 ---
 
@@ -195,6 +111,7 @@ Code 완료 보고(커밋 `519bead`)를 독립 재검증:
 - **인계문서의 "확인됨" 서술도 재검증 대상**(#310 연장)
 - 매일 자동 실행되며 실제 외부 발송을 일으키는 CI 워크플로(GitHub Actions 등) 추가·활성화 = 디스코드 실발송과 동급 승인 대상
 - git stash `z3c-misdirected-changes-needs-redo` 처리 방향 — 여전히 운영자 결정 대기(손대지 않음)
-- **self-fetch(자기 자신의 다른 API 라우트를 HTTP로 호출)는 별개 서버리스 함수 홉을 만든다**(#338) — 호출자의 maxDuration은 피호출 라우트에 적용되지 않는다. 무거운 작업은 in-process 함수 호출로 묶거나, self-fetch 대상 라우트에도 반드시 별도로 maxDuration을 지정할 것.
-- **인계문서가 "코드체계가 다를 수 있다"고 경고한 것도 실제로 코드를 추적해 확인하기 전엔 사실로 단정하지 말 것**(#339) — 이번 세션 원산지 코드가 실제로는 같은 표였음이 그 예.
-- **네이버에 실제로 PUT되는 필드와 씨앗심기 폼이 저장하는 DB 컬럼이 이름은 비슷해도 다른 컬럼일 수 있다**(#340) — `Product.taxType`(폼)과 `Product.naver_tax_type`(payload가 실제로 읽는 컬럼)이 서로 다른 사례 발견. dirty-field 화이트리스트 설계 시 반드시 `product-builder.ts`가 읽는 실제 컬럼명을 확인할 것.
+- **self-fetch(자기 자신의 다른 API 라우트를 HTTP로 호출)는 별개 서버리스 함수 홉을 만든다**(#338) — 호출자의 maxDuration은 피호출 라우트에 적용되지 않는다.
+- **인계문서가 "코드체계가 다를 수 있다"고 경고한 것도 실제로 코드를 추적해 확인하기 전엔 사실로 단정하지 말 것**(#339)
+- **네이버에 실제로 PUT되는 필드와 씨앗심기 폼이 저장하는 DB 컬럼이 이름은 비슷해도 다른 컬럼일 수 있다**(#340) — `Product.taxType`(폼)과 `Product.naver_tax_type`(payload가 실제로 읽는 컬럼)이 서로 다른 사례.
+- **DB 필드가 빈 값이라고 해서 "원래 비어있었다"고 가정하면 안 된다**(#341, 2026-08-12) — 초기버전 import route가 카테고리·원산지를 아예 채우지 않은 채 발행된 상품이 존재. v2 PUT은 FULL REPLACE라 빈 값을 그대로 보내면 네이버의 실제 값을 지운다. 부분 재연동/수정 계열 라우트를 새로 만들 때마다 "DB가 비어있는 게 곧 네이버도 비어있다는 뜻인가?"를 반드시 의심하고, GET-merge 방어 대상 필드에 포함시킬 것.

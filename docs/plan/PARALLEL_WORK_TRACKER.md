@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-11 (rev120 — 아침 소싱 알림 미발송+카테고리 편중 통합 근본수정 · Code) / 직전 rev119 — 아침 소싱 크론 조사 착수·중복발송 가드 추가 · Code
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-12 (rev121 — 부분재연동 안전장치 긴급 보강(카테고리 wipe 위험 방어) · Code) / 직전 rev120 — 아침 소싱 알림 미발송+카테고리 편중 통합 근본수정 · Code
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -6,6 +6,24 @@
 
 
 > **📦 rev80 이전은 archive로 분할됨(#31, 2026-07-28)**: `docs/plan/archive/PARALLEL_WORK_TRACKER_~rev80.md` 참조(rev51~rev80, 삭제 0).
+
+## rev121 — 부분재연동 안전장치 긴급 보강 (2026-08-12 Code)
+
+원본 지시: `docs/handoff/CODE_PARTIAL_SYNC_SAFETY_HANDOFF_2026-08-11.md` · 결과 상세: `docs/handoff/CODE_PARTIAL_SYNC_SAFETY_FIX_2026-08-11.md`
+
+**발견된 위험(운영자 실제 발견)**: "듀얼 무선 가습기" dryRun 미리보기에 "카테고리코드: -"(앱 DB 공백)로 나왔는데 실제 네이버는 정확한 카테고리가 설정돼 있었다 — confirm:true 실행 시 v2 PUT(FULL REPLACE)이 네이버의 실제 카테고리를 지웠을 위험. Desktop이 실행 전 중단.
+
+**근본원인 확정**: `/api/naver/products/update` 라우트가 `validateForRegistration()`이 이미 계산해 반환하던 `validation.canRegister`(카테고리 빈값이면 false)를 응답에만 실어 보낼 뿐 PUT 실행 여부 결정에 전혀 쓰지 않았음(register 라우트는 이 체크로 막는데 update 라우트만 빠져 있었음). 기존 §4-C GET-merge 방어(detailContent/sellerTags/metaDescription)도 카테고리·원산지 라벨은 커버하지 않았고, dryRun 경로에는 GET-merge 자체가 없어 미리보기가 실제 전송값과 달랐음.
+
+**수정(`src/app/api/naver/products/update/route.ts`)**: GET-merge 방어를 `leafCategoryId`·`originAreaInfo.content`까지 확장(`applyNaverStateDefense()` 공용 함수로 리팩터) + dryRun 경로에도 동일 적용 + GET-merge 이후에도 `leafCategoryId`가 무효면 confirm:true 실 PUT을 409로 하드 블록.
+
+**검증**: tsc 0 · build 0. 로컬 dev 서버에서 발행된 6개 상품 중 2개로 실제 dryRun 호출(Naver GET 포함, PUT은 미실행) — "듀얼 무선 가습기"가 `leafCategoryId: "50002540"`(이전 "-")·원산지 라벨 정확히 복구됨을 확인, `wouldBlockRealPut: null`.
+
+**옵션 B(DB 백필)**: `scripts/backfill-naver-category-origin.ts` 작성, dry-run 결과 카테고리 5/6·원산지 6/6 fix 대상 — 인계문서 실측치와 정확히 일치. `--apply`는 미실행(#41 두 환경 핑퐁 — Desktop 검토 후 실행).
+
+**신규 원칙**: `docs/plan/PRINCIPLES_LEARNED.md` #341 등재(DB 필드 공백을 네이버 공백으로 가정 금지 + GET-merge/하드블록 패턴).
+
+---
 
 ## rev120 — 아침 소싱 알림 미발송 + 카테고리 편중 통합 근본수정 (2026-08-11 Code)
 
