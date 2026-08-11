@@ -1131,3 +1131,45 @@ GET-merge 자체가 없어 미리보기가 실제 전송값과 달랐다.
    실제 값으로 백필하는 일회성 스크립트도 함께 마련해두면(dry-run 기본) 재발 방지와
    기존 오염 데이터 정리를 동시에 다룰 수 있다 — 단 production mutation(`--apply`)은
    #41 두 환경 핑퐁 프로토콜에 따라 Code가 직접 실행하지 않는다.
+
+---
+
+## 2026-08-12 (Code) 신규 원칙 #342
+
+### #342 — "네이버 API에 이 개념이 있을까?"는 실제 GET 응답을 찍어보고 판단한다 — 필드명이 그럴듯하다고 존재를 가정하지 않는다
+
+**사건**: import route 필드 완전성 갭 10건을 조사하며, 발행 6개 상품 전부를
+실제 `getProduct()`로 GET해 구조를 직접 확인한 결과: asPhone/asGuide/brand/
+sellerCode/unitPrice 5건은 정말 네이버가 구조화된 필드로 돌려주지만, 나머지
+5건(detailImages/detailImageUrl/hookPhrase/keywords/shippingTemplateId)은
+네이버 API 자체에 대응 개념이 없거나(HTML 하나로 이미 합쳐짐) 우리 시스템의
+내부 개념(로컬 FK)이었다. 특히 hookPhrase/detailImages/detailImageUrl은
+`detailContent`라는 하나의 완성된 HTML 블록으로 발행 시점에 합쳐지고, 네이버는
+그 HTML만 돌려준다 — "이 이미지가 상세페이지 이미지였다"를 문자열 파싱으로
+되짜는 건 추측이지 매핑이 아니다.
+
+**추가 발견(#340과 같은 패턴)**: `sellerCode` 필드를 추적하다가, 씨앗심기
+폼의 "판매자 상품코드" 입력란은 `Product.sku`에 저장되는데
+`buildNaverProductPayload`는 실제로 `Product.sellerProductCode`(별개 컬럼)를
+읽어 PUT한다는 것을 발견 — 부분재연동 dirty-field 감지기가 지금 추적 중인
+컬럼과 실제 네이버로 나가는 컬럼이 다르다. `brand`/`naver_brand`는 한술 더
+떠서, 두 컬럼 다 outgoing PUT 페이로드 어디에도 안 들어간다(내부 완결성
+점수용으로만 읽힘) — 화이트리스트가 추적은 하지만 실제로 네이버에 반영되지
+않는 필드다.
+
+**규칙**:
+1. "네이버 API에 X라는 필드/개념이 있을 것이다"는 절대 추정하지 않는다.
+   `getProduct()`(또는 등록/수정 응답)를 실제로 호출해 `JSON.stringify`로
+   구조를 직접 확인한 뒤 매핑한다(#82의 구체적 실행 방법). 가능하면 발행된
+   상품 여러 건을 GET해서 필드 존재 여부가 상품마다 우연이 아닌지 확인한다.
+2. 응답에 없는 필드는 "아직 못 찾았다"가 아니라 "네이버가 이 개념 자체를
+   구조화된 형태로 주지 않는다"는 결론일 수 있다 — 특히 여러 개의 로컬
+   컬럼(hookPhrase/detail_image_url/detail_images/description)이 발행
+   시점에 하나의 HTML(`detailContent`)로 합쳐지는 구조라면, 그 역방향
+   복원은 파싱 추측이니 시도하지 않는다.
+3. dirty-field 화이트리스트처럼 "이 필드가 바뀌면 네이버에도 반영된다"고
+   운영자에게 보여주는 UI가 있다면, 그 필드가 실제로 payload 빌더(`build
+   NaverProductPayload` 등)의 어느 컬럼을 읽는지 반드시 추적해 폼 저장
+   컬럼과 일치하는지 확인한다(#340 연장) — 일치하지 않거나 payload에
+   아예 안 들어가면 운영자에게 "바뀜"이라고 잘못 알리는 셈이니 발견 즉시
+   기록하고(수정은 별도 스코프 판단), 방치하지 않는다.

@@ -76,6 +76,62 @@ function pickOrigin(op: any): { originCode: string | undefined; naverOrigin: str
   return { originCode, naverOrigin, importerName };
 }
 
+// #2 (2026-08-12, docs/handoff/CODE_IMPORT_FIELD_COMPLETENESS_HANDOFF_2026-08-11.md)
+// — AS 전화번호/안내. 실 getProduct() 응답으로 구조 확인(추측 아님): 원본
+// afterServiceTelephoneNumber/afterServiceGuideContent 그대로 존재. asGuide는
+// product-form-mapping.ts #150 별칭 그대로 Product.asInfo 컬럼에 저장한다
+// (buildNaverProductPayload도 이 컬럼을 읽음 — product-builder.ts:1085).
+function pickAfterService(op: any): { asPhone: string | undefined; asGuide: string | undefined } {
+  const info = (op?.detailAttribute?.afterServiceInfo ?? {}) as Record<string, any>;
+  const asPhone = typeof info.afterServiceTelephoneNumber === 'string' && info.afterServiceTelephoneNumber.trim()
+    ? info.afterServiceTelephoneNumber.trim() : undefined;
+  const asGuide = typeof info.afterServiceGuideContent === 'string' && info.afterServiceGuideContent.trim()
+    ? info.afterServiceGuideContent.trim() : undefined;
+  return { asPhone, asGuide };
+}
+
+// 브랜드 — 실 응답 구조 확인 결과 detailAttribute.naverShoppingSearchInfo.brandName에
+// 있음(buildNaverProductPayload가 실제 PUT에 내보내지는 않고 내부 완결성 점수
+// (calcAttributeCompleteness)에만 쓰는 필드라 우선순위상 naver_brand로 저장 —
+// 다른 naver_* 접두 컬럼(naver_material 등)과 동일하게 "네이버에서 읽어온 값"
+// 구역에 둔다. Product.brand(연산자 직접 입력)는 건드리지 않는다.
+function pickBrand(op: any): string | undefined {
+  const b = op?.detailAttribute?.naverShoppingSearchInfo?.brandName;
+  return typeof b === 'string' && b.trim() ? b.trim() : undefined;
+}
+
+// 판매자 상품코드 — 실 응답 확인: detailAttribute.sellerCodeInfo.sellerManagementCode.
+// buildNaverProductPayload가 실제 PUT에 내보내는 컬럼은 Product.sellerProductCode
+// (product-builder.ts:1094) — Product.sku(내부 SKU, import가 이미 NAVER-{no}로
+// 채움)와는 다른 컬럼이니 혼동 금지. 씨앗심기 폼의 "판매자 상품코드" 입력란은
+// 현재 sku 컬럼에 저장되도록 배선돼 있어(product-form-mapping.ts) 이 임포트
+// 값과 별개로 남는다 — 별개 이슈로 기록만(#340과 같은 패턴, 이번 스코프 아님).
+function pickSellerCode(op: any): string | undefined {
+  const code = op?.detailAttribute?.sellerCodeInfo?.sellerManagementCode;
+  return typeof code === 'string' && code.trim() ? code.trim() : undefined;
+}
+
+// 단위가격(§4-A) — 실 6개 연동상품 전부 이 정책 비대상 카테고리라 실측 예시는
+// 없었으나, unitPriceInfo는 우리가 PUT으로 보내는 것과 동일한 형(unitPriceYn/
+// totalCapacityValue/unitCapacity/indicationUnit — product-builder.ts:1043-1055)을
+// 네이버 API 공식문서가 대칭으로 정의(afterServiceInfo/sellerCodeInfo/
+// originAreaInfo 전부 대칭 확인됨). 카테고리 비대상 상품은 그냥 undefined.
+function pickUnitPrice(op: any): {
+  unit_price_yn: boolean | undefined;
+  unit_total_capacity: number | undefined;
+  unit_capacity: number | undefined;
+  unit_indication_unit: string | undefined;
+} {
+  const info = op?.detailAttribute?.unitPriceInfo as Record<string, any> | undefined;
+  if (!info) return { unit_price_yn: undefined, unit_total_capacity: undefined, unit_capacity: undefined, unit_indication_unit: undefined };
+  return {
+    unit_price_yn: info.unitPriceYn === 'Y' ? true : (info.unitPriceYn === 'N' ? false : undefined),
+    unit_total_capacity: typeof info.totalCapacityValue === 'number' ? info.totalCapacityValue : undefined,
+    unit_capacity: typeof info.unitCapacity === 'number' ? info.unitCapacity : undefined,
+    unit_indication_unit: typeof info.indicationUnit === 'string' && info.indicationUnit.trim() ? info.indicationUnit.trim() : undefined,
+  };
+}
+
 // #4 — 마진 계산은 salePrice - instant_discount(원)를 실제 판매가로 쓴다
 // (profitability/route.ts). 네이버 즉시할인(customerBenefit.immediateDiscountPolicy,
 // PC 우선)을 읽어 원화 금액으로 환산해 그대로 세팅 — 안 하면 마진이 정가 기준으로 계산됨.
@@ -165,6 +221,10 @@ export async function POST(request: NextRequest) {
       const additionalImages = pickAdditionalImages(op);
       const sellerTags = pickSellerTags(op);
       const { originCode, naverOrigin, importerName } = pickOrigin(op);
+      const { asPhone, asGuide } = pickAfterService(op);
+      const naverBrand = pickBrand(op);
+      const sellerProductCode = pickSellerCode(op);
+      const unitPrice = pickUnitPrice(op);
 
       const created = await prisma.product.create({
         data: {
@@ -187,6 +247,19 @@ export async function POST(request: NextRequest) {
           originCode,
           naver_origin: naverOrigin,
           importer_name: importerName,
+          // #2 (2026-08-12, 결과 문서: CODE_IMPORT_FIELD_COMPLETENESS_2026-08-11.md)
+          // — 갭 목록 10건 중 실제로 네이버 응답에 존재해 복구 가능한 5건
+          // (asPhone/asGuide/brand/sellerCode/unitPrice). 나머지 5건
+          // (detailImages/detailImageUrl/hookPhrase/keywords/shippingTemplateId)은
+          // 결과 문서에 사유와 함께 화이트리스트 제외로 기록 — 추측 매핑 금지.
+          asPhone,
+          asInfo: asGuide,
+          naver_brand: naverBrand,
+          sellerProductCode,
+          unit_price_yn: unitPrice.unit_price_yn,
+          unit_total_capacity: unitPrice.unit_total_capacity,
+          unit_capacity: unitPrice.unit_capacity,
+          unit_indication_unit: unitPrice.unit_indication_unit,
         },
         select: { id: true },
       });

@@ -1,4 +1,4 @@
-# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-12 (rev121 — 부분재연동 안전장치 긴급 보강(카테고리 wipe 위험 방어) · Code) / 직전 rev120 — 아침 소싱 알림 미발송+카테고리 편중 통합 근본수정 · Code
+# 꽃틔움 가든 — 병행작업 트래커 (누락 0 원칙) · 최종 업데이트 2026-08-12 (rev122 — import route 필드 완전성 갭 10건 판정·매핑 · Code) / 직전 rev121 — 부분재연동 안전장치 긴급 보강 · Code
 
 > **⚠️ 2026-06-24(rev50)부터 2026-07-13까지 약 3주간 이 파일이 갱신되지 않았습니다.** 그 사이 실제로는 상품 IA 재설계(P1~P4), 꼬띠 페르소나 전면 적용, 재고 가시화, 좀비 튜닝 엔진 등 대형 작업이 진행·배포됐습니다(git log 기준 e7a3581~ea4e26d 다수 커밋).
 >
@@ -6,6 +6,22 @@
 
 
 > **📦 rev80 이전은 archive로 분할됨(#31, 2026-07-28)**: `docs/plan/archive/PARALLEL_WORK_TRACKER_~rev80.md` 참조(rev51~rev80, 삭제 0).
+
+## rev122 — import route 필드 완전성 갭 10건 판정·매핑 (2026-08-12 Code)
+
+원본 지시: `docs/handoff/CODE_IMPORT_FIELD_COMPLETENESS_HANDOFF_2026-08-11.md` · 결과 상세: `docs/handoff/CODE_IMPORT_FIELD_COMPLETENESS_2026-08-11.md`
+
+**전수 판정(실 GET 6건 실측, 추측 금지 #82)**: 화이트리스트 10건 중 5건(asPhone/asGuide/brand/sellerCode/unitPrice)은 네이버가 실제로 구조화된 필드로 돌려줘 매핑 완료. 나머지 5건(detailImages/detailImageUrl/hookPhrase/keywords/shippingTemplateId)은 네이버 API에 대응 없음(HTML로 이미 합쳐짐/병합됨) 또는 내부 FK 개념이라 매핑 불가로 확정.
+
+**구현(`src/app/api/products/import/route.ts`)**: `pickAfterService`/`pickBrand`/`pickSellerCode`/`pickUnitPrice` 4개 헬퍼 + `prisma.product.create()` 8개 컬럼 연결.
+
+**★부수 발견(수정 안 함, #340 계열, 원칙 #342 등재)**: `sellerCode` 화이트리스트가 추적하는 폼 컬럼(`sku`)과 실제 PUT 컬럼(`sellerProductCode`)이 다름. `brand`/`naver_brand`는 outgoing PUT 페이로드 어디에도 안 들어감(내부 완결성 점수용 전용).
+
+**검증**: tsc 0 · build 0. 실 미연동 상품(`11431754381`) 신규 임포트로 5개 필드 end-to-end 확인, 테스트 데이터 즉시 정리(잔존 0).
+
+**백필 통합**: `scripts/backfill-naver-category-origin.ts`를 확장(카테고리·원산지 + asPhone/asInfo/naver_brand/sellerProductCode/단위가격). dry-run 재실행 `fieldsFixed: 23`. asPhone/asInfo는 스키마 기본값이 이미 채워져 있어 "빈 값" 판정 제외(수동 확인 필요 항목으로 별도 기록). `--apply` 미실행(#41).
+
+---
 
 ## rev121 — 부분재연동 안전장치 긴급 보강 (2026-08-12 Code)
 

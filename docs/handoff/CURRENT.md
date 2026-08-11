@@ -1,12 +1,27 @@
-# 현재 인계 (CURRENT) — 2026-08-12 세션 (부분재연동 안전장치 긴급 보강 완료)
+# 현재 인계 (CURRENT) — 2026-08-12 세션 (부분재연동 안전장치 + import 필드완전성 갭 10건 완료)
 
 > 다음 세션은 이 파일 → 해당 트랙 설계문서 → `PRINCIPLES_LEARNED.md` 순으로 읽고 시작.
 
-- **status**: ✅ 부분재연동(#2) 안전장치 긴급 보강 완료 — 카테고리코드 wipe 위험(운영자 발견) 근본수정 + 실 dryRun 검증(발행 6건 중 2건) + DB 백필 스크립트 dry-run 완료(--apply는 미실행, Desktop 검토 대기). **confirm:true 실행은 여전히 하지 않음.**
+- **status**: ✅ 부분재연동(#2) 안전장치 긴급 보강 완료(카테고리코드 wipe 위험 근본수정) → ✅ import route 필드 완전성 갭 10건 판정 완료(5건 매핑 구현, 5건 "네이버 API에 대응 없음/내부개념"으로 확정). 백필 스크립트 하나로 통합, dry-run만 실행(--apply는 미실행, Desktop 검토 대기). **confirm:true 실행은 여전히 하지 않음.**
 - **branch**: `main` (커밋 예정 — 아래 참조)
-- **배포 상태**: `9d4a13e`까지 배포·프로덕션 검증 완료 (이번 세션 변경분은 push 후 Vercel 배포·verify-deploy 확인 필요)
+- **배포 상태**: `627960f`(부분재연동 안전장치)까지 배포·프로덕션 검증 완료. 이번 세션(import 필드완전성) 변경분은 push 후 Vercel 배포·verify-deploy 확인 필요.
 
 ---
+
+## ★★★★★★★★★ import route 필드 완전성 갭 10건 — 완료 (2026-08-12, Code)
+
+원본 지시: `docs/handoff/CODE_IMPORT_FIELD_COMPLETENESS_HANDOFF_2026-08-11.md`
+결과 상세: `docs/handoff/CODE_IMPORT_FIELD_COMPLETENESS_2026-08-11.md`
+
+**전수 판정(실제 `getProduct()` 6개 상품 GET으로 확인, 추측 금지 #82)**: 화이트리스트 10건 중 **5건은 실제로 네이버가 구조화된 필드로 돌려줘 매핑 완료** — asPhone/asGuide(`afterServiceInfo`) · brand(`naverShoppingSearchInfo.brandName` → `naver_brand`) · sellerCode(`sellerCodeInfo.sellerManagementCode` → `sellerProductCode`) · unitPrice(`unitPriceInfo`, 실측 예시 없지만 대칭 구조 확인 후 구현). **나머지 5건은 "매핑 불가"로 확정**: detailImages/detailImageUrl/hookPhrase는 네이버가 `detailContent` 하나의 HTML로 이미 합쳐 돌려줘 구조적으로 복원 불가(파싱 추측 하지 않음), keywords는 `sellerTags`로 이미 병합돼 돌아와 분리 불가(다만 `tags`는 이미 임포트됨), shippingTemplateId는 우리 로컬 `ShippingTemplate` 테이블 FK라 애초에 네이버 응답에 없음.
+
+**★부수 발견(수정 안 함, #340과 같은 패턴, 원칙 #342 등재)**: `sellerCode` 화이트리스트가 실제로 추적하는 폼 컬럼(`Product.sku`)과 `buildNaverProductPayload`가 실제 PUT에 쓰는 컬럼(`Product.sellerProductCode`)이 서로 다름 — 폼에서 판매자 상품코드를 바꿔도 네이버 payload는 안 바뀔 수 있음. `brand`/`naver_brand`는 한술 더 떠 outgoing PUT 페이로드 어디에도 안 들어감(내부 완결성 점수용으로만 쓰임). 둘 다 부분재연동 dirty-field 감지기가 추적은 하지만 실제 네이버 반영 효과가 없는 필드 — 이번 스코프(import route) 밖이라 기록만.
+
+**구현**: `src/app/api/products/import/route.ts`에 `pickAfterService`/`pickBrand`/`pickSellerCode`/`pickUnitPrice` 4개 헬퍼 추가, `prisma.product.create()`에 8개 컬럼 연결.
+
+**검증**: tsc 0 · build 0. 실제 미연동 네이버 상품(`11431754381`)을 로컬 dev로 신규 임포트해 5개 필드 전부 정확히 채워짐을 DB로 확인, 테스트 상품 즉시 DELETE로 정리(잔존 0).
+
+**백필 통합**: `scripts/backfill-naver-category-origin.ts`(부분재연동 안전장치 세션에서 만든 스크립트)를 하나로 확장 — 카테고리·원산지에 더해 asPhone/asInfo/naver_brand/sellerProductCode/단위가격까지 "앱 DB 빈 값만 채움" 원칙으로 통합. dry-run 재실행: `fieldsFixed: 23`(카테고리5+원산지6+브랜드6+판매자코드6). asPhone/asInfo는 6건 전부 스키마 기본값(플레이스홀더)이 이미 채워져 있어 "빈 값"으로 판정되지 않아 대상 제외(안전 원칙 그대로 지킴, 수동 확인 필요 항목으로 별도 기록). **`--apply`는 미실행**(#41).
 
 ## ★★★★★★★★★ 부분재연동 안전장치 긴급 보강 — 완료 (2026-08-12, Code)
 
@@ -30,16 +45,20 @@
 
 ## 다음 세션 시작 순서
 ```
-1. [필수, 순서대로] 이번 세션 변경분 커밋·push → verify-vercel-deploy.sh --wait 확인
-2. [Desktop] docs/handoff/CODE_PARTIAL_SYNC_SAFETY_FIX_2026-08-11.md 재검증 —
-   "듀얼 무선 가습기" dryRun을 프로덕션 UI로 직접 열어 카테고리코드가 실제 값으로
-   보이는지 확인 (안전 확인되면 confirm:true 실전 투입 GO)
+1. [필수, 순서대로] 이번 세션(import 필드완전성) 변경분 커밋·push → verify-vercel-deploy.sh --wait 확인
+2. [Desktop] docs/handoff/CODE_PARTIAL_SYNC_SAFETY_FIX_2026-08-11.md +
+   CODE_IMPORT_FIELD_COMPLETENESS_2026-08-11.md 재검증 — "듀얼 무선 가습기" dryRun을
+   프로덕션 UI로 직접 열어 카테고리코드가 실제 값으로 보이는지 확인
+   (안전 확인되면 confirm:true 실전 투입 GO)
 3. [Desktop 검토 후] scripts/backfill-naver-category-origin.ts --apply 실행 여부 결정
-4. [운영자 판단] taxType vs naver_tax_type 컬럼 분리 이슈 근본수정 착수 여부
-5. [운영자 방향 결정] 로드맵1b(8렌즈 쿼터 배분 시스템, sourcing-lenses.ts) 전체 연결 여부
-6. [운영자 결정 필요] 미merge 브랜치 3개 처리(BRANCH_AUDIT_2026-08-11.md)
-7. [기회 있을 때] 기존 6개 상품 썸네일 미표시 — "네이버에서 이미지 재동기화" 신규 기능 설계 검토
-8. git stash `z3c-misdirected-changes-needs-redo` 처리 방향 — 여전히 운영자 결정 대기
+   (카테고리·원산지·브랜드·판매자코드 23건 백필 대상)
+4. [운영자 판단] sellerCode(sku vs sellerProductCode)·brand(payload 미포함) 컬럼
+   불일치 근본수정 착수 여부 — taxType vs naver_tax_type(#340)과 같은 계열
+5. [운영자 판단] taxType vs naver_tax_type 컬럼 분리 이슈 근본수정 착수 여부
+6. [운영자 방향 결정] 로드맵1b(8렌즈 쿼터 배분 시스템, sourcing-lenses.ts) 전체 연결 여부
+7. [운영자 결정 필요] 미merge 브랜치 3개 처리(BRANCH_AUDIT_2026-08-11.md)
+8. [기회 있을 때] 기존 6개 상품 썸네일 미표시 — "네이버에서 이미지 재동기화" 신규 기능 설계 검토
+9. git stash `z3c-misdirected-changes-needs-redo` 처리 방향 — 여전히 운영자 결정 대기
 ```
 
 ---
