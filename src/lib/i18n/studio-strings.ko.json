@@ -3,7 +3,7 @@
     "description": "온실 아틀리에 (/studio) — Sprint 7-M2 Phase 3-B Korean strings. Co-author Diagnosis + Thumbnail + Detail page creation flow. Phase 3-C-2 added plantTab section for PLANT 7th tab integration. Phase 3-C-3 added autoRun + sequence status strings."
   },
   "page": {
-    "title": "온실 아틀리에",
+    "title": "꽃단장 작업실",
     "subtitle": "AI 진단 → 4 변형 썸네일 → 5섹션 상세페이지 자동 생성",
     "refresh": "새로고침",
     "lastSync": "최근 갱신:"
