@@ -4,8 +4,18 @@
 // 넘겨, 순서상 후반부였던 E-7이 강제종료로 아예 발송되지 못하던 것이 아침
 // 소싱 알림 미발송의 근본원인이었다. 동일 스케줄(0 23 * * * UTC = 08:00 KST)의
 // 별도 Vercel 함수로 분리해 다른 섹션의 지연과 완전히 독립시킨다.
+//
+// 근본수정 2단계(2026-08-11, #338): 위 분리 당시 이 라우트를 실제 작업을 하는
+// /api/sourcing-recommend로 HTTP self-fetch 하도록 만들었는데, 그 라우트에
+// maxDuration 지정이 빠져 있어 Hobby 기본 10초 제한에 걸렸다(실측: dryRun만
+// 으로도 8.4초 — DB저장+Discord발송까지 더하면 넘기기 쉬움). self-fetch는
+// "다른 함수를 부르는" 방식이라 이 라우트의 maxDuration=60은 그 함수엔
+// 적용되지 않는다 — 별개 서버리스 함수이기 때문. 이제 self-fetch를 없애고
+// runSourcingScan()을 같은 프로세스 안에서 직접 호출한다(sourcing-recommender.ts
+// — 이 라우트의 maxDuration=60이 전체를 커버).
 
 import { NextRequest, NextResponse } from 'next/server';
+import { runSourcingScan } from '@/lib/sourcing-recommender';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -32,23 +42,15 @@ export async function GET(req: NextRequest) {
   // 설정할 때만 dry-run(비상 정지)이고, 미설정/그 외에는 실발송.
   try {
     const sourcingPaused = process.env.SOURCING_RECOMMEND_LIVE === 'false';
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-    const srcRes = await fetch(`${baseUrl}/api/sourcing-recommend`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discord: true, dryRun: sourcingPaused }),
-    });
-    const srcData = await srcRes.json();
+    const outcome = await runSourcingScan({ dryRun: sourcingPaused, sendToDiscord: true });
     results.sourcingRecommend = {
-      dryRun: sourcingPaused,
-      sent: srcData.discordSent ?? false,
-      opportunities: srcData.opportunityCount ?? 0,
-      excludedCount: srcData.excludedCount ?? 0,
-      // #338 임시 진단(2026-08-11): sent:true인데 DB 저장/실제 도착이 없는
-      // 모순을 확정하기 위해 skipped/error 필드도 그대로 노출. 검증 후 제거.
-      skipped: srcData.skipped ?? null,
-      reason: srcData.reason ?? null,
-      srcOk: srcData.ok ?? null,
+      dryRun: outcome.dryRun,
+      sent: outcome.discordSent,
+      opportunities: outcome.skipped
+        ? (outcome.skippedExistingCount ?? 0)
+        : outcome.scan.opportunities.length,
+      excludedCount: outcome.scan.excludedCount ?? 0,
+      skipped: outcome.skipped,
     };
   } catch (srcErr) {
     results.sourcingRecommendError = srcErr instanceof Error ? srcErr.message.slice(0, 200) : String(srcErr);

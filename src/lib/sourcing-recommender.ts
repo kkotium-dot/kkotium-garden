@@ -4,10 +4,14 @@
 // to recommend blue-ocean product opportunities for sourcing
 // Runs daily via cron and pushable to Discord #kkotti-daily
 
+import type { Prisma } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+import { sendDiscord } from '@/lib/discord';
 import { fetchNaverTrends, type TrendResult } from '@/lib/trend-analyzer';
 import { fetchKeywordStats, type KeywordStat } from '@/lib/naver/keyword-api';
 import { matchWholesaleProducts, type WholesaleProduct } from '@/lib/wholesale-matcher';
 import { recoTypeSummary, type RecoTypeTag } from '@/lib/naver/recommendation-type';
+import { resolveRecoTypeTags } from '@/lib/naver/reco-type-resolver';
 import { judgeExclusion } from '@/lib/policy/exclusion-rules';
 import { pickVariant, seasonalGreeting } from '@/lib/notifications/kkotti-variation';
 
@@ -486,6 +490,151 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
       error: err instanceof Error ? err.message : String(err),
     };
   }
+}
+
+// ── Scan + persist + notify (근본수정 2026-08-11, #338) ──────────────────────
+// 기존엔 이 로직(중복발송 가드+DB저장+Discord발송)이 /api/sourcing-recommend
+// POST 핸들러에만 있었고, cron/sourcing-daily는 그 라우트를 HTTP self-fetch로
+// 호출했다. self-fetch 대상 라우트에 maxDuration 지정이 빠져 Vercel Hobby
+// 기본 10초 제한에 걸렸다(실측: dryRun만으로도 8.4초) — 아침 알림 미발송의
+// 근본원인. 여기로 로직을 옮겨 cron이 같은 프로세스 안에서 직접 호출하게
+// 하면 cron 라우트 자체의 maxDuration=60이 전체를 커버한다(별도 함수 홉 제거).
+// POST 라우트(대시보드 버튼용)는 이 함수를 그대로 호출하도록 재배선한다.
+
+const SOURCING_RETENTION_DAYS = 7; // GET/POST route.ts와 동일 — 7일치만 보관.
+
+export interface SourcingScanOutcome {
+  skipped: boolean;
+  reason?: string;
+  dryRun: boolean;
+  discordSent: boolean;
+  embedPreview?: Record<string, unknown>;
+  scan: SourcingRecommendResult;
+  // skipped(already-sent-today) 경로는 새로 스캔하지 않으므로 scan.opportunities가
+  // 비어있다 — 호출자가 "오늘 이미 몇 건 저장돼 있었는지"를 알 수 있게 별도 노출.
+  skippedExistingCount?: number;
+}
+
+export async function runSourcingScan(opts: {
+  dryRun: boolean;
+  sendToDiscord: boolean;
+}): Promise<SourcingScanOutcome> {
+  const { dryRun, sendToDiscord } = opts;
+
+  // 중복 발송 방지(#337): 같은 날 이미 스캔+저장된 레코드가 있으면 재실행을
+  // 건너뛴다. dryRun/discord:false 미리보기 호출은 발송이 없으므로 예외.
+  if (!dryRun && sendToDiscord) {
+    const todayGuard = new Date();
+    todayGuard.setHours(0, 0, 0, 0);
+    const alreadyToday = await prisma.sourcingOpportunityRecord
+      .count({ where: { date: todayGuard } })
+      .catch(() => 0);
+    if (alreadyToday > 0) {
+      return {
+        skipped: true,
+        reason: 'already-sent-today',
+        dryRun,
+        discordSent: false,
+        skippedExistingCount: alreadyToday,
+        scan: {
+          date: todayGuard.toLocaleDateString('ko-KR'),
+          trendSource: 'skipped',
+          trendCategories: [],
+          opportunities: [],
+        },
+      };
+    }
+  }
+
+  const result = await generateSourcingRecommendations();
+
+  if (dryRun) {
+    if (result.opportunities.length > 0) {
+      const nowMonth = new Date().getMonth() + 1;
+      const tags = await resolveRecoTypeTags(
+        result.opportunities.map((o) => ({
+          d1: o.category === 'general' ? '' : o.category,
+          supplierPrice: o.suggestedSupplyPrice,
+        })),
+        nowMonth,
+      ).catch(() => result.opportunities.map(() => null));
+      result.opportunities.forEach((o, i) => { o.recoType = tags[i] ?? null; });
+    }
+    const embed = buildSourcingRecommendEmbed(result);
+    return { skipped: false, dryRun: true, discordSent: false, embedPreview: embed, scan: result };
+  }
+
+  // #250 §3: 저장 전에 recoType 태그를 붙여야 한다(먼저 저장하면 reco_type이
+  // 항상 null로 저장되는 순서 버그가 된다).
+  if (result.opportunities.length > 0) {
+    const nowMonth = new Date().getMonth() + 1;
+    const tags = await resolveRecoTypeTags(
+      result.opportunities.map((o) => ({
+        d1: o.category === 'general' ? '' : o.category,
+        supplierPrice: o.suggestedSupplyPrice,
+      })),
+      nowMonth,
+    ).catch(() => result.opportunities.map(() => null));
+    result.opportunities.forEach((o, i) => { o.recoType = tags[i] ?? null; });
+  }
+
+  if (result.opportunities.length > 0) {
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+
+    // 누적 정리(#331 후속) — best-effort(#82), 정리 실패해도 저장은 진행.
+    const retentionCutoff = new Date(todayDate);
+    retentionCutoff.setDate(retentionCutoff.getDate() - SOURCING_RETENTION_DAYS);
+    await prisma.daily_recommendations.deleteMany({
+      where: { date: { lt: retentionCutoff }, season_tag: 'sourcing' },
+    }).catch(() => null);
+    await prisma.sourcingOpportunityRecord.deleteMany({
+      where: { date: { lt: retentionCutoff } },
+    }).catch(() => null);
+
+    await prisma.daily_recommendations.deleteMany({
+      where: { date: todayDate, season_tag: 'sourcing' },
+    });
+
+    await prisma.daily_recommendations.createMany({
+      data: result.opportunities.map(opp => ({
+        date: todayDate,
+        product_name: opp.keyword,
+        honey_score: opp.blueOceanScore,
+        season_tag: 'sourcing',
+        status: 'sent',
+      })),
+    });
+
+    await prisma.sourcingOpportunityRecord.deleteMany({
+      where: { date: todayDate },
+    }).catch(() => null);
+
+    await prisma.sourcingOpportunityRecord.createMany({
+      data: result.opportunities.map((opp, i) => ({
+        date: todayDate,
+        keyword: opp.keyword,
+        category: opp.category || null,
+        monthlySearchVolume: opp.monthlySearchVolume,
+        competition: opp.competition,
+        blueOceanScore: opp.blueOceanScore,
+        rank: i,
+        supplyPriceRange: (opp.supplyPriceRange ?? null) as unknown as Prisma.InputJsonValue,
+        wholesaleMatches: (opp.wholesaleMatches ?? null) as unknown as Prisma.InputJsonValue,
+        aiInsight: opp.aiInsight ?? null,
+        recoType: opp.recoType?.type ?? null,
+      })),
+    }).catch(() => null);
+  }
+
+  let discordSent = false;
+  if (sendToDiscord && result.opportunities.length > 0) {
+    const embed = buildSourcingRecommendEmbed(result);
+    const discordResult = await sendDiscord('KKOTTI_RECOMMEND', '', [embed]);
+    discordSent = discordResult.ok;
+  }
+
+  return { skipped: false, dryRun: false, discordSent, scan: result };
 }
 
 // ── Discord Embed Builder ────────────────────────────────────────────────────

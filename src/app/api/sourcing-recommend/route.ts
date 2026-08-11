@@ -4,17 +4,20 @@
 // POST: Force fresh scan (used by cron/daily and dashboard button)
 
 import { NextRequest, NextResponse } from 'next/server';
-import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import {
   generateSourcingRecommendations,
-  buildSourcingRecommendEmbed,
+  runSourcingScan,
   type SourcingRecommendResult,
 } from '@/lib/sourcing-recommender';
-import { sendDiscord } from '@/lib/discord';
-import { resolveRecoTypeTags } from '@/lib/naver/reco-type-resolver';
 
 export const dynamic = 'force-dynamic';
+// 근본수정(2026-08-11, #338): 이 라우트가 실제 무거운 작업(DataLab+검색량+AI+
+// 도매매칭+DB저장+Discord발송)을 전부 수행하는데 maxDuration 지정이 없어
+// Vercel Hobby 기본 10초 제한에 걸렸다(실측: dryRun만으로도 8.4초) — 아침
+// 소싱 알림이 sent:true를 반환하면서도 DB에 저장 안 되던 근본원인 중 하나.
+// cron/daily의 8단계 순차실행과 동일 근거로 60초를 부여한다(#333 계열).
+export const maxDuration = 60;
 
 // In-memory cache (5 min TTL)
 let cachedResult: SourcingRecommendResult | null = null;
@@ -169,155 +172,44 @@ export async function POST(req: NextRequest) {
     const dryRun =
       req.nextUrl.searchParams.get('dryRun') === 'true' || bodyRecord.dryRun === true;
 
-    // 중복 발송 방지(2026-08-10, #337): 같은 날 이미 스캔+저장된 레코드가
-    // 있으면 재실행을 건너뛴다. Vercel Hobby 크론은 정시 보장이 없어(공식
-    // 문서: "0 23 * * *"가 23:00~23:59 UTC 사이 아무 때나 실행) 외부 안전망
-    // (예: GitHub Actions 보조 트리거)과 겹쳐 하루에 두 번 불릴 수 있다.
-    // dryRun/discord:false 미리보기 호출은 발송이 없으므로 예외로 둔다.
-    if (!dryRun && sendToDiscord) {
-      const todayGuard = new Date();
-      todayGuard.setHours(0, 0, 0, 0);
-      const alreadyToday = await prisma.sourcingOpportunityRecord
-        .count({ where: { date: todayGuard } })
-        .catch(() => 0);
-      if (alreadyToday > 0) {
-        return NextResponse.json({
-          ok: true,
-          skipped: true,
-          reason: 'already-sent-today',
-          discordSent: false,
-          opportunityCount: alreadyToday,
-        });
-      }
+    // 근본수정(2026-08-11, #338): 스캔+가드+DB저장+Discord발송 로직은
+    // runSourcingScan()(sourcing-recommender.ts)으로 옮겨 cron/sourcing-daily도
+    // 같은 함수를 in-process로 직접 호출한다(기존엔 cron이 이 라우트를 HTTP
+    // self-fetch — 이 라우트에 maxDuration이 없어 Hobby 기본 10초에 걸려
+    // DB저장 직전에 죽는 게 미발송 근본원인이었다). 응답 shape은 기존과 동일.
+    const outcome = await runSourcingScan({ dryRun, sendToDiscord });
+
+    if (outcome.skipped) {
+      return NextResponse.json({
+        ok: true,
+        skipped: true,
+        reason: outcome.reason,
+        discordSent: false,
+        opportunityCount: outcome.skippedExistingCount ?? 0,
+      });
     }
 
-    // Generate fresh recommendations
-    const result = await generateSourcingRecommendations();
-    cachedResult = result;
+    cachedResult = outcome.scan;
     cachedAt = Date.now();
 
-    if (dryRun) {
-      // #250 §3 recoType 태그는 dry-run 미리보기에도 붙여준다(운영자 확인용).
-      if (result.opportunities.length > 0) {
-        const nowMonth = new Date().getMonth() + 1;
-        const tags = await resolveRecoTypeTags(
-          result.opportunities.map((o) => ({
-            d1: o.category === 'general' ? '' : o.category,
-            supplierPrice: o.suggestedSupplyPrice,
-          })),
-          nowMonth,
-        ).catch(() => result.opportunities.map(() => null));
-        result.opportunities.forEach((o, i) => { o.recoType = tags[i] ?? null; });
-      }
-
-      const embed = buildSourcingRecommendEmbed(result);
+    if (outcome.dryRun) {
       return NextResponse.json({
         ok: true,
         dryRun: true,
         discordSent: false,
-        opportunityCount: result.opportunities.length,
-        excludedCount: result.excludedCount ?? 0,
-        excludedSamples: result.excludedSamples ?? [],
-        embedPreview: embed,
-        ...result,
+        opportunityCount: outcome.scan.opportunities.length,
+        excludedCount: outcome.scan.excludedCount ?? 0,
+        excludedSamples: outcome.scan.excludedSamples ?? [],
+        embedPreview: outcome.embedPreview,
+        ...outcome.scan,
       });
-    }
-
-    // #250 §3: tag each opportunity 황금/니치/시즌 (category-score, D1-level).
-    // opp.category is a DataLab D1 name; 'general'/unknown → no tag (honest #231).
-    // 트랙A(2026-08-04): DB 저장 블록보다 먼저 실행해야 한다 — recoType이
-    // 붙기 전에 저장하면 sourcing_opportunity_records.reco_type이 항상
-    // null로 저장되는 순서 버그가 될 뻔했다(실측으로 발견·즉시 재배치).
-    if (result.opportunities.length > 0) {
-      const nowMonth = new Date().getMonth() + 1;
-      const tags = await resolveRecoTypeTags(
-        result.opportunities.map((o) => ({
-          d1: o.category === 'general' ? '' : o.category,
-          supplierPrice: o.suggestedSupplyPrice,
-        })),
-        nowMonth,
-      ).catch(() => result.opportunities.map(() => null));
-      result.opportunities.forEach((o, i) => { o.recoType = tags[i] ?? null; });
-    }
-
-    // Save to DB
-    if (result.opportunities.length > 0) {
-      const todayDate = new Date();
-      todayDate.setHours(0, 0, 0, 0);
-
-      // ★누적 정리(2026-08-06, #331 후속): 보관 기간(SOURCING_RETENTION_DAYS)보다
-      // 오래된 레코드를 두 테이블에서 함께 정리한다. 기존엔 오늘 것만 deleteMany
-      // 해서 과거 레코드가 무한 누적됐다(실측 8/3~8/6). GET을 "최신 date 하나"로
-      // 고쳐(#331) 화면은 안전하나 DB 용량이 계속 늘던 문제의 근본 해소.
-      // best-effort(#82): 정리 실패해도 저장은 진행한다(정리는 부가 작업).
-      const retentionCutoff = new Date(todayDate);
-      retentionCutoff.setDate(retentionCutoff.getDate() - SOURCING_RETENTION_DAYS);
-      await prisma.daily_recommendations.deleteMany({
-        where: { date: { lt: retentionCutoff }, season_tag: 'sourcing' },
-      }).catch(() => null);
-      await prisma.sourcingOpportunityRecord.deleteMany({
-        where: { date: { lt: retentionCutoff } },
-      }).catch(() => null);
-
-      // Delete old sourcing recommendations for today
-      await prisma.daily_recommendations.deleteMany({
-        where: {
-          date: todayDate,
-          season_tag: 'sourcing',
-        },
-      });
-
-      await prisma.daily_recommendations.createMany({
-        data: result.opportunities.map(opp => ({
-          date: todayDate,
-          product_name: opp.keyword,
-          honey_score: opp.blueOceanScore,
-          season_tag: 'sourcing',
-          status: 'sent',
-        })),
-      });
-
-      // 트랙A(2026-08-04): 완전한 형태로 새 테이블에도 저장. daily_recommendations
-      // (위)는 다른 화면이 이미 참조할 수 있어 그대로 보존하고, 이 테이블이
-      // 심화화면(드로어·아카이브)의 실제 데이터 소스가 된다. P2021 가드로
-      // 마이그레이션 이전 배포에서도 전체 요청이 실패하지 않게 한다(#82 best-effort).
-      await prisma.sourcingOpportunityRecord.deleteMany({
-        where: { date: todayDate },
-      }).catch(() => null);
-
-      await prisma.sourcingOpportunityRecord.createMany({
-        data: result.opportunities.map((opp, i) => ({
-          date: todayDate,
-          keyword: opp.keyword,
-          category: opp.category || null,
-          monthlySearchVolume: opp.monthlySearchVolume,
-          competition: opp.competition,
-          blueOceanScore: opp.blueOceanScore,
-          rank: i,
-          // Prisma의 Json 필드는 배열/객체를 InputJsonValue로 명시 캐스팅해야
-          // 받는다(TS2322 — WholesaleProduct[]가 InputJsonObject와 구조적으로
-          // 안 맞는다는 tsc 실측 오류를 그대로 따라 수정, unknown 경유 필요).
-          supplyPriceRange: (opp.supplyPriceRange ?? null) as unknown as Prisma.InputJsonValue,
-          wholesaleMatches: (opp.wholesaleMatches ?? null) as unknown as Prisma.InputJsonValue,
-          aiInsight: opp.aiInsight ?? null,
-          recoType: opp.recoType?.type ?? null,
-        })),
-      }).catch(() => null);
-    }
-
-    // Send Discord notification
-    let discordSent = false;
-    if (sendToDiscord && result.opportunities.length > 0) {
-      const embed = buildSourcingRecommendEmbed(result);
-      const discordResult = await sendDiscord('KKOTTI_RECOMMEND', '', [embed]);
-      discordSent = discordResult.ok;
     }
 
     return NextResponse.json({
       ok: true,
-      discordSent,
-      opportunityCount: result.opportunities.length,
-      ...result,
+      discordSent: outcome.discordSent,
+      opportunityCount: outcome.scan.opportunities.length,
+      ...outcome.scan,
     });
   } catch (err) {
     return NextResponse.json(

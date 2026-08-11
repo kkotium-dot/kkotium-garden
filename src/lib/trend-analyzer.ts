@@ -111,21 +111,33 @@ async function fetchRawCategorySeries(): Promise<RawCategorySeries[] | null> {
 }
 
 // ── A-8: Naver DataLab Shopping Insight ──────────────────────────────────
+// 카테고리 편중 근본수정(2026-08-11, #338): 기존엔 "최신일자 절대 ratio" 상위
+// 3개를 매일 그대로 반환했다 — ratio는 카테고리의 절대 검색 볼륨을 반영하므로
+// 베이스라인이 큰 카테고리(실측: "생활/건강")가 거의 매일 1~3위를 독식해
+// 9개 사전 중 사실상 1개만 노출되는 편중이 발생했다(운영자 신고).
+// 수정: 같은 7일 시리즈(fetchRawCategorySeries, 추가 API 호출 0)에서 이미
+// 계산 가능한 risingRate(전반부→후반부 평균 변화율, classifyTrendSignal)로
+// 재정렬한다 — "지금 막 뜨는 카테고리"를 우선하므로 절대 볼륨이 큰 카테고리에
+// 영구 고정되지 않는다. 그래도 상위 2개는 여전히 특정 카테고리가 매일
+// 반복될 수 있어(꾸준히 상승세인 카테고리), 3번째 슬롯은 상위 2개를 제외한
+// 나머지에서 날짜 기반으로 순환 선택해 9개 카테고리가 며칠 내로 골고루
+// 노출되게 한다(#338 — 로드맵1b 8렌즈 전체 연결은 스코프 아웃, 근거는
+// 결과문서 참조).
 async function fetchDataLabTrends(): Promise<TrendResult | null> {
   try {
     const results = await fetchRawCategorySeries();
     if (!results || results.length === 0) return null;
 
-    // Get latest day ratio for each category, sort by ratio desc
-    const ranked = results
-      .map(r => {
-        const latest = r.data[r.data.length - 1];
-        return { name: r.title, ratio: latest?.ratio ?? 0 };
-      })
-      .sort((a, b) => b.ratio - a.ratio);
+    const signals = results.map(r => classifyTrendSignal(r.title, r.data));
 
-    // Top 3 categories → trend categories
-    const trendCategories = ranked.slice(0, 3).map(r => r.name);
+    const byRisingRate = [...signals].sort((a, b) => b.risingRate - a.risingRate);
+    const top2 = byRisingRate.slice(0, 2).map(s => s.name);
+
+    const remaining = signals.filter(s => !top2.includes(s.name));
+    const dayIndex = Math.floor(Date.now() / 86_400_000);
+    const rotatedPick = remaining.length > 0 ? remaining[dayIndex % remaining.length].name : null;
+
+    const trendCategories = rotatedPick ? [...top2, rotatedPick] : top2;
 
     // Derive trend keywords from top category names + common search terms
     const trendKeywords = trendCategories
