@@ -44,6 +44,11 @@ export async function GET(req: NextRequest) {
       sent: srcData.discordSent ?? false,
       opportunities: srcData.opportunityCount ?? 0,
       excludedCount: srcData.excludedCount ?? 0,
+      // #338 임시 진단(2026-08-11): sent:true인데 DB 저장/실제 도착이 없는
+      // 모순을 확정하기 위해 skipped/error 필드도 그대로 노출. 검증 후 제거.
+      skipped: srcData.skipped ?? null,
+      reason: srcData.reason ?? null,
+      srcOk: srcData.ok ?? null,
     };
   } catch (srcErr) {
     results.sourcingRecommendError = srcErr instanceof Error ? srcErr.message.slice(0, 200) : String(srcErr);
