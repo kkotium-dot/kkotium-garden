@@ -3,19 +3,27 @@
 #
 # Verifies that the current HEAD commit has been deployed to Vercel production.
 #
-# Two verification paths (auto-selected):
+# Verification paths (auto-selected, in priority order):
 #   1. Vercel API path  (preferred) — uses VERCEL_TOKEN. Reports real build state (READY/BUILDING/ERROR).
 #   2. GitHub Deployments path (fallback) — uses gh CLI. Reports deployment registration only.
+#      ⚠ 2026-08-19 발견(P0-1 #3): 이 경로는 git-integration이 만든 deployment만 잡는다.
+#        `vercel deploy --prod` 같은 CLI 수동배포는 GitHub Deployments API에 기록을 남기지
+#        않아 실제로는 배포됐는데도 MISMATCH로 오판(false negative)한다.
+#   3. Vercel CLI path (cross-check, always runs) — `vercel ls <project> --json`으로 최신
+#      production 배포를 직접 조회. git-integration 배포는 meta.githubCommitSha로 완전
+#      일치를 확인하고, CLI 수동배포는 meta가 없으므로 배포 시각이 HEAD 커밋 시각보다
+#      늦은지로 판단한다(정확한 SHA 증명은 아니지만 위 false negative를 해소한다).
 #
 # Usage:
 #   scripts/verify-vercel-deploy.sh            # check HEAD against latest production deployment
 #   scripts/verify-vercel-deploy.sh --wait     # poll up to 180s until match (after push)
 #
 # Exit codes:
-#   0 = HEAD SHA matches latest production deployment commit SHA
+#   0 = HEAD SHA matches latest production deployment commit SHA (or CLI-path timing match)
 #   1 = mismatch (production is on a different commit — integration may be broken)
 #   2 = no Vercel token AND no gh CLI / both APIs unreachable
 #   3 = VERCEL_PROJECT_ID / VERCEL_ORG_ID missing (Vercel path only)
+#   4 = local HEAD is not in sync with origin/main — fix before deploying (P0-1 #1)
 #
 # Why webhook count is NOT checked anymore (work principle #36 e, 2026-05-12 refinement):
 #   Vercel modern setups use GitHub App integration, NOT legacy webhooks.
@@ -29,6 +37,24 @@ if [[ "${1:-}" == "--wait" ]]; then WAIT_MODE=1; fi
 
 HEAD_SHA="$(git rev-parse HEAD)"
 SHORT_HEAD="$(git rev-parse --short HEAD)"
+HEAD_COMMIT_TS="$(git log -1 --format=%ct HEAD)"  # epoch seconds
+
+# ---------------------------------------------------------------------------
+# P0-1 #1 — refuse to verify/deploy from a checkout that has diverged from
+# origin/main. A stale local HEAD makes every check below meaningless (you'd
+# be confirming the wrong commit ever reaches production).
+# ---------------------------------------------------------------------------
+if git rev-parse --verify -q origin/main >/dev/null; then
+  git fetch origin main -q || true
+fi
+if git rev-parse --verify -q origin/main >/dev/null; then
+  ORIGIN_MAIN_SHA="$(git rev-parse origin/main)"
+  if [[ "$HEAD_SHA" != "$ORIGIN_MAIN_SHA" ]]; then
+    echo "[verify-deploy] BLOCKED — local HEAD ($SHORT_HEAD) != origin/main ($(git rev-parse --short origin/main))" >&2
+    echo "[verify-deploy] sync first: git pull / git push, then re-run." >&2
+    exit 4
+  fi
+fi
 
 # ---------------------------------------------------------------------------
 # Path selection
@@ -104,6 +130,39 @@ github_check_once() {
 }
 
 # ---------------------------------------------------------------------------
+# Vercel CLI cross-check (path 3, always available if `vercel` CLI is authed)
+# — resolves the CLI-manual-deploy false negative from paths 1/2 (P0-1 #3).
+# ---------------------------------------------------------------------------
+
+cli_cross_check() {
+  local project resp sha created state
+  project="$(jq -r '.projectName // empty' .vercel/project.json 2>/dev/null || true)"
+  [[ -z "$project" ]] && project="kkotium-garden"
+  resp="$(npx --yes vercel ls "$project" --json --limit 5 2>/dev/null || true)"
+  [[ -z "$resp" ]] && { echo "CLI_UNAVAILABLE"; return; }
+
+  # Prefer an exact meta.githubCommitSha match among recent production deploys.
+  sha="$(echo "$resp" | jq -r --arg want "$HEAD_SHA" \
+    '.deployments[]? | select(.target=="production" and .meta.githubCommitSha==$want) | .meta.githubCommitSha' \
+    | head -1)"
+  if [[ -n "$sha" ]]; then
+    echo "EXACT_MATCH"
+    return
+  fi
+
+  # No git metadata (CLI manual deploy) — fall back to timing: is the latest
+  # READY production deployment newer than HEAD's own commit timestamp?
+  created="$(echo "$resp" | jq -r '[.deployments[]? | select(.target=="production" and .state=="READY")] | sort_by(.createdAt) | last | .createdAt // empty')"
+  if [[ -z "$created" ]]; then echo "NO_DEPLOY"; return; fi
+  local created_s=$(( created / 1000 ))
+  if [[ "$created_s" -gt "$HEAD_COMMIT_TS" ]]; then
+    echo "TIMING_MATCH ${created_s}"
+  else
+    echo "STALE ${created_s}"
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Unified check
 # ---------------------------------------------------------------------------
 
@@ -154,8 +213,23 @@ if [[ $WAIT_MODE -eq 1 ]]; then
           sleep 10
         else
           short_remote="${deploy_sha:0:7}"
-          echo "[verify-deploy] still on $short_remote (state=$state), polling..."
-          sleep 10
+          # CLI cross-check (P0-1 #3) — catches CLI-manual deploys that this
+          # path's SHA source (git-integration only) can never see.
+          cli_result="$(cli_cross_check)"
+          case "$cli_result" in
+            EXACT_MATCH)
+              echo "[verify-deploy] OK (vercel-cli, exact githubCommitSha match) — production is on $SHORT_HEAD"
+              exit 0
+              ;;
+            TIMING_MATCH*)
+              echo "[verify-deploy] OK (vercel-cli, timing match — CLI manual deploy after $SHORT_HEAD)"
+              exit 0
+              ;;
+            *)
+              echo "[verify-deploy] still on $short_remote (state=$state), polling..."
+              sleep 10
+              ;;
+          esac
         fi
         ;;
     esac
@@ -172,28 +246,49 @@ fi
 # ---------------------------------------------------------------------------
 
 result=$(check_once)
-case "$result" in
-  FAIL_API)
-    echo "[verify-deploy] cannot reach $ACTIVE_PATH API" >&2
-    exit 2
+
+if [[ "$result" == "FAIL_API" ]]; then
+  echo "[verify-deploy] cannot reach $ACTIVE_PATH API" >&2
+  exit 2
+fi
+
+if [[ "$result" == "NO_DEPLOY" ]]; then
+  echo "[verify-deploy] no production deployment found via $ACTIVE_PATH — trying CLI cross-check..." >&2
+  deploy_sha=""
+  state=""
+else
+  deploy_sha="${result% *}"
+  state="${result#* }"
+fi
+
+if [[ -n "$deploy_sha" && "$deploy_sha" == "$HEAD_SHA" ]]; then
+  echo "[verify-deploy] OK ($ACTIVE_PATH) — production is on $SHORT_HEAD (state=$state)"
+  exit 0
+fi
+
+if [[ -n "$deploy_sha" ]]; then
+  short_remote="${deploy_sha:0:7}"
+  echo "[verify-deploy] MISMATCH ($ACTIVE_PATH) — HEAD=$SHORT_HEAD but production=$short_remote (state=$state)" >&2
+fi
+
+echo "[verify-deploy] cross-checking via Vercel CLI (path 3)..." >&2
+cli_result="$(cli_cross_check)"
+case "$cli_result" in
+  EXACT_MATCH)
+    echo "[verify-deploy] OK (vercel-cli, exact githubCommitSha match) — production is on $SHORT_HEAD"
+    exit 0
     ;;
-  NO_DEPLOY)
-    echo "[verify-deploy] no production deployment found via $ACTIVE_PATH" >&2
-    exit 1
+  TIMING_MATCH*)
+    echo "[verify-deploy] OK (vercel-cli, timing match — no git metadata, likely CLI manual deploy after $SHORT_HEAD)"
+    echo "[verify-deploy] this is a heuristic, not a SHA proof — confirm with 'vercel inspect <alias> --json' if in doubt." >&2
+    exit 0
     ;;
   *)
-    deploy_sha="${result% *}"
-    state="${result#* }"
-    if [[ "$deploy_sha" == "$HEAD_SHA" ]]; then
-      echo "[verify-deploy] OK ($ACTIVE_PATH) — production is on $SHORT_HEAD (state=$state)"
-      exit 0
-    else
-      short_remote="${deploy_sha:0:7}"
-      echo "[verify-deploy] MISMATCH ($ACTIVE_PATH) — HEAD=$SHORT_HEAD but production=$short_remote (state=$state)" >&2
-      echo "[verify-deploy] Vercel git integration may be broken. checks to run:" >&2
-      echo "[verify-deploy]   - gh api repos/<owner>/<repo>/deployments" >&2
-      echo "[verify-deploy]   - Vercel dashboard: Settings -> Git -> Connect Git Repository" >&2
-      exit 1
-    fi
+    echo "[verify-deploy] CLI cross-check also failed ($cli_result)." >&2
+    echo "[verify-deploy] Vercel git integration may be broken. checks to run:" >&2
+    echo "[verify-deploy]   - gh api repos/<owner>/<repo>/deployments" >&2
+    echo "[verify-deploy]   - vercel ls kkotium-garden --json --limit 5" >&2
+    echo "[verify-deploy]   - Vercel dashboard: Settings -> Git -> Connect Git Repository" >&2
+    exit 1
     ;;
 esac
