@@ -9,6 +9,12 @@ import { calcHoneyScore } from '@/lib/honey-score';
 import { sendDiscord, buildWeeklyReportEmbed } from '@/lib/discord';
 import { refreshDomeCategoryTree } from '@/lib/dome-category-cache';
 import { withCronLogging } from '@/lib/cron/with-logging';
+import { dumpAndUploadWeeklySnapshot } from '@/lib/backup/db-snapshot';
+
+// P1-A(2026-08-20) — 이 라우트에 maxDuration이 없어 Hobby 기본 10초가 적용되고
+// 있었다(#333/#338과 같은 계열 위험). DB 스냅샷 백업을 추가하며 형제 크론들과
+// 동일하게 명시적으로 60초를 확보한다.
+export const maxDuration = 60;
 
 // ── Domeggook API ──────────────────────────────────────────────────────────
 const DOMEGGOOK_API = 'https://domeggook.com/ssl/api';
@@ -271,9 +277,23 @@ export const GET = withCronLogging('/api/cron/weekly', async (req: NextRequest) 
       console.warn('[cron/weekly] dome category refresh failed:', msg.slice(0, 200));
     }
 
+    // P1-A(2026-08-20) — 주간 DB 스냅샷 백업(Product·Order·InventorySnapshot·
+    // seller_overrides → Supabase Storage). 순수 읽기+업로드(additive)라 실패해도
+    // 주간 리포트 발송을 막지 않는다. 상세: src/lib/backup/db-snapshot.ts,
+    // 복구 절차: docs/runbook/DB_RESTORE.md.
+    let dbSnapshot: Awaited<ReturnType<typeof dumpAndUploadWeeklySnapshot>> = { ok: false, error: 'not run' };
+    try {
+      dbSnapshot = await dumpAndUploadWeeklySnapshot();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      dbSnapshot = { ok: false, error: msg.slice(0, 200) };
+      console.warn('[cron/weekly] db snapshot backup failed:', msg.slice(0, 200));
+    }
+
     return NextResponse.json({
       ok:        result.ok,
       timestamp: new Date().toISOString(),
+      dbSnapshot,
       weekLabel,
       stats: { totalProducts, activeProducts, oosProducts, newRegistered, avgHoneyScore, priceChanges, weekRevenue, weekOrderCount, weekCancelCount, weekNetProfit, sourcing: sourcingWeekly },
       priceDrift: { checked: priceDriftChecked, drifts: priceDrifts.length, items: priceDrifts },
