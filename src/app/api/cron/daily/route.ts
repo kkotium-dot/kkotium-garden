@@ -21,6 +21,7 @@ import {
 import { refreshCategoryTrendCache } from '@/lib/naver/category-trend-cache';
 import { naverRequest } from '@/lib/naver/api-client';
 import { scoreProduct, computeOpsDigestSignals, computeRecommendation } from '@/lib/notifications/daily-signals';
+import { withCronLogging } from '@/lib/cron/with-logging';
 
 export const dynamic = 'force-dynamic';
 // #333 후속 — 8단계 순차 실행(외부 API 다수)이 Hobby 기본 10초를 초과해
@@ -37,7 +38,7 @@ function isAuthorized(req: NextRequest): boolean {
 }
 
 // ── Main handler ────────────────────────────────────────────────────────────
-export async function GET(req: NextRequest) {
+export const GET = withCronLogging('/api/cron/daily', async (req: NextRequest) => {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -485,4 +486,4 @@ export async function GET(req: NextRequest) {
     console.error('[cron/daily] error:', msg);
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
-}
+});

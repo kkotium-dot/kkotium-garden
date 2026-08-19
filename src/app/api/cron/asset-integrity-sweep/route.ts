@@ -23,6 +23,7 @@ import {
   INTERVENTION_REGISTRY_DRIFT,
 } from '@/lib/jobs/intervention';
 import { BG_CLEAN } from '@/lib/jobs/job-type-routing';
+import { withCronLogging } from '@/lib/cron/with-logging';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -31,7 +32,7 @@ export const maxDuration = 300;
 
 const PRODUCT_LIMIT = 200;
 
-export async function GET(request: NextRequest) {
+export const GET = withCronLogging('/api/cron/asset-integrity-sweep', async (request: NextRequest) => {
   const authHeader = request.headers.get('authorization');
   const expectedSecret = process.env.CRON_SECRET;
   if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
@@ -135,4 +136,4 @@ export async function GET(request: NextRequest) {
     variantGapProducts: variantGap.length,
     variantGap,
   });
-}
+});

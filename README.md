@@ -40,12 +40,20 @@ cp .env.example .env
 mkdir prisma
 mv schema.prisma prisma/
 
-# DB Push
-npx prisma db push
+# DB Push (드리프트 가드 통과 시에만 실행됨 — 절대 npx prisma db push를 맨손으로 쓰지 말 것)
+npm run db:push
 
 # DB Studio 확인 (선택)
 npx prisma studio
 ```
+
+⚠️ **`npx prisma db push`를 직접 실행 금지.** `db push`는 schema.prisma를 절대진리로
+보고 DB의 "잉여"(schema.prisma에 없는 테이블/컬럼)를 전부 DROP으로 해석한다.
+schema.prisma가 프로덕션 DB보다 뒤처져 있으면(드리프트) 실제 데이터가 삭제된다
+(2026-08-19 실제 발견: 9테이블·21컬럼 드리프트 상태에서 db push 시도 시 DROP TABLE 9
+건이 나왔을 것 — 실행 직전에 발견해 막음). 항상 `npm run db:push`를 쓸 것 —
+`scripts/db-push-guard.sh`가 `prisma migrate diff`로 DROP 포함 여부를 먼저 확인하고
+DROP이 하나라도 있으면 실행을 거부한다. diff만 보려면 `npm run db:check`.
 
 ### 4단계: 개발 서버 실행
 

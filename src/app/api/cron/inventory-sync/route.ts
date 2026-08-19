@@ -13,11 +13,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { pollAppRegisteredInventory } from '@/lib/dome-inventory-poller';
+import { withCronLogging } from '@/lib/cron/with-logging';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // 60 seconds for full polling cycle
 
-export async function GET(request: NextRequest) {
+export const GET = withCronLogging('/api/cron/inventory-sync', async (request: NextRequest) => {
   // Authenticate Vercel Cron
   const authHeader = request.headers.get('authorization');
   const expectedSecret = process.env.CRON_SECRET;
@@ -43,4 +44,4 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

@@ -58,7 +58,7 @@ cd /Users/jyekkot/Desktop/kkotium-garden && \
 
 ## HOW — 코드 작성 규칙
 
-- **Prisma**: `new PrismaClient()` 절대 금지 → `src/lib/prisma.ts` 싱글톤. `keywords` 등 JsonValue 필드는 `Array.isArray()` 가드. 스키마 변경 후 `npx prisma generate` + dev 재시작.
+- **Prisma**: `new PrismaClient()` 절대 금지 → `src/lib/prisma.ts` 싱글톤. `keywords` 등 JsonValue 필드는 `Array.isArray()` 가드. 스키마 변경 후 `npx prisma generate` + dev 재시작. **`npx prisma db push` 맨손 실행 절대 금지**(2026-08-19 사고) — schema.prisma가 프로덕션 DB보다 뒤처져 있으면(드리프트) db push가 그 차이를 전부 DROP으로 실행한다. 항상 `npm run db:push`(드리프트 가드 `scripts/db-push-guard.sh`가 DROP 포함 시 거부) 사용.
 - **네이버 카테고리**: 로컬 데이터(`src/lib/naver/naver-categories-full.ts`, 4,993건)만 사용, API 호출 금지, 전체 데이터셋 AI 프롬프트 전달 금지(토큰 초과).
 - **환경 변수**: `.env.local`의 `$` 포함 값은 `\$` 이스케이프(dotenv-expand가 bare `$`를 확장 처리).
 - **검증**: 모든 수정 후 `npx tsc --noEmit` 0 errors 필수. 작업 완료 마킹 전 브라우저 테스트 의무(API 200만으로 불충분). tsc 통과 ≠ production 빌드 통과 → 의심 시 `npm run build`(#32).

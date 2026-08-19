@@ -13,6 +13,7 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withCronLogging } from '@/lib/cron/with-logging';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ function isAuthorized(req: NextRequest): boolean {
   return req.headers.get('authorization') === `Bearer ${secret}`;
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withCronLogging('/api/cron/order-sync', async (req: NextRequest) => {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -47,4 +48,4 @@ export async function GET(req: NextRequest) {
     console.error('[cron/order-sync] error:', msg);
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
-}
+});

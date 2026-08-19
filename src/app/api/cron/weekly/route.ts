@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { sendDiscord, buildWeeklyReportEmbed } from '@/lib/discord';
 import { refreshDomeCategoryTree } from '@/lib/dome-category-cache';
+import { withCronLogging } from '@/lib/cron/with-logging';
 
 // ── Domeggook API ──────────────────────────────────────────────────────────
 const DOMEGGOOK_API = 'https://domeggook.com/ssl/api';
@@ -43,7 +44,7 @@ function isAuthorized(req: NextRequest): boolean {
   return req.headers.get('authorization') === `Bearer ${secret}`;
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withCronLogging('/api/cron/weekly', async (req: NextRequest) => {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -280,4 +281,4 @@ export async function GET(req: NextRequest) {
     console.error('[cron/weekly] error:', msg);
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
-}
+});
