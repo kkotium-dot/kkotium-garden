@@ -923,3 +923,7 @@ naver_tax_type이 다른 컬럼 — 화이트리스트에서 taxType 제외해 �
 테스트 데이터 원복 확인.
 
 결과 문서: `docs/handoff/CODE_NAVER_PARTIAL_SYNC_RESULT_2026-08-11.md`
+
+## rev124 — B1 배포갭 수동복구 + B4 크론상한/미배포 가설 기각 + B4-A 크론 수신계측 + db push 파괴사고 봉인가드 (2026-08-19~20, Code)
+
+B1: Git 연동이 627960f 이후 조용히 끊겨 8일 미배포 확정(`vercel deploy --prod --yes`로 수동 복구, SHA 대조 완료). B4: `vercel cron ls`로 6개 크론 전부 등록 확인(개수상한 가설 기각) · `git log -S`로 sourcing-daily가 이미 여러 배포에 포함됐음 확인(미배포 가설 기각), 원인 미확정 상태로 정지. B4-A: CronInvocationLog + withCronLogging으로 6개 라우트 전부 수신 계측(#337 우회, 커밋 `105a95f`) — DB 테이블 생성은 승인 대기. 부수 발견(Desktop): schema.prisma가 프로덕션 DB보다 9테이블·21컬럼 뒤처져 있어 맨손 `db push`가 파괴적 DROP을 실행할 뻔함 — `scripts/db-push-guard.sh`(migrate diff 선검증) + `npm run db:push` 봉인 가드 추가.
