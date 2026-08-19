@@ -251,6 +251,9 @@ export const GET = withCronLogging('/api/cron/weekly', async (req: NextRequest) 
 
     const result = await sendDiscord('OPS_REPORT', '', [embed]);
 
+    // P1-1(2026-08-20) — cron_invocation_log 90일 초과분 정리(무한 누적 방지).
+    await prisma.cronInvocationLog.deleteMany({ where: { receivedAt: { lt: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000) } } }).catch(() => null);
+
     // Sprint 6-E: piggy-back dome category tree refresh on weekly cron.
     // Domeggook categories change slowly — weekly is plenty and avoids
     // adding a 4th cron route that would exceed Vercel Hobby plan limit.
