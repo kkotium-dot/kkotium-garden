@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Check, Store, Truck, Phone, RotateCcw, Key, Eye, EyeOff } from 'lucide-react';
+import { Check, Store, Truck, Phone, RotateCcw, Key, Eye, EyeOff, Sprout, X, Plus } from 'lucide-react';
 import { COURIER_CODES } from '@/lib/naver/codes';
 import { SELLER_GRADES, type SellerGrade } from '@/lib/naver-fee-rates-2026';
 
@@ -53,8 +53,64 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
+function SeedKeywordsEditor({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const [draft, setDraft] = useState('');
+
+  const addKeyword = () => {
+    const t = draft.trim();
+    if (!t || value.includes(t)) { setDraft(''); return; }
+    onChange([...value, t]);
+    setDraft('');
+  };
+
+  const removeKeyword = (k: string) => onChange(value.filter(v => v !== k));
+
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <input
+          className={inp}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } }}
+          placeholder="예) 가습기"
+        />
+        <button
+          type="button"
+          onClick={addKeyword}
+          className="shrink-0 flex items-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
+        >
+          <Plus size={14} />
+          추가
+        </button>
+      </div>
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-3">
+          {value.map(k => (
+            <span
+              key={k}
+              className="flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full"
+            >
+              {k}
+              <button
+                type="button"
+                onClick={() => removeKeyword(k)}
+                className="text-gray-400 hover:text-rose-500"
+                aria-label={`${k} 삭제`}
+              >
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function StoreSettingsPage() {
   const [settings, setSettings] = useState<StoreSettings>(DEFAULTS);
+  const [seedKeywords, setSeedKeywords] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -78,6 +134,7 @@ export default function StoreSettingsPage() {
               ? d.settings.sellerGrade
               : DEFAULTS.sellerGrade,
           });
+          setSeedKeywords(Array.isArray(d.settings.sourcingSeedKeywords) ? d.settings.sourcingSeedKeywords : []);
         }
       })
       .catch(() => {})
@@ -94,6 +151,7 @@ export default function StoreSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...settings,
+          sourcingSeedKeywords: seedKeywords,
           // Only send if user actually typed a new key (not the masked placeholder)
           domeggookApiKey: settings.domeggookApiKey.includes('•') ? undefined : settings.domeggookApiKey,
         }),
@@ -297,23 +355,13 @@ export default function StoreSettingsPage() {
           </Field>
         </SettingSection>
 
-        {/* Domeggook API Key */}
-        <SettingSection icon={<Key size={16} />} title="도매꾹 API Key">
+        {/* Sourcing seed keywords */}
+        <SettingSection icon={<Sprout size={16} />} title="소싱 씨앗 키워드">
           <Field
-            label="도매꾹 OpenAPI Key"
-            hint="도매꾹(domeggook.com) → 마이페이지 → API 관리에서 발급받은 키를 입력하세요. 크롤러(꿀통 꽃나들이) 작동에 필수입니다."
+            label="수동 씨앗 키워드"
+            hint="아직 취급 상품이 없는 신규 카테고리도 씨앗으로 등록할 수 있어요. 여기 등록한 키워드가 상품 기반 씨앗보다 우선 사용됩니다. 최대 5개까지 사용돼요."
           >
-            <input
-              type="password"
-              className={inp}
-              value={settings.domeggookApiKey}
-              onChange={e => update('domeggookApiKey', e.target.value)}
-              placeholder="도매꾹 API Key 입력"
-              autoComplete="off"
-            />
-            {settings.domeggookApiKey.includes('•') && (
-              <p className="mt-1 text-xs text-green-600 font-medium">✓ API Key 설정됨 — 새 키를 입력하면 덮어쓰기됩니다</p>
-            )}
+            <SeedKeywordsEditor value={seedKeywords} onChange={setSeedKeywords} />
           </Field>
         </SettingSection>
 

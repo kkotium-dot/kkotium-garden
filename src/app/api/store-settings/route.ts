@@ -24,6 +24,23 @@ function sanitizeTemplates(v: unknown): { code: string; name: string }[] {
   return out;
 }
 
+// P0-4 (2026-08-20): 운영자가 등록한 소싱 씨앗 키워드(string[]). 빈 문자열·
+// 2자 미만·중복은 걸러내고 최대 20개로 제한한다.
+function sanitizeSeedKeywords(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of v) {
+    if (typeof raw !== 'string') continue;
+    const t = raw.trim();
+    if (t.length < 2 || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+
 export async function GET() {
   try {
     // Use raw query to include domeggook_api_key which is not in Prisma schema yet
@@ -52,6 +69,12 @@ export async function GET() {
       domeggook_api_key_masked: maskedKey,
       domeggook_api_key_set: rawKey.length > 0,
       sellerGrade: String(settings.seller_grade ?? '영세'), // camelCase alias
+      // sourcing_seed_keywords 컬럼이 아직 배포 전이면 undefined — 빈 배열로
+      // 정상 처리한다(값 없음). 조회 자체의 실패(컬럼 부재로 인한 쿼리 에러)는
+      // 이 raw SELECT * 에서는 발생하지 않는다(존재하지 않는 컬럼은 그냥
+      // 결과에서 빠진다) — seed-keywords.ts의 findUnique 경로와 달리 여기선
+      // 조용한 실패가 아니라 정상적인 "값 없음"이다.
+      sourcingSeedKeywords: Array.isArray(settings.sourcing_seed_keywords) ? settings.sourcing_seed_keywords : [],
     };
     return NextResponse.json({ success: true, settings: normalized });
   } catch (e: unknown) {
@@ -85,6 +108,8 @@ export async function PATCH(req: NextRequest) {
       data.noticeTemplates = sanitizeTemplates(body.noticeTemplates);
     if (body.asTemplates !== undefined)
       data.asTemplates = sanitizeTemplates(body.asTemplates);
+    if (body.sourcingSeedKeywords !== undefined)
+      data.sourcingSeedKeywords = sanitizeSeedKeywords(body.sourcingSeedKeywords);
     // Domeggook OpenAPI Key
     if (body.domeggookApiKey !== undefined) {
       const key = String(body.domeggookApiKey).trim();

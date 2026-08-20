@@ -489,6 +489,10 @@ model StoreSettings {
   // P0-1 (2026-08-20): 셀러 네이버 등급 — 수수료율 계산의 단일 근거.
   // 미설정 시 '영세' (1인 영세 셀러 기본값, naver-fee-rates-2026.ts와 동기)
   sellerGrade           String   @default("영세") @map("seller_grade")
+  // P0-4 (2026-08-20): 운영자가 직접 추가하는 소싱 씨앗 키워드(string[]) — 아직
+  // 취급 상품이 없는 신규 취급군도 포함할 수 있게. 기본값은 빈 배열이며, 비어
+  // 있으면 Product 테이블에서 파생한 씨앗으로 폴백한다(seed-keywords.ts).
+  sourcingSeedKeywords  Json     @default("[]") @map("sourcing_seed_keywords")
   // E-2A: Manual review tracking (Naver review API not supported)
   manualReviewCount     Int      @default(0) @map("manual_review_count")
   reviewChecklist       Json     @default("{}") @map("review_checklist")
