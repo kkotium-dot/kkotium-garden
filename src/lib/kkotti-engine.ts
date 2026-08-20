@@ -13,71 +13,10 @@ import type {
   KkottiScoreBreakdown,
 } from '@/types/naver';
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 네이버 스마트스토어 카테고리별 수수료율 (2026 기준)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-export const NAVER_FEE_RATES: Record<string, number> = {
-  // 패션/의류
-  '패션의류':       0.06,
-  '패션잡화':       0.06,
-  '여성의류':       0.06,
-  '남성의류':       0.06,
-  '아동의류':       0.06,
-  // 뷰티
-  '화장품/미용':    0.06,
-  '뷰티':           0.06,
-  '헤어케어':       0.06,
-  // 생활/홈
-  '생활/건강':      0.055,
-  '홈인테리어':     0.055,
-  '주방용품':       0.055,
-  '욕실용품':       0.055,
-  // 디지털/가전
-  '디지털/가전':    0.036,
-  '컴퓨터':         0.036,
-  '스마트폰':       0.036,
-  // 식품
-  '식품':           0.055,
-  '신선식품':       0.055,
-  '건강식품':       0.055,
-  // 스포츠
-  '스포츠/레저':    0.06,
-  '등산/캠핑':      0.06,
-  // 출판/문구
-  '도서':           0.02,
-  '문구':           0.05,
-  // 반려동물
-  '반려동물':       0.055,
-  // 기본
-  'default':        0.058,
-};
-
-/** 카테고리명으로 수수료율 조회 */
-export function getNaverFeeRate(category?: string): number {
-  if (!category) return NAVER_FEE_RATES['default'];
-  const key = Object.keys(NAVER_FEE_RATES).find(k =>
-    k !== 'default' && category.includes(k)
-  );
-  return key ? NAVER_FEE_RATES[key] : NAVER_FEE_RATES['default'];
-}
-
-/** 실전 마진 계산 (네이버 스마트스토어 기준) */
-export function calcMarginDetail(params: {
-  supplierPrice: number;
-  salePrice: number;
-  shippingFee?: number;   // 판매자 부담 배송비
-  category?: string;
-  naverFeeRateOverride?: number; // 직접 지정 시
-}) {
-  const { supplierPrice, salePrice, shippingFee = 0, category, naverFeeRateOverride } = params;
-  const feeRate = naverFeeRateOverride ?? getNaverFeeRate(category);
-  const naverFee   = Math.round(salePrice * feeRate);
-  const totalCost  = supplierPrice + shippingFee;
-  const profit     = salePrice - totalCost - naverFee;
-  const marginRate = salePrice > 0 ? (profit / salePrice) * 100 : 0;
-  const roi        = totalCost > 0 ? (profit / totalCost) * 100 : 0;
-  return { feeRate, naverFee, totalCost, profit, marginRate, roi };
-}
+// P0-1 (2026-08-20): removed a fourth, pre-2025-06-02-reform duplicate fee
+// table (NAVER_FEE_RATES/getNaverFeeRate/calcMarginDetail) that lived here
+// unreferenced anywhere in the app. Fee-rate math has a single source of
+// truth: src/lib/naver-fee-rates-2026.ts (getNaverFeeRate / getNaverFeeRateByD1).
 
 export interface KkottiEvaluationInput {
   name?: string;

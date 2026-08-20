@@ -8,7 +8,11 @@
 // - 목표 마진 = 순마진(배송비·수수료 차감 후) 기준
 //
 // [2026 네이버 수수료]
-// 중소3 등급: 주문관리 3.003% + 판매수수료 2.73% = 5.733%
+// 등급별 수수료율은 naver-fee-rates-2026.ts가 단일 근거다 (P0-1: 3중화 정리).
+// 이 파일은 카테고리별 반품률/시즌성/마진 가이드만 소유하고, 수수료율은 항상
+// getNaverFeeRateByD1로 조회한다.
+
+import { getNaverFeeRateByD1, getFeeRateByGrade } from '@/lib/naver-fee-rates-2026';
 
 export interface MarginAdvice {
   // Category info
@@ -276,11 +280,18 @@ const D1_DEFAULTS: Record<string, Partial<typeof DEFAULT_ADVICE>> = {
 // Main API
 // ─────────────────────────────────────────────────
 
-export function getMarginAdvice(d1: string, d2: string, d3: string): MarginAdvice {
+// P0-1 (2026-08-20): naverFeeRate 값이 MARGIN_DB/D1_DEFAULTS/DEFAULT_ADVICE에
+// 중소3 기준(0.05733)으로 하드코딩되어 있었다 — 실제 등급(기본 '영세')과
+// 무관하게 항상 같은 값을 반환해 마진을 과대 계상했다. 이제 단일 권위 함수
+// (naver-fee-rates-2026.ts의 getNaverFeeRateByD1)로 항상 덮어쓴다. 테이블에
+// 남아있는 naverFeeRate 리터럴은 사용하지 않는 죽은 필드이므로 참조하지 말 것.
+export function getMarginAdvice(d1: string, d2: string, d3: string, grade?: string): MarginAdvice {
+  const naverFeeRate = getNaverFeeRateByD1(d1, 'normal', grade);
+
   // Try exact D3 key first
   const key = `${d1}|${d2}|${d3}`;
   const exact = MARGIN_DB[key];
-  if (exact) return { d1, d2, d3, ...exact };
+  if (exact) return { d1, d2, d3, ...exact, naverFeeRate };
 
   // Try D1-level default
   const d1default = D1_DEFAULTS[d1];
@@ -289,10 +300,11 @@ export function getMarginAdvice(d1: string, d2: string, d3: string): MarginAdvic
       d1, d2, d3,
       ...DEFAULT_ADVICE,
       ...d1default,
+      naverFeeRate,
     };
   }
 
-  return { d1, d2, d3, ...DEFAULT_ADVICE };
+  return { d1, d2, d3, ...DEFAULT_ADVICE, naverFeeRate };
 }
 
 // Calculate breakeven price
@@ -325,20 +337,22 @@ export function calcRecommendedPrice(
 // form, before category-specific advice is available. Replaces the legacy
 // supplierPrice * 1.3 markup, which ignored the Naver fee and shipping burden
 // and therefore auto-seeded deficit (negative net margin) prices.
-// Uses a flat 5.5% Naver fee and a 15% target net margin, absorbing the crawled
-// shipping fee as a fixed burden (defaults to 3000) so free-shipping conversion
-// stays conservative (no under-estimation). Rounds up to the nearest 100 won.
-const PREFILL_NAVER_FEE_RATE = 0.055;
+// Fee rate comes from naver-fee-rates-2026.ts (P0-1: single source of truth,
+// defaults to '영세' grade when the seller's grade isn't passed in). Absorbs the
+// crawled shipping fee as a fixed burden (defaults to 3000) so free-shipping
+// conversion stays conservative (no under-estimation). Rounds up to the nearest
+// 100 won.
 const PREFILL_TARGET_NET_MARGIN = 0.15;
 
 export function calcPrefillSalePrice(
   supplierPrice: number,
   shipFee?: number | null,
+  grade?: string,
 ): number {
   const sp = Number(supplierPrice) || 0;
   if (sp <= 0) return 0;
   const shipBurden = typeof shipFee === 'number' && shipFee >= 0 ? shipFee : 3000;
-  const denominator = 1 - PREFILL_NAVER_FEE_RATE - PREFILL_TARGET_NET_MARGIN;
+  const denominator = 1 - getFeeRateByGrade(grade) - PREFILL_TARGET_NET_MARGIN;
   const raw = (sp + shipBurden) / denominator;
   return Math.ceil(raw / 100) * 100;
 }

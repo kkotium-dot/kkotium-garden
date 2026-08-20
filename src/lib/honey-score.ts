@@ -6,6 +6,7 @@
 // Sprint 7 P1-B: name-rule warnings surfaced via honey-name-rules.ts
 
 import { buildHoneyScoreWarnings } from '@/lib/honey-name-rules';
+import { NAVER_DEFAULT_FEE_RATE } from '@/lib/naver-fee-rates-2026';
 
 export interface HoneyScoreInput {
   salePrice: number;
@@ -95,7 +96,7 @@ function resolveCompetitionLevel(
 
 // ── Margin score (40%) ────────────────────────────────────────────────────────
 function calcMarginScore(input: HoneyScoreInput) {
-  const { salePrice, supplierPrice, shippingFee = 3000, naverFeeRate = 0.05733 } = input;
+  const { salePrice, supplierPrice, shippingFee = 3000, naverFeeRate = NAVER_DEFAULT_FEE_RATE } = input;
   if (!salePrice || !supplierPrice || salePrice <= 0 || supplierPrice <= 0) {
     return { score: 0, marginRate: 0, netMarginRate: 0 };
   }
@@ -465,7 +466,7 @@ export interface SourcingScoreResult {
 }
 
 export function calcSourcingScore(input: HoneyScoreInput): SourcingScoreResult {
-  const { salePrice, supplierPrice, shippingFee = 3000, naverFeeRate = 0.05733 } = input;
+  const { salePrice, supplierPrice, shippingFee = 3000, naverFeeRate = NAVER_DEFAULT_FEE_RATE } = input;
   const badges: Array<{ label: string; type: 'good' | 'warn' | 'danger' }> = [];
   const warnings: string[] = [];
 

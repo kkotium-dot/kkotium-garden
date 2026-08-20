@@ -36,12 +36,26 @@ const NAVER_FEE_BY_GRADE = {
   영세:  0.01947 + 0.0273, // 4.677%
   중소1: 0.02563 + 0.0273, // 5.293%
   중소2: 0.02728 + 0.0273, // 5.458%
-  중소3: 0.03003 + 0.0273, // 5.733% ← 신규 셀러 기본 적용
+  중소3: 0.03003 + 0.0273, // 5.733%
   일반:  0.03630 + 0.0273, // 6.360%
 } as const;
 
-// 마진 계산 기본값: 중소3 (신규 셀러 적용 등급)
-export const NAVER_DEFAULT_FEE_RATE = NAVER_FEE_BY_GRADE['중소3']; // 0.05733
+export type SellerGrade = keyof typeof NAVER_FEE_BY_GRADE;
+export const SELLER_GRADES: SellerGrade[] = ['영세', '중소1', '중소2', '중소3', '일반'];
+
+// P0-1 (2026-08-20): 마진 계산 기본 등급 = '영세' (1인 영세 셀러 기본값).
+// StoreSettings.sellerGrade가 설정되어 있으면 그 값을 우선 사용할 것 —
+// 이 상수는 등급 미설정/조회 실패 시의 폴백이다. 이 값을 다른 파일에 다시
+// 하드코딩하지 말 것 (P0-1: 수수료 상수 3중화 정리).
+export const NAVER_DEFAULT_FEE_RATE = NAVER_FEE_BY_GRADE['영세']; // 0.04677
+
+export function isSellerGrade(v: unknown): v is SellerGrade {
+  return typeof v === 'string' && (SELLER_GRADES as string[]).includes(v);
+}
+
+export function getFeeRateByGrade(grade?: string): number {
+  return isSellerGrade(grade) ? NAVER_FEE_BY_GRADE[grade] : NAVER_DEFAULT_FEE_RATE;
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Channel-based sales fee (2025-06-02 reform)
@@ -68,26 +82,13 @@ function isExceptionD1(d1?: string): boolean {
   return d1 ? EXCEPTION_D1S.has(d1) : false;
 }
 
-// D1 카테고리별 수수료 — 2026 기준 카테고리 구분 없음, 모두 동일
-// 단, 대형가전/디지털 일부는 별도이므로 보수적으로 낮게 설정
+// 예외 카테고리 전용 고정 수수료 — 등급과 무관 (대형가전/디지털, 도서정가제 적용).
+// 그 외 모든 D1은 등급별 수수료(getFeeRateByGrade)를 그대로 쓴다 — 카테고리
+// 구분 없음(2026 기준). 이 테이블에 예외 2종 외의 항목을 추가하지 말 것
+// (P0-1: 수수료 상수 3중화 정리 — 등급 기반 계산으로 단일화).
 export const NAVER_FEE_RATES_BY_D1: Record<string, number> = {
-  '패션의류':     NAVER_DEFAULT_FEE_RATE,
-  '패션잡화':     NAVER_DEFAULT_FEE_RATE,
-  '화장품/미용':  NAVER_DEFAULT_FEE_RATE,
-  '뷰티':         NAVER_DEFAULT_FEE_RATE,
-  '디지털/가전':  0.048, // 대형가전 포함, 보수적 적용
-  '식품':         NAVER_DEFAULT_FEE_RATE,
-  '가구/인테리어':NAVER_DEFAULT_FEE_RATE,
-  '스포츠/레저':  NAVER_DEFAULT_FEE_RATE,
-  '출산/육아':    NAVER_DEFAULT_FEE_RATE,
-  '완구/취미':    NAVER_DEFAULT_FEE_RATE,
-  '도서':         0.045, // 도서정가제 적용 품목 별도
-  '생활/건강':    NAVER_DEFAULT_FEE_RATE,
-  '여가/생활편의':NAVER_DEFAULT_FEE_RATE,
-  '반려동물':     NAVER_DEFAULT_FEE_RATE,
-  '자동차용품':   NAVER_DEFAULT_FEE_RATE,
-  '문구/오피스':  NAVER_DEFAULT_FEE_RATE,
-  '주방용품/식기':NAVER_DEFAULT_FEE_RATE,
+  '디지털/가전': 0.048, // 대형가전 포함, 보수적 적용
+  '도서':        0.045, // 도서정가제 적용 품목 별도
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -211,14 +212,17 @@ function resolveD1FromCode(categoryCode?: string): string | undefined {
 
 /** Get Naver fee rate by category code (2026)
  *  @param channel 'normal' (default) standard exposure 2.73% / 'marketing' seller link 0.91%
+ *  @param grade seller grade (StoreSettings.sellerGrade) — defaults to '영세' when omitted/invalid
  *  Marketing reduction does NOT apply to exception categories (digital/electronics, books).
+ *  Category exception rates (디지털/가전, 도서) are grade-independent flat estimates.
  */
-export function getNaverFeeRate(categoryCode?: string, channel: FeeChannel = 'normal'): number {
+export function getNaverFeeRate(categoryCode?: string, channel: FeeChannel = 'normal', grade?: string): number {
   const d1 = resolveD1FromCode(categoryCode);
-  const base = d1 && NAVER_FEE_RATES_BY_D1[d1] !== undefined
-    ? NAVER_FEE_RATES_BY_D1[d1]
-    : NAVER_DEFAULT_FEE_RATE;
-  if (channel === 'marketing' && !isExceptionD1(d1)) {
+  const isException = isExceptionD1(d1);
+  const base = isException
+    ? NAVER_FEE_RATES_BY_D1[d1 as string]
+    : getFeeRateByGrade(grade);
+  if (channel === 'marketing' && !isException) {
     return base - NAVER_MARKETING_FEE_REDUCTION;
   }
   return base;
@@ -226,21 +230,23 @@ export function getNaverFeeRate(categoryCode?: string, channel: FeeChannel = 'no
 
 /** Get fee rate by d1 name directly
  *  @param channel 'normal' (default) standard exposure 2.73% / 'marketing' seller link 0.91%
+ *  @param grade seller grade (StoreSettings.sellerGrade) — defaults to '영세' when omitted/invalid
  *  Marketing reduction does NOT apply to exception categories (digital/electronics, books).
  */
-export function getNaverFeeRateByD1(d1Name?: string, channel: FeeChannel = 'normal'): number {
-  const base = !d1Name
-    ? NAVER_DEFAULT_FEE_RATE
-    : (NAVER_FEE_RATES_BY_D1[d1Name] ?? NAVER_DEFAULT_FEE_RATE);
-  if (channel === 'marketing' && !isExceptionD1(d1Name)) {
+export function getNaverFeeRateByD1(d1Name?: string, channel: FeeChannel = 'normal', grade?: string): number {
+  const isException = isExceptionD1(d1Name);
+  const base = isException
+    ? NAVER_FEE_RATES_BY_D1[d1Name as string]
+    : getFeeRateByGrade(grade);
+  if (channel === 'marketing' && !isException) {
     return base - NAVER_MARKETING_FEE_REDUCTION;
   }
   return base;
 }
 
 /** Get fee rate as formatted string e.g. "5.7%" */
-export function getNaverFeeRateFormatted(categoryCode?: string, channel: FeeChannel = 'normal'): string {
-  return `${(getNaverFeeRate(categoryCode, channel) * 100).toFixed(1)}%`;
+export function getNaverFeeRateFormatted(categoryCode?: string, channel: FeeChannel = 'normal', grade?: string): string {
+  return `${(getNaverFeeRate(categoryCode, channel, grade) * 100).toFixed(1)}%`;
 }
 
 /** Convenience: marketing-link savings per item at the given price (KRW) */
@@ -281,12 +287,13 @@ export interface NaverFeeBreakdown {
 export function getNaverFeeBreakdown(
   categoryCode?: string,
   channel: FeeChannel = 'normal',
+  grade?: string,
 ): NaverFeeBreakdown {
   const d1 = resolveD1FromCode(categoryCode);
   const isException = isExceptionD1(d1);
   // Effective channel: marketing reduction skipped for exception categories
   const effectiveChannel: FeeChannel = isException ? 'normal' : channel;
-  const total = getNaverFeeRate(categoryCode, effectiveChannel);
+  const total = getNaverFeeRate(categoryCode, effectiveChannel, grade);
   const salesFee = effectiveChannel === 'marketing'
     ? NAVER_SALES_FEE_MARKETING
     : NAVER_SALES_FEE_NORMAL;
@@ -297,11 +304,12 @@ export function getNaverFeeBreakdown(
     : effectiveChannel === 'marketing'
       ? `주문관리 ${(orderMgmt * 100).toFixed(2)}% + 자체마케팅 판매수수료 ${(salesFee * 100).toFixed(2)}% (2025.6.2 개편)`
       : `주문관리 ${(orderMgmt * 100).toFixed(2)}% + 일반노출 판매수수료 ${(salesFee * 100).toFixed(2)}% (2025.6.2 개편)`;
+  const resolvedGrade = isSellerGrade(grade) ? grade : '영세';
   return {
     orderManagementRate: orderMgmt,
     salesFeeRate: salesFee,
     totalRate: total,
-    gradeLabel: '중소3 (신규 기본)',
+    gradeLabel: isException ? '카테고리 예외 정책' : `${resolvedGrade} (기본값)`,
     channel: effectiveChannel,
     channelLabel,
     isExceptionCategory: isException,

@@ -12,6 +12,7 @@ import {
   ChevronDown, ChevronUp, RotateCcw, RefreshCw,
 } from 'lucide-react';
 import { getNaverFeeRate, getNaverFeeRateByD1, getNaverFeeBreakdown, getMarginProfile, type SalesChannel } from '@/lib/naver-fee-rates-2026';
+import { useSellerGrade } from '@/lib/hooks/useSellerGrade';
 import { getReturnCareFee } from '@/lib/return-care-fees';
 import ElevatedDropdown from '@/components/common/ElevatedDropdown';
 
@@ -285,6 +286,7 @@ export function MarginCalculator({
   onDiscountUnitChange,
   onCategoryChange,
 }: MarginCalculatorProps) {
+  const sellerGrade = useSellerGrade();
   const [local, setLocal] = useState<LocalState>({
     ...DEFAULTS,
     supplierPrice: extSupplier,
@@ -348,15 +350,15 @@ export function MarginCalculator({
   // Channel-aware: marketing link reduces sales fee 2.73% → 0.91% on standard categories
   const effectiveFeeRate = useMemo(() => {
     if (local.feeRateOverride !== null) return local.feeRateOverride / 100;
-    if (selectedD1) return getNaverFeeRateByD1(selectedD1, local.salesChannel);
-    if (selectedCategoryCode) return getNaverFeeRate(selectedCategoryCode, local.salesChannel);
-    return getNaverFeeRate(undefined, local.salesChannel);
-  }, [local.feeRateOverride, local.salesChannel, selectedD1, selectedCategoryCode]);
+    if (selectedD1) return getNaverFeeRateByD1(selectedD1, local.salesChannel, sellerGrade);
+    if (selectedCategoryCode) return getNaverFeeRate(selectedCategoryCode, local.salesChannel, sellerGrade);
+    return getNaverFeeRate(undefined, local.salesChannel, sellerGrade);
+  }, [local.feeRateOverride, local.salesChannel, selectedD1, selectedCategoryCode, sellerGrade]);
 
   // Fee breakdown for display (channel-aware)
   const feeBreakdown = useMemo(() => {
-    return getNaverFeeBreakdown(selectedCategoryCode || undefined, local.salesChannel);
-  }, [selectedCategoryCode, local.salesChannel]);
+    return getNaverFeeBreakdown(selectedCategoryCode || undefined, local.salesChannel, sellerGrade);
+  }, [selectedCategoryCode, local.salesChannel, sellerGrade]);
 
   // Core calculation
   const breakdown = useMemo<CostBreakdown>(() => {
@@ -576,9 +578,7 @@ export function MarginCalculator({
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              일반 노출 {feeBreakdown.isExceptionCategory
-                ? `${(getNaverFeeRate(selectedCategoryCode || undefined, 'normal') * 100).toFixed(1)}%`
-                : '5.7%'}
+              일반 노출 {(getNaverFeeRate(selectedCategoryCode || undefined, 'normal', sellerGrade) * 100).toFixed(1)}%
             </button>
             <button
               type="button"
@@ -597,7 +597,7 @@ export function MarginCalculator({
             >
               자체마케팅 {feeBreakdown.isExceptionCategory
                 ? '적용안됨'
-                : '3.9%'}
+                : `${(getNaverFeeRate(selectedCategoryCode || undefined, 'marketing', sellerGrade) * 100).toFixed(1)}%`}
             </button>
           </div>
           <p className="mt-1 text-[10px] text-gray-400 leading-relaxed px-1">
