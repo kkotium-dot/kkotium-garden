@@ -7,6 +7,7 @@ import { loadDispositionVerdicts } from '@/lib/products/disposition-load';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { sendDiscord, buildWeeklyReportEmbed } from '@/lib/discord';
 import { readSubstituteInfo, hasSubstitutePlan } from '@/lib/product-link';
+import { kstDateLabel } from '@/lib/date/kst';
 
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +20,7 @@ export async function GET(req: Request) {
   try {
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 86_400_000);
-    const weekLabel = `${weekAgo.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} ~ ${now.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}`;
+    const weekLabel = `${kstDateLabel(weekAgo, { month: 'short', day: 'numeric' })} ~ ${kstDateLabel(now, { month: 'short', day: 'numeric' })}`;
 
     // All products stats
     const allProducts = await prisma.product.findMany({

@@ -18,11 +18,11 @@
   2026-08-19 사고에서 DROP 대상으로 발견됨).
 - **저장 위치**: Supabase Storage 버킷 `db-backups`(비공개 — 고객명·전화·주소가
   들어있는 `Order`를 공개 버킷 `product-assets`와 절대 같이 두지 않는다).
-- **파일명**: `snapshot-YYYY-MM-DD.json` — ★ **날짜는 UTC 기준**(`new Date().toISOString().slice(0,10)`).
-  KST 08:00(=UTC 전날 23:00)에 도는 크론이라 **KST로는 오늘이어도 파일명은 어제
-  날짜로 찍힌다** — 예: 2026-08-20(KST) 새벽 실행분이 `snapshot-2026-08-19.json`
-  으로 저장됨(2026-08-20 실측 확인). 복구 시 "그 날짜"를 KST로 찾으면 하루
-  어긋나니 주의.
+- **파일명**: `snapshot-YYYY-MM-DD.json` — **날짜는 KST 기준**(`kstToday()`,
+  [src/lib/date/kst.ts](../../src/lib/date/kst.ts)). 2026-08-20부로 UTC 기준에서
+  KST 기준으로 수정(P1 KST 공통 유틸 도입) — 그 이전 스냅샷(`snapshot-2026-08-19.json`
+  등)은 구버전 로직(`toISOString().slice(0,10)`, UTC 자정 기준)으로 찍힌 것이라
+  KST로 찾으면 하루 어긋날 수 있으니 주의.
 - **보관 주기**: 최근 4주(28일)치만 유지, 초과분은 같은 크론 실행에서 자동 삭제.
 - **백업되지 않는 것**: 위 4개 외 나머지 테이블 전체(`asset_library` 등 드리프트
   테이블 나머지 8개 포함) — 이번 P1-A는 "복구 불가 데이터 우선순위"만 커버한다.

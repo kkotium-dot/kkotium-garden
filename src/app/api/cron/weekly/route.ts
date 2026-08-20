@@ -10,6 +10,7 @@ import { sendDiscord, buildWeeklyReportEmbed } from '@/lib/discord';
 import { refreshDomeCategoryTree } from '@/lib/dome-category-cache';
 import { withCronLogging } from '@/lib/cron/with-logging';
 import { dumpAndUploadWeeklySnapshot } from '@/lib/backup/db-snapshot';
+import { kstDateLabel } from '@/lib/date/kst';
 
 // P1-A(2026-08-20) — 이 라우트에 maxDuration이 없어 Hobby 기본 10초가 적용되고
 // 있었다(#333/#338과 같은 계열 위험). DB 스냅샷 백업을 추가하며 형제 크론들과
@@ -152,7 +153,7 @@ export const GET = withCronLogging('/api/cron/weekly', async (req: NextRequest) 
     }
 
     // Week label
-    const weekLabel = `${weekAgo.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} ~ ${now.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}`;
+    const weekLabel = `${kstDateLabel(weekAgo, { month: 'short', day: 'numeric' })} ~ ${kstDateLabel(now, { month: 'short', day: 'numeric' })}`;
 
     // ── Domeggook supplier price drift detection ───────────────────────
     // Re-fetch current price from Domeggook API for all crawl_logs items

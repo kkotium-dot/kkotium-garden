@@ -6,6 +6,7 @@
 // A-9: Enhanced with selling mode priorities — SEO improvement, price adjustment, stock alert
 
 import { calcHoneyScore, type HoneyScoreInput } from '@/lib/honey-score';
+import { kstLabel } from '@/lib/date/kst';
 
 export const DAILY_SLOT_CONFIG = {
   A: { min: 2, max: 3, minScore: 70,  label: '꼬띠 추천',     color: 'purple' },
@@ -323,7 +324,7 @@ export function buildDailyPlan(
   const sellingModeTasks = buildSellingModeTasks(products);
 
   return {
-    date: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }),
+    date: kstLabel(),
     slotA,
     slotB,
     slotC,

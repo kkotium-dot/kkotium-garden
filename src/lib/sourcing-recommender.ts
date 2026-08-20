@@ -14,6 +14,7 @@ import { recoTypeSummary, type RecoTypeTag } from '@/lib/naver/recommendation-ty
 import { resolveRecoTypeTags } from '@/lib/naver/reco-type-resolver';
 import { judgeExclusion } from '@/lib/policy/exclusion-rules';
 import { pickVariant, seasonalGreeting } from '@/lib/notifications/kkotti-variation';
+import { kstLabel, kstShortLabel } from '@/lib/date/kst';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -293,9 +294,7 @@ Respond ONLY in Korean JSON (no markdown, no backticks):
 
 // ── Main Sourcing Recommendation Engine ──────────────────────────────────────
 export async function generateSourcingRecommendations(): Promise<SourcingRecommendResult> {
-  const today = new Date().toLocaleDateString('ko-KR', {
-    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
-  });
+  const today = kstLabel();
 
   try {
     // Step 1: Get trending categories from DataLab
@@ -537,7 +536,7 @@ export async function runSourcingScan(opts: {
         discordSent: false,
         skippedExistingCount: alreadyToday,
         scan: {
-          date: todayGuard.toLocaleDateString('ko-KR'),
+          date: kstShortLabel(todayGuard),
           trendSource: 'skipped',
           trendCategories: [],
           opportunities: [],
