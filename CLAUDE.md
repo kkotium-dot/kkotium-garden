@@ -52,7 +52,9 @@ cd /Users/jyekkot/Desktop/kkotium-garden && \
 ```
 확인: HEAD==origin/main · working tree clean · SESSION_LOG.md 1500줄 초과 시 분할(#31) · Vercel HTTP 200 · **prod deploy SHA==HEAD**(불일치 시 #36 발동, 즉시 보고) · verify-vercel-deploy.sh exit 0. **feature 브랜치에서 작업 중이면 이 STEP 0을 main과 현재 브랜치 양쪽에서 수행**(아래 "브랜치·머지 리듬" 참조).
 
-**STEP 1 — 정독**: `PROGRESS.md` → `ROADMAP.md` → `SESSION_LOG.md`(직전 5세션) → `TASK_BRIDGE.md`(§3 ACTIVE+§4 STANDING+§6 PENDING 의무) → 필요시 `PRINCIPLES_LEARNED.md`/`PRINCIPLES_CODE.md`/`SPRINT_PLAN.md`/`REFERENCES.md`. `docs/plan/archive/`는 grep 검색 시에만.
+**STEP 1 — 정독**: `docs/playbook/REPEATED_FAILURE_PATTERNS.md`(**최우선·필독**) → `docs/handoff/CURRENT.md` → `PROGRESS.md` → `ROADMAP.md` → `SESSION_LOG.md`(직전 5세션) → `TASK_BRIDGE.md`(§3 ACTIVE+§4 STANDING+§6 PENDING 의무) → 필요시 `PRINCIPLES_LEARNED.md`/`PRINCIPLES_CODE.md`/`SPRINT_PLAN.md`/`REFERENCES.md`. `docs/plan/archive/`는 grep 검색 시에만.
+
+> ⚠️ **완료 보고 전 `docs/playbook/REPEATED_FAILURE_PATTERNS.md` §2 체크리스트를 실행하고 그 출력을 보고에 포함할 것.** tsc 통과·파일 생성·커밋 해시는 중간 단계이며 완료 증거가 아니다(#344). 2026-08 세션에서 5종(F1 커밋 누락 / F2 병합 누락 / F3 연결 누락 / F4 타입만 통과 / F5 표본 과적합)이 반복 발생했다. Desktop·Cowork도 예외가 아니다.
 
 **STEP 2 — 브리핑**: 현재 HEAD + 직전 산출물 요약 · 다음 본 작업(ROADMAP "다음 새 채팅 시작 메시지") · 미커밋/untracked 정확 보고 · SESSION_LOG 분할 필요 여부. **push된 미merge 브랜치가 있으면 그 사실과 며칠째 대기 중인지 반드시 브리핑에 포함**(아래 "브랜치·머지 리듬" 참조).
 
