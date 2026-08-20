@@ -33,6 +33,7 @@
 | **B4-A** | **아침 소싱 크론 계측** — 실발송 여전히 미해결(8/12 미발송 재확인). 발생 시점에 Vercel Recent Invocations 직접 확인 | 🟢 READY | (조사·계측, 코드변경 최소) | Desktop(대시보드)·Code(로그) | ⚠️ **재조사 금지 목록 준수**: force-dynamic·middleware·redirects·크론개수상한·미배포커밋 5건은 이미 기각(CURRENT.md 참조). 실 Discord 발송 테스트는 운영자 승인 없이 금지 |
 | **B5** | **Git 연동 복구** — 계정 이관 후 커밋·push 흐름 점검. 미커밋 변경분(import 필드완전성 등) 커밋·push·verify-deploy | 🟢 READY | `git`(레포 상태)·`docs/handoff/CURRENT.md` | Code | CURRENT.md "다음 세션 시작 순서" 1번과 연동. 이번 세션 변경분이 프로덕션 미반영 상태 |
 | **B6** | **Vercel Hobby ToS 확인** — 크론·상업적 사용 약관 적합성 검토(외부 안전망 GitHub Actions 도입 전 선행) | ⏸️ WAITING-OPERATOR | (조사·문서) | Desktop→운영자 | 매일 자동 실발송 CI = 디스코드 실발송 동급 승인 대상(#337). 요금제 상향 필요 여부 판단 |
+| **P1-A** | **상품 정식 카테고리 정비** — `naver_categories` 0행·전 상품 `category_id` 0건 → 드롭십 적합도·소싱 씨앗·네이버 검색 적합도 3곳 동시 무력화. 마스터 적재→제안 품질(D3/D4)→dryRun 백필→앱 개입점 4단계 | ⏸️ WAITING-OPERATOR (설계 승인 대기·**구현 착수 금지**) | Step1~3: `naver_categories`·backfill 스크립트 / Step4 UI는 별도(파일 무겹침) | Desktop(설계 완료)→Code(구현) | 권위: `docs/design/PRODUCT_CATEGORY_BACKFILL_2026-08-20.md`. 선행조건 없음·골든셋(P0-6)과 write set 무충돌. ⚠️ FK `ON DELETE SET NULL` — 마스터 DELETE 금지. `--apply`는 운영자 GO 없이 금지. 매출 직결 기반 정비 |
 
 ---
 
@@ -122,3 +123,4 @@
 |---|---|
 | 2026-07-30 | 최초 작성(Desktop). #318 문서정합성 사고 재발방지 + 꼬띠 에이전트 PRD 반영 |
 | 2026-08-19 | 전면 재작성(Cowork). P1=완료 반영·merge대기 4건 삭제(ahead=0 ref정리로 대체)·유효 미merge 2건만 명시·신규 P0 3건(B4-A/B5/B6) 추가·§6을 PING_PONG_PROTOCOL로 이관 |
+| 2026-08-20 | P1-A 상품 카테고리 정비 추가(설계 승인 대기·권위 PRODUCT_CATEGORY_BACKFILL_2026-08-20). Cowork |
