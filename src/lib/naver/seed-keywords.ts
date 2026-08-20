@@ -11,6 +11,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { extractNouns } from '@/lib/strategy/morpheme-tokenizer';
+import { USAGE_HINT_TOKENS_SET } from '@/lib/strategy/identity-dictionary';
 import { fetchKeywordVolumes, normalizeKeyword } from '@/lib/naver/searchad-volume';
 
 export interface SourcingSeed {
@@ -22,9 +23,29 @@ const MAX_SEEDS = 5; // SearchAd hintKeywords 배치 한도와 맞춤(1회 호�
 
 // 결함2 수정(2026-08-20, Desktop 실 DB 검증): nouns[0]("첫 명사")을 headword로
 // 쓰던 이전 구현은 "수식어+본체어" 구조인 한국어 상품명에서 항상 수식어를
-// 잡았다("듀얼 무선 가습기..." → "듀얼"). 숫자+단위 토큰("64구"·"2colors")도
-// GENERIC_MODIFIERS 사전엔 없는 패턴이라 명사로 통과한다 — 여기서 별도 차단.
-const NUMERIC_UNIT_PATTERN = /^\d+(구|단|colors?|p|개|종)$/i;
+// 잡았다("듀얼 무선 가습기..." → "듀얼"). 숫자로 시작하는 토큰("64구"·
+// "5종세트"·"20매입")도 GENERIC_MODIFIERS 사전엔 없는 패턴이라 명사로
+// 통과한다 — 여기서 별도 차단.
+const NUMERIC_PREFIX_PATTERN = /^\d+[가-힣]/;
+
+// P0-6 골든셋 검증(2026-08-20)에서 드러난 문제: "뒤에서부터" 순회만으로는
+// 상품명 맨 끝에 붙는 스펙/호환성 수식어("인덕션겸용"·"학생용"·"밴딩형"·
+// "사무용품")를 headword로 잘못 고른다. 이런 접미사는 GENERIC_MODIFIERS
+// (앞쪽 수식어 고정단어 목록)로 못 잡는 별도 패턴이라 접미사 매칭으로 차단한다.
+// ★ 형태소 분석을 완벽하게 만들려는 게 아니다 — 이 접미사들은 한국어
+// 상품명에서 거의 항상 "무엇을 위한/어떤 방식의"를 나타내지 "무엇인지"를
+// 나타내지 않는다는 확실한 패턴만 잡는다.
+const SPEC_SUFFIX_PATTERN = /(겸용|전용|사이즈|세트|설정|용품|매입|스타일|타입|버전|호환|형|용)$/;
+
+// USAGE_HINT_TOKENS(identity-dictionary.ts)는 선물/기념일/타겟 등 "용도" 힌트라
+// extractNouns()는 통과시키지만(identity-extractor가 별도 shopping-search로
+// 검증) 여긴 그 검증 단계가 없다 — 결함1·2와 같은 부류의 문제(naver_keywords
+// 상황어 오염)라 여기서도 배제한다. 선물류 복합어(개업선물·집들이선물 등,
+// COMPOUND_NOUNS에 통짜로 등록돼 있음)와 범용 잡화 접미사(소품·잡화)도 함께.
+const GENERIC_MERCHANDISE_SUFFIX_PATTERN = /(소품|잡화)$/;
+const GIFT_OCCASION_COMPOUNDS = new Set([
+  '개업선물', '집들이선물', '신혼선물', '명절선물', '추석선물', '설날선물', '답례품',
+]);
 
 // SearchAd 자기검증 임계값(월 검색량 합, PC+모바일). 미만이면 "상품명에서
 // 뽑혔지만 시장에서 검색되지 않는 토큰"으로 보고 탈락시킨다(예: 64구=0,
@@ -59,11 +80,14 @@ function lastCategorySegment(category: string): string | null {
  *  저소음 사무실 가습기"→가습기 — 전부 후반부) — 그래서 뒤에서부터 순회한다.
  *  숫자+단위 토큰(64구·2colors 등)은 여기서 추가로 걸러낸다(GENERIC_MODIFIERS
  *  사전은 고정 단어 목록이라 이 패턴을 못 잡는다). */
-function candidateHeadwordsFromName(name: string): string[] {
+export function candidateHeadwordsFromName(name: string): string[] {
   const { nouns } = extractNouns(name);
   const reversed = [...nouns].reverse();
   return reversed.filter(n =>
-    !isBlockedSeed(n) && n.length <= 15 && !NUMERIC_UNIT_PATTERN.test(n)
+    !isBlockedSeed(n) && n.length <= 15 &&
+    !NUMERIC_PREFIX_PATTERN.test(n) && !SPEC_SUFFIX_PATTERN.test(n) &&
+    !GENERIC_MERCHANDISE_SUFFIX_PATTERN.test(n) &&
+    !USAGE_HINT_TOKENS_SET.has(n) && !GIFT_OCCASION_COMPOUNDS.has(n)
   );
 }
 
