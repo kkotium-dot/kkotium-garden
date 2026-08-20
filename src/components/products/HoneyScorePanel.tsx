@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { calcHoneyScore, getHoneyGradeDisplay, getKkottiMoodMeta } from '@/lib/honey-score';
 import type { HoneyScoreResult } from '@/lib/honey-score';
+import { getFeeRateByGrade } from '@/lib/naver-fee-rates-2026';
+import { useSellerGrade } from '@/lib/hooks/useSellerGrade';
 
 interface HoneyScorePanelProps {
   salePrice: number;
@@ -171,17 +173,20 @@ export default function HoneyScorePanel({
   hasMainImage,
   hasDescription,
   hasDiscountSet,
-  naverFeeRate = 0.055,
+  naverFeeRate,
 }: HoneyScorePanelProps) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [dialogueKey, setDialogueKey] = useState(0);
+  const sellerGrade = useSellerGrade();
+  // P0-1: no explicit override → use the seller's actual grade, not a hardcoded literal
+  const effectiveFeeRate = naverFeeRate ?? getFeeRateByGrade(sellerGrade);
 
   const result: HoneyScoreResult = useMemo(() => calcHoneyScore({
     salePrice, supplierPrice, categoryId, productName,
-    keywords, tags, hasMainImage, hasDescription, hasDiscountSet, naverFeeRate,
+    keywords, tags, hasMainImage, hasDescription, hasDiscountSet, naverFeeRate: effectiveFeeRate,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [salePrice, supplierPrice, categoryId, productName, keywords, tags,
-       hasMainImage, hasDescription, hasDiscountSet, naverFeeRate, dialogueKey]);
+       hasMainImage, hasDescription, hasDiscountSet, effectiveFeeRate, dialogueKey]);
 
   const gradeDisplay = getHoneyGradeDisplay(result.grade);
   const moodMeta     = getKkottiMoodMeta(result.kkottiMood);
@@ -284,7 +289,7 @@ export default function HoneyScorePanel({
               {[
                 { label: '총마진율',  value: result.marginRate,    suffix: '%' },
                 { label: '순마진율',  value: result.netMarginRate, suffix: '%',
-                  sub: `수수료 ${(naverFeeRate * 100).toFixed(1)}% 반영` },
+                  sub: `수수료 ${(effectiveFeeRate * 100).toFixed(1)}% 반영` },
               ].map(item => {
                 const col = item.value >= 40 ? '#16a34a'
                   : item.value >= 30 ? '#2563eb'

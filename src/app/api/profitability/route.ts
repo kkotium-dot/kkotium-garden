@@ -11,15 +11,16 @@ import {
   getNaverFeeRate,
   NAVER_SALES_FEE_NORMAL,
   NAVER_SALES_FEE_MARKETING,
-  NAVER_MARKETING_FEE_REDUCTION,
   NAVER_FEE_REFORM_DATE,
   NAVER_FEE_REFORM_NOTE,
 } from '@/lib/naver-fee-rates-2026';
+import { getSellerGrade } from '@/lib/seller-grade.server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const grade = await getSellerGrade();
     const products = await prisma.product.findMany({
       where: { status: { in: ['ACTIVE', 'DRAFT'] } },
       select: {
@@ -41,8 +42,8 @@ export async function GET() {
       const effectivePrice = p.salePrice - Number(p.instant_discount ?? 0);
       // Resolve category-aware fee for both channels via single source of truth
       const code = p.naverCategoryCode ?? undefined;
-      const totalRateNormal = getNaverFeeRate(code, 'normal');
-      const totalRateMarketing = getNaverFeeRate(code, 'marketing');
+      const totalRateNormal = getNaverFeeRate(code, 'normal', grade);
+      const totalRateMarketing = getNaverFeeRate(code, 'marketing', grade);
       const feeNormal = Math.round(effectivePrice * totalRateNormal);
       const feeMarketing = Math.round(effectivePrice * totalRateMarketing);
       const baseCost = p.supplierPrice + (p.shippingFee ?? 0);
@@ -110,13 +111,13 @@ export async function GET() {
     const monthlyRevenueMarketing = dailyRevenueMarketing * 30;
 
     // Fee comparison rates — derived from category-aware totals when products exist,
-    // otherwise show the standard middle-small-3 grade default
+    // otherwise fall back to the seller's own grade default
     const avgRateNormal = totalProducts > 0
       ? productAnalysis.reduce((s, p) => s + p.rateNormal, 0) / totalProducts
-      : 0.05733;
+      : getNaverFeeRate(undefined, 'normal', grade);
     const avgRateMarketing = totalProducts > 0
       ? productAnalysis.reduce((s, p) => s + p.rateMarketing, 0) / totalProducts
-      : 0.05733 - NAVER_MARKETING_FEE_REDUCTION;
+      : getNaverFeeRate(undefined, 'marketing', grade);
 
     return NextResponse.json({
       success: true,

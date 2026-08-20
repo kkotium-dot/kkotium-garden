@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Check, Store, Truck, Phone, RotateCcw, Key, Eye, EyeOff } from 'lucide-react';
 import { COURIER_CODES } from '@/lib/naver/codes';
+import { SELLER_GRADES, type SellerGrade } from '@/lib/naver-fee-rates-2026';
 
 interface StoreSettings {
   freeShippingThreshold: number;
@@ -12,6 +13,7 @@ interface StoreSettings {
   defaultReturnFee: number;
   defaultExchangeFee: number;
   domeggookApiKey: string;
+  sellerGrade: SellerGrade;
 }
 
 const DEFAULTS: StoreSettings = {
@@ -23,6 +25,7 @@ const DEFAULTS: StoreSettings = {
   defaultReturnFee: 6000,
   defaultExchangeFee: 6000,
   domeggookApiKey: '',
+  sellerGrade: '영세',
 };
 
 const inp = 'w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm text-stone-800 placeholder-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-300 focus:border-transparent bg-white transition';
@@ -71,6 +74,9 @@ export default function StoreSettingsPage() {
             defaultReturnFee: d.settings.defaultReturnFee ?? DEFAULTS.defaultReturnFee,
             defaultExchangeFee: d.settings.defaultExchangeFee ?? DEFAULTS.defaultExchangeFee,
             domeggookApiKey: d.settings.domeggook_api_key_set ? '••••••••' : '',
+            sellerGrade: (SELLER_GRADES as string[]).includes(d.settings.sellerGrade)
+              ? d.settings.sellerGrade
+              : DEFAULTS.sellerGrade,
           });
         }
       })
@@ -160,6 +166,20 @@ export default function StoreSettingsPage() {
               onChange={e => update('storeName', e.target.value)}
               placeholder="예) 꽃틔움 가든"
             />
+          </Field>
+          <Field
+            label="네이버 판매자 등급"
+            hint="스마트스토어센터 → 판매자등급에서 확인. 마진 계산·소싱 추천의 수수료율 기준입니다. 모르면 '영세'로 두세요(1인 셀러 기본값)."
+          >
+            <select
+              className={sel}
+              value={settings.sellerGrade}
+              onChange={e => update('sellerGrade', e.target.value as SellerGrade)}
+            >
+              {SELLER_GRADES.map(g => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
           </Field>
         </SettingSection>
 

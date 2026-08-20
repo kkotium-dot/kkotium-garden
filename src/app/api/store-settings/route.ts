@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isSellerGrade } from '@/lib/naver-fee-rates-2026';
 
 
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,7 @@ export async function GET() {
       default_return_fee: 6000,
       default_exchange_fee: 6000,
       domeggook_api_key: '',
+      seller_grade: '영세',
     };
     // Mask API key — only show if set (first 6 chars + ***)
     const rawKey = String(settings.domeggook_api_key ?? '');
@@ -49,6 +51,7 @@ export async function GET() {
       domeggookApiKey: rawKey,              // camelCase alias
       domeggook_api_key_masked: maskedKey,
       domeggook_api_key_set: rawKey.length > 0,
+      sellerGrade: String(settings.seller_grade ?? '영세'), // camelCase alias
     };
     return NextResponse.json({ success: true, settings: normalized });
   } catch (e: unknown) {
@@ -75,6 +78,8 @@ export async function PATCH(req: NextRequest) {
       data.defaultReturnFee = Number(body.defaultReturnFee);
     if (body.defaultExchangeFee !== undefined)
       data.defaultExchangeFee = Number(body.defaultExchangeFee);
+    if (body.sellerGrade !== undefined && isSellerGrade(body.sellerGrade))
+      data.sellerGrade = body.sellerGrade;
     // #250: seller-managed template-code lists (제공고시/AS).
     if (body.noticeTemplates !== undefined)
       data.noticeTemplates = sanitizeTemplates(body.noticeTemplates);

@@ -14,6 +14,7 @@ import {
   calcNetMargin,
   getSeasonContext,
 } from '@/lib/naver-margin-advisor';
+import { useSellerGrade } from '@/lib/hooks/useSellerGrade';
 
 interface MarginAdvisorPanelProps {
   d1: string;
@@ -35,10 +36,12 @@ export default function MarginAdvisorPanel({
   shippingFee = 3000,
   onApplySalePrice,
 }: MarginAdvisorPanelProps) {
+  const sellerGrade = useSellerGrade();
+
   const advice = useMemo(() => {
     if (!d1 || !d3) return null;
-    return getMarginAdvice(d1, d2, d3);
-  }, [d1, d2, d3]);
+    return getMarginAdvice(d1, d2, d3, sellerGrade);
+  }, [d1, d2, d3, sellerGrade]);
 
   const season = useMemo(() => {
     if (!advice) return null;

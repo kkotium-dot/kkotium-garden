@@ -486,6 +486,9 @@ model StoreSettings {
   defaultReturnFee      Int      @default(6000) @map("default_return_fee")
   defaultExchangeFee    Int      @default(6000) @map("default_exchange_fee")
   domeggookApiKey       String   @default("") @map("domeggook_api_key")
+  // P0-1 (2026-08-20): 셀러 네이버 등급 — 수수료율 계산의 단일 근거.
+  // 미설정 시 '영세' (1인 영세 셀러 기본값, naver-fee-rates-2026.ts와 동기)
+  sellerGrade           String   @default("영세") @map("seller_grade")
   // E-2A: Manual review tracking (Naver review API not supported)
   manualReviewCount     Int      @default(0) @map("manual_review_count")
   reviewChecklist       Json     @default("{}") @map("review_checklist")

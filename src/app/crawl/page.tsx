@@ -16,6 +16,7 @@ import { OverflowMenu } from '@/components/common';
 import { calcHoneyScore, calcSourcingScore } from '@/lib/honey-score';
 import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 import { getNaverFeeRateByD1, NAVER_DEFAULT_FEE_RATE } from '@/lib/naver-fee-rates-2026';
+import { useSellerGrade } from '@/lib/hooks/useSellerGrade';
 import { calcPrefillSalePrice, calcMarketSalePrice, calcNetMargin } from '@/lib/naver-margin-advisor';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -94,7 +95,9 @@ function HoneyBadge({
   if (!supplierPrice || !salePrice) return <span style={{ fontSize:11, color:'#ccc' }}>—</span>;
   const r = calcSourcingScore({
     supplierPrice, salePrice, shippingFee: shipFee ?? 3000,
-    naverFeeRate: naverFeeRate ?? 0.05733,
+    // P0-1: no literal fallback here — omitting the field lets calcSourcingScore
+    // apply its own single-source-of-truth default (NAVER_DEFAULT_FEE_RATE).
+    naverFeeRate,
     inventory, canMerge, sellerRank, shipFee, optionCount,
   });
   const gradeColors: Record<string, { bg: string; text: string; border: string }> = {
@@ -152,8 +155,9 @@ function smartRound(price: number): number {
 }
 // ── Breakeven calculator ──────────────────────────────────────────────────────
 // Returns minimum sale price to break even (cost + naver fee + shipping)
-// feeRate defaults to 5.733% (2026 중소3+일반노출) — overridden by category D1 selection
-function calcBreakeven(supplierPrice: number, shipFee: number, feeRate = 0.05733): number {
+// feeRate defaults to NAVER_DEFAULT_FEE_RATE (single source of truth, '영세'
+// grade) — overridden by category D1 selection / seller grade at call sites
+function calcBreakeven(supplierPrice: number, shipFee: number, feeRate = NAVER_DEFAULT_FEE_RATE): number {
   return Math.ceil((supplierPrice + shipFee) / (1 - feeRate));
 }
 
@@ -246,7 +250,8 @@ function CrawlPageInner() {
   const [supPrice, setSupPrice]   = useState(0);
   const [sellPrice, setSellPrice] = useState(0);
   const [shipFee, setShipFee]     = useState(3000);
-  // Naver fee rate — dynamic by category D1 (default: 중소3 5.733%)
+  // Naver fee rate — dynamic by category D1 (default: seller's configured grade, 영세 if unset)
+  const sellerGrade = useSellerGrade();
   const [naverFeeRate, setNaverFeeRate] = useState(NAVER_DEFAULT_FEE_RATE);
   // Target profit input (replaces margin rate slider)
   const [targetProfit, setTargetProfit] = useState(3000);
@@ -280,7 +285,7 @@ function CrawlPageInner() {
         const topCat = data.suggestions[0];
         setSCatSelected(topCat);
         // Auto-apply fee rate for top category
-        const fee = getNaverFeeRateByD1(topCat.d1);
+        const fee = getNaverFeeRateByD1(topCat.d1, 'normal', sellerGrade);
         setNaverFeeRate(fee);
       }
     } catch { /* non-blocking */ }
@@ -985,7 +990,7 @@ function CrawlPageInner() {
                             setSCatSuggestions([cat]);
                             setSCatDropdown([]);
                             setSCatQuery([cat.d1, cat.d2, cat.d3, cat.d4].filter(Boolean).join(' > '));
-                            const fee = getNaverFeeRateByD1(cat.d1);
+                            const fee = getNaverFeeRateByD1(cat.d1, 'normal', sellerGrade);
                             setNaverFeeRate(fee);
                             if (supPrice > 0) {
                               const be = calcBreakeven(supPrice, shipFee, fee);
@@ -1019,7 +1024,7 @@ function CrawlPageInner() {
                                 setSCatSuggestions([cat]);
                                 setSCatDropdown([]);
                                 setSCatQuery([cat.d1, cat.d2, cat.d3, cat.d4].filter(Boolean).join(' > '));
-                                const fee = getNaverFeeRateByD1(cat.d1);
+                                const fee = getNaverFeeRateByD1(cat.d1, 'normal', sellerGrade);
                                 setNaverFeeRate(fee);
                                 if (supPrice > 0) {
                                   const be = calcBreakeven(supPrice, shipFee, fee);
@@ -1050,7 +1055,7 @@ function CrawlPageInner() {
                       return (
                         <button key={i} type="button" onClick={() => {
                             setSCatSelected(cat);
-                            const fee = getNaverFeeRateByD1(cat.d1);
+                            const fee = getNaverFeeRateByD1(cat.d1, 'normal', sellerGrade);
                             setNaverFeeRate(fee);
                             if (supPrice > 0) {
                               const be = calcBreakeven(supPrice, shipFee, fee);
@@ -1095,7 +1100,7 @@ function CrawlPageInner() {
                     <input type="number" value={supPrice} onChange={e => {
                       const p = Number(e.target.value);
                       setSupPrice(p);
-                      if (p > 0) setSellPrice(calcBreakeven(p, shipFee) + targetProfit);
+                      if (p > 0) setSellPrice(calcBreakeven(p, shipFee, naverFeeRate) + targetProfit);
                     }} style={{ width:'100%', padding:'9px 10px', fontSize:14, background:'#FFF5F8', border:'1.5px solid #F8DCE5', borderRadius:10, color:'#1A1A1A', outline:'none' }} />
                   </div>
                   <div>
@@ -1392,7 +1397,7 @@ function CrawlPageInner() {
                     <div style={{ flex:1 }}/>
                     {/* 꿀통순 정렬 */}
                     <button onClick={() => {
-                      const calcM = (sup:number) => { const s=bulkSalePrice(sup); return s>0?((s-sup-3000-s*0.05733)/s):-1; };
+                      const calcM = (sup:number) => { const s=bulkSalePrice(sup); return s>0?((s-sup-3000-s*NAVER_DEFAULT_FEE_RATE)/s):-1; };
                       setBRows(prev => [...prev].sort((a,b) => calcM(b.editedPrice??b.supplierPrice??0) - calcM(a.editedPrice??a.supplierPrice??0)));
                     }} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 12px', background:'#FFF5F8', border:'1.5px solid #FFB3CE', borderRadius:10, fontSize:12, fontWeight:700, color:'#F63B28', cursor:'pointer', whiteSpace:'nowrap' }}>
                       <TrendingUp size={12}/> 꿀통순 정렬
@@ -1763,7 +1768,7 @@ function CrawlPageInner() {
                   const prefill = {
                     productName: san(first.name||''),
                     supplierPrice: first.supplier_price,
-                    salePrice: calcPrefillSalePrice(first.supplier_price, first.ship_fee),
+                    salePrice: calcPrefillSalePrice(first.supplier_price, first.ship_fee, sellerGrade),
                     mainImage: (imgs[0] as string) || '',
                     additionalImgs: imgs.slice(1).join('|'),
                     options: opts.map((o: unknown) => san(typeof o === 'string' ? o : (o as {name:string}).name || '')).filter(Boolean),
@@ -1906,7 +1911,7 @@ function CrawlPageInner() {
                 const prefill = {
                   productName: san(log.name||''),
                   supplierPrice: log.supplier_price,
-                  salePrice: calcPrefillSalePrice(log.supplier_price, log.ship_fee),
+                  salePrice: calcPrefillSalePrice(log.supplier_price, log.ship_fee, sellerGrade),
                   mainImage: (logImgs[0] as string) || '',
                   additionalImgs: logImgs.slice(1).join('|'),
                   options: logOpts.map((o: unknown) => san(typeof o === 'string' ? o : (o as {name:string}).name || '')).filter(Boolean),

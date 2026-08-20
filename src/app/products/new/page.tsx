@@ -115,6 +115,7 @@ import studioStrings from '@/lib/i18n/studio-strings.ko.json';
 import productsNewStrings from '@/lib/i18n/products-new-strings.ko.json';
 import { calcPrefillSalePrice, calcNetMargin } from '@/lib/naver-margin-advisor';
 import { getMarginProfileByCode, getNaverFeeRate } from '@/lib/naver-fee-rates-2026';
+import { useSellerGrade } from '@/lib/hooks/useSellerGrade';
 
 // NAVER-PARTIAL-SYNC (2026-08-11, docs/design/NAVER_PARTIAL_SYNC_2026-08-11.md §3-A)
 // — human-readable labels for the fields that feed buildNaverProductPayload
@@ -493,6 +494,7 @@ function SequenceStatusBanner({
 function NewProductPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const sellerGrade = useSellerGrade();
   // C-PLANT-UX — draft-save (임시저장) state. DRAFT upsert keeps the seller on
   // the page (no visual-automation / studio jump), so partial data is fine.
   const [draftBusy, setDraftBusy]       = useState(false);
@@ -2987,7 +2989,7 @@ const handleGenerate = async () => {
                   <input className={inp} type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0" min={0} />
                   {/* G5: kkotti recommended sale price hint (net-margin transparency). */}
                   {Number(supplierPrice) > 0 && (() => {
-                    const recommended = calcPrefillSalePrice(Number(supplierPrice), crawlShipFee);
+                    const recommended = calcPrefillSalePrice(Number(supplierPrice), crawlShipFee, sellerGrade);
                     return (
                       <div className="mt-1.5 space-y-0.5">
                         <p className="text-xs font-semibold text-rose-600">
