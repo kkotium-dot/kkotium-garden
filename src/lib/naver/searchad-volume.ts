@@ -36,6 +36,16 @@ export interface VolumeRow {
   monthlyMobileQc: number;
   totalMonthlyQc: number;
   compIdx: CompIdx | null;
+  /** Average ad placement depth (SearchAd's plAvgDepth) — a secondary,
+   *  continuous competition-strength proxy alongside the 3-bucket compIdx.
+   *  Higher = more advertisers bidding = more contested. null when the API
+   *  omits the field (never fabricated). */
+  plAvgDepth: number | null;
+}
+
+function parseDepth(raw: unknown): number | null {
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
 function signRequest(
@@ -142,6 +152,7 @@ async function fetchBatch(hintKeywords: string[]): Promise<VolumeRow[] | null> {
       monthlyMobileQc: mb,
       totalMonthlyQc: pc + mb,
       compIdx: mapComp(row.compIdx),
+      plAvgDepth: parseDepth(row.plAvgDepth),
     });
   }
   return rows;
@@ -331,6 +342,7 @@ export async function fetchRelatedKeywords(
       monthlyMobileQc: mb,
       totalMonthlyQc: pc + mb,
       compIdx: mapComp(row.compIdx),
+      plAvgDepth: parseDepth(row.plAvgDepth),
     });
   }
 

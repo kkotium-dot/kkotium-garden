@@ -8,7 +8,14 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { sendDiscord } from '@/lib/discord';
 import { fetchNaverTrends, type TrendResult } from '@/lib/trend-analyzer';
-import { fetchKeywordStats, type KeywordStat } from '@/lib/naver/keyword-api';
+import type { KeywordStat } from '@/lib/naver/keyword-api';
+import { fetchKeywordVolumes } from '@/lib/naver/searchad-volume';
+
+// P0-3 (2026-08-20): local shape carrying SearchAd's plAvgDepth alongside the
+// existing KeywordStat fields — used as a continuous competition-strength
+// signal in calcBlueOceanScore (compIdx alone buckets into only 3 tiers,
+// which was collapsing distinct keywords onto identical scores).
+type KeywordVolumeStat = KeywordStat & { plAvgDepth: number | null };
 import { matchWholesaleProducts, type WholesaleProduct } from '@/lib/wholesale-matcher';
 import { recoTypeSummary, type RecoTypeTag } from '@/lib/naver/recommendation-type';
 import { resolveRecoTypeTags } from '@/lib/naver/reco-type-resolver';
@@ -22,10 +29,13 @@ export interface SourcingOpportunity {
   category: string;
   monthlySearchVolume: number;
   competition: 'low' | 'mid' | 'high' | 'unknown';
-  avgPrice: number;
-  minPrice: number;
-  maxPrice: number;
-  totalResults: number;
+  // P0-3 (2026-08-20): null (not 0) when unknown — 쇼핑검색 API 종료로
+  // 이 값들은 실측 불가능하다. 0은 "가격 0원"처럼 보이는 가짜값이므로 UI에서
+  // null을 명시적으로 숨겨야 한다 (0으로 채우지 말 것).
+  avgPrice: number | null;
+  minPrice: number | null;
+  maxPrice: number | null;
+  totalResults: number | null;
   competitionLevel: string;
   suggestedSupplyPrice: number;
   estimatedMargin: number;
@@ -172,6 +182,11 @@ function calcBlueOceanScore(params: {
   competition: string;
   totalResults?: number;
   avgPrice?: number;
+  /** SearchAd plAvgDepth (avg ad placement depth) — continuous secondary
+   *  competition signal. compIdx alone only has 3 buckets, which collapses
+   *  distinct keywords onto identical scores; this breaks ties within a
+   *  bucket. Higher depth = more advertisers bidding = more contested. */
+  plAvgDepth?: number | null;
 }): number {
   let score = 50; // base
 
@@ -194,6 +209,14 @@ function calcBlueOceanScore(params: {
   if (params.competition === 'low') score += 20;
   else if (params.competition === 'mid') score += 10;
   else if (params.competition === 'high') score -= 5;
+
+  // plAvgDepth: continuous tiebreaker within a compIdx bucket (0~15+ ad slots
+  // typically bid). Higher depth = more advertiser demand = more contested,
+  // so it nudges the score down proportionally instead of leaving keywords
+  // in the same compIdx bucket tied at an identical score.
+  if (typeof params.plAvgDepth === 'number') {
+    score -= Math.min(10, Math.round(params.plAvgDepth / 2));
+  }
 
   // Total search results: fewer = less competition (unavailable since SE05 — skip)
   if (params.totalResults !== undefined) {
@@ -327,23 +350,23 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
       };
     }
 
-    // Step 3: Fetch keyword search volumes (batch 5 at a time)
-    const keywordStats: KeywordStat[] = [];
-    let keywordStatFailures = 0;
-    for (let i = 0; i < uniqueKeywords.length; i += 5) {
-      const batch = uniqueKeywords.slice(i, i + 5);
-      try {
-        const stats = await fetchKeywordStats(batch);
-        keywordStats.push(...stats);
-      } catch {
-        // P1-E(#270): 무음 실패 금지 — 배치 실패는 건너뛰되 카운트는 남긴다.
-        keywordStatFailures += batch.length;
-      }
-      // Rate limit: 300ms between batches
-      if (i + 5 < uniqueKeywords.length) {
-        await new Promise(r => setTimeout(r, 300));
-      }
-    }
+    // Step 3: Fetch keyword search volumes via SearchAd /keywordstool
+    // (P0-3, 2026-08-20): now calls searchad-volume.ts's fetchKeywordVolumes —
+    // the module written for this exact endpoint, with honest "< 10" and
+    // env-missing handling — instead of the separate keyword-api.ts copy.
+    // fetchKeywordVolumes batches internally; null means env-missing or the
+    // very first batch hard-failed (no signal at all), [] means no matches.
+    const volumeRows = await fetchKeywordVolumes(uniqueKeywords);
+    const keywordStatFailures = volumeRows === null ? uniqueKeywords.length : 0;
+    const keywordStats: KeywordVolumeStat[] = (volumeRows ?? []).map(row => ({
+      keyword: row.keyword,
+      pcMonthly: row.monthlyPcQc,
+      mobileMonthly: row.monthlyMobileQc,
+      totalMonthly: row.totalMonthlyQc,
+      competition: row.compIdx === 'LOW' ? 'low' : row.compIdx === 'MEDIUM' ? 'mid' : row.compIdx === 'HIGH' ? 'high' : 'unknown',
+      compIdx: row.compIdx ?? '',
+      plAvgDepth: row.plAvgDepth,
+    }));
 
     // Step 4: Analyze competition for promising keywords
     // Filter: monthly volume >= 300, prefer low/mid competition
@@ -374,6 +397,7 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
       const blueOceanScore = calcBlueOceanScore({
         monthlyVolume: kw.totalMonthly,
         competition: kw.competition,
+        plAvgDepth: kw.plAvgDepth,
       });
 
       const reasons: string[] = [];
@@ -393,12 +417,12 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
         category: matchedCat,
         monthlySearchVolume: kw.totalMonthly,
         competition: kw.competition,
-        // 가격대·상품수는 쇼핑검색 없이는 알 수 없다 — 가짜값 대신 0(미확인)으로
-        // 두고 Step 6에서 top5에 한해 실측 도매가로 보완한다.
-        avgPrice: 0,
-        minPrice: 0,
-        maxPrice: 0,
-        totalResults: 0,
+        // 가격대·상품수는 쇼핑검색 없이는 알 수 없다 — 가짜값(0) 대신 null로
+        // 두고 Step 6에서 top5에 한해 실측 도매가(supplyPriceRange)로 보완한다.
+        avgPrice: null,
+        minPrice: null,
+        maxPrice: null,
+        totalResults: null,
         competitionLevel: COMPETITION_LEVEL_LABEL[kw.competition] ?? 'UNKNOWN',
         suggestedSupplyPrice: 0,
         estimatedMargin: 0,
