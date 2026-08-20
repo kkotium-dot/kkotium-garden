@@ -9,19 +9,25 @@ import { prisma } from '@/lib/prisma';
 import { sendDiscord } from '@/lib/discord';
 import { fetchNaverTrends, type TrendResult } from '@/lib/trend-analyzer';
 import type { KeywordStat } from '@/lib/naver/keyword-api';
-import { fetchKeywordVolumes } from '@/lib/naver/searchad-volume';
+import { fetchKeywordVolumes, fetchRelatedKeywords, type CompIdx } from '@/lib/naver/searchad-volume';
+import { resolveSourcingSeeds } from '@/lib/naver/seed-keywords';
+import { applyDropshipFitness } from '@/lib/policy/dropship-fitness';
 
 // P0-3 (2026-08-20): local shape carrying SearchAd's plAvgDepth alongside the
 // existing KeywordStat fields — used as a continuous competition-strength
 // signal in calcBlueOceanScore (compIdx alone buckets into only 3 tiers,
 // which was collapsing distinct keywords onto identical scores).
 type KeywordVolumeStat = KeywordStat & { plAvgDepth: number | null };
+
+function mapCompIdx(c: CompIdx | null): KeywordStat['competition'] {
+  return c === 'LOW' ? 'low' : c === 'MEDIUM' ? 'mid' : c === 'HIGH' ? 'high' : 'unknown';
+}
 import { matchWholesaleProducts, type WholesaleProduct } from '@/lib/wholesale-matcher';
 import { recoTypeSummary, type RecoTypeTag } from '@/lib/naver/recommendation-type';
 import { resolveRecoTypeTags } from '@/lib/naver/reco-type-resolver';
 import { judgeExclusion } from '@/lib/policy/exclusion-rules';
 import { pickVariant, seasonalGreeting } from '@/lib/notifications/kkotti-variation';
-import { kstLabel, kstShortLabel } from '@/lib/date/kst';
+import { getMarginAdvice } from '@/lib/naver-margin-advisor';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,6 +86,30 @@ export interface SourcingRecommendResult {
   keywordStatFailures?: number;
   competitionAnalysisFailures?: number;
   wholesaleMatchFailures?: number;
+  // P0-4 (2026-08-20): 유형별 5슬롯. opportunities 배열은 하위호환을 위해
+  // 그대로 유지(discord-builder·위젯·weekly-report가 의존) — slots는 추가
+  // 필드다. 화면이 slots로 완전히 전환되기 전까지 구필드는 제거하지 않는다.
+  slots?: SourcingSlot[];
+  seedSource?: 'product_seed' | 'category_fallback';
+}
+
+// ── P0-4: 유형별 5슬롯 ─────────────────────────────────────────────────────────
+export type SlotType = 'seasonal' | 'trending' | 'blue_ocean' | 'niche' | 'honeypot';
+
+export const SLOT_LABELS: Record<SlotType, string> = {
+  seasonal: '시즌 🗓️',
+  trending: '급상승트렌드 📈',
+  blue_ocean: '블루오션 🌊',
+  niche: '니치 💎',
+  honeypot: '꿀통 🍯',
+};
+
+export interface SourcingSlot {
+  type: SlotType;
+  opportunity: SourcingOpportunity | null;
+  // 억지로 채우지 않는다(운영자 지침) — 기준을 못 채우면 null + 사유만 노출.
+  pending?: boolean;
+  pendingMessage?: string;
 }
 
 // ── Category-to-keyword expansion map (P1-E) ─────────────────────────────────
@@ -237,6 +267,141 @@ function calcBlueOceanScore(params: {
   return Math.max(0, Math.min(100, score));
 }
 
+// ── P0-4: 유형별 5슬롯 선별 ────────────────────────────────────────────────────
+// 우선순위(설계안 승인): 시즌 > 급상승트렌드 > 블루오션 > 니치 > 꿀통.
+// 한 키워드는 한 슬롯에만 배정한다(중복 방지). 기준을 못 채운 슬롯은
+// opportunity:null + pendingMessage로 정직하게 노출 — 억지로 채우지 않는다.
+
+/** 최근 7일치 sourcing_opportunity_records에서 키워드별 검색량 이력을 모아
+ *  "최초 관측 대비 +15% 이상 성장"한 후보 중 가장 성장률 높은 것을 고른다.
+ *  이력이 아직 없으면(신규 스캔 초기) pending + 진행 상황 메시지를 반환한다.
+ *  별도 이력 테이블을 만들지 않고 기존 저장 데이터를 재사용한다(운영자 지침). */
+async function pickTrendingCandidate(
+  pool: SourcingOpportunity[],
+): Promise<{ opportunity: SourcingOpportunity | null; pending: boolean; pendingMessage?: string }> {
+  if (pool.length === 0) {
+    return { opportunity: null, pending: true, pendingMessage: '오늘은 후보 키워드가 없습니다.' };
+  }
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  const keywords = pool.map(o => o.keyword);
+  const history = await prisma.sourcingOpportunityRecord.findMany({
+    where: { keyword: { in: keywords }, date: { gte: sevenDaysAgo } },
+    orderBy: { date: 'asc' },
+    select: { keyword: true, date: true, monthlySearchVolume: true },
+  }).catch(() => []);
+
+  const firstSeenByKeyword = new Map<string, number>();
+  const daysCollected = new Set<string>();
+  for (const h of history) {
+    daysCollected.add(h.date.toISOString().slice(0, 10));
+    if (!firstSeenByKeyword.has(h.keyword)) firstSeenByKeyword.set(h.keyword, h.monthlySearchVolume);
+  }
+
+  let best: { opp: SourcingOpportunity; growth: number } | null = null;
+  for (const opp of pool) {
+    const prior = firstSeenByKeyword.get(opp.keyword);
+    if (!prior || prior <= 0) continue;
+    const growth = (opp.monthlySearchVolume - prior) / prior;
+    if (growth >= 0.15 && (!best || growth > best.growth)) best = { opp, growth };
+  }
+
+  if (best) return { opportunity: best.opp, pending: false };
+
+  const collected = daysCollected.size;
+  const pendingMessage = collected === 0
+    ? '데이터 축적 중 — 오늘이 첫 관측이라 추세 비교는 내일부터 가능합니다.'
+    : `데이터 축적 중 — 최근 ${collected}일치 확보, 안정적 추세 판정까지 약 ${Math.max(1, 3 - collected)}일 더 필요합니다.`;
+  return { opportunity: null, pending: true, pendingMessage };
+}
+
+/** 니치: compIdx가 LOW/MEDIUM(=low/mid)이면서 검색량이 후보 풀 하위 40퍼센타일
+ *  이내인 것. 절대값 임계치(예: 500~3000)는 운영자 실제 취급 상품을 탈락시켜
+ *  폐기했다(Desktop 실측: 트렁크정리함 10,850건이 탈락) — 상대 기준으로 교체. */
+function pickNicheCandidate(pool: SourcingOpportunity[]): SourcingOpportunity | null {
+  const eligible = pool.filter(o => o.competition === 'low' || o.competition === 'mid');
+  if (eligible.length === 0) return null;
+  const volumes = eligible.map(o => o.monthlySearchVolume).sort((a, b) => a - b);
+  const p40 = volumes[Math.min(Math.floor(volumes.length * 0.4), volumes.length - 1)];
+  const candidates = eligible.filter(o => o.monthlySearchVolume <= p40);
+  if (candidates.length === 0) return null;
+  return candidates.sort((a, b) => b.blueOceanScore - a.blueOceanScore)[0] ?? null;
+}
+
+/** 시즌: getMarginAdvice의 isSeasonal + seasonMonths에 현재월이 포함되는 것.
+ *  category 필드가 D1 근사치라 완전 일치가 안 될 수 있어 best-effort. */
+function pickSeasonalCandidate(pool: SourcingOpportunity[]): SourcingOpportunity | null {
+  const nowMonth = new Date().getMonth() + 1;
+  for (const opp of pool) {
+    const advice = getMarginAdvice(opp.category, '', '');
+    if (advice.isSeasonal && advice.seasonMonths?.includes(nowMonth)) return opp;
+  }
+  return null;
+}
+
+/** 블루오션/꿀통: 드롭십 적합도(차단 아님, 감점)를 곱한 순위점수로 정렬해
+ *  상위를 고른다. exclude로 이미 배정된 키워드는 후보에서 제외. */
+function pickByDropshipRank(pool: SourcingOpportunity[], exclude: Set<string>): SourcingOpportunity | null {
+  const candidates = pool.filter(o => !exclude.has(o.keyword));
+  if (candidates.length === 0) return null;
+  return candidates
+    .map(o => ({ o, rank: applyDropshipFitness(o.blueOceanScore, o.category) }))
+    .sort((a, b) => b.rank - a.rank)[0]?.o ?? null;
+}
+
+export async function assignSourcingSlots(pool: SourcingOpportunity[]): Promise<SourcingSlot[]> {
+  const used = new Set<string>();
+  const slots: SourcingSlot[] = [];
+
+  const seasonal = pickSeasonalCandidate(pool);
+  if (seasonal) used.add(seasonal.keyword);
+  slots.push({
+    type: 'seasonal',
+    opportunity: seasonal,
+    pending: !seasonal,
+    pendingMessage: seasonal ? undefined : '오늘은 해당 시즌 카테고리가 없습니다.',
+  });
+
+  const trendingResult = await pickTrendingCandidate(pool.filter(o => !used.has(o.keyword)));
+  if (trendingResult.opportunity) used.add(trendingResult.opportunity.keyword);
+  slots.push({ type: 'trending', ...trendingResult });
+
+  const blueOcean = pickByDropshipRank(pool, used);
+  if (blueOcean) used.add(blueOcean.keyword);
+  slots.push({
+    type: 'blue_ocean',
+    opportunity: blueOcean,
+    pending: !blueOcean,
+    pendingMessage: blueOcean ? undefined : '오늘은 블루오션 조건을 충족하는 후보가 없습니다.',
+  });
+
+  const niche = pickNicheCandidate(pool.filter(o => !used.has(o.keyword)));
+  if (niche) used.add(niche.keyword);
+  slots.push({
+    type: 'niche',
+    opportunity: niche,
+    pending: !niche,
+    pendingMessage: niche ? undefined : '오늘은 니치 조건을 충족하는 후보가 없습니다.',
+  });
+
+  // 꿀통: 실측 도매가 기반 마진 판정이 이상적이지만 이 시점엔 아직 도매매칭
+  // 전이다(Step 6이 나중에 실행) — 남은 후보 중 드롭십 적합도 순위 최고를
+  // 잠정 배정한다. Step 6 완료 후 opportunity.supplyPriceRange가 채워진다.
+  const honeypot = pickByDropshipRank(pool, used);
+  if (honeypot) used.add(honeypot.keyword);
+  slots.push({
+    type: 'honeypot',
+    opportunity: honeypot,
+    pending: !honeypot,
+    pendingMessage: honeypot ? undefined : '오늘은 남은 후보가 없습니다.',
+  });
+
+  return slots;
+}
+
 // ── Groq AI Insight Generator ────────────────────────────────────────────────
 async function generateAiInsight(
   opportunities: SourcingOpportunity[],
@@ -317,58 +482,84 @@ Respond ONLY in Korean JSON (no markdown, no backticks):
 
 // ── Main Sourcing Recommendation Engine ──────────────────────────────────────
 export async function generateSourcingRecommendations(): Promise<SourcingRecommendResult> {
-  const today = kstLabel();
+  const today = new Date().toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
+  });
 
   try {
-    // Step 1: Get trending categories from DataLab
+    // Step 1: Get trending categories from DataLab — P0-4(2026-08-20)부터는
+    // 후보 발굴이 아니라 시즌성·급상승 판정의 보조 신호로만 쓴다(설계안 승인).
     const trends: TrendResult = await fetchNaverTrends();
     const trendCategories = trends.trendCategories.length > 0
       ? trends.trendCategories
       : ['가구/인테리어']; // default for KKOTIUM
 
-    // Step 2: Expand categories to search keywords
-    const candidateKeywords: string[] = [];
-    for (const cat of trendCategories) {
-      const expanded = expandCategoryToKeywords(cat);
-      candidateKeywords.push(...expanded);
+    // Step 2 (P0-4): 취급 씨앗(Product 파생 + 운영자 등록) → 검색광고
+    // 연관확장(fetchRelatedKeywords, 최대 120건, 이미 검색량·compIdx·
+    // plAvgDepth 포함)이 1차 후보 소스다. 씨앗이 없거나(신규 스토어) 검색광고
+    // 응답이 비면 기존 DataLab 카테고리 확장으로 폴백한다 — 조용히 빈 결과를
+    // 내지 않는다.
+    let keywordStats: KeywordVolumeStat[] = [];
+    let keywordStatFailures = 0;
+    let seedSource: 'product_seed' | 'category_fallback' = 'category_fallback';
+
+    const seeds = await resolveSourcingSeeds();
+    if (seeds.length > 0) {
+      const related = await fetchRelatedKeywords(seeds.map(s => s.keyword), { maxRows: 120 });
+      if (related === null) {
+        keywordStatFailures = seeds.length;
+      } else if (related.length > 0) {
+        seedSource = 'product_seed';
+        keywordStats = related.map(row => ({
+          keyword: row.keyword,
+          pcMonthly: row.monthlyPcQc,
+          mobileMonthly: row.monthlyMobileQc,
+          totalMonthly: row.totalMonthlyQc,
+          competition: mapCompIdx(row.compIdx),
+          compIdx: row.compIdx ?? '',
+          plAvgDepth: row.plAvgDepth,
+        }));
+      }
     }
 
-    // Also add trend keywords directly
-    candidateKeywords.push(...trends.trendKeywords.slice(0, 5));
+    if (keywordStats.length === 0) {
+      // Fallback: legacy DataLab category expansion path.
+      const candidateKeywords: string[] = [];
+      for (const cat of trendCategories) {
+        candidateKeywords.push(...expandCategoryToKeywords(cat));
+      }
+      candidateKeywords.push(...trends.trendKeywords.slice(0, 5));
+      const uniqueKeywords = [...new Set(candidateKeywords)].slice(0, 15);
 
-    // Deduplicate
-    const uniqueKeywords = [...new Set(candidateKeywords)].slice(0, 15);
+      if (uniqueKeywords.length === 0) {
+        return {
+          date: today,
+          trendSource: trends.source,
+          trendCategories,
+          opportunities: [],
+          error: 'No candidate keywords found from seeds or trend data',
+        };
+      }
 
-    if (uniqueKeywords.length === 0) {
-      return {
-        date: today,
-        trendSource: trends.source,
-        trendCategories,
-        opportunities: [],
-        error: 'No candidate keywords found from trend data',
-      };
+      // (P0-3, 2026-08-20): fetchKeywordVolumes — same searchad-volume.ts
+      // wrapper as the seed path, with honest "< 10" and env-missing handling.
+      const volumeRows = await fetchKeywordVolumes(uniqueKeywords);
+      keywordStatFailures = volumeRows === null ? uniqueKeywords.length : 0;
+      keywordStats = (volumeRows ?? []).map(row => ({
+        keyword: row.keyword,
+        pcMonthly: row.monthlyPcQc,
+        mobileMonthly: row.monthlyMobileQc,
+        totalMonthly: row.totalMonthlyQc,
+        competition: mapCompIdx(row.compIdx),
+        compIdx: row.compIdx ?? '',
+        plAvgDepth: row.plAvgDepth,
+      }));
     }
-
-    // Step 3: Fetch keyword search volumes via SearchAd /keywordstool
-    // (P0-3, 2026-08-20): now calls searchad-volume.ts's fetchKeywordVolumes —
-    // the module written for this exact endpoint, with honest "< 10" and
-    // env-missing handling — instead of the separate keyword-api.ts copy.
-    // fetchKeywordVolumes batches internally; null means env-missing or the
-    // very first batch hard-failed (no signal at all), [] means no matches.
-    const volumeRows = await fetchKeywordVolumes(uniqueKeywords);
-    const keywordStatFailures = volumeRows === null ? uniqueKeywords.length : 0;
-    const keywordStats: KeywordVolumeStat[] = (volumeRows ?? []).map(row => ({
-      keyword: row.keyword,
-      pcMonthly: row.monthlyPcQc,
-      mobileMonthly: row.monthlyMobileQc,
-      totalMonthly: row.totalMonthlyQc,
-      competition: row.compIdx === 'LOW' ? 'low' : row.compIdx === 'MEDIUM' ? 'mid' : row.compIdx === 'HIGH' ? 'high' : 'unknown',
-      compIdx: row.compIdx ?? '',
-      plAvgDepth: row.plAvgDepth,
-    }));
 
     // Step 4: Analyze competition for promising keywords
     // Filter: monthly volume >= 300, prefer low/mid competition
+    // P0-4(2026-08-20): cap raised 8 → 24 — 5개 유형 슬롯(assignSourcingSlots)이
+    // 서로 다른 후보를 골라야 하므로 후보 풀이 8개면 다양성이 부족했다.
     const promising = keywordStats
       .filter(k => k.totalMonthly >= 300)
       .sort((a, b) => {
@@ -377,7 +568,7 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
         const bScore = b.totalMonthly * (b.competition === 'low' ? 3 : b.competition === 'mid' ? 2 : 1);
         return bScore - aScore;
       })
-      .slice(0, 8);
+      .slice(0, 24);
 
     // SE05(#324): 네이버 쇼핑검색 API가 영구 종료돼 analyzeCompetition()은 항상
     // 실패한다 — 더 이상 호출하지 않는다. 블루오션 판정은 검색량 + 검색광고
@@ -449,20 +640,40 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
     opportunities.length = 0;
     opportunities.push(...filteredOpportunities);
 
+    // Step 4.6 (P0-4, 2026-08-20): 유형별 5슬롯 선별 — blueOceanScore 단순
+    // top-5 대신 시즌/급상승/블루오션/니치/꿀통 각 1건을 고른다. 기준 미충족
+    // 슬롯은 opportunity:null(억지로 채우지 않음). 이후 단계(AI 인사이트,
+    // 도매매칭)는 opportunities 전체가 아니라 이 선택 결과에만 적용한다 —
+    // API 호출 비용은 기존과 동일(최대 5건).
+    const slots = await assignSourcingSlots(opportunities);
+    const selectedFromSlots = slots
+      .map(s => s.opportunity)
+      .filter((o): o is SourcingOpportunity => !!o);
+    const selectedKeywords = new Set(selectedFromSlots.map(o => o.keyword));
+    // 슬롯이 일부 비어(pending) selectedFromSlots가 5건 미만이면, 기존
+    // 소비처(discord-builder·위젯·weekly-report)가 기대하는 "top 5" 형태를
+    // 유지하기 위해 blueOceanScore 상위 나머지로 채운다.
+    const selectedOpportunities = [...selectedFromSlots];
+    for (const opp of opportunities) {
+      if (selectedOpportunities.length >= 5) break;
+      if (selectedKeywords.has(opp.keyword)) continue;
+      selectedOpportunities.push(opp);
+      selectedKeywords.add(opp.keyword);
+    }
+
     // Step 5: Generate AI insights for top opportunities
-    const aiResult = await generateAiInsight(opportunities, trendCategories);
+    const aiResult = await generateAiInsight(selectedOpportunities, trendCategories);
 
     // Apply AI insights to each opportunity
-    for (const opp of opportunities) {
+    for (const opp of selectedOpportunities) {
       const tip = aiResult.perItem.get(opp.keyword);
       if (tip) opp.aiInsight = tip;
     }
 
     // Step 6 (E-8): Search wholesale platforms for actual products
-    // Match top 5 keywords against Domeggook (min qty=1 filter) + Domemae
-    const top5Opps = opportunities.slice(0, 5);
+    // Match selected (slot-assigned) keywords against Domeggook (min qty=1) + Domemae
     let wholesaleMatchFailures = 0;
-    for (const opp of top5Opps) {
+    for (const opp of selectedOpportunities) {
       try {
         const wholesaleResult = await matchWholesaleProducts(opp.keyword);
         // P1-A: 개별 도매 상품명도 브랜드 휴리스틱으로 한 번 더 거른다(키워드 통과 ≠ 실상품 통과).
@@ -496,7 +707,9 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
       date: today,
       trendSource: trends.source,
       trendCategories,
-      opportunities: opportunities.slice(0, 5), // top 5 only
+      opportunities: selectedOpportunities, // 슬롯 배정 결과 (최대 5건) — 하위호환 형태 유지
+      slots,
+      seedSource,
       aiSummary: aiResult.summary || undefined,
       excludedCount: excludedSamples.length,
       excludedSamples: excludedSamples.slice(0, 10),
@@ -560,7 +773,7 @@ export async function runSourcingScan(opts: {
         discordSent: false,
         skippedExistingCount: alreadyToday,
         scan: {
-          date: kstShortLabel(todayGuard),
+          date: todayGuard.toLocaleDateString('ko-KR'),
           trendSource: 'skipped',
           trendCategories: [],
           opportunities: [],
