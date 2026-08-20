@@ -33,6 +33,7 @@ import {
   getSeasonContext,
 } from '@/lib/discord';
 import { computeOpsDigestSignals, computeRecommendation } from '@/lib/notifications/daily-signals';
+import { kstLabel } from '@/lib/date/kst';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -85,9 +86,7 @@ export async function POST(req: NextRequest) {
     const { publishReady, revival, zombie, zombieDetected } = opsSignals;
     const { top5, seasonTop2, trendNote, trendSource } = recommendation;
 
-    const today = new Date().toLocaleDateString('ko-KR', {
-      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
-    });
+    const today = kstLabel();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
     const recommendEmbed = buildRecommendEmbed({ today, top3: top5, season, seasonTop2, appUrl, trendNote });

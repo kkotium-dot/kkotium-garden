@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { sendDiscord, buildRecommendEmbed, getSeasonContext } from '@/lib/discord';
+import { kstLabel } from '@/lib/date/kst';
 
 
 export const dynamic = 'force-dynamic';
@@ -42,9 +43,7 @@ export async function GET(req: Request) {
           .slice(0, 2)
       : [];
 
-    const today = new Date().toLocaleDateString('ko-KR', {
-      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
-    });
+    const today = kstLabel();
 
     const embed = buildRecommendEmbed({
       today,

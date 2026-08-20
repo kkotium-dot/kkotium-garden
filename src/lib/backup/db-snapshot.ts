@@ -15,6 +15,7 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { prisma } from '@/lib/prisma';
+import { kstToday } from '@/lib/date/kst';
 
 const BUCKET = 'db-backups';
 const RETENTION_WEEKS = 4;
@@ -66,7 +67,7 @@ export interface SnapshotResult {
 }
 
 export async function dumpAndUploadWeeklySnapshot(): Promise<SnapshotResult> {
-  const dateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const dateStr = kstToday(); // YYYY-MM-DD, KST 기준(크론은 23:00 UTC=08:00 KST에 돎)
 
   const [product, order, inventorySnapshot, sellerOverrides] = await Promise.all([
     prisma.product.findMany().catch((e) => { console.warn('[db-snapshot] product dump failed:', e); return []; }),

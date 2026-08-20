@@ -3,10 +3,11 @@
 
 import { NextResponse } from 'next/server';
 import { sendDiscord, DISCORD_WEBHOOKS, buildStockAlertEmbed, buildPriceChangeEmbed, buildScoreDropEmbed, buildWeeklyReportEmbed } from '@/lib/discord';
+import { kstDateLabel } from '@/lib/date/kst';
 
 
 export const dynamic = 'force-dynamic';
-const TEST_DATE = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+const TEST_DATE = kstDateLabel(new Date(), { year: 'numeric', month: 'long', day: 'numeric' });
 
 export async function GET() {
   const results: Record<string, { ok: boolean; status?: number; error?: string }> = {};

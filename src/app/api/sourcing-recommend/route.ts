@@ -10,6 +10,7 @@ import {
   runSourcingScan,
   type SourcingRecommendResult,
 } from '@/lib/sourcing-recommender';
+import { kstShortLabel } from '@/lib/date/kst';
 
 export const dynamic = 'force-dynamic';
 // 근본수정(2026-08-11, #338): 이 라우트가 실제 무거운 작업(DataLab+검색량+AI+
@@ -75,7 +76,7 @@ export async function GET() {
 
     if (fullRecords.length > 0) {
       const result: SourcingRecommendResult = {
-        date: todayStart.toLocaleDateString('ko-KR'),
+        date: kstShortLabel(todayStart),
         trendSource: 'db-full',
         trendCategories: [...new Set(fullRecords.map(r => r.category).filter((c): c is string => !!c))],
         opportunities: fullRecords.map(r => ({
@@ -122,7 +123,7 @@ export async function GET() {
     if (dbResult.length > 0) {
       // Reconstruct from DB
       const result: SourcingRecommendResult = {
-        date: todayStart.toLocaleDateString('ko-KR'),
+        date: kstShortLabel(todayStart),
         trendSource: 'db-cache',
         trendCategories: [],
         opportunities: dbResult.map(r => ({
