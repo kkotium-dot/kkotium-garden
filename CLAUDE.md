@@ -3,6 +3,8 @@
 > **팀 구조**: 이 프로젝트는 1인 개발이 아니라 **대표님(운영자) + Claude(Desktop 설계·검증 / Code 구현 / 향후 확장 시 추가 에이전트)** 협업 체계다. 역할은 나뉘지만 최종 결정·승인은 항상 운영자. 에이전트가 늘어나면 이 구조도 함께 갱신한다(#320 참조).
 >
 > 착수 전 필독: `docs/CORE_PRINCIPLES.md`(절대 원칙 요약·전 레인 관문) · `docs/DOMAIN_FACTS.md`(이 앱이 무엇인가) · `docs/PRODUCT_LIFECYCLE_FLOW.md`(상품이 지나는 길)
+> **보고 전 필독: `docs/playbook/COMPLETION_GATE.md` — 완료 판정 5게이트(커밋·병합·연결·데이터·실행). "완료"라고 말하기 전 반드시 통과. 해시 없는 완료 보고는 완료가 아니다.**
+>
 > 실시간 진행 상태는 `docs/plan/PROGRESS.md` / `ROADMAP.md` / `SESSION_LOG.md` / `TASK_BRIDGE.md`.
 > 이 파일의 전문·이관 이력은 `docs/design/CLAUDE_MD_REDUCTION_CANDIDATES_2026-07-28.md`(v2) 참조.
 
