@@ -405,6 +405,11 @@ export interface SourcingOpportunityItem {
   // 경로에서 채워진다 — 위젯이 상태 칩 표시·PATCH 대상 식별에 쓴다.
   recordId?: string;
   operatorStatus?: 'interested' | 'sourcing_started' | 'skipped' | null;
+  // 렌즈 통일(2026-08-27, #295): sourcing-lenses.ts classifySourcingLenses()
+  // 결과 — 위젯 배지(황금🏆·스테디📚 등)용. fresh scan에서만 채워짐(db 재구성
+  // 경로는 다른 enrichment 필드처럼 생략될 수 있음).
+  lensMatches?: { lens: string; emoji: string; label: string }[];
+  redOceanWarning?: { emoji: string; label: string; reasons: string[] } | null;
 }
 
 export interface SourcingRecommendApiData {

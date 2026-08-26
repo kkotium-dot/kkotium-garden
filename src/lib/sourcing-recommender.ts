@@ -7,7 +7,16 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { sendDiscord } from '@/lib/discord';
-import { fetchNaverTrends, type TrendResult } from '@/lib/trend-analyzer';
+import { fetchNaverTrends, fetchCategoryTrendSignals, type TrendResult, type CategoryTrendSignal } from '@/lib/trend-analyzer';
+import {
+  classifySourcingLenses,
+  allocateByLens,
+  LENS_DAILY_QUOTA,
+  LENS_META,
+  type SourcingLens,
+  type LensAllocationCandidate,
+  type RedOceanWarning,
+} from '@/lib/sourcing-lenses';
 import type { KeywordStat } from '@/lib/naver/keyword-api';
 import { fetchKeywordVolumes, fetchRelatedKeywords, type CompIdx } from '@/lib/naver/searchad-volume';
 import { resolveSourcingSeeds } from '@/lib/naver/seed-keywords';
@@ -27,7 +36,6 @@ import { recoTypeSummary, type RecoTypeTag } from '@/lib/naver/recommendation-ty
 import { resolveRecoTypeTags } from '@/lib/naver/reco-type-resolver';
 import { judgeExclusion } from '@/lib/policy/exclusion-rules';
 import { pickVariant, seasonalGreeting } from '@/lib/notifications/kkotti-variation';
-import { getMarginAdvice } from '@/lib/naver-margin-advisor';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,6 +78,13 @@ export interface SourcingOpportunity {
   // 표시하고 PATCH 대상을 식별하는 데 쓴다. 스캔 생성 시점엔 없다(undefined).
   recordId?: string;
   operatorStatus?: 'interested' | 'sourcing_started' | 'skipped' | null;
+  // 렌즈 통일(2026-08-27, #295): sourcing-lenses.ts classifySourcingLenses()
+  // 결과를 그대로 붙인다(위젯 배지·디스코드 요약용) — 판정 로직은 여기서
+  // 다시 만들지 않는다. fresh scan에서만 채워짐 — db 재구성 경로(db-full/
+  // db-cache)는 blueOceanBase 등 기존 enrichment 필드와 동일하게 생략한다
+  // (#325 정직한 부분 enrichment, DB 컬럼 추가는 이번 스코프 밖).
+  lensMatches?: { lens: SourcingLens; emoji: string; label: string }[];
+  redOceanWarning?: RedOceanWarning | null;
 }
 
 export interface SourcingRecommendResult {
@@ -86,30 +101,32 @@ export interface SourcingRecommendResult {
   keywordStatFailures?: number;
   competitionAnalysisFailures?: number;
   wholesaleMatchFailures?: number;
-  // P0-4 (2026-08-20): 유형별 5슬롯. opportunities 배열은 하위호환을 위해
-  // 그대로 유지(discord-builder·위젯·weekly-report가 의존) — slots는 추가
-  // 필드다. 화면이 slots로 완전히 전환되기 전까지 구필드는 제거하지 않는다.
+  // P0-4 (2026-08-20) → 렌즈 통일(2026-08-27): 유형별 슬롯. opportunities
+  // 배열은 하위호환을 위해 그대로 유지(위젯·weekly-report가 의존) — slots는
+  // 추가 필드다.
   slots?: SourcingSlot[];
   seedSource?: 'product_seed' | 'category_fallback';
 }
 
-// ── P0-4: 유형별 5슬롯 ─────────────────────────────────────────────────────────
-export type SlotType = 'seasonal' | 'trending' | 'blue_ocean' | 'niche' | 'honeypot';
+// ── 유형별 슬롯 — sourcing-lenses.ts 단일 권위(#295, 2026-08-27) ────────────────
+// 여기서 렌즈 이름을 다시 정의하지 않는다 — SourcingLens를 그대로 재수출한다.
+// 구 SlotType('trending'·'blue_ocean' 5종)은 폐기, SourcingLens 7종으로 통일
+// (rising·seasonal·niche·blueOcean·honeypot·golden·steady).
+export type SlotType = SourcingLens;
 
-export const SLOT_LABELS: Record<SlotType, string> = {
-  seasonal: '시즌 🗓️',
-  trending: '급상승트렌드 📈',
-  blue_ocean: '블루오션 🌊',
-  niche: '니치 💎',
-  honeypot: '꿀통 🍯',
-};
+export const SLOT_LABELS: Record<SlotType, string> = Object.fromEntries(
+  (Object.keys(LENS_META) as SourcingLens[]).map((lens) => [lens, `${LENS_META[lens].label} ${LENS_META[lens].emoji}`]),
+) as Record<SlotType, string>;
 
 export interface SourcingSlot {
   type: SlotType;
-  opportunity: SourcingOpportunity | null;
-  // 억지로 채우지 않는다(운영자 지침) — 기준을 못 채우면 null + 사유만 노출.
-  pending?: boolean;
+  // quota만큼(0~n) — 부족하면 그만큼만 채우고 억지로 채우지 않는다(운영자 지침).
+  opportunities: SourcingOpportunity[];
+  quota: number;
+  pending: boolean; // quota 미달이면 true (#325 정직한 미달 표시)
   pendingMessage?: string;
+  // 대표(첫 opportunity) 기준 레드오션 경고 — 발굴 렌즈가 아니라 배지용(#327).
+  redOceanWarning?: RedOceanWarning | null;
 }
 
 // ── Category-to-keyword expansion map (P1-E) ─────────────────────────────────
@@ -267,136 +284,95 @@ function calcBlueOceanScore(params: {
   return Math.max(0, Math.min(100, score));
 }
 
-// ── P0-4: 유형별 5슬롯 선별 ────────────────────────────────────────────────────
-// 우선순위(설계안 승인): 시즌 > 급상승트렌드 > 블루오션 > 니치 > 꿀통.
-// 한 키워드는 한 슬롯에만 배정한다(중복 방지). 기준을 못 채운 슬롯은
-// opportunity:null + pendingMessage로 정직하게 노출 — 억지로 채우지 않는다.
+// ── 유형별 슬롯 선별 — sourcing-lenses.ts 단일 권위 배선(#295, 2026-08-27) ──────
+// F3 해소: classifySourcingLenses()·allocateByLens()·LENS_DAILY_QUOTA는
+// 로드맵 1b(rev118)에서 만들어졌지만 지금까지 아무 cron/route도 호출하지
+// 않는 죽은 코드였다. 이 함수 하나가 그 진입점이다 — 여기서 렌즈 판정
+// 로직을 다시 만들지 않고 순수하게 위임만 한다.
 
-/** 최근 7일치 sourcing_opportunity_records에서 키워드별 검색량 이력을 모아
- *  "최초 관측 대비 +15% 이상 성장"한 후보 중 가장 성장률 높은 것을 고른다.
- *  이력이 아직 없으면(신규 스캔 초기) pending + 진행 상황 메시지를 반환한다.
- *  별도 이력 테이블을 만들지 않고 기존 저장 데이터를 재사용한다(운영자 지침). */
-async function pickTrendingCandidate(
-  pool: SourcingOpportunity[],
-): Promise<{ opportunity: SourcingOpportunity | null; pending: boolean; pendingMessage?: string }> {
-  if (pool.length === 0) {
-    return { opportunity: null, pending: true, pendingMessage: '오늘은 후보 키워드가 없습니다.' };
-  }
-
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
-
-  const keywords = pool.map(o => o.keyword);
-  const history = await prisma.sourcingOpportunityRecord.findMany({
-    where: { keyword: { in: keywords }, date: { gte: sevenDaysAgo } },
-    orderBy: { date: 'asc' },
-    select: { keyword: true, date: true, monthlySearchVolume: true },
-  }).catch(() => []);
-
-  const firstSeenByKeyword = new Map<string, number>();
-  const daysCollected = new Set<string>();
-  for (const h of history) {
-    daysCollected.add(h.date.toISOString().slice(0, 10));
-    if (!firstSeenByKeyword.has(h.keyword)) firstSeenByKeyword.set(h.keyword, h.monthlySearchVolume);
-  }
-
-  let best: { opp: SourcingOpportunity; growth: number } | null = null;
-  for (const opp of pool) {
-    const prior = firstSeenByKeyword.get(opp.keyword);
-    if (!prior || prior <= 0) continue;
-    const growth = (opp.monthlySearchVolume - prior) / prior;
-    if (growth >= 0.15 && (!best || growth > best.growth)) best = { opp, growth };
-  }
-
-  if (best) return { opportunity: best.opp, pending: false };
-
-  const collected = daysCollected.size;
-  const pendingMessage = collected === 0
-    ? '데이터 축적 중 — 오늘이 첫 관측이라 추세 비교는 내일부터 가능합니다.'
-    : `데이터 축적 중 — 최근 ${collected}일치 확보, 안정적 추세 판정까지 약 ${Math.max(1, 3 - collected)}일 더 필요합니다.`;
-  return { opportunity: null, pending: true, pendingMessage };
-}
-
-/** 니치: compIdx가 LOW/MEDIUM(=low/mid)이면서 검색량이 후보 풀 하위 40퍼센타일
- *  이내인 것. 절대값 임계치(예: 500~3000)는 운영자 실제 취급 상품을 탈락시켜
- *  폐기했다(Desktop 실측: 트렁크정리함 10,850건이 탈락) — 상대 기준으로 교체. */
-function pickNicheCandidate(pool: SourcingOpportunity[]): SourcingOpportunity | null {
-  const eligible = pool.filter(o => o.competition === 'low' || o.competition === 'mid');
-  if (eligible.length === 0) return null;
-  const volumes = eligible.map(o => o.monthlySearchVolume).sort((a, b) => a - b);
-  const p40 = volumes[Math.min(Math.floor(volumes.length * 0.4), volumes.length - 1)];
-  const candidates = eligible.filter(o => o.monthlySearchVolume <= p40);
-  if (candidates.length === 0) return null;
-  return candidates.sort((a, b) => b.blueOceanScore - a.blueOceanScore)[0] ?? null;
-}
-
-/** 시즌: getMarginAdvice의 isSeasonal + seasonMonths에 현재월이 포함되는 것.
- *  category 필드가 D1 근사치라 완전 일치가 안 될 수 있어 best-effort. */
-function pickSeasonalCandidate(pool: SourcingOpportunity[]): SourcingOpportunity | null {
-  const nowMonth = new Date().getMonth() + 1;
-  for (const opp of pool) {
-    const advice = getMarginAdvice(opp.category, '', '');
-    if (advice.isSeasonal && advice.seasonMonths?.includes(nowMonth)) return opp;
-  }
-  return null;
-}
-
-/** 블루오션/꿀통: 드롭십 적합도(차단 아님, 감점)를 곱한 순위점수로 정렬해
- *  상위를 고른다. exclude로 이미 배정된 키워드는 후보에서 제외. */
-function pickByDropshipRank(pool: SourcingOpportunity[], exclude: Set<string>): SourcingOpportunity | null {
-  const candidates = pool.filter(o => !exclude.has(o.keyword));
-  if (candidates.length === 0) return null;
-  return candidates
-    .map(o => ({ o, rank: applyDropshipFitness(o.blueOceanScore, o.category) }))
-    .sort((a, b) => b.rank - a.rank)[0]?.o ?? null;
+/** blueOcean·honeypot처럼 여러 후보가 quota를 다투는 슬롯 내부에서, 이미
+ *  선택된 후보들 사이의 표시 순서만 드롭십 적합도로 재정렬한다(차단 아님,
+ *  감점 — exclusion-rules.ts와 분리 유지). allocateByLens의 선정 자체는
+ *  CategoryScore.totalScore 기준이라 이건 "누가 뽑히는가"가 아니라
+ *  "뽑힌 후보 중 무엇을 먼저 보여줄까"만 바꾼다. */
+function reorderByDropshipFitness(items: SourcingOpportunity[]): SourcingOpportunity[] {
+  return [...items].sort(
+    (a, b) => applyDropshipFitness(b.blueOceanScore, b.category) - applyDropshipFitness(a.blueOceanScore, a.category),
+  );
 }
 
 export async function assignSourcingSlots(pool: SourcingOpportunity[]): Promise<SourcingSlot[]> {
-  const used = new Set<string>();
-  const slots: SourcingSlot[] = [];
+  const nowMonth = new Date().getMonth() + 1;
 
-  const seasonal = pickSeasonalCandidate(pool);
-  if (seasonal) used.add(seasonal.keyword);
-  slots.push({
-    type: 'seasonal',
-    opportunity: seasonal,
-    pending: !seasonal,
-    pendingMessage: seasonal ? undefined : '오늘은 해당 시즌 카테고리가 없습니다.',
+  // D1별 급상승/스테디 신호 — fetchCategoryTrendSignals()를 이번에 처음 실제
+  // 호출한다(이전엔 정의만 있고 호출부가 없었다, F3).
+  const trendSignals = await fetchCategoryTrendSignals().catch(() => [] as CategoryTrendSignal[]);
+  const signalByD1 = new Map(trendSignals.map((s) => [s.name, s]));
+
+  const candidates: LensAllocationCandidate<SourcingOpportunity>[] = pool.map((opp) => {
+    const classification = classifySourcingLenses({
+      d1: opp.category,
+      d2: '',
+      d3: '',
+      // Step 6(도매매칭) 이전 시점이라 suggestedSupplyPrice는 아직 0일 수
+      // 있다 — 0을 실제 도매가처럼 넘기지 않고 미지값(null)으로 처리한다.
+      supplierPrice: opp.suggestedSupplyPrice || null,
+      // category-trend-cache(D1 SEO trend)는 이 배선의 스코프 밖 — null이면
+      // computeCategoryScore가 SEO를 중립 처리한다(가짜 신호 없음).
+      trend: null,
+      trendSignal: signalByD1.get(opp.category) ?? null,
+      nowMonth,
+      blueOceanScore: opp.blueOceanScore,
+      uniqueSellersInTop: opp.uniqueSellersInTop ?? null,
+      competitionLevel: opp.competition,
+    });
+
+    // 위젯 배지·디스코드 렌즈요약용으로 분류 결과를 opportunity에 그대로
+    // 붙인다 — 여기서 별도 배지 판정을 다시 만들지 않는다(#295).
+    opp.lensMatches = classification.matches.map((m) => ({ lens: m.lens, emoji: m.emoji, label: m.label }));
+    opp.redOceanWarning = classification.redOceanWarning;
+
+    return { item: opp, id: opp.keyword, classification };
   });
 
-  const trendingResult = await pickTrendingCandidate(pool.filter(o => !used.has(o.keyword)));
-  if (trendingResult.opportunity) used.add(trendingResult.opportunity.keyword);
-  slots.push({ type: 'trending', ...trendingResult });
+  const { byLens, unfilledLenses } = allocateByLens(candidates, LENS_DAILY_QUOTA);
+  const shortByLens = new Map(unfilledLenses.map((u) => [u.lens, u.short]));
 
-  const blueOcean = pickByDropshipRank(pool, used);
-  if (blueOcean) used.add(blueOcean.keyword);
-  slots.push({
-    type: 'blue_ocean',
-    opportunity: blueOcean,
-    pending: !blueOcean,
-    pendingMessage: blueOcean ? undefined : '오늘은 블루오션 조건을 충족하는 후보가 없습니다.',
+  const quotaLenses = Object.keys(LENS_DAILY_QUOTA) as Array<Exclude<SourcingLens, 'golden'>>;
+  const slots: SourcingSlot[] = quotaLenses.map((lens) => {
+    let opportunities = byLens[lens] ?? [];
+    if (lens === 'blueOcean' || lens === 'honeypot') {
+      opportunities = reorderByDropshipFitness(opportunities);
+    }
+    const quota = LENS_DAILY_QUOTA[lens];
+    const short = shortByLens.get(lens) ?? 0;
+    return {
+      type: lens,
+      opportunities,
+      quota,
+      pending: short > 0,
+      pendingMessage: opportunities.length === 0
+        ? `오늘은 ${LENS_META[lens].label} 조건을 충족하는 후보가 없습니다.`
+        : short > 0
+          ? `${LENS_META[lens].label} 후보 ${opportunities.length}/${quota}건만 확보됐습니다.`
+          : undefined,
+      redOceanWarning: opportunities.find((o) => o.redOceanWarning)?.redOceanWarning ?? null,
+    };
   });
 
-  const niche = pickNicheCandidate(pool.filter(o => !used.has(o.keyword)));
-  if (niche) used.add(niche.keyword);
+  // 🏆 황금키워드 — 전용 quota가 없는 오버레이 렌즈(설계 §3-0: 다른 렌즈와
+  // 중복 가능한 "대형 기회" 태그). 전체 후보 중 golden 매치 + totalScore
+  // 최고 1건을 대표로 노출한다(이미 다른 슬롯에 뽑혔어도 무관 — 오버레이).
+  const goldenTop = candidates
+    .filter((c) => c.classification.matches.some((m) => m.lens === 'golden'))
+    .sort((a, b) => b.classification.score.totalScore - a.classification.score.totalScore)[0];
   slots.push({
-    type: 'niche',
-    opportunity: niche,
-    pending: !niche,
-    pendingMessage: niche ? undefined : '오늘은 니치 조건을 충족하는 후보가 없습니다.',
-  });
-
-  // 꿀통: 실측 도매가 기반 마진 판정이 이상적이지만 이 시점엔 아직 도매매칭
-  // 전이다(Step 6이 나중에 실행) — 남은 후보 중 드롭십 적합도 순위 최고를
-  // 잠정 배정한다. Step 6 완료 후 opportunity.supplyPriceRange가 채워진다.
-  const honeypot = pickByDropshipRank(pool, used);
-  if (honeypot) used.add(honeypot.keyword);
-  slots.push({
-    type: 'honeypot',
-    opportunity: honeypot,
-    pending: !honeypot,
-    pendingMessage: honeypot ? undefined : '오늘은 남은 후보가 없습니다.',
+    type: 'golden',
+    opportunities: goldenTop ? [goldenTop.item] : [],
+    quota: 1,
+    pending: !goldenTop,
+    pendingMessage: goldenTop ? undefined : '오늘은 황금키워드(검색+마진 모두 高) 조건을 충족하는 후보가 없습니다.',
+    redOceanWarning: goldenTop?.item.redOceanWarning ?? null,
   });
 
   return slots;
@@ -640,22 +616,28 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
     opportunities.length = 0;
     opportunities.push(...filteredOpportunities);
 
-    // Step 4.6 (P0-4, 2026-08-20): 유형별 5슬롯 선별 — blueOceanScore 단순
-    // top-5 대신 시즌/급상승/블루오션/니치/꿀통 각 1건을 고른다. 기준 미충족
-    // 슬롯은 opportunity:null(억지로 채우지 않음). 이후 단계(AI 인사이트,
-    // 도매매칭)는 opportunities 전체가 아니라 이 선택 결과에만 적용한다 —
-    // API 호출 비용은 기존과 동일(최대 5건).
+    // Step 4.6 (P0-4 → 렌즈 통일 2026-08-27): sourcing-lenses.ts
+    // LENS_DAILY_QUOTA(급상승2·시즌2·니치2·블루오션2·꿀통1·스테디1=10)로
+    // 유형별 배분한다. 기준 미충족 슬롯은 정직하게 미달 표시(억지로 채우지
+    // 않음). 이후 단계(AI 인사이트, 도매매칭)는 opportunities 전체가 아니라
+    // 이 선택 결과에만 적용한다.
     const slots = await assignSourcingSlots(opportunities);
-    const selectedFromSlots = slots
-      .map(s => s.opportunity)
-      .filter((o): o is SourcingOpportunity => !!o);
-    const selectedKeywords = new Set(selectedFromSlots.map(o => o.keyword));
-    // 슬롯이 일부 비어(pending) selectedFromSlots가 5건 미만이면, 기존
-    // 소비처(discord-builder·위젯·weekly-report)가 기대하는 "top 5" 형태를
+    const selectedKeywords = new Set<string>();
+    const selectedFromSlots: SourcingOpportunity[] = [];
+    for (const slot of slots) {
+      for (const o of slot.opportunities) {
+        if (selectedKeywords.has(o.keyword)) continue; // golden 오버레이 등 중복 제거
+        selectedKeywords.add(o.keyword);
+        selectedFromSlots.push(o);
+      }
+    }
+    // 슬롯이 일부 비어(quota 미달) selectedFromSlots가 목표치(§3-0: 일일 10건)
+    // 미만이면, 기존 소비처(위젯·weekly-report)가 기대하는 "다다익선" 형태를
     // 유지하기 위해 blueOceanScore 상위 나머지로 채운다.
+    const DAILY_TARGET_TOTAL = Object.values(LENS_DAILY_QUOTA).reduce((a, b) => a + b, 0);
     const selectedOpportunities = [...selectedFromSlots];
     for (const opp of opportunities) {
-      if (selectedOpportunities.length >= 5) break;
+      if (selectedOpportunities.length >= DAILY_TARGET_TOTAL) break;
       if (selectedKeywords.has(opp.keyword)) continue;
       selectedOpportunities.push(opp);
       selectedKeywords.add(opp.keyword);
@@ -707,7 +689,7 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
       date: today,
       trendSource: trends.source,
       trendCategories,
-      opportunities: selectedOpportunities, // 슬롯 배정 결과 (최대 5건) — 하위호환 형태 유지
+      opportunities: selectedOpportunities, // 슬롯 배정 결과 (최대 10건, §3-0) — 하위호환 형태 유지
       slots,
       seedSource,
       aiSummary: aiResult.summary || undefined,
@@ -947,6 +929,29 @@ export function buildSourcingRecommendEmbed(result: SourcingRecommendResult): Re
       inline: false,
     };
   });
+
+  // 렌즈 요약 필드(#295 단일 권위 통일, 2026-08-27) — result.opportunities[].
+  // lensMatches를 집계한다. 판정 로직은 여기서 새로 만들지 않고 sourcing-
+  // lenses.ts classifySourcingLenses()가 이미 붙여둔 결과만 센다.
+  const lensCounts = new Map<SourcingLens, number>();
+  for (const o of result.opportunities) {
+    for (const m of o.lensMatches ?? []) {
+      lensCounts.set(m.lens, (lensCounts.get(m.lens) ?? 0) + 1);
+    }
+  }
+  const LENS_SUMMARY_ORDER: SourcingLens[] = ['rising', 'seasonal', 'niche', 'blueOcean', 'honeypot', 'golden', 'steady'];
+  const lensSummaryLine = LENS_SUMMARY_ORDER
+    .filter((l) => (lensCounts.get(l) ?? 0) > 0)
+    .map((l) => `${LENS_META[l].emoji} ${LENS_META[l].label} ${lensCounts.get(l)}`)
+    .join(' · ');
+  const redOceanCount = result.opportunities.filter((o) => o.redOceanWarning).length;
+  if (lensSummaryLine) {
+    fields.unshift({
+      name: ':mag: 오늘의 렌즈 요약',
+      value: lensSummaryLine + (redOceanCount > 0 ? `\n:warning: 레드오션 주의 ${redOceanCount}건 — 진입은 신중하게` : ''),
+      inline: false,
+    });
+  }
 
   // Trend info field
   if (result.trendCategories.length > 0) {

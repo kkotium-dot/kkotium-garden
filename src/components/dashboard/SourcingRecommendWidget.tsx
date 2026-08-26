@@ -365,6 +365,36 @@ export default function SourcingRecommendWidget() {
                         진입 {barrierBadge.label}
                       </span>
                     )}
+                    {/* 렌즈 배지(#295 단일 권위 통일, 2026-08-27) — 황금🏆·스테디📚
+                        등 opp.lensMatches를 그대로 렌더. 판정 로직은 여기서 새로
+                        만들지 않는다(sourcing-lenses.ts 결과를 그대로 표시만). */}
+                    {(opp.lensMatches ?? [])
+                      .filter((m) => m.lens === 'golden' || m.lens === 'steady')
+                      .map((m) => (
+                        <span
+                          key={m.lens}
+                          title={m.label}
+                          style={{
+                            fontSize: 10, padding: '1px 5px', borderRadius: 4,
+                            background: m.lens === 'golden' ? '#fef3c7' : '#e0f2fe',
+                            color: m.lens === 'golden' ? '#92400e' : '#075985',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {m.emoji} {m.label}
+                        </span>
+                      ))}
+                    {opp.redOceanWarning && (
+                      <span
+                        title={opp.redOceanWarning.reasons.join(' / ')}
+                        style={{
+                          fontSize: 10, padding: '1px 5px', borderRadius: 4,
+                          background: '#fee2e2', color: '#991b1b', fontWeight: 600,
+                        }}
+                      >
+                        {opp.redOceanWarning.emoji} {opp.redOceanWarning.label}
+                      </span>
+                    )}
                     <span style={{ fontSize: 11, color: '#6b7280' }}>
                       {opp.monthlySearchVolume.toLocaleString()}/월
                     </span>
