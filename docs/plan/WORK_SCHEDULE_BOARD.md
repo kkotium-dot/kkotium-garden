@@ -2,7 +2,7 @@
 
 > **이 파일의 역할**: "지금 뭘 해야 하고, 뭘 동시에 해도 되고, 뭐가 막혀 있는지"를 한 화면에 보여주는 **단일 우선순위 권위 문서**.
 > **갱신 의무**: 작업 착수·완료 시마다 즉시 갱신(#319). 세션 시작 시 이 파일을 먼저 본다.
-> **최종 갱신**: 2026-08-19 (Cowork 문서정정 — Desktop 실측 결과 반영)
+> **최종 갱신**: 2026-08-27 (Cowork 문서정정 — cron_invocation_log 실측 결과 반영, B4-A DONE)
 >
 > **왜 만들었나**: `TASK_BRIDGE.md` §3-A 보드가 2026-07-22 이후 방치돼 이미 끝난 작업을 "대기중"으로 표시하는 사고가 있었다(#318). 그 재발 방지 + 운영자가 "이거 해도 되나요?"를 다시 묻지 않아도 되게 하기 위함.
 >
@@ -30,7 +30,7 @@
 
 | 순위 | 작업 | 상태 | write set | 담당 레인 | 비고 |
 |---|---|---|---|---|---|
-| **B4-A** | **아침 소싱 크론 계측** — 실발송 여전히 미해결(8/12 미발송 재확인). 발생 시점에 Vercel Recent Invocations 직접 확인 | 🟢 READY | (조사·계측, 코드변경 최소) | Desktop(대시보드)·Code(로그) | ⚠️ **재조사 금지 목록 준수**: force-dynamic·middleware·redirects·크론개수상한·미배포커밋 5건은 이미 기각(CURRENT.md 참조). 실 Discord 발송 테스트는 운영자 승인 없이 금지 |
+| **B4-A** | **아침 소싱 크론 계측** — ✅ `cron_invocation_log` 실측(8/20~25) 결과 6개 크론 전부 매일 정상 발화·적재 확인(sourcing-daily 포함). 잔여=추천 품질(카테고리 편중 등), 발송 여부 재조사 불필요 | ✅ DONE(2026-08-27) | (조사·계측, 코드변경 없음) | Desktop(대시보드)·Code(로그) | ⚠️ **재조사 금지 목록 준수**: force-dynamic·middleware·redirects·크론개수상한·미배포커밋 5건은 이미 기각(CURRENT.md 참조). 실 Discord 발송 테스트는 운영자 승인 없이 금지 |
 | **B5** | **Git 연동 복구** — 계정 이관 후 커밋·push 흐름 점검. 미커밋 변경분(import 필드완전성 등) 커밋·push·verify-deploy | 🟢 READY | `git`(레포 상태)·`docs/handoff/CURRENT.md` | Code | CURRENT.md "다음 세션 시작 순서" 1번과 연동. 이번 세션 변경분이 프로덕션 미반영 상태 |
 | **B6** | **Vercel Hobby ToS 확인** — 크론·상업적 사용 약관 적합성 검토(외부 안전망 GitHub Actions 도입 전 선행) | ⏸️ WAITING-OPERATOR | (조사·문서) | Desktop→운영자 | 매일 자동 실발송 CI = 디스코드 실발송 동급 승인 대상(#337). 요금제 상향 필요 여부 판단 |
 | **P1-A** | **상품 정식 카테고리 정비** — `naver_categories` 0행·전 상품 `category_id` 0건 → 드롭십 적합도·소싱 씨앗·네이버 검색 적합도 3곳 동시 무력화. 마스터 적재→제안 품질(D3/D4)→dryRun 백필→앱 개입점 4단계 | ⏸️ WAITING-OPERATOR (설계 승인 대기·**구현 착수 금지**) | Step1~3: `naver_categories`·backfill 스크립트 / Step4 UI는 별도(파일 무겹침) | Desktop(설계 완료)→Code(구현) | 권위: `docs/design/PRODUCT_CATEGORY_BACKFILL_2026-08-20.md`. 선행조건 없음·골든셋(P0-6)과 write set 무충돌. ⚠️ FK `ON DELETE SET NULL` — 마스터 DELETE 금지. `--apply`는 운영자 GO 없이 금지. 매출 직결 기반 정비 |
