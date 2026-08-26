@@ -21,6 +21,7 @@ import type { KeywordStat } from '@/lib/naver/keyword-api';
 import { fetchKeywordVolumes, fetchRelatedKeywords, type CompIdx } from '@/lib/naver/searchad-volume';
 import { resolveSourcingSeeds } from '@/lib/naver/seed-keywords';
 import { applyDropshipFitness } from '@/lib/policy/dropship-fitness';
+import { getCachedTrend, buildD1Key, type CategoryTrendEntry } from '@/lib/naver/category-trend-cache';
 
 // P0-3 (2026-08-20): local shape carrying SearchAd's plAvgDepth alongside the
 // existing KeywordStat fields — used as a continuous competition-strength
@@ -309,6 +310,18 @@ export async function assignSourcingSlots(pool: SourcingOpportunity[]): Promise<
   const trendSignals = await fetchCategoryTrendSignals().catch(() => [] as CategoryTrendSignal[]);
   const signalByD1 = new Map(trendSignals.map((s) => [s.name, s]));
 
+  // D-fix(2026-08-27): category-trend-cache의 D1 SEO trend를 후보군 전체에서
+  // 딱 1회만 프리페치한다(N+1 금지) — 이게 없으면 classifySourcingLenses에
+  // trend:null이 고정 주입돼 seoScore가 50으로 눌려 🏆황금·📈급상승(SEO 경로)이
+  // 절대 발화하지 못하는 죽은 렌즈가 된다.
+  const uniqueD1s = [...new Set(pool.map((opp) => opp.category))];
+  const trendEntries = await Promise.all(
+    uniqueD1s.map((d1) => getCachedTrend(buildD1Key(d1)).catch(() => null)),
+  );
+  const trendByD1 = new Map<string, CategoryTrendEntry | null>(
+    uniqueD1s.map((d1, i) => [d1, trendEntries[i]]),
+  );
+
   const candidates: LensAllocationCandidate<SourcingOpportunity>[] = pool.map((opp) => {
     const classification = classifySourcingLenses({
       d1: opp.category,
@@ -317,9 +330,7 @@ export async function assignSourcingSlots(pool: SourcingOpportunity[]): Promise<
       // Step 6(도매매칭) 이전 시점이라 suggestedSupplyPrice는 아직 0일 수
       // 있다 — 0을 실제 도매가처럼 넘기지 않고 미지값(null)으로 처리한다.
       supplierPrice: opp.suggestedSupplyPrice || null,
-      // category-trend-cache(D1 SEO trend)는 이 배선의 스코프 밖 — null이면
-      // computeCategoryScore가 SEO를 중립 처리한다(가짜 신호 없음).
-      trend: null,
+      trend: trendByD1.get(opp.category) ?? null,
       trendSignal: signalByD1.get(opp.category) ?? null,
       nowMonth,
       blueOceanScore: opp.blueOceanScore,
