@@ -2,8 +2,15 @@
 // D-3: Competition monitoring library
 // Tracks competitor price/review changes for products in our catalog
 // Triggers Discord alerts when significant changes detected
+//
+// SE05(#324, 2026-08-27): 네이버 쇼핑검색 API(search/shop.json) 영구 종료로
+// 가격·판매자·상위노출 데이터는 대체 불가(검색광고 API는 집계 검색량/경쟁도만
+// 제공, 개별 상품 데이터 없음). 경쟁도(competitionLevel)만 검색광고 compIdx로
+// 대체하고, 가격 관련 필드(avgPrice 등)는 0/빈배열로 정직하게 비운 뒤
+// priceDataAvailable:false로 표시한다 — 0을 실제 가격처럼 지어내지 않는다
+// (#310). docs/design/NAVER_SHOPPING_API_SUNSET_RESPONSE.md §3-A 참조.
 
-import { searchShopping, type ShoppingItem } from '@/lib/naver/shopping-search';
+import { fetchKeywordVolumes } from '@/lib/naver/searchad-volume';
 
 // -- Types ------------------------------------------------------------------
 
@@ -15,7 +22,10 @@ export interface CompetitorSnapshot {
   maxPrice: number;
   totalResults: number;
   topItems: CompetitorItem[];
-  competitionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
+  competitionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH' | 'UNKNOWN';
+  /** false = 가격/판매자 필드는 실측 아님(쇼핑검색 API 종료). competitionLevel만
+   *  검색광고로 대체 가능하면 채워지고, 그마저 안 되면 'UNKNOWN'. */
+  priceDataAvailable: boolean;
 }
 
 // E-10: Entry barrier analysis (Option A approach)
@@ -85,40 +95,23 @@ const RESULTS_NICHE = 1000;
 
 // -- Core functions ----------------------------------------------------------
 
-/** Take a snapshot of competition for a given keyword */
+/** Take a snapshot of competition for a given keyword.
+ *  가격·판매자·topItems는 쇼핑검색 API 종료로 항상 비어있다(priceDataAvailable:
+ *  false) — competitionLevel만 검색광고 compIdx로 대체된다. */
 export async function takeCompetitorSnapshot(keyword: string): Promise<CompetitorSnapshot> {
-  const result = await searchShopping(keyword, { display: 10, sort: 'sim' });
-
-  const prices = result.items
-    .map(i => Number(i.lprice))
-    .filter(p => p > 0);
-
-  const avgPrice = prices.length > 0
-    ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length)
-    : 0;
-
-  const level: CompetitorSnapshot['competitionLevel'] =
-    result.total > 100000 ? 'VERY_HIGH' :
-    result.total > 30000 ? 'HIGH' :
-    result.total > 5000 ? 'MEDIUM' : 'LOW';
+  const rows = await fetchKeywordVolumes([keyword]).catch(() => null);
+  const compIdx = rows?.[0]?.compIdx ?? null;
 
   return {
     query: keyword,
     timestamp: new Date().toISOString(),
-    avgPrice,
-    minPrice: prices.length > 0 ? Math.min(...prices) : 0,
-    maxPrice: prices.length > 0 ? Math.max(...prices) : 0,
-    totalResults: result.total,
-    topItems: result.items.slice(0, 5).map(i => ({
-      title: i.title,
-      price: Number(i.lprice),
-      mallName: i.mallName,
-      productId: i.productId,
-      brand: i.brand,
-      category: [i.category1, i.category2, i.category3].filter(Boolean).join(' > '),
-      link: i.link,
-    })),
-    competitionLevel: level,
+    avgPrice: 0,
+    minPrice: 0,
+    maxPrice: 0,
+    totalResults: 0,
+    topItems: [],
+    competitionLevel: compIdx ?? 'UNKNOWN',
+    priceDataAvailable: false,
   };
 }
 
@@ -234,6 +227,7 @@ export function detectChanges(
   myPrice: number,
   myProductName: string,
 ): PriceChangeAlert | null {
+  if (!previous.priceDataAvailable || !current.priceDataAvailable) return null;
   if (!previous.avgPrice || !current.avgPrice) return null;
 
   const priceDiff = current.avgPrice - previous.avgPrice;
@@ -279,6 +273,7 @@ export function getCompetitionLabel(level: CompetitorSnapshot['competitionLevel'
     MEDIUM: '\uBCF4\uD1B5',    // 보통
     HIGH: '\uB192\uC74C',      // 높음
     VERY_HIGH: '\uCE58\uC5F4', // 치열
+    UNKNOWN: '\uBBF8\uD655\uC778', // 미확인
   };
   return labels[level] ?? level;
 }
@@ -290,6 +285,7 @@ export function getCompetitionColor(level: CompetitorSnapshot['competitionLevel'
     MEDIUM: '#ca8a04',
     HIGH: '#ea580c',
     VERY_HIGH: '#dc2626',
+    UNKNOWN: '#9ca3af',
   };
   return colors[level] ?? '#888';
 }

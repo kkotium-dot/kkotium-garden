@@ -46,8 +46,10 @@ export async function GET() {
       const kwArr = Array.isArray(kw) ? kw : (typeof kw === 'string' && kw ? kw.split(',').map(k => k.trim()).filter(Boolean) : []);
       const keyword = String(kwArr[0] ?? '') || p.naver_title || p.name;
 
-      // E-10: Compute entry barrier from current snapshot if available
-      const entryBarrier: EntryBarrierAnalysis | null = stored?.current
+      // E-10: Compute entry barrier from current snapshot if available.
+      // SE05(#324): 가격 데이터가 없으면(쇼핑검색 API 종료) 진입장벽 점수를
+      // 지어낼 수 없다 — priceDataAvailable일 때만 계산한다.
+      const entryBarrier: EntryBarrierAnalysis | null = stored?.current?.priceDataAvailable
         ? calcEntryBarrier(stored.current)
         : null;
 

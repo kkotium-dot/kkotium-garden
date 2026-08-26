@@ -24,9 +24,11 @@ interface Snapshot {
   minPrice: number;
   maxPrice: number;
   totalResults: number;
-  competitionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
+  competitionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH' | 'UNKNOWN';
   topItems: CompetitorItem[];
   timestamp: string;
+  /** false = 쇼핑검색 API 종료로 가격/판매자 데이터 실측 불가(SE05/#324) */
+  priceDataAvailable: boolean;
 }
 
 // E-10: Entry barrier analysis from API (Option A)
@@ -70,6 +72,7 @@ const LEVEL_STYLE: Record<string, { bg: string; text: string; label: string }> =
   MEDIUM:    { bg: 'var(--m-amber-bg)',  text: 'var(--m-amber-tx)',  label: '\uBCF4\uD1B5' },
   HIGH:      { bg: 'var(--m-orange-bg)', text: 'var(--m-orange-tx)', label: '\uB192\uC74C' },
   VERY_HIGH: { bg: 'var(--m-coral-bg)',  text: 'var(--m-coral-tx)',  label: '\uCE58\uC5F4' },
+  UNKNOWN:   { bg: '#f3f4f6',            text: '#6b7280',           label: '\uBBF8\uD655\uC778' },
 };
 
 // E-10: Entry barrier (3-state ascending) \u2192 master hues (\u00A73): \uB0AE\uC74C/easy\u2192mint,
@@ -323,25 +326,35 @@ export default function CompetitionMonitorWidget() {
                       </span>
                     )}
 
-                    {/* Avg price */}
+                    {/* Avg price \u2014 SE05(#324): \uC1FC\uD551\uAC80\uC0C9 API \uC885\uB8CC\uB85C \uB370\uC774\uD130 \uC5C6\uC73C\uBA74 "0\uC6D0" \uB300\uC2E0 \uC548\uB0B4 */}
                     {s && (
-                      <span style={{ fontSize: 12, color: '#555', fontWeight: 500, minWidth: 70, textAlign: 'right' }}>
-                        {s.avgPrice.toLocaleString()}{'\uC6D0'}
+                      <span style={{ fontSize: 12, color: s.priceDataAvailable ? '#555' : '#aaa', fontWeight: 500, minWidth: 70, textAlign: 'right' }}>
+                        {s.priceDataAvailable ? `${s.avgPrice.toLocaleString()}\uC6D0` : '\uAC00\uACA9\uC815\uBCF4 \uC5C6\uC74C'}
                       </span>
                     )}
 
                     {/* Price change */}
-                    {s && prev && <PriceChangeIndicator current={s.avgPrice} previous={prev.avgPrice} />}
+                    {s && prev && s.priceDataAvailable && <PriceChangeIndicator current={s.avgPrice} previous={prev.avgPrice} />}
 
                     {/* My price position */}
-                    {s && <PricePosition myPrice={p.myPrice} avgPrice={s.avgPrice} />}
+                    {s && s.priceDataAvailable && <PricePosition myPrice={p.myPrice} avgPrice={s.avgPrice} />}
 
                     {/* Chevron */}
                     {isExpanded ? <ChevronUp size={14} style={{ color: '#aaa' }} /> : <ChevronDown size={14} style={{ color: '#aaa' }} />}
                   </button>
 
                   {/* Expanded detail */}
-                  {isExpanded && s && (
+                  {isExpanded && s && !s.priceDataAvailable && (
+                    <div style={{ padding: '10px 12px 12px', background: '#fafafa' }}>
+                      <div style={{
+                        fontSize: 12, color: '#888', background: '#fff', borderRadius: 8,
+                        padding: '10px 12px', border: '1px solid #f0f0f0',
+                      }}>
+                        {'\uAC00\uACA9\u00B7\uD310\uB9E4\uC790 \uB370\uC774\uD130 \uC5C6\uC74C \u2014 \uB124\uC774\uBC84 \uC1FC\uD551\uAC80\uC0C9 API 2026-07-31 \uC885\uB8CC(\uB300\uCCB4 \uBD88\uAC00). \uACBD\uC7C1\uB3C4\uB9CC \uAC80\uC0C9\uAD11\uACE0 \uAE30\uC900\uC73C\uB85C \uD45C\uC2DC\uB429\uB2C8\uB2E4.'}
+                      </div>
+                    </div>
+                  )}
+                  {isExpanded && s && s.priceDataAvailable && (
                     <div style={{ padding: '0 12px 12px', background: '#fafafa' }}>
                       <div style={{
                         display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10,
