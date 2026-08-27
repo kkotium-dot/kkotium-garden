@@ -37,6 +37,7 @@ import { recoTypeSummary, type RecoTypeTag } from '@/lib/naver/recommendation-ty
 import { resolveRecoTypeTags } from '@/lib/naver/reco-type-resolver';
 import { judgeExclusion } from '@/lib/policy/exclusion-rules';
 import { pickVariant, seasonalGreeting } from '@/lib/notifications/kkotti-variation';
+import { callGroq } from '@/lib/ai/groq';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -426,28 +427,14 @@ Respond ONLY in Korean JSON (no markdown, no backticks):
 }`;
 
   try {
-    // Round-robin Groq keys
-    const keys = [groqKey, process.env.GROQ_API_KEY_2].filter(Boolean);
-    const key = keys[Math.floor(Math.random() * keys.length)] ?? groqKey;
-
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 600,
-        temperature: 0.4,
-      }),
-    });
-
-    if (!res.ok) return fallback;
-
-    const data = await res.json();
-    const text = data.choices?.[0]?.message?.content ?? '';
+    // UCE-2 fix (2026-08-27): this used to hand-roll its own fetch with
+    // model 'llama-3.1-8b-instant' — Groq removed that model from its
+    // catalog entirely (404 on every call, silently swallowed by the
+    // `!res.ok` fallback below, so this AI insight has likely been a no-op
+    // for a while). Switched to the shared callGroq() helper (groq.ts),
+    // which uses the current model (openai/gpt-oss-120b) + reasoning_effort:
+    // 'low' — also removes the need to duplicate key round-robin here.
+    const text = await callGroq(prompt);
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return fallback;
 

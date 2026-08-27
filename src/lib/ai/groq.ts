@@ -1,15 +1,26 @@
 // src/lib/ai/groq.ts — Groq AI SDK (primary AI provider, 2026-05-19)
 //
-// Model: llama-3.3-70b-versatile (한국어 정합, 무료 14,400 req/day × 3 keys)
-//   - 8b-instant는 한국어 degenerate 출력 (P24 단정 2026-05-19)
-//   - Desktop 직접 검증: "아로마 디퓨저 오일 방향제 홈 인테리어 소품" 정상
-//   - 응답 시간: 8b 1.96s → 70b ~3s (사용자 대기 가능 범위)
+// UCE-2 (2026-08-27, 실측): llama-3.3-70b-versatile was REMOVED from Groq's
+// catalog entirely — every call was silently 404ing in production
+// ("The model does not exist or you do not have access to it"), which is the
+// true root cause behind most `usedAI:false` results across the app (not a
+// parsing bug — every category/suggest AI call was failing before it even
+// got a response body). Confirmed via `GET /openai/v1/models`: Groq's current
+// catalog has moved to reasoning models (openai/gpt-oss-*, qwen/qwen3.6-27b),
+// no more direct-answer Llama chat models.
+//
+// Model: openai/gpt-oss-120b — live-tested (Korean product copy + category
+// JSON) 2026-08-27, fluent Korean output, correct JSON format.
+//   - This is a REASONING model — without `reasoning_effort: 'low'` it burns
+//     the token budget on an internal chain-of-thought and returns EMPTY
+//     content once max_tokens is hit before the visible answer starts. Every
+//     call below sets reasoning_effort:'low' for this reason — do not remove it.
 // Endpoint: https://api.groq.com/openai/v1/chat/completions (OpenAI-compatible)
 //
 // Round-robin: tries GROQ_API_KEY → _2 → _3 on 429/quota error.
 
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
-export const GROQ_MODEL = 'llama-3.3-70b-versatile';
+export const GROQ_MODEL = 'openai/gpt-oss-120b';
 
 function getGroqKeys(): string[] {
   return [
@@ -38,6 +49,9 @@ async function callGroqWithKey(
       ],
       temperature: 0.3,
       max_tokens: 1500,
+      // gpt-oss-120b is a reasoning model — 'low' skips the deliberation
+      // budget that otherwise eats max_tokens before any visible content.
+      reasoning_effort: 'low',
     }),
   });
 
