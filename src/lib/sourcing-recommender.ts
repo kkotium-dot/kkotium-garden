@@ -344,7 +344,7 @@ export async function assignSourcingSlots(pool: SourcingOpportunity[]): Promise<
     opp.lensMatches = classification.matches.map((m) => ({ lens: m.lens, emoji: m.emoji, label: m.label }));
     opp.redOceanWarning = classification.redOceanWarning;
 
-    return { item: opp, id: opp.keyword, classification };
+    return { item: opp, id: opp.keyword, classification, d1: opp.category };
   });
 
   const { byLens, unfilledLenses } = allocateByLens(candidates, LENS_DAILY_QUOTA);

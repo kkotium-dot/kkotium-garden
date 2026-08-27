@@ -286,6 +286,7 @@ export interface LensAllocationCandidate<T> {
   item: T;
   id: string; // dedup key — a candidate picked for one lens can't fill another slot too
   classification: LensClassification;
+  d1: string; // 대분류 — allocateByLens의 d1 다양성 게이트용(§3-2)
 }
 
 export interface LensAllocationResult<T> {
@@ -298,13 +299,19 @@ export interface LensAllocationResult<T> {
  * PURE. Greedy allocation: for each primary lens (LENS_DAILY_QUOTA order),
  * fill its quota from candidates that matched that lens, highest totalScore
  * first, skipping candidates already used by an earlier lens (no duplicate
- * slots — a product picked for 급상승 doesn't also occupy the 니치 slot even
+ * slots — a product picked for 급상승 doesn't also occupy the 니치 슬롯 even
  * if it matched both). Honest about shortfalls instead of silently returning
  * fewer than 10 (#325 — 정직한 미달성 표시).
+ *
+ * d1 다양성 게이트(docs/design/SOURCING_ZSCORE_NORMALIZATION_2026-08-27.md
+ * §3-2): 전체 10슬롯 중 한 d1 대분류가 maxD1Share(기본 40% = 4슬롯)를 넘게
+ * 차지하지 못하게 전 렌즈 통틀어 카운트한다. 상한에 걸려 quota를 못 채우면
+ * 억지로 채우지 않고 unfilledLenses에 정직하게 표시한다(#325와 동일 원칙).
  */
 export function allocateByLens<T>(
   candidates: Array<LensAllocationCandidate<T>>,
   quota: Record<Exclude<SourcingLens, 'golden'>, number> = LENS_DAILY_QUOTA,
+  maxD1Share = 0.4,
 ): LensAllocationResult<T> {
   const used = new Set<string>();
   const byLens = {} as Record<Exclude<SourcingLens, 'golden'>, T[]>;
@@ -312,6 +319,9 @@ export function allocateByLens<T>(
   const selected: T[] = [];
 
   const lensOrder = Object.keys(quota) as Array<Exclude<SourcingLens, 'golden'>>;
+  const totalSlots = Object.values(quota).reduce((s, n) => s + n, 0);
+  const d1Cap = Math.max(1, Math.ceil(totalSlots * maxD1Share));
+  const d1Count = new Map<string, number>();
 
   for (const lens of lensOrder) {
     const want = quota[lens];
@@ -319,10 +329,17 @@ export function allocateByLens<T>(
       .filter((c) => !used.has(c.id) && c.classification.matches.some((m) => m.lens === lens))
       .sort((a, b) => b.classification.score.totalScore - a.classification.score.totalScore);
 
-    const picked = pool.slice(0, want);
+    const picked: Array<LensAllocationCandidate<T>> = [];
+    for (const c of pool) {
+      if (picked.length >= want) break;
+      if ((d1Count.get(c.d1) ?? 0) >= d1Cap) continue; // d1 상한 도달 — 다음 후보로
+      picked.push(c);
+    }
+
     byLens[lens] = picked.map((c) => c.item);
     for (const c of picked) {
       used.add(c.id);
+      d1Count.set(c.d1, (d1Count.get(c.d1) ?? 0) + 1);
       selected.push(c.item);
     }
     if (picked.length < want) {

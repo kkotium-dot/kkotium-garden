@@ -29,6 +29,7 @@ export interface CategoryTrendSignal {
   latestRatio: number;    // most recent day's ratio (raw DataLab scale)
   risingRate: number;     // % change, first-half avg -> second-half avg of the window
   volatility: number;     // coefficient of variation (stddev/mean * 100), lower = steadier
+  zScore: number | null;  // (latest - own window mean) / own window stddev — null when 표본<6 (§3-1)
   points: number;         // how many daily points fed the calc (honesty — thin data = less trust)
   isRising: boolean;
   isStable: boolean;
@@ -130,7 +131,16 @@ async function fetchDataLabTrends(): Promise<TrendResult | null> {
 
     const signals = results.map(r => classifyTrendSignal(r.title, r.data));
 
-    const byRisingRate = [...signals].sort((a, b) => b.risingRate - a.risingRate);
+    // z-score 정규화(#설계 2026-08-27): 절대 risingRate로 정렬하면 변동성 기저가
+    // 큰 카테고리(패션의류·스포츠/레저)가 구조적으로 상위를 독식한다(프로덕션
+    // 실측 70%). zScore(자기 이력 대비 이례치)가 있는 카테고리는 그걸로 우선
+    // 정렬하고, 표본<6이라 zScore가 없는 카테고리만 기존 절대값으로 폴백해
+    // 뒤에 붙인다(정직표시 — 전체 랭킹을 왜곡하지 않음).
+    const withZ = signals.filter(s => s.zScore !== null);
+    const withoutZ = signals.filter(s => s.zScore === null);
+    withZ.sort((a, b) => (b.zScore as number) - (a.zScore as number));
+    withoutZ.sort((a, b) => b.risingRate - a.risingRate);
+    const byRisingRate = [...withZ, ...withoutZ];
     const top2 = byRisingRate.slice(0, 2).map(s => s.name);
 
     const remaining = signals.filter(s => !top2.includes(s.name));
@@ -220,6 +230,10 @@ const RISING_RATE_THRESHOLD = 15;   // % — first-half→second-half avg change
 const STABLE_VOLATILITY_MAX = 20;   // % coefficient of variation — below this = "steady"
 const MIN_POINTS_FOR_SIGNAL = 4;    // fewer daily points than this = too thin to trust (#231)
 
+// ── z-score 정규화 (docs/design/SOURCING_ZSCORE_NORMALIZATION_2026-08-27.md §3-1) ──
+const Z_SCORE_MIN_POINTS = 6;       // 표본<6 → 절대값 폴백(§5 — 정직표시)
+const Z_RISING_THRESHOLD = 1.0;     // 자기 이력 평균보다 1 표준편차 이상 높으면 "이례적으로 뜨는 중"
+
 /** % change from the window's first-half average to its second-half average. */
 export function computeRisingRate(ratios: number[]): number {
   if (ratios.length < 2) return 0;
@@ -243,6 +257,24 @@ export function computeVolatility(ratios: number[]): number {
   return Math.round((stddev / mean) * 1000) / 10; // 1 decimal
 }
 
+/**
+ * z = (최신값 − 이 카테고리 자기 이력 평균) / 자기 이력 stddev. 같은 창의
+ * ratios[]를 재사용(추가 API 호출 0, 비용0) — "절대 변동폭"이 아니라 "이
+ * 카테고리 기준으로 지금이 얼마나 이례적인가"를 측정해, 변동성 기저가 큰
+ * 카테고리(패션의류·스포츠/레저)가 구조적으로 상위를 독식하는 걸 막는다
+ * (§3-1). 표본<6이거나 stddev=0(전부 동일값)이면 null — 호출부는 절대값
+ * risingRate로 폴백한다(정직표시, §5).
+ */
+export function computeZScore(ratios: number[]): number | null {
+  if (ratios.length < Z_SCORE_MIN_POINTS) return null;
+  const mean = ratios.reduce((s, v) => s + v, 0) / ratios.length;
+  const variance = ratios.reduce((s, v) => s + (v - mean) ** 2, 0) / ratios.length;
+  const stddev = Math.sqrt(variance);
+  if (stddev === 0) return null;
+  const latest = ratios[ratios.length - 1];
+  return Math.round(((latest - mean) / stddev) * 100) / 100; // 2 decimals
+}
+
 /** PURE. Derive a CategoryTrendSignal from one category's raw daily series. */
 export function classifyTrendSignal(
   name: string,
@@ -252,14 +284,18 @@ export function classifyTrendSignal(
   const latestRatio = ratios.length > 0 ? ratios[ratios.length - 1] : 0;
   const risingRate = computeRisingRate(ratios);
   const volatility = computeVolatility(ratios);
+  const zScore = computeZScore(ratios);
   const enoughData = ratios.length >= MIN_POINTS_FOR_SIGNAL;
   return {
     name,
     latestRatio,
     risingRate,
     volatility,
+    zScore,
     points: ratios.length,
-    isRising: enoughData && risingRate >= RISING_RATE_THRESHOLD,
+    // z-score 가용 시 자기 이력 대비 이상치로 판정(§3-1) — 표본 부족(zScore
+    // null)일 때만 기존 절대값 임계치로 폴백(정직표시, §5).
+    isRising: zScore !== null ? zScore >= Z_RISING_THRESHOLD : enoughData && risingRate >= RISING_RATE_THRESHOLD,
     // Stability needs BOTH low volatility and no rising/falling trend — a
     // steady seller isn't spiking OR crashing.
     isStable: enoughData && volatility <= STABLE_VOLATILITY_MAX && Math.abs(risingRate) < RISING_RATE_THRESHOLD,
