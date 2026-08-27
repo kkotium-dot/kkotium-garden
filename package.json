@@ -11,7 +11,8 @@
     "seed:naver": "tsx prisma/seed-naver-master.ts",
     "db:check": "bash scripts/db-push-guard.sh --check-only",
     "db:push": "bash scripts/db-push-guard.sh",
-    "test:seeds": "tsx scripts/verify-seed-golden.ts"
+    "test:seeds": "tsx scripts/verify-seed-golden.ts",
+    "test:category-match": "tsx src/lib/naver/category-deterministic-matcher.test.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

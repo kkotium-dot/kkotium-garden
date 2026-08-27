@@ -15,6 +15,27 @@
 // This is PURE — no I/O, no AI, no DB. Runs before Groq (UCE-1: "결정론적
 // 매칭 1순위, AI는 실패 시 보조로 강등").
 //
+// UCE-7 (2026-08-27, 명사중심 재설계): the length-only scoring above had a
+// real production bug — wholesale titles are space-separated ("실리콘 주걱")
+// while a leaf name is often the compact concatenation of modifier+head
+// ("칫솔살균기", "차량용방향제", "요가매트"). A plain `name.includes(label)`
+// never sees these because the space breaks the substring. Fix:
+//   1. Also test every leaf against the space-free join of extracted nouns
+//      (`nounsCompact`), which recovers exactly this class of compound leaf.
+//   2. Weight matches by WHICH noun matched, not just match length. Korean
+//      noun phrases put the head noun last ("실리콘 주걱" — 주걱 is the
+//      object, 실리콘 is a material modifier). A match on the tail noun
+//      (핵심/말단명사) is boosted; a match on an earlier modifier-only noun
+//      is penalized. This fixes cases like "실리콘 주걱" incorrectly ranking
+//      생활/건강>공구>접착용품>실리콘 (a 3-char modifier match) above
+//      생활/건강>주방용품>조리기구>주걱 (the actual 2-char head-noun match).
+//   3. Reverse-containment fallback: when no leaf/d3/d2 forward-contains the
+//      product name/nounsCompact at all, also check whether the head noun
+//      alone is contained INSIDE a leaf name (e.g. "빨대" inside
+//      "일회용빨대") — weaker signal (no modifier corroboration), scored
+//      below every forward match, but better than returning nothing for a
+//      product whose exact head noun isn't itself a bare leaf.
+//
 // Known limitation: slash-packed labels ("필라테스/요가") can occasionally
 // out-score the correct product category when a lesson/service category
 // happens to pack the same two words a clothing item's name contains (e.g.
@@ -28,6 +49,12 @@ import { NAVER_CATEGORIES_FULL } from './naver-categories-full';
 import { extractNouns } from '../strategy/morpheme-tokenizer';
 import { GENERIC_MODIFIERS_SET, STOP_NOUNS_SET } from '../strategy/identity-dictionary';
 
+/** Which scoring tier produced this candidate — exposed so callers (route.ts
+ *  UCE-7b) can gate on match STRENGTH, not just score. Tier 1 = exact leaf
+ *  match (trust the score); Tier 2/3 are weak/broad by construction and
+ *  should always be treated as low-confidence regardless of their number. */
+export type MatchTier = 1 | 2 | 3 | 4;
+
 export interface DeterministicMatch {
   d1: string;
   d2: string;
@@ -36,9 +63,44 @@ export interface DeterministicMatch {
   /** Which leaf/branch text actually matched — for debugging & UI trust signal. */
   matchedTerm: string;
   score: number;
+  /** 1=leaf exact, 2=d3-only, 3=reverse-containment fallback, 4=d2-only. */
+  tier: MatchTier;
 }
 
 const MIN_TERM_LEN = 2; // shorter than this is too generic to trust as a signal
+
+// UCE-7a: head-noun (말단/핵심명사) vs modifier-noun weighting. A match on the
+// tail noun of the extracted noun list is far more likely to name what the
+// product actually IS; a match on an earlier noun is far more likely to be a
+// material/usage modifier describing it. See file header for the motivating
+// "실리콘 주걱" bug. ×3 / ×0.5 per UCE-7 design doc (docs/design/
+// UCE7_MATCH_QUALITY_2026-08-27.md §3 UCE-7a).
+const HEAD_NOUN_BOOST = 3;
+const MODIFIER_NOUN_PENALTY = 0.5;
+// UCE-7: reverse-containment fallback weight (headNoun found INSIDE a leaf
+// name, e.g. "빨대" inside "일회용빨대") — deliberately below every forward
+// tier's baseline so a real forward match always wins when one exists.
+const REVERSE_HEAD_WEIGHT = 6;
+
+// UCE-7c: service/lesson d2 buckets are never a valid category for a physical
+// wholesale product — this engine only ever matches physical goods. Every d2
+// under 여가/생활편의 is a class/rental/travel/care SERVICE (verified against
+// the full master, 2026-08-27), which is how "차량용방향제" could previously
+// out-rank into 여가/생활편의>원데이클래스>수공예 클래스 (its slash-packed
+// "캔들/방향제/향수" label happens to share vocabulary with the product name).
+// Listed at the d2 level (not blanket d1) so a future physical-goods d2 added
+// under this d1 isn't silently excluded too.
+const EXCLUDED_SERVICE_D2 = new Set<string>([
+  '국내렌터카',
+  '국내여행/체험',
+  '예체능레슨',
+  '원데이클래스',
+  '자기계발/취미 레슨',
+  '장기 국내여행/체험',
+  '장기 해외여행',
+  '해외여행',
+  '홈케어서비스',
+]);
 
 /** A candidate term is unusable as a signal if it's itself a generic
  *  wholesale-listing modifier/stopword (e.g. "무선","세트") — some Naver leaf
@@ -56,23 +118,40 @@ function splitSynonyms(label: string): string[] {
   return label.split('/').map((p) => p.trim()).filter((p) => p.length >= MIN_TERM_LEN);
 }
 
-/** Score a single tree-node label against the product name. Handles both
- *  plain labels ("우산꽂이" — whole-string substring) and slash-packed labels
- *  ("아로마방향제/디퓨저" — every synonym part must appear somewhere in the
- *  name; a product rarely repeats every synonym verbatim, so this is scored
- *  by total matched length rather than requiring the packed string itself). */
-function termMatchScore(label: string, name: string): number {
+/** Score a single tree-node label against a set of candidate haystacks
+ *  (the raw product name, and the space-free join of its extracted nouns).
+ *  Handles both plain labels ("우산꽂이" — whole-string substring) and
+ *  slash-packed labels ("아로마방향제/디퓨저" — every synonym part must
+ *  appear somewhere in one of the haystacks; a product rarely repeats every
+ *  synonym verbatim, so this is scored by total matched length rather than
+ *  requiring the packed string itself). */
+function termMatchScore(label: string, haystacks: readonly string[]): number {
   if (!label || isGenericTerm(label)) return 0;
   if (label.includes('/')) {
     const parts = splitSynonyms(label);
-    const matched = parts.filter((p) => !isGenericTerm(p) && name.includes(p));
+    const matched = parts.filter((p) => !isGenericTerm(p) && haystacks.some((h) => h.includes(p)));
     if (matched.length === 0) return 0;
     const full = matched.length === parts.length;
     const len = matched.reduce((sum, p) => sum + p.length, 0);
     return full ? len : len * 0.5; // partial synonym coverage = weaker signal
   }
   if (label.length < MIN_TERM_LEN) return 0;
-  return name.includes(label) ? label.length : 0;
+  return haystacks.some((h) => h.includes(label)) ? label.length : 0;
+}
+
+/** UCE-7: does `label` textually overlap the head noun / a modifier noun?
+ *  Slash-packed labels are checked part-by-part so "매트/발판" still counts
+ *  as a head-noun hit when the product's head noun is "매트". Returns a
+ *  score multiplier: boost when the head noun is involved, penalty when
+ *  only a modifier noun is, neutral (1) when neither can be determined
+ *  (e.g. product name didn't tokenize into 2+ nouns). */
+function headNounWeight(label: string, headNoun: string, modifierNouns: readonly string[]): number {
+  if (!headNoun) return 1;
+  const parts = label.includes('/') ? splitSynonyms(label) : [label];
+  const overlaps = (term: string) => parts.some((p) => p.includes(term) || term.includes(p));
+  if (overlaps(headNoun)) return HEAD_NOUN_BOOST;
+  if (modifierNouns.some((m) => overlaps(m))) return MODIFIER_NOUN_PENALTY;
+  return 1;
 }
 
 /**
@@ -89,6 +168,16 @@ export function matchDeterministicCategories(
   if (!name) return [];
 
   const { nouns } = extractNouns(name);
+  // UCE-7: tail noun = head noun (핵심/말단명사 — what the product actually
+  // IS, per Korean noun-phrase order); everything before it is a modifier
+  // (material/usage/brand). `nounsCompact` recovers compound leaf names that
+  // the wholesale title wrote with a space ("실리콘 주걱" -> can still match
+  // a leaf like "칫솔살균기" style compact spelling once nouns are re-joined).
+  const headNoun = nouns.length > 0 ? nouns[nouns.length - 1] : '';
+  const modifierNouns = nouns.slice(0, -1);
+  const nounsCompact = nouns.join('');
+  const haystacks = [name, nounsCompact].filter((h, i, arr) => h && arr.indexOf(h) === i);
+
   const byKey = new Map<string, DeterministicMatch>();
 
   const consider = (key: string, match: DeterministicMatch) => {
@@ -97,6 +186,8 @@ export function matchDeterministicCategories(
   };
 
   for (const c of NAVER_CATEGORIES_FULL) {
+    // UCE-7c: service/lesson categories are never a physical-product match.
+    if (EXCLUDED_SERVICE_D2.has(c.d2)) continue;
     const leaf = c.d4 || c.d3; // deepest non-empty level
     if (!leaf) continue;
     const key = `${c.d1}|${c.d2}|${c.d3}`;
@@ -106,25 +197,43 @@ export function matchDeterministicCategories(
     // every synonym part of a slash-packed label ("아로마방향제/디퓨저").
     // Korean has no word-boundary requirement, so this alone catches
     // "우산꽂이"(exact), "수세미"(exact), "달항아리"→"항아리"(substring).
-    const leafScore = termMatchScore(leaf, name);
+    const leafScore = termMatchScore(leaf, haystacks);
     if (leafScore > 0) {
-      match = { d1: c.d1, d2: c.d2, d3: c.d3, d4: c.d4 || undefined, matchedTerm: leaf, score: leafScore * 10 + (c.d4 ? 5 : 0) };
+      match = {
+        d1: c.d1, d2: c.d2, d3: c.d3, d4: c.d4 || undefined, matchedTerm: leaf, tier: 1,
+        score: (leafScore * 10 + (c.d4 ? 5 : 0)) * headNounWeight(leaf, headNoun, modifierNouns),
+      };
     }
     // Tier 2: d3 itself (when it differs from the leaf, i.e. d4 exists but
     // didn't match) — broader but still a real tree node. Don't guess which
     // specific d4 subtype applies (several rows can share this d3).
     else if (c.d3) {
-      const d3Score = termMatchScore(c.d3, name);
+      const d3Score = termMatchScore(c.d3, haystacks);
       if (d3Score > 0) {
-        match = { d1: c.d1, d2: c.d2, d3: c.d3, d4: undefined, matchedTerm: c.d3, score: d3Score * 8 };
+        match = {
+          d1: c.d1, d2: c.d2, d3: c.d3, d4: undefined, matchedTerm: c.d3, tier: 2,
+          score: d3Score * 8 * headNounWeight(c.d3, headNoun, modifierNouns),
+        };
       }
     }
-    // Tier 3: the d2 bucket itself matches (packed or plain) — trusted only
+    // Tier 3 (reverse-containment fallback): no forward match at all, but the
+    // head noun alone is CONTAINED INSIDE the leaf name (e.g. "빨대" inside
+    // "일회용빨대"). No modifier corroboration is possible here, so this is
+    // always weaker than a real forward tier — it exists purely so a product
+    // whose head noun isn't itself a bare leaf still resolves to something
+    // instead of falling through empty-handed.
+    if (!match && headNoun && headNoun.length >= MIN_TERM_LEN && !isGenericTerm(headNoun) && leaf.includes(headNoun)) {
+      match = { d1: c.d1, d2: c.d2, d3: c.d3, d4: c.d4 || undefined, matchedTerm: leaf, tier: 3, score: headNoun.length * REVERSE_HEAD_WEIGHT };
+    }
+    // Tier 4: the d2 bucket itself matches (packed or plain) — trusted only
     // down to d1+d2 (d3 left blank, per selfValidateSuggestions convention).
     if (!match && c.d2) {
-      const d2Score = termMatchScore(c.d2, name);
+      const d2Score = termMatchScore(c.d2, haystacks);
       if (d2Score > 0) {
-        consider(`${c.d1}|${c.d2}|`, { d1: c.d1, d2: c.d2, d3: '', d4: undefined, matchedTerm: c.d2, score: d2Score * 4 });
+        consider(`${c.d1}|${c.d2}|`, {
+          d1: c.d1, d2: c.d2, d3: '', d4: undefined, matchedTerm: c.d2, tier: 4,
+          score: d2Score * 4 * headNounWeight(c.d2, headNoun, modifierNouns),
+        });
       }
       continue;
     }

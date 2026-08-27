@@ -11,8 +11,44 @@ import { validatePageCategory } from '@/lib/naver/category-page-validator';
 import { callGroq } from '@/lib/ai/groq';
 import { computeCategoryScore, type CategoryScore } from '@/lib/naver/category-score';
 import { getCachedTrend, buildD1Key, type CategoryTrendEntry } from '@/lib/naver/category-trend-cache';
-import { matchDeterministicCategories } from '@/lib/naver/category-deterministic-matcher';
+import { matchDeterministicCategories, type DeterministicMatch } from '@/lib/naver/category-deterministic-matcher';
 import { prisma } from '@/lib/prisma';
+
+// UCE-7 (2026-08-27): deterministic-match confidence gate. The matcher itself
+// (category-deterministic-matcher.ts) now weights head vs. modifier nouns and
+// still occasionally lands on a genuinely weak guess (e.g. a reverse-
+// containment fallback match, or two top candidates from different d1
+// branches scored close together). Rather than trust a shaky deterministic
+// guess outright, ask Groq for a corrective second opinion — but ONLY for
+// this low-confidence slice, so the AI call stays cost-gated to cases that
+// actually need it (a confident deterministic hit never calls Groq).
+const DETERMINISTIC_MIN_CONFIDENT_SCORE = 20; // below this, the top guess alone is too weak to trust
+const DETERMINISTIC_D1_CONFLICT_GAP = 10; // top vs runner-up this close counts as a real disagreement
+const DETERMINISTIC_D1_CONFLICT_CEILING = 40; // only a disagreement when the top score itself isn't already decisive
+
+// d1 정합성 게이트: true when the deterministic top candidate is either too
+// weak on its own, or is contradicted by an almost-as-strong candidate from a
+// DIFFERENT d1 (the "상품 힌트 d1" is the runner-up's d1 branch — when it's
+// nearly tied with the top pick's d1, the deterministic result hasn't
+// actually converged on a single top-level category and shouldn't be trusted
+// without a corrective check).
+//
+// UCE-7b refinement (design doc §3): a Tier 2/3 top match (d3-only broad
+// match, or the reverse-containment fallback) is ALWAYS low-confidence
+// regardless of its numeric score — those tiers are structurally weak
+// signals (no exact leaf match, or no modifier corroboration at all), so a
+// high score within that tier still doesn't mean the match is trustworthy.
+function isDeterministicLowConfidence(matches: DeterministicMatch[]): boolean {
+  const top = matches[0];
+  if (!top) return true;
+  if (top.tier !== 1) return true;
+  if (top.score < DETERMINISTIC_MIN_CONFIDENT_SCORE) return true;
+  const second = matches[1];
+  if (second && second.d1 !== top.d1 && top.score < DETERMINISTIC_D1_CONFLICT_CEILING) {
+    if (top.score - second.score <= DETERMINISTIC_D1_CONFLICT_GAP) return true;
+  }
+  return false;
+}
 
 const CATEGORY_CONFIRM_NEEDED_TAG = 'category_confirm_needed';
 
@@ -324,7 +360,31 @@ export async function POST(request: NextRequest) {
     if (deterministic.length > 0) {
       rawSuggestions = deterministic.map((m) => ({ d1: m.d1, d2: m.d2, d3: m.d3, d4: m.d4 }));
       source = 'deterministic';
+
+      // UCE-7: deterministic found something, but it's a weak or internally
+      // conflicted guess — call Groq as a corrective check. Cost-gated: this
+      // branch is skipped entirely for a confident deterministic hit.
+      if (isDeterministicLowConfidence(deterministic)) {
+        try {
+          const aiResults = await suggestWithGroq(name);
+          const aiValidated = aiResults
+            .map((s) => validateSuggestion(s.d1, s.d2, s.d3))
+            .filter((s): s is NonNullable<typeof s> => !!s);
+          if (aiValidated.length > 0) {
+            usedAI = true;
+            rawSuggestions = aiValidated;
+            source = 'ai';
+          }
+          // AI returned nothing usable -> keep the deterministic guess (still
+          // better than nothing) rather than discarding it.
+        } catch (aiError) {
+          console.warn('[category/suggest] AI correction failed (deterministic low-confidence):', String(aiError).slice(0, 300));
+        }
+      }
     } else {
+      // UCE-1/UCE-7 (빈손 폴백): deterministic found NOTHING lexically — AI is
+      // the only remaining signal, always call it here (not cost-gated; there
+      // is no deterministic guess to fall back to if AI also fails).
       try {
         const aiResults = await suggestWithGroq(name);
         usedAI = true;
