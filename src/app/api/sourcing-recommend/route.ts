@@ -82,6 +82,9 @@ export async function GET() {
         opportunities: fullRecords.map(r => ({
           keyword: r.keyword,
           category: r.category ?? '',
+          // trendD1은 DB에 영속화되지 않는다(§3-4 — 렌즈 판정 전용, 표시엔
+          // 안 쓰임) — 이 경로는 캐시된 결과를 되돌려줄 뿐 재분류하지 않는다.
+          trendD1: '',
           monthlySearchVolume: r.monthlySearchVolume,
           competition: (r.competition ?? 'unknown') as 'low' | 'mid' | 'high' | 'unknown',
           avgPrice: null,
@@ -129,6 +132,7 @@ export async function GET() {
         opportunities: dbResult.map(r => ({
           keyword: r.product_name,
           category: '',
+          trendD1: '',
           monthlySearchVolume: 0,
           competition: 'unknown' as const,
           avgPrice: null,

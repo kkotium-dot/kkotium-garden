@@ -38,12 +38,21 @@ import { resolveRecoTypeTags } from '@/lib/naver/reco-type-resolver';
 import { judgeExclusion } from '@/lib/policy/exclusion-rules';
 import { pickVariant, seasonalGreeting } from '@/lib/notifications/kkotti-variation';
 import { callGroq } from '@/lib/ai/groq';
+import { matchDeterministicCategories } from '@/lib/naver/category-deterministic-matcher';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface SourcingOpportunity {
   keyword: string;
+  // UCE 연동(구현 B, §3-4): 표시·저장용 카테고리 라벨 — 결정론적 매처
+  // (matchDeterministicCategories)의 top 결과. 렌즈 판정용 트렌드 d1과는
+  // 다른 신호이므로 섞지 않는다(아래 trendD1 참조).
   category: string;
+  // 렌즈 판정·z-score 신호 조회 전용 d1 — DataLab 10대분류 어휘(트렌드
+  // 키워드 매칭). classifySourcingLenses/signalByD1/trendByD1/allocateByLens
+  // d1게이트는 반드시 이 필드를 써야 한다(category를 쓰면 UCE의 전체
+  // taxonomy 어휘와 안 맞아 신호 조회가 조용히 실패한다).
+  trendD1: string;
   monthlySearchVolume: number;
   competition: 'low' | 'mid' | 'high' | 'unknown';
   // P0-3 (2026-08-20): null (not 0) when unknown — 쇼핑검색 API 종료로
@@ -315,7 +324,10 @@ export async function assignSourcingSlots(pool: SourcingOpportunity[]): Promise<
   // 딱 1회만 프리페치한다(N+1 금지) — 이게 없으면 classifySourcingLenses에
   // trend:null이 고정 주입돼 seoScore가 50으로 눌려 🏆황금·📈급상승(SEO 경로)이
   // 절대 발화하지 못하는 죽은 렌즈가 된다.
-  const uniqueD1s = [...new Set(pool.map((opp) => opp.category))];
+  // UCE 연동(§3-4) 이후 category는 UCE 라벨(전체 taxonomy)이라 DataLab
+  // 10대분류 어휘를 쓰는 trend-cache/신호 조회에는 trendD1을 써야 한다
+  // (category를 쓰면 조회가 조용히 실패한다).
+  const uniqueD1s = [...new Set(pool.map((opp) => opp.trendD1))];
   const trendEntries = await Promise.all(
     uniqueD1s.map((d1) => getCachedTrend(buildD1Key(d1)).catch(() => null)),
   );
@@ -325,14 +337,14 @@ export async function assignSourcingSlots(pool: SourcingOpportunity[]): Promise<
 
   const candidates: LensAllocationCandidate<SourcingOpportunity>[] = pool.map((opp) => {
     const classification = classifySourcingLenses({
-      d1: opp.category,
+      d1: opp.trendD1,
       d2: '',
       d3: '',
       // Step 6(도매매칭) 이전 시점이라 suggestedSupplyPrice는 아직 0일 수
       // 있다 — 0을 실제 도매가처럼 넘기지 않고 미지값(null)으로 처리한다.
       supplierPrice: opp.suggestedSupplyPrice || null,
-      trend: trendByD1.get(opp.category) ?? null,
-      trendSignal: signalByD1.get(opp.category) ?? null,
+      trend: trendByD1.get(opp.trendD1) ?? null,
+      trendSignal: signalByD1.get(opp.trendD1) ?? null,
       nowMonth,
       blueOceanScore: opp.blueOceanScore,
       uniqueSellersInTop: opp.uniqueSellersInTop ?? null,
@@ -344,7 +356,9 @@ export async function assignSourcingSlots(pool: SourcingOpportunity[]): Promise<
     opp.lensMatches = classification.matches.map((m) => ({ lens: m.lens, emoji: m.emoji, label: m.label }));
     opp.redOceanWarning = classification.redOceanWarning;
 
-    return { item: opp, id: opp.keyword, classification, d1: opp.category };
+    // allocateByLens의 d1 다양성 게이트(§3-2)도 렌즈 신호와 같은 트렌드 d1
+    // 기준 — category(UCE)를 쓰면 카테고리 어휘가 갈려 게이트 의미가 없어진다.
+    return { item: opp, id: opp.keyword, classification, d1: opp.trendD1 };
   });
 
   const { byLens, unfilledLenses } = allocateByLens(candidates, LENS_DAILY_QUOTA);
@@ -571,14 +585,25 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
       if (kw.competition === 'low') reasons.push('low_competition');
       else if (kw.competition === 'high') reasons.push('high_competition');
 
-      // Find matching trend category
-      const matchedCat = trendCategories.find(cat =>
+      // 렌즈 판정용 트렌드 d1(DataLab 10대분류 어휘) — z-score/lens 신호
+      // 조회 전용, 아래 category(UCE)와는 별개로 유지한다.
+      const trendD1 = trendCategories.find(cat =>
         kw.keyword.includes(cat) || cat.includes(kw.keyword)
       ) ?? trendCategories[0] ?? 'general';
+
+      // UCE 연동(§3-4, 구현 B, 병합 필수): 표시·저장용 카테고리는 결정론적
+      // 매처(전체 5,021개 leaf 대상)의 top 결과로 채운다 — 이전엔 trendD1을
+      // 문자열 포함매칭으로 그대로 라벨에 썼기 때문에 "차량용방향제"가 무관한
+      // 트렌드 대분류로 오분류되는 게 아침 알림 카테고리 오류의 근본원인이었다
+      // (#351). 빈손(n=0)이면 trendD1로 폴백하되 정직표시(#310) — 저장된
+      // 값이 UCE 확정이 아님을 라벨 자체로 드러낸다.
+      const ucMatch = matchDeterministicCategories(kw.keyword)[0];
+      const matchedCat = ucMatch ? ucMatch.d1 : `${trendD1}(카테고리 미확정)`;
 
       opportunities.push({
         keyword: kw.keyword,
         category: matchedCat,
+        trendD1,
         monthlySearchVolume: kw.totalMonthly,
         competition: kw.competition,
         // 가격대·상품수는 쇼핑검색 없이는 알 수 없다 — 가짜값(0) 대신 null로
@@ -769,7 +794,9 @@ export async function runSourcingScan(opts: {
       const nowMonth = new Date().getMonth() + 1;
       const tags = await resolveRecoTypeTags(
         result.opportunities.map((o) => ({
-          d1: o.category === 'general' ? '' : o.category,
+          // reco-type-resolver도 category-trend-cache(DataLab 10대분류 어휘)를
+          // 쓰므로 UCE 라벨(category)이 아니라 trendD1을 넘긴다.
+          d1: o.trendD1 === 'general' ? '' : o.trendD1,
           supplierPrice: o.suggestedSupplyPrice,
         })),
         nowMonth,
@@ -786,7 +813,7 @@ export async function runSourcingScan(opts: {
     const nowMonth = new Date().getMonth() + 1;
     const tags = await resolveRecoTypeTags(
       result.opportunities.map((o) => ({
-        d1: o.category === 'general' ? '' : o.category,
+        d1: o.trendD1 === 'general' ? '' : o.trendD1,
         supplierPrice: o.suggestedSupplyPrice,
       })),
       nowMonth,
