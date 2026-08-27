@@ -35,6 +35,20 @@ import { getAdapter } from '@/lib/sources';
 // Types
 // ----------------------------------------------------------------------------
 
+// #351 (2026-08-27, UCE-7 캐시포이즌 재발 방지): bump this whenever the
+// CATEGORY-MATCHING LOGIC changes in a way that could change what a cached
+// row should say — category-deterministic-matcher.ts scoring/tiers, the
+// route.ts low-confidence AI-escalation gate, or rankByScore's ordering. The
+// version is baked into the storage KEY (see normalizeKey below), so a bump
+// makes every prior cache row unreachable by construction — no manual
+// `DELETE FROM category_mappings` hunt required (that manual-delete cycle is
+// exactly what caused the UCE-7 production incident: the code was fixed but
+// 3 stale rows kept serving the pre-fix answer because nothing told the
+// cache the logic underneath it had changed). Bump this NUMBER, not the
+// scheme — old rows are simply orphaned, never deleted, and age out via
+// Postgres storage cost alone (negligible at this table's size).
+export const CATEGORY_MATCH_LOGIC_VERSION = 1;
+
 export type LookupKind = 'dome_code' | 'name_hash';
 // UCE-1 (2026-08-27): 'deterministic' = category-deterministic-matcher.ts
 // (matched against the full master, no AI). 'unresolved' = neither
@@ -221,7 +235,8 @@ function normalizeKey(kind: LookupKind, key: string): string {
   if (!trimmed) return '';
   // dome codes are short numeric strings; preserve as-is. name_hash already
   // hex-encoded by nameHashKey. Truncate defensively to schema limit.
-  return trimmed.slice(0, 120);
+  // #351: logic version suffix — see CATEGORY_MATCH_LOGIC_VERSION above.
+  return `${trimmed}.v${CATEGORY_MATCH_LOGIC_VERSION}`.slice(0, 120);
 }
 
 function clampConfidence(value: number): number {
