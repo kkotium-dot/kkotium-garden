@@ -939,3 +939,66 @@ B1: Git 연동이 627960f 이후 조용히 끊겨 8일 미배포 확정(`vercel 
 **병합**: `feature/lens-unify`(9cf7f73) push → `origin/main` fast-forward 병합 → 로컬 main도 fast-forward. `scripts/verify-vercel-deploy.sh --wait`로 프로덕션이 `9cf7f73` 반영됨을 확인. 병합 완료된 `code-cli-docs-correction-f4105f` 워크트리·브랜치 정리(uncommitted 없음 확인 후 제거).
 
 결과 문서: 세션 내 커밋 메시지(`e4959a8`, `9cf7f73`) 참조.
+
+## rev126 — UCE-1~6 결정론적 카테고리 매칭 + Groq 모델 폐기 발견·교체 (2026-08-27, Code)
+
+**배경**: `category/suggest`가 AI(Groq) 우선 → 실패 시 하드코딩 57건 FALLBACK_RULES라는
+구조라 카탈로그 밖 상품(달항아리·수세미·우산꽂이 등)에서 자주 빈 결과. 마스터
+`NAVER_CATEGORIES_FULL`(5,021건)은 정상인데 "제안 다리"가 병목이라는 실측 전제로 착수.
+
+**UCE-1** (`src/lib/naver/category-deterministic-matcher.ts` 신규): 상품명을 마스터
+5,021개 리프 전체와 직접 substring/synonym-split("A/B" 라벨 분리) 매칭 — AI 호출 0,
+DB 조회 0, 순수함수. 형태소 토크나이저(`morpheme-tokenizer.ts`) 재사용해 d2 정합성
+보너스만 추가. `category/suggest` 흐름을 캐시→**결정론적(신규,1순위)**→AI(실패시만)
+순으로 재배선 — AI가 완전히 강등됨.
+
+**UCE-2**: Groq 원문 응답 항상 로깅 + 실패사유 세분화(empty_response/
+no_json_brackets/json_parse_error) + 마스터에서 뽑은 실제 카테고리 5건 few-shot
+삽입(환각 방지). **조사 중 진짜 근본원인 발견**: `llama-3.3-70b-versatile`(및
+sourcing-recommender.ts의 `llama-3.1-8b-instant`)이 Groq 카탈로그에서 완전히
+제거됨(`GET /v1/models` 실측 확인, 404) — `usedAI:false`의 실제 원인은 코드가
+아니라 죽은 모델명이었음. `groq.ts` GROQ_MODEL을 `openai/gpt-oss-120b`로 교체 +
+`reasoning_effort:'low'` 추가(추론모델이라 이거 없으면 max_tokens를 내부 사고에
+다 쓰고 빈 응답 반환 — 실측으로 확인). sourcing-recommender.ts의 중복 fetch도
+공용 `callGroq()`로 통합. 실측: 한국어 설명 생성·카테고리 JSON 분류 둘 다 정상,
+확신 없으면 정직하게 빈 배열 반환.
+
+**UCE-3**: `FALLBACK_RULES`(57건 하드코딩) + `suggestFallback()` 완전 삭제 —
+결정론적 매처가 마스터 전체(5,021건)를 커버하며 마스터 재생성 시 자동 최신화.
+
+**UCE-4**: 3단계(결정론적+AI+Naver 페이지검증) 전부 실패한 상품만 `internalTags`
+(기존 미사용 JSON 컬럼, 마이그레이션 불요)에 `category_confirm_needed` 마킹 →
+`UploadReadinessWidget`에서 "카테고리 확인 필요"로 "카테고리 미선택"과 구분 노출,
+성공 시 자가치유(플래그 제거). `/api/category/suggest`에 `productId` 선택 인자
+추가, `products/new` 두 호출부에서 `edit` 쿼리파라미터로 threading.
+
+**UCE-5**: `gen-naver-categories.py`가 XLS 파일명에서 날짜를 파싱해
+`CATEGORY_MASTER_GENERATED_AT`/`CATEGORY_MASTER_SOURCE_FILE` 상수를 생성 파일에
+자동 삽입(+ `categoryFullPath`가 재생성 시 유실되던 버그도 같이 수정 — 기존
+"DO NOT EDIT MANUALLY" 파일에 손으로 추가돼 있던 함수였음). 신규 월간 크론
+`/api/cron/category-master-check`(`vercel.json` `0 0 1 * *`)가 35일 경과 시
+OPS_REPORT로 갱신 알림. **자동 다운로드는 구현하지 않음** — Naver 카테고리 XLS의
+안전하게 검증된 fetch 가능 엔드포인트가 존재하지 않아(#82 추측 금지), 실측 없이
+가정하지 않기로 결정.
+
+**UCE-6**: `naver_categories` 테이블 실측 — 프로덕션 0행(never seeded) 확인.
+유일한 앱 소비자 `auto-mapper.ts`(matchCategory)는 도달 불가능한 죽은코드 체인
+(`NaverAutoFillForm.tsx`가 어떤 페이지에도 미마운트, 실측 grep 확인)이었고, 테이블이
+비어있는 채 그 체인이 호출되면 `scores[0]` undefined로 크래시하는 잠재 결함도
+발견. DDL(DROP TABLE)은 운영자 승인 필요 사안이라 실행하지 않고 `schema.prisma`에
+실측 결과 문서화만. 죽은코드 체인 제거는 별도 세션으로 분리(`spawn_task`).
+
+**배포 사고 1건**: `feature/universal-category-engine`→main 병합 직후
+`verify-vercel-deploy.sh`가 "SHA 일치" OK를 보고했으나, 실제 프로덕션 런타임
+로그(`vercel logs`)는 옛 코드의 경고 문구를 그대로 출력 — 재조사 결과
+`vercel ls --json` 응답이 34KB 근처에서 파이프 버퍼 절단돼 첫 배포 항목의
+`meta.githubCommitSha`를 못 읽었던 **조사 도구 쪽 오탐**으로 판명(git 연동
+자체는 정상 — 재실측 시 SHA 정확히 일치). 결론적으로 배포는 정상 작동했고,
+30분 내 두 번째 커밋(Groq 모델 수정)도 정상 자동배포됨.
+
+**검증**: tsc 0 · `npm run build` 0. 프로덕션 실호출 20종(카탈로그10 + 카탈로그밖10:
+달항아리·수세미·우산꽂이·도어스토퍼·빨래건조대 등) **전부 비어있지 않은 유효
+leaf 카테고리 연결 확인**(`suggestions.length>0`, 20/20). `usedAI:false` 전건 —
+결정론적 매처가 20건 전부를 AI 호출 없이 해결(비용 0 목표 달성).
+
+결과 문서: 세션 내 커밋 메시지(`958dff6`, `33db7d3`) 참조.
