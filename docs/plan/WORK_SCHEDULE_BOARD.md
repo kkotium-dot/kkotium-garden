@@ -50,7 +50,7 @@
 
 | 순위 | 작업 | 상태 | 막힌 이유 / 비고 | write set |
 |---|---|---|---|---|
-| 4 | **로드맵1b 8렌즈 쿼터 배분 cron 배선** | ⏸️ WAITING-OPERATOR | `sourcing-lenses.ts`는 rev118에서 구현됐으나 cron 소비 배선은 미연결(데이터 구조 상이). 전체 연결 여부 운영자 방향 결정 필요 | `sourcing-recommender.ts`(cron 소비) |
+| 4 | **로드맵1b 8렌즈 쿼터 배분 cron 배선** | ✅ DONE(2026-08-27·9cf7f73) | `assignSourcingSlots`에 `classifySourcingLenses`·`allocateByLens` 실배선(F3 해소) + D-fix(category-trend-cache D1 trend 프리페치 주입, N+1 없음) — 🏆황금·📈급상승(SEO 경로) 부활. 프로덕션 `/growth` 배지 렌더 실측(인테리어=🏆황금+📚스테디) | `sourcing-recommender.ts`(cron 소비) |
 | 5 | **P3 검수관 신설**(필터+배제사유) | 🟡 BLOCKED | 소싱 발굴 안정화 후 — 필터할 후보가 먼저 안정적으로 생성돼야 함 | `src/lib/sourcing/inspector.ts`(신규) |
 | 6 | **P4 앱「꼬띠 브리핑」화면** | 🟡 BLOCKED | P3 완료 필요 — 배제사유까지 보여줘야 함 | `src/app/(dashboard)/...`(신규) |
 | 7 | **P5 피드백 루프**(채택 이력 학습) | 🟡 BLOCKED | P4 완료 필요 — 채택 버튼이 있어야 데이터가 쌓임 | `prisma/schema.prisma`<br>`src/lib/sourcing/feedback.ts` |

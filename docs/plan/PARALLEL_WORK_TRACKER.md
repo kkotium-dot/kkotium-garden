@@ -927,3 +927,15 @@ naver_tax_type이 다른 컬럼 — 화이트리스트에서 taxType 제외해 �
 ## rev124 — B1 배포갭 수동복구 + B4 크론상한/미배포 가설 기각 + B4-A 크론 수신계측 + db push 파괴사고 봉인가드 (2026-08-19~20, Code)
 
 B1: Git 연동이 627960f 이후 조용히 끊겨 8일 미배포 확정(`vercel deploy --prod --yes`로 수동 복구, SHA 대조 완료). B4: `vercel cron ls`로 6개 크론 전부 등록 확인(개수상한 가설 기각) · `git log -S`로 sourcing-daily가 이미 여러 배포에 포함됐음 확인(미배포 가설 기각), 원인 미확정 상태로 정지. B4-A: CronInvocationLog + withCronLogging으로 6개 라우트 전부 수신 계측(#337 우회, 커밋 `105a95f`) — DB 테이블 생성은 승인 대기. 부수 발견(Desktop): schema.prisma가 프로덕션 DB보다 9테이블·21컬럼 뒤처져 있어 맨손 `db push`가 파괴적 DROP을 실행할 뻔함 — `scripts/db-push-guard.sh`(migrate diff 선검증) + `npm run db:push` 봉인 가드 추가.
+
+## rev125 — 8렌즈 assignSourcingSlots 실배선(F3해소) + D-fix trend주입(황금·급상승 부활) + 명칭통일 (2026-08-27, Code)
+
+**실배선(e4959a8)**: `sourcing-lenses.ts`(rev118에서 구현됐으나 어떤 cron/route도 호출하지 않던 죽은 코드, 로드맵1b 8렌즈 쿼터 배분 시스템)를 `assignSourcingSlots`에 처음 실배선. `classifySourcingLenses`·`allocateByLens`·`LENS_DAILY_QUOTA`로 판정·배분을 위임하고, 옛 `SlotType`(seasonal/trending/blue_ocean/niche/honeypot 5종)을 `SourcingLens` 7종(급상승/시즌선점/니치/블루오션/꿀통/황금/스테디)+레드오션 경고로 단일 권위 통일. `fetchCategoryTrendSignals()`도 이번에 처음 실제 호출(D1별 급상승/스테디 신호). 위젯(`SourcingRecommendWidget.tsx`)·훅(`useDashboardData.ts`)에 `lensMatches`/`redOceanWarning` 필드 배선해 🏆황금·📚스테디 배지를 그대로 렌더(판정 로직 재작성 없음).
+
+**D-fix(9cf7f73)**: 실배선 직후 교차검증에서 결함 발견 — `assignSourcingSlots`가 `classifySourcingLenses`에 `trend: null`을 고정 주입하고 있었다. `computeCategoryScore`는 `trend`가 없으면 `seoScore`를 중립값(50)으로 고정 계산하므로, `HOT_SEO=60` 문턱을 요구하는 🏆황금·📈급상승(SEO 경로)이 절대 발화할 수 없는 죽은 렌즈였다. 수정: `category-trend-cache`의 `getCachedTrend`/`buildD1Key`로 후보군의 고유 D1 카테고리만 한 번에 프리페치(`Promise.all`, N+1 금지)해 실제 trend 값을 주입.
+
+**검증**: tsc 0. 합성 입력 — trend:null(수정 전 재현) → seoScore=50·golden 미발화, 동일 입력에 실제 hot trend 주입 → seoScore=85·golden 발화. 프로덕션 `/growth` 소싱 추천 위젯에서 "스캔 시작" 실행 → `/api/sourcing-recommend` fresh scan(opportunityCount:10, trendSource:DataLab) → 실후보 "인테리어"가 🏆황금키워드+📚스테디셀러 배지로 실제 화면에 렌더됨을 스크린샷으로 확인(나머지 9건은 📚스테디셀러만 매칭, 정직한 결과 — 조작 아님).
+
+**병합**: `feature/lens-unify`(9cf7f73) push → `origin/main` fast-forward 병합 → 로컬 main도 fast-forward. `scripts/verify-vercel-deploy.sh --wait`로 프로덕션이 `9cf7f73` 반영됨을 확인. 병합 완료된 `code-cli-docs-correction-f4105f` 워크트리·브랜치 정리(uncommitted 없음 확인 후 제거).
+
+결과 문서: 세션 내 커밋 메시지(`e4959a8`, `9cf7f73`) 참조.

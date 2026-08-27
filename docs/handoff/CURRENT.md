@@ -59,7 +59,7 @@
    불일치 근본수정 착수 여부 — taxType vs naver_tax_type(#340)과 같은 계열
 5. [운영자 판단] taxType vs naver_tax_type 컬럼 분리 이슈 근본수정 착수 여부
 6. [해결됨 — 2026-08-27] 아침 소싱 알림 실발송: `cron_invocation_log` 실측으로 정상 발화·적재 확인(위 정정 섹션 참조). 재조사 불필요, 잔여는 추천 품질
-7. [운영자 방향 결정] 로드맵1b(8렌즈 쿼터 배분 시스템, sourcing-lenses.ts) 전체 연결 여부
+7. [해결됨 — 2026-08-27·9cf7f73] 로드맵1b(8렌즈 쿼터 배분 시스템, sourcing-lenses.ts) 전체 연결: `assignSourcingSlots`에 실배선(F3 해소) + category-trend-cache D1 trend 프리페치 D-fix(🏆황금·📈급상승 부활) — 프로덕션 `/growth` 배지 렌더 실측 완료(인테리어=🏆황금+📚스테디). 재조사 불필요
 8. [운영자 결정 필요] 미merge 브랜치 처리 — 유효 2건만 남음: prompt-asset-engine(재검토)·
    sprint-7-m2(병합 금지 확정). ahead=0 4건은 이미 반영됨(BRANCH_AUDIT / WORK_SCHEDULE_BOARD 참조)
 9. [기회 있을 때] 기존 6개 상품 썸네일 미표시 — "네이버에서 이미지 재동기화" 신규 기능 설계 검토
