@@ -2,7 +2,7 @@
 // Category suggestion, UCE-1 order (2026-08-27): cache -> deterministic
 // matcher (full 5,021-entry master, zero cost) -> Groq AI (only if
 // deterministic found nothing) -> Naver page-1 distribution cross-check.
-// AI provider: Groq llama-3.3-70b-versatile (Sprint 7-PC-D 2026-05-19)
+// AI provider: Groq openai/gpt-oss-120b (model updated 2026-08-27, see groq.ts)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { NAVER_CATEGORIES_FULL, NAVER_DEPTH1_LIST } from '@/lib/naver/naver-categories-full';

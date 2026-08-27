@@ -1,7 +1,7 @@
 // src/app/api/products/[id]/aeo-generate/route.ts
 // C-2: AEO (Answer Engine Optimization) Q&A + FAQ auto-generator
 // Generates structured Q&A pairs optimized for Naver AI Briefing
-// AI provider (Sprint 7-PC-D 2026-05-19): Groq llama-3.3-70b-versatile (3 keys round-robin)
+// AI provider: Groq openai/gpt-oss-120b (3 keys round-robin — model updated 2026-08-27, see groq.ts)
 // Stores result in product.aeo_content JSONB column
 
 import { NextRequest, NextResponse } from 'next/server';

@@ -1,5 +1,5 @@
 // src/app/api/kkotti-comment/route.ts
-// Kkotti AI comment generator — Groq llama-3.3-70b-versatile primary
+// Kkotti AI comment generator — Groq openai/gpt-oss-120b primary (model updated 2026-08-27, see groq.ts)
 // AI provider (Sprint 7-PC-D 2026-05-19): Groq → static fallback
 // POST { products: ProductSummary[], context: string }
 // Returns { comment: string, source: 'groq' | 'fallback' }

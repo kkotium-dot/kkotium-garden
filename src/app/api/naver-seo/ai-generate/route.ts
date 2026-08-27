@@ -1,7 +1,7 @@
 // src/app/api/naver-seo/ai-generate/route.ts
 // AI SEO generator — 3 style modes: orthodox / emotional / niche
 // Provider priority (Sprint 7-PC-D 2026-05-19):
-//   1. Groq llama-3.3-70b-versatile (3 keys round-robin, free 43,200/day)
+//   1. Groq openai/gpt-oss-120b (3 keys round-robin, free 43,200/day — model updated 2026-08-27, see groq.ts)
 //   2. Anthropic Claude Sonnet (last-resort, cost-capped)
 //
 // DEPRECATED chains (removed in this commit):

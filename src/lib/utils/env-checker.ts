@@ -1,6 +1,6 @@
 // 환경 변수 확인 유틸리티
 // AI provider chain (Sprint 7-PC-D 2026-05-19):
-//   Primary: Groq llama-3.3-70b-versatile (3 keys round-robin)
+//   Primary: Groq openai/gpt-oss-120b (3 keys round-robin — model updated 2026-08-27, see groq.ts)
 //   Last-resort: Anthropic Claude Sonnet
 
 interface EnvCheckResult {
