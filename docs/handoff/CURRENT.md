@@ -1,7 +1,7 @@
 # 현재 인계 (CURRENT) — 2026-08-12 세션 (부분재연동 안전장치 + import 필드완전성 갭 10건 완료)
 <!-- 2026-08-19 Cowork 문서정정: 아침 소싱 알림 "완료" 오기 → "미해결·계측 중"으로 정정, 재조사 금지 목록 추가, branch 실제 상태 반영 -->
 <!-- 2026-08-27 Cowork 문서정정: cron_invocation_log 실측(6개 크론 전부 매일 정상, sourcing-daily 8/20~25 ok) → "미발송" 표기를 "정상 발화·적재 확인, 잔여=추천 품질"로 정정 -->
-<!-- 2026-08-27 Code: 아래 status/branch/배포상태 3줄은 2026-08-12 시점 스냅샷으로 고정돼 낡음 — 이후 수십 rev 진행. 실측 최신 상태만 이 줄에 갱신: main = `33db7d3`(UCE-1~6 카테고리 결정론적 매칭 + Groq 모델 llama-3.3-70b-versatile 폐기 발견·openai/gpt-oss-120b 교체, rev126 참조). 프로덕션 verify-vercel-deploy.sh 확인 완료. -->
+<!-- 2026-08-27 Code: 아래 status/branch/배포상태 3줄은 2026-08-12 시점 스냅샷으로 고정돼 낡음 — 이후 수십 rev 진행. 실측 최신 상태만 이 줄에 갱신: main = `f5cd72e`(UCE-1~6 카테고리 결정론적 매칭 + Groq 모델 llama-3.3-70b-versatile 폐기 발견·openai/gpt-oss-120b 교체(rev126) + 도달불가 크롤러 자동매핑 죽은코드 3파일 제거(rev127)). 프로덕션 verify-vercel-deploy.sh 확인 완료. -->
 
 
 > 다음 세션은 이 파일 → 해당 트랙 설계문서 → `PRINCIPLES_LEARNED.md` 순으로 읽고 시작.

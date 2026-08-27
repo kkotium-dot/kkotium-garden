@@ -1002,3 +1002,20 @@ leaf 카테고리 연결 확인**(`suggestions.length>0`, 20/20). `usedAI:false`
 결정론적 매처가 20건 전부를 AI 호출 없이 해결(비용 0 목표 달성).
 
 결과 문서: 세션 내 커밋 메시지(`958dff6`, `33db7d3`) 참조.
+
+## rev127 — 도달불가 크롤러 자동매핑 죽은코드 제거 + Groq 모델명 주석 정정 (2026-08-27, Code)
+
+rev126 UCE-6 조사(naver_categories 0행) 중 발견한 도달 불가능 체인을 fresh grep
+재확인 후 제거: `NaverAutoFillForm.tsx`(어떤 페이지에도 미마운트) →
+`api/crawler/naver-auto-fill/route.ts`(유일 호출자가 위 컴포넌트) →
+`auto-mapper.ts`(matchCategory가 naver_categories 0행 상태에서 호출되면
+`scores[0]` undefined로 크래시하는 랜드마인). `types/crawler.ts`에서 이 체인
+전용 타입(AutoMappingResult·NaverAutoFillRequest/Response·BatchAutoFillRequest/
+Response) 제거, `CrawlResult`·`CrawledData`는 DomemaeCrawler.tsx·scraper.ts가
+계속 사용해 유지. 같은 커밋에서 Groq 모델 교체(33db7d3) 이후 방치됐던 낡은 주석
+5곳(naver-seo·aeo·category·kkotti·env-checker — 실제 코드는 `callGroq()`/
+`GROQ_MODEL` 동적 참조라 기능 영향 없었음, 주석만 오기) 정정. `naver_categories`
+Prisma 테이블/모델은 손대지 않음(운영자 승인 별건 유지). 검증: `.next` 스테일
+타입 캐시 삭제 후 tsc 0 · `npm run build` 0 · 빌드 산출물에서 naver-auto-fill
+라우트 소멸 확인. main fast-forward 병합, verify-vercel-deploy.sh --wait로
+프로덕션 `f5cd72e` 반영 확인.
