@@ -6,11 +6,21 @@
 # Prints validation + diff (added/removed) vs the current committed file.
 
 import sys, os, re, subprocess
+from datetime import datetime, date
 
 def main():
     if len(sys.argv) < 2:
         print("Usage: python3 scripts/gen-naver-categories.py <category.xls>"); sys.exit(1)
     xls = sys.argv[1]
+    # UCE-5 (2026-08-27): source filename is expected to look like
+    # "category_YYYYMMDD_HHMMSS.xls" (Naver Commerce API Center download
+    # convention). Parse the embedded date so the generated file carries a
+    # machine-readable freshness marker (CATEGORY_MASTER_GENERATED_AT) that
+    # /api/cron/category-master-check can compare against today without
+    # scraping the header comment. Falls back to "today" if the filename
+    # doesn't match — never blocks generation over this.
+    m = re.search(r'(\d{8})_\d{6}', os.path.basename(xls))
+    generated_at = datetime.strptime(m.group(1), '%Y%m%d').date().isoformat() if m else date.today().isoformat()
     import pandas as pd
     df = pd.read_excel(xls, header=0, dtype=str)
     df.columns = ['code','d1','d2','d3','d4']
@@ -60,6 +70,16 @@ def main():
     L.append('  new Set(NAVER_CATEGORIES_FULL.map(c => c.d1).filter(Boolean))')
     L.append(').sort();'); L.append('')
     L.append(f'export const TOTAL_CATEGORY_COUNT = {len(df)};')
+    L.append('')
+    L.append('// UCE-5: freshness marker read by /api/cron/category-master-check —')
+    L.append('// do not hand-edit; comes from the source XLS filename at regen time.')
+    L.append(f"export const CATEGORY_MASTER_SOURCE_FILE = '{esc(os.path.basename(xls))}';")
+    L.append(f"export const CATEGORY_MASTER_GENERATED_AT = '{generated_at}';")
+    L.append('')
+    L.append('/** leaf category code -> 전체 경로(트리명). 매칭 실패 시 코드 원문(추측 지양 - #82). */')
+    L.append('export function categoryFullPath(code: string): string {')
+    L.append("  return NAVER_CATEGORIES_FULL.find(c => c.code === code)?.fullPath ?? code;")
+    L.append('}')
     with open(target, 'w', encoding='utf-8') as f:
         f.write('\n'.join(L) + '\n')
 

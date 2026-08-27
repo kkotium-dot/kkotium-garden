@@ -22,6 +22,7 @@ export interface DashboardProduct {
   shippingTemplateId?: string | null;
   images?: string[];
   shippingFee?: number;
+  internalTags?: string[];
 }
 
 export function normalizeProducts(raw: unknown[]): DashboardProduct[] {
@@ -62,6 +63,7 @@ export function normalizeProducts(raw: unknown[]): DashboardProduct[] {
           : typeof p.shipping_fee === 'number'
             ? p.shipping_fee
             : 3000,
+      internalTags: Array.isArray(p.internalTags) ? (p.internalTags as string[]) : [],
     };
   });
 }

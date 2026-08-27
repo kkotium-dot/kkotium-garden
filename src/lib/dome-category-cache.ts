@@ -36,7 +36,12 @@ import { getAdapter } from '@/lib/sources';
 // ----------------------------------------------------------------------------
 
 export type LookupKind = 'dome_code' | 'name_hash';
-export type MappingSource = 'ai' | 'fallback' | 'manual';
+// UCE-1 (2026-08-27): 'deterministic' = category-deterministic-matcher.ts
+// (matched against the full master, no AI). 'unresolved' = neither
+// deterministic nor AI found anything; the suggestion (if any) came from the
+// Naver page-1 distribution synthesis path alone. 'fallback' retained for
+// legacy rows written before this change; no code writes it anymore.
+export type MappingSource = 'deterministic' | 'ai' | 'unresolved' | 'fallback' | 'manual';
 
 export interface CachedMapping {
   d1: string;

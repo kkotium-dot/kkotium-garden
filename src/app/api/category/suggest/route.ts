@@ -1,15 +1,40 @@
 // src/app/api/category/suggest/route.ts
-// Category suggestion: Groq AI (no category context in prompt) -> DB validation -> fallback rules
-// Strategy: Ask AI to reason from product name alone, then validate against actual DB
+// Category suggestion, UCE-1 order (2026-08-27): cache -> deterministic
+// matcher (full 5,021-entry master, zero cost) -> Groq AI (only if
+// deterministic found nothing) -> Naver page-1 distribution cross-check.
 // AI provider: Groq llama-3.3-70b-versatile (Sprint 7-PC-D 2026-05-19)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
+import { NAVER_CATEGORIES_FULL, NAVER_DEPTH1_LIST } from '@/lib/naver/naver-categories-full';
 import { getCachedMapping, saveMapping, nameHashKey } from '@/lib/dome-category-cache';
 import { validatePageCategory } from '@/lib/naver/category-page-validator';
 import { callGroq } from '@/lib/ai/groq';
 import { computeCategoryScore, type CategoryScore } from '@/lib/naver/category-score';
 import { getCachedTrend, buildD1Key, type CategoryTrendEntry } from '@/lib/naver/category-trend-cache';
+import { matchDeterministicCategories } from '@/lib/naver/category-deterministic-matcher';
+import { prisma } from '@/lib/prisma';
+
+const CATEGORY_CONFIRM_NEEDED_TAG = 'category_confirm_needed';
+
+// UCE-4 (2026-08-27): mark/clear the cross-product "카테고리 확인 필요" queue
+// flag (surfaced by UploadReadinessWidget via internalTags — an existing,
+// otherwise-unused JSON column, no schema migration needed). Best-effort:
+// never throws, never blocks the response.
+async function updateCategoryConfirmFlag(productId: string, needsConfirm: boolean): Promise<void> {
+  try {
+    const product = await prisma.product.findUnique({ where: { id: productId }, select: { internalTags: true } });
+    if (!product) return;
+    const current = Array.isArray(product.internalTags) ? (product.internalTags as string[]) : [];
+    const has = current.includes(CATEGORY_CONFIRM_NEEDED_TAG);
+    if (needsConfirm === has) return; // already correct, skip write
+    const next = needsConfirm
+      ? [...current, CATEGORY_CONFIRM_NEEDED_TAG]
+      : current.filter((t) => t !== CATEGORY_CONFIRM_NEEDED_TAG);
+    await prisma.product.update({ where: { id: productId }, data: { internalTags: next } });
+  } catch (e) {
+    console.warn('[category/suggest] category-confirm-flag update failed:', String(e).slice(0, 120));
+  }
+}
 
 type ScoredSuggestion = { d1: string; d2: string; d3: string; d4?: string; score: CategoryScore };
 
@@ -47,10 +72,35 @@ async function rankByScore(
 // Keeping prompt small (< 500 tokens) so AI has room to respond
 
 export const dynamic = 'force-dynamic';
+
+// UCE-2 (2026-08-27): AI is now the SECOND line — it only runs when the
+// deterministic matcher (category-deterministic-matcher.ts, checked first in
+// the handler below) found nothing. Two problems this rewrite targets:
+//   1. usedAI:false root cause was never actually identifiable because the
+//      Groq call's raw text was never logged — only a 120-char slice of the
+//      thrown Error message. Now we always log the raw response (or the
+//      exact failure reason: empty / no-brackets / parse-error) so a future
+//      usedAI:false can be diagnosed from logs instead of re-guessed.
+//   2. Hallucination risk: with only "correction rules" and no real examples,
+//      the model had nothing to anchor its output format/vocabulary to
+//      actual Naver category names. FEW_SHOT below is a handful of REAL
+//      rows sampled from NAVER_CATEGORIES_FULL (not hand-invented) so the
+//      model sees the real naming convention (e.g. "여성의류", "요가/필라테스")
+//      instead of inventing plausible-sounding but nonexistent categories.
+const FEW_SHOT_D1S = ['패션의류', '생활/건강', '가구/인테리어', '디지털/가전', '스포츠/레저'];
+function buildFewShotExamples(): string {
+  return FEW_SHOT_D1S.map((d1) => {
+    const row = NAVER_CATEGORIES_FULL.find((c) => c.d1 === d1 && c.d3);
+    return row ? `{"d1":"${row.d1}","d2":"${row.d2}","d3":"${row.d3}"}` : null;
+  })
+    .filter((x): x is string => !!x)
+    .join(', ');
+}
+
 async function suggestWithGroq(
   productName: string
 ): Promise<Array<{ d1: string; d2: string; d3: string }>> {
-  // Compact prompt — no giant category list, just key correction rules
+  const fewShot = buildFewShotExamples();
   const prompt = `You are a Naver SmartStore SEO expert. Given a Korean product name, output the top 3 Naver shopping category paths (d1 > d2 > d3).
 
 Product: "${productName}"
@@ -64,7 +114,12 @@ CRITICAL RULES (verified against actual Naver DB):
 - 두꺼비집가리개/분전함커버 → 가구/인테리어 > 인테리어소품 > 인터폰박스
 - 인테리어소품/장식 → 가구/인테리어 > 인테리어소품 > 기타장식용품
 - 반려동물/펫 관련 용품(급식기·급수기·사료·장난감 등) → d1은 "반려동물"이나 "펫용품"이 아니라 "생활/건강" > "반려동물" > (구체적 하위카테고리)
-- If the product does not clearly match any category you know, respond with an empty array [] instead of guessing.
+
+REAL examples of the exact d1/d2/d3 naming convention used (do not invent names outside this style — these are real rows, not a template):
+${fewShot}
+
+- Every d1/d2/d3 you output MUST be a real Naver category name in this exact style — never invent a plausible-sounding one.
+- If you are not confident the product matches a real category you know, respond with an empty array [] instead of guessing.
 
 Respond ONLY with raw JSON array (no markdown):
 [{"d1":"...","d2":"...","d3":"..."},{"d1":"...","d2":"...","d3":"..."},{"d1":"...","d2":"...","d3":"..."}]`;
@@ -74,109 +129,37 @@ Respond ONLY with raw JSON array (no markdown):
     'Output ONLY a raw JSON array. First character must be [. Last must be ]. No markdown, no explanation.',
   );
 
-  if (!text.trim()) throw new Error('Groq empty response');
+  // UCE-2: always log the raw response (truncated) — this is the single
+  // biggest gap that made usedAI:false unfixable before: we only ever saw a
+  // 120-char slice of the *thrown error*, never the model's actual text.
+  console.log(`[category/suggest][groq-raw] "${productName}" (${text.length} chars): ${text.slice(0, 300)}`);
+
+  if (!text.trim()) throw new Error('Groq empty response (reason=empty_response)');
 
   // Strip markdown fences if present
   const clean = text.replace(/^```(?:json)?\s*/, '').replace(/\s*```\s*$/, '').trim();
   const startIdx = clean.indexOf('[');
   const endIdx = clean.lastIndexOf(']');
-  if (startIdx === -1 || endIdx === -1) throw new Error(`No JSON array in: ${clean.slice(0, 80)}`);
-
-  const parsed: Array<{ d1: string; d2: string; d3: string }> = JSON.parse(clean.slice(startIdx, endIdx + 1));
-  return parsed.slice(0, 3);
-}
-
-// ── Fallback: keyword rules (DB-verified paths) ───────────────────────────────
-const FALLBACK_RULES: Array<{ keywords: string[]; d1: string; d2: string; d3: string }> = [
-  // ── 패션의류 - 여성 ──
-  { keywords: ['레깅스'],                                         d1: '패션의류',     d2: '여성의류',          d3: '레깅스' },
-  { keywords: ['원피스', '드레스'],                               d1: '패션의류',     d2: '여성의류',          d3: '원피스' },
-  { keywords: ['블라우스'],                                       d1: '패션의류',     d2: '여성의류',          d3: '블라우스/셔츠' },
-  { keywords: ['스커트', '치마'],                                 d1: '패션의류',     d2: '여성의류',          d3: '스커트' },
-  { keywords: ['잠옷', '파자마', '홈웨어', '수면잠옷'],           d1: '패션의류',     d2: '여성언더웨어/잠옷', d3: '잠옷/홈웨어' },
-  { keywords: ['브라', '팬티세트'],                               d1: '패션의류',     d2: '여성언더웨어/잠옷', d3: '브라팬티세트' },
-  // ── 패션의류 - 남성 ──
-  { keywords: ['남성잠옷', '남성홈웨어'],                         d1: '패션의류',     d2: '남성언더웨어/잠옷', d3: '잠옷/홈웨어' },
-  { keywords: ['청바지', '데님바지'],                             d1: '패션의류',     d2: '남성의류',          d3: '바지' },
-  { keywords: ['후드티', '맨투맨'],                               d1: '패션의류',     d2: '남성의류',          d3: '점퍼/재킷' },
-  // ── 스포츠 ──
-  { keywords: ['요가복', '필라테스복'],                           d1: '스포츠/레저',  d2: '요가/필라테스',     d3: '요가복' },
-  { keywords: ['등산복', '트레킹복'],                             d1: '스포츠/레저',  d2: '등산',              d3: '등산의류' },
-  // ── 가구/인테리어 ──
-  { keywords: ['차렵이불', '홑이불'],                             d1: '가구/인테리어',d2: '침구단품',          d3: '차렵이불' },
-  { keywords: ['이불', '베개'],                                   d1: '가구/인테리어',d2: '침구단품',          d3: '차렵이불' },
-  { keywords: ['침구세트'],                                       d1: '가구/인테리어',d2: '침구세트',          d3: '이불베개세트' },
-  { keywords: ['소파', '리클라이너'],                             d1: '가구/인테리어',d2: '거실가구',          d3: '소파' },
-  { keywords: ['책상'],                                           d1: '가구/인테리어',d2: '서재/사무용가구',   d3: '책상' },
-  { keywords: ['두꺼비집', '분전함', '차단기커버'],               d1: '가구/인테리어',d2: '인테리어소품',      d3: '인터폰박스' },
-  { keywords: ['시트지', '인테리어필름'],                         d1: '가구/인테리어',d2: 'DIY자재/용품',      d3: '시트지' },
-  { keywords: ['LED조명', '전구', '조명'],                        d1: '가구/인테리어',d2: '인테리어소품',      d3: '조명' },
-  // ── 생활/건강 - 주방 ──
-  { keywords: ['젖병솔', '젖병세척'],                             d1: '생활/건강',    d2: '유아동/출산',       d3: '수유/이유용품' },
-  { keywords: ['젖병'],                                           d1: '생활/건강',    d2: '유아동/출산',       d3: '수유/이유용품' },
-  { keywords: ['텀블러솔', '텀블러세척', '물병솔', '병솔'],       d1: '생활/건강',    d2: '주방용품',          d3: '주방청소용품' },
-  { keywords: ['텀블러'],                                         d1: '생활/건강',    d2: '주방용품',          d3: '텀블러/보온병' },
-  { keywords: ['보온병', '물병'],                                 d1: '생활/건강',    d2: '주방용품',          d3: '텀블러/보온병' },
-  { keywords: ['브러쉬', '브러시', '세척솔', '청소솔'],           d1: '생활/건강',    d2: '주방용품',          d3: '주방청소용품' },
-  { keywords: ['수세미'],                                         d1: '생활/건강',    d2: '주방용품',          d3: '수세미/행주' },
-  { keywords: ['행주', '키친타월'],                               d1: '생활/건강',    d2: '주방용품',          d3: '수세미/행주' },
-  { keywords: ['도마'],                                           d1: '생활/건강',    d2: '주방용품',          d3: '도마' },
-  { keywords: ['냄비', '프라이팬', '웍'],                         d1: '생활/건강',    d2: '주방용품',          d3: '냄비/프라이팬/웍' },
-  { keywords: ['전기포트', '커피포트'],                           d1: '생활/건강',    d2: '가전제품',          d3: '전기포트' },
-  { keywords: ['방향제', '디퓨저', '아로마'],                     d1: '생활/건강',    d2: '홈인테리어소품',    d3: '방향제/디퓨저' },
-  { keywords: ['청소기'],                                         d1: '생활/건강',    d2: '가전제품',          d3: '청소기' },
-  { keywords: ['가습기', '미니가습기', '주가습기', '탁상가습기', '인테리어가습기'],   d1: '생활/건강',    d2: '가전제품',          d3: '가습기' },
-  { keywords: ['WIFI가습기', '무선가습기'],                         d1: '생활/건강',    d2: '가전제품',          d3: '가습기' },
-  { keywords: ['선풍기', '포터블팬'],                             d1: '생활/건강',    d2: '가전제품',          d3: '전기선풍기' },
-  { keywords: ['공기청정기'],                                     d1: '생활/건강',    d2: '가전제품',          d3: '공기청정기' },
-  { keywords: ['우산'],                                           d1: '생활/건강',    d2: '여행/레저용품',     d3: '우산/레인코트' },
-  { keywords: ['용돈봉투', '봉투'],                               d1: '문구/오피스',  d2: '봉투',              d3: '봉투' },
-  // ── 화장품 ──
-  { keywords: ['마스크팩', '팩'],                                 d1: '화장품/미용',  d2: '기초화장품',        d3: '마스크팩/팩' },
-  { keywords: ['보습크림', '수분크림'],                           d1: '화장품/미용',  d2: '기초화장품',        d3: '크림' },
-  { keywords: ['로션', '에멀전'],                                 d1: '화장품/미용',  d2: '기초화장품',        d3: '로션/에멀전' },
-  { keywords: ['에센스', '세럼', '앰플'],                         d1: '화장품/미용',  d2: '기초화장품',        d3: '에센스/세럼/앰플' },
-  { keywords: ['선크림', '자외선차단'],                           d1: '화장품/미용',  d2: '기초화장품',        d3: '선케어' },
-  { keywords: ['립스틱', '립글로스', '립틴트'],                   d1: '화장품/미용',  d2: '색조화장품',        d3: '립메이크업' },
-  { keywords: ['샴푸'],                                           d1: '화장품/미용',  d2: '헤어케어',          d3: '샴푸' },
-  { keywords: ['헤어오일', '헤어에센스'],                         d1: '화장품/미용',  d2: '헤어케어',          d3: '헤어에센스/오일' },
-  // ── 식품 ──
-  { keywords: ['원두', '커피원두'],                               d1: '식품',         d2: '커피',              d3: '원두커피' },
-  { keywords: ['비타민', '영양제', '건강기능'],                   d1: '식품',         d2: '건강식품',          d3: '비타민/미네랄' },
-  // ── 디지털/가전 ──
-  { keywords: ['충전케이블', 'USB케이블'],                        d1: '디지털/가전',  d2: '휴대폰액세서리',    d3: '케이블/젠더' },
-  { keywords: ['무선이어폰', '이어버즈'],                         d1: '디지털/가전',  d2: '이어폰/헤드폰',     d3: '블루투스이어폰' },
-  { keywords: ['보조배터리'],                                     d1: '디지털/가전',  d2: '휴대폰액세서리',    d3: '보조배터리' },
-  // ── 반려동물 (실제 DB 축은 d1='생활/건강' > d2='반려동물' — '반려동물'은 d1이 아니다,
-  //   A 후속조사 2026-08-10: 기존 d1:'반려동물' 규칙이 존재하지 않는 카테고리라
-  //   selfValidateSuggestions에서 전부 드롭돼 안전망이 무력화돼 있었음) ──
-  { keywords: ['자동급식기', '급식기', '급수기'],                 d1: '생활/건강',    d2: '반려동물',          d3: '식기/급수기' },
-  { keywords: ['강아지', '반려견'],                               d1: '생활/건강',    d2: '반려동물',          d3: '강아지 사료' },
-  { keywords: ['고양이', '반려묘'],                               d1: '생활/건강',    d2: '반려동물',          d3: '고양이 사료' },
-  // ── 문구/오피스 ──
-  { keywords: ['노트', '다이어리'],                               d1: '문구/오피스',  d2: '노트/메모/다이어리',d3: '다이어리/플래너' },
-  { keywords: ['볼펜', '펜'],                                     d1: '문구/오피스',  d2: '필기구',            d3: '볼펜' },
-];
-
-function suggestFallback(productName: string): Array<{ d1: string; d2: string; d3: string }> {
-  const scores = new Map<string, { d1: string; d2: string; d3: string; score: number }>();
-  for (const rule of FALLBACK_RULES) {
-    let matchCount = 0;
-    for (const kw of rule.keywords) {
-      if (productName.includes(kw)) matchCount++;
-    }
-    if (matchCount > 0) {
-      const key = `${rule.d1}|${rule.d2}|${rule.d3}`;
-      const existing = scores.get(key);
-      if (!existing || existing.score < matchCount) {
-        scores.set(key, { d1: rule.d1, d2: rule.d2, d3: rule.d3, score: matchCount });
-      }
-    }
+  if (startIdx === -1 || endIdx === -1) {
+    throw new Error(`No JSON array (reason=no_json_brackets) in: ${clean.slice(0, 200)}`);
   }
-  return Array.from(scores.values())
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
-    .map(({ d1, d2, d3 }) => ({ d1, d2, d3 }));
+
+  let parsed: Array<{ d1: string; d2: string; d3: string }>;
+  try {
+    parsed = JSON.parse(clean.slice(startIdx, endIdx + 1));
+  } catch (e) {
+    throw new Error(`JSON.parse failed (reason=json_parse_error): ${String(e).slice(0, 120)} | raw: ${clean.slice(0, 200)}`);
+  }
+
+  // UCE-2 hallucination guard: log (don't silently drop here — validateSuggestion
+  // downstream still fuzzy-matches) any d1 that isn't even in the real depth-1
+  // list, so a hallucination pattern is visible in logs instead of invisible.
+  const hallucinated = parsed.filter((p) => p?.d1 && !NAVER_DEPTH1_LIST.includes(p.d1));
+  if (hallucinated.length > 0) {
+    console.warn(`[category/suggest][groq-hallucination] "${productName}" produced non-existent d1: ${hallucinated.map((h) => h.d1).join(', ')}`);
+  }
+
+  return parsed.slice(0, 3);
 }
 
 // ── DB validation ─────────────────────────────────────────────────────────────
@@ -272,6 +255,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const productName: string = body?.productName ?? '';
     const domeCategoryCode: string | undefined = body?.domeCategoryCode;
+    // UCE-4: when the caller knows which saved product this suggest call is
+    // for, we can mark/clear the "카테고리 확인 필요" queue flag on it.
+    // Optional — a brand-new unsaved draft has no id yet, and that's fine.
+    const productId: string | undefined = typeof body?.productId === 'string' ? body.productId : undefined;
     // #249: optional wholesale price makes the ROI score product-specific.
     const supplierPrice: number | undefined =
       typeof body?.supplierPrice === 'number' && body.supplierPrice > 0
@@ -322,24 +309,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // UCE-1 (2026-08-27): deterministic matcher against the FULL master runs
+    // FIRST — zero cost, zero latency vs. an AI round-trip, and covers every
+    // catalog category plus any out-of-catalog item whose name shares real
+    // vocabulary with a Naver leaf name (see category-deterministic-matcher.ts
+    // for why this covers far more than the old 57-rule FALLBACK_RULES did).
+    // AI is demoted to a second attempt, only invoked when deterministic
+    // matching finds nothing at all.
     let rawSuggestions: Array<{ d1: string; d2: string; d3: string; d4?: string }> = [];
     let usedAI = false;
+    let source: 'deterministic' | 'ai' | 'unresolved' = 'unresolved';
 
-    try {
-      const aiResults = await suggestWithGroq(name);
-      usedAI = true;
-      for (const s of aiResults) {
-        const validated = validateSuggestion(s.d1, s.d2, s.d3);
-        if (validated) rawSuggestions.push(validated);
+    const deterministic = matchDeterministicCategories(name);
+    if (deterministic.length > 0) {
+      rawSuggestions = deterministic.map((m) => ({ d1: m.d1, d2: m.d2, d3: m.d3, d4: m.d4 }));
+      source = 'deterministic';
+    } else {
+      try {
+        const aiResults = await suggestWithGroq(name);
+        usedAI = true;
+        for (const s of aiResults) {
+          const validated = validateSuggestion(s.d1, s.d2, s.d3);
+          if (validated) rawSuggestions.push(validated);
+        }
+        if (rawSuggestions.length > 0) source = 'ai';
+      } catch (aiError) {
+        console.warn('[category/suggest] AI failed (deterministic also found nothing):', String(aiError).slice(0, 300));
       }
-    } catch (aiError) {
-      console.warn('[category/suggest] AI failed, using fallback:', String(aiError).slice(0, 120));
-    }
-
-    let source: 'ai' | 'fallback' = usedAI && rawSuggestions.length > 0 ? 'ai' : 'fallback';
-    if (rawSuggestions.length === 0) {
-      rawSuggestions = suggestFallback(name);
-      source = 'fallback';
     }
 
     // Deduplicate
@@ -422,7 +418,7 @@ export async function POST(request: NextRequest) {
         d2: top.d2,
         d3: top.d3,
         d4: top.d4 ?? null,
-        confidence: source === 'ai' ? 80 : 60,
+        confidence: source === 'deterministic' ? 85 : source === 'ai' ? 75 : 55,
         source,
       }).catch((e) => console.warn('[category/suggest] cache write failed:', String(e).slice(0, 120)));
     }
@@ -434,7 +430,7 @@ export async function POST(request: NextRequest) {
         d2: top.d2,
         d3: top.d3,
         d4: top.d4 ?? null,
-        confidence: source === 'ai' ? 85 : 65,
+        confidence: source === 'deterministic' ? 90 : source === 'ai' ? 80 : 60,
         source,
       }).catch((e) => console.warn('[category/suggest] cache write failed:', String(e).slice(0, 120)));
     }
@@ -444,6 +440,12 @@ export async function POST(request: NextRequest) {
     // the seller sees the most search-favourable + profitable candidate first —
     // these are two different concerns (correct mapping vs. best opportunity).
     const rankedSuggestions = await rankByScore(suggestions, supplierPrice);
+
+    // UCE-4: honest, self-healing — flag when every layer failed, clear it
+    // the moment a later call (e.g. after the master regenerates) succeeds.
+    if (productId) {
+      await updateCategoryConfirmFlag(productId, suggestions.length === 0);
+    }
 
     return NextResponse.json({
       success: true,

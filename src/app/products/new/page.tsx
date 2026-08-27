@@ -1205,6 +1205,7 @@ function NewProductPageInner() {
       body: JSON.stringify({
         productName: productName.trim(),
         domeCategoryCode: crawlCatCode || undefined,
+        productId: searchParams?.get('edit') || undefined,
       }),
     })
       .then(r => r.json())
@@ -2929,7 +2930,10 @@ const handleGenerate = async () => {
                           const res = await fetch('/api/category/suggest', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ productName: productName.trim() }),
+                            body: JSON.stringify({
+                              productName: productName.trim(),
+                              productId: searchParams?.get('edit') || undefined,
+                            }),
                           });
                           const data = await res.json();
                           if (data.success && data.suggestions?.length > 0) {

@@ -5049,6 +5049,14 @@ export const NAVER_DEPTH1_LIST: string[] = Array.from(
 
 export const TOTAL_CATEGORY_COUNT = 5021;
 
+// UCE-5 (2026-08-27): freshness marker read by /api/cron/category-master-check
+// — do not hand-edit going forward; scripts/gen-naver-categories.py now emits
+// these automatically from the source XLS filename at regen time. Backfilled
+// here to match this already-committed file's header comment (source date
+// 2026-07-09) since it predates the generator gaining this feature.
+export const CATEGORY_MASTER_SOURCE_FILE = 'category_20260709_223453.xls';
+export const CATEGORY_MASTER_GENERATED_AT = '2026-07-09';
+
 /** leaf category code → 전체 경로(트리명). 매칭 실패 시 코드 원문(추측 지양 — #82). */
 export function categoryFullPath(code: string): string {
   return NAVER_CATEGORIES_FULL.find(c => c.code === code)?.fullPath ?? code;

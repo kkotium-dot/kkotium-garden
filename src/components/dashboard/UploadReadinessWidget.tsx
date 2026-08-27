@@ -356,6 +356,7 @@ export default function UploadReadinessWidget({
       .map((p) => {
         const readiness = calcUploadReadiness({
           naverCategoryCode: p.naverCategoryCode,
+          categoryConfirmNeeded: ((p as any).internalTags ?? []).includes('category_confirm_needed'),
           keywords: p.keywords,
           tags: p.tags,
           name: p.name,

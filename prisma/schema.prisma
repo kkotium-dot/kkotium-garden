@@ -365,6 +365,24 @@ model OrderItem {
   @@index([productId])
 }
 
+// UCE-6 (2026-08-27, 실측): DEAD TABLE — never seeded (0 rows in production,
+// confirmed by src/app/api/naver/categories/route.ts's own header comment).
+// The category suggestion pipeline (category/suggest, category-score,
+// category-deterministic-matcher) all read the static NAVER_CATEGORIES_FULL
+// array (naver-categories-full.ts, 5,021 entries) instead — this Prisma
+// model is NOT that master and is not wired to it.
+// Its only application-code consumers are src/lib/crawler/auto-mapper.ts
+// (matchCategory(), called via /api/crawler/naver-auto-fill) — but that whole
+// chain is itself unreachable dead code: the one component that would call
+// the route, src/components/product/NaverAutoFillForm.tsx, is never
+// imported/rendered by any page. With the table empty, matchCategory() would
+// actually throw (scores[0] is undefined -> best.category.categoryCode
+// crashes) if that dead chain were ever wired up — a landmine, not just
+// unused weight.
+// Decision needed from operator: DROP TABLE naver_categories (and delete the
+// 3 dead-code files above) vs. leave as documented-unused. Not touched here —
+// dropping a table is DDL and, per this project's DB safety rules, requires
+// explicit operator approval, not a judgment call made mid-feature-branch.
 model NaverCategory {
   id           String    @id @default(cuid())
   categoryCode String    @unique @map("category_code")

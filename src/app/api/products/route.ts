@@ -150,6 +150,11 @@ export async function GET(request: NextRequest) {
         return_care_enabled: true,
         keywords: true,
         tags: true,
+        // UCE-4 (2026-08-27): 'category_confirm_needed' tag set by
+        // /api/category/suggest when deterministic+AI+page-validation all
+        // failed to find a category — surfaces a "카테고리 확인 필요" queue
+        // distinct from "카테고리 미선택" (which just means nobody picked one).
+        internalTags: true,
         // Tuning score inputs (#256 P4) — loadTuningScores() needs these to
         // compute the same signal set used by /api/products/linked. (category
         // is already selected above for the search filter.)

@@ -34,6 +34,10 @@ export interface ReadinessItem {
 // ── Input type ───────────────────────────────────────────────────────────────
 export interface ReadinessInput {
   naverCategoryCode?: string | null;
+  // UCE-4 (2026-08-27): true when /api/category/suggest ran all 3 layers
+  // (deterministic + AI + Naver page-1 validation) and still found nothing —
+  // a genuinely hard-to-classify item, distinct from "nobody's picked one yet".
+  categoryConfirmNeeded?: boolean;
   keywords?: string[] | null;
   tags?: string[] | null;
   name?: string | null;
@@ -73,6 +77,7 @@ const WEIGHTS: Record<ReadinessItemId, number> = {
 export function calcUploadReadiness(input: ReadinessInput): ReadinessResult {
   const {
     naverCategoryCode,
+    categoryConfirmNeeded = false,
     keywords = [],
     tags = [],
     name = '',
@@ -151,7 +156,9 @@ export function calcUploadReadiness(input: ReadinessInput): ReadinessResult {
       id: 'category',
       passed: categoryPassed,
       label: '카테고리',
-      message: '카테고리 미선택 — 노출 순위 대폭 하락',
+      message: categoryConfirmNeeded
+        ? '카테고리 확인 필요 — 자동매칭 3단계(결정론적·AI·검색신호) 전부 실패, 직접 확인해주세요'
+        : '카테고리 미선택 — 노출 순위 대폭 하락',
       weight: WEIGHTS.category,
     },
     {
