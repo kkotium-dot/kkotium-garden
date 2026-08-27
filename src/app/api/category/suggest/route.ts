@@ -100,7 +100,20 @@ async function rankByScore(
     });
     scored.push({ ...s, score });
   }
-  scored.sort((a, b) => b.score.totalScore - a.score.totalScore);
+  // UCE-7 fix (2026-08-27 프로덕션 실측): sorting ALL candidates by SEO×ROI
+  // could promote a HIGHER-SCORING BUT WRONG category over the correctness
+  // pipeline's actual top pick — e.g. "요가 매트" deterministically matches
+  // 스포츠/레저>요가/필라테스>요가매트 first, but 생활/건강>반려동물>리빙용품>매트
+  // had a hotter trend score and was jumping to position 0, silently
+  // corrupting the primary answer for any never-before-cached product name.
+  // The correctness-ranked top (index 0, from the deterministic/AI/
+  // pageValidation pipeline) is pinned; only the alternatives (index 1+) are
+  // reordered by business opportunity, preserving #249's original intent.
+  if (scored.length > 1) {
+    const [top, ...rest] = scored;
+    rest.sort((a, b) => b.score.totalScore - a.score.totalScore);
+    return [top, ...rest];
+  }
   return scored;
 }
 
