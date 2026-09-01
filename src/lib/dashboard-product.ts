@@ -11,6 +11,9 @@ export interface DashboardProduct {
   salePrice: number;
   supplierPrice: number;
   naverCategoryCode?: string;
+  // Product.category_id — the naver_categories FK used for dropship-fitness/
+  // sourcing scoring, kept distinct from naverCategoryCode (2026-09-02).
+  category_id?: string | null;
   keywords?: string[];
   tags?: string[];
   mainImage?: string;
@@ -41,6 +44,7 @@ export function normalizeProducts(raw: unknown[]): DashboardProduct[] {
       // renders/counts as if it were a real Naver category code (2026-09-02
       // 실측, category_id backfill 작업 중 발견).
       naverCategoryCode: (p.naverCategoryCode as string | undefined) ?? '',
+      category_id: (p.category_id as string | null | undefined) ?? null,
       keywords: Array.isArray(p.keywords) ? (p.keywords as string[]) : [],
       tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
       mainImage:

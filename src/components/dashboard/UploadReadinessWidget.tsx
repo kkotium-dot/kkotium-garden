@@ -357,6 +357,11 @@ export default function UploadReadinessWidget({
         const readiness = calcUploadReadiness({
           naverCategoryCode: p.naverCategoryCode,
           categoryConfirmNeeded: ((p as any).internalTags ?? []).includes('category_confirm_needed'),
+          // 2026-09-02 (category_id 백필 방향전환): category_id는
+          // naverCategoryCode와 별개 신호 — 상품명이 있는데 category_id가
+          // NULL이면(자동 재기입은 중단됐으므로 사람이 아직 확인 안 한
+          // 상태) 여기서도 "확인 필요"로 뜨게 한다.
+          categoryDbConfirmNeeded: !!p.name && !p.category_id,
           keywords: p.keywords,
           tags: p.tags,
           name: p.name,

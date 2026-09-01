@@ -136,6 +136,9 @@ export async function GET(request: NextRequest) {
         createdAt: true,
         updatedAt: true,
         naverCategoryCode: true,
+        // naver_categories FK — distinct from naverCategoryCode, see
+        // src/lib/naver/category-id-resolver.ts header (2026-09-02).
+        category_id: true,
         naverProductId: true,
         // Registration status (#240) + revival scoring (#244) + source tag (#245)
         // for the hub axis. origin_kind column is live (Desktop applied the
