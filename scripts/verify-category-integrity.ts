@@ -115,4 +115,47 @@ for (const name of AMBIGUOUS_NAMES) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// UCE-9(2026-09-02) 매처 근본수정 재발방지 — Desktop 전수검증(임의20종+DB15종)
+// 실측 오분류4 + 개악2 = 6케이스. 근본원인 2가지를 category-deterministic-
+// matcher.ts에서 직접 고쳤다(resolver 게이트 강화만으로는 한계):
+//   1. 수식어 "인테리어"가 문장 끝에 오면 headNoun으로 오인되어 부적절하게
+//      HEAD_NOUN_BOOST를 받음 → HEAD_NOUN_EXCLUDE로 headNoun 후보에서 제외.
+//   2. "물티슈"(출산/육아 d2 완전일치)가 "물티슈/크리너"(반려동물, 부분매칭)
+//      에게, "무선청소기"(청소기 d3 완전일치)가 "청소기"(공구, 부분매칭)에게
+//      져서 반려동물/공구가 무관 상품에 과잉매칭 → EXACT_BRANCH 우선순위 신설.
+// ---------------------------------------------------------------------------
+console.log('\n[UCE-9] 매처 근본수정 — 수식어 오인식 + 반려동물/공구 과잉매칭 차단');
+
+const MATCHER_FIX_WRONG_GUARDS: WrongCategoryGuard[] = [
+  { name: '무선청소기', wrongD1: '생활/건강', wrongD2: '공구' }, // 舊: 전동공구>청소기(부분매칭)
+  { name: '차량용 무선청소기', wrongD1: '생활/건강', wrongD2: '공구' },
+  { name: '물티슈', wrongD1: '생활/건강', wrongD2: '반려동물' }, // 舊: 물티슈/크리너(부분매칭)
+  { name: '아기 물티슈', wrongD1: '생활/건강', wrongD2: '반려동물' },
+  { name: '수제 도자기 달항아리 인테리어소품', wrongD1: '도서', wrongD2: '가정/요리' }, // 舊: 도서>인테리어
+  { name: '무드 캔들 불멍 가습기 인테리어', wrongD1: '도서', wrongD2: '가정/요리' }, // 舊: 도서>인테리어
+];
+for (const g of MATCHER_FIX_WRONG_GUARDS) {
+  check(`"${g.name}" != ${g.wrongD1}>${g.wrongD2}`, () => {
+    const resolved = resolveConfidentCategory(g.name);
+    if (resolved) {
+      assert.notEqual(
+        `${resolved.match.d1}>${resolved.match.d2}`,
+        `${g.wrongD1}>${g.wrongD2}`,
+        `"${g.name}" resolved back to the known-wrong category: ${resolved.fullPath}`,
+      );
+    }
+  });
+}
+
+// 매처 수정이 정답 방향으로도 실제 작동하는지(단순 회피가 아니라 개선) —
+// 트레일링 "인테리어"를 headNoun에서 제외하니 진짜 headNoun("화병")이 정상적으로
+// 이겨서 이제는 확신 가능한 정답까지 나온다.
+check('"북유럽 감성 달항아리 화병 홈 인테리어" -> 가구/인테리어>인테리어소품 (트레일링 수식어 제외 후 정답 회복)', () => {
+  const resolved = resolveConfidentCategory('북유럽 감성 달항아리 화병 홈 인테리어');
+  assert.ok(resolved, 'expected a confident hit after HEAD_NOUN_EXCLUDE fix, got null');
+  assert.equal(resolved!.match.d1, '가구/인테리어');
+  assert.equal(resolved!.match.d2, '인테리어소품');
+});
+
 console.log(`\n${passed}/${passed} passed ✅\n`);

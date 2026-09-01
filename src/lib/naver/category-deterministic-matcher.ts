@@ -77,6 +77,14 @@ const MIN_TERM_LEN = 2; // shorter than this is too generic to trust as a signal
 // UCE7_MATCH_QUALITY_2026-08-27.md §3 UCE-7a).
 const HEAD_NOUN_BOOST = 3;
 const MODIFIER_NOUN_PENALTY = 0.5;
+// UCE-9: exact d2/d3 branch-name match — scored as if headNoun were itself a
+// self-matching leaf with the full head-noun boost (length*10, +headroom,
+// ×HEAD_NOUN_BOOST ≈ length*30). This must beat a spurious partial/substring
+// collision elsewhere (실측: "청소기" 부분매칭 105점이 "무선청소기" 완전일치
+// 150점에 져야 함), but must NOT beat a genuinely more specific compound leaf
+// that already encodes the modifier ("전동칫솔"=135점 leaf가 bare "칫솔"
+// 완전일치=60점보다 여전히 이겨야 함 — 더 구체적인 매치가 항상 우선).
+const EXACT_BRANCH_SCORE_PER_CHAR = 30;
 // UCE-7: reverse-containment fallback weight (headNoun found INSIDE a leaf
 // name, e.g. "빨대" inside "일회용빨대") — deliberately below every forward
 // tier's baseline so a real forward match always wins when one exists.
@@ -173,8 +181,19 @@ export function matchDeterministicCategories(
   // (material/usage/brand). `nounsCompact` recovers compound leaf names that
   // the wholesale title wrote with a space ("실리콘 주걱" -> can still match
   // a leaf like "칫솔살균기" style compact spelling once nouns are re-joined).
-  const headNoun = nouns.length > 0 ? nouns[nouns.length - 1] : '';
-  const modifierNouns = nouns.slice(0, -1);
+  //
+  // UCE-9 (2026-09-02, category_id 백필 전수검증): a small set of trailing
+  // words are near-universal SEO/category-stuffing suffixes in Korean
+  // wholesale titles ("...달항아리 인테리어", "...가습기 인테리어") rather
+  // than the product's actual identity — treating them as the headNoun makes
+  // HEAD_NOUN_BOOST reward the wrong signal (실측: 도서>가정/요리>인테리어/
+  // 살림>인테리어로 오분류). Skip them when picking headNoun, falling back to
+  // the nearest real identity noun before it.
+  const HEAD_NOUN_EXCLUDE = new Set(['인테리어']);
+  let headIdx = nouns.length - 1;
+  while (headIdx > 0 && HEAD_NOUN_EXCLUDE.has(nouns[headIdx])) headIdx--;
+  const headNoun = nouns.length > 0 ? nouns[headIdx] : '';
+  const modifierNouns = nouns.filter((_, i) => i !== headIdx);
   const nounsCompact = nouns.join('');
   const haystacks = [name, nounsCompact].filter((h, i, arr) => h && arr.indexOf(h) === i);
 
@@ -188,6 +207,39 @@ export function matchDeterministicCategories(
   for (const c of NAVER_CATEGORIES_FULL) {
     // UCE-7c: service/lesson categories are never a physical-product match.
     if (EXCLUDED_SERVICE_D2.has(c.d2)) continue;
+
+    // UCE-9 (2026-09-02, UCE7_EDGECASE_QUEUE §3-1/§3-2 근본수정): the head
+    // noun EXACTLY equals a d2/d3 BRANCH name — the product is describing
+    // that structural node, not merely sharing a word with some unrelated
+    // leaf elsewhere. This must always outrank a coincidental partial/
+    // substring match (실측: "무선청소기"→생활/건강>공구>전동공구>청소기
+    // (leaf 부분매칭, 105점)가 진짜 정답인 디지털/가전>청소기>무선청소기(d3
+    // 완전일치, 구 tier2 120점)를 근소하게 이겨야 정상인데 근소해서 위험했고,
+    // "물티슈"→생활/건강>반려동물>...>물티슈/크리너(부분매칭)가 정답
+    // 출산/육아>물티슈(d2 완전일치)를 아예 이겨버렸음). 완전일치이므로 어떤
+    // leaf의 우연한 부분매칭보다도 신뢰도가 높다 — 큰 고정 보너스로 확정.
+    if (headNoun && headNoun.length >= MIN_TERM_LEN) {
+      // Tie-break when the SAME branch name exists under two different
+      // parents (e.g. "소파" is a d3 under both 거실가구 (as an ancestor of
+      // qualified leaves like "가죽소파") and 아동/주니어가구 (where "소파"
+      // IS itself the sellable leaf, d4 empty) — prefer the one that's an
+      // actual leaf over one that's merely an ancestor label, so a bare
+      // head-noun match resolves to a real product node, not just a branch.
+      const isLeafItself = !c.d4;
+      if (c.d3 && c.d3 === headNoun) {
+        consider(`${c.d1}|${c.d2}|${c.d3}`, {
+          d1: c.d1, d2: c.d2, d3: c.d3, d4: undefined, matchedTerm: c.d3, tier: 1,
+          score: c.d3.length * EXACT_BRANCH_SCORE_PER_CHAR + (isLeafItself ? 1 : 0),
+        });
+      }
+      if (c.d2 === headNoun) {
+        consider(`${c.d1}|${c.d2}|`, {
+          d1: c.d1, d2: c.d2, d3: '', d4: undefined, matchedTerm: c.d2, tier: 1,
+          score: c.d2.length * EXACT_BRANCH_SCORE_PER_CHAR,
+        });
+      }
+    }
+
     const leaf = c.d4 || c.d3; // deepest non-empty level
     if (!leaf) continue;
     const key = `${c.d1}|${c.d2}|${c.d3}`;
