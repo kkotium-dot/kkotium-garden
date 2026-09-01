@@ -158,4 +158,60 @@ check('"북유럽 감성 달항아리 화병 홈 인테리어" -> 가구/인테�
   assert.equal(resolved!.match.d2, '인테리어소품');
 });
 
+// ---------------------------------------------------------------------------
+// 방향 전환(2026-09-02) — Desktop 임의 30종 전수검증: 정확17/NULL8/오분류5
+// (77%, #352 "오분류0" 미달). 근본: EXACT_BRANCH가 "사료"(관상어용품 완전
+// 일치)로 "강아지 사료"류를 낚아채는 등, 여러 무관 카테고리에 걸쳐 재사용되는
+// 범용 접미어(사료·받침·커버·필터)는 매처를 아무리 정교화해도 상품명 문맥
+// 없이는 완벽히 구분 불가 — 매처 추가 튜닝(무한 두더지잡기) 대신
+// GENERIC_SUFFIX_BLOCKLIST(category-id-resolver.ts)로 이 단어들이 최종
+// matchedTerm일 때 통째로 NULL 처리하는 안전 게이트로 전환했다. 확신 있는
+// 상품만 자동 backfill하고, 나머지는 씨앗심기 UI(UCE-4 개입큐)에서 사람이
+// 확인한다.
+// ---------------------------------------------------------------------------
+console.log('\n[방향전환] 범용접미어 blocklist — 매처 대신 안전 반자동(NULL)으로 처리');
+
+const GENERIC_SUFFIX_AMBIGUOUS_NAMES = [
+  '반려동물 사료', // 舊: 생활/건강>관상어용품>사료 (완전일치가 강아지/고양이 사료류를 낚아챔)
+  '강아지사료', // 공백 없는 압축형 — 동일 함정
+];
+for (const name of GENERIC_SUFFIX_AMBIGUOUS_NAMES) {
+  check(`"${name}" -> null (범용접미어 blocklist, 강제 연결 금지)`, () => {
+    const resolved = resolveConfidentCategory(name);
+    assert.equal(resolved, null, `"${name}": expected blocklist to force null, but got ${JSON.stringify(resolved)}`);
+  });
+}
+
+const GENERIC_SUFFIX_WRONG_GUARDS: WrongCategoryGuard[] = [
+  { name: '반려동물 사료', wrongD1: '생활/건강', wrongD2: '관상어용품' },
+  { name: '강아지사료', wrongD1: '생활/건강', wrongD2: '관상어용품' },
+];
+for (const g of GENERIC_SUFFIX_WRONG_GUARDS) {
+  check(`"${g.name}" != ${g.wrongD1}>${g.wrongD2}`, () => {
+    const resolved = resolveConfidentCategory(g.name);
+    if (resolved) {
+      assert.notEqual(
+        `${resolved.match.d1}>${resolved.match.d2}`,
+        `${g.wrongD1}>${g.wrongD2}`,
+        `"${g.name}" resolved back to the known-wrong category: ${resolved.fullPath}`,
+      );
+    }
+  });
+}
+
+// blocklist가 무관 상품까지 과잉 차단하지 않는지 — "받침"·"필터"가 구체적인
+// 복합 리프명(matchedTerm이 bare 단어가 아님)으로 이길 때는 정상 연결돼야 한다.
+check('"냄비받침" -> 생활/건강>주방용품 (구체 리프 매치는 blocklist 영향 없음)', () => {
+  const resolved = resolveConfidentCategory('냄비받침');
+  assert.ok(resolved, '"냄비받침": expected a confident hit, got null — blocklist over-blocked a specific compound leaf');
+  assert.equal(resolved!.match.d1, '생활/건강');
+  assert.equal(resolved!.match.d2, '주방용품');
+});
+check('"차량용 에어필터" -> 생활/건강>자동차용품 (구체 리프 매치는 blocklist 영향 없음)', () => {
+  const resolved = resolveConfidentCategory('차량용 에어필터');
+  assert.ok(resolved, '"차량용 에어필터": expected a confident hit, got null — blocklist over-blocked a specific compound leaf');
+  assert.equal(resolved!.match.d1, '생활/건강');
+  assert.equal(resolved!.match.d2, '자동차용품');
+});
+
 console.log(`\n${passed}/${passed} passed ✅\n`);

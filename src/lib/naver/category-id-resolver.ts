@@ -40,6 +40,17 @@ const D1_CONFLICT_GAP = 20;
 const MULTI_NOUN_THRESHOLD = 3;
 const MULTI_NOUN_MIN_SCORE = 60;
 
+// 방향 전환(2026-09-02, Desktop 임의 30종 전수검증 — 정확17/NULL8/오분류5,
+// #352 "오분류0" 미달): 매처 추가 튜닝은 중단한다(무한 두더지잡기 — "사료"
+// 하나 고치면 다음 임의 표본에서 또 다른 범용접미어가 걸린다). 대신 여러
+// 무관 카테고리에 걸쳐 재사용되는 흔한 독립어(=매처가 아무리 정교해도 상품명
+// 문맥 없이는 구분 불가능한 단어)는 백필 대상에서 원천 제외한다 — 실측:
+// "사료"가 생활/건강>관상어용품>사료(완전일치)로 "강아지 사료"·"강아지사료"
+// (반려동물)류를 통째로 낚아챔. 이런 상품은 category_id를 NULL로 남기고
+// 씨앗심기 UI의 UCE-4 개입큐(사람 확인)로 흘려보낸다 — 확신 없으면 정직하게
+// 비워두는 게 개악보다 낫다(#352).
+const GENERIC_SUFFIX_BLOCKLIST = new Set(['사료', '받침', '커버', '필터']);
+
 export interface CategoryResolution {
   /** naver_categories.category_code — Product.category_id를 채우려면 이 코드로
    *  naver_categories 행을 조회해야 한다(마스터 미적재/코드 부재 시 null 처리는
@@ -57,6 +68,7 @@ function isConfident(matches: DeterministicMatch[], nounCount: number): boolean 
   if (!top || top.tier !== 1) return false;
   if (top.score < MIN_CONFIDENT_SCORE) return false;
   if (nounCount >= MULTI_NOUN_THRESHOLD && top.score < MULTI_NOUN_MIN_SCORE) return false;
+  if (GENERIC_SUFFIX_BLOCKLIST.has(top.matchedTerm)) return false;
   const second = matches[1];
   if (second && second.d1 !== top.d1 && top.score - second.score <= D1_CONFLICT_GAP) {
     return false;
