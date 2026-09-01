@@ -36,10 +36,11 @@ export function normalizeProducts(raw: unknown[]): DashboardProduct[] {
       status: String(p.status ?? 'DRAFT'),
       salePrice: typeof p.salePrice === 'number' ? p.salePrice : 0,
       supplierPrice: typeof p.supplierPrice === 'number' ? p.supplierPrice : 0,
-      naverCategoryCode:
-        (p.naverCategoryCode as string | undefined) ??
-        (p.category_id as string | undefined) ??
-        '',
+      // category_id (Product.category_id, a naver_categories cuid FK) is NOT
+      // a naverCategoryCode — do not fall back to it here, or a raw DB id
+      // renders/counts as if it were a real Naver category code (2026-09-02
+      // 실측, category_id backfill 작업 중 발견).
+      naverCategoryCode: (p.naverCategoryCode as string | undefined) ?? '',
       keywords: Array.isArray(p.keywords) ? (p.keywords as string[]) : [],
       tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
       mainImage:

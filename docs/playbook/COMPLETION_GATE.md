@@ -102,12 +102,23 @@ npm run test:category-integrity   # scripts/verify-category-integrity.ts
 - ✅ 통과 조건: exit 0 (전 케이스 pass). 실패 시 그 케이스가 어떤 상품명 →
   잘못된 카테고리로 재귀환했는지 원문 그대로 보고에 포함
 - 이 테스트는 `src/lib/naver/category-id-resolver.ts#resolveConfidentCategory`
-  하나만 검증한다 — `scripts/backfill-category-id-from-name.ts`(백필)도 같은
-  함수를 쓰므로, 이 테스트가 통과하면 백필 로직도 같은 판정을 한다는 뜻이다
-  (백필과 테스트가 서로 다른 로직으로 드리프트하는 것을 구조적으로 차단).
+  하나만 검증한다 — 씨앗심기 UI 후보 힌트(`src/app/products/new/page.tsx`)도
+  같은 함수를 쓰므로, 이 테스트가 통과하면 UI 힌트도 같은 판정을 한다는 뜻이다
+  (드리프트를 구조적으로 차단).
 - 하이브리드 게이트: **A(사람관문)** = `--apply`는 운영자 GO 없이 금지(작업원칙
   #41) + **B(기계관문)** = 이 정합성 테스트. 사람이 값을 승인해도 테스트가
   실패하면 완료가 아니다 — 둘 다 통과해야 완료.
+- **방향전환(2026-09-02, #352/#353)**: `Product.category_id`의 **자동 재기입**은
+  중단됐다 — `scripts/backfill-category-id-from-name.ts`는 SUPERSEDED이며
+  `--apply` 금지(범용접미어 blocklist로도 오분류 0을 보장 못 함, 실측: 샤워필터→
+  정수기, 실외기→TV커버). 대신:
+  - **확정 오라벨 제거만**: `scripts/clear-known-wrong-category-labels.ts` —
+    수동 확인된 오연결 코드만 NULL로 비움(새 값 추정 없음). 이건 apply해도 개악이
+    아니다(틀린 값 제거).
+  - **신규 연결은 사람이**: 씨앗심기 업로드 준비도 패널이 `category_id` 미확정
+    상품에 매처 후보 3개를 클릭형 칩으로 보여주고, 사람이 클릭해야만
+    d1~d4/카테고리코드가 채워진다(자동확정 없음) — 브라우저 실측 완료
+    (2026-09-02, `/products/new`).
 
 ### 문서 작업 특칙 (F5 재발 방지)
 설계안·리서치·인계 문서를 **작성만 하고 커밋하지 않으면 다른 레인에서 보이지 않는다.**

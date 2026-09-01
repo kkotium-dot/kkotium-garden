@@ -105,6 +105,8 @@ import { productFormSerialize, productFormHydrate, type ProductFormValues } from
 import { PlatformPicker, SupplierPicker } from '@/components/ui/PlatformSupplierPicker';
 import MarginAdvisorPanel from '@/components/products/MarginAdvisorPanel';
 import { calcUploadReadiness, getReadinessColor, READINESS_GRADE_STYLE } from '@/lib/upload-readiness';
+import { resolveConfidentCategory } from '@/lib/naver/category-id-resolver';
+import { matchDeterministicCategories } from '@/lib/naver/category-deterministic-matcher';
 import { getReturnCareFee, RETURN_CARE_STATS } from '@/lib/return-care-fees';
 // Sprint 7-M2 Phase 3-C-2 — Studio cards mounted in 7th tab (visual automation)
 import {
@@ -4640,8 +4642,19 @@ const handleGenerate = async () => {
               const isEditMode = !!searchParams?.get('edit');
               const hasContent = !!productName.trim() || !!price;
               if (!isEditMode && !hasContent) return null;
+              // 2026-09-02 (category_id 백필 방향전환): naverCategoryCode와
+              // 별개로, 내부 DB 분류(category_id)를 상품명만으로 확신할 수
+              // 있는지 매처로 재확인 — 확신 없으면 자동확정 대신 사람에게
+              // 후보를 보여주고 확인을 유도한다(억지 연결 금지, #352/#353).
+              const trimmedName = productName.trim();
+              const categoryResolution = trimmedName ? resolveConfidentCategory(trimmedName) : null;
+              const categoryDbConfirmNeeded = !!trimmedName && !categoryResolution;
+              const categoryCandidates = categoryDbConfirmNeeded
+                ? matchDeterministicCategories(trimmedName, 3)
+                : [];
               const rd = calcUploadReadiness({
                 naverCategoryCode: categoryId || undefined,
+                categoryDbConfirmNeeded,
                 keywords: aiKeywords,
                 tags: seoTags,
                 name: productName,
@@ -4683,9 +4696,30 @@ const handleGenerate = async () => {
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {rd.failed.map(item => (
-                          <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                            <div style={{ width: 4, height: 4, borderRadius: '50%', background: col, flexShrink: 0, marginTop: 5 }} />
-                            <p style={{ fontSize: 11, color: '#555', margin: 0, lineHeight: 1.4 }}>{item.message}</p>
+                          <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                              <div style={{ width: 4, height: 4, borderRadius: '50%', background: col, flexShrink: 0, marginTop: 5 }} />
+                              <p style={{ fontSize: 11, color: '#555', margin: 0, lineHeight: 1.4 }}>{item.message}</p>
+                            </div>
+                            {item.id === 'category' && categoryDbConfirmNeeded && categoryCandidates.length > 0 && (
+                              <div style={{ marginLeft: 10, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                {categoryCandidates.map((c, i) => (
+                                  <button
+                                    key={i}
+                                    type="button"
+                                    onClick={() => {
+                                      // 사람이 직접 클릭해야만 확정 — 자동확정 아님(#352/#353).
+                                      setD1(c.d1); setD2(c.d2); setD3(c.d3);
+                                      if (c.d4) setD4(c.d4);
+                                      setCatTab('drill');
+                                    }}
+                                    style={{ fontSize: 10, color: '#8a6d3b', background: '#FFF6E5', border: '1px solid #F3D9A4', borderRadius: 99, padding: '2px 8px', cursor: 'pointer' }}
+                                  >
+                                    {[c.d1, c.d2, c.d3, c.d4].filter(Boolean).join(' > ')}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

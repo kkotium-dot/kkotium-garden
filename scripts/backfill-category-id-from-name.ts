@@ -1,6 +1,21 @@
 // scripts/backfill-category-id-from-name.ts
 //
-// Root-cause fix for the category_id backfill bug (2026-09-01). The prior
+// ⚠️ SUPERSEDED (2026-09-02) — DO NOT --apply THIS SCRIPT.
+// Desktop's 임의 30종 전수 dryRun found this script's auto-set path still
+// produces new misclassifications the GENERIC_SUFFIX_BLOCKLIST doesn't catch
+// (실측: "샤워필터"→정수기/필터, "실외기"→TV커버 — substring collisions on
+// terms outside the blocklist). #352/#353: a matcher-driven auto-correction
+// cannot reach "오분류 0" against an arbitrary catalog, and chasing every new
+// collision word-by-word is an unbounded blocklist (무한 두더지잡기). Kept
+// here only as a reference implementation / for its NULL-clearing half —
+// the "clear known-wrong values" behavior is now the dedicated, narrower
+// scripts/clear-known-wrong-category-labels.ts (manual confirmed-wrong list,
+// never guesses a replacement). New category_id assignment is done by a
+// human via the 씨앗심기 UI candidate picker (src/app/products/new/page.tsx,
+// backed by this same resolveConfidentCategory as an informational hint —
+// nothing auto-confirms) instead of any backfill script.
+//
+// Original root-cause fix for the category_id backfill bug (2026-09-01). The prior
 // backfill (scripts/wire-category-id-from-code.ts, UCE-8, run against
 // production from a different branch) set Product.category_id by resolving
 // each product's EXISTING naverCategoryCode straight into naver_categories.

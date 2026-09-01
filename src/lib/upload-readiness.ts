@@ -38,6 +38,18 @@ export interface ReadinessInput {
   // (deterministic + AI + Naver page-1 validation) and still found nothing —
   // a genuinely hard-to-classify item, distinct from "nobody's picked one yet".
   categoryConfirmNeeded?: boolean;
+  // 2026-09-02 (category_id 백필 방향전환, Desktop 지시): true when
+  // Product.category_id (the naver_categories FK used for dropship-fitness/
+  // sourcing scoring — separate from naverCategoryCode, which drives the
+  // Naver listing itself) couldn't be confidently derived from the product
+  // name (src/lib/naver/category-id-resolver.ts#resolveConfidentCategory
+  // returned null). A product can have a perfectly valid naverCategoryCode
+  // and still need this — the two are different signals, not aliases (a
+  // pre-existing bug conflated them, see dashboard-product.ts 2026-09-02
+  // fix). Auto-correcting category_id proved unsafe (범용접미어 blocklist
+  // bypass — "샤워필터"→정수기, "실외기"→TV커버) so this surfaces it for a
+  // human to confirm instead of guessing.
+  categoryDbConfirmNeeded?: boolean;
   keywords?: string[] | null;
   tags?: string[] | null;
   name?: string | null;
@@ -78,6 +90,7 @@ export function calcUploadReadiness(input: ReadinessInput): ReadinessResult {
   const {
     naverCategoryCode,
     categoryConfirmNeeded = false,
+    categoryDbConfirmNeeded = false,
     keywords = [],
     tags = [],
     name = '',
@@ -94,11 +107,13 @@ export function calcUploadReadiness(input: ReadinessInput): ReadinessResult {
   const safeName     = name ?? '';
   const safeImages   = Array.isArray(images)   ? images.filter(Boolean)   : [];
 
-  // 1. Category check — default code "" means not selected
+  // 1. Category check — default code "" means not selected. Also fails when
+  // naverCategoryCode is set but category_id (a separate internal signal)
+  // couldn't be confidently derived — see categoryDbConfirmNeeded above.
   const categoryPassed = !!(
     naverCategoryCode &&
     naverCategoryCode.length > 0
-  );
+  ) && !categoryDbConfirmNeeded;
 
   // 2. Keywords count >= 5
   const kwCountPassed = safeKeywords.length >= 5;
@@ -158,7 +173,9 @@ export function calcUploadReadiness(input: ReadinessInput): ReadinessResult {
       label: '카테고리',
       message: categoryConfirmNeeded
         ? '카테고리 확인 필요 — 자동매칭 3단계(결정론적·AI·검색신호) 전부 실패, 직접 확인해주세요'
-        : '카테고리 미선택 — 노출 순위 대폭 하락',
+        : categoryDbConfirmNeeded
+          ? '카테고리 확인 필요 — 내부 분류(DB) 미연결, 자동 확정 대신 후보 중 직접 선택해주세요'
+          : '카테고리 미선택 — 노출 순위 대폭 하락',
       weight: WEIGHTS.category,
     },
     {

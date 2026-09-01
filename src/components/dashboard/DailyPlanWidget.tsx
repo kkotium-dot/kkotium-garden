@@ -242,7 +242,10 @@ function normalizeRawProduct(p: any): DashboardProduct {
     status: p.status,
     salePrice: p.salePrice ?? 0,
     supplierPrice: p.supplierPrice ?? 0,
-    naverCategoryCode: p.naverCategoryCode ?? p.category_id ?? '',
+    // category_id (Product.category_id, a naver_categories cuid FK) is NOT a
+    // naverCategoryCode — do not fall back to it here, or a raw DB id counts
+    // as a real Naver category code (2026-09-02 실측).
+    naverCategoryCode: p.naverCategoryCode ?? '',
     keywords:  Array.isArray(p.keywords) ? p.keywords : [],
     tags:      Array.isArray(p.tags) ? p.tags : [],
     mainImage: p.mainImage ?? p.main_image_url,
