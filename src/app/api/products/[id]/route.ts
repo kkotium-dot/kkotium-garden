@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendDiscord, buildPriceChangeEmbed } from '@/lib/discord';
 import { captureDeletionSnapshots, recordProductDeletedEvents } from '@/lib/products/deletion-audit';
+import { resolveCategoryDbId, isValidCategoryDbId } from '@/lib/naver/category-sync';
 
 
 export const dynamic = 'force-dynamic';
@@ -35,6 +36,10 @@ export async function PATCH(
       'naverProductId', 'naverCategoryCode',
       'name', 'keywords', 'tags', 'aiGeneratedTitle', 'updatedAt',
       'naver_title', 'naver_keywords', 'naver_description',
+      // 2026-09-02 (반자동 개입큐 저장단계 연결): 씨앗심기에서 사람이 매처 후보
+      // 칩을 클릭해 category_id를 확정해도, 이 route가 그 필드를 몰라 저장이
+      // 끊겨 있었다(Desktop 실측). naver_categories FK 유효성은 아래에서 검증.
+      'category_id',
     ] as const;
 
     const data: Record<string, unknown> = {};
@@ -42,6 +47,25 @@ export async function PATCH(
       if (key in body) {
         data[key] = body[key];
       }
+    }
+
+    // 무효 category_id 방어 — naver_categories에 없는 id면 그대로 버리지 않고
+    // 이 필드만 저장에서 제외한다(다른 필드는 계속 저장되게, #150과 동일 원칙).
+    if ('category_id' in data) {
+      const raw = data.category_id;
+      if (raw === null) {
+        // explicit clear (clear-known-wrong-category-labels.ts와 동일 의미) — 허용.
+      } else if (typeof raw !== 'string' || !(await isValidCategoryDbId(raw))) {
+        console.warn('[PATCH /api/products/[id]] invalid category_id dropped:', JSON.stringify(raw).slice(0, 80));
+        delete data.category_id;
+      }
+    }
+    // naverCategoryCode가 이번 요청으로 (재)확정됐는데 category_id를 별도로
+    // 안 보냈으면, 방금 확정된 코드로 함께 채운다(사람이 막 선택한 값이므로
+    // 안전 — 구백필처럼 과거 미검증 코드를 되짚는 게 아니다).
+    if ('naverCategoryCode' in data && !('category_id' in data) && typeof data.naverCategoryCode === 'string') {
+      const resolved = await resolveCategoryDbId(data.naverCategoryCode);
+      if (resolved) data.category_id = resolved;
     }
 
     if (Object.keys(data).length === 0) {

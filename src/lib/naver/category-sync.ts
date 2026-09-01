@@ -34,6 +34,45 @@ export function categoryFullPath(code: string | null | undefined): string | null
   return entry?.fullPath ?? null;
 }
 
+// ============================================================================
+// 2026-09-02 (반자동 개입큐 저장단계 연결): naverCategoryCode -> naver_categories.id
+// 조회. 이 함수 자체는 UCE-8(별도 브랜치, 병합 보류 — docs 상신 참고)에도 있던
+// 순수 코드↔DB 조회지만, 여기서는 의도적으로 POST(생성 기본값)나 백필 스크립트가
+// 아니라 사람이 직접 편집을 트리거하는 PUT/PATCH 저장 경로에만 배선한다(아래
+// route.ts 참고) — naverCategoryCode가 이 경로로 바뀔 때는 항상 사람이 방금
+// 확정한 값이지, 구백필처럼 과거의 미검증 코드를 일괄 재해석하는 게 아니다.
+// naver_categories 미적재/코드 미상이면 null(호출자는 category_id 그대로 둠).
+// ============================================================================
+export async function resolveCategoryDbId(code: string | null | undefined): Promise<string | null> {
+  const trimmed = (code ?? '').trim();
+  if (!trimmed) return null;
+  try {
+    const row = await prisma.naverCategory.findUnique({
+      where: { categoryCode: trimmed },
+      select: { id: true },
+    });
+    return row?.id ?? null;
+  } catch (e) {
+    console.warn('[category-sync] resolveCategoryDbId failed:', String(e).slice(0, 120));
+    return null;
+  }
+}
+
+/** True when `id` is a real naver_categories row — defensive validation before
+ *  ever writing a caller-supplied category_id straight to Product (2026-09-02,
+ *  Desktop 지시: "무효 id 방어"). */
+export async function isValidCategoryDbId(id: string | null | undefined): Promise<boolean> {
+  const trimmed = (id ?? '').trim();
+  if (!trimmed) return false;
+  try {
+    const row = await prisma.naverCategory.findUnique({ where: { id: trimmed }, select: { id: true } });
+    return !!row;
+  } catch (e) {
+    console.warn('[category-sync] isValidCategoryDbId failed:', String(e).slice(0, 120));
+    return false;
+  }
+}
+
 export interface CategorySyncResult {
   updated: boolean;
   /** Reason when not updated: code unknown / already in sync / product missing. */

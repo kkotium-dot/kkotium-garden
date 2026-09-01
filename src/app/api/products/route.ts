@@ -13,6 +13,7 @@ import { generateUniqueSku } from '@/lib/sku-engine';
 import { mapCrawlOptions } from '@/lib/sources/crawl-option-mapper';
 import { parseDomeProductNo } from '@/lib/sources/parse-dome-no';
 import { sanitizeProductWrite } from '@/lib/product-write-fields';
+import { resolveCategoryDbId, isValidCategoryDbId } from '@/lib/naver/category-sync';
 import { loadTuningScores } from '@/lib/products/tuning-signals';
 
 // Fire-and-forget: check honey score drop after product update
@@ -484,6 +485,26 @@ export async function PUT(request: NextRequest) {
     if ('salePrice' in updateData)     updateData.salePrice     = coerceInt(updateData.salePrice);
     if ('supplierPrice' in updateData) updateData.supplierPrice = coerceInt(updateData.supplierPrice);
     if ('shippingFee' in updateData)   updateData.shippingFee   = coerceInt(updateData.shippingFee);
+
+    // 2026-09-02 (반자동 개입큐 저장단계 연결): category_id는 schema-derived
+    // allowlist(sanitizeProductWrite)를 이미 통과하지만, 무효 id 방어가 없었다
+    // — naver_categories에 없는 id면 그 필드만 버린다(#150과 동일 원칙, 다른
+    // 필드 저장은 막지 않음). naverCategoryCode가 이 요청으로 (재)확정됐는데
+    // category_id를 안 보냈으면 방금 확정된 코드로 함께 채운다(씨앗심기 매처
+    // 후보칩 클릭 → naverCategoryCode만 갱신되는 현재 흐름을 저장단계에서
+    // 이어줌 — 사람이 방금 고른 값이라 안전, 구백필의 미검증 코드 재해석과는
+    // 다름).
+    if ('category_id' in updateData) {
+      const raw = updateData.category_id;
+      if (raw !== null && (typeof raw !== 'string' || !(await isValidCategoryDbId(raw)))) {
+        console.warn('[PUT /api/products] invalid category_id dropped:', JSON.stringify(raw).slice(0, 80));
+        delete updateData.category_id;
+      }
+    }
+    if ('naverCategoryCode' in updateData && !('category_id' in updateData) && typeof updateData.naverCategoryCode === 'string') {
+      const resolved = await resolveCategoryDbId(updateData.naverCategoryCode);
+      if (resolved) updateData.category_id = resolved;
+    }
 
     // Capture previous score BEFORE update for drop detection
     const prevData = await prisma.product.findUnique({ where: { id }, select: { aiScore: true } });
