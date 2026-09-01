@@ -20,10 +20,25 @@
 
 import { NAVER_CATEGORIES_FULL } from './naver-categories-full';
 import { matchDeterministicCategories, type DeterministicMatch } from './category-deterministic-matcher';
+import { extractNouns } from '../strategy/morpheme-tokenizer';
 
 const MIN_CONFIDENT_SCORE = 20; // route.ts DETERMINISTIC_MIN_CONFIDENT_SCORE와 동일
-const D1_CONFLICT_GAP = 10;
-const D1_CONFLICT_CEILING = 40;
+//
+// Desktop dryRun 교차검증(2026-09-01)에서 발견: route.ts의 원래 게이트는
+// D1_CONFLICT_CEILING(top.score < 40일 때만 d1 충돌 검사) 때문에 top 점수가
+// 이미 높으면 서로 다른 d1의 근접 2위를 무시했다 — "차량용 신발장"처럼 top이
+// 90점(신발장, 가구/인테리어)이어도 75점짜리 다른 d1 후보(신발, 스포츠/레저)가
+// 15점 차로 바짝 붙어 있으면 신뢰할 수 없다(실측 오분류: 트렁크정리 상품이
+// '신발장'에 낚임). 이 백필 경로는 라이브 suggest UI처럼 사람이 검토하지 않고
+// DB에 그대로 쓰이므로, route.ts보다 더 보수적으로: 점수 크기와 무관하게 항상
+// d1 충돌을 검사하고(천장 폐지), 여유폭도 넓힌다.
+const D1_CONFLICT_GAP = 20;
+// 복합명(추출 명사 3개 이상)일수록 무관한 단어가 우연히 엉뚱한 leaf와
+// 부분매칭될 여지가 커진다(실측: "인테리어소품 달항아리 도어벨 개업선물
+// 액막이 집들이" 류 — 상품명이 길수록 위험). 짧은 이름보다 더 높은 점수를
+// 요구해 "저신뢰 긴 복합명은 NULL 유지"를 강제한다.
+const MULTI_NOUN_THRESHOLD = 3;
+const MULTI_NOUN_MIN_SCORE = 60;
 
 export interface CategoryResolution {
   /** naver_categories.category_code — Product.category_id를 채우려면 이 코드로
@@ -34,15 +49,17 @@ export interface CategoryResolution {
   match: DeterministicMatch;
 }
 
-/** tier 1(리프 정확 매치) + 점수 임계 + d1 충돌 없음 — 이 셋을 모두 만족해야
- *  "확신"으로 간주한다. 하나라도 못 만족하면 억지로 연결하지 않는다(정직). */
-function isConfident(matches: DeterministicMatch[]): boolean {
+/** tier 1(리프 정확 매치) + 점수 임계 + d1 충돌 없음(+ 복합명 가중 임계) —
+ *  이걸 모두 만족해야 "확신"으로 간주한다. 하나라도 못 만족하면 억지로
+ *  연결하지 않는다(정직). */
+function isConfident(matches: DeterministicMatch[], nounCount: number): boolean {
   const top = matches[0];
   if (!top || top.tier !== 1) return false;
   if (top.score < MIN_CONFIDENT_SCORE) return false;
+  if (nounCount >= MULTI_NOUN_THRESHOLD && top.score < MULTI_NOUN_MIN_SCORE) return false;
   const second = matches[1];
-  if (second && second.d1 !== top.d1 && top.score < D1_CONFLICT_CEILING) {
-    if (top.score - second.score <= D1_CONFLICT_GAP) return false;
+  if (second && second.d1 !== top.d1 && top.score - second.score <= D1_CONFLICT_GAP) {
+    return false;
   }
   return true;
 }
@@ -55,7 +72,8 @@ function isConfident(matches: DeterministicMatch[]): boolean {
  */
 export function resolveConfidentCategory(productName: string): CategoryResolution | null {
   const matches = matchDeterministicCategories(productName);
-  if (!isConfident(matches)) return null;
+  const { nouns } = extractNouns(productName);
+  if (!isConfident(matches, nouns.length)) return null;
   const top = matches[0];
   const entry = NAVER_CATEGORIES_FULL.find(
     (c) => c.d1 === top.d1 && c.d2 === top.d2 && c.d3 === top.d3 && (c.d4 || undefined) === top.d4,
