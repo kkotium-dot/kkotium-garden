@@ -60,12 +60,19 @@ export async function PATCH(
         delete data.category_id;
       }
     }
-    // naverCategoryCode가 이번 요청으로 (재)확정됐는데 category_id를 별도로
-    // 안 보냈으면, 방금 확정된 코드로 함께 채운다(사람이 막 선택한 값이므로
-    // 안전 — 구백필처럼 과거 미검증 코드를 되짚는 게 아니다).
+    // naverCategoryCode가 이번 요청으로 실제로 "바뀌었을" 때만 category_id를
+    // 함께 채운다(사람이 막 선택한 값이므로 안전 — 구백필처럼 과거 미검증
+    // 코드를 되짚는 게 아니다). 값이 안 바뀌었는데도 derive하면, 씨앗심기를
+    // 그냥 열기만 해도 autosave가 매번 같은 naverCategoryCode를 재전송해
+    // stale(과거 오분류) 코드로 category_id를 되살리는 사고가 난다(2026-09-03
+    // 프로덕션 실측: 64구 아이스틀이 clear-known-wrong 이후 편집화면을 열기만
+    // 했는데 홍합 category_id가 재기입됨).
     if ('naverCategoryCode' in data && !('category_id' in data) && typeof data.naverCategoryCode === 'string') {
-      const resolved = await resolveCategoryDbId(data.naverCategoryCode);
-      if (resolved) data.category_id = resolved;
+      const prevProduct = await prisma.product.findUnique({ where: { id }, select: { naverCategoryCode: true } });
+      if (data.naverCategoryCode !== (prevProduct?.naverCategoryCode ?? '')) {
+        const resolved = await resolveCategoryDbId(data.naverCategoryCode);
+        if (resolved) data.category_id = resolved;
+      }
     }
 
     if (Object.keys(data).length === 0) {

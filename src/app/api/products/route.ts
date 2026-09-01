@@ -486,14 +486,22 @@ export async function PUT(request: NextRequest) {
     if ('supplierPrice' in updateData) updateData.supplierPrice = coerceInt(updateData.supplierPrice);
     if ('shippingFee' in updateData)   updateData.shippingFee   = coerceInt(updateData.shippingFee);
 
-    // 2026-09-02 (반자동 개입큐 저장단계 연결): category_id는 schema-derived
-    // allowlist(sanitizeProductWrite)를 이미 통과하지만, 무효 id 방어가 없었다
-    // — naver_categories에 없는 id면 그 필드만 버린다(#150과 동일 원칙, 다른
-    // 필드 저장은 막지 않음). naverCategoryCode가 이 요청으로 (재)확정됐는데
-    // category_id를 안 보냈으면 방금 확정된 코드로 함께 채운다(씨앗심기 매처
-    // 후보칩 클릭 → naverCategoryCode만 갱신되는 현재 흐름을 저장단계에서
-    // 이어줌 — 사람이 방금 고른 값이라 안전, 구백필의 미검증 코드 재해석과는
-    // 다름).
+    // Capture previous score + naverCategoryCode BEFORE update (score-drop
+    // check + the category_id derivation below both need the prior row).
+    const prevData = await prisma.product.findUnique({ where: { id }, select: { aiScore: true, naverCategoryCode: true } });
+
+    // 2026-09-02 (반자동 개입큐 저장단계 연결), 2026-09-03 재발방지 수정:
+    // category_id는 schema-derived allowlist(sanitizeProductWrite)를 이미
+    // 통과하지만, 무효 id 방어가 없었다 — naver_categories에 없는 id면 그
+    // 필드만 버린다(#150과 동일 원칙, 다른 필드 저장은 막지 않음).
+    //
+    // ⚠️ naverCategoryCode가 "이번 요청에 포함됨"만으로 derive하면 안 된다 —
+    // 씨앗심기 autosave는 변경 여부와 무관하게 매 저장마다 naverCategoryCode를
+    // 그대로 다시 보낸다. 그래서 오래된(과거 오분류) naverCategoryCode를 가진
+    // 상품을 편집 화면에 열기만 해도 autosave가 그 STALE 코드로 category_id를
+    // 재기입해 clear-known-wrong로 지운 값이 되살아나는 사고가 실측으로
+    // 확인됐다(64구 아이스틀, 프로덕션). 반드시 기존 값과 달라졌을 때만
+    // derive — 사람이 후보칩을 눌러 실제로 바꾼 경우만 안전하다.
     if ('category_id' in updateData) {
       const raw = updateData.category_id;
       if (raw !== null && (typeof raw !== 'string' || !(await isValidCategoryDbId(raw)))) {
@@ -501,13 +509,15 @@ export async function PUT(request: NextRequest) {
         delete updateData.category_id;
       }
     }
-    if ('naverCategoryCode' in updateData && !('category_id' in updateData) && typeof updateData.naverCategoryCode === 'string') {
+    if (
+      'naverCategoryCode' in updateData &&
+      !('category_id' in updateData) &&
+      typeof updateData.naverCategoryCode === 'string' &&
+      updateData.naverCategoryCode !== (prevData?.naverCategoryCode ?? '')
+    ) {
       const resolved = await resolveCategoryDbId(updateData.naverCategoryCode);
       if (resolved) updateData.category_id = resolved;
     }
-
-    // Capture previous score BEFORE update for drop detection
-    const prevData = await prisma.product.findUnique({ where: { id }, select: { aiScore: true } });
     const previousScore = prevData?.aiScore ?? null;
 
     const product = await prisma.product.update({
