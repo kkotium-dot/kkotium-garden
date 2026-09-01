@@ -93,6 +93,22 @@ npx tsx scripts/<verify-script>.ts
 | **Desktop** | G3 · G4 · G5 + (문서 작업 시) G1 · G2 | DB·프로덕션 API·브라우저 접근 가능 → 최종 검증 책임 |
 | **Cowork** | G1 · G2 | 문서도 커밋·push해야 다른 레인이 읽는다(F5) |
 
+### 카테고리 작업 특칙 (아이스트레이→홍합·디퓨저→교자상 사고 재발 방지)
+`Product.category_id` / `naverCategoryCode` / `category` 문자열을 건드리는 작업은
+G5를 아래로 구체화한다 — FK 무결성(구조)만 보고 "완료"라 하지 않는다:
+```bash
+npm run test:category-integrity   # scripts/verify-category-integrity.ts
+```
+- ✅ 통과 조건: exit 0 (전 케이스 pass). 실패 시 그 케이스가 어떤 상품명 →
+  잘못된 카테고리로 재귀환했는지 원문 그대로 보고에 포함
+- 이 테스트는 `src/lib/naver/category-id-resolver.ts#resolveConfidentCategory`
+  하나만 검증한다 — `scripts/backfill-category-id-from-name.ts`(백필)도 같은
+  함수를 쓰므로, 이 테스트가 통과하면 백필 로직도 같은 판정을 한다는 뜻이다
+  (백필과 테스트가 서로 다른 로직으로 드리프트하는 것을 구조적으로 차단).
+- 하이브리드 게이트: **A(사람관문)** = `--apply`는 운영자 GO 없이 금지(작업원칙
+  #41) + **B(기계관문)** = 이 정합성 테스트. 사람이 값을 승인해도 테스트가
+  실패하면 완료가 아니다 — 둘 다 통과해야 완료.
+
 ### 문서 작업 특칙 (F5 재발 방지)
 설계안·리서치·인계 문서를 **작성만 하고 커밋하지 않으면 다른 레인에서 보이지 않는다.**
 - 문서를 근거로 인계할 때는 **커밋·push 후 해시와 함께** 전달한다
