@@ -1,6 +1,15 @@
 // scripts/clear-known-wrong-category-labels.ts
 //
-// Direction change (2026-09-02): auto re-deriving Product.category_id from
+// ✅ SUPERSEDED — already executed (2026-09-02, Desktop, via Supabase MCP
+// against production). Both WRONG_DESTINATION_CODES entries (홍합=50004716,
+// 교자상=50004765) confirmed cleared to NULL, 0 remaining, no other products
+// affected — verified. Do NOT re-run --apply for these two codes; the fix is
+// live. Kept here as a reference implementation for the *pattern* (manually
+// confirmed-wrong destination -> NULL, never guesses) if a new confirmed-wrong
+// destination surfaces later — extend WRONG_DESTINATION_CODES with a NEW
+// operator-confirmed code and dryRun again before any future --apply.
+//
+// Original direction change (2026-09-02): auto re-deriving Product.category_id from
 // the product name (scripts/backfill-category-id-from-name.ts) proved
 // unsafe — even with a GENERIC_SUFFIX_BLOCKLIST, the deterministic matcher
 // can still be fooled by substring collisions the blocklist doesn't cover
