@@ -537,7 +537,14 @@ function NewProductPageInner() {
   const [supplierPrice, setSupplierPrice]   = useState('');
   const [stock, setStock]                   = useState('100');
   const [taxType, setTaxType]               = useState(KKOTIUM_DEFAULTS.taxType);
-  const [originCode, setOriginCode]         = useState(KKOTIUM_DEFAULTS.originCode);
+  // 2026-09-03 (Desktop 교차검증 잔존 1건 수정): KKOTIUM_DEFAULTS.originCode
+  // ('0200037' 중국)로 초기화하면 사람이 원산지 필드를 건드리지 않아도 폼이
+  // 매번 "중국"을 들고 제출된다 — brand/taxType/courierCode 등 매장 전체가
+  // 실제로 동일한 값과 달리, 원산지는 상품마다 실제 사실이 다르므로 매장
+  // 공통 기본값 자체가 성립하지 않는다(추측=법적 위험, #82/#242). 빈 값으로
+  // 시작해 원산지 콤보박스에서 사람이 직접 고르게 강제한다 — "배송 정책" 탭
+  // 완료 체크(!!originCode)도 이제 실제 선택 여부를 정직하게 반영한다.
+  const [originCode, setOriginCode]         = useState('');
   const [originQuery, setOriginQuery]       = useState('');
   const [originOpen, setOriginOpen]         = useState(false);
   const [originActiveIdx, setOriginActiveIdx] = useState(0);
