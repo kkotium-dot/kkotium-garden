@@ -39,10 +39,19 @@ function loadSettings(): typeof KKOTIUM_DEFAULTS {
   return { ...KKOTIUM_DEFAULTS };
 }
 
+// 2026-09-03 (원산지 오라벨 근본원인 수정): 이전엔 c.length<4·'00'까지
+// "미설정"으로 보고 fallback(=KKOTIUM_DEFAULTS.originCode='0200037' 중국)으로
+// 덮어썼다. 하지만 '00'(국산)·'03'(상세설명에 표시)·'04'(직접입력)·
+// '05'(원산지 표기 의무대상 아님)는 naver-origin-codes.ts 기준 전부 정식
+// 코드다 — 사람이 정직하게 "국산(00)"을 입력해도 업로드 엑셀에서 중국으로
+// 둔갑하는 사고였다(#82/#242 원산지 허위표기 리스크). '0001'(강원도)만
+// 예외로 유지 — prisma/schema.prisma의 originCode @default("0001")라
+// 상품 생성 시 아무도 안 건드리면 그대로 남는 "미선택" 센티널이기 때문
+// (scripts/products/import/route.ts의 동일 취급과 일관, #82 추측 저장 금지).
 function sanitizeOriginCode(code: string | null | undefined, fallback: string): string {
   if (!code) return fallback;
   const c = String(code).trim();
-  if (c === '0001' || c === '00' || c === '0' || c.length < 4) return fallback;
+  if (c === '0001' || c === '') return fallback;
   return c;
 }
 

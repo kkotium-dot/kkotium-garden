@@ -8,7 +8,6 @@ import { PrismaClient } from '@prisma/client';
 import { calcHoneyScore } from '@/lib/honey-score';
 import { sendDiscord, buildScoreDropEmbed } from '@/lib/discord';
 import { prisma } from '@/lib/prisma';
-import { KKOTIUM_DEFAULTS } from '@/lib/naver/codes';
 import { generateUniqueSku } from '@/lib/sku-engine';
 import { mapCrawlOptions } from '@/lib/sources/crawl-option-mapper';
 import { parseDomeProductNo } from '@/lib/sources/parse-dome-no';
@@ -327,14 +326,27 @@ export async function POST(request: NextRequest) {
           name: String(data.name || ''),
           sku: resolvedSku,
           category: String(data.category || 'uncategorized'),
-          naverCategoryCode: String(data.naverCategoryCode || KKOTIUM_DEFAULTS.categoryCode),
+          // 2026-09-03 (#356 근본원인 수정): 예전엔 미입력 시 KKOTIUM_DEFAULTS.
+          // categoryCode(='50004716')를 그대로 채웠다 — codes.ts 주석은 "꽃다발"
+          // 이지만 NAVER_CATEGORIES_FULL(실제 발행에 쓰이는 마스터) 기준
+          // 이 코드는 "식품>수산물>해산물/어패류>홍합"이다(꽃다발 리프는 마스터에
+          // 없음). #356에서 반복 발견된 "홍합" 오염의 진짜 근본원인 — 매처가
+          // 아니라 이 하드코딩 기본값이 매번 새 상품에 조용히 찍히고 있었다.
+          // 확신 없으면 정직하게 비워두는 게 개악보다 낫다(#352/#355) — 빈
+          // 값이면 UCE-4 개입큐(사람 확인)로 흘러간다.
+          naverCategoryCode: String(data.naverCategoryCode || ''),
           salePrice,
           supplierPrice,
           margin,
           status: normalizedStatus,
           brand: String(data.brand || '꽃틔움'),
           manufacturer: String(data.manufacturer || '도매매 공급사'),
-          originCode: String(data.originCode || KKOTIUM_DEFAULTS.originCode),
+          // 2026-09-03: 원산지도 동일 원칙 — 미입력 시 KKOTIUM_DEFAULTS.originCode
+          // (='0200037' 중국)로 추측해 찍지 않는다(추측=법적 위험, gate-message-
+          // i18n.ts와 동일 원칙). data.originCode가 없으면 필드 자체를 생략해
+          // Prisma 스키마 기본값('0001'=미선택 센티널, import/route.ts와 동일
+          // 취급)이 적용되게 둔다.
+          ...(data.originCode ? { originCode: String(data.originCode) } : {}),
           shippingFee: Math.round(parseFloat(String(data.shippingFee)) || 3000),
           images: Array.isArray(data.images) ? data.images : [],
           imageAltTexts: Array.isArray(data.imageAltTexts) ? data.imageAltTexts : [],
