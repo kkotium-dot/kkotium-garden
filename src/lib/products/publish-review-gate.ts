@@ -21,12 +21,14 @@ import { calcUploadReadiness, type ReadinessInput } from '@/lib/upload-readiness
 import { computeImageGateWarnings } from './image-gate-warnings';
 import { checkPublishGate, type PublishGateVerdict as SupplyGateVerdict } from './publish-gate';
 import { loadSourceGoneFlags } from './source-gone';
+import { findCategoryMismatches, type CategoryMismatch } from './publish-category-consistency';
 
 export type PublishReviewBlockReason =
   | 'READINESS_INCOMPLETE'  // calcUploadReadiness < 100
   | 'IMAGE_WARNING'         // blocking image warnings remain (publish-preview logic)
   | 'NOT_REVIEWED'          // 운영자 검수 미승인
-  | 'REVIEW_STALE';         // 승인 후 검수대상 필드가 바뀜(#316-A)
+  | 'REVIEW_STALE'          // 승인 후 검수대상 필드가 바뀜(#316-A)
+  | 'CATEGORY_MISMATCH';    // #355/#356: category_id/naverCategoryCode가 상품명과 어휘상 무관
 
 export interface ReviewChecklist {
   approved?: boolean;
@@ -89,11 +91,16 @@ export interface PublishReviewGateInput {
   blockingImageWarningCount: number;
   reviewChecklist: ReviewChecklist | null;
   currentSnapshot: ReviewWhitelistSnapshot;
+  /** #355/#356: 미리 계산된 카테고리 상충 목록(비어있으면 상충 없음). 계산
+   *  자체(findCategoryMismatches)는 이 함수 밖(loadReviewInputs)에서 하되,
+   *  이 함수는 여전히 순수 — 원자(배열)만 받는다. */
+  categoryMismatches: CategoryMismatch[];
 }
 
 export interface PublishReviewGateVerdict {
   approved: boolean;
   reasons: PublishReviewBlockReason[];
+  categoryMismatches: CategoryMismatch[];
 }
 
 /** PURE 판정 — 원자만 받는다. I/O 없음(테스트·클라이언트 재사용, #32). */
@@ -102,6 +109,7 @@ export function decidePublishGate(input: PublishReviewGateInput): PublishReviewG
 
   if (input.readinessScore < 100) reasons.push('READINESS_INCOMPLETE');
   if (input.blockingImageWarningCount > 0) reasons.push('IMAGE_WARNING');
+  if (input.categoryMismatches.length > 0) reasons.push('CATEGORY_MISMATCH');
 
   const cl = input.reviewChecklist;
   if (!cl?.approved) {
@@ -110,7 +118,7 @@ export function decidePublishGate(input: PublishReviewGateInput): PublishReviewG
     reasons.push('REVIEW_STALE');
   }
 
-  return { approved: reasons.length === 0, reasons };
+  return { approved: reasons.length === 0, reasons, categoryMismatches: input.categoryMismatches };
 }
 
 export interface AssertPublishableResult {
@@ -120,7 +128,7 @@ export interface AssertPublishableResult {
   supply: SupplyGateVerdict;
 }
 
-const FAIL_CLOSED_REVIEW: PublishReviewGateVerdict = { approved: false, reasons: ['NOT_REVIEWED'] };
+const FAIL_CLOSED_REVIEW: PublishReviewGateVerdict = { approved: false, reasons: ['NOT_REVIEWED'], categoryMismatches: [] };
 
 /** loadReviewInputs()가 상품 없음/DB 조회 실패일 때 반환하는 판별 유니온 태그. */
 export interface ReviewInputsUnavailable {
@@ -133,6 +141,7 @@ export interface ReviewInputsLoaded {
   blockingImageWarningCount: number;
   currentSnapshot: ReviewWhitelistSnapshot;
   reviewChecklist: ReviewChecklist | null;
+  categoryMismatches: CategoryMismatch[];
 }
 
 /**
@@ -164,6 +173,7 @@ export async function loadReviewInputs(
         reviewChecklist: true,
         reviewLastUpdated: true,
         product_options: { select: { option_names: true, option_rows: true } },
+        naver_categories: { select: { categoryCode: true } },
       },
     });
   } catch {
@@ -200,12 +210,19 @@ export async function loadReviewInputs(
     optionRows: product.product_options?.option_rows ?? null,
   });
 
+  // #355/#356: 발행에 실제 쓰이는 두 카테고리 필드 모두 상품명과 대조.
+  const categoryMismatches = findCategoryMismatches(product.name, [
+    { field: 'category_id', code: product.naver_categories?.categoryCode },
+    { field: 'naverCategoryCode', code: product.naverCategoryCode },
+  ]);
+
   return {
     ok: true,
     readinessScore: readiness.score,
     blockingImageWarningCount,
     currentSnapshot,
     reviewChecklist: (product.reviewChecklist as ReviewChecklist | null) ?? null,
+    categoryMismatches,
   };
 }
 
@@ -226,6 +243,7 @@ export async function assertPublishable(productId: string): Promise<AssertPublis
     blockingImageWarningCount: inputs.blockingImageWarningCount,
     reviewChecklist: inputs.reviewChecklist,
     currentSnapshot: inputs.currentSnapshot,
+    categoryMismatches: inputs.categoryMismatches,
   });
 
   // ── 공급 가능성 판정(기존, publish-gate.ts) ─────────────────────────────

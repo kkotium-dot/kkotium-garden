@@ -29,6 +29,7 @@ function input(overrides: Partial<PublishReviewGateInput> = {}): PublishReviewGa
     blockingImageWarningCount: 0,
     reviewChecklist: { approved: true, gateSnapshot: { readiness: 100, imageWarnings: 0, fields: baseSnapshot } },
     currentSnapshot: baseSnapshot,
+    categoryMismatches: [],
     ...overrides,
   };
 }
@@ -76,6 +77,14 @@ check('approved + non-whitelist drift (irrelevant to snapshot) stays fresh', () 
 check('approved + no snapshot recorded at approval → REVIEW_STALE (conservative)', () => {
   const v = decidePublishGate(input({ reviewChecklist: { approved: true } }));
   assert.deepEqual(v.reasons, ['REVIEW_STALE']);
+});
+
+check('category mismatch (#355/#356) → CATEGORY_MISMATCH', () => {
+  const v = decidePublishGate(input({
+    categoryMismatches: [{ field: 'naverCategoryCode', categoryFullPath: '식품 > 수산물 > 조개류 > 홍합' }],
+  }));
+  assert.equal(v.approved, false);
+  assert.ok(v.reasons.includes('CATEGORY_MISMATCH'));
 });
 
 console.log(`\n${count} passed`);

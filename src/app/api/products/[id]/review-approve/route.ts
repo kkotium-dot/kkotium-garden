@@ -39,6 +39,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     blockingImageWarningCount: inputs.blockingImageWarningCount,
     reviewChecklist: inputs.reviewChecklist,
     currentSnapshot: inputs.currentSnapshot,
+    categoryMismatches: inputs.categoryMismatches,
   });
 
   return NextResponse.json({
@@ -72,6 +73,15 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         blockingImageWarningCount: inputs.blockingImageWarningCount,
       }, { status: 400 });
     }
+    if (inputs.categoryMismatches.length > 0) {
+      // #355/#356: 카테고리(category_id/naverCategoryCode)가 상품명과 어휘상
+      // 무관하면 승인 자체를 막는다 — 승인이 통과의 마지막 사람 확인 지점.
+      return NextResponse.json({
+        success: false,
+        error: '카테고리가 상품명과 상충합니다 — 검수 승인할 수 없습니다.',
+        categoryMismatches: inputs.categoryMismatches,
+      }, { status: 400 });
+    }
 
     const checklist: ReviewChecklist = {
       approved: true,
@@ -101,6 +111,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       blockingImageWarningCount: inputs.blockingImageWarningCount,
       reviewChecklist: checklist,
       currentSnapshot: inputs.currentSnapshot,
+      categoryMismatches: inputs.categoryMismatches,
     });
     return NextResponse.json({ success: true, review, reviewChecklist: checklist });
   }
