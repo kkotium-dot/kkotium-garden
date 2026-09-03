@@ -15,6 +15,7 @@ import { getNaverFeeRate, getNaverFeeRateByD1, getNaverFeeBreakdown, getMarginPr
 import { useSellerGrade } from '@/lib/hooks/useSellerGrade';
 import { getReturnCareFee } from '@/lib/return-care-fees';
 import ElevatedDropdown from '@/components/common/ElevatedDropdown';
+import { NumberInput } from '@/components/common/NumberInput';
 
 // ----------------------------------------------------------------
 // Types
@@ -252,12 +253,10 @@ function NumField({
     <div>
       <label className="block text-xs font-medium text-gray-500 mb-0.5">{label}</label>
       <div className="relative">
-        <input
-          type="number"
-          value={value || ''}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        <NumberInput
+          value={value}
+          onChange={onChange}
           min={min ?? 0}
-          step={step}
           disabled={disabled}
           className={`w-full pr-8 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400
             ${small ? 'px-2 py-1' : 'px-3 py-2'}`}
@@ -630,11 +629,9 @@ export function MarginCalculator({
           <label className="block text-xs font-medium text-gray-500 mb-0.5">판매가</label>
           <div className="flex items-center gap-1">
             <div className="relative flex-1 min-w-0">
-              <input
-                type="number"
-                value={local.salePrice || ''}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value) || 0;
+              <NumberInput
+                value={local.salePrice}
+                onChange={(v) => {
                   updateLocal({ salePrice: v });
                   pushToForm('salePrice', v);
                 }}
@@ -646,12 +643,9 @@ export function MarginCalculator({
             </div>
             <span className="shrink-0 text-gray-300 text-sm">−</span>
             <div className="relative w-20 shrink-0">
-              <input
-                type="number"
-                inputMode="decimal"
-                value={local.instantDiscount || ''}
-                onChange={(e) => {
-                  const raw = parseFloat(e.target.value) || 0;
+              <NumberInput
+                value={local.instantDiscount}
+                onChange={(raw) => {
                   // percent clamps to 0..100; won clamps to >= 0 (calc caps at salePrice)
                   const v = local.discountUnit === 'percent'
                     ? Math.min(Math.max(raw, 0), 100)
@@ -660,7 +654,7 @@ export function MarginCalculator({
                   pushToForm('instantDiscount', v);
                 }}
                 max={local.discountUnit === 'percent' ? 100 : undefined}
-                title="즉시할인"
+                aria-label="즉시할인"
                 className="w-full pl-2 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                 style={{ fontVariantNumeric: 'tabular-nums' }}
                 placeholder="할인"
@@ -876,10 +870,9 @@ export function MarginCalculator({
             <Target className="w-4 h-4 text-gray-600" />
             <span className="text-xs font-medium text-gray-600">목표 마진율</span>
             <div className="flex items-center gap-1">
-              <input
-                type="number"
-                value={local.targetMargin || ''}
-                onChange={(e) => updateLocal({ targetMargin: parseFloat(e.target.value) || 0 })}
+              <NumberInput
+                value={local.targetMargin}
+                onChange={(v) => updateLocal({ targetMargin: v })}
                 className="w-14 px-2 py-1 text-sm text-center border border-gray-300 rounded focus:ring-2 focus:ring-pink-500"
                 min={0}
                 max={90}

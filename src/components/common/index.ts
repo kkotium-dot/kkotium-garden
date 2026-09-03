@@ -15,3 +15,6 @@ export type { BadgeRailProps, BadgeRailItem } from "./BadgeRail";
 
 export { BADGE_PRIORITY, BADGE_RAIL_DEFAULT_MAX } from "./badge-priority";
 export type { BadgePriorityKey } from "./badge-priority";
+
+export { NumberInput, default as NumberInputDefault } from "./NumberInput";
+export type { NumberInputProps } from "./NumberInput";
