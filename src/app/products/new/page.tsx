@@ -13,7 +13,7 @@ import {
 import { toast } from 'react-hot-toast';
 // NAME-DIAG-1 (#151): the legacy product-name-checker readout + NameRulesPanel
 // are superseded by the unified ProductNameDiagnostics live panel below.
-import { OverflowMenu, StatusBadge } from '@/components/common';
+import { OverflowMenu, StatusBadge, NumberInput } from '@/components/common';
 import ElevatedDropdown from '@/components/common/ElevatedDropdown';
 import {
   NAVER_CATEGORIES_FULL,
@@ -3060,7 +3060,7 @@ const handleGenerate = async () => {
               {/* Price block — sale price + instant discount inline (Naver order) */}
               <div className="grid grid-cols-2 gap-3">
                 <Field label="판매가" required>
-                  <input className={inp} type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0" min={0} />
+                  <NumberInput className={inp} value={Number(price) || 0} onChange={v => setPrice(String(v))} placeholder="0" min={0} />
                   {/* G5: kkotti recommended sale price hint (net-margin transparency). */}
                   {Number(supplierPrice) > 0 && (() => {
                     const recommended = calcPrefillSalePrice(Number(supplierPrice), crawlShipFee, sellerGrade);
@@ -3085,8 +3085,8 @@ const handleGenerate = async () => {
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <Field label="즉시할인" hint="네이버 기본할인">
-                        <input className={inp} type="number" value={discountValue}
-                          onChange={e => setDiscountValue(e.target.value)} placeholder="0" min={0} />
+                        <NumberInput className={inp} value={Number(discountValue) || 0}
+                          onChange={v => setDiscountValue(String(v))} placeholder="0" min={0} />
                       </Field>
                     </div>
                     <div className="w-24">
@@ -3113,10 +3113,10 @@ const handleGenerate = async () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="공급가 (도매가)" hint="마진 계산에 사용">
-                  <input className={inp} type="number" value={supplierPrice} onChange={e => setSupplierPrice(e.target.value)} placeholder="0" min={0} />
+                  <NumberInput className={inp} value={Number(supplierPrice) || 0} onChange={v => setSupplierPrice(String(v))} placeholder="0" min={0} />
                 </Field>
                 <Field label="재고수량">
-                  <input className={inp} type="number" value={stock} onChange={e => setStock(e.target.value)} min={0} />
+                  <NumberInput className={inp} value={Number(stock) || 0} onChange={v => setStock(String(v))} min={0} />
                 </Field>
                 <Field label="부가세">
                   <select className={sel} value={taxType} onChange={e => setTaxType(e.target.value)}>
@@ -3614,12 +3614,12 @@ const handleGenerate = async () => {
                                         {parts[ni] ?? ''}
                                       </div>
                                     ))}
-                                    <input className={`${inp} py-1.5 text-center text-sm`}
-                                      type="number" value={row.price}
-                                      onChange={e => updateOptionRow(i, 'price', e.target.value)} />
-                                    <input className={`${inp} py-1.5 text-center text-sm`}
-                                      type="number" value={row.stock}
-                                      onChange={e => updateOptionRow(i, 'stock', e.target.value)} />
+                                    <NumberInput className={`${inp} py-1.5 text-center text-sm`}
+                                      value={Number(row.price) || 0}
+                                      onChange={v => updateOptionRow(i, 'price', String(v))} />
+                                    <NumberInput className={`${inp} py-1.5 text-center text-sm`}
+                                      value={Number(row.stock) || 0}
+                                      onChange={v => updateOptionRow(i, 'stock', String(v))} />
                                     <select className={`${sel} py-1.5 text-xs`}
                                       value={row.status ?? 'ON'}
                                       onChange={e => updateOptionRow(i, 'status', e.target.value as 'ON' | 'OUT' | 'OFF')}>
