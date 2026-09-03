@@ -591,6 +591,15 @@ function NewProductPageInner() {
     () => additionalImages.split(',').map(s => s.trim()).filter(Boolean),
     [additionalImages],
   );
+  // GEMINI-OCR (docs/design/GEMINI_OCR_INTERVENTION_2026-09-03.md) — "이미지에서
+  // 정보 읽기" 후보 추출 결과. 항상 후보일 뿐 자동확정 없음(#353) — 사람이
+  // 아래 "적용" 버튼을 눌러야 aiKeywords/originCode에 반영된다.
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [ocrError, setOcrError] = useState('');
+  const [ocrResult, setOcrResult] = useState<{
+    material?: string; size?: string; capacity?: string; origin?: string;
+    features: string[]; keywords: string[];
+  } | null>(null);
   const [seoHook, setSeoHook]         = useState('');
   // COPY-AUTO-1: true while seoHook holds the auto-generated template draft
   // (cleared once the user edits it or applies an AI hook).
@@ -1596,6 +1605,58 @@ function NewProductPageInner() {
     setOriginOpen(false);
     setOriginActiveIdx(0);
     if (!target?.importer) setImporterName('');
+  };
+
+  // GEMINI-OCR — the best available detail image to read from: 상세페이지
+  // 이미지(도매 상세 원본) 우선, 없으면 대표이미지(design §1: 소스 우선순위).
+  const ocrSourceImage = detailImagesArr[0] || detailImageUrl || mainImage || '';
+
+  // OCR이 읽은 원산지 원문(한글/영문 혼재 가능)을 ORIGIN_CODES 라벨과 매칭할
+  // 후보로 좁힌다 — 결정하지 않고 후보만 보여준다(#353). 자주 나오는 영문
+  // 표기만 최소 별칭 처리(#295: 새 판정엔진 아님, 기존 마스터 리스트 조회일 뿐).
+  const ORIGIN_ALIASES: Record<string, string> = {
+    china: '중국', 'made in china': '중국', korea: '국산', 'made in korea': '국산',
+    vietnam: '베트남', japan: '일본', taiwan: '대만', thailand: '태국', usa: '미국',
+  };
+  const ocrOriginCandidates = useMemo(() => {
+    const raw = ocrResult?.origin?.trim().toLowerCase();
+    if (!raw) return [];
+    // "Made in Vietnam" 같은 문구는 별칭 키가 원문 안에 부분포함되므로,
+    // 정확일치가 아니라 부분일치로 찾는다(exact-match였다면 "made in vietnam"이
+    // 별칭키 "vietnam"과 안 맞아 후보가 하나도 안 나옴).
+    const aliasHit = Object.entries(ORIGIN_ALIASES).find(([k]) => raw.includes(k));
+    const q = aliasHit?.[1] || raw;
+    return ORIGIN_CODES.filter(o => o.label.includes(q) || q.includes(o.label)).slice(0, 3);
+  }, [ocrResult]);
+
+  const runImageOcr = async () => {
+    if (!ocrSourceImage || ocrBusy) return;
+    setOcrBusy(true);
+    setOcrError('');
+    setOcrResult(null);
+    try {
+      const res = await fetch('/api/ai/image-ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: ocrSourceImage }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setOcrError(data.error || '이미지에서 정보를 못 읽었어요. 직접 입력해주세요.');
+        return;
+      }
+      setOcrResult(data.attributes);
+    } catch {
+      setOcrError('이미지에서 정보를 못 읽었어요. 직접 입력해주세요.');
+    } finally {
+      setOcrBusy(false);
+    }
+  };
+
+  // 사람이 "키워드에 추가"를 눌렀을 때만 aiKeywords에 합류 — 자동확정 아님.
+  const applyOcrKeywords = (values: string[]) => {
+    setAiKeywords(prev => Array.from(new Set([...prev, ...values.filter(Boolean)])));
+    toast.success('키워드에 추가했어요');
   };
 
   // Supplier combobox: search by name + code, pin selected
@@ -3729,6 +3790,86 @@ const handleGenerate = async () => {
                 썸네일(대표·추가)은 검색 결과 갤러리, 상세페이지 이미지는 상품 상세설명 본문에 들어갑니다.
               </p>
             </RSection>
+
+            {/* GEMINI-OCR (docs/design/GEMINI_OCR_INTERVENTION_2026-09-03.md) —
+                도매 상세이미지에서 재질/크기/용량/원산지/키워드 후보를 Gemini
+                멀티모달 OCR로 추출. 절대 자동확정하지 않는다(#353) — "적용"을
+                눌러야만 aiKeywords/originCode에 반영된다. */}
+            {ocrSourceImage && (
+              <RSection icon={<Search size={15}/>} title="이미지에서 정보 읽기 (Gemini OCR)">
+                <button
+                  type="button"
+                  onClick={runImageOcr}
+                  disabled={ocrBusy}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '10px 14px', background: ocrBusy ? '#eee' : '#EEF6FF', color: ocrBusy ? '#999' : '#1D5FB0', border: '1px solid #CFE3FA', borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: ocrBusy ? 'not-allowed' : 'pointer' }}
+                >
+                  {ocrBusy ? <Loader size={14} className="animate-spin" /> : <Search size={14} />}
+                  {ocrBusy ? '이미지 읽는 중…' : '이미지에서 정보 읽기'}
+                </button>
+                <p style={{ margin: '6px 2px 0', fontSize: 11, color: '#999' }}>
+                  상세이미지 속 텍스트를 AI가 읽어 후보를 보여줍니다. 자동으로 반영되지 않으며, &quot;적용&quot;을 눌러야 폼에 반영됩니다.
+                </p>
+
+                {ocrError && (
+                  <p style={{ marginTop: 8, fontSize: 12, color: '#B45309', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '8px 10px' }}>
+                    {ocrError}
+                  </p>
+                )}
+
+                {ocrResult && (
+                  <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {(ocrResult.material || ocrResult.size || ocrResult.capacity) && (
+                      <div style={{ fontSize: 12, color: '#444', background: '#F8FAFC', border: '1px solid #E5E9F0', borderRadius: 10, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {ocrResult.material && <span>재질: <b>{ocrResult.material}</b></span>}
+                        {ocrResult.size && <span>크기: <b>{ocrResult.size}</b></span>}
+                        {ocrResult.capacity && <span>용량: <b>{ocrResult.capacity}</b></span>}
+                      </div>
+                    )}
+
+                    {ocrResult.origin && (
+                      <div>
+                        <p style={{ fontSize: 11, color: '#888', margin: '0 0 4px' }}>원산지 후보 (이미지 판독: &quot;{ocrResult.origin}&quot;)</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {ocrOriginCandidates.length > 0 ? ocrOriginCandidates.map(o => (
+                            <button
+                              key={o.code}
+                              type="button"
+                              onClick={() => commitOrigin(o.code)}
+                              style={{ fontSize: 10, color: '#8a6d3b', background: '#FFF6E5', border: '1px solid #F3D9A4', borderRadius: 99, padding: '2px 8px', cursor: 'pointer' }}
+                            >
+                              {o.label} 적용
+                            </button>
+                          )) : (
+                            <span style={{ fontSize: 11, color: '#999' }}>일치하는 원산지 코드를 못 찾았어요 — 원산지 필드에서 직접 선택해주세요.</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {(ocrResult.features.length > 0 || ocrResult.keywords.length > 0) && (
+                      <div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
+                          {[...ocrResult.features, ...ocrResult.keywords].map((kw, i) => (
+                            <span key={i} style={{ fontSize: 11, color: '#555', background: '#F1F5F9', borderRadius: 99, padding: '2px 8px' }}>{kw}</span>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => applyOcrKeywords([...ocrResult.features, ...ocrResult.keywords])}
+                          style={{ fontSize: 12, fontWeight: 700, color: '#15803d', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, padding: '6px 12px', cursor: 'pointer' }}
+                        >
+                          황금키워드에 적용
+                        </button>
+                      </div>
+                    )}
+
+                    {!ocrResult.material && !ocrResult.size && !ocrResult.capacity && !ocrResult.origin && ocrResult.features.length === 0 && ocrResult.keywords.length === 0 && (
+                      <p style={{ fontSize: 12, color: '#888' }}>이미지에서 정보를 못 읽었어요. 직접 입력해주세요.</p>
+                    )}
+                  </div>
+                )}
+              </RSection>
+            )}
 
             {/* E7 — "저장 후 온실 아틀리에" is the PRIMARY contextual CTA on the
                 이미지 tab: image work hands off to the studio. Removed from the
