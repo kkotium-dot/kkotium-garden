@@ -26,6 +26,12 @@ export interface DashboardProduct {
   images?: string[];
   shippingFee?: number;
   internalTags?: string[];
+  // F-1 완주 임박 넛지(docs/design/F_PUBLISH_COMPLETION_NUDGE_2026-08-27.md)
+  // — "미발행" 판정(naverProductId IS NULL)과 테스트잔재 배제(source=NATIVE
+  // AND salePrice=0 AND mainImage없음)에 쓰인다. 둘 다 API가 이미 select하고
+  // 있었고(Product.naverProductId/source) DashboardProduct에만 없었다.
+  naverProductId?: string | null;
+  source?: string;
 }
 
 export function normalizeProducts(raw: unknown[]): DashboardProduct[] {
@@ -69,6 +75,8 @@ export function normalizeProducts(raw: unknown[]): DashboardProduct[] {
             ? p.shipping_fee
             : 3000,
       internalTags: Array.isArray(p.internalTags) ? (p.internalTags as string[]) : [],
+      naverProductId: (p.naverProductId as string | null | undefined) ?? null,
+      source: (p.source as string | undefined) ?? 'NATIVE',
     };
   });
 }

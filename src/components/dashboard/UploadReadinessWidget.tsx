@@ -32,7 +32,10 @@ import AutoFillModal from './AutoFillModal';
 
 // ── Mapping: readiness item -> seed-planting tab + icon ──────────────────────
 // Each problem chip deep-links into the right tab on the seed-planting page.
-const ITEM_TO_TAB: Record<ReadinessItemId, { tab: string; Icon: React.ElementType; short: string }> = {
+// Exported so other completion-nudge surfaces (F-1, docs/design/
+// F_PUBLISH_COMPLETION_NUDGE_2026-08-27.md) reuse the same tab mapping
+// instead of re-deriving it (#295 단일권위).
+export const ITEM_TO_TAB: Record<ReadinessItemId, { tab: string; Icon: React.ElementType; short: string }> = {
   category:          { tab: 'basic',    Icon: Hash,        short: '카테고리' },
   keywords_count:    { tab: 'seo',      Icon: Sparkles,    short: '키워드' },
   tags_count:        { tab: 'seo',      Icon: Tag,         short: '태그' },

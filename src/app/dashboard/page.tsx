@@ -48,11 +48,13 @@ import ZombieReactivationCard from '@/components/dashboard/cards/ZombieReactivat
 import ProductHealthSummaryCard from '@/components/dashboard/cards/ProductHealthSummaryCard';
 import InboxSummaryCard from '@/components/dashboard/cards/InboxSummaryCard';
 import ControlTowerSummaryCard from '@/components/dashboard/cards/ControlTowerSummaryCard';
+import PublishCompletionNudgeCard from '@/components/dashboard/cards/PublishCompletionNudgeCard';
 import { SystemHealthCard } from '@/components/dashboard/SystemHealthCard';
 import {
   useProductsList,
   useDashboardStats,
 } from '@/lib/hooks/useDashboardData';
+import { normalizeProducts } from '@/lib/dashboard-product';
 import Link from 'next/link';
 
 // Shared shape + normalizer live in @/lib/dashboard-product (Next.js App
@@ -92,9 +94,18 @@ function PipelineCard({ stages }: { stages: PipelineStage[] }) {
 
 export default function DashboardPage() {
   const {
+    rawProducts,
     isLoading: productsLoading,
     refresh: refreshProducts,
   } = useProductsList({ limit: 200 });
+
+  // F-1 완주 임박 카드(PublishCompletionNudgeCard)가 쓰는 정규화된 목록.
+  // 다른 필드 소비자가 없어 이전엔 rawProducts를 버리고 있었다 — F-1 추가로
+  // 처음 소비.
+  const products = useMemo(
+    () => (rawProducts ? normalizeProducts(rawProducts as unknown[]) : []),
+    [rawProducts],
+  );
 
   const {
     data: stats,
@@ -206,6 +217,11 @@ export default function DashboardPage() {
       >
         <div className="space-y-4">
           <PipelineCard stages={pipelineStages} />
+
+          {/* F-1 완주 임박(docs/design/F_PUBLISH_COMPLETION_NUDGE_2026-08-27.md)
+              — 미발행 실상품을 준비도 내림차순으로. 테스트잔재는 카드 내부에서
+              자동 제외(source=NATIVE·salePrice=0·mainImage없음). */}
+          <PublishCompletionNudgeCard products={products} loading={productsLoading} />
 
           {/* Quick action shortcuts */}
           <div className="kk-card" style={{ overflow: 'hidden' }}>
