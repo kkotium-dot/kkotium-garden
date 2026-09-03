@@ -408,8 +408,13 @@ function CrawlPageInner() {
     if (!sResult || !supPrice || !sellPrice) { setSError('도매가와 판매가를 입력해주세요'); return; }
     setSSaving(true); setSError('');
     try {
-      // Save to crawl_logs (sourcing shelf) — fire and forget
-      fetch('/api/crawler/logs', {
+      // B3 (OPERATOR_FEEDBACK_TRIAGE) — this used to be a fire-and-forget fetch
+      // with no navigation: a failed save still showed "담겼습니다" and the
+      // user was left staring at the same single-item screen with no visible
+      // sign the item actually landed anywhere. Now we await the save, surface
+      // real failures, and navigate into 꿀통 꽃수레 (history tab) on success so
+      // "담기" visibly moves the user to where the item now lives.
+      const res = await fetch('/api/crawler/logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -425,9 +430,16 @@ function CrawlPageInner() {
           canMerge: sResult.canMerge,
           sourcingStatus: 'SOURCED',
         }),
-      }).catch(() => null);
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        throw new Error(d?.error ?? '꽃수레에 담는 중 오류가 발생했습니다');
+      }
       setSSuccess('꿀통 꽃수레에 담겼습니다!');
       setTimeout(() => setSSuccess(''), 2500);
+      setTab('history');
+    } catch (e: unknown) {
+      setSError(e instanceof Error ? e.message : '꽃수레에 담는 중 오류가 발생했습니다');
     } finally { setSSaving(false); }
   };
 
