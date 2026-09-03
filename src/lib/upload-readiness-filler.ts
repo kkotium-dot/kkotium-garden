@@ -159,7 +159,7 @@ async function callGroq(prompt: string): Promise<{ raw: unknown; provider: strin
 }
 
 async function callGeminiWithKey(prompt: string, apiKey: string): Promise<unknown> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -188,7 +188,7 @@ async function callGemini(prompt: string): Promise<{ raw: unknown; provider: str
   for (const key of keys) {
     try {
       const raw = await callGeminiWithKey(prompt, key);
-      return { raw, provider: 'gemini-2.0-flash' };
+      return { raw, provider: 'gemini-3.6-flash' };
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
       if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('403')) {

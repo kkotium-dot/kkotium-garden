@@ -240,7 +240,7 @@ async function callGroq(prompt: string): Promise<unknown> {
 }
 
 async function callGeminiWithKey(prompt: string, apiKey: string): Promise<unknown> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -336,7 +336,7 @@ export async function analyzeReviewSentiment(
   if (hasGemini) {
     try {
       const raw = await callGemini(prompt);
-      return normalizeResult(raw, cleanReviews.length, 'gemini-2.0-flash');
+      return normalizeResult(raw, cleanReviews.length, 'gemini-3.6-flash');
     } catch (e) {
       console.warn('[review-analyzer] All Gemini keys failed, trying Anthropic:', e instanceof Error ? e.message.slice(0, 80) : e);
     }

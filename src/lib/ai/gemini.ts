@@ -1,6 +1,6 @@
 // src/lib/ai/gemini.ts
 // ============================================================================
-// GEMINI-RESTORE (#155 / #156) — env-based Google Gemini 2.0 Flash (free tier),
+// GEMINI-RESTORE (#155 / #156) — env-based Google Gemini Flash (free tier),
 // the FREE fallback between Groq (free) and Anthropic (paid, last resort). Keys
 // come ONLY from the environment (GEMINI_API_KEY / _2 / _3, round-robin on
 // quota) — NEVER hardcoded, and never logged (not even a fragment), per #156.
@@ -11,7 +11,9 @@
 // The legacy src/lib/gemini.ts is an unrelated Groq-compat shim and is left
 // untouched.
 
-export const GEMINI_MODEL = 'gemini-2.0-flash';
+// gemini-2.0-flash shut down 2026-06-01; gemini-3.6-flash is Google's
+// designated replacement (ai.google.dev/gemini-api/docs/deprecations).
+export const GEMINI_MODEL = 'gemini-3.6-flash';
 
 function geminiKeys(): string[] {
   return [
