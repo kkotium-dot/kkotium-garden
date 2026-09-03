@@ -1722,7 +1722,13 @@ function CrawlPageInner() {
             {/* D5 — registration bar floats at the page BOTTOM (fixed, centered)
                 only while >=1 row is selected; it clears on deselect. */}
             {histSelected.size > 0 && (
-              <div style={{ position:'fixed', bottom:20, left:'50%', transform:'translateX(-50%)', zIndex:40, width:'min(960px, calc(100vw - 32px))', display:'flex', alignItems:'center', gap:10, padding:'12px 16px', background:'#FFF0EF', border:'1.5px solid #FFB3CE', borderRadius:14, boxShadow:'0 10px 30px rgba(230,35,16,0.22)' }}>
+              // B2 (OPERATOR_FEEDBACK_TRIAGE) — this bar used to sit at bottom:20 with
+              // zIndex:40, so on mobile (<1024px) MobileTabBar (fixed, bottom:0,
+              // zIndex:60, ~60-76px tall incl. safe-area) rendered on top of it and
+              // clipped the action buttons. Clear the tab bar's height on mobile via a
+              // responsive Tailwind bottom offset, and out-rank it on z-index so it can
+              // never be covered again even if the two heights drift.
+              <div className="bottom-[calc(76px+env(safe-area-inset-bottom,0px))] lg:bottom-5" style={{ position:'fixed', left:'50%', transform:'translateX(-50%)', zIndex:65, width:'min(960px, calc(100vw - 32px))', display:'flex', alignItems:'center', gap:10, padding:'12px 16px', background:'#FFF0EF', border:'1.5px solid #FFB3CE', borderRadius:14, boxShadow:'0 10px 30px rgba(230,35,16,0.22)' }}>
                 <span style={{ fontSize:13, fontWeight:700, color:'#F63B28' }}>{histSelected.size}개 선택됨</span>
                 {batchResult && (
                   <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:99,
