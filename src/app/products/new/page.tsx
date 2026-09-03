@@ -2568,6 +2568,17 @@ const handleGenerate = async () => {
               <span style={{ color: '#9ca3af' }}>입력하면 자동 저장됩니다</span>
             )}
           </div>
+          {/* B10 (OPERATOR_FEEDBACK_TRIAGE) — autosave is silent; operators asked for
+              an explicit "지금 저장했다" button they can press on demand, separate
+              from the validate+promote readiness check below. */}
+          <button
+            type="button"
+            onClick={() => saveDraft({ validate: false })}
+            disabled={draftBusy}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#fff', color: '#1A1A1A', border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: 12.5, fontWeight: 800, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
+          >
+            <Save size={14} /> 현재 상태 저장
+          </button>
           <button
             type="button"
             onClick={() => saveDraft({ validate: true, promote: true })}
@@ -3908,9 +3919,32 @@ const handleGenerate = async () => {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                   <p className="text-xs text-gray-400">셀러 태그 (SEO) — 네이버 태그 최대 10개</p>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: seoTags.length >= 10 ? '#16a34a' : seoTags.length >= 5 ? '#d97706' : '#888' }}>
-                    {seoTags.length}/10
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {seoTags.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                            navigator.clipboard.writeText(seoTags.join(', ')).then(
+                              () => toast.success('태그를 복사했어요 (쉼표 구분)'),
+                              () => toast.error('복사에 실패했습니다'),
+                            );
+                          }
+                        }}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '2px 8px', borderRadius: 7,
+                          border: '1px solid var(--gp-pink-300, #FFB3CE)', background: '#fff',
+                          fontSize: 10.5, fontWeight: 700, color: '#F63B28', cursor: 'pointer',
+                        }}
+                      >
+                        <Clipboard size={11} /> 복사
+                      </button>
+                    )}
+                    <span style={{ fontSize: 11, fontWeight: 700, color: seoTags.length >= 10 ? '#16a34a' : seoTags.length >= 5 ? '#d97706' : '#888' }}>
+                      {seoTags.length}/10
+                    </span>
+                  </div>
                 </div>
                 {/* Tag chips */}
                 {seoTags.length > 0 && (
