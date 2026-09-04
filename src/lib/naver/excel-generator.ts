@@ -112,7 +112,13 @@ function toRow(product: any): Record<string, any> {
 
   return {
     '판매자 상품코드': product.sku || '',
-    '카테고리코드': product.naverCategoryCode || S.categoryCode,
+    // UCE-10 (2026-09-04): naverCategoryCode 없으면 빈 값 — 예전엔 여기서
+    // KKOTIUM_DEFAULTS.categoryCode('50004716'="홍합" 오염코드)로 폴백해
+    // 카테고리 미지정 상품이 엉뚱한 수산물 카테고리로 대량등록될 위험이
+    // 있었다(#356 근본원인의 살아있던 마지막 경로). 발행게이트가 이미
+    // naverCategoryCode 없는 상품을 막으므로, 여기 도달하면 빈 칸이 맞다
+    // (셀러가 네이버 업로드 시 카테고리 누락을 명확히 인지 → 오분류 등록 방지).
+    '카테고리코드': product.naverCategoryCode || '',
     '상품명': product.naver_title || product.name || '',
     '상품상태': S.productStatus,
     '판매가': product.salePrice || 0,

@@ -21,36 +21,6 @@ export const ORIGIN_CODES: OriginCode[] = NAVER_ORIGIN_CODES.map((o) => ({
   importer: Number(o.code) >= 200000 ? true : undefined,
 }));
 
-// ─── 꽃·식물 카테고리 코드 (네이버 실제 코드) ─────────────────
-// ⚠️ 2026-09-03 — 라벨 신뢰 금지. NAVER_CATEGORIES_FULL(naver-categories-
-// full.ts, 실제 발행 마스터·5,021리프)로 교차검증한 결과 이 아래 코드들의
-// 라벨이 다수 틀렸다(예: '50004716'은 "꽃다발"이 아니라 "식품>수산물>
-// 해산물/어패류>홍합", '50004719'는 "조화/인조꽃"이 아니라 "해삼"). #356
-// "홍합" 반복오염의 근본원인이 이 테이블의 첫 항목이 KKOTIUM_DEFAULTS.
-// categoryCode로 쓰였기 때문이었다(2e9a743/2e9a743 다음 커밋에서 그 소비처는
-// 제거함 — 상품 생성 시 더 이상 이 값이 안 찍힘). 이 테이블 자체는 여전히
-// naver-settings 페이지 "기본 카테고리" 드롭다운에 남아있고 라벨이 틀린
-// 상태 — 전체 재검증(마스터와 코드 1:1 대조) 없이는 신뢰하지 말 것. 별도
-// 승인 후 재작성 필요(범위 밖).
-export const FLOWER_CATEGORY_CODES = [
-  // 꽃/화환
-  { code: '50004716', label: '꽃/화환 > 꽃다발' },
-  { code: '50004717', label: '꽃/화환 > 꽃바구니' },
-  { code: '50004718', label: '꽃/화환 > 화환' },
-  { code: '50004719', label: '꽃/화환 > 조화/인조꽃' },
-  { code: '50004720', label: '꽃/화환 > 프리저브드플라워' },
-  { code: '50004721', label: '꽃/화환 > 드라이플라워' },
-  // 식물
-  { code: '50003307', label: '식물 > 관엽식물' },
-  { code: '50003308', label: '식물 > 다육식물/선인장' },
-  { code: '50003310', label: '식물 > 공기정화식물' },
-  { code: '50003312', label: '식물 > 허브' },
-  // 원예용품
-  { code: '50004901', label: '원예용품 > 포장재/리본' },
-  { code: '50004902', label: '원예용품 > 화분/용기' },
-  { code: '50004903', label: '원예용품 > 원예토/비료' },
-];
-
 // ─── 택배사 코드 (출처: 택배사코드.xlsx 주요 코드) ─────────────
 export const COURIER_CODES = [
   { code: 'CJGLS',   label: 'CJ대한통운' },
@@ -106,7 +76,6 @@ export const KKOTIUM_DEFAULTS = {
   // Prisma 스키마 기본값 '0001'=미선택 센티널 적용). 이 상수 자체는 naverExcelJS.ts의
   // `?? d.originCode` 널리시 폴백용으로 남아있으나 DB originCode가 실질적으로 null이
   // 되는 경로가 없어 그 폴백은 사실상 도달 불가.
-  categoryCode:         '50004716', // ⚠️ "꽃다발" 아님 — 실제로는 홍합(#356 근본원인, 위 FLOWER_CATEGORY_CODES 주석 참조). 상품 생성 라우트에서 소비 제거됨(2026-09-03) — 현재 살아있는 소비처 없음, 삭제 검토 대상(naver-settings 페이지 UI 정리와 함께, 범위 밖)
   courierCode:          'CJGLS',    // CJ대한통운
   shippingFeeType:      '조건부무료',
   shippingFee:          3000,

@@ -7,7 +7,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, Info, KeyRound, Layers } from 'lucide-react';
 import {
   COURIER_CODES,
-  FLOWER_CATEGORY_CODES,
   KKOTIUM_DEFAULTS,
   ORIGIN_CODES,
   PRODUCT_STATUSES,
@@ -200,7 +199,6 @@ export default function NaverSettingsPage() {
           </div>
           <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             <Field label="브랜드" keyName="brand" />
-            <Field label="기본 카테고리" keyName="categoryCode" options={FLOWER_CATEGORY_CODES} />
             <Field label="원산지코드" keyName="originCode" options={ORIGIN_CODES} />
             <Field label="부가세" keyName="taxType" options={TAX_TYPES} />
             <Field label="상품상태" keyName="productStatus" options={PRODUCT_STATUSES} />
