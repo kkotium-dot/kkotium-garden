@@ -1187,3 +1187,34 @@ QUEUED상태를 못잡고 직전 READY배포를 "OK"로 오탐 — 프로덕션A
 
 **§3 체크리스트 최종 상태**: 5항목 전부 확인 완료(1,2,4,5 rev129~130,
 3 이번 rev). 카테고리개편 전상품 재체크 작업 계열 **완전 종결**.
+
+## rev132 — #356 오염코드 마지막 살아있던 폴백 제거 + naver-settings 죽은UI 정리 (2026-09-04)
+
+**근본결함 발견·수정(전 상품 공통, #62)**: naver-settings "기본 카테고리"
+필드 제거 작업 중 tsc가 숨은 소비처 하나를 잡아냄 — `excel-generator.ts`
+L115가 네이버 대량등록 엑셀 '카테고리코드' 컬럼을 `product.
+naverCategoryCode || S.categoryCode`로 폴백하고 있었다. 즉
+naverCategoryCode 없는 상품이 `KKOTIUM_DEFAULTS.categoryCode`
+('50004716'=실제 "식품>수산물>해산물/어패류>홍합" 오염코드)로 대량
+등록될 위험이 있던, **#356 근본원인의 마지막 살아있던 경로**. `|| ''`
+(빈 값)로 수정 — 발행게이트가 이미 카테고리 없는 상품을 막으므로 빈
+칸이 맞고, 오분류 등록보다 명확한 누락 표시가 안전(#352/#355).
+
+**죽은 UI/데이터 정리**:
+- naver-settings 페이지 "기본 카테고리" Field 제거 — FLOWER_CATEGORY_
+  CODES가 13/13건 라벨불일치(rev131 실측) + store_settings에 naverDefaults
+  컬럼 자체가 없어 저장도 안 되던 silent no-op.
+- codes.ts: FLOWER_CATEGORY_CODES export + KKOTIUM_DEFAULTS.categoryCode
+  제거. 소비처 전수확인 결과 excel-generator 폴백이 유일했고 위에서 해소.
+
+**검증**: tsc 0, npm run build 통과, 프로덕션 배포 확인(`99927d0`,
+Vercel get_deployment로 state:READY+프로덕션 alias 직접확인 — #361 절차),
+배포 페이지 HTML에 "기본 카테고리" 문자열 부재 확인. **브라우저 실렌더는
+Chrome 확장 연결끊김으로 미완**(4중 간접검증으로 대체, 정직보고 —
+다음 세션 재연결 후 완전 확인 예정).
+
+**커밋**: 99927d0
+
+**#356 "홍합" 오염 완전 종결**: 상품생성 라우트(2026-09-03, 이미 수정됨)
++ 대량등록 엑셀 폴백(이번 rev) + naver-settings UI(이번 rev) — 세 경로
+모두 차단. 이제 오염코드가 새 상품/엑셀/설정 어디에도 주입되지 않음.
