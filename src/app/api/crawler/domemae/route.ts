@@ -90,27 +90,56 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         `seller=${detail.sellerId}(${detail.sellerNick}) | stock=${detail.inventory}`,
     );
 
-    // Persist sourcing snapshot. await ensures the INSERT completes before the
+    // Persist sourcing snapshot. await ensures the write completes before the
     // serverless instance freezes on response return; .catch keeps it non-blocking
-    // (a failed INSERT is swallowed and never breaks the crawl response).
-    await prisma.$executeRaw`
-      INSERT INTO crawl_logs (
-        id, url, name, supplier_price, images, options, status, source,
-        seller_nick, seller_id, seller_rank, category_name, category_code,
-        inventory, ship_fee, can_merge, sourcing_status
-      ) VALUES (
-        gen_random_uuid(),
-        ${detail.sourceUrl},
-        ${detail.name}, ${detail.supplierPrice},
-        ${JSON.stringify(detail.images)}::jsonb,
-        ${JSON.stringify(detail.options)}::jsonb,
-        'success', 'single',
-        ${detail.sellerNick}, ${detail.sellerId}, ${Number(detail.sellerRank)},
-        ${detail.categoryName}, ${detail.categoryCode},
-        ${Number(detail.inventory)}, ${Number(detail.shipFee)}, ${Boolean(detail.canMerge)},
-        'SOURCED'
+    // (a failed write is swallowed and never breaks the crawl response).
+    //
+    // UCE-11 트리아지 A-3 (2026-09-04): re-크롤링 같은 url을 여러 번 누르면
+    // (가격 재확인 등) 매번 새 행이 INSERT돼 꿀통 꽃수레 히스토리에 동일
+    // 상품의 SOURCED 스냅샷이 계속 쌓였다(#62 전상품공통). 아직 담기/발행으로
+    // 진행되지 않은(=sourcing_status가 여전히 SOURCED인) 직전 행이 같은 url로
+    // 있으면 그 행을 최신 크롤 데이터로 UPDATE, 없으면(최초 크롤 또는 이미
+    // PENDING/REGISTERED로 진행된 이력이 있는 경우) 새 행을 INSERT — 이미
+    // 진행된 이력 행은 절대 덮어쓰지 않는다.
+    const updated = await prisma.$executeRaw`
+      UPDATE crawl_logs SET
+        name = ${detail.name}, supplier_price = ${detail.supplierPrice},
+        images = ${JSON.stringify(detail.images)}::jsonb,
+        options = ${JSON.stringify(detail.options)}::jsonb,
+        status = 'success',
+        seller_nick = ${detail.sellerNick}, seller_id = ${detail.sellerId},
+        seller_rank = ${Number(detail.sellerRank)},
+        category_name = ${detail.categoryName}, category_code = ${detail.categoryCode},
+        inventory = ${Number(detail.inventory)}, ship_fee = ${Number(detail.shipFee)},
+        can_merge = ${Boolean(detail.canMerge)},
+        crawled_at = now()
+      WHERE id = (
+        SELECT id FROM crawl_logs
+        WHERE url = ${detail.sourceUrl} AND sourcing_status = 'SOURCED'
+        ORDER BY crawled_at DESC LIMIT 1
       )
-    `.catch((e) => console.error('[crawl-log-insert]', e));
+    `.catch((e) => { console.error('[crawl-log-update]', e); return 0; });
+
+    if (Number(updated) === 0) {
+      await prisma.$executeRaw`
+        INSERT INTO crawl_logs (
+          id, url, name, supplier_price, images, options, status, source,
+          seller_nick, seller_id, seller_rank, category_name, category_code,
+          inventory, ship_fee, can_merge, sourcing_status
+        ) VALUES (
+          gen_random_uuid(),
+          ${detail.sourceUrl},
+          ${detail.name}, ${detail.supplierPrice},
+          ${JSON.stringify(detail.images)}::jsonb,
+          ${JSON.stringify(detail.options)}::jsonb,
+          'success', 'single',
+          ${detail.sellerNick}, ${detail.sellerId}, ${Number(detail.sellerRank)},
+          ${detail.categoryName}, ${detail.categoryCode},
+          ${Number(detail.inventory)}, ${Number(detail.shipFee)}, ${Boolean(detail.canMerge)},
+          'SOURCED'
+        )
+      `.catch((e) => console.error('[crawl-log-insert]', e));
+    }
 
     // Sprint 7 P0-A: integrity check (vacation + channel + options hash)
     const integrity = evaluateIntegrity({
