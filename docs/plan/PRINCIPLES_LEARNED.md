@@ -1411,3 +1411,13 @@ sellerCode/unitPrice 5건은 정말 네이버가 구조화된 필드로 돌려�
 - provider·키·모델 작동 여부는 **연속 N회(≥3) 재현성**으로 판정한다. 1회는 일시적 상태(429·지연)일 수 있다.
 - "provider가 예상과 다름"이 관찰되면 → 코드 로직(프로필 순서) 확인 + 재현 테스트. 폴백이 섞이는 건 오히려 이중화가 작동한다는 증거.
 - 클러스터 인덱스 "AI 의존성"·"검증·실측"에 추가.
+
+
+## 작업원칙 #360 — 반응형(모바일) UI 검증은 OS 창 리사이즈가 아니라 실제 뷰포트 반영 여부를 먼저 확인한다 (2026-09-04)
+
+**사건(B2 검증)**: Claude-in-Chrome `resize_window`(390x844) 요청 후 `getComputedStyle`로 액션바를 확인했더니 `bottom:20px, zIndex:40, className:""` — 수정 전 구버전처럼 보였다. 프로덕션 배포 SHA는 이미 `verify-vercel-deploy.sh`로 정확히 확인된 상태라 "배포 안 됐나?"로 잘못 의심할 뻔했다. 근본원인은 `window.innerWidth`를 직접 찍어보니 여전히 1834px — **`resize_window`가 OS 창 크기만 바꿨고 실제 렌더링 뷰포트(devicePixelRatio 포함)는 반영되지 않았다.** 동일 호출을 재시도하니(414x800) 이번엔 `innerWidth:625, matchesLg:false`로 정확히 반영됐고, 그 상태에서 액션바가 `bottom:76px, zIndex:65`(수정 코드 그대로)로 정상 렌더됨을 확인했다.
+**규칙**:
+- Tailwind `lg:`류 반응형 클래스를 검증할 때, OS 창 크기 조정 도구(`resize_window`)만 믿지 말고 **`window.innerWidth`와 `window.matchMedia('(min-width: Npx)').matches`로 실제 반영 여부를 먼저 확인**한다 — CSS 미디어쿼리는 뷰포트 픽셀 기준이지 OS 창 픽셀 기준이 아니다.
+- 1차 시도가 기대와 다른 결과(구버전처럼 보임)를 내면, 배포 문제로 단정하기 전에 **검증 도구 자체의 성공 여부를 먼저 재확인**한다(#359 연장 — 검증 도구도 1회 실패로 단정하지 않고 재시도해 재현성을 본다).
+- 모바일 UI 회귀 검증 표준 절차: ① `resize_window`로 목표 폭 요청 → ② `window.innerWidth`/`matchMedia`로 실제 반영 확인(불일치 시 재시도) → ③ 반영 확인 후에만 스크린샷·`getComputedStyle`로 실제 UI 검증 → ④ 필요 시 `getBoundingClientRect()`로 요소 간 겹침(overlap) 여부를 좌표로 정량 확인(육안 스크린샷 판단보다 정밀).
+- 클러스터 인덱스 "검증·실측"·"UI/반응형"에 #360 추가.
