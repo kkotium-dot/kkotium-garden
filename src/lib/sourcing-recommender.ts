@@ -39,6 +39,7 @@ import { judgeExclusion } from '@/lib/policy/exclusion-rules';
 import { pickVariant, seasonalGreeting } from '@/lib/notifications/kkotti-variation';
 import { callGroq } from '@/lib/ai/groq';
 import { matchDeterministicCategories } from '@/lib/naver/category-deterministic-matcher';
+import { isDeterministicLowConfidence, suggestWithGroq, validateSuggestion } from '@/lib/naver/category-ai-suggest';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -595,10 +596,34 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
       // 매처(전체 5,021개 leaf 대상)의 top 결과로 채운다 — 이전엔 trendD1을
       // 문자열 포함매칭으로 그대로 라벨에 썼기 때문에 "차량용방향제"가 무관한
       // 트렌드 대분류로 오분류되는 게 아침 알림 카테고리 오류의 근본원인이었다
-      // (#351). 빈손(n=0)이면 trendD1로 폴백하되 정직표시(#310) — 저장된
-      // 값이 UCE 확정이 아님을 라벨 자체로 드러낸다.
-      const ucMatch = matchDeterministicCategories(kw.keyword)[0];
-      const matchedCat = ucMatch ? ucMatch.d1 : `${trendD1}(카테고리 미확정)`;
+      // (#351).
+      //
+      // UCE-10 (2026-09-04, 결함A): 이전엔 여기서 matchDeterministicCategories()를
+      // 신뢰도 검증 없이 단독 호출해 top[0]을 그대로 썼다 — /api/category/suggest
+      // (씨앗심기 UI)가 거치는 isDeterministicLowConfidence 게이트/Groq 교차확인/
+      // validateSuggestion 마스터검증을 전부 우회하는 별도 경로였다(#295 단일권위
+      // 위반, 실측: "거실등"류가 빈손(matchDeterministicCategories=[])인데도 AI
+      // 폴백 없이 곧장 trendD1 문자열매칭 결과("식품")로 저장됨). 이제 route.ts와
+      // 동일한 검증경로(lib/naver/category-ai-suggest.ts)를 거친다: 결정론이
+      // 확신(tier1 + 점수 임계 + d1 비충돌)이면 그대로 쓰고, 아니면(빈손 포함)
+      // Groq 교차확인 → 실패 시에도 억지 확신 대신 정직 라벨(#310)로 표시한다.
+      const ucMatches = matchDeterministicCategories(kw.keyword);
+      const ucTop = ucMatches[0];
+      let matchedCat: string;
+      if (ucTop && !isDeterministicLowConfidence(ucMatches)) {
+        matchedCat = ucTop.d1;
+      } else {
+        try {
+          const aiResults = await suggestWithGroq(kw.keyword);
+          const aiValidated = aiResults
+            .map((s) => validateSuggestion(s.d1, s.d2, s.d3))
+            .find((s): s is NonNullable<typeof s> => !!s);
+          matchedCat = aiValidated ? aiValidated.d1 : ucTop ? `${ucTop.d1}(확인필요)` : `${trendD1}(카테고리 미확정)`;
+        } catch (aiError) {
+          console.warn(`[sourcing-recommender] AI 카테고리 교차확인 실패 "${kw.keyword}":`, String(aiError).slice(0, 200));
+          matchedCat = ucTop ? `${ucTop.d1}(확인필요)` : `${trendD1}(카테고리 미확정)`;
+        }
+      }
 
       opportunities.push({
         keyword: kw.keyword,

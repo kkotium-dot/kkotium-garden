@@ -49,6 +49,23 @@ import { NAVER_CATEGORIES_FULL } from './naver-categories-full';
 import { extractNouns } from '../strategy/morpheme-tokenizer';
 import { GENERIC_MODIFIERS_SET, STOP_NOUNS_SET } from '../strategy/identity-dictionary';
 
+// UCE-10 (2026-09-04, tie-break fix): (d1|d2|d3) -> count of non-empty d4
+// children. Computed once at module load (NAVER_CATEGORIES_FULL is static),
+// not per-call - a per-call scan would make the branch tie-break O(n^2).
+// Replaces the old isLeafItself(+1) bonus, which always favoured a
+// coincidental same-named leaf (0 children) over the real, broader branch
+// (many children) sharing that d3 name.
+const D3_CHILD_COUNT = new Map<string, number>();
+for (const c of NAVER_CATEGORIES_FULL) {
+  if (!c.d3 || !c.d4) continue;
+  const key = `${c.d1}|${c.d2}|${c.d3}`;
+  D3_CHILD_COUNT.set(key, (D3_CHILD_COUNT.get(key) ?? 0) + 1);
+}
+function branchBreadthBonus(d1: string, d2: string, d3: string): number {
+  const childCount = D3_CHILD_COUNT.get(`${d1}|${d2}|${d3}`) ?? 0;
+  return Math.min(2, Math.log2(childCount + 1) * 0.5);
+}
+
 /** Which scoring tier produced this candidate — exposed so callers (route.ts
  *  UCE-7b) can gate on match STRENGTH, not just score. Tier 1 = exact leaf
  *  match (trust the score); Tier 2/3 are weak/broad by construction and
@@ -126,6 +143,18 @@ function splitSynonyms(label: string): string[] {
   return label.split('/').map((p) => p.trim()).filter((p) => p.length >= MIN_TERM_LEN);
 }
 
+// UCE-10 (2026-09-04, 결함B): master leaf names spell the formal "...용"
+// (for-use-of) suffix ("실내용방향제") while wholesale titles routinely drop
+// it ("실내방향제") — a pure substring test misses this and the product
+// leaks to an unrelated leaf. Stripping "용" and retrying is a weaker signal
+// than an exact match (전수스캔: 355건 중 정규화 충돌 3건뿐, 문맥으로 구분
+// 가능 — docs/design/UCE10_TIE_BREAK_AND_SOURCING_PARITY_2026-09-04.md),
+// so it's scored at a discount rather than treated as equal.
+const YONG_NORM_PENALTY = 0.85;
+function stripYong(s: string): string {
+  return s.replace(/용/g, '');
+}
+
 /** Score a single tree-node label against a set of candidate haystacks
  *  (the raw product name, and the space-free join of its extracted nouns).
  *  Handles both plain labels ("우산꽂이" — whole-string substring) and
@@ -144,7 +173,16 @@ function termMatchScore(label: string, haystacks: readonly string[]): number {
     return full ? len : len * 0.5; // partial synonym coverage = weaker signal
   }
   if (label.length < MIN_TERM_LEN) return 0;
-  return haystacks.some((h) => h.includes(label)) ? label.length : 0;
+  if (haystacks.some((h) => h.includes(label))) return label.length;
+
+  // UCE-10 (결함B): retry with "용" stripped from both sides, discounted.
+  const normLabel = stripYong(label);
+  if (normLabel.length >= MIN_TERM_LEN && normLabel !== label) {
+    if (haystacks.some((h) => stripYong(h).includes(normLabel))) {
+      return label.length * YONG_NORM_PENALTY;
+    }
+  }
+  return 0;
 }
 
 /** UCE-7: does `label` textually overlap the head noun / a modifier noun?
@@ -225,11 +263,10 @@ export function matchDeterministicCategories(
       // IS itself the sellable leaf, d4 empty) — prefer the one that's an
       // actual leaf over one that's merely an ancestor label, so a bare
       // head-noun match resolves to a real product node, not just a branch.
-      const isLeafItself = !c.d4;
       if (c.d3 && c.d3 === headNoun) {
         consider(`${c.d1}|${c.d2}|${c.d3}`, {
           d1: c.d1, d2: c.d2, d3: c.d3, d4: undefined, matchedTerm: c.d3, tier: 1,
-          score: c.d3.length * EXACT_BRANCH_SCORE_PER_CHAR + (isLeafItself ? 1 : 0),
+          score: c.d3.length * EXACT_BRANCH_SCORE_PER_CHAR + branchBreadthBonus(c.d1, c.d2, c.d3),
         });
       }
       if (c.d2 === headNoun) {

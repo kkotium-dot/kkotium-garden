@@ -47,7 +47,11 @@ import { getAdapter } from '@/lib/sources';
 // cache the logic underneath it had changed). Bump this NUMBER, not the
 // scheme — old rows are simply orphaned, never deleted, and age out via
 // Postgres storage cost alone (negligible at this table's size).
-export const CATEGORY_MATCH_LOGIC_VERSION = 1;
+//
+// v2 (2026-09-04, UCE-10): branchBreadthBonus tie-break replacing
+// isLeafItself + "용" 제거 정규화 fallback in termMatchScore — both change
+// deterministic-matcher scoring/winners for previously-cached rows.
+export const CATEGORY_MATCH_LOGIC_VERSION = 2;
 
 export type LookupKind = 'dome_code' | 'name_hash';
 // UCE-1 (2026-08-27): 'deterministic' = category-deterministic-matcher.ts

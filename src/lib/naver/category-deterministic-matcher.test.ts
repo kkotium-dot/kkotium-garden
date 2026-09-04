@@ -13,6 +13,19 @@
 // noun and that it wins over the longer "실리콘" modifier match once
 // head-noun weighting is applied. That's the "실리콘주걱→주걱 승리 로깅"
 // line below.
+//
+// UCE-10 (2026-09-04) 추가: docs/design/UCE10_TIE_BREAK_AND_SOURCING_PARITY_2026-09-04.md
+//   - 결함C: isLeafItself(+1) 동점보너스 -> branchBreadthBonus(자식 d4 개수
+//     기반) 교체. 전수스캔 16건 중 (d1,d2) 두 branch에 동일 d3명이 걸치는
+//     11건을 실코드로 재검증 — 9건 정답전환(TIE_BREAK_PAIRS), "넥타이"는
+//     extractNouns가 트레일링 "이"를 조사로 오인식해 스트리핑하는 별개의
+//     토크나이저 결함(headNoun="넥타"≠d3"넥타이")으로 여전히 실패, "우산"은
+//     스포츠/레저>골프>골프필드용품>우산이라는 실재하는 다른 d4 리프와의
+//     정당한 충돌이라 결함C 범위 밖 — 둘 다 UCE-11 후보로 별도 티켓, 이
+//     스위트에서는 회귀 확인용으로 "여전히 오답"을 명시적으로 단언한다.
+//   - 결함B: termMatchScore에 "용" 제거 정규화 fallback(소폭 감점) 추가 —
+//     "실내방향제"/"차량방향제"처럼 상품명이 마스터 리프의 공식 "...용"
+//     접미를 생략한 관용 표기일 때도 정확한 d4까지 잡히는지 확인.
 
 import assert from 'node:assert/strict';
 import { matchDeterministicCategories } from './category-deterministic-matcher';
@@ -61,7 +74,10 @@ const NORMAL_7: Expectation[] = [
   { name: '수세미', d1: '생활/건강', d2: '주방용품' },
   { name: '레깅스', d1: '출산/육아', d2: '유아동의류' },
   { name: '차렵이불', d1: '가구/인테리어', d2: '침구단품' },
-  { name: '소파', d1: '가구/인테리어', d2: '아동/주니어가구' },
+  // UCE-10 (결함C): "소파"의 기대값을 "아동/주니어가구"(자식0 자기리프, 옛
+  // isLeafItself 버그가 항상 이기게 만들던 오답)에서 "거실가구"(자식10, 진짜
+  // 주력 브랜치)로 정정 — branchBreadthBonus 도입 이후의 올바른 승자.
+  { name: '소파', d1: '가구/인테리어', d2: '거실가구' },
   { name: '전동 칫솔', d1: '디지털/가전', d2: '생활가전' },
 ];
 
@@ -100,6 +116,65 @@ check('요가복 결과에 예체능레슨 후보 없음', () => {
   const matches = matchDeterministicCategories('요가복', 10);
   const lessonHit = matches.find((m) => m.d2 === '예체능레슨');
   assert.equal(lessonHit, undefined, `레슨 카테고리가 여전히 후보에 남아있음: ${JSON.stringify(lessonHit)}`);
+});
+
+// ---------------------------------------------------------------------------
+// UCE-10 결함C: 동일 d3명이 두 (d1,d2) branch에 걸치는 16건 중 실코드로
+// 재현되는 11건 — 9건은 branchBreadthBonus로 정답전환, 2건("넥타이","우산")은
+// 결함C 범위 밖의 별개 원인으로 여전히 오답(회귀 확인용으로 명시 단언).
+// ---------------------------------------------------------------------------
+const TIE_BREAK_PAIRS: Expectation[] = [
+  { name: '소파', d1: '가구/인테리어', d2: '거실가구' },
+  { name: '의자', d1: '가구/인테리어', d2: '서재/사무용가구' },
+  { name: '책상', d1: '가구/인테리어', d2: '서재/사무용가구' },
+  { name: '조명', d1: '가구/인테리어', d2: '인테리어소품' },
+  { name: '히터', d1: '디지털/가전', d2: '계절가전' },
+  { name: '귀걸이', d1: '패션잡화', d2: '주얼리' },
+  { name: '팔찌', d1: '패션잡화', d2: '주얼리' },
+  { name: '스카프', d1: '패션잡화', d2: '패션소품' },
+  { name: '스타킹', d1: '패션잡화', d2: '패션소품' },
+];
+
+console.log('\n[UCE-10 결함C] 동점쌍 9건 정답전환');
+for (const exp of TIE_BREAK_PAIRS) {
+  check(`"${exp.name}" -> ${exp.d1}>${exp.d2}`, () => {
+    const [top] = matchDeterministicCategories(exp.name, 3);
+    assert.ok(top, `"${exp.name}": no match at all`);
+    assert.equal(top.d1, exp.d1, `"${exp.name}": d1 mismatch (got ${top.d1}>${top.d2})`);
+    assert.equal(top.d2, exp.d2, `"${exp.name}": d2 mismatch (got ${top.d1}>${top.d2})`);
+  });
+}
+
+console.log('\n[UCE-10 결함C, 범위 밖] "넥타이"/"우산" — 여전히 오답 (별개 원인, UCE-11 후보)');
+check('"넥타이"는 여전히 출산/육아>유아동잡화로 오분류 (extractNouns 트레일링 "이" 스트리핑 결함)', () => {
+  const [top] = matchDeterministicCategories('넥타이', 3);
+  assert.equal(top.d1, '출산/육아');
+  assert.equal(top.d2, '유아동잡화');
+});
+check('"우산"은 여전히 스포츠/레저>골프로 매칭 (골프우산이라는 실재 리프와의 정당한 충돌)', () => {
+  const [top] = matchDeterministicCategories('우산', 3);
+  assert.equal(top.d1, '스포츠/레저');
+  assert.equal(top.d2, '골프');
+});
+
+// ---------------------------------------------------------------------------
+// UCE-10 결함B: "용" 제거 정규화 — 상품명 관용 표기가 마스터 리프의 공식
+// "...용" 접미를 생략해도 정확한 d4까지 잡히는지.
+// ---------------------------------------------------------------------------
+console.log('\n[UCE-10 결함B] "용" 제거 정규화 매칭');
+check('"실내방향제" -> 생활/건강>생활용품>제습/방향/탈취>실내용방향제', () => {
+  const [top] = matchDeterministicCategories('실내방향제', 3);
+  assert.equal(top.d1, '생활/건강');
+  assert.equal(top.d2, '생활용품');
+  assert.equal(top.d3, '제습/방향/탈취');
+  assert.equal(top.d4, '실내용방향제');
+});
+check('"차량방향제" -> 생활/건강>자동차용품>공기청정용품>차량용방향제', () => {
+  const [top] = matchDeterministicCategories('차량방향제', 3);
+  assert.equal(top.d1, '생활/건강');
+  assert.equal(top.d2, '자동차용품');
+  assert.equal(top.d3, '공기청정용품');
+  assert.equal(top.d4, '차량용방향제');
 });
 
 console.log(`\n${passed}/${passed} passed ✅\n`);
