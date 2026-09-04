@@ -51,7 +51,12 @@ import { getAdapter } from '@/lib/sources';
 // v2 (2026-09-04, UCE-10): branchBreadthBonus tie-break replacing
 // isLeafItself + "용" 제거 정규화 fallback in termMatchScore — both change
 // deterministic-matcher scoring/winners for previously-cached rows.
-export const CATEGORY_MATCH_LOGIC_VERSION = 2;
+//
+// v3 (2026-09-04, UCE-11 결함A): COMPOUND_NOUNS에 -이 어미 상품 식별자
+// 6종(넥타이·손잡이·재떨이·손톱깎이·딸랑이·지팡이) 추가 — extractNouns의
+// nouns/headNoun 출력이 바뀌므로 이 값을 소비하는 매칭·스코어링 결과가
+// 달라질 수 있는 입력들에 한해 캐시 무효화.
+export const CATEGORY_MATCH_LOGIC_VERSION = 3;
 
 export type LookupKind = 'dome_code' | 'name_hash';
 // UCE-1 (2026-08-27): 'deterministic' = category-deterministic-matcher.ts

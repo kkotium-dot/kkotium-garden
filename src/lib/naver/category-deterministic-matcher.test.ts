@@ -145,13 +145,13 @@ for (const exp of TIE_BREAK_PAIRS) {
   });
 }
 
-console.log('\n[UCE-10 결함C, 범위 밖] "넥타이"/"우산" — 여전히 오답 (별개 원인, UCE-11 후보)');
-check('"넥타이"는 여전히 출산/육아>유아동잡화로 오분류 (extractNouns 트레일링 "이" 스트리핑 결함)', () => {
+console.log('\n[UCE-11 결함A 수정] "넥타이" 정답전환 / [범위 밖] "우산"은 여전히 별개 원인');
+check('"넥타이" -> 패션잡화>패션소품 (COMPOUND_NOUNS 등재로 트레일링 "이" 스트리핑 결함 해소)', () => {
   const [top] = matchDeterministicCategories('넥타이', 3);
-  assert.equal(top.d1, '출산/육아');
-  assert.equal(top.d2, '유아동잡화');
+  assert.equal(top.d1, '패션잡화');
+  assert.equal(top.d2, '패션소품');
 });
-check('"우산"은 여전히 스포츠/레저>골프로 매칭 (골프우산이라는 실재 리프와의 정당한 충돌)', () => {
+check('"우산"은 여전히 스포츠/레저>골프로 매칭 (골프우산이라는 실재 리프와의 정당한 충돌, UCE-11 범위 밖)', () => {
   const [top] = matchDeterministicCategories('우산', 3);
   assert.equal(top.d1, '스포츠/레저');
   assert.equal(top.d2, '골프');
