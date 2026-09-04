@@ -59,6 +59,62 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST /api/crawler/logs — commit the single-crawl shelf item ("꽃수레에 담기").
+// A crawl_logs row already exists from the crawl step (see /api/crawler/domemae),
+// created with the raw supplier price. This updates that row with any values the
+// user edited on the single-item screen (price, ship fee, etc.) before saving —
+// falling back to an insert if no crawl-time row is found (B3 auto-nav fix: this
+// endpoint didn't exist before, so every save silently 405'd and never reached
+// the post-save navigation to the history tab).
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { url, name, supplierPrice, source, sellerNick, sellerId,
+      categoryName, inventory, shipFee, canMerge, sourcingStatus } = body;
+    if (!url) {
+      return NextResponse.json({ success: false, error: 'url required' }, { status: 400 });
+    }
+
+    const updated = await prisma.$executeRaw`
+      UPDATE crawl_logs SET
+        name = ${name ?? null},
+        supplier_price = ${Number(supplierPrice) || 0},
+        seller_nick = ${sellerNick ?? null},
+        seller_id = ${sellerId ?? null},
+        category_name = ${categoryName ?? null},
+        inventory = ${inventory != null ? Number(inventory) : null},
+        ship_fee = ${shipFee != null ? Number(shipFee) : null},
+        can_merge = ${canMerge != null ? Boolean(canMerge) : null},
+        sourcing_status = ${sourcingStatus ?? 'SOURCED'}
+      WHERE id = (
+        SELECT id FROM crawl_logs WHERE url = ${url} ORDER BY crawled_at DESC LIMIT 1
+      )
+    `;
+
+    if (Number(updated) === 0) {
+      await prisma.$executeRaw`
+        INSERT INTO crawl_logs (
+          id, url, name, supplier_price, images, options, status, source,
+          seller_nick, seller_id, category_name, inventory, ship_fee, can_merge,
+          sourcing_status
+        ) VALUES (
+          gen_random_uuid(), ${url}, ${name ?? null}, ${Number(supplierPrice) || 0},
+          '[]'::jsonb, '[]'::jsonb, 'success', ${source ?? 'single'},
+          ${sellerNick ?? null}, ${sellerId ?? null}, ${categoryName ?? null},
+          ${inventory != null ? Number(inventory) : null},
+          ${shipFee != null ? Number(shipFee) : null},
+          ${canMerge != null ? Boolean(canMerge) : null},
+          ${sourcingStatus ?? 'SOURCED'}
+        )
+      `;
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (e: unknown) {
+    return NextResponse.json({ success: false, error: String(e) }, { status: 500 });
+  }
+}
+
 // PATCH /api/crawler/logs — update sourcing_status
 // Single: { id: string, sourcingStatus: string, productId?: string }
 // Batch by URL: { urls: string[], sourcingStatus: string }
