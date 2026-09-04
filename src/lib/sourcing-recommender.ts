@@ -868,6 +868,19 @@ export async function runSourcingScan(opts: {
         recoType: opp.recoType?.type ?? null,
       })),
     }).catch(() => null);
+
+    // 디스코드-앱 딥링크(docs/design/DISCORD_APP_SOURCING_LINK_2026-09-04.md
+    // §2-1): createMany는 생성된 id를 돌려주지 않으므로, 방금 저장한 레코드를
+    // rank 순으로 다시 읽어와 opportunities[i].recordId에 매칭한다. 실패해도
+    // best-effort — 링크가 빠질 뿐 발송 자체는 막지 않는다(#82와 동일 원칙).
+    await prisma.sourcingOpportunityRecord
+      .findMany({ where: { date: todayDate }, orderBy: { rank: 'asc' }, select: { id: true, rank: true } })
+      .then((records) => {
+        for (const rec of records) {
+          if (result.opportunities[rec.rank]) result.opportunities[rec.rank].recordId = rec.id;
+        }
+      })
+      .catch(() => null);
   }
 
   let discordSent = false;
@@ -945,11 +958,18 @@ export function buildSourcingRecommendEmbed(result: SourcingRecommendResult): Re
       ? `[${top.platform}] 공급가 **${top.supplyPrice.toLocaleString()}원**${outlierNote} | [보러가기](${top.url})`
       : `${supplyLine} — 도매처 미확인`;
 
+    // 디스코드-앱 딥링크(docs/design/DISCORD_APP_SOURCING_LINK_2026-09-04.md
+    // §2-1): recordId가 있을 때만(fresh scan 저장 직후) 붙인다 — dryRun 미리보기
+    // 등 recordId 없는 경로는 링크를 생략(하드코딩 URL/추측 ID 금지, #352).
+    const detailLine = opp.recordId
+      ? `\n[:iphone: 앱에서 상세보기](https://kkotium-garden.vercel.app/growth?highlight=${opp.recordId})`
+      : '';
+
     return {
       name: `${RANK_ICONS[i] ?? `${i + 1}.`} ${typeTag}${opp.keyword} (${opp.blueOceanScore}점)`,
       value: [
         `${COMP_LABEL[opp.competition] ?? ''} 경쟁 | 월 ${opp.monthlySearchVolume.toLocaleString()}건 검색`,
-        wholesaleLine,
+        wholesaleLine + detailLine,
       ].join('\n'),
       inline: false,
     };

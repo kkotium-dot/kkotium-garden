@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Search, TrendingUp, RefreshCw,
   ChevronDown, ChevronUp, Sparkles, ShoppingBag,
@@ -67,7 +67,15 @@ function getCategoryMismatchLabel(axis?: string | null, modifier?: string | null
   return modifier ? `${axisLabel}(${modifier}) 의심` : `${axisLabel} 의심`;
 }
 
-export default function SourcingRecommendWidget() {
+// 디스코드-앱 딥링크(docs/design/DISCORD_APP_SOURCING_LINK_2026-09-04.md §2-2):
+// /growth?highlight={recordId}로 들어오면 해당 카드로 스크롤 + 드로어 자동
+// 오픈한다. recordId는 카탈로그 하드코딩이 아니라 URL에서 그대로 받은 임의
+// 값이므로, 목록에 없으면(카탈로그 밖) 조용히 무시한다(#352 하드코딩 금지).
+interface SourcingRecommendWidgetProps {
+  highlightRecordId?: string | null;
+}
+
+export default function SourcingRecommendWidget({ highlightRecordId }: SourcingRecommendWidgetProps = {}) {
   // Option E: SWR-backed cache + setData for POST scan replace.
   // 트랙C-1(2026-08-05): setStatus로 낙점 상태를 변경한다(낙관적 업데이트).
   const { data: result, isLoading, setData, setStatus } = useSourcingRecommend();
@@ -144,6 +152,19 @@ export default function SourcingRecommendWidget() {
     const next = opp.operatorStatus === 'skipped' ? null : 'skipped';
     void setStatus(opp.keyword, next, opp.recordId);
   };
+
+  // 디스코드 딥링크 자동 오픈 — data가 로드된 뒤 한 번만 시도한다(수동으로
+  // 드로어를 닫아도 재오픈되지 않게 recordId별로 처리 완료를 기록).
+  const handledHighlightRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!highlightRecordId || handledHighlightRef.current === highlightRecordId) return;
+    const match = allOpps.find((opp) => opp.recordId === highlightRecordId);
+    if (!match) return;
+    handledHighlightRef.current = highlightRecordId;
+    setDrawerItem(match);
+    const el = document.getElementById(`sourcing-opp-${highlightRecordId}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlightRecordId, allOpps]);
 
   return (
     <div style={{
@@ -315,7 +336,7 @@ export default function SourcingRecommendWidget() {
         const isSourcing = opp.operatorStatus === 'sourcing_started';
 
         return (
-          <div key={opp.keyword} style={{
+          <div key={opp.keyword} id={opp.recordId ? `sourcing-opp-${opp.recordId}` : undefined} style={{
             border: isSourcing
               ? '1.5px solid #86efac'
               : isInterested

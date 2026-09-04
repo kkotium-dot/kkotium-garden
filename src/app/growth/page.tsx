@@ -4,7 +4,8 @@
 // Houses the 5 growth widgets moved off the dashboard so the command center stays lean.
 // Phase 2c 소싱성장군 hue 통일은 각 위젯 자체에서 이미 적용됨 — 이동만으로 유지.
 
-import { useMemo, useCallback } from 'react';
+import { Suspense, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Sprout, RefreshCw } from 'lucide-react';
 import SourcingRecommendWidget from '@/components/dashboard/SourcingRecommendWidget';
 import SupplierGardenWidget from '@/components/dashboard/SupplierGardenWidget';
@@ -14,7 +15,12 @@ import UploadReadinessWidget from '@/components/dashboard/UploadReadinessWidget'
 import { useProductsList } from '@/lib/hooks/useDashboardData';
 import { normalizeProducts, type DashboardProduct } from '@/lib/dashboard-product';
 
-export default function GrowthPage() {
+// 디스코드-앱 딥링크(docs/design/DISCORD_APP_SOURCING_LINK_2026-09-04.md §2-2):
+// /growth?highlight={recordId}를 받아 소싱 위젯에 넘긴다 — 카탈로그 무관 임의
+// recordId로도 동작해야 하므로(#352) 여기서 검증/필터링하지 않는다.
+function GrowthPageInner() {
+  const searchParams = useSearchParams();
+  const highlightRecordId = searchParams.get('highlight');
   const { rawProducts, isLoading: productsLoading, refresh: refreshProducts } = useProductsList({ limit: 200 });
 
   const products: DashboardProduct[] = useMemo(
@@ -61,11 +67,23 @@ export default function GrowthPage() {
 
       {/* Growth widgets grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
-        <SourcingRecommendWidget />
+        <SourcingRecommendWidget highlightRecordId={highlightRecordId} />
         <SupplierGardenWidget />
         <ReviewGrowthWidget />
         <ProductLifecycleWidget />
       </div>
     </div>
+  );
+}
+
+export default function GrowthPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid #FFB3CE', borderTop: '3px solid #F63B28', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    }>
+      <GrowthPageInner />
+    </Suspense>
   );
 }
