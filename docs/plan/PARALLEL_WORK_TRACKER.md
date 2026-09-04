@@ -1250,3 +1250,44 @@ route.ts의 크롤시점 INSERT를 "url 있으면 UPDATE"로 바꾸는 개선 �
 
 **남은 작업**: UCE-11(토크나이저/롱네임, 문서만 있음)·PRINCIPLES_LEARNED
 분할(#31, 1437줄). 둘 다 미착수.
+
+## rev134 — UCE-11 결함A 확정·수정 + PRINCIPLES_LEARNED 분할 + 크롤 UPSERT 3건 완료 (2026-09-04, Code)
+
+**UCE-11 결함A(트레일링 "이" 스트리핑) 확정·수정**: `extractNouns()` 직접
+실행으로 가설 확정 — "넥타이"→"넥타"로 스트리핑됨("목걸이"는 COMPOUND_
+NOUNS의 '걸이' 부분매치로 우연히 보호받았을 뿐). 카탈로그 밖 "~이" 20종 +
+"트레이/고블렛" 20종 전수 dryRun(#352) 후, 표준어·고빈도 확신 있는 6종
+(넥타이·손잡이·재떨이·손톱깎이·딸랑이·지팡이)만 COMPOUND_NOUNS에 추가
+(#353 고신뢰만). 다듬이/부지깽이/쓰레받이/화분받이/냄비받이는 표준어·
+빈도 확신 부족으로 보류.
+
+- **손트레이스 예단 반증**: headNounWeight의 부분포함 관용성 때문에
+  "넥타"→"넥타이" 보호가 결과에 영향 없을 걸로 예상했으나, 실측
+  (test:category-match)은 반대 — "넥타이"가 실제로 출산/육아>유아동잡화
+  (오답)→패션잡화>패션소품(정답)으로 전환됨. 코드를 손으로 읽고 매처
+  결과를 예단하지 말 것(#350과 같은 교훈, 실행 필수).
+- **결함C(얼음트레이→전기밥솥)는 결함A와 무관함을 실측 반증**: 매처가
+  원본 name도 haystack으로 쓰기 때문에 트레일링-이 스트리핑과 무관하게
+  "트레이"가 부분매칭됨. 별도 후속 사안으로 문서에 남김(docs/design/
+  UCE11_TOKENIZER_LONGNAME_CANDIDATES_2026-09-04.md).
+- test:category-match 27/27 · test:category-integrity 29/29(회귀0).
+  CATEGORY_MATCH_LOGIC_VERSION 2→3(#351 캐시무효화). 커밋 4bbdfd9.
+
+**PRINCIPLES_LEARNED.md 분할(#31)**: 1437줄→512줄. #254~#331 구간(925줄,
+원문 그대로)을 `archive/PRINCIPLES_LEARNED_archived-2026-09-04.md`로 이관.
+재구성 diff로 원문 손실 없음 확인. 커밋 d6fa5f0.
+
+**크롤 중복행 UPSERT(트리아지 A-3)**: `domemae/route.ts`의 크롤시점 INSERT를
+"같은 url의 SOURCED 행이 있으면 UPDATE, 없으면(최초 또는 이미 PENDING/
+REGISTERED로 진행됨) INSERT"로 변경. unique 제약 없이 SELECT-then-UPDATE
+패턴(스키마 마이그레이션 불필요). 로컬 dev+실 DB로 실측: SOURCED 재크롤
+2회→행1개 유지·id불변, REGISTERED 재크롤→기존 이력 원문보존+새 SOURCED
+행만 추가 생성. 테스트로 만든 부가 행은 정리 완료. 커밋 4b3ca93.
+
+**검증**: 3건 모두 tsc 0. 카테고리 매처는 회귀테스트로, 크롤 UPSERT는
+로컬 dev+실 DB 실측으로 검증(브라우저 UI 조작 자체는 이번 세션 미실시
+— API 레벨 실측으로 대체, 다음 세션 브라우저 재확인 권장).
+
+**남은 작업**: 없음(이번 세션 인계 3건 전부 완료). 후속 후보(선택):
+UCE-11 결함B(우산 동음이의)·결함C(트레이 promiscuity) — 위 설계문서
+"보류 후보" 참조.
