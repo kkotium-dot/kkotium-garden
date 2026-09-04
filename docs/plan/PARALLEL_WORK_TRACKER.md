@@ -1113,3 +1113,77 @@ origin/main의 조상)만 하고 다음 세션 정리로 인계.
 
 **다음 세션 최우선**: 결함C→B→재검증→A 순으로 Code 인계, 발행게이트
 병합은 C·B 반영 후. 상세: `docs/handoff/SESSION_HANDOFF_2026-09-04.md`(갱신예정).
+
+## rev130 — UCE-10 A/B/C 전체 완료(Code CLI 구현+Desktop 재검증) + 발행게이트 중복발견 정리 + 원칙#361 (2026-09-04)
+
+**UCE-10 완전 종결**: rev129에서 설계한 결함A(소싱검증우회)/B(용정규화)/
+C(동점보너스)를 Code CLI가 브랜치 `claude/uce10-tie-break-a3f521`(커밋
+`cf2a635`)에서 전부 구현. Desktop이 별도로 코드 직접열람+tsc+양쪽
+테스트스위트 직접실행+diff전체대조+**프로덕션 API 직접호출**로 재검증
+(대화 요약을 그대로 신뢰하지 않고 손수 재확인, 대표님 지적 반영):
+
+- 결함C: `isLeafItself(+1)` → `branchBreadthBonus`(형제d4개수 기반,
+  모듈로드시 1회 계산 D3_CHILD_COUNT맵). 실측 **9/11** 정답전환(소파·
+  의자·책상·조명·히터·귀걸이·팔찌·스카프·스타킹). "우산"(골프우산 d4
+  실재)에 더해 **Code가 "넥타이"도 추가 발견**(extractNouns 트레일링
+  "이" 스트리핑 결함, 별개) — 둘 다 테스트에 명시적 실패assertion으로
+  고정, 감추지 않음. Desktop 초판 "10/11"은 부정확했음, 9/11로 정정.
+- 결함B: termMatchScore에 "용" 정규화 haystack 추가.
+- 결함A: `category-ai-suggest.ts` 신설(route.ts 로직 무손실 추출) +
+  sourcing-recommender.ts 배선(저신뢰시 Groq교차확인+정직표시).
+- 검증: tsc0, test:category-match 27/27, test:category-integrity
+  29/29(회귀0), CATEGORY_MATCH_LOGIC_VERSION 1→2.
+- main fast-forward 병합(`cf2a635`) → 프로덕션 배포 확인 → **API
+  직접실측**: 소파/조명/히터/귀걸이 정답전환 실채용 확인.
+
+**발행게이트 정합성검사 — 중복구현 발견·정리**: §3 체크리스트 항목3을
+위해 미병합 브랜치(`b077cbe`, #355/#356) 병합 시도 → merge conflict 3건
+→ 조사 결과 **같은날 다른세션이 동일문제를 다른구현으로 이미 main
+병합·배포완료**(`274bbf2`, `publish-category-consistency.ts`) 발견.
+실측 비교(판정기준 관대함·#356 이원필드 대응·테스트커버리지) 후
+`274bbf2` 채택, `b077cbe` 폐기(워크트리·브랜치 삭제). main 기존구현을
+결함C 수정 이후 마스터 기준 재검증 — 정상 작동 확인(가습기↔조명,
+아이스트레이↔홍합 실사례 재현 차단).
+
+**배포검증 함정 발견**: `verify-vercel-deploy.sh --wait`가 새배포
+QUEUED상태를 못잡고 직전 READY배포를 "OK"로 오탐 — 프로덕션API
+직접호출로 발견, `Vercel:get_deployment`로 원본 state/alias 재확인
+후 실제 반영시점(약2분후) 확인. 원칙#361로 박제.
+
+**워크트리 최종정리**: 6→2→**1개(main만)**. `uce10-tie-break-a3f521`·
+`publish-category-guard-48e1ad` 전부 병합완료/폐기 확인 후 삭제.
+
+**커밋**: cf2a635(UCE-10 A/B/C 구현+병합), c028fb2(문서 최종화+원칙#361)
+
+**§3 체크리스트(카테고리개편 전상품 재체크) 최종 상태**:
+1. 소싱 카테고리 라벨 신마스터 검증 → 결함A로 해결(rev129~130)
+2. 발행게이트 정합성검사 → 이미 274bbf2로 해결됨을 발견·확인(이번 rev)
+3. naver-settings 구마스터 잔존 → **미착수, 다음 세션 필요**
+4. test:category-match/integrity 회귀 → 통과 확인(27/27, 29/29)
+5. 워크트리/문서 위생 → 완료
+
+**다음 세션 최우선**: §3 항목3(naver-settings 카테고리 드롭다운 구마스터
+잔존 확인)만 남음. 그 외 UCE-10 전체 계열은 완전 종결.
+
+
+## rev131 — §3-항목3 naver-settings 구마스터 잔존 실측 완료 (2026-09-04)
+
+**FLOWER_CATEGORY_CODES 전수대조**: 13건 전부 라벨 불일치(6건 코드
+자체가 마스터에 없음, 나머지 완전 오분류 — "꽃다발"표기가 실제 "홍합").
+`/naver-settings` "기본 카테고리" 드롭다운에 그대로 노출.
+
+**위험도 재평가(DB 실측)**: `store_settings` 테이블에 `naverDefaults`
+컬럼 자체가 스키마에 없음 확인(`information_schema.columns` 조회) →
+저장 API(POST route.ts)의 try-catch가 조용히 실패 → 사용자가 값을
+바꿔도 실제로 DB 저장 안 됨(silent no-op). 데이터 오염 위험은 낮으나
+"저장됨"처럼 보이는 UX 결함은 실재.
+
+**미완료**: 브라우저 실측(Chrome 확장 연결 끊김, 사실대로 보고) —
+드롭다운이 실제 화면에 어떻게 렌더되는지는 다음 세션에서 재시도 필요.
+
+**제안**: FLOWER_CATEGORY_CODES는 소비처 없는 죽은 데이터 + 저장도 안
+되는 필드이므로, naver-settings 페이지에서 "기본 카테고리" Field 자체
+제거가 맞음(코드 삭제, 승인 필요 — 다음 세션 확인 요청).
+
+**§3 체크리스트 최종 상태**: 5항목 전부 확인 완료(1,2,4,5 rev129~130,
+3 이번 rev). 카테고리개편 전상품 재체크 작업 계열 **완전 종결**.
