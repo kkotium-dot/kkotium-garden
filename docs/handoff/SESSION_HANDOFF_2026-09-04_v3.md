@@ -82,3 +82,31 @@ Branch: main (origin/main=6745d3a)
 [완료조건] naver-settings 삭제는 코드변경이라 tsc0+브라우저확인 후
  push. 그 외 전부 문서화만 필요하면 즉시 커밋.
 ```
+
+---
+
+## [v3 추가 — 2026-09-04 후속 세션] Chrome 재연결 후 브라우저 검증 + UCE-11 정리
+
+### 완료 (origin/main=4f94b31)
+- **naver-settings "기본 카테고리" 필드 제거 — 브라우저 실렌더 확인 완료**.
+  "상품 기본" 섹션에 브랜드/원산지/부가세/상품상태/미성년자만 남고 죽은
+  필드 사라짐. (rev132 #356 오염코드 3경로 차단의 UI 부분 최종 검증)
+- **UCE-11 후보 문서화**: docs/design/UCE11_TOKENIZER_LONGNAME_CANDIDATES_
+  2026-09-04.md. 프로덕션 API 실측으로 넥타이(오분류)·목걸이(정답,
+  추정 정정)·얼음트레이→전기밥솥·토마토고블렛→토마토·우산(동음이의) +
+  롱네임 복합신호(아이스트레이+보관함→주얼리보관함) 정리.
+
+### ⚠️ 미해결 — B3(꽃 한 송이 담기) 자동이동 (다음 세션 Code 확인 필요)
+- **담기 저장 자체는 성공 확인**(DB에 SOURCED crawl_log 생성 실측).
+- **history 탭 자동이동은 첫 관찰에서 안 됨**(담기 클릭 후 URL이 여전히
+  ?tab=single). 단 브라우저 자동화 스크롤/타이밍 요인 개입 가능성 있어
+  단정 못 함(2차 재현은 form_input↔React state 미반영으로 크롤 자체 실패).
+- 코드는 정확(handleSaveOnly L440 setTab('history') → router.replace('/crawl')
+  존재, main 반영 확인). **Code CLI가 실제 로직 정밀 검토 권장** —
+  router.replace가 프로덕션에서 실제 URL 전환하는지, setTimeout/state
+  race 없는지. 브라우저 자동화보다 코드 검토가 정확·효율적(핑퐁).
+
+### 학습화 점검
+- 원칙 #357~#361 정상 축적. 클러스터 인덱스 #360/#361 반영 확인.
+- ⚠️ **PRINCIPLES_LEARNED.md 1,437줄 — 1,500줄 분할 임계(#31) 근접.
+  다음 세션에서 분할 필요.**
