@@ -53,13 +53,18 @@ Branch: main (신규 feature 브랜치로 시작 권장 — 예: fix/uce10-tie-b
  카테고리마스터4,999건 그대로 유지. 워크트리 6→2개 정리완료.
 
 [최우선] docs/design/UCE10_TIE_BREAK_AND_SOURCING_PARITY_2026-09-04.md 정독 후:
- 1. 결함C: src/lib/naver/category-deterministic-matcher.ts L228-232
-    isLeafItself(+1) 보너스를 형제(d4) 개수 기반 가산으로 교체.
-    문서 §C에 시뮬레이션 코드 스니펫 있음(11/11 정답전환 확인된 로직).
+ 1. 결함C: src/lib/naver/category-deterministic-matcher.ts
+    (a) import문 직후에 D3_CHILD_COUNT맵 + branchBreadthBonus() 삽입
+    (b) matchDeterministicCategories() 내부 `if(c.d3 && c.d3===headNoun)`
+        블록의 `isLeafItself` 변수+보너스를 branchBreadthBonus()로 교체
+    문서 §C에 실제 삽입 코드 그대로(2026-09-04 재검증, 실파일 적용→
+    tsc0→원복 완료된 버전) 있음 — 그대로 복붙 가능.
+    ⚠️ 실측 10/11 정답전환, "우산"만 별도 리프충돌(골프우산 d4실재,
+    UCE-11 후보) — 이 수정으로 "우산"이 안 고쳐져도 실패 아님, 되돌리지 말것.
  2. 결함B: termMatchScore에 "용" 제거 정규화 haystack 추가(원본과 함께
     시도, 정규화매칭 시 완전일치보다 소폭 감점).
- 3. 카탈로그밖 임의 30종 + 문서 §C의 16건 동점충돌쌍 전수 dryRun,
-    회귀0 확인 후에만 적용(#352 절차 엄수).
+ 3. 카탈로그밖 임의 30종 + 문서 §C의 16건 동점충돌쌍(우산 제외 15건
+    필수) 전수 dryRun, 회귀0 확인 후에만 적용(#352 절차 엄수).
  4. test:category-match에 회귀 테스트로 고정.
  5. CATEGORY_MATCH_LOGIC_VERSION 상수 증가(#351 캐시무효화 필수).
  6. 결함A: sourcing-recommender.ts의 matchDeterministicCategories()

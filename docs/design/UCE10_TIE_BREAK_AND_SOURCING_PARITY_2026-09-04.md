@@ -124,16 +124,72 @@ d3 이름이 2개 이상의 서로 다른 (d1,d2) 브랜치에 걸쳐 존재하�
 ```
 1점 차이로 매번 틀린 쪽이 이긴다 — 명백한 설계 결함이지 우연이 아니다.
 
-### 수정안 검증 (dryRun 시뮬레이션)
-`isLeafItself ? +1 : 0`을 **"형제 d4 개수가 많을수록 근소 가산"**으로
-대체(로그스케일로 과도한 쏠림 방지, `Math.min(2, Math.log2(childCount+1)*0.5)`):
-- 11/11 케이스 전부 정답(자식 많은 진짜 브랜치)으로 승자 교체 확인.
-- "유아소파"·"유아책상" 같은 **진짜 유아용 복합명사**는 이미 tier1 완전
-  리프매칭(compound noun, 121점)으로 이 동점 로직과 무관하게 압도적으로
-  이기므로 회귀 없음(검증 완료).
-- 참고로 "아기우산"·"아기의자"(수식어+헤드노운 조합, 복합명사 사전에
-  미등재)는 **현재도 여전히 부정확**(별개 결함 — 수식어 인식 자체가 약함,
-  이번 스코프 밖으로 UCE-11 후보로 기록만 함).
+### 수정안 실코드 검증 (2026-09-04, 재검증 — 실제 파일에 적용 후 원복)
+
+**주의: 이전 버전 문서의 "11/11 정답전환"은 별도 임시스크립트 시뮬레이션
+결과였고, 실제 매처 함수 전체 파이프라인을 재현하지 못했다.** 아래는
+실제로 `category-deterministic-matcher.ts`를 수정하고 `matchDeterministicCategories()`를
+직접 호출해 재검증한 결과다(검증 후 `git checkout`으로 즉시 원복, #46 준수).
+
+**실제 삽입 코드** (import문 직후, 함수 정의 앞):
+```ts
+// UCE-10 (2026-09-04, tie-break fix): (d1|d2|d3) -> count of non-empty d4
+// children. Computed once at module load (NAVER_CATEGORIES_FULL is static),
+// not per-call - a per-call scan would make the branch tie-break O(n^2).
+// Replaces the old isLeafItself(+1) bonus, which always favoured a
+// coincidental same-named leaf (0 children) over the real, broader branch
+// (many children) sharing that d3 name.
+const D3_CHILD_COUNT = new Map<string, number>();
+for (const c of NAVER_CATEGORIES_FULL) {
+  if (!c.d3 || !c.d4) continue;
+  const key = `${c.d1}|${c.d2}|${c.d3}`;
+  D3_CHILD_COUNT.set(key, (D3_CHILD_COUNT.get(key) ?? 0) + 1);
+}
+function branchBreadthBonus(d1: string, d2: string, d3: string): number {
+  const childCount = D3_CHILD_COUNT.get(`${d1}|${d2}|${d3}`) ?? 0;
+  return Math.min(2, Math.log2(childCount + 1) * 0.5);
+}
+```
+**교체 지점**(`matchDeterministicCategories` 함수 내부, `if (c.d3 && c.d3 === headNoun)` 블록):
+```ts
+// 기존: const isLeafItself = !c.d4; ... + (isLeafItself ? 1 : 0)
+// 신규:
+if (c.d3 && c.d3 === headNoun) {
+  consider(`${c.d1}|${c.d2}|${c.d3}`, {
+    d1: c.d1, d2: c.d2, d3: c.d3, d4: undefined, matchedTerm: c.d3, tier: 1,
+    score: c.d3.length * EXACT_BRANCH_SCORE_PER_CHAR + branchBreadthBonus(c.d1, c.d2, c.d3),
+  });
+}
+```
+(`isLeafItself` 변수 선언 라인은 삭제 — 더 이상 참조되지 않음)
+
+**tsc**: 0 errors.
+
+**실측 결과**:
+- 동점쌍 11종 재검증: **10/11 정답 전환**(스카프·넥타이·귀걸이·팔찌·
+  스타킹·소파·의자·책상·히터·조명) — ✅
+- **"우산"만 여전히 오답**(`스포츠/레저>골프>골프필드용품`, 90점대) — ❌
+  근본원인 재조사: `스포츠/레저>골프>골프필드용품>우산`이라는 **실재하는
+  d4 리프**가 마스터에 있다(`50002815`, 골프우산 액세서리). 이건 결함C의
+  범위(같은 d3명이 branch/자기리프로 갈리는 동점)가 **아니라**, "동일한
+  리프명(우산)이 서로 다른 카테고리에 각각 정당하게 실재할 때 어느 걸
+  고르는가"라는 **별개의 신규 문제**다 — Tier1 완전일치가 둘 다 발화하고,
+  둘 다 진짜 존재하는 리프라 "오분류"가 아니라 "동음이의 리프 우선순위"
+  문제로 분류해야 한다. 결함C 수정으로는 해결되지 않으며, 결함C 수정과
+  함께 병합해도 무방하나 **별도 후속 이슈(UCE-11 후보)로 티켓팅**해야 한다.
+- 회귀 확인 10/10 유지(빨래건조대·무선청소기·요가매트·달항아리·아이스트레이·
+  수세미·우산꽂이·칫솔살균기·전동칫솔·실리콘주걱 — 전부 기존 정답 그대로).
+- 카탈로그 밖 20종 추가 재확인: 레일조명·도어스토퍼·아크릴은 예상대로
+  결함C와 무관(마스터 공백/모호 입력, 그대로). **신규 발견**: "토마토고블렛"이
+  `식품>농산물>과일>토마토`로 오분류(식품 취급제외 카테고리로 잘못
+  분류되면 judgeExclusion에서 걸릴 수 있어 별도 확인 필요, UCE-11 후보
+  기록만 함, 이번 스코프 밖).
+
+**결론**: 결함C 수정은 **적용해야 하지만, "16개 동점쌍 전건 해결"이
+아니라 "16개 중 최소 15개 해결, '우산'은 별도 리프 충돌 이슈로 분리"**로
+정정한다. Code는 이 수정을 적용한 뒤 "우산" 케이스를 실패로 착각해
+되돌리지 말 것 — 이건 이번 수정의 책임 범위 밖이다.
+
 
 ## D. UCE-4 개입큐가 실제로 작동하는지 (레일조명·도어스토퍼류 안전망)
 
