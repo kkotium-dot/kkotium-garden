@@ -1218,3 +1218,35 @@ Chrome 확장 연결끊김으로 미완**(4중 간접검증으로 대체, 정직
 **#356 "홍합" 오염 완전 종결**: 상품생성 라우트(2026-09-03, 이미 수정됨)
 + 대량등록 엑셀 폴백(이번 rev) + naver-settings UI(이번 rev) — 세 경로
 모두 차단. 이제 오염코드가 새 상품/엑셀/설정 어디에도 주입되지 않음.
+
+## rev133 — B3 근본원인(POST 405) 수정 병합·브라우저 실측 완료 + 크롤 중복행 개선후보 (2026-09-04)
+
+**B3 완전 종결 (1군 5개 전부 완료)**: Code CLI가 진짜 근본원인을 확정 —
+`/api/crawler/logs`에 POST 핸들러가 아예 없어 "꽃수레에 담기" 클릭마다
+405 → res.ok=false → catch로 빠져 `setTab('history')`(page.tsx:440)가
+애초에 실행 안 됐던 것. Desktop이 "담기 성공했으나 이동 안 됨"으로 본
+것은 오판이었고, 실제로는 담기 자체가 매번 실패했으며 사용자가 본
+"SOURCED 행"은 크롤 시점(domemae/route.ts)에 이미 생성된 행이었다.
+
+- 수정(커밋 d65f157): POST 핸들러 추가 — url로 최신 crawl_logs 행 찾아
+  사용자 편집값(가격/배송비 등)으로 UPDATE, 없으면 INSERT. UPDATE-우선
+  설계로 중복 방지. INSERT 컬럼이 NOT NULL 스키마와 정확히 일치함을
+  Desktop이 information_schema로 교차확인.
+- **브라우저 실측 완료**: 담기 클릭 → URL이 /crawl로 전환(history 탭
+  활성) → 담긴 상품이 꿀통 꽃수레 목록에 표시 확인. B3 자동이동 정상.
+- DB 실측: UPDATE-우선 정상 동작(담기가 새 행 안 만들고 크롤행 갱신).
+  테스트 데이터 즉시 원복(8/8 원본만 잔존).
+- tsc0, main fast-forward 병합, 프로덕션 배포 확인(#361 절차 —
+  get_deployment로 state:READY+alias 직접확인).
+
+**신규 개선후보 발견(B3 무관, 기존 동작)**: 같은 URL을 여러 번 크롤하면
+crawl_logs에 새 행이 계속 쌓임(아이스트레이가 8/8·재크롤로 2행 관찰).
+"꿀통 꽃수레" 목록에 같은 상품이 중복 노출되는 UX 이슈 가능. domemae/
+route.ts의 크롤시점 INSERT를 "url 있으면 UPDATE"로 바꾸는 개선 검토
+가치 있음(전 상품 공통 #62). → OPERATOR_FEEDBACK_TRIAGE 또는 별도
+개선티켓 후보로 기록만(이번 스코프 밖).
+
+**워크트리**: b3-auto-nav-tokenizer-a58f28 병합확인 후 정리 → main만 남음.
+
+**남은 작업**: UCE-11(토크나이저/롱네임, 문서만 있음)·PRINCIPLES_LEARNED
+분할(#31, 1437줄). 둘 다 미착수.
