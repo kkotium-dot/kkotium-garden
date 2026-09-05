@@ -1360,3 +1360,39 @@ tsc0. Desktop 독립 재검증: 결함C 6종 lowConf=true 전환, 정답 12종 �
 **다음 우선순위**: 결함E(최상)→결함D. 둘 다 category-deterministic-matcher
 +category-ai-suggest+route.ts 계열, Code 인계. 명화(공급단절)는 별건
 disposition 검증 케이스로 대기(로컬MCP 복구됨).
+
+
+## rev137 — UCE-11 결함E+D 완료·병합·프로덕션 재검증 (2026-09-05)
+
+**결함E+D 완료(커밋 58ae7a0, main 병합·배포 dpl_4krhr)**: Code가 Desktop
+인계 설계대로 (E)route.ts lowConfidenceFallback 플래그 + (D)headNounWeight
+복합어 스코핑 수정. Desktop 전량 재검증:
+
+**결함E(저신뢰+AI빈손)**: 
+- 캐시 write 스킵 채택(getCachedMapping이 confidence 무시하고 무조건 반환
+  하므로 confidence 낮추기론 부족 — Code가 실측으로 정확한 해법 선택)
+- category_confirm_needed 조건 확장(length===0 + lowConfidenceFallback)
+- needsConfirmation 응답필드(#310), page-1 검증 corroborate시 해제
+- 프로덕션 실측: 얼음/실리콘/미니트레이 needsConfirmation=true 확인,
+  회귀(아이스트레이·무선청소기·넥타이) needsConfirmation=false 유지.
+- 캐시 스킵 DB실측: v5에 트레이 오답 0건(이전 v2/v3/v4엔 confidence85
+  다수였음) — 오답 확신캐시 방지 정확 작동.
+
+**결함D(복합어 미분리)**: headNounWeight 역방향 관용매칭을 modifierNouns.
+length===0 케이스에 한해 head-final(endsWith)만 boost. 실리콘트레이
+105→17.5, 미니/큐브트레이 15점, 전부 low=true. 회귀 8종(차량용신발장·
+무선청소기·전동칫솔 등) 확신 유지 회귀0. 스코핑으로 정당복합어 미영향.
+
+**검증**: test:category-match 37/37, integrity 29/29, tsc0, 캐시버전 4→5.
+Desktop 독립 dryRun + 프로덕션 API + 캐시DB 3중 실측.
+
+**git 위생**: 세션 중 깨진 ref(".../76e06b 2" macOS 공백접미사)가 fetch를
+막던 것 발견·제거. 워크트리 musing-mcnulty-6b6194에서 Code 미커밋 작업
+발견해 커밋·병합.
+
+**잔여·후속티켓(task_b37526ed)**: "미니/우드/스텐받침"→욕실홀더 확신오분류
+(score35). 결함C 계열이나 boost가 head-final이라 별도 수정 필요. 사전존재
+(비회귀). **Desktop 판단: 결함E/D 검증·병합 완료됐으므로 이제 착수 가능한
+독립 작업 — Code 인계 대상.**
+
+**남은 작업**: task_b37526ed(받침류)·명화 disposition 검증(별건, 대기).
