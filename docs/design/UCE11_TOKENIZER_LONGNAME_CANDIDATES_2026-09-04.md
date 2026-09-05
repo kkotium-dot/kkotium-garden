@@ -240,3 +240,50 @@ Vercel 로그가 진실을 보여줌:
 결함C(저신뢰 판정)·D(복합어 미분리)는 "매처가 오답을 낸다"는 개별
 증상이고, 결함E는 "오답을 확신으로 굳혀 사용자가 못 걸러낸다"는
 시스템 신뢰성 근간. 발행 자동화의 안전성 직결.
+
+---
+
+## [2026-09-05 갱신] 결함D·E 수정 완료 (Code)
+
+### 결함E — 완료
+route.ts에 `lowConfidenceFallback` 로컬 플래그 추가: 저신뢰 분기에서 Groq가
+빈손(`[]`)이거나 예외를 던지면 true로 세팅, rawSuggestions는 여전히
+(미확인) 결정론 추측을 들고 있음을 표시한다. 페이지검증(`agreed`/
+`override`)이 독립신호로 뒷받침하면 다시 false로 해제. 이 플래그로:
+1. **캐시 스킵** — `cacheable = topIsFullyValid && !lowConfidenceFallback`.
+   confidence 하향만으로는 불충분함을 확인(`getCachedMapping`이 confidence
+   무관하게 무조건 캐시행을 반환하므로, 다음 조회 시 낮은 confidence여도
+   그대로 재서빙됨 — 반드시 저장 자체를 건너뛰어야 함).
+2. **개입큐 확장** — `needsConfirmation = suggestions.length===0 ||
+   lowConfidenceFallback`, `updateCategoryConfirmFlag`에 전달.
+3. **정직표시(#310)** — 응답 JSON에 `needsConfirmation: boolean` 필드 추가
+   (productId 없는 미저장 초안에도 노출).
+sourcing-recommender.ts는 별도 확인 불필요 — 이미 저신뢰+AI빈손을
+`"${d1}(확인필요)"` 라벨로 정직 표시하고 캐시에 쓰지 않는 경로였음(#295
+단일권위 검증 완료).
+
+### 결함D — 완료
+`headNounWeight`의 역방향 포함관계(`term.includes(p)`)를, 토크나이저가
+전혀 못 쪼갠 단일-명사 상품명(`modifierNouns.length===0`)에 한해
+머리명사 말미 위치(`term.endsWith(p)`)로 제한. 그 위치에도 안 걸리면
+MODIFIER_NOUN_PENALTY(×0.5)로 강등(중립 1배 방치 금지 — 원시
+leaf-length 점수만으로 임계 통과하는 걸 막기 위함). modifier가 이미
+분리된 경우(예: "차량용 신발장")는 건드리지 않음 — 그 케이스의
+근접경쟁 신호는 category-id-resolver.ts의 D1_CONFLICT_GAP 안전망이
+의존하는 기존 동작이라 보존 필요.
+- "실리콘트레이" 105.00(확신,공구>접착용품) → 17.50(저신뢰)
+- "미니트레이" 75.00(확신,골프의류) → 15.00(저신뢰)
+- "큐브트레이" 45.00(확신,유아동퍼즐) → 15.00(저신뢰)
+- "차량용 신발장" 경쟁후보(신발, 75점) 회귀0 확인 — 결함D 수정 전후 동일.
+
+**잔여 이슈(신규 발견, 후속 티켓 대상)**: "미니받침"/"우드받침"/
+"스텐받침"류가 여전히 확신구간(35점, 생활/건강>욕실용품>...>비눗갑/홀더/
+받침)에 오분류 — 단, 이건 결함D 수정 이전부터 있던 기존 결함(회귀 아님,
+"실리콘받침"은 105→35로 오히려 개선)이라 이번 수정 범위 밖. 메커니즘은
+결함C와 동일(slash라벨 파편 매칭)이지만 "받침"이 진짜 headNoun 말미와
+일치해 HEAD_NOUN_BOOST가 정당하게 걸려 결함C의 matched/parts 페널티만으론
+임계선 아래로 못 내림 — 별도 검토 필요.
+
+**검증**: test:category-match 37/37(결함C 6종 + 결함D 3종 + 신발장
+회귀케이스 신규 추가), test:category-integrity 29/29, tsc0. 캐시버전
+4→5. Desktop 프로덕션 재검증 필요.

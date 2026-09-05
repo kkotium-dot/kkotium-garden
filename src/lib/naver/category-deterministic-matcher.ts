@@ -205,9 +205,48 @@ function termMatchScore(label: string, haystacks: readonly string[]): number {
 function headNounWeight(label: string, headNoun: string, modifierNouns: readonly string[]): number {
   if (!headNoun) return 1;
   const parts = label.includes('/') ? splitSynonyms(label) : [label];
-  const overlaps = (term: string) => parts.some((p) => p.includes(term) || term.includes(p));
-  if (overlaps(headNoun)) return HEAD_NOUN_BOOST;
-  if (modifierNouns.some((m) => overlaps(m))) return MODIFIER_NOUN_PENALTY;
+  // UCE-11 (결함D, 2026-09-05): the reverse-containment direction
+  // (`term.includes(p)` — label is a fragment embedded inside headNoun) used
+  // to boost regardless of WHERE in headNoun the fragment sat. When the
+  // tokenizer fails to split a compound at all ("실리콘트레이" -> one opaque
+  // noun instead of 실리콘+트레이, i.e. modifierNouns is empty because there
+  // was nothing left to split off), that blob becomes headNoun whole, and
+  // any short leaf that's merely a substring somewhere inside it (e.g.
+  // "실리콘" from 공구>접착용품>실리콘) got the full HEAD_NOUN_BOOST — a
+  // coincidental hit, not a real identity match (실측: "실리콘트레이"/
+  // "미니트레이"/"큐브트레이" all landed on unrelated categories at
+  // confident scores, lowConf=false, never reaching AI/개입큐). Korean noun
+  // phrases put the real identity noun LAST, so in that single-noun-blob
+  // case a fragment is only trustworthy at the head-final position
+  // (`term.endsWith(p)`).
+  //
+  // This restriction is scoped to modifierNouns.length===0 ONLY — when the
+  // tokenizer DID split off a modifier ("차량용 신발장" -> headNoun="신발장",
+  // modifier="차량용"), headNoun is a genuine, independently-isolated
+  // identity noun and the unrestricted reverse-containment check must stay:
+  // it's what lets a coincidentally-embedded competitor ("신발" inside
+  // "신발장") keep enough score to trip the d1-conflict-gap safety net in
+  // category-id-resolver.ts/route.ts instead of being silently crushed to
+  // where the (still debatable) "신발장" top pick looks artificially
+  // uncontested. Only the untokenized-blob case is unambiguous enough to
+  // tighten.
+  const singleNounProduct = modifierNouns.length === 0;
+  const overlapsHead = (term: string) =>
+    parts.some((p) => p.includes(term) || (singleNounProduct ? term.length > p.length && term.endsWith(p) : term.includes(p)));
+  if (overlapsHead(headNoun)) return HEAD_NOUN_BOOST;
+  const overlapsPlain = (term: string) => parts.some((p) => p.includes(term) || term.includes(p));
+  if (modifierNouns.some((m) => overlapsPlain(m))) return MODIFIER_NOUN_PENALTY;
+  // UCE-11 (결함D): in the single-noun-blob case, a fragment that appeared
+  // inside headNoun but NOT at the head-final position is the same weak
+  // "modifier position" signal as matching a modifier noun above — penalize
+  // it the same way rather than falling through to neutral (which would
+  // still let the raw leaf-length score alone clear the confidence
+  // threshold unchecked).
+  if (singleNounProduct) {
+    const inModifierPosition = (term: string) =>
+      parts.some((p) => term.length > p.length && term.includes(p) && !term.endsWith(p));
+    if (inModifierPosition(headNoun)) return MODIFIER_NOUN_PENALTY;
+  }
   return 1;
 }
 

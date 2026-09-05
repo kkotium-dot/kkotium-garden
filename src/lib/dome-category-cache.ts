@@ -64,7 +64,16 @@ import { getAdapter } from '@/lib/sources';
 // `< 20` 경계를 통과해버리던 오분류를 근본에서 억제(부수로 `<=`로 안전망도
 // 강화). 슬래시 라벨이 관여하는 모든 부분매칭 스코어가 재계산되므로 캐시
 // 무효화.
-export const CATEGORY_MATCH_LOGIC_VERSION = 4;
+//
+// v5 (2026-09-05, UCE-11 결함D+E): (D) headNounWeight의 역방향 포함관계
+// (`term.includes(p)`)가 토크나이저가 못 쪼갠 단일-명사 상품명("실리콘트레이"
+// 등)에서 위치와 무관하게 부스트를 줘 "실리콘트레이"→공구>접착용품처럼
+// 확신구간(lowConf=false) 오분류를 만들던 것을, 그 케이스(modifierNouns가
+// 빈 경우)에 한해 머리명사 말미 위치(`term.endsWith(p)`)로 제한 — 스코어링
+// 결과가 바뀌므로 캐시 무효화. (E는 route.ts의 캐시 저장/개입큐 정책
+// 변경이라 매처 스코어 자체는 안 바뀌지만, 같은 배포 묶음이라 버전을 함께
+// 올린다.)
+export const CATEGORY_MATCH_LOGIC_VERSION = 5;
 
 export type LookupKind = 'dome_code' | 'name_hash';
 // UCE-1 (2026-08-27): 'deterministic' = category-deterministic-matcher.ts

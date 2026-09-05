@@ -216,6 +216,21 @@ export async function POST(request: NextRequest) {
     let rawSuggestions: Array<{ d1: string; d2: string; d3: string; d4?: string }> = [];
     let usedAI = false;
     let source: 'deterministic' | 'ai' | 'unresolved' = 'unresolved';
+    // UCE-11 (결함E, 2026-09-05): true when the deterministic guess was
+    // low-confidence AND the Groq cross-check came back empty-handed (or
+    // errored) — meaning `rawSuggestions` still holds nothing but the
+    // ORIGINAL weak guess, unconfirmed by anything. Production실측: "얼음/
+    // 서빙/정리트레이" hit exactly this branch after 결함C's fix started
+    // correctly triggering the AI call — Groq returned `[]` for all three —
+    // and the weak deterministic guess (전기밥솥) was then cached at
+    // confidence 85 and never flagged for the 개입큐, because downstream
+    // logic only ever asked "is suggestions.length===0?", not "was the only
+    // suggestion actually confirmed by anything?" (docs/design/
+    // UCE11_TOKENIZER_LONGNAME_CANDIDATES_2026-09-04.md §결함E). Threaded
+    // through to the cache-write and confirm-flag decisions below; cleared
+    // if page-1 distribution validation (a genuinely independent signal)
+    // later corroborates the top pick.
+    let lowConfidenceFallback = false;
 
     const deterministic = matchDeterministicCategories(name);
     if (deterministic.length > 0) {
@@ -235,10 +250,14 @@ export async function POST(request: NextRequest) {
             usedAI = true;
             rawSuggestions = aiValidated;
             source = 'ai';
+          } else {
+            // AI returned nothing usable -> keep the deterministic guess
+            // (still better than nothing to SHOW the user) but remember it
+            // was never actually confirmed by anything (결함E).
+            lowConfidenceFallback = true;
           }
-          // AI returned nothing usable -> keep the deterministic guess (still
-          // better than nothing) rather than discarding it.
         } catch (aiError) {
+          lowConfidenceFallback = true;
           console.warn('[category/suggest] AI correction failed (deterministic low-confidence):', String(aiError).slice(0, 300));
         }
       }
@@ -321,6 +340,14 @@ export async function POST(request: NextRequest) {
       console.warn('[category/suggest] page validation failed:', String(e).slice(0, 120));
     }
 
+    // UCE-11 (결함E): page-1 distribution is an INDEPENDENT signal from the
+    // deterministic matcher — when it corroborates the top pick ('agreed')
+    // or supplies a different, real-data-backed one ('override'), the
+    // original unconfirmed weak guess is no longer unconfirmed.
+    if (lowConfidenceFallback && (pageValidationApplied === 'agreed' || pageValidationApplied === 'override')) {
+      lowConfidenceFallback = false;
+    }
+
     // G2 Fix A: self-validate the final suggestions against the local tree
     // (the page-validation override above may have produced a ghost triple).
     suggestions = selfValidateSuggestions(suggestions);
@@ -329,9 +356,23 @@ export async function POST(request: NextRequest) {
     // G2 Fix B: only persist a FULLY valid triple. A blanked-d3 (d1/d2-only)
     // result is intentionally NOT cached so a future improved run can still
     // resolve the correct d3 instead of locking in the partial mapping.
+    //
+    // UCE-11 (결함E): also skip caching when `lowConfidenceFallback` is
+    // still set here — the top suggestion is the ORIGINAL low-confidence
+    // deterministic guess, never confirmed by AI or page-1 distribution.
+    // Lowering its stored `confidence` number alone would NOT be enough:
+    // getCachedMapping() returns a cache row unconditionally on a hit,
+    // ignoring the confidence column entirely, so a lower number still gets
+    // served as the answer on the very next lookup — the exact entrenchment
+    // 결함E was filed over (production실측: "얼음/서빙/정리트레이" rows
+    // stuck at naver_d3=전기밥솥, confidence 85, across v2/v3/v4). Skipping
+    // the write outright means the next call re-runs the full
+    // matcher->AI->page-validation pipeline instead of short-circuiting on
+    // a never-confirmed guess.
     const top = suggestions[0];
     const topIsFullyValid = !!(top && top.d3 && resolveCategoryId(top.d1, top.d2, top.d3, top.d4));
-    if (top && topIsFullyValid && nameKey) {
+    const cacheable = topIsFullyValid && !lowConfidenceFallback;
+    if (top && cacheable && nameKey) {
       saveMapping({
         kind: 'name_hash',
         key: nameKey,
@@ -343,7 +384,7 @@ export async function POST(request: NextRequest) {
         source,
       }).catch((e) => console.warn('[category/suggest] cache write failed:', String(e).slice(0, 120)));
     }
-    if (top && topIsFullyValid && domeCategoryCode) {
+    if (top && cacheable && domeCategoryCode) {
       saveMapping({
         kind: 'dome_code',
         key: domeCategoryCode,
@@ -364,14 +405,26 @@ export async function POST(request: NextRequest) {
 
     // UCE-4: honest, self-healing — flag when every layer failed, clear it
     // the moment a later call (e.g. after the master regenerates) succeeds.
+    // UCE-11 (결함E): a low-confidence fallback that AI/page-validation
+    // never confirmed is JUST AS dishonest as a total blank — the seller
+    // sees a category rendered as if it were settled, when really nothing
+    // backs it. `suggestions.length === 0` alone only caught the total-blank
+    // case; route it to the same "카테고리 확인 필요" queue.
+    const needsConfirmation = suggestions.length === 0 || lowConfidenceFallback;
     if (productId) {
-      await updateCategoryConfirmFlag(productId, suggestions.length === 0);
+      await updateCategoryConfirmFlag(productId, needsConfirmation);
     }
 
     return NextResponse.json({
       success: true,
       suggestions: rankedSuggestions,
       usedAI,
+      // UCE-11 (결함E, #310 정직표시): even for an unsaved draft (no
+      // productId yet, so the internalTags queue flag above can't persist),
+      // the caller should be told the top suggestion is an unconfirmed
+      // fallback guess rather than presenting it with the same confidence
+      // as a deterministic/AI-backed answer.
+      needsConfirmation,
       pageValidation: pageValidation
         ? {
             applied: pageValidationApplied,

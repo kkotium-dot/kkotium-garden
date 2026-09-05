@@ -198,4 +198,35 @@ for (const name of ['얼음트레이', '서빙트레이', '다용도트레이', 
   });
 }
 
+// ---------------------------------------------------------------------------
+// UCE-11 결함D (2026-09-05): headNounWeight의 역방향 포함관계
+// (`term.includes(p)`)가 토크나이저가 못 쪼갠 단일-명사 상품명("실리콘트레이"
+// -> nouns=["실리콘트레"], modifierNouns=[])에서 위치와 무관하게
+// HEAD_NOUN_BOOST(×3)를 줘, 우연히 그 블록 안에 등장하는 무관 리프 파편
+// ("실리콘"→공구>접착용품, "니트"→골프의류, "큐브"→유아동퍼즐)이 확신구간
+// (lowConf=false)으로 잘못 확정되던 결함(docs/design/
+// UCE11_TOKENIZER_LONGNAME_CANDIDATES_2026-09-04.md §결함D). modifierNouns가
+// 빈 경우(=토크나이저가 통째로 못 쪼갠 경우)에 한해 부스트를 머리명사
+// 말미(head-final) 위치로 제한해 저신뢰로 흘러야 한다. "차량용 신발장"처럼
+// 이미 modifier가 분리된 경우는 건드리지 않는다(회귀 확인, 아래 별도 케이스).
+// ---------------------------------------------------------------------------
+console.log('\n[UCE-11 결함D 수정] "실리콘트레이"류 복합어 미분리 오낚임 -> 저신뢰 판정');
+for (const name of ['실리콘트레이', '미니트레이', '큐브트레이']) {
+  check(`"${name}" -> 확신구간 아님(저신뢰로 흘러 AI/개입큐 확인)`, () => {
+    const matches = matchDeterministicCategories(name, 3);
+    assert.ok(
+      isDeterministicLowConfidence(matches),
+      `"${name}": 여전히 confident 판정 (top=${JSON.stringify(matches[0])})`,
+    );
+  });
+}
+check('"차량용 신발장" -> 신발(스포츠/레저) 후보 여전히 근접 경쟁(결함D 수정이 modifier-분리 케이스는 건드리지 않음)', () => {
+  const matches = matchDeterministicCategories('차량용 신발장', 4);
+  const top = matches[0];
+  const second = matches[1];
+  assert.ok(top && second, '경쟁 후보가 사라짐 — 결함D 수정이 modifier-분리 케이스까지 건드렸을 가능성');
+  assert.notEqual(top.d1, second.d1, '경쟁 후보가 같은 d1으로 흡수됨');
+  assert.ok(top.score - second.score <= 20, `경쟁 후보 점수차가 너무 벌어짐(회귀) — top=${top.score} second=${second.score}`);
+});
+
 console.log(`\n${passed}/${passed} passed ✅\n`);
