@@ -29,6 +29,7 @@
 
 import assert from 'node:assert/strict';
 import { matchDeterministicCategories } from './category-deterministic-matcher';
+import { isDeterministicLowConfidence } from './category-ai-suggest';
 import { extractNouns } from '../strategy/morpheme-tokenizer';
 
 let passed = 0;
@@ -176,5 +177,25 @@ check('"차량방향제" -> 생활/건강>자동차용품>공기청정용품>차
   assert.equal(top.d3, '공기청정용품');
   assert.equal(top.d4, '차량용방향제');
 });
+
+// ---------------------------------------------------------------------------
+// UCE-11 결함C (2026-09-05): slash-packed 라벨의 partial coverage가 파편
+// 개수와 무관한 flat ×0.5였을 때, "내솥/패킹/트레이"의 "트레이" 파편 1개만
+// 걸린 "얼음트레이"가 정확히 20.00점 tier1 단독후보가 되어
+// isDeterministicLowConfidence의 `< 20` 경계를 통과 — 디지털/가전>주방가전>
+// 전기밥솥으로 오분류(docs/design/UCE11_TOKENIZER_LONGNAME_CANDIDATES_
+// 2026-09-04.md §"결함C 정확한 트리거 규명"). matched/parts 비율 페널티로
+// 15.00점까지 낮아져 저신뢰 판정(AI 교차확인/개입큐)으로 흘러야 한다.
+// ---------------------------------------------------------------------------
+console.log('\n[UCE-11 결함C 수정] "얼음트레이"류 부분매칭 오낚임 -> 저신뢰 판정');
+for (const name of ['얼음트레이', '서빙트레이', '다용도트레이', '주방트레이', '화장품트레이', '정리트레이']) {
+  check(`"${name}" -> 전기밥솥 단독후보 아님(저신뢰로 흘러 AI/개입큐 확인)`, () => {
+    const matches = matchDeterministicCategories(name, 3);
+    assert.ok(
+      isDeterministicLowConfidence(matches),
+      `"${name}": 여전히 confident 판정 (top=${JSON.stringify(matches[0])})`,
+    );
+  });
+}
 
 console.log(`\n${passed}/${passed} passed ✅\n`);

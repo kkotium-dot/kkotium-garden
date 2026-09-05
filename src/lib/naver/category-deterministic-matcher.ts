@@ -170,7 +170,18 @@ function termMatchScore(label: string, haystacks: readonly string[]): number {
     if (matched.length === 0) return 0;
     const full = matched.length === parts.length;
     const len = matched.reduce((sum, p) => sum + p.length, 0);
-    return full ? len : len * 0.5; // partial synonym coverage = weaker signal
+    // UCE-11 (결함C, 2026-09-05): partial coverage used to be a flat ×0.5
+    // regardless of how many parts were packed into the label, so a single
+    // matched fragment out of a 3-part label ("내솥/패킹/트레이" matching only
+    // "트레이") scored the same as 1-of-2 ("아로마방향제/디퓨저" matching only
+    // "디퓨저") — letting a generic 물건종류 word like "트레이" accidentally
+    // borrow a whole unrelated leaf's confidence (실측: "얼음트레이" landed on
+    // 전기밥솥>내솥/패킹/트레이 at exactly 20.00, tied to
+    // DETERMINISTIC_MIN_CONFIDENT_SCORE's `<` boundary — see
+    // isDeterministicLowConfidence in category-ai-suggest.ts). Scale the
+    // penalty by actual coverage instead: 1-of-3 is a weaker signal than
+    // 1-of-2, and should score weaker.
+    return full ? len : len * (matched.length / parts.length);
   }
   if (label.length < MIN_TERM_LEN) return 0;
   if (haystacks.some((h) => h.includes(label))) return label.length;

@@ -56,7 +56,15 @@ import { getAdapter } from '@/lib/sources';
 // 6종(넥타이·손잡이·재떨이·손톱깎이·딸랑이·지팡이) 추가 — extractNouns의
 // nouns/headNoun 출력이 바뀌므로 이 값을 소비하는 매칭·스코어링 결과가
 // 달라질 수 있는 입력들에 한해 캐시 무효화.
-export const CATEGORY_MATCH_LOGIC_VERSION = 3;
+//
+// v4 (2026-09-05, UCE-11 결함C): termMatchScore의 slash-packed 라벨 partial
+// coverage가 파편 개수와 무관한 flat ×0.5였던 것을 파편 매칭 비율
+// (matched/parts)로 교체 — "얼음트레이"류가 "내솥/패킹/트레이"의 "트레이"
+// 파편 1개만 걸려 정확히 20.00점을 받고 isDeterministicLowConfidence의
+// `< 20` 경계를 통과해버리던 오분류를 근본에서 억제(부수로 `<=`로 안전망도
+// 강화). 슬래시 라벨이 관여하는 모든 부분매칭 스코어가 재계산되므로 캐시
+// 무효화.
+export const CATEGORY_MATCH_LOGIC_VERSION = 4;
 
 export type LookupKind = 'dome_code' | 'name_hash';
 // UCE-1 (2026-08-27): 'deterministic' = category-deterministic-matcher.ts

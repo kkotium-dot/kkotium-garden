@@ -32,7 +32,11 @@ export function isDeterministicLowConfidence(matches: DeterministicMatch[]): boo
   const top = matches[0];
   if (!top) return true;
   if (top.tier !== 1) return true;
-  if (top.score < DETERMINISTIC_MIN_CONFIDENT_SCORE) return true;
+  // UCE-11 (결함C, 2026-09-05): a `<` boundary let a top score that landed
+  // EXACTLY on the threshold (e.g. 20.00, the single-fragment partial-match
+  // score for "얼음트레이" -> 전기밥솥>내솥/패킹/트레이) pass as "confident"
+  // when it was really the weakest possible pass. `<=` closes that gap.
+  if (top.score <= DETERMINISTIC_MIN_CONFIDENT_SCORE) return true;
   const second = matches[1];
   if (second && second.d1 !== top.d1 && top.score < DETERMINISTIC_D1_CONFLICT_CEILING) {
     if (top.score - second.score <= DETERMINISTIC_D1_CONFLICT_GAP) return true;
