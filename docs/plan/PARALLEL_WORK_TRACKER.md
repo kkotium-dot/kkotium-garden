@@ -1327,3 +1327,36 @@ LEARNED_archived-2026-09-04.md에 보존, 손실0, 인코딩정상. (Desktop
 
 **전 계열 상태**: UCE-10·UCE-11결함A·발행게이트·§3체크리스트·#356오염·
 1군5개·naver-settings·크롤UPSERT 전부 완료. 워크트리 main만.
+
+
+## rev136 — UCE-11 결함C 완료·병합·프로덕션 재검증 + 결함D/E 신규 발견 (2026-09-05)
+
+**결함C 완료(커밋 597473c, main 병합·배포 dpl_JCqVqXbg)**: Code가
+(a)경계 `<`→`<=` + (b)termMatchScore partial flat×0.5→matched/parts
+비율로 근본수정. "얼음트레이" 20.00→15.00. test 33/33·integrity 29/29·
+tsc0. Desktop 독립 재검증: 결함C 6종 lowConf=true 전환, 정답 12종 회귀0.
+
+**프로덕션 재검증에서 결함C 수정이 정상 작동함을 확인 + 그 다음 단계
+결함 2건 신규 발견**(문서: UCE11_TOKENIZER_LONGNAME_CANDIDATES §결함D/E):
+
+- **결함D(복합어 미분리)**: "실리콘트레이"→공구>접착용품 105점,
+  "미니트레이"→골프의류, "큐브트레이"→유아퍼즐. **확신구간(lowConf=false)**
+  이라 AI도 안 거침. 토크나이저가 복합어 안 쪼개 전체어=headNoun→짧은
+  리프 substring이 HEAD_NOUN_BOOST 받아 고득점. 결함C와 다른 경로.
+
+- **결함E(저신뢰+AI빈손 정책, 최상 우선순위)**: 결함C 수정 후 "얼음트레이"가
+  저신뢰 판정→Groq 호출됨(로그 confirm: groq-raw "얼음트레이":[])→AI
+  빈손→route.ts L232 설계상 결정론 폴백→전기밥솥 오답이 **confidence 85로
+  캐시 저장**(실측: category_mappings에 naver_d3=전기밥솥 다수)+개입큐
+  플래그도 안 붙음(조건이 suggestions.length===0인데 오답이 살아있어 통과).
+  → "오답을 확신으로 굳혀 사용자가 못 걸러냄" = #353 위반, 발행 안전성 근간.
+  수정방향: 저신뢰+AI빈손 분기에서 캐시 스킵/저confidence + 개입큐 조건
+  확장 + 정직표시(#310). 문서 §결함E에 상세.
+
+**Desktop 검증 중 테스트 오염 정리**: 프로덕션 API 호출로 생성된 v4
+전기밥솥 캐시 삭제(구 v2/v3는 캐시버전 갱신으로 자연 무효화, 미조회 죽은
+캐시라 보존).
+
+**다음 우선순위**: 결함E(최상)→결함D. 둘 다 category-deterministic-matcher
++category-ai-suggest+route.ts 계열, Code 인계. 명화(공급단절)는 별건
+disposition 검증 케이스로 대기(로컬MCP 복구됨).
