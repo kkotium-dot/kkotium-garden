@@ -1291,3 +1291,39 @@ REGISTERED로 진행됨) INSERT"로 변경. unique 제약 없이 SELECT-then-UPD
 **남은 작업**: 없음(이번 세션 인계 3건 전부 완료). 후속 후보(선택):
 UCE-11 결함B(우산 동음이의)·결함C(트레이 promiscuity) — 위 설계문서
 "보류 후보" 참조.
+
+## rev135 — Code 3작업(UCE-11·문서분할·UPSERT) Desktop 전체 재검증 완료 (2026-09-05)
+
+Code CLI가 f819497까지 완료한 3개 작업을 Desktop이 프로덕션 실측으로
+전량 교차검증(#45 Code리포트 불신·직접확인):
+
+**UCE-11 결함A (넥타이 트레일링"이", 커밋 4bbdfd9)**: 프로덕션 API 8종
+실측 — 넥타이→패션잡화>패션소품>넥타이 정답전환 확인(이전 유아동잡화).
+손잡이·재떨이·손톱깎이·딸랑이·지팡이(EMPTY=리프부재, 스트리핑 아님)
+6종 스트리핑 해소. 목걸이·우산꽂이 회귀0. CATEGORY_MATCH_LOGIC_VERSION
+2→3 확인.
+
+**크롤 UPSERT (작업3, 커밋 4b3ca93)**: 실 크롤 API(/api/crawler/domemae)
+2회 직접호출 + DB 실측 — 아이스트레이 URL 2회 크롤에도 행 1개 유지,
+id 불변(0fa22411), crawled_at만 갱신(9초전). 중복 INSERT 완전 방지 확인.
+REGISTERED 이력보존은 코드로직(WHERE sourcing_status='SOURCED')+Code
+로컬실DB검증으로 갈음(프로덕션 REGISTERED 인위생성은 비가역발행 필요,
+위험대비 실익낮음 — 정직보고). 브라우저 클릭은 자동화 이슈로 API 미호출,
+curl 직접호출로 실경로 검증.
+
+**문서분할 (작업2, 커밋 d6fa5f0)**: PRINCIPLES_LEARNED.md 523줄(1500
+임계 이하), #343~#362 현재파일 유지, #295~#342는 archive/PRINCIPLES_
+LEARNED_archived-2026-09-04.md에 보존, 손실0, 인코딩정상. (Desktop
+첫 grep에서 "#295~#342 누락?" 의심했으나 grep 경계패턴 문제였고 archive에
+정상보존 확인 — 오탐 정정)
+
+**신규 원칙 #362**(Code 등재): 매처/스코어링 코드는 손트레이스 예단 금지,
+반드시 실행해 확정. UCE-11에서 "넥타이 COMPOUND_NOUNS 추가가 손트레이스
+예상과 달리 매칭까지 해결"한 실경험.
+
+**남은 작업**: UCE-11 결함C(얼음/서빙트레이→전기밥솥, 부분substring
+오낚임)는 별개 후속 티켓으로 문서에 남김. 크롤 UPSERT의 A-3 개선후보는
+이번에 구현완료.
+
+**전 계열 상태**: UCE-10·UCE-11결함A·발행게이트·§3체크리스트·#356오염·
+1군5개·naver-settings·크롤UPSERT 전부 완료. 워크트리 main만.
