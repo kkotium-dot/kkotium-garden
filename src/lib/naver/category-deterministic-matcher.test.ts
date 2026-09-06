@@ -229,4 +229,40 @@ check('"차량용 신발장" -> 신발(스포츠/레저) 후보 여전히 근접
   assert.ok(top.score - second.score <= 20, `경쟁 후보 점수차가 너무 벌어짐(회귀) — top=${top.score} second=${second.score}`);
 });
 
+// ---------------------------------------------------------------------------
+// UCE-11 결함F (2026-09-06, task_b37526ed): headNounWeight가 slash-packed
+// 라벨의 PARTIAL 매칭(matched.length < parts.length)에도 무조건 전체
+// HEAD_NOUN_BOOST(×3)를 줬다 — "미니/우드/스텐받침"이 욕실용품>욕실용기/
+// 홀더>비눗갑/홀더/받침(3파편 중 "받침" 1개만 매칭)에 그 "받침" 파편이
+// 마침 헤드노운 말미(head-final)와 일치한다는 이유만으로 확신구간(35점,
+// lowConf=false)에 오분류됐다(결함C의 matched/parts 비율 페널티가 이미
+// 11.67점까지 낮췄음에도 ×3 부스트가 다시 임계 위로 밀어올림). "label이
+// headNoun을 완전히 포함/일치"(strongHeadMatch, 예: "컵받침"=="컵받침")하는
+// 경우는 partial 여부와 무관하게 신뢰 유지 — 파편 매칭이 몇 개든 상품
+// 정체성 자체가 그 특정 동의어와 정확히 일치한다는 뜻이라서다. 반대로 파편
+// 일부만 headNoun의 말미와 우연히 일치하는 약한(weak) 경우는 partial
+// 매칭일 때 부스트를 거부한다.
+// ---------------------------------------------------------------------------
+console.log('\n[UCE-11 결함F 수정] "미니받침"류 slash파편 부분매칭+위치일치 중복부스트 -> 저신뢰 판정');
+for (const name of ['미니받침', '우드받침', '스텐받침', '유리받침', '도자기받침']) {
+  check(`"${name}" -> 확신구간 아님(저신뢰로 흘러 AI/개입큐 확인)`, () => {
+    const matches = matchDeterministicCategories(name, 3);
+    assert.ok(
+      isDeterministicLowConfidence(matches),
+      `"${name}": 여전히 confident 판정 (top=${JSON.stringify(matches[0])})`,
+    );
+  });
+}
+for (const [name, d1, d2] of [
+  ['냄비받침', '생활/건강', '주방용품'],
+  ['컵받침', '생활/건강', '주방용품'],
+  ['화분받침', '생활/건강', '정원/원예용품'],
+] as const) {
+  check(`"${name}" -> ${d1}>${d2} (구체 정답 리프 회귀0 — strongHeadMatch는 partial 무관 유지)`, () => {
+    const [top] = matchDeterministicCategories(name, 3);
+    assert.equal(top.d1, d1);
+    assert.equal(top.d2, d2);
+  });
+}
+
 console.log(`\n${passed}/${passed} passed ✅\n`);

@@ -162,12 +162,23 @@ function stripYong(s: string): string {
  *  appear somewhere in one of the haystacks; a product rarely repeats every
  *  synonym verbatim, so this is scored by total matched length rather than
  *  requiring the packed string itself). */
-function termMatchScore(label: string, haystacks: readonly string[]): number {
-  if (!label || isGenericTerm(label)) return 0;
+interface TermMatch {
+  score: number;
+  /** UCE-11 (결함F, 2026-09-06): true only for a slash-packed label where
+   *  SOME but not ALL synonym parts matched (matched.length < parts.length).
+   *  A partial coverage hit means we only have weak textual evidence that
+   *  the product is any ONE particular synonym in the packed group — see
+   *  headNounWeight, which uses this to refuse to also stack a positional
+   *  HEAD_NOUN_BOOST on top of an already-uncertain partial match. */
+  partial: boolean;
+}
+
+function termMatchScore(label: string, haystacks: readonly string[]): TermMatch {
+  if (!label || isGenericTerm(label)) return { score: 0, partial: false };
   if (label.includes('/')) {
     const parts = splitSynonyms(label);
     const matched = parts.filter((p) => !isGenericTerm(p) && haystacks.some((h) => h.includes(p)));
-    if (matched.length === 0) return 0;
+    if (matched.length === 0) return { score: 0, partial: false };
     const full = matched.length === parts.length;
     const len = matched.reduce((sum, p) => sum + p.length, 0);
     // UCE-11 (결함C, 2026-09-05): partial coverage used to be a flat ×0.5
@@ -181,19 +192,19 @@ function termMatchScore(label: string, haystacks: readonly string[]): number {
     // isDeterministicLowConfidence in category-ai-suggest.ts). Scale the
     // penalty by actual coverage instead: 1-of-3 is a weaker signal than
     // 1-of-2, and should score weaker.
-    return full ? len : len * (matched.length / parts.length);
+    return { score: full ? len : len * (matched.length / parts.length), partial: !full };
   }
-  if (label.length < MIN_TERM_LEN) return 0;
-  if (haystacks.some((h) => h.includes(label))) return label.length;
+  if (label.length < MIN_TERM_LEN) return { score: 0, partial: false };
+  if (haystacks.some((h) => h.includes(label))) return { score: label.length, partial: false };
 
   // UCE-10 (결함B): retry with "용" stripped from both sides, discounted.
   const normLabel = stripYong(label);
   if (normLabel.length >= MIN_TERM_LEN && normLabel !== label) {
     if (haystacks.some((h) => stripYong(h).includes(normLabel))) {
-      return label.length * YONG_NORM_PENALTY;
+      return { score: label.length * YONG_NORM_PENALTY, partial: false };
     }
   }
-  return 0;
+  return { score: 0, partial: false };
 }
 
 /** UCE-7: does `label` textually overlap the head noun / a modifier noun?
@@ -202,7 +213,12 @@ function termMatchScore(label: string, haystacks: readonly string[]): number {
  *  score multiplier: boost when the head noun is involved, penalty when
  *  only a modifier noun is, neutral (1) when neither can be determined
  *  (e.g. product name didn't tokenize into 2+ nouns). */
-function headNounWeight(label: string, headNoun: string, modifierNouns: readonly string[]): number {
+function headNounWeight(
+  label: string,
+  headNoun: string,
+  modifierNouns: readonly string[],
+  partialMatch: boolean,
+): number {
   if (!headNoun) return 1;
   const parts = label.includes('/') ? splitSynonyms(label) : [label];
   // UCE-11 (결함D, 2026-09-05): the reverse-containment direction
@@ -231,9 +247,37 @@ function headNounWeight(label: string, headNoun: string, modifierNouns: readonly
   // uncontested. Only the untokenized-blob case is unambiguous enough to
   // tighten.
   const singleNounProduct = modifierNouns.length === 0;
-  const overlapsHead = (term: string) =>
-    parts.some((p) => p.includes(term) || (singleNounProduct ? term.length > p.length && term.endsWith(p) : term.includes(p)));
-  if (overlapsHead(headNoun)) return HEAD_NOUN_BOOST;
+  // UCE-11 (결함F, 2026-09-06, task_b37526ed): a STRONG head match — the
+  // label (or one of its slash-packed synonym parts) fully CONTAINS/EQUALS
+  // headNoun (`p.includes(term)`) — is trustworthy regardless of whether the
+  // underlying leaf match was a partial slash coverage: the whole product
+  // identity noun genuinely equals one specific synonym in the packed group
+  // ("컵받침" the product == "컵받침" the synonym inside "컵받침/홀더"), so
+  // which OTHER synonyms in that group didn't also appear is irrelevant.
+  const strongHeadMatch = parts.some((p) => p.includes(headNoun));
+  if (strongHeadMatch) return HEAD_NOUN_BOOST;
+  // A WEAK head match is the reverse direction — only a FRAGMENT of headNoun
+  // (shorter than it) lines up with the label, either because headNoun is an
+  // untokenized blob and the fragment sits at its tail (singleNounProduct;
+  // 결함D), or because headNoun is a real noun that happens to textually
+  // contain a shorter, unrelated label (non-singleNounProduct; kept
+  // unrestricted for the 신발장 competing-candidate reason above).
+  const weakHeadMatch = singleNounProduct
+    ? parts.some((p) => headNoun.length > p.length && headNoun.endsWith(p))
+    : parts.some((p) => headNoun.includes(p));
+  if (weakHeadMatch) {
+    // UCE-11 (결함F): stacking the full HEAD_NOUN_BOOST on top of a match
+    // that was ALREADY discounted for partial slash coverage double-counts
+    // uncertainty in the wrong direction — a partial match only tells us one
+    // GENERIC synonym fragment ("받침") turned up somewhere, and a weak
+    // (non-exact) head-noun overlap adds no real corroboration on top of
+    // that (실측: "미니/우드/스텐받침" all landed on 생활/건강>욕실용품>
+    // 욕실용기/홀더>비눗갑/홀더/받침 at a confident 35점 — "받침" is 1-of-3
+    // matched fragments AND only reaches headNoun via the untokenized-blob
+    // tail-suffix branch, never as a full self-equal identity hit). Refuse
+    // the boost there; a full/plain match (partialMatch=false) keeps it.
+    return partialMatch ? 1 : HEAD_NOUN_BOOST;
+  }
   const overlapsPlain = (term: string) => parts.some((p) => p.includes(term) || term.includes(p));
   if (modifierNouns.some((m) => overlapsPlain(m))) return MODIFIER_NOUN_PENALTY;
   // UCE-11 (결함D): in the single-noun-blob case, a fragment that appeared
@@ -336,22 +380,22 @@ export function matchDeterministicCategories(
     // every synonym part of a slash-packed label ("아로마방향제/디퓨저").
     // Korean has no word-boundary requirement, so this alone catches
     // "우산꽂이"(exact), "수세미"(exact), "달항아리"→"항아리"(substring).
-    const leafScore = termMatchScore(leaf, haystacks);
-    if (leafScore > 0) {
+    const leafMatch = termMatchScore(leaf, haystacks);
+    if (leafMatch.score > 0) {
       match = {
         d1: c.d1, d2: c.d2, d3: c.d3, d4: c.d4 || undefined, matchedTerm: leaf, tier: 1,
-        score: (leafScore * 10 + (c.d4 ? 5 : 0)) * headNounWeight(leaf, headNoun, modifierNouns),
+        score: (leafMatch.score * 10 + (c.d4 ? 5 : 0)) * headNounWeight(leaf, headNoun, modifierNouns, leafMatch.partial),
       };
     }
     // Tier 2: d3 itself (when it differs from the leaf, i.e. d4 exists but
     // didn't match) — broader but still a real tree node. Don't guess which
     // specific d4 subtype applies (several rows can share this d3).
     else if (c.d3) {
-      const d3Score = termMatchScore(c.d3, haystacks);
-      if (d3Score > 0) {
+      const d3Match = termMatchScore(c.d3, haystacks);
+      if (d3Match.score > 0) {
         match = {
           d1: c.d1, d2: c.d2, d3: c.d3, d4: undefined, matchedTerm: c.d3, tier: 2,
-          score: d3Score * 8 * headNounWeight(c.d3, headNoun, modifierNouns),
+          score: d3Match.score * 8 * headNounWeight(c.d3, headNoun, modifierNouns, d3Match.partial),
         };
       }
     }
@@ -367,11 +411,11 @@ export function matchDeterministicCategories(
     // Tier 4: the d2 bucket itself matches (packed or plain) — trusted only
     // down to d1+d2 (d3 left blank, per selfValidateSuggestions convention).
     if (!match && c.d2) {
-      const d2Score = termMatchScore(c.d2, haystacks);
-      if (d2Score > 0) {
+      const d2Match = termMatchScore(c.d2, haystacks);
+      if (d2Match.score > 0) {
         consider(`${c.d1}|${c.d2}|`, {
           d1: c.d1, d2: c.d2, d3: '', d4: undefined, matchedTerm: c.d2, tier: 4,
-          score: d2Score * 4 * headNounWeight(c.d2, headNoun, modifierNouns),
+          score: d2Match.score * 4 * headNounWeight(c.d2, headNoun, modifierNouns, d2Match.partial),
         });
       }
       continue;

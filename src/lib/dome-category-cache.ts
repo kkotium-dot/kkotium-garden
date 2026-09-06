@@ -73,7 +73,18 @@ import { getAdapter } from '@/lib/sources';
 // 결과가 바뀌므로 캐시 무효화. (E는 route.ts의 캐시 저장/개입큐 정책
 // 변경이라 매처 스코어 자체는 안 바뀌지만, 같은 배포 묶음이라 버전을 함께
 // 올린다.)
-export const CATEGORY_MATCH_LOGIC_VERSION = 5;
+//
+// v6 (2026-09-06, UCE-11 결함F, task_b37526ed): headNounWeight가 slash-packed
+// 라벨의 PARTIAL 매칭(matched.length < parts.length)에도 위치 일치만으로
+// 무조건 전체 HEAD_NOUN_BOOST(×3)를 부여하던 것을 제한 — "미니/우드/
+// 스텐받침"류가 "비눗갑/홀더/받침"(3파편 중 "받침" 1개만 매칭)에서 그
+// "받침" 파편이 헤드노운 말미와 우연히 일치한다는 이유로 결함C의
+// matched/parts 페널티(11.67점)를 다시 35점으로 부스트해 확신구간에
+// 오분류되던 것을 근본수정. label이 headNoun을 완전히 포함/일치하는
+// strongHeadMatch("컵받침"=="컵받침")는 partial 여부와 무관하게 부스트
+// 유지, 나머지 약한(weak) 위치 일치만 partial일 때 부스트 거부. 스코어링
+// 결과가 바뀌므로 캐시 무효화.
+export const CATEGORY_MATCH_LOGIC_VERSION = 6;
 
 export type LookupKind = 'dome_code' | 'name_hash';
 // UCE-1 (2026-08-27): 'deterministic' = category-deterministic-matcher.ts

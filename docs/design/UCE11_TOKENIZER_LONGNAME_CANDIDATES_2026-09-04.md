@@ -287,3 +287,57 @@ leaf-length 점수만으로 임계 통과하는 걸 막기 위함). modifier가 
 **검증**: test:category-match 37/37(결함C 6종 + 결함D 3종 + 신발장
 회귀케이스 신규 추가), test:category-integrity 29/29, tsc0. 캐시버전
 4→5. Desktop 프로덕션 재검증 필요.
+
+---
+
+## [2026-09-06 갱신] 결함F — "미니받침"류 잔여 이슈 수정 완료 (task_b37526ed)
+
+### 근본원인
+`matchDeterministicCategories("미니받침")` 내역 실행으로 확인: leaf
+"비눗갑/홀더/받침"(3파편) 중 "받침" 1개만 매칭 → 결함C의 matched/parts
+페널티로 leafScore는 이미 0.667(=2*(1/3))까지 낮춰져 있었다
+((0.667*10+5)=11.67, 이 자체는 20점 임계 아래). 그런데 headNounWeight가
+이 11.67점에 그대로 HEAD_NOUN_BOOST(×3)를 곱해 35.00으로 되돌려놓았다 —
+"받침"이 headNoun("미니받침")의 말미(head-final)와 우연히 일치한다는
+이유만으로. 즉 결함C(파편 커버리지 페널티)와 결함D(위치 제한)가 각자는
+정상 동작했지만, **두 신호가 곱셈으로 상쇄**되는 상호작용을 놓쳤다 —
+"파편이 1개뿐이라 약한 매칭"이라는 사실과 "그 파편이 우연히 말미에
+온다"는 사실은 서로 다른 종류의 불확실성이라 곱하면 안 되는데 곱해진 것.
+
+### 수정
+`termMatchScore`가 `{score, partial}`을 반환하도록 변경(`partial` =
+slash 라벨에서 matched.length < parts.length). `headNounWeight`에 이
+`partial` 플래그를 추가 인자로 전달해:
+- **strongHeadMatch**(라벨/파편이 headNoun을 완전히 포함/일치,
+  `p.includes(term)` — 예: "컵받침"=="컵받침"): partial 여부 무관 항상
+  HEAD_NOUN_BOOST 유지. 파편 커버리지가 몇 개든 상품 정체성 자체가 그
+  특정 동의어와 정확히 일치한다는 뜻이라 무관함.
+- **weakHeadMatch**(파편이 headNoun보다 짧고 말미/포함 위치로만 겹침 —
+  결함D의 `endsWith` 분기 또는 비-단일명사 케이스의 `includes` 분기):
+  partial=true면 부스트 거부(중립 1배), partial=false(전체/plain 매치)면
+  기존대로 HEAD_NOUN_BOOST 유지.
+
+### 실측 (수정 전 → 후)
+- "미니받침"/"우드받침"/"스텐받침"/"유리받침"/"도자기받침" 35.00(확신) →
+  11.67(저신뢰) — 전부 lowConf=true 전환.
+- "실리콘받침"은 결함D 수정으로 이미 105→35였던 것이 이번에 17.50까지
+  추가 하락(다른 후보 "실리콘"→공구>접착용품, 이것도 결함D의 weakHeadMatch
+  경로라 별개로 저신뢰).
+- "냄비받침"(135, 컵받침("컵받침/홀더" partial이지만 "컵받침"=headNoun
+  완전일치 strongHeadMatch)/컵받침(60)/화분받침(120) — strongHeadMatch라
+  partial 무관하게 전부 회귀0.
+- "~쟁반"류(실리콘쟁반/미니쟁반/우드쟁반 등, "쟁반"은 plain 리프라
+  애초에 partial 대상이 아님)도 전부 회귀0 유지(75점 확신 그대로) — "쟁반"은
+  "트레이"/"받침"과 달리 마스터에 진짜 범용 리프가 있어서 정당한 확신.
+- 카탈로그밖 "~받침" 20종(미니/우드/스텐/실리콘/유리/도자기/대리석/가죽/
+  고무/플라스틱/메탈/세라믹/아크릴/원목/패브릭/천연석/유아/캠핑/차량/
+  휴대폰받침) 전수 dryRun — 전부 lowConf=true, 회귀0.
+
+**검증**: test:category-match 45/45(결함F 5종 신규 + strongHeadMatch
+회귀케이스 3종 신규 추가), test:category-integrity 29/29, tsc0. 캐시버전
+5→6. Desktop 프로덕션 재검증 필요.
+
+**참고**: 바구니 "받침"(단독어, 문맥 없음)은 여전히 확신(35점,
+비눗갑/홀더/받침) — 이건 strongHeadMatch(headNoun="받침"이 파편 "받침"과
+완전 자기일치)라 이번 수정 범위 밖이며, "우산"(결함B, 동음이의 리프
+충돌)과 같은 종류의 문맥-없이는-해결-불가 케이스로 별도 검토 대상.
