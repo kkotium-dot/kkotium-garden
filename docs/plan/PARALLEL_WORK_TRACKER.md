@@ -1428,3 +1428,33 @@ F(받침류) 전부 완료. 잔여 결함B(우산 동음이의)는 문맥없이 
 
 **남은 작업**: 명화 disposition 검증(별건, 대기). 카테고리 매처 계열은
 전면 안정화 완료.
+
+
+## rev139 — 명화 disposition 검증 → 전상품 공통 결함 2건 발견 (2026-09-06)
+
+**명화 결론**: DB에 상품 부재(도매매 삭제)라 disposition 대상 아님.
+disposition 로직 자체는 정상(가상 검증: 공급단절+자산X→DELETE_SAFE,
+자산O→RESOURCE 정확). 명화는 별도 조치 불필요.
+
+**명화 검증에서 파생된 전상품 공통 결함 2건**(문서: docs/design/
+DISPOSITION_SNAPSHOT_ABSENCE_2026-09-06.md):
+
+- **결함1(로직·최우선·근본)**: 발행 상품인데 inventory_snapshots 0개면
+  qty=undefined → disposition isOutOfStock `(undefined??0)<=0`=true →
+  재고 멀쩡한 상품을 품절 오판. 실측: 발행 6개 중 5개 MARK_OUT_OF_STOCK
+  오권고. **브라우저 확증**: /products/out-of-stock 대기함에 가습기 5개가
+  "품절 처리 권장"으로 올라옴(대체소싱0/재입고0/품절5 비정상 분포).
+  화면간 모순도 발생(꽃밭 돌보기는 "판매중"인데 대기함은 "품절권장").
+  수정: isLookupFailure에 qty==null(스냅샷부재) 추가 → 판정보류 NONE.
+
+- **결함2(데이터·후속)**: 발행 6개 전부 supplier_product_code=null,
+  last_poll=null → 재고 폴링 자체가 불가 → 스냅샷 영구0. 발행 워크플로가
+  소싱원본과 상품을 안 잇고 있음. 수정: 발행시 필수연결+기존6개 백필.
+
+**우선순위·의존성**: 결함1(Code 인계, disposition.ts+테스트, 독립·즉효)
+→ 결함2(발행워크플로+백필, 결함1 후). 결함1만 고쳐도 오권고 즉시 중단.
+
+**커밋**: 5d964a5(결함 문서), 브라우저 실측 보강.
+
+**남은 작업**: 결함1(Code 인계 대기)·결함2(후속). 카테고리 매처(UCE-10/11)는
+전면 종결. disposition은 로직 검증 완료, 스냅샷부재 처리만 남음.
