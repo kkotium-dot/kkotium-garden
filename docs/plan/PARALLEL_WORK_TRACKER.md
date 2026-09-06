@@ -1516,3 +1516,25 @@ EXPANSION_2026-09-06)**: 요청 재정의 = "디스코드(모바일 짧은 요�
 
 **남은 작업**: 개선1(deep-link 맥락파라미터, Code 인계 대기) · disposition
 결함2(역import 수동연결 UX, 저우선) · uce-coverage-empty-hand 브랜치 확인.
+
+## rev142 — 개선1(디스코드→웹앱 deep-link) 완료·프로덕션 브라우저 확증 (2026-09-06)
+
+**개선1 완료(커밋 086284b, 병합·배포·브라우저검증)**: 디스코드 알림
+deep-link에 highlight+from 맥락 파라미터를 전 알림 5종으로 확장. Code가
+7파일 구현(highlightPath 헬퍼 + digest 시그니처 DigestProductRef화 +
+productId 스레딩 4곳 + 프론트 2페이지 highlight수용/배너). Code는 seeded
+DB 없어 배너렌더까지만 확인.
+
+**Desktop 프로덕션 브라우저 실측(Code 미검증분 확증)**:
+- /products?highlight={실productId}&from=stock → targetRow 렌더 +
+  outline 2.5px 적용 + 배너 "🔴 품절 알림에서 왔어요 — 재입고 일정과
+  대체상품을 확인해보세요" 확인.
+- /products/reactivation?highlight={실productId}&from=score → targetRow
+  렌더 + outline + 배너 "📉 점수 급락 알림에서 왔어요 — 사유를 확인하고
+  SEO를 손봐주세요" 확인.
+- 실 productId(접이식트렁크·플라티코화분)로 검증 = deep-link productId
+  연결·highlight·배너 3요소 전부 정상. 정보단절 해소 확증.
+- tsc0, surfaceRules 10/10 회귀0.
+
+**남은 개선(설계됨, 미착수)**: 개선2(웹앱 알림센터)·개선3(정보심화)·
+개선4(양방향). disposition 결함2(역import 수동연결 UX, 저우선).
