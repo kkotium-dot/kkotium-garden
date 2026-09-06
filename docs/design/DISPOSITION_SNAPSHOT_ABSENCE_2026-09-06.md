@@ -111,3 +111,69 @@ isOutOfStock은 supplierStatus!=='판매중'이면 품절로 보므로 이건 �
 화면간 모순도 해소(양쪽 다 "판정불가→조용")됨. Code 인계 대상(문서 상단
 §Code 인계 참조). 결함2(supplier_product_code 백필)는 그 후 재고 폴링을
 실제로 살리는 후속.
+
+
+---
+
+## [2026-09-06 전상품 확장 체크] 동일 결함이 publish-gate에도 존재 (결함1 범위 확대)
+
+지시("전 상품 적용 시 문제없는지 확장 체크")에 따라 `qty ?? 0` 오판
+패턴을 전 프로젝트 grep → **disposition.ts 외 publish-gate.ts에도 동일
+버그** 발견. 실측(로컬 함수 직접 호출):
+
+| 입력 | publish-gate | disposition | 정오 |
+|---|---|---|---|
+| qty=null(스냅샷부재) | 차단 SUPPLIER_OUT_OF_STOCK | MARK_OUT_OF_STOCK | ❌❌ |
+| qty=undefined | 차단 | MARK_OUT_OF_STOCK | ❌❌ |
+| qty=0(실품절,스냅샷有) | 차단 | MARK_OUT_OF_STOCK | ✅✅ |
+| qty=100(정상) | 통과 | NONE | ✅✅ |
+
+### publish-gate가 더 위험
+publish-review-gate.ts:262가 `qty: snapshot?.qty ?? null`을 넘기는데,
+스냅샷 0건이면 정상 쿼리라 catch를 안 타고 qty=null로 checkPublishGate에
+도달 → `(null??0)<=0`=true → **SUPPLIER_OUT_OF_STOCK로 발행 차단**.
+주석(publish-gate.ts:49 "재고 신호 없으면 통과")의 의도와 정반대로 동작.
+→ 스냅샷 없는 신규 소싱 상품(supplier_product_code 연결 전)은 발행 자체가
+막힘. 결함2(supplier_code 누락)와 맞물리면 **발행 워크플로 전체가 봉쇄**.
+
+### 통합 수정 설계 (두 파일 동시, #62 단일 근본원인)
+"qty가 null/undefined = 재고 신호 없음(폴링 전)" ≠ "qty=0 = 실재고 0".
+- **publish-gate.checkPublishGate**: qty==null이면 SUPPLIER_OUT_OF_STOCK
+  판정 건너뛰고 PASS(주석 의도대로 "모르면 안 막음"). qty===0(명시적)만
+  차단.
+- **disposition.isOutOfStock / isLookupFailure**: qty==null이면 조회실패로
+  보고 상위에서 NONE(판정 보류). qty===0(스냅샷 존재+실품절)만 isOutOfStock
+  true.
+- source-gone-pure.ts는 영향 없음(s.qty<0만 세므로 null 자연 제외) — 확인함.
+
+### Code 인계 (통합, 최우선)
+```
+근본: qty ?? 0이 null/undefined(스냅샷부재)를 0(품절)으로 뭉갬. 2파일 공통.
+
+1) src/lib/products/publish-gate.ts checkPublishGate:
+   L61 `if ((inv.qty ?? 0) <= 0)` 앞에 `if (inv.qty == null) { /* 신호없음 */ }`
+   분기 — qty null이면 이 차단을 스킵(PASS로 흐름). qty===0만 차단 유지.
+   (L58 qty<0 조회실패 PASS는 그대로)
+
+2) src/lib/products/disposition.ts:
+   isLookupFailure(L98): `p.qty == null` 도 조회실패에 포함.
+   → decideDisposition L5(조회실패) 분기가 NONE 반환하므로 자동 보류.
+   isOutOfStock(L103)은 그대로 두되, isLookupFailure가 먼저 걸러 도달 안 함.
+
+3) 회귀 검증(#352): 
+   - 스냅샷부재(qty=null): publish-gate PASS, disposition NONE (신규수정)
+   - 실품절(qty=0): 양쪽 기존대로 차단/MARK_OUT_OF_STOCK 유지
+   - 정상(qty>0): PASS/NONE 유지
+   - 조회실패(qty<0): PASS/NONE 유지(기존)
+   surfaceRules.test.ts + 기존 테스트 전부 회귀0. 
+   프로덕션 재검증: /products/out-of-stock 대기함 5개→0개(스냅샷없는
+   가습기들이 품절권고에서 빠짐) Desktop 확인.
+
+브라우저 확증 완료: 대기함에 발행 가습기 5개가 품절권고로 떠있음(실측).
+수정 후 이 5개가 대기함에서 사라져야 정상(스냅샷 없으니 판정보류).
+```
+
+### 의존성
+결함1(통합 로직수정, 위) 최우선·독립 → 결함2(supplier_code 백필) 후속.
+결함1만 고쳐도 오권고·오차단 즉시 중단. 결함2는 재고폴링을 실제로 살려
+정상 판정이 나오게 하는 별도 단계(발행워크플로 개입점).
