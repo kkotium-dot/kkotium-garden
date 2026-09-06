@@ -177,3 +177,40 @@ publish-review-gate.ts:262가 `qty: snapshot?.qty ?? null`을 넘기는데,
 결함1(통합 로직수정, 위) 최우선·독립 → 결함2(supplier_code 백필) 후속.
 결함1만 고쳐도 오권고·오차단 즉시 중단. 결함2는 재고폴링을 실제로 살려
 정상 판정이 나오게 하는 별도 단계(발행워크플로 개입점).
+
+
+---
+
+## [2026-09-06 결함2 백필 가능성 실측] 자동 백필 불가 — 방향 재정립
+
+disposition 결함2(발행상품 supplier_product_code 누락)의 백필 가능성을
+DB 실측: **자동 백필 불가**.
+
+**실측 결과** (발행 6개 전수):
+- 전부 `source=IMPORTED`, `origin_kind=APP_CREATED`, `origin_id=null`,
+  `source_detail_url=null`. sku는 NAVER-xxxxx(네이버 역import) 또는
+  DMM-BD-43595104(1개만 도매매 흔적).
+- crawl_logs와 이름 매칭 0건, URL/sku 매칭 0건(DMM-BD-43595104도 crawl_logs
+  에 없음).
+
+**근본 진단**: 이 6개는 소싱→발행 정규 워크플로 산물이 아니라 **네이버
+스토어에서 앱으로 역import(가져오기)된 상품**. 도매매 원본과의 연결
+데이터가 애초에 존재하지 않음. 따라서 crawl_logs·소싱기록에서 자동
+매칭할 소스가 없음.
+
+**방향 재정립**:
+- 결함2는 "발행 워크플로가 코드 연결을 누락"이 아니라 "역import 상품은
+  도매매 원본을 구조적으로 모름"이 실체.
+- (a) **정규 워크플로 상품**: 소싱→씨앗심기→발행 경로로 만든 상품은
+  supplier_product_code가 이어지는지 별도 확인 필요(현재 발행상품엔
+  정규경로 산물이 없어 검증 불가 — 다음 정규 발행 때 확인).
+- (b) **역import 상품**: 도매매 원본을 자동으로 알 수 없음. 운영자가
+  수동으로 원본 URL을 연결하는 UI(supplier-code 라우트가 이미 존재:
+  api/products/[id]/supplier-code)가 정답. 자동 백필 금지.
+- 결함1 수정으로 이 상품들은 이제 "판정 보류(NONE)"라 오권고는 없음.
+  재고 추적이 필요하면 운영자가 supplier-code를 수동 연결해야 폴링 시작.
+
+**결론**: 결함2 자동 백필 작업은 취소(불가). 대신 "역import 상품에
+supplier-code 수동연결 안내" UX가 실질 해법(별도 개선, 저우선 — 결함1로
+급한 오권고는 이미 해소됨). api/products/[id]/supplier-code 라우트 실동작은
+추후 확인.
