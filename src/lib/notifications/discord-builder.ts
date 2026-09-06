@@ -57,6 +57,19 @@ function link(label: string, path: string): string {
 }
 
 /**
+ * 디스코드 맥락을 웹앱으로 이어주는 딥링크 파라미터(#62 전 알림 공통,
+ * DISCORD_TO_WEBAPP_EXPANSION_2026-09-06 §개선1). 소싱추천의
+ * `/growth?highlight={recordId}` 패턴을 전 알림으로 확장한다 — productId가
+ * 있으면 그 상품으로, 없으면(구조상 id 미확보) 목적지 경로만 그대로 둔다.
+ * 개인정보 없이 productId만 싣는다.
+ */
+function highlightPath(basePath: string, productId: string | undefined, from: string): string {
+  if (!productId) return basePath;
+  const sep = basePath.includes('?') ? '&' : '?';
+  return `${basePath}${sep}highlight=${encodeURIComponent(productId)}&from=${from}`;
+}
+
+/**
  * Seller-language label for the keyword-volume ranking boost (#258 — the raw
  * "+{n}" internal score delta read as alien jargon; sellers care about the
  * competition tier, not the point value). Tiers mirror the boost values
@@ -132,48 +145,54 @@ export function buildAdhdAlert(params: AdhdAlertParams): DiscordEmbed {
 // Each maps a computed signal set to its channel with the repurposed routing:
 //   publish-ready → KKOTTI_RECOMMEND · revival/zombie → KKOTTI_SCORE · margin → PRICE_CHANGE
 
-function digestExtraLines(names: string[]): string[] {
-  const shown = names.slice(0, 5).map((n) => `• ${n}`);
-  if (names.length > 5) shown.push(`_${fmt(STRINGS.common.more, { n: names.length - 5 })}_`);
+/** 알림 목록에 실리는 상품 참조 — 이름 + 딥링크 하이라이트용 productId. */
+export interface DigestProductRef {
+  name: string;
+  productId?: string;
+}
+
+function digestExtraLines(items: DigestProductRef[]): string[] {
+  const shown = items.slice(0, 5).map((it) => `• ${it.name}`);
+  if (items.length > 5) shown.push(`_${fmt(STRINGS.common.more, { n: items.length - 5 })}_`);
   return shown;
 }
 
 /** 발행 준비 완료 → KKOTTI_RECOMMEND (green digest). */
-export function buildPublishReadyAlert(names: string[]): DiscordEmbed {
+export function buildPublishReadyAlert(items: DigestProductRef[]): DiscordEmbed {
   const O = STRINGS.ops;
   return buildAdhdAlert({
     tier: 'digest', channel: 'KKOTTI_RECOMMEND', emoji: '✅',
-    title: fmt(pickVariant(O.publishReady_title, 'ops:publishReady:title'), { name: names.length === 1 ? names[0] : `${names.length}건` }),
+    title: fmt(pickVariant(O.publishReady_title, 'ops:publishReady:title'), { name: items.length === 1 ? items[0].name : `${items.length}건` }),
     action: pickVariant(O.publishReady_action, 'ops:publishReady:action'),
     kkotti: kkottiLine(O.publishReady_kkotti, 'ops:publishReady'),
-    deepLink: { path: '/products' },
-    extraLines: names.length > 1 ? digestExtraLines(names) : undefined,
+    deepLink: { path: highlightPath('/products', items[0]?.productId, 'publish') },
+    extraLines: items.length > 1 ? digestExtraLines(items) : undefined,
   });
 }
 
 /** 부활 후보(S/A) → KKOTTI_SCORE (green digest). */
-export function buildRevivalAlert(names: string[]): DiscordEmbed {
+export function buildRevivalAlert(items: DigestProductRef[]): DiscordEmbed {
   const O = STRINGS.ops;
   return buildAdhdAlert({
     tier: 'digest', channel: 'KKOTTI_SCORE', emoji: '🌱',
-    title: fmt(pickVariant(O.revival_title, 'ops:revival:title'), { n: names.length }),
+    title: fmt(pickVariant(O.revival_title, 'ops:revival:title'), { n: items.length }),
     action: pickVariant(O.revival_action, 'ops:revival:action'),
     kkotti: kkottiLine(O.revival_kkotti, 'ops:revival'),
-    deepLink: { path: '/products/reactivation' },
-    extraLines: digestExtraLines(names),
+    deepLink: { path: highlightPath('/products/reactivation', items[0]?.productId, 'revival') },
+    extraLines: digestExtraLines(items),
   });
 }
 
 /** 좀비(30일+ 무판매) → KKOTTI_SCORE (green digest). */
-export function buildZombieAlert(names: string[]): DiscordEmbed {
+export function buildZombieAlert(items: DigestProductRef[]): DiscordEmbed {
   const O = STRINGS.ops;
   return buildAdhdAlert({
     tier: 'digest', channel: 'KKOTTI_SCORE', emoji: '🥀',
-    title: fmt(pickVariant(O.zombie_title, 'ops:zombie:title'), { n: names.length }),
+    title: fmt(pickVariant(O.zombie_title, 'ops:zombie:title'), { n: items.length }),
     action: pickVariant(O.zombie_action, 'ops:zombie:action'),
     kkotti: kkottiLine(O.zombie_kkotti, 'ops:zombie'),
-    deepLink: { path: '/products/reactivation' },
-    extraLines: digestExtraLines(names),
+    deepLink: { path: highlightPath('/products/reactivation', items[0]?.productId, 'zombie') },
+    extraLines: digestExtraLines(items),
   });
 }
 
@@ -195,7 +214,7 @@ export function buildZombieDetectedAlert(item: { name: string; productId: string
 }
 
 /** 마진 경고(임계 이하) → PRICE_CHANGE (red realtime). */
-export function buildMarginWarnAlert(items: { name: string; margin: number }[]): DiscordEmbed {
+export function buildMarginWarnAlert(items: (DigestProductRef & { margin: number })[]): DiscordEmbed {
   const O = STRINGS.ops;
   const lines = items.slice(0, 5).map((i) => `• ${i.name} (${STRINGS.common.netMargin} ${i.margin.toFixed(1)}%)`);
   if (items.length > 5) lines.push(`_${fmt(STRINGS.common.more, { n: items.length - 5 })}_`);
@@ -204,7 +223,7 @@ export function buildMarginWarnAlert(items: { name: string; margin: number }[]):
     title: fmt(pickVariant(O.margin_title, 'ops:margin:title'), { n: items.length }),
     action: pickVariant(O.margin_action, 'ops:margin:action'),
     kkotti: kkottiLine(O.margin_kkotti, 'ops:margin'),
-    deepLink: { path: '/products' },
+    deepLink: { path: highlightPath('/products', items[0]?.productId, 'margin') },
     extraLines: lines,
   });
 }
@@ -443,7 +462,7 @@ export function buildStockAlertEmbed(params: StockAlertEmbedParams): DiscordEmbe
   const impact = fmt(S.impact_base, { loss: lossNote });
 
   const actionLines = [
-    `1. ${link(S.action_check, '/products?status=OUT_OF_STOCK')}`,
+    `1. ${link(S.action_check, highlightPath('/products?status=OUT_OF_STOCK', list[0]?.id, 'stock'))}`,
     `2. ${S.action_supplier}`,
     `3. ${link(S.action_alt, '/products')}`,
   ];
@@ -525,7 +544,7 @@ export function buildPriceChangeEmbed(params: PriceChangeEmbedParams): DiscordEm
   const impact = `${impactHead}${S.impact_tail}`;
 
   const actionLines = [
-    `1. ${link(S.action_adjust, '/products')}`,
+    `1. ${link(S.action_adjust, highlightPath('/products', list[0]?.productId, 'price'))}`,
     `2. ${S.action_simulate}`,
     `3. ${S.action_alternative}`,
   ];
@@ -584,7 +603,7 @@ export function buildScoreDropEmbed(params: ScoreDropEmbedParams): DiscordEmbed 
   const actionLines = [
     `1. ${link(S.action_seo, '/naver-seo')}`,
     `2. ${S.action_token}`,
-    `3. ${link(S.action_revive, '/products/reactivation')}`,
+    `3. ${link(S.action_revive, highlightPath('/products/reactivation', list[0]?.productId, 'score'))}`,
   ];
   const action = actionLines.join('\n');
 

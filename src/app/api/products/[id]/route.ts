@@ -117,6 +117,7 @@ export async function PATCH(
         // Build embed with margin danger context (A-7)
         const embed = buildPriceChangeEmbed({
           changes: [{
+            productId:   id,
             productName: existing.name,
             sku:         existing.sku,
             oldPrice:    oldSupplierPrice,

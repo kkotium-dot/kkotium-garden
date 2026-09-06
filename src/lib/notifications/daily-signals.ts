@@ -43,20 +43,26 @@ export function scoreProduct(p: {
 
 // ── Ops digest (publish-ready / revival / zombie / margin-warn) ────────────
 
+/** 이름+productId 페어 — 디스코드→웹앱 딥링크 하이라이트에 쓴다(#62 전 알림 공통). */
+export interface NamedProductRef {
+  name: string;
+  productId: string;
+}
+
 export interface OpsDigestSignals {
-  publishReady: string[];
-  revival: string[];
-  zombie: string[];
+  publishReady: NamedProductRef[];
+  revival: NamedProductRef[];
+  zombie: NamedProductRef[];
   zombieDetected: { name: string; productId: string; marginPct: number; reason: string }[];
-  marginWarn: { name: string; margin: number }[];
+  marginWarn: (NamedProductRef & { margin: number })[];
 }
 
 export async function computeOpsDigestSignals(
   products: DailyDigestProduct[],
 ): Promise<OpsDigestSignals> {
-  const publishReady: string[] = [];
-  const revival: string[] = [];
-  const zombie: string[] = [];
+  const publishReady: NamedProductRef[] = [];
+  const revival: NamedProductRef[] = [];
+  const zombie: NamedProductRef[] = [];
   const zombieDetected: OpsDigestSignals['zombieDetected'] = [];
   const marginWarn: OpsDigestSignals['marginWarn'] = [];
 
@@ -74,7 +80,7 @@ export async function computeOpsDigestSignals(
         salePrice: p.salePrice,
         supplierPrice: p.supplierPrice,
       });
-      if (rd.failed.length === 0) publishReady.push(p.name);
+      if (rd.failed.length === 0) publishReady.push({ name: p.name, productId: p.id });
     }
 
     // 부활 후보 (revival S/A) + 좀비 (long_inactive).
@@ -85,11 +91,11 @@ export async function computeOpsDigestSignals(
       name: p.name,
       mainImage: p.mainImage,
     }));
-    if (rev.grade === 'S' || rev.grade === 'A') revival.push(p.name);
+    if (rev.grade === 'S' || rev.grade === 'A') revival.push({ name: p.name, productId: p.id });
 
     const tuning = tuningMap.get(p.id);
     if (tuning?.isZombie) {
-      zombie.push(p.name);
+      zombie.push({ name: p.name, productId: p.id });
       zombieDetected.push({
         name: p.name, productId: p.id,
         marginPct: p.salePrice > 0 && p.supplierPrice > 0 ? scoreProduct(p).netMarginRate : 0,
@@ -100,7 +106,7 @@ export async function computeOpsDigestSignals(
     // 마진 경고 (임계 이하: 순마진 < 20%, honey-score 위험 기준).
     if (p.salePrice > 0 && p.supplierPrice > 0) {
       const m = scoreProduct(p).netMarginRate;
-      if (m < 20) marginWarn.push({ name: p.name, margin: m });
+      if (m < 20) marginWarn.push({ name: p.name, productId: p.id, margin: m });
     }
   }
 

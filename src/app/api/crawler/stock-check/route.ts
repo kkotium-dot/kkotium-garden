@@ -245,7 +245,7 @@ export async function POST(req: Request) {
 
         const hs = calcHoneyScore({ salePrice: 0, supplierPrice: r.previousPrice });
         return {
-          name: r.productName, sku: r.sku, salePrice: 0,
+          id: r.productId, name: r.productName, sku: r.sku, salePrice: 0,
           honeyScore: hs.total, honeyGrade: hs.grade, netMarginRate: hs.netMarginRate,
           alternatives: alts,
         };
@@ -281,6 +281,7 @@ export async function POST(req: Request) {
           const newMargin = p && salePrice > 0 && r.detectedPrice
             ? ((salePrice - r.detectedPrice - naverFee - 3000) / salePrice) * 100 : 0;
           return {
+            productId: r.productId,
             productName: r.productName,
             sku: r.sku,
             oldPrice: r.previousPrice,

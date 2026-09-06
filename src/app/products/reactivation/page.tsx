@@ -3,8 +3,8 @@
 // P2-3: "새 생명 부여" clone button, zombie auto-detection (30d+0 sales),
 //        pipeline: clone → HIDDEN original → SEO refresh → excel → Naver upload
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle, RefreshCw, ExternalLink, CheckCircle,
   Clock, TrendingDown, FileX, Sprout, Zap, X,
@@ -48,6 +48,15 @@ const REASON_META: Record<ReactivationReason, {
   long_inactive:    { icon: Clock,         color: '#c2410c', bgColor: '#fff7ed', borderColor: '#fed7aa', label: '장기 미판매' },
   score_drop:       { icon: TrendingDown,  color: '#b45309', bgColor: '#fffbeb', borderColor: '#fde68a', label: '점수 급락' },
   draft_incomplete: { icon: FileX,         color: '#555',    bgColor: '#f8f8f8', borderColor: '#F8DCE5', label: '등록 미완료' },
+};
+
+// 디스코드→웹앱 딥링크(DISCORD_TO_WEBAPP_EXPANSION_2026-09-06 §개선1) — 점수급락·
+// 좀비감지·부활후보 알림 모두 이 페이지로 온다. from 값별 배너 문구로 디스코드
+// 요약을 재현(#62 전 알림 공통, products/page.tsx와 동일 패턴).
+const HIGHLIGHT_FROM_BANNER: Record<string, { emoji: string; text: string }> = {
+  score:   { emoji: '📉', text: '점수 급락 알림에서 왔어요 — 사유를 확인하고 SEO를 손봐주세요' },
+  zombie:  { emoji: '🥀', text: '좀비 감지 알림에서 왔어요 — 30일+ 무판매 상품이에요' },
+  revival: { emoji: '🌱', text: '부활 후보 알림에서 왔어요 — 등급 S/A, 되살릴 가치가 있어요' },
 };
 
 const GRADE_COLOR: Record<string, { bg: string; color: string }> = {
@@ -128,8 +137,9 @@ function CloneConfirmModal({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function ReactivationPage() {
+function ReactivationPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [items, setItems]       = useState<ReactivationItem[]>([]);
   const [loading, setLoading]   = useState(true);
   const [filter, setFilter]     = useState<ReactivationReason | 'all'>('all');
@@ -141,6 +151,15 @@ export default function ReactivationPage() {
   // 재고/공급처 신호 — 처분 권고(#273)의 입력. 배지 컴포넌트가 판정까지
   // 담당하므로 이 화면은 자체 규칙을 두지 않는다(#62).
   const { byProductId: inventory } = useInventoryBadges();
+
+  // 디스코드 딥링크 하이라이트(#62 전 알림 공통) — /products/reactivation?
+  // highlight={productId}&from={score|zombie|revival}. 소싱추천 highlightRecordId
+  // 패턴 재사용(SourcingRecommendWidget.tsx 참고). 목록에 없으면(예: 이미
+  // 조치된 상품) 조용히 무시한다(#352 하드코딩 금지).
+  const highlightProductId = searchParams?.get('highlight') ?? null;
+  const highlightFrom = searchParams?.get('from') ?? null;
+  const [highlightBannerDismissed, setHighlightBannerDismissed] = useState(false);
+  const handledHighlightRef = useRef<string | null>(null);
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
@@ -183,6 +202,20 @@ export default function ReactivationPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // 하이라이트 대상이 현재 필터 밖이면(예: 판매중지 알림인데 필터가 품절) 전체로
+  // 전환해 보이게 한 뒤 스크롤한다.
+  useEffect(() => {
+    if (!highlightProductId || handledHighlightRef.current === highlightProductId) return;
+    const match = items.find((it) => it.product.id === highlightProductId);
+    if (!match) return;
+    handledHighlightRef.current = highlightProductId;
+    if (filter !== 'all' && match.reason !== filter) setFilter('all');
+    requestAnimationFrame(() => {
+      document.getElementById(`product-row-${highlightProductId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightProductId, items]);
 
   // NAME-DIAG-3 (#251): fetch server-computed 상품명 진단 for the listed rows.
   // Non-blocking — the list renders immediately; badges fill in when ready.
@@ -277,6 +310,23 @@ export default function ReactivationPage() {
           <p style={{ fontSize: 13, color: '#888', margin: 0 }}>품절·장기미노출·점수급락·미완료 상품 관리 · 등록 30일+판매0건 자동 좀비 감지</p>
         </div>
 
+        {/* 디스코드 딥링크 컨텍스트 배너(#62 전 알림 공통) — products/page.tsx와 동일 패턴. */}
+        {highlightProductId && highlightFrom && !highlightBannerDismissed && HIGHLIGHT_FROM_BANNER[highlightFrom] && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+            padding: '10px 14px', borderRadius: 12, marginBottom: 16,
+            background: '#FFF1F1', border: '1.5px solid #FFB3CE',
+          }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#9a3412', margin: 0 }}>
+              {HIGHLIGHT_FROM_BANNER[highlightFrom].emoji} {HIGHLIGHT_FROM_BANNER[highlightFrom].text}
+            </p>
+            <button onClick={() => setHighlightBannerDismissed(true)} aria-label="배너 닫기"
+              style={{ padding: 4, borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}>
+              <X size={13} style={{ color: '#9a3412' }} />
+            </button>
+          </div>
+        )}
+
         {/* Kkotti tip bubble */}
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px',
@@ -367,13 +417,14 @@ export default function ReactivationPage() {
               const grade = GRADE_COLOR[item.honeyScore.grade] ?? GRADE_COLOR.D;
               const isZombie = item.reason === 'long_inactive';
               const isDraft  = item.reason === 'draft_incomplete';
+              const isHighlighted = item.product.id === highlightProductId;
 
               return (
-                <div key={item.product.id}
+                <div key={item.product.id} id={`product-row-${item.product.id}`}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '14px 16px', background: '#fff', borderRadius: 14,
-                    border: `1.5px solid ${meta.borderColor}`,
+                    padding: '14px 16px', background: isHighlighted ? '#FFF1F1' : '#fff', borderRadius: 14,
+                    border: isHighlighted ? '1.5px solid #F63B28' : `1.5px solid ${meta.borderColor}`,
                   }}>
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -496,5 +547,17 @@ export default function ReactivationPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function ReactivationPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid #FFB3CE', borderTop: '3px solid #F63B28', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    }>
+      <ReactivationPageInner />
+    </Suspense>
   );
 }

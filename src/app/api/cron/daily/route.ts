@@ -193,6 +193,7 @@ export const GET = withCronLogging('/api/cron/daily', async (req: NextRequest) =
         const stockPayload = oosProducts.map(p => {
           const score = scoreProduct(p);
           return {
+            id:            p.id,
             name:          p.name,
             sku:           p.sku,
             salePrice:     p.salePrice,
@@ -222,6 +223,7 @@ export const GET = withCronLogging('/api/cron/daily', async (req: NextRequest) =
     // Compare current honey score vs stored aiScore (previous snapshot)
     try {
       const scoreDrops: {
+        productId: string;
         productName: string;
         sku: string;
         oldScore: number;
@@ -236,6 +238,7 @@ export const GET = withCronLogging('/api/cron/daily', async (req: NextRequest) =
         const drop = p.aiScore - current.total;
         if (drop >= 20) {
           scoreDrops.push({
+            productId:   p.id,
             productName: p.name,
             sku:         p.sku,
             oldScore:    p.aiScore,

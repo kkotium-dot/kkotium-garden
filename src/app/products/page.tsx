@@ -2,7 +2,7 @@
 // /products — Garden Warehouse v6
 // P2-1: supplier grouping, shipping badge, margin warning, bulk float menu, upload readiness filter
 
-import { Suspense, useState, useEffect, useMemo, useCallback } from 'react';
+import { Suspense, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -144,6 +144,17 @@ const TAB_CONFIG: Record<TabKey, {
   revival:      { label: '좀비꽃 발견',   dot: 'bg-purple-500', dotLabel: '좀비꽃',        filter: p => isZombieProduct(p) && !!p.naverProductId },
   lowMargin:    { label: '마진 낮음',     dot: 'bg-rose-500',   dotLabel: '마진 낮음',     filter: p => isLowMargin(p) && !!p.naverProductId },
   drift:        { label: '동기화 필요',   dot: 'bg-yellow-500', dotLabel: '동기화 필요',   filter: p => hasDrift(p) && !!p.naverProductId },
+};
+
+// 디스코드→웹앱 딥링크(DISCORD_TO_WEBAPP_EXPANSION_2026-09-06 §개선1) —
+// 소싱추천의 /growth?highlight={recordId} 패턴을 전 알림으로 확장. ?from=
+// 값별로 "이 알림 때문에 왔어요" 배너 문구를 재현해 디스코드에서 본 맥락이
+// 웹앱 진입 순간 사라지지 않게 한다. 여기 없는 from 값은 조용히 배너를 생략.
+const HIGHLIGHT_FROM_BANNER: Record<string, { emoji: string; text: string }> = {
+  stock:   { emoji: '🔴', text: '품절 알림에서 왔어요 — 재입고 일정과 대체상품을 확인해보세요' },
+  price:   { emoji: '💰', text: '가격 변동 알림에서 왔어요 — 마진 변화를 확인해보세요' },
+  publish: { emoji: '✅', text: '발행 준비 완료 알림에서 왔어요' },
+  margin:  { emoji: '⚠️', text: '마진 경고 알림에서 왔어요 — 순마진이 낮아졌어요' },
 };
 
 // 정원창고 필터 밀도 완화(2026-07-13 P1·PRODUCT_IA_REDESIGN_V2) — 10개 버튼을
@@ -2071,6 +2082,29 @@ function ProductsPageInner() {
     Object.fromEntries((Object.keys(TAB_CONFIG) as TabKey[]).map(k => [k, scored.filter(TAB_CONFIG[k].filter).length])) as Record<TabKey, number>,
     [scored]);
 
+  // 디스코드→웹앱 딥링크(#62 전 알림 공통) — /products?highlight={productId}&from={alertType}
+  // 로 들어오면 그 상품 패널을 자동으로 열고 스크롤한다(소싱추천 highlightRecordId
+  // 패턴 재사용, SourcingRecommendWidget.tsx 참고). recordId와 마찬가지로 목록에
+  // 없으면(오래된 알림·이미 처리된 상품) 조용히 무시한다(#352 하드코딩 금지).
+  const highlightProductId = searchParams?.get('highlight') ?? null;
+  const highlightFrom = searchParams?.get('from') ?? null;
+  const [highlightBannerDismissed, setHighlightBannerDismissed] = useState(false);
+  const handledHighlightRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!highlightProductId || handledHighlightRef.current === highlightProductId) return;
+    const match = scored.find((p) => p.id === highlightProductId);
+    if (!match) return;
+    handledHighlightRef.current = highlightProductId;
+    // 현재 탭 필터에 안 걸리는 상품이면(예: 품절 탭인데 이미 재입고됨) 전체 탭으로
+    // 전환해 카드가 실제로 보이게 한다.
+    if (!TAB_CONFIG[tab].filter(match)) setTab('all');
+    setSide(match);
+    requestAnimationFrame(() => {
+      document.getElementById(`product-row-${highlightProductId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightProductId, scored]);
+
   // 정원 창고 서브필터 카운트 — draft 뷰 안에서만 의미 있음(뷰 스코프 제한, H-2).
   // 2026-07-29 (#300 · #310 Desktop 관측 반영): "발행 가능"이 구조 준비도만
   // 보고 검수 승인은 무시해 서버(assertPublishable)와 어긋나던 것을 정합.
@@ -2366,15 +2400,16 @@ function ProductsPageInner() {
 
   const renderRow = (p: ScoredProduct, idx: number, isLast: boolean) => {
     const dangerMargin = p._hs.netMarginRate < 5;
+    const isHighlighted = p.id === highlightProductId;
     return (
-      <div key={p.id}>
+      <div key={p.id} id={`product-row-${p.id}`}>
         <div
           className="grid items-center gap-2 px-4 py-3 cursor-pointer group transition-colors"
           style={{
             gridTemplateColumns: COL,
             minWidth: TABLE_MIN_WIDTH,
-            background: selected.has(p.id) ? 'rgba(230,35,16,0.04)' : dangerMargin ? 'rgba(239,68,68,0.03)' : 'transparent',
-            borderLeft: dangerMargin ? '3px solid #ef4444' : '3px solid transparent',
+            background: isHighlighted ? 'rgba(246,59,40,0.08)' : selected.has(p.id) ? 'rgba(230,35,16,0.04)' : dangerMargin ? 'rgba(239,68,68,0.03)' : 'transparent',
+            borderLeft: isHighlighted ? '3px solid #F63B28' : dangerMargin ? '3px solid #ef4444' : '3px solid transparent',
           }}
           onClick={() => setSide(p)}
           onMouseEnter={e => { if (!selected.has(p.id)) (e.currentTarget as HTMLElement).style.background = '#FFF8FA'; }}
@@ -2715,6 +2750,21 @@ function ProductsPageInner() {
             </Link>
           )}
         </div>
+
+        {/* 디스코드 딥링크 컨텍스트 배너(#62 전 알림 공통) — 디스코드에서 본 요약을
+            웹앱 상단에 재현한다. highlight 대상 상품을 못 찾았거나(오래된 알림)
+            닫았으면 조용히 생략. */}
+        {highlightProductId && highlightFrom && !highlightBannerDismissed && HIGHLIGHT_FROM_BANNER[highlightFrom] && (
+          <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl"
+            style={{ background: '#FFF1F1', border: '1px solid #FFB3CE' }}>
+            <p className="text-xs font-semibold" style={{ color: '#9a3412' }}>
+              {HIGHLIGHT_FROM_BANNER[highlightFrom].emoji} {HIGHLIGHT_FROM_BANNER[highlightFrom].text}
+            </p>
+            <button onClick={() => setHighlightBannerDismissed(true)} className="p-1 rounded-lg hover:bg-black/5 flex-shrink-0" aria-label="배너 닫기">
+              <X size={13} style={{ color: '#9a3412' }} />
+            </button>
+          </div>
+        )}
 
         {/* Toolbar */}
         {/* Phase 2-MOBILE-3 M2/M3: mobile stacks toolbar vertically so the
