@@ -1,0 +1,79 @@
+# 디스코드 알림 → 웹앱 정보 확장 설계 (2026-09-06, Desktop)
+
+> 요청 재정의: "디스코드는 모바일 최적화라 정보가 제한적으로 전달된다.
+> 그 제한된 정보를 웹앱에서 풍부하게 확장·활용하는 아이디어와 실질 개선안."
+> = 디스코드(짧은 모바일 요약) → 웹앱(깊은 맥락+실행)의 연속성 설계.
+> (앞선 DISCORD_ALERT_AUDIT는 "알림 발송 코드 감사"였음 — 이 문서는 별개
+>  주제: 알림이 담은 정보의 웹앱 쪽 소비/확장.)
+
+## 현황 실측 (교차검증)
+
+디스코드 알림은 4섹션(상황/영향/액션/꼬띠멘트)으로 이미 정보가 풍부.
+재고알림은 대체상품 링크·일일손실추정까지 담음. 각 알림엔 deep-link
+("앱에서 열기")가 있음. **문제는 deep-link 목적지가 그 맥락을 못 받는 것.**
+
+| 알림 | 디스코드가 담는 정보(모바일) | deep-link 목적지 | 웹앱 확장? |
+|---|---|---|---|
+| 소싱추천 | 추천상품·점수 | `/growth?highlight={recordId}` | ✅ 위젯이 그 항목 하이라이트/스크롤 (모범) |
+| 재고알림 | 상품·품절일·일일손실·대체상품A/B | `/products?status=OUT_OF_STOCK` | ❌ 필터목록만, productId·대체안 소실 |
+| 가격변동 | 상품·구→신가·마진변화 | `/products` | ❌ 전체목록, 어떤상품인지 소실 |
+| 점수급락 | 상품·구→신점수·사유 | `/products/reactivation` | ❌ 목록만, 사유·점수 소실 |
+| 발행준비 | 준비완료 상품명들 | `/products` | ❌ 목록만 |
+| 마진경고 | 상품·마진% | `/products` | ❌ 목록만 |
+
+**핵심 결함(전 알림 공통 #62)**: 소싱추천만 highlight로 특정항목을 확장
+열기하고, 나머지 5종은 일반 목록으로 던져 **디스코드에서 본 맥락(어떤
+상품·왜·수치·대체안)이 웹앱 진입 순간 전부 사라짐.** 셀러는 모바일에서
+본 정보를 웹앱에서 처음부터 다시 찾아야 함(정보 단절).
+
+products 페이지는 tab·supplier·registerId만 받음 — 알림 맥락 파라미터 부재.
+
+## 개선안 (실질·단계적)
+
+### 개선1 (핵심·전 알림 공통) — deep-link에 맥락 파라미터 표준화
+소싱추천의 highlight 패턴을 전 알림으로 확장. 각 알림 deep-link에
+`?highlight={productId}&from={alertType}` 부여 → 목적지 페이지가:
+- 해당 상품으로 자동 스크롤+하이라이트(소싱추천처럼)
+- "이 알림 때문에 왔어요" 컨텍스트 배너(예: "🔴 품절 3일 · 일일손실 ~8천원 ·
+  대체상품 2건 발견") — 디스코드 요약을 웹앱 상단에 재현
+- 그 상품의 액션(대체소싱·판매중지 등)을 즉시 실행 가능하게 노출
+→ 전 상품 공통 엔진: 알림 종류·상품 무관하게 productId+alertType만으로 작동.
+
+### 개선2 — 웹앱 "알림 센터"(디스코드 미러) 신설
+디스코드는 스크롤하면 과거 알림이 묻힘(모바일 한계). 웹앱에 알림 이력
+페이지(`/alerts` 또는 대시보드 위젯): 발송된 디스코드 알림을 시간순
+카드로 미러링 + 각 카드에서 바로 실행. discord_send 로그 테이블이 있으면
+그걸 소스로(없으면 신설 검토). "디스코드에서 놓친 알림을 웹앱에서 정주행".
+
+### 개선3 — 정보 심화(디스코드=요약, 웹앱=전체)
+디스코드는 상위 5건·대체상품 2건으로 잘림(모바일 가독성). 웹앱 목적지는
+전량+심화: 재고알림이면 전 품절상품+각 대체후보 전체+마진 시뮬레이션,
+가격변동이면 가격추이 그래프+경쟁사 비교. "요약은 폰, 판단은 웹앱".
+
+### 개선4 — 양방향(웹앱 액션 → 디스코드 상태 갱신)
+디스코드 알림의 액션을 웹앱에서 처리하면 그 알림을 "처리완료"로 마킹
+(재알림 방지, 경고피로 감소 #272). 개선2의 알림센터와 연동.
+
+## 우선순위·의존성
+- **개선1이 최우선·최대 ROI**: 기존 소싱추천 highlight 패턴을 재사용해
+  전 알림으로 확장하는 것이라 신규설계 최소·즉효. 정보단절을 바로 해소.
+  products·reactivation 페이지에 highlight+from 파라미터 수용 로직 추가 +
+  discord-builder의 deepLink path에 productId 부여.
+- 개선2(알림센터)는 개선1 후 별도 페이지 신설. 개선3·4는 점진.
+- 디스코드 발송 코드(방금 안전화 완료)와 독립. 카테고리매처·disposition과 독립.
+
+## Code 인계 (개선1)
+```
+1) src/lib/notifications/discord-builder.ts: 각 빌더의 deepLink/link path에
+   productId 부여. 예: buildStockAlertEmbed action link를
+   `/products?highlight=${p.productId}&from=stock` (첫 상품 기준 or 다건이면
+   목록+개별 highlight). buildScoreDropEmbed→`/products/reactivation?
+   highlight=${productId}&from=score` 등. productId가 빌더 params에 이미
+   있는지 확인(StockAlert엔 sku만 있을 수 있음 — 있으면 productId 추가 전달).
+2) src/app/products/page.tsx: useSearchParams로 highlight·from 수용 →
+   해당 상품 카드 스크롤+하이라이트(소싱추천 SourcingRecommendWidget의
+   highlightRecordId 구현 참고) + from에 따른 컨텍스트 배너.
+3) src/app/products/reactivation/page.tsx: 동일 패턴.
+검증: 디스코드 deep-link URL로 진입 시 해당 상품 하이라이트+배너 표시
+(브라우저 실측). 전 알림종류 dryRun. highlight 없는 일반진입은 기존대로.
+```
