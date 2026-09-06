@@ -94,9 +94,13 @@ const NONE: DispositionVerdict = {
   daysOutOfStock: null,
 };
 
-/** 공급사 조회가 실패한 상태인지(#260 센티널). 실재고 0과 구분해야 한다. */
+/**
+ * 공급사 조회가 실패했거나 재고 신호 자체가 없는 상태인지(#260 센티널 +
+ * 스냅샷 부재). qty==null(스냅샷 없음, 폴링 전)은 실재고 0과 다르다 —
+ * "모르면 권고 안 함"으로 판정을 보류한다.
+ */
 function isLookupFailure(p: DispositionInput): boolean {
-  return (p.qty ?? 0) < 0 || p.supplierStatus === 'unknown';
+  return p.qty == null || p.qty < 0 || p.supplierStatus === 'unknown';
 }
 
 /** 공급사에서 지금 매입할 수 없는 상태인지. */

@@ -55,10 +55,13 @@ export function checkPublishGate(inv: PublishGateInput | undefined | null): Publ
 
   // 2. 조회 실패(qty<0, #260)는 차단 사유가 아니다. 일시적 폴링 실패일 수 있고,
   //    지속되면 위 sourceGone이 잡는다. 모른다고 막지 않는다.
-  if ((inv.qty ?? 0) < 0) return PASS;
+  if (inv.qty != null && inv.qty < 0) return PASS;
 
   // 3. 공급사 품절 — 발행해도 즉시 품절 처리해야 한다. 재입고 후 올리는 게 맞다.
-  if ((inv.qty ?? 0) <= 0) return { blocked: true, reason: 'SUPPLIER_OUT_OF_STOCK' };
+  //    qty가 null/undefined(스냅샷 부재=폴링 전)는 재고 신호가 아예 없는
+  //    것이지 실재고 0이 아니다 — "모르면 안 막는다"(위 함수 주석). qty===0
+  //    (스냅샷은 있고 실재고 0)만 차단한다.
+  if (inv.qty != null && inv.qty <= 0) return { blocked: true, reason: 'SUPPLIER_OUT_OF_STOCK' };
   const s = inv.supplierStatus;
   if (s && s !== SUPPLIER_STATUS_ACTIVE && s !== 'unknown') {
     return { blocked: true, reason: 'SUPPLIER_OUT_OF_STOCK' };
