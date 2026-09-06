@@ -1487,3 +1487,32 @@ publish-gate.ts 2파일 통합수정. Desktop 독립 재검증(회귀표 전건 
 감지는 아직 안 됨). Code/Desktop 협업 대상.
 
 **명화**: 조치 불필요(DB부재·공급단절 시스템 로직 정상). 종결.
+
+
+## rev141 — 디스코드 진단 안전화 완료 + 디스코드→웹앱 정보확장 설계 (2026-09-06)
+
+**디스코드 진단 라우트 안전화 완료(커밋 2ef50d7, 병합·배포·검증)**:
+/api/discord GET/POST가 호출 즉시 5채널 실발송하던 위험(IDIOM-4) 제거.
+기본 dry-run(checkChannelConfig, 발송0) + ?send=1일 때만 실발송.
+KKOTTI_RECOMMEND self-fetch(CRON_SECRET 401 오탐) 제거→직접 sendDiscord.
+프로덕션 검증: mode=dry-run, results에 status204 없음(발송0), KKOTTI_
+RECOMMEND ok:true(오탐 해소). Vercel로그 self-fetch 0건 확인.
+(검증 중 배포 미완료 구버전이 1회 실발송됨 — 이후 "배포 READY 확정 후
+호출" 재확인. 재발방지 IDIOM-4에 이미 박제됨.)
+
+**디스코드→웹앱 정보확장 설계(커밋 467c953, 문서: DISCORD_TO_WEBAPP_
+EXPANSION_2026-09-06)**: 요청 재정의 = "디스코드(모바일 짧은 요약)의
+제한된 정보를 웹앱에서 풍부하게 확장". 실측:
+- 디스코드 알림은 4섹션(상황/영향/액션/꼬띠) 정보풍부 + deep-link 보유.
+- **문제**: deep-link 목적지가 맥락을 못 받음. 소싱추천만 /growth?highlight=
+  {recordId}로 특정항목 확장(모범), 나머지 5종(재고·가격·점수·발행준비·
+  마진)은 /products 일반목록으로 던져 맥락(상품·수치·대체안) 소실.
+- 개선4종: (1)deep-link 맥락파라미터 표준화(highlight+from, 최우선·최대ROI
+  — 소싱추천 패턴 전알림 확장) (2)웹앱 알림센터(디스코드 미러) (3)정보심화
+  (요약=폰, 판단=웹앱) (4)양방향(웹앱액션→알림 처리완료 마킹).
+
+**git 위생**: 깨진 ref(".../main 2" macOS 공백접미사) 재발 제거, 병합된
+로컬브랜치 5개 정리. uce-coverage-empty-hand-fix만 미병합 보존.
+
+**남은 작업**: 개선1(deep-link 맥락파라미터, Code 인계 대기) · disposition
+결함2(역import 수동연결 UX, 저우선) · uce-coverage-empty-hand 브랜치 확인.
