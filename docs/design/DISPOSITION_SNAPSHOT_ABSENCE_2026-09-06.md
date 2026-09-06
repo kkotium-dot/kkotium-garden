@@ -242,3 +242,65 @@ Code가 개선1 검증 중 본 "Maximum update depth exceeded"는 프로덕션
 /products에서 재현 안 됨(콘솔 클린). 워크트리 seeded DB 없어 publish-
 readiness-batch 500 재시도 루프가 원인이었던 환경문제. 코드 버그 아님
 확정(Code 판단 정확).
+
+---
+
+## [2026-09-06 근본병목 규명] 개선2(알림센터) 착수 중 의존성 체인 발견
+
+개선2(웹앱 알림센터)를 최우선 착수하려 데이터 소스를 실측하다 **전체
+의존성 체인의 근본 병목**을 규명. "개선2 독립"이라던 앞선 판단을 실측으로
+정정(환각 제거).
+
+**실측 체인**:
+1. 알림센터 데이터 소스 후보 = low_stock_alerts + price_movement_alerts
+   (둘 다 productId·level·triggeredAt·resolvedAt 보유 — 알림센터+개선4
+   양방향에 완벽). 신규 테이블 불필요.
+2. **그러나 두 테이블 전부 0건**(실측). 원인: dome-inventory-poller가
+   "supplier_product_code 있는 상품만" 폴링(L10 주석) → 발행 6개는
+   역import라 code 없음 → 폴링 제외 → 스냅샷 없음 → 알림 0건.
+3. supplier-code 연결 백엔드(api/products/[id]/supplier-code + inventory-
+   mapping.ts)는 **완비**됨(수동입력 + crawl_logs 이름정확일치 자동매칭,
+   #231 정직 설계). **그러나 이 라우트를 호출하는 UI 진입점이 앱 어디에도
+   없음**(grep 0건) = 근본 병목.
+
+**의존성 체인**:
+```
+[근본병목] supplier-code 연결 UI 부재(백엔드는 있음)
+  → 결함2: 발행상품 code 미연결
+  → 재고폴링 대상 제외 → 스냅샷·알림 0건
+  → 디스코드 재고/가격알림 안 감 + 개선2 알림센터 빈껍데기
+  → disposition도 "판정보류"에 머물러 재고변화 감지 못함(결함1로 오권고는
+    막았으나 근본 재고추적은 여전히 죽어있음)
+```
+
+## 최우선 작업 재정립 (의존성 근거)
+**"supplier-code 연결 UI(운영자 개입점) 신설"이 진짜 의존성 없는 최우선.**
+백엔드 완비 → 프론트 개입점만 추가하면 폴링·알림·알림센터·disposition
+재고추적 전체를 되살리는 시작점(#62 전상품공통, 앱에 개입점 자연스럽게 녹임).
+
+### Code 인계 (supplier-code 연결 UI)
+```
+목표: api/products/[id]/supplier-code(완비된 백엔드)를 호출하는 운영자
+ 개입점을 상품 화면에 노출. 재고추적 안 되는 상품(supplier_product_code
+ null)에 "도매매 코드 연결" 버튼/입력.
+
+1) 노출 위치: 상품 상세 드로어(products/page.tsx의 setSide 드로어) 또는
+   꽃밭 돌보기 행. supplier_product_code null인 상품에만 "재고추적 연결
+   필요" 배지+버튼(전상품공통 — 조건부 노출).
+2) 동작: 버튼 클릭 → 먼저 POST /supplier-code {}(자동매칭 시도) →
+   matched:false면 수동 입력 필드(도매매 상품번호) → POST {code}.
+   성공 시 "재고추적 시작됨" 토스트 + 다음 폴링부터 스냅샷 쌓임 안내.
+3) 개입점 자연스럽게: disposition/publish-gate가 "재고신호없음"으로
+   판정보류 중인 상품에 이 배지를 노출하면 맥락 일치(결함1과 연결).
+검증: supplier_product_code null 상품에 버튼 노출 + 클릭→연결→DB반영
+ (Desktop 프로덕션 실측). code 연결 후 재고폴링 대상 포함 확인.
+
+[의존성] 이게 선행 → 이후 폴링 데이터 쌓이면 → 개선2 알림센터 의미생김.
+ 개선3(정보심화)은 이와 독립(개선1 위 UI라 데이터 무관, 지금도 가능).
+```
+
+## 정정된 우선순위
+1. **supplier-code 연결 UI**(근본병목, Code 인계) — 폴링/알림/센터 전체의 시작점
+2. 개선3(정보심화) — 개선1 위 UI, 데이터 의존 없어 병렬 가능
+3. 개선2(알림센터) — supplier-code UI로 데이터 쌓인 후
+4. 개선4(양방향) — 개선2와 연동

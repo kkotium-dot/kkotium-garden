@@ -1538,3 +1538,29 @@ DB 없어 배너렌더까지만 확인.
 
 **남은 개선(설계됨, 미착수)**: 개선2(웹앱 알림센터)·개선3(정보심화)·
 개선4(양방향). disposition 결함2(역import 수동연결 UX, 저우선).
+
+## rev143 — 개선2 착수 중 근본병목 규명: supplier-code 연결 UI 부재 (2026-09-06)
+
+개선2(웹앱 알림센터) 최우선 착수하려 데이터소스 실측 → **전체 의존성
+체인 근본병목 발견**("개선2 독립" 판단을 실측으로 정정, 환각 제거):
+
+- 알림센터 소스 = low_stock_alerts + price_movement_alerts (구조는 완벽,
+  productId·level·triggeredAt·resolvedAt 보유, 신규테이블 불필요) — 그러나
+  **둘 다 0건**.
+- 원인: dome-inventory-poller가 supplier_product_code 있는 상품만 폴링 →
+  발행 6개는 역import라 code없음 → 폴링제외 → 스냅샷·알림 0건.
+- supplier-code 연결 백엔드(api/products/[id]/supplier-code + inventory-
+  mapping.ts) 완비(수동+자동매칭) — **그러나 호출 UI 진입점 0건**=근본병목.
+
+의존성체인: [supplier-code UI 부재] → 결함2(code 미연결) → 폴링제외 →
+알림0건 → 디스코드 재고/가격알림 안감 + 알림센터 빈껍데기 + disposition
+재고추적 죽음.
+
+**정정된 우선순위**:
+1. supplier-code 연결 UI(근본병목·최우선·Code 인계) — 폴링/알림/센터 시작점
+2. 개선3(정보심화) — 개선1 위 UI, 데이터 의존 없어 병렬 가능
+3. 개선2(알림센터) — supplier-code UI로 데이터 쌓인 후
+4. 개선4(양방향) — 개선2 연동
+
+설계·Code인계 상세: docs/design/DISPOSITION_SNAPSHOT_ABSENCE_2026-09-06.md
+§근본병목 규명.
