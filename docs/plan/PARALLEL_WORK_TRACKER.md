@@ -1752,3 +1752,24 @@ DOM실측으로 "토큰 불일치" 확증(육안≠실측).
 
 **전 계열**: UI/UX는 /studio 2단계(Code인계)만 미완. 나머지 대시보드·
 씨앗심기 등 안정. supplier-code 즉시폴링(Code 진행중)·개선2/3/4(데이터후).
+
+## rev152 — supplier-code 즉시폴링 완료·프로덕션 실측(24h지연 해소) (2026-09-07)
+
+**supplier-code 즉시폴링 완료(커밋 045aff8, 병합·배포)**: 연결 후 24h
+크론대기 없이 즉시 재고추적 시작. pollSingleProduct(getInventory1회→스냅샷
+→evaluateAlert+evaluatePriceMovement 전체폴링 동일 #62) + route
+pollBestEffort(연결은 성공, 폴링 best-effort) + UI '재고추적 시작됨·현재고 N'.
+
+**Desktop 프로덕션 실측(Code 미검증분 확증)**:
+- 접이식트렁크(43595104) supplier-code 재연결 → 응답 snapshot{qty:1285,
+  status:판매중} 즉시 반환. DB 스냅샷 13초전 생성 확인(snaps 0→1).
+- UI: /products에서 접이식트렁크 배지 사라짐(trunkFlagged=false), 나머지
+  5개(코드 미연결) 배지 유지 = 전상품공통 조건 정확.
+→ 접이식트렁크 = supplier_code+카테고리+재고추적 전부 온전. 역import
+  데이터결손 복구 완성 사례.
+
+**워크트리 정리**: 4개(병합완료 잔재) → main 하나로 정리.
+
+**전 계열**: 결함A(supplier-code UI+즉시폴링) 완전완성. UCE-10/11·disposition
+결함1·디스코드·결손B(카테고리백필) 완료. 남은: /studio 2단계 토큰정렬
+(Code 진행중)·운영자 supplier_code 수동연결(5개)·개선2/3/4(데이터후).
