@@ -304,3 +304,47 @@ readiness-batch 500 재시도 루프가 원인이었던 환경문제. 코드 버
 2. 개선3(정보심화) — 개선1 위 UI, 데이터 의존 없어 병렬 가능
 3. 개선2(알림센터) — supplier-code UI로 데이터 쌓인 후
 4. 개선4(양방향) — 개선2와 연동
+
+---
+
+## [2026-09-06 #363 전상품 확장체크] supplier-code 연결 후 폴링 24h 지연 발견
+
+결함A(supplier-code UI) 완료 후 "코드 연결→폴링 시작"이 실제 작동하는지
+#363(전상품 확장체크)로 검증하다 **연결 즉시 폴링 안 되는 구조적 지연** 발견.
+
+**실측 근거(교차검증)**:
+- 접이식트렁크: supplier_product_code=43595104 연결됨(updatedAt 9/7 01:05)
+  인데 snaps=0, last_poll=null.
+- cron_invocation_log: /api/cron/inventory-sync 매일 00:51 정상 실행
+  (9/3~9/7 전부 outcome:ok, auth_ok:true). 크론은 정상.
+- 타이밍: 코드연결 01:05 > 그날 크론 00:51 → 14분 차이로 그날 폴링
+  놓침. 다음 자정(9/8 00:51)에야 첫 폴링.
+- 코드 확인: 단일상품 즉시폴링 함수 없음(pollAppRegisteredInventory
+  전체만). supplier-code 연결 라우트가 폴링 트리거 안 함(연결만).
+
+**결함(전상품 공통 #62)**: 코드 연결하는 모든 상품이 **최대 24시간**
+재고추적 시작 안 됨. 그 사이 "재고추적 필요" 배지 그대로 → 운영자
+"연결 안 됐나?" 혼란. supplier-code UI의 마지막 고리가 빠짐.
+
+**개선안(Code 인계)**:
+```
+supplier-code 연결(POST /api/products/[id]/supplier-code) 성공 직후
+해당 상품 1건 즉시 폴링:
+1) dome-inventory-poller.ts에 pollSingleProduct(productId or productNo)
+   추가 — 기존 pollAppRegisteredInventory의 단일 버전(adapter.getInventory
+   ([productNo]) 1회 → 스냅샷 생성 → 알림판정). 전체 폴링 로직 재사용.
+2) supplier-code/route.ts: setSupplierCode 성공 후 pollSingleProduct
+   호출(await, 실패해도 연결은 성공 처리 — 폴링은 best-effort). 응답에
+   snapshot 여부 포함해 UI가 "재고추적 시작됨 · 현재고 N개" 즉시 표시.
+3) UI(SupplierCodeConnect): 성공 응답에 스냅샷 있으면 "재고추적 시작됨 ·
+   현재고 N" , 없으면 "연결됨 · 곧 재고 확인 예정"(도매매 조회 지연 대비).
+검증: 코드연결→즉시 snaps 1건 생성→배지 사라짐(Desktop 프로덕션 실측,
+현재는 24h 대기라 못 봄). 도매매 getInventory 실호출이라 유효 productNo
+필요 — 접이식트렁크 43595104로 검증.
+[중요] 이 개선으로 결함A UI가 비로소 "즉시 피드백" 완성. 지금은 연결해도
+24h 무반응이라 UX 반쪽.
+```
+
+**의존성**: 결함A(supplier-code UI, 완료)의 후속 완성 조각. 개선2/3/4
+(폴링 데이터 의존)의 선행이기도 함 — 즉시폴링 있으면 운영자가 코드
+연결하는 즉시 데이터 쌓여 개선2/3/4 착수 앞당겨짐.
