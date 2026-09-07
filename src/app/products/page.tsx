@@ -334,16 +334,18 @@ function buildProductBadgeItems(p: ScoredProduct, ctx: ProductBadgeCtx): Array<B
       priority: inventoryBadgeRank(ctx.inventory, dispositionInput),
       node: <InventoryBadge inv={ctx.inventory} mode={ctx.mode} product={dispositionInput} />,
     },
-    // 재고추적 연결 필요(근본병목, DISPOSITION_SNAPSHOT_ABSENCE_2026-09-06
-    // §근본병목 규명) — 발행 상품인데 supplier_product_code가 없으면 재고
-    // 폴링 대상에서 아예 빠진다(InventoryBadge도 못 뜬다). 목록에서부터 눈에
-    // 띄어야 드로어를 열어 연결하러 간다. 상세 연결 UI는 SidePanel 쪽에.
-    !ctx.inventory && !p.supplier_product_code && !!p.naverProductId && {
-      key: 'supplierCodeMissing',
+    // ⚠️ 재연동 필요(근본병목 계열, IMPORTED_PRODUCT_DATA_GAPS_2026-09-06 §통합
+    // 제안) — 역import 상품은 초기 import route가 supplier_product_code(재고
+    // 폴링 키)와 naverCategoryCode(카테고리 의존 기능 키) 둘 다 안 채운 채
+    // 들어온 경우가 있다. 결손 필드가 하나라도 있으면 "뭔가 덜 됐다"를 한
+    // 배지로 통합 노출(#62 전상품공통) — 드로어를 열면 필드별 개별 복구
+    // 카드(SupplierCodeConnect/CategoryCodeConnect)가 나온다.
+    !!p.naverProductId && (!ctx.inventory && !p.supplier_product_code || !p.naverCategoryCode) && {
+      key: 'reconnectNeeded',
       priority: BADGE_PRIORITY.stock,
       node: (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#b45309', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 6, padding: '1px 6px', whiteSpace: 'nowrap' }}>
-          <Link2 size={9} /> 재고추적 필요
+          <Link2 size={9} /> 재연동 필요
         </span>
       ),
     },
@@ -768,7 +770,69 @@ function SupplierCodeConnect({ productId, onConnect }: {
   );
 }
 
-function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, onStockSync, onStatusApplied, onConnectSupplierCode }: {
+// 카테고리 백필(결손B, IMPORTED_PRODUCT_DATA_GAPS_2026-09-06 §Code 인계(B)) —
+// 역import 상품은 초기 import route가 naverCategoryCode도 안 채운 채 들어온
+// 경우가 있다(발행 6개 중 5개). 네이버엔 실제 카테고리가 있으므로(발행돼
+// 판매중) getProduct(GET)으로 가져와 채운다. 수동 입력은 없다 — 카테고리
+// 코드는 운영자가 암기할 값이 아니라서(#231), 네이버 GET 실패/무효면 정직하게
+// "수동 확인 필요"만 알리고 억지로 채우지 않는다. SupplierCodeConnect와 같은
+// 자리(재고·배송 섹션)에 병렬 노출 — A/B 둘 다 "역import 결손" 계열(#62).
+function CategoryCodeConnect({ productId, onBackfill }: {
+  productId: string;
+  onBackfill: (id: string) => Promise<{ matched: boolean; code: string | null; error?: string }>;
+}) {
+  const [state, setState] = useState<'idle' | 'trying' | 'done' | 'failed'>('idle');
+  const [code, setCode] = useState<string | null>(null);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  const tryBackfill = async () => {
+    setState('trying'); setErrMsg(null);
+    try {
+      const r = await onBackfill(productId);
+      if (r.matched && r.code) {
+        setCode(r.code);
+        setState('done');
+      } else {
+        setErrMsg(r.error ?? '네이버에서 못 가져옴 — 수동 확인 필요');
+        setState('failed');
+      }
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : '네이버에서 못 가져옴 — 수동 확인 필요');
+      setState('failed');
+    }
+  };
+
+  if (state === 'done') {
+    return (
+      <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#15803d' }}>
+        <CheckCircle2 size={12} /> 카테고리 연결됨 · {code}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg p-2.5" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <AlertTriangle size={11} style={{ color: '#b45309' }} />
+        <span className="text-[11px] font-bold" style={{ color: '#b45309' }}>카테고리 정보 없음</span>
+      </div>
+      <p className="text-[10px] leading-relaxed mb-2" style={{ color: '#92400e' }}>
+        네이버엔 실제 카테고리가 있어요 — 가져오면 카테고리 정합성검사·처분권고가 이 상품에도 작동해요.
+      </p>
+      <button onClick={() => void tryBackfill()} disabled={state === 'trying'}
+        className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-md disabled:opacity-60"
+        style={{ background: '#b45309', color: '#fff' }}>
+        {state === 'trying' ? <Loader2 size={11} className="animate-spin" /> : <Link2 size={11} />}
+        {state === 'trying' ? '가져오는 중...' : '네이버에서 가져오기'}
+      </button>
+      {state === 'failed' && errMsg && (
+        <p className="text-[10px] mt-1.5" style={{ color: '#b91c1c' }}>{errMsg}</p>
+      )}
+    </div>
+  );
+}
+
+function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, onStockSync, onStatusApplied, onConnectSupplierCode, onBackfillCategory }: {
   product: ScoredProduct;
   inventory?: InventoryBadgeData;
   onClose: () => void;
@@ -778,6 +842,7 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
   onStockSync: () => Promise<string>;
   onStatusApplied: () => void;
   onConnectSupplierCode: (id: string, code?: string) => Promise<{ matched: boolean; code: string | null }>;
+  onBackfillCategory: (id: string) => Promise<{ matched: boolean; code: string | null; error?: string }>;
 }) {
   const { _hs: hs } = product;
   const issues = getReadinessIssues(product);
@@ -992,6 +1057,13 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
               ) : !product.supplier_product_code ? (
                 <SupplierCodeConnect productId={product.id} onConnect={onConnectSupplierCode} />
               ) : null}
+              {/* 결손B(카테고리) — 결손A(재고코드)와 같은 "역import 데이터 결손"
+                  계열이라 같은 섹션에 병렬 노출한다(IMPORTED_PRODUCT_DATA_GAPS_
+                  2026-09-06 §통합 제안). isLinked(발행)만 대상 — 미발행 상품은
+                  카테고리 정합성검사 대상이 아니다. */}
+              {isLinked && !product.naverCategoryCode && (
+                <CategoryCodeConnect productId={product.id} onBackfill={onBackfillCategory} />
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: '#888' }}>배송</span>
                 <ShippingBadge product={product} />
@@ -2455,6 +2527,20 @@ function ProductsPageInner() {
     return { matched: !!j.matched, code: j.code ?? null };
   };
 
+  // 카테고리 백필(결손B, IMPORTED_PRODUCT_DATA_GAPS_2026-09-06 §Code 인계(B))
+  // — 네이버 GET(getProduct)으로 실제 leafCategoryId를 가져와 채운다. 라우트가
+  // 무효/실패 시에도 success:true(matched:false)를 돌려 정직 실패를 알리므로
+  // (#231 억지로 안 채움), 여기서는 raw 응답을 그대로 전달만 한다.
+  const handleBackfillCategory = async (id: string): Promise<{ matched: boolean; code: string | null; error?: string }> => {
+    const res = await fetch(`/api/products/${id}/backfill-category`, { method: 'POST' });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j?.success === false) throw new Error(j?.error || `HTTP ${res.status}`);
+    if (j.matched && j.code) {
+      setRawProducts(prev => prev.map(p => p.id === id ? { ...p, naverCategoryCode: j.code } : p));
+    }
+    return { matched: !!j.matched, code: j.code ?? null, error: j.error };
+  };
+
   // 공급사 재고 동기화 (#245) — reuse the existing stock-check sync (bulk over
   // products with a supplier URL). Returns a short result message for a toast.
   const handleStockSync = async (): Promise<string> => {
@@ -3319,7 +3405,7 @@ function ProductsPageInner() {
       {sideProduct && (
         <>
           <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setSide(null)} />
-          <SidePanel product={sideProduct} inventory={inventoryByProductId[sideProduct.id]} onClose={() => setSide(null)} onDelete={deleteProduct} onMutate={handleProductMutate} onReset={handleProductReset} onStockSync={handleStockSync} onStatusApplied={fetchProducts} onConnectSupplierCode={handleConnectSupplierCode} />
+          <SidePanel product={sideProduct} inventory={inventoryByProductId[sideProduct.id]} onClose={() => setSide(null)} onDelete={deleteProduct} onMutate={handleProductMutate} onReset={handleProductReset} onStockSync={handleStockSync} onStatusApplied={fetchProducts} onConnectSupplierCode={handleConnectSupplierCode} onBackfillCategory={handleBackfillCategory} />
         </>
       )}
 
