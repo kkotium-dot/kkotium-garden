@@ -1564,3 +1564,30 @@ DB 없어 배너렌더까지만 확인.
 
 설계·Code인계 상세: docs/design/DISPOSITION_SNAPSHOT_ABSENCE_2026-09-06.md
 §근본병목 규명.
+
+## rev144 — 개선3 데이터의존 확정 + 역import 데이터결손 계열 발견 (2026-09-06)
+
+**개선3(정보심화) 착수→실측→정정**: 개선1 위 UI라 독립인 줄 알았으나
+4개 데이터소스 실측 결과 전부 데이터부재 의존(재고/가격=폴링 스냅샷 0건,
+점수추이=이력테이블 없음, 대체상품=16중1건). supplier-code UI(폴링복구)가
+개선2/3/4 공통 유일 선행. 문서: DISCORD_TO_WEBAPP_EXPANSION §개선3 실측.
+
+**병렬 발굴 — 역import 상품 데이터결손 계열**(문서: IMPORTED_PRODUCT_
+DATA_GAPS_2026-09-06): 발행6개 전수실측 →
+- naverCategoryCode 5/6 공백, supplier/seller_product_code 6/6 공백
+  (originCode·salePrice는 온전). 근본: 초기 import route가 미충전.
+- 방어는 있음(applyNaverStateDefense, PUT전 네이버GET-merge+하드블록 —
+  빈값 덮어쓰기 사고방지) 하나 능동백필 개입점 없음.
+- A(supplier_code=재고폴링, Code 진행중) + B(naverCategoryCode=카테고리
+  기능, Code 인계 대기) 쌍둥이 패턴. "⚠️재연동 필요" 통합 개입점 제안
+  (결손필드 스캔→배지→복구액션, 전상품공통 #62).
+
+**교차검증 성과**: 개선3 "독립" 판단을 실측으로 정정(환각제거). 카테고리
+공백을 "결함"으로 단정않고 방어로직 실재까지 확인(이미 관리됨) 후, 진짜
+공백(능동백필 부재)만 인계.
+
+**정정 우선순위(최종)**:
+1. supplier-code UI(A, Code 진행중) — 재고폴링 복구, 개선2/3/4 선행
+2. naverCategoryCode 백필 UI(B, Code 인계 대기) — 카테고리기능 복구, A와 독립
+3. (통합) "재연동 필요" 단일 개입점으로 A+B 묶기 — UX 일관
+4. 개선2/3/4 — A 완료로 데이터 쌓인 후
