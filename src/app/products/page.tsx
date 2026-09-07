@@ -81,6 +81,10 @@ interface Product {
   /** 'NATIVE' | 'IMPORTED' | 'LINKED' — 네이버 가져오기 상품(IMPORTED)은 원가 정보가
    *  없어 supplierPrice=0으로 저장된다(#334-A2). 마진 표시 분기에 사용. */
   source?: string;
+  /** 도매매 원본 상품번호. null이면 재고 폴링 대상에서 제외된다(근본병목,
+   *  DISPOSITION_SNAPSHOT_ABSENCE_2026-09-06 §근본병목 규명) — 역import
+   *  상품은 이 연결이 애초에 없어 운영자가 수동 연결해야 재고추적이 시작된다. */
+  supplier_product_code?: string | null;
 }
 
 type TabKey = 'all' | 'draft' | 'ready' | 'active' | 'pending' | 'oos' | 'reactivation' | 'revival' | 'lowMargin' | 'drift';
@@ -329,6 +333,19 @@ function buildProductBadgeItems(p: ScoredProduct, ctx: ProductBadgeCtx): Array<B
       key: 'inventory',
       priority: inventoryBadgeRank(ctx.inventory, dispositionInput),
       node: <InventoryBadge inv={ctx.inventory} mode={ctx.mode} product={dispositionInput} />,
+    },
+    // 재고추적 연결 필요(근본병목, DISPOSITION_SNAPSHOT_ABSENCE_2026-09-06
+    // §근본병목 규명) — 발행 상품인데 supplier_product_code가 없으면 재고
+    // 폴링 대상에서 아예 빠진다(InventoryBadge도 못 뜬다). 목록에서부터 눈에
+    // 띄어야 드로어를 열어 연결하러 간다. 상세 연결 UI는 SidePanel 쪽에.
+    !ctx.inventory && !p.supplier_product_code && !!p.naverProductId && {
+      key: 'supplierCodeMissing',
+      priority: BADGE_PRIORITY.stock,
+      node: (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#b45309', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 6, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+          <Link2 size={9} /> 재고추적 필요
+        </span>
+      ),
     },
     p.tuningScore && {
       key: 'tuning',
@@ -658,7 +675,100 @@ function PushTab({ productId, appSalePrice, recommendedTarget, recommendReason, 
   );
 }
 
-function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, onStockSync, onStatusApplied }: {
+// 재고추적 연결(근본병목, DISPOSITION_SNAPSHOT_ABSENCE_2026-09-06 §근본병목
+// 규명) — dome-inventory-poller는 supplier_product_code 있는 상품만 폴링한다.
+// 네이버 역import 상품은 도매매 원본 연결이 애초에 없어(#231) code가 null →
+// 폴링 대상에서 빠져 재고 신호가 영원히 0(disposition은 이를 "판정보류"로
+// 정확히 처리하지만, 재고추적 자체는 죽어있다). 백엔드(api/products/[id]/
+// supplier-code)는 완비돼 있었으나 호출할 UI 진입점이 없었던 게 진짜 병목 —
+// 이 컴포넌트가 그 개입점이다(전 상품 공통 · #62).
+function SupplierCodeConnect({ productId, onConnect }: {
+  productId: string;
+  onConnect: (id: string, code?: string) => Promise<{ matched: boolean; code: string | null }>;
+}) {
+  const [state, setState] = useState<'idle' | 'trying' | 'manual' | 'done' | 'error'>('idle');
+  const [manualCode, setManualCode] = useState('');
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [connectedCode, setConnectedCode] = useState<string | null>(null);
+
+  const tryAuto = async () => {
+    setState('trying'); setErrMsg(null);
+    try {
+      const r = await onConnect(productId);
+      if (r.matched && r.code) {
+        setConnectedCode(r.code);
+        setState('done');
+      } else {
+        setState('manual'); // 자동매칭 실패 — 수동 입력으로 폴백
+      }
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : '연결 실패');
+      setState('error');
+    }
+  };
+
+  const submitManual = async () => {
+    const code = manualCode.trim();
+    if (!code) return;
+    setState('trying'); setErrMsg(null);
+    try {
+      const r = await onConnect(productId, code);
+      setConnectedCode(r.code ?? code);
+      setState('done');
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : '연결 실패');
+      setState('error');
+    }
+  };
+
+  if (state === 'done') {
+    return (
+      <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#15803d' }}>
+        <CheckCircle2 size={12} /> 재고추적 시작됨 · {connectedCode}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg p-2.5" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <AlertTriangle size={11} style={{ color: '#b45309' }} />
+        <span className="text-[11px] font-bold" style={{ color: '#b45309' }}>재고추적 연결 필요</span>
+      </div>
+      <p className="text-[10px] leading-relaxed mb-2" style={{ color: '#92400e' }}>
+        도매매 원본 코드가 없어 재고 폴링 대상에서 빠져 있어요 — 연결하면 다음 폴링부터 재고 신호가 쌓여요.
+      </p>
+      {state === 'manual' ? (
+        <div className="flex items-center gap-1.5">
+          <input
+            value={manualCode}
+            onChange={(e) => setManualCode(e.target.value)}
+            placeholder="도매매 상품번호"
+            className="flex-1 min-w-0 text-xs px-2 py-1.5 rounded-md"
+            style={{ border: '1px solid #FDE68A', background: '#fff' }}
+          />
+          <button onClick={() => void submitManual()} disabled={!manualCode.trim()}
+            className="shrink-0 text-[11px] font-bold px-2.5 py-1.5 rounded-md disabled:opacity-40"
+            style={{ background: '#b45309', color: '#fff' }}>
+            연결
+          </button>
+        </div>
+      ) : (
+        <button onClick={() => void tryAuto()} disabled={state === 'trying'}
+          className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-md disabled:opacity-60"
+          style={{ background: '#b45309', color: '#fff' }}>
+          {state === 'trying' ? <Loader2 size={11} className="animate-spin" /> : <Link2 size={11} />}
+          {state === 'trying' ? '연결 시도 중...' : '도매매 코드 연결'}
+        </button>
+      )}
+      {state === 'error' && errMsg && (
+        <p className="text-[10px] mt-1.5" style={{ color: '#b91c1c' }}>{errMsg}</p>
+      )}
+    </div>
+  );
+}
+
+function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, onStockSync, onStatusApplied, onConnectSupplierCode }: {
   product: ScoredProduct;
   inventory?: InventoryBadgeData;
   onClose: () => void;
@@ -667,6 +777,7 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
   onReset: (id: string) => Promise<boolean>;
   onStockSync: () => Promise<string>;
   onStatusApplied: () => void;
+  onConnectSupplierCode: (id: string, code?: string) => Promise<{ matched: boolean; code: string | null }>;
 }) {
   const { _hs: hs } = product;
   const issues = getReadinessIssues(product);
@@ -865,7 +976,7 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
                   <span className="text-xs font-semibold" style={{ color: '#555' }}>{product.supplierName}</span>
                 </div>
               )}
-              {inventory && (
+              {inventory ? (
                 <div className="flex items-center justify-between">
                   <span className="text-xs" style={{ color: '#888' }}>재고</span>
                   <InventoryBadge
@@ -878,7 +989,9 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
                     }}
                   />
                 </div>
-              )}
+              ) : !product.supplier_product_code ? (
+                <SupplierCodeConnect productId={product.id} onConnect={onConnectSupplierCode} />
+              ) : null}
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: '#888' }}>배송</span>
                 <ShippingBadge product={product} />
@@ -2322,6 +2435,26 @@ function ProductsPageInner() {
     }
   };
 
+  // 재고추적 연결(근본병목, DISPOSITION_SNAPSHOT_ABSENCE_2026-09-06 §근본병목
+  // 규명) — 백엔드(api/products/[id]/supplier-code)는 완비돼 있었으나 호출할
+  // UI가 없어 역import 상품(supplier_product_code null) 6개가 재고 폴링에서
+  // 영구 제외되고 있었다. code 없이 호출하면 crawl_logs 이름일치 자동매칭을
+  // 시도하고, 실패하면(matched:false) SupplierCodeConnect가 수동 입력으로
+  // 폴백한다. 성공하면 로컬 상태를 낙관적으로 갱신해 배지가 즉시 사라진다.
+  const handleConnectSupplierCode = async (id: string, code?: string): Promise<{ matched: boolean; code: string | null }> => {
+    const res = await fetch(`/api/products/${id}/supplier-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(code ? { code } : {}),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j?.success === false) throw new Error(j?.error || `HTTP ${res.status}`);
+    if (j.matched && j.code) {
+      setRawProducts(prev => prev.map(p => p.id === id ? { ...p, supplier_product_code: j.code } : p));
+    }
+    return { matched: !!j.matched, code: j.code ?? null };
+  };
+
   // 공급사 재고 동기화 (#245) — reuse the existing stock-check sync (bulk over
   // products with a supplier URL). Returns a short result message for a toast.
   const handleStockSync = async (): Promise<string> => {
@@ -3186,7 +3319,7 @@ function ProductsPageInner() {
       {sideProduct && (
         <>
           <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setSide(null)} />
-          <SidePanel product={sideProduct} inventory={inventoryByProductId[sideProduct.id]} onClose={() => setSide(null)} onDelete={deleteProduct} onMutate={handleProductMutate} onReset={handleProductReset} onStockSync={handleStockSync} onStatusApplied={fetchProducts} />
+          <SidePanel product={sideProduct} inventory={inventoryByProductId[sideProduct.id]} onClose={() => setSide(null)} onDelete={deleteProduct} onMutate={handleProductMutate} onReset={handleProductReset} onStockSync={handleStockSync} onStatusApplied={fetchProducts} onConnectSupplierCode={handleConnectSupplierCode} />
         </>
       )}
 
