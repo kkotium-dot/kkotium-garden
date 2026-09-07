@@ -1591,3 +1591,26 @@ DATA_GAPS_2026-09-06): 발행6개 전수실측 →
 2. naverCategoryCode 백필 UI(B, Code 인계 대기) — 카테고리기능 복구, A와 독립
 3. (통합) "재연동 필요" 단일 개입점으로 A+B 묶기 — UX 일관
 4. 개선2/3/4 — A 완료로 데이터 쌓인 후
+
+## rev145 — supplier-code UI(결함A) 완료·프로덕션 이중검증 + 결함B 재점검 (2026-09-06)
+
+**supplier-code 연결 UI 완료(커밋 2de0a21, 병합·배포)**: 역import 상품
+재고폴링 근본병목 해소. SupplierCodeConnect(자동매칭→수동폴백→확인) +
+목록 '재고추적 필요' 배지(조건 !inventory && !supplier_product_code &&
+naverProductId, 전상품공통 3조건 AND). 
+- Code 검증: dev DB에서 접이식트렁크 연결→DB영속→배지 6→5 재로드 유지.
+- **Desktop 프로덕션 이중검증**: /products 발행6개 중 정확히 5개 배지 노출
+  (접이식트렁크는 Code가 연결해 빠짐), 조건부노출 정확. uniqueFlagged=5 실측.
+
+**결함B(우산 동음이의) 재점검**: 프로덕션 실측 "우산/장우산/3단우산"→골프
+필드용품 확신오답(needsConfirm=false), 골프우산·자동우산은 정답. 근본:
+"우산" 리프 4곳(골프d4 75점 > 패션d3 61점), d1-conflict 게이트가
+CEILING=40 때문에 top 75점이면 검사 스킵. **단순 점수차 수정은 넥타이
+회귀(Desktop 시뮬 사전차단)** — 넥타이 정답(91)이 유아동(90)과 1점차라
+같이 걸림. 정밀조건(d4완전일치 vs d3브랜치 경쟁 구분 or 동음이의 사전)
+필요, #352 dryRun 선행. 우선순위 중(우산류 한정). 문서: UCE11 §결함B 재점검.
+
+**의존성 갱신**: 결함A(supplier-code) 완료 → 이제 이 배지로 운영자가
+공급코드 연결하면 폴링 시작 → 데이터 쌓이면 개선2/3/4 해금. 
+남은: 결함B(우산, Code 정밀조건) · naverCategoryCode 백필 UI(결함B_import,
+Code 인계 대기) · '재연동필요' 통합개입점 · 개선2/3/4(데이터 후).
