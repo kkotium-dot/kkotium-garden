@@ -84,7 +84,15 @@ import { getAdapter } from '@/lib/sources';
 // strongHeadMatch("컵받침"=="컵받침")는 partial 여부와 무관하게 부스트
 // 유지, 나머지 약한(weak) 위치 일치만 partial일 때 부스트 거부. 스코어링
 // 결과가 바뀌므로 캐시 무효화.
-export const CATEGORY_MATCH_LOGIC_VERSION = 6;
+// v7 (2026-09-06, UCE-11 결함B 재점검): 동음이의 리프 충돌("우산" 등) —
+// top이 다른 d1의 더 넓은 동명 d3 브랜치와 경합하는 진짜 말단(d4) 리프이고
+// 상품명에 top 자신의 d2가 문맥으로 없으면 homonymUnconfirmed로 표시,
+// isDeterministicLowConfidence가 이를 저신뢰로 처리(CONFLICT_CEILING을
+// 우회하지 않던 고득점 확신오답을 잡음). 단순 점수차 임계는 넥타이 회귀를
+// 내므로 금지(Desktop 시뮬 사전확인) — 구조적 신호(top이 진짜 리프인지 vs
+// 경쟁자가 더 넓은 브랜치인지)만 사용. 저신뢰 판정이 바뀌므로(스코어 자체는
+// 안 바뀜) 캐시 무효화.
+export const CATEGORY_MATCH_LOGIC_VERSION = 7;
 
 export type LookupKind = 'dome_code' | 'name_hash';
 // UCE-1 (2026-08-27): 'deterministic' = category-deterministic-matcher.ts

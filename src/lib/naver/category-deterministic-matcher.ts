@@ -82,6 +82,12 @@ export interface DeterministicMatch {
   score: number;
   /** 1=leaf exact, 2=d3-only, 3=reverse-containment fallback, 4=d2-only. */
   tier: MatchTier;
+  /** UCE-11 (결함B, 2026-09-06): true when this candidate is a genuine deep
+   *  leaf (d4) whose entire identity rests on a bare name that ALSO names a
+   *  broader/richer BRANCH under a different d1 elsewhere in the master, and
+   *  nothing else in the product's own text corroborates this candidate's own
+   *  d2 — see homonymUnconfirmed computation in matchDeterministicCategories. */
+  homonymUnconfirmed?: boolean;
 }
 
 const MIN_TERM_LEN = 2; // shorter than this is too generic to trust as a signal
@@ -428,6 +434,46 @@ export function matchDeterministicCategories(
       match.score += 1;
     }
     consider(key, match);
+  }
+
+  // UCE-11 (결함B, 2026-09-06 재점검) — 동음이의 리프 충돌: "우산"이 스포츠/
+  // 레저>골프>골프필드용품>우산(진짜 d4 리프, 75점)과 패션잡화>패션소품>
+  // 우산(더 범용적인 d3 브랜치, 자식 3개, 61점)에 동시 존재해 d4 완전일치가
+  // 이겨버린다. isDeterministicLowConfidence의 d1-conflict 게이트는
+  // CONFLICT_CEILING(40) 때문에 top이 75점이면 검사 자체를 건너뛰어 확신
+  // 오답이 난다(docs/design/UCE11_TOKENIZER_LONGNAME_CANDIDATES_2026-09-04.md
+  // §결함B 재점검).
+  //
+  // 단순 "top-2nd 점수차 ≤N" 임계는 넥타이 회귀(정답 91점이 오답 90점과 1점차
+  // 라 함께 걸림, Desktop 시뮬로 사전확인·금지)를 낸다 — 점수차만으론 "우산"
+  // (top이 오답 d1)과 "넥타이"(top이 이미 정답 d1)를 구분 못 한다.
+  //
+  // 실제 구조적 차이: "우산"의 top(골프)은 d4가 실재하는 **진짜 말단 리프**라
+  // breadth(자식 수)가 정의상 0이고, 진짜 정답(패션)은 **d3 브랜치**(자식
+  // 3개)다. "넥타이"는 반대로 top(패션) 자체가 이미 d3 브랜치(자식 3개)라서
+  // (branchBreadthBonus가 91 vs 90으로 이미 정답을 이기게 해뒀다) 이 검사
+  // 대상에서 아예 제외된다(m.d4 없음 → continue). 즉 "top이 말단 리프인데
+  // 더 넓은 동명 브랜치가 다른 d1에 있다"는 구조만 겨냥 — 하드코딩 사전 없이
+  // 마스터에서 매 호출 시 계산(#55/#62 전상품범용).
+  //
+  // "골프우산"은 top의 matchedTerm이 여전히 "우산"이라 위 rival(패션, breadth
+  // 3)이 그대로 걸리지만, 상품명 자체에 top의 d2("골프")가 문맥으로 등장하면
+  // corroborated로 보고 플래그를 걸지 않는다 — 우연한 동음이의가 아니라
+  // 진짜 그 카테고리를 가리킨다는 증거다(L433의 기존 d2-corroboration
+  // 보너스와 같은 결의 신호를 재사용, 새 사전 없음). "자동우산"은 matchedTerm
+  // 자체가 "자동우산"이라 애초에 같은 이름의 rival이 없어 이 체크와 무관하게
+  // 안전(135점 그대로 압도).
+  const allCandidates = Array.from(byKey.values());
+  const nodeBreadth = (m: DeterministicMatch): number =>
+    m.d4 ? 0 : (D3_CHILD_COUNT.get(`${m.d1}|${m.d2}|${m.d3}`) ?? 0);
+  for (const m of allCandidates) {
+    if (!m.d4) continue; // 말단 리프만 "우연한 이름충돌"의 대상 — 브랜치 매치는 제외
+    const rival = allCandidates.find((o) =>
+      o !== m && o.d1 !== m.d1 && o.matchedTerm === m.matchedTerm && nodeBreadth(o) > 0,
+    );
+    if (!rival) continue;
+    const corroborated = m.d2.length >= MIN_TERM_LEN && haystacks.some((h) => h.includes(m.d2));
+    if (!corroborated) m.homonymUnconfirmed = true;
   }
 
   return Array.from(byKey.values())

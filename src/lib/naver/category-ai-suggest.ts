@@ -37,6 +37,13 @@ export function isDeterministicLowConfidence(matches: DeterministicMatch[]): boo
   // score for "얼음트레이" -> 전기밥솥>내솥/패킹/트레이) pass as "confident"
   // when it was really the weakest possible pass. `<=` closes that gap.
   if (top.score <= DETERMINISTIC_MIN_CONFIDENT_SCORE) return true;
+  // UCE-11 (결함B, 2026-09-06 재점검) — 동음이의 리프 충돌("우산" 등): top이
+  // 진짜 d4 리프인데 그 이름이 다른 d1의 더 넓은 d3 브랜치와도 겹치고, 상품명
+  // 어디에도 top 자신의 d2가 문맥으로 나타나지 않으면 우연한 이름충돌로 보고
+  // 저신뢰 처리한다. CONFLICT_CEILING을 넘는 고득점(75점 등)도 이 체크는
+  // 우회하지 않는다 — 아래 gap 체크와 달리 top.score 크기와 무관한 구조적
+  // 신호이기 때문(계산은 category-deterministic-matcher.ts 참고).
+  if (top.homonymUnconfirmed) return true;
   const second = matches[1];
   if (second && second.d1 !== top.d1 && top.score < DETERMINISTIC_D1_CONFLICT_CEILING) {
     if (top.score - second.score <= DETERMINISTIC_D1_CONFLICT_GAP) return true;

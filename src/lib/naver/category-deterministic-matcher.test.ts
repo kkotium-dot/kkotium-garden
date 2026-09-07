@@ -146,13 +146,17 @@ for (const exp of TIE_BREAK_PAIRS) {
   });
 }
 
-console.log('\n[UCE-11 결함A 수정] "넥타이" 정답전환 / [범위 밖] "우산"은 여전히 별개 원인');
+console.log('\n[UCE-11 결함A 수정] "넥타이" 정답전환 / [결함B 수정] "우산"류 저신뢰 전환');
 check('"넥타이" -> 패션잡화>패션소품 (COMPOUND_NOUNS 등재로 트레일링 "이" 스트리핑 결함 해소)', () => {
   const [top] = matchDeterministicCategories('넥타이', 3);
   assert.equal(top.d1, '패션잡화');
   assert.equal(top.d2, '패션소품');
 });
-check('"우산"은 여전히 스포츠/레저>골프로 매칭 (골프우산이라는 실재 리프와의 정당한 충돌, UCE-11 범위 밖)', () => {
+check('"넥타이"는 확신 유지 (homonymUnconfirmed 미발생 — 결함B 수정이 이미 정답인 top까지 건드리면 안 됨)', () => {
+  const matches = matchDeterministicCategories('넥타이', 3);
+  assert.equal(isDeterministicLowConfidence(matches), false, `넥타이가 저신뢰로 회귀함(top=${JSON.stringify(matches[0])})`);
+});
+check('"우산"은 raw top이 여전히 스포츠/레저>골프(골프우산이라는 실재 리프와의 정당한 충돌)', () => {
   const [top] = matchDeterministicCategories('우산', 3);
   assert.equal(top.d1, '스포츠/레저');
   assert.equal(top.d2, '골프');
@@ -264,5 +268,59 @@ for (const [name, d1, d2] of [
     assert.equal(top.d2, d2);
   });
 }
+
+// ---------------------------------------------------------------------------
+// UCE-11 결함B (2026-09-06 재점검): 동음이의 리프 충돌 — "우산"이 스포츠/
+// 레저>골프>골프필드용품>우산(진짜 d4 리프, 75점, tier1)과 패션잡화>패션소품>
+// 우산(더 범용적인 d3 브랜치, 자식 3개, 61점)에 동시 존재해 top의 d4 완전
+// 일치가 이겨버리고, isDeterministicLowConfidence의 d1-conflict 게이트는
+// CONFLICT_CEILING(40) 때문에 top 75점에서 검사 자체를 건너뛰어 확신 오답이
+// 났다(docs/design/UCE11_TOKENIZER_LONGNAME_CANDIDATES_2026-09-04.md
+// §결함B 재점검). 단순 "top-2nd 점수차 임계"는 넥타이 회귀(정답 91점이
+// 오답 90점과 1점차라 함께 걸림, Desktop 시뮬로 사전차단)를 내므로 금지 —
+// 대신 구조적 신호(homonymUnconfirmed, category-deterministic-matcher.ts)를
+// 쓴다: top이 다른 d1에 더 넓은(자식 多) 동명 d3 브랜치를 둔 진짜 말단
+// 리프(d4)이고, 상품명 어디에도 top 자신의 d2가 문맥으로 없으면 저신뢰.
+// ---------------------------------------------------------------------------
+console.log('\n[UCE-11 결함B 수정] "우산"류 동음이의 리프 충돌 -> 저신뢰 판정 (넥타이 회귀가드 포함)');
+for (const name of ['우산', '장우산', '3단우산']) {
+  check(`"${name}" -> 저신뢰(AI/개입큐로 흘러야 함, 확신 오답 중단)`, () => {
+    const matches = matchDeterministicCategories(name, 3);
+    assert.ok(
+      isDeterministicLowConfidence(matches),
+      `"${name}": 여전히 confident 판정 (top=${JSON.stringify(matches[0])})`,
+    );
+  });
+}
+for (const name of ['자동우산', '골프우산']) {
+  check(`"${name}" -> 확신 유지(정답 리프가 이미 압도적이거나 문맥("골프")으로 corroborated)`, () => {
+    const matches = matchDeterministicCategories(name, 3);
+    assert.equal(
+      isDeterministicLowConfidence(matches), false,
+      `"${name}": 불필요하게 저신뢰로 전환됨(top=${JSON.stringify(matches[0])})`,
+    );
+  });
+}
+check('"자동우산" -> 패션잡화>패션소품 (구체 리프가 정답)', () => {
+  const [top] = matchDeterministicCategories('자동우산', 3);
+  assert.equal(top.d1, '패션잡화');
+  assert.equal(top.d2, '패션소품');
+});
+check('"골프우산" -> 스포츠/레저>골프 (문맥 있는 골프 리프가 정답)', () => {
+  const [top] = matchDeterministicCategories('골프우산', 3);
+  assert.equal(top.d1, '스포츠/레저');
+  assert.equal(top.d2, '골프');
+});
+// 회귀가드 — 목걸이/반지는 "우산"과 무관한 자체 동음이의 리프이지만(패션잡화
+// 주얼리 vs 반려동물/유아동 등) top이 이미 압도적 1위라 결함B 수정과
+// 무관하게 확신 유지돼야 한다.
+check('"목걸이" -> 확신 유지(회귀가드, 결함B 수정과 무관한 자체 압도적 1위)', () => {
+  const matches = matchDeterministicCategories('목걸이', 3);
+  assert.equal(isDeterministicLowConfidence(matches), false);
+});
+check('"반지" -> 확신 유지(회귀가드)', () => {
+  const matches = matchDeterministicCategories('반지', 3);
+  assert.equal(isDeterministicLowConfidence(matches), false);
+});
 
 console.log(`\n${passed}/${passed} passed ✅\n`);
