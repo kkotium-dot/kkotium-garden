@@ -1614,3 +1614,24 @@ CEILING=40 때문에 top 75점이면 검사 스킵. **단순 점수차 수정은
 공급코드 연결하면 폴링 시작 → 데이터 쌓이면 개선2/3/4 해금. 
 남은: 결함B(우산, Code 정밀조건) · naverCategoryCode 백필 UI(결함B_import,
 Code 인계 대기) · '재연동필요' 통합개입점 · 개선2/3/4(데이터 후).
+
+## rev146 — naverCategoryCode 백필 UI(결손B) 완료·병합 + 재연동 통합배지 (2026-09-06)
+
+**결손B 완료(커밋 7f8694c, 병합·push)**: 역import 상품 naverCategoryCode
+공백(발행6개중5) 능동 백필. backfill-category/route.ts(getProduct→
+leafCategoryId /^\d{6,10}$/ 검증→유효시만 write, 실패시 정직 matched:false)
++ CategoryCodeConnect UI('네이버에서 가져오기' 단일버튼) + 통합배지
+'재연동 필요'(A supplier_code OR B category 결손, 전상품공통 #62).
+
+- Code 검증: dev DB 정직실패경로만(sandbox 네이버 credentials 없음). tsc0,
+  surfaceRules 10/10.
+- **성공경로(네이버GET→백필→배지사라짐) 프로덕션 실측 대기**: 배포
+  7f8694c가 아직 READY 안 됨(현재 b395605 서빙). 배포완료 후 백필대상
+  가습기5개 중 1개로 실측 예정(듀얼무선 11431754371 등). ← 다음 세션 인계.
+
+**전상품 확장 체크**: 통합배지 조건 naverProductId && (재고결손 || 카테고리
+결손) 정확. CategoryCodeConnect는 isLinked && !naverCategoryCode 조건부.
+백필 성공 후 배지/카드 사라짐(일관성)은 프로덕션 실측으로 확인 필요.
+
+**미검증(정직)**: 백필 성공경로 프로덕션 브라우저 실측(배포지연). 다음
+세션 우선 재검증 항목.
