@@ -348,3 +348,26 @@ supplier-code 연결(POST /api/products/[id]/supplier-code) 성공 직후
 **의존성**: 결함A(supplier-code UI, 완료)의 후속 완성 조각. 개선2/3/4
 (폴링 데이터 의존)의 선행이기도 함 — 즉시폴링 있으면 운영자가 코드
 연결하는 즉시 데이터 쌓여 개선2/3/4 착수 앞당겨짐.
+
+---
+
+## [2026-09-08 Code 구현완료] pollSingleProduct 즉시폴링 — 코드 3건 반영, 실측 미완
+
+위 개선안 3항목 코드 반영 완료(`tsc --noEmit` 통과):
+1. `src/lib/dome-inventory-poller.ts` — `pollSingleProduct(productNo)` 추가.
+   product를 `supplier_product_code`로 조회 → `adapter.getInventory([productNo])`
+   1회 호출 → InventorySnapshot 생성 → ACTIVE면 `evaluateAlert`+
+   `evaluatePriceMovement` → `updateStockProfile`. 경쟁사 추적(evaluateCompetitor)은
+   제외(별도 API 쿼터 소모, 즉시폴링 목적과 무관 — 정규 6h 크론이 커버).
+2. `src/app/api/products/[id]/supplier-code/route.ts` — 코드 신규 연결(수동
+   또는 자동매칭, `source !== 'already_set'`) 성공 직후 `pollBestEffort`로
+   `pollSingleProduct` 호출(try/catch, 실패해도 연결 응답은 그대로 성공).
+   응답에 `snapshot: { qty, status } | null` 포함.
+3. `src/app/products/page.tsx` `SupplierCodeConnect` — 응답에 snapshot 있으면
+   "재고추적 시작됨 · 현재고 N", 없으면 "연결됨 · {code} · 곧 확인".
+
+**실측 미완(정직 보고)**: 이 워크트리에 `.env`(DATABASE_URL/도매매 키) 없음 —
+로컬에서 실제 DB·Domeggook 호출 불가. "코드연결→즉시 snaps 1건→배지 사라짐"
+검증은 Desktop 프로덕션 환경에서만 가능(접이식트렁크 43595104 등 유효
+productNo 필요). Code 인계 시점 기준 **코드 구현은 완료, 프로덕션 실측은
+아직 미수행** — 다음 세션/Desktop에서 실제 연결 1건으로 확인 필요.

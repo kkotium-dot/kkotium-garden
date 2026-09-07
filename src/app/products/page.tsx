@@ -686,12 +686,13 @@ function PushTab({ productId, appSalePrice, recommendedTarget, recommendReason, 
 // 이 컴포넌트가 그 개입점이다(전 상품 공통 · #62).
 function SupplierCodeConnect({ productId, onConnect }: {
   productId: string;
-  onConnect: (id: string, code?: string) => Promise<{ matched: boolean; code: string | null }>;
+  onConnect: (id: string, code?: string) => Promise<{ matched: boolean; code: string | null; snapshot?: { qty: number; status: string } | null }>;
 }) {
   const [state, setState] = useState<'idle' | 'trying' | 'manual' | 'done' | 'error'>('idle');
   const [manualCode, setManualCode] = useState('');
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [connectedCode, setConnectedCode] = useState<string | null>(null);
+  const [snapshotQty, setSnapshotQty] = useState<number | null>(null);
 
   const tryAuto = async () => {
     setState('trying'); setErrMsg(null);
@@ -699,6 +700,7 @@ function SupplierCodeConnect({ productId, onConnect }: {
       const r = await onConnect(productId);
       if (r.matched && r.code) {
         setConnectedCode(r.code);
+        setSnapshotQty(r.snapshot ? r.snapshot.qty : null);
         setState('done');
       } else {
         setState('manual'); // 자동매칭 실패 — 수동 입력으로 폴백
@@ -716,6 +718,7 @@ function SupplierCodeConnect({ productId, onConnect }: {
     try {
       const r = await onConnect(productId, code);
       setConnectedCode(r.code ?? code);
+      setSnapshotQty(r.snapshot ? r.snapshot.qty : null);
       setState('done');
     } catch (e) {
       setErrMsg(e instanceof Error ? e.message : '연결 실패');
@@ -726,7 +729,10 @@ function SupplierCodeConnect({ productId, onConnect }: {
   if (state === 'done') {
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#15803d' }}>
-        <CheckCircle2 size={12} /> 재고추적 시작됨 · {connectedCode}
+        <CheckCircle2 size={12} />
+        {snapshotQty !== null
+          ? `재고추적 시작됨 · 현재고 ${snapshotQty}`
+          : `연결됨 · ${connectedCode} · 곧 확인`}
       </div>
     );
   }
@@ -2513,7 +2519,7 @@ function ProductsPageInner() {
   // 영구 제외되고 있었다. code 없이 호출하면 crawl_logs 이름일치 자동매칭을
   // 시도하고, 실패하면(matched:false) SupplierCodeConnect가 수동 입력으로
   // 폴백한다. 성공하면 로컬 상태를 낙관적으로 갱신해 배지가 즉시 사라진다.
-  const handleConnectSupplierCode = async (id: string, code?: string): Promise<{ matched: boolean; code: string | null }> => {
+  const handleConnectSupplierCode = async (id: string, code?: string): Promise<{ matched: boolean; code: string | null; snapshot?: { qty: number; status: string } | null }> => {
     const res = await fetch(`/api/products/${id}/supplier-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2524,7 +2530,7 @@ function ProductsPageInner() {
     if (j.matched && j.code) {
       setRawProducts(prev => prev.map(p => p.id === id ? { ...p, supplier_product_code: j.code } : p));
     }
-    return { matched: !!j.matched, code: j.code ?? null };
+    return { matched: !!j.matched, code: j.code ?? null, snapshot: j.snapshot ?? null };
   };
 
   // 카테고리 백필(결손B, IMPORTED_PRODUCT_DATA_GAPS_2026-09-06 §Code 인계(B))

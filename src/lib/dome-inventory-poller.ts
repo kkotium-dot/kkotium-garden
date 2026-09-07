@@ -5,6 +5,9 @@
 //
 // Public API:
 //   - pollAppRegisteredInventory(): one-shot poll for cron entrypoint
+//   - pollSingleProduct(productNo): one-shot poll for a single just-connected
+//     product (see supplier-code route) — same snapshot/alert/profile logic,
+//     skips competitor tracking (separate concern, extra API quota)
 //
 // Logic flow per cron invocation (every 6 hours):
 //   1. Fetch all products with supplier_product_code (= dome productNo mapped)
@@ -242,6 +245,60 @@ export async function pollAppRegisteredInventory(): Promise<PollResult> {
 
   result.durationMs = Date.now() - startedAt;
   return result;
+}
+
+/**
+ * Poll one product immediately (single getInventory call), bypassing the
+ * cron's 6-hour cadence. Used right after a supplier code is connected
+ * (manual or auto-match) so the operator sees a real snapshot instead of
+ * waiting up to 24h for the next cron run (#62, #363).
+ * Returns the fetched snapshot, or null if the product/adapter/snapshot
+ * couldn't be resolved (caller treats this as best-effort).
+ */
+export async function pollSingleProduct(
+  productNo: string,
+): Promise<{ qty: number; status: string } | null> {
+  const product = await prisma.product.findFirst({
+    where: { supplier_product_code: productNo },
+    select: { id: true, name: true, supplierId: true, naverProductId: true },
+  });
+  if (!product) return null;
+
+  const meta: ProductMeta = {
+    id: product.id,
+    productNo,
+    name: product.name,
+    supplierId: product.supplierId,
+    isDraft: !product.naverProductId,
+  };
+
+  const adapter = getAdapter('DMM');
+  if (!adapter) return null;
+
+  const snapshots = await adapter.getInventory([productNo]);
+  const snap = snapshots.find((s) => s.productNo === productNo);
+  if (!snap) return null;
+
+  await prisma.inventorySnapshot.create({
+    data: {
+      productId: meta.id,
+      productNo: snap.productNo,
+      qty: snap.qty,
+      status: snap.status ?? 'unknown',
+      minq: 1,
+      supplierPrice: snap.supplierPrice ?? null,
+      isDraft: meta.isDraft,
+      polledAt: snap.polledAt,
+    },
+  });
+
+  if (!meta.isDraft) {
+    await evaluateAlert(meta, snap);
+    await evaluatePriceMovement(meta, snap);
+  }
+  await updateStockProfile(meta);
+
+  return { qty: snap.qty, status: snap.status ?? 'unknown' };
 }
 
 // ----------------------------------------------------------------------------
