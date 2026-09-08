@@ -740,6 +740,13 @@ function NewProductPageInner() {
     | { kind: 'partial'; d1: string; d2: string }
     | { kind: 'failed'; reason: string }
   >({ kind: 'idle' });
+  // B6 (트리아지 2군): /api/category/suggest already returns multiple
+  // candidates (suggestions[]) but the UI only ever applied suggestions[0].
+  // Keep up to 2 validated candidates so the seller can see and pick the
+  // 2nd-choice category too — chip selection only, never auto-applied.
+  const [categoryCandidates, setCategoryCandidates] = useState<
+    Array<{ d1: string; d2: string; d3: string; d4?: string }>
+  >([]);
   // PC-B-1 P18: capture crawler's domeggook category code so the suggest API
   // can hit the dome_code cache (suggest endpoint L209-218) for an
   // already-mapped NAVER triple. Cache miss falls through to AI/fallback path.
@@ -1215,6 +1222,7 @@ function NewProductPageInner() {
     if (!productName.trim()) return;
     let cancelled = false;
     setCrawlCatStatus({ kind: 'autofilling' });
+    setCategoryCandidates([]);
     // PC-B-1 P18: pass domeCategoryCode so the suggest endpoint can hit its
     // dome_code cache (route.ts L209-218) before falling through to AI/fallback.
     fetch('/api/category/suggest', {
@@ -1237,17 +1245,29 @@ function NewProductPageInner() {
         // dataset — committing such strings to state would leave the combobox
         // visibly empty ("선택"). Pick the first suggestion that resolves
         // to a non-empty getCategoryId; otherwise report failure.
-        const validated = suggestions.find((s) =>
-          s.d1 && s.d2 && s.d3 && !!getCategoryId(s.d1, s.d2, s.d3, s.d4 ?? '')
-        );
-        if (data?.success && validated && validated.d1 && validated.d2 && validated.d3) {
+        // B6: keep ALL validated candidates (not just the first) so the UI can
+        // offer a 1st/2nd-choice chip pair — dedupe by d1/d2/d3 triple.
+        const validCandidates: Array<{ d1: string; d2: string; d3: string; d4?: string }> = [];
+        const seenTriples = new Set<string>();
+        for (const s of suggestions) {
+          if (!s.d1 || !s.d2 || !s.d3 || !getCategoryId(s.d1, s.d2, s.d3, s.d4 ?? '')) continue;
+          const key = `${s.d1}>${s.d2}>${s.d3}`;
+          if (seenTriples.has(key)) continue;
+          seenTriples.add(key);
+          validCandidates.push({ d1: s.d1, d2: s.d2, d3: s.d3, d4: s.d4 });
+          if (validCandidates.length >= 2) break;
+        }
+        const validated = validCandidates[0];
+        if (data?.success && validated) {
           setD1(validated.d1); setD2(validated.d2); setD3(validated.d3);
           if (validated.d4) setD4(validated.d4);
+          setCategoryCandidates(validCandidates);
           setCrawlCatStatus({
             kind: 'autofilled',
             d1: validated.d1, d2: validated.d2, d3: validated.d3,
           });
         } else {
+          setCategoryCandidates([]);
           // G2 Fix C: no fully valid triple, but the server may have returned a
           // d1/d2-only suggestion (d3 blanked because it was a ghost). Auto-fill
           // the major/middle category so the seller only picks the subcategory,
@@ -2777,6 +2797,39 @@ const handleGenerate = async () => {
             </button>
           </div>
         )}
+        {/* B6 (트리아지 2군): /api/category/suggest already returns multiple
+            candidates — surface the 1st/2nd choice as selectable chips instead
+            of silently applying only suggestions[0]. Selecting a chip re-applies
+            D1-D4 and updates the banner text above; never auto-confirms (#353). */}
+        {crawlCatStatus.kind === 'autofilled' && categoryCandidates.length > 1 && (
+          <div style={{ marginTop: -10, marginBottom: 16, padding: '8px 14px 10px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, color: '#888', flexShrink: 0 }}>다른 후보:</span>
+            {categoryCandidates.map((cand, idx) => {
+              const active = crawlCatStatus.kind === 'autofilled'
+                && crawlCatStatus.d1 === cand.d1 && crawlCatStatus.d2 === cand.d2 && crawlCatStatus.d3 === cand.d3;
+              return (
+                <button
+                  key={`${cand.d1}>${cand.d2}>${cand.d3}`}
+                  type="button"
+                  onClick={() => {
+                    setD1(cand.d1); setD2(cand.d2); setD3(cand.d3);
+                    setD4(cand.d4 ?? '');
+                    setCrawlCatStatus({ kind: 'autofilled', d1: cand.d1, d2: cand.d2, d3: cand.d3 });
+                  }}
+                  style={{
+                    fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 999,
+                    border: `1.5px solid ${active ? '#F63B28' : '#E5E5E5'}`,
+                    background: active ? '#FFF0EF' : '#fff',
+                    color: active ? '#F63B28' : '#555555',
+                    cursor: active ? 'default' : 'pointer',
+                  }}
+                >
+                  {idx === 0 ? '1차' : '2차'}&nbsp;{cand.d1} &gt; {cand.d2} &gt; {cand.d3}
+                </button>
+              );
+            })}
+          </div>
+        )}
         {/* Sprint 6-A UI Phase 3 — minq>=2 consignment risk banner. */}
         {/* Senior policy: warn only, do not disable submission (seller autonomy). */}
         {crawlMinQuantity >= 2 && (
@@ -3043,6 +3096,31 @@ const handleGenerate = async () => {
                     </button>
                   )}
                 </div>
+                {/* B5 (트리아지 2군): 실시간 글자수 카운터 — 네이버 권장 25~50자
+                    기준 초록/노랑/빨강. ProductNameDiagnostics의 '글자 수' 체크는
+                    다른 체크들 사이에 묻혀 한눈에 안 들어와서, 입력창 바로 아래에
+                    독립 배지로 노출(순수 UI, 엔진 호출 없음). */}
+                {productName.length > 0 && (() => {
+                  const len = productName.length;
+                  const tone = (len >= 25 && len <= 50)
+                    ? { color: '#16a34a', bg: '#f0fdf4', label: '권장 길이예요' }
+                    : ((len >= 15 && len < 25) || (len > 50 && len <= 65))
+                      ? { color: '#d97706', bg: '#fffbeb', label: len < 25 ? '조금 더 써도 좋아요' : '조금 줄이면 좋아요' }
+                      : { color: '#dc2626', bg: '#fef2f2', label: len < 15 ? '너무 짧아요' : '너무 길어요' };
+                  return (
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 6,
+                      padding: '3px 9px', borderRadius: 999,
+                      background: tone.bg, color: tone.color,
+                      fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      <span>{len}자</span>
+                      <span style={{ opacity: 0.5 }}>·</span>
+                      <span>{tone.label}</span>
+                      <span style={{ opacity: 0.6, fontWeight: 500 }}>(권장 25~50자)</span>
+                    </div>
+                  );
+                })()}
                 {/* NAME-DIAG-1 (#151): unified live 상품명 진단 + 1클릭 수정.
                     ctx = category path + 황금키워드/셀러태그 + brand. Absorbs the
                     old length readout, grade badge, and NameRulesPanel. */}

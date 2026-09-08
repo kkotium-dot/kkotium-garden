@@ -25,6 +25,23 @@ interface Props {
   onApplyFix: (name: string) => void;
 }
 
+// B7 (트리아지 2군, "AI 상품명 다듬기"): 신규 SEO 로직을 추가하지 않고, 기존
+// diagnoseProductName의 각 체크가 이미 제공하는 fixedName(띄어쓰기/중복어/
+// 금칙어/특수문자/키워드포함 등)을 원본 위에 반복 적용해 하나의 "다듬은
+// 후보"로 합성한다. 매 반복마다 엔진을 다시 돌려 이전 수정 결과 위에서
+// 다음 체크를 판정하므로, 개별 체크의 fixedName을 그대로 이어붙이는 것보다
+// 정확하다. 최대 6회로 제한해 무한루프를 막는다(정상 케이스는 2~3회 내 수렴).
+function polishProductName(name: string, ctx: NameDiagnosisContext): string {
+  let current = name;
+  for (let i = 0; i < 6; i++) {
+    const d = diagnoseProductName(current, ctx);
+    const fixable = d.checks.find(c => c.fixedName && c.fixedName !== current);
+    if (!fixable) break;
+    current = fixable.fixedName!;
+  }
+  return current;
+}
+
 const STATUS_ORDER: Record<CheckStatus, number> = { fail: 0, warn: 1, pass: 2 };
 
 const STATUS_STYLE: Record<CheckStatus, { color: string; bg: string; Icon: typeof CheckCircle2 }> = {
@@ -93,6 +110,14 @@ export default function ProductNameDiagnostics({ name, ctx, onApplyFix }: Props)
   const sortedChecks = useMemo(
     () => [...diag.checks].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]),
     [diag.checks],
+  );
+
+  // B7: AI 상품명 다듬기 — 기존 엔진(diagnoseProductName)의 fixedName들을
+  // 반복 합성한 단일 후보. 원본과 같으면(고칠 게 없으면) 노출하지 않는다.
+  const polished = useMemo(
+    () => (debounced.trim() ? polishProductName(debounced, ctx) : debounced),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [debounced, ctxKey],
   );
 
   // NAME-DIAG-2: on-demand keyword-competition (검색량·상품수·경쟁강도). On-demand
@@ -177,6 +202,32 @@ export default function ProductNameDiagnostics({ name, ctx, onApplyFix }: Props)
           </p>
         </div>
       </div>
+
+      {/* B7: AI 상품명 다듬기 — 여러 체크의 fixedName을 합성한 완성형 후보를
+          한 번에 제시. 개별 "이렇게 고치기"와 달리 전체를 한 번에 다듬는다.
+          제시만 하고 적용은 클릭해야만(#353 패턴). */}
+      {polished !== debounced && (
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-neutral)', background: '#FEF7ED' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Wand2 size={13} style={{ color: '#C2410C', flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 800, color: '#1F2937' }}>AI 다듬은 이름 후보</span>
+          </div>
+          <p style={{ fontSize: 12.5, color: 'var(--text-900, #111)', margin: '5px 0 8px', lineHeight: 1.5, wordBreak: 'break-word' }}>
+            {polished}
+          </p>
+          <button
+            type="button"
+            onClick={() => onApplyFix(polished)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '5px 11px', borderRadius: 8, border: '1px solid #C2410C33',
+              background: '#fff', color: '#C2410C', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            <Wand2 size={12} /> 이 이름으로 다듬기
+          </button>
+        </div>
+      )}
 
       {/* Traffic-light checklist (red first) */}
       <ul style={{ listStyle: 'none', margin: 0, padding: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>

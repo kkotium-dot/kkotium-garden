@@ -299,6 +299,10 @@ export function MarginCalculator({
   const [selectedD1, setSelectedD1] = useState('');
   const [showDetail, setShowDetail] = useState(false);
   const [isIndependent, setIsIndependent] = useState(false);
+  // B9 (트리아지 2군): 마진 역산 계산기 — 목표판매가(실제 고객 결제가) 입력 +
+  // 할인율 선택 → 필요 정가(판매가)를 10원단위로 역산. 순수계산(신규 API 없음).
+  const [reverseTarget, setReverseTarget] = useState(0);
+  const [reverseDiscountRate, setReverseDiscountRate] = useState(10);
 
   const prevExtRef = useRef({ extSupplier, extSale, extDiscount, extDiscountUnit, extShipping, extCatPath, extCatCode });
 
@@ -429,6 +433,52 @@ export function MarginCalculator({
     () => MARGIN_LEVELS.find(l => breakdown.marginRate >= l.min) || MARGIN_LEVELS[MARGIN_LEVELS.length - 1],
     [breakdown.marginRate]
   );
+
+  // B9: reverse-calc from a target 실판매가(customer-paid price) — given a
+  // chosen 할인율, back out the 정가(판매가) needed so that after that discount
+  // the customer pays exactly reverseTarget, rounded up to the nearest 10원.
+  // Also reuses the same fee/cost inputs to show the resulting margin so the
+  // seller can confirm it is still profitable before applying (#353 pattern —
+  // candidate only, applied on explicit click).
+  const reverseCalc = useMemo(() => {
+    if (reverseTarget <= 0) return null;
+    const rate = Math.min(Math.max(reverseDiscountRate, 0), 90);
+    const denom = 1 - rate / 100;
+    if (denom <= 0) return null;
+    const requiredListPrice = Math.ceil(reverseTarget / denom / 10) * 10;
+    const discountAmount = requiredListPrice - reverseTarget;
+    const naverFee = Math.round(reverseTarget * effectiveFeeRate);
+    const returnRisk = Math.round(reverseTarget * (local.returnRiskRate / 100));
+    const adCost = Math.round(reverseTarget * (local.adCostRate / 100));
+    const totalCost = local.supplierPrice + naverFee + local.shippingFee + local.packagingCost
+      + returnRisk + adCost + local.returnCareFee + local.reviewRewardCost;
+    const profit = reverseTarget - totalCost;
+    const marginRate = reverseTarget > 0 ? (profit / reverseTarget) * 100 : 0;
+    return {
+      requiredListPrice,
+      discountAmount,
+      profit,
+      marginRate: Math.round(marginRate * 10) / 10,
+    };
+  }, [
+    reverseTarget, reverseDiscountRate, effectiveFeeRate,
+    local.supplierPrice, local.shippingFee, local.packagingCost,
+    local.returnRiskRate, local.adCostRate, local.returnCareFee, local.reviewRewardCost,
+  ]);
+
+  const applyReverseCalc = useCallback(() => {
+    if (!reverseCalc) return;
+    updateLocal({
+      salePrice: reverseCalc.requiredListPrice,
+      discountUnit: 'percent',
+      instantDiscount: reverseDiscountRate,
+    });
+    if (!isIndependent) {
+      onSalePriceChange(reverseCalc.requiredListPrice);
+      onDiscountUnitChange?.('%');
+      onInstantDiscountChange?.(reverseDiscountRate);
+    }
+  }, [reverseCalc, reverseDiscountRate, isIndependent, onSalePriceChange, onDiscountUnitChange, onInstantDiscountChange, updateLocal]);
 
   const handleReset = useCallback(() => {
     setLocal({ ...DEFAULTS });
@@ -917,6 +967,66 @@ export function MarginCalculator({
                 ? `${(recommendedPrice - local.salePrice).toLocaleString()}원 올리면 ${local.targetMargin}% 달성`
                 : `현재 ${breakdown.marginRate.toFixed(1)}% > 목표 ${local.targetMargin}%`}
             </p>
+          )}
+        </div>
+      )}
+
+      {/* B9 (트리아지 2군): 마진 역산 계산기 — "손님이 실제로 낼 가격"을 먼저
+          정하고, 할인율을 고르면 필요한 정가(판매가)를 10원단위로 역산. 위의
+          목표마진율→추천판매가(순방향)와 반대 방향(목표 실판매가→정가+할인율). */}
+      {local.supplierPrice > 0 && (
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 space-y-2">
+          <div className="flex items-center gap-2">
+            <Target className="w-4 h-4 text-gray-600" />
+            <span className="text-xs font-medium text-gray-600">마진 역산 (목표 실판매가 → 정가+할인율)</span>
+          </div>
+          <NumField
+            label="목표 실판매가 (손님이 실제로 낼 금액)"
+            value={reverseTarget}
+            onChange={setReverseTarget}
+          />
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">할인율</label>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[5, 10, 15, 20, 30].map(rate => (
+                <button
+                  key={rate}
+                  type="button"
+                  onClick={() => setReverseDiscountRate(rate)}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-md border transition-colors ${
+                    reverseDiscountRate === rate
+                      ? 'bg-pink-50 text-pink-600 border-pink-300'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-pink-200'
+                  }`}
+                >
+                  {rate}%
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {reverseCalc && (
+            <div className="pt-2 border-t border-gray-200 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">필요 정가 (판매가)</span>
+                <span className="text-base font-bold text-pink-600">{reverseCalc.requiredListPrice.toLocaleString()}원</span>
+              </div>
+              <p className="text-[10px] text-gray-400 text-right">
+                {reverseDiscountRate}% 할인 시 −{reverseCalc.discountAmount.toLocaleString()}원 → 실판매가 {reverseTarget.toLocaleString()}원
+              </p>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-medium ${reverseCalc.marginRate >= 15 ? 'text-green-600' : reverseCalc.marginRate >= 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                  이 조합의 마진율 {reverseCalc.marginRate.toFixed(1)}% ({reverseCalc.profit.toLocaleString()}원)
+                </span>
+                <button
+                  type="button"
+                  onClick={applyReverseCalc}
+                  className="px-3 py-1.5 text-xs font-medium text-white bg-pink-500 hover:bg-pink-600 rounded-lg transition-colors"
+                >
+                  적용
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}
