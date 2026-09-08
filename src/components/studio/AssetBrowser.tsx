@@ -490,7 +490,7 @@ export default function AssetBrowser({ productId, focusStages, focusLabel }: Ass
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3">
+    <div className="bg-white rounded-[16px] border border-gray-200 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-3">
       {/* UX-v2.2 — compact 1-line header (title + count + focus toggle + overflow). */}
       <div className="flex items-center gap-2 mb-2">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold text-gray-800 min-w-0">

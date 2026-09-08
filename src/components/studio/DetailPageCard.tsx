@@ -217,7 +217,7 @@ export function DetailPageCard({
           </div>
           <div
             style={{
-              border: '1.5px solid var(--gp-pink-300)', borderRadius: 12,
+              border: '1px solid #E5E5E5', borderRadius: 16,
               padding: showHtml ? 0 : 8, background: '#FAFAFA',
               maxHeight: 640, overflow: 'auto',
             }}

@@ -70,13 +70,13 @@ export function Card({
             style={{
               flexShrink: 0,
               width: 34, height: 34,
-              borderRadius: 17,
+              borderRadius: 16,
               background: done ? '#15803d' : (accent ?? 'var(--gp-pink-300)'),
               color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 13, fontWeight: 900,
               fontFamily: "'Arial Black', Impact, sans-serif",
-              boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
             }}
             aria-label={done ? strings.workflow.stepDone : `${strings.workflow.stepLabel} ${step}/${totalSteps}`}
           >

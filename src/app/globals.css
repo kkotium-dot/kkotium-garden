@@ -108,8 +108,9 @@ div[class*="bg-gray-50"] {
 /* ── kk-card — white surface, pink border, NO gray ── */
 .kk-card {
   background: #ffffff;
-  border: 1.5px solid #F8DCE5;
-  border-radius: 18px;
+  border: 1px solid #E5E5E5;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
   transition: box-shadow 0.2s ease, transform 0.15s ease;
 }
 .kk-card:hover {
