@@ -3096,6 +3096,31 @@ const handleGenerate = async () => {
                     </button>
                   )}
                 </div>
+                {/* B5 (트리아지 2군): 실시간 글자수 카운터 — 네이버 권장 25~50자
+                    기준 초록/노랑/빨강. ProductNameDiagnostics의 '글자 수' 체크는
+                    다른 체크들 사이에 묻혀 한눈에 안 들어와서, 입력창 바로 아래에
+                    독립 배지로 노출(순수 UI, 엔진 호출 없음). */}
+                {productName.length > 0 && (() => {
+                  const len = productName.length;
+                  const tone = (len >= 25 && len <= 50)
+                    ? { color: '#16a34a', bg: '#f0fdf4', label: '권장 길이예요' }
+                    : ((len >= 15 && len < 25) || (len > 50 && len <= 65))
+                      ? { color: '#d97706', bg: '#fffbeb', label: len < 25 ? '조금 더 써도 좋아요' : '조금 줄이면 좋아요' }
+                      : { color: '#dc2626', bg: '#fef2f2', label: len < 15 ? '너무 짧아요' : '너무 길어요' };
+                  return (
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 6,
+                      padding: '3px 9px', borderRadius: 999,
+                      background: tone.bg, color: tone.color,
+                      fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      <span>{len}자</span>
+                      <span style={{ opacity: 0.5 }}>·</span>
+                      <span>{tone.label}</span>
+                      <span style={{ opacity: 0.6, fontWeight: 500 }}>(권장 25~50자)</span>
+                    </div>
+                  );
+                })()}
                 {/* NAME-DIAG-1 (#151): unified live 상품명 진단 + 1클릭 수정.
                     ctx = category path + 황금키워드/셀러태그 + brand. Absorbs the
                     old length readout, grade badge, and NameRulesPanel. */}
