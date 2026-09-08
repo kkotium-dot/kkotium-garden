@@ -1798,3 +1798,26 @@ pollBestEffort(연결은 성공, 폴링 best-effort) + UI '재고추적 시작�
 - [Code] /studio 2단계 토큰정렬(진행중)
 - [운영자] supplier_code 5개 수동연결(연결즉시 재고추적, 24h대기 해소됨)
 - [대기] 개선2/3/4(알림센터등) — 운영자 코드연결로 데이터 쌓인 후
+
+## rev154 — /studio 2단계 토큰정렬 완료·DOM재측정 + 트리아지 누락점검 + 디스코드확장 현황 (2026-09-07)
+
+**/studio 2단계 완료(커밋 5d83f00, 병합·배포)**: StudioCardShell/kk-card를
+SoT로 radius16·뉴트럴보더·표준그림자 통일. Desktop DOM재측정:
+- kk-card 카드 radius 16px 반영 확인. StudioCardShell radius 17→16.
+- 남은 radius 12px 5개 = **카드 아닌 요소**(대표/추가/상세 이미지
+  플레이스홀더 슬롯·캔버스 컨테이너·까꿍 안내배너) → 16 변환시 부자연,
+  2단계 스코프(outer카드) 밖. Code "outer카드만, 나머지skip" 판단 옳음.
+- 시각 일관·깔끔 확인. **2단계 완료.**
+- 병합주의: 워크트리가 D.누락점검(6218120)보다 뒤처져 트리아지 27줄
+  삭제 diff 있었음 → 코드4파일만 커밋, 트리아지 checkout으로 보존(#354).
+
+**트리아지 누락점검(D)**: 운영자 지적 재실측. 완료=B1/2/3/8/10+크롤UPSERT
+(grep오탐 재확인). 미완=B4~7,9,11~15(2·3·4군 통째). B6(카테고리1·2차
+UI만·최우선)→B5·B9·B7 Code인계 대기.
+
+**디스코드→웹앱 확장 현황(개선1 완료 확인)**: highlightPath 전 알림7종
+(publish/revival/zombie/margin/stock/price/score) 적용, products+
+reactivation 수용. 개선2(알림센터)·3(정보심화)·4(양방향)는 폴링데이터 후.
+
+**전 계열**: /studio 2단계까지 완료. 남은: 트리아지 2·3·4군(Code) +
+운영자 supplier_code 연결 + 개선2/3/4(데이터후).
