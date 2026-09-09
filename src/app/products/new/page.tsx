@@ -1975,7 +1975,11 @@ function NewProductPageInner() {
       if (!opts.silent) {
         toast.success(
           promoted ? '발행 준비 완료 — 모든 필수 항목 통과'
-          : opts.thenStudio ? '저장 완료 · 온실 아틀리에로 이동합니다'
+          // B14(OPERATOR_FEEDBACK_TRIAGE) — 온실 아틀리에는 씨앗심기(현재
+          // 화면)까지 포함하는 상위 영역 이름이라 "온실 아틀리에로 이동"은
+          // 헷갈린다(이미 그 안에 있으므로). 실제 이동하는 하위 화면 이름
+          // "꽃단장 작업실"로 정정.
+          : opts.thenStudio ? '저장 완료 · 꽃단장 작업실로 이동합니다'
           : '저장됨',
         );
       }
@@ -3969,10 +3973,10 @@ const handleGenerate = async () => {
               disabled={draftBusy}
               style={{ marginTop: 16, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px 16px', background: draftBusy ? '#aaa' : '#F63B28', color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 900, cursor: draftBusy ? 'not-allowed' : 'pointer' }}
             >
-              <Sprout size={16} /> 저장 후 온실 아틀리에
+              <Sprout size={16} /> 저장 후 꽃단장 작업실
             </button>
             <p style={{ margin: '8px 2px 0', fontSize: 11.5, color: '#888', textAlign: 'center' }}>
-              대표·추가 이미지를 저장하고 온실 아틀리에에서 상세페이지를 이어서 제작합니다
+              대표·추가 이미지를 저장하고 꽃단장 작업실에서 상세페이지를 이어서 제작합니다
             </p>
             </>)}
 

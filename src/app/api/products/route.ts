@@ -166,6 +166,9 @@ export async function GET(request: NextRequest) {
         // 축적돼 있으므로 삭제가 아니라 판매중지+대체소싱을 권한다.
         salesCount: true,
         supplier_product_code: true,
+        // B12(OPERATOR_FEEDBACK_TRIAGE) — 도매처별 상품번호 구분: 어느
+        // 플랫폼(도매매/오너클랜 등)의 코드인지 목록에서 바로 배지로 보여준다.
+        supplier_platform_code: true,
         // A-2(#334): IMPORTED 상품은 네이버 API가 원가를 안 줘서 supplierPrice=0로
         // 저장된다 — MarginCell이 "0원"을 실제 원가로 오인해 마진%를 지어내지
         // 않도록 source를 함께 내려준다.

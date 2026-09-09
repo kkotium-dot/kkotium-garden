@@ -85,6 +85,8 @@ interface Product {
    *  DISPOSITION_SNAPSHOT_ABSENCE_2026-09-06 §근본병목 규명) — 역import
    *  상품은 이 연결이 애초에 없어 운영자가 수동 연결해야 재고추적이 시작된다. */
   supplier_product_code?: string | null;
+  /** B12 — 위 코드가 어느 도매처(플랫폼)의 것인지. 목록/상세 배지 표시용. */
+  supplier_platform_code?: string | null;
 }
 
 type TabKey = 'all' | 'draft' | 'ready' | 'active' | 'pending' | 'oos' | 'reactivation' | 'revival' | 'lowMargin' | 'drift';
@@ -838,6 +840,12 @@ function SupplierCodeConnect({ productId, onConnect, existingCode }: {
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#15803d' }}>
         <CheckCircle2 size={12} />
+        {platformLabel && (
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+            style={{ background: '#DCFCE7', color: '#15803d', border: '1px solid #86efac' }}>
+            {platformLabel}
+          </span>
+        )}
         {snapshotQty !== null
           ? `재고추적 시작됨 · 현재고 ${snapshotQty}`
           : `연결됨 · ${connectedCode} · 곧 확인`}
@@ -1173,6 +1181,22 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
                 <div className="flex items-center justify-between">
                   <span className="text-xs" style={{ color: '#888' }}>공급사</span>
                   <span className="text-xs font-semibold" style={{ color: '#555' }}>{product.supplierName}</span>
+                </div>
+              )}
+              {/* B12(OPERATOR_FEEDBACK_TRIAGE) — 도매처별 상품번호가 어느
+                  플랫폼(도매매/오너클랜 등) 것인지 배지로 구분 표시. */}
+              {product.supplier_product_code && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: '#888' }}>공급처 코드</span>
+                  <span className="inline-flex items-center gap-1">
+                    {product.supplier_platform_code && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                        style={{ background: '#FFF0F5', color: '#F63B28', border: '1px solid #F8DCE5' }}>
+                        {PLATFORM_LABEL[product.supplier_platform_code] ?? product.supplier_platform_code}
+                      </span>
+                    )}
+                    <span className="text-xs font-semibold" style={{ color: '#555' }}>{product.supplier_product_code}</span>
+                  </span>
                 </div>
               )}
               {inventory ? (

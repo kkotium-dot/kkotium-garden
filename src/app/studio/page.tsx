@@ -20,8 +20,9 @@
 
 import { Children, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { onProductMutated } from '@/lib/events/product-mutated';
-import { Palette, Loader2, Image as ImageIcon, Check, Monitor, Smartphone, Warehouse, FlaskConical, NotebookText } from 'lucide-react';
+import { Palette, Loader2, Image as ImageIcon, Check, Monitor, Smartphone, Warehouse, FlaskConical, NotebookText, ArrowLeft } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import {
   DiagnosisCard,
@@ -601,7 +602,7 @@ function StudioInner() {
       }}>
         <Palette size={22} style={{ color: 'var(--gp-red-500)' }} strokeWidth={2.4} />
       </div>
-      <div>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <h1 className="gp-h1" style={{ margin: 0 }}>
           {strings.page.title}
         </h1>
@@ -609,6 +610,22 @@ function StudioInner() {
           {strings.page.subtitle}
         </p>
       </div>
+      {/* B14(OPERATOR_FEEDBACK_TRIAGE) — 씨앗심기(products/new)에서 "저장 후
+          꽃단장 작업실" CTA로 넘어온 동선의 반대 방향(복귀)이 없었다. 씨앗심기
+          쪽 기본정보를 마저 고쳐야 할 때 다시 찾아가는 길을 헤매지 않도록. */}
+      {selectedProduct && (
+        <Link
+          href={`/products/new?edit=${encodeURIComponent(selectedProduct.id)}`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+            padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+            color: 'var(--gp-red-500)', background: 'var(--gp-pink-50, #FFF5F8)',
+            border: '1px solid var(--gp-red-500)', textDecoration: 'none',
+          }}
+        >
+          <ArrowLeft size={14} /> 씨앗심기로 복귀
+        </Link>
+      )}
     </header>
   );
 

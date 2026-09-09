@@ -247,6 +247,10 @@ function CrawlPageInner() {
   const [sessionWarning, setSessionWarning] = useState<string | null>(null);
   // SEED-SAVE C-3 Step 4 — re-crawl duplicate guard (non-blocking notice).
   const [dupWarn, setDupWarn] = useState<{ productId: string; productName: string } | null>(null);
+  // B4 (OPERATOR_FEEDBACK_TRIAGE) — after "꽃수레에 담기", ask whether to jump
+  // to the cart or keep sourcing so rapid-fire single crawling isn't broken
+  // by an unwanted tab switch every time.
+  const [addedModalOpen, setAddedModalOpen] = useState(false);
   const [supPrice, setSupPrice]   = useState(0);
   const [sellPrice, setSellPrice] = useState(0);
   const [shipFee, setShipFee]     = useState(3000);
@@ -437,10 +441,20 @@ function CrawlPageInner() {
       }
       setSSuccess('꿀통 꽃수레에 담겼습니다!');
       setTimeout(() => setSSuccess(''), 2500);
-      setTab('history');
+      // B4: let the operator choose 꽃수레 이동 vs 계속 담기 instead of forcing
+      // a tab switch — auto-navigating broke the flow of adding several items
+      // in a row.
+      setAddedModalOpen(true);
     } catch (e: unknown) {
       setSError(e instanceof Error ? e.message : '꽃수레에 담는 중 오류가 발생했습니다');
     } finally { setSSaving(false); }
+  };
+
+  // B4: "계속 담기" — clear the single-item form so the next URL can be
+  // crawled immediately, without leaving the 담기 tab.
+  const resetSingleForm = () => {
+    setSUrl(''); setSResult(null); setSError(''); setSSuccess('');
+    setDupWarn(null); setSupPrice(0); setSellPrice(0);
   };
 
   // ── 대량 탭 state ─────────────────────────────────────────────────────────
@@ -2240,6 +2254,38 @@ function CrawlPageInner() {
               <button onClick={() => { const id = deleteTarget.id; setDeleteTarget(null); deleteFromShelf(id); }}
                 style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'10px', background:'#F63B28', border:'none', borderRadius:10, fontSize:13, fontWeight:800, color:'#fff', cursor:'pointer' }}>
                 <Trash2 size={13}/> 삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* B4 (OPERATOR_FEEDBACK_TRIAGE) — 담기 완료 모달: 꽃수레로 이동할지
+          계속 담을지 선택. 몰입 유지를 위해 기본 강조는 "계속 담기". */}
+      {addedModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => { setAddedModalOpen(false); resetSingleForm(); }}
+          style={{ position:'fixed', inset:0, background:'rgba(26,26,26,0.45)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:80, padding:20 }}
+        >
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ width:'100%', maxWidth:380, background:'#fff', borderRadius:16, border:'1.5px solid #F8DCE5', padding:'20px 22px', boxShadow:'0 12px 40px rgba(0,0,0,0.18)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+              <CheckCircle size={18} color="#15803d" />
+              <h3 style={{ margin:0, fontSize:15, fontWeight:900, color:'#1A1A1A' }}>꿀통 꽃수레에 담았어요!</h3>
+            </div>
+            <p style={{ fontSize:12, color:'#7A6873', lineHeight:1.6, margin:'0 0 16px' }}>
+              계속 다른 상품을 담을까요, 지금 꽃수레로 이동할까요?
+            </p>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => { setAddedModalOpen(false); setTab('history'); }}
+                style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'10px', background:'#fff', border:'1.5px solid #F8DCE5', borderRadius:10, fontSize:13, fontWeight:700, color:'#555', cursor:'pointer' }}>
+                <Package size={13}/> 꽃수레로 이동
+              </button>
+              <button onClick={() => { setAddedModalOpen(false); resetSingleForm(); }}
+                style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'10px', background:'#F63B28', border:'none', borderRadius:10, fontSize:13, fontWeight:800, color:'#fff', cursor:'pointer' }}>
+                <Search size={13}/> 계속 담기
               </button>
             </div>
           </div>
