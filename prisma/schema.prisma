@@ -29,9 +29,18 @@ model Platform {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   suppliers   Supplier[]
+  // OWNERCLAN_INTEGRATION_2026-09-09 — password-based auth for platforms whose
+  // API requires re-issuing a short-lived JWT (e.g. OwnerClan), unlike the
+  // cookie-session pattern (supplier_sessions table) used for Domeggook/Domemae.
+  // encryptedPassword is AES-256-GCM ciphertext (src/lib/security/credential-crypto.ts)
+  // — never plaintext. NULL = credentials not yet configured for this platform.
+  loginUsername          String?   @map("login_username") @db.VarChar(200)
+  encryptedPassword      String?   @map("encrypted_password")
+  credentialsUpdatedAt   DateTime? @map("credentials_updated_at")
 
   @@map("platforms")
 }
+
 
 model Supplier {
   id                String            @id @default(cuid())

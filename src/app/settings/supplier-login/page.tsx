@@ -1,10 +1,12 @@
 'use client';
 // /settings/supplier-login
-// Manage login sessions for domemae and domeggook
-// Credentials are used for authenticated crawling (price/stock checks)
+// Manage login sessions for domemae and domeggook (cookie-based) + OwnerClan
+// (password-based, encrypted at rest — see OWNERCLAN_INTEGRATION_2026-09-09)
+// Credentials are used for authenticated crawling (price/stock checks) and,
+// for OwnerClan, for the real GraphQL inventory-sync API.
 
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, LogIn, LogOut, RefreshCw, Lock, Eye, EyeOff, AlertTriangle, KeyRound } from 'lucide-react';
+import { CheckCircle, XCircle, LogIn, LogOut, RefreshCw, Lock, Eye, EyeOff, AlertTriangle, KeyRound, ShieldCheck } from 'lucide-react';
 
 interface SessionStatus {
   platformCode: string;
@@ -20,6 +22,169 @@ const PLATFORM_META: Record<string, { color: string; bg: string; border: string;
 };
 
 const inp = 'w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm text-stone-800 placeholder-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-300 bg-white transition';
+
+// OWNERCLAN_INTEGRATION_2026-09-09 — separate card because the auth model is
+// fundamentally different from the DMM/DMK cookie-session pattern above:
+// OwnerClan needs the password stored (encrypted) server-side so a cron job
+// can silently re-issue a JWT without the operator re-logging in. The UI
+// makes this distinction explicit rather than pretending it's the same flow.
+function OwnerClanCredentialCard() {
+  const [configured, setConfigured] = useState(false);
+  const [loginUsername, setLoginUsername] = useState<string | null>(null);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/platforms/OWC/credentials');
+      const data = await res.json();
+      if (data.success) {
+        setConfigured(data.configured);
+        setLoginUsername(data.loginUsername);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { load(); }, []);
+
+  const handleSave = async () => {
+    if (!username.trim() || !password.trim()) {
+      setMessage({ text: '아이디와 비밀번호를 모두 입력해주세요.', ok: false });
+      return;
+    }
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/platforms/OWC/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setMessage({ text: data.error ?? '저장 실패', ok: false });
+        return;
+      }
+      setPassword('');
+      await load();
+      setMessage({ text: '저장 완료 — 실제 연동 확인 중...', ok: true });
+      setTesting(true);
+      const testRes = await fetch('/api/platforms/OWC/test-auth', { method: 'POST' });
+      const testData = await testRes.json();
+      setTesting(false);
+      if (testData.authOk) {
+        setMessage({ text: '저장 완료 · 오너클랜 인증 확인됨 — 재고추적이 시작됩니다.', ok: true });
+      } else {
+        setMessage({ text: `저장은 됐지만 인증 확인 실패: ${testData.error ?? '아이디/비밀번호를 다시 확인해주세요.'}`, ok: false });
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClear = async () => {
+    await fetch('/api/platforms/OWC/credentials', { method: 'DELETE' });
+    setUsername('');
+    setPassword('');
+    setMessage(null);
+    await load();
+  };
+
+  return (
+    <div className="border rounded-2xl overflow-hidden border-orange-200">
+      <div className="px-5 py-3.5 flex items-center justify-between bg-orange-50">
+        <div>
+          <p className="font-bold text-base text-orange-700">
+            오너클랜 <span className="text-xs font-normal text-gray-400 ml-1">(OWC · GraphQL API)</span>
+          </p>
+          <a href="https://ownerclan.com" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:underline">
+            ownerclan.com
+          </a>
+        </div>
+        <div className="flex items-center gap-2">
+          {loading ? (
+            <span className="text-xs text-gray-400">확인 중...</span>
+          ) : configured ? (
+            <>
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck size={14} className="text-green-500" />
+                <span className="text-xs text-green-700 font-semibold">연동됨</span>
+              </div>
+              {loginUsername && <span className="text-xs text-gray-400">({loginUsername})</span>}
+              <button onClick={handleClear} className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-500 border border-gray-200 hover:border-red-300 px-2.5 py-1 rounded-lg transition">
+                <LogOut size={11} /> 연동 해제
+              </button>
+            </>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <XCircle size={14} className="text-gray-300" />
+              <span className="text-xs text-gray-400">미연동</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="px-5 py-4 space-y-3 bg-white">
+        <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5">
+          <Lock size={13} className="text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-amber-800 leading-relaxed">
+            비밀번호는 암호화되어 서버에 저장됩니다(위 도매매/도매꾹과 달리, 오너클랜은 토큰이
+            자주 만료돼 자동으로 재발급받아야 해서 이 방식이 필요해요). 대표님이 직접 이 화면에
+            입력하시고, Claude는 이 값을 볼 수 없습니다.
+          </p>
+        </div>
+
+        {!configured && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">판매사 아이디</label>
+              <input className={inp} value={username} onChange={e => setUsername(e.target.value)}
+                placeholder="오너클랜 판매사 ID" autoComplete="username" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">비밀번호</label>
+              <div className="relative">
+                <input className={inp + ' pr-10'} type={showPw ? 'text' : 'password'} value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSave()}
+                  placeholder="비밀번호" autoComplete="current-password" />
+                <button type="button" onClick={() => setShowPw(!showPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {message && (
+          <div className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg ${message.ok ? 'text-green-700 bg-green-50' : 'text-red-600 bg-red-50'}`}>
+            {message.ok ? <CheckCircle size={12} /> : <AlertTriangle size={12} />}
+            {message.text}
+          </div>
+        )}
+
+        {!configured && (
+          <button onClick={handleSave} disabled={saving || testing}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition disabled:opacity-50">
+            {saving || testing ? (
+              <><RefreshCw size={13} className="animate-spin" /> {testing ? '연동 확인 중...' : '저장 중...'}</>
+            ) : (
+              <><LogIn size={13} /> 오너클랜 연동하기</>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function SupplierLoginPage() {
   const [sessions, setSessions]   = useState<SessionStatus[]>([]);
@@ -224,6 +389,10 @@ export default function SupplierLoginPage() {
             );
           })
         )}
+
+        {/* OWNERCLAN_INTEGRATION_2026-09-09 — password-based auth, separate
+            card style from the cookie-session cards above. */}
+        <OwnerClanCredentialCard />
 
         {/* Usage guide */}
         <div className="bg-white border border-gray-200 rounded-2xl px-5 py-4 space-y-2">
