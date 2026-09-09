@@ -8,7 +8,7 @@ import {
   Package, Image as ImageIcon, Search, Gift, AlertTriangle, Info, ShieldAlert,
   Palette, Save, Database, Sprout, Download, Upload, RefreshCw,
   FolderTree, Type, Layers, Coins, Store, Hash, Pencil, Trash2,
-  Loader, AlertCircle,
+  Loader, AlertCircle, CreditCard,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 // NAME-DIAG-1 (#151): the legacy product-name-checker readout + NameRulesPanel
@@ -4485,6 +4485,44 @@ const handleGenerate = async () => {
                     <input className={inp} type="number" value={installmentMonths} onChange={e => setInstallmentMonths(e.target.value)} min={0} max={24} />
                   </Field>
                 </div>
+                {/* B-무이자할부 (원본메모): 상품 단가별 무이자할부 안내 —
+                    네이버 스마트스토어센터 공식 문서(diad.co.kr 판매TIP 공지
+                    등)로 "판매자부담 무이자할부는 상품등록/수정 화면에서
+                    설정 가능"함은 교차검증됐으나, "단가별 몇 개월이 최적"이라는
+                    네이버의 공식 기준은 존재하지 않는다(검색 교차검증 결과
+                    확인 불가) — #357 데이터 근거 없는 확정 문구 금지 원칙에
+                    따라 "이렇게 하세요"가 아니라 "일반적으로 이렇게들 합니다"
+                    수준의 참고 안내로만 프레이밍한다. 확정 조언 아님을 명시. */}
+                {(() => {
+                  const priceNum = Number(price) || 0;
+                  const months = Number(installmentMonths) || 0;
+                  if (priceNum <= 0) return null;
+                  let guide: { label: string; note: string } | null = null;
+                  if (priceNum < 50000) {
+                    guide = { label: '5만 원 미만', note: '무이자할부 혜택 대상에서 자주 제외돼요. 일시불 결제 위주 소싱이 무난해요.' };
+                  } else if (priceNum < 100000) {
+                    guide = { label: '5만~10만 원', note: '2~3개월 무이자를 다는 셀러가 많아요. 카드사·수수료는 스마트스토어센터에서 직접 설정·확인하세요.' };
+                  } else {
+                    guide = { label: '10만 원 이상', note: '장기 무이자(최대 6개월)를 안내하는 경우가 흔해요. 실제 적용 여부·수수료는 스마트스토어센터 무이자할부 설정에서 최종 확인하세요.' };
+                  }
+                  return (
+                    <div style={{
+                      marginTop: 8, padding: '10px 14px', borderRadius: 12,
+                      background: '#eff6ff', border: '1px solid #bfdbfe',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <CreditCard size={13} style={{ color: '#1d4ed8' }} />
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#1e40af' }}>
+                          {guide.label} 상품 · 참고 안내 {months > 0 ? `(현재 ${months}개월 설정)` : ''}
+                        </span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: 11, color: '#3b5a99', lineHeight: 1.6 }}>{guide.note}</p>
+                      <p style={{ margin: '4px 0 0', fontSize: 10, color: '#93a5c9' }}>
+                        참고용 일반 관행이며 네이버 공식 권장 개월수가 아니에요 — 정확한 설정은 스마트스토어센터에서 진행하세요.
+                      </p>
+                    </div>
+                  );
+                })()}
                 {/* E-2C: Review reward optimal guide */}
                 {(() => {
                   const txtP = Number(textReviewPoint) || 0;
