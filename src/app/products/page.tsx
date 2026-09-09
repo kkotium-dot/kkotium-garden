@@ -340,7 +340,13 @@ function buildProductBadgeItems(p: ScoredProduct, ctx: ProductBadgeCtx): Array<B
     // 들어온 경우가 있다. 결손 필드가 하나라도 있으면 "뭔가 덜 됐다"를 한
     // 배지로 통합 노출(#62 전상품공통) — 드로어를 열면 필드별 개별 복구
     // 카드(SupplierCodeConnect/CategoryCodeConnect)가 나온다.
-    !!p.naverProductId && (!ctx.inventory && !p.supplier_product_code || !p.naverCategoryCode) && {
+    // MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 §버그수정 — 이전엔 "!p.
+    // supplier_product_code"(코드 문자열 존재 여부)만 봐서, 잘못된 값(URL
+    // 전체)이 저장돼도 "코드 있음"으로 오판해 배지가 사라졌다. 실제 재고추적
+    // 성립 여부(ctx.inventory 유무)만이 정확한 판정 기준 — 코드 유무가 아니라
+    // 재고 신호 유무로 판정해야 URL-저장 오류·오너클랜 미연동 등 모든 "코드는
+    // 있지만 폴링이 안 되는" 사례를 놓치지 않는다(#62 전상품공통).
+    !!p.naverProductId && (!ctx.inventory || !p.naverCategoryCode) && {
       key: 'reconnectNeeded',
       priority: BADGE_PRIORITY.stock,
       node: (
@@ -684,15 +690,95 @@ function PushTab({ productId, appSalePrice, recommendedTarget, recommendReason, 
 // 정확히 처리하지만, 재고추적 자체는 죽어있다). 백엔드(api/products/[id]/
 // supplier-code)는 완비돼 있었으나 호출할 UI 진입점이 없었던 게 진짜 병목 —
 // 이 컴포넌트가 그 개입점이다(전 상품 공통 · #62).
-function SupplierCodeConnect({ productId, onConnect }: {
-  productId: string;
-  onConnect: (id: string, code?: string) => Promise<{ matched: boolean; code: string | null; snapshot?: { qty: number; status: string } | null }>;
+// MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 §드로어 인라인 편집 — "꽃밭 돌보기"
+// 드로어(SidePanel)는 값을 표시만 하고 고칠 방법이 없어, 공급처에서 단가가
+//바뀌어도 별도 편집 페이지(/products/[id]/edit)로 가야만 반영할 수 있었다.
+// 클릭 한 번으로 그 자리에서 값을 고치는 최소 단위 재사용 컴포넌트. 저장은
+// 기존 PATCH 경로(onMutate=handleProductMutate)를 그대로 쓴다(#62 신규
+// 엔드포인트 없음) — sanitizeProductWrite가 스키마 기반 allowlist라
+// supplierPrice 등 스칼라 컬럼은 이미 쓰기 가능.
+function InlineNumberField({ label, value, suffix, placeholder, onSave }: {
+  label: string;
+  value: number;
+  suffix?: string;
+  placeholder?: string;
+  onSave: (n: number) => Promise<boolean>;
 }) {
-  const [state, setState] = useState<'idle' | 'trying' | 'manual' | 'done' | 'error'>('idle');
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value || ''));
+  const [saving, setSaving] = useState(false);
+
+  const commit = async () => {
+    const n = Number(draft.replace(/[^0-9.]/g, ''));
+    if (!Number.isFinite(n) || n < 0) { setEditing(false); setDraft(String(value || '')); return; }
+    setSaving(true);
+    const ok = await onSave(n);
+    setSaving(false);
+    if (ok) setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="flex justify-between items-center text-sm gap-2">
+        <span style={{ color: '#888' }}>{label}</span>
+        <div className="flex items-center gap-1">
+          <input
+            autoFocus
+            type="text"
+            inputMode="numeric"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void commit(); if (e.key === 'Escape') { setEditing(false); setDraft(String(value || '')); } }}
+            className="w-24 text-right text-sm font-semibold px-1.5 py-0.5 rounded"
+            style={{ border: '1px solid #F8DCE5' }}
+          />
+          <button onClick={() => void commit()} disabled={saving}
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded disabled:opacity-50"
+            style={{ background: '#DB2777', color: '#fff' }}>
+            {saving ? <Loader2 size={10} className="animate-spin" /> : '저장'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => { setDraft(String(value || '')); setEditing(true); }}
+      className="w-full flex justify-between text-sm text-left group"
+    >
+      <span style={{ color: '#888' }}>{label}</span>
+      <span className="font-semibold group-hover:underline" style={{ color: value ? '#111827' : '#B08968' }}>
+        {value ? `${value.toLocaleString()}${suffix ?? ''}` : (placeholder ?? '미입력')}
+      </span>
+    </button>
+  );
+}
+
+// MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 — renamed from "도매매 코드 연결":
+// the operator now sources from multiple wholesale platforms (도매매·오너클랜
+// 등), so a platform-specific label was inaccurate. Input also now accepts a
+// full product-page URL directly (parsed server-side via
+// parse-supplier-code.ts) — the operator's natural action is "copy the
+// product page link", not "find and extract just the number".
+const PLATFORM_LABEL: Record<string, string> = { DMM: '도매매', OWC: '오너클랜' };
+
+function SupplierCodeConnect({ productId, onConnect, existingCode }: {
+  productId: string;
+  onConnect: (id: string, code?: string) => Promise<{ matched: boolean; code: string | null; platformCode?: string | null; snapshot?: { qty: number; status: string } | null; pollNote?: string | null }>;
+  /** 이미 저장된 코드(잘못 저장됐을 수 있는 값 포함) — 있으면 "정정" 모드로 시작. */
+  existingCode?: string | null;
+}) {
+  // existingCode가 URL처럼 보이면(과거 버그로 링크 전체가 저장된 경우) 바로
+  // 수동 정정 입력을 열어준다 — "자동 연결 시도"부터 다시 거칠 필요 없음.
+  const looksBroken = !!existingCode && /^https?:\/\//i.test(existingCode);
+  const [state, setState] = useState<'idle' | 'trying' | 'manual' | 'done' | 'error'>(looksBroken ? 'manual' : 'idle');
   const [manualCode, setManualCode] = useState('');
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [connectedCode, setConnectedCode] = useState<string | null>(null);
+  const [connectedPlatform, setConnectedPlatform] = useState<string | null>(null);
   const [snapshotQty, setSnapshotQty] = useState<number | null>(null);
+  const [pollNote, setPollNote] = useState<string | null>(null);
 
   const tryAuto = async () => {
     setState('trying'); setErrMsg(null);
@@ -700,7 +786,9 @@ function SupplierCodeConnect({ productId, onConnect }: {
       const r = await onConnect(productId);
       if (r.matched && r.code) {
         setConnectedCode(r.code);
+        setConnectedPlatform(r.platformCode ?? null);
         setSnapshotQty(r.snapshot ? r.snapshot.qty : null);
+        setPollNote(r.pollNote ?? null);
         setState('done');
       } else {
         setState('manual'); // 자동매칭 실패 — 수동 입력으로 폴백
@@ -718,15 +806,35 @@ function SupplierCodeConnect({ productId, onConnect }: {
     try {
       const r = await onConnect(productId, code);
       setConnectedCode(r.code ?? code);
+      setConnectedPlatform(r.platformCode ?? null);
       setSnapshotQty(r.snapshot ? r.snapshot.qty : null);
+      setPollNote(r.pollNote ?? null);
       setState('done');
     } catch (e) {
+      // 422(파싱실패) 등 서버가 준 안내문을 그대로 노출(#231) — 링크를
+      // 못 알아봤을 때 "무슨 코드인지 모르겠다"는 정직한 사유가 뜬다.
       setErrMsg(e instanceof Error ? e.message : '연결 실패');
-      setState('error');
+      setState('manual');
     }
   };
 
   if (state === 'done') {
+    const platformLabel = connectedPlatform ? PLATFORM_LABEL[connectedPlatform] ?? connectedPlatform : null;
+    if (pollNote === 'PLATFORM_NOT_WIRED') {
+      // 코드는 정확히 저장됐지만, 그 플랫폼의 실제 재고 연동이 아직 준비중
+      // (예: 오너클랜 API 인증정보 미확보) — 억지로 성공처럼 보이지 않는다.
+      return (
+        <div className="rounded-lg p-2.5" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+          <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#1D4ED8' }}>
+            <CheckCircle2 size={12} />
+            {platformLabel ?? '상품'} 코드 저장됨 · {connectedCode}
+          </div>
+          <p className="text-[10px] leading-relaxed mt-1" style={{ color: '#1e3a8a' }}>
+            {platformLabel ?? '이 플랫폼'} 재고 자동연동은 아직 준비중이에요 — API 연동이 완료되면 이 코드로 바로 추적이 시작돼요.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#15803d' }}>
         <CheckCircle2 size={12} />
@@ -741,17 +849,21 @@ function SupplierCodeConnect({ productId, onConnect }: {
     <div className="rounded-lg p-2.5" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
       <div className="flex items-center gap-1.5 mb-1.5">
         <AlertTriangle size={11} style={{ color: '#b45309' }} />
-        <span className="text-[11px] font-bold" style={{ color: '#b45309' }}>재고추적 연결 필요</span>
+        <span className="text-[11px] font-bold" style={{ color: '#b45309' }}>
+          {looksBroken ? '저장된 링크를 알아보지 못했어요 · 정정 필요' : '재고추적 연결 필요'}
+        </span>
       </div>
       <p className="text-[10px] leading-relaxed mb-2" style={{ color: '#92400e' }}>
-        도매매 원본 코드가 없어 재고 폴링 대상에서 빠져 있어요 — 연결하면 다음 폴링부터 재고 신호가 쌓여요.
+        {looksBroken
+          ? '상품 페이지 링크가 그대로 저장돼 있어 재고를 못 가져왔어요 — 아래에 다시 붙여넣으면 자동으로 코드만 뽑아 저장해요.'
+          : '공급처 원본 코드가 없어 재고 폴링 대상에서 빠져 있어요 — 연결하면 다음 폴링부터 재고 신호가 쌓여요.'}
       </p>
       {state === 'manual' ? (
         <div className="flex items-center gap-1.5">
           <input
             value={manualCode}
             onChange={(e) => setManualCode(e.target.value)}
-            placeholder="도매매 상품번호"
+            placeholder="상품 페이지 링크 또는 상품번호"
             className="flex-1 min-w-0 text-xs px-2 py-1.5 rounded-md"
             style={{ border: '1px solid #FDE68A', background: '#fff' }}
           />
@@ -766,10 +878,10 @@ function SupplierCodeConnect({ productId, onConnect }: {
           className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-md disabled:opacity-60"
           style={{ background: '#b45309', color: '#fff' }}>
           {state === 'trying' ? <Loader2 size={11} className="animate-spin" /> : <Link2 size={11} />}
-          {state === 'trying' ? '연결 시도 중...' : '도매매 코드 연결'}
+          {state === 'trying' ? '연결 시도 중...' : '상품 코드 연결'}
         </button>
       )}
-      {state === 'error' && errMsg && (
+      {(state === 'error' || state === 'manual') && errMsg && (
         <p className="text-[10px] mt-1.5" style={{ color: '#b91c1c' }}>{errMsg}</p>
       )}
     </div>
@@ -847,7 +959,7 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
   onReset: (id: string) => Promise<boolean>;
   onStockSync: () => Promise<string>;
   onStatusApplied: () => void;
-  onConnectSupplierCode: (id: string, code?: string) => Promise<{ matched: boolean; code: string | null }>;
+  onConnectSupplierCode: (id: string, code?: string) => Promise<{ matched: boolean; code: string | null; platformCode?: string | null; snapshot?: { qty: number; status: string } | null; pollNote?: string | null }>;
   onBackfillCategory: (id: string) => Promise<{ matched: boolean; code: string | null; error?: string }>;
 }) {
   const { _hs: hs } = product;
@@ -1011,30 +1123,46 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
                   보여주는 대신 공급가 입력 전까지는 정직하게 "계산 불가"로 표시. */}
               {product.source === 'IMPORTED' && product.supplierPrice === 0 ? (
                 <>
-                  <div className="flex justify-between text-sm">
-                    <span style={{ color: '#888' }}>도매가 (공급가)</span>
-                    <span className="font-semibold" style={{ color: '#B08968' }}>미입력</span>
-                  </div>
+                  {/* MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 — 이 드로어(꽃밭
+                      돌보기)엔 편집 UI가 없어 별도 편집 페이지로 가야만 공급가를
+                      채울 수 있었다. 변동 가능성이 큰 값(오너클랜/도매매에서
+                      단가가 바뀔 때)을 보는 자리에서 바로 고칠 수 있게 인라인
+                      편집을 둔다 — /products/[id]/edit의 ProductBasicForm과
+                      같은 PATCH 경로(handleProductMutate)를 재사용(#62). */}
+                  <InlineNumberField
+                    label="도매가 (공급가)"
+                    value={product.supplierPrice}
+                    placeholder="미입력"
+                    suffix="원"
+                    onSave={(n) => onMutate(product.id, { supplierPrice: n })}
+                  />
                   <div className="flex justify-between text-sm">
                     <span style={{ color: '#888' }}>판매가</span>
                     <span className="font-semibold text-gray-800">{product.salePrice.toLocaleString()}원</span>
                   </div>
                   <p className="text-xs rounded-lg px-2 py-1.5" style={{ background: '#FFF7ED', color: '#B08968' }}>
-                    공급가 미입력 — 마진 계산 불가 (네이버 가져오기는 원가 정보가 없어요)
+                    공급가 미입력 — 마진 계산 불가 (네이버 가져오기는 원가 정보가 없어요). 공급처에서 확인한 도매가를 입력하면 바로 계산돼요.
                   </p>
                 </>
               ) : (
-                ([
-                  ['도매가 (공급가)', `${product.supplierPrice.toLocaleString()}원`, false],
-                  ['판매가', `${product.salePrice.toLocaleString()}원`, false],
-                  ['마진율', `${hs.marginRate.toFixed(1)}%`, false],
-                  ['순마진율', `${hs.netMarginRate.toFixed(1)}%`, hs.netMarginRate < 5],
-                ] as [string, string, boolean][]).map(([k, v, danger]) => (
-                  <div key={k} className="flex justify-between text-sm">
-                    <span style={{ color: '#888' }}>{k}</span>
-                    <span className={`font-semibold ${danger ? 'text-red-600' : 'text-gray-800'}`}>{v}</span>
-                  </div>
-                ))
+                <>
+                  <InlineNumberField
+                    label="도매가 (공급가)"
+                    value={product.supplierPrice}
+                    suffix="원"
+                    onSave={(n) => onMutate(product.id, { supplierPrice: n })}
+                  />
+                  {([
+                    ['판매가', `${product.salePrice.toLocaleString()}원`, false],
+                    ['마진율', `${hs.marginRate.toFixed(1)}%`, false],
+                    ['순마진율', `${hs.netMarginRate.toFixed(1)}%`, hs.netMarginRate < 5],
+                  ] as [string, string, boolean][]).map(([k, v, danger]) => (
+                    <div key={k} className="flex justify-between text-sm">
+                      <span style={{ color: '#888' }}>{k}</span>
+                      <span className={`font-semibold ${danger ? 'text-red-600' : 'text-gray-800'}`}>{v}</span>
+                    </div>
+                  ))}
+                </>
               )}
             </div>
 
@@ -1060,9 +1188,18 @@ function SidePanel({ product, inventory, onClose, onDelete, onMutate, onReset, o
                     }}
                   />
                 </div>
-              ) : !product.supplier_product_code ? (
-                <SupplierCodeConnect productId={product.id} onConnect={onConnectSupplierCode} />
-              ) : null}
+              ) : (
+                // MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 — 코드가 이미 있어도
+                // 스냅샷(inventory)이 없으면(URL이 잘못 저장됐거나, 플랫폼
+                // 재고연동이 아직 준비중인 경우) 계속 노출해 정정할 수 있게
+                // 한다. 예전엔 "코드 있음=끝"으로 보고 숨겨서, 잘못 저장된
+                // 값을 고칠 방법이 UI에 아예 없었다(이번 세션 실측 결함).
+                <SupplierCodeConnect
+                  productId={product.id}
+                  onConnect={onConnectSupplierCode}
+                  existingCode={product.supplier_product_code ?? null}
+                />
+              )}
               {/* 결손B(카테고리) — 결손A(재고코드)와 같은 "역import 데이터 결손"
                   계열이라 같은 섹션에 병렬 노출한다(IMPORTED_PRODUCT_DATA_GAPS_
                   2026-09-06 §통합 제안). isLinked(발행)만 대상 — 미발행 상품은
@@ -2519,18 +2656,21 @@ function ProductsPageInner() {
   // 영구 제외되고 있었다. code 없이 호출하면 crawl_logs 이름일치 자동매칭을
   // 시도하고, 실패하면(matched:false) SupplierCodeConnect가 수동 입력으로
   // 폴백한다. 성공하면 로컬 상태를 낙관적으로 갱신해 배지가 즉시 사라진다.
-  const handleConnectSupplierCode = async (id: string, code?: string): Promise<{ matched: boolean; code: string | null; snapshot?: { qty: number; status: string } | null }> => {
+  const handleConnectSupplierCode = async (id: string, code?: string): Promise<{ matched: boolean; code: string | null; platformCode?: string | null; snapshot?: { qty: number; status: string } | null; pollNote?: string | null }> => {
     const res = await fetch(`/api/products/${id}/supplier-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(code ? { code } : {}),
     });
     const j = await res.json().catch(() => ({}));
+    // MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 — a parse failure (422, code
+    // unrecognized) is a distinct case from a server error: surface the
+    // operator-facing message as-is instead of a generic "HTTP 422".
     if (!res.ok || j?.success === false) throw new Error(j?.error || `HTTP ${res.status}`);
     if (j.matched && j.code) {
       setRawProducts(prev => prev.map(p => p.id === id ? { ...p, supplier_product_code: j.code } : p));
     }
-    return { matched: !!j.matched, code: j.code ?? null, snapshot: j.snapshot ?? null };
+    return { matched: !!j.matched, code: j.code ?? null, platformCode: j.platformCode ?? null, snapshot: j.snapshot ?? null, pollNote: j.pollNote ?? null };
   };
 
   // 카테고리 백필(결손B, IMPORTED_PRODUCT_DATA_GAPS_2026-09-06 §Code 인계(B))

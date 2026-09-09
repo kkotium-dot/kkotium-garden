@@ -85,6 +85,10 @@ interface ProductMeta {
   name: string;
   supplierId: string;
   isDraft: boolean; // true = DRAFT (alert disabled), false = ACTIVE
+  // MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 — which sourcing platform
+  // productNo belongs to (platforms.code). NULL/legacy rows default to DMM
+  // for backward compat (pre-migration rows never had a second platform).
+  platformCode: string;
 }
 
 // ----------------------------------------------------------------------------
@@ -125,35 +129,52 @@ export async function pollAppRegisteredInventory(): Promise<PollResult> {
     return result;
   }
 
-  // Step 2: Get adapter (DMM only for Sprint 6-A; multi-platform comes in Sprint 6.5+)
-  const adapter = getAdapter('DMM');
-  if (!adapter) {
-    result.errors.push('DMM adapter not registered');
-    result.durationMs = Date.now() - startedAt;
-    return result;
+  // Step 2-3: MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 — group products by
+  // their sourcing platform (DMM/OWC/...) and poll each group through its
+  // own adapter. Previously hard-coded to getAdapter('DMM'), which silently
+  // skipped every non-Domeggook product (e.g. OwnerClan-sourced items never
+  // got polled at all, with no error surfaced). Any platform whose adapter
+  // is a stub (throws NotImplemented) degrades to per-product error
+  // snapshots for that group only — other platforms keep polling normally.
+  const byPlatform = new Map<string, ProductMeta[]>();
+  for (const p of products) {
+    const arr = byPlatform.get(p.platformCode) ?? [];
+    arr.push(p);
+    byPlatform.set(p.platformCode, arr);
   }
 
-  // Step 3: Chunk and poll
-  const productNos = products.map((p) => p.productNo);
-  const chunks = chunkArray(productNos, CHUNK_SIZE);
   const allSnapshots: AdapterSnapshot[] = [];
 
-  for (const chunk of chunks) {
-    try {
-      const snapshots = await adapter.getInventory(chunk);
-      allSnapshots.push(...snapshots);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      result.errors.push(`Chunk poll failed: ${msg}`);
-      // Push placeholder snapshots so we don't lose track
-      for (const no of chunk) {
-        allSnapshots.push({
-          productNo: no,
-          qty: -1,
-          status: 'error',
-          supplierPrice: null,
-          polledAt: new Date(),
-        });
+  for (const [platformCode, group] of byPlatform) {
+    const adapter = getAdapter(platformCode);
+    if (!adapter) {
+      result.errors.push(`${platformCode} adapter not registered`);
+      for (const p of group) {
+        allSnapshots.push({ productNo: p.productNo, qty: -1, status: 'error', supplierPrice: null, polledAt: new Date() });
+      }
+      continue;
+    }
+
+    const productNos = group.map((p) => p.productNo);
+    const chunks = chunkArray(productNos, CHUNK_SIZE);
+
+    for (const chunk of chunks) {
+      try {
+        const snapshots = await adapter.getInventory(chunk);
+        allSnapshots.push(...snapshots);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        result.errors.push(`[${platformCode}] Chunk poll failed: ${msg}`);
+        // Push placeholder snapshots so we don't lose track
+        for (const no of chunk) {
+          allSnapshots.push({
+            productNo: no,
+            qty: -1,
+            status: 'error',
+            supplierPrice: null,
+            polledAt: new Date(),
+          });
+        }
       }
     }
   }
@@ -219,11 +240,17 @@ export async function pollAppRegisteredInventory(): Promise<PollResult> {
 
     // Sprint 6-C: competitor tracking on the same product (single search call).
     // Uses adapter.searchItems internally — separate API quota from getItemView.
+    // MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 — adapter must match this
+    // product's own platform (meta.platformCode), not a single outer-scope
+    // adapter left over from the old DMM-only loop.
     try {
-      const compEval = await evaluateCompetitor(adapter, meta, snap.supplierPrice ?? null);
-      if (compEval.snapshotSaved) {
-        result.competitorSnapshotsSaved += 1;
-        if (compEval.error) result.competitorErrors += 1;
+      const competitorAdapter = getAdapter(meta.platformCode);
+      if (competitorAdapter) {
+        const compEval = await evaluateCompetitor(competitorAdapter, meta, snap.supplierPrice ?? null);
+        if (compEval.snapshotSaved) {
+          result.competitorSnapshotsSaved += 1;
+          if (compEval.error) result.competitorErrors += 1;
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -260,19 +287,26 @@ export async function pollSingleProduct(
 ): Promise<{ qty: number; status: string } | null> {
   const product = await prisma.product.findFirst({
     where: { supplier_product_code: productNo },
-    select: { id: true, name: true, supplierId: true, naverProductId: true },
+    select: { id: true, name: true, supplierId: true, naverProductId: true, supplier_platform_code: true },
   });
   if (!product) return null;
 
+  const platformCode = product.supplier_platform_code ?? 'DMM';
   const meta: ProductMeta = {
     id: product.id,
     productNo,
     name: product.name,
     supplierId: product.supplierId,
     isDraft: !product.naverProductId,
+    platformCode,
   };
 
-  const adapter = getAdapter('DMM');
+  // MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 — resolve the adapter that
+  // actually matches this product's platform, not a hard-coded DMM. A
+  // registered-but-stub adapter (e.g. OwnerClan pre-API-key) throws
+  // NotImplemented, which we surface honestly rather than silently
+  // returning null as if nothing happened.
+  const adapter = getAdapter(platformCode);
   if (!adapter) return null;
 
   const snapshots = await adapter.getInventory([productNo]);
@@ -320,6 +354,7 @@ async function loadProductsToPoll(): Promise<ProductMeta[]> {
       supplierId: true,
       naverProductId: true,
       supplier_product_code: true,
+      supplier_platform_code: true,
     },
   });
 
@@ -331,6 +366,9 @@ async function loadProductsToPoll(): Promise<ProductMeta[]> {
       name: r.name,
       supplierId: r.supplierId,
       isDraft: !r.naverProductId,
+      // Legacy rows (pre supplier_platform_code migration) default to DMM —
+      // every code stored before 2026-09-09 came from the Domeggook crawl flow.
+      platformCode: r.supplier_platform_code ?? 'DMM',
     }));
 }
 

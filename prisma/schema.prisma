@@ -215,6 +215,10 @@ model Product {
   sellerProductCode       String?           @unique
   seller_product_code     String?           @unique @db.VarChar(100)
   supplier_product_code   String?           @db.VarChar(100)
+  // MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 — which platform (platforms.code,
+  // e.g. DMM/OWC) supplier_product_code belongs to. NULL = legacy row, treated
+  // as DMM for backward compat (dome-inventory-poller.ts resolveAdapterForProduct).
+  supplier_platform_code  String?           @db.VarChar(10)
   category_id             String?
   origin_id               String?
   importer_name           String?           @db.VarChar(100)

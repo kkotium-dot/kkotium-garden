@@ -16,16 +16,31 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { attemptAutoMapSupplierCode, setSupplierCode } from '@/lib/inventory-mapping';
+import { attemptAutoMapSupplierCode, setSupplierCode, SupplierCodeParseError } from '@/lib/inventory-mapping';
 import { pollSingleProduct } from '@/lib/dome-inventory-poller';
+import { SourceAdapterError } from '@/lib/sources';
 
 export const dynamic = 'force-dynamic';
 
-async function pollBestEffort(productNo: string): Promise<{ qty: number; status: string } | null> {
+interface PollOutcome {
+  snapshot: { qty: number; status: string } | null;
+  /** Honest reason the snapshot is null, when the code write itself succeeded. */
+  pollNote: string | null;
+}
+
+// MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 — poll failure must not look
+// identical to poll success-with-no-data. A stub adapter (e.g. OwnerClan pre
+// API-key) throws NotImplemented; we surface that as an honest note instead
+// of silently returning snapshot:null like every other failure mode (#231).
+async function pollBestEffort(productNo: string): Promise<PollOutcome> {
   try {
-    return await pollSingleProduct(productNo);
-  } catch {
-    return null;
+    const snapshot = await pollSingleProduct(productNo);
+    return { snapshot, pollNote: null };
+  } catch (e) {
+    if (e instanceof SourceAdapterError && e.kind === 'NotImplemented') {
+      return { snapshot: null, pollNote: 'PLATFORM_NOT_WIRED' };
+    }
+    return { snapshot: null, pollNote: null };
   }
 }
 
@@ -35,19 +50,35 @@ export async function POST(
 ) {
   try {
     const body = await request.json().catch(() => ({}));
-    const manualCode = typeof body?.code === 'string' ? body.code.trim() : '';
+    const manualInput = typeof body?.code === 'string' ? body.code.trim() : '';
 
-    if (manualCode) {
-      await setSupplierCode(params.id, manualCode);
-      const snapshot = await pollBestEffort(manualCode);
-      return NextResponse.json({ success: true, matched: true, code: manualCode, source: 'manual', snapshot });
+    if (manualInput) {
+      let attach;
+      try {
+        attach = await setSupplierCode(params.id, manualInput);
+      } catch (e) {
+        if (e instanceof SupplierCodeParseError) {
+          return NextResponse.json({ success: false, error: e.message }, { status: 422 });
+        }
+        throw e;
+      }
+      const { snapshot, pollNote } = await pollBestEffort(attach.code);
+      return NextResponse.json({
+        success: true,
+        matched: true,
+        code: attach.code,
+        platformCode: attach.platformCode,
+        source: 'manual',
+        snapshot,
+        pollNote,
+      });
     }
 
     const result = await attemptAutoMapSupplierCode(params.id);
-    const snapshot = result.matched && result.code && result.source !== 'already_set'
+    const { snapshot, pollNote } = result.matched && result.code && result.source !== 'already_set'
       ? await pollBestEffort(result.code)
-      : null;
-    return NextResponse.json({ success: true, ...result, snapshot });
+      : { snapshot: null, pollNote: null };
+    return NextResponse.json({ success: true, ...result, snapshot, pollNote });
   } catch (e) {
     const msg = e instanceof Error ? e.message : '알 수 없는 오류';
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
