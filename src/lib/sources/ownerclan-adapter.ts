@@ -96,9 +96,18 @@ async function issueToken(username: string, password: string): Promise<string> {
   }
 
   if (!res.ok) {
-    // 401/403 = wrong credentials; anything else = platform-side issue.
+    // Surface the raw response body for diagnosis — OwnerClan's manual does
+    // not document error response shape, and a generic "401" alone doesn't
+    // tell us whether it's wrong credentials vs. a missing required field vs.
+    // an IP/account-not-provisioned block (#231 — don't guess, show the
+    // actual server message).
+    const bodyText = await res.text().catch(() => '');
     const kind = res.status === 401 || res.status === 403 ? 'AuthFailed' : 'BadResponse';
-    throw new SourceAdapterError(PLATFORM_CODE, kind, `OwnerClan auth returned HTTP ${res.status}.`);
+    throw new SourceAdapterError(
+      PLATFORM_CODE,
+      kind,
+      `OwnerClan auth returned HTTP ${res.status}. Body: ${bodyText.slice(0, 500)}`,
+    );
   }
 
   // Manual does not specify the exact response shape; the token is returned
