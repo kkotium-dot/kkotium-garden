@@ -138,56 +138,39 @@ export async function writeLinkFields(productId: string, f: Partial<LinkFields>)
   }
 }
 
-// ── SUBSTITUTE (#210, SUBSTITUTE_STOCKOUT_SPEC) ─────────────────────────────
-// Stock-out safety net stored in Product.substitute_info (jsonb). Flexible: an
-// app-internal substitute product reference OR free text OR a re-sourcing link.
-// Surfaced automatically on OUTOFSTOCK (C-9 substitute_ready) — not a plain memo.
-export interface SubstituteInfo {
-  hasSubstitute: boolean;
-  substituteProductId?: string | null;   // app-internal substitute (optional chain)
-  substituteName?: string | null;
-  substituteNote?: string | null;
-  sourcingUrl?: string | null;           // domeggook re-sourcing link
-  sourcingCode?: string | null;          // domeggook product no
-  lowStockThreshold?: number | null;     // pre-OOS alert threshold (optional)
-}
+// ── SUBSTITUTE (#210, SUBSTITUTE_STOCKOUT_SPEC; v2 — B11/B13, 2026-09-09) ───
+// Stock-out safety net stored in Product.substitute_info (jsonb). v2 supports
+// multiple priority-ordered substitutes + per-option-value matches — the type
+// definitions and v1→v2 normalization live in the single-authority module
+// src/lib/products/substitute-types.ts (#62); this file just re-exports the
+// legacy names so existing call sites (asset-jobs-matrix, weekly-report,
+// crawler/stock-check, tuning-signals, products/linked, substitute/route)
+// keep working unchanged.
+export type {
+  SubstituteInfoV2 as SubstituteInfo,
+  SubstituteEntry,
+  OptionMatchEntry,
+} from '@/lib/products/substitute-types';
+export {
+  normalizeSubstituteInfo,
+  hasSubstitutePlan,
+  primarySubstitute,
+  matchByOptionValue,
+} from '@/lib/products/substitute-types';
 
-/** Normalize an arbitrary jsonb value into a SubstituteInfo (safe defaults). */
-export function normalizeSubstituteInfo(raw: unknown): SubstituteInfo {
-  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
-  const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
-  const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
-  return {
-    hasSubstitute: o.hasSubstitute === true,
-    substituteProductId: str(o.substituteProductId),
-    substituteName: str(o.substituteName),
-    substituteNote: str(o.substituteNote),
-    sourcingUrl: str(o.sourcingUrl),
-    sourcingCode: str(o.sourcingCode),
-    lowStockThreshold: num(o.lowStockThreshold),
-  };
-}
-
-/** True when the substitute info carries any actionable content. */
-export function hasSubstitutePlan(info: SubstituteInfo | null | undefined): boolean {
-  if (!info) return false;
-  return (
-    info.hasSubstitute ||
-    !!info.substituteName || !!info.substituteNote ||
-    !!info.sourcingUrl || !!info.sourcingCode || !!info.substituteProductId
-  );
-}
+import type { SubstituteInfoV2 } from '@/lib/products/substitute-types';
+import { normalizeSubstituteInfo as normalizeSubstituteInfoV2 } from '@/lib/products/substitute-types';
 
 /** Read substitute_info for the given products. Empty map if column absent. */
-export async function readSubstituteInfo(productIds: string[]): Promise<Map<string, SubstituteInfo>> {
-  const map = new Map<string, SubstituteInfo>();
+export async function readSubstituteInfo(productIds: string[]): Promise<Map<string, SubstituteInfoV2>> {
+  const map = new Map<string, SubstituteInfoV2>();
   if (productIds.length === 0) return map;
   try {
     const rows = await prisma.$queryRaw<Array<{ id: string; substitute_info: unknown }>>`
       SELECT id, substitute_info FROM "Product" WHERE id IN (${Prisma.join(productIds)})
     `;
     for (const r of rows) {
-      if (r.substitute_info != null) map.set(r.id, normalizeSubstituteInfo(r.substitute_info));
+      if (r.substitute_info != null) map.set(r.id, normalizeSubstituteInfoV2(r.substitute_info));
     }
   } catch (e) {
     if (!isUndefinedColumnError(e)) throw e;
@@ -196,8 +179,8 @@ export async function readSubstituteInfo(productIds: string[]): Promise<Map<stri
 }
 
 /** Write substitute_info for one product. Returns false (no-op) if column absent. */
-export async function writeSubstituteInfo(productId: string, info: SubstituteInfo): Promise<boolean> {
-  const json = JSON.stringify(normalizeSubstituteInfo(info));
+export async function writeSubstituteInfo(productId: string, info: unknown): Promise<boolean> {
+  const json = JSON.stringify(normalizeSubstituteInfoV2(info));
   try {
     await prisma.$executeRaw`
       UPDATE "Product" SET substitute_info = ${json}::jsonb WHERE id = ${productId}

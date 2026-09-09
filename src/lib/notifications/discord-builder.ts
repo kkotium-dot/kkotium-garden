@@ -432,6 +432,11 @@ export interface StockAlertProduct {
   netMarginRate: number;
   daysOos?: number;
   alternatives?: { alt_product_name: string; platform_code: string; platform_url?: string }[];
+  // B15 (2026-09-09) — "2차 방어선" 감지: 등록된 대체상품 전원의 자체 재고까지
+  // 확인해 전부 품절이면 true. 대체상품 중 하나라도 앱 내부 연결이 없어(외부
+  // 소싱 링크만 있는 등) 재고를 확인할 수 없으면 판정 불가 → undefined
+  // (#82 근거 없는 단정 금지 — "확인 못함"과 "전부 품절"을 구분).
+  allAlternativesOos?: boolean;
 }
 
 export interface StockAlertEmbedParams {
@@ -479,9 +484,16 @@ export function buildStockAlertEmbed(params: StockAlertEmbedParams): DiscordEmbe
     })
     .filter((s): s is string => s !== null);
 
+  // B15 — 2차 방어선(대체상품마저 전부 품절) 강조. 확인된 건만(undefined 제외)
+  // 카운트해 근거 없는 경보를 내보내지 않는다(#82).
+  const escalatedCount = list.filter(p => p.allAlternativesOos === true).length;
+
   const action = altLines.length > 0
     ? `${actionLines.join('\n')}\n\n${S.alt_section}\n${altLines.join('\n\n')}`
     : actionLines.join('\n');
+  const actionWithEscalation = escalatedCount > 0
+    ? `${action}\n\n${fmt(S.alt_all_oos_warning, { n: escalatedCount })}`
+    : action;
 
   const kkotti = totalCount === 1
     ? kkottiLine(S.kkotti_one, 'stockAlert:one')
@@ -490,8 +502,10 @@ export function buildStockAlertEmbed(params: StockAlertEmbedParams): DiscordEmbe
   return {
     title: fmt(S.title, { n: totalCount }),
     description: S.description,
-    color: CHANNEL_COLOR.STOCK_ALERT,
-    fields: buildFourSectionFields({ situation, impact, action, kkotti }),
+    // 2차 방어선 확인 건이 하나라도 있으면 기존 팔레트의 더 급한 색(KKOTTI_SCORE
+    // red)으로 격상 — 신규 색상/embed 타입 추가 없이 기존 패턴 재사용(설계 지시).
+    color: escalatedCount > 0 ? CHANNEL_COLOR.KKOTTI_SCORE : CHANNEL_COLOR.STOCK_ALERT,
+    fields: buildFourSectionFields({ situation, impact, action: actionWithEscalation, kkotti }),
     footer: { text: S.footer },
     timestamp: new Date().toISOString(),
   };

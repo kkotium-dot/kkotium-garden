@@ -239,8 +239,14 @@ export async function POST(req: Request) {
       const subMap = await readSubstituteInfo(newlyOos.map(r => r.productId));
       const enriched = await Promise.all(newlyOos.map(async r => {
         const sub = subMap.get(r.productId);
+        // v2 (B11) — 다중 대체상품 중 우선순위 순으로 최대 2개까지 안내
+        // (buildStockAlertEmbed가 alternatives를 앞에서 2개만 렌더).
         const alts = sub && hasSubstitutePlan(sub)
-          ? [{ alt_product_name: sub.substituteName ?? null, platform_code: sub.sourcingCode ?? null, platform_url: sub.sourcingUrl ?? null }]
+          ? sub.substitutes.slice(0, 2).map(s => ({
+              alt_product_name: s.substituteName ?? null,
+              platform_code: s.sourcingCode ?? null,
+              platform_url: s.sourcingUrl ?? null,
+            }))
           : [];
 
         const hs = calcHoneyScore({ salePrice: 0, supplierPrice: r.previousPrice });

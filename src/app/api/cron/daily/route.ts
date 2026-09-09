@@ -5,10 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { loadDispositionVerdicts } from '@/lib/products/disposition-load';
 import {
   sendDiscord,
-  buildStockAlertEmbed,
   buildScoreDropEmbed,
   buildPublishReadyAlert,
   buildRevivalAlert,
@@ -22,6 +20,7 @@ import { refreshCategoryTrendCache } from '@/lib/naver/category-trend-cache';
 import { naverRequest } from '@/lib/naver/api-client';
 import { scoreProduct, computeOpsDigestSignals, computeRecommendation } from '@/lib/notifications/daily-signals';
 import { withCronLogging } from '@/lib/cron/with-logging';
+import { runStockOutAlertCheck } from '@/lib/cron/stock-alert-check';
 
 export const dynamic = 'force-dynamic';
 // #333 후속 — 8단계 순차 실행(외부 API 다수)이 Hobby 기본 10초를 초과해
@@ -147,74 +146,10 @@ export const GET = withCronLogging('/api/cron/daily', async (req: NextRequest) =
     // 그런 상품은 앱 status가 ACTIVE로 남기 때문. 디스코드는 운영자가 앱을
     // 열지 않아도 받는 유일한 채널이라, 여기서 누락되면 아예 모르고 지나간다.
     // 화면(대기함·대시보드)과 같은 판정을 써서 앱이 한 목소리를 내게 한다(#62).
-    let dispositionPendingIds = new Set<string>();
-    let daysOosById = new Map<string, number | null>();
+    // 실제 판정 + substitute_info 연결 + 발송 로직은 cron/stock-alert-pm과
+    // 공유하는 src/lib/cron/stock-alert-check.ts로 뽑혀 있다(B15).
     try {
-      const verdicts = await loadDispositionVerdicts();
-      for (const v of verdicts) {
-        if (v.verdict.action !== 'NONE') dispositionPendingIds.add(v.productId);
-        daysOosById.set(v.productId, v.verdict.daysOutOfStock);
-      }
-    } catch {
-      // best-effort(#82) — 판정 실패가 일일 크론 전체를 막으면 안 된다.
-      // 이 경우 아래 status 기준만으로 degrade한다(알림이 아예 안 가는 것보다 낫다).
-    }
-    try {
-      const oosProducts = products.filter(
-        p => p.status === 'OUT_OF_STOCK' || dispositionPendingIds.has(p.id),
-      );
-
-      if (oosProducts.length > 0) {
-        // Record events for new OOS products (those without a recent event).
-        // ※ 이벤트는 "status가 OUT_OF_STOCK으로 바뀜"의 기록이므로 **status 기준을
-        //   유지**한다. 처분 판정 대상(공급처 단절 등)까지 OOS 이벤트로 남기면
-        //   이벤트의 의미가 흐려진다 — 알림 대상과 이벤트 대상은 다른 축이다.
-        for (const p of oosProducts.filter(x => x.status === 'OUT_OF_STOCK')) {
-          const existing = await prisma.productEvent.findFirst({
-            where: {
-              productId: p.id,
-              type: 'OOS',
-              createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-            },
-          });
-          if (!existing) {
-            await prisma.productEvent.create({
-              data: {
-                productId: p.id,
-                type: 'OOS',
-                oldValue: 'ACTIVE',
-                newValue: 'OUT_OF_STOCK',
-                note: 'Detected by daily cron',
-              },
-            });
-          }
-        }
-
-        const stockPayload = oosProducts.map(p => {
-          const score = scoreProduct(p);
-          return {
-            id:            p.id,
-            name:          p.name,
-            sku:           p.sku,
-            salePrice:     p.salePrice,
-            honeyScore:    score.total,
-            honeyGrade:    score.grade,
-            netMarginRate: score.netMarginRate,
-            // 실제 품절 지속일(#273) — "3일째 품절"처럼 체감되는 정보를 준다.
-            daysOos:       daysOosById.get(p.id) ?? undefined,
-            alternatives:  [],
-          };
-        });
-
-        const stockResult = await sendDiscord(
-          'STOCK_ALERT',
-          '',
-          [buildStockAlertEmbed({ products: stockPayload })]
-        );
-        results.stockAlert = { sent: stockResult.ok, count: oosProducts.length };
-      } else {
-        results.stockAlert = { sent: false, count: 0, reason: 'no OOS products' };
-      }
+      results.stockAlert = await runStockOutAlertCheck(products);
     } catch (e) {
       results.stockAlertError = e instanceof Error ? e.message.slice(0, 100) : String(e);
     }
