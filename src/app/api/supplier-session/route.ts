@@ -135,10 +135,21 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { platformCode, loginId, loginPw } = await req.json();
-    if (!platformCode || !loginId || !loginPw) {
-      return NextResponse.json({ error: 'platformCode, loginId, loginPw required' }, { status: 400 });
+    if (!loginId || !loginPw) {
+      return NextResponse.json({ error: 'loginId, loginPw required' }, { status: 400 });
     }
-    if (!['DMM', 'DMK'].includes(platformCode)) {
+    // UNIFIED_LOGIN_2026-09-09 — DMM/DMK share the exact same login system
+    // (see header comment: both auth via domeggook.com/ssl/member). The
+    // operator confirmed their credentials are identical for both, so one
+    // submission now saves BOTH sessions instead of requiring two separate
+    // logins for what is, underneath, one account. platformCode is now
+    // optional: omit it (or pass 'ALL') to log into both; pass a specific
+    // code to keep the old single-platform behavior (used by the DELETE/
+    // re-login-one-platform flows).
+    const targets: string[] = platformCode && platformCode !== 'ALL'
+      ? [platformCode]
+      : ['DMM', 'DMK'];
+    if (targets.some((t) => !['DMM', 'DMK'].includes(t))) {
       return NextResponse.json({ error: 'Unknown platformCode' }, { status: 400 });
     }
 
@@ -153,7 +164,8 @@ export async function POST(req: Request) {
     });
     const initCookies = parseCookies(formRes.headers.getSetCookie?.() ?? []);
 
-    // Step 2: POST login
+    // Step 2: POST login (once — the session this creates is valid for both
+    // DMM and DMK since they're the same underlying account/auth system)
     const formData = new URLSearchParams();
     formData.append(LOGIN_CONFIG.idField, loginId);
     formData.append(LOGIN_CONFIG.pwField, loginPw);
@@ -206,34 +218,46 @@ export async function POST(req: Request) {
       if (dbCookies) finalCookies = mergeCookies(finalCookies, dbCookies);
     } catch { /* non-blocking */ }
 
-    // Step 4: Verify login
-    const isValid = await verifySession(platformCode, finalCookies);
-
-    // Step 5: Save to DB (upsert by platform_code)
+    // Step 4: Verify + save for EACH target platform. Verification is
+    // per-platform (different verify URL/markers) even though the login
+    // itself was one shared request — a platform-specific glitch shouldn't
+    // silently mark both as valid.
     const expiresAt = new Date(Date.now() + 12 * 3600_000);
-    await prisma.$executeRaw`
-      INSERT INTO supplier_sessions
-        (platform_code, platform_name, login_id, cookies, user_agent, logged_in_at, expires_at, is_valid, updated_at)
-      VALUES (
-        ${platformCode}, ${PLATFORM_NAMES[platformCode]}, ${loginId},
-        ${finalCookies}, ${UA}, NOW(), ${expiresAt}, ${isValid}, NOW()
-      )
-      ON CONFLICT (platform_code) DO UPDATE SET
-        login_id    = EXCLUDED.login_id,
-        cookies     = EXCLUDED.cookies,
-        logged_in_at = NOW(),
-        expires_at  = EXCLUDED.expires_at,
-        is_valid    = EXCLUDED.is_valid,
-        updated_at  = NOW()
-    `;
+    const results: Record<string, boolean> = {};
+    for (const code of targets) {
+      const isValid = await verifySession(code, finalCookies);
+      results[code] = isValid;
+      await prisma.$executeRaw`
+        INSERT INTO supplier_sessions
+          (platform_code, platform_name, login_id, cookies, user_agent, logged_in_at, expires_at, is_valid, updated_at)
+        VALUES (
+          ${code}, ${PLATFORM_NAMES[code]}, ${loginId},
+          ${finalCookies}, ${UA}, NOW(), ${expiresAt}, ${isValid}, NOW()
+        )
+        ON CONFLICT (platform_code) DO UPDATE SET
+          login_id    = EXCLUDED.login_id,
+          cookies     = EXCLUDED.cookies,
+          logged_in_at = NOW(),
+          expires_at  = EXCLUDED.expires_at,
+          is_valid    = EXCLUDED.is_valid,
+          updated_at  = NOW()
+      `;
+    }
+
+    const allValid = targets.every((t) => results[t]);
+    const anyValid = targets.some((t) => results[t]);
+    const names = targets.map((t) => PLATFORM_NAMES[t]).join('·');
 
     return NextResponse.json({
       success: true,
-      isValid,
-      platformCode,
-      message: isValid
-        ? `${PLATFORM_NAMES[platformCode]} 로그인 성공!`
-        : `${PLATFORM_NAMES[platformCode]} 로그인 실패 — ID/PW를 다시 확인해주세요.`,
+      isValid: anyValid,
+      results,
+      platformCode: targets.length === 1 ? targets[0] : 'ALL',
+      message: allValid
+        ? `${names} 로그인 성공!`
+        : anyValid
+          ? `일부만 성공 — ${targets.filter((t) => results[t]).map((t) => PLATFORM_NAMES[t]).join('·')}만 연동됨. 나머지는 ID/PW를 다시 확인해주세요.`
+          : `${names} 로그인 실패 — ID/PW를 다시 확인해주세요.`,
     });
   } catch (err) {
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
