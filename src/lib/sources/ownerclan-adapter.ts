@@ -219,14 +219,43 @@ async function fetchGraphQL<T>(query: string, variables?: Record<string, unknown
 // from fetchGraphQL rather than a silent wrong value.
 // ----------------------------------------------------------------------------
 
+interface OwnerClanItemOption {
+  price?: number;
+  quantity?: number;
+}
+
 interface OwnerClanItem {
   key: string;
   name?: string;
   price?: number;
   shippingFee?: number;
   origin?: string;
+  // FIELD_NAME_CORRECTION_2026-09-09 — verified against the operator-supplied
+  // Seller Manual (v0.11.0) Method > item section: OwnerClan's Item type has
+  // NO top-level stock/inventory field. Inventory lives per-SKU under
+  // options[].quantity (every item has at least one options entry, even
+  // items with no real option choices — that's the SKU row). status is the
+  // documented sale-state enum: "available" | "soldout" | "unavailable" |
+  // "discontinued". A prior version of this adapter guessed a nonexistent
+  // `stock` field, which GraphQL silently returned as null (no error,
+  // because GraphQL just omits unknown-but-nullable-looking fields in some
+  // configurations) — this produced qty:-1 for every real product with no
+  // visible failure. Fixed by summing options[].quantity instead.
   status?: string;
-  stock?: number;
+  options?: OwnerClanItemOption[];
+}
+
+/**
+ * OwnerClan's Item has no single stock field — inventory lives per-SKU
+ * under options[].quantity (see FIELD_NAME_CORRECTION_2026-09-09 above).
+ * -1 (unknown, matches the rest of this codebase's -1 = unknown convention)
+ * when no options data came back at all; otherwise the sum across every SKU.
+ */
+function sumOptionQuantities(options: OwnerClanItemOption[] | undefined): number {
+  if (!options || options.length === 0) return -1;
+  let sum = 0;
+  for (const o of options) sum += o.quantity ?? 0;
+  return sum;
 }
 
 export class OwnerClanAdapter implements SourceAdapter {
@@ -234,7 +263,7 @@ export class OwnerClanAdapter implements SourceAdapter {
   readonly platformName = PLATFORM_NAME;
 
   async getItemDetail(productNo: string): Promise<ItemDetail | null> {
-    const query = `query($key: ID!) { item(key: $key) { key name price shippingFee origin status stock } }`;
+    const query = `query($key: ID!) { item(key: $key) { key name price shippingFee origin status options { price quantity } } }`;
     let data: { item: OwnerClanItem | null };
     try {
       data = await fetchGraphQL<{ item: OwnerClanItem | null }>(query, { key: productNo });
@@ -244,6 +273,7 @@ export class OwnerClanAdapter implements SourceAdapter {
     }
     if (!data.item) return null;
     const it = data.item;
+    const totalQty = sumOptionQuantities(it.options);
     return {
       productNo: it.key,
       name: it.name ?? '',
@@ -252,7 +282,7 @@ export class OwnerClanAdapter implements SourceAdapter {
       options: [],
       description: '',
       sourceUrl: `https://www.ownerclan.com/V2/product/view.php?selfcode=${encodeURIComponent(it.key)}`,
-      inventory: it.stock ?? -1,
+      inventory: totalQty,
       shipFee: it.shippingFee ?? 0,
       canMerge: false,
       sellerNick: '',
@@ -279,7 +309,7 @@ export class OwnerClanAdapter implements SourceAdapter {
    */
   async getInventory(productNos: string[]): Promise<InventorySnapshot[]> {
     if (productNos.length === 0) return [];
-    const query = `query($keys: [ID!]!) { itemsByKeys(keys: $keys) { key price status stock } }`;
+    const query = `query($keys: [ID!]!) { itemsByKeys(keys: $keys) { key price status options { price quantity } } }`;
     const polledAt = new Date();
     const data = await fetchGraphQL<{ itemsByKeys: OwnerClanItem[] }>(query, { keys: productNos });
     const byKey = new Map(data.itemsByKeys.map((it) => [it.key, it]));
@@ -287,7 +317,7 @@ export class OwnerClanAdapter implements SourceAdapter {
       const it = byKey.get(no);
       return {
         productNo: no,
-        qty: it?.stock ?? -1,
+        qty: it ? sumOptionQuantities(it.options) : -1,
         status: it?.status ?? 'unknown',
         supplierPrice: it?.price ?? null,
         polledAt,
