@@ -2274,23 +2274,53 @@ function ProductsPageInner() {
   const [inlineEdit, setInlineEdit] = useState<{ id: string; field: 'salePrice' | 'supplierPrice'; value: string } | null>(null);
 
   // Batch 발행준비 X/8 for the hub (#245) — one fetch, mapped by product id.
+  // FIX_INFINITE_RETRY_2026-09-09 — this effect used to depend on the raw
+  // [rawProducts] array reference from SWR. When the batch endpoint fails,
+  // the failure path had no backoff; if anything caused rawProducts'
+  // reference to change again shortly after (SWR revalidation, a DB hiccup,
+  // etc.), the effect re-ran immediately and could re-fetch a failing
+  // endpoint in a tight loop (observed in a dev environment with no
+  // DATABASE_URL — surfaced as React's "Maximum update depth exceeded" and
+  // thousands of stacked network requests). Root fix, not a patch: depend on
+  // a STABLE key (sorted product-id list) instead of the array reference, so
+  // the effect only re-runs when the actual set of ids changes — and skip
+  // the fetch entirely once it has already failed for the current id set,
+  // rather than silently retrying forever with no operator-visible state.
+  const productIdsKey = useMemo(
+    () => (rawProducts ?? []).map((p) => p.id).sort().join(','),
+    [rawProducts],
+  );
+  const readinessFailedForKeyRef = useRef<string | null>(null);
   useEffect(() => {
+    if (readinessFailedForKeyRef.current === productIdsKey) return; // already failed for this exact id set — don't hammer it
     let alive = true;
     fetch('/api/products/publish-readiness-batch')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => {
         if (!alive || !d?.success || !Array.isArray(d.items)) return;
         const m: Record<string, { ready: boolean; passed: number; total: number; reviewApproved: boolean }> = {};
         for (const it of d.items) m[it.id] = { ready: it.ready, passed: it.passed, total: it.total, reviewApproved: !!it.reviewApproved };
         setReadinessMap(m);
       })
-      .catch(() => { /* non-critical — the X/8 badge just won't show */ });
+      .catch(() => {
+        // non-critical — the X/8 badge just won't show — but remember the
+        // failure so this exact id set doesn't get retried on every render.
+        if (alive) readinessFailedForKeyRef.current = productIdsKey;
+      });
     return () => { alive = false; };
-  }, [rawProducts]);
+  }, [productIdsKey]);
 
   // NAME-DIAG-3 (#251): batch 상품명 진단 for the hub rows. Non-blocking; the
   // list renders immediately and badges fill in when the server responds.
+  // FIX_INFINITE_RETRY_2026-09-09 — same [rawProducts]-reference + no-backoff
+  // pattern as the readiness-batch effect above; same fix (#62 — applied
+  // project-wide, not just the one endpoint that got reported).
+  const nameDiagFailedForKeyRef = useRef<string | null>(null);
   useEffect(() => {
+    if (nameDiagFailedForKeyRef.current === productIdsKey) return;
     let alive = true;
     const ids = (rawProducts ?? []).map((p) => p.id);
     if (ids.length === 0) { setNameDiagnoses({}); return; }
@@ -2299,11 +2329,16 @@ function ProductsPageInner() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ productIds: ids }),
     })
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((d) => { if (alive && d?.success) setNameDiagnoses(d.diagnoses ?? {}); })
-      .catch(() => { /* best-effort — badge just won't show */ });
+      .catch(() => {
+        if (alive) nameDiagFailedForKeyRef.current = productIdsKey;
+      });
     return () => { alive = false; };
-  }, [rawProducts]);
+  }, [productIdsKey]);
 
   // Fire Excel download once after readiness check is confirmed
   useEffect(() => {
