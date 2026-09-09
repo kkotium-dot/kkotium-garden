@@ -2016,3 +2016,21 @@ Playground introspection)로 필드명을 사전 대조해야 함. 오너클랜
 **전 계열 상태**: supplier-code 5개 전부 완전 정상 재고추적 확인
 완료. 오너클랜 실연동 계열 종료. 해금: B11·B13·B15(품절디펜스)·
 디스코드개선2/3/4 착수 가능(데이터 축적 시작됨).
+
+## rev160 — B11+B13+B15 설계 조사 완료, Code 인계 (2026-09-09)
+
+**Desktop 실측 조사(착수 전 코드+DB 대조, 추측 없이 확정)**:
+- substitute_info(Json)는 단일 객체 구조(대체상품 1개만) — B11 멀티등록 불가 확정.
+- optionName+optionValues(문자열배열)로 옵션축 이미 저장 중 — B13 매칭 대상 확정.
+- 디스코드 알림 StockAlertProduct.alternatives 필드는 이미 존재하나
+  cron/daily/route.ts L205에서 `alternatives: []` 하드코딩 확인 — B13·B15
+  핵심 미싱링크는 신규 UI가 아니라 기존 필드에 실데이터 연결.
+- 재고크론 vercel.json은 1일1회(inventory-sync) — B15 데일리2회 미구현 확정.
+
+**설계 확정**: substitute_info v2 shape(다중 substitutes[] + optionMatches[])
++ v1→v2 lazy 변환 헬퍼로 하위호환. 상세 명세
+docs/plan/B11_B13_B15_HANDOFF_SPEC_2026-09-09.md 작성, Code 인계 완료.
+
+**전 계열 상태**: 오너클랜 실연동 계열 완전 종료(rev159). 3군(B11·B13·B15)
+설계 완료·Code 착수 대기. 4군(B4·B14, B12) 이미 완료(rev157 병합).
+2군(B5·B6·B7·B9) 아직 미착수 — 다음 우선순위.
