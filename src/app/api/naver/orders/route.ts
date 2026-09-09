@@ -253,6 +253,12 @@ export async function GET(request: NextRequest) {
       const naverOrderId = String(productOrder.productOrderId ?? '');
       if (!naverOrderId) { skipped++; continue; }
 
+      // TEMP_FIELD_PROBE_2026-09-09 -- B13 option field-name probe. Pure
+      // read-only console.log, no side effects. Remove after verification.
+      if (process.env.PROBE_ORDER_FIELDS === 'true') {
+        console.log('[PROBE productOrder]', JSON.stringify(productOrder));
+      }
+
       try {
 
         // Status: from productOrder
