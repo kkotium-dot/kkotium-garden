@@ -34,5 +34,18 @@
   "pickCategoryEmpty": "같은 카테고리에 추천할 상품이 없어요",
   "pickSearchEmpty": "검색 결과가 없어요",
   "pickSelected": "선택됨",
-  "pickClear": "선택 해제"
+  "pickClear": "선택 해제",
+  "addSubstitute": "+ 대체상품 추가",
+  "removeSubstitute": "삭제",
+  "moveUp": "위로",
+  "moveDown": "아래로",
+  "priorityLabel": "{n}순위",
+  "priorityHint": "1순위가 품절 시 먼저 안내되고, 그마저 품절이면 2순위로 넘어가요",
+  "emptySubstitutes": "등록된 대체상품이 없어요",
+  "optionMatchTitle": "옵션별 대체상품 매칭",
+  "optionMatchSubtitle": "옵션값마다 다른 대체상품을 지정할 수 있어요 (예: 화이트 품절 시 전용 대체상품 안내)",
+  "optionMatchClear": "지정 해제",
+  "optionMatchNamePlaceholder": "이 옵션 품절 시 안내할 대체상품명",
+  "optionMatchNotePlaceholder": "메모 (선택)",
+  "optionMatchPick": "앱 상품에서 선택"
 }

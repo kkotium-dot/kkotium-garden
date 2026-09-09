@@ -11,6 +11,85 @@ import {
   NAVER_APP_STATUS_USER_MESSAGE,
   NAVER_CLIENT_SECRET_USER_MESSAGE,
 } from '@/lib/naver/api-client';
+import { readSubstituteInfo, matchByOptionValue } from '@/lib/product-link';
+import { sendDiscord } from '@/lib/discord';
+
+// ── B13 (docs/plan/B11_B13_B15_HANDOFF_SPEC_2026-09-09.md) — 옵션별 대체상품
+// 주문 알림 ──────────────────────────────────────────────────────────────
+// "화이트 주문 시 이 상품으로 발주" 케이스. ⚠️ Naver productOrder의 정확한
+// 옵션텍스트/상품번호 필드명은 이 세션에서 실측하지 못했다(라이브 Naver API
+// 호출 불가 환경) — 아래 후보 필드명은 Naver Commerce API v1 공개 문서상
+// 표준 이름을 근거로 한 추정이며, #357(근거없는 기본값 신뢰금지) 원칙에 따라
+// 검증 전까지 절대 신뢰하지 않는다(docs/playbook/RISKY_IDIOMS.md IDIOM-5와
+// 동일 위험군 — REST긴 하지만 "요청/매핑이 조용히 실패해도 200이 온다"는
+// 본질이 같다). 그래서 ORDER_OPTION_ALERT_ENABLED가 꺼져
+// 있는 한(기본값) Discord 실발송은 절대 없고, 매칭 결과만 이 route의 JSON
+// 응답(orderOptionAlerts)에 실어 dry-run 검증에 쓴다(#46 — 비가역 발송 위험).
+// Desktop 검증 방법: 실 주문 1건에서 console.log(JSON.stringify(productOrder))
+// 로 실제 필드명 확인 → 다르면 CANDIDATE_OPTION_FIELDS/CANDIDATE_PRODUCT_NO_FIELDS
+// 수정 → orderOptionAlerts가 기대대로 뜨는지 확인 → 그제서야 플래그를 켤 것.
+const CANDIDATE_OPTION_FIELDS = ['productOption', 'optionInfo', 'optionName', 'optionText'];
+const CANDIDATE_PRODUCT_NO_FIELDS = ['originProductNo', 'productId', 'productNo'];
+
+function firstNonEmptyString(o: Record<string, unknown>, keys: string[]): string | null {
+  for (const k of keys) {
+    const v = o[k];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+    if (typeof v === 'number') return String(v);
+  }
+  return null;
+}
+
+interface OrderOptionAlert {
+  naverOrderId: string;
+  productId: string;
+  productName: string;
+  optionValue: string;
+  substituteName: string;
+}
+
+/**
+ * productOrder에서 옵션 텍스트 + Naver 상품번호를 뽑아, 앱 Product(naverProductId
+ * 매칭) → optionValues 중 옵션 텍스트에 포함된 값 → substitute_info.optionMatches
+ * 순으로 매칭한다. 매칭 안 되면(필드명이 틀렸거나, 매칭 미설정이거나) 조용히
+ * null — 이 함수는 절대 throw하지 않는다(주문 동기화 자체를 막으면 안 됨, #82).
+ */
+async function matchOrderOptionSubstitute(
+  naverOrderId: string,
+  productOrder: Record<string, unknown>,
+): Promise<OrderOptionAlert | null> {
+  try {
+    const optionText = firstNonEmptyString(productOrder, CANDIDATE_OPTION_FIELDS);
+    const naverProductNo = firstNonEmptyString(productOrder, CANDIDATE_PRODUCT_NO_FIELDS);
+    if (!optionText || !naverProductNo) return null;
+
+    const product = await prisma.product.findFirst({
+      where: { naverProductId: naverProductNo },
+      select: { id: true, name: true, optionValues: true },
+    });
+    if (!product) return null;
+
+    const values = Array.isArray(product.optionValues)
+      ? (product.optionValues as unknown[]).filter((v): v is string => typeof v === 'string')
+      : [];
+    const matchedValue = values.find((v) => optionText.includes(v));
+    if (!matchedValue) return null;
+
+    const subMap = await readSubstituteInfo([product.id]);
+    const match = matchByOptionValue(subMap.get(product.id), matchedValue);
+    if (!match) return null;
+
+    return {
+      naverOrderId,
+      productId: product.id,
+      productName: product.name,
+      optionValue: matchedValue,
+      substituteName: match.substituteName,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -157,6 +236,7 @@ export async function GET(request: NextRequest) {
     }
 
     let synced = 0, skipped = 0;
+    const orderOptionAlerts: OrderOptionAlert[] = [];
 
     for (const item of details) {
       const el      = item as Record<string, unknown>;
@@ -278,10 +358,36 @@ export async function GET(request: NextRequest) {
         });
 
         synced++;
+
+        // B13 — 옵션별 대체상품 주문 알림 (dry-run: 매칭만 계산, 아래 응답에서
+        // orderOptionAlerts로 확인. ORDER_OPTION_ALERT_ENABLED=true일 때만 발송).
+        // 신규 결제(PAID)로 막 전이된 주문만 대상 — 취소/반품/이미 알려진
+        // 상태는 반복 알림을 만들지 않는다.
+        if (status === 'PAID') {
+          const alert = await matchOrderOptionSubstitute(naverOrderId, productOrder);
+          if (alert) orderOptionAlerts.push(alert);
+        }
       } catch (err: unknown) {
         console.error('[naver/orders] item error:', err instanceof Error ? err.message : err);
         skipped++;
       }
+    }
+
+    // B13 — dry-run 기본값(#46 비가역 발송 위험). ORDER_OPTION_ALERT_ENABLED가
+    // 명시적으로 'true'일 때만 실제 디스코드 채널로 보낸다. Desktop이 실 주문
+    // 필드명을 검증하고 매칭 결과(orderOptionAlerts)가 기대대로 나오는 것을
+    // 확인하기 전까지는 절대 켜지 않는다.
+    let orderOptionAlertsSent = false;
+    if (orderOptionAlerts.length > 0 && process.env.ORDER_OPTION_ALERT_ENABLED === 'true') {
+      for (const a of orderOptionAlerts) {
+        await sendDiscord('STOCK_ALERT', '', [{
+          title: `옵션별 대체상품 안내 — ${a.optionValue}`,
+          description: `**${a.productName}** (${a.optionValue}) 주문 접수 → 대체상품 **${a.substituteName}**로 발주 확인이 필요해요.`,
+          color: 0xf97316,
+          timestamp: new Date().toISOString(),
+        }]).catch(() => null);
+      }
+      orderOptionAlertsSent = true;
     }
 
     return NextResponse.json({
@@ -292,6 +398,8 @@ export async function GET(request: NextRequest) {
       changed: ids.length,
       windows: windows.length,
       period:  `${toKST(fromDate)} ~ ${toKST(toDate)}`,
+      orderOptionAlerts,
+      orderOptionAlertsSent,
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);

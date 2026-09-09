@@ -28,7 +28,7 @@ import {
 import type { ImageTier, RecommendedMode } from '@/lib/images/quality-classifier';
 import type { LocalProduct } from '@/lib/naver/product-builder';
 import { SEED_DNA_CARDS } from '@/lib/engine/category-dna';
-import { readLinkFields, readSubstituteInfo, hasSubstitutePlan } from '@/lib/product-link';
+import { readLinkFields, readSubstituteInfo, hasSubstitutePlan, primarySubstitute } from '@/lib/product-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -246,13 +246,16 @@ export async function GET() {
     const outOfStock = status === 'OUTOFSTOCK' || status === 'OUT_OF_STOCK';
     if (!outOfStock) continue; // threshold path dormant (no persisted Naver stock)
     const info = subMap.get(p.id) ?? null;
+    // v2 (B11) — 여러 대체상품 중 우선순위 1위(폴백 순서상 가장 먼저 안내할
+    // 것)를 카드에 노출한다. 전체 목록은 SubstituteEditor 탭에서 확인.
+    const primary = primarySubstitute(info);
     substituteById.set(p.id, {
       outOfStock: true,
       lowStock: false,
       hasSubstitute: hasSubstitutePlan(info),
-      substituteName: info?.substituteName ?? null,
-      substituteNote: info?.substituteNote ?? null,
-      sourcingUrl: info?.sourcingUrl ?? null,
+      substituteName: primary?.substituteName ?? null,
+      substituteNote: primary?.substituteNote ?? null,
+      sourcingUrl: primary?.sourcingUrl ?? null,
       lowStockThreshold: info?.lowStockThreshold ?? null,
       naverStock: null,
     });

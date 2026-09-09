@@ -27,6 +27,10 @@
       "schedule": "0 11 * * *"
     },
     {
+      "path": "/api/cron/stock-alert-pm",
+      "schedule": "0 12 * * *"
+    },
+    {
       "path": "/api/cron/asset-integrity-sweep",
       "schedule": "0 15 * * *"
     },
