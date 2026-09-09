@@ -1,0 +1,9122 @@
+{
+ "data": {
+  "__schema": {
+   "queryType": {
+    "name": "Query"
+   },
+   "mutationType": {
+    "name": "Mutation"
+   },
+   "types": [
+    {
+     "kind": "OBJECT",
+     "name": "Query",
+     "fields": [
+      {
+       "name": "category",
+       "args": [
+        {
+         "name": "lang",
+         "type": {
+          "name": "Language",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "Category",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "allCategories",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "CategoriesConnection",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "sellerQnaArticle",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "SellerQnaArticle",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "allSellerQnaArticles",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "search",
+         "type": {
+          "name": "SellerQnaSearch",
+          "kind": "INPUT_OBJECT",
+          "ofType": null
+         }
+        },
+        {
+         "name": "type",
+         "type": {
+          "name": "SellerQnaType",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "receiverName",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateFrom",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateTo",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "SellerQnaArticlesConnection",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "vendorQnaArticle",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "String",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "VendorQnaArticle",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "allVendorQnaArticles",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "search",
+         "type": {
+          "name": "VendorQnaSearch",
+          "kind": "INPUT_OBJECT",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateFrom",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateTo",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "authorType",
+         "type": {
+          "name": "VendorQnaAuthorType",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "replied",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "type",
+         "type": {
+          "name": "VendorQnaType",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "VendorQnaArticlesConnection",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "emergencyMessage",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "EmergencyMessage",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "allEmergencyMessages",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "status",
+         "type": {
+          "name": "EmergencyMessageStatus",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "EmergencyMessagesConnection",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "notice",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "String",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Notice",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "allNotices",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "type",
+         "type": {
+          "name": "NoticeType",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "authorType",
+         "type": {
+          "name": "NoticeAuthorType",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "checked",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "search",
+         "type": {
+          "name": "NoticeSearch",
+          "kind": "INPUT_OBJECT",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateFrom",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateTo",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "NoticesConnection",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "item",
+       "args": [
+        {
+         "name": "currency",
+         "type": {
+          "name": "Currency",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "lang",
+         "type": {
+          "name": "Language",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Item",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "allItems",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateFrom",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateTo",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "minPrice",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "maxPrice",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "search",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "vendor",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "status",
+         "type": {
+          "name": "ItemStatus",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "category",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "attributes",
+         "type": {
+          "name": null,
+          "kind": "LIST",
+          "ofType": {
+           "name": null,
+           "kind": "NON_NULL"
+          }
+         }
+        },
+        {
+         "name": "vcode",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "vprdcode",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "shippingLocationType",
+         "type": {
+          "name": "ShippingLocationType",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "openmarketSellable",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "grade",
+         "type": {
+          "name": "VendorGradeCode",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "sortBy",
+         "type": {
+          "name": "ItemSortCriteria",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "lang",
+         "type": {
+          "name": "Language",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "currency",
+         "type": {
+          "name": "Currency",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "isUsed",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ItemsConnection",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "itemsByKeys",
+       "args": [
+        {
+         "name": "keys",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": null,
+           "kind": "LIST"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "itemHistories",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateFrom",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateTo",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "kind",
+         "type": {
+          "name": "ItemHistoryKind",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "itemKey",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ItemHistoriesConnection",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "order",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "String",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "Order",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "allOrders",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "note",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "sellerNote",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "status",
+         "type": {
+          "name": "OrderStatus",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateFrom",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateTo",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "shippedAfter",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "shippedBefore",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "OrdersConnection",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "seller",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "Seller",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "allSellers",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "sortBy",
+         "type": {
+          "name": "SellerSortCriteria",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateFrom",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateTo",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "confirmed",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "signUpLocation",
+         "type": {
+          "name": "SignUpLocation",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "sellerConversion",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "userType",
+         "type": {
+          "name": "UserType",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "grade",
+         "type": {
+          "name": "SellerGrade",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "requestedRemoval",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "joinCourse",
+         "type": {
+          "name": "JoinCourse",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "manager",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "search",
+         "type": {
+          "name": "SellerSearch",
+          "kind": "INPUT_OBJECT",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "SellersConnection",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "sellerReceipt",
+       "args": [
+        {
+         "name": "issuedAt",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "SellerReceipt",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "allSellerReceipts",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "issuedFor",
+         "type": {
+          "name": "IssuedForSearch",
+          "kind": "INPUT_OBJECT",
+          "ofType": null
+         }
+        },
+        {
+         "name": "corporateStatus",
+         "type": {
+          "name": "CorporateTaxType",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "taxFree",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "issuanceStatus",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "search",
+         "type": {
+          "name": "SellerReceiptSearch",
+          "kind": "INPUT_OBJECT",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "SellerReceiptsConnection",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "sellerReserve",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "String",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "SellerReserve",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "allSellersReserve",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateFrom",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateTo",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "search",
+         "type": {
+          "name": "SellerReserveSearch",
+          "kind": "INPUT_OBJECT",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "SellerReservesConnection",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "settlement",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "Settlement",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "allSettlements",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "issuedFor",
+         "type": {
+          "name": "IssuedForSearch",
+          "kind": "INPUT_OBJECT",
+          "ofType": null
+         }
+        },
+        {
+         "name": "status",
+         "type": {
+          "name": "SettlementStatus",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "period",
+         "type": {
+          "name": "SettlementPeriod",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "corporateTaxType",
+         "type": {
+          "name": "CorporateTaxType",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        },
+        {
+         "name": "search",
+         "type": {
+          "name": "SettlementSearch",
+          "kind": "INPUT_OBJECT",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "SettlementsConnection",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "transaction",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "String",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "Transaction",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "user",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "User",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "vendor",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "Vendor",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "allVendors",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateFrom",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "dateTo",
+         "type": {
+          "name": "Timestamp",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "minAverageShippingDay",
+         "type": {
+          "name": "Float",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "maxAverageShippingDay",
+         "type": {
+          "name": "Float",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "minProductShippingRate",
+         "type": {
+          "name": "Float",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "maxProductShippingRate",
+         "type": {
+          "name": "Float",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "disabled",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "search",
+         "type": {
+          "name": "VendorSearch",
+          "kind": "INPUT_OBJECT",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "VendorsConnection",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "Language",
+     "fields": null
+    },
+    {
+     "kind": "SCALAR",
+     "name": "ID",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Category",
+     "fields": [
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "fullName",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "attributes",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "name",
+       "args": [
+        {
+         "name": "lang",
+         "type": {
+          "name": "Language",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "registrable",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "parent",
+       "args": [],
+       "type": {
+        "name": "Category",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "children",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "ancestors",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "descendants",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "CategoriesConnection",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "INTERFACE",
+     "name": "Node",
+     "fields": [
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "SCALAR",
+     "name": "String",
+     "fields": null
+    },
+    {
+     "kind": "SCALAR",
+     "name": "Boolean",
+     "fields": null
+    },
+    {
+     "kind": "SCALAR",
+     "name": "Int",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "CategoriesConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "CategoriesEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "PageInfo",
+     "fields": [
+      {
+       "name": "hasNextPage",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "hasPreviousPage",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "startCursor",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "endCursor",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "count",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "CategoriesEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Category",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SellerQnaArticle",
+     "fields": [
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "type",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "SellerQnaType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "isSecret",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "title",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "content",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "files",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "relatedItemKey",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "relatedOrderKey",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "sellerKey",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "vendorKey",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "recipientName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "subArticles",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "parentArticles",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "comments",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "SellerQnaType",
+     "fields": null
+    },
+    {
+     "kind": "SCALAR",
+     "name": "Timestamp",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "SellerQnaSearch",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "SellerQnaSearchBy",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SellerQnaArticlesConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "SellerQnaArticlesEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SellerQnaArticlesEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "SellerQnaArticle",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "VendorQnaArticle",
+     "fields": [
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "type",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "VendorQnaType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "title",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "content",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "files",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "relatedItemKey",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "relatedOrderKey",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "updatedAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "authorType",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "VendorQnaAuthorType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "authorKey",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "repliedAt",
+       "args": [],
+       "type": {
+        "name": "Timestamp",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "reply",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "repliedByKey",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "replierType",
+       "args": [],
+       "type": {
+        "name": "VendorQnaAuthorType",
+        "kind": "ENUM",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "VendorQnaType",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "VendorQnaAuthorType",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "VendorQnaSearch",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "VendorQnaSearchBy",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "VendorQnaArticlesConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "VendorQnaArticlesEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "VendorQnaArticlesEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "VendorQnaArticle",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "EmergencyMessage",
+     "fields": [
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "to",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "type",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "EmergencyMessageType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "itemKey",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "content",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "url",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "penalty",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "adminKey",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "status",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "EmergencyMessageStatus",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "repliedAt",
+       "args": [],
+       "type": {
+        "name": "Timestamp",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "reply",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "EmergencyMessageType",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "EmergencyMessageStatus",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "EmergencyMessagesConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "EmergencyMessagesEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "EmergencyMessagesEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "EmergencyMessage",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Notice",
+     "fields": [
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "content",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "sellerKey",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "adminKey",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "vendorKey",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "authorType",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "NoticeAuthorType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "relatedItemKeys",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "relatedOrderKeys",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "checkedAt",
+       "args": [],
+       "type": {
+        "name": "Timestamp",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "type",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "NoticeType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "NoticeAuthorType",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "NoticeType",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "NoticeSearch",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "NoticeSearchBy",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "NoticesConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "NoticesEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "NoticesEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Notice",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "Currency",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Item",
+     "fields": [
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "updatedAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "model",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "production",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "origin",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "isUsed",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "wholessalePrice",
+       "args": [],
+       "type": {
+        "name": "Int",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "wholesale",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "pricePolicy",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PricePolicy",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "searchKeywords",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "content",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "HTML",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "shippingFee",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "shippingType",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ShippingType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "status",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ItemStatus",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "options",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "isPublic",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "taxFree",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "adultOnly",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "returnable",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "noReturnReason",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "guaranteedShippingPeriod",
+       "args": [],
+       "type": {
+        "name": "Int",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "openmarketSellable",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "boxQuantity",
+       "args": [],
+       "type": {
+        "name": "Int",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "attributes",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "closingTime",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "returnCriteria",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ReturnCriteria",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "similarItems",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "metadata",
+       "args": [],
+       "type": {
+        "name": "JSON",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "name",
+       "args": [
+        {
+         "name": "lang",
+         "type": {
+          "name": "Language",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "price",
+       "args": [
+        {
+         "name": "currency",
+         "type": {
+          "name": "Currency",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "fixedPrice",
+       "args": [
+        {
+         "name": "currency",
+         "type": {
+          "name": "Currency",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "images",
+       "args": [
+        {
+         "name": "size",
+         "type": {
+          "name": "ImageSize",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "category",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Category",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "PricePolicy",
+     "fields": null
+    },
+    {
+     "kind": "SCALAR",
+     "name": "HTML",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "ShippingType",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "ItemStatus",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ItemOption",
+     "fields": [
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "quantity",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "status",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ItemOptionStatus",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "optionAttributes",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "metadata",
+       "args": [],
+       "type": {
+        "name": "JSON",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "price",
+       "args": [
+        {
+         "name": "currency",
+         "type": {
+          "name": "Currency",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "fixedPrice",
+       "args": [
+        {
+         "name": "currency",
+         "type": {
+          "name": "Currency",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "ItemOptionStatus",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ItemOptionAttribute",
+     "fields": [
+      {
+       "name": "name",
+       "args": [
+        {
+         "name": "lang",
+         "type": {
+          "name": "Language",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "value",
+       "args": [
+        {
+         "name": "lang",
+         "type": {
+          "name": "Language",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "SCALAR",
+     "name": "JSON",
+     "fields": null
+    },
+    {
+     "kind": "SCALAR",
+     "name": "Float",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "ReturnCriteria",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "ImageSize",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "ShippingLocationType",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "VendorGradeCode",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "ItemSortCriteria",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ItemsConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "ItemsEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ItemsEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Item",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "ItemHistoryKind",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ItemHistoriesConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "ItemHistoriesEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ItemHistoriesEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ItemHistory",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ItemHistory",
+     "fields": [
+      {
+       "name": "itemKey",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "kind",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ItemHistoryKind",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "title",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "valueBefore",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "valueAfter",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Order",
+     "fields": [
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "products",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "status",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "OrderStatus",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "shippingInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ShippingInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "updatedAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "note",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "ordererNote",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "sellerNote",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "isBeingMediated",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "adjustments",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "refundDetails",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "transactions",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "OrderProduct",
+     "fields": [
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "quantity",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "sourceAddress",
+       "args": [],
+       "type": {
+        "name": "Address",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "shippingType",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ShippingType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "itemKey",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "productName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "itemOptionInfo",
+       "args": [],
+       "type": {
+        "name": "OrderProductItemOptionInfo",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "trackingNumber",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "shippingCompanyCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "shippingCompanyName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "shippedDate",
+       "args": [],
+       "type": {
+        "name": "Timestamp",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "additionalAttributes",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "taxFree",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "sellerNote",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "price",
+       "args": [
+        {
+         "name": "currency",
+         "type": {
+          "name": "Currency",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Address",
+     "fields": [
+      {
+       "name": "addr1",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "addr2",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "postalCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "OrderProductItemOptionInfo",
+     "fields": [
+      {
+       "name": "optionAttributes",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "ItemOptionAttribute",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      },
+      {
+       "name": "shippingName",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "price",
+       "args": [
+        {
+         "name": "currency",
+         "type": {
+          "name": "Currency",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "AdditionalAttribute",
+     "fields": [
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "value",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "OrderStatus",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ShippingInfo",
+     "fields": [
+      {
+       "name": "sender",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Sender",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "recipient",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Recipient",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "shippingFee",
+       "args": [
+        {
+         "name": "currency",
+         "type": {
+          "name": "Currency",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Sender",
+     "fields": [
+      {
+       "name": "name",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "phoneNumber",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "email",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Recipient",
+     "fields": [
+      {
+       "name": "name",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "phoneNumber",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "destinationAddress",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Address",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "customsClearanceCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "OrderAdjustment",
+     "fields": [
+      {
+       "name": "reason",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "taxFree",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "price",
+       "args": [
+        {
+         "name": "currency",
+         "type": {
+          "name": "Currency",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Float",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "costPrice",
+       "args": [
+        {
+         "name": "currency",
+         "type": {
+          "name": "Currency",
+          "kind": "ENUM",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Float",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "RefundedOrder",
+     "fields": [
+      {
+       "name": "status",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "RefundProgressStatusType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "productStatus",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ProductStatusType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "RefundOrExchangeReasonType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "detailedReason",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ReasonForRefund",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "shippingFeePayment",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "returnCriteria",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ReturnCriteria",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "refundAddress",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "RefundAddress",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "shippingCompany",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "refundTrackingInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "RefundTrackingInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "content",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "RefundProgressStatusType",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "ProductStatusType",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "RefundOrExchangeReasonType",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ReasonForRefund",
+     "fields": [
+      {
+       "name": "refundType",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "RefundType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "detail",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "explanation",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "RefundType",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "RefundAddress",
+     "fields": [
+      {
+       "name": "refundAddressType",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "RefundAddressType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "address",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "RefundAddressType",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "RefundTrackingInfo",
+     "fields": [
+      {
+       "name": "shippingCompanycode",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "trackingNumber",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Transaction",
+     "fields": [
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "kind",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "TransactionKind",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "status",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "TransactionStatus",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "amount",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "TransactionAmount",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "updatedAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "closedAt",
+       "args": [],
+       "type": {
+        "name": "Timestamp",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "note",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "TransactionKind",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "TransactionStatus",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "TransactionAmount",
+     "fields": [
+      {
+       "name": "currency",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "value",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Float",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "OrdersConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "OrdersEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "OrdersEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Order",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Seller",
+     "fields": [
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "operatorInformation",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "OperatorInformation",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "rating",
+       "args": [],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "reserve",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "INTERFACE",
+     "name": "IOperator",
+     "fields": [
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "operatorInformation",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "OperatorInformation",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "OperatorInformation",
+     "fields": [
+      {
+       "name": "registrationNumber",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "industry",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "businessCondition",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "name",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "owner",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "phoneNumber",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "location",
+       "args": [],
+       "type": {
+        "name": "Address",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "marketingDirector",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "marketingDirectorPhoneNumber",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "settlementDirector",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "settlementDirectorPhoneNumber",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "settlementAccount",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "operatorType",
+       "args": [],
+       "type": {
+        "name": "OperatorType",
+        "kind": "ENUM",
+        "ofType": null
+       }
+      },
+      {
+       "name": "taxFree",
+       "args": [],
+       "type": {
+        "name": "Boolean",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "OperatorType",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "SellerSortCriteria",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "SignUpLocation",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "UserType",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "SellerGrade",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "JoinCourse",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "SellerSearch",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "SellerSearchBy",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SellersConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "SellersEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SellersEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Seller",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SellerReceipt",
+     "fields": [
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "issuedFor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "closingcode",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "taxFree",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "companyName",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "orderCount",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "price",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "supplyPrice",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "vat",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "issuanceStatus",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "corporateTaxType",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "CorporateTaxType",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "seller",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Seller",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "orders",
+       "args": [
+        {
+         "name": "first",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "last",
+         "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "after",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "before",
+         "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "OrdersConnection",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "sellerReserve",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "CorporateTaxType",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SellerReserveForReceipt",
+     "fields": [
+      {
+       "name": "reserve",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "totalReserve",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "ordercode",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "taxFree",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reserveHistory",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "IssuedForSearch",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "SellerReceiptSearch",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "SellerReceiptSearchBy",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SellerReceiptsConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "SellerReceiptsEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SellerReceiptsEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "SellerReceipt",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SellerReserve",
+     "fields": [
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reserve",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "content",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "manager",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "isExcludedFromBill",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "seller",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Seller",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "SellerReserveSearch",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "SellerReserveSearchBy",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SellerReservesConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "SellerReserveEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SellerReserveEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "SellerReserve",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Settlement",
+     "fields": [
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "closingcode",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "companyName",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "range",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "taxFree",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "totalPrice",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "totalShippingFee",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "totalAdjustments",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "netPrice",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "status",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "SettlementStatus",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "closedDate",
+       "args": [],
+       "type": {
+        "name": "Timestamp",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "corporateTaxType",
+       "args": [],
+       "type": {
+        "name": "CorporateTaxType",
+        "kind": "ENUM",
+        "ofType": null
+       }
+      },
+      {
+       "name": "adjustment",
+       "args": [],
+       "type": {
+        "name": "Adjustment",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "vendor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Vendor",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "orders",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "adjustments",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "SettlementStatus",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Adjustment",
+     "fields": [
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "taxFree",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "status",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "price",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "note",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "closingcode",
+       "args": [],
+       "type": {
+        "name": "Int",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "manager",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Vendor",
+     "fields": [
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "operatorInformation",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "OperatorInformation",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "rating",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Float",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "defaultMargin",
+       "args": [],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "homepage",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "accountDate",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "closetime",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "itemCount",
+       "args": [],
+       "type": {
+        "name": "Int",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "orderCount",
+       "args": [],
+       "type": {
+        "name": "Int",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "memo",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "approved",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "qnaAnswerRate",
+       "args": [],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "averageShippingDay",
+       "args": [],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "productShippingRate",
+       "args": [],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "invoiceConfirmationRate",
+       "args": [],
+       "type": {
+        "name": "Float",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "grade",
+       "args": [],
+       "type": {
+        "name": "VendorGrade",
+        "kind": "ENUM",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "VendorGrade",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "SettlementPeriod",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "SettlementSearch",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "SettlementSearchBy",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SettlementsConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "SettlementsEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SettlementsEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Settlement",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "User",
+     "fields": [
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "id",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createdAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "updatedAt",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Timestamp",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "username",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "name",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "email",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "emailConfirmed",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "phoneNumber",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "phoneNumberConfirmed",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "lastSigninTime",
+       "args": [],
+       "type": {
+        "name": "Timestamp",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "status",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "UserStatus",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "UserStatus",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "VendorSearch",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "VendorSearchBy",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "VendorsConnection",
+     "fields": [
+      {
+       "name": "pageInfo",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "PageInfo",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "edges",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "VendorsEdge",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "VendorsEdge",
+     "fields": [
+      {
+       "name": "cursor",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "node",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Vendor",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Mutation",
+     "fields": [
+      {
+       "name": "createSellerQnaArticle",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "SellerQnaArticleInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "SellerQnaArticle",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createSellerQnaArticleReply",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "SellerQnaArticleReplyInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "SellerQnaArticle",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createSellerQnaArticleComment",
+       "args": [
+        {
+         "name": "content",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "String",
+           "kind": "SCALAR"
+          }
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "SellerQnaArticle",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createVendorQnaArticle",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "VendorQnaArticleInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "VendorQnaArticle",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createVendorQnaArticleReply",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "VendorQnaArticleReplyInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "VendorQnaArticle",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createEmergencyMessage",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "EmergencyMessageInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "EmergencyMessage",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createNotice",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "NoticeInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Notice",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "createItem",
+       "args": [
+        {
+         "name": "denyCautionWords",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "autoReplace",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "autoTranslate",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ItemInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "Item",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "updateItem",
+       "args": [
+        {
+         "name": "denyCautionWords",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "autoReplace",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "autoTranslate",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ItemUpdateInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "Item",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "discontinueItem",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "Boolean",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "soldoutItem",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "Boolean",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "resumeItem",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": "Boolean",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "createOrder",
+       "args": [
+        {
+         "name": "simulationResult",
+         "type": {
+          "name": null,
+          "kind": "LIST",
+          "ofType": {
+           "name": null,
+           "kind": "NON_NULL"
+          }
+         }
+        },
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "OrderInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "simulateCreateOrder",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "OrderInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "updateOrderNotes",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "OrderUpdateNotesInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Order",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "setTrackingInfo",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "TrackingInfoInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Order",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "setOrderProductsTrackingInfo",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": null,
+           "kind": "LIST"
+          }
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Order",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "checkOrder",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Order",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "cancelOrder",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": "RequestOrderCancellationInput",
+          "kind": "INPUT_OBJECT",
+          "ofType": null
+         }
+        },
+        {
+         "name": "requestOrderCancellation",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Order",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "requestOrderCancellation",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "RequestOrderCancellationInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Order",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "acceptOrderCancellationRequest",
+       "args": [
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Order",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "rejectOrderCancellationRequest",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "RejectOrderCancellationInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Order",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "requestRefundOrExchange",
+       "args": [
+        {
+         "name": "input",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "RefundExchangeOrderInput",
+           "kind": "INPUT_OBJECT"
+          }
+         }
+        },
+        {
+         "name": "key",
+         "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+           "name": "ID",
+           "kind": "SCALAR"
+          }
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Order",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "SellerQnaArticleInput",
+     "fields": null
+    },
+    {
+     "kind": "SCALAR",
+     "name": "Upload",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "SellerQnaArticleReplyInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "VendorQnaArticleInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "VendorQnaArticleReplyInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "DirectTransferSellerQnaArticleReplyInput",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "SellerQnaDirectAnswerType",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "EstimatedDeliveryDayType",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "UnavailableDeliveryType",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "EmergencyMessageInput",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "PenaltyType",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "NoticeInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "ItemInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "TextInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "ItemOptionInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "ItemOptionAttributeInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "PriceInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "ItemOptionMetadataInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "OptionConstraintInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "SingleOptionContraintInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "ItemMetadataInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "ProductNotificationInformationInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "CertificateInformationInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "ExternalCategoryInformationInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "ItemUpdateInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "ItemMetadataUpdateInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "CreateOrderSimulationResultInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "OrderProductSimulationresultInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "OrderInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "SenderInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "RecipientInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "AddressInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "OrderProductInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "AdditionalAttributesInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "CustomsClearanceCodeInput",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "CustomsClearanceCodeType",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "CreateOrderSimulationResult",
+     "fields": [
+      {
+       "name": "itemAmounts",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "shippingAmount",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "extraShippingFeeExists",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "OrderProductSimulationresult",
+     "fields": [
+      {
+       "name": "amount",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "itemKey",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "OrderUpdateNotesInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "SellerNoteInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "TrackingInfoInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "OrderProductTrackingInfoInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "RequestOrderCancellationInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "RejectOrderCancellationInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "RejectOrderCancellationTrackingInfoInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "RefundExchangeOrderInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "DetailedReasonInput",
+     "fields": null
+    },
+    {
+     "kind": "ENUM",
+     "name": "ShippingFeePaymentType",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "RefundAddresInput",
+     "fields": null
+    },
+    {
+     "kind": "INPUT_OBJECT",
+     "name": "RefundTrackingInfoInput",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "__Schema",
+     "fields": [
+      {
+       "name": "types",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "queryType",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "__Type",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "mutationType",
+       "args": [],
+       "type": {
+        "name": "__Type",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "subscriptionType",
+       "args": [],
+       "type": {
+        "name": "__Type",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "directives",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "__Type",
+     "fields": [
+      {
+       "name": "kind",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "__TypeKind",
+         "kind": "ENUM",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "name",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "description",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "fields",
+       "args": [
+        {
+         "name": "includeDeprecated",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "__Field",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      },
+      {
+       "name": "interfaces",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "__Type",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      },
+      {
+       "name": "possibleTypes",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "__Type",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      },
+      {
+       "name": "enumValues",
+       "args": [
+        {
+         "name": "includeDeprecated",
+         "type": {
+          "name": "Boolean",
+          "kind": "SCALAR",
+          "ofType": null
+         }
+        }
+       ],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "__EnumValue",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      },
+      {
+       "name": "inputFields",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "__InputValue",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      },
+      {
+       "name": "ofType",
+       "args": [],
+       "type": {
+        "name": "__Type",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "__TypeKind",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "__Field",
+     "fields": [
+      {
+       "name": "name",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "description",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "args",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "type",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "__Type",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "isDeprecated",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "deprecationReason",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "__InputValue",
+     "fields": [
+      {
+       "name": "name",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "description",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "type",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "__Type",
+         "kind": "OBJECT",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "defaultValue",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "__EnumValue",
+     "fields": [
+      {
+       "name": "name",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "description",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "isDeprecated",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Boolean",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "deprecationReason",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "__Directive",
+     "fields": [
+      {
+       "name": "name",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "description",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "locations",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "args",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "ENUM",
+     "name": "__DirectiveLocation",
+     "fields": null
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SingleKeyNode",
+     "fields": [
+      {
+       "name": "key",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "SingleOptionContraint",
+     "fields": [
+      {
+       "name": "productId",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "ID",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "quantity",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "OptionConstraint",
+     "fields": [
+      {
+       "name": "constraints",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Price",
+     "fields": [
+      {
+       "name": "KRW",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Float",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "USD",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Float",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "CNY",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Float",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "Text",
+     "fields": [
+      {
+       "name": "ko_KR",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "en_US",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "zh_CN",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ItemOptionMetadataObject",
+     "fields": [
+      {
+       "name": "vcode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "vprdcode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ProductNotificationInformation",
+     "fields": [
+      {
+       "name": "code",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "Int",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "categorySpecific",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      },
+      {
+       "name": "common",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": null,
+         "kind": "LIST",
+         "ofType": {
+          "name": null,
+          "kind": "NON_NULL"
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "CertificateInformation",
+     "fields": [
+      {
+       "name": "certificateType",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "certificateIssuer",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "certificateName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "certificateCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "companyName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "certifiedDate",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "expiryDate",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "modelName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ItemMetaDataVendorGrade",
+     "fields": [
+      {
+       "name": "averageShip",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "releaseRate",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "qnaAnswer",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+         "name": "String",
+         "kind": "SCALAR",
+         "ofType": null
+        }
+       }
+      }
+     ]
+    },
+    {
+     "kind": "OBJECT",
+     "name": "ItemMetadata",
+     "fields": [
+      {
+       "name": "returnAddressCode",
+       "args": [],
+       "type": {
+        "name": "Int",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "vendorKey",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "vendorNotice",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "coupangCategoryCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "coupangCategoryFullName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "auctionCategoryCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "auctionCategoryFullName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "gmarketCategoryCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "gmarketCategoryFullName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "st11CategoryCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "st11CategoryFullName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "interparkCategoryCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "interparkCategoryFullName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "smartstoreCategoryCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "smartstoreCategoryFullName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "playautoCategoryCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "playautoCategoryFullName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "esellersCategoryCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "esellersCategoryFullName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "productNotificationInformation",
+       "args": [],
+       "type": {
+        "name": "ProductNotificationInformation",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      },
+      {
+       "name": "certificateInformation",
+       "args": [],
+       "type": {
+        "name": null,
+        "kind": "LIST",
+        "ofType": {
+         "name": null,
+         "kind": "NON_NULL",
+         "ofType": {
+          "name": "CertificateInformation",
+          "kind": "OBJECT"
+         }
+        }
+       }
+      },
+      {
+       "name": "returnShippingFee",
+       "args": [],
+       "type": {
+        "name": "Int",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "shippingName",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "groupCode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "vcode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "vprdcode",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "coupangCategoryIsItemMatching",
+       "args": [],
+       "type": {
+        "name": "Boolean",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "auctionCategoryIsItemMatching",
+       "args": [],
+       "type": {
+        "name": "Boolean",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "gmarketCategoryIsItemMatching",
+       "args": [],
+       "type": {
+        "name": "Boolean",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "st11CategoryIsItemMatching",
+       "args": [],
+       "type": {
+        "name": "Boolean",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "interparkCategoryIsItemMatching",
+       "args": [],
+       "type": {
+        "name": "Boolean",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "grade",
+       "args": [],
+       "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+       }
+      },
+      {
+       "name": "gradeDetail",
+       "args": [],
+       "type": {
+        "name": "ItemMetaDataVendorGrade",
+        "kind": "OBJECT",
+        "ofType": null
+       }
+      }
+     ]
+    }
+   ]
+  }
+ }
+}
