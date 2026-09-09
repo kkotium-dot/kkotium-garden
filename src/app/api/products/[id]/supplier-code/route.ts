@@ -19,8 +19,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { attemptAutoMapSupplierCode, setSupplierCode, SupplierCodeParseError } from '@/lib/inventory-mapping';
 import { pollSingleProduct } from '@/lib/dome-inventory-poller';
 import { SourceAdapterError } from '@/lib/sources';
+import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
+
+async function hasExistingSnapshot(productId: string): Promise<boolean> {
+  const count = await prisma.inventorySnapshot.count({ where: { productId } });
+  return count > 0;
+}
 
 interface PollOutcome {
   snapshot: { qty: number; status: string } | null;
@@ -75,9 +81,23 @@ export async function POST(
     }
 
     const result = await attemptAutoMapSupplierCode(params.id);
-    const { snapshot, pollNote } = result.matched && result.code && result.source !== 'already_set'
-      ? await pollBestEffort(result.code)
-      : { snapshot: null, pollNote: null };
+    // MULTI_PLATFORM_SUPPLIER_CODE_2026-09-09 — 'already_set' used to always
+    // skip the poll (designed to avoid redundant API calls on repeat clicks).
+    // But a code can be "already set" and still have zero snapshots — e.g.
+    // this session's URL-as-code bug, corrected directly in the DB without
+    // going through this route. Only skip the poll when a real snapshot
+    // already exists; otherwise still fire the best-effort poll so the
+    // operator sees a genuine "재고추적 시작됨" instead of a stale "곧 확인".
+    let snapshot: { qty: number; status: string } | null = null;
+    let pollNote: string | null = null;
+    if (result.matched && result.code) {
+      const alreadyHasSnapshot = result.source === 'already_set'
+        ? await hasExistingSnapshot(params.id)
+        : false;
+      if (!alreadyHasSnapshot) {
+        ({ snapshot, pollNote } = await pollBestEffort(result.code));
+      }
+    }
     return NextResponse.json({ success: true, ...result, snapshot, pollNote });
   } catch (e) {
     const msg = e instanceof Error ? e.message : '알 수 없는 오류';
