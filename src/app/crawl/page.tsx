@@ -270,6 +270,10 @@ function CrawlPageInner() {
   const [sCatLoading, setSCatLoading]   = useState(false);
   const [sCatSuggestions, setSCatSuggestions] = useState<Array<{d1:string;d2:string;d3:string}>>([]);
   const [sCatSelected, setSCatSelected] = useState<{d1:string;d2:string;d3:string}|null>(null);
+  // CATEGORY_LOW_CONFIDENCE_2026-09-10 (원본메모 전상품 확장 — 씨앗심기와
+  // 동일한 결함의 3번째 발생지점): AI가 확신 못해 needsConfirmation:true를
+  // 반환해도 이 화면은 무조건 "자동 선택됨"(초록 배지)으로 표시해왔다.
+  const [sCatNeedsConfirmation, setSCatNeedsConfirmation] = useState(false);
   const [sCatQuery, setSCatQuery]         = useState('');
   const [sCatDropdown, setSCatDropdown]   = useState<Array<{code:string;d1:string;d2:string;d3:string;d4:string}>>([]);
   const [sCatActiveIdx, setSCatActiveIdx] = useState(0);
@@ -288,6 +292,7 @@ function CrawlPageInner() {
         setSCatSuggestions(data.suggestions.slice(0, 3));
         const topCat = data.suggestions[0];
         setSCatSelected(topCat);
+        setSCatNeedsConfirmation(!!data.needsConfirmation);
         // Auto-apply fee rate for top category
         const fee = getNaverFeeRateByD1(topCat.d1, 'normal', sellerGrade);
         setNaverFeeRate(fee);
@@ -960,7 +965,11 @@ function CrawlPageInner() {
                     <RefreshCw size={12} className="animate-spin" style={{ color:'#F63B28', marginLeft:4 }} />
                   )}
                   {!sCatLoading && sCatSuggestions.length > 0 && (
-                    <span style={{ fontSize:10, color:'#15803d', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:99, padding:'1px 8px', marginLeft:4 }}>자동 선택됨</span>
+                    sCatNeedsConfirmation ? (
+                      <span style={{ fontSize:10, fontWeight:700, color:'#b91c1c', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:99, padding:'1px 8px', marginLeft:4 }}>⚠️ 확인 필요(AI 미확신)</span>
+                    ) : (
+                      <span style={{ fontSize:10, color:'#15803d', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:99, padding:'1px 8px', marginLeft:4 }}>자동 선택됨</span>
+                    )
                   )}
                   {!sCatLoading && sCatSelected && (
                     <span style={{ fontSize:10, fontWeight:700, color:'#c2410c', background:'#fff7ed', border:'1px solid #fed7aa', borderRadius:99, padding:'1px 8px', marginLeft:4 }}>

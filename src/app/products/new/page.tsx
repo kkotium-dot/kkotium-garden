@@ -739,6 +739,14 @@ function NewProductPageInner() {
     // blanked server-side) -> auto-fill d1/d2, user picks the subcategory.
     | { kind: 'partial'; d1: string; d2: string }
     | { kind: 'failed'; reason: string }
+    // CATEGORY_LOW_CONFIDENCE_2026-09-10 (원본메모 전상품 확장) — same fix as
+    // the manual "카테고리 자동 추천" button (products/new/page.tsx L3068~),
+    // applied here too: this AUTOMATIC prefill/mismatch-recovery path was the
+    // second call site of the same needsConfirmation-ignoring bug, and this
+    // one is more dangerous — it fires silently on every crawl-import with no
+    // operator click at all. A weak deterministic guess must never look like
+    // a confirmed 'autofilled' result to the seller.
+    | { kind: 'unconfirmed'; d1: string; d2: string; d3: string }
   >({ kind: 'idle' });
   // B6 (트리아지 2군): /api/category/suggest already returns multiple
   // candidates (suggestions[]) but the UI only ever applied suggestions[0].
@@ -1258,14 +1266,23 @@ function NewProductPageInner() {
           if (validCandidates.length >= 2) break;
         }
         const validated = validCandidates[0];
+        // CATEGORY_LOW_CONFIDENCE_2026-09-10 (전상품 확장 — 수동 버튼과 동일
+        // 근본원인의 두번째 발생지점, 실측 확정: 결정론적 매칭이 약할 때 Groq는
+        // 정직하게 빈배열을 반환하도록 설계돼 있는데[category-ai-suggest.ts],
+        // 이 자동 크롤-프리필 경로는 needsConfirmation을 확인하지 않고 그
+        // 신뢰도 낮은 추정치를 'autofilled'(확정됨)로 표시해왔다. 수동 버튼
+        // 수정과 동일 기준 적용: 미확정이면 카테고리 값 자체는 참고용으로
+        // 채우되(완전 공란보다 사용자가 검토하기 쉬움) 상태는 'unconfirmed'로
+        // 명확히 구분해 초록색 "자동완료" UI 대신 경고색으로 표시한다.
         if (data?.success && validated) {
           setD1(validated.d1); setD2(validated.d2); setD3(validated.d3);
           if (validated.d4) setD4(validated.d4);
           setCategoryCandidates(validCandidates);
-          setCrawlCatStatus({
-            kind: 'autofilled',
-            d1: validated.d1, d2: validated.d2, d3: validated.d3,
-          });
+          setCrawlCatStatus(
+            data.needsConfirmation
+              ? { kind: 'unconfirmed', d1: validated.d1, d2: validated.d2, d3: validated.d3 }
+              : { kind: 'autofilled', d1: validated.d1, d2: validated.d2, d3: validated.d3 }
+          );
         } else {
           setCategoryCandidates([]);
           // G2 Fix C: no fully valid triple, but the server may have returned a
@@ -2747,18 +2764,18 @@ const handleGenerate = async () => {
         {/* PC-A P1: surface category prefill autofill status. Banner shown only
             when crawler prefill produced a non-matching taxonomy or AI fallback
             ran; matched + idle states stay silent to keep the page calm. */}
-        {(crawlCatStatus.kind === 'mismatch' || crawlCatStatus.kind === 'autofilling' || crawlCatStatus.kind === 'autofilled' || crawlCatStatus.kind === 'partial' || crawlCatStatus.kind === 'failed') && (
+        {(crawlCatStatus.kind === 'mismatch' || crawlCatStatus.kind === 'autofilling' || crawlCatStatus.kind === 'autofilled' || crawlCatStatus.kind === 'unconfirmed' || crawlCatStatus.kind === 'partial' || crawlCatStatus.kind === 'failed') && (
           <div style={{
             marginBottom: 16, padding: '10px 14px', borderRadius: 12,
             display: 'flex', alignItems: 'center', gap: 10,
-            background: crawlCatStatus.kind === 'autofilled' ? '#F0FDF4' : crawlCatStatus.kind === 'failed' ? '#FEF2F2' : '#FEF7ED',
-            border: `1.5px solid ${crawlCatStatus.kind === 'autofilled' ? '#86EFAC' : crawlCatStatus.kind === 'failed' ? '#FCA5A5' : '#FDBA74'}`,
+            background: crawlCatStatus.kind === 'autofilled' ? '#F0FDF4' : (crawlCatStatus.kind === 'failed' || crawlCatStatus.kind === 'unconfirmed') ? '#FEF2F2' : '#FEF7ED',
+            border: `1.5px solid ${crawlCatStatus.kind === 'autofilled' ? '#86EFAC' : (crawlCatStatus.kind === 'failed' || crawlCatStatus.kind === 'unconfirmed') ? '#FCA5A5' : '#FDBA74'}`,
           }}>
             {crawlCatStatus.kind === 'autofilling' ? (
               <Info size={14} style={{ color: '#C2410C', flexShrink: 0 }} />
             ) : crawlCatStatus.kind === 'autofilled' ? (
               <CheckCircle size={14} style={{ color: '#16A34A', flexShrink: 0 }} />
-            ) : crawlCatStatus.kind === 'failed' ? (
+            ) : (crawlCatStatus.kind === 'failed' || crawlCatStatus.kind === 'unconfirmed') ? (
               <AlertTriangle size={14} style={{ color: '#B91C1C', flexShrink: 0 }} />
             ) : (
               <Info size={14} style={{ color: '#C2410C', flexShrink: 0 }} />
@@ -2777,6 +2794,13 @@ const handleGenerate = async () => {
                 <>
                   <strong>네이버 카테고리 자동 매핑 완료:</strong>&nbsp;
                   {crawlCatStatus.d1} &gt; {crawlCatStatus.d2} &gt; {crawlCatStatus.d3}
+                </>
+              )}
+              {crawlCatStatus.kind === 'unconfirmed' && (
+                <>
+                  <strong>⚠️ AI가 확신하지 못한 추정치입니다:</strong>&nbsp;
+                  {crawlCatStatus.d1} &gt; {crawlCatStatus.d2} &gt; {crawlCatStatus.d3}
+                  &nbsp;— 참고용으로만 채웠어요. 반드시 직접 확인·수정해주세요.
                 </>
               )}
               {crawlCatStatus.kind === 'partial' && (
