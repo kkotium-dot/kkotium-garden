@@ -245,7 +245,14 @@ function SingleImagePreview({
               maxHeight: 480,
               objectFit: "contain",
               borderRadius: 10,
-              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.06)",
+              // VISUAL_ANCHOR_2026-09-10 -- Gemini UI note's "Visual Anchor"
+              // idea re-verified. A full background swap to flat gray
+              // (#F0F2F5) was rejected -- it would erase the existing brand
+              // pink-checker canvas pattern above (repeating-linear-gradient).
+              // Instead only the main image's own shadow is deepened, giving
+              // "this is the product being worked on" a clearer visual center
+              // without touching brand identity.
+              boxShadow: "0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06)",
               background: "var(--color-surface)",
               padding: 8,
             }}

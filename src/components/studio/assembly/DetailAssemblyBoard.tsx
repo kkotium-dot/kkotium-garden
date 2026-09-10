@@ -75,9 +75,14 @@ export interface DetailAssemblyBoardProps {
   productId: string | null;
   /** #56 — jump to the studio image-generation step for an empty stage. */
   onNavigateToGenerate?: () => void;
+  /** FLOATING_DOCK_2026-09-10 — reports {filled, total} assignable-section
+      counts on every assignment change, so a parent-level floating summary
+      bar (studio/page.tsx) can show live progress without duplicating this
+      607-line board's own state. Optional — existing callers unaffected. */
+  onProgressChange?: (progress: { filled: number; total: number }) => void;
 }
 
-export default function DetailAssemblyBoard({ productId, onNavigateToGenerate }: DetailAssemblyBoardProps) {
+export default function DetailAssemblyBoard({ productId, onNavigateToGenerate, onProgressChange }: DetailAssemblyBoardProps) {
   const [data, setData] = useState<AssetsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -196,6 +201,16 @@ export default function DetailAssemblyBoard({ productId, onNavigateToGenerate }:
   const previewHtml = useMemo(() => buildDetailPreviewHtml(previewSections), [previewSections]);
   const previewImgCount = useMemo(() => previewSections.reduce((n, s) => n + s.images.length, 0), [previewSections]);
   const previewCopyChars = useMemo(() => buildDetailCopyText(previewSections).length, [previewSections]);
+
+  // FLOATING_DOCK_2026-09-10 -- report filled/total assignable-section counts
+  // to the parent on every assignment change (a section counts as "filled"
+  // once it has at least one image assigned). Read-only report -- does not
+  // change any existing behavior of this board.
+  useEffect(() => {
+    if (!onProgressChange) return;
+    const filled = ASSIGNABLE.filter((s) => (assignments[s.key]?.length ?? 0) > 0).length;
+    onProgressChange({ filled, total: ASSIGNABLE.length });
+  }, [assignments, onProgressChange]);
 
   // SF-3b — persist the assembled section copy to Product.description (zero new
   // field). Explicit save (not autosave) — description is higher-stakes than the

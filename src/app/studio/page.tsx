@@ -22,7 +22,7 @@ import { Children, Suspense, useCallback, useEffect, useMemo, useState, type Rea
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { onProductMutated } from '@/lib/events/product-mutated';
-import { Palette, Loader2, Image as ImageIcon, Check, Monitor, Smartphone, Warehouse, FlaskConical, NotebookText, ArrowLeft } from 'lucide-react';
+import { Palette, Loader2, Image as ImageIcon, Check, Monitor, Smartphone, Warehouse, FlaskConical, NotebookText, ArrowLeft, Layers } from 'lucide-react';
 import strings from '@/lib/i18n/studio-strings.ko.json';
 import {
   DiagnosisCard,
@@ -83,6 +83,13 @@ function StudioInner() {
 
   // Stepper + device-preview state (page-owned).
   const [step, setStep] = useState<AtelierStepKey>(initialStep);
+  // FLOATING_DOCK_2026-09-10 -- Gemini UI note's "맥락 보존형 하단 플로팅
+  // 도크" idea, scoped safely: instead of floating the whole 607-line
+  // DetailAssemblyBoard (which would cover the live preview above it), only
+  // a small always-visible progress summary floats at the workspace bottom.
+  // Clicking it scrolls to the actual board -- no duplicate UI, no risk of
+  // blocking other work.
+  const [assemblyProgress, setAssemblyProgress] = useState<{ filled: number; total: number } | null>(null);
   const [device, setDevice] = useState<'pc' | 'mobile'>('pc');
 
   // Product list state (page-specific — the hook only knows about a single
@@ -340,10 +347,13 @@ function StudioInner() {
             #62: isolated by ErrorBoundary so a render fault here can never blank
             the whole step canvas — the rest of 배양실 keeps rendering. */}
         <ErrorBoundary label="상세 조립 보드">
-          <DetailAssemblyBoard
-            productId={selectedProduct.id}
-            onNavigateToGenerate={() => setStep('thumbnail')}
-          />
+          <div id="assembly-board-anchor">
+            <DetailAssemblyBoard
+              productId={selectedProduct.id}
+              onNavigateToGenerate={() => setStep('thumbnail')}
+              onProgressChange={setAssemblyProgress}
+            />
+          </div>
         </ErrorBoundary>
       </StepGroup>
 
@@ -629,6 +639,35 @@ function StudioInner() {
     </header>
   );
 
+  // FLOATING_DOCK_2026-09-10 — small always-visible summary, only once the
+  // assembly board has actually reported real numbers (step 2 with a product
+  // loaded). Clicking scrolls to the real board instead of duplicating it.
+  const floatingDockSlot: ReactNode = (step === 'detail' && assemblyProgress && assemblyProgress.total > 0) ? (
+    <button
+      type="button"
+      onClick={() => document.getElementById('assembly-board-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '9px 16px', borderRadius: 999, border: '1px solid var(--color-border)',
+        background: 'var(--color-surface)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+        cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--gp-ink-700, #374151)',
+      }}
+    >
+      <Layers size={14} style={{ color: 'var(--gp-red-500)' }} />
+      조립 슬롯 {assemblyProgress.filled}/{assemblyProgress.total}
+      <span style={{
+        display: 'inline-block', width: 60, height: 5, borderRadius: 999,
+        background: 'var(--gp-pink-100, #FFE4EC)', overflow: 'hidden', position: 'relative',
+      }}>
+        <span style={{
+          display: 'block', height: '100%', borderRadius: 999,
+          width: `${Math.round((assemblyProgress.filled / assemblyProgress.total) * 100)}%`,
+          background: 'var(--gp-red-500)',
+        }} />
+      </span>
+    </button>
+  ) : null;
+
   return (
     <AtelierShell
       header={headerSlot}
@@ -636,6 +675,7 @@ function StudioInner() {
       sidebarTabs={sidebarTabs}
       workspace={workspaceSlot}
       tower={towerSlot}
+      workspaceFloatingDock={floatingDockSlot}
     />
   );
 }

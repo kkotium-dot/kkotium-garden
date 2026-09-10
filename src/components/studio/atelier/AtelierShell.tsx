@@ -49,6 +49,14 @@ export interface AtelierShellProps {
   workspace: ReactNode;
   /** Right rail — 검색 생장 관제탑 (control tower). */
   tower: ReactNode;
+  /** FLOATING_DOCK_2026-09-10 — optional small bar pinned to the bottom of the
+   *  workspace pane (Gemini UI note's "맥락 보존형 하단 플로팅 도크" idea,
+   *  scoped to a lightweight summary rather than a full panel — see
+   *  studio/page.tsx's assemblyProgress usage). Absolutely positioned inside
+   *  the workspace section, so it stays visible while that section scrolls
+   *  and never blocks the sidebar/tower columns. Desktop-only (same as the
+   *  rest of this row) — omitted entirely on the mobile stacked layout below. */
+  workspaceFloatingDock?: ReactNode;
 }
 
 const PANEL_STYLE = {
@@ -57,7 +65,7 @@ const PANEL_STYLE = {
   borderRadius: "var(--radius-card)",
 } as const;
 
-export default function AtelierShell({ header, stepper, sidebarTabs, workspace, tower }: AtelierShellProps) {
+export default function AtelierShell({ header, stepper, sidebarTabs, workspace, tower, workspaceFloatingDock }: AtelierShellProps) {
   const firstKey = sidebarTabs[0]?.key ?? "";
   const [activeKey, setActiveKey] = useState(firstKey);
   // Collapsible w-96 panel — clicking the active icon folds it so the 작업대
@@ -169,9 +177,13 @@ export default function AtelierShell({ header, stepper, sidebarTabs, workspace, 
             </aside>
           )}
 
-          {/* 개화 작업대 — 남는 폭 전부 차지 */}
+          {/* 개화 작업대 — 남는 폭 전부 차지. position:relative so the
+              optional floating dock below can pin to this pane's bottom
+              edge (not the viewport's), matching Gemini's "화면 밖으로 나가지
+              않도록 고정" intent scoped to the workspace column only. */}
           <section
             style={{
+              position: "relative",
               flex: 1,
               minWidth: 0,
               minHeight: 0,
@@ -185,6 +197,22 @@ export default function AtelierShell({ header, stepper, sidebarTabs, workspace, 
             }}
           >
             {workspace}
+            {workspaceFloatingDock && (
+              <div
+                style={{
+                  position: "sticky",
+                  bottom: 8,
+                  left: 0,
+                  right: 2,
+                  zIndex: 5,
+                  display: "flex",
+                  justifyContent: "center",
+                  pointerEvents: "none",
+                }}
+              >
+                <div style={{ pointerEvents: "auto" }}>{workspaceFloatingDock}</div>
+              </div>
+            )}
           </section>
 
           {/* 검색 생장 관제탑 */}
