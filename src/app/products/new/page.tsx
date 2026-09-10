@@ -5045,7 +5045,7 @@ const handleGenerate = async () => {
                               <div style={{ width: 4, height: 4, borderRadius: '50%', background: col, flexShrink: 0, marginTop: 5 }} />
                               <p style={{ fontSize: 11, color: '#555', margin: 0, lineHeight: 1.4 }}>{item.message}</p>
                             </div>
-                            {item.id === 'category' && categoryDbConfirmNeeded && categoryCandidates.length > 0 && (
+                            {item.id === 'category_db_ref' && categoryDbConfirmNeeded && categoryCandidates.length > 0 && (
                               <div style={{ marginLeft: 10, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                                 {categoryCandidates.map((c, i) => (
                                   <button

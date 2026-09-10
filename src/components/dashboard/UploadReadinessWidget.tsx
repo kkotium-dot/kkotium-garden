@@ -47,6 +47,11 @@ export const ITEM_TO_TAB: Record<ReadinessItemId, { tab: string; Icon: React.Ele
   extra_images:      { tab: 'image',    Icon: ImageIcon,   short: '추가' },
   shipping_template: { tab: 'shipping', Icon: Truck,       short: '배송' },
   net_margin:        { tab: 'basic',    Icon: DollarSign,  short: '마진' },
+  // CATEGORY_UX_CLARITY_2026-09-10 — split out from 'category' (see
+  // upload-readiness.ts). Near-zero weight, informational only — still
+  // deep-links to the same 'basic' tab since that's where the candidate
+  // chips render (products/new/page.tsx item.id === 'category_db_ref').
+  category_db_ref:   { tab: 'basic',    Icon: Hash,        short: '내부분류' },
 };
 
 // Helper: detect if a product has any AI-fillable failed item (used to show/hide auto-fill button)

@@ -21,7 +21,16 @@ export type ReadinessItemId =
   | 'main_image'
   | 'extra_images'
   | 'shipping_template'
-  | 'net_margin';
+  | 'net_margin'
+  // CATEGORY_UX_CLARITY_2026-09-10 — split out from 'category'. This tracks
+  // ONLY the internal reference classification (category_id, AI-free/very
+  // conservative — resolveConfidentCategory) that upload-readiness had
+  // wrongly ANDed into the same pass/fail as the Naver-listing category
+  // (naverCategoryCode). A product with a perfectly valid Naver category
+  // was showing as "카테고리 실패" (red, blocking the listing feel) purely
+  // because this unrelated internal signal was unconfident — misleading the
+  // operator into thinking the AI category matcher itself was broken.
+  | 'category_db_ref';
 
 export interface ReadinessItem {
   id: ReadinessItemId;
@@ -71,18 +80,24 @@ export interface ReadinessResult {
 }
 
 // ── Weights (must sum to 100) ─────────────────────────────────────────────────
+// CATEGORY_UX_CLARITY_2026-09-10 — rebalanced while splitting out
+// category_db_ref (see ReadinessItemId above). Also corrects a pre-existing
+// drift: this table summed to 110, not 100 as the comment claimed (never
+// caught because ReadinessResult.score is used relatively, not asserted
+// against 100 anywhere) — now sums to exactly 100.
 const WEIGHTS: Record<ReadinessItemId, number> = {
-  category:          14,
-  keywords_count:    12,
-  tags_count:        10,
-  keyword_in_front:  10,
-  name_length:        8,
-  no_abuse:          10,
-  no_repeat:          8,
-  main_image:        12,
-  extra_images:       8,
-  shipping_template: 10,
-  net_margin:         8,
+  category:          13,
+  keywords_count:    11,
+  tags_count:         9,
+  keyword_in_front:   9,
+  name_length:        7,
+  no_abuse:           9,
+  no_repeat:          7,
+  main_image:        11,
+  extra_images:       7,
+  shipping_template:  9,
+  net_margin:         7,
+  category_db_ref:    1, // reference-only signal — near-zero weight, never blocks
 };
 
 // ── Core calculation ─────────────────────────────────────────────────────────
@@ -107,13 +122,20 @@ export function calcUploadReadiness(input: ReadinessInput): ReadinessResult {
   const safeName     = name ?? '';
   const safeImages   = Array.isArray(images)   ? images.filter(Boolean)   : [];
 
-  // 1. Category check — default code "" means not selected. Also fails when
-  // naverCategoryCode is set but category_id (a separate internal signal)
-  // couldn't be confidently derived — see categoryDbConfirmNeeded above.
+  // 1. Category check — default code "" means not selected. This is ONLY
+  // the Naver-listing category (what actually goes into the product upload)
+  // — category_id confidence is tracked separately below (category_db_ref),
+  // per CATEGORY_UX_CLARITY_2026-09-10: the two are independent signals and
+  // must not gate each other (a valid Naver category should never show as
+  // "실패" just because the internal reference classifier wasn't confident).
   const categoryPassed = !!(
     naverCategoryCode &&
     naverCategoryCode.length > 0
-  ) && !categoryDbConfirmNeeded;
+  );
+  // 1b. Internal reference classification — informational only, near-zero
+  // weight (see WEIGHTS.category_db_ref). "Passed" here just means either
+  // it resolved confidently OR there's nothing to classify yet (no name).
+  const categoryDbRefPassed = !categoryDbConfirmNeeded;
 
   // 2. Keywords count >= 5
   const kwCountPassed = safeKeywords.length >= 5;
@@ -171,12 +193,23 @@ export function calcUploadReadiness(input: ReadinessInput): ReadinessResult {
       id: 'category',
       passed: categoryPassed,
       label: '카테고리',
+      // CATEGORY_UX_CLARITY_2026-09-10 (원본메모 지시: 두 카테고리 시스템이
+      // 혼란스럽게 다른 이름을 동시에 보여줌 — 실측 확인: 위쪽 배너는 네이버
+      // 노출용 카테고리(/api/category/suggest, Groq+Gemini 교차검증 거침)를
+      // 판정하고, 이 항목은 순수하게 그 네이버 카테고리 선택 여부만 본다.
+      // 내부 참고용 분류는 아래 category_db_ref 항목으로 완전히 분리했다
+      // (이전엔 여기서 AND로 합쳐져 네이버 카테고리가 있어도 "실패"로 떴다).
       message: categoryConfirmNeeded
         ? '카테고리 확인 필요 — 자동매칭 3단계(결정론적·AI·검색신호) 전부 실패, 직접 확인해주세요'
-        : categoryDbConfirmNeeded
-          ? '카테고리 확인 필요 — 내부 분류(DB) 미연결, 자동 확정 대신 후보 중 직접 선택해주세요'
-          : '카테고리 미선택 — 노출 순위 대폭 하락',
+        : '카테고리 미선택 — 노출 순위 대폭 하락',
       weight: WEIGHTS.category,
+    },
+    {
+      id: 'category_db_ref',
+      passed: categoryDbRefPassed,
+      label: '내부 분류(참고용)',
+      message: '내부 참고용 분류 미확정 — 네이버 노출 카테고리(위)와는 별개예요. 검색 진단 정확도를 위한 것이니 후보 중 선택하거나 건너뛰어도 무방해요',
+      weight: WEIGHTS.category_db_ref,
     },
     {
       id: 'keywords_count',
