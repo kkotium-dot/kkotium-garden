@@ -3076,9 +3076,27 @@ const handleGenerate = async () => {
                           const data = await res.json();
                           if (data.success && data.suggestions?.length > 0) {
                             const top = data.suggestions[0];
-                            setD1(top.d1); setD2(top.d2); setD3(top.d3);
-                            if (top.d4) setD4(top.d4);
-                            setCatTab('drill');
+                            // CATEGORY_LOW_CONFIDENCE_2026-09-10 (원본메모 재점검):
+                            // 근본원인 실측 확정 — Groq가 확신 없을 때 정직하게
+                            // 빈 배열을 반환하도록 설계돼 있는데(category-ai-
+                            // suggest.ts 프롬프트: "confident하지 않으면 []"),
+                            // API는 그 정직한 실패를 무시하고 신뢰도 낮은
+                            // deterministic 추정치를 그대로 top으로 내려보냈고
+                            // (needsConfirmation:true로 표시됨), 이 화면은 그
+                            // 플래그를 아예 확인 안 하고 무조건 적용해왔다(실측:
+                            // "강아지 얼굴망 방충 메쉬 머리덮개" -> AI가 모른다고
+                            // 했는데 "출산/육아>외출용품>기타외출용품"으로 자동
+                            // 확정 적용됨). 이제 이 플래그를 확인해 낮은 확신도
+                            // 결과는 자동 적용하지 않고 경고 + 카테고리 검색
+                            // 모드로 전환해 대표님이 직접 확인하게 한다.
+                            if (data.needsConfirmation) {
+                              setError(`⚠️ AI가 이 상품명으로 확신할 수 있는 카테고리를 찾지 못했어요 — 추정치(${top.d1} > ${top.d2} > ${top.d3})는 부정확할 수 있으니 아래 검색으로 직접 확인해주세요.`);
+                              setCatTab('search');
+                            } else {
+                              setD1(top.d1); setD2(top.d2); setD3(top.d3);
+                              if (top.d4) setD4(top.d4);
+                              setCatTab('drill');
+                            }
                           } else {
                             setError('카테고리 자동 매핑 실패 — 상품명에 카테고리 키워드가 없습니다. 직접 선택해주세요.');
                           }
