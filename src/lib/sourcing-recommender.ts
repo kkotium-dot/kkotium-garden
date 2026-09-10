@@ -39,7 +39,7 @@ import { judgeExclusion } from '@/lib/policy/exclusion-rules';
 import { pickVariant, seasonalGreeting } from '@/lib/notifications/kkotti-variation';
 import { callGroq } from '@/lib/ai/groq';
 import { matchDeterministicCategories } from '@/lib/naver/category-deterministic-matcher';
-import { isDeterministicLowConfidence, suggestWithGroq, validateSuggestion } from '@/lib/naver/category-ai-suggest';
+import { isDeterministicLowConfidence, suggestWithCrossCheck, validateSuggestion } from '@/lib/naver/category-ai-suggest';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -614,11 +614,16 @@ export async function generateSourcingRecommendations(): Promise<SourcingRecomme
         matchedCat = ucTop.d1;
       } else {
         try {
-          const aiResults = await suggestWithGroq(kw.keyword);
-          const aiValidated = aiResults
+          // GEMINI_CATEGORY_CROSSCHECK_2026-09-10 (#370 — 같은 API의 다른
+          // 소비처도 일관되게 갱신) — sourcing-recommender도 route.ts와
+          // 동일한 이중검증 경로를 거친다(#295 단일권위).
+          const cross = await suggestWithCrossCheck(kw.keyword);
+          const aiValidated = cross.suggestions
             .map((s) => validateSuggestion(s.d1, s.d2, s.d3))
             .find((s): s is NonNullable<typeof s> => !!s);
-          matchedCat = aiValidated ? aiValidated.d1 : ucTop ? `${ucTop.d1}(확인필요)` : `${trendD1}(카테고리 미확정)`;
+          matchedCat = aiValidated
+            ? (cross.agreement ? aiValidated.d1 : `${aiValidated.d1}(확인필요)`)
+            : ucTop ? `${ucTop.d1}(확인필요)` : `${trendD1}(카테고리 미확정)`;
         } catch (aiError) {
           console.warn(`[sourcing-recommender] AI 카테고리 교차확인 실패 "${kw.keyword}":`, String(aiError).slice(0, 200));
           matchedCat = ucTop ? `${ucTop.d1}(확인필요)` : `${trendD1}(카테고리 미확정)`;

@@ -11,7 +11,7 @@ import { validatePageCategory } from '@/lib/naver/category-page-validator';
 import { computeCategoryScore, type CategoryScore } from '@/lib/naver/category-score';
 import { getCachedTrend, buildD1Key, type CategoryTrendEntry } from '@/lib/naver/category-trend-cache';
 import { matchDeterministicCategories } from '@/lib/naver/category-deterministic-matcher';
-import { isDeterministicLowConfidence, suggestWithGroq, validateSuggestion } from '@/lib/naver/category-ai-suggest';
+import { isDeterministicLowConfidence, suggestWithCrossCheck, validateSuggestion } from '@/lib/naver/category-ai-suggest';
 import { prisma } from '@/lib/prisma';
 
 // UCE-10 (2026-09-04, 결함A): isDeterministicLowConfidence/suggestWithGroq/
@@ -242,14 +242,23 @@ export async function POST(request: NextRequest) {
       // branch is skipped entirely for a confident deterministic hit.
       if (isDeterministicLowConfidence(deterministic)) {
         try {
-          const aiResults = await suggestWithGroq(name);
-          const aiValidated = aiResults
+          // GEMINI_CATEGORY_CROSSCHECK_2026-09-10 — ask both free engines
+          // for this ambiguous case. agreement:true (both models' top d1
+          // independently match) is a genuine confirmation signal even
+          // though the deterministic matcher itself was weak.
+          const cross = await suggestWithCrossCheck(name);
+          const aiValidated = cross.suggestions
             .map((s) => validateSuggestion(s.d1, s.d2, s.d3))
             .filter((s): s is NonNullable<typeof s> => !!s);
           if (aiValidated.length > 0) {
             usedAI = true;
             rawSuggestions = aiValidated;
             source = 'ai';
+            // Even with a usable AI answer, only clear the "needs human
+            // confirmation" flag when the two engines actually agreed —
+            // a single engine's guess (the pre-existing behavior) still
+            // gets flagged, matching #370's stricter standard.
+            lowConfidenceFallback = !cross.agreement;
           } else {
             // AI returned nothing usable -> keep the deterministic guess
             // (still better than nothing to SHOW the user) but remember it
@@ -266,13 +275,18 @@ export async function POST(request: NextRequest) {
       // the only remaining signal, always call it here (not cost-gated; there
       // is no deterministic guess to fall back to if AI also fails).
       try {
-        const aiResults = await suggestWithGroq(name);
+        // GEMINI_CATEGORY_CROSSCHECK_2026-09-10 — same dual-engine check for
+        // the "deterministic found nothing at all" branch.
+        const cross = await suggestWithCrossCheck(name);
         usedAI = true;
-        for (const s of aiResults) {
+        for (const s of cross.suggestions) {
           const validated = validateSuggestion(s.d1, s.d2, s.d3);
           if (validated) rawSuggestions.push(validated);
         }
-        if (rawSuggestions.length > 0) source = 'ai';
+        if (rawSuggestions.length > 0) {
+          source = 'ai';
+          lowConfidenceFallback = !cross.agreement;
+        }
       } catch (aiError) {
         console.warn('[category/suggest] AI failed (deterministic also found nothing):', String(aiError).slice(0, 300));
       }

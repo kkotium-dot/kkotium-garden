@@ -10,6 +10,7 @@
 
 import { NAVER_CATEGORIES_FULL, NAVER_DEPTH1_LIST } from './naver-categories-full';
 import { callGroq } from '../ai/groq';
+import { callGemini, hasGeminiKey } from '../ai/gemini';
 import type { DeterministicMatch } from './category-deterministic-matcher';
 
 // UCE-7 (2026-08-27): deterministic-match confidence gate. The matcher itself
@@ -65,11 +66,9 @@ function buildFewShotExamples(): string {
     .join(', ');
 }
 
-export async function suggestWithGroq(
-  productName: string
-): Promise<Array<{ d1: string; d2: string; d3: string }>> {
+function buildCategoryPrompt(productName: string): string {
   const fewShot = buildFewShotExamples();
-  const prompt = `You are a Naver SmartStore SEO expert. Given a Korean product name, output the top 3 Naver shopping category paths (d1 > d2 > d3).
+  return `You are a Naver SmartStore SEO expert. Given a Korean product name, output the top 3 Naver shopping category paths (d1 > d2 > d3).
 
 Product: "${productName}"
 
@@ -91,18 +90,24 @@ ${fewShot}
 
 Respond ONLY with raw JSON array (no markdown):
 [{"d1":"...","d2":"...","d3":"..."},{"d1":"...","d2":"...","d3":"..."},{"d1":"...","d2":"...","d3":"..."}]`;
+}
 
-  const text = await callGroq(
-    prompt,
-    'Output ONLY a raw JSON array. First character must be [. Last must be ]. No markdown, no explanation.',
-  );
+const CATEGORY_SYSTEM_PROMPT = 'Output ONLY a raw JSON array. First character must be [. Last must be ]. No markdown, no explanation.';
 
+// UCE-2 (2026-08-27): parses+validates raw model text into a category array,
+// shared by both providers so a parsing fix benefits Groq and Gemini alike
+// (#62 — single authority, not duplicated per-provider logic).
+function parseCategoryResponse(
+  text: string,
+  productName: string,
+  logTag: string,
+): Array<{ d1: string; d2: string; d3: string }> {
   // UCE-2: always log the raw response (truncated) — this is the single
   // biggest gap that made usedAI:false unfixable before: we only ever saw a
   // 120-char slice of the *thrown error*, never the model's actual text.
-  console.log(`[category-ai-suggest][groq-raw] "${productName}" (${text.length} chars): ${text.slice(0, 300)}`);
+  console.log(`[category-ai-suggest][${logTag}-raw] "${productName}" (${text.length} chars): ${text.slice(0, 300)}`);
 
-  if (!text.trim()) throw new Error('Groq empty response (reason=empty_response)');
+  if (!text.trim()) throw new Error(`${logTag} empty response (reason=empty_response)`);
 
   // Strip markdown fences if present
   const clean = text.replace(/^```(?:json)?\s*/, '').replace(/\s*```\s*$/, '').trim();
@@ -124,10 +129,99 @@ Respond ONLY with raw JSON array (no markdown):
   // list, so a hallucination pattern is visible in logs instead of invisible.
   const hallucinated = parsed.filter((p) => p?.d1 && !NAVER_DEPTH1_LIST.includes(p.d1));
   if (hallucinated.length > 0) {
-    console.warn(`[category-ai-suggest][groq-hallucination] "${productName}" produced non-existent d1: ${hallucinated.map((h) => h.d1).join(', ')}`);
+    console.warn(`[category-ai-suggest][${logTag}-hallucination] "${productName}" produced non-existent d1: ${hallucinated.map((h) => h.d1).join(', ')}`);
   }
 
   return parsed.slice(0, 3);
+}
+
+export async function suggestWithGroq(
+  productName: string
+): Promise<Array<{ d1: string; d2: string; d3: string }>> {
+  const text = await callGroq(buildCategoryPrompt(productName), CATEGORY_SYSTEM_PROMPT);
+  return parseCategoryResponse(text, productName, 'groq');
+}
+
+// GEMINI_CATEGORY_CROSSCHECK_2026-09-10 (원본메모 지시: "그록에 한계가
+// 있다면 제미나이가 더 정확한지 교차검증") — 실측 결론: Gemini가 Groq보다
+// 일반적으로 더 뛰어나다는 확실한 벤치마크 근거는 있으나(Artificial
+// Analysis Intelligence Index), 한국어 쇼핑몰 카테고리 분류라는 이
+// 정확한 태스크의 비교 벤치마크는 공개 출처로 확인되지 않았다(#324류
+// 원칙 — 확인 안 되는 우월성 주장 채택 금지). 실제 이번 세션 결함(얼굴망
+// →출산/육아)의 근본원인은 모델 성능이 아니라 UI가 needsConfirmation을
+// 무시한 것이었다(rev163). 따라서 "모델 교체"가 아니라 "저신뢰 상황에서만
+// Groq+Gemini 둘 다에게 물어 일치하면 신뢰상승, 불일치하면 여전히 사람
+// 확인"하는 이중 검증으로 설계 — 평상시(고신뢰) 비용은 그대로, 애매한
+// 케이스만 한 번 더 확인해 정확도를 높인다.
+export async function suggestWithGemini(
+  productName: string
+): Promise<Array<{ d1: string; d2: string; d3: string }>> {
+  const text = await callGemini(buildCategoryPrompt(productName), CATEGORY_SYSTEM_PROMPT);
+  return parseCategoryResponse(text, productName, 'gemini');
+}
+
+export interface CrossCheckResult {
+  /** Validated suggestions to actually use — Groq's if both engines agree or
+   *  Gemini failed/empty; otherwise still Groq's (kept as the primary display
+   *  value) but agreement=false signals the caller to keep needsConfirmation. */
+  suggestions: Array<{ d1: string; d2: string; d3: string }>;
+  /** true when Groq and Gemini's top d1 match (a real independent-signal
+   *  agreement, not just "both non-empty") — the caller may treat this as
+   *  confirmed even though the deterministic matcher itself was weak. */
+  agreement: boolean;
+  /** Which engines actually returned a non-empty, valid result. */
+  engineResults: { groq: 'ok' | 'empty' | 'error'; gemini: 'ok' | 'empty' | 'error' | 'not_configured' };
+}
+
+/**
+ * GEMINI_CATEGORY_CROSSCHECK_2026-09-10 — call Groq AND Gemini (when
+ * configured) for a low-confidence deterministic guess, and report whether
+ * they agree. Never throws — a total failure of both engines returns an
+ * empty suggestions array with agreement:false, which the caller (route.ts)
+ * already handles as "no AI confirmation" (existing lowConfidenceFallback
+ * path, unchanged). This is strictly additive: single-engine behavior when
+ * Gemini isn't configured is identical to the pre-existing Groq-only flow.
+ */
+export async function suggestWithCrossCheck(productName: string): Promise<CrossCheckResult> {
+  const [groqSettled, geminiSettled] = await Promise.allSettled([
+    suggestWithGroq(productName),
+    hasGeminiKey() ? suggestWithGemini(productName) : Promise.reject(new Error('not_configured')),
+  ]);
+
+  const groqOk = groqSettled.status === 'fulfilled';
+  const groqSuggestions = groqOk ? groqSettled.value : [];
+  const groqStatus: 'ok' | 'empty' | 'error' = !groqOk ? 'error' : groqSuggestions.length > 0 ? 'ok' : 'empty';
+  if (!groqOk) {
+    console.warn('[category-ai-suggest][crosscheck] Groq failed:', String(groqSettled.reason).slice(0, 150));
+  }
+
+  let geminiStatus: 'ok' | 'empty' | 'error' | 'not_configured';
+  let geminiSuggestions: Array<{ d1: string; d2: string; d3: string }> = [];
+  if (geminiSettled.status === 'fulfilled') {
+    geminiSuggestions = geminiSettled.value;
+    geminiStatus = geminiSuggestions.length > 0 ? 'ok' : 'empty';
+  } else if (String(geminiSettled.reason).includes('not_configured')) {
+    geminiStatus = 'not_configured';
+  } else {
+    geminiStatus = 'error';
+    console.warn('[category-ai-suggest][crosscheck] Gemini failed:', String(geminiSettled.reason).slice(0, 150));
+  }
+
+  // Agreement = both engines' top pick shares the same d1 (broad enough to
+  // tolerate d2/d3 phrasing differences, strict enough to mean something —
+  // matching d1 across two independently-prompted models is a real signal).
+  const agreement =
+    groqStatus === 'ok' && geminiStatus === 'ok' && groqSuggestions[0]?.d1 === geminiSuggestions[0]?.d1;
+
+  console.log(
+    `[category-ai-suggest][crosscheck] "${productName}" groq=${groqStatus}(${groqSuggestions[0]?.d1 ?? '-'}) gemini=${geminiStatus}(${geminiSuggestions[0]?.d1 ?? '-'}) agreement=${agreement}`,
+  );
+
+  return {
+    suggestions: groqSuggestions.length > 0 ? groqSuggestions : geminiSuggestions,
+    agreement,
+    engineResults: { groq: groqStatus, gemini: geminiStatus },
+  };
 }
 
 // ── DB validation ─────────────────────────────────────────────────────────────
