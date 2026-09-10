@@ -155,7 +155,7 @@ export default function AtelierShell({ header, stepper, sidebarTabs, workspace, 
             <aside
               style={{
                 ...PANEL_STYLE,
-                width: 384,
+                width: 320,
                 flexShrink: 0,
                 minWidth: 0,
                 minHeight: 0,
@@ -191,7 +191,7 @@ export default function AtelierShell({ header, stepper, sidebarTabs, workspace, 
           <aside
             style={{
               ...PANEL_STYLE,
-              width: "clamp(280px, 24%, 360px)",
+              width: "clamp(320px, 24%, 420px)",
               flexShrink: 0,
               minWidth: 0,
               minHeight: 0,
