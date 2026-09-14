@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>꽃틔움 미디어 수집기</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <img src="assets/logo.png" alt="꽃틔움">
+      <div>
+        <div class="brand-name">꽃틔움</div>
+        <div class="brand-sub">미디어 수집기 <span>v0.3.0</span></div>
+      </div>
+    </div>
+    <div id="connection" class="status"><i></i>대기 중</div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">MEDIA WORKSPACE</p>
+        <h1>페이지의 미디어를<br><strong>한곳에서 정리하세요.</strong></h1>
+        <p class="hero-copy">이미지와 동영상을 수집하고 필요한 항목만 선택해 저장합니다.</p>
+      </div>
+      <button id="collect" class="primary">현재 페이지 수집</button>
+    </section>
+
+    <section class="summary" aria-label="수집 요약">
+      <div><span>전체</span><strong id="total">0</strong></div>
+      <div><span>이미지</span><strong id="imageCount">0</strong></div>
+      <div><span>영상</span><strong id="videoCount">0</strong></div>
+    </section>
+
+    <section class="toolbar">
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-filter="all">전체</button>
+        <button class="tab" data-filter="image">이미지</button>
+        <button class="tab" data-filter="video">영상</button>
+      </div>
+      <div class="toolbar-actions">
+        <button id="selectAll">전체 선택</button>
+        <button id="clear">해제</button>
+      </div>
+    </section>
+
+    <div id="pageInfo" class="page-info hidden"></div>
+    <section id="list" class="media-list"></section>
+    <div id="empty" class="empty">
+      <div class="empty-mark">✿</div>
+      <strong>아직 수집된 미디어가 없습니다.</strong>
+      <span>현재 페이지 수집을 눌러 시작하세요.</span>
+    </div>
+  </main>
+
+  <footer class="action-bar">
+    <div>
+      <strong id="selectedCount">0개</strong><span> 선택됨</span>
+      <small id="downloadHint">HTTP/HTTPS 파일부터 바로 저장할 수 있습니다.</small>
+    </div>
+    <div class="footer-actions">
+      <button id="copy">URL 복사</button>
+      <button id="json">JSON 저장</button>
+      <button id="download" class="primary" disabled>선택 항목 다운로드</button>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast"></div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

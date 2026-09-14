@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "꽃틔움 미디어 수집기",
+  "description": "웹페이지의 이미지와 동영상을 수집하고 필요한 항목을 선택해 저장하는 꽃틔움 실무용 수집기",
+  "version": "0.3.0",
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "32": "assets/icons/icon32.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  },
+  "action": {
+    "default_title": "꽃틔움 미디어 수집기"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads",
+    "sidePanel"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

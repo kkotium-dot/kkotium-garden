@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>꽃틔움 미디어 수집기</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">
+      <span class="flower flower-a">✦</span>
+      <span class="flower flower-b">✿</span>
+    </div>
+    <div>
+      <strong>꽃틔움</strong>
+      <span>MEDIA COLLECTOR</span>
+    </div>
+  </div>
+
+  <div id="status" class="status">준비</div>
+</header>
+
+<section class="hero">
+  <div>
+    <p class="eyebrow">MEDIA SOURCING</p>
+    <h1>현재 페이지의<br><em>미디어를 모아보세요.</em></h1>
+    <p class="description">
+      이미지와 동영상 URL을 한 번에 수집하고<br>
+      필요한 항목만 선택해 저장합니다.
+    </p>
+  </div>
+
+  <button id="collect" class="primary">
+    <span>페이지 수집</span>
+    <b>↗</b>
+  </button>
+</section>
+
+<section class="summary">
+  <div class="stat">
+    <span>IMAGE</span>
+    <strong id="imageCount">0</strong>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="stat">
+    <span>VIDEO</span>
+    <strong id="videoCount">0</strong>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="stat">
+    <span>SELECTED</span>
+    <strong id="selectedCount">0</strong>
+  </div>
+</section>
+
+<section class="controls">
+
+  <div class="filter-group">
+    <label class="filter active">
+      <input type="checkbox" id="images" checked>
+      <span>이미지</span>
+      <b id="imageCountFilter">0</b>
+    </label>
+
+    <label class="filter active">
+      <input type="checkbox" id="videos" checked>
+      <span>동영상</span>
+      <b id="videoCountFilter">0</b>
+    </label>
+  </div>
+
+  <div class="selection-actions">
+    <button id="all">전체 선택</button>
+    <button id="none">전체 해제</button>
+  </div>
+
+</section>
+
+<main id="list">
+  <div class="empty">
+    <div class="empty-icon">✿</div>
+    <strong>아직 수집된 미디어가 없습니다.</strong>
+    <span>현재 페이지 수집을 눌러 시작하세요.</span>
+  </div>
+</main>
+
+<footer>
+
+  <div class="download-row">
+    <button id="download" class="download-button" disabled>
+      <span class="download-icon">↓</span>
+      <span>선택 항목 다운로드</span>
+      <b id="downloadCount">0</b>
+    </button>
+  </div>
+
+  <div class="utility-row">
+    <button id="copy">URL 복사</button>
+    <button id="json">JSON 저장</button>
+  </div>
+
+  <p class="notice">
+    <span>ⓘ</span>
+    일반 이미지·영상 URL을 지원합니다. blob/스트리밍 영상은 직접 파일화되지 않을 수 있습니다.
+  </p>
+
+</footer>
+
+<script src="popup.js"></script>
+</body>
+</html>

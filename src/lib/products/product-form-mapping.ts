@@ -39,9 +39,9 @@ export interface ProductFormValues {
   // 이 필드가 이 공용 매핑에 없어서 (1)편집 재열람 시 기존 값이 폼에 안
   // 올라오고 (2)저장 payload에도 안 실려, 씨앗심기에서 저장하면 꽃밭 돌보기의
   // "상품 코드 연결"과 완전히 단절돼 있었다. supplier_product_code는 실제
-  // Product 컬럼이라 백엔드(PUT sanitize)는 이미 받을 준비가 됨 — 여기만
-  // 채우면 로딩+저장이 한 번에 복구된다(#62 단일권위).
-  supplierProductCode: string;
+  // Product 컬럼이라 백엔드(PUT sanitize)는 이미 받을 준비가 됨. crawlProductNo가
+  // prefill로 들어오면(prefill-schema) 이 필드에 실려 저장까지 영속화된다.
+  supplierProductCode: string; // → supplier_product_code (inventory tracking link)
 }
 
 /**
