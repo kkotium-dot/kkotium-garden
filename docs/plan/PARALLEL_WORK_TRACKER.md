@@ -2194,3 +2194,29 @@ tsc가 정확히 잡아내 수정, 나머지는 영향없음 확인(tsc 클린).
 
 **전 계열 상태**: 카테고리 관련 결함 계열(오분류 rev163 + 이중검증
 rev164 + UX분리 rev165) 완전 종료.
+
+## rev166 — 카테고리 단일권위 통합·명칭변경·크롤prefill 손실 진단 (2026-09-10)
+
+**1. 두 카테고리 추천 통합(원본메모 질문)**: 상품명옆 "카테고리 자동추천"
+(/api/category/suggest)과 "꼬띠 사냥"(/api/ai/seo-workflow)이 서로 다른
+API·다른 로직으로 카테고리를 추천해 다른 답 가능. seo-workflow가 응답 직전
+자체 category를 검증된 suggestWithCrossCheck(결정론+Groq+Gemini+네이버DB
+validateSuggestion)로 덮어쓰도록 통합(#295). 운영자가 카테고리 정했으면
+존중, 미정일 때만. 배포 완료(3706787).
+
+**2. 명칭 변경(원본메모 지시)**: "꼬띠 황금 키워드 사냥" → "꼬띠의 SEO
+황금열매 수확"(대표님 확정, 브랜드스토리: SEO=나무·최적요소=황금열매·꼬띠가
+수확). 사용자노출 6곳+kkotti-vocab 라벨/시그니처 전수변경. 꿀통 사냥터
+(크롤페이지 별칭)는 별개기능이라 유지.
+
+**3. 크롤→씨앗심기 prefill 데이터 손실(원본메모 신규 오류) — 진단완료·
+Code인계**: crawl 송신필드 vs 씨앗심기 수신필드 grep 1:1 대조 결과
+crawlProductNo(공급처상품번호·재고추적 즉시연결 가능)·crawlInventory·
+crawlNaverFeeRate가 수신부에 아예 없어 조용히 버려짐 확인. 진입점별
+(단건 vs bulk) prefill 스키마도 불일치(bulk는 options를 문자열배열로만
+보내 옵션재고 누락). 진단서 docs/plan/CRAWL_PREFILL_GAP_HANDOFF_
+2026-09-10.md 작성, prefill 공용스키마 도입 방향으로 Code 인계 예정.
+원칙#372 신규(데이터전달 송수신 필드 1:1대조).
+
+**전 계열 상태**: 카테고리 계열(rev163~166) 완전 종료. 크롤 prefill
+손실은 진단완료·Code착수 대기(독립작업).
