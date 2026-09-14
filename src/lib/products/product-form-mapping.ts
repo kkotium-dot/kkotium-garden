@@ -35,6 +35,7 @@ export interface ProductFormValues {
   shippingTemplateId: string;
   returnCareEnabled: boolean;
   sku: string;                // operator seller code (Product.sku column)
+  supplierProductCode: string; // → supplier_product_code (inventory tracking link)
 }
 
 /**
@@ -66,6 +67,9 @@ export function productFormSerialize(v: ProductFormValues): Record<string, unkno
     shipping_template_id: v.shippingTemplateId || undefined,
     return_care_enabled: v.returnCareEnabled,
     ...(v.sku.trim() ? { sku: v.sku.trim() } : {}),
+    // CRAWL_PREFILL_GAP_HANDOFF_2026-09-10 — crawlProductNo → supplierProductCode
+    // must actually reach the DB for inventory tracking to turn on immediately.
+    supplier_product_code: v.supplierProductCode.trim() || undefined,
   };
 }
 
@@ -87,6 +91,7 @@ export interface ProductFormSetters {
   setSelectedTemplateId: (s: string) => void;
   setReturnCareEnabled: (b: boolean) => void;
   setSellerCode: (s: string) => void;
+  setSupplierProductCode: (s: string) => void;
 }
 
 /**
@@ -119,4 +124,5 @@ export function productFormHydrate(
   if (dto.shipping_template_id) s.setSelectedTemplateId(String(dto.shipping_template_id));
   if (typeof dto.return_care_enabled === 'boolean') s.setReturnCareEnabled(dto.return_care_enabled);
   if (dto.sku) s.setSellerCode(String(dto.sku));
+  if (dto.supplier_product_code) s.setSupplierProductCode(String(dto.supplier_product_code));
 }

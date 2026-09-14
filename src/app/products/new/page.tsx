@@ -19,6 +19,7 @@ import {
   NAVER_CATEGORIES_FULL,
   type NaverCategoryEntry,
 } from '@/lib/naver/naver-categories-full';
+import { decodePrefill } from '@/lib/crawl/prefill-schema';
 
 // -- helpers derived from full 4,993-entry dataset --
 function getDepth1List(): string[] {
@@ -116,7 +117,7 @@ import {
 import studioStrings from '@/lib/i18n/studio-strings.ko.json';
 import productsNewStrings from '@/lib/i18n/products-new-strings.ko.json';
 import { calcPrefillSalePrice, calcNetMargin } from '@/lib/naver-margin-advisor';
-import { getMarginProfileByCode, getNaverFeeRate } from '@/lib/naver-fee-rates-2026';
+import { getMarginProfileByCode, getNaverFeeRate, getNaverFeeRateByD1 } from '@/lib/naver-fee-rates-2026';
 import { useSellerGrade } from '@/lib/hooks/useSellerGrade';
 
 // NAVER-PARTIAL-SYNC (2026-08-11, docs/design/NAVER_PARTIAL_SYNC_2026-08-11.md §3-A)
@@ -765,6 +766,11 @@ function NewProductPageInner() {
   // Minimum order quantity from crawler prefill. 1 = no restriction.
   // Values >= 2 trigger a consignment-risk warning banner.
   const [crawlMinQuantity, setCrawlMinQuantity] = useState<number>(1);
+  // CRAWL_PREFILL_GAP_HANDOFF_2026-09-10 결함A — crawl-time stock snapshot and
+  // Naver commission rate were sent by every crawl entry point but never read
+  // here, so the seller had no reference at all for either on the seed screen.
+  const [crawlInventory, setCrawlInventory] = useState<number | null>(null);
+  const [crawlNaverFeeRate, setCrawlNaverFeeRate] = useState<number | null>(null);
   const [showTemplateCreateModal, setShowTemplateCreateModal] = useState(false);
   const [pendingTemplateData, setPendingTemplateData] = useState<{
     name: string; code: string; shippingType: number;
@@ -948,18 +954,12 @@ function NewProductPageInner() {
   useEffect(() => {
     const raw = searchParams?.get('prefill');
     if (!raw) return;
+    const data = decodePrefill(raw);
+    if (!data) {
+      console.error('[prefill] decode failed — banner will show but form stays empty');
+      return;
+    }
     try {
-      // Decode UTF-8-safe Base64 using TextDecoder (handles Korean + any Unicode)
-      // Encoder uses: btoa(unescape(encodeURIComponent(JSON.stringify(data))))
-      // URLSearchParams.get decodes "+" as space (form-encoded rule); restore it
-      // before atob. Also accept URL-safe base64 (-/_) from updated encoders.
-      const bin = atob(raw.replace(/ /g, '+').replace(/-/g, '+').replace(/_/g, '/'));
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i) & 0xff;
-      // Strip every C0 control + DEL — JSON spec forbids raw control chars inside string literals
-      const jsonStr = new TextDecoder('utf-8').decode(bytes)
-        .replace(/[\x00-\x1F\x7F]/g, ' ');
-      const data = JSON.parse(jsonStr);
       if (data.productName)    setProductName(data.productName);
       if (data.supplierPrice)  setSupplierPrice(String(data.supplierPrice));
       if (data.salePrice)      setPrice(String(data.salePrice));
@@ -969,6 +969,15 @@ function NewProductPageInner() {
       if (typeof data.crawlMinQuantity === 'number' && data.crawlMinQuantity >= 1) {
         setCrawlMinQuantity(data.crawlMinQuantity);
       }
+      // CRAWL_PREFILL_GAP_HANDOFF_2026-09-10 결함A — crawlProductNo used to be
+      // sent by every crawl entry point and silently dropped here. Wiring it to
+      // supplierProductCode (→ supplier_product_code on save) turns on inventory
+      // tracking immediately instead of requiring a manual "상품 코드 연결" later.
+      if (data.crawlProductNo != null && String(data.crawlProductNo).trim()) {
+        setSupplierProductCode(String(data.crawlProductNo).trim());
+      }
+      if (typeof data.crawlInventory === 'number') setCrawlInventory(data.crawlInventory);
+      if (typeof data.crawlNaverFeeRate === 'number') setCrawlNaverFeeRate(data.crawlNaverFeeRate);
       // SEED-SAVE C-3: stash the crawl_log link keys so the create save links the
       // 꿀통 item to the new 창고 Product (crawlLogId preferred; URL as fallback).
       if (typeof data.crawlLogId === 'string') crawlLogIdRef.current = data.crawlLogId;
@@ -1026,49 +1035,30 @@ function NewProductPageInner() {
         });
       }
       // Auto-fill options from crawler — convert to SINGLE type with visible rows.
-      // PC-B-1 P14 observability: log raw + filtered counts so any drift between
-      // prefill payload and state can be diagnosed from the console (no in-app
-      // truncation found at code-review time, but logging is cheap).
-      if (Array.isArray(data.options) && data.options.length > 0) {
-        const rawCount = data.options.length;
-        // Prefill options may be plain strings (legacy callers) or
-        // { name, qty, addPrice } objects (crawl prefill now carries stock +
-        // surcharge so they survive to save — see HANDOFF_crawl_option_mapping_fix).
-        type RawOpt = string | { name?: string; qty?: number; addPrice?: number };
-        const cleanOpts = (data.options as RawOpt[])
-          .map((o: RawOpt) => typeof o === 'string'
-            ? { name: o.trim(), qty: 999, addPrice: 0 }
-            : {
-                name: (o?.name ?? '').trim(),
-                qty: Number.isFinite(o?.qty as number) ? Number(o!.qty) : 999,
-                addPrice: Number.isFinite(o?.addPrice as number) ? Number(o!.addPrice) : 0,
-              })
-          .filter((o) => o.name.length > 0);
-        // eslint-disable-next-line no-console
-        console.info('[prefill] options', { raw: rawCount, clean: cleanOpts.length, values: cleanOpts });
-        if (cleanOpts.length > 0) {
-          setOptionType('SINGLE');
-          // PC-B-2 P15: derive a more specific group name from productName
-          // (e.g. '향' for diffusers, '사이즈/색상' for clothing). Falls back
-          // to '옵션' when no keyword rule matches — same as previous behaviour.
-          setOptionNames([deriveOptionGroupName(data.productName ?? '')]);
-          // Set the comma-separated input (used by the text input field)
-          setOptionValueInputs([cleanOpts.map((o) => o.name).join(',')]);
-          // Also directly populate optionRows so the table shows immediately
-          // This bypasses the need to click "옵션목록으로 적용". Preserve crawled
-          // stock (qty) and surcharge (addPrice) instead of hardcoding defaults.
-          setOptionRows(cleanOpts.map((o) => ({
-            id: uuidv4(),
-            value: o.name,
-            price: String(o.addPrice),
-            stock: String(o.qty),
-            status: 'ON' as const,
-          })));
-        }
+      // decodePrefill already normalizes string/{name,qty,addPrice} shapes into
+      // one {name,qty,addPrice}[] — no re-parsing needed here.
+      if (data.options.length > 0) {
+        setOptionType('SINGLE');
+        // PC-B-2 P15: derive a more specific group name from productName
+        // (e.g. '향' for diffusers, '사이즈/색상' for clothing). Falls back
+        // to '옵션' when no keyword rule matches — same as previous behaviour.
+        setOptionNames([deriveOptionGroupName(data.productName ?? '')]);
+        // Set the comma-separated input (used by the text input field)
+        setOptionValueInputs([data.options.map((o) => o.name).join(',')]);
+        // Also directly populate optionRows so the table shows immediately
+        // This bypasses the need to click "옵션목록으로 적용". Preserve crawled
+        // stock (qty) and surcharge (addPrice) instead of hardcoding defaults.
+        setOptionRows(data.options.map((o) => ({
+          id: uuidv4(),
+          value: o.name,
+          price: String(o.addPrice),
+          stock: String(o.qty),
+          status: 'ON' as const,
+        })));
       }
       setError('');
     } catch (e) {
-      console.error('[prefill] decode failed — banner will show but form stays empty', e);
+      console.error('[prefill] apply failed — banner will show but form stays empty', e);
     }
   }, [searchParams]);
 
@@ -1077,13 +1067,10 @@ function NewProductPageInner() {
     const raw = searchParams?.get('prefill');
     if (!raw) return;
     try {
-      const bin = atob(raw.replace(/ /g, '+').replace(/-/g, '+').replace(/_/g, '/'));
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i) & 0xff;
-      const jsonStr = new TextDecoder('utf-8').decode(bytes).replace(/[\x00-\x1F\x7F]/g, ' ');
-      const data = JSON.parse(jsonStr);
-      const sellerId = data.crawlSellerId;
-      if (!sellerId) return;
+      const data = decodePrefill(raw);
+      if (!data) return;
+      if (!data.crawlSellerId) return;
+      const sellerId = String(data.crawlSellerId);
 
       // Look up supplier by domeggookSellerId
       fetch(`/api/suppliers?domeggookSellerId=${encodeURIComponent(sellerId)}`)
@@ -1340,7 +1327,7 @@ function NewProductPageInner() {
           setBrand, setOriginCode, setTaxType, setMainImage,
           setAdditionalImages, setDetailImages, setDetailImageUrl, setDescription,
           setAsPhone, setAsGuide, setSelectedTemplateId, setReturnCareEnabled,
-          setSellerCode,
+          setSellerCode, setSupplierProductCode,
         });
         // Page-managed fields below (bespoke side-effects beyond a setter):
         // Restore SEO fields. COPY-AUTO-2 cache: hookPhrase is the persisted hook
@@ -1929,6 +1916,7 @@ function NewProductPageInner() {
         shippingTemplateId: selectedTemplateId,
         returnCareEnabled,
         sku: sellerCode,
+        supplierProductCode,
       };
       const promoted = opts.promote && validatedPass;
       // promote → READY; explicit non-promote save → DRAFT; silent autosave omits
@@ -2222,6 +2210,9 @@ function NewProductPageInner() {
         // any AI re-generation. hookPhrase is the canonical column (Naver register).
         hookPhrase: seoHook.trim() || undefined,
         asPhone, asGuide,
+        // CRAWL_PREFILL_GAP_HANDOFF_2026-09-10 — supplierProductCode must reach
+        // the DB for the crawlProductNo auto-link to actually turn on tracking.
+        supplier_product_code: supplierProductCode.trim() || undefined,
         // Persist options to BOTH stores (crawl-option-mapper) so the Naver
         // register below sees a populated product_options row.
         ...(buildOptionsPayload() ?? {}),
@@ -2464,6 +2455,9 @@ const handleGenerate = async () => {
       description: description || undefined,
       shipping_template_id: selectedTemplateId || undefined,
       return_care_enabled: returnCareEnabled,
+      // CRAWL_PREFILL_GAP_HANDOFF_2026-09-10 — supplierProductCode must reach
+      // the DB for the crawlProductNo auto-link to actually turn on tracking.
+      supplier_product_code: supplierProductCode.trim() || undefined,
       // Persist options to BOTH stores so the DRAFT carries options end-to-end.
       ...(buildOptionsPayload() ?? {}),
     };
@@ -2684,6 +2678,23 @@ const handleGenerate = async () => {
             </div>
           </div>
         )}
+        {/* CRAWL_PREFILL_GAP_HANDOFF_2026-09-10 — crawl-time stock/수수료 reference.
+            Both values were sent by every crawl entry point but had no display
+            surface here at all, so the seller had nothing to sanity-check against. */}
+        {(crawlInventory != null || crawlNaverFeeRate != null) && (
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: 10, padding: '8px 14px',
+            borderRadius: 10, marginBottom: 12, background: '#F7F7F8',
+            border: '1.5px solid var(--border-neutral)', fontSize: 11.5, color: '#555',
+          }}>
+            {crawlInventory != null && (
+              <span>크롤 시점 재고 <strong>{crawlInventory.toLocaleString()}개</strong> 참고</span>
+            )}
+            {crawlNaverFeeRate != null && (
+              <span>예상 네이버 수수료 <strong>{(crawlNaverFeeRate * 100).toFixed(2)}%</strong></span>
+            )}
+          </div>
+        )}
         {/* Prefill banner from crawler */}
         {/* Kkotti supplier auto-mapping banner */}
         {crawlMapBanner && (
@@ -2713,7 +2724,8 @@ const handleGenerate = async () => {
                     공급사 자동 매핑 완료!
                   </p>
                   <p style={{ fontSize: 11, color: '#166534', margin: 0, lineHeight: 1.5 }}>
-                    판매자 ID <strong>{crawlMapBanner.sellerId}</strong> →{' '}
+                    판매자 ID <strong>{crawlMapBanner.sellerId}</strong>
+                    {crawlMapBanner.sellerNick && ` (${crawlMapBanner.sellerNick})`} →{' '}
                     <strong>{crawlMapBanner.supplierName}</strong> 자동 선택됨.
                     {crawlMapBanner.shipFee !== undefined && ` 배송비 ${crawlMapBanner.shipFee.toLocaleString()}원`}
                     {crawlMapBanner.canMerge === false && ' · 묶음배송 불가'}

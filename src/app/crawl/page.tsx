@@ -18,6 +18,7 @@ import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 import { getNaverFeeRateByD1, NAVER_DEFAULT_FEE_RATE } from '@/lib/naver-fee-rates-2026';
 import { useSellerGrade } from '@/lib/hooks/useSellerGrade';
 import { calcPrefillSalePrice, calcMarketSalePrice, calcNetMargin } from '@/lib/naver-margin-advisor';
+import { encodePrefill, type CrawlPrefillInput, type RawPrefillOption } from '@/lib/crawl/prefill-schema';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface CrawledOption {
@@ -363,30 +364,17 @@ function CrawlPageInner() {
       // Use already-fetched category (user may have selected one), fallback to API
       let suggestedCat: { d1: string; d2: string; d3: string } | null = sCatSelected;
 
-      // Sanitize: keep only printable ASCII + safe Unicode, strip everything else
-      const sanitize = (s: string) => (s || '')
-        .replace(/[\x00-\x1F\x7F-]/g, ' ') // control chars
-        .replace(/[�￾￿]/g, '')           // replacement chars
-        .replace(/[؀-ۿȀ-ɏ]/g, '')   // Arabic/extended Latin that caused corruption
-        .replace(/"/g, "'")                              // prevent JSON string breakage
-        .replace(/\\(?!['"\\/bfnrtu])/g, '\\\\')       // escape lone backslashes
-        .replace(/\s+/g, ' ')
-        .trim();
-      const prefill = {
-        productName: sanitize(sResult.name),
+      const prefillInput: CrawlPrefillInput = {
+        productName: sResult.name,
         supplierPrice: supPrice,
         salePrice: sellPrice,
         mainImage: sResult.images?.[0] || '',
         additionalImgs: (sResult.images?.slice(1) || []).join('|'),
-        description: sanitize(sResult.description || ''),
+        description: sResult.description || '',
         // Carry qty/addPrice (not just the value name) so the register form can
         // persist them to BOTH option stores. Names-only prefill silently dropped
         // stock and surcharge (HANDOFF_crawl_option_mapping_fix_2026-06-03.md).
-        options: (sResult.options || [])
-          .map(o => typeof o === 'string'
-            ? { name: sanitize(o), qty: 999, addPrice: 0 }
-            : { name: sanitize(o.name), qty: o.qty ?? 999, addPrice: o.addPrice ?? 0 })
-          .filter(o => o.name),
+        options: sResult.options || [],
         ...(suggestedCat ? { catD1: suggestedCat.d1, catD2: suggestedCat.d2, catD3: suggestedCat.d3 } : {}),
         // Supplier auto-mapping fields
         crawlSellerId:   sResult.sellerId   ?? null,
@@ -402,12 +390,7 @@ function CrawlPageInner() {
         // Source URL — used by seed-new to mark sourcing log as REGISTERED after Excel download
         crawlSourceUrl: sResult.sourceUrl ?? sUrl.trim() ?? null,
       };
-      // Encode: use TextEncoder for proper UTF-8 binary, then base64
-      const jsonStr = JSON.stringify(prefill);
-      const utf8Bytes = new TextEncoder().encode(jsonStr);
-      let binary = '';
-      utf8Bytes.forEach(b => { binary += String.fromCharCode(b); });
-      const encoded = btoa(binary);
+      const encoded = encodePrefill(prefillInput);
       router.push(`/products/new?prefill=${encoded}&autoSeo=1`);
     } catch (e: unknown) { setSError(e instanceof Error ? e.message : '오류'); }
     finally { setSSaving(false); }
@@ -594,20 +577,19 @@ function CrawlPageInner() {
   };
 
   const handleBulkToRegister = (r: BulkRow) => {
-    const san = (s: string) => (s || '')
-      .replace(/[\x00-\x1F\x7F-]/g, ' ')
-      .replace(/[�￾￿]/g, '')
-      .replace(/[؀-ۿȀ-ɏ]/g, '')
-      .replace(/"/g, "'")
-      .replace(/\s+/g, ' ').trim();
-    const prefill = {
-      productName: san(r.editedName || r.name || ''),
+    // #370: same {name,qty,addPrice} option shape + catD1/crawlSourceUrl/
+    // crawlNaverFeeRate as the single-item flow — bulk used to send options
+    // as name-only strings (stock/surcharge lost) and drop these three fields.
+    const bulkCatD1 = r.categoryName ? r.categoryName.split('>')[0]?.trim() : undefined;
+    const prefillInput: CrawlPrefillInput = {
+      productName: r.editedName || r.name || '',
       supplierPrice: r.editedPrice ?? r.supplierPrice ?? 0,
       salePrice: bulkSalePrice(r.editedPrice ?? r.supplierPrice ?? 0),
       mainImage: r.images?.[0] || '',
       additionalImgs: (r.images?.slice(1) || []).join('|'),
-      description: san(r.description || ''),
-      options: (r.options || []).map(o => san(typeof o === 'string' ? o : o.name)).filter(Boolean),
+      description: r.description || '',
+      options: r.options || [],
+      ...(bulkCatD1 ? { catD1: bulkCatD1 } : {}),
       // Supplier auto-mapping fields
       crawlSellerId:   r.sellerId   ?? null,
       crawlSellerNick: r.sellerNick ?? null,
@@ -617,13 +599,11 @@ function CrawlPageInner() {
       crawlProductNo:  r.productNo  ?? null,
       crawlInventory:  r.inventory  ?? null,
       crawlCategoryCode: r.categoryCode ?? null,
+      crawlNaverFeeRate: getNaverFeeRateByD1(bulkCatD1, 'normal', sellerGrade),
       crawlMinQuantity:  r.minQuantity ?? 1,
+      crawlSourceUrl:  r.url ?? null,
     };
-    // TextEncoder-based base64 (same as single crawl)
-    const jStr = JSON.stringify(prefill);
-    const uBytes = new TextEncoder().encode(jStr);
-    let bin = ''; uBytes.forEach(b => { bin += String.fromCharCode(b); });
-    router.push(`/products/new?prefill=${btoa(bin)}&autoSeo=1`);
+    router.push(`/products/new?prefill=${encodePrefill(prefillInput)}&autoSeo=1`);
   };
 
   // ── 소싱 보관함 탭 state ─────────────────────────────────────────────────
@@ -1801,36 +1781,32 @@ function CrawlPageInner() {
                     : <><Package size={11}/>한 번에 임시등록</>}
                 </button>
                 <button onClick={() => {
-                  const san = (s: string) => (s||'').replace(/[\x00-\x1F\x7F]/g,' ').replace(/"/g,"'").trim();
                   const first = logs.find(l => histSelected.has(l.id) && l.sourcing_status !== 'error');
                   if (!first) return;
                   const imgs = Array.isArray(first.images) ? first.images : [];
                   const opts = Array.isArray(first.options) ? first.options : [];
-                  const prefill = {
-                    productName: san(first.name||''),
+                  const histCatD1 = first.category_name ? first.category_name.split('>')[0]?.trim() : undefined;
+                  const prefillInput: CrawlPrefillInput = {
+                    productName: first.name || '',
                     supplierPrice: first.supplier_price,
                     salePrice: calcPrefillSalePrice(first.supplier_price, first.ship_fee, sellerGrade),
                     mainImage: (imgs[0] as string) || '',
                     additionalImgs: imgs.slice(1).join('|'),
-                    options: opts.map((o: unknown) => san(typeof o === 'string' ? o : (o as {name:string}).name || '')).filter(Boolean),
+                    options: opts as RawPrefillOption[],
                     crawlSellerId: first.seller_id,
                     crawlSellerNick: first.seller_nick,
                     crawlShipFee: first.ship_fee ?? 3000,
                     crawlCanMerge: first.can_merge,
                     crawlInventory: first.inventory,
                     crawlCategoryCode: first.category_code,
+                    crawlNaverFeeRate: getNaverFeeRateByD1(histCatD1, 'normal', sellerGrade),
                     // SEED-SAVE C-3: carry the crawl_log id + URL so the create save
                     // atomically links this 꿀통 item to the new 창고 Product (#82).
                     crawlLogId: first.id,
                     crawlSourceUrl: first.url,
-                    ...(first.category_name ? { catD1: first.category_name.split('>')[0]?.trim() } : {}),
+                    ...(histCatD1 ? { catD1: histCatD1 } : {}),
                   };
-                  const j = JSON.stringify(prefill);
-                  const b2 = new TextEncoder().encode(j);
-                  let bin = ''; b2.forEach((x:number) => { bin += String.fromCharCode(x); });
-                  // URL-safe base64: standard "+" gets eaten by URLSearchParams (form-encoded space)
-                  const safe = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_');
-                  router.push(`/products/new?prefill=${safe}&autoSeo=1`);
+                  router.push(`/products/new?prefill=${encodePrefill(prefillInput)}&autoSeo=1`);
                 }} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 14px', background:'#F63B28', border:'none', borderRadius:8, fontSize:12, fontWeight:700, color:'#fff', cursor:'pointer' }}>
                   <ArrowRight size={12}/> 등록 시작
                 </button>
@@ -1946,34 +1922,30 @@ function CrawlPageInner() {
               // PENDING "continue work" path skip the extra status write.
               const goSeed = (log: SourcingItem, opts?: { autoSeo?: boolean }) => {
                 updateSourcingStatus(log.id, 'PENDING');
-                const san = (s: string) => (s||'').replace(/[\x00-\x1F\x7F]/g,' ').replace(/"/g,"'").trim();
                 const logImgs = Array.isArray(log.images) ? log.images : [];
                 const logOpts = Array.isArray(log.options) ? log.options : [];
-                const prefill = {
-                  productName: san(log.name||''),
+                const goSeedCatD1 = log.category_name ? log.category_name.split('>')[0]?.trim() : undefined;
+                const prefillInput: CrawlPrefillInput = {
+                  productName: log.name || '',
                   supplierPrice: log.supplier_price,
                   salePrice: calcPrefillSalePrice(log.supplier_price, log.ship_fee, sellerGrade),
                   mainImage: (logImgs[0] as string) || '',
                   additionalImgs: logImgs.slice(1).join('|'),
-                  options: logOpts.map((o: unknown) => san(typeof o === 'string' ? o : (o as {name:string}).name || '')).filter(Boolean),
+                  options: logOpts as RawPrefillOption[],
                   crawlSellerId: log.seller_id,
                   crawlSellerNick: log.seller_nick,
                   crawlShipFee: log.ship_fee ?? 3000,
                   crawlCanMerge: log.can_merge,
                   crawlInventory: log.inventory,
                   crawlCategoryCode: log.category_code,
+                  crawlNaverFeeRate: getNaverFeeRateByD1(goSeedCatD1, 'normal', sellerGrade),
                   // SEED-SAVE C-3: carry the crawl_log id + URL so the create save
                   // atomically links this 꿀통 item to the new 창고 Product (#82).
                   crawlLogId: log.id,
                   crawlSourceUrl: log.url,
-                  ...(log.category_name ? { catD1: log.category_name.split('>')[0]?.trim() } : {}),
+                  ...(goSeedCatD1 ? { catD1: goSeedCatD1 } : {}),
                 };
-                const j = JSON.stringify(prefill);
-                const b2 = new TextEncoder().encode(j);
-                let bin = ''; b2.forEach((x:number)=>{ bin += String.fromCharCode(x); });
-                // URL-safe base64: standard "+" gets eaten by URLSearchParams (form-encoded space)
-                const safe = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_');
-                router.push(`/products/new?prefill=${safe}${opts?.autoSeo ? '&autoSeo=1' : ''}`);
+                router.push(`/products/new?prefill=${encodePrefill(prefillInput)}${opts?.autoSeo ? '&autoSeo=1' : ''}`);
               };
 
               // Context-aware smart action (one per row). Returns the rendered button.
