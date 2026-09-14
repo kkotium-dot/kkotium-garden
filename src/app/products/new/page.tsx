@@ -1340,7 +1340,7 @@ function NewProductPageInner() {
           setBrand, setOriginCode, setTaxType, setMainImage,
           setAdditionalImages, setDetailImages, setDetailImageUrl, setDescription,
           setAsPhone, setAsGuide, setSelectedTemplateId, setReturnCareEnabled,
-          setSellerCode,
+          setSellerCode, setSupplierProductCode,
         });
         // Page-managed fields below (bespoke side-effects beyond a setter):
         // Restore SEO fields. COPY-AUTO-2 cache: hookPhrase is the persisted hook
@@ -1929,6 +1929,7 @@ function NewProductPageInner() {
         shippingTemplateId: selectedTemplateId,
         returnCareEnabled,
         sku: sellerCode,
+        supplierProductCode,  // SUPPLIER_CODE_ROUNDTRIP_2026-09-10
       };
       const promoted = opts.promote && validatedPass;
       // promote → READY; explicit non-promote save → DRAFT; silent autosave omits
@@ -2208,6 +2209,12 @@ function NewProductPageInner() {
         supplierPrice: Number(supplierPrice) || 0,
         supplierId: selectedSupplierId || undefined,
         naverCategoryCode: catId,
+        // SUPPLIER_CODE_ROUNDTRIP_2026-09-10 (#372 — 두 저장 경로 일관성):
+        // this register-save path builds dbPayload inline (not via
+        // productFormSerialize), so the supplier code must be added here too,
+        // else registering-then-saving from this path drops it. Emit only when
+        // present so it never clears an existing code (PUT is PATCH-style).
+        ...(supplierProductCode.trim() ? { supplier_product_code: supplierProductCode.trim() } : {}),
         brand, originCode, taxType,
         status: 'DRAFT',
         // IMAGE-SPLIT (#163) — carry all three image zones into the register save.

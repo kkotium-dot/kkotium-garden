@@ -35,6 +35,13 @@ export interface ProductFormValues {
   shippingTemplateId: string;
   returnCareEnabled: boolean;
   sku: string;                // operator seller code (Product.sku column)
+  // SUPPLIER_CODE_ROUNDTRIP_2026-09-10 — 공급처 상품번호(재고추적의 1급 키).
+  // 이 필드가 이 공용 매핑에 없어서 (1)편집 재열람 시 기존 값이 폼에 안
+  // 올라오고 (2)저장 payload에도 안 실려, 씨앗심기에서 저장하면 꽃밭 돌보기의
+  // "상품 코드 연결"과 완전히 단절돼 있었다. supplier_product_code는 실제
+  // Product 컬럼이라 백엔드(PUT sanitize)는 이미 받을 준비가 됨 — 여기만
+  // 채우면 로딩+저장이 한 번에 복구된다(#62 단일권위).
+  supplierProductCode: string;
 }
 
 /**
@@ -65,6 +72,10 @@ export function productFormSerialize(v: ProductFormValues): Record<string, unkno
     // Previously-missing roundtrip fields (the #62 drift): now always persisted.
     shipping_template_id: v.shippingTemplateId || undefined,
     return_care_enabled: v.returnCareEnabled,
+    // SUPPLIER_CODE_ROUNDTRIP_2026-09-10 — emit only when non-empty so a save
+    // that legitimately has no code yet never overwrites an existing one to ''
+    // (PUT is PATCH-style: an omitted key is left untouched — see route.ts).
+    ...(v.supplierProductCode.trim() ? { supplier_product_code: v.supplierProductCode.trim() } : {}),
     ...(v.sku.trim() ? { sku: v.sku.trim() } : {}),
   };
 }
@@ -87,6 +98,7 @@ export interface ProductFormSetters {
   setSelectedTemplateId: (s: string) => void;
   setReturnCareEnabled: (b: boolean) => void;
   setSellerCode: (s: string) => void;
+  setSupplierProductCode: (s: string) => void;
 }
 
 /**
@@ -119,4 +131,7 @@ export function productFormHydrate(
   if (dto.shipping_template_id) s.setSelectedTemplateId(String(dto.shipping_template_id));
   if (typeof dto.return_care_enabled === 'boolean') s.setReturnCareEnabled(dto.return_care_enabled);
   if (dto.sku) s.setSellerCode(String(dto.sku));
+  // SUPPLIER_CODE_ROUNDTRIP_2026-09-10 — restore the supplier product code so
+  // re-opening an already-code-linked product shows it (and re-saving keeps it).
+  if (dto.supplier_product_code) s.setSupplierProductCode(String(dto.supplier_product_code));
 }
