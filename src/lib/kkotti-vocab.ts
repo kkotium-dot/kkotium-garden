@@ -41,9 +41,9 @@ export const KKOTTI_VARIANTS: Record<KkottiVariant, KkottiVariantMeta> = {
   },
   hunter: {
     variant: 'hunter',
-    label: '키워드 사냥꾼',
+    label: 'SEO 황금열매 수확꾼',
     accessory: 'heart_gun',
-    signature: '빵야 빵야~ 황금 키워드 사냥. 까꿍!',
+    signature: '톡톡~ SEO 황금열매 수확. 까꿍!',
     description: '오늘의 액션을 함께 처리해요',
   },
   cowgirl: {

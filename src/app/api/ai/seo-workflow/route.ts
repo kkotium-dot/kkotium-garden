@@ -19,6 +19,14 @@ import {
 } from '@/lib/ai/provider-profile';
 import bannedData from '@/lib/seo/banned-words.ko.json';
 import { classifyCopyTone, type CopyTone } from '@/lib/seo/copy-tone';
+// CATEGORY_SINGLE_AUTHORITY_2026-09-10 (원본메모: 두 카테고리 추천을 하나로
+// 통일 + 네이버 기준 매칭) — seo-workflow의 자체 카테고리 추론(프롬프트
+// 내장)을 검증된 단일권위(결정론 + Groq+Gemini 크로스체크 + 실제 네이버 DB
+// validateSuggestion)로 덮어써, 상품명 옆 "카테고리 자동 추천"과 이 "꼬띠
+// 사냥"이 절대 다른 답을 주지 않게 한다(#295 단일권위, #370 전소비처).
+import { suggestWithCrossCheck, validateSuggestion, isDeterministicLowConfidence } from '@/lib/naver/category-ai-suggest';
+import { matchDeterministicCategories } from '@/lib/naver/category-deterministic-matcher';
+import { NAVER_CATEGORIES_FULL } from '@/lib/naver/naver-categories-full';
 
 // HOOK-2 (#151/#62): reuse the shared product-name banned list as the hook
 // 과장/홍보어 filter — but KEEP benefit words, which are legitimate on the
@@ -497,6 +505,42 @@ export async function POST(request: NextRequest) {
     console.info(`[seo-workflow] profile=${profile} served=${provider || 'none'}`);
 
     const normalized = normalize(content, categoryPath ?? '카테고리 AI 자동 추론');
+
+    // CATEGORY_SINGLE_AUTHORITY_2026-09-10 — replace seo-workflow's own
+    // prompt-inferred category with the SAME authority the 상품명-옆 button
+    // uses, so the two never disagree. Only override when the operator
+    // hasn't already fixed a category (categoryPath empty) — if they set
+    // one, respect it. Deterministic-confident hits skip the AI call
+    // (cost-gated, same as /api/category/suggest); ambiguous ones go through
+    // the Groq+Gemini cross-check. On any failure we keep the AI's original
+    // guess rather than blanking it (best-effort, never throws).
+    if (!categoryPath?.trim()) {
+      try {
+        const det = matchDeterministicCategories(productName);
+        let chosen: { d1: string; d2: string; d3: string; d4?: string } | null = null;
+        if (det.length > 0 && !isDeterministicLowConfidence(det)) {
+          chosen = { d1: det[0].d1, d2: det[0].d2, d3: det[0].d3, d4: det[0].d4 };
+        } else {
+          const cross = await suggestWithCrossCheck(productName);
+          const validated = cross.suggestions
+            .map((s) => validateSuggestion(s.d1, s.d2, s.d3))
+            .find((s): s is NonNullable<typeof s> => !!s);
+          if (validated) chosen = validated;
+        }
+        if (chosen) {
+          const entry = NAVER_CATEGORIES_FULL.find(
+            (c) => c.d1 === chosen!.d1 && c.d2 === chosen!.d2 && c.d3 === chosen!.d3 && (c.d4 || undefined) === (chosen!.d4 || undefined),
+          );
+          normalized.category = {
+            code: entry?.code ?? '',
+            path: [chosen.d1, chosen.d2, chosen.d3, chosen.d4].filter(Boolean).join(' > '),
+            reason: '네이버 기준 교차검증',
+          };
+        }
+      } catch (catErr) {
+        console.warn('[seo-workflow] category single-authority override failed, keeping AI guess:', String(catErr).slice(0, 150));
+      }
+    }
 
     // HOOK-HYBRID-1: deterministic tone recommendation from product data.
     const copyTone = classifyCopyTone(body.price, body.categoryPath);

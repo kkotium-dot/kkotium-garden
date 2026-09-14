@@ -1,6 +1,6 @@
 'use client';
 
-// NaverSEOWorkflow — 꼬띠 황금 키워드 사냥꾼
+// NaverSEOWorkflow — 꼬띠의 SEO 황금열매 수확
 // 5단계: 카테고리 / 황금키워드 / 상품명 3종 / 태그 / 훅문구
 // Design: app unified style — #F63B28 accent, #FFB3CE lines, Kkotti face by state
 
@@ -270,7 +270,7 @@ export default function NaverSEOWorkflow({
           </div>
           <div style={{ textAlign: 'left' }}>
             <p style={{ fontSize: 13, fontWeight: 800, color: '#1A1A1A', margin: 0 }}>
-              꼬띠 황금 키워드 사냥
+              꼬띠의 SEO 황금열매 수확
             </p>
             <p style={{ fontSize: 10, color: kk.color, margin: 0, fontWeight: 700 }}>
               {kk.label}
@@ -730,7 +730,7 @@ export default function NaverSEOWorkflow({
                 </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 11, fontWeight: 800, color: '#F63B28', margin: '0 0 2px' }}>
-                    황금 키워드 사냥 완료!
+                    SEO 황금열매 수확 완료!
                   </p>
                   <p style={{ fontSize: 11, color: '#7f1d1d', margin: 0 }}>
                     각 항목 적용 후 전체 1클릭 버튼으로 한번에 반영하세요.

@@ -92,7 +92,7 @@ function checkKeywordInclusion(name: string, keywords: string[]): NameCheck {
     return {
       id: 'keywordInclusion', label: '핵심 키워드 포함', status: 'warn',
       detail: '비교할 황금키워드·태그가 아직 없어요.',
-      suggestion: '황금키워드 사냥으로 키워드를 먼저 확보하면 포함 여부를 진단해 드려요.',
+      suggestion: '꼬띠의 SEO 황금열매 수확으로 키워드를 먼저 확보하면 포함 여부를 진단해 드려요.',
     };
   }
   // SEO-MATCH-1 (#154): whitespace-insensitive — name "차량용 방향제" matches

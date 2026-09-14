@@ -4149,7 +4149,7 @@ const handleGenerate = async () => {
                       초안
                     </span>
                     <span style={{ fontSize: 11, color: 'var(--text-300, #888)' }}>
-                      상품 데이터로 자동 작성된 초안이에요 · 아래 황금키워드 사냥으로 더 다듬어 보세요.
+                      상품 데이터로 자동 작성된 초안이에요 · 아래 꼬띠의 SEO 황금열매 수확으로 더 다듬어 보세요.
                     </span>
                   </div>
                 )}
