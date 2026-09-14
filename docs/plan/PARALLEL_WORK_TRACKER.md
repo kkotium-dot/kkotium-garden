@@ -2220,3 +2220,32 @@ crawlNaverFeeRate가 수신부에 아예 없어 조용히 버려짐 확인. 진�
 
 **전 계열 상태**: 카테고리 계열(rev163~166) 완전 종료. 크롤 prefill
 손실은 진단완료·Code착수 대기(독립작업).
+
+## rev167 — 씨앗심기 supplier_product_code 저장/로딩 누락 근본수정 (2026-09-10)
+
+**"상품 수정/저장 데이터 유지 문제"(원본메모) 조사 중 독립 결함 발견**:
+크롤 prefill 손실(Code 인계중)과 별개로, supplier_product_code(공급처
+상품번호=재고추적 1급키)가 씨앗심기 저장/로딩 경로에서 완전 누락:
+(1)편집 재열람 시 기존값 폼에 안 뜸 (2)저장 payload 미포함(formValues·
+dbPayload 둘 다). 꽃밭 돌보기에서 연결한 코드가 씨앗심기 저장으로
+단절·유실 위험.
+
+**교차검증(백엔드 안전 확인)**: PUT/POST route.ts는 이 필드 받으면 저장
+(PATCH-style이라 omit시 기존값 보존), sanitizeProductWrite는 Prisma
+DMMF 자동추출이라 실컬럼인 supplier_product_code 이미 허용. 프론트
+한 곳만 문제.
+
+**근본수정(#62 단일권위)**: product-form-mapping.ts 공용매핑에
+supplierProductCode 추가 → serialize+hydrate 양방향 한번에 복구. 값
+있을때만 emit(빈값으로 기존코드 덮어쓰기 방지). #372대로 두번째
+저장경로(dbPayload)에도 동일적용.
+
+**브라우저 실측**: 듀얼가습기(31763951) 편집열람 → "공급사 상품코드"
+입력창에 정확히 로드 확인(이전엔 안 뜸). 배포 3fbaf07.
+
+**의존성**: Code 진행중 크롤 prefill 수정과 상호보완 — prefill이
+crawlProductNo를 supplierProductCode state에 넣고, 이 수정이 그걸
+DB까지 영속화. 둘 다 있어야 크롤→씨앗심기→재고추적 완결.
+
+**전 계열 상태**: 카테고리 계열(rev163~166) 종료. 상품코드 roundtrip
+(rev167) 수정완료. 크롤 prefill(Code) 진행중.
