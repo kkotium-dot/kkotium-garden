@@ -103,21 +103,29 @@ export default function PlatformsSettingPage() {
     else showToast(d.error ?? '삭제 실패', 'error');
   };
 
-  // ── 코드 자동 생성: Korean initial consonant extraction + English fallback ──
+  // SUPPLIER_CODE_ROMANIZE_FIX_2026-09-15 (#370 — settings/suppliers/page.tsx
+  // 에 적용한 것과 동일 근본원인·동일 수정을 여기도 적용해 일관화). 이전엔
+  // 초성 'ㅇ'을 'NG'(실제로는 종성 표기, 초성 표기 아님)로 치환해 음절
+  // 소실은 막았지만 부정확했다("오너클랜"->"NGNKR"). 국립국어원 공식
+  // 모음 로마자 대응표(korean.go.kr)로 교체 — 초성 'ㅇ'일 때 그 음절의
+  // 모음(중성) 첫 글자를 대신 쓴다("오너클랜"->"ONKR").
   const autoCode = (name: string): string => {
-    // CHO_MAP: 19 Korean initial consonants (index 11 = 'NG', not empty)
-    const CHO_MAP = ['G','GG','N','D','DD','R','M','B','BB','S','SS','NG','J','JJ','CH','K','T','P','H'];
+    const CHO_MAP = ['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'];
+    const JUNG_MAP = ['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
     const eng = name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     if (eng.length >= 2) return eng.slice(0, 6);
     let result = '';
     for (const ch of name) {
       const cp = ch.charCodeAt(0);
       if (cp >= 0xAC00 && cp <= 0xD7A3) {
-        const cho = CHO_MAP[Math.floor((cp - 0xAC00) / 588)];
-        if (cho) result += cho;
+        const offset = cp - 0xAC00;
+        const choIdx = Math.floor(offset / (21 * 28));
+        const jungIdx = Math.floor((offset % (21 * 28)) / 28);
+        const cho = CHO_MAP[choIdx] ?? '';
+        result += cho ? cho[0] : (JUNG_MAP[jungIdx]?.[0] ?? '');
       }
     }
-    const r = result.slice(0, 6);
+    const r = result.toUpperCase().slice(0, 6);
     return r.length >= 2 ? r : (eng.slice(0, 6) || 'CODE');
   };
 

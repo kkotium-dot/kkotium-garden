@@ -89,7 +89,22 @@ function deriveAbbr(code: string, name: string): string {
   return base.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 4);
 }
 
-const CHO = ['G','GG','N','D','DD','R','M','B','BB','S','SS','','J','JJ','CH','K','T','P','H'];
+// SUPPLIER_CODE_ROMANIZE_FIX_2026-09-15 (원본메모: "공급사 한글명이 영문
+// 약자로 제대로 안 바뀐다") — 근본원인: 초성 자모만 로마자로 옮기고,
+// 초성이 'ㅇ'인 글자는 통째로 스킵하는 알고리즘이었다. 국립국어원 표준
+// 발음법상 초성 'ㅇ'은 소리값이 없는 게 맞지만(공식 로마자 표기법 —
+// korean.go.kr), 그렇다고 그 음절 자체를 코드에서 지워버리면 안 된다.
+// 실제 한국 상호명·브랜드명 상당수가 모음으로 시작(오너클랜, 아이디어스,
+// 에이블리 등)해 이 결함이 자주 발생했다(실측: "오너클랜"->"NKR", 첫 음절
+// 소실). 근본수정: 초성이 'ㅇ'일 때는 국립국어원 공식 모음 로마자
+// 대응표(단모음 ㅏa ㅓeo ㅗo ㅜu ㅡeu ㅣi ㅐae ㅔe ㅚoe ㅟwi, 이중모음
+// ㅑya ㅕyeo 등)의 첫 글자를 대신 써서 음절 정보를 보존한다. 이 함수는
+// "자동 제안"일 뿐 사용자가 코드 필드를 직접 수정할 수 있으므로, 완벽한
+// 약어(예: 영문 약칭 "OC")까지는 못 만들어도 최소한 음절을 누락하지
+// 않는 것이 핵심 개선.
+const CHO = ['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'];
+// 21 vowels in Unicode Hangul jamo order.
+const JUNG = ['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
 function autoCode(name: string): string {
   const eng = name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   if (eng.length >= 2) return eng.slice(0, 6);
@@ -97,10 +112,16 @@ function autoCode(name: string): string {
   for (const ch of name) {
     const cp = ch.charCodeAt(0);
     if (cp >= 0xAC00 && cp <= 0xD7A3) {
-      result += CHO[Math.floor((cp - 0xAC00) / 588)] ?? '';
+      const offset = cp - 0xAC00;
+      const choIdx = Math.floor(offset / (21 * 28));
+      const jungIdx = Math.floor((offset % (21 * 28)) / 28);
+      const cho = CHO[choIdx] ?? '';
+      // Silent 'ㅇ' initial -> fall back to the vowel's first romanized
+      // letter so the syllable isn't dropped entirely.
+      result += cho ? cho[0] : (JUNG[jungIdx]?.[0] ?? '');
     }
   }
-  return result.slice(0, 6) || 'SUP';
+  return result.toUpperCase().slice(0, 6) || 'SUP';
 }
 
 export default function SuppliersPage() {

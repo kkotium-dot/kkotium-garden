@@ -778,24 +778,29 @@ function NewProductPageInner() {
     supplierId?: string;
   } | null>(null);
 
-  // Korean initial consonant -> uppercase letter mapping (index 11 = 'ㅇ' maps to 'NG' not empty)
-  // Moved to component body but defined as stable ref-independent function
-  // CHO_MAP covers all 19 Korean initial consonants
+  // SUPPLIER_CODE_ROMANIZE_FIX_2026-09-15 (#370 — 3번째 소비처, 동일 근본
+  // 원인·동일 수정으로 통일). 초성 'ㅇ'을 'NG'(부정확 — 실제로는 종성
+  // 표기)로 치환하던 것을, 국립국어원 공식 모음 로마자 대응표로 교체해
+  // 그 음절의 실제 중성(모음)을 반영한다("오너클랜"->"ONKR").
   const quickAutoCode = (name: string): string => {
-    const CHO_MAP = ['G','GG','N','D','DD','R','M','B','BB','S','SS','NG','J','JJ','CH','K','T','P','H'];
+    const CHO_MAP = ['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'];
+    const JUNG_MAP = ['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
     // Prefer English chars if present
     const eng = name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     if (eng.length >= 2) return eng.slice(0, 5);
-    // Extract Korean initial consonants
+    // Extract Korean initial consonants (vowel fallback for silent 'ㅇ')
     let r = '';
     for (const ch of name) {
       const cp = ch.charCodeAt(0);
       if (cp >= 0xAC00 && cp <= 0xD7A3) {
-        const cho = CHO_MAP[Math.floor((cp - 0xAC00) / 588)];
-        if (cho) r += cho;
+        const offset = cp - 0xAC00;
+        const choIdx = Math.floor(offset / (21 * 28));
+        const jungIdx = Math.floor((offset % (21 * 28)) / 28);
+        const cho = CHO_MAP[choIdx] ?? '';
+        r += cho ? cho[0] : (JUNG_MAP[jungIdx]?.[0] ?? '');
       }
     }
-    const result = r.slice(0, 5);
+    const result = r.toUpperCase().slice(0, 5);
     return result.length >= 2 ? result : (eng.slice(0, 5) || 'NEW');
   };
 
