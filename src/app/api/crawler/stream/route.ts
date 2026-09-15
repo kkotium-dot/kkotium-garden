@@ -1,5 +1,10 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+// OPTION_FIELDNAME_FIX_2026-09-15 (#370) — this route had its OWN duplicated
+// copy of parseOptions() with the identical addprice fieldname bug already
+// fixed in domemae-adapter.ts. Reusing the single-authority version instead
+// of maintaining two copies that can drift out of sync again (#62).
+import { parseOptions } from '@/lib/sources/domemae-adapter';
 
 // Bulk batch crawler using Domeggook OpenAPI (getItemView ver=4.5)
 // Replaces the old HTML/cheerio scraper entirely
@@ -41,24 +46,7 @@ function parseShipFee(deli: Record<string, unknown>): number {
   return 3000;
 }
 
-interface CrawledOption {
-  name: string;
-  qty: number;
-  addPrice: number;
-}
 
-function parseOptions(selectOpt: string | undefined): CrawledOption[] {
-  if (!selectOpt) return [];
-  try {
-    const p = JSON.parse(selectOpt) as { data?: Record<string, { name?: string; hid?: string | number; qty?: string | number; addprice?: string | number }> };
-    if (p.data) return Object.values(p.data)
-      .filter(o => String(o.hid ?? '0') !== '1')
-      .map(o => ({ name: o.name?.trim() ?? '', qty: parseInt(String(o.qty ?? '0'), 10) || 0, addPrice: parseInt(String(o.addprice ?? '0'), 10) || 0 }))
-      .filter(o => o.name)
-      .slice(0, 30);
-  } catch { /* ignore */ }
-  return [];
-}
 
 async function getApiKey(): Promise<string | null> {
   try {

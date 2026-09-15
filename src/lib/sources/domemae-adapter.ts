@@ -103,6 +103,26 @@ export function parseShipFee(deli: Record<string, unknown> | undefined): number 
  * Parse options from the selectOpt JSON string. Returns structured data
  * suitable for ItemDetail.options.
  */
+// OPTION_FIELDNAME_FIX_2026-09-15 (원본메모: "옵션가 인식이 제대로 안됨,
+// 전체 크롤링→씨앗심기→네이버엑셀 워크플로우 재점검") — 실측+확실한 출처
+// 교차검증으로 확정된 결함: 이 함수가 존재하지 않는 필드명 addprice를
+// 읽고 있어 모든 크롤 옵션의 추가금이 예외 없이 0으로 저장되고 있었다
+// (DB 실측: 10개 상품·27개 옵션행 전수가 addPrice:0).
+//
+// 출처 교차검증(도매매 자체 문서에 selectOpt 내부 필드 스키마가 없어
+// "별도 문서 참고요망"으로만 안내됨 — docs.channel.io/domeggook_api
+// 상품상세정보 문서 확인. 실제 필드 스키마는 도매매 API를 실사용하는
+// 제3자 오픈소스 파서의 테스트 픽스처로 교차확인: github.com/mydoglichy/
+// product-data-collector PR#62, test_parsing.py의
+// test_detail_parser_maps_select_options_from_json_string — 실제
+// selectOpt.data 원소 구조가 {name, dom, domPrice, sup, supPrice, sam,
+// samPrice, qty, hid, hash} 임을 명시적 테스트로 검증).
+//
+// 이 프로젝트는 도매매(supply) 채널만 쓴다(위 parseSupplyPrice/
+// item.price?.supply 참조, market='domemae'=supply) — 따라서 옵션
+// 추가금도 dome채널의 domPrice가 아니라 supply채널의 supPrice를 읽어야
+// 정확하다. 하위호환: 과거 크롤 데이터가 혹시 addprice로 저장됐을 가능성
+// 대비, supPrice -> addprice 순으로 폴백.
 export function parseOptions(selectOpt: string | undefined): CrawledOption[] {
   if (!selectOpt) return [];
   try {
@@ -113,7 +133,9 @@ export function parseOptions(selectOpt: string | undefined): CrawledOption[] {
           name?: string;
           hid?: string | number;
           qty?: string | number;
-          addprice?: string | number;
+          supPrice?: string | number;
+          domPrice?: string | number;
+          addprice?: string | number; // legacy fallback only — not a real API field
         }
       >;
       type?: string;
@@ -124,7 +146,7 @@ export function parseOptions(selectOpt: string | undefined): CrawledOption[] {
         .map((o) => ({
           name: o.name?.trim() ?? '',
           qty: parseInt(String(o.qty ?? '0'), 10) || 0,
-          addPrice: parseInt(String(o.addprice ?? '0'), 10) || 0,
+          addPrice: parseInt(String(o.supPrice ?? o.domPrice ?? o.addprice ?? '0'), 10) || 0,
         }))
         .filter((o) => o.name)
         .slice(0, 30);
