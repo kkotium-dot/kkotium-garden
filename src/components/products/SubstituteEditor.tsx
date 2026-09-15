@@ -479,6 +479,14 @@ function SubstituteRow({
         <Field label={strings.name}>
           <input value={row.substituteName ?? ''} onChange={(e) => onPatch({ substituteName: e.target.value })}
             placeholder={strings.namePlaceholder} style={input} />
+          {/* SUBSTITUTE_NAME_CLARITY_2026-09-15 (원본메모: "대체 상품명이
+              단순 이름교체처럼 보임, 왜 넣었는지 확인 필요") — 실제 기능은
+              의도된 것: 연결(substituteProductId)과 표시명(substituteName)이
+              분리된 필드다. 앱 상품 선택 시 상품명이 자동으로 채워지지만
+              그 뒤 자유롭게 수정 가능하며, 연결 자체는 그대로 유지된다
+              (예: 실제 상품명이 길 때 알림용으로 축약 표기). 로직을 분리하는
+              대신, 이 의도를 명확히 설명하는 힌트를 추가해 혼란을 없앤다. */}
+          <p style={{ margin: '4px 2px 0', fontSize: 10.5, color: '#9ca3af', lineHeight: 1.5 }}>{strings.nameHint}</p>
         </Field>
         <Field label={strings.note}>
           <input value={row.substituteNote ?? ''} onChange={(e) => onPatch({ substituteNote: e.target.value })}
@@ -562,7 +570,18 @@ function Field({ label, icon, children }: { label: string; icon?: React.ReactNod
 }
 
 // ⓐ 앱 상품 선택 / ⓒ 카테고리 자동추천 결과 행 (#256 P4-5).
+// SUBSTITUTE_CANDIDATE_STATUS_FIX_2026-09-15 — status 배지 신규. 검색
+// 대상을 발행상품(ACTIVE)뿐 아니라 정원창고(DRAFT)까지 확장했으므로
+// (route.ts 근본수정), 후보가 아직 미발행 상품일 수 있음을 사용자가
+// 한눈에 알 수 있어야 한다.
+const STATUS_BADGE: Record<string, { label: string; color: string; bg: string }> = {
+  DRAFT:    { label: '정원창고·미발행', color: '#92400e', bg: '#fef3c7' },
+  ACTIVE:   { label: '발행됨',          color: '#166534', bg: '#dcfce7' },
+  READY:    { label: '발행준비',        color: '#1e40af', bg: '#dbeafe' },
+};
+
 function CandidateRow({ c, onPick }: { c: CandidateProduct; onPick: () => void }) {
+  const badge = STATUS_BADGE[c.status];
   return (
     <button type="button" onClick={onPick}
       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 7px', background: 'none', border: 'none', borderRadius: 6, cursor: 'pointer', textAlign: 'left', width: '100%' }}
@@ -572,6 +591,11 @@ function CandidateRow({ c, onPick }: { c: CandidateProduct; onPick: () => void }
         ? <img src={c.mainImage} alt="" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
         : <div style={{ width: 28, height: 28, borderRadius: 6, background: '#f3f4f6', flexShrink: 0 }} />}
       <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+      {badge && (
+        <span style={{ fontSize: 9.5, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 999, padding: '2px 6px', flexShrink: 0 }}>
+          {badge.label}
+        </span>
+      )}
       <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', flexShrink: 0 }}>{(c.salePrice ?? 0).toLocaleString('ko-KR')}원</span>
     </button>
   );

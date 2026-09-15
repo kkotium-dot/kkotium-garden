@@ -11,8 +11,16 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
-// 대체 후보는 "지금 팔 수 있는 상품"만 — 품절/작성중/비활성은 제외.
-const SELLABLE_STATUS = ['ACTIVE', 'READY'];
+// SUBSTITUTE_CANDIDATE_STATUS_FIX_2026-09-15 (원본메모: "품절 안전망에서
+// 앱상품 검색이 아무것도 안 됨") — 근본원인 확정: 이전엔 ACTIVE/READY(발행
+// 완료 상품)만 검색 대상이었는데, DB 실측 결과 전체 28개 중 21개(75%)가
+// DRAFT(정원창고, 미발행)라 대부분의 상품이 검색에서 완전히 제외되고
+// 있었다. DOMAIN_FACTS.md의 대체소싱(RESOURCE) 개념상 대체 상품은
+// "이미 발행돼 있어야" 하는 게 아니라 — 오히려 정원창고에 미리 준비해둔
+// 후보를 품절 시 빠르게 승격시키는 게 자연스러운 실무 흐름이다. 발행
+// 여부와 무관하게 검색 가능하게 하되, INACTIVE(비활성/삭제 처리)만 제외
+// (대체 후보로 죽은 상품을 연결하면 안 되므로 이것만은 유지).
+const EXCLUDED_STATUS = ['INACTIVE'];
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params;
@@ -25,7 +33,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const items = await prisma.product.findMany({
       where: {
         id: { not: id },
-        status: { in: SELLABLE_STATUS },
+        status: { notIn: EXCLUDED_STATUS },
         name: { contains: q, mode: 'insensitive' },
       },
       select: { id: true, name: true, salePrice: true, mainImage: true, naver_status_type: true, status: true },
@@ -46,7 +54,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     where: {
       id: { not: id },
       naverCategoryCode: self.naverCategoryCode,
-      status: { in: SELLABLE_STATUS },
+      status: { notIn: EXCLUDED_STATUS },
     },
     select: { id: true, name: true, salePrice: true, mainImage: true, naver_status_type: true, status: true },
     orderBy: { updatedAt: 'desc' },
