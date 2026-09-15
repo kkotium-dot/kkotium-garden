@@ -67,6 +67,15 @@ export async function POST(request: NextRequest) {
     const productId = formData.get('productId') as string;
     const isMain = formData.get('isMain') === 'true';
     const altText = formData.get('altText') as string;
+    // IMAGE-UPLOAD-TYPE-FIX (원본메모: 상세페이지 이미지 업로드 실패)
+    // — 대표/추가이미지와 상세페이지 이미지는 네이버 규격 자체가 다르다.
+    // 상세페이지 이미지는 세로로 긴 컷·아이콘 등 작은 이미지가 정상적으로
+    // 많고 네이버도 최소크기를 요구하지 않는다 — 이 슬롯 타입 정보가 없어
+    // 모든 업로드에 대표이미지용 500x500px 최소규격이 무차별 적용되고
+    // 있었다. 프론트에서 안 보내던 옛 클라이언트 호환을 위해 기본값은
+    // 'additional'(기존 동작과 동일하게 최소규격 유지).
+    const slotType = (formData.get('slotType') as string) || (isMain ? 'main' : 'additional');
+    const isDetailImage = slotType === 'detail';
 
     if (!file) {
       return NextResponse.json(
@@ -114,13 +123,16 @@ export async function POST(request: NextRequest) {
 
     console.log('📏 이미지 정보:', `${metadata.width}x${metadata.height}px`, metadata.format);
 
-    // ⭐ 5. 네이버 규격 검증 (최소 크기)
-    const validation = validateNaverSpec(metadata.width, metadata.height);
-    if (!validation.valid) {
-      return NextResponse.json(
-        { success: false, error: validation.error },
-        { status: 400 }
-      );
+    // ⭐ 5. 네이버 규격 검증 (최소 크기) — 대표/추가이미지에만 적용.
+    // 상세페이지 이미지는 네이버가 이 최소크기를 요구하지 않으므로 스킵.
+    if (!isDetailImage) {
+      const validation = validateNaverSpec(metadata.width, metadata.height);
+      if (!validation.valid) {
+        return NextResponse.json(
+          { success: false, error: validation.error },
+          { status: 400 }
+        );
+      }
     }
 
     // 6. 파일명 생성 (타임스탬프 + 랜덤)

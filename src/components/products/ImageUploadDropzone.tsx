@@ -38,20 +38,41 @@ const TYPE_META: Record<ImageSlotType, { accept: string; desc: string; color: st
   detail:     { accept: 'image/jpeg,image/jpg,image/png,image/webp,image/gif', desc: '상세페이지 이미지', color: 'border-purple-300 hover:border-purple-400 hover:bg-purple-50' },
 };
 
+// IMAGE-UPLOAD-TYPE-FIX (원본메모: "상세페이지 이미지 업로드가 드래그·
+// 선택 둘 다 안 됨" + "에러메시지가 외계어") — 근본원인 확정: 서버
+// (/api/upload/image)가 대표/추가이미지 전용 최소규격(500x500px 이상)을
+// 상세페이지 이미지에도 무차별 적용해 거부하고 있었다. 상세페이지 이미지는
+// 세로로 긴 컷·아이콘 등 작은 이미지가 정상적으로 많다 — 네이버도 상세
+// 이미지엔 이 규격을 요구하지 않는다. 근본원인은 이 컴포넌트가 서버에
+// isMain(boolean)만 보내 main과 detail/additional을 구분 못 시켰던 것 —
+// 이제 정확한 type 문자열을 그대로 전달해 서버가 슬롯별로 다른 규격을
+// 적용할 수 있게 한다.
 async function uploadToSupabase(file: File, type: ImageSlotType): Promise<UploadResult> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('isMain', type === 'main' ? 'true' : 'false');
+  formData.append('slotType', type);
 
   try {
     const res  = await fetch('/api/upload/image', { method: 'POST', body: formData });
-    const data = await res.json();
-    if (data.success && data.url) {
+    const data = await res.json().catch(() => null);
+    if (data?.success && data.url) {
       return { url: data.url, filename: file.name, size: file.size, ok: true };
     }
-    return { url: '', filename: file.name, size: file.size, ok: false, error: data.error ?? '업로드 실패' };
-  } catch (e) {
-    return { url: '', filename: file.name, size: file.size, ok: false, error: String(e) };
+    // ERROR-MESSAGE-CLARITY — 서버가 이미 사람이 읽을 수 있는 한국어
+    // error 문자열을 내려주면 그대로 쓰고, 그마저 없을 때만(응답 파싱
+    // 실패 등 진짜 예외 상황) 정확한 상황을 설명하는 문구로 대체한다.
+    // 이전엔 catch에서 String(e)를 그대로 노출해 "TypeError: Failed to
+    // fetch" 같은 개발자용 기술 메시지가 사용자에게 그대로 보였다.
+    const fallback = !res.ok
+      ? `업로드 서버 응답 오류 (${res.status}) — 잠시 후 다시 시도해주세요.`
+      : '업로드에 실패했어요. 파일 형식이나 크기를 확인해주세요.';
+    return { url: '', filename: file.name, size: file.size, ok: false, error: data?.error ?? fallback };
+  } catch {
+    return {
+      url: '', filename: file.name, size: file.size, ok: false,
+      error: '네트워크 연결을 확인해주세요 — 업로드 서버에 연결하지 못했어요.',
+    };
   }
 }
 

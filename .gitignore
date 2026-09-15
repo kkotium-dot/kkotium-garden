@@ -69,12 +69,16 @@ tsconfig.tsbuildinfo
 # Backup file patterns (added 2026-05-19 — work principle #43 정합)
 # Reason: src/lib/gemini.ts.bak 잔존이 GEMINI_API_KEY revoke 사고 원인.
 # 2026-05-19 PM 추가: .backup 패턴 60건 대량 잔존 발견 (#43 메타-단정) → 영구 ignore.
+# 2026-09-15 추가: src/app/api/upload/image/route.ts.save가 실제로 git에
+# 커밋되어 GitHub 공개 저장소에 올라가 있던 것을 발견·제거(#43 재발). *.save 추가.
 *.bak
 *.backup
 *.backup[0-9]*
 *.backup.[0-9]*
 *.BROKEN.*
 *.old
+*.save
+*.orig
 *.tmp.[a-z]*
 *.v[0-9]*
 
