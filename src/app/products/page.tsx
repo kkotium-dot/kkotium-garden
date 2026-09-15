@@ -197,7 +197,7 @@ function getShippingInfo(p: Product): { label: string; color: string; icon: 'fre
   const t = p.shippingType;
   if (t === 2) return { label: '무료', color: '#16a34a', icon: 'free' };
   if (t === 3) return {
-    label: p.shippingFee > 0 ? `조건부(${(p.shippingFee / 1000).toFixed(0)}K)` : '조건부무료',
+    label: p.shippingFee > 0 ? `조건부(${(p.shippingFee / 1000).toFixed(0)}K)` : '조건부 무료',
     color: '#d97706', icon: 'cond',
   };
   return {
@@ -2210,7 +2210,7 @@ function ApplyTemplateModal({
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">{t.name}</p>
                   <p className="text-xs" style={{ color: '#888' }}>
-                    {t.shippingType === 2 ? '무료배송' : t.shippingType === 3 ? '조건부무료' : `유료 ${t.shippingFee.toLocaleString()}원`}
+                    {t.shippingType === 2 ? '무료배송' : t.shippingType === 3 ? '조건부 무료' : `유료 ${t.shippingFee.toLocaleString()}원`}
                   </p>
                 </div>
               </label>

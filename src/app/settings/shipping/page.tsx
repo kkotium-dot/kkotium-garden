@@ -33,7 +33,7 @@ const EMPTY_FORM = {
 const ST_META: Record<number, { label: string; color: string; bg: string; border: string }> = {
   1: { label: '묶음배송', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
   2: { label: '개별배송', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-  3: { label: '조건부무료', color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
+  3: { label: '조건부 무료', color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
   4: { label: '무료배송', color: '#15803d', bg: '#f0fdf4', border: '#86efac' },
 };
 const stMeta = (t: number) => ST_META[t] ?? { label: `타입${t}`, color: '#888', bg: '#f9f9f9', border: '#eee' };
@@ -577,7 +577,7 @@ export default function ShippingPage() {
                     value={modal.data.shippingType} onChange={e => setField('shippingType', Number(e.target.value))}>
                     <option value={1}>1 — 묶음배송</option>
                     <option value={2}>2 — 개별배송</option>
-                    <option value={3}>3 — 조건부무료</option>
+                    <option value={3}>3 — 조건부 무료</option>
                     <option value={4}>4 — 무료배송</option>
                   </select>
                 </div>
@@ -592,7 +592,7 @@ export default function ShippingPage() {
                 </div>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: Number(modal.data.shippingType) === 3 ? '#555' : '#ccc', display: 'block', marginBottom: 5 }}>
-                    무료 기준금액 <span style={{ fontSize: 10, fontWeight: 600 }}>(조건부무료만)</span>
+                    무료 기준금액 <span style={{ fontSize: 10, fontWeight: 600 }}>(조건부 무료만)</span>
                   </label>
                   <input type="number"
                     disabled={Number(modal.data.shippingType) !== 3}

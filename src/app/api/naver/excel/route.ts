@@ -183,12 +183,17 @@ export async function POST(request: NextRequest) {
       productName:          p.naver_title ?? p.seoTitle ?? p.aiGeneratedTitle ?? p.name ?? '',
       productStatus:        p.productStatus ?? undefined,
       price:                Number(p.salePrice) || 0,
-      // Naver requires '과세상품' / '면세상품' / '영세율' not just '과세'
+      // NAVER_ENUM_FIX_2026-09-15 — 정확한 네이버 규격은 과세상품/면세상품/
+      // 영세상품 3종뿐이다(실제 공식 템플릿 ExcelSaveTemplate_20260324.xlsx로
+      // 재확인, 이전 주석의 '영세율'은 존재하지 않는 값이었음 — 실제 결함).
+      // src/lib/naver/codes.ts의 TAX_TYPES도 이 값으로 통일했으므로, 이 정규화는
+      // 신규(수정 전) 상품 데이터에 남아있을 수 있는 구값('과세'/'면세'/'영세')만
+      // 방어적으로 흡수하고 신규 저장분은 애초에 정확한 값으로 들어온다.
       taxType: (() => {
-        const t = p.taxType ?? '과세';
+        const t = p.taxType ?? '과세상품';
         if (t === '과세' || t === '과세상품') return '과세상품';
         if (t === '면세' || t === '면세상품') return '면세상품';
-        if (t === '영세' || t === '영세율')  return '영세율';
+        if (t === '영세' || t === '영세상품' || t === '영세율') return '영세상품';
         return t;
       })(),
       stock:                Number(p.stock) || 999,

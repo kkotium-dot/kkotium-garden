@@ -1127,7 +1127,7 @@ function NewProductPageInner() {
               setCourierCode(matchedTemplate.courierCode);
               const feeType =
                 Number(matchedTemplate.shippingType) === 4 ? '무료' :
-                Number(matchedTemplate.shippingType) === 3 ? '조건부무료' : '유료';
+                Number(matchedTemplate.shippingType) === 3 ? '조건부 무료' : '유료';
               setDeliveryFeeType(feeType);
               if (Number(matchedTemplate.shippingType) === 3 && matchedTemplate.freeThreshold) {
                 setConditionalFreeAmount(String(matchedTemplate.freeThreshold));
@@ -1191,7 +1191,7 @@ function NewProductPageInner() {
               setDeliveryFeeType('무료');
               setBasicDeliveryFee('0');
             } else if (sale >= 10000) {
-              setDeliveryFeeType('조건부무료');
+              setDeliveryFeeType('조건부 무료');
               setBasicDeliveryFee(String(fee));
               setConditionalFreeAmount('30000');
             } else {
@@ -1759,7 +1759,7 @@ function NewProductPageInner() {
           setCourierCode(primary.courierCode);
           const feeType =
             Number(primary.shippingType) === 4 ? '무료' :
-            Number(primary.shippingType) === 3 ? '조건부무료' :
+            Number(primary.shippingType) === 3 ? '조건부 무료' :
             '유료';
           setDeliveryFeeType(feeType);
           if (Number(primary.shippingType) === 3 && primary.freeThreshold) {
@@ -4207,7 +4207,7 @@ const handleGenerate = async () => {
                 const alreadyApplied =
                   (kkottiPick === 'A' && deliveryFeeType === '유료') ||
                   (kkottiPick === 'B' && deliveryFeeType === '무료') ||
-                  (kkottiPick === 'C' && deliveryFeeType === '조건부무료');
+                  (kkottiPick === 'C' && deliveryFeeType === '조건부 무료');
                 if (alreadyApplied) return null;
                 const MSG: Record<'A'|'B'|'C', string> = {
                   A: `판매가 ${saleNum.toLocaleString()}원 — 가격비교 상단 노출에 유리해요. 유료배송 A안을 추천합니다!`,
@@ -4218,7 +4218,7 @@ const handleGenerate = async () => {
                 const doApply = () => {
                   if (kkottiPick === 'A') { setDeliveryFeeType('유료'); setBasicDeliveryFee('3000'); }
                   if (kkottiPick === 'B') { setDeliveryFeeType('무료'); setBasicDeliveryFee('0'); }
-                  if (kkottiPick === 'C') { setDeliveryFeeType('조건부무료'); setBasicDeliveryFee('3000'); setConditionalFreeAmount('30000'); }
+                  if (kkottiPick === 'C') { setDeliveryFeeType('조건부 무료'); setBasicDeliveryFee('3000'); setConditionalFreeAmount('30000'); }
                 };
                 return (
                   <div style={{
@@ -4302,11 +4302,11 @@ const handleGenerate = async () => {
                       bg: '#fff7ed',
                       border: '#fed7aa',
                       apply: () => {
-                        setDeliveryFeeType('조건부무료');
+                        setDeliveryFeeType('조건부 무료');
                         setBasicDeliveryFee('3000');
                         setConditionalFreeAmount('30000');
                       },
-                      active: deliveryFeeType === '조건부무료',
+                      active: deliveryFeeType === '조건부 무료',
                       kkottiPick: (Number(price)||0) >= 10000 && (Number(price)||0) < 25000,
                     },
                   ];
@@ -4387,7 +4387,7 @@ const handleGenerate = async () => {
                           )}
                           <span style={{ fontSize: 10, color: '#6b7280' }}>
                             {selectedShippingTemplate.shippingFeeType === '4' || selectedShippingTemplate.shippingFeeType === '무료' ? '무료' :
-                             selectedShippingTemplate.shippingFeeType === '3' || selectedShippingTemplate.shippingFeeType === '조건부무료' ? '조건부 무료' : '유료'}
+                             selectedShippingTemplate.shippingFeeType === '3' || selectedShippingTemplate.shippingFeeType === '조건부 무료' ? '조건부 무료' : '유료'}
                             {selectedShippingTemplate.shippingFee ? ` · ${Number(selectedShippingTemplate.shippingFee).toLocaleString()}원` : ''}
                           </span>
                         </div>
@@ -4453,7 +4453,7 @@ const handleGenerate = async () => {
                   <Field label="교환배송비 (원)">
                     <input className={inp} type="number" value={exchangeFee} onChange={e => setExchangeFee(e.target.value)} />
                   </Field>
-                  {deliveryFeeType === '조건부무료' && (
+                  {deliveryFeeType === '조건부 무료' && (
                     <Field label="무료 기준 금액 (원)">
                       <input className={inp} type="number" value={conditionalFreeAmount} onChange={e => setConditionalFreeAmount(e.target.value)} />
                     </Field>
@@ -4644,7 +4644,7 @@ const handleGenerate = async () => {
 
   const feeType =
     Number(t.shippingFeeType) === 3 ? '무료' :
-    Number(t.shippingFeeType) === 2 ? '조건부무료' :
+    Number(t.shippingFeeType) === 2 ? '조건부 무료' :
     '유료';
   setDeliveryFeeType(feeType);
 
@@ -4892,7 +4892,7 @@ const handleGenerate = async () => {
                           setCourierCode(t.courierCode);
                           const feeType =
                             t.shippingType === 4 ? '무료' :
-                            t.shippingType === 3 ? '조건부무료' : '유료';
+                            t.shippingType === 3 ? '조건부 무료' : '유료';
                           setDeliveryFeeType(feeType);
                           if (t.shippingType === 3 && t.freeThreshold) {
                             setConditionalFreeAmount(String(t.freeThreshold));

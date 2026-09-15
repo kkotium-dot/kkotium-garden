@@ -30,7 +30,7 @@ interface Props {
 }
 
 // Shipping type numeric codes from DB
-const SHIPPING_TYPE_LABELS: Record<number, string> = { 1: '유료', 2: '조건부무료', 3: '무료' };
+const SHIPPING_TYPE_LABELS: Record<number, string> = { 1: '유료', 2: '조건부 무료', 3: '무료' };
 
 // Build template name prefix per confirmed convention:
 // Case A (platform + supplier): {PLAT}_{ABBR}_{TYPE}_{CONDITION}  -> DMM_HV_유료_3000
@@ -384,7 +384,7 @@ export function ShippingTemplateModal({ open, onClose, onSelect, supplierId }: P
                 <label className="text-xs font-medium text-gray-600 block mb-1">배송유형 *</label>
                 <select className={sel} value={newShippingType} onChange={e => setNewShippingType(e.target.value)}>
                   <option value="1">유료</option>
-                  <option value="2">조건부무료</option>
+                  <option value="2">조건부 무료</option>
                   <option value="3">무료</option>
                 </select>
               </div>
