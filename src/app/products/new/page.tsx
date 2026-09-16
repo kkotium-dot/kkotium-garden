@@ -4866,8 +4866,24 @@ const handleGenerate = async () => {
                             shippingType: pendingTemplateData.shippingType,
                             shippingFee: pendingTemplateData.shippingFee,
                             freeThreshold: pendingTemplateData.freeThreshold ?? null,
-                            returnFee: 6000,
-                            exchangeFee: 6000,
+                            // RETURN_FEE_ONEWAY_FIX_2026-09-15 (원본메모: "반품
+                            // 배송비를 편도 비용으로 적용해야 함, 지금은 두배로
+                            // 자동입력") — 실측 확정: 실제로는 입력값의 2배가
+                            // 아니라 6000이 완전히 하드코딩돼 있었다(사용자가
+                            // 무엇을 입력하든 무시). 확실한 출처(실무팩
+                            // "판매자가 처음 설정하는 반품 배송비(편도)는 단순
+                            // 변심 기준" — silmupack.com/smartstore-shipping-fee)
+                            // 로 반품 배송비는 편도값이 정답임을 재확인. 근본
+                            // 수정: 하드코딩 대신 정배송비(shippingFee, 이미
+                            // 편도 금액)를 반품/교환 편도 배송비 기본 제안값으로
+                            // 사용 — 사용자가 실제로 계산한 값을 반영하고, 이후
+                            // 배송템플릿 화면에서 얼마든지 직접 수정 가능.
+                            returnFee: pendingTemplateData.shippingFee || 3000,
+                            // 네이버 스마트스토어센터의 반품/교환 배송비
+                            // 입력필드는 둘 다 "편도" 개념(왕복 곱연산 근거를
+                            // 찾지 못함 — #370 재확인 시 왕복설이 사실이면
+                            // 정정할 것). 반품비와 동일 기본값 제안.
+                            exchangeFee: pendingTemplateData.shippingFee || 3000,
                             courierCode: 'CJGLS',
                             supplierId: pendingTemplateData.supplierId ?? null,
                             isPrimary: false,

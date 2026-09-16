@@ -20,11 +20,15 @@ type ShippingTemplate = {
 type Supplier = { id: string; name: string; code: string; };
 type Platform = { id: string; name: string; code: string; };
 
+// RETURN_FEE_ONEWAY_FIX_2026-09-15 — returnFee/exchangeFee는 네이버
+// 반품/교환 배송비 입력 필드로 둘 다 편도값이다(정배송비 shippingFee와
+// 동일 기준). 기존 6000 하드코딩은 shippingFee 기본값(3000)의 2배로
+// 근거 없이 부풀려져 있었음.
 const EMPTY_FORM = {
   name: '', platformCode: '', supplierCode: '',
   courierCode: 'CJGLS', shippingType: 1,
   shippingFee: 3000, freeThreshold: 30000,
-  returnFee: 6000, exchangeFee: 6000,
+  returnFee: 3000, exchangeFee: 3000,
   jejuFee: 5000, islandFee: 5000,
   naverTemplateNo: '', bundleKey: '',
 };

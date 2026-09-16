@@ -59,7 +59,8 @@ export const KKOTIUM_DEFAULTS = {
   basicDeliveryFee: 3000,
   deliveryPayType: '선결제',
   returnFee: 3000,
-  exchangeFee: 6000,
+  // RETURN_FEE_ONEWAY_FIX_2026-09-15 — 편도 통일(#370, naver-defaults.ts와 동일)
+  exchangeFee: 3000,
   noticeTemplateCode: '2976841',
   asTemplateCode: '',
   asPhone: '010-3227-4805',

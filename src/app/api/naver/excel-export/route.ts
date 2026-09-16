@@ -81,6 +81,19 @@ function toNaverProduct(p: any): NaverProductData {
     // 컬럼은 shipping_template_id — 배송비 템플릿코드가 마찬가지로 항상
     // undefined라 엑셀에서 누락되고 있었다.
     deliveryTemplateCode: p.shipping_template_id ?? undefined,
+    // AS_TEMPLATE_CODE_FIX_2026-09-15 (원본메모: "상품정보제공고시 템플릿에
+    // A/S템플릿 코드가 들어가있다, 템플릿 코드 적용 위치 파악해 수정") —
+    // 실측 확정: noticeTemplateCode(51번 컬럼, 상품정보제공고시)와
+    // asTemplateCode(56번 컬럼, A/S)는 이미 각각 정확한 별개 컬럼으로
+    // 올바르게 매핑돼 있었다(naverExcelJS.ts) — "뒤바뀐" 게 아니라 둘 다
+    // 이 변환함수에서 아예 누락돼 있어 매번 공란으로 나가고 있었다.
+    // 네이버 공식 규격(ExcelSaveTemplate 5행 56번): "A/S템플릿코드가
+    // 기재되면 A/S전화번호/안내는 무시된다" — asTemplateCode가 항상
+    // 빈값이었으니 57/58번(전화번호/안내)이 항상 필수로 요구됐고, 마침
+    // asPhone 기본값이 잘못된 텍스트('고객센터 문의', 별도 수정완료)였던
+    // 것이 겹쳐 증상이 드러난 것으로 판단.
+    noticeTemplateCode: p.noticeTemplateCode ?? undefined,
+    asTemplateCode:    p.asTemplateCode ?? undefined,
     asPhone:           p.asPhone ?? undefined,
     asGuide:           p.asInfo ?? undefined,
     ...buildOptionFields(p.product_options),

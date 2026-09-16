@@ -99,7 +99,15 @@ export const KKOTIUM_DEFAULTS = {
   shippingMethod:       '택배배송',
   shippingPayType:      '선결제',  // valid as-is (matches SHIPPING_PAY_TYPES)
   brand:                '꽃틔움',
-  asPhone:              '고객센터 문의',
+  // AS_PHONE_FORMAT_FIX_2026-09-15 (원본메모: "A/S전화번호 칸에 숫자,+,-만
+  // 가능한데 '고객센터 문의'라고 들어감") — 네이버 공식 규격(ExcelSaveTemplate
+  // 5행, 57번 컬럼) 확인: "최대 20자, 숫자·하이픈(-)·더하기(+)만 입력 가능".
+  // 이 파일(codes.ts)의 KKOTIUM_DEFAULTS가 씨앗심기 UI(products/new/page.tsx)
+  // 초기값으로 쓰이는데, 실제 프로덕션 엑셀엔진(naverExcelJS.ts)이 참조하는
+  // naver-defaults.ts의 KKOTIUM_DEFAULTS.asPhone은 이미 정확한 전화번호
+  // ('010-3227-4805')였다 — 같은 이름의 두 상수가 서로 다른 값을 가진 것이
+  // 진짜 결함(#371). UI가 보여주는 기본값을 실제 저장되는 값과 일치시킨다.
+  asPhone:              '010-3227-4805',
   asGuide:              '평일 10:00~18:00 문의 가능합니다.',
   shippingFrom:         '서울특별시',
   returnAddress:        '서울특별시',

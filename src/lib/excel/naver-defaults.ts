@@ -15,7 +15,9 @@ export const KKOTIUM_DEFAULTS: SupplierDefaults = {
   basicDeliveryFee: 3000,
   deliveryPayType: '선결제',
   returnFee: 3000,
-  exchangeFee: 6000,
+  // RETURN_FEE_ONEWAY_FIX_2026-09-15 — exchangeFee도 편도 개념(returnFee와
+  // 동일 기준), 이전 6000은 근거 없이 2배로 설정돼 있었음(#370).
+  exchangeFee: 3000,
   noticeTemplateCode: '2976841',
   asPhone: '010-3227-4805',
   asGuide:
