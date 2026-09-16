@@ -345,6 +345,10 @@ export class DomemaeAdapter implements SourceAdapter {
     );
     const sellerId = String(item.seller?.id ?? '');
     const sellerRank = item.seller?.rank ?? 0;
+    // TEMP_SELECTOPT_PROBE_2026-09-15 -- addPrice 재검증용 1회성 로그.
+    // 순수 read-only console.log, 비가역 쓰기 없음. 검증 후 제거 예정.
+    // (일시적으로 게이트 제거 — 즉시 확인 후 원복)
+    console.log('[PROBE selectOpt raw]', item.selectOpt);
     const options = parseOptions(item.selectOpt);
     // B-8: prefer thumb.original (highest source resolution, typically ≥760px).
     // largePng/large are auto-derived smaller crops (often _stt_330 variants).
