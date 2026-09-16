@@ -49,6 +49,10 @@ export async function GET(req: NextRequest) {
     .split(',').map(k => k.trim()).filter(Boolean);
   const tokens = extractMainKeywordTokens(name);
   const headPool = (keywords.length > 0 ? keywords : tokens).slice(0, 5);
+  // LONGTAIL_MODIFIER_FIX_2026-09-16 — d1(대분류)을 받아 카테고리에 맞는
+  // 수식어 목록을 쓰기 위함. 없으면 buildLongtailCandidates가 범용
+  // 목록으로 안전하게 폴백한다(하위호환, 기존 호출부 그대로 동작).
+  const d1 = searchParams.get('d1')?.trim() || undefined;
   if (headPool.length === 0) {
     return NextResponse.json({ success: false, error: '분석할 키워드가 없어요. 상품명을 입력해 주세요.' }, { status: 400 });
   }
@@ -82,7 +86,7 @@ export async function GET(req: NextRequest) {
     if (v > bestVol) { bestVol = v; main = t; }
   }
 
-  const candidates = buildLongtailCandidates(main, 4);
+  const candidates = buildLongtailCandidates(main, 4, d1);
 
   // Round 2: candidate volumes (best-effort — candidates may be 0-volume).
   // #270: 무음 실패 금지 — 실패해도 rows는 "데이터 없음"으로 정상 표시되지만,

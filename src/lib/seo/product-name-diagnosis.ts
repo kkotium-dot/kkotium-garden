@@ -329,13 +329,48 @@ export function extractMainKeywordTokens(name: string): string[] {
     .sort((a, b) => b.length - a.length);
 }
 
-// Generic longtail modifiers (용도·규격·타깃·시즌). Whether each is actually a
-// good swap is decided by its MEASURED competition, not by this list.
-const LONGTAIL_MODIFIERS = ['실내', '차량용', '대용량', '선물용', '휴대용', '미니'];
+// LONGTAIL_MODIFIER_FIX_2026-09-16 (원본메모: "어떤 내용을 넣어도 고정된
+// 내용으로만 키워드가 합쳐짐") — 실측 확정: 이전엔 카테고리와 무관한 6개
+// 범용 수식어("실내","차량용","대용량","선물용","휴대용","미니")만 항상
+// 앞에 붙었다. 실측 재현("강아지 얼굴망"→"차량용강아지","대용량강아지",
+// "선물용강아지" 등 말이 안 되는 조합 확인). "실제로 좋은 교체인지는
+// 측정된 경쟁강도로 결정한다"(원 설계의도)는 유지하되, 애초에 후보 씨앗
+// 자체가 카테고리와 전혀 안 맞으면 측정할 가치 있는 후보가 하나도 안
+// 나올 수 있다 — #295 단일권위 원칙대로 새 사전(CATEGORY_MODIFIERS)을
+// 신설해 d1(대분류)별로 실제 의미 있는 수식어를 우선 사용하고, 매칭되는
+// d1이 없거나 카테고리 정보가 없을 때만 범용 목록으로 안전하게 폴백한다.
+// 이 파일의 "product-agnostic PURE" 원칙은 유지 — 여전히 순수 함수이며
+// I/O 없음, d1 문자열 하나만 추가 매개변수로 받는다.
+const GENERIC_LONGTAIL_MODIFIERS = ['실내', '차량용', '대용량', '선물용', '휴대용', '미니'];
 
-/** Build longtail candidates by prefixing modifiers onto a head keyword. */
-export function buildLongtailCandidates(token: string, max = 4): string[] {
-  return LONGTAIL_MODIFIERS
+// 대분류(d1)별 적합 수식어 — 실제 네이버 카테고리 대분류명(naver-categories-
+// full.ts에서 실측 추출한 NAVER_DEPTH1_LIST 11종과 정확히 대조·일치시킴:
+// 가구/인테리어, 도서, 디지털/가전, 생활/건강, 스포츠/레저, 식품,
+// 여가/생활편의, 출산/육아, 패션의류, 패션잡화, 화장품/미용. 각 카테고리
+// 성격상 실제로 검색되는 용도/타깃 수식어 위주로 구성(범용 목록보다
+// 문맥상 자연스러움). 커버 안 되는 d1(도서, 여가/생활편의)은 범용 목록으로
+// 안전하게 폴백 — 억지로 채우지 않음(환각 방지).
+const CATEGORY_LONGTAIL_MODIFIERS: Record<string, string[]> = {
+  '생활/건강':   ['실내', '차량용', '휴대용', '대용량', '미니'],
+  '가구/인테리어': ['미니', '접이식', '벽걸이', '탁상용', '수납'],
+  '패션의류':    ['여성', '남성', '커플', '겨울', '봄가을'],
+  '패션잡화':    ['여성', '남성', '캐주얼', '데일리', '미니'],
+  '출산/육아':   ['신생아', '유아용', '아기', '선물용', '휴대용'],
+  '스포츠/레저': ['캠핑용', '휴대용', '초보자', '전문가용', '겨울용'],
+  '식품':       ['선물용', '대용량', '소포장', '간편', '건강'],
+  '디지털/가전': ['무선', '휴대용', '차량용', '고속', '미니'],
+  '화장품/미용': ['민감성', '건성', '지성', '순한', '데일리'],
+};
+
+/**
+ * Build longtail candidates by prefixing modifiers onto a head keyword.
+ * When d1 (대분류) is known and has a curated modifier set, uses that first;
+ * otherwise falls back to the generic list (unchanged behavior for callers
+ * that don't pass category context, e.g. existing tests).
+ */
+export function buildLongtailCandidates(token: string, max = 4, d1?: string): string[] {
+  const pool = (d1 && CATEGORY_LONGTAIL_MODIFIERS[d1]) || GENERIC_LONGTAIL_MODIFIERS;
+  return pool
     .filter(m => !token.startsWith(m))
     .slice(0, max)
     .map(m => `${m}${token}`);

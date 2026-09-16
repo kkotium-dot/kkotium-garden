@@ -142,8 +142,13 @@ export default function ProductNameDiagnostics({ name, ctx, onApplyFix }: Props)
       // NAME-DIAG-2.1: pass the category-validated golden keywords/tags so the
       // server restricts the head pool to them (avoids cross-category heads).
       const kw = (ctx.keywords ?? []).filter(Boolean).join(',');
+      // LONGTAIL_MODIFIER_FIX_2026-09-16 — categoryPath의 첫 세그먼트(d1)를
+      // 전달해 서버가 카테고리에 맞는 수식어 후보를 고르게 한다. 이전엔
+      // 카테고리 정보 없이 항상 범용 6개 수식어("차량용","선물용" 등)만
+      // 붙어 "차량용강아지" 같은 어색한 조합이 나왔다.
+      const d1 = ctx.categoryPath?.split('>')[0]?.trim();
       const res = await fetch(
-        `/api/naver/keyword-competition?name=${encodeURIComponent(target)}${kw ? `&keywords=${encodeURIComponent(kw)}` : ''}`,
+        `/api/naver/keyword-competition?name=${encodeURIComponent(target)}${kw ? `&keywords=${encodeURIComponent(kw)}` : ''}${d1 ? `&d1=${encodeURIComponent(d1)}` : ''}`,
       );
       const data = await res.json();
       if (!data.success) {
