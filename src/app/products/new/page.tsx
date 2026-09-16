@@ -636,6 +636,42 @@ function NewProductPageInner() {
   const [seoTags, setSeoTags] = useState<string[]>([]);
   // Tag inline input state
   const [tagInputVal, setTagInputVal] = useState('');
+  // TAG_INLINE_AUTOCOMPLETE_2026-09-16 (원본메모 최초요청: "태그 입력 중
+  // 실시간으로 사용가능여부/검색량 확인 + 콤마로 여러개 한번에 입력") —
+  // 기존 /api/naver/keyword-stats(검색량+경쟁도, 최대 5개, 12h캐시)를
+  // 그대로 재사용(#62 단일권위, 신규 판정엔진 발명 안 함).
+  // TAG_INLINE_AUTOCOMPLETE_2026-09-16 (원본메모 최초요청: "태그 입력 중
+  // 실시간으로 사용가능여부·검색량 확인 + 콤마로 여러개 한번에 입력") —
+  // 이미 완성된 태그사전 검증 인프라(/api/tags/verify, verified/weak/
+  // missing 신호등 + monthlyVolume까지 반환)를 재사용한다(#62 단일권위,
+  // 신규 판정엔진 발명 안 함 — TagVerificationPanel이 이미 이 API를
+  // "수동 버튼 클릭" 방식으로 쓰고 있었는데, 입력 중 자동 debounce
+  // 조회로 확장).
+  const [tagLivePreview, setTagLivePreview] = useState<{ tag: string; status: string; monthlyVolume: number; hint: string } | null>(null);
+  const [tagStatsBusy, setTagStatsBusy] = useState(false);
+  useEffect(() => {
+    const q = tagInputVal.trim().replace(/^#/, '').replace(/,\s*$/, '');
+    if (!q || q.length < 2 || seoTags.includes(q)) { setTagLivePreview(null); return; }
+    const timer = setTimeout(async () => {
+      setTagStatsBusy(true);
+      try {
+        const res = await fetch('/api/tags/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tags: [q] }),
+        });
+        const j = await res.json();
+        if (j.success && Array.isArray(j.tags) && j.tags[0]) {
+          setTagLivePreview(j.tags[0]);
+        }
+      } catch {
+        // silent — live preview is a nice-to-have, never block tag entry
+      } finally {
+        setTagStatsBusy(false);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [tagInputVal, seoTags]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [shippingTemplates, setShippingTemplates]   = useState<ShippingTemplate[]>([]);
   const selectedTemplate = shippingTemplates.find(t => t.id === selectedTemplateId) || null;
@@ -4125,45 +4161,85 @@ const handleGenerate = async () => {
                     ))}
                   </div>
                 )}
-                {/* Tag input */}
-                {seoTags.length < 10 && (
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <input
-                      className={inp}
-                      value={tagInputVal}
-                      onChange={e => setTagInputVal(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const t = tagInputVal.trim().replace(/^#/, '');
-                          if (t && !seoTags.includes(t) && seoTags.length < 10) {
-                            setSeoTags(prev => [...prev, t]);
-                            setTagInputVal('');
-                          }
-                        }
-                      }}
-                      placeholder="태그 입력 후 Enter — 예) 홈웨어, 선물용, 봉로운"
-                      style={{ flex: 1 }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const t = tagInputVal.trim().replace(/^#/, '');
-                        if (t && !seoTags.includes(t) && seoTags.length < 10) {
-                          setSeoTags(prev => [...prev, t]);
-                          setTagInputVal('');
-                        }
-                      }}
-                      style={{ padding: '0 14px', background: '#FFF0F5', color: '#F63B28', border: '1.5px solid #FFB3CE', borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-                    >
-                      + 추가
-                    </button>
-                  </div>
-                )}
+                {/* TAG_INLINE_AUTOCOMPLETE_2026-09-16 — commit N개 tags
+                    from one comma-separated paste/typing, same as Naver's
+                    native tag input. Enter still works for a single tag. */}
+                {seoTags.length < 10 && (() => {
+                  const commitTags = (raw: string) => {
+                    const parts = raw.split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean);
+                    if (parts.length === 0) return;
+                    setSeoTags(prev => {
+                      const merged = [...prev];
+                      for (const p of parts) {
+                        if (!merged.includes(p) && merged.length < 10) merged.push(p);
+                      }
+                      return merged;
+                    });
+                    setTagInputVal('');
+                    setTagLivePreview(null);
+                  };
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          className={inp}
+                          value={tagInputVal}
+                          onChange={e => {
+                            const v = e.target.value;
+                            // Comma triggers an immediate split-commit, same as
+                            // Naver's own multi-tag paste behavior.
+                            if (v.includes(',')) { commitTags(v); return; }
+                            setTagInputVal(v);
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              commitTags(tagInputVal);
+                            }
+                          }}
+                          placeholder="태그 입력 — 쉼표(,)로 여러개 한번에 · Enter로 추가 · 예) 홈웨어, 선물용, 봄가을"
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => commitTags(tagInputVal)}
+                          style={{ padding: '0 14px', background: '#FFF0F5', color: '#F63B28', border: '1.5px solid #FFB3CE', borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          + 추가
+                        </button>
+                      </div>
+                      {/* Live inline preview — 사전등재 신호등(verified/weak/
+                          missing) + 월간 검색량, /api/tags/verify 재사용
+                          (기존 TagVerificationPanel과 동일 소스, #62). */}
+                      {(tagStatsBusy || tagLivePreview) && tagInputVal.trim().length >= 2 && (
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px',
+                          borderRadius: 8, fontSize: 11, fontWeight: 600,
+                          background: tagStatsBusy ? '#F5F5F5'
+                            : tagLivePreview?.status === 'verified' ? '#F0FDF4'
+                            : tagLivePreview?.status === 'weak' ? '#FEFCE8'
+                            : tagLivePreview?.status === 'missing' ? '#FEF2F2' : '#F5F5F5',
+                          color: tagStatsBusy ? '#737373'
+                            : tagLivePreview?.status === 'verified' ? '#15803D'
+                            : tagLivePreview?.status === 'weak' ? '#854D0E'
+                            : tagLivePreview?.status === 'missing' ? '#991B1B' : '#737373',
+                        }}>
+                          {tagStatsBusy ? '⏳ 확인 중…' : (
+                            <>
+                              {tagLivePreview?.status === 'verified' ? '🟢' : tagLivePreview?.status === 'weak' ? '🟡' : '🔴'}
+                              {' '}#{tagLivePreview?.tag} — {tagLivePreview?.hint}
+                              {typeof tagLivePreview?.monthlyVolume === 'number' && ` · 월 검색 ${tagLivePreview.monthlyVolume.toLocaleString('ko-KR')}회`}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 {seoTags.length === 0 && (
                   <p style={{ fontSize: 11, color: '#B0A0A8', marginTop: 4 }}>태그 10개 입력 시 SEO 점수에 +8점 반영됩니다</p>
                 )}
-                {/* Sprint 7 P1-C: Naver tag-dictionary verification */}
+                {/* Sprint 7 P1-C: Naver tag-dictionary verification (일괄 재검증) */}
                 <TagVerificationPanel tags={seoTags} />
               </div>
 
