@@ -36,16 +36,25 @@ export interface GeminiImageInput {
   base64Data: string; // raw base64, no 'data:' prefix
 }
 
+// MULTI_IMAGE_OCR_FIX_2026-09-16 (원본메모: "이미지에서 정보읽기가 상세
+// 페이지에서 올린 첫 이미지 한 장의 정보만 읽는 것 같음") — 실측 확정:
+// extractAttributesFromImage가 애초에 imageUrl 1개(string)만 받는 설계
+//였다(주석에 명시: "1장을 Gemini Vision에 넘겨"). 상세페이지는 보통
+// 여러 장(재질표/사이즈표/원산지 각각 다른 이미지)이라 1장만 읽으면
+// 나머지 이미지의 스펙 정보를 놓친다. Gemini generateContent API의 parts
+// 배열은 원래 여러 inline_data를 동시에 담을 수 있는 표준 구조(멀티모달)
+// 이므로, 이를 활용해 단일→배열로 확장한다(하위호환: images 배열 길이1도
+// 그대로 동작).
 async function callGeminiWithKey(
   prompt: string,
   systemPrompt: string,
   apiKey: string,
-  image?: GeminiImageInput,
+  images?: GeminiImageInput[],
 ): Promise<string> {
   // The key travels only in the request URL to Google — never logged/returned.
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
   const parts: Record<string, unknown>[] = [{ text: prompt }];
-  if (image) {
+  for (const image of images ?? []) {
     parts.push({ inline_data: { mime_type: image.mimeType, data: image.base64Data } });
   }
   const res = await fetch(url, {
@@ -73,7 +82,7 @@ async function callGeminiWithKey(
 async function callGeminiRoundRobin(
   prompt: string,
   systemPrompt: string,
-  image: GeminiImageInput | undefined,
+  images: GeminiImageInput[] | undefined,
   logTag: string,
 ): Promise<string> {
   const keys = geminiKeys();
@@ -82,7 +91,7 @@ async function callGeminiRoundRobin(
   let lastErr = '';
   for (let i = 0; i < keys.length; i++) {
     try {
-      return await callGeminiWithKey(prompt, systemPrompt, keys[i], image);
+      return await callGeminiWithKey(prompt, systemPrompt, keys[i], images);
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
       if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('403')) {
@@ -105,16 +114,21 @@ export async function callGemini(prompt: string, systemPrompt: string): Promise<
 }
 
 /**
- * Call Gemini Flash with an inline image (multimodal OCR/vision) — same key
- * round-robin and error contract as callGemini. Per design (GEMINI_OCR_
- * INTERVENTION_2026-09-03.md), this is Gemini-only: no Groq text fallback,
- * since Groq cannot read images. Caller must pre-fetch and resize the image
- * (recommended: ≤1456px, web-JPEG) before base64-encoding it.
+ * Call Gemini Flash with one or more inline images (multimodal OCR/vision) —
+ * same key round-robin and error contract as callGemini. Per design
+ * (GEMINI_OCR_INTERVENTION_2026-09-03.md), this is Gemini-only: no Groq text
+ * fallback, since Groq cannot read images. Caller must pre-fetch and resize
+ * each image (recommended: ≤1456px, web-JPEG) before base64-encoding it.
+ * MULTI_IMAGE_OCR_FIX_2026-09-16 — accepts a single image OR an array so a
+ * detail page's multiple images (spec table, material tag, size chart, each
+ * possibly a different photo) can all be read in one Gemini call instead of
+ * only the first.
  */
 export async function callGeminiVision(
   prompt: string,
   systemPrompt: string,
-  image: GeminiImageInput,
+  images: GeminiImageInput | GeminiImageInput[],
 ): Promise<string> {
-  return callGeminiRoundRobin(prompt, systemPrompt, image, 'gemini-vision');
+  const arr = Array.isArray(images) ? images : [images];
+  return callGeminiRoundRobin(prompt, systemPrompt, arr, 'gemini-vision');
 }

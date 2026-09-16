@@ -1636,9 +1636,17 @@ function NewProductPageInner() {
     if (!target?.importer) setImporterName('');
   };
 
-  // GEMINI-OCR — the best available detail image to read from: 상세페이지
-  // 이미지(도매 상세 원본) 우선, 없으면 대표이미지(design §1: 소스 우선순위).
-  const ocrSourceImage = detailImagesArr[0] || detailImageUrl || mainImage || '';
+  // MULTI_IMAGE_OCR_FIX_2026-09-16 (원본메모: "상세페이지에서 올린 첫
+  // 이미지 한 장의 정보만 읽는 것 같음") — 상세페이지는 재질표/사이즈표/
+  // 원산지 표기가 각각 다른 이미지에 나뉘어 있는 경우가 흔해, 1장만
+  // 읽으면 실제 존재하는 스펙 정보를 놓친다. 상세페이지 이미지 전체
+  // (detailImagesArr, 최대 4장은 gemini-ocr.ts에서 비용상 제한)를 함께
+  // 보낸다 — 상세이미지가 하나도 없을 때만 대표이미지로 폴백
+  // (design §1: 소스 우선순위는 그대로 유지).
+  const ocrSourceImages = detailImagesArr.length > 0
+    ? detailImagesArr
+    : [detailImageUrl, mainImage].filter((u): u is string => !!u);
+  const ocrSourceImage = ocrSourceImages[0] || '';
 
   // OCR이 읽은 원산지 원문(한글/영문 혼재 가능)을 ORIGIN_CODES 라벨과 매칭할
   // 후보로 좁힌다 — 결정하지 않고 후보만 보여준다(#353). 자주 나오는 영문
@@ -1659,7 +1667,7 @@ function NewProductPageInner() {
   }, [ocrResult]);
 
   const runImageOcr = async () => {
-    if (!ocrSourceImage || ocrBusy) return;
+    if (ocrSourceImages.length === 0 || ocrBusy) return;
     setOcrBusy(true);
     setOcrError('');
     setOcrResult(null);
@@ -1667,7 +1675,7 @@ function NewProductPageInner() {
       const res = await fetch('/api/ai/image-ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: ocrSourceImage }),
+        body: JSON.stringify({ imageUrls: ocrSourceImages }),
       });
       const data = await res.json();
       if (!data.success) {

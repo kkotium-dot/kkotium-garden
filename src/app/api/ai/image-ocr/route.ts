@@ -15,9 +15,15 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const imageUrl: string | undefined = body?.imageUrl;
+    // MULTI_IMAGE_OCR_FIX_2026-09-16 — accept imageUrls (array, new) with
+    // imageUrl (single string) kept for backward compatibility with any
+    // caller still sending the old shape.
+    const rawUrls: unknown = body?.imageUrls ?? body?.imageUrl;
+    const imageUrls: string[] = (Array.isArray(rawUrls) ? rawUrls : [rawUrls])
+      .filter((u): u is string => typeof u === 'string' && !!u.trim())
+      .map((u) => u.trim());
 
-    if (!imageUrl?.trim()) {
+    if (imageUrls.length === 0) {
       return NextResponse.json({ success: false, error: '이미지 URL이 필요합니다.' }, { status: 400 });
     }
 
@@ -28,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const attributes = await extractAttributesFromImage(imageUrl.trim());
+    const attributes = await extractAttributesFromImage(imageUrls);
     return NextResponse.json({ success: true, attributes });
   } catch (e: unknown) {
     // 이미지에서 못 읽었다는 사실만 정직하게 전달 — 키값·원본 응답은 절대 노출 안 함(#156/#310).

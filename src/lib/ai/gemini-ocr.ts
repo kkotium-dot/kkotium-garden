@@ -90,15 +90,39 @@ const USER_PROMPT =
   '"keywords": ["상품 검색에 쓸만한 키워드, 최대 8개"]}\n' +
   '이미지에 없는 필드는 키 자체를 생략하세요.';
 
+// MULTI_IMAGE_OCR_FIX_2026-09-16 (원본메모: "상세페이지에서 올린 첫
+// 이미지 한 장의 정보만 읽는 것 같음") — 상세페이지는 보통 여러 장(재질
+// 표·사이즈표·원산지 표기가 각각 다른 사진에 있는 경우가 흔함)이라 1장만
+// 읽으면 실제로 존재하는 스펙 정보를 놓친다. Gemini의 멀티모달 parts
+// 배열(callGeminiVision 확장 완료)을 그대로 활용해 최대 4장을 한 번의
+// 호출로 함께 읽는다(비용/속도 균형 — 실측 없이 무제한으로 늘리지 않음).
+const MAX_OCR_IMAGES = 4;
+
+const MULTI_USER_PROMPT_PREFIX =
+  '아래는 같은 상품의 상세페이지 이미지 여러 장입니다(재질표/사이즈표/원산지 표기 등이 ' +
+  '서로 다른 이미지에 나뉘어 있을 수 있습니다). 모든 이미지를 함께 참고해 다음 JSON ' +
+  '스키마로 속성을 추출하세요. 한 이미지에만 있는 정보도 놓치지 말고 반영하세요:\n';
+
 /**
- * Extract candidate attributes from a single detail image. Always returns a
- * (possibly partial) ExtractedAttributes — never throws for "nothing found",
- * only for real failures (no key / fetch / API error) so the caller can show
- * "이미지에서 정보를 못 읽었어요, 직접 입력" (design §3-3 / #310 정직표시).
+ * Extract candidate attributes from one or more detail images (multimodal —
+ * all images are sent in a single Gemini call so info spread across
+ * different photos, e.g. material on one image and size chart on another,
+ * is combined). Always returns a (possibly partial) ExtractedAttributes —
+ * never throws for "nothing found", only for real failures (no key / fetch /
+ * API error) so the caller can show "이미지에서 정보를 못 읽었어요, 직접
+ * 입력" (design §3-3 / #310 정직표시).
  */
-export async function extractAttributesFromImage(imageUrl: string): Promise<ExtractedAttributes> {
+export async function extractAttributesFromImage(
+  imageUrls: string | string[],
+): Promise<ExtractedAttributes> {
   if (!hasGeminiKey()) throw new Error('GEMINI_API_KEY not set');
-  const image = await fetchImageForGemini(imageUrl);
-  const raw = await callGeminiVision(USER_PROMPT, SYSTEM_PROMPT, image);
+  const urls = (Array.isArray(imageUrls) ? imageUrls : [imageUrls])
+    .filter(Boolean)
+    .slice(0, MAX_OCR_IMAGES);
+  if (urls.length === 0) throw new Error('no image url provided');
+
+  const images = await Promise.all(urls.map(fetchImageForGemini));
+  const prompt = urls.length > 1 ? `${MULTI_USER_PROMPT_PREFIX}${USER_PROMPT}` : USER_PROMPT;
+  const raw = await callGeminiVision(prompt, SYSTEM_PROMPT, images);
   return normalizeAttributes(parseJsonSafe(raw));
 }
