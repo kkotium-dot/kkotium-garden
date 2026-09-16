@@ -601,6 +601,20 @@ function NewProductPageInner() {
     material?: string; size?: string; capacity?: string; origin?: string;
     features: string[]; keywords: string[];
   } | null>(null);
+  // OCR_SCAN_SIGNAL_2026-09-16 (v.02 요청: "이미지 스캔 진단 신호등") —
+  // 신규 판정엔진 없음, 순수 파생값(#295). ocrResult에 실제로 채워진
+  // 필드 개수를 세어 등급을 매긴다 — 점수를 지어내지 않고 사실(채워진
+  // 필드 수)만 근거로 사용(#357 환각방지).
+  const ocrScanSignal = useMemo(() => {
+    if (!ocrResult) return null;
+    const filledCount =
+      (ocrResult.material ? 1 : 0) + (ocrResult.size ? 1 : 0) +
+      (ocrResult.capacity ? 1 : 0) + (ocrResult.origin ? 1 : 0) +
+      (ocrResult.features.length > 0 ? 1 : 0) + (ocrResult.keywords.length > 0 ? 1 : 0);
+    if (filledCount >= 3) return { level: 'good' as const, label: '스캔 완료', detail: `${filledCount}개 항목을 찾았어요` };
+    if (filledCount >= 1) return { level: 'partial' as const, label: '부분 인식', detail: `${filledCount}개 항목만 찾았어요 — 나머지는 직접 입력해주세요` };
+    return { level: 'empty' as const, label: '인식 실패', detail: '이미지에서 정보를 찾지 못했어요 — 직접 입력해주세요' };
+  }, [ocrResult]);
   const [seoHook, setSeoHook]         = useState('');
   // COPY-AUTO-1: true while seoHook holds the auto-generated template draft
   // (cleared once the user edits it or applies an AI hook).
@@ -4027,6 +4041,20 @@ const handleGenerate = async () => {
 
                 {ocrResult && (
                   <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* OCR_SCAN_SIGNAL_2026-09-16 — 스캔 결과 신호등, 결과
+                        나열 목록 바로 위에 배치해 한눈에 성공/부분/실패를
+                        먼저 파악하고 아래 상세를 보도록 함. */}
+                    {ocrScanSignal && (
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px',
+                        borderRadius: 10, fontSize: 12, fontWeight: 700,
+                        background: ocrScanSignal.level === 'good' ? '#F0FDF4' : ocrScanSignal.level === 'partial' ? '#FEFCE8' : '#FEF2F2',
+                        color: ocrScanSignal.level === 'good' ? '#15803D' : ocrScanSignal.level === 'partial' ? '#854D0E' : '#991B1B',
+                      }}>
+                        <span>{ocrScanSignal.level === 'good' ? '🟢' : ocrScanSignal.level === 'partial' ? '🟡' : '🔴'}</span>
+                        <span>{ocrScanSignal.label} — {ocrScanSignal.detail}</span>
+                      </div>
+                    )}
                     {(ocrResult.material || ocrResult.size || ocrResult.capacity) && (
                       <div style={{ fontSize: 12, color: '#444', background: '#F8FAFC', border: '1px solid #E5E9F0', borderRadius: 10, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {ocrResult.material && <span>재질: <b>{ocrResult.material}</b></span>}
