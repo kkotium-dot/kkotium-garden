@@ -1843,8 +1843,17 @@ function NewProductPageInner() {
   // sync. Only the single-group SINGLE/COMBINATION case maps cleanly onto the
   // one-axis store (the crawl-prefill scenario); multi-group / DIRECT / NONE
   // return null and the server keeps hasOptions=false (unchanged behaviour).
+  // OPTION_TYPE_PROPAGATION_FIX_2026-09-16 (원본메모: "엑셀옵션 단독형
+  // 입력한 정보가 엑셀 다운시 반영되지 않음") — 근본원인 확정: 서버측
+  // mapCrawlOptions()가 optionType 매개변수를 아예 받지 않고 항상
+  // COMBINATION으로 하드코딩해 저장하고 있었다. 그 결과 씨앗심기에서
+  // "단독형"을 선택해도 DB의 product_options.option_type은 언제나
+  // 'COMBINATION'으로 남고, 엑셀 생성(excel/route.ts)의
+  // `option_type === 'SINGLE'` 체크가 절대 참이 될 수 없어 단독형이
+  // 반영될 길이 없었다. 사용자가 실제로 고른 optionType을 payload에
+  // 함께 실어 서버가 그 선택을 존중하도록 배선.
   const buildOptionsPayload = ():
-    | { optionName: string; options: Array<{ name: string; qty: number; addPrice: number }> }
+    | { optionName: string; optionType: 'SINGLE' | 'COMBINATION'; options: Array<{ name: string; qty: number; addPrice: number }> }
     | null => {
     if (optionType !== 'SINGLE' && optionType !== 'COMBINATION') return null;
     const validNames = optionNames.filter(n => n.trim());
@@ -1853,6 +1862,7 @@ function NewProductPageInner() {
     if (rows.length === 0) return null;
     return {
       optionName: validNames[0].trim(),
+      optionType,
       options: rows.map(r => ({
         name: r.value.trim(),
         qty: parseInt(r.stock, 10) || 0,

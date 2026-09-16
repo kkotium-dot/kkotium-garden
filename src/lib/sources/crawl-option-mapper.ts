@@ -29,6 +29,11 @@ export const DEFAULT_OPTION_AXIS = '옵션';
 
 /** Naver combination option type literal (Product.optionType / option_type). */
 export const COMBINATION_OPTION_TYPE = 'COMBINATION';
+/** Naver single/standalone (단독형) option type literal — OPTION_TYPE_
+ * PROPAGATION_FIX_2026-09-16: previously this mapper never produced this
+ * value at all (always COMBINATION), so a seller's explicit "단독형" choice
+ * in 씨앗심기 could never survive to the DB or the Excel export. */
+export const SINGLE_OPTION_TYPE = 'SINGLE';
 
 /** Fallback stock when a crawled option has no qty (consignment ⇒ effectively unlimited). */
 const DEFAULT_OPTION_STOCK = 999;
@@ -101,17 +106,23 @@ export function normalizeCrawlOptions(raw: unknown): CrawledOption[] {
 export function mapCrawlOptions(
   raw: unknown,
   axisName: string = DEFAULT_OPTION_AXIS,
+  // OPTION_TYPE_PROPAGATION_FIX_2026-09-16 — optional, defaults to
+  // COMBINATION so every existing caller (crawl-prefill batch/register paths
+  // that never had a concept of 단독형) keeps its exact prior behavior.
+  // 씨앗심기's explicit save path is the only caller that now passes 'SINGLE'.
+  optionType: 'SINGLE' | 'COMBINATION' = 'COMBINATION',
 ): MappedCrawlOptions | null {
   const options = normalizeCrawlOptions(raw);
   if (options.length === 0) return null;
 
   const axis = axisName.trim() || DEFAULT_OPTION_AXIS;
+  const naverType = optionType === 'SINGLE' ? SINGLE_OPTION_TYPE : COMBINATION_OPTION_TYPE;
 
   return {
     productFields: {
       hasOptions: true,
       optionName: axis,
-      optionType: COMBINATION_OPTION_TYPE,
+      optionType: naverType,
       optionValues: options.map((o) => o.name),
       options: options.map((o) => ({
         optionName1: axis,
@@ -121,7 +132,7 @@ export function mapCrawlOptions(
       })),
     },
     productOptions: {
-      option_type: COMBINATION_OPTION_TYPE,
+      option_type: naverType,
       option_names: [axis],
       option_rows: options.map((o) => ({
         values: [o.name],

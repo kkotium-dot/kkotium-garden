@@ -316,8 +316,13 @@ export async function POST(request: NextRequest) {
       typeof data.optionName === 'string' && data.optionName.trim()
         ? data.optionName.trim()
         : undefined;
+    // OPTION_TYPE_PROPAGATION_FIX_2026-09-16 — pass through the operator's
+    // explicit 단독형/조합형 choice (씨앗심기 buildOptionsPayload) instead of
+    // always defaulting to COMBINATION inside the mapper.
+    const requestedOptionType: 'SINGLE' | 'COMBINATION' =
+      data.optionType === 'SINGLE' ? 'SINGLE' : 'COMBINATION';
     const mapped = Array.isArray(data.options) && data.options.length > 0
-      ? mapCrawlOptions(data.options, optionAxis)
+      ? mapCrawlOptions(data.options, optionAxis, requestedOptionType)
       : null;
 
     // Create the product + (when present) its product_options row atomically so
@@ -539,6 +544,39 @@ export async function PUT(request: NextRequest) {
       where: { id },
       data: updateData as Parameters<typeof prisma.product.update>[0]['data'],
     });
+
+    // OPTION_TYPE_PROPAGATION_FIX_2026-09-16 (원본메모: "엑셀옵션 단독형
+    // 입력한 정보가 엑셀 다운시 반영되지 않음") — 근본원인 중 두번째 갭:
+    // PUT(수정저장) 경로는 옵션 동기화 로직이 아예 없어, 이미 저장된
+    // 상품을 씨앗심기에서 열어 옵션 타입을 바꿔 저장해도 product_options
+    // 행이 전혀 갱신되지 않았다(POST에만 이 로직이 있었음, #370 재확인
+    // 으로 발견). 요청에 options 배열이 왔을 때만(부분 PATCH 안전성 유지
+    // — 옵션을 안 건드린 일반 저장은 기존 옵션을 그대로 둠) upsert한다.
+    if (Array.isArray(data.options) && data.options.length > 0) {
+      const optionAxis =
+        typeof data.optionName === 'string' && data.optionName.trim()
+          ? data.optionName.trim()
+          : undefined;
+      const requestedOptionType: 'SINGLE' | 'COMBINATION' =
+        data.optionType === 'SINGLE' ? 'SINGLE' : 'COMBINATION';
+      const mapped = mapCrawlOptions(data.options, optionAxis, requestedOptionType);
+      if (mapped) {
+        await prisma.product_options.upsert({
+          where: { product_id: id },
+          create: {
+            product_id:   id,
+            option_type:  mapped.productOptions.option_type,
+            option_names: mapped.productOptions.option_names,
+            option_rows:  mapped.productOptions.option_rows,
+          },
+          update: {
+            option_type:  mapped.productOptions.option_type,
+            option_names: mapped.productOptions.option_names,
+            option_rows:  mapped.productOptions.option_rows,
+          },
+        });
+      }
+    }
 
     // Fire-and-forget score drop check
     checkScoreDrop(id, previousScore).catch(() => null);
