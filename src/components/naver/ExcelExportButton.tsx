@@ -1,6 +1,10 @@
 // src/components/naver/ExcelExportButton.tsx
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 네이버 엑셀 내보내기 버튼
+// EXCEL_PRECHECKER_2026-09-16 (v.01/v.02: "네이버 엑셀 변환 사전 검수
+// 신호등") — 다운로드 클릭 시 실제 다운로드 전에 /api/naver/excel-precheck
+// 로 먼저 스캔해 결함이 있으면 다운로드를 막고 정확한 원인을 알려준다.
+// 결함이 없으면(또는 warning만 있으면) 그대로 다운로드를 진행한다.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 'use client';
@@ -25,6 +29,18 @@ interface Props {
   onError?: (error: string) => void;
 }
 
+interface PrecheckIssue {
+  field: string;
+  severity: 'error' | 'warning';
+  message: string;
+}
+interface PrecheckResult {
+  productId: string;
+  productName: string;
+  ok: boolean;
+  issues: PrecheckIssue[];
+}
+
 export function ExcelExportButton({
   mode,
   productId,
@@ -36,21 +52,16 @@ export function ExcelExportButton({
   onError,
 }: Props) {
   const [loading, setLoading] = useState(false);
+  const [precheckBusy, setPrecheckBusy] = useState(false);
+  const [precheckResults, setPrecheckResults] = useState<PrecheckResult[] | null>(null);
 
-  const handleExport = async () => {
+  const runExport = async () => {
     setLoading(true);
-
     try {
-      // API 호출
       const response = await fetch('/api/naver/excel-export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode,
-          productId,
-          productIds,
-          filters,
-        }),
+        body: JSON.stringify({ mode, productId, productIds, filters }),
       });
 
       if (!response.ok) {
@@ -58,30 +69,26 @@ export function ExcelExportButton({
         throw new Error(errorData.error || '엑셀 생성 실패');
       }
 
-      // 파일 다운로드
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
 
-      // Content-Disposition 헤더에서 파일명 추출
       const contentDisposition = response.headers.get('Content-Disposition');
       const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
-      const filename = filenameMatch?.[1] 
+      const filename = filenameMatch?.[1]
         ? decodeURIComponent(filenameMatch[1])
         : `naver_export_${Date.now()}.xlsx`;
 
       a.download = filename;
       document.body.appendChild(a);
       a.click();
-
-      // 정리
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
       onSuccess?.();
     } catch (error) {
-      console.error('❌ 엑셀 다운로드 오류:', error);
+      console.error('엑셀 다운로드 오류:', error);
       const errorMsg = error instanceof Error ? error.message : '알 수 없는 오류';
       onError?.(errorMsg);
       alert(`엑셀 다운로드 실패: ${errorMsg}`);
@@ -90,9 +97,50 @@ export function ExcelExportButton({
     }
   };
 
+  const handleExport = async () => {
+    // template 모드는 실제 상품 데이터가 없어 사전검수 대상이 아님(빈 양식).
+    if (mode === 'template') {
+      runExport();
+      return;
+    }
+
+    const ids = mode === 'single' && productId ? [productId] : (productIds ?? []);
+    if (ids.length === 0) {
+      runExport();
+      return;
+    }
+
+    setPrecheckBusy(true);
+    setPrecheckResults(null);
+    try {
+      const res = await fetch('/api/naver/excel-precheck', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productIds: ids }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const withErrors = (data.results as PrecheckResult[]).filter((r) => !r.ok);
+        if (withErrors.length > 0) {
+          setPrecheckResults(withErrors);
+          setPrecheckBusy(false);
+          return; // 다운로드 중단 — 신호등에서 오류를 보여줌
+        }
+      }
+      // 사전검수 통과(또는 API 자체가 실패해도 다운로드 자체를 막지는 않음
+      // — 검수는 "도움"이지 다운로드의 필수 관문이 아니어야 안전함).
+      setPrecheckBusy(false);
+      runExport();
+    } catch {
+      // 사전검수 API 실패는 조용히 무시하고 그냥 다운로드 진행(사전검수는
+      // 편의기능이지 다운로드를 막는 게이트가 되면 안 됨).
+      setPrecheckBusy(false);
+      runExport();
+    }
+  };
+
   const getButtonText = () => {
     if (buttonText) return buttonText;
-
     switch (mode) {
       case 'single':
         return '📥 엑셀 다운로드';
@@ -107,24 +155,60 @@ export function ExcelExportButton({
     }
   };
 
-  const defaultClassName = 
+  const defaultClassName =
     'px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition font-semibold';
 
+  const busy = loading || precheckBusy;
+
   return (
-    <button
-      onClick={handleExport}
-      disabled={loading}
-      className={buttonClassName || defaultClassName}
-    >
-      {loading ? (
-        <span className="flex items-center gap-2">
-          <span className="animate-spin">⏳</span>
-          생성 중...
-        </span>
-      ) : (
-        getButtonText()
+    <div>
+      <button
+        onClick={handleExport}
+        disabled={busy}
+        className={buttonClassName || defaultClassName}
+      >
+        {precheckBusy ? (
+          <span className="flex items-center gap-2">
+            <span className="animate-spin">🔍</span>
+            검수 중...
+          </span>
+        ) : loading ? (
+          <span className="flex items-center gap-2">
+            <span className="animate-spin">⏳</span>
+            생성 중...
+          </span>
+        ) : (
+          getButtonText()
+        )}
+      </button>
+
+      {precheckResults && precheckResults.length > 0 && (
+        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm">
+          <p className="font-bold text-red-700 mb-1">
+            🔴 엑셀 양식 오류 {precheckResults.reduce((n, r) => n + r.issues.filter((i) => i.severity === 'error').length, 0)}건 감지 — 다운로드를 잠시 멈췄어요
+          </p>
+          {precheckResults.map((r) => (
+            <div key={r.productId} className="mt-1.5">
+              <p className="font-medium text-red-800 truncate">{r.productName}</p>
+              <ul className="ml-3 list-disc text-red-600">
+                {r.issues.filter((i) => i.severity === 'error').map((i, idx) => (
+                  <li key={idx}>
+                    <span className="font-semibold">{i.field}</span> — {i.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setPrecheckResults(null)}
+            className="mt-2 text-xs text-red-500 underline"
+          >
+            닫기 (씨앗심기에서 수정 후 다시 시도해주세요)
+          </button>
+        </div>
       )}
-    </button>
+    </div>
   );
 }
 
