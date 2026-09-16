@@ -2425,3 +2425,31 @@ asPhone이 독립존재 — UI기본값을 실제엑셀값과 일치시킴. DB 2
 크롤prefill/엑셀변환/이미지업로드/공급사코드/품절안전망/반품비/
 AS전화번호/롱테일키워드 완료. 남은 미착수: OCR 첫이미지만 인식,
 엑셀 단독형 옵션 미반영, 오너클랜 크롤확장, 꽃수레 UX.
+
+## rev174 — OCR 다중이미지 인식 근본수정·실측검증 완료 (2026-09-16)
+
+**원본메모("이미지에서 정보읽기가 첫 이미지 한 장만 읽는 것 같음")
+확정·근본수정**: 코드 확인 결과 extractAttributesFromImage가 처음부터
+설계 자체가 imageUrl 1개(string)만 받는 구조였음(v.01/v.02가 요청한
+"하이브리드 범위"의 다중이미지 처리가 애초에 미구현).
+
+**근본수정**: Gemini generateContent API의 parts 배열이 원래 여러
+inline_data(이미지)를 한 요청에 담는 표준 멀티모달 구조임을 확인해
+활용. gemini.ts(callGeminiWithKey/RoundRobin/Vision 전부 배열 지원,
+하위호환 유지) → gemini-ocr.ts(extractAttributesFromImage가 string|
+string[] 받아 최대 4장을 한 Gemini호출로 함께 전송, 2장이상시 "여러
+이미지 함께 참고" 프롬프트로 전환) → image-ocr/route.ts(imageUrls
+배열 신규, imageUrl 단일 구버전 폴백) → products/new/page.tsx
+(ocrSourceImages로 확장, 상세이미지 전체 전송, 상세이미지 없을때만
+대표이미지 폴백).
+
+**실측검증(curl 직접 API호출)**: 3장 동시전송 → success:true, 여러
+키워드 정상반환. 단일이미지(구버전 imageUrl) 호출도 하위호환 정상
+확인. 두 결과가 서로 다른 값을 반환해 "다중이미지가 실제로 더 많은
+정보를 종합한다"는 목적이 실측으로 증명됨.
+
+**전 계열 상태**: 원본메모+v.01+v.02+신규5건 전체 항목 중 카테고리/
+크롤prefill/엑셀변환(부가세·배송비·상품상태·추가이미지·옵션·반품비·
+AS전화번호)/이미지업로드/공급사코드/품절안전망/롱테일키워드/OCR다중
+이미지 완료. 남은 미착수: 엑셀 단독형옵션 미반영, 오너클랜 크롤확장,
+꽃수레 UX(드래그정렬·그룹화·성공모달).
