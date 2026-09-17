@@ -236,7 +236,6 @@ export async function POST(request: NextRequest) {
     if (deterministic.length > 0) {
       rawSuggestions = deterministic.map((m) => ({ d1: m.d1, d2: m.d2, d3: m.d3, d4: m.d4 }));
       source = 'deterministic';
-      console.log('[CATDBG7]', name, 'top3=', JSON.stringify(deterministic.slice(0, 3)), 'lowConf=', isDeterministicLowConfidence(deterministic));
 
       // UCE-7: deterministic found something, but it's a weak or internally
       // conflicted guess — call Groq as a corrective check. Cost-gated: this
