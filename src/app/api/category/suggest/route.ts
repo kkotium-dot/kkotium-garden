@@ -237,9 +237,6 @@ export async function POST(request: NextRequest) {
       rawSuggestions = deterministic.map((m) => ({ d1: m.d1, d2: m.d2, d3: m.d3, d4: m.d4 }));
       source = 'deterministic';
 
-      // TEMP_ACCESSORY_DEBUG_2026-09-17 -- confidence gate diagnostic.
-      console.log('[CATDBG2] name=', name, 'top=', JSON.stringify(deterministic[0]), 'lowConf=', isDeterministicLowConfidence(deterministic));
-
       // UCE-7: deterministic found something, but it's a weak or internally
       // conflicted guess — call Groq as a corrective check. Cost-gated: this
       // branch is skipped entirely for a confident deterministic hit.

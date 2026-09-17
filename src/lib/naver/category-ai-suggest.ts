@@ -213,15 +213,50 @@ export async function suggestWithCrossCheck(productName: string): Promise<CrossC
   const agreement =
     groqStatus === 'ok' && geminiStatus === 'ok' && groqSuggestions[0]?.d1 === geminiSuggestions[0]?.d1;
 
+  // ACCESSORY_MISROUTE_FIX_2026-09-17 (v2, 대표님 "전 상품 확장" 지시로
+  // 더 깊이 재조사) — 근본원인 확정(Vercel 로그 실측, 2차): 기존 로직은
+  // "Groq가 뭐라도 답하면 Groq 우선"이었는데, 실측 결과 Groq가 네이버
+  // 카테고리 체계에 아예 존재하지 않는 d1+d2 조합("패션의류 > 여성패션소품",
+  // 실제로는 "패션잡화"의 하위 카테고리명)을 만들어내는 경우가 확인됐다 —
+  // 이건 phrasing 차이가 아니라 존재하지 않는 카테고리를 지어낸(환각)
+  // 경우다. Gemini는 같은 질문에 정확히 유효한 조합("패션잡화 >
+  // 헤어액세서리")을 줬다. "먼저 응답한/먼저 나열된 엔진을 신뢰"하는 대신,
+  // 각 엔진의 1순위 답이 실제 카테고리 마스터에 유효한 d1+d2 조합인지
+  // validateExists로 먼저 걸러 유효한 쪽을 우선한다(둘 다 유효하면 기존
+  // 그대로 Groq 우선 — 이 분기가 실제로 바꾸는 것은 "Groq가 무효한 카테고리를
+  // 만든 경우"뿐이라 다른 정상 케이스에 영향 없음).
+  const groqTopValid = groqSuggestions[0] ? validateExists(groqSuggestions[0].d1, groqSuggestions[0].d2) : false;
+  const geminiTopValid = geminiSuggestions[0] ? validateExists(geminiSuggestions[0].d1, geminiSuggestions[0].d2) : false;
+
+  let suggestions: Array<{ d1: string; d2: string; d3: string }>;
+  if (groqSuggestions.length > 0 && groqTopValid) {
+    suggestions = groqSuggestions;
+  } else if (geminiSuggestions.length > 0 && geminiTopValid) {
+    suggestions = geminiSuggestions;
+  } else if (groqSuggestions.length > 0) {
+    suggestions = groqSuggestions; // both invalid or unchecked -- keep prior default
+  } else {
+    suggestions = geminiSuggestions;
+  }
+
   console.log(
-    `[category-ai-suggest][crosscheck] "${productName}" groq=${groqStatus}(${groqSuggestions[0]?.d1 ?? '-'}) gemini=${geminiStatus}(${geminiSuggestions[0]?.d1 ?? '-'}) agreement=${agreement}`,
+    `[category-ai-suggest][crosscheck] "${productName}" groq=${groqStatus}(${groqSuggestions[0]?.d1 ?? '-'},valid=${groqTopValid}) gemini=${geminiStatus}(${geminiSuggestions[0]?.d1 ?? '-'},valid=${geminiTopValid}) agreement=${agreement}`,
   );
 
   return {
-    suggestions: groqSuggestions.length > 0 ? groqSuggestions : geminiSuggestions,
+    suggestions,
     agreement,
     engineResults: { groq: groqStatus, gemini: geminiStatus },
   };
+}
+
+// ACCESSORY_MISROUTE_FIX_2026-09-17 — lightweight existence check (d1+d2
+// combination actually appears in the category master), used only to filter
+// out a hallucinated top-pick before deciding which engine's answer to trust.
+// This is intentionally cheaper than validateSuggestion's full fuzzy-match
+// resolution below — it only needs a yes/no here.
+function validateExists(d1: string, d2: string): boolean {
+  return NAVER_CATEGORIES_FULL.some((c) => c.d1 === d1 && c.d2 === d2);
 }
 
 // ── DB validation ─────────────────────────────────────────────────────────────
