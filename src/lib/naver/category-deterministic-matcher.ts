@@ -489,10 +489,28 @@ export function matchDeterministicCategories(
   const allCandidates = Array.from(byKey.values());
   const nodeBreadth = (m: DeterministicMatch): number =>
     m.d4 ? 0 : (D3_CHILD_COUNT.get(`${m.d1}|${m.d2}|${m.d3}`) ?? 0);
+  // HAIRPIN_DEPTH_HOMONYM_FIX_2026-09-17 (rev183 재검증 발견): the rival
+  // filter originally required `nodeBreadth(o) > 0` — a genuinely broad
+  // branch with real d4 children. But a d3-as-leaf row (d4 blank, the
+  // MASTER'S OWN way of representing a bare sellable item at d3 depth —
+  // e.g. 패션잡화>헤어액세서리>헤어핀, one row, no children) has breadth 0
+  // and was silently excluded from being a rival, even though it names the
+  // exact same product identity as a competing d4 leaf elsewhere (실측:
+  // 출산/육아>유아동잡화>헤어액세서리>헤어핀, a real d4 leaf, out-scored
+  // it 105 vs 90 with NO homonym flag, because the 90-scoring 패션잡화 row's
+  // nodeBreadth was 0 and got excluded as a rival candidate). A rival is
+  // "another real sellable node with the same name under a different d1" —
+  // whether that's expressed as a d4 leaf (breadth 0 by definition) or a
+  // childless d3-as-leaf row (breadth also 0) is a master-data formatting
+  // detail, not a signal of whether it's a real competing product. Widen
+  // the rival test to also match a same-named CHILDLESS d3-as-leaf row.
+  const isD3AsLeaf = (m: DeterministicMatch): boolean =>
+    !m.d4 && (D3_CHILD_COUNT.get(`${m.d1}|${m.d2}|${m.d3}`) ?? 0) === 0;
   for (const m of allCandidates) {
     if (!m.d4) continue; // 말단 리프만 "우연한 이름충돌"의 대상 — 브랜치 매치는 제외
     const rival = allCandidates.find((o) =>
-      o !== m && o.d1 !== m.d1 && o.matchedTerm === m.matchedTerm && nodeBreadth(o) > 0,
+      o !== m && o.d1 !== m.d1 && o.matchedTerm === m.matchedTerm &&
+      (nodeBreadth(o) > 0 || isD3AsLeaf(o)),
     );
     if (!rival) continue;
     const corroborated = m.d2.length >= MIN_TERM_LEN && haystacks.some((h) => h.includes(m.d2));
