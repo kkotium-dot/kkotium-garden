@@ -319,9 +319,7 @@ export function matchDeterministicCategories(
   // TEMP_CATEGORY_DEBUG_2026-09-17 -- 검증 완료(Vercel 런타임 로그로 실제
   // 근본원인 확정: category-ai-suggest.ts의 validateSuggestion() fuzzy
   // 매칭 실패 시 폴백 로직 결함). 게이트 재적용, 평시 비활성.
-  if (process.env.DEBUG_CATEGORY_MATCH === 'true') {
-    console.log('[CATDBG] name=', name, 'nouns=', nouns);
-  }
+  console.log('[CATDBG] name=', name, 'nouns=', nouns);
   // UCE-7: tail noun = head noun (핵심/말단명사 — what the product actually
   // IS, per Korean noun-phrase order); everything before it is a modifier
   // (material/usage/brand). `nounsCompact` recovers compound leaf names that
@@ -340,6 +338,7 @@ export function matchDeterministicCategories(
   while (headIdx > 0 && HEAD_NOUN_EXCLUDE.has(nouns[headIdx])) headIdx--;
   const headNoun = nouns.length > 0 ? nouns[headIdx] : '';
   const modifierNouns = nouns.filter((_, i) => i !== headIdx);
+  console.log('[CATDBG] headNoun=', headNoun, 'modifierNouns=', modifierNouns);
   const nounsCompact = nouns.join('');
   const haystacks = [name, nounsCompact].filter((h, i, arr) => h && arr.indexOf(h) === i);
 
@@ -485,12 +484,8 @@ export function matchDeterministicCategories(
   }
 
   const sortedCandidates = Array.from(byKey.values()).sort((a, b) => b.score - a.score);
-  if (process.env.DEBUG_CATEGORY_MATCH === 'true') {
-    console.log('[CATDBG] top10=', JSON.stringify(sortedCandidates.slice(0, 10).map(m => ({
-      path: `${m.d1}>${m.d2}>${m.d3}>${m.d4 ?? ''}`, score: m.score, tier: m.tier, matchedTerm: m.matchedTerm,
-    }))));
-    const pestControl = sortedCandidates.find(m => m.d4 === '해충방지');
-    console.log('[CATDBG] pestControlCandidate=', pestControl ? JSON.stringify({ score: pestControl.score, tier: pestControl.tier }) : 'NOT_FOUND_AT_ALL');
-  }
+  console.log('[CATDBG] top10=', JSON.stringify(sortedCandidates.slice(0, 10).map(m => ({
+    path: `${m.d1}>${m.d2}>${m.d3}>${m.d4 ?? ''}`, score: m.score, tier: m.tier, matchedTerm: m.matchedTerm,
+  }))));
   return sortedCandidates.slice(0, limit);
 }
