@@ -48,6 +48,8 @@
 import { NAVER_CATEGORIES_FULL } from './naver-categories-full';
 import { extractNouns } from '../strategy/morpheme-tokenizer';
 import { GENERIC_MODIFIERS_SET, STOP_NOUNS_SET } from '../strategy/identity-dictionary';
+// (STOP_NOUNS_SET also used by HEAD_NOUN_EXCLUDE below — same import, no
+// duplicate dictionary; see ACCESSORY_HEADNOUN_FIX_2026-09-17 comment there.)
 
 // UCE-10 (2026-09-04, tie-break fix): (d1|d2|d3) -> count of non-empty d4
 // children. Computed once at module load (NAVER_CATEGORIES_FULL is static),
@@ -335,7 +337,17 @@ export function matchDeterministicCategories(
   // HEAD_NOUN_BOOST reward the wrong signal (실측: 도서>가정/요리>인테리어/
   // 살림>인테리어로 오분류). Skip them when picking headNoun, falling back to
   // the nearest real identity noun before it.
-  const HEAD_NOUN_EXCLUDE = new Set(['인테리어']);
+  //
+  // ACCESSORY_HEADNOUN_FIX_2026-09-17 (rev183): folded into the SAME
+  // dictionary as isGenericTerm() (STOP_NOUNS_SET, identity-dictionary.ts)
+  // rather than keeping a second, narrower one-word local set — "액세서리"
+  // is exactly this class of trailing catch-all genre word (see 실측 in
+  // identity-dictionary.ts), and any future STOP_NOUNS addition should
+  // automatically also be excluded from headNoun selection without a
+  // second edit site (#295 단일권위). "인테리어" itself is kept as a local
+  // addition since it's specific to this selector's SEO-stuffing pattern
+  // and not a universal non-identity stopword.
+  const HEAD_NOUN_EXCLUDE = new Set(['인테리어', ...STOP_NOUNS_SET]);
   let headIdx = nouns.length - 1;
   while (headIdx > 0 && HEAD_NOUN_EXCLUDE.has(nouns[headIdx])) headIdx--;
   const headNoun = nouns.length > 0 ? nouns[headIdx] : '';
@@ -343,7 +355,6 @@ export function matchDeterministicCategories(
   if (process.env.DEBUG_CATEGORY_MATCH === 'true') {
     console.log('[CATDBG] headNoun=', headNoun, 'modifierNouns=', modifierNouns);
   }
-  console.log('[CATDBG5]', name, 'nouns=', JSON.stringify(nouns), 'headNoun=', headNoun, 'modifierNouns=', JSON.stringify(modifierNouns));
   const nounsCompact = nouns.join('');
   const haystacks = [name, nounsCompact].filter((h, i, arr) => h && arr.indexOf(h) === i);
 

@@ -126,6 +126,19 @@ export const STOP_NOUNS: ReadonlyArray<string> = [
   '무료배송', '당일배송', '빠른배송',
   // Common quantifiers that look like nouns
   '개', '세트', '종', '단품',
+  // ACCESSORY_HEADNOUN_FIX_2026-09-17 (rev183): "액세서리" is a trailing
+  // catch-all appositive in wholesale titles ("헤어핀 액세서리", "목걸이
+  // 액세서리") — it describes the PRODUCT CATEGORY GENRE, not the specific
+  // item, exactly like "세트"/"용품" above. 실측(Vercel 런타임 로그,
+  // CATDBG4/5): "우아한 헤어핀 액세서리"에서 extractNouns의 tail-noun
+  // heuristic picked "액세서리" as headNoun over the real identity noun
+  // "헤어핀", and the master happens to contain TWO unrelated bare-"액세서리"
+  // leaves (디지털/가전>계절가전>전기매트/장판>액세서리,
+  // 생활/건강>반려동물>패션용품>액세서리) that both scored a confident 135
+  // (EXACT_BRANCH-tier, HEAD_NOUN_BOOST applied) — lowConf=false, so the
+  // AI cross-check safety net never even triggered. Root cause was the
+  // headNoun selector, not the AI/validateExists layer fixed in 6115253.
+  '액세서리',
 ];
 
 // ---------------------------------------------------------------------------
