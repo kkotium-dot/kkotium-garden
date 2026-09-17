@@ -252,7 +252,22 @@ export async function POST(request: NextRequest) {
             .filter((s): s is NonNullable<typeof s> => !!s);
           if (aiValidated.length > 0) {
             usedAI = true;
-            rawSuggestions = aiValidated;
+            // ACCESSORY_MISROUTE_FIX_2026-09-17 (원본메모 "전 상품 관점"
+            // 재점검 지시로 발견 — "액세서리"류 상품명 전반의 오분류).
+            // 근본원인 확정(Vercel 런타임 로그 실측): "여성 헤어 액세서리
+            // 핀셋"에서 결정론적 매처는 이미 정확한 1순위(출산/육아>
+            // 유아동잡화>헤어액세서리, 24점)를 갖고 있었는데, 이 분기가
+            // AI 검증 결과가 하나라도 있으면 rawSuggestions를 통째로
+            // 덮어써 그 좋은 후보를 완전히 버리고 있었다. 게다가 이번
+            // 실측에서는 그 AI 답변 자체도 틀렸다(Groq가 d1="패션의류"로
+            // 오답, 정답은 "패션잡화") — suggestWithCrossCheck가 groq
+            // 우선으로 하나만 반환하는 구조라 agreement=false여도 그
+            // 틀린 답 하나가 그대로 채택됐다.
+            // 근본수정: AI 검증 결과를 기존 결정론적 후보 "위에 추가"
+            // 하되 원래 후보를 버리지 않는다(병합) — 이후 dedup+rankByScore
+            // (아래)가 최종 순위를 다시 매기므로, 결정론적 매처의 더 나은
+            // 후보가 실제로 더 높은 점수면 자연스럽게 상위에 남는다.
+            rawSuggestions = [...aiValidated, ...rawSuggestions];
             source = 'ai';
             // Even with a usable AI answer, only clear the "needs human
             // confirmation" flag when the two engines actually agreed —
