@@ -343,6 +343,7 @@ export function matchDeterministicCategories(
   if (process.env.DEBUG_CATEGORY_MATCH === 'true') {
     console.log('[CATDBG] headNoun=', headNoun, 'modifierNouns=', modifierNouns);
   }
+  console.log('[CATDBG5]', name, 'nouns=', JSON.stringify(nouns), 'headNoun=', headNoun, 'modifierNouns=', JSON.stringify(modifierNouns));
   const nounsCompact = nouns.join('');
   const haystacks = [name, nounsCompact].filter((h, i, arr) => h && arr.indexOf(h) === i);
 
