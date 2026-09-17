@@ -314,6 +314,11 @@ export function matchDeterministicCategories(
   if (!name) return [];
 
   const { nouns } = extractNouns(name);
+  // TEMP_CATEGORY_DEBUG_2026-09-17 -- one-time diagnostic for 개껌 misroute
+  // investigation. Read-only console.log, gated, removed after verification.
+  if (process.env.DEBUG_CATEGORY_MATCH === 'true') {
+    console.log('[CATDBG] name=', name, 'nouns=', nouns);
+  }
   // UCE-7: tail noun = head noun (핵심/말단명사 — what the product actually
   // IS, per Korean noun-phrase order); everything before it is a modifier
   // (material/usage/brand). `nounsCompact` recovers compound leaf names that
@@ -476,7 +481,13 @@ export function matchDeterministicCategories(
     if (!corroborated) m.homonymUnconfirmed = true;
   }
 
-  return Array.from(byKey.values())
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
+  const sortedCandidates = Array.from(byKey.values()).sort((a, b) => b.score - a.score);
+  if (process.env.DEBUG_CATEGORY_MATCH === 'true') {
+    console.log('[CATDBG] top10=', JSON.stringify(sortedCandidates.slice(0, 10).map(m => ({
+      path: `${m.d1}>${m.d2}>${m.d3}>${m.d4 ?? ''}`, score: m.score, tier: m.tier, matchedTerm: m.matchedTerm,
+    }))));
+    const pestControl = sortedCandidates.find(m => m.d4 === '해충방지');
+    console.log('[CATDBG] pestControlCandidate=', pestControl ? JSON.stringify({ score: pestControl.score, tier: pestControl.tier }) : 'NOT_FOUND_AT_ALL');
+  }
+  return sortedCandidates.slice(0, limit);
 }
