@@ -232,12 +232,25 @@ export function validateSuggestion(
   const exact = NAVER_CATEGORIES_FULL.find(c => c.d1 === d1 && c.d2 === d2 && c.d3 === d3);
   if (exact) return { d1: exact.d1, d2: exact.d2, d3: exact.d3, d4: exact.d4 };
 
-  // 2. d1+d2 exact, d3 fuzzy
+  // CATEGORY_MISROUTE_FIX_2026-09-17 (원본메모 재발 확인: "강아지 얼굴망"
+  // -> "개껌" 오분류) — 근본원인 확정(Vercel 런타임 로그 실측): AI(Gemini)
+  // 는 정확히 "강아지 외출용품"(d1/d2 정답)을 줬는데, 이 텍스트가 실제
+  // 카테고리 마스터의 정확한 d3 표기("외출용품", "강아지" 접두사 없음)와
+  // 달라 fuzzy 매칭(2줄 아래)이 실패했고, 그러면 이 함수가 "d1d2 배열의
+  // 첫 번째 항목을 무조건 반환"하고 있었다 — 그 배열의 정렬 순서상 우연히
+  // "강아지 간식>개껌"이 첫 번째였을 뿐, AI의 답과 아무 상관 없는 카테고리가
+  // 나온 것. fuzzy 매칭 실패는 "확신 없음"이지 "아무거나 첫 번째가 정답"이
+  // 아니므로 null을 반환해 호출부(suggest/route.ts)가 이 AI 답변을
+  // "확인되지 않음"으로 정직하게 처리하게 한다(#357 — 근거 없이 채우지
+  // 않음). d1+d2까지는 신뢰할 수 있으므로 d3를 비운 채로 반환.
   const d1d2 = NAVER_CATEGORIES_FULL.filter(c => c.d1 === d1 && c.d2 === d2);
   if (d1d2.length > 0) {
     const fuzzy = d1d2.find(c => c.d3 && d3 && (c.d3.includes(d3) || d3.includes(c.d3)));
     if (fuzzy) return { d1: fuzzy.d1, d2: fuzzy.d2, d3: fuzzy.d3, d4: fuzzy.d4 };
-    return { d1: d1d2[0].d1, d2: d1d2[0].d2, d3: d1d2[0].d3, d4: d1d2[0].d4 };
+    // d3 fuzzy match failed -> only d1+d2 are trustworthy; leave d3 blank
+    // rather than guessing a leaf. selfValidateSuggestions elsewhere in this
+    // pipeline already treats a blank d3 as "needs confirmation".
+    return { d1: d1d2[0].d1, d2: d1d2[0].d2, d3: '', d4: undefined };
   }
 
   // 3. d1 exact, d2 char-overlap fuzzy (min 50%)
