@@ -16,7 +16,7 @@ tsc는 통과했고, 코드도 옳았고, 보고도 "완료"였다. 그런데 �
 
 ---
 
-## 반복 실패 5종 (전부 실측 기록)
+## 반복 실패 6종 (전부 실측 기록)
 
 | # | 유형 | 실제 사례 | 증상 |
 |---|---|---|---|
@@ -25,6 +25,7 @@ tsc는 통과했고, 코드도 옳았고, 보고도 "완료"였다. 그런데 �
 | **F3** | **연결 누락** | rev118 8렌즈 · `searchad-volume.ts` | 파일은 존재하나 호출부 0건. 소싱 엔진이 죽은 API만 바라봄 |
 | **F4** | **데이터 누락** | `dropship-fitness.ts` | 코드는 완벽하나 `category_id`가 전 상품 NULL → 전부 기본값 0.6. 감점 설계가 작동 0 |
 | **F5** | **문서 미동기화** | `PRODUCT_CATEGORY_BACKFILL` 설계안 | Desktop 로컬에만 존재. Code 워크트리에서 안 보여 착수 불가 |
+| **F6** | **시각 미검증** (2026-09-21) | #23 Studio 상세캔버스 — StepGroup 인라인 재생성으로 CSS 진입애니메이션이 opacity:0에 고착 | DOM에 정상 존재, API 200, 배포 READY — 그런데도 화면엔 안 보임. "DOM 확인"만으로 UI 작업을 완료로 오판 |
 
 ### 공통 구조
 
@@ -82,6 +83,36 @@ npx tsx scripts/<verify-script>.ts
 - ✅ 통과 조건: 실행 출력값을 보고에 **원문 그대로** 포함
 - ❌ "잘 될 것으로 보입니다" 금지. 실행 못 했으면 **"실행 못 했다"고 명시**
 - ✅ 환경 한계로 실행 불가 시: 검증 스크립트를 만들어 실행 가능한 레인에 인계
+
+#### G5-VISUAL — UI 작업의 실행 게이트는 "화면에 보이는가"까지다 (2026-09-21, rev186 신설)
+
+2026-09-21 #23(Studio 상세캔버스)에서 발견: 콘텐츠가 DOM에 정확히 존재하고
+(`document.body.innerText`로 확인됨), API도 200이고, 배포도 READY였는데 —
+실제 화면에는 완전히 안 보였다(CSS 애니메이션이 `opacity:0`에 고착돼
+있었음, `docs/playbook/RISKY_IDIOMS.md` IDIOM-7 참조). **"DOM에 있다"는
+G5(실행)를 통과한 것처럼 보이지만, UI 작업에서 G5의 진짜 기준은 "화면에
+보이는가"다.**
+
+UI를 다루는 작업(컴포넌트 추가/수정, 레이아웃 변경, 조건부 렌더링,
+애니메이션)은 G5를 아래 순서로 구체화한다 — 앞 단계를 통과해도 다음
+단계를 건너뛰지 않는다:
+```javascript
+// G5-VISUAL-1: DOM에 있는가 (필요조건일 뿐, 충분조건 아님)
+document.body.innerText.includes('찾는 텍스트')
+
+// G5-VISUAL-2: 그 좌표에서 실제로 클릭 가능한 최상위 요소가 맞는가
+document.elementFromPoint(x, y).innerText
+
+// G5-VISUAL-3: 시각적으로 숨겨져 있지 않은가 (opacity/visibility/transform)
+getComputedStyle(document.elementFromPoint(x, y)).opacity   // "0"이면 안 보임
+getComputedStyle(document.elementFromPoint(x, y)).visibility // "hidden"이면 안 보임
+
+// G5-VISUAL-4: 스크린샷으로 최종 육안 확인 (사람이 실제로 보는 것과 동일)
+```
+- ✅ 통과 조건: 4단계 전부 통과, 최종 스크린샷을 보고에 첨부
+- ❌ **"DOM에서 텍스트가 확인됩니다" 하나만으로 UI 작업을 완료로 보고하지 않는다**
+- 스크린샷과 `elementFromPoint`/`getComputedStyle`이 서로 다른 결과를 주면,
+  그 불일치 자체가 결함 신호다(원칙#384) — 둘 중 하나를 무시하고 넘어가지 않는다
 
 ---
 
@@ -179,3 +210,4 @@ npm run test:category-integrity   # scripts/verify-category-integrity.ts
 | 날짜 | 내용 |
 |---|---|
 | 2026-08-20 | 최초 작성. 반복 실패 5종(F1~F5) 정리 및 5게이트 규정 |
+| 2026-09-21 | G5-VISUAL 신설(rev186) — UI 작업에서 "DOM에 있다"가 "화면에 보인다"를 보장하지 않는 F6 유형(#23 Studio 사례) 발견 대응. DOM확인→elementFromPoint→getComputedStyle→스크린샷 4단계 필수화 |

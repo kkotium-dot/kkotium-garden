@@ -20,6 +20,11 @@
 
 **grep 패턴**: `\?\? 0` (특히 비교연산 `<= 0`, `< 0`, `=== 0` 근처)
 
+**실행 커맨드** (2026-09-21 소급):
+```bash
+grep -rn '?? 0' src/lib/products/ src/lib/naver/ src/lib/notifications/ --include="*.ts"
+```
+
 **안전 체크 표** (판정 로직에 `?? 0` 발견 시):
 | 입력 | 이 코드의 판정 | 맞나? |
 |---|---|---|
@@ -47,6 +52,12 @@ slash 라벨 파편과 우연히 겹침 + 위치일치 보너스가 곱셈으로
 
 **grep 패턴**: `.includes(` (매처/카테고리 로직 내), `split('/')`, `HEAD_NOUN_BOOST`
 
+**실행 커맨드** (2026-09-21 소급):
+```bash
+grep -n "\.includes(" src/lib/naver/category-deterministic-matcher.ts
+grep -n "split('/')" src/lib/naver/category-deterministic-matcher.ts
+```
+
 **안전 체크**: partial 매칭(matched < parts)엔 커버리지 비율 페널티(matched/parts),
 위치 보너스는 완전일치(strongHeadMatch)에만. 저신뢰(<임계)는 AI/개입큐로
 (결함E). 카탈로그 밖 "~트레이/~받침/~쟁반" 20종+ dryRun 필수.
@@ -64,6 +75,11 @@ slash 라벨 파편과 우연히 겹침 + 위치일치 보너스가 곱셈으로
 스코어링이 특정 값(파편매칭 등)에서 임계와 같은 수를 자주 만들면 경계버그 발현.
 
 **grep 패턴**: `< [A-Z_]+SCORE`, `< THRESHOLD`, `< MIN_`, `<= MAX_` (임계 비교)
+
+**실행 커맨드** (2026-09-21 소급):
+```bash
+grep -nE "< [A-Z_]+SCORE|< THRESHOLD|< MIN_|<= MAX_" src/lib/naver/category-deterministic-matcher.ts src/lib/products/*.ts
+```
 
 **안전 체크**: 임계에 정확히 착지하는 입력이 있는가? 있으면 포함/제외 어느 쪽이
 안전한가? 저신뢰 판정은 "애매하면 포함(보수적)"이 대개 안전(#353).
@@ -92,6 +108,12 @@ API 호출(발송·DB쓰기·외부POST)을 함. 조회만 할 거라 믿고 호
 **grep 패턴**: `/api/.*test`, `/api/.*diagnos`, GET 핸들러 내
 `sendDiscord`/`fetch(.*POST`/`prisma.*(create|update|delete)` 동시 존재.
 
+**실행 커맨드** (2026-09-21 소급):
+```bash
+find src/app/api -type d -iname "*test*" -o -type d -iname "*diagnos*"
+grep -rln "sendDiscord" src/app/api/ --include="route.ts"
+```
+
 **안전 체크**: 진단/테스트 라우트는 호출 전 코드를 먼저 읽어 부작용 여부
 확인. 진단은 기본 dry-run(상태·설정만 반환), 실행은 명시적 플래그
 (`?send=1`·`?apply=1`)일 때만. 외부 발송/비가역 쓰기는 프로덕션에서
@@ -118,6 +140,12 @@ null/누락 처리되어 모든 상품이 예외 없이 qty=-1(추정치 기본�
 공식 문서(매뉴얼 PDF 등)의 Method/Type 섹션에 정확히 그 이름으로
 등장하는지 확인. "stock", "inventory", "count" 같은 일반적인 이름을
 매뉴얼 대조 없이 자연스럽게 지어내지 않았는지 자문.
+
+**실행 커맨드** (2026-09-21 소급 — GraphQL 쿼리 문자열 전수 나열, 각
+필드명을 매뉴얼과 수동 대조):
+```bash
+grep -n "query\|gql\`" src/lib/suppliers/*.ts src/lib/naver/*.ts --include="*.ts" -A 15
+```
 
 **안전 체크**: (1) 공식 스키마 문서에서 정확한 필드명을 그대로 인용
 (추정 금지) (2) 가능하면 GraphQL introspection으로 라이브 스키마를
@@ -152,6 +180,13 @@ d3-as-리프"는 배제).
 문/조건이 사용하는 안전장치 변수(partialMatch, corroborated, breadth 등)
 목록을 나란히 적어 비교. 하나라도 다른 분기엔 있는데 이 분기엔 없으면
 의심.
+
+**실행 커맨드** (2026-09-21 소급):
+```bash
+grep -n "Match)" src/lib/naver/category-deterministic-matcher.ts
+```
+(출력된 각 분기의 return문에 partialMatch/corroborated 등이 동일하게
+쓰이는지 육안 대조)
 
 **안전 체크 표**:
 | 분기 | 안전장치 적용? | 비고 |
@@ -202,6 +237,32 @@ DOM에 있는지 먼저 확인 — 있는데도 화면에 안 보이면 (2)
 `opacity`/`visibility`/`transform`/`animationPlayState`를 전수 스캔
 — `opacity:0`이면서 `animationPlayState:running`인 조상을 찾으면
 바로 이 패턴.
+
+**실행 커맨드** (2026-09-21 소급 — 브라우저 콘솔/javascript_tool에서
+그대로 실행 가능한 3단계 진단 스니펫):
+```javascript
+// STEP1: DOM에 콘텐츠가 있는지
+document.body.innerText.includes('찾는 텍스트')
+
+// STEP2: 그 좌표의 실제 최상위 요소
+document.elementFromPoint(x, y).innerText
+
+// STEP3: opacity:0으로 고착된 조상을 조상 체인에서 탐색
+(() => {
+  let el = document.elementFromPoint(x, y), i = 0;
+  while (el && i++ < 8) {
+    const cs = getComputedStyle(el);
+    if (cs.opacity === '0') return {tag: el.tagName, cls: el.className, animationPlayState: cs.animationPlayState};
+    el = el.parentElement;
+  }
+  return 'not found';
+})()
+```
+
+소스 코드에서 인라인 자식 컴포넌트를 찾는 정적 grep:
+```bash
+grep -n "^  const [A-Z][a-zA-Z]* = (" src/app/studio/page.tsx
+```
 
 **안전수정**: 인라인 자식 컴포넌트를 (a) `useCallback([안정적인
 의존성들])`로 함수 참조 고정하거나, (b) 부모 함수 바깥으로 완전히
