@@ -2801,3 +2801,65 @@ needsConfirmation true/false는 AI 병합 결과에 따른 정직한 신뢰도
 **세션 종료 상태**: 배포 READY, 진단로그 전부 원복 확인(grep 0건),
 git clean, MASTER_CHECKLIST #45 완료 갱신 완료 — 카테고리 오분류
 계열(#1/#43/#44/#45) 전항목 완료 확정.
+
+## rev186 — Studio 3종(#21/#22/#24) 재검증 완료 + #23 레이아웃/렌더링 이중 근본결함 확정·수정 완료 (2026-09-21)
+
+**#21(3단 스플릿뷰)**: rev162에서 이미 완료된 상태였음을 코드(AtelierShell
+384/1709/420px)와 브라우저 실측으로 재확인. MASTER_CHECKLIST 미반영
+상태였던 것만 정정 필요.
+
+**#22(씨앗심기 복귀버튼 상태보존)**: "씨앗심기로 복귀" 클릭 →
+/products/new?edit=<정확한 productId>로 이동, 기존 카테고리/태그/SEO
+점수(92점) 전부 보존 확인. ✅완료.
+
+**#24(좀비부활소+튜닝지수)**: computeZombieVerdict(마진율·상품명SEO·
+카테고리트렌드·공급사신뢰도·이미지수·품절대체설정·공급처단절 7신호)
+브라우저 실측 — 긴급/방치됨/성장이탈/재고갈등/소싱이탈 5분류 정상
+작동, 진행률 게이지·배지 정상 렌더링. ✅완료.
+
+**#23(상세캔버스) — 이중 근본결함 발견·수정**:
+
+1차 조사에서 "DetailPageCard/SlotFunnelBoard/DetailAssemblyBoard 콘텐츠가
+DOM에는 있는데 화면에 전혀 안 보임"을 확인, 두 단계 근본원인을 순차
+확정:
+
+① **레이아웃 붕괴**: layout.tsx의 `<main>` children wrapper div에
+`flex:1`은 있고 `minHeight:0`이 누락 — flex-column 조상 안에서 flex
+item의 기본 min-height가 auto(콘텐츠 고유 높이)로 해석되어 뷰포트
+제약을 무시하고 콘텐츠 전체 크기(2352px)로 확장. AtelierShell.tsx
+최상위 wrapper div도 height/flex 지정이 없는 순수 block이라 부모의
+확장된 높이를 그대로 상속 — 좌측 배양실 aside의 clientHeight가
+2180px(뷰포트 1064px)까지 늘어나 있었음. 2개 파일 수정(minHeight:0
++ height:100%)으로 clientHeight 2180px→1024px 정상화 확인(커밋
+0480511, 28d3d3f).
+
+② **진짜 최종원인 — React 컴포넌트 재마운트 애니메이션 무한리셋**:
+①을 고쳤는데도 콘텐츠가 안 보여 정밀 재진단(getComputedStyle 조상
+체인 전수 스캔) → StepGroup이 StudioPage 컴포넌트 본문 안에 정의된
+일반 화살표 함수라 매 리렌더마다 새 함수 참조(=React가 보는 새
+컴포넌트 타입)로 재생성됨을 확인. React가 타입 바뀐 컴포넌트를
+언마운트+재마운트하면서 CSS 진입 애니메이션(kk-step-reveal,
+opacity 0→1, 0.22s)이 매번 처음부터 재시작 — 실측: 3초 넘게
+대기해도 activeStepGroup이 opacity:0/animationPlayState:running에
+고정(리렌더가 0.22s보다 잦아 애니메이션이 프레임2에 도달할 새 없이
+계속 리셋). 콘텐츠는 DOM에 완전히 정상 존재(elementFromPoint로
+실제 보드 텍스트 확인)했으나 딱 opacity:0이라 안 보였던 것 —
+"DOM에 있는지"만 체크하면 절대 못 잡는 결함 유형.
+
+**수정**: StepGroup을 `useCallback([step, a])`로 감싸 함수 참조
+안정화(커밋 05a1ee7). step이 실제로 바뀔 때만 재마운트(의도된 리빌
+애니메이션 타이밍 유지), 그 외 무관한 리렌더에서는 참조 유지.
+
+**최종 검증**: 클린 배포판에서 "배양실"→"상세 캔버스" 순서 클릭,
+2초 대기 후 스크린샷 — "상세 페이지 생성" 버튼, 9슬롯 퍼널 보드,
+상세 조립 보드(7섹션) 전부 스크롤 없이 즉시 화면에 렌더링 확인.
+✅완료 확정.
+
+**검증 중 특기사항**: 검증 도중 DB 연결풀 소진(Prisma EMAXCONN,
+max 200) 일시 장애 발생 — 제 코드 수정과 무관한 별개 인프라 이슈,
+약 1분 내 자연 해소 확인 후 재검증 완료.
+
+**커밋**: 0480511(minHeight:0), 28d3d3f(height:100%),
+05a1ee7(useCallback 최종수정).
+**세션 종료 상태**: 배포 READY, tsc 0에러, git clean.
+Studio 4항목(#21/#22/#23/#24) 전부 완료 확정.
