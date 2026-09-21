@@ -273,3 +273,47 @@ grep -n "^  const [A-Z][a-zA-Z]* = (" src/app/studio/page.tsx
 import·useState·useMemo 결과 등)인지 먼저 확인.
 
 **적용 원칙**: #384.
+
+---
+
+## IDIOM-8 — flex 레이아웃 수정이 형제 요소의 CSS 트릭(marginTop:auto 등)을 조용히 무력화
+
+**결함 사례**: 2026-09-22 rev193(이스터에그 footer가 화면 중간에 고정돼
+콘텐츠를 가림, 대표님 스크린샷 신고). rev186(#23 Studio 수정)에서
+`<main>` 콘텐츠 div에 `flex:1`을 추가했는데, 그 형제인 `<footer>`가
+`marginTop:'auto'`로 "콘텐츠 짧으면 바닥에 붙는다" 트릭을 쓰고 있었음
+— flex column에서 `flex:1`인 형제가 남는 공간을 전부 차지해버리면,
+`marginTop:auto`는 조용히 `0px`로 계산된다(에러도 경고도 없음). 즉
+**A를 고치려고 만든 `flex:1`이, 전혀 다른 목적(B: footer를 화면
+하단에 붙이기)으로 쓰인 CSS 트릭을 몇 커밋 뒤에 조용히 깨뜨렸다**.
+
+**근본**: flex 컨테이너 안에서 `flex-grow`/`flex:1`과
+`margin:auto`(또는 `justify-content: space-between` 등 "남는 공간"에
+의존하는 트릭)는 **같은 자원(남는 공간)을 두고 경쟁**한다. 한쪽을
+바꾸면 반드시 다른 쪽의 계산 결과가 바뀌는데, 이건 컴파일 에러도
+런타임 에러도 안 나고 그냥 "시각적으로 이상해 보일 뿐"이라 리뷰에서
+놓치기 매우 쉽다.
+
+**grep 패턴**: `flex: 1` 또는 `flexGrow: 1`을 추가/수정하는 커밋에서,
+**같은 flex 컨테이너 안의 형제 요소들** 중 `margin.*auto`,
+`justify-content: space-between`, `align-self: flex-end` 등 "남는
+공간에 의존하는" 스타일이 있는지 반드시 대조.
+
+**실행 커맨드** (2026-09-22 소급):
+```bash
+grep -n "marginTop: 'auto'\|margin-top: auto\|marginBottom: 'auto'" src/app/layout.tsx src/components/**/*.tsx 2>/dev/null
+```
+
+**안전 체크**: `flex:1`을 추가하기 전, 그 형제 요소들에 `margin:auto`
+류 트릭이 있는지 먼저 확인 — 있으면 (a) 그 형제를 flex 컨테이너 밖으로
+빼거나 (b) `margin:auto` 대신 명시적 `justify-content`/wrapper 구조로
+바꾸거나, (c) 최소한 수정 직후 실제 브라우저에서 "그 형제가 여전히
+의도한 위치에 있는지" 스크롤 시나리오로 재검증한다.
+
+**검증 시 추가 함정(같은 사고에서 발견)**: 페이지에 동일 태그(`<footer>`
+등)가 여러 개 있을 수 있다 — `document.querySelector('footer')`로
+검증하면 완전히 다른 컴포넌트를 검증하게 될 위험. 반드시
+`querySelectorAll`로 개수를 먼저 확인하고, 텍스트 내용으로 정확한
+대상을 특정한다.
+
+**적용 원칙**: #385.
