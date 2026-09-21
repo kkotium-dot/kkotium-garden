@@ -352,6 +352,7 @@ export function matchDeterministicCategories(
   while (headIdx > 0 && HEAD_NOUN_EXCLUDE.has(nouns[headIdx])) headIdx--;
   const headNoun = nouns.length > 0 ? nouns[headIdx] : '';
   const modifierNouns = nouns.filter((_, i) => i !== headIdx);
+  console.log('[CATDBG9-noun]', name, 'nouns=', JSON.stringify(nouns), 'headNoun=', headNoun);
   if (process.env.DEBUG_CATEGORY_MATCH === 'true') {
     console.log('[CATDBG] headNoun=', headNoun, 'modifierNouns=', modifierNouns);
   }
