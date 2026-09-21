@@ -3089,3 +3089,44 @@ grep으로 확정(현재 AI 제공자는 Groq+Claude). Grok 자체는 의도적
 
 **커밋**: 415f71f. **세션 종료 상태**: 배포 READY, tsc 0에러, git
 clean. MASTER_CHECKLIST #41 완료 갱신 완료.
+
+## rev193 — #52 이스터에그 footer 화면고정 근본수정(스크린샷 신고 대응) 완료 (2026-09-22)
+
+**신고 내용(대표님 스크린샷)**: 이스터에그 핑크 라인이 화면 최하단에
+고정돼야 하는데, 스크롤을 내리면 위치가 화면 중간에 고정되어 콘텐츠
+(SEO 훅문구 입력창 등)를 가림. 씨앗심기 SEO탭에서 재현.
+
+**근본원인**: `layout.tsx`의 `<footer>`(이스터에그 바)가 `<main>`
+(overflowY:auto 스크롤 컨테이너) 안쪽에 위치했고, `marginTop:'auto'`
+로 "콘텐츠가 짧으면 바닥에 붙는다"는 flex 트릭을 썼음. 그런데
+rev186(#23 Studio 상세캔버스 수정)에서 콘텐츠 div에 `flex:1`을 추가한
+것과 충돌 — flex column 컨테이너에서 `flex:1`인 형제가 남는 공간을
+전부 가져가버려, footer의 `marginTop:auto`가 실제로는 항상 `0px`로
+계산됨. computed-style 실측 확인: `marginTop: "0px"`, 콘텐츠를 끝까지
+스크롤해도 footer.bottom이 뷰포트 하단보다 162px 위에 멈춤.
+
+**근본수정**: footer를 `<main>`의 스크롤 콘텐츠에서 완전히 빼내, 그
+형제(Header/main을 감싸는 flex-column wrapper)의 직계 자식으로 이동.
+`</main>` 태그를 콘텐츠 div 바로 뒤로 옮기고, footer는 그 바깥에서
+`flexShrink:0`으로 배치 — 이제 footer는 `main`의 스크롤과 완전히
+무관하게 항상 화면 최하단(wrapper 하단 = 뷰포트 하단)에 고정되고,
+`main`은 그 위 남는 공간에서만 독립적으로 스크롤됨. 수정 중 `</main>`
+중복 태그(기존 위치에 남아있던 것)를 발견해 함께 정리.
+
+**실측 검증(2건)**:
+1. 씨앗심기 SEO탭 — `main.scrollTop=0`과
+   `main.scrollTop=main.scrollHeight` 양쪽 모두 footer.bottom이
+   정확히 viewportHeight와 일치(1411.25 = 1411) — 스크롤 위치와
+   무관하게 항상 화면 최하단 고정 확인.
+2. Studio(#23 회귀 위험 재검증) — aside clientHeight 1079px로 정상
+   유지(rev186에서 고친 2180px 폭주 버그 재발 없음), 이스터에그
+   footer도 화면 최하단 정확히 고정 확인. 검증 중 페이지에 동명
+   `<footer>` 태그가 3개 있음을 발견(ThumbnailCard의 "Phase 2-B-3"
+   안내 2개 + 진짜 이스터에그 1개) — `querySelector`로 첫 번째만
+   잡으면 엉뚱한 컴포넌트를 검증하게 되는 함정을 실제로 겪고 텍스트로
+   정확히 식별해 재확인. 향후 유사 DOM 검증 시 `querySelectorAll` +
+   텍스트 필터로 정확한 대상 특정 필요(재사용 가능한 교훈).
+
+**커밋**: f8efdd3. **세션 종료 상태**: 배포 READY, tsc 0에러, git
+clean. MASTER_CHECKLIST #52 신규 등재+완료 확정, 우선순위 목록
+최신화(완료된 #17-20/#33/#41 제거).
