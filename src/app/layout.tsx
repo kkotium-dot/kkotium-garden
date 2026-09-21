@@ -97,9 +97,27 @@ export default function RootLayout({
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
             <Header />
             <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', background: 'transparent', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              {/* STUDIO_HEIGHT_INHERIT_FIX_2026-09-21 (#23 조사) — this div was
+                  missing minHeight: 0. Inside a flex-column ancestor (main,
+                  above), a flex item's default min-height is "auto", which
+                  resolves to its CONTENT'S intrinsic height, not 0. That let
+                  this div (and everything inside it, including AtelierShell's
+                  height:100% tree) balloon to the full unclipped content
+                  height (~2352px measured) instead of respecting main's
+                  bounded flex-basis — collapsing the independent-scroll
+                  columns S2-A (#141) was designed to give the atelier.
+                  Concretely: AtelierShell's height:100% div can only shrink
+                  to fit the viewport if EVERY ancestor flex item between it
+                  and <main> also has minHeight: 0 — one missing link breaks
+                  the whole chain, and this was that missing link. Root cause
+                  confirmed via computed-style probe (asideCount clientHeight
+                  jumped 2180px vs viewport 1064px) before this fix. Regular
+                  (non-atelier) pages using normal <main> scroll are
+                  unaffected — flex:1 + minHeight:0 on a scrolling child is
+                  the standard, harmless pattern already used one level up. */}
               <div
                 className="px-4 lg:px-8 pt-6 pb-20 lg:pb-8"
-                style={{ flex: 1, minWidth: 0 }}
+                style={{ flex: 1, minWidth: 0, minHeight: 0 }}
               >
                 {children}
               </div>
