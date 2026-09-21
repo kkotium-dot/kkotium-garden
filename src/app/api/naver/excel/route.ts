@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateNaverExcelBuffer } from '@/lib/excel/naverExcelJS';
 import type { NaverProductData } from '@/lib/excel/naverExcel.types';
+import { resolveEffectiveStock, type OptionStockRow } from '@/lib/products/effective-stock';
 
 // ── F1 option transform ──────────────────────────────────────────────────
 // DB shape (per Desktop 2026-06-02 실측):
@@ -163,6 +164,11 @@ export async function POST(request: NextRequest) {
         // Without this include the Excel engine fell back to legacy Product
         // columns and emitted empty option cells (parity bug).
         product_options: true,
+        // EFFECTIVE_STOCK_2026-09-21 (#51) — single most-recent snapshot per
+        // product, used for no-option items (see resolveEffectiveStock below).
+        // Product has no `stock` column, so this is the only real source for
+        // a single-item (no options) product's quantity.
+        inventorySnapshots: { orderBy: { polledAt: 'desc' }, take: 1, select: { qty: true } },
       },
     });
 
@@ -196,7 +202,18 @@ export async function POST(request: NextRequest) {
         if (t === '영세' || t === '영세상품' || t === '영세율') return '영세상품';
         return t;
       })(),
-      stock:                Number(p.stock) || 999,
+      // EFFECTIVE_STOCK_2026-09-21 (#51 근본수정) — Product.stock is not a real
+      // DB column (Prisma schema has none), so `p.stock` was always undefined
+      // here and every DB-lookup Excel export silently forced stock=999 for
+      // every product regardless of actual availability. Two-branch rule
+      // (대표님 지시, 2026-09-21): options present -> sum option_rows[].stock;
+      // no options -> latest InventorySnapshot.qty (supplier/crawl poll),
+      // excluding the #260 unknown-sentinel (-1). See effective-stock.ts.
+      stock: resolveEffectiveStock({
+        hasOptions: Array.isArray(p.product_options?.option_rows) && p.product_options.option_rows.length > 0,
+        optionRows: p.product_options?.option_rows as OptionStockRow[] | undefined,
+        latestSnapshotQty: p.inventorySnapshots?.[0]?.qty ?? null,
+      }).stock,
       // F1: 5 option fields. product_options (API publish source) first, legacy
       // Product columns as fallback — keeps Excel and API publish in parity.
       ...buildOptionFields(p.product_options, p.optionType, p.optionName, p.options),

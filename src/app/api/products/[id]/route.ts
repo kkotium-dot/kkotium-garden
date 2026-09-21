@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { sendDiscord, buildPriceChangeEmbed } from '@/lib/discord';
 import { captureDeletionSnapshots, recordProductDeletedEvents } from '@/lib/products/deletion-audit';
 import { resolveCategoryDbId, isValidCategoryDbId } from '@/lib/naver/category-sync';
+import { resolveEffectiveStock } from '@/lib/products/effective-stock';
 
 
 export const dynamic = 'force-dynamic';
@@ -192,12 +193,26 @@ export async function GET(
         supplier: true,
         user: { select: { id: true, name: true, email: true } },
         diagnosis: true,
+        // EFFECTIVE_STOCK_2026-09-21 (#51) — same two data sources
+        // resolveEffectiveStock needs, so the 씨앗심기 edit-mode load can show
+        // the operator the real current stock instead of always defaulting to
+        // 100 (Product has no stock column to hydrate from).
+        product_options: true,
+        inventorySnapshots: { orderBy: { polledAt: 'desc' }, take: 1, select: { qty: true } },
       },
     });
     if (!product) {
       return NextResponse.json({ success: false, error: '상품을 찾을 수 없습니다' }, { status: 404 });
     }
-    return NextResponse.json({ success: true, product });
+    const optionRows = Array.isArray((product as any).product_options?.option_rows)
+      ? (product as any).product_options.option_rows
+      : [];
+    const effectiveStock = resolveEffectiveStock({
+      hasOptions: optionRows.length > 0,
+      optionRows,
+      latestSnapshotQty: (product as any).inventorySnapshots?.[0]?.qty ?? null,
+    });
+    return NextResponse.json({ success: true, product: { ...product, effectiveStock: effectiveStock.stock, effectiveStockSource: effectiveStock.source } });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ success: false, error: msg }, { status: 500 });

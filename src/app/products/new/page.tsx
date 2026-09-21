@@ -20,6 +20,7 @@ import {
   type NaverCategoryEntry,
 } from '@/lib/naver/naver-categories-full';
 import { decodePrefill } from '@/lib/crawl/prefill-schema';
+import { resolveEffectiveStock } from '@/lib/products/effective-stock';
 
 // -- helpers derived from full 4,993-entry dataset --
 function getDepth1List(): string[] {
@@ -1031,7 +1032,16 @@ function NewProductPageInner() {
       if (data.crawlProductNo != null && String(data.crawlProductNo).trim()) {
         setSupplierProductCode(String(data.crawlProductNo).trim());
       }
-      if (typeof data.crawlInventory === 'number') setCrawlInventory(data.crawlInventory);
+      if (typeof data.crawlInventory === 'number') {
+        setCrawlInventory(data.crawlInventory);
+        // EFFECTIVE_STOCK_2026-09-21 (#51) — prefill this crawl-time quantity
+        // into the visible "재고수량" field too, not just the read-only
+        // "참고" badge, so the number the operator actually sees on first
+        // load already matches the real supplier stock for a no-option item.
+        // Harmless for option products — resolveEffectiveStock at save/export
+        // time ignores this field once options exist (option sum wins).
+        setStock(String(data.crawlInventory));
+      }
       if (typeof data.crawlNaverFeeRate === 'number') setCrawlNaverFeeRate(data.crawlNaverFeeRate);
       // SEED-SAVE C-3: stash the crawl_log link keys so the create save links the
       // 꿀통 item to the new 창고 Product (crawlLogId preferred; URL as fallback).
@@ -1371,6 +1381,17 @@ function NewProductPageInner() {
         // (?edit=ID&focus=visual) land on a working tab.
         setSavedProductId(p.id);
         setSavedNaverProductId(p.naverProductId ?? null);
+        // EFFECTIVE_STOCK_2026-09-21 (#51) — GET /api/products/[id] now returns
+        // the computed real stock (option-sum or latest supplier snapshot,
+        // never the missing Product.stock column). Hydrate the visible
+        // "재고수량" field with it so re-opening an existing product shows
+        // the operator the true current number instead of always resetting
+        // to the 100 default. Only for no-option products — when options
+        // exist, optionRows carries the per-value stock and this field is a
+        // display-only sum, not something the operator edits directly.
+        if (typeof p.effectiveStock === 'number' && p.effectiveStockSource !== 'unknown') {
+          setStock(String(p.effectiveStock));
+        }
         // SEED-SAVE C-1: reflect a previously-promoted READY status on the chip.
         if (p.status === 'READY') setReadinessStatus('READY');
         // SEED-SAVE C-2 (#62): restore all drift-prone roundtrip fields through the
@@ -2441,7 +2462,20 @@ const handleGenerate = async () => {
       categoryId,
       productName: productName.trim(),
       price: Number(price),
-      stock: Number(stock) || 100,
+      // EFFECTIVE_STOCK_2026-09-21 (#51 근본수정) — 옵션 있으면 옵션별 재고
+      // 합산, 옵션 없으면(단품) 크롤/공급사 폴링 재고(crawlInventory)가 진짜
+      // 값 — 화면의 수동 "재고수량" 입력(stock state)은 옵션도 없고 크롤
+      // 재고도 없을 때(source==='unknown')만 쓰이는 최후 폴백. `||` 대신
+      // source로 직접 분기 — 실제 재고가 정확히 0(품절)인 정상 값을 falsy로
+      // 오인해 100으로 덮어쓰는 걸 방지.
+      stock: (() => {
+        const resolved = resolveEffectiveStock({
+          hasOptions: optionType !== 'NONE' && optionRows.some(r => !r.value.startsWith('__price_') && r.value.trim()),
+          optionRows,
+          latestSnapshotQty: crawlInventory,
+        });
+        return resolved.source === 'unknown' ? (Number(stock) || 100) : resolved.stock;
+      })(),
       taxType,
       // Options
       ...optionFields,
