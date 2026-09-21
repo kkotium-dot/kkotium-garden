@@ -224,16 +224,36 @@ function StudioInner() {
   // ROBUST-1 (#62/#82): each direct child card is isolated by its own ErrorBoundary
   // so a render fault in one card never blanks the whole step canvas — siblings keep
   // rendering, and the failed card shows a panel-level diagnostic (no silent blank).
-  const StepGroup = ({ when, children }: { when: AtelierStepKey; children: ReactNode }) => (
-    <div
-      hidden={step !== when}
-      className={step === when ? 'kk-step-reveal' : undefined}
-      style={{ display: step === when ? 'flex' : 'none', flexDirection: 'column', gap: 'var(--space-4)' }}
-    >
-      {Children.map(children, (child, i) => (
-        <ErrorBoundary key={i} label={a.steps[when]}>{child}</ErrorBoundary>
-      ))}
-    </div>
+  //
+  // STEP_GROUP_STABLE_IDENTITY_FIX_2026-09-21 (#23 근본수정, part 3 — the real
+  // cause of "content exists in DOM but is invisible"): this was previously a
+  // plain arrow function defined inline in the component body, so React saw a
+  // BRAND NEW component type on every single re-render of StudioPage (unrelated
+  // state changes included — polling, hover, etc.). React unmounts+remounts a
+  // component whose type reference changes, which restarted the CSS entrance
+  // animation (kk-step-reveal, opacity:0 -> 1 over 0.22s) from scratch every
+  // time — confirmed live: after 3+ seconds the active step's computed style
+  // was still opacity:0, animationPlayState:"running", because it kept getting
+  // reset before ever reaching frame 2. The content was always correctly in
+  // the DOM (verified via elementFromPoint returning real board text) — this
+  // is why it never showed up in screenshots despite passing every "is it in
+  // the DOM" check. useCallback stabilizes the function reference so React
+  // reuses the same component instance across re-renders (remounting only
+  // when `step`/`a` actually change, which is the correct/intended time for
+  // the reveal animation to replay).
+  const StepGroup = useCallback(
+    ({ when, children }: { when: AtelierStepKey; children: ReactNode }) => (
+      <div
+        hidden={step !== when}
+        className={step === when ? 'kk-step-reveal' : undefined}
+        style={{ display: step === when ? 'flex' : 'none', flexDirection: 'column', gap: 'var(--space-4)' }}
+      >
+        {Children.map(children, (child, i) => (
+          <ErrorBoundary key={i} label={a.steps[when]}>{child}</ErrorBoundary>
+        ))}
+      </div>
+    ),
+    [step, a],
   );
 
   // S2-B.2 — per-step completion status derived from EXISTING actions/engine
