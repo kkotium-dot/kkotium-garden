@@ -293,6 +293,7 @@ function headNounWeight(
     const modifierCorroborates = modifierNouns.some((m) =>
       unmatchedSiblings.some((s) => s.includes(m) || m.includes(s)),
     );
+    console.log('[CATDBG10-hnw]', 'label=', label, 'parts=', JSON.stringify(parts), 'headNoun=', headNoun, 'modifierNouns=', JSON.stringify(modifierNouns), 'unmatchedSiblings=', JSON.stringify(unmatchedSiblings), 'modifierCorroborates=', modifierCorroborates, 'partialMatch=', partialMatch);
     if (partialMatch && !modifierCorroborates) return 1;
     return HEAD_NOUN_BOOST;
   }
