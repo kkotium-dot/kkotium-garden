@@ -2903,3 +2903,50 @@ Studio 4항목(#21/#22/#23/#24) 전부 완료 확정.
 **커밋**: 문서만 수정(코드 변경 없음, 배포 불필요).
 **세션 종료 상태**: MASTER_CHECKLIST #16 완료 갱신, #51 신규 등재,
 우선순위 목록 최신화(완료된 #21-24/#16 제거) 완료. git clean.
+
+## rev188 — #51 재고계산 근본수정 완료 (2026-09-21)
+
+**대표님 지시 정확히 구현**: 옵션으로 재고를 적었을 때 총 재고가 계산
+되어 입력되고, 옵션 없는 단품은 크롤링한 실제 재고가 정확히 반영되며,
+엑셀에도 동일 정보가 반영되도록.
+
+**신설**: `src/lib/products/effective-stock.ts` — `resolveEffectiveStock()`
+단일권위 순수함수. 옵션있음→`option_rows[].stock` 합산, 옵션없음→
+최신 `InventorySnapshot.qty`(#260 조회실패 센티널 qty=-1은 "재고0"이
+아니라 "모름"이므로 제외, source-gone.ts와 동일 규약). 둘 다 없으면
+999 같은 거짓 기본값 대신 `source:'unknown'`으로 정직 표시.
+
+**연결 3곳**:
+1. `/api/naver/excel` — DB조회 경로(inventorySnapshots include 추가)와
+   씨앗심기 즉석다운로드 경로 둘 다 `stock: Number(p.stock) || 999`
+   (항상 999로 강제되던 버그, p.stock이 애초에 undefined였음)를
+   resolveEffectiveStock 호출로 교체.
+2. `/api/products/[id]` GET — product_options+inventorySnapshots
+   include 추가, 응답에 effectiveStock/effectiveStockSource 신규 필드.
+3. `products/new/page.tsx` — ①크롤 prefill 시 crawlInventory를 화면
+   "재고수량" 입력창에도 자동반영(기존엔 읽기전용 참고배지로만 표시)
+   ②수정모드 진입 시 GET의 effectiveStock으로 hydrate ③저장/엑셀생성
+   payload가 resolveEffectiveStock 결과 사용, source==='unknown'일
+   때만 수동입력값 폴백(`||` 연산자가 진짜 0(품절)을 falsy로 오인해
+   100으로 덮어쓰던 버그도 함께 즉시 발견·수정).
+
+**실측 검증(3중)**:
+- curl GET `/api/products/[id]`: LED차량가습기(오너클랜,옵션없음)
+  → effectiveStock=9999, source=supplier_snapshot(DB 실측값과 정확히
+  일치). 사무실가습기(옵션2개, 각 999) → effectiveStock=1998,
+  source=option_sum(999+999 정확히 합산).
+- curl POST `/api/naver/excel` + openpyxl 직접 파싱: 실제 엑셀파일의
+  "재고수량" 컬럼에 9999·1998 정확히 반영 확인(이전엔 두 상품 다
+  999로 강제됐던 것과 정반대 결과).
+- 브라우저 스크린샷: 씨앗심기 수정모드에서 LED차량가습기 열었을 때
+  "재고수량" 필드가 9999로 정상 표시(이전 100에서 개선).
+
+**진단 중 발견·즉시수정**: Prisma 관계필드명 실수
+(`inventory_snapshots` → 정확히는 camelCase `inventorySnapshots`)를
+tsc가 즉시 잡아냄 — 2개 파일에서 수정 후 0에러 확인. 클라이언트
+payload의 `.stock || Number(stock) || 100` 표현식이 진짜 0(품절)을
+100으로 덮어쓸 수 있던 걸 배포 전 자체 재검토로 발견해 source 기반
+분기로 즉시 교정(배포 후가 아니라 배포 전에 잡아 회귀 없이 나감).
+
+**커밋**: 7522818. **세션 종료 상태**: 배포 READY, tsc 0에러, git
+clean. MASTER_CHECKLIST #51 완료 확정, 우선순위 목록에서 제거.
