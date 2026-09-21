@@ -280,7 +280,21 @@ function headNounWeight(
     // 전혀 체크 안 함. weakHeadMatch 분기는 이미 partialMatch를 체크하는데
     // (아래) strongHeadMatch만 비대칭적으로 빠져있던 게 진짜 결함 — 새
     // 판정 신설 없이 그 비대칭만 해소.
-    return partialMatch ? 1 : HEAD_NOUN_BOOST;
+    //
+    // MODIFIER_SIBLING_CORROBORATION_2026-09-21 (#45 회귀 발견 즉시수정):
+    // 위 discount를 그대로 적용하면 "아로마 디퓨저"(nouns=[아로마,디퓨저],
+    // headNoun=디퓨저)가 "아로마방향제/디퓨저"의 매칭 안 된 형제 파트
+    // "아로마방향제"를 modifier "아로마"가 실제로 뒷받침하는데도 무조건
+    // 페널티를 받는 회귀를 실측(Vercel)으로 확인 — 우산 사례의 d2-
+    // corroboration과 대칭인 신호가 빠져있었다. 매칭 안 된 형제 파트 중
+    // 하나라도 어떤 modifier와 겹치면(접두어 관계) 그 modifier가 이
+    // 브랜치를 문맥으로 확증하는 것이므로 discount를 면제한다.
+    const unmatchedSiblings = parts.filter((p) => !p.includes(headNoun) && headNoun !== p);
+    const modifierCorroborates = modifierNouns.some((m) =>
+      unmatchedSiblings.some((s) => s.includes(m) || m.includes(s)),
+    );
+    if (partialMatch && !modifierCorroborates) return 1;
+    return HEAD_NOUN_BOOST;
   }
   // A WEAK head match is the reverse direction — only a FRAGMENT of headNoun
   // (shorter than it) lines up with the label, either because headNoun is an
