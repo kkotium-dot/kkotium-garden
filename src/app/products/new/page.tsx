@@ -647,6 +647,43 @@ function NewProductPageInner() {
   const [description, setDescription] = useState('');
   // D1: golden keywords from AI SEO workflow — stored in DB via keywords JSON column
   const [aiKeywords, setAiKeywords]   = useState<string[]>([]);
+  // AI_KEYWORD_TRUST_VERIFY_2026-09-21 (#41 근본수정) — aiKeywords(NaverSEOWorkflow가
+  // Groq/Gemini에게 "high search volume, low competition 키워드"를 프롬프트로
+  // 추정 생성시킨 결과, /api/ai/seo-workflow)는 실제 네이버 검색량 데이터
+  // 없이 화면에 그대로 노출되고 있었다 — 원칙#357("데이터 근거 없이
+  // 표시하면 환각") 위반 소지. 새 판정로직을 만드는 대신 이미 있는 태그
+  // 신호등 인프라(/api/tags/verify, #37에서 실측검증된 verified/weak/
+  // missing 3단계 + monthlyVolume)를 그대로 재사용해(#62/#295 단일권위)
+  // aiKeywords가 바뀔 때마다 자동 교차검증 — LLM이 추정한 키워드가 실제
+  // 네이버 검색량과 일치하는지 신호등으로 보여준다.
+  const [aiKeywordTrust, setAiKeywordTrust] = useState<Map<string, { status: string; monthlyVolume: number }>>(new Map());
+  const [aiKeywordTrustBusy, setAiKeywordTrustBusy] = useState(false);
+  useEffect(() => {
+    if (aiKeywords.length === 0) { setAiKeywordTrust(new Map()); return; }
+    let cancelled = false;
+    (async () => {
+      setAiKeywordTrustBusy(true);
+      try {
+        const res = await fetch('/api/tags/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tags: aiKeywords }),
+        });
+        const j = await res.json();
+        if (!cancelled && j.success && Array.isArray(j.tags)) {
+          const next = new Map<string, { status: string; monthlyVolume: number }>();
+          for (const t of j.tags) next.set(t.tag, { status: t.status, monthlyVolume: t.monthlyVolume });
+          setAiKeywordTrust(next);
+        }
+      } catch {
+        // silent — trust badges are supplementary, never block the keyword display
+      } finally {
+        if (!cancelled) setAiKeywordTrustBusy(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiKeywords.join(',')]);
   // D1: SEO tags — Naver actual limit 10 tags
   const [seoTags, setSeoTags] = useState<string[]>([]);
   // Tag inline input state
@@ -4166,11 +4203,25 @@ const handleGenerate = async () => {
               {/* Golden keywords display — populated by NaverSEOWorkflow in right panel */}
               {aiKeywords.length > 0 && (
                 <div>
-                  <p className="text-xs text-gray-400 mb-1.5">황금키워드 (AI SEO 워크플로우에서 생성)</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <p className="text-xs text-gray-400" style={{ margin: 0 }}>황금키워드 (AI SEO 워크플로우에서 생성)</p>
+                    {/* #41 — LLM이 추정 생성한 키워드를 실제 네이버 검색량과
+                        교차검증(aiKeywordTrust, /api/tags/verify 재사용).
+                        데이터 근거 없이 "황금키워드"라 부르면 환각(원칙#357)이므로
+                        검증 중/실검색량 함께 노출. */}
+                    {aiKeywordTrustBusy && <span style={{ fontSize: 10, color: '#aaa' }}>검증 중…</span>}
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {aiKeywords.map((kw, i) => (
-                      <span key={i} className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-xs font-medium">{kw}</span>
-                    ))}
+                    {aiKeywords.map((kw, i) => {
+                      const trust = aiKeywordTrust.get(kw);
+                      const dot = !trust ? '' : trust.status === 'verified' ? '🟢 ' : trust.status === 'weak' ? '🟡 ' : '🔴 ';
+                      const title = trust ? `월 ${trust.monthlyVolume.toLocaleString()}회 검색` : undefined;
+                      return (
+                        <span key={i} title={title} className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-xs font-medium">
+                          {dot}{kw}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}
