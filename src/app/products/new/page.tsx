@@ -4215,10 +4215,27 @@ const handleGenerate = async () => {
                     {aiKeywords.map((kw, i) => {
                       const trust = aiKeywordTrust.get(kw);
                       const dot = !trust ? '' : trust.status === 'verified' ? '🟢 ' : trust.status === 'weak' ? '🟡 ' : '🔴 ';
-                      const title = trust ? `월 ${trust.monthlyVolume.toLocaleString()}회 검색` : undefined;
+                      // Naver_Smart_Store_Product_Identity_Keyword_Extraction 리서치
+                      // (SOURCE_DOCS_INDEX 카테고리2) 권고: "검색량 0/극저 후보는
+                      // SearchAd 검증 게이트에서 즉시 폐기" — 완전 삭제(hide)까지는
+                      // 가지 않는다. 검색광고 API가 일시 오류로 missing을 잘못
+                      // 반환할 위험이 있어(#37에서 확인된 파서 특성), 잘못된
+                      // 자동숨김이 멀쩡한 키워드를 사라지게 만드는 새 위험을
+                      // 만들 수 있기 때문 — 대신 시각적으로 흐리게(dimmed) +
+                      // 명시 경고 문구로, 리서치의 핵심 의도(무의미한 키워드에
+                      // 낚이지 않게)만 안전하게 반영.
+                      const isMissing = trust?.status === 'missing';
+                      const title = trust
+                        ? (isMissing ? '검색량 확인 안 됨 — 태그로 적용하지 않는 것을 권장' : `월 ${trust.monthlyVolume.toLocaleString()}회 검색`)
+                        : undefined;
                       return (
-                        <span key={i} title={title} className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-xs font-medium">
-                          {dot}{kw}
+                        <span
+                          key={i}
+                          title={title}
+                          className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-xs font-medium"
+                          style={isMissing ? { opacity: 0.55 } : undefined}
+                        >
+                          {dot}{kw}{isMissing ? ' (검색량 없음)' : ''}
                         </span>
                       );
                     })}
