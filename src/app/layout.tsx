@@ -121,7 +121,23 @@ export default function RootLayout({
               >
                 {children}
               </div>
-              {/* ── Appreciation footer — always at true bottom regardless of content height ── */}
+            </main>
+              {/* FOOTER_STICKY_FIX_2026-09-22 (스크린샷 신고: 핑크 이스터에그
+                  바가 화면 중간에 고정돼 콘텐츠를 가림) — 근본원인: footer가
+                  <main>(overflowY:auto 스크롤 컨테이너) 안쪽에 있었고,
+                  marginTop:'auto'로 "콘텐츠 짧으면 바닥에 붙는다" 트릭을
+                  썼는데, #23 수정(rev186)에서 콘텐츠 div에 flex:1을 준 것과
+                  충돌 — flex:1인 형제가 남는 공간을 전부 차지해버려
+                  marginTop:auto가 실제로는 항상 0px로 계산됨(computed-style
+                  실측 확인: marginTop "0px", 스크롤 끝까지 내려도 footer가
+                  뷰포트 하단보다 162px 위에 멈춤). 근본수정: footer를
+                  <main>의 스크롤 콘텐츠에서 완전히 빼내 그 형제(Header/main을
+                  감싸는 flex-column wrapper)의 직계 자식으로 이동 — 이제
+                  footer는 스크롤과 무관하게 항상 화면 최하단에 고정되고,
+                  <main>은 그 위 남는 공간에서만 독립적으로 스크롤된다(원래
+                  주석이 의도했던 "always at true bottom"을 실제로 달성).
+                  #23(Studio flex:1/minHeight:0 체인)은 <main> 내부 구조라
+                  전혀 영향받지 않음. */}
               <footer style={{
                 background: '#e8527a',
                 display: 'flex',
@@ -130,7 +146,6 @@ export default function RootLayout({
                 padding: '6px 24px',
                 gap: 12,
                 minHeight: 32,
-                marginTop: 'auto',
                 position: 'relative',
                 flexShrink: 0,
               }}>
@@ -148,7 +163,6 @@ export default function RootLayout({
                 </p>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', flexShrink: 0 }}>✿</span>
               </footer>
-            </main>
           </div>
         </div>
         {/* Phase 2-MOBILE-1: fixed bottom tab bar — only renders under lg. */}
