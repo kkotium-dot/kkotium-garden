@@ -1296,3 +1296,48 @@ MASTER_CHECKLIST에 등재하고 이번 수정을 "완료"로 확정한다(원�
 strongHeadMatch 분기에 partial discount + modifierCorroborates 추가
 (커밋 79a1448, a97e564). 클린 배포판 curl 8종 재검증으로 최종 확정.
 - 클러스터 인덱스 "시스템 승격(단건 금지)"에 #383 추가.
+
+## 작업원칙 #384 — "DOM에 있다"는 "화면에 보인다"의 증거가 아니다: 시각적 렌더링은 computed style로 직접 확인한다 (2026-09-21, rev186)
+
+**배경**: #23(Studio 상세캔버스 콘텐츠 실종) 조사에서, DetailPageCard/
+SlotFunnelBoard/DetailAssemblyBoard가 `document.body.innerText`로
+정확히 확인됐음에도 실제 화면(스크린샷)에는 완전히 안 보였다. 1차로
+레이아웃 높이 상속 결함(layout.tsx/AtelierShell.tsx의 minHeight:0/
+height:100% 누락)을 찾아 고쳤지만 그것만으로는 설명이 안 됐고,
+`elementFromPoint` + `getComputedStyle` 조상 체인 전수 스캔으로
+진짜 원인(StepGroup 인라인 컴포넌트 재생성 → CSS 애니메이션 무한
+리셋, opacity:0 고착)을 찾았다.
+
+**규칙**:
+1. **"콘텐츠가 DOM에 있다"(`innerText`, `querySelector` 매칭)와
+   "콘텐츠가 화면에 보인다"는 서로 다른 주장이며, 전자는 후자의
+   필요조건일 뿐 충분조건이 아니다.** UI 버그를 "완료"로 확정하기
+   전에는 반드시 후자까지 확인한다.
+2. **스크린샷과 `elementFromPoint`/`getComputedStyle`이 다른 결과를
+   주면, 그 불일치 자체가 신호다** — 어느 한쪽을 무시하고 넘어가지
+   말고 왜 다른지부터 규명한다. 이번 사례에서 `elementFromPoint`는
+   정상 텍스트를 반환했는데 스크린샷엔 안 보였다 — 이 모순이
+   `opacity:0` 애니메이션 고착을 찾는 단서였다.
+3. **진단 순서**: (1) DOM 존재 확인(`innerText`) → (2) 그래도
+   안 보이면 좌표 기반 존재 확인(`elementFromPoint`) → (3) 그래도
+   안 보이면 조상 체인의 `getComputedStyle`(opacity/visibility/
+   transform/animationPlayState/display)을 전수 스캔. 각 단계를
+   건너뛰지 않는다 — (3)에서 찾은 원인이 (1)(2)에서는 절대 안
+   드러난다.
+4. **CSS 진입 애니메이션(`animation: ... both`, opacity 0→1류)이
+   걸린 요소는 특히 의심 대상이다** — `animation-fill-mode: both`는
+   애니메이션 시작 전에도 `from` 상태(보통 opacity:0)를 유지하므로,
+   애니메이션이 정상 재생을 못 하면 그 요소가 "영원히 투명한 채로
+   DOM에 존재"하는 상태가 되고, 표준 디버깅으로는 절대 못 잡는다.
+5. **레이아웃 결함(rev186 part1/2)과 렌더링 결함(rev186 part3)은
+   서로 독립적으로 존재할 수 있다** — 하나를 고쳤다고 문제가 완전히
+   해결됐다고 단정하지 말고, 매 수정 후 반드시 재검증해 "이걸로
+   충분한지" 스스로 확인한다(원칙#379의 확장 적용).
+
+**실증**: `src/app/studio/page.tsx`의 `StepGroup`을
+`useCallback([step, a])`로 감싸 함수 참조 안정화(커밋 05a1ee7).
+`docs/playbook/RISKY_IDIOMS.md`에 IDIOM-7(인라인 자식 컴포넌트 +
+CSS 진입 애니메이션)로 이 패턴 자체를 신설, 재사용 가능한 진단
+절차를 문서화.
+- 클러스터 인덱스 "시스템 승격(단건 금지)"에 #384, RISKY_IDIOMS
+  IDIOM-7 추가.

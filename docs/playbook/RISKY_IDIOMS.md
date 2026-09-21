@@ -165,3 +165,50 @@ d3-as-리프"는 배제).
 "아로마 디퓨저" 회귀를 냈고 modifier-corroboration 신호로 즉시 보강.
 
 **적용 원칙**: #295(단일권위), #382, #383.
+
+---
+
+## IDIOM-7 — 컴포넌트 본문 안에 정의된 인라인 자식 컴포넌트 + CSS 진입 애니메이션 조합
+
+**결함 사례**: 2026-09-21 rev186 #23(Studio 상세캔버스 콘텐츠가 DOM엔
+있는데 화면에 전혀 안 보임). `const StepGroup = (...) => (...)`가
+부모 함수 컴포넌트(`StudioPage`) 본문 안에서 매 렌더마다 새로 정의됨
+→ React는 함수 참조가 바뀌면 다른 컴포넌트 타입으로 인식해 매번
+언마운트+재마운트 → 그 자식에 걸린 CSS 진입 애니메이션
+(`kk-step-reveal`, opacity 0→1, 0.22s)이 매번 처음부터 재시작 →
+부모가 0.22초보다 자주 리렌더링되면 애니메이션이 영원히 프레임1
+(`opacity:0`)에 고정되어 실질적으로 안 보임. 3초 넘게 대기해도
+`getComputedStyle().opacity`가 "0", `animationPlayState`가
+"running"으로 확인됨.
+
+**근본**: "DOM에 노드가 존재하는가"를 확인하는 표준 디버깅
+(`document.body.innerText.includes(...)`, `querySelector`)은 이
+결함을 절대 못 잡는다 — 노드는 항상 정상 존재하고 텍스트도 정확하다.
+오직 `getComputedStyle`로 `opacity`/`transform`/`animationPlayState`
+같은 시각적 계산값을 직접 찍어봐야 드러난다.
+
+**grep 패턴**: 부모 함수 컴포넌트 본문(`function X() { ... }` 또는
+`const X = () => { ... }`) 안에서 `const Y = (props) => (<jsx/>)` 또는
+`const Y = ({...}) => {...}` 형태로 정의된 하위 컴포넌트가 있고, 그
+컴포넌트가 렌더하는 JSX에 CSS 애니메이션 클래스(`animation:`,
+`transition:` 등)가 걸려 있으면 의심. 특히 `hidden`/`display:none`
+토글과 함께 진입 애니메이션이 같이 쓰이는 조건부 렌더링 패턴에서
+빈발.
+
+**진단 절차**: (1) `document.body.innerText.includes(...)`로 콘텐츠가
+DOM에 있는지 먼저 확인 — 있는데도 화면에 안 보이면 (2)
+`elementFromPoint(x,y)`로 그 좌표의 실제 최상위 요소를 확인 — 정상
+텍스트가 나오면 (3) 그 요소부터 조상 체인을 따라 `getComputedStyle`의
+`opacity`/`visibility`/`transform`/`animationPlayState`를 전수 스캔
+— `opacity:0`이면서 `animationPlayState:running`인 조상을 찾으면
+바로 이 패턴.
+
+**안전수정**: 인라인 자식 컴포넌트를 (a) `useCallback([안정적인
+의존성들])`로 함수 참조 고정하거나, (b) 부모 함수 바깥으로 완전히
+빼서 독립 컴포넌트로 선언하거나, (c) props로 필요한 값을 전달받는
+형태로 변경. (a)가 가장 최소 변경이지만 의존성 배열에 "매 렌더마다
+바뀌는 값"(인라인 객체·배열 리터럴, 매번 새로 생성되는 함수)이
+들어가면 무의미해지므로, 의존성이 실제로 안정적 참조(모듈
+import·useState·useMemo 결과 등)인지 먼저 확인.
+
+**적용 원칙**: #384.

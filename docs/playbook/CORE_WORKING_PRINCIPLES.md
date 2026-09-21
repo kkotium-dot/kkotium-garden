@@ -152,3 +152,30 @@ strongHeadMatch는 그 체크가 통째로 빠져있던 비대칭. #382(HEAD_NOU
 프로덕션에 남기지 않은 핵심.
 
 - 클러스터 인덱스 "시스템 승격(단건 금지)"에 원칙#383, RISKY_IDIOMS IDIOM-6 추가.
+
+---
+
+## 신규 핵심 통찰 (2026-09-21, rev186 — Studio 상세캔버스 렌더링 실종, DOM존재≠화면표시)
+
+**기둥1(출처 교차검증) 보강 — "DOM에 있다"는 "화면에 보인다"의 증거가 아니다:**
+Studio 상세캔버스 콘텐츠(DetailPageCard/SlotFunnelBoard/DetailAssemblyBoard)가
+`document.body.innerText`로는 정확히 확인됐지만 실제 스크린샷에는 완전히
+안 보였다. 표준 디버깅("DOM에 노드가 있는가")은 이 클래스의 버그를 절대 못
+잡는다 — 반드시 `elementFromPoint` → `getComputedStyle`(opacity/visibility/
+transform/animationPlayState) 순으로 시각적 계산값까지 직접 확인해야 한다.
+스크린샷과 JS 진단이 서로 다른 결과를 주면 그 불일치 자체가 원인을 찾는
+단서다(이번엔 opacity:0에 고착된 CSS 진입 애니메이션이었다).
+
+**진짜 근본원인은 레이아웃이 아니라 React 컴포넌트 정체성이었다:**
+1차로 찾은 레이아웃 높이상속 결함(layout.tsx/AtelierShell.tsx의
+minHeight:0·height:100% 누락)을 고쳤는데도 문제가 안 풀려 더 깊이
+파고든 끝에, 진짜 원인은 `StepGroup`이 부모 함수 컴포넌트 본문 안에
+정의된 인라인 화살표 함수라 매 리렌더마다 React가 다른 컴포넌트
+타입으로 인식 → 계속 언마운트+재마운트 → CSS 진입 애니메이션이 매번
+처음부터 재시작되어 영원히 `opacity:0`에 고정된 것이었다. 레이아웃
+수정과 컴포넌트 정체성 수정은 서로 독립된 결함이었다 — 하나를
+고쳤다고 전부 해결됐다고 단정하지 않고 끝까지 재검증한 것이 핵심.
+`docs/playbook/RISKY_IDIOMS.md`에 IDIOM-7(인라인 자식 컴포넌트 + CSS
+진입 애니메이션 조합)로 이 패턴 자체를 신설.
+
+- 클러스터 인덱스 "시스템 승격(단건 금지)"에 원칙#384, RISKY_IDIOMS IDIOM-7 추가.
