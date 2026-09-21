@@ -3052,3 +3052,40 @@ Promise 결과(클립보드 쓰기 성공 여부, 토스트 렌더 여부, 클�
 
 **커밋**: cdc9a71. **세션 종료 상태**: 배포 READY, tsc 0에러, git
 clean. MASTER_CHECKLIST #33 완료 갱신 완료.
+
+## rev192 — #41 AI황금키워드 실검색량 교차검증 근본수정·완전 검증 완료 (2026-09-21)
+
+**#41(Grok 실시간 트렌드 키워드) 조사**: Grok(xAI)이 이미
+naver-seo/ai-generate/route.ts 주석에 "DEPRECATED chains — xAI
+Grok(cost-capped, not in primary stack)"으로 명시적으로 폐기됐음을
+grep으로 확정(현재 AI 제공자는 Groq+Claude). Grok 자체는 의도적
+미채택이 맞았으나, 원본 요구사항의 본질(실시간 데이터 기반 트렌드
+키워드)이 다른 경로에서 미충족 상태임을 발견: 씨앗심기 "황금키워드"
+(NaverSEOWorkflow → /api/ai/seo-workflow)가 LLM(Groq/Gemini)에게
+"high search volume 키워드"를 프롬프트로 추정 생성시킬 뿐, 네이버
+실검색량 API 검증 없이 화면에 그대로 노출 — aiKeywords state가
+신호등 검증되는 셀러태그(seoTags, #37)와 완전히 분리돼 있어 원칙
+#357("데이터 근거 없이 표시하면 환각")과 충돌 소지.
+
+**근본수정**: 새 판정로직 신설 대신 #37에서 이미 실측 검증된
+/api/tags/verify(verified/weak/missing 3단계 + monthlyVolume)를
+그대로 재사용(#62/#295 단일권위) — aiKeywords가 바뀔 때마다 자동
+배치 교차검증하는 useEffect 추가, 화면에 🟢🟡🔴 신호등 실시간 표시.
+사전 안전성 확인: /api/tags/verify는 20개까지 처리 가능(aiKeywords는
+보통 7~10개), 5개씩 배치로 네이버 검색광고 API 순차호출이라 성능
+리스크 없음(tsc 0에러 확인 후 배포).
+
+**실측 검증(실제 워크플로우 End-to-End, 최초 시도 실패 후 근본원인
+재확인해 성공)**: 1차 시도에서 "황금열매 수확" 버튼을 클릭해도
+키워드가 생성 안 되는 것처럼 보였으나, 코드 확인 결과 그 버튼은
+패널 토글(setExpanded)이고 실제 실행 버튼은 패널 내부의 "AI SEO
+전체 분석 시작"(handleRun)이었음을 발견 — 카테고리(패션의류>
+여성의류>티셔츠) 선택 후 정확한 버튼으로 재시도 → 실제 LLM 호출로
+"황금 키워드 7개"(여름티셔츠·냉감티셔츠·긴팔티·여성긴팔·통기성티·
+땀흡수·가벼운티) 생성 확인 → "적용" 클릭 → 화면에 정확히
+5개🟢(여름티셔츠·냉감티셔츠·긴팔티·여성긴팔·땀흡수)+2개🟡(통기성티·
+가벼운티) 신호등이 자동으로 표시됨을 확인. LLM 추정 키워드가 실제
+검색량 데이터로 정직하게 재검증되는 시스템이 실제로 작동.
+
+**커밋**: 415f71f. **세션 종료 상태**: 배포 READY, tsc 0에러, git
+clean. MASTER_CHECKLIST #41 완료 갱신 완료.
