@@ -9,7 +9,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, AlertTriangle, XCircle, Wand2, Sparkles, TrendingDown, Loader2, BarChart3, ArrowRight } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { CheckCircle2, AlertTriangle, XCircle, Wand2, Sparkles, TrendingDown, Loader2, BarChart3, ArrowRight, Copy } from 'lucide-react';
 import {
   diagnoseProductName,
   type NameDiagnosis,
@@ -220,17 +221,41 @@ export default function ProductNameDiagnostics({ name, ctx, onApplyFix }: Props)
           <p style={{ fontSize: 12.5, color: 'var(--text-900, #111)', margin: '5px 0 8px', lineHeight: 1.5, wordBreak: 'break-word' }}>
             {polished}
           </p>
-          <button
-            type="button"
-            onClick={() => onApplyFix(polished)}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '5px 11px', borderRadius: 8, border: '1px solid #C2410C33',
-              background: '#fff', color: '#C2410C', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
-            <Wand2 size={12} /> 이 이름으로 다듬기
-          </button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => onApplyFix(polished)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '5px 11px', borderRadius: 8, border: '1px solid #C2410C33',
+                background: '#fff', color: '#C2410C', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              <Wand2 size={12} /> 이 이름으로 다듬기
+            </button>
+            {/* #33 — 다른 텍스트필드(태그·SEO훅문구)와 동일한 복사 패턴을
+                상품명 다듬기 후보에도 추가(전 상품 공통 UX 일관성). 적용은
+                입력창을 바꾸지만, 복사는 붙여넣기용(예: 다른 채널에 그대로
+                옮겨쓸 때) — 서로 다른 용도라 둘 다 필요. */}
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                  navigator.clipboard.writeText(polished).then(
+                    () => toast.success('다듬은 이름을 복사했어요'),
+                    () => toast.error('복사에 실패했습니다'),
+                  );
+                }
+              }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '5px 11px', borderRadius: 8, border: '1px solid var(--gp-pink-300, #FFB3CE)',
+                background: '#fff', color: '#F63B28', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              <Copy size={12} /> 복사
+            </button>
+          </div>
         </div>
       )}
 
