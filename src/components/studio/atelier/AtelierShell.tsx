@@ -127,7 +127,23 @@ export default function AtelierShell({ header, stepper, sidebarTabs, workspace, 
   };
 
   return (
-    <div style={{ wordBreak: "keep-all" }}>
+    <div style={{ wordBreak: "keep-all", height: "100%", minHeight: 0 }}>
+      {/* STUDIO_HEIGHT_INHERIT_FIX_2026-09-21 (#23 근본수정, part 2) — this
+          outer div is a plain block element with no explicit height, so it
+          was sizing to its CONTENT (auto), not its parent's bounded flex
+          height. The immediate child below asks for height:"100%", but a
+          block parent with height:auto has no fixed height to be 100% OF —
+          so that 100% resolved against the content size too, and the whole
+          independent-scroll row (nav/aside/section/aside) ballooned to
+          ~2352px instead of the viewport-bounded ~1248px the parent <main>
+          chain (layout.tsx, now fixed with minHeight:0 one level up) actually
+          provides. height:"100%" + minHeight:0 here closes the last link in
+          the chain — every ancestor from <main> down to here now has an
+          explicit bounded height, so this div's own height:100% (and the
+          lg:flex child's height:100% right below) finally resolve against
+          the real viewport-derived size instead of drifting to content size.
+          Confirmed via computed-style probe: the cultivation-panel aside's
+          clientHeight was 2180px (vs. 1064px viewport) before this fix. */}
       {/* ── Desktop (lg+): viewport-bounded independent-scroll row ─────────── */}
       <div
         className="hidden lg:flex lg:flex-col"
