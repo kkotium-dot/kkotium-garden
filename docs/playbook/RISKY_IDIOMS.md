@@ -127,3 +127,41 @@ null/누락 처리되어 모든 상품이 예외 없이 qty=-1(추정치 기본�
 확인했는지" 남긴다(ownerclan-adapter.ts의 FIELD_NAME_CORRECTION 패턴).
 
 **적용 원칙**: #367(GraphQL 성공응답≠필드명정확), #231(침묵실패 표시).
+
+---
+
+## IDIOM-6 — 같은 목적의 두 분기(if/else if) 중 하나만 안전장치를 가짐
+
+**결함 사례**: 2026-09-21 #45(휴대폰 스트랩→카메라 오분류). headNounWeight
+함수의 strongHeadMatch(완전일치)와 weakHeadMatch(부분일치) 두 분기는
+"슬래시 합성어 일부만 매칭됐을 때 신뢰를 낮춘다"는 같은 목적을 갖는데,
+weakHeadMatch만 `partialMatch ? 1 : HEAD_NOUN_BOOST`로 partial을 체크하고
+strongHeadMatch는 무조건 `HEAD_NOUN_BOOST`를 반환 — 그 갭을 "삼각대가방/
+스트랩"(형제 파트 중 하나만 일치)이 정확히 찔러 60점 확신 오분류.
+같은 클래스: #382(HEAD_NOUN_EXCLUDE가 STOP_NOUNS_SET과 별도 사전이던 것),
+#44(homonymUnconfirmed의 rival 조건이 "자식있는 branch"만 인정, "자식0개
+d3-as-리프"는 배제).
+
+**근본**: 판정 함수 안에 "같은 위험을 막으려는" 분기가 여러 개 있을 때,
+하나를 고치거나 새로 만들 때 형제 분기에 같은 안전장치를 넣는 걸 잊기
+쉽다 — 각 분기가 독립된 조건문이라 시각적으로 떨어져 있고, 리뷰 시
+"이 분기만" 보고 넘어가기 때문.
+
+**grep 패턴**: 판정 함수 내부의 `if (...Match) return` 또는
+`if (...Match) { ... }` 형태 분기가 2개 이상 있으면, 각 분기의 return
+문/조건이 사용하는 안전장치 변수(partialMatch, corroborated, breadth 등)
+목록을 나란히 적어 비교. 하나라도 다른 분기엔 있는데 이 분기엔 없으면
+의심.
+
+**안전 체크 표**:
+| 분기 | 안전장치 적용? | 비고 |
+|---|---|---|
+| weakHeadMatch | partialMatch 체크함 | 원래부터 있었음 |
+| strongHeadMatch | (수정 전) 없음 → (수정 후) 있음 | #45로 발견·수정 |
+
+**부작용 주의**: 안전장치를 대칭으로 맞출 때, 그 분기가 원래 정당하게
+커버하던 케이스(완전일치 slash 그룹, 예: "컵받침"=="컵받침/홀더"의 유일
+파트)까지 discount하지 않는지 즉시 재검증 — #383(rev185) 참고, 실제로
+"아로마 디퓨저" 회귀를 냈고 modifier-corroboration 신호로 즉시 보강.
+
+**적용 원칙**: #295(단일권위), #382, #383.
