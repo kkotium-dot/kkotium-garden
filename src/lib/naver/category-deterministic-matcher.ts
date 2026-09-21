@@ -293,7 +293,6 @@ function headNounWeight(
     const modifierCorroborates = modifierNouns.some((m) =>
       unmatchedSiblings.some((s) => s.includes(m) || m.includes(s)),
     );
-    console.log('[CATDBG10-hnw]', 'label=', label, 'parts=', JSON.stringify(parts), 'headNoun=', headNoun, 'modifierNouns=', JSON.stringify(modifierNouns), 'unmatchedSiblings=', JSON.stringify(unmatchedSiblings), 'modifierCorroborates=', modifierCorroborates, 'partialMatch=', partialMatch);
     if (partialMatch && !modifierCorroborates) return 1;
     return HEAD_NOUN_BOOST;
   }
@@ -385,7 +384,6 @@ export function matchDeterministicCategories(
   while (headIdx > 0 && HEAD_NOUN_EXCLUDE.has(nouns[headIdx])) headIdx--;
   const headNoun = nouns.length > 0 ? nouns[headIdx] : '';
   const modifierNouns = nouns.filter((_, i) => i !== headIdx);
-  console.log('[CATDBG9-noun]', name, 'nouns=', JSON.stringify(nouns), 'headNoun=', headNoun);
   if (process.env.DEBUG_CATEGORY_MATCH === 'true') {
     console.log('[CATDBG] headNoun=', headNoun, 'modifierNouns=', modifierNouns);
   }
