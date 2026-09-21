@@ -125,8 +125,8 @@ export default function RootLayout({
                 </div>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', flexShrink: 0 }}>✿</span>
                 <p style={{ fontSize: 12, fontWeight: 600, color: '#fff', margin: 0,
-                  direction: 'rtl', letterSpacing: '0.01em' }}>
-                  شكراً لحبيبي ياسر على مساعدتي في تطوير تطبيقي الأول
+                  letterSpacing: '0.01em' }}>
+                  I can do all things through Christ which strengtheneth me. Though thy beginning was small, yet thy latter end should greatly increase.
                 </p>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', flexShrink: 0 }}>✿</span>
               </footer>
