@@ -3130,3 +3130,41 @@ rev186(#23 Studio 상세캔버스 수정)에서 콘텐츠 div에 `flex:1`을 추
 **커밋**: f8efdd3. **세션 종료 상태**: 배포 READY, tsc 0에러, git
 clean. MASTER_CHECKLIST #52 신규 등재+완료 확정, 우선순위 목록
 최신화(완료된 #17-20/#33/#41 제거).
+
+## rev194 — #53/#54 코드실측 재확인 완료 — 정보고시·도매꾹Private API는 이미 정확히 구현돼 있었음 (2026-09-22)
+
+**#53(정보고시 productInfoProvidedNotice)**: SOURCE_DOCS_INDEX 카테고리2에서
+"미반영 의심"으로 등재했던 항목. 실제 코드 grep 결과 2026-06-02 P0로 이미
+완전 구현돼 있었음을 확정 — src/lib/naver/product-builder.ts의
+buildProductInfoProvidedNoticeEtc()가 ETC유형 8필드
+(returnCostReason/noRefundReason/qualityAssuranceStandard/
+compensationProcedure/troubleShootingContents/itemName/modelName/
+manufacturer) + customerServicePhoneNumber 전부 채움, "상품상세참조"
+표준문구 패턴 적용. buildNaverProductPayload() 1039줄에서 호출되고
+1087줄 detailAttribute에 정확히 포함되어 최종 발행 payload에 실림.
+주석에 "RESEARCH §1: 템플릿코드 참조 미지원(공식), 매 상품 인라인이
+유일"까지 명시돼 있어, Research_Report.md 원문 결론과 정확히 일치 —
+6월 당시 이미 이 리서치를 정확히 반영해 구현했던 것.
+
+**#54(도매꾹 Open/Private API)**: 마찬가지로 "미반영 의심"이었으나 코드
+실측 결과 getItemView(단건+multiple=true배치 조회)와 getItemList
+(→searchItems, dome-competitor-tracker.ts에서 실제 호출 확인) 둘 다
+이미 구현·연결돼 있었음. placeOrder()(자동발주)만 "requires Private
+API, throws until Sprint 8"로 명시적으로 보류 상태 — 이건 정확히
+Research 자료가 권고했던 우선순위("재고폴링/경쟁추적은 Open API로
+충분, Private API는 자동발주 단계에서만 필요")와 일치하는 의도된
+단계적 설계였음.
+
+**의미**: SOURCE_DOCS_INDEX 신설(rev193 말미) 직후 첫 실전 활용에서,
+"미반영으로 보였던 두 항목이 실은 이미 정확히 구현돼 있었다"는 걸
+확인 — 인덱스가 "재검색 없이 진행도 파악"이라는 목적을 실제로 달성함과
+동시에, "미반영 표시"만으로 안심하지 않고 코드 실측까지 해야 한다는
+원칙#386의 규율(4번 "이미 반영됨 표시는 반드시 실측 근거와 함께")이
+반대 방향(미반영 표시도 실측 검증 필요)으로도 유효함을 실증.
+
+MASTER_CHECKLIST #53/#54 신규 등재(둘 다 완료), SOURCE_DOCS_INDEX의
+두 행을 카테고리1(반영됨)로 재분류.
+
+**커밋**: 문서만 수정(코드 변경 없음, 배포 불필요).
+**세션 종료 상태**: 배포 READY(코드 미변경), tsc 0에러, git clean 예정.
+MASTER_CHECKLIST 52→54항목으로 확장, 완료 43→45건.

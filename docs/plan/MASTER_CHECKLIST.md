@@ -5,7 +5,7 @@
 **"완료" 표시는 반드시 검증방법(curl/DB조회/브라우저 클릭)을 명시해야
 유효하다** — 검증방법이 비어있으면 미완료로 간주한다.
 
-마지막 갱신: 2026-09-22 (rev193 완료 — #52 이스터에그 footer 화면고정 근본수정(스크린샷 신고), footer를 main 스크롤컨테이너 밖으로 이동, Studio(#23) 회귀 재검증 완료, 총 52항목)
+마지막 갱신: 2026-09-22 (rev194 완료 — SOURCE_DOCS_INDEX 활용 첫 실전: #53(정보고시)·#54(도매꾹API) 코드실측으로 "이미 정확히 구현돼있었음" 확정, 총 54항목)
 
 ## 범례
 - ✅완료 = 코드수정+배포+아래 명시된 방법으로 실측검증까지 끝남
@@ -67,6 +67,8 @@
 | 50 | Canva Connect API 연동 — 템플릿 자동 채움(썸네일/배너 배치생성) | 신규(9/17), 제미나이 제안 | ❌미착수 | Canva API 키/계정 연동 여부부터 확인 필요. 대표님 원본메모는 "캔바 사용 불가시 자체 HTML 코드 제공"을 대안으로 명시 — 우선순위상 #47(자체 HTML)이 선행 권장 | - |
 | 51 | 씨앗심기 "재고수량"이 실제 재고와 무관하게 표시·저장되던 문제(#16 조사 중 신규발견) | 신규(9/21) | ✅완료 | 대표님 지시(9/21) 정확히 구현: 옵션 있는 상품=옵션별 재고 합산, 옵션 없는 단품=크롤/공급사 폴링 재고(InventorySnapshot 최신 qty)가 진짜값. 신설 src/lib/products/effective-stock.ts(resolveEffectiveStock 단일권위 순수함수)를 엑셀생성 API(DB조회+즉석다운로드 양쪽)·상품조회 API(GET, 수정모드 hydrate용)·씨앗심기 저장payload 3곳에 연결. curl 실측: LED가습기(오너클랜,옵션없음) GET effectiveStock=9999(source=supplier_snapshot), 사무실가습기(옵션2개 999+999) GET effectiveStock=1998(source=option_sum). 엑셀다운로드 openpyxl 직접검증 — 재고수량 컬럼에 9999·1998 정확히 반영(이전엔 전부 999로 강제됐던 버그). 브라우저 스크린샷으로 씨앗심기 화면 "재고수량" 필드도 9999로 정상 hydrate 확인 | rev188 |
 | 52 | 이스터에그 하단바(핑크 라인)가 화면 최하단에 고정 안 되고 스크롤 시 콘텐츠를 가림(대표님 스크린샷 신고) | 신규(9/22) | ✅완료 | 근본원인: footer가 &lt;main&gt;(overflowY:auto 스크롤 컨테이너) 안쪽에 있었고 marginTop:'auto'로 "콘텐츠 짧으면 바닥에 붙는다" 트릭을 썼는데, rev186(#23 Studio수정)에서 콘텐츠 div에 flex:1을 준 것과 충돌 — flex:1인 형제가 남는 공간을 전부 차지해 marginTop:auto가 실제로는 항상 0px로 계산됨(computed-style 실측 확인). 근본수정: footer를 &lt;main&gt; 스크롤 콘텐츠 밖으로 완전히 빼내 그 형제(Header/main 감싸는 flex-column wrapper)의 직계자식으로 이동 — 스크롤과 무관하게 항상 화면 최하단 고정. 브라우저 실측(2건): ①씨앗심기 SEO탭에서 scrollTop=0/scrollHeight 양쪽 다 footer.bottom이 정확히 viewportHeight와 일치 확인 ②Studio(#23 회귀위험 재검증) — aside clientHeight 1079px 정상 유지(2180px 폭주 재발 없음) + 이스터에그 footer도 화면 최하단 정확히 고정 확인(단, 페이지에 동명 &lt;footer&gt; 태그가 3개 있어 querySelector 1건만 잡으면 다른 컴포넌트(ThumbnailCard의 Phase2-B-3 안내)를 오인할 수 있음 — 검증 시 전체 footer 목록에서 텍스트로 정확히 식별 필요, 향후 유사검증 시 유의) | rev193 |
+| 53 | 네이버 정보고시(productInfoProvidedNotice) — 발행실패(BAD_REQUEST) 방지 | SOURCE_DOCS_INDEX 카테고리2(9/22 발견, Research_Report.md) | ✅완료(기존 구현 재확인) | 2026-06-02 P0로 이미 완전 구현돼 있었음(코드 실측): src/lib/naver/product-builder.ts의 buildProductInfoProvidedNoticeEtc()가 ETC유형 8필드(returnCostReason/noRefundReason/qualityAssuranceStandard/compensationProcedure/troubleShootingContents/itemName/modelName/manufacturer)+customerServicePhoneNumber 전부 채움, "상품상세참조" 표준문구 패턴 적용, buildNaverProductPayload() 1039줄에서 호출→1087줄 detailAttribute에 정확히 포함되어 최종 발행 payload에 실림. 주석에 "RESEARCH §1: 템플릿코드 참조 미지원(공식), 매 상품 인라인이 유일"까지 명시 — Research_Report.md 원문 결론과 정확히 일치. SOURCE_DOCS_INDEX 카테고리1(반영됨)로 재분류 필요 | 커밋이력 2026-06-02(기존) |
+| 54 | 도매꾹 Open/Private API 활용도 — 재고폴링/경쟁사추적 vs 자동발주 | SOURCE_DOCS_INDEX 카테고리2(9/22 발견, Domeggook_Open_API_and_Private_API_Integration_Strategy.md) | ✅완료(기존 설계 재확인) | 코드 실측: domemae-adapter.ts에 getItemView(단건+multiple=true배치)·getItemList(→searchItems, dome-competitor-tracker.ts에서 실제 사용 확인) 둘 다 이미 구현·연결됨. placeOrder()(자동발주)만 "requires Private API, throws until Sprint 8"로 명시적 보류 — Research 자료가 권고한 우선순위(재고폴링=Open API로 충분, 자동발주만 Private API 필요)와 정확히 일치하는 설계였음. "미반영"이 아니라 "의도된 단계적 구현" — Private API 신청 자체는 Sprint 8(자동발주 착수 시점)까지 불필요 | 기존 구현(도입시점 불명, 재확인 완료) |
 
 ## 다음 작업 우선순위 제안(의존성 없음, 순서 무관 — 단 #46~50은 규모가 커서 별도 논의 권장)
 1. #46 Gemini OCR 상세이미지 스펙추출 확장 — 기존 OCR 인프라 위에 얹는 확장이라 상대적으로 가벼움

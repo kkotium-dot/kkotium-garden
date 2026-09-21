@@ -24,6 +24,8 @@
 | 파일명 | 핵심 요구사항 | MASTER_CHECKLIST 매핑 | 상태 |
 |---|---|---|---|
 | Research_Report.md (이미지업로드 400에러) | representativeImage에 외부URL 직접 사용 금지, 2단계 업로드(POST /product-images/upload → 반환 URL만 사용) | #25(추정, 재확인 필요) | 반영됨(추정) |
+| Research_Report.md (정보고시) | productInfoProvidedNotice 객체(34종 유형, ETC 권장) 필수 — 없으면 BAD_REQUEST | #53 | 반영됨(2026-09-22 코드 실측 재확인 — 2026-06-02 P0로 이미 완전 구현돼 있었음, buildProductInfoProvidedNoticeEtc() 8필드+customerServicePhoneNumber 전부 확인) |
+| Domeggook_Open_API_and_Private_API_Integration_Strategy | 도매꾹 Private API 신청(재고폴링/자동발주 등 고급기능), Open API getItemList 미사용 상태 | #54 | 반영됨(2026-09-22 코드 실측 재확인 — getItemView+getItemList 둘 다 구현·사용중, placeOrder만 의도적으로 Sprint8 보류) |
 | 제미나이_꽃틔움_시스템_고도화_2026-09-17.md | OCR스펙추출/반응형HTML/Aesthetic Wit카피/스킬프리셋/Canva/오너클랜/재고크론/드래그정렬 등 9섹션 | #46-50, #16, #38, #17-20 | 반영됨(2026-09-22 원문 재대조 완료) |
 | 앱_사용_시_오류_개선_정리-원본_2026-09-17.md | 위 제미나이메모의 원본 — OCR 업그레이드, 채팅형 스킬 저장("MCP 스킬을 앱 전용으로") | #46-50 | 반영됨(2026-09-22 원문 재대조 완료. "09:00/14:00 크론시각"이 제미나이의 창작이고 원본메모엔 없음을 확인 — #38 판단(21시KST 채택, #357) 재확인됨) |
 
@@ -31,8 +33,6 @@
 
 | 파일명 | 핵심 요구사항 | MASTER_CHECKLIST 매핑 | 상태 |
 |---|---|---|---|
-| Research_Report.md (정보고시) | productInfoProvidedNotice 객체(34종 유형, ETC 권장) 필수 — 없으면 BAD_REQUEST | 없음 | 재확인필요 — 실제 네이버 발행 payload에 이 객체가 있는지 코드 확인 시급 |
-| Domeggook_Open_API_and_Private_API_Integration_Strategy | 도매꾹 Private API 신청(재고폴링/자동발주 등 고급기능), Open API getItemList 미사용 상태 | 없음 | 재확인필요 |
 | 꽃틔움_가든_Dashboard_and_App_Shell_Redesign(ADHD포커스) | ADHD 대시보드 설계(단일초점/점진적공개/7-8개 이하 요소), 사이드바 16개→5그룹 재편, 장식강도 3단계 토글 | 없음 | 재확인필요 — 대규모 UX 리서치, 별도 스프린트 논의 필요 |
 | STUDIO_REFACTOR_RESEARCH_KO.md | 스테퍼 4단계, 모바일 하단탭 반응형, 에셋브라우저 그리드, 맥락형 인스펙터패널(SEO관제탑) | 없음(#21 3단분할과 일부 겹침, 재확인 필요) | 재확인필요 |
 | Kkotium_Garden_Design_System(Balancing_Retro-Pop) | 색상토큰(75/15/10), 타이포스케일, 8px간격시스템, 그림자 elevation | 없음 | 재확인필요 |
