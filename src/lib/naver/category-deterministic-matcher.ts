@@ -263,7 +263,25 @@ function headNounWeight(
   // ("컵받침" the product == "컵받침" the synonym inside "컵받침/홀더"), so
   // which OTHER synonyms in that group didn't also appear is irrelevant.
   const strongHeadMatch = parts.some((p) => p.includes(headNoun));
-  if (strongHeadMatch) return HEAD_NOUN_BOOST;
+  if (strongHeadMatch) {
+    // STRAP_SIBLING_SYNONYM_GUARD_2026-09-21 (#45): a strong match still
+    // needs the partial-coverage discount when the label is a multi-part
+    // slash group and headNoun only equals ONE sibling synonym, not the
+    // whole packed identity. "컵받침" fully equals the WHOLE single-part
+    // label "컵받침" (parts=["컵받침"], partialMatch=false there) — still
+    // gets the full boost, untouched. But "스트랩" only equals ONE of two
+    // siblings in "삼각대가방/스트랩" (partialMatch=true) — the OTHER
+    // sibling ("삼각대가방") is what actually anchors this leaf to its
+    // camera-domain identity, and headNoun matching only the generic half
+    // of the pair is not the same confidence as matching the whole thing.
+    // 실측(Vercel CATDBG9): "휴대폰 스트랩" 헤드노운=스트랩이 "삼각대가방/
+    // 스트랩"(카메라 도메인)에 무조건 HEAD_NOUN_BOOST를 받아 60점
+    // 고신뢰(lowConf=false)로 확정, modifier "휴대폰"과의 도메인 불일치를
+    // 전혀 체크 안 함. weakHeadMatch 분기는 이미 partialMatch를 체크하는데
+    // (아래) strongHeadMatch만 비대칭적으로 빠져있던 게 진짜 결함 — 새
+    // 판정 신설 없이 그 비대칭만 해소.
+    return partialMatch ? 1 : HEAD_NOUN_BOOST;
+  }
   // A WEAK head match is the reverse direction — only a FRAGMENT of headNoun
   // (shorter than it) lines up with the label, either because headNoun is an
   // untokenized blob and the fragment sits at its tail (singleNounProduct;
@@ -410,6 +428,20 @@ export function matchDeterministicCategories(
     // every synonym part of a slash-packed label ("아로마방향제/디퓨저").
     // Korean has no word-boundary requirement, so this alone catches
     // "우산꽂이"(exact), "수세미"(exact), "달항아리"→"항아리"(substring).
+    //
+    // STRAP_SIBLING_SYNONYM_GUARD_2026-09-21 (#45 조사, #295/#382 연장):
+    // leaf가 슬래시 합성어(예: "삼각대가방/스트랩")이고 headNoun이 그 중
+    // 딱 한 파트("스트랩")와만 완전일치할 때, 형제 파트("삼각대가방")가
+    // 상품명에 전혀 없으면 headNounWeight의 strongHeadMatch가 부여하는
+    // HEAD_NOUN_BOOST를 무조건 신뢰하면 안 된다. 실측(Vercel CATDBG9):
+    // "휴대폰 스트랩" → headNoun=스트랩, "삼각대가방/스트랩"(카메라
+    // 도메인)에 60점 고신뢰로 매칭, modifier "휴대폰"이 이 도메인과 전혀
+    // 무관함을 아무도 체크 안 함 — 마스터에 이런 이질적 슬래시 그룹(파트이
+    // 서로 다른 d1에 걸쳐 재등장)이 70건 확인돼 단건이 아닌 클래스 결함.
+    // leafMatch.partial(termMatchScore가 이미 계산하는 "일부 파트만
+    // 매칭" 신호)을 그대로 재사용 — 새 판정 신설 없이 headNounWeight의
+    // strongHeadMatch 분기가 partial일 때는 부스트를 주지 않도록 좁힌다
+    // (아래 headNounWeight 함수 정의에서 처리).
     const leafMatch = termMatchScore(leaf, haystacks);
     if (leafMatch.score > 0) {
       match = {
