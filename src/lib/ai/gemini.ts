@@ -150,10 +150,17 @@ export async function callGeminiVision(
 // 은 그대로 공유(#295 단일권위).
 // ---------------------------------------------------------------------------
 
-// gemini-3.1-flash-image ("Nano Banana") — 2026-09-22 공식문서 확인 기준
-// 최신 이미지 생성 모델. 텍스트 전용 GEMINI_MODEL과 별개 상수로 분리 —
-// 두 모델은 서로 다른 deprecation 주기를 가질 수 있음.
-export const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image';
+// gemini-2.5-flash-image ("Nano Banana") — 2026-09-22 실측+공식문서 교차검증
+// 기준 채택. 최초엔 'gemini-3.1-flash-image'로 구현했으나 배포 후 실제
+// 호출이 두 키 모두에서 실패(Vercel 런타임 로그로 확인) — 원인 추적 결과
+// ①정확한 모델명은 'gemini-3.1-flash-image-preview'(-preview 접미사
+// 필수, getmaxim.ai 모델표 확인)였고 ②그 preview 모델조차 Google 개발자
+// 포럼(discuss.ai.google.dev, 2026)에 "batch API에서 무한 대기, 2.5-flash
+// -image로 바꾸면 정상 작동"이라는 실증 보고가 있어 안정성이 낮음. 구버전
+// gemini-2.5-flash-image는 2027-03-15까지 지원 확정(Google Cloud 공식
+// deprecation 표기)이라 이걸 채택 — 텍스트 전용 GEMINI_MODEL과 별개
+// 상수로 분리(두 모델은 서로 다른 deprecation 주기를 가질 수 있음).
+export const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image';
 
 export interface GeneratedImage {
   /** Base64-encoded image bytes (no data: URI prefix). */
