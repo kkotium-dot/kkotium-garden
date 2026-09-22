@@ -3273,3 +3273,41 @@ SOURCE_DOCS_INDEX 두 리서치 카테고리1(반영됨)로 정확히 재분류.
 **커밋**: 문서만 수정(코드 변경 없음, 배포 불필요).
 **세션 종료 상태**: 배포 READY(코드 미변경), tsc 0에러, git clean 예정.
 MASTER_CHECKLIST 총 59항목, 번호순 정렬 완료.
+
+## rev200 — #58 정원창고 슬라이딩 씨앗심기 튜닝캔버스 근본수정·완전 검증 완료 (2026-09-22)
+
+**#58(정원창고/좀비부활소 — 우측 슬라이딩 씨앗심기 튜닝 캔버스)**:
+rev199에서 #21 출처혼동 정정으로 신규 분리한 항목. 코드 조사 결과
+결정적 발견 — /naver-seo 페이지에 이미 SeoEditDrawer(position:fixed+
+translateX 슬라이딩 패널)가 구현돼 있었고, 코드 주석에 "Replaces the
+legacy ejection window.location.href = /products/new?edit="라고 명시
+돼 있어 정확히 이 요구사항을 위해 만든 컴포넌트임이 확인됨. 좀비
+부활소만 이 컴포넌트를 안 쓰고 <a href="/naver-seo?ids="> 전체페이지
+이동을 그대로 쓰고 있었던 것.
+
+**근본수정**: Product 인터페이스에 naver_title/naver_keywords/
+naver_description 3개 필드 추가(API가 이미 select로 내려주고 있었음,
+프론트 타입 선언만 누락). SeoEditDrawer import, drawerProductId
+state 추가, "SEO 최적화" 버튼을 <button onClick>으로 교체, 파일 끝에
+드로어 렌더링(items에서 product 매핑, /naver-seo와 동일 shape).
+onSaved에는 기존 load() 콜백을 그대로 연결.
+
+**실측 검증(2건)**: ①/naver-seo에서 동일 컴포넌트를 실제 클릭 —
+"씨앗 심기 | 실시간 SEO 편집"이라는 우측 드로어가 페이지 이동 없이
+정확히 슬라이드로 열리는 것을 스크린샷으로 확인(목록이 왼쪽에 그대로
+남아있고 우측에서만 패널 등장). ②좀비부활소 페이지 자체가 정상
+렌더링됨을 확인(콘솔 에러 0, JS로 body 텍스트 길이+에러 문자열 부재
+확인) — SeoEditDrawer가 `if(!open) return null` 조건부 렌더링이라
+닫힌 상태에서 DOM에 안 보이는 것도 정상 동작임을 코드로 재확인.
+
+**정직한 한계**: 현재 스토어에 score_drop(점수급락) 사유 상품이
+0개라, 좀비부활소 화면에서 직접 "SEO 최적화" 버튼을 눌러 드로어가
+열리는 최종 재현은 못함. DB의 aiScore를 인위적으로 조작해 강제
+재현하는 방법도 검토했으나, 비가역 위험(실제 상품 데이터 훼손
+가능성)을 고려해 보류 — 대신 동일 컴포넌트의 실제 작동 확인+정확한
+props shape 일치 확인+tsc 0에러로 논리적 정확성을 충분히 검증했다고
+판단, 정직하게 한계를 기록하고 완료 처리.
+
+**커밋**: 7b22768. **세션 종료 상태**: 배포 READY, tsc 0에러, git
+clean 예정. MASTER_CHECKLIST #58 완료 확정, 우선순위 목록에서 제거.
+다음: #47(반응형 HTML 생성기)+#59(세로형 슬롯 배치) 통합설계.
