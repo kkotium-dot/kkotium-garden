@@ -21,6 +21,7 @@ import {
 } from '@/lib/naver/naver-categories-full';
 import { decodePrefill } from '@/lib/crawl/prefill-schema';
 import { resolveEffectiveStock } from '@/lib/products/effective-stock';
+import { lintHookPhrase } from '@/lib/seo/hook-phrase-guard';
 
 // -- helpers derived from full 4,993-entry dataset --
 function getDepth1List(): string[] {
@@ -617,6 +618,11 @@ function NewProductPageInner() {
     return { level: 'empty' as const, label: '인식 실패', detail: '이미지에서 정보를 찾지 못했어요 — 직접 입력해주세요' };
   }, [ocrResult]);
   const [seoHook, setSeoHook]         = useState('');
+  // HOOK_PHRASE_GUARD_2026-09-22 (SOURCE_DOCS_INDEX "상품명진단엔진+SEO훅문구
+  // 리서치" 대조 발견 — 이 필드는 정확히 네이버 이벤트필드(혜택형) 용도인데,
+  // 상품명(product-name-diagnosis.ts)과 달리 "구체적 수치 혜택만 통과, 추상
+  // 홍보문구는 거부" 검증이 없었음. 순수함수 재사용, 타이핑마다 즉시 계산.
+  const hookLint = useMemo(() => lintHookPhrase(seoHook), [seoHook]);
   // COPY-AUTO-1: true while seoHook holds the auto-generated template draft
   // (cleared once the user edits it or applies an AI hook).
   const [seoHookIsDraft, setSeoHookIsDraft] = useState(false);
@@ -4386,6 +4392,14 @@ const handleGenerate = async () => {
                     seoHook.length >= 80 ? 'text-green-600 font-medium' : 'text-gray-400'
                   }`}>{seoHook.length}/100</span>
                 </div>
+                {/* HOOK_PHRASE_GUARD_2026-09-22 — 이벤트필드 검수 반려 예방
+                    경고(구체적 수치 혜택 없음/추상 홍보문구/장식특수문자). */}
+                {seoHook.trim() && hookLint.status === 'warn' && (
+                  <p style={{ display: 'flex', alignItems: 'flex-start', gap: 5, fontSize: 11, color: '#b45309', marginTop: 5, lineHeight: 1.5 }}>
+                    <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+                    {hookLint.hint}
+                  </p>
+                )}
                 {/* COPY-AUTO-1: template-draft badge (cleared on edit / AI apply). */}
                 {seoHookIsDraft && seoHook.trim() && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
