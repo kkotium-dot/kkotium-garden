@@ -300,7 +300,12 @@ Respond ONLY with JSON:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        // GROQ_MODEL_FIX_2026-09-22 (#48 조사 중 발견) — 'llama-3.1-8b-instant'는
+        // Groq 카탈로그에서 완전히 제거됨(404 model_not_found, 실측 확인).
+        // UCE-2(2026-08-27, src/lib/ai/groq.ts)의 정본 모델명 재사용.
+        // reasoning_effort:'low' 필수(없으면 추론모델이 content를 빈 문자열로 반환).
+        model: 'openai/gpt-oss-120b',
+        reasoning_effort: 'low',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 500,
         temperature: 0.3,

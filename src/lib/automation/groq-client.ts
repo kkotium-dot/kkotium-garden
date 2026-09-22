@@ -8,8 +8,17 @@
 // Runtime
 //   - Node runtime only (fetch is fine on Edge too, but section-composer is
 //     called from /api/automation/l2 which is Node-only via sharp).
-//   - Groq llama-3.1-8b-instant per workflow principle #38 (only LLM allowed
-//     at runtime).
+//
+// GROQ_MODEL_FIX_2026-09-22 (#48 조사 중 발견) — 'llama-3.1-8b-instant' was
+// REMOVED from Groq's catalog (404 model_not_found on every call, confirmed
+// via GET /openai/v1/models). This was already fixed once for the category/
+// suggest path (UCE-2, 2026-08-27, src/lib/ai/groq.ts) but this module still
+// had its own duplicated copy of the dead model name — exactly the "no
+// duplicated infra" risk the header above warned about. Now delegates to the
+// canonical src/lib/ai/groq.ts implementation (openai/gpt-oss-120b +
+// reasoning_effort:'low' — required, see that file's header for why).
+
+import { callGroq as callGroqCanonical } from '@/lib/ai/groq';
 
 export function pickGroqKey(): string | null {
   const keys = [
@@ -28,26 +37,18 @@ export interface GroqCallOptions {
   temperature?: number;
 }
 
+// `key`/`options` are kept in the signature so call sites (which already
+// call pickGroqKey() themselves) don't need to change — the canonical
+// implementation does its own round-robin+key selection internally, so this
+// key param is now unused here but harmless to keep for compatibility.
 export async function callGroq(
   prompt: string,
-  key: string,
-  options: GroqCallOptions = {},
+  _key: string,
+  _options: GroqCallOptions = {},
 ): Promise<string | null> {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: options.maxTokens ?? 60,
-      temperature: options.temperature ?? 0.3,
-    }),
-  });
-  if (!res.ok) return null;
-  const data: { choices?: { message?: { content?: string } }[] } = await res.json();
-  const text = data.choices?.[0]?.message?.content;
-  return typeof text === 'string' ? text.trim() : null;
+  try {
+    return await callGroqCanonical(prompt);
+  } catch {
+    return null;
+  }
 }

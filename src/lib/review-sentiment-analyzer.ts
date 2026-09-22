@@ -195,7 +195,14 @@ async function callGroqWithKey(prompt: string, apiKey: string): Promise<unknown>
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
+      // GROQ_MODEL_FIX_2026-09-22 (#48 조사 중 발견) — 'llama-3.1-8b-instant'는
+      // Groq 카탈로그에서 완전히 제거됨(404 model_not_found, GET /openai/v1/models
+      // 실측 확인). UCE-2(2026-08-27, src/lib/ai/groq.ts)가 이미 동일 문제를
+      // 고친 정본 모델명 재사용. reasoning_effort:'low' 필수 — 없으면 추론모델이
+      // max_tokens를 내부 사고과정에 다 써버려 content가 빈 문자열로 반환됨
+      // (openai/gpt-oss-20b 직접 curl 테스트로 확인된 실패 모드).
+      model: 'openai/gpt-oss-120b',
+      reasoning_effort: 'low',
       messages: [
         { role: 'system', content: 'Output ONLY raw JSON. First char must be {, last must be }. No markdown, no code fences.' },
         { role: 'user', content: prompt },

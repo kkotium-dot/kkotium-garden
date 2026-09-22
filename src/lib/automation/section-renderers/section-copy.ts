@@ -18,43 +18,33 @@ import { filterDarkPatterns } from '../copy-writer';
 import type { SectionRenderContext, GroundedFacts } from './types';
 import { STRINGS, buildSpecRows } from './strings';
 import { pickLeafFromCategory } from '../category-leaf';
+import { callGroq as callGroqCanonical } from '@/lib/ai/groq';
 
 // ---------------------------------------------------------------------------
-// Groq plumbing (mirrors copy-writer.ts — kept local so this module has no
-// circular dep risk and can be unit-tested in isolation).
+// Groq plumbing — GROQ_MODEL_FIX_2026-09-22 (#48 조사 중 발견): this module's
+// local callGroq() was hardcoding 'llama-3.1-8b-instant', a model Groq
+// REMOVED from its catalog entirely (confirmed via GET /openai/v1/models —
+// 404 model_not_found on every call). Every one of this file's 20+ copy
+// generators was silently falling back to the deterministic template on
+// every single call, in every environment, since the model was retired —
+// not a parsing bug, the call never got a response body. This is exactly
+// UCE-2 (2026-08-27, src/lib/ai/groq.ts header) which already fixed the
+// SAME failure mode in the category/suggest AI path — that fix is the
+// canonical one (#295 single authority): openai/gpt-oss-120b +
+// reasoning_effort:'low' (without it, a reasoning model burns max_tokens on
+// invisible chain-of-thought and returns empty content — confirmed via
+// direct curl test against openai/gpt-oss-20b: finish_reason:"length" with
+// content:"" ). Re-pointing this module's callGroq() to the canonical
+// implementation fixes all 20+ generators in one place instead of patching
+// each one — this local wrapper is kept ONLY so every call site below
+// (callGroq(prompt, maxTokens)) doesn't need to change; maxTokens is now a
+// soft hint (canonical callGroq always requests 1500, sections already trim
+// with .slice() afterward so a larger budget is harmless).
 // ---------------------------------------------------------------------------
 
-function pickGroqKey(): string | null {
-  const keys = [
-    process.env.GROQ_API_KEY,
-    process.env.GROQ_API_KEY_2,
-    process.env.GROQ_API_KEY_3,
-  ].filter((k): k is string => typeof k === 'string' && k.length > 0);
-  if (keys.length === 0) return null;
-  return keys[Math.floor(Math.random() * keys.length)];
-}
-
-async function callGroq(prompt: string, maxTokens: number): Promise<string | null> {
-  const key = pickGroqKey();
-  if (!key) return null;
+async function callGroq(prompt: string, _maxTokens: number): Promise<string | null> {
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: maxTokens,
-        temperature: 0.3,
-      }),
-    });
-    if (!res.ok) return null;
-    const data: { choices?: { message?: { content?: string } }[] } = await res.json();
-    const text = data.choices?.[0]?.message?.content;
-    return typeof text === 'string' ? text.trim() : null;
+    return await callGroqCanonical(prompt);
   } catch {
     return null;
   }
