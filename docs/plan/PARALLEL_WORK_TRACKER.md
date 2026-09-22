@@ -3416,3 +3416,43 @@ MASTER_CHECKLIST #48 완료 확정.
 실사용 화면에서 별도 브라우저 검증 권장 — 이번 세션은 #48(Aesthetic
 Wit) 경로만 실측했고 나머지 4개는 코드 수정+tsc만 확인, 각 화면에서의
 실제 브라우저 검증은 아직 없음.
+
+## rev204 — rev203 후속 3종 브라우저검증 완료, #60(네이버 쇼핑검색 미등록) 신규발견 (2026-09-22)
+
+**rev203에서 정정한 5개 파일 중 아직 실사용 검증이 안 남아있던 3개
+기능을 실제 프로덕션 데이터로 curl 검증**:
+
+**①리뷰 감성분석(/api/review-analysis)**: 실제 리뷰 3개(긍정2+부정1
+혼합)를 입력 — 배송/포장/품질을 정확히 강점으로, "얇음"/"가격대비
+아쉬움"을 정확히 약점으로 분류, aiSummary도 자연스러운 한국어 요약
+생성 확인. provider 필드가 'groq-llama3'라는 구식 라벨을 그대로
+반환하고 있어(모델은 이미 openai/gpt-oss-120b) 'groq'로 정정(프론트
+조건분기 미사용 확인 후 안전하게 교체).
+
+**②업로드 준비도 자동채움(/api/upload-readiness/auto-fill)**: 실제
+프로덕션 상품ID로 POST(DB불변경, 미리보기전용) — 상품명 개선안, 태그
+12개(시원한/여름필수/가벼운/데일리 등) 실제 AI생성 확인, confidence:
+high, autofillableSucceeded 전부 성공. 동일하게 provider 라벨 정정.
+
+**③경쟁사 인사이트(/api/naver/market-analysis) — 정직한 신규발견**:
+curl 실측 결과 rev203과 무관한 별개 결함 발견 — 네이버 쇼핑검색
+Open API 자체가 "404 SE05: 존재하지 않는 검색 api"를 반환, Groq AI
+로직(generateMarketInsight)에 도달하기도 전에 상위 단계에서 막힘.
+Vercel 환경변수의 NAVER_DATALAB_CLIENT_ID/SECRET는 데이터랩 API
+전용으로 발급된 자격증명으로 추정되고, 쇼핑검색 Open API는 네이버
+개발자센터에서 별도로 등록해야 하는 다른 권한 — SE05 메시지가
+정확히 이 미등록 상태를 가리킴. 로컬 egress 정책으로 직접 검증은
+막혔으나 Vercel 배포서버 자체에서 404가 재현돼 원인 확정. **코드
+결함이 아니라 네이버 개발자센터 설정 확인이 필요한 외부요인** —
+MASTER_CHECKLIST #60으로 정직하게 신규등재, 대표님께 네이버
+개발자센터에서 해당 앱에 "검색" API가 등록돼 있는지 직접 확인
+요청 필요(코드로 해결 불가능한 영역).
+
+**커밋**: b307839. **세션 종료 상태**: 배포 READY, tsc 0에러, git
+clean 예정. MASTER_CHECKLIST #60 신규등재(총 60항목), rev203의 5개
+수정파일 전부(section-copy/groq-client/review-sentiment/
+shopping-search/upload-readiness) 실사용 경로 검증 완결.
+
+**다음 세션**: #60은 대표님의 네이버 개발자센터 확인이 선행돼야
+하는 항목이라 코드 작업 우선순위에서 대기. #57(naver_certification
+UI 필요성) 또는 #40(옵션별 대체발주)으로 이어서 진행 권장.
