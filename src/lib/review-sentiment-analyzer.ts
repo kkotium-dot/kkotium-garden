@@ -333,7 +333,7 @@ export async function analyzeReviewSentiment(
   if (hasGroq) {
     try {
       const raw = await callGroq(prompt);
-      return normalizeResult(raw, cleanReviews.length, 'groq-llama3');
+      return normalizeResult(raw, cleanReviews.length, 'groq');
     } catch (e) {
       console.warn('[review-analyzer] All Groq keys failed, trying Gemini:', e instanceof Error ? e.message.slice(0, 80) : e);
     }

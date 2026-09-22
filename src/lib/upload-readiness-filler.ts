@@ -145,7 +145,7 @@ async function callGroq(prompt: string): Promise<{ raw: unknown; provider: strin
   for (const key of keys) {
     try {
       const raw = await callGroqWithKey(prompt, key);
-      return { raw, provider: 'groq-llama3' };
+      return { raw, provider: 'groq' };
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
       // Retry on rate/quota, auth errors, AND JSON parse failures
