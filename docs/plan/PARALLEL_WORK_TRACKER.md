@@ -3360,3 +3360,59 @@ emotional→informational 전환, 섹션 사이 구분선까지 전부 정상 �
 clean 예정. MASTER_CHECKLIST #47 갱신 완료(🔶부분, #59 통합 언급).
 **다음 세션 이어질 작업**: 스펙 테이블 데이터 모델 확장 설계, 또는
 #48(Aesthetic Wit 카피 3단계)로 전환.
+
+## rev203 — #48 완료, 전상품공통 Groq 모델결함 발견·근본수정(5파일) (2026-09-22)
+
+**#48(Aesthetic Wit) 최종 완료**: rev202에서 만든 generateAttitudeCopy()
++/api/ai/aesthetic-wit를 실제 curl로 검증하던 중, Hook/Attitude 둘 다
+매번 AI가 아니라 폴백 템플릿만 반환되는 걸 발견 — 최초엔 신규 코드
+자체의 버그로 의심했으나, 로컬에서 실제 Groq API를 직접 curl로 호출해
+근본원인을 확정: **llama-3.1-8b-instant 모델이 Groq 카탈로그에서
+완전히 제거됨**(GET /openai/v1/models 실측, 목록에 없음 — 404
+model_not_found를 실제 응답으로 확인).
+
+**전 상품 공통 결함으로 범위 확장**: grep 전수조사로 이 죽은 모델명을
+쓰는 파일을 찾은 결과 총 9개 — 그중 5개(section-copy.ts,
+groq-client.ts, review-sentiment-analyzer.ts, shopping-search.ts,
+upload-readiness-filler.ts)가 실제로 model: 'llama-3.1-8b-instant'를
+하드코딩하고 있었고, 나머지 4개(seo-workflow.ts, keywords.ts,
+sourcing-recommender.ts, ai/groq.ts)는 이미 UCE-2(2026-08-27)가 정정한
+정본 callGroq()를 쓰고 있어 무영향이었음(주석에만 옛 이름 잔재).
+
+즉 이건 section-copy.ts 하나의 버그가 아니라, "정본(#295 단일권위)이
+이미 있는데 5곳이 각자 로컬로 죽은 API 호출을 복제해 조용히 실패하고
+있던" 시스템 전체 결함 — Attitude/Hook/Detail 뿐 아니라 리뷰 감성분석
+(review-sentiment-analyzer), 스마트스토어 검색 AI인사이트
+(shopping-search), 업로드 준비도 자동채움(upload-readiness-filler)
+전부가 이 영향을 받고 있었을 가능성이 확인됨.
+
+**근본수정**: section-copy.ts와 groq-client.ts는 로컬 callGroq()가
+정본(src/lib/ai/groq.ts, openai/gpt-oss-120b + reasoning_effort:'low')
+을 delegate하도록 변경(20개+ 카피함수, prompt-translator.ts 등 호출부
+전혀 안 건드림). 나머지 3개(unknown 반환 구조라 delegate보다 인라인이
+안전)는 모델명+reasoning_effort만 직접 교체.
+
+**reasoning_effort 필수성 확인**: openai/gpt-oss-20b를 curl로 직접
+테스트해 reasoning_effort 없이 호출하면 추론모델이 max_tokens를 내부
+사고과정(reasoning 필드)에 다 써버려 content가 빈 문자열로 반환되는
+실패모드를 직접 재현·확인(finish_reason:"length"). 이게 UCE-2가 이미
+경고해둔 정확한 이유였음을 재확인.
+
+**최종 검증**: 정본 방식(reasoning_effort:'low')으로 curl 재현 —
+content에 정상 JSON, finish_reason:"stop"(중간절단 없음) 확인. 배포
+후 실제 /api/ai/aesthetic-wit 재호출 — Hook("여름에 땀에 눅눅해
+불편하지 않나요?"), Detail(폴리에스터85%·스판15% 등 구체스펙),
+Attitude("시원함을 담은 여름 티셔츠/지금 선택해 보세요") 전부 실제
+AI생성 결과로 확인(이전 폴백 문구와 완전히 다름). tsc 0에러.
+
+**커밋**: d7eecb3(rev202 코드) → 4da5302(rev203 전상품공통 수정).
+**세션 종료 상태**: 배포 READY, tsc 0에러, git clean 예정.
+MASTER_CHECKLIST #48 완료 확정.
+
+**다음 세션 권고 후속조사**: review-sentiment-analyzer(리뷰 감성분석)
+와 shopping-search(경쟁사 인사이트), upload-readiness-filler(업로드
+준비도 자동채움)가 이번 수정으로 실제로 얼마나 오래 폴백만 반환하고
+있었는지, 그리고 그 폴백 품질이 사용자에게 눈에 띄는 문제를 일으켰는지
+실사용 화면에서 별도 브라우저 검증 권장 — 이번 세션은 #48(Aesthetic
+Wit) 경로만 실측했고 나머지 4개는 코드 수정+tsc만 확인, 각 화면에서의
+실제 브라우저 검증은 아직 없음.
