@@ -30,7 +30,7 @@
 ## WHAT — 스택 · 외부 연동
 
 - Frontend: Next.js 14 (App Router) + TypeScript + Tailwind CSS · ORM: Prisma · DB: Supabase PostgreSQL(`doxfizicftgtqktmtftf`)
-- AI: Gemini(3키 round-robin, 주력) → Groq llama-3.1-8b-instant(무료 fallback)
+- AI: Groq(openai/gpt-oss-120b, reasoning_effort:'low' 필수 — rev203/2026-09-22 llama-3.1-8b-instant 폐기로 전면교체, 텍스트생성 주력) / Gemini(2키 round-robin, OCR·Vision 전용 — 이미지 생성은 rev208~209에서 시도했으나 quota실패로 미해결, 원칙#390 참조) — 상세: docs/plan/PRINCIPLES_LEARNED.md #388/#390
 - 배포: Vercel production = `https://kkotium-garden.vercel.app`(source of truth, #28)
 - 알림: Discord 5채널 webhook + Solapi 알림톡
 - 외부 API: 도매꾹 OpenAPI · 네이버 Commerce API · 네이버 검색광고 API · Supabase MCP(project id로 직접 SQL DDL)
