@@ -18,6 +18,15 @@ export interface ExtractedAttributes {
   size?: string;
   capacity?: string;
   origin?: string;
+  // GEMINI_OCR_TEXTURE_CERT_2026-09-22 (#46 근본수정, SOURCE_DOCS_INDEX
+  // "상품명진단엔진" 병렬로 확인된 대표님/제미나이 원본요구 — "소재/텍스처/
+  // 실측/KS규격"). material/size/capacity/origin은 이미 있었고
+  // texture/certification 2개만 빠져있던 것을 정확히 채움(#295 단일권위 —
+  // 새 개념을 만들지 않고, certification은 product-builder.ts가 이미 쓰는
+  // naver_certification과 같은 의미의 값이 되도록 프롬프트를 맞춤 — 씨앗심기
+  // 화면이 이 값을 그 필드로 바로 옮겨 담을 수 있게).
+  texture?: string;
+  certification?: string;
   features: string[];
   keywords: string[];
 }
@@ -72,13 +81,15 @@ function normalizeAttributes(raw: unknown): ExtractedAttributes {
     size: str(r.size),
     capacity: str(r.capacity),
     origin: str(r.origin),
+    texture: str(r.texture),
+    certification: str(r.certification),
     features: strArr(r.features),
     keywords: strArr(r.keywords),
   };
 }
 
 const SYSTEM_PROMPT =
-  '당신은 이커머스 상세이미지 OCR 전문가입니다. 이미지 속 텍스트(재질/크기/용량/원산지/스펙표 등)를 읽어 ' +
+  '당신은 이커머스 상세이미지 OCR 전문가입니다. 이미지 속 텍스트(재질/크기/용량/원산지/질감/인증번호/스펙표 등)를 읽어 ' +
   '속성을 JSON으로만 출력하세요. 첫 글자는 { 마지막 글자는 } 여야 하고, 설명·마크다운은 절대 포함하지 마세요. ' +
   '이미지에서 읽을 수 없는 필드는 생략하세요(추측 금지 — 확신 없으면 빈 값).';
 
@@ -86,6 +97,8 @@ const USER_PROMPT =
   '이 상품 상세이미지에서 다음 JSON 스키마로 속성을 추출하세요:\n' +
   '{"material": "재질(예: 스테인리스, 원목)", "size": "크기/사이즈", "capacity": "용량", ' +
   '"origin": "원산지 텍스트(이미지에 표기된 그대로, 예: 중국/China/원산지:국산)", ' +
+  '"texture": "표면 질감·결(예: 마블 무늬, 우드그레인, 매트, 헤어라인)", ' +
+  '"certification": "안전확인/KC/KS 등 인증·신고번호(이미지에 표기된 그대로, 예: 제2024-000123호)", ' +
   '"features": ["이미지에서 읽은 주요 스펙/특징 텍스트, 최대 6개"], ' +
   '"keywords": ["상품 검색에 쓸만한 키워드, 최대 8개"]}\n' +
   '이미지에 없는 필드는 키 자체를 생략하세요.';

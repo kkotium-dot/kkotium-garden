@@ -601,6 +601,7 @@ function NewProductPageInner() {
   const [ocrError, setOcrError] = useState('');
   const [ocrResult, setOcrResult] = useState<{
     material?: string; size?: string; capacity?: string; origin?: string;
+    texture?: string; certification?: string;
     features: string[]; keywords: string[];
   } | null>(null);
   // OCR_SCAN_SIGNAL_2026-09-16 (v.02 요청: "이미지 스캔 진단 신호등") —
@@ -612,6 +613,9 @@ function NewProductPageInner() {
     const filledCount =
       (ocrResult.material ? 1 : 0) + (ocrResult.size ? 1 : 0) +
       (ocrResult.capacity ? 1 : 0) + (ocrResult.origin ? 1 : 0) +
+      // #46 근본수정 — texture/certification도 다른 필드와 동일하게 카운트에
+      // 반영(전 상품 공통, 새 판정기준 아님 — 기존 filledCount 로직 그대로 확장).
+      (ocrResult.texture ? 1 : 0) + (ocrResult.certification ? 1 : 0) +
       (ocrResult.features.length > 0 ? 1 : 0) + (ocrResult.keywords.length > 0 ? 1 : 0);
     if (filledCount >= 3) return { level: 'good' as const, label: '스캔 완료', detail: `${filledCount}개 항목을 찾았어요` };
     if (filledCount >= 1) return { level: 'partial' as const, label: '부분 인식', detail: `${filledCount}개 항목만 찾았어요 — 나머지는 직접 입력해주세요` };
@@ -4132,11 +4136,40 @@ const handleGenerate = async () => {
                         <span>{ocrScanSignal.label} — {ocrScanSignal.detail}</span>
                       </div>
                     )}
-                    {(ocrResult.material || ocrResult.size || ocrResult.capacity) && (
+                    {(ocrResult.material || ocrResult.size || ocrResult.capacity || ocrResult.texture) && (
                       <div style={{ fontSize: 12, color: '#444', background: '#F8FAFC', border: '1px solid #E5E9F0', borderRadius: 10, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {ocrResult.material && <span>재질: <b>{ocrResult.material}</b></span>}
                         {ocrResult.size && <span>크기: <b>{ocrResult.size}</b></span>}
                         {ocrResult.capacity && <span>용량: <b>{ocrResult.capacity}</b></span>}
+                        {/* #46 근본수정 — texture(질감/결) 필드를 나머지 실측
+                            정보와 같은 박스에 노출. 별도 개념 아님, 동일한
+                            "이미지에서 읽은 스펙"의 한 종류일 뿐(#295). */}
+                        {ocrResult.texture && <span>질감: <b>{ocrResult.texture}</b></span>}
+                      </div>
+                    )}
+
+                    {/* #46 근본수정 — certification(안전확인/KC/KS 신고번호).
+                        저장할 전용 입력 필드가 씨앗심기 화면에 아직 없어(별도
+                        갭, #57로 분리 기록) "적용" 버튼 대신 복사 버튼만
+                        제공 — 정확한 신고번호를 상품정보고시(#53)나 상세페이지
+                        문구에 셀러가 직접 붙여넣을 수 있게. */}
+                    {ocrResult.certification && (
+                      <div style={{ fontSize: 12, color: '#444', background: '#F8FAFC', border: '1px solid #E5E9F0', borderRadius: 10, padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <span>인증·신고번호: <b>{ocrResult.certification}</b></span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                              navigator.clipboard.writeText(ocrResult.certification!).then(
+                                () => toast.success('인증번호를 복사했어요'),
+                                () => toast.error('복사에 실패했습니다'),
+                              );
+                            }
+                          }}
+                          style={{ fontSize: 11, fontWeight: 700, color: '#F63B28', background: '#fff', border: '1px solid var(--gp-pink-300, #FFB3CE)', borderRadius: 8, padding: '3px 9px', cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          복사
+                        </button>
                       </div>
                     )}
 
@@ -4177,7 +4210,7 @@ const handleGenerate = async () => {
                       </div>
                     )}
 
-                    {!ocrResult.material && !ocrResult.size && !ocrResult.capacity && !ocrResult.origin && ocrResult.features.length === 0 && ocrResult.keywords.length === 0 && (
+                    {!ocrResult.material && !ocrResult.size && !ocrResult.capacity && !ocrResult.origin && !ocrResult.texture && !ocrResult.certification && ocrResult.features.length === 0 && ocrResult.keywords.length === 0 && (
                       <p style={{ fontSize: 12, color: '#888' }}>이미지에서 정보를 못 읽었어요. 직접 입력해주세요.</p>
                     )}
                   </div>
