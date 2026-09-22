@@ -1,112 +1,129 @@
 # 꽃단장 작업실(Studio) 2.0 — 인앱 채팅+이미지생성+스킬프리셋 통합설계
 
-작성: 2026-09-22 (설계 확정 진행 중, 구현 착수 전)
-관련: #47/#48/#49/#59, 대표님 업로드 "꽃단장_작업실_재건축_2026-09-22.md"
-(제미나이 작성), 대표님 직접 지시(채팅형 워크플로우, Gemini 2키, Adobe
-Firefly 폴백)
+작성: 2026-09-22, 최종 확정: 2026-09-23 (구현 착수 준비 완료)
+관련: #47/#48/#49/#59, 대표님 업로드 md 2건(9/22 재건축안, 9/23 통합
+마스터플랜), 대표님 직접 지시(채팅형 워크플로우, Gemini 2키+@Canva+
+Adobe Firefly 폴백, 스킬 프리셋)
 
 ## 0. 경위 — 이 설계에 도달하기까지 정정된 오판들 (재발 방지 기록)
 
 1. **오판1**: #47/#59를 "완전 자동 생성 버튼 하나"로 설계하려 했음 →
    대표님이 "드래그 구현 방식은 유지하며, **채팅형 반복 워크플로우**가
-   진짜 요구"라고 정정. 원본 md 파일(제미나이 리서치)을 재확인해서야
-   "Aesthetic Wit 3단계", "채팅형 이미지 생성+픽스+팔레트 저장" 요구가
-   원래부터 있었음을 확인 — 원칙#387(원본 재대조)의 재발 사례.
-2. **오판2**: "제미나이의 캔바"를 내 도구함의 Canva MCP(프레젠테이션
-   전용) 또는 Canva Connect API(Enterprise 전용 autofill)로 추정 →
-   실제로는 "Canva Connected App for Gemini"(Gemini 앱 UI의 @Canva
-   기능, 2026-05-19 출시)를 가리켰음. 원칙#389로 재발방지 기록.
+   진짜 요구"라고 정정.
+2. **오판2**: "제미나이의 캔바"를 Canva MCP(프레젠테이션 전용) 또는
+   Canva Connect API(Enterprise 전용 autofill)로 추정 → 실제로는
+   "Canva Connected App for Gemini"(Gemini 앱 UI의 @Canva 기능,
+   2026-05-19 출시)를 가리켰음. 원칙#389로 재발방지 기록.
 3. **확정된 사실**: Gemini API 공식 리소스 목록에 Canva 관련 항목
    없음 — @Canva는 Gemini 앱 UI 전용, 우리 앱 서버가 Gemini REST
    API를 호출하는 방식으로는 재현 불가능.
+4. **오판3**: 아카이브 정책(원칙#37/#38, "Gemini 프로덕션 직접호출
+   금지")을 발견하고 "지금도 유효한 절대규칙"으로 곧바로 적용해
+   롤백 제안 → 대표님이 "5개월 전 상황(당시 실제 키폐기 사고) 근거,
+   그 사이 앱이 개선됐으니 현재상태 재실측이 먼저"라고 정정. 원칙
+   #390으로 재발방지 기록. 실제 재실측 결과 Gemini Vision(OCR)은
+   정상 작동 중, 이미지생성만 429(quota)로 별개 문제였음을 확정.
+5. **확정된 사실(2026-09-23, 스크린샷+공식문서 교차검증)**: 이미지
+   생성 429/503은 "무료 티어 이미지생성 quota 자체가 매우 낮음"이
+   근본원인. Gemini API 공식 billing 문서(ai.google.dev/gemini-api/
+   docs/billing, rate-limits, increase_quota 3개 교차검증) — 결제
+   계정을 "연결만" 해도(청구 없이, 최소 $10 선불 충전) Tier 1로
+   전환돼 rate limit이 대폭 상향됨. 단 "My Billing Account" 이름이
+   생긴 것만으로는 Tier 1이 아니고, 실제 $10 이상 선불충전이 필요.
+6. **확정된 사실(2026-09-23)**: 2026년 6월부터 Google이 새 표준
+   `Interactions API`를 GA로 출시, 기존 `generateContent`는 "레거시"
+   지위지만 계속 지원됨. `previous_interaction_id`로 서버사이드
+   대화상태 관리+효율적 context caching이 가능 — 대표님이 원하시는
+   "채팅형 반복 편집"과 "팔레트 재사용 시 캐싱"에 정확히 부합하는
+   최신 인프라.
 
-## 1. 최종 확정 설계 — 정확히 무엇을 만드는가
+## 1. 대표님이 정확히 원하시는 최종 그림 (2026-09-23 확정)
 
-### 1-A. 인앱 채팅 UI (신규, 최우선)
-Studio(또는 씨앗심기) 안에 진짜 대화창을 넣어, 그 안에서 Gemini와
-직접 대화하며 이미지를 생성·수정한다("자연광 카페 대리석 배경으로
-바꿔줘" 같은 자연어 피드백).
+1. 꽃단장 작업실 안에 **Gemini 채팅**이 연결돼, 그 안에서 대화로
+   Gemini의 이미지 생성(create)을 반복 호출해 썸네일을 만든다.
+2. 만들어진 썸네일들을 재료로 **네이버 스토어용 상세페이지 HTML**을
+   만든다 — 경우에 따라 Gemini의 @Canva 기능도 상황에 맞게 활용
+   (단, @Canva 자체 자동화는 API로 불가능함이 확정됐으므로, 실제로는
+   "Canva에서 열어 편집" 핸드오프로 구현).
+3. Gemini 이미지 생성이 막히면(quota 등) **Adobe Firefly로 자동
+   전환**해 계속 작업 가능하게 한다.
+4. 좋은 결과(프롬프트, 카피셋)는 **팔레트로 저장**해 다른 상품
+   작업 시 재사용한다(선택 시 Context Caching으로 톤앤매너 일관성
+   +비용 절감).
 
-- 프론트: 채팅 메시지 리스트 + 입력창 + 이미지 프리뷰 그리드(생성된
-  후보 여러 장을 한 화면에 비교)
+## 2. 최종 확정 설계 — 정확히 무엇을 만드는가
+
+### 2-A. 인앱 채팅 UI (신규, 최우선)
+꽃단장 작업실의 기존 "배양실" 탭(이미 존재, AtelierShell.tsx) **안에**
+채팅 인터페이스를 얹는다 — 화면을 새로 만들지 않고 기존 3-Domain
+구조(좌20%·중55%·우25%)를 그대로 재사용(#295 단일권위).
+
+- 중앙(55%, "개화 작업대")에 2x2 이미지 후보 그리드 + 채팅 메시지
+  리스트를 결합 배치.
+- 우측 "관제탑"(25%, 이미 존재)에 네이버 SEO 신호등을 그대로 유지.
 - 백엔드: `/api/ai/studio-chat`(신규) — 대화 히스토리를 유지하며
-  Gemini에 프롬프트+이전 이미지(멀티턴 이미지 편집)를 전달
+  Gemini에 프롬프트+이전 이미지(멀티턴 이미지 편집)를 전달.
 
-### 1-B. Gemini 2키 라운드로빈 이미지 생성 (신규, 1-A의 전제)
-- 현재 `src/lib/ai/gemini.ts`는 OCR/Vision(이미지를 "읽기")만 지원 —
-  이미지를 "생성"하는 기능이 없음. 신규 함수 필요(`generateImage` 또는
-  유사).
-- 이미 존재하는 `hasGeminiKey()`/`GEMINI_API_KEY`+`GEMINI_API_KEY_2`
-  라운드로빈 인프라(`callGeminiRoundRobin`)를 그대로 재사용 — #295
-  단일권위, 새 키 관리 로직 중복 금지.
-- 429 발생 시 자동으로 두 번째 키로 failover(기존 `callGeminiRoundRobin`
-  패턴 확인 필요, section-copy.ts의 Groq 패턴과 유사할 가능성 높음 —
-  구현 전 재확인).
+### 2-B. Gemini 이미지 생성 — quota 확보가 최우선 선행 과제
+- 코드는 이미 완성(rev208~211) — `generateGeminiImage()`, 2키 라운드
+  로빈, 정확한 상태코드 로깅까지 구현됨.
+- **막힌 지점**: 무료 티어 quota가 이미지 생성에 극도로 낮게 책정됨
+  (스크린샷 실증: 4회 요청 중 3회가 429/503). 공식문서 확인 결과
+  결제계정을 "연결"(청구 아님, 최소 $10 선불충전)하면 Tier 1로 전환
+  돼 rate limit 대폭 상향.
+- **대표님 확인 대기 중**: $10 선불충전 진행 여부.
+- 충전 후: 코드 변경 없이 즉시 재검증(이미 구현된 API를 그대로
+  재호출)으로 완료 확정 가능.
 
-### 1-C. Adobe Firefly 폴백 (신규, 정밀가공용)
-- 이미 Adobe MCP가 연결돼 있음(도구 목록에 `mcp__Adobe_for_creativity__*`
-  다수 확인됨 — image_remove_background, image_generative_expand 등).
-- Gemini 토큰 한도 초과 또는 누끼/배경확장처럼 Gemini가 약한 작업일
-  때 Adobe Firefly/Express로 자동 라우팅.
-- **주의**: 이건 Claude 세션의 MCP 도구이지, 우리 앱(Next.js 서버)이
-  직접 호출하는 API가 아님 — 프로덕션 앱에서 Adobe Firefly를 쓰려면
-  별도로 Adobe Firefly Services REST API 키가 필요한지 확인 필요
-  (project_knowledge의 Research_Report.md에 "경로 B는 OAuth
-  Server-to-Server + Adobe enterprise 계약 필요, 1인 사업자는 접근
-  어려움"이라는 기존 리서치 결론이 있었음 — 이미 답이 나와있을 수
-  있으니 구현 전 재확인).
+### 2-C. Adobe Firefly 폴백 (신규, quota 확보와 병행 가능)
+- 이미 승인된 코드 존재: `src/lib/automation/firefly-generate.ts`
+  (2026-06-04, api 모드 — #38의 명시적 예외로 이미 문서화됨).
+- Gemini가 429 등으로 실패하면 자동으로 이 경로로 전환.
+- Adobe MCP(Claude 세션 도구)와는 별개 — 프로덕션 앱이 직접 호출
+  하려면 Adobe Firefly Services의 정식 API 키(엔터프라이즈 계약)가
+  필요한지 재확인 필요(project_knowledge Research_Report.md에 기존
+  리서치 결론 있음, 착수 전 재확인).
 
-### 1-D. Canva 연동 — 현실화된 범위
-- Gemini API의 @Canva 자동 호출은 불가능(위 0번 경위 참조).
+### 2-D. Canva 핸드오프 — 현실화된 범위
+- @Canva 자동 호출은 Gemini 앱 UI 전용이라 API로 불가능(확정 사실).
 - 대신: 채팅으로 확정한 이미지를 **"Canva에서 편집하기"** 버튼으로
-  Canva 웹에 넘기는 수동 핸드오프 방식(이미지 다운로드 또는 Canva
-  업로드 딥링크). 이건 Canva MCP의 `search-designs`/`create-design-
-  from-brand-template` 등 "presentation" 전용 도구와도 다른, 훨씬
-  단순한 "이미지를 Canva로 넘기는" 최소 연동.
+  Canva 웹에 넘기는 수동 핸드오프(이미지 다운로드 또는 업로드 딥링크).
 
-### 1-E. 스킬 프리셋 DB (신규, 마지막 단계)
-- `prisma/schema.prisma`에 새 테이블 필요(0건 확인, 완전 신규):
-  ```prisma
-  model SkillPreset {
-    id          String   @id @default(cuid())
-    userId      String
-    name        String   // "성수동 앤틱 옥반지 감성 스킬"
-    promptStructure String @db.Text  // 확정된 이미지 생성 프롬프트
-    copyToneHook     String? @db.Text // Aesthetic Wit Hook 톤
-    copyToneDetail   String? @db.Text
-    copyToneAttitude String? @db.Text
-    referenceImageUrl String?
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
-  }
-  ```
-  (정확한 필드는 1-A/1-B 구현 후, 실제로 "확정본"이 어떤 데이터
-  구조인지 확정된 뒤 재설계 — 지금은 최소 스케치)
-- UI: 채팅에서 "이 스타일 저장" 버튼 → 프리셋 칩으로 저장 → 다음
-  상품 작업 시 칩 클릭으로 프롬프트 구조 재사용.
+### 2-E. 스킬 프리셋 DB (신규, 마지막 단계)
+- `prisma/schema.prisma`에 `SkillPreset` 테이블 신설(정확한 필드는
+  2-A/2-B 구현 후 실제 데이터 구조가 확정된 뒤 설계).
+- 저장: 프롬프트 구조, 카피 톤(Hook/Detail/Attitude), 레퍼런스 이미지
+  URL, HTML 레이아웃 템플릿.
+- 재사용 시 Gemini `Interactions API`의 `previous_interaction_id` 기반
+  context caching으로 톤앤매너 일관성 확보(md파일 제안, 2026-06
+  공식 GA된 최신 인프라로 실제 구현 가능 확인).
 
-## 2. 정확한 구현 순서(의존성)
+## 3. 정확한 착수 순서(의존성)
 
-1. **1-B(Gemini 이미지생성 API)** — 모든 것의 전제, 가장 먼저.
-   `callGeminiRoundRobin` 재사용 여부부터 확인.
-2. **1-A(채팅 UI)** — 1-B를 감싸는 대화형 껍데기.
-3. **1-C(Adobe Firefly 폴백)** — 선택적 고도화, 프로덕션 API 키
-   확보 가능 여부 확인 후 착수(project_knowledge 리서치 재확인 필요).
-4. **1-D(Canva 핸드오프)** — 가벼운 추가, 1-A 완료 후 아무때나.
-5. **1-E(스킬 프리셋 DB)** — 1-A/1-B의 산출물 구조가 확정된 뒤 마지막.
+1. **[대표님 결정 대기] $10 선불충전 여부** — 이게 정해져야 2-B가
+   즉시 완료되는지, 아니면 2-C(Adobe)를 먼저 주력으로 할지 갈림.
+2. **2-A(채팅 UI)** — 결정과 무관하게 바로 착수 가능(어느 엔진이든
+   이 UI 위에서 작동).
+3. **2-B/2-C 중 확보된 쪽으로 이미지생성 안정화**.
+4. **2-D(Canva 핸드오프)** — 가벼운 추가.
+5. **2-E(스킬 프리셋 DB)** — 2-A/2-B 산출물 구조 확정 후 마지막.
 
-## 3. 기존 인프라와의 관계 (재사용 — #295 단일권위)
+## 4. 기존 인프라와의 관계 (재사용 — #295 단일권위)
 
 - 8단계 HTML/PNG 콘텐츠 조립 파이프라인(rev201 근본수정 완료)은
   그대로 유지 — 채팅으로 만든 이미지가 이 파이프라인의 입력(썸네일/
-  상세이미지)으로 들어가는 구조. 파이프라인 자체를 새로 만들지 않음.
+  상세이미지)으로 들어가는 구조.
 - `generate-detail` API(#47 재조사에서 발견, 이미 PNG+HTML 완전
   반환)는 여전히 유효 — 채팅 이미지 생성은 이 API가 쓰는 "재료
   이미지"를 준비하는 상류 단계.
+- **"배양실"/"관제탑"은 신규 명칭이 아니라 기존 코드에 이미 있는
+  정확한 명칭**(md 파일이 "새 제안"처럼 표현했으나 실제로는 기존
+  구조와 동일 — 2026-09-23 코드 대조로 확인) — 화면을 갈아엎지 않고
+  기존 탭 안에 2x2 갤러리+채팅만 얹는다.
 
-## 4. 다음 세션 착수 지점
+## 5. 다음 세션 착수 지점
 
-**1-B부터.** `src/lib/ai/gemini.ts`에서 `callGeminiRoundRobin`의
-정확한 시그니처를 재확인하고, Gemini 이미지 생성 모델(Imagen 계열
-또는 Gemini 2.5 Flash Image/"Nano Banana")의 정확한 API 엔드포인트를
-공식 문서로 확인한 뒤 근본수정 착수.
+**대표님의 $10 충전 결정을 먼저 확인.** 결정과 무관하게 2-A(채팅 UI)
+는 바로 시작 가능 — src/components/studio/atelier/AtelierShell.tsx의
+"배양실" 탭 content를 확인하고, 그 안에 채팅 메시지 리스트+입력창+
+2x2 이미지 그리드 컴포넌트를 추가하는 것부터.
