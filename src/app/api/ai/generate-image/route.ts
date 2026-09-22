@@ -31,7 +31,11 @@ export async function POST(request: NextRequest) {
       imageCount: result.images.length,
     });
   } catch (e: unknown) {
-    // 원인 상세는 노출하지 않는다(#156/#310).
+    // GEMINI_IMAGE_429_DIAGNOSIS_2026-09-22 — 서버 로그(Vercel 런타임
+    // 로그)에는 정확한 원인을 남긴다. 사용자 응답에는 여전히 원인 상세를
+    // 노출하지 않는다(#156/#310) — 이 둘은 서로 다른 청중이라 충돌하지
+    // 않는다.
+    console.error('[generate-image]', e instanceof Error ? e.message : String(e));
     return NextResponse.json({ success: false, error: '이미지 생성 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }

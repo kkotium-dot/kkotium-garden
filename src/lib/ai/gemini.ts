@@ -236,7 +236,12 @@ export async function generateGeminiImage(
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
       if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('403')) {
-        console.warn(`[gemini-image] key #${i + 1} quota/limit, trying next`); // index only — no key value
+        // GEMINI_IMAGE_429_DIAGNOSIS_2026-09-22 — 정확한 HTTP 상태코드를
+        // 로그에 남긴다(이전엔 "quota/limit"으로만 뭉뚱그려 429(일시적
+        // 한도초과, 재시도로 해결가능)와 403(권한자체 없음, 재시도해도
+        // 무의미)을 구분할 수 없었음 — 제미나이가 "429 RPM/TPM 문제"라고
+        // 진단했는데, 실제로 403인지 429인지 이 로그로 확정한다).
+        console.warn(`[gemini-image] key #${i + 1} failed (${lastErr}), trying next`); // status only — no key value
         continue;
       }
       throw e;
