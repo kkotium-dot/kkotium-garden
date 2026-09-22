@@ -15,7 +15,11 @@
 // designated replacement (ai.google.dev/gemini-api/docs/deprecations).
 export const GEMINI_MODEL = 'gemini-3.6-flash';
 
-function geminiKeys(): string[] {
+// #47/#48/#49/Studio-2.0 (2026-09-22, 설계: docs/design/
+// STUDIO_2_0_CHAT_IMAGE_GEN_2026-09-22.md) — 이미지 생성 함수가 동일한
+// 2키 라운드로빈을 재사용해야 하므로 export(#295 단일권위, 키 순환 로직
+// 중복 금지).
+export function geminiKeys(): string[] {
   return [
     process.env.GEMINI_API_KEY,
     process.env.GEMINI_API_KEY_2,
@@ -131,4 +135,105 @@ export async function callGeminiVision(
 ): Promise<string> {
   const arr = Array.isArray(images) ? images : [images];
   return callGeminiRoundRobin(prompt, systemPrompt, arr, 'gemini-vision');
+}
+
+// ---------------------------------------------------------------------------
+// Image generation ("Nano Banana") — Studio 2.0 인앱 채팅 이미지 생성
+// (2026-09-22, 설계: docs/design/STUDIO_2_0_CHAT_IMAGE_GEN_2026-09-22.md).
+//
+// 별도 엔드포인트가 아니라 동일한 generateContent에 이미지 생성 모델명과
+// responseModalities:['TEXT','IMAGE']만 다르게 호출(공식문서 ai.google.dev/
+// gemini-api/docs/generate-content/image-generation, Firebase AI Logic 문서
+// 교차검증, 2026-09-22 확인). callGeminiWithKey는 텍스트만 반환하도록 고정돼
+// 있어(#156 — 원인 상세 비노출 계약) 재사용하지 않고, 이미지 생성 전용
+// 응답 shape(inlineData 포함)에 맞춘 별도 경로를 둔다 — 키 순환(geminiKeys)
+// 은 그대로 공유(#295 단일권위).
+// ---------------------------------------------------------------------------
+
+// gemini-3.1-flash-image ("Nano Banana") — 2026-09-22 공식문서 확인 기준
+// 최신 이미지 생성 모델. 텍스트 전용 GEMINI_MODEL과 별개 상수로 분리 —
+// 두 모델은 서로 다른 deprecation 주기를 가질 수 있음.
+export const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image';
+
+export interface GeneratedImage {
+  /** Base64-encoded image bytes (no data: URI prefix). */
+  base64Data: string;
+  mimeType: string;
+}
+
+export interface GeminiImageGenerationResult {
+  /** Any accompanying text the model produced alongside the image(s). */
+  text: string;
+  images: GeneratedImage[];
+}
+
+async function callGeminiImageWithKey(
+  prompt: string,
+  apiKey: string,
+  referenceImages?: GeminiImageInput[],
+): Promise<GeminiImageGenerationResult> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${apiKey}`;
+  const parts: Record<string, unknown>[] = [{ text: prompt }];
+  // 멀티턴 이미지 편집("이 배경을 대리석으로 바꿔줘") — 이전에 생성/제공된
+  // 이미지를 참조 입력으로 함께 보낸다(Studio 2.0 채팅 UI가 대화 히스토리의
+  // 최근 이미지를 여기로 전달).
+  for (const image of referenceImages ?? []) {
+    parts.push({ inline_data: { mime_type: image.mimeType, data: image.base64Data } });
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts }],
+      generationConfig: {
+        responseModalities: ['TEXT', 'IMAGE'],
+      },
+    }),
+  });
+  if (!res.ok) {
+    // Status only — never echo the response body (#156).
+    throw new Error(`Gemini image ${res.status}`);
+  }
+  const data = await res.json();
+  const responseParts: { text?: string; inlineData?: { data?: string; mimeType?: string } }[] =
+    data.candidates?.[0]?.content?.parts ?? [];
+
+  const text = responseParts.filter((p) => p.text).map((p) => p.text).join('').trim();
+  const images: GeneratedImage[] = responseParts
+    .filter((p) => p.inlineData?.data)
+    .map((p) => ({
+      base64Data: p.inlineData!.data!,
+      mimeType: p.inlineData!.mimeType ?? 'image/png',
+    }));
+
+  return { text, images };
+}
+
+/**
+ * Generate (or edit, via referenceImages) one or more images with Gemini,
+ * rotating across the configured GEMINI_API_KEY(_2/_3) on 429/quota/403 —
+ * same failover contract as callGeminiRoundRobin.
+ */
+export async function generateGeminiImage(
+  prompt: string,
+  referenceImages?: GeminiImageInput[],
+): Promise<GeminiImageGenerationResult> {
+  const keys = geminiKeys();
+  if (keys.length === 0) throw new Error('GEMINI_API_KEY not set');
+
+  let lastErr = '';
+  for (let i = 0; i < keys.length; i++) {
+    try {
+      return await callGeminiImageWithKey(prompt, keys[i], referenceImages);
+    } catch (e) {
+      lastErr = e instanceof Error ? e.message : String(e);
+      if (lastErr.includes('429') || lastErr.includes('quota') || lastErr.includes('403')) {
+        console.warn(`[gemini-image] key #${i + 1} quota/limit, trying next`); // index only — no key value
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error(`Gemini image generation failed on all keys: ${lastErr}`);
 }
