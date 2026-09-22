@@ -3311,3 +3311,52 @@ props shape 일치 확인+tsc 0에러로 논리적 정확성을 충분히 검증
 **커밋**: 7b22768. **세션 종료 상태**: 배포 READY, tsc 0에러, git
 clean 예정. MASTER_CHECKLIST #58 완료 확정, 우선순위 목록에서 제거.
 다음: #47(반응형 HTML 생성기)+#59(세로형 슬롯 배치) 통합설계.
+
+## rev201 — #47/#59 통합설계 착수, detail-html-serializer.ts clamp()+구분선 근본수정 완료 (2026-09-22)
+
+**#47(스마트에디터 ONE 반응형 HTML) 정정 조사**: "완전 신규 기능"이
+아니었음을 확인 — src/lib/automation/에 이미 6,677줄 규모의 정교한
+자동화 파이프라인이 존재(section-builder, section-composer, 12종
+레이아웃 스켈레톤 s1~s12, section-renderers/ 아래 specTable·spec·
+comparison 등 20종 이상 렌더러). 단 이 대규모 인프라는 전부 PNG
+이미지 렌더링 전용(createCanvas/sharp-composite, CANONICAL_WIDTH
+고정픽셀)이라 "반응형"이라는 개념 자체가 불필요한 경로였음 —
+Studio의 preset-preview 페이지가 이 PNG 파이프라인을 이미 사용 중.
+
+**진짜 갭 확정**: 리서치가 요구한 "스마트에디터 ONE에 복사-붙여넣기
+가능한 HTML"은 별도의 훨씬 단순한 detail-html-serializer.ts(123줄,
+PNG와 병렬 경로, 코드 주석에 "#46 grounding"까지 명시)가 담당. 여기에
+clamp() 반응형 폰트, 구분선이 빠져있었던 게 정확한 갭이었음.
+
+**근본수정**: renderSection의 h2(헤딩)/p(본문) 인라인 font-size를
+고정px에서 clamp()로 교체 — 헤딩 clamp(24px,5vw,30px), 본문
+clamp(16px,4vw,19px)(min=모바일 최저 가독선, max=기존 PC 고정값
+그대로 유지해 회귀 없음). 섹션 padding도 clamp(24px,6vw,40px)
+clamp(20px,5vw,48px)로 반응형화. #59(세로형 슬롯 배치) 요구를 위해
+섹션과 섹션 사이(첫 블록 앞은 제외 — 자연스러운 시작이라 불필요)에
+1px 옅은 구분선(sectionDivider())을 삽입. 컨테이너 레벨 폴백 폰트도
+clamp화. 스마트에디터가 <style> 태그를 통째로 제거하는 사례를
+Research_Report.md에서 이미 확인한 바 있어, 모든 clamp()를 인라인
+style 속성 안에 직접 심음(별도 <style> 블록 의존 없음).
+
+**검증(3건)**: ①node로 renderSection/serializeDetailHtml 로직을
+그대로 미러링한 테스트 스크립트 — clamp() 헤딩/본문 존재, 2섹션
+입력에 구분선 정확히 1개(중복 없음) 확인 ②동일 HTML 출력을 브라우저
+iframe(400px 모바일 폭 시뮬레이션)에 실제 렌더링 — 스크린샷으로
+헤딩이 좁은 화면에서도 잘림 없이 반응형 크기로 표시, 배경색
+emotional→informational 전환, 섹션 사이 구분선까지 전부 정상 시각
+확인 ③tsc 0에러.
+
+**정직하게 미완으로 남긴 부분**: "컬러/스펙 모바일 테이블"(제미나이가
+요구한, PNG 경로의 specTable.ts와 동등한 구조화 스펙표)은 이번
+근본수정 범위 밖. section-builder.ts의 SerializeSection.copy가
+자유텍스트 key-value 구조일 뿐 스펙 테이블 전용 데이터 모델이
+없어서(PNG 경로와 HTML 경로가 서로 다른 데이터 모델을 씀), 이걸
+추가하려면 별도의 확장 설계가 필요 — 즉흥적으로 두 경로를 억지로
+통합하지 않고 정직하게 다음 단계로 분리해 남김. MASTER_CHECKLIST #47
+을 🔶부분으로 정확히 기록(완료 아님).
+
+**커밋**: 04058f9. **세션 종료 상태**: 배포 READY, tsc 0에러, git
+clean 예정. MASTER_CHECKLIST #47 갱신 완료(🔶부분, #59 통합 언급).
+**다음 세션 이어질 작업**: 스펙 테이블 데이터 모델 확장 설계, 또는
+#48(Aesthetic Wit 카피 3단계)로 전환.
