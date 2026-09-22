@@ -15,6 +15,9 @@ import { calcUploadReadiness, getReadinessColor } from '@/lib/upload-readiness';
 import NameDiagnosisBadge, { type NameBadgeData } from '@/components/products/NameDiagnosisBadge';
 import InventoryBadge from '@/components/products/InventoryBadge';
 import { useInventoryBadges } from '@/lib/hooks/useInventoryBadges';
+// #58 근본수정 — /naver-seo가 이미 검증한 슬라이딩 드로어를 재사용
+// (#295 단일권위: SEO 편집 UI를 두 벌 만들지 않는다).
+import { SeoEditDrawer } from '@/components/naver-seo/edit-drawer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,6 +32,13 @@ interface Product {
   naverProductId?: string | null;
   naver_status_type?: string | null;
   salesCount?: number | null;
+  // #58 근본수정 (2026-09-22) — SeoEditDrawer(/naver-seo가 이미 검증한 우측
+  // 슬라이딩 편집 캔버스)를 그대로 재사용하기 위한 필드. /api/products가
+  // 이미 select에서 내려주고 있었음(route.ts 129~131줄) — 프론트 타입
+  // 선언만 빠져있던 것.
+  naver_title?: string | null;
+  naver_keywords?: string | null;
+  naver_description?: string | null;
 }
 
 interface ReactivationItem {
@@ -145,6 +155,11 @@ function ReactivationPageInner() {
   const [filter, setFilter]     = useState<ReactivationReason | 'all'>('all');
   const [cloneTarget, setCloneTarget] = useState<ReactivationItem | null>(null);
   const [cloning, setCloning]   = useState(false);
+  // #58 근본수정 — score_drop 상품을 별도 페이지(/naver-seo)로 이동시키지
+  // 않고, 이 화면에서 바로 우측 슬라이딩 캔버스로 편집(SeoEditDrawer,
+  // /naver-seo와 동일 컴포넌트 재사용).
+  const [drawerProductId, setDrawerProductId] = useState<string | null>(null);
+  const drawerDirtyRef = useRef(false);
   const [toast, setToast]       = useState<{ msg: string; ok: boolean } | null>(null);
   // NAME-DIAG-3 (#251): per-product 상품명 진단 badges (server-computed).
   const [diagnoses, setDiagnoses] = useState<Record<string, NameBadgeData>>({});
@@ -507,16 +522,22 @@ function ReactivationPageInner() {
                         <Sprout size={12} /> 새 생명 부여
                       </button>
                     )}
-                    {/* SEO 최적화 — for score_drop */}
+                    {/* SEO 최적화 — for score_drop. #58 근본수정: 전체페이지
+                        이동(/naver-seo) 대신 이 화면에서 바로 슬라이딩
+                        드로어를 연다 — 대표님 요구사항("우측 슬라이딩
+                        씨앗심기 튜닝 캔버스") 정확히 반영. */}
                     {item.reason === 'score_drop' && (
-                      <a href={`/naver-seo?ids=${item.product.id}`}
+                      <button
+                        type="button"
+                        onClick={() => setDrawerProductId(item.product.id)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 5,
                           padding: '8px 12px', background: '#F63B28', color: '#fff',
-                          borderRadius: 10, fontSize: 12, fontWeight: 700, textDecoration: 'none',
+                          borderRadius: 10, fontSize: 12, fontWeight: 700,
+                          border: 'none', cursor: 'pointer',
                         }}>
                         <Zap size={12} /> SEO 최적화
-                      </a>
+                      </button>
                     )}
                     {/* 등록 완료 — for draft */}
                     {isDraft && (
@@ -546,6 +567,34 @@ function ReactivationPageInner() {
           loading={cloning}
         />
       )}
+
+      {/* #58 근본수정 — /naver-seo와 동일한 슬라이딩 드로어를 재사용
+          (#295 단일권위). items에서 product를 찾아 SeoEditDrawerProduct
+          shape으로 매핑 — 이미 로드된 목록을 쓰므로 클릭마다 API를
+          재호출하지 않는다(/naver-seo의 동일 패턴 그대로). */}
+      <SeoEditDrawer
+        open={drawerProductId !== null}
+        product={
+          drawerProductId
+            ? (() => {
+                const found = items.find(i => i.product.id === drawerProductId)?.product;
+                if (!found) return null;
+                return {
+                  id: found.id,
+                  name: found.name,
+                  naver_title: found.naver_title ?? null,
+                  naver_keywords: found.naver_keywords ?? null,
+                  naver_description: found.naver_description ?? null,
+                  seoScore: found.aiScore,
+                  mainImage: found.mainImage,
+                };
+              })()
+            : null
+        }
+        onClose={() => setDrawerProductId(null)}
+        onSaved={load}
+        onDirtyChange={dirty => { drawerDirtyRef.current = dirty; }}
+      />
     </div>
   );
 }
