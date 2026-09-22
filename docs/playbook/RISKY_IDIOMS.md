@@ -317,3 +317,42 @@ grep -n "marginTop: 'auto'\|margin-top: auto\|marginBottom: 'auto'" src/app/layo
 대상을 특정한다.
 
 **적용 원칙**: #385.
+
+---
+
+## IDIOM-9 — 브릿지/연결 함수를 새로 만들기 전, 소비처(API route) 먼저 grep한다
+
+**결함 사례**: 2026-09-22, #47+#59 설계 중. `buildDetailPage()`(PNG
+파이프라인)와 `serializeDetailHtml()`(HTML 시리얼라이저)를 연결하는
+"브릿지 함수"가 없다고 판단해 `detail-page-to-html.ts`를 새로 작성함
+— 두 함수의 반환/인자 shape이 정확히 호환됨을 확인하고 만든, 근거
+있어 보이는 신규 파일이었음. 하지만 배포 직전 `grep -rln
+"buildDetailPage" src/app/api/`로 소비처를 확인하던 중, **이미
+`generate-detail/route.ts`가 이 두 함수를 정확히 같은 방식으로
+연결하고 있었음**(주석에 "STEP 3 — Parallel HTML output" 명시)을
+발견. 만든 파일은 전부 삭제하고 정정.
+
+**근본**: "두 라이브러리 함수의 타입이 호환되니 연결이 안 돼 있을
+것"이라는 추론은, 그 두 함수를 **이미 누군가 연결했을 가능성**을
+배제하지 못한다. 특히 이 프로젝트처럼 이미 수백 개의 API route가
+존재하는 코드베이스에서는, "타입이 맞으니 새로 만들자"보다 "이미
+누가 연결했는지 먼저 찾자"가 항상 먼저다.
+
+**grep 패턴**: 새 "연결/브릿지/통합" 함수를 작성하기 **전에**, 그
+함수가 연결하려는 두 핵심 함수/모듈 각각의 이름으로 `src/app/api/`
+전체를 grep해 이미 같은 두 함수를 함께 import하는 파일이 있는지
+확인한다.
+
+**실행 커맨드** (재현 가능, 2026-09-22 검증):
+```bash
+grep -rln "buildDetailPage" src/app/api/ --include="*.ts" | xargs grep -l "serializeDetailHtml"
+```
+
+**안전 체크**: "이 두 함수를 연결하는 게 없다"는 결론을 내리기 전에,
+반드시 두 함수명 각각으로 별도 grep을 돌리고, 결과 교집합(두 함수를
+모두 import하는 파일)을 확인한다. 하나만 grep해서 "없다"고 판단하면
+안 된다 — 이번 사례에서 `buildDetailPage` 하나만 먼저 grep했다면
+`generate-detail/route.ts`가 나왔을 것이고, 그 즉시 이미 연결돼
+있다는 걸 알았을 것.
+
+**적용 원칙**: #388.
