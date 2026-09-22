@@ -393,6 +393,74 @@ export async function generateCtaCopy(
 }
 
 // ---------------------------------------------------------------------------
+// Attitude (#48 근본수정, 2026-09-22) — 제미나이_꽃틔움_시스템_고도화_
+// 2026-09-17.md "Aesthetic Wit 카피라이팅 3단계" 중 마지막 단계.
+// Hook(공감형 도발)=problem.ts의 question/bullets, Detail(핵심 팩트)=
+// spec.ts/specTable.ts가 이미 정확히 대응됨(코드실측 확인) — Attitude
+// (시크한 클로징, 구매욕을 자극하는 디렉터 톤앤매너)만 정확히 빠져있던
+// 갭. cta.ts(안심문구, "no exaggeration/no false scarcity")와는 의도적
+// 으로 톤을 분리 — cta는 신뢰회복용 절제된 문구, attitude는 마무리
+// 임팩트용 짧고 단정한 클로징 한 줄. 같은 다크패턴 필터(filterDarkPatterns)
+// 를 반드시 통과시켜 "허위 긴급성/과장 최상급" 같은 금지 표현이 섞이지
+// 않게 한다 — "시크함"은 절제에서 나오지, 과장에서 나오지 않는다.
+// ---------------------------------------------------------------------------
+
+export interface AttitudeCopy {
+  /** Short, confident closing line — the "designer's sign-off" tone. */
+  closingLine: string;
+  /** One-line sign-off inviting the purchase decision (no urgency claims). */
+  signOff: string;
+}
+
+export async function generateAttitudeCopy(
+  spec: SkeletonSpec,
+  ctx: SectionRenderContext,
+): Promise<CopyResult<AttitudeCopy>> {
+  const fallback: AttitudeCopy = {
+    closingLine: STRINGS.attitude.closingLine,
+    signOff: STRINGS.attitude.signOff,
+  };
+
+  const prompt = [
+    `Write a short, confident Korean closing line for a Naver detail page, in the voice of a design director — not a salesperson.`,
+    `Skeleton: ${spec.id} — ${spec.description}.`,
+    `Tone: ${spec.copyGlobalTone}.`,
+    `Product: ${ctx.productName}`,
+    ctx.category ? `Category: ${ctx.category}` : '',
+    `Return JSON exactly: {"closingLine":"...", "signOff":"..."}.`,
+    `closingLine: a single Korean line under 24 characters — understated, self-assured, no exclamation marks.`,
+    `signOff: a single Korean line under 20 characters inviting the purchase decision — calm and direct, never urgent.`,
+    `Absolutely forbidden: false scarcity ("품절임박", "마감임박"), fake countdowns, superlatives ("최고", "1위", "유일"), exclamation-heavy hype.`,
+    `The tone is chic restraint, not loud persuasion. Respond with JSON only, no markdown.`,
+  ].filter(Boolean).join('\n');
+
+  const raw = await callGroq(prompt, 160);
+  if (!raw) return { value: fallback, source: 'fallback', filtered: false };
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { value: fallback, source: 'fallback', filtered: false };
+
+  try {
+    const parsed: { closingLine?: unknown; signOff?: unknown } = JSON.parse(jsonMatch[0]);
+    const c = typeof parsed.closingLine === 'string' ? parsed.closingLine : '';
+    const s = typeof parsed.signOff === 'string' ? parsed.signOff : '';
+    const cf = filterDarkPatterns(c);
+    const sf = filterDarkPatterns(s);
+    const anyFiltered = cf.filtered || sf.filtered;
+    return {
+      value: {
+        closingLine: cf.text.slice(0, 24) || fallback.closingLine,
+        signOff: sf.text.slice(0, 20) || fallback.signOff,
+      },
+      source: 'groq',
+      filtered: anyFiltered,
+    };
+  } catch {
+    return { value: fallback, source: 'fallback', filtered: false };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Sprint 7-M2 Phase 2-a additions — spec / story / grid / comparison / warranty
 // ---------------------------------------------------------------------------
 
