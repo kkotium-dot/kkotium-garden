@@ -5,7 +5,7 @@
 **"완료" 표시는 반드시 검증방법(curl/DB조회/브라우저 클릭)을 명시해야
 유효하다** — 검증방법이 비어있으면 미완료로 간주한다.
 
-마지막 갱신: 2026-09-22 (rev194 완료 — SOURCE_DOCS_INDEX 활용 첫 실전: #53(정보고시)·#54(도매꾹API) 코드실측으로 "이미 정확히 구현돼있었음" 확정, 총 54항목)
+마지막 갱신: 2026-09-22 (rev197 완료 — #56 SEO훅문구 근본수정(수치혜택 검증, 브라우저 실측 2건 완료), #55 카테고리 데이터공백 정직기록, 총 56항목)
 
 ## 범례
 - ✅완료 = 코드수정+배포+아래 명시된 방법으로 실측검증까지 끝남
@@ -70,6 +70,7 @@
 | 53 | 네이버 정보고시(productInfoProvidedNotice) — 발행실패(BAD_REQUEST) 방지 | SOURCE_DOCS_INDEX 카테고리2(9/22 발견, Research_Report.md) | ✅완료(기존 구현 재확인) | 2026-06-02 P0로 이미 완전 구현돼 있었음(코드 실측): src/lib/naver/product-builder.ts의 buildProductInfoProvidedNoticeEtc()가 ETC유형 8필드(returnCostReason/noRefundReason/qualityAssuranceStandard/compensationProcedure/troubleShootingContents/itemName/modelName/manufacturer)+customerServicePhoneNumber 전부 채움, "상품상세참조" 표준문구 패턴 적용, buildNaverProductPayload() 1039줄에서 호출→1087줄 detailAttribute에 정확히 포함되어 최종 발행 payload에 실림. 주석에 "RESEARCH §1: 템플릿코드 참조 미지원(공식), 매 상품 인라인이 유일"까지 명시 — Research_Report.md 원문 결론과 정확히 일치. SOURCE_DOCS_INDEX 카테고리1(반영됨)로 재분류 필요 | 커밋이력 2026-06-02(기존) |
 | 54 | 도매꾹 Open/Private API 활용도 — 재고폴링/경쟁사추적 vs 자동발주 | SOURCE_DOCS_INDEX 카테고리2(9/22 발견, Domeggook_Open_API_and_Private_API_Integration_Strategy.md) | ✅완료(기존 설계 재확인) | 코드 실측: domemae-adapter.ts에 getItemView(단건+multiple=true배치)·getItemList(→searchItems, dome-competitor-tracker.ts에서 실제 사용 확인) 둘 다 이미 구현·연결됨. placeOrder()(자동발주)만 "requires Private API, throws until Sprint 8"로 명시적 보류 — Research 자료가 권고한 우선순위(재고폴링=Open API로 충분, 자동발주만 Private API 필요)와 정확히 일치하는 설계였음. "미반영"이 아니라 "의도된 단계적 구현" — Private API 신청 자체는 Sprint 8(자동발주 착수 시점)까지 불필요 | 기존 구현(도입시점 불명, 재확인 완료) |
 | 55 | 카테고리 매처 — "신체부위+청소기/클리너" 조합이 디지털/가전으로 오분류(한국어_이커머스_소싱_카테고리_전환_동음이의어_필터링 리서치 대조 중 실측 발견) | SOURCE_DOCS_INDEX 카테고리2(한국어_이커머스_소싱의_카테고리_전환_동음이의어_필터링.md, "축A-신체부위" 권고) | 🔍조사완료·근본수정보류(데이터공백 판정) | curl 실측: "귀청소기 실리콘 이어클리너"→디지털/가전>PC액세서리>클리너(오분류), "애견 강아지 털청소기"/"차량용 무선 청소기"는 정확(리서치의 축B/축C는 이미 정상 작동). 근본원인 확정: 네이버 마스터 카테고리 자체에 "귀"+클리너류 leaf가 없음(생활/건강>건강관리용품에 코클리너·구강위생용품에 혀클리너는 존재하나 귀 대응 leaf 부재) — 코드 로직 결함이 아니라 카테고리 체계의 데이터 공백. headNoun 선정 로직에 "신체부위 감지" 규칙 자체가 없다는 것도 확인(리서치의 "축A" 개념이 매처에 없음). 즉흥 코드수정 보류 — 유사 사례가 더 쌓이면(체계적 패턴으로 확인되면) 신체부위 헤드노운 감지 규칙 신설 검토, 지금은 셀러 수동 카테고리 선택으로 대응 | - |
+| 56 | SEO 훅문구(이벤트필드용)에 "구체적 수치 혜택만 통과, 추상 홍보문구는 거부" 검증 누락(상품명진단엔진+SEO훅문구 리서치 대조 중 발견) | SOURCE_DOCS_INDEX 카테고리2(꽃틔움_가든_네이버_상품명_진단_엔진과_SEO_훅문구_개선_설계_리서치_2026-06.md, 목표2) | ✅완료 | 근본원인: SEO훅문구 필드는 정확히 네이버 이벤트필드(혜택형) 용도("네이버 쇼핑 검색 결과 홍보문구")인데, 상품명(product-name-diagnosis.ts)과 달리 리서치가 강조한 검증이 전혀 없었음 — "끝까지 최선을 다하겠습니다" 같은 추상 문구가 경고 없이 저장돼 실제 이벤트필드 검수 반려 위험. 신설: src/lib/seo/hook-phrase-guard.ts(lintHookPhrase 순수함수) — 수치혜택(아라비아/한글숫자+단위) 존재여부+리서치 원문의 거부예시 시드 사전+장식특수문자 3종 검사. 배포전 로컬테스트하네스(9→12케이스)로 자체검증 중 한글숫자 정규식이 "당일배송"의 "일"을 숫자로 오인하는 false-positive 발견해 "숫자+단위 인접" 패턴으로 즉시 수정, 12/12 통과 후 배포. 브라우저 실측(2건): ①"품질보증 무료A/S" 입력→경고문구 정확히 렌더 확인 ②"3만원 이상 무료배송" 입력→경고 정확히 사라짐(오탐없음) 확인 | rev197 |
 
 ## 다음 작업 우선순위 제안(의존성 없음, 순서 무관 — 단 #46~50은 규모가 커서 별도 논의 권장)
 1. #46 Gemini OCR 상세이미지 스펙추출 확장 — 기존 OCR 인프라 위에 얹는 확장이라 상대적으로 가벼움
