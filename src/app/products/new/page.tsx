@@ -749,6 +749,13 @@ function NewProductPageInner() {
   const [asGuide, setAsGuide]         = useState(KKOTIUM_DEFAULTS.asGuide);
   const [noticeTemplateCode, setNoticeTemplateCode] = useState('');
   const [asTemplateCode, setAsTemplateCode]         = useState('');
+  // #57 근본수정 — 안전확인/KC/KS 신고번호. API(products/new, products/[id])와
+  // product-builder.ts(#53 정보고시 qualityAssuranceStandard 병합)는 이미
+  // naver_certification을 받을 준비가 돼 있었는데 씨앗심기 화면에 입력
+  // UI가 없어 항상 비어있었음(코드실측 확인, 2026-09-22). 실증: 이 스토어
+  // 실제 상품 36개 중 6개가 가습기류(전기용품 및 생활용품 안전관리법
+  // 안전확인대상 가능성 있는 품목)인데 전부 naver_certification 비어있음.
+  const [naverCertification, setNaverCertification] = useState('');
   const [discountValue, setDiscountValue] = useState('');
   const [discountUnit, setDiscountUnit]   = useState('%');
   const [textReviewPoint, setTextReviewPoint]   = useState('100');
@@ -1487,6 +1494,9 @@ function NewProductPageInner() {
         // #250: restore selected 제공고시/AS 템플릿코드.
         if (typeof p.noticeTemplateCode === 'string')      setNoticeTemplateCode(p.noticeTemplateCode);
         if (typeof p.asTemplateCode === 'string')          setAsTemplateCode(p.asTemplateCode);
+        // #57 근본수정 — GET이 select 없이 include만 써서 이미 모든 스칼라
+        // 필드를 반환하고 있었음(Prisma 기본동작), hydrate 쪽만 누락.
+        if (typeof p.naver_certification === 'string')     setNaverCertification(p.naver_certification);
         // COPY-AUTO-2.1: load settled — release the auto-fire gate. Batched with the
         // setters above so the gate re-evaluates with the loaded hook in hand. Left
         // false on early-return / fetch error so a failed load never fires (no
@@ -2561,6 +2571,9 @@ const handleGenerate = async () => {
       // ⑤ SEO — notice + AS (template codes → bulk excel columns, #250)
       noticeTemplateCode: noticeTemplateCode || undefined,
       asTemplateCode: asTemplateCode || undefined,
+      // #57 근본수정 — API(POST/PUT)는 이미 naver_certification을 받을
+      // 준비가 돼 있었음(rev198 조사 확인), 저장 payload에서만 누락.
+      naver_certification: naverCertification.trim() || undefined,
       asPhone,
       asGuide,
       // SEO tags → sellerRemark (max 10 tags, comma-separated)
@@ -4148,27 +4161,22 @@ const handleGenerate = async () => {
                       </div>
                     )}
 
-                    {/* #46 근본수정 — certification(안전확인/KC/KS 신고번호).
-                        저장할 전용 입력 필드가 씨앗심기 화면에 아직 없어(별도
-                        갭, #57로 분리 기록) "적용" 버튼 대신 복사 버튼만
-                        제공 — 정확한 신고번호를 상품정보고시(#53)나 상세페이지
-                        문구에 셀러가 직접 붙여넣을 수 있게. */}
+                    {/* #46/#57 근본수정 — certification(안전확인/KC/KS 신고번호).
+                        #57에서 naverCertification 저장 필드를 신설했으므로
+                        복사 대신 바로 "적용"으로 업그레이드(#46 당시엔 저장할
+                        곳이 없어 복사만 제공했었음). */}
                     {ocrResult.certification && (
                       <div style={{ fontSize: 12, color: '#444', background: '#F8FAFC', border: '1px solid #E5E9F0', borderRadius: 10, padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                         <span>인증·신고번호: <b>{ocrResult.certification}</b></span>
                         <button
                           type="button"
                           onClick={() => {
-                            if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                              navigator.clipboard.writeText(ocrResult.certification!).then(
-                                () => toast.success('인증번호를 복사했어요'),
-                                () => toast.error('복사에 실패했습니다'),
-                              );
-                            }
+                            setNaverCertification(ocrResult.certification!);
+                            toast.success('인증번호를 적용했어요');
                           }}
                           style={{ fontSize: 11, fontWeight: 700, color: '#F63B28', background: '#fff', border: '1px solid var(--gp-pink-300, #FFB3CE)', borderRadius: 8, padding: '3px 9px', cursor: 'pointer', flexShrink: 0 }}
                         >
-                          복사
+                          적용
                         </button>
                       </div>
                     )}
@@ -4741,6 +4749,19 @@ const handleGenerate = async () => {
               <DSection icon={<Clipboard size={14}/>} title="상품정보제공고시" summary={`코드: ${noticeTemplateCode || '미선택'}`}>
                 <Field label="상품정보제공고시 템플릿코드">
                   <TemplateCodePicker kind="notice" value={noticeTemplateCode} onChange={setNoticeTemplateCode} />
+                </Field>
+                {/* #57 근본수정 — 전기/생활용품 안전관리법상 안전인증·안전확인·공급자적합성확인
+                    신고번호 입력. 해당 없는 일반 공산품이 대부분이라 "해당하는
+                    경우에만" 문구로 강제감을 없애되, 가습기 등 전기용품은 실제로
+                    필요할 수 있음을 안내. */}
+                <Field label="안전인증/KC 신고번호" hint="전기·생활용품(가습기, 온수매트 등)만 해당 — 해당 없으면 비워두세요">
+                  <input
+                    type="text"
+                    value={naverCertification}
+                    onChange={(e) => setNaverCertification(e.target.value)}
+                    placeholder="예: 제2024-000123호"
+                    style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--gp-pink-300, #FFD5E5)', borderRadius: 8, fontSize: 13 }}
+                  />
                 </Field>
               </DSection>
 
