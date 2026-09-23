@@ -457,32 +457,14 @@ function StudioInner() {
     { key: 'journal', label: s.journal, icon: <NotebookText size={18} />, content: <ErrorBoundary label={s.journal}>{journalSlot}</ErrorBoundary> },
   ];
 
-  // ── Assembly slot placeholders — static stubs (S2-B.1) ─────────────────────
-  // Communicate the future center layout where each step's output assembles into
-  // the detail page. No slot-filling logic yet (S2-D/Phase 3) — purely visual,
-  // no backend wiring (#132).
-  const assemblySlotStub: ReactNode = (
-    <section style={{
-      background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-      borderRadius: 'var(--radius-card)', padding: '14px 16px', flexShrink: 0, minWidth: 0,
-    }}>
-      <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: 'var(--gp-ink-900)' }}>{a.assembly.title}</h3>
-      <p style={{ margin: '3px 0 12px', fontSize: 11, color: 'var(--gp-ink-500)', lineHeight: 1.5 }}>{a.assembly.hint}</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
-        {[a.assembly.slotMain, a.assembly.slotAdditional, a.assembly.slotDetail].map((label) => (
-          <div key={label} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: 6, aspectRatio: '1 / 1', borderRadius: 12, minWidth: 0, padding: 8, textAlign: 'center',
-            border: '1.5px dashed var(--color-border)', background: 'var(--cream)',
-          }}>
-            <ImageIcon size={20} style={{ color: 'var(--gp-pink-300)' }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gp-ink-700)' }}>{label}</span>
-            <span style={{ fontSize: 10, color: 'var(--gp-ink-500)' }}>{a.assembly.slotPending}</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
+  // #61 STUDIO_CLEANUP_2026-09-23 (대표님 지시 — "확장 여지가 전혀 없는
+  // 잔재는 제거") — assemblySlotStub(S2-B.1, 2026-06 기록) 삭제. 이 3칸
+  // 점선 목업은 "언젠가 만들 예정"으로 남겨둔 순수 시각적 자리표시자였고
+  // (코드주석 "No slot-filling logic yet — purely visual, no backend
+  // wiring #132"), 실제 조립 기능은 별도 위치(371줄 DetailAssemblyBoard,
+  // 622줄 규모 완성 컴포넌트)가 이미 완전히 수행 중이라 완전한 중복이었음
+  // — grep으로 a.assembly.* 참조가 이 블록 내부뿐임을 확인 후 안전하게
+  // 통째로 제거(#295 단일권위: 조립 UI는 DetailAssemblyBoard 하나로 수렴).
 
   // ── Workspace (center) — live preview + assembly slot stubs + 꼬띠 bubble ───
   // S2-B.1: the heavy step forms moved to 배양실; the center is now the calm
@@ -594,9 +576,6 @@ function StudioInner() {
           backdropUrl={actions.manualBackdropUrl || undefined}
         />
       </div>
-
-      {/* Assembly slot placeholders (static stub) */}
-      {assemblySlotStub}
     </>
   ) : (
     <div style={{ padding: 40, textAlign: 'center', color: 'var(--gp-ink-500)', fontSize: 13 }}>
