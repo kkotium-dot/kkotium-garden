@@ -5,7 +5,7 @@
 **"완료" 표시는 반드시 검증방법(curl/DB조회/브라우저 클릭)을 명시해야
 유효하다** — 검증방법이 비어있으면 미완료로 간주한다.
 
-마지막 갱신: 2026-09-23 (rev213 완료 — #61 Studio2.0 이미지엔진 어댑터 근본구현: Gemini402/Firefly Enterprise전용 확정 후 Pollinations(무료) 기본엔진 채택, 3엔진(free/gemini/firefly) 통일 어댑터+자동폴백, curl 2건 실측(로컬+프로덕션) 완료. 총 61항목)
+마지막 갱신: 2026-09-23 (rev214 완료 — #62 꽃단장 작업실 대공사 1차: 33개 파일 전수조사(0건참조 죽은파일 없음 확인), assemblySlotStub(DetailAssemblyBoard와 완전중복) 근본제거, 브라우저 실측(콘솔에러0). 총 62항목)
 
 ## 범례
 - ✅완료 = 코드수정+배포+아래 명시된 방법으로 실측검증까지 끝남
@@ -76,9 +76,10 @@
 | 59 | 상세페이지 생성 시 세로형 슬롯 배치 구조(대표님 9/22 신규 지시 — #47과 결합) | 대표님 원본지시(2026-09-22, 9/17파일 아님 — project_knowledge에 없는 신규 요구사항) | ❌미착수 | 대표님 정확한 지시: 썸네일(1000x1000 정사각) 규격은 기존 그대로 유지하되, 상세페이지(#47 반응형HTML 생성기) 슬롯 배치는 모바일 세로 스크롤 환경에 맞춰 세로로 길게 이어지는 슬롯 구조로 설계. 모바일/PC 비율 차이도 함께 고려. #47(반응형 HTML 생성기) 설계 착수 시 정확히 통합 반영 — 별도 항목으로 분리해 누락 방지 | - |
 | 60 | 경쟁사 인사이트(시장분석) — 네이버 쇼핑검색 Open API가 404 SE05(존재하지 않는 검색api) 반환(rev203 후속 브라우저검증 중 발견) | rev203 후속검증(2026-09-22, review-sentiment/shopping-search/upload-readiness 3종 실사용 검증 중) | ❌미착수(코드 밖 원인) | curl 실측: GET /api/naver/market-analysis?q=... → "Naver Shopping Search failed: 404 — Invalid search api(SE05)". src/lib/naver/shopping-search.ts의 searchShopping()이 https://openapi.naver.com/v1/search/shop.json을 호출하는데, 이건 Groq 결함(rev203)과 무관 — Groq AI인사이트(generateMarketInsight) 앞단인 네이버 쇼핑검색 자체가 막혀 AI 로직 도달조차 못 함. 근본원인 추정: NAVER_DATALAB_CLIENT_ID/SECRET(Vercel실제값 확인)는 네이버 데이터랩 API 전용으로 발급된 자격증명이고, 쇼핑검색 Open API는 네이버 개발자센터에서 별도로 앱에 등록해야 하는 다른 권한 — SE05 "존재하지 않는 검색 api" 메시지가 정확히 이 미등록 상태를 가리킴. 코드 결함이 아니라 네이버 개발자센터 설정 확인이 필요한 외부요인(egress차단으로 로컬 직접검증은 못 함, Vercel배포서버 실측 404로 확정) — 대표님께 네이버 개발자센터에서 해당 앱에 "검색" API가 등록돼 있는지 직접 확인 요청 필요 | - |
 | 61 | Studio 2.0 이미지생성 엔진 어댑터(free/gemini/firefly, IMAGE_ENGINE 스위칭) | 대표님+제미나이 논의(2026-09-22~23), 원본요구는 "채팅으로 이미지생성+상세페이지HTML+팔레트저장", 실제 구현착수는 1-B(이미지생성) 단계 | ✅완료(1-B 부분) | 3단계 조사·정정 경위(정직기록): ①처음 "제미나이의 캔바"를 Canva MCP/Enterprise API로 오판(원칙#389 신설) ②Gemini 이미지생성(gemini-2.5-flash-image) 구현했으나 두 키 모두 402(결제필요) 실측확인(rev211/212), Google AI Studio 스크린샷 교차검증으로 무료티어 자체가 이미지생성에 결제연결 필요함을 확정 ③"캔바"가 실은 Canvas(HTML5 편집기)였음을 대표님이 명확히 정정, Adobe Firefly Services API를 Adobe 공식 커뮤니티 답변으로 "Enterprise전용, 개인프리미엄 불가" 확정(FIREFLY_SERVICES_CLIENT_ID/SECRET Vercel 미등록 실측 확인). 근본구현: src/lib/ai/image-engine.ts 신설 — generateImage() 단일함수로 3엔진(free=Pollinations 기본값·gemini·firefly) 통일 시그니처 제공, gemini/firefly 실패시 자동 free폴백+usedFallback플래그+안내문구 반환(자동전환이지만 UI가 토스트 표시 가능하게, 대표님 확정 UX). Pollinations(image.pollinations.ai, model=flux)는 키/가입 불필요 완전무료(공식 GitHub/PyPI 문서 확인). 검증(2건): ①로컬 curl로 Pollinations 직접호출 — 512x512 JPEG 정상생성(13.9KB) 확인(배포전 사전검증) ②배포후 /api/ai/generate-image 실제 프로덕션 호출 — HTTP200, engine:"free", 62KB 이미지 정상반환 확인. firefly는 함수만 남겨두고 항상 즉시폴백(향후 Enterprise키 발급시 환경변수만 추가하면 되는 확장구조, #295) | rev213 |
+| 62 | 꽃단장 작업실 대공사 — 기존 구조 전수조사 후 활용가능재료 유지+죽은잔재 제거(1건) | 대표님 지시(2026-09-23): "확장 여지가 전혀 없는 사항 제거하여 현재 개선사항 중점" | ✅완료(1차 정리) | 전수조사(정직기록): 33개 스튜디오 파일(8,663줄)을 grep으로 참조수 전수조사 — 완전 미사용(0건참조) 파일은 없음(전부 최소 1곳 이상 사용 중), 즉 "안 쓰이는 죽은 파일" 문제가 아니라 "쓰이지만 완성도 낮은 코드" 문제로 확정. TODO/미구현/stub 마커 전체 grep 결과 진짜 죽은코드는 assemblySlotStub(studio/page.tsx) 1건뿐 — 2026-06(S2-B.1)에 "언젠가 만들 예정"으로 남겨둔 3칸 점선 목업(코드주석 "No slot-filling logic yet — purely visual, no backend wiring #132")인데, 실제 조립 기능은 별도 위치(DetailAssemblyBoard, 622줄 완성 컴포넌트)가 이미 완전 수행 중이라 완전한 중복이었음. 재사용 가능 재료 확인(그대로 유지): FireflyPromptBuilder(Firefly HITL 4단계 워크플로우, 이미 완성), image-engine.ts(#61), 3-Domain 레이아웃(AtelierShell), DetailAssemblyBoard(622줄 조립기능). 근본수정: assemblySlotStub 통째 제거(a.assembly.* strings 참조가 이 블록 내부뿐임을 grep으로 확인 후 안전 제거), tsc 0에러. 브라우저 실측: /studio?product=... 정상 렌더링, 콘솔에러 0건, 제거된 목업이 화면에서 사라졌음을 JS로 확인 | rev214 |
 
 ## 다음 작업 우선순위 제안(의존성 없음, 순서 무관 — 단 #46~50은 규모가 커서 별도 논의 권장)
-1. Studio 2.0 1-A(인앱 채팅 UI) — #61(이미지엔진) 완료로 착수 가능해짐, "배양실" 탭 안에 채팅+2x2 갤러리
+1. Studio 2.0 1-A(인앱 채팅 UI) — #61+#62 완료로 착수 가능, ThumbnailCard의 기존 HITL 1단계(정적 6요소 합성)를 대화형으로 업그레이드(완전신규 아님, docs/design/STUDIO_2_0_CHAT_IMAGE_GEN_2026-09-22.md §2-A 참조)
 2. Studio 2.0 Fabric.js Canvas 편집기 — 1-A 이후, 단계적 도입(배경표시→텍스트오버레이→드래그)
 3. Studio 2.0 스킬 팔레트 DB(prompt_palettes) — 1-A/Canvas 산출물 구조 확정 후 마지막
 4. #47+#59 통합설계 — 반응형 HTML 상세페이지 생성기 + 세로형 슬롯 배치
