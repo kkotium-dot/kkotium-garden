@@ -15,7 +15,16 @@
 //     than blocking the whole diagnose pipeline.
 
 import sharp from 'sharp';
-import { createWorker, type Worker } from 'tesseract.js';
+// GEMINI 무관, VERCEL_FUNCTIONS_STORAGE_2026-09-23 근본수정 — 정적 import는
+// Next.js 파일 트레이서가 이 파일을 쓰는 모든 route(13개, next.config.js의
+// OCR_ROUTES)에 tesseract.js-core(43MB)를 강제로 포함시킴(공식 vercel 기술
+// 블로그 확인, 2026: "one heavy import taxes every route in that bundle").
+// createWorker는 오직 getWorker() 내부(실제 OCR 실행 시점)에서만 쓰이므로
+// 동적 import로 지연 로드 — #295 안전 경계: 기존 워커 크래시 3단계 수정
+// (커밋 7c7502a/7d183f1/1bb914f, next.config.js의 outputFileTracingIncludes+
+// serverComponentsExternalPackages)은 그대로 유지, "언제 모듈을 불러오는지"
+// 만 바꾼다(그 수정들이 다루던 "무엇을 트레이싱에 포함할지"는 안 건드림).
+import type { Worker } from 'tesseract.js';
 
 const BAND_RATIO = 0.15;
 const MIN_TEXT_LENGTH = 3;
@@ -32,6 +41,9 @@ let workerPromise: Promise<Worker> | null = null;
 async function getWorker(): Promise<Worker> {
   if (!workerPromise) {
     workerPromise = (async () => {
+      // 동적 import — 이 함수가 실제로 호출될 때만 tesseract.js(43MB WASM)를
+      // 로드한다(번들 트레이싱 대상에서 빠져 함수 배포 크기에 영향 없음).
+      const { createWorker } = await import('tesseract.js');
       const w = await Promise.race<Worker>([
         createWorker(['kor', 'eng']),
         new Promise<Worker>((_, reject) =>
