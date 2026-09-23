@@ -1,3 +1,17 @@
+# [DEPRECATED 2026-09-23] Claude Design 컨셉 — 디자인 토큰 + 리서치 대조 배선 (2026-07-08)
+
+> **폐기 확정(대표님 직접 지시, 2026-09-23)**: 이 문서의 4종 팔레트
+> ("정원의 만개", "노을 정원", "라벤더 필드", "딸기 크림")와 뉴브루탈
+> 장식(하드섀도·와시테이프·회전·분수대 애니)은 별도 세션(Claude
+> Design)에서 실험적으로 적용했던 결과인데, 대표님이 원하시는 방향
+> (로고색 위주, 절제된 프리미엄 B2B SaaS 톤)과 맞지 않아 폐기.
+> **`docs/design/KKOTIUM_DESIGN_SYSTEM.md`(2026-06-03, 2026-09-23
+> 로고 원본 대조로 재정정)가 유일한 진실**이며, 이 파일은 참고용
+> 역사 기록으로만 archive에 보존한다 — 앞으로 이 파일의 팔레트/토큰을
+> 신규 코드에 참조하지 않는다.
+
+---
+
 # Claude Design 컨셉 — 디자인 토큰 + 리서치 대조 배선 (2026-07-08)
 
 Authoring: DESKTOP. 출처: Claude Code가 전달한 컨셉(project/Kkottium Garden Dashboard.html·theme.jsx·branch implement-kkottium-garden 로컬커밋 34f5eed·클라우드 전용·origin push 불가). 권위: 대시보드 Phase 2(시각) 미감 배선 근거 + DASHBOARD_SHELL_REDESIGN_RESEARCH 대조.
