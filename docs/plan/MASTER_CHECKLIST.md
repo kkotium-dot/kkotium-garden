@@ -5,7 +5,7 @@
 **"완료" 표시는 반드시 검증방법(curl/DB조회/브라우저 클릭)을 명시해야
 유효하다** — 검증방법이 비어있으면 미완료로 간주한다.
 
-마지막 갱신: 2026-09-22 (rev205 완료 — #57 naver_certification 입력UI 완전근본수정: 법령(전기용품및생활용품안전관리법)+실데이터(가습기 6/36개 상품) 교차검증으로 필요성 확정, 씨앗심기 D3.5 섹션에 입력필드 신설+hydrate+저장연결, 브라우저 실측 완료. 총 60항목)
+마지막 갱신: 2026-09-23 (rev213 완료 — #61 Studio2.0 이미지엔진 어댑터 근본구현: Gemini402/Firefly Enterprise전용 확정 후 Pollinations(무료) 기본엔진 채택, 3엔진(free/gemini/firefly) 통일 어댑터+자동폴백, curl 2건 실측(로컬+프로덕션) 완료. 총 61항목)
 
 ## 범례
 - ✅완료 = 코드수정+배포+아래 명시된 방법으로 실측검증까지 끝남
@@ -75,14 +75,17 @@
 | 58 | 정원창고/꽃밭돌보기(좀비부활소) — 상품 클릭 시 전체페이지 이동이 아니라 우측 슬라이딩 씨앗심기 튜닝 캔버스로 열려야 함(#21 판정오류 정정 중 확정) | 제미나이_꽃틔움_시스템_고도화_2026-09-17.md 섹션7 정확한 원문("우측 슬라이딩 씨앗심기 튜닝 캔버스") | ✅완료 | 정정 경위: 이전 세션이 이 요구사항을 Studio 3-Domain 구조(#21)와 혼동해 "완료"로 오판정했던 걸 정정, 실제로는 미구현이었음(grep 0건, 전체페이지 이동만 존재). 근본수정(rev200): /naver-seo 페이지에 이미 검증된 SeoEditDrawer(position:fixed+translateX 슬라이딩 패널, 코드주석 "레거시 전체페이지 이동 대체용")가 있음을 발견 — 좀비부활소는 이 컴포넌트를 안 쓰고 있었을 뿐, 필요 데이터(naver_title 등)는 /api/products가 이미 select로 내려주고 있었음(프론트 타입 선언만 누락). Product 인터페이스 확장, SeoEditDrawer import, drawerProductId state 추가, "SEO 최적화" 버튼을 <a href="/naver-seo?ids="> 전체이동에서 <button onClick={setDrawerProductId}>로 교체, 파일 끝에 드로어 렌더링(items에서 product 매핑, /naver-seo와 동일 patternshape). 실측 검증(2건): ①/naver-seo에서 동일 컴포넌트 실제 클릭 — "씨앗 심기 | 실시간 SEO 편집" 우측 드로어가 페이지 이동 없이 정확히 슬라이드로 열림 스크린샷 확인 ②좀비부활소 페이지 자체는 정상 렌더링(콘솔에러 0, JS로 확인) + SeoEditDrawer가 if(!open) return null 조건부라 닫힌 상태에서 DOM에 없는 것도 정상 동작임을 코드로 확인. 정직한 한계: 현재 스토어에 score_drop(점수급락) 사유 상품이 0개라 이 페이지에서 직접 버튼 클릭 재현은 못함(DB aiScore 인위조작은 비가역위험 판단해 보류) — 동일 컴포넌트 실제작동+정확한 props shape 일치+tsc 0에러로 대체검증 | rev200 |
 | 59 | 상세페이지 생성 시 세로형 슬롯 배치 구조(대표님 9/22 신규 지시 — #47과 결합) | 대표님 원본지시(2026-09-22, 9/17파일 아님 — project_knowledge에 없는 신규 요구사항) | ❌미착수 | 대표님 정확한 지시: 썸네일(1000x1000 정사각) 규격은 기존 그대로 유지하되, 상세페이지(#47 반응형HTML 생성기) 슬롯 배치는 모바일 세로 스크롤 환경에 맞춰 세로로 길게 이어지는 슬롯 구조로 설계. 모바일/PC 비율 차이도 함께 고려. #47(반응형 HTML 생성기) 설계 착수 시 정확히 통합 반영 — 별도 항목으로 분리해 누락 방지 | - |
 | 60 | 경쟁사 인사이트(시장분석) — 네이버 쇼핑검색 Open API가 404 SE05(존재하지 않는 검색api) 반환(rev203 후속 브라우저검증 중 발견) | rev203 후속검증(2026-09-22, review-sentiment/shopping-search/upload-readiness 3종 실사용 검증 중) | ❌미착수(코드 밖 원인) | curl 실측: GET /api/naver/market-analysis?q=... → "Naver Shopping Search failed: 404 — Invalid search api(SE05)". src/lib/naver/shopping-search.ts의 searchShopping()이 https://openapi.naver.com/v1/search/shop.json을 호출하는데, 이건 Groq 결함(rev203)과 무관 — Groq AI인사이트(generateMarketInsight) 앞단인 네이버 쇼핑검색 자체가 막혀 AI 로직 도달조차 못 함. 근본원인 추정: NAVER_DATALAB_CLIENT_ID/SECRET(Vercel실제값 확인)는 네이버 데이터랩 API 전용으로 발급된 자격증명이고, 쇼핑검색 Open API는 네이버 개발자센터에서 별도로 앱에 등록해야 하는 다른 권한 — SE05 "존재하지 않는 검색 api" 메시지가 정확히 이 미등록 상태를 가리킴. 코드 결함이 아니라 네이버 개발자센터 설정 확인이 필요한 외부요인(egress차단으로 로컬 직접검증은 못 함, Vercel배포서버 실측 404로 확정) — 대표님께 네이버 개발자센터에서 해당 앱에 "검색" API가 등록돼 있는지 직접 확인 요청 필요 | - |
+| 61 | Studio 2.0 이미지생성 엔진 어댑터(free/gemini/firefly, IMAGE_ENGINE 스위칭) | 대표님+제미나이 논의(2026-09-22~23), 원본요구는 "채팅으로 이미지생성+상세페이지HTML+팔레트저장", 실제 구현착수는 1-B(이미지생성) 단계 | ✅완료(1-B 부분) | 3단계 조사·정정 경위(정직기록): ①처음 "제미나이의 캔바"를 Canva MCP/Enterprise API로 오판(원칙#389 신설) ②Gemini 이미지생성(gemini-2.5-flash-image) 구현했으나 두 키 모두 402(결제필요) 실측확인(rev211/212), Google AI Studio 스크린샷 교차검증으로 무료티어 자체가 이미지생성에 결제연결 필요함을 확정 ③"캔바"가 실은 Canvas(HTML5 편집기)였음을 대표님이 명확히 정정, Adobe Firefly Services API를 Adobe 공식 커뮤니티 답변으로 "Enterprise전용, 개인프리미엄 불가" 확정(FIREFLY_SERVICES_CLIENT_ID/SECRET Vercel 미등록 실측 확인). 근본구현: src/lib/ai/image-engine.ts 신설 — generateImage() 단일함수로 3엔진(free=Pollinations 기본값·gemini·firefly) 통일 시그니처 제공, gemini/firefly 실패시 자동 free폴백+usedFallback플래그+안내문구 반환(자동전환이지만 UI가 토스트 표시 가능하게, 대표님 확정 UX). Pollinations(image.pollinations.ai, model=flux)는 키/가입 불필요 완전무료(공식 GitHub/PyPI 문서 확인). 검증(2건): ①로컬 curl로 Pollinations 직접호출 — 512x512 JPEG 정상생성(13.9KB) 확인(배포전 사전검증) ②배포후 /api/ai/generate-image 실제 프로덕션 호출 — HTTP200, engine:"free", 62KB 이미지 정상반환 확인. firefly는 함수만 남겨두고 항상 즉시폴백(향후 Enterprise키 발급시 환경변수만 추가하면 되는 확장구조, #295) | rev213 |
 
 ## 다음 작업 우선순위 제안(의존성 없음, 순서 무관 — 단 #46~50은 규모가 커서 별도 논의 권장)
-1. #47+#59 통합설계 — 반응형 HTML 상세페이지 생성기(#47) + 세로형 슬롯 배치(#59, 대표님 9/22 지시로 #47과 결합 요청) — 신규 기능+UI라 규모 있음
-2. #40 옵션별 대체발주 알림 — order-sync 옵션값 흐름 실측부터 필요, 규모 있는 별도작업
-3. #18-20 꽃수레 드래그정렬/그룹화/시각화 — 신규 UI, 규모 있음
-4. #49 스킬 프리셋 저장소 — 신규 DB스키마+UI, 규모 큼, 별도 스프린트 권장
-5. #50 Canva API 연동 — 계정/키 확인부터, #47 이후 착수 권장
-6. #60 경쟁사 인사이트 — 대표님 네이버 개발자센터 "검색" API 등록여부 확인 대기 중(코드 작업 불가)
+1. Studio 2.0 1-A(인앱 채팅 UI) — #61(이미지엔진) 완료로 착수 가능해짐, "배양실" 탭 안에 채팅+2x2 갤러리
+2. Studio 2.0 Fabric.js Canvas 편집기 — 1-A 이후, 단계적 도입(배경표시→텍스트오버레이→드래그)
+3. Studio 2.0 스킬 팔레트 DB(prompt_palettes) — 1-A/Canvas 산출물 구조 확정 후 마지막
+4. #47+#59 통합설계 — 반응형 HTML 상세페이지 생성기 + 세로형 슬롯 배치
+5. #40 옵션별 대체발주 알림 — order-sync 옵션값 흐름 실측부터 필요, 규모 있는 별도작업
+6. #18-20 꽃수레 드래그정렬/그룹화/시각화 — 신규 UI, 규모 있음
+7. #50 Canva 관련 — 실제로는 Canvas(자체편집기)로 대체 확정(대표님 정정), 별도 API연동 불필요
+8. #60 경쟁사 인사이트 — 대표님 네이버 개발자센터 "검색" API 등록여부 확인 대기 중(코드 작업 불가)
 
 ## 문서 갱신 규칙(재발 방지)
 - 매 응답마다 이 파일을 실제로 열람(memory 아님, 파일 자체)해 표를 갱신한다.
