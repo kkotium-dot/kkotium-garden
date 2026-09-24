@@ -19,6 +19,7 @@ import { getPublishReadiness } from '@/lib/naver/publish-readiness';
 import { getNaverAddressIds } from '@/lib/naver/load-update-context';
 import type { LocalProduct } from '@/lib/naver/product-builder';
 import type { ReviewChecklist } from '@/lib/products/publish-review-gate';
+import { resolveAdditionalImages } from '@/lib/products/gallery-images';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,7 +37,7 @@ export async function GET() {
     const items = dbProducts.map((db) => {
       const product: LocalProduct = {
         ...db,
-        additionalImages: db.additionalImages as unknown,
+        additionalImages: resolveAdditionalImages(db),
         keywords: db.keywords as unknown,
         tags: db.tags as unknown,
         product_options: db.product_options ?? null,

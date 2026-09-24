@@ -25,6 +25,7 @@ import {
   type SupplierBundleInfo,
   type ValidationResult,
 } from './product-builder';
+import { resolveAdditionalImages } from '@/lib/products/gallery-images';
 
 // Store-name fallback (escaped so no Hangul literal sits in code). Mirrors the
 // register/update store default (the KKOTIUM store brand).
@@ -114,7 +115,7 @@ export async function loadNaverUpdateContext(productId: string): Promise<NaverUp
 
   const product: LocalProduct = {
     ...dbProduct,
-    additionalImages: dbProduct.additionalImages as unknown,
+    additionalImages: resolveAdditionalImages(dbProduct),
     keywords: dbProduct.keywords as unknown,
     tags: dbProduct.tags as unknown,
     product_options: dbProduct.product_options ?? null,

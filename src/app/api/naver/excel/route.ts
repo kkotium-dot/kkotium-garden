@@ -14,6 +14,7 @@ import { prisma } from '@/lib/prisma';
 import { generateNaverExcelBuffer } from '@/lib/excel/naverExcelJS';
 import type { NaverProductData } from '@/lib/excel/naverExcel.types';
 import { resolveEffectiveStock, type OptionStockRow } from '@/lib/products/effective-stock';
+import { resolveAdditionalImages } from '@/lib/products/gallery-images';
 
 // ── F1 option transform ──────────────────────────────────────────────────
 // DB shape (per Desktop 2026-06-02 실측):
@@ -218,9 +219,10 @@ export async function POST(request: NextRequest) {
       // Product columns as fallback — keeps Excel and API publish in parity.
       ...buildOptionFields(p.product_options, p.optionType, p.optionName, p.options),
       mainImage:            p.mainImage ?? '',
-      additionalImages:     Array.isArray(p.additionalImages)
-        ? p.additionalImages.join('\n')
-        : (p.additionalImages ?? undefined),
+      additionalImages:     (() => {
+        const list = resolveAdditionalImages(p);
+        return list.length > 0 ? list.join('\n') : undefined;
+      })(),
       // description = HTML img tag pointing to detail page image
       // Naver accepts: <img src="URL"> or full HTML. Never plain text.
       description: (() => {

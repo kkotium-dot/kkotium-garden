@@ -4,6 +4,7 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import { prisma } from '@/lib/prisma';
+import { resolveAdditionalImages } from '@/lib/products/gallery-images';
 
 /**
  * 안전한 배열 변환
@@ -57,7 +58,7 @@ export async function loadProductForEdit(productId: string) {
       ? product.naver_keywords.split(',').map(k => k.trim()).filter(Boolean)
       : [];
 
-    const additionalImages = ensureArray(product.additionalImages);
+    const additionalImages = resolveAdditionalImages(product);
     const allImages = product.mainImage 
       ? [product.mainImage, ...additionalImages]
       : additionalImages;

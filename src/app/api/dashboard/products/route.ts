@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { resolveAdditionalImages } from '@/lib/products/gallery-images';
 
 // 안전한 배열 변환
 
@@ -111,6 +112,7 @@ export async function GET(request: NextRequest) {
           originCode: true,
           naver_keywords: true,
           additionalImages: true,
+          images: true,
           aiGeneratedTags: true,
           createdAt: true,
           updatedAt: true,
@@ -127,7 +129,7 @@ export async function GET(request: NextRequest) {
     // 안전한 데이터 변환
     const productsWithMargin = products.map(p => {
       // DB 스키마 기준: additionalImages는 Json, naver_keywords는 String
-      const images = ensureArray(p.additionalImages);
+      const images = resolveAdditionalImages(p);
       const keywords = p.naver_keywords 
         ? p.naver_keywords.split(',').map(k => k.trim()).filter(Boolean)
         : [];

@@ -17,6 +17,7 @@ import { prisma } from '@/lib/prisma';
 import { assessImageQuality } from '@/lib/images/quality-classifier';
 import { loadAndEvaluateProducts } from '@/lib/automation/load-publish-readiness';
 import { validateForRegistration, type LocalProduct } from '@/lib/naver/product-builder';
+import { resolveAdditionalImages } from '@/lib/products/gallery-images';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -67,7 +68,7 @@ async function handle(productId: string) {
   // Required category attributes (e.g. material/color) from the register SoT.
   const product: LocalProduct = {
     ...dbProduct,
-    additionalImages: dbProduct.additionalImages as unknown,
+    additionalImages: resolveAdditionalImages(dbProduct),
     keywords: dbProduct.keywords as unknown,
     tags: dbProduct.tags as unknown,
     product_options: dbProduct.product_options ?? null,

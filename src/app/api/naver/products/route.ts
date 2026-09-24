@@ -10,6 +10,7 @@ import {
   type NaverProductPayload,
 } from '@/lib/naver/api-client';
 import { assertPublishable } from '@/lib/products/publish-review-gate';
+import { resolveAdditionalImages } from '@/lib/products/gallery-images';
 
 // Map internal DB product to Naver API payload
 function toNaverPayload(p: any): NaverProductPayload {
@@ -22,14 +23,7 @@ function toNaverPayload(p: any): NaverProductPayload {
       detailContent:  p.description ?? p.name,
       images: {
         representativeImageUrl: p.mainImage ?? '',
-        optionalImageUrls: (() => {
-          try {
-            const imgs = typeof p.additionalImages === 'string'
-              ? JSON.parse(p.additionalImages)
-              : (p.additionalImages ?? []);
-            return Array.isArray(imgs) ? imgs.slice(0, 9) : [];
-          } catch { return []; }
-        })(),
+        optionalImageUrls: resolveAdditionalImages(p),
       },
       salePrice:     Number(p.salePrice) || 0,
       stockQuantity: Number(p.stock) || 100,

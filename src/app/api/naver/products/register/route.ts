@@ -18,6 +18,7 @@ import {
   type AddressIds,
   type SupplierBundleInfo,
 } from '@/lib/naver/product-builder';
+import { resolveAdditionalImages } from '@/lib/products/gallery-images';
 
 export const dynamic = 'force-dynamic';
 
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
     // 4. Map DB product to LocalProduct interface
     const product: LocalProduct = {
       ...dbProduct,
-      additionalImages: dbProduct.additionalImages as unknown,
+      additionalImages: resolveAdditionalImages(dbProduct),
       keywords: dbProduct.keywords as unknown,
       tags: dbProduct.tags as unknown,
       product_options: dbProduct.product_options ?? null,
