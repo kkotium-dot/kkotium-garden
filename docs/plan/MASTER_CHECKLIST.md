@@ -80,6 +80,7 @@
 | 63 | Vercel Functions Storage 41.68GB 근본수정 — tesseract.js 동적import 전환 | 대표님 직접 스크린샷 확인 요청(2026-09-22) | ✅완료 | 근본원인: next.config.js OCR_ROUTES(13개 route)가 정적 import를 통해 각자 tesseract.js-core(43MB WASM)를 번들에 중복 포함(공식 Vercel기술블로그 확인: "one heavy import taxes every route in that bundle"). 근본수정: p-filter-watermark.ts의 createWorker import를 정적→동적(getWorker() 내부, 실제 OCR 실행시점에만 로드)으로 전환, 기존 워커크래시 3단계 수정(커밋 7c7502a/7d183f1/1bb914f)은 그대로 유지. 안전절차: main에 바로 배포하지 않고 별도 브랜치로 Preview 배포 → Deployment Protection을 get_access_to_vercel_url로 우회해 실제 OCR API 2회 호출(고양이사진+SVG로고, 각각 HTTP200 크래시없음 확인) → 안전 확인 후에만 main 병합(725e50a). 최종 프로덕션(kkotium-garden.vercel.app) 재검증도 HTTP200 정상 확인 | rev215 |
 
 ## 다음 작업 우선순위 제안(의존성 없음, 순서 무관 — 단 #46~50은 규모가 커서 별도 논의 권장)
+0. **[최우선·기준문서] Studio 전면 재구성** — docs/design/STUDIO_MASTER_PLAN_FINAL_2026-09-24.md §A 확정 순서: Step1 썸네일랩(가변그리드+대표지정) → Step3 SEO부스터(병렬가능) → Step4 에셋전송 → Step2 상세캔버스(Fabric.js) → 향기레시피 DB. 방식: 재구성하며 기존 기능을 그 자리에서 점검(작동=이식/고장=수정 또는 숨김/대체됨=정리)
 1. Studio 2.0 1-A(인앱 채팅 UI) — #61+#62 완료로 착수 가능, ThumbnailCard의 기존 HITL 1단계(정적 6요소 합성)를 대화형으로 업그레이드(완전신규 아님, docs/design/STUDIO_2_0_CHAT_IMAGE_GEN_2026-09-22.md §2-A 참조)
 2. Studio 2.0 Fabric.js Canvas 편집기 — 1-A 이후, 단계적 도입(배경표시→텍스트오버레이→드래그)
 3. Studio 2.0 스킬 팔레트 DB(prompt_palettes) — 1-A/Canvas 산출물 구조 확정 후 마지막
