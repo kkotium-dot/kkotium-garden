@@ -29,6 +29,13 @@
 | A15 | JSON-LD 은닉 주입 | ⚠️ 적용처 확인 필요 | 네이버 스마트에디터가 script 태그를 허용하는지 미확인 | 착수 전 스마트에디터 HTML 허용 태그 실측 필수 |
 | A16 | 색상 `--gp-primary` 테두리 | ⚠️ 토큰명 미정 | globals.css 4중 변수 통합 전 | 제미나이 시안 확정 후 토큰 통합 작업에서 이름 확정 |
 
+### A-데이터 기준 확정 (2026-09-24, rev217)
+- 대표 썸네일 = `mainImage`, 추가 썸네일 = `resolveAdditionalImages(product)`(`images` 컬럼 우선, 최대 9) — 네이버 등록·수정·엑셀·발행준비·씨앗심기와 **동일 단일 기준**.
+- 작업실 저장은 씨앗심기와 같은 `PUT /api/products {id, mainImage, images}`(sanitizeProductWrite 허용목록) 재사용 — 새 API 만들지 않음.
+- 작업실 목록 API(`GET /api/products`)는 추가이미지를 내려주지 않으므로 Step 1은 선택 상품의 상세(`GET /api/products/[id]`)에서 읽는다.
+- 실데이터 현황: 대표이미지 보유 19개 중 추가이미지 보유는 3개(3~5장) — 가변 그리드는 1~6장 구간이 실사용 중심.
+- Step 1 구현 설계: 신규 독립 컴포넌트 `ThumbnailGalleryBoard`(SRP) = 대표(Hero)+추가(Sub) 가변 그리드(1~4:2열 / 5~9:3열 / Hero flex2 : Sub flex3) + "대표로 지정"(대표↔추가 교환) + 개수 배지(N/10) + 1:1·해상도 권장 신호. 기존 4종 생성 변형(VariantGrid)은 "AI 시안" 영역으로 유지하고 "추가 슬롯에 넣기"로 연결.
+
 ### A-추가. 확정 착수 순서(의존성)
 1. **Step 1 썸네일 랩** — 가변 그리드(1~4:2열 / 5~9:3열 / 대표 선택 시 Hero+Sub) + 대표 지정 + 기존 ThumbnailCard/Firefly/드롭존 재배치. 신규 의존성 없음 → **최우선**
 2. **Step 3 SEO 부스터** — 씨앗심기 데이터 읽기전용 배지 + Alt 매칭 신호등(기존 CategoryDnaCard 재사용). Step 1과 병렬 가능
