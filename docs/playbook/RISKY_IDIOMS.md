@@ -356,3 +356,24 @@ grep -rln "buildDetailPage" src/app/api/ --include="*.ts" | xargs grep -l "seria
 있다는 걸 알았을 것.
 
 **적용 원칙**: #388.
+
+---
+
+## IDIOM-10 — 같은 개념이 컬럼 2개에 있을 때: "쓰는 컬럼"과 "읽는 컬럼"이 갈라진다
+
+**결함 사례(2026-09-24, rev217)**: 추가이미지가 `images`(String[])와
+`additionalImages`(Json) 두 컬럼에 존재. 씨앗심기·가져오기는 `images`에
+쓰고, 네이버 API 등록/수정 업로드 등 9곳은 `additionalImages`를 읽어
+셀러가 넣은 추가이미지가 조용히 누락됨. 9/15에 엑셀 경로 한 곳만 고치고
+나머지를 전수 확인하지 않아 표류가 남아 있었다.
+
+**grep 패턴(재현 가능, 실행 검증 완료)**:
+```bash
+grep -rn "additionalImages" src --include="*.ts" --include="*.tsx"   # 읽는 쪽
+grep -rn "images: v\.\|images: additional" src                        # 쓰는 쪽
+```
+
+**안전 체크**: 한 경로의 필드명 버그를 고칠 때 같은 필드를 읽는 모든
+지점을 grep하고, 판정을 단일 함수(`resolveAdditionalImages`)로 모은다.
+실데이터로 "쓰는 컬럼에는 값이 있는데 읽는 컬럼은 비어 있는지" 분포를
+실측하면 표류가 즉시 드러난다. 적용 원칙: #295(단일권위), #388.
