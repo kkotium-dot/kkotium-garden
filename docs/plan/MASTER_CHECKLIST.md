@@ -5,7 +5,7 @@
 **"완료" 표시는 반드시 검증방법(curl/DB조회/브라우저 클릭)을 명시해야
 유효하다** — 검증방법이 비어있으면 미완료로 간주한다.
 
-마지막 갱신: 2026-09-24 (rev218 검수완료 — #65 Studio Step1 스토어 썸네일 보드 프로덕션 실측 5종 통과·테스트데이터 원복, #64 얼굴망 상품 대표님 스토어 확인으로 종결. 총 65항목)
+마지막 갱신: 2026-09-24 (b865989 — #66 썸네일 랩 중복영역 숨김 브라우저 검증, Studio 정리방침·extensions 규칙 문서화, Step 3 Alt 전제 재검증(네이버 공식 적합도 필드에 Alt 없음) 후 방향 제안. 총 66항목)
 
 ## 범례
 - ✅완료 = 코드수정+배포+아래 명시된 방법으로 실측검증까지 끝남
@@ -80,6 +80,7 @@
 | 63 | Vercel Functions Storage 41.68GB 근본수정 — tesseract.js 동적import 전환 | 대표님 직접 스크린샷 확인 요청(2026-09-22) | ✅완료 | 근본원인: next.config.js OCR_ROUTES(13개 route)가 정적 import를 통해 각자 tesseract.js-core(43MB WASM)를 번들에 중복 포함(공식 Vercel기술블로그 확인: "one heavy import taxes every route in that bundle"). 근본수정: p-filter-watermark.ts의 createWorker import를 정적→동적(getWorker() 내부, 실제 OCR 실행시점에만 로드)으로 전환, 기존 워커크래시 3단계 수정(커밋 7c7502a/7d183f1/1bb914f)은 그대로 유지. 안전절차: main에 바로 배포하지 않고 별도 브랜치로 Preview 배포 → Deployment Protection을 get_access_to_vercel_url로 우회해 실제 OCR API 2회 호출(고양이사진+SVG로고, 각각 HTTP200 크래시없음 확인) → 안전 확인 후에만 main 병합(725e50a). 최종 프로덕션(kkotium-garden.vercel.app) 재검증도 HTTP200 정상 확인 | rev215 |
 | 64 | 추가이미지 단일기준 근본수정 — 씨앗심기 추가이미지가 네이버 등록/수정 업로드에서 누락되던 결함 | Studio Step1 착수 전 데이터 기준 확인 중 발견(2026-09-24) | ✅완료 | 근본원인: 쓰는 쪽(씨앗심기 productFormSerialize, import)은 images(String[]) 컬럼, 읽는 쪽 9곳(API 등록 업로드·수정 컨텍스트·빌더 폴백·발행준비(+일괄)·detail-strategy·asset-jobs-matrix·대시보드·로더·구 /api/naver/products·/api/naver/excel)은 레거시 additionalImages(Json, 대표이미지 보유 19개 전부 null) — 엑셀 경로만 9/15에 고쳐졌고 나머지는 미수정(#295 다중경로 표류). 근본수정: src/lib/products/gallery-images.ts resolveAdditionalImages()(images 우선→레거시 Json 폴백, 중복·대표 제외, http(s)만, 최대 9장) 신설 후 원천 매퍼 9곳 적용(하위 수정/발행준비/등록업로드는 자동 교정), 대시보드 select에 images 추가. 검증: 프로덕션 실데이터 읽기전용 — 영향 3개 상품 추가이미지 0→12장 인식, 엣지 4종 통과, 배포 후 /api/dashboard/products imageCount 5·6·4(대표+추가) 확인, tsc 0. 미반영: 이미 발행된 "강아지 안심 산책 통풍 얼굴망"(naverProductId 13695332066)은 네이버 스토어에 추가이미지 5장이 빠져 있을 가능성 — 스토어 이미지 갱신은 비가역 PUT이라 대표님 GO 필요 → 2026-09-24 대표님 확인: 스토어 관리자에서 직접 수정해 이미지 정상 노출, 추가 조치 불필요로 종결 | rev217 |
 | 65 | Studio Step 1 썸네일 랩 — 스토어 썸네일 보드(대표 Hero + 가변 추가 그리드, 대표 지정·순서·저장) | 마스터플랜 §A 착수순서 1번(2026-09-24) | ✅완료 | 구현: Cowork rev218(31a34af) src/components/studio/gallery/ThumbnailGalleryBoard.tsx — 데이터 대표=mainImage·추가=resolveAdditionalImages(#64 단일기준), 저장=PUT /api/products {id,mainImage,images}(씨앗심기와 동일 경로), 저장 후 broadcastProductMutated, 추가 1~4장 2열/5~9장 3열, 개수 N/10, 추가 0장이면 씨앗심기 이미지탭 딥링크(?focus=image 공식지원 확인). 동반수정: 부분 PUT 시 aiScore 0 덮어쓰기 방지. Desktop 검수: IDIOM-9에 따라 중복구현 없이 코드검수(이모지0·JSX한글0·tsc0) 후 프로덕션 브라우저 실측 — ①얼굴망(대표1+추가5): 6/10장·3열, "대표로 지정"(추가2→대표, 기존대표→추가1 보존)·변경표시·되돌리기 정상 ②저장: DB mainImage/images 반영, 5장 유지, "저장했어요", aiScore 32 유지 ③테스트 데이터 원본 원복(대표·추가 순서 정확 일치 확인) ④옥반지(대표1+추가4): 5/10장·2열 ⑤추가0 상품: 1/10장·안내문구·씨앗심기 링크·오류0 | rev218 |
+| 66 | 썸네일 랩 중복 대표이미지 영역 숨김(정리방침 1호 적용) | 대표님 승인(2026-09-24) | ✅완료 | studio/page.tsx: step=thumbnail에서 WorkbenchCanvas는 AI 시안 또는 누끼/배경 자산이 있을 때만 표시(코드 보존). 배포 반영 지연을 코드 문제로 오판하지 않도록 Vercel 배포 커밋 SHA 확인 후 재검증 — 썸네일 랩 캔버스 미표시·상세 캔버스 단계 유지·오류 0 확인 | b865989 |
 
 ## 다음 작업 우선순위 제안(의존성 없음, 순서 무관 — 단 #46~50은 규모가 커서 별도 논의 권장)
 0. **[최우선·기준문서] Studio 전면 재구성** — docs/design/STUDIO_MASTER_PLAN_FINAL_2026-09-24.md §A 확정 순서: Step1 썸네일랩(가변그리드+대표지정) → Step3 SEO부스터(병렬가능) → Step4 에셋전송 → Step2 상세캔버스(Fabric.js) → 향기레시피 DB. 방식: 재구성하며 기존 기능을 그 자리에서 점검(작동=이식/고장=수정 또는 숨김/대체됨=정리)
