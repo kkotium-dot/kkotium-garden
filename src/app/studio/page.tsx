@@ -564,7 +564,15 @@ function StudioInner() {
         <ThumbnailGalleryBoard productId={selectedProduct.id} onSaved={() => void loadProducts()} />
       )}
 
-      {/* Live preview — device-constrained */}
+      {/* Live preview — device-constrained.
+          STUDIO_DEDUP_2026-09-24 (owner-approved, master plan §A 정리방침 = 숨김):
+          on the thumbnail step the board above already shows the main image,
+          so this canvas only renders when it adds something — AI drafts or
+          designer cutout/backdrop assets. Other steps are unchanged. Code kept. */}
+      {(step !== 'thumbnail'
+        || (actions.thumbnails?.outputs?.length ?? 0) > 0
+        || Boolean(actions.manualCutoutUrl)
+        || Boolean(actions.manualBackdropUrl)) && (
       <div
         style={{
           flexShrink: 0,
@@ -584,6 +592,7 @@ function StudioInner() {
           backdropUrl={actions.manualBackdropUrl || undefined}
         />
       </div>
+      )}
     </>
   ) : (
     <div style={{ padding: 40, textAlign: 'center', color: 'var(--gp-ink-500)', fontSize: 13 }}>
