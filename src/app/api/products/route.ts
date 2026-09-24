@@ -497,7 +497,12 @@ export async function PUT(request: NextRequest) {
     }
 
     // ⭐ aiScore null 방지
-    if (updateData.aiScore === null || updateData.aiScore === undefined) {
+    // PARTIAL_PUT_SCORE_PRESERVE_2026-09-24 -- only coerce aiScore when the
+    // caller actually sent it. Partial saves (DetailAssemblyBoard description/
+    // detail_images, Studio gallery mainImage/images) omit aiScore; defaulting
+    // it to 0 wrote a transient zero that relied on checkScoreDrop's recompute
+    // to restore it (left at 0 if that fire-and-forget step failed).
+    if ('aiScore' in updateData && (updateData.aiScore === null || updateData.aiScore === undefined)) {
       updateData.aiScore = 0;
     }
 

@@ -42,6 +42,7 @@ import {
 } from '@/components/studio/workbench';
 // SLOT FUNNEL BOARD SF-1 — read-only 7-section detail assembly board.
 import DetailAssemblyBoard from '@/components/studio/assembly/DetailAssemblyBoard';
+import ThumbnailGalleryBoard from '@/components/studio/gallery/ThumbnailGalleryBoard';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import {
   CategoryDnaCard,
@@ -555,6 +556,13 @@ function StudioInner() {
       <KkottiGuide text={a.kkotti[step]} />
 
       {/* JOURNAL-1: JobLifecyclePanel relocated to the 일지 sidebar tab (journalSlot). */}
+
+      {/* STUDIO_STEP1_GALLERY_2026-09-24 -- Step 1 center: the store thumbnails
+          that will actually be published (main + up to 9 optional), with
+          promote/reorder/save. Master plan §A. AI drafts stay below. */}
+      {step === 'thumbnail' && (
+        <ThumbnailGalleryBoard productId={selectedProduct.id} onSaved={() => void loadProducts()} />
+      )}
 
       {/* Live preview — device-constrained */}
       <div

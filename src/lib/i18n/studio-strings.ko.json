@@ -546,5 +546,29 @@
       "done": "완료",
       "label": "단계 진행"
     }
+  },
+  "gallery": {
+    "title": "스토어 썸네일",
+    "subtitle": "네이버에 올라가는 대표 1장 + 추가 최대 9장",
+    "count": "{n}/{max}장",
+    "hero": "대표",
+    "extra": "추가 {n}",
+    "setMain": "대표로 지정",
+    "moveLeft": "앞으로",
+    "moveRight": "뒤로",
+    "save": "변경 저장",
+    "saving": "저장 중",
+    "saved": "저장했어요",
+    "reset": "되돌리기",
+    "dirty": "저장하지 않은 변경이 있어요",
+    "empty": "등록된 썸네일이 없어요",
+    "emptyHint": "씨앗심기 이미지 탭에서 올리거나 아래 AI 시안을 활용하세요",
+    "noExtras": "추가 이미지가 없어요",
+    "addInSeed": "씨앗심기에서 추가하기",
+    "loading": "썸네일 불러오는 중",
+    "loadError": "썸네일을 불러오지 못했어요",
+    "saveError": "저장하지 못했어요",
+    "notSquare": "정사각 아님",
+    "lowRes": "{w}px · 1000px 권장"
   }
 }
