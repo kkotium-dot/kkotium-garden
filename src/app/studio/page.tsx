@@ -72,6 +72,13 @@ const STEP_STAGES: Record<AtelierStepKey, string[]> = {
 
 // ── Main inner ────────────────────────────────────────────────────────────
 
+// STUDIO_LEGACY_HIDE_2026-09-24 (owner decision): only the new master-plan
+// features (docs/design/STUDIO_MASTER_PLAN_FINAL_2026-09-24.md) are visible.
+// The pre-rebuild studio surfaces did not work reliably and their layout was
+// confusing, so they are hidden -- NOT deleted. Flip this one switch to bring
+// every legacy surface back at once when a later rebuild needs them.
+const SHOW_LEGACY_STUDIO = false;
+
 function StudioInner() {
   const searchParams = useSearchParams();
   const initialProductId = searchParams.get('product');
@@ -205,11 +212,13 @@ function StudioInner() {
       {/* The 도구함 itself — live-verified AssetBrowser (정원 창고 / 템플릿 / 폰트,
           stage groups + 미적용 badges intact). UX-v2.1: defaults to the active
           step's stages; 전체 보기 토글 restores full access. */}
-      <AssetBrowser
-        productId={selectedProduct?.id ?? null}
-        focusStages={STEP_STAGES[step]}
-        focusLabel={a.steps[step]}
-      />
+      {SHOW_LEGACY_STUDIO && (
+        <AssetBrowser
+          productId={selectedProduct?.id ?? null}
+          focusStages={STEP_STAGES[step]}
+          focusLabel={a.steps[step]}
+        />
+      )}
     </div>
   );
 
@@ -456,7 +465,7 @@ function StudioInner() {
     { key: 'warehouse', label: s.warehouse, icon: <Warehouse size={18} />, content: <ErrorBoundary label={s.warehouse}>{toolboxSlot}</ErrorBoundary> },
     { key: 'cultivation', label: s.cultivation, icon: <FlaskConical size={18} />, content: <ErrorBoundary label={s.cultivation}>{cultivationSlot}</ErrorBoundary> },
     { key: 'journal', label: s.journal, icon: <NotebookText size={18} />, content: <ErrorBoundary label={s.journal}>{journalSlot}</ErrorBoundary> },
-  ];
+  ].filter((t) => SHOW_LEGACY_STUDIO || t.key === 'warehouse');
 
   // #61 STUDIO_CLEANUP_2026-09-23 (대표님 지시 — "확장 여지가 전혀 없는
   // 잔재는 제거") — assemblySlotStub(S2-B.1, 2026-06 기록) 삭제. 이 3칸
@@ -524,7 +533,8 @@ function StudioInner() {
           )}
         </div>
 
-        {/* Device toggle — PC / 모바일 live preview */}
+        {/* Device toggle — PC / 모바일 live preview (hidden until the Step 2 rebuild) */}
+        {SHOW_LEGACY_STUDIO && (
         <div style={{ display: 'flex', gap: 4, flexShrink: 0, background: 'var(--gp-pink-50)', padding: 3, borderRadius: 10 }}>
           {([['pc', a.workspace.devicePc, Monitor], ['mobile', a.workspace.deviceMobile, Smartphone]] as const).map(
             ([key, label, Icon]) => {
@@ -550,10 +560,26 @@ function StudioInner() {
             },
           )}
         </div>
+        )}
       </section>
 
       {/* 꼬띠 guide bubble — reflects the active step (microcopy) */}
-      <KkottiGuide text={a.kkotti[step]} />
+      {SHOW_LEGACY_STUDIO && <KkottiGuide text={a.kkotti[step]} />}
+
+      {/* Steps not rebuilt yet: one calm notice instead of legacy surfaces. */}
+      {!SHOW_LEGACY_STUDIO && step !== 'thumbnail' && (
+        <section style={{
+          padding: '28px 20px', textAlign: 'center', borderRadius: 'var(--radius-card)',
+          background: 'var(--color-surface)', border: '1px dashed var(--color-border)',
+        }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'var(--gp-ink-900)' }}>
+            {a.rebuild.title.replace('{step}', a.steps[step])}
+          </p>
+          <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--gp-ink-500)', lineHeight: 1.6 }}>
+            {a.rebuild.body}
+          </p>
+        </section>
+      )}
 
       {/* JOURNAL-1: JobLifecyclePanel relocated to the 일지 sidebar tab (journalSlot). */}
 
@@ -569,7 +595,7 @@ function StudioInner() {
           on the thumbnail step the board above already shows the main image,
           so this canvas only renders when it adds something — AI drafts or
           designer cutout/backdrop assets. Other steps are unchanged. Code kept. */}
-      {(step !== 'thumbnail'
+      {SHOW_LEGACY_STUDIO && (step !== 'thumbnail'
         || (actions.thumbnails?.outputs?.length ?? 0) > 0
         || Boolean(actions.manualCutoutUrl)
         || Boolean(actions.manualBackdropUrl)) && (
@@ -604,7 +630,7 @@ function StudioInner() {
   // #3 (Stage 1) — the right panel is stepper-gated: ControlTower emphasizes
   // the section that matches the active step (others collapse), the same way
   // the canvas (StepGroup) and the 도구함 asset filter (focusStages) already do.
-  const towerSlot: ReactNode = (
+  const legacyTowerSlot: ReactNode = (
     <ControlTower
       step={step}
       gate={engine.data?.gate ?? null}
@@ -614,6 +640,24 @@ function StudioInner() {
       degraded={engine.degraded}
       hasProduct={!!selectedProduct}
     />
+  );
+  // New tower: Step 1 shows the Naver thumbnail rules the board enforces
+  // (verified: main 1 required, optional up to 9, 1:1 and 1000px recommended).
+  const towerSlot: ReactNode = SHOW_LEGACY_STUDIO ? legacyTowerSlot : (
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <h2 style={{ margin: 0, fontSize: 13, fontWeight: 900, color: 'var(--gp-ink-900)' }}>
+        {step === 'thumbnail' ? a.rebuild.towerThumbTitle : a.rebuild.towerTitle}
+      </h2>
+      {step === 'thumbnail' ? (
+        <ul style={{ margin: 0, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {a.rebuild.thumbRules.map((rule) => (
+            <li key={rule} style={{ fontSize: 12, color: 'var(--gp-ink-700)', lineHeight: 1.5 }}>{rule}</li>
+          ))}
+        </ul>
+      ) : (
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--gp-ink-500)', lineHeight: 1.6 }}>{a.rebuild.towerBody}</p>
+      )}
+    </section>
   );
 
   // Page header — rendered INSIDE the atelier shell (fixed-viewport budget) so
@@ -658,7 +702,7 @@ function StudioInner() {
   // FLOATING_DOCK_2026-09-10 — small always-visible summary, only once the
   // assembly board has actually reported real numbers (step 2 with a product
   // loaded). Clicking scrolls to the real board instead of duplicating it.
-  const floatingDockSlot: ReactNode = (step === 'detail' && assemblyProgress && assemblyProgress.total > 0) ? (
+  const floatingDockSlot: ReactNode = (SHOW_LEGACY_STUDIO && step === 'detail' && assemblyProgress && assemblyProgress.total > 0) ? (
     <button
       type="button"
       onClick={() => document.getElementById('assembly-board-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
