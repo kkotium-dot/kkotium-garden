@@ -88,6 +88,9 @@
 
 구현 원칙: 새 판정 로직을 만들지 않고 씨앗심기 기존 진단·카테고리 진단을 읽기 전용으로 재사용(#295). 수정은 "씨앗심기에서 고치기" 딥링크(`?focus=seo`, 공식 지원 확인).
 
+### A-Step 2 상세 캔버스 설계 (2026-09-24)
+- 상세 설계는 `docs/design/STUDIO_STEP2_DETAIL_DESIGN_2026-09-24.md`(2-A~2-F). 새 발행 경로 없이 기존 상세 칸(hookPhrase·detail_images·description·aeo_content)을 채우는 구조. A15 JSON-LD는 **제외 확정**(script 태그 제거). P0: 스토어센터(SE ONE) 상세 덮어쓰기 방지.
+
 ### A-추가. 확정 착수 순서(의존성)
 1. **Step 1 썸네일 랩** — 가변 그리드(1~4:2열 / 5~9:3열 / 대표 선택 시 Hero+Sub) + 대표 지정 + 기존 ThumbnailCard/Firefly/드롭존 재배치. 신규 의존성 없음 → **최우선**
 2. **Step 3 SEO 부스터** — 씨앗심기 데이터 읽기전용 배지 + Alt 매칭 신호등(기존 CategoryDnaCard 재사용). Step 1과 병렬 가능
