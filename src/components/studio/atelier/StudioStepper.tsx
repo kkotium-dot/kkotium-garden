@@ -21,7 +21,9 @@ export interface StudioStepperProps {
   onChange: (step: AtelierStepKey) => void;
 }
 
-const STEP_ORDER: AtelierStepKey[] = ["thumbnail", "detail", "seo", "publish"];
+// STUDIO_3STEP_2026-09-24 (owner-approved): SEO booster absorbed into the
+// detail step; seed-planting owns SEO. "seo" key kept for legacy code only.
+const STEP_ORDER: AtelierStepKey[] = ["thumbnail", "detail", "publish"];
 
 const STEP_ICON = {
   thumbnail: Layers,

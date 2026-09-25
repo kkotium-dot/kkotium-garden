@@ -43,6 +43,7 @@ import {
 // SLOT FUNNEL BOARD SF-1 — read-only 7-section detail assembly board.
 import DetailAssemblyBoard from '@/components/studio/assembly/DetailAssemblyBoard';
 import ThumbnailGalleryBoard from '@/components/studio/gallery/ThumbnailGalleryBoard';
+import StudioHandoffPanel from '@/components/studio/handoff/StudioHandoffPanel';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import {
   CategoryDnaCard,
@@ -86,7 +87,7 @@ function StudioInner() {
   const tabParam = searchParams.get('tab');
   const initialStep: AtelierStepKey =
     tabParam === 'publish' ? 'publish'
-      : tabParam === 'image' ? 'detail'
+      : (tabParam === 'image' || tabParam === 'seo') ? 'detail'
         : 'thumbnail';
 
   // Stepper + device-preview state (page-owned).
@@ -567,7 +568,10 @@ function StudioInner() {
       {SHOW_LEGACY_STUDIO && <KkottiGuide text={a.kkotti[step]} />}
 
       {/* Steps not rebuilt yet: one calm notice instead of legacy surfaces. */}
-      {!SHOW_LEGACY_STUDIO && step !== 'thumbnail' && (
+      {!SHOW_LEGACY_STUDIO && step === 'publish' && (
+        <StudioHandoffPanel productId={selectedProduct.id} onGoThumbnail={() => setStep('thumbnail')} />
+      )}
+      {!SHOW_LEGACY_STUDIO && step !== 'thumbnail' && step !== 'publish' && (
         <section style={{
           padding: '28px 20px', textAlign: 'center', borderRadius: 'var(--radius-card)',
           background: 'var(--color-surface)', border: '1px dashed var(--color-border)',
@@ -655,7 +659,7 @@ function StudioInner() {
           ))}
         </ul>
       ) : (
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--gp-ink-500)', lineHeight: 1.6 }}>{a.rebuild.towerBody}</p>
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--gp-ink-500)', lineHeight: 1.6 }}>{step === 'publish' ? a.handoff.towerBody : a.rebuild.towerBody}</p>
       )}
     </section>
   );

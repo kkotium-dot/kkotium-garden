@@ -428,13 +428,13 @@
     "_note": "C-STUDIO-UX (2026-06-23) — 3-column premium atelier shell. Stepper + 도구함 + 개화 작업대 + 검색 생장 관제탑. Seller-language terms (no dev jargon).",
     "steps": {
       "thumbnail": "썸네일 랩",
-      "thumbnailHint": "대표·썸네일 4변형 + 무드 카메라",
+      "thumbnailHint": "네이버 대표·추가 이미지 정리",
       "detail": "상세 캔버스",
-      "detailHint": "5섹션 상세페이지 조립",
+      "detailHint": "상세페이지 + 씨앗심기 정보 반영",
       "seo": "SEO 부스터",
       "seoHint": "검색 노출·키워드 매칭",
-      "publish": "발행 검토",
-      "publishHint": "정책 게이트 + 이미지 저장·발행"
+      "publish": "씨앗심기로 전송",
+      "publishHint": "완성 이미지·상세 반영 확인"
     },
     "toolbox": {
       "title": "도구함",
@@ -558,6 +558,21 @@
         "정사각(1:1) 비율을 권장해요",
         "가로·세로 1000px 이상을 권장해요"
       ]
+    },
+    "handoff": {
+      "title": "씨앗심기로 전송",
+      "subtitle": "작업실에서 만든 결과가 씨앗심기 상품 정보에 실제로 들어갔는지 확인해요.",
+      "loading": "씨앗심기 저장 상태를 불러오는 중…",
+      "loadError": "저장 상태를 불러오지 못했어요. 잠시 후 다시 열어 주세요.",
+      "thumbDoneTitle": "썸네일 반영됨",
+      "thumbDoneBody": "대표 1장 · 추가 {n}장(최대 {max}장)이 씨앗심기에 저장돼 있어요. 네이버 등록·수정 때 그대로 올라가요.",
+      "thumbMissingTitle": "대표이미지가 없어요",
+      "thumbMissingBody": "네이버 등록에는 대표이미지 1장이 꼭 필요해요. 썸네일 랩에서 지정해 주세요.",
+      "detailPendingTitle": "상세페이지 — 상세 캔버스 완성 후 전송",
+      "detailPendingBody": "상세 캔버스(2단계)를 새로 짓는 중이에요. 완성되면 여기서 씨앗심기로 보낼 수 있어요.",
+      "goThumbnail": "썸네일 랩으로",
+      "openSeed": "씨앗심기 이미지 탭에서 확인",
+      "towerBody": "이 단계는 확인용이에요. 상품 정보 수정은 씨앗심기에서 해요."
     }
   },
   "gallery": {
